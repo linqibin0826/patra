@@ -70,7 +70,7 @@ public interface VenueDao extends JpaRepository<VenueEntity, Long> {
   /// @return 载体实体列表
   List<VenueEntity> findByIdIn(Collection<Long> ids);
 
-  /// 分页查询期刊列表。
+  /// 分页查询期刊列表，按 h-index 降序排列。
   ///
   /// 查询条件（AND 关系，空值忽略）：
   ///
@@ -80,23 +80,40 @@ public interface VenueDao extends JpaRepository<VenueEntity, Long> {
   /// - `issnL`：ISSN-L 精确匹配
   /// - `nlmId`：NLM ID 精确匹配
   ///
+  /// 使用原生查询以支持 MySQL `JSON_EXTRACT` 函数从 `citation_metrics` JSON 列提取 h-index 进行排序。
+  ///
   /// @param keyword title/titleZh 前缀搜索关键词（可空）
   /// @param countryCode 国家编码（可空）
   /// @param issnL ISSN-L（可空）
   /// @param nlmId NLM ID（可空）
-  /// @param pageable 分页参数
+  /// @param pageable 分页参数（仅使用分页，排序由查询内置）
   /// @return 期刊分页结果
   @Query(
-      """
-      SELECT v FROM VenueEntity v
-      WHERE v.venueType = 'JOURNAL'
+      value =
+          """
+      SELECT * FROM cat_venue v
+      WHERE v.venue_type = 'JOURNAL'
         AND (:keyword IS NULL
              OR LOWER(v.title) LIKE LOWER(CONCAT(:keyword, '%'))
-             OR LOWER(v.titleZh) LIKE LOWER(CONCAT(:keyword, '%')))
-        AND (:countryCode IS NULL OR v.countryCode = :countryCode)
-        AND (:issnL IS NULL OR v.issnL = :issnL)
-        AND (:nlmId IS NULL OR v.nlmId = :nlmId)
-      """)
+             OR LOWER(v.title_zh) LIKE LOWER(CONCAT(:keyword, '%')))
+        AND (:countryCode IS NULL OR v.country_code = :countryCode)
+        AND (:issnL IS NULL OR v.issn_l = :issnL)
+        AND (:nlmId IS NULL OR v.nlm_id = :nlmId)
+      ORDER BY COALESCE(CAST(JSON_EXTRACT(v.citation_metrics, '$.hIndex') AS SIGNED), 0) DESC,
+               v.id DESC
+      """,
+      countQuery =
+          """
+      SELECT COUNT(*) FROM cat_venue v
+      WHERE v.venue_type = 'JOURNAL'
+        AND (:keyword IS NULL
+             OR LOWER(v.title) LIKE LOWER(CONCAT(:keyword, '%'))
+             OR LOWER(v.title_zh) LIKE LOWER(CONCAT(:keyword, '%')))
+        AND (:countryCode IS NULL OR v.country_code = :countryCode)
+        AND (:issnL IS NULL OR v.issn_l = :issnL)
+        AND (:nlmId IS NULL OR v.nlm_id = :nlmId)
+      """,
+      nativeQuery = true)
   Page<VenueEntity> findJournalPage(
       @Param("keyword") String keyword,
       @Param("countryCode") String countryCode,

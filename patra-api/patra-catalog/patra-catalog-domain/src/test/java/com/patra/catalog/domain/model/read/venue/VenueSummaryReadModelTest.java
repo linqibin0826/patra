@@ -3,7 +3,6 @@ package com.patra.catalog.domain.model.read.venue;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -25,24 +24,23 @@ class VenueSummaryReadModelTest {
     @Test
     @DisplayName("id 为 null 时应抛出异常")
     void shouldRejectNullId() {
-      assertThatThrownBy(
-              () -> new VenueSummaryReadModel(null, "Nature", null, null, null, null, null))
-          .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("期刊 ID 不能为空");
+      assertThatThrownBy(() -> VenueSummaryReadModel.builder().id(null).title("Nature").build())
+          .isInstanceOf(NullPointerException.class)
+          .hasMessageContaining("id must not be null");
     }
 
     @Test
     @DisplayName("title 为空白时应抛出异常")
     void shouldRejectBlankTitle() {
-      assertThatThrownBy(() -> new VenueSummaryReadModel(1L, "   ", null, null, null, null, null))
+      assertThatThrownBy(() -> VenueSummaryReadModel.builder().id(1L).title("   ").build())
           .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("期刊标题不能为空");
+          .hasMessageContaining("title must not be blank");
     }
 
     @Test
     @DisplayName("title 为 null 时应抛出异常")
     void shouldRejectNullTitle() {
-      assertThatThrownBy(() -> new VenueSummaryReadModel(1L, null, null, null, null, null, null))
+      assertThatThrownBy(() -> VenueSummaryReadModel.builder().id(1L).title(null).build())
           .isInstanceOf(IllegalArgumentException.class);
     }
   }
@@ -54,30 +52,53 @@ class VenueSummaryReadModelTest {
     @Test
     @DisplayName("可空字段为 null 时应正常构造")
     void shouldAllowNullOptionalFields() {
-      var model = new VenueSummaryReadModel(1L, "Nature", null, null, null, null, null);
+      var model = VenueSummaryReadModel.builder().id(1L).title("Nature").build();
 
       assertThat(model.id()).isEqualTo(1L);
       assertThat(model.title()).isEqualTo("Nature");
       assertThat(model.titleZh()).isNull();
-      assertThat(model.issnL()).isNull();
-      assertThat(model.nlmId()).isNull();
       assertThat(model.countryCode()).isNull();
-      assertThat(model.lastSyncedAt()).isNull();
+      assertThat(model.imageUrl()).isNull();
+      assertThat(model.hIndex()).isNull();
+      assertThat(model.jifQuartile()).isNull();
+      assertThat(model.casMajorQuartile()).isNull();
+      assertThat(model.casTopJournal()).isNull();
+      assertThat(model.warningListStatus()).isNull();
+      assertThat(model.isOa()).isNull();
+      assertThat(model.researchDirection()).isNull();
     }
 
     @Test
     @DisplayName("所有字段均有值时应正常构造")
     void shouldConstructWithAllFields() {
-      var now = Instant.now();
-      var model = new VenueSummaryReadModel(1L, "Nature", "自然", "0028-0836", "0410462", "US", now);
+      var model =
+          VenueSummaryReadModel.builder()
+              .id(1L)
+              .title("Nature")
+              .titleZh("自然")
+              .countryCode("US")
+              .imageUrl("https://example.com/nature.jpg")
+              .hIndex(412)
+              .jifQuartile("Q1")
+              .casMajorQuartile("1区")
+              .casTopJournal(true)
+              .warningListStatus(null)
+              .isOa(true)
+              .researchDirection("医学 · 综合")
+              .build();
 
       assertThat(model.id()).isEqualTo(1L);
       assertThat(model.title()).isEqualTo("Nature");
       assertThat(model.titleZh()).isEqualTo("自然");
-      assertThat(model.issnL()).isEqualTo("0028-0836");
-      assertThat(model.nlmId()).isEqualTo("0410462");
       assertThat(model.countryCode()).isEqualTo("US");
-      assertThat(model.lastSyncedAt()).isEqualTo(now);
+      assertThat(model.imageUrl()).isEqualTo("https://example.com/nature.jpg");
+      assertThat(model.hIndex()).isEqualTo(412);
+      assertThat(model.jifQuartile()).isEqualTo("Q1");
+      assertThat(model.casMajorQuartile()).isEqualTo("1区");
+      assertThat(model.casTopJournal()).isTrue();
+      assertThat(model.warningListStatus()).isNull();
+      assertThat(model.isOa()).isTrue();
+      assertThat(model.researchDirection()).isEqualTo("医学 · 综合");
     }
   }
 }

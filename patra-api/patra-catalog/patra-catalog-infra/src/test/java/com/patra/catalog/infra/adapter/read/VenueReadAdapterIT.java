@@ -4,6 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.patra.catalog.domain.model.read.venue.VenueFilter;
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
+import com.patra.catalog.domain.model.vo.venue.CitationMetrics;
+import com.patra.catalog.domain.model.vo.venue.LetPubVenueData;
+import com.patra.catalog.domain.model.vo.venue.OpenAccessInfo;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
 import com.patra.catalog.infra.persistence.dao.VenueDao;
 import com.patra.catalog.infra.persistence.entity.VenueEntity;
@@ -144,11 +147,11 @@ class VenueReadAdapterIT {
     }
   }
 
-  /// 分页应返回正确元信息，并按更新时间/ID 倒序稳定输出。
+  /// 分页应返回正确元信息，按 h-index DESC, id DESC 排序。
   @Test
   @DisplayName("分页元信息与排序应正确")
   void shouldReturnCorrectPagingMetaAndSort() {
-    // Given
+    // Given — 三条期刊均无 h-index，退化为 id DESC 排序
     VenueEntity v1 = saveVenue("JOURNAL", "Journal-1", "1111-1111", "NLM1", "OPENALEX", "US");
     VenueEntity v2 = saveVenue("JOURNAL", "Journal-2", "2222-2222", "NLM2", "OPENALEX", "US");
     VenueEntity v3 = saveVenue("JOURNAL", "Journal-3", "3333-3333", "NLM3", "OPENALEX", "US");
@@ -221,6 +224,192 @@ class VenueReadAdapterIT {
               assertThat(item.title()).isEqualTo("Science");
               assertThat(item.titleZh()).isNull();
             });
+  }
+
+  @Nested
+  @DisplayName("h-index 排序规则")
+  class HIndexSortingTests {
+
+    /// 不同 h-index 值的期刊应按 h-index 降序排列。
+    @Test
+    @DisplayName("应按 h-index 降序排列")
+    void shouldSortByHIndexDescending() {
+      // Given
+      saveVenueWithHIndex("Low Impact", "1111-1111", 50);
+      saveVenueWithHIndex("High Impact", "2222-2222", 400);
+      saveVenueWithHIndex("Mid Impact", "3333-3333", 150);
+
+      // When
+      PageResult<VenueSummaryReadModel> page =
+          venueReadAdapter.findVenuePage(PagingParams.of(1, 10), EMPTY_FILTER);
+
+      // Then
+      assertThat(page.items())
+          .extracting("title")
+          .containsExactly("High Impact", "Mid Impact", "Low Impact");
+      assertThat(page.items()).extracting("hIndex").containsExactly(400, 150, 50);
+    }
+
+    /// h-index 相同时应按 id 降序排列（稳定排序）。
+    @Test
+    @DisplayName("h-index 相同时应按 id 降序排列")
+    void shouldFallbackToIdDescWhenHIndexEqual() {
+      // Given
+      saveVenueWithHIndex("First Saved", "1111-1111", 100);
+      saveVenueWithHIndex("Second Saved", "2222-2222", 100);
+
+      // When
+      PageResult<VenueSummaryReadModel> page =
+          venueReadAdapter.findVenuePage(PagingParams.of(1, 10), EMPTY_FILTER);
+
+      // Then — id 递增，DESC 排序后 Second Saved 在前
+      assertThat(page.items()).extracting("title").containsExactly("Second Saved", "First Saved");
+    }
+
+    /// 无 h-index（citation_metrics 为 null）的期刊应排在有 h-index 的期刊之后。
+    @Test
+    @DisplayName("无 h-index 的期刊应排在最后")
+    void shouldRankNullHIndexLast() {
+      // Given
+      saveVenue("JOURNAL", "No Metrics", "1111-1111", "NLM1", "OPENALEX", "US");
+      saveVenueWithHIndex("Has Metrics", "2222-2222", 200);
+
+      // When
+      PageResult<VenueSummaryReadModel> page =
+          venueReadAdapter.findVenuePage(PagingParams.of(1, 10), EMPTY_FILTER);
+
+      // Then
+      assertThat(page.items()).extracting("title").containsExactly("Has Metrics", "No Metrics");
+      assertThat(page.items()).extracting("hIndex").containsExactly(200, null);
+    }
+  }
+
+  @Nested
+  @DisplayName("JSON 嵌套字段映射")
+  class JsonNestedFieldMappingTests {
+
+    /// MapStruct 应正确提取 citationMetrics/letPubData/openAccess 中的嵌套字段。
+    @Test
+    @DisplayName("应正确映射 citationMetrics.hIndex 到 VenueSummaryReadModel")
+    void shouldMapCitationMetricsHIndex() {
+      // Given
+      VenueEntity entity = buildBaseVenue("Nature", "0028-0836");
+      entity.setCitationMetrics(CitationMetrics.of(50000, 2000000, 412, 8000, null));
+      venueDao.save(entity);
+
+      // When
+      PageResult<VenueSummaryReadModel> page =
+          venueReadAdapter.findVenuePage(PagingParams.of(1, 10), EMPTY_FILTER);
+
+      // Then
+      assertThat(page.items())
+          .singleElement()
+          .satisfies(
+              item -> {
+                assertThat(item.hIndex()).isEqualTo(412);
+              });
+    }
+
+    /// MapStruct 应正确提取 letPubData 中的分区和预警字段。
+    @Test
+    @DisplayName("应正确映射 letPubData 嵌套字段")
+    void shouldMapLetPubDataFields() {
+      // Given
+      VenueEntity entity = buildBaseVenue("Nature", "0028-0836");
+      entity.setLetPubData(
+          LetPubVenueData.builder()
+              .jifQuartile("Q1")
+              .casMajorQuartile("1区")
+              .casTopJournal(true)
+              .warningListStatus(null)
+              .researchDirection("医学 · 综合")
+              .build());
+      venueDao.save(entity);
+
+      // When
+      PageResult<VenueSummaryReadModel> page =
+          venueReadAdapter.findVenuePage(PagingParams.of(1, 10), EMPTY_FILTER);
+
+      // Then
+      assertThat(page.items())
+          .singleElement()
+          .satisfies(
+              item -> {
+                assertThat(item.jifQuartile()).isEqualTo("Q1");
+                assertThat(item.casMajorQuartile()).isEqualTo("1区");
+                assertThat(item.casTopJournal()).isTrue();
+                assertThat(item.warningListStatus()).isNull();
+                assertThat(item.researchDirection()).isEqualTo("医学 · 综合");
+              });
+    }
+
+    /// MapStruct 应正确提取 openAccess.isOa 字段。
+    @Test
+    @DisplayName("应正确映射 openAccess.isOa")
+    void shouldMapOpenAccessIsOa() {
+      // Given
+      VenueEntity entity = buildBaseVenue("PLOS ONE", "1932-6203");
+      entity.setOpenAccess(OpenAccessInfo.ofOaStatus(true, true, "gold"));
+      venueDao.save(entity);
+
+      // When
+      PageResult<VenueSummaryReadModel> page =
+          venueReadAdapter.findVenuePage(PagingParams.of(1, 10), EMPTY_FILTER);
+
+      // Then
+      assertThat(page.items())
+          .singleElement()
+          .satisfies(
+              item -> {
+                assertThat(item.isOa()).isTrue();
+              });
+    }
+
+    /// 所有 JSON 列均为 null 时，嵌套字段应安全映射为 null。
+    @Test
+    @DisplayName("JSON 列为 null 时嵌套字段应为 null")
+    void shouldMapNullJsonColumnsToNullFields() {
+      // Given — 不设置任何 JSON 列
+      saveVenue("JOURNAL", "Plain Journal", "9999-9999", "NLM999", "OPENALEX", "US");
+
+      // When
+      PageResult<VenueSummaryReadModel> page =
+          venueReadAdapter.findVenuePage(PagingParams.of(1, 10), EMPTY_FILTER);
+
+      // Then
+      assertThat(page.items())
+          .singleElement()
+          .satisfies(
+              item -> {
+                assertThat(item.hIndex()).isNull();
+                assertThat(item.jifQuartile()).isNull();
+                assertThat(item.casMajorQuartile()).isNull();
+                assertThat(item.casTopJournal()).isNull();
+                assertThat(item.warningListStatus()).isNull();
+                assertThat(item.isOa()).isNull();
+                assertThat(item.researchDirection()).isNull();
+              });
+    }
+  }
+
+  /// 构建基础 Venue 实体（JOURNAL 类型），用于 JSON 列映射测试。
+  private VenueEntity buildBaseVenue(String title, String issnL) {
+    VenueEntity entity = new VenueEntity();
+    entity.setId(SnowflakeIdGenerator.getId());
+    entity.setVenueType("JOURNAL");
+    entity.setTitle(title);
+    entity.setIssnL(issnL);
+    entity.setProvenanceCode("OPENALEX");
+    entity.setCountryCode("US");
+    entity.setLastSyncedAt(Instant.parse("2026-02-13T00:00:00Z"));
+    return entity;
+  }
+
+  /// 保存带 h-index 的测试用 Venue 实体。
+  private VenueEntity saveVenueWithHIndex(String title, String issnL, int hIndex) {
+    VenueEntity entity = buildBaseVenue(title, issnL);
+    entity.setCitationMetrics(CitationMetrics.of(null, null, hIndex, null, null));
+    return venueDao.save(entity);
   }
 
   /// 保存测试用 Venue 实体。

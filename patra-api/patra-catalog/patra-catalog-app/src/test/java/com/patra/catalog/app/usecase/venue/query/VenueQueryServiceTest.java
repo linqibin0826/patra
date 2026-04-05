@@ -12,7 +12,6 @@ import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import com.patra.catalog.domain.port.read.VenueReadPort;
 import com.patra.common.query.PageResult;
 import com.patra.common.query.PagingParams;
-import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
@@ -48,14 +47,12 @@ class VenueQueryServiceTest {
     PageResult<VenueSummaryReadModel> expected =
         PageResult.of(
             List.of(
-                new VenueSummaryReadModel(
-                    1L,
-                    "Nature",
-                    null,
-                    "0028-0836",
-                    "0410462",
-                    "US",
-                    Instant.parse("2026-02-13T00:00:00Z"))),
+                VenueSummaryReadModel.builder()
+                    .id(1L)
+                    .title("Nature")
+                    .countryCode("US")
+                    .hIndex(412)
+                    .build()),
             1,
             20,
             1);

@@ -1,21 +1,22 @@
 package com.patra.catalog.adapter.rest.venue.response;
 
-import java.time.Instant;
+import lombok.Builder;
 
-/// Venue 列表项响应。
+/// 期刊列表项响应。
 ///
-/// @param id Venue ID
-/// @param title 标题
-/// @param titleZh 中文标题（可空）
-/// @param issnL ISSN-L
-/// @param nlmId NLM ID
-/// @param countryCode 国家编码
-/// @param lastSyncedAt 最后同步时间
+/// @author linqibin
+/// @since 0.1.0
+@Builder
 public record VenueItemResponse(
     Long id,
     String title,
     String titleZh,
-    String issnL,
-    String nlmId,
     String countryCode,
-    Instant lastSyncedAt) {}
+    String imageUrl,
+    Integer hIndex,
+    String jifQuartile,
+    String casMajorQuartile,
+    Boolean casTopJournal,
+    String warningListStatus,
+    Boolean isOa,
+    String researchDirection) {}

@@ -7,7 +7,6 @@ import com.patra.catalog.domain.port.read.VenueReadPort;
 import com.patra.catalog.infra.persistence.dao.VenueDao;
 import com.patra.common.query.PageResult;
 import com.patra.common.query.PagingParams;
-import com.patra.starter.jpa.entity.BaseJpaEntity;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -32,8 +31,7 @@ public class VenueReadAdapter implements VenueReadPort {
   /// @return Venue 分页结果
   @Override
   public PageResult<VenueSummaryReadModel> findVenuePage(PagingParams paging, VenueFilter filter) {
-    Pageable pageable =
-        PageRequest.of(paging.page() - 1, paging.pageSize(), BaseJpaEntity.DEFAULT_SORT);
+    Pageable pageable = PageRequest.of(paging.page() - 1, paging.pageSize());
 
     var entityPage =
         venueDao.findJournalPage(
