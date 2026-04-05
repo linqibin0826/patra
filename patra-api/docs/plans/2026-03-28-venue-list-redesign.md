@@ -6,7 +6,7 @@
 
 **Architecture:** 全链路改造 — Domain ReadModel 新增字段 → Infra MapStruct 提取 JSON 嵌套字段 → DAO 原生查询按 h-index 排序 → API Response 更新 → 前端卡片重新设计。数据全部来自 VenueEntity 已有的 JSON 列（citationMetrics、letPubData、openAccess），无需新增数据库列或 Flyway 迁移。
 
-**Tech Stack:** Java 25, Spring Data JPA (native query), MapStruct, MySQL 8 JSON functions, React 19, Ant Design 5, TanStack Query
+**Tech Stack:** Java 25, Spring Data JPA (native query), MapStruct, MySQL 8 JSON functions, Nuxt 4, @nuxt/ui, Tailwind CSS 4, Vue 3
 
 ---
 
@@ -256,34 +256,38 @@ feat(catalog): 改造期刊列表读模型，新增学术评价指标字段
 
 ## Task 7: 前端类型定义更新
 
+**项目：** `../patra-web/`（Nuxt 4 + @nuxt/ui + Tailwind CSS 4 + Vue 3）
+
 **Files:**
-- Modify: `../patra-admin/src/types/venue.ts`
+- Modify: `../patra-web/app/types/venue.ts`
 
 **Step 1: 更新 VenueItem 类型**
 
 ```typescript
 export interface VenueItem {
-  id: string;
-  title: string;
-  titleZh: string | null;
-  countryCode: string | null;
-  imageUrl: string | null;
-  hIndex: number | null;
-  jifQuartile: string | null;        // "Q1" | "Q2" | "Q3" | "Q4"
-  casMajorQuartile: string | null;   // "1区" | "2区" | "3区" | "4区"
-  casTopJournal: boolean | null;
-  warningListStatus: string | null;
-  isOa: boolean | null;
-  researchDirection: string | null;
+  id: number
+  title: string
+  titleZh: string | null
+  countryCode: string | null
+  imageUrl: string | null
+  hIndex: number | null
+  jifQuartile: string | null        // "Q1" | "Q2" | "Q3" | "Q4"
+  casMajorQuartile: string | null   // "1区" | "2区" | "3区" | "4区"
+  casTopJournal: boolean | null
+  warningListStatus: string | null
+  isOa: boolean | null
+  researchDirection: string | null
 }
 ```
+
+同步更新 VenueListParams，移除 issnL 和 nlmId 筛选参数（列表页不再需要）。
 
 ---
 
 ## Task 8: 前端卡片重新设计
 
 **Files:**
-- Modify: `../patra-admin/src/pages/venue/index.tsx`
+- Modify: `../patra-web/app/pages/venues/index.vue`
 
 **设计目标：**
 
@@ -301,34 +305,34 @@ export interface VenueItem {
 
 **Step 1: 改造卡片布局**
 
-核心改动：
-- 左侧：封面图（imageUrl），无图时用 title 首字母生成占位符
+使用 @nuxt/ui 组件（UCard、UBadge 等）+ Tailwind CSS：
+- 左侧：封面图（imageUrl），无图时用 title 首字母生成占位符（bg-primary 圆角色块）
 - 标题行：title + titleZh
 - 副标题：researchDirection（学科方向）
-- 标签行：jifQuartile（彩色 Tag）、casMajorQuartile（Tag）、casTopJournal（"Top" Tag）
-- 指标：h-index 数值
+- 标签行：jifQuartile（UBadge 彩色）、casMajorQuartile（UBadge）、casTopJournal（"Top" UBadge）
+- 指标：h-index 数值显示
 - 底部：isOa（"OA" 标签）、warningListStatus（红色预警标签，有值时显示）
 
-**分区标签颜色：**
-- Q1 / 1区 → green
-- Q2 / 2区 → blue
-- Q3 / 3区 → orange
-- Q4 / 4区 → default (gray)
+**分区标签颜色（UBadge color prop）：**
+- Q1 / 1区 → success (green)
+- Q2 / 2区 → info (blue)
+- Q3 / 3区 → warning (orange)
+- Q4 / 4区 → neutral (gray)
 
 **Step 2: 移除旧的筛选项**
 
-移除 ISSN-L 和 NLM ID 筛选输入框（列表页不再需要）。
-保留：关键词搜索、国家筛选。
+移除 ISSN-L 和 NLM ID 筛选输入框。
+保留：关键词搜索（UInput）、国家筛选。
 
 **Step 3: 本地验证**
 
-Run: `cd ../patra-admin && npm run dev`
+Run: `cd ../patra-web && pnpm dev`
 在浏览器中验证列表页展示效果。
 
 **Step 4: Commit 前端改动**
 
 ```
-feat(admin): 重新设计期刊列表卡片，展示学术评价指标
+feat(web): 重新设计期刊列表卡片，展示学术评价指标
 
 - 卡片展示：封面图、学科方向、JIF/CAS 分区标签、h-index、OA 状态、预警标记
 - 移除列表页中 ISSN-L、NLM ID、同步时间等技术字段
