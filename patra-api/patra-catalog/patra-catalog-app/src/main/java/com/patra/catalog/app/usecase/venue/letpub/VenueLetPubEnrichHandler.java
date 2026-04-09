@@ -47,9 +47,6 @@ public class VenueLetPubEnrichHandler
     } catch (RuntimeException e) {
       throw new ApplicationException(
           CatalogErrorCode.CAT_1302, "LetPub 期刊富化失败: " + e.getMessage(), e);
-    } catch (Exception e) {
-      throw new ApplicationException(
-          CatalogErrorCode.CAT_1302, "LetPub 期刊富化时发生意外错误: " + e.getMessage(), e);
     }
   }
 }
