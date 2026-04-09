@@ -35,10 +35,15 @@ public class VenueScopusEnrichHandler
   /// 启动批处理作业，返回 Job Execution ID 供追踪。
   @Override
   public VenueScopusEnrichResult handle(VenueScopusEnrichCommand command) {
-    log.info("启动 Scopus 期刊指标富化任务");
+    log.info(
+        "启动 Scopus 期刊指标富化任务，targetYear={}, minCitedByCount={}",
+        command.targetYear(),
+        command.minCitedByCount());
 
     try {
-      Long executionId = scopusEnrichmentBatchPort.launchEnrichment();
+      Long executionId =
+          scopusEnrichmentBatchPort.launchEnrichment(
+              command.targetYear(), command.minCitedByCount());
       log.info("Scopus 期刊指标富化任务已启动，executionId：{}", executionId);
       return VenueScopusEnrichResult.of(executionId);
 

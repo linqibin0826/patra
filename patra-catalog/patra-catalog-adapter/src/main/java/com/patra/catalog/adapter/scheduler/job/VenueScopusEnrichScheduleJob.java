@@ -15,8 +15,7 @@ import org.springframework.stereotype.Component;
 ///
 /// **JobHandler 名称**: `venueScopusEnrichJob`
 ///
-/// **无需参数**：处理范围由 Spring Batch Reader 的 JPQL 条件
-/// （`NOT EXISTS (SELECT 1 FROM ScopusRatingEntity ...)`）自动确定，天然支持断点续传。
+/// **任务参数**：{@link VenueEnrichJobParam}（格式：`targetYear[,minCitedByCount]`）
 ///
 /// **运行建议**：
 ///
@@ -34,16 +33,21 @@ public class VenueScopusEnrichScheduleJob {
   private final CommandBus commandBus;
 
   /// 执行 Scopus 期刊指标富化任务。
-  ///
-  /// **JobHandler 名称**: `venueScopusEnrichJob`
   @XxlJob("venueScopusEnrichJob")
   public void executeVenueScopusEnrich() {
     log.info("Scopus 期刊指标富化任务已触发，jobId [{}]", XxlJobHelper.getJobId());
 
-    try {
-      VenueScopusEnrichResult result = commandBus.handle(new VenueScopusEnrichCommand());
+    VenueEnrichJobParam param = VenueEnrichJobParam.fromXxlJobParam();
 
-      String message = String.format("Scopus 期刊指标富化 Job 已启动，executionId=%d", result.executionId());
+    try {
+      VenueScopusEnrichResult result =
+          commandBus.handle(
+              new VenueScopusEnrichCommand(param.targetYear(), param.minCitedByCount()));
+
+      String message =
+          String.format(
+              "Scopus 期刊指标富化 Job 已启动，targetYear=%d, minCitedByCount=%d, executionId=%d",
+              param.targetYear(), param.minCitedByCount(), result.executionId());
       log.info(message);
       XxlJobHelper.handleSuccess(message);
 

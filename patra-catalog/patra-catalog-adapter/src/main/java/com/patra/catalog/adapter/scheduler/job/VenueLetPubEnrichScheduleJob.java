@@ -15,8 +15,7 @@ import org.springframework.stereotype.Component;
 ///
 /// **JobHandler 名称**: `venueLetPubEnrichJob`
 ///
-/// **无需参数**：处理范围由 Spring Batch Reader 的 JPQL 条件
-/// （`letpub_data IS NULL`）自动确定，天然支持断点续传。
+/// **任务参数**：{@link VenueEnrichJobParam}（格式：`targetYear[,minCitedByCount]`）
 ///
 /// **运行建议**：
 ///
@@ -35,16 +34,21 @@ public class VenueLetPubEnrichScheduleJob {
   private final CommandBus commandBus;
 
   /// 执行 LetPub 期刊富化任务。
-  ///
-  /// **JobHandler 名称**: `venueLetPubEnrichJob`
   @XxlJob("venueLetPubEnrichJob")
   public void executeVenueLetPubEnrich() {
     log.info("LetPub 期刊富化任务已触发，jobId [{}]", XxlJobHelper.getJobId());
 
-    try {
-      VenueLetPubEnrichResult result = commandBus.handle(new VenueLetPubEnrichCommand());
+    VenueEnrichJobParam param = VenueEnrichJobParam.fromXxlJobParam();
 
-      String message = String.format("LetPub 期刊富化 Job 已启动，executionId=%d", result.executionId());
+    try {
+      VenueLetPubEnrichResult result =
+          commandBus.handle(
+              new VenueLetPubEnrichCommand(param.targetYear(), param.minCitedByCount()));
+
+      String message =
+          String.format(
+              "LetPub 期刊富化 Job 已启动，targetYear=%d, minCitedByCount=%d, executionId=%d",
+              param.targetYear(), param.minCitedByCount(), result.executionId());
       log.info(message);
       XxlJobHelper.handleSuccess(message);
 

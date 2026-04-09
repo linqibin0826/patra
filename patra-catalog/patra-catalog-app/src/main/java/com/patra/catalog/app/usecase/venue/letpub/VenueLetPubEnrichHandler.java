@@ -35,10 +35,15 @@ public class VenueLetPubEnrichHandler
   /// 启动批处理作业，返回 Job Execution ID 供追踪。
   @Override
   public VenueLetPubEnrichResult handle(VenueLetPubEnrichCommand command) {
-    log.info("启动 LetPub 期刊富化任务");
+    log.info(
+        "启动 LetPub 期刊富化任务，targetYear={}, minCitedByCount={}",
+        command.targetYear(),
+        command.minCitedByCount());
 
     try {
-      Long executionId = letPubEnrichmentBatchPort.launchEnrichment();
+      Long executionId =
+          letPubEnrichmentBatchPort.launchEnrichment(
+              command.targetYear(), command.minCitedByCount());
       log.info("LetPub 期刊富化任务已启动，executionId：{}", executionId);
       return VenueLetPubEnrichResult.of(executionId);
 

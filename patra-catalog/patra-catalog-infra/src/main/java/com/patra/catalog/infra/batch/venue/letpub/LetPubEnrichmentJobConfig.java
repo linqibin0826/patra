@@ -5,6 +5,7 @@ import com.patra.catalog.infra.persistence.dao.CasRatingDao;
 import com.patra.catalog.infra.persistence.dao.JcrRatingDao;
 import com.patra.catalog.infra.persistence.entity.VenueEntity;
 import jakarta.persistence.EntityManagerFactory;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.configuration.annotation.StepScope;
@@ -15,9 +16,9 @@ import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.infrastructure.item.database.JpaPagingItemReader;
 import org.springframework.batch.infrastructure.item.database.builder.JpaPagingItemReaderBuilder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 
 /// LetPub 期刊富化 Spring Batch Job 配置。
@@ -27,7 +28,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 /// ```
 /// letPubEnrichmentJob
 ///   └── letPubEnrichmentStep (chunk-oriented, chunk=1)
-///         ├── reader: JpaPagingItemReader (有 ISSN-L 且未抓取的期刊)
+///         ├── reader: JpaPagingItemReader (缺少目标年份 JCR 评级数据的期刊)
 ///         ├── processor: LetPubVenueItemProcessor (爬取 + LetPubDataMapper 拆解)
 ///         └── writer: LetPubVenueItemWriter (JCR → cat_venue_jcr_rating, CAS →
 // cat_venue_cas_rating)
@@ -37,7 +38,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 ///
 /// - chunk size = 1：每条爬取耗时 8-10 秒，无需分组
 /// - faultTolerant + skipLimit(MAX_VALUE)：单条失败跳过，不中断整体
-/// - Reader 过滤条件 `letpub_fetched_at IS NULL`：断点续传
+/// - Reader 过滤条件 `NOT EXISTS` + `targetYear`：按目标年份筛选，断点续传
 /// - pageSize = 50：减少数据库查询次数
 ///
 /// @author linqibin
@@ -56,7 +57,6 @@ public class LetPubEnrichmentJobConfig {
   private final EntityManagerFactory entityManagerFactory;
   private final JcrRatingDao jcrRatingDao;
   private final CasRatingDao casRatingDao;
-  private final JdbcTemplate jdbcTemplate;
 
   /// 定义 LetPub 富化 Job。
   @Bean
@@ -74,7 +74,7 @@ public class LetPubEnrichmentJobConfig {
     return new StepBuilder("letPubEnrichmentStep", jobRepository)
         .<VenueEntity, LetPubEnrichResult>chunk(CHUNK_SIZE)
         .transactionManager(transactionManager)
-        .reader(letPubVenueItemReader())
+        .reader(letPubVenueItemReader(null, null))
         .processor(letPubVenueItemProcessor())
         .writer(letPubVenueItemWriter())
         .faultTolerant()
@@ -88,10 +88,13 @@ public class LetPubEnrichmentJobConfig {
   /// JPQL 过滤条件：
   /// - `venueType = 'JOURNAL'`：仅期刊类型
   /// - `issnL IS NOT NULL`：必须有 ISSN-L
-  /// - `letpubFetchedAt IS NULL`：未抓取的（断点续传）
+  /// - `NOT EXISTS` + `targetYear`：排除已有目标年份 JCR 评级数据的期刊（断点续传）
+  /// - `minCitedByCount`：按被引次数过滤（0 = 不过滤）
   @Bean
   @StepScope
-  public JpaPagingItemReader<VenueEntity> letPubVenueItemReader() {
+  public JpaPagingItemReader<VenueEntity> letPubVenueItemReader(
+      @Value("#{jobParameters['targetYear']}") Long targetYear,
+      @Value("#{jobParameters['minCitedByCount']}") Long minCitedByCount) {
     return new JpaPagingItemReaderBuilder<VenueEntity>()
         .name("letPubVenueItemReader")
         .entityManagerFactory(entityManagerFactory)
@@ -100,9 +103,17 @@ public class LetPubEnrichmentJobConfig {
             SELECT v FROM VenueEntity v
             WHERE v.venueType = 'JOURNAL'
               AND v.issnL IS NOT NULL
-              AND v.letpubFetchedAt IS NULL
+              AND NOT EXISTS (
+                SELECT 1 FROM JcrRatingEntity j
+                WHERE j.venueId = v.id AND j.year = :targetYear
+              )
+              AND (:minCitedByCount = 0 OR v.citedByCount >= :minCitedByCount)
             ORDER BY v.id
             """)
+        .parameterValues(
+            Map.of(
+                "targetYear", targetYear.shortValue(),
+                "minCitedByCount", minCitedByCount.intValue()))
         .pageSize(PAGE_SIZE)
         .build();
   }
@@ -118,6 +129,6 @@ public class LetPubEnrichmentJobConfig {
   @Bean
   @StepScope
   public LetPubVenueItemWriter letPubVenueItemWriter() {
-    return new LetPubVenueItemWriter(jcrRatingDao, casRatingDao, jdbcTemplate);
+    return new LetPubVenueItemWriter(jcrRatingDao, casRatingDao);
   }
 }
