@@ -1,9 +1,11 @@
-package com.patra.catalog.domain.model.vo.venue;
+package com.patra.catalog.domain.port.enrichment;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -62,6 +64,8 @@ class LetPubVenueDataTest {
               .reviewSpeedUser("平均6.0个月")
               .acceptanceRate("较难")
               .apcInfo("US$11390")
+              .impactFactorTrend(Map.of("2024-2025", 48.5, "2023-2024", 50.5))
+              .fiveYearImpactFactor(55.0)
               .indexedIn(List.of("SCI", "SCIE", "PubMed", "Scopus"))
               .build();
 
@@ -94,6 +98,11 @@ class LetPubVenueDataTest {
       assertThat(data.reviewSpeedUser()).isEqualTo("平均6.0个月");
       assertThat(data.acceptanceRate()).isEqualTo("较难");
       assertThat(data.apcInfo()).isEqualTo("US$11390");
+      assertThat(data.impactFactorTrend())
+          .hasSize(2)
+          .containsEntry("2024-2025", 48.5)
+          .containsEntry("2023-2024", 50.5);
+      assertThat(data.fiveYearImpactFactor()).isEqualTo(55.0);
       assertThat(data.indexedIn()).containsExactly("SCI", "SCIE", "PubMed", "Scopus");
     }
 
@@ -108,6 +117,8 @@ class LetPubVenueDataTest {
       assertThat(data.letPubName()).isNull();
       assertThat(data.startYear()).isNull();
       assertThat(data.casTopJournal()).isNull();
+      assertThat(data.fiveYearImpactFactor()).isNull();
+      assertThat(data.impactFactorTrend()).isEmpty();
       assertThat(data.indexedIn()).isEmpty();
     }
   }
@@ -115,6 +126,40 @@ class LetPubVenueDataTest {
   @Nested
   @DisplayName("indexedIn 防御性拷贝测试")
   class DefensiveCopyTests {
+
+    @Test
+    @DisplayName("impactFactorTrend 为 null 时应转为空 Map")
+    void shouldConvertNullImpactFactorTrendToEmptyMap() {
+      // When
+      var data = LetPubVenueData.builder().impactFactorTrend(null).build();
+
+      // Then
+      assertThat(data.impactFactorTrend()).isNotNull().isEmpty();
+    }
+
+    @Test
+    @DisplayName("impactFactorTrend 应进行防御性拷贝")
+    void shouldDefensivelyCopyImpactFactorTrend() {
+      // Given
+      var mutableMap = new HashMap<>(Map.of("2024-2025", 48.5));
+
+      // When
+      var data = LetPubVenueData.builder().impactFactorTrend(mutableMap).build();
+
+      // Then — 修改原始 Map 不应影响 VO
+      mutableMap.put("2023-2024", 50.5);
+      assertThat(data.impactFactorTrend()).hasSize(1).containsEntry("2024-2025", 48.5);
+    }
+
+    @Test
+    @DisplayName("impactFactorTrend 应为不可变 Map")
+    void shouldReturnUnmodifiableImpactFactorTrend() {
+      // Given
+      var data = LetPubVenueData.builder().impactFactorTrend(Map.of("2024-2025", 48.5)).build();
+
+      // Then
+      assertThat(data.impactFactorTrend()).isUnmodifiable().hasSize(1);
+    }
 
     @Test
     @DisplayName("indexedIn 为 null 时应转为空列表")

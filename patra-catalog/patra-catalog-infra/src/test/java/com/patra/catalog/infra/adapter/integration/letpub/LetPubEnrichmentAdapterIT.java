@@ -2,7 +2,7 @@ package com.patra.catalog.infra.adapter.integration.letpub;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.patra.catalog.domain.model.vo.venue.LetPubVenueData;
+import com.patra.catalog.domain.port.enrichment.LetPubVenueData;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.Optional;

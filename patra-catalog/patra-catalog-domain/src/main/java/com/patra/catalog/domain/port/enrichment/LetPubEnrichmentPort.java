@@ -1,6 +1,5 @@
 package com.patra.catalog.domain.port.enrichment;
 
-import com.patra.catalog.domain.model.vo.venue.LetPubVenueData;
 import java.util.Optional;
 
 /// LetPub 期刊评价数据富化端口。

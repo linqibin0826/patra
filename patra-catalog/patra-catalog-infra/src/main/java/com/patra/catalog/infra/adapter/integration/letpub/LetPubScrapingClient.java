@@ -1,8 +1,10 @@
 package com.patra.catalog.infra.adapter.integration.letpub;
 
-import com.patra.catalog.domain.model.vo.venue.LetPubVenueData;
+import com.patra.catalog.domain.port.enrichment.LetPubVenueData;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -228,6 +230,12 @@ public class LetPubScrapingClient {
     // 收录情况
     parseIndexedIn(rawHtml, builder);
 
+    // 影响因子趋势
+    parseImpactFactorTrend(rawHtml, builder);
+
+    // 五年影响因子
+    builder.fiveYearImpactFactor(parseDouble(findFieldValue(doc, "五年影响因子")));
+
     return builder.build();
   }
 
@@ -413,6 +421,73 @@ public class LetPubScrapingClient {
               .filter(s -> !s.isEmpty())
               .toList();
       builder.indexedIn(databases);
+    }
+  }
+
+  /// 从 ECharts `showecharts_if_trend()` 函数中解析影响因子趋势数据。
+  ///
+  /// 提取 `xAxis.data`（年份数组）和 `series[0].data`（IF 值数组），
+  /// 年份格式从 `"2024-2025年度"` 简化为 `"2024-2025"`。
+  private void parseImpactFactorTrend(String html, LetPubVenueData.LetPubVenueDataBuilder builder) {
+    // 定位 showecharts_if_trend 函数区域
+    int funcPos = html.indexOf("showecharts_if_trend");
+    if (funcPos < 0) {
+      return;
+    }
+    String funcSection = html.substring(funcPos, Math.min(funcPos + 3000, html.length()));
+
+    // 提取年份数组：data : ['2015-2016年度','2016-2017年度',...]
+    Pattern yearPattern = Pattern.compile("xAxis.*?data\\s*:\\s*\\[(.*?)]", Pattern.DOTALL);
+    Matcher yearMatcher = yearPattern.matcher(funcSection);
+    if (!yearMatcher.find()) {
+      return;
+    }
+    List<String> years = extractQuotedStrings(yearMatcher.group(1));
+
+    // 提取 IF 值数组：data : [38.138,40.137,...]
+    Pattern valuePattern =
+        Pattern.compile("series.*?data\\s*:\\s*\\[([\\d.,\\s]+)]", Pattern.DOTALL);
+    Matcher valueMatcher = valuePattern.matcher(funcSection);
+    if (!valueMatcher.find()) {
+      return;
+    }
+    String[] valueTokens = valueMatcher.group(1).split(",");
+
+    if (years.size() != valueTokens.length) {
+      log.warn("IF 趋势数据年份({})与数值({})数量不匹配", years.size(), valueTokens.length);
+      return;
+    }
+
+    Map<String, Double> trend = new LinkedHashMap<>();
+    for (int i = 0; i < years.size(); i++) {
+      String year = years.get(i).replace("年度", "").trim();
+      Double value = parseDouble(valueTokens[i].trim());
+      if (value != null) {
+        trend.put(year, value);
+      }
+    }
+    builder.impactFactorTrend(trend);
+  }
+
+  /// 从逗号分隔的引号字符串中提取值列表。
+  private static List<String> extractQuotedStrings(String raw) {
+    List<String> result = new ArrayList<>();
+    Matcher m = Pattern.compile("'([^']*)'").matcher(raw);
+    while (m.find()) {
+      result.add(m.group(1));
+    }
+    return result;
+  }
+
+  /// 安全解析 Double。
+  private static Double parseDouble(String text) {
+    if (text == null || text.isBlank()) {
+      return null;
+    }
+    try {
+      return Double.parseDouble(text.replaceAll("[^\\d.]", ""));
+    } catch (NumberFormatException e) {
+      return null;
     }
   }
 

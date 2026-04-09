@@ -2,6 +2,51 @@
 <html>
 <head><title>LetPub - Nature 期刊详情</title></head>
 <body>
+
+<!-- 影响因子区域 -->
+<div class="if-section">
+  <div>2024-2025最新影响因子（数据来源于搜索引擎）</div>
+  <span class="if-value">48.5</span>
+  <a onclick="showecharts_if_trend()">点击查看影响因子趋势图</a>
+</div>
+
+<!-- 五年影响因子 -->
+<table class="basic-metrics">
+  <tr>
+    <td>五年影响因子</td>
+    <td>55</td>
+  </tr>
+</table>
+
+<!-- 影响因子趋势图 ECharts 数据 -->
+<script>
+function showecharts_if_trend(){
+  require(['echarts', 'echarts/chart/line'], function (ec) {
+    var myChart_ajax = ec.init(document.getElementById('maincharts_if_trend_ajax'));
+    var option = {
+      title : {
+        text: '期刊近年的IF趋势图',
+        subtext: 'LetPub专业SCI论文编辑'
+      },
+      xAxis : [{
+        type : 'category',
+        boundaryGap : false,
+        data : ['2015-2016年度','2016-2017年度','2017-2018年度','2018-2019年度','2019-2020年度','2020-2021年度','2021-2022年度','2022-2023年度','2023-2024年度','2024-2025年度']
+      }],
+      yAxis : [{
+        name : 'IF值',
+        type : 'value'
+      }],
+      series : [{
+        name:'IF值',
+        type:'line',
+        data : [38.138,40.137,41.577,43.07,42.778,49.962,69.504,64.8,50.5,48.5]
+      }]
+    };
+    myChart_ajax.setOption(option);
+  });
+}
+</script>
 <div class="journal-detail">
   <h1>Nature期刊收藏夹<span class="fav-btn">收藏</span></h1>
 
