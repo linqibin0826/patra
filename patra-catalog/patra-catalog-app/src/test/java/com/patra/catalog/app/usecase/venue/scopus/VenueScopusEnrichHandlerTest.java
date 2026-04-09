@@ -44,8 +44,10 @@ class VenueScopusEnrichHandlerTest {
   @DisplayName("应启动 Scopus 富化 Job 并返回 executionId")
   void shouldLaunchJobAndReturnExecutionId() {
     // Given
-    var command = new VenueScopusEnrichCommand();
-    when(scopusEnrichmentBatchPort.launchEnrichment()).thenReturn(99L);
+    short targetYear = (short) 2025;
+    int minCitedByCount = 500;
+    var command = new VenueScopusEnrichCommand(targetYear, minCitedByCount);
+    when(scopusEnrichmentBatchPort.launchEnrichment(targetYear, minCitedByCount)).thenReturn(99L);
 
     // When
     VenueScopusEnrichResult result = handler.handle(command);
@@ -53,15 +55,18 @@ class VenueScopusEnrichHandlerTest {
     // Then
     assertThat(result).isNotNull();
     assertThat(result.executionId()).isEqualTo(99L);
-    verify(scopusEnrichmentBatchPort).launchEnrichment();
+    verify(scopusEnrichmentBatchPort).launchEnrichment(targetYear, minCitedByCount);
   }
 
   @Test
   @DisplayName("BatchPort 抛出 RuntimeException 时应包装为 ApplicationException")
   void shouldWrapRuntimeExceptionAsApplicationException() {
     // Given
-    var command = new VenueScopusEnrichCommand();
-    when(scopusEnrichmentBatchPort.launchEnrichment()).thenThrow(new RuntimeException("Job 启动失败"));
+    short targetYear = (short) 2025;
+    int minCitedByCount = 0;
+    var command = new VenueScopusEnrichCommand(targetYear, minCitedByCount);
+    when(scopusEnrichmentBatchPort.launchEnrichment(targetYear, minCitedByCount))
+        .thenThrow(new RuntimeException("Job 启动失败"));
 
     // When & Then
     assertThatThrownBy(() -> handler.handle(command))
