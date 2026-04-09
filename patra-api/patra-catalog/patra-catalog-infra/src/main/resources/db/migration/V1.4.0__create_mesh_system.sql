@@ -211,6 +211,7 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_entry_term` (
     -- 业务字段
     -- ========================================
     `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键,雪花算法生成',
+    `record_type` VARCHAR(20) NOT NULL DEFAULT 'DESCRIPTOR' COMMENT '记录类型(DESCRIPTOR=主题词,SCR=补充概念)',
     `owner_ui` VARCHAR(10) NOT NULL COMMENT '所有者UI(Descriptor:D开头,SCR:C开头)',
     `term_ui` VARCHAR(10) NULL DEFAULT NULL COMMENT '术语UI',
     `concept_ui` VARCHAR(10) NULL DEFAULT NULL COMMENT '所属概念UI',
@@ -234,7 +235,8 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_entry_term` (
 
     -- 普通索引
     INDEX `idx_owner_ui` (`owner_ui`) COMMENT '所有者UI索引,支持查询某主题词的所有入口术语',
-    INDEX `idx_concept_ui` (`concept_ui`) COMMENT '概念UI索引,支持按概念查询入口术语'
+    INDEX `idx_concept_ui` (`concept_ui`) COMMENT '概念UI索引,支持按概念查询入口术语',
+    INDEX `idx_record_type_owner` (`record_type`, `owner_ui`) COMMENT '记录类型+所有者UI复合索引,支持按类型查询'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='MeSH 入口术语表:存储主题词同义词和入口术语,支持模糊检索';
 
@@ -256,6 +258,7 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_concept` (
     -- 业务字段
     -- ========================================
     `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键,雪花算法生成',
+    `record_type` VARCHAR(20) NOT NULL DEFAULT 'DESCRIPTOR' COMMENT '记录类型(DESCRIPTOR=主题词,SCR=补充概念)',
     `owner_ui` VARCHAR(10) NOT NULL COMMENT '所有者UI(Descriptor:D开头,SCR:C开头)',
     `concept_ui` VARCHAR(10) NOT NULL COMMENT '概念唯一标识符(格式:M000001-M999999)',
     `concept_name` VARCHAR(255) NOT NULL COMMENT '概念名称',
@@ -277,7 +280,8 @@ CREATE TABLE IF NOT EXISTS `cat_mesh_concept` (
     UNIQUE INDEX `uk_concept_ui` (`concept_ui`) COMMENT '概念 UI 唯一索引,支持精确查询',
 
     -- 普通索引
-    INDEX `idx_owner_ui` (`owner_ui`) COMMENT '所有者UI索引,支持查询某主题词的所有概念'
+    INDEX `idx_owner_ui` (`owner_ui`) COMMENT '所有者UI索引,支持查询某主题词的所有概念',
+    INDEX `idx_record_type_owner` (`record_type`, `owner_ui`) COMMENT '记录类型+所有者UI复合索引,支持按类型查询'
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='MeSH 概念表:存储主题词下的概念,支持概念级别关联和检索';
