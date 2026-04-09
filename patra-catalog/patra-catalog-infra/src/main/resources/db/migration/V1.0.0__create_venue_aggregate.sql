@@ -72,6 +72,8 @@ CREATE TABLE IF NOT EXISTS `cat_venue` (
     `abbreviated_title` VARCHAR(200) NULL DEFAULT NULL COMMENT '缩写标题',
     `primary_language` VARCHAR(10) NULL DEFAULT NULL COMMENT '主要语言代码(BCP 47)',
     `country_code` VARCHAR(2) NULL DEFAULT NULL COMMENT '国家代码(ISO 3166-1 alpha-2)',
+    `image_url` VARCHAR(2048) NULL DEFAULT NULL COMMENT 'Wikimedia Commons 封面图片 URL（来自 Wikidata P18）',
+    `cited_by_count` INT UNSIGNED NULL DEFAULT NULL COMMENT '被引次数(来自 CitationMetrics,用于批量富化过滤)',
 
     -- ========================================
     -- 嵌入式值对象（JSON 字段）
@@ -104,6 +106,7 @@ CREATE TABLE IF NOT EXISTS `cat_venue` (
     INDEX `idx_venue_type` (`venue_type`) COMMENT '载体类型索引',
     INDEX `idx_title` (`title`(100)) COMMENT '标题前缀索引',
     INDEX `idx_provenance` (`provenance_code`) COMMENT '数据来源索引',
+    INDEX `idx_cited_by_count` (`cited_by_count`) COMMENT '被引次数索引,支持范围查询过滤',
 
     CONSTRAINT chk_venue_country_code CHECK (
         `country_code` IS NULL OR REGEXP_LIKE(`country_code`, '^[A-Z]{2}$')
