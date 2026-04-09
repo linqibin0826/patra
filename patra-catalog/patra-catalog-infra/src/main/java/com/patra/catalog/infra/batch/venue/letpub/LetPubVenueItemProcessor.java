@@ -42,9 +42,10 @@ public class LetPubVenueItemProcessor implements ItemProcessor<VenueEntity, LetP
 
     LetPubVenueData data = result.get();
     Long venueId = item.getId();
+    String sourceUrl = buildSourceUrl(data.letPubJournalId());
 
-    List<JcrRatingEntity> jcrRatings = dataMapper.mapToJcrRatings(data, venueId);
-    CasRatingEntity casRating = dataMapper.mapToCasRating(data, venueId);
+    List<JcrRatingEntity> jcrRatings = dataMapper.mapToJcrRatings(data, venueId, sourceUrl);
+    CasRatingEntity casRating = dataMapper.mapToCasRating(data, venueId, sourceUrl);
 
     int totalCount = jcrRatings.size() + (casRating != null ? 1 : 0);
     log.info(
@@ -56,5 +57,15 @@ public class LetPubVenueItemProcessor implements ItemProcessor<VenueEntity, LetP
         casRating != null ? 1 : 0);
 
     return LetPubEnrichResult.of(venueId, jcrRatings, casRating);
+  }
+
+  /// 构建 LetPub 详情页 URL，用于数据溯源。
+  private String buildSourceUrl(String journalId) {
+    if (journalId == null || journalId.isBlank()) {
+      return null;
+    }
+    return "https://www.letpub.com.cn/index.php?journalid="
+        + journalId
+        + "&page=journalapp&view=detail";
   }
 }

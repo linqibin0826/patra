@@ -30,6 +30,8 @@ import org.junit.jupiter.api.Timeout;
 class LetPubDataMapperTest {
 
   private static final Long VENUE_ID = 1001L;
+  private static final String SOURCE_URL =
+      "https://www.letpub.com.cn/index.php?journalid=6054&page=journalapp&view=detail";
 
   private LetPubDataMapper mapper;
 
@@ -87,10 +89,12 @@ class LetPubDataMapperTest {
     void shouldCreateOneRatingPerYear() {
       var data = createFullData();
 
-      List<JcrRatingEntity> ratings = mapper.mapToJcrRatings(data, VENUE_ID);
+      List<JcrRatingEntity> ratings = mapper.mapToJcrRatings(data, VENUE_ID, SOURCE_URL);
 
       assertThat(ratings).hasSize(3);
       assertThat(ratings).allMatch(r -> r.getVenueId().equals(VENUE_ID));
+      assertThat(ratings).allMatch(r -> SOURCE_URL.equals(r.getSourceUrl()));
+      assertThat(ratings).allMatch(r -> r.getFetchedAt() != null);
     }
 
     @Test
@@ -98,7 +102,7 @@ class LetPubDataMapperTest {
     void shouldIncludeFullDetailsForLatestYear() {
       var data = createFullData();
 
-      List<JcrRatingEntity> ratings = mapper.mapToJcrRatings(data, VENUE_ID);
+      List<JcrRatingEntity> ratings = mapper.mapToJcrRatings(data, VENUE_ID, SOURCE_URL);
 
       JcrRatingEntity latest =
           ratings.stream().filter(r -> r.getYear() == 2025).findFirst().orElseThrow();
@@ -119,7 +123,7 @@ class LetPubDataMapperTest {
     void shouldOnlyHaveImpactFactorForHistoricalYears() {
       var data = createFullData();
 
-      List<JcrRatingEntity> ratings = mapper.mapToJcrRatings(data, VENUE_ID);
+      List<JcrRatingEntity> ratings = mapper.mapToJcrRatings(data, VENUE_ID, SOURCE_URL);
 
       JcrRatingEntity historical =
           ratings.stream().filter(r -> r.getYear() == 2024).findFirst().orElseThrow();
@@ -135,7 +139,7 @@ class LetPubDataMapperTest {
     void shouldExtractYearFromKey() {
       var data = LetPubVenueData.builder().impactFactorTrend(Map.of("2021-2022", 69.504)).build();
 
-      List<JcrRatingEntity> ratings = mapper.mapToJcrRatings(data, VENUE_ID);
+      List<JcrRatingEntity> ratings = mapper.mapToJcrRatings(data, VENUE_ID, SOURCE_URL);
 
       assertThat(ratings)
           .singleElement()
@@ -147,7 +151,7 @@ class LetPubDataMapperTest {
     void shouldReturnEmptyWhenNoTrend() {
       var data = LetPubVenueData.builder().build();
 
-      List<JcrRatingEntity> ratings = mapper.mapToJcrRatings(data, VENUE_ID);
+      List<JcrRatingEntity> ratings = mapper.mapToJcrRatings(data, VENUE_ID, SOURCE_URL);
 
       assertThat(ratings).isEmpty();
     }
@@ -162,7 +166,7 @@ class LetPubDataMapperTest {
     void shouldCreateSingleCasRatingWithAllFields() {
       var data = createFullData();
 
-      CasRatingEntity rating = mapper.mapToCasRating(data, VENUE_ID);
+      CasRatingEntity rating = mapper.mapToCasRating(data, VENUE_ID, SOURCE_URL);
 
       assertThat(rating).isNotNull();
       assertThat(rating.getVenueId()).isEqualTo(VENUE_ID);
@@ -174,6 +178,8 @@ class LetPubDataMapperTest {
       assertThat(rating.getMinorQuartile()).isEqualTo("1区");
       assertThat(rating.getIsTopJournal()).isTrue();
       assertThat(rating.getIsReviewJournal()).isFalse();
+      assertThat(rating.getSourceUrl()).isEqualTo(SOURCE_URL);
+      assertThat(rating.getFetchedAt()).isNotNull();
     }
 
     @Test
@@ -181,7 +187,7 @@ class LetPubDataMapperTest {
     void shouldExtractYearFromCasVersion() {
       var data = LetPubVenueData.builder().casVersion("2023年12月升级版").casMajorQuartile("2区").build();
 
-      CasRatingEntity rating = mapper.mapToCasRating(data, VENUE_ID);
+      CasRatingEntity rating = mapper.mapToCasRating(data, VENUE_ID, SOURCE_URL);
 
       assertThat(rating.getYear()).isEqualTo((short) 2023);
       assertThat(rating.getEdition()).isEqualTo("升级版");
@@ -192,7 +198,7 @@ class LetPubDataMapperTest {
     void shouldReturnNullWhenNoCasData() {
       var data = LetPubVenueData.builder().build();
 
-      CasRatingEntity rating = mapper.mapToCasRating(data, VENUE_ID);
+      CasRatingEntity rating = mapper.mapToCasRating(data, VENUE_ID, SOURCE_URL);
 
       assertThat(rating).isNull();
     }
