@@ -70,6 +70,7 @@ public abstract class VenueJpaMapper {
   @Mapping(target = "abbreviatedTitle", source = "publicationProfile.abbreviatedTitle")
   @Mapping(target = "primaryLanguage", source = "publicationProfile.mainLanguage")
   @Mapping(target = "countryCode", source = "publicationProfile.countryCode")
+  @Mapping(target = "citedByCount", source = "citationMetrics.citedByCount")
   // 审计字段由 JPA 管理
   @Mapping(target = "version", ignore = true)
   @Mapping(target = "createdAt", ignore = true)
@@ -239,6 +240,11 @@ public abstract class VenueJpaMapper {
       entity.setAbbreviatedTitle(aggregate.getPublicationProfile().abbreviatedTitle());
       entity.setPrimaryLanguage(aggregate.getPublicationProfile().getMainLanguage());
       entity.setCountryCode(aggregate.getPublicationProfile().countryCode());
+    }
+
+    // 从 citationMetrics 提取快速访问字段
+    if (aggregate.getCitationMetrics() != null) {
+      entity.setCitedByCount(aggregate.getCitationMetrics().citedByCount());
     }
   }
 
