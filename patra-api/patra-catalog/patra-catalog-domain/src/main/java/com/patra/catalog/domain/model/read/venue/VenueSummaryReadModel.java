@@ -6,7 +6,7 @@ import lombok.Builder;
 /// 期刊列表摘要读模型。
 ///
 /// 用于期刊列表页展示，包含学术评价指标摘要。
-/// 数据来源：VenueEntity 的核心字段 + citationMetrics/letPubData/openAccess JSON 列。
+/// 数据来源：VenueEntity 核心字段 + JCR/CAS/Scopus 评级表 + citationMetrics/openAccess JSON 列。
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -21,6 +21,8 @@ public record VenueSummaryReadModel(
     String jifQuartile,
     String casMajorQuartile,
     Boolean casTopJournal,
+    Double citeScore,
+    String citeScoreQuartile,
     String warningListStatus,
     Boolean isOa,
     String researchDirection) {
