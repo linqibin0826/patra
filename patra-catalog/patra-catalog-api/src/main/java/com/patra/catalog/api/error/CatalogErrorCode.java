@@ -77,6 +77,17 @@ public enum CatalogErrorCode implements ErrorCodeLike {
   /// 请检查 Spring Batch 作业状态和网络连接。
   CAT_1302("CAT-1302", 500),
 
+  /// 表示 Scopus 期刊指标富化失败。
+  ///
+  /// 在执行 Scopus 期刊指标富化批处理时发生。可能由于：
+  ///
+  /// - Spring Batch Job 启动失败
+  /// - Scopus API 连接异常或限流
+  /// - 数据库更新失败
+  ///
+  /// 请检查 Spring Batch 作业状态和 Scopus API Key 配置。
+  CAT_1303("CAT-1303", 500),
+
   // ===== ROR 机构导入错误 (14xx) =====
 
   /// 表示 ROR 机构导入失败。
