@@ -4,6 +4,7 @@ import com.patra.catalog.infra.persistence.entity.JcrRatingEntity;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -39,6 +40,13 @@ public interface JcrRatingDao extends JpaRepository<JcrRatingEntity, Long> {
   /// @param venueIds 期刊 ID 列表
   /// @return JCR 评级列表
   List<JcrRatingEntity> findByVenueIdIn(Collection<Long> venueIds);
+
+  /// 查找某期刊已有的评级年份集合（仅 year 列投影，Writer 过滤用）。
+  ///
+  /// @param venueId 期刊 ID
+  /// @return 已有评级年份集合
+  @Query("SELECT r.year FROM JcrRatingEntity r WHERE r.venueId = :venueId")
+  Set<Short> findYearsByVenueId(@Param("venueId") Long venueId);
 
   /// 查找某期刊最新年份的 JCR 评级。
   ///

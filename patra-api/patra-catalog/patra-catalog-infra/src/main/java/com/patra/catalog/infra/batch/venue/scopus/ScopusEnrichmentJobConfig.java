@@ -4,6 +4,7 @@ import com.patra.catalog.domain.port.enrichment.ScopusEnrichmentPort;
 import com.patra.catalog.infra.persistence.dao.ScopusRatingDao;
 import com.patra.catalog.infra.persistence.entity.VenueEntity;
 import jakarta.persistence.EntityManagerFactory;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.configuration.annotation.StepScope;
@@ -14,6 +15,7 @@ import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.infrastructure.item.database.JpaPagingItemReader;
 import org.springframework.batch.infrastructure.item.database.builder.JpaPagingItemReaderBuilder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -25,7 +27,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 /// ```
 /// scopusEnrichmentJob
 ///   └── scopusEnrichmentStep (chunk-oriented, chunk=1)
-///         ├── reader: JpaPagingItemReader (有 ISSN-L 且无 Scopus 数据的期刊)
+///         ├── reader: JpaPagingItemReader (缺少目标年份 Scopus 评级数据的期刊)
 ///         ├── processor: ScopusVenueItemProcessor (API 调用 + ScopusDataMapper 映射)
 ///         └── writer: ScopusVenueItemWriter (→ cat_venue_scopus_rating)
 /// ```
@@ -34,7 +36,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 ///
 /// - chunk size = 1：API 限速（400ms/条），无需分组
 /// - faultTolerant + skipLimit(MAX_VALUE)：单条失败跳过，不中断整体
-/// - Reader 过滤条件 `NOT EXISTS`：断点续传，已有 Scopus 数据的期刊自动跳过
+/// - Reader 过滤条件 `NOT EXISTS` + `targetYear`：按目标年份筛选，断点续传
 /// - pageSize = 50：减少数据库查询次数
 ///
 /// @author linqibin
@@ -69,7 +71,7 @@ public class ScopusEnrichmentJobConfig {
     return new StepBuilder("scopusEnrichmentStep", jobRepository)
         .<VenueEntity, ScopusEnrichResult>chunk(CHUNK_SIZE)
         .transactionManager(transactionManager)
-        .reader(scopusVenueItemReader())
+        .reader(scopusVenueItemReader(null, null))
         .processor(scopusVenueItemProcessor())
         .writer(scopusVenueItemWriter())
         .faultTolerant()
@@ -83,10 +85,13 @@ public class ScopusEnrichmentJobConfig {
   /// JPQL 过滤条件：
   /// - `venueType = 'JOURNAL'`：仅期刊类型
   /// - `issnL IS NOT NULL`：必须有 ISSN-L
-  /// - `NOT EXISTS`：排除已有 Scopus 评级数据的期刊（断点续传）
+  /// - `NOT EXISTS` + `targetYear`：排除已有目标年份 Scopus 评级数据的期刊（断点续传）
+  /// - `minCitedByCount`：按被引次数过滤（0 = 不过滤）
   @Bean
   @StepScope
-  public JpaPagingItemReader<VenueEntity> scopusVenueItemReader() {
+  public JpaPagingItemReader<VenueEntity> scopusVenueItemReader(
+      @Value("#{jobParameters['targetYear']}") Long targetYear,
+      @Value("#{jobParameters['minCitedByCount']}") Long minCitedByCount) {
     return new JpaPagingItemReaderBuilder<VenueEntity>()
         .name("scopusVenueItemReader")
         .entityManagerFactory(entityManagerFactory)
@@ -95,9 +100,17 @@ public class ScopusEnrichmentJobConfig {
             SELECT v FROM VenueEntity v
             WHERE v.venueType = 'JOURNAL'
               AND v.issnL IS NOT NULL
-              AND NOT EXISTS (SELECT 1 FROM ScopusRatingEntity s WHERE s.venueId = v.id)
+              AND NOT EXISTS (
+                SELECT 1 FROM ScopusRatingEntity s
+                WHERE s.venueId = v.id AND s.year = :targetYear
+              )
+              AND (:minCitedByCount = 0 OR v.citedByCount >= :minCitedByCount)
             ORDER BY v.id
             """)
+        .parameterValues(
+            Map.of(
+                "targetYear", targetYear.shortValue(),
+                "minCitedByCount", minCitedByCount.intValue()))
         .pageSize(PAGE_SIZE)
         .build();
   }

@@ -4,9 +4,9 @@ import com.patra.common.cqrs.Command;
 
 /// Scopus 期刊指标富化命令。
 ///
-/// 无参数命令——富化范围由 Reader 的 JPQL 条件自动确定
-/// （`venueType = 'JOURNAL' AND issnL IS NOT NULL AND NOT EXISTS scopus_rating`）。
-///
+/// @param targetYear 目标评级年份（如 2025），Reader 筛选缺少该年份 Scopus 评级数据的期刊
+/// @param minCitedByCount 最低被引次数阈值，0 表示不过滤
 /// @author linqibin
 /// @since 0.1.0
-public record VenueScopusEnrichCommand() implements Command<VenueScopusEnrichResult> {}
+public record VenueScopusEnrichCommand(short targetYear, int minCitedByCount)
+    implements Command<VenueScopusEnrichResult> {}
