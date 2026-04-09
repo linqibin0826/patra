@@ -87,6 +87,8 @@ patra:
       # ROR（Research Organization Registry）机构数据 ZIP 文件 URL - 版本号从文件名自动推断
       # 最新版本下载地址：https://ror.readme.io/docs/data-dump
       download-url: https://zenodo.org/records/17953395/files/v2.0-2025-12-16-ror-data.zip?download=1
+    scopus:
+      api-key: ${SCOPUS_API_KEY:}
 
 # ----------------------------------------------------------------------------
 # XXL-Job Distributed Task Scheduler
