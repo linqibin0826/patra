@@ -4,10 +4,12 @@ import com.xxl.job.core.context.XxlJobHelper;
 
 /// 期刊富化 Job 的 XXL-Job 参数解析结果。
 ///
-/// **参数格式**：`targetYear[,minCitedByCount]`
+/// **参数格式**：`targetYear,minCitedByCount`
 ///
 /// - `targetYear`（必填）：目标评级年份，如 `2025`
-/// - `minCitedByCount`（可选）：最低被引次数阈值，默认 0（不过滤）
+/// - `minCitedByCount`（必填）：最低被引次数阈值，0 表示不过滤
+///
+/// 两个参数均为必填，避免误触发全库期刊处理。
 ///
 /// @param targetYear 目标评级年份
 /// @param minCitedByCount 最低被引次数阈值，0 表示不过滤
@@ -23,12 +25,16 @@ public record VenueEnrichJobParam(short targetYear, int minCitedByCount) {
     String jobParam = XxlJobHelper.getJobParam();
     if (jobParam == null || jobParam.isBlank()) {
       throw new IllegalArgumentException(
-          "缺少必填参数，格式：targetYear[,minCitedByCount]（如 2025 或 2025,1000）");
+          "缺少必填参数，格式：targetYear,minCitedByCount（如 2025,1000 或 2025,0）");
     }
 
     String[] parts = jobParam.trim().split(",");
+    if (parts.length < 2) {
+      throw new IllegalArgumentException(
+          "缺少 minCitedByCount 参数，格式：targetYear,minCitedByCount（如 2025,1000 或 2025,0）");
+    }
     short targetYear = parseTargetYear(parts[0]);
-    int minCitedByCount = parts.length > 1 ? parseMinCitedByCount(parts[1]) : 0;
+    int minCitedByCount = parseMinCitedByCount(parts[1]);
     return new VenueEnrichJobParam(targetYear, minCitedByCount);
   }
 
