@@ -4,11 +4,18 @@ import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueFilter;
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import com.patra.catalog.domain.port.read.VenueReadPort;
+import com.patra.catalog.infra.persistence.dao.CasRatingDao;
+import com.patra.catalog.infra.persistence.dao.JcrRatingDao;
 import com.patra.catalog.infra.persistence.dao.VenueDao;
+import com.patra.catalog.infra.persistence.entity.CasRatingEntity;
+import com.patra.catalog.infra.persistence.entity.JcrRatingEntity;
+import com.patra.catalog.infra.persistence.entity.VenueEntity;
 import com.patra.common.query.PageResult;
 import com.patra.common.query.PagingParams;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -16,15 +23,24 @@ import org.springframework.stereotype.Repository;
 
 /// Venue 读适配器。
 ///
-/// 基于 JPA 从 `cat_venue` 查询 Venue 分页数据，供前端列表查询使用。
+/// 基于 JPA 从 `cat_venue` 查询 Venue 分页数据，并批量 JOIN JCR/CAS 评级数据，
+/// 组装为 {@link VenueSummaryReadModel} 供前端列表查询使用。
+///
+/// @author linqibin
+/// @since 0.1.0
 @Repository
 @RequiredArgsConstructor
 public class VenueReadAdapter implements VenueReadPort {
 
   private final VenueDao venueDao;
+  private final JcrRatingDao jcrRatingDao;
+  private final CasRatingDao casRatingDao;
   private final VenueReadModelMapper venueReadModelMapper;
 
-  /// 查询 Venue 分页列表。
+  /// 查询 Venue 分页列表，包含最新 JCR/CAS 评级数据。
+  ///
+  /// **查询策略**：先分页查 VenueEntity，再按 venueIds 批量加载评级，
+  /// 避免 N+1 查询问题。
   ///
   /// @param paging 已验证的分页参数
   /// @param filter 筛选条件
@@ -36,8 +52,20 @@ public class VenueReadAdapter implements VenueReadPort {
     var entityPage =
         venueDao.findJournalPage(
             filter.keyword(), filter.countryCode(), filter.issnL(), filter.nlmId(), pageable);
+
+    // 批量加载评级数据
+    List<Long> venueIds = entityPage.getContent().stream().map(VenueEntity::getId).toList();
+    Map<Long, JcrRatingEntity> latestJcr = findLatestJcrByVenueIds(venueIds);
+    Map<Long, CasRatingEntity> latestCas = findLatestCasByVenueIds(venueIds);
+
+    // 组装读模型
     List<VenueSummaryReadModel> items =
-        entityPage.getContent().stream().map(venueReadModelMapper::toReadModel).toList();
+        entityPage.getContent().stream()
+            .map(
+                entity ->
+                    venueReadModelMapper.toReadModel(
+                        entity, latestJcr.get(entity.getId()), latestCas.get(entity.getId())))
+            .toList();
 
     return PageResult.of(items, paging.page(), paging.pageSize(), entityPage.getTotalElements());
   }
@@ -49,5 +77,34 @@ public class VenueReadAdapter implements VenueReadPort {
   @Override
   public Optional<VenueDetailReadModel> findVenueDetail(Long id) {
     return venueDao.findById(id).map(venueReadModelMapper::toDetailReadModel);
+  }
+
+  /// 批量查找最新 JCR 评级，按 venueId 分组取最新年份。
+  private Map<Long, JcrRatingEntity> findLatestJcrByVenueIds(List<Long> venueIds) {
+    if (venueIds.isEmpty()) {
+      return Map.of();
+    }
+    return jcrRatingDao.findByVenueIdIn(venueIds).stream()
+        .collect(
+            Collectors.toMap(
+                JcrRatingEntity::getVenueId, r -> r, (a, b) -> a.getYear() >= b.getYear() ? a : b));
+  }
+
+  /// 批量查找最新 CAS 评级，按 venueId 分组取最新年份。
+  private Map<Long, CasRatingEntity> findLatestCasByVenueIds(List<Long> venueIds) {
+    if (venueIds.isEmpty()) {
+      return Map.of();
+    }
+    return casRatingDao.findByVenueIdIn(venueIds).stream()
+        .collect(
+            Collectors.toMap(
+                CasRatingEntity::getVenueId,
+                r -> r,
+                (a, b) -> {
+                  int cmp = Short.compare(a.getYear(), b.getYear());
+                  return cmp != 0
+                      ? (cmp > 0 ? a : b)
+                      : a.getEdition().compareTo(b.getEdition()) <= 0 ? a : b;
+                }));
   }
 }
