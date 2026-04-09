@@ -4,6 +4,7 @@ import com.patra.catalog.domain.port.enrichment.LetPubVenueData;
 import com.patra.catalog.infra.persistence.entity.CasRatingEntity;
 import com.patra.catalog.infra.persistence.entity.JcrRatingEntity;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -42,12 +43,16 @@ public class LetPubDataMapper {
   ///
   /// @param data LetPub 原始数据
   /// @param venueId 目标 venue ID
+  /// @param sourceUrl LetPub 详情页 URL（数据溯源）
   /// @return JCR 评级实体列表（可能为空）
-  public List<JcrRatingEntity> mapToJcrRatings(LetPubVenueData data, Long venueId) {
+  public List<JcrRatingEntity> mapToJcrRatings(
+      LetPubVenueData data, Long venueId, String sourceUrl) {
     Map<String, Double> trend = data.impactFactorTrend();
     if (trend == null || trend.isEmpty()) {
       return List.of();
     }
+
+    Instant now = Instant.now();
 
     // 找出最新年份
     short latestYear =
@@ -68,6 +73,8 @@ public class LetPubDataMapper {
       entity.setVenueId(venueId);
       entity.setYear(year);
       entity.setImpactFactor(BigDecimal.valueOf(entry.getValue()));
+      entity.setSourceUrl(sourceUrl);
+      entity.setFetchedAt(now);
 
       // 最新年份附加详情
       if (year == latestYear) {
@@ -94,8 +101,9 @@ public class LetPubDataMapper {
   ///
   /// @param data LetPub 原始数据
   /// @param venueId 目标 venue ID
+  /// @param sourceUrl LetPub 详情页 URL（数据溯源）
   /// @return CAS 评级实体，无数据时返回 null
-  public CasRatingEntity mapToCasRating(LetPubVenueData data, Long venueId) {
+  public CasRatingEntity mapToCasRating(LetPubVenueData data, Long venueId, String sourceUrl) {
     String casVersion = data.casVersion();
     String quartile = data.casMajorQuartile();
     if (casVersion == null || casVersion.isBlank() || quartile == null || quartile.isBlank()) {
@@ -119,6 +127,8 @@ public class LetPubDataMapper {
     entity.setMinorQuartile(data.casMinorQuartile());
     entity.setIsTopJournal(data.casTopJournal());
     entity.setIsReviewJournal(data.casReviewJournal());
+    entity.setSourceUrl(sourceUrl);
+    entity.setFetchedAt(Instant.now());
 
     return entity;
   }
