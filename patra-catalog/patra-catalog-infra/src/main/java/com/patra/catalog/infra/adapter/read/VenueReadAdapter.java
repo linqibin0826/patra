@@ -6,15 +6,19 @@ import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import com.patra.catalog.domain.port.read.VenueReadPort;
 import com.patra.catalog.infra.persistence.dao.CasRatingDao;
 import com.patra.catalog.infra.persistence.dao.JcrRatingDao;
+import com.patra.catalog.infra.persistence.dao.ScopusRatingDao;
 import com.patra.catalog.infra.persistence.dao.VenueDao;
 import com.patra.catalog.infra.persistence.entity.CasRatingEntity;
 import com.patra.catalog.infra.persistence.entity.JcrRatingEntity;
+import com.patra.catalog.infra.persistence.entity.ScopusRatingEntity;
 import com.patra.catalog.infra.persistence.entity.VenueEntity;
 import com.patra.common.query.PageResult;
 import com.patra.common.query.PagingParams;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -23,7 +27,7 @@ import org.springframework.stereotype.Repository;
 
 /// Venue 读适配器。
 ///
-/// 基于 JPA 从 `cat_venue` 查询 Venue 分页数据，并批量 JOIN JCR/CAS 评级数据，
+/// 基于 JPA 从 `cat_venue` 查询 Venue 分页数据，并批量 JOIN JCR/CAS/Scopus 评级数据，
 /// 组装为 {@link VenueSummaryReadModel} 供前端列表查询使用。
 ///
 /// @author linqibin
@@ -35,11 +39,12 @@ public class VenueReadAdapter implements VenueReadPort {
   private final VenueDao venueDao;
   private final JcrRatingDao jcrRatingDao;
   private final CasRatingDao casRatingDao;
+  private final ScopusRatingDao scopusRatingDao;
   private final VenueReadModelMapper venueReadModelMapper;
 
-  /// 查询 Venue 分页列表，包含最新 JCR/CAS 评级数据。
+  /// 查询 Venue 分页列表，包含最新 JCR/CAS/Scopus 评级数据。
   ///
-  /// **查询策略**：先分页查 VenueEntity，再按 venueIds 批量加载评级，
+  /// **查询策略**：先分页查 VenueEntity，再按 venueIds 批量加载三套评级，
   /// 避免 N+1 查询问题。
   ///
   /// @param paging 已验证的分页参数
@@ -57,6 +62,7 @@ public class VenueReadAdapter implements VenueReadPort {
     List<Long> venueIds = entityPage.getContent().stream().map(VenueEntity::getId).toList();
     Map<Long, JcrRatingEntity> latestJcr = findLatestJcrByVenueIds(venueIds);
     Map<Long, CasRatingEntity> latestCas = findLatestCasByVenueIds(venueIds);
+    Map<Long, ScopusRatingEntity> latestScopus = findLatestScopusByVenueIds(venueIds);
 
     // 组装读模型
     List<VenueSummaryReadModel> items =
@@ -64,7 +70,10 @@ public class VenueReadAdapter implements VenueReadPort {
             .map(
                 entity ->
                     venueReadModelMapper.toReadModel(
-                        entity, latestJcr.get(entity.getId()), latestCas.get(entity.getId())))
+                        entity,
+                        latestJcr.get(entity.getId()),
+                        latestCas.get(entity.getId()),
+                        latestScopus.get(entity.getId())))
             .toList();
 
     return PageResult.of(items, paging.page(), paging.pageSize(), entityPage.getTotalElements());
@@ -79,32 +88,48 @@ public class VenueReadAdapter implements VenueReadPort {
     return venueDao.findById(id).map(venueReadModelMapper::toDetailReadModel);
   }
 
-  /// 批量查找最新 JCR 评级，按 venueId 分组取最新年份。
-  private Map<Long, JcrRatingEntity> findLatestJcrByVenueIds(List<Long> venueIds) {
+  /// 批量查找最新评级的通用方法，按 venueId 分组并用 mergeFunction 保留最新记录。
+  private <T> Map<Long, T> findLatestByVenueIds(
+      List<Long> venueIds,
+      Function<List<Long>, List<T>> finder,
+      Function<T, Long> venueIdExtractor,
+      BinaryOperator<T> mergeFunction) {
     if (venueIds.isEmpty()) {
       return Map.of();
     }
-    return jcrRatingDao.findByVenueIdIn(venueIds).stream()
-        .collect(
-            Collectors.toMap(
-                JcrRatingEntity::getVenueId, r -> r, (a, b) -> a.getYear() >= b.getYear() ? a : b));
+    return finder.apply(venueIds).stream()
+        .collect(Collectors.toMap(venueIdExtractor, r -> r, mergeFunction));
   }
 
-  /// 批量查找最新 CAS 评级，按 venueId 分组取最新年份。
+  /// 批量查找最新 JCR 评级，按 venueId 分组取最新年份。
+  private Map<Long, JcrRatingEntity> findLatestJcrByVenueIds(List<Long> venueIds) {
+    return findLatestByVenueIds(
+        venueIds,
+        jcrRatingDao::findByVenueIdIn,
+        JcrRatingEntity::getVenueId,
+        (a, b) -> a.getYear() >= b.getYear() ? a : b);
+  }
+
+  /// 批量查找最新 Scopus 评级，按 venueId 分组取最新年份。
+  private Map<Long, ScopusRatingEntity> findLatestScopusByVenueIds(List<Long> venueIds) {
+    return findLatestByVenueIds(
+        venueIds,
+        scopusRatingDao::findByVenueIdIn,
+        ScopusRatingEntity::getVenueId,
+        (a, b) -> a.getYear() >= b.getYear() ? a : b);
+  }
+
+  /// 批量查找最新 CAS 评级，按 venueId 分组取最新年份（同年取更高优先级版本）。
   private Map<Long, CasRatingEntity> findLatestCasByVenueIds(List<Long> venueIds) {
-    if (venueIds.isEmpty()) {
-      return Map.of();
-    }
-    return casRatingDao.findByVenueIdIn(venueIds).stream()
-        .collect(
-            Collectors.toMap(
-                CasRatingEntity::getVenueId,
-                r -> r,
-                (a, b) -> {
-                  int cmp = Short.compare(a.getYear(), b.getYear());
-                  return cmp != 0
-                      ? (cmp > 0 ? a : b)
-                      : a.getEdition().compareTo(b.getEdition()) <= 0 ? a : b;
-                }));
+    return findLatestByVenueIds(
+        venueIds,
+        casRatingDao::findByVenueIdIn,
+        CasRatingEntity::getVenueId,
+        (a, b) -> {
+          int cmp = Short.compare(a.getYear(), b.getYear());
+          return cmp != 0
+              ? (cmp > 0 ? a : b)
+              : a.getEdition().compareTo(b.getEdition()) <= 0 ? a : b;
+        });
   }
 }
