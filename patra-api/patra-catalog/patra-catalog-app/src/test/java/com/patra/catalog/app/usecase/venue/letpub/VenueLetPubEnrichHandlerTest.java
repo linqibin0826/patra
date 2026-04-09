@@ -44,8 +44,10 @@ class VenueLetPubEnrichHandlerTest {
   @DisplayName("应启动 LetPub 富化 Job 并返回 executionId")
   void shouldLaunchJobAndReturnExecutionId() {
     // Given
-    var command = new VenueLetPubEnrichCommand();
-    when(letPubEnrichmentBatchPort.launchEnrichment()).thenReturn(42L);
+    short targetYear = (short) 2025;
+    int minCitedByCount = 1000;
+    var command = new VenueLetPubEnrichCommand(targetYear, minCitedByCount);
+    when(letPubEnrichmentBatchPort.launchEnrichment(targetYear, minCitedByCount)).thenReturn(42L);
 
     // When
     VenueLetPubEnrichResult result = handler.handle(command);
@@ -53,15 +55,18 @@ class VenueLetPubEnrichHandlerTest {
     // Then
     assertThat(result).isNotNull();
     assertThat(result.executionId()).isEqualTo(42L);
-    verify(letPubEnrichmentBatchPort).launchEnrichment();
+    verify(letPubEnrichmentBatchPort).launchEnrichment(targetYear, minCitedByCount);
   }
 
   @Test
   @DisplayName("BatchPort 抛出 RuntimeException 时应包装为 ApplicationException")
   void shouldWrapRuntimeExceptionAsApplicationException() {
     // Given
-    var command = new VenueLetPubEnrichCommand();
-    when(letPubEnrichmentBatchPort.launchEnrichment()).thenThrow(new RuntimeException("Job 启动失败"));
+    short targetYear = (short) 2025;
+    int minCitedByCount = 0;
+    var command = new VenueLetPubEnrichCommand(targetYear, minCitedByCount);
+    when(letPubEnrichmentBatchPort.launchEnrichment(targetYear, minCitedByCount))
+        .thenThrow(new RuntimeException("Job 启动失败"));
 
     // When & Then
     assertThatThrownBy(() -> handler.handle(command))
