@@ -39,6 +39,7 @@ import org.hibernate.type.SqlTypes;
 /// | abbreviated_title | PublicationProfile | 快照 |
 /// | primary_language | PublicationProfile | 快照 |
 /// | country_code | PublicationProfile | 快照 |
+/// | cited_by_count | CitationMetrics | 快照 |
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -53,7 +54,8 @@ import org.hibernate.type.SqlTypes;
       @Index(name = "idx_provenance", columnList = "provenance_code"),
       @Index(name = "idx_issn_l", columnList = "issn_l"),
       @Index(name = "idx_nlm_id", columnList = "nlm_id"),
-      @Index(name = "idx_openalex_id", columnList = "openalex_id")
+      @Index(name = "idx_openalex_id", columnList = "openalex_id"),
+      @Index(name = "idx_cited_by_count", columnList = "cited_by_count")
     })
 public class VenueEntity extends SoftDeletableJpaEntity {
 
@@ -113,6 +115,10 @@ public class VenueEntity extends SoftDeletableJpaEntity {
   @Column(name = "country_code", length = 2)
   private String countryCode;
 
+  /// 被引用总次数（来自 OpenAlex CitationMetrics，快速访问字段）。
+  @Column(name = "cited_by_count")
+  private Integer citedByCount;
+
   /// 最后同步时间（UTC）
   @Column(name = "last_synced_at")
   private Instant lastSyncedAt;
@@ -140,12 +146,4 @@ public class VenueEntity extends SoftDeletableJpaEntity {
   @JdbcTypeCode(SqlTypes.JSON)
   @Column(name = "affiliated_societies", columnDefinition = "JSON")
   private List<Society> affiliatedSocieties;
-
-  // ========================================
-  // 外部数据源抓取时间戳
-  // ========================================
-
-  /// LetPub 数据抓取时间（用于批处理断点续传，NULL = 未抓取）。
-  @Column(name = "letpub_fetched_at")
-  private Instant letpubFetchedAt;
 }
