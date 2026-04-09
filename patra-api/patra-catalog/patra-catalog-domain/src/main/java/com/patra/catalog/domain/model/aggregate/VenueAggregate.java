@@ -5,7 +5,6 @@ import cn.hutool.core.util.StrUtil;
 import com.patra.catalog.domain.model.enums.VenueIdentifierType;
 import com.patra.catalog.domain.model.enums.VenueType;
 import com.patra.catalog.domain.model.vo.venue.CitationMetrics;
-import com.patra.catalog.domain.model.vo.venue.LetPubVenueData;
 import com.patra.catalog.domain.model.vo.venue.OpenAccessInfo;
 import com.patra.catalog.domain.model.vo.venue.ProvenanceInfo;
 import com.patra.catalog.domain.model.vo.venue.PublicationProfile;
@@ -98,9 +97,6 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
 
   /// 关联学会列表
   private List<Society> affiliatedSocieties;
-
-  /// LetPub 期刊评价数据（JCR/CAS 分区、审稿速度、APC 等）
-  private LetPubVenueData letPubData;
 
   /// 私有构造函数（通过工厂方法创建）。
   ///
@@ -226,18 +222,6 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
     }
   }
 
-  /// 富化 LetPub 期刊评价数据。
-  ///
-  /// 用于 LetPub 爬虫作业为 Venue 补充 JCR/CAS 分区、审稿速度等数据。
-  /// 传入 null 时不做任何操作（表示未查询到数据，不应清除已有值）。
-  ///
-  /// @param letPubData LetPub 期刊评价数据（null 表示无数据，不清除已有值）
-  public void enrichLetPubData(LetPubVenueData letPubData) {
-    if (letPubData != null) {
-      this.letPubData = letPubData;
-    }
-  }
-
   // ========== 嵌入式值对象设置方法 ==========
 
   /// 设置出版概况。
@@ -356,15 +340,6 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
   public VenueAggregate withAffiliatedSocieties(List<Society> affiliatedSocieties) {
     this.affiliatedSocieties =
         affiliatedSocieties != null ? new ArrayList<>(affiliatedSocieties) : new ArrayList<>();
-    return this;
-  }
-
-  /// 设置 LetPub 期刊评价数据（restore 场景）。
-  ///
-  /// @param letPubData LetPub 期刊评价数据
-  /// @return 当前对象
-  public VenueAggregate withLetPubData(LetPubVenueData letPubData) {
-    this.letPubData = letPubData;
     return this;
   }
 

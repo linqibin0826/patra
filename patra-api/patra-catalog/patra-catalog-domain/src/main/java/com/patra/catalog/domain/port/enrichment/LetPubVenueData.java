@@ -1,12 +1,16 @@
-package com.patra.catalog.domain.model.vo.venue;
+package com.patra.catalog.domain.port.enrichment;
 
 import java.util.List;
+import java.util.Map;
 import lombok.Builder;
 
-/// LetPub 期刊评价数据值对象。
+/// LetPub 爬取原始数据 DTO。
 ///
-/// 封装从 [LetPub](https://www.letpub.com.cn) 爬取的期刊评价指标，
-/// 包括 JCR/CAS 分区、审稿速度、APC 费用等国内科研人员关注的核心数据。
+/// 端口级中间数据结构，封装从 [LetPub](https://www.letpub.com.cn) 爬取的原始字段。
+/// 由 {@link LetPubEnrichmentPort} 返回，由下游 Mapper 拆解为领域原生概念
+/// （`cat_venue_jcr_rating` + `cat_venue_cas_rating` 评级行）。
+///
+/// **注意**：这不是领域值对象，而是数据源适配层的中间载体。
 ///
 /// **数据分组**：
 ///
@@ -48,6 +52,8 @@ import lombok.Builder;
 /// @param reviewSpeedUser 用户反馈审稿周期
 /// @param acceptanceRate 录用比例/难易度
 /// @param apcInfo APC 费用信息
+/// @param impactFactorTrend 近10年影响因子趋势（key="2024-2025"，value=IF值，不可变）
+/// @param fiveYearImpactFactor 五年影响因子（可为 null）
 /// @param indexedIn 数据库收录列表（不可变）
 /// @author linqibin
 /// @since 0.1.0
@@ -85,11 +91,15 @@ public record LetPubVenueData(
     String reviewSpeedUser,
     String acceptanceRate,
     String apcInfo,
+    // 影响因子
+    Map<String, Double> impactFactorTrend,
+    Double fiveYearImpactFactor,
     // 收录
     List<String> indexedIn) {
 
-  /// 紧凑构造器：对 `indexedIn` 集合进行防御性拷贝。
+  /// 紧凑构造器：对 `impactFactorTrend` 和 `indexedIn` 进行防御性拷贝。
   public LetPubVenueData {
+    impactFactorTrend = impactFactorTrend != null ? Map.copyOf(impactFactorTrend) : Map.of();
     indexedIn = indexedIn != null ? List.copyOf(indexedIn) : List.of();
   }
 }

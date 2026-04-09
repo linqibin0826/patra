@@ -3,7 +3,7 @@ package com.patra.catalog.infra.adapter.integration.letpub;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
-import com.patra.catalog.domain.model.vo.venue.LetPubVenueData;
+import com.patra.catalog.domain.port.enrichment.LetPubVenueData;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -165,6 +165,29 @@ class LetPubScrapingClientTest {
       assertThat(data.reviewSpeedUser()).contains("6.0个月");
       assertThat(data.acceptanceRate()).contains("7.69%");
       assertThat(data.apcInfo()).contains("US$11390");
+    }
+
+    @Test
+    @DisplayName("应该提取影响因子趋势数据（近10年）")
+    void shouldExtractImpactFactorTrend() {
+      String html = loadHtml("detail-page.html");
+      LetPubVenueData data = client.parseDetailPage(html, "10000");
+
+      assertThat(data.impactFactorTrend())
+          .isNotNull()
+          .hasSize(10)
+          .containsEntry("2024-2025", 48.5)
+          .containsEntry("2015-2016", 38.138)
+          .containsEntry("2021-2022", 69.504);
+    }
+
+    @Test
+    @DisplayName("应该提取五年影响因子")
+    void shouldExtractFiveYearImpactFactor() {
+      String html = loadHtml("detail-page.html");
+      LetPubVenueData data = client.parseDetailPage(html, "10000");
+
+      assertThat(data.fiveYearImpactFactor()).isEqualTo(55.0);
     }
 
     @Test

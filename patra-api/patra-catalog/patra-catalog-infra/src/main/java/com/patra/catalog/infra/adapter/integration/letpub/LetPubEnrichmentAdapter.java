@@ -1,7 +1,7 @@
 package com.patra.catalog.infra.adapter.integration.letpub;
 
-import com.patra.catalog.domain.model.vo.venue.LetPubVenueData;
 import com.patra.catalog.domain.port.enrichment.LetPubEnrichmentPort;
+import com.patra.catalog.domain.port.enrichment.LetPubVenueData;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
