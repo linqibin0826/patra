@@ -2,6 +2,8 @@ package com.patra.catalog.infra.adapter.read;
 
 import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
+import com.patra.catalog.infra.persistence.entity.CasRatingEntity;
+import com.patra.catalog.infra.persistence.entity.JcrRatingEntity;
 import com.patra.catalog.infra.persistence.entity.VenueEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -10,24 +12,32 @@ import org.mapstruct.ReportingPolicy;
 /// Venue 读模型 MapStruct 转换器。
 ///
 /// 将 JPA Entity 转换为 CQRS 读端的 ReadModel。
+/// 列表摘要支持多源映射：VenueEntity + JcrRatingEntity + CasRatingEntity。
 ///
 /// @author linqibin
 /// @since 0.1.0
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
 public interface VenueReadModelMapper {
 
-  /// 将 VenueEntity 转换为列表摘要读模型。
+  /// 将 VenueEntity + JCR/CAS 评级转换为列表摘要读模型。
   ///
   /// @param entity Venue JPA 实体
+  /// @param jcr 最新 JCR 评级（可为 null）
+  /// @param cas 最新 CAS 评级（可为 null）
   /// @return Venue 摘要读模型
-  @Mapping(source = "citationMetrics.hIndex", target = "hIndex")
-  @Mapping(source = "letPubData.jifQuartile", target = "jifQuartile")
-  @Mapping(source = "letPubData.casMajorQuartile", target = "casMajorQuartile")
-  @Mapping(source = "letPubData.casTopJournal", target = "casTopJournal")
-  @Mapping(source = "letPubData.warningListStatus", target = "warningListStatus")
-  @Mapping(source = "letPubData.researchDirection", target = "researchDirection")
-  @Mapping(source = "openAccess.isOa", target = "isOa")
-  VenueSummaryReadModel toReadModel(VenueEntity entity);
+  @Mapping(source = "entity.id", target = "id")
+  @Mapping(source = "entity.title", target = "title")
+  @Mapping(source = "entity.titleZh", target = "titleZh")
+  @Mapping(source = "entity.countryCode", target = "countryCode")
+  @Mapping(source = "entity.imageUrl", target = "imageUrl")
+  @Mapping(source = "entity.citationMetrics.hIndex", target = "hIndex")
+  @Mapping(source = "entity.openAccess.isOa", target = "isOa")
+  @Mapping(source = "jcr.jifQuartile", target = "jifQuartile")
+  @Mapping(source = "jcr.researchDirection", target = "researchDirection")
+  @Mapping(source = "cas.majorQuartile", target = "casMajorQuartile")
+  @Mapping(source = "cas.isTopJournal", target = "casTopJournal")
+  @Mapping(target = "warningListStatus", ignore = true)
+  VenueSummaryReadModel toReadModel(VenueEntity entity, JcrRatingEntity jcr, CasRatingEntity cas);
 
   /// 将 VenueEntity 转换为详情读模型。
   ///

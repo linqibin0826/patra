@@ -5,10 +5,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.patra.catalog.domain.model.vo.venue.LetPubVenueData;
 import com.patra.catalog.domain.port.enrichment.LetPubEnrichmentPort;
+import com.patra.catalog.domain.port.enrichment.LetPubVenueData;
 import com.patra.catalog.infra.persistence.entity.VenueEntity;
-import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -19,8 +19,8 @@ import org.junit.jupiter.api.Timeout;
 ///
 /// **测试策略**：
 ///
-/// - Mock `LetPubEnrichmentPort`，验证正常/未找到/异常场景
-/// - Processor 返回 null 表示跳过（Spring Batch 约定）
+/// - Mock `LetPubEnrichmentPort`，验证正常/未找到/ISSN空 场景
+/// - 验证拆解结果包含 JCR ratings 和 CAS rating
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -34,7 +34,7 @@ class LetPubVenueItemProcessorTest {
   @BeforeEach
   void setUp() {
     enrichmentPort = mock(LetPubEnrichmentPort.class);
-    processor = new LetPubVenueItemProcessor(enrichmentPort);
+    processor = new LetPubVenueItemProcessor(enrichmentPort, new LetPubDataMapper());
   }
 
   /// 创建测试用 VenueEntity。
@@ -49,53 +49,55 @@ class LetPubVenueItemProcessorTest {
   }
 
   @Test
-  @DisplayName("LetPub 查到数据时应返回 LetPubEnrichResult")
-  void shouldReturnResultWhenDataFound() throws Exception {
-    // Given
+  @DisplayName("LetPub 查到数据时应返回分开的 JCR 和 CAS 结果")
+  void shouldReturnSeparateJcrAndCasResults() throws Exception {
     VenueEntity entity = createVenueEntity(100L, "0028-0836");
     LetPubVenueData letPubData =
         LetPubVenueData.builder()
             .letPubJournalId("10000")
             .letPubName("Nature")
             .jifQuartile("Q1")
-            .indexedIn(List.of("SCI"))
+            .casMajorQuartile("1区")
+            .casVersion("2025年3月升级版")
+            .impactFactorTrend(Map.of("2024-2025", 48.5))
             .build();
     when(enrichmentPort.findByIssn("0028-0836")).thenReturn(Optional.of(letPubData));
 
-    // When
     LetPubEnrichResult result = processor.process(entity);
 
-    // Then
     assertThat(result).isNotNull();
     assertThat(result.venueId()).isEqualTo(100L);
-    assertThat(result.data()).isEqualTo(letPubData);
+
+    // JCR: 1 条（一年的 IF 趋势）
+    assertThat(result.jcrRatings()).hasSize(1);
+    assertThat(result.jcrRatings().getFirst().getJifQuartile()).isEqualTo("Q1");
+
+    // CAS: 1 条
+    assertThat(result.casRating()).isNotNull();
+    assertThat(result.casRating().getMajorQuartile()).isEqualTo("1区");
+    assertThat(result.casRating().getEdition()).isEqualTo("升级版");
+
     verify(enrichmentPort).findByIssn("0028-0836");
   }
 
   @Test
   @DisplayName("LetPub 未找到数据时应返回 null（跳过）")
   void shouldReturnNullWhenNotFound() throws Exception {
-    // Given
     VenueEntity entity = createVenueEntity(200L, "1234-5678");
     when(enrichmentPort.findByIssn("1234-5678")).thenReturn(Optional.empty());
 
-    // When
     LetPubEnrichResult result = processor.process(entity);
 
-    // Then
     assertThat(result).isNull();
   }
 
   @Test
   @DisplayName("ISSN-L 为空时应返回 null（跳过）")
   void shouldReturnNullWhenIssnLBlank() throws Exception {
-    // Given
     VenueEntity entity = createVenueEntity(300L, null);
 
-    // When
     LetPubEnrichResult result = processor.process(entity);
 
-    // Then
     assertThat(result).isNull();
   }
 }

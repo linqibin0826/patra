@@ -167,13 +167,6 @@ public enum VenueIdentifierType {
     return this == JCR;
   }
 
-  /// 判断是否为评价体系相关 ID（JCR）。
-  ///
-  /// @return true 如果为评价体系相关 ID
-  public boolean isRatingSystemId() {
-    return this == JCR;
-  }
-
   /// 判断是否为 CODEN。
   ///
   /// @return true 如果为 CODEN 类型

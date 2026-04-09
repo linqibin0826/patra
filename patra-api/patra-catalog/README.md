@@ -197,7 +197,6 @@ patra:
   - `MeshQualifierAggregate`：MeSH 限定词聚合根
   - `MeshScrAggregate`：MeSH 补充概念记录聚合根
   - `VenueAggregate`：载体（期刊/仓储/会议）聚合根
-  - `VenueRatingAggregate`：载体评级聚合根（独立聚合，支持 JCR/CAS/Scopus）
   - `AuthorAggregate`：作者聚合根（含名字变体、ORCID 子实体）
   - `OrganizationAggregate`：机构聚合根（基于 ROR Schema v2.0）
   - `PublicationAggregate`：文献聚合根
@@ -246,7 +245,6 @@ patra:
   - `OrganizationId`：机构聚合根 ID
   - `AuthorId`：作者聚合根 ID
   - `PublicationId`：出版物聚合根 ID
-  - `VenueRatingId`：载体评级聚合根 ID
 
 - **值对象（author 子包）**：作者领域模型（适配 PubMed Computed Authors）
   - `AuthorNameVariant`：作者名字变体（姓/名/缩写/原始字符串）
@@ -267,7 +265,6 @@ patra:
   - `ProvenanceInfo`：数据来源信息
   - `PublicationHistory`：出版历史（创刊/停刊年份）
   - `IndexingInfo`：MEDLINE 索引收录信息（venue 包）
-  - `LatestRating`：最新评级快照（冗余，高频查询优化）
   - `OaStatus`：开放获取状态
   - `VenueLanguages`：期刊语言信息（主要语言 + 摘要语言列表，来源 Serfile）
 
@@ -313,7 +310,6 @@ patra:
   - `VenueType`：载体类型（JOURNAL、REPOSITORY、CONFERENCE、EBOOK_PLATFORM、BOOK_SERIES、METADATA、IGSN_CATALOG、RAID_REGISTRY、OTHER）
   - `VenueIdentifierType`：标识符类型（ISSN、OPENALEX、NLM、MAG、FATCAT、WIKIDATA、DOAJ、CROSSREF_MEMBER、JCR、CODEN）
   - `DataSourceCode`：数据源代码（OPENALEX、PUBMED、DOAJ、CROSSREF、JCR）
-  - `RatingSystem`：评价体系（JCR、CAS、SCOPUS）
   - `VenueRelationType`：载体关联类型（PRECEDING、PRECEDING_IN_PART、SUCCEEDING、SUCCEEDING_IN_PART、ABSORBED、ABSORBED_BY、ABSORBED_IN_PART、ABSORBED_IN_PART_BY、MERGED_TO、MERGER_OF、SPLIT_FROM、SPLIT_TO、SUPERSEDES、SUPERSEDED_BY、SUPERSEDES_IN_PART、SUPERSEDED_IN_PART_BY、ANALYTIC、RELATED、REVERSION、SERIES、SERIES_AUTHORITY、TRANSLATED、OTHER、UNDETERMINED）
   - `CitationSubset`：引用子集（IM、AIM、N、D、H、K、T、E、S、X、B、C、F、Q、J、OM、P、QIS、R）
   - `IndexingTreatment`：索引处理方式（FULL、SELECTIVE、UNKNOWN、REFERENCED_IN、REFERENCED_IN_NO_DETAILS）
@@ -335,7 +331,6 @@ patra:
 - `MeshQualifierRepositoryAdapter`：限定词仓储适配器
 - `MeshScrRepositoryAdapter`：补充概念记录仓储适配器
 - `VenueRepositoryAdapter`：载体聚合根仓储适配器（含 identifiers 和补充数据）
-- `VenueRatingRepositoryAdapter`：载体评级聚合根仓储适配器（独立聚合）
 - `AuthorRepositoryAdapter`：作者聚合根仓储适配器（含名字变体、ORCID 子实体级联保存）
 - `OrganizationRepositoryAdapter`：机构聚合根仓储适配器（支持批量插入/更新，子表变更追踪）
 - `PublicationRepositoryAdapter`：文献聚合根仓储适配器（支持批量插入/更新，含 17 种关联数据写入）
@@ -404,7 +399,8 @@ patra:
   - `cat_venue_identifier`：载体标识符表（ISSN/OpenAlex ID/NLM ID/DOAJ/JCR 等）
   - `cat_venue_publication_stats`：载体年度发文统计表（发表量/被引量/OA 发文量）
   - `cat_venue_source_data`：载体数据源表（各数据源原始 JSON 和提取字段）
-  - `cat_venue_rating`：载体评级表（JCR/中科院分区/Scopus 等多评价体系年度评级）
+  - `cat_venue_jcr_rating`：JCR 期刊评级表（Impact Factor 年度趋势 + 最新年分区详情）
+  - `cat_venue_cas_rating`：CAS 中科院分区表（支持多版本：升级版/新锐版/基础版）
   - `cat_venue_mesh`：载体 MeSH 主题表（MeSH 主题词分类）
   - `cat_venue_relation`：载体关联表（期刊演变关系：前刊/后刊/合并/分拆）
   - `cat_venue_indexing_history`：载体索引历史表（MEDLINE/PMC 索引收录变迁）

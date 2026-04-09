@@ -14,7 +14,7 @@ import java.math.RoundingMode;
 /// - 使用 Record 实现不可变性
 /// - 通过 `VenueRepository` 统一管理
 /// - 每年一条记录，支持时序分析
-/// - 专注于发文量和引用量统计（评级数据存储在 VenueRating 中）
+/// - 专注于发文量和引用量统计（评级数据存储在 JCR/CAS 独立评级表中）
 ///
 /// **业务规则**：
 ///

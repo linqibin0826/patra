@@ -1,8 +1,11 @@
 package com.patra.catalog.infra.batch.venue.letpub;
 
-import com.patra.catalog.domain.model.vo.venue.LetPubVenueData;
 import com.patra.catalog.domain.port.enrichment.LetPubEnrichmentPort;
+import com.patra.catalog.domain.port.enrichment.LetPubVenueData;
+import com.patra.catalog.infra.persistence.entity.CasRatingEntity;
+import com.patra.catalog.infra.persistence.entity.JcrRatingEntity;
 import com.patra.catalog.infra.persistence.entity.VenueEntity;
+import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,8 +13,8 @@ import org.springframework.batch.infrastructure.item.ItemProcessor;
 
 /// LetPub 期刊富化 Processor。
 ///
-/// 从 {@link LetPubEnrichmentPort} 按 ISSN-L 查询 LetPub 期刊评价数据。
-/// 返回 null 表示跳过该条目（Spring Batch 约定）。
+/// 从 {@link LetPubEnrichmentPort} 按 ISSN-L 查询 LetPub 数据，
+/// 然后通过 {@link LetPubDataMapper} 拆解为 JCR + CAS 评级实体。
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -20,12 +23,9 @@ import org.springframework.batch.infrastructure.item.ItemProcessor;
 public class LetPubVenueItemProcessor implements ItemProcessor<VenueEntity, LetPubEnrichResult> {
 
   private final LetPubEnrichmentPort enrichmentPort;
+  private final LetPubDataMapper dataMapper;
 
-  /// 处理单个 VenueEntity，通过 ISSN-L 查询 LetPub 数据。
-  ///
-  /// - ISSN-L 为空时直接跳过
-  /// - LetPub 未找到数据时返回 null（跳过）
-  /// - 查到数据时封装为 {@link LetPubEnrichResult}
+  /// 处理单个 VenueEntity，通过 ISSN-L 查询 LetPub 数据并拆解为评级行。
   @Override
   public LetPubEnrichResult process(VenueEntity item) throws Exception {
     String issnL = item.getIssnL();
@@ -40,7 +40,21 @@ public class LetPubVenueItemProcessor implements ItemProcessor<VenueEntity, LetP
       return null;
     }
 
-    log.info("Venue [id={}, issn={}] LetPub 富化成功", item.getId(), issnL);
-    return LetPubEnrichResult.of(item.getId(), result.get());
+    LetPubVenueData data = result.get();
+    Long venueId = item.getId();
+
+    List<JcrRatingEntity> jcrRatings = dataMapper.mapToJcrRatings(data, venueId);
+    CasRatingEntity casRating = dataMapper.mapToCasRating(data, venueId);
+
+    int totalCount = jcrRatings.size() + (casRating != null ? 1 : 0);
+    log.info(
+        "Venue [id={}, issn={}] LetPub 富化成功，生成 {} 条评级（JCR:{}, CAS:{}）",
+        venueId,
+        issnL,
+        totalCount,
+        jcrRatings.size(),
+        casRating != null ? 1 : 0);
+
+    return LetPubEnrichResult.of(venueId, jcrRatings, casRating);
   }
 }

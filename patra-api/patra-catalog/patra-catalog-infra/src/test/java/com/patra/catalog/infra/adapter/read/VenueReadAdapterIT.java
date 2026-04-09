@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.patra.catalog.domain.model.read.venue.VenueFilter;
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import com.patra.catalog.domain.model.vo.venue.CitationMetrics;
-import com.patra.catalog.domain.model.vo.venue.LetPubVenueData;
 import com.patra.catalog.domain.model.vo.venue.OpenAccessInfo;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
 import com.patra.catalog.infra.persistence.dao.VenueDao;
@@ -307,39 +306,6 @@ class VenueReadAdapterIT {
           .satisfies(
               item -> {
                 assertThat(item.hIndex()).isEqualTo(412);
-              });
-    }
-
-    /// MapStruct 应正确提取 letPubData 中的分区和预警字段。
-    @Test
-    @DisplayName("应正确映射 letPubData 嵌套字段")
-    void shouldMapLetPubDataFields() {
-      // Given
-      VenueEntity entity = buildBaseVenue("Nature", "0028-0836");
-      entity.setLetPubData(
-          LetPubVenueData.builder()
-              .jifQuartile("Q1")
-              .casMajorQuartile("1区")
-              .casTopJournal(true)
-              .warningListStatus(null)
-              .researchDirection("医学 · 综合")
-              .build());
-      venueDao.save(entity);
-
-      // When
-      PageResult<VenueSummaryReadModel> page =
-          venueReadAdapter.findVenuePage(PagingParams.of(1, 10), EMPTY_FILTER);
-
-      // Then
-      assertThat(page.items())
-          .singleElement()
-          .satisfies(
-              item -> {
-                assertThat(item.jifQuartile()).isEqualTo("Q1");
-                assertThat(item.casMajorQuartile()).isEqualTo("1区");
-                assertThat(item.casTopJournal()).isTrue();
-                assertThat(item.warningListStatus()).isNull();
-                assertThat(item.researchDirection()).isEqualTo("医学 · 综合");
               });
     }
 
