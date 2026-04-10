@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /// REST Client 配置属性。
@@ -46,6 +47,9 @@ public class RestClientProperties {
 
   /// 拦截器配置
   private InterceptorsConfig interceptors = new InterceptorsConfig();
+
+  /// 代理配置
+  private ProxyConfig proxy = new ProxyConfig();
 
   /// 客户端配置映射（按用途分组）
   private Map<String, ClientConfig> clients = new HashMap<>();
@@ -104,6 +108,20 @@ public class RestClientProperties {
   /// @param interceptors 拦截器配置
   public void setInterceptors(InterceptorsConfig interceptors) {
     this.interceptors = interceptors;
+  }
+
+  /// 获取代理配置。
+  ///
+  /// @return 代理配置
+  public ProxyConfig getProxy() {
+    return proxy;
+  }
+
+  /// 设置代理配置。
+  ///
+  /// @param proxy 代理配置
+  public void setProxy(ProxyConfig proxy) {
+    this.proxy = proxy;
   }
 
   /// 获取客户端配置映射。
@@ -470,5 +488,46 @@ public class RestClientProperties {
     public void setTimeout(TimeoutConfig timeout) {
       this.timeout = timeout;
     }
+  }
+
+  /// 代理配置。
+  @Data
+  public static class ProxyConfig {
+    /// 隧道代理配置
+    private TunnelConfig tunnel = new TunnelConfig();
+  }
+
+  /// 隧道代理配置。
+  ///
+  /// 配置隧道代理的连接地址和认证信息。启用后，通过 {@code TunnelProxyConfigurer}
+  /// 为需要代理的 HttpClient 注入代理设置。
+  ///
+  /// ```yaml
+  /// patra:
+  ///   rest-client:
+  ///     proxy:
+  ///       tunnel:
+  ///         enabled: true
+  ///         host: tunnel.qg.net
+  ///         port: 15561
+  ///         auth-key: ${PROXY_AUTH_KEY}
+  ///         auth-pwd: ${PROXY_AUTH_PWD}
+  /// ```
+  @Data
+  public static class TunnelConfig {
+    /// 是否启用隧道代理（默认 false）
+    private boolean enabled = false;
+
+    /// 代理服务器地址
+    private String host;
+
+    /// 代理服务器端口
+    private int port;
+
+    /// 认证密钥（AuthKey）
+    private String authKey;
+
+    /// 认证密码（AuthPwd）
+    private String authPwd;
   }
 }
