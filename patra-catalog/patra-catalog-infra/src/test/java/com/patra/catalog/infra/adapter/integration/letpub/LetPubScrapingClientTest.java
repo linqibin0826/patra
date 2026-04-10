@@ -134,5 +134,32 @@ class LetPubScrapingClientTest {
       assertThat(client.isRateLimited("")).isFalse();
       assertThat(client.isRateLimited(null)).isFalse();
     }
+
+    @Test
+    @DisplayName("包含 '您使用的IP地址' 且内容短时应判定为限流（IP 封锁页）")
+    void shouldDetectIpBlockKeyword() {
+      String html = "<html><body><p>您使用的IP地址访问过于频繁，请稍后再试</p></body></html>";
+      assertThat(client.isRateLimited(html)).isTrue();
+    }
+
+    @Test
+    @DisplayName("包含 '注册或登录后，查看影响因子和历年趋势图' 且内容短时应判定为限流（软降级页）")
+    void shouldDetectLoginPromptKeyword() {
+      String html = "<html><body><p>注册或登录后，查看影响因子和历年趋势图</p></body></html>";
+      assertThat(client.isRateLimited(html)).isTrue();
+    }
+
+    @Test
+    @DisplayName("正常长页面即使偶然出现关键词也不应误判（长度阈值兜底）")
+    void shouldNotMisclassifyLongPageContainingKeyword() {
+      // 构造一个长度 >= RATE_LIMIT_THRESHOLD 的页面，内容里包含关键词作为 UX 文案
+      String longPage =
+          "<html><body>"
+              + "<p>欢迎使用 LetPub 期刊查询系统</p>"
+              + "您使用的IP地址访问过于频繁（这句话只是文档举例，不是真的限流）"
+              + "x".repeat(2000)
+              + "</body></html>";
+      assertThat(client.isRateLimited(longPage)).isFalse();
+    }
   }
 }
