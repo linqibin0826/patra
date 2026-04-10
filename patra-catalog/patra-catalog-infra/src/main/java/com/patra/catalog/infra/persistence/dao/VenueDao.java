@@ -75,14 +75,14 @@ public interface VenueDao extends JpaRepository<VenueEntity, Long> {
   /// 查询条件（AND 关系，空值忽略）：
   ///
   /// - 固定 `venueType=JOURNAL`
-  /// - `keyword`：title 或 titleZh 前缀模糊匹配
+  /// - `keyword`：title 前缀模糊匹配
   /// - `countryCode`：国家编码精确匹配
   /// - `issnL`：ISSN-L 精确匹配
   /// - `nlmId`：NLM ID 精确匹配
   ///
   /// 使用原生查询以支持 MySQL `JSON_EXTRACT` 函数从 `citation_metrics` JSON 列提取 h-index 进行排序。
   ///
-  /// @param keyword title/titleZh 前缀搜索关键词（可空）
+  /// @param keyword title 前缀搜索关键词（可空）
   /// @param countryCode 国家编码（可空）
   /// @param issnL ISSN-L（可空）
   /// @param nlmId NLM ID（可空）
@@ -93,9 +93,7 @@ public interface VenueDao extends JpaRepository<VenueEntity, Long> {
           """
       SELECT * FROM cat_venue v
       WHERE v.venue_type = 'JOURNAL'
-        AND (:keyword IS NULL
-             OR LOWER(v.title) LIKE LOWER(CONCAT(:keyword, '%'))
-             OR LOWER(v.title_zh) LIKE LOWER(CONCAT(:keyword, '%')))
+        AND (:keyword IS NULL OR LOWER(v.title) LIKE LOWER(CONCAT(:keyword, '%')))
         AND (:countryCode IS NULL OR v.country_code = :countryCode)
         AND (:issnL IS NULL OR v.issn_l = :issnL)
         AND (:nlmId IS NULL OR v.nlm_id = :nlmId)
@@ -106,9 +104,7 @@ public interface VenueDao extends JpaRepository<VenueEntity, Long> {
           """
       SELECT COUNT(*) FROM cat_venue v
       WHERE v.venue_type = 'JOURNAL'
-        AND (:keyword IS NULL
-             OR LOWER(v.title) LIKE LOWER(CONCAT(:keyword, '%'))
-             OR LOWER(v.title_zh) LIKE LOWER(CONCAT(:keyword, '%')))
+        AND (:keyword IS NULL OR LOWER(v.title) LIKE LOWER(CONCAT(:keyword, '%')))
         AND (:countryCode IS NULL OR v.country_code = :countryCode)
         AND (:issnL IS NULL OR v.issn_l = :issnL)
         AND (:nlmId IS NULL OR v.nlm_id = :nlmId)

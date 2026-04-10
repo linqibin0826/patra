@@ -56,7 +56,6 @@ class VenueSummaryReadModelTest {
 
       assertThat(model.id()).isEqualTo(1L);
       assertThat(model.title()).isEqualTo("Nature");
-      assertThat(model.titleZh()).isNull();
       assertThat(model.countryCode()).isNull();
       assertThat(model.imageUrl()).isNull();
       assertThat(model.hIndex()).isNull();
@@ -75,7 +74,6 @@ class VenueSummaryReadModelTest {
           VenueSummaryReadModel.builder()
               .id(1L)
               .title("Nature")
-              .titleZh("自然")
               .countryCode("US")
               .imageUrl("https://example.com/nature.jpg")
               .hIndex(412)
@@ -89,7 +87,6 @@ class VenueSummaryReadModelTest {
 
       assertThat(model.id()).isEqualTo(1L);
       assertThat(model.title()).isEqualTo("Nature");
-      assertThat(model.titleZh()).isEqualTo("自然");
       assertThat(model.countryCode()).isEqualTo("US");
       assertThat(model.imageUrl()).isEqualTo("https://example.com/nature.jpg");
       assertThat(model.hIndex()).isEqualTo(412);

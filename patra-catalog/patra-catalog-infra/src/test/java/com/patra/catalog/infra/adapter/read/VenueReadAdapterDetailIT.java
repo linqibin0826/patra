@@ -55,7 +55,6 @@ class VenueReadAdapterDetailIT {
     entity.setId(SnowflakeIdGenerator.getId());
     entity.setVenueType("JOURNAL");
     entity.setTitle("Nature");
-    entity.setTitleZh("自然");
     entity.setIssnL("0028-0836");
     entity.setNlmId("0410462");
     entity.setOpenalexId("S12345");
@@ -82,7 +81,6 @@ class VenueReadAdapterDetailIT {
     assertThat(detail.id()).isEqualTo(entity.getId());
     assertThat(detail.venueType()).isEqualTo("JOURNAL");
     assertThat(detail.title()).isEqualTo("Nature");
-    assertThat(detail.titleZh()).isEqualTo("自然");
     assertThat(detail.issnL()).isEqualTo("0028-0836");
     assertThat(detail.nlmId()).isEqualTo("0410462");
     assertThat(detail.openalexId()).isEqualTo("S12345");
@@ -120,7 +118,6 @@ class VenueReadAdapterDetailIT {
         PublicationProfile.builder()
             .abbreviatedTitle("Lancet")
             .alternateTitles(List.of("The Lancet", "Lancet (London, England)"))
-            .homepageUrl("https://www.thelancet.com")
             .frequency("Weekly")
             .countryCode("GB")
             .build());
@@ -146,7 +143,6 @@ class VenueReadAdapterDetailIT {
     assertThat(detail.publicationProfile().abbreviatedTitle()).isEqualTo("Lancet");
     assertThat(detail.publicationProfile().alternateTitles())
         .containsExactly("The Lancet", "Lancet (London, England)");
-    assertThat(detail.publicationProfile().homepageUrl()).isEqualTo("https://www.thelancet.com");
     assertThat(detail.publicationProfile().frequency()).isEqualTo("Weekly");
 
     // CitationMetrics

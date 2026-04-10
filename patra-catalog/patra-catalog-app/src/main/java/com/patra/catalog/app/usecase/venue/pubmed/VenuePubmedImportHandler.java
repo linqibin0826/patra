@@ -24,14 +24,12 @@ import com.patra.catalog.domain.model.vo.venue.VenueMesh;
 import com.patra.catalog.domain.model.vo.venue.VenueOpenAlexEnrichment;
 import com.patra.catalog.domain.model.vo.venue.VenuePublicationStats;
 import com.patra.catalog.domain.model.vo.venue.VenueRelation;
-import com.patra.catalog.domain.model.vo.venue.VenueWikidataEnrichment;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedIndexingHistory;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedLanguage;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedMeshHeading;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedSerialData;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedTitleRelation;
 import com.patra.catalog.domain.port.enrichment.OpenAlexEnrichmentQueryPort;
-import com.patra.catalog.domain.port.enrichment.WikidataEnrichmentQueryPort;
 import com.patra.catalog.domain.port.parser.LsiouParserPort;
 import com.patra.catalog.domain.port.registry.DictionaryResolverPort;
 import com.patra.catalog.domain.port.repository.MeshDescriptorRepository;
@@ -103,7 +101,6 @@ public class VenuePubmedImportHandler
   private final DictionaryResolverPort dictionaryResolverPort;
   private final MeshDescriptorRepository meshDescriptorRepository;
   private final MeshQualifierRepository meshQualifierRepository;
-  private final WikidataEnrichmentQueryPort wikidataEnrichmentQueryPort;
   private final OpenAlexEnrichmentQueryPort openAlexEnrichmentQueryPort;
 
   /// 导入上下文：封装批次级别的查询映射结果。
@@ -114,14 +111,12 @@ public class VenuePubmedImportHandler
   /// @param languageCodeMap 语言代码映射（ISO 639-3 → BCP 47）
   /// @param descriptorUiMap MeSH 描述符名称 → UI 映射
   /// @param qualifierUiMap MeSH 限定词名称 → UI 映射
-  /// @param wikidataEnrichmentMap ISSN-L → Wikidata 富化数据映射（中文标题 + 封面图片 + 官方网站）
   /// @param openAlexEnrichmentMap ISSN-L → OpenAlex 富化数据映射（引用指标 + 年度统计）
   private record ImportContext(
       Map<String, String> countryCodeMap,
       Map<String, String> languageCodeMap,
       Map<String, String> descriptorUiMap,
       Map<String, String> qualifierUiMap,
-      Map<String, VenueWikidataEnrichment> wikidataEnrichmentMap,
       Map<String, VenueOpenAlexEnrichment> openAlexEnrichmentMap) {}
 
   /// 执行 PubMed Venue 数据导入。
@@ -382,15 +377,7 @@ public class VenuePubmedImportHandler
         meshQualifierNames.size(),
         qualifierUiMap.size());
 
-    // 3.7. 批量查询 Wikidata 富化数据（中文标题 + 封面图片，通过 SPARQL，基于 ISSN-L）
-    Map<String, VenueWikidataEnrichment> wikidataEnrichmentMap =
-        wikidataEnrichmentQueryPort.findEnrichmentData(identifiers.issnLs());
-    log.debug(
-        "Wikidata 富化查询完成：ISSN-L 共 {} 个，匹配 {} 个",
-        identifiers.issnLs().size(),
-        wikidataEnrichmentMap.size());
-
-    // 3.8. 批量查询 OpenAlex 富化数据（引用指标 + 年度统计，通过 REST API，基于 ISSN-L）
+    // 3.7. 批量查询 OpenAlex 富化数据（引用指标 + 年度统计，通过 REST API，基于 ISSN-L）
     Map<String, VenueOpenAlexEnrichment> openAlexEnrichmentMap =
         openAlexEnrichmentQueryPort.findEnrichmentData(identifiers.issnLs());
     log.debug(
@@ -405,7 +392,6 @@ public class VenuePubmedImportHandler
             languageCodeMap,
             descriptorUiMap,
             qualifierUiMap,
-            wikidataEnrichmentMap,
             openAlexEnrichmentMap);
     BatchProcessingResult result = matchAndClassifyRecords(batch, existingVenues, context);
 
@@ -563,8 +549,6 @@ public class VenuePubmedImportHandler
           PublicationProfile profile =
               buildPublicationProfileFromRecord(record, context.countryCodeMap());
           venue.withPublicationProfile(profile);
-          // Wikidata 富化（中文标题 + 封面图片 + 官方网站，需在 withPublicationProfile 之后）
-          applyWikidataEnrichment(venue, resolveEnrichment(record, context));
           // OpenAlex 富化（引用指标 + OpenAlex ID + 年度统计收集）
           VenueOpenAlexEnrichment openAlexEnrichment = resolveOpenAlexEnrichment(record, context);
           applyOpenAlexEnrichment(venue, openAlexEnrichment);
@@ -601,8 +585,6 @@ public class VenuePubmedImportHandler
         PublicationProfile profile =
             buildPublicationProfileFromRecord(record, context.countryCodeMap());
         newVenue.withPublicationProfile(profile);
-        // Wikidata 富化（中文标题 + 封面图片 + 官方网站，需在 withPublicationProfile 之后）
-        applyWikidataEnrichment(newVenue, resolveEnrichment(record, context));
         // OpenAlex 富化（引用指标 + OpenAlex ID + 年度统计收集）
         VenueOpenAlexEnrichment openAlexEnrichment = resolveOpenAlexEnrichment(record, context);
         applyOpenAlexEnrichment(newVenue, openAlexEnrichment);
@@ -834,32 +816,6 @@ public class VenuePubmedImportHandler
         .build();
   }
 
-  /// 从 ImportContext 中按 ISSN-L 解析 Wikidata 富化数据。
-  ///
-  /// @param record PubMed 数据记录
-  /// @param context 导入上下文
-  /// @return 富化数据，如果无 ISSN-L 或无匹配则返回 null
-  private VenueWikidataEnrichment resolveEnrichment(
-      PubmedSerialData record, ImportContext context) {
-    return record.hasIssnL() ? context.wikidataEnrichmentMap().get(record.issnL()) : null;
-  }
-
-  /// 将 Wikidata 富化数据应用到聚合根。
-  ///
-  /// 统一处理中文标题、封面图片和官方网站的富化，
-  /// **必须在 `withPublicationProfile()` 之后调用**（因为 homepageUrl 嵌入在 Profile 中）。
-  ///
-  /// @param venue 待富化的聚合根
-  /// @param enrichment Wikidata 富化数据（可为 null）
-  private void applyWikidataEnrichment(VenueAggregate venue, VenueWikidataEnrichment enrichment) {
-    if (enrichment == null) {
-      return;
-    }
-    venue.enrichTitleZh(enrichment.titleZh());
-    venue.enrichImageUrl(enrichment.imageUrl());
-    venue.enrichHomepageUrl(enrichment.homepageUrl());
-  }
-
   /// 从 ImportContext 中按 ISSN-L 解析 OpenAlex 富化数据。
   ///
   /// @param record PubMed 数据记录
@@ -895,13 +851,12 @@ public class VenuePubmedImportHandler
   ///
   /// 创建聚合根并附加所有可用的标识符（NLM ID、ISSN-L 由工厂方法添加）。
   /// 其他字段（frequency、country、languages 等）通过 PublicationProfile 嵌入式值对象保存。
-  /// Wikidata 富化由调用方在 `withPublicationProfile` 之后通过 `applyWikidataEnrichment` 统一执行。
   ///
   /// @param record PubMed 数据记录
   /// @return 新创建的聚合根（只含标识符和来源信息，profile 和富化在调用处附加）
   private VenueAggregate createVenueFromRecord(PubmedSerialData record) {
     VenueAggregate venue =
-        VenueAggregate.fromPubMed(record.title(), null, record.nlmUniqueId(), record.issnL());
+        VenueAggregate.fromPubMed(record.title(), record.nlmUniqueId(), record.issnL());
 
     // 添加 CODEN 标识符
     if (record.hasCoden()) {

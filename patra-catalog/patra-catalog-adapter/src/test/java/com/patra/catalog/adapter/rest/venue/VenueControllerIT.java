@@ -10,7 +10,6 @@ import com.patra.catalog.app.usecase.venue.query.VenueQueryService;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueListQuery;
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import com.patra.common.query.PageResult;
-import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
@@ -52,14 +51,17 @@ class VenueControllerIT {
   void shouldReturnPagedVenuesWhenQueryProvided() {
     // Given
     VenueSummaryReadModel readModel =
-        new VenueSummaryReadModel(
-            1001L,
-            "Nature",
-            "自然",
-            "0028-0836",
-            "0410462",
-            "US",
-            Instant.parse("2026-02-12T10:00:00Z"));
+        VenueSummaryReadModel.builder()
+            .id(1001L)
+            .title("Nature")
+            .countryCode("US")
+            .imageUrl("https://www.letpub.com.cn/cover/journal/0410462.jpg")
+            .hIndex(412)
+            .jifQuartile("Q1")
+            .casMajorQuartile("1区")
+            .casTopJournal(true)
+            .isOa(false)
+            .build();
     PageResult<VenueSummaryReadModel> serviceResult = PageResult.of(List.of(readModel), 2, 10, 31);
 
     when(venueQueryService.listVenues(any(VenueListQuery.class))).thenReturn(serviceResult);
@@ -88,14 +90,20 @@ class VenueControllerIT {
         .isEqualTo("1001")
         .jsonPath("$.items[0].title")
         .isEqualTo("Nature")
-        .jsonPath("$.items[0].titleZh")
-        .isEqualTo("自然")
-        .jsonPath("$.items[0].issnL")
-        .isEqualTo("0028-0836")
-        .jsonPath("$.items[0].nlmId")
-        .isEqualTo("0410462")
         .jsonPath("$.items[0].countryCode")
-        .isEqualTo("US");
+        .isEqualTo("US")
+        .jsonPath("$.items[0].imageUrl")
+        .isEqualTo("https://www.letpub.com.cn/cover/journal/0410462.jpg")
+        .jsonPath("$.items[0].hIndex")
+        .isEqualTo(412)
+        .jsonPath("$.items[0].jifQuartile")
+        .isEqualTo("Q1")
+        .jsonPath("$.items[0].casMajorQuartile")
+        .isEqualTo("1区")
+        .jsonPath("$.items[0].casTopJournal")
+        .isEqualTo(true)
+        .jsonPath("$.items[0].isOa")
+        .isEqualTo(false);
 
     // 验证 QueryService 接收到正确的查询参数（由真实 Converter 转换）
     ArgumentCaptor<VenueListQuery> queryCaptor = ArgumentCaptor.forClass(VenueListQuery.class);

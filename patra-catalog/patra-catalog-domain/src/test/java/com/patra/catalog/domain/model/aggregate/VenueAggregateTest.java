@@ -42,7 +42,6 @@ class VenueAggregateTest {
   // ========== 测试数据 ==========
 
   private static final String TITLE = "Nature";
-  private static final String TITLE_ZH = "自然";
   private static final String NLM_ID = "0410462";
   private static final String ISSN_L = "0028-0836";
   private static final String ISSN = "1476-4687";
@@ -55,7 +54,7 @@ class VenueAggregateTest {
     @DisplayName("应该使用 NLM ID 创建载体")
     void shouldCreateVenueWithNlmId() {
       // When
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
+      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
 
       // Then
       assertThat(venue.getVenueType()).isEqualTo(VenueType.JOURNAL);
@@ -68,7 +67,7 @@ class VenueAggregateTest {
     @DisplayName("应该使用 ISSN-L 创建载体")
     void shouldCreateVenueWithIssnL() {
       // When
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, null, ISSN_L);
+      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, ISSN_L);
 
       // Then
       assertThat(venue.getIdentifier(VenueIdentifierType.ISSN_L)).contains(ISSN_L);
@@ -78,7 +77,7 @@ class VenueAggregateTest {
     @DisplayName("应该同时使用 NLM ID 和 ISSN-L 创建载体")
     void shouldCreateVenueWithBothNlmIdAndIssnL() {
       // When
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, ISSN_L);
+      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, NLM_ID, ISSN_L);
 
       // Then
       assertThat(venue.getIdentifiers()).hasSize(2);
@@ -87,31 +86,9 @@ class VenueAggregateTest {
     }
 
     @Test
-    @DisplayName("应该携带中文标题创建载体")
-    void shouldCreateVenueWithTitleZh() {
-      // When
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, TITLE_ZH, NLM_ID, null);
-
-      // Then
-      assertThat(venue.getTitle()).isEqualTo(TITLE);
-      assertThat(venue.getTitleZh()).isEqualTo(TITLE_ZH);
-    }
-
-    @Test
-    @DisplayName("中文标题为 null 时应该正常创建")
-    void shouldCreateVenueWithNullTitleZh() {
-      // When
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
-
-      // Then
-      assertThat(venue.getTitle()).isEqualTo(TITLE);
-      assertThat(venue.getTitleZh()).isNull();
-    }
-
-    @Test
     @DisplayName("NLM ID 和 ISSN-L 都为空时应该抛出异常")
     void shouldThrowWhenBothNlmIdAndIssnLAreBlank() {
-      assertThatThrownBy(() -> VenueAggregate.fromPubMed(TITLE, null, null, null))
+      assertThatThrownBy(() -> VenueAggregate.fromPubMed(TITLE, null, null))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("NLM ID 或 ISSN-L");
     }
@@ -129,30 +106,14 @@ class VenueAggregateTest {
       Long version = 5L;
 
       // When
-      VenueAggregate venue =
-          VenueAggregate.restore(id, VenueType.REPOSITORY, TITLE, null, null, version);
+      VenueAggregate venue = VenueAggregate.restore(id, VenueType.REPOSITORY, TITLE, null, version);
 
       // Then
       assertThat(venue.getId()).isEqualTo(id);
       assertThat(venue.getVenueType()).isEqualTo(VenueType.REPOSITORY);
       assertThat(venue.getTitle()).isEqualTo(TITLE);
-      assertThat(venue.getTitleZh()).isNull();
+      assertThat(venue.getImageUrl()).isNull();
       assertThat(venue.getVersion()).isEqualTo(version);
-    }
-
-    @Test
-    @DisplayName("应该正确恢复携带中文标题的聚合根")
-    void shouldRestoreWithTitleZh() {
-      // Given
-      VenueId id = VenueId.of(456L);
-
-      // When
-      VenueAggregate venue =
-          VenueAggregate.restore(id, VenueType.JOURNAL, TITLE, TITLE_ZH, null, 1L);
-
-      // Then
-      assertThat(venue.getTitle()).isEqualTo(TITLE);
-      assertThat(venue.getTitleZh()).isEqualTo(TITLE_ZH);
     }
   }
 
@@ -164,7 +125,7 @@ class VenueAggregateTest {
     @DisplayName("addIdentifier() 应该添加新标识符")
     void addIdentifierShouldAddNew() {
       // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, ISSN_L);
+      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, NLM_ID, ISSN_L);
       int initialSize = venue.getIdentifiers().size();
 
       // When
@@ -179,7 +140,7 @@ class VenueAggregateTest {
     @DisplayName("addIdentifier() 应该忽略重复标识符（基于 Record equals）")
     void addIdentifierShouldIgnoreDuplicate() {
       // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
+      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
       venue.addIdentifier(VenueIdentifier.forIssn(ISSN));
       int sizeAfterFirst = venue.getIdentifiers().size();
 
@@ -194,7 +155,7 @@ class VenueAggregateTest {
     @DisplayName("addIdentifier(type, value) 便捷方法应该正常工作")
     void addIdentifierConvenienceMethodShouldWork() {
       // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
+      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
 
       // When
       venue.addIdentifier(VenueIdentifierType.MAG, "12345");
@@ -207,7 +168,7 @@ class VenueAggregateTest {
     @DisplayName("removeIdentifier() 应该移除标识符")
     void removeIdentifierShouldRemove() {
       // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
+      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
       venue.addIdentifier(VenueIdentifier.forIssn(ISSN));
 
       // When
@@ -222,7 +183,7 @@ class VenueAggregateTest {
     @DisplayName("removeIdentifier() 移除不存在的标识符应该返回 false")
     void removeIdentifierShouldReturnFalseWhenNotExists() {
       // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
+      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
 
       // When
       boolean removed = venue.removeIdentifier(VenueIdentifierType.ISSN, "9999-9999");
@@ -235,7 +196,7 @@ class VenueAggregateTest {
     @DisplayName("getIdentifier(type) 应该返回第一个匹配的标识符")
     void getIdentifierShouldReturnFirst() {
       // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
+      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
       venue.addIdentifier(VenueIdentifier.forIssn("1111-1111"));
       venue.addIdentifier(VenueIdentifier.forIssn("2222-2222"));
 
@@ -250,7 +211,7 @@ class VenueAggregateTest {
     @DisplayName("getIdentifiers(type) 应该返回指定类型的所有标识符")
     void getIdentifiersByTypeShouldReturnAll() {
       // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
+      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
       venue.addIdentifier(VenueIdentifier.forIssn("1111-1111"));
       venue.addIdentifier(VenueIdentifier.forIssn("2222-2222"));
 
@@ -265,7 +226,7 @@ class VenueAggregateTest {
     @DisplayName("getIdentifiers() 应该返回不可变列表")
     void getIdentifiersShouldReturnUnmodifiableList() {
       // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
+      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
 
       // When
       List<VenueIdentifier> identifiers = venue.getIdentifiers();
@@ -277,51 +238,6 @@ class VenueAggregateTest {
   }
 
   @Nested
-  @DisplayName("enrichTitleZh() 中文标题富化测试")
-  class EnrichTitleZhTests {
-
-    @Test
-    @DisplayName("应该设置中文标题")
-    void shouldSetTitleZh() {
-      // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
-      assertThat(venue.getTitleZh()).isNull();
-
-      // When
-      venue.enrichTitleZh(TITLE_ZH);
-
-      // Then
-      assertThat(venue.getTitleZh()).isEqualTo(TITLE_ZH);
-    }
-
-    @Test
-    @DisplayName("应该覆盖已有的中文标题")
-    void shouldOverrideExistingTitleZh() {
-      // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, "旧标题", NLM_ID, null);
-
-      // When
-      venue.enrichTitleZh("新标题");
-
-      // Then
-      assertThat(venue.getTitleZh()).isEqualTo("新标题");
-    }
-
-    @Test
-    @DisplayName("传入 null 时不应该清除已有的中文标题")
-    void shouldNotClearTitleZhWhenNull() {
-      // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, TITLE_ZH, NLM_ID, null);
-
-      // When
-      venue.enrichTitleZh(null);
-
-      // Then — null 表示无数据，不应该清除已有值
-      assertThat(venue.getTitleZh()).isEqualTo(TITLE_ZH);
-    }
-  }
-
-  @Nested
   @DisplayName("Provenance 设置方法测试")
   class ProvenanceSetterTests {
 
@@ -329,7 +245,7 @@ class VenueAggregateTest {
     @DisplayName("withProvenance() 应该正确设置来源信息")
     void withProvenanceShouldWork() {
       // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
+      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
       ProvenanceInfo newProvenance = ProvenanceInfo.forManual();
 
       // When
@@ -347,9 +263,9 @@ class VenueAggregateTest {
     @Test
     @DisplayName("isJournal() 应该正确判断")
     void isJournalShouldWork() {
-      VenueAggregate journal = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
+      VenueAggregate journal = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
       VenueAggregate repo =
-          VenueAggregate.restore(VenueId.of(1L), VenueType.REPOSITORY, TITLE, null, null, 0L);
+          VenueAggregate.restore(VenueId.of(1L), VenueType.REPOSITORY, TITLE, null, 0L);
 
       assertThat(journal.isJournal()).isTrue();
       assertThat(repo.isJournal()).isFalse();
@@ -359,7 +275,7 @@ class VenueAggregateTest {
     @DisplayName("isRepository() 应该正确判断")
     void isRepositoryShouldWork() {
       VenueAggregate repo =
-          VenueAggregate.restore(VenueId.of(1L), VenueType.REPOSITORY, TITLE, null, null, 0L);
+          VenueAggregate.restore(VenueId.of(1L), VenueType.REPOSITORY, TITLE, null, 0L);
 
       assertThat(repo.isRepository()).isTrue();
     }
@@ -368,7 +284,7 @@ class VenueAggregateTest {
     @DisplayName("isConference() 应该正确判断")
     void isConferenceShouldWork() {
       VenueAggregate conf =
-          VenueAggregate.restore(VenueId.of(1L), VenueType.CONFERENCE, TITLE, null, null, 0L);
+          VenueAggregate.restore(VenueId.of(1L), VenueType.CONFERENCE, TITLE, null, 0L);
 
       assertThat(conf.isConference()).isTrue();
     }
@@ -376,9 +292,9 @@ class VenueAggregateTest {
     @Test
     @DisplayName("isFromPubMed() 应该正确判断")
     void isFromPubMedShouldWork() {
-      VenueAggregate pubmedVenue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
+      VenueAggregate pubmedVenue = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
       VenueAggregate restoredVenue =
-          VenueAggregate.restore(VenueId.of(1L), VenueType.JOURNAL, TITLE, null, null, 0L);
+          VenueAggregate.restore(VenueId.of(1L), VenueType.JOURNAL, TITLE, null, 0L);
 
       assertThat(pubmedVenue.isFromPubMed()).isTrue();
       assertThat(restoredVenue.isFromPubMed()).isFalse(); // restore 不设置 provenance
@@ -393,7 +309,7 @@ class VenueAggregateTest {
     @DisplayName("toString() 应该包含关键信息")
     void toStringShouldContainKeyInfo() {
       // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, ISSN_L);
+      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, NLM_ID, ISSN_L);
 
       // When
       String result = venue.toString();
@@ -408,14 +324,13 @@ class VenueAggregateTest {
   @DisplayName("enrichImageUrl() 封面图片 URL 富化测试")
   class EnrichImageUrlTests {
 
-    private static final String IMAGE_URL =
-        "http://commons.wikimedia.org/wiki/Special:FilePath/Nature_magazine.jpg";
+    private static final String IMAGE_URL = "https://www.letpub.com.cn/cover/journal/0000001.jpg";
 
     @Test
     @DisplayName("应该设置封面图片 URL")
     void shouldSetImageUrl() {
       // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
+      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
       assertThat(venue.getImageUrl()).isNull();
 
       // When
@@ -429,8 +344,8 @@ class VenueAggregateTest {
     @DisplayName("应该覆盖已有的封面图片 URL")
     void shouldOverrideExistingImageUrl() {
       // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
-      venue.enrichImageUrl("http://commons.wikimedia.org/wiki/Special:FilePath/old.jpg");
+      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
+      venue.enrichImageUrl("https://www.letpub.com.cn/cover/journal/old.jpg");
 
       // When
       venue.enrichImageUrl(IMAGE_URL);
@@ -443,7 +358,7 @@ class VenueAggregateTest {
     @DisplayName("传入 null 时不应该清除已有的封面图片 URL")
     void shouldNotClearImageUrlWhenNull() {
       // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
+      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
       venue.enrichImageUrl(IMAGE_URL);
 
       // When
@@ -455,72 +370,6 @@ class VenueAggregateTest {
   }
 
   @Nested
-  @DisplayName("enrichHomepageUrl() 官方网站 URL 富化测试")
-  class EnrichHomepageUrlTests {
-
-    private static final String HOMEPAGE_URL = "https://www.nature.com/nm";
-
-    @Test
-    @DisplayName("应该设置官方网站 URL 到 PublicationProfile")
-    void shouldSetHomepageUrlInProfile() {
-      // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
-      venue.withPublicationProfile(
-          PublicationProfile.builder().abbreviatedTitle("Nat Med").build());
-      assertThat(venue.getPublicationProfile().homepageUrl()).isNull();
-
-      // When
-      venue.enrichHomepageUrl(HOMEPAGE_URL);
-
-      // Then
-      assertThat(venue.getPublicationProfile().homepageUrl()).isEqualTo(HOMEPAGE_URL);
-      // 其他字段不受影响
-      assertThat(venue.getPublicationProfile().abbreviatedTitle()).isEqualTo("Nat Med");
-    }
-
-    @Test
-    @DisplayName("应该覆盖已有的官方网站 URL")
-    void shouldOverrideExistingHomepageUrl() {
-      // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
-      venue.withPublicationProfile(
-          PublicationProfile.builder().homepageUrl("https://old.example.com").build());
-
-      // When
-      venue.enrichHomepageUrl(HOMEPAGE_URL);
-
-      // Then
-      assertThat(venue.getPublicationProfile().homepageUrl()).isEqualTo(HOMEPAGE_URL);
-    }
-
-    @Test
-    @DisplayName("传入 null 时不应该清除已有的官方网站 URL")
-    void shouldNotClearHomepageUrlWhenNull() {
-      // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
-      venue.withPublicationProfile(PublicationProfile.builder().homepageUrl(HOMEPAGE_URL).build());
-
-      // When
-      venue.enrichHomepageUrl(null);
-
-      // Then — null 表示无数据，不应该清除已有值
-      assertThat(venue.getPublicationProfile().homepageUrl()).isEqualTo(HOMEPAGE_URL);
-    }
-
-    @Test
-    @DisplayName("PublicationProfile 为 null 时不应该抛异常")
-    void shouldNotThrowWhenProfileIsNull() {
-      // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
-      assertThat(venue.getPublicationProfile()).isNull();
-
-      // When & Then — 不抛异常，静默忽略
-      venue.enrichHomepageUrl(HOMEPAGE_URL);
-      assertThat(venue.getPublicationProfile()).isNull();
-    }
-  }
-
-  @Nested
   @DisplayName("normalizeCountryCode() 国家编码标准化测试")
   class NormalizeCountryCodeTests {
 
@@ -528,7 +377,7 @@ class VenueAggregateTest {
     @DisplayName("有效国家编码应该保持不变")
     void shouldKeepValidCountryCode() {
       // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
+      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
       PublicationProfile profile = PublicationProfile.builder().countryCode("US").build();
       venue.withPublicationProfile(profile);
 
@@ -543,7 +392,7 @@ class VenueAggregateTest {
     @DisplayName("无效国家编码应该被清除为 null")
     void shouldClearInvalidCountryCode() {
       // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
+      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
       PublicationProfile profile = PublicationProfile.builder().countryCode("XX").build();
       venue.withPublicationProfile(profile);
 
@@ -558,7 +407,7 @@ class VenueAggregateTest {
     @DisplayName("publicationProfile 为 null 时不应该抛出异常")
     void shouldNotThrowWhenPublicationProfileIsNull() {
       // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
+      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
       // publicationProfile 默认为 null
 
       // When & Then - 不应该抛出异常
@@ -570,7 +419,7 @@ class VenueAggregateTest {
     @DisplayName("countryCode 本身为 null 时传入 null 不应该更新")
     void shouldNotUpdateWhenBothAreNull() {
       // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
+      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
       PublicationProfile profile = PublicationProfile.builder().countryCode(null).build();
       venue.withPublicationProfile(profile);
 
@@ -585,12 +434,11 @@ class VenueAggregateTest {
     @DisplayName("更新国家编码时应该保留其他字段")
     void shouldPreserveOtherFieldsWhenUpdating() {
       // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
+      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
       PublicationProfile profile =
           PublicationProfile.builder()
               .countryCode("XX")
               .abbreviatedTitle("Nat. Med.")
-              .homepageUrl("https://example.com")
               .frequency("Monthly")
               .build();
       venue.withPublicationProfile(profile);
@@ -602,7 +450,6 @@ class VenueAggregateTest {
       PublicationProfile updated = venue.getPublicationProfile();
       assertThat(updated.countryCode()).isNull();
       assertThat(updated.abbreviatedTitle()).isEqualTo("Nat. Med.");
-      assertThat(updated.homepageUrl()).isEqualTo("https://example.com");
       assertThat(updated.frequency()).isEqualTo("Monthly");
     }
   }
@@ -628,7 +475,7 @@ class VenueAggregateTest {
     @DisplayName("应该将 ISO 639-3 代码转换为 BCP 47")
     void shouldConvertIso639ToBcp47() {
       // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
+      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
       PublicationProfile profile =
           PublicationProfile.builder()
               .languages(VenueLanguages.of(List.of("eng", "chi"), List.of("fre", "ger")))
@@ -648,7 +495,7 @@ class VenueAggregateTest {
     @DisplayName("应该移除无效的语言代码")
     void shouldRemoveInvalidLanguageCodes() {
       // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
+      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
       PublicationProfile profile =
           PublicationProfile.builder()
               .languages(VenueLanguages.of(List.of("eng", "xxx"), List.of("yyy", "fre")))
@@ -668,7 +515,7 @@ class VenueAggregateTest {
     @DisplayName("应该对多映射代码去重")
     void shouldDeduplicateMultiMappedCodes() {
       // Given - chi 和 zho 都映射到 zh
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
+      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
       PublicationProfile profile =
           PublicationProfile.builder()
               .languages(VenueLanguages.of(List.of("chi", "zho"), List.of("fre", "fra")))
@@ -688,7 +535,7 @@ class VenueAggregateTest {
     @DisplayName("publicationProfile 为 null 时不应该抛出异常")
     void shouldNotThrowWhenPublicationProfileIsNull() {
       // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
+      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
       // publicationProfile 默认为 null
 
       // When & Then - 不应该抛出异常
@@ -700,7 +547,7 @@ class VenueAggregateTest {
     @DisplayName("languages 为 null 时不应该抛出异常")
     void shouldNotThrowWhenLanguagesIsNull() {
       // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
+      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
       PublicationProfile profile = PublicationProfile.builder().countryCode("US").build();
       venue.withPublicationProfile(profile);
 
@@ -713,7 +560,7 @@ class VenueAggregateTest {
     @DisplayName("空语言列表时不应该更新")
     void shouldNotUpdateWhenLanguagesAreEmpty() {
       // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
+      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
       PublicationProfile profile =
           PublicationProfile.builder().languages(VenueLanguages.empty()).build();
       venue.withPublicationProfile(profile);
@@ -730,7 +577,7 @@ class VenueAggregateTest {
     @DisplayName("语言已经是 BCP 47 格式且无变化时不应该更新")
     void shouldNotUpdateWhenNoChange() {
       // Given - 假设已经标准化过，现在代码已经是 BCP 47 格式
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
+      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
       // 但我们的映射是 ISO 639-3 → BCP 47，如果输入就是 BCP 47，不在映射中会被过滤
       // 这个测试场景是：输入 ISO 639-3，映射结果与之前相同
       Map<String, String> mappingWithBcp47 = Map.of("en", "en", "zh", "zh"); // 假设已经是 BCP 47
@@ -753,12 +600,11 @@ class VenueAggregateTest {
     @DisplayName("更新语言时应该保留其他字段")
     void shouldPreserveOtherFieldsWhenUpdating() {
       // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
+      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
       PublicationProfile profile =
           PublicationProfile.builder()
               .countryCode("US")
               .abbreviatedTitle("Nat. Med.")
-              .homepageUrl("https://example.com")
               .languages(VenueLanguages.of(List.of("eng"), List.of()))
               .build();
       venue.withPublicationProfile(profile);
@@ -770,7 +616,6 @@ class VenueAggregateTest {
       PublicationProfile updated = venue.getPublicationProfile();
       assertThat(updated.countryCode()).isEqualTo("US");
       assertThat(updated.abbreviatedTitle()).isEqualTo("Nat. Med.");
-      assertThat(updated.homepageUrl()).isEqualTo("https://example.com");
       assertThat(updated.languages().primary()).containsExactly("en");
     }
 
@@ -778,7 +623,7 @@ class VenueAggregateTest {
     @DisplayName("映射表为空时应该清空所有语言代码")
     void shouldClearAllLanguagesWhenMappingIsEmpty() {
       // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, null, NLM_ID, null);
+      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
       PublicationProfile profile =
           PublicationProfile.builder()
               .languages(VenueLanguages.of(List.of("eng"), List.of("fre")))

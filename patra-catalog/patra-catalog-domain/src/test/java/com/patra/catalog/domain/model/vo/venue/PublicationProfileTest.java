@@ -37,7 +37,6 @@ class PublicationProfileTest {
           PublicationProfile.builder()
               .abbreviatedTitle("Nat. Med.")
               .alternateTitles(List.of("Nature Medicine"))
-              .homepageUrl("https://www.nature.com/nm")
               .frequency("Monthly")
               .publicationHistory(history)
               .languages(languages)
@@ -50,7 +49,6 @@ class PublicationProfileTest {
       // Then
       assertThat(profile.abbreviatedTitle()).isEqualTo("Nat. Med.");
       assertThat(profile.alternateTitles()).containsExactly("Nature Medicine");
-      assertThat(profile.homepageUrl()).isEqualTo("https://www.nature.com/nm");
       assertThat(profile.frequency()).isEqualTo("Monthly");
       assertThat(profile.publicationHistory()).isEqualTo(history);
       assertThat(profile.languages()).isEqualTo(languages);
@@ -69,7 +67,6 @@ class PublicationProfileTest {
       // Then
       assertThat(profile.abbreviatedTitle()).isNull();
       assertThat(profile.alternateTitles()).isEmpty();
-      assertThat(profile.homepageUrl()).isNull();
       assertThat(profile.frequency()).isNull();
       assertThat(profile.publicationHistory()).isNull();
       assertThat(profile.languages()).isNull();
@@ -109,19 +106,6 @@ class PublicationProfileTest {
       assertThat(withTitles.hasAlternateTitles()).isTrue();
       assertThat(withEmpty.hasAlternateTitles()).isFalse();
       assertThat(withNull.hasAlternateTitles()).isFalse();
-    }
-
-    @Test
-    @DisplayName("hasHomepageUrl() 应正确判断")
-    void shouldCheckHasHomepageUrl() {
-      PublicationProfile withUrl =
-          PublicationProfile.builder().homepageUrl("https://example.com").build();
-      PublicationProfile withBlank = PublicationProfile.builder().homepageUrl("  ").build();
-      PublicationProfile withNull = PublicationProfile.empty();
-
-      assertThat(withUrl.hasHomepageUrl()).isTrue();
-      assertThat(withBlank.hasHomepageUrl()).isFalse();
-      assertThat(withNull.hasHomepageUrl()).isFalse();
     }
 
     @Test

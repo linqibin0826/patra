@@ -14,7 +14,6 @@ import lombok.Builder;
 public record VenueSummaryReadModel(
     Long id,
     String title,
-    String titleZh,
     String countryCode,
     String imageUrl,
     Integer hIndex,

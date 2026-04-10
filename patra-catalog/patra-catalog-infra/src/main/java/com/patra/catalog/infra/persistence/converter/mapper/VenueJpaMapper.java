@@ -113,7 +113,6 @@ public abstract class VenueJpaMapper {
             entity.getId() != null ? VenueId.of(entity.getId()) : null,
             stringToVenueType(entity.getVenueType()),
             entity.getTitle(),
-            entity.getTitleZh(),
             entity.getImageUrl(),
             entity.getVersion());
 
@@ -195,7 +194,7 @@ public abstract class VenueJpaMapper {
   /// 更新托管实体的可变字段。
   ///
   /// 注意：venueType 和 title 是不可变的，不在此更新。
-  /// titleZh 是可富化字段（可从 Wikidata 后续补充），需要同步。
+  /// imageUrl 是可富化字段（来自 LetPub），需要同步。
   ///
   /// @param entity 托管实体
   /// @param aggregate 包含更新数据的聚合根
@@ -204,8 +203,7 @@ public abstract class VenueJpaMapper {
       return;
     }
 
-    // 更新 Wikidata 富化字段（中文标题 + 封面图片；官方网站嵌入在 PublicationProfile 中）
-    entity.setTitleZh(aggregate.getTitleZh());
+    // 更新富化字段：imageUrl 来自 LetPub 期刊详情页
     entity.setImageUrl(aggregate.getImageUrl());
 
     // 更新来源信息

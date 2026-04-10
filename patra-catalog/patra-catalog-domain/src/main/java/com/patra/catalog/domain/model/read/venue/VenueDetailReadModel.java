@@ -14,7 +14,6 @@ import lombok.Builder;
 /// @param id 期刊主键 ID
 /// @param venueType 载体类型（JOURNAL/REPOSITORY/CONFERENCE/等）
 /// @param title 期刊标题
-/// @param titleZh 中文标题（可空，来自 Wikidata）
 /// @param issnL ISSN-L（可空）
 /// @param nlmId NLM ID（可空）
 /// @param openalexId OpenAlex Source ID（可空）
@@ -33,7 +32,6 @@ public record VenueDetailReadModel(
     Long id,
     String venueType,
     String title,
-    String titleZh,
     String issnL,
     String nlmId,
     String openalexId,

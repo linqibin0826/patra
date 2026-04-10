@@ -23,11 +23,9 @@ import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.catalog.domain.model.vo.venue.VenueOpenAlexEnrichment;
 import com.patra.catalog.domain.model.vo.venue.VenuePublicationStats;
-import com.patra.catalog.domain.model.vo.venue.VenueWikidataEnrichment;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedMeshHeading;
 import com.patra.catalog.domain.model.vo.venue.pubmed.PubmedSerialData;
 import com.patra.catalog.domain.port.enrichment.OpenAlexEnrichmentQueryPort;
-import com.patra.catalog.domain.port.enrichment.WikidataEnrichmentQueryPort;
 import com.patra.catalog.domain.port.parser.LsiouParserPort;
 import com.patra.catalog.domain.port.registry.DictionaryResolverPort;
 import com.patra.catalog.domain.port.repository.MeshDescriptorRepository;
@@ -93,7 +91,6 @@ class VenuePubmedImportHandlerTest {
   @Mock private DictionaryResolverPort dictionaryResolverPort;
   @Mock private MeshDescriptorRepository meshDescriptorRepository;
   @Mock private MeshQualifierRepository meshQualifierRepository;
-  @Mock private WikidataEnrichmentQueryPort wikidataEnrichmentQueryPort;
   @Mock private OpenAlexEnrichmentQueryPort openAlexEnrichmentQueryPort;
 
   @Captor private ArgumentCaptor<List<VenueAggregate>> updateBatchCaptor;
@@ -119,7 +116,6 @@ class VenuePubmedImportHandlerTest {
             dictionaryResolverPort,
             meshDescriptorRepository,
             meshQualifierRepository,
-            wikidataEnrichmentQueryPort,
             openAlexEnrichmentQueryPort);
 
     // 创建临时 XML 文件，供 Handler 中 Files.newInputStream() 使用
@@ -145,11 +141,6 @@ class VenuePubmedImportHandlerTest {
     // 配置 MeSH Repository 默认返回空 Map（测试不关心 MeSH UI 导入）
     lenient().when(meshDescriptorRepository.findAllByNameIn(any())).thenReturn(Map.of());
     lenient().when(meshQualifierRepository.findAllByNameIn(any())).thenReturn(Map.of());
-
-    // 配置 Wikidata 富化端口默认返回空 Map（测试不关心 Wikidata 富化查询）
-    lenient()
-        .when(wikidataEnrichmentQueryPort.findEnrichmentData(any()))
-        .thenReturn(Map.<String, VenueWikidataEnrichment>of());
 
     // 配置 OpenAlex 富化端口默认返回空 Map（测试不关心 OpenAlex 富化查询）
     lenient()
@@ -792,103 +783,6 @@ class VenuePubmedImportHandlerTest {
   }
 
   @Nested
-  @DisplayName("Wikidata 富化测试（中文标题 + 封面图片 + 官方网站）")
-  class WikidataEnrichmentTest {
-
-    private static final String IMAGE_URL =
-        "http://commons.wikimedia.org/wiki/Special:FilePath/Nature_magazine.jpg";
-    private static final String HOMEPAGE_URL = "https://www.nature.com/nm";
-
-    @Test
-    @DisplayName("CREATE 路径：新建期刊应该携带中文标题、封面图片和官方网站")
-    void shouldSetAllWikidataEnrichmentOnCreate() {
-      // Given
-      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
-      PubmedSerialData record = createSerialData("0000001", "Nature", "0028-0836", null, null);
-
-      when(fileDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
-      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
-      when(venueRepository.findByIssnLs(any())).thenReturn(Map.of());
-      when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
-      when(venueRepository.findByIssns(any())).thenReturn(Map.of());
-      when(wikidataEnrichmentQueryPort.findEnrichmentData(any()))
-          .thenReturn(
-              Map.of("0028-0836", VenueWikidataEnrichment.of("自然", IMAGE_URL, HOMEPAGE_URL)));
-
-      // When
-      handler.handle(command);
-
-      // Then
-      verify(venueRepository).insertAll(insertAllCaptor.capture());
-      VenueAggregate created = insertAllCaptor.getValue().getFirst();
-      assertThat(created.getTitleZh()).isEqualTo("自然");
-      assertThat(created.getImageUrl()).isEqualTo(IMAGE_URL);
-      assertThat(created.getPublicationProfile().homepageUrl()).isEqualTo(HOMEPAGE_URL);
-    }
-
-    @Test
-    @DisplayName("UPDATE 路径：已有期刊应该被富化中文标题、封面图片和官方网站")
-    void shouldEnrichAllWikidataFieldsOnUpdate() {
-      // Given
-      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
-      PubmedSerialData record = createSerialData("0000001", "Nature", "0028-0836", null, null);
-
-      VenueAggregate existingVenue = createExistingVenue("Nature", null, "0028-0836");
-      assertThat(existingVenue.getTitleZh()).isNull();
-
-      when(fileDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
-      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
-      when(venueRepository.findByIssnLs(any())).thenReturn(Map.of("0028-0836", existingVenue));
-      when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
-      when(venueRepository.findByIssns(any())).thenReturn(Map.of());
-      when(wikidataEnrichmentQueryPort.findEnrichmentData(any()))
-          .thenReturn(
-              Map.of("0028-0836", VenueWikidataEnrichment.of("自然", IMAGE_URL, HOMEPAGE_URL)));
-
-      // When
-      handler.handle(command);
-
-      // Then — 更新路径的期刊应该被富化所有 Wikidata 字段
-      verify(venueRepository).updateBatch(updateBatchCaptor.capture());
-      VenueAggregate updated = updateBatchCaptor.getValue().getFirst();
-      assertThat(updated.getTitleZh()).isEqualTo("自然");
-      assertThat(updated.getImageUrl()).isEqualTo(IMAGE_URL);
-      assertThat(updated.getPublicationProfile().homepageUrl()).isEqualTo(HOMEPAGE_URL);
-    }
-
-    @Test
-    @DisplayName("UPDATE 路径：Wikidata 无数据时不应清除已有富化字段")
-    void shouldNotClearExistingEnrichmentWhenWikidataReturnsEmpty() {
-      // Given — 已有期刊本身已有中文标题和封面图片
-      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
-      PubmedSerialData record = createSerialData("0000001", "Nature", "0028-0836", null, null);
-
-      VenueAggregate existingVenue =
-          VenueAggregate.restore(
-              VenueId.of(venueIdCounter++), VenueType.JOURNAL, "Nature", "自然", IMAGE_URL, 0L);
-      existingVenue.addIdentifier(VenueIdentifier.forIssnL("0028-0836"));
-
-      when(fileDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
-      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
-      when(venueRepository.findByIssnLs(any())).thenReturn(Map.of("0028-0836", existingVenue));
-      when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
-      when(venueRepository.findByIssns(any())).thenReturn(Map.of());
-      // Wikidata 返回空 Map（无数据）
-      when(wikidataEnrichmentQueryPort.findEnrichmentData(any()))
-          .thenReturn(Map.<String, VenueWikidataEnrichment>of());
-
-      // When
-      handler.handle(command);
-
-      // Then — 已有的中文标题和封面图片不应被清除
-      verify(venueRepository).updateBatch(updateBatchCaptor.capture());
-      VenueAggregate updated = updateBatchCaptor.getValue().getFirst();
-      assertThat(updated.getTitleZh()).isEqualTo("自然");
-      assertThat(updated.getImageUrl()).isEqualTo(IMAGE_URL);
-    }
-  }
-
-  @Nested
   @DisplayName("OpenAlex 富化测试（引用指标 + 年度统计 + OpenAlex ID）")
   class OpenAlexEnrichmentTest {
 
@@ -1132,8 +1026,7 @@ class VenuePubmedImportHandlerTest {
   /// @return 带 ID 的 VenueAggregate
   private VenueAggregate createExistingVenue(String title, String nlmId, String issnL) {
     VenueAggregate venue =
-        VenueAggregate.restore(
-            VenueId.of(venueIdCounter++), VenueType.JOURNAL, title, null, null, 0L);
+        VenueAggregate.restore(VenueId.of(venueIdCounter++), VenueType.JOURNAL, title, null, 0L);
     if (nlmId != null) {
       venue.addIdentifier(VenueIdentifier.forNlm(nlmId));
     }

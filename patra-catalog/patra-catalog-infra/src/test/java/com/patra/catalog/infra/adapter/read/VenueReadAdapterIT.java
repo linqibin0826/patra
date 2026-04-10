@@ -173,58 +173,6 @@ class VenueReadAdapterIT {
     assertThat(page.items()).singleElement().extracting("id").isEqualTo(expectedSecondPageId);
   }
 
-  /// titleZh 应正确映射到列表读模型。
-  @Test
-  @DisplayName("titleZh 应正确映射到 VenueSummaryReadModel")
-  void shouldMapTitleZhToSummaryReadModel() {
-    // Given: 保存一条带中文标题的期刊
-    VenueEntity entity = new VenueEntity();
-    entity.setId(SnowflakeIdGenerator.getId());
-    entity.setVenueType("JOURNAL");
-    entity.setTitle("Nature");
-    entity.setTitleZh("自然");
-    entity.setIssnL("0028-0836");
-    entity.setNlmId("0410462");
-    entity.setProvenanceCode("OPENALEX");
-    entity.setCountryCode("US");
-    entity.setLastSyncedAt(Instant.parse("2026-02-13T00:00:00Z"));
-    venueDao.save(entity);
-
-    // When
-    PageResult<VenueSummaryReadModel> page =
-        venueReadAdapter.findVenuePage(PagingParams.of(1, 20), EMPTY_FILTER);
-
-    // Then
-    assertThat(page.items())
-        .singleElement()
-        .satisfies(
-            item -> {
-              assertThat(item.title()).isEqualTo("Nature");
-              assertThat(item.titleZh()).isEqualTo("自然");
-            });
-  }
-
-  /// titleZh 为 null 时应在读模型中保持为 null。
-  @Test
-  @DisplayName("titleZh 为 null 时应在读模型中保持为 null")
-  void shouldReturnNullTitleZhWhenNotSet() {
-    // Given: 保存一条没有中文标题的期刊
-    saveVenue("JOURNAL", "Science", "0036-8075", "0404511", "OPENALEX", "US");
-
-    // When
-    PageResult<VenueSummaryReadModel> page =
-        venueReadAdapter.findVenuePage(PagingParams.of(1, 20), EMPTY_FILTER);
-
-    // Then
-    assertThat(page.items())
-        .singleElement()
-        .satisfies(
-            item -> {
-              assertThat(item.title()).isEqualTo("Science");
-              assertThat(item.titleZh()).isNull();
-            });
-  }
-
   @Nested
   @DisplayName("h-index 排序规则")
   class HIndexSortingTests {

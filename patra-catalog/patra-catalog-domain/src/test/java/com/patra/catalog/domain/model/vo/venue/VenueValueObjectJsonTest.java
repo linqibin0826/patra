@@ -118,7 +118,6 @@ class VenueValueObjectJsonTest {
           "{"
               + "\"abbreviatedTitle\":\"Nat. Med.\","
               + "\"alternateTitles\":[\"Nature Medicine\"],"
-              + "\"homepageUrl\":\"https://example.org\","
               + "\"frequency\":\"Monthly\","
               + "\"publicationHistory\":{"
               + "\"startYear\":1990,"
@@ -180,7 +179,6 @@ class VenueValueObjectJsonTest {
     return PublicationProfile.builder()
         .abbreviatedTitle("Nat. Med.")
         .alternateTitles(List.of("Nature Medicine"))
-        .homepageUrl("https://example.org")
         .frequency("Monthly")
         .publicationHistory(history)
         .languages(languages)
