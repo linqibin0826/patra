@@ -112,7 +112,7 @@ class VenueAggregateTest {
       assertThat(venue.getId()).isEqualTo(id);
       assertThat(venue.getVenueType()).isEqualTo(VenueType.REPOSITORY);
       assertThat(venue.getTitle()).isEqualTo(TITLE);
-      assertThat(venue.getImageUrl()).isNull();
+      assertThat(venue.getImageObjectKey()).isNull();
       assertThat(venue.getVersion()).isEqualTo(version);
     }
   }
@@ -317,55 +317,6 @@ class VenueAggregateTest {
       // Then
       assertThat(result).contains("JOURNAL");
       assertThat(result).contains("name=" + TITLE);
-    }
-  }
-
-  @Nested
-  @DisplayName("enrichImageUrl() 封面图片 URL 富化测试")
-  class EnrichImageUrlTests {
-
-    private static final String IMAGE_URL = "https://www.letpub.com.cn/cover/journal/0000001.jpg";
-
-    @Test
-    @DisplayName("应该设置封面图片 URL")
-    void shouldSetImageUrl() {
-      // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
-      assertThat(venue.getImageUrl()).isNull();
-
-      // When
-      venue.enrichImageUrl(IMAGE_URL);
-
-      // Then
-      assertThat(venue.getImageUrl()).isEqualTo(IMAGE_URL);
-    }
-
-    @Test
-    @DisplayName("应该覆盖已有的封面图片 URL")
-    void shouldOverrideExistingImageUrl() {
-      // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
-      venue.enrichImageUrl("https://www.letpub.com.cn/cover/journal/old.jpg");
-
-      // When
-      venue.enrichImageUrl(IMAGE_URL);
-
-      // Then
-      assertThat(venue.getImageUrl()).isEqualTo(IMAGE_URL);
-    }
-
-    @Test
-    @DisplayName("传入 null 时不应该清除已有的封面图片 URL")
-    void shouldNotClearImageUrlWhenNull() {
-      // Given
-      VenueAggregate venue = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
-      venue.enrichImageUrl(IMAGE_URL);
-
-      // When
-      venue.enrichImageUrl(null);
-
-      // Then — null 表示无数据，不应该清除已有值
-      assertThat(venue.getImageUrl()).isEqualTo(IMAGE_URL);
     }
   }
 
