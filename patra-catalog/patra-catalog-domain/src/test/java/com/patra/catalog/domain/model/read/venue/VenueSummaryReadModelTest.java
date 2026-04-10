@@ -57,7 +57,7 @@ class VenueSummaryReadModelTest {
       assertThat(model.id()).isEqualTo(1L);
       assertThat(model.title()).isEqualTo("Nature");
       assertThat(model.countryCode()).isNull();
-      assertThat(model.imageUrl()).isNull();
+      assertThat(model.imageObjectKey()).isNull();
       assertThat(model.hIndex()).isNull();
       assertThat(model.jifQuartile()).isNull();
       assertThat(model.casMajorQuartile()).isNull();
@@ -75,7 +75,7 @@ class VenueSummaryReadModelTest {
               .id(1L)
               .title("Nature")
               .countryCode("US")
-              .imageUrl("https://example.com/nature.jpg")
+              .imageObjectKey("catalog/venue-cover/1.jpg")
               .hIndex(412)
               .jifQuartile("Q1")
               .casMajorQuartile("1区")
@@ -88,7 +88,7 @@ class VenueSummaryReadModelTest {
       assertThat(model.id()).isEqualTo(1L);
       assertThat(model.title()).isEqualTo("Nature");
       assertThat(model.countryCode()).isEqualTo("US");
-      assertThat(model.imageUrl()).isEqualTo("https://example.com/nature.jpg");
+      assertThat(model.imageObjectKey()).isEqualTo("catalog/venue-cover/1.jpg");
       assertThat(model.hIndex()).isEqualTo(412);
       assertThat(model.jifQuartile()).isEqualTo("Q1");
       assertThat(model.casMajorQuartile()).isEqualTo("1区");

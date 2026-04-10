@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS `cat_venue` (
     `abbreviated_title` VARCHAR(200) NULL DEFAULT NULL COMMENT '缩写标题',
     `primary_language` VARCHAR(10) NULL DEFAULT NULL COMMENT '主要语言代码(BCP 47)',
     `country_code` VARCHAR(2) NULL DEFAULT NULL COMMENT '国家代码(ISO 3166-1 alpha-2)',
-    `image_url` VARCHAR(2048) NULL DEFAULT NULL COMMENT '封面图片 URL（来自 LetPub 期刊详情页）',
+    `image_object_key` VARCHAR(512) NULL DEFAULT NULL COMMENT '封面图片对象存储键（相对于 venue-cover 桶）',
     `cited_by_count` INT UNSIGNED NULL DEFAULT NULL COMMENT '被引次数(来自 CitationMetrics,用于批量富化过滤)',
 
     -- ========================================
