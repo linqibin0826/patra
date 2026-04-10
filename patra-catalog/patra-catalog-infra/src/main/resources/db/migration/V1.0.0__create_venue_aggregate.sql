@@ -114,11 +114,6 @@ CREATE TABLE IF NOT EXISTS `cat_venue` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='出版载体表(最小聚合根):仅含核心身份标识和来源追踪,遵循CQRS原则';
 
--- 全文索引（仅覆盖 title）
-CREATE FULLTEXT INDEX `ft_title` ON `cat_venue` (`title`)
-    WITH PARSER ngram
-    COMMENT '标题全文索引';
-
 
 -- ============================================================
 -- 表 2: cat_venue_identifier (载体标识符表)

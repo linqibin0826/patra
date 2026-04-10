@@ -217,6 +217,90 @@ class VenueQueryServiceTest {
   }
 
   @Nested
+  @DisplayName("关键词 LIKE 通配符转义")
+  class KeywordLikeEscapeTests {
+
+    /// 用户输入含 `%` 时应被转义为 `!%`，防止被 SQL LIKE 当通配符。
+    @Test
+    @DisplayName("% 应被转义为 !%")
+    void shouldEscapePercentInKeyword() {
+      // Given
+      VenueQueryService service = new VenueQueryService(venueReadPort);
+      VenueFilter filter = VenueFilter.builder().keyword("Nat!%re").build();
+      PageResult<VenueSummaryReadModel> expected = PageResult.empty(1, 20);
+      when(venueReadPort.findVenuePage(eq(PagingParams.of(1, 20)), eq(filter)))
+          .thenReturn(expected);
+
+      // When
+      PageResult<VenueSummaryReadModel> actual =
+          service.listVenues(new VenueListQuery(null, null, "Nat%re", null, null, null));
+
+      // Then
+      assertThat(actual).isEqualTo(expected);
+      verify(venueReadPort).findVenuePage(PagingParams.of(1, 20), filter);
+    }
+
+    /// 用户输入含 `_` 时应被转义为 `!_`。
+    @Test
+    @DisplayName("_ 应被转义为 !_")
+    void shouldEscapeUnderscoreInKeyword() {
+      // Given
+      VenueQueryService service = new VenueQueryService(venueReadPort);
+      VenueFilter filter = VenueFilter.builder().keyword("Nat!_re").build();
+      PageResult<VenueSummaryReadModel> expected = PageResult.empty(1, 20);
+      when(venueReadPort.findVenuePage(eq(PagingParams.of(1, 20)), eq(filter)))
+          .thenReturn(expected);
+
+      // When
+      PageResult<VenueSummaryReadModel> actual =
+          service.listVenues(new VenueListQuery(null, null, "Nat_re", null, null, null));
+
+      // Then
+      assertThat(actual).isEqualTo(expected);
+      verify(venueReadPort).findVenuePage(PagingParams.of(1, 20), filter);
+    }
+
+    /// 用户输入含转义字符 `!` 自身时应被转义为 `!!`。
+    @Test
+    @DisplayName("! 应被转义为 !!")
+    void shouldEscapeBangInKeyword() {
+      // Given
+      VenueQueryService service = new VenueQueryService(venueReadPort);
+      VenueFilter filter = VenueFilter.builder().keyword("Nat!!re").build();
+      PageResult<VenueSummaryReadModel> expected = PageResult.empty(1, 20);
+      when(venueReadPort.findVenuePage(eq(PagingParams.of(1, 20)), eq(filter)))
+          .thenReturn(expected);
+
+      // When
+      PageResult<VenueSummaryReadModel> actual =
+          service.listVenues(new VenueListQuery(null, null, "Nat!re", null, null, null));
+
+      // Then
+      assertThat(actual).isEqualTo(expected);
+      verify(venueReadPort).findVenuePage(PagingParams.of(1, 20), filter);
+    }
+
+    /// 空白输入不应生成空字符串的 keyword（应归一化为 null）。
+    @Test
+    @DisplayName("空白输入转义后仍为 null（trim 在 escape 之前生效）")
+    void shouldReturnNullWhenKeywordBlank() {
+      // Given
+      VenueQueryService service = new VenueQueryService(venueReadPort);
+      PageResult<VenueSummaryReadModel> expected = PageResult.empty(1, 20);
+      when(venueReadPort.findVenuePage(eq(PagingParams.of(1, 20)), eq(EMPTY_FILTER)))
+          .thenReturn(expected);
+
+      // When
+      PageResult<VenueSummaryReadModel> actual =
+          service.listVenues(new VenueListQuery(null, null, "  ", null, null, null));
+
+      // Then
+      assertThat(actual).isEqualTo(expected);
+      verify(venueReadPort).findVenuePage(PagingParams.of(1, 20), EMPTY_FILTER);
+    }
+  }
+
+  @Nested
   @DisplayName("筛选字段空白归一化")
   class FilterFieldNormalizationTests {
 

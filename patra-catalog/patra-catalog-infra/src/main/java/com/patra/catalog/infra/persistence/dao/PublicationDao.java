@@ -120,7 +120,16 @@ public interface PublicationDao extends JpaRepository<PublicationEntity, Long> {
   ///
   /// 所有筛选参数均可为 null（表示不筛选）。关键词使用包含匹配（`%keyword%`）。
   ///
-  /// @param keyword 标题关键词（包含匹配，大小写不敏感）
+  /// **关键词匹配契约**：
+  ///
+  /// - 大小写不敏感依赖 `cat_publication` 表级 collation `utf8mb4_0900_ai_ci`
+  ///   （见 `V1.1.0__create_publication_aggregate.sql`）；未使用 `LOWER()`，
+  ///   但因查询形态为 infix 匹配（`%keyword%`）本身即不可能命中 B-tree 前缀索引
+  /// - **调用方契约**：`:keyword` 必须是已通过 `StringUtils.escapeLike()`
+  ///   转义的字符串，查询内置 `ESCAPE '!'` 子句与之配套，防止用户输入的
+  ///   `%` / `_` 被当作通配符
+  ///
+  /// @param keyword 标题关键词（已通过 `StringUtils.escapeLike` 转义，包含匹配，大小写不敏感）
   /// @param yearFrom 起始年份（含）
   /// @param yearTo 截止年份（含）
   /// @param languageBase 基础语种代码
@@ -136,7 +145,7 @@ public interface PublicationDao extends JpaRepository<PublicationEntity, Long> {
   @Query(
       """
       SELECT p FROM PublicationEntity p
-      WHERE (:keyword IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')))
+      WHERE (:keyword IS NULL OR p.title LIKE CONCAT('%', :keyword, '%') ESCAPE '!')
         AND (:yearFrom IS NULL OR p.publicationYear >= :yearFrom)
         AND (:yearTo IS NULL OR p.publicationYear <= :yearTo)
         AND (:languageBase IS NULL OR p.languageBase = :languageBase)
