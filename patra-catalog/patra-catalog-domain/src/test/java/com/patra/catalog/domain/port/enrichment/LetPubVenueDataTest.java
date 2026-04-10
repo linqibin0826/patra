@@ -61,10 +61,6 @@ class LetPubVenueDataTest {
               .letPubJournalId("10000")
               .letPubName("Nature")
               .researchDirection("综合性期刊")
-              .country("ENGLAND")
-              .language("English")
-              .frequency("Weekly")
-              .startYear(1869)
               .articlesPerYear(860)
               .goldOaPercent("49.32%")
               .researchArticlePercent("52.24%")
@@ -89,10 +85,6 @@ class LetPubVenueDataTest {
       assertThat(data.letPubJournalId()).isEqualTo("10000");
       assertThat(data.letPubName()).isEqualTo("Nature");
       assertThat(data.researchDirection()).isEqualTo("综合性期刊");
-      assertThat(data.country()).isEqualTo("ENGLAND");
-      assertThat(data.language()).isEqualTo("English");
-      assertThat(data.frequency()).isEqualTo("Weekly");
-      assertThat(data.startYear()).isEqualTo(1869);
       assertThat(data.articlesPerYear()).isEqualTo(860);
       assertThat(data.goldOaPercent()).isEqualTo("49.32%");
       assertThat(data.researchArticlePercent()).isEqualTo("52.24%");
@@ -130,7 +122,7 @@ class LetPubVenueDataTest {
       // Then
       assertThat(data.letPubJournalId()).isNull();
       assertThat(data.letPubName()).isNull();
-      assertThat(data.startYear()).isNull();
+      assertThat(data.articlesPerYear()).isNull();
       assertThat(data.casPartitions()).isEmpty();
       assertThat(data.fiveYearImpactFactor()).isNull();
       assertThat(data.impactFactorTrend()).isEmpty();

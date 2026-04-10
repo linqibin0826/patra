@@ -82,30 +82,6 @@ class LetPubDetailPageParserTest {
     }
 
     @Test
-    @DisplayName("应提取出版国家")
-    void shouldExtractCountry() {
-      assertThat(data.country()).isEqualTo("ENGLAND");
-    }
-
-    @Test
-    @DisplayName("应提取出版语言")
-    void shouldExtractLanguage() {
-      assertThat(data.language()).isEqualTo("English");
-    }
-
-    @Test
-    @DisplayName("应提取出版周期")
-    void shouldExtractFrequency() {
-      assertThat(data.frequency()).isEqualTo("Weekly");
-    }
-
-    @Test
-    @DisplayName("应提取创刊年份")
-    void shouldExtractStartYear() {
-      assertThat(data.startYear()).isEqualTo(1869);
-    }
-
-    @Test
     @DisplayName("应提取年文章数")
     void shouldExtractArticlesPerYear() {
       assertThat(data.articlesPerYear()).isEqualTo(860);
@@ -330,7 +306,7 @@ class LetPubDetailPageParserTest {
       LetPubVenueData result = parser.parse(html, "12345");
 
       assertThat(result.letPubName()).isEqualTo("Some Journal");
-      assertThat(result.country()).isEmpty();
+      assertThat(result.researchDirection()).isEmpty();
     }
   }
 }
