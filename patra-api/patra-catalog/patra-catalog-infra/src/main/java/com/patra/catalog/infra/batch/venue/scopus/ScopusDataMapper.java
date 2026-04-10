@@ -3,6 +3,7 @@ package com.patra.catalog.infra.batch.venue.scopus;
 import com.patra.catalog.domain.port.enrichment.ScopusVenueData;
 import com.patra.catalog.domain.port.enrichment.ScopusVenueData.YearlyMetric;
 import com.patra.catalog.infra.persistence.entity.ScopusRatingEntity;
+import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -38,6 +39,7 @@ class ScopusDataMapper {
 
     for (YearlyMetric metric : data.yearlyMetrics()) {
       ScopusRatingEntity entity = new ScopusRatingEntity();
+      entity.setId(SnowflakeIdGenerator.getId());
       entity.setVenueId(venueId);
       entity.setYear((short) metric.year());
       entity.setScopusSourceId(data.scopusSourceId());

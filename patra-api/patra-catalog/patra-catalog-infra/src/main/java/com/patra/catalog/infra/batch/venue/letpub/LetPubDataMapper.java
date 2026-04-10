@@ -3,6 +3,7 @@ package com.patra.catalog.infra.batch.venue.letpub;
 import com.patra.catalog.domain.port.enrichment.LetPubVenueData;
 import com.patra.catalog.infra.persistence.entity.CasRatingEntity;
 import com.patra.catalog.infra.persistence.entity.JcrRatingEntity;
+import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -70,6 +71,7 @@ public class LetPubDataMapper {
       }
 
       var entity = new JcrRatingEntity();
+      entity.setId(SnowflakeIdGenerator.getId());
       entity.setVenueId(venueId);
       entity.setYear(year);
       entity.setImpactFactor(BigDecimal.valueOf(entry.getValue()));
@@ -118,6 +120,7 @@ public class LetPubDataMapper {
     String edition = extractCasEdition(casVersion);
 
     var entity = new CasRatingEntity();
+    entity.setId(SnowflakeIdGenerator.getId());
     entity.setVenueId(venueId);
     entity.setYear(year);
     entity.setEdition(edition);
