@@ -45,18 +45,18 @@ public class LetPubVenueItemProcessor implements ItemProcessor<VenueEntity, LetP
     String sourceUrl = buildSourceUrl(data.letPubJournalId());
 
     List<JcrRatingEntity> jcrRatings = dataMapper.mapToJcrRatings(data, venueId, sourceUrl);
-    CasRatingEntity casRating = dataMapper.mapToCasRating(data, venueId, sourceUrl);
+    List<CasRatingEntity> casRatings = dataMapper.mapToCasRatings(data, venueId, sourceUrl);
 
-    int totalCount = jcrRatings.size() + (casRating != null ? 1 : 0);
+    int totalCount = jcrRatings.size() + casRatings.size();
     log.info(
         "Venue [id={}, issn={}] LetPub 富化成功，生成 {} 条评级（JCR:{}, CAS:{}）",
         venueId,
         issnL,
         totalCount,
         jcrRatings.size(),
-        casRating != null ? 1 : 0);
+        casRatings.size());
 
-    return LetPubEnrichResult.of(venueId, jcrRatings, casRating);
+    return LetPubEnrichResult.of(venueId, jcrRatings, casRatings);
   }
 
   /// 构建 LetPub 详情页 URL，用于数据溯源。

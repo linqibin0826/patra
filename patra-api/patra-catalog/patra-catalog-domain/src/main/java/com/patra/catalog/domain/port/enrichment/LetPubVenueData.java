@@ -18,11 +18,12 @@ import lombok.Builder;
 /// |------|------|------|
 /// | 基本信息 | letPubJournalId ~ researchArticlePercent | 期刊基础属性 |
 /// | JCR 分区 | jcrSubject ~ jciRank | Journal Citation Reports 分区排名 |
-/// | CAS 分区 | casVersion ~ casReviewJournal | 中科院分区信息 |
+/// | CAS 分区 | casPartitions | 中科院分区列表（支持多版本共存：新锐版/升级版/旧版） |
 /// | 预警/审稿/费用 | warningListStatus ~ apcInfo | 投稿决策参考 |
 /// | 收录情况 | indexedIn | 数据库收录列表 |
 ///
-/// **不变性**：Record + `@Builder` 自动保证不可变，`indexedIn` 通过紧凑构造器防御性拷贝。
+/// **不变性**：Record + `@Builder` 自动保证不可变，
+/// `impactFactorTrend` / `indexedIn` / `casPartitions` 通过紧凑构造器防御性拷贝。
 ///
 /// @param letPubJournalId LetPub 内部期刊 ID
 /// @param letPubName LetPub 显示的期刊名称
@@ -40,13 +41,7 @@ import lombok.Builder;
 /// @param jifRank JIF 排名
 /// @param jciQuartile JCI（期刊引文指标）分区
 /// @param jciRank JCI 排名
-/// @param casVersion 中科院分区版本
-/// @param casMajorCategory CAS 大类学科
-/// @param casMajorQuartile CAS 大类分区
-/// @param casMinorSubject CAS 小类学科
-/// @param casMinorQuartile CAS 小类分区
-/// @param casTopJournal 是否为 Top 期刊（可为 null）
-/// @param casReviewJournal 是否为综述期刊（可为 null）
+/// @param casPartitions CAS 中科院分区列表（支持多版本，不可变）
 /// @param warningListStatus 预警名单状态
 /// @param reviewSpeedOfficial 官方审稿周期
 /// @param reviewSpeedUser 用户反馈审稿周期
@@ -77,14 +72,8 @@ public record LetPubVenueData(
     String jifRank,
     String jciQuartile,
     String jciRank,
-    // CAS 分区
-    String casVersion,
-    String casMajorCategory,
-    String casMajorQuartile,
-    String casMinorSubject,
-    String casMinorQuartile,
-    Boolean casTopJournal,
-    Boolean casReviewJournal,
+    // CAS 分区（多版本）
+    List<CasPartition> casPartitions,
     // 预警 + 审稿 + 费用
     String warningListStatus,
     String reviewSpeedOfficial,
@@ -97,9 +86,32 @@ public record LetPubVenueData(
     // 收录
     List<String> indexedIn) {
 
-  /// 紧凑构造器：对 `impactFactorTrend` 和 `indexedIn` 进行防御性拷贝。
+  /// 紧凑构造器：对集合字段进行防御性拷贝。
   public LetPubVenueData {
     impactFactorTrend = impactFactorTrend != null ? Map.copyOf(impactFactorTrend) : Map.of();
     indexedIn = indexedIn != null ? List.copyOf(indexedIn) : List.of();
+    casPartitions = casPartitions != null ? List.copyOf(casPartitions) : List.of();
   }
+
+  /// CAS 中科院分区快照（单版本）。
+  ///
+  /// 对应 LetPub 页面上的一个分区表版本（如"2026年3月新锐版"、"2025年3月升级版"）。
+  /// LetPub 页面通常同时展示多个版本，本记录捕获其中一个版本的分区信息。
+  ///
+  /// @param version 版本标识（如"2026年3月新锐版"）
+  /// @param majorCategory 大类学科（如"综合性期刊"）
+  /// @param majorQuartile 大类分区（"1区"-"4区"）
+  /// @param minorSubject 小类学科（如"MULTIDISCIPLINARY SCIENCES"）
+  /// @param minorQuartile 小类分区（"1区"-"4区"）
+  /// @param topJournal 是否为 Top 期刊（可为 null）
+  /// @param reviewJournal 是否为综述期刊（可为 null）
+  @Builder
+  public record CasPartition(
+      String version,
+      String majorCategory,
+      String majorQuartile,
+      String minorSubject,
+      String minorQuartile,
+      Boolean topJournal,
+      Boolean reviewJournal) {}
 }

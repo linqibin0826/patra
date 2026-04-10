@@ -1,0 +1,336 @@
+package com.patra.catalog.infra.adapter.integration.letpub;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.patra.catalog.domain.port.enrichment.LetPubVenueData;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+
+/// LetPubDetailPageParser 单元测试。
+///
+/// 使用贴近真实 LetPub 页面结构的 HTML fixture 测试各字段提取。
+/// fixture 包含 `table.table_yjfx` 主表、嵌套 JCR/CAS 子表、
+/// `display:none` span 历史值、ECharts JS 等关键结构。
+///
+/// @author linqibin
+/// @since 0.1.0
+@DisplayName("LetPubDetailPageParser 单元测试")
+@Timeout(5)
+class LetPubDetailPageParserTest {
+
+  private static final String JOURNAL_ID = "10000";
+
+  private static LetPubDetailPageParser parser;
+  private static LetPubVenueData data;
+
+  @BeforeAll
+  static void parseOnce() {
+    parser = new LetPubDetailPageParser();
+    String html = loadHtml("detail-page.html");
+    data = parser.parse(html, JOURNAL_ID);
+  }
+
+  /// 从 classpath 加载 HTML 样本文件。
+  private static String loadHtml(String filename) {
+    try (InputStream is =
+        LetPubDetailPageParserTest.class.getResourceAsStream("/letpub/" + filename)) {
+      assertThat(is).as("HTML sample file: " + filename).isNotNull();
+      return new String(is.readAllBytes(), StandardCharsets.UTF_8);
+    } catch (IOException e) {
+      throw new RuntimeException("Failed to load HTML sample: " + filename, e);
+    }
+  }
+
+  @Nested
+  @DisplayName("期刊名称提取")
+  class JournalNameTests {
+
+    @Test
+    @DisplayName("应从可见 h1 提取期刊名，去除'期刊收藏夹'后缀")
+    void shouldExtractJournalName() {
+      assertThat(data.letPubName()).isEqualTo("Nature");
+    }
+
+    @Test
+    @DisplayName("应忽略 display:none 的品牌 h1 和页脚装饰 h1")
+    void shouldIgnoreHiddenAndFooterH1() {
+      // 品牌 h1 "美国ACCDON公司旗下品牌" 和页脚 "哇咔咔咔咔" 不应影响期刊名
+      assertThat(data.letPubName()).doesNotContain("ACCDON", "哇咔咔");
+    }
+  }
+
+  @Nested
+  @DisplayName("基本信息提取")
+  class BasicInfoTests {
+
+    @Test
+    @DisplayName("应设置 journalId")
+    void shouldSetJournalId() {
+      assertThat(data.letPubJournalId()).isEqualTo(JOURNAL_ID);
+    }
+
+    @Test
+    @DisplayName("应提取研究方向")
+    void shouldExtractResearchDirection() {
+      assertThat(data.researchDirection()).isEqualTo("综合性期刊");
+    }
+
+    @Test
+    @DisplayName("应提取出版国家")
+    void shouldExtractCountry() {
+      assertThat(data.country()).isEqualTo("ENGLAND");
+    }
+
+    @Test
+    @DisplayName("应提取出版语言")
+    void shouldExtractLanguage() {
+      assertThat(data.language()).isEqualTo("English");
+    }
+
+    @Test
+    @DisplayName("应提取出版周期")
+    void shouldExtractFrequency() {
+      assertThat(data.frequency()).isEqualTo("Weekly");
+    }
+
+    @Test
+    @DisplayName("应提取创刊年份")
+    void shouldExtractStartYear() {
+      assertThat(data.startYear()).isEqualTo(1869);
+    }
+
+    @Test
+    @DisplayName("应提取年文章数")
+    void shouldExtractArticlesPerYear() {
+      assertThat(data.articlesPerYear()).isEqualTo(860);
+    }
+
+    @Test
+    @DisplayName("应提取 Gold OA 占比")
+    void shouldExtractGoldOaPercent() {
+      assertThat(data.goldOaPercent()).isEqualTo("49.32%");
+    }
+
+    @Test
+    @DisplayName("应提取研究类文章占比")
+    void shouldExtractResearchArticlePercent() {
+      assertThat(data.researchArticlePercent()).isEqualTo("52.24%");
+    }
+  }
+
+  @Nested
+  @DisplayName("JCR 分区提取")
+  class JcrPartitionTests {
+
+    @Test
+    @DisplayName("应从 JIF 子表格提取学科分类")
+    void shouldExtractJcrSubject() {
+      assertThat(data.jcrSubject()).isEqualTo("MULTIDISCIPLINARY SCIENCES");
+    }
+
+    @Test
+    @DisplayName("应提取收录子集")
+    void shouldExtractJcrCollection() {
+      assertThat(data.jcrCollection()).isEqualTo("SCIE");
+    }
+
+    @Test
+    @DisplayName("应提取 JIF 分区")
+    void shouldExtractJifQuartile() {
+      assertThat(data.jifQuartile()).isEqualTo("Q1");
+    }
+
+    @Test
+    @DisplayName("应提取 JIF 排名")
+    void shouldExtractJifRank() {
+      assertThat(data.jifRank()).isEqualTo("1/73");
+    }
+
+    @Test
+    @DisplayName("应从 JCI 子表格提取分区")
+    void shouldExtractJciQuartile() {
+      assertThat(data.jciQuartile()).isEqualTo("Q1");
+    }
+
+    @Test
+    @DisplayName("应从 JCI 子表格提取排名")
+    void shouldExtractJciRank() {
+      assertThat(data.jciRank()).isEqualTo("2/73");
+    }
+  }
+
+  @Nested
+  @DisplayName("CAS 分区提取（多版本）")
+  class CasPartitionTests {
+
+    @Test
+    @DisplayName("应提取全部 3 个 CAS 版本（新锐版/升级版/旧的升级版）")
+    void shouldExtractAllCasVersions() {
+      assertThat(data.casPartitions()).hasSize(3);
+      assertThat(data.casPartitions())
+          .extracting(LetPubVenueData.CasPartition::version)
+          .containsExactly("2026年3月新锐版", "2025年3月升级版", "2023年12月旧的升级版");
+    }
+
+    @Test
+    @DisplayName("新锐版应排在第一位")
+    void shouldOrderXinruiFirst() {
+      assertThat(data.casPartitions().getFirst().version()).isEqualTo("2026年3月新锐版");
+    }
+
+    @Test
+    @DisplayName("应提取大类学科名称（过滤 span 分区标签）")
+    void shouldExtractMajorCategory() {
+      var xinrui = data.casPartitions().getFirst();
+      assertThat(xinrui.majorCategory()).isEqualTo("综合性期刊");
+    }
+
+    @Test
+    @DisplayName("应从可见 span 提取大类分区（忽略 display:none 历史值）")
+    void shouldExtractMajorQuartileFromVisibleSpan() {
+      var xinrui = data.casPartitions().getFirst();
+      assertThat(xinrui.majorQuartile()).isEqualTo("1区");
+    }
+
+    @Test
+    @DisplayName("应提取小类学科名称")
+    void shouldExtractMinorSubject() {
+      var xinrui = data.casPartitions().getFirst();
+      assertThat(xinrui.minorSubject()).contains("MULTIDISCIPLINARY SCIENCES");
+    }
+
+    @Test
+    @DisplayName("应从可见 span 提取小类分区")
+    void shouldExtractMinorQuartileFromVisibleSpan() {
+      var xinrui = data.casPartitions().getFirst();
+      assertThat(xinrui.minorQuartile()).isEqualTo("1区");
+    }
+
+    @Test
+    @DisplayName("应提取 Top 期刊标识")
+    void shouldExtractTopJournalFlag() {
+      var xinrui = data.casPartitions().getFirst();
+      assertThat(xinrui.topJournal()).isTrue();
+    }
+
+    @Test
+    @DisplayName("应提取综述期刊标识")
+    void shouldExtractReviewJournalFlag() {
+      var xinrui = data.casPartitions().getFirst();
+      assertThat(xinrui.reviewJournal()).isFalse();
+    }
+
+    @Test
+    @DisplayName("升级版也应被正确解析")
+    void shouldParseShengjiEdition() {
+      var shengji = data.casPartitions().get(1);
+      assertThat(shengji.version()).isEqualTo("2025年3月升级版");
+      assertThat(shengji.majorCategory()).isEqualTo("综合性期刊");
+      assertThat(shengji.majorQuartile()).isEqualTo("1区");
+    }
+
+    @Test
+    @DisplayName("旧的升级版也应被正确解析")
+    void shouldParseLegacyEdition() {
+      var legacy = data.casPartitions().get(2);
+      assertThat(legacy.version()).isEqualTo("2023年12月旧的升级版");
+      assertThat(legacy.majorQuartile()).isEqualTo("1区");
+    }
+  }
+
+  @Nested
+  @DisplayName("预警与审稿信息提取")
+  class AdvisoryInfoTests {
+
+    @Test
+    @DisplayName("应提取预警名单状态")
+    void shouldExtractWarningListStatus() {
+      assertThat(data.warningListStatus()).contains("2024").contains("无预警");
+    }
+
+    @Test
+    @DisplayName("应提取官方审稿速度")
+    void shouldExtractOfficialReviewSpeed() {
+      assertThat(data.reviewSpeedOfficial()).contains("较慢");
+    }
+
+    @Test
+    @DisplayName("应提取用户分享审稿速度")
+    void shouldExtractUserReviewSpeed() {
+      assertThat(data.reviewSpeedUser()).contains("6.0个月");
+    }
+
+    @Test
+    @DisplayName("应提取录用比例")
+    void shouldExtractAcceptanceRate() {
+      assertThat(data.acceptanceRate()).contains("7.69%");
+    }
+
+    @Test
+    @DisplayName("应提取 APC 费用信息")
+    void shouldExtractApcInfo() {
+      assertThat(data.apcInfo()).contains("US$11390");
+    }
+  }
+
+  @Nested
+  @DisplayName("收录与影响因子趋势")
+  class TrendAndIndexTests {
+
+    @Test
+    @DisplayName("应提取数据库收录列表")
+    void shouldExtractIndexedIn() {
+      assertThat(data.indexedIn()).isNotEmpty();
+      assertThat(data.indexedIn()).anyMatch(s -> s.contains("Science Citation Index"));
+    }
+
+    @Test
+    @DisplayName("应从 ECharts JS 提取10年 IF 趋势")
+    void shouldExtractImpactFactorTrend() {
+      assertThat(data.impactFactorTrend())
+          .isNotNull()
+          .hasSize(10)
+          .containsEntry("2024-2025", 48.5)
+          .containsEntry("2015-2016", 38.138)
+          .containsEntry("2021-2022", 69.504);
+    }
+
+    @Test
+    @DisplayName("应提取五年影响因子")
+    void shouldExtractFiveYearImpactFactor() {
+      assertThat(data.fiveYearImpactFactor()).isEqualTo(55.0);
+    }
+  }
+
+  @Nested
+  @DisplayName("边界情况")
+  class EdgeCaseTests {
+
+    @Test
+    @DisplayName("空 HTML 应返回仅含 journalId 的默认数据")
+    void shouldHandleEmptyHtml() {
+      LetPubVenueData emptyResult = parser.parse("<html></html>", "99999");
+
+      assertThat(emptyResult.letPubJournalId()).isEqualTo("99999");
+      assertThat(emptyResult.letPubName()).isNull();
+      assertThat(emptyResult.impactFactorTrend()).isEmpty();
+      assertThat(emptyResult.indexedIn()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("无主表格时应优雅降级")
+    void shouldHandleMissingMainTable() {
+      String html = "<html><body><h1>Some Journal 期刊收藏夹</h1></body></html>";
+      LetPubVenueData result = parser.parse(html, "12345");
+
+      assertThat(result.letPubName()).isEqualTo("Some Journal");
+      assertThat(result.country()).isEmpty();
+    }
+  }
+}

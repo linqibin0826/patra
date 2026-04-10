@@ -16,8 +16,8 @@ import org.junit.jupiter.api.Timeout;
 /// **测试策略**：
 ///
 /// - Builder 构建：验证 `@Builder` 正确构造全部字段
-/// - 防御性拷贝：`indexedIn` 集合的不可变性
-/// - null 安全：`indexedIn` 为 null 时自动转为空列表
+/// - 防御性拷贝：集合字段的不可变性
+/// - null 安全：集合字段为 null 时自动转为空集合
 /// - Record 等值语义：同值相等、异值不等
 ///
 /// @author linqibin
@@ -33,6 +33,28 @@ class LetPubVenueDataTest {
     @Test
     @DisplayName("应该通过 Builder 创建包含所有字段的 VO")
     void shouldBuildWithAllFields() {
+      // Given
+      var xinruiPartition =
+          LetPubVenueData.CasPartition.builder()
+              .version("2026年3月新锐版")
+              .majorCategory("综合性期刊")
+              .majorQuartile("1区")
+              .minorSubject("综合性期刊")
+              .minorQuartile("1区")
+              .topJournal(true)
+              .reviewJournal(false)
+              .build();
+      var shengjiPartition =
+          LetPubVenueData.CasPartition.builder()
+              .version("2025年3月升级版")
+              .majorCategory("综合性期刊")
+              .majorQuartile("1区")
+              .minorSubject("综合性期刊")
+              .minorQuartile("1区")
+              .topJournal(true)
+              .reviewJournal(false)
+              .build();
+
       // When
       var data =
           LetPubVenueData.builder()
@@ -52,13 +74,7 @@ class LetPubVenueDataTest {
               .jifRank("1/73")
               .jciQuartile("Q1")
               .jciRank("1/73")
-              .casVersion("2023年12月升级版")
-              .casMajorCategory("综合性期刊")
-              .casMajorQuartile("1区")
-              .casMinorSubject("综合性期刊")
-              .casMinorQuartile("1区")
-              .casTopJournal(true)
-              .casReviewJournal(false)
+              .casPartitions(List.of(xinruiPartition, shengjiPartition))
               .warningListStatus("否")
               .reviewSpeedOfficial("较慢，>12周")
               .reviewSpeedUser("平均6.0个月")
@@ -86,13 +102,12 @@ class LetPubVenueDataTest {
       assertThat(data.jifRank()).isEqualTo("1/73");
       assertThat(data.jciQuartile()).isEqualTo("Q1");
       assertThat(data.jciRank()).isEqualTo("1/73");
-      assertThat(data.casVersion()).isEqualTo("2023年12月升级版");
-      assertThat(data.casMajorCategory()).isEqualTo("综合性期刊");
-      assertThat(data.casMajorQuartile()).isEqualTo("1区");
-      assertThat(data.casMinorSubject()).isEqualTo("综合性期刊");
-      assertThat(data.casMinorQuartile()).isEqualTo("1区");
-      assertThat(data.casTopJournal()).isTrue();
-      assertThat(data.casReviewJournal()).isFalse();
+      assertThat(data.casPartitions())
+          .hasSize(2)
+          .extracting(LetPubVenueData.CasPartition::version)
+          .containsExactly("2026年3月新锐版", "2025年3月升级版");
+      assertThat(data.casPartitions().getFirst().majorQuartile()).isEqualTo("1区");
+      assertThat(data.casPartitions().getFirst().topJournal()).isTrue();
       assertThat(data.warningListStatus()).isEqualTo("否");
       assertThat(data.reviewSpeedOfficial()).isEqualTo("较慢，>12周");
       assertThat(data.reviewSpeedUser()).isEqualTo("平均6.0个月");
@@ -116,7 +131,7 @@ class LetPubVenueDataTest {
       assertThat(data.letPubJournalId()).isNull();
       assertThat(data.letPubName()).isNull();
       assertThat(data.startYear()).isNull();
-      assertThat(data.casTopJournal()).isNull();
+      assertThat(data.casPartitions()).isEmpty();
       assertThat(data.fiveYearImpactFactor()).isNull();
       assertThat(data.impactFactorTrend()).isEmpty();
       assertThat(data.indexedIn()).isEmpty();

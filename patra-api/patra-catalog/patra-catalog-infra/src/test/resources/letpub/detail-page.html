@@ -3,20 +3,324 @@
 <head><title>LetPub - Nature 期刊详情</title></head>
 <body>
 
-<!-- 影响因子区域 -->
-<div class="if-section">
-  <div>2024-2025最新影响因子（数据来源于搜索引擎）</div>
-  <span class="if-value">48.5</span>
-  <a onclick="showecharts_if_trend()">点击查看影响因子趋势图</a>
-</div>
+<!-- 品牌 h1（隐藏） -->
+<h1 style="font-weight:bold; display:none;">美国ACCDON公司旗下品牌</h1>
 
-<!-- 五年影响因子 -->
-<table class="basic-metrics">
-  <tr>
-    <td>五年影响因子</td>
-    <td>55</td>
-  </tr>
-</table>
+<div id="container">
+  <div id="link_list">首页 &gt; 期刊查询 &gt; Nature</div>
+
+  <!-- 期刊名 h1 -->
+  <h1>Nature <span style="float:right;"><a href="#" class="layui-btn layui-btn-sm layui-btn-normal">
+    <i class="layui-icon layui-icon-star"></i> 期刊收藏夹 </a></span></h1>
+
+  <div id="contentjournalapp">
+    <div id="yxyz_content">
+
+      <h2>Nature期刊基本信息</h2>
+
+      <TABLE style="box-sizing:border-box; padding: 8px; border: 1px solid rgb(221, 221, 221);
+             text-align: left; border-collapse: collapse;"
+             class="table_yjfx" cellpadding="0" cellspacing="0" width="1100">
+        <TBODY>
+
+          <!-- 表头行 -->
+          <TR style="background: blue; color: white;">
+            <TH width="180" bgcolor="#3B5998" style="padding: 8px;">基本信息</TH>
+            <TH colspan="2" bgcolor="#3B5998" style="padding: 8px;">登录收藏</TH>
+          </TR>
+
+          <!-- 期刊名字（含封面图和评分，解析时忽略） -->
+          <TR>
+            <TD style="padding: 8px; border: 1px solid rgb(221, 221, 221); font-weight: bold;">期刊名字</TD>
+            <TD colspan="2" style="padding: 8px; border: 1px solid rgb(221, 221, 221);">
+              <img src="/journal_cover/0028-0836.jpg" width="80"/>
+              Nature
+              <span class="letpub-score">LetPub评分: 9.8</span>
+            </TD>
+          </TR>
+
+          <!-- 期刊 ISSN -->
+          <TR>
+            <TD style="padding: 8px; border: 1px solid rgb(221, 221, 221); font-weight: bold;">期刊ISSN</TD>
+            <TD colspan="2" style="padding: 8px; border: 1px solid rgb(221, 221, 221);">0028-0836</TD>
+          </TR>
+
+          <!-- 2024-2025最新影响因子 -->
+          <TR>
+            <TD style="padding: 8px; border: 1px solid rgb(221, 221, 221); font-weight: bold;">2024-2025最新影响因子</TD>
+            <TD colspan="2" style="padding: 8px; border: 1px solid rgb(221, 221, 221);">
+              <span style="font-size:24px; color:red; font-weight:bold;">48.5</span>
+              <a onclick="showecharts_if_trend()" style="cursor:pointer;">点击查看影响因子趋势图</a>
+            </TD>
+          </TR>
+
+          <!-- 五年影响因子 -->
+          <TR>
+            <TD style="padding: 8px; border: 1px solid rgb(221, 221, 221); font-weight: bold;">五年影响因子</TD>
+            <TD colspan="2" style="padding: 8px; border: 1px solid rgb(221, 221, 221);">55</TD>
+          </TR>
+
+          <!-- 涉及的研究方向 -->
+          <TR>
+            <TD style="padding: 8px; border: 1px solid rgb(221, 221, 221); font-weight: bold;">涉及的研究方向</TD>
+            <TD colspan="2" style="padding: 8px; border: 1px solid rgb(221, 221, 221);">综合性期刊</TD>
+          </TR>
+
+          <!-- 出版国家或地区 -->
+          <TR>
+            <TD style="padding: 8px; border: 1px solid rgb(221, 221, 221); font-weight: bold;">出版国家或地区</TD>
+            <TD colspan="2" style="padding: 8px; border: 1px solid rgb(221, 221, 221);">ENGLAND</TD>
+          </TR>
+
+          <!-- 出版语言 -->
+          <TR>
+            <TD style="padding: 8px; border: 1px solid rgb(221, 221, 221); font-weight: bold;">出版语言</TD>
+            <TD colspan="2" style="padding: 8px; border: 1px solid rgb(221, 221, 221);">English</TD>
+          </TR>
+
+          <!-- 出版周期 -->
+          <TR>
+            <TD style="padding: 8px; border: 1px solid rgb(221, 221, 221); font-weight: bold;">出版周期</TD>
+            <TD colspan="2" style="padding: 8px; border: 1px solid rgb(221, 221, 221);">Weekly</TD>
+          </TR>
+
+          <!-- 出版年份 -->
+          <TR>
+            <TD style="padding: 8px; border: 1px solid rgb(221, 221, 221); font-weight: bold;">出版年份</TD>
+            <TD colspan="2" style="padding: 8px; border: 1px solid rgb(221, 221, 221);">1869</TD>
+          </TR>
+
+          <!-- 年文章数 -->
+          <TR>
+            <TD style="padding: 8px; border: 1px solid rgb(221, 221, 221); font-weight: bold;">年文章数</TD>
+            <TD colspan="2" style="padding: 8px; border: 1px solid rgb(221, 221, 221);">860</TD>
+          </TR>
+
+          <!-- Gold OA文章占比 -->
+          <TR>
+            <TD style="padding: 8px; border: 1px solid rgb(221, 221, 221); font-weight: bold;">Gold OA文章占比</TD>
+            <TD colspan="2" style="padding: 8px; border: 1px solid rgb(221, 221, 221);">49.32%</TD>
+          </TR>
+
+          <!-- 研究类文章占比 -->
+          <TR>
+            <TD style="padding: 8px; border: 1px solid rgb(221, 221, 221); font-weight: bold;">研究类文章占比</TD>
+            <TD colspan="2" style="padding: 8px; border: 1px solid rgb(221, 221, 221);">52.24%</TD>
+          </TR>
+
+          <!-- ====== WOS JCR 分区 ====== -->
+          <TR>
+            <TD style="padding: 8px; border: 1px solid rgb(221, 221, 221); font-weight: bold;">
+              WOS期刊JCR分区 <i class="layui-icon layui-icon-tips"></i><br>
+              （ <font color="red">2024-2025年最新版</font>）
+            </TD>
+            <TD colspan="2" style="padding: 8px; border: 1px solid rgb(221, 221, 221);">
+              WOS分区等级：<span style="background: #FFEEEE; border: 1px solid #FFAAAA; color:#3b5998; padding:4px;">1区</span>
+              <br><br>
+              <!-- JIF 表格 -->
+              <table width="800">
+                <tr>
+                  <td style="background:#F6F6F6; font-weight:bold;">按JIF指标学科分区</td>
+                  <td width="100" style="background:#F6F6F6;">收录子集</td>
+                  <td width="60" style="background:#F6F6F6;">JIF分区</td>
+                  <td width="60" style="background:#F6F6F6;">JIF排名</td>
+                  <td width="80" style="background:#F6F6F6;">JIF百分位</td>
+                </tr>
+                <tr>
+                  <td>学科：MULTIDISCIPLINARY SCIENCES</td>
+                  <td>SCIE</td>
+                  <td>Q1</td>
+                  <td>1/73</td>
+                  <td><div class="layui-progress"><div class="layui-progress-bar" style="width:99%"></div></div></td>
+                </tr>
+              </table>
+              <!-- JCI 表格 -->
+              <table width="800" style="margin-top:12px;">
+                <tr>
+                  <td style="background:#F6F6F6; font-weight:bold;">按JCI指标学科分区</td>
+                  <td width="100" style="background:#F6F6F6;">收录子集</td>
+                  <td width="60" style="background:#F6F6F6;">JCI分区</td>
+                  <td width="60" style="background:#F6F6F6;">JCI排名</td>
+                  <td width="80" style="background:#F6F6F6;">JCI百分位</td>
+                </tr>
+                <tr>
+                  <td>学科：MULTIDISCIPLINARY SCIENCES</td>
+                  <td>SCIE</td>
+                  <td>Q1</td>
+                  <td>2/73</td>
+                  <td><div class="layui-progress"><div class="layui-progress-bar" style="width:97%"></div></div></td>
+                </tr>
+              </table>
+            </TD>
+          </TR>
+
+          <!-- ====== 期刊分区表预警名单 ====== -->
+          <TR>
+            <TD style="padding: 8px; border: 1px solid rgb(221, 221, 221); font-weight: bold;">期刊分区表预警名单</TD>
+            <TD colspan="2" style="padding: 8px; border: 1px solid rgb(221, 221, 221);">
+              2024年2月发布的2024版：无预警
+            </TD>
+          </TR>
+
+          <!-- ====== CAS 新锐期刊分区表 ====== -->
+          <TR>
+            <TD style="padding: 8px; border: 1px solid rgb(221, 221, 221); font-weight: bold;">
+              《新锐期刊分区表》<br>（ <font color="red">2026年3月发布</font>）
+              <i class="layui-icon layui-icon-tips" id="jcr2021adv1"></i>
+            </TD>
+            <TD colspan="2" style="padding: 8px; border: 1px solid rgb(221, 221, 221);">
+              <span onclick="showecharts_historyjcr()" style="cursor:pointer; color:blue;">点击查看期刊分区表趋势图</span>
+              <br>
+              <table width="100%">
+                <tr>
+                  <th width="150px" style="padding:4px; background:#F6F6F6;">大类学科</th>
+                  <th width="460px" style="padding:4px; background:#F6F6F6;">小类学科</th>
+                  <th width="80px" style="padding:4px; background:#F6F6F6;">Top期刊</th>
+                  <th width="80px" style="padding:4px; background:#F6F6F6;">综述期刊</th>
+                </tr>
+                <tr>
+                  <!-- 大类学科 -->
+                  <td>综合性期刊
+                    <span style="background: #FFEEEE; color:#3b5998; padding:2px 4px; display:none;">2区</span>
+                    <span style="background: #FFEEEE; color:#3b5998; padding:2px 4px;">1区</span>
+                  </td>
+                  <!-- 小类学科 -->
+                  <td>
+                    <table width="99%">
+                      <tr>
+                        <td>MULTIDISCIPLINARY SCIENCES<br>综合性期刊</td>
+                        <td width="100">
+                          <span style="background: #FFEEEE; padding:2px 4px; display:none;">2区</span>
+                          <span style="background: #FFEEEE; padding:2px 4px;">1区</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <!-- Top期刊 -->
+                  <td style="text-align: center;">是</td>
+                  <!-- 综述期刊 -->
+                  <td style="text-align: center;">否</td>
+                </tr>
+              </table>
+            </TD>
+          </TR>
+
+          <!-- ====== CAS 升级版（旧） ====== -->
+          <TR>
+            <TD style="padding: 8px; border: 1px solid rgb(221, 221, 221); font-weight: bold;">
+              期刊分区表<br>（ <font color="red">2025年3月升级版</font>）
+            </TD>
+            <TD colspan="2" style="padding: 8px; border: 1px solid rgb(221, 221, 221);">
+              <table width="100%">
+                <tr>
+                  <th width="150px" style="padding:4px; background:#F6F6F6;">大类学科</th>
+                  <th width="460px" style="padding:4px; background:#F6F6F6;">小类学科</th>
+                  <th width="80px" style="padding:4px; background:#F6F6F6;">Top期刊</th>
+                  <th width="80px" style="padding:4px; background:#F6F6F6;">综述期刊</th>
+                </tr>
+                <tr>
+                  <td>综合性期刊
+                    <span style="background: #FFEEEE; padding:2px 4px; display:none;">1区</span>
+                    <span style="background: #FFEEEE; padding:2px 4px;">1区</span>
+                  </td>
+                  <td>
+                    <table width="99%">
+                      <tr>
+                        <td>MULTIDISCIPLINARY SCIENCES<br>综合性期刊</td>
+                        <td width="100">
+                          <span style="background: #FFEEEE; padding:2px 4px; display:none;">1区</span>
+                          <span style="background: #FFEEEE; padding:2px 4px;">1区</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td style="text-align: center;">是</td>
+                  <td style="text-align: center;">否</td>
+                </tr>
+              </table>
+            </TD>
+          </TR>
+
+          <!-- ====== CAS 旧的升级版 ====== -->
+          <TR>
+            <TD style="padding: 8px; border: 1px solid rgb(221, 221, 221); font-weight: bold;">
+              期刊分区表<br>（ <font color="red">2023年12月旧的升级版</font>）
+            </TD>
+            <TD colspan="2" style="padding: 8px; border: 1px solid rgb(221, 221, 221);">
+              <table width="100%">
+                <tr>
+                  <th>大类学科</th><th>小类学科</th><th>Top期刊</th><th>综述期刊</th>
+                </tr>
+                <tr>
+                  <td>综合性期刊
+                    <span style="padding:2px 4px;">1区</span>
+                  </td>
+                  <td>
+                    <table width="99%">
+                      <tr>
+                        <td>MULTIDISCIPLINARY SCIENCES<br>综合性期刊</td>
+                        <td width="100"><span style="padding:2px 4px;">1区</span></td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td style="text-align: center;">是</td>
+                  <td style="text-align: center;">否</td>
+                </tr>
+              </table>
+            </TD>
+          </TR>
+
+          <!-- PubMed Central -->
+          <TR>
+            <TD style="padding: 8px; border: 1px solid rgb(221, 221, 221); font-weight: bold;">PubMed Central (PMC)链接</TD>
+            <TD colspan="2" style="padding: 8px; border: 1px solid rgb(221, 221, 221);">
+              <a href="https://www.ncbi.nlm.nih.gov/pmc/journals/100/">全文链接</a>
+            </TD>
+          </TR>
+
+          <!-- 平均审稿速度 -->
+          <TR>
+            <TD style="padding: 8px; border: 1px solid rgb(221, 221, 221); font-weight: bold;">平均审稿速度</TD>
+            <TD colspan="2" style="padding: 8px; border: 1px solid rgb(221, 221, 221);">
+              期刊官网数据：较慢，>12周
+              网友分享经验：平均6.0个月
+            </TD>
+          </TR>
+
+          <!-- 平均录用比例 -->
+          <TR>
+            <TD style="padding: 8px; border: 1px solid rgb(221, 221, 221); font-weight: bold;">平均录用比例</TD>
+            <TD colspan="2" style="padding: 8px; border: 1px solid rgb(221, 221, 221);">
+              期刊官网数据：较难
+              网友分享经验：7.69%
+            </TD>
+          </TR>
+
+          <!-- APC文章处理费信息 -->
+          <TR>
+            <TD style="padding: 8px; border: 1px solid rgb(221, 221, 221); font-weight: bold;">APC文章处理费信息</TD>
+            <TD colspan="2" style="padding: 8px; border: 1px solid rgb(221, 221, 221);">
+              US$11390
+              <a href="#">(查看详情)</a>
+            </TD>
+          </TR>
+
+          <!-- SCI 期刊收录 -->
+          <TR>
+            <TD style="padding: 8px; border: 1px solid rgb(221, 221, 221); font-weight: bold;">SCI期刊收录coverage</TD>
+            <TD colspan="2" style="padding: 8px; border: 1px solid rgb(221, 221, 221);">
+              <a href="#">Science Citation Index</a>,
+              <a href="#">Science Citation Index Expanded</a>,
+              PubMed, Scopus
+            </TD>
+          </TR>
+
+        </TBODY>
+      </TABLE>
+
+    </div>
+  </div>
+</div>
 
 <!-- 影响因子趋势图 ECharts 数据 -->
 <script>
@@ -47,133 +351,10 @@ function showecharts_if_trend(){
   });
 }
 </script>
-<div class="journal-detail">
-  <h1>Nature期刊收藏夹<span class="fav-btn">收藏</span></h1>
 
-  <!-- 基本信息表格 -->
-  <h2>Nature期刊基本信息</h2>
-  <table class="journal-info-table">
-    <tr>
-      <td class="label">涉及的研究方向</td>
-      <td>综合性期刊</td>
-    </tr>
-    <tr>
-      <td class="label">出版国家或地区</td>
-      <td>ENGLAND</td>
-    </tr>
-    <tr>
-      <td class="label">出版语言</td>
-      <td>English</td>
-    </tr>
-    <tr>
-      <td class="label">出版周期</td>
-      <td>Weekly</td>
-    </tr>
-    <tr>
-      <td class="label">出版年份</td>
-      <td>1869</td>
-    </tr>
-    <tr>
-      <td class="label">年文章数</td>
-      <td>860</td>
-    </tr>
-    <tr>
-      <td class="label">Gold OA文章占比</td>
-      <td>49.32%</td>
-    </tr>
-    <tr>
-      <td class="label">研究类文章占比</td>
-      <td>52.24%</td>
-    </tr>
-  </table>
+<!-- 页脚 h1（装饰性） -->
+<h1>哇咔咔咔咔</h1>
+<h1>哇咔咔咔咔</h1>
 
-  <!-- WOS JCR 分区 -->
-  <div class="partition-section">
-    <h3>按JIF指标学科分区</h3>
-    <table class="partition-table">
-      <tr>
-        <td>学科：MULTIDISCIPLINARY SCIENCES</td>
-        <td>SCIE</td>
-        <td>Q1</td>
-        <td>1/73</td>
-      </tr>
-    </table>
-    <h3>按JCI指标学科分区</h3>
-    <table class="partition-table">
-      <tr>
-        <td>学科：MULTIDISCIPLINARY SCIENCES</td>
-        <td>SCIE</td>
-        <td>Q1</td>
-        <td>2/73</td>
-      </tr>
-    </table>
-  </div>
-
-  <!-- 中科院分区 -->
-  <div class="cas-partition-section">
-    <h3>中国科学院期刊分区 （ 2023年12月升级版）</h3>
-    <a href="#">点击查看中国科学院期刊分区趋势图</a>
-    <table class="cas-table">
-      <tr>
-        <td>大类学科小类学科Top期刊综述期刊</td>
-      </tr>
-      <tr>
-        <td>综合性期刊 1区</td>
-      </tr>
-      <tr>
-        <td>MULTIDISCIPLINARY SCIENCES 综合性期刊</td>
-        <td>1区</td>
-      </tr>
-      <tr>
-        <td>是</td>
-      </tr>
-      <tr>
-        <td>否</td>
-      </tr>
-    </table>
-    <!-- 旧版本（隐藏） -->
-    <span style="display:none">
-      <h3>中国科学院期刊分区 （ 2022年12月升级版）</h3>
-      <table><tr><td>综合性期刊 1区</td></tr></table>
-    </span>
-  </div>
-
-  <!-- 预警名单 -->
-  <div class="warning-section">
-    <p>2024年2月发布的2024版：无预警</p>
-  </div>
-
-  <!-- 审稿速度 -->
-  <table class="review-table">
-    <tr>
-      <td>平均审稿速度</td>
-      <td>期刊官网数据：较慢，>12周 网友分享经验：平均6.0个月</td>
-    </tr>
-  </table>
-
-  <!-- 录用比例 -->
-  <table class="accept-table">
-    <tr>
-      <td>平均录用比例</td>
-      <td>期刊官网数据：较难 网友分享经验：7.69%</td>
-    </tr>
-  </table>
-
-  <!-- APC -->
-  <table class="apc-table">
-    <tr>
-      <td>APC文章处理费信息</td>
-      <td>US$11390</td>
-    </tr>
-  </table>
-
-  <!-- 收录情况 -->
-  <table class="index-table">
-    <tr>
-      <td>SCI期刊收录</td>
-      <td>Science Citation Index, Science Citation Index Expanded, PubMed, Scopus</td>
-    </tr>
-  </table>
-</div>
 </body>
 </html>

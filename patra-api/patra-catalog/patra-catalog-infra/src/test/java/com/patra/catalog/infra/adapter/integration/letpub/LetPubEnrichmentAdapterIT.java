@@ -86,7 +86,8 @@ class LetPubEnrichmentAdapterIT {
     assertThat(data.letPubName()).isNotBlank();
     assertThat(data.letPubJournalId()).isNotBlank();
     assertThat(data.jifQuartile()).isNotBlank();
-    assertThat(data.casMajorQuartile()).isNotBlank();
+    assertThat(data.casPartitions()).isNotEmpty();
+    assertThat(data.casPartitions().getFirst().majorQuartile()).isNotBlank();
   }
 
   @Test
@@ -103,7 +104,8 @@ class LetPubEnrichmentAdapterIT {
     printData("Science", data);
 
     assertThat(data.letPubName()).isNotBlank();
-    assertThat(data.casMajorCategory()).isNotBlank();
+    assertThat(data.casPartitions()).isNotEmpty();
+    assertThat(data.casPartitions().getFirst().majorCategory()).isNotBlank();
   }
 
   @Test
@@ -150,13 +152,15 @@ class LetPubEnrichmentAdapterIT {
     System.out.println("║ JIF 分区:        " + data.jifQuartile() + "  排名: " + data.jifRank());
     System.out.println("║ JCI 分区:        " + data.jciQuartile() + "  排名: " + data.jciRank());
     System.out.println("╠══ CAS ═══════════════════════════════");
-    System.out.println("║ 版本:            " + data.casVersion());
-    System.out.println(
-        "║ 大类:            " + data.casMajorCategory() + " " + data.casMajorQuartile());
-    System.out.println(
-        "║ 小类:            " + data.casMinorSubject() + " " + data.casMinorQuartile());
-    System.out.println("║ Top 期刊:        " + data.casTopJournal());
-    System.out.println("║ 综述期刊:        " + data.casReviewJournal());
+    System.out.println("║ 版本数:          " + data.casPartitions().size());
+    data.casPartitions()
+        .forEach(
+            p -> {
+              System.out.println("║ ─── " + p.version() + " ───");
+              System.out.println("║   大类: " + p.majorCategory() + " " + p.majorQuartile());
+              System.out.println("║   小类: " + p.minorSubject() + " " + p.minorQuartile());
+              System.out.println("║   Top期刊: " + p.topJournal() + ", 综述: " + p.reviewJournal());
+            });
     System.out.println("╠══ 其他 ══════════════════════════════");
     System.out.println("║ 预警名单:        " + data.warningListStatus());
     System.out.println("║ 审稿速度(官网):  " + data.reviewSpeedOfficial());
