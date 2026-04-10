@@ -2,11 +2,13 @@ package com.patra.starter.restclient.proxy;
 
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import org.apache.hc.client5.http.auth.AuthScope;
 import org.apache.hc.client5.http.auth.UsernamePasswordCredentials;
 import org.apache.hc.client5.http.config.ConnectionConfig;
 import org.apache.hc.client5.http.config.RequestConfig;
 import org.apache.hc.client5.http.impl.auth.BasicCredentialsProvider;
+import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
 import org.apache.hc.core5.http.HttpHost;
@@ -60,13 +62,32 @@ public class TunnelProxyConfigurer {
     return proxyHost;
   }
 
-  /// 创建已配置代理的 HTTP 请求工厂。
+  /// 创建已配置代理的 HTTP 请求工厂（默认行为，不做额外定制）。
   ///
   /// @param connectTimeout 连接超时
   /// @param readTimeout 读取超时
   /// @return 已配置代理的请求工厂
   public HttpComponentsClientHttpRequestFactory createRequestFactory(
       Duration connectTimeout, Duration readTimeout) {
+    return createRequestFactory(connectTimeout, readTimeout, builder -> {});
+  }
+
+  /// 创建已配置代理的 HTTP 请求工厂，并允许调用方对底层 {@link HttpClientBuilder} 做额外定制。
+  ///
+  /// 典型的定制场景（以爬虫为例）：
+  ///
+  /// - 禁用 cookie 管理：`builder.disableCookieManagement()`
+  ///   避免跨请求携带相同会话标识被目标站点识别
+  /// - 禁用连接复用：`builder.setConnectionReuseStrategy((req, resp, ctx) -> false)`
+  ///   强制每次请求建立新的 TCP 连接，触发代理分配新的上游 IP
+  /// - 自定义 UA 拦截器：`builder.addRequestInterceptorFirst(...)`
+  ///
+  /// @param connectTimeout 连接超时
+  /// @param readTimeout 读取超时
+  /// @param customizer 对底层 HttpClient 构建器的定制逻辑
+  /// @return 已配置代理的请求工厂
+  public HttpComponentsClientHttpRequestFactory createRequestFactory(
+      Duration connectTimeout, Duration readTimeout, Consumer<HttpClientBuilder> customizer) {
     var connectionConfig =
         ConnectionConfig.custom()
             .setConnectTimeout(connectTimeout.toMillis(), TimeUnit.MILLISECONDS)
@@ -83,14 +104,15 @@ public class TunnelProxyConfigurer {
             .setResponseTimeout(readTimeout.toMillis(), TimeUnit.MILLISECONDS)
             .build();
 
-    var httpClient =
+    var builder =
         HttpClients.custom()
             .setProxy(proxyHost)
             .setDefaultCredentialsProvider(credentialsProvider)
             .setConnectionManager(connectionManager)
-            .setDefaultRequestConfig(requestConfig)
-            .build();
+            .setDefaultRequestConfig(requestConfig);
 
-    return new HttpComponentsClientHttpRequestFactory(httpClient);
+    customizer.accept(builder);
+
+    return new HttpComponentsClientHttpRequestFactory(builder.build());
   }
 }
