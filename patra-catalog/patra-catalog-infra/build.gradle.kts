@@ -50,6 +50,8 @@ dependencies {
     // 测试依赖（基础由 patra.java-library 提供）
     testImplementation(project(":patra-spring-boot-starter-test"))
     testImplementation(libs.mockftpserver)
+    // Apache HttpClient 5：隧道代理连通性测试需要（starter-rest-client 中为 compileOnly）
+    testImplementation("org.apache.httpcomponents.client5:httpclient5")
 }
 
 // 生成 test-jar 供 boot 模块复用
