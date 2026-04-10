@@ -44,24 +44,21 @@ class VenueQueryServiceDetailTest {
     VenueQueryService service = new VenueQueryService(venueReadPort);
     Long validId = 1L;
     VenueDetailReadModel expected =
-        new VenueDetailReadModel(
-            validId,
-            "JOURNAL",
-            "Nature",
-            null,
-            "0028-0836",
-            "0410462",
-            "S12345",
-            "Nature",
-            "eng",
-            "US",
-            null,
-            null,
-            null,
-            List.of(),
-            Instant.parse("2026-02-13T00:00:00Z"),
-            Instant.parse("2026-02-01T00:00:00Z"),
-            Instant.parse("2026-02-13T00:00:00Z"));
+        VenueDetailReadModel.builder()
+            .id(validId)
+            .venueType("JOURNAL")
+            .title("Nature")
+            .issnL("0028-0836")
+            .nlmId("0410462")
+            .openalexId("S12345")
+            .abbreviatedTitle("Nature")
+            .primaryLanguage("eng")
+            .countryCode("US")
+            .affiliatedSocieties(List.of())
+            .lastSyncedAt(Instant.parse("2026-02-13T00:00:00Z"))
+            .createdAt(Instant.parse("2026-02-01T00:00:00Z"))
+            .updatedAt(Instant.parse("2026-02-13T00:00:00Z"))
+            .build();
     when(venueReadPort.findVenueDetail(eq(validId))).thenReturn(Optional.of(expected));
 
     // When

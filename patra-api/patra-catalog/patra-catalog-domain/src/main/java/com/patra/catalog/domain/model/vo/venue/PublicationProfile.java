@@ -29,7 +29,7 @@ import lombok.Builder;
 ///
 /// | 分类 | 字段 |
 /// |------|------|
-/// | 出版信息 | abbreviatedTitle, alternateTitles, homepageUrl, frequency |
+/// | 出版信息 | abbreviatedTitle, alternateTitles, frequency |
 /// | 出版历史 | publicationHistory |
 /// | 语言信息 | languages |
 /// | 宿主机构 | hostOrganization |
@@ -43,7 +43,6 @@ import lombok.Builder;
 /// PublicationProfile profile = PublicationProfile.builder()
 ///     .abbreviatedTitle("Nat. Med.")
 ///     .alternateTitles(List.of("Nature Medicine"))
-///     .homepageUrl("https://www.nature.com/nm")
 ///     .frequency("Monthly")
 ///     .publicationHistory(PublicationHistory.active(1995))
 ///     .hostOrganization(HostOrganization.of("I123", "Springer Nature"))
@@ -52,7 +51,6 @@ import lombok.Builder;
 ///
 /// @param abbreviatedTitle 缩写标题（ISO 缩写）
 /// @param alternateTitles 替代名称列表
-/// @param homepageUrl 主页 URL
 /// @param frequency 出版频率（如 Weekly/Monthly/Quarterly）
 /// @param publicationHistory 出版历史（创刊/停刊年份）
 /// @param languages 语言信息（主语言和摘要语言）
@@ -67,7 +65,6 @@ import lombok.Builder;
 public record PublicationProfile(
     String abbreviatedTitle,
     List<String> alternateTitles,
-    String homepageUrl,
     String frequency,
     PublicationHistory publicationHistory,
     VenueLanguages languages,
@@ -106,13 +103,6 @@ public record PublicationProfile(
   /// @return true 如果有替代名称
   public boolean hasAlternateTitles() {
     return alternateTitles != null && !alternateTitles.isEmpty();
-  }
-
-  /// 判断是否有主页 URL。
-  ///
-  /// @return true 如果有主页 URL
-  public boolean hasHomepageUrl() {
-    return homepageUrl != null && !homepageUrl.isBlank();
   }
 
   /// 判断是否有出版频率。

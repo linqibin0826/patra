@@ -10,7 +10,6 @@ import lombok.Builder;
 public record VenueItemResponse(
     Long id,
     String title,
-    String titleZh,
     String countryCode,
     String imageUrl,
     Integer hIndex,

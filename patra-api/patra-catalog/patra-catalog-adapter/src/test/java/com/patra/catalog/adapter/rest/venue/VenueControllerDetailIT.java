@@ -53,24 +53,21 @@ class VenueControllerDetailIT {
     // Given
     Long validId = 1001L;
     VenueDetailReadModel detail =
-        new VenueDetailReadModel(
-            validId,
-            "JOURNAL",
-            "Nature",
-            "自然",
-            "0028-0836",
-            "0410462",
-            "S12345",
-            "Nature",
-            "eng",
-            "US",
-            null,
-            null,
-            null,
-            List.of(),
-            Instant.parse("2026-02-13T00:00:00Z"),
-            Instant.parse("2026-02-01T00:00:00Z"),
-            Instant.parse("2026-02-13T00:00:00Z"));
+        VenueDetailReadModel.builder()
+            .id(validId)
+            .venueType("JOURNAL")
+            .title("Nature")
+            .issnL("0028-0836")
+            .nlmId("0410462")
+            .openalexId("S12345")
+            .abbreviatedTitle("Nature")
+            .primaryLanguage("eng")
+            .countryCode("US")
+            .affiliatedSocieties(List.of())
+            .lastSyncedAt(Instant.parse("2026-02-13T00:00:00Z"))
+            .createdAt(Instant.parse("2026-02-01T00:00:00Z"))
+            .updatedAt(Instant.parse("2026-02-13T00:00:00Z"))
+            .build();
 
     when(venueQueryService.getVenueDetail(any(VenueDetailQuery.class))).thenReturn(detail);
 
@@ -90,8 +87,6 @@ class VenueControllerDetailIT {
         .isEqualTo("JOURNAL")
         .jsonPath("$.title")
         .isEqualTo("Nature")
-        .jsonPath("$.titleZh")
-        .isEqualTo("自然")
         .jsonPath("$.issnL")
         .isEqualTo("0028-0836")
         .jsonPath("$.nlmId")

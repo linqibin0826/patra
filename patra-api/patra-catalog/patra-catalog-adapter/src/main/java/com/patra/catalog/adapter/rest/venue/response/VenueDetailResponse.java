@@ -12,7 +12,6 @@ import java.util.List;
 /// @param id 期刊主键 ID
 /// @param venueType 载体类型
 /// @param title 期刊标题
-/// @param titleZh 中文标题（可空）
 /// @param issnL ISSN-L（可空）
 /// @param nlmId NLM ID（可空）
 /// @param openalexId OpenAlex Source ID（可空）
@@ -30,7 +29,6 @@ public record VenueDetailResponse(
     Long id,
     String venueType,
     String title,
-    String titleZh,
     String issnL,
     String nlmId,
     String openalexId,
@@ -65,7 +63,6 @@ public record VenueDetailResponse(
   ///
   /// @param abbreviatedTitle 缩写标题
   /// @param alternateTitles 替代名称列表
-  /// @param homepageUrl 主页 URL
   /// @param frequency 出版频率
   /// @param publicationHistory 出版历史
   /// @param languages 语言信息
@@ -75,7 +72,6 @@ public record VenueDetailResponse(
   public record PublicationProfileDto(
       String abbreviatedTitle,
       List<String> alternateTitles,
-      String homepageUrl,
       String frequency,
       PublicationHistoryDto publicationHistory,
       VenueLanguagesDto languages,

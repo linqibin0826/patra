@@ -55,7 +55,6 @@ CREATE TABLE IF NOT EXISTS `cat_venue` (
     -- ========================================
     `venue_type` VARCHAR(32) NOT NULL COMMENT '载体类型:JOURNAL/REPOSITORY/CONFERENCE/EBOOK_PLATFORM/BOOK_SERIES/METADATA/OTHER',
     `title` VARCHAR(500) NOT NULL COMMENT '载体标题(主名称)',
-    `title_zh` VARCHAR(500) NULL DEFAULT NULL COMMENT '中文标题(来自Wikidata SPARQL查询)',
 
     -- ========================================
     -- 来源追踪（Provenance）
@@ -72,7 +71,7 @@ CREATE TABLE IF NOT EXISTS `cat_venue` (
     `abbreviated_title` VARCHAR(200) NULL DEFAULT NULL COMMENT '缩写标题',
     `primary_language` VARCHAR(10) NULL DEFAULT NULL COMMENT '主要语言代码(BCP 47)',
     `country_code` VARCHAR(2) NULL DEFAULT NULL COMMENT '国家代码(ISO 3166-1 alpha-2)',
-    `image_url` VARCHAR(2048) NULL DEFAULT NULL COMMENT 'Wikimedia Commons 封面图片 URL（来自 Wikidata P18）',
+    `image_url` VARCHAR(2048) NULL DEFAULT NULL COMMENT '封面图片 URL（来自 LetPub 期刊详情页）',
     `cited_by_count` INT UNSIGNED NULL DEFAULT NULL COMMENT '被引次数(来自 CitationMetrics,用于批量富化过滤)',
 
     -- ========================================
@@ -115,10 +114,10 @@ CREATE TABLE IF NOT EXISTS `cat_venue` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 COMMENT='出版载体表(最小聚合根):仅含核心身份标识和来源追踪,遵循CQRS原则';
 
--- 全文索引（覆盖 title + title_zh，支持中英文混合检索）
-CREATE FULLTEXT INDEX `ft_title` ON `cat_venue` (`title`, `title_zh`)
+-- 全文索引（仅覆盖 title）
+CREATE FULLTEXT INDEX `ft_title` ON `cat_venue` (`title`)
     WITH PARSER ngram
-    COMMENT '标题全文索引,支持中英文检索';
+    COMMENT '标题全文索引';
 
 
 -- ============================================================

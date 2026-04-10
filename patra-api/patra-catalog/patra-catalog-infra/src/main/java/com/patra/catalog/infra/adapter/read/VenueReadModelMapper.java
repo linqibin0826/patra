@@ -29,7 +29,6 @@ public interface VenueReadModelMapper {
   /// @return Venue 摘要读模型
   @Mapping(source = "entity.id", target = "id")
   @Mapping(source = "entity.title", target = "title")
-  @Mapping(source = "entity.titleZh", target = "titleZh")
   @Mapping(source = "entity.countryCode", target = "countryCode")
   @Mapping(source = "entity.imageUrl", target = "imageUrl")
   @Mapping(source = "entity.citationMetrics.hIndex", target = "hIndex")

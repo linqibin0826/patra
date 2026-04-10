@@ -5,7 +5,7 @@ import java.util.Optional;
 /// LetPub 期刊评价数据富化端口。
 ///
 /// 定义从 [LetPub](https://www.letpub.com.cn) 获取期刊评价数据的能力。
-/// 与 Wikidata/OpenAlex 的批量查询不同，LetPub 采用逐条 ISSN 搜索 + HTML 解析的方式，
+/// 与 OpenAlex 的批量 REST 查询不同，LetPub 采用逐条 ISSN 搜索 + HTML 解析的方式，
 /// 每次调用仅处理单条期刊。
 ///
 /// **实现约束**：
