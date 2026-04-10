@@ -2,6 +2,8 @@ package com.patra.starter.batch.core;
 
 import com.patra.common.json.JsonMapperHolder;
 import com.patra.starter.batch.exception.BatchJobExecutionException;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.Map;
 import java.util.Optional;
@@ -14,6 +16,7 @@ import org.springframework.batch.core.job.parameters.JobParameters;
 import org.springframework.batch.core.job.parameters.JobParametersBuilder;
 import org.springframework.batch.core.launch.JobOperator;
 import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.StepExecution;
 import tools.jackson.databind.ObjectMapper;
 
 /// Job 启动辅助类。
@@ -87,12 +90,83 @@ public class JobOperatorHelper {
       JobExecution execution = jobOperator.start(job, jobParameters);
 
       log.info("Job [{}] 启动成功，执行 ID: {}", job.getName(), execution.getId());
+      logJobSummary(job.getName(), execution);
       return execution.getId();
 
     } catch (Exception e) {
       log.error("Job [{}] 启动失败", job.getName(), e);
       throw new BatchJobExecutionException(job.getName(), e);
     }
+  }
+
+  /// 打印 Job 执行摘要：状态、耗时及各 Step 的读/写/过滤/跳过/提交/回滚计数。
+  ///
+  /// `JobOperator.start()` 在本项目的配置下是同步调用（`TaskExecutorJobLauncher`
+  /// 返回时 Job 已执行完毕），因此可以在 launch() 返回前直接读取统计指标。
+  ///
+  /// 为了兼容单元测试中使用裸 `JobExecution`（无 StepExecution、无时间戳）的场景，
+  /// 所有字段访问都做了 null 安全处理。
+  ///
+  /// @param jobName Job 名称
+  /// @param execution 已执行完毕的 JobExecution
+  private void logJobSummary(String jobName, JobExecution execution) {
+    String status = execution.getStatus() != null ? execution.getStatus().name() : "UNKNOWN";
+    String exitCode =
+        execution.getExitStatus() != null ? execution.getExitStatus().getExitCode() : "UNKNOWN";
+    String duration =
+        formatDuration(computeDurationMs(execution.getStartTime(), execution.getEndTime()));
+
+    log.info(
+        "Job [{}] 执行完成 [executionId={}, status={}, exitCode={}, duration={}]",
+        jobName,
+        execution.getId(),
+        status,
+        exitCode,
+        duration);
+
+    var stepExecutions = execution.getStepExecutions();
+    if (stepExecutions == null || stepExecutions.isEmpty()) {
+      return;
+    }
+    for (StepExecution step : stepExecutions) {
+      String stepDuration =
+          formatDuration(computeDurationMs(step.getStartTime(), step.getEndTime()));
+      log.info(
+          "  └─ Step [{}]: read={}, write={}, filter={}, "
+              + "readSkip={}, processSkip={}, writeSkip={}, commit={}, rollback={}, duration={}",
+          step.getStepName(),
+          step.getReadCount(),
+          step.getWriteCount(),
+          step.getFilterCount(),
+          step.getReadSkipCount(),
+          step.getProcessSkipCount(),
+          step.getWriteSkipCount(),
+          step.getCommitCount(),
+          step.getRollbackCount(),
+          stepDuration);
+    }
+  }
+
+  /// 计算两个时间点之间的毫秒数，任一为 null 则返回 0。
+  private long computeDurationMs(LocalDateTime start, LocalDateTime end) {
+    if (start == null || end == null) {
+      return 0L;
+    }
+    return Duration.between(start, end).toMillis();
+  }
+
+  /// 将毫秒数格式化为可读形式：`Xm Ys` 或 `Ys` 或 `Xms`。
+  private String formatDuration(long ms) {
+    if (ms <= 0L) {
+      return "0s";
+    }
+    if (ms < 1000L) {
+      return ms + "ms";
+    }
+    long totalSeconds = ms / 1000L;
+    long minutes = totalSeconds / 60L;
+    long seconds = totalSeconds % 60L;
+    return minutes > 0 ? String.format("%dm%ds", minutes, seconds) : seconds + "s";
   }
 
   /// 将 JobParams 转换为 Map。
