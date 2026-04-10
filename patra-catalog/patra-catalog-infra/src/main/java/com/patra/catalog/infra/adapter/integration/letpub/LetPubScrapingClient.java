@@ -68,12 +68,14 @@ public class LetPubScrapingClient {
     this(restClient, 8000, 3000);
   }
 
-  /// 测试构造器（可配置延迟）。
+  /// 可配置延迟的构造器。
+  ///
+  /// 用于隧道代理模式（降低延迟）或测试场景。
   ///
   /// @param restClient HTTP 客户端
   /// @param baseDelayMs 基础延迟毫秒数
   /// @param jitterMs 随机抖动毫秒数
-  LetPubScrapingClient(RestClient restClient, long baseDelayMs, long jitterMs) {
+  public LetPubScrapingClient(RestClient restClient, long baseDelayMs, long jitterMs) {
     this.restClient = restClient;
     this.baseDelayMs = baseDelayMs;
     this.jitterMs = jitterMs;
@@ -187,12 +189,15 @@ public class LetPubScrapingClient {
     LetPubVenueData.LetPubVenueDataBuilder builder =
         LetPubVenueData.builder().letPubJournalId(journalId);
 
-    // 期刊名：从 h1 提取，去除 "期刊收藏夹" 后缀
-    Element h1 = doc.selectFirst("h1");
-    if (h1 != null) {
-      String name = h1.text().split("期刊收藏夹")[0].trim();
-      builder.letPubName(name);
-    }
+    // 期刊名：从可见的 h1 提取（跳过 display:none 的品牌标识），去除 "期刊收藏夹" 后缀
+    doc.select("h1").stream()
+        .filter(h1 -> !h1.attr("style").matches("(?i).*display\\s*:\\s*none.*"))
+        .findFirst()
+        .ifPresent(
+            h1 -> {
+              String name = h1.text().split("期刊收藏夹")[0].trim();
+              builder.letPubName(name);
+            });
 
     // 基本信息：label/value td 对
     builder.researchDirection(findFieldValue(doc, "涉及的研究方向"));
@@ -429,12 +434,16 @@ public class LetPubScrapingClient {
   /// 提取 `xAxis.data`（年份数组）和 `series[0].data`（IF 值数组），
   /// 年份格式从 `"2024-2025年度"` 简化为 `"2024-2025"`。
   private void parseImpactFactorTrend(String html, LetPubVenueData.LetPubVenueDataBuilder builder) {
-    // 定位 showecharts_if_trend 函数区域
-    int funcPos = html.indexOf("showecharts_if_trend");
+    // 提取 showecharts_if_trend 函数体：从函数定义到 setOption 调用
+    int funcPos = html.indexOf("function showecharts_if_trend");
     if (funcPos < 0) {
       return;
     }
-    String funcSection = html.substring(funcPos, Math.min(funcPos + 3000, html.length()));
+    int endPos = html.indexOf("setOption", funcPos);
+    if (endPos < 0) {
+      return;
+    }
+    String funcSection = html.substring(funcPos, endPos);
 
     // 提取年份数组：data : ['2015-2016年度','2016-2017年度',...]
     Pattern yearPattern = Pattern.compile("xAxis.*?data\\s*:\\s*\\[(.*?)]", Pattern.DOTALL);
