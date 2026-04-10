@@ -216,13 +216,13 @@ public class LetPubDetailPageParser {
   }
 
   /// 从 fieldMap 提取基本信息字段。
+  ///
+  /// **注意**：`出版国家或地区`、`出版语言`、`出版周期`、`出版年份` 四个字段
+  /// 由 PubMed NLM Serfile 作为权威来源提供（见 `VenuePubmedImportHandler`），
+  /// 此处不再抽取以避免多源冲突与死字段。
   private void parseBasicInfo(
       Map<String, Element> fieldMap, LetPubVenueData.LetPubVenueDataBuilder builder) {
     builder.researchDirection(getFieldText(fieldMap, "涉及的研究方向"));
-    builder.country(getFieldText(fieldMap, "出版国家或地区"));
-    builder.language(getFieldText(fieldMap, "出版语言"));
-    builder.frequency(getFieldText(fieldMap, "出版周期"));
-    builder.startYear(parseInteger(getFieldText(fieldMap, "出版年份")));
 
     String articlesStr = getFieldText(fieldMap, "年文章数");
     builder.articlesPerYear(parseInteger(articlesStr.replace(",", "")));

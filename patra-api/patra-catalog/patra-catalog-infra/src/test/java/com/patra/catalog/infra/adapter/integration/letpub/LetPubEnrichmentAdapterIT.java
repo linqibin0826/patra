@@ -141,10 +141,6 @@ class LetPubEnrichmentAdapterIT {
     System.out.println("║ 期刊名:          " + data.letPubName());
     System.out.println("║ LetPub ID:       " + data.letPubJournalId());
     System.out.println("║ 研究方向:        " + data.researchDirection());
-    System.out.println("║ 出版国:          " + data.country());
-    System.out.println("║ 语言:            " + data.language());
-    System.out.println("║ 出版周期:        " + data.frequency());
-    System.out.println("║ 创刊年:          " + data.startYear());
     System.out.println("║ 年文章数:        " + data.articlesPerYear());
     System.out.println("╠══ JCR ═══════════════════════════════");
     System.out.println("║ 学科:            " + data.jcrSubject());

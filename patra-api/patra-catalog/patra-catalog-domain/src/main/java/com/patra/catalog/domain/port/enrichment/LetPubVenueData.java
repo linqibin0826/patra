@@ -22,16 +22,16 @@ import lombok.Builder;
 /// | 预警/审稿/费用 | warningListStatus ~ apcInfo | 投稿决策参考 |
 /// | 收录情况 | indexedIn | 数据库收录列表 |
 ///
+/// **字段来源边界**：
+/// 出版国家、出版语言、出版周期、创刊年份等基础元数据由 PubMed NLM Serfile
+/// 作为权威来源提供（见 `VenuePubmedImportHandler`），本 DTO 不携带这些字段以避免多源冲突。
+///
 /// **不变性**：Record + `@Builder` 自动保证不可变，
 /// `impactFactorTrend` / `indexedIn` / `casPartitions` 通过紧凑构造器防御性拷贝。
 ///
 /// @param letPubJournalId LetPub 内部期刊 ID
 /// @param letPubName LetPub 显示的期刊名称
 /// @param researchDirection 研究方向/学科领域
-/// @param country 出版国家
-/// @param language 出版语言
-/// @param frequency 出版频率
-/// @param startYear 创刊年份（可为 null）
 /// @param articlesPerYear 年发文量（可为 null）
 /// @param goldOaPercent 金色 OA 百分比
 /// @param researchArticlePercent 研究性文章占比
@@ -58,10 +58,6 @@ public record LetPubVenueData(
     String letPubJournalId,
     String letPubName,
     String researchDirection,
-    String country,
-    String language,
-    String frequency,
-    Integer startYear,
     Integer articlesPerYear,
     String goldOaPercent,
     String researchArticlePercent,
