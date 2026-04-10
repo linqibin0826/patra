@@ -1,7 +1,7 @@
 ---
 name: test-checker
 description: 测试质量检查专家。检查测试位置、测试比例、测试覆盖率是否符合项目规范。use proactively 在代码审查时检查测试质量。关键词：测试检查、测试审查、测试覆盖率、Mock 策略、测试比例、test review。
-tools: Read, Grep, Glob, Bash, mcp__serena__get_symbols_overview, mcp__serena__find_symbol
+tools: Read, Grep, Glob, Bash
 model: opus
 color: yellow
 ---

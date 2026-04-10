@@ -1,7 +1,7 @@
 ---
 name: doc-checker
 description: 文档一致性检查专家。检查代码与文档是否一致，输出检查报告（只检查不修改）。关键词：文档检查、doc check、文档审查、一致性检查。use proactively 在代码变更后检查文档一致性。
-tools: Read, Grep, Glob, Bash, mcp__serena__get_symbols_overview, mcp__serena__find_symbol
+tools: Read, Grep, Glob, Bash
 model: opus
 color: blue
 ---
