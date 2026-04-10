@@ -57,26 +57,50 @@
 
 ### 强制要求
 
-1. 用户不一定是对的，以实际代码为准，发现问题主动指出并提供改进建议
-2. 信息不足时先查看相关代码/文档，没答案再提问（不要猜测，不要直接问）
-3. 三次失败必须转换策略（启动 subagents 进行调研，如 web、context7 等）
-4. **🚨 编写代码前必须加载对应的 Patra 技能！** 这是强制要求，无任何例外。根据任务类型加载：`patra-hexagonal`（创建组件/架构决策）、`patra-jpa`（数据层实现）、`patra-events`（事件/Outbox）
-5. 在使用 Plan subagent 制定开发计划时，必须优先考虑 TDD 流程和六边形架构原则，并加载 `patra-hexagonal` 确保计划符合项目架构规范
+1. **🚨 编写代码前必须加载对应的 Patra 技能！** 这是强制要求，无任何例外。根据任务类型加载：`patra-hexagonal`（创建组件/架构决策）、`patra-jpa`（数据层实现）、`patra-events`（事件/Outbox）、`patra-troubleshooter`（异常堆栈/日志链路/报错排查）
+2. 在使用 Plan subagent 制定开发计划时，必须优先考虑 TDD 流程和六边形架构原则，并加载 `patra-hexagonal` 确保计划符合项目架构规范
 
-### 推荐做法
+## Skill 加载优先级
 
-1. 主动使用 MCP 工具（serena、sequential-thinking、context7）
+Patra 项目使用**两层正交** skill 体系，叠加调用不冲突：
 
-## Context 管理
+1. **流程层 superpowers** — 决定"怎么推进工作"：
+   - 新功能 → `superpowers:brainstorming` 先行
+   - 写代码 → `superpowers:test-driven-development` 全程
+   - 调 bug → `superpowers:systematic-debugging` 四阶段
+   - 完成任务 → `superpowers:requesting-code-review` + `superpowers:finishing-a-development-branch`
 
-### 主动清理策略
+2. **领域层 patra-*** — 决定"代码写成什么样"：
+   - 架构决策 / 创建组件 → `patra-hexagonal`
+   - 数据持久化 → `patra-jpa`
+   - 事件 / Outbox → `patra-events`
+   - 异常排查 → `patra-troubleshooter`
 
-- **单个任务完成后**：如果要开始新任务，建议 `/clear` 重新开始
-- **Context 膨胀时**：使用 Eyad 的"copy-paste reset"技巧
-  1. 复制终端中重要的输出
-  2. `/compact` 获取摘要
-  3. `/clear` 清空上下文
-  4. 粘贴回关键信息
+**调用顺序**：流程层先行，领域层落地。示例"添加 Venue 导入功能"：
+
+`brainstorming` → `writing-plans` → `test-driven-development(RED)` → `patra-hexagonal`（指导 Handler）→ `patra-jpa`（指导 Repository）→ `test-driven-development(GREEN)` → `requesting-code-review`
+
+### 触发词默认规则（含豁免条款）
+
+以下是默认行为。**默认必须遵守**，但遇到下列情况可豁免；豁免时**必须**在回复开头显式声明"跳过 X 因为 Y"，不得静默跳过：
+
+**豁免条件**：
+
+- trivial 修改（< 15 行代码 或 < 5 分钟预估工作量）
+- 用户明确说"直接改" / "快速修一下" / "跳过流程"
+- 非功能性变更（注释、格式化、import 整理、常量改名）
+- 根因已明确的 bug（用户给出具体行号 / 异常栈）→ 可跳过 `systematic-debugging`
+
+| 触发词 | 默认调用 skill |
+|--------|---------------|
+| **新功能** / 新用例 / 新模块 / feature | `superpowers:brainstorming` |
+| **根因不明的** bug / 异常 / 崩溃 | `superpowers:systematic-debugging` + `patra-troubleshooter` |
+| **实现业务逻辑** / 重构超过 50 行 | `superpowers:test-driven-development` |
+| 计划 / 方案 / 设计 / plan | `superpowers:writing-plans` |
+| 审查 / review / 代码质量 | `superpowers:requesting-code-review` |
+| 聚合根 / Repository / Port / Gateway 设计 | `patra-hexagonal` |
+| Entity / Dao / Mapper / 持久化 / JPA | `patra-jpa` |
+| 事件 / Outbox / RocketMQ / 消息 | `patra-events` |
 
 ## 开发规范
 
@@ -85,43 +109,7 @@
 | 目录 | 规则内容 |
 |------|----------|
 | `rules/layers/` | 六边形架构各层规范（domain/app/infra/adapter/api/boot） |
-| `rules/tech/` | 技术栈规范（jpa/error-handling/observability/commandbus） |
+| `rules/tech/` | 技术栈规范（jpa/error-handling/observability/commandbus/port-service） |
 | `rules/testing/` | 测试规范（unit-test/integration-test/e2e-test） |
 | `rules/code-style.md` | 代码风格与命名规范 |
 | `rules/project-info.md` | 项目概览与技术栈 |
-
-## Agent Team 模板
-
-按任务需要创建团队，完成后清理（`"清理团队"` → `/clear`）。
-
-### backend-team（日常后端开发）
-
-3 人团队，适用于后端功能开发、重构、bug 修复。
-
-| 角色 | 模型 | 职责 |
-|------|------|------|
-| **backend-dev** | Opus | 后端实现，严格遵循六边形架构各层规范，编码前加载对应 Patra 技能（`patra-hexagonal`/`patra-jpa`/`patra-events`） |
-| **tdd-tester** | Opus | TDD 测试先行（Red 阶段），验证实现（Green 阶段），编码前加载对应 Patra 技能（`patra-hexagonal`/`patra-jpa`/`patra-events`） |
-| **reviewer** | Opus | 架构合规审查（层级依赖、Port/Service 命名、异常处理），Code Review |
-
-**协作流程**：tdd-tester 先写失败测试 → backend-dev 实现代码 → reviewer 审查
-
-### fullstack-team（全栈联动开发）
-
-4 人团队，适用于需要前后端同时开发的完整功能。
-
-| 角色 | 模型 | 职责 |
-|------|------|------|
-| **backend-dev** | Opus | 后端 API 实现（patra-api），编码前加载对应 Patra 技能（`patra-hexagonal`/`patra-jpa`/`patra-events`） |
-| **frontend-dev** | Opus | 前端页面开发（patra-admin，路径 `../patra-admin/`），React 19 + TypeScript |
-| **tdd-tester** | Opus | 后端 TDD 测试，编码前加载对应 Patra 技能（`patra-hexagonal`/`patra-jpa`/`patra-events`） |
-| **reviewer** | Opus | 全栈 Code Review（后端架构合规 + 前端代码质量） |
-
-**协作流程**：backend-dev 与 frontend-dev 并行开发，共享 API 契约 → tdd-tester 补充测试 → reviewer 全栈审查
-
-### 团队通用规则
-
-1. 所有 teammates 必须遵守 `rules/` 下的项目规范
-2. backend-dev 和 tdd-tester 编写 Java 代码前**必须加载对应 Patra 技能**（`patra-hexagonal`/`patra-jpa`/`patra-events`）
-3. reviewer 使用 Plan Approval 模式，重大改动需 lead 审批
-4. 任务完成后由 lead 统一决定是否 git commit（禁止 teammates 自动提交）
