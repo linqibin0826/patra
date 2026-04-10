@@ -76,6 +76,12 @@ public interface VenueDao extends JpaRepository<VenueEntity, Long> {
   ///
   /// - 固定 `venueType=JOURNAL`
   /// - `keyword`：title 前缀模糊匹配
+  ///   - 大小写不敏感依赖 `cat_venue` 表级 collation `utf8mb4_0900_ai_ci`
+  ///     （见 `V1.0.0__create_venue_aggregate.sql`）；未显式使用 `LOWER()`
+  ///     以便命中 `idx_title (title(100))` 前缀索引
+  ///   - **调用方契约**：`:keyword` 必须是已通过 `StringUtils.escapeLike()`
+  ///     转义的字符串，查询内置 `ESCAPE '!'` 子句与之配套，防止用户输入的
+  ///     `%` / `_` 被当作通配符
   /// - `countryCode`：国家编码精确匹配
   /// - `issnL`：ISSN-L 精确匹配
   /// - `nlmId`：NLM ID 精确匹配
@@ -93,7 +99,7 @@ public interface VenueDao extends JpaRepository<VenueEntity, Long> {
           """
       SELECT * FROM cat_venue v
       WHERE v.venue_type = 'JOURNAL'
-        AND (:keyword IS NULL OR LOWER(v.title) LIKE LOWER(CONCAT(:keyword, '%')))
+        AND (:keyword IS NULL OR v.title LIKE CONCAT(:keyword, '%') ESCAPE '!')
         AND (:countryCode IS NULL OR v.country_code = :countryCode)
         AND (:issnL IS NULL OR v.issn_l = :issnL)
         AND (:nlmId IS NULL OR v.nlm_id = :nlmId)
@@ -104,7 +110,7 @@ public interface VenueDao extends JpaRepository<VenueEntity, Long> {
           """
       SELECT COUNT(*) FROM cat_venue v
       WHERE v.venue_type = 'JOURNAL'
-        AND (:keyword IS NULL OR LOWER(v.title) LIKE LOWER(CONCAT(:keyword, '%')))
+        AND (:keyword IS NULL OR v.title LIKE CONCAT(:keyword, '%') ESCAPE '!')
         AND (:countryCode IS NULL OR v.country_code = :countryCode)
         AND (:issnL IS NULL OR v.issn_l = :issnL)
         AND (:nlmId IS NULL OR v.nlm_id = :nlmId)

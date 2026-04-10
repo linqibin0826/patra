@@ -1,5 +1,6 @@
 package com.patra.catalog.app.usecase.publication.query;
 
+import static com.patra.common.util.StringUtils.escapeLike;
 import static com.patra.common.util.StringUtils.trimToNull;
 
 import com.patra.catalog.app.usecase.publication.query.dto.PublicationDetailQuery;
@@ -39,7 +40,7 @@ public class PublicationQueryService {
     PagingParams paging = PagingParams.normalize(query.page(), query.pageSize());
     PublicationFilter filter =
         PublicationFilter.builder()
-            .keyword(trimToNull(query.q()))
+            .keyword(escapeLike(trimToNull(query.q())))
             .yearFrom(query.yearFrom())
             .yearTo(query.yearTo())
             .languageBase(trimToNull(query.languageBase()))

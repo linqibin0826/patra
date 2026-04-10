@@ -1,5 +1,6 @@
 package com.patra.catalog.app.usecase.venue.query;
 
+import static com.patra.common.util.StringUtils.escapeLike;
 import static com.patra.common.util.StringUtils.trimToNull;
 
 import com.patra.catalog.app.usecase.venue.query.dto.VenueDetailQuery;
@@ -33,7 +34,7 @@ public class VenueQueryService {
     PagingParams paging = PagingParams.normalize(query.page(), query.pageSize());
     VenueFilter filter =
         VenueFilter.builder()
-            .keyword(trimToNull(query.q()))
+            .keyword(escapeLike(trimToNull(query.q())))
             .countryCode(trimToNull(query.countryCode()))
             .issnL(trimToNull(query.issnL()))
             .nlmId(trimToNull(query.nlmId()))

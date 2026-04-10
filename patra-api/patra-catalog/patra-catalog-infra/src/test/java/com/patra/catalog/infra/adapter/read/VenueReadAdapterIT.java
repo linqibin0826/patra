@@ -144,6 +144,47 @@ class VenueReadAdapterIT {
       assertThat(page.total()).isEqualTo(1);
       assertThat(page.items()).singleElement().extracting("title").isEqualTo("The Lancet");
     }
+
+    /// LIKE 通配符转义契约：keyword 中的 `%` 应被视为字面字符而非通配符。
+    ///
+    /// 调用方（QueryService）已通过 `StringUtils.escapeLike` 把用户输入的 `%`
+    /// 转义为 `!%`，查询携带 `ESCAPE '!'` 子句告诉 MySQL `!` 是转义符。
+    /// 这里直接传入已转义的 `"100!%"`（模拟用户输入 `"100%"` 经 escapeLike 后的结果），
+    /// 期望只命中字面含 `"100%"` 前缀的期刊，不会把 `%` 当通配符匹配到 `"100 Years"`。
+    @Test
+    @DisplayName("keyword 中的 % 应被视为字面字符而非通配符")
+    void shouldTreatPercentInKeywordAsLiteral() {
+      // Given — 一条期刊标题包含字面 %，另一条只是以同样前缀开头
+      saveVenue("JOURNAL", "100% Renewable", "1000-0001", "9990001", "OPENALEX", "US");
+      saveVenue("JOURNAL", "100 Years of Science", "1000-0002", "9990002", "OPENALEX", "US");
+
+      // When — 传入已被 escapeLike 转义的关键词 "100!%"（等价于用户输入 "100%"）
+      PageResult<VenueSummaryReadModel> page =
+          venueReadAdapter.findVenuePage(
+              PagingParams.of(1, 20), VenueFilter.builder().keyword("100!%").build());
+
+      // Then — 只命中字面含 "100%" 的期刊；若 ESCAPE '!' 失效，会误命中两条
+      assertThat(page.total()).isEqualTo(1);
+      assertThat(page.items()).singleElement().extracting("title").isEqualTo("100% Renewable");
+    }
+
+    /// LIKE 通配符转义契约：keyword 中的 `_` 应被视为字面字符而非通配符。
+    @Test
+    @DisplayName("keyword 中的 _ 应被视为字面字符而非通配符")
+    void shouldTreatUnderscoreInKeywordAsLiteral() {
+      // Given — 一条标题含字面 _，一条标题用空格代替
+      saveVenue("JOURNAL", "Nat_Journal", "2000-0001", "9990003", "OPENALEX", "US");
+      saveVenue("JOURNAL", "NatXJournal", "2000-0002", "9990004", "OPENALEX", "US");
+
+      // When — 传入已被 escapeLike 转义的关键词 "Nat!_Jo"（等价于用户输入 "Nat_Jo"）
+      PageResult<VenueSummaryReadModel> page =
+          venueReadAdapter.findVenuePage(
+              PagingParams.of(1, 20), VenueFilter.builder().keyword("Nat!_Jo").build());
+
+      // Then — 只命中字面含 "Nat_Jo" 前缀的期刊；若 ESCAPE '!' 失效，会误命中 "NatXJournal"
+      assertThat(page.total()).isEqualTo(1);
+      assertThat(page.items()).singleElement().extracting("title").isEqualTo("Nat_Journal");
+    }
   }
 
   /// 分页应返回正确元信息，按 h-index DESC, id DESC 排序。
