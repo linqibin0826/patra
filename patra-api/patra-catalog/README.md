@@ -391,7 +391,7 @@ patra:
   - `cat_publication_personal_name_subject`：人物主题表（传记类/历史类文献的主题人物，按文献独立存储）
 
 - **Venue（载体）相关表**
-  - `cat_venue`：载体主表（含 image_url 封面图片字段（来自 LetPub），4 个 JSON 嵌入式值对象：publication_profile、citation_metrics、open_access、affiliated_societies）
+  - `cat_venue`：载体主表（含 image_object_key 封面对象存储键字段（LetPub 下载后上传到对象存储），4 个 JSON 嵌入式值对象：publication_profile、citation_metrics、open_access、affiliated_societies）
   - `cat_venue_identifier`：载体标识符表（ISSN/OpenAlex ID/NLM ID/DOAJ/JCR 等）
   - `cat_venue_publication_stats`：载体年度发文统计表（发表量/被引量/OA 发文量）
   - `cat_venue_source_data`：载体数据源表（各数据源原始 JSON 和提取字段）

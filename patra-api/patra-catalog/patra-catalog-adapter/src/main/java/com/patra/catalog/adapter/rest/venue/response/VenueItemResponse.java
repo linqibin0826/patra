@@ -11,7 +11,7 @@ public record VenueItemResponse(
     Long id,
     String title,
     String countryCode,
-    String imageUrl,
+    String imageObjectKey,
     Integer hIndex,
     String jifQuartile,
     String casMajorQuartile,

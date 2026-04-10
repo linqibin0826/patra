@@ -30,7 +30,7 @@ public interface VenueReadModelMapper {
   @Mapping(source = "entity.id", target = "id")
   @Mapping(source = "entity.title", target = "title")
   @Mapping(source = "entity.countryCode", target = "countryCode")
-  @Mapping(source = "entity.imageUrl", target = "imageUrl")
+  @Mapping(source = "entity.imageObjectKey", target = "imageObjectKey")
   @Mapping(source = "entity.citationMetrics.hIndex", target = "hIndex")
   @Mapping(source = "entity.openAccess.isOa", target = "isOa")
   @Mapping(source = "jcr.jifQuartile", target = "jifQuartile")

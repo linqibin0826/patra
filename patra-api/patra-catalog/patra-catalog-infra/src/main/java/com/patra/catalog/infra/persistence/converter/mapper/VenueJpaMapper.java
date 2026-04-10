@@ -113,7 +113,7 @@ public abstract class VenueJpaMapper {
             entity.getId() != null ? VenueId.of(entity.getId()) : null,
             stringToVenueType(entity.getVenueType()),
             entity.getTitle(),
-            entity.getImageUrl(),
+            entity.getImageObjectKey(),
             entity.getVersion());
 
     // 设置来源信息
@@ -194,7 +194,7 @@ public abstract class VenueJpaMapper {
   /// 更新托管实体的可变字段。
   ///
   /// 注意：venueType 和 title 是不可变的，不在此更新。
-  /// imageUrl 是可富化字段（来自 LetPub），需要同步。
+  /// imageObjectKey 是可富化字段（LetPub 下载结果），需要同步。
   ///
   /// @param entity 托管实体
   /// @param aggregate 包含更新数据的聚合根
@@ -203,8 +203,8 @@ public abstract class VenueJpaMapper {
       return;
     }
 
-    // 更新富化字段：imageUrl 来自 LetPub 期刊详情页
-    entity.setImageUrl(aggregate.getImageUrl());
+    // 更新富化字段：imageObjectKey 来自 LetPub 下载后的对象存储键
+    entity.setImageObjectKey(aggregate.getImageObjectKey());
 
     // 更新来源信息
     if (aggregate.getProvenance() != null) {

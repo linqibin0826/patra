@@ -71,9 +71,9 @@ public class VenueEntity extends SoftDeletableJpaEntity {
   @Column(name = "title", nullable = false, length = 500)
   private String title;
 
-  /// 封面图片 URL（可空，来自 LetPub 期刊详情页）
-  @Column(name = "image_url", length = 2048)
-  private String imageUrl;
+  /// 封面图片对象存储键（可空，指向 venue-cover 桶中的对象键）
+  @Column(name = "image_object_key", length = 512)
+  private String imageObjectKey;
 
   // ========================================
   // 来源追踪（Provenance）
