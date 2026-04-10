@@ -72,8 +72,8 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
   /// 标题（必填，不变量）
   private final String title;
 
-  /// 封面图片 URL（可空，来自 LetPub 期刊详情页，可后续富化）
-  private String imageUrl;
+  /// 封面图片对象存储键（可空，来自 LetPub 下载后上传到对象存储，相对于 venue-cover 桶）
+  private String imageObjectKey;
 
   /// 标识符集合（聚合边界内值对象）
   private final List<VenueIdentifier> identifiers;
@@ -100,8 +100,8 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
   /// @param id 主键 ID（新建时为 null）
   /// @param venueType 载体类型
   /// @param title 标题
-  /// @param imageUrl 封面图片 URL（可空）
-  private VenueAggregate(VenueId id, VenueType venueType, String title, String imageUrl) {
+  /// @param imageObjectKey 封面对象存储键（可空）
+  private VenueAggregate(VenueId id, VenueType venueType, String title, String imageObjectKey) {
     super(id);
 
     Assert.notNull(venueType, "载体类型不能为空");
@@ -109,7 +109,7 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
 
     this.venueType = venueType;
     this.title = title;
-    this.imageUrl = imageUrl;
+    this.imageObjectKey = imageObjectKey;
     this.identifiers = new ArrayList<>();
     this.affiliatedSocieties = new ArrayList<>();
   }
@@ -148,12 +148,12 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
   /// @param id 主键 ID（VenueId 值对象）
   /// @param venueType 载体类型
   /// @param title 标题
-  /// @param imageUrl 封面图片 URL（可空）
+  /// @param imageObjectKey 封面对象存储键（可空）
   /// @param version 乐观锁版本
   /// @return 重建的聚合根
   public static VenueAggregate restore(
-      VenueId id, VenueType venueType, String title, String imageUrl, Long version) {
-    VenueAggregate aggregate = new VenueAggregate(id, venueType, title, imageUrl);
+      VenueId id, VenueType venueType, String title, String imageObjectKey, Long version) {
+    VenueAggregate aggregate = new VenueAggregate(id, venueType, title, imageObjectKey);
     aggregate.assignVersion(version != null ? version : 0L);
     return aggregate;
   }
@@ -171,15 +171,16 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
 
   // ========== 富化方法 ==========
 
-  /// 富化封面图片 URL。
+  /// 富化封面图对象存储键。
   ///
-  /// 用于 LetPub 富化流程为 Venue 补充从 LetPub 期刊详情页抓取的封面图片地址。
-  /// 传入 null 时不做任何操作（表示未查询到数据，不应清除已有值）。
+  /// 用于 LetPub 富化流程：下载 LetPub 详情页上的封面图到对象存储后，
+  /// 将返回的对象键回填到聚合根。
+  /// 传入 null 时不做任何操作（表示未下载到数据，不应清除已有值）。
   ///
-  /// @param imageUrl 封面图片 URL（null 表示无数据，不清除已有值）
-  public void enrichImageUrl(String imageUrl) {
-    if (imageUrl != null) {
-      this.imageUrl = imageUrl;
+  /// @param imageObjectKey 封面对象存储键（null 表示无数据，不清除已有值）
+  public void enrichImageObjectKey(String imageObjectKey) {
+    if (imageObjectKey != null) {
+      this.imageObjectKey = imageObjectKey;
     }
   }
 
