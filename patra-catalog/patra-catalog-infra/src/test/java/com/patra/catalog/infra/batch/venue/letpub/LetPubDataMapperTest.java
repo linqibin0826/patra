@@ -19,8 +19,8 @@ import org.junit.jupiter.api.Timeout;
 /// **测试策略**：
 ///
 /// - JCR 映射：IF 趋势转为多行 JcrRatingEntity，最新年附加分区/排名/学科
-/// - CAS 映射：单行 CasRatingEntity，包含大类/小类分区 + 版本名称
-/// - 版本提取：从 casVersion 提取 year 和 edition
+/// - CAS 映射：多行 CasRatingEntity，每个版本（新锐版/升级版/旧版）一行
+/// - 版本提取：从 version 字符串提取 year 和 edition
 /// - 边界情况：空数据、缺少字段
 ///
 /// @author linqibin
@@ -42,6 +42,27 @@ class LetPubDataMapperTest {
 
   /// 创建包含完整数据的 LetPubVenueData。
   private LetPubVenueData createFullData() {
+    var xinruiPartition =
+        LetPubVenueData.CasPartition.builder()
+            .version("2026年3月新锐版")
+            .majorCategory("综合性期刊")
+            .majorQuartile("1区")
+            .minorSubject("MULTIDISCIPLINARY SCIENCES")
+            .minorQuartile("1区")
+            .topJournal(true)
+            .reviewJournal(false)
+            .build();
+    var shengjiPartition =
+        LetPubVenueData.CasPartition.builder()
+            .version("2025年3月升级版")
+            .majorCategory("综合性期刊")
+            .majorQuartile("1区")
+            .minorSubject("MULTIDISCIPLINARY SCIENCES")
+            .minorQuartile("1区")
+            .topJournal(true)
+            .reviewJournal(false)
+            .build();
+
     return LetPubVenueData.builder()
         .letPubJournalId("6054")
         .letPubName("NATURE")
@@ -58,13 +79,7 @@ class LetPubDataMapperTest {
         .jifRank("2/136")
         .jciQuartile("Q1")
         .jciRank("1/136")
-        .casVersion("2025年3月升级版")
-        .casMajorCategory("综合性期刊")
-        .casMajorQuartile("1区")
-        .casMinorSubject("MULTIDISCIPLINARY SCIENCES")
-        .casMinorQuartile("1区")
-        .casTopJournal(true)
-        .casReviewJournal(false)
+        .casPartitions(List.of(xinruiPartition, shengjiPartition))
         .warningListStatus("2024年2月发布的2024版：无预警")
         .reviewSpeedOfficial("较慢，>12周")
         .reviewSpeedUser("平均6.0个月")
@@ -162,45 +177,75 @@ class LetPubDataMapperTest {
   class CasMappingTests {
 
     @Test
-    @DisplayName("应生成一行 CAS rating，包含完整字段")
-    void shouldCreateSingleCasRatingWithAllFields() {
+    @DisplayName("每个 CAS 版本应生成一行 rating")
+    void shouldCreateOneRatingPerPartition() {
       var data = createFullData();
 
-      CasRatingEntity rating = mapper.mapToCasRating(data, VENUE_ID, SOURCE_URL);
+      List<CasRatingEntity> ratings = mapper.mapToCasRatings(data, VENUE_ID, SOURCE_URL);
 
-      assertThat(rating).isNotNull();
-      assertThat(rating.getVenueId()).isEqualTo(VENUE_ID);
-      assertThat(rating.getYear()).isEqualTo((short) 2025);
-      assertThat(rating.getEdition()).isEqualTo("升级版");
-      assertThat(rating.getMajorCategory()).isEqualTo("综合性期刊");
-      assertThat(rating.getMajorQuartile()).isEqualTo("1区");
-      assertThat(rating.getMinorSubject()).isEqualTo("MULTIDISCIPLINARY SCIENCES");
-      assertThat(rating.getMinorQuartile()).isEqualTo("1区");
-      assertThat(rating.getIsTopJournal()).isTrue();
-      assertThat(rating.getIsReviewJournal()).isFalse();
-      assertThat(rating.getSourceUrl()).isEqualTo(SOURCE_URL);
-      assertThat(rating.getFetchedAt()).isNotNull();
+      assertThat(ratings).hasSize(2);
+      assertThat(ratings).allMatch(r -> r.getVenueId().equals(VENUE_ID));
+      assertThat(ratings).allMatch(r -> SOURCE_URL.equals(r.getSourceUrl()));
+      assertThat(ratings).allMatch(r -> r.getFetchedAt() != null);
     }
 
     @Test
-    @DisplayName("年份应从 casVersion 提取（2023年12月升级版 → 2023）")
-    void shouldExtractYearFromCasVersion() {
-      var data = LetPubVenueData.builder().casVersion("2023年12月升级版").casMajorQuartile("2区").build();
+    @DisplayName("新锐版应映射完整字段")
+    void shouldMapXinruiPartitionWithAllFields() {
+      var data = createFullData();
 
-      CasRatingEntity rating = mapper.mapToCasRating(data, VENUE_ID, SOURCE_URL);
+      List<CasRatingEntity> ratings = mapper.mapToCasRatings(data, VENUE_ID, SOURCE_URL);
 
-      assertThat(rating.getYear()).isEqualTo((short) 2023);
-      assertThat(rating.getEdition()).isEqualTo("升级版");
+      CasRatingEntity xinrui =
+          ratings.stream().filter(r -> "新锐版".equals(r.getEdition())).findFirst().orElseThrow();
+
+      assertThat(xinrui.getYear()).isEqualTo((short) 2026);
+      assertThat(xinrui.getEdition()).isEqualTo("新锐版");
+      assertThat(xinrui.getMajorCategory()).isEqualTo("综合性期刊");
+      assertThat(xinrui.getMajorQuartile()).isEqualTo("1区");
+      assertThat(xinrui.getMinorSubject()).isEqualTo("MULTIDISCIPLINARY SCIENCES");
+      assertThat(xinrui.getMinorQuartile()).isEqualTo("1区");
+      assertThat(xinrui.getIsTopJournal()).isTrue();
+      assertThat(xinrui.getIsReviewJournal()).isFalse();
     }
 
     @Test
-    @DisplayName("无 CAS 数据时应返回 null")
-    void shouldReturnNullWhenNoCasData() {
+    @DisplayName("升级版应正确提取年份和版本名")
+    void shouldExtractShengjiYearAndEdition() {
+      var data = createFullData();
+
+      List<CasRatingEntity> ratings = mapper.mapToCasRatings(data, VENUE_ID, SOURCE_URL);
+
+      CasRatingEntity shengji =
+          ratings.stream().filter(r -> "升级版".equals(r.getEdition())).findFirst().orElseThrow();
+
+      assertThat(shengji.getYear()).isEqualTo((short) 2025);
+      assertThat(shengji.getEdition()).isEqualTo("升级版");
+    }
+
+    @Test
+    @DisplayName("无 CAS 分区时应返回空列表")
+    void shouldReturnEmptyWhenNoCasPartitions() {
       var data = LetPubVenueData.builder().build();
 
-      CasRatingEntity rating = mapper.mapToCasRating(data, VENUE_ID, SOURCE_URL);
+      List<CasRatingEntity> ratings = mapper.mapToCasRatings(data, VENUE_ID, SOURCE_URL);
 
-      assertThat(rating).isNull();
+      assertThat(ratings).isEmpty();
+    }
+
+    @Test
+    @DisplayName("分区缺少必填字段时应被跳过")
+    void shouldSkipPartitionMissingRequiredFields() {
+      var incompletePartition =
+          LetPubVenueData.CasPartition.builder()
+              .version("2025年3月升级版")
+              // majorQuartile 缺失
+              .build();
+      var data = LetPubVenueData.builder().casPartitions(List.of(incompletePartition)).build();
+
+      List<CasRatingEntity> ratings = mapper.mapToCasRatings(data, VENUE_ID, SOURCE_URL);
+
+      assertThat(ratings).isEmpty();
     }
   }
 

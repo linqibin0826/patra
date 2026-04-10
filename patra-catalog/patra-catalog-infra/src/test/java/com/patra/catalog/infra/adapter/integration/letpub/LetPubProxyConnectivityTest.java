@@ -102,11 +102,13 @@ class LetPubProxyConnectivityTest {
     System.out.println("║ 期刊名:          " + data.letPubName());
     System.out.println("║ LetPub ID:       " + data.letPubJournalId());
     System.out.println("║ JIF 分区:        " + data.jifQuartile());
-    System.out.println(
-        "║ CAS 大类:        " + data.casMajorCategory() + " " + data.casMajorQuartile());
-    System.out.println(
-        "║ IF 趋势年份数:   "
-            + (data.impactFactorTrend() != null ? data.impactFactorTrend().size() : 0));
+    System.out.println("║ CAS 版本数:      " + data.casPartitions().size());
+    data.casPartitions()
+        .forEach(
+            p ->
+                System.out.println(
+                    "║   - " + p.version() + ": " + p.majorCategory() + " " + p.majorQuartile()));
+    System.out.println("║ IF 趋势年份数:   " + data.impactFactorTrend().size());
     System.out.println("╚══════════════════════════════════════");
 
     assertThat(data.letPubName()).isNotBlank();

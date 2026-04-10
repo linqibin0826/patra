@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import com.patra.catalog.domain.port.enrichment.LetPubEnrichmentPort;
 import com.patra.catalog.domain.port.enrichment.LetPubVenueData;
 import com.patra.catalog.infra.persistence.entity.VenueEntity;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,16 +50,32 @@ class LetPubVenueItemProcessorTest {
   }
 
   @Test
-  @DisplayName("LetPub 查到数据时应返回分开的 JCR 和 CAS 结果")
+  @DisplayName("LetPub 查到数据时应返回分开的 JCR 和 CAS 列表")
   void shouldReturnSeparateJcrAndCasResults() throws Exception {
     VenueEntity entity = createVenueEntity(100L, "0028-0836");
+    var xinruiPartition =
+        LetPubVenueData.CasPartition.builder()
+            .version("2026年3月新锐版")
+            .majorCategory("综合性期刊")
+            .majorQuartile("1区")
+            .topJournal(true)
+            .reviewJournal(false)
+            .build();
+    var shengjiPartition =
+        LetPubVenueData.CasPartition.builder()
+            .version("2025年3月升级版")
+            .majorCategory("综合性期刊")
+            .majorQuartile("1区")
+            .topJournal(true)
+            .reviewJournal(false)
+            .build();
+
     LetPubVenueData letPubData =
         LetPubVenueData.builder()
             .letPubJournalId("10000")
             .letPubName("Nature")
             .jifQuartile("Q1")
-            .casMajorQuartile("1区")
-            .casVersion("2025年3月升级版")
+            .casPartitions(List.of(xinruiPartition, shengjiPartition))
             .impactFactorTrend(Map.of("2024-2025", 48.5))
             .build();
     when(enrichmentPort.findByIssn("0028-0836")).thenReturn(Optional.of(letPubData));
@@ -72,10 +89,12 @@ class LetPubVenueItemProcessorTest {
     assertThat(result.jcrRatings()).hasSize(1);
     assertThat(result.jcrRatings().getFirst().getJifQuartile()).isEqualTo("Q1");
 
-    // CAS: 1 条
-    assertThat(result.casRating()).isNotNull();
-    assertThat(result.casRating().getMajorQuartile()).isEqualTo("1区");
-    assertThat(result.casRating().getEdition()).isEqualTo("升级版");
+    // CAS: 2 条（新锐版 + 升级版）
+    assertThat(result.casRatings()).hasSize(2);
+    assertThat(result.casRatings())
+        .extracting(e -> e.getEdition())
+        .containsExactlyInAnyOrder("新锐版", "升级版");
+    assertThat(result.casRatings()).allMatch(e -> "1区".equals(e.getMajorQuartile()));
 
     verify(enrichmentPort).findByIssn("0028-0836");
   }

@@ -1,6 +1,7 @@
 package com.patra.catalog.infra.batch.venue.letpub;
 
 import com.patra.catalog.domain.port.enrichment.LetPubVenueData;
+import com.patra.catalog.domain.port.enrichment.LetPubVenueData.CasPartition;
 import com.patra.catalog.infra.persistence.entity.CasRatingEntity;
 import com.patra.catalog.infra.persistence.entity.JcrRatingEntity;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
@@ -19,7 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 /// 将 {@link LetPubVenueData}（端口级中间 DTO）拆解为强类型实体：
 ///
 /// - IF 趋势 + JCR 分区 → 多行 `JcrRatingEntity`（每年一行）
-/// - CAS 分区 → 单行 `CasRatingEntity`
+/// - CAS 分区 → 多行 `CasRatingEntity`（每个版本一行，如新锐版/升级版/旧版）
 ///
 /// 不依赖 JSON 序列化，所有字段直接映射到实体的强类型列。
 ///
@@ -99,41 +100,58 @@ public class LetPubDataMapper {
     return ratings;
   }
 
-  /// 将 LetPub CAS 分区数据映射为单行 CAS 评级。
+  /// 将 LetPub 所有 CAS 分区版本映射为多行 CAS 评级。
+  ///
+  /// LetPub 页面可能同时展示多个 CAS 版本（如新锐版/升级版/旧的升级版），
+  /// 每个版本生成一行 `CasRatingEntity`，通过 `(venue_id, year, edition)`
+  /// 唯一约束区分。
   ///
   /// @param data LetPub 原始数据
   /// @param venueId 目标 venue ID
   /// @param sourceUrl LetPub 详情页 URL（数据溯源）
-  /// @return CAS 评级实体，无数据时返回 null
-  public CasRatingEntity mapToCasRating(LetPubVenueData data, Long venueId, String sourceUrl) {
-    String casVersion = data.casVersion();
-    String quartile = data.casMajorQuartile();
-    if (casVersion == null || casVersion.isBlank() || quartile == null || quartile.isBlank()) {
-      return null;
+  /// @return CAS 评级实体列表（可能为空）
+  public List<CasRatingEntity> mapToCasRatings(
+      LetPubVenueData data, Long venueId, String sourceUrl) {
+    List<CasPartition> partitions = data.casPartitions();
+    if (partitions == null || partitions.isEmpty()) {
+      return List.of();
     }
 
-    short year = extractCasYear(casVersion);
-    if (year <= 0) {
-      return null;
+    Instant now = Instant.now();
+    List<CasRatingEntity> entities = new ArrayList<>();
+
+    for (CasPartition partition : partitions) {
+      String version = partition.version();
+      String quartile = partition.majorQuartile();
+      if (version == null || version.isBlank() || quartile == null || quartile.isBlank()) {
+        continue;
+      }
+
+      short year = extractCasYear(version);
+      if (year <= 0) {
+        continue;
+      }
+
+      String edition = extractCasEdition(version);
+
+      var entity = new CasRatingEntity();
+      entity.setId(SnowflakeIdGenerator.getId());
+      entity.setVenueId(venueId);
+      entity.setYear(year);
+      entity.setEdition(edition);
+      entity.setMajorCategory(partition.majorCategory());
+      entity.setMajorQuartile(quartile);
+      entity.setMinorSubject(partition.minorSubject());
+      entity.setMinorQuartile(partition.minorQuartile());
+      entity.setIsTopJournal(partition.topJournal());
+      entity.setIsReviewJournal(partition.reviewJournal());
+      entity.setSourceUrl(sourceUrl);
+      entity.setFetchedAt(now);
+
+      entities.add(entity);
     }
 
-    String edition = extractCasEdition(casVersion);
-
-    var entity = new CasRatingEntity();
-    entity.setId(SnowflakeIdGenerator.getId());
-    entity.setVenueId(venueId);
-    entity.setYear(year);
-    entity.setEdition(edition);
-    entity.setMajorCategory(data.casMajorCategory());
-    entity.setMajorQuartile(quartile);
-    entity.setMinorSubject(data.casMinorSubject());
-    entity.setMinorQuartile(data.casMinorQuartile());
-    entity.setIsTopJournal(data.casTopJournal());
-    entity.setIsReviewJournal(data.casReviewJournal());
-    entity.setSourceUrl(sourceUrl);
-    entity.setFetchedAt(Instant.now());
-
-    return entity;
+    return entities;
   }
 
   // ========== 年份/版本提取 ==========
