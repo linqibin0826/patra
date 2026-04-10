@@ -22,6 +22,9 @@ dependencies {
     // Spring Web: provides RestClient
     api("org.springframework:spring-web")
 
+    // Apache HttpClient 5: tunnel proxy support (HttpComponentsClientHttpRequestFactory)
+    compileOnly("org.apache.httpcomponents.client5:httpclient5")
+
     // Spring Retry: optional retry support
     compileOnly("org.springframework.retry:spring-retry")
 
@@ -46,6 +49,7 @@ dependencies {
     // 但测试代码需要使用 WebClient，因此需要显式声明测试依赖
     testImplementation("org.springframework:spring-webflux")
     testImplementation("io.projectreactor.netty:reactor-netty-http")
+    testImplementation("org.apache.httpcomponents.client5:httpclient5")
 }
 
 // 覆盖率要求 75%
