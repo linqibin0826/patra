@@ -1,4 +1,4 @@
-package com.patra.catalog.infra.batch.venue.letpub;
+package com.patra.catalog.infra.adapter.enrichment.letpub;
 
 import com.patra.catalog.domain.port.enrichment.LetPubVenueData;
 import com.patra.catalog.domain.port.enrichment.LetPubVenueData.CasPartition;

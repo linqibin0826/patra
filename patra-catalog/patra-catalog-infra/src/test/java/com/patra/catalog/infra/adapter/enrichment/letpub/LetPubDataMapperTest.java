@@ -1,4 +1,4 @@
-package com.patra.catalog.infra.batch.venue.letpub;
+package com.patra.catalog.infra.adapter.enrichment.letpub;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

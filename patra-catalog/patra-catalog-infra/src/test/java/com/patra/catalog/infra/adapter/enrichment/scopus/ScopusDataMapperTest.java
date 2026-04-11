@@ -1,4 +1,4 @@
-package com.patra.catalog.infra.batch.venue.scopus;
+package com.patra.catalog.infra.adapter.enrichment.scopus;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

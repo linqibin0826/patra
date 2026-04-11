@@ -2,7 +2,6 @@ package com.patra.catalog.infra.adapter.enrichment.letpub;
 
 import com.patra.catalog.domain.port.enrichment.LetPubEnrichmentPersistPort;
 import com.patra.catalog.domain.port.enrichment.LetPubVenueData;
-import com.patra.catalog.infra.batch.venue.letpub.LetPubDataMapper;
 import com.patra.catalog.infra.persistence.dao.CasRatingDao;
 import com.patra.catalog.infra.persistence.dao.CasWarningDao;
 import com.patra.catalog.infra.persistence.dao.JcrRatingDao;
