@@ -35,6 +35,7 @@ import lombok.Builder;
 /// @param articlesPerYear 年发文量（可为 null）
 /// @param goldOaPercent 金色 OA 百分比
 /// @param researchArticlePercent 研究性文章占比
+/// @param coverImageSourceUrl 封面图原始 URL（LetPub 托管于 Aliyun OSS CDN）
 /// @param jcrSubject JCR 学科分类
 /// @param jcrCollection JCR 大类
 /// @param jifQuartile JIF（影响因子）分区
@@ -61,6 +62,8 @@ public record LetPubVenueData(
     Integer articlesPerYear,
     String goldOaPercent,
     String researchArticlePercent,
+    // 封面图（LetPub CDN 原始 URL）
+    String coverImageSourceUrl,
     // JCR 分区
     String jcrSubject,
     String jcrCollection,

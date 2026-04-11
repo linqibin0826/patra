@@ -88,6 +88,9 @@ public class LetPubDetailPageParser {
   /// CAS 新锐版的版本标识后缀。
   private static final String EDITION_PIONEER = "新锐版";
 
+  /// 封面图 CSS 选择器：匹配 src 包含 `/cover/journal/` 路径的 img 元素。
+  private static final String COVER_IMG_SELECTOR = "img[src*=/cover/journal/]";
+
   // ========== 主入口 ==========
 
   /// 解析详情页 HTML，提取全部期刊评价字段。
@@ -102,6 +105,7 @@ public class LetPubDetailPageParser {
     var builder = LetPubVenueData.builder().letPubJournalId(journalId);
 
     parseJournalName(doc, builder);
+    parseCoverImageUrl(doc, builder);
     parseBasicInfo(fieldMap, builder);
     parseJcrPartition(fieldMap, builder);
     parseCasPartition(fieldMap, builder);
@@ -213,6 +217,26 @@ public class LetPubDetailPageParser {
               String name = h1.text().split("期刊收藏夹")[0].trim();
               builder.letPubName(name);
             });
+  }
+
+  /// 提取 LetPub 期刊封面图的原始 URL。
+  ///
+  /// LetPub 详情页使用 layui 框架，封面图以 `<div class="layui-form-item">` 包裹，
+  /// src 指向 Aliyun OSS CDN 的绝对 URL（形如
+  /// `https://media-cdn.oss-cn-hangzhou.aliyuncs.com/.../cover/journal/{id}.jpg`）。
+  ///
+  /// 使用内容选择器（路径包含 `/cover/journal/`）而非位置选择器，
+  /// 这样即使 LetPub 调整布局也能继续识别封面元素。
+  private void parseCoverImageUrl(Document doc, LetPubVenueData.LetPubVenueDataBuilder builder) {
+    Element img = doc.selectFirst(COVER_IMG_SELECTOR);
+    if (img == null) {
+      return;
+    }
+    String src = img.attr("src");
+    if (src.isBlank()) {
+      return;
+    }
+    builder.coverImageSourceUrl(src);
   }
 
   /// 从 fieldMap 提取基本信息字段。

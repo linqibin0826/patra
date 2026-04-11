@@ -18,6 +18,11 @@
 
       <h2>Nature期刊基本信息</h2>
 
+      <!-- 期刊封面图（真实 LetPub 页面使用 layui 框架，封面图独立于基本信息表格） -->
+      <div class="layui-form-item">
+        <img src="https://media-cdn.oss-cn-hangzhou.aliyuncs.com/statics/images/comment_center/cover/journal/6054.jpg?ver=1775839295" title="NATURE">
+      </div>
+
       <TABLE style="box-sizing:border-box; padding: 8px; border: 1px solid rgb(221, 221, 221);
              text-align: left; border-collapse: collapse;"
              class="table_yjfx" cellpadding="0" cellspacing="0" width="1100">
@@ -29,10 +34,11 @@
             <TH colspan="2" bgcolor="#3B5998" style="padding: 8px;">登录收藏</TH>
           </TR>
 
-          <!-- 期刊名字（含封面图和评分，解析时忽略） -->
+          <!-- 期刊名字（含无关装饰图与评分，解析时忽略） -->
           <TR>
             <TD style="padding: 8px; border: 1px solid rgb(221, 221, 221); font-weight: bold;">期刊名字</TD>
             <TD colspan="2" style="padding: 8px; border: 1px solid rgb(221, 221, 221);">
+              <!-- 无关装饰图：路径是 /journal_cover/（下划线），不匹配 img[src*=/cover/journal/] 选择器 -->
               <img src="/journal_cover/0028-0836.jpg" width="80"/>
               Nature
               <span class="letpub-score">LetPub评分: 9.8</span>
