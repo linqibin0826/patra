@@ -1,5 +1,6 @@
 package com.patra.catalog.app.usecase.venue.letpub.command;
 
+import com.patra.catalog.app.usecase.venue.VenueEnrichRunStats;
 import com.patra.common.cqrs.Command;
 
 /// LetPub 期刊富化命令。
@@ -9,4 +10,4 @@ import com.patra.common.cqrs.Command;
 /// @author linqibin
 /// @since 0.1.0
 public record VenueLetPubEnrichCommand(short targetYear, int minCitedByCount)
-    implements Command<VenueLetPubEnrichResult> {}
+    implements Command<VenueEnrichRunStats> {}

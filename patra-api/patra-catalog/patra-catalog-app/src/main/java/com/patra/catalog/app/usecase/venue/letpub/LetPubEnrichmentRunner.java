@@ -1,5 +1,6 @@
 package com.patra.catalog.app.usecase.venue.letpub;
 
+import com.patra.catalog.app.usecase.venue.VenueEnrichRunStats;
 import com.patra.catalog.app.usecase.venue.letpub.LetPubEnrichmentWorker.Outcome;
 import com.patra.catalog.domain.port.enrichment.VenueSnapshot;
 import com.patra.catalog.domain.port.read.VenueEnrichmentReadPort;
@@ -15,7 +16,7 @@ import org.springframework.stereotype.Service;
 /// 1. 用 keyset pagination 分批读取需要富化的 venue（`lastId` 前进）
 /// 2. 对每条调用 [LetPubEnrichmentWorker]（运行在独立 REQUIRES_NEW 事务里）
 /// 3. 捕获任何异常并计入 `failed`，保证整批 run 不中断
-/// 4. 返回完整统计 [RunStats]
+/// 4. 返回完整统计 [VenueEnrichRunStats]
 ///
 /// **为什么不用 @Transactional**：外循环跨 batch 和 venue，事务边界应由
 /// [LetPubEnrichmentWorker] 在 venue 粒度管理。Runner 本身是纯循环协调，
@@ -33,7 +34,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class LetPubEnrichmentRunner {
 
-  /// 每批读取的 venue 数量。与 `JpaPagingItemReader.pageSize` 的原有配置一致。
+  /// 每批读取的 venue 数量（keyset pagination 页大小）。
   private static final int BATCH_SIZE = 50;
 
   private final VenueEnrichmentReadPort readPort;
@@ -46,8 +47,8 @@ public class LetPubEnrichmentRunner {
   ///
   /// @param targetYear 目标评级年份（如 2025）
   /// @param minCitedByCount 被引次数下限（0 = 不过滤）
-  /// @return 完整运行统计 [RunStats]，不为 null
-  public RunStats run(short targetYear, int minCitedByCount) {
+  /// @return 完整运行统计 [VenueEnrichRunStats]，不为 null
+  public VenueEnrichRunStats run(short targetYear, int minCitedByCount) {
     log.info(
         "LetPub 富化 Runner 启动: targetYear={} minCitedByCount={} batchSize={}",
         targetYear,
@@ -86,7 +87,7 @@ public class LetPubEnrichmentRunner {
           if (e instanceof InterruptedException || e.getCause() instanceof InterruptedException) {
             Thread.currentThread().interrupt();
             log.warn("LetPub 富化 Runner 被中断: venueId={} processedSoFar={}", v.id(), processed);
-            return RunStats.of(total, processed, skipped, failed);
+            return VenueEnrichRunStats.of(total, processed, skipped, failed);
           }
           failed++;
           log.warn("LetPub 富化失败（继续）: venueId={} reason={}", v.id(), e.getMessage());
@@ -100,26 +101,6 @@ public class LetPubEnrichmentRunner {
         processed,
         skipped,
         failed);
-    return RunStats.of(total, processed, skipped, failed);
-  }
-
-  /// LetPub 富化 run 的完整统计结果。
-  ///
-  /// @param totalRead Reader 读取的候选 venue 总数
-  /// @param processed 成功完成富化的 venue 数
-  /// @param skipped 被 Worker 报告为 MISSING_ISSN 或 NOT_FOUND_IN_SOURCE 的 venue 数
-  /// @param failed 处理过程中抛异常被 Runner 捕获的 venue 数
-  public record RunStats(int totalRead, int processed, int skipped, int failed) {
-
-    /// 创建 [RunStats]。
-    ///
-    /// @param totalRead Reader 读取的候选 venue 总数
-    /// @param processed 成功完成富化的 venue 数
-    /// @param skipped MISSING_ISSN / NOT_FOUND_IN_SOURCE 的 venue 数
-    /// @param failed 抛异常被 Runner 捕获的 venue 数
-    /// @return 新建的 [RunStats] 实例
-    public static RunStats of(int totalRead, int processed, int skipped, int failed) {
-      return new RunStats(totalRead, processed, skipped, failed);
-    }
+    return VenueEnrichRunStats.of(total, processed, skipped, failed);
   }
 }

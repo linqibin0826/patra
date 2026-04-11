@@ -5,10 +5,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyShort;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.patra.catalog.app.usecase.venue.letpub.LetPubEnrichmentRunner.RunStats;
+import com.patra.catalog.app.usecase.venue.VenueEnrichRunStats;
 import com.patra.catalog.app.usecase.venue.letpub.LetPubEnrichmentWorker.Outcome;
 import com.patra.catalog.domain.port.enrichment.VenueSnapshot;
 import com.patra.catalog.domain.port.read.VenueEnrichmentReadPort;
@@ -42,7 +43,7 @@ class LetPubEnrichmentRunnerTest {
     when(readPort.findNeedingLetPubEnrichment(anyShort(), anyInt(), anyLong(), anyInt()))
         .thenReturn(List.of());
 
-    RunStats stats = runner.run((short) 2025, 0);
+    VenueEnrichRunStats stats = runner.run((short) 2025, 0);
 
     assertThat(stats.totalRead()).isZero();
     assertThat(stats.processed()).isZero();
@@ -59,12 +60,12 @@ class LetPubEnrichmentRunnerTest {
     when(readPort.findNeedingLetPubEnrichment((short) 2025, 0, 3L, 50)).thenReturn(List.of());
     when(worker.processVenue(any())).thenReturn(Outcome.PROCESSED);
 
-    RunStats stats = runner.run((short) 2025, 0);
+    VenueEnrichRunStats stats = runner.run((short) 2025, 0);
 
     assertThat(stats.totalRead()).isEqualTo(3);
     assertThat(stats.processed()).isEqualTo(3);
     assertThat(stats.failed()).isZero();
-    verify(worker, org.mockito.Mockito.times(3)).processVenue(any());
+    verify(worker, times(3)).processVenue(any());
   }
 
   @Test
@@ -78,7 +79,7 @@ class LetPubEnrichmentRunnerTest {
     when(worker.processVenue(VenueSnapshot.of(2L, "B"))).thenThrow(new RuntimeException("crash"));
     when(worker.processVenue(VenueSnapshot.of(3L, "C"))).thenReturn(Outcome.PROCESSED);
 
-    RunStats stats = runner.run((short) 2025, 0);
+    VenueEnrichRunStats stats = runner.run((short) 2025, 0);
 
     assertThat(stats.totalRead()).isEqualTo(3);
     assertThat(stats.processed()).isEqualTo(2);
@@ -98,7 +99,7 @@ class LetPubEnrichmentRunnerTest {
     when(worker.processVenue(VenueSnapshot.of(2L, "B"))).thenReturn(Outcome.NOT_FOUND_IN_SOURCE);
     when(worker.processVenue(VenueSnapshot.of(3L, "C"))).thenReturn(Outcome.PROCESSED);
 
-    RunStats stats = runner.run((short) 2025, 0);
+    VenueEnrichRunStats stats = runner.run((short) 2025, 0);
 
     assertThat(stats.skipped()).isEqualTo(2);
     assertThat(stats.processed()).isEqualTo(1);
@@ -115,7 +116,7 @@ class LetPubEnrichmentRunnerTest {
     when(readPort.findNeedingLetPubEnrichment((short) 2025, 0, 30L, 50)).thenReturn(List.of());
     when(worker.processVenue(any())).thenReturn(Outcome.PROCESSED);
 
-    RunStats stats = runner.run((short) 2025, 0);
+    VenueEnrichRunStats stats = runner.run((short) 2025, 0);
 
     assertThat(stats.totalRead()).isEqualTo(3);
     verify(readPort).findNeedingLetPubEnrichment((short) 2025, 0, 0L, 50);

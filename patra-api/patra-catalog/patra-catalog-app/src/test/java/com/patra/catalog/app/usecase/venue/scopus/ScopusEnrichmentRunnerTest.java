@@ -9,7 +9,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.patra.catalog.app.usecase.venue.scopus.ScopusEnrichmentRunner.RunStats;
+import com.patra.catalog.app.usecase.venue.VenueEnrichRunStats;
 import com.patra.catalog.app.usecase.venue.scopus.ScopusEnrichmentWorker.Outcome;
 import com.patra.catalog.domain.port.enrichment.VenueSnapshot;
 import com.patra.catalog.domain.port.read.VenueEnrichmentReadPort;
@@ -56,7 +56,7 @@ class ScopusEnrichmentRunnerTest {
     when(readPort.findNeedingScopusEnrichment(anyShort(), anyInt(), anyLong(), anyInt()))
         .thenReturn(List.of());
 
-    RunStats stats = runner.run((short) 2025, 0);
+    VenueEnrichRunStats stats = runner.run((short) 2025, 0);
 
     assertThat(stats.totalRead()).isZero();
     assertThat(stats.processed()).isZero();
@@ -74,7 +74,7 @@ class ScopusEnrichmentRunnerTest {
     when(readPort.findNeedingScopusEnrichment((short) 2025, 0, 3L, 50)).thenReturn(List.of());
     when(worker.processVenue(any())).thenReturn(Outcome.PROCESSED);
 
-    RunStats stats = runner.run((short) 2025, 0);
+    VenueEnrichRunStats stats = runner.run((short) 2025, 0);
 
     assertThat(stats.totalRead()).isEqualTo(3);
     assertThat(stats.processed()).isEqualTo(3);
@@ -93,7 +93,7 @@ class ScopusEnrichmentRunnerTest {
     when(worker.processVenue(VenueSnapshot.of(2L, "B"))).thenThrow(new RuntimeException("crash"));
     when(worker.processVenue(VenueSnapshot.of(3L, "C"))).thenReturn(Outcome.PROCESSED);
 
-    RunStats stats = runner.run((short) 2025, 0);
+    VenueEnrichRunStats stats = runner.run((short) 2025, 0);
 
     assertThat(stats.totalRead()).isEqualTo(3);
     assertThat(stats.processed()).isEqualTo(2);
@@ -113,7 +113,7 @@ class ScopusEnrichmentRunnerTest {
     when(worker.processVenue(VenueSnapshot.of(2L, "B"))).thenReturn(Outcome.NOT_FOUND_IN_SOURCE);
     when(worker.processVenue(VenueSnapshot.of(3L, "C"))).thenReturn(Outcome.PROCESSED);
 
-    RunStats stats = runner.run((short) 2025, 0);
+    VenueEnrichRunStats stats = runner.run((short) 2025, 0);
 
     assertThat(stats.skipped()).isEqualTo(2);
     assertThat(stats.processed()).isEqualTo(1);
@@ -130,7 +130,7 @@ class ScopusEnrichmentRunnerTest {
     when(readPort.findNeedingScopusEnrichment((short) 2025, 0, 30L, 50)).thenReturn(List.of());
     when(worker.processVenue(any())).thenReturn(Outcome.PROCESSED);
 
-    RunStats stats = runner.run((short) 2025, 0);
+    VenueEnrichRunStats stats = runner.run((short) 2025, 0);
 
     assertThat(stats.totalRead()).isEqualTo(3);
     verify(readPort).findNeedingScopusEnrichment((short) 2025, 0, 0L, 50);

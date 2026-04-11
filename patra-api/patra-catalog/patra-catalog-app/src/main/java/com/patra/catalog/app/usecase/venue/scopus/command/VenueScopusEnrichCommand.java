@@ -1,5 +1,6 @@
 package com.patra.catalog.app.usecase.venue.scopus.command;
 
+import com.patra.catalog.app.usecase.venue.VenueEnrichRunStats;
 import com.patra.common.cqrs.Command;
 
 /// Scopus 期刊指标富化命令。
@@ -9,4 +10,4 @@ import com.patra.common.cqrs.Command;
 /// @author linqibin
 /// @since 0.1.0
 public record VenueScopusEnrichCommand(short targetYear, int minCitedByCount)
-    implements Command<VenueScopusEnrichResult> {}
+    implements Command<VenueEnrichRunStats> {}

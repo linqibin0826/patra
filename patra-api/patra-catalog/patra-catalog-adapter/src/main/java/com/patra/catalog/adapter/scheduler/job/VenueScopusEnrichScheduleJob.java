@@ -1,7 +1,7 @@
 package com.patra.catalog.adapter.scheduler.job;
 
+import com.patra.catalog.app.usecase.venue.VenueEnrichRunStats;
 import com.patra.catalog.app.usecase.venue.scopus.command.VenueScopusEnrichCommand;
-import com.patra.catalog.app.usecase.venue.scopus.command.VenueScopusEnrichResult;
 import com.patra.common.cqrs.CommandBus;
 import com.xxl.job.core.context.XxlJobHelper;
 import com.xxl.job.core.handler.annotation.XxlJob;
@@ -40,7 +40,7 @@ public class VenueScopusEnrichScheduleJob {
     VenueEnrichJobParam param = VenueEnrichJobParam.fromXxlJobParam();
 
     try {
-      VenueScopusEnrichResult result =
+      VenueEnrichRunStats result =
           commandBus.handle(
               new VenueScopusEnrichCommand(param.targetYear(), param.minCitedByCount()));
 

@@ -5,9 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.patra.catalog.app.usecase.venue.letpub.LetPubEnrichmentRunner.RunStats;
+import com.patra.catalog.app.usecase.venue.VenueEnrichRunStats;
 import com.patra.catalog.app.usecase.venue.letpub.command.VenueLetPubEnrichCommand;
-import com.patra.catalog.app.usecase.venue.letpub.command.VenueLetPubEnrichResult;
 import com.patra.common.error.ApplicationException;
 import com.patra.common.error.DomainException;
 import com.patra.common.error.trait.StandardErrorTrait;
@@ -24,7 +23,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 ///
 /// **测试策略**：
 ///
-/// - Mock [LetPubEnrichmentRunner]，验证 Handler 把 RunStats 转成 Result 返回
+/// - Mock [LetPubEnrichmentRunner]，验证 Handler 透传 [VenueEnrichRunStats]
 /// - 验证 [DomainException] 直接传播
 /// - 验证未知 [RuntimeException] 被包装成 [ApplicationException]
 ///
@@ -45,14 +44,14 @@ class VenueLetPubEnrichHandlerTest {
   }
 
   @Test
-  @DisplayName("正常调用 - Runner 返回 stats 被转成 Result")
-  void shouldReturnResultFromRunnerStats() {
+  @DisplayName("正常调用 - Runner 的 stats 被透传")
+  void shouldReturnStatsFromRunner() {
     short targetYear = (short) 2025;
     int minCitedByCount = 1000;
     var command = new VenueLetPubEnrichCommand(targetYear, minCitedByCount);
-    when(runner.run(targetYear, minCitedByCount)).thenReturn(RunStats.of(100, 90, 5, 5));
+    when(runner.run(targetYear, minCitedByCount)).thenReturn(VenueEnrichRunStats.of(100, 90, 5, 5));
 
-    VenueLetPubEnrichResult result = handler.handle(command);
+    VenueEnrichRunStats result = handler.handle(command);
 
     assertThat(result.totalRead()).isEqualTo(100);
     assertThat(result.processed()).isEqualTo(90);

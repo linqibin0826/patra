@@ -1,5 +1,6 @@
 package com.patra.catalog.app.usecase.venue.scopus;
 
+import com.patra.catalog.app.usecase.venue.VenueEnrichRunStats;
 import com.patra.catalog.app.usecase.venue.scopus.ScopusEnrichmentWorker.Outcome;
 import com.patra.catalog.domain.port.enrichment.VenueSnapshot;
 import com.patra.catalog.domain.port.read.VenueEnrichmentReadPort;
@@ -20,7 +21,7 @@ import org.springframework.stereotype.Service;
 /// 2. 对每条调用 [ScopusEnrichmentWorker]（运行在独立 REQUIRES_NEW 事务里）
 /// 3. 两次 venue 调用之间通过 [doRateLimitSleep] 插入 400ms 停顿（首次不等）
 /// 4. 捕获任何异常并计入 `failed`，保证整批 run 不中断
-/// 5. 返回完整统计 [RunStats]
+/// 5. 返回完整统计 [VenueEnrichRunStats]
 ///
 /// **为什么不用独立 `RateLimiter` 类**：独立类需要 `lastCallAt` 字段，若作为
 /// Spring singleton 会在跨 `run()` 调用时产生状态泄漏。本类采用 protected 方法
@@ -49,8 +50,8 @@ public class ScopusEnrichmentRunner {
   ///
   /// @param targetYear 目标评级年份（如 2025）
   /// @param minCitedByCount 被引次数下限（0 = 不过滤）
-  /// @return 完整运行统计 [RunStats]，不为 null
-  public RunStats run(short targetYear, int minCitedByCount) {
+  /// @return 完整运行统计 [VenueEnrichRunStats]，不为 null
+  public VenueEnrichRunStats run(short targetYear, int minCitedByCount) {
     log.info(
         "Scopus 富化 Runner 启动: targetYear={} minCitedByCount={} batchSize={} rateLimitMs={}",
         targetYear,
@@ -86,7 +87,7 @@ public class ScopusEnrichmentRunner {
                 "Scopus 富化 Runner 被中断（rate limit wait）: venueId={} processedSoFar={}",
                 v.id(),
                 processed);
-            return RunStats.of(total, processed, skipped, failed);
+            return VenueEnrichRunStats.of(total, processed, skipped, failed);
           }
         }
         firstVenue = false;
@@ -105,7 +106,7 @@ public class ScopusEnrichmentRunner {
           if (e instanceof InterruptedException || e.getCause() instanceof InterruptedException) {
             Thread.currentThread().interrupt();
             log.warn("Scopus 富化 Runner 被中断: venueId={} processedSoFar={}", v.id(), processed);
-            return RunStats.of(total, processed, skipped, failed);
+            return VenueEnrichRunStats.of(total, processed, skipped, failed);
           }
           failed++;
           log.warn("Scopus 富化失败（继续）: venueId={} reason={}", v.id(), e.getMessage());
@@ -119,7 +120,7 @@ public class ScopusEnrichmentRunner {
         processed,
         skipped,
         failed);
-    return RunStats.of(total, processed, skipped, failed);
+    return VenueEnrichRunStats.of(total, processed, skipped, failed);
   }
 
   /// 限速钩子：默认 `Thread.sleep(RATE_LIMIT_INTERVAL_MS)`，测试可匿名子类重写。
@@ -131,25 +132,5 @@ public class ScopusEnrichmentRunner {
   /// @throws InterruptedException 若线程被中断，由调用方恢复 interrupt flag 并提前返回
   protected void doRateLimitSleep() throws InterruptedException {
     Thread.sleep(RATE_LIMIT_INTERVAL_MS);
-  }
-
-  /// Scopus 富化 run 的完整统计结果。
-  ///
-  /// @param totalRead Reader 读取的候选 venue 总数
-  /// @param processed 成功完成富化的 venue 数
-  /// @param skipped 被 Worker 报告为 MISSING_ISSN / NOT_FOUND_IN_SOURCE 的 venue 数
-  /// @param failed 抛异常被 Runner 捕获的 venue 数
-  public record RunStats(int totalRead, int processed, int skipped, int failed) {
-
-    /// 创建 [RunStats]。
-    ///
-    /// @param totalRead 候选 venue 总数
-    /// @param processed 成功富化数
-    /// @param skipped 被跳过数
-    /// @param failed 失败数
-    /// @return 新建的 [RunStats] 实例
-    public static RunStats of(int totalRead, int processed, int skipped, int failed) {
-      return new RunStats(totalRead, processed, skipped, failed);
-    }
   }
 }
