@@ -100,10 +100,10 @@ class LetPubScrapingClientTest {
 
       LetPubVenueData data = client.parseDetailPage(html, "10000");
 
-      assertThat(data.letPubJournalId()).isEqualTo("10000");
-      assertThat(data.letPubName()).isEqualTo("Nature");
-      assertThat(data.jifQuartile()).isEqualTo("Q1");
-      assertThat(data.casPartitions())
+      assertThat(data.basicInfo().letPubJournalId()).isEqualTo("10000");
+      assertThat(data.basicInfo().letPubName()).isEqualTo("Nature");
+      assertThat(data.jcrMetrics().jifQuartile()).isEqualTo("Q1");
+      assertThat(data.casData().partitions())
           .hasSize(3)
           .extracting(LetPubVenueData.CasPartition::version)
           .containsExactly("2026年3月新锐版", "2025年3月升级版", "2023年12月旧的升级版");

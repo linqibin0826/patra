@@ -51,7 +51,8 @@ public class LetPubDataMapper {
   /// @return JCR 评级实体列表（可能为空）
   public List<JcrRatingEntity> mapToJcrRatings(
       LetPubVenueData data, Long venueId, String sourceUrl) {
-    Map<String, Double> trend = data.impactFactorTrend();
+    LetPubVenueData.JcrMetrics jcr = data.jcrMetrics();
+    Map<String, Double> trend = jcr.impactFactorTrend();
     if (trend == null || trend.isEmpty()) {
       return List.of();
     }
@@ -84,20 +85,20 @@ public class LetPubDataMapper {
       // 详细 JCR 字段仅对最新年填充：这些字段在 Clarivate 原生 JCR 里本就是按年发布的年度指标，
       // LetPub 页面只提供最新年详细值，历史年暂留空，等后续接入 Clarivate 一级源后可回填。
       if (year == latestYear) {
-        entity.setSubject(data.jcrSubject());
-        entity.setCollection(data.jcrCollection());
-        entity.setJifQuartile(data.jifQuartile());
-        entity.setJifRank(data.jifRank());
-        entity.setJifPercentile(toBigDecimal(data.jifPercentile()));
-        entity.setJciSubject(data.jciSubject());
-        entity.setJciCollection(data.jciCollection());
-        entity.setJciQuartile(data.jciQuartile());
-        entity.setJciRank(data.jciRank());
-        entity.setJciPercentile(toBigDecimal(data.jciPercentile()));
-        entity.setJciValue(toBigDecimal(data.jciValue()));
-        entity.setWosOverallQuartile(data.wosOverallQuartile());
-        entity.setSelfCitationRate(toBigDecimal(data.selfCitationRate()));
-        entity.setResearchDirection(data.researchDirection());
+        entity.setSubject(jcr.jcrSubject());
+        entity.setCollection(jcr.jcrCollection());
+        entity.setJifQuartile(jcr.jifQuartile());
+        entity.setJifRank(jcr.jifRank());
+        entity.setJifPercentile(toBigDecimal(jcr.jifPercentile()));
+        entity.setJciSubject(jcr.jciSubject());
+        entity.setJciCollection(jcr.jciCollection());
+        entity.setJciQuartile(jcr.jciQuartile());
+        entity.setJciRank(jcr.jciRank());
+        entity.setJciPercentile(toBigDecimal(jcr.jciPercentile()));
+        entity.setJciValue(toBigDecimal(jcr.jciValue()));
+        entity.setWosOverallQuartile(jcr.wosOverallQuartile());
+        entity.setSelfCitationRate(toBigDecimal(jcr.selfCitationRate()));
+        entity.setResearchDirection(data.basicInfo().researchDirection());
       }
 
       ratings.add(entity);
@@ -118,8 +119,8 @@ public class LetPubDataMapper {
   /// @return CAS 评级实体列表（可能为空）
   public List<CasRatingEntity> mapToCasRatings(
       LetPubVenueData data, Long venueId, String sourceUrl) {
-    List<CasPartition> partitions = data.casPartitions();
-    if (partitions == null || partitions.isEmpty()) {
+    List<CasPartition> partitions = data.casData().partitions();
+    if (partitions.isEmpty()) {
       return List.of();
     }
 
@@ -171,8 +172,8 @@ public class LetPubDataMapper {
   /// @return CAS 预警实体列表（可能为空）
   public List<CasWarningEntity> mapToCasWarnings(
       LetPubVenueData data, Long venueId, String sourceUrl) {
-    List<CasWarningRecord> warnings = data.casWarnings();
-    if (warnings == null || warnings.isEmpty()) {
+    List<CasWarningRecord> warnings = data.casData().warnings();
+    if (warnings.isEmpty()) {
       return List.of();
     }
 

@@ -178,7 +178,8 @@ public class LetPubScrapingClient {
       }
 
       LetPubVenueData data = parseDetailPage(detailHtml, jid);
-      log.info("LetPub 成功爬取 ISSN {} → journalId={}, name={}", issn, jid, data.letPubName());
+      log.info(
+          "LetPub 成功爬取 ISSN {} → journalId={}, name={}", issn, jid, data.basicInfo().letPubName());
       return Optional.of(data);
 
     } catch (InterruptedException e) {

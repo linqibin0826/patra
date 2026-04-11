@@ -55,14 +55,14 @@ class LetPubDetailPageParserTest {
     @Test
     @DisplayName("应从可见 h1 提取期刊名，去除'期刊收藏夹'后缀")
     void shouldExtractJournalName() {
-      assertThat(data.letPubName()).isEqualTo("Nature");
+      assertThat(data.basicInfo().letPubName()).isEqualTo("Nature");
     }
 
     @Test
     @DisplayName("应忽略 display:none 的品牌 h1 和页脚装饰 h1")
     void shouldIgnoreHiddenAndFooterH1() {
       // 品牌 h1 "美国ACCDON公司旗下品牌" 和页脚 "哇咔咔咔咔" 不应影响期刊名
-      assertThat(data.letPubName()).doesNotContain("ACCDON", "哇咔咔");
+      assertThat(data.basicInfo().letPubName()).doesNotContain("ACCDON", "哇咔咔");
     }
   }
 
@@ -73,31 +73,31 @@ class LetPubDetailPageParserTest {
     @Test
     @DisplayName("应设置 journalId")
     void shouldSetJournalId() {
-      assertThat(data.letPubJournalId()).isEqualTo(JOURNAL_ID);
+      assertThat(data.basicInfo().letPubJournalId()).isEqualTo(JOURNAL_ID);
     }
 
     @Test
     @DisplayName("应提取研究方向")
     void shouldExtractResearchDirection() {
-      assertThat(data.researchDirection()).isEqualTo("综合性期刊");
+      assertThat(data.basicInfo().researchDirection()).isEqualTo("综合性期刊");
     }
 
     @Test
     @DisplayName("应提取年文章数")
     void shouldExtractArticlesPerYear() {
-      assertThat(data.articlesPerYear()).isEqualTo(860);
+      assertThat(data.basicInfo().articlesPerYear()).isEqualTo(860);
     }
 
     @Test
     @DisplayName("应提取 Gold OA 占比")
     void shouldExtractGoldOaPercent() {
-      assertThat(data.goldOaPercent()).isEqualTo("49.32%");
+      assertThat(data.basicInfo().goldOaPercent()).isEqualTo("49.32%");
     }
 
     @Test
     @DisplayName("应提取研究类文章占比")
     void shouldExtractResearchArticlePercent() {
-      assertThat(data.researchArticlePercent()).isEqualTo("52.24%");
+      assertThat(data.basicInfo().researchArticlePercent()).isEqualTo("52.24%");
     }
   }
 
@@ -108,37 +108,37 @@ class LetPubDetailPageParserTest {
     @Test
     @DisplayName("应从 JIF 子表格提取学科分类")
     void shouldExtractJcrSubject() {
-      assertThat(data.jcrSubject()).isEqualTo("MULTIDISCIPLINARY SCIENCES");
+      assertThat(data.jcrMetrics().jcrSubject()).isEqualTo("MULTIDISCIPLINARY SCIENCES");
     }
 
     @Test
     @DisplayName("应提取收录子集")
     void shouldExtractJcrCollection() {
-      assertThat(data.jcrCollection()).isEqualTo("SCIE");
+      assertThat(data.jcrMetrics().jcrCollection()).isEqualTo("SCIE");
     }
 
     @Test
     @DisplayName("应提取 JIF 分区")
     void shouldExtractJifQuartile() {
-      assertThat(data.jifQuartile()).isEqualTo("Q1");
+      assertThat(data.jcrMetrics().jifQuartile()).isEqualTo("Q1");
     }
 
     @Test
     @DisplayName("应提取 JIF 排名")
     void shouldExtractJifRank() {
-      assertThat(data.jifRank()).isEqualTo("2/136");
+      assertThat(data.jcrMetrics().jifRank()).isEqualTo("2/136");
     }
 
     @Test
     @DisplayName("应从 JCI 子表格提取分区")
     void shouldExtractJciQuartile() {
-      assertThat(data.jciQuartile()).isEqualTo("Q1");
+      assertThat(data.jcrMetrics().jciQuartile()).isEqualTo("Q1");
     }
 
     @Test
     @DisplayName("应从 JCI 子表格提取排名")
     void shouldExtractJciRank() {
-      assertThat(data.jciRank()).isEqualTo("3/144");
+      assertThat(data.jcrMetrics().jciRank()).isEqualTo("3/144");
     }
   }
 
@@ -149,43 +149,43 @@ class LetPubDetailPageParserTest {
     @Test
     @DisplayName("应从 JCR 行顶部提取 WOS 综合分区等级")
     void shouldExtractWosOverallQuartile() {
-      assertThat(data.wosOverallQuartile()).isEqualTo("1区");
+      assertThat(data.jcrMetrics().wosOverallQuartile()).isEqualTo("1区");
     }
 
     @Test
     @DisplayName("应从 JIF 子表第 5 列 lay-percent 属性提取百分位")
     void shouldExtractJifPercentile() {
-      assertThat(data.jifPercentile()).isEqualTo(99.0);
+      assertThat(data.jcrMetrics().jifPercentile()).isEqualTo(99.0);
     }
 
     @Test
     @DisplayName("应从 JCI 子表独立提取 JCI 学科（非复用 JIF subject）")
     void shouldExtractJciSubjectIndependently() {
-      assertThat(data.jciSubject()).isEqualTo("NATURAL SCIENCE FLAGSHIP");
+      assertThat(data.jcrMetrics().jciSubject()).isEqualTo("NATURAL SCIENCE FLAGSHIP");
     }
 
     @Test
     @DisplayName("应从 JCI 子表独立提取 JCI 收录子集")
     void shouldExtractJciCollectionIndependently() {
-      assertThat(data.jciCollection()).isEqualTo("SCIE");
+      assertThat(data.jcrMetrics().jciCollection()).isEqualTo("SCIE");
     }
 
     @Test
     @DisplayName("应从 JCI 子表第 5 列 lay-percent 属性提取百分位")
     void shouldExtractJciPercentile() {
-      assertThat(data.jciPercentile()).isEqualTo(98.9);
+      assertThat(data.jcrMetrics().jciPercentile()).isEqualTo(98.9);
     }
 
     @Test
     @DisplayName("应从独立行 \"JCI期刊引文指标\" 提取数值")
     void shouldExtractJciValue() {
-      assertThat(data.jciValue()).isEqualTo(11.14);
+      assertThat(data.jcrMetrics().jciValue()).isEqualTo(11.14);
     }
 
     @Test
     @DisplayName("应从独立行 \"自引率\" 提取百分比（剥离趋势图按钮 span）")
     void shouldExtractSelfCitationRate() {
-      assertThat(data.selfCitationRate()).isEqualTo(1.6);
+      assertThat(data.jcrMetrics().selfCitationRate()).isEqualTo(1.6);
     }
   }
 
@@ -196,8 +196,8 @@ class LetPubDetailPageParserTest {
     @Test
     @DisplayName("应提取全部 3 个 CAS 版本（新锐版/升级版/旧的升级版）")
     void shouldExtractAllCasVersions() {
-      assertThat(data.casPartitions()).hasSize(3);
-      assertThat(data.casPartitions())
+      assertThat(data.casData().partitions()).hasSize(3);
+      assertThat(data.casData().partitions())
           .extracting(LetPubVenueData.CasPartition::version)
           .containsExactly("2026年3月新锐版", "2025年3月升级版", "2023年12月旧的升级版");
     }
@@ -205,55 +205,55 @@ class LetPubDetailPageParserTest {
     @Test
     @DisplayName("新锐版应排在第一位")
     void shouldOrderXinruiFirst() {
-      assertThat(data.casPartitions().getFirst().version()).isEqualTo("2026年3月新锐版");
+      assertThat(data.casData().partitions().getFirst().version()).isEqualTo("2026年3月新锐版");
     }
 
     @Test
     @DisplayName("应提取大类学科名称（过滤 span 分区标签）")
     void shouldExtractMajorCategory() {
-      var xinrui = data.casPartitions().getFirst();
+      var xinrui = data.casData().partitions().getFirst();
       assertThat(xinrui.majorCategory()).isEqualTo("综合性期刊");
     }
 
     @Test
     @DisplayName("应从可见 span 提取大类分区（忽略 display:none 历史值）")
     void shouldExtractMajorQuartileFromVisibleSpan() {
-      var xinrui = data.casPartitions().getFirst();
+      var xinrui = data.casData().partitions().getFirst();
       assertThat(xinrui.majorQuartile()).isEqualTo("1区");
     }
 
     @Test
     @DisplayName("应提取小类学科名称")
     void shouldExtractMinorSubject() {
-      var xinrui = data.casPartitions().getFirst();
+      var xinrui = data.casData().partitions().getFirst();
       assertThat(xinrui.minorSubject()).contains("MULTIDISCIPLINARY SCIENCES");
     }
 
     @Test
     @DisplayName("应从可见 span 提取小类分区")
     void shouldExtractMinorQuartileFromVisibleSpan() {
-      var xinrui = data.casPartitions().getFirst();
+      var xinrui = data.casData().partitions().getFirst();
       assertThat(xinrui.minorQuartile()).isEqualTo("1区");
     }
 
     @Test
     @DisplayName("应提取 Top 期刊标识")
     void shouldExtractTopJournalFlag() {
-      var xinrui = data.casPartitions().getFirst();
+      var xinrui = data.casData().partitions().getFirst();
       assertThat(xinrui.topJournal()).isTrue();
     }
 
     @Test
     @DisplayName("应提取综述期刊标识")
     void shouldExtractReviewJournalFlag() {
-      var xinrui = data.casPartitions().getFirst();
+      var xinrui = data.casData().partitions().getFirst();
       assertThat(xinrui.reviewJournal()).isFalse();
     }
 
     @Test
     @DisplayName("升级版也应被正确解析")
     void shouldParseShengjiEdition() {
-      var shengji = data.casPartitions().get(1);
+      var shengji = data.casData().partitions().get(1);
       assertThat(shengji.version()).isEqualTo("2025年3月升级版");
       assertThat(shengji.majorCategory()).isEqualTo("综合性期刊");
       assertThat(shengji.majorQuartile()).isEqualTo("1区");
@@ -262,7 +262,7 @@ class LetPubDetailPageParserTest {
     @Test
     @DisplayName("旧的升级版也应被正确解析")
     void shouldParseLegacyEdition() {
-      var legacy = data.casPartitions().get(2);
+      var legacy = data.casData().partitions().get(2);
       assertThat(legacy.version()).isEqualTo("2023年12月旧的升级版");
       assertThat(legacy.majorQuartile()).isEqualTo("1区");
     }
@@ -275,25 +275,25 @@ class LetPubDetailPageParserTest {
     @Test
     @DisplayName("应提取官方审稿速度")
     void shouldExtractOfficialReviewSpeed() {
-      assertThat(data.reviewSpeedOfficial()).contains("较慢");
+      assertThat(data.submissionInfo().reviewSpeedOfficial()).contains("较慢");
     }
 
     @Test
     @DisplayName("应提取用户分享审稿速度")
     void shouldExtractUserReviewSpeed() {
-      assertThat(data.reviewSpeedUser()).contains("6.0个月");
+      assertThat(data.submissionInfo().reviewSpeedUser()).contains("6.0个月");
     }
 
     @Test
     @DisplayName("应提取录用比例")
     void shouldExtractAcceptanceRate() {
-      assertThat(data.acceptanceRate()).contains("7.69%");
+      assertThat(data.submissionInfo().acceptanceRate()).contains("7.69%");
     }
 
     @Test
     @DisplayName("应提取 APC 费用信息")
     void shouldExtractApcInfo() {
-      assertThat(data.apcInfo()).contains("US$11390");
+      assertThat(data.submissionInfo().apcInfo()).contains("US$11390");
     }
   }
 
@@ -304,14 +304,14 @@ class LetPubDetailPageParserTest {
     @Test
     @DisplayName("应提取数据库收录列表")
     void shouldExtractIndexedIn() {
-      assertThat(data.indexedIn()).isNotEmpty();
-      assertThat(data.indexedIn()).anyMatch(s -> s.contains("Science Citation Index"));
+      assertThat(data.basicInfo().indexedIn()).isNotEmpty();
+      assertThat(data.basicInfo().indexedIn()).anyMatch(s -> s.contains("Science Citation Index"));
     }
 
     @Test
     @DisplayName("应从 ECharts JS 提取10年 IF 趋势")
     void shouldExtractImpactFactorTrend() {
-      assertThat(data.impactFactorTrend())
+      assertThat(data.jcrMetrics().impactFactorTrend())
           .isNotNull()
           .hasSize(10)
           .containsEntry("2024-2025", 48.5)
@@ -329,10 +329,10 @@ class LetPubDetailPageParserTest {
     void shouldHandleEmptyHtml() {
       LetPubVenueData emptyResult = parser.parse("<html></html>", "99999");
 
-      assertThat(emptyResult.letPubJournalId()).isEqualTo("99999");
-      assertThat(emptyResult.letPubName()).isNull();
-      assertThat(emptyResult.impactFactorTrend()).isEmpty();
-      assertThat(emptyResult.indexedIn()).isEmpty();
+      assertThat(emptyResult.basicInfo().letPubJournalId()).isEqualTo("99999");
+      assertThat(emptyResult.basicInfo().letPubName()).isNull();
+      assertThat(emptyResult.jcrMetrics().impactFactorTrend()).isEmpty();
+      assertThat(emptyResult.basicInfo().indexedIn()).isEmpty();
     }
 
     @Test
@@ -341,8 +341,8 @@ class LetPubDetailPageParserTest {
       String html = "<html><body><h1>Some Journal 期刊收藏夹</h1></body></html>";
       LetPubVenueData result = parser.parse(html, "12345");
 
-      assertThat(result.letPubName()).isEqualTo("Some Journal");
-      assertThat(result.researchDirection()).isEmpty();
+      assertThat(result.basicInfo().letPubName()).isEqualTo("Some Journal");
+      assertThat(result.basicInfo().researchDirection()).isEmpty();
     }
   }
 
@@ -353,7 +353,7 @@ class LetPubDetailPageParserTest {
     @Test
     @DisplayName("应从 layui-form-item 提取真实 Aliyun OSS 封面 URL")
     void shouldExtractCoverImageUrlFromLayuiFormItem() {
-      assertThat(data.coverImageSourceUrl())
+      assertThat(data.basicInfo().coverImageSourceUrl())
           .isEqualTo(
               "https://media-cdn.oss-cn-hangzhou.aliyuncs.com/statics/images/comment_center/cover/journal/6054.jpg?ver=1775839295");
     }
@@ -363,7 +363,7 @@ class LetPubDetailPageParserTest {
     void shouldReturnNullWhenNoCoverImageElement() {
       String html = "<html><body><div>no cover here</div></body></html>";
       LetPubVenueData parsed = parser.parse(html, JOURNAL_ID);
-      assertThat(parsed.coverImageSourceUrl()).isNull();
+      assertThat(parsed.basicInfo().coverImageSourceUrl()).isNull();
     }
 
     @Test
@@ -374,7 +374,7 @@ class LetPubDetailPageParserTest {
               + "<div class=\"layui-form-item\"><img src=\"\" title=\"NATURE\"></div>"
               + "</body></html>";
       LetPubVenueData parsed = parser.parse(html, JOURNAL_ID);
-      assertThat(parsed.coverImageSourceUrl()).isNull();
+      assertThat(parsed.basicInfo().coverImageSourceUrl()).isNull();
     }
 
     @Test
@@ -386,7 +386,7 @@ class LetPubDetailPageParserTest {
               + "<img src=\"/banner/header.png\"/>"
               + "</body></html>";
       LetPubVenueData parsed = parser.parse(html, JOURNAL_ID);
-      assertThat(parsed.coverImageSourceUrl()).isNull();
+      assertThat(parsed.basicInfo().coverImageSourceUrl()).isNull();
     }
   }
 
@@ -397,17 +397,17 @@ class LetPubDetailPageParserTest {
     @Test
     @DisplayName("应从多行 <br><br> 分隔的文本中解析出 6 条预警记录")
     void shouldParseSixCasWarningRecordsFromFixture() {
-      assertThat(data.casWarnings()).hasSize(6);
+      assertThat(data.casData().warnings()).hasSize(6);
     }
 
     @Test
     @DisplayName("应正确提取发布年份与版本标签")
     void shouldExtractPublishedYearAndEditionLabel() {
-      assertThat(data.casWarnings())
+      assertThat(data.casData().warnings())
           .extracting(LetPubVenueData.CasWarningRecord::publishedYear)
           .containsExactly(2026, 2025, 2024, 2023, 2021, 2020);
 
-      assertThat(data.casWarnings())
+      assertThat(data.casData().warnings())
           .extracting(LetPubVenueData.CasWarningRecord::editionLabel)
           .containsExactly("新锐学术版", "2025版", "2024版", "2023版", "2021版", "2020版");
     }
@@ -415,7 +415,7 @@ class LetPubDetailPageParserTest {
     @Test
     @DisplayName("应正确提取发布月份")
     void shouldExtractPublishedMonth() {
-      assertThat(data.casWarnings())
+      assertThat(data.casData().warnings())
           .extracting(LetPubVenueData.CasWarningRecord::publishedMonth)
           .containsExactly(3, 3, 2, 1, 12, 12);
     }
@@ -424,7 +424,7 @@ class LetPubDetailPageParserTest {
     @DisplayName("应识别不在预警名单中的记录")
     void shouldMarkAsNotInWarningWhenContainsNegation() {
       // 2026/2025/2023/2020 这 4 条是"不在预警名单中"
-      assertThat(data.casWarnings())
+      assertThat(data.casData().warnings())
           .filteredOn(r -> !r.inWarningList())
           .hasSize(4)
           .extracting(LetPubVenueData.CasWarningRecord::publishedYear)
@@ -435,7 +435,7 @@ class LetPubDetailPageParserTest {
     @DisplayName("应识别中风险预警（2024 年）")
     void shouldRecognizeMediumWarningLevel() {
       LetPubVenueData.CasWarningRecord y2024 =
-          data.casWarnings().stream()
+          data.casData().warnings().stream()
               .filter(r -> r.publishedYear() == 2024)
               .findFirst()
               .orElseThrow();
@@ -447,7 +447,7 @@ class LetPubDetailPageParserTest {
     @DisplayName("应识别高风险预警（2021 年）")
     void shouldRecognizeHighWarningLevel() {
       LetPubVenueData.CasWarningRecord y2021 =
-          data.casWarnings().stream()
+          data.casData().warnings().stream()
               .filter(r -> r.publishedYear() == 2021)
               .findFirst()
               .orElseThrow();
@@ -459,7 +459,7 @@ class LetPubDetailPageParserTest {
     @DisplayName("rawText 应保留原始描述行以便追溯")
     void shouldPreserveRawTextForTraceability() {
       LetPubVenueData.CasWarningRecord y2025 =
-          data.casWarnings().stream()
+          data.casData().warnings().stream()
               .filter(r -> r.publishedYear() == 2025)
               .findFirst()
               .orElseThrow();
@@ -470,7 +470,7 @@ class LetPubDetailPageParserTest {
     @DisplayName("不在预警记录的 warningLevel 应为 null")
     void shouldHaveNullWarningLevelWhenNotInWarning() {
       LetPubVenueData.CasWarningRecord y2026 =
-          data.casWarnings().stream()
+          data.casData().warnings().stream()
               .filter(r -> r.publishedYear() == 2026)
               .findFirst()
               .orElseThrow();

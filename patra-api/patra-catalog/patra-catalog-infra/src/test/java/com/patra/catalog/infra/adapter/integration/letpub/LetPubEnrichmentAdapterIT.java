@@ -83,11 +83,11 @@ class LetPubEnrichmentAdapterIT {
 
     printData("Nature", data);
 
-    assertThat(data.letPubName()).isNotBlank();
-    assertThat(data.letPubJournalId()).isNotBlank();
-    assertThat(data.jifQuartile()).isNotBlank();
-    assertThat(data.casPartitions()).isNotEmpty();
-    assertThat(data.casPartitions().getFirst().majorQuartile()).isNotBlank();
+    assertThat(data.basicInfo().letPubName()).isNotBlank();
+    assertThat(data.basicInfo().letPubJournalId()).isNotBlank();
+    assertThat(data.jcrMetrics().jifQuartile()).isNotBlank();
+    assertThat(data.casData().partitions()).isNotEmpty();
+    assertThat(data.casData().partitions().getFirst().majorQuartile()).isNotBlank();
   }
 
   @Test
@@ -103,9 +103,9 @@ class LetPubEnrichmentAdapterIT {
 
     printData("Science", data);
 
-    assertThat(data.letPubName()).isNotBlank();
-    assertThat(data.casPartitions()).isNotEmpty();
-    assertThat(data.casPartitions().getFirst().majorCategory()).isNotBlank();
+    assertThat(data.basicInfo().letPubName()).isNotBlank();
+    assertThat(data.casData().partitions()).isNotEmpty();
+    assertThat(data.casData().partitions().getFirst().majorCategory()).isNotBlank();
   }
 
   @Test
@@ -138,37 +138,38 @@ class LetPubEnrichmentAdapterIT {
     System.out.println("╔══════════════════════════════════════");
     System.out.printf("║ %s LetPub 数据%n", label);
     System.out.println("╠══════════════════════════════════════");
-    System.out.println("║ 期刊名:          " + data.letPubName());
-    System.out.println("║ LetPub ID:       " + data.letPubJournalId());
-    System.out.println("║ 研究方向:        " + data.researchDirection());
-    System.out.println("║ 年文章数:        " + data.articlesPerYear());
+    System.out.println("║ 期刊名:          " + data.basicInfo().letPubName());
+    System.out.println("║ LetPub ID:       " + data.basicInfo().letPubJournalId());
+    System.out.println("║ 研究方向:        " + data.basicInfo().researchDirection());
+    System.out.println("║ 年文章数:        " + data.basicInfo().articlesPerYear());
     System.out.println("╠══ JCR / WOS ═════════════════════════");
-    System.out.println("║ WOS 综合分区:    " + data.wosOverallQuartile());
+    System.out.println("║ WOS 综合分区:    " + data.jcrMetrics().wosOverallQuartile());
     System.out.println("║ ─ JIF ─");
-    System.out.println("║ JIF 学科:        " + data.jcrSubject());
-    System.out.println("║ JIF 收录:        " + data.jcrCollection());
+    System.out.println("║ JIF 学科:        " + data.jcrMetrics().jcrSubject());
+    System.out.println("║ JIF 收录:        " + data.jcrMetrics().jcrCollection());
     System.out.println(
         "║ JIF 分区:        "
-            + data.jifQuartile()
+            + data.jcrMetrics().jifQuartile()
             + "  排名: "
-            + data.jifRank()
+            + data.jcrMetrics().jifRank()
             + "  百分位: "
-            + data.jifPercentile());
+            + data.jcrMetrics().jifPercentile());
     System.out.println("║ ─ JCI ─");
-    System.out.println("║ JCI 学科:        " + data.jciSubject());
-    System.out.println("║ JCI 收录:        " + data.jciCollection());
+    System.out.println("║ JCI 学科:        " + data.jcrMetrics().jciSubject());
+    System.out.println("║ JCI 收录:        " + data.jcrMetrics().jciCollection());
     System.out.println(
         "║ JCI 分区:        "
-            + data.jciQuartile()
+            + data.jcrMetrics().jciQuartile()
             + "  排名: "
-            + data.jciRank()
+            + data.jcrMetrics().jciRank()
             + "  百分位: "
-            + data.jciPercentile());
-    System.out.println("║ JCI 数值:        " + data.jciValue());
-    System.out.println("║ 自引率:          " + data.selfCitationRate());
+            + data.jcrMetrics().jciPercentile());
+    System.out.println("║ JCI 数值:        " + data.jcrMetrics().jciValue());
+    System.out.println("║ 自引率:          " + data.jcrMetrics().selfCitationRate());
     System.out.println("╠══ CAS ═══════════════════════════════");
-    System.out.println("║ 版本数:          " + data.casPartitions().size());
-    data.casPartitions()
+    System.out.println("║ 版本数:          " + data.casData().partitions().size());
+    data.casData()
+        .partitions()
         .forEach(
             p -> {
               System.out.println("║ ─── " + p.version() + " ───");
@@ -177,8 +178,9 @@ class LetPubEnrichmentAdapterIT {
               System.out.println("║   Top期刊: " + p.topJournal() + ", 综述: " + p.reviewJournal());
             });
     System.out.println("╠══ 预警名单（按版本时间序列） ══════════");
-    if (data.casWarnings() != null && !data.casWarnings().isEmpty()) {
-      data.casWarnings()
+    if (data.casData().warnings() != null && !data.casData().warnings().isEmpty()) {
+      data.casData()
+          .warnings()
           .forEach(
               w ->
                   System.out.println(
@@ -194,11 +196,11 @@ class LetPubEnrichmentAdapterIT {
       System.out.println("║   (无预警名单数据)");
     }
     System.out.println("╠══ 其他 ══════════════════════════════");
-    System.out.println("║ 审稿速度(官网):  " + data.reviewSpeedOfficial());
-    System.out.println("║ 审稿速度(网友):  " + data.reviewSpeedUser());
-    System.out.println("║ 录用率:          " + data.acceptanceRate());
-    System.out.println("║ APC:             " + data.apcInfo());
-    System.out.println("║ 收录数据库:      " + data.indexedIn());
+    System.out.println("║ 审稿速度(官网):  " + data.submissionInfo().reviewSpeedOfficial());
+    System.out.println("║ 审稿速度(网友):  " + data.submissionInfo().reviewSpeedUser());
+    System.out.println("║ 录用率:          " + data.submissionInfo().acceptanceRate());
+    System.out.println("║ APC:             " + data.submissionInfo().apcInfo());
+    System.out.println("║ 收录数据库:      " + data.basicInfo().indexedIn());
     System.out.println("╚══════════════════════════════════════");
     System.out.println();
   }

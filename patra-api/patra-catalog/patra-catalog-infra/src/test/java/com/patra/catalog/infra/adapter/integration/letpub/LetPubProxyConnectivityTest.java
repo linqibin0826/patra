@@ -99,20 +99,21 @@ class LetPubProxyConnectivityTest {
     System.out.println("╔══════════════════════════════════════");
     System.out.println("║ Nature（代理模式）LetPub 数据");
     System.out.println("╠══════════════════════════════════════");
-    System.out.println("║ 期刊名:          " + data.letPubName());
-    System.out.println("║ LetPub ID:       " + data.letPubJournalId());
-    System.out.println("║ JIF 分区:        " + data.jifQuartile());
-    System.out.println("║ CAS 版本数:      " + data.casPartitions().size());
-    data.casPartitions()
+    System.out.println("║ 期刊名:          " + data.basicInfo().letPubName());
+    System.out.println("║ LetPub ID:       " + data.basicInfo().letPubJournalId());
+    System.out.println("║ JIF 分区:        " + data.jcrMetrics().jifQuartile());
+    System.out.println("║ CAS 版本数:      " + data.casData().partitions().size());
+    data.casData()
+        .partitions()
         .forEach(
             p ->
                 System.out.println(
                     "║   - " + p.version() + ": " + p.majorCategory() + " " + p.majorQuartile()));
-    System.out.println("║ IF 趋势年份数:   " + data.impactFactorTrend().size());
+    System.out.println("║ IF 趋势年份数:   " + data.jcrMetrics().impactFactorTrend().size());
     System.out.println("╚══════════════════════════════════════");
 
-    assertThat(data.letPubName()).isNotBlank();
-    assertThat(data.letPubJournalId()).isNotBlank();
+    assertThat(data.basicInfo().letPubName()).isNotBlank();
+    assertThat(data.basicInfo().letPubJournalId()).isNotBlank();
   }
 
   @Test

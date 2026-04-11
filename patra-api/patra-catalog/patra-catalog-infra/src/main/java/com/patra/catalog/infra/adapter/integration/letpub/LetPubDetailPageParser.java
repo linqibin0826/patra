@@ -127,24 +127,42 @@ public class LetPubDetailPageParser {
     Document doc = Jsoup.parse(html);
     Map<String, Element> fieldMap = buildFieldMap(doc);
 
-    var builder = LetPubVenueData.builder().letPubJournalId(journalId);
+    // 4 个子 record 的 accumulator：2 个 Lombok builder + 2 个 mutable list + 3 个 SubmissionInfo 局部变量
+    var basicBuilder = LetPubVenueData.BasicInfo.builder().letPubJournalId(journalId);
+    var jcrBuilder = LetPubVenueData.JcrMetrics.builder();
+    List<LetPubVenueData.CasPartition> casPartitions = new ArrayList<>();
+    List<LetPubVenueData.CasWarningRecord> casWarnings = new ArrayList<>();
 
-    parseJournalName(doc, builder);
-    parseCoverImageUrl(doc, builder);
-    parseBasicInfo(fieldMap, builder);
-    parseJcrPartition(fieldMap, builder);
-    parseJciValue(fieldMap, builder);
-    parseSelfCitationRate(fieldMap, builder);
-    parseCasPartition(fieldMap, builder);
-    parseWarningList(fieldMap, builder);
-    parseReviewSpeed(fieldMap, builder);
-    parseAcceptanceRate(fieldMap, builder);
-    parseApc(fieldMap, builder);
-    parseIndexedIn(fieldMap, builder);
-    parseImpactFactorTrend(html, builder);
+    parseJournalName(doc, basicBuilder);
+    parseCoverImageUrl(doc, basicBuilder);
+    parseBasicInfo(fieldMap, basicBuilder);
+    parseIndexedIn(fieldMap, basicBuilder);
 
-    return builder.build();
+    parseJcrPartition(fieldMap, jcrBuilder);
+    parseJciValue(fieldMap, jcrBuilder);
+    parseSelfCitationRate(fieldMap, jcrBuilder);
+    parseImpactFactorTrend(html, jcrBuilder);
+
+    parseCasPartition(fieldMap, casPartitions);
+    parseWarningList(fieldMap, casWarnings);
+
+    ReviewSpeeds reviewSpeeds = parseReviewSpeed(fieldMap);
+    String acceptanceRate = parseAcceptanceRate(fieldMap);
+    String apcInfo = parseApc(fieldMap);
+
+    return LetPubVenueData.of(
+        basicBuilder.build(),
+        jcrBuilder.build(),
+        LetPubVenueData.CasData.of(casPartitions, casWarnings),
+        LetPubVenueData.SubmissionInfo.of(
+            reviewSpeeds.official(), reviewSpeeds.user(), acceptanceRate, apcInfo));
   }
+
+  /// 官方/网友两版审稿速度的解析返回值。
+  ///
+  /// 因为 `parseReviewSpeed` 从同一段文本中同时提取两个值，返回一个 tiny record
+  /// 比传出参数 / 双局部变量 + 多次 Map 访问更清晰。
+  private record ReviewSpeeds(String official, String user) {}
 
   // ========== 字段映射表 ==========
 
@@ -234,7 +252,7 @@ public class LetPubDetailPageParser {
   ///
   /// 页面包含多个 h1：品牌标识（`display:none`）、期刊名、页脚装饰。
   /// 取第一个可见 h1 的文本，去除"期刊收藏夹"后缀。
-  private void parseJournalName(Document doc, LetPubVenueData.LetPubVenueDataBuilder builder) {
+  private void parseJournalName(Document doc, LetPubVenueData.BasicInfo.BasicInfoBuilder builder) {
     doc.select("h1").stream()
         .filter(h1 -> !DISPLAY_NONE.matcher(h1.attr("style")).find())
         .findFirst()
@@ -253,7 +271,8 @@ public class LetPubDetailPageParser {
   ///
   /// 使用内容选择器（路径包含 `/cover/journal/`）而非位置选择器，
   /// 这样即使 LetPub 调整布局也能继续识别封面元素。
-  private void parseCoverImageUrl(Document doc, LetPubVenueData.LetPubVenueDataBuilder builder) {
+  private void parseCoverImageUrl(
+      Document doc, LetPubVenueData.BasicInfo.BasicInfoBuilder builder) {
     Element img = doc.selectFirst(COVER_IMG_SELECTOR);
     if (img == null) {
       return;
@@ -271,7 +290,7 @@ public class LetPubDetailPageParser {
   /// 由 PubMed NLM Serfile 作为权威来源提供（见 `VenuePubmedImportHandler`），
   /// 此处不再抽取以避免多源冲突与死字段。
   private void parseBasicInfo(
-      Map<String, Element> fieldMap, LetPubVenueData.LetPubVenueDataBuilder builder) {
+      Map<String, Element> fieldMap, LetPubVenueData.BasicInfo.BasicInfoBuilder builder) {
     builder.researchDirection(getFieldText(fieldMap, "涉及的研究方向"));
 
     String articlesStr = getFieldText(fieldMap, "年文章数");
@@ -293,7 +312,7 @@ public class LetPubDetailPageParser {
   /// JIF 和 JCI 的学科/收录子集**独立存储**（jcrSubject/jciSubject），支持跨库期刊
   /// （如 SSCI+SCIE）出现不同分类的边界情况。
   private void parseJcrPartition(
-      Map<String, Element> fieldMap, LetPubVenueData.LetPubVenueDataBuilder builder) {
+      Map<String, Element> fieldMap, LetPubVenueData.JcrMetrics.JcrMetricsBuilder builder) {
     Element jcrTd = findFieldElement(fieldMap, "WOS期刊JCR分区", "JCR分区");
     if (jcrTd == null) {
       return;
@@ -323,7 +342,7 @@ public class LetPubDetailPageParser {
   /// 百分位容错提取：优先读 `.layui-progress-bar[lay-percent]`（layui 约定，稳定），
   /// 失败回退 inline `style="width:X%"`（旧结构兼容），均失败返回 null。
   private void parseJcrSubTable(
-      Element table, LetPubVenueData.LetPubVenueDataBuilder builder, boolean isJif) {
+      Element table, LetPubVenueData.JcrMetrics.JcrMetricsBuilder builder, boolean isJif) {
     Elements rows = table.select("tr");
     for (int i = 1; i < rows.size(); i++) {
       Elements tds = rows.get(i).select("> td");
@@ -381,7 +400,7 @@ public class LetPubDetailPageParser {
   /// 页面行标签：`JCI期刊引文指标 <i class="layui-icon layui-icon-tips"></i>`
   /// 值 td 内容：直接文本如 `11.14`
   private void parseJciValue(
-      Map<String, Element> fieldMap, LetPubVenueData.LetPubVenueDataBuilder builder) {
+      Map<String, Element> fieldMap, LetPubVenueData.JcrMetrics.JcrMetricsBuilder builder) {
     String text = getFieldText(fieldMap, "JCI期刊引文指标");
     Double value = parseDouble(text);
     if (value != null) {
@@ -400,7 +419,7 @@ public class LetPubDetailPageParser {
   ///
   /// 使用 `Element.ownText()` 仅取 td 的直接文本节点，排除 span 子元素的按钮文本。
   private void parseSelfCitationRate(
-      Map<String, Element> fieldMap, LetPubVenueData.LetPubVenueDataBuilder builder) {
+      Map<String, Element> fieldMap, LetPubVenueData.JcrMetrics.JcrMetricsBuilder builder) {
     Element td = findFieldElement(fieldMap, "自引率");
     if (td == null) {
       return;
@@ -417,22 +436,17 @@ public class LetPubDetailPageParser {
   /// LetPub 页面通常同时展示多个版本（新锐版/升级版/旧版），每个版本占一行。
   /// 本方法扫描所有 CAS 行并为每个版本生成一个 {@link LetPubVenueData.CasPartition}。
   private void parseCasPartition(
-      Map<String, Element> fieldMap, LetPubVenueData.LetPubVenueDataBuilder builder) {
+      Map<String, Element> fieldMap, List<LetPubVenueData.CasPartition> accumulator) {
     List<CasSection> sections = findAllCasSections(fieldMap);
     if (sections.isEmpty()) {
       return;
     }
 
-    List<LetPubVenueData.CasPartition> partitions = new ArrayList<>();
     for (CasSection section : sections) {
       LetPubVenueData.CasPartition partition = parseSingleCasSection(section);
       if (partition != null) {
-        partitions.add(partition);
+        accumulator.add(partition);
       }
-    }
-
-    if (!partitions.isEmpty()) {
-      builder.casPartitions(partitions);
     }
   }
 
@@ -569,14 +583,13 @@ public class LetPubDetailPageParser {
   /// 5. 判断状态里是否包含"不在预警"决定 `inWarningList`
   /// 6. 从状态里识别"高/中/低"风险级别（若无则为 null）
   private void parseWarningList(
-      Map<String, Element> fieldMap, LetPubVenueData.LetPubVenueDataBuilder builder) {
+      Map<String, Element> fieldMap, List<LetPubVenueData.CasWarningRecord> accumulator) {
     Element el = findFieldElement(fieldMap, "预警名单");
     if (el == null) {
       return;
     }
     // 按 <br><br> 分段（html() 保留原始标签，便于分隔历史版本行）
     String[] segments = CAS_WARNING_SEGMENT_SEP.split(el.html());
-    List<LetPubVenueData.CasWarningRecord> records = new ArrayList<>();
     for (String segment : segments) {
       // 清理段内剩余 HTML，拿到纯文本
       String text = Jsoup.parse(segment).text().trim();
@@ -585,11 +598,8 @@ public class LetPubDetailPageParser {
       }
       LetPubVenueData.CasWarningRecord record = parseWarningLine(text);
       if (record != null) {
-        records.add(record);
+        accumulator.add(record);
       }
-    }
-    if (!records.isEmpty()) {
-      builder.casWarnings(records);
     }
   }
 
@@ -638,51 +648,55 @@ public class LetPubDetailPageParser {
     return null;
   }
 
-  /// 解析审稿速度（区分官方数据和网友经验）。
-  private void parseReviewSpeed(
-      Map<String, Element> fieldMap, LetPubVenueData.LetPubVenueDataBuilder builder) {
+  /// 解析审稿速度（同时提取官方数据和网友经验，两者来自同一段文本）。
+  ///
+  /// @return 两版审稿速度；文本缺失或无匹配返回 `(null, null)`。
+  private ReviewSpeeds parseReviewSpeed(Map<String, Element> fieldMap) {
     String text = getFieldText(fieldMap, "平均审稿速度");
     if (text.isEmpty()) {
-      return;
+      return new ReviewSpeeds(null, null);
     }
 
+    String official = null;
     Matcher officialMatcher = REVIEW_SPEED_OFFICIAL.matcher(text);
     if (officialMatcher.find()) {
-      builder.reviewSpeedOfficial(officialMatcher.group(1).trim());
+      official = officialMatcher.group(1).trim();
     }
 
+    String user = null;
     Matcher userMatcher = REVIEW_SPEED_USER.matcher(text);
     if (userMatcher.find()) {
-      builder.reviewSpeedUser(userMatcher.group(1).trim());
+      user = userMatcher.group(1).trim();
     }
+    return new ReviewSpeeds(official, user);
   }
 
   /// 解析录用比例。
-  private void parseAcceptanceRate(
-      Map<String, Element> fieldMap, LetPubVenueData.LetPubVenueDataBuilder builder) {
+  ///
+  /// @return 录用率字符串（如 `7.69%`），未匹配返回 null。
+  private String parseAcceptanceRate(Map<String, Element> fieldMap) {
     String text = getFieldText(fieldMap, "平均录用比例");
     if (text.isEmpty()) {
-      return;
+      return null;
     }
-
     Matcher percentMatcher = ACCEPTANCE_PERCENT.matcher(text);
-    if (percentMatcher.find()) {
-      builder.acceptanceRate(percentMatcher.group(1));
-    }
+    return percentMatcher.find() ? percentMatcher.group(1) : null;
   }
 
   /// 解析 APC 费用信息。
-  private void parseApc(
-      Map<String, Element> fieldMap, LetPubVenueData.LetPubVenueDataBuilder builder) {
+  ///
+  /// @return APC 费用文本（截断至 200 字符以保护下游列长度），无信息返回 null。
+  private String parseApc(Map<String, Element> fieldMap) {
     String text = getFieldText(fieldMap, "APC文章处理费信息");
-    if (!text.isEmpty()) {
-      builder.apcInfo(text.length() > 200 ? text.substring(0, 200) : text);
+    if (text.isEmpty()) {
+      return null;
     }
+    return text.length() > 200 ? text.substring(0, 200) : text;
   }
 
   /// 解析数据库收录列表。
   private void parseIndexedIn(
-      Map<String, Element> fieldMap, LetPubVenueData.LetPubVenueDataBuilder builder) {
+      Map<String, Element> fieldMap, LetPubVenueData.BasicInfo.BasicInfoBuilder builder) {
     String text = getFieldText(fieldMap, "SCI期刊收录");
     if (text.isEmpty()) {
       return;
@@ -697,7 +711,8 @@ public class LetPubDetailPageParser {
   ///
   /// 提取 `xAxis.data`（年份数组）和 `series[0].data`（IF 值数组），
   /// 年份格式从 `"2024-2025年度"` 简化为 `"2024-2025"`。
-  private void parseImpactFactorTrend(String html, LetPubVenueData.LetPubVenueDataBuilder builder) {
+  private void parseImpactFactorTrend(
+      String html, LetPubVenueData.JcrMetrics.JcrMetricsBuilder builder) {
     int funcPos = html.indexOf("function showecharts_if_trend");
     if (funcPos < 0) {
       return;
