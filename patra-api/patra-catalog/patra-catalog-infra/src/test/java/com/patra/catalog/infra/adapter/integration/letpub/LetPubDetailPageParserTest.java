@@ -309,4 +309,48 @@ class LetPubDetailPageParserTest {
       assertThat(result.researchDirection()).isEmpty();
     }
   }
+
+  @Nested
+  @DisplayName("封面图片 URL 提取")
+  class CoverImageTests {
+
+    @Test
+    @DisplayName("应从 layui-form-item 提取真实 Aliyun OSS 封面 URL")
+    void shouldExtractCoverImageUrlFromLayuiFormItem() {
+      assertThat(data.coverImageSourceUrl())
+          .isEqualTo(
+              "https://media-cdn.oss-cn-hangzhou.aliyuncs.com/statics/images/comment_center/cover/journal/6054.jpg?ver=1775839295");
+    }
+
+    @Test
+    @DisplayName("页面无封面图元素时应返回 null")
+    void shouldReturnNullWhenNoCoverImageElement() {
+      String html = "<html><body><div>no cover here</div></body></html>";
+      LetPubVenueData parsed = parser.parse(html, JOURNAL_ID);
+      assertThat(parsed.coverImageSourceUrl()).isNull();
+    }
+
+    @Test
+    @DisplayName("img 的 src 属性为空时应返回 null")
+    void shouldReturnNullWhenSrcAttributeIsBlank() {
+      String html =
+          "<html><body>"
+              + "<div class=\"layui-form-item\"><img src=\"\" title=\"NATURE\"></div>"
+              + "</body></html>";
+      LetPubVenueData parsed = parser.parse(html, JOURNAL_ID);
+      assertThat(parsed.coverImageSourceUrl()).isNull();
+    }
+
+    @Test
+    @DisplayName("只有非 /cover/journal/ 路径的图片时应返回 null")
+    void shouldIgnoreUnrelatedImagesWithoutCoverJournalPath() {
+      String html =
+          "<html><body>"
+              + "<img src=\"/journal_cover/0028-0836.jpg\"/>"
+              + "<img src=\"/banner/header.png\"/>"
+              + "</body></html>";
+      LetPubVenueData parsed = parser.parse(html, JOURNAL_ID);
+      assertThat(parsed.coverImageSourceUrl()).isNull();
+    }
+  }
 }
