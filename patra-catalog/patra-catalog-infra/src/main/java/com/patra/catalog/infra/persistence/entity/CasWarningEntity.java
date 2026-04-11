@@ -1,7 +1,10 @@
 package com.patra.catalog.infra.persistence.entity;
 
+import com.patra.catalog.domain.model.enums.CasWarningLevel;
+import com.patra.catalog.infra.persistence.converter.attribute.CasWarningLevelConverter;
 import com.patra.starter.jpa.entity.ChildJpaEntity;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
@@ -67,9 +70,11 @@ public class CasWarningEntity extends ChildJpaEntity {
   @Column(name = "in_warning_list", nullable = false)
   private Boolean inWarningList;
 
-  /// 预警级别：高/中/低（仅当 inWarningList=true 时可能有值）
+  /// 预警级别（HIGH/MEDIUM/LOW，仅当 inWarningList=true 时可能有值）。
+  /// 持久化为小写英文代码（`high`/`medium`/`low`）。
+  @Convert(converter = CasWarningLevelConverter.class)
   @Column(name = "warning_level", length = 10)
-  private String warningLevel;
+  private CasWarningLevel warningLevel;
 
   /// 原始描述文本（保留 LetPub 页面原句以便追溯）
   @Column(name = "raw_text", length = 500)

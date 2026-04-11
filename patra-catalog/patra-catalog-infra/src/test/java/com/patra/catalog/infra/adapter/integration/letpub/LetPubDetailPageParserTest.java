@@ -2,6 +2,7 @@ package com.patra.catalog.infra.adapter.integration.letpub;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.patra.catalog.domain.model.enums.CasWarningLevel;
 import com.patra.catalog.domain.port.enrichment.LetPubVenueData;
 import java.io.IOException;
 import java.io.InputStream;
@@ -439,7 +440,7 @@ class LetPubDetailPageParserTest {
               .findFirst()
               .orElseThrow();
       assertThat(y2024.inWarningList()).isTrue();
-      assertThat(y2024.warningLevel()).isEqualTo("中");
+      assertThat(y2024.warningLevel()).isEqualTo(CasWarningLevel.MEDIUM);
     }
 
     @Test
@@ -451,7 +452,7 @@ class LetPubDetailPageParserTest {
               .findFirst()
               .orElseThrow();
       assertThat(y2021.inWarningList()).isTrue();
-      assertThat(y2021.warningLevel()).isEqualTo("高");
+      assertThat(y2021.warningLevel()).isEqualTo(CasWarningLevel.HIGH);
     }
 
     @Test

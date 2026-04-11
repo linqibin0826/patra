@@ -208,7 +208,7 @@ CREATE TABLE IF NOT EXISTS `cat_venue_cas_warning` (
     `in_warning_list`    BOOLEAN         NOT NULL
                          COMMENT '是否在预警名单中：true=预警，false=正常',
     `warning_level`      VARCHAR(10)     NULL DEFAULT NULL
-                         COMMENT '预警级别：高/中/低（仅当 in_warning_list=true 时可能有值）',
+                         COMMENT '预警级别代码：high / medium / low（仅当 in_warning_list=true 时可能有值）',
     `raw_text`           VARCHAR(500)    NULL DEFAULT NULL
                          COMMENT '原始描述文本（保留 LetPub 页面原句以便追溯）',
     `source_url`         VARCHAR(500)    NULL DEFAULT NULL

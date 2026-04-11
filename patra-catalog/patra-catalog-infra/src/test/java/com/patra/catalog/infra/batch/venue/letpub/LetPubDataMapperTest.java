@@ -2,6 +2,7 @@ package com.patra.catalog.infra.batch.venue.letpub;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.patra.catalog.domain.model.enums.CasWarningLevel;
 import com.patra.catalog.domain.port.enrichment.LetPubVenueData;
 import com.patra.catalog.infra.persistence.entity.CasRatingEntity;
 import com.patra.catalog.infra.persistence.entity.CasWarningEntity;
@@ -307,7 +308,7 @@ class LetPubDataMapperTest {
               .publishedMonth(2)
               .editionLabel("2024版")
               .inWarningList(true)
-              .warningLevel("中")
+              .warningLevel(CasWarningLevel.MEDIUM)
               .rawText("2024年02月发布的2024版：中风险预警")
               .build();
       LetPubVenueData data = LetPubVenueData.builder().casWarnings(List.of(r1, r2)).build();
@@ -332,7 +333,7 @@ class LetPubDataMapperTest {
               .publishedMonth(12)
               .editionLabel("2021版")
               .inWarningList(true)
-              .warningLevel("高")
+              .warningLevel(CasWarningLevel.HIGH)
               .rawText("2021年12月发布的2021版：高风险预警")
               .build();
       LetPubVenueData data = LetPubVenueData.builder().casWarnings(List.of(record)).build();
@@ -348,7 +349,7 @@ class LetPubDataMapperTest {
                 assertThat(e.getPublishedMonth()).isEqualTo((short) 12);
                 assertThat(e.getEditionLabel()).isEqualTo("2021版");
                 assertThat(e.getInWarningList()).isTrue();
-                assertThat(e.getWarningLevel()).isEqualTo("高");
+                assertThat(e.getWarningLevel()).isEqualTo(CasWarningLevel.HIGH);
                 assertThat(e.getRawText()).isEqualTo("2021年12月发布的2021版：高风险预警");
                 assertThat(e.getSourceUrl()).isEqualTo(SOURCE_URL);
                 assertThat(e.getFetchedAt()).isNotNull();
