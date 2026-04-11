@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS `cat_venue` (
     `primary_language` VARCHAR(10) NULL DEFAULT NULL COMMENT '主要语言代码(BCP 47)',
     `country_code` VARCHAR(2) NULL DEFAULT NULL COMMENT '国家代码(ISO 3166-1 alpha-2)',
     `image_object_key` VARCHAR(512) NULL DEFAULT NULL COMMENT '封面图片对象存储键（相对于 venue-cover 桶）',
-    `cited_by_count` INT UNSIGNED NULL DEFAULT NULL COMMENT '被引次数(来自 CitationMetrics,用于批量富化过滤)',
+    `cited_by_count` INT UNSIGNED NULL DEFAULT NULL COMMENT '被引次数(来自 CitationMetrics,作为 LetPub/Scopus 富化的候选过滤条件)',
 
     -- ========================================
     -- 嵌入式值对象（JSON 字段）
