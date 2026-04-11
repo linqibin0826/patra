@@ -51,15 +51,15 @@ public class JcrRatingEntity extends ChildJpaEntity {
   @Column(name = "impact_factor", precision = 10, scale = 4)
   private BigDecimal impactFactor;
 
-  /// 五年影响因子（仅最新年）
-  @Column(name = "five_year_if", precision = 10, scale = 4)
-  private BigDecimal fiveYearIf;
+  /// WOS 综合分区等级（1区-4区，LetPub 基于 JIF + JCI 综合评定）
+  @Column(name = "wos_overall_quartile", length = 10)
+  private String wosOverallQuartile;
 
-  /// JCR 学科分类（如 "MULTIDISCIPLINARY SCIENCES"）
+  /// JIF 学科分类（如 "MULTIDISCIPLINARY SCIENCES"）
   @Column(name = "subject", length = 100)
   private String subject;
 
-  /// JCR 收录集（SCIE/SSCI/AHCI）
+  /// JIF 收录集（SCIE/SSCI/AHCI）
   @Column(name = "collection", length = 10)
   private String collection;
 
@@ -67,9 +67,21 @@ public class JcrRatingEntity extends ChildJpaEntity {
   @Column(name = "jif_quartile", length = 10)
   private String jifQuartile;
 
-  /// JIF 排名（如 "1/100"）
+  /// JIF 排名（如 "2/136"）
   @Column(name = "jif_rank", length = 20)
   private String jifRank;
+
+  /// JIF 学科百分位（如 "99%"）
+  @Column(name = "jif_percentile", length = 10)
+  private String jifPercentile;
+
+  /// JCI 学科分类（多数情况下同 subject）
+  @Column(name = "jci_subject", length = 100)
+  private String jciSubject;
+
+  /// JCI 收录集（多数情况下同 collection）
+  @Column(name = "jci_collection", length = 10)
+  private String jciCollection;
 
   /// JCI 分区
   @Column(name = "jci_quartile", length = 10)
@@ -78,6 +90,18 @@ public class JcrRatingEntity extends ChildJpaEntity {
   /// JCI 排名
   @Column(name = "jci_rank", length = 20)
   private String jciRank;
+
+  /// JCI 学科百分位（如 "98.9%"）
+  @Column(name = "jci_percentile", length = 10)
+  private String jciPercentile;
+
+  /// JCI 数值（Journal Citation Indicator 本身的数值，如 11.14）
+  @Column(name = "jci_value", precision = 10, scale = 4)
+  private BigDecimal jciValue;
+
+  /// 自引率（如 "1.6%"，按最新年）
+  @Column(name = "self_citation_rate", length = 10)
+  private String selfCitationRate;
 
   /// 研究方向/学科领域
   @Column(name = "research_direction", length = 200)

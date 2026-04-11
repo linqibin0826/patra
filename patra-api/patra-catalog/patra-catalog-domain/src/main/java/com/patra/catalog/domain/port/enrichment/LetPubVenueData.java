@@ -17,11 +17,22 @@ import lombok.Builder;
 /// | 分组 | 字段 | 说明 |
 /// |------|------|------|
 /// | 基本信息 | letPubJournalId ~ researchArticlePercent | 期刊基础属性 |
-/// | JCR 分区 | jcrSubject ~ jciRank | Journal Citation Reports 分区排名 |
+/// | JCR/WOS 指标 | wosOverallQuartile ~ selfCitationRate | WOS/Clarivate 评级体系 |
 /// | CAS 分区 | casPartitions | 中科院分区列表（支持多版本共存：新锐版/升级版/旧版） |
 /// | CAS 预警 | casWarnings | 中科院期刊预警名单时间序列（每版本一条） |
 /// | 审稿/费用 | reviewSpeedOfficial ~ apcInfo | 投稿决策参考 |
 /// | 收录情况 | indexedIn | 数据库收录列表 |
+///
+/// **数据源主权边界**（避免多源冲突）：
+///
+/// LetPub 页面展示的部分字段在 Patra 中已有权威数据源，LetPub 作为二级来源**不应抓取**：
+///
+/// - `h-index` → OpenAlex（`cat_venue.citation_metrics.hIndex`）
+/// - `CiteScore` / `SJR` / `SNIP` → Elsevier Scopus API（`cat_venue_scopus_rating`）
+/// - `出版国家/语言/周期/创刊年份` → PubMed NLM Serfile（`cat_venue` 快速访问列）
+///
+/// LetPub 的独占领域是 **JCR/WOS 非 IF 指标** + **CAS 分区与预警** + **LetPub 独有的
+/// 审稿/录用/APC 等投稿决策信息**。
 ///
 /// **字段来源边界**：
 /// 出版国家、出版语言、出版周期、创刊年份等基础元数据由 PubMed NLM Serfile
@@ -37,12 +48,19 @@ import lombok.Builder;
 /// @param goldOaPercent 金色 OA 百分比
 /// @param researchArticlePercent 研究性文章占比
 /// @param coverImageSourceUrl 封面图原始 URL（LetPub 托管于 Aliyun OSS CDN）
-/// @param jcrSubject JCR 学科分类
-/// @param jcrCollection JCR 大类
+/// @param wosOverallQuartile WOS 综合分区等级（如 `1区`，综合 JIF + JCI 评定）
+/// @param jcrSubject JIF 学科分类（与 JIF 子表的 subject 对应）
+/// @param jcrCollection JIF 收录子集（SCIE/SSCI/AHCI）
 /// @param jifQuartile JIF（影响因子）分区
-/// @param jifRank JIF 排名
+/// @param jifRank JIF 排名（如 `2/136`）
+/// @param jifPercentile JIF 学科百分位（如 `99%`）
+/// @param jciSubject JCI 学科分类（多数情况下同 jcrSubject）
+/// @param jciCollection JCI 收录子集（多数情况下同 jcrCollection）
 /// @param jciQuartile JCI（期刊引文指标）分区
 /// @param jciRank JCI 排名
+/// @param jciPercentile JCI 学科百分位（如 `98.9%`）
+/// @param jciValue JCI 数值（Journal Citation Indicator 本身的数值，如 `11.14`）
+/// @param selfCitationRate 自引率（如 `1.6%`，按最新年）
 /// @param casPartitions CAS 中科院分区列表（支持多版本，不可变）
 /// @param casWarnings CAS 中科院期刊预警名单时间序列（按版本，不可变）
 /// @param reviewSpeedOfficial 官方审稿周期
@@ -50,7 +68,6 @@ import lombok.Builder;
 /// @param acceptanceRate 录用比例/难易度
 /// @param apcInfo APC 费用信息
 /// @param impactFactorTrend 近10年影响因子趋势（key="2024-2025"，value=IF值，不可变）
-/// @param fiveYearImpactFactor 五年影响因子（可为 null）
 /// @param indexedIn 数据库收录列表（不可变）
 /// @author linqibin
 /// @since 0.1.0
@@ -65,13 +82,20 @@ public record LetPubVenueData(
     String researchArticlePercent,
     // 封面图（LetPub CDN 原始 URL）
     String coverImageSourceUrl,
-    // JCR 分区
+    // JCR/WOS 指标（按最新年一次性提取的快照）
+    String wosOverallQuartile,
     String jcrSubject,
     String jcrCollection,
     String jifQuartile,
     String jifRank,
+    String jifPercentile,
+    String jciSubject,
+    String jciCollection,
     String jciQuartile,
     String jciRank,
+    String jciPercentile,
+    Double jciValue,
+    String selfCitationRate,
     // CAS 分区（多版本）
     List<CasPartition> casPartitions,
     // CAS 预警名单（时间序列）
@@ -81,9 +105,8 @@ public record LetPubVenueData(
     String reviewSpeedUser,
     String acceptanceRate,
     String apcInfo,
-    // 影响因子
+    // 影响因子（近 10 年趋势）
     Map<String, Double> impactFactorTrend,
-    Double fiveYearImpactFactor,
     // 收录
     List<String> indexedIn) {
 

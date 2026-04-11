@@ -42,20 +42,32 @@ CREATE TABLE IF NOT EXISTS `cat_venue_jcr_rating` (
                          COMMENT '评级年份（2000-2100）',
     `impact_factor`      DECIMAL(10,4)   NULL DEFAULT NULL
                          COMMENT 'JIF 影响因子',
-    `five_year_if`       DECIMAL(10,4)   NULL DEFAULT NULL
-                         COMMENT '五年影响因子（仅最新年）',
+    `wos_overall_quartile` VARCHAR(10)   NULL DEFAULT NULL
+                         COMMENT 'WOS 综合分区等级（1区-4区，LetPub 基于 JIF + JCI 综合评定，仅最新年）',
     `subject`            VARCHAR(100)    NULL DEFAULT NULL
-                         COMMENT 'JCR 学科分类（如 MULTIDISCIPLINARY SCIENCES）',
+                         COMMENT 'JIF 学科分类（如 MULTIDISCIPLINARY SCIENCES，仅最新年）',
     `collection`         VARCHAR(10)     NULL DEFAULT NULL
-                         COMMENT 'JCR 收录集（SCIE/SSCI/AHCI）',
+                         COMMENT 'JIF 收录集（SCIE/SSCI/AHCI，仅最新年）',
     `jif_quartile`       VARCHAR(10)     NULL DEFAULT NULL
-                         COMMENT 'JIF 分区（Q1-Q4）',
+                         COMMENT 'JIF 分区（Q1-Q4，仅最新年）',
     `jif_rank`           VARCHAR(20)     NULL DEFAULT NULL
-                         COMMENT 'JIF 排名（如 1/100）',
+                         COMMENT 'JIF 排名（如 2/136，仅最新年）',
+    `jif_percentile`     VARCHAR(10)     NULL DEFAULT NULL
+                         COMMENT 'JIF 学科百分位（如 99%，仅最新年）',
+    `jci_subject`        VARCHAR(100)    NULL DEFAULT NULL
+                         COMMENT 'JCI 学科分类（多数情况下同 subject，仅最新年）',
+    `jci_collection`     VARCHAR(10)     NULL DEFAULT NULL
+                         COMMENT 'JCI 收录集（多数情况下同 collection，仅最新年）',
     `jci_quartile`       VARCHAR(10)     NULL DEFAULT NULL
-                         COMMENT 'JCI 分区',
+                         COMMENT 'JCI 分区（Q1-Q4，仅最新年）',
     `jci_rank`           VARCHAR(20)     NULL DEFAULT NULL
-                         COMMENT 'JCI 排名',
+                         COMMENT 'JCI 排名（仅最新年）',
+    `jci_percentile`     VARCHAR(10)     NULL DEFAULT NULL
+                         COMMENT 'JCI 学科百分位（如 98.9%，仅最新年）',
+    `jci_value`          DECIMAL(10,4)   NULL DEFAULT NULL
+                         COMMENT 'JCI 数值（Journal Citation Indicator 本身的数值，仅最新年）',
+    `self_citation_rate` VARCHAR(10)     NULL DEFAULT NULL
+                         COMMENT '自引率（如 1.6%，仅最新年）',
     `research_direction` VARCHAR(200)    NULL DEFAULT NULL
                          COMMENT '研究方向/学科领域',
     `source_url`         VARCHAR(500)    NULL DEFAULT NULL
