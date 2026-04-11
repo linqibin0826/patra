@@ -331,7 +331,7 @@ public class LetPubDetailPageParser {
         String collection = tds.get(1).text().trim();
         String quartile = tds.get(2).text().trim();
         String rank = tds.get(3).text().trim();
-        String percentile = tds.size() >= 5 ? extractLayuiPercentile(tds.get(4)) : null;
+        Double percentile = tds.size() >= 5 ? extractLayuiPercentile(tds.get(4)) : null;
 
         if (isJif) {
           builder.jcrSubject(subject);
@@ -351,26 +351,26 @@ public class LetPubDetailPageParser {
     }
   }
 
-  /// 从 layui 进度条元素中提取百分位字符串。
+  /// 从 layui 进度条元素中提取百分位数值。
   ///
   /// 先尝试 `.layui-progress-bar[lay-percent]` 属性，再回退 inline `style="width:X%"`，
-  /// 均失败时返回 null（而非空字符串，避免下游误判）。
+  /// 均失败时返回 null（而非 0.0，避免下游把"无数据"与"0% 百分位"混淆）。
   ///
   /// @param td 子表格第 5 列的 td 元素
-  /// @return 百分位字符串如 `"99%"`，未找到返回 null
-  private String extractLayuiPercentile(Element td) {
+  /// @return 百分位数值如 `99.0`（范围 0.0-100.0），未找到返回 null
+  private Double extractLayuiPercentile(Element td) {
     Element bar = td.selectFirst(".layui-progress-bar");
     if (bar == null) {
       return null;
     }
     String layPercent = bar.attr("lay-percent");
     if (!layPercent.isEmpty()) {
-      return layPercent;
+      return parseDouble(layPercent);
     }
     // 回退：inline style="width:99%"
     Matcher m = PROGRESS_BAR_WIDTH.matcher(bar.attr("style"));
     if (m.find()) {
-      return m.group(1);
+      return parseDouble(m.group(1));
     }
     return null;
   }
@@ -407,7 +407,7 @@ public class LetPubDetailPageParser {
     String ownText = td.ownText().trim();
     Matcher m = PERCENTAGE_VALUE.matcher(ownText);
     if (m.find()) {
-      builder.selfCitationRate(m.group(1));
+      builder.selfCitationRate(parseDouble(m.group(1)));
     }
   }
 

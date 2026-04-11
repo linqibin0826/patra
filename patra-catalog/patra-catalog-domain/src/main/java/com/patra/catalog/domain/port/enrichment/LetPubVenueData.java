@@ -54,14 +54,14 @@ import lombok.Builder;
 /// @param jcrCollection JIF 收录子集（SCIE/SSCI/AHCI）
 /// @param jifQuartile JIF（影响因子）分区
 /// @param jifRank JIF 排名（如 `2/136`）
-/// @param jifPercentile JIF 学科百分位（如 `99%`）
+/// @param jifPercentile JIF 学科百分位（0.00-100.00，如 `99.0`）
 /// @param jciSubject JCI 学科分类（多数情况下同 jcrSubject）
 /// @param jciCollection JCI 收录子集（多数情况下同 jcrCollection）
 /// @param jciQuartile JCI（期刊引文指标）分区
 /// @param jciRank JCI 排名
-/// @param jciPercentile JCI 学科百分位（如 `98.9%`）
+/// @param jciPercentile JCI 学科百分位（0.00-100.00，如 `98.9`）
 /// @param jciValue JCI 数值（Journal Citation Indicator 本身的数值，如 `11.14`）
-/// @param selfCitationRate 自引率（如 `1.6%`；Clarivate 年度指标，LetPub 仅提供最新年值）
+/// @param selfCitationRate 自引率（0.00-100.00，如 `1.6`；Clarivate 年度指标，LetPub 仅提供最新年值）
 /// @param casPartitions CAS 中科院分区列表（支持多版本，不可变）
 /// @param casWarnings CAS 中科院期刊预警名单时间序列（按版本，不可变）
 /// @param reviewSpeedOfficial 官方审稿周期
@@ -89,14 +89,14 @@ public record LetPubVenueData(
     String jcrCollection,
     String jifQuartile,
     String jifRank,
-    String jifPercentile,
+    Double jifPercentile,
     String jciSubject,
     String jciCollection,
     String jciQuartile,
     String jciRank,
-    String jciPercentile,
+    Double jciPercentile,
     Double jciValue,
-    String selfCitationRate,
+    Double selfCitationRate,
     // CAS 分区（多版本）
     List<CasPartition> casPartitions,
     // CAS 预警名单（时间序列）

@@ -60,8 +60,8 @@ CREATE TABLE IF NOT EXISTS `cat_venue_jcr_rating` (
                          COMMENT 'JIF 分区（Q1-Q4）',
     `jif_rank`           VARCHAR(20)     NULL DEFAULT NULL
                          COMMENT 'JIF 排名（如 2/136）',
-    `jif_percentile`     VARCHAR(10)     NULL DEFAULT NULL
-                         COMMENT 'JIF 学科百分位（如 99%）',
+    `jif_percentile`     DECIMAL(5,2)    NULL DEFAULT NULL
+                         COMMENT 'JIF 学科百分位（0.00-100.00）',
     `jci_subject`        VARCHAR(100)    NULL DEFAULT NULL
                          COMMENT 'JCI 学科分类（多数情况下同 subject）',
     `jci_collection`     VARCHAR(10)     NULL DEFAULT NULL
@@ -70,12 +70,12 @@ CREATE TABLE IF NOT EXISTS `cat_venue_jcr_rating` (
                          COMMENT 'JCI 分区（Q1-Q4）',
     `jci_rank`           VARCHAR(20)     NULL DEFAULT NULL
                          COMMENT 'JCI 排名',
-    `jci_percentile`     VARCHAR(10)     NULL DEFAULT NULL
-                         COMMENT 'JCI 学科百分位（如 98.9%）',
+    `jci_percentile`     DECIMAL(5,2)    NULL DEFAULT NULL
+                         COMMENT 'JCI 学科百分位（0.00-100.00）',
     `jci_value`          DECIMAL(10,4)   NULL DEFAULT NULL
                          COMMENT 'JCI 数值（Journal Citation Indicator 本身的数值）',
-    `self_citation_rate` VARCHAR(10)     NULL DEFAULT NULL
-                         COMMENT '自引率（如 1.6%）',
+    `self_citation_rate` DECIMAL(5,2)    NULL DEFAULT NULL
+                         COMMENT '自引率（0.00-100.00）',
     `research_direction` VARCHAR(200)    NULL DEFAULT NULL
                          COMMENT '研究方向/学科领域',
     `source_url`         VARCHAR(500)    NULL DEFAULT NULL

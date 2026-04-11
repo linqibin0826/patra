@@ -75,14 +75,14 @@ class LetPubDataMapperTest {
         .jcrCollection("SCIE")
         .jifQuartile("Q1")
         .jifRank("2/136")
-        .jifPercentile("99%")
+        .jifPercentile(99.0)
         .jciSubject("NATURAL SCIENCE FLAGSHIP")
         .jciCollection("SCIE")
         .jciQuartile("Q1")
         .jciRank("3/144")
-        .jciPercentile("98.9%")
+        .jciPercentile(98.9)
         .jciValue(11.14)
-        .selfCitationRate("1.6%")
+        .selfCitationRate(1.6)
         .casPartitions(List.of(xinruiPartition, shengjiPartition))
         .reviewSpeedOfficial("较慢，>12周")
         .reviewSpeedUser("平均6.0个月")
@@ -145,12 +145,12 @@ class LetPubDataMapperTest {
           ratings.stream().filter(r -> r.getYear() == 2025).findFirst().orElseThrow();
 
       assertThat(latest.getWosOverallQuartile()).isEqualTo("1区");
-      assertThat(latest.getJifPercentile()).isEqualTo("99%");
+      assertThat(latest.getJifPercentile()).isEqualByComparingTo(new BigDecimal("99.0"));
       assertThat(latest.getJciSubject()).isEqualTo("NATURAL SCIENCE FLAGSHIP");
       assertThat(latest.getJciCollection()).isEqualTo("SCIE");
-      assertThat(latest.getJciPercentile()).isEqualTo("98.9%");
+      assertThat(latest.getJciPercentile()).isEqualByComparingTo(new BigDecimal("98.9"));
       assertThat(latest.getJciValue()).isEqualByComparingTo(new BigDecimal("11.14"));
-      assertThat(latest.getSelfCitationRate()).isEqualTo("1.6%");
+      assertThat(latest.getSelfCitationRate()).isEqualByComparingTo(new BigDecimal("1.6"));
     }
 
     @Test

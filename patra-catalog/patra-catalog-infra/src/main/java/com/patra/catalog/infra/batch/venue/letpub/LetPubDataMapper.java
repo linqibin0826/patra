@@ -88,15 +88,15 @@ public class LetPubDataMapper {
         entity.setCollection(data.jcrCollection());
         entity.setJifQuartile(data.jifQuartile());
         entity.setJifRank(data.jifRank());
-        entity.setJifPercentile(data.jifPercentile());
+        entity.setJifPercentile(toBigDecimal(data.jifPercentile()));
         entity.setJciSubject(data.jciSubject());
         entity.setJciCollection(data.jciCollection());
         entity.setJciQuartile(data.jciQuartile());
         entity.setJciRank(data.jciRank());
-        entity.setJciPercentile(data.jciPercentile());
-        entity.setJciValue(data.jciValue() != null ? BigDecimal.valueOf(data.jciValue()) : null);
+        entity.setJciPercentile(toBigDecimal(data.jciPercentile()));
+        entity.setJciValue(toBigDecimal(data.jciValue()));
         entity.setWosOverallQuartile(data.wosOverallQuartile());
-        entity.setSelfCitationRate(data.selfCitationRate());
+        entity.setSelfCitationRate(toBigDecimal(data.selfCitationRate()));
         entity.setResearchDirection(data.researchDirection());
       }
 
@@ -194,6 +194,11 @@ public class LetPubDataMapper {
       entities.add(entity);
     }
     return entities;
+  }
+
+  /// 将 Double 桥接为 BigDecimal（null-safe）。用于 DTO（Double）→ Entity（BigDecimal）映射。
+  private static BigDecimal toBigDecimal(Double value) {
+    return value != null ? BigDecimal.valueOf(value) : null;
   }
 
   // ========== 年份/版本提取 ==========
