@@ -3,6 +3,7 @@ package com.patra.catalog.infra.batch.venue.letpub;
 import com.patra.catalog.domain.port.enrichment.LetPubEnrichmentPort;
 import com.patra.catalog.domain.port.storage.VenueCoverImageDownloadPort;
 import com.patra.catalog.infra.persistence.dao.CasRatingDao;
+import com.patra.catalog.infra.persistence.dao.CasWarningDao;
 import com.patra.catalog.infra.persistence.dao.JcrRatingDao;
 import com.patra.catalog.infra.persistence.dao.VenueDao;
 import com.patra.catalog.infra.persistence.entity.VenueEntity;
@@ -59,6 +60,7 @@ public class LetPubEnrichmentJobConfig {
   private final EntityManagerFactory entityManagerFactory;
   private final JcrRatingDao jcrRatingDao;
   private final CasRatingDao casRatingDao;
+  private final CasWarningDao casWarningDao;
   private final VenueDao venueDao;
   private final VenueCoverImageDownloadPort venueCoverImageDownloadPort;
 
@@ -134,6 +136,6 @@ public class LetPubEnrichmentJobConfig {
   @Bean
   @StepScope
   public LetPubVenueItemWriter letPubVenueItemWriter() {
-    return new LetPubVenueItemWriter(jcrRatingDao, casRatingDao, venueDao);
+    return new LetPubVenueItemWriter(jcrRatingDao, casRatingDao, casWarningDao, venueDao);
   }
 }

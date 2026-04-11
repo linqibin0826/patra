@@ -2,7 +2,9 @@ package com.patra.catalog.infra.batch.venue.letpub;
 
 import com.patra.catalog.domain.port.enrichment.LetPubVenueData;
 import com.patra.catalog.domain.port.enrichment.LetPubVenueData.CasPartition;
+import com.patra.catalog.domain.port.enrichment.LetPubVenueData.CasWarningRecord;
 import com.patra.catalog.infra.persistence.entity.CasRatingEntity;
+import com.patra.catalog.infra.persistence.entity.CasWarningEntity;
 import com.patra.catalog.infra.persistence.entity.JcrRatingEntity;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.math.BigDecimal;
@@ -151,6 +153,42 @@ public class LetPubDataMapper {
       entities.add(entity);
     }
 
+    return entities;
+  }
+
+  /// 将 LetPub CAS 预警名单记录映射为 CasWarningEntity 列表。
+  ///
+  /// 与 `mapToCasRatings` 不同，预警名单是**独立的时间序列**，每条记录对应
+  /// LetPub 页面预警名单行里的一段历史版本文本（由 Parser 解析而来）。
+  ///
+  /// @param data LetPub 原始数据
+  /// @param venueId 目标 venue ID
+  /// @param sourceUrl LetPub 详情页 URL（数据溯源）
+  /// @return CAS 预警实体列表（可能为空）
+  public List<CasWarningEntity> mapToCasWarnings(
+      LetPubVenueData data, Long venueId, String sourceUrl) {
+    List<CasWarningRecord> warnings = data.casWarnings();
+    if (warnings == null || warnings.isEmpty()) {
+      return List.of();
+    }
+
+    Instant now = Instant.now();
+    List<CasWarningEntity> entities = new ArrayList<>();
+    for (CasWarningRecord record : warnings) {
+      CasWarningEntity entity = new CasWarningEntity();
+      entity.setId(SnowflakeIdGenerator.getId());
+      entity.setVenueId(venueId);
+      entity.setPublishedYear((short) record.publishedYear());
+      entity.setPublishedMonth(
+          record.publishedMonth() != null ? record.publishedMonth().shortValue() : null);
+      entity.setEditionLabel(record.editionLabel());
+      entity.setInWarningList(record.inWarningList());
+      entity.setWarningLevel(record.warningLevel());
+      entity.setRawText(record.rawText());
+      entity.setSourceUrl(sourceUrl);
+      entity.setFetchedAt(now);
+      entities.add(entity);
+    }
     return entities;
   }
 

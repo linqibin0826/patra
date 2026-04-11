@@ -5,6 +5,7 @@ import com.patra.catalog.domain.port.enrichment.LetPubEnrichmentPort;
 import com.patra.catalog.domain.port.enrichment.LetPubVenueData;
 import com.patra.catalog.domain.port.storage.VenueCoverImageDownloadPort;
 import com.patra.catalog.infra.persistence.entity.CasRatingEntity;
+import com.patra.catalog.infra.persistence.entity.CasWarningEntity;
 import com.patra.catalog.infra.persistence.entity.JcrRatingEntity;
 import com.patra.catalog.infra.persistence.entity.VenueEntity;
 import java.net.URI;
@@ -64,23 +65,23 @@ public class LetPubVenueItemProcessor implements ItemProcessor<VenueEntity, LetP
 
     List<JcrRatingEntity> jcrRatings = dataMapper.mapToJcrRatings(data, venueId, sourceUrl);
     List<CasRatingEntity> casRatings = dataMapper.mapToCasRatings(data, venueId, sourceUrl);
+    List<CasWarningEntity> casWarnings = dataMapper.mapToCasWarnings(data, venueId, sourceUrl);
 
     String imageObjectKey = downloadCoverIfNeeded(item, data);
 
-    int totalCount = jcrRatings.size() + casRatings.size();
     log.info(
-        "Venue [id={}, issn={}] LetPub 富化成功，生成 {} 条评级（JCR:{}, CAS:{}）",
+        "Venue [id={}, issn={}] LetPub 富化成功，生成 JCR:{} CAS 评级:{} CAS 预警:{}",
         venueId,
         issnL,
-        totalCount,
         jcrRatings.size(),
-        casRatings.size());
+        casRatings.size(),
+        casWarnings.size());
 
     return LetPubEnrichResult.of(
         venueId,
         imageObjectKey,
         LetPubEnrichResult.JcrBatch.of(jcrRatings),
-        LetPubEnrichResult.CasBatch.of(casRatings));
+        LetPubEnrichResult.CasBatch.of(casRatings, casWarnings));
   }
 
   /// 按需下载封面到对象存储。

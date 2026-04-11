@@ -22,6 +22,7 @@
 -- 1. cat_venue_jcr_rating - JCR Impact Factor 年度趋势 + 分区详情
 -- 2. cat_venue_cas_rating - CAS 中科院分区（支持多版本共存）
 -- 3. cat_venue_scopus_rating - Scopus CiteScore/SJR/SNIP 年度指标
+-- 4. cat_venue_cas_warning - CAS 中科院期刊预警名单（按版本时间序列）
 -- ============================================================
 
 
@@ -159,3 +160,52 @@ CREATE TABLE IF NOT EXISTS `cat_venue_scopus_rating` (
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
   COMMENT = 'Scopus 期刊指标：CiteScore/SJR/SNIP 年度数据';
+
+
+-- ============================================================
+-- 表 4: cat_venue_cas_warning (CAS 中科院期刊预警名单)
+-- ============================================================
+-- 表说明: CAS 分区表预警名单的历史时间序列
+-- UK: (venue_id, published_year, edition_label) — 每版本一行
+--
+-- 为何独立于 cat_venue_cas_rating:
+--   预警名单和分区表是两个独立的时间序列，发布节奏和版本命名不同步
+--   预警名单覆盖更长历史（2020+），分区表只展示近几年版本
+--   强制合并需要大量 NULL 行，违反单一职责原则
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS `cat_venue_cas_warning` (
+    `id`                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT
+                         COMMENT 'Snowflake ID',
+    `venue_id`           BIGINT UNSIGNED NOT NULL
+                         COMMENT '关联期刊 ID（逻辑外键 → cat_venue.id）',
+    `published_year`     SMALLINT        NOT NULL
+                         COMMENT '预警名单发布年份（2020-2100）',
+    `published_month`    TINYINT UNSIGNED NULL DEFAULT NULL
+                         COMMENT '预警名单发布月份 1-12（可空）',
+    `edition_label`      VARCHAR(30)     NOT NULL
+                         COMMENT '原始版本标签：新锐学术版/2025版/2024版/2023版...',
+    `in_warning_list`    BOOLEAN         NOT NULL
+                         COMMENT '是否在预警名单中：true=预警，false=正常',
+    `warning_level`      VARCHAR(10)     NULL DEFAULT NULL
+                         COMMENT '预警级别：高/中/低（仅当 in_warning_list=true 时可能有值）',
+    `raw_text`           VARCHAR(500)    NULL DEFAULT NULL
+                         COMMENT '原始描述文本（保留 LetPub 页面原句以便追溯）',
+    `source_url`         VARCHAR(500)    NULL DEFAULT NULL
+                         COMMENT '数据来源 URL',
+    `fetched_at`         TIMESTAMP(6)    NULL DEFAULT NULL
+                         COMMENT '数据抓取时间（UTC，微秒精度）',
+    `created_at`         TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+                         COMMENT '创建时间',
+    `updated_at`         TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)
+                         COMMENT '最后更新时间',
+    `version`            BIGINT UNSIGNED NOT NULL DEFAULT 0
+                         COMMENT '乐观锁版本号',
+    PRIMARY KEY (`id`),
+    UNIQUE INDEX `uk_venue_year_edition` (`venue_id`, `published_year`, `edition_label`),
+    INDEX `idx_venue_id` (`venue_id`),
+    INDEX `idx_in_warning` (`in_warning_list`),
+    INDEX `idx_warning_level` (`warning_level`),
+    INDEX `idx_published_year` (`published_year`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+COMMENT='CAS 中科院期刊预警名单：按版本的时间序列';
