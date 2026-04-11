@@ -127,7 +127,6 @@ public class LetPubDetailPageParser {
     Document doc = Jsoup.parse(html);
     Map<String, Element> fieldMap = buildFieldMap(doc);
 
-    // 4 个子 record 的 accumulator：2 个 Lombok builder + 2 个 mutable list + 3 个 SubmissionInfo 局部变量
     var basicBuilder = LetPubVenueData.BasicInfo.builder().letPubJournalId(journalId);
     var jcrBuilder = LetPubVenueData.JcrMetrics.builder();
     List<LetPubVenueData.CasPartition> casPartitions = new ArrayList<>();
@@ -159,9 +158,6 @@ public class LetPubDetailPageParser {
   }
 
   /// 官方/网友两版审稿速度的解析返回值。
-  ///
-  /// 因为 `parseReviewSpeed` 从同一段文本中同时提取两个值，返回一个 tiny record
-  /// 比传出参数 / 双局部变量 + 多次 Map 访问更清晰。
   private record ReviewSpeeds(String official, String user) {}
 
   // ========== 字段映射表 ==========

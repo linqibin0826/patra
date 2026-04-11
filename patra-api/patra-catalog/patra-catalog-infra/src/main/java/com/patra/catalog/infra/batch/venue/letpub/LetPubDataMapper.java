@@ -100,29 +100,38 @@ public class LetPubDataMapper {
       entity.setSourceUrl(sourceUrl);
       entity.setFetchedAt(now);
 
-      // 详细 JCR 字段仅对最新年填充：这些字段在 Clarivate 原生 JCR 里本就是按年发布的年度指标，
-      // LetPub 页面只提供最新年详细值，历史年暂留空，等后续接入 Clarivate 一级源后可回填。
       if (year == latestYear) {
-        entity.setSubject(jcr.jcrSubject());
-        entity.setCollection(jcr.jcrCollection());
-        entity.setJifQuartile(jcr.jifQuartile());
-        entity.setJifRank(jcr.jifRank());
-        entity.setJifPercentile(toBigDecimal(jcr.jifPercentile()));
-        entity.setJciSubject(jcr.jciSubject());
-        entity.setJciCollection(jcr.jciCollection());
-        entity.setJciQuartile(jcr.jciQuartile());
-        entity.setJciRank(jcr.jciRank());
-        entity.setJciPercentile(toBigDecimal(jcr.jciPercentile()));
-        entity.setJciValue(toBigDecimal(jcr.jciValue()));
-        entity.setWosOverallQuartile(jcr.wosOverallQuartile());
-        entity.setSelfCitationRate(toBigDecimal(jcr.selfCitationRate()));
-        entity.setResearchDirection(data.basicInfo().researchDirection());
+        applyLatestYearDetails(entity, jcr, data.basicInfo());
       }
 
       ratings.add(entity);
     }
 
     return ratings;
+  }
+
+  /// 为最新年份的 JCR 行填充分区/排名/百分位等年度指标详情。
+  ///
+  /// **为何仅最新年填充**：Clarivate 原生 JCR 本就是按年发布的年度指标，每年一版。
+  /// LetPub 作为二级来源仅在页面上展示最新年的详细字段，历史年仅保留 IF 数值。
+  /// 未来接入 Clarivate 一级源后可回填历史年的详细字段，该方法结构无需改动——
+  /// 只需去掉 `year == latestYear` 的门槛，把它作为"每行都填"的通用逻辑即可。
+  private void applyLatestYearDetails(
+      JcrRatingEntity entity, LetPubVenueData.JcrMetrics jcr, LetPubVenueData.BasicInfo basicInfo) {
+    entity.setSubject(jcr.jcrSubject());
+    entity.setCollection(jcr.jcrCollection());
+    entity.setJifQuartile(jcr.jifQuartile());
+    entity.setJifRank(jcr.jifRank());
+    entity.setJifPercentile(toBigDecimal(jcr.jifPercentile()));
+    entity.setJciSubject(jcr.jciSubject());
+    entity.setJciCollection(jcr.jciCollection());
+    entity.setJciQuartile(jcr.jciQuartile());
+    entity.setJciRank(jcr.jciRank());
+    entity.setJciPercentile(toBigDecimal(jcr.jciPercentile()));
+    entity.setJciValue(toBigDecimal(jcr.jciValue()));
+    entity.setWosOverallQuartile(jcr.wosOverallQuartile());
+    entity.setSelfCitationRate(toBigDecimal(jcr.selfCitationRate()));
+    entity.setResearchDirection(basicInfo.researchDirection());
   }
 
   /// 将 LetPub 所有 CAS 分区版本映射为多行 CAS 评级。
