@@ -31,6 +31,16 @@ public class VenueLetPubEnrichHandler
 
   private final LetPubEnrichmentRunner runner;
 
+  /// 同步执行完整 LetPub 富化 worker loop，返回运行统计。
+  ///
+  /// 阻塞直到 [LetPubEnrichmentRunner] 处理完所有候选 venue。
+  /// 统计信息由 `RunStats` 直接映射为 [VenueLetPubEnrichResult]。
+  ///
+  /// @param command 富化参数：目标年份 + 被引次数下限
+  /// @return 同步执行结果，包含 totalRead / processed / skipped / failed 四项统计
+  /// @throws com.patra.common.error.DomainException 领域异常直接传播
+  /// @throws com.patra.common.error.ApplicationException 业务异常直接传播，
+  ///     未知 `RuntimeException` 被包装为 `ApplicationException(CAT_1302)`
   @Override
   public VenueLetPubEnrichResult handle(VenueLetPubEnrichCommand command) {
     log.info(
