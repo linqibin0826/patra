@@ -31,6 +31,13 @@ import org.springframework.batch.infrastructure.item.ItemWriter;
 /// Reader 是 `JpaPagingItemReader`，读出的 `VenueEntity` 处于 detached 状态，
 /// 无法通过 dirty check 自动持久化字段变更。因此由 Writer 显式 UPDATE。
 ///
+/// **失败语义**：
+///
+/// 三步写入共享 Step 事务。若封面 UPDATE 异常（例如瞬时锁冲突），
+/// 同一 chunk 的 JCR/CAS 插入也会随之回滚。因 `chunk=1`，影响范围
+/// 限于当前 venue；后续重跑时 Reader 的 `NOT EXISTS` 守卫会重新捞出
+/// 该 venue，封面侧有幂等跳过保护。
+///
 /// @author linqibin
 /// @since 0.1.0
 @Slf4j
@@ -71,9 +78,17 @@ public class LetPubVenueItemWriter implements ItemWriter<LetPubEnrichResult> {
         }
       }
 
+      // 仅在非 null 时 UPDATE：避免把已有对象键清空。
+      // 当前无显式清空需求；若未来需要清空，应在 LetPubEnrichResult
+      // 增加独立的 clearImageObjectKey 标志位，而非用 null 同时表达
+      // "未下载"和"主动清空"两种意图。
       if (result.imageObjectKey() != null) {
-        venueDao.updateImageObjectKey(result.venueId(), result.imageObjectKey());
-        log.debug("Venue [id={}] 已更新封面对象键: {}", result.venueId(), result.imageObjectKey());
+        int updated = venueDao.updateImageObjectKey(result.venueId(), result.imageObjectKey());
+        if (updated == 0) {
+          log.warn("Venue [id={}] 封面对象键 UPDATE 影响 0 行（可能已被删除或不存在）", result.venueId());
+        } else {
+          log.debug("Venue [id={}] 已更新封面对象键: {}", result.venueId(), result.imageObjectKey());
+        }
       }
     }
   }

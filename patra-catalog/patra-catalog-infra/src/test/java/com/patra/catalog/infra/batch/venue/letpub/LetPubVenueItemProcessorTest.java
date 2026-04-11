@@ -209,6 +209,55 @@ class LetPubVenueItemProcessorTest {
   }
 
   @Test
+  @DisplayName("LetPub 返回的封面 URL 为空字符串时应跳过下载（URI.create(\"\") 不会抛异常）")
+  void shouldSkipDownloadWhenCoverSourceUrlIsEmpty() throws Exception {
+    // Given — URI.create("") 在 JDK 25 返回空 URI 而非抛异常；
+    // 若 Processor 不在上游显式拦截，会让空 URI 流向下载端口。
+    VenueEntity entity = createVenueEntity(700L, "1010-2020");
+    LetPubVenueData data =
+        LetPubVenueData.builder()
+            .letPubJournalId("6054")
+            .letPubName("Nature")
+            .coverImageSourceUrl("")
+            .build();
+    when(enrichmentPort.findByIssn("1010-2020")).thenReturn(Optional.of(data));
+
+    // When
+    LetPubEnrichResult result = processor.process(entity);
+
+    // Then
+    assertThat(result).isNotNull();
+    assertThat(result.imageObjectKey()).isNull();
+    verify(coverImageDownloadPort, never()).downloadAndStore(any(), any());
+  }
+
+  @Test
+  @DisplayName("封面下载端口抛出非 FileDownloadException 的 RuntimeException 时应兜底不阻断主流程")
+  void shouldContinueProcessingWhenDownloadPortThrowsUncheckedRuntimeException() throws Exception {
+    // Given — 契约上 Adapter 应抛 FileDownloadException，但若有未包装的 bug
+    // 逃出，必须被处理器兜底，否则会触发 Spring Batch 的 chunk 回滚，
+    // 把同一 venue 的 JCR/CAS ratings 一并丢弃。
+    VenueEntity entity = createVenueEntity(800L, "2020-3030");
+    LetPubVenueData data =
+        LetPubVenueData.builder()
+            .letPubJournalId("6054")
+            .letPubName("Nature")
+            .coverImageSourceUrl("https://media-cdn.example.com/cover/journal/6054.jpg")
+            .build();
+    when(enrichmentPort.findByIssn("2020-3030")).thenReturn(Optional.of(data));
+    when(coverImageDownloadPort.downloadAndStore(any(URI.class), any()))
+        .thenThrow(new IllegalStateException("MinIO client 未初始化"));
+
+    // When
+    LetPubEnrichResult result = processor.process(entity);
+
+    // Then
+    assertThat(result).as("未知 RuntimeException 不应阻断主流程").isNotNull();
+    assertThat(result.venueId()).isEqualTo(800L);
+    assertThat(result.imageObjectKey()).as("失败时不应写入对象键").isNull();
+  }
+
+  @Test
   @DisplayName("LetPub 未返回封面 URL 时应跳过下载（数据缺失）")
   void shouldSkipDownloadWhenCoverSourceUrlIsNull() throws Exception {
     // Given — coverImageSourceUrl 未设置，默认为 null

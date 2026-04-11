@@ -84,30 +84,33 @@ public class LetPubVenueItemProcessor implements ItemProcessor<VenueEntity, LetP
   /// **跳过条件**：
   ///
   /// - 已存在 `imageObjectKey`（幂等，不重复下载）
-  /// - LetPub 未返回封面 URL（数据缺失）
+  /// - LetPub 未返回封面 URL，或 URL 为空白字符串（数据缺失）
   ///
-  /// **失败处理**（均不阻断主流程）：
+  /// **失败处理**（均不阻断主流程，对齐"封面下载是可选增强"契约）：
   ///
   /// - `IllegalArgumentException`（URL 格式非法）→ WARN 日志，返回 null
-  /// - `FileDownloadException` → WARN 日志，返回 null
+  /// - `FileDownloadException`（Adapter 契约内异常）→ WARN 日志 + trait，返回 null
+  /// - 其它 `RuntimeException`（Adapter 契约外异常，例如对象存储客户端
+  ///   未初始化、传输层 NPE 等）→ WARN 日志 + 完整堆栈，返回 null。
+  ///   **不兜底会触发 Spring Batch chunk 回滚，连带丢弃同一 venue 的
+  ///   JCR/CAS ratings**。
   ///
   /// @return 新下载的对象键；若跳过或失败返回 null
   private String downloadCoverIfNeeded(VenueEntity item, LetPubVenueData data) {
     if (item.getImageObjectKey() != null) {
+      log.debug("Venue [id={}] 已存在封面对象键，跳过下载（幂等）", item.getId());
       return null;
     }
-    if (data.coverImageSourceUrl() == null) {
+    String sourceUrl = data.coverImageSourceUrl();
+    if (sourceUrl == null || sourceUrl.isBlank()) {
       return null;
     }
     String stableKey = "catalog/venue-cover/" + item.getId() + ".jpg";
     URI sourceUri;
     try {
-      sourceUri = URI.create(data.coverImageSourceUrl());
+      sourceUri = URI.create(sourceUrl);
     } catch (IllegalArgumentException e) {
-      log.warn(
-          "venue 封面 URL 格式非法（主流程继续）: venueId={} sourceUrl={}",
-          item.getId(),
-          data.coverImageSourceUrl());
+      log.warn("venue 封面 URL 格式非法（主流程继续）: venueId={} sourceUrl={}", item.getId(), sourceUrl);
       return null;
     }
     try {
@@ -116,9 +119,12 @@ public class LetPubVenueItemProcessor implements ItemProcessor<VenueEntity, LetP
       log.warn(
           "venue 封面下载失败（主流程继续）: venueId={} sourceUrl={} trait={} reason={}",
           item.getId(),
-          data.coverImageSourceUrl(),
+          sourceUrl,
           e.getErrorTraits(),
           e.getMessage());
+      return null;
+    } catch (RuntimeException e) {
+      log.warn("venue 封面下载意外异常（主流程继续）: venueId={} sourceUrl={}", item.getId(), sourceUrl, e);
       return null;
     }
   }
