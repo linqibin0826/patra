@@ -1,5 +1,6 @@
 package com.patra.catalog.domain.port.enrichment;
 
+import com.patra.catalog.domain.model.enums.CasWarningLevel;
 import java.util.List;
 import java.util.Map;
 import lombok.Builder;
@@ -129,13 +130,13 @@ public record LetPubVenueData(
   /// - 预警名单是**独立于 CAS 分区表的时间序列**，发布节奏和版本命名均不同步
   /// - 预警版本标签（如 `新锐学术版`/`2025版`/`2024版`）和分区版本标签
   ///   （如 `新锐版`/`升级版`/`基础版`）命名风格不同，不应强行对齐
-  /// - `warningLevel` 仅在 `inWarningList=true` 时可能有值（高/中/低）
+  /// - `warningLevel` 仅在 `inWarningList=true` 时可能有值（HIGH/MEDIUM/LOW）
   ///
   /// @param publishedYear 预警名单发布年份
   /// @param publishedMonth 预警名单发布月份（可空）
   /// @param editionLabel 原始版本标签（如 `2025版`、`新锐学术版`）
   /// @param inWarningList 是否在预警名单中
-  /// @param warningLevel 预警级别（`高`/`中`/`低`，可空）
+  /// @param warningLevel 预警级别（`HIGH`/`MEDIUM`/`LOW`，可空）
   /// @param rawText 原始描述文本（保留 LetPub 页面原句以便追溯）
   @Builder
   public record CasWarningRecord(
@@ -143,7 +144,7 @@ public record LetPubVenueData(
       Integer publishedMonth,
       String editionLabel,
       boolean inWarningList,
-      String warningLevel,
+      CasWarningLevel warningLevel,
       String rawText) {}
 
   /// CAS 中科院分区快照（单版本）。

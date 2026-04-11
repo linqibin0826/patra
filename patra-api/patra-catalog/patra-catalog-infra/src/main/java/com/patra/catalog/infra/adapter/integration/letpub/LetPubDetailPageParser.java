@@ -1,5 +1,6 @@
 package com.patra.catalog.infra.adapter.integration.letpub;
 
+import com.patra.catalog.domain.model.enums.CasWarningLevel;
 import com.patra.catalog.domain.port.enrichment.LetPubVenueData;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -608,7 +609,7 @@ public class LetPubDetailPageParser {
 
     // "不在预警名单中" / "未列入" / 含"不在" → 不在预警
     boolean inWarningList = !statusText.contains("不在预警") && !statusText.contains("无预警");
-    String warningLevel = inWarningList ? extractWarningLevel(statusText) : null;
+    CasWarningLevel warningLevel = inWarningList ? extractWarningLevel(statusText) : null;
 
     return LetPubVenueData.CasWarningRecord.builder()
         .publishedYear(year)
@@ -623,16 +624,16 @@ public class LetPubDetailPageParser {
   /// 从预警状态文本中识别级别。
   ///
   /// @param statusText 状态文本（如 `"高风险预警"`）
-  /// @return `"高"` / `"中"` / `"低"`，未识别返回 null
-  private String extractWarningLevel(String statusText) {
+  /// @return `HIGH` / `MEDIUM` / `LOW`，未识别返回 null
+  private CasWarningLevel extractWarningLevel(String statusText) {
     if (statusText.contains("高风险") || statusText.contains("高级")) {
-      return "高";
+      return CasWarningLevel.HIGH;
     }
     if (statusText.contains("中风险") || statusText.contains("中级")) {
-      return "中";
+      return CasWarningLevel.MEDIUM;
     }
     if (statusText.contains("低风险") || statusText.contains("低级")) {
-      return "低";
+      return CasWarningLevel.LOW;
     }
     return null;
   }
