@@ -52,29 +52,29 @@ public class LetPubVenueItemWriter implements ItemWriter<LetPubEnrichResult> {
   @Override
   public void write(Chunk<? extends LetPubEnrichResult> results) throws Exception {
     for (LetPubEnrichResult result : results) {
-      if (!result.jcrRatings().isEmpty()) {
-        List<JcrRatingEntity> newJcrRatings =
-            filterNewJcrRatings(result.venueId(), result.jcrRatings());
+      List<JcrRatingEntity> jcrRatings = result.jcr().ratings();
+      if (!jcrRatings.isEmpty()) {
+        List<JcrRatingEntity> newJcrRatings = filterNewJcrRatings(result.venueId(), jcrRatings);
         if (!newJcrRatings.isEmpty()) {
           jcrRatingDao.saveAll(newJcrRatings);
           log.debug(
               "Venue [id={}] 已保存 {} 条 JCR 评级（跳过 {} 条已存在年份）",
               result.venueId(),
               newJcrRatings.size(),
-              result.jcrRatings().size() - newJcrRatings.size());
+              jcrRatings.size() - newJcrRatings.size());
         }
       }
 
-      if (!result.casRatings().isEmpty()) {
-        List<CasRatingEntity> newCasRatings =
-            filterNewCasRatings(result.venueId(), result.casRatings());
+      List<CasRatingEntity> casRatings = result.cas().ratings();
+      if (!casRatings.isEmpty()) {
+        List<CasRatingEntity> newCasRatings = filterNewCasRatings(result.venueId(), casRatings);
         if (!newCasRatings.isEmpty()) {
           casRatingDao.saveAll(newCasRatings);
           log.debug(
               "Venue [id={}] 已保存 {} 条 CAS 评级（跳过 {} 条已存在版本）",
               result.venueId(),
               newCasRatings.size(),
-              result.casRatings().size() - newCasRatings.size());
+              casRatings.size() - newCasRatings.size());
         }
       }
 

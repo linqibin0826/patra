@@ -7,7 +7,6 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import com.patra.catalog.infra.persistence.dao.CasRatingDao;
 import com.patra.catalog.infra.persistence.dao.JcrRatingDao;
 import com.patra.catalog.infra.persistence.dao.VenueDao;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -51,7 +50,11 @@ class LetPubVenueItemWriterTest {
   void shouldUpdateVenueImageObjectKeyWhenPresent() throws Exception {
     // Given
     LetPubEnrichResult result =
-        LetPubEnrichResult.of(42L, "catalog/venue-cover/42.jpg", List.of(), List.of());
+        LetPubEnrichResult.of(
+            42L,
+            "catalog/venue-cover/42.jpg",
+            LetPubEnrichResult.JcrBatch.empty(),
+            LetPubEnrichResult.CasBatch.empty());
 
     // When
     writer.write(Chunk.of(result));
@@ -64,7 +67,9 @@ class LetPubVenueItemWriterTest {
   @DisplayName("当 imageObjectKey 为空时不应触达 VenueDao（避免把已有对象键清空）")
   void shouldNotUpdateVenueWhenImageObjectKeyIsNull() throws Exception {
     // Given
-    LetPubEnrichResult result = LetPubEnrichResult.of(43L, null, List.of(), List.of());
+    LetPubEnrichResult result =
+        LetPubEnrichResult.of(
+            43L, null, LetPubEnrichResult.JcrBatch.empty(), LetPubEnrichResult.CasBatch.empty());
 
     // When
     writer.write(Chunk.of(result));
