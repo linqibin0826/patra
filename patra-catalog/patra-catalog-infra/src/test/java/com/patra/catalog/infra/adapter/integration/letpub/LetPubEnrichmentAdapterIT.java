@@ -142,11 +142,30 @@ class LetPubEnrichmentAdapterIT {
     System.out.println("║ LetPub ID:       " + data.letPubJournalId());
     System.out.println("║ 研究方向:        " + data.researchDirection());
     System.out.println("║ 年文章数:        " + data.articlesPerYear());
-    System.out.println("╠══ JCR ═══════════════════════════════");
-    System.out.println("║ 学科:            " + data.jcrSubject());
-    System.out.println("║ 收录:            " + data.jcrCollection());
-    System.out.println("║ JIF 分区:        " + data.jifQuartile() + "  排名: " + data.jifRank());
-    System.out.println("║ JCI 分区:        " + data.jciQuartile() + "  排名: " + data.jciRank());
+    System.out.println("╠══ JCR / WOS ═════════════════════════");
+    System.out.println("║ WOS 综合分区:    " + data.wosOverallQuartile());
+    System.out.println("║ ─ JIF ─");
+    System.out.println("║ JIF 学科:        " + data.jcrSubject());
+    System.out.println("║ JIF 收录:        " + data.jcrCollection());
+    System.out.println(
+        "║ JIF 分区:        "
+            + data.jifQuartile()
+            + "  排名: "
+            + data.jifRank()
+            + "  百分位: "
+            + data.jifPercentile());
+    System.out.println("║ ─ JCI ─");
+    System.out.println("║ JCI 学科:        " + data.jciSubject());
+    System.out.println("║ JCI 收录:        " + data.jciCollection());
+    System.out.println(
+        "║ JCI 分区:        "
+            + data.jciQuartile()
+            + "  排名: "
+            + data.jciRank()
+            + "  百分位: "
+            + data.jciPercentile());
+    System.out.println("║ JCI 数值:        " + data.jciValue());
+    System.out.println("║ 自引率:          " + data.selfCitationRate());
     System.out.println("╠══ CAS ═══════════════════════════════");
     System.out.println("║ 版本数:          " + data.casPartitions().size());
     data.casPartitions()
