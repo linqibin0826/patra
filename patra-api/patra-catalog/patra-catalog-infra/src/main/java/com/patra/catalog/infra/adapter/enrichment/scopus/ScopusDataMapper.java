@@ -1,4 +1,4 @@
-package com.patra.catalog.infra.batch.venue.scopus;
+package com.patra.catalog.infra.adapter.enrichment.scopus;
 
 import com.patra.catalog.domain.port.enrichment.ScopusVenueData;
 import com.patra.catalog.domain.port.enrichment.ScopusVenueData.YearlyMetric;

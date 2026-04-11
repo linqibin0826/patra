@@ -7,7 +7,6 @@ import static org.mockito.Mockito.*;
 import com.patra.catalog.domain.port.enrichment.ScopusEnrichmentPersistPort.PersistStats;
 import com.patra.catalog.domain.port.enrichment.ScopusVenueData;
 import com.patra.catalog.domain.port.enrichment.ScopusVenueData.YearlyMetric;
-import com.patra.catalog.infra.batch.venue.scopus.ScopusDataMapper;
 import com.patra.catalog.infra.persistence.dao.ScopusRatingDao;
 import java.util.List;
 import java.util.Set;

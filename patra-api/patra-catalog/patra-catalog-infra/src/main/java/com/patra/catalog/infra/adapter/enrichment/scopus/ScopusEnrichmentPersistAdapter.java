@@ -2,7 +2,6 @@ package com.patra.catalog.infra.adapter.enrichment.scopus;
 
 import com.patra.catalog.domain.port.enrichment.ScopusEnrichmentPersistPort;
 import com.patra.catalog.domain.port.enrichment.ScopusVenueData;
-import com.patra.catalog.infra.batch.venue.scopus.ScopusDataMapper;
 import com.patra.catalog.infra.persistence.dao.ScopusRatingDao;
 import com.patra.catalog.infra.persistence.entity.ScopusRatingEntity;
 import java.util.List;

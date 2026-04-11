@@ -7,7 +7,6 @@ import static org.mockito.Mockito.*;
 
 import com.patra.catalog.domain.port.enrichment.LetPubEnrichmentPersistPort.PersistStats;
 import com.patra.catalog.domain.port.enrichment.LetPubVenueData;
-import com.patra.catalog.infra.batch.venue.letpub.LetPubDataMapper;
 import com.patra.catalog.infra.persistence.dao.CasRatingDao;
 import com.patra.catalog.infra.persistence.dao.CasWarningDao;
 import com.patra.catalog.infra.persistence.dao.JcrRatingDao;
