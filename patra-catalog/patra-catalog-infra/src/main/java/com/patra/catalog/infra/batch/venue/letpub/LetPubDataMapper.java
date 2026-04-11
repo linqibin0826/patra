@@ -8,6 +8,7 @@ import com.patra.catalog.infra.persistence.entity.CasWarningEntity;
 import com.patra.catalog.infra.persistence.entity.JcrRatingEntity;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -40,6 +41,19 @@ public class LetPubDataMapper {
   /// CAS 版本名称提取正则：从 "2025年3月升级版" 提取 "升级版"。
   private static final Pattern CAS_EDITION_PATTERN = Pattern.compile("(升级版|新锐版|基础版)$");
 
+  /// 时钟源：生产默认 `Clock.systemUTC()`，测试可注入 `Clock.fixed()` 以断言 `fetchedAt` 值。
+  private final Clock clock;
+
+  /// 生产用构造器：使用系统 UTC 时钟。
+  public LetPubDataMapper() {
+    this(Clock.systemUTC());
+  }
+
+  /// 可注入 Clock 的构造器，便于测试控制 `fetchedAt` 时间戳。
+  public LetPubDataMapper(Clock clock) {
+    this.clock = clock;
+  }
+
   /// 将 LetPub IF 趋势和 JCR 分区数据映射为多行 JCR 评级。
   ///
   /// - 每个 IF 趋势条目生成一行（year = key 后半段）
@@ -57,7 +71,7 @@ public class LetPubDataMapper {
       return List.of();
     }
 
-    Instant now = Instant.now();
+    Instant now = clock.instant();
 
     // 找出最新年份
     short latestYear =
@@ -124,7 +138,7 @@ public class LetPubDataMapper {
       return List.of();
     }
 
-    Instant now = Instant.now();
+    Instant now = clock.instant();
     List<CasRatingEntity> entities = new ArrayList<>();
 
     for (CasPartition partition : partitions) {
@@ -177,7 +191,7 @@ public class LetPubDataMapper {
       return List.of();
     }
 
-    Instant now = Instant.now();
+    Instant now = clock.instant();
     List<CasWarningEntity> entities = new ArrayList<>();
     for (CasWarningRecord record : warnings) {
       CasWarningEntity entity = new CasWarningEntity();

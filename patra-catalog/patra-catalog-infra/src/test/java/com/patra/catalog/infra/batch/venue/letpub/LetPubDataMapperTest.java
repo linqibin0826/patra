@@ -8,6 +8,9 @@ import com.patra.catalog.infra.persistence.entity.CasRatingEntity;
 import com.patra.catalog.infra.persistence.entity.CasWarningEntity;
 import com.patra.catalog.infra.persistence.entity.JcrRatingEntity;
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,11 +38,14 @@ class LetPubDataMapperTest {
   private static final String SOURCE_URL =
       "https://www.letpub.com.cn/index.php?journalid=6054&page=journalapp&view=detail";
 
+  /// 固定时钟：便于断言 `fetchedAt` 等于此精确值。
+  private static final Instant FIXED_INSTANT = Instant.parse("2026-01-15T10:30:45.123456Z");
+
   private LetPubDataMapper mapper;
 
   @BeforeEach
   void setUp() {
-    mapper = new LetPubDataMapper();
+    mapper = new LetPubDataMapper(Clock.fixed(FIXED_INSTANT, ZoneOffset.UTC));
   }
 
   /// 创建包含完整数据的 LetPubVenueData。
@@ -110,7 +116,7 @@ class LetPubDataMapperTest {
   class JcrMappingTests {
 
     @Test
-    @DisplayName("IF 趋势每年应生成一行 JCR rating")
+    @DisplayName("IF 趋势每年应生成一行 JCR rating，fetchedAt 使用注入的 Clock")
     void shouldCreateOneRatingPerYear() {
       var data = createFullData();
 
@@ -119,7 +125,8 @@ class LetPubDataMapperTest {
       assertThat(ratings).hasSize(3);
       assertThat(ratings).allMatch(r -> r.getVenueId().equals(VENUE_ID));
       assertThat(ratings).allMatch(r -> SOURCE_URL.equals(r.getSourceUrl()));
-      assertThat(ratings).allMatch(r -> r.getFetchedAt() != null);
+      // 证明 Clock 注入有效：所有 fetchedAt 都等于注入的固定 Instant
+      assertThat(ratings).allMatch(r -> FIXED_INSTANT.equals(r.getFetchedAt()));
     }
 
     @Test
