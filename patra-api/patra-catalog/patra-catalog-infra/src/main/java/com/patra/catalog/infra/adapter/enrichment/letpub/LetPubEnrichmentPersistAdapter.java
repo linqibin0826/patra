@@ -25,7 +25,7 @@ import org.springframework.stereotype.Component;
 /// Mapper 会全部展开，Adapter 按键去重——单次调用 `target_year=2025` 可以
 /// 机会主义填充 2016-2024 的历史数据（仅插入之前缺失的年份）。
 ///
-/// **事务**：本类**不加** `@Transactional`，由调用方（App 层 Worker）的
+/// **事务**：本类**不加** `@Transactional`，由调用方（App 层 Persister）的
 /// `REQUIRES_NEW` 事务边界包裹。
 ///
 /// @author linqibin

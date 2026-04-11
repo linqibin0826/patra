@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 /// **错误处理策略**：
 ///
 /// - 爬取异常由 Client 内部转为 {@link LetPubScrapingException}
-/// - 本适配器不做额外异常处理，由调用方（Spring Batch skip）统一处理
+/// - 本适配器不做额外异常处理，由 App 层 Worker/Runner 的异常路径统一处理
 ///
 /// @author linqibin
 /// @since 0.1.0

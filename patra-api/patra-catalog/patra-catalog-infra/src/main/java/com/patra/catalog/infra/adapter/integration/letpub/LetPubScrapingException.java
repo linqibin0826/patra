@@ -7,7 +7,7 @@ import java.io.Serial;
 /// 当 LetPub 网站爬取过程中发生不可恢复的错误时抛出，
 /// 如超过最大限流重试次数、网络异常等。
 ///
-/// 由 Spring Batch 的 skip 策略捕获，单条失败不中断整体作业。
+/// 异常向上传播到 App 层 Runner，由 Runner 计入 `failed` 后继续下一条 venue。
 ///
 /// @author linqibin
 /// @since 0.1.0

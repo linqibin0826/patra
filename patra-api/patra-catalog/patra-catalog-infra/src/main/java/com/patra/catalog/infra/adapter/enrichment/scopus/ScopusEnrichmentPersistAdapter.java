@@ -25,7 +25,7 @@ import org.springframework.stereotype.Component;
 /// 历史年份仅填充 CiteScore 基础字段。Adapter 按年份去重保证幂等，
 /// 跨次调用不会重复插入同一年份。
 ///
-/// **事务**：本类**不加** `@Transactional`，由调用方（App 层 Worker）的
+/// **事务**：本类**不加** `@Transactional`，由调用方（App 层 Persister）的
 /// `REQUIRES_NEW` 事务边界包裹。
 ///
 /// @author linqibin
