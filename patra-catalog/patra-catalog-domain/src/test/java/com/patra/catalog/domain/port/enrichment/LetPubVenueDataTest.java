@@ -76,7 +76,6 @@ class LetPubVenueDataTest {
               .acceptanceRate("较难")
               .apcInfo("US$11390")
               .impactFactorTrend(Map.of("2024-2025", 48.5, "2023-2024", 50.5))
-              .fiveYearImpactFactor(55.0)
               .indexedIn(List.of("SCI", "SCIE", "PubMed", "Scopus"))
               .build();
 
@@ -107,7 +106,6 @@ class LetPubVenueDataTest {
           .hasSize(2)
           .containsEntry("2024-2025", 48.5)
           .containsEntry("2023-2024", 50.5);
-      assertThat(data.fiveYearImpactFactor()).isEqualTo(55.0);
       assertThat(data.indexedIn()).containsExactly("SCI", "SCIE", "PubMed", "Scopus");
     }
 
@@ -122,7 +120,6 @@ class LetPubVenueDataTest {
       assertThat(data.letPubName()).isNull();
       assertThat(data.articlesPerYear()).isNull();
       assertThat(data.casPartitions()).isEmpty();
-      assertThat(data.fiveYearImpactFactor()).isNull();
       assertThat(data.impactFactorTrend()).isEmpty();
       assertThat(data.indexedIn()).isEmpty();
     }

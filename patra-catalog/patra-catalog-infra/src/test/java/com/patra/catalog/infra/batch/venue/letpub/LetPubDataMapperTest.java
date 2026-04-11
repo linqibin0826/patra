@@ -70,12 +70,19 @@ class LetPubDataMapperTest {
         .researchDirection("综合性期刊")
         .articlesPerYear(860)
         .researchArticlePercent("52.24%")
+        .wosOverallQuartile("1区")
         .jcrSubject("MULTIDISCIPLINARY SCIENCES")
         .jcrCollection("SCIE")
         .jifQuartile("Q1")
         .jifRank("2/136")
+        .jifPercentile("99%")
+        .jciSubject("NATURAL SCIENCE FLAGSHIP")
+        .jciCollection("SCIE")
         .jciQuartile("Q1")
-        .jciRank("1/136")
+        .jciRank("3/144")
+        .jciPercentile("98.9%")
+        .jciValue(11.14)
+        .selfCitationRate("1.6%")
         .casPartitions(List.of(xinruiPartition, shengjiPartition))
         .reviewSpeedOfficial("较慢，>12周")
         .reviewSpeedUser("平均6.0个月")
@@ -86,7 +93,6 @@ class LetPubDataMapperTest {
                 "2024-2025", 48.5,
                 "2023-2024", 50.5,
                 "2022-2023", 64.8))
-        .fiveYearImpactFactor(55.0)
         .indexedIn(List.of("SCI", "SCIE"))
         .build();
   }
@@ -119,14 +125,49 @@ class LetPubDataMapperTest {
           ratings.stream().filter(r -> r.getYear() == 2025).findFirst().orElseThrow();
 
       assertThat(latest.getImpactFactor()).isEqualByComparingTo(new BigDecimal("48.5"));
-      assertThat(latest.getFiveYearIf()).isEqualByComparingTo(new BigDecimal("55.0"));
       assertThat(latest.getSubject()).isEqualTo("MULTIDISCIPLINARY SCIENCES");
       assertThat(latest.getCollection()).isEqualTo("SCIE");
       assertThat(latest.getJifQuartile()).isEqualTo("Q1");
       assertThat(latest.getJifRank()).isEqualTo("2/136");
       assertThat(latest.getJciQuartile()).isEqualTo("Q1");
-      assertThat(latest.getJciRank()).isEqualTo("1/136");
+      assertThat(latest.getJciRank()).isEqualTo("3/144");
       assertThat(latest.getResearchDirection()).isEqualTo("综合性期刊");
+    }
+
+    @Test
+    @DisplayName("最新年份应包含 WOS 增强字段（总体分区 / 百分位 / JCI 独立 / 自引率）")
+    void shouldIncludeWosEnhancedFieldsForLatestYear() {
+      var data = createFullData();
+
+      List<JcrRatingEntity> ratings = mapper.mapToJcrRatings(data, VENUE_ID, SOURCE_URL);
+
+      JcrRatingEntity latest =
+          ratings.stream().filter(r -> r.getYear() == 2025).findFirst().orElseThrow();
+
+      assertThat(latest.getWosOverallQuartile()).isEqualTo("1区");
+      assertThat(latest.getJifPercentile()).isEqualTo("99%");
+      assertThat(latest.getJciSubject()).isEqualTo("NATURAL SCIENCE FLAGSHIP");
+      assertThat(latest.getJciCollection()).isEqualTo("SCIE");
+      assertThat(latest.getJciPercentile()).isEqualTo("98.9%");
+      assertThat(latest.getJciValue()).isEqualByComparingTo(new BigDecimal("11.14"));
+      assertThat(latest.getSelfCitationRate()).isEqualTo("1.6%");
+    }
+
+    @Test
+    @DisplayName("历史年份不应包含 WOS 增强字段")
+    void shouldNotPopulateWosEnhancedFieldsForHistoricalYears() {
+      var data = createFullData();
+
+      List<JcrRatingEntity> ratings = mapper.mapToJcrRatings(data, VENUE_ID, SOURCE_URL);
+
+      JcrRatingEntity historical =
+          ratings.stream().filter(r -> r.getYear() == 2024).findFirst().orElseThrow();
+
+      assertThat(historical.getWosOverallQuartile()).isNull();
+      assertThat(historical.getJifPercentile()).isNull();
+      assertThat(historical.getJciSubject()).isNull();
+      assertThat(historical.getJciValue()).isNull();
+      assertThat(historical.getSelfCitationRate()).isNull();
     }
 
     @Test
@@ -142,7 +183,6 @@ class LetPubDataMapperTest {
       assertThat(historical.getImpactFactor()).isEqualByComparingTo(new BigDecimal("50.5"));
       assertThat(historical.getJifQuartile()).isNull();
       assertThat(historical.getSubject()).isNull();
-      assertThat(historical.getFiveYearIf()).isNull();
     }
 
     @Test

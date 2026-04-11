@@ -125,7 +125,7 @@ class LetPubDetailPageParserTest {
     @Test
     @DisplayName("应提取 JIF 排名")
     void shouldExtractJifRank() {
-      assertThat(data.jifRank()).isEqualTo("1/73");
+      assertThat(data.jifRank()).isEqualTo("2/136");
     }
 
     @Test
@@ -137,7 +137,54 @@ class LetPubDetailPageParserTest {
     @Test
     @DisplayName("应从 JCI 子表格提取排名")
     void shouldExtractJciRank() {
-      assertThat(data.jciRank()).isEqualTo("2/73");
+      assertThat(data.jciRank()).isEqualTo("3/144");
+    }
+  }
+
+  @Nested
+  @DisplayName("WOS 增强字段提取（综合分区 / 百分位 / JCI 独立字段 / 自引率）")
+  class WosEnhancedTests {
+
+    @Test
+    @DisplayName("应从 JCR 行顶部提取 WOS 综合分区等级")
+    void shouldExtractWosOverallQuartile() {
+      assertThat(data.wosOverallQuartile()).isEqualTo("1区");
+    }
+
+    @Test
+    @DisplayName("应从 JIF 子表第 5 列 lay-percent 属性提取百分位")
+    void shouldExtractJifPercentile() {
+      assertThat(data.jifPercentile()).isEqualTo("99%");
+    }
+
+    @Test
+    @DisplayName("应从 JCI 子表独立提取 JCI 学科（非复用 JIF subject）")
+    void shouldExtractJciSubjectIndependently() {
+      assertThat(data.jciSubject()).isEqualTo("NATURAL SCIENCE FLAGSHIP");
+    }
+
+    @Test
+    @DisplayName("应从 JCI 子表独立提取 JCI 收录子集")
+    void shouldExtractJciCollectionIndependently() {
+      assertThat(data.jciCollection()).isEqualTo("SCIE");
+    }
+
+    @Test
+    @DisplayName("应从 JCI 子表第 5 列 lay-percent 属性提取百分位")
+    void shouldExtractJciPercentile() {
+      assertThat(data.jciPercentile()).isEqualTo("98.9%");
+    }
+
+    @Test
+    @DisplayName("应从独立行 \"JCI期刊引文指标\" 提取数值")
+    void shouldExtractJciValue() {
+      assertThat(data.jciValue()).isEqualTo(11.14);
+    }
+
+    @Test
+    @DisplayName("应从独立行 \"自引率\" 提取百分比（剥离趋势图按钮 span）")
+    void shouldExtractSelfCitationRate() {
+      assertThat(data.selfCitationRate()).isEqualTo("1.6%");
     }
   }
 
@@ -271,12 +318,6 @@ class LetPubDetailPageParserTest {
           .containsEntry("2024-2025", 48.5)
           .containsEntry("2015-2016", 38.138)
           .containsEntry("2021-2022", 69.504);
-    }
-
-    @Test
-    @DisplayName("应提取五年影响因子")
-    void shouldExtractFiveYearImpactFactor() {
-      assertThat(data.fiveYearImpactFactor()).isEqualTo(55.0);
     }
   }
 

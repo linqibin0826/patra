@@ -71,6 +71,15 @@ public class LetPubDetailPageParser {
   /// 单引号字符串提取。
   private static final Pattern QUOTED_STRING = Pattern.compile("'([^']*)'");
 
+  /// WOS 综合分区等级提取正则（匹配 "WOS分区等级：X区" 中的分区）。
+  private static final Pattern WOS_OVERALL_QUARTILE = Pattern.compile("WOS分区等级\\s*[：:]\\s*(\\d区)");
+
+  /// Layui 进度条内联 style 的 width 百分比回退提取（兼容旧结构）。
+  private static final Pattern PROGRESS_BAR_WIDTH = Pattern.compile("width\\s*:\\s*([\\d.]+%)");
+
+  /// 自引率数值提取正则（如 `1.6%`）。
+  private static final Pattern PERCENTAGE_VALUE = Pattern.compile("([\\d.]+%)");
+
   /// CAS 预警名单单行解析正则。
   ///
   /// 匹配形如 `2026年03月发布的新锐学术版：不在预警名单中` 的文本：
@@ -123,13 +132,14 @@ public class LetPubDetailPageParser {
     parseCoverImageUrl(doc, builder);
     parseBasicInfo(fieldMap, builder);
     parseJcrPartition(fieldMap, builder);
+    parseJciValue(fieldMap, builder);
+    parseSelfCitationRate(fieldMap, builder);
     parseCasPartition(fieldMap, builder);
     parseWarningList(fieldMap, builder);
     parseReviewSpeed(fieldMap, builder);
     parseAcceptanceRate(fieldMap, builder);
     parseApc(fieldMap, builder);
     parseIndexedIn(fieldMap, builder);
-    parseFiveYearIf(fieldMap, builder);
     parseImpactFactorTrend(html, builder);
 
     return builder.build();
@@ -270,10 +280,17 @@ public class LetPubDetailPageParser {
     builder.researchArticlePercent(getFieldText(fieldMap, "研究类文章占比"));
   }
 
-  /// 解析 WOS JCR 分区（JIF + JCI 两个子表格）。
+  /// 解析 WOS JCR 分区。
   ///
-  /// 在值 td 内查找包含"按JIF指标"和"按JCI指标"文本的子表格，
-  /// 分别提取学科、收录子集、分区、排名。
+  /// **三部分提取**：
+  ///
+  /// 1. **WOS 综合分区等级** — 在 JCR 行顶部的 `WOS分区等级：<span>1区</span>`，
+  ///    通过正则从 `jcrTd.text()` 中提取（位置在子表格之前）
+  /// 2. **JIF 子表格** — 5 列：学科/收录子集/JIF 分区/JIF 排名/JIF 百分位
+  /// 3. **JCI 子表格** — 5 列：学科/收录子集/JCI 分区/JCI 排名/JCI 百分位
+  ///
+  /// JIF 和 JCI 的学科/收录子集**独立存储**（jcrSubject/jciSubject），支持跨库期刊
+  /// （如 SSCI+SCIE）出现不同分类的边界情况。
   private void parseJcrPartition(
       Map<String, Element> fieldMap, LetPubVenueData.LetPubVenueDataBuilder builder) {
     Element jcrTd = findFieldElement(fieldMap, "WOS期刊JCR分区", "JCR分区");
@@ -281,6 +298,13 @@ public class LetPubDetailPageParser {
       return;
     }
 
+    // 1. WOS 综合分区等级（位于子表格之前的 span 文本）
+    Matcher overallMatcher = WOS_OVERALL_QUARTILE.matcher(jcrTd.text());
+    if (overallMatcher.find()) {
+      builder.wosOverallQuartile(overallMatcher.group(1));
+    }
+
+    // 2. JIF / JCI 子表格
     for (Element table : jcrTd.select("table")) {
       String tableText = table.text();
       if (tableText.contains("按JIF指标")) {
@@ -292,6 +316,19 @@ public class LetPubDetailPageParser {
   }
 
   /// 解析 JCR 子表格（JIF 或 JCI）的第一数据行。
+  ///
+  /// **列结构（5 列）**：
+  ///
+  /// | 0 学科 | 1 收录子集 | 2 分区 | 3 排名 | 4 百分位（layui progress bar） |
+  ///
+  /// **百分位提取策略**（容错）：
+  ///
+  /// 1. 优先读 `.layui-progress-bar[lay-percent]` 属性（layui 框架约定，稳定）
+  /// 2. 回退读 inline `style="width:X%"`（旧结构兼容）
+  /// 3. 均失败返回 null
+  ///
+  /// JIF 和 JCI 的 subject/collection **独立存储**（不复用 JIF 的 subject 给 JCI），
+  /// 以支持跨库期刊的边界情况。
   private void parseJcrSubTable(
       Element table, LetPubVenueData.LetPubVenueDataBuilder builder, boolean isJif) {
     Elements rows = table.select("tr");
@@ -302,18 +339,83 @@ public class LetPubDetailPageParser {
         String collection = tds.get(1).text().trim();
         String quartile = tds.get(2).text().trim();
         String rank = tds.get(3).text().trim();
+        String percentile = tds.size() >= 5 ? extractLayuiPercentile(tds.get(4)) : null;
 
         if (isJif) {
           builder.jcrSubject(subject);
           builder.jcrCollection(collection);
           builder.jifQuartile(quartile);
           builder.jifRank(rank);
+          builder.jifPercentile(percentile);
         } else {
+          builder.jciSubject(subject);
+          builder.jciCollection(collection);
           builder.jciQuartile(quartile);
           builder.jciRank(rank);
+          builder.jciPercentile(percentile);
         }
         break;
       }
+    }
+  }
+
+  /// 从 layui 进度条元素中提取百分位字符串。
+  ///
+  /// 先尝试 `.layui-progress-bar[lay-percent]` 属性，再回退 inline `style="width:X%"`，
+  /// 均失败时返回 null（而非空字符串，避免下游误判）。
+  ///
+  /// @param td 子表格第 5 列的 td 元素
+  /// @return 百分位字符串如 `"99%"`，未找到返回 null
+  private String extractLayuiPercentile(Element td) {
+    Element bar = td.selectFirst(".layui-progress-bar");
+    if (bar == null) {
+      return null;
+    }
+    String layPercent = bar.attr("lay-percent");
+    if (!layPercent.isEmpty()) {
+      return layPercent;
+    }
+    // 回退：inline style="width:99%"
+    Matcher m = PROGRESS_BAR_WIDTH.matcher(bar.attr("style"));
+    if (m.find()) {
+      return m.group(1);
+    }
+    return null;
+  }
+
+  /// 解析 JCI 期刊引文指标数值（独立行）。
+  ///
+  /// 页面行标签：`JCI期刊引文指标 <i class="layui-icon layui-icon-tips"></i>`
+  /// 值 td 内容：直接文本如 `11.14`
+  private void parseJciValue(
+      Map<String, Element> fieldMap, LetPubVenueData.LetPubVenueDataBuilder builder) {
+    String text = getFieldText(fieldMap, "JCI期刊引文指标");
+    Double value = parseDouble(text);
+    if (value != null) {
+      builder.jciValue(value);
+    }
+  }
+
+  /// 解析自引率（独立行）。
+  ///
+  /// 页面行标签：形如 `2024-2025自引率`（年份前缀会变），用关键字 `自引率` 匹配。
+  /// 值 td 结构：
+  ///
+  /// ```html
+  /// <td>1.6%<span ...>点击查看自引率趋势图</span></td>
+  /// ```
+  ///
+  /// 使用 `Element.ownText()` 仅取 td 的直接文本节点，排除 span 子元素的按钮文本。
+  private void parseSelfCitationRate(
+      Map<String, Element> fieldMap, LetPubVenueData.LetPubVenueDataBuilder builder) {
+    Element td = findFieldElement(fieldMap, "自引率");
+    if (td == null) {
+      return;
+    }
+    String ownText = td.ownText().trim();
+    Matcher m = PERCENTAGE_VALUE.matcher(ownText);
+    if (m.find()) {
+      builder.selfCitationRate(m.group(1));
     }
   }
 
@@ -596,12 +698,6 @@ public class LetPubDetailPageParser {
     List<String> databases =
         Arrays.stream(text.split(",\\s*")).map(String::trim).filter(s -> !s.isEmpty()).toList();
     builder.indexedIn(databases);
-  }
-
-  /// 解析五年影响因子。
-  private void parseFiveYearIf(
-      Map<String, Element> fieldMap, LetPubVenueData.LetPubVenueDataBuilder builder) {
-    builder.fiveYearImpactFactor(parseDouble(getFieldText(fieldMap, "五年影响因子")));
   }
 
   /// 从 ECharts `showecharts_if_trend()` 函数中解析影响因子趋势数据。
