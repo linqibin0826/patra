@@ -82,8 +82,8 @@ public class LetPubEnrichmentRunner {
           // 合作式中断：恢复中断标志并立即返回当前统计，不再处理剩余 venue。
           // 注：worker.processVenue 声明里没有 throws InterruptedException，但底层爬虫
           // 的 Thread.sleep backoff 可能把 InterruptedException 包装为 RuntimeException
-          // 抛出，这里统一用 instanceof 识别。
-          if (e instanceof InterruptedException) {
+          // 抛出，所以同时检查直接 IE 和 cause 链里的 IE。
+          if (e instanceof InterruptedException || e.getCause() instanceof InterruptedException) {
             Thread.currentThread().interrupt();
             log.warn("LetPub 富化 Runner 被中断: venueId={} processedSoFar={}", v.id(), processed);
             return RunStats.of(total, processed, skipped, failed);
