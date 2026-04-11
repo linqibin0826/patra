@@ -1,13 +1,17 @@
 package com.patra.catalog.infra.adapter.storage;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.patra.catalog.domain.exception.FileDownloadException;
 import com.patra.catalog.domain.port.source.FileDownloadPort;
 import com.patra.catalog.domain.port.source.FileDownloadResult;
+import com.patra.common.error.trait.StandardErrorTrait;
 import com.patra.starter.objectstorage.ObjectStorageOperations;
 import com.patra.starter.objectstorage.domain.ObjectMetadata;
 import java.io.IOException;
@@ -71,5 +75,78 @@ class VenueCoverImageDownloadAdapterTest {
         .upload(eq("patra-catalog"), eq(targetKey), any(), metadataCaptor.capture());
     assertThat(metadataCaptor.getValue().getContentType()).isEqualTo("image/jpeg");
     assertThat(metadataCaptor.getValue().getContentLength()).isEqualTo(fileSize);
+  }
+
+  @Test
+  @DisplayName("下载的文件大小为 0 时应抛出 FileDownloadException(DEP_UNAVAILABLE)")
+  void shouldThrowWhenDownloadedFileIsEmpty() throws IOException {
+    // Given
+    URI sourceUrl = URI.create("https://example.com/empty.jpg");
+    String targetKey = "catalog/venue-cover/2.jpg";
+    Path tempFile = Files.createTempFile("cover-empty-", ".jpg");
+    when(fileDownloadPort.download(sourceUrl)).thenReturn(FileDownloadResult.of(tempFile, 0L));
+
+    // When
+    FileDownloadException ex =
+        catchThrowableOfType(
+            () -> adapter.downloadAndStore(sourceUrl, targetKey), FileDownloadException.class);
+
+    // Then
+    assertThat(ex).isNotNull();
+    assertThat(ex.getMessage()).contains("封面响应为空");
+    assertThat(ex.getErrorTraits()).contains(StandardErrorTrait.DEP_UNAVAILABLE);
+    assertThat(Files.exists(tempFile)).as("临时文件仍需清理").isFalse();
+  }
+
+  @Test
+  @DisplayName("下载的文件大小超过 16 MiB 时应抛出 FileDownloadException(RULE_VIOLATION)")
+  void shouldThrowWhenDownloadedFileExceedsMaxBytes() throws IOException {
+    // Given
+    URI sourceUrl = URI.create("https://example.com/huge.jpg");
+    String targetKey = "catalog/venue-cover/3.jpg";
+    Path tempFile = Files.createTempFile("cover-huge-", ".jpg");
+    long hugeSize = 17L * 1024 * 1024;
+    when(fileDownloadPort.download(sourceUrl))
+        .thenReturn(FileDownloadResult.of(tempFile, hugeSize));
+
+    // When
+    FileDownloadException ex =
+        catchThrowableOfType(
+            () -> adapter.downloadAndStore(sourceUrl, targetKey), FileDownloadException.class);
+
+    // Then
+    assertThat(ex).isNotNull();
+    assertThat(ex.getMessage()).contains("封面大小超限");
+    assertThat(ex.getErrorTraits()).contains(StandardErrorTrait.RULE_VIOLATION);
+    assertThat(Files.exists(tempFile)).as("临时文件仍需清理").isFalse();
+  }
+
+  @Test
+  @DisplayName("ObjectStorage.upload 抛 RuntimeException 时应包装为 FileDownloadException 并清理临时文件")
+  void shouldWrapUploadFailureAndDeleteTempFile() throws IOException {
+    // Given
+    URI sourceUrl = URI.create("https://example.com/nature.jpg");
+    String targetKey = "catalog/venue-cover/4.jpg";
+    Path tempFile = Files.createTempFile("cover-upload-fail-", ".jpg");
+    Files.writeString(tempFile, "fake-bytes");
+    long fileSize = Files.size(tempFile);
+
+    when(fileDownloadPort.download(sourceUrl))
+        .thenReturn(FileDownloadResult.of(tempFile, fileSize));
+    doThrow(new RuntimeException("MinIO unreachable"))
+        .when(objectStorage)
+        .upload(any(), any(), any(), any(ObjectMetadata.class));
+
+    // When
+    FileDownloadException ex =
+        catchThrowableOfType(
+            () -> adapter.downloadAndStore(sourceUrl, targetKey), FileDownloadException.class);
+
+    // Then
+    assertThat(ex).isNotNull();
+    assertThat(ex.getMessage()).contains("上传封面到对象存储失败");
+    assertThat(ex.getCause()).isInstanceOf(RuntimeException.class);
+    assertThat(ex.getErrorTraits()).contains(StandardErrorTrait.DEP_UNAVAILABLE);
+    assertThat(Files.exists(tempFile)).as("即使上传失败也需清理临时文件").isFalse();
   }
 }
