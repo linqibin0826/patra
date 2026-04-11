@@ -2,6 +2,7 @@ package com.patra.catalog.infra.batch.venue.letpub;
 
 import com.patra.catalog.infra.persistence.dao.CasRatingDao;
 import com.patra.catalog.infra.persistence.dao.JcrRatingDao;
+import com.patra.catalog.infra.persistence.dao.VenueDao;
 import com.patra.catalog.infra.persistence.entity.CasRatingEntity;
 import com.patra.catalog.infra.persistence.entity.JcrRatingEntity;
 import java.util.List;
@@ -13,15 +14,22 @@ import org.springframework.batch.infrastructure.item.ItemWriter;
 
 /// LetPub 期刊富化 Writer。
 ///
-/// 两步写入：
+/// **三步写入**：
 ///
 /// 1. 通过 {@link JcrRatingDao} 保存 JCR 评级行（→ `cat_venue_jcr_rating`），
 ///    **过滤已存在的年份**，仅插入新年份数据
 /// 2. 通过 {@link CasRatingDao} 保存 CAS 评级行（→ `cat_venue_cas_rating`），
 ///    **过滤已存在的 `(年份, 版本)` 组合**，仅插入新版本数据
+/// 3. 通过 {@link VenueDao#updateImageObjectKey} 更新封面对象键
+///    （仅当 `result.imageObjectKey()` 非空时）
 ///
 /// **断点续传**：不再依赖 `letpub_fetched_at` 标记字段，
 /// 改由 Reader 的 `NOT EXISTS` 子查询（基于目标年份）实现。
+///
+/// **封面更新为何不用 dirty check**：
+///
+/// Reader 是 `JpaPagingItemReader`，读出的 `VenueEntity` 处于 detached 状态，
+/// 无法通过 dirty check 自动持久化字段变更。因此由 Writer 显式 UPDATE。
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -31,6 +39,7 @@ public class LetPubVenueItemWriter implements ItemWriter<LetPubEnrichResult> {
 
   private final JcrRatingDao jcrRatingDao;
   private final CasRatingDao casRatingDao;
+  private final VenueDao venueDao;
 
   /// 将 LetPub 富化数据写入数据库。
   @Override
@@ -60,6 +69,11 @@ public class LetPubVenueItemWriter implements ItemWriter<LetPubEnrichResult> {
               newCasRatings.size(),
               result.casRatings().size() - newCasRatings.size());
         }
+      }
+
+      if (result.imageObjectKey() != null) {
+        venueDao.updateImageObjectKey(result.venueId(), result.imageObjectKey());
+        log.debug("Venue [id={}] 已更新封面对象键: {}", result.venueId(), result.imageObjectKey());
       }
     }
   }

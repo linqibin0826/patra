@@ -1,8 +1,10 @@
 package com.patra.catalog.infra.batch.venue.letpub;
 
 import com.patra.catalog.domain.port.enrichment.LetPubEnrichmentPort;
+import com.patra.catalog.domain.port.storage.VenueCoverImageDownloadPort;
 import com.patra.catalog.infra.persistence.dao.CasRatingDao;
 import com.patra.catalog.infra.persistence.dao.JcrRatingDao;
+import com.patra.catalog.infra.persistence.dao.VenueDao;
 import com.patra.catalog.infra.persistence.entity.VenueEntity;
 import jakarta.persistence.EntityManagerFactory;
 import java.util.Map;
@@ -57,6 +59,8 @@ public class LetPubEnrichmentJobConfig {
   private final EntityManagerFactory entityManagerFactory;
   private final JcrRatingDao jcrRatingDao;
   private final CasRatingDao casRatingDao;
+  private final VenueDao venueDao;
+  private final VenueCoverImageDownloadPort venueCoverImageDownloadPort;
 
   /// 定义 LetPub 富化 Job。
   @Bean
@@ -122,13 +126,14 @@ public class LetPubEnrichmentJobConfig {
   @Bean
   @StepScope
   public LetPubVenueItemProcessor letPubVenueItemProcessor() {
-    return new LetPubVenueItemProcessor(enrichmentPort, new LetPubDataMapper());
+    return new LetPubVenueItemProcessor(
+        enrichmentPort, new LetPubDataMapper(), venueCoverImageDownloadPort);
   }
 
   /// 创建 Writer Bean。
   @Bean
   @StepScope
   public LetPubVenueItemWriter letPubVenueItemWriter() {
-    return new LetPubVenueItemWriter(jcrRatingDao, casRatingDao);
+    return new LetPubVenueItemWriter(jcrRatingDao, casRatingDao, venueDao);
   }
 }
