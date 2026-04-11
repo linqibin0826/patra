@@ -31,8 +31,9 @@ import lombok.Builder;
 /// - `CiteScore` / `SJR` / `SNIP` → Elsevier Scopus API（`cat_venue_scopus_rating`）
 /// - `出版国家/语言/周期/创刊年份` → PubMed NLM Serfile（`cat_venue` 快速访问列）
 ///
-/// LetPub 的独占领域是 **JCR/WOS 非 IF 指标** + **CAS 分区与预警** + **LetPub 独有的
-/// 审稿/录用/APC 等投稿决策信息**。
+/// LetPub 作为**便捷的二级来源**覆盖：**JCR/WOS 年度指标**（Clarivate 是一级源）、
+/// **CAS 中科院分区与预警**（中科院是一级源）、以及 **LetPub 独有的审稿/录用/APC 等
+/// 投稿决策信息**。未来接入 Clarivate/中科院一级源时，JCR/CAS 类字段可继续由一级源补全。
 ///
 /// **字段来源边界**：
 /// 出版国家、出版语言、出版周期、创刊年份等基础元数据由 PubMed NLM Serfile
@@ -60,7 +61,7 @@ import lombok.Builder;
 /// @param jciRank JCI 排名
 /// @param jciPercentile JCI 学科百分位（如 `98.9%`）
 /// @param jciValue JCI 数值（Journal Citation Indicator 本身的数值，如 `11.14`）
-/// @param selfCitationRate 自引率（如 `1.6%`，按最新年）
+/// @param selfCitationRate 自引率（如 `1.6%`；Clarivate 年度指标，LetPub 仅提供最新年值）
 /// @param casPartitions CAS 中科院分区列表（支持多版本，不可变）
 /// @param casWarnings CAS 中科院期刊预警名单时间序列（按版本，不可变）
 /// @param reviewSpeedOfficial 官方审稿周期
@@ -82,7 +83,7 @@ public record LetPubVenueData(
     String researchArticlePercent,
     // 封面图（LetPub CDN 原始 URL）
     String coverImageSourceUrl,
-    // JCR/WOS 指标（按最新年一次性提取的快照）
+    // JCR/WOS 年度指标：Clarivate 每版 JCR 都按年发布，LetPub 作为二级来源仅提供最新年详细值
     String wosOverallQuartile,
     String jcrSubject,
     String jcrCollection,

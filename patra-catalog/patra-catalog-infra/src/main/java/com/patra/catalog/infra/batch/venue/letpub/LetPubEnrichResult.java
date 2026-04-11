@@ -34,7 +34,8 @@ public record LetPubEnrichResult(Long venueId, String imageObjectKey, JcrBatch j
 
   /// JCR 评级批次。
   ///
-  /// @param ratings JCR 评级实体列表（不可变，每年一行，最新年附加详情）
+  /// @param ratings JCR 评级实体列表（不可变，每年一行；详细分区/排名/百分位等 Clarivate 年度指标
+  ///     受 LetPub 数据源限制仅最新年可填，未来接入一级源后可回填历史年）
   public record JcrBatch(List<JcrRatingEntity> ratings) {
 
     public JcrBatch {

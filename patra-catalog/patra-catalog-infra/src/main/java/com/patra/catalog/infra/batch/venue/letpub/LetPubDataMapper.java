@@ -81,7 +81,8 @@ public class LetPubDataMapper {
       entity.setSourceUrl(sourceUrl);
       entity.setFetchedAt(now);
 
-      // 仅最新年填充分区/学科/排名等快照字段：LetPub 页面只展示当前最新年的详情，历史年份无法重建。
+      // 详细 JCR 字段仅对最新年填充：这些字段在 Clarivate 原生 JCR 里本就是按年发布的年度指标，
+      // LetPub 页面只提供最新年详细值，历史年暂留空，等后续接入 Clarivate 一级源后可回填。
       if (year == latestYear) {
         entity.setSubject(data.jcrSubject());
         entity.setCollection(data.jcrCollection());
