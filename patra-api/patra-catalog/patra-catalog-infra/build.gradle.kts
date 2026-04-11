@@ -19,8 +19,8 @@ dependencies {
     api(project(":patra-registry:patra-registry-api"))
     api(project(":patra-spring-boot-starter-core"))
 
-    // 对象存储（可选）
-    compileOnly(project(":patra-spring-boot-starter-object-storage"))
+    // 对象存储：VenueCoverImageDownloadAdapter 依赖此 starter 上传封面图到 MinIO/S3
+    api(project(":patra-spring-boot-starter-object-storage"))
 
     // Elasticsearch
     api("org.springframework.boot:spring-boot-starter-data-elasticsearch")
