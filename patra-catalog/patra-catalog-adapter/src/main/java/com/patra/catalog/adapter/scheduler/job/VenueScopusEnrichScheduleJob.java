@@ -11,7 +11,8 @@ import org.springframework.stereotype.Component;
 
 /// Scopus 期刊指标富化定时任务。
 ///
-/// 通过 XXL-Job 控制台手动触发，启动 Scopus 期刊指标的批量富化 Job。
+/// 通过 XXL-Job 控制台手动触发，启动 Scopus 期刊指标的循环式富化任务
+/// （worker loop + 游标分页，由 App 层 Runner/Worker/Persister 三段结构驱动）。
 ///
 /// **JobHandler 名称**: `venueScopusEnrichJob`
 ///
