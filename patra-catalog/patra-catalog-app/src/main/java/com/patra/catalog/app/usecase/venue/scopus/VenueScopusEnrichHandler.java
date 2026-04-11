@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 /// 委托 [ScopusEnrichmentRunner] 同步执行 worker loop，返回完整的运行统计。
 ///
 /// **事务说明**：本方法**不使用** `@Transactional`——外层循环非事务，
-/// 事务边界由 [ScopusEnrichmentWorker#processVenue] 的 `REQUIRES_NEW` 管理。
+/// 事务边界由 [ScopusEnrichmentPersister#persist] 的 `REQUIRES_NEW` 管理。
 ///
 /// **异常处理**：[DomainException] 与 [ApplicationException] 直接传播，
 /// 其他 [RuntimeException] 包装为 `ApplicationException(CAT_1303)` 统一返回。

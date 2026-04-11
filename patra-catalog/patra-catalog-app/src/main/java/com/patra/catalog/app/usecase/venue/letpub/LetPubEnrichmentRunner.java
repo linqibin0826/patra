@@ -14,14 +14,13 @@ import org.springframework.stereotype.Service;
 /// **外循环职责**：
 ///
 /// 1. 用 keyset pagination 分批读取需要富化的 venue（`lastId` 前进）
-/// 2. 对每条调用 [LetPubEnrichmentWorker]（运行在独立 REQUIRES_NEW 事务里）
+/// 2. 对每条调用 [LetPubEnrichmentWorker]（非事务）
 /// 3. 捕获任何异常并计入 `failed`，保证整批 run 不中断
 /// 4. 返回完整统计 [VenueEnrichRunStats]
 ///
-/// **为什么不用 @Transactional**：外循环跨 batch 和 venue，事务边界应由
-/// [LetPubEnrichmentWorker] 在 venue 粒度管理。Runner 本身是纯循环协调，
-/// 若加 `@Transactional` 会与 Worker 的 `REQUIRES_NEW` 产生嵌套事务语义，
-/// 反而破坏单 venue 隔离。
+/// **为什么不用 @Transactional**：外循环跨 batch 和 venue，Runner 本身是纯循环协调。
+/// 事务边界应收紧到 [LetPubEnrichmentPersister#persist] 的单方法 DB 写入窗口。
+/// 若在 Runner 上加 `@Transactional` 会人为拉长事务生命周期，反而破坏单 venue 隔离。
 ///
 /// **Keyset 游标的必要性**：`NOT EXISTS` 守卫让成功 venue 自动从下一批候选集消失，
 /// 但失败的 venue 依然匹配查询——若无 `id > :lastId` 游标，失败 venue 会被无限重捞

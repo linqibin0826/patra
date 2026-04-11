@@ -73,7 +73,7 @@ public interface VenueDao extends JpaRepository<VenueEntity, Long> {
 
   /// 仅更新 `cat_venue.image_object_key` 列。
   ///
-  /// **使用场景**：LetPub 富化 Worker 在 `REQUIRES_NEW` 事务里写入封面对象键时，
+  /// **使用场景**：LetPub 富化在 Persister 的 `REQUIRES_NEW` 事务里写入封面对象键时，
   /// 并未加载 `VenueEntity` 聚合（只拿到 `VenueSnapshot` 投影），因此不能依赖
   /// dirty check——必须通过此显式 UPDATE 把封面键写回 `cat_venue`，避免为了改
   /// 一个字段而加载整张表行。

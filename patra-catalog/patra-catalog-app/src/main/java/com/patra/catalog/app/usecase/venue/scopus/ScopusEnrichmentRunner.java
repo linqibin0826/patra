@@ -18,7 +18,7 @@ import org.springframework.stereotype.Service;
 /// **外循环职责**：
 ///
 /// 1. 用 keyset pagination 分批读取需要富化的 venue（`lastId` 前进）
-/// 2. 对每条调用 [ScopusEnrichmentWorker]（运行在独立 REQUIRES_NEW 事务里）
+/// 2. 对每条调用 [ScopusEnrichmentWorker]（非事务）
 /// 3. 两次 venue 调用之间通过 [doRateLimitSleep] 插入 400ms 停顿（首次不等）
 /// 4. 捕获任何异常并计入 `failed`，保证整批 run 不中断
 /// 5. 返回完整统计 [VenueEnrichRunStats]
