@@ -93,6 +93,9 @@ __pycache__/
 # Hook execution state (session-specific)
 .claude/hooks/state/
 
+# Hook tmp files (auto-generated per Java file modification)
+.claude/hooks/.java-files-modified
+
 # Backup directories
 .claude.backup-*/
 
