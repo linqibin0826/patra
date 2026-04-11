@@ -68,24 +68,24 @@ public enum CatalogErrorCode implements ErrorCodeLike {
 
   /// 表示 LetPub 期刊富化失败。
   ///
-  /// 在执行 LetPub 期刊富化批处理时发生。可能由于：
+  /// 在执行 LetPub 期刊富化（worker loop 循环式任务）时发生。可能由于：
   ///
-  /// - Spring Batch Job 启动失败
-  /// - 爬虫连接异常或限流过于频繁
-  /// - 数据库更新失败
+  /// - 爬虫连接异常或反爬限流（Apache HttpClient 5 + 青果隧道代理）
+  /// - LetPub 详情页 HTML 解析失败或页面结构变更
+  /// - 数据库写入失败（`cat_venue_jcr_rating` / `cat_venue_cas_rating` / `cat_venue_cas_warning`）
   ///
-  /// 请检查 Spring Batch 作业状态和网络连接。
+  /// 请检查 LetPub 站点可用性、隧道代理额度和目标数据库状态。
   CAT_1302("CAT-1302", 500),
 
   /// 表示 Scopus 期刊指标富化失败。
   ///
-  /// 在执行 Scopus 期刊指标富化批处理时发生。可能由于：
+  /// 在执行 Scopus 期刊指标富化（worker loop 循环式任务）时发生。可能由于：
   ///
-  /// - Spring Batch Job 启动失败
-  /// - Scopus API 连接异常或限流
-  /// - 数据库更新失败
+  /// - Scopus API 连接异常或触发限流（API 限速 2-3 次/秒）
+  /// - Elsevier API Key 无效、过期或配额耗尽
+  /// - 数据库写入失败（`cat_venue_scopus_rating`）
   ///
-  /// 请检查 Spring Batch 作业状态和 Scopus API Key 配置。
+  /// 请检查 Scopus API 可用性、API Key 配置和目标数据库状态。
   CAT_1303("CAT-1303", 500),
 
   // ===== ROR 机构导入错误 (14xx) =====
