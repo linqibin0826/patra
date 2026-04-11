@@ -8,19 +8,20 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 
-/// 处理单个 venue 的 Scopus 富化事务单元。
+/// 处理单个 venue 的 Scopus 富化编排单元（非事务）。
+///
+/// **架构分层**：
+///
+/// - **本类（Worker）**：非事务，负责编排顺序——检查 ISSN → HTTP 爬取 →
+///   委托 [ScopusEnrichmentPersister] 持久化。HTTP 调用发生在事务外，
+///   不占用 DB 连接。
+/// - **[ScopusEnrichmentPersister]**：事务门面，`@Transactional(REQUIRES_NEW)`
+///   包一层 `PersistPort.persist` 调用。
+/// - **[ScopusEnrichmentRunner]**：外循环协调器 + 400ms rate limit。
 ///
 /// 与 LetPub 版本相比更简单：Scopus API 不提供期刊封面，故无封面下载逻辑，
-/// 依赖集减少为 [ScopusEnrichmentPort] 和 [ScopusEnrichmentPersistPort] 两个。
-///
-/// **为什么与 `ScopusEnrichmentRunner` 分离**：
-///
-/// Spring AOP 自调用不触发代理——`Runner.run()` 内直接 `this.processVenue()`
-/// 不会激活 `@Transactional`。拆成两个 Spring bean 通过依赖注入跨类调用，
-/// 才能让每个 venue 真正运行在独立事务里。
+/// 依赖只剩 [ScopusEnrichmentPort] 和 [ScopusEnrichmentPersister] 两个。
 ///
 /// **返回值语义**：三种 [Outcome] 用于 Runner 统计，不是失败标志。
 /// 任何 `Exception` 都会向上传播，由 Runner 的 try/catch 计入 `failed`。
@@ -33,11 +34,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class ScopusEnrichmentWorker {
 
   private final ScopusEnrichmentPort scraperPort;
-  private final ScopusEnrichmentPersistPort persistPort;
+  private final ScopusEnrichmentPersister persister;
 
   /// 单 venue 处理结果的三种正常分支。
   public enum Outcome {
-    /// 成功完成持久化（至少调用一次 persistPort.persist）
+    /// 成功完成持久化（至少调用一次 persister.persist）
     PROCESSED,
     /// venue 在 Scopus 未检索到数据（scraperPort 返回 empty）
     NOT_FOUND_IN_SOURCE,
@@ -45,16 +46,16 @@ public class ScopusEnrichmentWorker {
     MISSING_ISSN
   }
 
-  /// 处理单个 venue 的 Scopus 富化。
+  /// 处理单个 venue 的 Scopus 富化编排。
   ///
-  /// 事务边界：每次调用独占一个 REQUIRES_NEW 事务，`Exception` 触发回滚。
+  /// **本方法本身不是事务**——事务边界在 [ScopusEnrichmentPersister#persist] 里。
+  /// HTTP 爬取在事务外执行，只有 `persister.persist(...)` 进入独立 `REQUIRES_NEW` 事务。
   ///
-  /// 流程：检查 ISSN → 爬取 → 调 persistPort 持久化。无封面下载路径。
+  /// 流程：检查 ISSN → 爬取 → 调 Persister 持久化。无封面下载路径。
   ///
   /// @param venue 待处理 venue 快照，`id` 不为 null；`issnL` 允许为 null（返回 MISSING_ISSN）
   /// @return 三种 [Outcome] 之一：PROCESSED / NOT_FOUND_IN_SOURCE / MISSING_ISSN
   /// @throws RuntimeException 任何下游 port 抛出的运行时异常都会向上传播
-  @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
   public Outcome processVenue(VenueSnapshot venue) {
     if (venue.issnL() == null || venue.issnL().isBlank()) {
       log.debug("Venue [id={}] ISSN-L 为空，跳过 Scopus 富化", venue.id());
@@ -68,7 +69,7 @@ public class ScopusEnrichmentWorker {
     }
 
     ScopusVenueData data = result.get();
-    ScopusEnrichmentPersistPort.PersistStats stats = persistPort.persist(venue.id(), data);
+    ScopusEnrichmentPersistPort.PersistStats stats = persister.persist(venue.id(), data);
 
     log.info(
         "Venue [id={}, issn={}] Scopus 富化成功 ratingsInserted={}",

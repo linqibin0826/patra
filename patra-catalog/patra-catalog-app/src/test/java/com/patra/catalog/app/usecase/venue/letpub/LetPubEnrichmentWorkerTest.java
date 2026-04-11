@@ -35,14 +35,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class LetPubEnrichmentWorkerTest {
 
   @Mock LetPubEnrichmentPort scraperPort;
-  @Mock LetPubEnrichmentPersistPort persistPort;
+  @Mock LetPubEnrichmentPersister persister;
   @Mock VenueCoverImageDownloadPort coverPort;
 
   LetPubEnrichmentWorker worker;
 
   @BeforeEach
   void setUp() {
-    worker = new LetPubEnrichmentWorker(scraperPort, persistPort, coverPort);
+    worker = new LetPubEnrichmentWorker(scraperPort, persister, coverPort);
   }
 
   @Test
@@ -53,13 +53,13 @@ class LetPubEnrichmentWorkerTest {
     when(scraperPort.findByIssn("1234-5678")).thenReturn(Optional.of(data));
     when(coverPort.downloadAndStore(any(), eq("catalog/venue-cover/100.jpg")))
         .thenReturn("catalog/venue-cover/100.jpg");
-    when(persistPort.persist(100L, data, "catalog/venue-cover/100.jpg"))
+    when(persister.persist(100L, data, "catalog/venue-cover/100.jpg"))
         .thenReturn(new LetPubEnrichmentPersistPort.PersistStats(10, 5, 2, true));
 
     Outcome outcome = worker.processVenue(v);
 
     assertThat(outcome).isEqualTo(Outcome.PROCESSED);
-    verify(persistPort).persist(100L, data, "catalog/venue-cover/100.jpg");
+    verify(persister).persist(100L, data, "catalog/venue-cover/100.jpg");
   }
 
   @Test
@@ -70,7 +70,7 @@ class LetPubEnrichmentWorkerTest {
     Outcome outcome = worker.processVenue(v);
 
     assertThat(outcome).isEqualTo(Outcome.MISSING_ISSN);
-    verifyNoInteractions(scraperPort, persistPort, coverPort);
+    verifyNoInteractions(scraperPort, persister, coverPort);
   }
 
   @Test
@@ -82,7 +82,7 @@ class LetPubEnrichmentWorkerTest {
     Outcome outcome = worker.processVenue(v);
 
     assertThat(outcome).isEqualTo(Outcome.NOT_FOUND_IN_SOURCE);
-    verifyNoInteractions(persistPort, coverPort);
+    verifyNoInteractions(persister, coverPort);
   }
 
   @Test
@@ -93,13 +93,13 @@ class LetPubEnrichmentWorkerTest {
     when(scraperPort.findByIssn("1234-5678")).thenReturn(Optional.of(data));
     when(coverPort.downloadAndStore(any(), any()))
         .thenThrow(new FileDownloadException("network", StandardErrorTrait.DEP_UNAVAILABLE));
-    when(persistPort.persist(eq(100L), eq(data), isNull()))
+    when(persister.persist(eq(100L), eq(data), isNull()))
         .thenReturn(new LetPubEnrichmentPersistPort.PersistStats(1, 0, 0, false));
 
     Outcome outcome = worker.processVenue(v);
 
     assertThat(outcome).isEqualTo(Outcome.PROCESSED);
-    verify(persistPort).persist(100L, data, null);
+    verify(persister).persist(100L, data, null);
   }
 
   @Test
@@ -119,14 +119,14 @@ class LetPubEnrichmentWorkerTest {
     VenueSnapshot v = VenueSnapshot.of(100L, "1234-5678", "catalog/venue-cover/100.jpg");
     LetPubVenueData data = letPubDataWithCoverUrl();
     when(scraperPort.findByIssn("1234-5678")).thenReturn(Optional.of(data));
-    when(persistPort.persist(eq(100L), eq(data), isNull()))
+    when(persister.persist(eq(100L), eq(data), isNull()))
         .thenReturn(new LetPubEnrichmentPersistPort.PersistStats(1, 0, 0, false));
 
     Outcome outcome = worker.processVenue(v);
 
     assertThat(outcome).isEqualTo(Outcome.PROCESSED);
     verifyNoInteractions(coverPort);
-    verify(persistPort).persist(100L, data, null);
+    verify(persister).persist(100L, data, null);
   }
 
   @Test
@@ -135,14 +135,14 @@ class LetPubEnrichmentWorkerTest {
     VenueSnapshot v = VenueSnapshot.of(100L, "1234-5678", null);
     LetPubVenueData data = letPubDataWithoutCoverUrl();
     when(scraperPort.findByIssn("1234-5678")).thenReturn(Optional.of(data));
-    when(persistPort.persist(eq(100L), eq(data), isNull()))
+    when(persister.persist(eq(100L), eq(data), isNull()))
         .thenReturn(new LetPubEnrichmentPersistPort.PersistStats(1, 0, 0, false));
 
     Outcome outcome = worker.processVenue(v);
 
     assertThat(outcome).isEqualTo(Outcome.PROCESSED);
     verifyNoInteractions(coverPort);
-    verify(persistPort).persist(100L, data, null);
+    verify(persister).persist(100L, data, null);
   }
 
   @Test
@@ -152,7 +152,7 @@ class LetPubEnrichmentWorkerTest {
     LetPubVenueData data = letPubDataWithCoverUrl();
     when(scraperPort.findByIssn("1234-5678")).thenReturn(Optional.of(data));
     when(coverPort.downloadAndStore(any(), any())).thenReturn("catalog/venue-cover/100.jpg");
-    when(persistPort.persist(100L, data, "catalog/venue-cover/100.jpg"))
+    when(persister.persist(100L, data, "catalog/venue-cover/100.jpg"))
         .thenThrow(new RuntimeException("db constraint violation"));
 
     assertThatThrownBy(() -> worker.processVenue(v))

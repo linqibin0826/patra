@@ -11,16 +11,21 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 
-/// 处理单个 venue 的 LetPub 富化事务单元。
+/// 处理单个 venue 的 LetPub 富化编排单元（非事务）。
 ///
-/// **为什么与 [LetPubEnrichmentRunner] 分离**：
+/// **架构分层**：
 ///
-/// Spring AOP 自调用不触发代理——`Runner.run()` 内直接 `this.processVenue()`
-/// 不会激活 `@Transactional`。拆成两个 Spring bean 通过依赖注入跨类调用，
-/// 才能让每个 venue 真正运行在独立事务里。
+/// - **本类（Worker）**：非事务，负责编排顺序——检查 ISSN → HTTP 爬取 → 按需
+///   下载封面 → 委托 [LetPubEnrichmentPersister] 持久化。HTTP 调用和
+///   `Thread.sleep` backoff 发生在事务外，不占用 DB 连接。
+/// - **[LetPubEnrichmentPersister]**：事务门面，`@Transactional(REQUIRES_NEW)`
+///   包一层 `PersistPort.persist` 调用，把 DB 连接占用收缩到最紧凑的 DB-only 窗口。
+/// - **[LetPubEnrichmentRunner]**：外循环协调器，keyset pagination 喂 venue。
+///
+/// **为什么与 [LetPubEnrichmentRunner] 是两个 bean**：Spring AOP 自调用不触发代理，
+/// 而 [LetPubEnrichmentPersister] 需要通过跨 bean 调用才能激活 `@Transactional`。
+/// Runner → Worker → Persister 是三层独立 bean，AOP 代理在每一跳都生效。
 ///
 /// **返回值语义**：三种 [Outcome] 用于 Runner 统计，不是失败标志。
 /// 任何 `Exception` 都会向上传播，由 Runner 的 try/catch 计入 `failed`。
@@ -33,12 +38,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class LetPubEnrichmentWorker {
 
   private final LetPubEnrichmentPort scraperPort;
-  private final LetPubEnrichmentPersistPort persistPort;
+  private final LetPubEnrichmentPersister persister;
   private final VenueCoverImageDownloadPort coverImageDownloadPort;
 
   /// 单 venue 处理结果的三种正常分支。
   public enum Outcome {
-    /// 成功完成持久化（至少调用一次 persistPort.persist）
+    /// 成功完成持久化（至少调用一次 persister.persist）
     PROCESSED,
     /// venue 在 LetPub 未检索到数据（scraperPort 返回 empty）
     NOT_FOUND_IN_SOURCE,
@@ -46,16 +51,17 @@ public class LetPubEnrichmentWorker {
     MISSING_ISSN
   }
 
-  /// 处理单个 venue 的 LetPub 富化。
+  /// 处理单个 venue 的 LetPub 富化编排。
   ///
-  /// 事务边界：每次调用独占一个 REQUIRES_NEW 事务，`Exception` 触发回滚。
+  /// **本方法本身不是事务**——事务边界在 [LetPubEnrichmentPersister#persist] 里。
+  /// HTTP 爬取和封面下载在事务外执行，只有最后一步 `persister.persist(...)` 会
+  /// 进入独立 `REQUIRES_NEW` 事务。
   ///
-  /// 流程：检查 ISSN → 爬取 → 按需下载封面 → 调 persistPort 持久化。
+  /// 流程：检查 ISSN → 爬取 → 按需下载封面 → 调 Persister 持久化。
   ///
   /// @param venue 待处理 venue 快照，`id` 不为 null；`issnL` 允许为 null（返回 MISSING_ISSN）
   /// @return 三种 [Outcome] 之一：PROCESSED / NOT_FOUND_IN_SOURCE / MISSING_ISSN
   /// @throws RuntimeException 任何下游 port 抛出的运行时异常都会向上传播
-  @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
   public Outcome processVenue(VenueSnapshot venue) {
     if (venue.issnL() == null || venue.issnL().isBlank()) {
       log.debug("Venue [id={}] ISSN-L 为空，跳过 LetPub 富化", venue.id());
@@ -71,7 +77,7 @@ public class LetPubEnrichmentWorker {
     LetPubVenueData data = result.get();
     String coverObjectKey = downloadCoverIfNeeded(venue, data);
     LetPubEnrichmentPersistPort.PersistStats stats =
-        persistPort.persist(venue.id(), data, coverObjectKey);
+        persister.persist(venue.id(), data, coverObjectKey);
 
     log.info(
         "Venue [id={}, issn={}] LetPub 富化成功 JCR={} CAS={} Warning={} cover={}",
@@ -86,12 +92,12 @@ public class LetPubEnrichmentWorker {
 
   /// 按需下载封面图到对象存储，失败时宽容处理不影响主流程。
   ///
-  /// 跳过条件：venue 已存在封面键 / LetPub 未返回 URL / URL 格式非法 / 下载时抛异常。
-  /// "已存在封面键"的判断直接读 snapshot 里的 projection 字段，避免额外 PK 查询。
+  /// 跳过条件：venue 已有封面键（读 `venue.existingCoverKey()` 得到非 null）/
+  /// LetPub 未返回 URL / URL 格式非法 / 下载时抛异常。
   ///
-  /// @param venue 待处理 venue 快照，`existingCoverKey` 非 null 时跳过下载
+  /// @param venue 目标 venue 快照
   /// @param data LetPub 爬取数据，从中提取 coverImageSourceUrl
-  /// @return 新下载的对象键；任何跳过或失败路径返回 null（调用方传 null 给 persistPort）
+  /// @return 新下载的对象键；任何跳过或失败路径返回 null（调用方传 null 给 persister）
   private String downloadCoverIfNeeded(VenueSnapshot venue, LetPubVenueData data) {
     if (venue.existingCoverKey() != null) {
       log.debug("Venue [id={}] 已存在封面对象键，跳过下载", venue.id());
