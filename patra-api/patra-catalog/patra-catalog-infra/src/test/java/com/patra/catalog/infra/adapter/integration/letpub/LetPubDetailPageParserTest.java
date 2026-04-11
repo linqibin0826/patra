@@ -154,7 +154,7 @@ class LetPubDetailPageParserTest {
     @Test
     @DisplayName("应从 JIF 子表第 5 列 lay-percent 属性提取百分位")
     void shouldExtractJifPercentile() {
-      assertThat(data.jifPercentile()).isEqualTo("99%");
+      assertThat(data.jifPercentile()).isEqualTo(99.0);
     }
 
     @Test
@@ -172,7 +172,7 @@ class LetPubDetailPageParserTest {
     @Test
     @DisplayName("应从 JCI 子表第 5 列 lay-percent 属性提取百分位")
     void shouldExtractJciPercentile() {
-      assertThat(data.jciPercentile()).isEqualTo("98.9%");
+      assertThat(data.jciPercentile()).isEqualTo(98.9);
     }
 
     @Test
@@ -184,7 +184,7 @@ class LetPubDetailPageParserTest {
     @Test
     @DisplayName("应从独立行 \"自引率\" 提取百分比（剥离趋势图按钮 span）")
     void shouldExtractSelfCitationRate() {
-      assertThat(data.selfCitationRate()).isEqualTo("1.6%");
+      assertThat(data.selfCitationRate()).isEqualTo(1.6);
     }
   }
 

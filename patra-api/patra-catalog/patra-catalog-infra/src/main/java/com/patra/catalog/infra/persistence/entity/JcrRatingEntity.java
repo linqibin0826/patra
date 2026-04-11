@@ -75,9 +75,9 @@ public class JcrRatingEntity extends ChildJpaEntity {
   @Column(name = "jif_rank", length = 20)
   private String jifRank;
 
-  /// JIF 学科百分位（如 "99%"）
-  @Column(name = "jif_percentile", length = 10)
-  private String jifPercentile;
+  /// JIF 学科百分位（0.00-100.00，如 99.00）
+  @Column(name = "jif_percentile", precision = 5, scale = 2)
+  private BigDecimal jifPercentile;
 
   /// JCI 学科分类（多数情况下同 subject）
   @Column(name = "jci_subject", length = 100)
@@ -95,17 +95,17 @@ public class JcrRatingEntity extends ChildJpaEntity {
   @Column(name = "jci_rank", length = 20)
   private String jciRank;
 
-  /// JCI 学科百分位（如 "98.9%"）
-  @Column(name = "jci_percentile", length = 10)
-  private String jciPercentile;
+  /// JCI 学科百分位（0.00-100.00，如 98.90）
+  @Column(name = "jci_percentile", precision = 5, scale = 2)
+  private BigDecimal jciPercentile;
 
   /// JCI 数值（Journal Citation Indicator 本身的数值，如 11.14）
   @Column(name = "jci_value", precision = 10, scale = 4)
   private BigDecimal jciValue;
 
-  /// 自引率（如 "1.6%"；Clarivate 年度指标，LetPub 仅提供最新年值）
-  @Column(name = "self_citation_rate", length = 10)
-  private String selfCitationRate;
+  /// 自引率（0.00-100.00，如 1.60；Clarivate 年度指标，LetPub 仅提供最新年值）
+  @Column(name = "self_citation_rate", precision = 5, scale = 2)
+  private BigDecimal selfCitationRate;
 
   /// 研究方向/学科领域
   @Column(name = "research_direction", length = 200)
