@@ -86,9 +86,10 @@ public class LetPubVenueItemProcessor implements ItemProcessor<VenueEntity, LetP
   /// - 已存在 `imageObjectKey`（幂等，不重复下载）
   /// - LetPub 未返回封面 URL（数据缺失）
   ///
-  /// **失败处理**：
+  /// **失败处理**（均不阻断主流程）：
   ///
-  /// - `FileDownloadException` → WARN 日志，返回 null，不阻断主流程
+  /// - `IllegalArgumentException`（URL 格式非法）→ WARN 日志，返回 null
+  /// - `FileDownloadException` → WARN 日志，返回 null
   ///
   /// @return 新下载的对象键；若跳过或失败返回 null
   private String downloadCoverIfNeeded(VenueEntity item, LetPubVenueData data) {
@@ -99,8 +100,17 @@ public class LetPubVenueItemProcessor implements ItemProcessor<VenueEntity, LetP
       return null;
     }
     String stableKey = "catalog/venue-cover/" + item.getId() + ".jpg";
+    URI sourceUri;
     try {
-      URI sourceUri = URI.create(data.coverImageSourceUrl());
+      sourceUri = URI.create(data.coverImageSourceUrl());
+    } catch (IllegalArgumentException e) {
+      log.warn(
+          "venue 封面 URL 格式非法（主流程继续）: venueId={} sourceUrl={}",
+          item.getId(),
+          data.coverImageSourceUrl());
+      return null;
+    }
+    try {
       return coverImageDownloadPort.downloadAndStore(sourceUri, stableKey);
     } catch (FileDownloadException e) {
       log.warn(

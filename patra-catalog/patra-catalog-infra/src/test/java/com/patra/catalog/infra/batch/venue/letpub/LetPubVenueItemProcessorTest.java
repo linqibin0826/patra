@@ -186,6 +186,47 @@ class LetPubVenueItemProcessorTest {
   }
 
   @Test
+  @DisplayName("LetPub 返回的封面 URL 格式非法时应跳过下载且不阻断主流程")
+  void shouldContinueProcessingWhenCoverUrlIsMalformed() throws Exception {
+    // Given — 带空格的 URL 会让 URI.create 抛 IllegalArgumentException
+    VenueEntity entity = createVenueEntity(500L, "7777-8888");
+    LetPubVenueData data =
+        LetPubVenueData.builder()
+            .letPubJournalId("6054")
+            .letPubName("Nature")
+            .coverImageSourceUrl("not a valid url with spaces")
+            .build();
+    when(enrichmentPort.findByIssn("7777-8888")).thenReturn(Optional.of(data));
+
+    // When
+    LetPubEnrichResult result = processor.process(entity);
+
+    // Then
+    assertThat(result).as("非法 URL 不应阻断主流程").isNotNull();
+    assertThat(result.venueId()).isEqualTo(500L);
+    assertThat(result.imageObjectKey()).as("非法 URL 时不应写入对象键").isNull();
+    verify(coverImageDownloadPort, never()).downloadAndStore(any(), any());
+  }
+
+  @Test
+  @DisplayName("LetPub 未返回封面 URL 时应跳过下载（数据缺失）")
+  void shouldSkipDownloadWhenCoverSourceUrlIsNull() throws Exception {
+    // Given — coverImageSourceUrl 未设置，默认为 null
+    VenueEntity entity = createVenueEntity(600L, "9999-0000");
+    LetPubVenueData data =
+        LetPubVenueData.builder().letPubJournalId("6054").letPubName("Nature").build();
+    when(enrichmentPort.findByIssn("9999-0000")).thenReturn(Optional.of(data));
+
+    // When
+    LetPubEnrichResult result = processor.process(entity);
+
+    // Then
+    assertThat(result).isNotNull();
+    assertThat(result.imageObjectKey()).isNull();
+    verify(coverImageDownloadPort, never()).downloadAndStore(any(), any());
+  }
+
+  @Test
   @DisplayName("当 VenueEntity 已存在 imageObjectKey 时应跳过下载（幂等）")
   void shouldSkipDownloadWhenImageObjectKeyAlreadyExists() throws Exception {
     // Given
