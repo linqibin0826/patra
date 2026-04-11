@@ -76,7 +76,11 @@ public class LetPubVenueItemProcessor implements ItemProcessor<VenueEntity, LetP
         jcrRatings.size(),
         casRatings.size());
 
-    return LetPubEnrichResult.of(venueId, imageObjectKey, jcrRatings, casRatings);
+    return LetPubEnrichResult.of(
+        venueId,
+        imageObjectKey,
+        LetPubEnrichResult.JcrBatch.of(jcrRatings),
+        LetPubEnrichResult.CasBatch.of(casRatings));
   }
 
   /// 按需下载封面到对象存储。
@@ -105,7 +109,7 @@ public class LetPubVenueItemProcessor implements ItemProcessor<VenueEntity, LetP
     if (sourceUrl == null || sourceUrl.isBlank()) {
       return null;
     }
-    String stableKey = "catalog/venue-cover/" + item.getId() + ".jpg";
+    String stableKey = buildCoverObjectKey(item.getId());
     URI sourceUri;
     try {
       sourceUri = URI.create(sourceUrl);
@@ -127,6 +131,14 @@ public class LetPubVenueItemProcessor implements ItemProcessor<VenueEntity, LetP
       log.warn("venue 封面下载意外异常（主流程继续）: venueId={} sourceUrl={}", item.getId(), sourceUrl, e);
       return null;
     }
+  }
+
+  /// 构建封面对象键：`catalog/venue-cover/{venueId}.jpg`。
+  ///
+  /// 稳定键（key by venueId）同一 venue 每次都解析为相同的对象路径，
+  /// 天然支持"覆盖同一张图"和"幂等跳过"两种语义。
+  private static String buildCoverObjectKey(Long venueId) {
+    return "catalog/venue-cover/" + venueId + ".jpg";
   }
 
   /// 构建 LetPub 详情页 URL，用于数据溯源。

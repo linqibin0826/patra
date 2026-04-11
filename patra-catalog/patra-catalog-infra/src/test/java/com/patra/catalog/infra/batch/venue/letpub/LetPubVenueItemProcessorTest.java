@@ -98,15 +98,15 @@ class LetPubVenueItemProcessorTest {
     assertThat(result.venueId()).isEqualTo(100L);
 
     // JCR: 1 条（一年的 IF 趋势）
-    assertThat(result.jcrRatings()).hasSize(1);
-    assertThat(result.jcrRatings().getFirst().getJifQuartile()).isEqualTo("Q1");
+    assertThat(result.jcr().ratings()).hasSize(1);
+    assertThat(result.jcr().ratings().getFirst().getJifQuartile()).isEqualTo("Q1");
 
     // CAS: 2 条（新锐版 + 升级版）
-    assertThat(result.casRatings()).hasSize(2);
-    assertThat(result.casRatings())
+    assertThat(result.cas().ratings()).hasSize(2);
+    assertThat(result.cas().ratings())
         .extracting(e -> e.getEdition())
         .containsExactlyInAnyOrder("新锐版", "升级版");
-    assertThat(result.casRatings()).allMatch(e -> "1区".equals(e.getMajorQuartile()));
+    assertThat(result.cas().ratings()).allMatch(e -> "1区".equals(e.getMajorQuartile()));
 
     verify(enrichmentPort).findByIssn("0028-0836");
   }
