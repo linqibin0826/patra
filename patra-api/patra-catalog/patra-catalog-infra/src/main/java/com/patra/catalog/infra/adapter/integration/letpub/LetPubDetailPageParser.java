@@ -71,6 +71,21 @@ public class LetPubDetailPageParser {
   /// 单引号字符串提取。
   private static final Pattern QUOTED_STRING = Pattern.compile("'([^']*)'");
 
+  /// CAS 预警名单单行解析正则。
+  ///
+  /// 匹配形如 `2026年03月发布的新锐学术版：不在预警名单中` 的文本：
+  ///
+  /// - group(1) = 发布年份（`2026`）
+  /// - group(2) = 发布月份（`03`，可能是 1-2 位数字）
+  /// - group(3) = 版本标签（`新锐学术版`）
+  /// - group(4) = 状态文本（`不在预警名单中` / `高风险预警` / `中风险预警` 等）
+  private static final Pattern CAS_WARNING_LINE =
+      Pattern.compile("(\\d{4})年(\\d{1,2})月发布的([^：:]+)[：:]\\s*(.*)");
+
+  /// CAS 预警名单按段分隔：多个 `<br>` 或换行。
+  private static final Pattern CAS_WARNING_SEGMENT_SEP =
+      Pattern.compile("(?i)(?:<br\\s*/?>)\\s*(?:<br\\s*/?>)+");
+
   // ========== 业务标签常量（LetPub 页面固定结构） ==========
 
   /// 期刊信息主表格的表头文本（定位主表格用）。
@@ -442,11 +457,90 @@ public class LetPubDetailPageParser {
 
   /// 解析 CAS 中科院期刊预警名单时间序列。
   ///
-  /// 待 Phase 2B TDD 重写：按 `<br><br>` 分段后逐条解析为 `CasWarningRecord` 列表。
-  /// 当前占位实现什么都不做，Builder 的 `casWarnings` 会默认为空 List。
+  /// LetPub 页面的 "期刊分区表预警名单" 行包含多个历史版本记录，每个版本一段，
+  /// 各段以 `<br><br>` 分隔。每段形如：
+  ///
+  /// ```
+  /// 2026年03月发布的新锐学术版：不在预警名单中
+  /// 2025年03月发布的2025版：高风险预警
+  /// ```
+  ///
+  /// **解析步骤**：
+  ///
+  /// 1. 拿到值 td 的 `html()` 保留 `<br>` 分隔符
+  /// 2. 按连续两个以上的 `<br>` 分段
+  /// 3. 对每段用 Jsoup 清理 HTML 得到纯文本
+  /// 4. 用 `CAS_WARNING_LINE` 正则提取年/月/版本/状态
+  /// 5. 判断状态里是否包含"不在预警"决定 `inWarningList`
+  /// 6. 从状态里识别"高/中/低"风险级别（若无则为 null）
   private void parseWarningList(
       Map<String, Element> fieldMap, LetPubVenueData.LetPubVenueDataBuilder builder) {
-    // TODO(Phase 2B): 实现多行预警记录解析
+    Element el = findFieldElement(fieldMap, "预警名单");
+    if (el == null) {
+      return;
+    }
+    // 按 <br><br> 分段（html() 保留原始标签，便于分隔历史版本行）
+    String[] segments = CAS_WARNING_SEGMENT_SEP.split(el.html());
+    List<LetPubVenueData.CasWarningRecord> records = new ArrayList<>();
+    for (String segment : segments) {
+      // 清理段内剩余 HTML，拿到纯文本
+      String text = Jsoup.parse(segment).text().trim();
+      if (text.isEmpty()) {
+        continue;
+      }
+      LetPubVenueData.CasWarningRecord record = parseWarningLine(text);
+      if (record != null) {
+        records.add(record);
+      }
+    }
+    if (!records.isEmpty()) {
+      builder.casWarnings(records);
+    }
+  }
+
+  /// 解析单行预警记录为 `CasWarningRecord`。
+  ///
+  /// @param line 清理后的纯文本行
+  /// @return 解析成功返回 Record，格式不匹配返回 null
+  private LetPubVenueData.CasWarningRecord parseWarningLine(String line) {
+    Matcher m = CAS_WARNING_LINE.matcher(line);
+    if (!m.find()) {
+      return null;
+    }
+    int year = Integer.parseInt(m.group(1));
+    int month = Integer.parseInt(m.group(2));
+    String editionLabel = m.group(3).trim();
+    String statusText = m.group(4).trim();
+
+    // "不在预警名单中" / "未列入" / 含"不在" → 不在预警
+    boolean inWarningList = !statusText.contains("不在预警") && !statusText.contains("无预警");
+    String warningLevel = inWarningList ? extractWarningLevel(statusText) : null;
+
+    return LetPubVenueData.CasWarningRecord.builder()
+        .publishedYear(year)
+        .publishedMonth(month)
+        .editionLabel(editionLabel)
+        .inWarningList(inWarningList)
+        .warningLevel(warningLevel)
+        .rawText(line)
+        .build();
+  }
+
+  /// 从预警状态文本中识别级别。
+  ///
+  /// @param statusText 状态文本（如 `"高风险预警"`）
+  /// @return `"高"` / `"中"` / `"低"`，未识别返回 null
+  private String extractWarningLevel(String statusText) {
+    if (statusText.contains("高风险") || statusText.contains("高级")) {
+      return "高";
+    }
+    if (statusText.contains("中风险") || statusText.contains("中级")) {
+      return "中";
+    }
+    if (statusText.contains("低风险") || statusText.contains("低级")) {
+      return "低";
+    }
+    return null;
   }
 
   /// 解析审稿速度（区分官方数据和网友经验）。

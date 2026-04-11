@@ -349,4 +349,93 @@ class LetPubDetailPageParserTest {
       assertThat(parsed.coverImageSourceUrl()).isNull();
     }
   }
+
+  @Nested
+  @DisplayName("CAS 预警名单时间序列提取")
+  class CasWarningListTests {
+
+    @Test
+    @DisplayName("应从多行 <br><br> 分隔的文本中解析出 6 条预警记录")
+    void shouldParseSixCasWarningRecordsFromFixture() {
+      assertThat(data.casWarnings()).hasSize(6);
+    }
+
+    @Test
+    @DisplayName("应正确提取发布年份与版本标签")
+    void shouldExtractPublishedYearAndEditionLabel() {
+      assertThat(data.casWarnings())
+          .extracting(LetPubVenueData.CasWarningRecord::publishedYear)
+          .containsExactly(2026, 2025, 2024, 2023, 2021, 2020);
+
+      assertThat(data.casWarnings())
+          .extracting(LetPubVenueData.CasWarningRecord::editionLabel)
+          .containsExactly("新锐学术版", "2025版", "2024版", "2023版", "2021版", "2020版");
+    }
+
+    @Test
+    @DisplayName("应正确提取发布月份")
+    void shouldExtractPublishedMonth() {
+      assertThat(data.casWarnings())
+          .extracting(LetPubVenueData.CasWarningRecord::publishedMonth)
+          .containsExactly(3, 3, 2, 1, 12, 12);
+    }
+
+    @Test
+    @DisplayName("应识别不在预警名单中的记录")
+    void shouldMarkAsNotInWarningWhenContainsNegation() {
+      // 2026/2025/2023/2020 这 4 条是"不在预警名单中"
+      assertThat(data.casWarnings())
+          .filteredOn(r -> !r.inWarningList())
+          .hasSize(4)
+          .extracting(LetPubVenueData.CasWarningRecord::publishedYear)
+          .containsExactlyInAnyOrder(2026, 2025, 2023, 2020);
+    }
+
+    @Test
+    @DisplayName("应识别中风险预警（2024 年）")
+    void shouldRecognizeMediumWarningLevel() {
+      LetPubVenueData.CasWarningRecord y2024 =
+          data.casWarnings().stream()
+              .filter(r -> r.publishedYear() == 2024)
+              .findFirst()
+              .orElseThrow();
+      assertThat(y2024.inWarningList()).isTrue();
+      assertThat(y2024.warningLevel()).isEqualTo("中");
+    }
+
+    @Test
+    @DisplayName("应识别高风险预警（2021 年）")
+    void shouldRecognizeHighWarningLevel() {
+      LetPubVenueData.CasWarningRecord y2021 =
+          data.casWarnings().stream()
+              .filter(r -> r.publishedYear() == 2021)
+              .findFirst()
+              .orElseThrow();
+      assertThat(y2021.inWarningList()).isTrue();
+      assertThat(y2021.warningLevel()).isEqualTo("高");
+    }
+
+    @Test
+    @DisplayName("rawText 应保留原始描述行以便追溯")
+    void shouldPreserveRawTextForTraceability() {
+      LetPubVenueData.CasWarningRecord y2025 =
+          data.casWarnings().stream()
+              .filter(r -> r.publishedYear() == 2025)
+              .findFirst()
+              .orElseThrow();
+      assertThat(y2025.rawText()).contains("2025年03月").contains("2025版");
+    }
+
+    @Test
+    @DisplayName("不在预警记录的 warningLevel 应为 null")
+    void shouldHaveNullWarningLevelWhenNotInWarning() {
+      LetPubVenueData.CasWarningRecord y2026 =
+          data.casWarnings().stream()
+              .filter(r -> r.publishedYear() == 2026)
+              .findFirst()
+              .orElseThrow();
+      assertThat(y2026.inWarningList()).isFalse();
+      assertThat(y2026.warningLevel()).isNull();
+    }
+  }
 }

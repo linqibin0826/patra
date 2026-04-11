@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.patra.catalog.domain.port.enrichment.LetPubVenueData;
 import com.patra.catalog.infra.persistence.entity.CasRatingEntity;
+import com.patra.catalog.infra.persistence.entity.CasWarningEntity;
 import com.patra.catalog.infra.persistence.entity.JcrRatingEntity;
 import java.math.BigDecimal;
 import java.util.List;
@@ -241,6 +242,110 @@ class LetPubDataMapperTest {
       List<CasRatingEntity> ratings = mapper.mapToCasRatings(data, VENUE_ID, SOURCE_URL);
 
       assertThat(ratings).isEmpty();
+    }
+  }
+
+  @Nested
+  @DisplayName("CAS 预警名单映射测试")
+  class MapToCasWarningsTests {
+
+    @Test
+    @DisplayName("应将 CasWarningRecord 列表映射为 CasWarningEntity 列表")
+    void shouldMapMultipleWarningRecords() {
+      var r1 =
+          LetPubVenueData.CasWarningRecord.builder()
+              .publishedYear(2026)
+              .publishedMonth(3)
+              .editionLabel("新锐学术版")
+              .inWarningList(false)
+              .warningLevel(null)
+              .rawText("2026年03月发布的新锐学术版：不在预警名单中")
+              .build();
+      var r2 =
+          LetPubVenueData.CasWarningRecord.builder()
+              .publishedYear(2024)
+              .publishedMonth(2)
+              .editionLabel("2024版")
+              .inWarningList(true)
+              .warningLevel("中")
+              .rawText("2024年02月发布的2024版：中风险预警")
+              .build();
+      LetPubVenueData data = LetPubVenueData.builder().casWarnings(List.of(r1, r2)).build();
+
+      List<CasWarningEntity> entities = mapper.mapToCasWarnings(data, VENUE_ID, SOURCE_URL);
+
+      assertThat(entities).hasSize(2);
+      assertThat(entities)
+          .extracting(CasWarningEntity::getPublishedYear)
+          .containsExactly((short) 2026, (short) 2024);
+      assertThat(entities)
+          .extracting(CasWarningEntity::getEditionLabel)
+          .containsExactly("新锐学术版", "2024版");
+    }
+
+    @Test
+    @DisplayName("应正确传递 inWarningList / warningLevel / rawText 字段")
+    void shouldPreserveAllFields() {
+      var record =
+          LetPubVenueData.CasWarningRecord.builder()
+              .publishedYear(2021)
+              .publishedMonth(12)
+              .editionLabel("2021版")
+              .inWarningList(true)
+              .warningLevel("高")
+              .rawText("2021年12月发布的2021版：高风险预警")
+              .build();
+      LetPubVenueData data = LetPubVenueData.builder().casWarnings(List.of(record)).build();
+
+      List<CasWarningEntity> entities = mapper.mapToCasWarnings(data, VENUE_ID, SOURCE_URL);
+
+      assertThat(entities)
+          .singleElement()
+          .satisfies(
+              e -> {
+                assertThat(e.getVenueId()).isEqualTo(VENUE_ID);
+                assertThat(e.getPublishedYear()).isEqualTo((short) 2021);
+                assertThat(e.getPublishedMonth()).isEqualTo((short) 12);
+                assertThat(e.getEditionLabel()).isEqualTo("2021版");
+                assertThat(e.getInWarningList()).isTrue();
+                assertThat(e.getWarningLevel()).isEqualTo("高");
+                assertThat(e.getRawText()).isEqualTo("2021年12月发布的2021版：高风险预警");
+                assertThat(e.getSourceUrl()).isEqualTo(SOURCE_URL);
+                assertThat(e.getFetchedAt()).isNotNull();
+              });
+    }
+
+    @Test
+    @DisplayName("casWarnings 为空时应返回空列表")
+    void shouldReturnEmptyListWhenCasWarningsIsEmpty() {
+      LetPubVenueData data = LetPubVenueData.builder().casWarnings(List.of()).build();
+
+      List<CasWarningEntity> entities = mapper.mapToCasWarnings(data, VENUE_ID, SOURCE_URL);
+
+      assertThat(entities).isEmpty();
+    }
+
+    @Test
+    @DisplayName("publishedMonth 为 null 时应映射为 null")
+    void shouldMapNullPublishedMonthAsNull() {
+      var record =
+          LetPubVenueData.CasWarningRecord.builder()
+              .publishedYear(2020)
+              .publishedMonth(null)
+              .editionLabel("2020版")
+              .inWarningList(false)
+              .rawText("2020年 发布的2020版：不在预警名单中")
+              .build();
+      LetPubVenueData data = LetPubVenueData.builder().casWarnings(List.of(record)).build();
+
+      List<CasWarningEntity> entities = mapper.mapToCasWarnings(data, VENUE_ID, SOURCE_URL);
+
+      assertThat(entities)
+          .singleElement()
+          .satisfies(
+              e -> {
+                assertThat(e.getPublishedMonth()).isNull();
+              });
     }
   }
 

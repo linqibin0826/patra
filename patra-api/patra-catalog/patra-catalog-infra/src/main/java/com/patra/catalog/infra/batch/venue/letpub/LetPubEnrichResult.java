@@ -1,6 +1,7 @@
 package com.patra.catalog.infra.batch.venue.letpub;
 
 import com.patra.catalog.infra.persistence.entity.CasRatingEntity;
+import com.patra.catalog.infra.persistence.entity.CasWarningEntity;
 import com.patra.catalog.infra.persistence.entity.JcrRatingEntity;
 import java.util.List;
 
@@ -80,30 +81,40 @@ public record LetPubEnrichResult(Long venueId, String imageObjectKey, JcrBatch j
 
   /// CAS 相关批次。
   ///
-  /// **当前字段**：
+  /// **字段**：
   ///
   /// - `ratings` — CAS 分区评级实体列表（每个版本一行）
-  ///
-  /// **未来扩展**：
-  ///
   /// - `warnings` — CAS 预警名单时间序列（独立于分区表的时间线）
-  /// - CAS 分区趋势历史等
+  ///
+  /// **为何 ratings 与 warnings 并列而非合并**：
+  ///
+  /// 虽然两者都来自 LetPub 的 CAS 数据，但它们是两个**独立的时间序列**：
+  /// 发布节奏不同（预警年初发布，分区可能春秋两季），版本命名风格不同
+  /// （预警用 `2025版`，分区用 `升级版`），历史覆盖不同（预警覆盖 2020+，
+  /// 分区只展示近几年）。强制按 year 对齐会产生大量 NULL 行。
   ///
   /// @param ratings CAS 分区评级实体列表（不可变）
-  public record CasBatch(List<CasRatingEntity> ratings) {
+  /// @param warnings CAS 预警记录实体列表（不可变）
+  public record CasBatch(List<CasRatingEntity> ratings, List<CasWarningEntity> warnings) {
 
     public CasBatch {
       ratings = ratings != null ? List.copyOf(ratings) : List.of();
+      warnings = warnings != null ? List.copyOf(warnings) : List.of();
     }
 
     /// 创建空批次。
     public static CasBatch empty() {
-      return new CasBatch(List.of());
+      return new CasBatch(List.of(), List.of());
     }
 
-    /// 使用指定评级列表创建批次。
+    /// 仅包含评级的批次（无预警）。
     public static CasBatch of(List<CasRatingEntity> ratings) {
-      return new CasBatch(ratings);
+      return new CasBatch(ratings, List.of());
+    }
+
+    /// 同时包含评级和预警的批次。
+    public static CasBatch of(List<CasRatingEntity> ratings, List<CasWarningEntity> warnings) {
+      return new CasBatch(ratings, warnings);
     }
   }
 }

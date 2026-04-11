@@ -1,9 +1,11 @@
 package com.patra.catalog.infra.batch.venue.letpub;
 
 import com.patra.catalog.infra.persistence.dao.CasRatingDao;
+import com.patra.catalog.infra.persistence.dao.CasWarningDao;
 import com.patra.catalog.infra.persistence.dao.JcrRatingDao;
 import com.patra.catalog.infra.persistence.dao.VenueDao;
 import com.patra.catalog.infra.persistence.entity.CasRatingEntity;
+import com.patra.catalog.infra.persistence.entity.CasWarningEntity;
 import com.patra.catalog.infra.persistence.entity.JcrRatingEntity;
 import java.util.List;
 import java.util.Set;
@@ -14,13 +16,15 @@ import org.springframework.batch.infrastructure.item.ItemWriter;
 
 /// LetPub 期刊富化 Writer。
 ///
-/// **三步写入**：
+/// **四步写入**：
 ///
 /// 1. 通过 {@link JcrRatingDao} 保存 JCR 评级行（→ `cat_venue_jcr_rating`），
 ///    **过滤已存在的年份**，仅插入新年份数据
 /// 2. 通过 {@link CasRatingDao} 保存 CAS 评级行（→ `cat_venue_cas_rating`），
 ///    **过滤已存在的 `(年份, 版本)` 组合**，仅插入新版本数据
-/// 3. 通过 {@link VenueDao#updateImageObjectKey} 更新封面对象键
+/// 3. 通过 {@link CasWarningDao} 保存 CAS 预警记录（→ `cat_venue_cas_warning`），
+///    **过滤已存在的 `(发布年份, 版本标签)` 组合**，仅插入新记录
+/// 4. 通过 {@link VenueDao#updateImageObjectKey} 更新封面对象键
 ///    （仅当 `result.imageObjectKey()` 非空时）
 ///
 /// **断点续传**：不再依赖 `letpub_fetched_at` 标记字段，
@@ -46,6 +50,7 @@ public class LetPubVenueItemWriter implements ItemWriter<LetPubEnrichResult> {
 
   private final JcrRatingDao jcrRatingDao;
   private final CasRatingDao casRatingDao;
+  private final CasWarningDao casWarningDao;
   private final VenueDao venueDao;
 
   /// 将 LetPub 富化数据写入数据库。
@@ -75,6 +80,19 @@ public class LetPubVenueItemWriter implements ItemWriter<LetPubEnrichResult> {
               result.venueId(),
               newCasRatings.size(),
               casRatings.size() - newCasRatings.size());
+        }
+      }
+
+      List<CasWarningEntity> casWarnings = result.cas().warnings();
+      if (!casWarnings.isEmpty()) {
+        List<CasWarningEntity> newCasWarnings = filterNewCasWarnings(result.venueId(), casWarnings);
+        if (!newCasWarnings.isEmpty()) {
+          casWarningDao.saveAll(newCasWarnings);
+          log.debug(
+              "Venue [id={}] 已保存 {} 条 CAS 预警（跳过 {} 条已存在版本）",
+              result.venueId(),
+              newCasWarnings.size(),
+              casWarnings.size() - newCasWarnings.size());
         }
       }
 
@@ -117,6 +135,22 @@ public class LetPubVenueItemWriter implements ItemWriter<LetPubEnrichResult> {
 
     return casRatings.stream()
         .filter(r -> !existingKeys.contains(r.getYear() + ":" + r.getEdition()))
+        .toList();
+  }
+
+  /// 过滤掉数据库中已存在的 `(发布年份, 版本标签)` 组合，只返回新的 CAS 预警记录。
+  ///
+  /// 通过投影查询仅载入 `(publishedYear:editionLabel)` 键集合，
+  /// 避免拉取完整预警实体字段。
+  private List<CasWarningEntity> filterNewCasWarnings(
+      Long venueId, List<CasWarningEntity> casWarnings) {
+    Set<String> existingKeys = casWarningDao.findKeysByVenueId(venueId);
+    if (existingKeys.isEmpty()) {
+      return casWarnings;
+    }
+
+    return casWarnings.stream()
+        .filter(w -> !existingKeys.contains(w.getPublishedYear() + ":" + w.getEditionLabel()))
         .toList();
   }
 }
