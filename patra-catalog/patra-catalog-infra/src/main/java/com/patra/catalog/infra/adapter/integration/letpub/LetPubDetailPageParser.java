@@ -317,18 +317,10 @@ public class LetPubDetailPageParser {
 
   /// 解析 JCR 子表格（JIF 或 JCI）的第一数据行。
   ///
-  /// **列结构（5 列）**：
+  /// **列结构（5 列）**：`0 学科 | 1 收录子集 | 2 分区 | 3 排名 | 4 百分位`
   ///
-  /// | 0 学科 | 1 收录子集 | 2 分区 | 3 排名 | 4 百分位（layui progress bar） |
-  ///
-  /// **百分位提取策略**（容错）：
-  ///
-  /// 1. 优先读 `.layui-progress-bar[lay-percent]` 属性（layui 框架约定，稳定）
-  /// 2. 回退读 inline `style="width:X%"`（旧结构兼容）
-  /// 3. 均失败返回 null
-  ///
-  /// JIF 和 JCI 的 subject/collection **独立存储**（不复用 JIF 的 subject 给 JCI），
-  /// 以支持跨库期刊的边界情况。
+  /// 百分位容错提取：优先读 `.layui-progress-bar[lay-percent]`（layui 约定，稳定），
+  /// 失败回退 inline `style="width:X%"`（旧结构兼容），均失败返回 null。
   private void parseJcrSubTable(
       Element table, LetPubVenueData.LetPubVenueDataBuilder builder, boolean isJif) {
     Elements rows = table.select("tr");

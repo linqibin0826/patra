@@ -295,7 +295,7 @@ class LetPubVenueItemProcessorTest {
 
     // Then
     assertThat(result).isNotNull();
-    assertThat(result.imageObjectKey()).as("幂等：已有对象键不应被重写").isNull();
+    assertThat(result.imageObjectKey()).as("幂等跳过：不重复下载，Result 仅携带本轮新下载的对象键").isNull();
     verify(coverImageDownloadPort, never()).downloadAndStore(any(), any());
   }
 }

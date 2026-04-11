@@ -271,8 +271,6 @@ class LetPubDetailPageParserTest {
   @DisplayName("审稿与录用信息提取")
   class AdvisoryInfoTests {
 
-    // 预警名单（casWarnings）的测试在 WarningListTests @Nested 内，参见后续 TDD 阶段。
-
     @Test
     @DisplayName("应提取官方审稿速度")
     void shouldExtractOfficialReviewSpeed() {
