@@ -29,13 +29,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class ScopusEnrichmentWorkerTest {
 
   @Mock ScopusEnrichmentPort scraperPort;
-  @Mock ScopusEnrichmentPersistPort persistPort;
+  @Mock ScopusEnrichmentPersister persister;
 
   ScopusEnrichmentWorker worker;
 
   @BeforeEach
   void setUp() {
-    worker = new ScopusEnrichmentWorker(scraperPort, persistPort);
+    worker = new ScopusEnrichmentWorker(scraperPort, persister);
   }
 
   @Test
@@ -44,13 +44,12 @@ class ScopusEnrichmentWorkerTest {
     VenueSnapshot v = VenueSnapshot.of(100L, "1234-5678", null);
     ScopusVenueData data = scopusDataWithOneYear();
     when(scraperPort.findByIssn("1234-5678")).thenReturn(Optional.of(data));
-    when(persistPort.persist(100L, data))
-        .thenReturn(ScopusEnrichmentPersistPort.PersistStats.of(1));
+    when(persister.persist(100L, data)).thenReturn(ScopusEnrichmentPersistPort.PersistStats.of(1));
 
     Outcome outcome = worker.processVenue(v);
 
     assertThat(outcome).isEqualTo(Outcome.PROCESSED);
-    verify(persistPort).persist(100L, data);
+    verify(persister).persist(100L, data);
   }
 
   @Test
@@ -61,7 +60,7 @@ class ScopusEnrichmentWorkerTest {
     Outcome outcome = worker.processVenue(v);
 
     assertThat(outcome).isEqualTo(Outcome.MISSING_ISSN);
-    verifyNoInteractions(scraperPort, persistPort);
+    verifyNoInteractions(scraperPort, persister);
   }
 
   @Test
@@ -72,7 +71,7 @@ class ScopusEnrichmentWorkerTest {
     Outcome outcome = worker.processVenue(v);
 
     assertThat(outcome).isEqualTo(Outcome.MISSING_ISSN);
-    verifyNoInteractions(scraperPort, persistPort);
+    verifyNoInteractions(scraperPort, persister);
   }
 
   @Test
@@ -84,7 +83,7 @@ class ScopusEnrichmentWorkerTest {
     Outcome outcome = worker.processVenue(v);
 
     assertThat(outcome).isEqualTo(Outcome.NOT_FOUND_IN_SOURCE);
-    verifyNoInteractions(persistPort);
+    verifyNoInteractions(persister);
   }
 
   @Test
@@ -104,8 +103,7 @@ class ScopusEnrichmentWorkerTest {
     VenueSnapshot v = VenueSnapshot.of(100L, "1234-5678", null);
     ScopusVenueData data = scopusDataWithOneYear();
     when(scraperPort.findByIssn("1234-5678")).thenReturn(Optional.of(data));
-    when(persistPort.persist(100L, data))
-        .thenThrow(new RuntimeException("db constraint violation"));
+    when(persister.persist(100L, data)).thenThrow(new RuntimeException("db constraint violation"));
 
     assertThatThrownBy(() -> worker.processVenue(v))
         .isInstanceOf(RuntimeException.class)
