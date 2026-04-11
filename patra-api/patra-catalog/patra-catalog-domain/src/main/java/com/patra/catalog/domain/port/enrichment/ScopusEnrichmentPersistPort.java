@@ -8,8 +8,9 @@ package com.patra.catalog.domain.port.enrichment;
 /// 2. 对每条按 `(venue_id, year)` 去重过滤（防 UK 冲突）
 /// 3. 通过 `ScopusRatingDao` 批量插入剩余行
 ///
-/// **事务约束**：本方法**不自带事务**，必须被 App 层的
-/// `@Transactional(REQUIRES_NEW)` worker 调用，依赖事务传播执行。
+/// **事务约束**：本方法**不自带事务**。调用方必须是 App 层承载
+/// `@Transactional(REQUIRES_NEW)` 边界的 Persister bean（如 `ScopusEnrichmentPersister`），
+/// 依赖跨 bean 代理激活事务。
 ///
 /// **无封面处理**：Scopus Serial Title API 不提供期刊封面，
 /// 故与 [LetPubEnrichmentPersistPort] 相比缺少 `coverObjectKey` 参数。
