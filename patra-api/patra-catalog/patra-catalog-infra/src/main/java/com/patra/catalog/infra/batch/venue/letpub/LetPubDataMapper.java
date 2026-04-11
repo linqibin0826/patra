@@ -81,24 +81,20 @@ public class LetPubDataMapper {
       entity.setSourceUrl(sourceUrl);
       entity.setFetchedAt(now);
 
-      // 最新年份附加详情：分区、学科、排名、WOS 增强字段等（这些字段只对"当前最新年"有意义）
+      // 仅最新年填充分区/学科/排名等快照字段：LetPub 页面只展示当前最新年的详情，历史年份无法重建。
       if (year == latestYear) {
-        // JIF 基础信息（学科/子集/分区/排名/百分位）
         entity.setSubject(data.jcrSubject());
         entity.setCollection(data.jcrCollection());
         entity.setJifQuartile(data.jifQuartile());
         entity.setJifRank(data.jifRank());
         entity.setJifPercentile(data.jifPercentile());
-        // JCI 独立维度（学科/子集/分区/排名/百分位/数值）
         entity.setJciSubject(data.jciSubject());
         entity.setJciCollection(data.jciCollection());
         entity.setJciQuartile(data.jciQuartile());
         entity.setJciRank(data.jciRank());
         entity.setJciPercentile(data.jciPercentile());
         entity.setJciValue(data.jciValue() != null ? BigDecimal.valueOf(data.jciValue()) : null);
-        // WOS 综合分区（JIF + JCI 综合评定）
         entity.setWosOverallQuartile(data.wosOverallQuartile());
-        // 其他快照字段
         entity.setSelfCitationRate(data.selfCitationRate());
         entity.setResearchDirection(data.researchDirection());
       }

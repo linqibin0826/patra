@@ -72,6 +72,7 @@ public class VenueCoverImageDownloadAdapter implements VenueCoverImageDownloadPo
           sourceUrl);
       return targetObjectKey;
     } catch (FileDownloadException e) {
+      // 透传：FileDownloadException 已携带正确的 trait，避免被下方 RuntimeException 分支二次包装。
       throw e;
     } catch (IOException e) {
       throw new FileDownloadException(

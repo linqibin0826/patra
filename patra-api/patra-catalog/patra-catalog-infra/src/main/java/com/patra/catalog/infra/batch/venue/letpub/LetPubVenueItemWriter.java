@@ -16,31 +16,11 @@ import org.springframework.batch.infrastructure.item.ItemWriter;
 
 /// LetPub 期刊富化 Writer。
 ///
-/// **四步写入**：
+/// 向三张评级表（`cat_venue_jcr_rating` / `cat_venue_cas_rating` / `cat_venue_cas_warning`）
+/// 插入新记录，并按需 UPDATE `cat_venue.image_object_key`。
 ///
-/// 1. 通过 {@link JcrRatingDao} 保存 JCR 评级行（→ `cat_venue_jcr_rating`），
-///    **过滤已存在的年份**，仅插入新年份数据
-/// 2. 通过 {@link CasRatingDao} 保存 CAS 评级行（→ `cat_venue_cas_rating`），
-///    **过滤已存在的 `(年份, 版本)` 组合**，仅插入新版本数据
-/// 3. 通过 {@link CasWarningDao} 保存 CAS 预警记录（→ `cat_venue_cas_warning`），
-///    **过滤已存在的 `(发布年份, 版本标签)` 组合**，仅插入新记录
-/// 4. 通过 {@link VenueDao#updateImageObjectKey} 更新封面对象键
-///    （仅当 `result.imageObjectKey()` 非空时）
-///
-/// **断点续传**：不再依赖 `letpub_fetched_at` 标记字段，
-/// 改由 Reader 的 `NOT EXISTS` 子查询（基于目标年份）实现。
-///
-/// **封面更新为何不用 dirty check**：
-///
-/// Reader 是 `JpaPagingItemReader`，读出的 `VenueEntity` 处于 detached 状态，
-/// 无法通过 dirty check 自动持久化字段变更。因此由 Writer 显式 UPDATE。
-///
-/// **失败语义**：
-///
-/// 三步写入共享 Step 事务。若封面 UPDATE 异常（例如瞬时锁冲突），
-/// 同一 chunk 的 JCR/CAS 插入也会随之回滚。因 `chunk=1`，影响范围
-/// 限于当前 venue；后续重跑时 Reader 的 `NOT EXISTS` 守卫会重新捞出
-/// 该 venue，封面侧有幂等跳过保护。
+/// **为何封面用显式 UPDATE 而非 dirty check**：Reader 是 `JpaPagingItemReader`，
+/// 读出的 `VenueEntity` 已 detached，setter 不会触发 UPDATE。
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -96,10 +76,7 @@ public class LetPubVenueItemWriter implements ItemWriter<LetPubEnrichResult> {
         }
       }
 
-      // 仅在非 null 时 UPDATE：避免把已有对象键清空。
-      // 当前无显式清空需求；若未来需要清空，应在 LetPubEnrichResult
-      // 增加独立的 clearImageObjectKey 标志位，而非用 null 同时表达
-      // "未下载"和"主动清空"两种意图。
+      // 仅在非 null 时 UPDATE：null 表示"未下载"，不应清空已有对象键。
       if (result.imageObjectKey() != null) {
         int updated = venueDao.updateImageObjectKey(result.venueId(), result.imageObjectKey());
         if (updated == 0) {
