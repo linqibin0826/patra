@@ -21,14 +21,14 @@ import java.util.List;
 ///
 /// @author linqibin
 /// @since 0.1.0
-class ScopusDataMapper {
+public class ScopusDataMapper {
 
   /// 将 ScopusVenueData 映射为 ScopusRatingEntity 列表。
   ///
   /// @param data Scopus API 返回的原始数据
   /// @param venueId 关联的 Venue ID
   /// @return 评级实体列表（按年份排序），data 为 null 或无历史数据时返回空列表
-  List<ScopusRatingEntity> mapToScopusRatings(ScopusVenueData data, Long venueId) {
+  public List<ScopusRatingEntity> mapToScopusRatings(ScopusVenueData data, Long venueId) {
     if (data == null || data.yearlyMetrics().isEmpty()) {
       return List.of();
     }

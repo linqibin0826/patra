@@ -1,7 +1,7 @@
 package com.patra.catalog.adapter.scheduler.job;
 
+import com.patra.catalog.app.usecase.venue.VenueEnrichRunStats;
 import com.patra.catalog.app.usecase.venue.letpub.command.VenueLetPubEnrichCommand;
-import com.patra.catalog.app.usecase.venue.letpub.command.VenueLetPubEnrichResult;
 import com.patra.common.cqrs.CommandBus;
 import com.xxl.job.core.context.XxlJobHelper;
 import com.xxl.job.core.handler.annotation.XxlJob;
@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component;
 /// **运行建议**：
 ///
 /// - 全量富化约需 70 小时（30,000 条期刊，每条 8-10 秒含反爬延迟）
-/// - 可随时中断，重启后自动跳过已处理记录
+/// - 失败 venue 会在下次 Job 调度时自动被候选查询重新捞起（跨 Job 自愈）
 /// - 建议在低峰期手动触发
 /// - 超时时间建议设置为 0（无限制）
 ///
@@ -41,14 +41,20 @@ public class VenueLetPubEnrichScheduleJob {
     VenueEnrichJobParam param = VenueEnrichJobParam.fromXxlJobParam();
 
     try {
-      VenueLetPubEnrichResult result =
+      VenueEnrichRunStats result =
           commandBus.handle(
               new VenueLetPubEnrichCommand(param.targetYear(), param.minCitedByCount()));
 
       String message =
           String.format(
-              "LetPub 期刊富化 Job 已启动，targetYear=%d, minCitedByCount=%d, executionId=%d",
-              param.targetYear(), param.minCitedByCount(), result.executionId());
+              "LetPub 期刊富化已完成: targetYear=%d, minCitedByCount=%d,"
+                  + " total=%d, processed=%d, skipped=%d, failed=%d",
+              param.targetYear(),
+              param.minCitedByCount(),
+              result.totalRead(),
+              result.processed(),
+              result.skipped(),
+              result.failed());
       log.info(message);
       XxlJobHelper.handleSuccess(message);
 

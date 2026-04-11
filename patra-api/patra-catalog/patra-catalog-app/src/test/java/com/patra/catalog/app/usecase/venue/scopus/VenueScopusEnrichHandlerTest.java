@@ -5,10 +5,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.patra.catalog.app.usecase.venue.VenueEnrichRunStats;
 import com.patra.catalog.app.usecase.venue.scopus.command.VenueScopusEnrichCommand;
-import com.patra.catalog.app.usecase.venue.scopus.command.VenueScopusEnrichResult;
-import com.patra.catalog.domain.port.batch.ScopusEnrichmentBatchPort;
 import com.patra.common.error.ApplicationException;
+import com.patra.common.error.DomainException;
+import com.patra.common.error.trait.StandardErrorTrait;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,54 +23,66 @@ import org.mockito.junit.jupiter.MockitoExtension;
 ///
 /// **测试策略**：
 ///
-/// - Mock `ScopusEnrichmentBatchPort`，验证 Job 启动和结果返回
-/// - 验证异常包装为 `ApplicationException`
+/// - Mock [ScopusEnrichmentRunner]，验证 Handler 透传 [VenueEnrichRunStats]
+/// - 验证 [DomainException] 直接传播
+/// - 验证未知 [RuntimeException] 被包装成 [ApplicationException]
 ///
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("VenueScopusEnrichHandler 单元测试")
-@Timeout(2)
+@Timeout(value = 2, unit = TimeUnit.SECONDS)
 @ExtendWith(MockitoExtension.class)
 class VenueScopusEnrichHandlerTest {
 
-  @Mock private ScopusEnrichmentBatchPort scopusEnrichmentBatchPort;
+  @Mock private ScopusEnrichmentRunner runner;
 
   private VenueScopusEnrichHandler handler;
 
   @BeforeEach
   void setUp() {
-    handler = new VenueScopusEnrichHandler(scopusEnrichmentBatchPort);
+    handler = new VenueScopusEnrichHandler(runner);
   }
 
   @Test
-  @DisplayName("应启动 Scopus 富化 Job 并返回 executionId")
-  void shouldLaunchJobAndReturnExecutionId() {
-    // Given
+  @DisplayName("正常调用 - Runner 的 stats 被透传")
+  void shouldReturnStatsFromRunner() {
     short targetYear = (short) 2025;
-    int minCitedByCount = 500;
+    int minCitedByCount = 1000;
     var command = new VenueScopusEnrichCommand(targetYear, minCitedByCount);
-    when(scopusEnrichmentBatchPort.launchEnrichment(targetYear, minCitedByCount)).thenReturn(99L);
+    when(runner.run(targetYear, minCitedByCount)).thenReturn(VenueEnrichRunStats.of(50, 45, 3, 2));
 
-    // When
-    VenueScopusEnrichResult result = handler.handle(command);
+    VenueEnrichRunStats result = handler.handle(command);
 
-    // Then
-    assertThat(result).isNotNull();
-    assertThat(result.executionId()).isEqualTo(99L);
-    verify(scopusEnrichmentBatchPort).launchEnrichment(targetYear, minCitedByCount);
+    assertThat(result.totalRead()).isEqualTo(50);
+    assertThat(result.processed()).isEqualTo(45);
+    assertThat(result.skipped()).isEqualTo(3);
+    assertThat(result.failed()).isEqualTo(2);
+    verify(runner).run(targetYear, minCitedByCount);
   }
 
   @Test
-  @DisplayName("BatchPort 抛出 RuntimeException 时应包装为 ApplicationException")
+  @DisplayName("DomainException 直接传播，不被包装")
+  void shouldPropagateDomainException() {
+    short targetYear = (short) 2025;
+    int minCitedByCount = 100;
+    var command = new VenueScopusEnrichCommand(targetYear, minCitedByCount);
+    when(runner.run(targetYear, minCitedByCount))
+        .thenThrow(
+            new DomainException("domain rule violated", StandardErrorTrait.RULE_VIOLATION) {});
+
+    assertThatThrownBy(() -> handler.handle(command))
+        .isInstanceOf(DomainException.class)
+        .hasMessage("domain rule violated");
+  }
+
+  @Test
+  @DisplayName("未知 RuntimeException 被包装为 ApplicationException")
   void shouldWrapRuntimeExceptionAsApplicationException() {
-    // Given
     short targetYear = (short) 2025;
-    int minCitedByCount = 0;
+    int minCitedByCount = 100;
     var command = new VenueScopusEnrichCommand(targetYear, minCitedByCount);
-    when(scopusEnrichmentBatchPort.launchEnrichment(targetYear, minCitedByCount))
-        .thenThrow(new RuntimeException("Job 启动失败"));
+    when(runner.run(targetYear, minCitedByCount)).thenThrow(new RuntimeException("Runner crashed"));
 
-    // When & Then
     assertThatThrownBy(() -> handler.handle(command))
         .isInstanceOf(ApplicationException.class)
         .hasMessageContaining("Scopus 期刊富化失败");
