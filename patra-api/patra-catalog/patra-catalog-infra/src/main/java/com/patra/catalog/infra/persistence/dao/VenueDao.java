@@ -7,6 +7,7 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -69,6 +70,19 @@ public interface VenueDao extends JpaRepository<VenueEntity, Long> {
   /// @param ids 载体 ID 列表
   /// @return 载体实体列表
   List<VenueEntity> findByIdIn(Collection<Long> ids);
+
+  /// 仅更新 `cat_venue.image_object_key` 列。
+  ///
+  /// **使用场景**：Spring Batch LetPub 富化 Job 中，`JpaPagingItemReader`
+  /// 读出的 `VenueEntity` 已 detach，Writer 无法依赖 dirty check 持久化
+  /// 字段变更；必须通过此显式 UPDATE 写回封面对象键。
+  ///
+  /// @param id 载体 ID
+  /// @param key 封面对象键（非空）
+  /// @return 受影响行数
+  @Modifying
+  @Query("UPDATE VenueEntity v SET v.imageObjectKey = :key WHERE v.id = :id")
+  int updateImageObjectKey(@Param("id") Long id, @Param("key") String key);
 
   /// 分页查询期刊列表，按 h-index 降序排列。
   ///

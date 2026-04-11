@@ -1,13 +1,20 @@
 package com.patra.catalog.infra.batch.venue.letpub;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.patra.catalog.domain.exception.FileDownloadException;
 import com.patra.catalog.domain.port.enrichment.LetPubEnrichmentPort;
 import com.patra.catalog.domain.port.enrichment.LetPubVenueData;
+import com.patra.catalog.domain.port.storage.VenueCoverImageDownloadPort;
 import com.patra.catalog.infra.persistence.entity.VenueEntity;
+import com.patra.common.error.trait.StandardErrorTrait;
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -20,8 +27,9 @@ import org.junit.jupiter.api.Timeout;
 ///
 /// **测试策略**：
 ///
-/// - Mock `LetPubEnrichmentPort`，验证正常/未找到/ISSN空 场景
-/// - 验证拆解结果包含 JCR ratings 和 CAS rating
+/// - Mock `LetPubEnrichmentPort`：验证正常/未找到/ISSN 空 场景
+/// - Mock `VenueCoverImageDownloadPort`：验证封面下载成功 / 失败隔离
+/// - 真实注入 `LetPubDataMapper`：验证 JCR + CAS 拆解结果
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -30,12 +38,16 @@ import org.junit.jupiter.api.Timeout;
 class LetPubVenueItemProcessorTest {
 
   private LetPubEnrichmentPort enrichmentPort;
+  private VenueCoverImageDownloadPort coverImageDownloadPort;
   private LetPubVenueItemProcessor processor;
 
   @BeforeEach
   void setUp() {
     enrichmentPort = mock(LetPubEnrichmentPort.class);
-    processor = new LetPubVenueItemProcessor(enrichmentPort, new LetPubDataMapper());
+    coverImageDownloadPort = mock(VenueCoverImageDownloadPort.class);
+    processor =
+        new LetPubVenueItemProcessor(
+            enrichmentPort, new LetPubDataMapper(), coverImageDownloadPort);
   }
 
   /// 创建测试用 VenueEntity。
@@ -118,5 +130,82 @@ class LetPubVenueItemProcessorTest {
     LetPubEnrichResult result = processor.process(entity);
 
     assertThat(result).isNull();
+  }
+
+  @Test
+  @DisplayName("封面下载成功时应将对象键写入 LetPubEnrichResult")
+  void shouldIncludeImageObjectKeyWhenCoverDownloadSucceeds() throws Exception {
+    // Given
+    VenueEntity entity = createVenueEntity(401L, "1111-2222");
+    LetPubVenueData data =
+        LetPubVenueData.builder()
+            .letPubJournalId("6054")
+            .letPubName("Nature")
+            .coverImageSourceUrl(
+                "https://media-cdn.oss-cn-hangzhou.aliyuncs.com/statics/images/comment_center/cover/journal/6054.jpg")
+            .build();
+    when(enrichmentPort.findByIssn("1111-2222")).thenReturn(Optional.of(data));
+    when(coverImageDownloadPort.downloadAndStore(any(URI.class), eq("catalog/venue-cover/401.jpg")))
+        .thenReturn("catalog/venue-cover/401.jpg");
+
+    // When
+    LetPubEnrichResult result = processor.process(entity);
+
+    // Then
+    assertThat(result).isNotNull();
+    assertThat(result.imageObjectKey()).isEqualTo("catalog/venue-cover/401.jpg");
+    verify(coverImageDownloadPort)
+        .downloadAndStore(any(URI.class), eq("catalog/venue-cover/401.jpg"));
+  }
+
+  @Test
+  @DisplayName("封面下载失败时主流程应继续返回评级数据且 imageObjectKey 为空")
+  void shouldContinueProcessingWhenCoverDownloadFails() throws Exception {
+    // Given
+    VenueEntity entity = createVenueEntity(402L, "3333-4444");
+    LetPubVenueData data =
+        LetPubVenueData.builder()
+            .letPubJournalId("9999")
+            .letPubName("Nature")
+            .coverImageSourceUrl(
+                "https://media-cdn.oss-cn-hangzhou.aliyuncs.com/statics/images/comment_center/cover/journal/9999.jpg")
+            .build();
+    when(enrichmentPort.findByIssn("3333-4444")).thenReturn(Optional.of(data));
+    when(coverImageDownloadPort.downloadAndStore(any(URI.class), any()))
+        .thenThrow(new FileDownloadException("MinIO down", StandardErrorTrait.DEP_UNAVAILABLE));
+
+    // When
+    LetPubEnrichResult result = processor.process(entity);
+
+    // Then
+    assertThat(result).as("下载失败不应阻断主流程").isNotNull();
+    assertThat(result.venueId()).isEqualTo(402L);
+    assertThat(result.imageObjectKey()).as("下载失败时不写入对象键").isNull();
+    verify(coverImageDownloadPort)
+        .downloadAndStore(any(URI.class), eq("catalog/venue-cover/402.jpg"));
+  }
+
+  @Test
+  @DisplayName("当 VenueEntity 已存在 imageObjectKey 时应跳过下载（幂等）")
+  void shouldSkipDownloadWhenImageObjectKeyAlreadyExists() throws Exception {
+    // Given
+    VenueEntity entity = createVenueEntity(403L, "5555-6666");
+    entity.setImageObjectKey("catalog/venue-cover/403.jpg");
+    LetPubVenueData data =
+        LetPubVenueData.builder()
+            .letPubJournalId("6054")
+            .letPubName("Nature")
+            .coverImageSourceUrl(
+                "https://media-cdn.oss-cn-hangzhou.aliyuncs.com/cover/journal/6054.jpg")
+            .build();
+    when(enrichmentPort.findByIssn("5555-6666")).thenReturn(Optional.of(data));
+
+    // When
+    LetPubEnrichResult result = processor.process(entity);
+
+    // Then
+    assertThat(result).isNotNull();
+    assertThat(result.imageObjectKey()).as("幂等：已有对象键不应被重写").isNull();
+    verify(coverImageDownloadPort, never()).downloadAndStore(any(), any());
   }
 }
