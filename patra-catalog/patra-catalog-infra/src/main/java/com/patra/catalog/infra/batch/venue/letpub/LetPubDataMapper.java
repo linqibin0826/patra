@@ -11,7 +11,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -73,20 +73,24 @@ public class LetPubDataMapper {
 
     Instant now = clock.instant();
 
-    // 找出最新年份
-    short latestYear =
-        trend.keySet().stream()
-            .map(this::extractLaterYear)
-            .filter(y -> y > 0)
-            .max(Comparator.naturalOrder())
-            .orElse((short) 0);
-
-    List<JcrRatingEntity> ratings = new ArrayList<>();
+    // 单次规范化：原始 key（"2024-2025"）→ 后段年份；丢弃解析失败行。
+    // 同一个 year 可能出现多次（LetPub 历史极少有重复 key，末值覆盖前值即可）。
+    Map<Short, Double> yearToIf = new LinkedHashMap<>();
+    short latestYear = 0;
     for (Map.Entry<String, Double> entry : trend.entrySet()) {
       short year = extractLaterYear(entry.getKey());
       if (year <= 0) {
         continue;
       }
+      yearToIf.put(year, entry.getValue());
+      if (year > latestYear) {
+        latestYear = year;
+      }
+    }
+
+    List<JcrRatingEntity> ratings = new ArrayList<>();
+    for (Map.Entry<Short, Double> entry : yearToIf.entrySet()) {
+      short year = entry.getKey();
 
       var entity = new JcrRatingEntity();
       entity.setId(SnowflakeIdGenerator.getId());
