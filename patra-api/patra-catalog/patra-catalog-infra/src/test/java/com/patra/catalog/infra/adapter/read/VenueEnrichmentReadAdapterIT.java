@@ -38,9 +38,8 @@ import org.springframework.test.context.ContextConfiguration;
 ///
 /// **覆盖场景**：
 /// - `findNeedingLetPubEnrichment`：NOT EXISTS 过滤、keyset 前进、citedByCount 下限、
-///   ISSN-L 为空跳过、limit 生效（5 个测试）
+///   ISSN-L 为空跳过、limit 生效、cover key 投影（6 个测试）
 /// - `findNeedingScopusEnrichment`：NOT EXISTS 对接 `cat_venue_scopus_rating` 表（2 个代表性测试，验证关键差异）
-/// - `findExistingCoverKey`：命中 / 未命中 / venue 不存在（3 个测试）
 @DataJpaTest
 @ContextConfiguration(initializers = CatalogMySQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -118,6 +117,26 @@ class VenueEnrichmentReadAdapterIT {
 
       assertThat(result).hasSize(3);
     }
+
+    @Test
+    @DisplayName("cover key 投影 - 已存在封面的 venue 在 snapshot 里带回 existingCoverKey")
+    void projectsExistingCoverKey() {
+      VenueEntity v1 = persistJournalWithCover("8000-0001", "catalog/venue-cover/111.jpg");
+      VenueEntity v2 = persistJournal("8000-0002", 0); // 无封面
+
+      List<VenueSnapshot> result = adapter.findNeedingLetPubEnrichment((short) 2025, 0, 0L, 50);
+
+      assertThat(result)
+          .filteredOn(s -> s.id().equals(v1.getId()))
+          .singleElement()
+          .extracting(VenueSnapshot::existingCoverKey)
+          .isEqualTo("catalog/venue-cover/111.jpg");
+      assertThat(result)
+          .filteredOn(s -> s.id().equals(v2.getId()))
+          .singleElement()
+          .extracting(VenueSnapshot::existingCoverKey)
+          .isNull();
+    }
   }
 
   // ========== findNeedingScopusEnrichment ==========
@@ -147,35 +166,6 @@ class VenueEnrichmentReadAdapterIT {
       List<VenueSnapshot> result = adapter.findNeedingScopusEnrichment((short) 2025, 0, 0L, 50);
 
       assertThat(result).extracting(VenueSnapshot::id).containsExactly(v1.getId());
-    }
-  }
-
-  // ========== findExistingCoverKey ==========
-
-  @Nested
-  @DisplayName("findExistingCoverKey 测试")
-  class FindExistingCoverKeyTests {
-
-    @Test
-    @DisplayName("命中 - venue 已有封面对象键")
-    void returnsKeyWhenPresent() {
-      VenueEntity v = persistJournalWithCover("6000-0001", "catalog/venue-cover/999.jpg");
-
-      assertThat(adapter.findExistingCoverKey(v.getId())).contains("catalog/venue-cover/999.jpg");
-    }
-
-    @Test
-    @DisplayName("未命中 - venue 存在但封面字段为 null")
-    void returnsEmptyWhenAbsent() {
-      VenueEntity v = persistJournal("6000-0002", 0);
-
-      assertThat(adapter.findExistingCoverKey(v.getId())).isEmpty();
-    }
-
-    @Test
-    @DisplayName("venue 不存在 - 返回 empty")
-    void returnsEmptyWhenVenueNotFound() {
-      assertThat(adapter.findExistingCoverKey(999_999_999L)).isEmpty();
     }
   }
 

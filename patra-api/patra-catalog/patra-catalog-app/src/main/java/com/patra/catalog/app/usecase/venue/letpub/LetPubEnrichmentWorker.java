@@ -5,7 +5,6 @@ import com.patra.catalog.domain.port.enrichment.LetPubEnrichmentPersistPort;
 import com.patra.catalog.domain.port.enrichment.LetPubEnrichmentPort;
 import com.patra.catalog.domain.port.enrichment.LetPubVenueData;
 import com.patra.catalog.domain.port.enrichment.VenueSnapshot;
-import com.patra.catalog.domain.port.read.VenueEnrichmentReadPort;
 import com.patra.catalog.domain.port.storage.VenueCoverImageDownloadPort;
 import java.net.URI;
 import java.util.Optional;
@@ -36,7 +35,6 @@ public class LetPubEnrichmentWorker {
   private final LetPubEnrichmentPort scraperPort;
   private final LetPubEnrichmentPersistPort persistPort;
   private final VenueCoverImageDownloadPort coverImageDownloadPort;
-  private final VenueEnrichmentReadPort readPort;
 
   /// 单 venue 处理结果的三种正常分支。
   public enum Outcome {
@@ -71,7 +69,7 @@ public class LetPubEnrichmentWorker {
     }
 
     LetPubVenueData data = result.get();
-    String coverObjectKey = downloadCoverIfNeeded(venue.id(), data);
+    String coverObjectKey = downloadCoverIfNeeded(venue, data);
     LetPubEnrichmentPersistPort.PersistStats stats =
         persistPort.persist(venue.id(), data, coverObjectKey);
 
@@ -89,14 +87,14 @@ public class LetPubEnrichmentWorker {
   /// 按需下载封面图到对象存储，失败时宽容处理不影响主流程。
   ///
   /// 跳过条件：venue 已存在封面键 / LetPub 未返回 URL / URL 格式非法 / 下载时抛异常。
+  /// "已存在封面键"的判断直接读 snapshot 里的 projection 字段，避免额外 PK 查询。
   ///
-  /// @param venueId 目标 venue 主键
+  /// @param venue 待处理 venue 快照，`existingCoverKey` 非 null 时跳过下载
   /// @param data LetPub 爬取数据，从中提取 coverImageSourceUrl
   /// @return 新下载的对象键；任何跳过或失败路径返回 null（调用方传 null 给 persistPort）
-  private String downloadCoverIfNeeded(long venueId, LetPubVenueData data) {
-    Optional<String> existing = readPort.findExistingCoverKey(venueId);
-    if (existing.isPresent()) {
-      log.debug("Venue [id={}] 已存在封面对象键，跳过下载", venueId);
+  private String downloadCoverIfNeeded(VenueSnapshot venue, LetPubVenueData data) {
+    if (venue.existingCoverKey() != null) {
+      log.debug("Venue [id={}] 已存在封面对象键，跳过下载", venue.id());
       return null;
     }
     String sourceUrl = data.basicInfo().coverImageSourceUrl();
@@ -104,12 +102,12 @@ public class LetPubEnrichmentWorker {
       return null;
     }
 
-    String stableKey = "catalog/venue-cover/" + venueId + ".jpg";
+    String stableKey = "catalog/venue-cover/" + venue.id() + ".jpg";
     URI sourceUri;
     try {
       sourceUri = URI.create(sourceUrl);
     } catch (IllegalArgumentException e) {
-      log.warn("venue 封面 URL 格式非法（继续）: venueId={} sourceUrl={}", venueId, sourceUrl);
+      log.warn("venue 封面 URL 格式非法（继续）: venueId={} sourceUrl={}", venue.id(), sourceUrl);
       return null;
     }
     try {
@@ -117,12 +115,12 @@ public class LetPubEnrichmentWorker {
     } catch (FileDownloadException e) {
       log.warn(
           "venue 封面下载失败（继续）: venueId={} trait={} reason={}",
-          venueId,
+          venue.id(),
           e.getErrorTraits(),
           e.getMessage());
       return null;
     } catch (RuntimeException e) {
-      log.warn("venue 封面下载意外异常（继续）: venueId={}", venueId, e);
+      log.warn("venue 封面下载意外异常（继续）: venueId={}", venue.id(), e);
       return null;
     }
   }

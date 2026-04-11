@@ -41,7 +41,7 @@ class ScopusEnrichmentWorkerTest {
   @Test
   @DisplayName("Happy path - 爬取 + 持久化成功")
   void processVenue_happyPath_returnsPROCESSED() {
-    VenueSnapshot v = VenueSnapshot.of(100L, "1234-5678");
+    VenueSnapshot v = VenueSnapshot.of(100L, "1234-5678", null);
     ScopusVenueData data = scopusDataWithOneYear();
     when(scraperPort.findByIssn("1234-5678")).thenReturn(Optional.of(data));
     when(persistPort.persist(100L, data))
@@ -56,7 +56,7 @@ class ScopusEnrichmentWorkerTest {
   @Test
   @DisplayName("ISSN-L 为空 - 直接返回 MISSING_ISSN，不调任何 port")
   void processVenue_missingIssn_returnsMISSING_ISSN() {
-    VenueSnapshot v = VenueSnapshot.of(100L, null);
+    VenueSnapshot v = VenueSnapshot.of(100L, null, null);
 
     Outcome outcome = worker.processVenue(v);
 
@@ -67,7 +67,7 @@ class ScopusEnrichmentWorkerTest {
   @Test
   @DisplayName("ISSN-L 为空白字符串 - 直接返回 MISSING_ISSN，不调任何 port")
   void processVenue_blankIssn_returnsMISSING_ISSN() {
-    VenueSnapshot v = VenueSnapshot.of(100L, "   ");
+    VenueSnapshot v = VenueSnapshot.of(100L, "   ", null);
 
     Outcome outcome = worker.processVenue(v);
 
@@ -78,7 +78,7 @@ class ScopusEnrichmentWorkerTest {
   @Test
   @DisplayName("Scopus 未找到数据 - 返回 NOT_FOUND_IN_SOURCE，不走持久化")
   void processVenue_notFoundOnSource_returnsNOT_FOUND_IN_SOURCE() {
-    VenueSnapshot v = VenueSnapshot.of(100L, "1234-5678");
+    VenueSnapshot v = VenueSnapshot.of(100L, "1234-5678", null);
     when(scraperPort.findByIssn("1234-5678")).thenReturn(Optional.empty());
 
     Outcome outcome = worker.processVenue(v);
@@ -90,7 +90,7 @@ class ScopusEnrichmentWorkerTest {
   @Test
   @DisplayName("爬虫抛异常 - 向上传播，由 Runner 层兜底")
   void processVenue_scraperThrows_propagatesException() {
-    VenueSnapshot v = VenueSnapshot.of(100L, "1234-5678");
+    VenueSnapshot v = VenueSnapshot.of(100L, "1234-5678", null);
     when(scraperPort.findByIssn("1234-5678")).thenThrow(new RuntimeException("scopus api down"));
 
     assertThatThrownBy(() -> worker.processVenue(v))
@@ -101,7 +101,7 @@ class ScopusEnrichmentWorkerTest {
   @Test
   @DisplayName("persistPort 抛异常 - 向上传播，事务回滚")
   void processVenue_persistThrows_propagatesException() {
-    VenueSnapshot v = VenueSnapshot.of(100L, "1234-5678");
+    VenueSnapshot v = VenueSnapshot.of(100L, "1234-5678", null);
     ScopusVenueData data = scopusDataWithOneYear();
     when(scraperPort.findByIssn("1234-5678")).thenReturn(Optional.of(data));
     when(persistPort.persist(100L, data))

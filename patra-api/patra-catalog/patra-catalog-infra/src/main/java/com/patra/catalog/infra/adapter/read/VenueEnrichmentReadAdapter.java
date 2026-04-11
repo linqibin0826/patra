@@ -5,7 +5,6 @@ import com.patra.catalog.domain.port.read.VenueEnrichmentReadPort;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.util.List;
-import java.util.Optional;
 import org.springframework.stereotype.Component;
 
 /// [VenueEnrichmentReadPort] 的 JPA 实现，使用 keyset pagination + NOT EXISTS。
@@ -31,7 +30,8 @@ public class VenueEnrichmentReadAdapter implements VenueEnrichmentReadPort {
   /// 查询缺少指定年份 JCR 评级的期刊 venue。
   ///
   /// 使用 keyset pagination（`id > :lastId`）结合 `NOT EXISTS` 子查询过滤已有 JCR 评级的 venue。
-  /// 仅返回 `venueType = 'JOURNAL'` 且 `issnL` 不为 null 的 venue。
+  /// 仅返回 `venueType = 'JOURNAL'` 且 `issnL` 不为 null 的 venue。同一次 projection 把
+  /// `imageObjectKey` 一起带出，让下游 LetPub Worker 免掉一次 PK 查询。
   ///
   /// @param targetYear 目标年份（对应 `cat_venue_jcr_rating.year`），不可为 null
   /// @param minCitedByCount 被引次数下限（0 = 不过滤）
@@ -43,7 +43,8 @@ public class VenueEnrichmentReadAdapter implements VenueEnrichmentReadPort {
       short targetYear, int minCitedByCount, long lastId, int limit) {
     return em.createQuery(
             """
-            SELECT new com.patra.catalog.domain.port.enrichment.VenueSnapshot(v.id, v.issnL)
+            SELECT new com.patra.catalog.domain.port.enrichment.VenueSnapshot(
+                v.id, v.issnL, v.imageObjectKey)
             FROM VenueEntity v
             WHERE v.venueType = 'JOURNAL'
               AND v.issnL IS NOT NULL
@@ -66,7 +67,9 @@ public class VenueEnrichmentReadAdapter implements VenueEnrichmentReadPort {
   /// 查询缺少指定年份 Scopus 评级的期刊 venue。
   ///
   /// 与 [findNeedingLetPubEnrichment] 结构一致，但 `NOT EXISTS` 子查询
-  /// 指向 `cat_venue_scopus_rating` 表，互不干扰。
+  /// 指向 `cat_venue_scopus_rating` 表，互不干扰。Scopus 管线不使用 `existingCoverKey`
+  /// 字段（恒有值或 null 都无影响），projection 保留是为了与 LetPub 查询共用同一
+  /// [VenueSnapshot] record 类型。
   ///
   /// @param targetYear 目标年份（对应 `cat_venue_scopus_rating.year`），不可为 null
   /// @param minCitedByCount 被引次数下限（0 = 不过滤）
@@ -78,7 +81,8 @@ public class VenueEnrichmentReadAdapter implements VenueEnrichmentReadPort {
       short targetYear, int minCitedByCount, long lastId, int limit) {
     return em.createQuery(
             """
-            SELECT new com.patra.catalog.domain.port.enrichment.VenueSnapshot(v.id, v.issnL)
+            SELECT new com.patra.catalog.domain.port.enrichment.VenueSnapshot(
+                v.id, v.issnL, v.imageObjectKey)
             FROM VenueEntity v
             WHERE v.venueType = 'JOURNAL'
               AND v.issnL IS NOT NULL
@@ -96,22 +100,5 @@ public class VenueEnrichmentReadAdapter implements VenueEnrichmentReadPort {
         .setParameter("lastId", lastId)
         .setMaxResults(limit)
         .getResultList();
-  }
-
-  /// 读取指定 venue 已有的封面对象键。
-  ///
-  /// 查询 `cat_venue.image_object_key` 字段；若 venue 不存在或字段为 null，返回 empty。
-  ///
-  /// @param venueId 目标 venue 主键
-  /// @return 封面对象键；若 venue 无封面或不存在返回 empty
-  @Override
-  public Optional<String> findExistingCoverKey(long venueId) {
-    List<String> results =
-        em.createQuery(
-                "SELECT v.imageObjectKey FROM VenueEntity v WHERE v.id = :venueId", String.class)
-            .setParameter("venueId", venueId)
-            .setMaxResults(1)
-            .getResultList();
-    return results.isEmpty() ? Optional.empty() : Optional.ofNullable(results.get(0));
   }
 }

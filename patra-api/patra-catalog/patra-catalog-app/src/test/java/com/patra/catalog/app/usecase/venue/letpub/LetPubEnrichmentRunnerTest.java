@@ -55,7 +55,10 @@ class LetPubEnrichmentRunnerTest {
   @DisplayName("单批全部 PROCESSED - 一页耗尽立即终止")
   void run_singleBatch_processesAll() {
     List<VenueSnapshot> batch =
-        List.of(VenueSnapshot.of(1L, "A"), VenueSnapshot.of(2L, "B"), VenueSnapshot.of(3L, "C"));
+        List.of(
+            VenueSnapshot.of(1L, "A", null),
+            VenueSnapshot.of(2L, "B", null),
+            VenueSnapshot.of(3L, "C", null));
     when(readPort.findNeedingLetPubEnrichment((short) 2025, 0, 0L, 50)).thenReturn(batch);
     when(readPort.findNeedingLetPubEnrichment((short) 2025, 0, 3L, 50)).thenReturn(List.of());
     when(worker.processVenue(any())).thenReturn(Outcome.PROCESSED);
@@ -72,12 +75,16 @@ class LetPubEnrichmentRunnerTest {
   @DisplayName("单条失败不中断 - 其余 venue 继续处理")
   void run_workerThrowsOnOneVenue_othersContinue() {
     List<VenueSnapshot> batch =
-        List.of(VenueSnapshot.of(1L, "A"), VenueSnapshot.of(2L, "B"), VenueSnapshot.of(3L, "C"));
+        List.of(
+            VenueSnapshot.of(1L, "A", null),
+            VenueSnapshot.of(2L, "B", null),
+            VenueSnapshot.of(3L, "C", null));
     when(readPort.findNeedingLetPubEnrichment((short) 2025, 0, 0L, 50)).thenReturn(batch);
     when(readPort.findNeedingLetPubEnrichment((short) 2025, 0, 3L, 50)).thenReturn(List.of());
-    when(worker.processVenue(VenueSnapshot.of(1L, "A"))).thenReturn(Outcome.PROCESSED);
-    when(worker.processVenue(VenueSnapshot.of(2L, "B"))).thenThrow(new RuntimeException("crash"));
-    when(worker.processVenue(VenueSnapshot.of(3L, "C"))).thenReturn(Outcome.PROCESSED);
+    when(worker.processVenue(VenueSnapshot.of(1L, "A", null))).thenReturn(Outcome.PROCESSED);
+    when(worker.processVenue(VenueSnapshot.of(2L, "B", null)))
+        .thenThrow(new RuntimeException("crash"));
+    when(worker.processVenue(VenueSnapshot.of(3L, "C", null))).thenReturn(Outcome.PROCESSED);
 
     VenueEnrichRunStats stats = runner.run((short) 2025, 0);
 
@@ -93,11 +100,14 @@ class LetPubEnrichmentRunnerTest {
     when(readPort.findNeedingLetPubEnrichment((short) 2025, 0, 0L, 50))
         .thenReturn(
             List.of(
-                VenueSnapshot.of(1L, null), VenueSnapshot.of(2L, "B"), VenueSnapshot.of(3L, "C")));
+                VenueSnapshot.of(1L, null, null),
+                VenueSnapshot.of(2L, "B", null),
+                VenueSnapshot.of(3L, "C", null)));
     when(readPort.findNeedingLetPubEnrichment((short) 2025, 0, 3L, 50)).thenReturn(List.of());
-    when(worker.processVenue(VenueSnapshot.of(1L, null))).thenReturn(Outcome.MISSING_ISSN);
-    when(worker.processVenue(VenueSnapshot.of(2L, "B"))).thenReturn(Outcome.NOT_FOUND_IN_SOURCE);
-    when(worker.processVenue(VenueSnapshot.of(3L, "C"))).thenReturn(Outcome.PROCESSED);
+    when(worker.processVenue(VenueSnapshot.of(1L, null, null))).thenReturn(Outcome.MISSING_ISSN);
+    when(worker.processVenue(VenueSnapshot.of(2L, "B", null)))
+        .thenReturn(Outcome.NOT_FOUND_IN_SOURCE);
+    when(worker.processVenue(VenueSnapshot.of(3L, "C", null))).thenReturn(Outcome.PROCESSED);
 
     VenueEnrichRunStats stats = runner.run((short) 2025, 0);
 
@@ -110,9 +120,9 @@ class LetPubEnrichmentRunnerTest {
   @DisplayName("Keyset 游标前进 - 跨页读取使用上页末尾 id")
   void run_keysetAdvancesAcrossPages() {
     when(readPort.findNeedingLetPubEnrichment((short) 2025, 0, 0L, 50))
-        .thenReturn(List.of(VenueSnapshot.of(10L, "A"), VenueSnapshot.of(20L, "B")));
+        .thenReturn(List.of(VenueSnapshot.of(10L, "A", null), VenueSnapshot.of(20L, "B", null)));
     when(readPort.findNeedingLetPubEnrichment((short) 2025, 0, 20L, 50))
-        .thenReturn(List.of(VenueSnapshot.of(30L, "C")));
+        .thenReturn(List.of(VenueSnapshot.of(30L, "C", null)));
     when(readPort.findNeedingLetPubEnrichment((short) 2025, 0, 30L, 50)).thenReturn(List.of());
     when(worker.processVenue(any())).thenReturn(Outcome.PROCESSED);
 

@@ -2,7 +2,6 @@ package com.patra.catalog.domain.port.read;
 
 import com.patra.catalog.domain.port.enrichment.VenueSnapshot;
 import java.util.List;
-import java.util.Optional;
 
 /// Venue 富化工作队列读端口。
 ///
@@ -13,6 +12,11 @@ import java.util.Optional;
 ///   自动缩减，无需专门的"失败清单"表或重试队列
 /// - `lastId` 游标前进 — 避免同一 venue 失败后被无限重捞（同一次 run 内失败
 ///   的 venue 留待下次 Job 调度时再次进入查询）
+///
+/// **为什么返回的 [VenueSnapshot] 直接携带 `existingCoverKey`**：
+/// LetPub Worker 判断是否跳过封面下载时要读 `cat_venue.image_object_key`，
+/// 与其多发一次 PK 查询，不如在同一条工作队列查询里 projection 出来——
+/// Scopus 管线不用但字段为 null，开销可忽略。
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -40,14 +44,4 @@ public interface VenueEnrichmentReadPort {
   /// @return 按 `id` 升序排列的 venue 快照列表；空列表表示没有更多候选
   List<VenueSnapshot> findNeedingScopusEnrichment(
       short targetYear, int minCitedByCount, long lastId, int limit);
-
-  /// 读取指定 venue 已有的封面对象键。
-  ///
-  /// 用于 [LetPubEnrichmentWorker] 判断是否需要重新下载封面（幂等跳过）。
-  /// 放在 ReadPort 而不是 PersistPort，是因为这是一次纯读取，语义上属于
-  /// "venue 工作队列的附加元数据查询"。
-  ///
-  /// @param venueId 目标 venue 主键
-  /// @return 封面对象键；若 venue 无封面返回 empty
-  Optional<String> findExistingCoverKey(long venueId);
 }
