@@ -39,7 +39,6 @@ public interface VenueReadModelMapper {
   @Mapping(source = "cas.isTopJournal", target = "casTopJournal")
   @Mapping(source = "scopus.citeScore", target = "citeScore")
   @Mapping(source = "scopus.quartile", target = "citeScoreQuartile")
-  @Mapping(target = "warningListStatus", ignore = true)
   VenueSummaryReadModel toReadModel(
       VenueEntity entity, JcrRatingEntity jcr, CasRatingEntity cas, ScopusRatingEntity scopus);
 

@@ -340,7 +340,6 @@ class VenueReadAdapterIT {
                 assertThat(item.jifQuartile()).isNull();
                 assertThat(item.casMajorQuartile()).isNull();
                 assertThat(item.casTopJournal()).isNull();
-                assertThat(item.warningListStatus()).isNull();
                 assertThat(item.isOa()).isNull();
                 assertThat(item.researchDirection()).isNull();
               });

@@ -440,13 +440,13 @@ public class LetPubDetailPageParser {
     return new MinorSubjectData(subject, quartile);
   }
 
-  /// 解析预警名单。
+  /// 解析 CAS 中科院期刊预警名单时间序列。
+  ///
+  /// 待 Phase 2B TDD 重写：按 `<br><br>` 分段后逐条解析为 `CasWarningRecord` 列表。
+  /// 当前占位实现什么都不做，Builder 的 `casWarnings` 会默认为空 List。
   private void parseWarningList(
       Map<String, Element> fieldMap, LetPubVenueData.LetPubVenueDataBuilder builder) {
-    String text = getFieldText(fieldMap, "预警名单");
-    if (!text.isEmpty()) {
-      builder.warningListStatus(text);
-    }
+    // TODO(Phase 2B): 实现多行预警记录解析
   }
 
   /// 解析审稿速度（区分官方数据和网友经验）。

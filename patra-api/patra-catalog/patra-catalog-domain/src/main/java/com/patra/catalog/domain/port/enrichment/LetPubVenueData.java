@@ -19,7 +19,8 @@ import lombok.Builder;
 /// | 基本信息 | letPubJournalId ~ researchArticlePercent | 期刊基础属性 |
 /// | JCR 分区 | jcrSubject ~ jciRank | Journal Citation Reports 分区排名 |
 /// | CAS 分区 | casPartitions | 中科院分区列表（支持多版本共存：新锐版/升级版/旧版） |
-/// | 预警/审稿/费用 | warningListStatus ~ apcInfo | 投稿决策参考 |
+/// | CAS 预警 | casWarnings | 中科院期刊预警名单时间序列（每版本一条） |
+/// | 审稿/费用 | reviewSpeedOfficial ~ apcInfo | 投稿决策参考 |
 /// | 收录情况 | indexedIn | 数据库收录列表 |
 ///
 /// **字段来源边界**：
@@ -43,7 +44,7 @@ import lombok.Builder;
 /// @param jciQuartile JCI（期刊引文指标）分区
 /// @param jciRank JCI 排名
 /// @param casPartitions CAS 中科院分区列表（支持多版本，不可变）
-/// @param warningListStatus 预警名单状态
+/// @param casWarnings CAS 中科院期刊预警名单时间序列（按版本，不可变）
 /// @param reviewSpeedOfficial 官方审稿周期
 /// @param reviewSpeedUser 用户反馈审稿周期
 /// @param acceptanceRate 录用比例/难易度
@@ -73,8 +74,9 @@ public record LetPubVenueData(
     String jciRank,
     // CAS 分区（多版本）
     List<CasPartition> casPartitions,
-    // 预警 + 审稿 + 费用
-    String warningListStatus,
+    // CAS 预警名单（时间序列）
+    List<CasWarningRecord> casWarnings,
+    // 审稿 + 费用
     String reviewSpeedOfficial,
     String reviewSpeedUser,
     String acceptanceRate,
@@ -90,7 +92,35 @@ public record LetPubVenueData(
     impactFactorTrend = impactFactorTrend != null ? Map.copyOf(impactFactorTrend) : Map.of();
     indexedIn = indexedIn != null ? List.copyOf(indexedIn) : List.of();
     casPartitions = casPartitions != null ? List.copyOf(casPartitions) : List.of();
+    casWarnings = casWarnings != null ? List.copyOf(casWarnings) : List.of();
   }
+
+  /// CAS 中科院期刊预警名单记录（单版本）。
+  ///
+  /// 对应 LetPub 页面 "期刊分区表预警名单" 行内每一段历史版本文本。
+  /// 每条记录代表一个具体版本（如"2025年03月发布的2025版"）的预警状态。
+  ///
+  /// **设计说明**：
+  ///
+  /// - 预警名单是**独立于 CAS 分区表的时间序列**，发布节奏和版本命名均不同步
+  /// - 预警版本标签（如 `新锐学术版`/`2025版`/`2024版`）和分区版本标签
+  ///   （如 `新锐版`/`升级版`/`基础版`）命名风格不同，不应强行对齐
+  /// - `warningLevel` 仅在 `inWarningList=true` 时可能有值（高/中/低）
+  ///
+  /// @param publishedYear 预警名单发布年份
+  /// @param publishedMonth 预警名单发布月份（可空）
+  /// @param editionLabel 原始版本标签（如 `2025版`、`新锐学术版`）
+  /// @param inWarningList 是否在预警名单中
+  /// @param warningLevel 预警级别（`高`/`中`/`低`，可空）
+  /// @param rawText 原始描述文本（保留 LetPub 页面原句以便追溯）
+  @Builder
+  public record CasWarningRecord(
+      int publishedYear,
+      Integer publishedMonth,
+      String editionLabel,
+      boolean inWarningList,
+      String warningLevel,
+      String rawText) {}
 
   /// CAS 中科院分区快照（单版本）。
   ///

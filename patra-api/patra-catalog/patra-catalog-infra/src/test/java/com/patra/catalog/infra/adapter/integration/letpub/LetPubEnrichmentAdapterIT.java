@@ -157,8 +157,24 @@ class LetPubEnrichmentAdapterIT {
               System.out.println("║   小类: " + p.minorSubject() + " " + p.minorQuartile());
               System.out.println("║   Top期刊: " + p.topJournal() + ", 综述: " + p.reviewJournal());
             });
+    System.out.println("╠══ 预警名单（按版本时间序列） ══════════");
+    if (data.casWarnings() != null && !data.casWarnings().isEmpty()) {
+      data.casWarnings()
+          .forEach(
+              w ->
+                  System.out.println(
+                      "║   "
+                          + w.publishedYear()
+                          + (w.publishedMonth() != null ? "-" + w.publishedMonth() : "")
+                          + " "
+                          + w.editionLabel()
+                          + ": "
+                          + (w.inWarningList() ? "⚠ 预警" : "✓ 不在预警")
+                          + (w.warningLevel() != null ? " [" + w.warningLevel() + "]" : "")));
+    } else {
+      System.out.println("║   (无预警名单数据)");
+    }
     System.out.println("╠══ 其他 ══════════════════════════════");
-    System.out.println("║ 预警名单:        " + data.warningListStatus());
     System.out.println("║ 审稿速度(官网):  " + data.reviewSpeedOfficial());
     System.out.println("║ 审稿速度(网友):  " + data.reviewSpeedUser());
     System.out.println("║ 录用率:          " + data.acceptanceRate());
