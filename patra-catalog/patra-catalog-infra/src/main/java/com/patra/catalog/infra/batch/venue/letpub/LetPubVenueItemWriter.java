@@ -22,6 +22,20 @@ import org.springframework.batch.infrastructure.item.ItemWriter;
 /// **为何封面用显式 UPDATE 而非 dirty check**：Reader 是 `JpaPagingItemReader`，
 /// 读出的 `VenueEntity` 已 detached，setter 不会触发 UPDATE。
 ///
+/// **为何每类实体写入前都要做一次 `existingKeys` 过滤**（`filterNewXxx`）：
+///
+/// 这**不是**对 Reader `NOT EXISTS` 守卫的防御性冗余，而是修复两个过滤维度不对齐
+/// 带来的真实 UK 冲突：
+///
+/// - Reader 过滤维度 = **单一 `targetYear`**（`NOT EXISTS (... year=:targetYear)`）
+/// - Mapper 生成维度 = **多年行集合**（LetPub 趋势 10 年 + CAS 多版本 + 预警历史序列）
+///
+/// 场景：Venue X 此前以 `targetYear=2024` 运行已持久化 2020-2024 的 JCR 行。现以
+/// `targetYear=2025` 再跑，Reader 认为 X 缺 2025 而捞它；Mapper 从 LetPub 拿到完整
+/// 10 年趋势，生成 2016-2025 共 10 条行。若 Writer 不过滤而直接 saveAll，
+/// `INSERT (X, 2020)` 会撞 UK `(venue_id, year)` 导致整 chunk 事务回滚，连带 2025
+/// 也没写入——形成"每次尝试每次失败"的死循环。过滤后只插入真正缺失的 2025 行。
+///
 /// @author linqibin
 /// @since 0.1.0
 @Slf4j

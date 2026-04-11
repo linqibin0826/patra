@@ -11,7 +11,9 @@ import com.patra.catalog.infra.persistence.dao.CasRatingDao;
 import com.patra.catalog.infra.persistence.dao.CasWarningDao;
 import com.patra.catalog.infra.persistence.dao.JcrRatingDao;
 import com.patra.catalog.infra.persistence.dao.VenueDao;
+import com.patra.catalog.infra.persistence.entity.CasRatingEntity;
 import com.patra.catalog.infra.persistence.entity.CasWarningEntity;
+import com.patra.catalog.infra.persistence.entity.JcrRatingEntity;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -61,6 +63,21 @@ class LetPubVenueItemWriterTest {
     w.setEditionLabel(label);
     w.setInWarningList(false);
     return w;
+  }
+
+  private static JcrRatingEntity buildJcr(Long venueId, int year) {
+    JcrRatingEntity e = new JcrRatingEntity();
+    e.setVenueId(venueId);
+    e.setYear((short) year);
+    return e;
+  }
+
+  private static CasRatingEntity buildCas(Long venueId, int year, String edition) {
+    CasRatingEntity e = new CasRatingEntity();
+    e.setVenueId(venueId);
+    e.setYear((short) year);
+    e.setEdition(edition);
+    return e;
   }
 
   @Test
@@ -186,5 +203,89 @@ class LetPubVenueItemWriterTest {
     verify(casWarningDao).findKeysByVenueId(103L);
     verify(casWarningDao, never())
         .saveAll(org.mockito.ArgumentMatchers.<Iterable<CasWarningEntity>>any());
+  }
+
+  /// **关键回归场景**：JCR 跨年过滤（Reader/Mapper 维度不对齐）。
+  ///
+  /// 复现 Writer Javadoc 描述的真实 UK 冲突：Venue 此前以 `targetYear=2024` 运行
+  /// 已持久化 2020-2024；本轮以 `targetYear=2025` 再跑，Reader 认为它缺 2025
+  /// 而捞它出来，Mapper 从 LetPub 拿到完整 6 年趋势生成 2020-2025 共 6 条。
+  /// 若 Writer 不过滤而直接 saveAll，`INSERT (venueId, 2020)` 会撞 UK `(venue_id, year)`
+  /// 导致整个 chunk 回滚，连带 2025 也没写入——形成每次尝试每次失败的死循环。
+  ///
+  /// 过滤后 saveAll 只收到 2025 这唯一的新年行。
+  ///
+  /// **若该测试失败**：说明有人删除了 filterNewJcrRatings 或改坏了判断逻辑，
+  /// 必须回到 Javadoc 的场景说明重新评估，绝不能以"Reader 已经守卫"为由去掉去重。
+  @Test
+  @DisplayName("JCR 跨年：已存在 2020-2024 时应只写入 2025（防 UK 冲突）")
+  void shouldFilterJcrRatingsAcrossYearsToAvoidUniqueKeyCollision() throws Exception {
+    // Given — Mapper 生成 2020-2025 共 6 年；DB 已有 2020-2024（来自上轮运行）
+    Long venueId = 200L;
+    List<JcrRatingEntity> incoming =
+        List.of(
+            buildJcr(venueId, 2020),
+            buildJcr(venueId, 2021),
+            buildJcr(venueId, 2022),
+            buildJcr(venueId, 2023),
+            buildJcr(venueId, 2024),
+            buildJcr(venueId, 2025));
+    LetPubEnrichResult result =
+        LetPubEnrichResult.of(
+            venueId,
+            null,
+            LetPubEnrichResult.JcrBatch.of(incoming),
+            LetPubEnrichResult.CasBatch.empty());
+    when(jcrRatingDao.findYearsByVenueId(venueId))
+        .thenReturn(Set.of((short) 2020, (short) 2021, (short) 2022, (short) 2023, (short) 2024));
+
+    // When
+    writer.write(Chunk.of(result));
+
+    // Then — 只应保存 2025 这一行
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<List<JcrRatingEntity>> captor = ArgumentCaptor.forClass(List.class);
+    verify(jcrRatingDao).saveAll(captor.capture());
+    assertThat(captor.getValue())
+        .singleElement()
+        .satisfies(e -> assertThat(e.getYear()).isEqualTo((short) 2025));
+  }
+
+  /// **关键回归场景**：CAS 跨版本过滤（Reader/Mapper 维度不对齐）。
+  ///
+  /// Mapper 从 LetPub 拿到多个 CAS 版本（升级版/新锐版/旧升级版），但 DB 中已有
+  /// 其中部分 `(year, edition)` 组合。若不过滤直接 saveAll，重复 key 会撞
+  /// UK `(venue_id, year, edition)` 致整个 chunk 回滚。
+  ///
+  /// 与 JCR 过滤唯一区别是组合键维度（year + edition vs 仅 year），失败后果一致。
+  @Test
+  @DisplayName("CAS 跨版本：已存在 (2025,升级版) 时应只写入 (2026,新锐版)")
+  void shouldFilterCasRatingsAcrossEditionsToAvoidUniqueKeyCollision() throws Exception {
+    // Given — Mapper 生成两个版本；DB 已有 2025 升级版
+    Long venueId = 201L;
+    List<CasRatingEntity> incoming =
+        List.of(buildCas(venueId, 2025, "升级版"), buildCas(venueId, 2026, "新锐版"));
+    LetPubEnrichResult result =
+        LetPubEnrichResult.of(
+            venueId,
+            null,
+            LetPubEnrichResult.JcrBatch.empty(),
+            LetPubEnrichResult.CasBatch.of(incoming, List.of()));
+    when(casRatingDao.findKeysByVenueId(venueId)).thenReturn(Set.of("2025:升级版"));
+
+    // When
+    writer.write(Chunk.of(result));
+
+    // Then — 只应保存 2026 新锐版这一行
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<List<CasRatingEntity>> captor = ArgumentCaptor.forClass(List.class);
+    verify(casRatingDao).saveAll(captor.capture());
+    assertThat(captor.getValue())
+        .singleElement()
+        .satisfies(
+            e -> {
+              assertThat(e.getYear()).isEqualTo((short) 2026);
+              assertThat(e.getEdition()).isEqualTo("新锐版");
+            });
   }
 }
