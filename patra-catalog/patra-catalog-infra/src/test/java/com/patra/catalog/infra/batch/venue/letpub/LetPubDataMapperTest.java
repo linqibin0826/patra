@@ -76,7 +76,6 @@ class LetPubDataMapperTest {
         .jciQuartile("Q1")
         .jciRank("1/136")
         .casPartitions(List.of(xinruiPartition, shengjiPartition))
-        .warningListStatus("2024年2月发布的2024版：无预警")
         .reviewSpeedOfficial("较慢，>12周")
         .reviewSpeedUser("平均6.0个月")
         .acceptanceRate("7.69%")

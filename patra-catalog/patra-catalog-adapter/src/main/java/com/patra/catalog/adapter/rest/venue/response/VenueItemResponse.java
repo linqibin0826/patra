@@ -16,6 +16,5 @@ public record VenueItemResponse(
     String jifQuartile,
     String casMajorQuartile,
     Boolean casTopJournal,
-    String warningListStatus,
     Boolean isOa,
     String researchDirection) {}

@@ -221,14 +221,10 @@ class LetPubDetailPageParserTest {
   }
 
   @Nested
-  @DisplayName("预警与审稿信息提取")
+  @DisplayName("审稿与录用信息提取")
   class AdvisoryInfoTests {
 
-    @Test
-    @DisplayName("应提取预警名单状态")
-    void shouldExtractWarningListStatus() {
-      assertThat(data.warningListStatus()).contains("2024").contains("无预警");
-    }
+    // 预警名单（casWarnings）的测试在 WarningListTests @Nested 内，参见后续 TDD 阶段。
 
     @Test
     @DisplayName("应提取官方审稿速度")

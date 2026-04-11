@@ -62,7 +62,6 @@ class VenueSummaryReadModelTest {
       assertThat(model.jifQuartile()).isNull();
       assertThat(model.casMajorQuartile()).isNull();
       assertThat(model.casTopJournal()).isNull();
-      assertThat(model.warningListStatus()).isNull();
       assertThat(model.isOa()).isNull();
       assertThat(model.researchDirection()).isNull();
     }
@@ -80,7 +79,6 @@ class VenueSummaryReadModelTest {
               .jifQuartile("Q1")
               .casMajorQuartile("1区")
               .casTopJournal(true)
-              .warningListStatus(null)
               .isOa(true)
               .researchDirection("医学 · 综合")
               .build();
@@ -93,7 +91,6 @@ class VenueSummaryReadModelTest {
       assertThat(model.jifQuartile()).isEqualTo("Q1");
       assertThat(model.casMajorQuartile()).isEqualTo("1区");
       assertThat(model.casTopJournal()).isTrue();
-      assertThat(model.warningListStatus()).isNull();
       assertThat(model.isOa()).isTrue();
       assertThat(model.researchDirection()).isEqualTo("医学 · 综合");
     }

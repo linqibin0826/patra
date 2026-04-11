@@ -71,7 +71,6 @@ class LetPubVenueDataTest {
               .jciQuartile("Q1")
               .jciRank("1/73")
               .casPartitions(List.of(xinruiPartition, shengjiPartition))
-              .warningListStatus("否")
               .reviewSpeedOfficial("较慢，>12周")
               .reviewSpeedUser("平均6.0个月")
               .acceptanceRate("较难")
@@ -100,7 +99,6 @@ class LetPubVenueDataTest {
           .containsExactly("2026年3月新锐版", "2025年3月升级版");
       assertThat(data.casPartitions().getFirst().majorQuartile()).isEqualTo("1区");
       assertThat(data.casPartitions().getFirst().topJournal()).isTrue();
-      assertThat(data.warningListStatus()).isEqualTo("否");
       assertThat(data.reviewSpeedOfficial()).isEqualTo("较慢，>12周");
       assertThat(data.reviewSpeedUser()).isEqualTo("平均6.0个月");
       assertThat(data.acceptanceRate()).isEqualTo("较难");

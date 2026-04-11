@@ -22,7 +22,6 @@ public record VenueSummaryReadModel(
     Boolean casTopJournal,
     Double citeScore,
     String citeScoreQuartile,
-    String warningListStatus,
     Boolean isOa,
     String researchDirection) {
 
