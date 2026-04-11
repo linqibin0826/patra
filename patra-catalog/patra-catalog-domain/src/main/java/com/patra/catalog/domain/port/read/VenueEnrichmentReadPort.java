@@ -2,6 +2,7 @@ package com.patra.catalog.domain.port.read;
 
 import com.patra.catalog.domain.port.enrichment.VenueSnapshot;
 import java.util.List;
+import java.util.Optional;
 
 /// Venue 富化工作队列读端口。
 ///
@@ -48,5 +49,5 @@ public interface VenueEnrichmentReadPort {
   ///
   /// @param venueId 目标 venue 主键
   /// @return 封面对象键；若 venue 无封面返回 empty
-  java.util.Optional<String> findExistingCoverKey(long venueId);
+  Optional<String> findExistingCoverKey(long venueId);
 }
