@@ -13,12 +13,16 @@ import lombok.Setter;
 
 /// JCR 期刊评级 JPA 实体，映射到表 `cat_venue_jcr_rating`。
 ///
-/// **数据模型**：一个期刊每年一行，存储 Impact Factor 年度趋势数据。
-/// 历史年份仅有 `impactFactor`，最新年份额外填充分区/排名/学科等详情。
+/// **数据模型**：Clarivate JCR 按年发布的期刊评级时间序列（每期刊每年一行）。除 `impactFactor`
+/// 之外的分区/排名/学科/百分位/JCI 独立字段/自引率/WOS 综合分区等，也都是 Clarivate 每版 JCR
+/// 按年发布的年度指标——**语义上都是年度数据，非快照**。
 ///
 /// **唯一约束**：`(venue_id, year)` — 每个期刊每年最多一条 JCR 评级记录。
 ///
-/// **数据来源**：通过 LetPub 爬取填充，由 `LetPubDataMapper` 从原始数据拆解而来。
+/// **当前数据源局限**：目前仅通过 LetPub 爬取填充，而 LetPub 页面只展示最新年的详细分区
+/// 数据（历史年仅有 `impactFactor` 趋势值）。故历史年行里 `impactFactor` 之外的字段目前
+/// 均为 NULL——这是**数据源限制**而非 schema 错位。未来接入 Clarivate InCites API 或
+/// 历史 JCR Excel 批量导入后，可回填这些年度指标。
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -99,7 +103,7 @@ public class JcrRatingEntity extends ChildJpaEntity {
   @Column(name = "jci_value", precision = 10, scale = 4)
   private BigDecimal jciValue;
 
-  /// 自引率（如 "1.6%"，按最新年）
+  /// 自引率（如 "1.6%"；Clarivate 年度指标，LetPub 仅提供最新年值）
   @Column(name = "self_citation_rate", length = 10)
   private String selfCitationRate;
 
