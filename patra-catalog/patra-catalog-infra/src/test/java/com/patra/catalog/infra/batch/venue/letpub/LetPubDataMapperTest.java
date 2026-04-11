@@ -65,37 +65,44 @@ class LetPubDataMapperTest {
             .reviewJournal(false)
             .build();
 
-    return LetPubVenueData.builder()
-        .letPubJournalId("6054")
-        .letPubName("NATURE")
-        .researchDirection("综合性期刊")
-        .articlesPerYear(860)
-        .researchArticlePercent("52.24%")
-        .wosOverallQuartile("1区")
-        .jcrSubject("MULTIDISCIPLINARY SCIENCES")
-        .jcrCollection("SCIE")
-        .jifQuartile("Q1")
-        .jifRank("2/136")
-        .jifPercentile(99.0)
-        .jciSubject("NATURAL SCIENCE FLAGSHIP")
-        .jciCollection("SCIE")
-        .jciQuartile("Q1")
-        .jciRank("3/144")
-        .jciPercentile(98.9)
-        .jciValue(11.14)
-        .selfCitationRate(1.6)
-        .casPartitions(List.of(xinruiPartition, shengjiPartition))
-        .reviewSpeedOfficial("较慢，>12周")
-        .reviewSpeedUser("平均6.0个月")
-        .acceptanceRate("7.69%")
-        .apcInfo("US$11390")
-        .impactFactorTrend(
-            Map.of(
-                "2024-2025", 48.5,
-                "2023-2024", 50.5,
-                "2022-2023", 64.8))
-        .indexedIn(List.of("SCI", "SCIE"))
-        .build();
+    var basicInfo =
+        LetPubVenueData.BasicInfo.builder()
+            .letPubJournalId("6054")
+            .letPubName("NATURE")
+            .researchDirection("综合性期刊")
+            .articlesPerYear(860)
+            .researchArticlePercent("52.24%")
+            .indexedIn(List.of("SCI", "SCIE"))
+            .build();
+
+    var jcrMetrics =
+        LetPubVenueData.JcrMetrics.builder()
+            .wosOverallQuartile("1区")
+            .jcrSubject("MULTIDISCIPLINARY SCIENCES")
+            .jcrCollection("SCIE")
+            .jifQuartile("Q1")
+            .jifRank("2/136")
+            .jifPercentile(99.0)
+            .jciSubject("NATURAL SCIENCE FLAGSHIP")
+            .jciCollection("SCIE")
+            .jciQuartile("Q1")
+            .jciRank("3/144")
+            .jciPercentile(98.9)
+            .jciValue(11.14)
+            .selfCitationRate(1.6)
+            .impactFactorTrend(
+                Map.of(
+                    "2024-2025", 48.5,
+                    "2023-2024", 50.5,
+                    "2022-2023", 64.8))
+            .build();
+
+    var casData = LetPubVenueData.CasData.of(List.of(xinruiPartition, shengjiPartition), List.of());
+
+    var submissionInfo =
+        LetPubVenueData.SubmissionInfo.of("较慢，>12周", "平均6.0个月", "7.69%", "US$11390");
+
+    return LetPubVenueData.of(basicInfo, jcrMetrics, casData, submissionInfo);
   }
 
   @Nested
@@ -189,7 +196,11 @@ class LetPubDataMapperTest {
     @Test
     @DisplayName("年份应从 key 后半段提取（2024-2025 → 2025）")
     void shouldExtractYearFromKey() {
-      var data = LetPubVenueData.builder().impactFactorTrend(Map.of("2021-2022", 69.504)).build();
+      var jcrMetrics =
+          LetPubVenueData.JcrMetrics.builder()
+              .impactFactorTrend(Map.of("2021-2022", 69.504))
+              .build();
+      var data = LetPubVenueData.of(null, jcrMetrics, null, null);
 
       List<JcrRatingEntity> ratings = mapper.mapToJcrRatings(data, VENUE_ID, SOURCE_URL);
 
@@ -201,7 +212,7 @@ class LetPubDataMapperTest {
     @Test
     @DisplayName("无 IF 趋势时应返回空列表")
     void shouldReturnEmptyWhenNoTrend() {
-      var data = LetPubVenueData.builder().build();
+      var data = LetPubVenueData.empty();
 
       List<JcrRatingEntity> ratings = mapper.mapToJcrRatings(data, VENUE_ID, SOURCE_URL);
 
@@ -263,7 +274,7 @@ class LetPubDataMapperTest {
     @Test
     @DisplayName("无 CAS 分区时应返回空列表")
     void shouldReturnEmptyWhenNoCasPartitions() {
-      var data = LetPubVenueData.builder().build();
+      var data = LetPubVenueData.empty();
 
       List<CasRatingEntity> ratings = mapper.mapToCasRatings(data, VENUE_ID, SOURCE_URL);
 
@@ -278,7 +289,12 @@ class LetPubDataMapperTest {
               .version("2025年3月升级版")
               // majorQuartile 缺失
               .build();
-      var data = LetPubVenueData.builder().casPartitions(List.of(incompletePartition)).build();
+      var data =
+          LetPubVenueData.of(
+              null,
+              null,
+              LetPubVenueData.CasData.of(List.of(incompletePartition), List.of()),
+              null);
 
       List<CasRatingEntity> ratings = mapper.mapToCasRatings(data, VENUE_ID, SOURCE_URL);
 
@@ -311,7 +327,9 @@ class LetPubDataMapperTest {
               .warningLevel(CasWarningLevel.MEDIUM)
               .rawText("2024年02月发布的2024版：中风险预警")
               .build();
-      LetPubVenueData data = LetPubVenueData.builder().casWarnings(List.of(r1, r2)).build();
+      LetPubVenueData data =
+          LetPubVenueData.of(
+              null, null, LetPubVenueData.CasData.of(List.of(), List.of(r1, r2)), null);
 
       List<CasWarningEntity> entities = mapper.mapToCasWarnings(data, VENUE_ID, SOURCE_URL);
 
@@ -336,7 +354,9 @@ class LetPubDataMapperTest {
               .warningLevel(CasWarningLevel.HIGH)
               .rawText("2021年12月发布的2021版：高风险预警")
               .build();
-      LetPubVenueData data = LetPubVenueData.builder().casWarnings(List.of(record)).build();
+      LetPubVenueData data =
+          LetPubVenueData.of(
+              null, null, LetPubVenueData.CasData.of(List.of(), List.of(record)), null);
 
       List<CasWarningEntity> entities = mapper.mapToCasWarnings(data, VENUE_ID, SOURCE_URL);
 
@@ -359,7 +379,8 @@ class LetPubDataMapperTest {
     @Test
     @DisplayName("casWarnings 为空时应返回空列表")
     void shouldReturnEmptyListWhenCasWarningsIsEmpty() {
-      LetPubVenueData data = LetPubVenueData.builder().casWarnings(List.of()).build();
+      LetPubVenueData data =
+          LetPubVenueData.of(null, null, LetPubVenueData.CasData.of(List.of(), List.of()), null);
 
       List<CasWarningEntity> entities = mapper.mapToCasWarnings(data, VENUE_ID, SOURCE_URL);
 
@@ -377,7 +398,9 @@ class LetPubDataMapperTest {
               .inWarningList(false)
               .rawText("2020年 发布的2020版：不在预警名单中")
               .build();
-      LetPubVenueData data = LetPubVenueData.builder().casWarnings(List.of(record)).build();
+      LetPubVenueData data =
+          LetPubVenueData.of(
+              null, null, LetPubVenueData.CasData.of(List.of(), List.of(record)), null);
 
       List<CasWarningEntity> entities = mapper.mapToCasWarnings(data, VENUE_ID, SOURCE_URL);
 

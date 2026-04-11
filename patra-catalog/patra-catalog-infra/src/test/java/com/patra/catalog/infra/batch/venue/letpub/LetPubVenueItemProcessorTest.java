@@ -83,13 +83,17 @@ class LetPubVenueItemProcessorTest {
             .build();
 
     LetPubVenueData letPubData =
-        LetPubVenueData.builder()
-            .letPubJournalId("10000")
-            .letPubName("Nature")
-            .jifQuartile("Q1")
-            .casPartitions(List.of(xinruiPartition, shengjiPartition))
-            .impactFactorTrend(Map.of("2024-2025", 48.5))
-            .build();
+        LetPubVenueData.of(
+            LetPubVenueData.BasicInfo.builder()
+                .letPubJournalId("10000")
+                .letPubName("Nature")
+                .build(),
+            LetPubVenueData.JcrMetrics.builder()
+                .jifQuartile("Q1")
+                .impactFactorTrend(Map.of("2024-2025", 48.5))
+                .build(),
+            LetPubVenueData.CasData.of(List.of(xinruiPartition, shengjiPartition), List.of()),
+            null);
     when(enrichmentPort.findByIssn("0028-0836")).thenReturn(Optional.of(letPubData));
 
     LetPubEnrichResult result = processor.process(entity);
@@ -138,12 +142,16 @@ class LetPubVenueItemProcessorTest {
     // Given
     VenueEntity entity = createVenueEntity(401L, "1111-2222");
     LetPubVenueData data =
-        LetPubVenueData.builder()
-            .letPubJournalId("6054")
-            .letPubName("Nature")
-            .coverImageSourceUrl(
-                "https://media-cdn.oss-cn-hangzhou.aliyuncs.com/statics/images/comment_center/cover/journal/6054.jpg")
-            .build();
+        LetPubVenueData.of(
+            LetPubVenueData.BasicInfo.builder()
+                .letPubJournalId("6054")
+                .letPubName("Nature")
+                .coverImageSourceUrl(
+                    "https://media-cdn.oss-cn-hangzhou.aliyuncs.com/statics/images/comment_center/cover/journal/6054.jpg")
+                .build(),
+            null,
+            null,
+            null);
     when(enrichmentPort.findByIssn("1111-2222")).thenReturn(Optional.of(data));
     when(coverImageDownloadPort.downloadAndStore(any(URI.class), eq("catalog/venue-cover/401.jpg")))
         .thenReturn("catalog/venue-cover/401.jpg");
@@ -164,12 +172,16 @@ class LetPubVenueItemProcessorTest {
     // Given
     VenueEntity entity = createVenueEntity(402L, "3333-4444");
     LetPubVenueData data =
-        LetPubVenueData.builder()
-            .letPubJournalId("9999")
-            .letPubName("Nature")
-            .coverImageSourceUrl(
-                "https://media-cdn.oss-cn-hangzhou.aliyuncs.com/statics/images/comment_center/cover/journal/9999.jpg")
-            .build();
+        LetPubVenueData.of(
+            LetPubVenueData.BasicInfo.builder()
+                .letPubJournalId("9999")
+                .letPubName("Nature")
+                .coverImageSourceUrl(
+                    "https://media-cdn.oss-cn-hangzhou.aliyuncs.com/statics/images/comment_center/cover/journal/9999.jpg")
+                .build(),
+            null,
+            null,
+            null);
     when(enrichmentPort.findByIssn("3333-4444")).thenReturn(Optional.of(data));
     when(coverImageDownloadPort.downloadAndStore(any(URI.class), any()))
         .thenThrow(new FileDownloadException("MinIO down", StandardErrorTrait.DEP_UNAVAILABLE));
@@ -191,11 +203,15 @@ class LetPubVenueItemProcessorTest {
     // Given — 带空格的 URL 会让 URI.create 抛 IllegalArgumentException
     VenueEntity entity = createVenueEntity(500L, "7777-8888");
     LetPubVenueData data =
-        LetPubVenueData.builder()
-            .letPubJournalId("6054")
-            .letPubName("Nature")
-            .coverImageSourceUrl("not a valid url with spaces")
-            .build();
+        LetPubVenueData.of(
+            LetPubVenueData.BasicInfo.builder()
+                .letPubJournalId("6054")
+                .letPubName("Nature")
+                .coverImageSourceUrl("not a valid url with spaces")
+                .build(),
+            null,
+            null,
+            null);
     when(enrichmentPort.findByIssn("7777-8888")).thenReturn(Optional.of(data));
 
     // When
@@ -215,11 +231,15 @@ class LetPubVenueItemProcessorTest {
     // 若 Processor 不在上游显式拦截，会让空 URI 流向下载端口。
     VenueEntity entity = createVenueEntity(700L, "1010-2020");
     LetPubVenueData data =
-        LetPubVenueData.builder()
-            .letPubJournalId("6054")
-            .letPubName("Nature")
-            .coverImageSourceUrl("")
-            .build();
+        LetPubVenueData.of(
+            LetPubVenueData.BasicInfo.builder()
+                .letPubJournalId("6054")
+                .letPubName("Nature")
+                .coverImageSourceUrl("")
+                .build(),
+            null,
+            null,
+            null);
     when(enrichmentPort.findByIssn("1010-2020")).thenReturn(Optional.of(data));
 
     // When
@@ -239,11 +259,15 @@ class LetPubVenueItemProcessorTest {
     // 把同一 venue 的 JCR/CAS ratings 一并丢弃。
     VenueEntity entity = createVenueEntity(800L, "2020-3030");
     LetPubVenueData data =
-        LetPubVenueData.builder()
-            .letPubJournalId("6054")
-            .letPubName("Nature")
-            .coverImageSourceUrl("https://media-cdn.example.com/cover/journal/6054.jpg")
-            .build();
+        LetPubVenueData.of(
+            LetPubVenueData.BasicInfo.builder()
+                .letPubJournalId("6054")
+                .letPubName("Nature")
+                .coverImageSourceUrl("https://media-cdn.example.com/cover/journal/6054.jpg")
+                .build(),
+            null,
+            null,
+            null);
     when(enrichmentPort.findByIssn("2020-3030")).thenReturn(Optional.of(data));
     when(coverImageDownloadPort.downloadAndStore(any(URI.class), any()))
         .thenThrow(new IllegalStateException("MinIO client 未初始化"));
@@ -263,7 +287,14 @@ class LetPubVenueItemProcessorTest {
     // Given — coverImageSourceUrl 未设置，默认为 null
     VenueEntity entity = createVenueEntity(600L, "9999-0000");
     LetPubVenueData data =
-        LetPubVenueData.builder().letPubJournalId("6054").letPubName("Nature").build();
+        LetPubVenueData.of(
+            LetPubVenueData.BasicInfo.builder()
+                .letPubJournalId("6054")
+                .letPubName("Nature")
+                .build(),
+            null,
+            null,
+            null);
     when(enrichmentPort.findByIssn("9999-0000")).thenReturn(Optional.of(data));
 
     // When
@@ -282,12 +313,16 @@ class LetPubVenueItemProcessorTest {
     VenueEntity entity = createVenueEntity(403L, "5555-6666");
     entity.setImageObjectKey("catalog/venue-cover/403.jpg");
     LetPubVenueData data =
-        LetPubVenueData.builder()
-            .letPubJournalId("6054")
-            .letPubName("Nature")
-            .coverImageSourceUrl(
-                "https://media-cdn.oss-cn-hangzhou.aliyuncs.com/cover/journal/6054.jpg")
-            .build();
+        LetPubVenueData.of(
+            LetPubVenueData.BasicInfo.builder()
+                .letPubJournalId("6054")
+                .letPubName("Nature")
+                .coverImageSourceUrl(
+                    "https://media-cdn.oss-cn-hangzhou.aliyuncs.com/cover/journal/6054.jpg")
+                .build(),
+            null,
+            null,
+            null);
     when(enrichmentPort.findByIssn("5555-6666")).thenReturn(Optional.of(data));
 
     // When

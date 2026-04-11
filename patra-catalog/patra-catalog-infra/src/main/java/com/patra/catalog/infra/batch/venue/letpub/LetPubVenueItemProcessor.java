@@ -61,7 +61,7 @@ public class LetPubVenueItemProcessor implements ItemProcessor<VenueEntity, LetP
 
     LetPubVenueData data = result.get();
     Long venueId = item.getId();
-    String sourceUrl = buildSourceUrl(data.letPubJournalId());
+    String sourceUrl = buildSourceUrl(data.basicInfo().letPubJournalId());
 
     List<JcrRatingEntity> jcrRatings = dataMapper.mapToJcrRatings(data, venueId, sourceUrl);
     List<CasRatingEntity> casRatings = dataMapper.mapToCasRatings(data, venueId, sourceUrl);
@@ -106,7 +106,7 @@ public class LetPubVenueItemProcessor implements ItemProcessor<VenueEntity, LetP
       log.debug("Venue [id={}] 已存在封面对象键，跳过下载（幂等）", item.getId());
       return null;
     }
-    String sourceUrl = data.coverImageSourceUrl();
+    String sourceUrl = data.basicInfo().coverImageSourceUrl();
     if (sourceUrl == null || sourceUrl.isBlank()) {
       return null;
     }
