@@ -19,9 +19,9 @@ import org.springframework.stereotype.Component;
 ///
 /// **运行建议**：
 ///
-/// - Scopus API 限速 2-3 次/秒，每条约 400ms
+/// - Scopus API 限速 2-3 次/秒，Runner 自动在两次 venue 处理间等待 400ms
 /// - 全量富化约需数小时（视期刊数量）
-/// - 可随时中断，重启后自动跳过已处理记录
+/// - 失败 venue 会在下次 Job 调度时自动被候选查询重新捞起（跨 Job 自愈）
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -46,8 +46,13 @@ public class VenueScopusEnrichScheduleJob {
 
       String message =
           String.format(
-              "Scopus 期刊指标富化 Job 已启动，targetYear=%d, minCitedByCount=%d, executionId=%d",
-              param.targetYear(), param.minCitedByCount(), result.executionId());
+              "Scopus 期刊指标富化已完成: targetYear=%d, minCitedByCount=%d, total=%d, processed=%d, skipped=%d, failed=%d",
+              param.targetYear(),
+              param.minCitedByCount(),
+              result.totalRead(),
+              result.processed(),
+              result.skipped(),
+              result.failed());
       log.info(message);
       XxlJobHelper.handleSuccess(message);
 
