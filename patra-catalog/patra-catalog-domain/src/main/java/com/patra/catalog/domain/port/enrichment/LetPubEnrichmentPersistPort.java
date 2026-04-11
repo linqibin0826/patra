@@ -9,8 +9,9 @@ package com.patra.catalog.domain.port.enrichment;
 /// 3. 通过对应 DAO 执行批量插入
 /// 4. 若 `coverObjectKey` 非 null，UPDATE `cat_venue.image_object_key`
 ///
-/// **事务约束**：本方法**不自带事务**，必须被 App 层的
-/// `@Transactional(REQUIRES_NEW)` worker 调用，依赖事务传播执行。
+/// **事务约束**：本方法**不自带事务**。调用方必须是 App 层承载
+/// `@Transactional(REQUIRES_NEW)` 边界的 Persister bean（如 `LetPubEnrichmentPersister`），
+/// 依赖跨 bean 代理激活事务。
 ///
 /// @author linqibin
 /// @since 0.1.0
