@@ -41,9 +41,7 @@ class LetPubEnrichmentPersistAdapterTest {
   @BeforeEach
   void setUp() {
     MockitoAnnotations.openMocks(this);
-    adapter =
-        new LetPubEnrichmentPersistAdapter(
-            new LetPubDataMapper(), jcrDao, casDao, warnDao, venueDao);
+    adapter = new LetPubEnrichmentPersistAdapter(jcrDao, casDao, warnDao, venueDao);
   }
 
   @Test

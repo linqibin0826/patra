@@ -35,7 +35,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class LetPubEnrichmentPersistAdapter implements LetPubEnrichmentPersistPort {
 
-  private final LetPubDataMapper dataMapper;
+  private final LetPubDataMapper dataMapper = new LetPubDataMapper();
   private final JcrRatingDao jcrRatingDao;
   private final CasRatingDao casRatingDao;
   private final CasWarningDao casWarningDao;
