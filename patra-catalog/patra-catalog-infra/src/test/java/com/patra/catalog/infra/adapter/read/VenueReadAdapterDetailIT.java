@@ -2,13 +2,23 @@ package com.patra.catalog.infra.adapter.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.patra.catalog.domain.model.enums.CasWarningLevel;
 import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel;
+import com.patra.catalog.domain.model.read.venue.VenueLatestRating;
 import com.patra.catalog.domain.model.vo.venue.CitationMetrics;
 import com.patra.catalog.domain.model.vo.venue.OpenAccessInfo;
 import com.patra.catalog.domain.model.vo.venue.PublicationProfile;
 import com.patra.catalog.domain.model.vo.venue.Society;
 import com.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
+import com.patra.catalog.infra.persistence.dao.CasRatingDao;
+import com.patra.catalog.infra.persistence.dao.CasWarningDao;
+import com.patra.catalog.infra.persistence.dao.JcrRatingDao;
+import com.patra.catalog.infra.persistence.dao.ScopusRatingDao;
 import com.patra.catalog.infra.persistence.dao.VenueDao;
+import com.patra.catalog.infra.persistence.entity.CasRatingEntity;
+import com.patra.catalog.infra.persistence.entity.CasWarningEntity;
+import com.patra.catalog.infra.persistence.entity.JcrRatingEntity;
+import com.patra.catalog.infra.persistence.entity.ScopusRatingEntity;
 import com.patra.catalog.infra.persistence.entity.VenueEntity;
 import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
@@ -45,6 +55,10 @@ class VenueReadAdapterDetailIT {
   @Autowired private VenueReadAdapter venueReadAdapter;
 
   @Autowired private VenueDao venueDao;
+  @Autowired private JcrRatingDao jcrRatingDao;
+  @Autowired private CasRatingDao casRatingDao;
+  @Autowired private ScopusRatingDao scopusRatingDao;
+  @Autowired private CasWarningDao casWarningDao;
 
   /// 正常查询应返回完整详情。
   @Test
@@ -178,5 +192,155 @@ class VenueReadAdapterDetailIT {
 
     // Then: 返回空
     assertThat(result).isEmpty();
+  }
+
+  /// 详情查询应包含最新 JCR/CAS/Scopus 评级和 CAS 预警数据。
+  @Test
+  @DisplayName("详情查询应包含最新 JCR/CAS/Scopus 评级和 CAS 预警数据")
+  void shouldReturnDetailWithLatestRatingData() {
+    // Given: 插入 Venue
+    VenueEntity venue = new VenueEntity();
+    venue.setId(SnowflakeIdGenerator.getId());
+    venue.setVenueType("JOURNAL");
+    venue.setTitle("Test Journal With Ratings");
+    venue.setProvenanceCode("OPENALEX");
+    venue.setAffiliatedSocieties(List.of());
+    venueDao.save(venue);
+
+    Long venueId = venue.getId();
+
+    // 插入 JCR 评级（两条，应取最新年份 2025）
+    JcrRatingEntity jcr2024 = new JcrRatingEntity();
+    jcr2024.setId(SnowflakeIdGenerator.getId());
+    jcr2024.setVenueId(venueId);
+    jcr2024.setYear((short) 2024);
+    jcr2024.setImpactFactor(new BigDecimal("10.5000"));
+    jcr2024.setJifQuartile("Q1");
+    jcrRatingDao.save(jcr2024);
+
+    JcrRatingEntity jcr2025 = new JcrRatingEntity();
+    jcr2025.setId(SnowflakeIdGenerator.getId());
+    jcr2025.setVenueId(venueId);
+    jcr2025.setYear((short) 2025);
+    jcr2025.setImpactFactor(new BigDecimal("12.3400"));
+    jcr2025.setJifQuartile("Q1");
+    jcr2025.setJifRank("5/200");
+    jcr2025.setJifPercentile(new BigDecimal("97.50"));
+    jcr2025.setWosOverallQuartile("1区");
+    jcr2025.setCollection("SCIE");
+    jcr2025.setSelfCitationRate(new BigDecimal("3.20"));
+    jcr2025.setResearchDirection("MULTIDISCIPLINARY SCIENCES");
+    jcr2025.setJciValue(new BigDecimal("8.5000"));
+    jcr2025.setJciQuartile("Q1");
+    jcrRatingDao.save(jcr2025);
+
+    // 插入 CAS 评级
+    CasRatingEntity cas = new CasRatingEntity();
+    cas.setId(SnowflakeIdGenerator.getId());
+    cas.setVenueId(venueId);
+    cas.setYear((short) 2025);
+    cas.setEdition("升级版");
+    cas.setMajorCategory("医学");
+    cas.setMajorQuartile("1区");
+    cas.setMinorSubject("肿瘤学");
+    cas.setMinorQuartile("1区");
+    cas.setIsTopJournal(true);
+    cas.setIsReviewJournal(false);
+    casRatingDao.save(cas);
+
+    // 插入 Scopus 评级
+    ScopusRatingEntity scopus = new ScopusRatingEntity();
+    scopus.setId(SnowflakeIdGenerator.getId());
+    scopus.setVenueId(venueId);
+    scopus.setYear((short) 2025);
+    scopus.setCiteScore(new BigDecimal("15.6000"));
+    scopus.setSjr(new BigDecimal("5.2300"));
+    scopus.setSnip(new BigDecimal("4.1200"));
+    scopus.setQuartile("Q1");
+    scopus.setPercentile(new BigDecimal("98.00"));
+    scopusRatingDao.save(scopus);
+
+    // 插入 CAS 预警（两条，应取最新年份 2025）
+    CasWarningEntity warning2024 = new CasWarningEntity();
+    warning2024.setId(SnowflakeIdGenerator.getId());
+    warning2024.setVenueId(venueId);
+    warning2024.setPublishedYear((short) 2024);
+    warning2024.setEditionLabel("2024版");
+    warning2024.setInWarningList(false);
+    casWarningDao.save(warning2024);
+
+    CasWarningEntity warning2025 = new CasWarningEntity();
+    warning2025.setId(SnowflakeIdGenerator.getId());
+    warning2025.setVenueId(venueId);
+    warning2025.setPublishedYear((short) 2025);
+    warning2025.setEditionLabel("2025版");
+    warning2025.setInWarningList(true);
+    warning2025.setWarningLevel(CasWarningLevel.MEDIUM);
+    casWarningDao.save(warning2025);
+
+    // When
+    Optional<VenueDetailReadModel> result = venueReadAdapter.findVenueDetail(venueId);
+
+    // Then
+    assertThat(result).isPresent();
+    VenueDetailReadModel detail = result.get();
+    VenueLatestRating rating = detail.latestRating();
+    assertThat(rating).isNotNull();
+
+    // JCR（应为 2025 年数据）
+    assertThat(rating.jcrYear()).isEqualTo((short) 2025);
+    assertThat(rating.impactFactor()).isEqualByComparingTo(new BigDecimal("12.34"));
+    assertThat(rating.jifQuartile()).isEqualTo("Q1");
+    assertThat(rating.jifRank()).isEqualTo("5/200");
+    assertThat(rating.jifPercentile()).isEqualByComparingTo(new BigDecimal("97.50"));
+    assertThat(rating.wosOverallQuartile()).isEqualTo("1区");
+    assertThat(rating.collection()).isEqualTo("SCIE");
+    assertThat(rating.selfCitationRate()).isEqualByComparingTo(new BigDecimal("3.20"));
+    assertThat(rating.researchDirection()).isEqualTo("MULTIDISCIPLINARY SCIENCES");
+    assertThat(rating.jciValue()).isEqualByComparingTo(new BigDecimal("8.50"));
+    assertThat(rating.jciQuartile()).isEqualTo("Q1");
+
+    // CAS
+    assertThat(rating.casYear()).isEqualTo((short) 2025);
+    assertThat(rating.casEdition()).isEqualTo("升级版");
+    assertThat(rating.majorCategory()).isEqualTo("医学");
+    assertThat(rating.majorQuartile()).isEqualTo("1区");
+    assertThat(rating.minorSubject()).isEqualTo("肿瘤学");
+    assertThat(rating.minorQuartile()).isEqualTo("1区");
+    assertThat(rating.isTopJournal()).isTrue();
+    assertThat(rating.isReviewJournal()).isFalse();
+
+    // Scopus
+    assertThat(rating.scopusYear()).isEqualTo((short) 2025);
+    assertThat(rating.citeScore()).isEqualByComparingTo(new BigDecimal("15.60"));
+    assertThat(rating.sjr()).isEqualByComparingTo(new BigDecimal("5.23"));
+    assertThat(rating.snip()).isEqualByComparingTo(new BigDecimal("4.12"));
+    assertThat(rating.citeScoreQuartile()).isEqualTo("Q1");
+    assertThat(rating.citeScorePercentile()).isEqualByComparingTo(new BigDecimal("98.00"));
+
+    // Warning（应为 2025 年数据）
+    assertThat(rating.inWarningList()).isTrue();
+    assertThat(rating.warningLevel()).isEqualTo("medium");
+  }
+
+  /// 无评级数据时 latestRating 应为 null。
+  @Test
+  @DisplayName("无评级数据时 latestRating 应为 null")
+  void shouldReturnNullLatestRatingWhenNoRatingData() {
+    // Given: 仅插入 Venue，无评级数据
+    VenueEntity venue = new VenueEntity();
+    venue.setId(SnowflakeIdGenerator.getId());
+    venue.setVenueType("JOURNAL");
+    venue.setTitle("Journal Without Ratings");
+    venue.setProvenanceCode("OPENALEX");
+    venue.setAffiliatedSocieties(List.of());
+    venueDao.save(venue);
+
+    // When
+    Optional<VenueDetailReadModel> result = venueReadAdapter.findVenueDetail(venue.getId());
+
+    // Then
+    assertThat(result).isPresent();
+    assertThat(result.get().latestRating()).isNull();
   }
 }

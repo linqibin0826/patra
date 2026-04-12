@@ -22,6 +22,7 @@ import java.util.List;
 /// @param citationMetrics 引用指标（可空）
 /// @param openAccess 开放获取信息（可空）
 /// @param affiliatedSocieties 关联学会列表（可空）
+/// @param latestRating 最新评级摘要（JCR/CAS/Scopus/预警，可空）
 /// @param lastSyncedAt 最后同步时间（可空）
 /// @param createdAt 创建时间
 /// @param updatedAt 更新时间
@@ -39,6 +40,7 @@ public record VenueDetailResponse(
     CitationMetricsDto citationMetrics,
     OpenAccessDto openAccess,
     List<SocietyDto> affiliatedSocieties,
+    LatestRatingDto latestRating,
     Instant lastSyncedAt,
     Instant createdAt,
     Instant updatedAt) {
@@ -118,4 +120,62 @@ public record VenueDetailResponse(
   /// @param url 学会主页 URL
   /// @param organization 学会/组织名称
   public record SocietyDto(String url, String organization) {}
+
+  /// 最新评级摘要 DTO（JCR/CAS/Scopus/预警）。
+  ///
+  /// @param jcrYear JCR 评级年份
+  /// @param impactFactor JIF 影响因子
+  /// @param jifQuartile JIF 分区（Q1-Q4）
+  /// @param jifRank JIF 排名（如 "2/136"）
+  /// @param jifPercentile JIF 学科百分位
+  /// @param wosOverallQuartile WOS 综合分区等级
+  /// @param collection JIF 收录集（SCIE/SSCI/AHCI）
+  /// @param selfCitationRate 自引率
+  /// @param researchDirection 研究方向/学科领域
+  /// @param jciValue JCI 数值
+  /// @param jciQuartile JCI 分区
+  /// @param casYear CAS 分区年份
+  /// @param casEdition CAS 版本名称
+  /// @param majorCategory 大类学科
+  /// @param majorQuartile 大类分区
+  /// @param minorSubject 小类学科
+  /// @param minorQuartile 小类分区
+  /// @param isTopJournal 是否为 Top 期刊
+  /// @param isReviewJournal 是否为综述期刊
+  /// @param scopusYear Scopus 评级年份
+  /// @param citeScore CiteScore
+  /// @param sjr SCImago Journal Rank
+  /// @param snip Source Normalized Impact per Paper
+  /// @param citeScoreQuartile CiteScore 分区（Q1-Q4）
+  /// @param citeScorePercentile CiteScore 学科百分位
+  /// @param inWarningList 是否在 CAS 预警名单中
+  /// @param warningLevel 预警级别（high/medium/low）
+  public record LatestRatingDto(
+      Short jcrYear,
+      BigDecimal impactFactor,
+      String jifQuartile,
+      String jifRank,
+      BigDecimal jifPercentile,
+      String wosOverallQuartile,
+      String collection,
+      BigDecimal selfCitationRate,
+      String researchDirection,
+      BigDecimal jciValue,
+      String jciQuartile,
+      Short casYear,
+      String casEdition,
+      String majorCategory,
+      String majorQuartile,
+      String minorSubject,
+      String minorQuartile,
+      Boolean isTopJournal,
+      Boolean isReviewJournal,
+      Short scopusYear,
+      BigDecimal citeScore,
+      BigDecimal sjr,
+      BigDecimal snip,
+      String citeScoreQuartile,
+      BigDecimal citeScorePercentile,
+      Boolean inWarningList,
+      String warningLevel) {}
 }
