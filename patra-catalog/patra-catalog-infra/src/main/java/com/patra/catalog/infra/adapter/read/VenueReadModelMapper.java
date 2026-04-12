@@ -2,6 +2,9 @@ package com.patra.catalog.infra.adapter.read;
 
 import com.patra.catalog.domain.model.enums.CasWarningLevel;
 import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel;
+import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel.IndexingHistoryItem;
+import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel.MeshHeading;
+import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel.VenueRelationItem;
 import com.patra.catalog.domain.model.read.venue.VenueLatestRating;
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import com.patra.catalog.infra.persistence.entity.CasRatingEntity;
@@ -9,6 +12,10 @@ import com.patra.catalog.infra.persistence.entity.CasWarningEntity;
 import com.patra.catalog.infra.persistence.entity.JcrRatingEntity;
 import com.patra.catalog.infra.persistence.entity.ScopusRatingEntity;
 import com.patra.catalog.infra.persistence.entity.VenueEntity;
+import com.patra.catalog.infra.persistence.entity.VenueIndexingHistoryEntity;
+import com.patra.catalog.infra.persistence.entity.VenueMeshEntity;
+import com.patra.catalog.infra.persistence.entity.VenueRelationEntity;
+import java.util.List;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -39,6 +46,8 @@ public interface VenueReadModelMapper {
   @Mapping(source = "entity.openAccess.isOa", target = "isOa")
   @Mapping(source = "jcr.jifQuartile", target = "jifQuartile")
   @Mapping(source = "jcr.researchDirection", target = "researchDirection")
+  @Mapping(source = "jcr.impactFactor", target = "impactFactor")
+  @Mapping(source = "jcr.collection", target = "collection")
   @Mapping(source = "cas.majorQuartile", target = "casMajorQuartile")
   @Mapping(source = "cas.isTopJournal", target = "casTopJournal")
   @Mapping(source = "scopus.citeScore", target = "citeScore")
@@ -46,10 +55,13 @@ public interface VenueReadModelMapper {
   VenueSummaryReadModel toReadModel(
       VenueEntity entity, JcrRatingEntity jcr, CasRatingEntity cas, ScopusRatingEntity scopus);
 
-  /// 将 VenueEntity + 评级数据转换为详情读模型。
+  /// 将 VenueEntity + 评级数据 + MeSH/关系/索引历史转换为详情读模型。
   ///
   /// @param entity Venue JPA 实体
   /// @param latestRating 最新评级摘要（可为 null）
+  /// @param meshEntities MeSH 主题词实体列表
+  /// @param relationEntities 关联关系实体列表
+  /// @param indexingEntities 索引历史实体列表
   /// @return Venue 详情读模型
   @Mapping(source = "entity.id", target = "id")
   @Mapping(source = "entity.venueType", target = "venueType")
@@ -64,11 +76,37 @@ public interface VenueReadModelMapper {
   @Mapping(source = "entity.citationMetrics", target = "citationMetrics")
   @Mapping(source = "entity.openAccess", target = "openAccess")
   @Mapping(source = "entity.affiliatedSocieties", target = "affiliatedSocieties")
+  @Mapping(source = "meshEntities", target = "meshHeadings")
+  @Mapping(source = "relationEntities", target = "relations")
+  @Mapping(source = "indexingEntities", target = "indexingHistory")
   @Mapping(source = "latestRating", target = "latestRating")
   @Mapping(source = "entity.lastSyncedAt", target = "lastSyncedAt")
   @Mapping(source = "entity.createdAt", target = "createdAt")
   @Mapping(source = "entity.updatedAt", target = "updatedAt")
-  VenueDetailReadModel toDetailReadModel(VenueEntity entity, VenueLatestRating latestRating);
+  VenueDetailReadModel toDetailReadModel(
+      VenueEntity entity,
+      VenueLatestRating latestRating,
+      List<VenueMeshEntity> meshEntities,
+      List<VenueRelationEntity> relationEntities,
+      List<VenueIndexingHistoryEntity> indexingEntities);
+
+  /// 将 VenueMeshEntity 转换为 MeshHeading 读模型。
+  ///
+  /// @param entity MeSH 主题词实体
+  /// @return MeSH 主题词读模型
+  MeshHeading toMeshHeading(VenueMeshEntity entity);
+
+  /// 将 VenueRelationEntity 转换为 VenueRelationItem 读模型。
+  ///
+  /// @param entity 关联关系实体
+  /// @return 关联关系读模型
+  VenueRelationItem toRelationItem(VenueRelationEntity entity);
+
+  /// 将 VenueIndexingHistoryEntity 转换为 IndexingHistoryItem 读模型。
+  ///
+  /// @param entity 索引历史实体
+  /// @return 索引历史读模型
+  IndexingHistoryItem toIndexingHistoryItem(VenueIndexingHistoryEntity entity);
 
   /// 将 JCR/CAS/Scopus 评级和 CAS 预警转换为最新评级摘要。
   ///

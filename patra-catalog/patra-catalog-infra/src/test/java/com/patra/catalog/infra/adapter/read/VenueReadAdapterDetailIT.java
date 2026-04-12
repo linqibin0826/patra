@@ -4,6 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.patra.catalog.domain.model.enums.CasWarningLevel;
 import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel;
+import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel.IndexingHistoryItem;
+import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel.MeshHeading;
+import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel.VenueRelationItem;
 import com.patra.catalog.domain.model.read.venue.VenueLatestRating;
 import com.patra.catalog.domain.model.vo.venue.CitationMetrics;
 import com.patra.catalog.domain.model.vo.venue.OpenAccessInfo;
@@ -15,15 +18,22 @@ import com.patra.catalog.infra.persistence.dao.CasWarningDao;
 import com.patra.catalog.infra.persistence.dao.JcrRatingDao;
 import com.patra.catalog.infra.persistence.dao.ScopusRatingDao;
 import com.patra.catalog.infra.persistence.dao.VenueDao;
+import com.patra.catalog.infra.persistence.dao.VenueIndexingHistoryDao;
+import com.patra.catalog.infra.persistence.dao.VenueMeshDao;
+import com.patra.catalog.infra.persistence.dao.VenueRelationDao;
 import com.patra.catalog.infra.persistence.entity.CasRatingEntity;
 import com.patra.catalog.infra.persistence.entity.CasWarningEntity;
 import com.patra.catalog.infra.persistence.entity.JcrRatingEntity;
 import com.patra.catalog.infra.persistence.entity.ScopusRatingEntity;
 import com.patra.catalog.infra.persistence.entity.VenueEntity;
+import com.patra.catalog.infra.persistence.entity.VenueIndexingHistoryEntity;
+import com.patra.catalog.infra.persistence.entity.VenueMeshEntity;
+import com.patra.catalog.infra.persistence.entity.VenueRelationEntity;
 import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -32,6 +42,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
@@ -46,7 +57,12 @@ import org.springframework.test.context.ContextConfiguration;
 @DataJpaTest
 @ContextConfiguration(initializers = CatalogMySQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({VenueReadAdapter.class, VenueReadModelMapperImpl.class, JpaAuditingConfig.class})
+@Import({
+  VenueReadAdapter.class,
+  VenueReadModelMapperImpl.class,
+  JpaAuditingConfig.class,
+  JacksonAutoConfiguration.class
+})
 @ActiveProfiles("test")
 @DisplayName("VenueReadAdapter 详情查询集成测试")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
@@ -59,6 +75,9 @@ class VenueReadAdapterDetailIT {
   @Autowired private CasRatingDao casRatingDao;
   @Autowired private ScopusRatingDao scopusRatingDao;
   @Autowired private CasWarningDao casWarningDao;
+  @Autowired private VenueMeshDao venueMeshDao;
+  @Autowired private VenueRelationDao venueRelationDao;
+  @Autowired private VenueIndexingHistoryDao venueIndexingHistoryDao;
 
   /// 正常查询应返回完整详情。
   @Test
@@ -342,5 +361,182 @@ class VenueReadAdapterDetailIT {
     // Then
     assertThat(result).isPresent();
     assertThat(result.get().latestRating()).isNull();
+  }
+
+  /// 详情查询应包含 MeSH 主题词数据。
+  @Test
+  @DisplayName("详情查询应包含 MeSH 主题词数据")
+  void shouldReturnDetailWithMeshHeadings() {
+    // Given: 插入 Venue 和 MeSH 数据
+    VenueEntity venue = new VenueEntity();
+    venue.setId(SnowflakeIdGenerator.getId());
+    venue.setVenueType("JOURNAL");
+    venue.setTitle("Journal With MeSH");
+    venue.setProvenanceCode("NLM");
+    venue.setAffiliatedSocieties(List.of());
+    venueDao.save(venue);
+
+    Long venueId = venue.getId();
+
+    VenueMeshEntity mesh1 = new VenueMeshEntity();
+    mesh1.setId(SnowflakeIdGenerator.getId());
+    mesh1.setVenueId(venueId);
+    mesh1.setDescriptorName("Medicine");
+    mesh1.setDescriptorUi("D008511");
+    mesh1.setIsMajorTopic(true);
+    mesh1.setQualifierName(null);
+    mesh1.setQualifierUi(null);
+    venueMeshDao.save(mesh1);
+
+    VenueMeshEntity mesh2 = new VenueMeshEntity();
+    mesh2.setId(SnowflakeIdGenerator.getId());
+    mesh2.setVenueId(venueId);
+    mesh2.setDescriptorName("Cardiology");
+    mesh2.setDescriptorUi("D002309");
+    mesh2.setIsMajorTopic(false);
+    mesh2.setQualifierName("methods");
+    mesh2.setQualifierUi("Q000379");
+    venueMeshDao.save(mesh2);
+
+    // When
+    Optional<VenueDetailReadModel> result = venueReadAdapter.findVenueDetail(venueId);
+
+    // Then
+    assertThat(result).isPresent();
+    VenueDetailReadModel detail = result.get();
+    assertThat(detail.meshHeadings()).hasSize(2);
+
+    MeshHeading medicineHeading =
+        detail.meshHeadings().stream()
+            .filter(m -> "Medicine".equals(m.descriptorName()))
+            .findFirst()
+            .orElseThrow();
+    assertThat(medicineHeading.descriptorUi()).isEqualTo("D008511");
+    assertThat(medicineHeading.isMajorTopic()).isTrue();
+    assertThat(medicineHeading.qualifierName()).isNull();
+
+    MeshHeading cardiologyHeading =
+        detail.meshHeadings().stream()
+            .filter(m -> "Cardiology".equals(m.descriptorName()))
+            .findFirst()
+            .orElseThrow();
+    assertThat(cardiologyHeading.descriptorUi()).isEqualTo("D002309");
+    assertThat(cardiologyHeading.isMajorTopic()).isFalse();
+    assertThat(cardiologyHeading.qualifierName()).isEqualTo("methods");
+    assertThat(cardiologyHeading.qualifierUi()).isEqualTo("Q000379");
+  }
+
+  /// 详情查询应包含期刊关联关系数据。
+  @Test
+  @DisplayName("详情查询应包含期刊关联关系数据")
+  void shouldReturnDetailWithRelations() {
+    // Given: 插入 Venue 和关联关系数据
+    VenueEntity venue = new VenueEntity();
+    venue.setId(SnowflakeIdGenerator.getId());
+    venue.setVenueType("JOURNAL");
+    venue.setTitle("Journal With Relations");
+    venue.setProvenanceCode("NLM");
+    venue.setAffiliatedSocieties(List.of());
+    venueDao.save(venue);
+
+    Long venueId = venue.getId();
+
+    VenueRelationEntity relation = new VenueRelationEntity();
+    relation.setId(SnowflakeIdGenerator.getId());
+    relation.setVenueId(venueId);
+    relation.setRelatedVenueId(123456L);
+    relation.setRelatedTitle("Previous Journal Title");
+    relation.setRelationType("PRECEDING");
+    relation.setEffectiveDate(LocalDate.of(2000, 1, 1));
+    relation.setNotes("Journal was renamed");
+    venueRelationDao.save(relation);
+
+    // When
+    Optional<VenueDetailReadModel> result = venueReadAdapter.findVenueDetail(venueId);
+
+    // Then
+    assertThat(result).isPresent();
+    VenueDetailReadModel detail = result.get();
+    assertThat(detail.relations()).hasSize(1);
+
+    VenueRelationItem item = detail.relations().getFirst();
+    assertThat(item.relatedVenueId()).isEqualTo(123456L);
+    assertThat(item.relatedTitle()).isEqualTo("Previous Journal Title");
+    assertThat(item.relationType()).isEqualTo("PRECEDING");
+    assertThat(item.effectiveDate()).isEqualTo(LocalDate.of(2000, 1, 1));
+    assertThat(item.notes()).isEqualTo("Journal was renamed");
+  }
+
+  /// 详情查询应包含索引历史数据。
+  @Test
+  @DisplayName("详情查询应包含索引历史数据")
+  void shouldReturnDetailWithIndexingHistory() {
+    // Given: 插入 Venue 和索引历史数据
+    VenueEntity venue = new VenueEntity();
+    venue.setId(SnowflakeIdGenerator.getId());
+    venue.setVenueType("JOURNAL");
+    venue.setTitle("Journal With Indexing");
+    venue.setProvenanceCode("NLM");
+    venue.setAffiliatedSocieties(List.of());
+    venueDao.save(venue);
+
+    Long venueId = venue.getId();
+
+    VenueIndexingHistoryEntity indexing = new VenueIndexingHistoryEntity();
+    indexing.setId(SnowflakeIdGenerator.getId());
+    indexing.setVenueId(venueId);
+    indexing.setIndexingSource("MEDLINE");
+    indexing.setCurrentlyIndexed(true);
+    indexing.setIndexingTreatment("FULL");
+    indexing.setStartYear(1966);
+    indexing.setEndYear(null);
+    indexing.setStartVolume("1");
+    indexing.setStartIssue("1");
+    indexing.setEndVolume(null);
+    indexing.setEndIssue(null);
+    venueIndexingHistoryDao.save(indexing);
+
+    // When
+    Optional<VenueDetailReadModel> result = venueReadAdapter.findVenueDetail(venueId);
+
+    // Then
+    assertThat(result).isPresent();
+    VenueDetailReadModel detail = result.get();
+    assertThat(detail.indexingHistory()).hasSize(1);
+
+    IndexingHistoryItem item = detail.indexingHistory().getFirst();
+    assertThat(item.indexingSource()).isEqualTo("MEDLINE");
+    assertThat(item.currentlyIndexed()).isTrue();
+    assertThat(item.indexingTreatment()).isEqualTo("FULL");
+    assertThat(item.startYear()).isEqualTo(1966);
+    assertThat(item.endYear()).isNull();
+    assertThat(item.startVolume()).isEqualTo("1");
+    assertThat(item.startIssue()).isEqualTo("1");
+    assertThat(item.endVolume()).isNull();
+    assertThat(item.endIssue()).isNull();
+  }
+
+  /// 无 MeSH/关系/索引历史时应返回空列表。
+  @Test
+  @DisplayName("无 MeSH/关系/索引历史时应返回空列表")
+  void shouldReturnEmptyListsWhenNoMeshRelationsOrIndexing() {
+    // Given: 仅插入 Venue，无关联数据
+    VenueEntity venue = new VenueEntity();
+    venue.setId(SnowflakeIdGenerator.getId());
+    venue.setVenueType("JOURNAL");
+    venue.setTitle("Journal Without Extra Data");
+    venue.setProvenanceCode("OPENALEX");
+    venue.setAffiliatedSocieties(List.of());
+    venueDao.save(venue);
+
+    // When
+    Optional<VenueDetailReadModel> result = venueReadAdapter.findVenueDetail(venue.getId());
+
+    // Then
+    assertThat(result).isPresent();
+    VenueDetailReadModel detail = result.get();
+    assertThat(detail.meshHeadings()).isEmpty();
+    assertThat(detail.relations()).isEmpty();
+    assertThat(detail.indexingHistory()).isEmpty();
   }
 }
