@@ -4,6 +4,7 @@ import com.patra.catalog.adapter.rest.venue.request.VenueListRequest;
 import com.patra.catalog.adapter.rest.venue.response.VenueDetailResponse;
 import com.patra.catalog.adapter.rest.venue.response.VenueItemResponse;
 import com.patra.catalog.adapter.rest.venue.response.VenueRatingHistoryResponse;
+import com.patra.catalog.adapter.rest.venue.response.VenueStatsResponse;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueListQuery;
 import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel.IndexingHistoryItem;
@@ -11,6 +12,7 @@ import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel.MeshHeadin
 import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel.VenueRelationItem;
 import com.patra.catalog.domain.model.read.venue.VenueLatestRating;
 import com.patra.catalog.domain.model.read.venue.VenueRatingHistoryReadModel;
+import com.patra.catalog.domain.model.read.venue.VenueStatsReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import com.patra.catalog.domain.model.vo.venue.CitationMetrics;
 import com.patra.catalog.domain.model.vo.venue.HostOrganization;
@@ -126,6 +128,18 @@ public interface VenueApiConverter {
   /// @param readModel 评级历史读模型
   /// @return 评级历史响应 DTO
   VenueRatingHistoryResponse toRatingHistoryResponse(VenueRatingHistoryReadModel readModel);
+
+  /// 将发文统计读模型转换为 API 响应。
+  ///
+  /// @param readModel 发文统计读模型
+  /// @return 发文统计响应 DTO
+  VenueStatsResponse toStatsResponse(VenueStatsReadModel readModel);
+
+  /// 将 YearStats 读模型转换为 YearStatsDto。
+  ///
+  /// @param yearStats 年度统计记录
+  /// @return 年度统计 DTO
+  VenueStatsResponse.YearStatsDto toDto(VenueStatsReadModel.YearStats yearStats);
 
   /// 将 JcrRecord 读模型转换为 JcrRatingDto。
   ///

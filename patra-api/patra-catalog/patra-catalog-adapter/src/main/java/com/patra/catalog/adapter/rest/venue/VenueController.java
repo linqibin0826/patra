@@ -5,10 +5,12 @@ import com.patra.catalog.adapter.rest.venue.request.VenueListRequest;
 import com.patra.catalog.adapter.rest.venue.response.VenueDetailResponse;
 import com.patra.catalog.adapter.rest.venue.response.VenueItemResponse;
 import com.patra.catalog.adapter.rest.venue.response.VenueRatingHistoryResponse;
+import com.patra.catalog.adapter.rest.venue.response.VenueStatsResponse;
 import com.patra.catalog.app.usecase.venue.query.VenueQueryService;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueDetailQuery;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueListQuery;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueRatingHistoryQuery;
+import com.patra.catalog.app.usecase.venue.query.dto.VenueStatsQuery;
 import com.patra.common.query.PageResult;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -60,5 +62,17 @@ public class VenueController {
     var query = VenueRatingHistoryQuery.of(id);
     return venueApiConverter.toRatingHistoryResponse(
         venueQueryService.getVenueRatingHistory(query));
+  }
+
+  /// 查询 Venue 年度发文统计。
+  ///
+  /// 返回所有年份的发文量、引用量和 OA 发文量，供前端趋势图展示。非分页接口。
+  ///
+  /// @param id 期刊主键 ID
+  /// @return 发文统计响应
+  @GetMapping("/{id}/stats")
+  public VenueStatsResponse getVenueStats(@PathVariable Long id) {
+    var query = VenueStatsQuery.of(id);
+    return venueApiConverter.toStatsResponse(venueQueryService.getVenueStats(query));
   }
 }
