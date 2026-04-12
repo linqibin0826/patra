@@ -26,7 +26,7 @@ class ScopusEnrichmentPersistAdapterTest {
   @BeforeEach
   void setUp() {
     MockitoAnnotations.openMocks(this);
-    adapter = new ScopusEnrichmentPersistAdapter(new ScopusDataMapper(), scopusRatingDao);
+    adapter = new ScopusEnrichmentPersistAdapter(scopusRatingDao);
   }
 
   @Test

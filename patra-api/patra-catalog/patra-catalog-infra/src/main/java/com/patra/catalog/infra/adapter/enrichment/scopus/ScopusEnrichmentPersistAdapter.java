@@ -35,7 +35,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class ScopusEnrichmentPersistAdapter implements ScopusEnrichmentPersistPort {
 
-  private final ScopusDataMapper dataMapper;
+  private final ScopusDataMapper dataMapper = new ScopusDataMapper();
   private final ScopusRatingDao scopusRatingDao;
 
   @Override
