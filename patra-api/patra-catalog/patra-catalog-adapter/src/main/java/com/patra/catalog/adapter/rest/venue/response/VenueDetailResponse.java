@@ -2,6 +2,7 @@ package com.patra.catalog.adapter.rest.venue.response;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 /// Venue 详情响应 DTO。
@@ -22,6 +23,9 @@ import java.util.List;
 /// @param citationMetrics 引用指标（可空）
 /// @param openAccess 开放获取信息（可空）
 /// @param affiliatedSocieties 关联学会列表（可空）
+/// @param meshHeadings MeSH 主题词列表
+/// @param relations 期刊关联关系列表
+/// @param indexingHistory 索引历史列表
 /// @param latestRating 最新评级摘要（JCR/CAS/Scopus/预警，可空）
 /// @param lastSyncedAt 最后同步时间（可空）
 /// @param createdAt 创建时间
@@ -40,6 +44,9 @@ public record VenueDetailResponse(
     CitationMetricsDto citationMetrics,
     OpenAccessDto openAccess,
     List<SocietyDto> affiliatedSocieties,
+    List<MeshHeadingDto> meshHeadings,
+    List<VenueRelationDto> relations,
+    List<IndexingHistoryDto> indexingHistory,
     LatestRatingDto latestRating,
     Instant lastSyncedAt,
     Instant createdAt,
@@ -120,6 +127,56 @@ public record VenueDetailResponse(
   /// @param url 学会主页 URL
   /// @param organization 学会/组织名称
   public record SocietyDto(String url, String organization) {}
+
+  /// MeSH 主题词 DTO。
+  ///
+  /// @param descriptorName 描述符名称
+  /// @param descriptorUi 描述符唯一标识符
+  /// @param isMajorTopic 是否主要主题
+  /// @param qualifierName 限定符名称（可空）
+  /// @param qualifierUi 限定符唯一标识符（可空）
+  public record MeshHeadingDto(
+      String descriptorName,
+      String descriptorUi,
+      Boolean isMajorTopic,
+      String qualifierName,
+      String qualifierUi) {}
+
+  /// 期刊关联关系 DTO。
+  ///
+  /// @param relatedVenueId 关联期刊 ID（可空）
+  /// @param relatedTitle 关联期刊标题
+  /// @param relationType 关系类型
+  /// @param effectiveDate 生效日期（可空）
+  /// @param notes 备注说明（可空）
+  public record VenueRelationDto(
+      Long relatedVenueId,
+      String relatedTitle,
+      String relationType,
+      LocalDate effectiveDate,
+      String notes) {}
+
+  /// 索引历史 DTO。
+  ///
+  /// @param indexingSource 索引来源
+  /// @param currentlyIndexed 当前是否被索引
+  /// @param indexingTreatment 索引处理方式（可空）
+  /// @param startYear 开始年份（可空）
+  /// @param endYear 结束年份（可空）
+  /// @param startVolume 开始卷号（可空）
+  /// @param startIssue 开始期号（可空）
+  /// @param endVolume 结束卷号（可空）
+  /// @param endIssue 结束期号（可空）
+  public record IndexingHistoryDto(
+      String indexingSource,
+      Boolean currentlyIndexed,
+      String indexingTreatment,
+      Integer startYear,
+      Integer endYear,
+      String startVolume,
+      String startIssue,
+      String endVolume,
+      String endIssue) {}
 
   /// 最新评级摘要 DTO（JCR/CAS/Scopus/预警）。
   ///

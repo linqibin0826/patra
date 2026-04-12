@@ -12,6 +12,9 @@ import com.patra.catalog.infra.persistence.dao.CasWarningDao;
 import com.patra.catalog.infra.persistence.dao.JcrRatingDao;
 import com.patra.catalog.infra.persistence.dao.ScopusRatingDao;
 import com.patra.catalog.infra.persistence.dao.VenueDao;
+import com.patra.catalog.infra.persistence.dao.VenueIndexingHistoryDao;
+import com.patra.catalog.infra.persistence.dao.VenueMeshDao;
+import com.patra.catalog.infra.persistence.dao.VenueRelationDao;
 import com.patra.catalog.infra.persistence.entity.CasRatingEntity;
 import com.patra.catalog.infra.persistence.entity.CasWarningEntity;
 import com.patra.catalog.infra.persistence.entity.JcrRatingEntity;
@@ -52,6 +55,9 @@ public class VenueReadAdapter implements VenueReadPort {
   private final CasRatingDao casRatingDao;
   private final ScopusRatingDao scopusRatingDao;
   private final CasWarningDao casWarningDao;
+  private final VenueMeshDao venueMeshDao;
+  private final VenueRelationDao venueRelationDao;
+  private final VenueIndexingHistoryDao venueIndexingHistoryDao;
   private final VenueReadModelMapper venueReadModelMapper;
   private final ObjectMapper objectMapper;
 
@@ -224,7 +230,11 @@ public class VenueReadAdapter implements VenueReadPort {
         .map(
             entity -> {
               VenueLatestRating latestRating = buildLatestRating(entity.getId());
-              return venueReadModelMapper.toDetailReadModel(entity, latestRating);
+              var meshEntities = venueMeshDao.findByVenueId(id);
+              var relationEntities = venueRelationDao.findByVenueId(id);
+              var indexingEntities = venueIndexingHistoryDao.findByVenueId(id);
+              return venueReadModelMapper.toDetailReadModel(
+                  entity, latestRating, meshEntities, relationEntities, indexingEntities);
             });
   }
 

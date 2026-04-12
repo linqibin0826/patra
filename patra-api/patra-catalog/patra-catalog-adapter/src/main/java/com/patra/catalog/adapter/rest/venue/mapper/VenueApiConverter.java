@@ -5,6 +5,9 @@ import com.patra.catalog.adapter.rest.venue.response.VenueDetailResponse;
 import com.patra.catalog.adapter.rest.venue.response.VenueItemResponse;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueListQuery;
 import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel;
+import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel.IndexingHistoryItem;
+import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel.MeshHeading;
+import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel.VenueRelationItem;
 import com.patra.catalog.domain.model.read.venue.VenueLatestRating;
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import com.patra.catalog.domain.model.vo.venue.CitationMetrics;
@@ -97,4 +100,22 @@ public interface VenueApiConverter {
   /// @param latestRating 最新评级摘要读模型
   /// @return 最新评级 DTO
   VenueDetailResponse.LatestRatingDto toDto(VenueLatestRating latestRating);
+
+  /// 将 MeshHeading 读模型转换为 MeshHeadingDto。
+  ///
+  /// @param meshHeading MeSH 主题词读模型
+  /// @return MeSH 主题词 DTO
+  VenueDetailResponse.MeshHeadingDto toDto(MeshHeading meshHeading);
+
+  /// 将 VenueRelationItem 读模型转换为 VenueRelationDto。
+  ///
+  /// @param relationItem 关联关系读模型
+  /// @return 关联关系 DTO
+  VenueDetailResponse.VenueRelationDto toDto(VenueRelationItem relationItem);
+
+  /// 将 IndexingHistoryItem 读模型转换为 IndexingHistoryDto。
+  ///
+  /// @param indexingHistoryItem 索引历史读模型
+  /// @return 索引历史 DTO
+  VenueDetailResponse.IndexingHistoryDto toDto(IndexingHistoryItem indexingHistoryItem);
 }
