@@ -4,6 +4,7 @@ import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueFilter;
 import com.patra.catalog.domain.model.read.venue.VenueLatestRating;
 import com.patra.catalog.domain.model.read.venue.VenueRatingHistoryReadModel;
+import com.patra.catalog.domain.model.read.venue.VenueStatsReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import com.patra.catalog.domain.model.vo.venue.CitationMetrics;
 import com.patra.catalog.domain.model.vo.venue.OpenAccessInfo;
@@ -15,12 +16,14 @@ import com.patra.catalog.infra.persistence.dao.ScopusRatingDao;
 import com.patra.catalog.infra.persistence.dao.VenueDao;
 import com.patra.catalog.infra.persistence.dao.VenueIndexingHistoryDao;
 import com.patra.catalog.infra.persistence.dao.VenueMeshDao;
+import com.patra.catalog.infra.persistence.dao.VenuePublicationStatsDao;
 import com.patra.catalog.infra.persistence.dao.VenueRelationDao;
 import com.patra.catalog.infra.persistence.entity.CasRatingEntity;
 import com.patra.catalog.infra.persistence.entity.CasWarningEntity;
 import com.patra.catalog.infra.persistence.entity.JcrRatingEntity;
 import com.patra.catalog.infra.persistence.entity.ScopusRatingEntity;
 import com.patra.catalog.infra.persistence.entity.VenueEntity;
+import com.patra.catalog.infra.persistence.entity.VenuePublicationStatsEntity;
 import com.patra.common.query.PageResult;
 import com.patra.common.query.PagingParams;
 import java.math.BigDecimal;
@@ -56,6 +59,7 @@ public class VenueReadAdapter implements VenueReadPort {
   private final CasRatingDao casRatingDao;
   private final ScopusRatingDao scopusRatingDao;
   private final CasWarningDao casWarningDao;
+  private final VenuePublicationStatsDao venuePublicationStatsDao;
   private final VenueMeshDao venueMeshDao;
   private final VenueRelationDao venueRelationDao;
   private final VenueIndexingHistoryDao venueIndexingHistoryDao;
@@ -277,6 +281,20 @@ public class VenueReadAdapter implements VenueReadPort {
         .scopus(scopusRecords)
         .warnings(warningRecords)
         .build();
+  }
+
+  /// 查询 Venue 年度发文统计，按年份降序排列。
+  ///
+  /// @param venueId 期刊主键 ID
+  /// @return 发文统计读模型
+  @Override
+  public VenueStatsReadModel findVenueStats(Long venueId) {
+    var yearStats =
+        venuePublicationStatsDao.findByVenueId(venueId).stream()
+            .sorted(Comparator.comparing(VenuePublicationStatsEntity::getYear).reversed())
+            .map(venueReadModelMapper::toYearStats)
+            .toList();
+    return new VenueStatsReadModel(yearStats);
   }
 
   /// 构建最新评级摘要，聚合 JCR/CAS/Scopus 评级和 CAS 预警数据。

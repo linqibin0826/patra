@@ -7,6 +7,7 @@ import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel.MeshHeadin
 import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel.VenueRelationItem;
 import com.patra.catalog.domain.model.read.venue.VenueLatestRating;
 import com.patra.catalog.domain.model.read.venue.VenueRatingHistoryReadModel;
+import com.patra.catalog.domain.model.read.venue.VenueStatsReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import com.patra.catalog.infra.persistence.entity.CasRatingEntity;
 import com.patra.catalog.infra.persistence.entity.CasWarningEntity;
@@ -15,6 +16,7 @@ import com.patra.catalog.infra.persistence.entity.ScopusRatingEntity;
 import com.patra.catalog.infra.persistence.entity.VenueEntity;
 import com.patra.catalog.infra.persistence.entity.VenueIndexingHistoryEntity;
 import com.patra.catalog.infra.persistence.entity.VenueMeshEntity;
+import com.patra.catalog.infra.persistence.entity.VenuePublicationStatsEntity;
 import com.patra.catalog.infra.persistence.entity.VenueRelationEntity;
 import java.util.List;
 import org.mapstruct.Mapper;
@@ -181,6 +183,12 @@ public interface VenueReadModelMapper {
       target = "warningLevel",
       qualifiedByName = "warningLevelToString")
   VenueRatingHistoryReadModel.WarningRecord toWarningRecord(CasWarningEntity entity);
+
+  /// 将 VenuePublicationStatsEntity 转换为 YearStats 读模型。
+  ///
+  /// @param entity 年度发文统计实体
+  /// @return 年度统计记录
+  VenueStatsReadModel.YearStats toYearStats(VenuePublicationStatsEntity entity);
 
   /// 将 CasWarningLevel 枚举转换为字符串代码。
   ///

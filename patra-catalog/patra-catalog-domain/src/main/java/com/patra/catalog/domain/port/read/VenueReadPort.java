@@ -3,6 +3,7 @@ package com.patra.catalog.domain.port.read;
 import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueFilter;
 import com.patra.catalog.domain.model.read.venue.VenueRatingHistoryReadModel;
+import com.patra.catalog.domain.model.read.venue.VenueStatsReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import com.patra.common.query.PageResult;
 import com.patra.common.query.PagingParams;
@@ -33,4 +34,12 @@ public interface VenueReadPort {
   /// @param venueId 期刊主键 ID
   /// @return 评级历史读模型（无数据时各列表为空）
   VenueRatingHistoryReadModel findVenueRatingHistory(Long venueId);
+
+  /// 查询 Venue 年度发文统计。
+  ///
+  /// 返回所有年份的发文量、引用量和 OA 发文量，按年份降序排列。
+  ///
+  /// @param venueId 期刊主键 ID
+  /// @return 发文统计读模型（无数据时列表为空）
+  VenueStatsReadModel findVenueStats(Long venueId);
 }
