@@ -4,6 +4,8 @@ import com.patra.catalog.infra.persistence.entity.VenueInstanceEntity;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -81,6 +83,36 @@ public interface VenueInstanceDao extends JpaRepository<VenueInstanceEntity, Lon
       @Param("venueId") Long venueId,
       @Param("conferenceName") String conferenceName,
       @Param("publicationYear") Integer publicationYear);
+
+  /// 分页查询 Venue 实例列表，包含关联文献数量。
+  ///
+  /// 支持按出版年份过滤，结果按 publicationYear DESC、volume DESC、issue DESC 排序。
+  ///
+  /// @param venueId 载体 ID
+  /// @param year 出版年份过滤（可为 null，表示不过滤）
+  /// @param pageable 分页参数
+  /// @return 实例分页结果，每行为 Object[]（实例字段 + pub_count）
+  @Query(
+      value =
+          """
+      SELECT vi.id, vi.volume, vi.issue,
+             vi.publication_year, vi.publication_month, vi.publication_day,
+             (SELECT COUNT(*) FROM cat_publication p WHERE p.venue_instance_id = vi.id) AS pub_count
+      FROM cat_venue_instance vi
+      WHERE vi.venue_id = :venueId
+        AND (:year IS NULL OR vi.publication_year = :year)
+      ORDER BY vi.publication_year DESC, vi.volume DESC, vi.issue DESC
+      """,
+      countQuery =
+          """
+      SELECT COUNT(*)
+      FROM cat_venue_instance vi
+      WHERE vi.venue_id = :venueId
+        AND (:year IS NULL OR vi.publication_year = :year)
+      """,
+      nativeQuery = true)
+  Page<Object[]> findVenueInstancesWithPubCount(
+      @Param("venueId") Long venueId, @Param("year") Integer year, Pageable pageable);
 
   /// 根据 venueId 删除所有关联实例。
   ///

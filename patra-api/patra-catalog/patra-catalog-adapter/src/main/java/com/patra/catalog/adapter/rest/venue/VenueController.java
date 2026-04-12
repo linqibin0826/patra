@@ -1,13 +1,16 @@
 package com.patra.catalog.adapter.rest.venue;
 
 import com.patra.catalog.adapter.rest.venue.mapper.VenueApiConverter;
+import com.patra.catalog.adapter.rest.venue.request.VenueInstanceListRequest;
 import com.patra.catalog.adapter.rest.venue.request.VenueListRequest;
 import com.patra.catalog.adapter.rest.venue.response.VenueDetailResponse;
+import com.patra.catalog.adapter.rest.venue.response.VenueInstanceItemResponse;
 import com.patra.catalog.adapter.rest.venue.response.VenueItemResponse;
 import com.patra.catalog.adapter.rest.venue.response.VenueRatingHistoryResponse;
 import com.patra.catalog.adapter.rest.venue.response.VenueStatsResponse;
 import com.patra.catalog.app.usecase.venue.query.VenueQueryService;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueDetailQuery;
+import com.patra.catalog.app.usecase.venue.query.dto.VenueInstanceListQuery;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueListQuery;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueRatingHistoryQuery;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueStatsQuery;
@@ -74,5 +77,21 @@ public class VenueController {
   public VenueStatsResponse getVenueStats(@PathVariable Long id) {
     var query = VenueStatsQuery.of(id);
     return venueApiConverter.toStatsResponse(venueQueryService.getVenueStats(query));
+  }
+
+  /// 查询 Venue 实例（卷/期）分页列表。
+  ///
+  /// 支持按出版年份过滤，结果按 publicationYear DESC、volume DESC、issue DESC 排序。
+  ///
+  /// @param id 期刊主键 ID
+  /// @param request 实例列表查询请求（Spring MVC 自动绑定 query params）
+  /// @return 分页响应
+  @GetMapping("/{id}/instances")
+  public PageResult<VenueInstanceItemResponse> listVenueInstances(
+      @PathVariable Long id, VenueInstanceListRequest request) {
+    var query = VenueInstanceListQuery.of(id, request.year(), request.page(), request.pageSize());
+    return venueQueryService
+        .listVenueInstances(query)
+        .map(venueApiConverter::toInstanceItemResponse);
   }
 }

@@ -2,6 +2,7 @@ package com.patra.catalog.adapter.rest.venue.mapper;
 
 import com.patra.catalog.adapter.rest.venue.request.VenueListRequest;
 import com.patra.catalog.adapter.rest.venue.response.VenueDetailResponse;
+import com.patra.catalog.adapter.rest.venue.response.VenueInstanceItemResponse;
 import com.patra.catalog.adapter.rest.venue.response.VenueItemResponse;
 import com.patra.catalog.adapter.rest.venue.response.VenueRatingHistoryResponse;
 import com.patra.catalog.adapter.rest.venue.response.VenueStatsResponse;
@@ -10,6 +11,7 @@ import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel.IndexingHistoryItem;
 import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel.MeshHeading;
 import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel.VenueRelationItem;
+import com.patra.catalog.domain.model.read.venue.VenueInstanceSummaryReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueLatestRating;
 import com.patra.catalog.domain.model.read.venue.VenueRatingHistoryReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueStatsReadModel;
@@ -164,4 +166,10 @@ public interface VenueApiConverter {
   /// @param record CAS 预警历史记录
   /// @return CAS 预警 DTO
   VenueRatingHistoryResponse.WarningDto toDto(VenueRatingHistoryReadModel.WarningRecord record);
+
+  /// 将 VenueInstanceSummaryReadModel 转换为 VenueInstanceItemResponse。
+  ///
+  /// @param readModel Venue 实例摘要读模型
+  /// @return Venue 实例列表项响应
+  VenueInstanceItemResponse toInstanceItemResponse(VenueInstanceSummaryReadModel readModel);
 }
