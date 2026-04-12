@@ -85,7 +85,7 @@ public interface VenueDao extends JpaRepository<VenueEntity, Long> {
   @Query("UPDATE VenueEntity v SET v.imageObjectKey = :key WHERE v.id = :id")
   int updateImageObjectKey(@Param("id") Long id, @Param("key") String key);
 
-  /// 分页查询期刊列表，按 h-index 降序排列。
+  /// 分页查询期刊列表，按被引总次数降序排列。
   ///
   /// 查询条件（AND 关系，空值忽略）：
   ///
@@ -100,8 +100,6 @@ public interface VenueDao extends JpaRepository<VenueEntity, Long> {
   /// - `countryCode`：国家编码精确匹配
   /// - `issnL`：ISSN-L 精确匹配
   /// - `nlmId`：NLM ID 精确匹配
-  ///
-  /// 使用原生查询以支持 MySQL `JSON_EXTRACT` 函数从 `citation_metrics` JSON 列提取 h-index 进行排序。
   ///
   /// @param keyword title 前缀搜索关键词（可空）
   /// @param countryCode 国家编码（可空）
@@ -118,7 +116,7 @@ public interface VenueDao extends JpaRepository<VenueEntity, Long> {
         AND (:countryCode IS NULL OR v.country_code = :countryCode)
         AND (:issnL IS NULL OR v.issn_l = :issnL)
         AND (:nlmId IS NULL OR v.nlm_id = :nlmId)
-      ORDER BY COALESCE(CAST(JSON_EXTRACT(v.citation_metrics, '$.hIndex') AS SIGNED), 0) DESC,
+      ORDER BY COALESCE(v.cited_by_count, 0) DESC,
                v.id DESC
       """,
       countQuery =
