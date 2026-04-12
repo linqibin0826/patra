@@ -135,4 +135,116 @@ public interface VenueDao extends JpaRepository<VenueEntity, Long> {
       @Param("issnL") String issnL,
       @Param("nlmId") String nlmId,
       Pageable pageable);
+
+  /// 分页查询期刊列表（带评级 LATERAL JOIN），支持多维筛选和多字段排序。
+  ///
+  /// 当存在高级筛选条件（JCR 分区、CAS 分区、Top、OA 类型、收录集、研究方向、预警）
+  /// 或非默认排序时使用此查询，通过 LATERAL JOIN 在单次查询中完成评级关联，
+  /// 避免 N+1 查询。
+  ///
+  /// **LATERAL JOIN 说明**：
+  ///
+  /// - JCR：取最新年份一条记录
+  /// - CAS：取最新年份 + 版本排序第一条记录
+  /// - Scopus：取最新年份一条记录
+  ///
+  /// **排序策略**：使用多分支 CASE 表达式避免混合数值类型问题。
+  ///
+  /// @param keyword title 前缀搜索关键词（可空）
+  /// @param countryCode 国家编码（可空）
+  /// @param issnL ISSN-L（可空）
+  /// @param nlmId NLM ID（可空）
+  /// @param jifQuartile JCR JIF 分区精确匹配（可空）
+  /// @param casMajorQuartile CAS 大类分区精确匹配（可空）
+  /// @param casTopJournal 是否仅 Top 期刊（可空）
+  /// @param oaType OA 类型精确匹配（可空）
+  /// @param collection JCR 收录集精确匹配（可空）
+  /// @param researchDirection 研究方向模糊匹配（可空）
+  /// @param warningOnly 是否仅预警期刊（可空）
+  /// @param sortBy 排序字段（可空，默认 citedByCount）
+  /// @param pageable 分页参数（仅使用分页，排序由查询内置）
+  /// @return 包含评级数据的 Object[] 分页结果
+  @Query(
+      value =
+          """
+      SELECT v.id, v.title, v.country_code, v.image_object_key,
+             v.citation_metrics, v.open_access, v.cited_by_count,
+             jcr.impact_factor, jcr.jif_quartile, jcr.collection, jcr.research_direction,
+             cas.major_quartile, cas.is_top_journal,
+             scopus.cite_score, scopus.quartile AS cite_score_quartile
+      FROM cat_venue v
+      LEFT JOIN LATERAL (
+          SELECT r.impact_factor, r.jif_quartile, r.collection, r.research_direction
+          FROM cat_venue_jcr_rating r WHERE r.venue_id = v.id ORDER BY r.year DESC LIMIT 1
+      ) jcr ON TRUE
+      LEFT JOIN LATERAL (
+          SELECT r.major_quartile, r.is_top_journal
+          FROM cat_venue_cas_rating r WHERE r.venue_id = v.id ORDER BY r.year DESC, r.edition ASC LIMIT 1
+      ) cas ON TRUE
+      LEFT JOIN LATERAL (
+          SELECT r.cite_score, r.quartile
+          FROM cat_venue_scopus_rating r WHERE r.venue_id = v.id ORDER BY r.year DESC LIMIT 1
+      ) scopus ON TRUE
+      WHERE v.venue_type = 'JOURNAL'
+        AND (:keyword IS NULL OR v.title LIKE CONCAT(:keyword, '%') ESCAPE '!')
+        AND (:countryCode IS NULL OR v.country_code = :countryCode)
+        AND (:issnL IS NULL OR v.issn_l = :issnL)
+        AND (:nlmId IS NULL OR v.nlm_id = :nlmId)
+        AND (:jifQuartile IS NULL OR jcr.jif_quartile = :jifQuartile)
+        AND (:casMajorQuartile IS NULL OR cas.major_quartile = :casMajorQuartile)
+        AND (:casTopJournal IS NULL OR cas.is_top_journal = :casTopJournal)
+        AND (:oaType IS NULL OR JSON_UNQUOTE(JSON_EXTRACT(v.open_access, '$.oaType')) = :oaType)
+        AND (:collection IS NULL OR jcr.collection = :collection)
+        AND (:researchDirection IS NULL OR jcr.research_direction LIKE CONCAT('%', :researchDirection, '%') ESCAPE '!')
+        AND (:warningOnly IS NULL OR EXISTS (
+            SELECT 1 FROM cat_venue_cas_warning w WHERE w.venue_id = v.id AND w.in_warning_list = TRUE
+        ))
+      ORDER BY
+        CASE WHEN :sortBy = 'impactFactor' THEN COALESCE(jcr.impact_factor, 0) ELSE NULL END DESC,
+        CASE WHEN :sortBy = 'citeScore' THEN COALESCE(scopus.cite_score, 0) ELSE NULL END DESC,
+        CASE WHEN :sortBy = 'hIndex' THEN COALESCE(JSON_EXTRACT(v.citation_metrics, '$.hIndex'), 0) ELSE NULL END DESC,
+        CASE WHEN :sortBy IS NULL OR :sortBy = 'citedByCount' THEN COALESCE(v.cited_by_count, 0) ELSE NULL END DESC,
+        v.id DESC
+      """,
+      countQuery =
+          """
+      SELECT COUNT(*) FROM cat_venue v
+      LEFT JOIN LATERAL (
+          SELECT r.jif_quartile, r.collection, r.research_direction
+          FROM cat_venue_jcr_rating r WHERE r.venue_id = v.id ORDER BY r.year DESC LIMIT 1
+      ) jcr ON TRUE
+      LEFT JOIN LATERAL (
+          SELECT r.major_quartile, r.is_top_journal
+          FROM cat_venue_cas_rating r WHERE r.venue_id = v.id ORDER BY r.year DESC, r.edition ASC LIMIT 1
+      ) cas ON TRUE
+      WHERE v.venue_type = 'JOURNAL'
+        AND (:keyword IS NULL OR v.title LIKE CONCAT(:keyword, '%') ESCAPE '!')
+        AND (:countryCode IS NULL OR v.country_code = :countryCode)
+        AND (:issnL IS NULL OR v.issn_l = :issnL)
+        AND (:nlmId IS NULL OR v.nlm_id = :nlmId)
+        AND (:jifQuartile IS NULL OR jcr.jif_quartile = :jifQuartile)
+        AND (:casMajorQuartile IS NULL OR cas.major_quartile = :casMajorQuartile)
+        AND (:casTopJournal IS NULL OR cas.is_top_journal = :casTopJournal)
+        AND (:oaType IS NULL OR JSON_UNQUOTE(JSON_EXTRACT(v.open_access, '$.oaType')) = :oaType)
+        AND (:collection IS NULL OR jcr.collection = :collection)
+        AND (:researchDirection IS NULL OR jcr.research_direction LIKE CONCAT('%', :researchDirection, '%') ESCAPE '!')
+        AND (:warningOnly IS NULL OR EXISTS (
+            SELECT 1 FROM cat_venue_cas_warning w WHERE w.venue_id = v.id AND w.in_warning_list = TRUE
+        ))
+      """,
+      nativeQuery = true)
+  Page<Object[]> findFilteredJournalPage(
+      @Param("keyword") String keyword,
+      @Param("countryCode") String countryCode,
+      @Param("issnL") String issnL,
+      @Param("nlmId") String nlmId,
+      @Param("jifQuartile") String jifQuartile,
+      @Param("casMajorQuartile") String casMajorQuartile,
+      @Param("casTopJournal") Boolean casTopJournal,
+      @Param("oaType") String oaType,
+      @Param("collection") String collection,
+      @Param("researchDirection") String researchDirection,
+      @Param("warningOnly") Boolean warningOnly,
+      @Param("sortBy") String sortBy,
+      Pageable pageable);
 }

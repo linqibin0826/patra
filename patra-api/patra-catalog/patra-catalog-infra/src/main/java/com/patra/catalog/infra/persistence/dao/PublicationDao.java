@@ -136,6 +136,7 @@ public interface PublicationDao extends JpaRepository<PublicationEntity, Long> {
   /// @param isOa 是否有 OA 版本
   /// @param oaStatus OA 状态
   /// @param venueId 载体 ID
+  /// @param venueInstanceId 载体实例 ID
   /// @param pmid PubMed ID
   /// @param doi DOI
   /// @param provenanceCode 数据来源代码
@@ -152,6 +153,7 @@ public interface PublicationDao extends JpaRepository<PublicationEntity, Long> {
         AND (:isOa IS NULL OR p.isOa = :isOa)
         AND (:oaStatus IS NULL OR p.oaStatus = :oaStatus)
         AND (:venueId IS NULL OR p.venueId = :venueId)
+        AND (:venueInstanceId IS NULL OR p.venueInstanceId = :venueInstanceId)
         AND (:pmid IS NULL OR p.pmid = :pmid)
         AND (:doi IS NULL OR p.doi = :doi)
         AND (:provenanceCode IS NULL OR p.provenanceCode = :provenanceCode)
@@ -165,6 +167,7 @@ public interface PublicationDao extends JpaRepository<PublicationEntity, Long> {
       @Param("isOa") Boolean isOa,
       @Param("oaStatus") String oaStatus,
       @Param("venueId") Long venueId,
+      @Param("venueInstanceId") Long venueInstanceId,
       @Param("pmid") String pmid,
       @Param("doi") String doi,
       @Param("provenanceCode") String provenanceCode,

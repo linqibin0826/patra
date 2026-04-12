@@ -254,6 +254,30 @@ class PublicationReadAdapterIT {
       assertThat(page.total()).isEqualTo(1);
       assertThat(page.items()).singleElement().extracting("title").isEqualTo("Target Article");
     }
+
+    /// venueInstanceId 精确匹配应生效。
+    @Test
+    @DisplayName("venueInstanceId 精确匹配")
+    void shouldFilterByVenueInstanceId() {
+      // Given
+      VenueEntity venue = saveVenue("Nature");
+      Long instanceA = SnowflakeIdGenerator.getId();
+      Long instanceB = SnowflakeIdGenerator.getId();
+      savePublicationWithInstance(
+          "Instance A Article", "99999881", null, 2024, "en", venue.getId(), instanceA);
+      savePublicationWithInstance(
+          "Instance B Article", "99999882", null, 2024, "en", venue.getId(), instanceB);
+
+      // When
+      PageResult<PublicationSummaryReadModel> page =
+          publicationReadAdapter.findPublicationPage(
+              PagingParams.of(1, 20),
+              PublicationFilter.builder().venueInstanceId(instanceA).build());
+
+      // Then
+      assertThat(page.total()).isEqualTo(1);
+      assertThat(page.items()).singleElement().extracting("title").isEqualTo("Instance A Article");
+    }
   }
 
   /// 分页应返回正确元信息，并按更新时间/ID 倒序稳定输出。
@@ -287,6 +311,38 @@ class PublicationReadAdapterIT {
     assertThat(page.items()).singleElement().extracting("id").isEqualTo(expectedSecondPageId);
   }
 
+  /// sortBy=citedByCount 时应按被引次数降序排列。
+  @Test
+  @DisplayName("sortBy=citedByCount 应按被引次数降序排列")
+  void shouldSortByCitedByCountDescending() {
+    // Given
+    VenueEntity venue = saveVenue("Nature");
+    PublicationEntity lowCited =
+        savePublication("Low Cited", "99999871", null, 2024, "en", venue.getId());
+    lowCited.setCitationCount(5);
+    publicationDao.save(lowCited);
+
+    PublicationEntity highCited =
+        savePublication("High Cited", "99999872", null, 2024, "en", venue.getId());
+    highCited.setCitationCount(100);
+    publicationDao.save(highCited);
+
+    PublicationEntity midCited =
+        savePublication("Mid Cited", "99999873", null, 2024, "en", venue.getId());
+    midCited.setCitationCount(50);
+    publicationDao.save(midCited);
+
+    // When
+    PageResult<PublicationSummaryReadModel> page =
+        publicationReadAdapter.findPublicationPage(
+            PagingParams.of(1, 20), PublicationFilter.builder().sortBy("citedByCount").build());
+
+    // Then
+    assertThat(page.items())
+        .extracting("title")
+        .containsExactly("High Cited", "Mid Cited", "Low Cited");
+  }
+
   /// 保存测试用 Venue 实体。
   private VenueEntity saveVenue(String title) {
     VenueEntity entity = new VenueEntity();
@@ -301,6 +357,25 @@ class PublicationReadAdapterIT {
   /// 保存测试用 Publication 实体。
   private PublicationEntity savePublication(
       String title, String pmid, String doi, Integer year, String langCode, Long venueId) {
+    return savePublicationWithInstance(
+        title,
+        pmid,
+        doi,
+        year,
+        langCode,
+        venueId,
+        venueId != null ? venueId : SnowflakeIdGenerator.getId());
+  }
+
+  /// 保存测试用 Publication 实体（指定 venueInstanceId）。
+  private PublicationEntity savePublicationWithInstance(
+      String title,
+      String pmid,
+      String doi,
+      Integer year,
+      String langCode,
+      Long venueId,
+      Long venueInstanceId) {
     PublicationEntity entity =
         PublicationEntity.builder()
             .id(SnowflakeIdGenerator.getId())
@@ -311,7 +386,7 @@ class PublicationReadAdapterIT {
             .publicationYear(year)
             .languageCode(langCode)
             .venueId(venueId)
-            .venueInstanceId(venueId != null ? venueId : SnowflakeIdGenerator.getId())
+            .venueInstanceId(venueInstanceId)
             .isOa(false)
             .authorsComplete(true)
             .lastSyncedAt(Instant.parse("2026-02-13T00:00:00Z"))

@@ -246,6 +246,78 @@ public class VenueReadAdapter implements VenueReadPort {
             });
   }
 
+  /// 批量查询 Venue 详情用于对比，包含基础信息和最新评级。
+  ///
+  /// 不包含 MeSH/关联关系/索引历史（对比场景无需这些数据）。
+  /// 不存在的 ID 会被静默忽略，返回结果按输入 ID 顺序排列。
+  ///
+  /// @param ids 期刊主键 ID 列表
+  /// @return Venue 详情读模型列表
+  @Override
+  public List<VenueDetailReadModel> findVenuesForCompare(List<Long> ids) {
+    List<VenueEntity> entities = venueDao.findByIdIn(ids);
+    if (entities.isEmpty()) {
+      return List.of();
+    }
+
+    List<Long> foundIds = entities.stream().map(VenueEntity::getId).toList();
+    Map<Long, JcrRatingEntity> latestJcr = findLatestJcrByVenueIds(foundIds);
+    Map<Long, CasRatingEntity> latestCas = findLatestCasByVenueIds(foundIds);
+    Map<Long, ScopusRatingEntity> latestScopus = findLatestScopusByVenueIds(foundIds);
+    Map<Long, CasWarningEntity> latestWarnings = findLatestWarningByVenueIds(foundIds);
+
+    // 按输入 ID 顺序组装结果，忽略不存在的 ID
+    Map<Long, VenueEntity> entityMap =
+        entities.stream().collect(Collectors.toMap(VenueEntity::getId, e -> e));
+
+    return ids.stream()
+        .filter(entityMap::containsKey)
+        .map(
+            id -> {
+              VenueEntity entity = entityMap.get(id);
+              VenueLatestRating latestRating =
+                  buildLatestRatingFromBatch(
+                      id, latestJcr, latestCas, latestScopus, latestWarnings);
+              return venueReadModelMapper.toDetailReadModel(
+                  entity, latestRating, List.of(), List.of(), List.of());
+            })
+        .toList();
+  }
+
+  /// 从批量加载的评级数据中构建单个 Venue 的最新评级摘要。
+  ///
+  /// @param venueId 期刊 ID
+  /// @param jcrMap JCR 评级批量数据
+  /// @param casMap CAS 评级批量数据
+  /// @param scopusMap Scopus 评级批量数据
+  /// @param warningMap CAS 预警批量数据
+  /// @return 评级摘要（全部数据源无数据时返回 null）
+  private VenueLatestRating buildLatestRatingFromBatch(
+      Long venueId,
+      Map<Long, JcrRatingEntity> jcrMap,
+      Map<Long, CasRatingEntity> casMap,
+      Map<Long, ScopusRatingEntity> scopusMap,
+      Map<Long, CasWarningEntity> warningMap) {
+    var jcr = jcrMap.get(venueId);
+    var cas = casMap.get(venueId);
+    var scopus = scopusMap.get(venueId);
+    var warning = warningMap.get(venueId);
+
+    if (jcr == null && cas == null && scopus == null && warning == null) {
+      return null;
+    }
+    return venueReadModelMapper.toLatestRating(jcr, cas, scopus, warning);
+  }
+
+  /// 批量查找最新 CAS 预警，按 venueId 分组取最新发布年份。
+  private Map<Long, CasWarningEntity> findLatestWarningByVenueIds(List<Long> venueIds) {
+    return findLatestByVenueIds(
+        venueIds,
+        casWarningDao::findByVenueIdIn,
+        CasWarningEntity::getVenueId,
+        (a, b) -> a.getPublishedYear() >= b.getPublishedYear() ? a : b);
+  }
+
   /// 查询 Venue 评级历史，聚合 JCR/CAS/Scopus 评级和 CAS 预警的全部年份记录。
   ///
   /// 各列表按年份降序排列。

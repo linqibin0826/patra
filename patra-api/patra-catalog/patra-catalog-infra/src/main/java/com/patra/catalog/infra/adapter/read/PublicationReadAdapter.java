@@ -36,6 +36,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
 /// 文献出版物 CQRS 读适配器。
@@ -61,11 +62,24 @@ public class PublicationReadAdapter implements PublicationReadPort {
   private final PublicationMeshQualifierDao publicationMeshQualifierDao;
   private final PublicationReadModelMapper publicationReadModelMapper;
 
+  /// 解析排序参数。
+  ///
+  /// 当 `sortBy` 为 "citedByCount" 时按被引次数降序排列，否则使用默认排序。
+  ///
+  /// @param sortBy 排序字段名（可为 null）
+  /// @return 排序规则
+  private Sort resolveSort(String sortBy) {
+    if ("citedByCount".equals(sortBy)) {
+      return Sort.by(Sort.Order.desc("citationCount"), Sort.Order.desc("id"));
+    }
+    return BaseJpaEntity.DEFAULT_SORT;
+  }
+
   @Override
   public PageResult<PublicationSummaryReadModel> findPublicationPage(
       PagingParams paging, PublicationFilter filter) {
     Pageable pageable =
-        PageRequest.of(paging.page() - 1, paging.pageSize(), BaseJpaEntity.DEFAULT_SORT);
+        PageRequest.of(paging.page() - 1, paging.pageSize(), resolveSort(filter.sortBy()));
 
     Page<PublicationEntity> entityPage =
         publicationDao.findPublicationPage(
@@ -76,6 +90,7 @@ public class PublicationReadAdapter implements PublicationReadPort {
             filter.isOa(),
             filter.oaStatus(),
             filter.venueId(),
+            filter.venueInstanceId(),
             filter.pmid(),
             filter.doi(),
             filter.provenanceCode(),

@@ -8,6 +8,7 @@ import com.patra.catalog.domain.model.read.venue.VenueStatsReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import com.patra.common.query.PageResult;
 import com.patra.common.query.PagingParams;
+import java.util.List;
 import java.util.Optional;
 
 /// Venue 读端口。
@@ -43,6 +44,15 @@ public interface VenueReadPort {
   /// @param venueId 期刊主键 ID
   /// @return 发文统计读模型（无数据时列表为空）
   VenueStatsReadModel findVenueStats(Long venueId);
+
+  /// 批量查询 Venue 详情用于对比。
+  ///
+  /// 返回每个 Venue 的基础信息和最新评级，不包含 MeSH/关联关系/索引历史。
+  /// 不存在的 ID 会被静默忽略，仅返回查到的结果。
+  ///
+  /// @param ids 期刊主键 ID 列表（2~5 个）
+  /// @return Venue 详情读模型列表（顺序与输入 ID 一致）
+  List<VenueDetailReadModel> findVenuesForCompare(List<Long> ids);
 
   /// 查询 Venue 实例（卷/期）分页列表。
   ///

@@ -12,6 +12,7 @@ import com.patra.catalog.domain.model.read.publication.PublicationDetailReadMode
 import com.patra.catalog.domain.model.read.publication.PublicationDetailReadModel.MeshHeadingInfo.MeshQualifierInfo;
 import com.patra.catalog.domain.model.read.publication.PublicationSummaryReadModel;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 
 /// Publication 查询 API 转换器。
@@ -22,8 +23,13 @@ public interface PublicationApiConverter {
 
   /// 将列表请求转换为应用层查询参数。
   ///
+  /// `venueInstanceId` 和 `sortBy` 由 VenueController 的实例文献端点单独构建，
+  /// 通用文献列表请求不包含这两个字段。
+  ///
   /// @param request Publication 列表请求
   /// @return 应用层查询参数
+  @Mapping(target = "venueInstanceId", ignore = true)
+  @Mapping(target = "sortBy", ignore = true)
   PublicationListQuery toQuery(PublicationListRequest request);
 
   /// 将 Publication 摘要读模型转换为 API 列表项响应。

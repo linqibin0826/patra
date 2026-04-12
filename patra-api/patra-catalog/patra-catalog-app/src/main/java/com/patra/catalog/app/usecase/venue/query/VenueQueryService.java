@@ -3,6 +3,7 @@ package com.patra.catalog.app.usecase.venue.query;
 import static com.patra.common.util.StringUtils.escapeLike;
 import static com.patra.common.util.StringUtils.trimToNull;
 
+import com.patra.catalog.app.usecase.venue.query.dto.VenueCompareQuery;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueDetailQuery;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueInstanceListQuery;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueListQuery;
@@ -18,6 +19,7 @@ import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import com.patra.catalog.domain.port.read.VenueReadPort;
 import com.patra.common.query.PageResult;
 import com.patra.common.query.PagingParams;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -100,6 +102,17 @@ public class VenueQueryService {
         .findVenueDetail(query.id())
         .orElseThrow(() -> new VenueNotFoundException(query.id()));
     return venueReadPort.findVenueStats(query.id());
+  }
+
+  /// 批量查询 Venue 详情用于对比。
+  ///
+  /// 不存在的 ID 会被静默忽略，仅返回查到的结果。
+  ///
+  /// @param query 对比查询参数
+  /// @return Venue 详情读模型列表
+  public List<VenueDetailReadModel> compareVenues(VenueCompareQuery query) {
+    Objects.requireNonNull(query, "query must not be null");
+    return venueReadPort.findVenuesForCompare(query.ids());
   }
 
   /// 查询 Venue 实例（卷/期）分页列表。
