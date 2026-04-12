@@ -1,0 +1,7 @@
+interface:
+  display_name: "Patra 事件驱动"
+  short_description: "设计 Patra 领域事件、事务监听器、Outbox 和可靠发布流程"
+  default_prompt: "使用 $patra-events 设计这个 Patra 事件链和 Outbox 发布流程。"
+
+policy:
+  allow_implicit_invocation: true
