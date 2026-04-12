@@ -83,9 +83,7 @@ public class VenueQueryService {
   /// @throws VenueNotFoundException 当 Venue 不存在时
   public VenueRatingHistoryReadModel getVenueRatingHistory(VenueRatingHistoryQuery query) {
     Objects.requireNonNull(query, "query must not be null");
-    venueReadPort
-        .findVenueDetail(query.id())
-        .orElseThrow(() -> new VenueNotFoundException(query.id()));
+    requireVenueExists(query.id());
     return venueReadPort.findVenueRatingHistory(query.id());
   }
 
@@ -98,9 +96,7 @@ public class VenueQueryService {
   /// @throws VenueNotFoundException 当 Venue 不存在时
   public VenueStatsReadModel getVenueStats(VenueStatsQuery query) {
     Objects.requireNonNull(query, "query must not be null");
-    venueReadPort
-        .findVenueDetail(query.id())
-        .orElseThrow(() -> new VenueNotFoundException(query.id()));
+    requireVenueExists(query.id());
     return venueReadPort.findVenueStats(query.id());
   }
 
@@ -124,6 +120,16 @@ public class VenueQueryService {
     Objects.requireNonNull(query, "query must not be null");
     PagingParams paging = PagingParams.normalize(query.page(), query.pageSize());
     return venueReadPort.findVenueInstances(query.venueId(), paging, query.year());
+  }
+
+  /// 验证期刊存在，不存在时抛出 VenueNotFoundException。
+  ///
+  /// @param id 期刊主键 ID
+  /// @throws VenueNotFoundException 当 Venue 不存在时
+  private void requireVenueExists(Long id) {
+    if (!venueReadPort.existsById(id)) {
+      throw new VenueNotFoundException(id);
+    }
   }
 
   /// 验证排序字段是否在白名单中，无效值返回 null（使用默认排序）。

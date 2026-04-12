@@ -31,6 +31,21 @@ public interface CasWarningDao extends JpaRepository<CasWarningEntity, Long> {
   Optional<CasWarningEntity> findByVenueIdAndPublishedYearAndEditionLabel(
       Long venueId, Short publishedYear, String editionLabel);
 
+  /// 查询指定期刊的最新预警记录。
+  ///
+  /// @param venueId 期刊 ID
+  /// @return 最新预警记录，不存在时返回 Optional.empty()
+  @Query(
+      value =
+          """
+      SELECT * FROM cat_venue_cas_warning w
+      WHERE w.venue_id = :venueId
+      ORDER BY w.published_year DESC, w.id DESC
+      LIMIT 1
+      """,
+      nativeQuery = true)
+  Optional<CasWarningEntity> findLatestByVenueId(@Param("venueId") Long venueId);
+
   /// 查找某期刊的所有预警记录。
   ///
   /// @param venueId 期刊 ID

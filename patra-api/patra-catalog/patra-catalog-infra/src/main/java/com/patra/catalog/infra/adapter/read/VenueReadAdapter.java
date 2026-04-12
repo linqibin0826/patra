@@ -69,6 +69,11 @@ public class VenueReadAdapter implements VenueReadPort {
   private final VenueReadModelMapper venueReadModelMapper;
   private final ObjectMapper objectMapper;
 
+  @Override
+  public boolean existsById(Long id) {
+    return venueDao.existsById(id);
+  }
+
   /// 查询 Venue 分页列表，包含最新 JCR/CAS/Scopus 评级数据。
   ///
   /// **查询策略**：
@@ -425,14 +430,12 @@ public class VenueReadAdapter implements VenueReadPort {
     return venueReadModelMapper.toLatestRating(jcr, cas, scopus, warning);
   }
 
-  /// 查找某期刊最新的 CAS 预警记录，按发布年份降序取第一条。
+  /// 查找某期刊最新的 CAS 预警记录。
   ///
   /// @param venueId 期刊 ID
   /// @return 最新预警记录，无预警时返回 null
   private CasWarningEntity findLatestWarning(Long venueId) {
-    return casWarningDao.findByVenueId(venueId).stream()
-        .max(Comparator.comparing(CasWarningEntity::getPublishedYear))
-        .orElse(null);
+    return casWarningDao.findLatestByVenueId(venueId).orElse(null);
   }
 
   /// 批量查找最新评级的通用方法，按 venueId 分组并用 mergeFunction 保留最新记录。

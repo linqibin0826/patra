@@ -16,6 +16,12 @@ import java.util.Optional;
 /// CQRS 读端驱动端口，提供面向查询场景的 Venue 分页读取能力。
 public interface VenueReadPort {
 
+  /// 检查期刊是否存在。
+  ///
+  /// @param id 期刊主键 ID
+  /// @return 存在返回 true，否则返回 false
+  boolean existsById(Long id);
+
   /// 查询 Venue 分页列表。
   ///
   /// @param paging 已验证的分页参数
