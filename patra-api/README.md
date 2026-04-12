@@ -152,7 +152,8 @@ curl http://localhost:8082/actuator/health   # Ingest
 ### 核心指南
 
 - [**AGENTS.md**](./AGENTS.md) — Codex 规则主入口（项目架构与工程规范）
-- [**.codex/README.md**](./.codex/README.md) — Codex 工作流与目录说明
+- [**plugins/patra-codex**](./plugins/patra-codex/) — Codex 本地插件（skills + hooks）
+- [**CLAUDE.md**](./CLAUDE.md) — Claude 规则主入口
 
 ### 模块 README
 
