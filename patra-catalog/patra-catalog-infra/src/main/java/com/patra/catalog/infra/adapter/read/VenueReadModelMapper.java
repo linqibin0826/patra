@@ -6,6 +6,7 @@ import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel.IndexingHi
 import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel.MeshHeading;
 import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel.VenueRelationItem;
 import com.patra.catalog.domain.model.read.venue.VenueLatestRating;
+import com.patra.catalog.domain.model.read.venue.VenueRatingHistoryReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import com.patra.catalog.infra.persistence.entity.CasRatingEntity;
 import com.patra.catalog.infra.persistence.entity.CasWarningEntity;
@@ -152,6 +153,34 @@ public interface VenueReadModelMapper {
       CasRatingEntity cas,
       ScopusRatingEntity scopus,
       CasWarningEntity warning);
+
+  /// 将 JcrRatingEntity 转换为 JcrRecord 读模型。
+  ///
+  /// @param entity JCR 评级实体
+  /// @return JCR 评级历史记录
+  VenueRatingHistoryReadModel.JcrRecord toJcrRecord(JcrRatingEntity entity);
+
+  /// 将 CasRatingEntity 转换为 CasRecord 读模型。
+  ///
+  /// @param entity CAS 分区实体
+  /// @return CAS 分区历史记录
+  VenueRatingHistoryReadModel.CasRecord toCasRecord(CasRatingEntity entity);
+
+  /// 将 ScopusRatingEntity 转换为 ScopusRecord 读模型。
+  ///
+  /// @param entity Scopus 指标实体
+  /// @return Scopus 指标历史记录
+  VenueRatingHistoryReadModel.ScopusRecord toScopusRecord(ScopusRatingEntity entity);
+
+  /// 将 CasWarningEntity 转换为 WarningRecord 读模型。
+  ///
+  /// @param entity CAS 预警实体
+  /// @return CAS 预警历史记录
+  @Mapping(
+      source = "warningLevel",
+      target = "warningLevel",
+      qualifiedByName = "warningLevelToString")
+  VenueRatingHistoryReadModel.WarningRecord toWarningRecord(CasWarningEntity entity);
 
   /// 将 CasWarningLevel 枚举转换为字符串代码。
   ///

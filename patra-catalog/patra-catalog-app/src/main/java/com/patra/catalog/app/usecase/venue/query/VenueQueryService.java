@@ -5,9 +5,11 @@ import static com.patra.common.util.StringUtils.trimToNull;
 
 import com.patra.catalog.app.usecase.venue.query.dto.VenueDetailQuery;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueListQuery;
+import com.patra.catalog.app.usecase.venue.query.dto.VenueRatingHistoryQuery;
 import com.patra.catalog.domain.exception.VenueNotFoundException;
 import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueFilter;
+import com.patra.catalog.domain.model.read.venue.VenueRatingHistoryReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import com.patra.catalog.domain.port.read.VenueReadPort;
 import com.patra.common.query.PageResult;
@@ -64,6 +66,21 @@ public class VenueQueryService {
     return venueReadPort
         .findVenueDetail(query.id())
         .orElseThrow(() -> new VenueNotFoundException(query.id()));
+  }
+
+  /// 查询期刊评级历史。
+  ///
+  /// 与 `getVenueDetail` 保持一致的异常策略：Venue 不存在时抛出 VenueNotFoundException。
+  ///
+  /// @param query 评级历史查询参数
+  /// @return 评级历史读模型
+  /// @throws VenueNotFoundException 当 Venue 不存在时
+  public VenueRatingHistoryReadModel getVenueRatingHistory(VenueRatingHistoryQuery query) {
+    Objects.requireNonNull(query, "query must not be null");
+    venueReadPort
+        .findVenueDetail(query.id())
+        .orElseThrow(() -> new VenueNotFoundException(query.id()));
+    return venueReadPort.findVenueRatingHistory(query.id());
   }
 
   /// 验证排序字段是否在白名单中，无效值返回 null（使用默认排序）。

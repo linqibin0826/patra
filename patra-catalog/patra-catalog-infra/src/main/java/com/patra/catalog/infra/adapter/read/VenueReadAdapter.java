@@ -3,6 +3,7 @@ package com.patra.catalog.infra.adapter.read;
 import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueFilter;
 import com.patra.catalog.domain.model.read.venue.VenueLatestRating;
+import com.patra.catalog.domain.model.read.venue.VenueRatingHistoryReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import com.patra.catalog.domain.model.vo.venue.CitationMetrics;
 import com.patra.catalog.domain.model.vo.venue.OpenAccessInfo;
@@ -236,6 +237,46 @@ public class VenueReadAdapter implements VenueReadPort {
               return venueReadModelMapper.toDetailReadModel(
                   entity, latestRating, meshEntities, relationEntities, indexingEntities);
             });
+  }
+
+  /// 查询 Venue 评级历史，聚合 JCR/CAS/Scopus 评级和 CAS 预警的全部年份记录。
+  ///
+  /// 各列表按年份降序排列。
+  ///
+  /// @param venueId 期刊主键 ID
+  /// @return 评级历史读模型
+  @Override
+  public VenueRatingHistoryReadModel findVenueRatingHistory(Long venueId) {
+    var jcrRecords =
+        jcrRatingDao.findByVenueId(venueId).stream()
+            .sorted(Comparator.comparing(JcrRatingEntity::getYear).reversed())
+            .map(venueReadModelMapper::toJcrRecord)
+            .toList();
+
+    var casRecords =
+        casRatingDao.findByVenueId(venueId).stream()
+            .sorted(Comparator.comparing(CasRatingEntity::getYear).reversed())
+            .map(venueReadModelMapper::toCasRecord)
+            .toList();
+
+    var scopusRecords =
+        scopusRatingDao.findByVenueId(venueId).stream()
+            .sorted(Comparator.comparing(ScopusRatingEntity::getYear).reversed())
+            .map(venueReadModelMapper::toScopusRecord)
+            .toList();
+
+    var warningRecords =
+        casWarningDao.findByVenueId(venueId).stream()
+            .sorted(Comparator.comparing(CasWarningEntity::getPublishedYear).reversed())
+            .map(venueReadModelMapper::toWarningRecord)
+            .toList();
+
+    return VenueRatingHistoryReadModel.builder()
+        .jcr(jcrRecords)
+        .cas(casRecords)
+        .scopus(scopusRecords)
+        .warnings(warningRecords)
+        .build();
   }
 
   /// 构建最新评级摘要，聚合 JCR/CAS/Scopus 评级和 CAS 预警数据。
