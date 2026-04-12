@@ -1,0 +1,26 @@
+{
+  "name": "patra-codex",
+  "version": "0.1.0",
+  "description": "Patra 项目的 Codex 本地插件，聚合仓库规则、技能与停止检查钩子。",
+  "author": {
+    "name": "Qibin Lin"
+  },
+  "skills": "./skills/",
+  "hooks": "./hooks.json",
+  "interface": {
+    "displayName": "Patra Codex",
+    "shortDescription": "Patra 项目的 Codex 本地技能与钩子",
+    "longDescription": "为 Patra 项目提供 Codex 可发现的本地技能、审查清单与停止时质量检查适配。",
+    "developerName": "Qibin Lin",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "使用 Patra Codex 技能检查我的改动是否符合六边形架构。",
+      "使用 patra-hexagonal 帮我在 Patra 中实现一个新的应用层用例。"
+    ],
+    "brandColor": "#0F766E"
+  }
+}

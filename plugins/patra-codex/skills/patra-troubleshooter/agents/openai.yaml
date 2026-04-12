@@ -1,0 +1,7 @@
+interface:
+  display_name: "Patra Troubleshooter"
+  short_description: "排查 Patra 异常堆栈、日志链路与运行时故障根因"
+  default_prompt: "使用 $patra-troubleshooter 帮我定位这段 Patra 异常和日志的根因。"
+
+policy:
+  allow_implicit_invocation: true
