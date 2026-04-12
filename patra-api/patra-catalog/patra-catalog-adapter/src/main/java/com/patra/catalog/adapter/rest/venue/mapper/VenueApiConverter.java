@@ -5,6 +5,7 @@ import com.patra.catalog.adapter.rest.venue.response.VenueDetailResponse;
 import com.patra.catalog.adapter.rest.venue.response.VenueItemResponse;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueListQuery;
 import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel;
+import com.patra.catalog.domain.model.read.venue.VenueLatestRating;
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import com.patra.catalog.domain.model.vo.venue.CitationMetrics;
 import com.patra.catalog.domain.model.vo.venue.HostOrganization;
@@ -90,4 +91,10 @@ public interface VenueApiConverter {
   /// @param vo 索引信息值对象
   /// @return 索引信息 DTO
   VenueDetailResponse.PublicationProfileDto.IndexingInfoDto toDto(IndexingInfo vo);
+
+  /// 将 VenueLatestRating 读模型转换为 LatestRatingDto。
+  ///
+  /// @param latestRating 最新评级摘要读模型
+  /// @return 最新评级 DTO
+  VenueDetailResponse.LatestRatingDto toDto(VenueLatestRating latestRating);
 }

@@ -24,6 +24,7 @@ import lombok.Builder;
 /// @param citationMetrics 引用指标（可空）
 /// @param openAccess 开放获取信息（可空）
 /// @param affiliatedSocieties 关联学会列表（可空）
+/// @param latestRating 最新评级摘要（JCR/CAS/Scopus/预警，可空）
 /// @param lastSyncedAt 最后同步时间（可空）
 /// @param createdAt 创建时间
 /// @param updatedAt 更新时间
@@ -42,6 +43,7 @@ public record VenueDetailReadModel(
     CitationMetrics citationMetrics,
     OpenAccessInfo openAccess,
     List<Society> affiliatedSocieties,
+    VenueLatestRating latestRating,
     Instant lastSyncedAt,
     Instant createdAt,
     Instant updatedAt) {

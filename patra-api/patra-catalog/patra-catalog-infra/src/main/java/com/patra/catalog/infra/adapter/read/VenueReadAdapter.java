@@ -2,18 +2,22 @@ package com.patra.catalog.infra.adapter.read;
 
 import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueFilter;
+import com.patra.catalog.domain.model.read.venue.VenueLatestRating;
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import com.patra.catalog.domain.port.read.VenueReadPort;
 import com.patra.catalog.infra.persistence.dao.CasRatingDao;
+import com.patra.catalog.infra.persistence.dao.CasWarningDao;
 import com.patra.catalog.infra.persistence.dao.JcrRatingDao;
 import com.patra.catalog.infra.persistence.dao.ScopusRatingDao;
 import com.patra.catalog.infra.persistence.dao.VenueDao;
 import com.patra.catalog.infra.persistence.entity.CasRatingEntity;
+import com.patra.catalog.infra.persistence.entity.CasWarningEntity;
 import com.patra.catalog.infra.persistence.entity.JcrRatingEntity;
 import com.patra.catalog.infra.persistence.entity.ScopusRatingEntity;
 import com.patra.catalog.infra.persistence.entity.VenueEntity;
 import com.patra.common.query.PageResult;
 import com.patra.common.query.PagingParams;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -40,6 +44,7 @@ public class VenueReadAdapter implements VenueReadPort {
   private final JcrRatingDao jcrRatingDao;
   private final CasRatingDao casRatingDao;
   private final ScopusRatingDao scopusRatingDao;
+  private final CasWarningDao casWarningDao;
   private final VenueReadModelMapper venueReadModelMapper;
 
   /// 查询 Venue 分页列表，包含最新 JCR/CAS/Scopus 评级数据。
@@ -79,13 +84,45 @@ public class VenueReadAdapter implements VenueReadPort {
     return PageResult.of(items, paging.page(), paging.pageSize(), entityPage.getTotalElements());
   }
 
-  /// 查询 Venue 详情。
+  /// 查询 Venue 详情，包含最新 JCR/CAS/Scopus 评级和 CAS 预警数据。
   ///
   /// @param id 期刊主键 ID
   /// @return Venue 详情读模型，不存在时返回 Optional.empty()
   @Override
   public Optional<VenueDetailReadModel> findVenueDetail(Long id) {
-    return venueDao.findById(id).map(venueReadModelMapper::toDetailReadModel);
+    return venueDao
+        .findById(id)
+        .map(
+            entity -> {
+              VenueLatestRating latestRating = buildLatestRating(entity.getId());
+              return venueReadModelMapper.toDetailReadModel(entity, latestRating);
+            });
+  }
+
+  /// 构建最新评级摘要，聚合 JCR/CAS/Scopus 评级和 CAS 预警数据。
+  ///
+  /// @param venueId 期刊 ID
+  /// @return 评级摘要（全部数据源无数据时返回 null）
+  private VenueLatestRating buildLatestRating(Long venueId) {
+    var jcr = jcrRatingDao.findLatestByVenueId(venueId).orElse(null);
+    var cas = casRatingDao.findLatestByVenueId(venueId).orElse(null);
+    var scopus = scopusRatingDao.findLatestByVenueId(venueId).orElse(null);
+    var warning = findLatestWarning(venueId);
+
+    if (jcr == null && cas == null && scopus == null && warning == null) {
+      return null;
+    }
+    return venueReadModelMapper.toLatestRating(jcr, cas, scopus, warning);
+  }
+
+  /// 查找某期刊最新的 CAS 预警记录，按发布年份降序取第一条。
+  ///
+  /// @param venueId 期刊 ID
+  /// @return 最新预警记录，无预警时返回 null
+  private CasWarningEntity findLatestWarning(Long venueId) {
+    return casWarningDao.findByVenueId(venueId).stream()
+        .max(Comparator.comparing(CasWarningEntity::getPublishedYear))
+        .orElse(null);
   }
 
   /// 批量查找最新评级的通用方法，按 venueId 分组并用 mergeFunction 保留最新记录。
