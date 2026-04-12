@@ -4,6 +4,8 @@ import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueFilter;
 import com.patra.catalog.domain.model.read.venue.VenueLatestRating;
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
+import com.patra.catalog.domain.model.vo.venue.CitationMetrics;
+import com.patra.catalog.domain.model.vo.venue.OpenAccessInfo;
 import com.patra.catalog.domain.port.read.VenueReadPort;
 import com.patra.catalog.infra.persistence.dao.CasRatingDao;
 import com.patra.catalog.infra.persistence.dao.CasWarningDao;
@@ -17,6 +19,7 @@ import com.patra.catalog.infra.persistence.entity.ScopusRatingEntity;
 import com.patra.catalog.infra.persistence.entity.VenueEntity;
 import com.patra.common.query.PageResult;
 import com.patra.common.query.PagingParams;
+import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -25,9 +28,12 @@ import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
+import tools.jackson.databind.ObjectMapper;
 
 /// Venue 读适配器。
 ///
@@ -36,6 +42,7 @@ import org.springframework.stereotype.Repository;
 ///
 /// @author linqibin
 /// @since 0.1.0
+@Slf4j
 @Repository
 @RequiredArgsConstructor
 public class VenueReadAdapter implements VenueReadPort {
@@ -46,11 +53,14 @@ public class VenueReadAdapter implements VenueReadPort {
   private final ScopusRatingDao scopusRatingDao;
   private final CasWarningDao casWarningDao;
   private final VenueReadModelMapper venueReadModelMapper;
+  private final ObjectMapper objectMapper;
 
   /// 查询 Venue 分页列表，包含最新 JCR/CAS/Scopus 评级数据。
   ///
-  /// **查询策略**：先分页查 VenueEntity，再按 venueIds 批量加载三套评级，
-  /// 避免 N+1 查询问题。
+  /// **查询策略**：
+  ///
+  /// - 仅基础筛选 + 默认排序：先分页查 VenueEntity，再批量加载评级（简单高效）
+  /// - 高级筛选或非默认排序：使用 LATERAL JOIN 单次查询完成（避免评级表无法过滤的问题）
   ///
   /// @param paging 已验证的分页参数
   /// @param filter 筛选条件
@@ -59,6 +69,15 @@ public class VenueReadAdapter implements VenueReadPort {
   public PageResult<VenueSummaryReadModel> findVenuePage(PagingParams paging, VenueFilter filter) {
     Pageable pageable = PageRequest.of(paging.page() - 1, paging.pageSize());
 
+    if (filter.hasAdvancedFilters()) {
+      return findVenuePageWithLateralJoin(paging, filter, pageable);
+    }
+    return findVenuePageWithBatchLoad(paging, filter, pageable);
+  }
+
+  /// 基础路径：先分页查 VenueEntity，再批量加载评级数据。
+  private PageResult<VenueSummaryReadModel> findVenuePageWithBatchLoad(
+      PagingParams paging, VenueFilter filter, Pageable pageable) {
     var entityPage =
         venueDao.findJournalPage(
             filter.keyword(), filter.countryCode(), filter.issnL(), filter.nlmId(), pageable);
@@ -82,6 +101,116 @@ public class VenueReadAdapter implements VenueReadPort {
             .toList();
 
     return PageResult.of(items, paging.page(), paging.pageSize(), entityPage.getTotalElements());
+  }
+
+  /// 高级路径：使用 LATERAL JOIN 单次查询，直接从 Object[] 构建读模型。
+  private PageResult<VenueSummaryReadModel> findVenuePageWithLateralJoin(
+      PagingParams paging, VenueFilter filter, Pageable pageable) {
+    Page<Object[]> resultPage =
+        venueDao.findFilteredJournalPage(
+            filter.keyword(),
+            filter.countryCode(),
+            filter.issnL(),
+            filter.nlmId(),
+            filter.jifQuartile(),
+            filter.casMajorQuartile(),
+            filter.casTopJournal(),
+            filter.oaType(),
+            filter.collection(),
+            filter.researchDirection(),
+            filter.warningOnly(),
+            filter.sortBy(),
+            pageable);
+
+    List<VenueSummaryReadModel> items =
+        resultPage.getContent().stream().map(this::mapRowToReadModel).toList();
+
+    return PageResult.of(items, paging.page(), paging.pageSize(), resultPage.getTotalElements());
+  }
+
+  /// 将 LATERAL JOIN 查询的 Object[] 行映射为 VenueSummaryReadModel。
+  ///
+  /// 列索引对应 `findFilteredJournalPage` SELECT 子句：
+  ///
+  /// - 0: v.id, 1: v.title, 2: v.country_code, 3: v.image_object_key
+  /// - 4: v.citation_metrics (JSON), 5: v.open_access (JSON), 6: v.cited_by_count
+  /// - 7: jcr.impact_factor, 8: jcr.jif_quartile, 9: jcr.collection, 10: jcr.research_direction
+  /// - 11: cas.major_quartile, 12: cas.is_top_journal
+  /// - 13: scopus.cite_score, 14: scopus.quartile
+  private VenueSummaryReadModel mapRowToReadModel(Object[] row) {
+    Integer hIndex = extractHIndex(row[4]);
+    Boolean isOa = extractIsOa(row[5]);
+
+    return VenueSummaryReadModel.builder()
+        .id(((Number) row[0]).longValue())
+        .title((String) row[1])
+        .countryCode((String) row[2])
+        .imageObjectKey((String) row[3])
+        .hIndex(hIndex)
+        .isOa(isOa)
+        .impactFactor(toBigDecimal(row[7]))
+        .jifQuartile((String) row[8])
+        .collection((String) row[9])
+        .researchDirection((String) row[10])
+        .casMajorQuartile((String) row[11])
+        .casTopJournal(toBoolean(row[12]))
+        .citeScore(toBigDecimal(row[13]))
+        .citeScoreQuartile((String) row[14])
+        .build();
+  }
+
+  /// 从 citation_metrics JSON 列提取 hIndex 值。
+  private Integer extractHIndex(Object citationMetricsJson) {
+    if (citationMetricsJson == null) {
+      return null;
+    }
+    try {
+      CitationMetrics metrics =
+          objectMapper.readValue(citationMetricsJson.toString(), CitationMetrics.class);
+      return metrics != null ? metrics.hIndex() : null;
+    } catch (Exception e) {
+      log.warn("Failed to extract hIndex from citationMetrics JSON for venue row", e);
+      return null;
+    }
+  }
+
+  /// 从 open_access JSON 列提取 isOa 值。
+  private Boolean extractIsOa(Object openAccessJson) {
+    if (openAccessJson == null) {
+      return null;
+    }
+    try {
+      OpenAccessInfo info = objectMapper.readValue(openAccessJson.toString(), OpenAccessInfo.class);
+      return info != null ? info.isOa() : null;
+    } catch (Exception e) {
+      log.warn("Failed to extract isOa from openAccess JSON for venue row", e);
+      return null;
+    }
+  }
+
+  /// 安全转换为 BigDecimal。
+  private static BigDecimal toBigDecimal(Object value) {
+    if (value == null) {
+      return null;
+    }
+    if (value instanceof BigDecimal bd) {
+      return bd;
+    }
+    return new BigDecimal(value.toString());
+  }
+
+  /// 安全转换为 Boolean。
+  private static Boolean toBoolean(Object value) {
+    if (value == null) {
+      return null;
+    }
+    if (value instanceof Boolean b) {
+      return b;
+    }
+    if (value instanceof Number n) {
+      return n.intValue() != 0;
+    }
+    return Boolean.parseBoolean(value.toString());
   }
 
   /// 查询 Venue 详情，包含最新 JCR/CAS/Scopus 评级和 CAS 预警数据。
