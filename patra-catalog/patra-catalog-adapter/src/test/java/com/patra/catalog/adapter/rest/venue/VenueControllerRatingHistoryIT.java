@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.patra.catalog.adapter.config.TestConfiguration;
+import com.patra.catalog.app.usecase.publication.query.PublicationQueryService;
 import com.patra.catalog.app.usecase.venue.query.VenueQueryService;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueRatingHistoryQuery;
 import com.patra.catalog.domain.exception.VenueNotFoundException;
@@ -45,6 +46,7 @@ class VenueControllerRatingHistoryIT {
   @Autowired private RestTestClient restClient;
 
   @MockitoBean private VenueQueryService venueQueryService;
+  @MockitoBean private PublicationQueryService publicationQueryService;
 
   /// 查询存在的 ID 应返回 200 和多年评级历史（按年份降序）。
   @Test
