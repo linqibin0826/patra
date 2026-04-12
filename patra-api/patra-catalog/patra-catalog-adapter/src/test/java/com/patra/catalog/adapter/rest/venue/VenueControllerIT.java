@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.patra.catalog.adapter.config.TestConfiguration;
+import com.patra.catalog.app.usecase.publication.query.PublicationQueryService;
 import com.patra.catalog.app.usecase.venue.query.VenueQueryService;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueListQuery;
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
@@ -44,6 +45,7 @@ class VenueControllerIT {
   @Autowired private RestTestClient restClient;
 
   @MockitoBean private VenueQueryService venueQueryService;
+  @MockitoBean private PublicationQueryService publicationQueryService;
 
   /// 指定查询参数时应返回分页结果。
   @Test

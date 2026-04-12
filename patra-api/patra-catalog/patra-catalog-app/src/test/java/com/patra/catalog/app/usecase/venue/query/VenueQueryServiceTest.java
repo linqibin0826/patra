@@ -61,7 +61,7 @@ class VenueQueryServiceTest {
 
     // When
     PageResult<VenueSummaryReadModel> actual =
-        service.listVenues(new VenueListQuery(null, null, "   ", null, null, null));
+        service.listVenues(VenueListQuery.builder().q("   ").build());
 
     // Then
     assertThat(actual).isEqualTo(expected);
@@ -98,7 +98,8 @@ class VenueQueryServiceTest {
 
       // When
       PageResult<VenueSummaryReadModel> actual =
-          service.listVenues(new VenueListQuery(0, 1000, "  Nature  ", null, null, null));
+          service.listVenues(
+              VenueListQuery.builder().page(0).pageSize(1000).q("  Nature  ").build());
 
       // Then
       assertThat(actual).isEqualTo(expected);
@@ -118,7 +119,7 @@ class VenueQueryServiceTest {
 
       // When
       PageResult<VenueSummaryReadModel> actual =
-          service.listVenues(new VenueListQuery(3, 50, "NLM001", null, null, null));
+          service.listVenues(VenueListQuery.builder().page(3).pageSize(50).q("NLM001").build());
 
       // Then
       assertThat(actual).isEqualTo(expected);
@@ -143,7 +144,7 @@ class VenueQueryServiceTest {
 
       // When
       PageResult<VenueSummaryReadModel> actual =
-          service.listVenues(new VenueListQuery(null, null, null, "US", null, null));
+          service.listVenues(VenueListQuery.builder().countryCode("US").build());
 
       // Then
       assertThat(actual).isEqualTo(expected);
@@ -163,7 +164,7 @@ class VenueQueryServiceTest {
 
       // When
       PageResult<VenueSummaryReadModel> actual =
-          service.listVenues(new VenueListQuery(null, null, null, null, "0028-0836", null));
+          service.listVenues(VenueListQuery.builder().issnL("0028-0836").build());
 
       // Then
       assertThat(actual).isEqualTo(expected);
@@ -183,7 +184,7 @@ class VenueQueryServiceTest {
 
       // When
       PageResult<VenueSummaryReadModel> actual =
-          service.listVenues(new VenueListQuery(null, null, null, null, null, "0410462"));
+          service.listVenues(VenueListQuery.builder().nlmId("0410462").build());
 
       // Then
       assertThat(actual).isEqualTo(expected);
@@ -208,7 +209,7 @@ class VenueQueryServiceTest {
 
       // When
       PageResult<VenueSummaryReadModel> actual =
-          service.listVenues(new VenueListQuery(null, null, "Nature", "GB", null, null));
+          service.listVenues(VenueListQuery.builder().q("Nature").countryCode("GB").build());
 
       // Then
       assertThat(actual).isEqualTo(expected);
@@ -233,7 +234,7 @@ class VenueQueryServiceTest {
 
       // When
       PageResult<VenueSummaryReadModel> actual =
-          service.listVenues(new VenueListQuery(null, null, "Nat%re", null, null, null));
+          service.listVenues(VenueListQuery.builder().q("Nat%re").build());
 
       // Then
       assertThat(actual).isEqualTo(expected);
@@ -253,7 +254,7 @@ class VenueQueryServiceTest {
 
       // When
       PageResult<VenueSummaryReadModel> actual =
-          service.listVenues(new VenueListQuery(null, null, "Nat_re", null, null, null));
+          service.listVenues(VenueListQuery.builder().q("Nat_re").build());
 
       // Then
       assertThat(actual).isEqualTo(expected);
@@ -273,7 +274,7 @@ class VenueQueryServiceTest {
 
       // When
       PageResult<VenueSummaryReadModel> actual =
-          service.listVenues(new VenueListQuery(null, null, "Nat!re", null, null, null));
+          service.listVenues(VenueListQuery.builder().q("Nat!re").build());
 
       // Then
       assertThat(actual).isEqualTo(expected);
@@ -292,7 +293,7 @@ class VenueQueryServiceTest {
 
       // When
       PageResult<VenueSummaryReadModel> actual =
-          service.listVenues(new VenueListQuery(null, null, "  ", null, null, null));
+          service.listVenues(VenueListQuery.builder().q("  ").build());
 
       // Then
       assertThat(actual).isEqualTo(expected);
@@ -316,7 +317,7 @@ class VenueQueryServiceTest {
 
       // When
       PageResult<VenueSummaryReadModel> actual =
-          service.listVenues(new VenueListQuery(null, null, null, "  ", null, null));
+          service.listVenues(VenueListQuery.builder().countryCode("  ").build());
 
       // Then
       assertThat(actual).isEqualTo(expected);
@@ -335,7 +336,7 @@ class VenueQueryServiceTest {
 
       // When
       PageResult<VenueSummaryReadModel> actual =
-          service.listVenues(new VenueListQuery(null, null, null, null, "  \t ", null));
+          service.listVenues(VenueListQuery.builder().issnL("  \t ").build());
 
       // Then
       assertThat(actual).isEqualTo(expected);
@@ -354,7 +355,7 @@ class VenueQueryServiceTest {
 
       // When
       PageResult<VenueSummaryReadModel> actual =
-          service.listVenues(new VenueListQuery(null, null, null, null, null, "   "));
+          service.listVenues(VenueListQuery.builder().nlmId("   ").build());
 
       // Then
       assertThat(actual).isEqualTo(expected);

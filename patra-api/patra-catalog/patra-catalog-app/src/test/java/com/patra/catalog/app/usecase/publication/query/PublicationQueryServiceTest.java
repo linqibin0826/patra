@@ -72,9 +72,7 @@ class PublicationQueryServiceTest {
 
     // When
     PageResult<PublicationSummaryReadModel> actual =
-        service.listPublications(
-            new PublicationListQuery(
-                null, null, "   ", null, null, null, null, null, null, null, null, null, null));
+        service.listPublications(PublicationListQuery.builder().q("   ").build());
 
     // Then
     assertThat(actual).isEqualTo(expected);
@@ -112,20 +110,7 @@ class PublicationQueryServiceTest {
       // When
       PageResult<PublicationSummaryReadModel> actual =
           service.listPublications(
-              new PublicationListQuery(
-                  0,
-                  1000,
-                  "  cancer  ",
-                  null,
-                  null,
-                  null,
-                  null,
-                  null,
-                  null,
-                  null,
-                  null,
-                  null,
-                  null));
+              PublicationListQuery.builder().page(0).pageSize(1000).q("  cancer  ").build());
 
       // Then
       assertThat(actual).isEqualTo(expected);
@@ -146,8 +131,7 @@ class PublicationQueryServiceTest {
       // When
       PageResult<PublicationSummaryReadModel> actual =
           service.listPublications(
-              new PublicationListQuery(
-                  3, 50, "apoptosis", null, null, null, null, null, null, null, null, null, null));
+              PublicationListQuery.builder().page(3).pageSize(50).q("apoptosis").build());
 
       // Then
       assertThat(actual).isEqualTo(expected);
@@ -172,9 +156,7 @@ class PublicationQueryServiceTest {
 
       // When
       PageResult<PublicationSummaryReadModel> actual =
-          service.listPublications(
-              new PublicationListQuery(
-                  null, null, null, 2020, null, null, null, null, null, null, null, null, null));
+          service.listPublications(PublicationListQuery.builder().yearFrom(2020).build());
 
       // Then
       assertThat(actual).isEqualTo(expected);
@@ -194,9 +176,7 @@ class PublicationQueryServiceTest {
 
       // When
       PageResult<PublicationSummaryReadModel> actual =
-          service.listPublications(
-              new PublicationListQuery(
-                  null, null, null, null, null, null, null, null, 100L, null, null, null, null));
+          service.listPublications(PublicationListQuery.builder().venueId(100L).build());
 
       // Then
       assertThat(actual).isEqualTo(expected);
@@ -216,9 +196,7 @@ class PublicationQueryServiceTest {
 
       // When
       PageResult<PublicationSummaryReadModel> actual =
-          service.listPublications(
-              new PublicationListQuery(
-                  null, null, null, null, null, null, true, null, null, null, null, null, null));
+          service.listPublications(PublicationListQuery.builder().isOa(true).build());
 
       // Then
       assertThat(actual).isEqualTo(expected);
@@ -250,9 +228,12 @@ class PublicationQueryServiceTest {
       // When
       PageResult<PublicationSummaryReadModel> actual =
           service.listPublications(
-              new PublicationListQuery(
-                  null, null, "cancer", 2020, 2024, null, true, null, null, null, null, null,
-                  null));
+              PublicationListQuery.builder()
+                  .q("cancer")
+                  .yearFrom(2020)
+                  .yearTo(2024)
+                  .isOa(true)
+                  .build());
 
       // Then
       assertThat(actual).isEqualTo(expected);
@@ -276,9 +257,7 @@ class PublicationQueryServiceTest {
 
       // When
       PageResult<PublicationSummaryReadModel> actual =
-          service.listPublications(
-              new PublicationListQuery(
-                  null, null, null, null, null, "  ", null, null, null, null, null, null, null));
+          service.listPublications(PublicationListQuery.builder().languageBase("  ").build());
 
       // Then
       assertThat(actual).isEqualTo(expected);
@@ -297,9 +276,7 @@ class PublicationQueryServiceTest {
 
       // When
       PageResult<PublicationSummaryReadModel> actual =
-          service.listPublications(
-              new PublicationListQuery(
-                  null, null, null, null, null, null, null, "  \t ", null, null, null, null, null));
+          service.listPublications(PublicationListQuery.builder().oaStatus("  \t ").build());
 
       // Then
       assertThat(actual).isEqualTo(expected);
@@ -318,9 +295,7 @@ class PublicationQueryServiceTest {
 
       // When
       PageResult<PublicationSummaryReadModel> actual =
-          service.listPublications(
-              new PublicationListQuery(
-                  null, null, null, null, null, null, null, null, null, "   ", null, null, null));
+          service.listPublications(PublicationListQuery.builder().pmid("   ").build());
 
       // Then
       assertThat(actual).isEqualTo(expected);
