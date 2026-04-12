@@ -3,12 +3,14 @@ package com.patra.catalog.adapter.rest.venue.mapper;
 import com.patra.catalog.adapter.rest.venue.request.VenueListRequest;
 import com.patra.catalog.adapter.rest.venue.response.VenueDetailResponse;
 import com.patra.catalog.adapter.rest.venue.response.VenueItemResponse;
+import com.patra.catalog.adapter.rest.venue.response.VenueRatingHistoryResponse;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueListQuery;
 import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel.IndexingHistoryItem;
 import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel.MeshHeading;
 import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel.VenueRelationItem;
 import com.patra.catalog.domain.model.read.venue.VenueLatestRating;
+import com.patra.catalog.domain.model.read.venue.VenueRatingHistoryReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import com.patra.catalog.domain.model.vo.venue.CitationMetrics;
 import com.patra.catalog.domain.model.vo.venue.HostOrganization;
@@ -118,4 +120,34 @@ public interface VenueApiConverter {
   /// @param indexingHistoryItem 索引历史读模型
   /// @return 索引历史 DTO
   VenueDetailResponse.IndexingHistoryDto toDto(IndexingHistoryItem indexingHistoryItem);
+
+  /// 将评级历史读模型转换为 API 响应。
+  ///
+  /// @param readModel 评级历史读模型
+  /// @return 评级历史响应 DTO
+  VenueRatingHistoryResponse toRatingHistoryResponse(VenueRatingHistoryReadModel readModel);
+
+  /// 将 JcrRecord 读模型转换为 JcrRatingDto。
+  ///
+  /// @param record JCR 评级历史记录
+  /// @return JCR 评级 DTO
+  VenueRatingHistoryResponse.JcrRatingDto toDto(VenueRatingHistoryReadModel.JcrRecord record);
+
+  /// 将 CasRecord 读模型转换为 CasRatingDto。
+  ///
+  /// @param record CAS 分区历史记录
+  /// @return CAS 分区 DTO
+  VenueRatingHistoryResponse.CasRatingDto toDto(VenueRatingHistoryReadModel.CasRecord record);
+
+  /// 将 ScopusRecord 读模型转换为 ScopusRatingDto。
+  ///
+  /// @param record Scopus 指标历史记录
+  /// @return Scopus 指标 DTO
+  VenueRatingHistoryResponse.ScopusRatingDto toDto(VenueRatingHistoryReadModel.ScopusRecord record);
+
+  /// 将 WarningRecord 读模型转换为 WarningDto。
+  ///
+  /// @param record CAS 预警历史记录
+  /// @return CAS 预警 DTO
+  VenueRatingHistoryResponse.WarningDto toDto(VenueRatingHistoryReadModel.WarningRecord record);
 }

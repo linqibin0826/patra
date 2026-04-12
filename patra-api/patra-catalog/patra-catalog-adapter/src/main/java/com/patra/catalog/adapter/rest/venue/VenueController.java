@@ -4,9 +4,11 @@ import com.patra.catalog.adapter.rest.venue.mapper.VenueApiConverter;
 import com.patra.catalog.adapter.rest.venue.request.VenueListRequest;
 import com.patra.catalog.adapter.rest.venue.response.VenueDetailResponse;
 import com.patra.catalog.adapter.rest.venue.response.VenueItemResponse;
+import com.patra.catalog.adapter.rest.venue.response.VenueRatingHistoryResponse;
 import com.patra.catalog.app.usecase.venue.query.VenueQueryService;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueDetailQuery;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueListQuery;
+import com.patra.catalog.app.usecase.venue.query.dto.VenueRatingHistoryQuery;
 import com.patra.common.query.PageResult;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -45,5 +47,18 @@ public class VenueController {
   public VenueDetailResponse getVenueDetail(@PathVariable Long id) {
     VenueDetailQuery query = VenueDetailQuery.of(id);
     return venueApiConverter.toDetailResponse(venueQueryService.getVenueDetail(query));
+  }
+
+  /// 查询 Venue 评级历史（JCR/CAS/Scopus/预警）。
+  ///
+  /// 返回所有年份的评级记录，供前端趋势图展示。非分页接口。
+  ///
+  /// @param id 期刊主键 ID
+  /// @return 评级历史响应
+  @GetMapping("/{id}/ratings")
+  public VenueRatingHistoryResponse getVenueRatingHistory(@PathVariable Long id) {
+    var query = VenueRatingHistoryQuery.of(id);
+    return venueApiConverter.toRatingHistoryResponse(
+        venueQueryService.getVenueRatingHistory(query));
   }
 }
