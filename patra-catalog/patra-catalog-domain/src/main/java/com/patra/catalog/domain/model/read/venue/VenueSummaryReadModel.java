@@ -1,5 +1,6 @@
 package com.patra.catalog.domain.model.read.venue;
 
+import java.math.BigDecimal;
 import java.util.Objects;
 import lombok.Builder;
 
@@ -20,10 +21,12 @@ public record VenueSummaryReadModel(
     String jifQuartile,
     String casMajorQuartile,
     Boolean casTopJournal,
-    Double citeScore,
+    BigDecimal citeScore,
     String citeScoreQuartile,
     Boolean isOa,
-    String researchDirection) {
+    String researchDirection,
+    BigDecimal impactFactor,
+    String collection) {
 
   /// 构造期刊列表摘要读模型并执行参数校验。
   public VenueSummaryReadModel {

@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
@@ -37,7 +38,12 @@ import org.springframework.test.context.ContextConfiguration;
 @DataJpaTest
 @ContextConfiguration(initializers = CatalogMySQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({VenueReadAdapter.class, VenueReadModelMapperImpl.class, JpaAuditingConfig.class})
+@Import({
+  VenueReadAdapter.class,
+  VenueReadModelMapperImpl.class,
+  JpaAuditingConfig.class,
+  JacksonAutoConfiguration.class
+})
 @ActiveProfiles("test")
 @DisplayName("VenueReadAdapter 集成测试")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)

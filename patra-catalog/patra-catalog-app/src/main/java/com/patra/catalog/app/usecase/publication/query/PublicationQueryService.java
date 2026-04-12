@@ -47,10 +47,12 @@ public class PublicationQueryService {
             .isOa(query.isOa())
             .oaStatus(trimToNull(query.oaStatus()))
             .venueId(query.venueId())
+            .venueInstanceId(query.venueInstanceId())
             .pmid(trimToNull(query.pmid()))
             .doi(trimToNull(query.doi()))
             .provenanceCode(trimToNull(query.provenanceCode()))
             .publicationStatus(trimToNull(query.publicationStatus()))
+            .sortBy(trimToNull(query.sortBy()))
             .build();
     return publicationReadPort.findPublicationPage(paging, filter);
   }

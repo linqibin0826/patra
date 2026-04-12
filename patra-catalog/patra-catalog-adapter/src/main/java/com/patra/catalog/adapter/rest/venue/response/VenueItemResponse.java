@@ -1,5 +1,6 @@
 package com.patra.catalog.adapter.rest.venue.response;
 
+import java.math.BigDecimal;
 import lombok.Builder;
 
 /// 期刊列表项响应。
@@ -16,5 +17,9 @@ public record VenueItemResponse(
     String jifQuartile,
     String casMajorQuartile,
     Boolean casTopJournal,
+    BigDecimal citeScore,
+    String citeScoreQuartile,
     Boolean isOa,
-    String researchDirection) {}
+    String researchDirection,
+    BigDecimal impactFactor,
+    String collection) {}

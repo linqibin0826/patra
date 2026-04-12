@@ -17,7 +17,9 @@ public record PublicationFilter(
     Boolean isOa,
     String oaStatus,
     Long venueId,
+    Long venueInstanceId,
     String pmid,
     String doi,
     String provenanceCode,
-    String publicationStatus) {}
+    String publicationStatus,
+    String sortBy) {}
