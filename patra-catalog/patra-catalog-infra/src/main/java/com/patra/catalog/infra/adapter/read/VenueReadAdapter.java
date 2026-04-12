@@ -2,6 +2,7 @@ package com.patra.catalog.infra.adapter.read;
 
 import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueFilter;
+import com.patra.catalog.domain.model.read.venue.VenueInstanceSummaryReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueLatestRating;
 import com.patra.catalog.domain.model.read.venue.VenueRatingHistoryReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueStatsReadModel;
@@ -15,6 +16,7 @@ import com.patra.catalog.infra.persistence.dao.JcrRatingDao;
 import com.patra.catalog.infra.persistence.dao.ScopusRatingDao;
 import com.patra.catalog.infra.persistence.dao.VenueDao;
 import com.patra.catalog.infra.persistence.dao.VenueIndexingHistoryDao;
+import com.patra.catalog.infra.persistence.dao.VenueInstanceDao;
 import com.patra.catalog.infra.persistence.dao.VenueMeshDao;
 import com.patra.catalog.infra.persistence.dao.VenuePublicationStatsDao;
 import com.patra.catalog.infra.persistence.dao.VenueRelationDao;
@@ -55,6 +57,7 @@ import tools.jackson.databind.ObjectMapper;
 public class VenueReadAdapter implements VenueReadPort {
 
   private final VenueDao venueDao;
+  private final VenueInstanceDao venueInstanceDao;
   private final JcrRatingDao jcrRatingDao;
   private final CasRatingDao casRatingDao;
   private final ScopusRatingDao scopusRatingDao;
@@ -295,6 +298,43 @@ public class VenueReadAdapter implements VenueReadPort {
             .map(venueReadModelMapper::toYearStats)
             .toList();
     return new VenueStatsReadModel(yearStats);
+  }
+
+  /// 查询 Venue 实例（卷/期）分页列表，包含关联文献数量。
+  ///
+  /// @param venueId 期刊主键 ID
+  /// @param paging 已验证的分页参数
+  /// @param year 出版年份过滤（可为 null）
+  /// @return Venue 实例分页结果
+  @Override
+  public PageResult<VenueInstanceSummaryReadModel> findVenueInstances(
+      Long venueId, PagingParams paging, Integer year) {
+    Pageable pageable = PageRequest.of(paging.page() - 1, paging.pageSize());
+    Page<Object[]> resultPage =
+        venueInstanceDao.findVenueInstancesWithPubCount(venueId, year, pageable);
+
+    List<VenueInstanceSummaryReadModel> items =
+        resultPage.getContent().stream().map(this::mapRowToInstanceReadModel).toList();
+
+    return PageResult.of(items, paging.page(), paging.pageSize(), resultPage.getTotalElements());
+  }
+
+  /// 将 native query 的 Object[] 行映射为 VenueInstanceSummaryReadModel。
+  ///
+  /// 列索引对应 `findVenueInstancesWithPubCount` SELECT 子句：
+  ///
+  /// - 0: vi.id, 1: vi.volume, 2: vi.issue
+  /// - 3: vi.publication_year, 4: vi.publication_month, 5: vi.publication_day
+  /// - 6: pub_count
+  private VenueInstanceSummaryReadModel mapRowToInstanceReadModel(Object[] row) {
+    return new VenueInstanceSummaryReadModel(
+        ((Number) row[0]).longValue(),
+        (String) row[1],
+        (String) row[2],
+        row[3] != null ? ((Number) row[3]).intValue() : null,
+        row[4] != null ? ((Number) row[4]).intValue() : null,
+        row[5] != null ? ((Number) row[5]).intValue() : null,
+        ((Number) row[6]).longValue());
   }
 
   /// 构建最新评级摘要，聚合 JCR/CAS/Scopus 评级和 CAS 预警数据。

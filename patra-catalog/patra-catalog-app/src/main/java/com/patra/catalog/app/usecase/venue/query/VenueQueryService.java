@@ -4,12 +4,14 @@ import static com.patra.common.util.StringUtils.escapeLike;
 import static com.patra.common.util.StringUtils.trimToNull;
 
 import com.patra.catalog.app.usecase.venue.query.dto.VenueDetailQuery;
+import com.patra.catalog.app.usecase.venue.query.dto.VenueInstanceListQuery;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueListQuery;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueRatingHistoryQuery;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueStatsQuery;
 import com.patra.catalog.domain.exception.VenueNotFoundException;
 import com.patra.catalog.domain.model.read.venue.VenueDetailReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueFilter;
+import com.patra.catalog.domain.model.read.venue.VenueInstanceSummaryReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueRatingHistoryReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueStatsReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
@@ -98,6 +100,17 @@ public class VenueQueryService {
         .findVenueDetail(query.id())
         .orElseThrow(() -> new VenueNotFoundException(query.id()));
     return venueReadPort.findVenueStats(query.id());
+  }
+
+  /// 查询 Venue 实例（卷/期）分页列表。
+  ///
+  /// @param query 查询参数
+  /// @return Venue 实例分页结果
+  public PageResult<VenueInstanceSummaryReadModel> listVenueInstances(
+      VenueInstanceListQuery query) {
+    Objects.requireNonNull(query, "query must not be null");
+    PagingParams paging = PagingParams.normalize(query.page(), query.pageSize());
+    return venueReadPort.findVenueInstances(query.venueId(), paging, query.year());
   }
 
   /// 验证排序字段是否在白名单中，无效值返回 null（使用默认排序）。
