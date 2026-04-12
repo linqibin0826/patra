@@ -13,6 +13,7 @@ import com.patra.catalog.domain.port.read.VenueReadPort;
 import com.patra.common.query.PageResult;
 import com.patra.common.query.PagingParams;
 import java.util.Objects;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +23,9 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class VenueQueryService {
+
+  private static final Set<String> VALID_SORT_FIELDS =
+      Set.of("impactFactor", "citeScore", "hIndex", "citedByCount");
 
   private final VenueReadPort venueReadPort;
 
@@ -38,6 +42,14 @@ public class VenueQueryService {
             .countryCode(trimToNull(query.countryCode()))
             .issnL(trimToNull(query.issnL()))
             .nlmId(trimToNull(query.nlmId()))
+            .jifQuartile(trimToNull(query.jifQuartile()))
+            .casMajorQuartile(trimToNull(query.casMajorQuartile()))
+            .casTopJournal(Boolean.TRUE.equals(query.casTopJournal()) ? true : null)
+            .oaType(trimToNull(query.oaType()))
+            .collection(trimToNull(query.collection()))
+            .researchDirection(escapeLike(trimToNull(query.researchDirection())))
+            .warningOnly(Boolean.TRUE.equals(query.warningOnly()) ? true : null)
+            .sortBy(validatedSortBy(trimToNull(query.sortBy())))
             .build();
     return venueReadPort.findVenuePage(paging, filter);
   }
@@ -52,5 +64,13 @@ public class VenueQueryService {
     return venueReadPort
         .findVenueDetail(query.id())
         .orElseThrow(() -> new VenueNotFoundException(query.id()));
+  }
+
+  /// 验证排序字段是否在白名单中，无效值返回 null（使用默认排序）。
+  private static String validatedSortBy(String sortBy) {
+    if (sortBy != null && !VALID_SORT_FIELDS.contains(sortBy)) {
+      return null;
+    }
+    return sortBy;
   }
 }
