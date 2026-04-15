@@ -189,4 +189,28 @@ public interface PublicationDao extends JpaRepository<PublicationEntity, Long> {
   @Modifying
   @Query("DELETE FROM PublicationEntity e WHERE e.venueId = :venueId")
   int deleteByVenueId(@Param("venueId") Long venueId);
+
+  /// 按 venue 查询 Top N 高被引文献。
+  ///
+  /// **排序规则**：`citation_count DESC`（NULL 排在最后）、`publication_year DESC`。
+  ///
+  /// **软删除**：手动过滤 `deleted_at IS NULL`（使用 `nativeQuery`，不经 Hibernate `@SoftDelete` 拦截）。
+  ///
+  /// @param venueId 期刊 ID
+  /// @param since   发表年下限（可为 null，表示不过滤）
+  /// @param limit   返回条数上限
+  /// @return 文献实体列表，已按 `citation_count DESC, publication_year DESC` 排序
+  @Query(
+      value =
+          """
+          SELECT * FROM cat_publication
+          WHERE venue_id = :venueId
+            AND (:since IS NULL OR publication_year >= :since)
+            AND deleted_at IS NULL
+          ORDER BY citation_count IS NULL, citation_count DESC, publication_year DESC
+          LIMIT :limit
+          """,
+      nativeQuery = true)
+  List<PublicationEntity> findTopByVenue(
+      @Param("venueId") Long venueId, @Param("since") Integer since, @Param("limit") int limit);
 }
