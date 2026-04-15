@@ -3,6 +3,7 @@ package com.patra.catalog.adapter.rest.publication.mapper;
 import com.patra.catalog.adapter.rest.publication.request.PublicationListRequest;
 import com.patra.catalog.adapter.rest.publication.response.PublicationDetailResponse;
 import com.patra.catalog.adapter.rest.publication.response.PublicationItemResponse;
+import com.patra.catalog.adapter.rest.venue.response.TopPublicationItemResponse;
 import com.patra.catalog.app.usecase.publication.query.dto.PublicationListQuery;
 import com.patra.catalog.domain.model.read.publication.PublicationDetailReadModel;
 import com.patra.catalog.domain.model.read.publication.PublicationDetailReadModel.AbstractInfo;
@@ -37,6 +38,14 @@ public interface PublicationApiConverter {
   /// @param readModel Publication 摘要读模型
   /// @return API 列表项响应
   PublicationItemResponse toItemResponse(PublicationSummaryReadModel readModel);
+
+  /// 将 Publication 摘要读模型转换为刊级 Top N 高被引响应项。
+  ///
+  /// 仅保留 `id/title/publicationYear/citationCount/doi` 字段，其余字段被忽略。
+  ///
+  /// @param readModel Publication 摘要读模型
+  /// @return 刊级 Top N 响应项
+  TopPublicationItemResponse toTopItemResponse(PublicationSummaryReadModel readModel);
 
   /// 将 Publication 详情读模型转换为 API 详情响应。
   ///
