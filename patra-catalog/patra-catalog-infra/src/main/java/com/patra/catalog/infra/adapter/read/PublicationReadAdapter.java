@@ -122,6 +122,21 @@ public class PublicationReadAdapter implements PublicationReadPort {
     return publicationDao.findById(id).map(this::toDetailReadModel);
   }
 
+  @Override
+  public List<PublicationSummaryReadModel> findTopByVenue(Long venueId, Integer since, int limit) {
+    Objects.requireNonNull(venueId, "venueId must not be null");
+    if (limit <= 0) return List.of();
+
+    List<PublicationEntity> entities = publicationDao.findTopByVenue(venueId, since, limit);
+    if (entities.isEmpty()) return List.of();
+
+    // 单 venue 查询：venueName 一次取出，复用现有私有映射方法
+    Map<Long, String> venueNameMap =
+        venueDao.findById(venueId).map(v -> Map.of(venueId, v.getTitle())).orElseGet(Map::of);
+
+    return entities.stream().map(entity -> toSummaryReadModel(entity, venueNameMap)).toList();
+  }
+
   /// 将 PublicationEntity + venueNameMap 组装为 SummaryReadModel。
   private PublicationSummaryReadModel toSummaryReadModel(
       PublicationEntity entity, Map<Long, String> venueNameMap) {
