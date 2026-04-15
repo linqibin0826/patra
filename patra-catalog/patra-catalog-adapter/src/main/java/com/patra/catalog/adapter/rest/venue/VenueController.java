@@ -4,8 +4,10 @@ import com.patra.catalog.adapter.rest.publication.mapper.PublicationApiConverter
 import com.patra.catalog.adapter.rest.publication.response.PublicationItemResponse;
 import com.patra.catalog.adapter.rest.venue.mapper.VenueApiConverter;
 import com.patra.catalog.adapter.rest.venue.request.InstancePublicationListRequest;
+import com.patra.catalog.adapter.rest.venue.request.TopPublicationsRequest;
 import com.patra.catalog.adapter.rest.venue.request.VenueInstanceListRequest;
 import com.patra.catalog.adapter.rest.venue.request.VenueListRequest;
+import com.patra.catalog.adapter.rest.venue.response.TopPublicationItemResponse;
 import com.patra.catalog.adapter.rest.venue.response.VenueDetailResponse;
 import com.patra.catalog.adapter.rest.venue.response.VenueInstanceItemResponse;
 import com.patra.catalog.adapter.rest.venue.response.VenueItemResponse;
@@ -13,6 +15,7 @@ import com.patra.catalog.adapter.rest.venue.response.VenueRatingHistoryResponse;
 import com.patra.catalog.adapter.rest.venue.response.VenueStatsResponse;
 import com.patra.catalog.app.usecase.publication.query.PublicationQueryService;
 import com.patra.catalog.app.usecase.publication.query.dto.PublicationListQuery;
+import com.patra.catalog.app.usecase.publication.query.dto.TopPublicationsQuery;
 import com.patra.catalog.app.usecase.venue.query.VenueQueryService;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueCompareQuery;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueDetailQuery;
@@ -143,5 +146,22 @@ public class VenueController {
     return publicationQueryService
         .listPublications(query)
         .map(publicationApiConverter::toItemResponse);
+  }
+
+  /// 查询期刊的 Top N 高被引文献。
+  ///
+  /// 按 `citation_count` 降序、`publication_year` 降序排序。用于期刊详情"出口"区的
+  /// "高被引文章"模块；limit 默认 5，范围 1-20；可选 `since` 按发表年下限过滤。
+  ///
+  /// @param id      期刊主键 ID
+  /// @param request `limit`（1-20，缺省 5）、`since`（发表年下限，可选）
+  /// @return Top N 文献响应列表
+  @GetMapping("/{id}/top-publications")
+  public List<TopPublicationItemResponse> listTopPublicationsByVenue(
+      @PathVariable Long id, TopPublicationsRequest request) {
+    TopPublicationsQuery query = TopPublicationsQuery.of(id, request.limit(), request.since());
+    return publicationQueryService.listTopPublicationsByVenue(query).stream()
+        .map(publicationApiConverter::toTopItemResponse)
+        .toList();
   }
 }

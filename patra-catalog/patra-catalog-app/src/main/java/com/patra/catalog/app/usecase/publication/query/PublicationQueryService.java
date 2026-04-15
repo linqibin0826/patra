@@ -5,6 +5,7 @@ import static com.patra.common.util.StringUtils.trimToNull;
 
 import com.patra.catalog.app.usecase.publication.query.dto.PublicationDetailQuery;
 import com.patra.catalog.app.usecase.publication.query.dto.PublicationListQuery;
+import com.patra.catalog.app.usecase.publication.query.dto.TopPublicationsQuery;
 import com.patra.catalog.domain.exception.PublicationNotFoundException;
 import com.patra.catalog.domain.model.read.publication.PublicationDetailReadModel;
 import com.patra.catalog.domain.model.read.publication.PublicationFilter;
@@ -12,6 +13,7 @@ import com.patra.catalog.domain.model.read.publication.PublicationSummaryReadMod
 import com.patra.catalog.domain.port.read.PublicationReadPort;
 import com.patra.common.query.PageResult;
 import com.patra.common.query.PagingParams;
+import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -67,5 +69,14 @@ public class PublicationQueryService {
     return publicationReadPort
         .findPublicationDetail(query.id())
         .orElseThrow(() -> new PublicationNotFoundException(query.id()));
+  }
+
+  /// 查询指定期刊的 Top N 高被引文献。
+  ///
+  /// @param query 查询参数（`limit` 已由 {@link TopPublicationsQuery#of} 归一化）
+  /// @return Top N 文献摘要列表
+  public List<PublicationSummaryReadModel> listTopPublicationsByVenue(TopPublicationsQuery query) {
+    Objects.requireNonNull(query, "query must not be null");
+    return publicationReadPort.findTopByVenue(query.venueId(), query.since(), query.limit());
   }
 }
