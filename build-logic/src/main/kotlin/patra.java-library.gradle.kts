@@ -8,6 +8,7 @@
 plugins {
     id("patra.java-base")
     `java-library`
+    `maven-publish`
 }
 
 // 预编译脚本插件需要显式获取 Version Catalog
@@ -17,6 +18,23 @@ val libs = the<org.gradle.api.artifacts.VersionCatalogsExtension>().named("libs"
 java {
     withSourcesJar()
     withJavadocJar()
+}
+
+// Maven 发布配置：所有 java-library 模块默认可以 publishToMavenLocal
+// 用于 sutra-app 等下游项目通过 mavenLocal() 消费 patra starter 与 common
+//
+// versionMapping：patra 用 io.spring.dependency-management 注入 BOM，dependencies 声明无版本号；
+// 发布时必须 resolve 出实际版本写进 pom，否则下游 mavenLocal 引用会报 "no version"
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            from(components["java"])
+            versionMapping {
+                usage("java-api") { fromResolutionOf("runtimeClasspath") }
+                usage("java-runtime") { fromResolutionResult() }
+            }
+        }
+    }
 }
 
 // Javadoc 配置
