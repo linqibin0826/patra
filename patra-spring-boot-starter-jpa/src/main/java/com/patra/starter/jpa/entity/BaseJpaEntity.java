@@ -13,6 +13,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
@@ -78,7 +80,12 @@ public abstract class BaseJpaEntity implements Serializable, IdAwareEntity {
   /// 用于存储备注或变更审计跟踪的 JSON 格式字符串。
   ///
   /// 此字段可用于记录与实体生命周期相关的重要事件或注释。
+  ///
+  /// **持久化类型**：通过 `@JdbcTypeCode(SqlTypes.JSON)` 让 Hibernate 7
+  /// 按方言映射 —— PostgreSQL → `JSONB`，MySQL → `JSON`。Java 端保持
+  /// `String`，调用方负责传入合法 JSON（推荐 `null` 表示无备注，避免空串）。
   @Column(name = "record_remarks")
+  @JdbcTypeCode(SqlTypes.JSON)
   private String recordRemarks;
 
   /// 实体创建时间戳。
