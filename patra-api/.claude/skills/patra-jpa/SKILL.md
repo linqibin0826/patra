@@ -7,7 +7,7 @@ description: |
   解决 JPA 问题（N+1、批量保存 OOM、AttributeConverter）。
   不适用于：Flyway 迁移脚本、Controller/Handler 创建（用 patra-hexagonal）、
   领域事件与 Outbox（用 patra-events）、Port 接口定义。
-allowed-tools: Read, Edit, Write, Grep, Glob, Bash, mcp__serena__get_symbols_overview, mcp__serena__find_symbol
+allowed-tools: Read, Edit, Write, Grep, Glob, Bash
 ---
 
 # Patra JPA 数据层开发指南
