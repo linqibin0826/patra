@@ -9,18 +9,19 @@ import com.tngtech.archunit.library.Architectures;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import org.springframework.transaction.annotation.Transactional;
 
 /// 六边形架构规则工厂。
 ///
-/// 提供参数化的架构规则，支持不同服务使用相同的架构约束。
-/// 通过构造函数传入服务名（如 "ingest"、"catalog"）生成对应的规则集。
+/// 提供参数化的架构规则，支持任意基础包前缀的项目复用同一套架构约束。
+/// 通过构造函数传入项目基础包（如 `"com.patra.ingest"`、`"com.sutra"`）生成对应的规则集。
 ///
 /// ### 设计目的
 ///
-/// - **消除代码重复**: 不同服务的架构规则高度相似（仅包名不同）
+/// - **消除代码重复**: 不同服务的架构规则高度相似，仅基础包不同
 /// - **统一架构标准**: 所有服务遵循相同的六边形架构约束
-/// - **易于维护**: 修改规则只需在一处进行
+/// - **跨项目复用**: 不限定 `com.patra.*` 前缀，任意根包的项目均可使用
 ///
 /// ### 使用方式
 ///
@@ -32,13 +33,12 @@ import org.springframework.transaction.annotation.Transactional;
 ///         .importPackages("com.patra.ingest");
 ///
 ///     private static final HexagonalArchitectureRules rules =
-///         new HexagonalArchitectureRules("ingest");
+///         new HexagonalArchitectureRules("com.patra.ingest");
 ///
-///     @ArchTest
-///     static final ArchRule layerDependencies = rules.layerDependenciesAreRespected();
-///
-///     @ArchTest
-///     static final ArchRule domainPurity = rules.domainShouldNotDependOnSpring();
+///     @Test
+///     void layerDependencies() {
+///         rules.layerDependenciesAreRespected().check(classes);
+///     }
 ///
 ///     // 或使用批量验证
 ///     @Test
@@ -60,18 +60,18 @@ import org.springframework.transaction.annotation.Transactional;
 /// @since 0.1.0
 public class HexagonalArchitectureRules {
 
-  /// 服务名（如 "ingest"、"catalog"）。
-  private final String serviceName;
-
-  /// 基础包名（如 "com.patra.ingest"）。
+  /// 项目基础包（如 `"com.patra.ingest"`、`"com.sutra"`）。
   private final String basePackage;
 
   /// 构造函数。
   ///
-  /// @param serviceName 服务名（如 "ingest"、"catalog"），用于生成包名模式
-  public HexagonalArchitectureRules(String serviceName) {
-    this.serviceName = serviceName;
-    this.basePackage = "com.patra." + serviceName;
+  /// @param basePackage 项目基础包前缀（如 `"com.patra.ingest"`、`"com.sutra"`），
+  ///                    必须是 Domain/App/Infra/Adapter 等子包的共同父包
+  public HexagonalArchitectureRules(String basePackage) {
+    this.basePackage = Objects.requireNonNull(basePackage, "basePackage 不能为空");
+    if (basePackage.isBlank()) {
+      throw new IllegalArgumentException("basePackage 不能为空白字符串");
+    }
   }
 
   // ==================== 层依赖规则 ====================
@@ -89,13 +89,13 @@ public class HexagonalArchitectureRules {
     return Architectures.layeredArchitecture()
         .consideringOnlyDependenciesInLayers()
         .layer("Domain")
-        .definedBy(".." + serviceName + ".domain..")
+        .definedBy(basePackage + ".domain..")
         .layer("Application")
-        .definedBy(".." + serviceName + ".app..")
+        .definedBy(basePackage + ".app..")
         .layer("Infrastructure")
-        .definedBy(".." + serviceName + ".infra..")
+        .definedBy(basePackage + ".infra..")
         .layer("Adapter")
-        .definedBy(".." + serviceName + ".adapter..")
+        .definedBy(basePackage + ".adapter..")
         .whereLayer("Domain")
         .mayNotAccessAnyLayer()
         .whereLayer("Application")
@@ -124,17 +124,17 @@ public class HexagonalArchitectureRules {
 
   /// Adapter 层不能反向依赖 Infra 层。
   ///
-  /// 注意：此规则仅检查主动适配器层（`{service}.adapter.*`），不包括 infra 模块内部的被动适配器
+  /// 注意：此规则仅检查主动适配器层（`{basePackage}.adapter.*`），不包括 infra 模块内部的被动适配器
   /// （`infra.adapter.persistence.*`）。被动适配器作为 Repository 实现，必须依赖 Mapper、Converter、DO。
   ///
   /// @return ArchRule 规则实例
   public ArchRule adapterShouldNotDependOnInfra() {
     return noClasses()
         .that()
-        .resideInAPackage(".." + serviceName + ".adapter..")
+        .resideInAPackage(basePackage + ".adapter..")
         .should()
         .dependOnClassesThat()
-        .resideInAPackage(".." + serviceName + ".infra..")
+        .resideInAPackage(basePackage + ".infra..")
         .as("Adapter 层不能反向依赖 Infra 层")
         .because("Adapter 和 Infra 应该通过 App 层协调，避免直接耦合");
   }
@@ -145,10 +145,10 @@ public class HexagonalArchitectureRules {
   public ArchRule adapterShouldNotDependOnBoot() {
     return noClasses()
         .that()
-        .resideInAPackage(".." + serviceName + ".adapter..")
+        .resideInAPackage(basePackage + ".adapter..")
         .should()
         .dependOnClassesThat()
-        .resideInAPackage(".." + serviceName + ".boot..")
+        .resideInAPackage(basePackage + ".boot..")
         .as("Adapter 层不能依赖 Boot 层")
         .because("Boot 层是最外层，只能被依赖，不能反向依赖");
   }
@@ -218,17 +218,21 @@ public class HexagonalArchitectureRules {
 
   // ==================== 命名约定规则 ====================
 
-  /// Port 接口必须在 domain.port 包，命名以 Port、Repository 或 Gateway 结尾。
+  /// Port 接口必须在 domain port 包，命名以 Port、Repository 或 Gateway 结尾。
   ///
   /// - **Repository**: 聚合根持久化接口（实现在 Infra 层）
   /// - **Port**: 被驱动端口/Driven Port（实现在 Infra 层）
   /// - **Gateway**: 驱动端口/Driving Port（实现在 App 层）
   ///
+  /// 包模式使用 `..domain..port..`，兼容 patra 的 layer-first 布局
+  /// （`domain.port.<sub>`）和 sutra 的 context-first 布局
+  /// （`domain.<context>.port.<sub>`）。
+  ///
   /// @return ArchRule 规则实例
   public ArchRule portsShouldResideInDomainPortPackage() {
     return classes()
         .that()
-        .resideInAPackage("..domain.port..")
+        .resideInAPackage("..domain..port..")
         .and()
         .areInterfaces()
         .and()
@@ -239,8 +243,9 @@ public class HexagonalArchitectureRules {
         .haveSimpleNameEndingWith("Repository")
         .orShould()
         .haveSimpleNameEndingWith("Gateway")
-        .as("Port 接口必须在 domain.port 包，命名以 Port、Repository 或 Gateway 结尾")
-        .because("统一的命名约定便于识别 Port 接口");
+        .as("Port 接口必须在 domain port 包，命名以 Port、Repository 或 Gateway 结尾")
+        .because("统一的命名约定便于识别 Port 接口")
+        .allowEmptyShould(true);
   }
 
   /// Port/Repository 接口实现必须在 infra 层（Gateway 除外）。
@@ -251,19 +256,20 @@ public class HexagonalArchitectureRules {
   public ArchRule repositoryImplsShouldResideInInfra() {
     return classes()
         .that()
-        .resideInAPackage(".." + serviceName + "..")
+        .resideInAPackage(basePackage + "..")
         .and()
         .areNotInterfaces()
         .and()
         .implement(
             com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage(
-                "..domain.port.."))
+                "..domain..port.."))
         .and()
         .haveSimpleNameNotEndingWith("GatewayImpl")
         .should()
         .resideInAPackage("..infra..")
         .as("Domain Port/Repository 接口的实现类必须在 infra 层（Gateway 除外）")
-        .because("Infra 层负责实现 Domain 层定义的 Port 接口（六边形架构依赖倒置原则），Gateway 实现在 App 层");
+        .because("Infra 层负责实现 Domain 层定义的 Port 接口（六边形架构依赖倒置原则），Gateway 实现在 App 层")
+        .allowEmptyShould(true);
   }
 
   /// Gateway 接口实现必须在 app 层。
@@ -275,7 +281,7 @@ public class HexagonalArchitectureRules {
   public ArchRule gatewayImplsShouldResideInApp() {
     return classes()
         .that()
-        .resideInAPackage(".." + serviceName + "..")
+        .resideInAPackage(basePackage + "..")
         .and()
         .areNotInterfaces()
         .and()
@@ -283,7 +289,8 @@ public class HexagonalArchitectureRules {
         .should()
         .resideInAPackage("..app..")
         .as("Gateway 接口的实现类必须在 app 层")
-        .because("Gateway 是 Driving Port，其实现在 Application 层提供业务服务");
+        .because("Gateway 是 Driving Port，其实现在 Application 层提供业务服务")
+        .allowEmptyShould(true);
   }
 
   /// DO 类必须在 infra.persistence.entity 包。
@@ -296,7 +303,8 @@ public class HexagonalArchitectureRules {
         .should()
         .resideInAPackage("..infra.persistence.entity..")
         .as("DO 类必须在 infra.persistence.entity 包")
-        .because("DO 类是持久化层的概念，不应泄露到其他层（CHK-ARCH-004）");
+        .because("DO 类是持久化层的概念，不应泄露到其他层（CHK-ARCH-004）")
+        .allowEmptyShould(true);
   }
 
   /// Aggregate 必须在 domain.model.aggregate 包。
@@ -309,7 +317,8 @@ public class HexagonalArchitectureRules {
         .should()
         .resideInAPackage("..domain.model.aggregate..")
         .as("Aggregate 必须在 domain.model.aggregate 包")
-        .because("Aggregate 是 DDD 的核心概念，属于 Domain 层");
+        .because("Aggregate 是 DDD 的核心概念，属于 Domain 层")
+        .allowEmptyShould(true);
   }
 
   /// Orchestrator/Coordinator 必须在 app.usecase 包。
@@ -324,7 +333,8 @@ public class HexagonalArchitectureRules {
         .should()
         .resideInAPackage("..app.usecase..")
         .as("Orchestrator/Coordinator 必须在 app.usecase 包")
-        .because("编排器是应用层概念，负责用例流程编排和事务边界（CHK-ARCH-003）");
+        .because("编排器是应用层概念，负责用例流程编排和事务边界（CHK-ARCH-003）")
+        .allowEmptyShould(true);
   }
 
   // ==================== 封装规则 ====================
@@ -349,7 +359,7 @@ public class HexagonalArchitectureRules {
   public ArchRule portsShouldBePublic() {
     return classes()
         .that()
-        .resideInAPackage("..domain.port..")
+        .resideInAPackage("..domain..port..")
         .and()
         .areInterfaces()
         .and()
@@ -357,7 +367,8 @@ public class HexagonalArchitectureRules {
         .should()
         .haveModifier(com.tngtech.archunit.core.domain.JavaModifier.PUBLIC)
         .as("Port 接口必须是 public")
-        .because("Port 接口是 Domain 层的公开契约，需要跨模块访问");
+        .because("Port 接口是 Domain 层的公开契约，需要跨模块访问")
+        .allowEmptyShould(true);
   }
 
   /// Domain Event 必须在 domain.event 包。
@@ -374,7 +385,8 @@ public class HexagonalArchitectureRules {
         .should()
         .resideInAPackage("..domain.event..")
         .as("Domain Event 必须在 domain.event 包")
-        .because("领域事件是 DDD 事件驱动架构的核心，应统一管理");
+        .because("领域事件是 DDD 事件驱动架构的核心，应统一管理")
+        .allowEmptyShould(true);
   }
 
   // ==================== 事务边界规则 ====================
@@ -389,7 +401,8 @@ public class HexagonalArchitectureRules {
         .should()
         .resideInAPackage("..app..")
         .as("@Transactional 只能在 app 层")
-        .because("事务边界应该在应用层的用例编排器中定义（六边形架构原则 CHK-ARCH-003）");
+        .because("事务边界应该在应用层的用例编排器中定义（六边形架构原则 CHK-ARCH-003）")
+        .allowEmptyShould(true);
   }
 
   /// Domain 层严禁使用 @Transactional。
@@ -447,14 +460,7 @@ public class HexagonalArchitectureRules {
     return Collections.unmodifiableList(rules);
   }
 
-  /// 获取服务名。
-  ///
-  /// @return 服务名
-  public String getServiceName() {
-    return serviceName;
-  }
-
-  /// 获取基础包名。
+  /// 获取项目基础包名。
   ///
   /// @return 基础包名
   public String getBasePackage() {
