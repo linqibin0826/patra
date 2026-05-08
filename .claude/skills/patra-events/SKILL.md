@@ -7,7 +7,7 @@ description: |
   处理事件处理器的 OptimisticLockingFailureException、设计事件链。
   即使用户只说"通知其他服务"或"完成后触发"，也应使用此技能。
   不适用于：创建 Controller/Handler/Port（用 patra-hexagonal）、JPA 数据层（用 patra-jpa）。
-allowed-tools: Read, Edit, Write, Grep, Glob, Bash, mcp__serena__get_symbols_overview, mcp__serena__find_symbol
+allowed-tools: Read, Edit, Write, Grep, Glob, Bash
 ---
 
 # Patra 事件驱动与 Outbox 模式指南

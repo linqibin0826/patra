@@ -38,7 +38,7 @@ grep "2025-12-18 11:30" /Users/linqibin/Desktop/Patra/patra-api/logs/patra-catal
 
 ### 4. 定位源码
 
-使用 `mcp__serena__find_symbol` 定位异常发生的类和方法，阅读上下文代码理解逻辑。
+使用 IDEA MCP 的符号搜索能力或 `rg` 定位异常发生的类和方法，阅读上下文代码理解逻辑。
 
 ### 5. 查找解决方案
 

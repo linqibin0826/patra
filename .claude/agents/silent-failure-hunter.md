@@ -219,4 +219,4 @@ grep -rn "tryLock\|RLock" patra-*/patra-*-infra/src/main/java | head -5
 2. 跨方法异常传播链 — 我只扫单方法级别的反模式，跨方法需要 IDE 辅助
 3. 业务语义判断 — `orElse(null)` 是否合法依赖业务上下文，我会标 Warning 让人判断
 
-**发现既有 agent 过时工具引用时**：如果你在扫描过程中发现 `.claude/agents/*.md` 里有 `mcp__serena__*` 或已禁用的 `mcp__idea__*` 引用，顺手在报告末尾"附录"里提一句，不占主要发现名额。
+**发现既有 agent 过时工具引用时**：如果你在扫描过程中发现 `.claude/agents/*.md` 里有已下线或已禁用的工具引用，顺手在报告末尾"附录"里提一句，不占主要发现名额。

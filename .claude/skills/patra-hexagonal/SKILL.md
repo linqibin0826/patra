@@ -6,7 +6,7 @@ description: |
   添加 REST/RPC 接口、创建 XXL-Job 定时任务、添加 Starter 依赖、决定代码放在哪个模块（domain/app/infra/adapter）。
   不适用于：JPA 数据层实现（用 patra-jpa）、领域事件与 Outbox 模式（用 patra-events）、
   排查异常和错误（用 patra-troubleshooter）、重构已有代码、编写 Flyway 脚本。
-allowed-tools: Read, Edit, Write, Grep, Glob, Bash, mcp__serena__get_symbols_overview, mcp__serena__find_symbol
+allowed-tools: Read, Edit, Write, Grep, Glob, Bash
 ---
 
 # Patra 六边形架构开发指南
