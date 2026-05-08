@@ -45,8 +45,9 @@ class CatalogArchitectureTest {
 
   private static JavaClasses classes;
 
-  /// 参数化的六边形架构规则（服务名: catalog）。
-  private static final HexagonalArchitectureRules rules = new HexagonalArchitectureRules("catalog");
+  /// 参数化的六边形架构规则（基础包: com.patra.catalog）。
+  private static final HexagonalArchitectureRules rules =
+      new HexagonalArchitectureRules("com.patra.catalog");
 
   @BeforeAll
   static void setup() {

@@ -45,8 +45,9 @@ class IngestArchitectureTest {
 
   private static JavaClasses classes;
 
-  /// 参数化的六边形架构规则（服务名: ingest）。
-  private static final HexagonalArchitectureRules rules = new HexagonalArchitectureRules("ingest");
+  /// 参数化的六边形架构规则（基础包: com.patra.ingest）。
+  private static final HexagonalArchitectureRules rules =
+      new HexagonalArchitectureRules("com.patra.ingest");
 
   @BeforeAll
   static void setup() {
