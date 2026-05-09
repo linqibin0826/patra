@@ -366,9 +366,13 @@ class VenueReadAdapterIT {
   }
 
   /// 保存带 h-index 的测试用 Venue 实体。
+  ///
+  /// 列表排序由 `cited_by_count` 列驱动；为简化用例，让 `citedByCount` 与 `hIndex` 取同值，
+  /// 使断言可同时覆盖两个字段。
   private VenueEntity saveVenueWithHIndex(String title, String issnL, int hIndex) {
     VenueEntity entity = buildBaseVenue(title, issnL);
     entity.setCitationMetrics(CitationMetrics.of(null, null, hIndex, null, null));
+    entity.setCitedByCount(hIndex);
     return venueDao.save(entity);
   }
 
