@@ -1,7 +1,7 @@
 package dev.linqibin.patra.ingest.infra.integration.storage.converter;
 
-import dev.linqibin.patra.ingest.domain.port.StorageMetadataPort.MetadataRequest;
 import com.patra.objectstorage.api.dto.UploadRecordRequest;
+import dev.linqibin.patra.ingest.domain.port.StorageMetadataPort.MetadataRequest;
 import org.mapstruct.Context;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;

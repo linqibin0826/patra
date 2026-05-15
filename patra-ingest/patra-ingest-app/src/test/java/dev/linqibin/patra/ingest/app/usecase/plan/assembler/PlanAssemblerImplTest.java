@@ -6,6 +6,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.patra.expr.Const;
+import dev.linqibin.commons.enums.Priority;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.ingest.app.usecase.plan.dto.PlanAssemblyResult;
 import dev.linqibin.patra.ingest.app.usecase.plan.expression.PlanExpressionDescriptor;
 import dev.linqibin.patra.ingest.app.usecase.plan.slicer.SlicePlanner;
@@ -18,8 +20,6 @@ import dev.linqibin.patra.ingest.domain.model.enums.TriggerType;
 import dev.linqibin.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import dev.linqibin.patra.ingest.domain.model.vo.plan.PlanTriggerNorm;
 import dev.linqibin.patra.ingest.domain.model.vo.plan.PlannerWindow;
-import dev.linqibin.commons.enums.Priority;
-import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;

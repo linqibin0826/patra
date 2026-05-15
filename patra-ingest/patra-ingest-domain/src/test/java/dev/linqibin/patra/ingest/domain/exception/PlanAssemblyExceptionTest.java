@@ -2,9 +2,9 @@ package dev.linqibin.patra.ingest.domain.exception;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.linqibin.patra.ingest.domain.exception.PlanAssemblyException.Reason;
 import dev.linqibin.commons.error.trait.ErrorTrait;
 import dev.linqibin.commons.error.trait.StandardErrorTrait;
+import dev.linqibin.patra.ingest.domain.exception.PlanAssemblyException.Reason;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

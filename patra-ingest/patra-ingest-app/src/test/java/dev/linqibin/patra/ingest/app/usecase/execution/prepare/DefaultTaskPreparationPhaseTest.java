@@ -3,6 +3,7 @@ package dev.linqibin.patra.ingest.app.usecase.execution.prepare;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.ingest.app.usecase.execution.command.TaskReadyCommand;
 import dev.linqibin.patra.ingest.app.usecase.execution.idempotency.IdempotencyChecker;
 import dev.linqibin.patra.ingest.app.usecase.execution.lease.LeaseManagementService;
@@ -20,7 +21,6 @@ import dev.linqibin.patra.ingest.domain.model.vo.task.TaskId;
 import dev.linqibin.patra.ingest.domain.port.PlanSliceRepository;
 import dev.linqibin.patra.ingest.domain.port.TaskRepository;
 import dev.linqibin.patra.ingest.domain.port.TaskRunRepository;
-import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;

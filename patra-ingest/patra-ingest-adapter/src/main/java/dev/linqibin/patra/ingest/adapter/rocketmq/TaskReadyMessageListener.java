@@ -1,8 +1,8 @@
 package dev.linqibin.patra.ingest.adapter.rocketmq;
 
+import dev.linqibin.commons.cqrs.CommandBus;
 import dev.linqibin.patra.ingest.adapter.rocketmq.dto.TaskReadyPayload;
 import dev.linqibin.patra.ingest.app.usecase.execution.command.TaskReadyCommand;
-import dev.linqibin.commons.cqrs.CommandBus;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;

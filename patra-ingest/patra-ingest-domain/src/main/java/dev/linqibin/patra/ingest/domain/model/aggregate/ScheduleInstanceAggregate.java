@@ -1,10 +1,10 @@
 package dev.linqibin.patra.ingest.domain.model.aggregate;
 
+import dev.linqibin.commons.domain.AggregateRoot;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.ingest.domain.model.enums.Scheduler;
 import dev.linqibin.patra.ingest.domain.model.enums.TriggerType;
 import dev.linqibin.patra.ingest.domain.model.vo.schedule.ScheduleInstanceId;
-import dev.linqibin.commons.domain.AggregateRoot;
-import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;

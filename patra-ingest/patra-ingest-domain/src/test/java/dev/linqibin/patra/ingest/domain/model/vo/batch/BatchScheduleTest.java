@@ -3,11 +3,11 @@ package dev.linqibin.patra.ingest.domain.model.vo.batch;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import dev.linqibin.patra.common.enums.ProvenanceCode;
+import dev.linqibin.patra.common.model.DataType;
 import dev.linqibin.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import dev.linqibin.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import dev.linqibin.patra.ingest.domain.model.vo.query.QuerySession;
-import dev.linqibin.patra.common.enums.ProvenanceCode;
-import dev.linqibin.patra.common.model.DataType;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;

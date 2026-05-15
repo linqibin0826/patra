@@ -2,13 +2,13 @@ package dev.linqibin.patra.ingest.infra.adapter.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
+import com.patra.starter.jpa.id.SnowflakeIdGenerator;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.ingest.domain.model.entity.Cursor;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.dao.CursorDao;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.CursorEntity;
 import dev.linqibin.patra.ingest.infra.config.IngestMySQLContainerInitializer;
-import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
-import com.patra.starter.jpa.id.SnowflakeIdGenerator;
-import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -44,7 +44,8 @@ import org.springframework.test.context.ContextConfiguration;
 @ContextConfiguration(initializers = IngestMySQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({CursorRepositoryAdapter.class, JacksonAutoConfiguration.class, JpaAuditingConfig.class})
-@ComponentScan(basePackages = "dev.linqibin.patra.ingest.infra.adapter.persistence.converter.mapper")
+@ComponentScan(
+    basePackages = "dev.linqibin.patra.ingest.infra.adapter.persistence.converter.mapper")
 @ActiveProfiles("test")
 @DisplayName("CursorRepositoryAdapter 集成测试")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)

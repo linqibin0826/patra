@@ -1,9 +1,9 @@
 package dev.linqibin.patra.ingest.domain.model.vo.execution;
 
-import dev.linqibin.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
-import dev.linqibin.patra.ingest.domain.model.vo.plan.WindowSpec;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.common.model.DataType;
+import dev.linqibin.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
+import dev.linqibin.patra.ingest.domain.model.vo.plan.WindowSpec;
 import tools.jackson.databind.JsonNode;
 
 /// 任务运行的执行上下文值对象。

@@ -1,10 +1,10 @@
 package dev.linqibin.patra.ingest.app.usecase.execution.strategy.batch;
 
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.ingest.domain.model.vo.batch.Batch;
 import dev.linqibin.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import dev.linqibin.patra.ingest.domain.model.vo.query.QuerySession;
 import dev.linqibin.patra.ingest.domain.strategy.BatchGenerationStrategy;
-import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;

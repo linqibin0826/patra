@@ -1,8 +1,8 @@
 package dev.linqibin.patra.ingest.infra.mapper;
 
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.ingest.domain.model.vo.batch.Batch;
 import dev.linqibin.patra.ingest.domain.model.vo.query.QuerySession;
-import dev.linqibin.patra.common.enums.ProvenanceCode;
 import tools.jackson.databind.JsonNode;
 
 /// 数据源参数映射器接口。

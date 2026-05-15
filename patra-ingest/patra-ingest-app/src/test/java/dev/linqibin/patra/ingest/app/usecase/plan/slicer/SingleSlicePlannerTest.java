@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.patra.expr.Expr;
 import com.patra.expr.Exprs;
+import dev.linqibin.commons.enums.Priority;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.ingest.app.usecase.plan.expression.PlanExpressionDescriptor;
 import dev.linqibin.patra.ingest.app.usecase.plan.slicer.model.SlicePlan;
 import dev.linqibin.patra.ingest.app.usecase.plan.slicer.model.SlicePlanningContext;
@@ -13,8 +15,6 @@ import dev.linqibin.patra.ingest.domain.model.enums.SliceStrategy;
 import dev.linqibin.patra.ingest.domain.model.enums.TriggerType;
 import dev.linqibin.patra.ingest.domain.model.vo.plan.PlanTriggerNorm;
 import dev.linqibin.patra.ingest.domain.model.vo.plan.PlannerWindow;
-import dev.linqibin.commons.enums.Priority;
-import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;

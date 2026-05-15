@@ -2,14 +2,6 @@ package dev.linqibin.patra.ingest.infra.integration.provenance;
 
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.date.TimeInterval;
-import dev.linqibin.patra.ingest.domain.model.vo.batch.Batch;
-import dev.linqibin.patra.ingest.domain.model.vo.execution.ExecutionContext;
-import dev.linqibin.patra.ingest.domain.model.vo.query.QuerySession;
-import dev.linqibin.patra.ingest.domain.port.ProvenanceDataPort;
-import dev.linqibin.patra.ingest.infra.exception.ProvenanceDataException;
-import dev.linqibin.patra.ingest.infra.integration.provenance.acl.QuerySessionTranslator;
-import dev.linqibin.patra.ingest.infra.mapper.ProviderParameterMapper;
-import dev.linqibin.patra.ingest.infra.mapper.ProviderParameterMapperRegistry;
 import com.patra.starter.provenance.common.config.BatchingConfig;
 import com.patra.starter.provenance.common.config.HttpConfig;
 import com.patra.starter.provenance.common.config.PaginationConfig;
@@ -29,6 +21,14 @@ import dev.linqibin.commons.json.JsonMapperHolder;
 import dev.linqibin.commons.type.TypeReference;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.common.model.DataType;
+import dev.linqibin.patra.ingest.domain.model.vo.batch.Batch;
+import dev.linqibin.patra.ingest.domain.model.vo.execution.ExecutionContext;
+import dev.linqibin.patra.ingest.domain.model.vo.query.QuerySession;
+import dev.linqibin.patra.ingest.domain.port.ProvenanceDataPort;
+import dev.linqibin.patra.ingest.infra.exception.ProvenanceDataException;
+import dev.linqibin.patra.ingest.infra.integration.provenance.acl.QuerySessionTranslator;
+import dev.linqibin.patra.ingest.infra.mapper.ProviderParameterMapper;
+import dev.linqibin.patra.ingest.infra.mapper.ProviderParameterMapperRegistry;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.List;
@@ -178,7 +178,8 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
 
   /// 转换HTTP配置
   private HttpConfig toHttpConfig(
-      dev.linqibin.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot.HttpConfig httpInfo) {
+      dev.linqibin.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot.HttpConfig
+          httpInfo) {
     if (httpInfo == null) {
       return null;
     }
@@ -242,7 +243,8 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
 
   /// 转换批处理配置
   private BatchingConfig toBatchingConfig(
-      dev.linqibin.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot.BatchingConfig batchingInfo) {
+      dev.linqibin.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot.BatchingConfig
+          batchingInfo) {
     if (batchingInfo == null) {
       return null;
     }
@@ -256,7 +258,8 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
 
   /// 转换重试配置
   private RetryConfig toRetryConfig(
-      dev.linqibin.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot.RetryConfig retryInfo) {
+      dev.linqibin.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot.RetryConfig
+          retryInfo) {
     if (retryInfo == null) {
       return null;
     }

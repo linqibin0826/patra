@@ -2,6 +2,7 @@ package dev.linqibin.patra.ingest.domain.model.aggregate;
 
 import static org.assertj.core.api.Assertions.*;
 
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.ingest.domain.event.TaskCompletedEvent;
 import dev.linqibin.patra.ingest.domain.event.TaskQueuedEvent;
 import dev.linqibin.patra.ingest.domain.model.enums.TaskStatus;
@@ -9,7 +10,6 @@ import dev.linqibin.patra.ingest.domain.model.vo.plan.PlanId;
 import dev.linqibin.patra.ingest.domain.model.vo.schedule.ScheduleInstanceId;
 import dev.linqibin.patra.ingest.domain.model.vo.slice.PlanSliceId;
 import dev.linqibin.patra.ingest.domain.model.vo.task.TaskId;
-import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

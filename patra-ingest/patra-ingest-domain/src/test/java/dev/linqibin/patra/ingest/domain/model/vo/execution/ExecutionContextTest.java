@@ -2,10 +2,10 @@ package dev.linqibin.patra.ingest.domain.model.vo.execution;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.linqibin.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
-import dev.linqibin.patra.ingest.domain.model.vo.plan.WindowSpec;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.common.model.DataType;
+import dev.linqibin.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
+import dev.linqibin.patra.ingest.domain.model.vo.plan.WindowSpec;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

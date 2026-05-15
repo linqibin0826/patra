@@ -1,9 +1,9 @@
 package dev.linqibin.patra.ingest.domain.model.entity;
 
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.ingest.domain.model.enums.CursorDirection;
 import dev.linqibin.patra.ingest.domain.model.enums.CursorType;
 import dev.linqibin.patra.ingest.domain.model.vo.cursor.CursorLineage;
-import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.math.BigDecimal;
 import java.time.Instant;
 import lombok.Getter;

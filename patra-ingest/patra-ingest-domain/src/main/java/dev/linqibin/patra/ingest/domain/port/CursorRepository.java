@@ -1,7 +1,7 @@
 package dev.linqibin.patra.ingest.domain.port;
 
-import dev.linqibin.patra.ingest.domain.model.entity.Cursor;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
+import dev.linqibin.patra.ingest.domain.model.entity.Cursor;
 import java.time.Instant;
 import java.util.Optional;
 

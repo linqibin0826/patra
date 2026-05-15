@@ -6,6 +6,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.ingest.app.usecase.plan.dto.PlanIngestionResult;
 import dev.linqibin.patra.ingest.app.usecase.plan.publisher.TaskOutboxPublisher;
 import dev.linqibin.patra.ingest.domain.event.TaskQueuedEvent;
@@ -18,7 +19,6 @@ import dev.linqibin.patra.ingest.domain.model.vo.plan.PlanId;
 import dev.linqibin.patra.ingest.domain.model.vo.schedule.ScheduleInstanceId;
 import dev.linqibin.patra.ingest.domain.model.vo.slice.PlanSliceId;
 import dev.linqibin.patra.ingest.domain.model.vo.task.TaskId;
-import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;

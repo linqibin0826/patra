@@ -1,5 +1,6 @@
 package dev.linqibin.patra.ingest.app.usecase.execution.publisher;
 
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.ingest.app.outbox.config.OutboxPublisherProperties;
 import dev.linqibin.patra.ingest.app.outbox.constants.OutboxAggregateTypes;
 import dev.linqibin.patra.ingest.app.outbox.core.AbstractOutboxPublisher;
@@ -10,7 +11,6 @@ import dev.linqibin.patra.ingest.domain.event.PublicationDataReadyEvent;
 import dev.linqibin.patra.ingest.domain.messaging.IngestPublishingChannels;
 import dev.linqibin.patra.ingest.domain.messaging.OperationType;
 import dev.linqibin.patra.ingest.domain.port.OutboxMessageRepository;
-import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.List;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;

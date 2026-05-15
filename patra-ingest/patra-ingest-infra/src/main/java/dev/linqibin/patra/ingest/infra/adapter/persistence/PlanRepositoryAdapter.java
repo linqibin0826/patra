@@ -1,11 +1,11 @@
 package dev.linqibin.patra.ingest.infra.adapter.persistence;
 
+import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import dev.linqibin.patra.ingest.domain.model.aggregate.PlanAggregate;
 import dev.linqibin.patra.ingest.domain.port.PlanRepository;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.converter.mapper.PlanJpaMapper;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.dao.PlanDao;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.PlanEntity;
-import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

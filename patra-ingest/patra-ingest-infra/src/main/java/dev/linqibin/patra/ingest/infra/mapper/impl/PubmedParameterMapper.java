@@ -1,12 +1,12 @@
 package dev.linqibin.patra.ingest.infra.mapper.impl;
 
+import dev.linqibin.commons.json.JsonMapperHolder;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
+import dev.linqibin.patra.common.provenance.api.params.PubMedParamKeys;
 import dev.linqibin.patra.ingest.domain.model.vo.batch.Batch;
 import dev.linqibin.patra.ingest.domain.model.vo.query.QuerySession;
 import dev.linqibin.patra.ingest.infra.mapper.ProviderParameterMapper;
 import dev.linqibin.patra.ingest.infra.mapper.StateTokenKeys;
-import dev.linqibin.commons.json.JsonMapperHolder;
-import dev.linqibin.patra.common.enums.ProvenanceCode;
-import dev.linqibin.patra.common.provenance.api.params.PubMedParamKeys;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

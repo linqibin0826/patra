@@ -3,6 +3,7 @@ package dev.linqibin.patra.ingest.app.usecase.execution.complete;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.ingest.app.usecase.execution.cursor.CursorAdvancer;
 import dev.linqibin.patra.ingest.app.usecase.execution.lease.LeaseManagementService;
 import dev.linqibin.patra.ingest.app.usecase.execution.publisher.PublicationEventPublisher;
@@ -21,7 +22,6 @@ import dev.linqibin.patra.ingest.domain.model.vo.task.TaskId;
 import dev.linqibin.patra.ingest.domain.port.TaskRepository;
 import dev.linqibin.patra.ingest.domain.port.TaskRunBatchRepository;
 import dev.linqibin.patra.ingest.domain.port.TaskRunRepository;
-import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;

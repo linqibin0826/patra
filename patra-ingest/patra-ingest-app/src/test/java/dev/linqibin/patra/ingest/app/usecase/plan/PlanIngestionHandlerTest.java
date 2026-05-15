@@ -11,6 +11,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import dev.linqibin.commons.enums.Priority;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.ingest.app.usecase.plan.assembler.PlanAssembler;
 import dev.linqibin.patra.ingest.app.usecase.plan.assembler.PlanAssemblyRequest;
 import dev.linqibin.patra.ingest.app.usecase.plan.command.PlanIngestionCommand;
@@ -43,8 +45,6 @@ import dev.linqibin.patra.ingest.domain.port.CursorRepository;
 import dev.linqibin.patra.ingest.domain.port.PatraRegistryPort;
 import dev.linqibin.patra.ingest.domain.port.PlanRepository;
 import dev.linqibin.patra.ingest.domain.port.TaskRepository;
-import dev.linqibin.commons.enums.Priority;
-import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;

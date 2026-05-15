@@ -2,10 +2,10 @@ package dev.linqibin.patra.ingest.domain.model.aggregate;
 
 import static org.assertj.core.api.Assertions.*;
 
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.ingest.domain.model.enums.SliceStatus;
 import dev.linqibin.patra.ingest.domain.model.vo.plan.PlanId;
 import dev.linqibin.patra.ingest.domain.model.vo.slice.PlanSliceId;
-import dev.linqibin.patra.common.enums.ProvenanceCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

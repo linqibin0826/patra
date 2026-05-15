@@ -4,6 +4,11 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import dev.linqibin.commons.type.TypeReference;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
+import dev.linqibin.patra.common.model.CanonicalPublication;
+import dev.linqibin.patra.common.model.DataType;
+import dev.linqibin.patra.common.model.enums.PublicationIdentifierType;
 import dev.linqibin.patra.ingest.domain.model.vo.batch.Batch;
 import dev.linqibin.patra.ingest.domain.model.vo.batch.BatchResult;
 import dev.linqibin.patra.ingest.domain.model.vo.execution.ExecutionContext;
@@ -11,11 +16,6 @@ import dev.linqibin.patra.ingest.domain.model.vo.query.QuerySession;
 import dev.linqibin.patra.ingest.domain.port.ProvenanceDataPort;
 import dev.linqibin.patra.ingest.domain.port.ProvenanceDataPort.DataFetchResult;
 import dev.linqibin.patra.ingest.domain.port.ProvenanceDataPort.DataFetchResult.ErrorType;
-import dev.linqibin.commons.type.TypeReference;
-import dev.linqibin.patra.common.enums.ProvenanceCode;
-import dev.linqibin.patra.common.model.CanonicalPublication;
-import dev.linqibin.patra.common.model.DataType;
-import dev.linqibin.patra.common.model.enums.PublicationIdentifierType;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -65,16 +65,18 @@ class GenericBatchExecutorTest {
   @BeforeEach
   void setUp() {
     // 准备基础测试数据
-    dev.linqibin.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot.ProvenanceInfo provenanceInfo =
-        new dev.linqibin.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot.ProvenanceInfo(
-            1L,
-            "pubmed",
-            "PubMed",
-            "https://test.example.com",
-            "UTC",
-            "https://docs.example.com",
-            true,
-            "ACTIVE");
+    dev.linqibin.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot.ProvenanceInfo
+        provenanceInfo =
+            new dev.linqibin.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot
+                .ProvenanceInfo(
+                1L,
+                "pubmed",
+                "PubMed",
+                "https://test.example.com",
+                "UTC",
+                "https://docs.example.com",
+                true,
+                "ACTIVE");
 
     dev.linqibin.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot configSnapshot =
         new dev.linqibin.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot(
