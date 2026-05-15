@@ -19,7 +19,7 @@
 
 ```xml
 <dependency>
-    <groupId>com.patra</groupId>
+    <groupId>dev.linqibin.patra</groupId>
     <artifactId>patra-spring-boot-starter-rest-client</artifactId>
 </dependency>
 ```

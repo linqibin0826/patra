@@ -111,7 +111,7 @@ patra-spring-boot-starter-openapi
 ## 包结构
 
 ```
-com.patra.starter.openapi
+dev.linqibin.starter.openapi
 ├── autoconfigure/
 │   └── OpenApiAutoConfiguration   # 自动配置（创建 OpenAPI bean）
 └── config/

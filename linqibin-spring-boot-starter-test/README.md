@@ -14,7 +14,7 @@
 
 ```xml
 <dependency>
-    <groupId>com.patra</groupId>
+    <groupId>dev.linqibin.patra</groupId>
     <artifactId>patra-spring-boot-starter-test</artifactId>
     <scope>test</scope>
 </dependency>
@@ -66,7 +66,7 @@ class MyIntegrationTest {
 ### 3. 使用 ArchUnit 规则
 
 ```java
-@AnalyzeClasses(packages = "com.patra.catalog", importOptions = ImportOption.DoNotIncludeTests.class)
+@AnalyzeClasses(packages = "dev.linqibin.patra.catalog", importOptions = ImportOption.DoNotIncludeTests.class)
 class CatalogArchitectureTest {
 
     private static final String SERVICE_NAME = "catalog";

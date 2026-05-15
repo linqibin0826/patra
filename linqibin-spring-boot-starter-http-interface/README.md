@@ -13,7 +13,7 @@
 ## 包结构
 
 ```
-com.patra.starter.httpinterface
+dev.linqibin.starter.httpinterface
 ├── config/
 │   ├── HttpInterfaceAutoConfiguration  # 自动配置类
 │   └── HttpInterfaceProperties         # 配置属性
@@ -68,7 +68,7 @@ patra:
 
 ```xml
 <dependency>
-    <groupId>com.patra</groupId>
+    <groupId>dev.linqibin.patra</groupId>
     <artifactId>patra-spring-boot-starter-http-interface</artifactId>
 </dependency>
 ```
