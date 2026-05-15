@@ -1,8 +1,8 @@
 package com.patra.starter.objectstorage;
 
-import com.patra.common.storage.DatePartitionedKeyGenerator;
-import com.patra.common.storage.ObjectKeyContext;
-import com.patra.common.storage.ObjectKeyGenerator;
+import dev.linqibin.commons.storage.DatePartitionedKeyGenerator;
+import dev.linqibin.commons.storage.ObjectKeyContext;
+import dev.linqibin.commons.storage.ObjectKeyGenerator;
 import java.util.Locale;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;

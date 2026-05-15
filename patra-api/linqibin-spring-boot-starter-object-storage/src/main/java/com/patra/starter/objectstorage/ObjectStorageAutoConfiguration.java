@@ -1,7 +1,7 @@
 package com.patra.starter.objectstorage;
 
-import com.patra.common.storage.ObjectKeyGenerator;
 import com.patra.starter.objectstorage.metrics.ObjectStorageMetrics;
+import dev.linqibin.commons.storage.ObjectKeyGenerator;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.minio.MinioClient;
 import java.io.IOException;
