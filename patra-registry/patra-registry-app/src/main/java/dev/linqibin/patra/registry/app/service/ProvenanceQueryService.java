@@ -1,10 +1,10 @@
 package dev.linqibin.patra.registry.app.service;
 
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.registry.app.converter.ProvenanceQueryAssembler;
 import dev.linqibin.patra.registry.domain.model.read.provenance.ProvenanceConfigQuery;
 import dev.linqibin.patra.registry.domain.model.read.provenance.ProvenanceQuery;
 import dev.linqibin.patra.registry.domain.port.ProvenanceConfigRepository;
-import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;

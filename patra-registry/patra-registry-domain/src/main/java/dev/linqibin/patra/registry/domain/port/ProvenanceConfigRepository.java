@@ -1,5 +1,6 @@
 package dev.linqibin.patra.registry.domain.port;
 
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.registry.domain.model.aggregate.ProvenanceConfiguration;
 import dev.linqibin.patra.registry.domain.model.vo.provenance.BatchingConfig;
 import dev.linqibin.patra.registry.domain.model.vo.provenance.HttpConfig;
@@ -8,7 +9,6 @@ import dev.linqibin.patra.registry.domain.model.vo.provenance.Provenance;
 import dev.linqibin.patra.registry.domain.model.vo.provenance.RateLimitConfig;
 import dev.linqibin.patra.registry.domain.model.vo.provenance.RetryConfig;
 import dev.linqibin.patra.registry.domain.model.vo.provenance.WindowOffsetConfig;
-import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;

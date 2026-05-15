@@ -1,8 +1,8 @@
 package dev.linqibin.patra.registry.api.endpoint;
 
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.registry.api.dto.provenance.ProvenanceConfigResp;
 import dev.linqibin.patra.registry.api.dto.provenance.ProvenanceResp;
-import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.web.bind.annotation.PathVariable;
