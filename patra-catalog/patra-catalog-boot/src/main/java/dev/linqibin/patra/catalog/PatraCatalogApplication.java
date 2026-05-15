@@ -29,7 +29,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 ///
 /// @author linqibin
 /// @since 0.2.0
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "dev.linqibin")
 public class PatraCatalogApplication {
 
   /// 应用程序入口点,启动 Spring Boot 应用。

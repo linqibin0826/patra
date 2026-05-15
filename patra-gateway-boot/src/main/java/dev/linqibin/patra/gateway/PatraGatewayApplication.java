@@ -18,7 +18,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 /// 默认端口: 9528
 ///
 /// @see org.springframework.cloud.gateway.route.RouteDefinition
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "dev.linqibin")
 public class PatraGatewayApplication {
 
   /// 启动Spring Boot应用。

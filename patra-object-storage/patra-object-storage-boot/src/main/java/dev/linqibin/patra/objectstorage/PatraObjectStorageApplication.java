@@ -8,7 +8,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 /// Patra对象存储元数据管理微服务的启动类,负责记录和管理上传到 外部对象存储提供商的文件元数据。
 ///
 /// 默认配置文件设置:如果未指定profile,自动使用'dev'配置。
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "dev.linqibin")
 public class PatraObjectStorageApplication {
 
   /// 应用程序入口点,启动 Spring Boot 应用。
