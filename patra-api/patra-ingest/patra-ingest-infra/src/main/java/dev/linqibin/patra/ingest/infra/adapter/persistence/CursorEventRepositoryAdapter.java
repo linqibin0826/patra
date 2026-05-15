@@ -1,11 +1,11 @@
 package dev.linqibin.patra.ingest.infra.adapter.persistence;
 
-import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import dev.linqibin.patra.ingest.domain.model.entity.CursorEvent;
 import dev.linqibin.patra.ingest.domain.port.CursorEventRepository;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.converter.mapper.CursorEventJpaMapper;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.dao.CursorEventDao;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.CursorEventEntity;
+import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;

@@ -1,7 +1,5 @@
 package dev.linqibin.patra.catalog.infra.adapter.persistence;
 
-import com.patra.starter.jpa.entity.IdAwareEntity;
-import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import dev.linqibin.patra.catalog.domain.model.aggregate.OrganizationAggregate;
 import dev.linqibin.patra.catalog.domain.model.vo.organization.ExternalId;
 import dev.linqibin.patra.catalog.domain.model.vo.organization.GeoLocation;
@@ -21,6 +19,8 @@ import dev.linqibin.patra.catalog.infra.persistence.entity.OrganizationExternalI
 import dev.linqibin.patra.catalog.infra.persistence.entity.OrganizationLocationEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.OrganizationNameEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.OrganizationRelationEntity;
+import dev.linqibin.starter.jpa.entity.IdAwareEntity;
+import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
 import jakarta.persistence.EntityManager;
 import java.util.ArrayList;
 import java.util.Collection;

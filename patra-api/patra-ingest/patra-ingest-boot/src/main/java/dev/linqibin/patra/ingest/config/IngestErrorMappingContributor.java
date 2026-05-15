@@ -1,6 +1,5 @@
 package dev.linqibin.patra.ingest.config;
 
-import com.patra.starter.core.error.spi.ErrorMappingContributor;
 import dev.linqibin.commons.error.codes.ErrorCodeLike;
 import dev.linqibin.commons.error.remote.RemoteCallException;
 import dev.linqibin.commons.error.trait.ErrorTrait;
@@ -14,6 +13,7 @@ import dev.linqibin.patra.ingest.domain.exception.PlanAssemblyException;
 import dev.linqibin.patra.ingest.domain.exception.PlanPersistenceException;
 import dev.linqibin.patra.ingest.domain.exception.PlanValidationException;
 import dev.linqibin.patra.ingest.domain.exception.TaskCheckpointException;
+import dev.linqibin.starter.core.error.spi.ErrorMappingContributor;
 import java.util.Optional;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;

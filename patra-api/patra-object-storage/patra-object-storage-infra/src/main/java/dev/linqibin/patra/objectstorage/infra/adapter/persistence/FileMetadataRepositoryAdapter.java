@@ -1,12 +1,12 @@
 package dev.linqibin.patra.objectstorage.infra.adapter.persistence;
 
-import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import dev.linqibin.patra.objectstorage.domain.model.aggregate.FileMetadata;
 import dev.linqibin.patra.objectstorage.domain.model.vo.StorageKey;
 import dev.linqibin.patra.objectstorage.domain.port.FileMetadataRepository;
 import dev.linqibin.patra.objectstorage.infra.adapter.persistence.converter.mapper.FileMetadataJpaMapper;
 import dev.linqibin.patra.objectstorage.infra.adapter.persistence.dao.FileMetadataDao;
 import dev.linqibin.patra.objectstorage.infra.adapter.persistence.entity.FileMetadataEntity;
+import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;

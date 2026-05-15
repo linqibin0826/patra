@@ -3,8 +3,8 @@ package dev.linqibin.patra.catalog.infra.adapter.integration.letpub;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-import com.patra.starter.restclient.proxy.TunnelProxyConfigurer;
 import dev.linqibin.patra.catalog.domain.port.enrichment.LetPubVenueData;
+import dev.linqibin.starter.restclient.proxy.TunnelProxyConfigurer;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;

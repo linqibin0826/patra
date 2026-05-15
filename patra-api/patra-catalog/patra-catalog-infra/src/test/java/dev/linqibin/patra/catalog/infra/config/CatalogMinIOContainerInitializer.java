@@ -1,6 +1,6 @@
 package dev.linqibin.patra.catalog.infra.config;
 
-import com.patra.starter.test.container.initializer.MinIOContainerInitializer;
+import dev.linqibin.starter.test.container.initializer.MinIOContainerInitializer;
 
 /// Catalog 服务专用 MinIO 容器初始化器。
 ///

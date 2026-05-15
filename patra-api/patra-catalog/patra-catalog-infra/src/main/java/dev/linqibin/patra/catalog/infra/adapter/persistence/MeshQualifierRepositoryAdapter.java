@@ -1,11 +1,11 @@
 package dev.linqibin.patra.catalog.infra.adapter.persistence;
 
-import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import dev.linqibin.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import dev.linqibin.patra.catalog.domain.port.repository.MeshQualifierRepository;
 import dev.linqibin.patra.catalog.infra.persistence.converter.mapper.MeshQualifierJpaMapper;
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshQualifierDao;
 import dev.linqibin.patra.catalog.infra.persistence.entity.MeshQualifierEntity;
+import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;

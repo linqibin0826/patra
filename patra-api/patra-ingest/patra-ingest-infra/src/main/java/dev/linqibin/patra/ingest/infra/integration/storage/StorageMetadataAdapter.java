@@ -1,6 +1,5 @@
 package dev.linqibin.patra.ingest.infra.integration.storage;
 
-import com.patra.starter.objectstorage.ObjectStorageProperties;
 import dev.linqibin.commons.error.remote.RemoteCallException;
 import dev.linqibin.patra.ingest.domain.port.StorageMetadataPort;
 import dev.linqibin.patra.ingest.infra.integration.storage.converter.StorageMetadataRequestConverter;
@@ -8,6 +7,7 @@ import dev.linqibin.patra.ingest.infra.integration.storage.converter.StorageMeta
 import dev.linqibin.patra.objectstorage.api.dto.RecordUploadResponse;
 import dev.linqibin.patra.objectstorage.api.dto.UploadRecordRequest;
 import dev.linqibin.patra.objectstorage.api.endpoint.StorageEndpoint;
+import dev.linqibin.starter.objectstorage.ObjectStorageProperties;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

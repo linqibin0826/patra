@@ -3,7 +3,6 @@ package dev.linqibin.patra.catalog.infra.adapter.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
-import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import dev.linqibin.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import dev.linqibin.patra.catalog.domain.model.entity.MeshConcept;
 import dev.linqibin.patra.catalog.domain.model.entity.MeshEntryTerm;
@@ -18,6 +17,7 @@ import dev.linqibin.patra.catalog.infra.persistence.dao.MeshDescriptorDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshEntryCombinationDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshEntryTermDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshTreeNumberDao;
+import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;

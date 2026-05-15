@@ -1,8 +1,8 @@
 package dev.linqibin.patra.catalog.infra.batch.author;
 
-import com.patra.starter.batch.core.JobOperatorHelper;
 import dev.linqibin.patra.catalog.domain.model.vo.author.AuthorImportParams;
 import dev.linqibin.patra.catalog.domain.port.batch.AuthorBatchPort;
+import dev.linqibin.starter.batch.core.JobOperatorHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.job.Job;
 import org.springframework.beans.factory.annotation.Qualifier;

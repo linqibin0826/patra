@@ -2,8 +2,6 @@ package dev.linqibin.patra.catalog.infra.adapter.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
-import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import dev.linqibin.commons.query.PageResult;
 import dev.linqibin.commons.query.PagingParams;
 import dev.linqibin.patra.catalog.domain.model.read.publication.PublicationFilter;
@@ -13,6 +11,8 @@ import dev.linqibin.patra.catalog.infra.persistence.dao.PublicationDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.VenueDao;
 import dev.linqibin.patra.catalog.infra.persistence.entity.PublicationEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.VenueEntity;
+import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
+import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.TimeUnit;

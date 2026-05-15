@@ -1,6 +1,6 @@
 package dev.linqibin.patra.catalog.infra.config;
 
-import com.patra.starter.test.container.initializer.MySQLContainerInitializer;
+import dev.linqibin.starter.test.container.initializer.MySQLContainerInitializer;
 
 /// Catalog 服务专用 MySQL 容器初始化器。
 ///

@@ -1,6 +1,6 @@
 package dev.linqibin.patra.registry.infra.adapter.persistence.entity.provenance;
 
-import com.patra.starter.jpa.entity.SoftDeletableJpaEntity;
+import dev.linqibin.starter.jpa.entity.SoftDeletableJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;

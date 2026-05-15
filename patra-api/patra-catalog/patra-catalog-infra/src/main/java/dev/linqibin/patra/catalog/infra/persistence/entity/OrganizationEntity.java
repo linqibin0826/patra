@@ -1,8 +1,8 @@
 package dev.linqibin.patra.catalog.infra.persistence.entity;
 
-import com.patra.starter.jpa.entity.SoftDeletableJpaEntity;
 import dev.linqibin.patra.catalog.domain.model.vo.organization.AdminInfo;
 import dev.linqibin.patra.catalog.domain.model.vo.organization.OrganizationLink;
+import dev.linqibin.starter.jpa.entity.SoftDeletableJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;

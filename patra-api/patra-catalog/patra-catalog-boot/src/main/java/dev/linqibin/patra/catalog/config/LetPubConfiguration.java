@@ -1,7 +1,7 @@
 package dev.linqibin.patra.catalog.config;
 
-import com.patra.starter.restclient.proxy.TunnelProxyConfigurer;
 import dev.linqibin.patra.catalog.infra.adapter.integration.letpub.LetPubScrapingClient;
+import dev.linqibin.starter.restclient.proxy.TunnelProxyConfigurer;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.Optional;

@@ -1,6 +1,6 @@
 package dev.linqibin.patra.ingest.integration.config;
 
-import com.patra.starter.test.container.initializer.RocketMQContainerInitializer;
+import dev.linqibin.starter.test.container.initializer.RocketMQContainerInitializer;
 
 /// Ingest 服务专用 RocketMQ 容器初始化器。
 ///

@@ -2,7 +2,6 @@ package dev.linqibin.patra.catalog.infra.adapter.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import dev.linqibin.patra.catalog.domain.model.aggregate.OrganizationAggregate;
 import dev.linqibin.patra.catalog.domain.model.enums.ExternalIdType;
 import dev.linqibin.patra.catalog.domain.model.enums.OrganizationNameType;
@@ -24,6 +23,7 @@ import dev.linqibin.patra.catalog.infra.persistence.dao.OrganizationLocationDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.OrganizationNameDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.OrganizationRelationDao;
 import dev.linqibin.patra.catalog.infra.persistence.entity.OrganizationExternalIdEntity;
+import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.time.LocalDate;

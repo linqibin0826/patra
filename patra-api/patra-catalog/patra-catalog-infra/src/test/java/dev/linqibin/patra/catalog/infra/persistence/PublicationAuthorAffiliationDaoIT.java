@@ -2,13 +2,13 @@ package dev.linqibin.patra.catalog.infra.adapter.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
-import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import dev.linqibin.patra.catalog.domain.model.enums.DisambiguationMethod;
 import dev.linqibin.patra.catalog.domain.model.enums.DisambiguationStatus;
 import dev.linqibin.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
 import dev.linqibin.patra.catalog.infra.persistence.dao.PublicationAuthorAffiliationDao;
 import dev.linqibin.patra.catalog.infra.persistence.entity.PublicationAuthorAffiliationEntity;
+import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
+import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;

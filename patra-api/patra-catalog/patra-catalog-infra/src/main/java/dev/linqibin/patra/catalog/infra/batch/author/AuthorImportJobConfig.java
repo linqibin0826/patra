@@ -1,9 +1,9 @@
 package dev.linqibin.patra.catalog.infra.batch.author;
 
-import com.patra.starter.batch.config.BatchProperties;
-import com.patra.starter.batch.metrics.BatchProgressMetricsListener;
 import dev.linqibin.patra.catalog.domain.model.aggregate.AuthorAggregate;
 import dev.linqibin.patra.catalog.domain.port.source.FileDownloadPort;
+import dev.linqibin.starter.batch.config.BatchProperties;
+import dev.linqibin.starter.batch.metrics.BatchProgressMetricsListener;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.configuration.annotation.StepScope;

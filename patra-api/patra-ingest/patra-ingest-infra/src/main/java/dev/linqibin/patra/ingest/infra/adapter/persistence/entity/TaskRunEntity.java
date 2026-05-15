@@ -1,6 +1,6 @@
 package dev.linqibin.patra.ingest.infra.adapter.persistence.entity;
 
-import com.patra.starter.jpa.entity.ChildJpaEntity;
+import dev.linqibin.starter.jpa.entity.ChildJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;

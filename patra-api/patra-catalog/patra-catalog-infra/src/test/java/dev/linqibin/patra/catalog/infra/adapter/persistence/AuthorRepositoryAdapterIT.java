@@ -2,13 +2,13 @@ package dev.linqibin.patra.catalog.infra.adapter.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import dev.linqibin.patra.catalog.domain.model.aggregate.AuthorAggregate;
 import dev.linqibin.patra.catalog.domain.model.vo.author.AuthorNameVariant;
 import dev.linqibin.patra.catalog.domain.model.vo.author.Orcid;
 import dev.linqibin.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
 import dev.linqibin.patra.catalog.infra.persistence.dao.AuthorDao;
 import dev.linqibin.patra.catalog.infra.persistence.entity.AuthorEntity;
+import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;

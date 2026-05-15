@@ -4,7 +4,6 @@ import static dev.linqibin.commons.util.StringUtils.trimToNull;
 
 import com.ibm.icu.text.Collator;
 import com.ibm.icu.util.ULocale;
-import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import dev.linqibin.commons.util.StringUtils;
 import dev.linqibin.patra.catalog.domain.model.aggregate.PublicationAggregate;
 import dev.linqibin.patra.catalog.domain.model.vo.publication.ExistingPublicationKeys;
@@ -60,6 +59,7 @@ import dev.linqibin.patra.catalog.infra.persistence.entity.PublicationOaLocation
 import dev.linqibin.patra.catalog.infra.persistence.entity.PublicationPersonalNameSubjectEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.PublicationSupplMeshEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.PublicationTypeEntity;
+import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import java.util.ArrayList;

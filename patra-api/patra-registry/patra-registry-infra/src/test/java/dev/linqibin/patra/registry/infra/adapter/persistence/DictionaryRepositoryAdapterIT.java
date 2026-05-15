@@ -2,9 +2,6 @@ package dev.linqibin.patra.registry.infra.adapter.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.patra.starter.jpa.autoconfig.HibernatePropertiesCustomizer;
-import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
-import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import dev.linqibin.patra.registry.domain.model.read.dictionary.DictionaryItemSummary;
 import dev.linqibin.patra.registry.domain.model.vo.dictionary.DictionaryItem;
 import dev.linqibin.patra.registry.domain.model.vo.dictionary.DictionaryType;
@@ -15,6 +12,9 @@ import dev.linqibin.patra.registry.infra.adapter.persistence.entity.dictionary.S
 import dev.linqibin.patra.registry.infra.adapter.persistence.entity.dictionary.SysDictItemEntity;
 import dev.linqibin.patra.registry.infra.adapter.persistence.entity.dictionary.SysDictTypeEntity;
 import dev.linqibin.patra.registry.infra.config.RegistryMySQLContainerInitializer;
+import dev.linqibin.starter.jpa.autoconfig.HibernatePropertiesCustomizer;
+import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
+import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
 import jakarta.persistence.EntityManager;
 import java.util.List;
 import java.util.Map;

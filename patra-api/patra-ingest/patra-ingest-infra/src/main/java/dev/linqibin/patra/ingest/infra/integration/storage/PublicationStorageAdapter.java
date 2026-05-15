@@ -1,13 +1,13 @@
 package dev.linqibin.patra.ingest.infra.integration.storage;
 
-import com.patra.starter.objectstorage.ObjectStorageTemplate;
-import com.patra.starter.objectstorage.StorageLocation;
-import com.patra.starter.objectstorage.StorageLocationResolver;
-import com.patra.starter.objectstorage.domain.ObjectMetadata;
-import com.patra.starter.objectstorage.domain.UploadResult;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.common.model.CanonicalPublication;
 import dev.linqibin.patra.ingest.domain.port.PublicationStoragePort;
+import dev.linqibin.starter.objectstorage.ObjectStorageTemplate;
+import dev.linqibin.starter.objectstorage.StorageLocation;
+import dev.linqibin.starter.objectstorage.StorageLocationResolver;
+import dev.linqibin.starter.objectstorage.domain.ObjectMetadata;
+import dev.linqibin.starter.objectstorage.domain.UploadResult;
 import java.io.ByteArrayInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -112,8 +112,8 @@ public class PublicationStorageAdapter implements PublicationStoragePort {
   }
 
   private StorageLocation resolveStorageLocation(PublicationStoragePort.StorageContext context) {
-    com.patra.starter.objectstorage.StorageContext storageContext =
-        com.patra.starter.objectstorage.StorageContext.builder()
+    dev.linqibin.starter.objectstorage.StorageContext storageContext =
+        dev.linqibin.starter.objectstorage.StorageContext.builder()
             .businessType(BUSINESS_TYPE)
             .filename(generateFilename(context))
             .businessId(buildBusinessId(context))

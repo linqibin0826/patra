@@ -1,9 +1,9 @@
 package dev.linqibin.patra.catalog.infra.adapter.enrichment.scopus;
 
-import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import dev.linqibin.patra.catalog.domain.port.enrichment.ScopusVenueData;
 import dev.linqibin.patra.catalog.domain.port.enrichment.ScopusVenueData.YearlyMetric;
 import dev.linqibin.patra.catalog.infra.persistence.entity.ScopusRatingEntity;
+import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
