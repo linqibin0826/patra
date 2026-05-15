@@ -1,7 +1,7 @@
 package com.patra.objectstorage.app.recordupload;
 
 import cn.hutool.core.text.CharSequenceUtil;
-import com.patra.common.cqrs.Command;
+import dev.linqibin.commons.cqrs.Command;
 import java.time.Instant;
 import java.util.Map;
 

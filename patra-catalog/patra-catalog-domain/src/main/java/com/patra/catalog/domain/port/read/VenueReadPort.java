@@ -6,8 +6,8 @@ import com.patra.catalog.domain.model.read.venue.VenueInstanceSummaryReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueRatingHistoryReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueStatsReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
-import com.patra.common.query.PageResult;
-import com.patra.common.query.PagingParams;
+import dev.linqibin.commons.query.PageResult;
+import dev.linqibin.commons.query.PagingParams;
 import java.util.List;
 import java.util.Optional;
 

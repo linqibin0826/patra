@@ -4,7 +4,7 @@ import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
 import com.patra.catalog.domain.model.vo.mesh.MeshQualifierId;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
-import com.patra.common.domain.AggregateRoot;
+import dev.linqibin.commons.domain.AggregateRoot;
 import java.io.Serial;
 import java.time.LocalDate;
 import java.util.ArrayList;

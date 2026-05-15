@@ -1,6 +1,5 @@
 package com.patra.starter.core.error.config;
 
-import com.patra.common.error.codes.HttpStdErrors;
 import com.patra.starter.core.error.engine.DefaultErrorResolutionEngine;
 import com.patra.starter.core.error.engine.ErrorResolutionEngine;
 import com.patra.starter.core.error.pipeline.ErrorResolutionPipeline;
@@ -8,6 +7,7 @@ import com.patra.starter.core.error.pipeline.ResolutionInterceptor;
 import com.patra.starter.core.error.spi.ErrorMappingContributor;
 import com.patra.starter.core.error.spi.TraceProvider;
 import com.patra.starter.core.error.trace.HeaderBasedTraceProvider;
+import dev.linqibin.commons.error.codes.HttpStdErrors;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;

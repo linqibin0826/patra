@@ -1,6 +1,6 @@
 package com.patra.catalog.infra.batch.publication;
 
-import static com.patra.common.util.StringUtils.trimToNull;
+import static dev.linqibin.commons.util.StringUtils.trimToNull;
 
 import com.patra.catalog.domain.model.vo.publication.ExistingPublicationKeys;
 import com.patra.catalog.domain.model.vo.publication.PublicationCompleteData;

@@ -1,6 +1,6 @@
 package com.patra.starter.redisson.exception;
 
-import com.patra.common.error.codes.ErrorCodeLike;
+import dev.linqibin.commons.error.codes.ErrorCodeLike;
 import lombok.RequiredArgsConstructor;
 
 /// 分布式锁错误码枚举。

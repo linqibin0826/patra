@@ -11,6 +11,7 @@ plugins {
 dependencies {
     // 内部模块
     api(project(":patra-common:patra-common-core"))
+    api(project(":linqibin-commons-core"))
     api(project(":patra-ingest:patra-ingest-domain"))
     api(project(":patra-ingest:patra-ingest-api"))
     api(project(":linqibin-spring-boot-starter-core"))

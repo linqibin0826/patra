@@ -3,8 +3,8 @@ package com.patra.catalog.domain.port.read;
 import com.patra.catalog.domain.model.read.publication.PublicationDetailReadModel;
 import com.patra.catalog.domain.model.read.publication.PublicationFilter;
 import com.patra.catalog.domain.model.read.publication.PublicationSummaryReadModel;
-import com.patra.common.query.PageResult;
-import com.patra.common.query.PagingParams;
+import dev.linqibin.commons.query.PageResult;
+import dev.linqibin.commons.query.PagingParams;
 import java.util.List;
 import java.util.Optional;
 

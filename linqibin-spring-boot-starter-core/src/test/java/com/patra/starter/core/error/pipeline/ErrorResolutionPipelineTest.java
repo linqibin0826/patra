@@ -5,10 +5,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.lenient;
 
-import com.patra.common.error.codes.ErrorCodeLike;
 import com.patra.starter.core.error.engine.ErrorResolutionEngine;
 import com.patra.starter.core.error.model.ErrorResolution;
 import com.patra.starter.core.error.model.ResolutionStrategy;
+import dev.linqibin.commons.error.codes.ErrorCodeLike;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;

@@ -1,10 +1,6 @@
 package com.patra.ingest.app.usecase.plan.slicer;
 
 import cn.hutool.core.util.StrUtil;
-import com.patra.common.json.JsonNormalizationException;
-import com.patra.common.json.JsonNormalizer;
-import com.patra.common.json.JsonNormalizerResult;
-import com.patra.common.util.HashUtils;
 import com.patra.expr.Expr;
 import com.patra.expr.Exprs;
 import com.patra.ingest.app.usecase.plan.expression.PlanExpressionDescriptor;
@@ -12,6 +8,10 @@ import com.patra.ingest.app.usecase.plan.slicer.model.SlicePlan;
 import com.patra.ingest.app.usecase.plan.slicer.model.SlicePlanningContext;
 import com.patra.ingest.domain.model.enums.SliceStrategy;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
+import dev.linqibin.commons.json.JsonNormalizationException;
+import dev.linqibin.commons.json.JsonNormalizer;
+import dev.linqibin.commons.json.JsonNormalizerResult;
+import dev.linqibin.commons.util.HashUtils;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;

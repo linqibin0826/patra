@@ -1,13 +1,13 @@
 package com.patra.starter.expr.compiler.snapshot;
 
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.common.error.remote.RemoteCallException;
 import com.patra.registry.api.dto.expr.ExprSnapshotResp;
 import com.patra.registry.api.dto.provenance.ProvenanceResp;
 import com.patra.registry.api.endpoint.ExprEndpoint;
 import com.patra.registry.api.endpoint.ProvenanceEndpoint;
 import com.patra.starter.expr.compiler.exception.RuleSnapshotLoadException;
 import com.patra.starter.expr.compiler.snapshot.convert.SnapshotAssembler;
+import dev.linqibin.commons.error.remote.RemoteCallException;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 

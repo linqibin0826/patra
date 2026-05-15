@@ -1,11 +1,11 @@
 package com.patra.objectstorage.adapter.rest.internal;
 
-import com.patra.common.cqrs.CommandBus;
 import com.patra.objectstorage.api.dto.RecordUploadResponse;
 import com.patra.objectstorage.api.dto.UploadRecordRequest;
 import com.patra.objectstorage.api.endpoint.StorageEndpoint;
 import com.patra.objectstorage.app.recordupload.RecordUploadCommand;
 import com.patra.objectstorage.app.recordupload.RecordUploadResult;
+import dev.linqibin.commons.cqrs.CommandBus;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.net.InetAddress;

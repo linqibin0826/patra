@@ -7,9 +7,9 @@ import static org.mockito.Mockito.when;
 
 import com.patra.catalog.app.usecase.venue.VenueEnrichRunStats;
 import com.patra.catalog.app.usecase.venue.scopus.command.VenueScopusEnrichCommand;
-import com.patra.common.error.ApplicationException;
-import com.patra.common.error.DomainException;
-import com.patra.common.error.trait.StandardErrorTrait;
+import dev.linqibin.commons.error.ApplicationException;
+import dev.linqibin.commons.error.DomainException;
+import dev.linqibin.commons.error.trait.StandardErrorTrait;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

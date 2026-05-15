@@ -1,16 +1,16 @@
 package com.patra.starter.core.error.engine;
 
-import com.patra.common.error.ApplicationException;
-import com.patra.common.error.DomainException;
-import com.patra.common.error.codes.ErrorCodeLike;
-import com.patra.common.error.trait.ErrorTrait;
-import com.patra.common.error.trait.HasErrorTraits;
-import com.patra.common.error.trait.StandardErrorTrait;
 import com.patra.starter.core.error.config.ErrorProperties;
 import com.patra.starter.core.error.model.ErrorResolution;
 import com.patra.starter.core.error.model.ResolutionStrategy;
 import com.patra.starter.core.error.model.SimpleErrorCode;
 import com.patra.starter.core.error.spi.ErrorMappingContributor;
+import dev.linqibin.commons.error.ApplicationException;
+import dev.linqibin.commons.error.DomainException;
+import dev.linqibin.commons.error.codes.ErrorCodeLike;
+import dev.linqibin.commons.error.trait.ErrorTrait;
+import dev.linqibin.commons.error.trait.HasErrorTraits;
+import dev.linqibin.commons.error.trait.StandardErrorTrait;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.ArrayList;

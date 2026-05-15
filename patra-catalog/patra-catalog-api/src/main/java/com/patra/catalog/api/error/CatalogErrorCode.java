@@ -1,6 +1,6 @@
 package com.patra.catalog.api.error;
 
-import com.patra.common.error.codes.ErrorCodeLike;
+import dev.linqibin.commons.error.codes.ErrorCodeLike;
 
 /// 目录服务的错误代码目录。
 ///
@@ -15,7 +15,7 @@ import com.patra.common.error.codes.ErrorCodeLike;
 /// - 14xx: ROR 机构导入错误
 /// - 15xx: Publication 导入错误
 ///
-/// @see com.patra.common.error.codes.ErrorCodeLike
+/// @see dev.linqibin.commons.error.codes.ErrorCodeLike
 public enum CatalogErrorCode implements ErrorCodeLike {
 
   // ===== MeSH 导入错误 (10xx) =====

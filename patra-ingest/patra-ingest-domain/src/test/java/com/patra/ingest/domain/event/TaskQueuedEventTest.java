@@ -738,7 +738,7 @@ class TaskQueuedEventTest {
               OCCURRED_AT);
 
       // Then: 应该是 DomainEvent 的实例
-      assertThat(event).isInstanceOf(com.patra.common.domain.DomainEvent.class);
+      assertThat(event).isInstanceOf(dev.linqibin.commons.domain.DomainEvent.class);
     }
 
     @Test

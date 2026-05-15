@@ -1,7 +1,7 @@
 package com.patra.ingest.domain.exception;
 
-import com.patra.common.error.DomainException;
-import com.patra.common.error.trait.ErrorTrait;
+import dev.linqibin.commons.error.DomainException;
+import dev.linqibin.commons.error.trait.ErrorTrait;
 
 /// 采集领域异常基类。
 ///

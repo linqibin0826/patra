@@ -1,8 +1,8 @@
 package com.patra.starter.core.cqrs.interceptor;
 
-import com.patra.common.cqrs.Command;
-import com.patra.common.cqrs.CommandInterceptor;
-import com.patra.common.cqrs.CommandInterceptor.CommandExecutor;
+import dev.linqibin.commons.cqrs.Command;
+import dev.linqibin.commons.cqrs.CommandInterceptor;
+import dev.linqibin.commons.cqrs.CommandInterceptor.CommandExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

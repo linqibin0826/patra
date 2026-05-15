@@ -442,7 +442,7 @@ class OutboxLeaseMissedEventTest {
               1001L, "publication.parsed", "relay-instance-01", "relay-instance-02", Instant.now());
 
       // When & Then
-      assertThat(event).isInstanceOf(com.patra.common.domain.DomainEvent.class);
+      assertThat(event).isInstanceOf(dev.linqibin.commons.domain.DomainEvent.class);
     }
 
     @Test

@@ -1,6 +1,5 @@
 package com.patra.objectstorage.app.recordupload;
 
-import com.patra.common.cqrs.CommandHandler;
 import com.patra.objectstorage.domain.model.aggregate.FileMetadata;
 import com.patra.objectstorage.domain.model.enums.StorageProvider;
 import com.patra.objectstorage.domain.model.vo.BusinessContext;
@@ -8,6 +7,7 @@ import com.patra.objectstorage.domain.model.vo.FileChecksum;
 import com.patra.objectstorage.domain.model.vo.FileSize;
 import com.patra.objectstorage.domain.model.vo.StorageKey;
 import com.patra.objectstorage.domain.port.FileMetadataRepository;
+import dev.linqibin.commons.cqrs.CommandHandler;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

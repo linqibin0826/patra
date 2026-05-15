@@ -33,7 +33,7 @@ import tools.jackson.databind.ser.std.ToStringSerializer;
 /// ### 使用指南
 ///
 /// - 在 Spring 组件内部优先使用构造注入获取 `ObjectMapper`
-/// - 非 Spring 代码使用 {@link com.patra.common.json.JsonMapperHolder#getObjectMapper()}
+/// - 非 Spring 代码使用 {@link dev.linqibin.commons.json.JsonMapperHolder#getObjectMapper()}
 ///
 /// @author linqibin
 /// @since 0.1.0

@@ -9,12 +9,12 @@ import static org.mockito.Mockito.when;
 
 import com.patra.catalog.domain.exception.FileDownloadException;
 import com.patra.catalog.domain.port.source.FileDownloadResult;
-import com.patra.common.error.trait.StandardErrorTrait;
 import com.patra.starter.restclient.download.DownloadClient;
 import com.patra.starter.restclient.download.DownloadException;
 import com.patra.starter.restclient.download.DownloadOptions;
 import com.patra.starter.restclient.download.DownloadProgress;
 import com.patra.starter.restclient.download.DownloadResult;
+import dev.linqibin.commons.error.trait.StandardErrorTrait;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;

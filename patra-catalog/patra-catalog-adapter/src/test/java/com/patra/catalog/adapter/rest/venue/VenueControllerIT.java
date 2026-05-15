@@ -10,7 +10,7 @@ import com.patra.catalog.app.usecase.publication.query.PublicationQueryService;
 import com.patra.catalog.app.usecase.venue.query.VenueQueryService;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueListQuery;
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
-import com.patra.common.query.PageResult;
+import dev.linqibin.commons.query.PageResult;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;

@@ -1,12 +1,12 @@
 package com.patra.ingest.app.usecase.execution;
 
-import com.patra.common.cqrs.CommandHandler;
 import com.patra.ingest.app.usecase.execution.command.TaskReadyCommand;
 import com.patra.ingest.app.usecase.execution.complete.TaskCompletionPhase;
 import com.patra.ingest.app.usecase.execution.prepare.TaskPreparationPhase;
 import com.patra.ingest.app.usecase.execution.session.ExecutionSession;
 import com.patra.ingest.app.usecase.execution.strategy.BatchExecutionPhase;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
+import dev.linqibin.commons.cqrs.CommandHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

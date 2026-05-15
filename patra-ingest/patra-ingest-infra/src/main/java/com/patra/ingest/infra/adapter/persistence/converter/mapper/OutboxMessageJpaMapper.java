@@ -16,11 +16,11 @@ public interface OutboxMessageJpaMapper {
   @Mapping(
       target = "payloadJson",
       expression =
-          "java(com.patra.common.json.JsonNodeMappings.jsonStringToNode(message.getPayloadJson()))")
+          "java(dev.linqibin.commons.json.JsonNodeMappings.jsonStringToNode(message.getPayloadJson()))")
   @Mapping(
       target = "headersJson",
       expression =
-          "java(com.patra.common.json.JsonNodeMappings.jsonStringToNode(message.getHeadersJson()))")
+          "java(dev.linqibin.commons.json.JsonNodeMappings.jsonStringToNode(message.getHeadersJson()))")
   @Mapping(target = "pubLeaseOwner", source = "leaseOwner")
   @Mapping(target = "pubLeasedUntil", source = "leaseExpireAt")
   // 审计字段由 JPA 管理
@@ -38,11 +38,11 @@ public interface OutboxMessageJpaMapper {
   @Mapping(
       target = "payloadJson",
       expression =
-          "java(com.patra.common.json.JsonNodeMappings.jsonNodeToString(entity.getPayloadJson()))")
+          "java(dev.linqibin.commons.json.JsonNodeMappings.jsonNodeToString(entity.getPayloadJson()))")
   @Mapping(
       target = "headersJson",
       expression =
-          "java(com.patra.common.json.JsonNodeMappings.jsonNodeToString(entity.getHeadersJson()))")
+          "java(dev.linqibin.commons.json.JsonNodeMappings.jsonNodeToString(entity.getHeadersJson()))")
   @Mapping(target = "leaseOwner", source = "pubLeaseOwner")
   @Mapping(target = "leaseExpireAt", source = "pubLeasedUntil")
   OutboxMessage toAggregate(OutboxMessageEntity entity);

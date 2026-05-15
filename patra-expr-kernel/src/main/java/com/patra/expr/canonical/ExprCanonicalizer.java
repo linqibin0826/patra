@@ -1,9 +1,9 @@
 package com.patra.expr.canonical;
 
-import com.patra.common.util.HashUtils;
 import com.patra.expr.Expr;
 import com.patra.expr.Exprs;
 import com.patra.expr.json.ExprJsonCodec;
+import dev.linqibin.commons.util.HashUtils;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;

@@ -5,8 +5,8 @@ import com.patra.catalog.app.usecase.publication.baseline.command.PublicationBas
 import com.patra.catalog.app.usecase.publication.baseline.dto.PublicationBaselineImportResult;
 import com.patra.catalog.domain.model.vo.publication.PublicationImportParams;
 import com.patra.catalog.domain.port.batch.PublicationBatchPort;
-import com.patra.common.cqrs.CommandHandler;
-import com.patra.common.error.ApplicationException;
+import dev.linqibin.commons.cqrs.CommandHandler;
+import dev.linqibin.commons.error.ApplicationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

@@ -1,7 +1,7 @@
 package com.patra.catalog.app.usecase.publication.query;
 
-import static com.patra.common.util.StringUtils.escapeLike;
-import static com.patra.common.util.StringUtils.trimToNull;
+import static dev.linqibin.commons.util.StringUtils.escapeLike;
+import static dev.linqibin.commons.util.StringUtils.trimToNull;
 
 import com.patra.catalog.app.usecase.publication.query.dto.PublicationDetailQuery;
 import com.patra.catalog.app.usecase.publication.query.dto.PublicationListQuery;
@@ -11,8 +11,8 @@ import com.patra.catalog.domain.model.read.publication.PublicationDetailReadMode
 import com.patra.catalog.domain.model.read.publication.PublicationFilter;
 import com.patra.catalog.domain.model.read.publication.PublicationSummaryReadModel;
 import com.patra.catalog.domain.port.read.PublicationReadPort;
-import com.patra.common.query.PageResult;
-import com.patra.common.query.PagingParams;
+import dev.linqibin.commons.query.PageResult;
+import dev.linqibin.commons.query.PagingParams;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;

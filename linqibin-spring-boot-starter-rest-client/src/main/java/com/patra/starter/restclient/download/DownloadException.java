@@ -1,8 +1,8 @@
 package com.patra.starter.restclient.download;
 
-import com.patra.common.error.trait.ErrorTrait;
-import com.patra.common.error.trait.HasErrorTraits;
-import com.patra.common.error.trait.StandardErrorTrait;
+import dev.linqibin.commons.error.trait.ErrorTrait;
+import dev.linqibin.commons.error.trait.HasErrorTraits;
+import dev.linqibin.commons.error.trait.StandardErrorTrait;
 import java.util.Set;
 
 /// 下载异常。

@@ -1,7 +1,7 @@
 package com.patra.ingest.domain.model.vo.relay;
 
-import com.patra.common.messaging.ChannelKey;
 import com.patra.ingest.domain.event.OutboxRelayDomainEvent;
+import dev.linqibin.commons.messaging.ChannelKey;
 import java.util.List;
 
 /// 中继批次执行结果汇总 Value Object。

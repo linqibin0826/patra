@@ -2,9 +2,9 @@ package com.patra.ingest.domain.exception;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.patra.common.error.trait.ErrorTrait;
-import com.patra.common.error.trait.StandardErrorTrait;
 import com.patra.ingest.domain.exception.PlanPersistenceException.Stage;
+import dev.linqibin.commons.error.trait.ErrorTrait;
+import dev.linqibin.commons.error.trait.StandardErrorTrait;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -144,7 +144,7 @@ class PlanPersistenceExceptionTest {
       PlanPersistenceException exception = new PlanPersistenceException(Stage.PLAN, "持久化失败");
 
       // When & Then
-      assertThat(exception).isInstanceOf(com.patra.common.error.trait.HasErrorTraits.class);
+      assertThat(exception).isInstanceOf(dev.linqibin.commons.error.trait.HasErrorTraits.class);
     }
   }
 }

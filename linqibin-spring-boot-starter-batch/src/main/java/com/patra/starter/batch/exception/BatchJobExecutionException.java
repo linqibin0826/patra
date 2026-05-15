@@ -1,6 +1,6 @@
 package com.patra.starter.batch.exception;
 
-import com.patra.common.error.ApplicationException;
+import dev.linqibin.commons.error.ApplicationException;
 
 /// 批处理任务执行异常。
 ///

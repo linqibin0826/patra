@@ -3,7 +3,7 @@ package com.patra.catalog.app.usecase.mesh.command;
 import cn.hutool.core.text.CharSequenceUtil;
 import com.patra.catalog.app.usecase.mesh.dto.MeshQualifierImportResult;
 import com.patra.catalog.domain.exception.CatalogScheduleParameterException;
-import com.patra.common.cqrs.Command;
+import dev.linqibin.commons.cqrs.Command;
 import java.net.URI;
 
 /// MeSH 限定词导入命令（Adapter → Application）。

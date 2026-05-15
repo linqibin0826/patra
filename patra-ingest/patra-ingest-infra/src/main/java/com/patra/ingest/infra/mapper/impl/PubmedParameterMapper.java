@@ -1,12 +1,12 @@
 package com.patra.ingest.infra.mapper.impl;
 
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.common.json.JsonMapperHolder;
 import com.patra.common.provenance.api.params.PubMedParamKeys;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.query.QuerySession;
 import com.patra.ingest.infra.mapper.ProviderParameterMapper;
 import com.patra.ingest.infra.mapper.StateTokenKeys;
+import dev.linqibin.commons.json.JsonMapperHolder;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

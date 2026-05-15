@@ -4,7 +4,6 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.*;
 import static org.awaitility.Awaitility.await;
 
-import com.patra.common.cqrs.CommandBus;
 import com.patra.ingest.app.usecase.relay.command.OutboxRelayCommand;
 import com.patra.ingest.app.usecase.relay.dto.RelayReport;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
@@ -16,6 +15,7 @@ import com.patra.ingest.integration.config.IngestRocketMQContainerInitializer;
 import com.patra.ingest.testutil.OutboxMessageTestBuilder;
 import com.patra.ingest.testutil.RocketMQMessageCollector;
 import com.patra.starter.test.container.initializer.RocketMQContainerInitializer;
+import dev.linqibin.commons.cqrs.CommandBus;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;

@@ -1,6 +1,6 @@
 package com.patra.starter.batch.exception;
 
-import com.patra.common.error.codes.ErrorCodeLike;
+import dev.linqibin.commons.error.codes.ErrorCodeLike;
 import lombok.RequiredArgsConstructor;
 
 /// 批处理错误码枚举。

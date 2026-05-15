@@ -1,6 +1,6 @@
 package com.patra.ingest.domain.exception;
 
-import com.patra.common.error.trait.StandardErrorTrait;
+import dev.linqibin.commons.error.trait.StandardErrorTrait;
 
 /// Outbox 持久化异常。
 ///

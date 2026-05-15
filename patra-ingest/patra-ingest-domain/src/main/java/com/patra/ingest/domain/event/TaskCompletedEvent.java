@@ -1,6 +1,6 @@
 package com.patra.ingest.domain.event;
 
-import com.patra.common.domain.DomainEvent;
+import dev.linqibin.commons.domain.DomainEvent;
 import java.time.Instant;
 
 /// 任务完成领域事件。当任务执行完成时发布（无论成功或失败）。

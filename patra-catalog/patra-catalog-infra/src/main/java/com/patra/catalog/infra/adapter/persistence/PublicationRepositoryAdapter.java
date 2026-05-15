@@ -1,6 +1,6 @@
 package com.patra.catalog.infra.adapter.persistence;
 
-import static com.patra.common.util.StringUtils.trimToNull;
+import static dev.linqibin.commons.util.StringUtils.trimToNull;
 
 import com.ibm.icu.text.Collator;
 import com.ibm.icu.util.ULocale;
@@ -58,8 +58,8 @@ import com.patra.catalog.infra.persistence.entity.PublicationOaLocationEntity;
 import com.patra.catalog.infra.persistence.entity.PublicationPersonalNameSubjectEntity;
 import com.patra.catalog.infra.persistence.entity.PublicationSupplMeshEntity;
 import com.patra.catalog.infra.persistence.entity.PublicationTypeEntity;
-import com.patra.common.util.StringUtils;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
+import dev.linqibin.commons.util.StringUtils;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import java.util.ArrayList;

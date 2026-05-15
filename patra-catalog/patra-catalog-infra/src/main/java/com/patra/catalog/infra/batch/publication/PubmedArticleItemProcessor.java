@@ -1,6 +1,6 @@
 package com.patra.catalog.infra.batch.publication;
 
-import static com.patra.common.util.StringUtils.trimToNull;
+import static dev.linqibin.commons.util.StringUtils.trimToNull;
 
 import com.patra.catalog.domain.model.aggregate.PublicationAggregate;
 import com.patra.catalog.domain.model.aggregate.VenueInstanceAggregate;

@@ -16,7 +16,7 @@ import com.patra.catalog.infra.persistence.dao.MeshEntryCombinationDao;
 import com.patra.catalog.infra.persistence.dao.MeshEntryTermDao;
 import com.patra.catalog.infra.persistence.dao.MeshTreeNumberDao;
 import com.patra.catalog.integration.config.CatalogMySQLContainerInitializer;
-import com.patra.common.cqrs.CommandBus;
+import dev.linqibin.commons.cqrs.CommandBus;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;

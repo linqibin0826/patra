@@ -1,7 +1,7 @@
 package com.patra.starter.batch.core;
 
-import com.patra.common.json.JsonMapperHolder;
 import com.patra.starter.batch.exception.BatchJobExecutionException;
+import dev.linqibin.commons.json.JsonMapperHolder;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Date;

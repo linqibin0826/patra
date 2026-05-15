@@ -1,10 +1,10 @@
 package com.patra.starter.web.error.handler;
 
-import com.patra.common.error.problem.ErrorKeys;
 import com.patra.starter.web.error.adapter.ProblemDetailAdapter;
 import com.patra.starter.web.error.adapter.model.ProblemDetailResponse;
 import com.patra.starter.web.error.model.ValidationError;
 import com.patra.starter.web.error.spi.ValidationErrorsFormatter;
+import dev.linqibin.commons.error.problem.ErrorKeys;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;

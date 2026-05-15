@@ -1,6 +1,6 @@
 package com.patra.registry.api.error;
 
-import com.patra.common.error.codes.ErrorCodeLike;
+import dev.linqibin.commons.error.codes.ErrorCodeLike;
 
 /// Registry 服务错误码目录。
 ///

@@ -1,6 +1,6 @@
 package com.patra.ingest.app.usecase.relay.dto;
 
-import com.patra.common.messaging.ChannelKey;
+import dev.linqibin.commons.messaging.ChannelKey;
 
 /// 单批次中继的聚合指标
 ///

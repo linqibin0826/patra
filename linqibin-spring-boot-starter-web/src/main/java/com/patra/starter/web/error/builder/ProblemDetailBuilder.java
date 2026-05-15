@@ -1,9 +1,5 @@
 package com.patra.starter.web.error.builder;
 
-import com.patra.common.error.codes.ErrorCodeLike;
-import com.patra.common.error.problem.ErrorKeys;
-import com.patra.common.error.trait.ErrorTrait;
-import com.patra.common.error.trait.HasErrorTraits;
 import com.patra.starter.core.error.config.ErrorProperties;
 import com.patra.starter.core.error.model.ErrorResolution;
 import com.patra.starter.core.error.spi.ProblemFieldContributor;
@@ -11,6 +7,10 @@ import com.patra.starter.core.error.spi.TraceProvider;
 import com.patra.starter.web.error.config.WebErrorProperties;
 import com.patra.starter.web.error.spi.WebProblemFieldContributor;
 import com.patra.starter.web.error.util.HttpStatusConverter;
+import dev.linqibin.commons.error.codes.ErrorCodeLike;
+import dev.linqibin.commons.error.problem.ErrorKeys;
+import dev.linqibin.commons.error.trait.ErrorTrait;
+import dev.linqibin.commons.error.trait.HasErrorTraits;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.time.Instant;

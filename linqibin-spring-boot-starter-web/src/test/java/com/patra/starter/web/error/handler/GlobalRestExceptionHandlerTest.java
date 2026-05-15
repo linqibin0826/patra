@@ -7,12 +7,12 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.patra.common.error.problem.ErrorKeys;
 import com.patra.starter.core.error.model.ErrorResolution;
 import com.patra.starter.web.error.adapter.ProblemDetailAdapter;
 import com.patra.starter.web.error.adapter.model.ProblemDetailResponse;
 import com.patra.starter.web.error.model.ValidationError;
 import com.patra.starter.web.error.spi.ValidationErrorsFormatter;
+import dev.linqibin.commons.error.problem.ErrorKeys;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,8 +54,8 @@ class GlobalRestExceptionHandlerTest {
 
     ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
 
-    com.patra.common.error.codes.ErrorCodeLike errorCode =
-        mock(com.patra.common.error.codes.ErrorCodeLike.class);
+    dev.linqibin.commons.error.codes.ErrorCodeLike errorCode =
+        mock(dev.linqibin.commons.error.codes.ErrorCodeLike.class);
     when(errorCode.code()).thenReturn("ERR_INTERNAL_ERROR");
 
     ErrorResolution errorResolution = mock(ErrorResolution.class);
@@ -97,8 +97,8 @@ class GlobalRestExceptionHandlerTest {
 
     ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
 
-    com.patra.common.error.codes.ErrorCodeLike errorCode =
-        mock(com.patra.common.error.codes.ErrorCodeLike.class);
+    dev.linqibin.commons.error.codes.ErrorCodeLike errorCode =
+        mock(dev.linqibin.commons.error.codes.ErrorCodeLike.class);
     when(errorCode.code()).thenReturn("ERR_VALIDATION_FAILED");
 
     ErrorResolution errorResolution = mock(ErrorResolution.class);
@@ -150,8 +150,8 @@ class GlobalRestExceptionHandlerTest {
 
     ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
 
-    com.patra.common.error.codes.ErrorCodeLike errorCode =
-        mock(com.patra.common.error.codes.ErrorCodeLike.class);
+    dev.linqibin.commons.error.codes.ErrorCodeLike errorCode =
+        mock(dev.linqibin.commons.error.codes.ErrorCodeLike.class);
     when(errorCode.code()).thenReturn("ERR_VALIDATION_FAILED");
 
     ErrorResolution errorResolution = mock(ErrorResolution.class);
@@ -202,8 +202,8 @@ class GlobalRestExceptionHandlerTest {
 
     ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
 
-    com.patra.common.error.codes.ErrorCodeLike errorCode =
-        mock(com.patra.common.error.codes.ErrorCodeLike.class);
+    dev.linqibin.commons.error.codes.ErrorCodeLike errorCode =
+        mock(dev.linqibin.commons.error.codes.ErrorCodeLike.class);
     when(errorCode.code()).thenReturn("ERR_VALIDATION_FAILED");
 
     ErrorResolution errorResolution = mock(ErrorResolution.class);
@@ -237,8 +237,8 @@ class GlobalRestExceptionHandlerTest {
     ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
     problemDetail.setProperties(null); // 显式设置为 null
 
-    com.patra.common.error.codes.ErrorCodeLike errorCode =
-        mock(com.patra.common.error.codes.ErrorCodeLike.class);
+    dev.linqibin.commons.error.codes.ErrorCodeLike errorCode =
+        mock(dev.linqibin.commons.error.codes.ErrorCodeLike.class);
     when(errorCode.code()).thenReturn("ERR_INTERNAL_ERROR");
 
     ErrorResolution errorResolution = mock(ErrorResolution.class);
@@ -266,8 +266,8 @@ class GlobalRestExceptionHandlerTest {
 
     ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
 
-    com.patra.common.error.codes.ErrorCodeLike errorCode =
-        mock(com.patra.common.error.codes.ErrorCodeLike.class);
+    dev.linqibin.commons.error.codes.ErrorCodeLike errorCode =
+        mock(dev.linqibin.commons.error.codes.ErrorCodeLike.class);
     when(errorCode.code()).thenReturn("ERR_BAD_REQUEST");
 
     ErrorResolution errorResolution = mock(ErrorResolution.class);
@@ -294,8 +294,8 @@ class GlobalRestExceptionHandlerTest {
 
     ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
 
-    com.patra.common.error.codes.ErrorCodeLike errorCode =
-        mock(com.patra.common.error.codes.ErrorCodeLike.class);
+    dev.linqibin.commons.error.codes.ErrorCodeLike errorCode =
+        mock(dev.linqibin.commons.error.codes.ErrorCodeLike.class);
     when(errorCode.code()).thenReturn("ERR_NOT_FOUND");
 
     ErrorResolution errorResolution = mock(ErrorResolution.class);

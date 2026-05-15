@@ -7,7 +7,7 @@ import com.patra.catalog.adapter.rest.publication.response.PublicationItemRespon
 import com.patra.catalog.app.usecase.publication.query.PublicationQueryService;
 import com.patra.catalog.app.usecase.publication.query.dto.PublicationDetailQuery;
 import com.patra.catalog.app.usecase.publication.query.dto.PublicationListQuery;
-import com.patra.common.query.PageResult;
+import dev.linqibin.commons.query.PageResult;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;

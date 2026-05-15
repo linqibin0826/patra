@@ -241,8 +241,8 @@ class PlanPublishingCoordinatorTest {
       // Given
       TaskQueuedEvent queuedEvent = createTaskQueuedEvent(1L);
       // 创建其他类型的 DomainEvent
-      com.patra.common.domain.DomainEvent otherEvent =
-          new com.patra.common.domain.DomainEvent() {
+      dev.linqibin.commons.domain.DomainEvent otherEvent =
+          new dev.linqibin.commons.domain.DomainEvent() {
             @Override
             public Instant occurredAt() {
               return Instant.now();

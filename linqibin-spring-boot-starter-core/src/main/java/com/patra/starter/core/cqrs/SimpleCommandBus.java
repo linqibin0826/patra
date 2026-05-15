@@ -1,11 +1,11 @@
 package com.patra.starter.core.cqrs;
 
-import com.patra.common.cqrs.Command;
-import com.patra.common.cqrs.CommandBus;
-import com.patra.common.cqrs.CommandHandler;
-import com.patra.common.cqrs.CommandHandlerNotFoundException;
-import com.patra.common.cqrs.CommandInterceptor;
-import com.patra.common.cqrs.CommandInterceptor.CommandExecutor;
+import dev.linqibin.commons.cqrs.Command;
+import dev.linqibin.commons.cqrs.CommandBus;
+import dev.linqibin.commons.cqrs.CommandHandler;
+import dev.linqibin.commons.cqrs.CommandHandlerNotFoundException;
+import dev.linqibin.commons.cqrs.CommandInterceptor;
+import dev.linqibin.commons.cqrs.CommandInterceptor.CommandExecutor;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.List;

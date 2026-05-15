@@ -1,7 +1,6 @@
 package com.patra.ingest.infra.adapter.persistence.converter.mapper;
 
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.common.json.JsonNodeMappings;
 import com.patra.ingest.domain.exception.InfrastructureException;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.model.enums.OperationCode;
@@ -14,6 +13,7 @@ import com.patra.ingest.domain.model.vo.shared.LeaseInfo;
 import com.patra.ingest.domain.model.vo.slice.PlanSliceId;
 import com.patra.ingest.domain.model.vo.task.TaskId;
 import com.patra.ingest.infra.adapter.persistence.entity.TaskEntity;
+import dev.linqibin.commons.json.JsonNodeMappings;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -38,7 +38,7 @@ public interface TaskJpaMapper {
   @Mapping(
       target = "params",
       expression =
-          "java(com.patra.common.json.JsonNodeMappings.jsonStringToNode(aggregate.getParamsJson()))")
+          "java(dev.linqibin.commons.json.JsonNodeMappings.jsonStringToNode(aggregate.getParamsJson()))")
   @Mapping(target = "statusCode", source = "status", qualifiedByName = "taskStatusToCode")
   @Mapping(target = "leaseOwner", source = "leaseInfo.owner")
   @Mapping(target = "leasedUntil", source = "leaseInfo.leasedUntil")

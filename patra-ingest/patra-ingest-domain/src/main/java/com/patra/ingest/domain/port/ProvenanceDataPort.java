@@ -2,10 +2,10 @@ package com.patra.ingest.domain.port;
 
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.DataType;
-import com.patra.common.type.TypeReference;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import com.patra.ingest.domain.model.vo.query.QuerySession;
+import dev.linqibin.commons.type.TypeReference;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -59,7 +59,7 @@ import lombok.Builder;
 /// @see com.patra.ingest.domain.model.vo.batch.Batch 批次定义
 /// @see com.patra.ingest.domain.model.vo.execution.ExecutionContext 执行上下文
 /// @see com.patra.common.model.DataType 数据类型枚举
-/// @see com.patra.common.type.TypeReference 类型引用工具
+/// @see dev.linqibin.commons.type.TypeReference 类型引用工具
 /// @author linqibin
 /// @since 0.1.0
 public interface ProvenanceDataPort {

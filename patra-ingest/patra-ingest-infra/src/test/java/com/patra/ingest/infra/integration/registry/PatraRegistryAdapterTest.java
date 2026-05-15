@@ -8,9 +8,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.common.error.remote.RemoteCallException;
-import com.patra.common.error.trait.ErrorTrait;
-import com.patra.common.error.trait.StandardErrorTrait;
 import com.patra.ingest.domain.exception.IngestConfigurationException;
 import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
@@ -18,6 +15,9 @@ import com.patra.ingest.infra.integration.registry.converter.ProvenanceConfigSna
 import com.patra.registry.api.dto.provenance.ProvenanceConfigResp;
 import com.patra.registry.api.dto.provenance.ProvenanceResp;
 import com.patra.registry.api.endpoint.ProvenanceEndpoint;
+import dev.linqibin.commons.error.remote.RemoteCallException;
+import dev.linqibin.commons.error.trait.ErrorTrait;
+import dev.linqibin.commons.error.trait.StandardErrorTrait;
 import java.time.Instant;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;

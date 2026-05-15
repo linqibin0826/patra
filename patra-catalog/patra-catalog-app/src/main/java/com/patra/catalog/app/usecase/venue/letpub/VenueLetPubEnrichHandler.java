@@ -3,9 +3,9 @@ package com.patra.catalog.app.usecase.venue.letpub;
 import com.patra.catalog.api.error.CatalogErrorCode;
 import com.patra.catalog.app.usecase.venue.VenueEnrichRunStats;
 import com.patra.catalog.app.usecase.venue.letpub.command.VenueLetPubEnrichCommand;
-import com.patra.common.cqrs.CommandHandler;
-import com.patra.common.error.ApplicationException;
-import com.patra.common.error.DomainException;
+import dev.linqibin.commons.cqrs.CommandHandler;
+import dev.linqibin.commons.error.ApplicationException;
+import dev.linqibin.commons.error.DomainException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -36,8 +36,8 @@ public class VenueLetPubEnrichHandler
   ///
   /// @param command 富化参数：目标年份 + 被引次数下限
   /// @return 同步执行结果，包含 totalRead / processed / skipped / failed 四项统计
-  /// @throws com.patra.common.error.DomainException 领域异常直接传播
-  /// @throws com.patra.common.error.ApplicationException 业务异常直接传播，
+  /// @throws dev.linqibin.commons.error.DomainException 领域异常直接传播
+  /// @throws dev.linqibin.commons.error.ApplicationException 业务异常直接传播，
   ///     未知 `RuntimeException` 被包装为 `ApplicationException(CAT_1302)`
   @Override
   public VenueEnrichRunStats handle(VenueLetPubEnrichCommand command) {

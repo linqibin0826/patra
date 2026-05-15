@@ -1,7 +1,6 @@
 package com.patra.ingest.infra.adapter.persistence.converter.mapper;
 
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.common.json.JsonNodeMappings;
 import com.patra.ingest.domain.exception.InfrastructureException;
 import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
 import com.patra.ingest.domain.model.enums.OperationCode;
@@ -9,6 +8,7 @@ import com.patra.ingest.domain.model.enums.SliceStatus;
 import com.patra.ingest.domain.model.vo.plan.PlanId;
 import com.patra.ingest.domain.model.vo.slice.PlanSliceId;
 import com.patra.ingest.infra.adapter.persistence.entity.PlanSliceEntity;
+import dev.linqibin.commons.json.JsonNodeMappings;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -26,11 +26,11 @@ public interface PlanSliceJpaMapper {
   @Mapping(
       target = "windowSpec",
       expression =
-          "java(com.patra.common.json.JsonNodeMappings.jsonStringToNode(aggregate.getWindowSpecJson()))")
+          "java(dev.linqibin.commons.json.JsonNodeMappings.jsonStringToNode(aggregate.getWindowSpecJson()))")
   @Mapping(
       target = "exprSnapshot",
       expression =
-          "java(com.patra.common.json.JsonNodeMappings.jsonStringToNode(aggregate.getExprSnapshotJson()))")
+          "java(dev.linqibin.commons.json.JsonNodeMappings.jsonStringToNode(aggregate.getExprSnapshotJson()))")
   @Mapping(target = "statusCode", source = "status", qualifiedByName = "sliceStatusToCode")
   PlanSliceEntity toEntity(PlanSliceAggregate aggregate);
 

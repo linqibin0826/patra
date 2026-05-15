@@ -13,7 +13,7 @@ import com.patra.catalog.domain.model.vo.organization.OrganizationLink;
 import com.patra.catalog.domain.model.vo.organization.OrganizationName;
 import com.patra.catalog.domain.model.vo.organization.OrganizationRelation;
 import com.patra.catalog.domain.model.vo.organization.RorId;
-import com.patra.common.domain.AggregateRoot;
+import dev.linqibin.commons.domain.AggregateRoot;
 import java.io.Serial;
 import java.util.ArrayList;
 import java.util.Collections;

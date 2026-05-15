@@ -9,8 +9,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
-import com.patra.common.error.remote.RemoteCallException;
 import com.patra.starter.httpinterface.config.HttpInterfaceAutoConfiguration;
+import dev.linqibin.commons.error.remote.RemoteCallException;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

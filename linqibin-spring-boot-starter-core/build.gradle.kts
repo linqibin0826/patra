@@ -14,6 +14,7 @@ plugins {
 dependencies {
     // Internal shared library: utilities/exceptions
     api(project(":patra-common:patra-common-core"))
+    api(project(":linqibin-commons-core"))
 
     // Foundation for custom AutoConfiguration
     api("org.springframework.boot:spring-boot-autoconfigure")
