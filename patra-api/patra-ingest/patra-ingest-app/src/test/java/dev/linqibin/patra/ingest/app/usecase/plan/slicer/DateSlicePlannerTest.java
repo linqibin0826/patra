@@ -2,10 +2,10 @@ package dev.linqibin.patra.ingest.app.usecase.plan.slicer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.patra.expr.Expr;
-import com.patra.expr.Exprs;
 import dev.linqibin.commons.enums.Priority;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
+import dev.linqibin.patra.expr.Expr;
+import dev.linqibin.patra.expr.Exprs;
 import dev.linqibin.patra.ingest.app.usecase.plan.expression.PlanExpressionDescriptor;
 import dev.linqibin.patra.ingest.app.usecase.plan.slicer.model.SlicePlan;
 import dev.linqibin.patra.ingest.app.usecase.plan.slicer.model.SlicePlanningContext;

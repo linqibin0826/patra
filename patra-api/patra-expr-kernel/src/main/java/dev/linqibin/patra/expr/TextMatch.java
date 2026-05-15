@@ -1,4 +1,4 @@
-package com.patra.expr;
+package dev.linqibin.patra.expr;
 
 /// TERM 操作的文本匹配语义。
 ///

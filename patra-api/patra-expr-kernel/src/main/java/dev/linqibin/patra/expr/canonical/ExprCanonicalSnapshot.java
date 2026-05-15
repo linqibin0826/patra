@@ -1,6 +1,6 @@
-package com.patra.expr.canonical;
+package dev.linqibin.patra.expr.canonical;
 
-import com.patra.expr.Expr;
+import dev.linqibin.patra.expr.Expr;
 import java.util.Objects;
 
 /// 不可变快照,捕获表达式及其规范化 JSON 和哈希值。

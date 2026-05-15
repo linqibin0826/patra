@@ -1,11 +1,11 @@
 package dev.linqibin.patra.ingest.app.usecase.plan.expression;
 
 import cn.hutool.core.collection.CollUtil;
-import com.patra.expr.And;
-import com.patra.expr.Expr;
-import com.patra.expr.Exprs;
-import com.patra.expr.canonical.ExprCanonicalSnapshot;
-import com.patra.expr.canonical.ExprCanonicalizer;
+import dev.linqibin.patra.expr.And;
+import dev.linqibin.patra.expr.Expr;
+import dev.linqibin.patra.expr.Exprs;
+import dev.linqibin.patra.expr.canonical.ExprCanonicalSnapshot;
+import dev.linqibin.patra.expr.canonical.ExprCanonicalizer;
 import dev.linqibin.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import dev.linqibin.patra.ingest.domain.model.vo.plan.PlanTriggerNorm;
 import java.util.ArrayList;

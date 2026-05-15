@@ -1,8 +1,8 @@
-package com.patra.expr.canonical;
+package dev.linqibin.patra.expr.canonical;
 
-import com.patra.expr.Expr;
-import com.patra.expr.Exprs;
-import com.patra.expr.json.ExprJsonCodec;
+import dev.linqibin.patra.expr.Expr;
+import dev.linqibin.patra.expr.Exprs;
+import dev.linqibin.patra.expr.json.ExprJsonCodec;
 import dev.linqibin.commons.util.HashUtils;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;

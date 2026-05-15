@@ -1,6 +1,6 @@
 package com.patra.starter.expr.compiler.snapshot;
 
-import com.patra.expr.Atom;
+import dev.linqibin.patra.expr.Atom;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;

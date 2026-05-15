@@ -1,4 +1,4 @@
-package com.patra.expr;
+package dev.linqibin.patra.expr;
 
 /// 表示文本比较是否区分大小写。
 ///

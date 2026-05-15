@@ -1,6 +1,6 @@
 package dev.linqibin.patra.ingest.app.usecase.plan.expression;
 
-import com.patra.expr.Expr;
+import dev.linqibin.patra.expr.Expr;
 import java.util.Objects;
 
 /// Plan 表达式描述符(表达式三元组:结构 + 规范化快照 + 哈希)

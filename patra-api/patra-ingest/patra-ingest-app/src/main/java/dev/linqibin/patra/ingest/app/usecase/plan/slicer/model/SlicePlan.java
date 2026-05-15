@@ -1,6 +1,6 @@
 package dev.linqibin.patra.ingest.app.usecase.plan.slicer.model;
 
-import com.patra.expr.Expr;
+import dev.linqibin.patra.expr.Expr;
 import java.util.Objects;
 
 /// 切片规划结果(应用层·DTO)
