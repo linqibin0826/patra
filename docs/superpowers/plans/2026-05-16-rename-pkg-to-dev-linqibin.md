@@ -30,6 +30,8 @@
 - **sed**：使用 BSD sed 语法（`sed -i ''` 双引号空字符串作 inplace 备份）
 - **Shell**：zsh
 - 所有命令假设 working directory 是 `/Users/linqibin/Projects/Products/Patra/patra-api`
+- **Docker desktop**：执行任一 baseline / 验证 build 前必须运行（Testcontainers 集成测试依赖 `/var/run/docker.sock`）
+- **SpotBugs 跳过**：所有 `./gradlew build` 都加 `-x spotbugsMain -x spotbugsTest`。原因：main 分支上 `spotbugs-exclude.xml` 存在已知的 class 名错位（如 filter 写 `JsonNormalizer$Result` 但实际类是 `JsonNormalizerResult`；`DomainException` 的 `CT_CONSTRUCTOR_THROW` 排除只覆盖 `domain.policy` 包但类在 `common.error`）。这些与本次重构无关，留待独立 PR 修复
 
 ---
 
@@ -71,12 +73,16 @@ Expected：空输出。若有未提交内容，先 stash 或 commit。
 
 - [ ] **Step 2：跑 baseline build**
 
+**前置：确认 Docker desktop 已启动**（执行 `docker ps` 不报 socket 错即可）。
+
 Run:
 ```bash
-./gradlew build --no-daemon
+./gradlew build -x spotbugsMain -x spotbugsTest --no-daemon
 ```
 
 Expected：`BUILD SUCCESSFUL`（约 5-15 分钟）。若失败，必须先修复 baseline 再开始重构。
+
+注：跳过 SpotBugs 详见"平台前提"节的说明。
 
 - [ ] **Step 3：记录 baseline commit SHA 作回滚锚点**
 
@@ -1842,12 +1848,16 @@ Expected：空输出，或仅剩 spec/plan 文档中"本次重构 com.patra → 
 
 - [ ] **Step 3：clean build 全量验证**
 
+**前置：确认 Docker desktop 已启动**。
+
 Run:
 ```bash
-./gradlew clean build --no-daemon
+./gradlew clean build -x spotbugsMain -x spotbugsTest --no-daemon
 ```
 
-Expected：`BUILD SUCCESSFUL`。包含全部编译 + 所有单元测试。可能 5-15 分钟。
+Expected：`BUILD SUCCESSFUL`。包含全部编译 + 单元测试 + Testcontainers 集成测试。可能 5-15 分钟。
+
+注：跳过 SpotBugs 详见"平台前提"节。
 
 - [ ] **Step 4：4 个 boot 启动验证**
 
