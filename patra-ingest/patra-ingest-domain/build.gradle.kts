@@ -6,7 +6,7 @@
  */
 
 plugins {
-    id("patra.hexagonal-domain")
+    id("linqibin.hexagonal-domain")
 }
 
 // patra-common-core 由 patra.hexagonal-domain 插件提供

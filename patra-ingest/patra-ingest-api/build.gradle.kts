@@ -5,7 +5,7 @@
  */
 
 plugins {
-    id("patra.hexagonal-api")
+    id("linqibin.hexagonal-api")
 }
 
 dependencies {

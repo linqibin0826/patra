@@ -6,7 +6,7 @@
  */
 
 plugins {
-    id("patra.hexagonal-domain")
+    id("linqibin.hexagonal-domain")
 }
 
 // 所有依赖由 patra.hexagonal-domain 插件提供:

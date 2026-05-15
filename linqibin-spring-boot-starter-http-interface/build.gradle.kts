@@ -8,7 +8,7 @@
  */
 
 plugins {
-    id("patra.spring-boot-starter")
+    id("linqibin.spring-boot-starter")
 }
 
 dependencies {

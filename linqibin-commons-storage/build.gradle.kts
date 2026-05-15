@@ -8,7 +8,7 @@
  */
 
 plugins {
-    id("patra.java-library")  // Phase 1.3 后改为 linqibin.java-library
+    id("linqibin.java-library")  // Phase 1.3 后改为 linqibin.java-library
 }
 
 dependencies {
