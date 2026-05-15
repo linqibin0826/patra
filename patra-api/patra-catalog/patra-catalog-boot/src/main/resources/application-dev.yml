@@ -39,8 +39,8 @@ spring:
 # 开发环境日志降噪（保留全局 DEBUG 能力，仅抑制高频刷屏类）
 logging:
   level:
-    com.patra.catalog.app.usecase.publication.service.VenueInstanceGatewayImpl: INFO
-    com.patra.catalog.infra.adapter.persistence.VenueInstanceRepositoryAdapter: INFO
+    dev.linqibin.patra.catalog.app.usecase.publication.service.VenueInstanceGatewayImpl: INFO
+    dev.linqibin.patra.catalog.infra.adapter.persistence.VenueInstanceRepositoryAdapter: INFO
 
 # Spring Batch 独立数据源（与业务数据库隔离）
 patra:
