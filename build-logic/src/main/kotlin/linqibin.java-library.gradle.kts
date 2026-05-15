@@ -6,7 +6,7 @@
  */
 
 plugins {
-    id("patra.java-base")
+    id("linqibin.java-base")
     `java-library`
     `maven-publish`
 }
