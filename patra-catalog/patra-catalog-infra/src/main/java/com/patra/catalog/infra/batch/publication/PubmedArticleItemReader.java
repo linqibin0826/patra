@@ -3,7 +3,7 @@ package com.patra.catalog.infra.batch.publication;
 import com.patra.catalog.domain.port.parser.PubmedXmlParserPort;
 import com.patra.catalog.domain.port.source.FileDownloadPort;
 import com.patra.catalog.domain.port.source.FileDownloadResult;
-import com.patra.common.model.CanonicalPublication;
+import dev.linqibin.patra.common.model.CanonicalPublication;
 import java.io.FileInputStream;
 import java.net.URI;
 import java.nio.file.Files;

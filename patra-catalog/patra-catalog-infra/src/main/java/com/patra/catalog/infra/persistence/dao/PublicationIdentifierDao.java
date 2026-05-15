@@ -1,7 +1,7 @@
 package com.patra.catalog.infra.persistence.dao;
 
 import com.patra.catalog.infra.persistence.entity.PublicationIdentifierEntity;
-import com.patra.common.model.enums.PublicationIdentifierType;
+import dev.linqibin.patra.common.model.enums.PublicationIdentifierType;
 import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;

@@ -2,9 +2,9 @@ package com.patra.starter.provenance.pubmed.converter;
 
 import static org.assertj.core.api.Assertions.*;
 
-import com.patra.common.model.CanonicalPublication;
-import com.patra.common.model.enums.PublicationIdentifierType;
 import com.patra.starter.provenance.pubmed.model.response.PubmedPublication;
+import dev.linqibin.patra.common.model.CanonicalPublication;
+import dev.linqibin.patra.common.model.enums.PublicationIdentifierType;
 import java.time.LocalDate;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;

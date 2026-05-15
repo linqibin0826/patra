@@ -9,11 +9,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.patra.common.model.CanonicalPublication;
 import com.patra.ingest.domain.port.PublicationStoragePort;
 import com.patra.ingest.domain.port.StorageMetadataPort;
 import com.patra.ingest.domain.port.TechnicalRetryPort;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
+import dev.linqibin.patra.common.model.CanonicalPublication;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;

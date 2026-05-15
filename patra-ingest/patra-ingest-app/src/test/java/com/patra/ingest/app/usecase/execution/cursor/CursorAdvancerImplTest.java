@@ -6,7 +6,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-import com.patra.common.model.DataType;
 import com.patra.ingest.domain.model.entity.Cursor;
 import com.patra.ingest.domain.model.entity.CursorEvent;
 import com.patra.ingest.domain.model.vo.cursor.CursorLineage;
@@ -15,6 +14,7 @@ import com.patra.ingest.domain.model.vo.plan.WindowSpec;
 import com.patra.ingest.domain.port.CursorEventRepository;
 import com.patra.ingest.domain.port.CursorRepository;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
+import dev.linqibin.patra.common.model.DataType;
 import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;

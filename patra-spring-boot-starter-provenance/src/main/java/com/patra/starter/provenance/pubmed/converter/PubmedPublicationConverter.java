@@ -1,7 +1,5 @@
 package com.patra.starter.provenance.pubmed.converter;
 
-import com.patra.common.model.CanonicalPublication;
-import com.patra.common.model.enums.PublicationIdentifierType;
 import com.patra.starter.provenance.pubmed.model.response.PubmedPublication;
 import com.patra.starter.provenance.pubmed.model.response.PubmedPublication.Article;
 import com.patra.starter.provenance.pubmed.model.response.PubmedPublication.Author;
@@ -11,6 +9,8 @@ import com.patra.starter.provenance.pubmed.model.response.PubmedPublication.Jour
 import com.patra.starter.provenance.pubmed.model.response.PubmedPublication.MedlineJournalInfo;
 import com.patra.starter.provenance.pubmed.model.response.PubmedPublication.PubmedData;
 import com.patra.starter.provenance.pubmed.model.response.PubmedPublication.PubmedData.ArticleId;
+import dev.linqibin.patra.common.model.CanonicalPublication;
+import dev.linqibin.patra.common.model.enums.PublicationIdentifierType;
 import java.time.LocalDate;
 import java.time.Month;
 import java.util.ArrayList;

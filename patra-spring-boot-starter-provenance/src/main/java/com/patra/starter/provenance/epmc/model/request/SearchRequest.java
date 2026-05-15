@@ -1,8 +1,8 @@
 package com.patra.starter.provenance.epmc.model.request;
 
-import com.patra.common.provenance.api.params.EpmcParamKeys;
-import com.patra.common.provenance.api.values.epmc.Format;
 import com.patra.starter.provenance.common.gateway.ApiRequest;
+import dev.linqibin.patra.common.provenance.api.params.EpmcParamKeys;
+import dev.linqibin.patra.common.provenance.api.values.epmc.Format;
 import java.util.LinkedHashMap;
 import java.util.Map;
 

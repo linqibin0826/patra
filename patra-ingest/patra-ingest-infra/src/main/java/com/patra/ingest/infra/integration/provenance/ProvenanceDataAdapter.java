@@ -2,7 +2,6 @@ package com.patra.ingest.infra.integration.provenance;
 
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.date.TimeInterval;
-import com.patra.common.model.DataType;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import com.patra.ingest.domain.model.vo.query.QuerySession;
@@ -29,6 +28,7 @@ import com.patra.starter.provenance.internal.metadata.PlanMetadata;
 import dev.linqibin.commons.json.JsonMapperHolder;
 import dev.linqibin.commons.type.TypeReference;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
+import dev.linqibin.patra.common.model.DataType;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.List;

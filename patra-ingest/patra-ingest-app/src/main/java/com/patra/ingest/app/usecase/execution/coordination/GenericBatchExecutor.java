@@ -2,8 +2,6 @@ package com.patra.ingest.app.usecase.execution.coordination;
 
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.date.TimeInterval;
-import com.patra.common.model.CanonicalPublication;
-import com.patra.common.model.DataType;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.batch.BatchResult;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
@@ -13,6 +11,8 @@ import com.patra.ingest.domain.port.ProvenanceDataPort.DataFetchResult;
 import com.patra.ingest.domain.port.ProvenanceDataPort.DataFetchResult.ErrorType;
 import dev.linqibin.commons.type.TypeReference;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
+import dev.linqibin.patra.common.model.CanonicalPublication;
+import dev.linqibin.patra.common.model.DataType;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;

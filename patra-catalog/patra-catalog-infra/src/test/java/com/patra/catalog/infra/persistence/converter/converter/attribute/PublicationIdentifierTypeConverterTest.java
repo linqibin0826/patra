@@ -2,7 +2,7 @@ package com.patra.catalog.infra.persistence.converter.attribute;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.patra.common.model.enums.PublicationIdentifierType;
+import dev.linqibin.patra.common.model.enums.PublicationIdentifierType;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

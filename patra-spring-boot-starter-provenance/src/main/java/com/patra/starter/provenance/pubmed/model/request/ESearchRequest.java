@@ -1,8 +1,8 @@
 package com.patra.starter.provenance.pubmed.model.request;
 
-import com.patra.common.provenance.api.params.PubMedParamKeys;
-import com.patra.common.provenance.api.values.pubmed.RetMode;
 import com.patra.starter.provenance.common.gateway.ApiRequest;
+import dev.linqibin.patra.common.provenance.api.params.PubMedParamKeys;
+import dev.linqibin.patra.common.provenance.api.values.pubmed.RetMode;
 import java.util.LinkedHashMap;
 import java.util.Map;
 

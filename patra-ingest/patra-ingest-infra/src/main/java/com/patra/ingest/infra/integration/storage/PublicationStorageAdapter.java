@@ -1,6 +1,5 @@
 package com.patra.ingest.infra.integration.storage;
 
-import com.patra.common.model.CanonicalPublication;
 import com.patra.ingest.domain.port.PublicationStoragePort;
 import com.patra.starter.objectstorage.ObjectStorageTemplate;
 import com.patra.starter.objectstorage.StorageLocation;
@@ -8,6 +7,7 @@ import com.patra.starter.objectstorage.StorageLocationResolver;
 import com.patra.starter.objectstorage.domain.ObjectMetadata;
 import com.patra.starter.objectstorage.domain.UploadResult;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
+import dev.linqibin.patra.common.model.CanonicalPublication;
 import java.io.ByteArrayInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;

@@ -1,6 +1,6 @@
 package com.patra.catalog.domain.port.parser;
 
-import com.patra.common.model.CanonicalPublication;
+import dev.linqibin.patra.common.model.CanonicalPublication;
 import java.io.InputStream;
 import java.util.stream.Stream;
 

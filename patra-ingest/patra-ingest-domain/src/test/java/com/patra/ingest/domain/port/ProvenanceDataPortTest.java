@@ -2,8 +2,6 @@ package com.patra.ingest.domain.port;
 
 import static org.assertj.core.api.Assertions.*;
 
-import com.patra.common.model.CanonicalPublication;
-import com.patra.common.model.DataType;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import com.patra.ingest.domain.model.vo.query.QuerySession;
@@ -11,6 +9,8 @@ import com.patra.ingest.domain.port.ProvenanceDataPort.DataFetchResult;
 import com.patra.ingest.domain.port.ProvenanceDataPort.DataFetchResult.ErrorType;
 import dev.linqibin.commons.type.TypeReference;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
+import dev.linqibin.patra.common.model.CanonicalPublication;
+import dev.linqibin.patra.common.model.DataType;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
