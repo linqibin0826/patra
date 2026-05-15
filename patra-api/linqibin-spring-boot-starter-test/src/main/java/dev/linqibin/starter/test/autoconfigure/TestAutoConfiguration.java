@@ -18,7 +18,7 @@ import org.springframework.context.annotation.Import;
 ///
 /// ```xml
 /// <dependency>
-///     <groupId>com.patra</groupId>
+///     <groupId>dev.linqibin.patra</groupId>
 ///     <artifactId>patra-spring-boot-starter-test</artifactId>
 ///     <scope>test</scope>
 /// </dependency>

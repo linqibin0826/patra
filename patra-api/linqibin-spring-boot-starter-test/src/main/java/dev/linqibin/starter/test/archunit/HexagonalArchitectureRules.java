@@ -15,13 +15,13 @@ import org.springframework.transaction.annotation.Transactional;
 /// 六边形架构规则工厂。
 ///
 /// 提供参数化的架构规则，支持任意基础包前缀的项目复用同一套架构约束。
-/// 通过构造函数传入项目基础包（如 `"com.patra.ingest"`、`"com.sutra"`）生成对应的规则集。
+/// 通过构造函数传入项目基础包（如 `"dev.linqibin.patra.ingest"`、`"com.sutra"`）生成对应的规则集。
 ///
 /// ### 设计目的
 ///
 /// - **消除代码重复**: 不同服务的架构规则高度相似，仅基础包不同
 /// - **统一架构标准**: 所有服务遵循相同的六边形架构约束
-/// - **跨项目复用**: 不限定 `com.patra.*` 前缀，任意根包的项目均可使用
+/// - **跨项目复用**: 不限定 `dev.linqibin.*` 前缀，任意根包的项目均可使用
 ///
 /// ### 使用方式
 ///
@@ -30,10 +30,10 @@ import org.springframework.transaction.annotation.Transactional;
 ///
 ///     private static final JavaClasses classes = new ClassFileImporter()
 ///         .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
-///         .importPackages("com.patra.ingest");
+///         .importPackages("dev.linqibin.patra.ingest");
 ///
 ///     private static final HexagonalArchitectureRules rules =
-///         new HexagonalArchitectureRules("com.patra.ingest");
+///         new HexagonalArchitectureRules("dev.linqibin.patra.ingest");
 ///
 ///     @Test
 ///     void layerDependencies() {
@@ -60,12 +60,12 @@ import org.springframework.transaction.annotation.Transactional;
 /// @since 0.1.0
 public class HexagonalArchitectureRules {
 
-  /// 项目基础包（如 `"com.patra.ingest"`、`"com.sutra"`）。
+  /// 项目基础包（如 `"dev.linqibin.patra.ingest"`、`"com.sutra"`）。
   private final String basePackage;
 
   /// 构造函数。
   ///
-  /// @param basePackage 项目基础包前缀（如 `"com.patra.ingest"`、`"com.sutra"`），
+  /// @param basePackage 项目基础包前缀（如 `"dev.linqibin.patra.ingest"`、`"com.sutra"`），
   ///                    必须是 Domain/App/Infra/Adapter 等子包的共同父包
   public HexagonalArchitectureRules(String basePackage) {
     this.basePackage = Objects.requireNonNull(basePackage, "basePackage 不能为空");
