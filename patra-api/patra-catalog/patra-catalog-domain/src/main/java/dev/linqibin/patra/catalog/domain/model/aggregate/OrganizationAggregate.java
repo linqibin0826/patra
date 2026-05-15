@@ -2,6 +2,7 @@ package dev.linqibin.patra.catalog.domain.model.aggregate;
 
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
+import dev.linqibin.commons.domain.AggregateRoot;
 import dev.linqibin.patra.catalog.domain.model.enums.ExternalIdType;
 import dev.linqibin.patra.catalog.domain.model.enums.OrganizationStatus;
 import dev.linqibin.patra.catalog.domain.model.enums.OrganizationType;
@@ -13,7 +14,6 @@ import dev.linqibin.patra.catalog.domain.model.vo.organization.OrganizationLink;
 import dev.linqibin.patra.catalog.domain.model.vo.organization.OrganizationName;
 import dev.linqibin.patra.catalog.domain.model.vo.organization.OrganizationRelation;
 import dev.linqibin.patra.catalog.domain.model.vo.organization.RorId;
-import dev.linqibin.commons.domain.AggregateRoot;
 import java.io.Serial;
 import java.util.ArrayList;
 import java.util.Collections;

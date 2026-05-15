@@ -1,13 +1,13 @@
 package dev.linqibin.patra.catalog.adapter.scheduler.job;
 
+import com.xxl.job.core.context.XxlJobHelper;
+import com.xxl.job.core.handler.annotation.XxlJob;
+import dev.linqibin.commons.cqrs.CommandBus;
 import dev.linqibin.patra.catalog.adapter.scheduler.config.RorDataSourceProperties;
 import dev.linqibin.patra.catalog.adapter.scheduler.exception.RorConfigurationException;
 import dev.linqibin.patra.catalog.adapter.scheduler.util.RorFileNameParser;
 import dev.linqibin.patra.catalog.app.usecase.organization.command.RorOrganizationImportCommand;
 import dev.linqibin.patra.catalog.app.usecase.organization.command.RorOrganizationImportResult;
-import com.xxl.job.core.context.XxlJobHelper;
-import com.xxl.job.core.handler.annotation.XxlJob;
-import dev.linqibin.commons.cqrs.CommandBus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

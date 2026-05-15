@@ -1,10 +1,10 @@
 package dev.linqibin.patra.catalog.infra.persistence.entity;
 
+import com.patra.starter.jpa.entity.SoftDeletableJpaEntity;
 import dev.linqibin.patra.catalog.domain.model.vo.venue.CitationMetrics;
 import dev.linqibin.patra.catalog.domain.model.vo.venue.OpenAccessInfo;
 import dev.linqibin.patra.catalog.domain.model.vo.venue.PublicationProfile;
 import dev.linqibin.patra.catalog.domain.model.vo.venue.Society;
-import com.patra.starter.jpa.entity.SoftDeletableJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;

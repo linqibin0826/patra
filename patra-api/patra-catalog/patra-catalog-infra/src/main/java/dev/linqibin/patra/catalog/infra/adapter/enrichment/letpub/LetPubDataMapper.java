@@ -1,12 +1,12 @@
 package dev.linqibin.patra.catalog.infra.adapter.enrichment.letpub;
 
+import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import dev.linqibin.patra.catalog.domain.port.enrichment.LetPubVenueData;
 import dev.linqibin.patra.catalog.domain.port.enrichment.LetPubVenueData.CasPartition;
 import dev.linqibin.patra.catalog.domain.port.enrichment.LetPubVenueData.CasWarningRecord;
 import dev.linqibin.patra.catalog.infra.persistence.entity.CasRatingEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.CasWarningEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.JcrRatingEntity;
-import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;

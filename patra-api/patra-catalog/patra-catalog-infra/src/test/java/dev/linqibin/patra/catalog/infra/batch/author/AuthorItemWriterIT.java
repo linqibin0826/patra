@@ -2,12 +2,12 @@ package dev.linqibin.patra.catalog.infra.batch.author;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import dev.linqibin.patra.catalog.domain.model.aggregate.AuthorAggregate;
 import dev.linqibin.patra.catalog.infra.adapter.persistence.AuthorRepositoryAdapter;
 import dev.linqibin.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
 import dev.linqibin.patra.catalog.infra.persistence.dao.AuthorDao;
 import dev.linqibin.patra.catalog.infra.persistence.entity.AuthorEntity;
-import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -300,7 +300,9 @@ class AuthorItemWriterIT {
 
       AuthorAggregate author1 = AuthorAggregate.fromPubMedComputed("SARMA+R");
       author1.withNameVariants(
-          List.of(dev.linqibin.patra.catalog.domain.model.vo.author.AuthorNameVariant.parse("Sarma,Rup,R")));
+          List.of(
+              dev.linqibin.patra.catalog.domain.model.vo.author.AuthorNameVariant.parse(
+                  "Sarma,Rup,R")));
       author1.addOrcid(dev.linqibin.patra.catalog.domain.model.vo.author.Orcid.of(sharedOrcid));
 
       AuthorAggregate author2 = AuthorAggregate.fromPubMedComputed("SARMA+R");
@@ -333,7 +335,8 @@ class AuthorItemWriterIT {
       AuthorAggregate author1 = AuthorAggregate.fromPubMedComputed("SMITH+R");
       author1.withNameVariants(
           List.of(
-              dev.linqibin.patra.catalog.domain.model.vo.author.AuthorNameVariant.parse("Smith,Raymond,R")));
+              dev.linqibin.patra.catalog.domain.model.vo.author.AuthorNameVariant.parse(
+                  "Smith,Raymond,R")));
       author1.addOrcid(dev.linqibin.patra.catalog.domain.model.vo.author.Orcid.of(existingOrcid));
 
       Chunk<AuthorAggregate> firstBatch = new Chunk<>(List.of(author1));
@@ -356,7 +359,8 @@ class AuthorItemWriterIT {
       AuthorAggregate author3 = AuthorAggregate.fromPubMedComputed("JONES+M");
       author3.withNameVariants(
           List.of(
-              dev.linqibin.patra.catalog.domain.model.vo.author.AuthorNameVariant.parse("Jones,Mary,M")));
+              dev.linqibin.patra.catalog.domain.model.vo.author.AuthorNameVariant.parse(
+                  "Jones,Mary,M")));
 
       Chunk<AuthorAggregate> secondBatch = new Chunk<>(List.of(author2, author3));
       authorItemWriter.write(secondBatch);
@@ -390,7 +394,9 @@ class AuthorItemWriterIT {
 
       AuthorAggregate author1 = AuthorAggregate.fromPubMedComputed("WANG+L");
       author1.withNameVariants(
-          List.of(dev.linqibin.patra.catalog.domain.model.vo.author.AuthorNameVariant.parse("Wang,Lei,L")));
+          List.of(
+              dev.linqibin.patra.catalog.domain.model.vo.author.AuthorNameVariant.parse(
+                  "Wang,Lei,L")));
       author1.addOrcid(dev.linqibin.patra.catalog.domain.model.vo.author.Orcid.of(existingOrcid));
 
       Chunk<AuthorAggregate> firstBatch = new Chunk<>(List.of(author1));
@@ -400,7 +406,8 @@ class AuthorItemWriterIT {
       AuthorAggregate author2 = AuthorAggregate.fromPubMedComputed("WANG+L");
       author2.withNameVariants(
           List.of(
-              dev.linqibin.patra.catalog.domain.model.vo.author.AuthorNameVariant.parse("Wang,Lei,L"), // 重复
+              dev.linqibin.patra.catalog.domain.model.vo.author.AuthorNameVariant.parse(
+                  "Wang,Lei,L"), // 重复
               dev.linqibin.patra.catalog.domain.model.vo.author.AuthorNameVariant.parse(
                   "Wang,Lei Ming,LM"))); // 新变体
       author2.addOrcid(dev.linqibin.patra.catalog.domain.model.vo.author.Orcid.of(existingOrcid));
@@ -425,12 +432,15 @@ class AuthorItemWriterIT {
       // Given: 两个无 ORCID 的作者
       AuthorAggregate author1 = AuthorAggregate.fromPubMedComputed("ZHANG+W");
       author1.withNameVariants(
-          List.of(dev.linqibin.patra.catalog.domain.model.vo.author.AuthorNameVariant.parse("Zhang,Wei,W")));
+          List.of(
+              dev.linqibin.patra.catalog.domain.model.vo.author.AuthorNameVariant.parse(
+                  "Zhang,Wei,W")));
 
       AuthorAggregate author2 = AuthorAggregate.fromPubMedComputed("LI+X");
       author2.withNameVariants(
           List.of(
-              dev.linqibin.patra.catalog.domain.model.vo.author.AuthorNameVariant.parse("Li,Xiaoming,X")));
+              dev.linqibin.patra.catalog.domain.model.vo.author.AuthorNameVariant.parse(
+                  "Li,Xiaoming,X")));
 
       // When: 写入
       Chunk<AuthorAggregate> chunk = new Chunk<>(List.of(author1, author2));

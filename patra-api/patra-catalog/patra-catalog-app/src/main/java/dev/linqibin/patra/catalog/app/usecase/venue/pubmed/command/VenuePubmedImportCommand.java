@@ -1,9 +1,9 @@
 package dev.linqibin.patra.catalog.app.usecase.venue.pubmed.command;
 
 import cn.hutool.core.text.CharSequenceUtil;
+import dev.linqibin.commons.cqrs.Command;
 import dev.linqibin.patra.catalog.app.usecase.venue.pubmed.dto.VenuePubmedImportResult;
 import dev.linqibin.patra.catalog.domain.exception.CatalogScheduleParameterException;
-import dev.linqibin.commons.cqrs.Command;
 import java.net.URI;
 
 /// PubMed Venue 数据导入命令（Adapter → Application）。

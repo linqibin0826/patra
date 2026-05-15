@@ -1,5 +1,6 @@
 package dev.linqibin.patra.catalog.infra.adapter.persistence;
 
+import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import dev.linqibin.patra.catalog.domain.model.aggregate.AuthorAggregate;
 import dev.linqibin.patra.catalog.domain.model.vo.author.AuthorId;
 import dev.linqibin.patra.catalog.domain.model.vo.author.AuthorNameVariant;
@@ -10,7 +11,6 @@ import dev.linqibin.patra.catalog.infra.persistence.dao.AuthorDao;
 import dev.linqibin.patra.catalog.infra.persistence.entity.AuthorEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.AuthorNameVariantEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.AuthorOrcidEntity;
-import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import jakarta.persistence.EntityManager;
 import java.util.Collection;
 import java.util.HashMap;

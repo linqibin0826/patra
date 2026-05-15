@@ -2,6 +2,7 @@ package dev.linqibin.patra.catalog.domain.model.aggregate;
 
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
+import dev.linqibin.commons.domain.AggregateRoot;
 import dev.linqibin.patra.catalog.domain.model.enums.OaStatus;
 import dev.linqibin.patra.catalog.domain.model.enums.PublicationMedium;
 import dev.linqibin.patra.catalog.domain.model.enums.PublicationStatus;
@@ -11,7 +12,6 @@ import dev.linqibin.patra.catalog.domain.model.vo.publication.PublicationId;
 import dev.linqibin.patra.catalog.domain.model.vo.publication.PublicationIdentifier;
 import dev.linqibin.patra.catalog.domain.model.vo.venue.VenueId;
 import dev.linqibin.patra.catalog.domain.model.vo.venue.VenueInstanceId;
-import dev.linqibin.commons.domain.AggregateRoot;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.common.model.enums.PublicationIdentifierType;
 import java.io.Serial;

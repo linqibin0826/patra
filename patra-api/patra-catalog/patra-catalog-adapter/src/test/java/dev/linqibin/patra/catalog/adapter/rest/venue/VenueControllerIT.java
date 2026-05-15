@@ -5,12 +5,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import dev.linqibin.commons.query.PageResult;
 import dev.linqibin.patra.catalog.adapter.config.TestConfiguration;
 import dev.linqibin.patra.catalog.app.usecase.publication.query.PublicationQueryService;
 import dev.linqibin.patra.catalog.app.usecase.venue.query.VenueQueryService;
 import dev.linqibin.patra.catalog.app.usecase.venue.query.dto.VenueListQuery;
 import dev.linqibin.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
-import dev.linqibin.commons.query.PageResult;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;

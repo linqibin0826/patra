@@ -2,6 +2,8 @@ package dev.linqibin.patra.catalog.infra.adapter.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
+import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import dev.linqibin.patra.catalog.domain.model.enums.CasWarningLevel;
 import dev.linqibin.patra.catalog.domain.model.read.venue.VenueDetailReadModel;
 import dev.linqibin.patra.catalog.domain.model.read.venue.VenueDetailReadModel.IndexingHistoryItem;
@@ -29,8 +31,6 @@ import dev.linqibin.patra.catalog.infra.persistence.entity.VenueEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.VenueIndexingHistoryEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.VenueMeshEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.VenueRelationEntity;
-import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
-import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;

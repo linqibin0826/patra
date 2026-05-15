@@ -1,7 +1,7 @@
 package dev.linqibin.patra.catalog.app.usecase.venue.letpub.command;
 
-import dev.linqibin.patra.catalog.app.usecase.venue.VenueEnrichRunStats;
 import dev.linqibin.commons.cqrs.Command;
+import dev.linqibin.patra.catalog.app.usecase.venue.VenueEnrichRunStats;
 
 /// LetPub 期刊富化命令。
 ///

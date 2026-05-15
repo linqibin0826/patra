@@ -1,9 +1,9 @@
 package dev.linqibin.patra.catalog.infra.adapter.integration.registry;
 
+import dev.linqibin.commons.error.remote.RemoteCallException;
 import dev.linqibin.patra.catalog.domain.model.enums.DictionaryType;
 import dev.linqibin.patra.catalog.domain.model.vo.common.SourceStandard;
 import dev.linqibin.patra.catalog.domain.port.registry.DictionaryResolverPort;
-import dev.linqibin.commons.error.remote.RemoteCallException;
 import dev.linqibin.patra.registry.api.dto.dict.DictionaryResolveItemResp;
 import dev.linqibin.patra.registry.api.dto.dict.DictionaryResolveReq;
 import dev.linqibin.patra.registry.api.dto.dict.DictionaryResolveResp;

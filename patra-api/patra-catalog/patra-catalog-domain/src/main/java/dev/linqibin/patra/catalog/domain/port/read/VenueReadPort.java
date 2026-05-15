@@ -1,13 +1,13 @@
 package dev.linqibin.patra.catalog.domain.port.read;
 
+import dev.linqibin.commons.query.PageResult;
+import dev.linqibin.commons.query.PagingParams;
 import dev.linqibin.patra.catalog.domain.model.read.venue.VenueDetailReadModel;
 import dev.linqibin.patra.catalog.domain.model.read.venue.VenueFilter;
 import dev.linqibin.patra.catalog.domain.model.read.venue.VenueInstanceSummaryReadModel;
 import dev.linqibin.patra.catalog.domain.model.read.venue.VenueRatingHistoryReadModel;
 import dev.linqibin.patra.catalog.domain.model.read.venue.VenueStatsReadModel;
 import dev.linqibin.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
-import dev.linqibin.commons.query.PageResult;
-import dev.linqibin.commons.query.PagingParams;
 import java.util.List;
 import java.util.Optional;
 

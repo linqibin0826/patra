@@ -3,6 +3,7 @@ package dev.linqibin.patra.catalog.domain.model.aggregate;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import dev.linqibin.commons.domain.ChildEntityChange;
 import dev.linqibin.patra.catalog.domain.model.entity.MeshConcept;
 import dev.linqibin.patra.catalog.domain.model.enums.ScrClass;
 import dev.linqibin.patra.catalog.domain.model.vo.mesh.HeadingMappedTo;
@@ -11,7 +12,6 @@ import dev.linqibin.patra.catalog.domain.model.vo.mesh.MeshScrId;
 import dev.linqibin.patra.catalog.domain.model.vo.mesh.MeshUI;
 import dev.linqibin.patra.catalog.domain.model.vo.mesh.PharmacologicalAction;
 import dev.linqibin.patra.catalog.domain.model.vo.mesh.ScrSource;
-import dev.linqibin.commons.domain.ChildEntityChange;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;

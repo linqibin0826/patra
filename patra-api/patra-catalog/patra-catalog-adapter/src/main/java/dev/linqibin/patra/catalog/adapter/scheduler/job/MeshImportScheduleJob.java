@@ -1,5 +1,8 @@
 package dev.linqibin.patra.catalog.adapter.scheduler.job;
 
+import com.xxl.job.core.context.XxlJobHelper;
+import com.xxl.job.core.handler.annotation.XxlJob;
+import dev.linqibin.commons.cqrs.CommandBus;
 import dev.linqibin.patra.catalog.adapter.scheduler.config.MeshDataSourceProperties;
 import dev.linqibin.patra.catalog.adapter.scheduler.exception.MeshConfigurationException;
 import dev.linqibin.patra.catalog.adapter.scheduler.util.MeshFileNameParser;
@@ -9,9 +12,6 @@ import dev.linqibin.patra.catalog.app.usecase.mesh.command.MeshScrImportCommand;
 import dev.linqibin.patra.catalog.app.usecase.mesh.dto.MeshDescriptorImportResult;
 import dev.linqibin.patra.catalog.app.usecase.mesh.dto.MeshQualifierImportResult;
 import dev.linqibin.patra.catalog.app.usecase.mesh.dto.MeshScrImportResult;
-import com.xxl.job.core.context.XxlJobHelper;
-import com.xxl.job.core.handler.annotation.XxlJob;
-import dev.linqibin.commons.cqrs.CommandBus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

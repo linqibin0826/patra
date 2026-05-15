@@ -1,5 +1,6 @@
 package dev.linqibin.patra.catalog.adapter.rest.venue;
 
+import dev.linqibin.commons.query.PageResult;
 import dev.linqibin.patra.catalog.adapter.rest.publication.mapper.PublicationApiConverter;
 import dev.linqibin.patra.catalog.adapter.rest.publication.response.PublicationItemResponse;
 import dev.linqibin.patra.catalog.adapter.rest.venue.mapper.VenueApiConverter;
@@ -23,7 +24,6 @@ import dev.linqibin.patra.catalog.app.usecase.venue.query.dto.VenueInstanceListQ
 import dev.linqibin.patra.catalog.app.usecase.venue.query.dto.VenueListQuery;
 import dev.linqibin.patra.catalog.app.usecase.venue.query.dto.VenueRatingHistoryQuery;
 import dev.linqibin.patra.catalog.app.usecase.venue.query.dto.VenueStatsQuery;
-import dev.linqibin.commons.query.PageResult;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

@@ -2,6 +2,7 @@ package dev.linqibin.patra.catalog.domain.model.aggregate;
 
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
+import dev.linqibin.commons.domain.AggregateRoot;
 import dev.linqibin.patra.catalog.domain.model.entity.MeshConcept;
 import dev.linqibin.patra.catalog.domain.model.entity.MeshEntryTerm;
 import dev.linqibin.patra.catalog.domain.model.entity.MeshTreeNumber;
@@ -12,7 +13,6 @@ import dev.linqibin.patra.catalog.domain.model.vo.mesh.MeshDescriptorId;
 import dev.linqibin.patra.catalog.domain.model.vo.mesh.MeshUI;
 import dev.linqibin.patra.catalog.domain.model.vo.mesh.PharmacologicalAction;
 import dev.linqibin.patra.catalog.domain.model.vo.mesh.SeeRelatedDescriptor;
-import dev.linqibin.commons.domain.AggregateRoot;
 import java.io.Serial;
 import java.time.LocalDate;
 import java.util.ArrayList;

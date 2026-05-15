@@ -1,5 +1,6 @@
 package dev.linqibin.patra.catalog.adapter.rest.publication;
 
+import dev.linqibin.commons.query.PageResult;
 import dev.linqibin.patra.catalog.adapter.rest.publication.mapper.PublicationApiConverter;
 import dev.linqibin.patra.catalog.adapter.rest.publication.request.PublicationListRequest;
 import dev.linqibin.patra.catalog.adapter.rest.publication.response.PublicationDetailResponse;
@@ -7,7 +8,6 @@ import dev.linqibin.patra.catalog.adapter.rest.publication.response.PublicationI
 import dev.linqibin.patra.catalog.app.usecase.publication.query.PublicationQueryService;
 import dev.linqibin.patra.catalog.app.usecase.publication.query.dto.PublicationDetailQuery;
 import dev.linqibin.patra.catalog.app.usecase.publication.query.dto.PublicationListQuery;
-import dev.linqibin.commons.query.PageResult;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;

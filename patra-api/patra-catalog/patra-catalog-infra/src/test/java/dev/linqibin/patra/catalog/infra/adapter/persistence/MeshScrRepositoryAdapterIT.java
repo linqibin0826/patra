@@ -3,6 +3,7 @@ package dev.linqibin.patra.catalog.infra.adapter.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
+import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import dev.linqibin.patra.catalog.domain.model.aggregate.MeshScrAggregate;
 import dev.linqibin.patra.catalog.domain.model.entity.MeshConcept;
 import dev.linqibin.patra.catalog.domain.model.enums.ScrClass;
@@ -18,7 +19,6 @@ import dev.linqibin.patra.catalog.infra.persistence.dao.MeshScrHeadingMappedToDa
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshScrIndexingInfoDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshScrPharmacologicalActionDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshScrSourceDao;
-import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
