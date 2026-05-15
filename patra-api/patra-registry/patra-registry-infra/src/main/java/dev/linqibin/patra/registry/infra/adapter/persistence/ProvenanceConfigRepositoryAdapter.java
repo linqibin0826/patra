@@ -1,5 +1,6 @@
 package dev.linqibin.patra.registry.infra.adapter.persistence;
 
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.registry.domain.model.aggregate.ProvenanceConfiguration;
 import dev.linqibin.patra.registry.domain.model.vo.provenance.*;
 import dev.linqibin.patra.registry.domain.port.ProvenanceConfigRepository;
@@ -7,7 +8,6 @@ import dev.linqibin.patra.registry.domain.support.RegistryKeyStandardizer;
 import dev.linqibin.patra.registry.infra.adapter.persistence.converter.mapper.ProvenanceJpaMapper;
 import dev.linqibin.patra.registry.infra.adapter.persistence.dao.provenance.*;
 import dev.linqibin.patra.registry.infra.adapter.persistence.entity.provenance.ProvenanceEntity;
-import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;

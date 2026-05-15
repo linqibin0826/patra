@@ -1,10 +1,10 @@
 package dev.linqibin.patra.registry.config;
 
-import dev.linqibin.patra.registry.domain.exception.DomainValidationException;
-import dev.linqibin.patra.registry.domain.exception.RegistryQuotaExceeded;
 import com.patra.starter.core.error.spi.ErrorMappingContributor;
 import dev.linqibin.commons.error.codes.ErrorCodeLike;
 import dev.linqibin.commons.error.codes.HttpStdErrors;
+import dev.linqibin.patra.registry.domain.exception.DomainValidationException;
+import dev.linqibin.patra.registry.domain.exception.RegistryQuotaExceeded;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;

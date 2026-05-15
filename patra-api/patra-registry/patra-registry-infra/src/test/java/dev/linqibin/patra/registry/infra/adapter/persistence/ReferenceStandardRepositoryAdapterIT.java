@@ -2,13 +2,13 @@ package dev.linqibin.patra.registry.infra.adapter.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.patra.starter.jpa.autoconfig.HibernatePropertiesCustomizer;
+import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
+import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import dev.linqibin.patra.registry.domain.model.vo.reference.ReferenceStandard;
 import dev.linqibin.patra.registry.infra.adapter.persistence.dao.reference.ReferenceStandardDao;
 import dev.linqibin.patra.registry.infra.adapter.persistence.entity.reference.ReferenceStandardEntity;
 import dev.linqibin.patra.registry.infra.config.RegistryMySQLContainerInitializer;
-import com.patra.starter.jpa.autoconfig.HibernatePropertiesCustomizer;
-import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
-import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;

@@ -4,10 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import dev.linqibin.patra.registry.domain.exception.DomainValidationException;
-import dev.linqibin.patra.registry.domain.exception.RegistryQuotaExceeded;
 import dev.linqibin.commons.error.codes.ErrorCodeLike;
 import dev.linqibin.commons.error.codes.HttpStdErrors;
+import dev.linqibin.patra.registry.domain.exception.DomainValidationException;
+import dev.linqibin.patra.registry.domain.exception.RegistryQuotaExceeded;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
