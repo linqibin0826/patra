@@ -1,6 +1,6 @@
 package com.patra.catalog.infra.persistence.converter.attribute;
 
-import com.patra.common.model.enums.PublicationIdentifierType;
+import dev.linqibin.patra.common.model.enums.PublicationIdentifierType;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 

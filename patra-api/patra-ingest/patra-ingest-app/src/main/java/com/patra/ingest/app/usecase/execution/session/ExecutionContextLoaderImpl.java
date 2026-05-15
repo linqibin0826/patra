@@ -1,6 +1,5 @@
 package com.patra.ingest.app.usecase.execution.session;
 
-import com.patra.common.model.DataType;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
@@ -13,6 +12,7 @@ import com.patra.ingest.domain.port.ExpressionCompilerPort;
 import com.patra.ingest.domain.port.PlanRepository;
 import com.patra.ingest.domain.port.PlanSliceRepository;
 import com.patra.ingest.domain.port.TaskRepository;
+import dev.linqibin.patra.common.model.DataType;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

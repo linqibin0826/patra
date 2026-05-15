@@ -2,10 +2,10 @@ package com.patra.ingest.domain.model.vo.execution;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.patra.common.model.DataType;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.plan.WindowSpec;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
+import dev.linqibin.patra.common.model.DataType;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

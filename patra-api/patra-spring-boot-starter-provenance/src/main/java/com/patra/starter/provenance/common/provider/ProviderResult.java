@@ -1,6 +1,6 @@
 package com.patra.starter.provenance.common.provider;
 
-import com.patra.common.model.DataType;
+import dev.linqibin.patra.common.model.DataType;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;

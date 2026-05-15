@@ -1,7 +1,7 @@
 package com.patra.starter.provenance.epmc.request;
 
-import com.patra.common.provenance.api.params.EpmcParamKeys;
 import com.patra.starter.provenance.epmc.model.request.SearchRequest;
+import dev.linqibin.patra.common.provenance.api.params.EpmcParamKeys;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeType;
 

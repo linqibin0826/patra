@@ -2,9 +2,9 @@ package com.patra.starter.provenance.common.processor;
 
 import static org.assertj.core.api.Assertions.*;
 
-import com.patra.common.model.CanonicalPublication;
-import com.patra.common.model.DataType;
 import com.patra.starter.provenance.common.provider.ProviderRequest;
+import dev.linqibin.patra.common.model.CanonicalPublication;
+import dev.linqibin.patra.common.model.DataType;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;

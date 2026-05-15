@@ -4,7 +4,7 @@ import com.patra.catalog.domain.exception.XmlParseException;
 import com.patra.catalog.domain.port.parser.PubmedXmlParserPort;
 import com.patra.catalog.infra.parser.strategy.CanonicalPublicationParsingStrategy;
 import com.patra.catalog.infra.parser.support.AbstractStaxParserAdapter;
-import com.patra.common.model.CanonicalPublication;
+import dev.linqibin.patra.common.model.CanonicalPublication;
 import java.io.InputStream;
 import java.util.stream.Stream;
 import org.springframework.stereotype.Component;

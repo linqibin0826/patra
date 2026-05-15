@@ -1,7 +1,7 @@
 package com.patra.starter.provenance.crossref.request;
 
-import com.patra.common.provenance.api.params.CrossrefParamKeys;
 import com.patra.starter.provenance.crossref.model.request.CrossrefWorksRequest;
+import dev.linqibin.patra.common.provenance.api.params.CrossrefParamKeys;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeType;
 

@@ -1,11 +1,11 @@
 package com.patra.starter.provenance.common.provider;
 
-import com.patra.common.model.DataType;
 import com.patra.starter.provenance.common.config.ProvenanceConfig;
 import com.patra.starter.provenance.common.exception.ProvenanceClientException;
 import com.patra.starter.provenance.common.processor.DataProcessor;
 import com.patra.starter.provenance.internal.metadata.PlanMetadata;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
+import dev.linqibin.patra.common.model.DataType;
 import java.util.Optional;
 import java.util.Set;
 import tools.jackson.databind.JsonNode;

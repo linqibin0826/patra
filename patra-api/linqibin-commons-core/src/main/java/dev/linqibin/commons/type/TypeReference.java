@@ -110,7 +110,7 @@ public abstract class TypeReference<T> {
   /// TypeReference<List<CanonicalPublication>> ref = new TypeReference<>() {;
   /// Type type = ref.getType();
   /// // type instanceof ParameterizedType
-  /// // type.toString() = "java.util.List<com.patra.common.model.CanonicalPublication>"
+  /// // type.toString() = "java.util.List<dev.linqibin.patra.common.model.CanonicalPublication>"
   /// ```
   ///
   /// @return 完整的类型信息

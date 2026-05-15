@@ -1,6 +1,6 @@
 package com.patra.starter.provenance.common.processor;
 
-import com.patra.common.model.DataType;
+import dev.linqibin.patra.common.model.DataType;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;

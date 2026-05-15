@@ -3,8 +3,8 @@ package com.patra.catalog.infra.parser;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import com.patra.common.model.CanonicalPublication;
-import com.patra.common.model.enums.PublicationIdentifierType;
+import dev.linqibin.patra.common.model.CanonicalPublication;
+import dev.linqibin.patra.common.model.enums.PublicationIdentifierType;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;

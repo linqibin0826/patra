@@ -196,7 +196,7 @@ public class HexagonalArchitectureRules {
             "cn.hutool..",
             "tools.jackson..",
             "com.fasterxml.jackson.annotation..",
-            "com.patra.common..",
+            "dev.linqibin.patra.common..",
             basePackage + ".domain..")
         .as("Domain 层仅允许依赖：JDK、Lombok、Hutool、Jackson、patra-common")
         .because("限制依赖范围确保 Domain 层纯净（CHK-ARCH-001）");
