@@ -16,7 +16,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 ///
 /// @author linqibin
 /// @since 0.1.0
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "dev.linqibin")
 public class PatraRegistryApplication {
 
   /// 应用程序入口点,启动 Spring Boot 应用。
