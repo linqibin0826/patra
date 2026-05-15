@@ -1,8 +1,8 @@
 package dev.linqibin.patra.starter.expr.compiler.check;
 
+import dev.linqibin.patra.expr.Expr;
 import dev.linqibin.patra.starter.expr.compiler.model.Issue;
 import dev.linqibin.patra.starter.expr.compiler.snapshot.ProvenanceSnapshot;
-import dev.linqibin.patra.expr.Expr;
 import java.util.List;
 
 /// 能力检查器,验证表达式是否符合数据源的能力限制。

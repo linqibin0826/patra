@@ -1,7 +1,5 @@
 package dev.linqibin.patra.starter.expr.compiler.check;
 
-import dev.linqibin.patra.starter.expr.compiler.model.Issue;
-import dev.linqibin.patra.starter.expr.compiler.snapshot.ProvenanceSnapshot;
 import dev.linqibin.patra.expr.And;
 import dev.linqibin.patra.expr.Atom;
 import dev.linqibin.patra.expr.CaseSensitivity;
@@ -9,6 +7,8 @@ import dev.linqibin.patra.expr.Const;
 import dev.linqibin.patra.expr.Expr;
 import dev.linqibin.patra.expr.Not;
 import dev.linqibin.patra.expr.Or;
+import dev.linqibin.patra.starter.expr.compiler.model.Issue;
+import dev.linqibin.patra.starter.expr.compiler.snapshot.ProvenanceSnapshot;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;

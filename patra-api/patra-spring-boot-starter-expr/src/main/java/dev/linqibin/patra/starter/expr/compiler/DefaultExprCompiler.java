@@ -1,5 +1,6 @@
 package dev.linqibin.patra.starter.expr.compiler;
 
+import dev.linqibin.patra.expr.Expr;
 import dev.linqibin.patra.starter.expr.compiler.boot.CompilerProperties;
 import dev.linqibin.patra.starter.expr.compiler.boot.ExprModeProperties;
 import dev.linqibin.patra.starter.expr.compiler.check.CapabilityChecker;
@@ -17,7 +18,6 @@ import dev.linqibin.patra.starter.expr.compiler.snapshot.ProvenanceSnapshot;
 import dev.linqibin.patra.starter.expr.compiler.snapshot.RuleSnapshotLoader;
 import dev.linqibin.patra.starter.expr.compiler.transform.TransformRegistry;
 import dev.linqibin.patra.starter.expr.compiler.transform.ValueTransform;
-import dev.linqibin.patra.expr.Expr;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
