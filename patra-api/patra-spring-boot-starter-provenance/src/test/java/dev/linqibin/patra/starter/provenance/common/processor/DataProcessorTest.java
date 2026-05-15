@@ -2,12 +2,12 @@ package dev.linqibin.patra.starter.provenance.common.processor;
 
 import static org.assertj.core.api.Assertions.*;
 
-import dev.linqibin.patra.starter.provenance.common.config.ProvenanceConfig;
-import dev.linqibin.patra.starter.provenance.common.provider.BatchExecutionParams;
-import dev.linqibin.patra.starter.provenance.common.provider.ProviderRequest;
 import dev.linqibin.patra.common.model.CanonicalPublication;
 import dev.linqibin.patra.common.model.DataType;
 import dev.linqibin.patra.common.model.enums.PublicationIdentifierType;
+import dev.linqibin.patra.starter.provenance.common.config.ProvenanceConfig;
+import dev.linqibin.patra.starter.provenance.common.provider.BatchExecutionParams;
+import dev.linqibin.patra.starter.provenance.common.provider.ProviderRequest;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;

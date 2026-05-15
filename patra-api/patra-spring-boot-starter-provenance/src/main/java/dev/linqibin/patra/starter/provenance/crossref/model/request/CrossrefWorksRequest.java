@@ -1,7 +1,7 @@
 package dev.linqibin.patra.starter.provenance.crossref.model.request;
 
-import dev.linqibin.patra.starter.provenance.common.gateway.ApiRequest;
 import dev.linqibin.patra.common.provenance.api.params.CrossrefParamKeys;
+import dev.linqibin.patra.starter.provenance.common.gateway.ApiRequest;
 import java.util.LinkedHashMap;
 import java.util.Map;
 

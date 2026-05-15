@@ -5,6 +5,9 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.withSettings;
 
+import dev.linqibin.patra.common.model.CanonicalPublication;
+import dev.linqibin.patra.common.model.DataType;
+import dev.linqibin.patra.common.model.enums.PublicationIdentifierType;
 import dev.linqibin.patra.starter.provenance.boot.ProvenanceProperties;
 import dev.linqibin.patra.starter.provenance.common.config.BatchingConfig;
 import dev.linqibin.patra.starter.provenance.common.config.ProvenanceConfig;
@@ -24,9 +27,6 @@ import dev.linqibin.patra.starter.provenance.pubmed.model.response.EFetchRespons
 import dev.linqibin.patra.starter.provenance.pubmed.model.response.EPostResponse;
 import dev.linqibin.patra.starter.provenance.pubmed.model.response.ESearchResponse;
 import dev.linqibin.patra.starter.provenance.pubmed.model.response.PubmedPublication;
-import dev.linqibin.patra.common.model.CanonicalPublication;
-import dev.linqibin.patra.common.model.DataType;
-import dev.linqibin.patra.common.model.enums.PublicationIdentifierType;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
