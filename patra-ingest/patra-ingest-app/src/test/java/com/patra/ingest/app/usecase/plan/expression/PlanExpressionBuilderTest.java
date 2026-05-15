@@ -2,7 +2,6 @@ package com.patra.ingest.app.usecase.plan.expression;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.expr.And;
 import com.patra.expr.Const;
 import com.patra.ingest.domain.model.enums.OperationCode;
@@ -11,6 +10,7 @@ import com.patra.ingest.domain.model.enums.TriggerType;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.plan.PlanTriggerNorm;
 import dev.linqibin.commons.enums.Priority;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;

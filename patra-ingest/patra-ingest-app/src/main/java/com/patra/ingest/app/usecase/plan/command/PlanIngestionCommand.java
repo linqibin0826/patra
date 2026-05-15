@@ -1,12 +1,12 @@
 package com.patra.ingest.app.usecase.plan.command;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.app.usecase.plan.dto.PlanIngestionResult;
 import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.enums.Scheduler;
 import com.patra.ingest.domain.model.enums.TriggerType;
 import dev.linqibin.commons.cqrs.Command;
 import dev.linqibin.commons.enums.Priority;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;

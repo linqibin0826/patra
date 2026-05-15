@@ -1,7 +1,6 @@
 package com.patra.ingest.app.usecase.plan.publisher;
 
 import cn.hutool.core.util.StrUtil;
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.app.outbox.config.OutboxPublisherProperties;
 import com.patra.ingest.app.outbox.constants.OutboxAggregateTypes;
 import com.patra.ingest.app.outbox.core.AbstractOutboxPublisher;
@@ -14,6 +13,7 @@ import com.patra.ingest.domain.messaging.OperationType;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.model.aggregate.ScheduleInstanceAggregate;
 import com.patra.ingest.domain.port.OutboxMessageRepository;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;

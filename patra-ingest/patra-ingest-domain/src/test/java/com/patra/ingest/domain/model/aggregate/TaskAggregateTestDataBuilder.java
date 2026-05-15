@@ -1,6 +1,5 @@
 package com.patra.ingest.domain.model.aggregate;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.TaskStatus;
 import com.patra.ingest.domain.model.vo.execution.ExecutionTimeline;
 import com.patra.ingest.domain.model.vo.plan.PlanId;
@@ -9,6 +8,7 @@ import com.patra.ingest.domain.model.vo.schedule.ScheduleInstanceId;
 import com.patra.ingest.domain.model.vo.shared.LeaseInfo;
 import com.patra.ingest.domain.model.vo.slice.PlanSliceId;
 import com.patra.ingest.domain.model.vo.task.TaskId;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 
 /// TaskAggregate 测试数据构建器。

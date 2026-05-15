@@ -1,6 +1,6 @@
 package com.patra.starter.expr.compiler.exception;
 
-import com.patra.common.enums.ProvenanceCode;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 
 /// 规则快照加载异常
 ///

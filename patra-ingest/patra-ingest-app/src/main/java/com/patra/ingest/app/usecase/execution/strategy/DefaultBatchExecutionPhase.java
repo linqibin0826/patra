@@ -1,6 +1,5 @@
 package com.patra.ingest.app.usecase.execution.strategy;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.app.usecase.execution.coordination.GenericBatchExecutor;
 import com.patra.ingest.app.usecase.execution.session.ExecutionSession;
 import com.patra.ingest.app.usecase.execution.strategy.builder.BatchScheduleBuilder;
@@ -12,6 +11,7 @@ import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import com.patra.ingest.domain.model.vo.query.QuerySession;
 import com.patra.ingest.domain.port.TaskRunBatchRepository;
 import com.patra.ingest.domain.port.TaskRunRepository;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

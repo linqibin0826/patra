@@ -1,7 +1,6 @@
 package com.patra.ingest.app.usecase.plan.assembler;
 
 import cn.hutool.core.text.CharSequenceUtil;
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.expr.canonical.ExprCanonicalSnapshot;
 import com.patra.expr.canonical.ExprCanonicalizer;
 import com.patra.ingest.app.usecase.plan.dto.PlanAssemblyResult;
@@ -25,6 +24,7 @@ import dev.linqibin.commons.json.JsonNormalizer;
 import dev.linqibin.commons.json.JsonNormalizerConfig;
 import dev.linqibin.commons.json.JsonNormalizerResult;
 import dev.linqibin.commons.util.HashUtils;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;

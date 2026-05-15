@@ -1,6 +1,5 @@
 package com.patra.starter.provenance.boot;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.starter.provenance.common.config.BatchingConfig;
 import com.patra.starter.provenance.common.config.HttpConfig;
 import com.patra.starter.provenance.common.config.PaginationConfig;
@@ -8,6 +7,7 @@ import com.patra.starter.provenance.common.config.ProvenanceConfig;
 import com.patra.starter.provenance.common.config.RateLimitConfig;
 import com.patra.starter.provenance.common.config.RetryConfig;
 import com.patra.starter.provenance.common.config.WindowOffsetConfig;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;

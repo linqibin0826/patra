@@ -35,7 +35,7 @@ import com.patra.catalog.infra.persistence.entity.PublicationEntity;
 import com.patra.catalog.infra.persistence.entity.PublicationIdentifierEntity;
 import com.patra.catalog.infra.persistence.entity.PublicationMetadataEntity;
 import com.patra.catalog.infra.persistence.entity.PublicationOaLocationEntity;
-import com.patra.common.enums.ProvenanceCode;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.List;
 import java.util.Map;
 import org.mapstruct.Mapper;

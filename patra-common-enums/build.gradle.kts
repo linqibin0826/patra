@@ -13,8 +13,7 @@ plugins {
 }
 
 dependencies {
-    // 枚举类可能使用 Jackson 注解 (@JsonValue / @JsonCreator)
-    api("tools.jackson.core:jackson-databind")
+    // 枚举类使用 Jackson 注解 (@JsonValue / @JsonCreator)，仅需轻量 annotations jar
     api("com.fasterxml.jackson.core:jackson-annotations")
 }
 

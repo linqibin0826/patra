@@ -1,6 +1,5 @@
 package com.patra.ingest.app.usecase.execution.publisher;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.app.outbox.config.OutboxPublisherProperties;
 import com.patra.ingest.app.outbox.constants.OutboxAggregateTypes;
 import com.patra.ingest.app.outbox.core.AbstractOutboxPublisher;
@@ -11,6 +10,7 @@ import com.patra.ingest.domain.event.PublicationDataReadyEvent;
 import com.patra.ingest.domain.messaging.IngestPublishingChannels;
 import com.patra.ingest.domain.messaging.OperationType;
 import com.patra.ingest.domain.port.OutboxMessageRepository;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.List;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;

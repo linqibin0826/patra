@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.CanonicalPublication;
 import com.patra.common.model.DataType;
 import com.patra.common.model.enums.PublicationIdentifierType;
@@ -16,6 +15,7 @@ import com.patra.ingest.domain.port.ProvenanceDataPort;
 import com.patra.ingest.domain.port.ProvenanceDataPort.DataFetchResult;
 import com.patra.ingest.domain.port.ProvenanceDataPort.DataFetchResult.ErrorType;
 import dev.linqibin.commons.type.TypeReference;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;

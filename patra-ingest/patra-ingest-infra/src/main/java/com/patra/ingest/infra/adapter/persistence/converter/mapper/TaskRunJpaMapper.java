@@ -1,6 +1,5 @@
 package com.patra.ingest.infra.adapter.persistence.converter.mapper;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.exception.InfrastructureException;
 import com.patra.ingest.domain.exception.TaskCheckpointException;
 import com.patra.ingest.domain.model.entity.TaskRun;
@@ -11,6 +10,7 @@ import com.patra.ingest.domain.model.vo.execution.RunStats;
 import com.patra.ingest.domain.model.vo.execution.TaskRunCheckpoint;
 import com.patra.ingest.infra.adapter.persistence.entity.TaskRunEntity;
 import dev.linqibin.commons.json.JsonMapperHolder;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;

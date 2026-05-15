@@ -1,6 +1,6 @@
 package com.patra.ingest.domain.event;
 
-import com.patra.common.enums.ProvenanceCode;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.List;
 import lombok.Builder;
 

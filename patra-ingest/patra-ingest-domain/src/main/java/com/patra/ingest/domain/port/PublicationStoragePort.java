@@ -1,7 +1,7 @@
 package com.patra.ingest.domain.port;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.CanonicalPublication;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.List;
 import lombok.Builder;
 

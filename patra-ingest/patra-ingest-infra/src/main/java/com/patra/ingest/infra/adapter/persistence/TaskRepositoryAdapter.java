@@ -1,6 +1,5 @@
 package com.patra.ingest.infra.adapter.persistence;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.model.vo.task.TaskId;
 import com.patra.ingest.domain.port.TaskRepository;
@@ -8,6 +7,7 @@ import com.patra.ingest.infra.adapter.persistence.converter.mapper.TaskJpaMapper
 import com.patra.ingest.infra.adapter.persistence.dao.TaskDao;
 import com.patra.ingest.infra.adapter.persistence.entity.TaskEntity;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;

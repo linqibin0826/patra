@@ -7,11 +7,11 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.registry.app.converter.ExprQueryAssembler;
 import com.patra.registry.domain.model.read.expr.ExprSnapshotQuery;
 import com.patra.registry.domain.model.vo.expr.ExprSnapshot;
 import com.patra.registry.domain.port.ExprRepository;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;

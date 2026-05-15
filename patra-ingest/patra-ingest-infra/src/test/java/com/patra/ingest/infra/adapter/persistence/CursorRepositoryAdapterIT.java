@@ -2,13 +2,13 @@ package com.patra.ingest.infra.adapter.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.entity.Cursor;
 import com.patra.ingest.infra.adapter.persistence.dao.CursorDao;
 import com.patra.ingest.infra.adapter.persistence.entity.CursorEntity;
 import com.patra.ingest.infra.config.IngestMySQLContainerInitializer;
 import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;

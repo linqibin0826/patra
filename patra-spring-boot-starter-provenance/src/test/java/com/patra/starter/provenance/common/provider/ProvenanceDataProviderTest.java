@@ -2,13 +2,13 @@ package com.patra.starter.provenance.common.provider;
 
 import static org.assertj.core.api.Assertions.*;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.CanonicalPublication;
 import com.patra.common.model.DataType;
 import com.patra.common.model.enums.PublicationIdentifierType;
 import com.patra.starter.provenance.common.processor.DataProcessor;
 import com.patra.starter.provenance.common.processor.ProcessResult;
 import com.patra.starter.provenance.common.processor.ProviderContext;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;

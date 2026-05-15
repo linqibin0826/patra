@@ -1,8 +1,8 @@
 package com.patra.starter.provenance.common.config;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.starter.provenance.boot.ProvenanceProperties;
 import com.patra.starter.provenance.boot.ProvenanceProperties.SourceProperties;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.Objects;
 
 /// 默认配置提供者

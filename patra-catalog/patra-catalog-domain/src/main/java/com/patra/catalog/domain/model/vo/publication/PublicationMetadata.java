@@ -4,7 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import com.patra.catalog.domain.model.enums.IndexingStatus;
 import com.patra.catalog.domain.model.enums.QualityScore;
 import com.patra.catalog.domain.model.enums.ReviewStatus;
-import com.patra.common.enums.ProvenanceCode;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.Instant;

@@ -2,7 +2,6 @@ package com.patra.registry.infra.adapter.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.registry.domain.model.aggregate.ProvenanceConfiguration;
 import com.patra.registry.domain.model.vo.provenance.BatchingConfig;
 import com.patra.registry.domain.model.vo.provenance.HttpConfig;
@@ -29,6 +28,7 @@ import com.patra.registry.infra.config.RegistryMySQLContainerInitializer;
 import com.patra.starter.jpa.autoconfig.HibernatePropertiesCustomizer;
 import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;

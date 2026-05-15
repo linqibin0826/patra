@@ -1,6 +1,5 @@
 package com.patra.ingest.app.usecase.execution.strategy.builder;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.exception.BatchSchedulingException;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.batch.BatchSchedule;
@@ -8,6 +7,7 @@ import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import com.patra.ingest.domain.model.vo.query.QuerySession;
 import com.patra.ingest.domain.port.ProvenanceDataPort;
 import com.patra.ingest.domain.strategy.BatchGenerationStrategy;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;

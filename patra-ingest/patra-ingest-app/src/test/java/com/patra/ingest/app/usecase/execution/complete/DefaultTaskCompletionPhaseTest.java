@@ -3,7 +3,6 @@ package com.patra.ingest.app.usecase.execution.complete;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.app.usecase.execution.cursor.CursorAdvancer;
 import com.patra.ingest.app.usecase.execution.lease.LeaseManagementService;
 import com.patra.ingest.app.usecase.execution.publisher.PublicationEventPublisher;
@@ -22,6 +21,7 @@ import com.patra.ingest.domain.model.vo.task.TaskId;
 import com.patra.ingest.domain.port.TaskRepository;
 import com.patra.ingest.domain.port.TaskRunBatchRepository;
 import com.patra.ingest.domain.port.TaskRunRepository;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;

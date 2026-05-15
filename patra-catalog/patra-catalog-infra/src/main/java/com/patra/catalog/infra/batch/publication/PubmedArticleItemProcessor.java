@@ -28,7 +28,6 @@ import com.patra.catalog.infra.batch.publication.PublicationImportResult.Publica
 import com.patra.catalog.infra.batch.publication.PublicationImportResult.PublicationTypeData;
 import com.patra.catalog.infra.batch.publication.PublicationImportResult.QualifierData;
 import com.patra.catalog.infra.batch.publication.PublicationImportResult.SupplMeshData;
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.CanonicalPublication;
 import com.patra.common.model.CanonicalPublication.Abstract;
 import com.patra.common.model.CanonicalPublication.AbstractSection;
@@ -43,6 +42,7 @@ import com.patra.common.model.CanonicalPublication.PublicationDates;
 import com.patra.common.model.CanonicalPublication.PublicationType;
 import com.patra.common.model.CanonicalPublication.QualifierName;
 import com.patra.common.model.enums.PublicationIdentifierType;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
