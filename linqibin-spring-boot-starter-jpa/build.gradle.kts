@@ -15,7 +15,6 @@ plugins {
 
 dependencies {
     // Patra 内部依赖
-    api(project(":patra-common-enums"))
     api(project(":linqibin-commons-core"))
     api(project(":linqibin-spring-boot-starter-core"))
 
