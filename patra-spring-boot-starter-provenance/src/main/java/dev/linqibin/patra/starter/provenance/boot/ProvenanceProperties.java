@@ -1,5 +1,6 @@
 package dev.linqibin.patra.starter.provenance.boot;
 
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.starter.provenance.common.config.BatchingConfig;
 import dev.linqibin.patra.starter.provenance.common.config.HttpConfig;
 import dev.linqibin.patra.starter.provenance.common.config.PaginationConfig;
@@ -7,7 +8,6 @@ import dev.linqibin.patra.starter.provenance.common.config.ProvenanceConfig;
 import dev.linqibin.patra.starter.provenance.common.config.RateLimitConfig;
 import dev.linqibin.patra.starter.provenance.common.config.RetryConfig;
 import dev.linqibin.patra.starter.provenance.common.config.WindowOffsetConfig;
-import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;

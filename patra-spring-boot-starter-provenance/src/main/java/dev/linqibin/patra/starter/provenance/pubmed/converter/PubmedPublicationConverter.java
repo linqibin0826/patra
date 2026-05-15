@@ -1,5 +1,7 @@
 package dev.linqibin.patra.starter.provenance.pubmed.converter;
 
+import dev.linqibin.patra.common.model.CanonicalPublication;
+import dev.linqibin.patra.common.model.enums.PublicationIdentifierType;
 import dev.linqibin.patra.starter.provenance.pubmed.model.response.PubmedPublication;
 import dev.linqibin.patra.starter.provenance.pubmed.model.response.PubmedPublication.Article;
 import dev.linqibin.patra.starter.provenance.pubmed.model.response.PubmedPublication.Author;
@@ -9,8 +11,6 @@ import dev.linqibin.patra.starter.provenance.pubmed.model.response.PubmedPublica
 import dev.linqibin.patra.starter.provenance.pubmed.model.response.PubmedPublication.MedlineJournalInfo;
 import dev.linqibin.patra.starter.provenance.pubmed.model.response.PubmedPublication.PubmedData;
 import dev.linqibin.patra.starter.provenance.pubmed.model.response.PubmedPublication.PubmedData.ArticleId;
-import dev.linqibin.patra.common.model.CanonicalPublication;
-import dev.linqibin.patra.common.model.enums.PublicationIdentifierType;
 import java.time.LocalDate;
 import java.time.Month;
 import java.util.ArrayList;

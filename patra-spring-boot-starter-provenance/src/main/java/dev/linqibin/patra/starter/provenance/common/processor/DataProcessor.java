@@ -1,7 +1,7 @@
 package dev.linqibin.patra.starter.provenance.common.processor;
 
-import dev.linqibin.patra.starter.provenance.common.provider.ProviderRequest;
 import dev.linqibin.patra.common.model.DataType;
+import dev.linqibin.patra.starter.provenance.common.provider.ProviderRequest;
 
 /// 数据处理器策略接口
 ///

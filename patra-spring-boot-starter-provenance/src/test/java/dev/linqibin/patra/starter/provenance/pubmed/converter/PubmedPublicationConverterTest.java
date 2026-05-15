@@ -2,9 +2,9 @@ package dev.linqibin.patra.starter.provenance.pubmed.converter;
 
 import static org.assertj.core.api.Assertions.*;
 
-import dev.linqibin.patra.starter.provenance.pubmed.model.response.PubmedPublication;
 import dev.linqibin.patra.common.model.CanonicalPublication;
 import dev.linqibin.patra.common.model.enums.PublicationIdentifierType;
+import dev.linqibin.patra.starter.provenance.pubmed.model.response.PubmedPublication;
 import java.time.LocalDate;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
