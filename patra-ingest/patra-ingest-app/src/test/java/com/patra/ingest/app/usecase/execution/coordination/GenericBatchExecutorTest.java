@@ -7,6 +7,7 @@ import static org.mockito.Mockito.*;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.CanonicalPublication;
 import com.patra.common.model.DataType;
+import com.patra.common.model.enums.PublicationIdentifierType;
 import com.patra.common.type.TypeReference;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.batch.BatchResult;
@@ -380,7 +381,7 @@ class GenericBatchExecutorTest {
                     .identifiers(
                         List.of(
                             CanonicalPublication.Identifier.builder()
-                                .type("pmid")
+                                .type(PublicationIdentifierType.PMID)
                                 .value("PMID-" + (1000 + i))
                                 .build()))
                     .build())
