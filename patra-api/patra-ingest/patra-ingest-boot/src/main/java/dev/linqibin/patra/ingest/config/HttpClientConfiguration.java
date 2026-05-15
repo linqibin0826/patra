@@ -1,7 +1,7 @@
 package dev.linqibin.patra.ingest.config;
 
-import com.patra.objectstorage.api.endpoint.StorageEndpoint;
 import com.patra.starter.httpinterface.factory.RestClientFactory;
+import dev.linqibin.patra.objectstorage.api.endpoint.StorageEndpoint;
 import dev.linqibin.patra.registry.api.endpoint.DictionaryEndpoint;
 import dev.linqibin.patra.registry.api.endpoint.ExprEndpoint;
 import dev.linqibin.patra.registry.api.endpoint.ProvenanceEndpoint;
