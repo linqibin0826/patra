@@ -3,6 +3,8 @@ package dev.linqibin.patra.catalog.app.usecase.publication.query;
 import static dev.linqibin.commons.util.StringUtils.escapeLike;
 import static dev.linqibin.commons.util.StringUtils.trimToNull;
 
+import dev.linqibin.commons.query.PageResult;
+import dev.linqibin.commons.query.PagingParams;
 import dev.linqibin.patra.catalog.app.usecase.publication.query.dto.PublicationDetailQuery;
 import dev.linqibin.patra.catalog.app.usecase.publication.query.dto.PublicationListQuery;
 import dev.linqibin.patra.catalog.app.usecase.publication.query.dto.TopPublicationsQuery;
@@ -11,8 +13,6 @@ import dev.linqibin.patra.catalog.domain.model.read.publication.PublicationDetai
 import dev.linqibin.patra.catalog.domain.model.read.publication.PublicationFilter;
 import dev.linqibin.patra.catalog.domain.model.read.publication.PublicationSummaryReadModel;
 import dev.linqibin.patra.catalog.domain.port.read.PublicationReadPort;
-import dev.linqibin.commons.query.PageResult;
-import dev.linqibin.commons.query.PagingParams;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;

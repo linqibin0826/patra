@@ -1,12 +1,12 @@
 package dev.linqibin.patra.catalog.domain.model.aggregate;
 
 import cn.hutool.core.lang.Assert;
+import dev.linqibin.commons.domain.AggregateRoot;
 import dev.linqibin.patra.catalog.domain.model.enums.AuthorStatus;
 import dev.linqibin.patra.catalog.domain.model.enums.DataSourceCode;
 import dev.linqibin.patra.catalog.domain.model.vo.author.AuthorId;
 import dev.linqibin.patra.catalog.domain.model.vo.author.AuthorNameVariant;
 import dev.linqibin.patra.catalog.domain.model.vo.author.Orcid;
-import dev.linqibin.commons.domain.AggregateRoot;
 import java.io.Serial;
 import java.time.Instant;
 import java.util.ArrayList;

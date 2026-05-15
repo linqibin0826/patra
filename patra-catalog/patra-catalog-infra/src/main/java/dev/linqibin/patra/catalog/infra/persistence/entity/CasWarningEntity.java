@@ -1,8 +1,8 @@
 package dev.linqibin.patra.catalog.infra.persistence.entity;
 
+import com.patra.starter.jpa.entity.ChildJpaEntity;
 import dev.linqibin.patra.catalog.domain.model.enums.CasWarningLevel;
 import dev.linqibin.patra.catalog.infra.persistence.converter.attribute.CasWarningLevelConverter;
-import com.patra.starter.jpa.entity.ChildJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;

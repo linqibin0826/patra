@@ -2,9 +2,9 @@ package dev.linqibin.patra.catalog.domain.model.aggregate;
 
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
+import dev.linqibin.commons.domain.AggregateRoot;
 import dev.linqibin.patra.catalog.domain.model.vo.venue.VenueId;
 import dev.linqibin.patra.catalog.domain.model.vo.venue.VenueInstanceId;
-import dev.linqibin.commons.domain.AggregateRoot;
 import java.io.Serial;
 import java.time.LocalDate;
 import lombok.Getter;

@@ -6,9 +6,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import dev.linqibin.commons.error.remote.RemoteCallException;
 import dev.linqibin.patra.catalog.domain.model.enums.DictionaryType;
 import dev.linqibin.patra.catalog.domain.model.vo.common.SourceStandard;
-import dev.linqibin.commons.error.remote.RemoteCallException;
 import dev.linqibin.patra.registry.api.dto.dict.DictionaryResolveItemResp;
 import dev.linqibin.patra.registry.api.dto.dict.DictionaryResolveReq;
 import dev.linqibin.patra.registry.api.dto.dict.DictionaryResolveResp;

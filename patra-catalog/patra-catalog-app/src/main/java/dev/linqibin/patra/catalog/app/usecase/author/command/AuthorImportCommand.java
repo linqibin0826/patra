@@ -1,9 +1,9 @@
 package dev.linqibin.patra.catalog.app.usecase.author.command;
 
 import cn.hutool.core.text.CharSequenceUtil;
+import dev.linqibin.commons.cqrs.Command;
 import dev.linqibin.patra.catalog.app.usecase.author.dto.AuthorImportResult;
 import dev.linqibin.patra.catalog.domain.exception.CatalogScheduleParameterException;
-import dev.linqibin.commons.cqrs.Command;
 import java.net.URI;
 
 /// PubMed Computed Authors 导入命令（Adapter → Application）。

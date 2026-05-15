@@ -1,10 +1,10 @@
 package dev.linqibin.patra.catalog.app.usecase.publication.baseline.command;
 
 import cn.hutool.core.text.CharSequenceUtil;
+import dev.linqibin.commons.cqrs.Command;
 import dev.linqibin.patra.catalog.app.usecase.publication.baseline.dto.PublicationBaselineImportResult;
 import dev.linqibin.patra.catalog.domain.exception.CatalogScheduleParameterException;
 import dev.linqibin.patra.catalog.domain.model.vo.publication.PublicationImportParams;
-import dev.linqibin.commons.cqrs.Command;
 import java.net.URI;
 
 /// PubMed Baseline 文献导入命令（Adapter → Application）。

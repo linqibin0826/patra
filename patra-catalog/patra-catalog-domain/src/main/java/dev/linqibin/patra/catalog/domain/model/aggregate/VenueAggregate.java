@@ -2,6 +2,7 @@ package dev.linqibin.patra.catalog.domain.model.aggregate;
 
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
+import dev.linqibin.commons.domain.AggregateRoot;
 import dev.linqibin.patra.catalog.domain.model.enums.VenueIdentifierType;
 import dev.linqibin.patra.catalog.domain.model.enums.VenueType;
 import dev.linqibin.patra.catalog.domain.model.vo.venue.CitationMetrics;
@@ -12,7 +13,6 @@ import dev.linqibin.patra.catalog.domain.model.vo.venue.Society;
 import dev.linqibin.patra.catalog.domain.model.vo.venue.VenueId;
 import dev.linqibin.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import dev.linqibin.patra.catalog.domain.model.vo.venue.VenueLanguages;
-import dev.linqibin.commons.domain.AggregateRoot;
 import java.io.Serial;
 import java.util.ArrayList;
 import java.util.Collections;

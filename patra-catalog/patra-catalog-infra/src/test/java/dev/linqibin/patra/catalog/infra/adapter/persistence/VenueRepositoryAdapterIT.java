@@ -3,6 +3,7 @@ package dev.linqibin.patra.catalog.infra.adapter.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
+import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import dev.linqibin.patra.catalog.domain.model.aggregate.VenueAggregate;
 import dev.linqibin.patra.catalog.domain.model.enums.VenueIdentifierType;
 import dev.linqibin.patra.catalog.domain.model.vo.venue.CitationMetrics;
@@ -15,7 +16,6 @@ import dev.linqibin.patra.catalog.domain.model.vo.venue.VenueLanguages;
 import dev.linqibin.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
 import dev.linqibin.patra.catalog.infra.persistence.dao.VenueDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.VenueIdentifierDao;
-import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.math.BigDecimal;
 import java.time.Instant;

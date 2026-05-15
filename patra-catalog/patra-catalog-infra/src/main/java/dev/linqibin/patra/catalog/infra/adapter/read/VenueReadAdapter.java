@@ -1,5 +1,7 @@
 package dev.linqibin.patra.catalog.infra.adapter.read;
 
+import dev.linqibin.commons.query.PageResult;
+import dev.linqibin.commons.query.PagingParams;
 import dev.linqibin.patra.catalog.domain.model.read.venue.VenueDetailReadModel;
 import dev.linqibin.patra.catalog.domain.model.read.venue.VenueFilter;
 import dev.linqibin.patra.catalog.domain.model.read.venue.VenueInstanceSummaryReadModel;
@@ -26,8 +28,6 @@ import dev.linqibin.patra.catalog.infra.persistence.entity.JcrRatingEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.ScopusRatingEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.VenueEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.VenuePublicationStatsEntity;
-import dev.linqibin.commons.query.PageResult;
-import dev.linqibin.commons.query.PagingParams;
 import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.List;

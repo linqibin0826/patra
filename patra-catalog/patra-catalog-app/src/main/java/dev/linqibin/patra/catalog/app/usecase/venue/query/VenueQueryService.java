@@ -3,6 +3,8 @@ package dev.linqibin.patra.catalog.app.usecase.venue.query;
 import static dev.linqibin.commons.util.StringUtils.escapeLike;
 import static dev.linqibin.commons.util.StringUtils.trimToNull;
 
+import dev.linqibin.commons.query.PageResult;
+import dev.linqibin.commons.query.PagingParams;
 import dev.linqibin.patra.catalog.app.usecase.venue.query.dto.VenueCompareQuery;
 import dev.linqibin.patra.catalog.app.usecase.venue.query.dto.VenueDetailQuery;
 import dev.linqibin.patra.catalog.app.usecase.venue.query.dto.VenueInstanceListQuery;
@@ -17,8 +19,6 @@ import dev.linqibin.patra.catalog.domain.model.read.venue.VenueRatingHistoryRead
 import dev.linqibin.patra.catalog.domain.model.read.venue.VenueStatsReadModel;
 import dev.linqibin.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import dev.linqibin.patra.catalog.domain.port.read.VenueReadPort;
-import dev.linqibin.commons.query.PageResult;
-import dev.linqibin.commons.query.PagingParams;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;

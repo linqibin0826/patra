@@ -1,11 +1,11 @@
 package dev.linqibin.patra.catalog.adapter.scheduler.job;
 
-import dev.linqibin.patra.catalog.adapter.scheduler.config.PubmedDataSourceProperties;
-import dev.linqibin.patra.catalog.app.usecase.publication.baseline.command.PublicationBaselineImportCommand;
-import dev.linqibin.patra.catalog.app.usecase.publication.baseline.dto.PublicationBaselineImportResult;
 import com.xxl.job.core.context.XxlJobHelper;
 import com.xxl.job.core.handler.annotation.XxlJob;
 import dev.linqibin.commons.cqrs.CommandBus;
+import dev.linqibin.patra.catalog.adapter.scheduler.config.PubmedDataSourceProperties;
+import dev.linqibin.patra.catalog.app.usecase.publication.baseline.command.PublicationBaselineImportCommand;
+import dev.linqibin.patra.catalog.app.usecase.publication.baseline.dto.PublicationBaselineImportResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

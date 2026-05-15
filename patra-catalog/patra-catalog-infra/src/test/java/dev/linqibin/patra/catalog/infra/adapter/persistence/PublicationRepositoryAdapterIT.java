@@ -3,6 +3,7 @@ package dev.linqibin.patra.catalog.infra.adapter.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import dev.linqibin.patra.catalog.domain.model.aggregate.PublicationAggregate;
 import dev.linqibin.patra.catalog.domain.model.enums.OaStatus;
 import dev.linqibin.patra.catalog.domain.model.enums.PublicationDateType;
@@ -45,7 +46,6 @@ import dev.linqibin.patra.catalog.infra.persistence.dao.PublicationOaLocationDao
 import dev.linqibin.patra.catalog.infra.persistence.dao.PublicationPersonalNameSubjectDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.PublicationSupplMeshDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.PublicationTypeDao;
-import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.List;
 import java.util.Map;

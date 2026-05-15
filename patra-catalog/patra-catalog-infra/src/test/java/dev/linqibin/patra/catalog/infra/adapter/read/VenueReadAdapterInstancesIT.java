@@ -2,6 +2,10 @@ package dev.linqibin.patra.catalog.infra.adapter.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
+import com.patra.starter.jpa.id.SnowflakeIdGenerator;
+import dev.linqibin.commons.query.PageResult;
+import dev.linqibin.commons.query.PagingParams;
 import dev.linqibin.patra.catalog.domain.model.read.venue.VenueInstanceSummaryReadModel;
 import dev.linqibin.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
 import dev.linqibin.patra.catalog.infra.persistence.dao.PublicationDao;
@@ -10,10 +14,6 @@ import dev.linqibin.patra.catalog.infra.persistence.dao.VenueInstanceDao;
 import dev.linqibin.patra.catalog.infra.persistence.entity.PublicationEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.VenueEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.VenueInstanceEntity;
-import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
-import com.patra.starter.jpa.id.SnowflakeIdGenerator;
-import dev.linqibin.commons.query.PageResult;
-import dev.linqibin.commons.query.PagingParams;
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;

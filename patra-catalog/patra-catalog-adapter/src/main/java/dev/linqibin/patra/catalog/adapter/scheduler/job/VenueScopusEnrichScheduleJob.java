@@ -1,10 +1,10 @@
 package dev.linqibin.patra.catalog.adapter.scheduler.job;
 
-import dev.linqibin.patra.catalog.app.usecase.venue.VenueEnrichRunStats;
-import dev.linqibin.patra.catalog.app.usecase.venue.scopus.command.VenueScopusEnrichCommand;
 import com.xxl.job.core.context.XxlJobHelper;
 import com.xxl.job.core.handler.annotation.XxlJob;
 import dev.linqibin.commons.cqrs.CommandBus;
+import dev.linqibin.patra.catalog.app.usecase.venue.VenueEnrichRunStats;
+import dev.linqibin.patra.catalog.app.usecase.venue.scopus.command.VenueScopusEnrichCommand;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

@@ -7,12 +7,12 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.xxl.job.core.context.XxlJobHelper;
+import dev.linqibin.commons.cqrs.CommandBus;
 import dev.linqibin.patra.catalog.adapter.scheduler.config.RorDataSourceAutoConfiguration;
 import dev.linqibin.patra.catalog.adapter.scheduler.exception.RorConfigurationException;
 import dev.linqibin.patra.catalog.app.usecase.organization.command.RorOrganizationImportCommand;
 import dev.linqibin.patra.catalog.app.usecase.organization.command.RorOrganizationImportResult;
-import com.xxl.job.core.context.XxlJobHelper;
-import dev.linqibin.commons.cqrs.CommandBus;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

@@ -2,9 +2,9 @@ package dev.linqibin.patra.catalog.infra.persistence.dao;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import dev.linqibin.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
 import dev.linqibin.patra.catalog.infra.persistence.entity.PublicationEntity;
-import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

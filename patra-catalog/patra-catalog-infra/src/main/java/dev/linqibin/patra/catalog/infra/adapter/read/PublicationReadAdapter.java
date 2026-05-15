@@ -1,5 +1,8 @@
 package dev.linqibin.patra.catalog.infra.adapter.read;
 
+import com.patra.starter.jpa.entity.BaseJpaEntity;
+import dev.linqibin.commons.query.PageResult;
+import dev.linqibin.commons.query.PagingParams;
 import dev.linqibin.patra.catalog.domain.model.read.publication.PublicationDetailReadModel;
 import dev.linqibin.patra.catalog.domain.model.read.publication.PublicationDetailReadModel.AbstractInfo;
 import dev.linqibin.patra.catalog.domain.model.read.publication.PublicationDetailReadModel.IdentifierInfo;
@@ -23,9 +26,6 @@ import dev.linqibin.patra.catalog.infra.persistence.entity.PublicationKeywordEnt
 import dev.linqibin.patra.catalog.infra.persistence.entity.PublicationMeshHeadingEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.PublicationMeshQualifierEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.VenueEntity;
-import com.patra.starter.jpa.entity.BaseJpaEntity;
-import dev.linqibin.commons.query.PageResult;
-import dev.linqibin.commons.query.PagingParams;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;

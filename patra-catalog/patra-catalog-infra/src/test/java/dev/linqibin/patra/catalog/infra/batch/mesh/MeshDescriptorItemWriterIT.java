@@ -2,6 +2,7 @@ package dev.linqibin.patra.catalog.infra.batch.mesh;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import dev.linqibin.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import dev.linqibin.patra.catalog.domain.model.entity.MeshConcept;
 import dev.linqibin.patra.catalog.domain.model.entity.MeshEntryTerm;
@@ -25,7 +26,6 @@ import dev.linqibin.patra.catalog.infra.persistence.entity.MeshDescriptorEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.MeshEntryCombinationEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.MeshEntryTermEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.MeshTreeNumberEntity;
-import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;

@@ -6,12 +6,12 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import dev.linqibin.commons.query.PageResult;
+import dev.linqibin.commons.query.PagingParams;
 import dev.linqibin.patra.catalog.app.usecase.venue.query.dto.VenueListQuery;
 import dev.linqibin.patra.catalog.domain.model.read.venue.VenueFilter;
 import dev.linqibin.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import dev.linqibin.patra.catalog.domain.port.read.VenueReadPort;
-import dev.linqibin.commons.query.PageResult;
-import dev.linqibin.commons.query.PagingParams;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;

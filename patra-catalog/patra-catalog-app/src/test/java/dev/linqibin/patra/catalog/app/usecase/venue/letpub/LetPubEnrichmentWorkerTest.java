@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import dev.linqibin.commons.error.trait.StandardErrorTrait;
 import dev.linqibin.patra.catalog.app.usecase.venue.letpub.LetPubEnrichmentWorker.Outcome;
 import dev.linqibin.patra.catalog.domain.exception.FileDownloadException;
 import dev.linqibin.patra.catalog.domain.port.enrichment.LetPubEnrichmentPersistPort;
@@ -16,7 +17,6 @@ import dev.linqibin.patra.catalog.domain.port.enrichment.LetPubEnrichmentPort;
 import dev.linqibin.patra.catalog.domain.port.enrichment.LetPubVenueData;
 import dev.linqibin.patra.catalog.domain.port.enrichment.VenueSnapshot;
 import dev.linqibin.patra.catalog.domain.port.storage.VenueCoverImageDownloadPort;
-import dev.linqibin.commons.error.trait.StandardErrorTrait;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;

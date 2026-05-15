@@ -1,10 +1,10 @@
 package dev.linqibin.patra.catalog.domain.port.read;
 
+import dev.linqibin.commons.query.PageResult;
+import dev.linqibin.commons.query.PagingParams;
 import dev.linqibin.patra.catalog.domain.model.read.publication.PublicationDetailReadModel;
 import dev.linqibin.patra.catalog.domain.model.read.publication.PublicationFilter;
 import dev.linqibin.patra.catalog.domain.model.read.publication.PublicationSummaryReadModel;
-import dev.linqibin.commons.query.PageResult;
-import dev.linqibin.commons.query.PagingParams;
 import java.util.List;
 import java.util.Optional;
 

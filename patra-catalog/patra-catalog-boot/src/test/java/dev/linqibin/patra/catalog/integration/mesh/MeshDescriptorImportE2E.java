@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import dev.linqibin.commons.cqrs.CommandBus;
 import dev.linqibin.patra.catalog.app.usecase.mesh.command.MeshDescriptorImportCommand;
 import dev.linqibin.patra.catalog.app.usecase.mesh.dto.MeshDescriptorImportResult;
 import dev.linqibin.patra.catalog.domain.exception.DataAlreadyExistsException;
@@ -16,7 +17,6 @@ import dev.linqibin.patra.catalog.infra.persistence.dao.MeshEntryCombinationDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshEntryTermDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshTreeNumberDao;
 import dev.linqibin.patra.catalog.integration.config.CatalogMySQLContainerInitializer;
-import dev.linqibin.commons.cqrs.CommandBus;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
