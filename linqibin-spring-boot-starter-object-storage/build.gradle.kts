@@ -16,7 +16,7 @@ dependencies {
     api("org.springframework.boot:spring-boot-starter")
 
     // Patra 内部依赖
-    api(project(":patra-common:patra-common-storage"))
+    api(project(":linqibin-commons-storage"))
 
     // MinIO Client
     api(libs.minio)

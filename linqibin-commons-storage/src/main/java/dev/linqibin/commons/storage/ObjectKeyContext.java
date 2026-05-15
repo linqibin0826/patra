@@ -1,4 +1,4 @@
-package com.patra.common.storage;
+package dev.linqibin.commons.storage;
 
 import java.time.LocalDate;
 import java.util.Collections;

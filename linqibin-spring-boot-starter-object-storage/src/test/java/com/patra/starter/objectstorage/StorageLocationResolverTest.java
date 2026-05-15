@@ -6,8 +6,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.patra.common.storage.ObjectKeyContext;
-import com.patra.common.storage.ObjectKeyGenerator;
+import dev.linqibin.commons.storage.ObjectKeyContext;
+import dev.linqibin.commons.storage.ObjectKeyGenerator;
 import java.time.LocalDate;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;

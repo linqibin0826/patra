@@ -12,8 +12,6 @@ plugins {
 }
 
 dependencies {
-    // Hutool 工具库
-    api(libs.hutool.core)
 }
 
 // 覆盖率要求 75%

@@ -1,4 +1,4 @@
-package com.patra.common.storage;
+package dev.linqibin.commons.storage;
 
 /// 生成标准化对象存储键的策略接口。
 ///
