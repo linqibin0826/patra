@@ -2,10 +2,10 @@ package dev.linqibin.patra.ingest.app.usecase.plan.expression;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.patra.expr.And;
-import com.patra.expr.Const;
 import dev.linqibin.commons.enums.Priority;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
+import dev.linqibin.patra.expr.And;
+import dev.linqibin.patra.expr.Const;
 import dev.linqibin.patra.ingest.domain.model.enums.OperationCode;
 import dev.linqibin.patra.ingest.domain.model.enums.Scheduler;
 import dev.linqibin.patra.ingest.domain.model.enums.TriggerType;

@@ -1,13 +1,13 @@
 package com.patra.starter.expr.compiler.normalize;
 
-import com.patra.expr.And;
-import com.patra.expr.Atom;
-import com.patra.expr.Const;
-import com.patra.expr.Expr;
-import com.patra.expr.Exprs;
-import com.patra.expr.Not;
-import com.patra.expr.Or;
-import com.patra.expr.TextMatch;
+import dev.linqibin.patra.expr.And;
+import dev.linqibin.patra.expr.Atom;
+import dev.linqibin.patra.expr.Const;
+import dev.linqibin.patra.expr.Expr;
+import dev.linqibin.patra.expr.Exprs;
+import dev.linqibin.patra.expr.Not;
+import dev.linqibin.patra.expr.Or;
+import dev.linqibin.patra.expr.TextMatch;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;

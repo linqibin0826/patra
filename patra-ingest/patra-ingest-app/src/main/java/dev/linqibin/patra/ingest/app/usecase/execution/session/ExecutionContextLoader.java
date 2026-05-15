@@ -11,7 +11,7 @@ import dev.linqibin.patra.ingest.domain.model.vo.execution.ExecutionContext;
 ///
 /// - **快照恢复**: 从 Task 链路向上追溯 Slice 和 Plan 的配置快照
 ///   - **Hash 校验**: 验证表达式快照的完整性
-///   - **表达式编译**: 将标准化 JSON 编译为可执行的 {@link com.patra.expr.Expr} 对象
+///   - **表达式编译**: 将标准化 JSON 编译为可执行的 {@link dev.linqibin.patra.expr.Expr} 对象
 ///
 /// ### 优化策略
 ///

@@ -1,6 +1,6 @@
 package com.patra.starter.expr.compiler.normalize;
 
-import com.patra.expr.Expr;
+import dev.linqibin.patra.expr.Expr;
 
 /// 表达式规范化器,将表达式转换为规范形式。
 ///

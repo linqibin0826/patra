@@ -1,12 +1,12 @@
 package dev.linqibin.patra.ingest.app.usecase.plan.slicer;
 
 import cn.hutool.core.util.StrUtil;
-import com.patra.expr.Expr;
-import com.patra.expr.Exprs;
 import dev.linqibin.commons.json.JsonNormalizationException;
 import dev.linqibin.commons.json.JsonNormalizer;
 import dev.linqibin.commons.json.JsonNormalizerResult;
 import dev.linqibin.commons.util.HashUtils;
+import dev.linqibin.patra.expr.Expr;
+import dev.linqibin.patra.expr.Exprs;
 import dev.linqibin.patra.ingest.app.usecase.plan.expression.PlanExpressionDescriptor;
 import dev.linqibin.patra.ingest.app.usecase.plan.slicer.model.SlicePlan;
 import dev.linqibin.patra.ingest.app.usecase.plan.slicer.model.SlicePlanningContext;

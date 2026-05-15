@@ -1,15 +1,15 @@
-package com.patra.expr;
+package dev.linqibin.patra.expr;
 
-import com.patra.expr.Atom.DateRange;
-import com.patra.expr.Atom.DateTimeRange;
-import com.patra.expr.Atom.ExistsFlag;
-import com.patra.expr.Atom.InValues;
-import com.patra.expr.Atom.NumberRange;
-import com.patra.expr.Atom.Operator;
-import com.patra.expr.Atom.RangeValue.Boundary;
-import com.patra.expr.Atom.TermValue;
-import com.patra.expr.Atom.TokenValue;
-import com.patra.expr.json.ExprJsonCodec;
+import dev.linqibin.patra.expr.Atom.DateRange;
+import dev.linqibin.patra.expr.Atom.DateTimeRange;
+import dev.linqibin.patra.expr.Atom.ExistsFlag;
+import dev.linqibin.patra.expr.Atom.InValues;
+import dev.linqibin.patra.expr.Atom.NumberRange;
+import dev.linqibin.patra.expr.Atom.Operator;
+import dev.linqibin.patra.expr.Atom.RangeValue.Boundary;
+import dev.linqibin.patra.expr.Atom.TermValue;
+import dev.linqibin.patra.expr.Atom.TokenValue;
+import dev.linqibin.patra.expr.json.ExprJsonCodec;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;

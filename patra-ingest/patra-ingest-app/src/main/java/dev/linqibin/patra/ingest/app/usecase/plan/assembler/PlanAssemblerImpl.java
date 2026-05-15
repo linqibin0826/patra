@@ -1,14 +1,14 @@
 package dev.linqibin.patra.ingest.app.usecase.plan.assembler;
 
 import cn.hutool.core.text.CharSequenceUtil;
-import com.patra.expr.canonical.ExprCanonicalSnapshot;
-import com.patra.expr.canonical.ExprCanonicalizer;
 import dev.linqibin.commons.enums.Priority;
 import dev.linqibin.commons.json.JsonNormalizer;
 import dev.linqibin.commons.json.JsonNormalizerConfig;
 import dev.linqibin.commons.json.JsonNormalizerResult;
 import dev.linqibin.commons.util.HashUtils;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
+import dev.linqibin.patra.expr.canonical.ExprCanonicalSnapshot;
+import dev.linqibin.patra.expr.canonical.ExprCanonicalizer;
 import dev.linqibin.patra.ingest.app.usecase.plan.dto.PlanAssemblyResult;
 import dev.linqibin.patra.ingest.app.usecase.plan.expression.PlanExpressionDescriptor;
 import dev.linqibin.patra.ingest.app.usecase.plan.slicer.SlicePlanner;

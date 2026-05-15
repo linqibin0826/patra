@@ -1,7 +1,7 @@
-package com.patra.expr.json;
+package dev.linqibin.patra.expr.json;
 
-import com.patra.expr.*;
-import com.patra.expr.Atom.*;
+import dev.linqibin.patra.expr.*;
+import dev.linqibin.patra.expr.Atom.*;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;

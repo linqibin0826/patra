@@ -1,8 +1,8 @@
 package com.patra.starter.expr.compiler.snapshot.convert;
 
-import com.patra.expr.Atom;
 import com.patra.starter.expr.compiler.snapshot.ProvenanceSnapshot;
 import dev.linqibin.patra.common.enums.RegistryConfigScope;
+import dev.linqibin.patra.expr.Atom;
 import dev.linqibin.patra.registry.api.dto.expr.ApiParamMappingResp;
 import dev.linqibin.patra.registry.api.dto.expr.ExprCapabilityResp;
 import dev.linqibin.patra.registry.api.dto.expr.ExprFieldResp;

@@ -1,6 +1,5 @@
 package com.patra.starter.expr.compiler;
 
-import com.patra.expr.Expr;
 import com.patra.starter.expr.compiler.boot.CompilerProperties;
 import com.patra.starter.expr.compiler.boot.ExprModeProperties;
 import com.patra.starter.expr.compiler.check.CapabilityChecker;
@@ -18,6 +17,7 @@ import com.patra.starter.expr.compiler.snapshot.ProvenanceSnapshot;
 import com.patra.starter.expr.compiler.snapshot.RuleSnapshotLoader;
 import com.patra.starter.expr.compiler.transform.TransformRegistry;
 import com.patra.starter.expr.compiler.transform.ValueTransform;
+import dev.linqibin.patra.expr.Expr;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;

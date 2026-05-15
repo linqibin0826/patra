@@ -1,4 +1,4 @@
-package com.patra.expr;
+package dev.linqibin.patra.expr;
 
 /// 用于 Patra 平台的表达式抽象语法树 (AST) 根接口。
 ///
