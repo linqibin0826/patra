@@ -62,6 +62,6 @@ dependencies {
     implementation(libs.findLibrary("spring-cloud-starter-consul-discovery").get())
 
     // 测试依赖
-    testImplementation(project(":patra-spring-boot-starter-test"))
+    testImplementation(project(":linqibin-spring-boot-starter-test"))
     testImplementation(libs.findLibrary("testcontainers-jdbc").get())
 }

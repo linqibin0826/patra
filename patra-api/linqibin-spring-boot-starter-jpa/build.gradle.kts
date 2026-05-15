@@ -16,7 +16,7 @@ plugins {
 dependencies {
     // Patra 内部依赖
     api(project(":patra-common:patra-common-core"))
-    api(project(":patra-spring-boot-starter-core"))
+    api(project(":linqibin-spring-boot-starter-core"))
 
     // Spring Data JPA (包含 Hibernate)
     api("org.springframework.boot:spring-boot-starter-data-jpa")
@@ -42,5 +42,5 @@ dependencies {
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
 
     // 测试依赖
-    testImplementation(project(":patra-spring-boot-starter-test"))
+    testImplementation(project(":linqibin-spring-boot-starter-test"))
 }
