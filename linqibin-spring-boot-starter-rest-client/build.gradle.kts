@@ -14,7 +14,7 @@ plugins {
 dependencies {
     // Patra 内部依赖
     api(project(":patra-common:patra-common-core"))
-    api(project(":patra-spring-boot-starter-core"))
+    api(project(":linqibin-spring-boot-starter-core"))
 
     // Spring Boot AutoConfiguration support
     api("org.springframework.boot:spring-boot-autoconfigure")
@@ -44,7 +44,7 @@ dependencies {
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
 
     // 测试依赖
-    testImplementation(project(":patra-spring-boot-starter-test"))
+    testImplementation(project(":linqibin-spring-boot-starter-test"))
     // WebFlux 和 Reactor Netty 在主代码中是 compileOnly（optional），
     // 但测试代码需要使用 WebClient，因此需要显式声明测试依赖
     testImplementation("org.springframework:spring-webflux")

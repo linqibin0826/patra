@@ -21,5 +21,5 @@ dependencies {
     compileOnly("org.springframework:spring-web")
 
     // 测试依赖
-    testImplementation(project(":patra-spring-boot-starter-test"))
+    testImplementation(project(":linqibin-spring-boot-starter-test"))
 }
