@@ -1,6 +1,6 @@
 package com.patra.ingest.domain.event;
 
-import com.patra.common.domain.DomainEvent;
+import dev.linqibin.commons.domain.DomainEvent;
 
 /// Outbox 中继领域事件标记接口。
 ///

@@ -5,7 +5,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.patra.common.enums.Priority;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.expr.Const;
 import com.patra.ingest.app.usecase.plan.dto.PlanAssemblyResult;
@@ -20,6 +19,7 @@ import com.patra.ingest.domain.model.enums.TriggerType;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.plan.PlanTriggerNorm;
 import com.patra.ingest.domain.model.vo.plan.PlannerWindow;
+import dev.linqibin.commons.enums.Priority;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;

@@ -1,6 +1,6 @@
 package com.patra.starter.core.error.model;
 
-import com.patra.common.error.codes.ErrorCodeLike;
+import dev.linqibin.commons.error.codes.ErrorCodeLike;
 
 /// 异常解析结果,组合业务错误码、HTTP 状态码和解析策略。
 ///

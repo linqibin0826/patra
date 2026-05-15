@@ -1,7 +1,6 @@
 package com.patra.ingest.infra.adapter.persistence.converter.mapper;
 
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.common.json.JsonMapperHolder;
 import com.patra.ingest.domain.exception.InfrastructureException;
 import com.patra.ingest.domain.model.entity.TaskRunBatch;
 import com.patra.ingest.domain.model.enums.BatchStatus;
@@ -9,6 +8,7 @@ import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.vo.batch.BatchStats;
 import com.patra.ingest.domain.model.vo.shared.IdempotentKey;
 import com.patra.ingest.infra.adapter.persistence.entity.TaskRunBatchEntity;
+import dev.linqibin.commons.json.JsonMapperHolder;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;

@@ -1,6 +1,6 @@
 package com.patra.ingest.domain.exception;
 
-import com.patra.common.error.trait.StandardErrorTrait;
+import dev.linqibin.commons.error.trait.StandardErrorTrait;
 
 /// 批次调度异常。
 ///

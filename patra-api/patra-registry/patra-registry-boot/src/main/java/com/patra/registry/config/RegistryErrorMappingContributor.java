@@ -1,10 +1,10 @@
 package com.patra.registry.config;
 
-import com.patra.common.error.codes.ErrorCodeLike;
-import com.patra.common.error.codes.HttpStdErrors;
 import com.patra.registry.domain.exception.DomainValidationException;
 import com.patra.registry.domain.exception.RegistryQuotaExceeded;
 import com.patra.starter.core.error.spi.ErrorMappingContributor;
+import dev.linqibin.commons.error.codes.ErrorCodeLike;
+import dev.linqibin.commons.error.codes.HttpStdErrors;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;

@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-import com.patra.common.messaging.ChannelKey;
 import com.patra.ingest.app.usecase.relay.command.OutboxRelayCommand;
 import com.patra.ingest.app.usecase.relay.config.OutboxRelayProperties;
 import com.patra.ingest.app.usecase.relay.dto.RelayReport;
@@ -14,6 +13,7 @@ import com.patra.ingest.app.usecase.relay.publisher.RelayEventPublisher;
 import com.patra.ingest.domain.event.OutboxRelayDomainEvent;
 import com.patra.ingest.domain.model.vo.relay.RelayBatchResult;
 import com.patra.ingest.domain.model.vo.relay.RelayPlan;
+import dev.linqibin.commons.messaging.ChannelKey;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;

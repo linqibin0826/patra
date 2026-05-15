@@ -1,8 +1,6 @@
 package com.patra.ingest.infra.adapter.persistence.converter.mapper;
 
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.common.json.JsonMapperHolder;
-import com.patra.common.json.JsonNodeMappings;
 import com.patra.ingest.domain.exception.InfrastructureException;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.model.enums.OperationCode;
@@ -11,6 +9,8 @@ import com.patra.ingest.domain.model.vo.plan.PlanId;
 import com.patra.ingest.domain.model.vo.plan.WindowSpec;
 import com.patra.ingest.domain.model.vo.schedule.ScheduleInstanceId;
 import com.patra.ingest.infra.adapter.persistence.entity.PlanEntity;
+import dev.linqibin.commons.json.JsonMapperHolder;
+import dev.linqibin.commons.json.JsonNodeMappings;
 import java.util.Map;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.Mapper;
@@ -38,15 +38,15 @@ public interface PlanJpaMapper {
   @Mapping(
       target = "exprProtoSnapshot",
       expression =
-          "java(com.patra.common.json.JsonNodeMappings.jsonStringToNode(aggregate.getExprProtoSnapshotJson()))")
+          "java(dev.linqibin.commons.json.JsonNodeMappings.jsonStringToNode(aggregate.getExprProtoSnapshotJson()))")
   @Mapping(
       target = "provenanceConfigSnapshot",
       expression =
-          "java(com.patra.common.json.JsonNodeMappings.jsonStringToNode(aggregate.getProvenanceConfigSnapshotJson()))")
+          "java(dev.linqibin.commons.json.JsonNodeMappings.jsonStringToNode(aggregate.getProvenanceConfigSnapshotJson()))")
   @Mapping(
       target = "sliceParams",
       expression =
-          "java(com.patra.common.json.JsonNodeMappings.jsonStringToNode(aggregate.getSliceParamsJson()))")
+          "java(dev.linqibin.commons.json.JsonNodeMappings.jsonStringToNode(aggregate.getSliceParamsJson()))")
   @Mapping(target = "statusCode", source = "status", qualifiedByName = "planStatusToCode")
   @Mapping(target = "windowSpec", source = "windowSpec", qualifiedByName = "windowSpecToJson")
   // 审计字段由 JPA 管理

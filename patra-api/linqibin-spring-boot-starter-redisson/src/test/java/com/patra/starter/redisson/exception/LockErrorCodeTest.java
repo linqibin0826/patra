@@ -2,7 +2,7 @@ package com.patra.starter.redisson.exception;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.patra.common.error.codes.ErrorCodeLike;
+import dev.linqibin.commons.error.codes.ErrorCodeLike;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

@@ -1,6 +1,5 @@
 package com.patra.objectstorage.infra.adapter.persistence.converter.mapper;
 
-import com.patra.common.json.JsonMapperHolder;
 import com.patra.objectstorage.domain.model.aggregate.FileMetadata;
 import com.patra.objectstorage.domain.model.enums.FileStatus;
 import com.patra.objectstorage.domain.model.enums.StorageProvider;
@@ -9,6 +8,7 @@ import com.patra.objectstorage.domain.model.vo.FileChecksum;
 import com.patra.objectstorage.domain.model.vo.FileSize;
 import com.patra.objectstorage.domain.model.vo.StorageKey;
 import com.patra.objectstorage.infra.adapter.persistence.entity.FileMetadataEntity;
+import dev.linqibin.commons.json.JsonMapperHolder;
 import java.util.Locale;
 import java.util.Map;
 import org.mapstruct.Mapper;

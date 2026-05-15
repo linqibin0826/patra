@@ -6,7 +6,7 @@ import com.patra.catalog.domain.model.enums.DataSourceCode;
 import com.patra.catalog.domain.model.vo.author.AuthorId;
 import com.patra.catalog.domain.model.vo.author.AuthorNameVariant;
 import com.patra.catalog.domain.model.vo.author.Orcid;
-import com.patra.common.domain.AggregateRoot;
+import dev.linqibin.commons.domain.AggregateRoot;
 import java.io.Serial;
 import java.time.Instant;
 import java.util.ArrayList;

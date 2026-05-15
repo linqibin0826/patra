@@ -1,8 +1,8 @@
 package com.patra.starter.core.cqrs;
 
-import com.patra.common.cqrs.CommandBus;
-import com.patra.common.cqrs.CommandHandler;
-import com.patra.common.cqrs.CommandInterceptor;
+import dev.linqibin.commons.cqrs.CommandBus;
+import dev.linqibin.commons.cqrs.CommandHandler;
+import dev.linqibin.commons.cqrs.CommandInterceptor;
 import java.util.List;
 import java.util.concurrent.Executor;
 import org.slf4j.Logger;

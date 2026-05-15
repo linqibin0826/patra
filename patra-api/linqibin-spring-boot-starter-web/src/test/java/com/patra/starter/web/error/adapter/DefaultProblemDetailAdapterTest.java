@@ -7,12 +7,12 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.patra.common.error.codes.ErrorCodeLike;
 import com.patra.starter.core.error.model.ErrorResolution;
 import com.patra.starter.core.error.model.ResolutionStrategy;
 import com.patra.starter.core.error.pipeline.ErrorResolutionPipeline;
 import com.patra.starter.web.error.adapter.model.ProblemDetailResponse;
 import com.patra.starter.web.error.builder.ProblemDetailBuilder;
+import dev.linqibin.commons.error.codes.ErrorCodeLike;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

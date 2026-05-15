@@ -1,6 +1,6 @@
 package com.patra.ingest.app.usecase.execution.command;
 
-import com.patra.common.cqrs.Command;
+import dev.linqibin.commons.cqrs.Command;
 import java.util.Map;
 
 /// 任务就绪命令(简化版)

@@ -5,12 +5,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.patra.common.cqrs.CommandBus;
 import com.patra.objectstorage.adapter.rest.internal.StorageEndpointImpl;
 import com.patra.objectstorage.api.dto.RecordUploadResponse;
 import com.patra.objectstorage.api.dto.UploadRecordRequest;
 import com.patra.objectstorage.app.recordupload.RecordUploadCommand;
 import com.patra.objectstorage.app.recordupload.RecordUploadResult;
+import dev.linqibin.commons.cqrs.CommandBus;
 import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;

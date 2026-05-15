@@ -16,7 +16,7 @@ import com.patra.catalog.domain.port.enrichment.LetPubEnrichmentPort;
 import com.patra.catalog.domain.port.enrichment.LetPubVenueData;
 import com.patra.catalog.domain.port.enrichment.VenueSnapshot;
 import com.patra.catalog.domain.port.storage.VenueCoverImageDownloadPort;
-import com.patra.common.error.trait.StandardErrorTrait;
+import dev.linqibin.commons.error.trait.StandardErrorTrait;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;

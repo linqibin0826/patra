@@ -50,7 +50,7 @@ package com.patra.ingest.domain.messaging;
 ///
 /// @author linqibin
 /// @since 0.1.0
-/// @see com.patra.common.messaging.ChannelKey
+/// @see dev.linqibin.commons.messaging.ChannelKey
 public interface OperationType {
 
   /// 返回操作类型的代码。

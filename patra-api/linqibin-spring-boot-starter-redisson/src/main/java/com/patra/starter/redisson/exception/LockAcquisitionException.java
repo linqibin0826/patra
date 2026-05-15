@@ -1,6 +1,6 @@
 package com.patra.starter.redisson.exception;
 
-import com.patra.common.error.ApplicationException;
+import dev.linqibin.commons.error.ApplicationException;
 
 /// 锁获取失败异常。
 ///

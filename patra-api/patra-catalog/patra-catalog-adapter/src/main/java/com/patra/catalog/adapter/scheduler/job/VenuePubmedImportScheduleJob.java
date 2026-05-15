@@ -5,9 +5,9 @@ import com.patra.catalog.adapter.scheduler.exception.LsiouConfigurationException
 import com.patra.catalog.adapter.scheduler.util.LsiouFileNameParser;
 import com.patra.catalog.app.usecase.venue.pubmed.command.VenuePubmedImportCommand;
 import com.patra.catalog.app.usecase.venue.pubmed.dto.VenuePubmedImportResult;
-import com.patra.common.cqrs.CommandBus;
 import com.xxl.job.core.context.XxlJobHelper;
 import com.xxl.job.core.handler.annotation.XxlJob;
+import dev.linqibin.commons.cqrs.CommandBus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

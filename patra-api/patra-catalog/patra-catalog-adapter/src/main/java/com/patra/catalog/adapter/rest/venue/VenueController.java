@@ -23,7 +23,7 @@ import com.patra.catalog.app.usecase.venue.query.dto.VenueInstanceListQuery;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueListQuery;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueRatingHistoryQuery;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueStatsQuery;
-import com.patra.common.query.PageResult;
+import dev.linqibin.commons.query.PageResult;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

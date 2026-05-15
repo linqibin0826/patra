@@ -1,6 +1,6 @@
 package com.patra.ingest.api.error;
 
-import com.patra.common.error.codes.ErrorCodeLike;
+import dev.linqibin.commons.error.codes.ErrorCodeLike;
 
 /// 采集服务的错误代码目录。
 ///
@@ -15,7 +15,7 @@ import com.patra.common.error.codes.ErrorCodeLike;
 ///   - 15xx: 检查点序列化错误
 ///   - 16xx: 计划组装错误
 ///
-/// @see com.patra.common.error.codes.ErrorCodeLike
+/// @see dev.linqibin.commons.error.codes.ErrorCodeLike
 public enum IngestErrorCode implements ErrorCodeLike {
 
   // ===== 注册中心配置错误 (12xx) =====

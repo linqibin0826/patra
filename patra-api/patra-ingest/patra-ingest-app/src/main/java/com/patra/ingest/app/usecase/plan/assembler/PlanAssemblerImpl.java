@@ -1,12 +1,7 @@
 package com.patra.ingest.app.usecase.plan.assembler;
 
 import cn.hutool.core.text.CharSequenceUtil;
-import com.patra.common.enums.Priority;
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.common.json.JsonNormalizer;
-import com.patra.common.json.JsonNormalizerConfig;
-import com.patra.common.json.JsonNormalizerResult;
-import com.patra.common.util.HashUtils;
 import com.patra.expr.canonical.ExprCanonicalSnapshot;
 import com.patra.expr.canonical.ExprCanonicalizer;
 import com.patra.ingest.app.usecase.plan.dto.PlanAssemblyResult;
@@ -25,6 +20,11 @@ import com.patra.ingest.domain.model.vo.plan.PlanTriggerNorm;
 import com.patra.ingest.domain.model.vo.plan.PlannerWindow;
 import com.patra.ingest.domain.model.vo.plan.WindowSpec;
 import com.patra.ingest.domain.model.vo.schedule.ScheduleInstanceId;
+import dev.linqibin.commons.enums.Priority;
+import dev.linqibin.commons.json.JsonNormalizer;
+import dev.linqibin.commons.json.JsonNormalizerConfig;
+import dev.linqibin.commons.json.JsonNormalizerResult;
+import dev.linqibin.commons.util.HashUtils;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;

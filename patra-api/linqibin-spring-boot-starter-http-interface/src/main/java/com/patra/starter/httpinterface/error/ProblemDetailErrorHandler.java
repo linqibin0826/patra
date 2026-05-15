@@ -1,9 +1,9 @@
 package com.patra.starter.httpinterface.error;
 
-import com.patra.common.error.problem.ErrorKeys;
-import com.patra.common.error.remote.RemoteCallException;
-import com.patra.common.error.trait.ErrorTrait;
 import com.patra.starter.httpinterface.config.HttpInterfaceProperties;
+import dev.linqibin.commons.error.problem.ErrorKeys;
+import dev.linqibin.commons.error.remote.RemoteCallException;
+import dev.linqibin.commons.error.trait.ErrorTrait;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;

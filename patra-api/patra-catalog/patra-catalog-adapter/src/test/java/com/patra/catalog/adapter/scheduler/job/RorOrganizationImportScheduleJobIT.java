@@ -11,8 +11,8 @@ import com.patra.catalog.adapter.scheduler.config.RorDataSourceAutoConfiguration
 import com.patra.catalog.adapter.scheduler.exception.RorConfigurationException;
 import com.patra.catalog.app.usecase.organization.command.RorOrganizationImportCommand;
 import com.patra.catalog.app.usecase.organization.command.RorOrganizationImportResult;
-import com.patra.common.cqrs.CommandBus;
 import com.xxl.job.core.context.XxlJobHelper;
+import dev.linqibin.commons.cqrs.CommandBus;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

@@ -1,7 +1,7 @@
 package com.patra.catalog.app.usecase.venue.query;
 
-import static com.patra.common.util.StringUtils.escapeLike;
-import static com.patra.common.util.StringUtils.trimToNull;
+import static dev.linqibin.commons.util.StringUtils.escapeLike;
+import static dev.linqibin.commons.util.StringUtils.trimToNull;
 
 import com.patra.catalog.app.usecase.venue.query.dto.VenueCompareQuery;
 import com.patra.catalog.app.usecase.venue.query.dto.VenueDetailQuery;
@@ -17,8 +17,8 @@ import com.patra.catalog.domain.model.read.venue.VenueRatingHistoryReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueStatsReadModel;
 import com.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import com.patra.catalog.domain.port.read.VenueReadPort;
-import com.patra.common.query.PageResult;
-import com.patra.common.query.PagingParams;
+import dev.linqibin.commons.query.PageResult;
+import dev.linqibin.commons.query.PagingParams;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;

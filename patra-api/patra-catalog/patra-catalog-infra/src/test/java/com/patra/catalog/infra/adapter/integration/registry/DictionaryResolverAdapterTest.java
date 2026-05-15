@@ -8,11 +8,11 @@ import static org.mockito.Mockito.when;
 
 import com.patra.catalog.domain.model.enums.DictionaryType;
 import com.patra.catalog.domain.model.vo.common.SourceStandard;
-import com.patra.common.error.remote.RemoteCallException;
 import com.patra.registry.api.dto.dict.DictionaryResolveItemResp;
 import com.patra.registry.api.dto.dict.DictionaryResolveReq;
 import com.patra.registry.api.dto.dict.DictionaryResolveResp;
 import com.patra.registry.api.endpoint.DictionaryEndpoint;
+import dev.linqibin.commons.error.remote.RemoteCallException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;

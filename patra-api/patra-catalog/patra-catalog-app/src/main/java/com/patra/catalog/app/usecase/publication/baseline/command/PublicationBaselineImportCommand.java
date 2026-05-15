@@ -4,7 +4,7 @@ import cn.hutool.core.text.CharSequenceUtil;
 import com.patra.catalog.app.usecase.publication.baseline.dto.PublicationBaselineImportResult;
 import com.patra.catalog.domain.exception.CatalogScheduleParameterException;
 import com.patra.catalog.domain.model.vo.publication.PublicationImportParams;
-import com.patra.common.cqrs.Command;
+import dev.linqibin.commons.cqrs.Command;
 import java.net.URI;
 
 /// PubMed Baseline 文献导入命令（Adapter → Application）。

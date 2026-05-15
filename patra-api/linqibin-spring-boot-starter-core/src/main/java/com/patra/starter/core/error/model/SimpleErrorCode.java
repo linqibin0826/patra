@@ -1,6 +1,6 @@
 package com.patra.starter.core.error.model;
 
-import com.patra.common.error.codes.ErrorCodeLike;
+import dev.linqibin.commons.error.codes.ErrorCodeLike;
 
 /// {@link ErrorCodeLike} 的简单不可变实现。
 ///

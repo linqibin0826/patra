@@ -1,6 +1,6 @@
 package com.patra.starter.core.json;
 
-import com.patra.common.json.JsonMapperHolder;
+import dev.linqibin.commons.json.JsonMapperHolder;
 import java.util.concurrent.atomic.AtomicReference;
 import tools.jackson.databind.ObjectMapper;
 

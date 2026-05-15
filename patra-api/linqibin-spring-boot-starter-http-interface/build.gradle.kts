@@ -14,6 +14,7 @@ plugins {
 dependencies {
     // Patra 通用核心（提供 RemoteCallException、ErrorTrait 等错误处理基础设施）
     api(project(":patra-common:patra-common-core"))
+    api(project(":linqibin-commons-core"))
 
     // Spring Boot RestClient（提供 RestClientCustomizer 等）
     api("org.springframework.boot:spring-boot-restclient")

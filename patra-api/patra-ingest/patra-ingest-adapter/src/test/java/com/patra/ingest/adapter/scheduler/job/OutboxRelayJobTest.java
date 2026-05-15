@@ -9,7 +9,6 @@ import static org.mockito.Mockito.when;
 
 import cn.hutool.core.net.NetUtil;
 import cn.hutool.core.util.IdUtil;
-import com.patra.common.cqrs.CommandBus;
 import com.patra.ingest.adapter.scheduler.param.OutboxRelayJobParam;
 import com.patra.ingest.app.usecase.relay.command.OutboxRelayCommand;
 import com.patra.ingest.app.usecase.relay.config.OutboxRelayProperties;
@@ -17,6 +16,7 @@ import com.patra.ingest.app.usecase.relay.dto.RelayReport;
 import com.patra.ingest.domain.exception.OutboxRelayExecutionException;
 import com.patra.ingest.domain.messaging.IngestPublishingChannels;
 import com.xxl.job.core.context.XxlJobHelper;
+import dev.linqibin.commons.cqrs.CommandBus;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;

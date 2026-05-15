@@ -2,7 +2,7 @@ package com.patra.starter.batch.exception;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.patra.common.error.ApplicationException;
+import dev.linqibin.commons.error.ApplicationException;
 import org.junit.jupiter.api.Test;
 
 /**

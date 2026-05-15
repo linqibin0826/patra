@@ -1,8 +1,8 @@
 package com.patra.ingest.app.usecase.relay.command;
 
-import com.patra.common.cqrs.Command;
-import com.patra.common.messaging.ChannelKey;
 import com.patra.ingest.app.usecase.relay.dto.RelayReport;
+import dev.linqibin.commons.cqrs.Command;
+import dev.linqibin.commons.messaging.ChannelKey;
 import java.time.Duration;
 import java.time.Instant;
 

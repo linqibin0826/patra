@@ -1,6 +1,6 @@
 package com.patra.catalog.domain.exception;
 
-import com.patra.common.error.trait.ErrorTrait;
+import dev.linqibin.commons.error.trait.ErrorTrait;
 
 /// 文件下载异常。
 ///

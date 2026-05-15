@@ -1,6 +1,6 @@
 package com.patra.catalog.app.usecase.organization.command;
 
-import com.patra.common.cqrs.Command;
+import dev.linqibin.commons.cqrs.Command;
 import java.util.Objects;
 
 /// ROR 机构导入命令。

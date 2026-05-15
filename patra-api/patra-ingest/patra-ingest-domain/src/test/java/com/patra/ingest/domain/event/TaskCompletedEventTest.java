@@ -2,7 +2,7 @@ package com.patra.ingest.domain.event;
 
 import static org.assertj.core.api.Assertions.*;
 
-import com.patra.common.domain.DomainEvent;
+import dev.linqibin.commons.domain.DomainEvent;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;

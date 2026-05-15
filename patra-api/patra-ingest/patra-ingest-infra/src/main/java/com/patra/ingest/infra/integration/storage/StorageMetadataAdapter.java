@@ -1,6 +1,5 @@
 package com.patra.ingest.infra.integration.storage;
 
-import com.patra.common.error.remote.RemoteCallException;
 import com.patra.ingest.domain.port.StorageMetadataPort;
 import com.patra.ingest.infra.integration.storage.converter.StorageMetadataRequestConverter;
 import com.patra.ingest.infra.integration.storage.converter.StorageMetadataRequestConverter.MappingContext;
@@ -8,6 +7,7 @@ import com.patra.objectstorage.api.dto.RecordUploadResponse;
 import com.patra.objectstorage.api.dto.UploadRecordRequest;
 import com.patra.objectstorage.api.endpoint.StorageEndpoint;
 import com.patra.starter.objectstorage.ObjectStorageProperties;
+import dev.linqibin.commons.error.remote.RemoteCallException;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

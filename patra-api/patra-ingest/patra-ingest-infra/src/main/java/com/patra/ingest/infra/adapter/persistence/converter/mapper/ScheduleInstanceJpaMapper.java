@@ -1,7 +1,6 @@
 package com.patra.ingest.infra.adapter.persistence.converter.mapper;
 
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.common.json.JsonNodeMappings;
 import com.patra.ingest.domain.exception.InfrastructureException;
 import com.patra.ingest.domain.model.aggregate.ScheduleInstanceAggregate;
 import com.patra.ingest.domain.model.enums.OperationCode;
@@ -9,6 +8,7 @@ import com.patra.ingest.domain.model.enums.Scheduler;
 import com.patra.ingest.domain.model.enums.TriggerType;
 import com.patra.ingest.domain.model.vo.schedule.ScheduleInstanceId;
 import com.patra.ingest.infra.adapter.persistence.entity.ScheduleInstanceEntity;
+import dev.linqibin.commons.json.JsonNodeMappings;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -30,7 +30,7 @@ public interface ScheduleInstanceJpaMapper {
   @Mapping(
       target = "triggerParams",
       expression =
-          "java(com.patra.common.json.JsonNodeMappings.mapToJsonNode(aggregate.getTriggerParams()))")
+          "java(dev.linqibin.commons.json.JsonNodeMappings.mapToJsonNode(aggregate.getTriggerParams()))")
   ScheduleInstanceEntity toEntity(ScheduleInstanceAggregate aggregate);
 
   default ScheduleInstanceAggregate toAggregate(ScheduleInstanceEntity entity) {

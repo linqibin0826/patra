@@ -5,7 +5,8 @@ package com.patra.registry.domain.exception;
 /// 典型场景：构造领域对象、强制不变性、验证查询视图参数。
 /// 这表示调用者提供的无效输入，而非内部系统错误。
 ///
-/// **自动语义**: 所有验证异常自动携带 {@link com.patra.common.error.trait.StandardErrorTrait#RULE_VIOLATION} 特征。
+/// **自动语义**: 所有验证异常自动携带 {@link dev.linqibin.commons.error.trait.StandardErrorTrait#RULE_VIOLATION}
+// 特征。
 ///
 /// **指南**:
 ///

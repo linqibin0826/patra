@@ -17,6 +17,7 @@ plugins {
 dependencies {
     // API 层核心依赖
     api(project(":patra-common:patra-common-core"))
+    api(project(":linqibin-commons-core"))
 
     // Jakarta Validation (仅用于 DTO 校验注解)
     compileOnly("jakarta.validation:jakarta.validation-api")

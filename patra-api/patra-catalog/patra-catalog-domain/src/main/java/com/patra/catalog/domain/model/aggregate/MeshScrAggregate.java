@@ -11,7 +11,7 @@ import com.patra.catalog.domain.model.vo.mesh.MeshScrId;
 import com.patra.catalog.domain.model.vo.mesh.MeshUI;
 import com.patra.catalog.domain.model.vo.mesh.PharmacologicalAction;
 import com.patra.catalog.domain.model.vo.mesh.ScrSource;
-import com.patra.common.domain.AggregateRoot;
+import dev.linqibin.commons.domain.AggregateRoot;
 import java.io.Serial;
 import java.time.LocalDate;
 import java.util.ArrayList;

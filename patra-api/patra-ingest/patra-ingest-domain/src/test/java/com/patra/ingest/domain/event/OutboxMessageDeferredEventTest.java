@@ -702,7 +702,7 @@ class OutboxMessageDeferredEventTest {
               Instant.now());
 
       // When & Then
-      assertThat(event).isInstanceOf(com.patra.common.domain.DomainEvent.class);
+      assertThat(event).isInstanceOf(dev.linqibin.commons.domain.DomainEvent.class);
     }
 
     @Test

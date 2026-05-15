@@ -1,6 +1,6 @@
 package com.patra.ingest.domain.event;
 
-import com.patra.common.domain.DomainEvent;
+import dev.linqibin.commons.domain.DomainEvent;
 import java.time.Instant;
 
 /// 切片状态变更领域事件,当 Slice 的状态因 Task 完成而变更时触发。

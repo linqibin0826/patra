@@ -1,12 +1,12 @@
 package com.patra.ingest.app.usecase.plan.command;
 
-import com.patra.common.cqrs.Command;
-import com.patra.common.enums.Priority;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.app.usecase.plan.dto.PlanIngestionResult;
 import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.enums.Scheduler;
 import com.patra.ingest.domain.model.enums.TriggerType;
+import dev.linqibin.commons.cqrs.Command;
+import dev.linqibin.commons.enums.Priority;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
@@ -23,7 +23,7 @@ import java.util.Objects;
 ///   - **windowFrom/windowTo**: half-open interval [from, to); both may be null for resolver to
 ///       infer.
 ///   - **priority**: scheduling priority; defaults to {@link
-///       com.patra.common.enums.Priority#NORMAL}.
+///       dev.linqibin.commons.enums.Priority#NORMAL}.
 ///   - **triggeredAt**: trigger time; defaults to now when null.
 ///   - **scheduler/schedulerJobId/schedulerLogId**: scheduler context for tracking; log id may
 ///       be null.

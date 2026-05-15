@@ -1,6 +1,6 @@
 package com.patra.starter.core.error.spi;
 
-import com.patra.common.error.codes.ErrorCodeLike;
+import dev.linqibin.commons.error.codes.ErrorCodeLike;
 import java.util.Optional;
 import org.springframework.core.Ordered;
 

@@ -1,9 +1,5 @@
 package com.patra.ingest.config;
 
-import com.patra.common.error.codes.ErrorCodeLike;
-import com.patra.common.error.remote.RemoteCallException;
-import com.patra.common.error.trait.ErrorTrait;
-import com.patra.common.error.trait.StandardErrorTrait;
 import com.patra.ingest.api.error.IngestErrorCode;
 import com.patra.ingest.domain.exception.IngestConfigurationException;
 import com.patra.ingest.domain.exception.IngestScheduleParameterException;
@@ -14,6 +10,10 @@ import com.patra.ingest.domain.exception.PlanPersistenceException;
 import com.patra.ingest.domain.exception.PlanValidationException;
 import com.patra.ingest.domain.exception.TaskCheckpointException;
 import com.patra.starter.core.error.spi.ErrorMappingContributor;
+import dev.linqibin.commons.error.codes.ErrorCodeLike;
+import dev.linqibin.commons.error.remote.RemoteCallException;
+import dev.linqibin.commons.error.trait.ErrorTrait;
+import dev.linqibin.commons.error.trait.StandardErrorTrait;
 import java.util.Optional;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;

@@ -1,12 +1,12 @@
 package com.patra.starter.core.error.pipeline.interceptor;
 
-import com.patra.common.error.codes.ErrorCodeLike;
 import com.patra.starter.core.error.config.ErrorProperties;
 import com.patra.starter.core.error.model.ErrorResolution;
 import com.patra.starter.core.error.model.ResolutionStrategy;
 import com.patra.starter.core.error.model.SimpleErrorCode;
 import com.patra.starter.core.error.pipeline.ResolutionInterceptor;
 import com.patra.starter.core.error.pipeline.ResolutionInvocation;
+import dev.linqibin.commons.error.codes.ErrorCodeLike;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import lombok.extern.slf4j.Slf4j;

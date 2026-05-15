@@ -1,6 +1,6 @@
 package com.patra.ingest.domain.model.vo.relay;
 
-import com.patra.common.messaging.ChannelKey;
+import dev.linqibin.commons.messaging.ChannelKey;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;

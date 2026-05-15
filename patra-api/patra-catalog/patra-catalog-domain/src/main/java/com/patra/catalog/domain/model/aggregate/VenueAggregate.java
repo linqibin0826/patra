@@ -12,7 +12,7 @@ import com.patra.catalog.domain.model.vo.venue.Society;
 import com.patra.catalog.domain.model.vo.venue.VenueId;
 import com.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import com.patra.catalog.domain.model.vo.venue.VenueLanguages;
-import com.patra.common.domain.AggregateRoot;
+import dev.linqibin.commons.domain.AggregateRoot;
 import java.io.Serial;
 import java.util.ArrayList;
 import java.util.Collections;

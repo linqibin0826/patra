@@ -4,9 +4,9 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import com.patra.common.cqrs.CommandBus;
 import com.patra.ingest.adapter.rocketmq.dto.TaskReadyPayload;
 import com.patra.ingest.app.usecase.execution.command.TaskReadyCommand;
+import dev.linqibin.commons.cqrs.CommandBus;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import org.apache.rocketmq.common.message.MessageExt;

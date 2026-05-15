@@ -14,6 +14,7 @@ plugins {
 dependencies {
     // Patra 内部依赖
     api(project(":patra-common:patra-common-core"))
+    api(project(":linqibin-commons-core"))
     api(project(":linqibin-spring-boot-starter-core"))
     api(project(":linqibin-spring-boot-starter-redisson"))
 

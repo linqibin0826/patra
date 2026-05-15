@@ -1,8 +1,8 @@
 package com.patra.starter.restclient.download;
 
-import com.patra.common.error.trait.StandardErrorTrait;
 import com.patra.starter.restclient.config.DownloadProperties;
 import com.patra.starter.restclient.download.strategy.StreamingDownloader;
+import dev.linqibin.commons.error.trait.StandardErrorTrait;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;

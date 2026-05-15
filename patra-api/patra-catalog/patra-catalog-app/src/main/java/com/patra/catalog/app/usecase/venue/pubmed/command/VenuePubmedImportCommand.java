@@ -3,7 +3,7 @@ package com.patra.catalog.app.usecase.venue.pubmed.command;
 import cn.hutool.core.text.CharSequenceUtil;
 import com.patra.catalog.app.usecase.venue.pubmed.dto.VenuePubmedImportResult;
 import com.patra.catalog.domain.exception.CatalogScheduleParameterException;
-import com.patra.common.cqrs.Command;
+import dev.linqibin.commons.cqrs.Command;
 import java.net.URI;
 
 /// PubMed Venue 数据导入命令（Adapter → Application）。

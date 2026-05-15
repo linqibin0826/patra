@@ -3,11 +3,11 @@ package com.patra.ingest.domain.model.vo.plan;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.patra.common.enums.Priority;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.enums.Scheduler;
 import com.patra.ingest.domain.model.enums.TriggerType;
+import dev.linqibin.commons.enums.Priority;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;

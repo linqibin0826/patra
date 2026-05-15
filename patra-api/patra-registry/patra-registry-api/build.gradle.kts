@@ -10,6 +10,7 @@ plugins {
 
 dependencies {
     api(project(":patra-common:patra-common-core"))
+    api(project(":linqibin-commons-core"))
 
     // DTO 验证注解
     api("jakarta.validation:jakarta.validation-api")

@@ -1,6 +1,6 @@
 package com.patra.registry.domain.exception;
 
-import com.patra.common.error.trait.StandardErrorTrait;
+import dev.linqibin.commons.error.trait.StandardErrorTrait;
 
 /// 注册中心配额/速率限制/容量超限异常基类。
 ///

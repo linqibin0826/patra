@@ -1,6 +1,6 @@
 package com.patra.catalog.domain.exception;
 
-import com.patra.common.error.trait.StandardErrorTrait;
+import dev.linqibin.commons.error.trait.StandardErrorTrait;
 
 /// MeSH 数据持久化异常。
 ///

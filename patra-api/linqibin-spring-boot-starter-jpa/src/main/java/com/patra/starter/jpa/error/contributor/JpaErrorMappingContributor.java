@@ -1,8 +1,8 @@
 package com.patra.starter.jpa.error.contributor;
 
-import com.patra.common.error.codes.ErrorCodeLike;
-import com.patra.common.error.codes.HttpStdErrors;
 import com.patra.starter.core.error.spi.ErrorMappingContributor;
+import dev.linqibin.commons.error.codes.ErrorCodeLike;
+import dev.linqibin.commons.error.codes.HttpStdErrors;
 import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.LockTimeoutException;

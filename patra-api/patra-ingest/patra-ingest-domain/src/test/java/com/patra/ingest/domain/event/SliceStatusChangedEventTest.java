@@ -227,7 +227,7 @@ class SliceStatusChangedEventTest {
           SliceStatusChangedEvent.of(1001L, 2001L, "EXECUTING", "SUCCEEDED");
 
       // When & Then
-      assertThat(event).isInstanceOf(com.patra.common.domain.DomainEvent.class);
+      assertThat(event).isInstanceOf(dev.linqibin.commons.domain.DomainEvent.class);
     }
 
     @Test

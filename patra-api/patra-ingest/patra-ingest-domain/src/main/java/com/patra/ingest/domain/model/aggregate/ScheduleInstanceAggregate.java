@@ -1,10 +1,10 @@
 package com.patra.ingest.domain.model.aggregate;
 
-import com.patra.common.domain.AggregateRoot;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.Scheduler;
 import com.patra.ingest.domain.model.enums.TriggerType;
 import com.patra.ingest.domain.model.vo.schedule.ScheduleInstanceId;
+import dev.linqibin.commons.domain.AggregateRoot;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;

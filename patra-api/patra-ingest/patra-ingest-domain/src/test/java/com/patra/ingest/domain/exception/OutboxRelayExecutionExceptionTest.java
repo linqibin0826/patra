@@ -2,8 +2,8 @@ package com.patra.ingest.domain.exception;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.patra.common.error.trait.ErrorTrait;
-import com.patra.common.error.trait.StandardErrorTrait;
+import dev.linqibin.commons.error.trait.ErrorTrait;
+import dev.linqibin.commons.error.trait.StandardErrorTrait;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -97,7 +97,7 @@ class OutboxRelayExecutionExceptionTest {
           new OutboxRelayExecutionException("执行失败", new RuntimeException());
 
       // When & Then
-      assertThat(exception).isInstanceOf(com.patra.common.error.trait.HasErrorTraits.class);
+      assertThat(exception).isInstanceOf(dev.linqibin.commons.error.trait.HasErrorTraits.class);
     }
   }
 }

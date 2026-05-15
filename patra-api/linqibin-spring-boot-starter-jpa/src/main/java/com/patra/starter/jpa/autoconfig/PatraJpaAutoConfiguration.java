@@ -1,7 +1,7 @@
 package com.patra.starter.jpa.autoconfig;
 
-import com.patra.common.error.codes.HttpStdErrors;
 import com.patra.starter.jpa.error.contributor.JpaErrorMappingContributor;
+import dev.linqibin.commons.error.codes.HttpStdErrors;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;

@@ -3,7 +3,6 @@ package com.patra.ingest.app.usecase.plan.validator;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.patra.common.enums.Priority;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.exception.PlanValidationException;
 import com.patra.ingest.domain.model.enums.OperationCode;
@@ -12,6 +11,7 @@ import com.patra.ingest.domain.model.enums.TriggerType;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.plan.PlanTriggerNorm;
 import com.patra.ingest.domain.model.vo.plan.PlannerWindow;
+import dev.linqibin.commons.enums.Priority;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
