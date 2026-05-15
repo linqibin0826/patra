@@ -32,8 +32,10 @@ import org.springframework.transaction.annotation.Transactional;
 ///         .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
 ///         .importPackages("dev.linqibin.patra.ingest");
 ///
+///     // 显式传入 Domain 层允许依赖的业务公共包（如 patra-common）
 ///     private static final HexagonalArchitectureRules rules =
-///         new HexagonalArchitectureRules("dev.linqibin.patra.ingest");
+///         new HexagonalArchitectureRules("dev.linqibin.patra.ingest",
+///             List.of("dev.linqibin.patra.common.."));
 ///
 ///     @Test
 ///     void layerDependencies() {
@@ -63,15 +65,33 @@ public class HexagonalArchitectureRules {
   /// 项目基础包（如 `"dev.linqibin.patra.ingest"`、`"com.sutra"`）。
   private final String basePackage;
 
-  /// 构造函数。
+  /// Domain 层允许依赖的业务公共包列表（ArchUnit 包模式，如 `"dev.linqibin.patra.common.."`）。
+  private final List<String> allowedCommonPackages;
+
+  /// 完整构造函数。
   ///
-  /// @param basePackage 项目基础包前缀（如 `"dev.linqibin.patra.ingest"`、`"com.sutra"`），
-  ///                    必须是 Domain/App/Infra/Adapter 等子包的共同父包
-  public HexagonalArchitectureRules(String basePackage) {
+  /// @param basePackage           项目基础包前缀（如 `"dev.linqibin.patra.ingest"`、`"com.sutra"`），
+  ///                              必须是 Domain/App/Infra/Adapter 等子包的共同父包
+  /// @param allowedCommonPackages Domain 层允许依赖的业务公共包列表（ArchUnit 包模式字符串，
+  ///                              如 `List.of("dev.linqibin.patra.common..")`）；
+  ///                              传空列表时 Domain 层不允许依赖任何业务公共包
+  public HexagonalArchitectureRules(String basePackage, List<String> allowedCommonPackages) {
     this.basePackage = Objects.requireNonNull(basePackage, "basePackage 不能为空");
     if (basePackage.isBlank()) {
       throw new IllegalArgumentException("basePackage 不能为空白字符串");
     }
+    this.allowedCommonPackages =
+        List.copyOf(
+            Objects.requireNonNull(allowedCommonPackages, "allowedCommonPackages 不能为 null"));
+  }
+
+  /// 无业务公共包白名单的构造函数。
+  ///
+  /// 适用于 Domain 层不依赖任何跨服务公共包的纯净项目。
+  ///
+  /// @param basePackage 项目基础包前缀
+  public HexagonalArchitectureRules(String basePackage) {
+    this(basePackage, List.of());
   }
 
   // ==================== 层依赖规则 ====================
@@ -183,22 +203,26 @@ public class HexagonalArchitectureRules {
 
   /// Domain 层允许的依赖白名单。
   ///
+  /// 固定允许依赖：JDK、Lombok、Hutool、Jackson 及 `basePackage` 自身的 domain 子包。
+  /// 业务公共包（如 `patra-common`）通过构造函数的 `allowedCommonPackages` 参数传入。
+  ///
   /// @return ArchRule 规则实例
   public ArchRule domainAllowedDependencies() {
+    List<String> allowed = new ArrayList<>();
+    allowed.add("java..");
+    allowed.add("lombok..");
+    allowed.add("cn.hutool..");
+    allowed.add("tools.jackson..");
+    allowed.add("com.fasterxml.jackson.annotation..");
+    allowed.addAll(allowedCommonPackages);
+    allowed.add(basePackage + ".domain..");
     return classes()
         .that()
         .resideInAPackage("..domain..")
         .should()
         .onlyDependOnClassesThat()
-        .resideInAnyPackage(
-            "java..",
-            "lombok..",
-            "cn.hutool..",
-            "tools.jackson..",
-            "com.fasterxml.jackson.annotation..",
-            "dev.linqibin.patra.common..",
-            basePackage + ".domain..")
-        .as("Domain 层仅允许依赖：JDK、Lombok、Hutool、Jackson、patra-common")
+        .resideInAnyPackage(allowed.toArray(new String[0]))
+        .as("Domain 层仅允许依赖：JDK、Lombok、Hutool、Jackson 及构造函数指定的业务公共包")
         .because("限制依赖范围确保 Domain 层纯净（CHK-ARCH-001）");
   }
 

@@ -5,6 +5,7 @@ import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import dev.linqibin.starter.test.archunit.HexagonalArchitectureRules;
 import dev.linqibin.starter.test.archunit.TestingRules;
+import java.util.List;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -45,9 +46,10 @@ class IngestArchitectureTest {
 
   private static JavaClasses classes;
 
-  /// 参数化的六边形架构规则（基础包: dev.linqibin.patra.ingest）。
+  /// 参数化的六边形架构规则（基础包: dev.linqibin.patra.ingest，业务公共包: patra-common）。
   private static final HexagonalArchitectureRules rules =
-      new HexagonalArchitectureRules("dev.linqibin.patra.ingest");
+      new HexagonalArchitectureRules(
+          "dev.linqibin.patra.ingest", List.of("dev.linqibin.patra.common.."));
 
   @BeforeAll
   static void setup() {
