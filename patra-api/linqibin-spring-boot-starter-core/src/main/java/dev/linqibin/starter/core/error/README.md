@@ -56,7 +56,7 @@
 ## 包结构
 
 ```
-com.patra.starter.core.error
+dev.linqibin.starter.core.error
 ├── config/                    # 配置与自动装配
 │   ├── ErrorProperties        # 配置属性（patra.error.*）
 │   ├── CoreErrorAutoConfiguration      # 核心自动配置

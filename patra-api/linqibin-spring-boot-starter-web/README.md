@@ -55,7 +55,7 @@ ProblemDetailAdapter 转换
 
 ```xml
 <dependency>
-    <groupId>com.patra</groupId>
+    <groupId>dev.linqibin.patra</groupId>
     <artifactId>patra-spring-boot-starter-web</artifactId>
 </dependency>
 ```
@@ -195,7 +195,7 @@ patra-spring-boot-starter-web
 ## 包结构
 
 ```
-com.patra.starter.web
+dev.linqibin.starter.web
 ├── autoconfig/
 │   └── WebConversionAutoConfiguration   # 类型转换器自动配置
 └── error/

@@ -272,7 +272,7 @@ public class BatchImportService {
 
 ```xml
 <dependency>
-    <groupId>com.patra</groupId>
+    <groupId>dev.linqibin.patra</groupId>
     <artifactId>patra-spring-boot-starter-jpa</artifactId>
 </dependency>
 ```
@@ -382,7 +382,7 @@ patra-spring-boot-starter-jpa
 ## 包结构
 
 ```
-com.patra.starter.jpa
+dev.linqibin.starter.jpa
 ├── autoconfig/
 │   ├── PatraJpaAutoConfiguration       # 主自动配置类
 │   ├── JpaAuditingConfig               # JPA 审计配置

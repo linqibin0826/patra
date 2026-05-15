@@ -18,7 +18,7 @@
 
 ```xml
 <dependency>
-    <groupId>com.patra</groupId>
+    <groupId>dev.linqibin.patra</groupId>
     <artifactId>patra-spring-boot-starter-redisson</artifactId>
     <version>${patra.version}</version>
 </dependency>
@@ -176,7 +176,7 @@ patra:
 
 ```xml
 <dependency>
-    <groupId>com.patra</groupId>
+    <groupId>dev.linqibin.patra</groupId>
     <artifactId>patra-spring-boot-starter-observability</artifactId>
 </dependency>
 ```

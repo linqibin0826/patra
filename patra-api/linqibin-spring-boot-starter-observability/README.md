@@ -53,7 +53,7 @@
 
 ```xml
 <dependency>
-    <groupId>com.patra</groupId>
+    <groupId>dev.linqibin.patra</groupId>
     <artifactId>patra-spring-boot-starter-observability</artifactId>
 </dependency>
 ```
@@ -189,7 +189,7 @@ patra-spring-boot-starter-observability
 ## 包结构
 
 ```
-com.patra.starter.observability
+dev.linqibin.starter.observability
 ├── autoconfigure/                       # 自动配置
 │   ├── ObservabilityAutoConfiguration   # 核心自动配置
 │   ├── MicrometerAutoConfiguration      # Micrometer 配置 + OTel Bridge
