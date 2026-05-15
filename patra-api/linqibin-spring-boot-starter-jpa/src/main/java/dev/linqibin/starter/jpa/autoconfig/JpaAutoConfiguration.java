@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-/// Patra JPA 自动配置类。
+/// JPA 自动配置类。
 ///
 /// **功能说明**：
 ///
@@ -28,7 +28,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 @AutoConfiguration(after = HibernateJpaAutoConfiguration.class)
 @ConditionalOnClass({JpaRepository.class})
 @Import({JpaAuditingConfig.class, HibernatePropertiesCustomizer.class})
-public class PatraJpaAutoConfiguration {
+public class JpaAutoConfiguration {
 
   /// 注册 JPA 异常映射贡献器。
   ///
