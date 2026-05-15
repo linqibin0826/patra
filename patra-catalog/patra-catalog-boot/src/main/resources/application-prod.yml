@@ -23,8 +23,8 @@ spring:
 # Production logging configuration
 logging:
   level:
-    com.patra: INFO
-    com.patra.catalog: INFO
+    dev.linqibin: INFO
+    dev.linqibin.patra.catalog: INFO
 
 # Spring Batch 独立数据源（与业务数据库隔离）
 patra:

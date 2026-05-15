@@ -43,5 +43,5 @@ patra:
 
 logging:
   level:
-    com.patra: DEBUG
-    com.patra.starter.expr.compiler: DEBUG
+    dev.linqibin: DEBUG
+    dev.linqibin.patra.starter.expr.compiler: DEBUG

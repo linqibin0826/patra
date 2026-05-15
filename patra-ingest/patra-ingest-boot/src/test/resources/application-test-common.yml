@@ -100,7 +100,7 @@ management:
 # 日志配置
 logging:
   level:
-    com.patra: INFO
+    dev.linqibin: INFO
     org.testcontainers: INFO
     org.apache.rocketmq: WARN
     org.springframework.cloud: WARN
