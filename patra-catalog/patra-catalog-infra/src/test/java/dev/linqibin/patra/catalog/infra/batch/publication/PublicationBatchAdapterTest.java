@@ -8,8 +8,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.patra.starter.batch.core.JobOperatorHelper;
 import dev.linqibin.patra.catalog.domain.model.vo.publication.PublicationImportParams;
+import dev.linqibin.starter.batch.core.JobOperatorHelper;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

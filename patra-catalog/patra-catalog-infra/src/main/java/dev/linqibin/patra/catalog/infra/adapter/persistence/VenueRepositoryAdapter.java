@@ -1,6 +1,5 @@
 package dev.linqibin.patra.catalog.infra.adapter.persistence;
 
-import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import dev.linqibin.patra.catalog.domain.model.aggregate.VenueAggregate;
 import dev.linqibin.patra.catalog.domain.model.enums.VenueIdentifierType;
 import dev.linqibin.patra.catalog.domain.model.vo.venue.VenueId;
@@ -23,6 +22,7 @@ import dev.linqibin.patra.catalog.infra.persistence.entity.VenueIndexingHistoryE
 import dev.linqibin.patra.catalog.infra.persistence.entity.VenueMeshEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.VenuePublicationStatsEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.VenueRelationEntity;
+import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
 import jakarta.persistence.EntityManager;
 import java.util.ArrayList;
 import java.util.Collection;

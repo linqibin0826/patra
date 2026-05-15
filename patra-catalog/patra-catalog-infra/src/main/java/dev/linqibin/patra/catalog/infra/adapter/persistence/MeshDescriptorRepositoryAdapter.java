@@ -1,7 +1,5 @@
 package dev.linqibin.patra.catalog.infra.adapter.persistence;
 
-import com.patra.starter.jpa.entity.IdAwareEntity;
-import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import dev.linqibin.patra.catalog.domain.model.aggregate.MeshDescriptorAggregate;
 import dev.linqibin.patra.catalog.domain.model.entity.MeshConcept;
 import dev.linqibin.patra.catalog.domain.port.repository.MeshDescriptorRepository;
@@ -18,6 +16,8 @@ import dev.linqibin.patra.catalog.infra.persistence.entity.MeshDescriptorEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.MeshEntryCombinationEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.MeshEntryTermEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.MeshTreeNumberEntity;
+import dev.linqibin.starter.jpa.entity.IdAwareEntity;
+import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
 import jakarta.persistence.EntityManager;
 import java.util.ArrayList;
 import java.util.Collection;

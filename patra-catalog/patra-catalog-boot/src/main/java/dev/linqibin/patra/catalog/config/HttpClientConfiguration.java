@@ -1,7 +1,7 @@
 package dev.linqibin.patra.catalog.config;
 
-import com.patra.starter.httpinterface.factory.RestClientFactory;
 import dev.linqibin.patra.registry.api.endpoint.DictionaryEndpoint;
+import dev.linqibin.starter.httpinterface.factory.RestClientFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

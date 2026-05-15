@@ -2,12 +2,12 @@ package dev.linqibin.patra.catalog.infra.adapter.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import dev.linqibin.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import dev.linqibin.patra.catalog.domain.model.vo.mesh.MeshUI;
 import dev.linqibin.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshQualifierDao;
 import dev.linqibin.patra.catalog.infra.persistence.entity.MeshQualifierEntity;
+import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;

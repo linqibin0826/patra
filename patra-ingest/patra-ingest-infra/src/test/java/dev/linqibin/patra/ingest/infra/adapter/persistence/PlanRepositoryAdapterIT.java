@@ -2,14 +2,14 @@ package dev.linqibin.patra.ingest.infra.adapter.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
-import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import dev.linqibin.patra.ingest.domain.model.aggregate.PlanAggregate;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.dao.PlanDao;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.dao.ScheduleInstanceDao;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.PlanEntity;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.ScheduleInstanceEntity;
 import dev.linqibin.patra.ingest.infra.config.IngestMySQLContainerInitializer;
+import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
+import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;

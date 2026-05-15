@@ -2,7 +2,6 @@ package dev.linqibin.patra.catalog.infra.batch.publication;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.patra.starter.batch.config.BatchProperties;
 import dev.linqibin.patra.catalog.domain.port.gateway.VenueInstanceGateway;
 import dev.linqibin.patra.catalog.domain.port.lookup.FunderLookupPort;
 import dev.linqibin.patra.catalog.domain.port.lookup.LanguageLookupPort;
@@ -10,6 +9,7 @@ import dev.linqibin.patra.catalog.domain.port.lookup.VenueLookupPort;
 import dev.linqibin.patra.catalog.domain.port.parser.PubmedXmlParserPort;
 import dev.linqibin.patra.catalog.domain.port.repository.PublicationRepository;
 import dev.linqibin.patra.catalog.domain.port.source.FileDownloadPort;
+import dev.linqibin.starter.batch.config.BatchProperties;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;

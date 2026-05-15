@@ -4,7 +4,6 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.*;
 import static org.awaitility.Awaitility.await;
 
-import com.patra.starter.test.container.initializer.RocketMQContainerInitializer;
 import dev.linqibin.commons.cqrs.CommandBus;
 import dev.linqibin.patra.ingest.app.usecase.relay.command.OutboxRelayCommand;
 import dev.linqibin.patra.ingest.app.usecase.relay.dto.RelayReport;
@@ -16,6 +15,7 @@ import dev.linqibin.patra.ingest.integration.config.IngestMySQLContainerInitiali
 import dev.linqibin.patra.ingest.integration.config.IngestRocketMQContainerInitializer;
 import dev.linqibin.patra.ingest.testutil.OutboxMessageTestBuilder;
 import dev.linqibin.patra.ingest.testutil.RocketMQMessageCollector;
+import dev.linqibin.starter.test.container.initializer.RocketMQContainerInitializer;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;

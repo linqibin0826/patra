@@ -1,6 +1,5 @@
 package dev.linqibin.patra.ingest.infra.adapter.persistence;
 
-import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.ingest.domain.model.aggregate.TaskAggregate;
 import dev.linqibin.patra.ingest.domain.model.vo.task.TaskId;
@@ -8,6 +7,7 @@ import dev.linqibin.patra.ingest.domain.port.TaskRepository;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.converter.mapper.TaskJpaMapper;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.dao.TaskDao;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.TaskEntity;
+import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;

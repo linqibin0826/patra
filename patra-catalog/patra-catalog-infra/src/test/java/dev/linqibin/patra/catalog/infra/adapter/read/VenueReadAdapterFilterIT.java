@@ -2,8 +2,6 @@ package dev.linqibin.patra.catalog.infra.adapter.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
-import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import dev.linqibin.commons.query.PageResult;
 import dev.linqibin.commons.query.PagingParams;
 import dev.linqibin.patra.catalog.domain.model.read.venue.VenueFilter;
@@ -21,6 +19,8 @@ import dev.linqibin.patra.catalog.infra.persistence.entity.CasWarningEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.JcrRatingEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.ScopusRatingEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.VenueEntity;
+import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
+import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;

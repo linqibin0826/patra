@@ -1,6 +1,5 @@
 package dev.linqibin.patra.catalog.infra.persistence.converter.mapper;
 
-import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import dev.linqibin.patra.catalog.domain.model.aggregate.AuthorAggregate;
 import dev.linqibin.patra.catalog.domain.model.enums.AuthorStatus;
 import dev.linqibin.patra.catalog.domain.model.enums.DataSourceCode;
@@ -10,6 +9,7 @@ import dev.linqibin.patra.catalog.domain.model.vo.author.Orcid;
 import dev.linqibin.patra.catalog.infra.persistence.entity.AuthorEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.AuthorNameVariantEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.AuthorOrcidEntity;
+import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
 import java.util.List;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;

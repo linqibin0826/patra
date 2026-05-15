@@ -1,10 +1,10 @@
 package dev.linqibin.patra.ingest.architecture;
 
-import com.patra.starter.test.archunit.HexagonalArchitectureRules;
-import com.patra.starter.test.archunit.TestingRules;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
+import dev.linqibin.starter.test.archunit.HexagonalArchitectureRules;
+import dev.linqibin.starter.test.archunit.TestingRules;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

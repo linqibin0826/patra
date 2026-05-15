@@ -1,6 +1,6 @@
 package dev.linqibin.patra.registry.infra.config;
 
-import com.patra.starter.test.container.initializer.MySQLContainerInitializer;
+import dev.linqibin.starter.test.container.initializer.MySQLContainerInitializer;
 
 /// Registry 服务专用 MySQL 容器初始化器。
 ///

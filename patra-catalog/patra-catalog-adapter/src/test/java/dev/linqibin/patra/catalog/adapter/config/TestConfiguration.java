@@ -1,8 +1,8 @@
 package dev.linqibin.patra.catalog.adapter.config;
 
-import com.patra.starter.core.error.config.CoreErrorAutoConfiguration;
-import com.patra.starter.core.json.autoconfig.JacksonAutoConfiguration;
-import com.patra.starter.web.error.config.WebErrorAutoConfiguration;
+import dev.linqibin.starter.core.error.config.CoreErrorAutoConfiguration;
+import dev.linqibin.starter.core.json.autoconfig.JacksonAutoConfiguration;
+import dev.linqibin.starter.web.error.config.WebErrorAutoConfiguration;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;

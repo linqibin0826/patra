@@ -1,10 +1,10 @@
 package dev.linqibin.patra.ingest.config;
 
-import com.patra.starter.httpinterface.factory.RestClientFactory;
 import dev.linqibin.patra.objectstorage.api.endpoint.StorageEndpoint;
 import dev.linqibin.patra.registry.api.endpoint.DictionaryEndpoint;
 import dev.linqibin.patra.registry.api.endpoint.ExprEndpoint;
 import dev.linqibin.patra.registry.api.endpoint.ProvenanceEndpoint;
+import dev.linqibin.starter.httpinterface.factory.RestClientFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

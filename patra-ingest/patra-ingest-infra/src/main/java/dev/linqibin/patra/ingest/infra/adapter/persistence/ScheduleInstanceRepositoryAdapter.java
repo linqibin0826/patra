@@ -1,12 +1,12 @@
 package dev.linqibin.patra.ingest.infra.adapter.persistence;
 
 import cn.hutool.core.lang.Assert;
-import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import dev.linqibin.patra.ingest.domain.model.aggregate.ScheduleInstanceAggregate;
 import dev.linqibin.patra.ingest.domain.port.ScheduleInstanceRepository;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.converter.mapper.ScheduleInstanceJpaMapper;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.dao.ScheduleInstanceDao;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.ScheduleInstanceEntity;
+import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;

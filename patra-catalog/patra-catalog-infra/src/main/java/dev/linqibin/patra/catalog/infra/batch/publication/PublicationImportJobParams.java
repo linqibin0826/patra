@@ -1,6 +1,6 @@
 package dev.linqibin.patra.catalog.infra.batch.publication;
 
-import com.patra.starter.batch.core.JobParams;
+import dev.linqibin.starter.batch.core.JobParams;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

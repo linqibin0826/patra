@@ -1,13 +1,13 @@
 package dev.linqibin.patra.catalog.infra.adapter.source;
 
-import com.patra.starter.restclient.download.DownloadClient;
-import com.patra.starter.restclient.download.DownloadException;
-import com.patra.starter.restclient.download.DownloadOptions;
-import com.patra.starter.restclient.download.DownloadResult;
 import dev.linqibin.commons.error.trait.StandardErrorTrait;
 import dev.linqibin.patra.catalog.domain.exception.FileDownloadException;
 import dev.linqibin.patra.catalog.domain.port.source.FileDownloadPort;
 import dev.linqibin.patra.catalog.domain.port.source.FileDownloadResult;
+import dev.linqibin.starter.restclient.download.DownloadClient;
+import dev.linqibin.starter.restclient.download.DownloadException;
+import dev.linqibin.starter.restclient.download.DownloadOptions;
+import dev.linqibin.starter.restclient.download.DownloadResult;
 import java.net.URI;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;

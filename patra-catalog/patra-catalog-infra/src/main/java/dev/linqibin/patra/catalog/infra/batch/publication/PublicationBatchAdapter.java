@@ -1,8 +1,8 @@
 package dev.linqibin.patra.catalog.infra.batch.publication;
 
-import com.patra.starter.batch.core.JobOperatorHelper;
 import dev.linqibin.patra.catalog.domain.model.vo.publication.PublicationImportParams;
 import dev.linqibin.patra.catalog.domain.port.batch.PublicationBatchPort;
+import dev.linqibin.starter.batch.core.JobOperatorHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.job.Job;

@@ -1,7 +1,7 @@
 package dev.linqibin.patra.objectstorage;
 
-import com.patra.starter.core.error.config.CoreErrorAutoConfiguration;
-import com.patra.starter.web.error.config.WebErrorAutoConfiguration;
+import dev.linqibin.starter.core.error.config.CoreErrorAutoConfiguration;
+import dev.linqibin.starter.web.error.config.WebErrorAutoConfiguration;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
