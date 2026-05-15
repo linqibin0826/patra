@@ -1,9 +1,9 @@
 package com.patra.ingest.domain.strategy;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import com.patra.ingest.domain.model.vo.query.QuerySession;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.List;
 
 /// 批次生成策略接口

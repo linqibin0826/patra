@@ -1,7 +1,7 @@
 package com.patra.ingest.domain.event;
 
-import com.patra.common.enums.ProvenanceCode;
 import dev.linqibin.commons.domain.DomainEvent;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 
 /// 任务入队领域事件。当任务进入执行队列时发布。

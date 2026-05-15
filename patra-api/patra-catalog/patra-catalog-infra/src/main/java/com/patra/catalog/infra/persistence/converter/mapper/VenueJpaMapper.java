@@ -19,7 +19,7 @@ import com.patra.catalog.infra.persistence.entity.VenueIndexingHistoryEntity;
 import com.patra.catalog.infra.persistence.entity.VenueMeshEntity;
 import com.patra.catalog.infra.persistence.entity.VenuePublicationStatsEntity;
 import com.patra.catalog.infra.persistence.entity.VenueRelationEntity;
-import com.patra.common.enums.ProvenanceCode;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.List;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;

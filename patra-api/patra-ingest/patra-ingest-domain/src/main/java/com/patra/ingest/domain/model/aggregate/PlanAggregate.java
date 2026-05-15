@@ -1,12 +1,12 @@
 package com.patra.ingest.domain.model.aggregate;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.enums.PlanStatus;
 import com.patra.ingest.domain.model.vo.plan.PlanId;
 import com.patra.ingest.domain.model.vo.plan.WindowSpec;
 import com.patra.ingest.domain.model.vo.schedule.ScheduleInstanceId;
 import dev.linqibin.commons.domain.AggregateRoot;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.Objects;
 import lombok.Getter;
 

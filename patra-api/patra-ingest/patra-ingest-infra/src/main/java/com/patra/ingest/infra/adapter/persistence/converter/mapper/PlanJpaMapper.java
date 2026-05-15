@@ -1,6 +1,5 @@
 package com.patra.ingest.infra.adapter.persistence.converter.mapper;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.exception.InfrastructureException;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.model.enums.OperationCode;
@@ -11,6 +10,7 @@ import com.patra.ingest.domain.model.vo.schedule.ScheduleInstanceId;
 import com.patra.ingest.infra.adapter.persistence.entity.PlanEntity;
 import dev.linqibin.commons.json.JsonMapperHolder;
 import dev.linqibin.commons.json.JsonNodeMappings;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.Map;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.Mapper;

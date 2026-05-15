@@ -1,7 +1,6 @@
 package com.patra.ingest.adapter.scheduler.job;
 
 import cn.hutool.core.text.CharSequenceUtil;
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.adapter.scheduler.param.ProvenanceScheduleJobParam;
 import com.patra.ingest.app.usecase.plan.command.PlanIngestionCommand;
 import com.patra.ingest.app.usecase.plan.dto.PlanIngestionResult;
@@ -12,6 +11,7 @@ import com.patra.ingest.domain.model.enums.TriggerType;
 import com.xxl.job.core.context.XxlJobHelper;
 import dev.linqibin.commons.cqrs.CommandBus;
 import dev.linqibin.commons.enums.Priority;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.LinkedHashMap;

@@ -1,7 +1,7 @@
 package com.patra.starter.expr.compiler.model;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.expr.Expr;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.Objects;
 
 /// {@link CompileRequest} 的流式构建器，具有合理的默认值和便利的辅助方法。

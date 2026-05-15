@@ -1,6 +1,5 @@
 package com.patra.ingest.infra.adapter.persistence.converter.mapper;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.exception.InfrastructureException;
 import com.patra.ingest.domain.model.entity.Cursor;
 import com.patra.ingest.domain.model.enums.CursorType;
@@ -10,6 +9,7 @@ import com.patra.ingest.domain.model.vo.cursor.CursorLineage;
 import com.patra.ingest.domain.model.vo.cursor.CursorValue;
 import com.patra.ingest.domain.model.vo.cursor.CursorWatermark;
 import com.patra.ingest.infra.adapter.persistence.entity.CursorEntity;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.math.BigDecimal;
 import java.time.Instant;
 import org.mapstruct.Mapper;

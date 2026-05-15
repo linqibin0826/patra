@@ -2,10 +2,10 @@ package com.patra.ingest.domain.model.aggregate;
 
 import static org.assertj.core.api.Assertions.*;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.Scheduler;
 import com.patra.ingest.domain.model.enums.TriggerType;
 import com.patra.ingest.domain.model.vo.schedule.ScheduleInstanceId;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;

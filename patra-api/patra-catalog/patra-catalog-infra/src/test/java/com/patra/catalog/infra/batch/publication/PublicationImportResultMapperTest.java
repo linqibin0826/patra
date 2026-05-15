@@ -28,7 +28,7 @@ import com.patra.catalog.infra.batch.publication.PublicationImportResult.Publica
 import com.patra.catalog.infra.batch.publication.PublicationImportResult.PublicationTypeData;
 import com.patra.catalog.infra.batch.publication.PublicationImportResult.QualifierData;
 import com.patra.catalog.infra.batch.publication.PublicationImportResult.SupplMeshData;
-import com.patra.common.enums.ProvenanceCode;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;

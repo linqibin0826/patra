@@ -7,13 +7,13 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.registry.app.converter.ProvenanceQueryAssembler;
 import com.patra.registry.domain.model.aggregate.ProvenanceConfiguration;
 import com.patra.registry.domain.model.read.provenance.ProvenanceConfigQuery;
 import com.patra.registry.domain.model.read.provenance.ProvenanceQuery;
 import com.patra.registry.domain.model.vo.provenance.Provenance;
 import com.patra.registry.domain.port.ProvenanceConfigRepository;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;

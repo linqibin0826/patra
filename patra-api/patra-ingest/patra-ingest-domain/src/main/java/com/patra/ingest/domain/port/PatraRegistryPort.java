@@ -1,8 +1,8 @@
 package com.patra.ingest.domain.port;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 
 /// Patra Registry 访问端口(六边形架构 - Domain → Infrastructure)。
 ///

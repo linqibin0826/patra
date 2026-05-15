@@ -1,6 +1,6 @@
 package com.patra.ingest.domain.model.vo.relay;
 
-import com.patra.common.enums.ProvenanceCode;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.List;
 
 /// [待翻译] * Message payload for the `INGEST_PUBLICATION_DATA_READY` channel.

@@ -2,7 +2,6 @@ package com.patra.ingest.app.usecase.plan;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.map.MapUtil;
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.app.usecase.plan.command.PlanIngestionCommand;
 import com.patra.ingest.domain.exception.PlanPersistenceException;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
@@ -13,6 +12,7 @@ import com.patra.ingest.domain.port.PlanRepository;
 import com.patra.ingest.domain.port.PlanSliceRepository;
 import com.patra.ingest.domain.port.ScheduleInstanceRepository;
 import com.patra.ingest.domain.port.TaskRepository;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;

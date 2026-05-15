@@ -1,10 +1,10 @@
 package com.patra.registry.app.service;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.registry.app.converter.ProvenanceQueryAssembler;
 import com.patra.registry.domain.model.read.provenance.ProvenanceConfigQuery;
 import com.patra.registry.domain.model.read.provenance.ProvenanceQuery;
 import com.patra.registry.domain.port.ProvenanceConfigRepository;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;

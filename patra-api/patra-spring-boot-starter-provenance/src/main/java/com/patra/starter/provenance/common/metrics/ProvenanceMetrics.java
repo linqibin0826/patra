@@ -1,6 +1,6 @@
 package com.patra.starter.provenance.common.metrics;
 
-import com.patra.common.enums.ProvenanceCode;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;

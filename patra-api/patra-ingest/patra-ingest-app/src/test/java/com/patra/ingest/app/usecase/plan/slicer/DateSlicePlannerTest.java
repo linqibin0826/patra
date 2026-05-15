@@ -2,7 +2,6 @@ package com.patra.ingest.app.usecase.plan.slicer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.expr.Expr;
 import com.patra.expr.Exprs;
 import com.patra.ingest.app.usecase.plan.expression.PlanExpressionDescriptor;
@@ -16,6 +15,7 @@ import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.plan.PlanTriggerNorm;
 import com.patra.ingest.domain.model.vo.plan.PlannerWindow;
 import dev.linqibin.commons.enums.Priority;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;

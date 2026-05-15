@@ -1,6 +1,5 @@
 package com.patra.registry.infra.adapter.persistence;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.registry.domain.exception.provenance.ProvenanceNotFoundException;
 import com.patra.registry.domain.model.vo.expr.*;
 import com.patra.registry.domain.port.ExprRepository;
@@ -11,6 +10,7 @@ import com.patra.registry.infra.adapter.persistence.dao.expr.ProvApiParamMapDao;
 import com.patra.registry.infra.adapter.persistence.dao.expr.ProvExprCapabilityDao;
 import com.patra.registry.infra.adapter.persistence.dao.expr.ProvExprRenderRuleDao;
 import com.patra.registry.infra.adapter.persistence.dao.provenance.ProvenanceDao;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

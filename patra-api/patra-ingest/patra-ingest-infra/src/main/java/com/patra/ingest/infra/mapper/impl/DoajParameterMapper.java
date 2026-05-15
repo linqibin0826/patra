@@ -1,11 +1,11 @@
 package com.patra.ingest.infra.mapper.impl;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.provenance.api.params.DoajParamKeys;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.query.QuerySession;
 import com.patra.ingest.infra.mapper.ProviderParameterMapper;
 import dev.linqibin.commons.json.JsonMapperHolder;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;

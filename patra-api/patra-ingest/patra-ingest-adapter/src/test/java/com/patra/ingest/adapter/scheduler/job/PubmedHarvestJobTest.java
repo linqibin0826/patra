@@ -6,8 +6,8 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.OperationCode;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

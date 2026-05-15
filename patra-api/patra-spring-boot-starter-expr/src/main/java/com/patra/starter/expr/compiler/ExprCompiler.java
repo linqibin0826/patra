@@ -1,10 +1,10 @@
 package com.patra.starter.expr.compiler;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.expr.*;
 import com.patra.starter.expr.compiler.model.CompileRequest;
 import com.patra.starter.expr.compiler.model.CompileRequestBuilder;
 import com.patra.starter.expr.compiler.model.CompileResult;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 
 /// 表达式编译器,将领域表达式编译为数据源特定的查询参数。
 ///

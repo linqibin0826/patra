@@ -1,11 +1,11 @@
 package com.patra.ingest.domain.model.entity;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.TaskRunStatus;
 import com.patra.ingest.domain.model.vo.execution.RunContext;
 import com.patra.ingest.domain.model.vo.execution.RunStats;
 import com.patra.ingest.domain.model.vo.execution.TaskRunCheckpoint;
 import com.patra.ingest.domain.model.vo.plan.WindowSpec;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import lombok.Getter;
 

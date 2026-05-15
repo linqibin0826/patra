@@ -3,7 +3,6 @@ package com.patra.ingest.app.usecase.execution.prepare;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.app.usecase.execution.command.TaskReadyCommand;
 import com.patra.ingest.app.usecase.execution.idempotency.IdempotencyChecker;
 import com.patra.ingest.app.usecase.execution.lease.LeaseManagementService;
@@ -21,6 +20,7 @@ import com.patra.ingest.domain.model.vo.task.TaskId;
 import com.patra.ingest.domain.port.PlanSliceRepository;
 import com.patra.ingest.domain.port.TaskRepository;
 import com.patra.ingest.domain.port.TaskRunRepository;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;

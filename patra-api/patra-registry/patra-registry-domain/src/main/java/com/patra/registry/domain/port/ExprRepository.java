@@ -1,7 +1,7 @@
 package com.patra.registry.domain.port;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.registry.domain.model.vo.expr.ExprSnapshot;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 
 /// 表达式仓储接口,提供表达式相关领域对象的只读访问。

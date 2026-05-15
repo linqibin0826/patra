@@ -1,6 +1,6 @@
 package com.patra.ingest.domain.model.vo.query;
 
-import com.patra.common.enums.ProvenanceCode;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.Map;
 import java.util.Optional;
 

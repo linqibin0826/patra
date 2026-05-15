@@ -1,8 +1,8 @@
 package com.patra.ingest.infra.mapper;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.query.QuerySession;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import tools.jackson.databind.JsonNode;
 
 /// 数据源参数映射器接口。

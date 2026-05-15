@@ -1,8 +1,8 @@
 package com.patra.ingest.domain.port;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.vo.storage.StorageUploadRequest;
 import com.patra.ingest.domain.model.vo.storage.StorageUploadResult;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 
 /// 对象存储适配器端口(六边形架构 - Domain → Infrastructure)。
 ///

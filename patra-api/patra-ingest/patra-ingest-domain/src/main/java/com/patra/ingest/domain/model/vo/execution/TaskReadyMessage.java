@@ -1,6 +1,6 @@
 package com.patra.ingest.domain.model.vo.execution;
 
-import com.patra.common.enums.ProvenanceCode;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 
 /// `TASK_READY` 通道的任务就绪消息值对象。

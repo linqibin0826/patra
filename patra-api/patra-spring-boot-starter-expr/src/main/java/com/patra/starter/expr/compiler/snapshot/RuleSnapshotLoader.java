@@ -1,6 +1,6 @@
 package com.patra.starter.expr.compiler.snapshot;
 
-import com.patra.common.enums.ProvenanceCode;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 
 /// 规则快照加载器，用于加载 Provenance 配置快照。
 public interface RuleSnapshotLoader {

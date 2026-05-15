@@ -1,12 +1,12 @@
 package com.patra.registry.adapter.rest;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.registry.adapter.rest.converter.ProvenanceApiConverter;
 import com.patra.registry.api.dto.provenance.ProvenanceConfigResp;
 import com.patra.registry.api.dto.provenance.ProvenanceResp;
 import com.patra.registry.api.endpoint.ProvenanceEndpoint;
 import com.patra.registry.app.service.ProvenanceQueryService;
 import com.patra.registry.domain.exception.provenance.ProvenanceNotFoundException;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

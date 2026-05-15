@@ -1,12 +1,12 @@
 package com.patra.ingest.infra.adapter.persistence;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.entity.Cursor;
 import com.patra.ingest.domain.port.CursorRepository;
 import com.patra.ingest.infra.adapter.persistence.converter.mapper.CursorJpaMapper;
 import com.patra.ingest.infra.adapter.persistence.dao.CursorDao;
 import com.patra.ingest.infra.adapter.persistence.entity.CursorEntity;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;

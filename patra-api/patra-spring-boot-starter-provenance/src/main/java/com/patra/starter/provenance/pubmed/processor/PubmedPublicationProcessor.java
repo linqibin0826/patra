@@ -2,7 +2,6 @@ package com.patra.starter.provenance.pubmed.processor;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.CanonicalPublication;
 import com.patra.common.model.DataType;
 import com.patra.common.model.enums.PublicationIdentifierType;
@@ -32,6 +31,7 @@ import com.patra.starter.provenance.pubmed.model.response.ESearchResponse;
 import com.patra.starter.provenance.pubmed.model.response.PubmedPublication;
 import com.patra.starter.provenance.pubmed.request.PubMedESearchRequestAssembler;
 import dev.linqibin.commons.json.JsonMapperHolder;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;

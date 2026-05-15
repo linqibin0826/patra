@@ -1,6 +1,5 @@
 package com.patra.ingest.app.usecase.execution.cursor;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.entity.Cursor;
 import com.patra.ingest.domain.model.entity.CursorEvent;
 import com.patra.ingest.domain.model.enums.CursorDirection;
@@ -11,6 +10,7 @@ import com.patra.ingest.domain.model.vo.plan.WindowSpec;
 import com.patra.ingest.domain.model.vo.shared.NamespaceKey;
 import com.patra.ingest.domain.port.CursorEventRepository;
 import com.patra.ingest.domain.port.CursorRepository;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;

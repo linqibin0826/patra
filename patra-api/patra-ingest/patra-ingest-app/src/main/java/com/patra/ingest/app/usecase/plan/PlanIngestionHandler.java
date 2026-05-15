@@ -1,6 +1,5 @@
 package com.patra.ingest.app.usecase.plan;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.app.usecase.plan.assembler.PlanAssembler;
 import com.patra.ingest.app.usecase.plan.assembler.PlanAssemblyRequest;
 import com.patra.ingest.app.usecase.plan.command.PlanIngestionCommand;
@@ -27,6 +26,7 @@ import com.patra.ingest.domain.port.PatraRegistryPort;
 import com.patra.ingest.domain.port.PlanRepository;
 import com.patra.ingest.domain.port.TaskRepository;
 import dev.linqibin.commons.cqrs.CommandHandler;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

@@ -13,6 +13,9 @@ plugins {
 }
 
 dependencies {
+    // 业务枚举（从 patra-common-core 拆出，透传给上层模块）
+    api(project(":patra-common-enums"))
+
     // Hutool 工具库
     api(libs.hutool.core)
 

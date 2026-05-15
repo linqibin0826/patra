@@ -2,7 +2,6 @@ package com.patra.ingest.infra.integration.registry;
 
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.date.TimeInterval;
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.exception.IngestConfigurationException;
 import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
@@ -14,6 +13,7 @@ import dev.linqibin.commons.error.remote.RemoteCallException;
 import dev.linqibin.commons.error.remote.RemoteErrorHelper;
 import dev.linqibin.commons.error.trait.ErrorTrait;
 import dev.linqibin.commons.error.trait.StandardErrorTrait;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;

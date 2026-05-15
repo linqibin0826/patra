@@ -1,6 +1,5 @@
 package com.patra.ingest.domain.model.entity;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.BatchStatus;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.batch.BatchResult;
@@ -8,6 +7,7 @@ import com.patra.ingest.domain.model.vo.batch.BatchStats;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import com.patra.ingest.domain.model.vo.shared.IdempotentKey;
 import dev.linqibin.commons.util.HashUtils;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import lombok.Getter;
 

@@ -1,6 +1,5 @@
 package com.patra.ingest.infra.adapter.persistence.converter.mapper;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.exception.InfrastructureException;
 import com.patra.ingest.domain.model.entity.CursorEvent;
 import com.patra.ingest.domain.model.enums.CursorDirection;
@@ -8,6 +7,7 @@ import com.patra.ingest.domain.model.enums.CursorType;
 import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.vo.cursor.CursorLineage;
 import com.patra.ingest.infra.adapter.persistence.entity.CursorEventEntity;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;

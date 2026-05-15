@@ -2,10 +2,10 @@ package com.patra.ingest.domain.model.entity;
 
 import static org.assertj.core.api.Assertions.*;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.CursorDirection;
 import com.patra.ingest.domain.model.enums.CursorType;
 import com.patra.ingest.domain.model.vo.cursor.CursorLineage;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.math.BigDecimal;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;

@@ -1,6 +1,6 @@
 package com.patra.starter.provenance.internal.metadata;
 
-import com.patra.common.enums.ProvenanceCode;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 
 /// EPMC 特定的计划元数据
 ///

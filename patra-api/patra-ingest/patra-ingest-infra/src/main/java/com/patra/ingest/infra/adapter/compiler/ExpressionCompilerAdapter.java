@@ -1,6 +1,5 @@
 package com.patra.ingest.infra.adapter.compiler;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.expr.Expr;
 import com.patra.expr.json.ExprJsonCodec;
 import com.patra.ingest.domain.model.vo.expression.ExprCompilationRequest;
@@ -11,6 +10,7 @@ import com.patra.starter.expr.compiler.model.CompileRequest;
 import com.patra.starter.expr.compiler.model.CompileRequestBuilder;
 import com.patra.starter.expr.compiler.model.CompileResult;
 import com.patra.starter.expr.compiler.model.ValidationReport;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

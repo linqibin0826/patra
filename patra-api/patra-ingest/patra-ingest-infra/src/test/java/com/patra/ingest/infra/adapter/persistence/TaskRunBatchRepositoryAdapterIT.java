@@ -2,7 +2,6 @@ package com.patra.ingest.infra.adapter.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.entity.TaskRunBatch;
 import com.patra.ingest.domain.model.enums.BatchStatus;
 import com.patra.ingest.domain.model.vo.shared.IdempotentKey;
@@ -21,6 +20,7 @@ import com.patra.ingest.infra.adapter.persistence.entity.TaskRunEntity;
 import com.patra.ingest.infra.config.IngestMySQLContainerInitializer;
 import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
 import com.patra.starter.jpa.id.SnowflakeIdGenerator;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;

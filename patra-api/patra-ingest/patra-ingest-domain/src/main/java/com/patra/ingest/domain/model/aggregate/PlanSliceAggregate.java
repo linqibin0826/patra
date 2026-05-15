@@ -1,10 +1,10 @@
 package com.patra.ingest.domain.model.aggregate;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.SliceStatus;
 import com.patra.ingest.domain.model.vo.plan.PlanId;
 import com.patra.ingest.domain.model.vo.slice.PlanSliceId;
 import dev.linqibin.commons.domain.AggregateRoot;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.Objects;
 import lombok.Getter;
 

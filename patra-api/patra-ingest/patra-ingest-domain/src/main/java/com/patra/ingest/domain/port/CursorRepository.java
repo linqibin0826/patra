@@ -1,7 +1,7 @@
 package com.patra.ingest.domain.port;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.entity.Cursor;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.Optional;
 

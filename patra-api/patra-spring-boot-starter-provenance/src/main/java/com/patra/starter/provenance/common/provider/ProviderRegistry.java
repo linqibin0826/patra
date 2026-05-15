@@ -1,7 +1,7 @@
 package com.patra.starter.provenance.common.provider;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.DataType;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;

@@ -2,7 +2,6 @@ package com.patra.starter.provenance.pubmed;
 
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.date.TimeInterval;
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.CanonicalPublication;
 import com.patra.common.model.DataType;
 import com.patra.starter.provenance.common.config.ProvenanceConfig;
@@ -18,6 +17,7 @@ import com.patra.starter.provenance.pubmed.model.request.ESearchRequest;
 import com.patra.starter.provenance.pubmed.model.response.ESearchResponse;
 import com.patra.starter.provenance.pubmed.processor.PubmedPublicationProcessor;
 import com.patra.starter.provenance.pubmed.request.PubMedESearchRequestAssembler;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

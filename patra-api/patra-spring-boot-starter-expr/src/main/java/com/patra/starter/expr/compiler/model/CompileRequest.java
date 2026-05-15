@@ -1,7 +1,7 @@
 package com.patra.starter.expr.compiler.model;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.expr.Expr;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.Locale;
 import java.util.Objects;
 

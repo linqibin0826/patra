@@ -1,10 +1,10 @@
 package com.patra.registry.app.service;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.registry.app.converter.ExprQueryAssembler;
 import com.patra.registry.domain.model.read.expr.ExprSnapshotQuery;
 import com.patra.registry.domain.model.vo.expr.ExprSnapshot;
 import com.patra.registry.domain.port.ExprRepository;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -1,6 +1,6 @@
 package com.patra.ingest.infra.mapper;
 
-import com.patra.common.enums.ProvenanceCode;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;

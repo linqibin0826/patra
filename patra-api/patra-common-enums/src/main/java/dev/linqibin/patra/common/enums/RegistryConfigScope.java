@@ -1,4 +1,4 @@
-package com.patra.common.enums;
+package dev.linqibin.patra.common.enums;
 
 import java.util.Locale;
 

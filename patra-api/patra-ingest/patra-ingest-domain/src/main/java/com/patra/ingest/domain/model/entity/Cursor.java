@@ -1,11 +1,11 @@
 package com.patra.ingest.domain.model.entity;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.CursorType;
 import com.patra.ingest.domain.model.enums.NamespaceScope;
 import com.patra.ingest.domain.model.vo.cursor.CursorLineage;
 import com.patra.ingest.domain.model.vo.cursor.CursorValue;
 import com.patra.ingest.domain.model.vo.cursor.CursorWatermark;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.Objects;
 import lombok.Getter;
