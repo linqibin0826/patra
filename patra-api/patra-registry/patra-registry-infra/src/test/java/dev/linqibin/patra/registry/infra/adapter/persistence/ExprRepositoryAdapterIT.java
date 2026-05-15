@@ -72,7 +72,8 @@ import tools.jackson.databind.json.JsonMapper;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ImportAutoConfiguration(FlywayAutoConfiguration.class)
 @Import({ExprRepositoryAdapter.class, JpaAuditingConfig.class, HibernatePropertiesCustomizer.class})
-@ComponentScan(basePackages = "com.patra.registry.infra.adapter.persistence.converter.mapper")
+@ComponentScan(
+    basePackages = "dev.linqibin.patra.registry.infra.adapter.persistence.converter.mapper")
 @ActiveProfiles("test")
 @DisplayName("ExprRepositoryAdapter 集成测试")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)

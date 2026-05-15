@@ -87,8 +87,8 @@ public class ExprCompilerAutoConfiguration {
   @ConditionalOnMissingBean(RuleSnapshotLoader.class)
   @ConditionalOnClass(
       name = {
-        "com.patra.registry.api.endpoint.ProvenanceEndpoint",
-        "com.patra.registry.api.endpoint.ExprEndpoint"
+        "dev.linqibin.patra.registry.api.endpoint.ProvenanceEndpoint",
+        "dev.linqibin.patra.registry.api.endpoint.ExprEndpoint"
       })
   @ConditionalOnProperty(
       prefix = "patra.expr.compiler.registry-api",
