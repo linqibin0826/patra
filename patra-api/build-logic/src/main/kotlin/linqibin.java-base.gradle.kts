@@ -23,8 +23,8 @@ plugins {
 val libs = the<org.gradle.api.artifacts.VersionCatalogsExtension>().named("libs")
 
 // ==================== 统一依赖管理（BOM + 强制版本约束）====================
-// 配置定义在 PatraDependencyManagement.kt 中，版本从 libs.versions.toml 获取
-applyPatraDependencyManagement(libs)
+// 配置定义在 LinqibinDependencyManagement.kt 中，版本从 libs.versions.toml 获取
+applyLinqibinDependencyManagement(libs)
 
 // ==================== Java Toolchain ====================
 java {

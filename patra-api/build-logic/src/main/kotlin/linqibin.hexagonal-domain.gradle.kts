@@ -19,7 +19,7 @@
  */
 
 plugins {
-    id("patra.java-library")
+    id("linqibin.java-library")
 }
 
 // 预编译脚本插件需要显式获取 Version Catalog

@@ -11,7 +11,7 @@
  */
 
 plugins {
-    id("patra.spring-library")
+    id("linqibin.spring-library")
 }
 
 // 预编译脚本插件需要显式获取 Version Catalog

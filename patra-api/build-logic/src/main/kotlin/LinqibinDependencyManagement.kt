@@ -1,5 +1,5 @@
 /**
- * Patra Dependency Management
+ * Linqibin Dependency Management
  *
  * 集中管理依赖版本，使用 Gradle Version Catalog 作为单一版本来源。
  *
@@ -10,7 +10,7 @@
  * }
  *
  * // 应用统一的依赖管理配置
- * applyPatraDependencyManagement(libs)
+ * applyLinqibinDependencyManagement(libs)
  * ```
  *
  * 依赖声明（使用 Version Catalog）：
@@ -36,7 +36,7 @@ import org.gradle.kotlin.dsl.configure
 /// 版本统一从 `gradle/libs.versions.toml` 获取，确保单一来源。
 ///
 /// @param libs Version Catalog 实例，在 Convention Plugin 中通过 `libs` 访问
-fun Project.applyPatraDependencyManagement(libs: VersionCatalog) {
+fun Project.applyLinqibinDependencyManagement(libs: VersionCatalog) {
     // 从 Version Catalog 获取版本
     val springBootVersion = libs.findVersion("spring-boot").get().requiredVersion
     val springCloudVersion = libs.findVersion("spring-cloud").get().requiredVersion

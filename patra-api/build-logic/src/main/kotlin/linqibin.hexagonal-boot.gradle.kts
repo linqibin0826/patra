@@ -9,12 +9,12 @@
  * - 生成可执行 fat JAR
  *
  * 注意：org.springframework.boot 插件会自动应用 io.spring.dependency-management，
- * 但 patra.java-base 中的 BOM 配置不会自动继承。这里通过 applyPatraDependencyManagement()
+ * 但 patra.java-base 中的 BOM 配置不会自动继承。这里通过 applyLinqibinDependencyManagement()
  * 确保 BOM 和强制版本约束正确应用。
  */
 
 plugins {
-    id("patra.java-base")
+    id("linqibin.java-base")
     id("org.springframework.boot")
     // 注意：org.springframework.boot 会自动应用 io.spring.dependency-management
 }
@@ -24,7 +24,7 @@ val libs = the<org.gradle.api.artifacts.VersionCatalogsExtension>().named("libs"
 
 // 重新应用依赖管理配置
 // 虽然 patra.java-base 已经配置过，但 org.springframework.boot 插件会重置配置
-applyPatraDependencyManagement(libs)
+applyLinqibinDependencyManagement(libs)
 
 // ==================== Spring Boot JAR 配置 ====================
 tasks.bootJar {
