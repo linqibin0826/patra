@@ -17,8 +17,8 @@
         <appender-ref ref="CONSOLE"/>
     </root>
 
-    <!-- Application Logger: INFO level (only for com.patra.* classes) -->
-    <logger name="com.patra" level="INFO" additivity="false">
+    <!-- Application Logger: INFO level (only for dev.linqibin.* classes) -->
+    <logger name="dev.linqibin" level="INFO" additivity="false">
         <appender-ref ref="CONSOLE"/>
     </logger>
 

@@ -18,9 +18,9 @@
         <appender-ref ref="CONSOLE"/>
     </root>
 
-    <!-- Application Logger: INFO level (only for com.patra.starter.provenance.* classes) -->
+    <!-- Application Logger: INFO level (only for dev.linqibin.patra.starter.provenance.* classes) -->
     <!-- 只记录 ERROR 级别日志,进一步减少测试输出 -->
-    <logger name="com.patra.starter.provenance" level="INFO" additivity="false">
+    <logger name="dev.linqibin.patra.starter.provenance" level="INFO" additivity="false">
         <appender-ref ref="CONSOLE"/>
     </logger>
 
