@@ -1,16 +1,16 @@
 package dev.linqibin.starter.core.error.engine;
 
-import dev.linqibin.starter.core.error.config.ErrorProperties;
-import dev.linqibin.starter.core.error.model.ErrorResolution;
-import dev.linqibin.starter.core.error.model.ResolutionStrategy;
-import dev.linqibin.starter.core.error.model.SimpleErrorCode;
-import dev.linqibin.starter.core.error.spi.ErrorMappingContributor;
 import dev.linqibin.commons.error.ApplicationException;
 import dev.linqibin.commons.error.DomainException;
 import dev.linqibin.commons.error.codes.ErrorCodeLike;
 import dev.linqibin.commons.error.trait.ErrorTrait;
 import dev.linqibin.commons.error.trait.HasErrorTraits;
 import dev.linqibin.commons.error.trait.StandardErrorTrait;
+import dev.linqibin.starter.core.error.config.ErrorProperties;
+import dev.linqibin.starter.core.error.model.ErrorResolution;
+import dev.linqibin.starter.core.error.model.ResolutionStrategy;
+import dev.linqibin.starter.core.error.model.SimpleErrorCode;
+import dev.linqibin.starter.core.error.spi.ErrorMappingContributor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.ArrayList;
@@ -55,7 +55,8 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
   /// 将标准错误特征映射到 HTTP 状态码后缀。
   ///
   /// 注意: 这个映射只包含 {@link StandardErrorTrait} 的映射。
-  /// 自定义 {@link ErrorTrait} 实现应该通过 {@link dev.linqibin.starter.core.error.spi.ErrorMappingContributor}
+  /// 自定义 {@link ErrorTrait} 实现应该通过 {@link
+  // dev.linqibin.starter.core.error.spi.ErrorMappingContributor}
   // 提供映射。
   private static final Map<ErrorTrait, String> TRAIT_TO_CODE_MAP =
       Map.ofEntries(

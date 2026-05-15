@@ -1,8 +1,8 @@
 package dev.linqibin.starter.jpa.error.contributor;
 
-import dev.linqibin.starter.core.error.spi.ErrorMappingContributor;
 import dev.linqibin.commons.error.codes.ErrorCodeLike;
 import dev.linqibin.commons.error.codes.HttpStdErrors;
+import dev.linqibin.starter.core.error.spi.ErrorMappingContributor;
 import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.LockTimeoutException;

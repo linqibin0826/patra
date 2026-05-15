@@ -1,7 +1,7 @@
 package dev.linqibin.starter.objectstorage;
 
-import dev.linqibin.starter.objectstorage.metrics.ObjectStorageMetrics;
 import dev.linqibin.commons.storage.ObjectKeyGenerator;
+import dev.linqibin.starter.objectstorage.metrics.ObjectStorageMetrics;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.minio.MinioClient;
 import java.io.IOException;

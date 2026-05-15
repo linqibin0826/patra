@@ -1,8 +1,8 @@
 package dev.linqibin.starter.batch.autoconfigure;
 
-import dev.linqibin.starter.batch.config.BatchProperties;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import dev.linqibin.starter.batch.config.BatchProperties;
 import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;

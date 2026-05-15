@@ -1,2 +1,2 @@
-com.patra.starter.redisson.autoconfigure.RedissonAutoConfiguration
-com.patra.starter.redisson.autoconfigure.LockAutoConfiguration
+dev.linqibin.starter.redisson.autoconfigure.RedissonAutoConfiguration
+dev.linqibin.starter.redisson.autoconfigure.LockAutoConfiguration

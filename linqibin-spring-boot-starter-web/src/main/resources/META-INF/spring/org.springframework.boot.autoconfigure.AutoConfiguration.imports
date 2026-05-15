@@ -1,2 +1,2 @@
-com.patra.starter.web.autoconfig.WebConversionAutoConfiguration
-com.patra.starter.web.error.config.WebErrorAutoConfiguration
+dev.linqibin.starter.web.autoconfig.WebConversionAutoConfiguration
+dev.linqibin.starter.web.error.config.WebErrorAutoConfiguration
