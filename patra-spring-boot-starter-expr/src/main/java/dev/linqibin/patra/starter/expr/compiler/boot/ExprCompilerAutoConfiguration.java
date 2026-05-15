@@ -1,5 +1,8 @@
 package dev.linqibin.patra.starter.expr.compiler.boot;
 
+import com.patra.starter.httpinterface.config.HttpInterfaceAutoConfiguration;
+import dev.linqibin.patra.registry.api.endpoint.ExprEndpoint;
+import dev.linqibin.patra.registry.api.endpoint.ProvenanceEndpoint;
 import dev.linqibin.patra.starter.expr.compiler.DefaultExprCompiler;
 import dev.linqibin.patra.starter.expr.compiler.ExprCompiler;
 import dev.linqibin.patra.starter.expr.compiler.check.CapabilityChecker;
@@ -14,9 +17,6 @@ import dev.linqibin.patra.starter.expr.compiler.snapshot.RegistryRuleSnapshotLoa
 import dev.linqibin.patra.starter.expr.compiler.snapshot.RuleSnapshotLoader;
 import dev.linqibin.patra.starter.expr.compiler.snapshot.convert.SnapshotAssembler;
 import dev.linqibin.patra.starter.expr.compiler.transform.TransformRegistry;
-import com.patra.starter.httpinterface.config.HttpInterfaceAutoConfiguration;
-import dev.linqibin.patra.registry.api.endpoint.ExprEndpoint;
-import dev.linqibin.patra.registry.api.endpoint.ProvenanceEndpoint;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;

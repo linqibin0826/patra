@@ -1,9 +1,9 @@
 package dev.linqibin.patra.starter.expr.compiler.render;
 
+import dev.linqibin.patra.expr.Expr;
 import dev.linqibin.patra.starter.expr.compiler.model.Issue;
 import dev.linqibin.patra.starter.expr.compiler.model.RenderTrace;
 import dev.linqibin.patra.starter.expr.compiler.snapshot.ProvenanceSnapshot;
-import dev.linqibin.patra.expr.Expr;
 import java.util.List;
 import java.util.Map;
 

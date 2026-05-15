@@ -1,6 +1,5 @@
 package dev.linqibin.patra.starter.expr.compiler.snapshot.convert;
 
-import dev.linqibin.patra.starter.expr.compiler.snapshot.ProvenanceSnapshot;
 import dev.linqibin.patra.common.enums.RegistryConfigScope;
 import dev.linqibin.patra.expr.Atom;
 import dev.linqibin.patra.registry.api.dto.expr.ApiParamMappingResp;
@@ -9,6 +8,7 @@ import dev.linqibin.patra.registry.api.dto.expr.ExprFieldResp;
 import dev.linqibin.patra.registry.api.dto.expr.ExprRenderRuleResp;
 import dev.linqibin.patra.registry.api.dto.expr.ExprSnapshotResp;
 import dev.linqibin.patra.registry.api.dto.provenance.ProvenanceResp;
+import dev.linqibin.patra.starter.expr.compiler.snapshot.ProvenanceSnapshot;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
