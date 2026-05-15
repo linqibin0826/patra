@@ -1,4 +1,4 @@
-package dev.linqibin.starter.web.autoconfig;
+package dev.linqibin.patra.starter.provenance.autoconfig;
 
 import dev.linqibin.patra.common.enums.ProvenanceCode;
 import lombok.extern.slf4j.Slf4j;
@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.util.StringUtils;
 
-/// 通用 Web 转换器的自动配置类。
+/// `String → ProvenanceCode` 转换器自动配置。
 ///
 /// 注册全局 `String -> ProvenanceCode` 转换器,使 `@PathVariable` 和 `@RequestParam`
 /// 绑定能够一致地解析 Provenance 标识符。
@@ -19,7 +19,7 @@ import org.springframework.util.StringUtils;
 @Slf4j
 @AutoConfiguration
 @ConditionalOnClass(Converter.class)
-public class WebConversionAutoConfiguration {
+public class ProvenanceCodeConverterAutoConfiguration {
 
   /// 注册转换器,将文本形式的 Provenance 标识符解析为 {@link ProvenanceCode} 值, 使 Spring MVC 能够为请求参数和路径变量绑定枚举友好的值。
   ///
