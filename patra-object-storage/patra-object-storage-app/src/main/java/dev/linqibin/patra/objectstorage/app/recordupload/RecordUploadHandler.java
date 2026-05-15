@@ -1,5 +1,6 @@
 package dev.linqibin.patra.objectstorage.app.recordupload;
 
+import dev.linqibin.commons.cqrs.CommandHandler;
 import dev.linqibin.patra.objectstorage.domain.model.aggregate.FileMetadata;
 import dev.linqibin.patra.objectstorage.domain.model.enums.StorageProvider;
 import dev.linqibin.patra.objectstorage.domain.model.vo.BusinessContext;
@@ -7,7 +8,6 @@ import dev.linqibin.patra.objectstorage.domain.model.vo.FileChecksum;
 import dev.linqibin.patra.objectstorage.domain.model.vo.FileSize;
 import dev.linqibin.patra.objectstorage.domain.model.vo.StorageKey;
 import dev.linqibin.patra.objectstorage.domain.port.FileMetadataRepository;
-import dev.linqibin.commons.cqrs.CommandHandler;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

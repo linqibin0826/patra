@@ -1,5 +1,6 @@
 package dev.linqibin.patra.objectstorage.infra.adapter.persistence.converter.mapper;
 
+import dev.linqibin.commons.json.JsonMapperHolder;
 import dev.linqibin.patra.objectstorage.domain.model.aggregate.FileMetadata;
 import dev.linqibin.patra.objectstorage.domain.model.enums.FileStatus;
 import dev.linqibin.patra.objectstorage.domain.model.enums.StorageProvider;
@@ -8,7 +9,6 @@ import dev.linqibin.patra.objectstorage.domain.model.vo.FileChecksum;
 import dev.linqibin.patra.objectstorage.domain.model.vo.FileSize;
 import dev.linqibin.patra.objectstorage.domain.model.vo.StorageKey;
 import dev.linqibin.patra.objectstorage.infra.adapter.persistence.entity.FileMetadataEntity;
-import dev.linqibin.commons.json.JsonMapperHolder;
 import java.util.Locale;
 import java.util.Map;
 import org.mapstruct.Mapper;
