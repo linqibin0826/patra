@@ -33,7 +33,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 /// class TestArchitectureTest {
 ///
 ///     private static final JavaClasses classes = new ClassFileImporter()
-///         .importPackages("com.patra");
+///         .importPackages("dev.linqibin");
 ///
 ///     @ArchTest
 ///     static final ArchRule testNaming = TestingRules.testClassesShouldFollowNamingConvention();
