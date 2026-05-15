@@ -1,7 +1,5 @@
 package com.patra.starter.expr.compiler.boot;
 
-import com.patra.registry.api.endpoint.ExprEndpoint;
-import com.patra.registry.api.endpoint.ProvenanceEndpoint;
 import com.patra.starter.expr.compiler.DefaultExprCompiler;
 import com.patra.starter.expr.compiler.ExprCompiler;
 import com.patra.starter.expr.compiler.check.CapabilityChecker;
@@ -17,6 +15,8 @@ import com.patra.starter.expr.compiler.snapshot.RuleSnapshotLoader;
 import com.patra.starter.expr.compiler.snapshot.convert.SnapshotAssembler;
 import com.patra.starter.expr.compiler.transform.TransformRegistry;
 import com.patra.starter.httpinterface.config.HttpInterfaceAutoConfiguration;
+import dev.linqibin.patra.registry.api.endpoint.ExprEndpoint;
+import dev.linqibin.patra.registry.api.endpoint.ProvenanceEndpoint;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;

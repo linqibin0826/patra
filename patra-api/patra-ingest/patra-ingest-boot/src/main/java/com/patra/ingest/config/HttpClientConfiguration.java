@@ -1,10 +1,10 @@
 package com.patra.ingest.config;
 
 import com.patra.objectstorage.api.endpoint.StorageEndpoint;
-import com.patra.registry.api.endpoint.DictionaryEndpoint;
-import com.patra.registry.api.endpoint.ExprEndpoint;
-import com.patra.registry.api.endpoint.ProvenanceEndpoint;
 import com.patra.starter.httpinterface.factory.RestClientFactory;
+import dev.linqibin.patra.registry.api.endpoint.DictionaryEndpoint;
+import dev.linqibin.patra.registry.api.endpoint.ExprEndpoint;
+import dev.linqibin.patra.registry.api.endpoint.ProvenanceEndpoint;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

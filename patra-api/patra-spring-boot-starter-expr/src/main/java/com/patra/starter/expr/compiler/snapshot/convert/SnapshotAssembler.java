@@ -1,14 +1,14 @@
 package com.patra.starter.expr.compiler.snapshot.convert;
 
 import com.patra.expr.Atom;
-import com.patra.registry.api.dto.expr.ApiParamMappingResp;
-import com.patra.registry.api.dto.expr.ExprCapabilityResp;
-import com.patra.registry.api.dto.expr.ExprFieldResp;
-import com.patra.registry.api.dto.expr.ExprRenderRuleResp;
-import com.patra.registry.api.dto.expr.ExprSnapshotResp;
-import com.patra.registry.api.dto.provenance.ProvenanceResp;
 import com.patra.starter.expr.compiler.snapshot.ProvenanceSnapshot;
 import dev.linqibin.patra.common.enums.RegistryConfigScope;
+import dev.linqibin.patra.registry.api.dto.expr.ApiParamMappingResp;
+import dev.linqibin.patra.registry.api.dto.expr.ExprCapabilityResp;
+import dev.linqibin.patra.registry.api.dto.expr.ExprFieldResp;
+import dev.linqibin.patra.registry.api.dto.expr.ExprRenderRuleResp;
+import dev.linqibin.patra.registry.api.dto.expr.ExprSnapshotResp;
+import dev.linqibin.patra.registry.api.dto.provenance.ProvenanceResp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
