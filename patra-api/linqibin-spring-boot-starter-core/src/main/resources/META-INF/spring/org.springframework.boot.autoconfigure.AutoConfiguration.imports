@@ -1,8 +1,8 @@
-com.patra.starter.core.config.CoreAutoConfiguration
-com.patra.starter.core.async.AsyncAutoConfiguration
-com.patra.starter.core.json.autoconfig.JacksonAutoConfiguration
-com.patra.starter.core.error.config.CoreErrorAutoConfiguration
-com.patra.starter.core.error.config.CircuitBreakerErrorAutoConfiguration
-com.patra.starter.core.xml.autoconfig.XmlAutoConfiguration
-com.patra.starter.core.cqrs.CommandBusAutoConfiguration
-com.patra.starter.core.cqrs.interceptor.CommandInterceptorAutoConfiguration
+dev.linqibin.starter.core.config.CoreAutoConfiguration
+dev.linqibin.starter.core.async.AsyncAutoConfiguration
+dev.linqibin.starter.core.json.autoconfig.JacksonAutoConfiguration
+dev.linqibin.starter.core.error.config.CoreErrorAutoConfiguration
+dev.linqibin.starter.core.error.config.CircuitBreakerErrorAutoConfiguration
+dev.linqibin.starter.core.xml.autoconfig.XmlAutoConfiguration
+dev.linqibin.starter.core.cqrs.CommandBusAutoConfiguration
+dev.linqibin.starter.core.cqrs.interceptor.CommandInterceptorAutoConfiguration

@@ -1,2 +1,2 @@
-com.patra.starter.objectstorage.ObjectStorageAutoConfiguration
-com.patra.starter.objectstorage.S3StorageAutoConfiguration
+dev.linqibin.starter.objectstorage.ObjectStorageAutoConfiguration
+dev.linqibin.starter.objectstorage.S3StorageAutoConfiguration

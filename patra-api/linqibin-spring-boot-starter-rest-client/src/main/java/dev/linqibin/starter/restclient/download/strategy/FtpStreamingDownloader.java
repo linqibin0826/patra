@@ -1,11 +1,11 @@
 package dev.linqibin.starter.restclient.download.strategy;
 
+import dev.linqibin.commons.error.trait.StandardErrorTrait;
 import dev.linqibin.starter.restclient.config.DownloadProperties;
 import dev.linqibin.starter.restclient.download.DownloadException;
 import dev.linqibin.starter.restclient.download.DownloadOptions;
 import dev.linqibin.starter.restclient.download.FtpCredentials;
 import dev.linqibin.starter.restclient.download.StreamingDownloadResponse;
-import dev.linqibin.commons.error.trait.StandardErrorTrait;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;

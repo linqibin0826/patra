@@ -1,7 +1,7 @@
 package dev.linqibin.starter.jpa.autoconfig;
 
-import dev.linqibin.starter.jpa.error.contributor.JpaErrorMappingContributor;
 import dev.linqibin.commons.error.codes.HttpStdErrors;
+import dev.linqibin.starter.jpa.error.contributor.JpaErrorMappingContributor;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;

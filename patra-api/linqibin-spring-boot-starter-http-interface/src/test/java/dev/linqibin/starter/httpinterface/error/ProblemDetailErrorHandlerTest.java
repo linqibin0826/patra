@@ -4,9 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
-import dev.linqibin.starter.httpinterface.config.HttpInterfaceProperties;
 import dev.linqibin.commons.error.remote.RemoteCallException;
 import dev.linqibin.commons.error.trait.StandardErrorTrait;
+import dev.linqibin.starter.httpinterface.config.HttpInterfaceProperties;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;

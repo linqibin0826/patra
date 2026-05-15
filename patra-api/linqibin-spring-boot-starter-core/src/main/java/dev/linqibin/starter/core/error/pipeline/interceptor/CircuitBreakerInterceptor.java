@@ -1,12 +1,12 @@
 package dev.linqibin.starter.core.error.pipeline.interceptor;
 
+import dev.linqibin.commons.error.codes.ErrorCodeLike;
 import dev.linqibin.starter.core.error.config.ErrorProperties;
 import dev.linqibin.starter.core.error.model.ErrorResolution;
 import dev.linqibin.starter.core.error.model.ResolutionStrategy;
 import dev.linqibin.starter.core.error.model.SimpleErrorCode;
 import dev.linqibin.starter.core.error.pipeline.ResolutionInterceptor;
 import dev.linqibin.starter.core.error.pipeline.ResolutionInvocation;
-import dev.linqibin.commons.error.codes.ErrorCodeLike;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import lombok.extern.slf4j.Slf4j;
