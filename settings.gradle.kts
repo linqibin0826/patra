@@ -42,7 +42,7 @@ include(":patra-common:patra-common-provenance-api")
 // ==================== LinQibin Commons ====================
 include(":linqibin-commons-core")
 include(":linqibin-commons-storage")
-include(":patra-common-enums")
+include(":patra-common:patra-common-enums")
 
 // ==================== Expression Kernel ====================
 include(":patra-expr-kernel")

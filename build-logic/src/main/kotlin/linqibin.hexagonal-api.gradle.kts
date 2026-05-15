@@ -16,7 +16,7 @@ plugins {
 
 dependencies {
     // API 层核心依赖
-    api(project(":patra-common-enums"))
+    api(project(":patra-common:patra-common-enums"))
     api(project(":linqibin-commons-core"))
 
     // Jakarta Validation (仅用于 DTO 校验注解)
