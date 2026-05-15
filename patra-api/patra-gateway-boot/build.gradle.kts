@@ -5,7 +5,7 @@
  */
 
 plugins {
-    id("patra.hexagonal-boot")
+    id("linqibin.hexagonal-boot")
 }
 
 springBoot {
