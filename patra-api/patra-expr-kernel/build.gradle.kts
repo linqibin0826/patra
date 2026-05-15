@@ -11,7 +11,7 @@ plugins {
 }
 
 dependencies {
-    api(project(":patra-common:patra-common-core"))
+    api(project(":patra-common-enums"))
     api(project(":linqibin-commons-core"))
     api("tools.jackson.core:jackson-databind")
 

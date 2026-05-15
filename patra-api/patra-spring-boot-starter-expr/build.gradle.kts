@@ -11,7 +11,7 @@ plugins {
 dependencies {
     // 内部模块
     api(project(":patra-expr-kernel"))
-    api(project(":patra-common:patra-common-core"))
+    api(project(":patra-common-enums"))
     api(project(":linqibin-commons-core"))
     api(project(":linqibin-spring-boot-starter-core"))
     api(project(":patra-registry:patra-registry-api"))

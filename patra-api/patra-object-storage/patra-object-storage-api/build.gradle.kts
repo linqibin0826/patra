@@ -9,7 +9,7 @@ plugins {
 }
 
 dependencies {
-    api(project(":patra-common:patra-common-core"))
+    api(project(":patra-common-enums"))
     api(project(":linqibin-commons-core"))
 
     // DTO 验证注解

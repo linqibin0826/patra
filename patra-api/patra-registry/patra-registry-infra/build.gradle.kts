@@ -10,7 +10,7 @@ plugins {
 
 dependencies {
     api(project(":patra-registry:patra-registry-domain"))
-    api(project(":patra-common:patra-common-core"))
+    api(project(":patra-common-enums"))
     api(project(":linqibin-commons-core"))
     api(project(":linqibin-spring-boot-starter-core"))
     api(project(":linqibin-spring-boot-starter-jpa"))

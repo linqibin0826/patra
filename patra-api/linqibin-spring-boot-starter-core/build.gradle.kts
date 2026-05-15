@@ -13,7 +13,7 @@ plugins {
 
 dependencies {
     // Internal shared library: utilities/exceptions
-    api(project(":patra-common:patra-common-core"))
+    api(project(":patra-common-enums"))
     api(project(":linqibin-commons-core"))
 
     // Foundation for custom AutoConfiguration

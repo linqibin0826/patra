@@ -36,8 +36,6 @@ dependencyResolutionManagement {
 }
 
 // ==================== Common Modules ====================
-include(":patra-common:patra-common-core")
-include(":patra-common:patra-common-storage")
 include(":patra-common:patra-common-model")
 include(":patra-common:patra-common-provenance-api")
 
