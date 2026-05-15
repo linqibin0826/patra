@@ -45,9 +45,9 @@ class IngestArchitectureTest {
 
   private static JavaClasses classes;
 
-  /// 参数化的六边形架构规则（基础包: com.patra.ingest）。
+  /// 参数化的六边形架构规则（基础包: dev.linqibin.patra.ingest）。
   private static final HexagonalArchitectureRules rules =
-      new HexagonalArchitectureRules("com.patra.ingest");
+      new HexagonalArchitectureRules("dev.linqibin.patra.ingest");
 
   @BeforeAll
   static void setup() {
@@ -69,7 +69,7 @@ class IngestArchitectureTest {
                   // 包含 target/classes 目录（当前模块）
                   return true;
                 })
-            .importPackages("com.patra.ingest"); // 导入 com.patra.ingest 及其所有子包
+            .importPackages("dev.linqibin.patra.ingest"); // 导入 dev.linqibin.patra.ingest 及其所有子包
   }
 
   @Nested

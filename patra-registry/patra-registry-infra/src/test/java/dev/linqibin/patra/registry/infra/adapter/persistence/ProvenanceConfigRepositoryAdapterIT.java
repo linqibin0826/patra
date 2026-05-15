@@ -80,7 +80,8 @@ import org.springframework.test.context.ContextConfiguration;
   JpaAuditingConfig.class,
   HibernatePropertiesCustomizer.class
 })
-@ComponentScan(basePackages = "com.patra.registry.infra.adapter.persistence.converter.mapper")
+@ComponentScan(
+    basePackages = "dev.linqibin.patra.registry.infra.adapter.persistence.converter.mapper")
 @ActiveProfiles("test")
 @DisplayName("ProvenanceConfigRepositoryAdapter 集成测试")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)

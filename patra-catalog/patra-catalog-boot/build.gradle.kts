@@ -9,7 +9,7 @@ plugins {
 }
 
 springBoot {
-    mainClass = "com.patra.catalog.PatraCatalogApplication"
+    mainClass = "dev.linqibin.patra.catalog.PatraCatalogApplication"
 }
 
 dependencies {

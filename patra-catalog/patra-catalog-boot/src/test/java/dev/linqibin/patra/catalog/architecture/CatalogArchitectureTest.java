@@ -45,7 +45,7 @@ class CatalogArchitectureTest {
 
   private static JavaClasses classes;
 
-  /// 参数化的六边形架构规则（基础包: com.patra.catalog）。
+  /// 参数化的六边形架构规则（基础包: dev.linqibin.patra.catalog）。
   private static final HexagonalArchitectureRules rules =
       new HexagonalArchitectureRules("dev.linqibin.patra.catalog");
 
@@ -69,7 +69,7 @@ class CatalogArchitectureTest {
                   // 包含 target/classes 目录（当前模块）
                   return true;
                 })
-            .importPackages("dev.linqibin.patra.catalog"); // 导入 com.patra.catalog 及其所有子包
+            .importPackages("dev.linqibin.patra.catalog"); // 导入 dev.linqibin.patra.catalog 及其所有子包
   }
 
   @Nested
