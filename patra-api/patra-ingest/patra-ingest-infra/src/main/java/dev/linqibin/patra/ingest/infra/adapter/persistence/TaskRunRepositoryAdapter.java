@@ -1,12 +1,12 @@
 package dev.linqibin.patra.ingest.infra.adapter.persistence;
 
+import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import dev.linqibin.patra.ingest.domain.model.entity.TaskRun;
 import dev.linqibin.patra.ingest.domain.model.enums.TaskRunStatus;
 import dev.linqibin.patra.ingest.domain.port.TaskRunRepository;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.converter.mapper.TaskRunJpaMapper;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.dao.TaskRunDao;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.TaskRunEntity;
-import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;

@@ -2,7 +2,8 @@ package dev.linqibin.patra.ingest.infra.mapper;
 
 /// StateToken 内部键常量
 ///
-/// 定义 {@link dev.linqibin.patra.ingest.domain.model.vo.query.QuerySession#stateToken()} Map 中使用的键名称。
+/// 定义 {@link dev.linqibin.patra.ingest.domain.model.vo.query.QuerySession#stateToken()} Map
+// 中使用的键名称。
 ///
 /// **用途**：在 {@link QuerySessionTranslator} 构建 stateToken 和 {@link ProviderParameterMapper}
 /// 读取 stateToken 之间传递会话状态。

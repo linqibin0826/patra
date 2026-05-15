@@ -1,7 +1,7 @@
 package dev.linqibin.patra.ingest.domain.port;
 
-import dev.linqibin.patra.ingest.domain.model.aggregate.TaskAggregate;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
+import dev.linqibin.patra.ingest.domain.model.aggregate.TaskAggregate;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;

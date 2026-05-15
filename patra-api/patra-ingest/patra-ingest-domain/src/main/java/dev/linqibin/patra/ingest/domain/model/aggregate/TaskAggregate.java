@@ -1,5 +1,7 @@
 package dev.linqibin.patra.ingest.domain.model.aggregate;
 
+import dev.linqibin.commons.domain.AggregateRoot;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.ingest.domain.event.TaskCompletedEvent;
 import dev.linqibin.patra.ingest.domain.event.TaskQueuedEvent;
 import dev.linqibin.patra.ingest.domain.model.enums.TaskStatus;
@@ -10,8 +12,6 @@ import dev.linqibin.patra.ingest.domain.model.vo.schedule.ScheduleInstanceId;
 import dev.linqibin.patra.ingest.domain.model.vo.shared.LeaseInfo;
 import dev.linqibin.patra.ingest.domain.model.vo.slice.PlanSliceId;
 import dev.linqibin.patra.ingest.domain.model.vo.task.TaskId;
-import dev.linqibin.commons.domain.AggregateRoot;
-import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.Objects;
 import lombok.Getter;

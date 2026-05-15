@@ -3,6 +3,8 @@ package dev.linqibin.patra.ingest.infra.adapter.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
+import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import dev.linqibin.patra.ingest.domain.model.entity.OutboxRelayLog;
 import dev.linqibin.patra.ingest.domain.model.enums.RelayStatus;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.dao.OutboxMessageDao;
@@ -10,8 +12,6 @@ import dev.linqibin.patra.ingest.infra.adapter.persistence.dao.OutboxRelayLogDao
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.OutboxMessageEntity;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.OutboxRelayLogEntity;
 import dev.linqibin.patra.ingest.infra.config.IngestMySQLContainerInitializer;
-import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
-import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -55,7 +55,8 @@ import tools.jackson.databind.node.ObjectNode;
   JacksonAutoConfiguration.class,
   JpaAuditingConfig.class
 })
-@ComponentScan(basePackages = "dev.linqibin.patra.ingest.infra.adapter.persistence.converter.mapper")
+@ComponentScan(
+    basePackages = "dev.linqibin.patra.ingest.infra.adapter.persistence.converter.mapper")
 @ActiveProfiles("test")
 @DisplayName("OutboxRelayLogRepositoryAdapter 集成测试")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)

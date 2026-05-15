@@ -35,7 +35,8 @@ import lombok.Getter;
 ///
 /// @author linqibin
 /// @since 0.1.0
-/// @see dev.linqibin.patra.ingest.app.outbox.config.OutboxPublisherProperties#getAllowedAggregateTypes()
+/// @see
+// dev.linqibin.patra.ingest.app.outbox.config.OutboxPublisherProperties#getAllowedAggregateTypes()
 @Getter
 public enum OutboxAggregateTypes {
 

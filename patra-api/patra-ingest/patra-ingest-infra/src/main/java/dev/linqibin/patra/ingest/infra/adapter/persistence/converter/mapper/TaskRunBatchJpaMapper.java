@@ -1,5 +1,7 @@
 package dev.linqibin.patra.ingest.infra.adapter.persistence.converter.mapper;
 
+import dev.linqibin.commons.json.JsonMapperHolder;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.ingest.domain.exception.InfrastructureException;
 import dev.linqibin.patra.ingest.domain.model.entity.TaskRunBatch;
 import dev.linqibin.patra.ingest.domain.model.enums.BatchStatus;
@@ -7,8 +9,6 @@ import dev.linqibin.patra.ingest.domain.model.enums.OperationCode;
 import dev.linqibin.patra.ingest.domain.model.vo.batch.BatchStats;
 import dev.linqibin.patra.ingest.domain.model.vo.shared.IdempotentKey;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.TaskRunBatchEntity;
-import dev.linqibin.commons.json.JsonMapperHolder;
-import dev.linqibin.patra.common.enums.ProvenanceCode;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;

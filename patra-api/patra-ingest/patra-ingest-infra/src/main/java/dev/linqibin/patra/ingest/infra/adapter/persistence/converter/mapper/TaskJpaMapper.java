@@ -1,5 +1,7 @@
 package dev.linqibin.patra.ingest.infra.adapter.persistence.converter.mapper;
 
+import dev.linqibin.commons.json.JsonNodeMappings;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.ingest.domain.exception.InfrastructureException;
 import dev.linqibin.patra.ingest.domain.model.aggregate.TaskAggregate;
 import dev.linqibin.patra.ingest.domain.model.enums.OperationCode;
@@ -12,8 +14,6 @@ import dev.linqibin.patra.ingest.domain.model.vo.shared.LeaseInfo;
 import dev.linqibin.patra.ingest.domain.model.vo.slice.PlanSliceId;
 import dev.linqibin.patra.ingest.domain.model.vo.task.TaskId;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.TaskEntity;
-import dev.linqibin.commons.json.JsonNodeMappings;
-import dev.linqibin.patra.common.enums.ProvenanceCode;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;

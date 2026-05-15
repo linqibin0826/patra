@@ -1,13 +1,13 @@
 package dev.linqibin.patra.ingest.domain.model.entity;
 
+import dev.linqibin.commons.util.HashUtils;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.ingest.domain.model.enums.BatchStatus;
 import dev.linqibin.patra.ingest.domain.model.vo.batch.Batch;
 import dev.linqibin.patra.ingest.domain.model.vo.batch.BatchResult;
 import dev.linqibin.patra.ingest.domain.model.vo.batch.BatchStats;
 import dev.linqibin.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import dev.linqibin.patra.ingest.domain.model.vo.shared.IdempotentKey;
-import dev.linqibin.commons.util.HashUtils;
-import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import lombok.Getter;
 

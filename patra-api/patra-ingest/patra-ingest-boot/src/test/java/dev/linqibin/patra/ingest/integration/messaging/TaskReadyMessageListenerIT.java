@@ -6,10 +6,10 @@ import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import dev.linqibin.commons.cqrs.CommandBus;
 import dev.linqibin.patra.ingest.app.usecase.execution.command.TaskReadyCommand;
 import dev.linqibin.patra.ingest.integration.config.IngestMySQLContainerInitializer;
 import dev.linqibin.patra.ingest.integration.config.IngestRocketMQContainerInitializer;
-import dev.linqibin.commons.cqrs.CommandBus;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;

@@ -2,6 +2,7 @@ package dev.linqibin.patra.ingest.app.usecase.relay;
 
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.date.TimeInterval;
+import dev.linqibin.commons.cqrs.CommandHandler;
 import dev.linqibin.patra.ingest.app.usecase.relay.command.OutboxRelayCommand;
 import dev.linqibin.patra.ingest.app.usecase.relay.config.OutboxRelayProperties;
 import dev.linqibin.patra.ingest.app.usecase.relay.dto.RelayReport;
@@ -10,7 +11,6 @@ import dev.linqibin.patra.ingest.app.usecase.relay.planner.RelayPlanBuilder;
 import dev.linqibin.patra.ingest.app.usecase.relay.publisher.RelayEventPublisher;
 import dev.linqibin.patra.ingest.domain.model.vo.relay.RelayBatchResult;
 import dev.linqibin.patra.ingest.domain.model.vo.relay.RelayPlan;
-import dev.linqibin.commons.cqrs.CommandHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

@@ -1,5 +1,6 @@
 package dev.linqibin.patra.ingest.infra.adapter.persistence;
 
+import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import dev.linqibin.patra.ingest.domain.exception.OutboxPersistenceException;
 import dev.linqibin.patra.ingest.domain.model.entity.OutboxMessage;
 import dev.linqibin.patra.ingest.domain.port.OutboxMessageRepository;
@@ -7,7 +8,6 @@ import dev.linqibin.patra.ingest.domain.port.OutboxRelayRepository;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.converter.mapper.OutboxMessageJpaMapper;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.dao.OutboxMessageDao;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.OutboxMessageEntity;
-import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;

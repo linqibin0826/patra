@@ -2,14 +2,14 @@ package dev.linqibin.patra.ingest.infra.adapter.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
+import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import dev.linqibin.patra.ingest.domain.model.aggregate.PlanAggregate;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.dao.PlanDao;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.dao.ScheduleInstanceDao;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.PlanEntity;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.ScheduleInstanceEntity;
 import dev.linqibin.patra.ingest.infra.config.IngestMySQLContainerInitializer;
-import com.patra.starter.jpa.autoconfig.JpaAuditingConfig;
-import com.patra.starter.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -47,7 +47,8 @@ import tools.jackson.databind.node.ObjectNode;
 @ContextConfiguration(initializers = IngestMySQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({PlanRepositoryAdapter.class, JacksonAutoConfiguration.class, JpaAuditingConfig.class})
-@ComponentScan(basePackages = "dev.linqibin.patra.ingest.infra.adapter.persistence.converter.mapper")
+@ComponentScan(
+    basePackages = "dev.linqibin.patra.ingest.infra.adapter.persistence.converter.mapper")
 @ActiveProfiles("test")
 @DisplayName("PlanRepositoryAdapter 集成测试")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)

@@ -1,5 +1,6 @@
 package dev.linqibin.patra.ingest.app.usecase.execution.strategy.builder;
 
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.ingest.domain.exception.BatchSchedulingException;
 import dev.linqibin.patra.ingest.domain.model.vo.batch.Batch;
 import dev.linqibin.patra.ingest.domain.model.vo.batch.BatchSchedule;
@@ -7,7 +8,6 @@ import dev.linqibin.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import dev.linqibin.patra.ingest.domain.model.vo.query.QuerySession;
 import dev.linqibin.patra.ingest.domain.port.ProvenanceDataPort;
 import dev.linqibin.patra.ingest.domain.strategy.BatchGenerationStrategy;
-import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;

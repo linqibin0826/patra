@@ -1,9 +1,9 @@
 package dev.linqibin.patra.ingest.domain.strategy;
 
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.ingest.domain.model.vo.batch.Batch;
 import dev.linqibin.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import dev.linqibin.patra.ingest.domain.model.vo.query.QuerySession;
-import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.List;
 
 /// 批次生成策略接口

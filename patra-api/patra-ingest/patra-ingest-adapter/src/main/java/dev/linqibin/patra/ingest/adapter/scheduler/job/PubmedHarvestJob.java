@@ -1,9 +1,9 @@
 package dev.linqibin.patra.ingest.adapter.scheduler.job;
 
-import dev.linqibin.patra.ingest.domain.model.enums.OperationCode;
 import com.xxl.job.core.context.XxlJobHelper;
 import com.xxl.job.core.handler.annotation.XxlJob;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
+import dev.linqibin.patra.ingest.domain.model.enums.OperationCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 

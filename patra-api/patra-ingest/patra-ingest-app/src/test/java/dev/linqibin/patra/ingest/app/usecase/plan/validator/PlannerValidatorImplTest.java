@@ -3,6 +3,8 @@ package dev.linqibin.patra.ingest.app.usecase.plan.validator;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import dev.linqibin.commons.enums.Priority;
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.ingest.domain.exception.PlanValidationException;
 import dev.linqibin.patra.ingest.domain.model.enums.OperationCode;
 import dev.linqibin.patra.ingest.domain.model.enums.Scheduler;
@@ -10,8 +12,6 @@ import dev.linqibin.patra.ingest.domain.model.enums.TriggerType;
 import dev.linqibin.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import dev.linqibin.patra.ingest.domain.model.vo.plan.PlanTriggerNorm;
 import dev.linqibin.patra.ingest.domain.model.vo.plan.PlannerWindow;
-import dev.linqibin.commons.enums.Priority;
-import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;

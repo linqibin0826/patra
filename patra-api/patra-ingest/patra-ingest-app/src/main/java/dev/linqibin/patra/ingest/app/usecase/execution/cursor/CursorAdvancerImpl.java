@@ -1,5 +1,6 @@
 package dev.linqibin.patra.ingest.app.usecase.execution.cursor;
 
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.ingest.domain.model.entity.Cursor;
 import dev.linqibin.patra.ingest.domain.model.entity.CursorEvent;
 import dev.linqibin.patra.ingest.domain.model.enums.CursorDirection;
@@ -10,7 +11,6 @@ import dev.linqibin.patra.ingest.domain.model.vo.plan.WindowSpec;
 import dev.linqibin.patra.ingest.domain.model.vo.shared.NamespaceKey;
 import dev.linqibin.patra.ingest.domain.port.CursorEventRepository;
 import dev.linqibin.patra.ingest.domain.port.CursorRepository;
-import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;

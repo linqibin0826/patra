@@ -3,6 +3,7 @@ package dev.linqibin.patra.ingest.app.usecase.execution.strategy;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.ingest.app.usecase.execution.coordination.GenericBatchExecutor;
 import dev.linqibin.patra.ingest.app.usecase.execution.session.ExecutionSession;
 import dev.linqibin.patra.ingest.app.usecase.execution.strategy.builder.BatchScheduleBuilder;
@@ -14,7 +15,6 @@ import dev.linqibin.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import dev.linqibin.patra.ingest.domain.model.vo.query.QuerySession;
 import dev.linqibin.patra.ingest.domain.port.TaskRunBatchRepository;
 import dev.linqibin.patra.ingest.domain.port.TaskRunRepository;
-import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;

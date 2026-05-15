@@ -1,5 +1,6 @@
 package dev.linqibin.patra.ingest.app.usecase.execution.session;
 
+import dev.linqibin.patra.common.model.DataType;
 import dev.linqibin.patra.ingest.domain.model.aggregate.PlanAggregate;
 import dev.linqibin.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
 import dev.linqibin.patra.ingest.domain.model.aggregate.TaskAggregate;
@@ -12,7 +13,6 @@ import dev.linqibin.patra.ingest.domain.port.ExpressionCompilerPort;
 import dev.linqibin.patra.ingest.domain.port.PlanRepository;
 import dev.linqibin.patra.ingest.domain.port.PlanSliceRepository;
 import dev.linqibin.patra.ingest.domain.port.TaskRepository;
-import dev.linqibin.patra.common.model.DataType;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

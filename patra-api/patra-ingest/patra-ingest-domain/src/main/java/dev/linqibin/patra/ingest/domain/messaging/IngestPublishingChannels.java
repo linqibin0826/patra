@@ -1,8 +1,8 @@
 package dev.linqibin.patra.ingest.domain.messaging;
 
+import dev.linqibin.commons.messaging.ChannelKey;
 import dev.linqibin.patra.ingest.domain.model.vo.execution.TaskReadyMessage;
 import dev.linqibin.patra.ingest.domain.model.vo.relay.PublicationReadyMessage;
-import dev.linqibin.commons.messaging.ChannelKey;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.Optional;

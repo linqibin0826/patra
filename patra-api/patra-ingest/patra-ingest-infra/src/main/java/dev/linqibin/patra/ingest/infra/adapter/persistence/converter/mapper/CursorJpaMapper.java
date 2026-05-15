@@ -1,5 +1,6 @@
 package dev.linqibin.patra.ingest.infra.adapter.persistence.converter.mapper;
 
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.ingest.domain.exception.InfrastructureException;
 import dev.linqibin.patra.ingest.domain.model.entity.Cursor;
 import dev.linqibin.patra.ingest.domain.model.enums.CursorType;
@@ -9,7 +10,6 @@ import dev.linqibin.patra.ingest.domain.model.vo.cursor.CursorLineage;
 import dev.linqibin.patra.ingest.domain.model.vo.cursor.CursorValue;
 import dev.linqibin.patra.ingest.domain.model.vo.cursor.CursorWatermark;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.CursorEntity;
-import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.math.BigDecimal;
 import java.time.Instant;
 import org.mapstruct.Mapper;

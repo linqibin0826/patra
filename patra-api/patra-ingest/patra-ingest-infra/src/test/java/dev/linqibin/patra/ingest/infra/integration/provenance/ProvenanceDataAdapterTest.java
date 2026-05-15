@@ -3,12 +3,12 @@ package dev.linqibin.patra.ingest.infra.integration.provenance;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import com.patra.starter.provenance.common.config.*;
+import com.patra.starter.provenance.common.provider.ProviderRegistry;
 import dev.linqibin.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import dev.linqibin.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import dev.linqibin.patra.ingest.infra.integration.provenance.acl.QuerySessionTranslator;
 import dev.linqibin.patra.ingest.infra.mapper.ProviderParameterMapperRegistry;
-import com.patra.starter.provenance.common.config.*;
-import com.patra.starter.provenance.common.provider.ProviderRegistry;
 import java.lang.reflect.Method;
 import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
