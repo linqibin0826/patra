@@ -7,11 +7,13 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import dev.linqibin.commons.json.JsonMapperHolder;
 import dev.linqibin.starter.batch.exception.BatchJobExecutionException;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -26,6 +28,7 @@ import org.springframework.batch.core.job.parameters.JobParameters;
 import org.springframework.batch.core.launch.JobExecutionAlreadyRunningException;
 import org.springframework.batch.core.launch.JobOperator;
 import org.springframework.batch.core.repository.JobRepository;
+import tools.jackson.databind.json.JsonMapper;
 
 /// {@link JobOperatorHelper} 单元测试
 ///
@@ -41,6 +44,21 @@ class JobOperatorHelperTest {
   @Mock private Job job;
 
   private JobOperatorHelper jobOperatorHelper;
+
+  /// 注册一个不含 LongToStringModule 的干净 ObjectMapper。
+  ///
+  /// 当 Spring IT 测试（如 BatchAutoConfigurationIT）在同一 JVM 进程中
+  /// 先于本测试运行时，会通过 ObjectMapperProvider 将带有 LongToStringModule
+  /// 的 Spring ObjectMapper 注册到 JsonMapperHolder。该模块将 Long 序列化为
+  /// String，导致 convertValue 后 longParam 类型变为 String，最终
+  /// JobParameters.getLong() 抛出 IllegalArgumentException。
+  ///
+  /// 此方法在测试类加载时重置 JsonMapperHolder 为标准 JsonMapper，
+  /// 避免跨测试类的静态状态污染。
+  @BeforeAll
+  static void resetJsonMapper() {
+    JsonMapperHolder.register(JsonMapper.builder().findAndAddModules().build());
+  }
 
   @BeforeEach
   void setUp() {

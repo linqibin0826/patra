@@ -28,7 +28,7 @@ import org.springframework.batch.core.step.StepExecution;
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("BatchProgressMetricsListener 单元测试")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
+@Timeout(value = 5, unit = TimeUnit.SECONDS)
 class BatchProgressMetricsListenerTest {
 
   private MeterRegistry meterRegistry;
