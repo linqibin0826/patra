@@ -120,7 +120,7 @@ class DictionaryRepositoryAdapterIT {
 
       // 使用 Native SQL 标记为已删除（@SoftDelete 由 Hibernate 自动管理，不暴露 setter）
       entityManager
-          .createNativeQuery("UPDATE reg_sys_dict_type SET deleted_at = NOW() WHERE id = :id")
+          .createNativeQuery("UPDATE sys_dict_type SET deleted_at = NOW() WHERE id = :id")
           .setParameter("id", deletedTypeId)
           .executeUpdate();
       entityManager.flush();
@@ -176,7 +176,7 @@ class DictionaryRepositoryAdapterIT {
 
       // 使用 Native SQL 标记为已删除（@SoftDelete 由 Hibernate 自动管理，不暴露 setter）
       entityManager
-          .createNativeQuery("UPDATE reg_sys_dict_item SET deleted_at = NOW() WHERE id = :id")
+          .createNativeQuery("UPDATE sys_dict_item SET deleted_at = NOW() WHERE id = :id")
           .setParameter("id", deletedItemId)
           .executeUpdate();
       entityManager.flush();
