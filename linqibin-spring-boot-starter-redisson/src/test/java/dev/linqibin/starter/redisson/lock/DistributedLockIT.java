@@ -247,7 +247,12 @@ class DistributedLockIT {
   @EnableAutoConfiguration(
       excludeName = {
         // 排除依赖 Spring Batch 的配置（测试环境无 Spring Batch）
-        "dev.linqibin.starter.observability.autoconfigure.ObservationInterceptorsAutoConfiguration"
+        "dev.linqibin.starter.observability.autoconfigure.ObservationInterceptorsAutoConfiguration",
+        // 排除数据源相关自动配置（redisson 测试无需数据库）
+        "org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration",
+        "org.springframework.boot.jdbc.autoconfigure.DataSourceTransactionManagerAutoConfiguration",
+        "org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration",
+        "org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration"
       })
   static class TestConfiguration {
     // Spring Boot 自动配置会自动加载 LockAutoConfiguration
