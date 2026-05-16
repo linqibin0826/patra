@@ -217,7 +217,7 @@ class PublicationDataReadyEventTest {
       // Then
       assertThat(event).isNotNull();
       assertThat(event.provenanceCode()).isNull();
-      assertThat(event.storageKeys()).isNull();
+      assertThat(event.storageKeys()).isEqualTo(List.of()); // null → List.of()（防御性拷贝规范）
       assertThat(event.totalPublicationCount()).isNull();
       assertThat(event.successBatchCount()).isNull();
       assertThat(event.failedBatchCount()).isNull();
@@ -559,7 +559,7 @@ class PublicationDataReadyEventTest {
       // Then
       assertThat(result)
           .contains("provenanceCode=null")
-          .contains("storageKeys=null")
+          .contains("storageKeys=[]") // null → List.of()（防御性拷贝规范），toString 展示 []
           .contains("totalPublicationCount=null");
     }
 
