@@ -13,13 +13,14 @@ spring:
   config:
     import:
       - "optional:classpath:application-test-common.yml"
-      - "classpath:ingest-error-config.yaml"
-      - "classpath:ingest-rocketmq.yaml"
 
 # RocketMQ Producer Group（覆盖公共配置）
 rocketmq:
   producer:
     group: patra_ingest_producer_e2e_test
+  # 使用唯一的实例名称，避免与 integration-test 上下文的消费者冲突（SHUTDOWN_ALREADY）
+  consumer:
+    instance-name: patra-ingest-e2e-test
 
 # Patra Ingest 配置（差异部分）
 patra:

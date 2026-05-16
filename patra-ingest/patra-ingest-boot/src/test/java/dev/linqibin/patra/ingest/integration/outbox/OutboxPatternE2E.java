@@ -110,7 +110,10 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest(
     properties = {
       "spring.cloud.consul.enabled=false",
-      "spring.config.import=classpath:ingest-error-config.yaml,classpath:ingest-rocketmq.yaml"
+      "spring.config.import=classpath:ingest-error-config.yaml,classpath:ingest-rocketmq.yaml",
+      // 禁用 Spring 管理的 TaskReadyMessageListener：本 E2E 测试使用本地 testConsumer 收集消息，
+      // 避免 Spring 管理的 Listener 在 Spring 上下文 pause/restart 循环中触发 SHUTDOWN_ALREADY
+      "patra.ingest.listener.task-ready.enabled=false"
     })
 @ContextConfiguration(
     initializers = {
@@ -141,12 +144,15 @@ class OutboxPatternE2E {
   void setUp() throws Exception {
     messageCollector = new RocketMQMessageCollector();
 
-    String namesrvAddr = RocketMQContainerInitializer.getRocketMQSupport().getNameserverAddress();
+    String namesrvAddr = RocketMQContainerInitializer.getResolvedNameserverAddr();
     testConsumer = new DefaultMQPushConsumer("e2e_test_consumer_" + System.currentTimeMillis());
     testConsumer.setNamesrvAddr(namesrvAddr);
-    // RocketMQ 不支持通配符订阅，需要显式订阅每个 Topic
-    testConsumer.subscribe("INGEST_TASK_READY", "*");
-    testConsumer.subscribe("INGEST_PUBLICATION_READY", "*");
+    // 使用独立的 instanceName，避免与 Spring 管理的消费者共享 MQClientInstance
+    // 防止 testConsumer.shutdown() 影响 Spring 管理的 TaskReadyMessageListener
+    testConsumer.setInstanceName("e2e-test-local-consumer-" + System.currentTimeMillis());
+    // 订阅实际发布 Topic（INGEST_TASK / INGEST_PUBLICATION），与生产代码 channel-mapping 保持一致
+    testConsumer.subscribe("INGEST_TASK", "*");
+    testConsumer.subscribe("INGEST_PUBLICATION", "*");
 
     testConsumer.registerMessageListener(
         (MessageListenerConcurrently)
@@ -156,6 +162,12 @@ class OutboxPatternE2E {
             });
 
     testConsumer.start();
+    // 等待消费者向 Broker 注册订阅（避免消息在订阅生效前发出而丢失）
+    try {
+      Thread.sleep(2000);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
   }
 
   @AfterEach
@@ -294,9 +306,11 @@ class OutboxPatternE2E {
     }
 
     @Test
-    @Transactional
     @DisplayName("应该防止相同 dedupKey 的重复消息")
     void shouldPreventDuplicateDedupKey() {
+      // 说明: 此测试验证数据库层面的 (channel, dedup_key) 唯一约束
+      // 相同 (channel, dedupKey) 的第二条 saveOrUpdate（不同 ID）应抛出约束违反异常
+
       // 准备: 第一条消息
       OutboxMessage msg1 =
           OutboxMessageTestBuilder.aValidPendingMessage()
@@ -306,26 +320,29 @@ class OutboxPatternE2E {
               .build();
       outboxRepository.saveOrUpdate(msg1);
 
-      // 查询第一条消息获取其 ID
+      // 验证: 第一条消息已保存
       var savedMsg =
           outboxRepository.findByChannelAndDedup("INGEST_TASK", "duplicate-key-e2e").orElseThrow();
+      assertThat(savedMsg.getPayloadJson()).contains("version\":1");
 
-      // 尝试写入相同 dedupKey 的第二条消息 (使用 saveOrUpdate 会更新而非插入)
+      // 尝试写入相同 (channel, dedupKey) 的第二条消息（使用不同 ID，即新实体）
+      // 期望触发 uk_outbox_channel_dedup 唯一约束异常
       OutboxMessage msg2 =
           OutboxMessageTestBuilder.aValidPendingMessage()
-              .id(savedMsg.getId()) // 使用相同的 ID,触发更新而非插入
               .channel("INGEST_TASK")
-              .dedupKey("duplicate-key-e2e")
+              .dedupKey("duplicate-key-e2e") // 相同的 dedupKey
               .payloadJson("{\"version\":2}")
               .build();
-      outboxRepository.saveOrUpdate(msg2);
 
-      // 验证: 只有一条消息 (后者覆盖前者)
+      assertThatThrownBy(() -> outboxRepository.saveOrUpdate(msg2))
+          .isInstanceOf(Exception.class); // uk_outbox_channel_dedup 约束违反
+
+      // 验证: 只有原始消息存在
       var messages =
           outboxRepository.findByChannelAndDedupIn(
               "INGEST_TASK", java.util.List.of("duplicate-key-e2e"));
       assertThat(messages).hasSize(1);
-      assertThat(messages.get(0).getPayloadJson()).contains("version\":2");
+      assertThat(messages.get(0).getPayloadJson()).contains("version\":1");
     }
   }
 
@@ -409,8 +426,8 @@ class OutboxPatternE2E {
           outboxRepository.findByChannelAndDedup("INGEST_TASK", msg.getDedupKey()).orElseThrow();
       assertThat(publishingMsg.getStatusCode()).isEqualTo("PUBLISHING");
 
-      // 步骤 3: 模拟发送失败,标记为 DEFERRED (PUBLISHING → FAILED)
-      // 注意: markDeferred 将状态设置为 FAILED 而非 PENDING
+      // 步骤 3: 模拟发送失败，标记为 DEFERRED（PUBLISHING → PENDING，等待下次重试）
+      // 注意: markDeferred 将状态设置为 PENDING（供下次重试），不是 FAILED
       relayStore.markDeferred(
           publishingMsg.getId(),
           publishingMsg.getVersion(), // 使用 PUBLISHING 状态的 version
@@ -419,10 +436,10 @@ class OutboxPatternE2E {
           "SEND_FAILED",
           "模拟发送失败");
 
-      // 验证: 消息状态为 FAILED,重试次数为 1,nextRetryAt 已设置
+      // 验证: 消息状态为 PENDING（等待重试），重试次数为 1，nextRetryAt 已设置
       var deferredMsg =
           outboxRepository.findByChannelAndDedup("INGEST_TASK", msg.getDedupKey()).orElseThrow();
-      assertThat(deferredMsg.getStatusCode()).isEqualTo("FAILED");
+      assertThat(deferredMsg.getStatusCode()).isEqualTo("PENDING");
       assertThat(deferredMsg.getRetryCount()).isEqualTo(1);
       assertThat(deferredMsg.getErrorCode()).isEqualTo("SEND_FAILED");
       assertThat(deferredMsg.getNextRetryAt()).isNotNull();

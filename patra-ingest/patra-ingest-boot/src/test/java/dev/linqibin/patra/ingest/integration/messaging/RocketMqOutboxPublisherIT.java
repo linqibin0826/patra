@@ -307,7 +307,7 @@ class RocketMqOutboxPublisherIT {
     MessageExt receivedMsg = messageCollector.getMessage("empty-headers-test");
     assertThat(receivedMsg).isNotNull();
     // 验证只有系统添加的 channel 属性
-    assertThat(receivedMsg.getUserProperty("channel")).isEqualTo("TASK_READY");
+    assertThat(receivedMsg.getUserProperty("channel")).isEqualTo("INGEST_TASK");
   }
 
   // ==================== 内部类：消息收集器 ====================

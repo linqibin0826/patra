@@ -2,6 +2,8 @@ package dev.linqibin.starter.test.container.initializer;
 
 import dev.linqibin.starter.test.container.rocketmq.RocketMQContainerSupport;
 import dev.linqibin.starter.test.container.rocketmq.RocketMQTopicAdmin;
+import java.io.IOException;
+import java.net.Socket;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.test.util.TestPropertyValues;
@@ -70,10 +72,19 @@ public class RocketMQContainerInitializer
 
   private static final Logger log = LoggerFactory.getLogger(RocketMQContainerInitializer.class);
 
-  /// RocketMQ 容器支持类单例实例。
+  /// RocketMQ NameServer 主机。
+  private static final String NAMESRV_HOST = "localhost";
+
+  /// RocketMQ NameServer 端口。
+  private static final int NAMESRV_PORT = 9876;
+
+  /// RocketMQ 容器支持类单例实例（使用 Testcontainers 启动时才非 null）。
   private static volatile RocketMQContainerSupport rocketmqSupport;
 
-  /// RocketMQ Topic 管理工具单例实例。
+  /// RocketMQ 连接地址（host 模式时直接使用，容器模式时由 rocketmqSupport 提供）。
+  private static volatile String resolvedNameserverAddr;
+
+  /// RocketMQ Topic 管理工具单例实例（仅容器模式可用）。
   private static volatile RocketMQTopicAdmin topicAdmin;
 
   /// 初始化状态标志，使用 volatile 确保多线程可见性。
@@ -90,6 +101,19 @@ public class RocketMQContainerInitializer
   /// @return Topic 名称数组
   protected String[] getTopicsToCreate() {
     return new String[0];
+  }
+
+  /// 检测宿主机 RocketMQ NameServer 是否已在运行。
+  ///
+  /// 尝试 TCP 连接 localhost:9876，连接成功则认为宿主机已有 RocketMQ 实例。
+  ///
+  /// @return true 表示宿主机 RocketMQ 已运行，false 表示需要启动容器
+  private static boolean isHostRocketMQRunning() {
+    try (Socket socket = new Socket(NAMESRV_HOST, NAMESRV_PORT)) {
+      return true;
+    } catch (IOException e) {
+      return false;
+    }
   }
 
   /// 初始化 RocketMQ 容器（线程安全的单例模式）。
@@ -113,43 +137,51 @@ public class RocketMQContainerInitializer
         // 第二次检查：确保只有一个线程执行初始化
         if (!initialized) {
           log.info("========================================");
-          log.info("初始化 RocketMQ TestContainers (线程: {})", Thread.currentThread().getName());
+          log.info("初始化 RocketMQ 测试环境 (线程: {})", Thread.currentThread().getName());
           log.info("========================================");
 
           try {
-            // 启动容器
-            rocketmqSupport = new RocketMQContainerSupport();
-            rocketmqSupport.start();
+            if (isHostRocketMQRunning()) {
+              // 宿主机已有 RocketMQ 实例（如 docker-compose 启动的 patra-rocketmq-namesrv）
+              // 直接复用，无需启动 Testcontainers 容器
+              resolvedNameserverAddr = NAMESRV_HOST + ":" + NAMESRV_PORT;
+              log.info("检测到宿主机 RocketMQ 已运行，复用现有实例");
+              log.info("  - NameServer 地址: {}", resolvedNameserverAddr);
+              log.info("  - Topics 将由 Broker 自动创建（autoCreateTopicEnable=true）");
+            } else {
+              // 宿主机无 RocketMQ，启动 Testcontainers 容器
+              rocketmqSupport = new RocketMQContainerSupport();
+              rocketmqSupport.start();
+              resolvedNameserverAddr = rocketmqSupport.getNameserverAddress();
 
-            log.info("RocketMQ 容器已启动");
-            log.info("  - NameServer 地址: {}", rocketmqSupport.getNameserverAddress());
+              log.info("RocketMQ Testcontainers 容器已启动");
+              log.info("  - NameServer 地址: {}", resolvedNameserverAddr);
 
-            // 初始化 Topic 管理工具
-            topicAdmin = new RocketMQTopicAdmin(rocketmqSupport.getComposeContainer());
-
-            // 创建测试所需的 Topics
-            String[] topics = getTopicsToCreate();
-            for (String topic : topics) {
-              log.info("创建测试 Topic: {}", topic);
-              topicAdmin.createTopic(topic);
+              // 初始化 Topic 管理工具并预创建 Topics
+              topicAdmin = new RocketMQTopicAdmin(rocketmqSupport.getComposeContainer());
+              String[] topics = getTopicsToCreate();
+              for (String topic : topics) {
+                log.info("创建测试 Topic: {}", topic);
+                topicAdmin.createTopic(topic);
+              }
             }
 
             // 标记初始化完成（volatile 写操作，确保其他线程可见）
             initialized = true;
 
             log.info("========================================");
-            log.info("RocketMQ TestContainers 初始化完成");
+            log.info("RocketMQ 测试环境初始化完成");
             log.info("========================================");
           } catch (Exception e) {
-            log.error("RocketMQ 容器初始化失败", e);
-            throw new IllegalStateException("RocketMQ 容器初始化失败", e);
+            log.error("RocketMQ 测试环境初始化失败", e);
+            throw new IllegalStateException("RocketMQ 测试环境初始化失败", e);
           }
         } else {
-          log.info("RocketMQ 容器已由其他线程初始化，复用现有实例 (线程: {})", Thread.currentThread().getName());
+          log.info("RocketMQ 已由其他线程初始化，复用现有实例 (线程: {})", Thread.currentThread().getName());
         }
       }
     } else {
-      log.debug("RocketMQ 容器已初始化，跳过 (线程: {})", Thread.currentThread().getName());
+      log.debug("RocketMQ 已初始化，跳过 (线程: {})", Thread.currentThread().getName());
     }
   }
 
@@ -167,18 +199,27 @@ public class RocketMQContainerInitializer
 
     log.info("注入 RocketMQ 动态配置到 Spring 上下文");
 
-    String nameServerAddr = rocketmqSupport.getNameserverAddress();
-
-    TestPropertyValues.of("rocketmq.name-server=" + nameServerAddr)
+    TestPropertyValues.of("rocketmq.name-server=" + resolvedNameserverAddr)
         .applyTo(applicationContext.getEnvironment());
 
     log.info("RocketMQ 动态配置注入完成");
-    log.info("  - rocketmq.name-server: {}", nameServerAddr);
+    log.info("  - rocketmq.name-server: {}", resolvedNameserverAddr);
+  }
+
+  /// 获取已解析的 NameServer 地址（供测试代码访问）。
+  ///
+  /// 不论使用宿主机模式还是容器模式，此方法均可返回有效地址。
+  ///
+  /// @return NameServer 地址，格式 host:port
+  public static String getResolvedNameserverAddr() {
+    return resolvedNameserverAddr;
   }
 
   /// 获取 RocketMQ 容器支持实例（供测试代码访问）。
   ///
-  /// @return RocketMQ 容器支持实例
+  /// 仅在容器模式下非 null；宿主机模式下返回 null。
+  ///
+  /// @return RocketMQ 容器支持实例，或 null（宿主机模式）
   public static RocketMQContainerSupport getRocketMQSupport() {
     return rocketmqSupport;
   }

@@ -73,9 +73,9 @@ import tools.jackson.databind.ObjectMapper;
       "spring.config.import=classpath:ingest-error-config.yaml,classpath:ingest-rocketmq.yaml",
       // 启用测试目标：TaskReadyMessageListener
       "patra.ingest.listener.task-ready.enabled=true",
-      // 配置 Topic 和 Consumer Group
-      "patra.ingest.mq.topics.task-ready=INGEST_TASK_READY",
-      "patra.ingest.mq.consumer-groups.task-ready=test-task-ready-consumer-group"
+      // 配置 Topic 和 Consumer Group（TaskReadyMessageListener 使用 task 而非 task-ready）
+      "patra.ingest.mq.topics.task=INGEST_TASK",
+      "patra.ingest.mq.consumer-groups.task=test-task-ready-consumer-group"
     })
 @ContextConfiguration(
     initializers = {
@@ -96,7 +96,7 @@ class TaskReadyMessageListenerIT {
   @Autowired private ObjectMapper objectMapper;
 
   /// 测试用的 Topic 名称 (与配置文件保持一致)
-  private static final String TOPIC = "INGEST_TASK_READY";
+  private static final String TOPIC = "INGEST_TASK";
 
   @BeforeEach
   void setUp() {
@@ -121,8 +121,8 @@ class TaskReadyMessageListenerIT {
             .setHeader("KEYS", "test-dedup-key-001") // dedupKey
             .build();
 
-    // 执行：发送消息到 RocketMQ（TAGS 通过 destination 传递）
-    String destination = TOPIC + ":CREATE"; // destination 格式：topic:tags
+    // 执行：发送消息到 RocketMQ（TAGS 通过 destination 传递，监听器过滤条件 selectorExpression="READY"）
+    String destination = TOPIC + ":READY"; // destination 格式：topic:tags
     SendResult sendResult = rocketMQTemplate.syncSend(destination, message);
     log.info("消息已发送, msgId={}", sendResult.getMsgId());
 
@@ -141,7 +141,7 @@ class TaskReadyMessageListenerIT {
     // 验证：headers 包含 RocketMQ 元数据
     assertThat(capturedCommand.headers()).isNotNull();
     assertThat(capturedCommand.headers()).containsEntry("KEYS", "test-dedup-key-001");
-    assertThat(capturedCommand.headers()).containsEntry("TAGS", "CREATE");
+    assertThat(capturedCommand.headers()).containsEntry("TAGS", "READY");
     assertThat(capturedCommand.headers()).containsEntry("topic", TOPIC);
     assertThat(capturedCommand.headers()).containsKey("msgId"); // RocketMQ 消息 ID
   }
@@ -165,8 +165,8 @@ class TaskReadyMessageListenerIT {
             .setHeader("traceId", "trace-12345") // 链路追踪 ID
             .build();
 
-    // 执行：发送消息（TAGS 通过 destination 传递）
-    String destination = TOPIC + ":UPDATE"; // destination 格式：topic:tags
+    // 执行：发送消息（TAGS 通过 destination 传递，监听器过滤条件 selectorExpression="READY"）
+    String destination = TOPIC + ":READY"; // destination 格式：topic:tags
     rocketMQTemplate.syncSend(destination, message);
 
     // 断言：等待 CommandBus 被调用
@@ -182,7 +182,7 @@ class TaskReadyMessageListenerIT {
 
     // 验证 RocketMQ 标准元数据
     assertThat(headers).containsEntry("KEYS", "test-dedup-key-002");
-    assertThat(headers).containsEntry("TAGS", "UPDATE");
+    assertThat(headers).containsEntry("TAGS", "READY");
     assertThat(headers).containsEntry("topic", TOPIC);
 
     // 验证自定义 UserProperties
@@ -205,17 +205,25 @@ class TaskReadyMessageListenerIT {
     Message<String> message =
         MessageBuilder.withPayload(payloadJson).setHeader("KEYS", "test-dedup-key-003").build();
 
-    // 执行：发送消息
-    rocketMQTemplate.syncSend(TOPIC, message);
+    // 执行：发送消息（使用 READY 标签，让监听器接收后触发验证失败）
+    rocketMQTemplate.syncSend(TOPIC + ":READY", message);
 
-    // 断言：等待一段时间，确保 CommandBus 不会被调用
+    // 断言：等待一段时间，确保 CommandBus 不会被调用（taskId 缺失导致验证失败）
+    // 注意：使用精确的 KEYS 匹配避免来自其他测试重试消息的干扰
     await()
         .pollDelay(2, SECONDS) // 等待 2 秒
         .atMost(5, SECONDS)
-        .untilAsserted(() -> verify(commandBus, never()).handle(any()));
+        .untilAsserted(
+            () -> {
+              // 获取所有对 commandBus.handle() 的实际调用，验证没有本测试的命令（KEYS=test-dedup-key-003）
+              var captor = ArgumentCaptor.forClass(TaskReadyCommand.class);
+              verify(commandBus, atLeast(0)).handle(captor.capture());
+              assertThat(captor.getAllValues())
+                  .noneMatch(rc -> "test-dedup-key-003".equals(rc.headers().get("KEYS")));
+            });
 
     // 说明：由于消息解析失败，Listener 会抛出异常，RocketMQ 会重试
-    // 在测试中，我们验证 Handler 不会被调用（因为验证失败在调用之前）
+    // 在测试中，我们验证针对本测试消息的 Handler 不会被调用（因为验证失败在调用之前）
   }
 
   @Test
@@ -232,14 +240,21 @@ class TaskReadyMessageListenerIT {
     Message<String> message =
         MessageBuilder.withPayload(payloadJson).setHeader("KEYS", "test-dedup-key-004").build();
 
-    // 执行：发送消息
-    rocketMQTemplate.syncSend(TOPIC, message);
+    // 执行：发送消息（使用 READY 标签，让监听器接收后触发验证失败）
+    rocketMQTemplate.syncSend(TOPIC + ":READY", message);
 
-    // 断言：等待一段时间，确保 CommandBus 不会被调用
+    // 断言：等待一段时间，确保 CommandBus 不会被调用（idempotentKey 缺失导致验证失败）
+    // 注意：使用精确的 taskId 匹配避免来自其他测试重试消息的干扰
     await()
         .pollDelay(2, SECONDS)
         .atMost(5, SECONDS)
-        .untilAsserted(() -> verify(commandBus, never()).handle(any()));
+        .untilAsserted(
+            () -> {
+              // 获取所有对 commandBus.handle() 的实际调用，验证没有本测试的命令（taskId=3001）
+              var captor = ArgumentCaptor.forClass(TaskReadyCommand.class);
+              verify(commandBus, atLeast(0)).handle(captor.capture());
+              assertThat(captor.getAllValues()).noneMatch(rc -> rc.taskId() == 3001L);
+            });
 
     // 说明：由于验证失败，Listener 会抛出异常，RocketMQ 会重试
   }
@@ -261,8 +276,8 @@ class TaskReadyMessageListenerIT {
     Message<String> message =
         MessageBuilder.withPayload(payloadJson).setHeader("KEYS", "test-dedup-key-005").build();
 
-    // 执行：发送消息
-    rocketMQTemplate.syncSend(TOPIC, message);
+    // 执行：发送消息（使用 READY 标签触发监听器，验证异常传播）
+    rocketMQTemplate.syncSend(TOPIC + ":READY", message);
 
     // 断言：等待 CommandBus.handle() 被调用
     await()
@@ -294,8 +309,8 @@ class TaskReadyMessageListenerIT {
             .setHeader("userId", "user-123")
             .build();
 
-    // 执行：发送消息（TAGS 通过 destination 传递）
-    String destination = TOPIC + ":EXECUTE"; // destination 格式：topic:tags
+    // 执行：发送消息（TAGS 通过 destination 传递，监听器过滤条件 selectorExpression="READY"）
+    String destination = TOPIC + ":READY"; // destination 格式：topic:tags
     rocketMQTemplate.syncSend(destination, message);
 
     // 断言：等待 CommandBus 被调用
@@ -316,7 +331,7 @@ class TaskReadyMessageListenerIT {
     Map<String, Object> headers = capturedCommand.headers();
     assertThat(headers)
         .containsEntry("KEYS", "test-dedup-key-006")
-        .containsEntry("TAGS", "EXECUTE")
+        .containsEntry("TAGS", "READY")
         .containsEntry("topic", TOPIC)
         .containsEntry("partitionKey", "partition-B")
         .containsEntry("channel", "TASK_READY")
