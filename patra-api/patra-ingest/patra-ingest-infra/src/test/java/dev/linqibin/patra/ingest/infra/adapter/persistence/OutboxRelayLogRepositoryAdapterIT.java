@@ -10,6 +10,7 @@ import dev.linqibin.patra.ingest.infra.adapter.persistence.dao.OutboxRelayLogDao
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.OutboxMessageEntity;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.OutboxRelayLogEntity;
 import dev.linqibin.patra.ingest.infra.config.IngestMySQLContainerInitializer;
+import dev.linqibin.starter.jpa.autoconfig.HibernatePropertiesCustomizer;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
 import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
@@ -53,7 +54,8 @@ import tools.jackson.databind.node.ObjectNode;
 @Import({
   OutboxRelayLogRepositoryAdapter.class,
   JacksonAutoConfiguration.class,
-  JpaAuditingConfig.class
+  JpaAuditingConfig.class,
+  HibernatePropertiesCustomizer.class
 })
 @ComponentScan(
     basePackages = "dev.linqibin.patra.ingest.infra.adapter.persistence.converter.mapper")

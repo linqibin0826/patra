@@ -13,6 +13,7 @@ import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.PlanSliceEntit
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.ScheduleInstanceEntity;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.TaskEntity;
 import dev.linqibin.patra.ingest.infra.config.IngestMySQLContainerInitializer;
+import dev.linqibin.starter.jpa.autoconfig.HibernatePropertiesCustomizer;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
 import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
@@ -52,7 +53,12 @@ import tools.jackson.databind.node.ObjectNode;
 @DataJpaTest
 @ContextConfiguration(initializers = IngestMySQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({TaskRepositoryAdapter.class, JacksonAutoConfiguration.class, JpaAuditingConfig.class})
+@Import({
+  TaskRepositoryAdapter.class,
+  JacksonAutoConfiguration.class,
+  JpaAuditingConfig.class,
+  HibernatePropertiesCustomizer.class
+})
 @ComponentScan(
     basePackages = "dev.linqibin.patra.ingest.infra.adapter.persistence.converter.mapper")
 @ActiveProfiles("test")

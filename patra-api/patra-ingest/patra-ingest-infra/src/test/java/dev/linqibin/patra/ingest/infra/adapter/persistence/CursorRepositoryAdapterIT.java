@@ -7,6 +7,7 @@ import dev.linqibin.patra.ingest.domain.model.entity.Cursor;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.dao.CursorDao;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.CursorEntity;
 import dev.linqibin.patra.ingest.infra.config.IngestMySQLContainerInitializer;
+import dev.linqibin.starter.jpa.autoconfig.HibernatePropertiesCustomizer;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
 import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
@@ -43,7 +44,12 @@ import org.springframework.test.context.ContextConfiguration;
 @DataJpaTest
 @ContextConfiguration(initializers = IngestMySQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({CursorRepositoryAdapter.class, JacksonAutoConfiguration.class, JpaAuditingConfig.class})
+@Import({
+  CursorRepositoryAdapter.class,
+  JacksonAutoConfiguration.class,
+  JpaAuditingConfig.class,
+  HibernatePropertiesCustomizer.class
+})
 @ComponentScan(
     basePackages = "dev.linqibin.patra.ingest.infra.adapter.persistence.converter.mapper")
 @ActiveProfiles("test")
