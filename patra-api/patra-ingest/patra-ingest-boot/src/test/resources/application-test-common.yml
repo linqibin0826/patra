@@ -61,9 +61,10 @@ patra:
         TASK_READY: INGEST_TASK_READY
         PUBLICATION_READY: INGEST_PUBLICATION_READY
     # MQ 消费者配置（Topic 名称）
+    # 使用实际发布 Topic（INGEST_TASK），而非旧的 INGEST_TASK_READY
     mq:
       topics:
-        task-ready: ${TOPIC_PREFIX:}INGEST_TASK_READY
+        task-ready: ${TOPIC_PREFIX:}INGEST_TASK
       # consumer-groups 在各自的 profile 中配置
     # listener 开关在各自的 profile 中配置
   # 对象存储配置（测试环境使用虚拟配置）
