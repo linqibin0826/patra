@@ -70,7 +70,7 @@ class StorageEndpointIT {
       // When & Then
       restClient
           .post()
-          .uri("/internal/storage/files/record")
+          .uri("/_internal/storage/files/record")
           .contentType(MediaType.APPLICATION_JSON)
           .body(request)
           .exchange()
@@ -101,7 +101,7 @@ class StorageEndpointIT {
       // When & Then
       restClient
           .post()
-          .uri("/internal/storage/files/record")
+          .uri("/_internal/storage/files/record")
           .contentType(MediaType.APPLICATION_JSON)
           .body(request)
           .exchange()
@@ -117,7 +117,7 @@ class StorageEndpointIT {
       // When & Then
       restClient
           .post()
-          .uri("/internal/storage/files/record")
+          .uri("/_internal/storage/files/record")
           .contentType(MediaType.APPLICATION_JSON)
           .body(
               """
@@ -144,7 +144,7 @@ class StorageEndpointIT {
       // When & Then
       restClient
           .post()
-          .uri("/internal/storage/files/record")
+          .uri("/_internal/storage/files/record")
           .contentType(MediaType.APPLICATION_JSON)
           .body(
               """
@@ -171,7 +171,7 @@ class StorageEndpointIT {
       // When & Then
       restClient
           .post()
-          .uri("/internal/storage/files/record")
+          .uri("/_internal/storage/files/record")
           .contentType(MediaType.APPLICATION_JSON)
           .body(
               """
@@ -198,7 +198,7 @@ class StorageEndpointIT {
       // When & Then
       restClient
           .post()
-          .uri("/internal/storage/files/record")
+          .uri("/_internal/storage/files/record")
           .contentType(MediaType.APPLICATION_JSON)
           .body(
               """
@@ -225,7 +225,7 @@ class StorageEndpointIT {
       // When & Then
       restClient
           .post()
-          .uri("/internal/storage/files/record")
+          .uri("/_internal/storage/files/record")
           .contentType(MediaType.APPLICATION_JSON)
           .body(
               """
