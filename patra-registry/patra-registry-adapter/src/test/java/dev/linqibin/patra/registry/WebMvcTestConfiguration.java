@@ -1,0 +1,41 @@
+package dev.linqibin.patra.registry;
+
+import dev.linqibin.starter.core.error.config.CoreErrorAutoConfiguration;
+import dev.linqibin.starter.core.json.autoconfig.JacksonAutoConfiguration;
+import dev.linqibin.starter.web.error.config.WebErrorAutoConfiguration;
+import org.springframework.boot.SpringBootConfiguration;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
+
+/// WebMvcTest 切片测试配置类。
+///
+/// 提供 @WebMvcTest 所需的最小 Spring Boot 配置。
+/// 由于 adapter 模块遵循六边形架构，不包含 @SpringBootApplication 类，
+/// 需要显式提供此配置类作为测试上下文的根配置。
+///
+/// 职责：
+///
+/// - 提供 @SpringBootConfiguration，使 @WebMvcTest 能够加载 Spring 上下文
+/// - 通过 @EnableAutoConfiguration 加载通用自动配置
+/// - 显式导入错误处理自动配置（@WebMvcTest 默认不加载）
+/// - 显式导入 Jackson 自动配置，确保 Long → String 序列化模块在切片测试中生效
+///
+/// 异常处理说明：
+///
+/// 领域异常（如 ProvenanceNotFoundException）携带 StandardErrorTrait.NOT_FOUND，
+/// 由 DefaultErrorResolutionEngine 内置映射自动转换为 HTTP 404。
+///
+/// 注意：Controller 由 @WebMvcTest + @Import 显式指定，保持切片测试的隔离性。
+///
+/// @author linqibin
+/// @since 0.1.0
+@SpringBootConfiguration
+@EnableAutoConfiguration
+@ImportAutoConfiguration({
+  CoreErrorAutoConfiguration.class,
+  WebErrorAutoConfiguration.class,
+  JacksonAutoConfiguration.class
+})
+public class WebMvcTestConfiguration {
+  // 空配置类，仅提供 @SpringBootConfiguration 标记
+}

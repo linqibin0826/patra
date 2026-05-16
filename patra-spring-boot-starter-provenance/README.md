@@ -371,9 +371,9 @@ public class PubmedDataProvider implements ProvenanceDataProvider {
 #### 使用 API 常量和枚举（推荐）
 
 ```java
-import com.patra.common.provenance.api.params.PubMedParamKeys;
-import com.patra.common.provenance.api.values.pubmed.*;
-import com.patra.common.provenance.api.constants.PubMedOperation;
+import dev.linqibin.patra.common.provenance.api.params.PubMedParamKeys;
+import dev.linqibin.patra.common.provenance.api.values.pubmed.*;
+import dev.linqibin.patra.common.provenance.api.constants.PubMedOperation;
 
 // 构建请求参数（类型安全）
 Map<String, String> params = new HashMap<>();
@@ -847,11 +847,11 @@ PubMedClient client = new PubMedClientAdapter(
 **主要变更**:
 
 1. **包路径变更**:
-   - 旧位置: `com.patra.starter.provenance.pubmed.request.PubMedParamKeys`
-   - 新位置: `com.patra.common.provenance.api.params.PubMedParamKeys`
+   - 旧位置: `dev.linqibin.patra.starter.provenance.pubmed.request.PubMedParamKeys`
+   - 新位置: `dev.linqibin.patra.common.provenance.api.params.PubMedParamKeys`
 
-   - 旧位置: `com.patra.starter.provenance.epmc.request.EpmcParamKeys`
-   - 新位置: `com.patra.common.provenance.api.params.EpmcParamKeys`
+   - 旧位置: `dev.linqibin.patra.starter.provenance.epmc.request.EpmcParamKeys`
+   - 新位置: `dev.linqibin.patra.common.provenance.api.params.EpmcParamKeys`
 
 2. **新增功能**:
    - 端点路径常量: `CrossrefEndpoints`
@@ -864,9 +864,9 @@ PubMedClient client = new PubMedClientAdapter(
 **使用示例**:
 
 ```java
-import com.patra.common.provenance.api.params.PubMedParamKeys;
-import com.patra.common.provenance.api.values.pubmed.RetMode;
-import com.patra.common.provenance.api.constants.PubMedOperation;
+import dev.linqibin.patra.common.provenance.api.params.PubMedParamKeys;
+import dev.linqibin.patra.common.provenance.api.values.pubmed.RetMode;
+import dev.linqibin.patra.common.provenance.api.constants.PubMedOperation;
 
 // 使用类型安全的枚举
 params.put(PubMedParamKeys.RETMODE, RetMode.JSON.value());

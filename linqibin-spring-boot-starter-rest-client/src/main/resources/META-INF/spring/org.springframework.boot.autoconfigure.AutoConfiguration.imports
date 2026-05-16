@@ -1,0 +1,4 @@
+dev.linqibin.starter.restclient.config.RestClientAutoConfiguration
+dev.linqibin.starter.restclient.config.TunnelProxyAutoConfiguration
+dev.linqibin.starter.restclient.config.DownloadClientAutoConfiguration
+dev.linqibin.starter.restclient.config.StreamingWebClientAutoConfiguration

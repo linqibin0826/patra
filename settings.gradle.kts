@@ -36,28 +36,31 @@ dependencyResolutionManagement {
 }
 
 // ==================== Common Modules ====================
-include(":patra-common:patra-common-core")
-include(":patra-common:patra-common-storage")
 include(":patra-common:patra-common-model")
 include(":patra-common:patra-common-provenance-api")
+
+// ==================== LinQibin Commons ====================
+include(":linqibin-commons-core")
+include(":linqibin-commons-storage")
+include(":patra-common:patra-common-enums")
 
 // ==================== Expression Kernel ====================
 include(":patra-expr-kernel")
 
 // ==================== Spring Boot Starters ====================
-include(":patra-spring-boot-starter-core")
-include(":patra-spring-boot-starter-web")
-include(":patra-spring-boot-starter-jpa")
-include(":patra-spring-boot-starter-batch")
-include(":patra-spring-boot-starter-rest-client")
-include(":patra-spring-boot-starter-http-interface")
-include(":patra-spring-boot-starter-observability")
+include(":linqibin-spring-boot-starter-core")
+include(":linqibin-spring-boot-starter-web")
+include(":linqibin-spring-boot-starter-jpa")
+include(":linqibin-spring-boot-starter-batch")
+include(":linqibin-spring-boot-starter-rest-client")
+include(":linqibin-spring-boot-starter-http-interface")
+include(":linqibin-spring-boot-starter-observability")
 include(":patra-spring-boot-starter-provenance")
-include(":patra-spring-boot-starter-redisson")
-include(":patra-spring-boot-starter-object-storage")
+include(":linqibin-spring-boot-starter-redisson")
+include(":linqibin-spring-boot-starter-object-storage")
 include(":patra-spring-boot-starter-expr")
-include(":patra-spring-boot-starter-test")
-include(":patra-spring-boot-starter-openapi")
+include(":linqibin-spring-boot-starter-test")
+include(":linqibin-spring-boot-starter-openapi")
 
 // ==================== Microservices ====================
 include(":patra-registry:patra-registry-domain")

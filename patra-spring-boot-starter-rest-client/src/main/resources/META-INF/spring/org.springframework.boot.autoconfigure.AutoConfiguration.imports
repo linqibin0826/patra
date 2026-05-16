@@ -1,4 +1,0 @@
-com.patra.starter.restclient.config.RestClientAutoConfiguration
-com.patra.starter.restclient.config.TunnelProxyAutoConfiguration
-com.patra.starter.restclient.config.DownloadClientAutoConfiguration
-com.patra.starter.restclient.config.StreamingWebClientAutoConfiguration

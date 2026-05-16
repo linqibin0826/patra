@@ -1,0 +1,2 @@
+dev.linqibin.starter.redisson.autoconfigure.RedissonAutoConfiguration
+dev.linqibin.starter.redisson.autoconfigure.LockAutoConfiguration

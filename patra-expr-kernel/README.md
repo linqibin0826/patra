@@ -18,7 +18,7 @@
 ## 模块结构
 
 ```
-com.patra.expr
+dev.linqibin.patra.expr
 ├── Expr.java              # 密封接口,表达式树根节点
 ├── And.java               # AND 逻辑运算符
 ├── Or.java                # OR 逻辑运算符

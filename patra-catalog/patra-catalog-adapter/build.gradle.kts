@@ -5,14 +5,14 @@
  */
 
 plugins {
-    id("patra.hexagonal-adapter")
+    id("linqibin.hexagonal-adapter")
 }
 
 dependencies {
     // 内部模块
     api(project(":patra-catalog:patra-catalog-app"))
     api(project(":patra-catalog:patra-catalog-api"))
-    api(project(":patra-spring-boot-starter-web"))
+    api(project(":linqibin-spring-boot-starter-web"))
 
     // RocketMQ
     api(libs.rocketmq.spring.boot)
@@ -24,5 +24,5 @@ dependencies {
     // annotationProcessor 由 patra.java-base 插件提供
 
     // 测试依赖
-    testImplementation(project(":patra-spring-boot-starter-test"))
+    testImplementation(project(":linqibin-spring-boot-starter-test"))
 }

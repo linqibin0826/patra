@@ -1,0 +1,2 @@
+dev.linqibin.starter.objectstorage.ObjectStorageAutoConfiguration
+dev.linqibin.starter.objectstorage.S3StorageAutoConfiguration

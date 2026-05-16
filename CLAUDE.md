@@ -8,7 +8,7 @@
 ### 核心事实
 
 1. 零历史包袱:不存在旧版本，无需向后兼容、数据迁移或渐进式重构
-2. 单人团队:整个项目由 Qibin Lin 一人负责，无团队协作成本
+2. 单人团队:整个项目由 linqibin 一人负责，无团队协作成本
 3. 质量优先:可投入任何必要时间实现最优方案，技术卓越是唯一标准
 
 ### 执行要求
@@ -80,36 +80,3 @@ Patra 项目使用**两层正交** skill 体系，叠加调用不冲突：
 
 `brainstorming` → `writing-plans` → `test-driven-development(RED)` → `patra-hexagonal`（指导 Handler）→ `patra-jpa`（指导 Repository）→ `test-driven-development(GREEN)` → `requesting-code-review`
 
-### 触发词默认规则（含豁免条款）
-
-以下是默认行为。**默认必须遵守**，但遇到下列情况可豁免；豁免时**必须**在回复开头显式声明"跳过 X 因为 Y"，不得静默跳过：
-
-**豁免条件**：
-
-- trivial 修改（< 15 行代码 或 < 5 分钟预估工作量）
-- 用户明确说"直接改" / "快速修一下" / "跳过流程"
-- 非功能性变更（注释、格式化、import 整理、常量改名）
-- 根因已明确的 bug（用户给出具体行号 / 异常栈）→ 可跳过 `systematic-debugging`
-
-| 触发词 | 默认调用 skill |
-|--------|---------------|
-| **新功能** / 新用例 / 新模块 / feature | `superpowers:brainstorming` |
-| **根因不明的** bug / 异常 / 崩溃 | `superpowers:systematic-debugging` + `patra-troubleshooter` |
-| **实现业务逻辑** / 重构超过 50 行 | `superpowers:test-driven-development` |
-| 计划 / 方案 / 设计 / plan | `superpowers:writing-plans` |
-| 审查 / review / 代码质量 | `superpowers:requesting-code-review` |
-| 聚合根 / Repository / Port / Gateway 设计 | `patra-hexagonal` |
-| Entity / Dao / Mapper / 持久化 / JPA | `patra-jpa` |
-| 事件 / Outbox / RocketMQ / 消息 | `patra-events` |
-
-## 开发规范
-
-> **项目开发规范非常重要，你必须严格遵守以下规范!!!**
-
-| 目录 | 规则内容 |
-|------|----------|
-| `rules/layers/` | 六边形架构各层规范（domain/app/infra/adapter/api/boot） |
-| `rules/tech/` | 技术栈规范（jpa/error-handling/observability/commandbus/port-service） |
-| `rules/testing/` | 测试规范（unit-test/integration-test/e2e-test） |
-| `rules/code-style.md` | 代码风格与命名规范 |
-| `rules/project-info.md` | 项目概览与技术栈 |

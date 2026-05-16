@@ -18,8 +18,8 @@ spring:
       - org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchClientAutoConfiguration
       - org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchRestClientAutoConfiguration
       # 排除对象存储配置（E2E 测试不需要 MinIO）
-      - com.patra.starter.objectstorage.ObjectStorageAutoConfiguration
-      - com.patra.starter.objectstorage.S3StorageAutoConfiguration
+      - dev.linqibin.starter.objectstorage.ObjectStorageAutoConfiguration
+      - dev.linqibin.starter.objectstorage.S3StorageAutoConfiguration
   # 导入错误配置
   config:
     import:
@@ -61,6 +61,11 @@ patra:
   # 禁用 Redisson（E2E 测试不需要 Redis）
   redisson:
     enabled: false
+  # 禁用隧道代理（E2E 测试使用 Mock FileDownloadPort，无需真实代理）
+  rest-client:
+    proxy:
+      tunnel:
+        enabled: false
 
 # Management & Monitoring (禁用测试环境不需要的)
 management:
@@ -76,7 +81,7 @@ management:
 # 日志配置
 logging:
   level:
-    com.patra: INFO
+    dev.linqibin: INFO
     org.springframework.batch: DEBUG
     org.testcontainers: INFO
     org.springframework.cloud.consul: WARN

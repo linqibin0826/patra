@@ -32,10 +32,10 @@
 | 包路径 | 级别 | 说明 |
 |--------|------|------|
 | root | INFO | 默认级别，所有第三方库 |
-| com.patra | DEBUG | 业务代码，DEBUG 级别 |
+| dev.linqibin | DEBUG | 业务代码，DEBUG 级别 |
 
 **重要**：FILE appender 有 `ThresholdFilter` 过滤 INFO 以下，所以：
-- **控制台**：可见 com.patra 的 DEBUG 日志
+- **控制台**：可见 dev.linqibin 的 DEBUG 日志
 - **文件**：只有 INFO 及以上，DEBUG 日志不会写入文件
 
 ## 滚动策略

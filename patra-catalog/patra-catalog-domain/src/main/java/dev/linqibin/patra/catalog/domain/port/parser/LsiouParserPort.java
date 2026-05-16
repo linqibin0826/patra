@@ -1,0 +1,46 @@
+package dev.linqibin.patra.catalog.domain.port.parser;
+
+import dev.linqibin.patra.catalog.domain.model.vo.venue.pubmed.PubmedSerialData;
+import java.io.InputStream;
+import java.util.stream.Stream;
+
+/// NLM LSIOU XML 解析端口（领域层定义，基础设施层实现）。
+///
+/// **设计原则**：
+///
+/// - 接口在 Domain 层定义，确保领域层独立
+/// - 实现在 Infrastructure 层，遵循依赖倒置原则（DIP）
+/// - 使用 Stream 返回，支持大文件流式处理
+/// - 返回领域层值对象，而非 Infra 层 DTO
+///
+/// **主要使用场景**：
+///
+/// NLM LSIOU 数据导入，解析约 15,000 条期刊记录
+///
+/// @author linqibin
+/// @since 0.1.0
+public interface LsiouParserPort {
+
+  /// 解析 LSIOU XML 输入流，返回 PubMed 期刊数据流。
+  ///
+  /// 使用 StAX 流式解析，避免将整个文件加载到内存。
+  /// 调用方负责关闭返回的 Stream（推荐使用 try-with-resources）。
+  ///
+  /// **注意**：此方法**不关闭**传入的 InputStream，由调用方负责管理。
+  ///
+  /// **使用示例**：
+  ///
+  /// ```java
+  /// FileDownloadResult result = downloadPort.download(uri);
+  /// try (InputStream in = Files.newInputStream(result.filePath())) {
+  ///     parse(in).forEach(data -> processData(data));
+  /// } finally {
+  ///     Files.deleteIfExists(result.filePath());
+  /// }
+  /// ```
+  ///
+  /// @param inputStream XML 输入流（调用方负责关闭）
+  /// @return PubMed 期刊数据流（调用方负责关闭）
+  /// @throws dev.linqibin.patra.catalog.domain.exception.XmlParseException 解析失败时抛出
+  Stream<PubmedSerialData> parse(InputStream inputStream);
+}

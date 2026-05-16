@@ -339,25 +339,25 @@ Git pre-commit hook 自动运行架构测试：
 #### 规则 1: Domain 层零 Spring 依赖
 ```java
 // ❌ 错误
-package com.patra.ingest.domain.service;
+package dev.linqibin.patra.ingest.domain.service;
 @Service  // ❌ 不允许 Spring 注解
 public class PlanService { }
 
 // ✅ 正确
-package com.patra.ingest.domain.service;
+package dev.linqibin.patra.ingest.domain.service;
 public class PlanService { }  // ✅ 纯 Java
 ```
 
 #### 规则 2: App 层不直接依赖 Infra
 ```java
 // ❌ 错误
-import com.patra.ingest.infra.persistence.entity.PlanDO;  // ❌
+import dev.linqibin.patra.ingest.infra.persistence.entity.PlanDO;  // ❌
 public class PlanIngestionHandler {
     void handle(PlanDO plan) { }
 }
 
 // ✅ 正确
-import com.patra.ingest.domain.model.aggregate.PlanAggregate;  // ✅
+import dev.linqibin.patra.ingest.domain.model.aggregate.PlanAggregate;  // ✅
 public class PlanIngestionHandler {
     void handle(PlanAggregate plan) { }
 }
@@ -366,8 +366,8 @@ public class PlanIngestionHandler {
 #### 规则 3: DO 类不泄露 Infra 层
 ```java
 // ❌ 错误
-package com.patra.ingest.app;
-import com.patra.ingest.infra.persistence.entity.PlanDO;  // ❌ DO 泄露
+package dev.linqibin.patra.ingest.app;
+import dev.linqibin.patra.ingest.infra.persistence.entity.PlanDO;  // ❌ DO 泄露
 
 // ✅ 正确
 // DO 仅在 infra.persistence 内部使用，通过 Converter 转换为 Domain 实体
@@ -452,5 +452,5 @@ A: 临时设置 `freeze.refreeze=true` 更新基线，但重构完成后立即�
 ---
 
 **最后更新**: 2026-01-14
-**模块坐标**: `com.patra:patra-ingest:0.1.0-SNAPSHOT`
+**模块坐标**: `dev.linqibin.patra:patra-ingest:0.1.0-SNAPSHOT`
 **作者**: linqibin

@@ -8,4 +8,4 @@ logging:
   file:
     path: ${PATRA_LOG_DIR:./logs}/patra-object-storage
   level:
-    com.patra.objectstorage: INFO
+    dev.linqibin.patra.objectstorage: INFO

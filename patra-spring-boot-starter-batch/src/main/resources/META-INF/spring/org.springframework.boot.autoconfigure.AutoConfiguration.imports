@@ -1,4 +1,0 @@
-com.patra.starter.batch.autoconfigure.BatchDataSourceConfiguration
-com.patra.starter.batch.autoconfigure.BatchSchemaInitializerConfiguration
-com.patra.starter.batch.autoconfigure.BatchAutoConfiguration
-com.patra.starter.batch.autoconfigure.BatchProgressMetricsAutoConfiguration
