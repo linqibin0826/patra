@@ -22,9 +22,9 @@ import org.springframework.web.client.RestClient;
 /// 需要在 `application.yml` 中配置服务分组：
 ///
 /// ```yaml
-/// patra:
-///   http:
-///     interface:
+/// linqibin:
+///   starter:
+///     http-interface:
 ///       groups:
 ///         registry:
 ///           base-url: lb://patra-registry
@@ -35,7 +35,7 @@ import org.springframework.web.client.RestClient;
 @Slf4j
 @Configuration
 @ConditionalOnProperty(
-    prefix = "patra.http.interface",
+    prefix = "linqibin.starter.http-interface",
     name = "enabled",
     havingValue = "true",
     matchIfMissing = true)

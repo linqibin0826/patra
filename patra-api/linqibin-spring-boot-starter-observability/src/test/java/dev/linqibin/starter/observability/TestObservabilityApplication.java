@@ -31,13 +31,13 @@ import org.springframework.test.context.TestPropertySource;
 @SpringBootTest(classes = TestObservabilityApplication.TestConfiguration.class)
 @TestPropertySource(
     properties = {
-      "patra.observability.enabled=true",
-      "patra.observability.application-name=test-observability-app",
-      "patra.observability.environment=test",
-      "patra.observability.region=cn-test",
-      "patra.observability.cluster=test-cluster-01",
-      "patra.observability.metrics.common-tags.team=backend",
-      "patra.observability.metrics.common-tags.project=patra",
+      "linqibin.starter.observability.enabled=true",
+      "linqibin.starter.observability.application-name=test-observability-app",
+      "linqibin.starter.observability.environment=test",
+      "linqibin.starter.observability.region=cn-test",
+      "linqibin.starter.observability.cluster=test-cluster-01",
+      "linqibin.starter.observability.metrics.common-tags.team=backend",
+      "linqibin.starter.observability.metrics.common-tags.project=patra",
       "management.observations.annotations.enabled=false" // 禁用 @Observed 注解支持（测试环境无 AspectJ）
     })
 class TestObservabilityApplication {

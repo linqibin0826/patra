@@ -9,31 +9,32 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /// REST Client 配置属性。
 ///
-/// 绑定 {@code patra.rest-client} 配置前缀，支持超时、重试、拦截器和多客户端配置。
+/// 绑定 {@code linqibin.starter.rest-client} 配置前缀，支持超时、重试、拦截器和多客户端配置。
 ///
 /// ## 配置示例
 ///
 /// ```yaml
-/// patra:
-///   rest-client:
-///     enabled: true
-///     timeout:
-///       connect: 10s
-///       read: 30s
-///     retry:
+/// linqibin:
+///   starter:
+///     rest-client:
 ///       enabled: true
-///       max-attempts: 3
-///     interceptors:
-///       logging:
+///       timeout:
+///         connect: 10s
+///         read: 30s
+///       retry:
 ///         enabled: true
-///     clients:
-///       pubmed:
-///         base-url: "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
+///         max-attempts: 3
+///       interceptors:
+///         logging:
+///           enabled: true
+///       clients:
+///         pubmed:
+///           base-url: "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 /// ```
 ///
 /// @author linqibin
 /// @since 0.1.0
-@ConfigurationProperties(prefix = "patra.rest-client")
+@ConfigurationProperties(prefix = "linqibin.starter.rest-client")
 public class RestClientProperties {
 
   /// 是否启用自动配置（默认 true）

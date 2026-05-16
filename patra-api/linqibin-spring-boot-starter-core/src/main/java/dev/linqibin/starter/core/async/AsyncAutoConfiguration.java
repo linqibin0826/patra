@@ -11,26 +11,28 @@ import org.springframework.context.annotation.Bean;
 
 /// 通用异步线程池自动配置。
 ///
-/// 根据 `patra.async.pools` 配置自动创建命名线程池，
+/// 根据 `linqibin.starter.core.async.pools` 配置自动创建命名线程池，
 /// 支持 Micrometer 指标监控。
 ///
 /// **配置示例**：
 ///
 /// ```yaml
-/// patra:
-///   async:
-///     enabled: true
-///     pools:
-///       cache-upload:
-///         core-size: 2
-///         max-size: 4
-///         queue-capacity: 50
-///         thread-name-prefix: cache-upload-
-///       data-sync:
-///         core-size: 4
-///         max-size: 8
-///         queue-capacity: 200
-///         thread-name-prefix: data-sync-
+/// linqibin:
+///   starter:
+///     core:
+///       async:
+///         enabled: true
+///         pools:
+///           cache-upload:
+///             core-size: 2
+///             max-size: 4
+///             queue-capacity: 50
+///             thread-name-prefix: cache-upload-
+///           data-sync:
+///             core-size: 4
+///             max-size: 8
+///             queue-capacity: 200
+///             thread-name-prefix: data-sync-
 /// ```
 ///
 /// **使用方式**：
@@ -51,13 +53,13 @@ import org.springframework.context.annotation.Bean;
 ///
 /// **启用条件**：
 ///
-/// - `patra.async.enabled=true`（默认启用）
+/// - `linqibin.starter.core.async.enabled=true`（默认启用）
 ///
 /// @author linqibin
 /// @since 0.1.0
 @AutoConfiguration
 @ConditionalOnProperty(
-    prefix = "patra.async",
+    prefix = "linqibin.starter.core.async",
     name = "enabled",
     havingValue = "true",
     matchIfMissing = true)
@@ -84,7 +86,7 @@ public class AsyncAutoConfiguration {
     properties.getPools().forEach(registry::register);
 
     if (properties.getPools().isEmpty()) {
-      log.info("未配置任何异步线程池。如需使用，请在 patra.async.pools 下配置");
+      log.info("未配置任何异步线程池。如需使用，请在 linqibin.starter.core.async.pools 下配置");
     } else {
       log.info("异步线程池自动配置完成，共注册 {} 个线程池", properties.getPools().size());
     }

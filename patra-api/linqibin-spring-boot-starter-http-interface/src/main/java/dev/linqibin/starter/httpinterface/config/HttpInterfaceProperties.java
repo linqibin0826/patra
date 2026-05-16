@@ -8,7 +8,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /// HTTP Interface 客户端配置属性
 ///
-/// 通过 `patra.http.interface` 前缀配置 HTTP Interface 客户端行为，包括：
+/// 通过 `linqibin.starter.http-interface` 前缀配置 HTTP Interface 客户端行为，包括：
 ///
 /// - 全局超时设置
 /// - 错误处理策略
@@ -17,9 +17,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 ///
 /// **示例配置：**
 /// ```yaml
-/// patra:
-///   http:
-///     interface:
+/// linqibin:
+///   starter:
+///     http-interface:
 ///       enabled: true
 ///       connect-timeout: 5s
 ///       read-timeout: 30s
@@ -34,7 +34,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /// @author linqibin
 /// @since 0.1.0
 @Data
-@ConfigurationProperties(prefix = "patra.http.interface")
+@ConfigurationProperties(prefix = "linqibin.starter.http-interface")
 public class HttpInterfaceProperties {
 
   /// 整体启用或禁用 HTTP Interface 自动配置

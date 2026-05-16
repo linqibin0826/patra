@@ -28,7 +28,7 @@ import org.springframework.context.annotation.Configuration;
 ///
 /// 启用条件:
 ///
-/// - `patra.error.enabled=true`(默认启用)
+/// - `linqibin.starter.core.error.enabled=true`(默认启用)
 ///
 /// 设计原则: 提供可被应用程序覆盖的默认引擎和核心 Bean。
 /// 可观测性功能(追踪、指标)由 patra-spring-boot-starter-observability 通过 ResolutionInterceptor 扩展点提供。
@@ -39,7 +39,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties({ErrorProperties.class, TracingProperties.class})
 @ConditionalOnProperty(
-    prefix = "patra.error",
+    prefix = "linqibin.starter.core.error",
     name = "enabled",
     havingValue = "true",
     matchIfMissing = true)
@@ -73,7 +73,7 @@ public class CoreErrorAutoConfiguration {
       ErrorProperties errorProperties, List<ErrorMappingContributor> mappingContributors) {
     if (errorProperties.getContextPrefix() == null
         || errorProperties.getContextPrefix().isBlank()) {
-      log.warn("patra.error.context-prefix 未配置,使用 UNKNOWN 作为统一错误前缀");
+      log.warn("linqibin.starter.core.error.context-prefix 未配置,使用 UNKNOWN 作为统一错误前缀");
     }
     return new DefaultErrorResolutionEngine(errorProperties, mappingContributors);
   }

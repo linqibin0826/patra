@@ -32,11 +32,11 @@ class TunnelProxyAutoConfigurationTest {
   void should_create_configurer_when_enabled_with_full_config() {
     contextRunner
         .withPropertyValues(
-            "patra.rest-client.proxy.tunnel.enabled=true",
-            "patra.rest-client.proxy.tunnel.host=tunnel.qg.net",
-            "patra.rest-client.proxy.tunnel.port=15561",
-            "patra.rest-client.proxy.tunnel.auth-key=testKey",
-            "patra.rest-client.proxy.tunnel.auth-pwd=testPwd")
+            "linqibin.starter.rest-client.proxy.tunnel.enabled=true",
+            "linqibin.starter.rest-client.proxy.tunnel.host=tunnel.qg.net",
+            "linqibin.starter.rest-client.proxy.tunnel.port=15561",
+            "linqibin.starter.rest-client.proxy.tunnel.auth-key=testKey",
+            "linqibin.starter.rest-client.proxy.tunnel.auth-pwd=testPwd")
         .run(
             context -> {
               assertThat(context).hasSingleBean(TunnelProxyConfigurer.class);
@@ -48,11 +48,11 @@ class TunnelProxyAutoConfigurationTest {
   void should_not_create_configurer_when_disabled() {
     contextRunner
         .withPropertyValues(
-            "patra.rest-client.proxy.tunnel.enabled=false",
-            "patra.rest-client.proxy.tunnel.host=tunnel.qg.net",
-            "patra.rest-client.proxy.tunnel.port=15561",
-            "patra.rest-client.proxy.tunnel.auth-key=testKey",
-            "patra.rest-client.proxy.tunnel.auth-pwd=testPwd")
+            "linqibin.starter.rest-client.proxy.tunnel.enabled=false",
+            "linqibin.starter.rest-client.proxy.tunnel.host=tunnel.qg.net",
+            "linqibin.starter.rest-client.proxy.tunnel.port=15561",
+            "linqibin.starter.rest-client.proxy.tunnel.auth-key=testKey",
+            "linqibin.starter.rest-client.proxy.tunnel.auth-pwd=testPwd")
         .run(context -> assertThat(context).doesNotHaveBean(TunnelProxyConfigurer.class));
   }
 
@@ -61,8 +61,8 @@ class TunnelProxyAutoConfigurationTest {
   void should_fail_when_enabled_but_missing_required_config() {
     contextRunner
         .withPropertyValues(
-            "patra.rest-client.proxy.tunnel.enabled=true",
-            "patra.rest-client.proxy.tunnel.host=tunnel.qg.net")
+            "linqibin.starter.rest-client.proxy.tunnel.enabled=true",
+            "linqibin.starter.rest-client.proxy.tunnel.host=tunnel.qg.net")
         // 缺少 port, auth-key, auth-pwd
         .run(context -> assertThat(context).hasFailed());
   }

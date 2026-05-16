@@ -6,7 +6,7 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /// 对象存储 starter 的配置模型。
-@ConfigurationProperties("patra.object-storage")
+@ConfigurationProperties("linqibin.starter.object-storage")
 @Data
 public class ObjectStorageProperties {
 

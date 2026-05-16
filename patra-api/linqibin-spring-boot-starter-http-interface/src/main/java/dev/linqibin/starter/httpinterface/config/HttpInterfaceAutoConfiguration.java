@@ -31,7 +31,7 @@ import tools.jackson.databind.ObjectMapper;
 /// 此配置在以下条件下激活：
 ///
 /// - 类路径存在 `RestClient` 和 `ProblemDetail`
-/// - 配置属性 `patra.http.interface.enabled` 为 `true`（默认）
+/// - 配置属性 `linqibin.starter.http-interface.enabled` 为 `true`（默认）
 ///
 /// **使用 Apache HttpClient 5.x 替代 JDK HttpClient**
 ///
@@ -54,7 +54,7 @@ import tools.jackson.databind.ObjectMapper;
 @ConditionalOnClass(
     name = {"org.springframework.web.client.RestClient", "org.springframework.http.ProblemDetail"})
 @ConditionalOnProperty(
-    prefix = "patra.http.interface",
+    prefix = "linqibin.starter.http-interface",
     name = "enabled",
     havingValue = "true",
     matchIfMissing = true)

@@ -67,15 +67,17 @@ patra:
         task-ready: ${TOPIC_PREFIX:}INGEST_TASK
       # consumer-groups 在各自的 profile 中配置
     # listener 开关在各自的 profile 中配置
-  # 对象存储配置（测试环境使用虚拟配置）
-  object-storage:
-    active-provider: minio
-    providers:
-      minio:
-        endpoint: http://localhost:9000
-        access-key: minioadmin
-        secret-key: minioadmin
-        bucket: patra-test
+linqibin:
+  starter:
+    # 对象存储配置（测试环境使用虚拟配置）
+    object-storage:
+      active-provider: minio
+      providers:
+        minio:
+          endpoint: http://localhost:9000
+          access-key: minioadmin
+          secret-key: minioadmin
+          bucket: patra-test
 
 # Task 配置
 task:

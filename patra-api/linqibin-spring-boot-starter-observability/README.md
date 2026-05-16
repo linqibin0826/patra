@@ -82,19 +82,20 @@ otel.instrumentation.micrometer.enabled=true
 ### 3. 配置属性
 
 ```yaml
-patra:
-  observability:
-    enabled: true
-    application-name: ${spring.application.name}
-    environment: dev
-    region: cn-north
-    cluster: default
-
-    metrics:
+linqibin:
+  starter:
+    observability:
       enabled: true
-      common-tags:
-        team: platform
-        version: ${project.version}
+      application-name: ${spring.application.name}
+      environment: dev
+      region: cn-north
+      cluster: default
+
+      metrics:
+        enabled: true
+        common-tags:
+          team: platform
+          version: ${project.version}
 ```
 
 ### 4. 使用 @Observed 注解
@@ -135,18 +136,18 @@ public class OrderService {
 
 | 属性 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `patra.observability.enabled` | boolean | true | 全局开关 |
-| `patra.observability.application-name` | String | `${spring.application.name}` | 应用标识（自动从 Spring 获取） |
-| `patra.observability.environment` | String | `${spring.profiles.active}` | 环境标识（自动从 profile 获取，"default" 映射为 "dev"） |
-| `patra.observability.region` | String | null | 区域标识 |
-| `patra.observability.cluster` | String | default | 集群标识 |
+| `linqibin.starter.observability.enabled` | boolean | true | 全局开关 |
+| `linqibin.starter.observability.application-name` | String | `${spring.application.name}` | 应用标识（自动从 Spring 获取） |
+| `linqibin.starter.observability.environment` | String | `${spring.profiles.active}` | 环境标识（自动从 profile 获取，"default" 映射为 "dev"） |
+| `linqibin.starter.observability.region` | String | null | 区域标识 |
+| `linqibin.starter.observability.cluster` | String | default | 集群标识 |
 
 ### 指标配置
 
 | 属性 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `patra.observability.metrics.enabled` | boolean | true | 是否启用指标收集 |
-| `patra.observability.metrics.common-tags` | Map | {} | 公共标签 |
+| `linqibin.starter.observability.metrics.enabled` | boolean | true | 是否启用指标收集 |
+| `linqibin.starter.observability.metrics.common-tags` | Map | {} | 公共标签 |
 
 > **指标前缀**：`patra_` 前缀由 OTel Collector 的 Prometheus exporter 统一添加，无需应用层配置。
 

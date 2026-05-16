@@ -6,26 +6,27 @@ import org.springframework.util.StringUtils;
 
 /// Spring Batch 批处理配置属性。
 ///
-/// 使用 `patra.batch` 前缀配置批处理行为。
+/// 使用 `linqibin.starter.batch` 前缀配置批处理行为。
 ///
 /// ## 数据源配置
 ///
 /// 支持独立数据源配置，将 Spring Batch 元数据表存储到共享数据库：
 ///
 /// ```yaml
-/// patra:
-///   batch:
-///     datasource:
-///       url: jdbc:mysql://shared-db:3306/batch_meta
-///       username: batch_user
-///       password: batch_password
+/// linqibin:
+///   starter:
+///     batch:
+///       datasource:
+///         url: jdbc:mysql://shared-db:3306/batch_meta
+///         username: batch_user
+///         password: batch_password
 /// ```
 ///
 /// 未配置 `datasource.url` 时，使用应用默认数据源（向后兼容）。
 ///
 /// @author Patra Team
 /// @since 0.1.0
-@ConfigurationProperties(prefix = "patra.batch")
+@ConfigurationProperties(prefix = "linqibin.starter.batch")
 @Data
 public class BatchProperties {
 

@@ -28,7 +28,7 @@ import org.springframework.context.annotation.Bean;
 @ConditionalOnClass({RedissonClient.class, RLock.class})
 @ConditionalOnBean(RedissonClient.class)
 @ConditionalOnProperty(
-    prefix = "patra.redisson.lock",
+    prefix = "linqibin.starter.redisson.lock",
     name = "enabled",
     havingValue = "true",
     matchIfMissing = true)

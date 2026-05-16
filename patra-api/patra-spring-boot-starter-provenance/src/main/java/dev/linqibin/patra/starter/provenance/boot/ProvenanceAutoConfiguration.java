@@ -35,7 +35,7 @@ import tools.jackson.dataformat.xml.XmlMapper;
 ///
 /// 配置说明:
 ///
-/// - 使用 `patra.provenance.enabled=false` 可禁用此自动配置
+/// - 使用 `patra.starter.provenance.enabled=false` 可禁用此自动配置
 ///   - 默认启用,自动注册 PubMed 和 EPMC 数据源提供者
 ///   - 集成 Micrometer 进行指标监控(如果可用)
 ///
@@ -45,7 +45,7 @@ import tools.jackson.dataformat.xml.XmlMapper;
 @AutoConfiguration
 @EnableConfigurationProperties(ProvenanceProperties.class)
 @ConditionalOnProperty(
-    prefix = "patra.provenance",
+    prefix = "patra.starter.provenance",
     name = "enabled",
     havingValue = "true",
     matchIfMissing = true)

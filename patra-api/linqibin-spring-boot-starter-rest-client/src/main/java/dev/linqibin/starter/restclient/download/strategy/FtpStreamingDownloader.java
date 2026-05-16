@@ -122,7 +122,7 @@ public class FtpStreamingDownloader implements StreamingDownloader {
         || credentials.password() == null
         || credentials.password().isBlank()) {
       throw new DownloadException(
-          "FTP 账号密码未配置，请在 patra.rest-client.download.ftp.* 或 DownloadOptions 中提供",
+          "FTP 账号密码未配置，请在 linqibin.starter.rest-client.download.ftp.* 或 DownloadOptions 中提供",
           StandardErrorTrait.RULE_VIOLATION);
     }
     return credentials;

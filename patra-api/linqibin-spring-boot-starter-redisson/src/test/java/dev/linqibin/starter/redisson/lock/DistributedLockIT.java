@@ -50,11 +50,11 @@ class DistributedLockIT {
   static void redisProperties(DynamicPropertyRegistry registry) {
     registry.add("spring.data.redis.host", redis::getHost);
     registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
-    registry.add("patra.redisson.enabled", () -> "true");
-    registry.add("patra.redisson.lock.enabled", () -> "true");
-    registry.add("patra.redisson.lock.key-prefix", () -> "test:lock:");
-    registry.add("patra.redisson.lock.default-wait-time", () -> "3000");
-    registry.add("patra.redisson.lock.default-lease-time", () -> "5000");
+    registry.add("linqibin.starter.redisson.enabled", () -> "true");
+    registry.add("linqibin.starter.redisson.lock.enabled", () -> "true");
+    registry.add("linqibin.starter.redisson.lock.key-prefix", () -> "test:lock:");
+    registry.add("linqibin.starter.redisson.lock.default-wait-time", () -> "3000");
+    registry.add("linqibin.starter.redisson.lock.default-lease-time", () -> "5000");
   }
 
   /**

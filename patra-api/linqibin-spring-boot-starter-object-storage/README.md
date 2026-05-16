@@ -137,27 +137,28 @@ MinIO 存储提供商实现,提供以下特性:
 
 ## 配置属性
 
-**配置前缀**: `patra.object-storage`
+**配置前缀**: `linqibin.starter.object-storage`
 
 ```yaml
-patra:
-  object-storage:
-    active-provider: minio                        # 活动存储提供商: minio | s3
-    max-file-size: 104857600                      # 最大文件大小(字节,默认 100MB)
-    retry:
-      max-attempts: 3                             # 最大重试次数
-      wait-duration: 1000                         # 重试等待时间(毫秒)
-    providers:
-      minio:
-        endpoint: http://localhost:9000           # MinIO 端点
-        access-key: minioadmin                    # 访问密钥
-        secret-key: minioadmin                    # 密钥
-        bucket: default-bucket                    # 默认 Bucket(可选)
-      s3:
-        region: us-east-1                         # AWS S3 区域
-        access-key: ${AWS_ACCESS_KEY_ID}
-        secret-key: ${AWS_SECRET_ACCESS_KEY}
-        bucket: my-s3-bucket
+linqibin:
+  starter:
+    object-storage:
+      active-provider: minio                        # 活动存储提供商: minio | s3
+      max-file-size: 104857600                      # 最大文件大小(字节,默认 100MB)
+      retry:
+        max-attempts: 3                             # 最大重试次数
+        wait-duration: 1000                         # 重试等待时间(毫秒)
+      providers:
+        minio:
+          endpoint: http://localhost:9000           # MinIO 端点
+          access-key: minioadmin                    # 访问密钥
+          secret-key: minioadmin                    # 密钥
+          bucket: default-bucket                    # 默认 Bucket(可选)
+        s3:
+          region: us-east-1                         # AWS S3 区域
+          access-key: ${AWS_ACCESS_KEY_ID}
+          secret-key: ${AWS_SECRET_ACCESS_KEY}
+          bucket: my-s3-bucket
 ```
 
 ## 使用方式
@@ -185,18 +186,19 @@ spring:
   profiles:
     active: dev
 
-patra:
-  object-storage:
-    active-provider: minio
-    max-file-size: 104857600  # 100MB
-    retry:
-      max-attempts: 3
-      wait-duration: 1000
-    providers:
-      minio:
-        endpoint: http://localhost:9000
-        access-key: minioadmin
-        secret-key: minioadmin
+linqibin:
+  starter:
+    object-storage:
+      active-provider: minio
+      max-file-size: 104857600  # 100MB
+      retry:
+        max-attempts: 3
+        wait-duration: 1000
+      providers:
+        minio:
+          endpoint: http://localhost:9000
+          access-key: minioadmin
+          secret-key: minioadmin
 ```
 
 ### 代码示例

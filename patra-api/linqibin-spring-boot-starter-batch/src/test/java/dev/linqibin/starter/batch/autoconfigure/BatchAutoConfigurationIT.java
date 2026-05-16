@@ -30,8 +30,8 @@ import org.springframework.test.context.ContextConfiguration;
       "spring.batch.jdbc.initialize-schema=always",
       "spring.batch.job.enabled=false",
       "spring.autoconfigure.exclude=org.redisson.spring.starter.RedissonAutoConfigurationV2,org.redisson.spring.starter.RedissonAutoConfigurationV4",
-      "patra.batch.enabled=true",
-      "patra.redisson.observability.metrics-enabled=false"
+      "linqibin.starter.batch.enabled=true",
+      "linqibin.starter.redisson.observability.metrics-enabled=false"
     })
 @ContextConfiguration(initializers = MySQLContainerInitializer.class)
 @Timeout(value = 30, unit = TimeUnit.SECONDS)

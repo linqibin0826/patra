@@ -107,7 +107,7 @@ public class ObjectStorageAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean(MinioClient.class)
   @ConditionalOnProperty(
-      prefix = "patra.object-storage",
+      prefix = "linqibin.starter.object-storage",
       name = "active-provider",
       havingValue = "minio",
       matchIfMissing = true)

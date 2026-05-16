@@ -6,14 +6,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /// 平台级错误处理的配置属性。
 ///
-/// 配置前缀: `patra.error`
+/// 配置前缀: `linqibin.starter.core.error`
 ///
 /// 控制错误码上下文、错误解析行为、观测和断路器设置。
 ///
 /// @author linqibin
 /// @since 0.1.0
 @Data
-@ConfigurationProperties(prefix = "patra.error")
+@ConfigurationProperties(prefix = "linqibin.starter.core.error")
 public class ErrorProperties {
 
   /// 是否启用平台级错误解析,默认: true

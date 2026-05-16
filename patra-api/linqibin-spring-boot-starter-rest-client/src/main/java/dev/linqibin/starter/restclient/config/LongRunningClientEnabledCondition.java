@@ -7,14 +7,15 @@ import org.springframework.core.type.AnnotatedTypeMetadata;
 
 /// 长时间运行客户端启用条件。
 ///
-/// 当 `patra.rest-client.clients.long-running.enabled` 为 `true` 或未配置时，
+/// 当 `linqibin.starter.rest-client.clients.long-running.enabled` 为 `true` 或未配置时，
 /// 条件匹配；当显式配置为 `false` 时，条件不匹配。
 ///
 /// @author linqibin
 /// @since 0.1.0
 class LongRunningClientEnabledCondition extends SpringBootCondition {
 
-  private static final String ENABLED_PROPERTY = "patra.rest-client.clients.long-running.enabled";
+  private static final String ENABLED_PROPERTY =
+      "linqibin.starter.rest-client.clients.long-running.enabled";
 
   @Override
   public ConditionOutcome getMatchOutcome(

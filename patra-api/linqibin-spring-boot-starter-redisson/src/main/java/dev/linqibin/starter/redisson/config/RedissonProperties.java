@@ -10,7 +10,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /// @author Patra Team
 /// @since 1.0.0
 @Data
-@ConfigurationProperties(prefix = "patra.redisson")
+@ConfigurationProperties(prefix = "linqibin.starter.redisson")
 public class RedissonProperties {
 
   /// 是否启用 Redisson Starter，默认 true
