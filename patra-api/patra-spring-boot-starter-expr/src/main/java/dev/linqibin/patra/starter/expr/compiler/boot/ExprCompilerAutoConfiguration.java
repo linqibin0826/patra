@@ -46,8 +46,8 @@ import tools.jackson.databind.ObjectMapper;
 /// ### 条件装配
 ///
 /// - 依赖 {@link HttpInterfaceAutoConfiguration} 和 {@link ExprFunctionAutoConfiguration} 先完成
-///   - Registry API 集成可通过 `patra.expr.compiler.registry-api.enabled=false` 禁用
-///   - 编译器整体可通过 `patra.expr.compiler.enabled=false` 禁用
+///   - Registry API 集成可通过 `patra.starter.expr.compiler.registry-api.enabled=false` 禁用
+///   - 编译器整体可通过 `patra.starter.expr.compiler.enabled=false` 禁用
 ///
 /// ### 配置属性
 ///
@@ -69,7 +69,7 @@ public class ExprCompilerAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean(RuleSnapshotLoader.class)
   @ConditionalOnProperty(
-      prefix = "patra.expr.compiler.registry-api",
+      prefix = "patra.starter.expr.compiler.registry-api",
       name = "enabled",
       havingValue = "true",
       matchIfMissing = true)
@@ -91,7 +91,7 @@ public class ExprCompilerAutoConfiguration {
         "dev.linqibin.patra.registry.api.endpoint.ExprEndpoint"
       })
   @ConditionalOnProperty(
-      prefix = "patra.expr.compiler.registry-api",
+      prefix = "patra.starter.expr.compiler.registry-api",
       name = "enabled",
       havingValue = "true",
       matchIfMissing = true)
@@ -164,7 +164,7 @@ public class ExprCompilerAutoConfiguration {
     TransformRegistry.class
   })
   @ConditionalOnProperty(
-      prefix = "patra.expr.compiler",
+      prefix = "patra.starter.expr.compiler",
       name = "enabled",
       havingValue = "true",
       matchIfMissing = true)

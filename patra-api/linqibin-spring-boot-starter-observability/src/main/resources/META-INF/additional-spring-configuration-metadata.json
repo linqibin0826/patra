@@ -1,46 +1,46 @@
 {
   "groups": [
     {
-      "name": "patra.observability",
+      "name": "linqibin.starter.observability",
       "type": "com.patra.starter.observability.config.ObservabilityProperties",
       "description": "Patra 可观测性统一配置属性（OTel Agent + Micrometer Bridge 模式）"
     },
     {
-      "name": "patra.observability.metrics",
+      "name": "linqibin.starter.observability.metrics",
       "type": "com.patra.starter.observability.config.ObservabilityProperties$MetricsConfig",
       "description": "指标（Metrics）配置"
     }
   ],
   "properties": [
     {
-      "name": "patra.observability.enabled",
+      "name": "linqibin.starter.observability.enabled",
       "type": "java.lang.Boolean",
       "description": "全局开关，是否启用可观测性功能",
       "defaultValue": true
     },
     {
-      "name": "patra.observability.application-name",
+      "name": "linqibin.starter.observability.application-name",
       "type": "java.lang.String",
       "description": "应用名称标识（默认自动从 spring.application.name 获取）"
     },
     {
-      "name": "patra.observability.environment",
+      "name": "linqibin.starter.observability.environment",
       "type": "java.lang.String",
       "description": "环境标识（默认自动从 spring.profiles.active 获取，\"default\" 映射为 \"dev\"）"
     },
     {
-      "name": "patra.observability.region",
+      "name": "linqibin.starter.observability.region",
       "type": "java.lang.String",
       "description": "区域标识"
     },
     {
-      "name": "patra.observability.cluster",
+      "name": "linqibin.starter.observability.cluster",
       "type": "java.lang.String",
       "description": "集群标识",
       "defaultValue": "default"
     },
     {
-      "name": "patra.observability.metrics.enabled",
+      "name": "linqibin.starter.observability.metrics.enabled",
       "type": "java.lang.Boolean",
       "description": "是否启用指标收集",
       "defaultValue": true
@@ -48,7 +48,7 @@
   ],
   "hints": [
     {
-      "name": "patra.observability.environment",
+      "name": "linqibin.starter.observability.environment",
       "values": [
         {
           "value": "dev",

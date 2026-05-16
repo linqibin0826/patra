@@ -57,7 +57,7 @@ class BatchProgressMetricsAutoConfigurationTest {
   void withDisabledConfig_shouldNotCreateListener() {
     contextRunner
         .withUserConfiguration(MeterRegistryConfiguration.class)
-        .withPropertyValues("patra.batch.metrics.enabled=false")
+        .withPropertyValues("linqibin.starter.batch.metrics.enabled=false")
         .run(
             context -> {
               assertThat(context).doesNotHaveBean(BatchProgressMetricsListener.class);

@@ -27,12 +27,12 @@ import org.springframework.stereotype.Component;
 /// ## 条件装配
 ///
 /// - 仅当容器中存在 `MeterRegistry` Bean 时启用
-/// - 通过配置 `patra.command-bus.interceptors.metrics=false` 禁用
+/// - 通过配置 `linqibin.starter.core.command-bus.interceptors.metrics=false` 禁用
 @Component
 @Order(200)
 @ConditionalOnBean(MeterRegistry.class)
 @ConditionalOnProperty(
-    prefix = "patra.command-bus.interceptors",
+    prefix = "linqibin.starter.core.command-bus.interceptors",
     name = "metrics",
     havingValue = "true",
     matchIfMissing = true)

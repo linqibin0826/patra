@@ -15,7 +15,7 @@ import org.springframework.context.annotation.Bean;
 /// 当以下条件满足时自动创建 `BatchProgressMetricsListener`：
 ///
 /// - 存在 `MeterRegistry` Bean（Micrometer 指标注册表）
-/// - 配置属性 `patra.batch.metrics.enabled` 为 `true`（默认启用）
+/// - 配置属性 `linqibin.starter.batch.metrics.enabled` 为 `true`（默认启用）
 ///
 /// **使用方式**：
 ///
@@ -54,7 +54,7 @@ import org.springframework.context.annotation.Bean;
 @ConditionalOnClass({MeterRegistry.class, JobRegistry.class})
 @ConditionalOnBean(MeterRegistry.class)
 @ConditionalOnProperty(
-    prefix = "patra.batch.metrics",
+    prefix = "linqibin.starter.batch.metrics",
     name = "enabled",
     havingValue = "true",
     matchIfMissing = true)

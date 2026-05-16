@@ -25,7 +25,7 @@ import org.springframework.context.annotation.Bean;
 /// @see dev.linqibin.starter.core.error.pipeline.ResolutionInterceptor
 @AutoConfiguration(after = ObservabilityAutoConfiguration.class)
 @ConditionalOnProperty(
-    prefix = "patra.observability",
+    prefix = "linqibin.starter.observability",
     name = "enabled",
     havingValue = "true",
     matchIfMissing = true)

@@ -78,7 +78,7 @@ class HttpInterfaceAutoConfigurationTest {
     @DisplayName("禁用配置时 - 不注册任何 Bean")
     void shouldNotRegisterBeansWhenDisabled() {
       contextRunner
-          .withPropertyValues("patra.http.interface.enabled=false")
+          .withPropertyValues("linqibin.starter.http-interface.enabled=false")
           .run(
               context -> {
                 assertThat(context).doesNotHaveBean(ProblemDetailErrorHandler.class);
@@ -110,8 +110,8 @@ class HttpInterfaceAutoConfigurationTest {
     void shouldApplyCustomTimeoutProperties() {
       contextRunner
           .withPropertyValues(
-              "patra.http.interface.connect-timeout=5000",
-              "patra.http.interface.read-timeout=30000")
+              "linqibin.starter.http-interface.connect-timeout=5000",
+              "linqibin.starter.http-interface.read-timeout=30000")
           .run(
               context -> {
                 assertThat(context).hasBean("httpInterfaceRestClientBuilder");
@@ -123,7 +123,7 @@ class HttpInterfaceAutoConfigurationTest {
     @DisplayName("容错模式配置 - 传递给 ProblemDetailErrorHandler")
     void shouldPassTolerantModeToErrorHandler() {
       contextRunner
-          .withPropertyValues("patra.http.interface.error-handling.tolerant=false")
+          .withPropertyValues("linqibin.starter.http-interface.error-handling.tolerant=false")
           .run(
               context -> {
                 assertThat(context).hasSingleBean(ProblemDetailErrorHandler.class);
@@ -135,10 +135,10 @@ class HttpInterfaceAutoConfigurationTest {
     void shouldApplyConnectionPoolProperties() {
       contextRunner
           .withPropertyValues(
-              "patra.http.interface.connection-pool.max-conn-total=200",
-              "patra.http.interface.connection-pool.max-conn-per-route=50",
-              "patra.http.interface.connection-pool.validate-after-inactivity=10s",
-              "patra.http.interface.connection-pool.evict-idle-connections-after=60s")
+              "linqibin.starter.http-interface.connection-pool.max-conn-total=200",
+              "linqibin.starter.http-interface.connection-pool.max-conn-per-route=50",
+              "linqibin.starter.http-interface.connection-pool.validate-after-inactivity=10s",
+              "linqibin.starter.http-interface.connection-pool.evict-idle-connections-after=60s")
           .run(
               context -> {
                 assertThat(context).hasBean("httpInterfaceRestClientBuilder");

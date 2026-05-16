@@ -29,7 +29,7 @@ import org.springframework.stereotype.Component;
 ///
 /// - 仅当类路径中存在 `ObservationRegistry` 时启用
 /// - 仅当容器中存在 `ObservationRegistry` Bean 时启用
-/// - 通过配置 `patra.command-bus.interceptors.tracing=false` 禁用
+/// - 通过配置 `linqibin.starter.core.command-bus.interceptors.tracing=false` 禁用
 ///
 /// ## Order 说明
 ///
@@ -40,7 +40,7 @@ import org.springframework.stereotype.Component;
 @ConditionalOnClass(ObservationRegistry.class)
 @ConditionalOnBean(ObservationRegistry.class)
 @ConditionalOnProperty(
-    prefix = "patra.command-bus.interceptors",
+    prefix = "linqibin.starter.core.command-bus.interceptors",
     name = "tracing",
     havingValue = "true",
     matchIfMissing = true)

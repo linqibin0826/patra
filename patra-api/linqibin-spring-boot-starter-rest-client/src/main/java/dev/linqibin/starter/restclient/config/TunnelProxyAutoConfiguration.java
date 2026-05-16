@@ -10,7 +10,7 @@ import org.springframework.util.Assert;
 
 /// 隧道代理自动配置。
 ///
-/// 当 {@code patra.rest-client.proxy.tunnel.enabled=true} 时，
+/// 当 {@code linqibin.starter.rest-client.proxy.tunnel.enabled=true} 时，
 /// 创建 {@link TunnelProxyConfigurer} Bean。
 ///
 /// ## 使用方式
@@ -34,7 +34,7 @@ import org.springframework.util.Assert;
 @AutoConfiguration
 @EnableConfigurationProperties(RestClientProperties.class)
 @ConditionalOnProperty(
-    prefix = "patra.rest-client.proxy.tunnel",
+    prefix = "linqibin.starter.rest-client.proxy.tunnel",
     name = "enabled",
     havingValue = "true")
 public class TunnelProxyAutoConfiguration {
@@ -48,10 +48,10 @@ public class TunnelProxyAutoConfiguration {
   public TunnelProxyConfigurer tunnelProxyConfigurer(RestClientProperties properties) {
     var tunnel = properties.getProxy().getTunnel();
 
-    Assert.hasText(tunnel.getHost(), "patra.rest-client.proxy.tunnel.host 未配置");
-    Assert.isTrue(tunnel.getPort() > 0, "patra.rest-client.proxy.tunnel.port 必须大于 0");
-    Assert.hasText(tunnel.getAuthKey(), "patra.rest-client.proxy.tunnel.auth-key 未配置");
-    Assert.hasText(tunnel.getAuthPwd(), "patra.rest-client.proxy.tunnel.auth-pwd 未配置");
+    Assert.hasText(tunnel.getHost(), "linqibin.starter.rest-client.proxy.tunnel.host 未配置");
+    Assert.isTrue(tunnel.getPort() > 0, "linqibin.starter.rest-client.proxy.tunnel.port 必须大于 0");
+    Assert.hasText(tunnel.getAuthKey(), "linqibin.starter.rest-client.proxy.tunnel.auth-key 未配置");
+    Assert.hasText(tunnel.getAuthPwd(), "linqibin.starter.rest-client.proxy.tunnel.auth-pwd 未配置");
 
     log.info("隧道代理已启用: {}:{}", tunnel.getHost(), tunnel.getPort());
     return new TunnelProxyConfigurer(

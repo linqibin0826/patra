@@ -345,7 +345,7 @@ curl http://localhost:8500/v1/catalog/service/patra-object-storage
 - **原因**: 网络延迟或服务未启动
 - **解决**:
   - 检查 Consul 服务注册状态
-  - 调整 RestClient 超时配置: `patra.http.interface.connect-timeout=5s`
+  - 调整 RestClient 超时配置: `linqibin.starter.http-interface.connect-timeout=5s`
 
 **Q: Flyway 迁移失败**
 - **原因**: 数据库版本不兼容或迁移脚本错误

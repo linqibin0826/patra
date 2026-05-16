@@ -85,11 +85,12 @@ public class FileDownloadService {
 **禁用方式**：
 
 ```yaml
-patra:
-  rest-client:
-    clients:
-      long-running:
-        enabled: false
+linqibin:
+  starter:
+    rest-client:
+      clients:
+        long-running:
+          enabled: false
 ```
 
 ### 流式下载 WebClient
@@ -130,15 +131,16 @@ public class StreamingService {
 
 **启用条件**：
 - 需要 `spring-webflux` 和 `reactor-netty-http` 依赖
-- `patra.rest-client.streaming.enabled=true`（默认启用）
+- `linqibin.starter.rest-client.streaming.enabled=true`（默认启用）
 
 **禁用方式**：
 
 ```yaml
-patra:
-  rest-client:
-    streaming:
-      enabled: false
+linqibin:
+  starter:
+    rest-client:
+      streaming:
+        enabled: false
 ```
 
 ### 文件下载与进度监控
@@ -199,30 +201,31 @@ DownloadResult result = downloadClient.downloadToTemp(
 **可选配置**（全局默认 + 单次覆盖）：
 
 ```yaml
-patra:
-  rest-client:
-    download:
-      enabled: true
-      base-dir: /data/patra/downloads
-      temp-dir: /data/patra/tmp
-      write-strategy: OVERWRITE
-      create-dirs: true
-      cleanup-on-failure: true
-      buffer-size: 65536
-      retry:
+linqibin:
+  starter:
+    rest-client:
+      download:
         enabled: true
-        max-attempts: 3
-        initial-backoff: 2s
-        max-backoff: 30s
-      ftp:
-        enabled: true
-        # FTP 账号密码无默认值，匿名 FTP 可不填，私有 FTP 必须配置或在 DownloadOptions 中传入
-        # username: YOUR_FTP_USERNAME
-        # password: YOUR_FTP_PASSWORD
-        connect-timeout: 30s
-        data-timeout: 30m
-        passive-mode: true
-        default-content-type: application/xml
+        base-dir: /data/patra/downloads
+        temp-dir: /data/patra/tmp
+        write-strategy: OVERWRITE
+        create-dirs: true
+        cleanup-on-failure: true
+        buffer-size: 65536
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-backoff: 2s
+          max-backoff: 30s
+        ftp:
+          enabled: true
+          # FTP 账号密码无默认值，匿名 FTP 可不填，私有 FTP 必须配置或在 DownloadOptions 中传入
+          # username: YOUR_FTP_USERNAME
+          # password: YOUR_FTP_PASSWORD
+          connect-timeout: 30s
+          data-timeout: 30m
+          passive-mode: true
+          default-content-type: application/xml
 ```
 
 **进度回调信息**（`DownloadProgress`）：
@@ -281,65 +284,66 @@ public class CustomProgressListener implements ProgressListener {
 
 ## 配置项
 
-所有配置项均以 `patra.rest-client` 为前缀。
+所有配置项均以 `linqibin.starter.rest-client` 为前缀。
 
 ### 完整配置示例
 
 ```yaml
-patra:
-  rest-client:
-    # 是否启用自动配置（默认 true）
-    enabled: true
+linqibin:
+  starter:
+    rest-client:
+      # 是否启用自动配置（默认 true）
+      enabled: true
 
-    # 全局超时配置
-    timeout:
-      connect: 10s      # 连接超时（默认 10s）
-      read: 30s         # 读取超时（默认 30s）
-      write: 30s        # 写入超时（默认 30s）
+      # 全局超时配置
+      timeout:
+        connect: 10s      # 连接超时（默认 10s）
+        read: 30s         # 读取超时（默认 30s）
+        write: 30s        # 写入超时（默认 30s）
 
-    # 重试配置
-    retry:
-      enabled: false           # 是否启用重试（默认 false）
-      max-attempts: 3          # 最大重试次数
-      wait-duration: 1000      # 初始等待时间（ms）
-      backoff-multiplier: 2.0  # 退避倍数
-      max-wait-duration: 30000 # 最大等待时间（ms）
+      # 重试配置
+      retry:
+        enabled: false           # 是否启用重试（默认 false）
+        max-attempts: 3          # 最大重试次数
+        wait-duration: 1000      # 初始等待时间（ms）
+        backoff-multiplier: 2.0  # 退避倍数
+        max-wait-duration: 30000 # 最大等待时间（ms）
 
-    # 拦截器配置
-    interceptors:
-      logging:
-        enabled: true           # 是否启用日志（默认 true）
-        log-headers: false      # 是否记录 Headers（默认 false）
-        log-body: false         # 是否记录 Body（默认 false）
-        max-body-log-length: 1024  # Body 日志最大字节数
+      # 拦截器配置
+      interceptors:
+        logging:
+          enabled: true           # 是否启用日志（默认 true）
+          log-headers: false      # 是否记录 Headers（默认 false）
+          log-body: false         # 是否记录 Body（默认 false）
+          max-body-log-length: 1024  # Body 日志最大字节数
 
-      tracing:
-        enabled: true                           # 是否启用追踪（默认 true）
-        header-names:                           # 追踪 ID 头名称
-          - X-Trace-ID
-          - X-B3-TraceId
+        tracing:
+          enabled: true                           # 是否启用追踪（默认 true）
+          header-names:                           # 追踪 ID 头名称
+            - X-Trace-ID
+            - X-B3-TraceId
 
-      metrics:
-        enabled: true           # 是否启用指标（默认 true）
+        metrics:
+          enabled: true           # 是否启用指标（默认 true）
 
-    # 多客户端配置
-    clients:
-      # 长时间运行客户端（自动配置，可选覆盖）
-      long-running:
-        enabled: true         # 是否启用（默认 true）
-        timeout:
-          connect: 30s        # 连接超时（默认 30s）
-          read: 600s          # 读取超时（默认 600s / 10分钟）
-          write: 30s          # 写入超时（默认 30s）
+      # 多客户端配置
+      clients:
+        # 长时间运行客户端（自动配置，可选覆盖）
+        long-running:
+          enabled: true         # 是否启用（默认 true）
+          timeout:
+            connect: 30s        # 连接超时（默认 30s）
+            read: 600s          # 读取超时（默认 600s / 10分钟）
+            write: 30s          # 写入超时（默认 30s）
 
-      # 自定义客户端示例
-      pubmed:
-        base-url: "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
-        default-headers:
-          Accept: "application/json"
-        timeout:
-          connect: 5s
-          read: 60s
+        # 自定义客户端示例
+        pubmed:
+          base-url: "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
+          default-headers:
+            Accept: "application/json"
+          timeout:
+            connect: 5s
+            read: 60s
 ```
 
 ### 配置项说明

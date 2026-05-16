@@ -43,7 +43,7 @@ import org.springframework.web.client.RestClient;
 @AutoConfiguration
 @EnableConfigurationProperties(RestClientProperties.class)
 @ConditionalOnProperty(
-    prefix = "patra.rest-client",
+    prefix = "linqibin.starter.rest-client",
     name = "enabled",
     havingValue = "true",
     matchIfMissing = true)
@@ -127,7 +127,7 @@ public class RestClientAutoConfiguration {
   ///
   /// **使用方式**：通过 `@Qualifier("longRunningRestClient")` 注入。
   ///
-  /// **禁用方式**：设置 `patra.rest-client.clients.long-running.enabled=false`。
+  /// **禁用方式**：设置 `linqibin.starter.rest-client.clients.long-running.enabled=false`。
   ///
   /// @param properties 配置属性
   /// @param interceptorsProvider Spring 标准拦截器提供者
@@ -185,7 +185,7 @@ public class RestClientAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean
   @ConditionalOnProperty(
-      prefix = "patra.rest-client.interceptors.logging",
+      prefix = "linqibin.starter.rest-client.interceptors.logging",
       name = "enabled",
       havingValue = "true",
       matchIfMissing = true)

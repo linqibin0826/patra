@@ -41,7 +41,7 @@ import org.springframework.context.annotation.Configuration;
 @AutoConfiguration(
     after = {RestClientAutoConfiguration.class, StreamingWebClientAutoConfiguration.class})
 @ConditionalOnProperty(
-    prefix = "patra.rest-client.download",
+    prefix = "linqibin.starter.rest-client.download",
     name = "enabled",
     havingValue = "true",
     matchIfMissing = true)
@@ -91,7 +91,7 @@ public class DownloadClientAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean(FtpStreamingDownloader.class)
   @ConditionalOnProperty(
-      prefix = "patra.rest-client.download.ftp",
+      prefix = "linqibin.starter.rest-client.download.ftp",
       name = "enabled",
       havingValue = "true",
       matchIfMissing = true)
@@ -104,7 +104,7 @@ public class DownloadClientAutoConfiguration {
   @ConditionalOnClass(name = "org.springframework.web.reactive.function.client.WebClient")
   @ConditionalOnBean(name = "streamingWebClient")
   @ConditionalOnProperty(
-      prefix = "patra.rest-client.streaming",
+      prefix = "linqibin.starter.rest-client.streaming",
       name = "enabled",
       havingValue = "true",
       matchIfMissing = true)

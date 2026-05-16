@@ -25,7 +25,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /// §3.8
 ///
 /// @since 0.1.0
-@ConfigurationProperties(prefix = "expr")
+@ConfigurationProperties(prefix = "patra.starter.expr.mode")
 public class ExprModeProperties {
 
   private boolean strict = false;

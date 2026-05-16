@@ -23,11 +23,11 @@ import org.springframework.stereotype.Component;
 ///
 /// ## 启用/禁用
 ///
-/// 通过配置 `patra.command-bus.interceptors.logging=false` 禁用。
+/// 通过配置 `linqibin.starter.core.command-bus.interceptors.logging=false` 禁用。
 @Component
 @Order(100)
 @ConditionalOnProperty(
-    prefix = "patra.command-bus.interceptors",
+    prefix = "linqibin.starter.core.command-bus.interceptors",
     name = "logging",
     havingValue = "true",
     matchIfMissing = true)

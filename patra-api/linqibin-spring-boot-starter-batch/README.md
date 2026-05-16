@@ -70,17 +70,18 @@ public class MyJobService {
 ## 配置属性
 
 ```yaml
-patra:
-  batch:
-    enabled: true                    # 总开关（默认启用）
-    table-prefix: "BATCH_"           # 元数据表前缀
-    chunk:
-      default-size: 5000             # 默认 Chunk 大小
-      max-size: 10000                # 最大 Chunk 大小
-    schema:
-      initialize: true               # 自动初始化 Schema（默认启用）
-    import-limit:
-      max-records: -1                # 最大导入记录数（-1=不限制，正整数=限制后自动终止）
+linqibin:
+  starter:
+    batch:
+      enabled: true                    # 总开关（默认启用）
+      table-prefix: "BATCH_"           # 元数据表前缀
+      chunk:
+        default-size: 5000             # 默认 Chunk 大小
+        max-size: 10000                # 最大 Chunk 大小
+      schema:
+        initialize: true               # 自动初始化 Schema（默认启用）
+      import-limit:
+        max-records: -1                # 最大导入记录数（-1=不限制，正整数=限制后自动终止）
 ```
 
 ## 独立数据源
@@ -90,25 +91,26 @@ patra:
 ### 配置方式
 
 ```yaml
-patra:
-  batch:
-    datasource:
-      url: jdbc:mysql://batch-db:3306/batch_meta
-      username: batch_user
-      password: batch_password
-      driver-class-name: com.mysql.cj.jdbc.Driver  # 可选，自动推断
-      hikari:
-        maximum-pool-size: 5         # 最大连接数（默认 5）
-        minimum-idle: 2              # 最小空闲连接（默认 2）
-        connection-timeout: 30000    # 连接超时（毫秒）
-        idle-timeout: 600000         # 空闲超时（毫秒）
-        max-lifetime: 1800000        # 最大生存时间（毫秒）
+linqibin:
+  starter:
+    batch:
+      datasource:
+        url: jdbc:mysql://batch-db:3306/batch_meta
+        username: batch_user
+        password: batch_password
+        driver-class-name: com.mysql.cj.jdbc.Driver  # 可选，自动推断
+        hikari:
+          maximum-pool-size: 5         # 最大连接数（默认 5）
+          minimum-idle: 2              # 最小空闲连接（默认 2）
+          connection-timeout: 30000    # 连接超时（毫秒）
+          idle-timeout: 600000         # 空闲超时（毫秒）
+          max-lifetime: 1800000        # 最大生存时间（毫秒）
 ```
 
 ### 数据源优先级
 
 1. 用户自定义 `batchDataSource` Bean（最高）
-2. `patra.batch.datasource.*` 配置创建的数据源
+2. `linqibin.starter.batch.datasource.*` 配置创建的数据源
 3. 主数据源 `@Primary DataSource`（默认回退）
 
 ### 应用场景
@@ -132,10 +134,11 @@ patra:
 ### 配置方式
 
 ```yaml
-patra:
-  batch:
-    schema:
-      initialize: true   # 默认启用
+linqibin:
+  starter:
+    batch:
+      schema:
+        initialize: true   # 默认启用
 ```
 
 ### 禁用场景

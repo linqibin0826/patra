@@ -70,7 +70,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
     properties = {
       "spring.cloud.consul.enabled=false",
       "spring.config.import=classpath:catalog-error-config.yaml",
-      "patra.batch.chunk.default-size=2"
+      "linqibin.starter.batch.chunk.default-size=2"
     })
 @ContextConfiguration(initializers = CatalogMySQLContainerInitializer.class)
 @ActiveProfiles("e2e-test")

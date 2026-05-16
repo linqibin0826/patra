@@ -11,23 +11,24 @@ import java.util.concurrent.TimeUnit;
 ///
 /// **收集的指标:**
 ///
-/// - `patra.object_storage.upload.total` - 上传总数(成功/失败)
-///   - `patra.object_storage.upload.duration` - 上传时长分布
-///   - `patra.object_storage.upload.size` - 上传文件大小分布
-///   - `patra.object_storage.download.total` - 下载总数
-///   - `patra.object_storage.retry.count` - 重试次数
+/// - `linqibin.starter.object_storage.upload.total` - 上传总数(成功/失败)
+///   - `linqibin.starter.object_storage.upload.duration` - 上传时长分布
+///   - `linqibin.starter.object_storage.upload.size` - 上传文件大小分布
+///   - `linqibin.starter.object_storage.download.total` - 下载总数
+///   - `linqibin.starter.object_storage.retry.count` - 重试次数
 ///
 /// **指标标签:**
 /// provider(minio/s3)、bucket、status(success/failure)、error_type(validation/network/auth/unknown)
 public class ObjectStorageMetrics {
 
-  private static final String UPLOAD_TOTAL = "patra.object_storage.upload.total";
-  private static final String UPLOAD_DURATION = "patra.object_storage.upload.duration";
-  private static final String UPLOAD_SIZE = "patra.object_storage.upload.size";
-  private static final String DOWNLOAD_TOTAL = "patra.object_storage.download.total";
-  private static final String DOWNLOAD_DURATION = "patra.object_storage.download.duration";
-  private static final String DOWNLOAD_SIZE = "patra.object_storage.download.size";
-  private static final String RETRY_COUNT = "patra.object_storage.retry.count";
+  private static final String UPLOAD_TOTAL = "linqibin.starter.object_storage.upload.total";
+  private static final String UPLOAD_DURATION = "linqibin.starter.object_storage.upload.duration";
+  private static final String UPLOAD_SIZE = "linqibin.starter.object_storage.upload.size";
+  private static final String DOWNLOAD_TOTAL = "linqibin.starter.object_storage.download.total";
+  private static final String DOWNLOAD_DURATION =
+      "linqibin.starter.object_storage.download.duration";
+  private static final String DOWNLOAD_SIZE = "linqibin.starter.object_storage.download.size";
+  private static final String RETRY_COUNT = "linqibin.starter.object_storage.retry.count";
 
   private final MeterRegistry meterRegistry;
 

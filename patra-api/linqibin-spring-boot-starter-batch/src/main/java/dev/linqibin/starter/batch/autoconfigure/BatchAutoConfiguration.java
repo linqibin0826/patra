@@ -35,15 +35,15 @@ import org.springframework.transaction.PlatformTransactionManager;
 /// 支持独立数据源配置，优先级如下：
 ///
 /// 1. 用户自定义 `batchDataSource` Bean（最高）
-/// 2. `patra.batch.datasource.*` 配置创建的数据源
+/// 2. `linqibin.starter.batch.datasource.*` 配置创建的数据源
 /// 3. 主数据源 `@Primary DataSource`（默认回退）
 ///
-/// 条件激活：`patra.batch.enabled=true`（默认启用）
+/// 条件激活：`linqibin.starter.batch.enabled=true`（默认启用）
 ///
 /// @author Patra Team
 /// @since 0.1.0
 @ConditionalOnProperty(
-    prefix = "patra.batch",
+    prefix = "linqibin.starter.batch",
     name = "enabled",
     havingValue = "true",
     matchIfMissing = true)

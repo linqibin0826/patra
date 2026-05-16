@@ -18,28 +18,28 @@ import org.springframework.test.context.ActiveProfiles;
 
 /// 双数据源集成测试。
 ///
-/// 验证配置了 `patra.batch.datasource.*` 后，Spring Batch 使用独立数据源。
+/// 验证配置了 `linqibin.starter.batch.datasource.*` 后，Spring Batch 使用独立数据源。
 ///
 /// 注意：此测试只验证 batchDataSource 的创建和配置。
 /// 主数据源由 Spring Boot DataSourceAutoConfiguration 管理，不在此测试范围内。
 @SpringBootTest(
     properties = {
       // Batch 独立数据源（元数据）：使用 Testcontainers MySQL
-      "patra.batch.datasource.url=jdbc:tc:mysql:8.0.40:///batch_meta_db",
-      "patra.batch.datasource.username=test",
-      "patra.batch.datasource.password=test",
-      "patra.batch.datasource.driver-class-name=org.testcontainers.jdbc.ContainerDatabaseDriver",
-      "patra.batch.datasource.hikari.maximum-pool-size=3",
-      "patra.batch.datasource.hikari.minimum-idle=1",
+      "linqibin.starter.batch.datasource.url=jdbc:tc:mysql:8.0.40:///batch_meta_db",
+      "linqibin.starter.batch.datasource.username=test",
+      "linqibin.starter.batch.datasource.password=test",
+      "linqibin.starter.batch.datasource.driver-class-name=org.testcontainers.jdbc.ContainerDatabaseDriver",
+      "linqibin.starter.batch.datasource.hikari.maximum-pool-size=3",
+      "linqibin.starter.batch.datasource.hikari.minimum-idle=1",
       // Spring Batch 配置
       "spring.batch.jdbc.initialize-schema=always",
       "spring.batch.job.enabled=false",
       // Patra 配置
-      "patra.batch.enabled=true",
-      "patra.batch.table-prefix=BATCH_",
+      "linqibin.starter.batch.enabled=true",
+      "linqibin.starter.batch.table-prefix=BATCH_",
       // 禁用 Redisson（测试环境）
       "spring.autoconfigure.exclude=org.redisson.spring.starter.RedissonAutoConfigurationV2,org.redisson.spring.starter.RedissonAutoConfigurationV4",
-      "patra.redisson.observability.metrics-enabled=false",
+      "linqibin.starter.redisson.observability.metrics-enabled=false",
       // 覆盖主数据源为简单的 Testcontainers MySQL URL（不依赖类路径资源）
       "spring.datasource.url=jdbc:tc:mysql:8.0.40:///test_batch",
       "spring.datasource.username=test",

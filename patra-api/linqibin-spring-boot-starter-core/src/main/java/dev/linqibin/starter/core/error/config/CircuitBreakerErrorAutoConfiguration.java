@@ -22,7 +22,7 @@ import org.springframework.context.annotation.Bean;
 /// 启用条件:
 ///
 /// - classpath 中存在 Resilience4j CircuitBreaker
-///   - `patra.error.circuit-breaker.enabled=true`(默认启用)
+///   - `linqibin.starter.core.error.circuit-breaker.enabled=true`(默认启用)
 ///
 /// 设计说明: 此配置与 {@link CoreErrorAutoConfiguration} 分离,避免 Resilience4j 不存在时 出现
 /// ClassNotFoundException(可选依赖)。
@@ -50,7 +50,7 @@ public class CircuitBreakerErrorAutoConfiguration {
 
   @Bean(name = "errorResolutionCircuitBreaker")
   @ConditionalOnProperty(
-      prefix = "patra.error.circuit-breaker",
+      prefix = "linqibin.starter.core.error.circuit-breaker",
       name = "enabled",
       havingValue = "true",
       matchIfMissing = true)

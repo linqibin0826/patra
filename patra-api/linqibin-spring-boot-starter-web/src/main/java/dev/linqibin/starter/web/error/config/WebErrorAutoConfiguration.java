@@ -32,22 +32,23 @@ import org.springframework.context.annotation.Bean;
 /// **激活条件:**
 ///
 /// - Servlet Web 应用环境
-///   - `patra.web.problem.enabled=true`(默认启用)
+///   - `linqibin.starter.web.problem.enabled=true`(默认启用)
 ///
 /// **配置示例:**
 ///
-/// ```java
-/// patra:
-///   web:
-///     problem:
-///       enabled: true
-///       include-stack-trace: false
+/// ```yaml
+/// linqibin:
+///   starter:
+///     web:
+///       problem:
+///         enabled: true
+///         include-stack-trace: false
 /// ```
 @Slf4j
 @AutoConfiguration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @ConditionalOnProperty(
-    prefix = "patra.web.problem",
+    prefix = "linqibin.starter.web.problem",
     name = "enabled",
     havingValue = "true",
     matchIfMissing = true)
