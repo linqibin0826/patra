@@ -259,20 +259,20 @@
 
   <!-- ApplicationException: Constructor throws by design (exception class) -->
   <Match>
-    <Class name="com.patra.common.error.ApplicationException"/>
+    <Class name="dev.linqibin.patra.common.error.ApplicationException"/>
     <Bug pattern="CT_CONSTRUCTOR_THROW"/>
   </Match>
 
   <!-- JsonNormalizerResult: Internal result class, exposing hash material is intentional -->
   <Match>
-    <Class name="com.patra.common.json.JsonNormalizer$Result"/>
+    <Class name="dev.linqibin.patra.common.json.JsonNormalizer$Result"/>
     <Method name="getHashMaterial"/>
     <Bug pattern="EI_EXPOSE_REP"/>
   </Match>
 
   <!-- ObjectMapperProvider: Singleton pattern with static field by design -->
   <Match>
-    <Class name="com.patra.starter.core.json.ObjectMapperProvider"/>
+    <Class name="dev.linqibin.starter.core.json.ObjectMapperProvider"/>
     <Or>
       <Bug pattern="MS_EXPOSE_REP"/>
       <Bug pattern="ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"/>

@@ -18,7 +18,7 @@ description: |
 从用户提供的堆栈中提取：
 - **异常类型**：`NullPointerException`、`IllegalStateException`、自定义 `DomainException` 等
 - **根因位置**：`Caused by` 链中最底层的异常
-- **业务代码位置**：`com.patra.*` 包下的调用栈行号
+- **业务代码位置**：`dev.linqibin.*` 包下的调用栈行号
 
 ### 2. 提取链路信息
 
@@ -54,7 +54,7 @@ grep "2025-12-18 11:30" /Users/linqibin/Desktop/Patra/patra-api/logs/patra-catal
 
 | 场景 | 操作 | 配置位置 |
 |------|------|----------|
-| 排查 com.patra 问题 | 默认 DEBUG 已开启 | - |
+| 排查 dev.linqibin 问题 | 默认 DEBUG 已开启 | - |
 | 排查 Spring 问题 | 临时开启 `org.springframework` DEBUG | logback-spring.xml |
 | 排查 JPA/Hibernate 问题 | 临时开启 `org.hibernate` DEBUG | logback-spring.xml |
 | 排查 HTTP Interface/RestClient 问题 | 临时开启 `org.springframework.web.client` DEBUG | logback-spring.xml |

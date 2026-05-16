@@ -8,13 +8,14 @@
  */
 
 plugins {
-    id("patra.spring-boot-starter")
+    id("linqibin.spring-boot-starter")
 }
 
 dependencies {
     // Patra 内部依赖
-    api(project(":patra-common:patra-common-core"))
-    api(project(":patra-spring-boot-starter-rest-client"))
+    api(project(":patra-common:patra-common-enums"))
+    api(project(":linqibin-commons-core"))
+    api(project(":linqibin-spring-boot-starter-rest-client"))
     api(project(":patra-common:patra-common-model"))
     api(project(":patra-common:patra-common-provenance-api"))
 
@@ -38,5 +39,5 @@ dependencies {
     compileOnly("io.micrometer:micrometer-core")
 
     // 测试依赖
-    testImplementation(project(":patra-spring-boot-starter-test"))
+    testImplementation(project(":linqibin-spring-boot-starter-test"))
 }

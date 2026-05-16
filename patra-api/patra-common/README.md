@@ -49,7 +49,7 @@ patra-common/                         (Gradle 聚合项目 - 无代码)
 
 ### 1. patra-common-core (必需)
 
-**模块坐标**: `com.patra:patra-common-core`
+**模块坐标**: `dev.linqibin.patra:patra-common-core`
 
 **定位**: 所有 Patra 服务必须依赖的核心基础设施。
 
@@ -69,7 +69,7 @@ patra-common/                         (Gradle 聚合项目 - 无代码)
 
 ### 2. patra-common-storage (可选)
 
-**模块坐标**: `com.patra:patra-common-storage`
+**模块坐标**: `dev.linqibin.patra:patra-common-storage`
 
 **定位**: 标准化的对象存储键生成策略(业务规则,非基础设施代码)。
 
@@ -89,7 +89,7 @@ patra-common/                         (Gradle 聚合项目 - 无代码)
 
 ### 3. patra-common-model (可选)
 
-**模块坐标**: `com.patra:patra-common-model`
+**模块坐标**: `dev.linqibin.patra:patra-common-model`
 
 **定位**: 跨服务共享的标准化数据模型(Shared Kernel)。
 
@@ -136,7 +136,7 @@ implementation(project(":patra-common:patra-common-model"))
 ### 使用存储键生成器
 
 ```java
-import com.patra.common.storage.ObjectKeyTemplate;
+import dev.linqibin.patra.common.storage.ObjectKeyTemplate;
 
 String key = ObjectKeyTemplate.generateDailyKey(
     "ingest", "publication-batch", "pubmed-123-batch-001", "json"
@@ -147,7 +147,7 @@ String key = ObjectKeyTemplate.generateDailyKey(
 ### 使用 JSON 标准化工具
 
 ```java
-import com.patra.common.json.JsonNormalizer;
+import dev.linqibin.patra.common.json.JsonNormalizer;
 
 JsonNormalizerResult result = JsonNormalizer.normalizeDefault(payload);
 String canonicalJson = result.getCanonicalJson();
