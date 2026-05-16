@@ -4,7 +4,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /// 表达式编译器配置属性
 ///
-/// 配置前缀: `patra.expr.compiler`
+/// 配置前缀: `patra.starter.expr.compiler`
 ///
 /// ### 核心配置
 ///
@@ -41,7 +41,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /// @see CompilerProperties.RegistryApi
 /// @see CompilerProperties.QueryParamBridge
 /// @since 0.1.0
-@ConfigurationProperties(prefix = "patra.expr.compiler")
+@ConfigurationProperties(prefix = "patra.starter.expr.compiler")
 public class CompilerProperties {
 
   private boolean enabled = true;

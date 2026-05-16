@@ -62,9 +62,9 @@ class BatchDataSourceConfigurationTest {
     // When: 配置了 datasource.url（使用 MySQL TestContainers）
     contextRunner
         .withPropertyValues(
-            "patra.batch.datasource.url=" + jdbcUrl,
-            "patra.batch.datasource.username=" + username,
-            "patra.batch.datasource.password=" + password)
+            "linqibin.starter.batch.datasource.url=" + jdbcUrl,
+            "linqibin.starter.batch.datasource.username=" + username,
+            "linqibin.starter.batch.datasource.password=" + password)
         .run(
             context -> {
               // Then: 应创建 batchDataSource 和 batchTransactionManager Bean
@@ -86,9 +86,9 @@ class BatchDataSourceConfigurationTest {
     // When: 只配置 URL，不配置 Hikari 参数（使用 MySQL TestContainers）
     contextRunner
         .withPropertyValues(
-            "patra.batch.datasource.url=" + jdbcUrl,
-            "patra.batch.datasource.username=" + username,
-            "patra.batch.datasource.password=" + password)
+            "linqibin.starter.batch.datasource.url=" + jdbcUrl,
+            "linqibin.starter.batch.datasource.username=" + username,
+            "linqibin.starter.batch.datasource.password=" + password)
         .run(
             context -> {
               HikariDataSource dataSource =
@@ -109,13 +109,13 @@ class BatchDataSourceConfigurationTest {
     // When: 配置了自定义 Hikari 参数（使用 MySQL TestContainers）
     contextRunner
         .withPropertyValues(
-            "patra.batch.datasource.url=" + jdbcUrl,
-            "patra.batch.datasource.username=" + username,
-            "patra.batch.datasource.password=" + password,
-            "patra.batch.datasource.hikari.maximum-pool-size=10",
-            "patra.batch.datasource.hikari.minimum-idle=3",
-            "patra.batch.datasource.hikari.connection-timeout=60000",
-            "patra.batch.datasource.hikari.idle-timeout=300000")
+            "linqibin.starter.batch.datasource.url=" + jdbcUrl,
+            "linqibin.starter.batch.datasource.username=" + username,
+            "linqibin.starter.batch.datasource.password=" + password,
+            "linqibin.starter.batch.datasource.hikari.maximum-pool-size=10",
+            "linqibin.starter.batch.datasource.hikari.minimum-idle=3",
+            "linqibin.starter.batch.datasource.hikari.connection-timeout=60000",
+            "linqibin.starter.batch.datasource.hikari.idle-timeout=300000")
         .run(
             context -> {
               HikariDataSource dataSource =
@@ -135,9 +135,9 @@ class BatchDataSourceConfigurationTest {
     // Given: 用户自定义了 batchDataSource Bean（使用 MySQL TestContainers）
     contextRunner
         .withPropertyValues(
-            "patra.batch.datasource.url=" + jdbcUrl,
-            "patra.batch.datasource.username=" + username,
-            "patra.batch.datasource.password=" + password)
+            "linqibin.starter.batch.datasource.url=" + jdbcUrl,
+            "linqibin.starter.batch.datasource.username=" + username,
+            "linqibin.starter.batch.datasource.password=" + password)
         .withBean(
             "batchDataSource",
             DataSource.class,

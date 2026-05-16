@@ -64,7 +64,7 @@ class RestClientPropertiesTest {
   @DisplayName("应该正确绑定顶级配置")
   void should_bind_top_level_configuration() {
     contextRunner
-        .withPropertyValues("patra.rest-client.enabled=false")
+        .withPropertyValues("linqibin.starter.rest-client.enabled=false")
         .run(
             context -> {
               RestClientProperties properties = context.getBean(RestClientProperties.class);
@@ -77,9 +77,9 @@ class RestClientPropertiesTest {
   void should_bind_timeout_configuration() {
     contextRunner
         .withPropertyValues(
-            "patra.rest-client.timeout.connect=5s",
-            "patra.rest-client.timeout.read=20s",
-            "patra.rest-client.timeout.write=25s")
+            "linqibin.starter.rest-client.timeout.connect=5s",
+            "linqibin.starter.rest-client.timeout.read=20s",
+            "linqibin.starter.rest-client.timeout.write=25s")
         .run(
             context -> {
               RestClientProperties properties = context.getBean(RestClientProperties.class);
@@ -97,11 +97,11 @@ class RestClientPropertiesTest {
   void should_bind_retry_configuration() {
     contextRunner
         .withPropertyValues(
-            "patra.rest-client.retry.enabled=true",
-            "patra.rest-client.retry.max-attempts=5",
-            "patra.rest-client.retry.wait-duration=2000",
-            "patra.rest-client.retry.backoff-multiplier=1.5",
-            "patra.rest-client.retry.max-wait-duration=60000")
+            "linqibin.starter.rest-client.retry.enabled=true",
+            "linqibin.starter.rest-client.retry.max-attempts=5",
+            "linqibin.starter.rest-client.retry.wait-duration=2000",
+            "linqibin.starter.rest-client.retry.backoff-multiplier=1.5",
+            "linqibin.starter.rest-client.retry.max-wait-duration=60000")
         .run(
             context -> {
               RestClientProperties properties = context.getBean(RestClientProperties.class);
@@ -120,9 +120,9 @@ class RestClientPropertiesTest {
   void should_bind_logging_interceptor_configuration() {
     contextRunner
         .withPropertyValues(
-            "patra.rest-client.interceptors.logging.enabled=false",
-            "patra.rest-client.interceptors.logging.log-headers=true",
-            "patra.rest-client.interceptors.logging.log-body=true")
+            "linqibin.starter.rest-client.interceptors.logging.enabled=false",
+            "linqibin.starter.rest-client.interceptors.logging.log-headers=true",
+            "linqibin.starter.rest-client.interceptors.logging.log-body=true")
         .run(
             context -> {
               RestClientProperties properties = context.getBean(RestClientProperties.class);
@@ -139,9 +139,9 @@ class RestClientPropertiesTest {
   void should_bind_tracing_interceptor_configuration() {
     contextRunner
         .withPropertyValues(
-            "patra.rest-client.interceptors.tracing.enabled=false",
-            "patra.rest-client.interceptors.tracing.header-names[0]=X-Request-ID",
-            "patra.rest-client.interceptors.tracing.header-names[1]=X-Correlation-ID")
+            "linqibin.starter.rest-client.interceptors.tracing.enabled=false",
+            "linqibin.starter.rest-client.interceptors.tracing.header-names[0]=X-Request-ID",
+            "linqibin.starter.rest-client.interceptors.tracing.header-names[1]=X-Correlation-ID")
         .run(
             context -> {
               RestClientProperties properties = context.getBean(RestClientProperties.class);
@@ -157,7 +157,7 @@ class RestClientPropertiesTest {
   @DisplayName("应该正确绑定指标拦截器配置")
   void should_bind_metrics_interceptor_configuration() {
     contextRunner
-        .withPropertyValues("patra.rest-client.interceptors.metrics.enabled=false")
+        .withPropertyValues("linqibin.starter.rest-client.interceptors.metrics.enabled=false")
         .run(
             context -> {
               RestClientProperties properties = context.getBean(RestClientProperties.class);
@@ -172,9 +172,9 @@ class RestClientPropertiesTest {
   void should_bind_client_configuration() {
     contextRunner
         .withPropertyValues(
-            "patra.rest-client.clients.pubmed.base-url=https://eutils.ncbi.nlm.nih.gov",
-            "patra.rest-client.clients.pubmed.default-headers.Accept=application/xml",
-            "patra.rest-client.clients.pubmed.default-headers.User-Agent=Patra/1.0")
+            "linqibin.starter.rest-client.clients.pubmed.base-url=https://eutils.ncbi.nlm.nih.gov",
+            "linqibin.starter.rest-client.clients.pubmed.default-headers.Accept=application/xml",
+            "linqibin.starter.rest-client.clients.pubmed.default-headers.User-Agent=Patra/1.0")
         .run(
             context -> {
               RestClientProperties properties = context.getBean(RestClientProperties.class);
@@ -193,9 +193,9 @@ class RestClientPropertiesTest {
   void should_support_multiple_client_configurations() {
     contextRunner
         .withPropertyValues(
-            "patra.rest-client.clients.pubmed.base-url=https://pubmed.ncbi.nlm.nih.gov",
-            "patra.rest-client.clients.crossref.base-url=https://api.crossref.org",
-            "patra.rest-client.clients.europepmc.base-url=https://www.ebi.ac.uk/europepmc")
+            "linqibin.starter.rest-client.clients.pubmed.base-url=https://pubmed.ncbi.nlm.nih.gov",
+            "linqibin.starter.rest-client.clients.crossref.base-url=https://api.crossref.org",
+            "linqibin.starter.rest-client.clients.europepmc.base-url=https://www.ebi.ac.uk/europepmc")
         .run(
             context -> {
               RestClientProperties properties = context.getBean(RestClientProperties.class);
@@ -215,7 +215,8 @@ class RestClientPropertiesTest {
   @DisplayName("应该支持客户端级超时配置")
   void should_support_client_level_timeout_configuration() {
     contextRunner
-        .withPropertyValues("patra.rest-client.clients.slow-api.base-url=https://slow.api.com")
+        .withPropertyValues(
+            "linqibin.starter.rest-client.clients.slow-api.base-url=https://slow.api.com")
         .run(
             context -> {
               RestClientProperties properties = context.getBean(RestClientProperties.class);

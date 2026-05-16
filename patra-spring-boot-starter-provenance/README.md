@@ -46,7 +46,7 @@
 
 ### 启用条件
 
-- 配置属性 `patra.provenance.enabled=true`（默认启用）
+- 配置属性 `patra.starter.provenance.enabled=true`（默认启用）
 - 指标 Bean 需要 `MeterRegistry` 存在
 
 ## 主要组件
@@ -170,7 +170,7 @@ public class PubmedDataAdapter {
 
 ## 配置属性
 
-配置前缀: `patra.provenance`
+配置前缀: `patra.starter.provenance`
 
 ### 全局配置
 

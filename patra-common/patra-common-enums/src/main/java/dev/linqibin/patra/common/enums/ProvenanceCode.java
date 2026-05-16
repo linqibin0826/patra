@@ -98,7 +98,7 @@ public enum ProvenanceCode {
   /// 返回小写的数据源代码
   ///
   /// 用于配置文件键、API参数、内部标识符等需要小写的场景。
-  /// 例如：`patra.provenance.sources.pubmed`
+  /// 例如：`patra.starter.provenance.sources.pubmed`
   ///
   /// 注意：此方法返回构造时缓存的小写值，避免重复调用 `toLowerCase()`。
   ///

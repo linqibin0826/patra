@@ -154,16 +154,17 @@ try {
 ## 配置属性
 
 ```yaml
-patra:
-  redisson:
-    enabled: true                    # 总开关
-    lock-watchdog-timeout: 30000     # 看门狗超时（毫秒）
+linqibin:
+  starter:
+    redisson:
+      enabled: true                    # 总开关
+      lock-watchdog-timeout: 30000     # 看门狗超时（毫秒）
 
-    lock:
-      enabled: true                  # 分布式锁开关
-      default-wait-time: 3000        # 默认等待时间
-      default-lease-time: -1         # 默认租约时间（-1 启用看门狗）
-      key-prefix: "patra:lock:"      # 锁键前缀
+      lock:
+        enabled: true                  # 分布式锁开关
+        default-wait-time: 3000        # 默认等待时间
+        default-lease-time: -1         # 默认租约时间（-1 启用看门狗）
+        key-prefix: "patra:lock:"      # 锁键前缀
 ```
 
 ## 可观测性
@@ -185,10 +186,10 @@ patra:
 
 | 指标名 | 类型 | 说明 |
 |--------|------|------|
-| `patra.redisson.lock.acquired` | Counter | 获取成功次数 |
-| `patra.redisson.lock.failed` | Counter | 获取失败次数 |
-| `patra.redisson.lock.wait_time` | Timer | 等待时间分布 |
-| `patra.redisson.lock.hold_time` | Timer | 持有时间分布 |
+| `linqibin.starter.redisson.lock.acquired` | Counter | 获取成功次数 |
+| `linqibin.starter.redisson.lock.failed` | Counter | 获取失败次数 |
+| `linqibin.starter.redisson.lock.wait_time` | Timer | 等待时间分布 |
+| `linqibin.starter.redisson.lock.hold_time` | Timer | 持有时间分布 |
 
 **标签**：
 - `key_pattern`：锁键模式（低基数，自动去除动态部分）

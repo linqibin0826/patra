@@ -105,7 +105,7 @@ public @interface DistributedLock {
   ///
   /// 设置为 0 时，不等待，获取失败立即抛异常（tryLock 模式）。
   ///
-  /// 默认: -1（使用配置文件中的 patra.redisson.lock.default-wait-time）
+  /// 默认: -1（使用配置文件中的 linqibin.starter.redisson.lock.default-wait-time）
   ///
   /// @return 等待时间（毫秒）
   long waitTime() default -1;

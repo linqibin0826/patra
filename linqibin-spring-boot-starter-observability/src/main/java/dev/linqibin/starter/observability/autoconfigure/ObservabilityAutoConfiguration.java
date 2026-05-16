@@ -29,7 +29,7 @@ import org.springframework.context.annotation.Configuration;
 @ConditionalOnClass({ObservationRegistry.class, MeterRegistry.class})
 @EnableConfigurationProperties(ObservabilityProperties.class)
 @ConditionalOnProperty(
-    prefix = "patra.observability",
+    prefix = "linqibin.starter.observability",
     name = "enabled",
     havingValue = "true",
     matchIfMissing = true)

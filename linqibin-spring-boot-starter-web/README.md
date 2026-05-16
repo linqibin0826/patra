@@ -16,7 +16,7 @@ Web 层 Starter，提供统一的 REST API 错误处理和类型转换支持。
 
 | 配置类 | 功能 | 条件 |
 |--------|------|------|
-| `WebErrorAutoConfiguration` | 错误处理核心配置，创建全局异常处理器、验证格式化器、ProblemDetail 构建器 | Servlet Web 应用，`patra.web.problem.enabled=true`（默认启用） |
+| `WebErrorAutoConfiguration` | 错误处理核心配置，创建全局异常处理器、验证格式化器、ProblemDetail 构建器 | Servlet Web 应用，`linqibin.starter.web.problem.enabled=true`（默认启用） |
 | `WebConversionAutoConfiguration` | 注册类型转换器（String → ProvenanceCode） | Converter 类存在 |
 
 ### 异常处理流程
@@ -63,12 +63,13 @@ ProblemDetailAdapter 转换
 ### 2. 配置属性
 
 ```yaml
-patra:
-  web:
-    problem:
-      enabled: true                              # 是否启用错误处理（默认 true）
-      type-base-url: https://errors.example.com/ # ProblemDetail type URI 基础 URL
-      include-stack: false                       # 是否在响应中包含堆栈跟踪（仅调试）
+linqibin:
+  starter:
+    web:
+      problem:
+        enabled: true                              # 是否启用错误处理（默认 true）
+        type-base-url: https://errors.example.com/ # ProblemDetail type URI 基础 URL
+        include-stack: false                       # 是否在响应中包含堆栈跟踪（仅调试）
 ```
 
 ### 3. 响应格式示例
@@ -110,9 +111,9 @@ patra:
 
 | 属性 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `patra.web.problem.enabled` | boolean | true | 是否启用 Web 错误处理 |
-| `patra.web.problem.type-base-url` | String | https://errors.example.com/ | ProblemDetail type URI 基础 URL |
-| `patra.web.problem.include-stack` | boolean | false | 是否在响应中包含堆栈跟踪 |
+| `linqibin.starter.web.problem.enabled` | boolean | true | 是否启用 Web 错误处理 |
+| `linqibin.starter.web.problem.type-base-url` | String | https://errors.example.com/ | ProblemDetail type URI 基础 URL |
+| `linqibin.starter.web.problem.include-stack` | boolean | false | 是否在响应中包含堆栈跟踪 |
 
 ## 安全特性
 

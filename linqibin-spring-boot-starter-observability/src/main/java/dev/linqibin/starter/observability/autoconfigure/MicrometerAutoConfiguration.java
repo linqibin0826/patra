@@ -44,7 +44,7 @@ import org.springframework.core.annotation.Order;
 @ConditionalOnClass({MeterRegistry.class, ObservationRegistry.class})
 @EnableConfigurationProperties(ObservabilityProperties.class)
 @ConditionalOnProperty(
-    prefix = "patra.observability.metrics",
+    prefix = "linqibin.starter.observability.metrics",
     name = "enabled",
     havingValue = "true",
     matchIfMissing = true)
@@ -134,8 +134,10 @@ public class MicrometerAutoConfiguration {
   ///
   /// 自动获取优先级：
   ///
-  /// - applicationName：`patra.observability.application-name` > `spring.application.name`
-  /// - environment：`patra.observability.environment` > `spring.profiles.active`（"default" 映射为
+  /// - applicationName：`linqibin.starter.observability.application-name` >
+  // `spring.application.name`
+  /// - environment：`linqibin.starter.observability.environment` >
+  // `spring.profiles.active`（"default" 映射为
   // "dev"）
   ///
   /// @param properties          可观测性配置属性

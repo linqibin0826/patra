@@ -34,10 +34,10 @@ class RestClientAutoConfigurationTest {
   }
 
   @Test
-  @DisplayName("当 patra.rest-client.enabled=false 时应该禁用自动配置")
+  @DisplayName("当 linqibin.starter.rest-client.enabled=false 时应该禁用自动配置")
   void should_disable_autoconfiguration_when_enabled_false() {
     contextRunner
-        .withPropertyValues("patra.rest-client.enabled=false")
+        .withPropertyValues("linqibin.starter.rest-client.enabled=false")
         .run(context -> assertThat(context).doesNotHaveBean(RestClient.class));
   }
 
@@ -67,7 +67,7 @@ class RestClientAutoConfigurationTest {
   @DisplayName("当 logging.enabled=false 时不应该创建日志拦截器")
   void should_not_create_logging_interceptor_when_disabled() {
     contextRunner
-        .withPropertyValues("patra.rest-client.interceptors.logging.enabled=false")
+        .withPropertyValues("linqibin.starter.rest-client.interceptors.logging.enabled=false")
         .run(context -> assertThat(context).doesNotHaveBean(LoggingInterceptor.class));
   }
 
@@ -76,8 +76,8 @@ class RestClientAutoConfigurationTest {
   void should_create_logging_interceptor_with_configuration() {
     contextRunner
         .withPropertyValues(
-            "patra.rest-client.interceptors.logging.log-headers=true",
-            "patra.rest-client.interceptors.logging.log-body=true")
+            "linqibin.starter.rest-client.interceptors.logging.log-headers=true",
+            "linqibin.starter.rest-client.interceptors.logging.log-body=true")
         .run(
             context -> {
               assertThat(context).hasSingleBean(LoggingInterceptor.class);
@@ -89,8 +89,8 @@ class RestClientAutoConfigurationTest {
   void should_support_default_headers_configuration() {
     contextRunner
         .withPropertyValues(
-            "patra.rest-client.clients.default.default-headers.User-Agent=Patra-RestClient/1.0",
-            "patra.rest-client.clients.default.default-headers.Accept=application/json")
+            "linqibin.starter.rest-client.clients.default.default-headers.User-Agent=Patra-RestClient/1.0",
+            "linqibin.starter.rest-client.clients.default.default-headers.Accept=application/json")
         .run(
             context -> {
               assertThat(context).hasBean("defaultRestClient");
@@ -108,8 +108,8 @@ class RestClientAutoConfigurationTest {
   void should_support_custom_client_configuration() {
     contextRunner
         .withPropertyValues(
-            "patra.rest-client.clients.pubmed.base-url=https://eutils.ncbi.nlm.nih.gov",
-            "patra.rest-client.clients.pubmed.default-headers.Accept=application/xml")
+            "linqibin.starter.rest-client.clients.pubmed.base-url=https://eutils.ncbi.nlm.nih.gov",
+            "linqibin.starter.rest-client.clients.pubmed.default-headers.Accept=application/xml")
         .run(
             context -> {
               RestClientProperties properties = context.getBean(RestClientProperties.class);
@@ -126,9 +126,9 @@ class RestClientAutoConfigurationTest {
   void should_load_timeout_configuration_correctly() {
     contextRunner
         .withPropertyValues(
-            "patra.rest-client.timeout.connect=3s",
-            "patra.rest-client.timeout.read=10s",
-            "patra.rest-client.timeout.write=15s")
+            "linqibin.starter.rest-client.timeout.connect=3s",
+            "linqibin.starter.rest-client.timeout.read=10s",
+            "linqibin.starter.rest-client.timeout.write=15s")
         .run(
             context -> {
               RestClientProperties properties = context.getBean(RestClientProperties.class);
@@ -172,11 +172,11 @@ class RestClientAutoConfigurationTest {
   void should_load_retry_configuration_correctly() {
     contextRunner
         .withPropertyValues(
-            "patra.rest-client.retry.enabled=true",
-            "patra.rest-client.retry.max-attempts=5",
-            "patra.rest-client.retry.wait-duration=2000",
-            "patra.rest-client.retry.backoff-multiplier=1.5",
-            "patra.rest-client.retry.max-wait-duration=60000")
+            "linqibin.starter.rest-client.retry.enabled=true",
+            "linqibin.starter.rest-client.retry.max-attempts=5",
+            "linqibin.starter.rest-client.retry.wait-duration=2000",
+            "linqibin.starter.rest-client.retry.backoff-multiplier=1.5",
+            "linqibin.starter.rest-client.retry.max-wait-duration=60000")
         .run(
             context -> {
               RestClientProperties properties = context.getBean(RestClientProperties.class);
@@ -206,7 +206,7 @@ class RestClientAutoConfigurationTest {
   @DisplayName("当 long-running.enabled=false 时不应该创建 longRunningRestClient")
   void should_not_create_long_running_rest_client_when_disabled() {
     contextRunner
-        .withPropertyValues("patra.rest-client.clients.long-running.enabled=false")
+        .withPropertyValues("linqibin.starter.rest-client.clients.long-running.enabled=false")
         .run(context -> assertThat(context).doesNotHaveBean("longRunningRestClient"));
   }
 
@@ -215,10 +215,10 @@ class RestClientAutoConfigurationTest {
   void should_support_custom_long_running_timeout_configuration() {
     contextRunner
         .withPropertyValues(
-            "patra.rest-client.clients.long-running.base-url=http://example.com",
-            "patra.rest-client.clients.long-running.timeout.connect=60s",
-            "patra.rest-client.clients.long-running.timeout.read=900s",
-            "patra.rest-client.clients.long-running.timeout.write=60s")
+            "linqibin.starter.rest-client.clients.long-running.base-url=http://example.com",
+            "linqibin.starter.rest-client.clients.long-running.timeout.connect=60s",
+            "linqibin.starter.rest-client.clients.long-running.timeout.read=900s",
+            "linqibin.starter.rest-client.clients.long-running.timeout.write=60s")
         .run(
             context -> {
               assertThat(context).hasBean("longRunningRestClient");

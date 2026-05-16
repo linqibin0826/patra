@@ -18,7 +18,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 ///       metrics: true
 ///       tracing: true
 /// ```
-@ConfigurationProperties(prefix = "patra.command-bus")
+@ConfigurationProperties(prefix = "linqibin.starter.core.command-bus")
 public class CommandBusProperties {
 
   /// 异步执行配置。

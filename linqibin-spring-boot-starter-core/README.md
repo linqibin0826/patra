@@ -57,7 +57,7 @@ CQRS 命令总线自动配置:
 ### AsyncAutoConfiguration
 异步线程池自动配置,提供:
 - `AsyncExecutorRegistry`: 命名线程池注册表,管理多个独立的线程池
-- 根据 `patra.async.pools.*` 配置自动创建线程池
+- 根据 `linqibin.starter.core.async.pools.*` 配置自动创建线程池
 - 可选的 Micrometer 指标集成(当 MeterRegistry 可用时自动注册)
 
 ## 主要组件
@@ -138,7 +138,7 @@ public class MyService {
 
 **核心功能**:
 - **命名管理**: 按名称注册和获取线程池,支持多个独立线程池
-- **配置驱动**: 通过 `patra.async.pools.*` 配置动态创建
+- **配置驱动**: 通过 `linqibin.starter.core.async.pools.*` 配置动态创建
 - **指标集成**: 自动注册 Micrometer 线程池指标(当 MeterRegistry 可用)
 - **优雅关闭**: 实现 `DisposableBean`,应用关闭时正确终止所有线程池
 
@@ -264,93 +264,101 @@ public class MyInterceptor implements ResolutionInterceptor {
 
 ## 配置属性
 
-**配置前缀**: `patra.command-bus`, `patra.error`, `patra.tracing`, `patra.async`
+**配置前缀**: `linqibin.starter.core.command-bus`, `linqibin.starter.core.error`, `linqibin.starter.core.tracing`, `linqibin.starter.core.async`
 
 ### CommandBus 配置
 ```yaml
-patra:
-  command-bus:
-    async:
-      core-pool-size: 4                # 核心线程数(默认 4)
-      max-pool-size: 16                # 最大线程数(默认 16)
-      queue-capacity: 100              # 队列容量(默认 100)
-      thread-name-prefix: cmd-bus-     # 线程名前缀(默认 cmd-bus-)
-    interceptors:
-      logging: true                    # 启用日志拦截器(默认 true)
-      metrics: true                    # 启用指标拦截器(默认 true)
-      tracing: true                    # 启用追踪拦截器(默认 true)
+linqibin:
+  starter:
+    core:
+      command-bus:
+        async:
+          core-pool-size: 4                # 核心线程数(默认 4)
+          max-pool-size: 16                # 最大线程数(默认 16)
+          queue-capacity: 100              # 队列容量(默认 100)
+          thread-name-prefix: cmd-bus-     # 线程名前缀(默认 cmd-bus-)
+        interceptors:
+          logging: true                    # 启用日志拦截器(默认 true)
+          metrics: true                    # 启用指标拦截器(默认 true)
+          tracing: true                    # 启用追踪拦截器(默认 true)
 ```
 
 **配置属性说明**:
 | 属性 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `patra.command-bus.async.core-pool-size` | int | 4 | 异步执行核心线程数 |
-| `patra.command-bus.async.max-pool-size` | int | 16 | 异步执行最大线程数 |
-| `patra.command-bus.async.queue-capacity` | int | 100 | 异步任务队列容量 |
-| `patra.command-bus.async.thread-name-prefix` | String | `cmd-bus-` | 线程名前缀 |
-| `patra.command-bus.interceptors.logging` | boolean | true | 启用执行日志和耗时记录 |
-| `patra.command-bus.interceptors.metrics` | boolean | true | 启用 Micrometer 指标收集 |
-| `patra.command-bus.interceptors.tracing` | boolean | true | 启用 Observation API 追踪 |
+| `linqibin.starter.core.command-bus.async.core-pool-size` | int | 4 | 异步执行核心线程数 |
+| `linqibin.starter.core.command-bus.async.max-pool-size` | int | 16 | 异步执行最大线程数 |
+| `linqibin.starter.core.command-bus.async.queue-capacity` | int | 100 | 异步任务队列容量 |
+| `linqibin.starter.core.command-bus.async.thread-name-prefix` | String | `cmd-bus-` | 线程名前缀 |
+| `linqibin.starter.core.command-bus.interceptors.logging` | boolean | true | 启用执行日志和耗时记录 |
+| `linqibin.starter.core.command-bus.interceptors.metrics` | boolean | true | 启用 Micrometer 指标收集 |
+| `linqibin.starter.core.command-bus.interceptors.tracing` | boolean | true | 启用 Observation API 追踪 |
 
 ### 异步线程池配置
 ```yaml
-patra:
-  async:
-    enabled: true                              # 是否启用异步线程池管理(默认 true)
-    pools:                                     # 命名线程池配置
-      cache-upload:                            # 线程池名称(自定义)
-        core-size: 2                           # 核心线程数(默认 2)
-        max-size: 4                            # 最大线程数(默认 4)
-        queue-capacity: 100                    # 队列容量(默认 100)
-        keep-alive-seconds: 60                 # 空闲线程存活时间(秒,默认 60)
-        thread-name-prefix: cache-upload-      # 线程名前缀(默认 async-{name}-)
-      data-sync:                               # 另一个线程池
-        core-size: 4
-        max-size: 8
-        queue-capacity: 200
-        thread-name-prefix: data-sync-
+linqibin:
+  starter:
+    core:
+      async:
+        enabled: true                              # 是否启用异步线程池管理(默认 true)
+        pools:                                     # 命名线程池配置
+          cache-upload:                            # 线程池名称(自定义)
+            core-size: 2                           # 核心线程数(默认 2)
+            max-size: 4                            # 最大线程数(默认 4)
+            queue-capacity: 100                    # 队列容量(默认 100)
+            keep-alive-seconds: 60                 # 空闲线程存活时间(秒,默认 60)
+            thread-name-prefix: cache-upload-      # 线程名前缀(默认 async-{name}-)
+          data-sync:                               # 另一个线程池
+            core-size: 4
+            max-size: 8
+            queue-capacity: 200
+            thread-name-prefix: data-sync-
 ```
 
 **配置属性说明**:
 | 属性 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `patra.async.enabled` | boolean | `true` | 是否启用异步线程池管理 |
-| `patra.async.pools.{name}.core-size` | int | 2 | 核心线程数 |
-| `patra.async.pools.{name}.max-size` | int | 4 | 最大线程数 |
-| `patra.async.pools.{name}.queue-capacity` | int | 100 | 任务队列容量 |
-| `patra.async.pools.{name}.keep-alive-seconds` | int | 60 | 空闲线程存活时间(秒) |
-| `patra.async.pools.{name}.thread-name-prefix` | String | `async-{name}-` | 线程名前缀 |
+| `linqibin.starter.core.async.enabled` | boolean | `true` | 是否启用异步线程池管理 |
+| `linqibin.starter.core.async.pools.{name}.core-size` | int | 2 | 核心线程数 |
+| `linqibin.starter.core.async.pools.{name}.max-size` | int | 4 | 最大线程数 |
+| `linqibin.starter.core.async.pools.{name}.queue-capacity` | int | 100 | 任务队列容量 |
+| `linqibin.starter.core.async.pools.{name}.keep-alive-seconds` | int | 60 | 空闲线程存活时间(秒) |
+| `linqibin.starter.core.async.pools.{name}.thread-name-prefix` | String | `async-{name}-` | 线程名前缀 |
 
 ### 错误处理配置
 ```yaml
-patra:
-  error:
-    enabled: true                           # 是否启用错误处理框架
-    context-prefix: PATRA                   # 错误代码上下文前缀
-    engine:
-      max-cause-depth: 10                   # 原因链遍历最大深度
-      enable-trait-mapping: true            # 是否启用特征映射
-      enable-naming-heuristic: true         # 是否启用类名启发式
-    observation:
-      enabled: true                         # 是否启用错误观测
-      slow-threshold-ms: 200                # 慢解析阈值(毫秒)
-      log-slow-resolution: true             # 是否记录慢解析警告
-    circuit-breaker:
-      enabled: true                         # 是否启用熔断器
-      failure-rate-threshold: 50.0          # 失败率阈值(百分比)
-      minimum-number-of-calls: 20           # 最小调用次数
-      sliding-window-size: 50               # 滑动窗口大小
-      permitted-calls-in-half-open-state: 5 # 半开状态允许调用数
-      wait-duration-in-open-state: 30s      # 断路器打开等待时长
+linqibin:
+  starter:
+    core:
+      error:
+        enabled: true                           # 是否启用错误处理框架
+        context-prefix: PATRA                   # 错误代码上下文前缀
+        engine:
+          max-cause-depth: 10                   # 原因链遍历最大深度
+          enable-trait-mapping: true            # 是否启用特征映射
+          enable-naming-heuristic: true         # 是否启用类名启发式
+        observation:
+          enabled: true                         # 是否启用错误观测
+          slow-threshold-ms: 200                # 慢解析阈值(毫秒)
+          log-slow-resolution: true             # 是否记录慢解析警告
+        circuit-breaker:
+          enabled: true                         # 是否启用熔断器
+          failure-rate-threshold: 50.0          # 失败率阈值(百分比)
+          minimum-number-of-calls: 20           # 最小调用次数
+          sliding-window-size: 50               # 滑动窗口大小
+          permitted-calls-in-half-open-state: 5 # 半开状态允许调用数
+          wait-duration-in-open-state: 30s      # 断路器打开等待时长
 ```
 
 ### 追踪配置
 ```yaml
-patra:
-  tracing:
-    header-names:
-      - X-Trace-ID                          # 追踪 ID 的 HTTP 头名称列表
-      - X-B3-TraceId
+linqibin:
+  starter:
+    core:
+      tracing:
+        header-names:
+          - X-Trace-ID                          # 追踪 ID 的 HTTP 头名称列表
+          - X-B3-TraceId
 ```
 
 ## 使用方式
@@ -380,14 +388,16 @@ spring:
     deserialization:
       fail-on-unknown-properties: true
 
-patra:
-  error:
-    enabled: true
-    context-prefix: INGEST
-    circuit-breaker:
-      enabled: true                        # 启用熔断器
-      failure-rate-threshold: 50.0
-      minimum-number-of-calls: 20
+linqibin:
+  starter:
+    core:
+      error:
+        enabled: true
+        context-prefix: INGEST
+        circuit-breaker:
+          enabled: true                        # 启用熔断器
+          failure-rate-threshold: 50.0
+          minimum-number-of-calls: 20
 ```
 
 ### 代码示例

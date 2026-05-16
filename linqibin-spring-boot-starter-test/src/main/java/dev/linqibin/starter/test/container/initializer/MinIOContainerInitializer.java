@@ -55,10 +55,10 @@ import org.testcontainers.containers.MinIOContainer;
 ///
 /// ### 注入的配置项
 ///
-/// - `patra.object-storage.active-provider=minio`
-/// - `patra.object-storage.providers.minio.endpoint={动态端口}`
-/// - `patra.object-storage.providers.minio.access-key=minioadmin`
-/// - `patra.object-storage.providers.minio.secret-key=minioadmin`
+/// - `linqibin.starter.object-storage.active-provider=minio`
+/// - `linqibin.starter.object-storage.providers.minio.endpoint={动态端口}`
+/// - `linqibin.starter.object-storage.providers.minio.access-key=minioadmin`
+/// - `linqibin.starter.object-storage.providers.minio.secret-key=minioadmin`
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -168,10 +168,10 @@ public class MinIOContainerInitializer
   ///
   /// 注入的配置项:
   ///
-  /// - `patra.object-storage.active-provider`: minio
-  /// - `patra.object-storage.providers.minio.endpoint`: {动态 S3 URL}
-  /// - `patra.object-storage.providers.minio.access-key`: minioadmin
-  /// - `patra.object-storage.providers.minio.secret-key`: minioadmin
+  /// - `linqibin.starter.object-storage.active-provider`: minio
+  /// - `linqibin.starter.object-storage.providers.minio.endpoint`: {动态 S3 URL}
+  /// - `linqibin.starter.object-storage.providers.minio.access-key`: minioadmin
+  /// - `linqibin.starter.object-storage.providers.minio.secret-key`: minioadmin
   ///
   /// @param applicationContext Spring 应用上下文
   @Override
@@ -193,10 +193,10 @@ public class MinIOContainerInitializer
     log.info("  - 存储桶: {}", bucketName);
 
     TestPropertyValues.of(
-            "patra.object-storage.active-provider=minio",
-            "patra.object-storage.providers.minio.endpoint=" + minio.getS3URL(),
-            "patra.object-storage.providers.minio.access-key=" + minio.getUserName(),
-            "patra.object-storage.providers.minio.secret-key=" + minio.getPassword())
+            "linqibin.starter.object-storage.active-provider=minio",
+            "linqibin.starter.object-storage.providers.minio.endpoint=" + minio.getS3URL(),
+            "linqibin.starter.object-storage.providers.minio.access-key=" + minio.getUserName(),
+            "linqibin.starter.object-storage.providers.minio.secret-key=" + minio.getPassword())
         .applyTo(applicationContext.getEnvironment());
 
     log.info("MinIO 动态配置注入完成");

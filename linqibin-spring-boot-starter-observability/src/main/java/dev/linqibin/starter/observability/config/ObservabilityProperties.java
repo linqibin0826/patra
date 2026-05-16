@@ -17,7 +17,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 ///
 /// @author Jobs
 /// @since 1.0.0
-@ConfigurationProperties(prefix = "patra.observability")
+@ConfigurationProperties(prefix = "linqibin.starter.observability")
 @Data
 public class ObservabilityProperties {
 
