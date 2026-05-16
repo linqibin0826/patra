@@ -24,6 +24,7 @@ dependencies {
 
     // SLF4J API (运行时由容器提供)
     compileOnly("org.slf4j:slf4j-api")
+    testRuntimeOnly("org.slf4j:slf4j-api")
 }
 
 // 覆盖率要求 75%
