@@ -7,7 +7,6 @@ import dev.linqibin.patra.objectstorage.api.endpoint.StorageEndpoint;
 import dev.linqibin.patra.objectstorage.app.recordupload.RecordUploadCommand;
 import dev.linqibin.patra.objectstorage.app.recordupload.RecordUploadResult;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import lombok.RequiredArgsConstructor;
@@ -46,7 +45,7 @@ public class StorageEndpointImpl implements StorageEndpoint {
   /// @param request 已验证的上传载荷
   /// @return 201 Created,包含元数据ID
   @Override
-  public RecordUploadResponse recordUpload(@RequestBody @Valid UploadRecordRequest request) {
+  public RecordUploadResponse recordUpload(@RequestBody UploadRecordRequest request) {
     HttpServletRequest httpRequest = getCurrentRequest();
     RecordUploadCommand command = buildCommand(request, httpRequest);
     RecordUploadResult result = commandBus.handle(command);

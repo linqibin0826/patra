@@ -2,6 +2,7 @@ package dev.linqibin.patra.objectstorage.api.endpoint;
 
 import dev.linqibin.patra.objectstorage.api.dto.RecordUploadResponse;
 import dev.linqibin.patra.objectstorage.api.dto.UploadRecordRequest;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.service.annotation.HttpExchange;
 import org.springframework.web.service.annotation.PostExchange;
@@ -26,5 +27,5 @@ public interface StorageEndpoint {
   /// @param request 上传有效负载
   /// @return 元数据标识符和记录时间戳
   @PostExchange("/files/record")
-  RecordUploadResponse recordUpload(@RequestBody UploadRecordRequest request);
+  RecordUploadResponse recordUpload(@RequestBody @Valid UploadRecordRequest request);
 }
