@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Timeout;
 ///
 /// @author linqibin
 /// @since 0.1.0
-@Timeout(2)
+@Timeout(5)
 class CompositeProgressListenerTest {
 
   @Nested

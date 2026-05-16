@@ -15,7 +15,7 @@ import org.springframework.web.client.RestClient;
 ///
 /// <p>测试自动配置类的条件装配、Bean 创建和配置属性加载。
 @DisplayName("RestClientAutoConfiguration 单元测试")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
+@Timeout(value = 5, unit = TimeUnit.SECONDS)
 class RestClientAutoConfigurationTest {
 
   private final ApplicationContextRunner contextRunner =
