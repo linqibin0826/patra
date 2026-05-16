@@ -79,6 +79,7 @@ Micrometer:    linqibin.starter.object_storage.*  ← 同步
 | starter-core | `patra.command-bus` | `linqibin.starter.core.command-bus` | CommandBusProperties |
 | starter-core | `patra.command-bus.interceptors` | `linqibin.starter.core.command-bus.interceptors` | @ConditionalOnProperty ×3 |
 | starter-core | `patra.error` | `linqibin.starter.core.error` | ErrorProperties |
+| starter-core | `patra.error.circuit-breaker` | `linqibin.starter.core.error.circuit-breaker` | @ConditionalOnProperty (CircuitBreakerErrorAutoConfiguration) |
 | starter-core | `patra.tracing` | `linqibin.starter.core.tracing` | TracingProperties |
 | starter-batch | `patra.batch` | `linqibin.starter.batch` | BatchProperties |
 | starter-batch | `patra.batch.metrics` | `linqibin.starter.batch.metrics` | @ConditionalOnProperty |
@@ -106,19 +107,24 @@ Micrometer:    linqibin.starter.object_storage.*  ← 同步
 |---|---|---|---|
 | starter-expr | `expr` | `patra.starter.expr.mode` | ExprModeProperties，原 `expr` 是历史不规范，顺手规整 |
 | starter-expr | `patra.expr.compiler` | `patra.starter.expr.compiler` | CompilerProperties |
+| starter-expr | `patra.expr.compiler.registry-api` | `patra.starter.expr.compiler.registry-api` | @ConditionalOnProperty ×2 (ExprCompilerAutoConfiguration) |
 | starter-provenance | `patra.provenance` | `patra.starter.provenance` | ProvenanceProperties |
 
 ### 3.3 Micrometer 指标名（仅 starter-object-storage）
 
+实测自 `ObjectStorageMetrics.java:24-30` 的 7 个常量字符串：
+
 | 旧名 | 新名 |
 |---|---|
 | `patra.object_storage.upload.total` | `linqibin.starter.object_storage.upload.total` |
-| `patra.object_storage.upload.bytes` | `linqibin.starter.object_storage.upload.bytes` |
 | `patra.object_storage.upload.duration` | `linqibin.starter.object_storage.upload.duration` |
+| `patra.object_storage.upload.size` | `linqibin.starter.object_storage.upload.size` |
 | `patra.object_storage.download.total` | `linqibin.starter.object_storage.download.total` |
-| `patra.object_storage.download.bytes` | `linqibin.starter.object_storage.download.bytes` |
 | `patra.object_storage.download.duration` | `linqibin.starter.object_storage.download.duration` |
-| `patra.object_storage.delete.total` | `linqibin.starter.object_storage.delete.total` |
+| `patra.object_storage.download.size` | `linqibin.starter.object_storage.download.size` |
+| `patra.object_storage.retry.count` | `linqibin.starter.object_storage.retry.count` |
+
+同文件 `ObjectStorageMetrics.java:14-18` 内有 5 行 `///` JavaDoc 注释引用同样的指标名，需同步更新。
 
 保留 underscore 不改 hyphen，符合 Micrometer / Prometheus exposition format 主流约定。
 
@@ -126,9 +132,11 @@ Micrometer:    linqibin.starter.object_storage.*  ← 同步
 
 | 文件 | 改动 |
 |---|---|
-| `LongRunningClientEnabledCondition.java:17` | `Environment.getProperty("patra.rest-client.clients.long-running.enabled")` → 对应新 prefix |
+| `LongRunningClientEnabledCondition.java:17` | `ENABLED_PROPERTY = "patra.rest-client.clients.long-running.enabled"` → 对应新 prefix |
 | `CoreErrorAutoConfiguration.java:76` | 日志提示 `"patra.error.context-prefix 未配置..."` → 对应新 prefix |
-| `TunnelProxyAutoConfiguration.java:51-54` | Assert 提示中 `"patra.rest-client.proxy.tunnel.host"` 等 → 对应新 prefix |
+| `TunnelProxyAutoConfiguration.java:51-54` | 4 个 Assert 提示中 `"patra.rest-client.proxy.tunnel.{host,port,auth-key,auth-pwd}"` → 对应新 prefix |
+| `MinIOContainerInitializer.java:196-199` | 4 个测试容器 `TestPropertyValues.of("patra.object-storage.{active-provider,providers.minio.*}=…")` → 对应新 prefix |
+| `ObjectStorageMetrics.java:14-18` | 5 行 `///` JavaDoc 注释引用旧指标名 → 对应新指标名 |
 
 ---
 
@@ -140,8 +148,8 @@ Micrometer:    linqibin.starter.object_storage.*  ← 同步
 |---|---|---|
 | `@ConfigurationProperties` 类 | 13（11 通用 + 2 patra 专用） | 每类一行 `prefix = "…"` |
 | `@ConditionalOnProperty` 用点 | 23 处 | 分布在 22 个 AutoConfiguration / Condition 文件 |
-| Java 硬编码字符串 | 3 处 | 见 § 3.4 |
-| Micrometer 指标名 | 7 行 | `ObjectStorageMetrics.java` 内 |
+| Java 硬编码字符串（5 文件） | 14 处 | 见 § 3.4（CoreError 1 + Tunnel 4 + LongRunning 1 + MinIO 4 + ObjectStorageMetrics JavaDoc 5；不含 § 3.3 的 7 个常量字符串） |
+| Micrometer 指标名常量 | 7 行 | `ObjectStorageMetrics.java:24-30` 内 |
 | yml/properties（生产 + 测试） | 14 个文件 | 见 § 4.2 |
 | README/技术文档 | 9 个文件 | 见 § 4.3 |
 | `additional-spring-configuration-metadata.json` | 2 文件 / 11 keys | 见 § 4.4 |
