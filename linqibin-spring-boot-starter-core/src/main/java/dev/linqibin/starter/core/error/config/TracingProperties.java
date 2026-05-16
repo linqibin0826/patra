@@ -6,14 +6,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /// 分布式追踪支持的配置属性。
 ///
-/// 配置前缀: `patra.tracing`
+/// 配置前缀: `linqibin.starter.core.tracing`
 ///
 /// 用于从 HTTP Header 中提取追踪 ID,支持多种分布式追踪系统的 Header 格式。
 ///
 /// @author linqibin
 /// @since 0.1.0
 @Data
-@ConfigurationProperties(prefix = "patra.tracing")
+@ConfigurationProperties(prefix = "linqibin.starter.core.tracing")
 public class TracingProperties {
 
   /// 用于解析追踪标识符的 HTTP Header 名称列表(按优先级顺序)。

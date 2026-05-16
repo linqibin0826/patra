@@ -58,7 +58,7 @@
 ```
 dev.linqibin.starter.core.error
 ├── config/                    # 配置与自动装配
-│   ├── ErrorProperties        # 配置属性（patra.error.*）
+│   ├── ErrorProperties        # 配置属性（linqibin.starter.core.error.*）
 │   ├── CoreErrorAutoConfiguration      # 核心自动配置
 │   └── CircuitBreakerErrorAutoConfiguration  # 熔断器自动配置
 ├── engine/                    # 错误解析引擎
@@ -223,49 +223,51 @@ public class MetricsInterceptor implements ResolutionInterceptor {
 
 ## 配置
 
-### 配置属性（patra.error.*）
+### 配置属性（linqibin.starter.core.error.*）
 
 ```yaml
-patra:
-  error:
-    # 是否启用错误解析框架（默认: true）
-    enabled: true
+linqibin:
+  starter:
+    core:
+      error:
+        # 是否启用错误解析框架（默认: true）
+        enabled: true
 
-    # [必需] 错误码上下文前缀，如 INGEST、REG、CATALOG
-    context-prefix: INGEST
+        # [必需] 错误码上下文前缀，如 INGEST、REG、CATALOG
+        context-prefix: INGEST
 
-    # 解析引擎配置
-    engine:
-      # 原因链最大递归深度（默认: 10）
-      max-cause-depth: 10
-      # 是否启用语义特征映射（默认: true）
-      enable-trait-mapping: true
-      # 是否启用类名启发式（默认: true）
-      enable-naming-heuristic: true
+        # 解析引擎配置
+        engine:
+          # 原因链最大递归深度（默认: 10）
+          max-cause-depth: 10
+          # 是否启用语义特征映射（默认: true）
+          enable-trait-mapping: true
+          # 是否启用类名启发式（默认: true）
+          enable-naming-heuristic: true
 
-    # 观测配置
-    observation:
-      # 是否启用观测（默认: true）
-      enabled: true
-      # 慢解析阈值，毫秒（默认: 200）
-      slow-threshold-ms: 200
-      # 是否记录慢解析日志（默认: true）
-      log-slow-resolution: true
+        # 观测配置
+        observation:
+          # 是否启用观测（默认: true）
+          enabled: true
+          # 慢解析阈值，毫秒（默认: 200）
+          slow-threshold-ms: 200
+          # 是否记录慢解析日志（默认: true）
+          log-slow-resolution: true
 
-    # 熔断器配置（需要 Resilience4j）
-    circuit-breaker:
-      # 是否启用熔断保护（默认: true）
-      enabled: true
-      # 失败率阈值，%（默认: 50）
-      failure-rate-threshold: 50
-      # 触发熔断的最小调用数（默认: 20）
-      minimum-number-of-calls: 20
-      # 滑动窗口大小（默认: 50）
-      sliding-window-size: 50
-      # 半开状态允许的调用数（默认: 5）
-      permitted-calls-in-half-open-state: 5
-      # 熔断器打开后等待时间（默认: 30s）
-      wait-duration-in-open-state: 30s
+        # 熔断器配置（需要 Resilience4j）
+        circuit-breaker:
+          # 是否启用熔断保护（默认: true）
+          enabled: true
+          # 失败率阈值，%（默认: 50）
+          failure-rate-threshold: 50
+          # 触发熔断的最小调用数（默认: 20）
+          minimum-number-of-calls: 20
+          # 滑动窗口大小（默认: 50）
+          sliding-window-size: 50
+          # 半开状态允许的调用数（默认: 5）
+          permitted-calls-in-half-open-state: 5
+          # 熔断器打开后等待时间（默认: 30s）
+          wait-duration-in-open-state: 30s
 ```
 
 ## 与异常体系的集成

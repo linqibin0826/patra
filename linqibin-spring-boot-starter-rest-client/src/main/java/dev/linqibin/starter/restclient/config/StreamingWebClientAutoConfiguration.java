@@ -35,7 +35,7 @@ import reactor.netty.http.client.HttpClient;
 ///
 /// ## 配置说明
 ///
-/// - 默认启用：`patra.rest-client.streaming.enabled=true`
+/// - 默认启用：`linqibin.starter.rest-client.streaming.enabled=true`
 /// - 连接超时：30 秒
 /// - 响应超时：10 分钟（与 longRunningRestClient 一致，适合大文件下载）
 /// - 内存限制：-1（不限制，使用流式处理，不缓存到内存）
@@ -61,7 +61,7 @@ import reactor.netty.http.client.HttpClient;
 @ConditionalOnClass(WebClient.class)
 @EnableConfigurationProperties(RestClientProperties.class)
 @ConditionalOnProperty(
-    prefix = "patra.rest-client.streaming",
+    prefix = "linqibin.starter.rest-client.streaming",
     name = "enabled",
     havingValue = "true",
     matchIfMissing = true)

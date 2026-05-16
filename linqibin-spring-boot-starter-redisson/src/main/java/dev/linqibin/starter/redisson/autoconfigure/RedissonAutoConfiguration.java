@@ -22,7 +22,7 @@ import org.springframework.context.annotation.Configuration;
 @AutoConfiguration(after = RedissonAutoConfigurationV2.class)
 @ConditionalOnClass(RedissonClient.class)
 @ConditionalOnProperty(
-    prefix = "patra.redisson",
+    prefix = "linqibin.starter.redisson",
     name = "enabled",
     havingValue = "true",
     matchIfMissing = true)

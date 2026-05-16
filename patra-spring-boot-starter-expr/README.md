@@ -38,8 +38,8 @@
 
 ### 启用条件
 
-- 配置属性 `patra.expr.compiler.enabled=true` (默认启用)
-- 配置属性 `patra.expr.compiler.registry-api.enabled=true` (默认启用)
+- 配置属性 `patra.starter.expr.compiler.enabled=true` (默认启用)
+- 配置属性 `patra.starter.expr.compiler.registry-api.enabled=true` (默认启用)
 - 需要 `ProvenanceEndpoint` 和 `ExprEndpoint` HTTP Interface 代理存在
 
 ## 主要组件
@@ -75,7 +75,7 @@ CompileResult compile(Expr expression, ProvenanceCode provenance, String operati
 
 ## 配置属性
 
-配置前缀: `patra.expr.compiler`
+配置前缀: `patra.starter.expr.compiler`
 
 ### 编译器配置
 

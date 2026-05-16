@@ -9,11 +9,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /// 下载配置属性。
 ///
-/// 绑定 {@code patra.rest-client.download} 前缀，提供下载目录、写入策略、重试与 FTP 配置。
+/// 绑定 {@code linqibin.starter.rest-client.download} 前缀，提供下载目录、写入策略、重试与 FTP 配置。
 ///
 /// @author linqibin
 /// @since 0.1.0
-@ConfigurationProperties(prefix = "patra.rest-client.download")
+@ConfigurationProperties(prefix = "linqibin.starter.rest-client.download")
 @Data
 public class DownloadProperties {
 

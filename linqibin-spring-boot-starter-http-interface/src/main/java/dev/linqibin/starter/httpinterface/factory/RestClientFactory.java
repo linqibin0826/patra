@@ -85,7 +85,7 @@ public class RestClientFactory {
   /// 根据分组名从配置中获取 baseUrl 和超时设置，自动应用所有 RestClientCustomizer。
   ///
   /// @param builder RestClient.Builder（建议使用 httpInterfaceLoadBalancedRestClientBuilder）
-  /// @param groupName 服务分组名称（对应 `patra.http.interface.groups.{groupName}`）
+  /// @param groupName 服务分组名称（对应 `linqibin.starter.http-interface.groups.{groupName}`）
   /// @param defaultBaseUrl 默认基础 URL（当配置中未指定时使用）
   /// @return 配置好的 RestClient
   public RestClient createRestClient(

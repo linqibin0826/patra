@@ -1,26 +1,27 @@
 # Catalog 模块错误处理配置
-patra:
-  error:
-    enabled: true
-    context-prefix: CAT
-    engine:
-      max-cause-depth: 10
-      enable-trait-mapping: true
-      enable-naming-heuristic: true
-    observation:
-      enabled: true
-      slow-threshold-ms: 200
-      log-slow-resolution: true
-    circuit-breaker:
-      enabled: true
-      failure-rate-threshold: 50.0
-      minimum-number-of-calls: 20
-      sliding-window-size: 50
-      permitted-calls-in-half-open-state: 5
-      wait-duration-in-open-state: PT30S
+linqibin:
+  starter:
+    core:
+      error:
+        enabled: true
+        context-prefix: CAT
+        engine:
+          max-cause-depth: 10
+          enable-trait-mapping: true
+          enable-naming-heuristic: true
+        observation:
+          enabled: true
+          slow-threshold-ms: 200
+          log-slow-resolution: true
+        circuit-breaker:
+          enabled: true
+          failure-rate-threshold: 50.0
+          minimum-number-of-calls: 20
+          sliding-window-size: 50
+          permitted-calls-in-half-open-state: 5
+          wait-duration-in-open-state: PT30S
 
-  http:
-    interface:
+    http-interface:
       error-handling:
         problem-detail-enabled: true
         tolerant: true

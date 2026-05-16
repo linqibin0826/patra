@@ -41,8 +41,8 @@ class MicrometerAutoConfigurationTest {
       properties = {
         "spring.application.name=spring-app",
         "spring.profiles.active=prod",
-        "patra.observability.application-name=explicit-app",
-        "patra.observability.environment=explicit-env",
+        "linqibin.starter.observability.application-name=explicit-app",
+        "linqibin.starter.observability.environment=explicit-env",
         "management.observations.annotations.enabled=false"
       })
   class ExplicitConfigurationTest {
@@ -91,7 +91,7 @@ class MicrometerAutoConfigurationTest {
         "spring.application.name=fallback-spring-app",
         "spring.profiles.active=staging",
         "management.observations.annotations.enabled=false"
-        // 注意：不配置 patra.observability.application-name 和 environment
+        // 注意：不配置 linqibin.starter.observability.application-name 和 environment
       })
   class FallbackToSpringPropertiesTest {
 

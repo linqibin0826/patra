@@ -16,16 +16,17 @@ spring:
       - org.redisson.spring.starter.RedissonAutoConfigurationV2  # 测试环境禁用 Redisson
       - org.redisson.spring.starter.RedissonAutoConfigurationV4  # Spring Boot 4 需同时排除 V4
 
-patra:
-  batch:
-    enabled: true
-    observability:
-      tracing:
-        enabled: true
-      metrics:
-        enabled: true
-      logging:
-        enabled: true
-    chunk:
-      default-size: 1000
-      max-size: 10000
+linqibin:
+  starter:
+    batch:
+      enabled: true
+      observability:
+        tracing:
+          enabled: true
+        metrics:
+          enabled: true
+        logging:
+          enabled: true
+      chunk:
+        default-size: 1000
+        max-size: 10000

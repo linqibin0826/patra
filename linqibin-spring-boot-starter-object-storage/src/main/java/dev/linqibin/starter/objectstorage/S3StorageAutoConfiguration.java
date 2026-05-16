@@ -61,7 +61,7 @@ public class S3StorageAutoConfiguration {
   @Bean(destroyMethod = "close")
   @ConditionalOnMissingBean(S3Client.class)
   @ConditionalOnProperty(
-      prefix = "patra.object-storage",
+      prefix = "linqibin.starter.object-storage",
       name = "active-provider",
       havingValue = "s3")
   public S3Client s3Client(ObjectStorageProperties properties) {

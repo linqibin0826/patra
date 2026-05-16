@@ -12,16 +12,17 @@ import org.springframework.context.annotation.Bean;
 
 /// Spring Batch Schema 初始化自动配置。
 ///
-/// 当 `patra.batch.schema.initialize=true`（默认）时，自动创建 `BatchSchemaInitializer` Bean，
+/// 当 `linqibin.starter.batch.schema.initialize=true`（默认）时，自动创建 `BatchSchemaInitializer` Bean，
 /// 在 `BatchAutoConfiguration` 构造时触发 Schema 初始化。
 ///
 /// ## 配置选项
 ///
 /// ```yaml
-/// patra:
-///   batch:
-///     schema:
-///       initialize: true  # 默认启用
+/// linqibin:
+///   starter:
+///     batch:
+///       schema:
+///         initialize: true  # 默认启用
 /// ```
 ///
 /// ## 禁用场景
@@ -38,7 +39,7 @@ import org.springframework.context.annotation.Bean;
 /// @author Patra Team
 /// @since 0.1.0
 @ConditionalOnProperty(
-    prefix = "patra.batch.schema",
+    prefix = "linqibin.starter.batch.schema",
     name = "initialize",
     havingValue = "true",
     matchIfMissing = true)

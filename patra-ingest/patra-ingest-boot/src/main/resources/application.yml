@@ -40,9 +40,9 @@ spring:
     baseline-version: 0.1.0
 
 # HTTP Interface 客户端配置（替代 Feign）
-patra:
-  http:
-    interface:
+linqibin:
+  starter:
+    http-interface:
       enabled: true
       connect-timeout: 2s
       read-timeout: 5s
@@ -56,6 +56,8 @@ patra:
         storage:
           base-url: lb://patra-object-storage
           read-timeout: 60s
+
+patra:
   ingest:
     exec:
       # Lease time-to-live in seconds for execution lock

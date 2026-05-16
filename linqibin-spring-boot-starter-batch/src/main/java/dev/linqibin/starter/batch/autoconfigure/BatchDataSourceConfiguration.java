@@ -18,12 +18,12 @@ import org.springframework.util.StringUtils;
 
 /// Batch 独立数据源自动配置。
 ///
-/// 当配置了 `patra.batch.datasource.url` 时，创建独立的数据源和事务管理器，
+/// 当配置了 `linqibin.starter.batch.datasource.url` 时，创建独立的数据源和事务管理器，
 /// 用于存储 Spring Batch 元数据（JobRepository、JobExplorer 等）。
 ///
 /// ## 激活条件
 ///
-/// - `patra.batch.datasource.url` 配置了有效值
+/// - `linqibin.starter.batch.datasource.url` 配置了有效值
 ///
 /// ## 创建的 Bean
 ///
@@ -45,13 +45,13 @@ import org.springframework.util.StringUtils;
 // Access</a>
 @AutoConfiguration(after = DataSourceAutoConfiguration.class)
 @ConditionalOnClass(HikariDataSource.class)
-@ConditionalOnProperty(prefix = "patra.batch.datasource", name = "url")
+@ConditionalOnProperty(prefix = "linqibin.starter.batch.datasource", name = "url")
 @EnableConfigurationProperties(BatchProperties.class)
 public class BatchDataSourceConfiguration {
 
   /// 创建 Batch 专用数据源。
   ///
-  /// 使用 HikariCP 连接池，配置来自 `patra.batch.datasource.*`。
+  /// 使用 HikariCP 连接池，配置来自 `linqibin.starter.batch.datasource.*`。
   ///
   /// **注意**：`defaultCandidate = false` 确保此数据源不参与自动装配候选，
   /// 避免干扰 JPA 的 `@ConditionalOnSingleCandidate(DataSource.class)` 检查。

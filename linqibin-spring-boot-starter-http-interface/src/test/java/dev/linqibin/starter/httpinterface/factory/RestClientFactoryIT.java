@@ -44,10 +44,10 @@ import tools.jackson.databind.json.JsonMapper;
 @WireMockTest
 @TestPropertySource(
     properties = {
-      "patra.http.interface.connect-timeout=5s",
-      "patra.http.interface.read-timeout=10s",
-      "patra.http.interface.error-handling.tolerant=true",
-      "patra.http.interface.error-handling.problem-detail-enabled=true"
+      "linqibin.starter.http-interface.connect-timeout=5s",
+      "linqibin.starter.http-interface.read-timeout=10s",
+      "linqibin.starter.http-interface.error-handling.tolerant=true",
+      "linqibin.starter.http-interface.error-handling.problem-detail-enabled=true"
     })
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
 @DisplayName("RestClientFactory 集成测试")

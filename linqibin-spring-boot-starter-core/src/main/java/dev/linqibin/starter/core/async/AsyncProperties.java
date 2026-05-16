@@ -41,7 +41,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 ///
 /// @author linqibin
 /// @since 0.1.0
-@ConfigurationProperties(prefix = "patra.async")
+@ConfigurationProperties(prefix = "linqibin.starter.core.async")
 public class AsyncProperties {
 
   /// 是否启用异步线程池（默认 true）。

@@ -9,7 +9,7 @@ import org.springframework.http.ProblemDetail;
 /// @author linqibin
 /// @since 0.1.0
 @Data
-@ConfigurationProperties(prefix = "patra.web.problem")
+@ConfigurationProperties(prefix = "linqibin.starter.web.problem")
 public class WebErrorProperties {
 
   /// 是否启用 Web 特定的错误处理。

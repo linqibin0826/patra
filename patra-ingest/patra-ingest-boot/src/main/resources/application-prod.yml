@@ -10,17 +10,17 @@ spring:
     redis:
       url: ${INGEST_REDIS_URL}
 
-expr:
-  strict: true
-  multi:
-    repeat-enabled: false
-
 patra:
-  expr:
-    compiler:
-      enabled: true
-      query-param-bridge:
+  starter:
+    expr:
+      mode:
+        strict: true
+        multi:
+          repeat-enabled: false
+      compiler:
         enabled: true
-      max-query-length: 5000
-      warn-param-count: 50
-      max-param-count: 100
+        query-param-bridge:
+          enabled: true
+        max-query-length: 5000
+        warn-param-count: 50
+        max-param-count: 100
