@@ -170,10 +170,12 @@ public class DefaultDownloadClient implements DownloadClient {
       }
 
       long endTime = System.currentTimeMillis();
+      // 完成时若总大小未知，以实际下载量作为总量，确保进度为 100%
+      long effectiveTotalBytes = totalBytes > 0 ? totalBytes : bytesDownloaded;
       DownloadProgress finalProgress =
           calculateProgress(
               bytesDownloaded,
-              totalBytes,
+              effectiveTotalBytes,
               startTime,
               endTime,
               lastUpdateState[1],

@@ -146,12 +146,14 @@ public class HttpStreamingDownloader implements StreamingDownloader {
             response ->
                 response
                     .bodyToMono(String.class)
-                    .map(
+                    .defaultIfEmpty("")
+                    .flatMap(
                         body -> {
                           log.error("HTTP 错误响应：{}，body: {}", response.statusCode(), body);
-                          return new DownloadException(
-                              "HTTP 错误：" + response.statusCode().value(),
-                              StandardErrorTrait.DEP_UNAVAILABLE);
+                          return Mono.error(
+                              new DownloadException(
+                                  "HTTP 错误：" + response.statusCode().value(),
+                                  StandardErrorTrait.DEP_UNAVAILABLE));
                         }))
         .toEntityFlux(DataBuffer.class);
   }
