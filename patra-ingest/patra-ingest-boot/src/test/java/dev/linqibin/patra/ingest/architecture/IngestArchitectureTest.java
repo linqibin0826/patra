@@ -49,7 +49,8 @@ class IngestArchitectureTest {
   /// 参数化的六边形架构规则（基础包: dev.linqibin.patra.ingest，业务公共包: patra-common）。
   private static final HexagonalArchitectureRules rules =
       new HexagonalArchitectureRules(
-          "dev.linqibin.patra.ingest", List.of("dev.linqibin.patra.common.."));
+          "dev.linqibin.patra.ingest",
+          List.of("dev.linqibin.patra.common..", "dev.linqibin.commons.."));
 
   @BeforeAll
   static void setup() {

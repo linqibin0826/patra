@@ -49,7 +49,8 @@ class CatalogArchitectureTest {
   /// 参数化的六边形架构规则（基础包: dev.linqibin.patra.catalog，业务公共包: patra-common）。
   private static final HexagonalArchitectureRules rules =
       new HexagonalArchitectureRules(
-          "dev.linqibin.patra.catalog", List.of("dev.linqibin.patra.common.."));
+          "dev.linqibin.patra.catalog",
+          List.of("dev.linqibin.patra.common..", "dev.linqibin.commons.."));
 
   @BeforeAll
   static void setup() {
