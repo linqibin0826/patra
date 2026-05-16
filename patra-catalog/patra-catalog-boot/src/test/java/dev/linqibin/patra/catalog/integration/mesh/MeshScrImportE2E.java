@@ -6,9 +6,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import dev.linqibin.commons.cqrs.CommandBus;
-import dev.linqibin.commons.error.ApplicationException;
 import dev.linqibin.patra.catalog.app.usecase.mesh.command.MeshScrImportCommand;
 import dev.linqibin.patra.catalog.app.usecase.mesh.dto.MeshScrImportResult;
+import dev.linqibin.patra.catalog.domain.exception.DataAlreadyExistsException;
 import dev.linqibin.patra.catalog.domain.port.source.FileDownloadPort;
 import dev.linqibin.patra.catalog.domain.port.source.FileDownloadResult;
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshConceptDao;
@@ -20,6 +20,7 @@ import dev.linqibin.patra.catalog.infra.persistence.dao.MeshScrPharmacologicalAc
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshScrSourceDao;
 import dev.linqibin.patra.catalog.infra.persistence.entity.MeshScrHeadingMappedToEntity;
 import dev.linqibin.patra.catalog.integration.config.CatalogMySQLContainerInitializer;
+import dev.linqibin.starter.objectstorage.ObjectStorageOperations;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -115,6 +116,9 @@ class MeshScrImportE2E {
   /// Mock FileDownloadPort，将测试资源文件写入临时文件后返回路径。
   @MockitoBean private FileDownloadPort fileDownloadPort;
 
+  /// Mock ObjectStorageOperations，E2E 测试不需要真实的对象存储。
+  @MockitoBean private ObjectStorageOperations objectStorageOperations;
+
   // ========== Setup & Teardown ==========
 
   /// 测试初始化。
@@ -170,7 +174,7 @@ class MeshScrImportE2E {
     jdbcTemplate.execute("DELETE FROM BATCH_JOB_INSTANCE");
     jdbcTemplate.execute("UPDATE BATCH_STEP_EXECUTION_SEQ SET ID = 0");
     jdbcTemplate.execute("UPDATE BATCH_JOB_EXECUTION_SEQ SET ID = 0");
-    jdbcTemplate.execute("UPDATE BATCH_JOB_SEQ SET ID = 0");
+    jdbcTemplate.execute("UPDATE BATCH_JOB_INSTANCE_SEQ SET ID = 0");
   }
 
   // ========== 一次性初始化测试 ==========
@@ -225,9 +229,9 @@ class MeshScrImportE2E {
       // 验证数据已导入
       assertThat(scrDao.count()).isEqualTo(EXPECTED_SCR_COUNT);
 
-      // When/Then - 再次导入应该抛出 ApplicationException
+      // When/Then - 再次导入应该抛出 DataAlreadyExistsException
       assertThatThrownBy(() -> commandBus.handle(command))
-          .isInstanceOf(ApplicationException.class)
+          .isInstanceOf(DataAlreadyExistsException.class)
           .hasMessageContaining("MeSH SCR");
     }
   }

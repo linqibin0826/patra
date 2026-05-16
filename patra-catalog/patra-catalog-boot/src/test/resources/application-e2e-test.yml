@@ -61,6 +61,11 @@ patra:
   # 禁用 Redisson（E2E 测试不需要 Redis）
   redisson:
     enabled: false
+  # 禁用隧道代理（E2E 测试使用 Mock FileDownloadPort，无需真实代理）
+  rest-client:
+    proxy:
+      tunnel:
+        enabled: false
 
 # Management & Monitoring (禁用测试环境不需要的)
 management:
