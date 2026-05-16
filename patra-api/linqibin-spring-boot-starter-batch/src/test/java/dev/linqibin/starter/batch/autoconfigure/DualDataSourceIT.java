@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
+import org.springframework.test.context.ActiveProfiles;
 
 /// 双数据源集成测试。
 ///
@@ -23,10 +24,11 @@ import org.springframework.context.ApplicationContext;
 /// 主数据源由 Spring Boot DataSourceAutoConfiguration 管理，不在此测试范围内。
 @SpringBootTest(
     properties = {
-      // Batch 独立数据源（元数据）
-      "patra.batch.datasource.url=jdbc:h2:mem:batch_meta_db;MODE=MySQL;DB_CLOSE_DELAY=-1",
-      "patra.batch.datasource.username=sa",
-      "patra.batch.datasource.password=",
+      // Batch 独立数据源（元数据）：使用 Testcontainers MySQL
+      "patra.batch.datasource.url=jdbc:tc:mysql:8.0.40:///batch_meta_db",
+      "patra.batch.datasource.username=test",
+      "patra.batch.datasource.password=test",
+      "patra.batch.datasource.driver-class-name=org.testcontainers.jdbc.ContainerDatabaseDriver",
       "patra.batch.datasource.hikari.maximum-pool-size=3",
       "patra.batch.datasource.hikari.minimum-idle=1",
       // Spring Batch 配置
@@ -37,8 +39,16 @@ import org.springframework.context.ApplicationContext;
       "patra.batch.table-prefix=BATCH_",
       // 禁用 Redisson（测试环境）
       "spring.autoconfigure.exclude=org.redisson.spring.starter.RedissonAutoConfigurationV2,org.redisson.spring.starter.RedissonAutoConfigurationV4",
-      "patra.redisson.observability.metrics-enabled=false"
+      "patra.redisson.observability.metrics-enabled=false",
+      // 覆盖主数据源为简单的 Testcontainers MySQL URL（不依赖类路径资源）
+      "spring.datasource.url=jdbc:tc:mysql:8.0.40:///test_batch",
+      "spring.datasource.username=test",
+      "spring.datasource.password=test",
+      "spring.datasource.driver-class-name=org.testcontainers.jdbc.ContainerDatabaseDriver",
+      // 禁用 Flyway（batch starter 无迁移脚本，不需要数据库模式初始化）
+      "spring.flyway.enabled=false"
     })
+@ActiveProfiles("test")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
 class DualDataSourceIT {
 
