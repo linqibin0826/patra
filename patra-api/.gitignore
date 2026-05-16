@@ -105,3 +105,6 @@ __pycache__/
 # JAR files (except Gradle wrapper)
 *.jar
 !gradle/wrapper/gradle-wrapper.jar
+
+# Serena MCP local config
+.serena/
