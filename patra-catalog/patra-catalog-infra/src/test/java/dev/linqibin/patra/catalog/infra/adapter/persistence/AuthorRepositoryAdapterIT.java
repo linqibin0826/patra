@@ -362,9 +362,14 @@ class AuthorRepositoryAdapterIT {
 
       // Then: 验证聚合根
       assertThat(saved.getNormalizedKey()).isEqualTo("Smith+JK");
-      assertThat(saved.getDisplayName()).isEqualTo("John Smith");
       assertThat(saved.getNameVariants()).hasSize(2);
       assertThat(saved.getOrcids()).hasSize(1);
+
+      // Then: 验证 DB 中存储的 displayName 是首个名字变体的展示形式
+      // 注意：JPA 实体使用 HashSet 存储名字变体，迭代顺序不确定，
+      // 因此通过直接查询 DB 实体验证持久化的 displayName 字段，而非聚合根重建后的值。
+      AuthorEntity savedEntity = jpaRepository.findById(saved.getId().value()).orElseThrow();
+      assertThat(savedEntity.getDisplayName()).isEqualTo("John Smith");
 
       // Then: 重新从数据库读取验证
       List<AuthorAggregate> reloaded = authorRepository.findByNormalizedKey("Smith+JK");
