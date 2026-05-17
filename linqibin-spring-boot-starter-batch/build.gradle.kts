@@ -29,8 +29,8 @@ dependencies {
     // HikariCP 连接池（可选，用于独立 Batch 数据源）
     compileOnly("com.zaxxer:HikariCP")
 
-    // MySQL JDBC 驱动（可选，用于 JobRepository 元数据存储）
-    compileOnly("com.mysql:mysql-connector-j")
+    // PostgreSQL JDBC 驱动（可选，用于 JobRepository 元数据存储）
+    compileOnly("org.postgresql:postgresql")
 
     // Micrometer Observation（可选，用于 Spring Batch 原生可观测性）
     compileOnly("io.micrometer:micrometer-observation")
