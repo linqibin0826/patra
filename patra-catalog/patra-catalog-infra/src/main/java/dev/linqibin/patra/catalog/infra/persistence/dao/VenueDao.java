@@ -193,7 +193,7 @@ public interface VenueDao extends JpaRepository<VenueEntity, Long> {
         AND (:jifQuartile IS NULL OR jcr.jif_quartile = :jifQuartile)
         AND (:casMajorQuartile IS NULL OR cas.major_quartile = :casMajorQuartile)
         AND (:casTopJournal IS NULL OR cas.is_top_journal = :casTopJournal)
-        AND (:oaType IS NULL OR JSON_UNQUOTE(JSON_EXTRACT(v.open_access, '$.oaType')) = :oaType)
+        AND (:oaType IS NULL OR v.open_access ->> 'oaType' = :oaType)
         AND (:collection IS NULL OR jcr.collection = :collection)
         AND (:researchDirection IS NULL OR jcr.research_direction LIKE CONCAT('%', :researchDirection, '%') ESCAPE '!')
         AND (:warningOnly IS NULL OR EXISTS (
@@ -202,7 +202,7 @@ public interface VenueDao extends JpaRepository<VenueEntity, Long> {
       ORDER BY
         CASE WHEN :sortBy = 'impactFactor' THEN COALESCE(jcr.impact_factor, 0) ELSE NULL END DESC,
         CASE WHEN :sortBy = 'citeScore' THEN COALESCE(scopus.cite_score, 0) ELSE NULL END DESC,
-        CASE WHEN :sortBy = 'hIndex' THEN COALESCE(JSON_EXTRACT(v.citation_metrics, '$.hIndex'), 0) ELSE NULL END DESC,
+        CASE WHEN :sortBy = 'hIndex' THEN COALESCE((v.citation_metrics ->> 'hIndex')::numeric, 0) ELSE NULL END DESC,
         CASE WHEN :sortBy IS NULL OR :sortBy = 'citedByCount' THEN COALESCE(v.cited_by_count, 0) ELSE NULL END DESC,
         v.id DESC
       """,
@@ -225,7 +225,7 @@ public interface VenueDao extends JpaRepository<VenueEntity, Long> {
         AND (:jifQuartile IS NULL OR jcr.jif_quartile = :jifQuartile)
         AND (:casMajorQuartile IS NULL OR cas.major_quartile = :casMajorQuartile)
         AND (:casTopJournal IS NULL OR cas.is_top_journal = :casTopJournal)
-        AND (:oaType IS NULL OR JSON_UNQUOTE(JSON_EXTRACT(v.open_access, '$.oaType')) = :oaType)
+        AND (:oaType IS NULL OR v.open_access ->> 'oaType' = :oaType)
         AND (:collection IS NULL OR jcr.collection = :collection)
         AND (:researchDirection IS NULL OR jcr.research_direction LIKE CONCAT('%', :researchDirection, '%') ESCAPE '!')
         AND (:warningOnly IS NULL OR EXISTS (
