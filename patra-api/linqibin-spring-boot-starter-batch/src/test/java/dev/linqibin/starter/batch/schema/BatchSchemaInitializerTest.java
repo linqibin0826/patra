@@ -214,10 +214,10 @@ class BatchSchemaInitializerTest {
     void schemaResourceShouldExist() {
       // Given
       org.springframework.core.io.Resource resource =
-          new org.springframework.core.io.ClassPathResource("db/batch/schema-mysql.sql");
+          new org.springframework.core.io.ClassPathResource("db/batch/schema-postgresql.sql");
 
       // Then
-      assertThat(resource.exists()).as("Schema 资源文件 db/batch/schema-mysql.sql 应该存在").isTrue();
+      assertThat(resource.exists()).as("Schema 资源文件 db/batch/schema-postgresql.sql 应该存在").isTrue();
     }
   }
 }
