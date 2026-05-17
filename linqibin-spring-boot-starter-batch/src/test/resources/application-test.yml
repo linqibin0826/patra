@@ -1,7 +1,7 @@
 spring:
   datasource:
     driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
-    url: jdbc:tc:mysql:8.0.40:///test_batch?TC_TMPFS=/testtmpfs:rw&TC_MY_CNF=/tc/mysql/conf.d
+    url: jdbc:tc:postgresql:17:///test_batch
     username: test
     password: test
 
