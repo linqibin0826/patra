@@ -865,11 +865,11 @@ class PublicationRepositoryAdapterIT {
 
       // When / Then
       // PG 错误信息使用小写 "duplicate key value violates unique constraint"，
-      // 与 MySQL 的 "Duplicate entry" 不同，故断言宽松匹配约束名即可
+      // 与 MySQL 的 "Duplicate entry" 不同，故用大小写不敏感的正则匹配
       assertThatThrownBy(() -> repository.insertAllWithAssociations(List.of(completeData)))
           .isInstanceOfAny(
               DataIntegrityViolationException.class, ConstraintViolationException.class)
-          .hasMessageContainingIgnoringCase("duplicate");
+          .hasMessageMatching("(?is).*duplicate.*");
     }
 
     @Test

@@ -32,7 +32,7 @@ import java.time.Instant;
 /// @param pageSizeValue 页大小,用于PAGE_NUMBER/SCROLL模式,null时使用应用默认值
 /// @param maxPagesPerExecution 单次执行最大页数,用于限制深度分页,可为null
 /// @param sortFieldParamName 排序字段参数名称,可为null
-/// @param sortingDirection 排序方向,0表示降序(DESC),1表示升序(ASC),可为null
+/// @param sortingDirection 排序方向，`true` 表示升序(ASC)，`false` 表示降序(DESC)，可为null
 /// @author linqibin
 /// @since 0.1.0
 public record PaginationConfig(
@@ -45,7 +45,7 @@ public record PaginationConfig(
     Integer pageSizeValue,
     Integer maxPagesPerExecution,
     String sortFieldParamName,
-    Integer sortingDirection) {
+    Boolean sortingDirection) {
   /// 规范构造器,强制执行分页配置的业务约束。
   ///
   /// 验证规则:
@@ -66,7 +66,7 @@ public record PaginationConfig(
       Integer pageSizeValue,
       Integer maxPagesPerExecution,
       String sortFieldParamName,
-      Integer sortingDirection) {
+      Boolean sortingDirection) {
     DomainValidationException.positive(id, "Pagination config id");
     DomainValidationException.positive(provenanceId, "Provenance id");
     String modeTrimmed =

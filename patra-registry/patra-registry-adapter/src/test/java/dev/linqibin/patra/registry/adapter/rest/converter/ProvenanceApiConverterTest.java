@@ -320,7 +320,7 @@ class ProvenanceApiConverterTest {
 
       PaginationConfigQuery query =
           new PaginationConfigQuery(
-              20L, 1L, "HARVEST", effectiveFrom, effectiveTo, "PAGE_NUMBER", 100, 50, "sort", 1);
+              20L, 1L, "HARVEST", effectiveFrom, effectiveTo, "PAGE_NUMBER", 100, 50, "sort", true);
 
       // When: 执行转换
       PaginationConfigResp result = converter.toResp(query);
@@ -336,7 +336,7 @@ class ProvenanceApiConverterTest {
       assertThat(result.pageSizeValue()).isEqualTo(100);
       assertThat(result.maxPagesPerExecution()).isEqualTo(50);
       assertThat(result.sortFieldParamName()).isEqualTo("sort");
-      assertThat(result.sortingDirection()).isEqualTo(1);
+      assertThat(result.sortingDirection()).isEqualTo(true);
     }
 
     @Test

@@ -19,7 +19,7 @@ public record PaginationConfigQuery(
     Integer pageSizeValue,
     Integer maxPagesPerExecution,
     String sortFieldParamName,
-    Integer sortingDirection) {
+    Boolean sortingDirection) {
   /// 规范构造器,强制执行分页配置查询视图的验证规则。
   ///
   /// 验证规则：

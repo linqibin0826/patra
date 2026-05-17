@@ -867,7 +867,7 @@ class ProvenanceConfigurationTest {
           100, // pageSizeValue
           500, // maxPagesPerExecution
           "sort", // sortFieldParamName
-          0 // sortingDirection (DESC)
+          false // sortingDirection (DESC)
           );
     }
 

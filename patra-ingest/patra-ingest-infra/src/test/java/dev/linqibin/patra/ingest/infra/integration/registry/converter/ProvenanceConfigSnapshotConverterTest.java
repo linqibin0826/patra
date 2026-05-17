@@ -341,7 +341,7 @@ class ProvenanceConfigSnapshotConverterTest {
       Instant effectiveFrom = Instant.parse("2025-01-01T00:00:00Z");
       PaginationConfigResp resp =
           new PaginationConfigResp(
-              2L, 10L, "LIST_RESOURCES", effectiveFrom, null, "CURSOR", 50, 20, "orderBy", 0);
+              2L, 10L, "LIST_RESOURCES", effectiveFrom, null, "CURSOR", 50, 20, "orderBy", false);
 
       // When
       ProvenanceConfigSnapshot.PaginationConfig config = converter.mapPaginationConfig(resp);
@@ -357,7 +357,7 @@ class ProvenanceConfigSnapshotConverterTest {
       assertThat(config.pageSizeValue()).isEqualTo(50);
       assertThat(config.maxPagesPerExecution()).isEqualTo(20);
       assertThat(config.sortFieldParamName()).isEqualTo("orderBy");
-      assertThat(config.sortingDirection()).isEqualTo(0);
+      assertThat(config.sortingDirection()).isEqualTo(false);
     }
 
     @Test
