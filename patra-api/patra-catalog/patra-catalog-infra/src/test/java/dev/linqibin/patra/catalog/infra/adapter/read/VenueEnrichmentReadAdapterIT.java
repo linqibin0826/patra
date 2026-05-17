@@ -28,7 +28,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
-/// VenueEnrichmentReadAdapter 集成测试（JPA + Testcontainers MySQL）。
+/// VenueEnrichmentReadAdapter 集成测试（JPA + Testcontainers PostgreSQL）。
 ///
 /// **测试策略**：
 /// - `@DataJpaTest` 仅装配 JPA 相关 bean；通过 `@Import` 显式加入被测 Adapter
