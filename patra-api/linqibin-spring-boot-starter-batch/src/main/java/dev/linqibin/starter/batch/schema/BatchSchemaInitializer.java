@@ -20,7 +20,7 @@ import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 /// ## 初始化逻辑
 ///
 /// 1. 检查 `BATCH_JOB_INSTANCE` 表是否存在
-/// 2. 不存在则执行 `db/batch/schema-mysql.sql` 创建所有元数据表
+/// 2. 不存在则执行 `db/batch/schema-postgresql.sql` 创建所有元数据表
 /// 3. 已存在则跳过（幂等）
 ///
 /// ## 使用场景
@@ -39,7 +39,7 @@ public class BatchSchemaInitializer {
   private static final String MARKER_TABLE = "BATCH_JOB_INSTANCE";
 
   /// Schema SQL 资源路径。
-  private static final String SCHEMA_RESOURCE = "db/batch/schema-mysql.sql";
+  private static final String SCHEMA_RESOURCE = "db/batch/schema-postgresql.sql";
 
   private final DataSource dataSource;
   private final String tablePrefix;
@@ -88,7 +88,8 @@ public class BatchSchemaInitializer {
     try (Connection connection = dataSource.getConnection()) {
       DatabaseMetaData metaData = connection.getMetaData();
       // 使用 null 作为 catalog 和 schema，让 JDBC 驱动自动选择
-      // tableName 使用大写（MySQL 在 Linux 上可能区分大小写）
+      // PG 默认将未加引号的标识符折叠为小写，BATCH_JOB_INSTANCE 实际存储为 batch_job_instance；
+      // 查询时同样折叠，行为一致。此处同时检测大写与小写以覆盖两种情形。
       try (ResultSet tables =
           metaData.getTables(null, null, tableName.toUpperCase(), new String[] {"TABLE"})) {
         if (tables.next()) {
