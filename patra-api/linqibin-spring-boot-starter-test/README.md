@@ -4,7 +4,7 @@
 
 ## 功能概览
 
-- **TestContainers 容器初始化器**: JVM 级别单例容器，支持 MySQL、RocketMQ、MinIO
+- **TestContainers 容器初始化器**: JVM 级别单例容器，支持 PostgreSQL、RocketMQ、MinIO
 - **ArchUnit 架构规则**: 六边形架构规则、测试规范规则
 - **测试工具集成**: JUnit 5、AssertJ、Mockito、Awaitility、WireMock
 
@@ -25,8 +25,8 @@
 创建服务特定的容器初始化器：
 
 ```java
-// 继承 MySQLContainerInitializer，指定数据库名
-public class CatalogMySQLContainerInitializer extends MySQLContainerInitializer {
+// 继承 PostgreSQLContainerInitializer，指定数据库名
+public class CatalogPostgreSQLContainerInitializer extends PostgreSQLContainerInitializer {
     @Override
     protected String getDatabaseName() {
         return "patra_catalog";
@@ -55,7 +55,7 @@ public class CatalogMinIOContainerInitializer extends MinIOContainerInitializer 
 ```java
 @SpringBootTest
 @ContextConfiguration(initializers = {
-    CatalogMySQLContainerInitializer.class,
+    CatalogPostgreSQLContainerInitializer.class,
     IngestRocketMQContainerInitializer.class
 })
 class MyIntegrationTest {
@@ -93,7 +93,7 @@ class CatalogArchitectureTest {
 
 | 类 | 说明 |
 |---|---|
-| `MySQLContainerInitializer` | MySQL 容器初始化器基类，支持 Flyway 迁移 |
+| `PostgreSQLContainerInitializer` | PostgreSQL 容器初始化器基类，支持 Flyway 迁移 |
 | `RocketMQContainerInitializer` | RocketMQ 容器初始化器基类，支持 Topic 自动创建 |
 | `MinIOContainerInitializer` | MinIO 容器初始化器基类，支持存储桶自动创建 |
 | `ContainerRegistry` | JVM 级别容器注册中心，确保单例 |
@@ -126,7 +126,7 @@ class CatalogArchitectureTest {
 - Spring Boot Data JPA Test
 - Spring Boot JDBC Test
 - Spring Boot Flyway Test
-- TestContainers (core + junit-jupiter + mysql)
+- TestContainers (core + junit-jupiter + postgresql)
 - ArchUnit JUnit 5
 - Awaitility
 - WireMock
@@ -136,7 +136,7 @@ class CatalogArchitectureTest {
 
 | 容器 | 镜像 |
 |---|---|
-| MySQL | `mysql:8.0.36` |
+| PostgreSQL | `postgres:17` |
 | RocketMQ | `apache/rocketmq:5.3.1` |
 | MinIO | `minio/minio:RELEASE.2024-01-18T22-51-28Z` |
 
