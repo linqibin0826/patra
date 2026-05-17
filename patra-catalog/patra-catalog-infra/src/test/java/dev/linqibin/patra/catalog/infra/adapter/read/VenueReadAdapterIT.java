@@ -154,7 +154,7 @@ class VenueReadAdapterIT {
     /// LIKE 通配符转义契约：keyword 中的 `%` 应被视为字面字符而非通配符。
     ///
     /// 调用方（QueryService）已通过 `StringUtils.escapeLike` 把用户输入的 `%`
-    /// 转义为 `!%`，查询携带 `ESCAPE '!'` 子句告诉 MySQL `!` 是转义符。
+    /// 转义为 `!%`，查询携带 `ESCAPE '!'` 子句告诉数据库 `!` 是转义符。
     /// 这里直接传入已转义的 `"100!%"`（模拟用户输入 `"100%"` 经 escapeLike 后的结果），
     /// 期望只命中字面含 `"100%"` 前缀的期刊，不会把 `%` 当通配符匹配到 `"100 Years"`。
     @Test

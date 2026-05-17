@@ -45,7 +45,7 @@ import org.springframework.test.context.ContextConfiguration;
 
 /// OrganizationRepositoryAdapter 集成测试（JPA）。
 ///
-/// 使用 Testcontainers + MySQL 8 验证 Organization 聚合根持久化逻辑。
+/// 使用 Testcontainers + PostgreSQL 17 验证 Organization 聚合根持久化逻辑。
 ///
 /// @author linqibin
 /// @since 0.1.0

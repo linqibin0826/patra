@@ -28,13 +28,13 @@ import org.springframework.test.context.ContextConfiguration;
 
 /// 作者仓储实现集成测试（JPA 版本）。
 ///
-/// 使用 Testcontainers + MySQL 8 测试 CRUD 操作。
+/// 使用 Testcontainers + PostgreSQL 17 测试 CRUD 操作。
 ///
 /// **测试策略**：
 ///
-/// - 集成测试：使用真实 MySQL 数据库
+/// - 集成测试：使用真实 PostgreSQL 数据库
 /// - 测试隔离：每个测试方法独立，使用 @Transactional 自动回滚
-/// - TestContainers：自动启动和停止 MySQL 容器
+/// - TestContainers：自动启动和停止 PostgreSQL 容器
 /// - 测试覆盖：save(), saveBatch(), findByOrcid(), findByNormalizedKey(), hasAnyData() 等场景
 ///
 /// **重点测试场景**：

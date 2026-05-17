@@ -345,7 +345,7 @@ class PubMedComputedAuthorParserTest {
     @Test
     @DisplayName("重音字符差异 - 应该去重（García = Garcia）")
     void parse_accentVariants_shouldDeduplicate() throws IOException {
-      // Given: 带重音和不带重音的变体（MySQL utf8mb4_0900_ai_ci 视为相同）
+      // Given: 带重音和不带重音的变体（PostgreSQL（spec §4.22 默认 C collation + ILIKE） 视为相同）
       String jsonLines =
           """
           {"name": "GARCIA+M", "names": ["García,María,M", "Garcia,Maria,M"], "orcid": [], "pmids": []}
