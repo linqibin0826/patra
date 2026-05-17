@@ -118,13 +118,13 @@ CREATE TABLE sys_dict_item
     PRIMARY KEY (id),
     CONSTRAINT uk_sys_dict_item__type_code UNIQUE (type_id, item_code),
     CONSTRAINT uk_sys_dict_item__default_per_type UNIQUE (default_key),
-    CONSTRAINT chk_sys_dict_item__code_format CHECK (item_code ~ '^[A-Z0-9_]{1,64}$')
+    CONSTRAINT chk_sys_dict_item__code_format CHECK (item_code ~ '^[A-Za-z0-9_]{1,64}$')
 );
 
 COMMENT ON TABLE sys_dict_item IS '系统字典 - 条目';
 COMMENT ON COLUMN sys_dict_item.id IS '主键；内部唯一标识符(雪花ID)';
 COMMENT ON COLUMN sys_dict_item.type_id IS '父类型ID (逻辑外键 -> sys_dict_type.id)';
-COMMENT ON COLUMN sys_dict_item.item_code IS '条目编码: 稳定键 (大写下划线格式)，例如 GET / PAGE_NUMBER';
+COMMENT ON COLUMN sys_dict_item.item_code IS '条目编码: 稳定键，例如 AF/US (国家类型用大写) 或 en/zh (语言类型用小写 BCP 47)';
 COMMENT ON COLUMN sys_dict_item.item_name IS '条目显示名称 (默认语言)';
 COMMENT ON COLUMN sys_dict_item.short_name IS '简称/缩写名称 (紧凑UI)';
 COMMENT ON COLUMN sys_dict_item.description IS '备注/说明 (语义、边界、兼容性)';
