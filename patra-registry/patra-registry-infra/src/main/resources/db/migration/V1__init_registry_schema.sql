@@ -1,6 +1,6 @@
 -- =====================================================================
 -- Patra Registry — PostgreSQL 17 baseline schema
--- 合并自原 V1.0.0 / V1.0.1 / V1.0.2（MySQL）；已移除 6 条物理 FK、AUTO_INCREMENT、
+-- 合并自原 V1.0.0 / V1.0.1 / V1.0.2；已移除 6 条物理 FK、
 -- ENGINE/CHARSET/COLLATE、DROP TABLE IF EXISTS、ROW_FORMAT、IF NOT EXISTS
 -- =====================================================================
 

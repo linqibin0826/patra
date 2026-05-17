@@ -4,7 +4,7 @@
  * 目的: 为所有支持的数据源 (PubMed, EPMC, CrossRef) 及其表达式配置
  *       提供统一的初始化数据
  *
- * 重写自: V1.1.0__seed_all_data.sql（MySQL）→ PostgreSQL 17
+ * 重写自: V1.1.0__seed_all_data.sql → PostgreSQL 17
  * 主要变更:
  *   - INET6_ATON('192.168.1.10') → '\xC0A8010A'::bytea
  *   - JSON_ARRAY(...) → jsonb_build_array(...)
