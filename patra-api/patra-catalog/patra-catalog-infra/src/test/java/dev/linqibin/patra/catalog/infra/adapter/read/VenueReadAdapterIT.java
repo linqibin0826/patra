@@ -8,7 +8,7 @@ import dev.linqibin.patra.catalog.domain.model.read.venue.VenueFilter;
 import dev.linqibin.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import dev.linqibin.patra.catalog.domain.model.vo.venue.CitationMetrics;
 import dev.linqibin.patra.catalog.domain.model.vo.venue.OpenAccessInfo;
-import dev.linqibin.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
+import dev.linqibin.patra.catalog.infra.config.CatalogPostgreSQLContainerInitializer;
 import dev.linqibin.patra.catalog.infra.persistence.dao.VenueDao;
 import dev.linqibin.patra.catalog.infra.persistence.entity.VenueEntity;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
@@ -36,7 +36,7 @@ import org.springframework.test.context.ContextConfiguration;
 /// - 各筛选条件独立生效（keyword 前缀匹配、countryCode/issnL/nlmId 精确匹配）
 /// - 分页元信息与排序规则
 @DataJpaTest
-@ContextConfiguration(initializers = CatalogMySQLContainerInitializer.class)
+@ContextConfiguration(initializers = CatalogPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
   VenueReadAdapter.class,
@@ -154,7 +154,7 @@ class VenueReadAdapterIT {
     /// LIKE 通配符转义契约：keyword 中的 `%` 应被视为字面字符而非通配符。
     ///
     /// 调用方（QueryService）已通过 `StringUtils.escapeLike` 把用户输入的 `%`
-    /// 转义为 `!%`，查询携带 `ESCAPE '!'` 子句告诉 MySQL `!` 是转义符。
+    /// 转义为 `!%`，查询携带 `ESCAPE '!'` 子句告诉数据库 `!` 是转义符。
     /// 这里直接传入已转义的 `"100!%"`（模拟用户输入 `"100%"` 经 escapeLike 后的结果），
     /// 期望只命中字面含 `"100%"` 前缀的期刊，不会把 `%` 当通配符匹配到 `"100 Years"`。
     @Test

@@ -25,7 +25,7 @@ import dev.linqibin.patra.registry.infra.adapter.persistence.entity.provenance.P
 import dev.linqibin.patra.registry.infra.adapter.persistence.entity.provenance.ProvRetryCfgEntity;
 import dev.linqibin.patra.registry.infra.adapter.persistence.entity.provenance.ProvWindowOffsetCfgEntity;
 import dev.linqibin.patra.registry.infra.adapter.persistence.entity.provenance.ProvenanceEntity;
-import dev.linqibin.patra.registry.infra.config.RegistryMySQLContainerInitializer;
+import dev.linqibin.patra.registry.infra.config.RegistryPostgreSQLContainerInitializer;
 import dev.linqibin.starter.jpa.autoconfig.HibernatePropertiesCustomizer;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
 import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
@@ -51,13 +51,13 @@ import org.springframework.test.context.ContextConfiguration;
 
 /// ProvenanceConfigRepositoryAdapter 集成测试。
 ///
-/// 使用 TestContainers + MySQL 8 测试数据源配置查询。
+/// 使用 TestContainers + PostgreSQL 17 测试数据源配置查询。
 ///
 /// **测试策略**：
 ///
-/// - 集成测试：使用真实 MySQL 数据库
+/// - 集成测试：使用真实 PostgreSQL 数据库
 ///   - 测试隔离：每个测试方法前清理并重建测试数据
-///   - TestContainers：自动启动和停止 MySQL 容器
+///   - TestContainers：自动启动和停止 PostgreSQL 容器
 ///   - Flyway：自动执行数据库迁移脚本
 ///   - 测试覆盖：数据源查询、配置查询、完整配置聚合
 ///
@@ -72,7 +72,7 @@ import org.springframework.test.context.ContextConfiguration;
 /// @author linqibin
 /// @since 0.1.0
 @DataJpaTest
-@ContextConfiguration(initializers = RegistryMySQLContainerInitializer.class)
+@ContextConfiguration(initializers = RegistryPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ImportAutoConfiguration(FlywayAutoConfiguration.class)
 @Import({
@@ -521,7 +521,7 @@ class ProvenanceConfigRepositoryAdapterIT {
     cfg.setPaginationModeCode("PAGE_NUMBER");
     cfg.setPageSizeValue(100);
     cfg.setMaxPagesPerExecution(1000);
-    cfg.setSortingDirection(1);
+    cfg.setSortingDirection(true);
     cfg.setLifecycleStatusCode("ACTIVE");
     paginationCfgDao.saveAndFlush(cfg);
   }

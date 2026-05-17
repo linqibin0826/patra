@@ -29,10 +29,10 @@ dependencies {
 
     // Flyway 数据库迁移
     api("org.springframework.boot:spring-boot-starter-flyway")
-    api("org.flywaydb:flyway-mysql")
+    api("org.flywaydb:flyway-database-postgresql")
 
-    // MySQL 驱动
-    api("com.mysql:mysql-connector-j")
+    // PostgreSQL 驱动
+    api("org.postgresql:postgresql")
 
     // Lombok
     compileOnly("org.projectlombok:lombok")

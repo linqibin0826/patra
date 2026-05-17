@@ -21,6 +21,9 @@ import org.springframework.context.annotation.Configuration;
 /// - 默认禁用二级缓存（批量场景下无用且占内存）
 /// - 应用可以通过 `spring.jpa.properties.*` 覆盖
 ///
+/// **PostgreSQL + HikariCP 优化**：通过 `hibernate.temp.use_jdbc_metadata_defaults=false`
+/// 避免连接建立时的元数据探测 round-trip。
+///
 /// **Jackson 3.x JSON 序列化配置**：
 ///
 /// Hibernate 7.1 无法自动检测 Jackson 3.x（因为包名从 `com.fasterxml.jackson`
@@ -51,6 +54,13 @@ public class HibernatePropertiesCustomizer
     // 禁用二级缓存（批量场景优化）
     hibernateProperties.putIfAbsent(AvailableSettings.USE_SECOND_LEVEL_CACHE, false);
     hibernateProperties.putIfAbsent(AvailableSettings.USE_QUERY_CACHE, false);
+
+    // 明确指定 PostgreSQL Dialect，配合 hibernate.temp.use_jdbc_metadata_defaults=false 使用
+    hibernateProperties.putIfAbsent(
+        AvailableSettings.DIALECT, "org.hibernate.dialect.PostgreSQLDialect");
+
+    // PG + HikariCP 公认优化：避免连接建立时 Hibernate 发起额外 JDBC metadata round-trip
+    hibernateProperties.putIfAbsent("hibernate.temp.use_jdbc_metadata_defaults", false);
 
     // 禁用在 JVM 退出时自动创建 SessionFactory
     hibernateProperties.putIfAbsent(AvailableSettings.DELAY_CDI_ACCESS, true);

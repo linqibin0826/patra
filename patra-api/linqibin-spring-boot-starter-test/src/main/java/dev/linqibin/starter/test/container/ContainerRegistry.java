@@ -27,15 +27,16 @@ import org.testcontainers.lifecycle.Startable;
 ///
 /// ```java
 /// // 注册容器
-/// MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0.36");
-/// mysql.start();
-/// ContainerRegistry.register(ContainerType.MYSQL, mysql);
+/// PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17");
+/// postgres.start();
+/// ContainerRegistry.register(ContainerType.POSTGRESQL, postgres);
 ///
 /// // 获取容器
-/// MySQLContainer<?> container = ContainerRegistry.get(ContainerType.MYSQL, MySQLContainer.class);
+/// PostgreSQLContainer<?> container = ContainerRegistry.get(ContainerType.POSTGRESQL,
+///     PostgreSQLContainer.class);
 ///
 /// // 检查是否已注册
-/// if (!ContainerRegistry.isRegistered(ContainerType.MYSQL)) {
+/// if (!ContainerRegistry.isRegistered(ContainerType.POSTGRESQL)) {
 ///     // 初始化容器...
 /// }
 /// ```

@@ -34,14 +34,14 @@
 
 | 类别 | 数量 / 位置 | 工作量 |
 |---|---|---|
-| Flyway 脚本 | **81 张表**（registry 15 / ingest 10 / catalog 55 / object-storage 1），分布在 22 个 V*.sql 文件 | 高 |
+| Flyway 脚本 | **81 张表**（registry 15 / ingest 10 / catalog 55 / object-storage 1），分布在 **26 个 V*.sql 文件**（catalog 15 + registry 9 + ingest 1 + object-storage 1） | 高 |
 | Java native query 含 MySQL JSON 函数 | `VenueDao.findFilteredJournalPage`（3 处 `JSON_UNQUOTE/JSON_EXTRACT`）+ `TaskRunDao` 1 处 `CAST(... AS JSON)` | 中 |
 | Java 错误码映射 | `JpaErrorMappingContributor`（MySQL 1062/1451/1452 switch） | 低 |
 | Spring Batch schema 加载 | `BatchSchemaInitializer`（`schema-mysql.sql` 常量） | 低 |
 | application*.yml | 4 个 boot × {main, dev, prod, test}，5 处 `jdbc:mysql://` URL + 4 处 `driver-class-name` | 低 |
 | Docker Compose / init scripts | `patra-infra/docker/docker-compose.core.yaml` + `.env.dev` + `docker/mysql/init-scripts/02-create-batch-db.sql` | 低 |
 | Testcontainers 初始化器 | `MySQLContainerInitializer` + 2 个子类 + `ContainerType.MYSQL` 枚举 | 低 |
-| `.idea/dataSources.xml` 已入库且含 MySQL URL | git 已跟踪 | 低 + 加 `.gitignore` |
+| `.idea/dataSources.xml` 含 MySQL URL | **已在 `.gitignore` 内，未被 git 跟踪**；属开发者本地 IDE 配置 | 低（迁移后开发者在 IntelliJ 内重建 DataSource） |
 | 文档面 README/CLAUDE/Skill 引用 MySQL | 14+ 个 Markdown 文件 | 中 |
 | 字段重命名（PG 保留字） | `cat_publication_identifier.value` → `identifier_value`（仅此一处） | 低 |
 | LIKE 大小写不敏感语义 | `VenueDao:94` + `PublicationDao:125`：MySQL collation 隐式提供 → PG 改 `ILIKE` 显式 | 低 |
@@ -67,7 +67,7 @@
 | 4.11 | `VARBINARY(16)` (ip_address) | → `bytea`（BaseJpaEntity `byte[] ipAddress` 保持不变） | PG 标准二进制类型，零 Java 代码改动 |
 | 4.12 | Seed 中 `INET6_ATON('192.168.1.10')` | → `'\xC0A8010A'::bytea`（十六进制字面量） | PG 无此函数；只涉及 V1.1.0 极少几条 |
 | 4.13 | `DECIMAL(38, x)` | → `NUMERIC(38, x)` | PG `NUMERIC` 即 ANSI DECIMAL |
-| 4.14 | `AUTO_INCREMENT` | **删除**（37 张表受影响）；统一用应用层雪花 ID | 与 `BaseJpaEntity` "不用 `@GeneratedValue`" 设计一致 |
+| 4.14 | `AUTO_INCREMENT` | **删除**（**53 张表受影响**：catalog 35 + ingest 10 + registry 7 + object-storage 1）；统一用应用层雪花 ID | 与 `BaseJpaEntity` "不用 `@GeneratedValue`" 设计一致 |
 | 4.15 | `TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)` | → `timestamptz(6)` + `set_updated_at()` 触发器函数 + 每张表 `BEFORE UPDATE` 触发器 | PG 无 `ON UPDATE`；触发器加条件 `IF NEW.updated_at IS NOT DISTINCT FROM OLD.updated_at` 避免覆盖 JPA `@LastModifiedDate` 已设置的值 |
 | 4.16 | `TIMESTAMP(6)` 时区语义 | 统一 `timestamptz(6)` | PG 推荐；与现有"UTC 存储"语义一致 |
 | 4.17 | `GENERATED ALWAYS AS (...) STORED` 表达式翻译 | 见 §5.1 逐字段翻译表 | `IFNULL`→`COALESCE`、`IF(x=1,a,b)`→`CASE WHEN x THEN a ELSE b END`、`SUBSTRING_INDEX`→`split_part`；全部 IMMUTABLE |
@@ -78,7 +78,7 @@
 | 4.22 | 数据库默认 collation | PG 标准 **`C` collation**（确定性） | 避免 nondeterministic ICU collation 带来的 B-tree dedup 失效 + LIKE 索引失效 |
 | 4.23 | Case-insensitive LIKE 查询 | `VenueDao:94` / `PublicationDao:125` 改用 **`ILIKE`** 实现 | PG 原生大小写不敏感 LIKE，与 collation 解耦；语义等价 |
 | 4.24 | Java 侧 ICU4J Collator 去重逻辑 | **保留不变**，仅更新注释为"对外部数据源的 collation-aware 去重，与 DB 无关" | 该逻辑在内存中处理解析后对象，与 DB collation 解耦 |
-| 4.25 | PG 保留字字段冲突 | `cat_publication_identifier.value` → 重命名 **`identifier_value`** | 仅此一处真冲突；其他子串字段（`cursor_value`/`new_value`/`window_spec`/`window_from_ts` 等）不是保留字 |
+| 4.25 | PG 保留字字段冲突 | 两处独立 `value` 字段冲突，分别重命名：`cat_publication_identifier.value` → `identifier_value`；`cat_organization_name.value` → `name_value` | `value` 是 PG 保留字（SQL standard reserved）；其他子串字段（`cursor_value`/`new_value`/`window_spec`/`window_from_ts` 等）不是保留字 |
 | 4.26 | `VenueDao.findFilteredJournalPage` JSON 函数 | `JSON_UNQUOTE(JSON_EXTRACT(col, '$.k'))` → `col->>'k'`；`JSON_EXTRACT(col, '$.k')` → `(col->>'k')::numeric` | PG JSONB 原生操作符 |
 | 4.27 | `TaskRunDao` `CAST(:checkpointJson AS JSON)` | → `:checkpointJson::jsonb` | PG 原生 cast 语法 |
 | 4.28 | `PublicationDao` `ORDER BY citation_count IS NULL, citation_count DESC` | → `ORDER BY citation_count DESC NULLS LAST` | PG 默认 `DESC` 是 `NULLS FIRST`（与 MySQL 相反）；显式标注语义 |
@@ -93,8 +93,24 @@
 | 4.37 | JDBC URL 参数 | 移除 `useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&rewriteBatchedStatements=true` | PG 默认 UTF-8；`rewriteBatchedStatements` 是 MySQL 驱动专属 |
 | 4.38 | JDBC 默认用户名 | `root` → `postgres`；密码 `123456` 保持 | PG 镜像惯例 |
 | 4.39 | JDBC 默认端口 | `13306` → `15432`（避开本地默认 5432） | 与 MySQL 13306 端口避让风格一致 |
-| 4.40 | `.idea/dataSources.xml` 已入库 | 加入 `.gitignore` 并 `git rm` 已跟踪文件 | IDE 配置不应入库；迁移后开发者在本地重建 PG 连接 |
+| 4.40 | `.idea/dataSources.xml` 状态 | **已在 `.gitignore` 内（line 11 `.idea`），从未入库** — 不需要 `git rm`；迁移后开发者在本地 IntelliJ 重建 PG DataSource 连接（含 driver-ref、jdbc-url、用户名） | 经 `git ls-files .idea/dataSources.xml` 验证：未跟踪。spec 早前误以为已入库已勘误 |
 | 4.41 | XXL-Job 元数据库 | **不迁移**（明确划出范围） | XXL-Job 3.2.0 元数据 schema 由上游维护；保留 `docker-compose.jobs.yaml` 中专给 XXL-Job 的独立 MySQL 容器 |
+| 4.42 | Flyway 版本号惯例 | 纯整数 `V1__/V2__/V3__/V4__`（每服务从 V1 重新计数） | Flyway 11 Quick Start 推荐；避免历史 `baseline-version` 配置不一致导致空库 |
+| 4.43 | Flyway application.yml 配置 | **删除** `baseline-on-migrate` 与 `baseline-version`；保留 `enabled: true` + `locations: classpath:db/migration` | 绿地空库无历史包袱，让 Flyway 从 V1 全量执行；避免 `baseline-on-migrate: true` 掩盖配置错误（如 URL 指错库时被静默 baseline 而非报错） |
+| 4.44 | Flyway 脚本合并目标态 | **22 文件 → 16 文件**：registry 9→4 / ingest 1→4 / catalog 15→7 / object-storage 1→1 | 详见 §5.6；按聚合根 / 逻辑分组重整，绿地零数据 → 一次性 baseline 重写最佳时机 |
+| 4.45 | Idempotent INSERT 模式 | seed 中 `INSERT ... WHERE NOT EXISTS` → `INSERT ... ON CONFLICT (...) DO NOTHING` | PG 原生幂等惯用法，比 WHERE NOT EXISTS 子查询简洁、性能更好 |
+| 4.46 | Registry 6 条物理外键 | **删除**（仅 V1.0.1 内 6 条 `reg_prov_*_cfg → reg_provenance` FK） | 与项目"逻辑外键 + 应用层校验"模式统一；现存仅 registry V1.0.1 是特例；改为列注释 `-- 逻辑外键 → reg_provenance.id` |
+| 4.47 | PG Partial Index 优化（可选但顺手） | ingest 队列扫描索引改为 partial：`ing_task.idx_task_queue WHERE status_code IN ('PENDING','QUEUED')`、`ing_outbox_message.idx_pending_relay WHERE status_code='PENDING'`、`idx_publishing_lease WHERE status_code='PUBLISHING'` | PG partial index 仅索引子集，体积更小、扫描更快；与现有查询条件 100% 对齐；零业务行为变更 |
+| 4.48 | 共享 `set_updated_at()` 函数策略 | **方案 A**：每服务首个 Flyway 脚本顶部独立定义（`CREATE OR REPLACE` 保证幂等） | 与项目"服务自包含"原则一致；避免方案 B（跨 starter classpath 共享）破坏 Testcontainers 独立测试，避免方案 C（Docker init-script）破坏托管 PG 适配性 |
+| 4.49 | `CREATE TABLE IF NOT EXISTS` | **删除**（替换为 `CREATE TABLE`） | 绿地 baseline 反模式：`IF NOT EXISTS` 会掩盖建库错误；空库下应让 Flyway 在表已存在时立刻报错 |
+| 4.50 | Catalog 冗余索引清理 | 删除 4 处明确冗余索引：`cat_publication_author.idx_publication`、`cat_publication_author_affiliation.idx_pub_author`、`cat_publication_keyword.idx_major`（合并入 keyword_pub 复合）、`cat_venue_identifier.idx_venue_id` | 这些字段均已被同表 UNIQUE 索引的首列覆盖；保留属重复 |
+| 4.51 | 测试代码中 hardcoded MySQL JDBC URL / 容器 | 替换 3 处 spec 此前未点的 Java 测试代码：`DualDataSourceIT.java:28/44`（两处 `@SpringBootTest(properties=...)` 含 `jdbc:tc:mysql:8.0.40`）+ `BatchDataSourceConfigurationTest.java:26-27`（直接 `new MySQLContainer<>("mysql:8.0.36")`）+ `BatchPropertiesTest.java:80`（hardcoded `jdbc:mysql://localhost:3306/batch_meta`，仅单测字符串非空判断但保持一致性也需替换） | 仅修 `application-test.yml` 不够，Java 代码内还有 3 处镜像/URL 引用 |
+| 4.52 | Hibernate metadata 探测优化（PG+Hikari 公认） | 在 `HibernatePropertiesCustomizer` 中追加 `hibernate.temp.use_jdbc_metadata_defaults=false` | 避免 HikariCP 建立连接时 Hibernate 发起额外 JDBC metadata round-trip；PG 与 Hikari 组合的标准优化建议 |
+| 4.53 | Spring Data 派生方法 `IgnoreCase` 索引失效问题 | 在 catalog Flyway DDL 中为 `cat_author.display_name` 与 `cat_author_name_variant.last_name` 追加函数索引：`CREATE INDEX idx_author_display_name_lower ON cat_author (lower(display_name));` / `CREATE INDEX idx_author_variant_last_name_lower ON cat_author_name_variant (lower(last_name));` | MySQL `0900_ai_ci` 下 `findByXxxContainingIgnoreCase` 派生方法走表级 collation，B-tree 索引可用；PG 下 Hibernate 生成 `LOWER(col) LIKE LOWER(?)`，B-tree 失效，必须用函数索引兜底 |
+| 4.54 | collation 依赖的 IT 测试断言 | `MeshScrRepositoryAdapterIT:346-348` 与 `MeshDescriptorRepositoryAdapterIT:322-324` 注释明说断言行为取决于 collation（`0900_ai_ci` 多匹配 vs `_bin` 单匹配）；PG `C` collation 下结果会确定为"单匹配"，**迁移后重跑这两个测试并更新断言注释**（从"记录实际行为"改为"PG `C` collation 下确定单匹配"） | 测试代码已显式承认 collation 依赖；PG 切换后行为变化是确定的 |
+| 4.55 | DB collation vs Java ICU4J Collator 语义边界 | 显式声明：**DB collation = `C`**（确定性，索引/dedup 性能优先，§4.22）；**Java 内存去重 = ICU4J PRIMARY**（语义对齐外部数据源的 accent-/case-insensitive 期望，§4.24）；两者刻意解耦不必对齐 | 防止迁移后有人误以为 ICU4J 注释过时而删除；这是设计意图而非历史遗留 |
+| 4.56 | `.codex/agents/test-checker.toml:47` 同步更新 | spec §6 M7 step 34 仅点了 `.claude/agents/test-checker.md:52`，需追加 `.codex/agents/test-checker.toml:47` — 两文件均含 `MySQLContainerInitializer` 字样，同步重命名为 `PostgreSQLContainerInitializer` | 避免 Codex 与 Claude Code 两套 agent 配置不一致 |
+| 4.57 | `patra-infra/.claude/CLAUDE.md` 5 处更新 | 5 行需替换：line 15 `# 核心服务（MySQL/Redis/Consul）` → PostgreSQL；line 62 `MySQL \| ~/.patra/docker/mysql/data` → `PostgreSQL \| ~/.patra/docker/postgres/data`；line 72 `MySQL \| 13306 \| root / 123456` → `PostgreSQL \| 15432 \| postgres / 123456`；line 88 `lsof -i :13306` 注释 → `lsof -i :15432`；line 124 `MySQL + Redis + Consul` → `PostgreSQL + Redis + Consul` | 该文件是 patra-infra 仓库开发入口文档，端口/路径错误会导致运维操作失败 |
 
 ---
 
@@ -144,9 +160,10 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 | 表 | 旧字段 | 新字段 | 受影响 Java 文件 |
 |---|---|---|---|
-| `cat_publication_identifier` | `value` | `identifier_value` | `PublicationIdentifierEntity.java` 的 `@Column(name="value")` → `@Column(name="identifier_value")`；Java 属性名 `value` 保持不变（不是保留字） |
+| `cat_publication_identifier` | `value` | `identifier_value` | `PublicationIdentifierEntity.java:53` 的 `@Column(name="value")` → `@Column(name="identifier_value")`；Java 属性名 `value` 保持不变 |
+| `cat_organization_name` | `value` | `name_value` | `OrganizationNameEntity.java:59` 的 `@Column(name="value")` → `@Column(name="name_value")`；**同时更新 `:46` `@UniqueConstraint(columnNames = {"org_id", "value", "lang"})` 中的 `"value"` 为 `"name_value"`**；**同时更新 `:50` `@Index(columnList = "value")` 为 `columnList = "name_value"`**；Java 属性名 `value` 保持不变 |
 
-仅此 1 处真冲突。其他名字（`cursor_value` / `new_value` / `prev_value` / `observed_max_value` / `window_spec` / `window_from_ts` / `window_to_ts` / `effective_from` / `effective_to` / `last_synced_at`）含保留字子串但本身不是保留字，PG 接受无需引号。
+2 处真冲突均为同名 `value`（PG SQL 标准保留字）。其他名字（`cursor_value` / `new_value` / `prev_value` / `observed_max_value` / `window_spec` / `window_from_ts` / `window_to_ts` / `effective_from` / `effective_to` / `last_synced_at`）含保留字子串但本身不是保留字，PG 接受无需引号。
 
 ### 5.4 ILIKE 改写
 
@@ -189,6 +206,106 @@ CREATE DATABASE patra_storage;
 CREATE DATABASE patra_batch;
 ```
 
+### 5.6 Flyway 脚本结构重整方案（一次性 baseline）
+
+绿地零数据 + 切换 DB 引擎 + 重写 DDL 是结构重整的最佳窗口。3 个调研代理的产出汇总如下。
+
+#### 5.6.1 目标文件清单（22 → 16）
+
+| 服务 | 现状 | 目标 | 变化 |
+|---|---|---|---|
+| `patra-registry-infra` | 9 文件（3 DDL + 6 seed） | **4 文件**（1 DDL + 3 主题 seed） | DDL 三合一；V1.4.0 NAME_ZH 标准分别并入 country/language seed |
+| `patra-ingest-infra` | 1 文件（10 表全合在一个 575 行文件） | **4 文件**（按 4 大业务分组拆分） | 拆分提升可读性与 PR review 友好度 |
+| `patra-catalog-infra` | 15 文件（按迭代版本时序累积） | **7 文件**（按聚合根/子系统归并） | publication 5 文件合 1；mesh 2 合 1；author/organization 2 合 1；rating 并入 venue |
+| `patra-object-storage-infra` | 1 文件 | **1 文件** | 仅 1 张表，无需拆 |
+
+#### 5.6.2 patra-registry 目标态（4 文件）
+
+| 新文件 | 来源 | 内容 | 估行 |
+|---|---|---|---|
+| `V1__init_registry_schema.sql` | V1.0.0 + V1.0.1 + V1.0.2 | sys_dict 4 表 + reg_provenance + reg_prov_*_cfg 6 表 + reg_expr_* 4 表（共 15 表）；含 `set_updated_at()` 函数与全部 BEFORE UPDATE 触发器；**移除 6 条物理 FK**；移除 `DROP TABLE IF EXISTS` 与 `ROW_FORMAT=DYNAMIC` | ~550 |
+| `V2__seed_provenance_expr.sql` | V1.1.0（原内容） | provenance 配置 + expr 能力/渲染规则 seed | ~230 |
+| `V3__seed_dict_country.sql` | V1.2.0 + V1.4.0 (country NAME_ZH) + V1.4.1 | country sys_dict_type + 3 reference_standard（含 NAME_ZH）+ 249 items + 249 NAME_EN alias + 249 NAME_ZH alias | ~380 |
+| `V4__seed_dict_language.sql` | V1.3.0 + V1.4.0 (language NAME_ZH) + V1.4.2 | language sys_dict_type + 4 reference_standard（含 NAME_ZH）+ 50 items + 60 ISO_639_3 alias + 50 NAME_EN alias + 50 NAME_ZH alias | ~260 |
+
+V1.4.0 单独文件消失（仅 2 条 NAME_ZH 标准记录，按 country/language 主题分别并入）。
+
+#### 5.6.3 patra-ingest 目标态（4 文件）
+
+| 新文件 | 来源 | 内容 | 估行 |
+|---|---|---|---|
+| `V1__init_ingest_scheduling.sql` | V0.1.0 第 1-3 段 | `ing_schedule_instance` + `ing_plan`（调度根）；含 `set_updated_at()` 函数定义 | ~150 |
+| `V2__init_ingest_execution.sql` | V0.1.0 第 4-6 段 | `ing_plan_slice` + `ing_task` + `ing_task_run` + `ing_task_run_batch`（执行链）；含 partial index 优化 | ~250 |
+| `V3__init_ingest_cursor.sql` | V0.1.0 第 7-8 段 | `ing_cursor`（可变）+ `ing_cursor_event`（追加事件） | ~120 |
+| `V4__init_ingest_outbox.sql` | V0.1.0 第 9-10 段 | `ing_outbox_message` + `ing_outbox_relay_log`；含 partial index 优化 | ~150 |
+
+#### 5.6.4 patra-catalog 目标态（7 文件）
+
+| 新文件 | 来源 | 内容 | 估行 |
+|---|---|---|---|
+| `V1__create_venue.sql` | V1.0.0 + V1.0.1 | venue 聚合 7 表 + venue rating 4 表 = 11 表；含 `set_updated_at()` 函数 | ~700 |
+| `V2__create_publication.sql` | V1.1.0 + V1.1.1 + V1.1.2 + V1.4.3 + V1.5.1 | publication 主 + identifier + abstract + date/metadata/alt_abstract/oa_location + reference + type + supplemental 4 表 = 13 表 | ~1050 |
+| `V3__create_author.sql` | V1.2.0 + V1.2.1 | author + author_name_variant + author_orcid + publication_author + publication_author_affiliation = 5 表 | ~400 |
+| `V4__create_organization.sql` | V1.3.0 + V1.3.1 | organization 5 表（含 **`cat_organization_name.value` → `name_value` 重命名**）+ investigator 3 表 = 8 表 | ~500 |
+| `V5__create_mesh.sql` | V1.4.0 + V1.4.1 | mesh descriptor/qualifier 子系统 10 表 + mesh SCR 子系统 5 表 = 15 表 | ~750 |
+| `V6__create_keyword.sql` | V1.4.2 | keyword + publication_keyword = 2 表 | ~140 |
+| `V7__create_funding.sql` | V1.5.0 | publication_funding = 1 表 | ~100 |
+
+合并的关键决策：
+- Publication 散落 5 个文件 → 合 1（V2）：publication 是 catalog 的核心聚合，本就该聚合到一处；
+- MeSH descriptor 与 MeSH SCR 强耦合（V1.4.1 文件头明确标注"依赖 V1.4.0"，且 `cat_publication_suppl_mesh` 引用 `cat_mesh_scr.ui`）→ 合 1（V5）；
+- Investigator 在概念上属于 Organization 子系统的研究者扩展 → 并入 V4；如未来 investigator 独立性变强可再拆。
+
+#### 5.6.5 patra-object-storage 目标态（1 文件）
+
+`V1__init_storage_schema.sql` —— `storage_file_metadata` 单表，保持不变；含 `set_updated_at()` 函数。
+
+#### 5.6.6 跨服务共享 SQL（方案 A）
+
+`set_updated_at()` 函数在每个服务的 `V1__` 脚本顶部独立定义：
+
+```sql
+CREATE OR REPLACE FUNCTION set_updated_at() RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.updated_at IS NOT DISTINCT FROM OLD.updated_at THEN
+    NEW.updated_at = now();
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+`CREATE OR REPLACE` 保证幂等；4 处重复是可接受的解耦成本。否决方案 B（共享 starter classpath，破坏 Testcontainers 独立测试）和方案 C（Docker init-script，破坏托管 PG 部署）。
+
+#### 5.6.7 Flyway 应用配置目标态
+
+各 boot 模块 `application.yml` 中 Flyway 配置简化为：
+
+```yaml
+spring:
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+```
+
+**删除**：
+- `baseline-on-migrate: true` —— 空库不需要 baseline；保留它会在 URL 指错库时被静默 baseline 而非报错；
+- `baseline-version: 0.1.0` / `baseline-version: 1.5.1` —— 与 `baseline-on-migrate` 配套删除；不同服务的 baseline-version 历史不一致（catalog 是 `1.5.1`，ingest 是 `0.1.0`），合并 baseline 后这个不一致也一并消除。
+
+`validate-on-migrate` 保持默认 `true`（Flyway 最关键的安全机制，防止已应用脚本被改）。
+
+#### 5.6.8 PG Partial Index 应用（顺手优化）
+
+在 ingest 重写时落地 3 个 partial index（与现有查询完全等价，仅索引体积/扫描效率优化）：
+
+| 表 | 原索引 | PG partial 改写 |
+|---|---|---|
+| `ing_task` | `idx_task_queue (status_code, leased_until, priority, scheduled_at, id)` | `CREATE INDEX idx_task_queue ON ing_task (leased_until, priority, scheduled_at, id) WHERE status_code IN ('PENDING','QUEUED');` |
+| `ing_outbox_message` | `idx_pending_relay (channel, status_code, not_before, id)` | `CREATE INDEX idx_pending_relay ON ing_outbox_message (channel, not_before, id) WHERE status_code = 'PENDING';` |
+| `ing_outbox_message` | `idx_publishing_lease (channel, status_code, pub_leased_until, id)` | `CREATE INDEX idx_publishing_lease ON ing_outbox_message (channel, pub_leased_until, id) WHERE status_code = 'PUBLISHING';` |
+
+注意：PG partial index 的列顺序需要与典型 query 的 `ORDER BY` 匹配；上述改写已对齐现有查询。
+
 ---
 
 ## 6. 实施清单（按依赖顺序）
@@ -204,7 +321,7 @@ CREATE DATABASE patra_batch;
 5. `patra-infra/docker/docker-compose.core.yaml`：mysql 服务整段替换。
 6. `patra-infra/docker/.env.dev`：`MYSQL_*` → `POSTGRES_*`。
 7. 重写 `patra-infra/docker/mysql/init-scripts/02-create-batch-db.sql` → `patra-infra/docker/postgres/init-scripts/02-create-databases.sql`。
-8. 删除 git 中的 `.idea/dataSources.xml` 系列文件，把它们加入 `.gitignore`。
+8. `.idea/dataSources.xml` 已在 `.gitignore` 内（line 11 `.idea`），从未入库，**无需 git 操作**；迁移完成后由开发者在 IntelliJ 中手动重建 PG DataSource（driver-ref、jdbc-url、用户名、ServerVersion 全部按 §4.34 / §4.38 / §4.39 设置）。
 
 **验证**：`cd patra-infra && docker compose -f docker/docker-compose.core.yaml up -d postgres && docker exec -it patra-postgres psql -U postgres -c '\l'`。
 
@@ -221,28 +338,55 @@ CREATE DATABASE patra_batch;
 12. `JpaErrorMappingContributor`：在 `mapSqlExceptions` 中删除 MySQL 1062/1451/1452 的 switch 分支与相关注释（PG 上永远不会命中）；保留现有的 `SQLIntegrityConstraintViolationException → CONFLICT` 和 `SQLState 08*/HY* → UNAVAILABLE` 通用分支不变（`23*` 这类 PG 完整性错误由 Spring Data 在上游已包装为 `DataIntegrityViolationException`，已在 `mapSpringDataExceptions` 中映射为 CONFLICT）。同步更新 `linqibin-spring-boot-starter-jpa/README.md` 中错误码对照表（1062→23505、1451/1452→23503，仅文档对照用途）。
 13. `BatchSchemaInitializer.SCHEMA_RESOURCE` → `db/batch/schema-postgresql.sql`；删除 `linqibin-spring-boot-starter-batch/src/main/resources/db/batch/schema-mysql.sql`；从 Spring Batch 5 jar 抽取 `org/springframework/batch/core/schema-postgresql.sql` 放到 `db/batch/schema-postgresql.sql`。
 14. `linqibin-spring-boot-starter-batch/src/test/resources/application-test.yml`：`jdbc:tc:mysql:8.0.40:///test_batch?TC_TMPFS=...` → `jdbc:tc:postgresql:17:///test_batch`。
+14a. **batch starter 测试代码同步替换 3 处 hardcoded MySQL 引用**（§4.51）：
+    - `DualDataSourceIT.java:28`：`"linqibin.starter.batch.datasource.url=jdbc:tc:mysql:8.0.40:///batch_meta_db"` → `jdbc:tc:postgresql:17:///batch_meta_db`；
+    - `DualDataSourceIT.java:44`：`"spring.datasource.url=jdbc:tc:mysql:8.0.40:///test_batch"` → `jdbc:tc:postgresql:17:///test_batch`；
+    - `BatchDataSourceConfigurationTest.java:13/26-27`：`import org.testcontainers.containers.MySQLContainer` → `PostgreSQLContainer`；`new MySQLContainer<>("mysql:8.0.36")` → `new PostgreSQLContainer<>("postgres:17")`；
+    - `BatchPropertiesTest.java:80`：`"jdbc:mysql://localhost:3306/batch_meta"` → `"jdbc:postgresql://localhost:5432/batch_meta"`。
+14b. **Hibernate metadata 探测优化**（§4.52）：在 `HibernatePropertiesCustomizer.java` 中追加 `hibernateProperties.putIfAbsent("hibernate.temp.use_jdbc_metadata_defaults", false);`。
 
 **验证**：`./gradlew :linqibin-spring-boot-starter-jpa:test :linqibin-spring-boot-starter-batch:test`。
 
-### M4. Flyway DDL 全量重写（按服务）
+### M4. Flyway DDL 重写并按 §5.6 目标态合并（按服务）
 
-15. **patra-registry**（V1.0.0 sys_dict 4 表 + V1.0.1 reg_prov_* 12 表 + V1.0.2 reg_expr_* 3 表 + V1.1.0/V1.2.0/V1.3.0/V1.4.x seed/ddl 共 8 文件）：
-    - 删除所有 `ENGINE/CHARSET/COLLATE/ROW_FORMAT`、`AUTO_INCREMENT`、`UNSIGNED`、`ON UPDATE`、反引号；
-    - 类型替换（`BIGINT UNSIGNED`/`TINYINT(1)`/`JSON`/`VARBINARY(16)`/`DECIMAL(38,12)`/`TIMESTAMP(6)` → §4 表格）；
-    - 6 条 `REGEXP_LIKE` CHECK → `~` 操作符；
-    - 5 处 generated column 表达式重写（§5.1）；
-    - 在 V1.0.0 首文件顶部注入 `set_updated_at()` 函数；
-    - 每张含 `updated_at` 的表后追加 `BEFORE UPDATE` 触发器；
-    - V1.1.0/V1.2.0/V1.3.0/V1.4.0 中 seed 数据：所有 `is_xxx=1/0` 改 `true/false`；`INET6_ATON('192.168.1.10')` → `'\xC0A8010A'::bytea`；`JSON_ARRAY(...)` → `jsonb_build_array(...)`；`JSON_OBJECT(...)` → `jsonb_build_object(...)`；`NOW(6)` → `CURRENT_TIMESTAMP`。
-16. **patra-ingest**（V0.1.0 共 10 表）：同样的逐项替换。
-17. **patra-catalog**（V1.0.0–V1.5.1 共 15 文件 55 表）：
-    - 同上替换；
-    - **额外**：`cat_publication_identifier.value` → `identifier_value`；
-    - **额外**：6 个 `CREATE FULLTEXT INDEX ... WITH PARSER ngram` 语句全部删除；
-    - V1.1.0 中 `language_base` 生成列表达式 → `split_part`。
-18. **patra-object-storage**（V0.1.0 共 1 表）：同上替换。
+每个服务的步骤：**删除现有 V*.sql 文件 → 按 §5.6 目标清单创建新 V*.sql → 重写为 PG 语法**。所有服务通用的语法替换清单：
 
-**验证**：对每个服务执行 `./gradlew :patra-<service>-infra:test` + 启动 boot `./gradlew :patra-<service>-boot:bootRun`，确认 Flyway 全部 migration 成功。
+- 删除：`ENGINE/CHARSET/COLLATE/ROW_FORMAT`、`AUTO_INCREMENT`、`UNSIGNED`、`ON UPDATE CURRENT_TIMESTAMP(6)`、反引号、`CREATE TABLE IF NOT EXISTS` 中的 `IF NOT EXISTS`、`DROP TABLE IF EXISTS`；
+- 类型替换（详见 §4.5/4.9/4.11/4.13/4.16）：`BIGINT UNSIGNED → BIGINT`、`TINYINT(1)/BOOLEAN → BOOLEAN`、`JSON → jsonb`、`VARBINARY(16) → bytea`、`DECIMAL(38,x) → NUMERIC(38,x)`、`TIMESTAMP(6) → timestamptz(6)`；
+- CHECK：`REGEXP_LIKE(col, 'pat')` → `col ~ 'pat'`；
+- 函数：`IFNULL → COALESCE`、`IF(x=1,a,b) → CASE WHEN x THEN a ELSE b END`、`SUBSTRING_INDEX → split_part`、`JSON_ARRAY → jsonb_build_array`、`JSON_OBJECT → jsonb_build_object`、`NOW(6) → CURRENT_TIMESTAMP`、`INET6_ATON('a.b.c.d') → '\xHEX'::bytea`；
+- seed 中 boolean 字面量 `0`/`1` → `false`/`true`；
+- seed 中 `INSERT ... WHERE NOT EXISTS` → `INSERT ... ON CONFLICT (...) DO NOTHING`；
+- 每个 `V1__` 脚本顶部注入 `set_updated_at()` 函数（§5.2 / §5.6.6）；
+- 每张含 `updated_at` 字段的表追加 `BEFORE UPDATE` 触发器。
+
+**逐服务专项动作**：
+
+15. **patra-registry** → 4 个新文件（§5.6.2）：
+    - 删除 9 个旧 V*.sql 文件；
+    - 创建 `V1__init_registry_schema.sql`（合并 3 个 DDL）—— **移除 6 条物理 FK 改为列注释**（§4.46）；
+    - 创建 `V2__seed_provenance_expr.sql`（重写自 V1.1.0）；
+    - 创建 `V3__seed_dict_country.sql`（合并 V1.2.0 + V1.4.0 country + V1.4.1）；
+    - 创建 `V4__seed_dict_language.sql`（合并 V1.3.0 + V1.4.0 language + V1.4.2）。
+16. **patra-ingest** → 4 个新文件（§5.6.3）：
+    - 删除 V0.1.0；
+    - 创建 `V1__init_ingest_scheduling.sql`（ing_schedule_instance + ing_plan）；
+    - 创建 `V2__init_ingest_execution.sql`（4 表执行链 + `idx_task_queue` partial index §5.6.8）；
+    - 创建 `V3__init_ingest_cursor.sql`（ing_cursor + ing_cursor_event）；
+    - 创建 `V4__init_ingest_outbox.sql`（2 张 outbox 表 + 2 个 partial index §5.6.8）。
+17. **patra-catalog** → 7 个新文件（§5.6.4）：
+    - 删除 15 个旧 V*.sql 文件；
+    - 创建 V1（venue + rating）/ V2（publication 集大成）/ V3（author）/ V4（organization + investigator）/ V5（mesh + mesh SCR）/ V6（keyword）/ V7（funding）；
+    - 6 个 `CREATE FULLTEXT INDEX ... WITH PARSER ngram` 全部删除（§4.19）；
+    - `cat_publication_identifier.value` 重命名为 `identifier_value`（§5.3）；
+    - `cat_publication.language_base` 生成列 → `split_part(language_code, '-', 1)`；
+    - 删除 §4.50 列出的 4 处冗余索引；
+    - **追加 2 条函数索引**（§4.53）：在 V3__create_author.sql 中 `cat_author` 与 `cat_author_name_variant` 各加 `CREATE INDEX ... ON ... (lower(...))`；
+    - **`cat_organization_name.value` → `name_value` 重命名**（§4.25 / §5.3）：在 V4__create_organization.sql 中改 DDL、唯一约束、索引；同步 `OrganizationNameEntity.java:46/50/59` 的 `@Column(name)` / `@UniqueConstraint(columnNames)` / `@Index(columnList)`。
+18. **patra-object-storage** → 1 个新文件（§5.6.5）：
+    - 重写 V0.1.0 → `V1__init_storage_schema.sql`，含 `set_updated_at()` 函数。
+
+**验证**：对每个服务执行 `./gradlew :patra-<service>-infra:test` + 启动 boot `./gradlew :patra-<service>-boot:bootRun`，确认 Flyway 从 V1 起全量 migration 成功（`flyway_schema_history` 中应见 4/4/7/1 条已应用记录）。
 
 ### M5. Java 应用代码修复
 
@@ -255,6 +399,7 @@ CREATE DATABASE patra_batch;
 25. `PublicationRepositoryAdapter` / `RorOrganizationParser` / `PubMedComputedAuthorParser` 中"匹配 MySQL `utf8mb4_0900_ai_ci`"注释改为"用于解析后对象去重的 collation-aware 处理（与 DB 无关）"。
 26. `BaseJpaEntity` 中 JSON 注释保持（已写"PG → JSONB，MySQL → JSON"，迁移后可简化）。
 27. `commons-core/StringUtils.java` LIKE ESCAPE 注释里"MySQL"字样改为通用描述（PG 行为一致）。
+27a. **collation 依赖的 IT 测试断言更新**（§4.54）：在 PG 容器跑起来后重跑 `MeshScrRepositoryAdapterIT` / `MeshDescriptorRepositoryAdapterIT`，把 line 346-348 / 322-324 的"匹配多/单依赖 collation"注释改为"PG `C` collation 下确定单匹配"，断言相应调整。
 
 **验证**：`./gradlew test` 全量。
 
@@ -265,13 +410,15 @@ CREATE DATABASE patra_batch;
 30. 4 个 `application-prod.yml`：保留 `${INGEST_DB_URL}` 等环境变量占位符（实际部署侧由运维注入 PG URL）。
 31. object-storage `application-dev.yml:3` 默认值 `jdbc:mysql://localhost:13306/...` → PG URL。
 32. 各 boot `application-dev.yml` 中数据库账号 `root` → `postgres`（密码 `123456` 保持）。
+32a. **删除所有 boot 模块 `application.yml` 中的** `spring.flyway.baseline-on-migrate` 与 `spring.flyway.baseline-version`（§4.43 / §5.6.7）；保留 `enabled: true` + `locations: classpath:db/migration`。
 
 **验证**：每个 boot 模块 `./gradlew :patra-<service>-boot:bootRun`。
 
 ### M7. 文档同步
 
 33. `.claude/rules/project-info.md`：`MySQL 8.x` → `PostgreSQL 17`。
-34. `.claude/agents/test-checker.md`：`MySQLContainerInitializer` → `PostgreSQLContainerInitializer`。
+34. `.claude/agents/test-checker.md:52` 与 `.codex/agents/test-checker.toml:47`（§4.56）：两文件均含 `MySQLContainerInitializer` → 同步改为 `PostgreSQLContainerInitializer`。
+34a. **`patra-infra/.claude/CLAUDE.md` 5 处替换**（§4.57）：lines 15/62/72/88/124 端口（13306→15432）/ 路径（`mysql`→`postgres`）/ 服务名（MySQL→PostgreSQL）/ 默认账号（root→postgres）。
 35. 根 `README.md`、`patra-ingest/README.md`、`patra-object-storage/README.md`：技术栈/端口/启动命令统一替换。
 36. `linqibin-spring-boot-starter-jpa/README.md`：错误码对照表 1062/1451/1452 → 23505/23503/23502/23514。
 37. `linqibin-spring-boot-starter-test/README.md`：MySQLContainerInitializer 用例改为 PG。
@@ -326,6 +473,8 @@ CREATE DATABASE patra_batch;
 | 10.4 | Spring Batch 5 实际 `schema-postgresql.sql` 内容与 Boot 4 BOM 版本对齐 | M3 阶段从依赖 jar 中抽取最新版本写入项目 |
 | 10.5 | XXL-Job 容器与新 postgres 容器在同一 Docker network 不冲突 | M1 阶段两个 compose 文件分别 up，端口与容器名不撞 |
 | 10.6 | catalog `ILIKE` 改写后查询结果与 MySQL 原 collation 行为完全等价 | M5 阶段抽取一份典型用例，比对 MySQL/PG 返回结果集 |
+| 10.7 | HikariCP `maximum-pool-size` 在 PG 进程模型下的合理性（catalog 设了 20，其余 10） | M6 后用代表性并发跑一遍，观察 PG `pg_stat_activity` 活跃连接数 vs `max_connections`，必要时下调 |
+| 10.8 | 函数索引 `lower(display_name)` / `lower(last_name)` 在 PG 上确实被 Spring Data 派生方法 `ContainingIgnoreCase` 命中 | M4 后 `EXPLAIN ANALYZE` 一条典型 Author 查询确认 |
 
 ---
 

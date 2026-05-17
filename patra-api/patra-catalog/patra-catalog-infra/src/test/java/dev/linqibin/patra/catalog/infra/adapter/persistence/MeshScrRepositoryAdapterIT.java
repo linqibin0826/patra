@@ -11,7 +11,7 @@ import dev.linqibin.patra.catalog.domain.model.vo.mesh.IndexingInfo;
 import dev.linqibin.patra.catalog.domain.model.vo.mesh.MeshUI;
 import dev.linqibin.patra.catalog.domain.model.vo.mesh.PharmacologicalAction;
 import dev.linqibin.patra.catalog.domain.model.vo.mesh.ScrSource;
-import dev.linqibin.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
+import dev.linqibin.patra.catalog.infra.config.CatalogPostgreSQLContainerInitializer;
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshConceptDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshScrDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshScrHeadingMappedToDao;
@@ -38,19 +38,19 @@ import org.springframework.test.context.ContextConfiguration;
 
 /// MeSH SCR 仓储实现集成测试（JPA 版本）。
 ///
-/// 使用 Testcontainers + MySQL 8 测试批量保存操作。
+/// 使用 Testcontainers + PostgreSQL 17 测试批量保存操作。
 ///
 /// **测试策略**：
 ///
-/// - 集成测试：使用真实 MySQL 数据库
+/// - 集成测试：使用真实 PostgreSQL 数据库
 /// - 测试隔离：每个测试方法独立，使用 @Transactional 自动回滚
-/// - TestContainers：自动启动和停止 MySQL 容器
+/// - TestContainers：自动启动和停止 PostgreSQL 容器
 /// - 测试覆盖：hasAnyData、insertAll（聚合根批量插入）、findAllByNameIn
 ///
 /// @author linqibin
 /// @since 0.1.0
 @DataJpaTest
-@ContextConfiguration(initializers = CatalogMySQLContainerInitializer.class)
+@ContextConfiguration(initializers = CatalogPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({MeshScrRepositoryAdapter.class, JpaAuditingConfig.class, JacksonAutoConfiguration.class})
 @ComponentScan(basePackages = "dev.linqibin.patra.catalog.infra.persistence.converter")
@@ -340,12 +340,9 @@ class MeshScrRepositoryAdapterIT {
                   "Aspirin" // 正确大小写
                   ));
 
-      // Then: 只有正确大小写的名称匹配
-      // 注意：MySQL 默认排序规则可能是大小写不敏感的，这里验证实际行为
+      // Then: PG `C` collation（spec §4.22）大小写敏感，确定匹配单个
+      assertThat(result).hasSize(1);
       assertThat(result).containsKey("Aspirin");
-      // 如果 MySQL 使用 utf8mb4_0900_ai_ci（大小写不敏感），则可能匹配多个
-      // 如果使用 utf8mb4_bin（大小写敏感），则只匹配一个
-      // 此测试记录实际行为
     }
   }
 

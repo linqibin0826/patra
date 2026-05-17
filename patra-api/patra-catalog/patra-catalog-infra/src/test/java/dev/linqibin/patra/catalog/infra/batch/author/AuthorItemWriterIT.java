@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.linqibin.patra.catalog.domain.model.aggregate.AuthorAggregate;
 import dev.linqibin.patra.catalog.infra.adapter.persistence.AuthorRepositoryAdapter;
-import dev.linqibin.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
+import dev.linqibin.patra.catalog.infra.config.CatalogPostgreSQLContainerInitializer;
 import dev.linqibin.patra.catalog.infra.persistence.dao.AuthorDao;
 import dev.linqibin.patra.catalog.infra.persistence.entity.AuthorEntity;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
@@ -33,7 +33,7 @@ import tools.jackson.databind.ObjectMapper;
 ///
 /// **测试策略**：
 ///
-/// - 使用 TestContainers + MySQL 测试数据库写入
+/// - 使用 TestContainers + PostgreSQL 测试数据库写入
 /// - 验证解析后的数据能正确保存到数据库
 /// - 测试隔离：每个测试方法独立，使用 @Transactional 自动回滚
 ///
@@ -46,7 +46,7 @@ import tools.jackson.databind.ObjectMapper;
 /// @author linqibin
 /// @since 0.1.0
 @DataJpaTest
-@ContextConfiguration(initializers = CatalogMySQLContainerInitializer.class)
+@ContextConfiguration(initializers = CatalogPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
   AuthorItemWriter.class,

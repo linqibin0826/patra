@@ -122,9 +122,8 @@ public interface PublicationDao extends JpaRepository<PublicationEntity, Long> {
   ///
   /// **关键词匹配契约**：
   ///
-  /// - 大小写不敏感依赖 `cat_publication` 表级 collation `utf8mb4_0900_ai_ci`
-  ///   （见 `V1.1.0__create_publication_aggregate.sql`）；未使用 `LOWER()`，
-  ///   但因查询形态为 infix 匹配（`%keyword%`）本身即不可能命中 B-tree 前缀索引
+  /// - 使用 `ILIKE` 实现大小写不敏感（与 DB collation 解耦）；
+  ///   因查询形态为 infix 匹配（`%keyword%`）本身即不可能命中 B-tree 前缀索引
   /// - **调用方契约**：`:keyword` 必须是已通过 `StringUtils.escapeLike()`
   ///   转义的字符串，查询内置 `ESCAPE '!'` 子句与之配套，防止用户输入的
   ///   `%` / `_` 被当作通配符
@@ -144,21 +143,45 @@ public interface PublicationDao extends JpaRepository<PublicationEntity, Long> {
   /// @param pageable 分页参数
   /// @return 分页结果
   @Query(
-      """
-      SELECT p FROM PublicationEntity p
-      WHERE (:keyword IS NULL OR p.title LIKE CONCAT('%', :keyword, '%') ESCAPE '!')
-        AND (:yearFrom IS NULL OR p.publicationYear >= :yearFrom)
-        AND (:yearTo IS NULL OR p.publicationYear <= :yearTo)
-        AND (:languageBase IS NULL OR p.languageBase = :languageBase)
-        AND (:isOa IS NULL OR p.isOa = :isOa)
-        AND (:oaStatus IS NULL OR p.oaStatus = :oaStatus)
-        AND (:venueId IS NULL OR p.venueId = :venueId)
-        AND (:venueInstanceId IS NULL OR p.venueInstanceId = :venueInstanceId)
+      value =
+          """
+      SELECT * FROM cat_publication p
+      WHERE (:keyword IS NULL OR p.title ILIKE CONCAT('%', CAST(:keyword AS text), '%') ESCAPE '!')
+        AND (:yearFrom IS NULL OR p.publication_year >= :yearFrom)
+        AND (:yearTo IS NULL OR p.publication_year <= :yearTo)
+        AND (:languageBase IS NULL OR p.language_base = :languageBase)
+        AND (:isOa IS NULL OR p.is_oa = :isOa)
+        AND (:oaStatus IS NULL OR p.oa_status = :oaStatus)
+        AND (:venueId IS NULL OR p.venue_id = :venueId)
+        AND (:venueInstanceId IS NULL OR p.venue_instance_id = :venueInstanceId)
         AND (:pmid IS NULL OR p.pmid = :pmid)
         AND (:doi IS NULL OR p.doi = :doi)
-        AND (:provenanceCode IS NULL OR p.provenanceCode = :provenanceCode)
-        AND (:publicationStatus IS NULL OR p.publicationStatus = :publicationStatus)
-      """)
+        AND (:provenanceCode IS NULL OR p.provenance_code = :provenanceCode)
+        AND (:publicationStatus IS NULL OR p.publication_status = :publicationStatus)
+        AND p.deleted_at IS NULL
+      ORDER BY
+        CASE WHEN :sortBy = 'citedByCount' THEN COALESCE(p.citation_count, -1) ELSE NULL END DESC,
+        CASE WHEN :sortBy IS NULL OR :sortBy != 'citedByCount' THEN p.updated_at ELSE NULL END DESC,
+        p.id DESC
+      """,
+      countQuery =
+          """
+      SELECT COUNT(*) FROM cat_publication p
+      WHERE (:keyword IS NULL OR p.title ILIKE CONCAT('%', CAST(:keyword AS text), '%') ESCAPE '!')
+        AND (:yearFrom IS NULL OR p.publication_year >= :yearFrom)
+        AND (:yearTo IS NULL OR p.publication_year <= :yearTo)
+        AND (:languageBase IS NULL OR p.language_base = :languageBase)
+        AND (:isOa IS NULL OR p.is_oa = :isOa)
+        AND (:oaStatus IS NULL OR p.oa_status = :oaStatus)
+        AND (:venueId IS NULL OR p.venue_id = :venueId)
+        AND (:venueInstanceId IS NULL OR p.venue_instance_id = :venueInstanceId)
+        AND (:pmid IS NULL OR p.pmid = :pmid)
+        AND (:doi IS NULL OR p.doi = :doi)
+        AND (:provenanceCode IS NULL OR p.provenance_code = :provenanceCode)
+        AND (:publicationStatus IS NULL OR p.publication_status = :publicationStatus)
+        AND p.deleted_at IS NULL
+      """,
+      nativeQuery = true)
   Page<PublicationEntity> findPublicationPage(
       @Param("keyword") String keyword,
       @Param("yearFrom") Integer yearFrom,
@@ -172,6 +195,7 @@ public interface PublicationDao extends JpaRepository<PublicationEntity, Long> {
       @Param("doi") String doi,
       @Param("provenanceCode") String provenanceCode,
       @Param("publicationStatus") String publicationStatus,
+      @Param("sortBy") String sortBy,
       Pageable pageable);
 
   /// 根据载体实例 ID 删除所有关联文献。
@@ -207,7 +231,7 @@ public interface PublicationDao extends JpaRepository<PublicationEntity, Long> {
           WHERE venue_id = :venueId
             AND (:since IS NULL OR publication_year >= :since)
             AND deleted_at IS NULL
-          ORDER BY citation_count IS NULL, citation_count DESC, publication_year DESC
+          ORDER BY citation_count DESC NULLS LAST, publication_year DESC
           LIMIT :limit
           """,
       nativeQuery = true)

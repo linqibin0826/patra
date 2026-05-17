@@ -52,7 +52,7 @@ public interface TaskRunDao extends JpaRepository<TaskRunEntity, Long> {
       value =
           """
           UPDATE ing_task_run
-          SET checkpoint = CAST(:checkpointJson AS JSON),
+          SET checkpoint = CAST(:checkpointJson AS jsonb),
               last_heartbeat = :now,
               version = version + 1
           WHERE id = :runId

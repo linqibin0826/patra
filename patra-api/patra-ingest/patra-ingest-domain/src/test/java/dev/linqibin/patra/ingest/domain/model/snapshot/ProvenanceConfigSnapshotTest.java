@@ -59,7 +59,7 @@ class ProvenanceConfigSnapshotTest {
 
   private static PaginationConfig createSamplePaginationConfig() {
     Instant now = Instant.parse("2025-01-01T00:00:00Z");
-    return new PaginationConfig(201L, 1L, "FETCH", now, null, "PAGE_NUMBER", 100, 10, "sort", 1);
+    return new PaginationConfig(201L, 1L, "FETCH", now, null, "PAGE_NUMBER", 100, 10, "sort", true);
   }
 
   private static HttpConfig createSampleHttpConfig() {
@@ -381,7 +381,7 @@ class ProvenanceConfigSnapshotTest {
       assertThat(config.paginationModeCode()).isEqualTo("PAGE_NUMBER");
       assertThat(config.pageSizeValue()).isEqualTo(100);
       assertThat(config.maxPagesPerExecution()).isEqualTo(10);
-      assertThat(config.sortingDirection()).isEqualTo(1); // ASC
+      assertThat(config.sortingDirection()).isEqualTo(true); // ASC
     }
 
     @Test
@@ -390,7 +390,7 @@ class ProvenanceConfigSnapshotTest {
       // Given
       Instant now = Instant.parse("2025-01-01T00:00:00Z");
       PaginationConfig config =
-          new PaginationConfig(202L, 1L, "FETCH", now, null, "CURSOR", null, null, "cursor", 1);
+          new PaginationConfig(202L, 1L, "FETCH", now, null, "CURSOR", null, null, "cursor", true);
 
       // Then
       assertThat(config.paginationModeCode()).isEqualTo("CURSOR");
@@ -405,10 +405,10 @@ class ProvenanceConfigSnapshotTest {
       Instant now = Instant.parse("2025-01-01T00:00:00Z");
       PaginationConfig config =
           new PaginationConfig(
-              203L, 1L, "FETCH", now, null, "PAGE_NUMBER", 50, 20, "sort", 0); // 0 = DESC
+              203L, 1L, "FETCH", now, null, "PAGE_NUMBER", 50, 20, "sort", false); // false = DESC
 
       // Then
-      assertThat(config.sortingDirection()).isEqualTo(0);
+      assertThat(config.sortingDirection()).isEqualTo(false);
     }
 
     @Test
@@ -852,7 +852,7 @@ class ProvenanceConfigSnapshotTest {
               100,
               10,
               "sort",
-              1);
+              true);
 
       // When
       ProvenanceConfigSnapshot snapshot =
@@ -928,7 +928,7 @@ class ProvenanceConfigSnapshotTest {
 
       PaginationConfig paginationConfig =
           new PaginationConfig(
-              200L, 1L, "FETCH", effectiveFrom, null, "PAGE_NUMBER", 500, 100, "sort", 1);
+              200L, 1L, "FETCH", effectiveFrom, null, "PAGE_NUMBER", 500, 100, "sort", true);
 
       HttpConfig httpConfig =
           new HttpConfig(

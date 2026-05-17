@@ -8,8 +8,8 @@ public final class StringUtils {
 
   /// SQL `LIKE` 表达式的转义字符。
   ///
-  /// 使用 `!` 而非 `\`：`\` 在 MySQL 中同时是字符串默认转义和 LIKE 转义，
-  /// 会产生"到底要转义几次"的歧义。使用非反斜杠字符则语义清晰，
+  /// 使用 `!` 而非 `\`：`\` 在部分数据库（ANSI SQL 未规定）有歧义，
+  /// 使用非反斜杠字符则语义清晰，
   /// 只需要在 DAO 查询里配套写 `ESCAPE '!'` 子句。
   private static final char LIKE_ESCAPE_CHAR = '!';
 
@@ -37,8 +37,8 @@ public final class StringUtils {
   /// - `_`（匹配任一字符）→ `!_`
   /// - `!`（转义字符本身）→ `!!`（必须优先于上述两条执行，避免二次转义）
   ///
-  /// **配套要求**：DAO 查询必须在 LIKE 子句后附加 `ESCAPE '!'`，否则 MySQL 仍会
-  /// 把 `!` 当字面字符而非转义符。例如：
+  /// **配套要求**：DAO 查询必须在 LIKE/ILIKE 子句后附加 `ESCAPE '!'`，否则
+  /// `!` 会被当字面字符而非转义符。例如：
   ///
   /// ```sql
   /// WHERE title LIKE CONCAT(:keyword, '%') ESCAPE '!'

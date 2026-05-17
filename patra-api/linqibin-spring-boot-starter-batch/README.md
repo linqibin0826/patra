@@ -95,10 +95,10 @@ linqibin:
   starter:
     batch:
       datasource:
-        url: jdbc:mysql://batch-db:3306/batch_meta
+        url: jdbc:postgresql://batch-db:5432/batch_meta
         username: batch_user
         password: batch_password
-        driver-class-name: com.mysql.cj.jdbc.Driver  # 可选，自动推断
+        driver-class-name: org.postgresql.Driver  # 可选，自动推断
         hikari:
           maximum-pool-size: 5         # 最大连接数（默认 5）
           minimum-idle: 2              # 最小空闲连接（默认 2）
@@ -128,7 +128,7 @@ linqibin:
 ### 初始化逻辑
 
 1. 检查 `BATCH_JOB_INSTANCE` 表是否存在
-2. 不存在则执行 `db/batch/schema-mysql.sql` 创建所有元数据表
+2. 不存在则执行 `db/batch/schema-postgresql.sql` 创建所有元数据表
 3. 已存在则跳过（幂等）
 
 ### 配置方式
@@ -343,7 +343,7 @@ patra-spring-boot-starter-batch/
 │   ├── BatchErrorCode.java                       # 错误码枚举
 │   └── BatchJobExecutionException.java           # 执行异常
 └── resources/db/batch/
-    └── schema-mysql.sql                          # MySQL Schema 脚本
+    └── schema-postgresql.sql                     # PostgreSQL Schema 脚本
 ```
 
 ## 依赖关系
@@ -353,7 +353,7 @@ patra-spring-boot-starter-batch/
 - `patra-spring-boot-starter-core`：核心基础设施
 - `patra-spring-boot-starter-redisson`：分布式锁支持
 - `micrometer-observation`（可选）：可观测性支持
-- `mysql-connector-j`（可选）：MySQL 驱动
+- `postgresql`（可选）：PostgreSQL 驱动
 
 ## 设计原则
 

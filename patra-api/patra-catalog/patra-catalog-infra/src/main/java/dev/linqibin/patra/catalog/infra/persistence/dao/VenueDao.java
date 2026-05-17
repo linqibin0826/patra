@@ -91,9 +91,7 @@ public interface VenueDao extends JpaRepository<VenueEntity, Long> {
   ///
   /// - 固定 `venueType=JOURNAL`
   /// - `keyword`：title 前缀模糊匹配
-  ///   - 大小写不敏感依赖 `cat_venue` 表级 collation `utf8mb4_0900_ai_ci`
-  ///     （见 `V1.0.0__create_venue_aggregate.sql`）；未显式使用 `LOWER()`
-  ///     以便命中 `idx_title (title(100))` 前缀索引
+  ///   - 显式 ILIKE 实现大小写不敏感（与 DB collation 解耦）
   ///   - **调用方契约**：`:keyword` 必须是已通过 `StringUtils.escapeLike()`
   ///     转义的字符串，查询内置 `ESCAPE '!'` 子句与之配套，防止用户输入的
   ///     `%` / `_` 被当作通配符
@@ -112,7 +110,7 @@ public interface VenueDao extends JpaRepository<VenueEntity, Long> {
           """
       SELECT * FROM cat_venue v
       WHERE v.venue_type = 'JOURNAL'
-        AND (:keyword IS NULL OR v.title LIKE CONCAT(:keyword, '%') ESCAPE '!')
+        AND (:keyword IS NULL OR v.title ILIKE CONCAT(:keyword, '%') ESCAPE '!')
         AND (:countryCode IS NULL OR v.country_code = :countryCode)
         AND (:issnL IS NULL OR v.issn_l = :issnL)
         AND (:nlmId IS NULL OR v.nlm_id = :nlmId)
@@ -123,7 +121,7 @@ public interface VenueDao extends JpaRepository<VenueEntity, Long> {
           """
       SELECT COUNT(*) FROM cat_venue v
       WHERE v.venue_type = 'JOURNAL'
-        AND (:keyword IS NULL OR v.title LIKE CONCAT(:keyword, '%') ESCAPE '!')
+        AND (:keyword IS NULL OR v.title ILIKE CONCAT(:keyword, '%') ESCAPE '!')
         AND (:countryCode IS NULL OR v.country_code = :countryCode)
         AND (:issnL IS NULL OR v.issn_l = :issnL)
         AND (:nlmId IS NULL OR v.nlm_id = :nlmId)
@@ -186,23 +184,23 @@ public interface VenueDao extends JpaRepository<VenueEntity, Long> {
           FROM cat_venue_scopus_rating r WHERE r.venue_id = v.id ORDER BY r.year DESC LIMIT 1
       ) scopus ON TRUE
       WHERE v.venue_type = 'JOURNAL'
-        AND (:keyword IS NULL OR v.title LIKE CONCAT(:keyword, '%') ESCAPE '!')
+        AND (:keyword IS NULL OR v.title ILIKE CONCAT(:keyword, '%') ESCAPE '!')
         AND (:countryCode IS NULL OR v.country_code = :countryCode)
         AND (:issnL IS NULL OR v.issn_l = :issnL)
         AND (:nlmId IS NULL OR v.nlm_id = :nlmId)
         AND (:jifQuartile IS NULL OR jcr.jif_quartile = :jifQuartile)
         AND (:casMajorQuartile IS NULL OR cas.major_quartile = :casMajorQuartile)
         AND (:casTopJournal IS NULL OR cas.is_top_journal = :casTopJournal)
-        AND (:oaType IS NULL OR JSON_UNQUOTE(JSON_EXTRACT(v.open_access, '$.oaType')) = :oaType)
+        AND (:oaType IS NULL OR v.open_access ->> 'oaType' = :oaType)
         AND (:collection IS NULL OR jcr.collection = :collection)
-        AND (:researchDirection IS NULL OR jcr.research_direction LIKE CONCAT('%', :researchDirection, '%') ESCAPE '!')
+        AND (:researchDirection IS NULL OR jcr.research_direction ILIKE CONCAT('%', :researchDirection, '%') ESCAPE '!')
         AND (:warningOnly IS NULL OR EXISTS (
             SELECT 1 FROM cat_venue_cas_warning w WHERE w.venue_id = v.id AND w.in_warning_list = TRUE
         ))
       ORDER BY
         CASE WHEN :sortBy = 'impactFactor' THEN COALESCE(jcr.impact_factor, 0) ELSE NULL END DESC,
         CASE WHEN :sortBy = 'citeScore' THEN COALESCE(scopus.cite_score, 0) ELSE NULL END DESC,
-        CASE WHEN :sortBy = 'hIndex' THEN COALESCE(JSON_EXTRACT(v.citation_metrics, '$.hIndex'), 0) ELSE NULL END DESC,
+        CASE WHEN :sortBy = 'hIndex' THEN COALESCE((v.citation_metrics ->> 'hIndex')::numeric, 0) ELSE NULL END DESC,
         CASE WHEN :sortBy IS NULL OR :sortBy = 'citedByCount' THEN COALESCE(v.cited_by_count, 0) ELSE NULL END DESC,
         v.id DESC
       """,
@@ -218,16 +216,16 @@ public interface VenueDao extends JpaRepository<VenueEntity, Long> {
           FROM cat_venue_cas_rating r WHERE r.venue_id = v.id ORDER BY r.year DESC, r.edition ASC LIMIT 1
       ) cas ON TRUE
       WHERE v.venue_type = 'JOURNAL'
-        AND (:keyword IS NULL OR v.title LIKE CONCAT(:keyword, '%') ESCAPE '!')
+        AND (:keyword IS NULL OR v.title ILIKE CONCAT(:keyword, '%') ESCAPE '!')
         AND (:countryCode IS NULL OR v.country_code = :countryCode)
         AND (:issnL IS NULL OR v.issn_l = :issnL)
         AND (:nlmId IS NULL OR v.nlm_id = :nlmId)
         AND (:jifQuartile IS NULL OR jcr.jif_quartile = :jifQuartile)
         AND (:casMajorQuartile IS NULL OR cas.major_quartile = :casMajorQuartile)
         AND (:casTopJournal IS NULL OR cas.is_top_journal = :casTopJournal)
-        AND (:oaType IS NULL OR JSON_UNQUOTE(JSON_EXTRACT(v.open_access, '$.oaType')) = :oaType)
+        AND (:oaType IS NULL OR v.open_access ->> 'oaType' = :oaType)
         AND (:collection IS NULL OR jcr.collection = :collection)
-        AND (:researchDirection IS NULL OR jcr.research_direction LIKE CONCAT('%', :researchDirection, '%') ESCAPE '!')
+        AND (:researchDirection IS NULL OR jcr.research_direction ILIKE CONCAT('%', :researchDirection, '%') ESCAPE '!')
         AND (:warningOnly IS NULL OR EXISTS (
             SELECT 1 FROM cat_venue_cas_warning w WHERE w.venue_id = v.id AND w.in_warning_list = TRUE
         ))

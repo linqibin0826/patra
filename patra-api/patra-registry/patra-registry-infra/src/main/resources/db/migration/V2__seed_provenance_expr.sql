@@ -1,15 +1,19 @@
 /* ====================================================================
- * 迁移: V1.1.0 - Registry 完整种子数据
+ * 迁移: V2 - Registry 完整种子数据
  * ====================================================================
  * 目的: 为所有支持的数据源 (PubMed, EPMC, CrossRef) 及其表达式配置
  *       提供统一的初始化数据
  *
- * 合并历史:
- *   - 合并自: V1.1.0~V1.1.3 (原始种子脚本)
- *   - 应用修复自: V1.1.4 (entrez_date DATE 类型)
- *   - 集成新增自: V1.1.5 (publication_date 支持)
- *   - 集成新增自: V1.1.6 (分页配置)
- *   - 修复: Entity 继承体系调整后移除不存在的审计字段
+ * 重写自: V1.1.0__seed_all_data.sql → PostgreSQL 17
+ * 主要变更:
+ *   - INET6_ATON('192.168.1.10') → '\xC0A8010A'::bytea
+ *   - JSON_ARRAY(...) → jsonb_build_array(...)
+ *   - JSON_OBJECT(...) → jsonb_build_object(...)
+ *   - NOW(6) → CURRENT_TIMESTAMP
+ *   - TIMESTAMP('...') → TIMESTAMP '...'
+ *   - boolean 字面量 0/1 → false/true
+ *   - INSERT ... WHERE NOT EXISTS → INSERT ... ON CONFLICT DO NOTHING
+ *   - 移除 schema 前缀 patra_registry.
  *
  * 结构:
  *   第0部分: 来源标准目录 (sys_reference_standard)
@@ -18,17 +22,6 @@
  *   第3部分: PubMed 表达式配置
  *   第4部分: EPMC 表达式配置
  *   第5部分: CrossRef 表达式配置
- *
- * 关键假设:
- *   - 操作范围 = ALL
- *   - 全局范围 = endpoint_name IS NULL
- *   - 生效时间 = 2025-09-01 / 2025-10-14 (UTC)
- *   - lifecycle_status_code = 'ACTIVE'
- *
- * Entity 继承说明:
- *   - reg_provenance: SoftDeletableJpaEntity (完整审计 + 软删除)
- *   - sys_reference_standard: BaseJpaEntity (完整审计)
- *   - 其他 reg_prov_* 表: ValueObjectJpaEntity (仅 id 字段)
  * ==================================================================== */
 
 
@@ -40,45 +33,41 @@
  *   - 每个字典类型只能有一个规范标准（通过 canonical_key 生成列约束）
  * ==================================================================== */
 
-INSERT INTO patra_registry.sys_reference_standard
+INSERT INTO sys_reference_standard
 (id, dict_type_code, standard_code, standard_name, description, display_order, is_canonical, enabled,
  created_at, updated_at, version)
-SELECT
+VALUES (
   900000000000000002,
   'country',
   'ISO_3166_1_ALPHA2',
   'ISO 3166-1 alpha-2',
   '国家代码两字母标准（平台规范标准，item_code 采用此格式）',
   10,
-  1,
-  1,
-  NOW(6),
-  NOW(6),
+  true,
+  true,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP,
   0
-WHERE NOT EXISTS (
-  SELECT 1 FROM patra_registry.sys_reference_standard
-  WHERE dict_type_code = 'country' AND standard_code = 'ISO_3166_1_ALPHA2'
-);
+)
+ON CONFLICT (dict_type_code, standard_code) DO NOTHING;
 
-INSERT INTO patra_registry.sys_reference_standard
+INSERT INTO sys_reference_standard
 (id, dict_type_code, standard_code, standard_name, description, display_order, is_canonical, enabled,
  created_at, updated_at, version)
-SELECT
+VALUES (
   900000000000000003,
   'country',
   'NAME_EN',
   'English Name',
   '英文名称标准（用于名称型输入，需转换为 ISO 代码）',
   20,
-  0,
-  1,
-  NOW(6),
-  NOW(6),
+  false,
+  true,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP,
   0
-WHERE NOT EXISTS (
-  SELECT 1 FROM patra_registry.sys_reference_standard
-  WHERE dict_type_code = 'country' AND standard_code = 'NAME_EN'
-);
+)
+ON CONFLICT (dict_type_code, standard_code) DO NOTHING;
 
 
 /* ====================================================================
@@ -88,52 +77,55 @@ WHERE NOT EXISTS (
 -- 1.1) 注册三个数据源: PubMed, EPMC, CrossRef
 -- 注: 使用预分配的雪花 ID 格式，便于后续表引用
 -- PUBMED_ID = 800000000000000001, EPMC_ID = 800000000000000002, CROSSREF_ID = 800000000000000003
-INSERT INTO patra_registry.`reg_provenance`
+INSERT INTO reg_provenance
 (id, provenance_code, provenance_name, base_url_default, timezone_default,
  docs_url, is_active, lifecycle_status_code, record_remarks,
  created_at, created_by, created_by_name,
  updated_at, updated_by, updated_by_name, version, ip_address, deleted_at)
 VALUES
     (800000000000000001, 'PUBMED', 'PubMed', 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/', 'UTC',
-     'https://www.ncbi.nlm.nih.gov/books/NBK25501/', 1, 'ACTIVE',
-     JSON_ARRAY(JSON_OBJECT('time', '2025-09-01 10:30:00', 'by', '系统管理员', 'note', '初始化注册 PubMed 来源')),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员', 0, INET6_ATON('192.168.1.10'), NULL),
+     'https://www.ncbi.nlm.nih.gov/books/NBK25501/', true, 'ACTIVE',
+     jsonb_build_array(jsonb_build_object('time', '2025-09-01 10:30:00', 'by', '系统管理员', 'note', '初始化注册 PubMed 来源')),
+     CURRENT_TIMESTAMP, 1001, '系统管理员', CURRENT_TIMESTAMP, 1001, '系统管理员', 0, '\xC0A8010A'::bytea, NULL),
 
     (800000000000000002, 'EPMC', 'Europe PMC', 'https://www.ebi.ac.uk/europepmc/webservices/rest/', 'UTC',
-     'https://europepmc.org/RestfulWebService', 1, 'ACTIVE',
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-16 00:00:00', 'by', '系统管理员', 'note', '初始化注册 Europe PMC 来源')),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员', 0, INET6_ATON('192.168.1.10'), NULL),
+     'https://europepmc.org/RestfulWebService', true, 'ACTIVE',
+     jsonb_build_array(jsonb_build_object('time', '2025-10-16 00:00:00', 'by', '系统管理员', 'note', '初始化注册 Europe PMC 来源')),
+     CURRENT_TIMESTAMP, 1001, '系统管理员', CURRENT_TIMESTAMP, 1001, '系统管理员', 0, '\xC0A8010A'::bytea, NULL),
 
     (800000000000000003, 'CROSSREF', 'Crossref', 'https://api.crossref.org/', 'UTC',
-     'https://api.crossref.org/swagger-ui/index.html', 1, 'ACTIVE',
-     JSON_ARRAY(JSON_OBJECT('time', '2025-10-16 00:00:00', 'by', '系统管理员', 'note', '初始化注册 Crossref 来源')),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员', 0, INET6_ATON('192.168.1.10'), NULL);
+     'https://api.crossref.org/swagger-ui/index.html', true, 'ACTIVE',
+     jsonb_build_array(jsonb_build_object('time', '2025-10-16 00:00:00', 'by', '系统管理员', 'note', '初始化注册 Crossref 来源')),
+     CURRENT_TIMESTAMP, 1001, '系统管理员', CURRENT_TIMESTAMP, 1001, '系统管理员', 0, '\xC0A8010A'::bytea, NULL)
+ON CONFLICT (provenance_code) DO NOTHING;
 
 
 -- 1.2) PubMed 窗口与偏移配置 (ValueObjectJpaEntity: 仅 id 字段)
-INSERT INTO patra_registry.reg_prov_window_offset_cfg
+INSERT INTO reg_prov_window_offset_cfg
 (id, provenance_id, operation_type, effective_from, effective_to,
  window_mode_code, window_size_value, window_size_unit_code, calendar_align_to,
  lookback_value, lookback_unit_code, overlap_value, overlap_unit_code, watermark_lag_seconds,
  offset_type_code, offset_field_key, offset_date_format, window_date_field_key,
  max_ids_per_window, max_window_span_seconds, lifecycle_status_code)
 VALUES
-    (1, 800000000000000001, 'ALL', '2025-09-01 00:00:00.000000', NULL,
+    (1, 800000000000000001, 'ALL', TIMESTAMP '2025-09-01 00:00:00.000000', NULL,
      'CALENDAR', 1, 'DAY', 'DAY',
      2, 'HOUR', 1, 'HOUR', 3600,
      'DATE', 'entrez_date', 'yyyy-MM-dd', 'entrez_date',
-     50000, 2592000, 'ACTIVE');
+     50000, 2592000, 'ACTIVE')
+ON CONFLICT (provenance_id, operation_type, effective_from) DO NOTHING;
 
 
 -- 1.3) PubMed 分页配置 (ValueObjectJpaEntity: 仅 id 字段)
-INSERT INTO patra_registry.reg_prov_pagination_cfg
+INSERT INTO reg_prov_pagination_cfg
 (id, provenance_id, operation_type, effective_from, effective_to,
  pagination_mode_code, page_size_value, max_pages_per_execution,
  sort_field_param_name, sorting_direction, lifecycle_status_code)
 VALUES
-    (1, 800000000000000001, 'ALL', '2025-09-01 00:00:00.000000', NULL,
+    (1, 800000000000000001, 'ALL', TIMESTAMP '2025-09-01 00:00:00.000000', NULL,
      'PAGE_NUMBER', 100, 1000,
-     NULL, 1, 'ACTIVE');
+     NULL, true, 'ACTIVE')
+ON CONFLICT (provenance_id, operation_type, effective_from) DO NOTHING;
 
 
 /* ====================================================================
@@ -141,31 +133,33 @@ VALUES
  * ==================================================================== */
 
 -- 2.1) PubMed 特定字段 (ValueObjectJpaEntity: 仅 id 字段)
-INSERT INTO patra_registry.reg_expr_field_dict
+INSERT INTO reg_expr_field_dict
 (id, field_key, display_name, description, data_type_code, cardinality_code,
  exposable, is_date)
 VALUES
     -- Entrez date field (PubMed)
     (900001, 'entrez_date', 'Entrez Date', 'PubMed Entrez date for temporal filtering',
-     'DATE', 'SINGLE', 1, 1),
+     'DATE', 'SINGLE', true, true),
 
     -- Title/Abstract text field (PubMed)
     (900002, 'tiab', 'Title/Abstract', 'Unified text field mapped to PubMed TIAB (Title/Abstract) for basic keyword search',
-     'TEXT', 'SINGLE', 1, 0);
+     'TEXT', 'SINGLE', true, false)
+ON CONFLICT (field_key) DO NOTHING;
 
 
 -- 2.2) 共享字段 (EPMC & CrossRef & PubMed) (ValueObjectJpaEntity: 仅 id 字段)
-INSERT INTO patra_registry.reg_expr_field_dict
+INSERT INTO reg_expr_field_dict
 (id, field_key, display_name, description, data_type_code, cardinality_code,
  exposable, is_date)
 VALUES
     -- Publication date field (shared by EPMC, CrossRef, PubMed)
     (910001, 'publication_date', 'Publication Date', 'Publication date for article filtering (shared field)',
-     'DATE', 'SINGLE', 1, 1),
+     'DATE', 'SINGLE', true, true),
 
     -- Free text field (shared by EPMC & CrossRef)
     (910002, 'text', 'Free Text', 'Free text search field (shared by EPMC and CrossRef)',
-     'TEXT', 'SINGLE', 1, 0);
+     'TEXT', 'SINGLE', true, false)
+ON CONFLICT (field_key) DO NOTHING;
 
 
 /* ====================================================================
@@ -173,7 +167,7 @@ VALUES
  * ==================================================================== */
 
 -- 3.1) PubMed 字段能力 (ValueObjectJpaEntity: 仅 id 字段)
-INSERT INTO patra_registry.reg_prov_expr_capability
+INSERT INTO reg_prov_expr_capability
 (id, provenance_id, operation_type, lifecycle_status_code,
  field_key, effective_from, effective_to,
  ops, negatable_ops, supports_not,
@@ -185,37 +179,38 @@ INSERT INTO patra_registry.reg_prov_expr_capability
 VALUES
     -- entrez_date RANGE capability (DATE type, fixed from V1.1.4)
     (900101, 800000000000000001, 'ALL', 'ACTIVE',
-     'entrez_date', TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
-     JSON_ARRAY('RANGE'), NULL, 0,
-     NULL, 0, 0, 0, 0, NULL,
-     0, 0,
-     'DATE', 1, 1, 0,
+     'entrez_date', TIMESTAMP '2025-10-14 00:00:00.000000', NULL,
+     jsonb_build_array('RANGE'), NULL, false,
+     NULL, false, false, 0, 0, NULL,
+     0, false,
+     'DATE', true, true, false,
      DATE '1900-01-01', NULL, NULL, NULL, NULL, NULL,
-     0, NULL, NULL),
+     false, NULL, NULL),
 
     -- tiab TERM/IN capability
     (900102, 800000000000000001, 'ALL', 'ACTIVE',
-     'tiab', TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
-     JSON_ARRAY('TERM', 'IN'), JSON_ARRAY('TERM'), 1,
-     JSON_ARRAY('PHRASE', 'ANY'), 0, 0, 1, 0, NULL,
-     1000, 0,
-     'NONE', 0, 0, 0,
+     'tiab', TIMESTAMP '2025-10-14 00:00:00.000000', NULL,
+     jsonb_build_array('TERM', 'IN'), jsonb_build_array('TERM'), true,
+     jsonb_build_array('PHRASE', 'ANY'), false, false, 1, 0, NULL,
+     1000, false,
+     'NONE', false, false, false,
      NULL, NULL, NULL, NULL, NULL, NULL,
-     0, NULL, NULL),
+     false, NULL, NULL),
 
     -- publication_date RANGE capability (merged from V1.1.5)
     (900103, 800000000000000001, 'ALL', 'ACTIVE',
-     'publication_date', TIMESTAMP('2025-10-18 00:00:00.000000'), NULL,
-     JSON_ARRAY('RANGE'), NULL, 0,
-     NULL, 0, 0, 0, 0, NULL,
-     0, 0,
-     'DATE', 1, 1, 0,
+     'publication_date', TIMESTAMP '2025-10-18 00:00:00.000000', NULL,
+     jsonb_build_array('RANGE'), NULL, false,
+     NULL, false, false, 0, 0, NULL,
+     0, false,
+     'DATE', true, true, false,
      DATE '1900-01-01', NULL, NULL, NULL, NULL, NULL,
-     0, NULL, NULL);
+     false, NULL, NULL)
+ON CONFLICT (provenance_id, operation_type, field_key, effective_from) DO NOTHING;
 
 
 -- 3.2) PubMed 渲染规则 (ValueObjectJpaEntity: 仅 id 字段)
-INSERT INTO patra_registry.reg_prov_expr_render_rule
+INSERT INTO reg_prov_expr_render_rule
 (id, provenance_id, operation_type, lifecycle_status_code,
  field_key, op_code, match_type_code, negated, value_type_code, emit_type_code,
  effective_from, effective_to,
@@ -225,41 +220,42 @@ VALUES
     -- entrez_date RANGE -> PARAMS
     (900201, 800000000000000001, 'ALL', 'ACTIVE',
      'entrez_date', 'RANGE', NULL, NULL, 'DATE', 'PARAMS',
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
-     NULL, NULL, NULL, 0,
-     JSON_OBJECT('from', '{{from}}', 'to', '{{to}}', 'datetype', '{{datetype}}'), 'PUBMED_DATETYPE'),
+     TIMESTAMP '2025-10-14 00:00:00.000000', NULL,
+     NULL, NULL, NULL, false,
+     jsonb_build_object('from', '{{from}}', 'to', '{{to}}', 'datetype', '{{datetype}}'), 'PUBMED_DATETYPE'),
 
     -- tiab TERM (ANY match) -> QUERY
     (900202, 800000000000000001, 'ALL', 'ACTIVE',
      'tiab', 'TERM', NULL, NULL, 'STRING', 'QUERY',
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
-     '{{v}}[TIAB]', NULL, NULL, 0,
+     TIMESTAMP '2025-10-14 00:00:00.000000', NULL,
+     '{{v}}[TIAB]', NULL, NULL, false,
      NULL, NULL),
 
     -- tiab IN -> QUERY (OR-joined)
     (900203, 800000000000000001, 'ALL', 'ACTIVE',
      'tiab', 'IN', NULL, NULL, 'STRING', 'QUERY',
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
-     NULL, '"{{item}}"[TIAB]', ' OR ', 1,
+     TIMESTAMP '2025-10-14 00:00:00.000000', NULL,
+     NULL, '"{{item}}"[TIAB]', ' OR ', true,
      NULL, NULL),
 
     -- tiab TERM (PHRASE match) -> QUERY
     (900204, 800000000000000001, 'ALL', 'ACTIVE',
      'tiab', 'TERM', 'PHRASE', NULL, 'STRING', 'QUERY',
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
-     '"{{v}}"[TIAB]', NULL, NULL, 0,
+     TIMESTAMP '2025-10-14 00:00:00.000000', NULL,
+     '"{{v}}"[TIAB]', NULL, NULL, false,
      NULL, NULL),
 
     -- publication_date RANGE -> PARAMS (merged from V1.1.5)
     (900205, 800000000000000001, 'ALL', 'ACTIVE',
      'publication_date', 'RANGE', NULL, NULL, 'DATE', 'PARAMS',
-     TIMESTAMP('2025-10-18 00:00:00.000000'), NULL,
-     NULL, NULL, NULL, 0,
-     JSON_OBJECT('from', '{{from}}', 'to', '{{to}}', 'datetype', '{{datetype}}'), 'PUBMED_DATETYPE');
+     TIMESTAMP '2025-10-18 00:00:00.000000', NULL,
+     NULL, NULL, NULL, false,
+     jsonb_build_object('from', '{{from}}', 'to', '{{to}}', 'datetype', '{{datetype}}'), 'PUBMED_DATETYPE')
+ON CONFLICT (provenance_id, operation_type, field_key, op_code, match_type_key, negated_key, value_type_key, emit_type_code, effective_from) DO NOTHING;
 
 
 -- 3.3) PubMed 全局 API 参数映射 (ValueObjectJpaEntity: 仅 id 字段)
-INSERT INTO patra_registry.reg_prov_api_param_map
+INSERT INTO reg_prov_api_param_map
 (id, provenance_id, operation_type, lifecycle_status_code,
  endpoint_name, std_key, provider_param_name, transform_code, notes,
  effective_from, effective_to)
@@ -267,32 +263,33 @@ VALUES
     -- Boolean query bridging: std 'query' -> provider 'term'
     (900310, 800000000000000001, 'ALL', 'ACTIVE',
      NULL, 'query', 'term', NULL, NULL,
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL),
+     TIMESTAMP '2025-10-14 00:00:00.000000', NULL),
 
     -- Date window lower bound
     (900301, 800000000000000001, 'ALL', 'ACTIVE',
      NULL, 'from', 'mindate', NULL, NULL,
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL),
+     TIMESTAMP '2025-10-14 00:00:00.000000', NULL),
 
     -- Date window upper bound (exclusive -> inclusive transform)
     (900302, 800000000000000001, 'ALL', 'ACTIVE',
      NULL, 'to', 'maxdate', 'TO_EXCLUSIVE_MINUS_1D', NULL,
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL),
+     TIMESTAMP '2025-10-14 00:00:00.000000', NULL),
 
     -- Date type discriminator (PDAT/EDAT)
     (900303, 800000000000000001, 'ALL', 'ACTIVE',
      NULL, 'datetype', 'datetype', NULL, NULL,
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL),
+     TIMESTAMP '2025-10-14 00:00:00.000000', NULL),
 
     -- Pagination: limit -> retmax
     (900304, 800000000000000001, 'ALL', 'ACTIVE',
      NULL, 'limit', 'retmax', NULL, NULL,
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL),
+     TIMESTAMP '2025-10-14 00:00:00.000000', NULL),
 
     -- Pagination: offset -> retstart
     (900305, 800000000000000001, 'ALL', 'ACTIVE',
      NULL, 'offset', 'retstart', NULL, NULL,
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL);
+     TIMESTAMP '2025-10-14 00:00:00.000000', NULL)
+ON CONFLICT (provenance_id, operation_type, endpoint_name, std_key, effective_from) DO NOTHING;
 
 
 /* ====================================================================
@@ -300,7 +297,7 @@ VALUES
  * ==================================================================== */
 
 -- 4.1) EPMC 字段能力 (ValueObjectJpaEntity: 仅 id 字段)
-INSERT INTO patra_registry.reg_prov_expr_capability
+INSERT INTO reg_prov_expr_capability
 (id, provenance_id, operation_type, lifecycle_status_code,
  field_key, effective_from, effective_to,
  ops, negatable_ops, supports_not,
@@ -311,28 +308,29 @@ INSERT INTO patra_registry.reg_prov_expr_capability
  exists_supported, token_kinds, token_value_pattern)
 VALUES
     -- publication_date RANGE capability
-    (910101, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='EPMC'), 'ALL', 'ACTIVE',
-     'publication_date', TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
-     JSON_ARRAY('RANGE'), NULL, 0,
-     NULL, 0, 0, 0, 0, NULL,
-     0, 0,
-     'DATE', 1, 1, 0,
+    (910101, (SELECT id FROM reg_provenance WHERE provenance_code='EPMC'), 'ALL', 'ACTIVE',
+     'publication_date', TIMESTAMP '2025-10-14 00:00:00.000000', NULL,
+     jsonb_build_array('RANGE'), NULL, false,
+     NULL, false, false, 0, 0, NULL,
+     0, false,
+     'DATE', true, true, false,
      DATE '1900-01-01', NULL, NULL, NULL, NULL, NULL,
-     0, NULL, NULL),
+     false, NULL, NULL),
 
     -- text TERM/IN capability
-    (910102, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='EPMC'), 'ALL', 'ACTIVE',
-     'text', TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
-     JSON_ARRAY('TERM', 'IN'), JSON_ARRAY('TERM'), 1,
-     JSON_ARRAY('PHRASE', 'ANY'), 0, 0, 1, 0, NULL,
-     1000, 0,
-     'NONE', 0, 0, 0,
+    (910102, (SELECT id FROM reg_provenance WHERE provenance_code='EPMC'), 'ALL', 'ACTIVE',
+     'text', TIMESTAMP '2025-10-14 00:00:00.000000', NULL,
+     jsonb_build_array('TERM', 'IN'), jsonb_build_array('TERM'), true,
+     jsonb_build_array('PHRASE', 'ANY'), false, false, 1, 0, NULL,
+     1000, false,
+     'NONE', false, false, false,
      NULL, NULL, NULL, NULL, NULL, NULL,
-     0, NULL, NULL);
+     false, NULL, NULL)
+ON CONFLICT (provenance_id, operation_type, field_key, effective_from) DO NOTHING;
 
 
 -- 4.2) EPMC 渲染规则 (ValueObjectJpaEntity: 仅 id 字段)
-INSERT INTO patra_registry.reg_prov_expr_render_rule
+INSERT INTO reg_prov_expr_render_rule
 (id, provenance_id, operation_type, lifecycle_status_code,
  field_key, op_code, match_type_code, negated, value_type_code, emit_type_code,
  effective_from, effective_to,
@@ -340,49 +338,51 @@ INSERT INTO patra_registry.reg_prov_expr_render_rule
  params, fn_code)
 VALUES
     -- publication_date RANGE -> QUERY
-    (910201, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='EPMC'), 'ALL', 'ACTIVE',
+    (910201, (SELECT id FROM reg_provenance WHERE provenance_code='EPMC'), 'ALL', 'ACTIVE',
      'publication_date', 'RANGE', NULL, NULL, 'DATE', 'QUERY',
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
-     'FIRST_PDATE:[{{from}} TO {{to}}]', NULL, NULL, 0,
+     TIMESTAMP '2025-10-14 00:00:00.000000', NULL,
+     'FIRST_PDATE:[{{from}} TO {{to}}]', NULL, NULL, false,
      NULL, NULL),
 
     -- text TERM ANY -> QUERY (no quotes)
-    (910202, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='EPMC'), 'ALL', 'ACTIVE',
+    (910202, (SELECT id FROM reg_provenance WHERE provenance_code='EPMC'), 'ALL', 'ACTIVE',
      'text', 'TERM', 'ANY', NULL, 'STRING', 'QUERY',
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
-     '{{v}}', NULL, NULL, 0,
+     TIMESTAMP '2025-10-14 00:00:00.000000', NULL,
+     '{{v}}', NULL, NULL, false,
      NULL, NULL),
 
     -- text TERM PHRASE -> QUERY (quoted)
-    (910203, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='EPMC'), 'ALL', 'ACTIVE',
+    (910203, (SELECT id FROM reg_provenance WHERE provenance_code='EPMC'), 'ALL', 'ACTIVE',
      'text', 'TERM', 'PHRASE', NULL, 'STRING', 'QUERY',
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
-     '"{{v}}"', NULL, NULL, 0,
+     TIMESTAMP '2025-10-14 00:00:00.000000', NULL,
+     '"{{v}}"', NULL, NULL, false,
      NULL, NULL),
 
     -- text IN -> QUERY (OR-joined)
-    (910204, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='EPMC'), 'ALL', 'ACTIVE',
+    (910204, (SELECT id FROM reg_provenance WHERE provenance_code='EPMC'), 'ALL', 'ACTIVE',
      'text', 'IN', NULL, NULL, 'STRING', 'QUERY',
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
-     NULL, '"{{item}}"', ' OR ', 1,
-     NULL, NULL);
+     TIMESTAMP '2025-10-14 00:00:00.000000', NULL,
+     NULL, '"{{item}}"', ' OR ', true,
+     NULL, NULL)
+ON CONFLICT (provenance_id, operation_type, field_key, op_code, match_type_key, negated_key, value_type_key, emit_type_code, effective_from) DO NOTHING;
 
 
 -- 4.3) EPMC 全局 API 参数映射 (ValueObjectJpaEntity: 仅 id 字段)
-INSERT INTO patra_registry.reg_prov_api_param_map
+INSERT INTO reg_prov_api_param_map
 (id, provenance_id, operation_type, lifecycle_status_code,
  endpoint_name, std_key, provider_param_name, transform_code, notes,
  effective_from, effective_to)
 VALUES
     -- Boolean query bridging: std 'query' -> provider 'query'
-    (910301, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='EPMC'), 'ALL', 'ACTIVE',
+    (910301, (SELECT id FROM reg_provenance WHERE provenance_code='EPMC'), 'ALL', 'ACTIVE',
      NULL, 'query', 'query', NULL, NULL,
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL),
+     TIMESTAMP '2025-10-14 00:00:00.000000', NULL),
 
     -- Pagination: limit -> pageSize
-    (910302, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='EPMC'), 'ALL', 'ACTIVE',
+    (910302, (SELECT id FROM reg_provenance WHERE provenance_code='EPMC'), 'ALL', 'ACTIVE',
      NULL, 'limit', 'pageSize', NULL, NULL,
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL);
+     TIMESTAMP '2025-10-14 00:00:00.000000', NULL)
+ON CONFLICT (provenance_id, operation_type, endpoint_name, std_key, effective_from) DO NOTHING;
 
 
 /* ====================================================================
@@ -390,7 +390,7 @@ VALUES
  * ==================================================================== */
 
 -- 5.1) CrossRef 字段能力 (ValueObjectJpaEntity: 仅 id 字段)
-INSERT INTO patra_registry.reg_prov_expr_capability
+INSERT INTO reg_prov_expr_capability
 (id, provenance_id, operation_type, lifecycle_status_code,
  field_key, effective_from, effective_to,
  ops, negatable_ops, supports_not,
@@ -401,28 +401,29 @@ INSERT INTO patra_registry.reg_prov_expr_capability
  exists_supported, token_kinds, token_value_pattern)
 VALUES
     -- publication_date RANGE capability
-    (920101, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='CROSSREF'), 'ALL', 'ACTIVE',
-     'publication_date', TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
-     JSON_ARRAY('RANGE'), NULL, 0,
-     NULL, 0, 0, 0, 0, NULL,
-     0, 0,
-     'DATE', 1, 1, 0,
+    (920101, (SELECT id FROM reg_provenance WHERE provenance_code='CROSSREF'), 'ALL', 'ACTIVE',
+     'publication_date', TIMESTAMP '2025-10-14 00:00:00.000000', NULL,
+     jsonb_build_array('RANGE'), NULL, false,
+     NULL, false, false, 0, 0, NULL,
+     0, false,
+     'DATE', true, true, false,
      DATE '1900-01-01', NULL, NULL, NULL, NULL, NULL,
-     0, NULL, NULL),
+     false, NULL, NULL),
 
     -- text TERM/IN capability
-    (920102, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='CROSSREF'), 'ALL', 'ACTIVE',
-     'text', TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
-     JSON_ARRAY('TERM', 'IN'), JSON_ARRAY('TERM'), 1,
-     JSON_ARRAY('PHRASE', 'ANY'), 0, 0, 1, 0, NULL,
-     1000, 0,
-     'NONE', 0, 0, 0,
+    (920102, (SELECT id FROM reg_provenance WHERE provenance_code='CROSSREF'), 'ALL', 'ACTIVE',
+     'text', TIMESTAMP '2025-10-14 00:00:00.000000', NULL,
+     jsonb_build_array('TERM', 'IN'), jsonb_build_array('TERM'), true,
+     jsonb_build_array('PHRASE', 'ANY'), false, false, 1, 0, NULL,
+     1000, false,
+     'NONE', false, false, false,
      NULL, NULL, NULL, NULL, NULL, NULL,
-     0, NULL, NULL);
+     false, NULL, NULL)
+ON CONFLICT (provenance_id, operation_type, field_key, effective_from) DO NOTHING;
 
 
 -- 5.2) CrossRef 渲染规则 (ValueObjectJpaEntity: 仅 id 字段)
-INSERT INTO patra_registry.reg_prov_expr_render_rule
+INSERT INTO reg_prov_expr_render_rule
 (id, provenance_id, operation_type, lifecycle_status_code,
  field_key, op_code, match_type_code, negated, value_type_code, emit_type_code,
  effective_from, effective_to,
@@ -430,61 +431,63 @@ INSERT INTO patra_registry.reg_prov_expr_render_rule
  params, fn_code)
 VALUES
     -- publication_date RANGE -> PARAMS
-    (920201, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='CROSSREF'), 'ALL', 'ACTIVE',
+    (920201, (SELECT id FROM reg_provenance WHERE provenance_code='CROSSREF'), 'ALL', 'ACTIVE',
      'publication_date', 'RANGE', NULL, NULL, 'DATE', 'PARAMS',
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
-     NULL, NULL, NULL, 0,
-     JSON_OBJECT('filter', 'from-pub-date:{{from}},until-pub-date:{{to}}'), NULL),
+     TIMESTAMP '2025-10-14 00:00:00.000000', NULL,
+     NULL, NULL, NULL, false,
+     jsonb_build_object('filter', 'from-pub-date:{{from}},until-pub-date:{{to}}'), NULL),
 
     -- text TERM ANY -> QUERY (no quotes)
-    (920202, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='CROSSREF'), 'ALL', 'ACTIVE',
+    (920202, (SELECT id FROM reg_provenance WHERE provenance_code='CROSSREF'), 'ALL', 'ACTIVE',
      'text', 'TERM', 'ANY', NULL, 'STRING', 'QUERY',
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
-     '{{v}}', NULL, NULL, 0,
+     TIMESTAMP '2025-10-14 00:00:00.000000', NULL,
+     '{{v}}', NULL, NULL, false,
      NULL, NULL),
 
     -- text TERM PHRASE -> QUERY (quoted)
-    (920203, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='CROSSREF'), 'ALL', 'ACTIVE',
+    (920203, (SELECT id FROM reg_provenance WHERE provenance_code='CROSSREF'), 'ALL', 'ACTIVE',
      'text', 'TERM', 'PHRASE', NULL, 'STRING', 'QUERY',
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
-     '"{{v}}"', NULL, NULL, 0,
+     TIMESTAMP '2025-10-14 00:00:00.000000', NULL,
+     '"{{v}}"', NULL, NULL, false,
      NULL, NULL),
 
     -- text IN -> QUERY (OR-joined)
-    (920204, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='CROSSREF'), 'ALL', 'ACTIVE',
+    (920204, (SELECT id FROM reg_provenance WHERE provenance_code='CROSSREF'), 'ALL', 'ACTIVE',
      'text', 'IN', NULL, NULL, 'STRING', 'QUERY',
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
-     NULL, '"{{item}}"', ' OR ', 1,
-     NULL, NULL);
+     TIMESTAMP '2025-10-14 00:00:00.000000', NULL,
+     NULL, '"{{item}}"', ' OR ', true,
+     NULL, NULL)
+ON CONFLICT (provenance_id, operation_type, field_key, op_code, match_type_key, negated_key, value_type_key, emit_type_code, effective_from) DO NOTHING;
 
 
 -- 5.3) CrossRef 全局 API 参数映射 (ValueObjectJpaEntity: 仅 id 字段)
-INSERT INTO patra_registry.reg_prov_api_param_map
+INSERT INTO reg_prov_api_param_map
 (id, provenance_id, operation_type, lifecycle_status_code,
  endpoint_name, std_key, provider_param_name, transform_code, notes,
  effective_from, effective_to)
 VALUES
     -- Boolean query bridging: std 'query' -> provider 'query'
-    (920301, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='CROSSREF'), 'ALL', 'ACTIVE',
+    (920301, (SELECT id FROM reg_provenance WHERE provenance_code='CROSSREF'), 'ALL', 'ACTIVE',
      NULL, 'query', 'query', NULL, NULL,
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL),
+     TIMESTAMP '2025-10-14 00:00:00.000000', NULL),
 
     -- Filter mapping: std 'filter' -> provider 'filter'
-    (920302, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='CROSSREF'), 'ALL', 'ACTIVE',
+    (920302, (SELECT id FROM reg_provenance WHERE provenance_code='CROSSREF'), 'ALL', 'ACTIVE',
      NULL, 'filter', 'filter', NULL, NULL,
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL),
+     TIMESTAMP '2025-10-14 00:00:00.000000', NULL),
 
     -- Pagination: limit -> rows
-    (920303, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='CROSSREF'), 'ALL', 'ACTIVE',
+    (920303, (SELECT id FROM reg_provenance WHERE provenance_code='CROSSREF'), 'ALL', 'ACTIVE',
      NULL, 'limit', 'rows', NULL, NULL,
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL),
+     TIMESTAMP '2025-10-14 00:00:00.000000', NULL),
 
     -- Pagination: offset -> offset
-    (920304, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='CROSSREF'), 'ALL', 'ACTIVE',
+    (920304, (SELECT id FROM reg_provenance WHERE provenance_code='CROSSREF'), 'ALL', 'ACTIVE',
      NULL, 'offset', 'offset', NULL, NULL,
-     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL);
+     TIMESTAMP '2025-10-14 00:00:00.000000', NULL)
+ON CONFLICT (provenance_id, operation_type, endpoint_name, std_key, effective_from) DO NOTHING;
 
 
 /* ====================================================================
- * V1.1.0 合并种子数据结束
+ * V2 种子数据结束
  * ==================================================================== */

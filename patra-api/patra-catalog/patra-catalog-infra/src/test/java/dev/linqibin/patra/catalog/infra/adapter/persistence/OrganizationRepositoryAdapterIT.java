@@ -16,7 +16,7 @@ import dev.linqibin.patra.catalog.domain.model.vo.organization.OrganizationLink;
 import dev.linqibin.patra.catalog.domain.model.vo.organization.OrganizationName;
 import dev.linqibin.patra.catalog.domain.model.vo.organization.OrganizationRelation;
 import dev.linqibin.patra.catalog.domain.model.vo.organization.RorId;
-import dev.linqibin.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
+import dev.linqibin.patra.catalog.infra.config.CatalogPostgreSQLContainerInitializer;
 import dev.linqibin.patra.catalog.infra.persistence.dao.OrganizationDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.OrganizationExternalIdDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.OrganizationLocationDao;
@@ -45,12 +45,12 @@ import org.springframework.test.context.ContextConfiguration;
 
 /// OrganizationRepositoryAdapter 集成测试（JPA）。
 ///
-/// 使用 Testcontainers + MySQL 8 验证 Organization 聚合根持久化逻辑。
+/// 使用 Testcontainers + PostgreSQL 17 验证 Organization 聚合根持久化逻辑。
 ///
 /// @author linqibin
 /// @since 0.1.0
 @DataJpaTest
-@ContextConfiguration(initializers = CatalogMySQLContainerInitializer.class)
+@ContextConfiguration(initializers = CatalogPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
   OrganizationRepositoryAdapter.class,

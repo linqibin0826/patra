@@ -9,7 +9,7 @@ CanonicalPublication (Shared Kernel 模型)
     ↓  PubmedArticleItemProcessor 处理
 PublicationImportResult (9 种关联数据)
     ↓  PublicationItemWriter 写入
-MySQL 表 (34 张 publication 相关表)
+PostgreSQL 表 (34 张 publication 相关表)
 ```
 
 对比目标：找出**XML 中有但没解析**、**解析了但没入库**的数据。

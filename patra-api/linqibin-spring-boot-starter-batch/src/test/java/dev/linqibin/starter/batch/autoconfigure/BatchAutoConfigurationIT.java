@@ -3,7 +3,7 @@ package dev.linqibin.starter.batch.autoconfigure;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.linqibin.starter.batch.core.JobOperatorHelper;
-import dev.linqibin.starter.test.container.initializer.MySQLContainerInitializer;
+import dev.linqibin.starter.test.container.initializer.PostgreSQLContainerInitializer;
 import io.micrometer.observation.ObservationRegistry;
 import java.util.concurrent.TimeUnit;
 import javax.sql.DataSource;
@@ -21,7 +21,7 @@ import org.springframework.test.context.ContextConfiguration;
 /// BatchAutoConfiguration 集成测试。
 ///
 /// 验证 Spring Batch 核心组件的自动配置功能。
-/// 使用 MySQL TestContainer 确保与生产环境一致。
+/// 使用 PostgreSQL TestContainer 确保与生产环境一致。
 ///
 /// @author Patra Lin
 /// @since 0.1.0
@@ -33,7 +33,7 @@ import org.springframework.test.context.ContextConfiguration;
       "linqibin.starter.batch.enabled=true",
       "linqibin.starter.redisson.observability.metrics-enabled=false"
     })
-@ContextConfiguration(initializers = MySQLContainerInitializer.class)
+@ContextConfiguration(initializers = PostgreSQLContainerInitializer.class)
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
 class BatchAutoConfigurationIT {
 

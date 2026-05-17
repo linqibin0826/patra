@@ -18,7 +18,7 @@ import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.ScheduleInstan
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.TaskEntity;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.TaskRunBatchEntity;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.TaskRunEntity;
-import dev.linqibin.patra.ingest.infra.config.IngestMySQLContainerInitializer;
+import dev.linqibin.patra.ingest.infra.config.IngestPostgreSQLContainerInitializer;
 import dev.linqibin.starter.jpa.autoconfig.HibernatePropertiesCustomizer;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
 import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
@@ -44,20 +44,20 @@ import tools.jackson.databind.node.ObjectNode;
 
 /// TaskRunBatchRepositoryAdapter 集成测试。
 ///
-/// 使用 TestContainers + MySQL 8 测试任务执行批次持久化。
+/// 使用 TestContainers + PostgreSQL 17 测试任务执行批次持久化。
 ///
 /// **测试策略**：
 ///
-/// - 集成测试：使用真实 MySQL 数据库
+/// - 集成测试：使用真实 PostgreSQL 数据库
 ///   - 测试隔离：每个测试方法前清理并重建测试数据
-///   - TestContainers：自动启动和停止 MySQL 容器
+///   - TestContainers：自动启动和停止 PostgreSQL 容器
 ///   - Flyway：自动执行数据库迁移脚本
 ///   - 测试覆盖：save、saveAll、findByRunId、findLastSucceededBatchId
 ///
 /// @author linqibin
 /// @since 0.1.0
 @DataJpaTest
-@ContextConfiguration(initializers = IngestMySQLContainerInitializer.class)
+@ContextConfiguration(initializers = IngestPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
   TaskRunBatchRepositoryAdapter.class,
