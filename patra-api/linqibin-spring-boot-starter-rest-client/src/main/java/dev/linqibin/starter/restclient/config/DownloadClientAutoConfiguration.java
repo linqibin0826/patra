@@ -11,11 +11,10 @@ import dev.linqibin.starter.restclient.download.strategy.HttpStreamingDownloader
 import dev.linqibin.starter.restclient.download.strategy.StreamingDownloader;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -53,15 +52,20 @@ public class DownloadClientAutoConfiguration {
 
   /// 创建下载客户端。
   ///
+  /// 使用 `ObjectProvider` 解析 `StreamingDownloader` 集合，避免
+  // `@ConditionalOnBean(StreamingDownloader.class)`
+  /// 在 Spring Boot 4 的条件评估时序下与同类兄弟 `@Bean` 互相不可见的问题（条件评估早于
+  /// BeanDefinition 类型可见性建立）。无 downloader 时 `DefaultDownloadClient` 在调用期才会抛出
+  /// `unsupportedScheme`，由调用方处理。
+  ///
   /// @param properties 下载配置
-  /// @param downloaders 流式下载策略列表
+  /// @param downloadersProvider 流式下载策略 ObjectProvider
   /// @return 下载客户端
   @Bean
   @ConditionalOnMissingBean
-  @ConditionalOnBean(StreamingDownloader.class)
   public DownloadClient downloadClient(
-      DownloadProperties properties, List<StreamingDownloader> downloaders) {
-    return new DefaultDownloadClient(downloaders, properties);
+      DownloadProperties properties, ObjectProvider<StreamingDownloader> downloadersProvider) {
+    return new DefaultDownloadClient(downloadersProvider.orderedStream().toList(), properties);
   }
 
   /// 创建默认进度监听器。
@@ -100,9 +104,15 @@ public class DownloadClientAutoConfiguration {
   }
 
   /// HTTP/HTTPS 流式下载策略配置。
+  ///
+  /// 移除了原 `@ConditionalOnBean(name = "streamingWebClient")` —— 该守卫在 Spring Boot 4 条件评估时序下
+  /// 与 `StreamingWebClientAutoConfiguration` 跨类失效。本类的进入条件
+  /// （`@ConditionalOnClass(WebClient)` + `streaming.enabled`）与
+  // `StreamingWebClientAutoConfiguration`
+  /// 完全一致，前者满足则 `streamingWebClient` bean 一定存在。若用户手动排除了
+  /// `StreamingWebClientAutoConfiguration`，`@Qualifier` 注入会失败并给出清晰的报错。
   @Configuration
   @ConditionalOnClass(name = "org.springframework.web.reactive.function.client.WebClient")
-  @ConditionalOnBean(name = "streamingWebClient")
   @ConditionalOnProperty(
       prefix = "linqibin.starter.rest-client.streaming",
       name = "enabled",

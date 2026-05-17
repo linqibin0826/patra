@@ -7,6 +7,7 @@ import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import java.util.Locale;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -87,7 +88,7 @@ public class KeywordEntity extends BaseJpaEntity {
   ///
   /// 被多少篇文献使用。
   @Column(name = "frequency")
-  @lombok.Builder.Default
+  @Builder.Default
   private Integer frequency = 0;
 
   // ========== 便捷方法 ==========

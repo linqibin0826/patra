@@ -6,6 +6,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -64,7 +65,7 @@ public class PublicationKeywordEntity extends ValueObjectJpaEntity {
 
   /// 是否为主要关键词。
   @Column(name = "is_major", nullable = false)
-  @lombok.Builder.Default
+  @Builder.Default
   private Boolean major = false;
 
   /// 顺序号（在同一文献内的排序）。
