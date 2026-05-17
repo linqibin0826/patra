@@ -35,13 +35,13 @@ import tools.jackson.databind.node.ObjectNode;
 
 /// OutboxRelayLogRepositoryAdapter 集成测试。
 ///
-/// 使用 TestContainers + MySQL 8 测试发件箱中继日志持久化。
+/// 使用 TestContainers + PostgreSQL 17 测试发件箱中继日志持久化。
 ///
 /// **测试策略**：
 ///
-/// - 集成测试：使用真实 MySQL 数据库
+/// - 集成测试：使用真实 PostgreSQL 数据库
 ///   - 测试隔离：每个测试方法前清理并重建测试数据
-///   - TestContainers：自动启动和停止 MySQL 容器
+///   - TestContainers：自动启动和停止 PostgreSQL 容器
 ///   - Flyway：自动执行数据库迁移脚本
 ///   - 测试覆盖：save、saveBatch、findByOutboxMessageId、findByBatchId、
 ///     countByChannelAndStatus、findRecentFailed、findByChannelAndTimeRange
