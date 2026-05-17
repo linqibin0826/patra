@@ -77,7 +77,7 @@ class BatchPropertiesTest {
     BatchProperties properties = new BatchProperties();
 
     // When
-    properties.getDatasource().setUrl("jdbc:mysql://localhost:3306/batch_meta");
+    properties.getDatasource().setUrl("jdbc:postgresql://localhost:5432/batch_meta");
 
     // Then
     assertThat(properties.getDatasource().isConfigured()).isTrue();
