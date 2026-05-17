@@ -45,7 +45,7 @@ spring:
 
   # Database Configuration
   datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    driver-class-name: org.postgresql.Driver
     # URL, username, password are profile-specific (see application-dev.yml, application-prod.yml)
     hikari:
       maximum-pool-size: 20
