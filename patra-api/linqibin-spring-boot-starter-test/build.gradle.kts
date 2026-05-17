@@ -38,8 +38,8 @@ dependencies {
     api("org.springframework.boot:spring-boot-starter-data-jpa-test")
     api("org.springframework.boot:spring-boot-starter-jdbc-test")
     api("org.springframework.boot:spring-boot-starter-flyway-test")
-    // Flyway 11+ 数据库支持拆分为独立模块，MySQL 需显式引入
-    api("org.flywaydb:flyway-mysql")
+    // Flyway 11+ 数据库支持拆分为独立模块，PostgreSQL 需显式引入
+    api("org.flywaydb:flyway-database-postgresql")
     api("org.springframework.boot:spring-boot-starter-webmvc-test")
     api("org.springframework.boot:spring-boot-starter-restclient-test")
 
@@ -56,7 +56,7 @@ dependencies {
 
     api(libs.testcontainers.core)
     api(libs.testcontainers.junit.jupiter)
-    api(libs.testcontainers.mysql)
+    api(libs.testcontainers.postgresql)
     api(libs.testcontainers.minio)
 
     // MinIO Java Client（MinIOContainerInitializer 创建存储桶需要）
@@ -82,9 +82,9 @@ dependencies {
 
     api("io.micrometer:micrometer-core")
 
-    // ==================== 数据库驱动（TestContainers MySQL 需要）====================
+    // ==================== 数据库驱动（TestContainers PostgreSQL 需要）====================
 
-    api("com.mysql:mysql-connector-j")
+    api("org.postgresql:postgresql")
 
     // ==================== SLF4J 日志 ====================
 
