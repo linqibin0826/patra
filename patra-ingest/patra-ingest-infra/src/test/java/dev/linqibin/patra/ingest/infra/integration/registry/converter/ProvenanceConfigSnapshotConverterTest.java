@@ -73,7 +73,7 @@ class ProvenanceConfigSnapshotConverterTest {
 
       PaginationConfigResp paginationResp =
           new PaginationConfigResp(
-              20L, 1L, "QUERY_SESSION", now, null, "PAGE_NUMBER", 100, 10, "sort", 1);
+              20L, 1L, "QUERY_SESSION", now, null, "PAGE_NUMBER", 100, 10, "sort", true);
 
       HttpConfigResp httpResp =
           new HttpConfigResp(

@@ -336,7 +336,7 @@ class ProvenanceConfigQueryTest {
         100,
         10,
         "publicationDate",
-        1);
+        true);
   }
 
   private static HttpConfigQuery createValidHttpConfigQuery() {
