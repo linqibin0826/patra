@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.linqibin.patra.registry.domain.model.vo.reference.ReferenceStandard;
 import dev.linqibin.patra.registry.infra.adapter.persistence.dao.reference.ReferenceStandardDao;
 import dev.linqibin.patra.registry.infra.adapter.persistence.entity.reference.ReferenceStandardEntity;
-import dev.linqibin.patra.registry.infra.config.RegistryMySQLContainerInitializer;
+import dev.linqibin.patra.registry.infra.config.RegistryPostgreSQLContainerInitializer;
 import dev.linqibin.starter.jpa.autoconfig.HibernatePropertiesCustomizer;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
 import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
@@ -33,7 +33,7 @@ import org.springframework.test.context.ContextConfiguration;
 /// @author linqibin
 /// @since 0.1.0
 @DataJpaTest
-@ContextConfiguration(initializers = RegistryMySQLContainerInitializer.class)
+@ContextConfiguration(initializers = RegistryPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ImportAutoConfiguration(FlywayAutoConfiguration.class)
 @Import({

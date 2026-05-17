@@ -24,8 +24,8 @@ import org.springframework.test.context.ActiveProfiles;
 /// 主数据源由 Spring Boot DataSourceAutoConfiguration 管理，不在此测试范围内。
 @SpringBootTest(
     properties = {
-      // Batch 独立数据源（元数据）：使用 Testcontainers MySQL
-      "linqibin.starter.batch.datasource.url=jdbc:tc:mysql:8.0.40:///batch_meta_db",
+      // Batch 独立数据源（元数据）：使用 Testcontainers PostgreSQL
+      "linqibin.starter.batch.datasource.url=jdbc:tc:postgresql:17:///batch_meta_db",
       "linqibin.starter.batch.datasource.username=test",
       "linqibin.starter.batch.datasource.password=test",
       "linqibin.starter.batch.datasource.driver-class-name=org.testcontainers.jdbc.ContainerDatabaseDriver",
@@ -40,8 +40,8 @@ import org.springframework.test.context.ActiveProfiles;
       // 禁用 Redisson（测试环境）
       "spring.autoconfigure.exclude=org.redisson.spring.starter.RedissonAutoConfigurationV2,org.redisson.spring.starter.RedissonAutoConfigurationV4",
       "linqibin.starter.redisson.observability.metrics-enabled=false",
-      // 覆盖主数据源为简单的 Testcontainers MySQL URL（不依赖类路径资源）
-      "spring.datasource.url=jdbc:tc:mysql:8.0.40:///test_batch",
+      // 覆盖主数据源为简单的 Testcontainers PostgreSQL URL（不依赖类路径资源）
+      "spring.datasource.url=jdbc:tc:postgresql:17:///test_batch",
       "spring.datasource.username=test",
       "spring.datasource.password=test",
       "spring.datasource.driver-class-name=org.testcontainers.jdbc.ContainerDatabaseDriver",

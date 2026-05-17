@@ -12,7 +12,7 @@ import dev.linqibin.patra.catalog.domain.model.vo.venue.PublicationHistory;
 import dev.linqibin.patra.catalog.domain.model.vo.venue.PublicationProfile;
 import dev.linqibin.patra.catalog.domain.model.vo.venue.Society;
 import dev.linqibin.patra.catalog.domain.model.vo.venue.VenueLanguages;
-import dev.linqibin.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
+import dev.linqibin.patra.catalog.infra.config.CatalogPostgreSQLContainerInitializer;
 import dev.linqibin.patra.catalog.infra.persistence.dao.VenueDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.VenueIdentifierDao;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
@@ -50,7 +50,7 @@ import org.springframework.test.context.ContextConfiguration;
 /// @author linqibin
 /// @since 0.1.0
 @DataJpaTest
-@ContextConfiguration(initializers = CatalogMySQLContainerInitializer.class)
+@ContextConfiguration(initializers = CatalogPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({VenueRepositoryAdapter.class, JpaAuditingConfig.class, JacksonAutoConfiguration.class})
 @ComponentScan(basePackages = "dev.linqibin.patra.catalog.infra.persistence.converter")

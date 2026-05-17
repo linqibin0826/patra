@@ -10,21 +10,21 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.testcontainers.containers.MySQLContainer;
+import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 /// {@link BatchDataSourceConfiguration} 单元测试。
 ///
 /// 验证 Batch 独立数据源的条件装配逻辑。
-/// 使用 MySQL TestContainers 确保与生产环境一致。
+/// 使用 PostgreSQL TestContainers 确保与生产环境一致。
 @Testcontainers
 class BatchDataSourceConfigurationTest {
 
-  /// MySQL 容器（JVM 级别共享）。
+  /// PostgreSQL 容器（JVM 级别共享）。
   @Container
-  private static final MySQLContainer<?> MYSQL =
-      new MySQLContainer<>("mysql:8.0.36")
+  private static final PostgreSQLContainer<?> POSTGRESQL =
+      new PostgreSQLContainer<>("postgres:17")
           .withDatabaseName("batch_test")
           .withUsername("root")
           .withPassword("123456");
@@ -35,9 +35,9 @@ class BatchDataSourceConfigurationTest {
 
   @BeforeAll
   static void setupDatabase() {
-    jdbcUrl = MYSQL.getJdbcUrl();
-    username = MYSQL.getUsername();
-    password = MYSQL.getPassword();
+    jdbcUrl = POSTGRESQL.getJdbcUrl();
+    username = POSTGRESQL.getUsername();
+    password = POSTGRESQL.getPassword();
   }
 
   private final ApplicationContextRunner contextRunner =
@@ -59,7 +59,7 @@ class BatchDataSourceConfigurationTest {
   @Test
   @DisplayName("配置 datasource.url 时：应创建 batchDataSource 和 batchTransactionManager Bean")
   void batchDataSource_ShouldBeCreated_WhenUrlConfigured() {
-    // When: 配置了 datasource.url（使用 MySQL TestContainers）
+    // When: 配置了 datasource.url（使用 PostgreSQL TestContainers）
     contextRunner
         .withPropertyValues(
             "linqibin.starter.batch.datasource.url=" + jdbcUrl,
@@ -83,7 +83,7 @@ class BatchDataSourceConfigurationTest {
   @Test
   @DisplayName("未配置 Hikari 参数时：应使用默认 Hikari 配置")
   void batchDataSource_ShouldUseHikariDefaults() {
-    // When: 只配置 URL，不配置 Hikari 参数（使用 MySQL TestContainers）
+    // When: 只配置 URL，不配置 Hikari 参数（使用 PostgreSQL TestContainers）
     contextRunner
         .withPropertyValues(
             "linqibin.starter.batch.datasource.url=" + jdbcUrl,
@@ -106,7 +106,7 @@ class BatchDataSourceConfigurationTest {
   @Test
   @DisplayName("配置自定义 Hikari 参数时：应使用自定义配置")
   void batchDataSource_ShouldUseCustomHikariConfig() {
-    // When: 配置了自定义 Hikari 参数（使用 MySQL TestContainers）
+    // When: 配置了自定义 Hikari 参数（使用 PostgreSQL TestContainers）
     contextRunner
         .withPropertyValues(
             "linqibin.starter.batch.datasource.url=" + jdbcUrl,
@@ -132,7 +132,7 @@ class BatchDataSourceConfigurationTest {
   @Test
   @DisplayName("用户自定义 batchDataSource Bean 时：不应覆盖用户定义的 Bean")
   void batchDataSource_ShouldNotOverrideUserDefinedBean() {
-    // Given: 用户自定义了 batchDataSource Bean（使用 MySQL TestContainers）
+    // Given: 用户自定义了 batchDataSource Bean（使用 PostgreSQL TestContainers）
     contextRunner
         .withPropertyValues(
             "linqibin.starter.batch.datasource.url=" + jdbcUrl,

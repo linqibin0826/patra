@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.linqibin.patra.catalog.domain.model.aggregate.MeshQualifierAggregate;
 import dev.linqibin.patra.catalog.domain.model.vo.mesh.MeshUI;
-import dev.linqibin.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
+import dev.linqibin.patra.catalog.infra.config.CatalogPostgreSQLContainerInitializer;
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshQualifierDao;
 import dev.linqibin.patra.catalog.infra.persistence.entity.MeshQualifierEntity;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
@@ -46,7 +46,7 @@ import org.springframework.test.context.ContextConfiguration;
 /// @author linqibin
 /// @since 0.1.0
 @DataJpaTest
-@ContextConfiguration(initializers = CatalogMySQLContainerInitializer.class)
+@ContextConfiguration(initializers = CatalogPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
   MeshQualifierRepositoryAdapter.class,

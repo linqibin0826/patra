@@ -10,7 +10,7 @@ import dev.linqibin.patra.catalog.domain.model.entity.MeshTreeNumber;
 import dev.linqibin.patra.catalog.domain.model.enums.DescriptorClass;
 import dev.linqibin.patra.catalog.domain.model.enums.LexicalTag;
 import dev.linqibin.patra.catalog.domain.model.vo.mesh.MeshUI;
-import dev.linqibin.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
+import dev.linqibin.patra.catalog.infra.config.CatalogPostgreSQLContainerInitializer;
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshConceptDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshConceptRelationDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshDescriptorDao;
@@ -49,7 +49,7 @@ import org.springframework.test.context.ContextConfiguration;
 /// @author linqibin
 /// @since 0.1.0
 @DataJpaTest
-@ContextConfiguration(initializers = CatalogMySQLContainerInitializer.class)
+@ContextConfiguration(initializers = CatalogPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
   MeshDescriptorRepositoryAdapter.class,

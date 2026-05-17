@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.linqibin.patra.catalog.domain.model.aggregate.AuthorAggregate;
 import dev.linqibin.patra.catalog.domain.model.vo.author.AuthorNameVariant;
 import dev.linqibin.patra.catalog.domain.model.vo.author.Orcid;
-import dev.linqibin.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
+import dev.linqibin.patra.catalog.infra.config.CatalogPostgreSQLContainerInitializer;
 import dev.linqibin.patra.catalog.infra.persistence.dao.AuthorDao;
 import dev.linqibin.patra.catalog.infra.persistence.entity.AuthorEntity;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
@@ -47,7 +47,7 @@ import org.springframework.test.context.ContextConfiguration;
 /// @author linqibin
 /// @since 0.1.0
 @DataJpaTest
-@ContextConfiguration(initializers = CatalogMySQLContainerInitializer.class)
+@ContextConfiguration(initializers = CatalogPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({AuthorRepositoryAdapter.class, JpaAuditingConfig.class, JacksonAutoConfiguration.class})
 @ComponentScan(basePackages = "dev.linqibin.patra.catalog.infra.persistence.converter")

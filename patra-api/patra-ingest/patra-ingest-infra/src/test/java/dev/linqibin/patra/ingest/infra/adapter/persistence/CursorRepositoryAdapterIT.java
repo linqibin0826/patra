@@ -6,7 +6,7 @@ import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.ingest.domain.model.entity.Cursor;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.dao.CursorDao;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.CursorEntity;
-import dev.linqibin.patra.ingest.infra.config.IngestMySQLContainerInitializer;
+import dev.linqibin.patra.ingest.infra.config.IngestPostgreSQLContainerInitializer;
 import dev.linqibin.starter.jpa.autoconfig.HibernatePropertiesCustomizer;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
 import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
@@ -42,7 +42,7 @@ import org.springframework.test.context.ContextConfiguration;
 /// @author linqibin
 /// @since 0.1.0
 @DataJpaTest
-@ContextConfiguration(initializers = IngestMySQLContainerInitializer.class)
+@ContextConfiguration(initializers = IngestPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
   CursorRepositoryAdapter.class,
