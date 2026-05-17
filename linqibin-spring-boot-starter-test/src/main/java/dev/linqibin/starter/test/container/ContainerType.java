@@ -6,15 +6,15 @@ package dev.linqibin.starter.test.container;
 ///
 /// ### 支持的容器类型
 ///
-/// - **MYSQL**: MySQL 数据库容器
+/// - **POSTGRESQL**: PostgreSQL 数据库容器
 /// - **ROCKETMQ**: RocketMQ 消息队列容器
 /// - **REDIS**: Redis 缓存容器
 ///
 /// ### 使用示例
 ///
 /// ```java
-/// // 获取已注册的 MySQL 容器
-/// MySQLContainer<?> mysql = ContainerRegistry.get(ContainerType.MYSQL);
+/// // 获取已注册的 PostgreSQL 容器
+/// PostgreSQLContainer<?> postgres = ContainerRegistry.get(ContainerType.POSTGRESQL);
 ///
 /// // 检查容器是否已注册
 /// if (ContainerRegistry.isRegistered(ContainerType.REDIS)) {
@@ -27,10 +27,10 @@ package dev.linqibin.starter.test.container;
 /// @see ContainerRegistry
 public enum ContainerType {
 
-  /// MySQL 数据库容器。
+  /// PostgreSQL 数据库容器。
   ///
-  /// 使用 mysql:8.0.36 镜像，支持配置化数据库名。
-  MYSQL,
+  /// 使用 postgres:17 镜像，支持配置化数据库名。
+  POSTGRESQL,
 
   /// RocketMQ 消息队列容器。
   ///
