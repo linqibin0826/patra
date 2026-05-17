@@ -226,7 +226,7 @@ public interface PublicationDao extends JpaRepository<PublicationEntity, Long> {
           WHERE venue_id = :venueId
             AND (:since IS NULL OR publication_year >= :since)
             AND deleted_at IS NULL
-          ORDER BY citation_count IS NULL, citation_count DESC, publication_year DESC
+          ORDER BY citation_count DESC NULLS LAST, publication_year DESC
           LIMIT :limit
           """,
       nativeQuery = true)
