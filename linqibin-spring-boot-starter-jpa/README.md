@@ -258,13 +258,12 @@ public class BatchImportService {
 | `EntityNotFoundException` | 404 | 实体不存在 |
 | `EntityExistsException` | 409 | 实体已存在（重复键） |
 | `OptimisticLockException` | 409 | 乐观锁冲突 |
-| `DataIntegrityViolationException` | 409 | 数据完整性违反 |
+| `DataIntegrityViolationException` | 409 | 数据完整性违反（包含 PG SQLState `23505 unique_violation`、`23503 foreign_key_violation`、`23502 not_null_violation`、`23514 check_violation`） |
 | `ConstraintViolationException` | 409 | 约束违反 |
 | `JDBCConnectionException` | 503 | 数据库连接问题 |
 | `QueryTimeoutException` | 503 | 查询超时 |
 | 其他 `PersistenceException` | 500 | 内部错误 |
-| MySQL 1062 | 409 | 唯一键重复条目 |
-| MySQL 1451/1452 | 409 | 外键约束错误 |
+| SQLState `08xxx` / `HYxxx` | 503 | 连接/超时类错误（兜底） |
 
 ## 快速开始
 

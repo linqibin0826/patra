@@ -192,24 +192,8 @@ public class JpaErrorMappingContributor implements ErrorMappingContributor {
     }
 
     if (exception instanceof SQLException sqlEx) {
-      // MySQL 特定错误码映射
-      Optional<ErrorCodeLike> mysqlResult =
-          switch (sqlEx.getErrorCode()) {
-            case 1062 -> { // ER_DUP_ENTRY: 唯一键的重复条目
-              log.debug("将 MySQL 重复条目错误 ({}) 映射为冲突", sqlEx.getErrorCode(), sqlEx);
-              yield Optional.of(http.CONFLICT());
-            }
-            case 1451, 1452 -> { // ER_ROW_IS_REFERENCED_2, ER_NO_REFERENCED_ROW_2: 外键约束
-              log.debug("将 MySQL 外键约束错误 ({}) 映射为冲突", sqlEx.getErrorCode(), sqlEx);
-              yield Optional.of(http.CONFLICT());
-            }
-            default -> Optional.empty();
-          };
-      if (mysqlResult.isPresent()) {
-        return mysqlResult;
-      }
-
-      // SQLState 映射
+      // SQLState 映射（PG 完整性错误已由 Spring Data 包装为 DataIntegrityViolationException，
+      // 在 mapSpringDataExceptions() 中已处理为 CONFLICT；这里仅兜底连接/超时类错误）
       String sqlState = sqlEx.getSQLState();
       if (sqlState != null && (sqlState.startsWith("08") || sqlState.startsWith("HY"))) {
         log.warn("将 SQL 连接/超时错误（SQLState: {}）映射为服务不可用", sqlState, sqlEx);
