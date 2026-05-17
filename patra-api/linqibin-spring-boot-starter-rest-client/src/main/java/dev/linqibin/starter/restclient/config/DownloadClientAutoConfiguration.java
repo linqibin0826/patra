@@ -53,10 +53,15 @@ public class DownloadClientAutoConfiguration {
   /// 创建下载客户端。
   ///
   /// 使用 `ObjectProvider` 解析 `StreamingDownloader` 集合，避免
-  // `@ConditionalOnBean(StreamingDownloader.class)`
-  /// 在 Spring Boot 4 的条件评估时序下与同类兄弟 `@Bean` 互相不可见的问题（条件评估早于
-  /// BeanDefinition 类型可见性建立）。无 downloader 时 `DefaultDownloadClient` 在调用期才会抛出
-  /// `unsupportedScheme`，由调用方处理。
+  /// `@ConditionalOnBean(StreamingDownloader.class)` 在同类内兄弟 `@Bean`
+  /// 提供 bean 时不可靠的问题 —— `OnBeanCondition` 在解析阶段评估，
+  /// 只能看到"截止当前已处理"的 BeanDefinition，同类兄弟 `@Bean` 反射注册
+  /// 顺序不确定（可能尚未注册）。这是 Spring 一贯设计，团队明确拒绝修复
+  /// （见 spring-boot#30508 / #26621 / #37382），推荐 `ObjectProvider`
+  /// 模式把解析推迟到 BeanFactory 完成阶段。
+  ///
+  /// 无 downloader 时 `DefaultDownloadClient` 在调用期才抛 `unsupportedScheme`，
+  /// 由调用方处理。
   ///
   /// @param properties 下载配置
   /// @param downloadersProvider 流式下载策略 ObjectProvider
@@ -105,12 +110,12 @@ public class DownloadClientAutoConfiguration {
 
   /// HTTP/HTTPS 流式下载策略配置。
   ///
-  /// 移除了原 `@ConditionalOnBean(name = "streamingWebClient")` —— 该守卫在 Spring Boot 4 条件评估时序下
-  /// 与 `StreamingWebClientAutoConfiguration` 跨类失效。本类的进入条件
-  /// （`@ConditionalOnClass(WebClient)` + `streaming.enabled`）与
-  // `StreamingWebClientAutoConfiguration`
-  /// 完全一致，前者满足则 `streamingWebClient` bean 一定存在。若用户手动排除了
-  /// `StreamingWebClientAutoConfiguration`，`@Qualifier` 注入会失败并给出清晰的报错。
+  /// 移除了原 `@ConditionalOnBean(name = "streamingWebClient")` —— 该守卫受
+  /// `OnBeanCondition` 评估时序约束（解析阶段评估，跨类依赖目标 BeanDefinition
+  /// 已注册），存在不可靠风险。本类的进入条件（`@ConditionalOnClass(WebClient)`
+  /// + `streaming.enabled`）与 `StreamingWebClientAutoConfiguration` 完全一致，
+  /// 前者满足则 `streamingWebClient` bean 一定存在，守卫冗余。若用户手动排除
+  /// `StreamingWebClientAutoConfiguration`，`@Qualifier` 注入会失败并给出清晰报错。
   @Configuration
   @ConditionalOnClass(name = "org.springframework.web.reactive.function.client.WebClient")
   @ConditionalOnProperty(
