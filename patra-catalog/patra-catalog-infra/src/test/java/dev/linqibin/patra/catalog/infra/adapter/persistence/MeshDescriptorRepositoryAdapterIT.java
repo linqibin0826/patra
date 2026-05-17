@@ -316,12 +316,9 @@ class MeshDescriptorRepositoryAdapterIT {
                   "Cardiovascular Diseases" // 正确大小写
                   ));
 
-      // Then: 只有正确大小写的名称匹配
-      // 注意：MySQL 默认排序规则可能是大小写不敏感的，这里验证实际行为
+      // PG `C` collation（spec §4.22）大小写敏感，确定匹配单个
+      assertThat(result).hasSize(1);
       assertThat(result).containsKey("Cardiovascular Diseases");
-      // 如果 MySQL 使用 utf8mb4_0900_ai_ci（大小写不敏感），则可能匹配多个
-      // 如果使用 utf8mb4_bin（大小写敏感），则只匹配一个
-      // 此测试记录实际行为
     }
   }
 
