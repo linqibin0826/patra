@@ -20,7 +20,7 @@ import dev.linqibin.patra.registry.infra.adapter.persistence.entity.expr.ProvApi
 import dev.linqibin.patra.registry.infra.adapter.persistence.entity.expr.ProvExprCapabilityEntity;
 import dev.linqibin.patra.registry.infra.adapter.persistence.entity.expr.ProvExprRenderRuleEntity;
 import dev.linqibin.patra.registry.infra.adapter.persistence.entity.provenance.ProvenanceEntity;
-import dev.linqibin.patra.registry.infra.config.RegistryMySQLContainerInitializer;
+import dev.linqibin.patra.registry.infra.config.RegistryPostgreSQLContainerInitializer;
 import dev.linqibin.starter.jpa.autoconfig.HibernatePropertiesCustomizer;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
 import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
@@ -47,13 +47,13 @@ import tools.jackson.databind.json.JsonMapper;
 
 /// ExprRepositoryAdapter 集成测试。
 ///
-/// 使用 TestContainers + MySQL 8 测试表达式快照加载。
+/// 使用 TestContainers + PostgreSQL 17 测试表达式快照加载。
 ///
 /// **测试策略**：
 ///
-/// - 集成测试：使用真实 MySQL 数据库
+/// - 集成测试：使用真实 PostgreSQL 数据库
 ///   - 测试隔离：每个测试方法前清理并重建测试数据
-///   - TestContainers：自动启动和停止 MySQL 容器
+///   - TestContainers：自动启动和停止 PostgreSQL 容器
 ///   - Flyway：自动执行数据库迁移脚本
 ///   - 测试覆盖：loadSnapshot() 的各种场景
 ///
@@ -68,7 +68,7 @@ import tools.jackson.databind.json.JsonMapper;
 /// @author linqibin
 /// @since 0.1.0
 @DataJpaTest
-@ContextConfiguration(initializers = RegistryMySQLContainerInitializer.class)
+@ContextConfiguration(initializers = RegistryPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ImportAutoConfiguration(FlywayAutoConfiguration.class)
 @Import({ExprRepositoryAdapter.class, JpaAuditingConfig.class, HibernatePropertiesCustomizer.class})

@@ -12,7 +12,7 @@ Spring Data JPA Starter，提供基于 Hibernate 7.1 的数据持久化支持，
 - **JPA 审计集成**：自动填充 createdAt/createdBy/updatedAt/updatedBy
 - **Hibernate 批量写入优化**：开箱即用的批量插入/更新配置
 - **错误映射**：通过 `ErrorMappingContributor` SPI 将 JPA/Hibernate 异常转换为标准错误码
-- **Flyway 数据库迁移**：内置 Flyway + MySQL 支持
+- **Flyway 数据库迁移**：内置 Flyway + PostgreSQL 支持
 
 ## 核心功能
 
@@ -258,13 +258,12 @@ public class BatchImportService {
 | `EntityNotFoundException` | 404 | 实体不存在 |
 | `EntityExistsException` | 409 | 实体已存在（重复键） |
 | `OptimisticLockException` | 409 | 乐观锁冲突 |
-| `DataIntegrityViolationException` | 409 | 数据完整性违反 |
+| `DataIntegrityViolationException` | 409 | 数据完整性违反（包含 PG SQLState `23505 unique_violation`、`23503 foreign_key_violation`、`23502 not_null_violation`、`23514 check_violation`） |
 | `ConstraintViolationException` | 409 | 约束违反 |
 | `JDBCConnectionException` | 503 | 数据库连接问题 |
 | `QueryTimeoutException` | 503 | 查询超时 |
 | 其他 `PersistenceException` | 500 | 内部错误 |
-| MySQL 1062 | 409 | 唯一键重复条目 |
-| MySQL 1451/1452 | 409 | 外键约束错误 |
+| SQLState `08xxx` / `HYxxx` | 503 | 连接/超时类错误（兜底） |
 
 ## 快速开始
 
@@ -282,10 +281,10 @@ public class BatchImportService {
 ```yaml
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/patra?rewriteBatchedStatements=true
-    username: root
+    url: jdbc:postgresql://localhost:15432/patra
+    username: postgres
     password: password
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
       ddl-auto: validate  # 使用 Flyway 管理 DDL
@@ -295,7 +294,7 @@ spring:
     locations: classpath:db/migration
 ```
 
-> **重要**：数据库连接 URL 必须包含 `rewriteBatchedStatements=true` 以启用 MySQL 批量写入优化。
+> **重要**：数据库连接 URL 格式为 `jdbc:postgresql://host:port/db`，Hibernate 批量写入优化由 `HibernatePropertiesCustomizer` 自动配置。
 
 ### 3. 创建 Entity
 
@@ -360,7 +359,7 @@ public class JpaTaskRepository implements TaskRepository {
 
 | 属性 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `spring.datasource.url` | String | - | 数据库连接 URL（**必须含** `rewriteBatchedStatements=true`） |
+| `spring.datasource.url` | String | - | 数据库连接 URL，格式：`jdbc:postgresql://host:port/db` |
 | `spring.jpa.hibernate.ddl-auto` | String | validate | DDL 策略，建议使用 Flyway |
 | `spring.jpa.properties.hibernate.jdbc.batch_size` | int | 500 | 批量写入大小 |
 | `spring.flyway.enabled` | boolean | true | 是否启用 Flyway |
@@ -374,8 +373,8 @@ patra-spring-boot-starter-jpa
 ├── patra-spring-boot-starter-core       # 核心 Starter（ErrorMappingContributor SPI）
 ├── spring-boot-starter-data-jpa         # Spring Data JPA（含 Hibernate 7.1）
 ├── flyway-core                          # Flyway 核心
-├── flyway-mysql                         # Flyway MySQL 支持
-├── mysql-connector-j                    # MySQL 驱动
+├── flyway-database-postgresql           # Flyway PostgreSQL 支持
+├── postgresql                           # PostgreSQL 驱动
 └── jackson-databind                     # JSON 处理（用于 JSON 类型字段）
 ```
 

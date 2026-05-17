@@ -67,7 +67,7 @@ class BatchScheduleTest {
         500, // pageSizeValue
         10000, // maxPagesPerExecution
         "sort", // sortFieldParamName
-        1 // sortingDirection (ASC)
+        true // sortingDirection (ASC)
         );
   }
 

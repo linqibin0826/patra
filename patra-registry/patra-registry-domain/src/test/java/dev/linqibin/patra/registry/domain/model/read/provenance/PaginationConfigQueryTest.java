@@ -27,7 +27,7 @@ class PaginationConfigQueryTest {
   private static final Integer VALID_PAGE_SIZE = 100;
   private static final Integer VALID_MAX_PAGES = 10;
   private static final String VALID_SORT_FIELD = "publicationDate";
-  private static final Integer VALID_SORT_DIRECTION = 1;
+  private static final Boolean VALID_SORT_DIRECTION = true;
 
   @Nested
   @DisplayName("成功构造测试")

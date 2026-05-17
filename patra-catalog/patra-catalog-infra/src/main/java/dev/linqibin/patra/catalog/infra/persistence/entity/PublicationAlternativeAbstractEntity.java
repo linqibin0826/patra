@@ -10,6 +10,8 @@ import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /// 文献翻译摘要 JPA 实体，映射到表 `cat_publication_alternative_abstract`。
 ///
@@ -74,6 +76,7 @@ public class PublicationAlternativeAbstractEntity extends ValueObjectJpaEntity {
   private String plainText;
 
   /// 结构化摘要段落（JSON 对象）
+  @JdbcTypeCode(SqlTypes.JSON)
   @Column(name = "structured_sections", columnDefinition = "JSON")
   private String structuredSections;
 

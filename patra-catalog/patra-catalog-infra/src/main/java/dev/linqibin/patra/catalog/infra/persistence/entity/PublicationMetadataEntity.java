@@ -10,6 +10,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /// 文献元数据 JPA 实体，映射到表 `cat_publication_metadata`。
 ///
@@ -112,10 +114,12 @@ public class PublicationMetadataEntity extends ValueObjectJpaEntity {
   private String reviewer;
 
   /// 验证错误（JSON 数组）
+  @JdbcTypeCode(SqlTypes.JSON)
   @Column(name = "validation_errors", columnDefinition = "JSON")
   private String validationErrors;
 
   /// 处理注释（JSON 数组）
+  @JdbcTypeCode(SqlTypes.JSON)
   @Column(name = "processing_notes", columnDefinition = "JSON")
   private String processingNotes;
 }

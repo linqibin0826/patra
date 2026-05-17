@@ -3,8 +3,9 @@
 
 spring:
   flyway:
-    # 只执行到 V1.0.2（最后一个 schema 迁移），跳过 V1.1.0 种子数据
-    target: 1.0.2
+    # 只执行到 V1（schema 迁移），跳过 V2~V4 种子数据
+    # 迁移脚本命名已从 V1.0.x 改为 V1/V2/V3/V4（PG 迁移重命名）
+    target: 1
     # 允许清理数据库（仅用于测试）
     clean-disabled: false
     # 设置 baseline 跳过已存在的迁移历史检查

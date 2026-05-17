@@ -1,7 +1,7 @@
 spring:
   datasource:
-    url: ${STORAGE_DB_URL:jdbc:mysql://localhost:13306/patra_storage?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC}
-    username: ${STORAGE_DB_USERNAME:root}
+    url: ${STORAGE_DB_URL:jdbc:postgresql://localhost:15432/patra_storage}
+    username: ${STORAGE_DB_USERNAME:postgres}
     password: ${STORAGE_DB_PASSWORD:123456}
 
 logging:

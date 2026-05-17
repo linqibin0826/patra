@@ -56,7 +56,7 @@ class PaginationConfigTest {
       Integer pageSizeValue = 100;
       Integer maxPagesPerExecution = 10;
       String sortFieldParamName = "updated_at";
-      Integer sortingDirection = 0;
+      Boolean sortingDirection = false;
 
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
@@ -814,7 +814,7 @@ class PaginationConfigTest {
     @DisplayName("sortingDirection 为 null 时应允许")
     void sortingDirectionCanBeNull() {
       // Given: sortingDirection 为 null
-      Integer sortingDirection = null;
+      Boolean sortingDirection = null;
 
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
@@ -879,7 +879,7 @@ class PaginationConfigTest {
               100,
               10,
               "updated_at",
-              0);
+              false);
 
       PaginationConfig paginationConfig2 =
           new PaginationConfig(
@@ -892,7 +892,7 @@ class PaginationConfigTest {
               100,
               10,
               "updated_at",
-              0);
+              false);
 
       // When & Then: 应该相等
       assertThat(paginationConfig1).isEqualTo(paginationConfig2);
@@ -948,7 +948,7 @@ class PaginationConfigTest {
               100,
               10,
               "updated_at",
-              0);
+              false);
 
       // When: 调用 toString
       String toString = paginationConfig.toString();
@@ -1071,7 +1071,7 @@ class PaginationConfigTest {
               100,
               10,
               "updated_at",
-              0);
+              false);
 
       // When: 获取字段值
       Long retrievedId = paginationConfig.id();
@@ -1295,10 +1295,10 @@ class PaginationConfigTest {
     }
 
     @Test
-    @DisplayName("应该成功创建 sortingDirection 为 0（降序 DESC）的配置")
+    @DisplayName("应该成功创建 sortingDirection 为 false（降序 DESC）的配置")
     void shouldCreateConfigWithSortingDirectionDesc() {
-      // Given: sortingDirection 为 0（降序 DESC）
-      Integer sortingDirection = 0;
+      // Given: sortingDirection 为 false（降序 DESC）
+      Boolean sortingDirection = false;
 
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
@@ -1315,14 +1315,14 @@ class PaginationConfigTest {
               sortingDirection);
 
       // Then: 验证成功创建
-      assertThat(paginationConfig.sortingDirection()).isEqualTo(0);
+      assertThat(paginationConfig.sortingDirection()).isEqualTo(false);
     }
 
     @Test
-    @DisplayName("应该成功创建 sortingDirection 为 1（升序 ASC）的配置")
+    @DisplayName("应该成功创建 sortingDirection 为 true（升序 ASC）的配置")
     void shouldCreateConfigWithSortingDirectionAsc() {
-      // Given: sortingDirection 为 1（升序 ASC）
-      Integer sortingDirection = 1;
+      // Given: sortingDirection 为 true（升序 ASC）
+      Boolean sortingDirection = true;
 
       // When: 创建 PaginationConfig
       PaginationConfig paginationConfig =
@@ -1339,7 +1339,7 @@ class PaginationConfigTest {
               sortingDirection);
 
       // Then: 验证成功创建
-      assertThat(paginationConfig.sortingDirection()).isEqualTo(1);
+      assertThat(paginationConfig.sortingDirection()).isEqualTo(true);
     }
 
     @Test
@@ -1477,7 +1477,7 @@ class PaginationConfigTest {
               100,
               10,
               "updated_at",
-              0);
+              false);
 
       // Then: 验证所有字段
       assertThat(paginationConfig.id()).isEqualTo(1001L);
@@ -1487,7 +1487,7 @@ class PaginationConfigTest {
       assertThat(paginationConfig.pageSizeValue()).isEqualTo(100);
       assertThat(paginationConfig.maxPagesPerExecution()).isEqualTo(10);
       assertThat(paginationConfig.sortFieldParamName()).isEqualTo("updated_at");
-      assertThat(paginationConfig.sortingDirection()).isEqualTo(0);
+      assertThat(paginationConfig.sortingDirection()).isEqualTo(false);
     }
 
     @Test
@@ -1727,54 +1727,6 @@ class PaginationConfigTest {
 
       // Then: 应该成功创建
       assertThat(paginationConfig.sortFieldParamName()).isEqualTo("t");
-    }
-
-    @Test
-    @DisplayName("应该处理 sortingDirection 为负数的情况")
-    void shouldHandleNegativeSortingDirection() {
-      // Given: sortingDirection 为负数
-      Integer sortingDirection = -1;
-
-      // When: 创建 PaginationConfig
-      PaginationConfig paginationConfig =
-          new PaginationConfig(
-              1001L,
-              2001L,
-              "HARVEST",
-              Instant.now(),
-              null,
-              "PAGE_NUMBER",
-              null,
-              null,
-              "updated_at",
-              sortingDirection);
-
-      // Then: 应该成功创建
-      assertThat(paginationConfig.sortingDirection()).isEqualTo(-1);
-    }
-
-    @Test
-    @DisplayName("应该处理 sortingDirection 为大于 1 的情况")
-    void shouldHandleSortingDirectionGreaterThanOne() {
-      // Given: sortingDirection 为大于 1
-      Integer sortingDirection = 2;
-
-      // When: 创建 PaginationConfig
-      PaginationConfig paginationConfig =
-          new PaginationConfig(
-              1001L,
-              2001L,
-              "HARVEST",
-              Instant.now(),
-              null,
-              "PAGE_NUMBER",
-              null,
-              null,
-              "updated_at",
-              sortingDirection);
-
-      // Then: 应该成功创建
-      assertThat(paginationConfig.sortingDirection()).isEqualTo(2);
     }
 
     @Test

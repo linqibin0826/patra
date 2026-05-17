@@ -36,7 +36,7 @@ import lombok.Setter;
     name = "cat_publication_identifier",
     indexes = {
       @Index(name = "idx_pub_type", columnList = "publication_id, type"),
-      @Index(name = "idx_type_value", columnList = "type, value")
+      @Index(name = "idx_type_value", columnList = "type, identifier_value")
     })
 public class PublicationIdentifierEntity extends ValueObjectJpaEntity {
 
@@ -50,7 +50,7 @@ public class PublicationIdentifierEntity extends ValueObjectJpaEntity {
   private PublicationIdentifierType type;
 
   /// 标识符值
-  @Column(name = "value", nullable = false, length = 255)
+  @Column(name = "identifier_value", nullable = false, length = 255)
   private String value;
 
   /// 标识符来源（PubMed/Crossref/Manual）

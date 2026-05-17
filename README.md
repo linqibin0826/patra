@@ -2,7 +2,7 @@
 
 > **状态**: 🚧 引导阶段 (v0.1.0-SNAPSHOT)
 > **架构**: 微服务 + 六边形架构 + DDD + 事件驱动
-> **技术栈**: Java 25, Spring Boot 4.0.1, Spring Data JPA, MySQL 8.x
+> **技术栈**: Java 25, Spring Boot 4.0.1, Spring Data JPA, PostgreSQL 17
 
 ---
 
@@ -87,7 +87,7 @@ Patra 是一个**医学出版物数据平台**,旨在:
 
 - **Java 25+** (OpenJDK 或 Oracle JDK)
 - **Gradle 8.x+** (已内置 Wrapper，无需单独安装)
-- **MySQL 8.0+**
+- **PostgreSQL 17+**
 - **Docker & Docker Compose** (用于本地基础设施)
 
 ### 1. 启动本地基础设施
@@ -98,7 +98,7 @@ docker-compose up -d
 ```
 
 这将启动:
-- MySQL (端口 13306)
+- PostgreSQL (端口 15432)
 - Consul (端口 8500) — 服务注册中心
 - RocketMQ (端口 9876, 10911) — 消息队列
 
@@ -106,8 +106,8 @@ docker-compose up -d
 
 ```bash
 # 运行 SQL 脚本 (位置待定)
-mysql -h127.0.0.1 -uroot -p < scripts/init-registry.sql
-mysql -h127.0.0.1 -uroot -p < scripts/init-ingest.sql
+psql -h 127.0.0.1 -p 15432 -U postgres -f scripts/init-registry.sql
+psql -h 127.0.0.1 -p 15432 -U postgres -f scripts/init-ingest.sql
 ```
 
 ### 3. 构建项目

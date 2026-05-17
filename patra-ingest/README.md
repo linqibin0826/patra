@@ -237,7 +237,7 @@ PlanMetadata metadata = searchPort.preparePlanMetadata(
 ### 1. 启动依赖服务
 
 ```bash
-# 启动 MySQL + RocketMQ + MinIO
+# 启动 PostgreSQL + RocketMQ + MinIO
 docker-compose -f docker/docker-compose.yml up -d
 ```
 

@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.linqibin.commons.query.PageResult;
 import dev.linqibin.commons.query.PagingParams;
 import dev.linqibin.patra.catalog.domain.model.read.venue.VenueInstanceSummaryReadModel;
-import dev.linqibin.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
+import dev.linqibin.patra.catalog.infra.config.CatalogPostgreSQLContainerInitializer;
 import dev.linqibin.patra.catalog.infra.persistence.dao.PublicationDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.VenueDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.VenueInstanceDao;
@@ -38,7 +38,7 @@ import org.springframework.test.context.ContextConfiguration;
 /// - publicationCount 统计正确
 /// - 排序规则：publicationYear DESC、volume DESC、issue DESC
 @DataJpaTest
-@ContextConfiguration(initializers = CatalogMySQLContainerInitializer.class)
+@ContextConfiguration(initializers = CatalogPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
   VenueReadAdapter.class,

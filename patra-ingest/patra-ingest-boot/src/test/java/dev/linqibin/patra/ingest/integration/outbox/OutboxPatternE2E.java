@@ -11,7 +11,7 @@ import dev.linqibin.patra.ingest.domain.model.entity.OutboxMessage;
 import dev.linqibin.patra.ingest.domain.port.OutboxMessageRepository;
 import dev.linqibin.patra.ingest.domain.port.OutboxRelayRepository;
 import dev.linqibin.patra.ingest.infra.messaging.RocketMqOutboxPublisher;
-import dev.linqibin.patra.ingest.integration.config.IngestMySQLContainerInitializer;
+import dev.linqibin.patra.ingest.integration.config.IngestPostgreSQLContainerInitializer;
 import dev.linqibin.patra.ingest.integration.config.IngestRocketMQContainerInitializer;
 import dev.linqibin.patra.ingest.testutil.OutboxMessageTestBuilder;
 import dev.linqibin.patra.ingest.testutil.RocketMQMessageCollector;
@@ -67,7 +67,7 @@ import org.springframework.transaction.annotation.Transactional;
 ///
 /// 遵循 testing-guide.md §7.2 Outbox 模式测试要求:
 ///
-/// - **真实依赖**: MySQL + RocketMQ (Testcontainers)
+/// - **真实依赖**: PostgreSQL + RocketMQ (Testcontainers)
 ///   - **事务测试**: 使用 `@Transactional` 测试原子性
 ///   - **异步验证**: 使用 Awaitility 等待消息接收
 ///   - **状态验证**: 检查数据库中 Outbox 消息状态变化
@@ -104,7 +104,7 @@ import org.springframework.transaction.annotation.Transactional;
 ///
 /// @author linqibin
 /// @since 0.1.0
-/// @see IngestMySQLContainerInitializer
+/// @see IngestPostgreSQLContainerInitializer
 /// @see IngestRocketMQContainerInitializer
 /// @see OutboxMessageTestBuilder
 @SpringBootTest(
@@ -117,7 +117,7 @@ import org.springframework.transaction.annotation.Transactional;
     })
 @ContextConfiguration(
     initializers = {
-      IngestMySQLContainerInitializer.class,
+      IngestPostgreSQLContainerInitializer.class,
       IngestRocketMQContainerInitializer.class
     })
 @DisplayName("Outbox 模式端到端测试")
@@ -127,7 +127,8 @@ import org.springframework.transaction.annotation.Transactional;
 class OutboxPatternE2E {
 
   // ========== Test Dependencies ==========
-  // 注意：此测试类同时使用 MySQL 和 RocketMQ 容器（由 MySQLContainerInitializer 和 RocketMQContainerInitializer 提供）
+  // 注意：此测试类同时使用 PostgreSQL 和 RocketMQ 容器（由 PostgreSQLContainerInitializer 和
+  // RocketMQContainerInitializer 提供）
   // 所有容器在所有测试间共享，提升测试性能
 
   @Autowired private OutboxMessageRepository outboxRepository;

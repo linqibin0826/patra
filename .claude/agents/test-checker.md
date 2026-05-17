@@ -49,7 +49,7 @@ color: yellow
 ## 测试基础设施
 
 所有 Spring 模块（除 domain 层、api 层和 `patra-common-*`）必须使用 `patra-spring-boot-starter-test`：
-- **容器初始化器**：`MySQLContainerInitializer`、`RocketMQContainerInitializer` 基类
+- **容器初始化器**：`PostgreSQLContainerInitializer`、`RocketMQContainerInitializer` 基类
 - **ArchUnit 规则**：`HexagonalArchitectureRules`、`TestingRules`
 - **传递依赖**：JUnit 5、AssertJ、Mockito、TestContainers、ArchUnit、Awaitility、WireMock
 - **禁止重复声明**：上述已传递的依赖不应在模块 build.gradle.kts 中重复声明

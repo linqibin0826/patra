@@ -8,7 +8,7 @@ import static org.mockito.Mockito.*;
 
 import dev.linqibin.commons.cqrs.CommandBus;
 import dev.linqibin.patra.ingest.app.usecase.execution.command.TaskReadyCommand;
-import dev.linqibin.patra.ingest.integration.config.IngestMySQLContainerInitializer;
+import dev.linqibin.patra.ingest.integration.config.IngestPostgreSQLContainerInitializer;
 import dev.linqibin.patra.ingest.integration.config.IngestRocketMQContainerInitializer;
 import java.util.HashMap;
 import java.util.Map;
@@ -56,15 +56,15 @@ import tools.jackson.databind.ObjectMapper;
 ///
 /// ### 容器依赖说明
 ///
-/// 本测试需要启动 RocketMQ 和 MySQL 容器：
+/// 本测试需要启动 RocketMQ 和 PostgreSQL 容器：
 ///
 /// - RocketMQ: 用于测试消息监听器
-///   - MySQL: 应用上下文依赖数据库组件（如 Repository）
+///   - PostgreSQL: 应用上下文依赖数据库组件（如 Repository）
 ///
 /// @author linqibin
 /// @since 0.1.0
 /// @see RocketMQContainerInitializer
-/// @see MySQLContainerInitializer
+/// @see IngestPostgreSQLContainerInitializer
 /// @see CommandBus
 @Slf4j
 @SpringBootTest(
@@ -79,7 +79,7 @@ import tools.jackson.databind.ObjectMapper;
     })
 @ContextConfiguration(
     initializers = {
-      IngestMySQLContainerInitializer.class,
+      IngestPostgreSQLContainerInitializer.class,
       IngestRocketMQContainerInitializer.class
     })
 @org.springframework.test.context.ActiveProfiles("integration-test")

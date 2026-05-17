@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.linqibin.patra.catalog.domain.model.enums.DisambiguationMethod;
 import dev.linqibin.patra.catalog.domain.model.enums.DisambiguationStatus;
-import dev.linqibin.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
+import dev.linqibin.patra.catalog.infra.config.CatalogPostgreSQLContainerInitializer;
 import dev.linqibin.patra.catalog.infra.persistence.dao.PublicationAuthorAffiliationDao;
 import dev.linqibin.patra.catalog.infra.persistence.entity.PublicationAuthorAffiliationEntity;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
@@ -29,13 +29,13 @@ import org.springframework.test.context.ContextConfiguration;
 
 /// 作者-机构归属 Dao 集成测试。
 ///
-/// 使用 Testcontainers + MySQL 8 测试 JPA Repository 的 CRUD 操作。
+/// 使用 Testcontainers + PostgreSQL 17 测试 JPA Repository 的 CRUD 操作。
 ///
 /// **测试策略**：
 ///
-/// - 集成测试：使用真实 MySQL 数据库
+/// - 集成测试：使用真实 PostgreSQL 数据库
 /// - 测试隔离：每个测试方法独立，使用 @Transactional 自动回滚
-/// - TestContainers：自动启动和停止 MySQL 容器
+/// - TestContainers：自动启动和停止 PostgreSQL 容器
 ///
 /// **重点测试场景**：
 ///
@@ -47,7 +47,7 @@ import org.springframework.test.context.ContextConfiguration;
 /// @author linqibin
 /// @since 0.1.0
 @DataJpaTest
-@ContextConfiguration(initializers = CatalogMySQLContainerInitializer.class)
+@ContextConfiguration(initializers = CatalogPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import(JpaAuditingConfig.class)
 @ActiveProfiles("test")

@@ -75,7 +75,7 @@ public class SysDictItemEntity extends SoftDeletableJpaEntity {
 
   /// 生成列，用于强制每个类型只有一个默认项(由数据库处理)。
   ///
-  /// MySQL GENERATED ALWAYS AS 列，Hibernate 不应尝试插入或更新。
+  /// PG GENERATED ALWAYS AS (...) STORED 列，Hibernate 不应尝试插入或更新。
   @Column(name = "default_key", insertable = false, updatable = false)
   private Long defaultKey;
 }

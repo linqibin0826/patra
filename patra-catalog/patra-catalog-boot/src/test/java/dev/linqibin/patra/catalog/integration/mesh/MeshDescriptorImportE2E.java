@@ -16,7 +16,7 @@ import dev.linqibin.patra.catalog.infra.persistence.dao.MeshDescriptorDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshEntryCombinationDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshEntryTermDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshTreeNumberDao;
-import dev.linqibin.patra.catalog.integration.config.CatalogMySQLContainerInitializer;
+import dev.linqibin.patra.catalog.integration.config.CatalogPostgreSQLContainerInitializer;
 import dev.linqibin.starter.objectstorage.ObjectStorageOperations;
 import java.io.IOException;
 import java.io.InputStream;
@@ -69,7 +69,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
       "spring.cloud.consul.enabled=false",
       "spring.config.import=classpath:catalog-error-config.yaml"
     })
-@ContextConfiguration(initializers = CatalogMySQLContainerInitializer.class)
+@ContextConfiguration(initializers = CatalogPostgreSQLContainerInitializer.class)
 @ActiveProfiles("e2e-test")
 @Timeout(value = 60, unit = TimeUnit.SECONDS)
 @TestClassOrder(ClassOrderer.OrderAnnotation.class)
@@ -161,10 +161,10 @@ class MeshDescriptorImportE2E {
     jdbcTemplate.execute("DELETE FROM BATCH_STEP_EXECUTION");
     jdbcTemplate.execute("DELETE FROM BATCH_JOB_EXECUTION");
     jdbcTemplate.execute("DELETE FROM BATCH_JOB_INSTANCE");
-    // 重置序列值
-    jdbcTemplate.execute("UPDATE BATCH_STEP_EXECUTION_SEQ SET ID = 0");
-    jdbcTemplate.execute("UPDATE BATCH_JOB_EXECUTION_SEQ SET ID = 0");
-    jdbcTemplate.execute("UPDATE BATCH_JOB_INSTANCE_SEQ SET ID = 0");
+    // PG 使用 SEQUENCE，通过 ALTER SEQUENCE RESTART 重置自增值
+    jdbcTemplate.execute("ALTER SEQUENCE BATCH_STEP_EXECUTION_SEQ RESTART WITH 1");
+    jdbcTemplate.execute("ALTER SEQUENCE BATCH_JOB_EXECUTION_SEQ RESTART WITH 1");
+    jdbcTemplate.execute("ALTER SEQUENCE BATCH_JOB_INSTANCE_SEQ RESTART WITH 1");
   }
 
   // ========== 一次性初始化测试 ==========

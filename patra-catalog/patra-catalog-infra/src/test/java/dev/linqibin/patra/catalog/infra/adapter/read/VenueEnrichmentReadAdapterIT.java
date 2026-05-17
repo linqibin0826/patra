@@ -3,7 +3,7 @@ package dev.linqibin.patra.catalog.infra.adapter.read;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.linqibin.patra.catalog.domain.port.enrichment.VenueSnapshot;
-import dev.linqibin.patra.catalog.infra.config.CatalogMySQLContainerInitializer;
+import dev.linqibin.patra.catalog.infra.config.CatalogPostgreSQLContainerInitializer;
 import dev.linqibin.patra.catalog.infra.persistence.dao.JcrRatingDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.ScopusRatingDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.VenueDao;
@@ -28,7 +28,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
-/// VenueEnrichmentReadAdapter 集成测试（JPA + Testcontainers MySQL）。
+/// VenueEnrichmentReadAdapter 集成测试（JPA + Testcontainers PostgreSQL）。
 ///
 /// **测试策略**：
 /// - `@DataJpaTest` 仅装配 JPA 相关 bean；通过 `@Import` 显式加入被测 Adapter
@@ -41,7 +41,7 @@ import org.springframework.test.context.ContextConfiguration;
 ///   ISSN-L 为空跳过、limit 生效、cover key 投影（6 个测试）
 /// - `findNeedingScopusEnrichment`：NOT EXISTS 对接 `cat_venue_scopus_rating` 表（2 个代表性测试，验证关键差异）
 @DataJpaTest
-@ContextConfiguration(initializers = CatalogMySQLContainerInitializer.class)
+@ContextConfiguration(initializers = CatalogPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({VenueEnrichmentReadAdapter.class, JpaAuditingConfig.class, JacksonAutoConfiguration.class})
 @ComponentScan(basePackages = "dev.linqibin.patra.catalog.infra.persistence.converter")

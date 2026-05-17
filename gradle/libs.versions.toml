@@ -150,7 +150,7 @@ jmh-generator = { module = "org.openjdk.jmh:jmh-generator-annprocess", version.r
 # Testcontainers
 testcontainers-core = { module = "org.testcontainers:testcontainers" }
 testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter" }
-testcontainers-mysql = { module = "org.testcontainers:mysql" }
+testcontainers-postgresql = { module = "org.testcontainers:postgresql" }
 testcontainers-minio = { module = "org.testcontainers:minio" }
 testcontainers-jdbc = { module = "org.testcontainers:jdbc" }
 testcontainers-elasticsearch = { module = "org.testcontainers:elasticsearch" }
