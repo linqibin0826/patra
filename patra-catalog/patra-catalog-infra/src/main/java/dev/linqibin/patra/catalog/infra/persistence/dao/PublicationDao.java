@@ -122,7 +122,7 @@ public interface PublicationDao extends JpaRepository<PublicationEntity, Long> {
   ///
   /// **关键词匹配契约**：
   ///
-  /// - 显式 ILIKE 实现大小写不敏感（与 DB collation 解耦）；
+  /// - 使用 `ILIKE` 实现大小写不敏感（与 DB collation 解耦）；
   ///   因查询形态为 infix 匹配（`%keyword%`）本身即不可能命中 B-tree 前缀索引
   /// - **调用方契约**：`:keyword` 必须是已通过 `StringUtils.escapeLike()`
   ///   转义的字符串，查询内置 `ESCAPE '!'` 子句与之配套，防止用户输入的
@@ -146,7 +146,7 @@ public interface PublicationDao extends JpaRepository<PublicationEntity, Long> {
       value =
           """
       SELECT * FROM cat_publication p
-      WHERE (:keyword IS NULL OR p.title ILIKE CONCAT('%', :keyword, '%') ESCAPE '!')
+      WHERE (:keyword IS NULL OR p.title ILIKE CONCAT('%', :keyword::text, '%') ESCAPE '!')
         AND (:yearFrom IS NULL OR p.publication_year >= :yearFrom)
         AND (:yearTo IS NULL OR p.publication_year <= :yearTo)
         AND (:languageBase IS NULL OR p.language_base = :languageBase)
@@ -159,11 +159,15 @@ public interface PublicationDao extends JpaRepository<PublicationEntity, Long> {
         AND (:provenanceCode IS NULL OR p.provenance_code = :provenanceCode)
         AND (:publicationStatus IS NULL OR p.publication_status = :publicationStatus)
         AND p.deleted_at IS NULL
+      ORDER BY
+        CASE WHEN :sortBy = 'citedByCount' THEN COALESCE(p.citation_count, -1) ELSE NULL END DESC,
+        CASE WHEN :sortBy IS NULL OR :sortBy != 'citedByCount' THEN p.updated_at ELSE NULL END DESC,
+        p.id DESC
       """,
       countQuery =
           """
       SELECT COUNT(*) FROM cat_publication p
-      WHERE (:keyword IS NULL OR p.title ILIKE CONCAT('%', :keyword, '%') ESCAPE '!')
+      WHERE (:keyword IS NULL OR p.title ILIKE CONCAT('%', :keyword::text, '%') ESCAPE '!')
         AND (:yearFrom IS NULL OR p.publication_year >= :yearFrom)
         AND (:yearTo IS NULL OR p.publication_year <= :yearTo)
         AND (:languageBase IS NULL OR p.language_base = :languageBase)
@@ -191,6 +195,7 @@ public interface PublicationDao extends JpaRepository<PublicationEntity, Long> {
       @Param("doi") String doi,
       @Param("provenanceCode") String provenanceCode,
       @Param("publicationStatus") String publicationStatus,
+      @Param("sortBy") String sortBy,
       Pageable pageable);
 
   /// 根据载体实例 ID 删除所有关联文献。

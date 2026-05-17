@@ -55,6 +55,10 @@ public class HibernatePropertiesCustomizer
     hibernateProperties.putIfAbsent(AvailableSettings.USE_SECOND_LEVEL_CACHE, false);
     hibernateProperties.putIfAbsent(AvailableSettings.USE_QUERY_CACHE, false);
 
+    // 明确指定 PostgreSQL Dialect，配合 hibernate.temp.use_jdbc_metadata_defaults=false 使用
+    hibernateProperties.putIfAbsent(
+        AvailableSettings.DIALECT, "org.hibernate.dialect.PostgreSQLDialect");
+
     // PG + HikariCP 公认优化：避免连接建立时 Hibernate 发起额外 JDBC metadata round-trip
     hibernateProperties.putIfAbsent("hibernate.temp.use_jdbc_metadata_defaults", false);
 
