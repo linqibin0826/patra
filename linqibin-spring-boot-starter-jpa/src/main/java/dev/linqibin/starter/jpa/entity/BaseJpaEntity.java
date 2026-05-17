@@ -82,8 +82,8 @@ public abstract class BaseJpaEntity implements Serializable, IdAwareEntity {
   /// 此字段可用于记录与实体生命周期相关的重要事件或注释。
   ///
   /// **持久化类型**：通过 `@JdbcTypeCode(SqlTypes.JSON)` 让 Hibernate 7
-  /// 按方言映射 —— PostgreSQL → `JSONB`，MySQL → `JSON`。Java 端保持
-  /// `String`，调用方负责传入合法 JSON（推荐 `null` 表示无备注，避免空串）。
+  /// 按方言映射 —— PostgreSQL → `JSONB`（Hibernate 7 PG dialect 自动映射 SqlTypes.JSON）。
+  /// Java 端保持 `String`，调用方负责传入合法 JSON（推荐 `null` 表示无备注，避免空串）。
   @Column(name = "record_remarks")
   @JdbcTypeCode(SqlTypes.JSON)
   private String recordRemarks;

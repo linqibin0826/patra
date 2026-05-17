@@ -17,7 +17,7 @@ import org.springframework.util.StringUtils;
 ///   starter:
 ///     batch:
 ///       datasource:
-///         url: jdbc:mysql://shared-db:3306/batch_meta
+///         url: jdbc:postgresql://shared-db:5432/batch_meta
 ///         username: batch_user
 ///         password: batch_password
 /// ```
