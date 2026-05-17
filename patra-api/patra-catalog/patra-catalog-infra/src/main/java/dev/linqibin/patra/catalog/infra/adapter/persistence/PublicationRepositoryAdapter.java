@@ -106,7 +106,9 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
   /// 批量操作时每批次的大小，超过此值会 flush 并 clear 以防内存溢出。
   private static final int BATCH_FLUSH_SIZE = 500;
 
-  /// ICU4J Collator（匹配 MySQL utf8mb4_0900_ai_ci：忽略重音与大小写）。
+  /// ICU4J Collator，用于解析后内存对象的 collation-aware 去重，与 DB 无关；
+  /// PRIMARY 强度对齐外部数据源的 accent-/case-insensitive 期望（spec §4.24 / §4.55）。
+  /// DB collation = `C`（确定性，性能优先）。
   private static final Collator UNICODE_CI_COLLATOR;
 
   static {
@@ -449,7 +451,7 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
       }
       for (PublicationKeyword keyword : item.keywords()) {
         String normalizedTerm = KeywordEntity.normalize(keyword.term());
-        // 使用与 MySQL utf8mb4_0900_ai_ci 一致的 collation key 去重
+        // 使用 ICU4J PRIMARY 强度 collation key 去重（accent-/case-insensitive，与 DB collation 解耦）
         keywordMap.putIfAbsent(toCollationKey(normalizedTerm), keyword);
       }
     }
@@ -1193,11 +1195,11 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
     }
   }
 
-  /// 生成与 MySQL utf8mb4_0900_ai_ci 一致的去重键。
+  /// 生成 collation-aware 去重键（用于解析后内存对象去重，与 DB 无关）。
   ///
-  /// - 忽略重音差异（如 cáncer = cancer）
-  /// - 忽略大小写差异
-  /// - 基于 Unicode Collation Algorithm（ICU4J）
+  /// - ICU4J PRIMARY 强度：忽略重音差异（如 cáncer = cancer）
+  /// - 忽略大小写差异（accent-/case-insensitive，spec §4.55）
+  /// - 基于 Unicode Collation Algorithm（ICU4J）；DB collation = `C`（确定性，性能优先）
   private String toCollationKey(String value) {
     if (value == null) {
       return "";
