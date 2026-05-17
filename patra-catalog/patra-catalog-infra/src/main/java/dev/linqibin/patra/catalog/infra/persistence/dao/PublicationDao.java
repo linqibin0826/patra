@@ -146,7 +146,7 @@ public interface PublicationDao extends JpaRepository<PublicationEntity, Long> {
       value =
           """
       SELECT * FROM cat_publication p
-      WHERE (:keyword IS NULL OR p.title ILIKE CONCAT('%', :keyword::text, '%') ESCAPE '!')
+      WHERE (:keyword IS NULL OR p.title ILIKE CONCAT('%', CAST(:keyword AS text), '%') ESCAPE '!')
         AND (:yearFrom IS NULL OR p.publication_year >= :yearFrom)
         AND (:yearTo IS NULL OR p.publication_year <= :yearTo)
         AND (:languageBase IS NULL OR p.language_base = :languageBase)
@@ -167,7 +167,7 @@ public interface PublicationDao extends JpaRepository<PublicationEntity, Long> {
       countQuery =
           """
       SELECT COUNT(*) FROM cat_publication p
-      WHERE (:keyword IS NULL OR p.title ILIKE CONCAT('%', :keyword::text, '%') ESCAPE '!')
+      WHERE (:keyword IS NULL OR p.title ILIKE CONCAT('%', CAST(:keyword AS text), '%') ESCAPE '!')
         AND (:yearFrom IS NULL OR p.publication_year >= :yearFrom)
         AND (:yearTo IS NULL OR p.publication_year <= :yearTo)
         AND (:languageBase IS NULL OR p.language_base = :languageBase)

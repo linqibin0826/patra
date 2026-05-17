@@ -48,7 +48,7 @@ class PublicationDaoTopByVenueIT {
 
     jdbc.update(
         "INSERT INTO cat_venue (id, venue_type, title, provenance_code, version, created_at, updated_at) "
-            + "VALUES (?, 'JOURNAL', 'Test Journal', 'PUBMED', 0, NOW(6), NOW(6))",
+            + "VALUES (?, 'JOURNAL', 'Test Journal', 'PUBMED', 0, NOW(), NOW())",
         VENUE_ID);
 
     // 插入 10 篇 publication：citation_count 从 10→1 递减，publication_year 在 2020..2024 循环
@@ -56,7 +56,7 @@ class PublicationDaoTopByVenueIT {
       jdbc.update(
           "INSERT INTO cat_publication (id, venue_id, title, provenance_code, citation_count, "
               + "publication_year, version, created_at, updated_at) "
-              + "VALUES (?, ?, ?, 'PUBMED', ?, ?, 0, NOW(6), NOW(6))",
+              + "VALUES (?, ?, ?, 'PUBMED', ?, ?, 0, NOW(), NOW())",
           2000L + i,
           VENUE_ID,
           "Paper " + i,
@@ -97,7 +97,7 @@ class PublicationDaoTopByVenueIT {
   @DisplayName("软删除的 publication 被排除")
   void findTopByVenue_excludesSoftDeleted() {
     // 软删除 id=2000 (citation_count=10, 原 top 1)
-    jdbc.update("UPDATE cat_publication SET deleted_at = NOW(6) WHERE id = ?", 2000L);
+    jdbc.update("UPDATE cat_publication SET deleted_at = NOW() WHERE id = ?", 2000L);
 
     List<PublicationEntity> result = publicationDao.findTopByVenue(VENUE_ID, null, 5);
 

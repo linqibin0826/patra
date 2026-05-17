@@ -172,9 +172,10 @@ class MeshScrImportE2E {
     jdbcTemplate.execute("DELETE FROM BATCH_STEP_EXECUTION");
     jdbcTemplate.execute("DELETE FROM BATCH_JOB_EXECUTION");
     jdbcTemplate.execute("DELETE FROM BATCH_JOB_INSTANCE");
-    jdbcTemplate.execute("UPDATE BATCH_STEP_EXECUTION_SEQ SET ID = 0");
-    jdbcTemplate.execute("UPDATE BATCH_JOB_EXECUTION_SEQ SET ID = 0");
-    jdbcTemplate.execute("UPDATE BATCH_JOB_INSTANCE_SEQ SET ID = 0");
+    // PG 使用 SEQUENCE，重置语法与 MySQL 表不同
+    jdbcTemplate.execute("ALTER SEQUENCE BATCH_STEP_EXECUTION_SEQ RESTART WITH 1");
+    jdbcTemplate.execute("ALTER SEQUENCE BATCH_JOB_EXECUTION_SEQ RESTART WITH 1");
+    jdbcTemplate.execute("ALTER SEQUENCE BATCH_JOB_INSTANCE_SEQ RESTART WITH 1");
   }
 
   // ========== 一次性初始化测试 ==========
