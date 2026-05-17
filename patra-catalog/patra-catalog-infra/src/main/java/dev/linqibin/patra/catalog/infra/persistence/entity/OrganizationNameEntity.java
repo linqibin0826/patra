@@ -43,11 +43,11 @@ import org.hibernate.type.SqlTypes;
     uniqueConstraints = {
       @UniqueConstraint(
           name = "uk_org_name",
-          columnNames = {"org_id", "value", "lang"})
+          columnNames = {"org_id", "name_value", "lang"})
     },
     indexes = {
       @Index(name = "idx_org_name_org_id", columnList = "org_id"),
-      @Index(name = "idx_org_name_value", columnList = "value")
+      @Index(name = "idx_org_name_value", columnList = "name_value")
     })
 public class OrganizationNameEntity extends ValueObjectJpaEntity {
 
@@ -56,7 +56,7 @@ public class OrganizationNameEntity extends ValueObjectJpaEntity {
   private Long orgId;
 
   /// 名称文本。
-  @Column(name = "value", nullable = false, length = 500)
+  @Column(name = "name_value", nullable = false, length = 500)
   private String value;
 
   /// 名称类型集合（JSON 数组）。
