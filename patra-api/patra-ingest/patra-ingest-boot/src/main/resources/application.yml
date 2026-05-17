@@ -36,8 +36,6 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
-    baseline-on-migrate: true
-    baseline-version: 0.1.0
 
 # HTTP Interface 客户端配置（替代 Feign）
 linqibin:
