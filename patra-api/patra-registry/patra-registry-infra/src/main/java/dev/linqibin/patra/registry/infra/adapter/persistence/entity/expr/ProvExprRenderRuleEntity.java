@@ -63,21 +63,22 @@ public class ProvExprRenderRuleEntity extends ValueObjectJpaEntity {
 
   /// 规范化的匹配类型键（未指定时为 `ANY`）。
   ///
-  /// MySQL 生成列，由数据库自动计算：`IFNULL(match_type_code, 'ANY')`。
+  /// PG STORED 生成列（GENERATED ALWAYS AS ... STORED）：`COALESCE(match_type_code, 'ANY')`。
   @Generated(event = EventType.INSERT)
   @Column(name = "match_type_key", length = 20, insertable = false, updatable = false)
   private String matchTypeKey;
 
   /// 规范化的否定键 (T/F/ANY)。
   ///
-  /// MySQL 生成列，由数据库自动计算：`IFNULL(IF(negated = 1, 'T', 'F'), 'ANY')`。
+  /// PG STORED 生成列（GENERATED ALWAYS AS ... STORED）：`COALESCE(CASE WHEN negated THEN 'T' ELSE 'F'
+  // END, 'ANY')`。
   @Generated(event = EventType.INSERT)
   @Column(name = "negated_key", length = 5, insertable = false, updatable = false)
   private String negatedKey;
 
   /// 规范化的值类型键（未指定时为 `ANY`）。
   ///
-  /// MySQL 生成列，由数据库自动计算：`IFNULL(value_type_code, 'ANY')`。
+  /// PG STORED 生成列（GENERATED ALWAYS AS ... STORED）：`COALESCE(value_type_code, 'ANY')`。
   @Generated(event = EventType.INSERT)
   @Column(name = "value_type_key", length = 20, insertable = false, updatable = false)
   private String valueTypeKey;
