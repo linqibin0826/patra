@@ -26,7 +26,7 @@ spring:
         # 指定服务注册的 scheme，解决 lb:// 协议与 HttpClient 不兼容问题
         scheme: http
   datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
       minimum-idle: 5
