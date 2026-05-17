@@ -248,7 +248,7 @@ spring:
     name: patra-object-storage
 
   datasource:
-    url: jdbc:mysql://localhost:3306/patra_storage?useUnicode=true&characterEncoding=utf8mb4
+    url: jdbc:postgresql://localhost:15432/patra_storage
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:password}
 
@@ -281,7 +281,7 @@ spring:
 | Spring Data JPA | (Spring Boot 管理) | ORM 框架 |
 | MapStruct | 1.6.5+ | 对象映射 |
 | Consul | 1.18+ | 服务注册中心 |
-| MySQL | 8.0+ | 数据库 |
+| PostgreSQL | 17 | 数据库 |
 | Flyway | 10.30.0+ | 数据库迁移工具 |
 | Hutool | 5.8.36+ | 工具库 |
 
@@ -291,14 +291,14 @@ spring:
 
 - **JDK 25+**: 确保安装 Java 25 或更高版本
 - **Gradle 8.x+**: 用于构建和依赖管理（已内置 Wrapper）
-- **MySQL 8.0+**: 数据库服务
+- **PostgreSQL 17**: 数据库服务
 - **Consul**: 服务注册中心(开发环境可选)
 
 ### 本地启动
 
 1. **初始化数据库**:
 ```bash
-mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS patra_storage CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+psql -h 127.0.0.1 -p 15432 -U postgres -c "CREATE DATABASE patra_storage;"
 ```
 
 2. **配置环境变量** (可选):
@@ -350,7 +350,7 @@ curl http://localhost:8500/v1/catalog/service/patra-object-storage
 **Q: Flyway 迁移失败**
 - **原因**: 数据库版本不兼容或迁移脚本错误
 - **解决**:
-  - 确保 MySQL 版本 >= 8.0
+  - 确保 PostgreSQL 版本 >= 17
   - 检查 `db/migration` 目录下的 SQL 脚本语法
   - 必要时清理 `flyway_schema_history` 表重新迁移
 
