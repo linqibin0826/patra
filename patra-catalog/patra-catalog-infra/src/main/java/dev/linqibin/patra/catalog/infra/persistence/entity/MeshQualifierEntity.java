@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -98,6 +99,7 @@ public class MeshQualifierEntity extends BaseJpaEntity {
   /// 树形编号列表（限定词在 MeSH 层级树中的位置）。
   ///
   /// 使用 Hibernate 7.1 的 `@JdbcTypeCode(SqlTypes.JSON)` 直接映射到 MySQL JSON 类型。
+  @Builder.Default
   @JdbcTypeCode(SqlTypes.JSON)
   @Column(name = "tree_numbers", columnDefinition = "JSON")
   private List<String> treeNumbers = new ArrayList<>();

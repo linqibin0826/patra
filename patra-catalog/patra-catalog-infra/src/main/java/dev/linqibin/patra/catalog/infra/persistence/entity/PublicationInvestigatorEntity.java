@@ -7,6 +7,7 @@ import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -70,7 +71,7 @@ public class PublicationInvestigatorEntity extends ValueObjectJpaEntity {
 
   /// 是否联系人。
   @Column(name = "is_contact", nullable = false)
-  @lombok.Builder.Default
+  @Builder.Default
   private Boolean contact = false;
 
   /// 顺序号（多个研究者时排序）。

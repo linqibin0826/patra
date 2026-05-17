@@ -13,6 +13,7 @@ import jakarta.persistence.UniqueConstraint;
 import java.math.BigDecimal;
 import java.time.Instant;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -83,7 +84,7 @@ public class PublicationAuthorAffiliationEntity extends ValueObjectJpaEntity {
 
   /// 机构顺序（1=第一机构，2=第二机构...）。
   @Column(name = "affiliation_order", nullable = false)
-  @lombok.Builder.Default
+  @Builder.Default
   private Integer affiliationOrder = 1;
 
   /// 原始机构字符串（外部采集，未标准化）。
@@ -113,7 +114,7 @@ public class PublicationAuthorAffiliationEntity extends ValueObjectJpaEntity {
   /// 消歧状态（PENDING/MATCHED/UNMATCHED/AMBIGUOUS）。
   @Enumerated(EnumType.STRING)
   @Column(name = "disambiguation_status", nullable = false, length = 20)
-  @lombok.Builder.Default
+  @Builder.Default
   private DisambiguationStatus disambiguationStatus = DisambiguationStatus.PENDING;
 
   /// 消歧方法（ROR_ID/RINGGOLD/GRID/NAME_MATCH/MANUAL）。

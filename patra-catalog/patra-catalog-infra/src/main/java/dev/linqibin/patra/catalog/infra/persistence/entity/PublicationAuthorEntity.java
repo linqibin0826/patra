@@ -7,6 +7,7 @@ import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -77,17 +78,17 @@ public class PublicationAuthorEntity extends ValueObjectJpaEntity {
 
   /// 是否第一作者。
   @Column(name = "is_first_author", nullable = false)
-  @lombok.Builder.Default
+  @Builder.Default
   private Boolean firstAuthor = false;
 
   /// 是否通讯作者。
   @Column(name = "is_corresponding_author", nullable = false)
-  @lombok.Builder.Default
+  @Builder.Default
   private Boolean correspondingAuthor = false;
 
   /// 是否同等贡献作者。
   @Column(name = "is_equal_contribution", nullable = false)
-  @lombok.Builder.Default
+  @Builder.Default
   private Boolean equalContribution = false;
 
   // ========== 联系方式 ==========

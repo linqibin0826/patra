@@ -7,6 +7,7 @@ import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -73,7 +74,7 @@ public class PublicationMeshQualifierEntity extends ValueObjectJpaEntity {
   ///
   /// 限定词也可以单独标记为 MajorTopic。
   @Column(name = "is_major_topic", nullable = false)
-  @lombok.Builder.Default
+  @Builder.Default
   private Boolean majorTopic = false;
 
   /// 限定词顺序（可选）。

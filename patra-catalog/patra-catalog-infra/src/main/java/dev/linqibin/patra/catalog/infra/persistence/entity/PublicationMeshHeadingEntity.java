@@ -7,6 +7,7 @@ import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -73,7 +74,7 @@ public class PublicationMeshHeadingEntity extends ValueObjectJpaEntity {
   ///
   /// PubMed 中标记为 MajorTopic="Y" 的主题词表示文章的核心主题。
   @Column(name = "is_major_topic", nullable = false)
-  @lombok.Builder.Default
+  @Builder.Default
   private Boolean majorTopic = false;
 
   /// 标引顺序（可选）。

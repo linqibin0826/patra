@@ -12,6 +12,7 @@ import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -115,7 +116,7 @@ public class AuthorEntity extends SoftDeletableJpaEntity {
       cascade = CascadeType.ALL,
       orphanRemoval = true,
       fetch = FetchType.LAZY)
-  @lombok.Builder.Default
+  @Builder.Default
   private Set<AuthorNameVariantEntity> nameVariants = new HashSet<>();
 
   /// ORCID 标识符集合。
@@ -128,7 +129,7 @@ public class AuthorEntity extends SoftDeletableJpaEntity {
       cascade = CascadeType.ALL,
       orphanRemoval = true,
       fetch = FetchType.LAZY)
-  @lombok.Builder.Default
+  @Builder.Default
   private Set<AuthorOrcidEntity> orcids = new HashSet<>();
 
   // ========== 便捷方法 ==========
