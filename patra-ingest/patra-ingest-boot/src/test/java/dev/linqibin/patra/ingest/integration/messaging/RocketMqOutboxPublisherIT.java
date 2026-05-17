@@ -6,7 +6,7 @@ import static org.awaitility.Awaitility.await;
 
 import dev.linqibin.patra.ingest.domain.model.entity.OutboxMessage;
 import dev.linqibin.patra.ingest.infra.messaging.RocketMqOutboxPublisher;
-import dev.linqibin.patra.ingest.integration.config.IngestMySQLContainerInitializer;
+import dev.linqibin.patra.ingest.integration.config.IngestPostgreSQLContainerInitializer;
 import dev.linqibin.patra.ingest.integration.config.IngestRocketMQContainerInitializer;
 import dev.linqibin.patra.ingest.testutil.OutboxMessageTestBuilder;
 import java.nio.charset.StandardCharsets;
@@ -68,7 +68,7 @@ import org.springframework.test.context.ContextConfiguration;
 /// @author linqibin
 /// @since 0.1.0
 /// @see IngestRocketMQContainerInitializer
-/// @see IngestMySQLContainerInitializer
+/// @see IngestPostgreSQLContainerInitializer
 /// @see OutboxMessageTestBuilder
 /// @see MessageCollector
 @SpringBootTest(
@@ -82,7 +82,7 @@ import org.springframework.test.context.ContextConfiguration;
     })
 @ContextConfiguration(
     initializers = {
-      IngestMySQLContainerInitializer.class,
+      IngestPostgreSQLContainerInitializer.class,
       IngestRocketMQContainerInitializer.class
     })
 @org.springframework.context.annotation.Import(RocketMqOutboxPublisherIT.MessageCollector.class)

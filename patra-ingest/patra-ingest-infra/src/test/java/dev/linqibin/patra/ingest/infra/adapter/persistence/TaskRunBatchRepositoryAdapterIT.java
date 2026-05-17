@@ -18,7 +18,7 @@ import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.ScheduleInstan
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.TaskEntity;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.TaskRunBatchEntity;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.TaskRunEntity;
-import dev.linqibin.patra.ingest.infra.config.IngestMySQLContainerInitializer;
+import dev.linqibin.patra.ingest.infra.config.IngestPostgreSQLContainerInitializer;
 import dev.linqibin.starter.jpa.autoconfig.HibernatePropertiesCustomizer;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
 import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
@@ -57,7 +57,7 @@ import tools.jackson.databind.node.ObjectNode;
 /// @author linqibin
 /// @since 0.1.0
 @DataJpaTest
-@ContextConfiguration(initializers = IngestMySQLContainerInitializer.class)
+@ContextConfiguration(initializers = IngestPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
   TaskRunBatchRepositoryAdapter.class,
