@@ -33,7 +33,7 @@ import org.testcontainers.lifecycle.Startable;
 ///
 /// // 获取容器
 /// PostgreSQLContainer<?> container = ContainerRegistry.get(ContainerType.POSTGRESQL,
-// PostgreSQLContainer.class);
+///     PostgreSQLContainer.class);
 ///
 /// // 检查是否已注册
 /// if (!ContainerRegistry.isRegistered(ContainerType.POSTGRESQL)) {

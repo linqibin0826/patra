@@ -47,7 +47,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 /// ### 容器配置
 ///
 /// - **镜像版本**: postgres:17（与生产环境一致）
-/// - **用户名/密码**: patra / patra_pass
+/// - **用户名/密码**: postgres / 123456（与 docker-compose.core.yaml 生产容器对齐）
 /// - **容器复用策略**: JVM 内复用，JVM 间不复用
 ///
 /// ### 性能表现
@@ -67,11 +67,11 @@ public class PostgreSQLContainerInitializer
   /// PostgreSQL 镜像版本（与生产环境一致）。
   private static final String POSTGRESQL_IMAGE = "postgres:17";
 
-  /// 默认用户名。
-  private static final String DEFAULT_USERNAME = "patra";
+  /// 默认用户名（与 docker-compose.core.yaml 生产容器对齐）。
+  private static final String DEFAULT_USERNAME = "postgres";
 
-  /// 默认密码。
-  private static final String DEFAULT_PASSWORD = "patra_pass";
+  /// 默认密码（与 docker-compose.core.yaml 生产容器对齐）。
+  private static final String DEFAULT_PASSWORD = "123456";
 
   /// 初始化状态标志。
   private static volatile boolean initialized = false;
