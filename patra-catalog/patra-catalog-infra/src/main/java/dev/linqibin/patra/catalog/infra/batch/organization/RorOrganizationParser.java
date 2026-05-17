@@ -350,8 +350,9 @@ public class RorOrganizationParser {
   /// ROR 数据可能包含 Collation 等价的重复名称记录，使用 ICU4J Collator 进行去重。
   /// 当出现重复时，保留第一个出现的记录（types 可能不同，优先保留先出现的）。
   ///
-  /// **技术说明**：MySQL `utf8mb4_0900_ai_ci` 遵循 Unicode Collation Algorithm (UCA)，
-  /// 包含数百条语言特定规则。使用 ICU4J 精确模拟此行为，避免手动处理各语言特例。
+  /// **技术说明**：ICU4J PRIMARY 强度对齐外部数据源的 accent-/case-insensitive 期望
+  /// （spec §4.24 / §4.55），用于解析后内存对象去重，与 DB collation 解耦。
+  /// DB collation = `C`（确定性，性能优先）。
   private List<OrganizationName> buildNames(List<RorOrganizationRecord.Name> names) {
     if (names == null || names.isEmpty()) {
       return List.of();
@@ -367,7 +368,7 @@ public class RorOrganizationParser {
 
       String value = name.value().strip();
       String lang = name.lang() != null ? name.lang().strip().toLowerCase() : "";
-      // 使用 ICU4J 生成 collation key，精确匹配 MySQL unicode_ci 行为
+      // 使用 ICU4J PRIMARY 强度生成 collation key（accent-/case-insensitive，与 DB collation 解耦）
       String collationKey = toCollationKey(value) + "|" + lang;
 
       if (!result.containsKey(collationKey)) {
@@ -387,31 +388,32 @@ public class RorOrganizationParser {
     return new ArrayList<>(result.values());
   }
 
-  /// ICU4J Collator 实例（线程安全，可复用）。
+  /// ICU4J Collator 实例（线程安全，可复用），用于解析后内存对象的 collation-aware 去重，与 DB 无关。
   ///
-  /// 配置为 PRIMARY 强度，匹配 MySQL `utf8mb4_0900_ai_ci` 的行为：
+  /// 配置为 PRIMARY 强度，对齐外部数据源的 accent-/case-insensitive 期望（spec §4.24 / §4.55）：
   /// - 忽略重音差异："Slovenská" = "Slovenska"
   /// - 忽略大小写："Harvard" = "harvard"
   /// - 日语平假名/片假名等价："かいし" = "カイシ"
   /// - 德语 ß = ss："Straße" = "Strasse"
+  /// DB collation = `C`（确定性，性能优先）。
   private static final Collator UNICODE_CI_COLLATOR;
 
   static {
     // 使用 ROOT locale 获取语言无关的 Unicode Collation Algorithm
     UNICODE_CI_COLLATOR = Collator.getInstance(ULocale.ROOT);
-    // PRIMARY 强度：忽略重音和大小写（等价于 MySQL 的 _ci 和 _ai）
+    // PRIMARY 强度：忽略重音和大小写（accent-/case-insensitive，与 DB collation 解耦）
     UNICODE_CI_COLLATOR.setStrength(Collator.PRIMARY);
     // 冻结以保证线程安全
     UNICODE_CI_COLLATOR.freeze();
   }
 
-  /// 生成 MySQL utf8mb4_0900_ai_ci 兼容的 Collation Key。
+  /// 生成 collation-aware 去重键（用于解析后内存对象去重，与 DB 无关）。
   ///
-  /// 使用 ICU4J 实现完整的 Unicode Collation Algorithm，自动处理：
+  /// 使用 ICU4J PRIMARY 强度实现 Unicode Collation Algorithm，自动处理：
   /// - 重音差异（斯洛伐克语 á/a、德语 ü/u 等）
   /// - 日语平假名/片假名等价
   /// - 德语 ß/ss 等价
-  /// - 大小写不敏感
+  /// - 大小写不敏感（spec §4.55）
   /// - 其他所有 UCA 定义的等价规则
   ///
   /// @param value 原始字符串

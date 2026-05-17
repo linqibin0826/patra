@@ -50,18 +50,19 @@ import tools.jackson.databind.ObjectMapper;
 @Component
 public class PubMedComputedAuthorParser {
 
-  /// ICU4J Collator 实例（线程安全，可复用）。
+  /// ICU4J Collator 实例（线程安全，可复用），用于解析后内存对象的 collation-aware 去重，与 DB 无关。
   ///
-  /// 配置为 PRIMARY 强度，匹配 MySQL `utf8mb4_0900_ai_ci` 的行为：
+  /// 配置为 PRIMARY 强度，对齐外部数据源的 accent-/case-insensitive 期望（spec §4.24 / §4.55）：
   /// - 忽略重音差异："García" = "Garcia"
   /// - 忽略大小写："Tephly" = "TEPHLY"
   /// - 德语 ß = ss："Müller" = "Mueller"
+  /// DB collation = `C`（确定性，性能优先）。
   private static final Collator UNICODE_CI_COLLATOR;
 
   static {
     // 使用 ROOT locale 获取语言无关的 Unicode Collation Algorithm
     UNICODE_CI_COLLATOR = Collator.getInstance(ULocale.ROOT);
-    // PRIMARY 强度：忽略重音和大小写（等价于 MySQL 的 _ci 和 _ai）
+    // PRIMARY 强度：忽略重音和大小写（accent-/case-insensitive，与 DB collation 解耦）
     UNICODE_CI_COLLATOR.setStrength(Collator.PRIMARY);
     // 冻结以保证线程安全
     UNICODE_CI_COLLATOR.freeze();
@@ -134,14 +135,14 @@ public class PubMedComputedAuthorParser {
     // 1. 创建聚合根
     AuthorAggregate author = AuthorAggregate.fromPubMedComputed(dto.name());
 
-    // 2. 解析并设置名字变体（使用 ICU4J Collator 去重，精确匹配 MySQL utf8mb4_0900_ai_ci）
+    // 2. 解析并设置名字变体（使用 ICU4J PRIMARY 强度 Collator 去重，accent-/case-insensitive）
     if (dto.names() != null && !dto.names().isEmpty()) {
       // 使用 LinkedHashMap 保持插入顺序，按 collation key 去重
       LinkedHashMap<String, AuthorNameVariant> uniqueVariants = new LinkedHashMap<>();
       for (String name : dto.names()) {
         AuthorNameVariant variant = parseNameVariant(name);
         if (variant != null) {
-          // 使用 collation key 作为去重依据（精确匹配 MySQL utf8mb4_0900_ai_ci 行为）
+          // 使用 ICU4J PRIMARY 强度 collation key 去重（accent-/case-insensitive，与 DB collation 解耦）
           String key = toCollationKey(variant.fullString());
           uniqueVariants.putIfAbsent(key, variant);
         }
@@ -196,9 +197,9 @@ public class PubMedComputedAuthorParser {
     }
   }
 
-  /// 生成 MySQL utf8mb4_0900_ai_ci 兼容的 Collation Key。
+  /// 生成 collation-aware 去重键（用于解析后内存对象去重，与 DB 无关）。
   ///
-  /// 使用 ICU4J 实现完整的 Unicode Collation Algorithm，自动处理：
+  /// 使用 ICU4J PRIMARY 强度实现 Unicode Collation Algorithm，自动处理（spec §4.55）：
   /// - 重音差异（西班牙语 García/Garcia、法语 François/Francois 等）
   /// - 德语 ß/ss 等价（Müller/Mueller）
   /// - 大小写不敏感（Tephly/TEPHLY）
