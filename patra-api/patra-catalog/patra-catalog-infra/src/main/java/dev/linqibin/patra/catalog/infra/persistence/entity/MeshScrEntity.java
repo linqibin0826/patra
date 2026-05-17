@@ -9,6 +9,8 @@ import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /// MeSH SCR（补充概念记录）JPA 实体，映射到表 `cat_mesh_scr`。
 ///
@@ -89,6 +91,7 @@ public class MeshScrEntity extends BaseJpaEntity {
   private String meshVersion;
 
   /// 其他元数据（JSON 扩展字段）
+  @JdbcTypeCode(SqlTypes.JSON)
   @Column(name = "metadata", columnDefinition = "JSON")
   private String metadata;
 }
