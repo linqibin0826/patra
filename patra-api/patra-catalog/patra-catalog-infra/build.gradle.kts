@@ -1,7 +1,7 @@
 /**
  * Patra Catalog Infrastructure
  *
- * 基础设施层 - MySQL/Elasticsearch 持久化、外部服务集成
+ * 基础设施层 - PostgreSQL/Elasticsearch 持久化、外部服务集成
  */
 
 plugins {
