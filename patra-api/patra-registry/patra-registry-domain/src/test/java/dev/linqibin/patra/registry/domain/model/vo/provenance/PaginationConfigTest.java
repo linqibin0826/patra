@@ -879,7 +879,7 @@ class PaginationConfigTest {
               100,
               10,
               "updated_at",
-              0);
+              false);
 
       PaginationConfig paginationConfig2 =
           new PaginationConfig(
@@ -892,7 +892,7 @@ class PaginationConfigTest {
               100,
               10,
               "updated_at",
-              0);
+              false);
 
       // When & Then: 应该相等
       assertThat(paginationConfig1).isEqualTo(paginationConfig2);
@@ -948,7 +948,7 @@ class PaginationConfigTest {
               100,
               10,
               "updated_at",
-              0);
+              false);
 
       // When: 调用 toString
       String toString = paginationConfig.toString();
@@ -1071,7 +1071,7 @@ class PaginationConfigTest {
               100,
               10,
               "updated_at",
-              0);
+              false);
 
       // When: 获取字段值
       Long retrievedId = paginationConfig.id();
