@@ -55,14 +55,14 @@ import org.springframework.test.context.ContextConfiguration;
 ///
 /// ### 性能优化
 ///
-/// - 容器单例: 由 {@link RocketMQContainerInitializer} 和 {@link MySQLContainerInitializer}
+/// - 容器单例: 由 {@link RocketMQContainerInitializer} 和 {@link IngestPostgreSQLContainerInitializer}
 ///       配置，所有集成测试共享容器
 ///   - Spring Consumer: 自动管理生命周期，无需手动等待启动
 ///   - 并行测试: 测试方法可并发执行 (不同 Consumer Group)
 ///
 /// ### 容器依赖说明
 ///
-/// 虽然本测试主要测试 RocketMQ 消息发送，但由于 Spring 上下文中包含依赖数据库的组件（如 OutboxMessageRepository）， 因此也需要启动 MySQL
+/// 虽然本测试主要测试 RocketMQ 消息发送，但由于 Spring 上下文中包含依赖数据库的组件（如 OutboxMessageRepository）， 因此也需要启动 PostgreSQL
 /// 容器。这样可以确保完整的应用上下文正常启动。
 ///
 /// @author linqibin
