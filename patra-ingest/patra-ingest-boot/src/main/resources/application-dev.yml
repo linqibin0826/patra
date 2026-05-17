@@ -4,8 +4,8 @@ spring:
     activate:
       on-profile: dev
   datasource:
-    url: jdbc:mysql://127.0.0.1:13306/patra_ingest?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&rewriteBatchedStatements=true
-    username: root
+    url: jdbc:postgresql://127.0.0.1:15432/patra_ingest
+    username: postgres
     password: 123456
   data:
     redis:
