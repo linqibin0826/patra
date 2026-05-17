@@ -18,4 +18,4 @@ public record PaginationConfigResp(
     Integer pageSizeValue,
     Integer maxPagesPerExecution,
     String sortFieldParamName,
-    Integer sortingDirection) {}
+    Boolean sortingDirection) {}

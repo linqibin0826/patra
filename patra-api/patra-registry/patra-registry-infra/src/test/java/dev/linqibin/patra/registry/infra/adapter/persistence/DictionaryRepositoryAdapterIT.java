@@ -197,11 +197,12 @@ class DictionaryRepositoryAdapterIT {
     @DisplayName("应能通过别名查询字典项")
     void shouldFindItemsByAliases() {
       Long itemId = createItem("CN", "中国", 10);
-      createAlias(itemId, "ISO_3166_1_ALPHA2", "CN");
-      createAlias(itemId, "ISO_3166_1_ALPHA3", "CHN");
+      // source_standard 使用小写（PG CHECK 约束：^[a-z0-9_\-]{1,64}$）
+      createAlias(itemId, "iso_3166_1_alpha2", "CN");
+      createAlias(itemId, "iso_3166_1_alpha3", "CHN");
 
       Map<String, DictionaryItem> result =
-          repository.findItemsByAliases(testTypeId, "ISO_3166_1_ALPHA2", Set.of("CN"));
+          repository.findItemsByAliases(testTypeId, "iso_3166_1_alpha2", Set.of("CN"));
 
       assertThat(result).hasSize(1);
       assertThat(result.get("CN").itemCode()).isEqualTo("CN");
@@ -212,13 +213,13 @@ class DictionaryRepositoryAdapterIT {
     void shouldIsolateBySourceStandard() {
       Long cnItemId = createItem("CN", "中国", 10);
       Long usItemId = createItem("US", "美国", 20);
-      createAlias(cnItemId, "ISO_3166_1_ALPHA2", "CN");
-      createAlias(usItemId, "NAME_EN", "United States");
+      createAlias(cnItemId, "iso_3166_1_alpha2", "CN");
+      createAlias(usItemId, "name_en", "United States");
 
       Map<String, DictionaryItem> result =
-          repository.findItemsByAliases(testTypeId, "NAME_EN", Set.of("CN", "United States"));
+          repository.findItemsByAliases(testTypeId, "name_en", Set.of("CN", "United States"));
 
-      // 只能找到 NAME_EN 来源的别名
+      // 只能找到 name_en 来源的别名
       assertThat(result).hasSize(1);
       assertThat(result.get("United States").itemCode()).isEqualTo("US");
     }
@@ -247,11 +248,11 @@ class DictionaryRepositoryAdapterIT {
       otherItem.setEnabled(true);
       otherItem.setIsDefault(false);
       itemDao.save(otherItem);
-      createAlias(otherItem.getId(), "ISO_639_1", "zh");
+      createAlias(otherItem.getId(), "iso_639_1", "zh");
 
       // 使用 country 类型查询 language 类型的别名
       Map<String, DictionaryItem> result =
-          repository.findItemsByAliases(testTypeId, "ISO_639_1", Set.of("zh"));
+          repository.findItemsByAliases(testTypeId, "iso_639_1", Set.of("zh"));
 
       assertThat(result).isEmpty();
     }

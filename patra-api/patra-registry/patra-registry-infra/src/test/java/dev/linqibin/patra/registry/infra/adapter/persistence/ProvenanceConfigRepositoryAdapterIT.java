@@ -521,7 +521,7 @@ class ProvenanceConfigRepositoryAdapterIT {
     cfg.setPaginationModeCode("PAGE_NUMBER");
     cfg.setPageSizeValue(100);
     cfg.setMaxPagesPerExecution(1000);
-    cfg.setSortingDirection(1);
+    cfg.setSortingDirection(true);
     cfg.setLifecycleStatusCode("ACTIVE");
     paginationCfgDao.saveAndFlush(cfg);
   }

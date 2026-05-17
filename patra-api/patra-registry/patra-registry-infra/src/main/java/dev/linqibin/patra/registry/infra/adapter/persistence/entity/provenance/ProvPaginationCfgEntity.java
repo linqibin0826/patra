@@ -52,9 +52,9 @@ public class ProvPaginationCfgEntity extends ValueObjectJpaEntity {
   @Column(name = "sort_field_param_name", length = 50)
   private String sortFieldParamName;
 
-  /// 排序方向标志(`1` 表示升序，`0` 表示降序)。
+  /// 排序方向标志（`true` 表示升序 ASC，`false` 表示降序 DESC）。
   @Column(name = "sorting_direction")
-  private Integer sortingDirection;
+  private Boolean sortingDirection;
 
   /// 生命周期状态代码，有效记录通常为 `ACTIVE`。
   @Column(name = "lifecycle_status_code", length = 20)

@@ -92,7 +92,7 @@ public record ProvenanceConfigSnapshot(
       /* 页大小值(PAGE_NUMBER/SCROLL 模式,NULL=应用默认) */ Integer pageSizeValue,
       /* 每次执行最大页数(NULL=无限制或上层控制) */ Integer maxPagesPerExecution,
       /* 排序字段参数名(例如 sort) */ String sortFieldParamName,
-      /* 排序方向(1=ASC, 0=DESC) */ Integer sortingDirection) {}
+      /* 排序方向(true=ASC, false=DESC, null=不指定) */ Boolean sortingDirection) {}
 
   /// HTTP 策略配置 (reg_prov_http_cfg)。
   ///
