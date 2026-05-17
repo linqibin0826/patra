@@ -79,9 +79,6 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
-    # Allow Flyway to baseline existing databases
-    baseline-on-migrate: true
-    baseline-version: 0.1.0
 
 # ========================================
 # Logging Configuration
