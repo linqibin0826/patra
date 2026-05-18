@@ -71,7 +71,27 @@ docker compose -f infra/docker/docker-compose.dev.yaml up -d
 
 # 6. (Mac mini) 验证全部 healthy
 docker compose -f infra/docker/docker-compose.dev.yaml ps
+
+# 7. (Mac mini) 首次初始化 Nacos 3.x admin 用户（一次性，nacos 容器 healthy 后执行）
+#    Nacos 3.x 鉴权开启后默认无 admin 用户；首次调用后该 API 失效，密码可设强密码
+curl -X POST 'http://localhost:8848/nacos/v3/auth/user/admin' -d 'password=nacos'
+# 预期：{"code":0,"message":"success","data":{"username":"nacos","password":"nacos"}}
 ```
+
+### MacBook 应用跨 tailscale 访问 Nacos 的端口转发
+
+OrbStack 端口转发对 gRPC HTTP/2 SETTINGS frame 在 tailscale 跨网络场景下转发不完整，导致 nacos-client gRPC handshake 超时。MacBook 上启动微服务前先开 ssh tunnel：
+
+```bash
+# 在 MacBook 上后台开 ssh tunnel：8848 HTTP+8080 控制台+9848 gRPC
+ssh -N -f -L 8848:127.0.0.1:8848 -L 9848:127.0.0.1:9848 -L 8080:127.0.0.1:8080 \
+  linqibin@linqibins-mac-mini
+
+# 应用启动时 NACOS_HOST 指向 tunnel 端口
+export NACOS_HOST=127.0.0.1
+```
+
+清理 tunnel：`pkill -f 'ssh -N -f -L 8848'`。
 
 ### Mac mini 一次性 PATH 配置
 
