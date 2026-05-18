@@ -4,7 +4,7 @@
 
 rocketmq:
   # RocketMQ NameServer 地址
-  name-server: ${ROCKETMQ_NAMESRV:127.0.0.1:9876}
+  name-server: ${ROCKETMQ_NAMESRV:${PATRA_INFRA_HOST:127.0.0.1}:9876}
 
   producer:
     # 生产者组名称
