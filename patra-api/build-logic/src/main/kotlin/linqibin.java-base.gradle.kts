@@ -106,8 +106,14 @@ tasks.jacocoTestCoverageVerification {
 // ==================== Test Configuration ====================
 tasks.test {
     useJUnitPlatform {
-        // 排除手动测试
+        // 默认排除：
+        // - manual：需要手动触发的测试
+        // - external：依赖外部网络/服务的测试（如隧道代理真实链路验证），CI 与本地默认跳过；
+        //   通过 -PrunExternal 显式启用：./gradlew test -PrunExternal
         excludeTags("manual")
+        if (!project.hasProperty("runExternal")) {
+            excludeTags("external")
+        }
     }
 
     // 并行执行

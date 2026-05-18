@@ -476,6 +476,27 @@ patra-spring-boot-starter-rest-client
 3. **日志级别**：日志拦截器仅在 DEBUG 级别输出，生产环境建议保持 INFO 级别
 4. **重试策略**：重试功能默认关闭，启用前请评估对下游服务的影响
 
+## 测试
+
+模块测试默认全部可在无外网环境下执行。
+
+依赖外部服务（隧道代理 `tunnel.qg.net:15561`、真实 HTTPS 站点）的连通性测试
+通过 JUnit 5 `@Tag("external")` 标记，由根 `build-logic/linqibin.java-base.gradle.kts`
+默认从 `./gradlew test` 中排除，避免 CI 与本地构建因外网波动 flake。
+
+显式运行真实链路验证：
+
+```bash
+# 单模块
+./gradlew :linqibin-spring-boot-starter-rest-client:test -PrunExternal
+
+# 全仓
+./gradlew test -PrunExternal
+```
+
+`TunnelProxyConnectivityTest` 同时需要环境变量 `PROXY_AUTH_KEY` / `PROXY_AUTH_PWD`，
+未设置时通过 `Assumptions.assumeTrue` 自动跳过。
+
 ## 版本要求
 
 - Java 25+
