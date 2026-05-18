@@ -68,9 +68,14 @@ patra:
 xxl:
   job:
     admin:
+      # xxl-job-admin 部署在 Mac mini，跟随 PATRA_INFRA_HOST 统一切换（与 PG/Redis/MinIO/RocketMQ 一致）。
+      # 默认 127.0.0.1 仅用于在 MacBook 本地起容器调试的应急 fallback（统一用 127.0.0.1 避免 hosts/IPv6 解析歧义）。
       addresses: ${XXL_JOB_ADMIN_ADDRESSES:http://${PATRA_INFRA_HOST:127.0.0.1}:7070/xxl-job-admin}
     executor:
-      ip: ${XXL_JOB_EXECUTOR_IP:host.docker.internal}  # Docker 容器中的 xxl-job-admin 需要通过此地址回调宿主机
+      # executor 回调地址：admin（Mac mini 容器）需主动回调本 executor（MacBook 进程）触发任务。
+      # 跨主机部署下无合理通用默认（每台 MacBook 的 tailscale IP 不同），必须显式注入。
+      # 取值示例：MacBook 的 tailscale IP（`tailscale ip -4`）。
+      ip: ${XXL_JOB_EXECUTOR_IP:}
       # Log directory in centralized logs folder
       logpath: ${XXL_JOB_EXECUTOR_LOG_PATH:${PATRA_LOG_DIR:logs}/xxl-job/patra-ingest}
       logretentiondays: ${XXL_JOB_LOG_RETENTION_DAYS:30}
