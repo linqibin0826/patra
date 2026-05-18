@@ -37,7 +37,9 @@ spring:
   # ========================================
   cloud:
     consul:
-      host: ${CONSUL_HOST:localhost}
+      # 默认从 PATRA_INFRA_HOST 取（zsh env 中已 export 为 Mac mini IP）；
+      # 生产环境通过 CONSUL_HOST 直接覆盖。
+      host: ${CONSUL_HOST:${PATRA_INFRA_HOST:localhost}}
       port: ${CONSUL_PORT:8500}
       discovery:
         service-name: ${spring.application.name}
