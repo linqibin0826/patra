@@ -30,7 +30,7 @@ import org.gradle.kotlin.dsl.configure
 /// 应用 Patra 统一的依赖管理配置
 ///
 /// 包括：
-/// - Spring Boot / Cloud / Resilience4j / Testcontainers BOM
+/// - Spring Boot / Cloud / Cloud Alibaba / Resilience4j / Testcontainers BOM
 /// - 强制版本约束（解决依赖冲突）
 ///
 /// 版本统一从 `gradle/libs.versions.toml` 获取，确保单一来源。
