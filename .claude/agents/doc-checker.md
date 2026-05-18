@@ -12,26 +12,11 @@ color: blue
 
 ## 🎯 核心职责
 
-检查两类文档与代码的一致性：
-1. **ADR** — 架构决策是否有记录
-2. **服务 README** — 服务描述是否准确
+检查服务 README 与代码的一致性。
 
 ## 🔍 检查清单
 
-### 1. ADR 检查
-
-**检查是否缺少 ADR：**
-- 新增/删除服务或模块 → 需要 ADR
-- 技术选型变更 → 需要 ADR
-- 架构模式变更 → 需要 ADR
-- 核心领域模型重构 → 需要 ADR
-
-**检查现有 ADR：**
-```bash
-ls ../Patra-docs/content/decisions/ 2>/dev/null || echo "ADR 目录不存在"
-```
-
-### 2. 服务 README 检查
+### 服务 README 检查
 
 **检查内容：**
 - README 是否存在
@@ -53,7 +38,6 @@ find . -maxdepth 2 -name "README.md" -path "*/patra-*/*" ! -path "*/patra-*-*/*"
 🟢 一致 / 🟡 部分不一致 / 🔴 严重不一致
 
 ## 🔴 缺失文档
-- `../Patra-docs/content/decisions/` — [描述缺失的决策记录]
 - `patra-xxx/README.md` — 服务 README 不存在
 
 ## 🟡 内容过时

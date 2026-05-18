@@ -459,5 +459,3 @@ patra:
 ## 📖 相关文档
 
 - [patra-spring-boot-starter-batch](../patra-spring-boot-starter-batch/README.md)
-- [ADR-025: Author 聚合根设计](../../../Patra-docs/content/decisions/ADR-025-author-aggregate-design.md)
-- [ADR-026: 作者多机构归属支持](../../../Patra-docs/content/decisions/ADR-026-author-multi-affiliation-support.md)
