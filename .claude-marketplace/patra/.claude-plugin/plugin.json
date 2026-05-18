@@ -1,0 +1,12 @@
+{
+  "name": "patra",
+  "description": "Patra 项目专属能力 plugin。Phase 1：方法论 skills（TDD、系统调试、写计划/执行计划、子代理派发、代码审查、git worktree、发布收尾，基于 jnMetaCode/superpowers-zh fork 精简）。Phase 2+：并入 hooks/agents/commands/patra-* 领域 skill。",
+  "version": "0.1.0",
+  "author": {
+    "name": "linqibin0826",
+    "url": "https://github.com/linqibin0826"
+  },
+  "homepage": "https://github.com/linqibin0826/patra-api",
+  "license": "MIT",
+  "keywords": ["patra", "skills", "tdd", "debugging", "chinese", "中文", "hexagonal", "ddd"]
+}
