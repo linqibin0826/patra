@@ -276,7 +276,7 @@ spring:
 | 组件 | 版本 | 说明 |
 |------|------|------|
 | Java | 25 | 语言版本 |
-| Spring Boot | 4.0.1 | 应用框架 |
+| Spring Boot | 4.0.6 | 应用框架 |
 | Spring Cloud | 2025.1.0 | 微服务框架 |
 | Spring Data JPA | (Spring Boot 管理) | ORM 框架 |
 | MapStruct | 1.6.5+ | 对象映射 |
@@ -307,6 +307,8 @@ export DB_USERNAME=root
 export DB_PASSWORD=your_password
 export NACOS_HOST=localhost
 export NACOS_PORT=8848
+export NACOS_USERNAME=nacos
+export NACOS_PASSWORD=nacos  # 生产必须改密
 ```
 
 3. **编译并启动**:

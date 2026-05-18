@@ -152,6 +152,8 @@ scalar:
 | `SPRING_PROFILES_ACTIVE` | 激活的配置文件 | `dev` |
 | `NACOS_HOST` | Nacos 服务器地址 | `localhost` |
 | `NACOS_PORT` | Nacos 端口 | `8848` |
+| `NACOS_USERNAME` | Nacos 认证用户名 | `nacos` |
+| `NACOS_PASSWORD` | Nacos 认证密码 | `nacos` |
 
 ### 端口配置
 - **默认端口**: 9528
@@ -199,7 +201,7 @@ management:
 
 | 组件 | 版本/说明 |
 |------|----------|
-| **Spring Boot** | 4.0.1 |
+| **Spring Boot** | 4.0.6 |
 | **Spring Cloud Gateway** | 2025.1.0 |
 | **Spring Cloud LoadBalancer** | 用于客户端负载均衡 |
 | **Nacos Discovery** | 服务发现和注册 |
