@@ -21,8 +21,9 @@ import org.springframework.context.annotation.Configuration;
 /// - 默认禁用二级缓存（批量场景下无用且占内存）
 /// - 应用可以通过 `spring.jpa.properties.*` 覆盖
 ///
-/// **PostgreSQL + HikariCP 优化**：通过 `hibernate.temp.use_jdbc_metadata_defaults=false`
-/// 避免连接建立时的元数据探测 round-trip。
+/// **PostgreSQL + HikariCP 优化**：通过 `hibernate.boot.allow_jdbc_metadata_access=false`
+/// 避免连接建立时的元数据探测 round-trip（Hibernate 7 起替代旧的
+/// `hibernate.temp.use_jdbc_metadata_defaults`）。
 ///
 /// **Jackson 3.x JSON 序列化配置**：
 ///
@@ -55,12 +56,9 @@ public class HibernatePropertiesCustomizer
     hibernateProperties.putIfAbsent(AvailableSettings.USE_SECOND_LEVEL_CACHE, false);
     hibernateProperties.putIfAbsent(AvailableSettings.USE_QUERY_CACHE, false);
 
-    // 明确指定 PostgreSQL Dialect，配合 hibernate.temp.use_jdbc_metadata_defaults=false 使用
-    hibernateProperties.putIfAbsent(
-        AvailableSettings.DIALECT, "org.hibernate.dialect.PostgreSQLDialect");
-
-    // PG + HikariCP 公认优化：避免连接建立时 Hibernate 发起额外 JDBC metadata round-trip
-    hibernateProperties.putIfAbsent("hibernate.temp.use_jdbc_metadata_defaults", false);
+    // PG + HikariCP 公认优化：禁止启动期 JDBC metadata 探测，避免额外 round-trip
+    // Hibernate 7 起 PostgreSQLDialect 由 JDBC URL 自动识别，无需显式指定（HHH90000025）
+    hibernateProperties.putIfAbsent(AvailableSettings.ALLOW_METADATA_ON_BOOT, false);
 
     // 禁用在 JVM 退出时自动创建 SessionFactory
     hibernateProperties.putIfAbsent(AvailableSettings.DELAY_CDI_ACCESS, true);
