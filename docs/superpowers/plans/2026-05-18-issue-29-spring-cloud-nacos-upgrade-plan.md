@@ -136,14 +136,14 @@ cloud:
     username: ${NACOS_USERNAME:nacos}
     password: ${NACOS_PASSWORD:nacos}
     discovery:
-      server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:localhost}}:${NACOS_PORT:8848}
+      server-addr: ${NACOS_HOST:127.0.0.1}:${NACOS_PORT:8848}
       service: ${spring.application.name}
       # 显式 false：SCA 2025.1.0.0 默认 true 会让 nacos 3.x gRPC 异步握手未完成时
       # 同步 register 的 -401 Client-not-connected 直接 abort 整个应用启动
       fail-fast: false
 ```
 
-注意：gateway/object-storage 与 registry/ingest/catalog 共用同一模板，无需 `metadata.scheme`（Nacos 默认 `secure=false` 即返回 `scheme=http`，scheme 决策不读 metadata；Task 2 code-review 字节码验证）。原 `${CONSUL_HOST:localhost}` 没用 `PATRA_INFRA_HOST` 兜底，Nacos 模板统一使用三段兜底（`NACOS_HOST → PATRA_INFRA_HOST → localhost`）以与其它服务对齐。
+注意：gateway/object-storage 与 registry/ingest/catalog 共用同一模板，无需 `metadata.scheme`（Nacos 默认 `secure=false` 即返回 `scheme=http`，scheme 决策不读 metadata；Task 2 code-review 字节码验证）。`server-addr` 默认 `127.0.0.1:8848` 而非 `PATRA_INFRA_HOST`：dev 通过 launchd ssh tunnel 转发到 mac mini Nacos（绕过 tailscale wireguard MTU 1280 对 gRPC HTTP/2 SETTINGS frame 的限制），prod 通过 `NACOS_HOST=<prod-nacos>` env 显式覆盖。
 
 ### 模板 B — application-dev.yml 改造
 
@@ -419,7 +419,7 @@ Edit：把以下原块
       username: ${NACOS_USERNAME:nacos}
       password: ${NACOS_PASSWORD:nacos}
       discovery:
-        server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:localhost}}:${NACOS_PORT:8848}
+        server-addr: ${NACOS_HOST:127.0.0.1}:${NACOS_PORT:8848}
         service: ${spring.application.name}
         fail-fast: false
 ```
@@ -485,7 +485,7 @@ Edit：把第 15-29 行
       username: ${NACOS_USERNAME:nacos}
       password: ${NACOS_PASSWORD:nacos}
       discovery:
-        server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:localhost}}:${NACOS_PORT:8848}
+        server-addr: ${NACOS_HOST:127.0.0.1}:${NACOS_PORT:8848}
         service: ${spring.application.name}
         fail-fast: false
 ```
@@ -570,7 +570,7 @@ Edit 第 29-46 行：
       username: ${NACOS_USERNAME:nacos}
       password: ${NACOS_PASSWORD:nacos}
       discovery:
-        server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:localhost}}:${NACOS_PORT:8848}
+        server-addr: ${NACOS_HOST:127.0.0.1}:${NACOS_PORT:8848}
         service: ${spring.application.name}
         fail-fast: false
 ```
@@ -659,7 +659,7 @@ Edit 第 37-42 行：
       username: ${NACOS_USERNAME:nacos}
       password: ${NACOS_PASSWORD:nacos}
       discovery:
-        server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:localhost}}:${NACOS_PORT:8848}
+        server-addr: ${NACOS_HOST:127.0.0.1}:${NACOS_PORT:8848}
         service: ${spring.application.name}
         fail-fast: false
 ```
@@ -693,7 +693,7 @@ Edit 第 10-22 行：
       username: ${NACOS_USERNAME:nacos}
       password: ${NACOS_PASSWORD:nacos}
       discovery:
-        server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:localhost}}:${NACOS_PORT:8848}
+        server-addr: ${NACOS_HOST:127.0.0.1}:${NACOS_PORT:8848}
         service: ${spring.application.name}
         fail-fast: false
 ```
@@ -1109,7 +1109,7 @@ spring:
       username: ${NACOS_USERNAME:nacos}
       password: ${NACOS_PASSWORD:nacos}
       discovery:
-        server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:localhost}}:${NACOS_PORT:8848}
+        server-addr: ${NACOS_HOST:127.0.0.1}:${NACOS_PORT:8848}
         service: ${spring.application.name}
         fail-fast: false
 ```
@@ -1136,7 +1136,7 @@ spring:
       username: ${NACOS_USERNAME:nacos}
       password: ${NACOS_PASSWORD:nacos}
       discovery:
-        server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:localhost}}:${NACOS_PORT:8848}
+        server-addr: ${NACOS_HOST:127.0.0.1}:${NACOS_PORT:8848}
         service: ${spring.application.name}
         fail-fast: false
 ```
@@ -1185,7 +1185,7 @@ plugins/patra-codex/skills/patra-hexagonal/references/configuration.md
       username: ${NACOS_USERNAME:nacos}
       password: ${NACOS_PASSWORD:nacos}
       discovery:
-        server-addr: ${NACOS_HOST:localhost}:${NACOS_PORT:8848}
+        server-addr: ${NACOS_HOST:127.0.0.1}:${NACOS_PORT:8848}
         service: ${spring.application.name}
         fail-fast: false
 ```
