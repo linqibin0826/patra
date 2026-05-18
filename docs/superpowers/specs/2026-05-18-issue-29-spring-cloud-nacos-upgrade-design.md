@@ -70,6 +70,8 @@
 
 ### In scope
 
+> **强约束**：改造完成后，除 `docs/superpowers/specs/**` 与 `docs/superpowers/plans/**` 外，项目内**不得遗留任何 consul / Consul / CONSUL_HOST / CONSUL_PORT 字样**（包括 yml/Java 注释、JavaDoc、README 段落、Skill 文档）。验收用 §11 的 grep 断言客观执行。
+
 **Gradle 层**：
 
 - `gradle/libs.versions.toml`：升级 spring-boot/spring-cloud；新增 spring-cloud-alibaba；删除 consul starter；新增 nacos starter
@@ -77,41 +79,71 @@
 - `build-logic/src/main/kotlin/linqibin.hexagonal-boot.gradle.kts:72`：切换 starter 引用
 - `build-logic/bin/` 旧 IDE/Gradle 编译产物：清理（顺手检查 `.gitignore`）
 
-**应用配置层**（5 个 boot 模块）：
+**应用配置层**（5 个 boot 模块，10 个 yml 文件）：
 
 | 模块 | 文件 | 改造 |
 |---|---|---|
-| patra-registry-boot | `src/main/resources/application.yml` | 模板 A |
-| patra-registry-boot | `src/main/resources/application-dev.yml` | 模板 B |
-| patra-ingest-boot | `src/main/resources/application.yml` | 模板 A |
-| patra-ingest-boot | `src/main/resources/application-dev.yml` | 模板 B |
-| patra-ingest-boot | `src/test/resources/application-test-common.yml` | 模板 C |
-| patra-catalog-boot | `src/main/resources/application.yml` | 模板 A |
-| patra-catalog-boot | `src/main/resources/application-dev.yml` | 模板 B |
+| patra-registry-boot | `src/main/resources/application.yml` | 模板 A + 同步清理"Consul Service Discovery"等中文/英文注释 |
+| patra-registry-boot | `src/main/resources/application-dev.yml` | 模板 B + 清理 "Consul 跑在 Mac mini docker" 类注释 |
+| patra-ingest-boot | `src/main/resources/application.yml` | 模板 A + 注释清理 |
+| patra-ingest-boot | `src/main/resources/application-dev.yml` | 模板 B + 注释清理 |
+| patra-ingest-boot | `src/test/resources/application-test-common.yml` | 模板 C（含 logging 包名） |
+| patra-catalog-boot | `src/main/resources/application.yml` | 模板 A + 注释清理 |
+| patra-catalog-boot | `src/main/resources/application-dev.yml` | 模板 B + 注释清理 |
 | patra-catalog-boot | `src/test/resources/application-e2e-test.yml` | 模板 C |
-| patra-gateway-boot | `src/main/resources/application.yml` | 模板 A（含 metadata.scheme） |
-| patra-object-storage-boot | `src/main/resources/application.yml` | 模板 A（含 metadata.scheme） |
+| patra-gateway-boot | `src/main/resources/application.yml` | 模板 A（含 `metadata.scheme`）+ 注释清理（含顶部 banner "Consul-based service discovery"） |
+| patra-object-storage-boot | `src/main/resources/application.yml` | 模板 A（含 `metadata.scheme`）+ 注释清理 |
 
-**E2E Java 测试**（字符串属性切换）：
+**E2E / IT Java 测试**（5 个文件、`spring.cloud.consul.enabled=false` 字符串属性切换 — 模板 D）：
 
-- `patra-catalog-boot/src/test/java/dev/linqibin/patra/catalog/integration/mesh/MeshScrImportE2E.java:71`
-- `patra-ingest-boot/src/test/java/dev/linqibin/patra/ingest/integration/outbox/OutboxPatternE2E.java:112`
+| 模块 | 文件 |
+|---|---|
+| patra-catalog-boot | `src/test/java/dev/linqibin/patra/catalog/integration/mesh/MeshScrImportE2E.java:71` |
+| patra-catalog-boot | `src/test/java/dev/linqibin/patra/catalog/integration/mesh/MeshDescriptorImportE2E.java:69` |
+| patra-ingest-boot | `src/test/java/dev/linqibin/patra/ingest/integration/outbox/OutboxPatternE2E.java:112` |
+| patra-ingest-boot | `src/test/java/dev/linqibin/patra/ingest/integration/messaging/RocketMqOutboxPublisherIT.java:76` |
+| patra-ingest-boot | `src/test/java/dev/linqibin/patra/ingest/integration/messaging/TaskReadyMessageListenerIT.java:72` |
+
+**Java 源码 JavaDoc**：
+
+- `patra-gateway-boot/src/main/java/dev/linqibin/patra/gateway/PatraGatewayApplication.java:9, 14`：JavaDoc 中"通过 Consul 服务发现" → "通过 Nacos 服务发现"
 
 **基础设施层**：
 
-- `infra/docker/docker-compose.core.yaml`：删 consul 服务块、加 nacos 服务块
-- `infra/docker/docker-compose.dev.yaml`：仅 include 注释提到 consul，同步更新
-- `infra/docker/.env`、`.env.example`：新增 `NACOS_AUTH_*` 三个变量
+- `infra/docker/docker-compose.core.yaml`：删 consul 服务块（44–60 行）、加 nacos 服务块
+- `infra/docker/docker-compose.dev.yaml:9`：`include` 注释 `# PostgreSQL, Redis, Consul` → `# PostgreSQL, Redis, Nacos`
+- `infra/docker/.env`：删 `CONSUL_PORT=8500` / `CONSUL_HOST=...`，新增 `NACOS_AUTH_TOKEN` / `NACOS_AUTH_IDENTITY_KEY` / `NACOS_AUTH_IDENTITY_VALUE` / `NACOS_PORT=8848`
+- `infra/docker/.env.dev:9-10`：删 Consul 区块、加 Nacos 区块
+- `infra/docker/.env.example`：同步占位 + `openssl rand -base64 32` / `openssl rand -base64 24` 生成命令注释
 - `infra/scripts/init-volumes.sh:29`：`consul/data` → `nacos/data` + `nacos/logs`
-- `infra/docker/README.md`：结构图、栈描述、示例 yml 全部同步
+- `infra/docker/README.md`：4 处涉及（行 14 结构图、行 131 示例 yml、行 151 Consul UI、行 283 栈描述图）
 
-**文档**：
+**项目文档**（README）：
 
-- `patra-gateway-boot/README.md`（行 83、153）
-- `patra-object-storage/README.md`（行 257、308）
-- `.claude/skills/patra-hexagonal/resources/configuration.md`（行 29）
-- `.agents/skills/patra-hexagonal/resources/configuration.md`（行 29）
-- `plugins/patra-codex/skills/patra-hexagonal/references/configuration.md`（行 29）
+| 文件 | 位置 |
+|---|---|
+| `README.md`（根） | 行 102、145 |
+| `patra-registry/README.md` | 行 141 |
+| `patra-catalog/README.md` | 行 137 |
+| `patra-gateway-boot/README.md` | 行 12、24、76–84、153–158、205（多处，需重写 "Consul 集成" 整节为 "Nacos 集成"） |
+| `patra-object-storage/README.md` | 行 256–258、283、295、308–309、324、347（含 env 命令、依赖表、部署步骤） |
+
+**Claude / Codex 上下文（Skill + Rule，必须同步，否则后续 AI 生成代码会回吐 consul 配置）**：
+
+| 文件 | 位置 |
+|---|---|
+| `.claude/rules/project-info.md` | 行 8（技术栈列表："Spring Boot 4.0.1 \| ... \| Consul" → "Spring Boot 4.0.6 \| ... \| Nacos"） |
+| `.claude/skills/patra-hexagonal/resources/configuration.md` | 行 21、28–30、38（"Consul 服务发现配置"整节重写） |
+| `.claude/skills/patra-hexagonal/resources/patra-starters.md` | 行 32（http-interface 描述中的 "Consul 服务发现" → "Nacos 服务发现"） |
+| `.claude/skills/patra-troubleshooter/SKILL.md` | 行 7（trigger 描述中的 "Consul 服务发现问题" → "Nacos 服务发现问题"） |
+| `.agents/skills/patra-hexagonal/resources/configuration.md` | 行 21、28–30、38（同 .claude 版本） |
+| `.agents/skills/patra-hexagonal/resources/patra-starters.md` | 行 32 |
+| `plugins/patra-codex/skills/patra-hexagonal/references/configuration.md` | 行 21、28–30、38 |
+| `plugins/patra-codex/skills/patra-hexagonal/references/patra-starters.md` | 行 32 |
+
+**已确认无需改动**（grep 命中但属于误报）：
+
+- `scripts/letpub/venues_issn.tsv`：医学期刊名（"Consultant"、"Consulting"、"Consultation"等）—— 这是数据而非配置，不在改造范围；§11 的 grep 断言需要排除该文件
 
 ### Out of scope
 
@@ -139,13 +171,19 @@
 │   ├─ application.yml ×5（registry/ingest/catalog/gateway/storage）│
 │   ├─ application-dev.yml ×3（registry/ingest/catalog）            │
 │   ├─ test yml ×2（ingest test-common + catalog e2e）              │
-│   └─ E2E Java ×2（OutboxPatternE2E + MeshScrImportE2E）           │
+│   ├─ E2E/IT Java ×5（catalog ×2、ingest ×3 — 见 §3 表格）         │
+│   └─ JavaDoc ×1（PatraGatewayApplication）                        │
 ├──────────────────────────────────────────────────────────────────┤
 │  基础设施层                                                        │
 │   docker-compose.core.yaml: 删 consul 服务 / 加 nacos             │
+│   docker-compose.dev.yaml:9 注释同步                              │
 │   init-volumes.sh:29       : consul/data → nacos/data + logs      │
-│   infra/docker/README.md   : 结构图/栈描述同步                     │
-│   .env / .env.example      : 新增 NACOS_AUTH_* 三件套              │
+│   .env / .env.dev / .env.example: NACOS_AUTH_* 三件套 + NACOS_PORT │
+├──────────────────────────────────────────────────────────────────┤
+│  文档与 AI 上下文层（零残留）                                       │
+│   README ×6（根、infra/docker、registry、catalog、gateway、storage）│
+│   .claude/rules/project-info.md（项目背景规则）                    │
+│   Skill 文档 ×7（.claude / .agents / plugins 三套）                │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -240,12 +278,16 @@ spring:
 + com.alibaba.nacos.client: WARN
 ```
 
-#### 模板 D — E2E Java 字符串属性（2 处）
+#### 模板 D — E2E/IT Java 字符串属性（5 处）
+
+5 个测试文件的 `@TestPropertySource` / `@SpringBootTest(properties=...)` 中同款字符串替换：
 
 ```diff
 - "spring.cloud.consul.enabled=false",
 + "spring.cloud.nacos.discovery.enabled=false",
 ```
+
+涉及文件清单见 §3 "E2E / IT Java 测试" 表格。
 
 ### 5.3 Gradle 变更
 
@@ -372,3 +414,42 @@ mavenBom("com.alibaba.cloud:spring-cloud-alibaba-dependencies:$springCloudAlibab
 | 本地启 Nacos + 4 个微服务相互发现 | §8 Step 3–4 |
 | `./gradlew test` 全量通过 | §8 Step 2 / Step 4 |
 | e2e 测试通过 | §8 Step 4 |
+| **用户追加：除 spec/plan 外项目内零 consul 残留** | §3 强约束 + §11 自动化断言 |
+
+## 10. 提交粒度（4 个原子 commit）
+
+| # | 主题 | 范围 | 验证命令 |
+|---|---|---|---|
+| 1 | `build(deps): SpringBoot 4.0.6 / SpringCloud 2025.1.1 升级 + 引入 SCA + 切换 nacos starter` | `libs.versions.toml`、`LinqibinDependencyManagement.kt`、`linqibin.hexagonal-boot.gradle.kts:72`、`build-logic/bin/` 清理 | §8 Step 1 |
+| 2 | `refactor(boot): 5 个 boot 模块由 Consul 切换到 Nacos（注释清扫）` | 10 个 yml + 5 个测试 Java + 1 个 JavaDoc 注释 | §8 Step 2 |
+| 3 | `chore(infra): docker compose 由 Consul 切换到 Nacos` | `compose.core/dev.yaml`、3 个 `.env*`、`init-volumes.sh` | §8 Step 3 |
+| 4 | `docs: 清扫全部模块 README 与 Skill 文档中的 Consul 字样` | 6 个 README + 7 个 Skill 文档 + §11 零残留断言通过 | §8 Step 4 + §11 |
+
+## 11. 完工断言（零残留 grep）
+
+实施完成的客观验收命令。**任意一行命中即视为未完成**（venues_issn.tsv 是数据文件，必须排除）：
+
+```bash
+# 在仓库根目录执行
+grep -rni -E "consul|CONSUL_HOST|CONSUL_PORT" . \
+  --exclude-dir=.git \
+  --exclude-dir=.gradle \
+  --exclude-dir=build \
+  --exclude-dir=bin \
+  --exclude-dir=node_modules \
+  --exclude-dir=.idea \
+  --exclude-dir=.claude/worktrees \
+  --exclude='*.tsv' \
+  | grep -v 'docs/superpowers/specs/' \
+  | grep -v 'docs/superpowers/plans/'
+```
+
+预期输出：**空**。
+
+排除项说明：
+- `*.tsv` — `scripts/letpub/venues_issn.tsv` 含 "Consultant" / "Consulting" 等期刊名（医学数据），不在范围
+- `docs/superpowers/specs/` 与 `docs/superpowers/plans/` — 本 spec 与对应 plan 必然包含 Consul → Nacos 的对照说明
+- `.claude/worktrees/` — 其它并行 worktree 与本任务无关
+- `.git` / `.gradle` / `build` / `bin` / `node_modules` / `.idea` — 构建产物与 IDE 缓存
+
+如果断言失败，必须把命中行加进 §3 In scope 并继续清理，直到为空。该断言纳入 commit 4 的强制前置检查。
