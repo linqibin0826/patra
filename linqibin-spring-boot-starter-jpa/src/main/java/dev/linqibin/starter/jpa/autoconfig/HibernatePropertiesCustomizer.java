@@ -22,8 +22,15 @@ import org.springframework.context.annotation.Configuration;
 /// - 应用可以通过 `spring.jpa.properties.*` 覆盖
 ///
 /// **PostgreSQL + HikariCP 优化**：通过 `hibernate.boot.allow_jdbc_metadata_access=false`
-/// 避免连接建立时的元数据探测 round-trip（Hibernate 7 起替代旧的
-/// `hibernate.temp.use_jdbc_metadata_defaults`）。
+/// 禁止启动期 JDBC metadata 探测，避免 HikariCP 建立连接时的额外 round-trip
+/// （Hibernate 7 起替代旧的 `hibernate.temp.use_jdbc_metadata_defaults`）。
+///
+/// 禁用 metadata 后 Hibernate 无法自动决定 Dialect，需要显式声明数据库。
+/// 这里通过 `jakarta.persistence.database-product-name=PostgreSQL` 走
+/// `DialectResolver` 路径自动解析为 `PostgreSQLDialect`，从而：
+///
+/// 1. 不显式设置 `hibernate.dialect` → 不触发 HHH90000025 deprecation 警告
+/// 2. 启动期不连数据库即可决定 Dialect → 优化效果保持
 ///
 /// **Jackson 3.x JSON 序列化配置**：
 ///
@@ -57,8 +64,11 @@ public class HibernatePropertiesCustomizer
     hibernateProperties.putIfAbsent(AvailableSettings.USE_QUERY_CACHE, false);
 
     // PG + HikariCP 公认优化：禁止启动期 JDBC metadata 探测，避免额外 round-trip
-    // Hibernate 7 起 PostgreSQLDialect 由 JDBC URL 自动识别，无需显式指定（HHH90000025）
     hibernateProperties.putIfAbsent(AvailableSettings.ALLOW_METADATA_ON_BOOT, false);
+
+    // DISALLOW metadata 后必须显式声明数据库；用 product name 走 DialectResolver
+    // 自动解析，避免显式 hibernate.dialect 触发 HHH90000025 deprecation 警告
+    hibernateProperties.putIfAbsent(AvailableSettings.JAKARTA_HBM2DDL_DB_NAME, "PostgreSQL");
 
     // 禁用在 JVM 退出时自动创建 SessionFactory
     hibernateProperties.putIfAbsent(AvailableSettings.DELAY_CDI_ACCESS, true);
