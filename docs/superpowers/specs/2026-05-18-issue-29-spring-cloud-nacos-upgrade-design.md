@@ -245,12 +245,12 @@ spring:
       discovery:
         server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:localhost}}:${NACOS_PORT:8848}
         service: ${spring.application.name}
-        fail-fast: true
+        fail-fast: false
 ```
 
 **为什么这样**：
-- `fail-fast: true` — 启动期注册失败立即抛错，避免后续 `lb://` 调用迷之 503
-- `username/password` 默认 `nacos/nacos`（Nacos 首启默认账号），由 env 覆盖；生产必须改密
+- `fail-fast: false` — **必须显式 false**。SCA 2025.1.0.0 NacosRegistration 默认 failFast=true，但 nacos-client 3.1.1 的 gRPC channel 异步建立（HTTP login + 拿 token + gRPC connect + server check 约 3 秒），而 Spring `WebServerInitializedEvent` 触发的同步 register 立即调用 NamingService.registerInstance，此时 gRPC channel 常仍在 STARTING，SCA 仅 4 × 100ms 内部重试就放弃，failFast=true 让异常向上抛出导致整个应用启动失败（错误码 -401 Client not connected, status:STARTING，**不是鉴权失败**）。改为 false 后 nacos-client 后台异步重试，应用启动正常，~3 秒内完成注册。联调实测验证。
+- `username/password` 默认 `nacos/nacos`（Nacos 3.x 首次启动需手动 `POST /nacos/v3/auth/user/admin -d password=xxx` 初始化 admin，详见 §1 部署说明），由 env 覆盖；生产必须改密
 - 不需要配 `scheme: http` —— Nacos `NacosServiceInstance.getScheme()` 通过 `isSecure()` 决定，默认 `secure=false` 即返回 `http`；与 Consul 模型不同，metadata 不参与 scheme 决策（Task 2 code-review 字节码验证）
 
 #### 模板 B — `application-dev.yml`（3 个：registry/ingest/catalog）
@@ -354,7 +354,9 @@ mavenBom("com.alibaba.cloud:spring-cloud-alibaba-dependencies:$springCloudAlibab
 |---|---|
 | 9848 gRPC 端口被防火墙/路由器挡 | compose 显式 expose；README 在"首次部署"段写明 dev 必须开 8848 + 9848 |
 | `NACOS_AUTH_TOKEN` 解码长度不足 32 字节导致 nacos-server 启动失败 | `.env.example` 给 `openssl rand -base64 32` 生成命令，并在注释里写明长度约束 |
-| 首启 token 配错，5 个微服务集体 401 | `fail-fast: true` + 启动日志立即看到 4xx 异常；不会静默降级 |
+| 首启 token 配错，5 个微服务集体 401 | nacos-client 后台异步重试，启动日志可见 `nacos register failed` WARN；运维通过 Nacos 控制台 / `/v3/admin/ns/service/list` 验证服务列表是否齐全 |
+| Nacos 3.x 首次部署 admin 用户不存在 | 部署文档要求执行 `curl -X POST http://NACOS_HOST:8848/nacos/v3/auth/user/admin -d password=nacos` 初始化 admin（首次调用后该 API 失效，密码可设为强密码） |
+| OrbStack 跨 tailscale 端口转发对 gRPC HTTP/2 SETTINGS frame 转发不完整，导致客户端 gRPC handshake 超时 | dev 在 MacBook 跨网络访问 macmini Nacos 时用 `ssh -L 8848 -L 9848 -L 8080 linqibin@linqibins-mac-mini -N` 建立 ssh tunnel，应用 `NACOS_HOST=127.0.0.1`；生产部署应避免跨 OrbStack 用户态网络的 gRPC 流量 |
 | Spring Cloud BOM 与 SCA BOM 版本冲突 | 强制 import 顺序：spring-cloud 在前（先 import 的 BOM 优先）、SCA 在后；Gradle 切换 commit 后跑 `./gradlew dependencyInsight --dependency spring-cloud-context` 验证 spring-cloud 实际解析版本为 2025.1.1 |
 | `lb://` 路由 scheme 解析 | Nacos `NacosServiceInstance.getScheme()` 通过 `isSecure()` 决定，默认即 `http`；验证 `curl http://localhost:9528/patra-ingest/actuator/health` 仍 200 |
 | `object-storage` 不在 issue 验收的 "4 个微服务" 列表 | 但其 application.yml 用 consul，必须同步切换；纳入设计范围（issue 自身验收清单已列其 yml） |
