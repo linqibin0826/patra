@@ -1,15 +1,25 @@
 # Development profile overrides
+# 基础设施 host 来自 zsh env 的 $PATRA_INFRA_HOST（Mac mini docker）
 spring:
   config:
     activate:
       on-profile: dev
   datasource:
-    url: jdbc:postgresql://127.0.0.1:15432/patra_ingest
+    url: jdbc:postgresql://${PATRA_INFRA_HOST:127.0.0.1}:15432/patra_ingest
     username: postgres
     password: 123456
   data:
     redis:
-      url: redis://localhost:16379
+      url: redis://${PATRA_INFRA_HOST:127.0.0.1}:16379
+
+  # dev 场景：见 patra-registry application-dev.yml 同段说明
+  cloud:
+    consul:
+      discovery:
+        ip-address: ${TAILSCALE_IP:}
+        register-health-check: false
+        heartbeat:
+          enabled: true
 
 # 可观测性：开箱即用（零配置）
 # - Tracing/Logging: OTel Agent 自动处理
@@ -36,7 +46,7 @@ linqibin:
       active-provider: minio
       providers:
         minio:
-          endpoint: http://localhost:19000
+          endpoint: http://${PATRA_INFRA_HOST:127.0.0.1}:19000
           access-key: ${MINIO_ACCESS_KEY:minioadmin}
           secret-key: ${MINIO_SECRET_KEY:minioadmin123}
           bucket: dev-ingest
