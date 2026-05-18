@@ -26,24 +26,15 @@ spring:
       # Local error-handling configuration
       - "classpath:catalog-error-config.yaml"
 
-  # Consul Service Discovery
+  # Nacos Service Discovery
   cloud:
-    consul:
-      # 默认从 PATRA_INFRA_HOST 取（zsh env 中已 export 为 Mac mini IP）；
-      # 生产环境通过 CONSUL_HOST 直接覆盖。
-      host: ${CONSUL_HOST:${PATRA_INFRA_HOST:localhost}}
-      port: ${CONSUL_PORT:8500}
+    nacos:
+      username: ${NACOS_USERNAME:nacos}
+      password: ${NACOS_PASSWORD:nacos}
       discovery:
-        service-name: ${spring.application.name}
-        health-check-interval: 10s
-        health-check-path: /actuator/health
-        # 使用固定 instance-id，服务重启时覆盖旧注册，避免僵尸实例
-        instance-id: ${spring.application.name}:${server.port}
-        # 使用宿主机实际 IP 注册服务（Consul 容器和宿主机服务都能访问）
-        prefer-ip-address: true
-        # 指定服务发现返回的 scheme，解决 lb:// 协议与 JDK HttpClient 不兼容问题
-        # 参考：https://github.com/spring-cloud/spring-cloud-commons/issues/1320
-        scheme: http
+        server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:localhost}}:${NACOS_PORT:8848}
+        service: ${spring.application.name}
+        fail-fast: true
 
   # Database Configuration
   datasource:

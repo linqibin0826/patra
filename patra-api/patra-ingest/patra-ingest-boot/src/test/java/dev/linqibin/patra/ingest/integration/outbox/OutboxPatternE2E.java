@@ -109,7 +109,7 @@ import org.springframework.transaction.annotation.Transactional;
 /// @see OutboxMessageTestBuilder
 @SpringBootTest(
     properties = {
-      "spring.cloud.consul.enabled=false",
+      "spring.cloud.nacos.discovery.enabled=false",
       "spring.config.import=classpath:ingest-error-config.yaml,classpath:ingest-rocketmq.yaml",
       // 禁用 Spring 管理的 TaskReadyMessageListener：本 E2E 测试使用本地 testConsumer 收集消息，
       // 避免 Spring 管理的 Listener 在 Spring 上下文 pause/restart 循环中触发 SHUTDOWN_ALREADY
