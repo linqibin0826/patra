@@ -1,0 +1,81 @@
+# Tempo 配置 - 单机模式（开发环境）
+# 接收来自 OTel Collector 的链路数据
+
+server:
+  http_listen_port: 3200
+  grpc_listen_port: 9095
+  log_level: info
+
+# 分布式追踪配置（Tempo 自身）
+# distributor:
+#   receivers:
+#     otlp:
+#       protocols:
+#         grpc:
+#           endpoint: 0.0.0.0:4317
+#         http:
+#           endpoint: 0.0.0.0:4318
+
+# 使用 OTel Collector 作为接收器，Tempo 只做存储
+# 通过 OTLP exporter 从 Collector 接收数据
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+
+ingester:
+  max_block_duration: 5m
+
+compactor:
+  compaction:
+    block_retention: 168h  # 7 天
+
+metrics_generator:
+  registry:
+    external_labels:
+      source: tempo
+      environment: development
+  storage:
+    path: /var/tempo/generator/wal
+    remote_write:
+      - url: http://prometheus:9090/api/v1/write
+        send_exemplars: true
+  traces_storage:
+    path: /var/tempo/generator/traces
+  processor:
+    span_metrics:
+      dimensions:
+        - service.name
+        - http.method
+        - http.status_code
+    service_graphs:
+      dimensions:
+        - service.name
+
+storage:
+  trace:
+    backend: local
+    wal:
+      path: /var/tempo/wal
+    local:
+      path: /var/tempo/blocks
+    pool:
+      max_workers: 100
+      queue_depth: 10000
+
+querier:
+  frontend_worker:
+    frontend_address: localhost:9095
+
+# 过滤器配置
+overrides:
+  defaults:
+    metrics_generator:
+      processors: [service-graphs, span-metrics, local-blocks]
+
+# 使用限制
+# usage_report:
+#   reporting_enabled: false

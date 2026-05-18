@@ -1,0 +1,192 @@
+# 可观测性服务 - OpenTelemetry + Grafana Stack
+# 统一的 Metrics/Logs/Traces 采集平台
+#
+# 版本矩阵（2025-12-01）:
+# - OTel Collector: 0.140.1
+# - Prometheus: 3.7.3
+# - Loki: 3.6.2
+# - Tempo: 2.9.0
+# - Grafana: 12.3.0
+# - Alertmanager: 0.29.0
+#
+# 资源限制说明:
+# - OTel Collector: 2G（处理高吞吐量 OTLP 数据，含发送队列缓冲）
+# - Prometheus: 512M（7 天数据保留）
+# - Loki/Tempo: 512M（标准日志/追踪存储）
+# - Grafana: 256M（可视化界面）
+# - Alertmanager: 128M（告警路由）
+#
+# 端口分配:
+# - 4317: OTel Collector gRPC (OTLP)
+# - 4318: OTel Collector HTTP (OTLP)
+# - 8889: OTel Collector Prometheus metrics
+# - 9090: Prometheus Web UI
+# - 3100: Loki Push/Query API
+# - 3200: Tempo Query API
+# - 3000: Grafana Web UI
+# - 9093: Alertmanager Web UI
+
+name: patra
+
+services:
+  # OpenTelemetry Collector - 统一接收 Traces/Metrics/Logs
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.140.1
+    container_name: patra-otel-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./otel-collector/config.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8889:8889"   # Prometheus metrics 暴露
+    environment:
+      TZ: Asia/Shanghai
+    # 注意：otel/opentelemetry-collector-contrib 是 FROM scratch 镜像
+    # 没有 shell、curl、wget 等工具，无法使用传统 healthcheck
+    # 可通过宿主机 curl http://localhost:13133 手动验证健康状态
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    depends_on:
+      tempo:
+        condition: service_started
+      loki:
+        condition: service_started
+
+  # Prometheus - 指标存储与查询
+  prometheus:
+    image: prom/prometheus:v3.7.3
+    container_name: patra-prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=7d"
+      - "--web.enable-lifecycle"
+      - "--web.enable-remote-write-receiver"
+      - "--enable-feature=exemplar-storage"
+      - "--enable-feature=native-histograms"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ${HOME}/.patra/docker/prometheus/data:/prometheus
+    ports:
+      - "9090:9090"
+    environment:
+      TZ: Asia/Shanghai
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9090/-/healthy || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # Loki - 日志聚合存储
+  loki:
+    image: grafana/loki:3.6.2
+    container_name: patra-loki
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/loki-config.yaml"]
+    volumes:
+      - ./loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+      - ${HOME}/.patra/docker/loki/data:/loki
+    ports:
+      - "3100:3100"
+    environment:
+      TZ: Asia/Shanghai
+    # 注意：grafana/loki 是 FROM scratch 镜像，没有 shell
+    # 可通过宿主机 curl http://localhost:3100/ready 验证
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # Tempo - 分布式链路存储
+  tempo:
+    image: grafana/tempo:2.9.0
+    container_name: patra-tempo
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo/tempo.yaml"]
+    volumes:
+      - ./tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - ${HOME}/.patra/docker/tempo/data:/var/tempo
+    ports:
+      - "3200:3200"   # Tempo Query API
+      - "9095:9095"   # Tempo internal
+    environment:
+      TZ: Asia/Shanghai
+    # 注意：grafana/tempo 是 FROM scratch 镜像，没有 shell
+    # 可通过宿主机 curl http://localhost:3200/ready 验证
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # Grafana - 统一可视化
+  grafana:
+    image: grafana/grafana:12.3.0
+    container_name: patra-grafana
+    restart: unless-stopped
+    volumes:
+      - ./grafana/grafana.ini:/etc/grafana/grafana.ini:ro
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ${HOME}/.patra/docker/grafana/data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    environment:
+      TZ: Asia/Shanghai
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: patra123
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      loki:
+        condition: service_started
+      tempo:
+        condition: service_started
+
+  # Alertmanager - 告警路由
+  alertmanager:
+    image: prom/alertmanager:v0.29.0
+    container_name: patra-alertmanager
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ${HOME}/.patra/docker/alertmanager/data:/alertmanager
+    ports:
+      - "9093:9093"
+    environment:
+      TZ: Asia/Shanghai
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9093/-/healthy || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+networks:
+  default:
+    name: patra-net

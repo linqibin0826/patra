@@ -1,0 +1,64 @@
+version: "3.9"
+
+name: patra
+
+# Core infrastructure services required for application runtime
+# These services are essential and should always be running
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: patra-postgres
+    restart: unless-stopped
+    ports: [ "15432:5432" ]
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123456}
+      TZ: Asia/Shanghai
+    volumes:
+      - ${HOME}/.patra/docker/postgres/data:/var/lib/postgresql/data
+      # init 脚本走仓库内相对路径（与 mysql-ops 风格一致），git pull 后变更自动生效；
+      # 只在 data 目录为空时由 postgres 镜像执行一次。
+      - ./postgres/init-scripts:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7.0.15
+    container_name: patra-redis
+    restart: unless-stopped
+    ports: [ "16379:6379" ]
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
+    volumes:
+      - ${HOME}/.patra/docker/redis/data:/data
+      - ${HOME}/.patra/docker/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  consul:
+    image: hashicorp/consul:1.18
+    container_name: patra-consul
+    restart: unless-stopped
+    environment:
+      - TZ=Asia/Shanghai
+    ports:
+      - "8500:8500"      # HTTP API & Web UI
+      - "8600:8600/udp"  # DNS interface
+    command: agent -dev -client=0.0.0.0 -ui
+    volumes:
+      - ${HOME}/.patra/docker/consul/data:/consul/data
+    healthcheck:
+      test: [ "CMD", "consul", "members" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+networks:
+  default:
+    name: patra-net
