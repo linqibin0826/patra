@@ -243,7 +243,7 @@ spring:
       username: ${NACOS_USERNAME:nacos}
       password: ${NACOS_PASSWORD:nacos}
       discovery:
-        server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:localhost}}:${NACOS_PORT:8848}
+        server-addr: ${NACOS_HOST:127.0.0.1}:${NACOS_PORT:8848}
         service: ${spring.application.name}
         fail-fast: false
 ```
@@ -336,7 +336,7 @@ mavenBom("com.alibaba.cloud:spring-cloud-alibaba-dependencies:$springCloudAlibab
 
 | Consul 字段 | Nacos 等价 | 处理 |
 |---|---|---|
-| `consul.host` + `consul.port` | `discovery.server-addr` | 合并为 `${NACOS_HOST:${PATRA_INFRA_HOST:localhost}}:${NACOS_PORT:8848}` |
+| `consul.host` + `consul.port` | `discovery.server-addr` | 合并为 `${NACOS_HOST:127.0.0.1}:${NACOS_PORT:8848}` |
 | `discovery.service-name` | `discovery.service` | 改名 |
 | `discovery.health-check-interval` | Nacos 临时实例默认心跳 | **删除** |
 | `discovery.health-check-path` | Nacos 不基于 HTTP 探针 | **删除** |

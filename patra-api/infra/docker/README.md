@@ -78,20 +78,26 @@ curl -X POST 'http://localhost:8848/nacos/v3/auth/user/admin' -d 'password=nacos
 # 预期：{"code":0,"message":"success","data":{"username":"nacos","password":"nacos"}}
 ```
 
-### MacBook 应用跨 tailscale 访问 Nacos 的端口转发
+### MacBook 应用跨 tailscale 访问 Nacos 的端口转发（一次性安装）
 
-OrbStack 端口转发对 gRPC HTTP/2 SETTINGS frame 在 tailscale 跨网络场景下转发不完整，导致 nacos-client gRPC handshake 超时。MacBook 上启动微服务前先开 ssh tunnel：
+**根因**：tailscale wireguard 隧道 MTU=1280，Nacos gRPC server 发的 HTTP/2 SETTINGS frame 经 Docker bridge (MTU 1500) → OrbStack vpnkit → macOS host → tailscale 时超过 1280 字节被静默丢弃（实测 `ping -D -s 1252` 通、`-s 1432` 不通），nacos-client 永远收不到 SETTINGS ACK 而卡 STARTING。这是 tailscale 已知架构限制（[issue #311 PMTU discovery](https://github.com/tailscale/tailscale/issues/311) 未实现）。
+
+**方案**：在 MacBook 上跑 launchd agent 维持 ssh tunnel（ssh channel 应用层重新分段，绕过 MTU 限制）。开机自启动、断开自重连，应用无感知。
 
 ```bash
-# 在 MacBook 上后台开 ssh tunnel：8848 HTTP+8080 控制台+9848 gRPC
-ssh -N -f -L 8848:127.0.0.1:8848 -L 9848:127.0.0.1:9848 -L 8080:127.0.0.1:8080 \
-  linqibin@linqibins-mac-mini
+# 一次性安装（首次部署 MacBook 时）
+bash infra/scripts/install-nacos-tunnel.sh install
 
-# 应用启动时 NACOS_HOST 指向 tunnel 端口
-export NACOS_HOST=127.0.0.1
+# 查看状态
+bash infra/scripts/install-nacos-tunnel.sh status
+
+# 卸载
+bash infra/scripts/install-nacos-tunnel.sh uninstall
 ```
 
-清理 tunnel：`pkill -f 'ssh -N -f -L 8848'`。
+安装后 launchd 自动启动 `dev.patra.nacos-tunnel` agent，把 MacBook 的 `127.0.0.1:{8848,9848,8080}` 转发到 mac mini 对应端口。应用 yml 中 `NACOS_HOST` 默认就是 `127.0.0.1`，**无需任何环境变量**。
+
+日志位置：`/tmp/patra-nacos-tunnel.{out,err}.log`。
 
 ### Mac mini 一次性 PATH 配置
 
@@ -152,7 +158,7 @@ spring:
       username: ${NACOS_USERNAME:nacos}
       password: ${NACOS_PASSWORD:nacos}
       discovery:
-        server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:localhost}}:${NACOS_PORT:8848}
+        server-addr: ${NACOS_HOST:127.0.0.1}:${NACOS_PORT:8848}
         service: ${spring.application.name}
         fail-fast: true
 patra:
