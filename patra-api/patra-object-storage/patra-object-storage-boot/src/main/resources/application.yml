@@ -14,8 +14,6 @@ spring:
         server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:localhost}}:${NACOS_PORT:8848}
         service: ${spring.application.name}
         fail-fast: true
-        metadata:
-          scheme: http
   datasource:
     driver-class-name: org.postgresql.Driver
     hikari:

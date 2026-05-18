@@ -42,7 +42,7 @@
 
 | 方案 | 评估 |
 |---|---|
-| **C1. 砍掉等价默认项，仅保留差异化字段（采用）** | `health-check-*` / `register-health-check` / `heartbeat` / `prefer-ip-address` / `instance-id` 全删；只保留 `server-addr`、`service`、`fail-fast`、dev 的 `ip`、gateway 的 `metadata.scheme`。**采用** — 配置噪音最小、可读性最强。 |
+| **C1. 砍掉等价默认项，仅保留差异化字段（采用）** | `health-check-*` / `register-health-check` / `heartbeat` / `prefer-ip-address` / `instance-id` / `scheme` 全删；只保留 `server-addr`、`service`、`fail-fast`、dev 的 `ip`。**采用** — 配置噪音最小、可读性最强。（注：原计划给 gateway/object-storage 保留 `metadata.scheme: http`，但 Task 2 code-review 通过字节码分析确认 `NacosServiceInstance.getScheme()` 只读 `isSecure()` 不读 metadata，Nacos 默认 `secure=false` 即返回 `http`，故无需配置。） |
 | C2. 一比一映射（保留所有语义） | 否决 — 大部分字段写出来等价于 Nacos 默认值，纯噪音。 |
 
 ### 决策 D：环境变量命名
@@ -91,8 +91,8 @@
 | patra-catalog-boot | `src/main/resources/application.yml` | 模板 A + 注释清理 |
 | patra-catalog-boot | `src/main/resources/application-dev.yml` | 模板 B + 注释清理 |
 | patra-catalog-boot | `src/test/resources/application-e2e-test.yml` | 模板 C |
-| patra-gateway-boot | `src/main/resources/application.yml` | 模板 A（含 `metadata.scheme`）+ 注释清理（含顶部 banner "Consul-based service discovery"） |
-| patra-object-storage-boot | `src/main/resources/application.yml` | 模板 A（含 `metadata.scheme`）+ 注释清理 |
+| patra-gateway-boot | `src/main/resources/application.yml` | 模板 A + 注释清理（含顶部 banner "Consul-based service discovery"） |
+| patra-object-storage-boot | `src/main/resources/application.yml` | 模板 A + 注释清理 |
 
 **E2E / IT Java 测试**（5 个文件、`spring.cloud.consul.enabled=false` 字符串属性切换 — 模板 D）：
 
@@ -246,15 +246,12 @@ spring:
         server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:localhost}}:${NACOS_PORT:8848}
         service: ${spring.application.name}
         fail-fast: true
-        # gateway / object-storage 追加以下块：
-        metadata:
-          scheme: http
 ```
 
 **为什么这样**：
 - `fail-fast: true` — 启动期注册失败立即抛错，避免后续 `lb://` 调用迷之 503
 - `username/password` 默认 `nacos/nacos`（Nacos 首启默认账号），由 env 覆盖；生产必须改密
-- `metadata.scheme` — gateway/object-storage 原 `scheme: http` 在 Nacos 模型下需挂到 metadata，供 LoadBalancer 决定下游 URL scheme
+- 不需要配 `scheme: http` —— Nacos `NacosServiceInstance.getScheme()` 通过 `isSecure()` 决定，默认 `secure=false` 即返回 `http`；与 Consul 模型不同，metadata 不参与 scheme 决策（Task 2 code-review 字节码验证）
 
 #### 模板 B — `application-dev.yml`（3 个：registry/ingest/catalog）
 
@@ -347,7 +344,7 @@ mavenBom("com.alibaba.cloud:spring-cloud-alibaba-dependencies:$springCloudAlibab
 | `discovery.heartbeat.enabled` | Nacos 默认启用 | **删除** |
 | `discovery.ip-address` | `discovery.ip` | 改名（dev profile 用，保留 TAILSCALE_IP 注入） |
 | `discovery.prefer-ip-address` | Nacos 默认按 IP 注册 | **删除** |
-| `discovery.scheme: http` | `discovery.metadata.scheme: http` | 转 metadata（gateway 用） |
+| `discovery.scheme: http` | Nacos 默认 `secure=false` 即返回 `http`（`NacosServiceInstance.getScheme()` 只读 `isSecure()`） | **删除** |
 | `discovery.instance-id` | Nacos 同 ip:port 自动覆盖旧实例 | **删除** |
 | `consul.enabled: false`（测试） | `nacos.discovery.enabled: false` | 改键 |
 
@@ -359,7 +356,7 @@ mavenBom("com.alibaba.cloud:spring-cloud-alibaba-dependencies:$springCloudAlibab
 | `NACOS_AUTH_TOKEN` 解码长度不足 32 字节导致 nacos-server 启动失败 | `.env.example` 给 `openssl rand -base64 32` 生成命令，并在注释里写明长度约束 |
 | 首启 token 配错，5 个微服务集体 401 | `fail-fast: true` + 启动日志立即看到 4xx 异常；不会静默降级 |
 | Spring Cloud BOM 与 SCA BOM 版本冲突 | 强制 import 顺序：spring-cloud 在前（先 import 的 BOM 优先）、SCA 在后；Gradle 切换 commit 后跑 `./gradlew dependencyInsight --dependency spring-cloud-context` 验证 spring-cloud 实际解析版本为 2025.1.1 |
-| `lb://` 路由 scheme 解析 | gateway 的 `metadata.scheme: http` 决定下游 URL scheme；验证 `curl http://localhost:9528/patra-ingest/actuator/health` 仍 200 |
+| `lb://` 路由 scheme 解析 | Nacos `NacosServiceInstance.getScheme()` 通过 `isSecure()` 决定，默认即 `http`；验证 `curl http://localhost:9528/patra-ingest/actuator/health` 仍 200 |
 | `object-storage` 不在 issue 验收的 "4 个微服务" 列表 | 但其 application.yml 用 consul，必须同步切换；纳入设计范围（issue 自身验收清单已列其 yml） |
 | 测试时 nacos 容器未起 | `nacos.discovery.enabled=false` 完全关闭客户端，Testcontainers 不需要关心 nacos |
 | 旧 Consul 数据卷残留 | README 提示用户手工 `rm -rf ${HOME}/.patra/docker/consul/`；脚本不主动删（避免误删用户其他数据） |

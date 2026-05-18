@@ -29,7 +29,7 @@
 - 绿地项目，禁止保留任何 Consul fallback / 兼容代码 / 注释
 - Nacos 字段以 spec §6 表为准；Consul 特有但 Nacos 默认行为已覆盖的字段全部**直接删除**
 - 测试 yml 中 `nacos.discovery.enabled=false` 完全关闭客户端（避免测试需要连 Nacos）
-- gateway 与 object-storage 的 `metadata.scheme: http` 替代原 `prefer-ip-address + scheme` 组合
+- gateway 与 object-storage 与其它服务用相同 Nacos 模板（无需 `metadata.scheme` — Nacos `NacosServiceInstance` 默认 `secure=false` 即返回 `scheme=http`，scheme 决策不读 metadata；Task 2 code-review 字节码验证）
 
 ---
 
@@ -62,8 +62,8 @@
 | `patra-catalog/patra-catalog-boot/src/main/resources/application.yml` | 模板 A |
 | `patra-catalog/patra-catalog-boot/src/main/resources/application-dev.yml` | 模板 B |
 | `patra-catalog/patra-catalog-boot/src/test/resources/application-e2e-test.yml` | 模板 C |
-| `patra-gateway-boot/src/main/resources/application.yml` | 模板 A + `metadata.scheme` |
-| `patra-object-storage/patra-object-storage-boot/src/main/resources/application.yml` | 模板 A + `metadata.scheme` |
+| `patra-gateway-boot/src/main/resources/application.yml` | 模板 A |
+| `patra-object-storage/patra-object-storage-boot/src/main/resources/application.yml` | 模板 A |
 | `patra-catalog-boot/.../MeshScrImportE2E.java:71` | 模板 D |
 | `patra-catalog-boot/.../MeshDescriptorImportE2E.java:69` | 模板 D |
 | `patra-ingest-boot/.../OutboxPatternE2E.java:112` | 模板 D |
@@ -141,23 +141,7 @@ cloud:
       fail-fast: true
 ```
 
-**Nacos 块（替换写入）** — `gateway / object-storage`（额外 `metadata.scheme`）：
-
-```yaml
-# Nacos Service Discovery
-cloud:
-  nacos:
-    username: ${NACOS_USERNAME:nacos}
-    password: ${NACOS_PASSWORD:nacos}
-    discovery:
-      server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:localhost}}:${NACOS_PORT:8848}
-      service: ${spring.application.name}
-      fail-fast: true
-      metadata:
-        scheme: http
-```
-
-注意：gateway/object-storage 原 `${CONSUL_HOST:localhost}` 没用 `PATRA_INFRA_HOST` 兜底，但 Nacos 模板统一使用三段兜底（`NACOS_HOST → PATRA_INFRA_HOST → localhost`）以与其它服务对齐。
+注意：gateway/object-storage 与 registry/ingest/catalog 共用同一模板，无需 `metadata.scheme`（Nacos 默认 `secure=false` 即返回 `scheme=http`，scheme 决策不读 metadata；Task 2 code-review 字节码验证）。原 `${CONSUL_HOST:localhost}` 没用 `PATRA_INFRA_HOST` 兜底，Nacos 模板统一使用三段兜底（`NACOS_HOST → PATRA_INFRA_HOST → localhost`）以与其它服务对齐。
 
 ### 模板 B — application-dev.yml 改造
 
@@ -644,7 +628,7 @@ Edit 第 37-42 行：
 +# Routes are configured below with Nacos-based service discovery.
 ```
 
-第 25-38 行（Consul 块完整替换为 Nacos 块，含 `metadata.scheme`）：
+第 25-38 行（Consul 块完整替换为 Nacos 块）：
 
 替换前：
 
@@ -676,9 +660,6 @@ Edit 第 37-42 行：
         server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:localhost}}:${NACOS_PORT:8848}
         service: ${spring.application.name}
         fail-fast: true
-        # gateway 通过 lb:// 转发下游，下游 scheme 通过 metadata 暴露给 LoadBalancer
-        metadata:
-          scheme: http
 ```
 
 - [ ] **Step 2.10: 修改 `patra-object-storage/patra-object-storage-boot/src/main/resources/application.yml`**
@@ -713,8 +694,6 @@ Edit 第 10-22 行：
         server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:localhost}}:${NACOS_PORT:8848}
         service: ${spring.application.name}
         fail-fast: true
-        metadata:
-          scheme: http
 ```
 
 - [ ] **Step 2.11: 修改 5 个 Java 测试文件 — 字符串属性切换**
@@ -1130,8 +1109,6 @@ spring:
         server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:localhost}}:${NACOS_PORT:8848}
         service: ${spring.application.name}
         fail-fast: true
-        metadata:
-          scheme: http
 ```
 
 如有 dev 注意事项段提到 Consul 心跳模式或 `register-health-check: false`，删除整段（Nacos 默认即心跳模型，无需说明）。
@@ -1159,8 +1136,6 @@ spring:
         server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:localhost}}:${NACOS_PORT:8848}
         service: ${spring.application.name}
         fail-fast: true
-        metadata:
-          scheme: http
 ```
 
 第 324 行附近的服务注册查询示例：

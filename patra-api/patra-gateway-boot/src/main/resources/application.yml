@@ -30,9 +30,6 @@ spring:
         server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:localhost}}:${NACOS_PORT:8848}
         service: ${spring.application.name}
         fail-fast: true
-        # gateway 通过 lb:// 转发下游，下游 scheme 通过 metadata 暴露给 LoadBalancer
-        metadata:
-          scheme: http
 
     # Gateway Route Configuration
     # Routes requests to downstream microservices using load balancing
