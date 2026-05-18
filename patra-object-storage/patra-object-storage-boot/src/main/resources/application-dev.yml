@@ -5,7 +5,7 @@ spring:
       discovery:
         ip: ${TAILSCALE_IP:}
   datasource:
-    url: ${STORAGE_DB_URL:jdbc:postgresql://localhost:15432/patra_storage}
+    url: ${STORAGE_DB_URL:jdbc:postgresql://${PATRA_INFRA_HOST:127.0.0.1}:15432/patra_storage}
     username: ${STORAGE_DB_USERNAME:postgres}
     password: ${STORAGE_DB_PASSWORD:123456}
 

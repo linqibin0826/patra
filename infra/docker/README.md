@@ -149,10 +149,10 @@ export PATRA_INFRA_HOST=linqibins-mac-mini
 ```yaml
 spring:
   datasource:
-    url: jdbc:postgresql://${PATRA_INFRA_HOST:localhost}:15432/patra_ingest
+    url: jdbc:postgresql://${PATRA_INFRA_HOST:127.0.0.1}:15432/patra_ingest
   data:
     redis:
-      host: ${PATRA_INFRA_HOST:localhost}
+      host: ${PATRA_INFRA_HOST:127.0.0.1}
   cloud:
     nacos:
       username: ${NACOS_USERNAME:nacos}
@@ -165,12 +165,12 @@ patra:
   object-storage:
     providers:
       minio:
-        endpoint: http://${PATRA_INFRA_HOST:localhost}:19000
+        endpoint: http://${PATRA_INFRA_HOST:127.0.0.1}:19000
 rocketmq:
-  name-server: ${PATRA_INFRA_HOST:localhost}:9876
+  name-server: ${PATRA_INFRA_HOST:127.0.0.1}:9876
 ```
 
-默认值 `localhost` 仅用于应急 fallback（如临时在 MacBook 上本地起容器调试）。
+默认值 `127.0.0.1` 仅用于应急 fallback（如临时在 MacBook 上本地起容器调试）。统一用 `127.0.0.1` 而非 `localhost`，避免 hosts/IPv6 解析歧义。
 
 ---
 
