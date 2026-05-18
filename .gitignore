@@ -101,6 +101,7 @@ __pycache__/
 
 # Git worktrees
 .worktrees/
+.claude/worktrees/
 
 # JAR files (except Gradle wrapper)
 *.jar
