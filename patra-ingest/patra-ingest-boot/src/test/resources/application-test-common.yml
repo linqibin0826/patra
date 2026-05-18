@@ -12,8 +12,9 @@ spring:
       - "classpath:ingest-error-config.yaml"
       - "classpath:ingest-rocketmq.yaml"
   cloud:
-    consul:
-      enabled: false  # 禁用服务注册（测试环境）
+    nacos:
+      discovery:
+        enabled: false  # 禁用服务注册（测试环境）
   datasource:
     # 由 Testcontainers 动态配置
     url: ${spring.datasource.url}
@@ -107,4 +108,4 @@ logging:
     org.testcontainers: INFO
     org.apache.rocketmq: WARN
     org.springframework.cloud: WARN
-    org.springframework.cloud.consul: WARN
+    com.alibaba.nacos.client: WARN

@@ -69,7 +69,7 @@ import tools.jackson.databind.ObjectMapper;
 @Slf4j
 @SpringBootTest(
     properties = {
-      "spring.cloud.consul.enabled=false",
+      "spring.cloud.nacos.discovery.enabled=false",
       "spring.config.import=classpath:ingest-error-config.yaml,classpath:ingest-rocketmq.yaml",
       // 启用测试目标：TaskReadyMessageListener
       "patra.ingest.listener.task-ready.enabled=true",

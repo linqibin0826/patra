@@ -20,17 +20,11 @@ spring:
     redis:
       url: redis://${PATRA_INFRA_HOST:127.0.0.1}:16379
 
-  # dev 场景：应用跑在 MacBook，Consul 跑在 Mac mini docker。
-  # 容器内 → MacBook tailscale 100.x 不通（Docker bridge 不路由到 utun），
-  # 所以用 TTL heartbeat 替代反向 HTTP 健康检查；
-  # 用 TAILSCALE_IP 注册，确保跨主机服务发现拿到的 IP 可达。
+  # dev 场景：用 TAILSCALE_IP 注册，确保跨主机服务发现拿到的 IP 可达。
   cloud:
-    consul:
+    nacos:
       discovery:
-        ip-address: ${TAILSCALE_IP:}
-        register-health-check: false
-        heartbeat:
-          enabled: true
+        ip: ${TAILSCALE_IP:}
 
 # 可观测性：开箱即用（零配置）
 # - Tracing/Logging: OTel Agent 自动处理

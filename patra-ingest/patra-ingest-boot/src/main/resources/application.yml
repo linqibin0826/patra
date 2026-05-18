@@ -12,21 +12,13 @@ spring:
       - "classpath:ingest-error-config.yaml"
       - "classpath:ingest-rocketmq.yaml"
   cloud:
-    consul:
-      # 默认从 PATRA_INFRA_HOST 取（zsh env 中已 export 为 Mac mini IP）；
-      # 生产环境通过 CONSUL_HOST 直接覆盖。
-      host: ${CONSUL_HOST:${PATRA_INFRA_HOST:localhost}}
-      port: ${CONSUL_PORT:8500}
+    nacos:
+      username: ${NACOS_USERNAME:nacos}
+      password: ${NACOS_PASSWORD:nacos}
       discovery:
-        service-name: ${spring.application.name}
-        health-check-interval: 10s
-        health-check-path: /actuator/health
-        # 使用固定 instance-id，服务重启时覆盖旧注册，避免僵尸实例
-        instance-id: ${spring.application.name}:${server.port}
-        # 使用宿主机实际 IP 注册服务（Consul 容器和宿主机服务都能访问）
-        prefer-ip-address: true
-        # 指定服务注册的 scheme，解决 lb:// 协议与 HttpClient 不兼容问题
-        scheme: http
+        server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:localhost}}:${NACOS_PORT:8848}
+        service: ${spring.application.name}
+        fail-fast: true
   datasource:
     driver-class-name: org.postgresql.Driver
     hikari:
