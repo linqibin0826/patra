@@ -2,7 +2,7 @@
 # Patra API Gateway - Main Configuration
 # ============================================================================
 # This gateway serves as the unified entry point for all Patra services.
-# Routes are configured below with Consul-based service discovery.
+# Routes are configured below with Nacos-based service discovery.
 # ============================================================================
 
 # ----------------------------------------------------------------------------
@@ -22,20 +22,16 @@ spring:
 
   # Cloud Configuration
   cloud:
-    # Consul Service Discovery
-    consul:
-      host: ${CONSUL_HOST:localhost}
-      port: ${CONSUL_PORT:8500}
+    # Nacos Service Discovery
+    nacos:
+      username: ${NACOS_USERNAME:nacos}
+      password: ${NACOS_PASSWORD:nacos}
       discovery:
-        service-name: ${spring.application.name}
-        health-check-interval: 10s
-        health-check-path: /actuator/health
-        # 使用固定 instance-id，服务重启时覆盖旧注册，避免僵尸实例
-        instance-id: ${spring.application.name}:${server.port}
-        # 使用宿主机实际 IP 注册服务（Consul 容器和宿主机服务都能访问）
-        prefer-ip-address: true
-        # 指定服务注册的 scheme，解决 lb:// 协议与 HttpClient 不兼容问题
-        scheme: http
+        server-addr: ${NACOS_HOST:127.0.0.1}:${NACOS_PORT:8848}
+        service: ${spring.application.name}
+        # 显式 false：SCA 2025.1.0.0 默认 true 会让 nacos 3.x gRPC 异步握手未完成时
+        # 同步 register 的 -401 Client-not-connected 直接 abort 整个应用启动
+        fail-fast: false
 
     # Gateway Route Configuration
     # Routes requests to downstream microservices using load balancing

@@ -6,7 +6,7 @@ name: patra
 # Composed from modular service stacks for flexible startup
 
 include:
-  - docker-compose.core.yaml          # PostgreSQL, Redis, Consul
+  - docker-compose.core.yaml          # PostgreSQL, Redis, Nacos
   - docker-compose.storage.yaml       # MinIO (Object Storage)
   - docker-compose.search.yaml        # Elasticsearch
   - docker-compose.observability.yaml # OpenTelemetry + Grafana Stack

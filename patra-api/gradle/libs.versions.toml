@@ -6,8 +6,9 @@ java = "25"
 patra = "0.1.0-SNAPSHOT"
 
 # Spring
-spring-boot = "4.0.1"
-spring-cloud = "2025.1.0"
+spring-boot = "4.0.6"
+spring-cloud = "2025.1.1"
+spring-cloud-alibaba = "2025.1.0.0"
 spring-dependency-management = "1.1.7"
 
 # Code Generation
@@ -74,6 +75,7 @@ kordamp-enforcer = "0.14.0"
 # BOMs
 spring-boot-bom = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "spring-boot" }
 spring-cloud-bom = { module = "org.springframework.cloud:spring-cloud-dependencies", version.ref = "spring-cloud" }
+spring-cloud-alibaba-bom = { module = "com.alibaba.cloud:spring-cloud-alibaba-dependencies", version.ref = "spring-cloud-alibaba" }
 resilience4j-bom = { module = "io.github.resilience4j:resilience4j-bom", version.ref = "resilience4j" }
 testcontainers-bom = { module = "org.testcontainers:testcontainers-bom", version.ref = "testcontainers" }
 aws-sdk-s3 = { module = "software.amazon.awssdk:s3", version.ref = "aws-sdk" }
@@ -93,7 +95,7 @@ spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-
 spring-boot-starter-batch = { module = "org.springframework.boot:spring-boot-starter-batch" }
 
 # Spring Cloud
-spring-cloud-starter-consul-discovery = { module = "org.springframework.cloud:spring-cloud-starter-consul-discovery" }
+spring-cloud-starter-alibaba-nacos-discovery = { module = "com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery" }
 spring-cloud-starter-gateway = { module = "org.springframework.cloud:spring-cloud-starter-gateway-server-webflux" }
 spring-cloud-starter-loadbalancer = { module = "org.springframework.cloud:spring-cloud-starter-loadbalancer" }
 

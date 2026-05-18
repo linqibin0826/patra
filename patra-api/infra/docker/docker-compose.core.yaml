@@ -41,20 +41,30 @@ services:
       timeout: 5s
       retries: 10
 
-  consul:
-    image: hashicorp/consul:1.18
-    container_name: patra-consul
+  nacos:
+    image: nacos/nacos-server:v3.0.2
+    container_name: patra-nacos
     restart: unless-stopped
     environment:
+      - MODE=standalone
+      - PREFER_HOST_MODE=hostname
+      - NACOS_AUTH_ENABLE=true
+      - NACOS_AUTH_TOKEN=${NACOS_AUTH_TOKEN}
+      - NACOS_AUTH_IDENTITY_KEY=${NACOS_AUTH_IDENTITY_KEY}
+      - NACOS_AUTH_IDENTITY_VALUE=${NACOS_AUTH_IDENTITY_VALUE}
+      - JVM_XMS=256m
+      - JVM_XMX=256m
       - TZ=Asia/Shanghai
     ports:
-      - "8500:8500"      # HTTP API & Web UI
-      - "8600:8600/udp"  # DNS interface
-    command: agent -dev -client=0.0.0.0 -ui
+      - "8848:8848"   # HTTP / OpenAPI / 老控制台
+      - "9848:9848"   # gRPC（2.x+ 客户端心跳与变更推送，缺则只能 HTTP 握手）
+      - "8080:8080"   # 新版控制台
     volumes:
-      - ${HOME}/.patra/docker/consul/data:/consul/data
+      - ${HOME}/.patra/docker/nacos/data:/home/nacos/data
+      - ${HOME}/.patra/docker/nacos/logs:/home/nacos/logs
     healthcheck:
-      test: [ "CMD", "consul", "members" ]
+      # Nacos 3.x：v1 路径已 deprecated（410 Gone），健康端点搬到 8080 新控制台
+      test: [ "CMD-SHELL", "curl -fs http://localhost:8080/v3/console/health/readiness || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 10

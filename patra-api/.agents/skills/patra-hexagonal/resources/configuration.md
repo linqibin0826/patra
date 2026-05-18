@@ -18,24 +18,23 @@ patra-{service}-boot/src/main/resources/
 3. `application-{profile}.yaml`
 4. `application.yaml`
 
-## Consul 服务发现配置
+## Nacos 服务发现配置
 
 ```yaml
 spring:
   application:
     name: patra-catalog
   cloud:
-    consul:
-      host: ${CONSUL_HOST:localhost}
-      port: ${CONSUL_PORT:8500}
+    nacos:
+      username: ${NACOS_USERNAME:nacos}
+      password: ${NACOS_PASSWORD:nacos}
       discovery:
-        service-name: ${spring.application.name}
-        health-check-interval: 10s
-        health-check-path: /actuator/health
-        instance-id: ${spring.application.name}:${random.value}
+        server-addr: ${NACOS_HOST:127.0.0.1}:${NACOS_PORT:8848}
+        service: ${spring.application.name}
+        fail-fast: true
 ```
 
-Consul 仅用于服务发现，不用于配置管理。
+Nacos 仅用于服务发现，不用于配置管理。
 
 ## 配置类模式
 

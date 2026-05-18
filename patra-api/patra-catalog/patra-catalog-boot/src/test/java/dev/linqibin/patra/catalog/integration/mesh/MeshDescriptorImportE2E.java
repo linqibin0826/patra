@@ -66,7 +66,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 /// @since 0.1.0
 @SpringBootTest(
     properties = {
-      "spring.cloud.consul.enabled=false",
+      "spring.cloud.nacos.discovery.enabled=false",
       "spring.config.import=classpath:catalog-error-config.yaml"
     })
 @ContextConfiguration(initializers = CatalogPostgreSQLContainerInitializer.class)

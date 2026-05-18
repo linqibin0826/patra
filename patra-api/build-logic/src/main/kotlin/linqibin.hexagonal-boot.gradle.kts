@@ -69,7 +69,7 @@ tasks.bootRun {
 
 dependencies {
     // 服务发现
-    implementation(libs.findLibrary("spring-cloud-starter-consul-discovery").get())
+    implementation(libs.findLibrary("spring-cloud-starter-alibaba-nacos-discovery").get())
 
     // 测试依赖
     testImplementation(project(":linqibin-spring-boot-starter-test"))

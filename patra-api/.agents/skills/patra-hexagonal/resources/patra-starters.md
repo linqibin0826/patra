@@ -29,7 +29,7 @@
 ### starter-http-interface
 
 **适用**：`patra-{service}-infra`（调用其他 Patra 微服务）
-**功能**：Spring 7 HTTP Interface + RestClient + Consul 服务发现
+**功能**：Spring 7 HTTP Interface + RestClient + Nacos 服务发现
 
 **三步使用**：
 1. 在 `-api` 模块定义 `@HttpExchange` 接口
