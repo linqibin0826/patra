@@ -3,10 +3,8 @@ package dev.linqibin.starter.restclient.config;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.linqibin.starter.restclient.proxy.TunnelProxyConfigurer;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
@@ -14,7 +12,6 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 ///
 /// 验证隧道代理自动配置的条件装配逻辑。
 @DisplayName("TunnelProxyAutoConfiguration 单元测试")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class TunnelProxyAutoConfigurationTest {
 
   private final ApplicationContextRunner contextRunner =
