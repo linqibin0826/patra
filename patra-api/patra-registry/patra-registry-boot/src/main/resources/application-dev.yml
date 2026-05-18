@@ -9,16 +9,28 @@ spring:
     activate:
       on-profile: dev
 
-  # Development database (local Docker container)
+  # Development database (Mac mini docker, host from $PATRA_INFRA_HOST in zsh env)
   datasource:
-    url: jdbc:postgresql://127.0.0.1:15432/patra_registry
+    url: jdbc:postgresql://${PATRA_INFRA_HOST:127.0.0.1}:15432/patra_registry
     username: postgres
     password: 123456  # Development only - secure in production
 
-  # Development Redis (local Docker container)
+  # Development Redis (Mac mini docker)
   data:
     redis:
-      url: redis://localhost:16379
+      url: redis://${PATRA_INFRA_HOST:127.0.0.1}:16379
+
+  # dev 场景：应用跑在 MacBook，Consul 跑在 Mac mini docker。
+  # 容器内 → MacBook tailscale 100.x 不通（Docker bridge 不路由到 utun），
+  # 所以用 TTL heartbeat 替代反向 HTTP 健康检查；
+  # 用 TAILSCALE_IP 注册，确保跨主机服务发现拿到的 IP 可达。
+  cloud:
+    consul:
+      discovery:
+        ip-address: ${TAILSCALE_IP:}
+        register-health-check: false
+        heartbeat:
+          enabled: true
 
 # 可观测性：开箱即用（零配置）
 # - Tracing/Logging: OTel Agent 自动处理
