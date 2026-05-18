@@ -1,7 +1,7 @@
 /**
  * Patra Catalog Infrastructure
  *
- * 基础设施层 - PostgreSQL/Elasticsearch 持久化、外部服务集成
+ * 基础设施层 - PostgreSQL 持久化、外部服务集成
  */
 
 plugins {
@@ -21,9 +21,6 @@ dependencies {
 
     // 对象存储：VenueCoverImageDownloadAdapter 依赖此 starter 上传封面图到 MinIO/S3
     api(project(":linqibin-spring-boot-starter-object-storage"))
-
-    // Elasticsearch
-    api("org.springframework.boot:spring-boot-starter-data-elasticsearch")
 
     // WebFlux（WebClient 流式下载）
     api("org.springframework:spring-webflux")
