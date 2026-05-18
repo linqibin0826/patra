@@ -63,7 +63,8 @@ services:
       - ${HOME}/.patra/docker/nacos/data:/home/nacos/data
       - ${HOME}/.patra/docker/nacos/logs:/home/nacos/logs
     healthcheck:
-      test: [ "CMD-SHELL", "curl -fs http://localhost:8848/nacos/v1/console/health/readiness || exit 1" ]
+      # Nacos 3.x：v1 路径已 deprecated（410 Gone），健康端点搬到 8080 新控制台
+      test: [ "CMD-SHELL", "curl -fs http://localhost:8080/v3/console/health/readiness || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 10

@@ -898,7 +898,8 @@ Edit 第 44-60 行（整段 consul 服务定义）。
       - ${HOME}/.patra/docker/nacos/data:/home/nacos/data
       - ${HOME}/.patra/docker/nacos/logs:/home/nacos/logs
     healthcheck:
-      test: [ "CMD-SHELL", "curl -fs http://localhost:8848/nacos/v1/console/health/readiness || exit 1" ]
+      # Nacos 3.x：v1 路径已 deprecated（410 Gone），健康端点搬到 8080 新控制台
+      test: [ "CMD-SHELL", "curl -fs http://localhost:8080/v3/console/health/readiness || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -989,7 +990,7 @@ Expected: `STATUS` 列显示 `Up X seconds (healthy)`。
 进一步验证 readiness 端点：
 
 ```bash
-curl -fs http://localhost:8848/nacos/v1/console/health/readiness && echo OK
+curl -fs http://localhost:8080/v3/console/health/readiness && echo
 ```
 
 Expected: 输出 `OK`。
@@ -1014,7 +1015,7 @@ chore(infra): docker compose 由 Consul 切换到 Nacos (#29)
 - init-volumes.sh：consul/data → nacos/data + nacos/logs
 
 .env（含真实 token）不入 git；实施者本地用 openssl rand 生成后填入。
-Nacos readiness 端点 /nacos/v1/console/health/readiness 通过验证。
+Nacos readiness 端点 8080/v3/console/health/readiness 通过验证（v1 路径 410 Gone）。
 
 旧 ${HOME}/.patra/docker/consul/ 数据卷不主动清理，避免误删。
 如需回收：rm -rf ${HOME}/.patra/docker/consul

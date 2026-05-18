@@ -216,7 +216,7 @@ nacos:
     - ${HOME}/.patra/docker/nacos/data:/home/nacos/data
     - ${HOME}/.patra/docker/nacos/logs:/home/nacos/logs
   healthcheck:
-    test: ["CMD-SHELL", "curl -fs http://localhost:8848/nacos/v1/console/health/readiness || exit 1"]
+    test: ["CMD-SHELL", "curl -fs http://localhost:8080/v3/console/health/readiness || exit 1"]
     interval: 10s
     timeout: 5s
     retries: 10
@@ -378,7 +378,7 @@ mavenBom("com.alibaba.cloud:spring-cloud-alibaba-dependencies:$springCloudAlibab
 
 ### Step 3 — compose 切换后
 - `docker compose -f infra/docker/docker-compose.core.yaml up -d nacos` 单独起 nacos
-- `curl -fs http://localhost:8848/nacos/v1/console/health/readiness` 返回 OK
+- `curl -fs http://localhost:8080/v3/console/health/readiness` 返回 `{"code":0,"message":"success","data":"ok"}`（Nacos 3.x 健康端点在 8080 新控制台，v1 路径已 deprecated）
 - 浏览器 `http://localhost:8080` 新控制台可登录（默认 nacos/nacos）
 
 ### Step 4 — 联调验证
