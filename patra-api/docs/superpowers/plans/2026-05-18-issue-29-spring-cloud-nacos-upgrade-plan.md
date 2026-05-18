@@ -138,7 +138,9 @@ cloud:
     discovery:
       server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:localhost}}:${NACOS_PORT:8848}
       service: ${spring.application.name}
-      fail-fast: true
+      # 显式 false：SCA 2025.1.0.0 默认 true 会让 nacos 3.x gRPC 异步握手未完成时
+      # 同步 register 的 -401 Client-not-connected 直接 abort 整个应用启动
+      fail-fast: false
 ```
 
 注意：gateway/object-storage 与 registry/ingest/catalog 共用同一模板，无需 `metadata.scheme`（Nacos 默认 `secure=false` 即返回 `scheme=http`，scheme 决策不读 metadata；Task 2 code-review 字节码验证）。原 `${CONSUL_HOST:localhost}` 没用 `PATRA_INFRA_HOST` 兜底，Nacos 模板统一使用三段兜底（`NACOS_HOST → PATRA_INFRA_HOST → localhost`）以与其它服务对齐。
@@ -419,7 +421,7 @@ Edit：把以下原块
       discovery:
         server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:localhost}}:${NACOS_PORT:8848}
         service: ${spring.application.name}
-        fail-fast: true
+        fail-fast: false
 ```
 
 - [ ] **Step 2.2: 修改 `patra-registry/patra-registry-boot/src/main/resources/application-dev.yml`**
@@ -485,7 +487,7 @@ Edit：把第 15-29 行
       discovery:
         server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:localhost}}:${NACOS_PORT:8848}
         service: ${spring.application.name}
-        fail-fast: true
+        fail-fast: false
 ```
 
 - [ ] **Step 2.4: 修改 `patra-ingest/patra-ingest-boot/src/main/resources/application-dev.yml`**
@@ -570,7 +572,7 @@ Edit 第 29-46 行：
       discovery:
         server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:localhost}}:${NACOS_PORT:8848}
         service: ${spring.application.name}
-        fail-fast: true
+        fail-fast: false
 ```
 
 - [ ] **Step 2.7: 修改 `patra-catalog/patra-catalog-boot/src/main/resources/application-dev.yml`**
@@ -659,7 +661,7 @@ Edit 第 37-42 行：
       discovery:
         server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:localhost}}:${NACOS_PORT:8848}
         service: ${spring.application.name}
-        fail-fast: true
+        fail-fast: false
 ```
 
 - [ ] **Step 2.10: 修改 `patra-object-storage/patra-object-storage-boot/src/main/resources/application.yml`**
@@ -693,7 +695,7 @@ Edit 第 10-22 行：
       discovery:
         server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:localhost}}:${NACOS_PORT:8848}
         service: ${spring.application.name}
-        fail-fast: true
+        fail-fast: false
 ```
 
 - [ ] **Step 2.11: 修改 5 个 Java 测试文件 — 字符串属性切换**
@@ -1109,7 +1111,7 @@ spring:
       discovery:
         server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:localhost}}:${NACOS_PORT:8848}
         service: ${spring.application.name}
-        fail-fast: true
+        fail-fast: false
 ```
 
 如有 dev 注意事项段提到 Consul 心跳模式或 `register-health-check: false`，删除整段（Nacos 默认即心跳模型，无需说明）。
@@ -1136,7 +1138,7 @@ spring:
       discovery:
         server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:localhost}}:${NACOS_PORT:8848}
         service: ${spring.application.name}
-        fail-fast: true
+        fail-fast: false
 ```
 
 第 324 行附近的服务注册查询示例：
@@ -1185,7 +1187,7 @@ plugins/patra-codex/skills/patra-hexagonal/references/configuration.md
       discovery:
         server-addr: ${NACOS_HOST:localhost}:${NACOS_PORT:8848}
         service: ${spring.application.name}
-        fail-fast: true
+        fail-fast: false
 ```
 
 - 行 38：`Consul 仅用于服务发现，不用于配置管理。` → `Nacos 仅用于服务发现，不用于配置管理。`
