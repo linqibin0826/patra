@@ -30,7 +30,7 @@ import org.gradle.kotlin.dsl.configure
 /// 应用 Patra 统一的依赖管理配置
 ///
 /// 包括：
-/// - Spring Boot / Cloud / Resilience4j / Testcontainers BOM
+/// - Spring Boot / Cloud / Cloud Alibaba / Resilience4j / Testcontainers BOM
 /// - 强制版本约束（解决依赖冲突）
 ///
 /// 版本统一从 `gradle/libs.versions.toml` 获取，确保单一来源。
@@ -40,6 +40,7 @@ fun Project.applyLinqibinDependencyManagement(libs: VersionCatalog) {
     // 从 Version Catalog 获取版本
     val springBootVersion = libs.findVersion("spring-boot").get().requiredVersion
     val springCloudVersion = libs.findVersion("spring-cloud").get().requiredVersion
+    val springCloudAlibabaVersion = libs.findVersion("spring-cloud-alibaba").get().requiredVersion
     val resilience4jVersion = libs.findVersion("resilience4j").get().requiredVersion
     val testcontainersVersion = libs.findVersion("testcontainers").get().requiredVersion
     // 强制版本约束
@@ -51,6 +52,7 @@ fun Project.applyLinqibinDependencyManagement(libs: VersionCatalog) {
         imports {
             mavenBom("org.springframework.boot:spring-boot-dependencies:$springBootVersion")
             mavenBom("org.springframework.cloud:spring-cloud-dependencies:$springCloudVersion")
+            mavenBom("com.alibaba.cloud:spring-cloud-alibaba-dependencies:$springCloudAlibabaVersion")
             mavenBom("io.github.resilience4j:resilience4j-bom:$resilience4jVersion")
             mavenBom("org.testcontainers:testcontainers-bom:$testcontainersVersion")
         }

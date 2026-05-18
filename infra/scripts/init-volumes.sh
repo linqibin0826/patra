@@ -26,7 +26,8 @@ echo "[1/4] 创建目录骨架..."
 mkdir -p \
   "$ROOT"/postgres/data \
   "$ROOT"/redis/data \
-  "$ROOT"/consul/data \
+  "$ROOT"/nacos/data \
+  "$ROOT"/nacos/logs \
   "$ROOT"/minio/data \
   "$ROOT"/es/data \
   "$ROOT"/rocketmq/namesrv/logs \

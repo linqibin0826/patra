@@ -9,6 +9,12 @@ spring:
     activate:
       on-profile: dev
 
+  # dev 场景：用 TAILSCALE_IP 注册，确保跨主机服务发现拿到的 IP 可达。
+  cloud:
+    nacos:
+      discovery:
+        ip: ${TAILSCALE_IP:}
+
 # ----------------------------------------------------------------------------
 # Development Logging Configuration
 # ----------------------------------------------------------------------------

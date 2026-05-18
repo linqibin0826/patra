@@ -134,11 +134,11 @@ patra-registry/
 | 组件 | 版本/说明 |
 |------|---------|
 | **Java** | 25 |
-| **Spring Boot** | 4.0.1 |
+| **Spring Boot** | 4.0.6 |
 | **Spring Cloud** | 2025.1.0 |
 | **Spring Data JPA** | 持久化框架 |
 | **MapStruct** | 对象映射 |
-| **Consul** | 服务注册中心 |
+| **Nacos** | 服务注册中心 |
 | **Gradle** | 构建工具 |
 
 ## 配置说明

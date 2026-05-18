@@ -12,14 +12,11 @@ spring:
     redis:
       url: redis://${PATRA_INFRA_HOST:127.0.0.1}:16379
 
-  # dev 场景：见 patra-registry application-dev.yml 同段说明
+  # dev 场景：用 TAILSCALE_IP 注册，确保跨主机服务发现拿到的 IP 可达。
   cloud:
-    consul:
+    nacos:
       discovery:
-        ip-address: ${TAILSCALE_IP:}
-        register-health-check: false
-        heartbeat:
-          enabled: true
+        ip: ${TAILSCALE_IP:}
 
 # 可观测性：开箱即用（零配置）
 # - Tracing/Logging: OTel Agent 自动处理

@@ -1,4 +1,9 @@
 spring:
+  # dev 场景：用 TAILSCALE_IP 注册，确保跨主机服务发现拿到的 IP 可达。
+  cloud:
+    nacos:
+      discovery:
+        ip: ${TAILSCALE_IP:}
   datasource:
     url: ${STORAGE_DB_URL:jdbc:postgresql://localhost:15432/patra_storage}
     username: ${STORAGE_DB_USERNAME:postgres}

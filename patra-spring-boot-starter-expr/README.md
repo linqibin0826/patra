@@ -220,6 +220,6 @@ public class CustomTransform implements ValueTransform {
 
 - patra-expr-kernel
 - patra-registry-api
-- Spring Boot 4.0.1
+- Spring Boot 4.0.6
 - Jackson
 - Micrometer (可选)

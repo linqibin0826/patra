@@ -73,7 +73,7 @@ import org.springframework.test.context.ContextConfiguration;
 /// @see MessageCollector
 @SpringBootTest(
     properties = {
-      "spring.cloud.consul.enabled=false",
+      "spring.cloud.nacos.discovery.enabled=false",
       "spring.config.import=classpath:ingest-error-config.yaml,classpath:ingest-rocketmq.yaml",
       // 禁用生产环境的 RocketMQ Listener
       "patra.ingest.listener.task-ready.enabled=false",
