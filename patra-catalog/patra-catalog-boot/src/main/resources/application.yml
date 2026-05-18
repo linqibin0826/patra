@@ -105,7 +105,7 @@ linqibin:
 xxl:
   job:
     admin:
-      addresses: ${XXL_JOB_ADMIN_ADDRESSES:http://localhost:7070/xxl-job-admin}
+      addresses: ${XXL_JOB_ADMIN_ADDRESSES:http://${PATRA_INFRA_HOST:127.0.0.1}:7070/xxl-job-admin}
     executor:
       ip: ${XXL_JOB_EXECUTOR_IP:host.docker.internal}  # Docker 容器中的 xxl-job-admin 需要通过此地址回调宿主机
       # Log directory in centralized logs folder
