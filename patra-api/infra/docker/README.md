@@ -11,7 +11,7 @@ Patra 全部基础设施容器部署在 **Mac mini**（hostname: `linqibins-mac-
 ```
 docker/
 ├── docker-compose.dev.yaml          # 主入口（include 全部栈）
-├── docker-compose.core.yaml         # postgres + redis + consul
+├── docker-compose.core.yaml         # postgres + redis + nacos
 ├── docker-compose.storage.yaml      # minio + minio-init
 ├── docker-compose.search.yaml       # elasticsearch
 ├── docker-compose.observability.yaml # otel/prom/loki/tempo/grafana
@@ -128,8 +128,13 @@ spring:
     redis:
       host: ${PATRA_INFRA_HOST:localhost}
   cloud:
-    consul:
-      host: ${PATRA_INFRA_HOST:localhost}
+    nacos:
+      username: ${NACOS_USERNAME:nacos}
+      password: ${NACOS_PASSWORD:nacos}
+      discovery:
+        server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:localhost}}:${NACOS_PORT:8848}
+        service: ${spring.application.name}
+        fail-fast: true
 patra:
   object-storage:
     providers:
@@ -148,7 +153,7 @@ rocketmq:
 ### 核心服务
 - **PostgreSQL**: `linqibins-mac-mini:15432` (postgres/123456)
 - **Redis**: `linqibins-mac-mini:16379`
-- **Consul UI**: http://linqibins-mac-mini:8500
+- **Nacos 控制台**: http://linqibins-mac-mini:8080
 
 ### 存储服务
 - **MinIO API**: `linqibins-mac-mini:19000` (minioadmin/minioadmin123)
@@ -280,7 +285,7 @@ PATRA_INFRA_HOST=100.73.7.112 docker compose -f infra/docker/docker-compose.stor
 ```
 ┌─────────────────────────────────────┐
 │ 核心服务                             │  (无依赖)
-│ - postgres, redis, consul           │
+│ - postgres, redis, nacos            │
 └─────────────────────────────────────┘
          ▲                    ▲             ▲
          │                    │             │

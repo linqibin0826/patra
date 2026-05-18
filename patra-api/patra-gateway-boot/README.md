@@ -9,7 +9,7 @@
 ## 核心职责
 
 - **请求路由**: 根据请求路径将流量分发到正确的微服务(patra-registry、patra-ingest 等)
-- **服务发现**: 通过 Consul 自动发现和注册后端服务实例
+- **服务发现**: 通过 Nacos 自动发现和注册后端服务实例
 - **负载均衡**: 使用 Spring Cloud LoadBalancer 在多个服务实例间分配请求
 - **统一入口**: 为所有 Patra API 提供单一访问点,简化客户端配置
 - **请求日志**: 集成分布式追踪,记录请求和响应以便问题诊断
@@ -21,7 +21,7 @@ patra-gateway-boot/
 ├── src/main/java/com/patra/gateway/
 │   └── PatraGatewayApplication.java    # Spring Boot 启动类
 ├── src/main/resources/
-│   ├── application.yml                 # 主配置文件(路由、Consul)
+│   ├── application.yml                 # 主配置文件(路由、Nacos)
 │   ├── application-dev.yml             # 开发环境配置(DEBUG 日志)
 │   └── application-prod.yml            # 生产环境配置
 └── build.gradle.kts                    # Gradle 依赖定义
@@ -73,19 +73,19 @@ spring:
 - `predicates`: 匹配条件,这里按路径前缀匹配
 - `filters`: 请求处理过滤器,`StripPrefix=1` 会移除路径的第一段
 
-### Consul 集成
-通过 Spring Cloud Consul 实现服务发现:
+### Nacos 集成
+通过 Spring Cloud Alibaba Nacos 实现服务发现:
 
 ```yaml
 spring:
   cloud:
-    consul:
-      host: ${CONSUL_HOST:localhost}
-      port: ${CONSUL_PORT:8500}
+    nacos:
+      username: ${NACOS_USERNAME:nacos}
+      password: ${NACOS_PASSWORD:nacos}
       discovery:
-        service-name: ${spring.application.name}
-        health-check-interval: 10s
-        health-check-path: /actuator/health
+        server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:localhost}}:${NACOS_PORT:8848}
+        service: ${spring.application.name}
+        fail-fast: true
 ```
 
 ## 路由示例
@@ -150,12 +150,12 @@ scalar:
 | 变量名 | 说明 | 默认值 |
 |--------|------|--------|
 | `SPRING_PROFILES_ACTIVE` | 激活的配置文件 | `dev` |
-| `CONSUL_HOST` | Consul 服务器地址 | `localhost` |
-| `CONSUL_PORT` | Consul 端口 | `8500` |
+| `NACOS_HOST` | Nacos 服务器地址 | `localhost` |
+| `NACOS_PORT` | Nacos 端口 | `8848` |
 
 ### 端口配置
 - **默认端口**: 9528
-- **Consul 端口**: 8500
+- **Nacos 端口**: 8848
 
 ### 日志配置
 开发环境下启用 DEBUG 级别日志以便调试路由和负载均衡:
@@ -202,7 +202,7 @@ management:
 | **Spring Boot** | 4.0.1 |
 | **Spring Cloud Gateway** | 2025.1.0 |
 | **Spring Cloud LoadBalancer** | 用于客户端负载均衡 |
-| **Consul Discovery** | 服务发现和注册 |
+| **Nacos Discovery** | 服务发现和注册 |
 | **patra-spring-boot-starter-core** | Patra 核心 starter |
 | **Scalar UI** | API 文档聚合展示 |
 | **SpringDoc OpenAPI (WebFlux)** | OpenAPI 文档生成（WebFlux 版） |
