@@ -31,7 +31,8 @@
     ]
   },
   "enabledPlugins": {
-    "superpowers@claude-plugins-official": true,
-    "frontend-design@claude-code-plugins": true
+    "superpowers@claude-plugins-official": false,
+    "frontend-design@claude-code-plugins": true,
+    "patra@patra-local": true
   }
 }

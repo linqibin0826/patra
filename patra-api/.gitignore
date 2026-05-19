@@ -110,3 +110,6 @@ __pycache__/
 
 # Serena MCP local config
 .serena/
+
+# brainstorming visual-companion 会话持久化目录（不要与 docs/patra/ 文档目录混淆）
+.patra/

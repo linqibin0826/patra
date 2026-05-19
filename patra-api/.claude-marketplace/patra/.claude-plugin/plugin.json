@@ -1,0 +1,21 @@
+{
+  "name": "patra",
+  "description": "Patra 项目专属能力 plugin：13 个方法论 skills（brainstorming / writing-plans / executing-plans / subagent-driven-development / dispatching-parallel-agents / test-driven-development / systematic-debugging / verification-before-completion / requesting-code-review / receiving-code-review / finishing-a-development-branch / using-git-worktrees / using-superpowers），基于 jnMetaCode/superpowers-zh fork 精简并按 patra-api 六边形架构 + Java/Gradle 技术栈深度定制。",
+  "version": "0.1.0",
+  "author": {
+    "name": "linqibin0826",
+    "url": "https://github.com/linqibin0826"
+  },
+  "homepage": "https://github.com/linqibin0826/patra-api",
+  "license": "MIT",
+  "keywords": [
+    "patra",
+    "skills",
+    "tdd",
+    "debugging",
+    "chinese",
+    "中文",
+    "hexagonal",
+    "ddd"
+  ]
+}

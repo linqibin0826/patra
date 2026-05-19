@@ -204,4 +204,3 @@ try {
 - [Spring HTTP Interface](https://docs.spring.io/spring-framework/reference/integration/rest-clients.html#rest-http-interface)
 - [RestClient](https://docs.spring.io/spring-framework/reference/integration/rest-clients.html#rest-restclient)
 - [RFC 7807 Problem Details](https://www.rfc-editor.org/rfc/rfc7807)
-- ADR-023: 从 OpenFeign 迁移到 Spring HTTP Interface（位于 `Patra-docs/content/decisions/` 目录）

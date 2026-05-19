@@ -1,0 +1,2048 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Patra Solo Dev SOP — 单人全链路开发流程设计</title>
+<style>
+  :root {
+    --bg:             #ffffff;
+    --bg-subtle:      #f6f8fa;
+    --bg-muted:       #f0f3f7;
+    --bg-deep:        #e8edf4;
+    --border:         #d1d9e0;
+    --border-muted:   #e4e9f0;
+    --text:           #1a2332;
+    --text-muted:     #536173;
+    --text-subtle:    #6e7f93;
+    --accent:         #2563eb;
+    --accent-hover:   #1d4ed8;
+    --accent-bg:      #eff6ff;
+    --accent-border:  #bfdbfe;
+    --teal:           #0d9488;
+    --teal-bg:        #f0fdfa;
+    --teal-border:    #99f6e4;
+    --amber:          #b45309;
+    --amber-bg:       #fffbeb;
+    --amber-border:   #fcd34d;
+    --red:            #dc2626;
+    --red-bg:         #fef2f2;
+    --red-border:     #fecaca;
+    --green:          #16a34a;
+    --green-bg:       #f0fdf4;
+    --green-border:   #bbf7d0;
+    --purple:         #7c3aed;
+    --purple-bg:      #f5f3ff;
+    --purple-border:  #ddd6fe;
+
+    --sidebar-width:  268px;
+    --header-height:  58px;
+    --content-max:    860px;
+
+    --font-sans: "PingFang SC", "Noto Sans SC", -apple-system, BlinkMacSystemFont,
+                 "Segoe UI", "Hiragino Sans GB", "Microsoft YaHei",
+                 "Helvetica Neue", Arial, sans-serif;
+    --font-mono: "JetBrains Mono", "SF Mono", SFMono-Regular, Menlo,
+                 Consolas, "Liberation Mono", monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* ── Topbar ── */
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 60;
+    height: var(--header-height);
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: saturate(180%) blur(8px);
+    -webkit-backdrop-filter: saturate(180%) blur(8px);
+    border-bottom: 1px solid var(--border-muted);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 14px;
+  }
+
+  .topbar-title {
+    flex: 1;
+    min-width: 0;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .topbar-badges {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1.5;
+    white-space: nowrap;
+    border: 1px solid transparent;
+  }
+
+  .badge-draft  { background: var(--amber-bg);  color: var(--amber);  border-color: var(--amber-border); }
+  .badge-date   { background: var(--bg-muted);   color: var(--text-muted); border-color: var(--border-muted);
+                  font-family: var(--font-mono); font-weight: 500; font-size: 11px; }
+  .badge-v      { background: var(--purple-bg);  color: var(--purple); border-color: var(--purple-border); }
+
+  .menu-btn {
+    display: none;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 12.5px;
+    color: var(--text);
+    cursor: pointer;
+    line-height: 1.4;
+  }
+  .menu-btn:hover { background: var(--bg-subtle); }
+
+  /* ── Layout ── */
+  .layout {
+    display: flex;
+    align-items: flex-start;
+    max-width: 1380px;
+    margin: 0 auto;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    position: sticky;
+    top: var(--header-height);
+    width: var(--sidebar-width);
+    flex-shrink: 0;
+    height: calc(100vh - var(--header-height));
+    overflow-y: auto;
+    padding: 22px 14px 22px 22px;
+    border-right: 1px solid var(--border-muted);
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .toc-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-subtle);
+    margin-bottom: 10px;
+    padding-left: 8px;
+  }
+
+  .sidebar nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .sidebar nav > ul > li { margin-bottom: 1px; }
+
+  .sidebar nav a {
+    display: block;
+    padding: 4px 8px;
+    border-radius: 5px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 13px;
+    line-height: 1.5;
+    border-left: 2px solid transparent;
+    transition: color 0.1s, background 0.1s, border-color 0.1s;
+  }
+
+  .sidebar nav a:hover {
+    color: var(--accent);
+    background: var(--bg-subtle);
+  }
+
+  .sidebar nav a.l1 { font-weight: 600; color: var(--text); font-size: 13px; }
+
+  .sidebar nav a.l2 {
+    padding-left: 20px;
+    font-size: 12.5px;
+  }
+
+  .sidebar nav a.l3 {
+    padding-left: 32px;
+    font-size: 12px;
+    color: var(--text-subtle);
+  }
+
+  .sidebar nav a.active {
+    color: var(--accent);
+    background: var(--accent-bg);
+    border-left-color: var(--accent);
+  }
+
+  .sidebar details { margin: 0; }
+  .sidebar details summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+  }
+  .sidebar details summary::-webkit-details-marker { display: none; }
+  .sidebar details summary > a { flex: 1; }
+  .sidebar details summary::after {
+    content: "";
+    display: inline-block;
+    width: 0; height: 0;
+    border-left: 4px solid var(--text-subtle);
+    border-top: 3px solid transparent;
+    border-bottom: 3px solid transparent;
+    transition: transform 0.15s;
+    flex-shrink: 0;
+    margin-right: 4px;
+  }
+  .sidebar details[open] summary::after { transform: rotate(90deg); }
+  .sidebar details ul { margin-top: 1px; }
+
+  /* ── Main ── */
+  .main {
+    flex: 1;
+    min-width: 0;
+    padding: 40px 48px 96px;
+  }
+
+  .content { max-width: var(--content-max); margin: 0 auto; }
+
+  /* ── Typography ── */
+  h1, h2, h3, h4 {
+    font-weight: 600;
+    color: var(--text);
+    scroll-margin-top: calc(var(--header-height) + 14px);
+    line-height: 1.3;
+  }
+
+  h1 {
+    font-size: 30px;
+    margin: 0 0 8px;
+    padding-bottom: 14px;
+    border-bottom: 2px solid var(--border-muted);
+    letter-spacing: -0.01em;
+  }
+
+  h2 {
+    font-size: 22px;
+    margin: 52px 0 14px;
+    padding-bottom: 9px;
+    border-bottom: 1px solid var(--border-muted);
+    letter-spacing: -0.005em;
+  }
+
+  h3 {
+    font-size: 17px;
+    margin: 28px 0 10px;
+  }
+
+  h4 {
+    font-size: 15px;
+    margin: 20px 0 8px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+
+  p { margin: 0 0 12px; }
+
+  ul, ol { margin: 0 0 12px; padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  li > ul, li > ol { margin-top: 4px; margin-bottom: 4px; }
+
+  strong { font-weight: 600; color: var(--text); }
+
+  del { color: var(--text-subtle); }
+
+  a {
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.1s, color 0.1s;
+  }
+
+  .content a:hover { border-bottom-color: var(--accent); }
+  .content a:visited { color: #5b21b6; }
+
+  hr {
+    border: none;
+    border-top: 1px solid var(--border-muted);
+    margin: 44px 0;
+  }
+
+  /* ── Code ── */
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.87em;
+  }
+
+  p code, li code, td code, th code, h1 code, h2 code, h3 code, h4 code {
+    background: var(--bg-muted);
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border-muted);
+    color: var(--text);
+    white-space: nowrap;
+  }
+
+  pre {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-muted);
+    border-radius: 8px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    margin: 0 0 16px;
+    line-height: 1.6;
+    font-size: 13px;
+  }
+
+  pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    white-space: pre;
+    font-size: 13px;
+    color: var(--text);
+  }
+
+  /* ── Tables ── */
+  .table-wrap {
+    overflow-x: auto;
+    margin: 0 0 18px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    min-width: 400px;
+  }
+
+  thead th {
+    background: var(--bg-subtle);
+    text-align: left;
+    font-weight: 600;
+    color: var(--text);
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    vertical-align: top;
+  }
+
+  tbody td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-muted);
+    vertical-align: top;
+    line-height: 1.65;
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:nth-child(even) { background: var(--bg-subtle); }
+  tbody tr:hover { background: var(--bg-muted); }
+  table code { font-size: 0.84em; }
+
+  /* ── Doc meta ── */
+  .doc-meta {
+    margin: 14px 0 28px;
+    padding: 14px 18px;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-muted);
+    border-radius: 8px;
+    font-size: 13.5px;
+    color: var(--text-muted);
+  }
+
+  .doc-meta p { margin: 3px 0; }
+  .doc-meta strong { color: var(--text); }
+
+  /* ── Callout ── */
+  aside.callout {
+    display: flex;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 8px;
+    margin: 0 0 18px;
+    border: 1px solid var(--border-muted);
+    background: var(--bg-subtle);
+  }
+
+  aside.callout .icon {
+    flex-shrink: 0;
+    font-size: 16px;
+    line-height: 1.7;
+  }
+
+  aside.callout .body { flex: 1; min-width: 0; }
+  aside.callout .body p { margin: 0 0 6px; font-size: 13.5px; }
+  aside.callout .body p:last-child { margin: 0; }
+  aside.callout .body strong { color: var(--text); font-size: 13.5px; }
+
+  aside.callout.info    { background: var(--accent-bg); border-color: var(--accent-border); }
+  aside.callout.tip     { background: var(--teal-bg);   border-color: var(--teal-border);   }
+  aside.callout.warn    { background: var(--amber-bg);  border-color: var(--amber-border);  }
+  aside.callout.danger  { background: var(--red-bg);    border-color: var(--red-border);    }
+  aside.callout.note    { background: var(--purple-bg); border-color: var(--purple-border); }
+
+  aside.callout.info   .icon { color: var(--accent); }
+  aside.callout.tip    .icon { color: var(--teal);   }
+  aside.callout.warn   .icon { color: var(--amber);  }
+  aside.callout.danger .icon { color: var(--red);    }
+  aside.callout.note   .icon { color: var(--purple); }
+
+  /* ── Stage tag ── */
+  .stage-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 9px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1.6;
+    white-space: nowrap;
+    border: 1px solid transparent;
+    vertical-align: middle;
+    margin: 0 3px;
+  }
+
+  .tag-backlog    { background: var(--bg-muted);    color: var(--text-muted);  border-color: var(--border); }
+  .tag-tech       { background: var(--purple-bg);   color: var(--purple);      border-color: var(--purple-border); }
+  .tag-be         { background: var(--accent-bg);   color: var(--accent);      border-color: var(--accent-border); }
+  .tag-design     { background: #fdf4ff;             color: #7e22ce;             border-color: #e9d5ff; }
+  .tag-fe         { background: var(--teal-bg);     color: var(--teal);        border-color: var(--teal-border); }
+  .tag-review     { background: var(--amber-bg);    color: var(--amber);       border-color: var(--amber-border); }
+  .tag-done       { background: var(--green-bg);    color: var(--green);       border-color: var(--green-border); }
+  .tag-fast       { background: var(--red-bg);      color: var(--red);         border-color: var(--red-border); }
+  .tag-path       { background: var(--bg-muted);    color: var(--text-muted);  border-color: var(--border);      font-family: var(--font-mono); }
+
+  /* ── "待创建" badge ── */
+  .badge-todo {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.6;
+    white-space: nowrap;
+    background: var(--amber-bg);
+    border: 1px solid var(--amber-border);
+    color: var(--amber);
+    vertical-align: middle;
+    margin-left: 4px;
+    letter-spacing: 0.02em;
+  }
+
+  /* ── Optional / conditional text ── */
+  .optional-note {
+    color: var(--text-subtle);
+    font-style: italic;
+    font-size: 0.93em;
+  }
+
+  /* ── Phase block ── */
+  .phase-block {
+    border: 1px solid var(--border-muted);
+    border-radius: 8px;
+    padding: 16px 18px 10px;
+    margin: 10px 0 18px;
+    background: var(--bg-subtle);
+  }
+
+  .phase-block > *:last-child { margin-bottom: 0; }
+
+  /* ── DoD checklist ── */
+  .dod-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 12px;
+  }
+
+  .dod-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 4px 0;
+    font-size: 13.5px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border-muted);
+  }
+
+  .dod-list li:last-child { border-bottom: none; }
+
+  .dod-list li::before {
+    content: "□";
+    font-family: var(--font-mono);
+    color: var(--text-subtle);
+    font-size: 13px;
+    flex-shrink: 0;
+    line-height: 1.7;
+  }
+
+  /* ── Scope grid ── */
+  .scope-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 0 0 18px;
+  }
+
+  .scope-card {
+    border-radius: 8px;
+    border: 1px solid var(--border-muted);
+    padding: 14px 16px;
+    font-size: 13.5px;
+  }
+
+  .scope-card.in-scope   { background: var(--green-bg);  border-color: var(--green-border); }
+  .scope-card.out-scope  { background: var(--red-bg);    border-color: var(--red-border);   }
+
+  .scope-card h4 {
+    margin: 0 0 8px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-subtle);
+  }
+
+  .scope-card.in-scope h4  { color: var(--green); }
+  .scope-card.out-scope h4 { color: var(--red); }
+
+  .scope-card ul { margin: 0; padding-left: 18px; }
+  .scope-card li { margin-bottom: 3px; color: var(--text); }
+
+  /* ── Key decision summary ── */
+  .decision-summary {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin: 0 0 24px;
+  }
+
+  .decision-card {
+    border: 1px solid var(--border-muted);
+    border-radius: 8px;
+    padding: 12px 14px;
+    background: var(--bg-subtle);
+    font-size: 13px;
+  }
+
+  .decision-card .dc-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-subtle);
+    margin-bottom: 4px;
+  }
+
+  .decision-card .dc-choice {
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 4px;
+    font-size: 13.5px;
+  }
+
+  .decision-card .dc-why {
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  /* ── State machine flow ── */
+  .flow-diagram {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-muted);
+    border-radius: 8px;
+    padding: 16px 18px;
+    margin: 0 0 18px;
+    overflow-x: auto;
+  }
+
+  .flow-diagram pre {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.65;
+  }
+
+  /* ── Red lines ── */
+  .redline-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 14px;
+    counter-reset: redline;
+  }
+
+  .redline-list li {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    background: var(--red-bg);
+    border: 1px solid var(--red-border);
+    font-size: 13.5px;
+    counter-increment: redline;
+  }
+
+  .redline-list li::before {
+    content: counter(redline);
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--red);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1px;
+  }
+
+  /* ── Tool card grid ── */
+  .tool-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+    margin: 0 0 18px;
+  }
+
+  .tool-card {
+    border: 1px solid var(--border-muted);
+    border-radius: 8px;
+    padding: 12px 14px;
+    background: var(--bg-subtle);
+    font-size: 13px;
+  }
+
+  .tool-card .tc-name {
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+    font-size: 13.5px;
+  }
+
+  .tool-card .tc-role {
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  /* ── Section separator with icon ── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .section-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .icon-blue   { background: var(--accent-bg);   color: var(--accent); }
+  .icon-teal   { background: var(--teal-bg);     color: var(--teal); }
+  .icon-amber  { background: var(--amber-bg);    color: var(--amber); }
+  .icon-purple { background: var(--purple-bg);   color: var(--purple); }
+  .icon-green  { background: var(--green-bg);    color: var(--green); }
+  .icon-red    { background: var(--red-bg);      color: var(--red); }
+
+  /* ── Changelog ── */
+  .changelog {
+    border-left: 3px solid var(--border);
+    padding-left: 16px;
+    margin: 0 0 12px;
+    font-size: 13.5px;
+    color: var(--text-muted);
+  }
+
+  .changelog .cl-entry { display: flex; gap: 10px; margin-bottom: 4px; }
+  .changelog .cl-ver  { font-family: var(--font-mono); font-size: 12px; color: var(--accent); font-weight: 600; }
+  .changelog .cl-date { color: var(--text-subtle); font-size: 12px; }
+
+  /* ── Print ── */
+  @media print {
+    .topbar, .sidebar, .menu-btn { display: none !important; }
+    .main { padding: 0; }
+    body { font-size: 11pt; background: #fff; color: #000; }
+    .content { max-width: 100%; }
+    h1, h2, h3 { page-break-after: avoid; }
+    pre, table, .table-wrap { page-break-inside: avoid; }
+    a { color: #000; text-decoration: underline; }
+    .content a[href]::after { content: " (" attr(href) ")"; font-size: 0.8em; color: #555; }
+    .content a[href^="#"]::after { content: ""; }
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 1100px) {
+    .main { padding: 32px 32px 72px; }
+    .decision-summary { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 820px) {
+    .menu-btn { display: inline-flex; }
+
+    .sidebar {
+      position: fixed;
+      top: var(--header-height);
+      left: 0;
+      transform: translateX(-100%);
+      transition: transform 0.2s ease;
+      background: var(--bg);
+      z-index: 50;
+      box-shadow: 4px 0 14px rgba(0,0,0,0.07);
+      border-right: 1px solid var(--border);
+    }
+
+    .sidebar.open { transform: translateX(0); }
+
+    .main { padding: 24px 20px 60px; }
+    .scope-grid { grid-template-columns: 1fr; }
+    .tool-grid { grid-template-columns: 1fr; }
+
+    h1 { font-size: 25px; }
+    h2 { font-size: 20px; }
+    h3 { font-size: 16px; }
+    body { font-size: 14.5px; }
+    .topbar-title { font-size: 13px; }
+  }
+
+  @media (max-width: 480px) {
+    .topbar { padding: 0 16px; gap: 8px; }
+    .badge-date { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <button class="menu-btn" id="menuBtn" aria-label="切换目录">目录</button>
+  <div class="topbar-title">Patra Solo Dev SOP — 单人全链路开发流程设计</div>
+  <div class="topbar-badges">
+    <span class="badge badge-draft">Draft</span>
+    <span class="badge badge-v">v0.1</span>
+    <span class="badge badge-date">2026-05-19</span>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- ===== Sidebar TOC ===== -->
+  <aside class="sidebar" id="sidebar" aria-label="文档目录">
+    <div class="toc-label">目录</div>
+    <nav>
+      <ul>
+        <li><details open><summary><a href="#s0" class="l1">0. 元信息</a></summary></details></li>
+        <li><details open><summary><a href="#s1" class="l1">1. 概览</a></summary>
+          <ul>
+            <li><a href="#s1-1" class="l2">1.1 设计目标</a></li>
+            <li><a href="#s1-2" class="l2">1.2 设计原则</a></li>
+            <li><a href="#s1-3" class="l2">1.3 不在范围内</a></li>
+            <li><a href="#s1-4" class="l2">1.4 整体架构</a></li>
+          </ul>
+        </details></li>
+        <li><details open><summary><a href="#s2" class="l1">2. Project 层</a></summary>
+          <ul>
+            <li><a href="#s2-1" class="l2">2.1 状态机</a></li>
+            <li><a href="#s2-2" class="l2">2.2 版本规划文档</a></li>
+            <li><a href="#s2-3" class="l2">2.3 Entry Gate</a></li>
+          </ul>
+        </details></li>
+        <li><details open><summary><a href="#s3" class="l1">3. Issue 层</a></summary>
+          <ul>
+            <li><a href="#s3-1" class="l2">3.1 状态机</a></li>
+            <li><a href="#s3-2" class="l2">3.2 Linear 三层结构</a></li>
+            <li><a href="#s3-3" class="l2">3.3 Issue 自定义字段</a></li>
+            <li><a href="#s3-4" class="l2">3.4 Issue 标签分流</a></li>
+          </ul>
+        </details></li>
+        <li><details open><summary><a href="#s4" class="l1">4. 阶段详细定义</a></summary>
+          <ul>
+            <li><a href="#s4-1" class="l2">4.1 Tech Design</a></li>
+            <li><a href="#s4-2" class="l2">4.2 BE</a></li>
+            <li><a href="#s4-3" class="l2">4.3 Design (UI/UX)</a></li>
+            <li><a href="#s4-4" class="l2">4.4 FE</a></li>
+            <li><a href="#s4-5" class="l2">4.5 Review</a></li>
+          </ul>
+        </details></li>
+        <li><details open><summary><a href="#s5" class="l1">5. 工具栈</a></summary>
+          <ul>
+            <li><a href="#s5-1" class="l2">5.1 必备 11 项</a></li>
+            <li><a href="#s5-2" class="l2">5.2 可选</a></li>
+            <li><a href="#s5-3" class="l2">5.3 显式不引入</a></li>
+          </ul>
+        </details></li>
+        <li><details open><summary><a href="#s6" class="l1">6. 横切机制</a></summary>
+          <ul>
+            <li><a href="#s6-1" class="l2">6.1 上下文管理</a></li>
+            <li><a href="#s6-2" class="l2">6.2 中断恢复</a></li>
+            <li><a href="#s6-3" class="l2">6.3 回路机制</a></li>
+            <li><a href="#s6-4" class="l2">6.4 三层质量门</a></li>
+            <li><a href="#s6-5" class="l2">6.5 节奏</a></li>
+          </ul>
+        </details></li>
+        <li><details><summary><a href="#s7" class="l1">7. 补丁路径</a></summary>
+          <ul>
+            <li><a href="#s7-1" class="l2">7.1 fast-track</a></li>
+            <li><a href="#s7-2" class="l2">7.2 design-first</a></li>
+          </ul>
+        </details></li>
+        <li><details><summary><a href="#s8" class="l1">8. 落地</a></summary>
+          <ul>
+            <li><a href="#s8-1" class="l2">8.1 工具初始化清单</a></li>
+            <li><a href="#s8-2" class="l2">8.2 首个 Issue 试运行</a></li>
+            <li><a href="#s8-3" class="l2">8.3 五条红线</a></li>
+            <li><a href="#s8-4" class="l2">8.4 演进与反馈</a></li>
+          </ul>
+        </details></li>
+        <li><details><summary><a href="#s9" class="l1">9. 附录</a></summary>
+          <ul>
+            <li><a href="#s9-1" class="l2">9.1 主流程图</a></li>
+            <li><a href="#s9-2" class="l2">9.2 关键决策记录</a></li>
+            <li><a href="#s9-3" class="l2">9.3 参考资料</a></li>
+            <li><a href="#s9-4" class="l2">9.4 术语表</a></li>
+          </ul>
+        </details></li>
+      </ul>
+    </nav>
+  </aside>
+
+  <!-- ===== Main Content ===== -->
+  <main class="main">
+    <article class="content">
+
+      <h1 id="top">Patra Solo Dev SOP</h1>
+      <p style="font-size:17px; color:var(--text-muted); margin: 0 0 6px; font-weight: 500;">单人全链路开发流程设计</p>
+
+      <!-- ── 0. 元信息 ── -->
+      <section>
+        <h2 id="s0">0. 元信息</h2>
+        <div class="doc-meta">
+          <p><strong>设计日期</strong>：2026-05-19</p>
+          <p><strong>作者</strong>：Lin（独立开发者）</p>
+          <p><strong>适用项目</strong>：Patra（医学出版物数据平台），可推广至其他单人开发的产品</p>
+          <p><strong>目标读者</strong>：作者本人（操作执行）+ Claude Code（消费此文档作为 SOP 指南）</p>
+          <p><strong>演进方式</strong>：随实践迭代，每完成 N 个 Issue 或遇 Review 回路 ≥ R2 时反思更新</p>
+        </div>
+        <div class="changelog">
+          <div class="cl-entry">
+            <span class="cl-ver">v0.1</span>
+            <span class="cl-date">2026-05-19</span>
+            <span>Lin / 初稿（PRD skill 独立化 + Sentry 移到可选）</span>
+          </div>
+        </div>
+      </section>
+
+      <hr>
+
+      <!-- ── 1. 概览 ── -->
+      <section>
+        <h2 id="s1">1. 概览</h2>
+
+        <h3 id="s1-1">1.1 设计目标</h3>
+
+        <aside class="callout info">
+          <div class="icon">&#9432;</div>
+          <div class="body">
+            <strong>核心诉求</strong>
+            <p>为单人完成"产品 → UI/UX → 前端 → 后端 → QA"全链路的开发流程提供一套清晰可执行的 SOP。</p>
+          </div>
+        </aside>
+
+        <p>需要解决的四类痛点：</p>
+        <ol>
+          <li><strong>角色切换累</strong>：5 个角色都是自己，频繁切换上下文消耗精力</li>
+          <li><strong>优先级乱</strong>：能做的事太多，每天不知道先动哪个</li>
+          <li><strong>质量没人把关</strong>：自测靠不住，缺少独立 review 视角</li>
+          <li><strong>节奏失控 + 上下文易丢</strong>：无外部督促易拖延；几天后回头看自己的代码/决策要重新理解</li>
+        </ol>
+
+        <h3 id="s1-2">1.2 设计原则</h3>
+
+        <div class="decision-summary">
+          <div class="decision-card">
+            <div class="dc-label">原则一</div>
+            <div class="dc-choice">AI 主导执行，人专注决策</div>
+            <div class="dc-why">你是决策者 + 把关者，Claude 是执行层；介入点在"起点（需求）"和"终点（review）"</div>
+          </div>
+          <div class="decision-card">
+            <div class="dc-label">原则二</div>
+            <div class="dc-choice">Linear 是单一信息源</div>
+            <div class="dc-why">所有 feature 生命周期状态挂在 Linear，Claude 跨会话恢复上下文只看 Linear</div>
+          </div>
+          <div class="decision-card">
+            <div class="dc-label">原则三</div>
+            <div class="dc-choice">事件驱动而非时间驱动</div>
+            <div class="dc-why">节奏由 Issue 状态变化触发，不预设"周几做什么"</div>
+          </div>
+          <div class="decision-card">
+            <div class="dc-label">原则四</div>
+            <div class="dc-choice">故意粗糙以聚焦</div>
+            <div class="dc-why">PRD 阶段视觉故意粗糙（防完成感幻觉），UI 阶段直接 hi-fi（AI 时代低保真过时）</div>
+          </div>
+          <div class="decision-card">
+            <div class="dc-label">原则五</div>
+            <div class="dc-choice">回路成本最小化</div>
+            <div class="dc-why">默认串行顺序选择回路代价最低的（消费外部 API 项目 BE 先）</div>
+          </div>
+        </div>
+
+        <h3 id="s1-3">1.3 不在范围内的事</h3>
+
+        <div class="scope-grid">
+          <div class="scope-card out-scope">
+            <h4>明确不做</h4>
+            <ul>
+              <li>产品定位 / 市场策略 / 竞品分析的方法论（自用，不需要）</li>
+              <li>团队协作流程（团队只有你一个人）</li>
+              <li>E2E 测试体系（成本不对称，先不上）</li>
+              <li>用户运营 / 增长流程（无用户阶段不需要）</li>
+              <li>持续部署管道（已有 GitHub Actions，本 SOP 不涉及）</li>
+            </ul>
+          </div>
+          <div class="scope-card in-scope">
+            <h4>本 SOP 覆盖</h4>
+            <ul>
+              <li>Project 层：产品维度规划 + Issue 池派生</li>
+              <li>Issue 层：Tech Design → BE → Design → FE → Review 全流程</li>
+              <li>横切机制：上下文管理、中断恢复、回路、质量门、节奏</li>
+              <li>补丁路径：fast-track、design-first</li>
+              <li>工具栈选型与落地清单</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3 id="s1-4">1.4 整体架构（双层结构）</h3>
+
+        <div class="flow-diagram">
+          <pre>┌─────────────────────────────────────────────────────────┐
+│  Project 层（产品维度）                                  │
+│  Draft → Active → Done                                  │
+│  · Entry Gate: 写完版本规划文档 + 派生 Issue 池          │
+│  · 产物: docs/patra/release-specs/&lt;version&gt;.md          │
+└──────────────────────┬──────────────────────────────────┘
+                       │
+                       │ Issue 池
+                       ↓
+┌─────────────────────────────────────────────────────────┐
+│  Issue 层（工程维度）                                    │
+│  每个 Issue 走一遍：                                      │
+│  Tech Design → BE → Design → FE → Review → Done         │
+│  · 产物: docs/patra/specs/&lt;topic&gt;-design.md +           │
+│         GitHub PR(s) + Linear Sub-issues                │
+└─────────────────────────────────────────────────────────┘</pre>
+        </div>
+      </section>
+
+      <hr>
+
+      <!-- ── 2. Project 层 ── -->
+      <section>
+        <h2 id="s2">2. Project 层（产品维度）</h2>
+
+        <h3 id="s2-1">2.1 状态机</h3>
+
+        <div class="flow-diagram">
+          <pre>[想法] → Draft → Active → Done
+              ↑
+        Entry Gate: 完成版本规划文档 + Issue 池派生</pre>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>状态</th><th>含义</th><th>出口条件</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><span class="stage-tag tag-backlog">Draft</span></td>
+                <td>你在写版本规划文档</td>
+                <td>Project Entry Gate 通过：① 5 字段全填 ② Issue 池已派生</td>
+              </tr>
+              <tr>
+                <td><span class="stage-tag tag-be">Active</span></td>
+                <td>文档完成，Issue 池开始走 SOP</td>
+                <td>所有 Issue 推到 Done</td>
+              </tr>
+              <tr>
+                <td><span class="stage-tag tag-done">Done</span></td>
+                <td>整个版本完成</td>
+                <td>（可选）retro 沉淀到 Obsidian</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 id="s2-2">2.2 版本规划文档（5 字段）</h3>
+
+        <p><strong>产物路径</strong>：<code>docs/patra/release-specs/&lt;version&gt;.md</code></p>
+        <p>
+          <strong>工具</strong>：Claude Code + <code>patra:release-planning</code>
+          <span class="badge-todo">待创建</span>
+          （独立 PRD skill；详见 §9.2 决策 #6）
+        </p>
+
+        <details>
+          <summary style="cursor:pointer; padding:8px 0; color:var(--accent); font-weight:600; font-size:13.5px; user-select:none;">
+            展开 5 字段模板
+          </summary>
+          <div style="margin-top:10px;">
+            <pre><code># &lt;Version&gt; 版本规划
+
+## 1. 版本目标 / 价值
+1-2 句话描述这版的核心交付价值。
+例："Patra 能让我搜 PubMed 文献并加入收藏。"
+
+## 2. 功能列表 / 要做的事
+bulleted list，每条 = 1 个用户故事 → 派生 1 个 Linear Issue。
+- 用户能输入关键词搜 PubMed → 看到文献列表（标题、作者、年份）
+- 用户能点开文献看详情
+- 用户能给文献加收藏标签
+- 收藏夹页能列出所有已收藏文献
+
+## 3. 范围边界 / 不做的事
+明确"不做"以防 scope creep（关键字段）。
+- 不做：高级筛选（按 journal / year range 过滤）
+- 不做：批量收藏 / 导出
+- 不做：跨数据源搜索（仅 PubMed，不含 EPMC / Crossref）
+
+## 4. 关键决策 / 技术取舍
+跨 Issue 的架构决策。
+- 收藏数据：直接存 PostgreSQL，不引入 Redis 缓存
+- PubMed API：复用 patra-ingest 模块，不新建独立 adapter
+- 前端路由：Next 15 App Router，server / client 组件按页面拆分
+
+## 5. Done 判定
+这版"完成"的客观标准。
+- 所有 Issue 状态 = Done
+- 单元测试 + 集成测试 全部 GREEN
+- 核心 flow 自测能跑通（搜索 → 看详情 → 加收藏 → 收藏夹查看）
+- 关键 error log 无未处理项</code></pre>
+          </div>
+        </details>
+
+        <h3 id="s2-3">2.3 Project Entry Gate（关卡）</h3>
+
+        <p>Draft → Active 必须满足：</p>
+        <ul class="dod-list">
+          <li>5 字段全部填完</li>
+          <li>第 2 字段每条功能 → 已生成 1 个 Linear Issue（Description = 该故事 + 初步 AC）</li>
+          <li>第 3 字段"不做的事"显式列出</li>
+          <li>第 5 字段 Done 判定可验证</li>
+        </ul>
+      </section>
+
+      <hr>
+
+      <!-- ── 3. Issue 层 ── -->
+      <section>
+        <h2 id="s3">3. Issue 层（工程维度）</h2>
+
+        <h3 id="s3-1">3.1 状态机</h3>
+
+        <div class="flow-diagram">
+          <pre>Backlog → Tech Design → BE → Design → FE → Review → Done
+   ↑                                          │
+   └─────── No-Go 回路（退到对应阶段） ──────┘</pre>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>状态</th><th>主导</th><th>关键工具 / Skill</th><th>入口条件</th><th>出口条件（DoD）</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><span class="stage-tag tag-backlog">Backlog</span></td>
+                <td>—</td>
+                <td>Linear</td>
+                <td>Project Active</td>
+                <td>你决定开始这个 Issue</td>
+              </tr>
+              <tr>
+                <td><span class="stage-tag tag-tech">Tech Design</span></td>
+                <td>Claude + 你决策</td>
+                <td><code>superpowers-zh:brainstorming</code> + <code>writing-plans</code></td>
+                <td>Issue Description 含用户故事 + AC</td>
+                <td>design.md 已写 + API 字段清单已明确 + <code>path</code> 标签确定</td>
+              </tr>
+              <tr>
+                <td><span class="stage-tag tag-be">BE</span></td>
+                <td>Claude Code + patra-skills</td>
+                <td><code>patra-hexagonal</code> / <code>patra-jpa</code> / <code>patra-events</code> + TDD</td>
+                <td>Tech Design 通过</td>
+                <td>BE PR + 单测+集成测试 GREEN + Bruno collection 入 git + OpenAPI schema 暴露</td>
+              </tr>
+              <tr>
+                <td><span class="stage-tag tag-design">Design</span></td>
+                <td>Claude Design + 你 review</td>
+                <td>Claude Design + Handoff</td>
+                <td>BE 通过（或 <code>flow:design-first</code> 时 Tech Design 通过）</td>
+                <td>Claude Design URL + Handoff token + Sub-issue「UI 设计稿」</td>
+              </tr>
+              <tr>
+                <td><span class="stage-tag tag-fe">FE</span></td>
+                <td>Claude Code + 你 review</td>
+                <td>openapi-typescript + openapi-fetch + Bruno</td>
+                <td>Design 通过</td>
+                <td>FE PR + UI 还原 ≥ 95% + Vitest+RTL 测试 + 类型 100% 来自 openapi-typescript</td>
+              </tr>
+              <tr>
+                <td><span class="stage-tag tag-review">Review</span></td>
+                <td>CodeRabbit + 你 Go/No-Go</td>
+                <td>CodeRabbit CLI + GitHub App</td>
+                <td>FE PR + BE PR 都开</td>
+                <td>CodeRabbit 评论全处理 + 自测三件套通过 + <span class="optional-note">（如已引入 Sentry）release tag 挂上</span> + PR merge</td>
+              </tr>
+              <tr>
+                <td><span class="stage-tag tag-done">Done</span></td>
+                <td>—</td>
+                <td>—</td>
+                <td>Review 通过 + PR merged</td>
+                <td>进入下一个 Issue</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 id="s3-2">3.2 Linear 三层结构</h3>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>层级</th><th>含义</th><th>状态</th><th>数量</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><strong>Project</strong></td>
+                <td>大版本 / Initiative（如 v0.2 PubMed 搜索）</td>
+                <td>Draft / Active / Done</td>
+                <td>1（每版本 1 个）</td>
+              </tr>
+              <tr>
+                <td><strong>Issue</strong></td>
+                <td>用户故事（如"用户能搜 PubMed"）</td>
+                <td>Backlog / Tech Design / BE / Design / FE / Review / Done</td>
+                <td>多个/版本，每个 1-3 天</td>
+              </tr>
+              <tr>
+                <td><strong>Sub-issue</strong></td>
+                <td>单阶段产物（Tech Design / BE PR / UI 稿 / FE PR / Review 反馈 / 中断快照）</td>
+                <td>Todo / In Progress / Done</td>
+                <td>多个/Issue</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 id="s3-3">3.3 Issue 自定义字段</h3>
+
+        <aside class="callout info">
+          <div class="icon">&#9432;</div>
+          <div class="body">
+            <strong>跨会话上下文恢复的核心来源</strong>
+            <p>每个 Issue 必须有这 5 个自定义字段，是 Claude 新会话恢复状态的第一手资料。</p>
+          </div>
+        </aside>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>字段</th><th>填写时机</th><th>内容</th></tr></thead>
+            <tbody>
+              <tr><td><code>Acceptance Criteria</code></td><td>Tech Design 阶段</td><td>≥ 3 条可验证条件（Given/When/Then 或简化格式）</td></tr>
+              <tr><td><code>Design URL</code></td><td>Design 阶段</td><td>Claude Design 链接 + Handoff token</td></tr>
+              <tr><td><code>FE PR</code></td><td>FE 阶段</td><td>GitHub PR URL</td></tr>
+              <tr><td><code>BE PR</code></td><td>BE 阶段</td><td>GitHub PR URL</td></tr>
+              <tr><td><code>Review Outcome</code></td><td>Review 阶段</td><td>CodeRabbit 摘要 + Go/No-Go 决策 + 时间戳</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 id="s3-4">3.4 Issue 标签分流</h3>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>标签</th><th>含义</th><th>用途</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><span class="stage-tag tag-path">path:full</span>（默认）</td>
+                <td>走完整 5 阶段 SOP</td>
+                <td>默认所有 Issue</td>
+              </tr>
+              <tr>
+                <td><span class="stage-tag tag-fast">path:fast-track</span></td>
+                <td>跳过 Tech Design + Design，直接 BE/FE/Review</td>
+                <td>typo / UI 微调 / 纯重构 / 配置升级 / BUG fix（必须先写复现测试）</td>
+              </tr>
+              <tr>
+                <td><span class="stage-tag tag-path">flow:design-first</span></td>
+                <td>翻转 BE 和 Design 顺序，Design 先</td>
+                <td>UI 探索性强 / 数据完全自己定义 / 对外部 API 非常熟悉</td>
+              </tr>
+              <tr>
+                <td><span class="stage-tag tag-path">paused:&lt;原因&gt;</span></td>
+                <td>Issue 暂停</td>
+                <td>配合 Sub-issue「中断快照」使用</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <hr>
+
+      <!-- ── 4. 阶段详细定义 ── -->
+      <section>
+        <h2 id="s4">4. 阶段详细定义</h2>
+
+        <!-- 4.1 Tech Design -->
+        <h3 id="s4-1">
+          <span class="stage-tag tag-tech" style="margin-right:8px;">Tech Design</span>
+          4.1 Tech Design
+        </h3>
+
+        <p><strong>入口</strong>：Issue 推到 <code>Tech Design</code> 状态</p>
+        <p><strong>主导</strong>：Claude Code（起草细化）+ 你（架构决策）</p>
+
+        <div class="phase-block">
+          <p><strong>流程：</strong></p>
+          <ol>
+            <li>在 Claude Code 里调用 <code>/superpowers-zh:brainstorming</code>，输入 Issue Description（用户故事 + 初步 AC）</li>
+            <li>Claude 通过对话探索技术方案、领域模型、外部 API 调研、字段清单初稿</li>
+            <li>用 <code>/superpowers-zh:writing-plans</code> 产出实施计划</li>
+            <li>产物路径：<code>docs/patra/specs/&lt;topic&gt;-design.md</code></li>
+            <li>把细化后的 AC 回写到 Linear Issue 的 <code>Acceptance Criteria</code> 字段</li>
+            <li>决定 Issue 标签（<code>path:*</code> / <code>flow:*</code>）</li>
+          </ol>
+        </div>
+
+        <p><strong>DoD（Definition of Done）：</strong></p>
+        <ul class="dod-list">
+          <li>技术方案明确（领域模型 + 接口契约 + 数据流）</li>
+          <li>API 字段清单初稿（用于 UI Design 阶段参考）</li>
+          <li>AC ≥ 3 条可验证</li>
+          <li>实施计划分步</li>
+          <li><code>path</code> / <code>flow</code> 标签确定</li>
+        </ul>
+
+        <!-- 4.2 BE -->
+        <h3 id="s4-2">
+          <span class="stage-tag tag-be" style="margin-right:8px;">BE</span>
+          4.2 BE
+        </h3>
+
+        <p><strong>入口</strong>：Issue 推到 <code>BE</code> 状态（默认，Tech Design 后）或 <code>flow:design-first</code> 时在 Design 后</p>
+        <p><strong>主导</strong>：Claude Code + patra-* skill 体系；你做架构决策</p>
+
+        <div class="phase-block">
+          <p><strong>流程：</strong></p>
+          <ol>
+            <li>在 Claude Code 里调用 <code>/superpowers-zh:test-driven-development</code>（TDD 主流程，强制）</li>
+            <li>架构决策 / 创建组件 → 调用 <code>patra-hexagonal</code></li>
+            <li>数据持久化 → 调用 <code>patra-jpa</code></li>
+            <li>事件 / Outbox → 调用 <code>patra-events</code></li>
+            <li>实现过程中如发现字段变化，立即回写 Tech Design 文档的字段清单（保持 SoT 同步）</li>
+            <li>Bruno collection 同步更新（API 契约入 git）</li>
+            <li>OpenAPI schema 自动暴露（已有 <code>linqibin-spring-boot-starter-openapi</code>）</li>
+            <li>创建 GitHub PR；Sub-issue「BE 实现」link PR；Linear <code>BE PR</code> 字段填回</li>
+          </ol>
+        </div>
+
+        <p><strong>DoD：</strong></p>
+        <ul class="dod-list">
+          <li>单元测试 + 集成测试全部 GREEN</li>
+          <li>AC 在 BE 层可验证（curl / Bruno 跑通）</li>
+          <li>Bruno collection 已更新并入 PR</li>
+          <li>OpenAPI schema 已 sync</li>
+          <li><code>BE PR</code> 字段填回</li>
+        </ul>
+
+        <!-- 4.3 Design -->
+        <h3 id="s4-3">
+          <span class="stage-tag tag-design" style="margin-right:8px;">Design</span>
+          4.3 Design (UI/UX)
+        </h3>
+
+        <p><strong>入口</strong>：Issue 推到 <code>Design</code> 状态（默认在 BE 后，或 <code>flow:design-first</code> 时在 Tech Design 后）</p>
+        <p><strong>主导</strong>：Claude Design 生成 + 你 review 微调</p>
+
+        <aside class="callout tip">
+          <div class="icon">&#9670;</div>
+          <div class="body">
+            <strong>跳过传统 wireframe 阶段</strong>
+            <p>AI 时代 hi-fi 成本接近零，思考流程在 Tech Design 阶段已完成；wireframe 反而易产生"完成感幻觉"。直接生成可点击 hi-fi 原型。</p>
+          </div>
+        </aside>
+
+        <div class="phase-block">
+          <p><strong>流程：</strong></p>
+          <ol>
+            <li>打开 Claude Design，新建 design session</li>
+            <li>输入：Issue Description + Tech Design 字段清单 + BE OpenAPI schema（如已完成）</li>
+            <li>Claude Design 生成可点击的 hi-fi 原型</li>
+            <li>你 review 并对话迭代到主要 user flow 可点击</li>
+            <li>发起 <strong>Handoff to Claude Code</strong>，获得 token</li>
+            <li>Design URL + Handoff token 回写 Linear <code>Design URL</code> 字段</li>
+            <li>创建 Sub-issue「UI 设计稿」link Claude Design URL</li>
+          </ol>
+        </div>
+
+        <p><strong>DoD：</strong></p>
+        <ul class="dod-list">
+          <li>主要 user flow 在 Claude Design 中可点击</li>
+          <li>每条 AC 在 UI 上能找到对应入口</li>
+          <li>Handoff token 已生成</li>
+          <li><code>Design URL</code> 字段填回</li>
+        </ul>
+
+        <!-- 4.4 FE -->
+        <h3 id="s4-4">
+          <span class="stage-tag tag-fe" style="margin-right:8px;">FE</span>
+          4.4 FE
+        </h3>
+
+        <p><strong>入口</strong>：Issue 推到 <code>FE</code> 状态（Design 完成后）</p>
+        <p><strong>主导</strong>：Claude Code 消费 Handoff + 你 review</p>
+
+        <div class="phase-block">
+          <p><strong>流程：</strong></p>
+          <ol>
+            <li>在 Claude Code 把 Handoff token 喂给 Claude，让它把 Claude Design 产物翻译到前端栈</li>
+            <li>跑 <code>pnpm gen:bootstrap</code>（一键 sync）：
+              <ul>
+                <li><code>pnpm gen:types</code> — openapi-typescript 生成 TS types</li>
+                <li><code>pnpm gen:hooks</code> — openapi-react-query 生成 type-safe TanStack Query hooks</li>
+                <li><code>pnpm gen:zod</code> — openapi-zod-client 生成 Zod schemas</li>
+              </ul>
+            </li>
+            <li>实现页面 / 组件 / 状态管理（Zustand）/ 表单（RHF + Zod）</li>
+            <li>用 Bruno collection 做本地联调（数据真实形态）</li>
+            <li>Vitest + RTL 写关键交互单测</li>
+            <li>Husky pre-commit：Biome + tsc --noEmit + Vitest 自动跑</li>
+            <li>创建 GitHub PR；Sub-issue「FE 实现」link PR；Linear <code>FE PR</code> 字段填回</li>
+          </ol>
+        </div>
+
+        <p><strong>DoD：</strong></p>
+        <ul class="dod-list">
+          <li>UI 还原 ≥ 95% 与 Claude Design 一致</li>
+          <li>关键交互可手动跑通</li>
+          <li>类型 100% 来自 openapi-typescript（零手写 API 类型）</li>
+          <li>Vitest + RTL 测试覆盖关键交互</li>
+          <li><code>FE PR</code> 字段填回</li>
+        </ul>
+
+        <!-- 4.5 Review -->
+        <h3 id="s4-5">
+          <span class="stage-tag tag-review" style="margin-right:8px;">Review</span>
+          4.5 Review
+        </h3>
+
+        <p><strong>入口</strong>：FE PR + BE PR 都开（或单 PR，如纯 FE/纯 BE 改动）</p>
+        <p><strong>主导</strong>：CodeRabbit（守门）+ 你做 Go/No-Go</p>
+
+        <h4>三层质量门</h4>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>层</th><th>触发时机</th><th>工具</th><th>检查内容</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><strong>1</strong></td>
+                <td>pre-commit（每次 <code>git commit</code>）</td>
+                <td>Husky + lint-staged</td>
+                <td>FE: Biome + tsc --noEmit + Vitest / BE: pre-commit-config.yaml</td>
+              </tr>
+              <tr>
+                <td><strong>2</strong></td>
+                <td>push 前（每次 <code>git push</code>）</td>
+                <td>CodeRabbit CLI</td>
+                <td>本地快审，找语义 / 漏边界</td>
+              </tr>
+              <tr>
+                <td><strong>3</strong></td>
+                <td>PR 后 / merge 前</td>
+                <td>CodeRabbit GitHub App</td>
+                <td>自动 inline review + summary + sequence diagram</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Review 流程</h4>
+        <ol>
+          <li>PR 创建 → CodeRabbit 自动 review，发 inline 评论 + summary</li>
+          <li>你 review 评论：每条处理（修复 / "why 不改"回复 / 关闭）</li>
+          <li><strong>自测三件套</strong>：
+            <ul>
+              <li>跑 Bruno collection（API 契约验证）</li>
+              <li>手测 UI flow（与 AC 一一对照）</li>
+              <li><span class="optional-note">（可选）检查 Sentry dashboard（如已引入 Sentry，针对 hotfix / 之前有问题场景）</span></li>
+            </ul>
+          </li>
+          <li><strong>Go/No-Go 决策</strong>：
+            <ul>
+              <li>Go → merge PR；Issue 状态推到 <code>Done</code><span class="optional-note">（如已引入 Sentry，release tag 自动打上）</span></li>
+              <li>No-Go → Issue 状态退回出问题阶段；新增 Sub-issue「Review 反馈 Rn」</li>
+            </ul>
+          </li>
+        </ol>
+
+        <h4>Linear <code>Review Outcome</code> 字段格式</h4>
+        <pre><code>CodeRabbit: 12 条，已处理 12
+自测: Bruno ✓ | UI flow ✓ | AC 1/2/3 ✓
+决策: Go @ 2026-05-19 14:30</code></pre>
+
+        <p><strong>DoD：</strong></p>
+        <ul class="dod-list">
+          <li>CodeRabbit 评论 100% 已处理（修复或解释）</li>
+          <li>AC 全部手测通过</li>
+          <li><code>Review Outcome</code> 字段填回</li>
+          <li><span class="optional-note">（如已引入 Sentry）release tag 已挂上</span></li>
+          <li>关联 GitHub PR 已 merge</li>
+        </ul>
+      </section>
+
+      <hr>
+
+      <!-- ── 5. 工具栈 ── -->
+      <section>
+        <h2 id="s5">5. 工具栈</h2>
+
+        <h3 id="s5-1">5.1 必备 11 项</h3>
+
+        <div class="tool-grid">
+          <div class="tool-card">
+            <div class="tc-name">Linear</div>
+            <div class="tc-role">单一信息源；Project / Issue / Sub-issue 三层结构</div>
+          </div>
+          <div class="tool-card">
+            <div class="tc-name">CLAUDE.md + patra-* skills</div>
+            <div class="tc-role">Claude 跨会话规则；已构建完整</div>
+          </div>
+          <div class="tool-card">
+            <div class="tc-name">Obsidian</div>
+            <div class="tc-role">已有 vault；放想法 inbox、retro、长论证</div>
+          </div>
+          <div class="tool-card">
+            <div class="tc-name">
+              PRD 起草<br>
+              <span style="font-weight:400; font-size:12px; color:var(--text-subtle);">Claude Code + <code>patra:release-planning</code></span>
+              <span class="badge-todo">待创建</span>
+            </div>
+            <div class="tc-role">Project 层版本规划文档（详见 §9.2 决策 #6）</div>
+          </div>
+          <div class="tool-card">
+            <div class="tc-name">Tech Design 起草<br>
+              <span style="font-weight:400; font-size:12px; color:var(--text-subtle);">Claude Code + <code>superpowers-zh:brainstorming</code> + <code>writing-plans</code></span>
+            </div>
+            <div class="tc-role">Issue 层工程规格（已有 skill）</div>
+          </div>
+          <div class="tool-card">
+            <div class="tc-name">Claude Design</div>
+            <div class="tc-role">hi-fi UI 设计；Handoff to Claude Code → 前端实现闭环</div>
+          </div>
+          <div class="tool-card">
+            <div class="tc-name">Bruno</div>
+            <div class="tc-role">Collection 入 git，与 PR 一起 review；CodeRabbit 也能看</div>
+          </div>
+          <div class="tool-card">
+            <div class="tc-name">openapi-typescript 生态</div>
+            <div class="tc-role">后端 OpenAPI → 前端 TS types + Query hooks + Zod schemas，零手写</div>
+          </div>
+          <div class="tool-card">
+            <div class="tc-name">Claude Code + patra-hexagonal / jpa / events</div>
+            <div class="tc-role">已有 skill 体系，TDD 主流程</div>
+          </div>
+          <div class="tool-card">
+            <div class="tc-name">GitHub</div>
+            <div class="tc-role">已用；PR 标题模板支持 <code>LIN-123</code> 引用</div>
+          </div>
+          <div class="tool-card">
+            <div class="tc-name">CodeRabbit</div>
+            <div class="tc-role">CLI 预审 + GitHub App 守门；双档 review；Pro $15/月</div>
+          </div>
+        </div>
+
+        <h3 id="s5-2">5.2 可选</h3>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>环节</th><th>工具</th><th>启用条件</th></tr></thead>
+            <tbody>
+              <tr><td>用户问卷</td><td>Tally</td><td>未来有用户需要调研时</td></tr>
+              <tr><td>PRD 流程图</td><td>Excalidraw 或纸笔</td><td>当 PRD 阶段需要手绘用户流程时</td></tr>
+              <tr>
+                <td>运行时监控</td>
+                <td><strong>Sentry</strong></td>
+                <td>上线运行后引入错误监控时（FE 装 <code>@sentry/nextjs</code>，BE 用 <code>sentry-spring-boot-starter</code>，免费版 5K events/月）</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 id="s5-3">5.3 显式不引入（思考过为什么不加）</h3>
+
+        <p style="font-size:13.5px; color:var(--text-muted);">以下工具经过评估后明确排除，每项都有理由：</p>
+        <ul style="font-size:13.5px; color:var(--text-muted);">
+          <li><del>ChatPRD</del> — <code>patra:release-planning</code> skill + 版本规划模板替代</li>
+          <li><del>v0.dev / Lovable / Bolt</del> — Claude Design 已覆盖</li>
+          <li><del>Whimsical</del> — Excalidraw / 纸笔已足够；AI 时代 wireframe 工具过时</li>
+          <li><del>PostHog / Mixpanel / Amplitude</del> — 自用 + 无用户阶段无价值；未来有用户时再加</li>
+          <li><del>Canny / Featurebase</del> — 早期 Linear native 足够，用户群 100+ 再加</li>
+          <li><del>Playwright / Cypress</del> — E2E 单人维护成本高；Project 复杂后再补</li>
+          <li><del>Notion / Confluence</del> — 已有 Linear + Obsidian + docs/，不重复</li>
+          <li><del>Miro / Figma Pro</del> — 单人无需协作设计软件</li>
+          <li><del>Productboard / Aha!</del> — 面向 PM 团队，单人 overkill</li>
+          <li><del>Datadog / NewRelic</del> — 后端已有 observability starter；Sentry 可作可选补漏（详见 §5.2）</li>
+        </ul>
+      </section>
+
+      <hr>
+
+      <!-- ── 6. 横切机制 ── -->
+      <section>
+        <h2 id="s6">6. 横切机制</h2>
+
+        <h3 id="s6-1">6.1 上下文管理（解"上下文易丢"痛点）</h3>
+
+        <aside class="callout info">
+          <div class="icon">&#9432;</div>
+          <div class="body">
+            <strong>Claude 恢复上下文只看三处</strong>
+            <p>1. Linear Issue Description（用户故事 + AC）</p>
+            <p>2. Linear 5 个自定义字段（AC / Design URL / FE PR / BE PR / Review Outcome）</p>
+            <p>3. 关联 GitHub PR + Sub-issues</p>
+          </div>
+        </aside>
+
+        <p><strong>项目级规则</strong>：<code>CLAUDE.md</code> + <code>.claude/rules/</code> + skill 体系（已完备）。</p>
+
+        <aside class="callout danger">
+          <div class="icon">&#9888;</div>
+          <div class="body">
+            <strong>禁止</strong>
+            <p>Claude 不在 Linear 之外另起"记忆库"；每次新会话先读 Issue 状态再决策。</p>
+          </div>
+        </aside>
+
+        <h3 id="s6-2">6.2 中断恢复（解"节奏失控 + 上下文易丢"）</h3>
+
+        <h4>暂停 Issue 流程</h4>
+        <ol>
+          <li>Issue 加标签 <code>paused:&lt;原因&gt;</code>（如 <code>paused:waiting-pubmed-api-quota</code>）</li>
+          <li>创建 Sub-issue「中断快照」记录：
+            <ul>
+              <li>当前状态（哪一阶段）</li>
+              <li>下一步具体动作（≤ 3 条）</li>
+              <li>关键决策（选 X 而非 Y 的理由）</li>
+              <li>引用的代码 / 文档 / Bruno collection link</li>
+            </ul>
+          </li>
+          <li>关闭 Claude Code 会话</li>
+        </ol>
+
+        <h4>恢复 Issue 流程</h4>
+        <ol>
+          <li>打开 Linear Issue</li>
+          <li>读「中断快照」Sub-issue</li>
+          <li>把 Sub-issue 内容粘贴到 Claude Code 新会话作为起始上下文</li>
+          <li>Claude 自动恢复 → 删除 <code>paused:</code> 标签 + 关闭「中断快照」Sub-issue</li>
+        </ol>
+
+        <h3 id="s6-3">6.3 回路机制（解"质量没把关"）</h3>
+
+        <h4>No-Go 处理</h4>
+        <ol>
+          <li>Issue 状态退到出问题阶段（<code>BE</code> / <code>FE</code> / <code>Design</code> / <code>Tech Design</code>）</li>
+          <li>创建 Sub-issue「Review 反馈 R1」（R1/R2/R3... 递增）记录每轮反馈</li>
+          <li>不允许 Skip Review：再次到 Review 要重跑三层门</li>
+        </ol>
+
+        <aside class="callout warn">
+          <div class="icon">&#9651;</div>
+          <div class="body">
+            <strong>升级机制</strong>
+            <p>R3 仍 No-Go → 强制升级到 Tech Design 重审，从头梳理（避免在低层反复修补）；新增 Sub-issue「Tech Design v2」记录重审原因。</p>
+          </div>
+        </aside>
+
+        <h3 id="s6-4">6.4 三层质量门（贯穿整个 SOP）</h3>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>层</th><th>触发时机</th><th>工具</th><th>检查内容</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><strong>1</strong></td>
+                <td>pre-commit</td>
+                <td>Husky + lint-staged</td>
+                <td>FE: Biome check + tsc --noEmit + Vitest / BE: <code>.pre-commit-config.yaml</code></td>
+              </tr>
+              <tr>
+                <td><strong>2</strong></td>
+                <td>push 前</td>
+                <td>CodeRabbit CLI</td>
+                <td>本地快审</td>
+              </tr>
+              <tr>
+                <td><strong>3</strong></td>
+                <td>PR 后</td>
+                <td>CodeRabbit GitHub App</td>
+                <td>自动 inline + summary + sequence diagram</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 id="s6-5">6.5 节奏（事件驱动，无时间表）</h3>
+
+        <p>不预设"周几做什么"。SOP 的节奏由 <strong>Issue 状态机驱动</strong>：</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Issue 状态变化</th><th>你的工作模式</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>→ <span class="stage-tag tag-tech">Tech Design</span></td>
+                <td>Claude Code + <code>/superpowers-zh:brainstorming</code> + <code>writing-plans</code></td>
+              </tr>
+              <tr>
+                <td>→ <span class="stage-tag tag-be">BE</span></td>
+                <td>Claude Code + patra-* skill + TDD</td>
+              </tr>
+              <tr>
+                <td>→ <span class="stage-tag tag-design">Design</span></td>
+                <td>Claude Design + Handoff</td>
+              </tr>
+              <tr>
+                <td>→ <span class="stage-tag tag-fe">FE</span></td>
+                <td>patra-web 仓库 + Handoff 消费 + <code>pnpm gen:bootstrap</code></td>
+              </tr>
+              <tr>
+                <td>→ <span class="stage-tag tag-review">Review</span></td>
+                <td>GitHub PR + CodeRabbit + 自测三件套</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>避免角色切换的可选策略</h4>
+        <ol>
+          <li><strong>Batch by stage</strong>：等多个 Issue 进同一阶段再统一处理，减少切换成本</li>
+          <li><strong>单 in-progress 原则</strong>：单时段只让 1 个 Issue 处于活跃实施（<code>FE</code> / <code>BE</code> 状态）；其余放 <code>Backlog</code> / <code>paused:*</code></li>
+          <li><strong><code>paused:</code> 标签 + 中断快照</strong>：临时不做的 Issue 立即快照暂停，不要让 Issue 永远卡在某阶段</li>
+          <li><strong>Retrospective 触发条件</strong>：每完成 N 个 Issue、或遇 Review 回路 ≥ R2、或 SOP 阻塞超 2 天 时，写一次 retro 沉淀到 Obsidian</li>
+        </ol>
+      </section>
+
+      <hr>
+
+      <!-- ── 7. 补丁路径 ── -->
+      <section>
+        <h2 id="s7">7. 补丁路径</h2>
+
+        <h3 id="s7-1">
+          <span class="stage-tag tag-fast" style="margin-right:8px;">path:fast-track</span>
+          7.1 小修小 enhance
+        </h3>
+
+        <p><strong>触发</strong>：Issue 创建时打 <code>path:fast-track</code> 标签。</p>
+        <p><strong>精简流程</strong>：跳过 Tech Design + Design，直接进 <code>FE</code> 或 <code>BE</code>（看改哪边）→ Review → Done。</p>
+
+        <div class="scope-grid">
+          <div class="scope-card in-scope">
+            <h4>适用白名单</h4>
+            <ul>
+              <li>typo / 措辞 / 文案</li>
+              <li>UI 微调（border、间距、颜色）</li>
+              <li>纯重构（行为不变 + 测试 GREEN）</li>
+              <li>配置 / 依赖升级</li>
+              <li>BUG 修复 + 单测覆盖（<strong>必须先写复现测试</strong>）</li>
+            </ul>
+          </div>
+          <div class="scope-card out-scope">
+            <h4>fast-track 不豁免</h4>
+            <ul>
+              <li>CodeRabbit 双档审查</li>
+              <li>tsc / Vitest / 集成测试必须 GREEN</li>
+              <li><code>Review Outcome</code> 仍需填回</li>
+            </ul>
+          </div>
+        </div>
+
+        <aside class="callout note">
+          <div class="icon">&#9670;</div>
+          <div class="body">
+            <strong>fast-track Issue 可独立存在</strong>
+            <p>不必挂任何 Project（直接挂在 Linear Team / Workspace 下），适合零散小修。</p>
+          </div>
+        </aside>
+
+        <h3 id="s7-2">
+          <span class="stage-tag tag-path" style="margin-right:8px;">flow:design-first</span>
+          7.2 UI 探索 / 内部数据
+        </h3>
+
+        <p><strong>触发</strong>：Issue 创建时打 <code>flow:design-first</code> 标签。</p>
+        <p><strong>翻转顺序</strong>：Tech Design → Design → BE → FE → Review → Done</p>
+
+        <aside class="callout tip">
+          <div class="icon">&#9670;</div>
+          <div class="body">
+            <strong>适用条件（任一）</strong>
+            <ul style="margin:4px 0 0; padding-left:18px; font-size:13.5px;">
+              <li>UI 探索性强（想先看体验决定要不要做）</li>
+              <li>数据完全你自己定义（不依赖外部 API）</li>
+              <li>你对该外部 API 已经非常熟悉，确认字段不会变</li>
+            </ul>
+          </div>
+        </aside>
+
+        <aside class="callout warn">
+          <div class="icon">&#9651;</div>
+          <div class="body">
+            <strong>默认 BE 先的理由</strong>
+            <p>Patra 是消费外部 API 项目，字段稳定性来自真实调用；BE 先 = 回路最少。<code>flow:design-first</code> 是 escape hatch，不是默认路径。</p>
+          </div>
+        </aside>
+      </section>
+
+      <hr>
+
+      <!-- ── 8. 落地 ── -->
+      <section>
+        <h2 id="s8">8. 落地</h2>
+
+        <h3 id="s8-1">8.1 一次性工具初始化清单（按顺序）</h3>
+
+        <details open>
+          <summary style="cursor:pointer; padding:8px 0; color:var(--text); font-weight:600; font-size:14px; user-select:none;">
+            展开 / 折叠完整清单
+          </summary>
+          <div style="margin-top:10px;">
+
+            <h4>1. Linear</h4>
+            <ul class="dod-list">
+              <li>创建 workspace + Patra Team</li>
+              <li>自定义状态：Project: Draft / Active / Done；Issue: Backlog / Tech Design / BE / Design / FE / Review / Done；Sub-issue: Todo / In Progress / Done</li>
+              <li>自定义字段（Issue 层）：Acceptance Criteria / Design URL / FE PR / BE PR / Review Outcome</li>
+              <li>标签：path:full / path:fast-track / flow:design-first / paused:*</li>
+              <li>启用 Linear ↔ GitHub 集成（commit message 引用 <code>LIN-123</code> 自动关联）</li>
+            </ul>
+
+            <h4>2. CodeRabbit</h4>
+            <ul class="dod-list">
+              <li>GitHub App 安装（Pro $15/月）</li>
+              <li>本地装 CLI（<code>npm i -g @coderabbit/cli</code> 或官方推荐方式）</li>
+              <li>项目根加 <code>.coderabbit.yaml</code>（自定义规则引用 <code>.claude/rules/</code>）</li>
+            </ul>
+
+            <h4>3. Claude Design</h4>
+            <ul class="dod-list">
+              <li>订阅 Pro 以上</li>
+              <li>初始化 Patra 工作区（让它读 patra-api / patra-web 仓库提取色彩、字体、组件库）</li>
+            </ul>
+
+            <h4>4. Bruno</h4>
+            <ul class="dod-list">
+              <li>在 patra-web / patra-api 各自仓库根创建 <code>bruno/</code> 目录</li>
+              <li>首批 collection 入 git</li>
+            </ul>
+
+            <h4>5. <code>patra:release-planning</code> skill <span class="badge-todo">前置项</span></h4>
+            <ul class="dod-list">
+              <li>在 <code>.claude-marketplace/patra/skills/release-planning/</code> 创建 SKILL.md</li>
+              <li>设计参考 §9.2 决策 #6 的说明</li>
+              <li>必须在第一次创建 Linear Project 之前完成</li>
+            </ul>
+
+            <h4>6. patra-web</h4>
+            <ul class="dod-list">
+              <li>新建仓库 / monorepo 子项目；<code>pnpm create next-app</code></li>
+              <li>Next.js 15 App Router + React 19 + TypeScript 5 strict</li>
+              <li>Tailwind CSS v4 + shadcn/ui</li>
+              <li>TanStack Query v5 + Zustand</li>
+              <li>React Hook Form + Zod</li>
+              <li>Biome + Vitest + Testing Library + jsdom</li>
+              <li>Husky + lint-staged</li>
+              <li>添加 <code>pnpm gen:bootstrap</code> 一键命令（types + hooks + zod）</li>
+            </ul>
+          </div>
+        </details>
+
+        <h3 id="s8-2">8.2 首个 Issue 试运行清单</h3>
+
+        <aside class="callout tip">
+          <div class="icon">&#9670;</div>
+          <div class="body">
+            <strong>选题建议</strong>
+            <p>选一个小而完整的 Issue（能走完全部阶段、风险低）。例如"用户能查看某个 Provenance 的元数据"。</p>
+          </div>
+        </aside>
+
+        <ul class="dod-list">
+          <li><span class="stage-tag tag-tech">Tech Design</span>：<code>docs/patra/specs/&lt;topic&gt;-design.md</code> 写完 + AC ≥ 3 条 + <code>path</code> 标签</li>
+          <li><span class="stage-tag tag-be">BE</span>：调用 patra-hexagonal/jpa skill；BE PR 创建；Bruno collection 更新</li>
+          <li><span class="stage-tag tag-design">Design</span>：Claude Design URL + Handoff token 入 Linear</li>
+          <li><span class="stage-tag tag-fe">FE</span>：消费 Handoff token；<code>pnpm gen:bootstrap</code>；FE PR 创建</li>
+          <li><span class="stage-tag tag-review">Review</span>：CodeRabbit 处理 + 自测三件套 + <code>Review Outcome</code> 字段填写 + Go merge</li>
+        </ul>
+
+        <p><strong>回顾</strong>：Issue Done 后写 retro 沉淀到 Obsidian <code>notes/patra-retros/</code>，作为 SOP v0.2 输入。</p>
+
+        <h3 id="s8-3">8.3 五条红线（常见踩坑）</h3>
+
+        <ul class="redline-list">
+          <li><strong>Tech Design 偷懒</strong>：AC / 字段清单 / 实施计划写得模糊 → 强制 Tech Design DoD 全过，否则状态不能推进</li>
+          <li><strong>Skip Review 走捷径</strong>：任何 Issue 必须经三层门（包括 <code>path:fast-track</code>）；无例外</li>
+          <li><strong>Project Draft 漂移</strong>：在 Draft 阶段开始写实现代码 → Draft 只产出版本规划 + Issue 池，不允许写实现</li>
+          <li><strong>回路无限循环</strong>：Review No-Go > R3 → 强制升级到 Tech Design 重审，避免在低层反复修补</li>
+          <li><strong>Linear 字段不填</strong>：状态推进了但字段没更新 → 设 Linear 自动化在状态切换时检查必填字段；Claude 在新会话开始时主动检查并提示补全</li>
+        </ul>
+
+        <h3 id="s8-4">8.4 演进与反馈</h3>
+
+        <p>SOP v0.1 是起点，不是终点。<strong>触发反思的时机</strong>：</p>
+        <ul>
+          <li>完成 N 个 Issue（N 自定，建议 3-5）</li>
+          <li>遇 Review 回路 ≥ R2</li>
+          <li>SOP 阻塞超 2 天</li>
+          <li>工具栈中某项工具出现 friction</li>
+        </ul>
+
+        <p><strong>反思方式</strong>：在 Obsidian 写一篇 retro，记录：哪个阶段累/顺、哪个工具有效/摩擦、哪条 DoD 经常过不去、SOP 哪里该简化/加强。</p>
+
+        <aside class="callout info">
+          <div class="icon">&#9432;</div>
+          <div class="body">
+            <strong>修订约定</strong>
+            <p>SOP 任何修改都更新本文档，commit 时附 <code>docs(sop): vN.M [修改要点]</code>。</p>
+          </div>
+        </aside>
+      </section>
+
+      <hr>
+
+      <!-- ── 9. 附录 ── -->
+      <section>
+        <h2 id="s9">9. 附录</h2>
+
+        <h3 id="s9-1">9.1 主流程图（端到端）</h3>
+
+        <div class="flow-diagram">
+          <pre>脑子里的想法
+    ↓
+Linear Project: Draft
+    ↓ 跑 patra:release-planning（版本规划模板）
+docs/patra/release-specs/&lt;version&gt;.md
+    ↓ 功能列表 → 派生 Linear Issues
+Linear Project: Active
+    ↓
+══ 每个 Issue 走 SOP ══
+Tech Design → docs/patra/specs/&lt;topic&gt;-design.md
+    ↓ (含 API 字段清单初稿)
+BE → BE PR + Bruno collection + OpenAPI schema
+    ↓ (API 字段稳定下来)
+Design (UI) → Claude Design URL + Handoff token
+    ↓ (UI 设计基于真实 API)
+FE → FE PR + 组件代码 + Vitest/RTL 测试
+    ↓ (UI + API 集成)
+Review → CodeRabbit + 自测三件套 + Go/No-Go
+    ↓
+Issue: Done
+══════════════════
+    ↓
+所有 Issue Done → Project: Done
+    ↓
+（可选）retro 沉淀到 Obsidian</pre>
+        </div>
+
+        <h3 id="s9-2">9.2 关键决策记录</h3>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>决策</th><th>选择</th><th>理由</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>SOP 主轴</td><td>Feature 全生命周期</td><td>而非节奏切片或角色协议（更适合 solo + 5 类痛点全中）</td></tr>
+              <tr><td>2</td><td>任务卡载体</td><td>Linear（非 GitHub Issues / Obsidian Bases）</td><td>UI / workflow 灵活，Linear ↔ GitHub 集成成熟</td></tr>
+              <tr><td>3</td><td>切片粒度</td><td>三层（Project / Issue / Sub-issue）</td><td>支持版本规划 + 用户故事 + 任务三层表达</td></tr>
+              <tr><td>4</td><td>人 vs Claude 边界</td><td>决策者 + 把关者</td><td>AI 是执行层；人介入"起点（需求）"和"终点（review）"</td></tr>
+              <tr><td>5</td><td>三个新工具是否引入</td><td>Bruno / openapi-typescript 全部引入；Sentry 移到可选</td><td>必要：契约入 git / 类型自动 sync；Sentry 当前无用户场景延后</td></tr>
+              <tr>
+                <td>6</td>
+                <td>PRD skill</td>
+                <td>独立 <code>patra:release-planning</code> <span class="badge-todo">待创建</span>，不是 Claude Design 也不复用 brainstorming</td>
+                <td>Claude Design 不支持 PRD 级抽象生成；brainstorming 已为工程 spec 特化（路径绑定 <code>docs/patra/specs/</code> / 涵盖范围"架构、组件、数据流" / HARD-GATE 终点 writing-plans），强行复用违背"职责清晰"。设计草稿：5 字段对话引导 → 派生 Issue 池 → 终止于 Linear Project Active</td>
+              </tr>
+              <tr><td>7</td><td>线框 vs 高保真</td><td>直接 hi-fi，跳过 wireframe</td><td>AI 时代 wireframe 工具过时；思考流程在 Tech Design 完成</td></tr>
+              <tr><td>8</td><td>Project 子阶段</td><td>简化为 Draft → Active → Done</td><td>单人 + 无用户，不需要 Validation 等中间步骤</td></tr>
+              <tr><td>9</td><td>Issue 状态机顺序</td><td>Tech Design → BE → Design → FE → Review → Done</td><td>消费外部 API 项目 BE 先 = 回路最少；<code>flow:design-first</code> 作为 escape hatch</td></tr>
+              <tr><td>10</td><td>节奏</td><td>事件驱动而非时间驱动</td><td>项目语境"无时间压力"匹配</td></tr>
+              <tr><td>11</td><td>PostHog</td><td>不引入</td><td>自用 + 无用户阶段无价值</td></tr>
+              <tr><td>12</td><td>Sentry</td><td>移到可选（未来引入）</td><td>当前自用 + 无外部用户，运行时监控价值低；上线后再引入</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 id="s9-3">9.3 参考资料</h3>
+
+        <details>
+          <summary style="cursor:pointer; padding:8px 0; color:var(--accent); font-weight:600; font-size:13.5px; user-select:none;">
+            展开参考资料列表
+          </summary>
+          <div style="margin-top:10px;">
+            <h4>调研轮 1（工具栈背景）</h4>
+            <ul>
+              <li>Claude Design 官方发布：<a href="https://www.anthropic.com/news/claude-design-anthropic-labs" target="_blank" rel="noopener">anthropic.com</a></li>
+              <li>Claude Design Handoff 机制：<a href="https://claudefa.st/blog/guide/mechanics/claude-design-handoff" target="_blank" rel="noopener">claudefa.st</a></li>
+              <li>CodeRabbit 文档：<a href="https://docs.coderabbit.ai/" target="_blank" rel="noopener">docs.coderabbit.ai</a></li>
+              <li>AI-augmented solo dev 工作流：<a href="https://www.nxcode.io/resources/news/one-person-unicorn-context-engineering-solo-founder-guide-2026" target="_blank" rel="noopener">nxcode.io</a></li>
+              <li>Solo dev LLM workflow：<a href="https://medium.com/@addyosmani/my-llm-coding-workflow-going-into-2026-52fe1681325e" target="_blank" rel="noopener">medium.com/@addyosmani</a></li>
+            </ul>
+            <h4>调研轮 2（PRD 阶段方法论）</h4>
+            <ul>
+              <li>Claude Design 功能评测：<a href="https://uxpilot.ai/blogs/claude-design-review" target="_blank" rel="noopener">uxpilot.ai</a></li>
+              <li>Claude Design vs Figma：<a href="https://www.eigent.ai/blog/claude-design-vs-figma-make" target="_blank" rel="noopener">eigent.ai</a></li>
+              <li>线框 vs 高保真（NN/g）：<a href="https://www.nngroup.com/articles/ux-prototype-hi-lo-fidelity/" target="_blank" rel="noopener">nngroup.com</a></li>
+              <li>AI 时代线框图地位变化：<a href="https://medium.com/design-bootcamp/high-fidelity-ai-prototypes-as-replacement-for-wireframes-c2e84053539b" target="_blank" rel="noopener">medium.com/design-bootcamp</a></li>
+              <li>ChatPRD AI codegen 用法：<a href="https://www.chatprd.ai/learn/prd-for-ai-codegen" target="_blank" rel="noopener">chatprd.ai</a></li>
+              <li>1-page Lean PRD：<a href="https://plan.io/blog/one-pager-prd-product-requirements-document/" target="_blank" rel="noopener">plan.io</a></li>
+            </ul>
+            <h4>调研轮 3（产品工作流全景）</h4>
+            <ul>
+              <li>Pieter Levels MVP 方法：<a href="https://levels.io/how-i-build-my-minimum-viable-products/" target="_blank" rel="noopener">levels.io</a></li>
+              <li>Tony Dinh solopreneur 成长：<a href="https://news.tonydinh.com/p/my-solopreneur-story-zero-to-45kmo" target="_blank" rel="noopener">news.tonydinh.com</a></li>
+              <li>Solo Founder 2026 工具栈：<a href="https://www.opc.community/blog/solo-founder-tools-2026" target="_blank" rel="noopener">opc.community</a></li>
+              <li>AI 产品管理工具横向对比：<a href="https://www.telos-ai.org/blog/ai-product-management-tools-compared" target="_blank" rel="noopener">telos-ai.org</a></li>
+            </ul>
+          </div>
+        </details>
+
+        <h3 id="s9-4">9.4 术语表</h3>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>术语</th><th>含义</th></tr></thead>
+            <tbody>
+              <tr><td>Tech Design</td><td>Issue 内的工程规格设计阶段，产物为 <code>docs/patra/specs/*-design.md</code></td></tr>
+              <tr><td>版本规划文档 / Release Spec</td><td>Project 内的产品规划文档，产物为 <code>docs/patra/release-specs/*.md</code>；由 <code>patra:release-planning</code> skill 产出</td></tr>
+              <tr><td><code>patra:release-planning</code></td><td><span class="badge-todo">待创建</span> 的独立 PRD skill；与 brainstorming 严格分离</td></tr>
+              <tr><td>Handoff token</td><td>Claude Design 生成的桥接 token，可让 Claude Code 接住设计稿</td></tr>
+              <tr><td>Bruno collection</td><td>API 契约文件，存入 git 与 PR 一起 review</td></tr>
+              <tr><td>AC（Acceptance Criteria）</td><td>验收标准，每个 Issue ≥ 3 条可验证</td></tr>
+              <tr><td>Sub-issue</td><td>Linear 三层结构的最底层，记录单阶段产物或中断快照</td></tr>
+              <tr><td>DoD（Definition of Done）</td><td>阶段或 Issue 的"完成定义"，所有项通过才能推进状态</td></tr>
+              <tr><td>三层质量门</td><td>pre-commit (Husky) → push 前 (CodeRabbit CLI) → PR 后 (CodeRabbit App)</td></tr>
+              <tr><td>回路（R1/R2/R3）</td><td>Review No-Go 后状态退回的轮次计数</td></tr>
+              <tr><td>escape hatch</td><td>默认路径之外的逃生机制（如 <code>flow:design-first</code>）</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </article>
+  </main>
+</div>
+
+<script>
+(function () {
+  // Mobile menu
+  var sidebar = document.getElementById('sidebar');
+  var btn = document.getElementById('menuBtn');
+  if (btn && sidebar) {
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      sidebar.classList.toggle('open');
+    });
+    document.addEventListener('click', function (e) {
+      if (window.innerWidth <= 820 && sidebar.classList.contains('open')) {
+        if (!sidebar.contains(e.target) && e.target !== btn) {
+          sidebar.classList.remove('open');
+        }
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (window.innerWidth <= 820 && e.target.tagName === 'A') {
+        sidebar.classList.remove('open');
+      }
+    });
+  }
+
+  // Active TOC via IntersectionObserver
+  var tocLinks = [].slice.call(document.querySelectorAll('.sidebar a[href^="#"]'));
+  var byHash = {};
+  tocLinks.forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h) byHash[h] = a;
+  });
+
+  var headings = [].slice.call(
+    document.querySelectorAll('.content h2[id], .content h3[id]')
+  );
+
+  if (!('IntersectionObserver' in window) || !headings.length) return;
+
+  var visible = new Set();
+
+  function activate() {
+    var cands = [];
+    visible.forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) cands.push({ id: id, top: el.getBoundingClientRect().top });
+    });
+    if (!cands.length) return;
+    cands.sort(function (a, b) { return a.top - b.top; });
+    tocLinks.forEach(function (a) { a.classList.remove('active'); });
+    var link = byHash['#' + cands[0].id];
+    if (link) link.classList.add('active');
+  }
+
+  var obs = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      var id = entry.target.id;
+      if (entry.isIntersecting) visible.add(id);
+      else visible.delete(id);
+    });
+    activate();
+  }, { rootMargin: '-72px 0px -65% 0px', threshold: 0 });
+
+  headings.forEach(function (h) { obs.observe(h); });
+})();
+</script>
+
+</body>
+</html>
