@@ -242,7 +242,7 @@ echo "$CSS" | grep -q "^:root\\|^  :root" && echo "✓ :root 变量" || echo "�
     </header>
 
     <ol class="steps">
-      <li class="step" data-status="pending">
+      <li class="step" data-status="done">
         <strong>步骤 1：创建目录</strong>
         <pre><code class="lang-bash">mkdir -p /Users/linqibin/Projects/Products/Patra/patra-api/.claude-marketplace/patra/skills/brainstorming/template</code></pre>
       </li>
@@ -429,7 +429,7 @@ git commit -m "feat(skill/brainstorming): 新建 spec-template.html（三栏 + f
   </article>
 
   <!-- ============== TASK 3 ============== -->
-  <article class="task" id="task-3" data-status="pending">
+  <article class="task" id="task-3" data-status="done">
     <header>
       <h2>任务 3：创建 plan-template.html</h2>
       <dl class="files">
@@ -439,12 +439,12 @@ git commit -m "feat(skill/brainstorming): 新建 spec-template.html（三栏 + f
     </header>
 
     <ol class="steps">
-      <li class="step" data-status="pending">
+      <li class="step" data-status="done">
         <strong>步骤 1：创建目录</strong>
         <pre><code class="lang-bash">mkdir -p /Users/linqibin/Projects/Products/Patra/patra-api/.claude-marketplace/patra/skills/writing-plans/template</code></pre>
       </li>
 
-      <li class="step" data-status="pending">
+      <li class="step" data-status="done">
         <strong>步骤 2：用 Write 工具创建 plan-template.html，结构如下</strong>
         <p>骨架（CSS 复用 Task 1 的 <code>$BASE_CSS</code>，与 spec-template 完全一致）：</p>
         <pre><code class="lang-html">&lt;!DOCTYPE html&gt;
@@ -598,7 +598,7 @@ git commit -m "feat(skill/brainstorming): 新建 spec-template.html（三栏 + f
 &lt;/html&gt;</code></pre>
       </li>
 
-      <li class="step" data-status="pending">
+      <li class="step" data-status="done">
         <strong>步骤 3：验证 CSS 与 spec-template 完全一致</strong>
         <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/Patra
 SPEC=patra-api/.claude-marketplace/patra/skills/brainstorming/template/spec-template.html
@@ -609,7 +609,7 @@ diff <(sed -n '/<style>/,/<\/style>/p' $SPEC) <(sed -n '/<style>/,/<\/style>/p' 
         <p>预期：<code>diff</code> 无输出 → "✓ CSS 完全一致"。</p>
       </li>
 
-      <li class="step" data-status="pending">
+      <li class="step" data-status="done">
         <strong>步骤 4：验证 plan 模板结构</strong>
         <pre><code class="lang-bash">F=$PLAN
 
@@ -631,7 +631,7 @@ grep -q "TASK TEMPLATE" $F && echo "✓ task 模板注释"
 [ $(grep -c "FILL:" $F) -ge 10 ] && echo "✓ FILL 占位 ≥ 10"</code></pre>
       </li>
 
-      <li class="step" data-status="pending">
+      <li class="step" data-status="done">
         <strong>步骤 5：git add + commit</strong>
         <pre><code class="lang-bash">git add patra-api/.claude-marketplace/patra/skills/writing-plans/template/plan-template.html
 git commit -m "feat(skill/writing-plans): 新建 plan-template.html（三栏 + 同套 CSS + task 状态机）"</code></pre>
