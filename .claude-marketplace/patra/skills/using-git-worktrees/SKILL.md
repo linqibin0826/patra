@@ -53,6 +53,8 @@ git rev-parse --show-superproject-working-tree 2>/dev/null
 
 用户已经请求隔离工作区（步骤 0 已获同意）。你是否已经有创建 worktree 的方法？可能是名为 `EnterWorktree`、`WorktreeCreate` 的工具、`/worktree` 命令，或 `--worktree` 标志。如果有，用它，然后跳到步骤 3。
 
+**在 Claude Code 中**：原生工具是 `EnterWorktree`（可以从 ToolSearch 加载，或在 plan/auto 模式自动可用）。它会自动把 worktree 创建在 `.claude/worktrees/<name>/` 下、起新分支、管理生命周期。**Codex** 等支持原生 worktree 的平台同理——优先用平台原生机制。
+
 原生工具自动处理目录放置、分支创建和清理。在你已经有原生工具的情况下使用 `git worktree add`，会创建你的 harness 看不到也无法管理的"幻影状态"。
 
 只有在没有原生 worktree 工具可用时，才进入步骤 1b。
@@ -76,18 +78,9 @@ git rev-parse --show-superproject-working-tree 2>/dev/null
 
    找到就用。如果两者都存在，`.worktrees` 优先。
 
-3. **检查是否存在全局目录：**
+3. **都不存在则默认用项目根目录下的 `.worktrees/`**。
 
-   ```bash
-   project=$(basename "$(git rev-parse --show-toplevel)")
-   ls -d ~/.config/superpowers/worktrees/$project 2>/dev/null
-   ```
-
-   找到就用（兼容老的全局路径）。
-
-4. **如果没有其他可参考的信息**，默认用项目根目录下的 `.worktrees/`。
-
-#### 安全验证（仅项目本地目录）
+#### 安全验证（项目本地目录必须）
 
 **创建 worktree 前必须验证目录已被忽略：**
 
@@ -99,17 +92,10 @@ git check-ignore -q .worktrees 2>/dev/null || git check-ignore -q worktrees 2>/d
 
 **为什么关键：** 防止 worktree 内容被意外提交到仓库。
 
-全局目录（`~/.config/superpowers/worktrees/`）无需验证。
-
 #### 创建工作树
 
 ```bash
-project=$(basename "$(git rev-parse --show-toplevel)")
-
-# 根据选定位置确定路径
-# 项目本地：path="$LOCATION/$BRANCH_NAME"
-# 全局：path="~/.config/superpowers/worktrees/$project/$BRANCH_NAME"
-
+# 路径形如：$LOCATION/$BRANCH_NAME
 git worktree add "$path" -b "$BRANCH_NAME"
 cd "$path"
 ```
@@ -118,30 +104,32 @@ cd "$path"
 
 ## 步骤 3：项目设置
 
-自动检测并运行相应的设置命令：
+patra-api 是 Java + Gradle 项目。运行依赖刷新（不跑测试，留给步骤 4）：
 
 ```bash
-# Node.js
-if [ -f package.json ]; then npm install; fi
-
-# Rust
-if [ -f Cargo.toml ]; then cargo build; fi
-
-# Python
-if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-if [ -f pyproject.toml ]; then poetry install; fi
-
-# Go
-if [ -f go.mod ]; then go mod download; fi
+if [ -f build.gradle.kts ] || [ -f build.gradle ] || [ -f settings.gradle.kts ] || [ -f settings.gradle ]; then
+  ./gradlew help --no-daemon  # 触发依赖解析与 Gradle wrapper 自检
+fi
 ```
+
+如果项目使用 mise 管理 JDK / 工具版本：
+
+```bash
+if [ -f .mise.toml ] || [ -f mise.toml ]; then
+  mise install
+fi
+```
+
+不预跑 `./gradlew build`——构建放到步骤 4 的基线测试一起做。
 
 ## 步骤 4：验证基线干净
 
 运行测试确保工作区初始状态干净：
 
 ```bash
-# 使用项目对应的命令
-npm test / cargo test / pytest / go test ./...
+./gradlew test --no-daemon       # 单元测试
+# 或更严格：含 Checkstyle / Spotless / 集成测试
+./gradlew check --no-daemon
 ```
 
 **如果测试失败：** 报告失败，询问是继续还是排查。
@@ -162,24 +150,23 @@ npm test / cargo test / pytest / go test ./...
 |------|------|
 | 已在 linked worktree 内 | 跳过创建（步骤 0） |
 | 在 submodule 内 | 按普通仓库处理（步骤 0 守卫） |
-| 有原生 worktree 工具 | 用它（步骤 1a） |
+| 有原生 worktree 工具（Claude Code 的 EnterWorktree） | 用它（步骤 1a） |
 | 没有原生工具 | git worktree 回退（步骤 1b） |
 | `.worktrees/` 存在 | 用它（验证已忽略） |
 | `worktrees/` 存在 | 用它（验证已忽略） |
 | 两者都存在 | 用 `.worktrees/` |
 | 都不存在 | 检查 instructions 文件，再默认 `.worktrees/` |
-| 全局路径存在 | 用它（向后兼容） |
 | 目录未被忽略 | 添加到 .gitignore + 提交 |
 | 创建时权限错误 | 沙盒回退，原地工作 |
 | 基线测试失败 | 报告失败 + 询问 |
-| 无 package.json/Cargo.toml | 跳过依赖安装 |
+| 无 build.gradle(.kts) | 跳过 Gradle 设置 |
 
 ## 常见错误
 
 ### 与 harness 对抗
 
 - **问题：** 平台已经提供隔离的情况下还在用 `git worktree add`
-- **修复：** 步骤 0 检测现有隔离。步骤 1a 让位给原生工具。
+- **修复：** 步骤 0 检测现有隔离。步骤 1a 让位给原生工具（Claude Code 的 EnterWorktree）。
 
 ### 跳过检测
 
@@ -194,7 +181,7 @@ npm test / cargo test / pytest / go test ./...
 ### 假设目录位置
 
 - **问题：** 造成不一致、违反项目约定
-- **修复：** 遵循优先级：现有目录 > 全局历史路径 > instructions 文件 > 默认
+- **修复：** 遵循优先级：现有 `.worktrees/` > 现有 `worktrees/` > instructions 文件 > 默认 `.worktrees/`
 
 ### 带着失败的测试继续
 
@@ -216,20 +203,20 @@ npm test / cargo test / pytest / go test ./...
 
 - 先跑步骤 0 检测
 - 优先原生工具，其次 git 回退
-- 遵循目录优先级：现有目录 > 全局历史路径 > instructions 文件 > 默认
+- 遵循目录优先级：现有 `.worktrees/` > 现有 `worktrees/` > instructions 文件 > 默认 `.worktrees/`
 - 项目本地目录验证已忽略
-- 自动检测并运行项目设置
-- 验证测试基线干净
+- 触发 Gradle 依赖解析（步骤 3）
+- 验证测试基线干净（步骤 4）
 
 ## 集成
 
 **被以下技能调用：**
 
-- **brainstorming**（阶段 4）- 设计通过且需要实现时必需
-- **subagent-driven-development** - 执行任何任务前必需
-- **executing-plans** - 执行任何任务前必需
+- **patra:brainstorming**（阶段 4）- 设计通过且需要实现时必需
+- **patra:subagent-driven-development** - 执行任何任务前必需
+- **patra:executing-plans** - 执行任何任务前必需
 - 任何需要隔离工作区的技能
 
 **配合使用：**
 
-- **finishing-a-development-branch** - 工作完成后清理时必需
+- **patra:finishing-a-development-branch** - 工作完成后清理时必需
