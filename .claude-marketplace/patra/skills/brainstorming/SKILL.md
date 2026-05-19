@@ -63,7 +63,7 @@ digraph brainstorming {
 }
 ```
 
-**终止状态是调用 writing-plans。** 不要调用 frontend-design、mcp-builder 或任何其他实现技能。头脑风暴之后你唯一要调用的技能是 writing-plans。
+**终止状态是调用 writing-plans。** 不要调用 frontend-design 或任何其他实现技能。头脑风暴之后你唯一要调用的技能是 writing-plans。
 
 ## 流程详述
 

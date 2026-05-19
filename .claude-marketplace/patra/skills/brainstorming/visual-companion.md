@@ -70,13 +70,6 @@ scripts/start-server.sh --project-dir /path/to/project
 scripts/start-server.sh --project-dir /path/to/project
 ```
 
-**Gemini CLI：**
-```bash
-# 使用 --foreground 并在 shell 工具调用上设置 is_background: true，
-# 让进程在轮次之间存活
-scripts/start-server.sh --project-dir /path/to/project --foreground
-```
-
 **其他环境：** 服务器必须在会话轮次之间持续在后台运行。如果你的环境会回收分离的进程，使用 `--foreground` 并通过平台的后台执行机制启动命令。
 
 如果浏览器无法访问该 URL（在远程/容器化环境中常见），绑定一个非回环主机：
