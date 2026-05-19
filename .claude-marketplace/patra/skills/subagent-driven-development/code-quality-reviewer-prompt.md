@@ -7,8 +7,8 @@
 **仅在规格合规性审查通过后才分派。**
 
 ```
-Task tool (patra:code-reviewer):
-  使用模板 requesting-code-review/code-reviewer.md
+Task tool (general-purpose):
+  使用模板 patra:requesting-code-review/code-reviewer.md
 
   WHAT_WAS_IMPLEMENTED: [来自实现者的报告]
   PLAN_OR_REQUIREMENTS: [plan-file] 中的任务 N
