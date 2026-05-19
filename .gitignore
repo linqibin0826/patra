@@ -1,0 +1,13 @@
+# macOS 系统垃圾
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# 通用编辑器残留
+*.swp
+*.swo
+*~
+
+# Patra workspace 临时 / 备份目录
+*.backup
+*.stale
