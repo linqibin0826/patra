@@ -69,6 +69,8 @@ digraph skill_flow {
 }
 ```
 
+**注：** 流程图中"为每个条目创建 TodoWrite 待办"适用于 **skill 内部的检查清单**（如 brainstorming 的 9 步流程、writing-plans 的自检步骤）。**执行 plan 任务的进度追踪不用 TodoWrite**——plan 是 HTML 文件，进度通过修改 `<article data-status="…">` 与 `<li data-status="…">` 跟踪，详见 `patra:executing-plans` 与 `patra:subagent-driven-development`。两条路径不冲突：前者是 skill 流程的临时步骤跟踪，后者是 plan 任务的持久进度跟踪。
+
 ## 红线
 
 这些想法意味着停下——你在合理化：
