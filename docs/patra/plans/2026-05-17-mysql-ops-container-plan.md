@@ -8,7 +8,7 @@
 
 **Tech Stack:** Docker Compose / MySQL 8.0 / XXL-Job admin 3.2.0
 
-**Spec 链接:** `docs/superpowers/specs/2026-05-17-mysql-ops-container-design.md`
+**Spec 链接:** `docs/patra/specs/2026-05-17-mysql-ops-container-design.md`
 
 ---
 
@@ -642,7 +642,7 @@ catalog/ingest 启动后反复 ConnectionRefused，调度功能失效。
 - docker/README.md 4 处补充 mysql-ops 段落
 
 patra-api 零改动（yml 早已指向 localhost:7070）。
-设计与决策见 patra-api/docs/superpowers/specs/2026-05-17-mysql-ops-container-design.md
+设计与决策见 patra-api/docs/patra/specs/2026-05-17-mysql-ops-container-design.md
 EOF
 )"
 ```
@@ -705,8 +705,8 @@ gh issue close 22 --comment "$(cat <<'EOF'
 
 ### 落地文档
 
-- 设计：`docs/superpowers/specs/2026-05-17-mysql-ops-container-design.md`
-- 实施计划：`docs/superpowers/plans/2026-05-17-mysql-ops-container-plan.md`
+- 设计：`docs/patra/specs/2026-05-17-mysql-ops-container-design.md`
+- 实施计划：`docs/patra/plans/2026-05-17-mysql-ops-container-plan.md`
 - 实施 commit：见 patra-infra 仓库
 EOF
 )"
@@ -731,12 +731,12 @@ cd /Users/linqibin/Projects/Products/Patra/patra-api/.claude/worktrees/issue-22-
 git status
 ```
 
-Expected: 只有 `docs/superpowers/plans/2026-05-17-mysql-ops-container-plan.md` 是 untracked。
+Expected: 只有 `docs/patra/plans/2026-05-17-mysql-ops-container-plan.md` 是 untracked。
 
 - [ ] **Step 10.2: commit plan 文档**
 
 ```bash
-git add docs/superpowers/plans/2026-05-17-mysql-ops-container-plan.md
+git add docs/patra/plans/2026-05-17-mysql-ops-container-plan.md
 git commit -m "$(cat <<'EOF'
 docs(plan): 新增 mysql-ops 容器实施计划
 

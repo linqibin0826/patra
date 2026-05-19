@@ -51,8 +51,8 @@
 
 | 方案 | 评估 |
 |---|---|
-| **D1. 不迁 superpowers 文档（采用）** | `patra-infra/docs/superpowers/{specs,plans}/2026-05-17-migrate-infra-to-macmini-*.md` 两份文档保留在归档仓库中，patra-api 的 docs 库不被污染。 |
-| D2. 迁到 patra-api/docs/superpowers/ 下 | 否决 — 用户决策；这些是 patra-infra 内部演进的快照，与 patra-api 开发主线无关。 |
+| **D1. 不迁 superpowers 文档（采用）** | `patra-infra/docs/patra/{specs,plans}/2026-05-17-migrate-infra-to-macmini-*.md` 两份文档保留在归档仓库中，patra-api 的 docs 库不被污染。 |
+| D2. 迁到 patra-api/docs/patra/ 下 | 否决 — 用户决策；这些是 patra-infra 内部演进的快照，与 patra-api 开发主线无关。 |
 
 ### 决策 E：脚本改名
 
@@ -85,9 +85,9 @@ patra-api 既有文件触达：
 
 ### Out of scope
 
-- `patra-infra/docs/superpowers/` 两份文档不迁（决策 D）
+- `patra-infra/docs/patra/` 两份文档不迁（决策 D）
 - `patra-infra/README.md`、`patra-infra/.gitignore`、`patra-infra/.claude/CLAUDE.md` 不迁（patra-api 已有自己的版本）
-- patra-api 内对 `patra-infra` 的历史引用（如 `docs/superpowers/specs|plans/2026-05-17-mysql-ops-*.md` 中提到的 `patra-infra/docker/...`）不修改 —— 这些是已归档的设计文档，路径作为历史快照保留
+- patra-api 内对 `patra-infra` 的历史引用（如 `docs/patra/specs|plans/2026-05-17-mysql-ops-*.md` 中提到的 `patra-infra/docker/...`）不修改 —— 这些是已归档的设计文档，路径作为历史快照保留
 - Mac mini 上 `~/.patra/docker/` 实际数据卷不动 —— 用户确认已部署运行，迁移仅改变仓库代码位置，与运行时数据卷无关
 - patra-infra 之前 push 到远程的状态：当前 origin/main 落后于本地已合并的 d7f8599（用户选 C 暂不 push），归档前会补一次 push 防止丢失 commit
 

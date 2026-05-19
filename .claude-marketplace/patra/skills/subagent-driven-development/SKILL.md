@@ -128,7 +128,7 @@ digraph process {
 ```
 你：我正在使用子智能体驱动开发来执行这个计划。
 
-[一次性读取计划文件：docs/superpowers/plans/feature-plan.md]
+[一次性读取计划文件：docs/patra/plans/feature-plan.md]
 [提取全部 5 个任务的完整文本和上下文]
 [用所有任务创建 TodoWrite]
 

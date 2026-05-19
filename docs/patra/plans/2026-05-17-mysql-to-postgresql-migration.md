@@ -8,7 +8,7 @@
 
 **Tech Stack:** PostgreSQL 17、`org.postgresql:postgresql` 42.x、Flyway 11 `flyway-database-postgresql`、Hibernate 7.1 `PostgreSQLDialect`、Spring Boot 4.0.1、Spring Batch 5、Testcontainers `postgres:17`。
 
-**Spec：** [`docs/superpowers/specs/2026-05-17-mysql-to-postgresql-migration-design.md`](../specs/2026-05-17-mysql-to-postgresql-migration-design.md)（490 行，57 条决策） — 实施前必读。所有类型/函数/语法翻译规则在 spec §4 与 §5 中。
+**Spec：** [`docs/patra/specs/2026-05-17-mysql-to-postgresql-migration-design.md`](../specs/2026-05-17-mysql-to-postgresql-migration-design.md)（490 行，57 条决策） — 实施前必读。所有类型/函数/语法翻译规则在 spec §4 与 §5 中。
 
 ---
 
@@ -2803,7 +2803,7 @@ git checkout main -- patra-infra/docker/docker-compose.core.yaml gradle/libs.ver
 **每个 task 标题已附 `[Track: W?-T?]` 标签**，dispatcher 可直接用 `grep` 抽取每个 Wave 的全部 task：
 
 ```bash
-PLAN=docs/superpowers/plans/2026-05-17-mysql-to-postgresql-migration.md
+PLAN=docs/patra/plans/2026-05-17-mysql-to-postgresql-migration.md
 # 列出 W4-catalog 所有 track
 grep "Track: W4c-" $PLAN
 # 列出 W5 全部 9 个 track

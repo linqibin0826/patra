@@ -8,7 +8,7 @@
 
 **Tech Stack:** Bash / Git / Gradle 9.2.1 / Docker Compose / gh CLI
 
-**关联 spec:** [`docs/superpowers/specs/2026-05-18-patra-infra-migration-design.md`](../specs/2026-05-18-patra-infra-migration-design.md)
+**关联 spec:** [`docs/patra/specs/2026-05-18-patra-infra-migration-design.md`](../specs/2026-05-18-patra-infra-migration-design.md)
 
 **工作位置:** 本 plan 在 patra-api 当前 worktree 执行。`阶段 4` 需要切换到 `/Users/linqibin/Projects/Products/Patra/patra-infra` 操作原仓库。
 

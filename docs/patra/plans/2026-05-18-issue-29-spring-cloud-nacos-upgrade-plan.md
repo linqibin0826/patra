@@ -8,7 +8,7 @@
 
 **Tech Stack:** Java 25 · Spring Boot 4.0.6 · Spring Cloud 2025.1.1 · spring-cloud-alibaba 2025.1.0.0 · nacos-client 3.1.1 · nacos-server v3.0.2 · Gradle 9.2.1 (Kotlin DSL Convention Plugins)
 
-**Spec:** `docs/superpowers/specs/2026-05-18-issue-29-spring-cloud-nacos-upgrade-design.md`
+**Spec:** `docs/patra/specs/2026-05-18-issue-29-spring-cloud-nacos-upgrade-design.md`
 
 ---
 
@@ -22,7 +22,7 @@
 | `build-logic/src/main/kotlin/LinqibinDependencyManagement.kt` | BOM 注入实现；`imports { mavenBom(...) }` 顺序很重要（先 import 的 BOM 优先） |
 | `build-logic/src/main/kotlin/linqibin.hexagonal-boot.gradle.kts` | 所有 boot 模块共用的 convention plugin；服务发现 starter 在这里统一引入 |
 | `infra/docker/docker-compose.core.yaml` | core 栈：postgres + redis + (consul → nacos) |
-| `docs/superpowers/specs/2026-05-18-issue-29-spring-cloud-nacos-upgrade-design.md` §6 | Consul → Nacos 字段映射决策表 |
+| `docs/patra/specs/2026-05-18-issue-29-spring-cloud-nacos-upgrade-design.md` §6 | Consul → Nacos 字段映射决策表 |
 
 **统一约定**：
 
@@ -1232,8 +1232,8 @@ grep -rni -E "consul|CONSUL_HOST|CONSUL_PORT" . \
   --exclude-dir=.idea \
   --exclude-dir=.claude/worktrees \
   --exclude='*.tsv' \
-  | grep -v 'docs/superpowers/specs/' \
-  | grep -v 'docs/superpowers/plans/'
+  | grep -v 'docs/patra/specs/' \
+  | grep -v 'docs/patra/plans/'
 ```
 
 Expected: 输出**完全为空**。
@@ -1326,7 +1326,7 @@ docs: 清扫全部模块 README 与 Skill 文档中的 Consul 字样 (#29)
   patra-troubleshooter SKILL.md（trigger 描述）
 
 零残留 grep 断言通过（spec §11）：
-除 docs/superpowers/{specs,plans}/、scripts/letpub/venues_issn.tsv 数据文件、
+除 docs/patra/{specs,plans}/、scripts/letpub/venues_issn.tsv 数据文件、
 构建产物外，项目内已无 consul / CONSUL_HOST / CONSUL_PORT 字样。
 
 联调验证：5 个微服务在 Nacos 注册并通过 gateway lb:// 互相发现；

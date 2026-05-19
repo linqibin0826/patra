@@ -4,7 +4,7 @@
 **作者**：linqibin + Claude（superpowers:brainstorming）
 **状态**：待 review（spec phase）
 **分支**：`refactor/rename-config-prefix`（待创建）
-**关联前序**：PR #19（com.patra → dev.linqibin），完成报告 `docs/superpowers/2026-05-16-refactor-completion-report.html` Follow-up ii
+**关联前序**：PR #19（com.patra → dev.linqibin），完成报告 `docs/patra/2026-05-16-refactor-completion-report.html` Follow-up ii
 
 ---
 
@@ -303,7 +303,7 @@ Rename 重构 = 行为不变。**不新增测试用例**（写新单元测试覆
 3. § 7.1 gate 2 grep 零残留
 4. 至少 1 个 boot bootRun 启动成功，`/actuator/configprops` 显示新 prefix
 5. 至少 1 个跨 starter 集成测试通过
-6. Spec 文档与 plan 文档已 commit 到 `docs/superpowers/` 对应位置
+6. Spec 文档与 plan 文档已 commit 到 `docs/patra/` 对应位置
 7. 单 commit 提交，commit message 形如 `refactor(config): rename patra.* config prefix → linqibin.starter.* / patra.starter.*`
 8. PR 描述包含 § 3 映射矩阵 + § 7.1 gate 验证证据
 

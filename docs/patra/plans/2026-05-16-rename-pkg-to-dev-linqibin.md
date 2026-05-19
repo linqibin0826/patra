@@ -8,7 +8,7 @@
 
 **Tech Stack:** Java 25, Spring Boot 4.0.1, Gradle 9.2.1 (Kotlin DSL + Convention Plugins), JPA/Hibernate, RestClient, Spring Cloud Consul
 
-**Spec 参考:** [docs/superpowers/specs/2026-05-15-rename-package-to-dev-linqibin-design.md](../specs/2026-05-15-rename-package-to-dev-linqibin-design.md)（commit e518b7ecc）
+**Spec 参考:** [docs/patra/specs/2026-05-15-rename-package-to-dev-linqibin-design.md](../specs/2026-05-15-rename-package-to-dev-linqibin-design.md)（commit e518b7ecc）
 
 ---
 
@@ -1840,7 +1840,7 @@ grep -rn "com\.patra" \
   --include="*.yml" --include="*.yaml" --include="*.xml" \
   --include="*.md" --include="*.imports" --include="*.properties" \
   --include="Dockerfile*" --include="*.sh" \
-  . | grep -v "docs/superpowers/specs" | grep -v "docs/superpowers/plans" | head
+  . | grep -v "docs/patra/specs" | grep -v "docs/patra/plans" | head
 ```
 
 Expected：空输出，或仅剩 spec/plan 文档中"本次重构 com.patra → dev.linqibin"这种 mention（合理保留）。
@@ -1954,7 +1954,7 @@ git branch -D refactor/rename-pkg-to-dev-linqibin
 
 ## 备注
 
-本计划由 `superpowers:writing-plans` 技能基于已 commit 的 spec 文档（`docs/superpowers/specs/2026-05-15-rename-package-to-dev-linqibin-design.md`，commit e518b7ecc）生成。
+本计划由 `superpowers:writing-plans` 技能基于已 commit 的 spec 文档（`docs/patra/specs/2026-05-15-rename-package-to-dev-linqibin-design.md`，commit e518b7ecc）生成。
 
 执行者选项：
 - **subagent-driven-development**（推荐）：每个 task 派 fresh subagent 执行，主 session review 后进入下一 task

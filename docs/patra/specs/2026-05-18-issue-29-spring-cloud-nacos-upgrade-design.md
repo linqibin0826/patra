@@ -70,7 +70,7 @@
 
 ### In scope
 
-> **强约束**：改造完成后，除 `docs/superpowers/specs/**` 与 `docs/superpowers/plans/**` 外，项目内**不得遗留任何 consul / Consul / CONSUL_HOST / CONSUL_PORT 字样**（包括 yml/Java 注释、JavaDoc、README 段落、Skill 文档）。验收用 §11 的 grep 断言客观执行。
+> **强约束**：改造完成后，除 `docs/patra/specs/**` 与 `docs/patra/plans/**` 外，项目内**不得遗留任何 consul / Consul / CONSUL_HOST / CONSUL_PORT 字样**（包括 yml/Java 注释、JavaDoc、README 段落、Skill 文档）。验收用 §11 的 grep 断言客观执行。
 
 **Gradle 层**：
 
@@ -439,15 +439,15 @@ grep -rni -E "consul|CONSUL_HOST|CONSUL_PORT" . \
   --exclude-dir=.idea \
   --exclude-dir=.claude/worktrees \
   --exclude='*.tsv' \
-  | grep -v 'docs/superpowers/specs/' \
-  | grep -v 'docs/superpowers/plans/'
+  | grep -v 'docs/patra/specs/' \
+  | grep -v 'docs/patra/plans/'
 ```
 
 预期输出：**空**。
 
 排除项说明：
 - `*.tsv` — `scripts/letpub/venues_issn.tsv` 含 "Consultant" / "Consulting" 等期刊名（医学数据），不在范围
-- `docs/superpowers/specs/` 与 `docs/superpowers/plans/` — 本 spec 与对应 plan 必然包含 Consul → Nacos 的对照说明
+- `docs/patra/specs/` 与 `docs/patra/plans/` — 本 spec 与对应 plan 必然包含 Consul → Nacos 的对照说明
 - `.claude/worktrees/` — 其它并行 worktree 与本任务无关
 - `.git` / `.gradle` / `build` / `bin` / `node_modules` / `.idea` — 构建产物与 IDE 缓存
 
