@@ -47,3 +47,13 @@ Task tool（通用）:
 ```
 
 **审查员返回：** 状态、问题（如有）、建议
+
+## 模板合规性检查（v0.2+ 新增）
+
+8. **是否严格按模板？**
+   - CSS 是否未修改？（与 `skills/writing-plans/template/plan-template.html` 的 `<style>` 块完全一致）
+   - 章节顺序是否与模板一致？（header / scope-check / file-structure / tasks / self-check）
+   - 所有 `<!-- FILL: -->` 注释是否已被替换？
+   - 每个 `<article class="task">` 都有唯一 `id="task-N"` + 初始 `data-status="pending"`？
+   - 右栏 `<aside class="notes-panel">` 是否存在？
+   - 4 类 note entry 模板注释 + task 卡片模板注释是否保留（供实施期 AI 复制）？

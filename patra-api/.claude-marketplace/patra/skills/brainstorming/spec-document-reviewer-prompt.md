@@ -46,3 +46,12 @@ Task tool（通用）:
 ```
 
 **审查员返回：** 状态、问题（如有）、建议
+
+## 模板合规性检查（v0.2+ 新增）
+
+8. **是否严格按模板？**
+   - CSS 是否未修改？（与 `skills/brainstorming/template/spec-template.html` 的 `<style>` 块完全一致）
+   - 章节顺序是否与模板一致？
+   - 所有 `<!-- FILL: -->` 注释是否已被替换为实际内容（grep 文件应无 `FILL:` 残留）？
+   - 右栏 `<aside class="notes-panel">` 是否存在（即使 `<ol class="notes-log">` 内为空）？
+   - 4 类 note entry 模板注释是否保留在 `<ol class="notes-log">` 内（供实施期 AI 复制）？
