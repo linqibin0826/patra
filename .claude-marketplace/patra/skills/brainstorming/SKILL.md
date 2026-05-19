@@ -26,7 +26,7 @@ description: "在任何创造性工作之前必须使用此技能——创建功
 3. **提出澄清问题** — 每次一个，了解目的/约束/成功标准
 4. **提出 2-3 种方案** — 附带权衡分析和你的推荐
 5. **展示设计** — 按复杂度分节展示，每节展示后获得用户批准
-6. **编写设计文档** — 保存到 `docs/patra/specs/YYYY-MM-DD-<topic>-design.md` 并 commit
+6. **编写设计文档** — 保存到 `docs/patra/specs/YYYY-MM-DD-<topic>-design.html` 并 commit（**HTML 不是 Markdown**，参见下方写作指南）
 7. **规格自检** — 快速内联检查占位符、矛盾、模糊性、范围（详见下方）
 8. **用户审查书面规格** — 在继续之前请用户审查规格文件
 9. **过渡到实现** — 调用 writing-plans 技能创建实现计划
@@ -108,8 +108,9 @@ digraph brainstorming {
 
 **文档：**
 
-- 将验证通过的设计（规格说明）写入 `docs/patra/specs/YYYY-MM-DD-<topic>-design.md`
+- 将验证通过的设计（规格说明）写入 `docs/patra/specs/YYYY-MM-DD-<topic>-design.html`
   - （用户对规格位置的偏好优先于此默认值）
+  - **产物是 HTML，不是 Markdown**——HTML 的视觉层次（callout / 风险 pill / 折叠章节 / 决策表）能让重点一眼可见。详细写作骨架与必含语义元素见 `skills/brainstorming/html-output-guide.md`。开始写之前先读 guide。
 - 将设计文档 commit 到 git
 
 **规格自检：**
