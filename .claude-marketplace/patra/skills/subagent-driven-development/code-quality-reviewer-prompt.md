@@ -7,7 +7,7 @@
 **仅在规格合规性审查通过后才分派。**
 
 ```
-Task tool (superpowers:code-reviewer):
+Task tool (patra:code-reviewer):
   使用模板 requesting-code-review/code-reviewer.md
 
   WHAT_WAS_IMPLEMENTED: [来自实现者的报告]

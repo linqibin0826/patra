@@ -53,9 +53,15 @@ Task tool (general-purpose):
     - 他们是否解决了错误的问题？
     - 他们是否实现了正确的功能但方式不对？
 
+    **HTML 进度结构（writing-plans 出的 plan 是 HTML，控制者维护 data-status）：**
+    - 任务对应的 `<article class="task" id="task-N">` 当前 `data-status` 应该是 `"in-progress"`（审查阶段）
+    - article 内 5 个 `<li class="step">` 的 `data-status` 应该全部是 `"done"`（实现 5 步都完成）
+    - 若任务定义里包含 `<aside class="blocker">` 或 `<aside class="skip-reason">` 但被实现者忽略未处理，标记为问题
+    - 不验证：article 本身 status 是否切到 `"done"`——那是控制者审查全部通过后才做的最终切换
+
     **通过阅读代码来验证，而非信任报告。**
 
     报告：
-    - ✅ 符合规格（如果经过代码检查后一切匹配）
-    - ❌ 发现问题：[具体列出缺失或多余的内容，附带 file:line 引用]
+    - ✅ 符合规格（如果经过代码检查后一切匹配，且 HTML 进度结构正确）
+    - ❌ 发现问题：[具体列出缺失或多余的内容，附带 file:line 引用；HTML 进度问题单独列出]
 ```
