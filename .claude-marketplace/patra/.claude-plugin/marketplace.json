@@ -8,7 +8,7 @@
   "plugins": [
     {
       "name": "patra",
-      "description": "Patra 项目专属能力 plugin：方法论 skills（基于 jnMetaCode/superpowers-zh fork 精简版）+ 后续会并入 hooks/agents/commands",
+      "description": "Patra 项目专属能力 plugin：13 个方法论 skills，基于 jnMetaCode/superpowers-zh fork 精简并按 patra-api 六边形架构 + Java/Gradle 技术栈深度定制。",
       "version": "0.1.0",
       "source": "./",
       "author": {
