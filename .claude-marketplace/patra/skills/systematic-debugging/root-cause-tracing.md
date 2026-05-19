@@ -2,7 +2,7 @@
 
 ## 概述
 
-Bug 通常表现在调用栈深处（在错误目录执行 git init、在错误位置创建文件、用错误路径打开数据库）。你的本能是在错误出现的地方修复，但那只是治标。
+Bug 通常表现在调用栈深处（在错误目录执行写入、用错误条件查 DB、构造对象时拿到 null 字段）。你的本能是在错误出现的地方修复，但那只是治标。
 
 **核心原则：** 沿着调用链反向追踪，直到找到最初的触发点，然后在源头修复。
 
@@ -33,99 +33,133 @@ digraph when_to_use {
 
 ### 1. 观察症状
 ```
-Error: git init failed in /Users/jesse/project/packages/core
+java.lang.IllegalArgumentException: ProvenanceCode 不能为空
+    at com.patra.common.code.ProvenanceCode.of(ProvenanceCode.java:42)
+    at com.patra.registry.app.PublicationMapper.toDomain(PublicationMapper.java:18)
+    at com.patra.registry.app.PublicationAppService.ingest(PublicationAppService.java:55)
+    at com.patra.registry.adapter.rest.PublicationController.ingest(PublicationController.java:31)
+    ...
 ```
 
 ### 2. 找到直接原因
-**哪段代码直接导致了这个错误？**
-```typescript
-await execFileAsync('git', ['init'], { cwd: projectDir });
+**哪段代码直接抛出了这个错误？**
+```java
+public record ProvenanceCode(String value) {
+    public static ProvenanceCode of(String value) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException("ProvenanceCode 不能为空");
+        }
+        return new ProvenanceCode(value);
+    }
+}
 ```
 
 ### 3. 问：谁调用了它？
-```typescript
-WorktreeManager.createSessionWorktree(projectDir, sessionId)
-  → 被 Session.initializeWorkspace() 调用
-  → 被 Session.create() 调用
-  → 被测试中的 Project.create() 调用
+```
+PublicationMapper.toDomain(dto)
+  → ProvenanceCode.of(dto.provenanceCode())    ← 这里传入了空字符串
+  → 被 PublicationAppService.ingest(IngestRequest) 调用
+  → 被 PublicationController.ingest(@RequestBody Body) 调用
 ```
 
 ### 4. 继续向上追踪
 **传入了什么值？**
-- `projectDir = ''`（空字符串！）
-- 空字符串作为 `cwd` 会解析为 `process.cwd()`
-- 那就是源代码目录！
+- `dto.provenanceCode() = ""`（空字符串！）
+- DTO 来自 `IngestRequest` ——这是 Controller 接收的 JSON 反序列化结果
+- 那 JSON 里 `provenanceCode` 是空字符串
 
 ### 5. 找到最初的触发点
 **空字符串从哪里来的？**
-```typescript
-const context = setupCoreTest(); // 返回 { tempDir: '' }
-Project.create('name', context.tempDir); // 在 beforeEach 之前就访问了！
+```java
+// Controller
+@PostMapping("/ingest")
+public IngestResponse ingest(@Valid @RequestBody IngestRequest req) {
+    return appService.ingest(req);
+}
+
+// IngestRequest record
+public record IngestRequest(String provenanceCode, String title, ...) {
+    // ❌ 没有 @NotBlank 校验，"" 通过 @Valid
+}
 ```
+
+**根本原因：** 入口 DTO 缺少 Bean Validation 注解（`@NotBlank`），空字符串穿透到 VO 工厂方法才被发现，但此时调用栈已经深 4 层。
+
+**修复（源头）：**
+```java
+public record IngestRequest(
+    @NotBlank String provenanceCode,
+    @NotBlank String title,
+    ...
+) {}
+```
+Spring 在反序列化后会返回 `400 Bad Request` + 清晰的字段级错误。
 
 ## 添加堆栈跟踪
 
 当无法手动追踪时，添加诊断埋点：
 
-```typescript
+```java
 // 在有问题的操作之前
-async function gitInit(directory: string) {
-  const stack = new Error().stack;
-  console.error('DEBUG git init:', {
-    directory,
-    cwd: process.cwd(),
-    nodeEnv: process.env.NODE_ENV,
-    stack,
-  });
-
-  await execFileAsync('git', ['init'], { cwd: directory });
+public static ProvenanceCode of(String value) {
+    if (value == null || value.isBlank()) {
+        // 临时埋点：捕获完整调用栈
+        log.warn("[debug] empty ProvenanceCode received, value={}, caller stack:",
+                 value,
+                 new Throwable("stack trace for empty input"));
+        throw new IllegalArgumentException("ProvenanceCode 不能为空");
+    }
+    return new ProvenanceCode(value);
 }
 ```
 
-**重要：** 在测试中使用 `console.error()`（而非 logger——可能不会显示）
+**重要：**
+- 用 `new Throwable("...")` 当 log 第 N 个参数，SLF4J 会自动打印 stack trace
+- 不要 `e.printStackTrace()`（不走 logger，CI 抓不到）
+- 临时埋点用完**立即删除**——不要污染生产日志
 
 **运行并捕获：**
 ```bash
-npm test 2>&1 | grep 'DEBUG git init'
+./gradlew :patra-registry-boot:test 2>&1 | grep -A 30 "empty ProvenanceCode received"
 ```
 
 **分析堆栈跟踪：**
-- 找测试文件名
+- 找测试方法名 / Controller 入口
 - 找触发调用的行号
-- 识别模式（同一个测试？同一个参数？）
+- 识别模式（同一个 endpoint？同一个 DTO 字段？）
 
 ## 找出导致污染的测试
 
-如果某些现象在测试期间出现，但你不知道是哪个测试造成的：
+如果某些现象在测试套件运行期间出现，但不知道是哪个测试造成的（如：测试后 `.gitignored` 目录里多了文件、某些静态状态被改了）：
 
 使用本目录下的二分查找脚本 `find-polluter.sh`：
 
 ```bash
-./find-polluter.sh '.git' 'src/**/*.test.ts'
+./find-polluter.sh '.cache/test-tmp' '*Test'
 ```
 
-逐个运行测试，在第一个"污染者"处停止。详见脚本中的使用说明。
+它会按 Gradle 测试模式逐批运行，二分定位污染来源测试类。详见脚本内使用说明。
 
-## 真实案例：空的 projectDir
+## 真实案例：空 ProvenanceCode 穿透 4 层
 
-**症状：** `.git` 被创建在 `packages/core/`（源代码目录）中
+**症状：** 集成测试 `PublicationControllerIT.should_reject_empty_provenance_code` 期望 `400`，实际返回 `500 IllegalArgumentException`。
 
 **追踪链：**
-1. `git init` 在 `process.cwd()` 中执行 ← cwd 参数为空
-2. WorktreeManager 被传入空的 projectDir
-3. Session.create() 传递了空字符串
-4. 测试在 beforeEach 之前访问了 `context.tempDir`
-5. setupCoreTest() 初始返回 `{ tempDir: '' }`
+1. `ProvenanceCode.of("")` 抛 `IllegalArgumentException` ← VO 层校验
+2. `PublicationMapper.toDomain(dto)` 调用了 VO 工厂
+3. `PublicationAppService.ingest(req)` 没捕获，直接抛出
+4. `PublicationController.ingest(@Valid req)` — `@Valid` 没生效
+5. `IngestRequest` record 字段没注解 ← **最初触发点**
 
-**根本原因：** 顶层变量初始化时访问了空值
+**根本原因：** DTO 字段缺少 `@NotBlank`，校验失效，空字符串穿透到 VO 层。
 
-**修复：** 将 tempDir 改为 getter，在 beforeEach 之前访问时抛出异常
+**修复：** 给 `IngestRequest` 字段加 `@NotBlank` 注解。
 
 **同时添加了纵深防御：**
-- 第 1 层：Project.create() 校验目录
-- 第 2 层：WorkspaceManager 校验非空
-- 第 3 层：NODE_ENV 守卫拒绝在 tmpdir 之外执行 git init
-- 第 4 层：git init 前记录堆栈跟踪
+- 第 1 层：`IngestRequest` 字段 `@NotBlank` / `@Pattern`（入口校验）
+- 第 2 层：`PublicationAppService` 用 `Objects.requireNonNull` 兜底（应用层）
+- 第 3 层：`ProvenanceCode.of` VO 工厂自身校验（值对象层，保留）
+- 第 4 层：集成测试 `@WebMvcTest` 覆盖 `@NotBlank` 触发路径
 
 ## 关键原则
 
@@ -155,15 +189,11 @@ digraph principle {
 
 ## 堆栈跟踪技巧
 
-**在测试中：** 使用 `console.error()` 而非 logger——logger 可能被抑制
+**在测试中：** 用 SLF4J `log.warn(... , new Throwable("..."))` 让 stack trace 走 logger，CI 能抓到
 **操作之前：** 在危险操作之前记录日志，而不是在失败之后
-**包含上下文：** 目录、cwd、环境变量、时间戳
-**捕获堆栈：** `new Error().stack` 能显示完整的调用链
+**包含上下文：** 输入参数、当前事务状态、租户 / Provenance 上下文、时间戳
+**捕获堆栈：** `new Throwable("debug").getStackTrace()` 能显示完整调用链；或在 Spring 异常处理器里统一打 `e.getCause()` 链
 
 ## 实际效果
 
-来自调试实践（2025-10-03）：
-- 通过 5 层追踪找到了根本原因
-- 在源头修复（getter 校验）
-- 添加了 4 层纵深防御
-- 1847 个测试通过，零污染
+按系统化追踪流程，4 层调用栈深处的 bug 平均能在 15-30 分钟内定位到源头并加上 4 层纵深防御，避免后续复发。

@@ -10,106 +10,101 @@
 
 ```dot
 digraph when_to_use {
-    "测试使用了 setTimeout/sleep？" [shape=diamond];
+    "测试使用了 Thread.sleep / Awaitility 硬等？" [shape=diamond];
     "是在测试时序行为吗？" [shape=diamond];
     "记录为什么需要超时" [shape=box];
     "使用基于条件的等待" [shape=box];
 
-    "测试使用了 setTimeout/sleep？" -> "是在测试时序行为吗？" [label="是"];
+    "测试使用了 Thread.sleep / Awaitility 硬等？" -> "是在测试时序行为吗？" [label="是"];
     "是在测试时序行为吗？" -> "记录为什么需要超时" [label="是"];
     "是在测试时序行为吗？" -> "使用基于条件的等待" [label="否"];
 }
 ```
 
 **适用场景：**
-- 测试中有硬编码延迟（`setTimeout`、`sleep`、`time.sleep()`）
+- 测试中有硬编码延迟（`Thread.sleep(ms)`、`TimeUnit.MILLISECONDS.sleep(...)`）
 - 测试不稳定（时而通过，高负载下失败）
 - 并行运行时测试超时
-- 等待异步操作完成
+- 等待异步操作完成（`@Async` 方法、RocketMQ 消费、`CompletableFuture`、定时任务）
 
 **不适用场景：**
-- 测试实际的时序行为（防抖、节流间隔）
+- 测试实际的时序行为（debounce / throttle / 限流间隔）——这种情况下时间就是被测对象
 - 如果使用硬编码超时，务必注释说明原因
 
 ## 核心模式
 
-```typescript
+```java
 // ❌ 之前：猜测时序
-await new Promise(r => setTimeout(r, 50));
-const result = getResult();
-expect(result).toBeDefined();
+publisher.publish(event);
+Thread.sleep(50);                       // 希望 50ms 内被消费
+assertThat(handler.received()).isNotNull();
 
-// ✅ 之后：等待条件满足
-await waitFor(() => getResult() !== undefined);
-const result = getResult();
-expect(result).toBeDefined();
+// ✅ 之后：等待条件满足（推荐 Awaitility）
+publisher.publish(event);
+Awaitility.await()
+    .atMost(Duration.ofSeconds(5))
+    .pollInterval(Duration.ofMillis(10))
+    .untilAsserted(() -> assertThat(handler.received()).isNotNull());
 ```
 
-## 常用模式速查
+## patra-api 推荐：用 Awaitility
+
+测试依赖（`build.gradle.kts`）：
+
+```kotlin
+testImplementation("org.awaitility:awaitility:4.2.2")
+```
+
+常用模式速查：
 
 | 场景 | 模式 |
 |------|------|
-| 等待事件 | `waitFor(() => events.find(e => e.type === 'DONE'))` |
-| 等待状态 | `waitFor(() => machine.state === 'ready')` |
-| 等待数量 | `waitFor(() => items.length >= 5)` |
-| 等待文件 | `waitFor(() => fs.existsSync(path))` |
-| 复合条件 | `waitFor(() => obj.ready && obj.value > 10)` |
+| 等待事件出现 | `await().untilAsserted(() -> assertThat(handler.events()).contains(expected))` |
+| 等待聚合状态 | `await().until(() -> repo.findById(id).map(Aggregate::isReady).orElse(false))` |
+| 等待数量 | `await().until(() -> handler.events().size() >= 5)` |
+| 等待外部状态（DB 行存在） | `await().until(() -> jdbc.queryForObject("select count(*)...", Integer.class) > 0)` |
+| 复合条件 | `await().until(() -> aggregate.isReady() && aggregate.value() > 10)` |
 
-## 实现方式
+`untilAsserted` 与 `until`：
+- `untilAsserted(ThrowingRunnable)` —— 内部用 AssertJ 断言，失败时 Awaitility 重试；超时后抛出最后一次断言异常（**错误信息清晰**，推荐）
+- `until(Callable<Boolean>)` —— 只检查 true/false；超时后只能报 "Condition was not fulfilled within ..."（错误信息少）
 
-通用轮询函数：
-```typescript
-async function waitFor<T>(
-  condition: () => T | undefined | null | false,
-  description: string,
-  timeoutMs = 5000
-): Promise<T> {
-  const startTime = Date.now();
+## 不引入 Awaitility 时的简化实现
 
-  while (true) {
-    const result = condition();
-    if (result) return result;
-
-    if (Date.now() - startTime > timeoutMs) {
-      throw new Error(`Timeout waiting for ${description} after ${timeoutMs}ms`);
-    }
-
-    await new Promise(r => setTimeout(r, 10)); // 每 10ms 轮询一次
-  }
-}
-```
-
-参见本目录下的 `condition-based-waiting-example.ts`，其中包含完整实现和领域专用辅助函数（`waitForEvent`、`waitForEventCount`、`waitForEventMatch`），源自实际调试过程。
+如果你不想引入 Awaitility，可以参见本目录下的 `condition-based-waiting-example.java` —— 一个 60 行左右的 `waitFor` 工具类。但推荐直接用 Awaitility——它的 fluent API 与超时 / 轮询 / 异常处理都更完整。
 
 ## 常见错误
 
-**❌ 轮询太频繁：** `setTimeout(check, 1)` —— 浪费 CPU
-**✅ 修正：** 每 10ms 轮询一次
+**❌ 轮询太频繁：** `pollInterval(Duration.ofMillis(1))` —— 浪费 CPU
+**✅ 修正：** `pollInterval(Duration.ofMillis(10))` 是合理默认
 
-**❌ 没有超时：** 条件永远不满足时无限循环
-**✅ 修正：** 始终设置超时并提供清晰的错误信息
+**❌ 没有超时：** 用 `while (true) Thread.sleep(10);` 等待条件永远不满足时无限循环
+**✅ 修正：** Awaitility 默认 10 秒超时；显式 `atMost(Duration.ofSeconds(5))`
 
-**❌ 数据过期：** 在循环外缓存状态
-**✅ 修正：** 在循环内调用 getter 获取最新数据
+**❌ 缓存过期数据：** 在 `until` 外面 `var snapshot = repo.findAll();`，循环里看的是快照
+**✅ 修正：** `until(() -> repo.findAll().size() >= N)` —— 每次轮询都重新查
+
+**❌ Awaitility 在 `@Transactional` 测试内被事务隔离骗到：** 主线程的事务可见性 ≠ 数据库已持久化
+**✅ 修正：** 写 RocketMQ 消费、异步 handler 等场景时，把测试拆出 `@Transactional`，或用 `TestTransaction.flagForCommit()` + `TestTransaction.end()`
 
 ## 何时硬编码超时是正确的
 
-```typescript
-// 工具每 100ms tick 一次——需要 2 次 tick 来验证部分输出
-await waitForEvent(manager, 'TOOL_STARTED'); // 首先：等待条件
-await new Promise(r => setTimeout(r, 200));   // 然后：等待有明确时序依据的行为
-// 200ms = 100ms 间隔的 2 次 tick——有文档说明且有充分理由
+```java
+// 业务规则：节流器要求两次调用之间至少 200ms
+service.callOnce();
+Awaitility.await().untilAsserted(...);   // 首先：等待第一次调用的可观察后果
+Thread.sleep(200);                       // 然后：等待"节流窗口"——业务时序，非猜测
+service.callOnce();                      // 这一次应该被允许
 ```
 
 **使用要求：**
-1. 首先等待触发条件
-2. 基于已知时序（而非猜测）
-3. 注释说明原因
+1. 首先等待触发条件（先用 Awaitility 锚定时序点）
+2. 硬等的 ms 数有业务依据（节流间隔、ttl 等），不是"试出来的"
+3. 注释写明 ms 数的来源
 
 ## 实际效果
 
-来自调试实践（2025-10-03）：
-- 修复了 3 个文件中的 15 个不稳定测试
-- 通过率：60% → 100%
-- 执行时间：快了 40%
-- 再无竞态条件
+把 RocketMQ 消费测试 / 定时任务测试 / `@TransactionalEventListener` 测试中的 `Thread.sleep(50/100/200)` 全部替换为 `Awaitility.await().untilAsserted(...)` 后：
+- CI 失败率显著下降（消除竞态条件）
+- 单测时间反而更快（条件满足立即返回，不再傻等 200ms）
+- 错误信息可读（`untilAsserted` 会把 AssertJ 失败原因 attach 到 timeout exception）

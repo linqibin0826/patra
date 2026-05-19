@@ -86,26 +86,44 @@ description: 遇到任何 bug、测试失败或异常行为时使用，在提出
    然后针对该组件深入调查
    ```
 
-   **示例（多层系统）：**
-   ```bash
-   # 第 1 层：工作流
-   echo "=== Secrets available in workflow: ==="
-   echo "IDENTITY: ${IDENTITY:+SET}${IDENTITY:-UNSET}"
+   **示例（patra-api 多层日志追踪）：**
 
-   # 第 2 层：构建脚本
-   echo "=== Env vars in build script: ==="
-   env | grep IDENTITY || echo "IDENTITY not in environment"
+   场景：REST 调用返回 `{}`，但数据库里明明有数据。在六边形分层每一层加埋点：
 
-   # 第 3 层：签名脚本
-   echo "=== Keychain state: ==="
-   security list-keychains
-   security find-identity -v
+   ```java
+   // 第 1 层：Adapter（Controller）— 请求入口
+   @PostMapping("/api/v1/provenance/{code}")
+   public ProvenanceResponse query(@PathVariable String code) {
+       log.debug("[adapter] received provenanceCode={}", code);
+       var result = appService.lookup(code);
+       log.debug("[adapter] returning result: {}", result);
+       return mapper.toResponse(result);
+   }
 
-   # 第 4 层：实际签名
-   codesign --sign "$IDENTITY" --verbose=4 "$APP"
+   // 第 2 层：App（Handler / Service）— 编排层
+   @Transactional(readOnly = true)
+   public ProvenanceView lookup(String code) {
+       log.debug("[app] before repo query, code={}", code);
+       var aggregate = repository.findByCode(code);
+       log.debug("[app] repo returned: {}", aggregate);
+       return mapper.toView(aggregate);
+   }
+
+   // 第 3 层：Infra（Repository / Adapter）— 持久化
+   @Override
+   public Optional<Provenance> findByCode(String code) {
+       log.debug("[infra] JPA query: code={}", code);
+       var entity = dao.findByCode(code);
+       log.debug("[infra] JPA result: entity={}", entity);
+       return entity.map(mapper::toDomain);
+   }
+
+   // 第 4 层：JPA / Hibernate（开 SQL 日志）
+   // application.yml: logging.level.org.hibernate.SQL=DEBUG
+   //                  logging.level.org.hibernate.orm.jdbc.bind=TRACE
    ```
 
-   **由此可以看出：** 哪一层出了问题（secrets → workflow ✓, workflow → build ✗）
+   **由此可以看出：** 哪一层数据没正确传递（adapter ✓ → app ✓ → infra 返回 Optional.empty() ✗）。重点排查 infra 层：是 WHERE 条件错？deleted_at 软删除？租户隔离？看 Hibernate SQL 即可定位。
 
 5. **跟踪数据流**
 
@@ -176,7 +194,7 @@ description: 遇到任何 bug、测试失败或异常行为时使用，在提出
    - 尽可能用自动化测试
    - 没有测试框架就写一次性测试脚本
    - 修复前必须先有测试
-   - 使用 `superpowers:test-driven-development` 技能来编写规范的失败测试
+   - 使用 `patra:test-driven-development` 技能来编写规范的失败测试
 
 2. **实施单一修复**
    - 修复已定位的根本原因
@@ -284,8 +302,8 @@ description: 遇到任何 bug、测试失败或异常行为时使用，在提出
 - **`condition-based-waiting.md`** - 用条件轮询替代硬编码等待时间
 
 **相关技能：**
-- **superpowers:test-driven-development** - 用于创建失败测试用例（第四阶段，第 1 步）
-- **superpowers:verification-before-completion** - 在宣称成功之前验证修复确实有效
+- **patra:test-driven-development** - 用于创建失败测试用例（第四阶段，第 1 步）
+- **patra:verification-before-completion** - 在宣称成功之前验证修复确实有效
 
 ## 实际效果
 
