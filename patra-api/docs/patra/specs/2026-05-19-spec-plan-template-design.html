@@ -249,24 +249,52 @@
   <p>追加 note 的强制规则<strong>不会</strong>写到这两个 skill 里（留作后续 PR）。本 PR 里规则只体现在模板的右栏 hint 文字 + reviewer prompt 检查项里。当前默认 AI 看到模板 hint 就会遵循。</p>
 </aside>
 
-<h2 id="design-language">5. CSS / 组件设计语言</h2>
+<h2 id="design-language">5. 视觉设计原则（委托给 frontend-design skill）</h2>
+
+<aside class="callout info">
+  <span class="title">设计权委托</span>
+  <p>本次改造<strong>不在 spec 里硬编码具体颜色 / 字体 / 组件样式</strong>。模板的视觉风格由 <code>/frontend-design:frontend-design</code> skill 在实施期产出，确保符合下方 3 个原则。这避免我（设计能力存疑的工程师）拍脑袋定的样式被固化进模板。</p>
+</aside>
+
+<h3>5.1 三大视觉原则</h3>
 
 <table>
   <thead>
-    <tr><th>维度</th><th>取值</th></tr>
+    <tr><th>原则</th><th>含义</th></tr>
   </thead>
   <tbody>
-    <tr><td>主色</td><td><code>#4338ca</code>（indigo）</td></tr>
-    <tr><td>中性</td><td>stone 系（<code>#fafaf9</code> ~ <code>#1c1917</code>）</td></tr>
-    <tr><td>语义色</td><td>success: <code>#15803d</code> / warning: <code>#b45309</code> / danger: <code>#b91c1c</code> / info: <code>#0369a1</code></td></tr>
-    <tr><td>note 类型</td><td>decision: indigo / change: amber / tradeoff: violet / other: slate</td></tr>
-    <tr><td>字体</td><td>Inter (文本) + JetBrains Mono (代码)</td></tr>
-    <tr><td>组件库</td><td>callout (4 色) / pill (语义+类型) / decision card / task card (data-status 状态机) / note entry (4 类)</td></tr>
-    <tr><td>圆角 / 间距</td><td>CSS 变量 <code>--r-sm/md/lg</code>, <code>--gap-*</code> 统一</td></tr>
+    <tr>
+      <td><strong>简约</strong></td>
+      <td>视觉元素克制——必要的层次差异、不滥用色彩；优先字体粗细 / 间距区分而非颜色堆砌</td>
+    </tr>
+    <tr>
+      <td><strong>易读</strong></td>
+      <td>长文档阅读舒适——合适行高 / 段距 / 字号 / 对比度；代码块清晰；表格扫读快</td>
+    </tr>
+    <tr>
+      <td><strong>易改</strong></td>
+      <td>CSS 变量集中在 <code>:root</code>，调一处就改全局；命名语义化（不出现 <code>--c-1</code> 这种位置依赖名）；新增组件少量代码即可</td>
+    </tr>
   </tbody>
 </table>
 
-<p>两份模板各自 inline 完整 CSS（HTML 单文件自包含约束），但<mark>设计语言（变量值、组件命名）跨两份模板保持一致</mark>——手工同步。</p>
+<h3>5.2 结构性约束（spec 强制定义，frontend-design 不可违反）</h3>
+
+<ul>
+  <li><strong>支持三栏布局</strong>（§3 定义的 220 / fit / 320 grid + sticky + 响应式断点 1024px）</li>
+  <li><strong>4 类 note pill</strong> 必须视觉上可区分（DECISION / CHANGE / TRADEOFF / OTHER），具体配色由 frontend-design 决定</li>
+  <li><strong>task card 的 data-status 状态机</strong>（pending / in-progress / done / blocked / skipped）必须有显著视觉区分</li>
+  <li><strong>HTML 单文件自包含</strong>——CSS / JS inline，禁止外部依赖（字体可引 Google Fonts）</li>
+  <li><strong>spec 与 plan 两份模板使用同一套 CSS 变量定义</strong>（手工同步保持一致，CSS 变量名约定一致）</li>
+</ul>
+
+<h3>5.3 实施流程</h3>
+
+<ol>
+  <li>plan 第一个 task：调用 <code>/frontend-design:frontend-design</code> skill，输入 3 大原则 + 5 项结构性约束 + 章节骨架（spec 7 / plan 5），让它产出 base CSS</li>
+  <li>把 frontend-design 产出的 CSS 嵌入 spec-template.html 和 plan-template.html</li>
+  <li>两份模板的 CSS 内容保持完全一致（除模板专属选择器外，如 <code>.task / .step</code> 只在 plan 模板）</li>
+</ol>
 
 <h2 id="skill-changes">6. SKILL.md / reviewer 修订要点</h2>
 
@@ -320,6 +348,12 @@
   <p class="alternatives"><strong>备选：</strong>本 PR 一并改 — 否决：PR 范围已经较大（10+ 文件），再加 2 个 skill 改造增加 review 负担。模板 hint 文字对当前阶段已足够。</p>
 </div>
 
+<div class="decision">
+  <h3>决策 6：视觉风格委托给 frontend-design skill（vs 我直接指定）</h3>
+  <p>不在 spec 里硬编码 CSS 配色 / 字体 / 具体组件样式。模板视觉由 <code>/frontend-design:frontend-design</code> skill 产出，spec 只规定 3 大原则（简约 / 易读 / 易改）和 5 项结构性约束。</p>
+  <p class="alternatives"><strong>备选 A：</strong>我直接在 spec 里指定 indigo + Inter 全套（即 v0.1 写法）— 否决：我（工程师）的视觉判断不可靠，固化进 spec 会拖累后续调优。<br><strong>备选 B：</strong>不调用 frontend-design，让 AI 在写模板时自由设计 — 否决：又回到"自由发挥"老路，无法保证质量。</p>
+</div>
+
 <h2 id="risks">8. 风险与缓解</h2>
 
 <table>
@@ -357,11 +391,11 @@
     <tr><th>#</th><th>路径</th><th>操作</th><th>说明</th></tr>
   </thead>
   <tbody>
-    <tr><td>1</td><td><code>brainstorming/template/spec-template.html</code></td><td><span class="pill create">create</span></td><td>三栏布局 + 完整 CSS + 7 个 section 骨架 + 4 类 note entry template</td></tr>
+    <tr><td>1</td><td><code>brainstorming/template/spec-template.html</code></td><td><span class="pill create">create</span></td><td>三栏布局 + frontend-design 产出 CSS + 7 个 section 骨架 + 4 类 note entry template</td></tr>
     <tr><td>2</td><td><code>brainstorming/SKILL.md</code></td><td><span class="pill modify">modify</span></td><td>第 6 步改"复制模板"，删 guide 引用</td></tr>
     <tr><td>3</td><td><code>brainstorming/spec-document-reviewer-prompt.md</code></td><td><span class="pill modify">modify</span></td><td>加检查项"是否严格按模板"</td></tr>
     <tr><td>4</td><td><code>brainstorming/html-output-guide.md</code></td><td><span class="pill delete">delete</span></td><td>内容已固化到模板</td></tr>
-    <tr><td>5</td><td><code>writing-plans/template/plan-template.html</code></td><td><span class="pill create">create</span></td><td>三栏 + task 状态机 + 4 类 note entry</td></tr>
+    <tr><td>5</td><td><code>writing-plans/template/plan-template.html</code></td><td><span class="pill create">create</span></td><td>三栏 + frontend-design 产出 CSS + task 状态机 + 4 类 note entry</td></tr>
     <tr><td>6</td><td><code>writing-plans/SKILL.md</code></td><td><span class="pill modify">modify</span></td><td>同 #2 模式</td></tr>
     <tr><td>7</td><td><code>writing-plans/plan-document-reviewer-prompt.md</code></td><td><span class="pill modify">modify</span></td><td>同 #3 模式</td></tr>
   </tbody>
