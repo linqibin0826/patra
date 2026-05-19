@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spec / Plan 模板化改造 实现计划</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --c-bg: #fafaf9; --c-surface: #ffffff;
+      --c-border: #e7e5e4; --c-border-strong: #d6d3d1;
+      --c-text: #1c1917; --c-text-muted: #57534e; --c-text-subtle: #78716c;
+      --c-primary: #4338ca; --c-primary-bg: #eef2ff;
+      --c-success: #15803d; --c-success-bg: #f0fdf4;
+      --c-warning: #b45309; --c-warning-bg: #fffbeb;
+      --c-danger: #b91c1c; --c-danger-bg: #fef2f2;
+      --c-info: #0369a1; --c-info-bg: #f0f9ff;
+      --c-code-bg: #f5f5f4;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 15px; line-height: 1.7; color: var(--c-text); background: var(--c-bg); margin: 0; }
+    .page { max-width: 960px; margin: 0 auto; padding: 48px 32px 96px; }
+    code, pre { font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace; font-size: 0.92em; }
+    code { background: var(--c-code-bg); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--c-border); color: var(--c-primary); }
+    pre { background: #1c1917; color: #fafaf9; border-radius: 8px; padding: 16px 20px; overflow-x: auto; line-height: 1.55; font-size: 13px; }
+    pre code { background: none; padding: 0; border: none; color: inherit; }
+    header.doc-header { border-bottom: 2px solid var(--c-border-strong); padding-bottom: 24px; margin-bottom: 36px; }
+    header.doc-header h1 { font-size: 28px; font-weight: 700; margin: 0 0 12px; letter-spacing: -0.5px; }
+    .meta-bar { display: flex; flex-wrap: wrap; gap: 18px; font-size: 13px; color: var(--c-text-subtle); }
+    .status-pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--c-warning-bg); color: var(--c-warning); border: 1px solid var(--c-warning); }
+    .for-ai-worker { background: var(--c-info-bg); border-left: 4px solid var(--c-info); padding: 16px 20px; border-radius: 8px; margin: 16px 0; font-size: 13.5px; }
+    .for-ai-worker strong { color: var(--c-info); }
+    dl.meta { display: grid; grid-template-columns: max-content 1fr; gap: 6px 20px; margin: 20px 0; font-size: 14px; }
+    dl.meta dt { font-weight: 600; color: var(--c-text-subtle); text-transform: uppercase; letter-spacing: 0.4px; font-size: 12px; padding-top: 3px; }
+    dl.meta dd { margin: 0; }
+    dl.meta dd a { color: var(--c-primary); text-decoration: none; }
+    h2 { font-size: 21px; font-weight: 700; margin: 44px 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--c-border); }
+    .file-tree { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 10px; padding: 18px 22px; }
+    .file-tree pre { background: none; color: var(--c-text); padding: 0; font-size: 13px; }
+    article.task { background: var(--c-surface); border: 1px solid var(--c-border); border-left: 4px solid var(--c-border-strong); border-radius: 10px; padding: 20px 24px; margin: 22px 0; }
+    article.task[data-status="pending"] { border-left-color: var(--c-border-strong); }
+    article.task[data-status="in-progress"] { border-left-color: #3b82f6; background: #eff6ff; }
+    article.task[data-status="done"] { border-left-color: var(--c-success); background: #f3f4f6; }
+    article.task[data-status="blocked"] { border-left-color: var(--c-danger); background: var(--c-danger-bg); }
+    article.task[data-status="skipped"] { opacity: 0.55; text-decoration: line-through; }
+    article.task header h2 { font-size: 18px; margin: 0 0 8px; padding: 0; border: none; }
+    article.task[data-status="pending"] header h2::before { content: "☐ "; color: var(--c-text-subtle); }
+    article.task[data-status="in-progress"] header h2::before { content: "▶ "; color: #3b82f6; }
+    article.task[data-status="done"] header h2::before { content: "☑ "; color: var(--c-success); }
+    article.task[data-status="blocked"] header h2::before { content: "✗ "; color: var(--c-danger); }
+    article.task[data-status="skipped"] header h2::before { content: "⊘ "; }
+    .files { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 8px 0 16px; font-size: 13px; }
+    .files dt { font-weight: 600; color: var(--c-text-subtle); text-transform: uppercase; letter-spacing: 0.3px; font-size: 11px; }
+    .files dd { margin: 0; }
+    ol.steps { list-style: none; padding: 0; }
+    li.step { position: relative; padding: 12px 16px 12px 38px; margin: 8px 0; border-radius: 6px; background: var(--c-bg); border: 1px solid transparent; }
+    li.step::before { position: absolute; left: 12px; top: 12px; font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+    li.step[data-status="pending"]::before { content: "☐"; color: var(--c-text-subtle); }
+    li.step[data-status="in-progress"]::before { content: "▶"; color: #3b82f6; }
+    li.step[data-status="done"]::before { content: "☑"; color: var(--c-success); }
+    li.step[data-status="blocked"]::before { content: "✗"; color: var(--c-danger); }
+    li.step[data-status="skipped"]::before { content: "⊘"; opacity: 0.5; }
+    li.step[data-status="in-progress"] { background: #eff6ff; border-color: #3b82f6; }
+    li.step[data-status="done"] { background: #f3f4f6; }
+    li.step strong { font-weight: 600; }
+    aside.callout { border-radius: 10px; padding: 16px 20px; margin: 18px 0; border-left: 4px solid; }
+    aside.callout.info { background: var(--c-info-bg); border-color: var(--c-info); }
+    aside.callout.success { background: var(--c-success-bg); border-color: var(--c-success); }
+    aside.callout.warning { background: var(--c-warning-bg); border-color: var(--c-warning); }
+    aside.callout strong { display: block; margin-bottom: 4px; }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+    .pill.create { background: var(--c-success-bg); color: var(--c-success); border: 1px solid var(--c-success); }
+    .pill.modify { background: var(--c-info-bg); color: var(--c-info); border: 1px solid var(--c-info); }
+    .pill.delete { background: var(--c-danger-bg); color: var(--c-danger); border: 1px solid var(--c-danger); }
+    .pill.verify { background: var(--c-warning-bg); color: var(--c-warning); border: 1px solid var(--c-warning); }
+    .muted { color: var(--c-text-subtle); font-size: 13.5px; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+<header class="doc-header">
+  <h1>Spec / Plan 模板化改造 实现计划</h1>
+  <div class="meta-bar">
+    <span>📅 2026-05-19</span>
+    <span>🌿 chore/claude-config-refactor</span>
+    <span>📋 plan</span>
+    <span class="status-pill">draft</span>
+  </div>
+
+  <aside class="for-ai-worker">
+    <strong>面向 AI 代理的工作者：</strong>
+    必需子技能：使用 <code>patra:subagent-driven-development</code>（推荐）
+    或 <code>patra:executing-plans</code> 逐任务实现。
+    通过修改任务卡片与步骤的 <code>data-status</code> 属性追踪进度
+    （pending / in-progress / done / blocked / skipped）。
+    每完成一个 task 立即 commit。本计划共 7 个 task，预计 6 个 commit（Task 1 无 commit，纯 CSS 设计阶段）。
+  </aside>
+
+  <dl class="meta">
+    <dt>目标</dt>
+    <dd>把 <code>patra:brainstorming</code> 和 <code>patra:writing-plans</code> 两个 skill 从"轻骨架自由发挥"改造为"刚性模板+占位符填空"模式。新增三栏布局（左 TOC / 中 内容 / 右 Implementation Notes），右栏 4 类 note entry。</dd>
+    <dt>架构</dt>
+    <dd>视觉设计权委托给 <code>/frontend-design:frontend-design</code> skill（Task 1 调用）。两份独立模板各自 inline 完整 CSS，但 CSS 变量定义保持完全一致。模板放在各 skill 的 <code>template/</code> 子目录。</dd>
+    <dt>技术栈</dt>
+    <dd>HTML 模板（单文件自包含）+ Markdown skill 文件。frontend-design skill 产出 base CSS。无构建步骤、无 JS（除字体引用）。</dd>
+    <dt>关联 spec</dt>
+    <dd><a href="../specs/2026-05-19-spec-plan-template-design.html">2026-05-19-spec-plan-template-design.html</a></dd>
+  </dl>
+</header>
+
+<section>
+  <h2>范围检查结果</h2>
+  <aside class="callout success">
+    <strong>单 plan 覆盖</strong>
+    spec 聚焦单一主题（两个 skill 模板化），7 文件变更逻辑紧密耦合，无需拆分子计划。
+  </aside>
+</section>
+
+<section>
+  <h2>文件结构</h2>
+  <div class="file-tree">
+    <pre>patra-api/.claude-marketplace/patra/skills/
+
+├── brainstorming/
+│   ├── SKILL.md                                  <span class="pill modify">modify</span>   第 6/7 步重写，删 guide 引用
+│   ├── spec-document-reviewer-prompt.md          <span class="pill modify">modify</span>   加"是否严格按模板"检查项
+│   ├── html-output-guide.md                      <span class="pill delete">delete</span>   内容已固化到模板
+│   ├── template/                                 <span class="pill create">create</span>   新建子目录
+│   │   └── spec-template.html                    <span class="pill create">create</span>   三栏布局 + frontend-design CSS + 7 个 section + 4 类 note
+│   ├── visual-companion.md                       <span class="muted">不动</span>
+│   └── scripts/                                  <span class="muted">不动（视觉伴侣后端）</span>
+│
+└── writing-plans/
+    ├── SKILL.md                                  <span class="pill modify">modify</span>   重写"计划文档结构"章节
+    ├── plan-document-reviewer-prompt.md          <span class="pill modify">modify</span>   加"是否严格按模板"检查项
+    └── template/                                 <span class="pill create">create</span>   新建子目录
+        └── plan-template.html                    <span class="pill create">create</span>   三栏 + 同套 CSS + task 状态机 + 4 类 note</pre>
+  </div>
+</section>
+
+<section class="tasks">
+  <h2>任务列表</h2>
+
+  <!-- ============== TASK 1 ============== -->
+  <article class="task" id="task-1" data-status="pending">
+    <header>
+      <h2>任务 1：调用 frontend-design skill 产出 base CSS</h2>
+      <dl class="files">
+        <dt>产出</dt><dd>base CSS（保留在 context 中，下一 task 嵌入模板）</dd>
+        <dt>关联 spec</dt><dd>§5.3 实施流程 第 1 步</dd>
+      </dl>
+    </header>
+
+    <ol class="steps">
+      <li class="step" data-status="pending">
+        <strong>步骤 1：用 Skill 工具加载 <code>frontend-design:frontend-design</code></strong>
+        <p>调用：</p>
+        <pre><code class="lang-bash">Skill('frontend-design:frontend-design')</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 2：向 frontend-design 提交设计需求（完整 brief）</strong>
+        <p>提交以下完整需求（复制到 frontend-design 的对话）：</p>
+        <pre><code>设计目标：为 patra:brainstorming 和 patra:writing-plans 两个 skill 产出共享的 base CSS，
+将分别 inline 到 spec-template.html 和 plan-template.html 两份模板。
+
+3 大视觉原则：
+1. 简约：视觉元素克制，必要层次差异，不滥用色彩；优先字体粗细 / 间距区分而非颜色堆砌
+2. 易读：长文档阅读舒适，合适行高 / 段距 / 字号 / 对比度；代码块清晰，表格扫读快
+3. 易改：CSS 变量集中在 :root，调一处就改全局；命名语义化（不出现 --c-1 这种位置依赖名）
+
+5 项结构性约束（不可违反）：
+A. 支持三栏布局：grid-template-columns: 220px minmax(0, 1fr) 320px; gap: 24px;
+   左栏 .toc 和右栏 .notes-panel 都是 sticky (top: 24px)
+   响应式 @media (max-width: 1024px) 折叠为单栏（TOC 移到顶部 details，右栏移到底部）
+B. 4 类 note pill 必须视觉可区分：data-type="decision" / "change" / "tradeoff" / "other"
+C. task card 的 data-status 状态机必须有显著视觉区分：pending / in-progress / done / blocked / skipped
+D. HTML 单文件自包含——CSS inline，禁止外部依赖（字体可引 Google Fonts）
+E. CSS 变量名必须跨两份模板保持完全一致（手工同步）
+
+必须覆盖的组件清单：
+- header.doc-header（含 meta-bar、status-pill）
+- nav.toc（左栏导航）
+- aside.callout（4 色：info / success / warning / danger / summary）
+- table（含偶行斑马纹）
+- pre + code（暗色代码块）
+- .pill（语义 pill：low/mid/high/create/modify/delete/verify；类型 pill：decision/change/tradeoff/other）
+- .decision（决策卡片，含 .alternatives）
+- article.task + ol.steps（含 data-status 5 状态渲染）
+- aside.notes-panel（右栏面板，含 ol.notes-log、empty-state、notes-stats footer）
+- dl.meta（plan 头部元数据）
+- aside.for-ai-worker（plan 头部 AI 工作者提示）
+
+字体：Google Fonts (Inter + JetBrains Mono)
+
+产出形式：仅给我完整的 &lt;style&gt;...&lt;/style&gt; 内容（不写 HTML 结构、不写文件）。
+我会把这段 CSS inline 到两份模板的 &lt;head&gt; 中。</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 3：验证 frontend-design 产出符合所有约束</strong>
+        <p>checklist（对 CSS 字符串做检查，应全 ✓ 否则要求 frontend-design 补改）：</p>
+        <pre><code class="lang-bash"># 三栏 grid
+echo "$CSS" | grep -q "grid-template-columns.*220px.*320px" && echo "✓ 三栏 grid" || echo "✗ 缺三栏 grid"
+
+# 响应式断点
+echo "$CSS" | grep -q "1024px" && echo "✓ 响应式断点" || echo "✗ 缺响应式断点"
+
+# 4 类 note pill
+for type in decision change tradeoff other; do
+  echo "$CSS" | grep -q "data-type=\"$type\"\\|note.*$type\\|pill.$type" && echo "✓ $type pill" || echo "✗ 缺 $type pill"
+done
+
+# 5 类 task data-status
+for s in pending in-progress done blocked skipped; do
+  echo "$CSS" | grep -q "data-status=\"$s\"" && echo "✓ task $s" || echo "✗ 缺 task $s"
+done
+
+# CSS 变量定义在 :root
+echo "$CSS" | grep -q "^:root\\|^  :root" && echo "✓ :root 变量" || echo "✗ 缺 :root 变量"</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 4：保存 base CSS 到工作记忆，进入 Task 2</strong>
+        <p>把 frontend-design 产出的完整 <code>&lt;style&gt;</code> 内容保存为变量 <code>$BASE_CSS</code> 或记录到 scratchpad。Task 2 和 Task 3 会复用这段 CSS 嵌入到两份模板。</p>
+        <p>本 task 不 commit（CSS 是中间产物，不入 git）。</p>
+      </li>
+    </ol>
+  </article>
+
+  <!-- ============== TASK 2 ============== -->
+  <article class="task" id="task-2" data-status="pending">
+    <header>
+      <h2>任务 2：创建 spec-template.html</h2>
+      <dl class="files">
+        <dt>创建</dt><dd><code>patra-api/.claude-marketplace/patra/skills/brainstorming/template/spec-template.html</code></dd>
+        <dt>关联 spec</dt><dd>§3 三栏布局 / §4 右栏 / §5.3 实施流程 第 2 步</dd>
+      </dl>
+    </header>
+
+    <ol class="steps">
+      <li class="step" data-status="pending">
+        <strong>步骤 1：创建目录</strong>
+        <pre><code class="lang-bash">mkdir -p /Users/linqibin/Projects/Products/Patra/patra-api/.claude-marketplace/patra/skills/brainstorming/template</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 2：用 Write 工具创建 spec-template.html，结构如下</strong>
+        <p>骨架（CSS 内容由 Task 1 的 <code>$BASE_CSS</code> 填入 <code>&lt;style&gt;</code> 块）：</p>
+        <pre><code class="lang-html">&lt;!DOCTYPE html&gt;
+&lt;html lang="zh-CN"&gt;
+&lt;head&gt;
+  &lt;meta charset="UTF-8"&gt;
+  &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+  &lt;title&gt;&lt;!-- FILL: 设计文档标题 --&gt;[设计文档标题]&lt;/title&gt;
+  &lt;link rel="preconnect" href="https://fonts.googleapis.com"&gt;
+  &lt;link rel="preconnect" href="https://fonts.gstatic.com" crossorigin&gt;
+  &lt;link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap" rel="stylesheet"&gt;
+  &lt;style&gt;
+  /* === 从 Task 1 的 $BASE_CSS 完整粘贴到此处 === */
+  &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class="layout"&gt;
+
+  &lt;!-- 左栏：TOC --&gt;
+  &lt;nav class="toc"&gt;
+    &lt;h3&gt;目录&lt;/h3&gt;
+    &lt;ol&gt;
+      &lt;li&gt;&lt;a href="#background"&gt;1. 背景与现状&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href="#scope"&gt;2. 范围边界&lt;/a&gt;&lt;/li&gt;
+      &lt;!-- FILL: 根据 spec 实际章节补全 TOC --&gt;
+      &lt;li&gt;&lt;a href="#decisions"&gt;关键决策与备选&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href="#risks"&gt;风险与缓解&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href="#changes"&gt;改造文件清单&lt;/a&gt;&lt;/li&gt;
+    &lt;/ol&gt;
+  &lt;/nav&gt;
+
+  &lt;!-- 中栏：内容 --&gt;
+  &lt;main class="content"&gt;
+    &lt;header class="doc-header"&gt;
+      &lt;h1&gt;&lt;!-- FILL: 文档大标题 --&gt;[设计文档标题]&lt;/h1&gt;
+      &lt;div class="meta-bar"&gt;
+        &lt;span&gt;📅 &lt;!-- FILL: ISO 日期 --&gt;[YYYY-MM-DD]&lt;/span&gt;
+        &lt;span&gt;🌿 &lt;!-- FILL: 分支名 --&gt;[branch-name]&lt;/span&gt;
+        &lt;span&gt;🎯 spec&lt;/span&gt;
+        &lt;span class="status-pill"&gt;draft&lt;/span&gt;
+      &lt;/div&gt;
+    &lt;/header&gt;
+
+    &lt;aside class="callout summary"&gt;
+      &lt;span class="title"&gt;关键决策摘要&lt;/span&gt;
+      &lt;p&gt;&lt;!-- FILL: 3-5 句话回答"这份文档做了什么决定" --&gt;[摘要内容]&lt;/p&gt;
+    &lt;/aside&gt;
+
+    &lt;section id="background"&gt;
+      &lt;h2&gt;1. 背景与现状&lt;/h2&gt;
+      &lt;p&gt;&lt;!-- FILL: 项目当前状态 / 触发本次改造的原因 --&gt;[背景描述]&lt;/p&gt;
+    &lt;/section&gt;
+
+    &lt;section id="scope"&gt;
+      &lt;h2&gt;2. 范围边界&lt;/h2&gt;
+      &lt;div class="two-col"&gt;
+        &lt;aside class="callout success"&gt;
+          &lt;span class="title"&gt;In Scope&lt;/span&gt;
+          &lt;ul&gt;&lt;li&gt;&lt;!-- FILL: 做什么 --&gt;[条目]&lt;/li&gt;&lt;/ul&gt;
+        &lt;/aside&gt;
+        &lt;aside class="callout warning"&gt;
+          &lt;span class="title"&gt;Out of Scope&lt;/span&gt;
+          &lt;ul&gt;&lt;li&gt;&lt;!-- FILL: 不做什么 --&gt;[条目]&lt;/li&gt;&lt;/ul&gt;
+        &lt;/aside&gt;
+      &lt;/div&gt;
+    &lt;/section&gt;
+
+    &lt;!-- FILL: 中间章节按 spec 主题增减（核心方案 / 加载机制 / 架构 等）--&gt;
+
+    &lt;section id="decisions"&gt;
+      &lt;h2&gt;关键决策与备选&lt;/h2&gt;
+      &lt;!-- 每个决策一个 .decision 卡片，复制以下结构：
+      &lt;div class="decision"&gt;
+        &lt;h3&gt;决策 N：&lt;!-- FILL: 决策标题 --&gt;[标题]&lt;/h3&gt;
+        &lt;p&gt;&lt;!-- FILL: 决策内容 --&gt;[正文]&lt;/p&gt;
+        &lt;p class="alternatives"&gt;&lt;strong&gt;备选 A：&lt;/strong&gt;[备选 A] — 否决：[理由]&lt;/p&gt;
+      &lt;/div&gt;
+      --&gt;
+    &lt;/section&gt;
+
+    &lt;section id="risks"&gt;
+      &lt;h2&gt;风险与缓解&lt;/h2&gt;
+      &lt;table&gt;
+        &lt;thead&gt;&lt;tr&gt;&lt;th&gt;风险&lt;/th&gt;&lt;th&gt;等级&lt;/th&gt;&lt;th&gt;缓解&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;
+        &lt;tbody&gt;&lt;tr&gt;
+          &lt;td&gt;&lt;!-- FILL: 风险描述 --&gt;[风险]&lt;/td&gt;
+          &lt;td&gt;&lt;span class="pill mid"&gt;mid&lt;/span&gt;&lt;/td&gt;
+          &lt;td&gt;&lt;!-- FILL: 缓解措施 --&gt;[措施]&lt;/td&gt;
+        &lt;/tr&gt;&lt;/tbody&gt;
+      &lt;/table&gt;
+    &lt;/section&gt;
+
+    &lt;section id="changes"&gt;
+      &lt;h2&gt;改造文件清单&lt;/h2&gt;
+      &lt;table&gt;
+        &lt;thead&gt;&lt;tr&gt;&lt;th&gt;#&lt;/th&gt;&lt;th&gt;文件&lt;/th&gt;&lt;th&gt;操作&lt;/th&gt;&lt;th&gt;说明&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;
+        &lt;tbody&gt;&lt;tr&gt;
+          &lt;td&gt;1&lt;/td&gt;&lt;td&gt;&lt;code&gt;&lt;!-- FILL --&gt;[path]&lt;/code&gt;&lt;/td&gt;
+          &lt;td&gt;&lt;span class="pill create"&gt;create&lt;/span&gt;&lt;/td&gt;
+          &lt;td&gt;&lt;!-- FILL --&gt;[说明]&lt;/td&gt;
+        &lt;/tr&gt;&lt;/tbody&gt;
+      &lt;/table&gt;
+    &lt;/section&gt;
+
+    &lt;aside class="callout info"&gt;
+      &lt;span class="title"&gt;Done 判定&lt;/span&gt;
+      &lt;ol&gt;&lt;li&gt;&lt;!-- FILL: 完成判定条件 --&gt;[条件]&lt;/li&gt;&lt;/ol&gt;
+    &lt;/aside&gt;
+  &lt;/main&gt;
+
+  &lt;!-- 右栏：Implementation Notes --&gt;
+  &lt;aside class="notes-panel" id="notes"&gt;
+    &lt;header&gt;
+      &lt;h2&gt;Implementation Notes&lt;/h2&gt;
+      &lt;p class="hint"&gt;实施期由 Claude Code 即时追加。规则：遇到 spec 未规定的&lt;strong&gt;决定&lt;/strong&gt;、必要&lt;strong&gt;更改&lt;/strong&gt;、不可避免的&lt;strong&gt;权衡&lt;/strong&gt;、其他用户应知事项，立即用 Edit 追加 entry，不要等任务结束。&lt;/p&gt;
+    &lt;/header&gt;
+    &lt;ol class="notes-log"&gt;
+      &lt;!-- ENTRY TEMPLATE (注释保留供 AI 复制):
+      &lt;li class="note" data-type="decision" data-time="YYYY-MM-DDTHH:MM"&gt;
+        &lt;header&gt;
+          &lt;span class="note-type"&gt;DECISION&lt;/span&gt;
+          &lt;time datetime="YYYY-MM-DDTHH:MM"&gt;MM-DD HH:MM&lt;/time&gt;
+          &lt;a href="#sec-N"&gt;§ N 章节名&lt;/a&gt;
+        &lt;/header&gt;
+        &lt;p&gt;描述：spec 未规定 X，实施时选择 Y。理由：...&lt;/p&gt;
+      &lt;/li&gt;
+      data-type 4 类：decision / change / tradeoff / other
+      --&gt;
+    &lt;/ol&gt;
+    &lt;p class="empty-state"&gt;no notes yet&lt;/p&gt;
+    &lt;footer class="notes-stats"&gt;
+      总计:
+      &lt;span data-counter="decision"&gt;0&lt;/span&gt; decisions /
+      &lt;span data-counter="change"&gt;0&lt;/span&gt; changes /
+      &lt;span data-counter="tradeoff"&gt;0&lt;/span&gt; tradeoffs /
+      &lt;span data-counter="other"&gt;0&lt;/span&gt; others
+    &lt;/footer&gt;
+  &lt;/aside&gt;
+
+&lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 3：验证模板结构</strong>
+        <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/Patra
+F=patra-api/.claude-marketplace/patra/skills/brainstorming/template/spec-template.html
+
+# 三栏 layout 容器
+grep -q 'class="layout"' $F && echo "✓ layout 容器"
+grep -q 'class="toc"' $F && echo "✓ 左栏 toc"
+grep -q 'class="content"' $F && echo "✓ 中栏 content"
+grep -q 'class="notes-panel"' $F && echo "✓ 右栏 notes-panel"
+
+# FILL 占位符存在（待 AI 复制时替换）
+grep -c "FILL:" $F  # 预期 ≥ 10
+
+# 必须的 section id
+for id in background scope decisions risks changes; do
+  grep -q "id=\"$id\"" $F && echo "✓ section $id"
+done
+
+# Note entry template 4 类提示
+grep -q "decision / change / tradeoff / other" $F && echo "✓ 4 类提示"
+
+# Notes stats footer
+grep -q 'data-counter="decision"' $F && echo "✓ stats footer"</code></pre>
+        <p>预期：所有 ✓；<code>grep -c "FILL:"</code> 返回 ≥ 10。</p>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 4：git add + commit</strong>
+        <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/Patra
+git add patra-api/.claude-marketplace/patra/skills/brainstorming/template/spec-template.html
+git commit -m "feat(skill/brainstorming): 新建 spec-template.html（三栏 + frontend-design CSS + 4 类 note）"</code></pre>
+      </li>
+    </ol>
+  </article>
+
+  <!-- ============== TASK 3 ============== -->
+  <article class="task" id="task-3" data-status="pending">
+    <header>
+      <h2>任务 3：创建 plan-template.html</h2>
+      <dl class="files">
+        <dt>创建</dt><dd><code>patra-api/.claude-marketplace/patra/skills/writing-plans/template/plan-template.html</code></dd>
+        <dt>关联 spec</dt><dd>§3 三栏布局 / §4 右栏 / §5.3 实施流程 第 3 步</dd>
+      </dl>
+    </header>
+
+    <ol class="steps">
+      <li class="step" data-status="pending">
+        <strong>步骤 1：创建目录</strong>
+        <pre><code class="lang-bash">mkdir -p /Users/linqibin/Projects/Products/Patra/patra-api/.claude-marketplace/patra/skills/writing-plans/template</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 2：用 Write 工具创建 plan-template.html，结构如下</strong>
+        <p>骨架（CSS 复用 Task 1 的 <code>$BASE_CSS</code>，与 spec-template 完全一致）：</p>
+        <pre><code class="lang-html">&lt;!DOCTYPE html&gt;
+&lt;html lang="zh-CN"&gt;
+&lt;head&gt;
+  &lt;meta charset="UTF-8"&gt;
+  &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+  &lt;title&gt;&lt;!-- FILL: 计划标题 --&gt;[实现计划标题]&lt;/title&gt;
+  &lt;link rel="preconnect" href="https://fonts.googleapis.com"&gt;
+  &lt;link rel="preconnect" href="https://fonts.gstatic.com" crossorigin&gt;
+  &lt;link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap" rel="stylesheet"&gt;
+  &lt;style&gt;
+  /* === 从 Task 1 的 $BASE_CSS 完整粘贴到此处（与 spec-template.html 完全一致）=== */
+  &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class="layout"&gt;
+
+  &lt;!-- 左栏：TOC --&gt;
+  &lt;nav class="toc"&gt;
+    &lt;h3&gt;目录&lt;/h3&gt;
+    &lt;ol&gt;
+      &lt;li&gt;&lt;a href="#scope-check"&gt;范围检查结果&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href="#file-structure"&gt;文件结构&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href="#tasks"&gt;任务列表&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href="#self-check"&gt;自检结果&lt;/a&gt;&lt;/li&gt;
+    &lt;/ol&gt;
+  &lt;/nav&gt;
+
+  &lt;!-- 中栏：内容 --&gt;
+  &lt;main class="content"&gt;
+    &lt;header class="doc-header"&gt;
+      &lt;h1&gt;&lt;!-- FILL: 计划大标题 --&gt;[实现计划标题]&lt;/h1&gt;
+      &lt;div class="meta-bar"&gt;
+        &lt;span&gt;📅 &lt;!-- FILL --&gt;[YYYY-MM-DD]&lt;/span&gt;
+        &lt;span&gt;🌿 &lt;!-- FILL --&gt;[branch-name]&lt;/span&gt;
+        &lt;span&gt;📋 plan&lt;/span&gt;
+        &lt;span class="status-pill"&gt;draft&lt;/span&gt;
+      &lt;/div&gt;
+
+      &lt;aside class="for-ai-worker"&gt;
+        &lt;strong&gt;面向 AI 代理的工作者：&lt;/strong&gt;
+        必需子技能：使用 &lt;code&gt;patra:subagent-driven-development&lt;/code&gt;（推荐）
+        或 &lt;code&gt;patra:executing-plans&lt;/code&gt; 逐任务实现。
+        通过修改任务卡片与步骤的 &lt;code&gt;data-status&lt;/code&gt; 属性追踪进度
+        （pending / in-progress / done / blocked / skipped）。
+        每完成一个 task 立即 commit。
+      &lt;/aside&gt;
+
+      &lt;dl class="meta"&gt;
+        &lt;dt&gt;目标&lt;/dt&gt; &lt;dd&gt;&lt;!-- FILL --&gt;[一句话描述]&lt;/dd&gt;
+        &lt;dt&gt;架构&lt;/dt&gt; &lt;dd&gt;&lt;!-- FILL --&gt;[2-3 句话]&lt;/dd&gt;
+        &lt;dt&gt;技术栈&lt;/dt&gt; &lt;dd&gt;&lt;!-- FILL --&gt;[关键技术]&lt;/dd&gt;
+        &lt;dt&gt;关联 spec&lt;/dt&gt; &lt;dd&gt;&lt;a href="../specs/&lt;!-- FILL --&gt;[spec-file].html"&gt;[spec 标题]&lt;/a&gt;&lt;/dd&gt;
+      &lt;/dl&gt;
+    &lt;/header&gt;
+
+    &lt;section id="scope-check"&gt;
+      &lt;h2&gt;范围检查结果&lt;/h2&gt;
+      &lt;aside class="callout success"&gt;
+        &lt;strong&gt;单 plan 覆盖&lt;/strong&gt;
+        &lt;!-- FILL: 一句话说明本 plan 覆盖范围 --&gt;[说明]
+      &lt;/aside&gt;
+    &lt;/section&gt;
+
+    &lt;section id="file-structure"&gt;
+      &lt;h2&gt;文件结构&lt;/h2&gt;
+      &lt;div class="file-tree"&gt;
+        &lt;pre&gt;&lt;!-- FILL: 列出所有 create/modify/delete 的文件 + 操作 pill + 简短说明 --&gt;&lt;/pre&gt;
+      &lt;/div&gt;
+    &lt;/section&gt;
+
+    &lt;section id="tasks" class="tasks"&gt;
+      &lt;h2&gt;任务列表&lt;/h2&gt;
+
+      &lt;!-- TASK TEMPLATE (注释保留供 AI 复制):
+      &lt;article class="task" id="task-N" data-status="pending"&gt;
+        &lt;header&gt;
+          &lt;h2&gt;任务 N：&lt;!-- FILL: 任务标题 --&gt;[标题]&lt;/h2&gt;
+          &lt;dl class="files"&gt;
+            &lt;dt&gt;创建&lt;/dt&gt;&lt;dd&gt;&lt;code&gt;[path]&lt;/code&gt;&lt;/dd&gt;
+            &lt;dt&gt;修改&lt;/dt&gt;&lt;dd&gt;&lt;code&gt;[path:line]&lt;/code&gt;&lt;/dd&gt;
+          &lt;/dl&gt;
+        &lt;/header&gt;
+        &lt;ol class="steps"&gt;
+          &lt;li class="step" data-status="pending"&gt;
+            &lt;strong&gt;步骤 1：[描述]&lt;/strong&gt;
+            &lt;pre&gt;&lt;code class="lang-bash"&gt;[命令或代码]&lt;/code&gt;&lt;/pre&gt;
+          &lt;/li&gt;
+        &lt;/ol&gt;
+      &lt;/article&gt;
+      --&gt;
+    &lt;/section&gt;
+
+    &lt;section id="self-check" class="self-check"&gt;
+      &lt;h2&gt;自检结果&lt;/h2&gt;
+
+      &lt;aside class="callout success"&gt;
+        &lt;strong&gt;1. 规格覆盖度&lt;/strong&gt;
+        &lt;!-- FILL: spec 各章节 → task 映射 --&gt;[说明] ✓
+      &lt;/aside&gt;
+
+      &lt;aside class="callout success"&gt;
+        &lt;strong&gt;2. 占位符扫描&lt;/strong&gt;
+        &lt;!-- FILL: 是否有 TODO / 待补 / 后续 等占位 --&gt;[说明] ✓
+      &lt;/aside&gt;
+
+      &lt;aside class="callout success"&gt;
+        &lt;strong&gt;3. 类型一致性&lt;/strong&gt;
+        &lt;!-- FILL: 跨任务的命名 / 路径 / 接口是否一致 --&gt;[说明] ✓
+      &lt;/aside&gt;
+
+      &lt;aside class="callout success"&gt;
+        &lt;strong&gt;4. HTML 结构完整性&lt;/strong&gt;
+        &lt;!-- FILL: 每个 task 有唯一 id + 初始 data-status；CSS 选择器覆盖所有状态 --&gt;[说明] ✓
+      &lt;/aside&gt;
+    &lt;/section&gt;
+  &lt;/main&gt;
+
+  &lt;!-- 右栏：Implementation Notes（结构与 spec-template 完全一致）--&gt;
+  &lt;aside class="notes-panel" id="notes"&gt;
+    &lt;header&gt;
+      &lt;h2&gt;Implementation Notes&lt;/h2&gt;
+      &lt;p class="hint"&gt;实施期由 Claude Code 即时追加。规则：遇到 plan 未规定的&lt;strong&gt;决定&lt;/strong&gt;、必要&lt;strong&gt;更改&lt;/strong&gt;、不可避免的&lt;strong&gt;权衡&lt;/strong&gt;、其他用户应知事项，立即用 Edit 追加 entry，不要等任务结束。&lt;/p&gt;
+    &lt;/header&gt;
+    &lt;ol class="notes-log"&gt;
+      &lt;!-- ENTRY TEMPLATE (注释保留供 AI 复制):
+      &lt;li class="note" data-type="decision" data-time="YYYY-MM-DDTHH:MM"&gt;
+        &lt;header&gt;
+          &lt;span class="note-type"&gt;DECISION&lt;/span&gt;
+          &lt;time datetime="YYYY-MM-DDTHH:MM"&gt;MM-DD HH:MM&lt;/time&gt;
+          &lt;a href="#task-N"&gt;§ Task N&lt;/a&gt;
+        &lt;/header&gt;
+        &lt;p&gt;描述：plan 未规定 X，实施时选择 Y。理由：...&lt;/p&gt;
+      &lt;/li&gt;
+      data-type 4 类：decision / change / tradeoff / other
+      --&gt;
+    &lt;/ol&gt;
+    &lt;p class="empty-state"&gt;no notes yet&lt;/p&gt;
+    &lt;footer class="notes-stats"&gt;
+      总计:
+      &lt;span data-counter="decision"&gt;0&lt;/span&gt; decisions /
+      &lt;span data-counter="change"&gt;0&lt;/span&gt; changes /
+      &lt;span data-counter="tradeoff"&gt;0&lt;/span&gt; tradeoffs /
+      &lt;span data-counter="other"&gt;0&lt;/span&gt; others
+    &lt;/footer&gt;
+  &lt;/aside&gt;
+
+&lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 3：验证 CSS 与 spec-template 完全一致</strong>
+        <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/Patra
+SPEC=patra-api/.claude-marketplace/patra/skills/brainstorming/template/spec-template.html
+PLAN=patra-api/.claude-marketplace/patra/skills/writing-plans/template/plan-template.html
+
+# 提取两个文件的 <style>...</style> 块对比
+diff <(sed -n '/<style>/,/<\/style>/p' $SPEC) <(sed -n '/<style>/,/<\/style>/p' $PLAN) && echo "✓ CSS 完全一致" || echo "✗ CSS 有差异（应为 0 差异）"</code></pre>
+        <p>预期：<code>diff</code> 无输出 → "✓ CSS 完全一致"。</p>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 4：验证 plan 模板结构</strong>
+        <pre><code class="lang-bash">F=$PLAN
+
+# 三栏 + 右栏
+grep -q 'class="layout"' $F && echo "✓ layout 容器"
+grep -q 'class="toc"' $F && echo "✓ 左栏"
+grep -q 'class="notes-panel"' $F && echo "✓ 右栏"
+
+# plan 特有元素
+grep -q 'class="for-ai-worker"' $F && echo "✓ for-ai-worker"
+grep -q 'class="files"' $F && echo "✓ files dl"
+grep -q 'data-status="pending"' $F && echo "✓ task data-status"
+grep -q 'class="self-check"' $F && echo "✓ self-check section"
+
+# Task / step template 注释存在
+grep -q "TASK TEMPLATE" $F && echo "✓ task 模板注释"
+
+# FILL 占位符
+[ $(grep -c "FILL:" $F) -ge 10 ] && echo "✓ FILL 占位 ≥ 10"</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 5：git add + commit</strong>
+        <pre><code class="lang-bash">git add patra-api/.claude-marketplace/patra/skills/writing-plans/template/plan-template.html
+git commit -m "feat(skill/writing-plans): 新建 plan-template.html（三栏 + 同套 CSS + task 状态机）"</code></pre>
+      </li>
+    </ol>
+  </article>
+
+  <!-- ============== TASK 4 ============== -->
+  <article class="task" id="task-4" data-status="pending">
+    <header>
+      <h2>任务 4：删除 html-output-guide.md + 修订 brainstorming/SKILL.md</h2>
+      <dl class="files">
+        <dt>删除</dt><dd><code>brainstorming/html-output-guide.md</code></dd>
+        <dt>修改</dt><dd><code>brainstorming/SKILL.md</code></dd>
+        <dt>关联 spec</dt><dd>§6.1 / §9 #2 #4</dd>
+      </dl>
+    </header>
+
+    <ol class="steps">
+      <li class="step" data-status="pending">
+        <strong>步骤 1：删除 html-output-guide.md</strong>
+        <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/Patra
+git rm patra-api/.claude-marketplace/patra/skills/brainstorming/html-output-guide.md</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 2：修改 brainstorming/SKILL.md 第 6 步</strong>
+        <p>定位检查清单中的第 6 项，原文：</p>
+        <pre><code>6. **编写设计文档** — 保存到 `docs/patra/specs/YYYY-MM-DD-&lt;topic&gt;-design.html` 并 commit（**HTML 不是 Markdown**，参见下方写作指南）</code></pre>
+        <p>用 Edit 工具替换为：</p>
+        <pre><code>6. **编写设计文档** — 复制 `template/spec-template.html` 到 `docs/patra/specs/YYYY-MM-DD-&lt;topic&gt;-design.html`，按文件内所有 `&lt;!-- FILL: --&gt;` 注释逐一替换占位内容。**禁止修改 CSS、章节顺序、HTML 结构** —— 只填内容。完成后 commit。</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 3：修改 brainstorming/SKILL.md 第 7 步（规格自检）</strong>
+        <p>在原"占位符扫描"项后追加 FILL 检查。定位原文：</p>
+        <pre><code>1. **占位符扫描：** 有没有"待定"、"TODO"、未完成的章节或模糊的需求？修复它们。</code></pre>
+        <p>替换为：</p>
+        <pre><code>1. **占位符扫描：** 有没有"待定"、"TODO"、未完成的章节或模糊的需求？修复它们。**额外**：grep 文件中所有 `&lt;!-- FILL: --&gt;` 注释是否已替换完毕（每个 FILL 都应在内容中被实际值替代）。</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 4：修改 SKILL.md "设计之后 / 文档"段落</strong>
+        <p>定位"设计之后 / 文档"段落，原文片段：</p>
+        <pre><code>- 将验证通过的设计（规格说明）写入 `docs/patra/specs/YYYY-MM-DD-&lt;topic&gt;-design.html`
+  - （用户对规格位置的偏好优先于此默认值）
+  - **产物是 HTML，不是 Markdown**——HTML 的视觉层次（callout / 风险 pill / 折叠章节 / 决策表）能让重点一眼可见。详细写作骨架与必含语义元素见 `skills/brainstorming/html-output-guide.md`。开始写之前先读 guide。</code></pre>
+        <p>替换为：</p>
+        <pre><code>- 复制 `template/spec-template.html` 到 `docs/patra/specs/YYYY-MM-DD-&lt;topic&gt;-design.html`
+  - （用户对规格位置的偏好优先于此默认值）
+  - **不要**改 CSS / 章节顺序 / HTML 结构；只按 `&lt;!-- FILL: --&gt;` 注释填内容
+  - 设计的视觉层次（callout / 风险 pill / 折叠章节 / 决策表 / 三栏布局 + 右栏 Implementation Notes）已在模板里固化</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 5：修改流程图节点</strong>
+        <p>定位流程图中的节点：</p>
+        <pre><code>    "编写设计文档" [shape=box];</code></pre>
+        <p>替换为：</p>
+        <pre><code>    "复制 spec-template.html\n按 FILL 注释填内容" [shape=box];</code></pre>
+        <p>同时更新所有引用 "编写设计文档" 的边——用 sed/MultiEdit 全量替换：</p>
+        <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/Patra
+sed -i '' 's/"编写设计文档"/"复制 spec-template.html\\n按 FILL 注释填内容"/g' patra-api/.claude-marketplace/patra/skills/brainstorming/SKILL.md</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 6：验证 SKILL.md 无 guide 残留</strong>
+        <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/Patra
+F=patra-api/.claude-marketplace/patra/skills/brainstorming/SKILL.md
+
+! grep -q "html-output-guide.md" $F && echo "✓ 无 guide 引用" || (echo "✗ 仍有 guide 引用"; grep -n "html-output-guide" $F)
+grep -q "template/spec-template.html" $F && echo "✓ 指向新模板"
+grep -q "FILL:" $F && echo "✓ 提到 FILL 注释机制"</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 7：git add + commit</strong>
+        <pre><code class="lang-bash">git add patra-api/.claude-marketplace/patra/skills/brainstorming/SKILL.md \
+        patra-api/.claude-marketplace/patra/skills/brainstorming/html-output-guide.md
+git commit -m "refactor(skill/brainstorming): SKILL.md 切换到模板模式 + 删 html-output-guide.md"</code></pre>
+      </li>
+    </ol>
+  </article>
+
+  <!-- ============== TASK 5 ============== -->
+  <article class="task" id="task-5" data-status="pending">
+    <header>
+      <h2>任务 5：修订 writing-plans/SKILL.md</h2>
+      <dl class="files">
+        <dt>修改</dt><dd><code>writing-plans/SKILL.md</code></dd>
+        <dt>关联 spec</dt><dd>§6.2 / §9 #6</dd>
+      </dl>
+    </header>
+
+    <ol class="steps">
+      <li class="step" data-status="pending">
+        <strong>步骤 1：替换"计划文档结构（HTML 模板）"章节</strong>
+        <p>定位原文（约第 46-48 行）：</p>
+        <pre><code>## 计划文档结构（HTML 模板）
+
+模板**全部定义在** `skills/brainstorming/html-output-guide.md` 的"实现计划（plan）专用章节"。写计划前必读 guide，然后按模板填内容。本 SKILL 只描述流程与原则，不重复模板。</code></pre>
+        <p>替换为：</p>
+        <pre><code>## 计划文档结构（HTML 模板）
+
+复制 `template/plan-template.html` 到 `docs/patra/plans/YYYY-MM-DD-&lt;feature-name&gt;.html`，按文件内所有 `&lt;!-- FILL: --&gt;` 注释填内容。**禁止修改 CSS、章节顺序、HTML 结构** —— 只填内容。
+
+模板已包含：
+- 三栏布局（左 TOC / 中 任务卡片 / 右 Implementation Notes）
+- task / step 卡片结构（含 `data-status` 状态机 5 类渲染：pending / in-progress / done / blocked / skipped）
+- 右栏 4 类 note entry 模板（decision / change / tradeoff / other）+ stats footer
+
+新增 task 时复制 task 卡片模板（HTML 注释保留在 `&lt;section id="tasks"&gt;` 内供复制）。</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 2：替换"计划保存位置"段落</strong>
+        <p>定位原文（约第 18-20 行）：</p>
+        <pre><code>**计划保存位置：** `docs/patra/plans/YYYY-MM-DD-&lt;feature-name&gt;.html`
+- 用户对计划位置的偏好优先于此默认值
+- **产物是 HTML，不是 Markdown**——HTML 让任务列表的进度、风险、阻塞状态可视化；通过 `data-status` 属性追踪进度比 markdown checkbox 表达力强。开始写之前**必读** `skills/brainstorming/html-output-guide.md`，其中"实现计划（plan）专用章节"定义了头部模板、任务卡片模板、状态机与 AI 代理切换约定。本 SKILL 不重复这些模板内容——单一信息源避免漂移。</code></pre>
+        <p>替换为：</p>
+        <pre><code>**计划保存位置：** `docs/patra/plans/YYYY-MM-DD-&lt;feature-name&gt;.html`
+- 用户对计划位置的偏好优先于此默认值
+- **产物是 HTML，不是 Markdown**——通过 `data-status` 属性追踪进度比 markdown checkbox 表达力强
+- 复制 `template/plan-template.html`，按 `&lt;!-- FILL: --&gt;` 注释填内容；不要改 CSS / 结构</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 3：在自检章节加 FILL 检查</strong>
+        <p>定位原文（约第 84 行）：</p>
+        <pre><code>**2. 占位符扫描：** 搜索计划中的红旗——上方"禁止占位符"章节中的任何模式。修复它们。</code></pre>
+        <p>替换为：</p>
+        <pre><code>**2. 占位符扫描：** 搜索计划中的红旗——上方"禁止占位符"章节中的任何模式。修复它们。**额外**：grep 文件中所有 `&lt;!-- FILL: --&gt;` 注释是否已替换完毕。</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 4：验证</strong>
+        <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/Patra
+F=patra-api/.claude-marketplace/patra/skills/writing-plans/SKILL.md
+
+! grep -q "html-output-guide.md" $F && echo "✓ 无 guide 引用"
+grep -q "template/plan-template.html" $F && echo "✓ 指向新模板"
+grep -q "FILL:" $F && echo "✓ 提到 FILL 机制"</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 5：git add + commit</strong>
+        <pre><code class="lang-bash">git add patra-api/.claude-marketplace/patra/skills/writing-plans/SKILL.md
+git commit -m "refactor(skill/writing-plans): SKILL.md 切换到模板模式（删 guide 引用，加 FILL 机制）"</code></pre>
+      </li>
+    </ol>
+  </article>
+
+  <!-- ============== TASK 6 ============== -->
+  <article class="task" id="task-6" data-status="pending">
+    <header>
+      <h2>任务 6：修订两个 reviewer prompt</h2>
+      <dl class="files">
+        <dt>修改</dt><dd><code>brainstorming/spec-document-reviewer-prompt.md</code></dd>
+        <dt>修改</dt><dd><code>writing-plans/plan-document-reviewer-prompt.md</code></dd>
+        <dt>关联 spec</dt><dd>§6.3</dd>
+      </dl>
+    </header>
+
+    <ol class="steps">
+      <li class="step" data-status="pending">
+        <strong>步骤 1：在 spec-document-reviewer-prompt.md 末尾追加检查项</strong>
+        <p>用 Edit 工具在文件末尾追加（如果已有 "检查项" 列表则插入末尾）：</p>
+        <pre><code>## 模板合规性检查（v0.2+ 新增）
+
+8. **是否严格按模板？**
+   - CSS 是否未修改？（与 `skills/brainstorming/template/spec-template.html` 的 `&lt;style&gt;` 块完全一致）
+   - 章节顺序是否与模板一致？
+   - 所有 `&lt;!-- FILL: --&gt;` 注释是否已被替换为实际内容（grep 文件应无 `FILL:` 残留）？
+   - 右栏 `&lt;aside class="notes-panel"&gt;` 是否存在（即使 `&lt;ol class="notes-log"&gt;` 内为空）？
+   - 4 类 note entry 模板注释是否保留在 `&lt;ol class="notes-log"&gt;` 内（供实施期 AI 复制）？</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 2：在 plan-document-reviewer-prompt.md 末尾追加检查项</strong>
+        <p>类似 Task 6 步骤 1，文本调整为 plan 版本：</p>
+        <pre><code>## 模板合规性检查（v0.2+ 新增）
+
+8. **是否严格按模板？**
+   - CSS 是否未修改？（与 `skills/writing-plans/template/plan-template.html` 的 `&lt;style&gt;` 块完全一致）
+   - 章节顺序是否与模板一致？（header / scope-check / file-structure / tasks / self-check）
+   - 所有 `&lt;!-- FILL: --&gt;` 注释是否已被替换？
+   - 每个 `&lt;article class="task"&gt;` 都有唯一 `id="task-N"` + 初始 `data-status="pending"`？
+   - 右栏 `&lt;aside class="notes-panel"&gt;` 是否存在？
+   - 4 类 note entry 模板注释 + task 卡片模板注释是否保留（供实施期 AI 复制）？</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 3：验证</strong>
+        <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/Patra
+grep -q "模板合规性检查" patra-api/.claude-marketplace/patra/skills/brainstorming/spec-document-reviewer-prompt.md && echo "✓ spec reviewer"
+grep -q "模板合规性检查" patra-api/.claude-marketplace/patra/skills/writing-plans/plan-document-reviewer-prompt.md && echo "✓ plan reviewer"</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 4：git add + commit</strong>
+        <pre><code class="lang-bash">git add patra-api/.claude-marketplace/patra/skills/brainstorming/spec-document-reviewer-prompt.md \
+        patra-api/.claude-marketplace/patra/skills/writing-plans/plan-document-reviewer-prompt.md
+git commit -m "feat(skill): reviewer prompt 加模板合规性检查（spec + plan）"</code></pre>
+      </li>
+    </ol>
+  </article>
+
+  <!-- ============== TASK 7 ============== -->
+  <article class="task" id="task-7" data-status="pending">
+    <header>
+      <h2>任务 7：最终验证 + push + 更新 PR description</h2>
+      <dl class="files">
+        <dt>验证</dt><dd>对照 spec §9 Done 判定 6 条</dd>
+        <dt>关联 spec</dt><dd>§9 Done 判定</dd>
+      </dl>
+    </header>
+
+    <ol class="steps">
+      <li class="step" data-status="pending">
+        <strong>步骤 1：spec Done 判定逐条验证</strong>
+        <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/Patra
+SKILLS=patra-api/.claude-marketplace/patra/skills
+
+# 1. 两份模板存在于 template/ 子目录
+test -f $SKILLS/brainstorming/template/spec-template.html && \
+  test -f $SKILLS/writing-plans/template/plan-template.html && \
+  echo "✓ 两份模板存在"
+
+# 2. 含 notes-panel + ENTRY TEMPLATE 注释 + stats footer
+for f in $SKILLS/brainstorming/template/spec-template.html \
+         $SKILLS/writing-plans/template/plan-template.html; do
+  grep -q "notes-panel" $f && \
+    grep -q "ENTRY TEMPLATE" $f && \
+    grep -q "data-counter" $f && \
+    echo "✓ $(basename $f) 含 notes-panel + ENTRY 注释 + stats"
+done
+
+# 3. SKILL.md 无旧引用
+! grep -q "html-output-guide" $SKILLS/brainstorming/SKILL.md && \
+  ! grep -q "html-output-guide" $SKILLS/writing-plans/SKILL.md && \
+  ! grep -q "风格自由" $SKILLS/brainstorming/SKILL.md && \
+  echo "✓ SKILL.md 无旧引用"
+
+# 4. reviewer prompt 含合规性检查
+grep -q "模板合规性检查" $SKILLS/brainstorming/spec-document-reviewer-prompt.md && \
+  grep -q "模板合规性检查" $SKILLS/writing-plans/plan-document-reviewer-prompt.md && \
+  echo "✓ reviewer prompt 已加检查"
+
+# 5. html-output-guide.md 已删
+! test -f $SKILLS/brainstorming/html-output-guide.md && echo "✓ guide 已删"</code></pre>
+        <p>预期：5 行全部 ✓。</p>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 2：人工验证（reload plugin 测试）</strong>
+        <p>在 Claude Code 里：</p>
+        <pre><code class="lang-bash">/reload-plugins</code></pre>
+        <p>然后在新会话中调用 <code>patra:brainstorming</code>，触发"编写设计文档"步骤，验证 AI 是否复制 <code>spec-template.html</code> 而非自由发挥。如果 AI 仍尝试从零写 CSS，回到 Task 4 检查 SKILL.md 修改是否生效。</p>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 3：push 分支到远程（首次需 -u 设置 upstream）</strong>
+        <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/Patra
+git log --oneline main..HEAD | head -20  # 看本 PR 所有 commit
+git push -u origin chore/claude-config-refactor</code></pre>
+        <p>预期：push 成功。<strong>GitHub 不会自动建 PR</strong>——下一步用 <code>gh</code> 创建或更新。</p>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 4：创建 PR 或更新现有 PR description</strong>
+        <p>检查当前分支是否已有 PR：</p>
+        <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/Patra
+PR_NUM=$(gh pr list --head chore/claude-config-refactor --json number --jq '.[0].number // ""')
+echo "现有 PR 编号: ${PR_NUM:-(无)}"</code></pre>
+        <p>如果 <code>PR_NUM</code> 为空，<strong>首次创建 PR</strong>：</p>
+        <pre><code class="lang-bash">gh pr create --title "chore(claude): monorepo Claude 配置三层化 + skill 模板化" --body "$(cat &lt;&lt;'EOF'
+## 摘要
+
+按 Claude Code 原生加载规则把 monorepo Claude 配置拆分为三层（workspace / BE / FE），同时把 patra:brainstorming 和 patra:writing-plans 两个 skill 从"轻骨架自由发挥"改造为"刚性模板+占位符填空"模式。
+
+## 第一部分：Claude 配置三层化
+
+- workspace 共享层（Patra/CLAUDE.md）：绿地原则 + TDD 精神 + Workspace Layout
+- BE 子项目层（patra-api/CLAUDE.md）：删通用部分 + superpowers→patra 修正
+- FE 子项目层（patra-portal/CLAUDE.md + .claude/rules/ 4 个骨架）：从零创建
+- 删除所有 AGENTS.md（不维护 Codex）
+
+详见 spec: docs/patra/specs/2026-05-19-claude-config-refactor-design.html
+
+## 第二部分：spec/plan 模板化
+
+- 新增三栏布局：左 TOC / 中 内容 / 右 Implementation Notes
+- 右栏 4 类 note entry（decision / change / tradeoff / other）由实施期 Claude Code 即时追加
+- 视觉设计权委托给 frontend-design skill
+- 删除 html-output-guide.md
+
+详见 spec: docs/patra/specs/2026-05-19-spec-plan-template-design.html
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+EOF
+)"</code></pre>
+        <p>如果 <code>PR_NUM</code> 非空，<strong>追加现有 PR description</strong>：</p>
+        <pre><code class="lang-bash">CURRENT_BODY=$(gh pr view $PR_NUM --json body --jq '.body')
+gh pr edit $PR_NUM --body "$CURRENT_BODY
+
+---
+
+## 追加：spec/plan 模板化改造
+
+- 把 patra:brainstorming / writing-plans 改造为刚性模板模式
+- 三栏布局 + 右栏 Implementation Notes（4 类 note entry）
+- 视觉设计权委托给 frontend-design skill
+- 删除 html-output-guide.md
+
+详见 spec: docs/patra/specs/2026-05-19-spec-plan-template-design.html
+"</code></pre>
+        <p>记下最终 PR URL，告知用户。</p>
+      </li>
+    </ol>
+  </article>
+</section>
+
+<section class="self-check">
+  <h2>自检结果</h2>
+
+  <aside class="callout success">
+    <strong>1. 规格覆盖度</strong>
+    spec §9 文件清单 7 项逐一映射：#1→Task 2、#2→Task 4 步骤 2-6、#3→Task 6 步骤 1、#4→Task 4 步骤 1、#5→Task 3、#6→Task 5、#7→Task 6 步骤 2。spec §3 三栏 / §4 右栏 / §5.3 实施流程都对应到具体步骤。spec §9 Done 判定 6 条映射到 Task 7 步骤 1-2。✓
+  </aside>
+
+  <aside class="callout success">
+    <strong>2. 占位符扫描</strong>
+    任务步骤里无"TODO / 后续实现"等占位词。Task 2/3 的 HTML 骨架里有 <code>&lt;!-- FILL: --&gt;</code> 注释，但这是模板**有意保留**的占位符（供未来使用模板的人替换），非任务步骤的缺陷。✓
+  </aside>
+
+  <aside class="callout success">
+    <strong>3. 类型一致性</strong>
+    跨任务命名一致：<code>template/</code> 子目录、<code>spec-template.html</code> / <code>plan-template.html</code> 命名、<code>$BASE_CSS</code> 引用、<code>notes-panel</code> / <code>notes-log</code> / <code>data-type</code> / <code>data-counter</code> 等 CSS 选择器 / 属性名。Task 4 与 Task 5 修改 SKILL.md 的方式对称。✓
+  </aside>
+
+  <aside class="callout success">
+    <strong>4. HTML 结构完整性</strong>
+    本 plan 自身：7 个 <code>&lt;article class="task"&gt;</code> 都有唯一 <code>id="task-N"</code> + 初始 <code>data-status="pending"</code>；所有 <code>&lt;li class="step"&gt;</code> 初始 <code>data-status="pending"</code>；头部 <code>&lt;dl class="meta"&gt;</code> 含目标 / 架构 / 技术栈 / 关联 spec 四项；CSS inline 无外部依赖；<code>[data-status]</code> 属性选择器在 CSS 里都有对应渲染规则。✓
+  </aside>
+</section>
+
+</div>
+</body>
+</html>
