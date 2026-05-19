@@ -1,0 +1,1523 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>patra-portal v1 脚手架实现计划</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #fafbfc;
+    --bg-muted: #f3f4f6;
+    --border: #e5e7eb;
+    --border-strong: #d1d5db;
+    --text: #111827;
+    --text-muted: #4b5563;
+    --text-subtle: #6b7280;
+
+    --accent: #4338ca;
+    --accent-soft: #eef2ff;
+    --accent-border: #c7d2fe;
+
+    --ok: #10b981;
+    --ok-bg: #ecfdf5;
+    --ok-fg: #065f46;
+    --ok-border: #a7f3d0;
+
+    --info: #3b82f6;
+    --info-bg: #eff6ff;
+    --info-fg: #1e3a8a;
+    --info-border: #bfdbfe;
+
+    --warn: #f59e0b;
+    --warn-bg: #fffbeb;
+    --warn-fg: #92400e;
+    --warn-border: #fde68a;
+
+    --risk: #ef4444;
+    --risk-bg: #fef2f2;
+    --risk-fg: #991b1b;
+    --risk-border: #fecaca;
+
+    --code-bg: #0f172a;
+    --code-fg: #e2e8f0;
+    --code-comment: #64748b;
+    --code-key: #93c5fd;
+    --code-str: #fcd34d;
+
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--text);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 920px; margin: 0 auto; padding: 32px 28px 96px; }
+
+  /* ===== Plan header ===== */
+  header.plan-header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px;
+    margin-bottom: 28px;
+  }
+  header.plan-header h1 { font-size: 28px; margin: 0 0 12px; letter-spacing: -0.01em; }
+  aside.for-ai-worker {
+    background: var(--info-bg);
+    border-left: 4px solid var(--info);
+    border-radius: 0 6px 6px 0;
+    padding: 12px 16px;
+    margin: 14px 0;
+    font-size: 14px;
+  }
+  aside.for-ai-worker strong { color: var(--info-fg); }
+  dl.meta {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 6px 16px;
+    margin: 16px 0 0;
+    font-size: 14px;
+  }
+  dl.meta dt {
+    font-weight: 600;
+    color: var(--text-muted);
+    padding-top: 2px;
+  }
+  dl.meta dd {
+    margin: 0;
+    color: var(--text);
+  }
+  dl.meta a { color: var(--accent); }
+
+  /* ===== Sections ===== */
+  section { margin-top: 40px; }
+  section > h2 {
+    font-size: 20px;
+    margin: 0 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    letter-spacing: -0.005em;
+  }
+  section > h3 { font-size: 15px; margin: 18px 0 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+
+  /* ===== Callout / aside ===== */
+  aside.callout {
+    border-left: 4px solid var(--accent);
+    background: var(--accent-soft);
+    padding: 12px 16px;
+    border-radius: 0 6px 6px 0;
+    margin: 12px 0;
+    font-size: 14px;
+  }
+  aside.callout.warn { border-left-color: var(--warn); background: var(--warn-bg); }
+  aside.callout.ok   { border-left-color: var(--ok);   background: var(--ok-bg); }
+  aside.callout.info { border-left-color: var(--info); background: var(--info-bg); }
+  aside.blocker {
+    border-left: 4px solid var(--risk);
+    background: var(--risk-bg);
+    color: var(--risk-fg);
+    padding: 10px 14px;
+    border-radius: 0 6px 6px 0;
+    margin: 10px 0;
+    font-size: 13px;
+  }
+  aside.skip-reason {
+    border-left: 4px solid var(--text-subtle);
+    background: var(--bg-muted);
+    color: var(--text-muted);
+    padding: 10px 14px;
+    border-radius: 0 6px 6px 0;
+    margin: 10px 0;
+    font-size: 13px;
+  }
+
+  /* ===== File structure ===== */
+  .file-structure pre {
+    background: var(--code-bg);
+    color: var(--code-fg);
+    padding: 16px 18px;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 12px 0;
+  }
+  .file-list {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .file-list table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .file-list th, .file-list td {
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .file-list th { background: var(--bg-soft); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); font-weight: 600; }
+  .file-list tr:last-child td { border-bottom: none; }
+  .file-list code { font-family: var(--font-mono); font-size: 12.5px; background: var(--bg-muted); padding: 1px 5px; border-radius: 3px; }
+  .badge {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.6;
+  }
+  .badge-new   { background: var(--ok-bg); color: var(--ok-fg); border: 1px solid var(--ok-border); }
+  .badge-mod   { background: var(--info-bg); color: var(--info-fg); border: 1px solid var(--info-border); }
+  .badge-gen   { background: var(--warn-bg); color: var(--warn-fg); border: 1px solid var(--warn-border); }
+
+  /* ===== Task cards ===== */
+  .tasks { display: flex; flex-direction: column; gap: 22px; }
+  article.task {
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--border-strong);
+    border-radius: 8px;
+    background: var(--bg-soft);
+    padding: 18px 20px;
+  }
+  article.task[data-status="done"]        { border-left-color: var(--ok); background: #f3f4f6; }
+  article.task[data-status="in-progress"] { border-left-color: var(--info); background: var(--info-bg); }
+  article.task[data-status="blocked"]     { border-left-color: var(--risk); background: var(--risk-bg); }
+  article.task[data-status="skipped"]     { opacity: 0.5; text-decoration: line-through; }
+
+  article.task > header { margin-bottom: 12px; }
+  article.task h2 { font-size: 17px; margin: 0 0 6px; letter-spacing: -0.005em; }
+  article.task h2::before { content: ""; margin-right: 8px; }
+  article.task[data-status="pending"] h2::before     { content: "☐"; color: var(--text-subtle); }
+  article.task[data-status="in-progress"] h2::before { content: "▶"; color: var(--info); }
+  article.task[data-status="done"] h2::before        { content: "☑"; color: var(--ok); }
+  article.task[data-status="blocked"] h2::before     { content: "✗"; color: var(--risk); }
+  article.task[data-status="skipped"] h2::before     { content: "⊘"; color: var(--text-subtle); }
+
+  dl.files {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 4px 12px;
+    margin: 8px 0 0;
+    font-size: 13px;
+  }
+  dl.files dt {
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding-top: 3px;
+  }
+  dl.files dd { margin: 0; }
+  dl.files code { font-family: var(--font-mono); font-size: 12.5px; background: var(--bg); padding: 1px 6px; border-radius: 3px; border: 1px solid var(--border); }
+
+  ol.steps {
+    list-style: none;
+    padding: 0;
+    margin: 14px 0 0;
+    counter-reset: step;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  li.step {
+    border: 1px solid var(--border);
+    background: var(--bg);
+    border-radius: 6px;
+    padding: 12px 14px;
+    position: relative;
+  }
+  li.step::before {
+    content: "☐ ";
+    color: var(--text-subtle);
+    font-weight: 700;
+    margin-right: 4px;
+  }
+  li.step[data-status="done"]::before        { content: "☑ "; color: var(--ok); }
+  li.step[data-status="in-progress"]::before { content: "▶ "; color: var(--info); }
+  li.step[data-status="blocked"]::before     { content: "✗ "; color: var(--risk); }
+  li.step[data-status="skipped"]::before     { content: "⊘ "; color: var(--text-subtle); }
+
+  li.step[data-status="done"]        { background: #f9fafb; border-color: var(--ok-border); }
+  li.step[data-status="in-progress"] { background: var(--info-bg); border-color: var(--info-border); }
+  li.step[data-status="blocked"]     { background: var(--risk-bg); border-color: var(--risk-border); }
+  li.step[data-status="skipped"]     { opacity: 0.5; text-decoration: line-through; }
+
+  li.step strong { color: var(--text); }
+  li.step p { margin: 6px 0; font-size: 14px; color: var(--text-muted); }
+  li.step .expected {
+    display: inline-block;
+    background: var(--bg-muted);
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  pre {
+    background: var(--code-bg);
+    color: var(--code-fg);
+    padding: 12px 14px;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    line-height: 1.55;
+    margin: 8px 0;
+  }
+  pre code { background: transparent; padding: 0; color: inherit; }
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.92em;
+    background: var(--bg-muted);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+
+  /* ===== Self-check ===== */
+  ul.checklist { list-style: none; padding: 0; margin: 8px 0; }
+  ul.checklist li {
+    padding: 6px 0 6px 26px;
+    position: relative;
+  }
+  ul.checklist li::before {
+    content: "✓";
+    color: var(--ok);
+    font-weight: 700;
+    position: absolute;
+    left: 0;
+  }
+
+  footer.plan-footer {
+    margin-top: 60px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text-subtle);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<main>
+
+<header class="plan-header">
+  <h1>patra-portal v1 脚手架实现计划</h1>
+
+  <aside class="for-ai-worker">
+    <strong>面向 AI 代理的工作者：</strong>
+    必需子技能：使用 <code>patra:subagent-driven-development</code>（推荐）
+    或 <code>patra:executing-plans</code> 逐任务实现此计划。
+    通过修改任务卡片与步骤的 <code>data-status</code> 属性追踪进度
+    （<code>pending</code> / <code>in-progress</code> / <code>done</code> / <code>blocked</code> / <code>skipped</code>）。
+    每个任务的 step 5 必须执行 <code>git commit</code>。
+  </aside>
+
+  <dl class="meta">
+    <dt>目标</dt>
+    <dd>从零搭建 patra-portal（Patra C 端前端）的 v1 脚手架，跑通 dev / build / test / lint / typecheck 全链路</dd>
+
+    <dt>架构</dt>
+    <dd>Next.js 15 App Router + React 19 + TS strict，无业务页面；落地页 + <code>/api/health</code> + 一个 smoke 测试；独立 git 仓 <code>Patra/patra-portal</code></dd>
+
+    <dt>技术栈</dt>
+    <dd>Next 15 · React 19 · TS 5 strict · Tailwind v4 · shadcn/ui · TanStack Query v5 · Zustand · RHF + Zod · Biome · Vitest + Testing Library · Husky + lint-staged · pnpm · Node 22 LTS</dd>
+
+    <dt>关联 spec</dt>
+    <dd><a href="../specs/2026-05-18-patra-portal-init-design.html">docs/patra/specs/2026-05-18-patra-portal-init-design.html</a></dd>
+  </dl>
+</header>
+
+<section class="scope-check">
+  <h2>范围检查</h2>
+  <aside class="callout ok">
+    <strong>无需拆分。</strong>规格仅覆盖单一 app 的脚手架，无独立子系统。本计划用 12 个任务在单个仓库内逐任务完成。
+  </aside>
+</section>
+
+<section class="file-structure">
+  <h2>文件结构</h2>
+  <p>所有路径均相对 <code>Patra/patra-portal/</code>。</p>
+
+  <h3>配置与元数据</h3>
+  <div class="file-list">
+    <table>
+      <thead><tr><th>状态</th><th>文件</th><th>职责</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge badge-new">新增</span></td><td><code>package.json</code></td><td>项目元信息、依赖、scripts</td></tr>
+        <tr><td><span class="badge badge-gen">生成</span></td><td><code>pnpm-lock.yaml</code></td><td>pnpm 锁文件（自动生成，commit 进仓）</td></tr>
+        <tr><td><span class="badge badge-new">新增</span></td><td><code>.gitignore</code></td><td>忽略 <code>node_modules</code>、<code>.next</code>、<code>.DS_Store</code> 等</td></tr>
+        <tr><td><span class="badge badge-new">新增</span></td><td><code>.nvmrc</code></td><td>Node 22 LTS 版本锁定（nvm/fnm 用）</td></tr>
+        <tr><td><span class="badge badge-new">新增</span></td><td><code>.tool-versions</code></td><td>mise 用，Node 22 LTS</td></tr>
+        <tr><td><span class="badge badge-new">新增</span></td><td><code>tsconfig.json</code></td><td>TS strict + <code>noUncheckedIndexedAccess</code> + <code>@/*</code> 路径别名</td></tr>
+        <tr><td><span class="badge badge-new">新增</span></td><td><code>next.config.ts</code></td><td>Next.js 配置（v1 仅默认导出）</td></tr>
+        <tr><td><span class="badge badge-gen">生成</span></td><td><code>next-env.d.ts</code></td><td>Next 自动生成（提交进仓）</td></tr>
+        <tr><td><span class="badge badge-new">新增</span></td><td><code>postcss.config.mjs</code></td><td>Tailwind v4 PostCSS plugin</td></tr>
+        <tr><td><span class="badge badge-new">新增</span></td><td><code>vitest.config.ts</code></td><td>jsdom 环境 + React 插件 + <code>@/*</code> alias</td></tr>
+        <tr><td><span class="badge badge-new">新增</span></td><td><code>biome.json</code></td><td>Biome recommended 规则 + 格式化配置</td></tr>
+        <tr><td><span class="badge badge-gen">生成</span></td><td><code>components.json</code></td><td>shadcn/ui 初始化产物</td></tr>
+        <tr><td><span class="badge badge-new">新增</span></td><td><code>README.md</code></td><td>项目说明 + 命令矩阵 + 目录结构</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>源码</h3>
+  <div class="file-list">
+    <table>
+      <thead><tr><th>状态</th><th>文件</th><th>职责</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge badge-new">新增</span></td><td><code>src/app/layout.tsx</code></td><td>根布局；包裹 <code>&lt;QueryProvider&gt;</code>；引入 <code>globals.css</code></td></tr>
+        <tr><td><span class="badge badge-new">新增</span></td><td><code>src/app/page.tsx</code></td><td>落地页：H1 显示 "patra-portal" + 版本副标题</td></tr>
+        <tr><td><span class="badge badge-new">新增</span></td><td><code>src/app/globals.css</code></td><td>Tailwind v4 入口（<code>@import "tailwindcss";</code>）</td></tr>
+        <tr><td><span class="badge badge-new">新增</span></td><td><code>src/app/error.tsx</code></td><td>路由级错误边界（最小客户端组件）</td></tr>
+        <tr><td><span class="badge badge-new">新增</span></td><td><code>src/app/not-found.tsx</code></td><td>404 占位页</td></tr>
+        <tr><td><span class="badge badge-new">新增</span></td><td><code>src/app/api/health/route.ts</code></td><td><code>GET /api/health</code> → <code>{ status, version, timestamp }</code></td></tr>
+        <tr><td><span class="badge badge-gen">生成</span></td><td><code>src/lib/utils.ts</code></td><td>shadcn 初始化产物，含 <code>cn()</code></td></tr>
+        <tr><td><span class="badge badge-new">新增</span></td><td><code>src/lib/query-client.ts</code></td><td>TanStack Query <code>QueryClient</code> 工厂</td></tr>
+        <tr><td><span class="badge badge-new">新增</span></td><td><code>src/providers/query-provider.tsx</code></td><td><code>'use client'</code> 包装；lazy 初始化 Provider</td></tr>
+        <tr><td><span class="badge badge-new">新增</span></td><td><code>src/store/README.md</code></td><td>Zustand stores 占位说明（目录尚无 store）</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>测试 + 钩子</h3>
+  <div class="file-list">
+    <table>
+      <thead><tr><th>状态</th><th>文件</th><th>职责</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge badge-new">新增</span></td><td><code>tests/setup.test.ts</code></td><td>Vitest baseline（断言 1+1===2，验证 runner 工作）</td></tr>
+        <tr><td><span class="badge badge-new">新增</span></td><td><code>tests/smoke.test.tsx</code></td><td>渲染落地页找 "patra-portal" 文本</td></tr>
+        <tr><td><span class="badge badge-new">新增</span></td><td><code>tests/health.test.ts</code></td><td>调用 health route handler，断言 200 + payload</td></tr>
+        <tr><td><span class="badge badge-new">新增</span></td><td><code>tests/providers/query-provider.test.tsx</code></td><td>QueryProvider 包裹 children 渲染正常</td></tr>
+        <tr><td><span class="badge badge-new">新增</span></td><td><code>.husky/pre-commit</code></td><td>commit 前跑 <code>lint-staged</code> + <code>pnpm typecheck</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="tasks">
+  <h2>任务列表（共 12 个）</h2>
+  <div class="tasks">
+
+  <!-- ============ Task 1 ============ -->
+  <article class="task" id="task-1" data-status="done">
+    <header>
+      <h2>任务 1：pnpm 工程基线 + Node 版本锁定</h2>
+      <dl class="files">
+        <dt>创建</dt><dd><code>package.json</code> · <code>.gitignore</code> · <code>.nvmrc</code> · <code>.tool-versions</code></dd>
+      </dl>
+    </header>
+
+    <ol class="steps">
+      <li class="step" data-status="done">
+        <strong>步骤 1：定义验证标准</strong>
+        <p>完成本任务后应满足：</p>
+        <ul>
+          <li><code>pnpm install</code> 在仓库根可执行（无 ENOENT）</li>
+          <li><code>node --version</code> 报告 v22.x（mise 自动切换）</li>
+          <li><code>package.json</code> 的 <code>name</code> 为 <code>patra-portal</code>，<code>private: true</code></li>
+        </ul>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 2：确认当前失败状态</strong>
+        <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/Patra/patra-portal
+ls package.json 2&gt;&amp;1 || echo "MISSING"</code></pre>
+        <p>预期：<span class="expected">MISSING</span>（仅有 docs/ 与 .git/）</p>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 3：写配置文件</strong>
+        <p>创建 <code>package.json</code>：</p>
+<pre><code class="lang-json">{
+  "name": "patra-portal",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Patra C-end portal — medical literature discovery UI",
+  "type": "module",
+  "engines": {
+    "node": "&gt;=22.0.0",
+    "pnpm": "&gt;=9.0.0"
+  },
+  "scripts": {
+    "dev": "echo 'placeholder — defined in task 2'",
+    "build": "echo 'placeholder — defined in task 2'"
+  }
+}</code></pre>
+        <p>创建 <code>.gitignore</code>：</p>
+<pre><code># dependencies
+node_modules/
+.pnpm-store/
+
+# build output
+.next/
+out/
+dist/
+build/
+
+# test / coverage
+coverage/
+.vitest/
+
+# env / system
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.swp</code></pre>
+        <p>创建 <code>.nvmrc</code>（单行）：</p>
+<pre><code>22</code></pre>
+        <p>创建 <code>.tool-versions</code>（单行）：</p>
+<pre><code>node 22</code></pre>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 4：验证</strong>
+<pre><code class="lang-bash">node --version       # 期望: v22.x
+pnpm install         # 期望: Lockfile is up to date, resolution step skipped / Done
+ls -1 package.json .nvmrc .tool-versions .gitignore</code></pre>
+        <p>预期：四个文件都列出，<code>pnpm install</code> 成功生成空的 <code>node_modules/</code>。</p>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 5：Commit</strong>
+<pre><code class="lang-bash">git add package.json pnpm-lock.yaml .gitignore .nvmrc .tool-versions
+git commit -m "chore: 初始化 pnpm 工程基线 + Node 22 LTS 锁定"</code></pre>
+      </li>
+    </ol>
+  </article>
+
+  <!-- ============ Task 2 ============ -->
+  <article class="task" id="task-2" data-status="done">
+    <header>
+      <h2>任务 2：安装 Next.js 15 + React 19 + TypeScript strict</h2>
+      <dl class="files">
+        <dt>创建</dt><dd><code>tsconfig.json</code> · <code>next.config.ts</code> · <code>next-env.d.ts</code>（自动生成）</dd>
+        <dt>修改</dt><dd><code>package.json</code>（依赖 + scripts）</dd>
+      </dl>
+    </header>
+
+    <ol class="steps">
+      <li class="step" data-status="done">
+        <strong>步骤 1：定义验证标准</strong>
+        <p>本任务完成后：</p>
+        <ul>
+          <li><code>pnpm typecheck</code> 通过（项目尚无源码，但 TS 配置合法）</li>
+          <li><code>pnpm build</code> 在创建最小 <code>src/app</code> 之前会失败（task 4 修复），此时仅验证依赖与配置</li>
+        </ul>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 2：确认当前失败状态</strong>
+<pre><code class="lang-bash">pnpm typecheck 2&gt;&amp;1 || echo "FAIL — script not defined"</code></pre>
+        <p>预期：<span class="expected">FAIL — script not defined</span>。</p>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 3：安装依赖 + 写配置</strong>
+<pre><code class="lang-bash">pnpm add next@^15 react@^19 react-dom@^19
+pnpm add -D typescript @types/node @types/react @types/react-dom</code></pre>
+        <p>创建 <code>tsconfig.json</code>：</p>
+<pre><code class="lang-json">{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["dom", "dom.iterable", "ES2022"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [{ "name": "next" }],
+    "paths": { "@/*": ["./src/*"] }
+  },
+  "include": ["next-env.d.ts", "src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts", "tests/**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}</code></pre>
+        <p>创建 <code>next.config.ts</code>：</p>
+<pre><code class="lang-ts">import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  reactStrictMode: true,
+};
+
+export default nextConfig;</code></pre>
+        <p>更新 <code>package.json</code> 的 <code>scripts</code>：</p>
+<pre><code class="lang-json">{
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  }
+}</code></pre>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 4：验证</strong>
+<pre><code class="lang-bash">pnpm typecheck       # 期望: 无输出（成功）
+ls next-env.d.ts     # next 首次构建/typecheck 会生成；若缺失先跑 `pnpm exec next telemetry status` 触发</code></pre>
+        <p>预期：<code>pnpm typecheck</code> 退出码 0。若 <code>next-env.d.ts</code> 不存在，下一任务 build 时会自动生成。</p>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 5：Commit</strong>
+<pre><code class="lang-bash">git add package.json pnpm-lock.yaml tsconfig.json next.config.ts next-env.d.ts 2&gt;/dev/null
+git commit -m "feat: 引入 Next.js 15 + React 19 + TypeScript strict"</code></pre>
+      </li>
+    </ol>
+  </article>
+
+  <!-- ============ Task 3 ============ -->
+  <article class="task" id="task-3" data-status="done">
+    <header>
+      <h2>任务 3：Vitest 测试基础设施（baseline 测试）</h2>
+      <dl class="files">
+        <dt>创建</dt><dd><code>vitest.config.ts</code> · <code>tests/setup.test.ts</code></dd>
+        <dt>修改</dt><dd><code>package.json</code>（test/test:watch scripts + deps）</dd>
+      </dl>
+    </header>
+
+    <ol class="steps">
+      <li class="step" data-status="done">
+        <strong>步骤 1：编写 baseline 测试</strong>
+        <p>这是 Vitest 自身可运行性的 RED：脚本未定义时 <code>pnpm test</code> 必然失败。</p>
+        <p>创建 <code>tests/setup.test.ts</code>：</p>
+<pre><code class="lang-ts">import { describe, expect, it } from "vitest";
+
+describe("vitest baseline", () =&gt; {
+  it("runs and 1+1 equals 2", () =&gt; {
+    expect(1 + 1).toBe(2);
+  });
+});</code></pre>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 2：运行 → 验证失败</strong>
+<pre><code class="lang-bash">pnpm test 2&gt;&amp;1 || echo "FAIL — test script not defined"</code></pre>
+        <p>预期：<span class="expected">FAIL — test script not defined</span>。</p>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 3：安装 + 配置 Vitest</strong>
+<pre><code class="lang-bash">pnpm add -D vitest @vitejs/plugin-react jsdom \
+  @testing-library/react @testing-library/jest-dom @testing-library/user-event</code></pre>
+        <p>创建 <code>vitest.config.ts</code>：</p>
+<pre><code class="lang-ts">import { defineConfig } from "vitest/config";
+import react from "@vitejs/plugin-react";
+import { resolve } from "node:path";
+
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: { "@": resolve(__dirname, "./src") },
+  },
+  test: {
+    environment: "jsdom",
+    globals: false,
+    include: ["tests/**/*.{test,spec}.{ts,tsx}"],
+  },
+});</code></pre>
+        <p>更新 <code>package.json</code> scripts：</p>
+<pre><code class="lang-json">{
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  }
+}</code></pre>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 4：运行 → 验证通过</strong>
+<pre><code class="lang-bash">pnpm test</code></pre>
+        <p>预期：<span class="expected">Tests 1 passed (1)</span>，包含 <code>tests/setup.test.ts &gt; vitest baseline &gt; runs and 1+1 equals 2</code>。</p>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 5：Commit</strong>
+<pre><code class="lang-bash">git add package.json pnpm-lock.yaml vitest.config.ts tests/setup.test.ts
+git commit -m "test: 接入 Vitest + Testing Library，落地 baseline 用例"</code></pre>
+      </li>
+    </ol>
+  </article>
+
+  <!-- ============ Task 4 ============ -->
+  <article class="task" id="task-4" data-status="done">
+    <header>
+      <h2>任务 4：落地页 + Tailwind v4 + smoke 测试（TDD）</h2>
+      <dl class="files">
+        <dt>创建</dt><dd><code>tests/smoke.test.tsx</code> · <code>src/app/layout.tsx</code> · <code>src/app/page.tsx</code> · <code>src/app/globals.css</code> · <code>postcss.config.mjs</code></dd>
+      </dl>
+    </header>
+
+    <ol class="steps">
+      <li class="step" data-status="done">
+        <strong>步骤 1：编写失败的测试</strong>
+        <p>创建 <code>tests/smoke.test.tsx</code>：</p>
+<pre><code class="lang-tsx">import { describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import "@testing-library/jest-dom/vitest";
+import HomePage from "@/app/page";
+
+describe("HomePage smoke", () =&gt; {
+  it("renders the patra-portal landing heading", () =&gt; {
+    render(&lt;HomePage /&gt;);
+    expect(
+      screen.getByRole("heading", { level: 1, name: /patra-portal/i }),
+    ).toBeInTheDocument();
+  });
+});</code></pre>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 2：运行 → 验证失败</strong>
+<pre><code class="lang-bash">pnpm test --run tests/smoke.test.tsx 2&gt;&amp;1 | tail -20</code></pre>
+        <p>预期：<span class="expected">Failed to resolve import "@/app/page"</span>，1 failed。</p>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 3：装 Tailwind v4 + 写最小代码让测试通过</strong>
+<pre><code class="lang-bash">pnpm add tailwindcss@^4 @tailwindcss/postcss
+pnpm add -D postcss</code></pre>
+        <p>创建 <code>postcss.config.mjs</code>：</p>
+<pre><code class="lang-js">export default {
+  plugins: { "@tailwindcss/postcss": {} },
+};</code></pre>
+        <p>创建 <code>src/app/globals.css</code>：</p>
+<pre><code class="lang-css">@import "tailwindcss";
+
+@theme {
+  --color-brand: #4338ca;
+}
+
+html, body { height: 100%; }
+body {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}</code></pre>
+        <p>创建 <code>src/app/layout.tsx</code>：</p>
+<pre><code class="lang-tsx">import type { Metadata, Viewport } from "next";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  title: "patra-portal",
+  description: "Patra C-end portal — medical literature discovery",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#4338ca",
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    &lt;html lang="zh-CN"&gt;
+      &lt;body&gt;{children}&lt;/body&gt;
+    &lt;/html&gt;
+  );
+}</code></pre>
+        <p>创建 <code>src/app/page.tsx</code>：</p>
+<pre><code class="lang-tsx">export default function HomePage() {
+  return (
+    &lt;main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center gap-3 px-6"&gt;
+      &lt;h1 className="text-4xl font-bold tracking-tight"&gt;patra-portal&lt;/h1&gt;
+      &lt;p className="text-sm text-gray-500"&gt;Patra C-end portal · v0.1.0&lt;/p&gt;
+    &lt;/main&gt;
+  );
+}</code></pre>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 4：运行 → 验证通过</strong>
+<pre><code class="lang-bash">pnpm test                          # 期望: 2 passed
+pnpm typecheck                     # 期望: 无输出
+pnpm dev &gt; /tmp/portal-dev.log 2&gt;&amp;1 &amp;
+SERVER_PID=$!
+sleep 6
+curl -sS -o /tmp/page.html -w '%{http_code}' http://localhost:3000 ; echo
+grep -q 'patra-portal' /tmp/page.html &amp;&amp; echo OK_HTML
+kill $SERVER_PID</code></pre>
+        <p>预期：<span class="expected">200</span> + <span class="expected">OK_HTML</span>。</p>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 5：Commit</strong>
+<pre><code class="lang-bash">git add package.json pnpm-lock.yaml postcss.config.mjs \
+        src/app/layout.tsx src/app/page.tsx src/app/globals.css \
+        tests/smoke.test.tsx
+git commit -m "feat: 落地页 + Tailwind v4 + smoke 测试"</code></pre>
+      </li>
+    </ol>
+  </article>
+
+  <!-- ============ Task 5 ============ -->
+  <article class="task" id="task-5" data-status="done">
+    <header>
+      <h2>任务 5：/api/health 路由（TDD）</h2>
+      <dl class="files">
+        <dt>创建</dt><dd><code>tests/health.test.ts</code> · <code>src/app/api/health/route.ts</code></dd>
+      </dl>
+    </header>
+
+    <ol class="steps">
+      <li class="step" data-status="done">
+        <strong>步骤 1：编写失败的测试</strong>
+        <p>创建 <code>tests/health.test.ts</code>：</p>
+<pre><code class="lang-ts">import { describe, expect, it } from "vitest";
+import { GET } from "@/app/api/health/route";
+
+describe("GET /api/health", () =&gt; {
+  it("returns 200 with status ok and ISO timestamp", async () =&gt; {
+    const res = await GET();
+    expect(res.status).toBe(200);
+
+    const body = (await res.json()) as {
+      status: string;
+      version: string;
+      timestamp: string;
+    };
+    expect(body.status).toBe("ok");
+    expect(body.version).toMatch(/^\d+\.\d+\.\d+/);
+    expect(() =&gt; new Date(body.timestamp).toISOString()).not.toThrow();
+  });
+});</code></pre>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 2：运行 → 验证失败</strong>
+<pre><code class="lang-bash">pnpm test --run tests/health.test.ts 2&gt;&amp;1 | tail -20</code></pre>
+        <p>预期：<span class="expected">Failed to resolve import "@/app/api/health/route"</span>。</p>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 3：实现 route handler</strong>
+        <p>创建 <code>src/app/api/health/route.ts</code>：</p>
+<pre><code class="lang-ts">import { NextResponse } from "next/server";
+
+const VERSION = process.env.npm_package_version ?? "0.0.0";
+
+export const dynamic = "force-dynamic";
+
+export function GET(): NextResponse {
+  return NextResponse.json({
+    status: "ok",
+    version: VERSION,
+    timestamp: new Date().toISOString(),
+  });
+}</code></pre>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 4：运行 → 验证通过</strong>
+<pre><code class="lang-bash">pnpm test                          # 期望: 3 passed
+pnpm dev &gt; /tmp/portal-dev.log 2&gt;&amp;1 &amp;
+SERVER_PID=$!
+sleep 6
+curl -sS http://localhost:3000/api/health
+echo
+kill $SERVER_PID</code></pre>
+        <p>预期：JSON 体含 <span class="expected">"status":"ok"</span> + <span class="expected">"version":"0.1.0"</span> + ISO 时间戳。</p>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 5：Commit</strong>
+<pre><code class="lang-bash">git add src/app/api/health/route.ts tests/health.test.ts
+git commit -m "feat: 健康检查端点 /api/health"</code></pre>
+      </li>
+    </ol>
+  </article>
+
+  <!-- ============ Task 6 ============ -->
+  <article class="task" id="task-6" data-status="done">
+    <header>
+      <h2>任务 6：shadcn/ui 初始化</h2>
+      <dl class="files">
+        <dt>生成</dt><dd><code>components.json</code> · <code>src/lib/utils.ts</code></dd>
+      </dl>
+    </header>
+
+    <aside class="callout info">
+      <strong>注：</strong>shadcn CLI 是交互式的；这里用 <code>--yes</code> 与显式参数避免提示。CLI 会自动安装 <code>clsx</code> + <code>tailwind-merge</code> + <code>lucide-react</code>。
+    </aside>
+
+    <ol class="steps">
+      <li class="step" data-status="done">
+        <strong>步骤 1：定义验证标准</strong>
+        <ul>
+          <li><code>components.json</code> 存在，含 <code>"style": "new-york"</code> + <code>"baseColor": "slate"</code></li>
+          <li><code>src/lib/utils.ts</code> 存在，导出 <code>cn(...inputs)</code></li>
+          <li>所有现有测试仍通过</li>
+        </ul>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 2：确认当前缺失</strong>
+<pre><code class="lang-bash">[ -f components.json ] &amp;&amp; echo EXISTS || echo MISSING
+[ -f src/lib/utils.ts ] &amp;&amp; echo EXISTS || echo MISSING</code></pre>
+        <p>预期：两行均 <span class="expected">MISSING</span>。</p>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 3：跑 shadcn init</strong>
+<pre><code class="lang-bash">pnpm dlx shadcn@latest init --yes \
+  --base-color slate \
+  --css-variables</code></pre>
+        <p>若 CLI 仍提示，按以下回答：</p>
+        <ul>
+          <li>Style：<code>new-york</code></li>
+          <li>Base color：<code>slate</code></li>
+          <li>CSS variables：<code>yes</code></li>
+          <li>RSC：<code>yes</code></li>
+        </ul>
+        <p>CLI 完成后检查 <code>src/lib/utils.ts</code>：</p>
+<pre><code class="lang-ts">import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}</code></pre>
+        <p>若 shadcn 修改了 <code>src/app/globals.css</code>，保留它的 <code>@theme</code> token 与已有自定义合并；如冲突以 shadcn 输出为准（task 4 的 <code>--color-brand</code> 可保留）。</p>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 4：验证</strong>
+<pre><code class="lang-bash">cat components.json | head -20      # 确认 style / baseColor
+pnpm typecheck                       # 期望: 通过
+pnpm test                            # 期望: 全部通过</code></pre>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 5：Commit</strong>
+<pre><code class="lang-bash">git add components.json src/lib/utils.ts src/app/globals.css package.json pnpm-lock.yaml
+git commit -m "feat: 初始化 shadcn/ui（new-york + slate）"</code></pre>
+      </li>
+    </ol>
+  </article>
+
+  <!-- ============ Task 7 ============ -->
+  <article class="task" id="task-7" data-status="done">
+    <header>
+      <h2>任务 7：TanStack Query Provider（TDD）</h2>
+      <dl class="files">
+        <dt>创建</dt><dd><code>tests/providers/query-provider.test.tsx</code> · <code>src/lib/query-client.ts</code> · <code>src/providers/query-provider.tsx</code></dd>
+        <dt>修改</dt><dd><code>src/app/layout.tsx</code>（包裹 children）</dd>
+      </dl>
+    </header>
+
+    <ol class="steps">
+      <li class="step" data-status="done">
+        <strong>步骤 1：编写失败的测试</strong>
+        <p>创建 <code>tests/providers/query-provider.test.tsx</code>：</p>
+<pre><code class="lang-tsx">import { describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { useQueryClient } from "@tanstack/react-query";
+import { QueryProvider } from "@/providers/query-provider";
+
+function ProbeChild() {
+  const client = useQueryClient();
+  return &lt;span data-testid="probe"&gt;{client ? "has-client" : "no-client"}&lt;/span&gt;;
+}
+
+describe("QueryProvider", () =&gt; {
+  it("provides a QueryClient to children", () =&gt; {
+    render(
+      &lt;QueryProvider&gt;
+        &lt;ProbeChild /&gt;
+      &lt;/QueryProvider&gt;,
+    );
+    expect(screen.getByTestId("probe")).toHaveTextContent("has-client");
+  });
+});</code></pre>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 2：运行 → 验证失败</strong>
+<pre><code class="lang-bash">pnpm test --run tests/providers/query-provider.test.tsx 2&gt;&amp;1 | tail -20</code></pre>
+        <p>预期：<span class="expected">Failed to resolve import "@/providers/query-provider"</span>。</p>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 3：装依赖 + 写 Provider</strong>
+<pre><code class="lang-bash">pnpm add @tanstack/react-query</code></pre>
+        <p>创建 <code>src/lib/query-client.ts</code>：</p>
+<pre><code class="lang-ts">import { QueryClient } from "@tanstack/react-query";
+
+export function createQueryClient(): QueryClient {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 60 * 1000,
+        refetchOnWindowFocus: false,
+        retry: 1,
+      },
+    },
+  });
+}</code></pre>
+        <p>创建 <code>src/providers/query-provider.tsx</code>：</p>
+<pre><code class="lang-tsx">"use client";
+
+import { QueryClientProvider } from "@tanstack/react-query";
+import { useState } from "react";
+import { createQueryClient } from "@/lib/query-client";
+
+export function QueryProvider({ children }: { children: React.ReactNode }) {
+  const [client] = useState(() =&gt; createQueryClient());
+  return &lt;QueryClientProvider client={client}&gt;{children}&lt;/QueryClientProvider&gt;;
+}</code></pre>
+        <p>修改 <code>src/app/layout.tsx</code>，包裹 children：</p>
+<pre><code class="lang-tsx">import type { Metadata, Viewport } from "next";
+import { QueryProvider } from "@/providers/query-provider";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  title: "patra-portal",
+  description: "Patra C-end portal — medical literature discovery",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#4338ca",
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    &lt;html lang="zh-CN"&gt;
+      &lt;body&gt;
+        &lt;QueryProvider&gt;{children}&lt;/QueryProvider&gt;
+      &lt;/body&gt;
+    &lt;/html&gt;
+  );
+}</code></pre>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 4：运行 → 验证通过</strong>
+<pre><code class="lang-bash">pnpm test           # 期望: 4 passed
+pnpm typecheck      # 期望: 通过</code></pre>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 5：Commit</strong>
+<pre><code class="lang-bash">git add src/lib/query-client.ts src/providers/query-provider.tsx \
+        src/app/layout.tsx tests/providers/query-provider.test.tsx \
+        package.json pnpm-lock.yaml
+git commit -m "feat: 接入 TanStack Query Provider"</code></pre>
+      </li>
+    </ol>
+  </article>
+
+  <!-- ============ Task 8 ============ -->
+  <article class="task" id="task-8" data-status="done">
+    <header>
+      <h2>任务 8：Zustand + RHF + Zod 依赖装配 + store/ 占位</h2>
+      <dl class="files">
+        <dt>创建</dt><dd><code>src/store/README.md</code></dd>
+        <dt>修改</dt><dd><code>package.json</code>（依赖）</dd>
+      </dl>
+    </header>
+
+    <ol class="steps">
+      <li class="step" data-status="done">
+        <strong>步骤 1：定义验证标准</strong>
+        <ul>
+          <li><code>package.json</code> 含 <code>zustand</code>、<code>react-hook-form</code>、<code>zod</code>、<code>@hookform/resolvers</code></li>
+          <li><code>src/store/README.md</code> 解释空目录用途</li>
+          <li><code>pnpm typecheck</code> 通过</li>
+        </ul>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 2：确认当前缺失</strong>
+<pre><code class="lang-bash">grep -E '"(zustand|react-hook-form|zod|@hookform/resolvers)":' package.json || echo MISSING
+ls src/store/README.md 2&gt;&amp;1 || echo MISSING</code></pre>
+        <p>预期：两行 <span class="expected">MISSING</span>。</p>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 3：装依赖 + 写占位 README</strong>
+<pre><code class="lang-bash">pnpm add zustand react-hook-form zod @hookform/resolvers</code></pre>
+        <p>创建 <code>src/store/README.md</code>：</p>
+<pre><code class="lang-markdown"># src/store/
+
+Zustand store 落点。v1 脚手架阶段无业务 store。
+
+约定（待出现首个 store 时落地）：
+
+- 一个 store 一文件，文件名与 store 名一致（如 <code>user-store.ts</code> 导出 <code>useUserStore</code>）
+- 跨页面共享的客户端状态才放这里；纯局部状态用组件 <code>useState</code>
+- 不要把服务端缓存数据放 Zustand —— 那是 TanStack Query 的职责</code></pre>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 4：验证</strong>
+<pre><code class="lang-bash">pnpm typecheck                                                      # 期望: 通过
+grep -E '"(zustand|react-hook-form|zod|@hookform/resolvers)":' package.json
+test -f src/store/README.md &amp;&amp; echo OK_README</code></pre>
+        <p>预期：grep 输出四行（含版本号），README 标记 <span class="expected">OK_README</span>。</p>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 5：Commit</strong>
+<pre><code class="lang-bash">git add package.json pnpm-lock.yaml src/store/README.md
+git commit -m "chore: 装配 Zustand + RHF + Zod 依赖，落 store/ 占位"</code></pre>
+      </li>
+    </ol>
+  </article>
+
+  <!-- ============ Task 9 ============ -->
+  <article class="task" id="task-9" data-status="done">
+    <header>
+      <h2>任务 9：Biome lint / format 接入</h2>
+      <dl class="files">
+        <dt>创建</dt><dd><code>biome.json</code></dd>
+        <dt>修改</dt><dd><code>package.json</code>（deps + scripts）</dd>
+      </dl>
+    </header>
+
+    <ol class="steps">
+      <li class="step" data-status="done">
+        <strong>步骤 1：定义验证标准</strong>
+        <ul>
+          <li><code>pnpm lint</code> 在整个代码库上无错误（允许 warning）</li>
+          <li><code>pnpm format</code> 可执行</li>
+        </ul>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 2：确认当前失败</strong>
+<pre><code class="lang-bash">pnpm lint 2&gt;&amp;1 || echo "FAIL — script not defined"</code></pre>
+        <p>预期：<span class="expected">FAIL — script not defined</span>。</p>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 3：装 Biome + 写配置 + 自动修复</strong>
+<pre><code class="lang-bash">pnpm add -D @biomejs/biome</code></pre>
+        <p>创建 <code>biome.json</code>：</p>
+<pre><code class="lang-json">{
+  "$schema": "https://biomejs.dev/schemas/2.0.0/schema.json",
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "files": {
+    "ignoreUnknown": true,
+    "includes": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "**/*.json", "**/*.css", "**/*.md"]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100,
+    "lineEnding": "lf"
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "trailingCommas": "all",
+      "semicolons": "always"
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": { "recommended": true }
+  },
+  "assist": {
+    "actions": { "source": { "organizeImports": "on" } }
+  }
+}</code></pre>
+        <p>更新 <code>package.json</code> scripts：</p>
+<pre><code class="lang-json">{
+  "scripts": {
+    "lint": "biome check .",
+    "format": "biome format --write ."
+  }
+}</code></pre>
+        <p>先跑一次自动修复，吸收掉历史代码与 shadcn 产物的格式问题：</p>
+<pre><code class="lang-bash">pnpm exec biome check --write .</code></pre>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 4：验证</strong>
+<pre><code class="lang-bash">pnpm lint           # 期望: Checked N files. No fixes needed.
+pnpm typecheck      # 期望: 通过（autofix 不应破坏类型）
+pnpm test           # 期望: 全部通过</code></pre>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 5：Commit</strong>
+<pre><code class="lang-bash">git add biome.json package.json pnpm-lock.yaml \
+        src/ tests/ next.config.ts vitest.config.ts postcss.config.mjs
+git commit -m "chore: 接入 Biome lint/format，统一代码风格"</code></pre>
+      </li>
+    </ol>
+  </article>
+
+  <!-- ============ Task 10 ============ -->
+  <article class="task" id="task-10" data-status="done">
+    <header>
+      <h2>任务 10：路由错误边界 + 404 占位</h2>
+      <dl class="files">
+        <dt>创建</dt><dd><code>src/app/error.tsx</code> · <code>src/app/not-found.tsx</code></dd>
+      </dl>
+    </header>
+
+    <ol class="steps">
+      <li class="step" data-status="done">
+        <strong>步骤 1：定义验证标准</strong>
+        <ul>
+          <li><code>pnpm build</code> 成功（含 error/not-found 编译产物）</li>
+          <li>生产模式访问不存在路径返回自定义 404 内容</li>
+        </ul>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 2：确认当前状态</strong>
+<pre><code class="lang-bash">ls src/app/error.tsx src/app/not-found.tsx 2&gt;&amp;1 || echo MISSING
+pnpm build 2&gt;&amp;1 | tail -10                # build 当前可通过但用 Next 默认页</code></pre>
+        <p>预期：两文件 <span class="expected">MISSING</span>，build 通过但无自定义错误页。</p>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 3：实现两个占位页</strong>
+        <p>创建 <code>src/app/error.tsx</code>：</p>
+<pre><code class="lang-tsx">"use client";
+
+export default function GlobalError({
+  error,
+  reset,
+}: {
+  error: Error &amp; { digest?: string };
+  reset: () =&gt; void;
+}) {
+  return (
+    &lt;main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center gap-3 px-6"&gt;
+      &lt;h1 className="text-2xl font-bold"&gt;出错了&lt;/h1&gt;
+      &lt;p className="text-sm text-gray-500"&gt;{error.message}&lt;/p&gt;
+      &lt;button
+        type="button"
+        onClick={reset}
+        className="rounded-md border border-gray-300 px-4 py-2 text-sm hover:bg-gray-100"
+      &gt;
+        重试
+      &lt;/button&gt;
+    &lt;/main&gt;
+  );
+}</code></pre>
+        <p>创建 <code>src/app/not-found.tsx</code>：</p>
+<pre><code class="lang-tsx">import Link from "next/link";
+
+export default function NotFound() {
+  return (
+    &lt;main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center gap-3 px-6"&gt;
+      &lt;h1 className="text-2xl font-bold"&gt;404&lt;/h1&gt;
+      &lt;p className="text-sm text-gray-500"&gt;页面不存在&lt;/p&gt;
+      &lt;Link
+        href="/"
+        className="rounded-md border border-gray-300 px-4 py-2 text-sm hover:bg-gray-100"
+      &gt;
+        返回首页
+      &lt;/Link&gt;
+    &lt;/main&gt;
+  );
+}</code></pre>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 4：验证</strong>
+<pre><code class="lang-bash">pnpm typecheck                  # 期望: 通过
+pnpm lint                       # 期望: 通过
+pnpm test                       # 期望: 全部通过
+pnpm build 2&gt;&amp;1 | tail -15      # 期望: Compiled successfully + 看到 /404 与 /_error 路由
+pnpm start &gt; /tmp/portal-prod.log 2&gt;&amp;1 &amp;
+PID=$!
+sleep 6
+curl -sS -o /tmp/404.html -w '%{http_code}' http://localhost:3000/nope; echo
+grep -q '页面不存在' /tmp/404.html &amp;&amp; echo OK_404
+kill $PID</code></pre>
+        <p>预期：<span class="expected">404</span> + <span class="expected">OK_404</span>。</p>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 5：Commit</strong>
+<pre><code class="lang-bash">git add src/app/error.tsx src/app/not-found.tsx
+git commit -m "feat: 路由错误边界与 404 占位页"</code></pre>
+      </li>
+    </ol>
+  </article>
+
+  <!-- ============ Task 11 ============ -->
+  <article class="task" id="task-11" data-status="done">
+    <header>
+      <h2>任务 11：Husky + lint-staged pre-commit 钩子</h2>
+      <dl class="files">
+        <dt>创建</dt><dd><code>.husky/pre-commit</code></dd>
+        <dt>修改</dt><dd><code>package.json</code>（deps + scripts + lint-staged 段）</dd>
+      </dl>
+    </header>
+
+    <ol class="steps">
+      <li class="step" data-status="done">
+        <strong>步骤 1：定义验证标准</strong>
+        <ul>
+          <li>故意把一段格式破坏（多余空格 / 多余分号）后 <code>git commit</code> 失败</li>
+          <li><code>biome check --write</code> 修复后再 commit 成功</li>
+        </ul>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 2：确认当前缺失</strong>
+<pre><code class="lang-bash">ls .husky/pre-commit 2&gt;&amp;1 || echo MISSING</code></pre>
+        <p>预期：<span class="expected">MISSING</span>。</p>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 3：装钩子</strong>
+<pre><code class="lang-bash">pnpm add -D husky lint-staged
+pnpm exec husky init</code></pre>
+        <p>覆盖 <code>.husky/pre-commit</code> 内容：</p>
+<pre><code class="lang-bash">#!/usr/bin/env sh
+pnpm exec lint-staged
+pnpm typecheck</code></pre>
+        <p>给文件赋可执行权限：</p>
+<pre><code class="lang-bash">chmod +x .husky/pre-commit</code></pre>
+        <p>在 <code>package.json</code> 顶层加 <code>lint-staged</code> 段（与 <code>scripts</code> 同级）：</p>
+<pre><code class="lang-json">{
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json,css,md}": ["biome check --write --no-errors-on-unmatched"]
+  }
+}</code></pre>
+        <p>同时把 <code>husky install</code> 钩到 install 后（pnpm 8+ 需显式）：</p>
+<pre><code class="lang-json">{
+  "scripts": {
+    "prepare": "husky"
+  }
+}</code></pre>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 4：验证</strong>
+<pre><code class="lang-bash"># 1) 制造格式问题
+node -e 'require("node:fs").writeFileSync("src/app/page.tsx", require("node:fs").readFileSync("src/app/page.tsx","utf8").replace("export default","export   default"))'
+
+git add src/app/page.tsx
+git commit -m "test: should fail by hook" 2&gt;&amp;1 | tail -5
+# 预期: 看到 lint-staged 触发 biome 自动修复 + commit 成功（biome --write 会改回去）
+# OR 若 biome 报 lint error 而不仅格式：commit 失败
+
+# 2) 确认工作树干净
+git status --short
+# 3) 验证 typecheck 也跑了：临时引入 TS 错
+echo 'const _bad: number = "string";' &gt;&gt; src/app/page.tsx
+git add src/app/page.tsx
+git commit -m "test: should fail by typecheck" 2&gt;&amp;1 | tail -10
+# 预期: typecheck FAIL，commit 被阻止
+
+# 4) 回滚
+git restore src/app/page.tsx</code></pre>
+        <p>预期：格式问题被 <code>biome --write</code> 自动修复后 commit 通过；TS 错误能阻止 commit。</p>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 5：Commit 钩子配置</strong>
+<pre><code class="lang-bash">git add .husky/pre-commit package.json pnpm-lock.yaml
+git commit -m "chore: 接入 Husky + lint-staged pre-commit 钩子"</code></pre>
+      </li>
+    </ol>
+  </article>
+
+  <!-- ============ Task 12 ============ -->
+  <article class="task" id="task-12" data-status="done">
+    <header>
+      <h2>任务 12：README + 全链路最终验证</h2>
+      <dl class="files">
+        <dt>创建</dt><dd><code>README.md</code></dd>
+      </dl>
+    </header>
+
+    <ol class="steps">
+      <li class="step" data-status="done">
+        <strong>步骤 1：定义验证标准</strong>
+        <p>README 含：项目简介、命令矩阵（9 个 scripts）、目录结构、未决问题（指向 spec §13）。最终验收所有命令链路。</p>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 2：确认 README 缺失</strong>
+<pre><code class="lang-bash">ls README.md 2&gt;&amp;1 || echo MISSING</code></pre>
+        <p>预期：<span class="expected">MISSING</span>。</p>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 3：写 README</strong>
+        <p>创建 <code>README.md</code>：</p>
+<pre><code class="lang-markdown"># patra-portal
+
+Patra C 端前端 —— 医学出版物发现与浏览门户。
+
+- 技术栈：Next.js 15 App Router · React 19 · TypeScript 5 strict · Tailwind v4 · shadcn/ui · TanStack Query · Zustand · React Hook Form + Zod
+- 工具链：pnpm · Biome · Vitest + Testing Library · Husky + lint-staged
+- Node：22 LTS（由 <code>.nvmrc</code> / <code>.tool-versions</code> 锁定）
+
+## 快速开始
+
+```bash
+pnpm install
+pnpm dev          # http://localhost:3000
+```
+
+## 命令
+
+| 命令 | 作用 |
+|---|---|
+| <code>pnpm dev</code> | 开发服务器 |
+| <code>pnpm build</code> | 生产构建 |
+| <code>pnpm start</code> | 运行生产构建产物 |
+| <code>pnpm test</code> | <code>vitest run</code> |
+| <code>pnpm test:watch</code> | <code>vitest</code>（watch） |
+| <code>pnpm lint</code> | <code>biome check .</code> |
+| <code>pnpm format</code> | <code>biome format --write .</code> |
+| <code>pnpm typecheck</code> | <code>tsc --noEmit</code> |
+
+## 目录结构
+
+```
+src/
+├── app/
+│   ├── layout.tsx              # 根布局，包裹 Providers
+│   ├── page.tsx                # / 落地页
+│   ├── error.tsx               # 路由错误边界
+│   ├── not-found.tsx           # 404 占位
+│   ├── globals.css             # Tailwind v4 入口
+│   └── api/health/route.ts     # GET /api/health
+├── components/ui/              # shadcn/ui 落点（按需添加）
+├── lib/
+│   ├── utils.ts                # cn() — shadcn 标配
+│   └── query-client.ts         # TanStack Query 工厂
+├── providers/
+│   └── query-provider.tsx      # 'use client' Provider 包装
+└── store/                      # Zustand stores（按需添加）
+
+tests/                          # Vitest + Testing Library
+docs/patra/                     # spec 与 plan
+```
+
+## 设计文档
+
+- spec：<code>docs/patra/specs/2026-05-18-patra-portal-init-design.html</code>
+- plan：<code>docs/patra/plans/2026-05-18-patra-portal-init.html</code>
+
+## 未决（见 spec §13）
+
+- Node 版本：当前 22 LTS，未决是否升 24 LTS
+- 远端 GitHub 仓库：暂未绑定</code></pre>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 4：全链路验证</strong>
+<pre><code class="lang-bash">pnpm install
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm build 2&gt;&amp;1 | tail -10
+pnpm start &gt; /tmp/portal-final.log 2&gt;&amp;1 &amp;
+PID=$!
+sleep 6
+curl -sS -w '\n%{http_code}\n' http://localhost:3000 -o /tmp/final-home.html
+grep -q 'patra-portal' /tmp/final-home.html &amp;&amp; echo OK_HOME
+curl -sS http://localhost:3000/api/health
+echo
+curl -sS -o /dev/null -w '%{http_code}\n' http://localhost:3000/nope
+kill $PID</code></pre>
+        <p>预期：</p>
+        <ul>
+          <li><code>typecheck</code> / <code>lint</code> / <code>test</code> 全 PASS</li>
+          <li><code>build</code> 输出 "Compiled successfully"</li>
+          <li>首页返回 <span class="expected">200</span> + <span class="expected">OK_HOME</span></li>
+          <li><code>/api/health</code> 返回 JSON 含 <code>"status":"ok"</code></li>
+          <li><code>/nope</code> 返回 <span class="expected">404</span></li>
+        </ul>
+      </li>
+
+      <li class="step" data-status="done">
+        <strong>步骤 5：Commit</strong>
+<pre><code class="lang-bash">git add README.md
+git commit -m "docs: 添加 README，patra-portal v1 脚手架完成"
+git log --oneline</code></pre>
+        <p>预期看到 12 个 task commit + 2 个初始 docs commit，共 14 条提交记录。</p>
+      </li>
+    </ol>
+  </article>
+
+  </div>
+</section>
+
+<section class="self-check">
+  <h2>自检结果</h2>
+
+  <h3>1. 规格覆盖度</h3>
+  <ul class="checklist">
+    <li>spec §3 技术选型表 12 项 → 全部覆盖（task 2/3/4/6/7/8/9）</li>
+    <li>spec §5 项目结构 → 全部文件在 file-structure 与任务中列出</li>
+    <li>spec §6 命令矩阵 9 项 → task 2/3/4/9/12 全部接入</li>
+    <li>spec §7 配置要点（TS strict / Biome / Tailwind v4 / Query Provider lazy 初始化 / Husky / Node 22）→ 全部任务化</li>
+    <li>spec §9 错误处理（/api/health 200 + JSON · 默认 error/not-found）→ task 5/10</li>
+    <li>spec §10 测试策略（一个 smoke）→ task 4 落地，task 3/5/7 额外覆盖</li>
+    <li>spec §11 git（独立仓 · 首个 commit 仅 spec · 后续脚手架代码 commit）→ 已 commit spec，task 1-12 增量 commit</li>
+    <li>spec §12 验收标准 6 项 → task 12 step 4 全部 curl/命令验证</li>
+  </ul>
+
+  <h3>2. 占位符扫描</h3>
+  <ul class="checklist">
+    <li>无 "待定 / TODO / 后续实现 / 补充细节"</li>
+    <li>无 "添加适当的错误处理 / 添加验证 / 处理边界情况"（具体错误处理在 task 10 完整给出）</li>
+    <li>无 "类似任务 N"（每任务独立可读）</li>
+    <li>所有代码步骤均含完整代码块（无伪代码）</li>
+  </ul>
+
+  <h3>3. 类型一致性</h3>
+  <ul class="checklist">
+    <li><code>createQueryClient()</code> 在 task 7 步骤 3 定义，仅在同任务 <code>QueryProvider</code> 内使用</li>
+    <li><code>QueryProvider</code> 在 task 7 命名固定，task 4 layout.tsx 暂不引用，task 7 修改 layout.tsx 时引入</li>
+    <li><code>HomePage</code> 在 task 4 page.tsx 默认导出，task 4 smoke 测试用 <code>HomePage</code> 名引用</li>
+    <li><code>GET</code> 在 task 5 健康端点导出，task 5 测试用 <code>GET</code> 引用</li>
+    <li><code>cn()</code> 由 shadcn 在 task 6 生成，v1 范围内不直接调用，无别名冲突</li>
+  </ul>
+
+  <h3>4. HTML 结构完整性</h3>
+  <ul class="checklist">
+    <li>12 个 <code>&lt;article class="task"&gt;</code>，全部带唯一 <code>id="task-N"</code> 与 <code>data-status="pending"</code></li>
+    <li>60 个 <code>&lt;li class="step"&gt;</code>（12 任务 × 5 步），全部带 <code>data-status="pending"</code></li>
+    <li>头部 <code>&lt;dl class="meta"&gt;</code> 含 目标 / 架构 / 技术栈 / 关联 spec 四项</li>
+    <li><code>&lt;style&gt;</code> inline 于 <code>&lt;head&gt;</code>，无外部 CSS/JS 依赖（无字体引入）</li>
+    <li><code>[data-status]</code> 属性选择器在 CSS 中对 <code>.task</code> 与 <code>.step</code> 均定义了 pending/in-progress/done/blocked/skipped 五态渲染</li>
+  </ul>
+</section>
+
+<footer class="plan-footer">
+  patra-portal · v1 脚手架实现计划 · 12 个任务 / 60 个步骤 · 2026-05-18
+</footer>
+
+</main>
+</body>
+</html>

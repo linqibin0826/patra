@@ -1,0 +1,28 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build output
+.next/
+out/
+dist/
+build/
+
+# test / coverage
+coverage/
+.vitest/
+
+# typescript incremental cache
+*.tsbuildinfo
+
+# env / system
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.swp

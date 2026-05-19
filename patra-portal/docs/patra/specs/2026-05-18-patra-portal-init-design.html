@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>patra-portal v1 脚手架设计</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #fafbfc;
+    --bg-muted: #f3f4f6;
+    --border: #e5e7eb;
+    --border-strong: #d1d5db;
+    --text: #111827;
+    --text-muted: #4b5563;
+    --text-subtle: #6b7280;
+
+    --accent: #4338ca;
+    --accent-soft: #eef2ff;
+    --accent-border: #c7d2fe;
+
+    --ok-bg: #ecfdf5;
+    --ok-fg: #065f46;
+    --ok-border: #a7f3d0;
+
+    --warn-bg: #fffbeb;
+    --warn-fg: #92400e;
+    --warn-border: #fde68a;
+
+    --risk-bg: #fef2f2;
+    --risk-fg: #991b1b;
+    --risk-border: #fecaca;
+
+    --code-bg: #0f172a;
+    --code-fg: #e2e8f0;
+
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--text);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  main {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 32px 28px 96px;
+  }
+
+  /* ===== Document header ===== */
+  header.doc-header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px;
+    margin-bottom: 28px;
+  }
+  header.doc-header h1 {
+    font-size: 28px;
+    margin: 0 0 10px;
+    letter-spacing: -0.01em;
+  }
+  header.doc-header .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    font-size: 13px;
+    color: var(--text-muted);
+    align-items: center;
+  }
+  header.doc-header .meta time { font-family: var(--font-mono); }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+  .badge-status {
+    background: var(--warn-bg);
+    color: var(--warn-fg);
+    border: 1px solid var(--warn-border);
+  }
+  .badge-tag {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border: 1px solid var(--accent-border);
+    font-family: var(--font-mono);
+  }
+  header.doc-header .links a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+  header.doc-header .links a:hover { text-decoration: underline; }
+
+  /* ===== Sections ===== */
+  section { margin-top: 40px; }
+  section > h2 {
+    font-size: 20px;
+    margin: 0 0 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    letter-spacing: -0.005em;
+  }
+  section > h3 {
+    font-size: 16px;
+    margin: 24px 0 10px;
+    color: var(--text);
+  }
+  p { margin: 8px 0; }
+
+  /* ===== Callouts ===== */
+  aside.callout {
+    border-left: 4px solid var(--accent);
+    background: var(--accent-soft);
+    padding: 14px 16px;
+    border-radius: 0 6px 6px 0;
+    margin: 14px 0;
+  }
+  aside.callout.summary {
+    border-left-color: var(--accent);
+    background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%);
+    border: 1px solid var(--accent-border);
+    border-left-width: 4px;
+    padding: 18px 20px;
+  }
+  aside.callout.summary h3 {
+    margin: 0 0 8px;
+    font-size: 15px;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  aside.callout.summary p { margin: 6px 0; }
+  aside.callout.ok {
+    border-left-color: #10b981;
+    background: var(--ok-bg);
+  }
+  aside.callout.warn {
+    border-left-color: #f59e0b;
+    background: var(--warn-bg);
+  }
+  aside.callout.risk {
+    border-left-color: #ef4444;
+    background: var(--risk-bg);
+  }
+  aside.callout strong { color: var(--text); }
+
+  /* ===== Risk pills ===== */
+  .pill {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    line-height: 1.6;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  .pill-low {
+    background: var(--ok-bg);
+    color: var(--ok-fg);
+    border: 1px solid var(--ok-border);
+  }
+  .pill-mid {
+    background: var(--warn-bg);
+    color: var(--warn-fg);
+    border: 1px solid var(--warn-border);
+  }
+  .pill-high {
+    background: var(--risk-bg);
+    color: var(--risk-fg);
+    border: 1px solid var(--risk-border);
+  }
+
+  /* ===== Tables ===== */
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin: 12px 0;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th {
+    background: var(--bg-soft);
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  tr:last-child td { border-bottom: none; }
+  td code, th code {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    background: var(--bg-muted);
+    padding: 1px 6px;
+    border-radius: 3px;
+  }
+  .col-narrow { width: 1%; white-space: nowrap; }
+
+  /* Scope side-by-side */
+  .scope-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin: 14px 0;
+  }
+  @media (max-width: 720px) { .scope-grid { grid-template-columns: 1fr; } }
+  .scope-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .scope-card.in   { border-left: 4px solid #10b981; background: var(--ok-bg); }
+  .scope-card.out  { border-left: 4px solid #ef4444; background: var(--risk-bg); }
+  .scope-card h3 {
+    margin: 0 0 8px;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .scope-card.in h3  { color: var(--ok-fg); }
+  .scope-card.out h3 { color: var(--risk-fg); }
+  .scope-card ul { margin: 6px 0 0 18px; padding: 0; }
+  .scope-card li { margin: 4px 0; }
+
+  /* ===== Code blocks ===== */
+  pre {
+    background: var(--code-bg);
+    color: var(--code-fg);
+    padding: 14px 16px;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.55;
+    margin: 12px 0;
+  }
+  pre code { background: transparent; padding: 0; color: inherit; }
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.92em;
+    background: var(--bg-muted);
+    padding: 1px 6px;
+    border-radius: 3px;
+  }
+  mark {
+    background: #fef08a;
+    color: #713f12;
+    padding: 0 4px;
+    border-radius: 3px;
+    font-weight: 600;
+  }
+
+  /* ===== Decision blocks ===== */
+  .decision {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 18px;
+    margin: 14px 0;
+    background: var(--bg-soft);
+  }
+  .decision header {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .decision header h3 {
+    margin: 0;
+    font-size: 15px;
+  }
+  .decision .picked {
+    background: var(--ok-bg);
+    color: var(--ok-fg);
+    border: 1px solid var(--ok-border);
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .decision .why {
+    margin: 6px 0;
+    color: var(--text-muted);
+  }
+  .decision .alternatives {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border-strong);
+  }
+  .decision .alternatives summary {
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .decision .alternatives summary:hover { text-decoration: underline; }
+  .decision .alt {
+    margin: 8px 0 0 0;
+    padding: 8px 12px;
+    background: var(--bg);
+    border-left: 3px solid var(--border-strong);
+    border-radius: 0 4px 4px 0;
+  }
+  .decision .alt strong { color: var(--text); }
+  .decision .alt em {
+    color: var(--text-subtle);
+    font-style: normal;
+    font-size: 13px;
+  }
+
+  /* ===== Checklist ===== */
+  ul.check {
+    list-style: none;
+    padding-left: 0;
+  }
+  ul.check li {
+    padding-left: 24px;
+    position: relative;
+    margin: 6px 0;
+  }
+  ul.check li::before {
+    content: "☐";
+    position: absolute;
+    left: 0;
+    color: var(--text-subtle);
+    font-weight: 700;
+  }
+
+  details {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0 14px;
+    margin: 12px 0;
+    background: var(--bg-soft);
+  }
+  details summary {
+    cursor: pointer;
+    padding: 12px 0;
+    font-weight: 600;
+    color: var(--text);
+    list-style: none;
+  }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::before {
+    content: "▸ ";
+    color: var(--accent);
+    display: inline-block;
+    transition: transform 0.15s;
+  }
+  details[open] summary::before { content: "▾ "; }
+  details > *:not(summary) { margin-bottom: 12px; }
+
+  footer.doc-footer {
+    margin-top: 60px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text-subtle);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<main>
+
+<header class="doc-header">
+  <h1>patra-portal v1 脚手架设计</h1>
+  <div class="meta">
+    <time datetime="2026-05-18">2026-05-18</time>
+    <span class="badge badge-status">draft · 待用户审核</span>
+    <span class="badge badge-tag">scope: scaffold-only</span>
+    <span class="badge badge-tag">repo: patra-portal</span>
+  </div>
+  <p class="links" style="margin-top:10px;">
+    <strong>关联：</strong>
+    <span style="color: var(--text-subtle);">实现计划：<code>docs/patra/plans/YYYY-MM-DD-patra-portal-init.html</code>（spec 批准后由 writing-plans 生成）</span><br>
+    <span style="color: var(--text-subtle);">归档参考：<code>~/Projects/Archive/patra-web</code>（Nuxt 4 demo）</span>
+  </p>
+</header>
+
+<aside class="callout summary">
+  <h3>关键决策摘要</h3>
+  <p>新建 <code>Patra/patra-portal</code> 作为 Patra 的 <strong>C 端前端</strong>，采用 <mark>Next.js 15 + React 19 + TypeScript strict + Tailwind v4 + shadcn/ui + TanStack Query + Zustand</mark>。</p>
+  <p>v1 范围 <strong>仅交付脚手架</strong>：一个落地页 + <code>/api/health</code> + 一个 smoke 测试 + 全套 dev/build/test/lint/typecheck 命令。<strong>不</strong>实现任何业务页面、不接 patra-gateway-boot API、不预置鉴权/i18n/Docker/CI。</p>
+  <p>独立 git 仓库（已 <code>git init</code>），暂不绑远端。命名 <code>patra-portal</code> 与已归档的 <code>patra-web</code> 区分，避免混淆。</p>
+</aside>
+
+<section>
+  <h2>1. 背景</h2>
+  <p>Patra 是医学出版物数据平台，后端由四个微服务构成：<code>patra-registry</code>（SSOT 注册中心）、<code>patra-ingest</code>（采集）、<code>patra-catalog</code>（目录索引）、<code>patra-gateway-boot</code>（API 网关）。</p>
+  <p>历史前端 <code>patra-web</code>（Nuxt 4 + @nuxt/ui 4）仅为 demo，已于 2026-05-18 归档至 <code>~/Projects/Archive/patra-web</code>。本设计为<strong>全新 C 端前端 <code>patra-portal</code></strong> 的 v1 脚手架，未来承载文献检索、期刊浏览、个人订阅等场景。</p>
+  <aside class="callout warn">
+    <strong>绿地约束：</strong>无历史包袱、单人开发、质量优先。设计中已剔除"向后兼容 / 数据迁移 / 团队协作妥协 / 分阶段实施"等维度——它们对此项目均为 YAGNI。
+  </aside>
+</section>
+
+<section>
+  <h2>2. 范围边界</h2>
+  <div class="scope-grid">
+    <div class="scope-card in">
+      <h3>✓ 在范围内（v1）</h3>
+      <ul>
+        <li>项目脚手架与依赖装配</li>
+        <li>TS strict、Tailwind v4、shadcn/ui CLI 初始化</li>
+        <li>TanStack Query Provider（Client Component，SSR 安全）</li>
+        <li>Zustand 目录骨架（空）</li>
+        <li>RHF + Zod 依赖装配（不建 schema）</li>
+        <li>Biome lint/format + <code>tsc --noEmit</code></li>
+        <li>Vitest + Testing Library + 一个 smoke 测试</li>
+        <li>Husky pre-commit + lint-staged</li>
+        <li>占位首页 <code>/</code> + 健康检查 <code>/api/health</code></li>
+        <li>README + dev/build/test 命令</li>
+      </ul>
+    </div>
+    <div class="scope-card out">
+      <h3>✗ 不在范围（v1）</h3>
+      <ul>
+        <li>任何业务页面（检索、详情、列表、个人中心）</li>
+        <li>真实 API 调用（不接 patra-gateway-boot）</li>
+        <li>鉴权（Auth.js / Clerk）</li>
+        <li>国际化（next-intl / Paraglide）</li>
+        <li>Playwright e2e、Storybook</li>
+        <li>OpenAPI 客户端代码生成</li>
+        <li>Dockerfile / 部署配置</li>
+        <li>CI/CD（GitHub Actions）</li>
+        <li>远端 Git 仓库绑定</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>3. 技术选型</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>维度</th><th>选型</th><th>说明</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Meta-framework</td><td><code>next@15</code>（App Router）</td><td>RSC + Server Actions + Turbopack 已稳定</td></tr>
+        <tr><td>Runtime</td><td><code>react@19</code></td><td><code>use()</code>、<code>useActionState</code>、<code>useOptimistic</code></td></tr>
+        <tr><td>语言</td><td><code>typescript@5</code> strict</td><td><code>strict: true</code> + <code>noUncheckedIndexedAccess: true</code></td></tr>
+        <tr><td>样式</td><td><code>tailwindcss@4</code></td><td>Oxide 引擎 + CSS-first（<code>@theme</code>）</td></tr>
+        <tr><td>UI 组件</td><td><code>shadcn/ui</code>（new-york 风）</td><td>copy-paste，避免 vendor lock-in</td></tr>
+        <tr><td>服务端状态</td><td><code>@tanstack/react-query@5</code></td><td>事实标准</td></tr>
+        <tr><td>客户端状态</td><td><code>zustand</code></td><td>API 最轻，按需引入</td></tr>
+        <tr><td>表单</td><td><code>react-hook-form</code> + <code>zod</code> + <code>@hookform/resolvers</code></td><td>类型安全、性能好</td></tr>
+        <tr><td>包管理</td><td><code>pnpm</code></td><td>磁盘节省、与 mise 配合好</td></tr>
+        <tr><td>代码风格</td><td><code>@biomejs/biome</code></td><td>单工具替代 ESLint + Prettier</td></tr>
+        <tr><td>单元测试</td><td><code>vitest</code> + <code>@testing-library/react</code> + <code>jsdom</code></td><td>Vite 生态对齐</td></tr>
+        <tr><td>提交钩子</td><td><code>husky</code> + <code>lint-staged</code></td><td>pre-commit 跑 biome + typecheck</td></tr>
+        <tr><td>Node 版本</td><td>Node 22 LTS</td><td>通过 <code>.nvmrc</code> + mise <code>.tool-versions</code> 锁定</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>4. 决策交代</h2>
+  <p>v1 涉及 3 个关键决策，每个均评估了至少 2 个备选方案。</p>
+
+  <div class="decision">
+    <header>
+      <h3>4.1 Meta-framework 选 Next.js 15</h3>
+      <span class="picked">采纳</span>
+    </header>
+    <p class="why">医学文献 C 端 SEO 关键（文献详情页需被搜索引擎索引），RSC 让首屏数据预取干净；生态最厚，碰到问题可搜性最强。</p>
+    <details class="alternatives">
+      <summary>备选方案及未采纳原因</summary>
+      <div class="alt">
+        <strong>TanStack Start</strong> · <em>2025 GA，类型安全最强，Vite 基底</em>
+        <p>未选：生态较年轻，SSR 不如 Next 成熟；患文献站点的 SSR/SEO 是刚需，押注还不够稳。</p>
+      </div>
+      <div class="alt">
+        <strong>Vite + React Router 7（纯 SPA）</strong> · <em>最轻量、构建最快</em>
+        <p>未选：无 SSR，文献详情页对搜索引擎不友好；需要额外做 prerender，反而复杂。</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="decision">
+    <header>
+      <h3>4.2 代码风格工具选 Biome</h3>
+      <span class="picked">采纳</span>
+    </header>
+    <p class="why">单二进制覆盖 lint + format，速度比 ESLint + Prettier 组合快一个数量级；2025 末已具备 ESLint 主要规则集等价覆盖。配置文件单一（<code>biome.json</code>），心智负担低。</p>
+    <details class="alternatives">
+      <summary>备选方案及未采纳原因</summary>
+      <div class="alt">
+        <strong>ESLint v9 + Prettier</strong> · <em>生态最厚，插件最全</em>
+        <p>未选：双工具配置膨胀、跑得慢；本项目无需稀有插件，Biome 的覆盖足够。</p>
+      </div>
+      <div class="alt">
+        <strong>oxlint + Prettier</strong> · <em>oxlint 是当下最快的 lint</em>
+        <p>未选：oxlint 仍以 lint 为主，format 还需配 Prettier，回到双工具。一站式不如 Biome。</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="decision">
+    <header>
+      <h3>4.3 仓库形态选「单 app 独立 git 仓」</h3>
+      <span class="picked">采纳</span>
+    </header>
+    <p class="why">v1 只有一个 app；过早引入 monorepo（pnpm workspace / Turborepo）会带来不必要的 workspace 配置成本。未来若加 admin，按需开 <code>patra-admin</code> 独立仓即可——Patra 顶层非 monorepo，这一模式与 <code>patra-api</code> 一致（也是独立仓）。</p>
+    <details class="alternatives">
+      <summary>备选方案及未采纳原因</summary>
+      <div class="alt">
+        <strong>pnpm workspace monorepo（apps/ + packages/）</strong> · <em>未来易扩 admin 等多 app</em>
+        <p>未选：YAGNI。当下没有 admin 需求，预留 <code>packages/ui</code> 等仅增加心智成本。</p>
+      </div>
+      <div class="alt">
+        <strong>沿用旧名 <code>patra-web</code></strong> · <em>语义最朴素</em>
+        <p>未选：与已归档的 demo 同名会造成历史 commit / 配置 / 引用混淆，强制重名得不偿失。</p>
+      </div>
+    </details>
+  </div>
+</section>
+
+<section>
+  <h2>5. 项目结构</h2>
+<pre><code>Patra/patra-portal/
+├── docs/patra/specs/                       # 设计文档
+├── public/                                 # 静态资源
+├── src/
+│   ├── app/
+│   │   ├── layout.tsx                      # 根布局（含 Providers）
+│   │   ├── page.tsx                        # / 落地页
+│   │   ├── globals.css                     # Tailwind 入口
+│   │   └── api/health/route.ts             # GET /api/health
+│   ├── components/ui/                      # shadcn/ui 落点（初始为空）
+│   ├── lib/
+│   │   ├── utils.ts                        # cn() (clsx + tailwind-merge)
+│   │   └── query-client.ts                 # QueryClient 工厂
+│   ├── providers/
+│   │   └── query-provider.tsx              # 'use client' Provider 包装
+│   └── store/                              # zustand stores（占位 README）
+├── tests/smoke.test.tsx                    # 渲染首页 smoke
+├── .husky/pre-commit
+├── .gitignore
+├── .nvmrc                                  # Node 22 LTS
+├── .tool-versions                          # mise
+├── biome.json
+├── components.json                         # shadcn 配置
+├── next.config.ts
+├── package.json
+├── pnpm-lock.yaml
+├── postcss.config.mjs
+├── README.md
+├── tsconfig.json
+└── vitest.config.ts</code></pre>
+</section>
+
+<section>
+  <h2>6. 命令矩阵</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th class="col-narrow">命令</th><th>作用</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>pnpm install</code></td><td>安装依赖</td></tr>
+        <tr><td><code>pnpm dev</code></td><td>Next.js 开发服务器（默认 :3000）</td></tr>
+        <tr><td><code>pnpm build</code></td><td>生产构建至 <code>.next/</code></td></tr>
+        <tr><td><code>pnpm start</code></td><td>运行生产构建产物</td></tr>
+        <tr><td><code>pnpm lint</code></td><td><code>biome check .</code></td></tr>
+        <tr><td><code>pnpm format</code></td><td><code>biome format --write .</code></td></tr>
+        <tr><td><code>pnpm typecheck</code></td><td><code>tsc --noEmit</code></td></tr>
+        <tr><td><code>pnpm test</code></td><td><code>vitest run</code></td></tr>
+        <tr><td><code>pnpm test:watch</code></td><td><code>vitest</code>（watch 模式）</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>7. 配置要点</h2>
+
+  <aside class="callout">
+    <strong>TypeScript：</strong><code>strict: true</code>、<code>noUncheckedIndexedAccess: true</code>、<code>paths</code> 配 <code>@/*</code> → <code>src/*</code>。
+  </aside>
+
+  <aside class="callout">
+    <strong>Biome：</strong>启用 <code>recommended</code> 规则集 + import 排序；缩进 2 空格；行宽 100；尾随逗号 all。
+  </aside>
+
+  <aside class="callout">
+    <strong>Tailwind v4：</strong>通过 <code>@import "tailwindcss";</code> 在 <code>globals.css</code> 引入；不再需要 <code>tailwind.config.js</code>，按 v4 CSS-first 配置（<code>@theme</code> 语法）。
+  </aside>
+
+  <aside class="callout">
+    <strong>TanStack Query Provider：</strong>lazy 初始化（<code>useState(() =&gt; new QueryClient())</code>），避免 SSR/Client 双实例。Provider 文件标 <code>'use client'</code>，在 <code>app/layout.tsx</code> 中包裹 <code>{children}</code>。
+  </aside>
+
+  <aside class="callout">
+    <strong>Husky <code>pre-commit</code>：</strong>依次执行
+    <ol style="margin: 6px 0 0 22px; padding: 0;">
+      <li><code>pnpm exec lint-staged</code>：对 <code>*.{ts,tsx,js,jsx,json,md,css}</code> 跑 <code>biome check --write</code></li>
+      <li><code>pnpm typecheck</code>：仓库级 <code>tsc --noEmit</code>（不按 staged 分片——TS 必须整体类型检查）</li>
+    </ol>
+    任一失败则阻止 commit。
+  </aside>
+
+  <aside class="callout">
+    <strong>Node 22 LTS：</strong>通过 <code>.nvmrc</code> + mise <code>.tool-versions</code> 双重锁定，与 Patra 工作区其他项目一致。
+  </aside>
+</section>
+
+<section>
+  <h2>8. 风险与缓解</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th class="col-narrow">风险</th><th>说明</th><th>缓解</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="pill pill-low">低</span></td>
+          <td>Tailwind v4 CSS-first 配置与 shadcn/ui 的初始化流程仍在演进，初始化可能踩 CLI 兼容坑</td>
+          <td>使用 shadcn CLI 最新 <code>init</code>；问题出现时按官方升级 issue 修复，不阻塞 v1</td>
+        </tr>
+        <tr>
+          <td><span class="pill pill-low">低</span></td>
+          <td>React 19 + Next 15 RSC 心智模型对开发者有一定迁移成本</td>
+          <td>v1 不写业务，问题留到 v1.1 出现真实组件时再处理；Provider 边界已在脚手架阶段画清</td>
+        </tr>
+        <tr>
+          <td><span class="pill pill-low">低</span></td>
+          <td>Biome 与 ESLint 生态覆盖差异：某些社区规则在 Biome 缺失</td>
+          <td><code>recommended</code> 覆盖足够；若未来出现缺口可在 plan 阶段并入 ESLint 局部</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="color: var(--text-subtle); font-size: 13px;">无中/高风险——脚手架阶段范围窄、可逆性强。</p>
+</section>
+
+<section>
+  <h2>9. 错误处理与可观测性</h2>
+  <p>v1 仅保证：</p>
+  <ul>
+    <li><code>/api/health</code> 返回 <code>200</code> + <code>{ status: "ok", version, timestamp }</code></li>
+    <li>未捕获错误走 Next.js 默认 <code>error.tsx</code> 与 <code>not-found.tsx</code>（提供最小占位实现）</li>
+  </ul>
+  <p>未来按需引入：Sentry / OpenTelemetry / 结构化日志。</p>
+</section>
+
+<section>
+  <h2>10. 测试策略</h2>
+  <p><strong>v1 范围：</strong>仅一个 smoke 测试，确保渲染管道 + 测试基础设施可运行——用 Testing Library 渲染落地页，断言出现 <code>"patra-portal"</code>。</p>
+  <p><strong>未来：</strong>组件单测、Page 集成测试（Vitest + Testing Library）、e2e（Playwright，待页面出现后引入）。</p>
+</section>
+
+<section>
+  <h2>11. Git 与仓库管理</h2>
+  <ul>
+    <li><code>Patra/patra-portal/</code> 为<strong>独立 git 仓库</strong>（已 <code>git init</code>）</li>
+    <li>远端：暂不绑定（待用户决定 GitHub 仓库名后 <code>git remote add</code>）</li>
+    <li>首个 commit 仅含本 spec（已 commit）；脚手架代码作为后续 commit</li>
+  </ul>
+</section>
+
+<section>
+  <h2>12. 验收标准</h2>
+  <ul class="check">
+    <li><code>pnpm install &amp;&amp; pnpm dev</code> 后访问 <code>http://localhost:3000</code> 显示 "patra-portal" 落地页</li>
+    <li><code>curl http://localhost:3000/api/health</code> 返回 <code>{"status":"ok",...}</code></li>
+    <li><code>pnpm build &amp;&amp; pnpm start</code> 生产模式可启动</li>
+    <li><code>pnpm lint</code> / <code>pnpm typecheck</code> / <code>pnpm test</code> 全部通过</li>
+    <li><code>git commit</code> 触发 pre-commit 钩子，校验通过后才允许提交</li>
+    <li><code>README.md</code> 列出全部命令与目录说明</li>
+  </ul>
+</section>
+
+<section>
+  <h2>13. 未决问题</h2>
+  <aside class="callout warn">
+    <strong>需要用户拍板（不阻塞 v1 出 plan）：</strong>
+    <ol style="margin: 6px 0 0 22px; padding: 0;">
+      <li>Node 版本：22 LTS（默认）vs 24 LTS（更新）—— 默认 22，可在实施时调整</li>
+      <li>远端 GitHub 仓库名：<code>linqibin0826/patra-portal</code>？还是别的？现在不绑也可</li>
+    </ol>
+    <strong>无需用户拍板的默认选择：</strong>
+    <ol style="margin: 6px 0 0 22px; padding: 0;">
+      <li>shadcn 主题：<code>new-york</code> 风格 + <code>slate</code> 色</li>
+      <li>图标库：Lucide React（shadcn 默认）</li>
+      <li>健康检查路径：<code>/api/health</code>（符合 Next.js 路由习惯）</li>
+    </ol>
+  </aside>
+</section>
+
+<section>
+  <h2>14. 后续规划</h2>
+  <details>
+    <summary>仅作记录，不在本 spec 范围</summary>
+    <ul>
+      <li><strong>v1.1</strong>：接入 patra-gateway-boot 的 OpenAPI，生成类型安全客户端（候选：<code>openapi-typescript</code> + <code>openapi-fetch</code>）</li>
+      <li><strong>v1.2</strong>：落地首个业务页面（文献检索 + 详情）</li>
+      <li><strong>v1.3</strong>：鉴权（Auth.js v5 接入 gateway 鉴权端点）</li>
+      <li><strong>v2.0</strong>：国际化（next-intl）与多语言内容</li>
+    </ul>
+  </details>
+</section>
+
+<footer class="doc-footer">
+  patra-portal · v1 脚手架设计 · 2026-05-18
+</footer>
+
+</main>
+</body>
+</html>
