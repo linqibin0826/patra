@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monorepo Claude 配置三层化改造 实现计划</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --c-bg: #fafaf9;
+      --c-surface: #ffffff;
+      --c-border: #e7e5e4;
+      --c-border-strong: #d6d3d1;
+      --c-text: #1c1917;
+      --c-text-muted: #57534e;
+      --c-text-subtle: #78716c;
+      --c-primary: #4338ca;
+      --c-primary-bg: #eef2ff;
+      --c-success: #15803d;
+      --c-success-bg: #f0fdf4;
+      --c-warning: #b45309;
+      --c-warning-bg: #fffbeb;
+      --c-danger: #b91c1c;
+      --c-danger-bg: #fef2f2;
+      --c-info: #0369a1;
+      --c-info-bg: #f0f9ff;
+      --c-code-bg: #f5f5f4;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--c-text);
+      background: var(--c-bg);
+      margin: 0;
+    }
+
+    .page { max-width: 960px; margin: 0 auto; padding: 48px 32px 96px; }
+
+    code, pre {
+      font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+      font-size: 0.92em;
+    }
+    code {
+      background: var(--c-code-bg);
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid var(--c-border);
+      color: var(--c-primary);
+    }
+    pre {
+      background: #1c1917;
+      color: #fafaf9;
+      border-radius: 8px;
+      padding: 16px 20px;
+      overflow-x: auto;
+      line-height: 1.55;
+      font-size: 13px;
+    }
+    pre code { background: none; padding: 0; border: none; color: inherit; }
+
+    /* 文档头 */
+    header.doc-header {
+      border-bottom: 2px solid var(--c-border-strong);
+      padding-bottom: 24px;
+      margin-bottom: 36px;
+    }
+    header.doc-header h1 {
+      font-size: 30px;
+      font-weight: 700;
+      margin: 0 0 12px;
+      letter-spacing: -0.5px;
+    }
+    .meta-bar {
+      display: flex; flex-wrap: wrap; gap: 18px;
+      font-size: 13px; color: var(--c-text-subtle);
+    }
+    .status-pill {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      background: var(--c-warning-bg);
+      color: var(--c-warning);
+      border: 1px solid var(--c-warning);
+    }
+
+    /* AI worker hint */
+    .for-ai-worker {
+      background: var(--c-info-bg);
+      border-left: 4px solid var(--c-info);
+      padding: 16px 20px;
+      border-radius: 8px;
+      margin: 16px 0;
+      font-size: 13.5px;
+    }
+    .for-ai-worker strong { color: var(--c-info); }
+
+    /* Meta dl */
+    dl.meta {
+      display: grid;
+      grid-template-columns: max-content 1fr;
+      gap: 6px 20px;
+      margin: 20px 0;
+      font-size: 14px;
+    }
+    dl.meta dt {
+      font-weight: 600;
+      color: var(--c-text-subtle);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      font-size: 12px;
+      padding-top: 3px;
+    }
+    dl.meta dd { margin: 0; }
+    dl.meta dd a { color: var(--c-primary); text-decoration: none; }
+    dl.meta dd a:hover { text-decoration: underline; }
+
+    h2 {
+      font-size: 22px; font-weight: 700;
+      margin: 48px 0 16px; padding-bottom: 8px;
+      border-bottom: 1px solid var(--c-border);
+    }
+
+    /* 文件结构 */
+    .file-tree {
+      background: var(--c-surface);
+      border: 1px solid var(--c-border);
+      border-radius: 10px;
+      padding: 18px 22px;
+    }
+    .file-tree pre {
+      background: none;
+      color: var(--c-text);
+      padding: 0;
+      font-size: 13px;
+    }
+
+    /* Task card */
+    article.task {
+      background: var(--c-surface);
+      border: 1px solid var(--c-border);
+      border-left: 4px solid var(--c-border-strong);
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin: 22px 0;
+      transition: border-color 0.2s;
+    }
+    article.task[data-status="pending"]     { border-left-color: var(--c-border-strong); }
+    article.task[data-status="in-progress"] { border-left-color: #3b82f6; background: #eff6ff; }
+    article.task[data-status="done"]        { border-left-color: var(--c-success); background: #f3f4f6; }
+    article.task[data-status="blocked"]     { border-left-color: var(--c-danger); background: var(--c-danger-bg); }
+    article.task[data-status="skipped"]     { opacity: 0.55; text-decoration: line-through; }
+
+    article.task header h2 {
+      font-size: 19px;
+      margin: 0 0 8px;
+      padding: 0;
+      border: none;
+    }
+    article.task header h2::before {
+      content: attr(data-icon);
+      margin-right: 6px;
+    }
+    article.task[data-status="pending"]     header h2::before { content: "☐ "; color: var(--c-text-subtle); }
+    article.task[data-status="in-progress"] header h2::before { content: "▶ "; color: #3b82f6; }
+    article.task[data-status="done"]        header h2::before { content: "☑ "; color: var(--c-success); }
+    article.task[data-status="blocked"]     header h2::before { content: "✗ "; color: var(--c-danger); }
+    article.task[data-status="skipped"]     header h2::before { content: "⊘ "; }
+
+    .files {
+      display: grid;
+      grid-template-columns: max-content 1fr;
+      gap: 4px 16px;
+      margin: 8px 0 16px;
+      font-size: 13px;
+    }
+    .files dt {
+      font-weight: 600;
+      color: var(--c-text-subtle);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      font-size: 11px;
+    }
+    .files dd { margin: 0; }
+
+    /* Steps */
+    ol.steps {
+      list-style: none;
+      padding: 0;
+      counter-reset: step;
+    }
+    li.step {
+      counter-increment: step;
+      position: relative;
+      padding: 12px 16px 12px 38px;
+      margin: 8px 0;
+      border-radius: 6px;
+      background: var(--c-bg);
+      border: 1px solid transparent;
+    }
+    li.step::before {
+      position: absolute;
+      left: 12px;
+      top: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+    }
+    li.step[data-status="pending"]::before     { content: "☐"; color: var(--c-text-subtle); }
+    li.step[data-status="in-progress"]::before { content: "▶"; color: #3b82f6; }
+    li.step[data-status="done"]::before        { content: "☑"; color: var(--c-success); }
+    li.step[data-status="blocked"]::before     { content: "✗"; color: var(--c-danger); }
+    li.step[data-status="skipped"]::before     { content: "⊘"; opacity: 0.5; }
+    li.step[data-status="in-progress"] { background: #eff6ff; border-color: #3b82f6; }
+    li.step[data-status="done"] { background: #f3f4f6; }
+    li.step strong { font-weight: 600; }
+    li.step p { margin: 8px 0; }
+
+    /* Callout */
+    aside.callout {
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin: 18px 0;
+      border-left: 4px solid;
+    }
+    aside.callout.info    { background: var(--c-info-bg);    border-color: var(--c-info); }
+    aside.callout.success { background: var(--c-success-bg); border-color: var(--c-success); }
+    aside.callout.warning { background: var(--c-warning-bg); border-color: var(--c-warning); }
+    aside.callout strong { display: block; margin-bottom: 4px; color: inherit; }
+    aside.callout p:last-child { margin-bottom: 0; }
+
+    /* Pill */
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .pill.create { background: var(--c-success-bg); color: var(--c-success); border: 1px solid var(--c-success); }
+    .pill.modify { background: var(--c-info-bg);    color: var(--c-info);    border: 1px solid var(--c-info); }
+    .pill.delete { background: var(--c-danger-bg);  color: var(--c-danger);  border: 1px solid var(--c-danger); }
+    .pill.verify { background: var(--c-warning-bg); color: var(--c-warning); border: 1px solid var(--c-warning); }
+
+    .muted { color: var(--c-text-subtle); font-size: 13.5px; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+<header class="doc-header">
+  <h1>Monorepo Claude 配置三层化改造 实现计划</h1>
+  <div class="meta-bar">
+    <span>📅 2026-05-19</span>
+    <span>🌿 chore/claude-config-refactor</span>
+    <span>📋 plan</span>
+    <span class="status-pill">draft</span>
+  </div>
+
+  <aside class="for-ai-worker">
+    <strong>面向 AI 代理的工作者：</strong>
+    必需子技能：使用 <code>patra:subagent-driven-development</code>（推荐）
+    或 <code>patra:executing-plans</code> 逐任务实现此计划。
+    通过修改任务卡片与步骤的 <code>data-status</code> 属性追踪进度
+    （pending / in-progress / done / blocked / skipped）。
+    每完成一个 task 即提交对应 commit；本计划共 6 个 task，预计 6 个 commit。
+  </aside>
+
+  <dl class="meta">
+    <dt>目标</dt>
+    <dd>把 monorepo 的 Claude 配置按 cwd 上溯叠加机制拆分为 workspace 共享层 / BE 子项目层 / FE 子项目层，并清理 PR #36 遗留的 superpowers 旧引用。</dd>
+    <dt>架构</dt>
+    <dd>三层 CLAUDE.md 叠加模型：通用规则在根（Patra/），子项目层只写差异。<code>.claude-marketplace/</code> 与 BE <code>.claude/</code> 主体不动。删除 AGENTS.md（不维护 Codex）。patra-portal 从零起骨架（CLAUDE.md + 4 个 rules，每文件 &lt; 30 行）。</dd>
+    <dt>技术栈</dt>
+    <dd>纯文件改动（无代码）；Markdown rules + Markdown CLAUDE.md；git mv / rm / Write 工具。</dd>
+    <dt>关联 spec</dt>
+    <dd><a href="../specs/2026-05-19-claude-config-refactor-design.html">2026-05-19-claude-config-refactor-design.html</a></dd>
+  </dl>
+</header>
+
+<section>
+  <h2>范围检查结果</h2>
+  <aside class="callout success">
+    <strong>单 plan 覆盖</strong>
+    <p>spec 聚焦单一主题（Claude 配置三层化），9 个文件改动 + 1 个验证任务，逻辑紧密耦合，无需拆分子计划。</p>
+  </aside>
+</section>
+
+<section>
+  <h2>文件结构</h2>
+  <div class="file-tree">
+    <pre>Patra/                                                       <span class="muted">← workspace 共享层</span>
+├── CLAUDE.md                                                <span class="pill modify">overwrite</span>  现状 13 行 → 扩展为 ~70 行
+└── AGENTS.md                                                <span class="pill delete">delete</span>     不维护 Codex
+
+├── patra-api/                                               <span class="muted">← BE 叠加层</span>
+│   ├── CLAUDE.md                                            <span class="pill modify">modify</span>     删通用部分 + superpowers→patra
+│   └── AGENTS.md                                            <span class="pill delete">delete</span>     同上
+
+└── patra-portal/                                            <span class="muted">← FE 叠加层（从零起骨架）</span>
+    ├── CLAUDE.md                                            <span class="pill create">create</span>     FE 角色 + 栈 + plugin 未适配说明
+    └── .claude/
+        └── rules/
+            ├── code-style.md                                <span class="pill create">create</span>     Biome + TS + 命名
+            ├── component.md                                 <span class="pill create">create</span>     shadcn/ui + Tailwind
+            ├── state.md                                     <span class="pill create">create</span>     TanStack Query + Zustand 边界
+            └── testing.md                                   <span class="pill create">create</span>     Vitest + Testing Library</pre>
+  </div>
+</section>
+
+<section class="tasks">
+  <h2>任务列表</h2>
+
+  <!-- ============== TASK 1 ============== -->
+  <article class="task" id="task-1" data-status="pending">
+    <header>
+      <h2>任务 1：创建 Patra/CLAUDE.md（workspace 共享层）</h2>
+      <dl class="files">
+        <dt>创建</dt><dd><code>Patra/CLAUDE.md</code>（覆盖现有 13 行版本）</dd>
+        <dt>关联 spec 章节</dt><dd>§5.1</dd>
+      </dl>
+    </header>
+
+    <ol class="steps">
+      <li class="step" data-status="pending">
+        <strong>步骤 1：用 Write 工具覆盖 <code>Patra/CLAUDE.md</code>，内容如下</strong>
+        <pre><code># CLAUDE.md
+
+## 项目背景
+
+本项目是全新代码库（Greenfield Project），由单人开发，无时间压力。
+**始终牢记:** 这是绿地项目，无任何历史包袱，可以从零开始设计和实现最优方案。
+
+### 核心事实
+
+1. 零历史包袱:不存在旧版本，无需向后兼容、数据迁移或渐进式重构
+2. 单人团队:整个项目由 linqibin 一人负责，无团队协作成本
+3. 质量优先:可投入任何必要时间实现最优方案，技术卓越是唯一标准
+
+### 执行要求
+
+1. 不明白的地方反问我，先不急着编码
+2. 直接采用最优解决方案，数据结构、架构按最终形态设计
+3. 发现更好方案立即替换，可随时重构，不保留旧实现
+4. 所有组件、文档、API 只维护当前版本，修改时直接替换整个模块
+
+### 禁止行为
+
+1. 禁止考虑向后兼容、数据迁移、渐进式重构、历史遗留逻辑
+2. 禁止创建多版本并存、编写兼容 adapter、使用 deprecated 标记（直接删除或重写）
+3. 禁止以时间限制、人力不足、快速交付为由采用次优方案
+4. 禁止提及"如果时间允许"、"建议后续优化"、"分阶段实施"
+
+## TDD 开发模式（强制）
+
+所有功能开发遵循 Red-Green-Refactor 循环（语言无关，BE/FE 均适用）：
+
+1. **Red**: 先编写一个失败的测试，明确定义期望行为
+2. **Green**: 编写最少量的代码使测试通过，不多不少
+3. **Refactor**: 在测试保护下优化代码结构，保持测试绿色
+
+### 执行规则
+
+1. **测试先行**: 禁止在没有测试的情况下编写实现代码
+2. **小步前进**: 每次只关注一个测试用例，逐步构建功能
+3. **最小实现**: 只编写让当前测试通过的必要代码，避免过度设计
+4. **持续重构**: 每次测试通过后检视代码，消除重复和坏味道
+
+### 禁止行为
+
+1. 禁止跳过测试直接编写实现代码
+2. 禁止一次性编写多个测试后再实现
+3. 禁止编写超出当前测试需求的"预防性"代码
+4. 禁止在测试失败时继续添加新功能
+
+## Workspace Layout
+
+Patra 工作区包含以下子项目：
+
+| 目录 | 用途 | 技术栈 |
+|------|------|--------|
+| **patra-api** | 后端服务（微服务 + 六边形 + DDD） | Java 25 / Spring Boot 4 / Gradle |
+| **patra-portal** | 前端门户（管理控制台） | Next.js 15 / React 19 / TypeScript 5 strict / Tailwind v4 / shadcn/ui |
+| **patra-infra** | 基建配置（Docker Compose、DB 脚本） | （独立维护） |
+
+每个子项目有自己的 `.claude/CLAUDE.md`，cwd 上溯路径上会自动叠加加载（详见下方 cwd 工作约定）。
+
+## cwd 工作约定
+
+不同任务类型在不同 cwd 启动 Claude Code：
+
+| 任务类型 | cwd | 加载的配置层 |
+|---------|-----|------------|
+| 修改 BE 代码 / 写 BE 测试 | `patra-api/` | workspace + BE |
+| 修改 FE 代码 / 写 FE 测试 | `patra-portal/` | workspace + FE |
+| 跨项目重构 / 改 SOP / 改 ADR | `Patra/` | 仅 workspace 共享层 |
+
+**约定理由**：Claude Code 的 hooks 是硬约束——只有 cwd 那层 `settings.json` 里的 hooks 才会触发。BE/FE 各自的 hooks（如 Java 编译检查、Biome lint）应在对应子项目 cwd 启动时才激活，避免误触发。
+</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 2：验证内容写入</strong>
+        <p>运行：</p>
+        <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/Patra
+wc -l CLAUDE.md
+grep -c "^## " CLAUDE.md  # 应有 4 个一级章节</code></pre>
+        <p>预期：<code>wc -l</code> 返回 60-75 行；<code>grep -c</code> 返回 <code>4</code>（项目背景 / TDD / Workspace Layout / cwd 工作约定）。</p>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 3：git add + commit</strong>
+        <pre><code class="lang-bash">git add CLAUDE.md
+git commit -m "docs(claude): 提升 workspace 共享层 CLAUDE.md（绿地原则 + TDD + Layout + cwd 约定）"</code></pre>
+      </li>
+    </ol>
+  </article>
+
+  <!-- ============== TASK 2 ============== -->
+  <article class="task" id="task-2" data-status="pending">
+    <header>
+      <h2>任务 2：修订 patra-api/CLAUDE.md（删通用部分 + superpowers→patra）</h2>
+      <dl class="files">
+        <dt>修改</dt><dd><code>patra-api/CLAUDE.md</code></dd>
+        <dt>关联 spec 章节</dt><dd>§5.2</dd>
+      </dl>
+    </header>
+
+    <ol class="steps">
+      <li class="step" data-status="pending">
+        <strong>步骤 1：用 Write 工具覆盖 <code>patra-api/CLAUDE.md</code>，内容如下</strong>
+        <pre><code># CLAUDE.md
+
+> 本文件是 patra-api 后端项目的 BE 叠加层规则。
+> 通用规则（绿地原则 / TDD 精神 / Workspace Layout / cwd 约定）见 [`../CLAUDE.md`](../CLAUDE.md)（workspace 根）。
+
+## BE 角色定位
+
+系统架构师 / 高级 Java 开发者 / TDD 专家，精通六边形架构 + DDD + TDD，熟练使用 Spring Boot/Cloud 技术栈。
+
+技术栈：Java 25 / Spring Boot 4.0.6 / Gradle 9.2.1 (Kotlin DSL) / PostgreSQL 17 / Nacos
+
+## BE 工作原则
+
+### 强制要求
+
+1. **🚨 编写代码前必须加载对应的 Patra 领域技能！** 这是强制要求，无任何例外。根据任务类型加载：`patra-hexagonal`（创建组件/架构决策）、`patra-jpa`（数据层实现）、`patra-events`（事件/Outbox）、`patra-troubleshooter`（异常堆栈/日志链路/报错排查）
+2. 在使用 Plan subagent 制定开发计划时，必须优先考虑 TDD 流程和六边形架构原则，并加载 `patra-hexagonal` 确保计划符合项目架构规范
+
+## Skill 加载优先级
+
+Patra 项目使用**两层正交** skill 体系，叠加调用不冲突：
+
+1. **流程层 `patra:`**（plugin namespace，13 个方法论 skill）— 决定"怎么推进工作"：
+   - 新功能 → `patra:brainstorming` 先行
+   - 写计划 → `patra:writing-plans`
+   - 写代码 → `patra:test-driven-development` 全程
+   - 调 bug → `patra:systematic-debugging` 四阶段
+   - 完成任务 → `patra:requesting-code-review` + `patra:finishing-a-development-branch`
+
+2. **领域层 `patra-*`**（项目本地 skill）— 决定"代码写成什么样"：
+   - 架构决策 / 创建组件 → `patra-hexagonal`
+   - 数据持久化 → `patra-jpa`
+   - 事件 / Outbox → `patra-events`
+   - 异常排查 → `patra-troubleshooter`
+
+**调用顺序**：流程层先行，领域层落地。示例"添加 Venue 导入功能"：
+
+`patra:brainstorming` → `patra:writing-plans` → `patra:test-driven-development(RED)` → `patra-hexagonal`（指导 Handler）→ `patra-jpa`（指导 Repository）→ `patra:test-driven-development(GREEN)` → `patra:requesting-code-review`
+</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 2：验证 superpowers 已彻底清除</strong>
+        <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/Patra
+grep -n "superpowers:" patra-api/CLAUDE.md
+# 预期：无输出（exit code 1）
+
+grep -c "patra:" patra-api/CLAUDE.md
+# 预期：至少 5 次（brainstorming / writing-plans / TDD / debugging / code-review）</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 3：验证通用章节已删除</strong>
+        <pre><code class="lang-bash">grep -E "^### 核心事实|^## TDD 开发模式" patra-api/CLAUDE.md
+# 预期：无输出（这些已提到根 CLAUDE.md）
+
+grep -E "^## BE 角色定位|^## BE 工作原则|^## Skill 加载优先级" patra-api/CLAUDE.md
+# 预期：3 行输出</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 4：git add + commit</strong>
+        <pre><code class="lang-bash">git add patra-api/CLAUDE.md
+git commit -m "docs(claude): patra-api/CLAUDE.md 拆分 + 修正 superpowers→patra"</code></pre>
+      </li>
+    </ol>
+  </article>
+
+  <!-- ============== TASK 3 ============== -->
+  <article class="task" id="task-3" data-status="pending">
+    <header>
+      <h2>任务 3：删除两个 AGENTS.md</h2>
+      <dl class="files">
+        <dt>删除</dt><dd><code>Patra/AGENTS.md</code></dd>
+        <dt>删除</dt><dd><code>patra-api/AGENTS.md</code></dd>
+        <dt>关联 spec 决策</dt><dd>决策 3：不维护 Codex</dd>
+      </dl>
+    </header>
+
+    <ol class="steps">
+      <li class="step" data-status="pending">
+        <strong>步骤 1：git rm 两个 AGENTS.md</strong>
+        <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/Patra
+git rm AGENTS.md patra-api/AGENTS.md</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 2：验证删除</strong>
+        <pre><code class="lang-bash">find . -maxdepth 2 -name "AGENTS.md" -not -path "./node_modules/*" -not -path "./*/node_modules/*"
+# 预期：无输出</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 3：commit</strong>
+        <pre><code class="lang-bash">git commit -m "chore(claude): 删除 AGENTS.md（不维护 Codex，单工具 Claude Code 已足够）"</code></pre>
+      </li>
+    </ol>
+  </article>
+
+  <!-- ============== TASK 4 ============== -->
+  <article class="task" id="task-4" data-status="pending">
+    <header>
+      <h2>任务 4：创建 patra-portal/CLAUDE.md（FE 叠加层）</h2>
+      <dl class="files">
+        <dt>创建</dt><dd><code>patra-portal/CLAUDE.md</code></dd>
+        <dt>关联 spec 章节</dt><dd>§5.3</dd>
+      </dl>
+    </header>
+
+    <ol class="steps">
+      <li class="step" data-status="pending">
+        <strong>步骤 1：用 Write 工具创建 <code>patra-portal/CLAUDE.md</code>，内容如下</strong>
+        <pre><code># CLAUDE.md
+
+> 本文件是 patra-portal 前端项目的 FE 叠加层规则。
+> 通用规则（绿地原则 / TDD 精神 / Workspace Layout / cwd 约定）见 [`../CLAUDE.md`](../CLAUDE.md)（workspace 根）。
+
+## FE 角色定位
+
+高级前端工程师，精通现代 React 生态、TypeScript 类型系统、可访问 UI 与性能优化。
+
+技术栈：
+
+- **框架**：Next.js 15 App Router + React 19（Server Components 优先）
+- **类型**：TypeScript 5 strict 模式
+- **样式**：Tailwind v4 + shadcn/ui（组件原语在 `src/components/ui/`）
+- **状态**：TanStack Query v5（服务端状态）+ Zustand（客户端 UI 状态）
+- **表单**：React Hook Form + Zod
+- **测试**：Vitest + Testing Library
+- **工具**：Biome（格式化 + lint）+ pnpm + Husky/lint-staged
+
+## FE 工作原则
+
+1. **类型严格**：禁止 `any`、禁止 `// @ts-ignore`；用 `@ts-expect-error` 必须带注释说明原因
+2. **服务端优先**：默认使用 Server Components（无 `"use client"`），仅在需要交互或浏览器 API 时声明客户端
+3. **状态边界**：API 数据→TanStack Query；UI 偏好 / 本地暂存→Zustand；表单状态→RHF
+4. **可访问性**：优先使用语义化 HTML 与 ARIA；Testing Library 查询优先 `getByRole`
+
+详细规范见 `.claude/rules/` 下的具体规则文件（Claude Code 自动加载）。
+
+## ⚠️ Skill 加载现状
+
+**patra plugin（`patra:` 命名空间下的 13 个方法论 skill）当前仅适配后端**（六边形架构 + Java/Gradle），尚未为前端语境改造。
+
+在 `patra-portal/` cwd 工作时：
+
+- ❌ **不应**调用 `patra:brainstorming`、`patra:writing-plans`、`patra:test-driven-development` 等流程 skill —— 它们的代码示例、技术栈假设都是 Java
+- ✅ 可以使用其他通用 skill（如 IDE 提供的 frontend-design）
+- 🔜 前端专用 skill 体系将在后续 PR 中补充
+</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 2：验证关键章节存在</strong>
+        <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/Patra
+grep -E "^## FE 角色定位|^## FE 工作原则|^## ⚠️ Skill 加载现状" patra-portal/CLAUDE.md
+# 预期：3 行输出
+
+grep -c "patra plugin.*仅适配后端" patra-portal/CLAUDE.md
+# 预期：1</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 3：commit</strong>
+        <pre><code class="lang-bash">git add patra-portal/CLAUDE.md
+git commit -m "docs(claude): 新增 patra-portal/CLAUDE.md（FE 角色 + Next.js 栈 + plugin 未适配警示）"</code></pre>
+      </li>
+    </ol>
+  </article>
+
+  <!-- ============== TASK 5 ============== -->
+  <article class="task" id="task-5" data-status="pending">
+    <header>
+      <h2>任务 5：创建 patra-portal/.claude/rules/ 4 个骨架文件</h2>
+      <dl class="files">
+        <dt>创建</dt><dd><code>patra-portal/.claude/rules/code-style.md</code></dd>
+        <dt>创建</dt><dd><code>patra-portal/.claude/rules/component.md</code></dd>
+        <dt>创建</dt><dd><code>patra-portal/.claude/rules/state.md</code></dd>
+        <dt>创建</dt><dd><code>patra-portal/.claude/rules/testing.md</code></dd>
+        <dt>关联 spec 章节</dt><dd>§6</dd>
+      </dl>
+    </header>
+
+    <ol class="steps">
+      <li class="step" data-status="pending">
+        <strong>步骤 1：创建 <code>patra-portal/.claude/rules/code-style.md</code></strong>
+        <pre><code># 代码风格
+
+## Biome 是唯一权威
+
+- 格式化与 lint 全部交给 Biome（`biome.json`）
+- 禁止与 Biome 配置冲突的手动格式化
+- pre-commit 通过 Husky + lint-staged 自动跑 Biome
+
+## TypeScript strict 模式
+
+- 禁止 `any`（用 `unknown` + 类型守卫代替）
+- 禁止 `// @ts-ignore`，使用 `// @ts-expect-error <原因>`
+- 函数返回类型对公开 API 必须显式声明（除明显的简单函数）
+
+## 命名
+
+| 类别 | 约定 | 示例 |
+|------|------|------|
+| 组件 | PascalCase | `VenueCard.tsx` |
+| Hook | `useXxx` camelCase | `useVenueQuery` |
+| 纯函数 / 变量 | camelCase | `formatDate` |
+| 常量 | SCREAMING_SNAKE_CASE | `MAX_RETRY_COUNT` |
+| 类型 / 接口 | PascalCase | `VenueDTO` |
+
+## 路径别名
+
+- `@/` 指向 `src/`
+- 禁止使用 `../../` 跨目录引用，统一用 `@/`
+</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 2：创建 <code>patra-portal/.claude/rules/component.md</code></strong>
+        <pre><code># 组件规范
+
+## shadcn/ui 优先
+
+- UI primitives（Button、Dialog、Input 等）一律用 shadcn/ui，安装到 `src/components/ui/`
+- 禁止从 npm 直接装无 headless 实现的组件库（如 Ant Design、MUI）
+
+## 业务组件组织
+
+- 业务组件放 `src/components/<feature>/`
+- 单文件单组件：每个 `.tsx` 默认导出一个组件
+- 复合组件（如 `Card.Header`、`Card.Body`）允许同一文件内多个 named export
+
+## Tailwind 习惯
+
+- Class 顺序由 Biome 插件自动排，不手动调整
+- 禁止 inline `style` 属性，必须用 Tailwind class 或 CSS variables
+- 条件 class 用 `cn`（封装在 `@/lib/utils`）
+
+## Server Components 优先
+
+- 默认 RSC（无 `"use client"` 指令）
+- 仅在需要浏览器 API、事件交互、`useState`/`useEffect` 时声明 `"use client"`
+</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 3：创建 <code>patra-portal/.claude/rules/state.md</code></strong>
+        <pre><code># 状态管理边界
+
+## 三层状态分工
+
+| 类型 | 工具 | 例子 |
+|------|------|------|
+| 服务端状态（来自 API） | TanStack Query v5 | venue 列表、user info |
+| 客户端 UI 状态 | Zustand | 侧边栏折叠、主题切换 |
+| 表单状态 | React Hook Form + Zod | 编辑表单、搜索框 |
+
+## TanStack Query 约定
+
+- `queryKey` 集中管理在 `src/lib/query-keys.ts`
+- 每个 endpoint 一个自定义 hook（`useVenueListQuery`、`useVenueDetailQuery`）
+- mutation 后用 `queryClient.invalidateQueries({ queryKey })` 失效缓存
+
+## Zustand 约定
+
+- 每个 store 单一职责（不写"大 store"）
+- store 文件放 `src/store/<name>.ts`
+- 禁止把 API 数据塞进 Zustand
+
+## RHF + Zod 约定
+
+- 表单 schema 用 Zod 定义，通过 `zodResolver` 接入 RHF
+- 表单状态不进 Zustand，不进 query cache
+</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 4：创建 <code>patra-portal/.claude/rules/testing.md</code></strong>
+        <pre><code># 测试规范
+
+## 测试位置
+
+- 测试文件与被测文件并列：`Venue.tsx` 对应 `Venue.test.tsx`
+- 或集中在 `tests/` 目录（与现有结构一致）
+- 测试工具：Vitest（runner + assertion）+ Testing Library（DOM 查询）
+
+## 查询优先级
+
+按可访问性优先级，从高到低：
+
+1. `getByRole`（最优，反映用户感知）
+2. `getByLabelText`（表单字段）
+3. `getByPlaceholderText`
+4. `getByText`
+5. ⚠️ `getByTestId`（**仅作最后手段**，禁止作为首选）
+
+## 禁止行为
+
+- ❌ Snapshot 测试（脆弱，无信息价值）
+- ❌ 测试实现细节（如 state 内部值、私有方法）
+- ❌ 裸 `setTimeout` 等异步——必须用 `await findBy*` / `waitFor`
+
+## TDD 红绿循环
+
+遵循 workspace 根 `CLAUDE.md` 的 TDD 强制要求：写测试 → 验证失败 → 写最少代码 → 验证通过 → commit。
+</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 5：验证 4 个文件存在且每个 &lt; 30 行</strong>
+        <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/Patra
+for f in code-style component state testing; do
+  path="patra-portal/.claude/rules/$f.md"
+  lines=$(wc -l < "$path")
+  echo "$path: $lines 行"
+done
+# 预期：4 个文件都在，每个 lines 数在 25-32 之间（允许少量超过 30，因表格行数较多）</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 6：commit</strong>
+        <pre><code class="lang-bash">git add patra-portal/.claude/rules/
+git commit -m "docs(claude): 新增 patra-portal/.claude/rules/ 4 个骨架（code-style / component / state / testing）"</code></pre>
+      </li>
+    </ol>
+  </article>
+
+  <!-- ============== TASK 6 ============== -->
+  <article class="task" id="task-6" data-status="pending">
+    <header>
+      <h2>任务 6：最终验证 + push + 开 PR</h2>
+      <dl class="files">
+        <dt>验证</dt><dd>整体改造完成度，对照 spec Done 判定</dd>
+        <dt>关联 spec 章节</dt><dd>第 9 章 Done 判定</dd>
+      </dl>
+    </header>
+
+    <ol class="steps">
+      <li class="step" data-status="pending">
+        <strong>步骤 1：spec Done 判定逐条验证</strong>
+        <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/Patra
+
+# 1. workspace 根 CLAUDE.md 存在且内容符合
+test -f CLAUDE.md && grep -q "Workspace Layout" CLAUDE.md && echo "✓ Patra/CLAUDE.md OK" || echo "✗ FAIL"
+
+# 2. patra-portal/CLAUDE.md 存在且包含警示
+test -f patra-portal/CLAUDE.md && grep -q "patra plugin.*仅适配后端" patra-portal/CLAUDE.md && echo "✓ portal CLAUDE.md OK" || echo "✗ FAIL"
+
+# 3. patra-api/CLAUDE.md 无 superpowers 残留
+! grep -q "superpowers:" patra-api/CLAUDE.md && echo "✓ patra-api/CLAUDE.md 已清理" || echo "✗ FAIL"
+
+# 4. AGENTS.md 全部删除
+! test -f AGENTS.md && ! test -f patra-api/AGENTS.md && echo "✓ AGENTS.md 已删除" || echo "✗ FAIL"
+
+# 5. portal rules 4 个文件存在
+ls patra-portal/.claude/rules/{code-style,component,state,testing}.md > /dev/null 2>&1 && echo "✓ portal rules OK" || echo "✗ FAIL"</code></pre>
+        <p>预期：5 行全部 <code>✓</code>。</p>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 2：cwd 启动验证（人工，需新会话）</strong>
+        <p>在新终端：</p>
+        <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/Patra/patra-portal
+claude
+# 在新会话中对话：
+# 用户："我现在在哪个角色？用什么技术栈？"
+# 预期：Claude 应回答 FE 角色（Next.js / React 19 / TS strict / Tailwind v4 / shadcn/ui 等），
+#       不应该出现 BE 内容（Spring Boot / Java / 六边形等）。</code></pre>
+        <p>如果回答不符合，回到对应 task 检查 CLAUDE.md 内容。</p>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 3：push 分支到远程</strong>
+        <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/Patra
+git log --oneline main..HEAD  # 应看到 6 个新 commit（含 spec 共 7 个）
+git push -u origin chore/claude-config-refactor</code></pre>
+      </li>
+
+      <li class="step" data-status="pending">
+        <strong>步骤 4：用 gh 开 PR</strong>
+        <pre><code class="lang-bash">gh pr create --title "chore(claude): monorepo Claude 配置三层化改造" --body "$(cat <<'EOF'
+## 摘要
+
+按 Claude Code 原生加载规则（cwd 上溯叠加 + 子目录按需），把 monorepo 的 Claude 配置拆分为三层：
+
+- **workspace 共享层**（`Patra/CLAUDE.md`）：绿地原则 + TDD 精神 + Workspace Layout + cwd 工作约定
+- **BE 子项目层**（`patra-api/CLAUDE.md`）：删除已提到根的通用部分，保留 BE 专属，修正 PR #36 遗留的 `superpowers:` → `patra:`
+- **FE 子项目层**（`patra-portal/CLAUDE.md` + `.claude/rules/` 4 个骨架）：从零创建，含 patra plugin 未适配前端的明确警示
+
+## 关键决策
+
+- **cwd 工作模式**：BE/FE 工作时 cd 到对应子项目启动 Claude（hooks 硬约束）
+- **`.claude-marketplace/` 暂留 patra-api/**：plugin 当前仅适配后端，前端 skill 体系待后续 PR
+- **删除所有 AGENTS.md**：不维护 Codex，单工具足够
+
+## 改动范围（10 项）
+
+- 新建：`Patra/CLAUDE.md`（覆盖）、`patra-portal/CLAUDE.md`、`patra-portal/.claude/rules/{code-style,component,state,testing}.md`（4 个）
+- 修订：`patra-api/CLAUDE.md`
+- 删除：`Patra/AGENTS.md`、`patra-api/AGENTS.md`
+- 不动：`patra-api/.claude/` 与 `.claude-marketplace/` 主体
+
+## 关联文档
+
+- spec: [`docs/patra/specs/2026-05-19-claude-config-refactor-design.html`](patra-api/docs/patra/specs/2026-05-19-claude-config-refactor-design.html)
+- plan: [`docs/patra/plans/2026-05-19-claude-config-refactor.html`](patra-api/docs/patra/plans/2026-05-19-claude-config-refactor.html)
+
+## 测试计划
+
+- [x] grep 验证 `superpowers:` 已清除
+- [x] find 验证 AGENTS.md 已删除
+- [x] portal/CLAUDE.md 含 "patra plugin 仅适配后端" 警示
+- [x] cwd=patra-portal 启动新会话验证 FE 角色识别正确
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+EOF
+)"</code></pre>
+        <p>预期：gh 返回 PR URL，记下后告知用户。</p>
+      </li>
+    </ol>
+  </article>
+</section>
+
+<section class="self-check">
+  <h2>自检结果</h2>
+
+  <aside class="callout success">
+    <strong>1. 规格覆盖度</strong>
+    <p>spec 第 9 章 10 项改造逐一对应到 task：1→Task1、2→Task3、3→Task2、4→Task3、5→Task4、6-9→Task5（4 个 rules）、10→明确不动（无 task 但 spec 已说明）。spec 第 9 章 Done 判定 6 条全部映射到 Task 6 步骤 1-2。✓</p>
+  </aside>
+
+  <aside class="callout success">
+    <strong>2. 占位符扫描</strong>
+    <p>无"TODO / 待补 / 后续实现"等占位词。每个文件创建任务都给出完整 markdown 全文（不是骨架）。Done 判定的命令也是可直接执行的具体 grep / test 命令。✓</p>
+  </aside>
+
+  <aside class="callout success">
+    <strong>3. 类型一致性</strong>
+    <p>不涉及代码类型。文件路径、commit 消息格式、grep 关键词跨任务一致（"superpowers:" / "patra plugin.*仅适配后端" 等）。✓</p>
+  </aside>
+
+  <aside class="callout success">
+    <strong>4. HTML 结构完整性</strong>
+    <p>6 个 <code>&lt;article class="task"&gt;</code> 都有唯一 <code>id="task-N"</code> + 初始 <code>data-status="pending"</code>；所有 <code>&lt;li class="step"&gt;</code> 初始 <code>data-status="pending"</code>；头部 <code>&lt;dl class="meta"&gt;</code> 含目标 / 架构 / 技术栈 / 关联 spec 四项；CSS inline 无外部依赖；<code>[data-status]</code> 属性选择器在 CSS 里都有对应渲染规则。✓</p>
+  </aside>
+</section>
+
+</div>
+</body>
+</html>
