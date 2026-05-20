@@ -96,6 +96,13 @@ Task tool (general-purpose):
     - 如果要求了 TDD，我是否遵循了？
     - 测试是否全面？
 
+    **偏离记录（重要）：**
+    - 本任务中是否有 plan **没规定**的决定我替它做了？（如默认值、命名约定、key 前缀）
+    - 是否有偏离 plan 明文要求的**更改**？（如版本号、文件位置、依赖选择）
+    - 是否有不得不接受的**权衡**？（如暂未抽接口、暂未处理边界场景、为绕坑改了实现路径）
+    - 是否有应让用户知道的**环境怪事**？（如端口冲突、本地依赖缺失、临时 workaround）
+    - 全部列入 DEVIATIONS 报告（见汇报格式），**不要**自己改 plan HTML——控制者会读你的报告并追加到 plan notes-panel。
+
     如果在自审中发现问题，在汇报前就修复。
 
     ## 汇报格式
@@ -106,6 +113,17 @@ Task tool (general-purpose):
     - 你测试了什么以及测试结果
     - 修改了哪些文件
     - 自审发现（如果有）
+    - **DEVIATIONS：** 本任务中 plan 未规定的决定 / 必要更改 / 不可避免的权衡 / 环境怪事。
+      每条单独一行，前缀为 `[DECISION]` / `[CHANGE]` / `[TRADEOFF]` / `[OTHER]`。
+      格式示例：
+      ```
+      DEVIATIONS:
+      [DECISION] plan 未指定 repair 模式 dry-run 默认值，采用 dry-run=true（保守默认）
+      [CHANGE] Flyway 编号 V12 改为 V13（本地已存在 V12）
+      [TRADEOFF] Repository 暂未抽 interface，因当前只有一个实现
+      ```
+      若无任何偏离，写 `DEVIATIONS: none`。
+      **绝不**自己改 plan HTML——控制者会读这份清单并代为追加 notes-panel entry。
     - 任何问题或疑虑
 
     如果你完成了工作但对正确性有疑虑，使用 DONE_WITH_CONCERNS。
