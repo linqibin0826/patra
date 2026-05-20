@@ -1,0 +1,54 @@
+{
+  "mcpServers": {
+    "patra-pg-registry": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://postgres:123456@${PATRA_INFRA_HOST}:15432/patra_registry"
+      ],
+      "env": {}
+    },
+    "patra-pg-ingest": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://postgres:123456@${PATRA_INFRA_HOST}:15432/patra_ingest"
+      ],
+      "env": {}
+    },
+    "patra-pg-catalog": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://postgres:123456@${PATRA_INFRA_HOST}:15432/patra_catalog"
+      ],
+      "env": {}
+    },
+    "patra-pg-storage": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://postgres:123456@${PATRA_INFRA_HOST}:15432/patra_storage"
+      ],
+      "env": {}
+    },
+    "patra-pg-batch": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://postgres:123456@${PATRA_INFRA_HOST}:15432/patra_batch"
+      ],
+      "env": {}
+    }
+  }
+}
