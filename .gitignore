@@ -11,3 +11,10 @@
 # Patra workspace 临时 / 备份目录
 *.backup
 *.stale
+
+# IDE / 工具本地目录
+.idea/
+.serena/
+
+# Claude Code 本地偏好（不入版本）
+.claude/settings.local.json

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><!-- FILL: 设计文档标题 -->[设计文档标题]</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- CSS 外置：相对路径 ../styles/ 是从生成位置 docs/patra/specs/ 出发；
+       模板本身在 .claude-marketplace/ 下打开时此 link 会 404（接受：模板预览以生成后的 spec 为准） -->
+  <link rel="stylesheet" href="../styles/journal.css">
+</head>
+<body>
+<div class="layout">
+
+  <!-- ============================================================
+       左栏：目录（TOC）
+       ============================================================ -->
+  <nav class="toc">
+    <h3>目录</h3>
+    <ol>
+      <li><a href="#background">背景与现状</a></li>
+      <li><a href="#scope">范围边界</a></li>
+      <!-- FILL: 根据 spec 实际章节补全 TOC，每个 <li> 对应一个 main 内的 <section id="..."> -->
+      <li><a href="#decisions">关键决策与备选</a></li>
+      <li><a href="#risks">风险与缓解</a></li>
+      <li><a href="#changes">改造文件清单</a></li>
+    </ol>
+  </nav>
+
+  <!-- ============================================================
+       中栏：内容
+       ============================================================ -->
+  <main class="content">
+
+    <header class="doc-header">
+      <h1><!-- FILL: 文档大标题 -->[设计文档标题]</h1>
+      <div class="meta-bar">
+        <span>📅 <!-- FILL: ISO 日期 -->[YYYY-MM-DD]</span>
+        <span>🌿 <!-- FILL: 分支名 -->[branch-name]</span>
+        <span>🎯 spec</span>
+        <span class="status-pill">draft</span>
+      </div>
+    </header>
+
+    <aside class="callout summary">
+      <span class="title">关键决策摘要</span>
+      <p><!-- FILL: 3-5 句话回答"这份文档做了什么决定" -->[摘要内容]</p>
+    </aside>
+
+    <section id="background">
+      <h2>1. 背景与现状</h2>
+      <p><!-- FILL: 项目当前状态 / 触发本次改造的原因 -->[背景描述]</p>
+    </section>
+
+    <section id="scope">
+      <h2>2. 范围边界</h2>
+      <div class="two-col">
+        <aside class="callout success">
+          <span class="title">In Scope</span>
+          <ul>
+            <li><!-- FILL: 做什么 -->[条目]</li>
+          </ul>
+        </aside>
+        <aside class="callout warning">
+          <span class="title">Out of Scope</span>
+          <ul>
+            <li><!-- FILL: 不做什么 -->[条目]</li>
+          </ul>
+        </aside>
+      </div>
+    </section>
+
+    <!-- FILL: 中间章节按 spec 主题增减（核心方案 / 加载机制 / 架构 等）
+         每节用 <section id="..."> 包裹，TOC 同步增加 <li><a href="#..."> -->
+
+    <section id="decisions">
+      <h2>关键决策与备选</h2>
+      <!-- 每个决策一个 .decision 卡片，复制以下结构：
+
+      <div class="decision">
+        <h3>决策 N：[决策标题]</h3>
+        <p>[决策内容]</p>
+        <p class="alternatives"><strong>备选 A：</strong>[备选 A] — 否决：[理由]<br>
+        <strong>备选 B：</strong>[备选 B] — 否决：[理由]</p>
+      </div>
+
+      -->
+    </section>
+
+    <section id="risks">
+      <h2>风险与缓解</h2>
+      <table>
+        <thead>
+          <tr><th>风险</th><th>等级</th><th>缓解</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><!-- FILL: 风险描述 -->[风险]</td>
+            <td><span class="pill mid">mid</span></td>
+            <td><!-- FILL: 缓解措施 -->[措施]</td>
+          </tr>
+          <!-- 复制以上 <tr> 添加更多风险；等级 pill: low / mid / high -->
+        </tbody>
+      </table>
+    </section>
+
+    <section id="changes">
+      <h2>改造文件清单</h2>
+      <table>
+        <thead>
+          <tr><th>#</th><th>文件</th><th>操作</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><code><!-- FILL -->[path]</code></td>
+            <td><span class="pill create">create</span></td>
+            <td><!-- FILL -->[说明]</td>
+          </tr>
+          <!-- 复制以上 <tr> 添加更多文件；操作 pill: create / modify / delete / keep -->
+        </tbody>
+      </table>
+    </section>
+
+    <aside class="callout info">
+      <span class="title">Done 判定</span>
+      <ol>
+        <li><!-- FILL: 完成判定条件 -->[条件]</li>
+      </ol>
+    </aside>
+
+  </main>
+
+  <!-- ============================================================
+       右栏：Implementation Notes（实施期由 Claude Code 维护）
+       ============================================================ -->
+  <aside class="notes-panel" id="notes">
+    <header>
+      <h2>Implementation Notes</h2>
+      <p class="hint">实施期由 Claude Code 即时追加。规则：遇到 spec 未规定的<strong>决定</strong>、必要<strong>更改</strong>、不可避免的<strong>权衡</strong>、其他用户应知事项，立即用 Edit 追加 entry，不要等任务结束。</p>
+    </header>
+
+    <ol class="notes-log">
+      <!-- ENTRY TEMPLATE（注释保留供实施期 AI 复制）:
+
+      <li class="note" data-type="decision" data-time="YYYY-MM-DDTHH:MM">
+        <header>
+          <span class="note-type">DECISION</span>
+          <time datetime="YYYY-MM-DDTHH:MM">MM-DD HH:MM</time>
+          <a href="#sec-N">§ N 章节名</a>
+        </header>
+        <p>描述：spec 未规定 X，实施时选择 Y。理由：...</p>
+      </li>
+
+      data-type 4 类：decision / change / tradeoff / other
+      追加 entry 时同步更新下方 notes-stats footer 的对应 counter 数字。
+      -->
+    </ol>
+
+    <p class="empty-state">no notes yet</p>
+
+    <footer class="notes-stats">
+      总计:
+      <span data-counter="decision">0</span> decisions /
+      <span data-counter="change">0</span> changes /
+      <span data-counter="tradeoff">0</span> tradeoffs /
+      <span data-counter="other">0</span> others
+    </footer>
+  </aside>
+
+</div>
+</body>
+</html>

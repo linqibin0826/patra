@@ -26,7 +26,7 @@ description: "在任何创造性工作之前必须使用此技能——创建功
 3. **提出澄清问题** — 每次一个，了解目的/约束/成功标准
 4. **提出 2-3 种方案** — 附带权衡分析和你的推荐
 5. **展示设计** — 按复杂度分节展示，每节展示后获得用户批准
-6. **编写设计文档** — 保存到 `docs/patra/specs/YYYY-MM-DD-<topic>-design.html` 并 commit（**HTML 不是 Markdown**，参见下方写作指南）
+6. **编写设计文档** — 复制 `template/spec-template.html` 到 `docs/patra/specs/YYYY-MM-DD-<topic>-design.html`，按文件内所有 `<!-- FILL: -->` 注释逐一替换占位内容。**禁止修改 `<link>` href、章节顺序、HTML 结构** —— 只填内容。模板已 link 到 `../styles/journal.css`（在 `docs/patra/styles/`，与所有 spec/plan 共享），**绝不在生成的 HTML 里嵌入 `<style>` 块**——改主题在 CSS 文件里改一次即可全部生效。完成后 commit，然后执行 `open <path>` 在浏览器中打开供用户查看（macOS；Linux 用 `xdg-open <path>`，Windows 用 `start <path>`）。
 7. **规格自检** — 快速内联检查占位符、矛盾、模糊性、范围（详见下方）
 8. **用户审查书面规格** — 在继续之前请用户审查规格文件
 9. **过渡到实现** — 调用 writing-plans 技能创建实现计划
@@ -42,7 +42,7 @@ digraph brainstorming {
     "提出 2-3 种方案" [shape=box];
     "分节展示设计" [shape=box];
     "用户批准设计?" [shape=diamond];
-    "编写设计文档" [shape=box];
+    "按模板填内容" [shape=box];
     "规格自检\n（内联修复）" [shape=box];
     "用户审查规格?" [shape=diamond];
     "调用 writing-plans 技能" [shape=doublecircle];
@@ -55,10 +55,10 @@ digraph brainstorming {
     "提出 2-3 种方案" -> "分节展示设计";
     "分节展示设计" -> "用户批准设计?";
     "用户批准设计?" -> "分节展示设计" [label="否，修改"];
-    "用户批准设计?" -> "编写设计文档" [label="是"];
-    "编写设计文档" -> "规格自检\n（内联修复）";
+    "用户批准设计?" -> "按模板填内容" [label="是"];
+    "按模板填内容" -> "规格自检\n（内联修复）";
     "规格自检\n（内联修复）" -> "用户审查规格?";
-    "用户审查规格?" -> "编写设计文档" [label="要求修改"];
+    "用户审查规格?" -> "按模板填内容" [label="要求修改"];
     "用户审查规格?" -> "调用 writing-plans 技能" [label="批准"];
 }
 ```
@@ -108,15 +108,16 @@ digraph brainstorming {
 
 **文档：**
 
-- 将验证通过的设计（规格说明）写入 `docs/patra/specs/YYYY-MM-DD-<topic>-design.html`
+- 复制 `template/spec-template.html` 到 `docs/patra/specs/YYYY-MM-DD-<topic>-design.html`
   - （用户对规格位置的偏好优先于此默认值）
-  - **产物是 HTML，不是 Markdown**——HTML 的视觉层次（callout / 风险 pill / 折叠章节 / 决策表）能让重点一眼可见。详细写作骨架与必含语义元素见 `skills/brainstorming/html-output-guide.md`。开始写之前先读 guide。
+  - **不要**改 `<link>` href / 章节顺序 / HTML 结构；CSS 已在 `docs/patra/styles/journal.css`，生成的 HTML 不得嵌入 `<style>` 块
+  - 设计的视觉层次（callout / 风险 pill / 折叠章节 / 决策表 / 三栏布局 + 右栏 Implementation Notes）已在模板里固化
 - 将设计文档 commit 到 git
 
 **规格自检：**
 编写规格文档后，以全新的视角审视它：
 
-1. **占位符扫描：** 有没有"待定"、"TODO"、未完成的章节或模糊的需求？修复它们。
+1. **占位符扫描：** 有没有"待定"、"TODO"、未完成的章节或模糊的需求？修复它们。**额外**：grep 文件中所有 `<!-- FILL: -->` 注释是否已替换完毕（每个 FILL 都应在内容中被实际值替代）。
 2. **内部一致性：** 各章节之间有矛盾吗？架构和功能描述匹配吗？
 3. **范围检查：** 这是否聚焦到可以用一个实现计划覆盖，还是需要进一步拆分？
 4. **模糊性检查：** 有没有需求可以被两种方式理解？如果有，选择一种并明确写出来。
@@ -126,7 +127,7 @@ digraph brainstorming {
 **用户审查关卡：**
 规格自检完成后，请用户在继续之前审查书面规格：
 
-> "规格已编写并 commit 到 `<path>`。请审查一下，如果在我们开始编写实现计划之前你想做任何修改，请告诉我。"
+> "规格已编写并 commit 到 `<path>`，已在浏览器中打开。请审查一下，如果在我们开始编写实现计划之前你想做任何修改，请告诉我。"
 
 等待用户回复。如果他们要求修改，做出修改并重新运行规格自检。只有在用户批准后才继续。
 

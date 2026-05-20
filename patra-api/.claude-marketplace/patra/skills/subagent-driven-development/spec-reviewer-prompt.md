@@ -53,15 +53,22 @@ Task tool (general-purpose):
     - 他们是否解决了错误的问题？
     - 他们是否实现了正确的功能但方式不对？
 
-    **HTML 进度结构（writing-plans 出的 plan 是 HTML，控制者维护 data-status）：**
+    **HTML 进度结构（writing-plans 出的 plan 是 HTML，控制者维护 data-status / toc-tasks / notes-panel）：**
     - 任务对应的 `<article class="task" id="task-N">` 当前 `data-status` 应该是 `"in-progress"`（审查阶段）
     - article 内 5 个 `<li class="step">` 的 `data-status` 应该全部是 `"done"`（实现 5 步都完成）
-    - 若任务定义里包含 `<aside class="blocker">` 或 `<aside class="skip-reason">` 但被实现者忽略未处理，标记为问题
+    - 左栏 `<ol class="toc-tasks">` 内本任务对应的 `<li>`，其 `data-task-status` 应等于 article 的 `data-status`（控制者切 article 时若漏切 toc li，是问题）
     - 不验证：article 本身 status 是否切到 `"done"`——那是控制者审查全部通过后才做的最终切换
+
+    **Implementation Notes 一致性（plan HTML 右栏 `<aside class="notes-panel">`）：**
+    - 读取实现者报告的 `DEVIATIONS` 字段
+    - 对每一条 DEVIATIONS 条目，在 plan HTML 的 `<ol class="notes-log">` 内查找匹配的 `<li class="note">` entry（按 `<a href="#task-N">` 锚点 + 描述匹配）
+    - 若 DEVIATIONS 非空但 notes-log 内没有对应 entry → 报"控制者未追加 notes"问题
+    - 若 DEVIATIONS 报告为 `none` 但你读代码发现了实现者**未上报**的偏离（如默认值、命名选择、版本号变化）→ 报"实现者漏报偏离"问题
+    - 校验 `<footer class="notes-stats">` 的 4 个 counter（decision / change / tradeoff / other）数字与 `<ol class="notes-log">` 内实际 entry 数一致
 
     **通过阅读代码来验证，而非信任报告。**
 
     报告：
-    - ✅ 符合规格（如果经过代码检查后一切匹配，且 HTML 进度结构正确）
-    - ❌ 发现问题：[具体列出缺失或多余的内容，附带 file:line 引用；HTML 进度问题单独列出]
+    - ✅ 符合规格（如果经过代码检查后一切匹配，且 HTML 进度结构正确，notes-panel 与 DEVIATIONS 一致）
+    - ❌ 发现问题：[具体列出缺失或多余的内容，附带 file:line 引用；HTML 进度问题、notes 一致性问题各自单独列出]
 ```

@@ -1,0 +1,195 @@
+/* ============================================================
+   Patra Plan Extras — plan 专属样式
+   依赖 journal.css；plan 文档 link 顺序：journal.css → plan-extras.css
+   ============================================================ */
+
+/* 任务嵌套子列表（与中栏 article.task 状态联动） */
+.toc-tasks {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0 0 0 var(--space-3);
+  font-size: var(--text-xs);
+  counter-reset: none;
+}
+.toc-tasks li {
+  counter-increment: none;
+  margin: var(--space-1) 0;
+  padding-left: var(--space-4);
+  position: relative;
+  line-height: 1.4;
+}
+.toc-tasks li::before {
+  position: absolute;
+  left: 0;
+  top: 0;
+  margin-right: 0;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  width: var(--space-4);
+  text-align: center;
+}
+.toc-tasks li[data-task-status="pending"]::before     { content: "○"; color: var(--ink-subtle); }
+.toc-tasks li[data-task-status="in-progress"]::before { content: "▸"; color: var(--status-in-progress); }
+.toc-tasks li[data-task-status="done"]::before        { content: "●"; color: var(--status-done); }
+.toc-tasks li[data-task-status="blocked"]::before     { content: "×"; color: var(--status-blocked); }
+.toc-tasks li[data-task-status="skipped"]::before     { content: "⊘"; opacity: 0.5; }
+.toc-tasks li[data-task-status="done"] a { opacity: 0.7; }
+.toc-tasks li[data-task-status="skipped"] a { opacity: 0.45; text-decoration: line-through; }
+
+/* plan 内容区比 spec 略宽 */
+.content { max-width: 760px; }
+
+/* meta-bar 在 plan 加底部边距 */
+.meta-bar { margin-bottom: var(--space-4); }
+
+/* For-AI-worker 提示框（plan 专属顶部告示） */
+.for-ai-worker {
+  background: var(--ink);
+  color: var(--paper);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  margin: var(--space-4) 0;
+  border-left: 3px solid var(--accent);
+}
+.for-ai-worker strong { color: var(--accent); font-weight: 600; }
+.for-ai-worker code {
+  background: rgba(245, 240, 230, 0.1);
+  border-color: rgba(245, 240, 230, 0.2);
+  color: var(--paper);
+}
+
+/* Meta dl（plan 头部 4 项 metadata 布局） */
+dl.meta {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-2) var(--space-5);
+  margin: var(--space-4) 0;
+  font-size: var(--text-sm);
+}
+dl.meta dt {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--ink-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding-top: 4px;
+}
+dl.meta dd { margin: 0; }
+dl.meta dd a {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid var(--accent-soft);
+}
+dl.meta dd a:hover { border-color: var(--accent); }
+
+/* File tree 文件结构区 */
+.file-tree {
+  background: var(--paper-elevated);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5);
+  margin: var(--space-4) 0;
+}
+.file-tree pre {
+  background: none;
+  color: var(--ink);
+  padding: 0;
+  margin: 0;
+  border: none;
+  font-size: var(--text-sm);
+}
+
+/* Task 卡片（5 状态渲染） */
+article.task {
+  background: var(--paper-elevated);
+  border: 1px solid var(--rule);
+  border-left: 4px solid var(--status-pending);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  margin: var(--space-5) 0;
+  transition: border-left-color 0.2s, background 0.2s;
+}
+article.task[data-status="pending"]     { border-left-color: var(--status-pending); }
+article.task[data-status="in-progress"] { border-left-color: var(--status-in-progress); background: var(--info-bg); }
+article.task[data-status="done"]        { border-left-color: var(--status-done); background: var(--success-bg); opacity: 0.85; }
+article.task[data-status="blocked"]     { border-left-color: var(--status-blocked); background: var(--danger-bg); }
+article.task[data-status="skipped"]     { opacity: 0.45; text-decoration: line-through; }
+
+article.task header h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  border: none;
+}
+article.task[data-status="pending"]     header h2::before { content: "○ "; color: var(--ink-subtle); }
+article.task[data-status="in-progress"] header h2::before { content: "▸ "; color: var(--status-in-progress); }
+article.task[data-status="done"]        header h2::before { content: "● "; color: var(--status-done); }
+article.task[data-status="blocked"]     header h2::before { content: "× "; color: var(--status-blocked); }
+article.task[data-status="skipped"]     header h2::before { content: "⊘ "; }
+
+/* Task 内 files dl */
+dl.files {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-1) var(--space-4);
+  margin: var(--space-3) 0 var(--space-4);
+  font-size: var(--text-sm);
+  background: var(--paper);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+}
+dl.files dt {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ink-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding-top: 4px;
+}
+dl.files dd { margin: 0; }
+
+/* Step 列表（5 状态渲染） */
+ol.steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  counter-reset: step;
+}
+li.step {
+  counter-increment: step;
+  position: relative;
+  padding: var(--space-3) var(--space-4) var(--space-3) calc(var(--space-7) + var(--space-1));
+  margin: var(--space-2) 0;
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  border: 1px solid transparent;
+}
+li.step::before {
+  position: absolute;
+  left: var(--space-4);
+  top: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  width: 24px;
+  text-align: center;
+}
+li.step[data-status="pending"]::before     { content: "○"; color: var(--ink-subtle); }
+li.step[data-status="in-progress"]::before { content: "▸"; color: var(--status-in-progress); }
+li.step[data-status="done"]::before        { content: "●"; color: var(--status-done); }
+li.step[data-status="blocked"]::before     { content: "×"; color: var(--status-blocked); }
+li.step[data-status="skipped"]::before     { content: "⊘"; opacity: 0.5; }
+li.step[data-status="in-progress"] { background: var(--info-bg); border-color: var(--status-in-progress); }
+li.step[data-status="done"] { background: rgba(63, 107, 45, 0.05); }
+li.step strong { font-weight: 600; color: var(--ink); }
+li.step p { margin: var(--space-2) 0; }
+
+/* Self-check 区域 callout 间距 */
+.self-check aside.callout { margin: var(--space-3) 0; }
