@@ -1,0 +1,13 @@
+{
+  "skill_name": "release-planning",
+  "evals": [
+    {
+      "id": 1,
+      "name": "pubmed-search-v0.2",
+      "prompt": "我打算启动 Patra v0.2，主题是 PubMed 搜索能力。能帮我规划这版要做哪些事情吗？最好把'不做的事'和 Done 判定也列出来。",
+      "expected_output": "通过 5 字段对话引导（版本目标 → 功能列表 → 范围边界 → 关键决策 → Done 判定），产出 release-spec.md 和 Linear Issue 建议清单。skill 应明确终止于'让用户在 Linear 中创建 Issues + Project 推到 Active'，不调用任何其他 skill。",
+      "files": [],
+      "assertions": []
+    }
+  ]
+}
