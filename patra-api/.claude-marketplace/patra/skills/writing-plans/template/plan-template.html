@@ -117,6 +117,8 @@
       top: var(--space-5);
       align-self: start;
       font-size: var(--text-sm);
+      max-height: calc(100vh - 2 * var(--space-5));
+      overflow-y: auto;
     }
     @media (max-width: 1024px) {
       .toc {
@@ -155,6 +157,40 @@
       transition: border-color 0.15s, color 0.15s;
     }
     .toc a:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* 任务嵌套子列表（与中栏 article.task 状态联动） */
+    .toc-tasks {
+      list-style: none;
+      margin: var(--space-2) 0 0;
+      padding: 0 0 0 var(--space-3);
+      font-size: var(--text-xs);
+      counter-reset: none;
+    }
+    .toc-tasks li {
+      counter-increment: none;
+      margin: var(--space-1) 0;
+      padding-left: var(--space-4);
+      position: relative;
+      line-height: 1.4;
+    }
+    .toc-tasks li::before {
+      position: absolute;
+      left: 0;
+      top: 0;
+      margin-right: 0;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      font-size: var(--text-sm);
+      width: var(--space-4);
+      text-align: center;
+    }
+    .toc-tasks li[data-task-status="pending"]::before     { content: "○"; color: var(--ink-subtle); }
+    .toc-tasks li[data-task-status="in-progress"]::before { content: "▸"; color: var(--status-in-progress); }
+    .toc-tasks li[data-task-status="done"]::before        { content: "●"; color: var(--status-done); }
+    .toc-tasks li[data-task-status="blocked"]::before     { content: "×"; color: var(--status-blocked); }
+    .toc-tasks li[data-task-status="skipped"]::before     { content: "⊘"; opacity: 0.5; }
+    .toc-tasks li[data-task-status="done"] a { opacity: 0.7; }
+    .toc-tasks li[data-task-status="skipped"] a { opacity: 0.45; text-decoration: line-through; }
 
     /* ===== Main content ===== */
     .content { min-width: 0; max-width: 760px; }
@@ -634,7 +670,18 @@
     <ol>
       <li><a href="#scope-check">范围检查结果</a></li>
       <li><a href="#file-structure">文件结构</a></li>
-      <li><a href="#tasks">任务列表</a></li>
+      <li><a href="#tasks">任务列表</a>
+        <ol class="toc-tasks">
+          <!-- ENTRY TEMPLATE（注释保留供添加 task 时复制）:
+               每写一个 <article id="task-N">，在此处同步追加一条 li，初始 data-task-status="pending"。
+               实施期改 article 的 data-status 时，必须同步改此处 li 的 data-task-status，
+               否则 TOC 状态符号会与中栏卡片不一致。
+
+          <li data-task-status="pending"><a href="#task-N">Task N — [任务名]</a></li>
+          -->
+          <li data-task-status="pending"><a href="#task-1"><!-- FILL: 任务名 -->[Task 1 — 任务名]</a></li>
+        </ol>
+      </li>
       <li><a href="#self-check">自检结果</a></li>
     </ol>
   </nav>

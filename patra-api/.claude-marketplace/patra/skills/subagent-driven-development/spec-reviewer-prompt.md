@@ -53,9 +53,10 @@ Task tool (general-purpose):
     - 他们是否解决了错误的问题？
     - 他们是否实现了正确的功能但方式不对？
 
-    **HTML 进度结构（writing-plans 出的 plan 是 HTML，控制者维护 data-status 与 notes-panel）：**
+    **HTML 进度结构（writing-plans 出的 plan 是 HTML，控制者维护 data-status / toc-tasks / notes-panel）：**
     - 任务对应的 `<article class="task" id="task-N">` 当前 `data-status` 应该是 `"in-progress"`（审查阶段）
     - article 内 5 个 `<li class="step">` 的 `data-status` 应该全部是 `"done"`（实现 5 步都完成）
+    - 左栏 `<ol class="toc-tasks">` 内本任务对应的 `<li>`，其 `data-task-status` 应等于 article 的 `data-status`（控制者切 article 时若漏切 toc li，是问题）
     - 不验证：article 本身 status 是否切到 `"done"`——那是控制者审查全部通过后才做的最终切换
 
     **Implementation Notes 一致性（plan HTML 右栏 `<aside class="notes-panel">`）：**
