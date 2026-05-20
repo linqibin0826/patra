@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Patra Tailscale Route Guard - LaunchDaemon (root).
+
+  Why this exists:
+  - macOS 上 Shadowrocket TUN 拨断重连时会换 utun 编号 (utun6 -> utun15 等)，触发
+    系统 link-change 事件。Tailscale daemon 应对 link-change 的策略是 "先清空所有
+    路由再重建"，中间有几百毫秒空窗。
+  - 空窗里去 100.x 的流量没有 100.64/10 路由匹配，fallback 到 default，被新的
+    Shadowrocket TUN 抢到。macOS 把解析结果缓存为克隆主机路由 (UHWIi, /32)。
+  - /32 比 /10 更具体，Tailscale 后续重建 100.64/10 → utun 也救不了缓存。
+  - 表现：tailscale ping 通，但 ssh 100.x 超时或 banner exchange 失败。
+
+  What it does:
+  - 后台脚本每 5s 检查每个 tailnet peer 的路由出口接口是否是 Tailscale 的 utun。
+  - 检测到漂移：清除 100.64/10 内所有克隆主机路由 + `tailscale down/up` 重新协商。
+  - 30s 冷却防抖，避免连环修复。
+
+  Install / uninstall:
+    sudo bash infra/scripts/install-tailscale-route-guard.sh {install|uninstall|status}
+
+  Logs:
+    /opt/homebrew/var/log/tailscale-route-guard.log
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>dev.patra.tailscale-route-guard</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/sbin/tailscale-route-guard.sh</string>
+    </array>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
+    <key>StandardOutPath</key>
+    <string>/opt/homebrew/var/log/tailscale-route-guard.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/opt/homebrew/var/log/tailscale-route-guard.log</string>
+</dict>
+</plist>
