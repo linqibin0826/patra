@@ -1,7 +1,0 @@
-interface:
-  display_name: "Patra 六边形架构"
-  short_description: "规划 Patra 六边形架构中的分层职责、端口边界与组件落位"
-  default_prompt: "使用 $patra-hexagonal 为这个 Patra 需求设计分层、端口和用例。"
-
-policy:
-  allow_implicit_invocation: true

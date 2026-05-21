@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monorepo Starter 重组：Patra 顶层三段式布局</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles/journal.css">
+</head>
+<body>
+<div class="layout">
+
+  <nav class="toc">
+    <h3>目录</h3>
+    <ol>
+      <li><a href="#background">背景与现状</a></li>
+      <li><a href="#scope">范围边界</a></li>
+      <li><a href="#layout">目标布局</a></li>
+      <li><a href="#gradle">Gradle 改造</a></li>
+      <li><a href="#contract">坐标与依赖契约</a></li>
+      <li><a href="#migration">迁移路径</a></li>
+      <li><a href="#decisions">关键决策与备选</a></li>
+      <li><a href="#risks">风险与缓解</a></li>
+      <li><a href="#changes">改造文件清单</a></li>
+    </ol>
+  </nav>
+
+  <main class="content">
+
+    <header class="doc-header">
+      <h1>Monorepo Starter 重组：Patra 顶层三段式布局</h1>
+      <div class="meta-bar">
+        <span>📅 2026-05-21</span>
+        <span>🌿 worktree-brainstorm-starter-reorg</span>
+        <span>🎯 spec</span>
+        <span class="status-pill">draft</span>
+      </div>
+    </header>
+
+    <aside class="callout summary">
+      <span class="title">关键决策摘要</span>
+      <p>把堆在 <code>patra-api/</code> 里的 13 个通用 starter（<code>linqibin-*</code>）与 2 个项目专属 starter（<code>patra-spring-boot-starter-*</code>）拆出，按"通用 / 项目 / 业务"三段提升到 Patra/ 顶层；Gradle 改造为单 root，使用拍平 path + <code>projectDir</code> 重映射（现有跨模块依赖零改动）；Maven group 收紧为两段——<code>dev.linqibin.commons</code> 与 <code>dev.linqibin.patra</code>；<code>linqibin-commons</code> 禁止反向依赖 <code>patra-*</code> 的边界靠 Gradle convention plugin 强制校验，不靠约定；单 PR 单 worktree 完成，4 个逻辑 commit 各自可构建。</p>
+    </aside>
+
+    <section id="background">
+      <h2>1. 背景与现状</h2>
+      <p>Patra 工作区由多 repo 合并成 monorepo 后，Java 后端代码堆积在 <code>patra-api/</code> 一个子目录下，同时承担"业务子树"和"工作区根容器"两个职责：13 个通用 Spring Boot starter（<code>linqibin-*</code>，命名暗示个人通用基建）、2 个项目专属 starter（<code>patra-spring-boot-starter-{expr,provenance}</code>）、7 个业务模块（<code>patra-catalog</code>、<code>patra-ingest</code> 等）、<code>build-logic/</code>、<code>.github/</code>、Gradle wrapper、配置文件等全部混在一起。与之相对，<code>patra-portal/</code> 和 <code>patra-infra/</code> 已在 Patra/ 顶层并列，结构层级不对称。</p>
+      <p>本次重组对齐 monorepo 工作区根标准布局（参考 Gradle 官方 "Structuring Software Projects"、spring-projects/spring-boot 仓库、Bazel/Nx/Turborepo 实践）：顶层是 workspace root，配置/CI/工具/共享 build-logic 在根，业务/通用 starter/项目 starter 各为独立子树。Codex 独立评审已收纳，主要修正：group 三段收紧为两段、依赖契约改为 Gradle convention plugin 强制校验、commit 1 切分边界扩大避免中间态构建失败、验证清单系统化。</p>
+    </section>
+
+    <section id="scope">
+      <h2>2. 范围边界</h2>
+      <div class="two-col">
+        <aside class="callout success">
+          <span class="title">In Scope</span>
+          <ul>
+            <li><code>linqibin-*</code> 13 个 starter + 2 个 commons 上移到 <code>linqibin-commons/</code></li>
+            <li><code>patra-spring-boot-starter-*</code> 2 个 starter 上移到 <code>patra-starters/</code></li>
+            <li>Gradle root（settings/build/properties/wrapper/gradle/libs.versions.toml）、<code>build-logic/</code>、<code>spotbugs-exclude.xml</code> 上移到 Patra/ 顶层</li>
+            <li><code>.github/</code> 上移；workflow <code>working-directory</code> 全扫去掉 <code>patra-api/</code> 前缀</li>
+            <li><code>.editorconfig</code>、<code>.pre-commit-config.yaml</code>、<code>.sdkmanrc</code> 上移；<code>patra-api/.gitignore</code> 合并入 <code>Patra/.gitignore</code></li>
+            <li><code>scripts/{git,javadoc,letpub}/</code> 整体上移</li>
+            <li>删除 <code>patra-api/plugins/patra-codex/</code>（弃用）</li>
+            <li>新建 <code>Patra/README.md</code> 作 workspace 入口</li>
+            <li>修正 <code>patra-api/.run/PatraXxxApplication.run.xml</code> 内 <code>$PROJECT_DIR$/../patra-infra/</code> 为 <code>$PROJECT_DIR$/patra-infra/</code></li>
+            <li>新增 Gradle convention plugin 强制 <code>linqibin-commons/*</code> 不依赖 <code>patra-*</code> 的边界校验，挂在 <code>check</code> 任务</li>
+          </ul>
+        </aside>
+        <aside class="callout warning">
+          <span class="title">Out of Scope</span>
+          <ul>
+            <li><code>patra-api/.github/workflows/ci.yml</code> 全面 Gradle 化重写——遗留大量 <code>hashFiles('**/pom.xml')</code> 等 Maven 时代逻辑，留作单独后续 PR，本次仅做路径前缀修正</li>
+            <li>linqibin-* 抽离为独立 git repo / 发布 Maven Central——保留通路（坐标分段），但不实施</li>
+            <li>业务模块（<code>patra-catalog</code> 等）重新分组（如 services/libs）——保持现状，仅整体上移到 <code>patra-api/</code> 下并通过 <code>projectDir</code> 重映射</li>
+            <li>Gradle path 改为嵌套（<code>:linqibin-commons:linqibin-commons-core</code>）——使用拍平 + 重映射避免全库 sed</li>
+            <li>publishToMavenLocal 之外的发布配置（source jar、javadoc jar、signing、Maven Central pom 元数据）——YAGNI</li>
+          </ul>
+        </aside>
+      </div>
+    </section>
+
+    <section id="layout">
+      <h2>3. 目标布局</h2>
+      <p>Patra/ 顶层重组后结构如下：</p>
+      <pre><code>Patra/
+├── README.md                          ← 新建：workspace 入口（3 子树 map）
+├── settings.gradle.kts                ← 单 Gradle root
+├── build.gradle.kts
+├── gradle.properties                  ← 两段 group 属性
+├── gradlew / gradlew.bat / gradle/    ← 含 libs.versions.toml + wrapper/
+├── spotbugs-exclude.xml
+├── build-logic/                       ← 上移；新增 linqibin.module-commons /
+│                                        linqibin.module-patra 两个 convention plugin
+│                                        与 linqibin.boundary-check convention plugin
+├── .github/                           ← 上移；仅路径前缀修正（ci.yml 重写另开 PR）
+├── .editorconfig
+├── .pre-commit-config.yaml
+├── .sdkmanrc
+├── .gitignore                         ← 合并 patra-api/.gitignore
+├── .mcp.json
+├── docs/  CLAUDE.md  .claude/  .claude-marketplace/
+├── scripts/{git,javadoc,letpub}/      ← 整体上移
+│
+├── linqibin-commons/                  ← 13 starter + 2 commons（扁平）
+│   ├── linqibin-commons-core/
+│   ├── linqibin-commons-storage/
+│   └── linqibin-spring-boot-starter-{batch, core, http-interface, jpa,
+│       object-storage, observability, openapi, redisson, rest-client,
+│       test, web}/
+│
+├── patra-starters/                    ← 2 项目专属 starter（扁平）
+│   ├── patra-spring-boot-starter-expr/
+│   └── patra-spring-boot-starter-provenance/
+│
+├── patra-api/                         ← 纯业务子树
+│   ├── .run/  .claude/  CLAUDE.md  README.md
+│   └── patra-{catalog, common, expr-kernel, gateway-boot, ingest,
+│              object-storage, registry}/
+│
+├── patra-infra/                       ← 已上移（PR #45）
+└── patra-portal/                      ← Next.js 前端</code></pre>
+
+      <p><strong>归属分析框架</strong>：</p>
+      <ul>
+        <li><strong>CCP (Common Closure Principle)</strong>：一起变化的放一起。Gradle 升级 = 跨子树事件 ⇒ 配置统一根；业务 run config = 仅 patra-api 内 ⇒ 留 patra-api/<code>.run/</code>。</li>
+        <li><strong>Group by Consumer</strong>：制品放消费者最近公共祖先。<code>build-logic</code> 被三方共享 ⇒ Patra/ 顶层；<code>.run/PatraXxxApplication</code> 仅服务 patra-api 业务 ⇒ 留 patra-api/。</li>
+        <li><strong>Monorepo workspace root 通识</strong>：顶层放配置/CI/工具，子项目独立子目录（Gradle/spring-boot/Nx/Bazel 同构）。</li>
+        <li><strong>SST (Single Source of Truth)</strong>：<code>.editorconfig</code> / <code>.pre-commit-config.yaml</code> / <code>.sdkmanrc</code> 只能仓库根有一份，否则失效或漂移。</li>
+      </ul>
+    </section>
+
+    <section id="gradle">
+      <h2>4. Gradle 改造</h2>
+
+      <h3>4.1 单 root + 拍平 path + <code>projectDir</code> 重映射</h3>
+      <p>核心理由：现有跨模块依赖大量使用拍平形式 <code>api(project(":linqibin-commons-core"))</code>，重映射方案让这些引用零改动；Gradle 官方支持修改 <code>ProjectDescriptor.projectDir</code>，非 hack。</p>
+
+      <pre><code>// Patra/settings.gradle.kts
+rootProject.name = "patra"
+
+pluginManagement {
+    includeBuild("build-logic")
+    repositories { gradlePluginPortal(); mavenCentral() }
+}
+
+dependencyResolutionManagement {
+    repositories {
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
+        mavenCentral()
+    }
+    repositoriesMode = RepositoriesMode.FAIL_ON_PROJECT_REPOS
+}
+
+// 集中映射 helper
+fun includeAt(path: String, dir: String) {
+    include(path)
+    project(path).projectDir = file(dir)
+}
+
+// linqibin-commons/ —— 13 starter + 2 commons
+includeAt(":linqibin-commons-core", "linqibin-commons/linqibin-commons-core")
+includeAt(":linqibin-commons-storage", "linqibin-commons/linqibin-commons-storage")
+includeAt(":linqibin-spring-boot-starter-core", "linqibin-commons/linqibin-spring-boot-starter-core")
+// ... 其余 10 个 starter 同样
+
+// patra-starters/ —— 2 项目 starter
+includeAt(":patra-spring-boot-starter-expr", "patra-starters/patra-spring-boot-starter-expr")
+includeAt(":patra-spring-boot-starter-provenance", "patra-starters/patra-spring-boot-starter-provenance")
+
+// patra-api/ —— 业务模块（嵌套 path 现状保留）
+includeAt(":patra-common", "patra-api/patra-common")
+includeAt(":patra-common:patra-common-model", "patra-api/patra-common/patra-common-model")
+// ... 其余业务模块同样</code></pre>
+
+      <h3>4.2 Group 两段：显式设置，禁用 <code>allprojects</code> 隐式判断</h3>
+      <p><code>linqibin-commons/*</code> 独立身份 <code>dev.linqibin.commons</code>，<code>patra-starters/*</code> 与 <code>patra-api/*</code> 共享 <code>dev.linqibin.patra</code>（patra-starters 本质是 Patra 产品的一部分，与业务同 group 更准）。group 在各模块通过 apply 对应 convention plugin 显式设置，<strong>不</strong>使用 <code>allprojects { group = when { projectDir.startsWith(...) } }</code> 的隐式判断（避免目录移动时 group 静默变化、避免 configuration cache 兼容性问题）。</p>
+
+      <pre><code>// gradle.properties
+patraVersion=0.1.0-SNAPSHOT
+linqibinCommonsGroup=dev.linqibin.commons
+patraGroup=dev.linqibin.patra
+
+// build-logic/src/main/kotlin/linqibin.module-commons.gradle.kts
+plugins { id("linqibin.spring-boot-starter") }  // 或 linqibin.java-library
+group = providers.gradleProperty("linqibinCommonsGroup").get()
+
+// build-logic/src/main/kotlin/linqibin.module-patra.gradle.kts
+group = providers.gradleProperty("patraGroup").get()
+
+// 子模块 build.gradle.kts 显式 apply 身份
+// linqibin-commons/linqibin-spring-boot-starter-jpa/build.gradle.kts
+plugins { id("linqibin.module-commons") }
+// patra-starters/patra-spring-boot-starter-expr/build.gradle.kts
+plugins { id("linqibin.module-patra"); id("linqibin.spring-boot-starter") }
+// patra-api/patra-catalog/patra-catalog-app/build.gradle.kts
+plugins { id("linqibin.module-patra"); id("linqibin.hexagonal-app") }</code></pre>
+
+      <h3>4.3 依赖契约：Gradle convention plugin 强制校验</h3>
+      <p>"linqibin-commons 禁止依赖 patra-*"不能靠约定，必须 fail-fast。新增 <code>linqibin.boundary-check</code> convention plugin，linqibin-commons/* 模块通过 <code>linqibin.module-commons</code> 间接自动 apply，注册 <code>checkBoundary</code> task 并挂入 <code>check</code> 生命周期：</p>
+
+      <pre><code>// build-logic/src/main/kotlin/linqibin.boundary-check.gradle.kts
+val checkBoundary = tasks.register("checkBoundary") {
+    group = "verification"
+    doLast {
+        val forbidden = configurations
+            .flatMap { it.dependencies }
+            .filterIsInstance&lt;ProjectDependency&gt;()
+            .map { it.dependencyProject.path }
+            .filter { it.startsWith(":patra-") }
+        if (forbidden.isNotEmpty()) {
+            throw GradleException(
+                "${project.path} (linqibin-commons) 禁止依赖 patra-* 模块: $forbidden"
+            )
+        }
+    }
+}
+tasks.named("check") { dependsOn(checkBoundary) }</code></pre>
+    </section>
+
+    <section id="contract">
+      <h2>5. 坐标与依赖契约</h2>
+
+      <table>
+        <thead>
+          <tr><th>子树</th><th>group</th><th>artifactId 示例</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>linqibin-commons/*</code></td>
+            <td><code>dev.linqibin.commons</code></td>
+            <td><code>linqibin-commons-core</code>、<code>linqibin-spring-boot-starter-jpa</code></td>
+          </tr>
+          <tr>
+            <td><code>patra-starters/*</code></td>
+            <td><code>dev.linqibin.patra</code></td>
+            <td><code>patra-spring-boot-starter-expr</code></td>
+          </tr>
+          <tr>
+            <td><code>patra-api/*</code></td>
+            <td><code>dev.linqibin.patra</code></td>
+            <td><code>patra-catalog-app</code>、<code>patra-common-model</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p><strong>依赖契约</strong>（由 <code>checkBoundary</code> task 自动强制）：</p>
+      <table>
+        <thead>
+          <tr><th>来源子树</th><th>允许依赖</th><th>禁止依赖</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>linqibin-commons/*</code></td>
+            <td>外部库、<code>linqibin-commons/*</code> 内部</td>
+            <td><code>patra-*</code> 任何模块（保留未来独立 repo 通路）</td>
+          </tr>
+          <tr>
+            <td><code>patra-starters/*</code></td>
+            <td>外部库、<code>linqibin-commons/*</code>、<code>patra-api/*</code> 中的 lib（如 <code>patra-expr-kernel</code>、<code>patra-common</code>）</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td><code>patra-api/*</code></td>
+            <td>全部</td>
+            <td>—</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p><strong>发布策略</strong>：仅 <code>publishToMavenLocal</code>，不准备 Maven Central 配置（YAGNI）。<code>~/.m2/repository/dev/linqibin/</code> 下应出现 <code>commons/</code> 与 <code>patra/</code> 两个子树。</p>
+    </section>
+
+    <section id="migration">
+      <h2>6. 迁移路径</h2>
+      <p>单 worktree / 单 PR，逻辑切分为 4 个 commit，每个 commit 末态满足 <code>./gradlew clean build</code> 全绿。</p>
+
+      <h3>Commit 1：Gradle root 上移 + 配套基础设施（最大单步）</h3>
+      <p>这是<strong>最危险断点</strong>——<code>settings.gradle.kts</code> 上移后，Gradle 从根目录解析 <code>includeBuild("build-logic")</code> 和所有 <code>projectDir</code>；任何路径错配都会让构建直接挂。必须在<strong>同一 commit 内</strong>同步完成以下全部内容：</p>
+      <ul>
+        <li>移动：<code>patra-api/{settings.gradle.kts, build.gradle.kts, gradle.properties, gradlew, gradlew.bat, gradle/, spotbugs-exclude.xml}</code> → Patra/ 顶层</li>
+        <li>移动：<code>patra-api/build-logic/</code> → Patra/build-logic/（其内部 <code>settings.gradle.kts</code> 引用 <code>../gradle/libs.versions.toml</code> 路径继续成立）</li>
+        <li>移动：<code>patra-api/{.editorconfig, .pre-commit-config.yaml, .sdkmanrc}</code> → Patra/</li>
+        <li>合并：<code>patra-api/.gitignore</code> → <code>Patra/.gitignore</code></li>
+        <li>移动：<code>patra-api/.github/</code> → <code>Patra/.github/</code>；workflow 内所有 <code>working-directory: patra-api</code> 去掉前缀（<code>ci.yml</code> 的 Maven pom.xml 残留<strong>不动</strong>，留作后续 PR）</li>
+        <li>移动：<code>patra-api/scripts/</code> → <code>Patra/scripts/</code></li>
+        <li>顶层 <code>settings.gradle.kts</code> 暂以 <code>patra-api/*</code> 路径 include 现有模块（中间态可构建）：业务模块物理位置不变、starter 物理位置不变、只是 settings 文件位置变</li>
+        <li>删除：<code>patra-api/plugins/patra-codex/</code></li>
+      </ul>
+      <p><strong>验证</strong>：<code>./gradlew clean build</code> 全绿；<code>./gradlew projects</code> 输出与 commit 前完全一致。</p>
+
+      <h3>Commit 2：linqibin-commons/ 上移 + Group 拆分</h3>
+      <ul>
+        <li><code>git mv patra-api/linqibin-* linqibin-commons/</code>（13 starter + 2 commons）</li>
+        <li>settings.gradle.kts 改用 <code>includeAt</code> helper + projectDir 重映射</li>
+        <li>build-logic 新增 <code>linqibin.module-commons</code>、<code>linqibin.module-patra</code>、<code>linqibin.boundary-check</code> 三个 convention plugin</li>
+        <li>各子模块 build.gradle.kts 显式 apply 身份 plugin（patra-api/ 业务模块也要 apply <code>linqibin.module-patra</code>，否则 group 缺省）</li>
+        <li>移除根 build.gradle.kts 内 <code>allprojects { group = ... }</code> 行</li>
+      </ul>
+      <p><strong>验证</strong>：<code>./gradlew clean build</code> 全绿；<code>./gradlew :linqibin-spring-boot-starter-jpa:dependencies</code> 显示 group <code>dev.linqibin.commons</code>；<code>./gradlew :linqibin-spring-boot-starter-jpa:check</code> 触发 <code>checkBoundary</code> 任务并通过。</p>
+
+      <h3>Commit 3：patra-starters/ 上移</h3>
+      <ul>
+        <li><code>git mv patra-api/patra-spring-boot-starter-{expr,provenance} patra-starters/</code></li>
+        <li>settings.gradle.kts 加 2 个 <code>includeAt</code> 条目</li>
+      </ul>
+      <p><strong>验证</strong>：<code>./gradlew clean build</code>；<code>./gradlew :patra-spring-boot-starter-expr:dependencies</code> 显示 group <code>dev.linqibin.patra</code>。</p>
+
+      <h3>Commit 4：清扫 + 文档</h3>
+      <ul>
+        <li>新建 <code>Patra/README.md</code>（workspace 入口，3 子树职责 map）</li>
+        <li>修正 <code>patra-api/.run/PatraXxxApplication.run.xml</code>（× 5 个 application，含 JRebel 副本 × 5 = 10 个文件）：<code>$PROJECT_DIR$/../patra-infra/docker/otel-agent/...</code> → <code>$PROJECT_DIR$/patra-infra/docker/otel-agent/...</code></li>
+        <li>清扫 <code>patra-api/</code> 内任何残留（应只剩业务模块 + <code>.run/</code> + <code>.claude/</code> + <code>CLAUDE.md</code> + <code>README.md</code>）</li>
+        <li><code>publishToMavenLocal</code> 后验证 <code>~/.m2/repository/dev/linqibin/{commons,patra}/</code> 结构</li>
+      </ul>
+    </section>
+
+    <section id="decisions">
+      <h2>7. 关键决策与备选</h2>
+
+      <div class="decision">
+        <h3>决策 1：顶层切分为三段（linqibin-commons / patra-starters / patra-api）</h3>
+        <p>三个语义清晰的子树，"通用基建 / 项目专属 starter / 业务"职责分离。</p>
+        <p class="alternatives"><strong>备选 A</strong>：二段 <code>patra-foundation/</code> 容纳所有 starter（不区分通用与项目专属）—— 否决：通用 starter 未来抽离独立 repo 的通路被遮蔽；语义稍模糊。<br>
+        <strong>备选 B</strong>：全扁平，每个模块都成为 Patra/ 顶层目录 —— 否决：顶层目录数膨胀到 20+，浏览压力大。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 2：单 Gradle root</h3>
+        <p>Patra/ 顶层唯一 <code>settings.gradle.kts</code>，include 全部模块。IDE 一次导入即可见全部、跨子树重构与跳转无障碍。</p>
+        <p class="alternatives"><strong>备选 A</strong>：composite build，每个子树自有 settings + 顶层 umbrella <code>includeBuild</code> —— 否决：当前只有一个消费者（patra-api），独立构建无收益；IDE 跨构建重构体验劣于单 root。未来真要分离时升级到 composite 也容易。<br>
+        <strong>备选 B</strong>：3 个独立 root + <code>publishToMavenLocal</code> —— 否决：日常迭代要手动 publish + 刷版本号，体验最差。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 3：拍平 Gradle path + <code>projectDir</code> 重映射</h3>
+        <p>Gradle path 保持一级（<code>:linqibin-commons-core</code>），物理路径通过 <code>project(":...").projectDir = file("linqibin-commons/...")</code> 重映射。所有现有 <code>api(project(":linqibin-commons-core"))</code> 引用零改动。</p>
+        <p class="alternatives"><strong>备选 A</strong>：嵌套 path（<code>:linqibin-commons:linqibin-commons-core</code>，与物理路径一致）—— 否决：所有 build.gradle.kts 中跨模块引用需机械 sed（13 starter × N 引用点），改动面广；类型安全 accessor 全变；空中间聚合项目语义不清。spring-projects/spring-boot 走嵌套是历史选择，绿地项目可选更优解。<br>
+        <strong>备选 B</strong>：混合（业务嵌套、starter 拍平）—— 否决：风格不一致，新人困惑。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 4：Group 两段（dev.linqibin.commons + dev.linqibin.patra）</h3>
+        <p>linqibin-commons 独立身份，patra-starters 与 patra-api 共享 dev.linqibin.patra group。各模块通过 convention plugin 显式设 group，禁用 <code>allprojects + when</code> 隐式判断。</p>
+        <p class="alternatives"><strong>备选 A</strong>：三段（linqibin-commons / dev.linqibin.patra.starters / dev.linqibin.patra）—— 否决：Codex 评审认为过度设计，starters 与 patra 业务本质同 group；<code>projectDir.startsWith</code> 隐式分派脆弱。<br>
+        <strong>备选 B</strong>：全仓一段（dev.linqibin.patra）—— 否决：失去 linqibin-commons 独立身份信号；未来抽离需一次性改 group，工作量与现在分两段近似。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 5：依赖边界靠 Gradle convention plugin 强制，不靠约定</h3>
+        <p>新增 <code>linqibin.boundary-check</code> convention plugin，linqibin-commons/* 模块自动注册 <code>checkBoundary</code> task，遍历所有 <code>ProjectDependency</code>，若依赖 <code>:patra-*</code> 则 fail 构建。挂入 <code>check</code> 生命周期。</p>
+        <p class="alternatives"><strong>备选 A</strong>：靠 README / CONTRIBUTING 文档约定 —— 否决：单人项目也会自己手滑；fail-fast 是绿地项目"质量优先"原则的具体落地。<br>
+        <strong>备选 B</strong>：依赖 <code>group</code> 隔离做约束 —— 否决：group 不阻止 <code>project(":...")</code> 引用，错位语义。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 6：单 PR / 单 worktree，4 个逻辑 commit</h3>
+        <p>原子性强，中间态不发布；commit 内部按"基础设施上移 → linqibin-commons 上移 → patra-starters 上移 → 清扫"逻辑切分，每个 commit 末态可构建。</p>
+        <p class="alternatives"><strong>备选 A</strong>：3 个独立 PR 分批 —— 否决：单人项目无并行需求；中间态需保证可构建，对 settings 反复折腾。<br>
+        <strong>备选 B</strong>：单 commit 一刀切 —— 否决：grep / bisect 困难，commit 1 的高风险变更与 commit 2 的纯文件移动应该可区分。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 7：CI 重写延后到单独 PR</h3>
+        <p>本次仅做 <code>.github/</code> 上移与 workflow 内 <code>working-directory</code> 路径前缀修正。<code>ci.yml</code> 中 <code>hashFiles('**/pom.xml')</code> 等 Maven 时代遗留全面重写为 Gradle 版本作为下一个 PR 范围。</p>
+        <p class="alternatives"><strong>备选 A</strong>：本次顺手重写 ci.yml —— 否决：扩大 PR 商务范围，review 复杂度上升；CI 重写本身是独立工作单元（牵涉 spotless / jacoco / boundary task 等任务编排），值得单独 spec。<br>
+        <strong>备选 B</strong>：不动不送，作 known issue —— 否决：CI 上移后路径前缀失配会立即红，至少要修这一项。</p>
+      </div>
+    </section>
+
+    <section id="risks">
+      <h2>8. 风险与缓解</h2>
+      <table>
+        <thead>
+          <tr><th>风险</th><th>等级</th><th>缓解</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Commit 1 中间态不可构建：Gradle root 上移后 <code>build-logic</code> 找不到、<code>libs.versions.toml</code> 路径错位、workflow working-directory 残留 patra-api 前缀</td>
+            <td><span class="pill high">high</span></td>
+            <td>Commit 1 严格打包：settings/build/properties/wrapper/gradle 完整一次性移动；<code>build-logic/settings.gradle.kts</code> 内 <code>../gradle/libs.versions.toml</code> 相对路径保留可用；workflow grep 扫除 <code>working-directory: patra-api</code> 残留；commit 末态执行 <code>./gradlew clean build</code> + <code>./gradlew projects</code> 双重验证</td>
+          </tr>
+          <tr>
+            <td>IntelliJ <code>.run/</code> 配置中 <code>$PROJECT_DIR$/../patra-infra/...</code> 失效——根目录上移后 <code>$PROJECT_DIR$</code> 变成 Patra/，原有相对路径多了一层 <code>../</code></td>
+            <td><span class="pill mid">mid</span></td>
+            <td>Commit 4 显式修正 5 个 PatraXxxApplication + 5 个 JRebel 副本共 10 个 .run XML，将 <code>$PROJECT_DIR$/../patra-infra/</code> 改为 <code>$PROJECT_DIR$/patra-infra/</code>；同时验证 <code>&lt;module name="patra.patra-xxx-boot.main"&gt;</code> 字段不变（<code>rootProject.name = "patra"</code> 不变 + 业务嵌套 path 不变 ⇒ Gradle module 名不变）</td>
+          </tr>
+          <tr>
+            <td>Maven 时代 CI 遗留：<code>ci.yml</code> 大量 <code>hashFiles('**/pom.xml')</code> / <code>grep "spotless" pom.xml</code> 在 Gradle 项目下本就失效，上移路径后仍然失效</td>
+            <td><span class="pill mid">mid</span></td>
+            <td>本次仅修 working-directory 路径前缀，业务上不引入新红；ci.yml 全面 Gradle 化作为下一个 PR 范围，spec 中明确标记为 Out of Scope</td>
+          </tr>
+          <tr>
+            <td><code>~/.gradle/caches</code> 中旧 group 缓存不会自动失效，本地首次构建可能撞旧缓存</td>
+            <td><span class="pill low">low</span></td>
+            <td>Done 判定包含 <code>./gradlew clean build --refresh-dependencies</code> 一次性触发</td>
+          </tr>
+          <tr>
+            <td>Configuration cache 兼容性：显式 group 设置 + <code>linqibin.module-*</code> convention plugin 在 cache 下行为需验证</td>
+            <td><span class="pill low">low</span></td>
+            <td>Done 判定包含 <code>./gradlew help --configuration-cache</code> 与 <code>./gradlew build --configuration-cache</code> 验证</td>
+          </tr>
+          <tr>
+            <td><code>patra-api/.gitignore</code>（1962 字节）与 <code>Patra/.gitignore</code>（272 字节，目前仅 worktree 级）合并时遗漏 Gradle/IDE 规则</td>
+            <td><span class="pill low">low</span></td>
+            <td>Commit 1 内人工 diff 合并；合并后 <code>git status</code> 检查无意外 untracked / ignored 变化</td>
+          </tr>
+          <tr>
+            <td>patra-portal CI 路径过滤：workflow 中 path filter 可能引用 patra-api 子目录，路径前缀修正时漏掉对 portal 的影响</td>
+            <td><span class="pill low">low</span></td>
+            <td>Commit 1 扫描 <code>.github/workflows/*.yml</code> 全文 grep <code>patra-api</code>，确认所有命中都已修正或预期保留</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="changes">
+      <h2>9. 改造文件清单</h2>
+      <table>
+        <thead>
+          <tr><th>#</th><th>文件</th><th>操作</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><code>Patra/settings.gradle.kts</code></td>
+            <td><span class="pill create">create</span></td>
+            <td>从 patra-api 上移；新增 <code>includeAt</code> helper；含全部模块的 <code>projectDir</code> 重映射</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><code>Patra/build.gradle.kts</code></td>
+            <td><span class="pill create">create</span></td>
+            <td>从 patra-api 上移；移除 <code>allprojects { group = ... }</code>（改由 convention plugin 设）</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><code>Patra/gradle.properties</code></td>
+            <td><span class="pill create">create</span></td>
+            <td>从 patra-api 上移；新增 <code>linqibinCommonsGroup</code> 属性</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td><code>Patra/{gradlew, gradlew.bat, gradle/}</code></td>
+            <td><span class="pill create">create</span></td>
+            <td>从 patra-api 上移（含 <code>libs.versions.toml</code> 与 <code>wrapper/</code>）</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td><code>Patra/spotbugs-exclude.xml</code></td>
+            <td><span class="pill create">create</span></td>
+            <td>从 patra-api 上移</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td><code>Patra/build-logic/</code></td>
+            <td><span class="pill create">create</span></td>
+            <td>从 patra-api 上移；新增 3 个 convention plugin：<code>linqibin.module-commons</code>、<code>linqibin.module-patra</code>、<code>linqibin.boundary-check</code></td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td><code>Patra/.github/</code></td>
+            <td><span class="pill create">create</span></td>
+            <td>从 patra-api 上移；workflow <code>working-directory: patra-api</code> 全扫去前缀；ci.yml Maven 残留<strong>不动</strong>（下一个 PR）</td>
+          </tr>
+          <tr>
+            <td>8</td>
+            <td><code>Patra/{.editorconfig, .pre-commit-config.yaml, .sdkmanrc}</code></td>
+            <td><span class="pill create">create</span></td>
+            <td>从 patra-api 上移</td>
+          </tr>
+          <tr>
+            <td>9</td>
+            <td><code>Patra/.gitignore</code></td>
+            <td><span class="pill modify">modify</span></td>
+            <td>合并 <code>patra-api/.gitignore</code>（Gradle/IDE/build 规则并入）</td>
+          </tr>
+          <tr>
+            <td>10</td>
+            <td><code>Patra/scripts/{git,javadoc,letpub}/</code></td>
+            <td><span class="pill create">create</span></td>
+            <td>从 patra-api 整体上移</td>
+          </tr>
+          <tr>
+            <td>11</td>
+            <td><code>Patra/README.md</code></td>
+            <td><span class="pill create">create</span></td>
+            <td>workspace 入口；列出 3 子树职责（linqibin-commons / patra-starters / patra-api）+ 构建命令</td>
+          </tr>
+          <tr>
+            <td>12</td>
+            <td><code>Patra/linqibin-commons/*</code>（15 个模块）</td>
+            <td><span class="pill create">create</span></td>
+            <td>从 <code>patra-api/linqibin-*</code> <code>git mv</code> 整体上移</td>
+          </tr>
+          <tr>
+            <td>13</td>
+            <td><code>Patra/patra-starters/*</code>（2 个模块）</td>
+            <td><span class="pill create">create</span></td>
+            <td>从 <code>patra-api/patra-spring-boot-starter-{expr,provenance}</code> <code>git mv</code> 上移</td>
+          </tr>
+          <tr>
+            <td>14</td>
+            <td><code>linqibin-commons/*/build.gradle.kts</code>（15 个）</td>
+            <td><span class="pill modify">modify</span></td>
+            <td>各模块 plugins 块新增 <code>id("linqibin.module-commons")</code></td>
+          </tr>
+          <tr>
+            <td>15</td>
+            <td><code>patra-starters/*/build.gradle.kts</code>（2 个）</td>
+            <td><span class="pill modify">modify</span></td>
+            <td>各模块 plugins 块新增 <code>id("linqibin.module-patra")</code></td>
+          </tr>
+          <tr>
+            <td>16</td>
+            <td><code>patra-api/**/build.gradle.kts</code></td>
+            <td><span class="pill modify">modify</span></td>
+            <td>各业务模块 plugins 块新增 <code>id("linqibin.module-patra")</code>（含 patra-common / patra-expr-kernel / patra-{catalog,ingest,registry,object-storage,gateway-boot} 及其六边形子模块）</td>
+          </tr>
+          <tr>
+            <td>17</td>
+            <td><code>patra-api/.run/PatraXxxApplication*.run.xml</code></td>
+            <td><span class="pill modify">modify</span></td>
+            <td>5 个 application × 2 副本（普通 + JRebel）= 10 个文件；<code>$PROJECT_DIR$/../patra-infra/...</code> → <code>$PROJECT_DIR$/patra-infra/...</code></td>
+          </tr>
+          <tr>
+            <td>18</td>
+            <td><code>patra-api/{settings.gradle.kts, build.gradle.kts, gradle.properties, gradlew*, gradle/, spotbugs-exclude.xml, build-logic/, .github/, .editorconfig, .pre-commit-config.yaml, .sdkmanrc, .gitignore, scripts/, plugins/}</code></td>
+            <td><span class="pill delete">delete</span></td>
+            <td>已上移；移除后 patra-api/ 只剩业务模块 + <code>.run/</code> + <code>.claude/</code> + <code>CLAUDE.md</code> + <code>README.md</code></td>
+          </tr>
+          <tr>
+            <td>19</td>
+            <td><code>patra-api/plugins/patra-codex/</code></td>
+            <td><span class="pill delete">delete</span></td>
+            <td>弃用的 Codex 插件，确认全删</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <aside class="callout info">
+      <span class="title">Done 判定</span>
+      <ol>
+        <li><code>./gradlew clean build --refresh-dependencies</code> 全绿（含 spotless / spotbugs / jacoco）</li>
+        <li><code>./gradlew projects</code> 输出包含全部预期模块；映射前后项目数一致</li>
+        <li><code>./gradlew build --configuration-cache</code> 通过（验证 configuration cache 兼容性）</li>
+        <li><code>./gradlew :linqibin-spring-boot-starter-jpa:dependencies</code> 顶部显示 <code>dev.linqibin.commons:linqibin-spring-boot-starter-jpa:0.1.0-SNAPSHOT</code></li>
+        <li><code>./gradlew :patra-spring-boot-starter-expr:dependencies</code> 顶部显示 <code>dev.linqibin.patra:patra-spring-boot-starter-expr:0.1.0-SNAPSHOT</code></li>
+        <li><code>./gradlew :patra-catalog-app:dependencies</code> 顶部显示 <code>dev.linqibin.patra:patra-catalog-app:0.1.0-SNAPSHOT</code></li>
+        <li><code>./gradlew :linqibin-spring-boot-starter-jpa:check</code> 触发 <code>checkBoundary</code> task 并通过；人为引入 <code>api(project(":patra-common"))</code> 后 <code>check</code> 应 fail（手动 sanity test）</li>
+        <li><code>./gradlew publishToMavenLocal</code> 后 <code>~/.m2/repository/dev/linqibin/</code> 下出现 <code>commons/</code> 与 <code>patra/</code> 两个 group 目录树</li>
+        <li><code>git ls-files patra-api | grep -E "linqibin-|patra-spring-boot-starter-"</code> 无命中</li>
+        <li><code>git ls-files patra-api | grep -E "build-logic/|settings.gradle.kts|build.gradle.kts$"</code> 无命中（顶层 root 文件不应在 patra-api/ 下重复）</li>
+        <li><code>ls patra-api/plugins/</code> 不存在</li>
+        <li><code>find Patra -maxdepth 2 -name "linqibin-spring-boot-starter-jpa" -type d</code> 仅命中 <code>linqibin-commons/linqibin-spring-boot-starter-jpa</code></li>
+        <li><code>grep -rn "working-directory: patra-api" .github/workflows/</code> 无命中</li>
+        <li><code>grep -rn "patra-api" .github/workflows/</code> 命中仅限合理保留（如未处理的 ci.yml Maven 残留——本次 Out of Scope）</li>
+        <li>IntelliJ 关闭 Patra 项目 → 删除 <code>.idea/</code> → 重新 Open Patra/ → 一次性 reimport 后 <code>PatraCatalogApplication</code> 可启动且 OTEL agent 路径解析正确</li>
+        <li>启动至少 1 个 Boot app（<code>PatraCatalogApplication</code>）冒烟测试，确认 Spring 上下文初始化无错</li>
+      </ol>
+    </aside>
+
+  </main>
+
+  <aside class="notes-panel" id="notes">
+    <header>
+      <h2>Implementation Notes</h2>
+      <p class="hint">实施期由 Claude Code 即时追加。规则：遇到 spec 未规定的<strong>决定</strong>、必要<strong>更改</strong>、不可避免的<strong>权衡</strong>、其他用户应知事项，立即用 Edit 追加 entry，不要等任务结束。</p>
+    </header>
+
+    <ol class="notes-log">
+    </ol>
+
+    <p class="empty-state">no notes yet</p>
+
+    <footer class="notes-stats">
+      总计:
+      <span data-counter="decision">0</span> decisions /
+      <span data-counter="change">0</span> changes /
+      <span data-counter="tradeoff">0</span> tradeoffs /
+      <span data-counter="other">0</span> others
+    </footer>
+  </aside>
+
+</div>
+</body>
+</html>
