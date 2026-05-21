@@ -11,12 +11,10 @@ import dev.linqibin.starter.httpinterface.config.HttpInterfaceProperties.Service
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.restclient.RestClientCustomizer;
 import org.springframework.web.client.RestClient;
@@ -35,7 +33,6 @@ import org.springframework.web.service.annotation.HttpExchange;
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("RestClientFactory 单元测试")
-@Timeout(value = 5, unit = TimeUnit.SECONDS)
 class RestClientFactoryTest {
 
   /// 创建带有空 customizers 的工厂

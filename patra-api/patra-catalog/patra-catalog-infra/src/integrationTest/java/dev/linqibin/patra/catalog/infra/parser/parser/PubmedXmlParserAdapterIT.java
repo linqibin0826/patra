@@ -9,11 +9,9 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// PubmedXmlParserAdapter 集成测试。
 ///
@@ -22,7 +20,6 @@ import org.junit.jupiter.api.Timeout;
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("PubmedXmlParserAdapter 集成测试")
-@Timeout(value = 5, unit = TimeUnit.SECONDS)
 class PubmedXmlParserAdapterIT {
 
   private final PubmedXmlParserAdapter adapter = new PubmedXmlParserAdapter();

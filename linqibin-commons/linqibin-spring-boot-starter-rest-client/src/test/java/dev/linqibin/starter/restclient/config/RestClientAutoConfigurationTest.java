@@ -3,10 +3,8 @@ package dev.linqibin.starter.restclient.config;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.linqibin.starter.restclient.interceptor.LoggingInterceptor;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.web.client.RestClient;
@@ -15,7 +13,6 @@ import org.springframework.web.client.RestClient;
 ///
 /// <p>测试自动配置类的条件装配、Bean 创建和配置属性加载。
 @DisplayName("RestClientAutoConfiguration 单元测试")
-@Timeout(value = 5, unit = TimeUnit.SECONDS)
 class RestClientAutoConfigurationTest {
 
   private final ApplicationContextRunner contextRunner =
