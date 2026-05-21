@@ -31,7 +31,7 @@
           <li data-task-status="done"><a href="#task-2">Task 2 — 迁移 plugin 启用声明并验证上溯查找</a></li>
           <li data-task-status="done"><a href="#task-3">Task 3 — 上移 send-stop-notification.sh 及 Stop hook 注册</a></li>
           <li data-task-status="done"><a href="#task-4">Task 4 — 上移 create-issue skill 并改临时路径</a></li>
-          <li data-task-status="pending"><a href="#task-5">Task 5 — Patra/CLAUDE.md 顶部新增「产品定义」章节</a></li>
+          <li data-task-status="done"><a href="#task-5">Task 5 — Patra/CLAUDE.md 顶部新增「产品定义」章节</a></li>
           <li data-task-status="pending"><a href="#task-6">Task 6 — 删除 patra-portal/CLAUDE.md 的 FE 警示段</a></li>
           <li data-task-status="pending"><a href="#task-7">Task 7 — 全链路端到端验证并推送 PR</a></li>
         </ol>
@@ -483,7 +483,7 @@ EOF
         </ol>
       </article>
 
-      <article class="task" id="task-5" data-status="pending">
+      <article class="task" id="task-5" data-status="done">
         <header>
           <h2>任务 5：Patra/CLAUDE.md 顶部新增「产品定义」章节</h2>
           <dl class="files">
@@ -492,7 +492,7 @@ EOF
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：用 Edit 工具在标题与「项目背景」之间插入「产品定义」</strong>
             <p>old_string：</p>
             <pre><code class="lang-text"># CLAUDE.md
@@ -508,7 +508,7 @@ EOF
 ## 项目背景</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：核对插入结果</strong>
             <pre><code class="lang-bash">head -8 CLAUDE.md</code></pre>
             <p>预期前 8 行：</p>
@@ -522,7 +522,7 @@ EOF
 </code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：Commit</strong>
             <pre><code class="lang-bash">git add CLAUDE.md
 git commit -m "$(cat <<'EOF'

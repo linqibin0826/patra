@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## 产品定义
+
+**Patra** — 医学出版物数据平台，采集、解析、存储来自 PubMed / EPMC / Crossref 等 10+ 外部数据源的文献和期刊数据。
+
 ## 项目背景
 
 本项目是全新代码库（Greenfield Project），由单人开发，无时间压力。
