@@ -23,11 +23,11 @@
           <li data-task-status="done"><a href="#task-1">Task 1 — 引入 JVM Test Suites convention</a></li>
           <li data-task-status="done"><a href="#task-2">Task 2 — 迁移 linqibin-commons IT</a></li>
           <li data-task-status="done"><a href="#task-3">Task 3 — 迁移 patra-registry IT</a></li>
-          <li data-task-status="in-progress"><a href="#task-4">Task 4 — 迁移 patra-ingest IT + E2E</a></li>
-          <li data-task-status="pending"><a href="#task-5">Task 5 — 迁移 patra-catalog IT + E2E</a></li>
-          <li data-task-status="pending"><a href="#task-6">Task 6 — 迁移 patra-object-storage IT</a></li>
-          <li data-task-status="pending"><a href="#task-7">Task 7 — 测试分层全局验证</a></li>
-          <li data-task-status="pending"><a href="#task-8">Task 8 — 根 build.gradle.kts 引入 JaCoCo 聚合</a></li>
+          <li data-task-status="done"><a href="#task-4">Task 4 — 迁移 patra-ingest IT + E2E</a></li>
+          <li data-task-status="done"><a href="#task-5">Task 5 — 迁移 patra-catalog IT + E2E</a></li>
+          <li data-task-status="done"><a href="#task-6">Task 6 — 迁移 patra-object-storage IT</a></li>
+          <li data-task-status="done"><a href="#task-7">Task 7 — 测试分层全局验证</a></li>
+          <li data-task-status="in-progress"><a href="#task-8">Task 8 — 根 build.gradle.kts 引入 JaCoCo 聚合</a></li>
           <li data-task-status="pending"><a href="#task-9">Task 9 — 重写 ci.yml + 删 pr-checks.yml</a></li>
           <li data-task-status="pending"><a href="#task-10">Task 10 — 推分支验证 CI + 配置 CODECOV_TOKEN</a></li>
           <li data-task-status="pending"><a href="#task-11">Task 11 — 开 PR + 回写 Linear AC</a></li>
@@ -547,7 +547,7 @@ EOF
       <!-- ============================================================
            Task 4: 迁移 patra-ingest IT + E2E
            ============================================================ -->
-      <article class="task" id="task-4" data-status="in-progress">
+      <article class="task" id="task-4" data-status="done">
         <header>
           <h2>任务 4：迁移 patra-ingest 的 8 个 IT + 1 个 E2E + 3 个 Initializer</h2>
           <dl class="files">
@@ -628,7 +628,7 @@ EOF
       <!-- ============================================================
            Task 5: 迁移 patra-catalog IT + E2E
            ============================================================ -->
-      <article class="task" id="task-5" data-status="pending">
+      <article class="task" id="task-5" data-status="done">
         <header>
           <h2>任务 5：迁移 patra-catalog 的 32 个 IT + 2 个 E2E + 3 个 Initializer</h2>
           <dl class="files">
@@ -757,7 +757,7 @@ EOF
       <!-- ============================================================
            Task 6: 迁移 patra-object-storage IT
            ============================================================ -->
-      <article class="task" id="task-6" data-status="pending">
+      <article class="task" id="task-6" data-status="done">
         <header>
           <h2>任务 6：迁移 patra-object-storage 的 1 个 IT</h2>
           <dl class="files">
@@ -794,7 +794,7 @@ Refs: PAP-10"</code></pre>
       <!-- ============================================================
            Task 7: 测试分层全局验证
            ============================================================ -->
-      <article class="task" id="task-7" data-status="pending">
+      <article class="task" id="task-7" data-status="done">
         <header>
           <h2>任务 7：测试分层全局本地验证</h2>
           <dl class="files">
@@ -849,7 +849,7 @@ Refs: PAP-10"</code></pre>
       <!-- ============================================================
            Task 8: 根 build.gradle.kts 引入 JaCoCo 聚合
            ============================================================ -->
-      <article class="task" id="task-8" data-status="pending">
+      <article class="task" id="task-8" data-status="in-progress">
         <header>
           <h2>任务 8：根 build.gradle.kts 引入 jacoco-report-aggregation</h2>
           <dl class="files">
@@ -1327,12 +1327,20 @@ EOF
         </header>
         <p>Plan 文件清单只列 <code>*IT.java</code> / <code>*E2E.java</code> / <code>*ContainerInitializer.java</code>，实施时发现还需迁移命名不规则的 IT 支持类：<code>ingest-boot/testutil/{OutboxMessageTestBuilder,RocketMQMessageCollector}.java</code>、<code>ingest-infra/TestApplication.java</code>、<code>registry-infra/TestApplication.java</code>、<code>registry-adapter/WebMvcTestConfiguration.java</code>、<code>object-storage-adapter/WebMvcTestConfiguration.java</code>、<code>catalog-adapter/config/TestConfiguration.java</code>、<code>catalog-infra/TestApplication.java</code>。判定规则：grep 看是否仅被 *IT 引用——是则搬到 integrationTest；若同时被 unit 与 IT 引用（如 <code>PubMedComputedAuthorTestDataGenerator</code>）则留在 src/test/java/ 靠 source set 共享。</p>
       </li>
+      <li class="note" data-type="change" data-time="2026-05-21T23:20">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-21T23:20">05-21 23:20</time>
+          <a href="#task-8">§ Task 8</a>
+        </header>
+        <p>Plan Task 8 写的根 build.gradle.kts 只 apply <code>base</code> + <code>jacoco-report-aggregation</code>，但实际跑 <code>testCodeCoverageReport</code> 时报 "Could not find org.springframework.cloud:spring-cloud-starter-gateway-server-webflux:."——jacoco-report-aggregation 触发根项目 resolve 子项目（如 patra-gateway-boot / patra-catalog-infra）的 runtime 依赖，但根没注入 Spring Cloud BOM 故版本号为空。修正：根 build.gradle.kts 也 apply <code>id("io.spring.dependency-management") version "1.1.7"</code> + 复制 <code>linqibin.java-base</code> 的 5 个 BOM imports (spring-boot / spring-cloud / spring-cloud-alibaba / resilience4j / testcontainers)。版本号写死 "1.1.7"（与 libs.versions.toml 的 <code>spring-dependency-management</code> 同步），因为 libs.versions.toml 无 <code>[plugins]</code> 表，无法用 <code>alias(libs.plugins.xxx)</code>。后续若改版本需同步两处。</p>
+      </li>
     </ol>
 
     <footer class="notes-stats">
       总计:
       <span data-counter="decision">0</span> decisions /
-      <span data-counter="change">2</span> changes /
+      <span data-counter="change">3</span> changes /
       <span data-counter="tradeoff">0</span> tradeoffs /
       <span data-counter="other">1</span> others
     </footer>
