@@ -30,7 +30,7 @@
           <li data-task-status="done"><a href="#task-1">Task 1 — 上移 Gradle root + 基础设施（spec commit 1）</a></li>
           <li data-task-status="done"><a href="#task-2">Task 2 — linqibin-commons/ 上移 + Group 拆分 + boundary check（spec commit 2）</a></li>
           <li data-task-status="done"><a href="#task-3">Task 3 — patra-starters/ 上移（spec commit 3）</a></li>
-          <li data-task-status="pending"><a href="#task-4">Task 4 — 清扫 + 路径修正 + README + 最终验证（spec commit 4）</a></li>
+          <li data-task-status="done"><a href="#task-4">Task 4 — 清扫 + 路径修正 + README + 最终验证（spec commit 4）</a></li>
         </ol>
       </li>
       <li><a href="#self-check">自检结果</a></li>
@@ -781,7 +781,7 @@ EOF
         </ol>
       </article>
 
-      <article class="task" id="task-4" data-status="pending">
+      <article class="task" id="task-4" data-status="done">
         <header>
           <h2>任务 4：清扫 + 路径修正 + README + 最终验证（spec commit 4）</h2>
           <p>新建 workspace 入口 README；修正 .run/ 与 gradle.properties 内 patra-infra 相对路径；执行 spec 的 16 条 Done 判定。</p>
@@ -793,7 +793,7 @@ EOF
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：新建 Patra/README.md（workspace 入口）</strong>
             <p>用 Write 工具创建 <code>Patra/README.md</code>：</p>
             <pre><code class="lang-markdown"># Patra Monorepo
@@ -839,7 +839,7 @@ EOF
 </code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：修正 10 个 .run XML 中的 patra-infra 相对路径</strong>
             <p>Gradle root 上移后 IntelliJ <code>$PROJECT_DIR$</code> 从 patra-api/ 变为 Patra/，原 <code>$PROJECT_DIR$/../patra-infra/</code> 多了一层 <code>../</code>，需修正为 <code>$PROJECT_DIR$/patra-infra/</code>。</p>
             <pre><code class="lang-bash"># 批量替换
@@ -863,7 +863,7 @@ rm patra-api/.run/*.bak</code></pre>
             <p>预期：10 个 .run XML 中所有 <code>$PROJECT_DIR$/../patra-infra/</code> 已替换为 <code>$PROJECT_DIR$/patra-infra/</code>。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：修正 gradle.properties 中 otel.agent.path</strong>
             <p>用 Edit 工具修改 <code>gradle.properties</code>：</p>
             <pre><code class="lang-properties"># 旧：
@@ -874,7 +874,7 @@ otel.agent.path=patra-infra/docker/opentelemetry-javaagent.jar</code></pre>
             <p>预期：otel.agent.path 不再有 <code>../</code> 前缀。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：验证 patra-api/ 无残留</strong>
             <pre><code class="lang-bash"># 4.1 starter 与 plugins 残留
 find patra-api -maxdepth 1 -type d -name "linqibin-*" -o -name "patra-spring-boot-starter-*"
@@ -897,7 +897,7 @@ grep -rn "patra-api" .github/workflows/
             <p>预期：4 个验证子步骤通过；patra-api/ 仅剩业务模块 + .run/ + .claude/ + CLAUDE.md + README.md。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：执行 spec Done 判定 1-4（基础构建与配置 cache）</strong>
             <pre><code class="lang-bash"># Done 1: 完整 clean assemble + refresh 依赖（清掉旧 group 缓存）
 ./gradlew clean assemble --refresh-dependencies
@@ -917,7 +917,7 @@ diff <(grep "Project ':" /tmp/projects-after.txt | sort) <(./gradlew projects --
             <p>预期：3 个命令全部 BUILD SUCCESSFUL；项目数与基线一致。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：执行 spec Done 判定 4-8（group 坐标实证）</strong>
             <pre><code class="lang-bash"># Done 4: linqibin-commons group
 ./gradlew :linqibin-spring-boot-starter-jpa:dependencies --configuration runtimeClasspath 2>&amp;1 | grep "Project ':linqibin-spring-boot-starter-jpa'\|^.*runtimeClasspath" | head -5
@@ -949,7 +949,7 @@ ls ~/.m2/repository/dev/linqibin/patra/ | head
             <p>预期：3 个 group 实证正确；~/.m2/dev/linqibin/ 下出现 commons/ 与 patra/ 两个分支。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7：执行 spec Done 判定 9-14（路径残留扫描）</strong>
             <pre><code class="lang-bash"># Done 9-10: starter 与 Gradle 配置在 patra-api/ 下无残留
 git ls-files patra-api | grep -E "linqibin-|patra-spring-boot-starter-"
@@ -972,8 +972,9 @@ grep -n "patra-api" .github/workflows/*.yml || echo "✓ workflows 完全无 pat
             <p>预期：5 个扫描全部按预期（无命中或仅 OoS 残留）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="skipped">
             <strong>步骤 8：执行 spec Done 判定 15（IDE 重新导入 sanity check）</strong>
+            <p><em>(skipped: 手动步骤，由用户在 IntelliJ 中执行；reorg 命令链已全绿，Gradle 模型一致性满足 IDE 导入前提)</em></p>
             <p>此步需在 IntelliJ 中手动执行，无 CLI 替代：</p>
             <ol>
               <li>关闭当前 Patra 项目（File → Close Project）</li>
@@ -992,8 +993,9 @@ grep -n "patra-api" .github/workflows/*.yml || echo "✓ workflows 完全无 pat
             <p>预期：IDE 重新导入后所有模块可见、PatraCatalogApplication 可启动且 OTel agent 路径解析正确（修正后的 <code>$PROJECT_DIR$/patra-infra/...</code> 生效）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="skipped">
             <strong>步骤 9：执行 spec Done 判定 16（Boot app 冒烟测试 - CLI 版）</strong>
+            <p><em>(skipped: 本地 patra-infra docker compose 未启动，MySQL 3306 端口关，PatraCatalogApplication 启动会因 DB 连接失败而非 reorg 原因 fail；待用户 docker compose up 后手动 ./gradlew :patra-catalog:patra-catalog-boot:bootRun 验证 Spring 上下文初始化)</em></p>
             <p>不进 IDE 也可用 CLI 验证：</p>
             <pre><code class="lang-bash"># 启动 PatraCatalogApplication（前置：本地 docker-compose 已起 MySQL / Nacos）
 cd /Users/linqibin/Projects/Products/Patra/.claude/worktrees/brainstorm-starter-reorg
@@ -1014,7 +1016,7 @@ wait $BOOT_PID 2>/dev/null</code></pre>
             <p>预期：Spring 上下文初始化无错（看日志最后是否有 <code>Started PatraCatalogApplication in X seconds</code>）。若 actuator 端点不可达但日志显示 Started，仍判通过。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 10：Commit + 最终状态确认</strong>
             <pre><code class="lang-bash">git add -A
 git status
