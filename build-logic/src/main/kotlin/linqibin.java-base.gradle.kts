@@ -173,14 +173,20 @@ listOf("integrationTest", "e2eTest").forEach { suiteName ->
 
 // integrationTest 复用 test source set 输出（共享 unit/IT 都用的 TestDataBuilder / Helper 等）
 // e2eTest 同时继承 integrationTest 与 test output（链式共享 *ContainerInitializer / test fixtures）
+//
+// 同时显式补充 main source set output 到 compileClasspath / runtimeClasspath:
+// Spring Boot plugin 默认禁用 `jar` task（只产 bootJar），导致 `implementation(project())`
+// 引用的 default configuration artifact 为空，main classes 不在 integrationTest 的 runtime
+// classpath 上，@SpringBootTest 找不到 @SpringBootApplication。显式补 sourceSets["main"].output
+// 绕过该限制，让 @SpringBootTest 的 package 搜索能定位主类。
 sourceSets {
     named("integrationTest") {
-        compileClasspath += sourceSets["test"].output
-        runtimeClasspath += sourceSets["test"].output
+        compileClasspath += sourceSets["main"].output + sourceSets["test"].output
+        runtimeClasspath += sourceSets["main"].output + sourceSets["test"].output
     }
     named("e2eTest") {
-        compileClasspath += sourceSets["integrationTest"].output + sourceSets["test"].output
-        runtimeClasspath += sourceSets["integrationTest"].output + sourceSets["test"].output
+        compileClasspath += sourceSets["main"].output + sourceSets["integrationTest"].output + sourceSets["test"].output
+        runtimeClasspath += sourceSets["main"].output + sourceSets["integrationTest"].output + sourceSets["test"].output
     }
 }
 
