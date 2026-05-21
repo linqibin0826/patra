@@ -1,7 +1,0 @@
-interface:
-  display_name: "Patra JPA 数据层"
-  short_description: "实现 Patra JPA 持久化模型、查询策略、映射与仓储适配器"
-  default_prompt: "使用 $patra-jpa 设计这个 Patra infra 层的 Entity、Dao 和 RepositoryAdapter。"
-
-policy:
-  allow_implicit_invocation: true
