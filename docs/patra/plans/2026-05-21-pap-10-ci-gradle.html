@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PAP-10 实施计划：CI 全面 Gradle 化 + JVM Test Suites + JaCoCo 聚合 + Codecov</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles/journal.css">
+  <link rel="stylesheet" href="../styles/plan-extras.css">
+</head>
+<body>
+<div class="layout">
+
+  <nav class="toc">
+    <h3>目录</h3>
+    <ol>
+      <li><a href="#scope-check">范围检查结果</a></li>
+      <li><a href="#file-structure">文件结构</a></li>
+      <li><a href="#tasks">任务列表</a>
+        <ol class="toc-tasks">
+          <li data-task-status="pending"><a href="#task-1">Task 1 — 引入 JVM Test Suites convention</a></li>
+          <li data-task-status="pending"><a href="#task-2">Task 2 — 迁移 linqibin-commons IT</a></li>
+          <li data-task-status="pending"><a href="#task-3">Task 3 — 迁移 patra-registry IT</a></li>
+          <li data-task-status="pending"><a href="#task-4">Task 4 — 迁移 patra-ingest IT + E2E</a></li>
+          <li data-task-status="pending"><a href="#task-5">Task 5 — 迁移 patra-catalog IT + E2E</a></li>
+          <li data-task-status="pending"><a href="#task-6">Task 6 — 迁移 patra-object-storage IT</a></li>
+          <li data-task-status="pending"><a href="#task-7">Task 7 — 测试分层全局验证</a></li>
+          <li data-task-status="pending"><a href="#task-8">Task 8 — 根 build.gradle.kts 引入 JaCoCo 聚合</a></li>
+          <li data-task-status="pending"><a href="#task-9">Task 9 — 重写 ci.yml + 删 pr-checks.yml</a></li>
+          <li data-task-status="pending"><a href="#task-10">Task 10 — 推分支验证 CI + 配置 CODECOV_TOKEN</a></li>
+          <li data-task-status="pending"><a href="#task-11">Task 11 — 开 PR + 回写 Linear AC</a></li>
+        </ol>
+      </li>
+      <li><a href="#self-check">自检结果</a></li>
+    </ol>
+  </nav>
+
+  <main class="content">
+
+    <header class="doc-header">
+      <h1>PAP-10 实施计划：CI 全面 Gradle 化 + JVM Test Suites + JaCoCo 聚合 + Codecov</h1>
+      <div class="meta-bar">
+        <span>📅 2026-05-21</span>
+        <span>🌿 worktree-pap-10-ci-gradle-jacoco</span>
+        <span>📋 plan</span>
+        <span class="status-pill">draft</span>
+      </div>
+
+      <aside class="for-ai-worker">
+        <strong>面向 AI 代理的工作者：</strong>
+        必需子技能：使用 <code>patra:subagent-driven-development</code>（推荐）
+        或 <code>patra:executing-plans</code> 逐任务实现。
+        通过修改任务卡片与步骤的 <code>data-status</code> 属性追踪进度
+        （pending / in-progress / done / blocked / skipped）。
+        每完成一个 task 立即 commit。
+      </aside>
+
+      <dl class="meta">
+        <dt>目标</dt> <dd>把 <code>.github/workflows/</code> 从已失效的 Maven 命令链改造为 Gradle，同时把测试结构升级到 JVM Test Suites（unit / integrationTest / e2eTest 三层物理隔离），并通过 <code>jacoco-report-aggregation</code> 聚合覆盖率上传 Codecov。</dd>
+        <dt>架构</dt> <dd>在 <code>linqibin.java-base</code> convention plugin 中统一声明 JVM Test Suites，所有 Java 模块自动获得三个 source set；54 个 <code>*IT.java</code> + 3 个 <code>*E2E.java</code> + 7 个 <code>*ContainerInitializer.java</code> 用 <code>git mv</code> 迁移到对应目录。<code>e2eTest</code> source set 通过 <code>compileClasspath</code> 继承 <code>integrationTest</code> 的 output（共享 Initializer）；<code>integrationTest</code> 配置 <code>extendsFrom</code> 继承 <code>testImplementation</code> 全部依赖。CI 用单 workflow <code>ci.yml</code> + 单 job <code>build-and-test</code>，靠 <code>gradle/actions/setup-gradle@v4</code> build cache 加速。</dd>
+        <dt>技术栈</dt> <dd>Gradle 9.5 / JVM Test Suites (incubating since Gradle 7.3) / jacoco-report-aggregation (Gradle 7.4+) / GitHub Actions / gradle/actions/setup-gradle@v4 / codecov/codecov-action@v4 / Testcontainers (postgres:17, apache/rocketmq:5.3.1) / JUnit 5</dd>
+        <dt>关联 spec</dt> <dd><a href="../specs/2026-05-21-pap-10-ci-gradle-design.html">PAP-10: CI 全面 Gradle 化 + JaCoCo 聚合 + Codecov</a></dd>
+      </dl>
+    </header>
+
+    <section id="scope-check">
+      <h2>范围检查结果</h2>
+      <aside class="callout success">
+        <span class="title">单 plan 覆盖</span>
+        <p>PAP-10 涉及 4 个相互耦合的改动面（convention plugin / 测试文件迁移 / CI workflow / JaCoCo 聚合）。各面之间存在硬依赖：CI 调用的 task 由 convention 定义；JaCoCo 聚合的 suite 名由 convention 决定；测试迁移必须发生在 convention 改造之后否则编译失败。这些耦合无法拆分到独立 PR，必须作为一个 plan 一次性交付。</p>
+      </aside>
+    </section>
+
+    <section id="file-structure">
+      <h2>文件结构</h2>
+      <div class="file-tree">
+        <pre>build-logic/src/main/kotlin/linqibin.java-base.gradle.kts        [modify] 引入 JVM Test Suites + 配置继承
+build.gradle.kts                                                  [modify] 加 jacoco-report-aggregation
+.github/workflows/ci.yml                                          [modify] 重写为单 job build-and-test
+.github/workflows/pr-checks.yml                                   [delete] 全部逻辑失效
+
+# 测试文件迁移（git mv，保留 history）
+linqibin-commons/linqibin-spring-boot-starter-batch/
+  src/test/java/.../*IT.java                                      [move]   → src/integrationTest/java/.../
+linqibin-commons/linqibin-spring-boot-starter-http-interface/
+  src/test/java/.../RestClientFactoryIT.java                      [move]   → src/integrationTest/java/.../
+linqibin-commons/linqibin-spring-boot-starter-redisson/
+  src/test/java/.../DistributedLockIT.java                        [move]   → src/integrationTest/java/.../
+linqibin-commons/linqibin-spring-boot-starter-rest-client/
+  src/test/java/.../DownloadClientIT.java                         [move]   → src/integrationTest/java/.../
+patra-api/patra-registry/patra-registry-adapter/
+  src/test/java/.../*IT.java (4)                                  [move]   → src/integrationTest/java/.../
+patra-api/patra-registry/patra-registry-infra/
+  src/test/java/.../*IT.java (4)                                  [move]   → src/integrationTest/java/.../
+  src/test/java/.../RegistryPostgreSQLContainerInitializer.java   [move]   → src/integrationTest/java/.../
+patra-api/patra-ingest/patra-ingest-boot/
+  src/test/java/.../integration/messaging/*IT.java (2)            [move]   → src/integrationTest/java/.../
+  src/test/java/.../integration/outbox/OutboxPatternE2E.java      [move]   → src/e2eTest/java/.../
+  src/test/java/.../integration/config/*ContainerInitializer (2)  [move]   → src/integrationTest/java/.../
+patra-api/patra-ingest/patra-ingest-infra/
+  src/test/java/.../*IT.java (6)                                  [move]   → src/integrationTest/java/.../
+  src/test/java/.../IngestPostgreSQLContainerInitializer.java     [move]   → src/integrationTest/java/.../
+patra-api/patra-catalog/patra-catalog-adapter/
+  src/test/java/.../*IT.java (11)                                 [move]   → src/integrationTest/java/.../
+patra-api/patra-catalog/patra-catalog-infra/
+  src/test/java/.../*IT.java (21)                                 [move]   → src/integrationTest/java/.../
+  src/test/java/.../CatalogPostgreSQLContainerInitializer.java    [move]   → src/integrationTest/java/.../
+  src/test/java/.../CatalogMinIOContainerInitializer.java         [move]   → src/integrationTest/java/.../
+patra-api/patra-catalog/patra-catalog-boot/
+  src/test/java/.../integration/mesh/*E2E.java (2)                [move]   → src/e2eTest/java/.../
+  src/test/java/.../integration/config/CatalogPostgreSQLContainerInitializer.java
+                                                                  [move]   → src/e2eTest/java/.../ (boot 模块的 Initializer 仅 E2E 使用)
+patra-api/patra-object-storage/patra-object-storage-adapter/
+  src/test/java/.../StorageEndpointIT.java                        [move]   → src/integrationTest/java/.../</pre>
+      </div>
+    </section>
+
+    <section id="tasks">
+      <h2>任务列表</h2>
+
+      <!-- ============================================================
+           Task 1: 引入 JVM Test Suites convention
+           ============================================================ -->
+      <article class="task" id="task-1" data-status="pending">
+        <header>
+          <h2>任务 1：在 linqibin.java-base 引入 JVM Test Suites convention</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>build-logic/src/main/kotlin/linqibin.java-base.gradle.kts</code></dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：完整替换 linqibin.java-base.gradle.kts 内容</strong>
+            <p>整体替换文件内容为下面新版本。关键差异：</p>
+            <ul>
+              <li>移除原顶层 <code>tasks.test { useJUnitPlatform { ... } }</code> 配置（移入 suites DSL）</li>
+              <li>移除原顶层 <code>dependencies { ... testImplementation ... testRuntimeOnly ... }</code> 中的 <code>testRuntimeOnly</code> 项（移入 suites DSL）</li>
+              <li>新增 <code>testing { suites { ... } }</code> DSL 声明 3 个 suite</li>
+              <li>新增 configurations.extendsFrom 让 integrationTest/e2eTest 继承 test 全部依赖</li>
+              <li>新增 e2eTest source set 继承 integrationTest output</li>
+              <li>新增 integrationTest/e2eTest 的 annotationProcessor 显式声明（extendsFrom 不传递 processor configuration）</li>
+            </ul>
+            <p>新文件完整内容：</p>
+            <pre><code class="lang-kotlin">/**
+ * Patra Java Base Convention Plugin
+ *
+ * 所有 Java 模块的基础配置：
+ * - Java 25 Toolchain
+ * - 编译选项
+ * - Spotless 代码格式化
+ * - SpotBugs 静态分析
+ * - JaCoCo 代码覆盖率
+ * - JVM Test Suites（test / integrationTest / e2eTest）
+ * - Lombok + MapStruct 注解处理器
+ */
+
+plugins {
+    java
+    jacoco
+    id("com.diffplug.spotless")
+    id("com.github.spotbugs")
+    id("io.spring.dependency-management")
+}
+
+// ==================== Version Catalog 访问 ====================
+val libs = the&lt;org.gradle.api.artifacts.VersionCatalogsExtension&gt;().named("libs")
+
+// ==================== 统一依赖管理 ====================
+applyLinqibinDependencyManagement(libs)
+
+// ==================== Java Toolchain ====================
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+// ==================== Compile Options ====================
+tasks.withType&lt;JavaCompile&gt;().configureEach {
+    options.encoding = "UTF-8"
+    options.compilerArgs.addAll(listOf("-parameters"))
+}
+
+// ==================== Spotless ====================
+spotless {
+    java {
+        target("src/**/*.java")
+        googleJavaFormat(libs.findVersion("google-java-format").get().requiredVersion)
+        removeUnusedImports()
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+    kotlinGradle {
+        target("*.gradle.kts")
+        ktlint(libs.findVersion("ktlint").get().requiredVersion)
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+}
+
+// ==================== SpotBugs ====================
+spotbugs {
+    effort = com.github.spotbugs.snom.Effort.MAX
+    reportLevel = com.github.spotbugs.snom.Confidence.MEDIUM
+    excludeFilter = rootProject.file("spotbugs-exclude.xml")
+}
+
+tasks.withType&lt;com.github.spotbugs.snom.SpotBugsTask&gt;().configureEach {
+    reports.create("html") { required = true }
+    reports.create("xml") { required = true }
+}
+
+// ==================== JaCoCo ====================
+jacoco {
+    toolVersion = libs.findVersion("jacoco").get().requiredVersion
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required = true
+        html.required = true
+    }
+    classDirectories.setFrom(
+        files(classDirectories.files.map {
+            fileTree(it) {
+                exclude("net/sf/jsqlparser/**")
+            }
+        })
+    )
+}
+
+tasks.jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            limit {
+                minimum = "0.70".toBigDecimal()
+            }
+        }
+    }
+}
+// 注意：jacocoTestCoverageVerification 不挂到 check（决策 D：v0.3 不设阈值门禁）
+
+// ==================== JVM Test Suites ====================
+testing {
+    suites {
+        val test by getting(JvmTestSuite::class) {
+            useJUnitJupiter()
+            targets.configureEach {
+                testTask.configure {
+                    useJUnitPlatform {
+                        excludeTags("manual")
+                        if (!project.hasProperty("runExternal")) excludeTags("external")
+                    }
+                    maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
+                    jvmArgs("--add-opens", "java.base/java.lang=ALL-UNNAMED")
+                    testLogging { events("passed", "skipped", "failed") }
+                }
+            }
+        }
+
+        register&lt;JvmTestSuite&gt;("integrationTest") {
+            useJUnitJupiter()
+            dependencies {
+                implementation(project())
+            }
+            targets.configureEach {
+                testTask.configure {
+                    shouldRunAfter(test)
+                    useJUnitPlatform {
+                        excludeTags("manual")
+                        if (!project.hasProperty("runExternal")) excludeTags("external")
+                    }
+                    maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
+                    jvmArgs("--add-opens", "java.base/java.lang=ALL-UNNAMED")
+                    testLogging { events("passed", "skipped", "failed") }
+                }
+            }
+        }
+
+        register&lt;JvmTestSuite&gt;("e2eTest") {
+            useJUnitJupiter()
+            dependencies {
+                implementation(project())
+            }
+            targets.configureEach {
+                testTask.configure {
+                    shouldRunAfter(named("integrationTest"))
+                    useJUnitPlatform {
+                        excludeTags("manual")
+                        if (!project.hasProperty("runExternal")) excludeTags("external")
+                    }
+                    maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
+                    jvmArgs("--add-opens", "java.base/java.lang=ALL-UNNAMED")
+                    testLogging { events("passed", "skipped", "failed") }
+                }
+            }
+        }
+    }
+}
+
+// ==================== Test Suite 之间的配置/source 共享 ====================
+// integrationTest 与 e2eTest 各自的 Implementation/RuntimeOnly/CompileOnly 配置
+// 默认是独立的；这里让它们继承 test 的 declarative 依赖，避免每模块重复声明。
+listOf("integrationTest", "e2eTest").forEach { suiteName ->
+    configurations.named("${suiteName}Implementation") {
+        extendsFrom(configurations.named("testImplementation").get())
+    }
+    configurations.named("${suiteName}RuntimeOnly") {
+        extendsFrom(configurations.named("testRuntimeOnly").get())
+    }
+    configurations.named("${suiteName}CompileOnly") {
+        extendsFrom(configurations.named("testCompileOnly").get())
+    }
+}
+
+// e2eTest 复用 integrationTest source set 输出（共享 *ContainerInitializer 等基础类）
+sourceSets {
+    named("e2eTest") {
+        compileClasspath += sourceSets["integrationTest"].output
+        runtimeClasspath += sourceSets["integrationTest"].output
+    }
+}
+
+// ==================== Annotation Processors ====================
+// extendsFrom 不传递 annotationProcessor configuration，需要为每个 suite 显式声明
+dependencies {
+    // Lombok
+    compileOnly(libs.findLibrary("lombok").get())
+    annotationProcessor(libs.findLibrary("lombok").get())
+    testCompileOnly(libs.findLibrary("lombok").get())
+    testAnnotationProcessor(libs.findLibrary("lombok").get())
+    "integrationTestCompileOnly"(libs.findLibrary("lombok").get())
+    "integrationTestAnnotationProcessor"(libs.findLibrary("lombok").get())
+    "e2eTestCompileOnly"(libs.findLibrary("lombok").get())
+    "e2eTestAnnotationProcessor"(libs.findLibrary("lombok").get())
+
+    // MapStruct
+    annotationProcessor(libs.findLibrary("mapstruct-processor").get())
+    testAnnotationProcessor(libs.findLibrary("mapstruct-processor").get())
+    "integrationTestAnnotationProcessor"(libs.findLibrary("mapstruct-processor").get())
+    "e2eTestAnnotationProcessor"(libs.findLibrary("mapstruct-processor").get())
+
+    // Lombok-MapStruct Binding
+    annotationProcessor(libs.findLibrary("lombok-mapstruct-binding").get())
+    testAnnotationProcessor(libs.findLibrary("lombok-mapstruct-binding").get())
+    "integrationTestAnnotationProcessor"(libs.findLibrary("lombok-mapstruct-binding").get())
+    "e2eTestAnnotationProcessor"(libs.findLibrary("lombok-mapstruct-binding").get())
+
+    // JUnit Platform Launcher
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    "integrationTestRuntimeOnly"("org.junit.platform:junit-platform-launcher")
+    "e2eTestRuntimeOnly"("org.junit.platform:junit-platform-launcher")
+}
+</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：清理 build-logic 旧 build cache，避免脏缓存</strong>
+            <pre><code class="lang-bash">./gradlew --stop
+rm -rf build-logic/build build-logic/.gradle</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：让 Gradle 重新生成 kotlin-dsl accessors</strong>
+            <p>运行：<code>./gradlew help --no-daemon -q</code></p>
+            <p>预期：退出码 0，无 build script 错误。如果报 "Cannot resolve external dependency"，先 commit 然后重试（kotlin-dsl accessors 与 buildSrc 缓存交互偶发）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：验证 3 个 suite 的 task 已生成</strong>
+            <p>运行：<code>./gradlew :linqibin-commons-core:tasks --all --no-daemon | grep -E "(integrationTest|e2eTest)"</code></p>
+            <p>预期输出至少包含：</p>
+            <pre><code>compileIntegrationTestJava
+compileE2eTestJava
+integrationTest
+e2eTest</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：验证 ./gradlew test 行为不变（unit only）</strong>
+            <p>运行：<code>./gradlew :linqibin-commons-core:test --no-daemon</code></p>
+            <p>预期：linqibin-commons-core 模块 unit test 全部通过（与 baseline 一致，因为此模块没有 IT/E2E）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 6：Commit</strong>
+            <pre><code class="lang-bash">git add build-logic/src/main/kotlin/linqibin.java-base.gradle.kts
+git commit -m "$(cat &lt;&lt;'EOF'
+build(convention): 引入 JVM Test Suites（test / integrationTest / e2eTest）
+
+- linqibin.java-base 用 testing { suites { ... } } DSL 声明 3 个 suite
+- integrationTest/e2eTest Implementation/RuntimeOnly/CompileOnly extendsFrom test
+- e2eTest source set 继承 integrationTest output（共享 ContainerInitializer 等）
+- annotationProcessor 为每个 suite 显式声明（extendsFrom 不传递）
+- 现有 tasks.test 的 tag exclude / maxParallelForks / jvmArgs 移植到 3 个 suite
+
+为 PAP-10 测试文件迁移做铺垫；模块各自的 IT/E2E 迁移在后续 commits。
+
+Refs: PAP-10
+EOF
+)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <!-- ============================================================
+           Task 2: 迁移 linqibin-commons IT
+           ============================================================ -->
+      <article class="task" id="task-2" data-status="pending">
+        <header>
+          <h2>任务 2：迁移 linqibin-commons 的 5 个 IT 到 integrationTest source set</h2>
+          <dl class="files">
+            <dt>迁移</dt><dd>5 个 <code>*IT.java</code> 在 4 个模块下</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：linqibin-spring-boot-starter-batch (2 个 IT)</strong>
+            <pre><code class="lang-bash">mkdir -p linqibin-commons/linqibin-spring-boot-starter-batch/src/integrationTest/java/dev/linqibin/starter/batch/autoconfigure
+git mv linqibin-commons/linqibin-spring-boot-starter-batch/src/test/java/dev/linqibin/starter/batch/autoconfigure/BatchAutoConfigurationIT.java \
+       linqibin-commons/linqibin-spring-boot-starter-batch/src/integrationTest/java/dev/linqibin/starter/batch/autoconfigure/BatchAutoConfigurationIT.java
+git mv linqibin-commons/linqibin-spring-boot-starter-batch/src/test/java/dev/linqibin/starter/batch/autoconfigure/DualDataSourceIT.java \
+       linqibin-commons/linqibin-spring-boot-starter-batch/src/integrationTest/java/dev/linqibin/starter/batch/autoconfigure/DualDataSourceIT.java</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：linqibin-spring-boot-starter-http-interface (1 个 IT)</strong>
+            <pre><code class="lang-bash">mkdir -p linqibin-commons/linqibin-spring-boot-starter-http-interface/src/integrationTest/java/dev/linqibin/starter/httpinterface/factory
+git mv linqibin-commons/linqibin-spring-boot-starter-http-interface/src/test/java/dev/linqibin/starter/httpinterface/factory/RestClientFactoryIT.java \
+       linqibin-commons/linqibin-spring-boot-starter-http-interface/src/integrationTest/java/dev/linqibin/starter/httpinterface/factory/RestClientFactoryIT.java</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：linqibin-spring-boot-starter-redisson (1 个 IT)</strong>
+            <pre><code class="lang-bash">mkdir -p linqibin-commons/linqibin-spring-boot-starter-redisson/src/integrationTest/java/dev/linqibin/starter/redisson/lock
+git mv linqibin-commons/linqibin-spring-boot-starter-redisson/src/test/java/dev/linqibin/starter/redisson/lock/DistributedLockIT.java \
+       linqibin-commons/linqibin-spring-boot-starter-redisson/src/integrationTest/java/dev/linqibin/starter/redisson/lock/DistributedLockIT.java</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：linqibin-spring-boot-starter-rest-client (1 个 IT)</strong>
+            <pre><code class="lang-bash">mkdir -p linqibin-commons/linqibin-spring-boot-starter-rest-client/src/integrationTest/java/dev/linqibin/starter/restclient/download
+git mv linqibin-commons/linqibin-spring-boot-starter-rest-client/src/test/java/dev/linqibin/starter/restclient/download/DownloadClientIT.java \
+       linqibin-commons/linqibin-spring-boot-starter-rest-client/src/integrationTest/java/dev/linqibin/starter/restclient/download/DownloadClientIT.java</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：编译验证</strong>
+            <p>运行：<code>./gradlew :linqibin-spring-boot-starter-batch:compileIntegrationTestJava :linqibin-spring-boot-starter-http-interface:compileIntegrationTestJava :linqibin-spring-boot-starter-redisson:compileIntegrationTestJava :linqibin-spring-boot-starter-rest-client:compileIntegrationTestJava --no-daemon</code></p>
+            <p>预期：4 个模块 compileIntegrationTestJava 退出码 0，无 "package not found" / "cannot resolve symbol"。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 6：unit test 仍然绿（确保没迁错文件）</strong>
+            <p>运行：<code>./gradlew :linqibin-spring-boot-starter-batch:test :linqibin-spring-boot-starter-http-interface:test :linqibin-spring-boot-starter-redisson:test :linqibin-spring-boot-starter-rest-client:test --no-daemon</code></p>
+            <p>预期：4 个模块 unit test 全绿（不应再跑到任何 IT）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 7：Commit</strong>
+            <pre><code class="lang-bash">git add linqibin-commons/
+git commit -m "$(cat &lt;&lt;'EOF'
+test: 迁移 linqibin-commons 5 个 IT 到 integrationTest source set
+
+- linqibin-spring-boot-starter-batch: BatchAutoConfigurationIT / DualDataSourceIT
+- linqibin-spring-boot-starter-http-interface: RestClientFactoryIT
+- linqibin-spring-boot-starter-redisson: DistributedLockIT
+- linqibin-spring-boot-starter-rest-client: DownloadClientIT
+
+Refs: PAP-10
+EOF
+)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <!-- ============================================================
+           Task 3: 迁移 patra-registry IT
+           ============================================================ -->
+      <article class="task" id="task-3" data-status="pending">
+        <header>
+          <h2>任务 3：迁移 patra-registry 的 8 个 IT + 1 个 Initializer</h2>
+          <dl class="files">
+            <dt>迁移</dt><dd>registry-adapter (4 IT) + registry-infra (4 IT + RegistryPostgreSQLContainerInitializer)</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：patra-registry-adapter (4 IT)</strong>
+            <pre><code class="lang-bash">REG_ADAPTER_SRC=patra-api/patra-registry/patra-registry-adapter/src/test/java/dev/linqibin/patra/registry/adapter/rest
+REG_ADAPTER_DST=patra-api/patra-registry/patra-registry-adapter/src/integrationTest/java/dev/linqibin/patra/registry/adapter/rest
+
+mkdir -p "$REG_ADAPTER_DST/dictionary"
+git mv "$REG_ADAPTER_SRC/dictionary/DictionaryItemControllerIT.java" "$REG_ADAPTER_DST/dictionary/DictionaryItemControllerIT.java"
+git mv "$REG_ADAPTER_SRC/DictionaryEndpointIT.java"  "$REG_ADAPTER_DST/DictionaryEndpointIT.java"
+git mv "$REG_ADAPTER_SRC/ExprEndpointIT.java"        "$REG_ADAPTER_DST/ExprEndpointIT.java"
+git mv "$REG_ADAPTER_SRC/ProvenanceEndpointIT.java"  "$REG_ADAPTER_DST/ProvenanceEndpointIT.java"</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：patra-registry-infra (4 IT + 1 Initializer)</strong>
+            <pre><code class="lang-bash">REG_INFRA_SRC=patra-api/patra-registry/patra-registry-infra/src/test/java/dev/linqibin/patra/registry/infra
+REG_INFRA_DST=patra-api/patra-registry/patra-registry-infra/src/integrationTest/java/dev/linqibin/patra/registry/infra
+
+mkdir -p "$REG_INFRA_DST/adapter/persistence" "$REG_INFRA_DST/config"
+git mv "$REG_INFRA_SRC/adapter/persistence/DictionaryRepositoryAdapterIT.java"      "$REG_INFRA_DST/adapter/persistence/DictionaryRepositoryAdapterIT.java"
+git mv "$REG_INFRA_SRC/adapter/persistence/ExprRepositoryAdapterIT.java"             "$REG_INFRA_DST/adapter/persistence/ExprRepositoryAdapterIT.java"
+git mv "$REG_INFRA_SRC/adapter/persistence/ProvenanceConfigRepositoryAdapterIT.java" "$REG_INFRA_DST/adapter/persistence/ProvenanceConfigRepositoryAdapterIT.java"
+git mv "$REG_INFRA_SRC/adapter/persistence/ReferenceStandardRepositoryAdapterIT.java" "$REG_INFRA_DST/adapter/persistence/ReferenceStandardRepositoryAdapterIT.java"
+git mv "$REG_INFRA_SRC/config/RegistryPostgreSQLContainerInitializer.java"           "$REG_INFRA_DST/config/RegistryPostgreSQLContainerInitializer.java"</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：编译验证</strong>
+            <p>运行：<code>./gradlew :patra-registry:patra-registry-adapter:compileIntegrationTestJava :patra-registry:patra-registry-infra:compileIntegrationTestJava --no-daemon</code></p>
+            <p>预期：退出码 0。如果报 RegistryPostgreSQLContainerInitializer 未解析，确认 Initializer 文件已正确移动且 package 路径未变。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：unit test 仍绿</strong>
+            <p>运行：<code>./gradlew :patra-registry:patra-registry-adapter:test :patra-registry:patra-registry-infra:test --no-daemon</code></p>
+            <p>预期：unit test 全绿。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：Commit</strong>
+            <pre><code class="lang-bash">git add patra-api/patra-registry/
+git commit -m "$(cat &lt;&lt;'EOF'
+test: 迁移 patra-registry 8 个 IT + 1 Initializer 到 integrationTest
+
+- registry-adapter: 4 个 EndpointIT
+- registry-infra: 4 个 RepositoryAdapterIT + RegistryPostgreSQLContainerInitializer
+
+Refs: PAP-10
+EOF
+)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <!-- ============================================================
+           Task 4: 迁移 patra-ingest IT + E2E
+           ============================================================ -->
+      <article class="task" id="task-4" data-status="pending">
+        <header>
+          <h2>任务 4：迁移 patra-ingest 的 8 个 IT + 1 个 E2E + 3 个 Initializer</h2>
+          <dl class="files">
+            <dt>迁移</dt><dd>ingest-boot (2 IT 到 integrationTest, 1 E2E 到 e2eTest, 2 Initializer 到 integrationTest) + ingest-infra (6 IT + 1 Initializer 到 integrationTest)</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：patra-ingest-boot 的 IT (integration/messaging 2 个)</strong>
+            <pre><code class="lang-bash">INGEST_BOOT_SRC=patra-api/patra-ingest/patra-ingest-boot/src/test/java/dev/linqibin/patra/ingest/integration
+INGEST_BOOT_IT_DST=patra-api/patra-ingest/patra-ingest-boot/src/integrationTest/java/dev/linqibin/patra/ingest/integration
+
+mkdir -p "$INGEST_BOOT_IT_DST/messaging"
+git mv "$INGEST_BOOT_SRC/messaging/RocketMqOutboxPublisherIT.java"  "$INGEST_BOOT_IT_DST/messaging/RocketMqOutboxPublisherIT.java"
+git mv "$INGEST_BOOT_SRC/messaging/TaskReadyMessageListenerIT.java" "$INGEST_BOOT_IT_DST/messaging/TaskReadyMessageListenerIT.java"</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：patra-ingest-boot 的 Initializer (config 2 个，IT 和 E2E 共享 → integrationTest)</strong>
+            <pre><code class="lang-bash">mkdir -p "$INGEST_BOOT_IT_DST/config"
+git mv "$INGEST_BOOT_SRC/config/IngestPostgreSQLContainerInitializer.java" "$INGEST_BOOT_IT_DST/config/IngestPostgreSQLContainerInitializer.java"
+git mv "$INGEST_BOOT_SRC/config/IngestRocketMQContainerInitializer.java"   "$INGEST_BOOT_IT_DST/config/IngestRocketMQContainerInitializer.java"</code></pre>
+            <p>说明：这两个 Initializer 既被 IT 引用（messaging/*IT）也被 E2E 引用（outbox/OutboxPatternE2E）。放在 integrationTest source set，e2eTest 通过 Task 1 配置的 <code>sourceSets.e2eTest.compileClasspath += sourceSets.integrationTest.output</code> 自动可见。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：patra-ingest-boot 的 E2E (integration/outbox 1 个)</strong>
+            <pre><code class="lang-bash">INGEST_BOOT_E2E_DST=patra-api/patra-ingest/patra-ingest-boot/src/e2eTest/java/dev/linqibin/patra/ingest/integration
+
+mkdir -p "$INGEST_BOOT_E2E_DST/outbox"
+git mv "$INGEST_BOOT_SRC/outbox/OutboxPatternE2E.java" "$INGEST_BOOT_E2E_DST/outbox/OutboxPatternE2E.java"</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：patra-ingest-infra (6 IT + 1 Initializer)</strong>
+            <pre><code class="lang-bash">INGEST_INFRA_SRC=patra-api/patra-ingest/patra-ingest-infra/src/test/java/dev/linqibin/patra/ingest/infra
+INGEST_INFRA_DST=patra-api/patra-ingest/patra-ingest-infra/src/integrationTest/java/dev/linqibin/patra/ingest/infra
+
+mkdir -p "$INGEST_INFRA_DST/adapter/persistence" "$INGEST_INFRA_DST/config"
+git mv "$INGEST_INFRA_SRC/adapter/persistence/CursorRepositoryAdapterIT.java"            "$INGEST_INFRA_DST/adapter/persistence/CursorRepositoryAdapterIT.java"
+git mv "$INGEST_INFRA_SRC/adapter/persistence/OutboxMessageRepositoryAdapterIT.java"     "$INGEST_INFRA_DST/adapter/persistence/OutboxMessageRepositoryAdapterIT.java"
+git mv "$INGEST_INFRA_SRC/adapter/persistence/OutboxRelayLogRepositoryAdapterIT.java"    "$INGEST_INFRA_DST/adapter/persistence/OutboxRelayLogRepositoryAdapterIT.java"
+git mv "$INGEST_INFRA_SRC/adapter/persistence/PlanRepositoryAdapterIT.java"              "$INGEST_INFRA_DST/adapter/persistence/PlanRepositoryAdapterIT.java"
+git mv "$INGEST_INFRA_SRC/adapter/persistence/TaskRepositoryAdapterIT.java"              "$INGEST_INFRA_DST/adapter/persistence/TaskRepositoryAdapterIT.java"
+git mv "$INGEST_INFRA_SRC/adapter/persistence/TaskRunBatchRepositoryAdapterIT.java"      "$INGEST_INFRA_DST/adapter/persistence/TaskRunBatchRepositoryAdapterIT.java"
+git mv "$INGEST_INFRA_SRC/config/IngestPostgreSQLContainerInitializer.java"              "$INGEST_INFRA_DST/config/IngestPostgreSQLContainerInitializer.java"</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：编译验证（IT + E2E）</strong>
+            <p>运行：<code>./gradlew :patra-ingest:patra-ingest-boot:compileIntegrationTestJava :patra-ingest:patra-ingest-boot:compileE2eTestJava :patra-ingest:patra-ingest-infra:compileIntegrationTestJava --no-daemon</code></p>
+            <p>预期：退出码 0。E2E 类（OutboxPatternE2E）能解析到 IngestPostgreSQLContainerInitializer / IngestRocketMQContainerInitializer（这两个在 integrationTest source set 的 output 里）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 6：unit test 仍绿</strong>
+            <p>运行：<code>./gradlew :patra-ingest:patra-ingest-boot:test :patra-ingest:patra-ingest-infra:test --no-daemon</code></p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 7：Commit</strong>
+            <pre><code class="lang-bash">git add patra-api/patra-ingest/
+git commit -m "$(cat &lt;&lt;'EOF'
+test: 迁移 patra-ingest IT/E2E 到对应 source set
+
+- ingest-boot: 2 个 messaging IT + 2 个 Initializer → integrationTest
+- ingest-boot: 1 个 outbox E2E → e2eTest（通过 source set 共享访问 Initializer）
+- ingest-infra: 6 个 persistence IT + 1 个 Initializer → integrationTest
+
+Refs: PAP-10
+EOF
+)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <!-- ============================================================
+           Task 5: 迁移 patra-catalog IT + E2E
+           ============================================================ -->
+      <article class="task" id="task-5" data-status="pending">
+        <header>
+          <h2>任务 5：迁移 patra-catalog 的 32 个 IT + 2 个 E2E + 3 个 Initializer</h2>
+          <dl class="files">
+            <dt>迁移</dt><dd>catalog-adapter (11 IT), catalog-infra (21 IT + 2 Initializer), catalog-boot (2 E2E + 1 Initializer)</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：catalog-adapter (11 IT，rest/publication + rest/venue + scheduler/job)</strong>
+            <pre><code class="lang-bash">CAT_ADAPTER_SRC=patra-api/patra-catalog/patra-catalog-adapter/src/test/java/dev/linqibin/patra/catalog/adapter
+CAT_ADAPTER_DST=patra-api/patra-catalog/patra-catalog-adapter/src/integrationTest/java/dev/linqibin/patra/catalog/adapter
+
+mkdir -p "$CAT_ADAPTER_DST/rest/publication" "$CAT_ADAPTER_DST/rest/venue" "$CAT_ADAPTER_DST/scheduler/job"
+
+git mv "$CAT_ADAPTER_SRC/rest/publication/PublicationControllerDetailIT.java"          "$CAT_ADAPTER_DST/rest/publication/PublicationControllerDetailIT.java"
+git mv "$CAT_ADAPTER_SRC/rest/publication/PublicationControllerIT.java"                "$CAT_ADAPTER_DST/rest/publication/PublicationControllerIT.java"
+git mv "$CAT_ADAPTER_SRC/rest/venue/VenueControllerCompareIT.java"                     "$CAT_ADAPTER_DST/rest/venue/VenueControllerCompareIT.java"
+git mv "$CAT_ADAPTER_SRC/rest/venue/VenueControllerDetailIT.java"                      "$CAT_ADAPTER_DST/rest/venue/VenueControllerDetailIT.java"
+git mv "$CAT_ADAPTER_SRC/rest/venue/VenueControllerInstancePublicationsIT.java"        "$CAT_ADAPTER_DST/rest/venue/VenueControllerInstancePublicationsIT.java"
+git mv "$CAT_ADAPTER_SRC/rest/venue/VenueControllerIT.java"                            "$CAT_ADAPTER_DST/rest/venue/VenueControllerIT.java"
+git mv "$CAT_ADAPTER_SRC/rest/venue/VenueControllerRatingHistoryIT.java"               "$CAT_ADAPTER_DST/rest/venue/VenueControllerRatingHistoryIT.java"
+git mv "$CAT_ADAPTER_SRC/rest/venue/VenueControllerStatsIT.java"                       "$CAT_ADAPTER_DST/rest/venue/VenueControllerStatsIT.java"
+git mv "$CAT_ADAPTER_SRC/rest/venue/VenueControllerTopPublicationsIT.java"             "$CAT_ADAPTER_DST/rest/venue/VenueControllerTopPublicationsIT.java"
+git mv "$CAT_ADAPTER_SRC/scheduler/job/MeshImportScheduleJobIT.java"                   "$CAT_ADAPTER_DST/scheduler/job/MeshImportScheduleJobIT.java"
+git mv "$CAT_ADAPTER_SRC/scheduler/job/RorOrganizationImportScheduleJobIT.java"        "$CAT_ADAPTER_DST/scheduler/job/RorOrganizationImportScheduleJobIT.java"</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：catalog-infra (21 IT + 2 Initializer)</strong>
+            <pre><code class="lang-bash">CAT_INFRA_SRC=patra-api/patra-catalog/patra-catalog-infra/src/test/java/dev/linqibin/patra/catalog/infra
+CAT_INFRA_DST=patra-api/patra-catalog/patra-catalog-infra/src/integrationTest/java/dev/linqibin/patra/catalog/infra
+
+mkdir -p "$CAT_INFRA_DST/adapter/integration/letpub" \
+         "$CAT_INFRA_DST/adapter/integration/registry" \
+         "$CAT_INFRA_DST/adapter/persistence" \
+         "$CAT_INFRA_DST/adapter/read" \
+         "$CAT_INFRA_DST/batch/author" \
+         "$CAT_INFRA_DST/batch/mesh" \
+         "$CAT_INFRA_DST/parser/parser" \
+         "$CAT_INFRA_DST/persistence/dao" \
+         "$CAT_INFRA_DST/persistence" \
+         "$CAT_INFRA_DST/config"
+
+# Integration adapters
+git mv "$CAT_INFRA_SRC/adapter/integration/letpub/LetPubEnrichmentAdapterIT.java"        "$CAT_INFRA_DST/adapter/integration/letpub/LetPubEnrichmentAdapterIT.java"
+git mv "$CAT_INFRA_SRC/adapter/integration/registry/DictionaryResolverAdapterIT.java"     "$CAT_INFRA_DST/adapter/integration/registry/DictionaryResolverAdapterIT.java"
+
+# Persistence adapters (8)
+git mv "$CAT_INFRA_SRC/adapter/persistence/AuthorRepositoryAdapterIT.java"               "$CAT_INFRA_DST/adapter/persistence/AuthorRepositoryAdapterIT.java"
+git mv "$CAT_INFRA_SRC/adapter/persistence/MeshDescriptorRepositoryAdapterIT.java"        "$CAT_INFRA_DST/adapter/persistence/MeshDescriptorRepositoryAdapterIT.java"
+git mv "$CAT_INFRA_SRC/adapter/persistence/MeshQualifierRepositoryAdapterIT.java"         "$CAT_INFRA_DST/adapter/persistence/MeshQualifierRepositoryAdapterIT.java"
+git mv "$CAT_INFRA_SRC/adapter/persistence/MeshScrRepositoryAdapterIT.java"               "$CAT_INFRA_DST/adapter/persistence/MeshScrRepositoryAdapterIT.java"
+git mv "$CAT_INFRA_SRC/adapter/persistence/OrganizationRepositoryAdapterIT.java"          "$CAT_INFRA_DST/adapter/persistence/OrganizationRepositoryAdapterIT.java"
+git mv "$CAT_INFRA_SRC/adapter/persistence/PublicationRepositoryAdapterIT.java"           "$CAT_INFRA_DST/adapter/persistence/PublicationRepositoryAdapterIT.java"
+git mv "$CAT_INFRA_SRC/adapter/persistence/VenueInstanceRepositoryAdapterIT.java"         "$CAT_INFRA_DST/adapter/persistence/VenueInstanceRepositoryAdapterIT.java"
+git mv "$CAT_INFRA_SRC/adapter/persistence/VenueRepositoryAdapterIT.java"                 "$CAT_INFRA_DST/adapter/persistence/VenueRepositoryAdapterIT.java"
+
+# Read adapters (8)
+git mv "$CAT_INFRA_SRC/adapter/read/PublicationReadAdapterDetailIT.java"                  "$CAT_INFRA_DST/adapter/read/PublicationReadAdapterDetailIT.java"
+git mv "$CAT_INFRA_SRC/adapter/read/PublicationReadAdapterIT.java"                        "$CAT_INFRA_DST/adapter/read/PublicationReadAdapterIT.java"
+git mv "$CAT_INFRA_SRC/adapter/read/PublicationReadAdapterTopByVenueIT.java"              "$CAT_INFRA_DST/adapter/read/PublicationReadAdapterTopByVenueIT.java"
+git mv "$CAT_INFRA_SRC/adapter/read/VenueEnrichmentReadAdapterIT.java"                    "$CAT_INFRA_DST/adapter/read/VenueEnrichmentReadAdapterIT.java"
+git mv "$CAT_INFRA_SRC/adapter/read/VenueReadAdapterDetailIT.java"                        "$CAT_INFRA_DST/adapter/read/VenueReadAdapterDetailIT.java"
+git mv "$CAT_INFRA_SRC/adapter/read/VenueReadAdapterFilterIT.java"                        "$CAT_INFRA_DST/adapter/read/VenueReadAdapterFilterIT.java"
+git mv "$CAT_INFRA_SRC/adapter/read/VenueReadAdapterInstancesIT.java"                     "$CAT_INFRA_DST/adapter/read/VenueReadAdapterInstancesIT.java"
+git mv "$CAT_INFRA_SRC/adapter/read/VenueReadAdapterIT.java"                              "$CAT_INFRA_DST/adapter/read/VenueReadAdapterIT.java"
+
+# Batch + Parser
+git mv "$CAT_INFRA_SRC/batch/author/AuthorItemWriterIT.java"                              "$CAT_INFRA_DST/batch/author/AuthorItemWriterIT.java"
+git mv "$CAT_INFRA_SRC/batch/mesh/MeshDescriptorItemWriterIT.java"                        "$CAT_INFRA_DST/batch/mesh/MeshDescriptorItemWriterIT.java"
+git mv "$CAT_INFRA_SRC/parser/parser/LsiouParserAdapterIT.java"                           "$CAT_INFRA_DST/parser/parser/LsiouParserAdapterIT.java"
+git mv "$CAT_INFRA_SRC/parser/parser/MeshDescriptorParserAdapterIT.java"                  "$CAT_INFRA_DST/parser/parser/MeshDescriptorParserAdapterIT.java"
+git mv "$CAT_INFRA_SRC/parser/parser/MeshQualifierParserAdapterIT.java"                   "$CAT_INFRA_DST/parser/parser/MeshQualifierParserAdapterIT.java"
+git mv "$CAT_INFRA_SRC/parser/parser/PubmedXmlParserAdapterIT.java"                       "$CAT_INFRA_DST/parser/parser/PubmedXmlParserAdapterIT.java"
+
+# Direct persistence DAO
+git mv "$CAT_INFRA_SRC/persistence/dao/PublicationDaoTopByVenueIT.java"                   "$CAT_INFRA_DST/persistence/dao/PublicationDaoTopByVenueIT.java"
+git mv "$CAT_INFRA_SRC/persistence/PublicationAuthorAffiliationDaoIT.java"                 "$CAT_INFRA_DST/persistence/PublicationAuthorAffiliationDaoIT.java"
+
+# Initializers (2)
+git mv "$CAT_INFRA_SRC/config/CatalogPostgreSQLContainerInitializer.java"                 "$CAT_INFRA_DST/config/CatalogPostgreSQLContainerInitializer.java"
+git mv "$CAT_INFRA_SRC/config/CatalogMinIOContainerInitializer.java"                       "$CAT_INFRA_DST/config/CatalogMinIOContainerInitializer.java"</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：catalog-boot (2 E2E + 1 Initializer，全部到 e2eTest)</strong>
+            <pre><code class="lang-bash">CAT_BOOT_SRC=patra-api/patra-catalog/patra-catalog-boot/src/test/java/dev/linqibin/patra/catalog/integration
+CAT_BOOT_E2E_DST=patra-api/patra-catalog/patra-catalog-boot/src/e2eTest/java/dev/linqibin/patra/catalog/integration
+
+mkdir -p "$CAT_BOOT_E2E_DST/mesh" "$CAT_BOOT_E2E_DST/config"
+git mv "$CAT_BOOT_SRC/mesh/MeshDescriptorImportE2E.java"                 "$CAT_BOOT_E2E_DST/mesh/MeshDescriptorImportE2E.java"
+git mv "$CAT_BOOT_SRC/mesh/MeshScrImportE2E.java"                        "$CAT_BOOT_E2E_DST/mesh/MeshScrImportE2E.java"
+git mv "$CAT_BOOT_SRC/config/CatalogPostgreSQLContainerInitializer.java" "$CAT_BOOT_E2E_DST/config/CatalogPostgreSQLContainerInitializer.java"</code></pre>
+            <p>说明：catalog-boot 模块本身没有 IT（只有 2 个 E2E），boot 下的 Initializer 仅被 E2E 使用，所以直接搬到 <code>src/e2eTest/java/</code> 即可（无需放 integrationTest）。这是 catalog-boot 与 ingest-boot 的差异——后者 IT/E2E 共享 Initializer 所以 Initializer 必须在 integrationTest。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：编译验证</strong>
+            <p>运行：<code>./gradlew :patra-catalog:patra-catalog-adapter:compileIntegrationTestJava :patra-catalog:patra-catalog-infra:compileIntegrationTestJava :patra-catalog:patra-catalog-boot:compileE2eTestJava --no-daemon</code></p>
+            <p>预期：退出码 0。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：unit test 仍绿</strong>
+            <p>运行：<code>./gradlew :patra-catalog:patra-catalog-adapter:test :patra-catalog:patra-catalog-infra:test :patra-catalog:patra-catalog-boot:test --no-daemon</code></p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 6：Commit</strong>
+            <pre><code class="lang-bash">git add patra-api/patra-catalog/
+git commit -m "$(cat &lt;&lt;'EOF'
+test: 迁移 patra-catalog 32 IT + 2 E2E + 3 Initializer 到对应 source set
+
+- catalog-adapter: 11 个 Controller/Scheduler IT → integrationTest
+- catalog-infra: 21 个 Adapter/Read/Batch/Parser/DAO IT + 2 个 Initializer → integrationTest
+- catalog-boot: 2 个 Mesh*Import E2E + 1 个 Initializer → e2eTest
+
+Refs: PAP-10
+EOF
+)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <!-- ============================================================
+           Task 6: 迁移 patra-object-storage IT
+           ============================================================ -->
+      <article class="task" id="task-6" data-status="pending">
+        <header>
+          <h2>任务 6：迁移 patra-object-storage 的 1 个 IT</h2>
+          <dl class="files">
+            <dt>迁移</dt><dd>patra-object-storage-adapter: <code>StorageEndpointIT.java</code></dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：git mv</strong>
+            <pre><code class="lang-bash">OS_SRC=patra-api/patra-object-storage/patra-object-storage-adapter/src/test/java/dev/linqibin/patra/objectstorage/adapter/rest
+OS_DST=patra-api/patra-object-storage/patra-object-storage-adapter/src/integrationTest/java/dev/linqibin/patra/objectstorage/adapter/rest
+
+mkdir -p "$OS_DST"
+git mv "$OS_SRC/StorageEndpointIT.java" "$OS_DST/StorageEndpointIT.java"</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：编译 + unit 验证</strong>
+            <p>运行：<code>./gradlew :patra-object-storage:patra-object-storage-adapter:compileIntegrationTestJava :patra-object-storage:patra-object-storage-adapter:test --no-daemon</code></p>
+            <p>预期：compileIntegrationTestJava + test 均退出码 0。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：Commit</strong>
+            <pre><code class="lang-bash">git add patra-api/patra-object-storage/
+git commit -m "test: 迁移 patra-object-storage StorageEndpointIT 到 integrationTest
+
+Refs: PAP-10"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <!-- ============================================================
+           Task 7: 测试分层全局验证
+           ============================================================ -->
+      <article class="task" id="task-7" data-status="pending">
+        <header>
+          <h2>任务 7：测试分层全局本地验证</h2>
+          <dl class="files">
+            <dt>验证范围</dt><dd>所有 java 模块的 compileTestJava / compileIntegrationTestJava / compileE2eTestJava</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：全局编译 3 个 test source set</strong>
+            <p>运行：<code>./gradlew compileTestJava compileIntegrationTestJava compileE2eTestJava --no-daemon</code></p>
+            <p>预期：退出码 0，所有模块的 3 个 compile task 通过。如出现 "task not found"，说明 convention 没正确 wire 进某模块——检查该模块是否 apply 了 <code>linqibin.java-base</code>（直接或通过 java-library / hexagonal-* 间接）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：./gradlew test 只跑 unit</strong>
+            <p>运行：<code>./gradlew test --no-daemon</code></p>
+            <p>预期：所有 unit test 通过（约 384 个），<strong>无任何 IT/E2E 被触发</strong>（不应看到 PostgreSQL/RocketMQ container 启动日志）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：D4 验证——integrationTest --dry-run 不报错</strong>
+            <p>运行：<code>./gradlew :linqibin-commons-core:integrationTest --dry-run --no-daemon</code></p>
+            <p>预期：退出码 0，输出列出 task graph（如 <code>:linqibin-commons-core:compileIntegrationTestJava SKIPPED</code>）。--dry-run 不实际执行，只验证 task 可被解析。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：D4 验证——tasks 列表见 integrationTest/e2eTest</strong>
+            <p>运行：<code>./gradlew tasks --all --no-daemon 2>&amp;1 | grep -E "(integrationTest|e2eTest)" | head -20</code></p>
+            <p>预期：见到至少 <code>integrationTest</code>、<code>e2eTest</code>、<code>compileIntegrationTestJava</code>、<code>compileE2eTestJava</code>。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：检查无残留 IT/E2E 在 src/test/java 下</strong>
+            <p>运行：<code>find . -path "*/src/test/java/*" \( -name "*IT.java" -o -name "*E2E.java" \) 2>/dev/null</code></p>
+            <p>预期：输出为空（所有 IT/E2E 已迁出）。如果有残留，说明 Task 2-6 漏了文件——补迁。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 6：检查无残留 ContainerInitializer 在 src/test/java 下</strong>
+            <p>运行：<code>find . -path "*/src/test/java/*" -name "*ContainerInitializer.java" 2>/dev/null</code></p>
+            <p>预期：输出为空。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 7：此 task 无 commit（纯验证）</strong>
+            <p>如果上述任一步骤失败，回到对应 Task 修复后重跑本 Task。如果全部通过，继续 Task 8。</p>
+          </li>
+        </ol>
+      </article>
+
+      <!-- ============================================================
+           Task 8: 根 build.gradle.kts 引入 JaCoCo 聚合
+           ============================================================ -->
+      <article class="task" id="task-8" data-status="pending">
+        <header>
+          <h2>任务 8：根 build.gradle.kts 引入 jacoco-report-aggregation</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>build.gradle.kts</code>（根）</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：完整替换根 build.gradle.kts</strong>
+            <pre><code class="lang-kotlin">/**
+ * Patra - Root Build Script
+ *
+ * 根项目负责：
+ * - 聚合项目信息（version）
+ * - 跨模块 JaCoCo 报告聚合（jacoco-report-aggregation plugin）
+ *
+ * 实际构建逻辑在 build-logic Convention Plugins 中。
+ *
+ * 常用命令：
+ * - ./gradlew clean                                清理所有模块
+ * - ./gradlew build                                构建所有模块
+ * - ./gradlew test                                 跑所有 unit 测试
+ * - ./gradlew integrationTest                      跑所有 IT（需 Docker）
+ * - ./gradlew e2eTest                              跑所有 E2E（需 Docker）
+ * - ./gradlew testCodeCoverageReport               产出 unit 覆盖率聚合 XML
+ * - ./gradlew integrationTestCodeCoverageReport    产出 IT 覆盖率聚合 XML
+ * - ./gradlew spotlessApply                        格式化所有代码（PAP-13 启用基线后）
+ */
+
+plugins {
+    base
+    `jacoco-report-aggregation`
+}
+
+// ==================== Project Info ====================
+// group 由 build-logic 中的身份 convention plugin 显式设置（linqibin.module-commons / linqibin.module-patra）。
+allprojects {
+    version = property("patraVersion") as String
+}
+
+// ==================== JaCoCo Aggregation ====================
+// 把所有 apply 了 jacoco plugin 的子项目纳入聚合
+dependencies {
+    subprojects {
+        plugins.withId("jacoco") {
+            jacocoAggregation(this@subprojects)
+        }
+    }
+}
+
+reporting {
+    reports {
+        register&lt;JacocoCoverageReport&gt;("testCodeCoverageReport") {
+            testSuiteName = "test"
+        }
+        register&lt;JacocoCoverageReport&gt;("integrationTestCodeCoverageReport") {
+            testSuiteName = "integrationTest"
+        }
+        // e2eTest 暂不聚合：3 个 E2E 测试覆盖率信号弱，需要时按相同模式追加
+    }
+}
+</code></pre>
+            <p>关键注意点：</p>
+            <ul>
+              <li><code>plugins.withId("jacoco") { jacocoAggregation(this@subprojects) }</code> 是延迟注册：只有当子项目应用了 jacoco plugin 时才加入聚合。这避免对仅含 build-logic 等纯 Kotlin 项目的依赖错误。</li>
+              <li><code>JacocoCoverageReport.testSuiteName</code> 必须与 Task 1 中 <code>register&lt;JvmTestSuite&gt;("integrationTest")</code> 命名一致。</li>
+            </ul>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：先产出一份 unit 覆盖率聚合，确认 plugin 工作</strong>
+            <p>运行：<code>./gradlew testCodeCoverageReport --no-daemon</code></p>
+            <p>预期：退出码 0；产生文件 <code>build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml</code>（非空，约几十 KB 到几百 KB）。</p>
+            <p>验证：<code>test -s build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml &amp;&amp; echo OK || echo MISSING</code></p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：可选——本地若 Docker 可用，验证 integrationTest 聚合</strong>
+            <p>仅在 Docker daemon 运行时执行（<code>docker info</code> 不报错）：</p>
+            <p><code>./gradlew integrationTestCodeCoverageReport --no-daemon</code></p>
+            <p>预期：产生 <code>build/reports/jacoco/integrationTestCodeCoverageReport/integrationTestCodeCoverageReport.xml</code>。Docker 不可用时跳过此步——CI 会覆盖此验证。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：Commit</strong>
+            <pre><code class="lang-bash">git add build.gradle.kts
+git commit -m "$(cat &lt;&lt;'EOF'
+build(root): 引入 jacoco-report-aggregation 聚合 unit + IT 覆盖率
+
+- 根项目 apply jacoco-report-aggregation plugin（Gradle 7.4+ stable）
+- 自动收集所有 apply jacoco 的子项目
+- 声明 testCodeCoverageReport / integrationTestCodeCoverageReport 两个 JacocoCoverageReport
+- 输出路径 build/reports/jacoco/&lt;reportName&gt;/&lt;reportName&gt;.xml
+
+e2eTest 覆盖率暂不聚合（信号弱，需要时再加）。
+
+Refs: PAP-10
+EOF
+)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <!-- ============================================================
+           Task 9: 重写 ci.yml + 删 pr-checks.yml
+           ============================================================ -->
+      <article class="task" id="task-9" data-status="pending">
+        <header>
+          <h2>任务 9：重写 ci.yml + 删除 pr-checks.yml</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>.github/workflows/ci.yml</code></dd>
+            <dt>删除</dt><dd><code>.github/workflows/pr-checks.yml</code></dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：删除 pr-checks.yml</strong>
+            <pre><code class="lang-bash">git rm .github/workflows/pr-checks.yml</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：完整替换 ci.yml 内容</strong>
+            <pre><code class="lang-yaml">name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+      - '.editorconfig'
+      - 'LICENSE'
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+      - '.editorconfig'
+      - 'LICENSE'
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: build-and-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup JDK 25 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+
+      - name: 🐘 Setup Gradle (build cache + dependency cache + wrapper verify)
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: 🧪 Unit tests
+        run: ./gradlew test --no-daemon
+        # 注：本步骤暂不调 `./gradlew check`，因 spotbugsMain / spotlessCheck 需 PAP-12/13 完成 baseline 后才能阻断 CI
+
+      - name: 🔬 Integration tests (Testcontainers)
+        run: ./gradlew integrationTest --no-daemon
+
+      - name: 🎯 E2E tests
+        run: ./gradlew e2eTest --no-daemon
+
+      - name: 📊 JaCoCo aggregate reports
+        run: ./gradlew testCodeCoverageReport integrationTestCodeCoverageReport --no-daemon
+
+      - name: 📈 Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: |
+            build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml
+            build/reports/jacoco/integrationTestCodeCoverageReport/integrationTestCodeCoverageReport.xml
+          fail_ci_if_error: false
+
+      - name: 📦 Upload reports artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          path: |
+            **/build/reports/
+            **/build/test-results/
+          retention-days: 7
+</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：验证无 mvn 残留</strong>
+            <p>运行：<code>grep -rn "mvn " .github/ 2>/dev/null; echo "EXIT=$?"</code></p>
+            <p>预期：仅 <code>EXIT=1</code>（grep 未找到匹配返回 1），无输出行。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：用 actionlint 校验 yaml（可选）</strong>
+            <p>如果本机已装 actionlint：<code>actionlint .github/workflows/ci.yml</code></p>
+            <p>如果没装，跳过——GitHub 自身会在 push 后校验。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：D8 验证——无残留 pom.xml</strong>
+            <p>运行：<code>find . -name "pom.xml" -not -path "*/node_modules/*" -not -path "*/.gradle/*" 2>/dev/null; echo "EXIT=$?"</code></p>
+            <p>预期：无输出（仓库已无 Maven 残留）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 6：Commit</strong>
+            <pre><code class="lang-bash">git add .github/workflows/ci.yml
+git commit -m "$(cat &lt;&lt;'EOF'
+ci: 全面 Gradle 化 workflows，删除失效的 pr-checks.yml
+
+- ci.yml 单 workflow 单 job（build-and-test）
+- 全 ./gradlew 调用，删除所有 mvn / MODULE_MAP / 复杂变更检测
+- gradle/actions/setup-gradle@v4 接管 build cache + dependency cache
+- codecov/codecov-action@v4 上传 unit + IT 聚合覆盖率
+- concurrency 配置自动取消同 ref 旧 run
+- pr-checks.yml 删除（全部逻辑失效，PR 信息检查交给 PAP-14 CodeRabbit）
+
+Required Status Check 命名：CI / build-and-test（PAP-15 引用）。
+spotbugsMain / spotlessCheck 暂未加入 CI，待 PAP-12/13 baseline 后启用。
+
+Refs: PAP-10
+EOF
+)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <!-- ============================================================
+           Task 10: 推分支 + Codecov token + CI 验证
+           ============================================================ -->
+      <article class="task" id="task-10" data-status="pending">
+        <header>
+          <h2>任务 10：推 worktree 分支 + 配置 CODECOV_TOKEN + 观察 CI 全绿</h2>
+          <dl class="files">
+            <dt>用户侧</dt><dd>codecov.io 启用 patra + GitHub secret CODECOV_TOKEN</dd>
+            <dt>AI 侧</dt><dd>git push + gh run watch</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：让用户先去 codecov.io 启用 patra 并配置 secret</strong>
+            <p>暂停，向用户输出以下指引并等待确认：</p>
+            <pre><code>请完成以下用户侧动作（无法由 AI 自动化）：
+
+1. 浏览器登录 https://app.codecov.io，用 GitHub 账户授权
+2. 在 Codecov 仪表盘点击 "Add new repository"，选择 patra 仓库
+3. Codecov 会显示一个 token（CODECOV_TOKEN），复制
+4. 浏览器打开 https://github.com/&lt;your-org&gt;/patra/settings/secrets/actions
+5. 点击 "New repository secret"
+   - Name: CODECOV_TOKEN
+   - Value: 上一步复制的 token
+6. 保存
+
+完成后回复 "OK，token 已配"。</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：推送 worktree 分支到 origin</strong>
+            <pre><code class="lang-bash">git push -u origin worktree-pap-10-ci-gradle-jacoco</code></pre>
+            <p>预期：push 成功，GitHub Actions 立即触发（因为 ci.yml 的 on.push 监听任何分支变更——但实际本配置只监听 main，所以 push 到 feature branch 不会触发 ci.yml）。</p>
+            <p><strong>修正：</strong>当前 ci.yml 的 <code>on.push.branches</code> 只含 <code>main</code>。要让 feature branch push 触发，临时改为 <code>on.push.branches: ['**']</code> 或开 PR。</p>
+            <p>采用：直接开 draft PR（pull_request 监听 main 即触发 ci.yml）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：开 draft PR 触发 CI</strong>
+            <pre><code class="lang-bash">gh pr create --draft --title "ci: 全面 Gradle 化 + JVM Test Suites + JaCoCo 聚合 + Codecov (PAP-10)" \
+  --body "WIP — testing CI workflow before flipping to ready-for-review.
+
+Refs: PAP-10
+https://linear.app/papertrace/issue/PAP-10"</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：观察 CI run</strong>
+            <pre><code class="lang-bash">gh run watch --exit-status</code></pre>
+            <p>预期：build-and-test job 所有 step 退出码 0。常见失败排查：</p>
+            <ul>
+              <li><code>compileIntegrationTestJava FAILED</code>: Task 7 漏了文件，回查</li>
+              <li><code>integrationTest FAILED</code> with Testcontainers 错误: runner 容器问题，看具体日志</li>
+              <li><code>e2eTest FAILED</code> with "cannot resolve XxxContainerInitializer": Task 1 的 e2eTest source set 配置没生效，检查 build-logic 是否要重 `--refresh-dependencies`</li>
+              <li><code>codecov upload FAILED</code>: token 没配，回 Step 1</li>
+            </ul>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：D6 验证——Codecov 控制台见数字</strong>
+            <p>浏览器打开 <code>https://app.codecov.io/gh/&lt;your-org&gt;/patra</code>。预期看到 patra 仓库覆盖率百分比。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 6：D7 验证——PR check 名字</strong>
+            <p>浏览器打开 PR 页面，下方 Checks 区域应能看到 <code>CI / build-and-test</code> 这一项。截图记录，PAP-15 分支保护配置需引用此名字。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 7：此 task 无 commit（验证 + 等待用户）</strong>
+            <p>如所有验证通过，进入 Task 11（开正式 PR）。如失败，按 Step 4 排查列表迭代修复。</p>
+          </li>
+        </ol>
+      </article>
+
+      <!-- ============================================================
+           Task 11: 开 PR + 回写 Linear AC
+           ============================================================ -->
+      <article class="task" id="task-11" data-status="pending">
+        <header>
+          <h2>任务 11：把 PR 转为 ready-for-review + 回写 Linear AC</h2>
+          <dl class="files">
+            <dt>动作</dt><dd>gh pr ready + mcp linear save_issue</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：补充 PR 描述</strong>
+            <pre><code class="lang-bash">gh pr edit --body "$(cat &lt;&lt;'EOF'
+## Summary
+
+PAP-10 工程基础设施基线 P0 起点：CI 全面 Gradle 化 + 测试分层重构。
+
+- 删 <code>.github/workflows/pr-checks.yml</code>（全部 mvn 命令失效，PR 信息检查交给 PAP-14）
+- 重写 <code>.github/workflows/ci.yml</code> 为单 workflow / 单 job <code>build-and-test</code>，全 <code>./gradlew</code> 命令
+- <code>linqibin.java-base</code> convention 引入 JVM Test Suites（<code>test</code> / <code>integrationTest</code> / <code>e2eTest</code>）
+- 54 个 *IT.java + 3 个 *E2E.java + 7 个 *ContainerInitializer.java 用 <code>git mv</code> 物理隔离迁移
+- 根 <code>build.gradle.kts</code> 引入 <code>jacoco-report-aggregation</code> 聚合 unit + IT 覆盖率
+- <code>codecov/codecov-action@v4</code> + <code>CODECOV_TOKEN</code> secret 上传
+
+Required Status Check 命名固定：<code>CI / build-and-test</code>（PAP-15 分支保护规则引用）。
+
+## 与 Linear PAP-10 AC 的偏差
+
+| Linear PAP-10 原 AC | 本 PR 实际 | 理由 |
+|---|---|---|
+| 'MODULE_MAP 重写对齐三段式' | 删除 MODULE_MAP | 已失效，Gradle build cache 替代 |
+| '变更检测用 settings.gradle.kts hash' | 删除变更检测 | 全量跑 + setup-gradle@v4 缓存更简单 |
+| 'Setup / unit-tests / integration / e2e / code-quality 分 job' | 单 job build-and-test | Required Status Check 单一名字稳定 |
+| 'JaCoCo 聚合到 build/reports/jacoco/aggregate/jacoco.xml' | 两份分 suite XML（Gradle 默认路径） | jacoco-report-aggregation plugin 按 suite 拆分 |
+
+详见 spec：docs/patra/specs/2026-05-21-pap-10-ci-gradle-design.html
+
+## Test plan
+
+- [x] D1: <code>grep -r "mvn " .github/</code> 空输出
+- [x] D2: PR 触发的 CI run 全绿
+- [x] D3: 本地 <code>./gradlew test --no-daemon</code> 退出码 0
+- [x] D4: <code>./gradlew tasks --all | grep -E "(integrationTest|e2eTest)"</code> 见 task
+- [x] D5: 两份聚合 XML 产出
+- [x] D6: Codecov 控制台见 patra 覆盖率数字
+- [x] D7: PR check 名字 <code>CI / build-and-test</code>
+- [x] D8: <code>find . -name "pom.xml"</code> 空
+
+## Out of scope（后续 Issue）
+
+- PAP-12 SpotBugs 接入 + 定制
+- PAP-13 Spotless 全代码 baseline
+- PAP-14 CodeRabbit + PR/Issue 模板
+- PAP-15 分支保护 + Dependabot
+- PAP-16 pre-commit + commitlint
+- PAP-17 README 工具链入口
+
+Refs: PAP-10
+https://linear.app/papertrace/issue/PAP-10
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+EOF
+)"</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：把 draft PR 转为 ready-for-review</strong>
+            <pre><code class="lang-bash">gh pr ready</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：回写 Linear PAP-10 description（标注 AC 微调）</strong>
+            <p>用 <code>mcp__plugin_linear_linear__save_issue</code> 更新 PAP-10 description，在原 AC 列表后追加一段 "实施时 AC 微调"。具体调用：</p>
+            <pre><code>mcp__plugin_linear_linear__save_issue({
+  "id": "PAP-10",
+  "description": "&lt;原 description 内容&gt;\n\n---\n\n## 实施时 AC 微调（PR #&lt;PR-number&gt; 落地）\n\n| 原 AC | 实际 | 理由 |\n|---|---|---|\n| MODULE_MAP 重写对齐三段式 | 删除 MODULE_MAP | Gradle build cache 替代 |\n| 变更检测用 settings.gradle.kts hash | 删除变更检测 | 全量跑更简单 |\n| 5 个 job 拆分 | 单 job build-and-test | Required Status Check 单一名字 |\n| jacoco/aggregate/jacoco.xml 单文件 | 分 suite 两份 XML | jacoco-report-aggregation 官方机制 |"
+})</code></pre>
+            <p>具体 PR number 在 Step 1 之后从 <code>gh pr view --json number -q .number</code> 拿到。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：（用户合并 PR 后）把 PAP-10 Linear 状态推到 Done</strong>
+            <pre><code>mcp__plugin_linear_linear__save_issue({
+  "id": "PAP-10",
+  "state": "Done"
+})</code></pre>
+            <p>注：此步在 PR merge 之后执行；如 PR 还在 review 中，跳过此步等 PR 完成。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：输出 PR URL 给用户</strong>
+            <pre><code class="lang-bash">gh pr view --json url -q .url</code></pre>
+            <p>把 URL 输出给用户，PAP-10 SOP 闭环完成。</p>
+          </li>
+        </ol>
+      </article>
+
+    </section>
+
+    <section id="self-check" class="self-check">
+      <h2>自检结果</h2>
+
+      <aside class="callout success">
+        <span class="title">1. 规格覆盖度</span>
+        <p>Spec 各章节 → Task 映射：§3 测试分层 → Task 1；§7 测试迁移 → Task 2-6；§4 JaCoCo 聚合 → Task 8；§5 CI workflow → Task 9；§6 Codecov → Task 10；§Done 判定 D1-D8 → 分散在 Task 7/9/10 验证步骤；§范围边界 → Task 11 PR body 中明列。无遗漏。</p>
+      </aside>
+
+      <aside class="callout success">
+        <span class="title">2. 占位符扫描</span>
+        <p>全文 grep 无 "TODO / 待补 / 后续 / 待定 / 类似任务 N"。所有步骤都含完整命令或代码块（构建脚本完整、git mv 完整、commit message 完整）。FILL 注释已全部替换。</p>
+      </aside>
+
+      <aside class="callout success">
+        <span class="title">3. 类型一致性</span>
+        <p>跨 Task 命名一致：suite 名 <code>test</code> / <code>integrationTest</code> / <code>e2eTest</code> 在 Task 1 声明，Task 7 验证，Task 8 聚合时引用 <code>testSuiteName = "test"</code> / <code>"integrationTest"</code>，Task 9 CI 调 <code>./gradlew integrationTest</code> / <code>e2eTest</code>。聚合 task 名 <code>testCodeCoverageReport</code> / <code>integrationTestCodeCoverageReport</code> 在 Task 8 声明，Task 9 CI 调用，Task 10 Codecov files 引用同名 XML。Required Status Check 名 <code>CI / build-and-test</code> 在 Task 9 配置（workflow name + job name），Task 10 验证。无类型/名字漂移。</p>
+      </aside>
+
+      <aside class="callout success">
+        <span class="title">4. HTML 结构完整性</span>
+        <p>11 个 <code>&lt;article class="task"&gt;</code> 每个有唯一 <code>id="task-N"</code> + 初始 <code>data-status="pending"</code>。所有 <code>&lt;li class="step"&gt;</code> 初始 <code>data-status="pending"</code>。<code>&lt;head&gt;</code> 含 2 个 <code>&lt;link&gt;</code> 引用 <code>../styles/journal.css</code> + <code>../styles/plan-extras.css</code>，无 inline style。TOC <code>&lt;ol class="toc-tasks"&gt;</code> 11 条 li 一一对应 11 个 article id（task-1 ~ task-11），初始 <code>data-task-status="pending"</code> 与 article 一致。<code>&lt;dl class="meta"&gt;</code> 含目标 / 架构 / 技术栈 / 关联 spec 四项。</p>
+      </aside>
+    </section>
+
+  </main>
+
+  <aside class="notes-panel" id="notes">
+    <header>
+      <h2>Implementation Notes</h2>
+      <p class="hint">实施期由 Claude Code 即时追加。规则：遇到 plan 未规定的<strong>决定</strong>、必要<strong>更改</strong>、不可避免的<strong>权衡</strong>、其他用户应知事项，立即用 Edit 追加 entry，不要等任务结束。</p>
+    </header>
+
+    <ol class="notes-log">
+    </ol>
+
+    <p class="empty-state">no notes yet</p>
+
+    <footer class="notes-stats">
+      总计:
+      <span data-counter="decision">0</span> decisions /
+      <span data-counter="change">0</span> changes /
+      <span data-counter="tradeoff">0</span> tradeoffs /
+      <span data-counter="other">0</span> others
+    </footer>
+  </aside>
+
+</div>
+</body>
+</html>
