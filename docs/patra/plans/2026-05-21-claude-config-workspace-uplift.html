@@ -34,6 +34,7 @@
           <li data-task-status="done"><a href="#task-5">Task 5 — Patra/CLAUDE.md 顶部新增「产品定义」章节</a></li>
           <li data-task-status="done"><a href="#task-6">Task 6 — 删除 patra-portal/CLAUDE.md 的 FE 警示段</a></li>
           <li data-task-status="in-progress"><a href="#task-7">Task 7 — 全链路端到端验证并推送 PR</a></li>
+          <li data-task-status="done"><a href="#task-8">Task 8 — docs/ 上移到 workspace 根 + skill 默认路径修正（范围扩张）</a></li>
         </ol>
       </li>
       <li><a href="#self-check">自检结果</a></li>
@@ -696,6 +697,67 @@ EOF
         </ol>
       </article>
 
+      <article class="task" id="task-8" data-status="done">
+        <header>
+          <h2>任务 8：docs/ 上移到 workspace 根 + skill 默认路径修正（范围扩张）</h2>
+          <dl class="files">
+            <dt>移动</dt><dd><code>patra-api/docs/patra/</code> → <code>&lt;git-root&gt;/docs/patra/</code>（5 HTML + 2 CSS + 1 release-spec md，共 8 文件 git mv）</dd>
+            <dt>修改</dt><dd>plugin 内 7 个 SKILL.md / prompt.md：所有 <code>docs/patra/</code> 替换为 <code>&lt;git-root&gt;/docs/patra/</code>（20+ 处）</dd>
+            <dt>新增</dt><dd>brainstorming/SKILL.md + writing-plans/SKILL.md 顶部「路径约定」段（解释 <code>&lt;git-root&gt;</code> 占位符语义）</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>背景：实施期范围扩张</strong>
+            <p>Task 7 内部验证完成、即将 push 时，用户提出 spec/plan 文档归属错位的观察：5 份 HTML 全是 workspace 主题（claude 配置 / SOP），但放在 patra-api/docs/ 下。根因是 brainstorming/writing-plans skill 默认路径写的是 cwd 相对路径 <code>docs/patra/specs/</code>，cwd=patra-api 时自然落在 BE 子项目下。本 task 一并修复：(a) 现有 docs 全量上移；(b) skill 默认路径用 <code>&lt;git-root&gt;</code> 占位符明确指仓库根。</p>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 1：git mv 整个 patra-api/docs/patra/ 到 workspace 根</strong>
+            <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/Patra
+mkdir -p docs
+git mv patra-api/docs/patra docs/patra
+rmdir patra-api/docs   # 空目录清理</code></pre>
+            <p>结果：8 个文件 git status 显示为 R（rename），含本 plan 自身。</p>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 2：批量替换 plugin 内 7 个 skill 文件中的 <code>docs/patra/</code> 为 <code>&lt;git-root&gt;/docs/patra/</code></strong>
+            <p>使用 Edit replace_all=true 对以下文件批处理：</p>
+            <ul>
+              <li><code>brainstorming/SKILL.md</code>（3 处）</li>
+              <li><code>brainstorming/spec-document-reviewer-prompt.md</code>（1 处）</li>
+              <li><code>writing-plans/SKILL.md</code>（5 处）</li>
+              <li><code>executing-plans/SKILL.md</code>（3 处）</li>
+              <li><code>release-planning/SKILL.md</code>（7 处）</li>
+              <li><code>requesting-code-review/SKILL.md</code>（1 处）</li>
+              <li><code>subagent-driven-development/SKILL.md</code>（1 处）</li>
+            </ul>
+            <p>验证 <code>grep -rn "docs/patra/" .claude-marketplace/patra/skills/ --include="*.md" | grep -v "&lt;git-root&gt;/docs/patra/"</code> 为 0 匹配；带前缀的总数 20+。</p>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 3：在 brainstorming 与 writing-plans 顶部各加一段「路径约定」</strong>
+            <p>文本内容（两份完全相同）：</p>
+            <pre><code class="lang-markdown">&gt; **路径约定**：本 skill 中 `&lt;git-root&gt;` 是占位符，指 git 仓库根目录（用 `git rev-parse --show-toplevel` 解析）。所有 `&lt;git-root&gt;/docs/patra/` 子路径都从那里出发。AI 写文件前要么 cd 到 git root，要么用 git-root 解析后的绝对路径，避免 cwd 在子模块时写错位置。</code></pre>
+            <p>插入位置：H1 标题之后、首段正文之前。</p>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 4：本 plan 自身内的相对路径引用核查</strong>
+            <p>plan HTML 引用 spec HTML 用 <code>../specs/...</code>，git mv 后两份 HTML 同步从 <code>patra-api/docs/patra/{plans,specs}/</code> 移到 <code>docs/patra/{plans,specs}/</code>，相对位置不变，无需改动。</p>
+            <p>同样 plan HTML 引用 <code>../styles/journal.css</code> + <code>../styles/plan-extras.css</code>，git mv 后 styles 目录也同步移动，相对路径仍正确。</p>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 5：Commit</strong>
+            <pre><code class="lang-bash">git add -A docs/ patra-api/docs/ .claude-marketplace/patra/skills/
+git commit -m "chore(docs+skill): docs/ 上移到 workspace 根 + skill 默认路径修正 (Task 8)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
     </section>
 
     <section id="self-check" class="self-check">
@@ -772,12 +834,21 @@ EOF
         </header>
         <p>spec §7 决策 6 + plan Task 6 原计划「删除 portal/CLAUDE.md 的 ⚠️ Skill 加载现状 整段」，前提是「plugin 上移后 BE/FE 自动共用」。实证发现 enabledPlugins 与 plugin install 都是 project-scoped（见上方 Task 2 change），portal cwd 用 patra plugin 仍需手动 <code>/plugin marketplace add + /plugin install</code>。所以警示段不能简单删除，否则 FE 开发者不知道怎么启用。改为<strong>重写</strong>该章节为「patra plugin 启用（按需）」指引：保留章节存在性，内容更新为 marketplace add + install 的 2 步命令 + LLM 跨技术栈映射说明。原 plan 第 25-34 行的 ❌/✅/🔜 警示替换为 portal/CLAUDE.md 第 26-38 行的新章节（共 13 行，含命令代码块）。spec §7 决策 6 的核心逻辑（取消独立 FE 适配工作）仍成立。</p>
       </li>
+
+      <li class="note" data-type="change" data-time="2026-05-21T11:45">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-21T11:45">05-21 11:45</time>
+          <a href="#task-8">§ Task 8</a>
+        </header>
+        <p><strong>范围扩张</strong>：Task 7 准备 push 前用户指出 spec/plan 文档归属错位——所有 spec/plan 都是 workspace 主题（claude 配置 / SOP），但因 brainstorming/writing-plans skill 默认路径写的是 cwd 相对的 <code>docs/patra/specs/</code>、cwd=patra-api 时自然落入 BE 子项目下。原本想留为独立 PR，用户决定一次处理：(a) <code>git mv patra-api/docs/patra/ → docs/patra/</code>（8 文件 R rename）；(b) plugin 内 7 个 SKILL.md / prompt.md 的 <code>docs/patra/</code> 全部加 <code>&lt;git-root&gt;/</code> 前缀（20+ 处）；(c) brainstorming + writing-plans SKILL.md 顶部各加一段「路径约定」解释 <code>&lt;git-root&gt;</code> 占位符语义。结果：未来在任意 cwd 运行 brainstorming/writing-plans 都会写到 workspace 根 docs/，不再因 cwd 错位。本 plan 自身文件也随 git mv 移动，相对引用 <code>../specs/...</code> + <code>../styles/...</code> 不受影响。spec §2 In Scope 与 §9 文件清单未在 spec 文档中同步更新（spec 是设计快照，偏离用本 entry 记录）。</p>
+      </li>
     </ol>
 
     <footer class="notes-stats">
       总计:
       <span data-counter="decision">0</span> decisions /
-      <span data-counter="change">2</span> changes /
+      <span data-counter="change">3</span> changes /
       <span data-counter="tradeoff">0</span> tradeoffs /
       <span data-counter="other">1</span> others
     </footer>

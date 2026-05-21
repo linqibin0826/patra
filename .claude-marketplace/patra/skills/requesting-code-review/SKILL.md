@@ -62,7 +62,7 @@ HEAD_SHA=$(git rev-parse HEAD)
 [派遣代码审查子代理]
   subagent_type: general-purpose
   DESCRIPTION: 在 IngestRequest 上加 ProvenanceCode VO 校验，含 @NotBlank + record 紧凑构造器双层防御
-  PLAN_OR_REQUIREMENTS: docs/patra/plans/ingest-validation-plan.html 任务 2
+  PLAN_OR_REQUIREMENTS: <git-root>/docs/patra/plans/ingest-validation-plan.html 任务 2
   BASE_SHA: a7981ec
   HEAD_SHA: 3df7661
 

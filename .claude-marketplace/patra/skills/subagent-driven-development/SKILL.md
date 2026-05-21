@@ -190,7 +190,7 @@ digraph process {
 ```
 你：我正在使用子智能体驱动开发来执行这个计划。
 
-[一次性读取 plan HTML 文件：docs/patra/plans/2026-MM-DD-feature.html]
+[一次性读取 plan HTML 文件：<git-root>/docs/patra/plans/2026-MM-DD-feature.html]
 [提取全部 5 个任务的完整文本和上下文]
 
 任务 1：[占位：Hook 安装脚本]
