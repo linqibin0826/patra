@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude 配置 workspace 上移 v0.1</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles/journal.css">
+</head>
+<body>
+<div class="layout">
+
+  <nav class="toc">
+    <h3>目录</h3>
+    <ol>
+      <li><a href="#background">背景与现状</a></li>
+      <li><a href="#scope">范围边界</a></li>
+      <li><a href="#audit">配置归属审计</a></li>
+      <li><a href="#layout">目标目录形态</a></li>
+      <li><a href="#settings">settings.json 拆分</a></li>
+      <li><a href="#product-def">产品定义补丁</a></li>
+      <li><a href="#decisions">关键决策与备选</a></li>
+      <li><a href="#risks">风险与缓解</a></li>
+      <li><a href="#changes">改造文件清单</a></li>
+    </ol>
+  </nav>
+
+  <main class="content">
+
+    <header class="doc-header">
+      <h1>Claude 配置 workspace 上移 v0.1</h1>
+      <div class="meta-bar">
+        <span>📅 2026-05-21</span>
+        <span>🌿 main</span>
+        <span>🎯 spec</span>
+        <span class="status-pill">draft</span>
+      </div>
+    </header>
+
+    <aside class="callout summary">
+      <span class="title">关键决策摘要</span>
+      <p>把 patra-api/.claude/ 下 4 项 workspace 通用配置（patra plugin marketplace、plugin 启用声明、send-stop-notification hook、create-issue skill）上移到 Patra/.claude/；另把 Patra 的一句产品定义补到 Patra/CLAUDE.md。BE 专属内容（Java/Gradle hooks、六边形 rules、layers/testing/tech、patra-* 领域 skill、test-checker agent、project-info.md 实现细节）全部留在 patra-api。不引入 Patra/.claude/rules/ 目录（YAGNI）。Stop hook 借助 settings.json 叠加机制无缝衔接，不修改任何脚本逻辑。同时取消原本设想的「FE 适配」工作 —— 基于 LLM 自动跨技术栈映射能力，FE 与 BE 共用同一份 patra plugin 即可，顺手删除 portal/CLAUDE.md 的 FE 警示段（见 §7 决策 6）。</p>
+    </aside>
+
+    <section id="background">
+      <h2>1. 背景与现状</h2>
+      <p>上一次「monorepo Claude 配置三层化改造」（PR #37，commit <code>14134d4de</code>）确立了 workspace 共享层 / BE 子项目层 / FE 子项目层的分层模型，并按 cwd 工作模式约定按需 cd。但当时为快速落地，把多项实际属于 workspace 的配置（patra plugin 实体与启用、跨语言的停止通知 hook、语言无关的 create-issue skill）暂留在 patra-api/.claude/ 下，commit message 也明确标注「.claude-marketplace/ 暂留 patra-api/（plugin 未适配 FE）」。</p>
+      <p>这次延续上次的方向：把真正的 workspace 共享配置抽到 <code>Patra/.claude/</code>，让 patra-api/.claude/ 只保留 BE 专属。诉求来自用户：「主要的配置还都是在 patra-api 下面，需要拆出整个项目相关的，然后迁移或改造到 Patra 下面」。</p>
+    </section>
+
+    <section id="scope">
+      <h2>2. 范围边界</h2>
+      <div class="two-col">
+        <aside class="callout success">
+          <span class="title">In Scope</span>
+          <ul>
+            <li><code>git mv</code> <code>patra-api/.claude-marketplace/patra/</code> → <code>Patra/.claude-marketplace/patra/</code></li>
+            <li>从 <code>patra-api/.claude/settings.json</code> 移除 <code>enabledPlugins.patra@patra-local</code>，添加到 <code>Patra/.claude/settings.json</code></li>
+            <li><code>git mv</code> <code>patra-api/.claude/hooks/send-stop-notification.sh</code> → <code>Patra/.claude/hooks/send-stop-notification.sh</code>，并把对应 Stop 注册从 patra-api/settings.json 移到 Patra/settings.json</li>
+            <li><code>git mv</code> <code>patra-api/.claude/skills/create-issue/</code> → <code>Patra/.claude/skills/create-issue/</code>，并把 SKILL.md 中所有 <code>/tmp/patra-api/</code> 替换为 <code>/tmp/patra/</code></li>
+            <li>在 <code>Patra/CLAUDE.md</code> 最顶部新增「产品定义」章节，仅一句话概括 Patra 的业务</li>
+            <li>删除 <code>patra-portal/CLAUDE.md</code> 的「⚠️ Skill 加载现状」整段警示（约 10 行），让 FE 与 BE 同等享用 patra plugin</li>
+          </ul>
+        </aside>
+        <aside class="callout warning">
+          <span class="title">Out of Scope</span>
+          <ul>
+            <li>不动 <code>patra-api/.claude/rules/project-info.md</code>（90% 是 BE 工程细节，整体留 BE）</li>
+            <li>不动 <code>patra-api/CLAUDE.md</code>（其中关于 patra plugin 命名空间的描述上移后仍准确）</li>
+            <li>不动 patra-api 的 Java/Gradle hooks 与 test-checker agent</li>
+            <li>不动 patra-api/.claude/rules/{code-style, layers/, testing/, tech/} 与 skills/patra-{hexagonal,jpa,events,troubleshooter}</li>
+            <li>不对 patra plugin 内 14 个 skill 做任何内容改造（不去技术栈化、不加 FE 双语示例、不做 cwd 探测） —— 见 §7 决策 6</li>
+            <li>不上移 docs/ 目录或 journal.css（独立工作，本次延用 patra-api/docs/patra/）</li>
+            <li>不调整 .mcp.json（已在 Patra/ 根，无需改动）</li>
+            <li>不引入 <code>Patra/.claude/rules/</code> 目录</li>
+          </ul>
+        </aside>
+      </div>
+    </section>
+
+    <section id="audit">
+      <h2>3. 配置归属审计</h2>
+      <p>对 <code>patra-api/.claude/</code> 全量内容逐项判定归属：</p>
+      <table>
+        <thead>
+          <tr><th>项目</th><th>内容性质</th><th>归属</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>.claude-marketplace/patra/</code></td><td>13 个方法论 skill（brainstorming/writing-plans/TDD/debugging/code review 等），语言无关</td><td><span class="pill">workspace</span></td></tr>
+          <tr><td><code>settings.json</code> 的 <code>enabledPlugins.patra@patra-local</code></td><td>plugin 启用声明</td><td><span class="pill">workspace</span></td></tr>
+          <tr><td><code>hooks/send-stop-notification.sh</code></td><td>macOS osascript + git，纯通知，无 Java 痕迹</td><td><span class="pill">workspace</span></td></tr>
+          <tr><td><code>skills/create-issue/</code></td><td>gh CLI 批量建 issue，语言无关</td><td><span class="pill">workspace</span></td></tr>
+          <tr><td><code>settings.json</code> 的 PostToolUse / Stop（Java hooks）</td><td>mark-java-changes + gradle-compile-check + trigger-build-resolver-java，全部 Java/Gradle 专属</td><td><span class="pill mid">BE 留下</span></td></tr>
+          <tr><td><code>agents/test-checker.md</code></td><td>Java 测试金字塔 + 六边形 5 层 + Mockito + JaCoCo</td><td><span class="pill mid">BE 留下</span></td></tr>
+          <tr><td><code>rules/code-style.md</code></td><td>Google Java + Lombok + Record</td><td><span class="pill mid">BE 留下</span></td></tr>
+          <tr><td><code>rules/layers/*.md</code></td><td>六边形 6 层（api/app/domain/infra/adapter/boot）</td><td><span class="pill mid">BE 留下</span></td></tr>
+          <tr><td><code>rules/testing/*.md</code></td><td>unit / integration / e2e Java 测试规范</td><td><span class="pill mid">BE 留下</span></td></tr>
+          <tr><td><code>rules/tech/*.md</code></td><td>port-service / commandbus / observability / error-handling / jpa</td><td><span class="pill mid">BE 留下</span></td></tr>
+          <tr><td><code>rules/project-info.md</code></td><td>10% 产品定义 + 90% BE 工程细节（技术栈、微服务清单、模块结构、starter、build-logic）</td><td><span class="pill mid">BE 留下（仅一句产品定义抽到 Patra/CLAUDE.md）</span></td></tr>
+          <tr><td><code>skills/patra-{hexagonal,jpa,events,troubleshooter}/</code></td><td>Java 领域 skill</td><td><span class="pill mid">BE 留下</span></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="layout">
+      <h2>4. 目标目录形态</h2>
+      <p>上移后的 workspace 层：</p>
+      <pre><code>Patra/
+├── CLAUDE.md                       # 顶部新增「产品定义」一句话
+├── .claude/
+│   ├── settings.json               # 新增 Stop hook + 扩充 enabledPlugins.patra@patra-local
+│   ├── settings.local.json         # 不变
+│   ├── hooks/
+│   │   └── send-stop-notification.sh  # 从 patra-api 上移
+│   └── skills/
+│       └── create-issue/SKILL.md   # 从 patra-api 上移（/tmp 路径改名）
+├── .claude-marketplace/
+│   └── patra/                      # 从 patra-api 上移（整目录）
+├── .mcp.json                       # 不变（5 个 patra-pg-* PostgreSQL）
+└── ...</code></pre>
+      <p>瘦身后的 patra-api 层：</p>
+      <pre><code>patra-api/
+├── CLAUDE.md                       # 不变
+└── .claude/
+    ├── settings.json               # 仅保留 Java/Gradle hooks（移除 send-stop + enabledPlugins）
+    ├── agents/test-checker.md      # 不变
+    ├── hooks/{mark-java-changes,gradle-compile-check,trigger-build-resolver-java}.sh
+    ├── rules/
+    │   ├── code-style.md           # 不变
+    │   ├── project-info.md         # 不变（整份保留）
+    │   ├── layers/*.md             # 不变（6 层）
+    │   ├── testing/*.md            # 不变
+    │   └── tech/*.md               # 不变
+    └── skills/
+        ├── patra-hexagonal/
+        ├── patra-jpa/
+        ├── patra-events/
+        └── patra-troubleshooter/</code></pre>
+    </section>
+
+    <section id="settings">
+      <h2>5. settings.json 拆分</h2>
+      <p><strong>Patra/.claude/settings.json</strong>（新增 hooks 段 + 扩充 enabledPlugins）：</p>
+      <pre><code>{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/send-stop-notification.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "enabledPlugins": {
+    "linear@claude-plugins-official": true,
+    "context7@claude-plugins-official": true,
+    "frontend-design@claude-plugins-official": true,
+    "codex@openai-codex": true,
+    "patra@patra-local": true
+  }
+}</code></pre>
+      <p><strong>patra-api/.claude/settings.json</strong>（移除 send-stop-notification 与 enabledPlugins，PostToolUse 与剩余 Stop 不变）：</p>
+      <pre><code>{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {"type": "command", "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/mark-java-changes.sh"}
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {"type": "command", "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/gradle-compile-check.sh"},
+          {"type": "command", "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/trigger-build-resolver-java.sh"}
+        ]
+      }
+    ]
+  }
+}</code></pre>
+      <p><strong>叠加语义</strong>：当 cwd 在 patra-api 时，Claude Code 同时加载 Patra/.claude/settings.json 与 patra-api/.claude/settings.json。Stop 事件会依次触发三个 hook：workspace 层的 send-stop-notification.sh + patra-api 层的 gradle-compile-check.sh + trigger-build-resolver-java.sh。<code>$CLAUDE_PROJECT_DIR</code> 在所有 hook 里都解析为 cwd（即 patra-api/），所以 send-stop-notification.sh 的 <code>basename "$PROJECT_ROOT"</code> 仍输出「patra-api」—— 行为零变化。</p>
+    </section>
+
+    <section id="product-def">
+      <h2>6. 产品定义补丁</h2>
+      <p>在 <code>Patra/CLAUDE.md</code> 当前内容的最顶部（在「## 项目背景」之前）插入新章节：</p>
+      <pre><code># CLAUDE.md
+
+## 产品定义
+
+**Patra** — 医学出版物数据平台，采集、解析、存储来自 PubMed / EPMC / Crossref 等 10+ 外部数据源的文献和期刊数据。
+
+## 项目背景
+
+本项目是全新代码库（Greenfield Project）...
+（以下原内容保持不变）</code></pre>
+      <p>这一句来自 <code>patra-api/.claude/rules/project-info.md</code> 第 5 行的产品定义，其余技术栈/微服务清单/模块结构整体留在 patra-api 的 rules（仍由 BE skill / agent 引用）。</p>
+    </section>
+
+    <section id="decisions">
+      <h2>7. 关键决策与备选</h2>
+
+      <div class="decision">
+        <h3>决策 1：patra plugin 仅在 workspace 启用，FE 不主动调用</h3>
+        <p>把 <code>patra@patra-local</code> 从 patra-api 提到 workspace 启用。无论 cwd 是 patra-api 还是 patra-portal，plugin 都被加载，但 patra-portal/CLAUDE.md 仍保留「不应调用 patra: 流程 skill」的现状声明（plugin 内的 brainstorming/TDD 等示例仍是 Java 语境）。未来 FE 适配完成只需删除那段警示。</p>
+        <p class="alternatives"><strong>备选 A：</strong>BE/FE 同时启用并立刻删 FE 警示 — 否决：plugin 内 Java 示例未改，会误导 FE 工作流。<br>
+        <strong>备选 B：</strong>plugin 保持在 patra-api 不上移 — 否决：违背「拆 workspace 通用配置」的初衷，FE/workspace 视角无法引用同一份 plugin 实体。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 2：project-info.md 整份留在 patra-api</h3>
+        <p>初判时考虑过整文件上移到 <code>Patra/.claude/rules/project-info.md</code>。审查后发现文件 90% 是 BE 实现细节（技术栈 Java/Spring Boot/JPA/Gradle、4 个微服务清单、六边形 6 层模块结构、11 个 starter、build-logic Convention Plugins），只有顶部一句业务定义属于 workspace。整份上移会污染 workspace 视图；只上移一句话又不值得建独立文件。</p>
+        <p class="alternatives"><strong>备选 A：</strong>整份上移 — 否决：BE 工程细节出现在 workspace 视图里，与 patra-portal cwd 语义错位。<br>
+        <strong>备选 B：</strong>拆成两份（workspace 一份业务概览 + BE 一份工程细节） — 否决：维护双份易漂移，且业务概览仅一句话不值得独立文件。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 3：不引入 Patra/.claude/rules/ 目录</h3>
+        <p>沿 YAGNI 原则。本次 workspace 层没有需要单独 md 承载的规则；唯一的产品定义直接合并进 Patra/CLAUDE.md 顶部。未来真有 workspace 级规则需求再建目录。</p>
+        <p class="alternatives"><strong>备选 A：</strong>预建 Patra/.claude/rules/ 作为占位目录 — 否决：空目录无意义，未来需要时再建零成本。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 4：create-issue skill 临时路径改名 /tmp/patra-api → /tmp/patra</h3>
+        <p>skill 上移到 workspace 后，SKILL.md 中 3 处 <code>/tmp/patra-api/</code> 引用同步改为 <code>/tmp/patra/</code>。语义中性化，避免 portal cwd 调用此 skill 时临时文件落到带 BE 命名的目录。</p>
+        <p class="alternatives"><strong>备选 A：</strong>保留 <code>/tmp/patra-api/</code> — 否决：路径与 skill 实际位置脱节，portal/workspace cwd 调用时语义错位。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 5：用 git mv 而非物理 mv + add</h3>
+        <p>Patra/ 和 patra-api/ 同一 git repo，<code>git mv</code> 保留历史血缘，便于后续 git log/blame 追溯（patra plugin marketplace 内含大量 skill 文件，历史很有价值）。</p>
+        <p class="alternatives"><strong>备选 A：</strong>cp + rm + add — 否决：丢失 git 历史。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 6：取消 FE 适配工作，BE/FE 共用同一份 patra plugin</h3>
+        <p>brainstorming 期间深入对比了上游 obra/superpowers（200k star，今日仍在更新）的语言策略：上游本身就是<strong>技术栈混合</strong>（TDD 用 TypeScript、debugging 用 shell + macOS 工具链），并不强绑后端。本地 patra fork 当前的「Java 化 + 中文化」是 fork 时的本地化决策。</p>
+        <p>原本设想给 FE 单独适配（双语示例 / cwd 动态分支 / 去技术栈化）。深入后发现：现代 Claude/Opus 已经能自动跨技术栈映射（看 Java <code>assertThat()</code> 能反向映射到 TS <code>expect()</code>，反之亦然），方法论部分（红绿重构 / 四阶段调试 / brainstorming 9 步 / code review 流程）100% 通用。FE 读 Java 示例仅有「轻度 cognitive friction」，不到「不能用」的程度。</p>
+        <p>结论：FE 适配不必做。本次 spec 顺手删除 patra-portal/CLAUDE.md 的「⚠️ Skill 加载现状」警示段，让 FE 与 BE 同等享用 plugin。如果未来 FE 工作中映射开销显著超预期，再单开「plugin 去技术栈化」PR（回归上游风格 + 保留中文翻译，patra-* 领域 skill 不动）。</p>
+        <p class="alternatives"><strong>备选 A：</strong>立刻做 FE 双语示例 — 否决：skill 长度膨胀 ~50%，且 LLM 自动映射已能承担同样作用，是「无效定制」。<br>
+        <strong>备选 B：</strong>立刻做去技术栈化（回归上游 + 中文） — 否决：工作量大且本次 PR 应聚焦位置上移，不应耦合两类改造；如未来真有痛点再独立 PR 解决。<br>
+        <strong>备选 C：</strong>保留 portal/CLAUDE.md 警示段不删 — 否决：警示存在的前提是「FE 调用会出问题」，与本决策得出的「能跨栈映射」结论矛盾。</p>
+      </div>
+    </section>
+
+    <section id="risks">
+      <h2>8. 风险与缓解</h2>
+      <table>
+        <thead>
+          <tr><th>风险</th><th>等级</th><th>缓解</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Claude Code 是否会从 patra-api（cwd）上溯查找 <code>Patra/.claude-marketplace/patra/</code>？若不上溯，patra: 命名空间 skill 在 BE cwd 下会消失。</td>
+            <td><span class="pill high">high</span></td>
+            <td>实施后第一步：在 patra-api cwd 启动新 Claude Code 会话，检查 <code>/skill</code> 列表里 <code>patra:brainstorming</code> 等是否仍可见。若不可见 → 回滚或在 patra-api/.claude-marketplace 留符号链接 <code>ln -s ../../.claude-marketplace/patra patra</code>。</td>
+          </tr>
+          <tr>
+            <td>Stop hook 叠加顺序：workspace 层与 BE 层的 Stop hooks 是否按预期都触发？</td>
+            <td><span class="pill mid">mid</span></td>
+            <td>实施后手动 trigger Stop 事件（结束一次会话），观察 macOS 通知是否弹出 +  gradle 编译检查是否运行。Claude Code 官方文档说明 settings 叠加规则为「合并而非覆盖」，预期都触发。</td>
+          </tr>
+          <tr>
+            <td>create-issue skill 中 <code>/tmp/patra-api/</code> 漏改</td>
+            <td><span class="pill low">low</span></td>
+            <td>实施时用 <code>grep -n patra-api SKILL.md</code> 兜底校验 0 匹配。</td>
+          </tr>
+          <tr>
+            <td>patra-api/CLAUDE.md 中「流程层 patra:（plugin namespace，13 个方法论 skill）」描述上移后失准</td>
+            <td><span class="pill low">low</span></td>
+            <td>命名空间与 skill 数量不随物理位置变化，描述仍准确。实施时复读一次确认。</td>
+          </tr>
+          <tr>
+            <td>marketplace 路径变动导致 settings.json 中 <code>patra@patra-local</code> 的「patra-local」名称不再有效</td>
+            <td><span class="pill mid">mid</span></td>
+            <td>「patra-local」是 marketplace 名（来自 marketplace 元数据中的 name 字段，而非物理路径），物理路径变化不影响命名。实施后通过 risk 1 的 skill 列表检查同时验证。</td>
+          </tr>
+          <tr>
+            <td>FE 实际使用 patra: 流程 skill 时，Java 示例造成的 cognitive friction 超预期，影响产出质量</td>
+            <td><span class="pill low">low</span></td>
+            <td>用一段时间观察 FE 工作流（brainstorming / writing-plans / TDD 等）的实际产出；若痛点显著则独立开「plugin 去技术栈化」PR（回归上游风格 + 中文翻译），patra-* 领域 skill 不动。本次先不做。</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="changes">
+      <h2>9. 改造文件清单</h2>
+      <table>
+        <thead>
+          <tr><th>#</th><th>文件</th><th>操作</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><code>Patra/.claude-marketplace/patra/</code></td>
+            <td><span class="pill create">create</span></td>
+            <td>git mv 自 <code>patra-api/.claude-marketplace/patra/</code>，整目录搬移</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><code>patra-api/.claude-marketplace/</code></td>
+            <td><span class="pill delete">delete</span></td>
+            <td>移走 patra/ 后整个 .claude-marketplace/ 目录变空，删除</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><code>Patra/.claude/hooks/send-stop-notification.sh</code></td>
+            <td><span class="pill create">create</span></td>
+            <td>git mv 自 <code>patra-api/.claude/hooks/send-stop-notification.sh</code>，脚本内容不变</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td><code>Patra/.claude/skills/create-issue/SKILL.md</code></td>
+            <td><span class="pill create">create</span></td>
+            <td>git mv 自 <code>patra-api/.claude/skills/create-issue/SKILL.md</code>，replace 3 处 <code>/tmp/patra-api/</code> → <code>/tmp/patra/</code></td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td><code>Patra/.claude/settings.json</code></td>
+            <td><span class="pill modify">modify</span></td>
+            <td>新增 hooks.Stop 段（指向 workspace 的 send-stop-notification.sh）；enabledPlugins 增加 <code>patra@patra-local</code></td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td><code>patra-api/.claude/settings.json</code></td>
+            <td><span class="pill modify">modify</span></td>
+            <td>从 Stop 数组中移除 send-stop-notification.sh 条目；删除整个 enabledPlugins 字段（变成顶层只剩 hooks）</td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td><code>Patra/CLAUDE.md</code></td>
+            <td><span class="pill modify">modify</span></td>
+            <td>顶部新增「## 产品定义」章节（一句话）</td>
+          </tr>
+          <tr>
+            <td>8</td>
+            <td><code>patra-api/.claude/rules/project-info.md</code></td>
+            <td><span class="pill">keep</span></td>
+            <td>不变</td>
+          </tr>
+          <tr>
+            <td>9</td>
+            <td><code>patra-api/CLAUDE.md</code></td>
+            <td><span class="pill">keep</span></td>
+            <td>不变（plugin 命名空间描述上移后仍准确）</td>
+          </tr>
+          <tr>
+            <td>10</td>
+            <td><code>patra-portal/CLAUDE.md</code></td>
+            <td><span class="pill modify">modify</span></td>
+            <td>删除「## ⚠️ Skill 加载现状」整段（约 10 行），让 FE 与 BE 同等享用 patra plugin（见 §7 决策 6）</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <aside class="callout info">
+      <span class="title">Done 判定</span>
+      <ol>
+        <li>10 项改造文件清单全部按操作类型完成（3 create + 4 modify + 1 delete + 2 keep 不变项）</li>
+        <li>在 patra-api cwd 启动新 Claude Code 会话，确认 <code>patra:brainstorming</code> / <code>patra:writing-plans</code> / <code>patra:test-driven-development</code> 等 14 个 skill 在 <code>/skill</code> 列表里仍可见</li>
+        <li>在 patra-portal cwd 启动新 Claude Code 会话，同样确认 14 个 patra: skill 可见（FE 与 BE 同等享用）</li>
+        <li>触发一次 Stop 事件，macOS 通知正常弹出且标题/项目名「patra-api」正确</li>
+        <li>在 patra-api 修改一个 .java 文件后结束会话，gradle-compile-check.sh 与 trigger-build-resolver-java.sh 正常执行</li>
+        <li><code>grep -rn "patra-api" Patra/.claude/skills/create-issue/SKILL.md</code> 应为 0 匹配（仅核对 /tmp 路径相关；其他无关字符串不在 skill 内）</li>
+        <li>Patra/CLAUDE.md 顶部「产品定义」章节出现</li>
+        <li>patra-portal/CLAUDE.md 不再含「⚠️ Skill 加载现状」章节</li>
+        <li>git log 显示 patra plugin marketplace 与 send-stop-notification.sh 的历史血缘随 git mv 保留</li>
+      </ol>
+    </aside>
+
+  </main>
+
+  <aside class="notes-panel" id="notes">
+    <header>
+      <h2>Implementation Notes</h2>
+      <p class="hint">实施期由 Claude Code 即时追加。规则：遇到 spec 未规定的<strong>决定</strong>、必要<strong>更改</strong>、不可避免的<strong>权衡</strong>、其他用户应知事项，立即用 Edit 追加 entry，不要等任务结束。</p>
+    </header>
+
+    <ol class="notes-log">
+    </ol>
+
+    <p class="empty-state">no notes yet</p>
+
+    <footer class="notes-stats">
+      总计:
+      <span data-counter="decision">0</span> decisions /
+      <span data-counter="change">0</span> changes /
+      <span data-counter="tradeoff">0</span> tradeoffs /
+      <span data-counter="other">0</span> others
+    </footer>
+  </aside>
+
+</div>
+</body>
+</html>
