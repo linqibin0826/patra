@@ -1,447 +1,75 @@
-name: CI - 持续集成测试
+name: CI
 
 on:
   push:
-    branches:
-      - main
-      - develop
-      - 'feature/**'
-    paths-ignore:  # 🚀 阶段1优化：忽略非代码文件，减少触发次数
-      - '**.md'
-      - 'docs/**'
-      - '.gitignore'
-      - '.editorconfig'
-      - 'LICENSE'
-      - '.github/workflows/pr-checks.yml'  # PR检查工作流变更不触发CI
-  pull_request:
-    branches:
-      - main
-      - develop
+    branches: [main]
     paths-ignore:
       - '**.md'
       - 'docs/**'
       - '.gitignore'
       - '.editorconfig'
       - 'LICENSE'
-  workflow_dispatch: # 支持手动触发
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+      - '.editorconfig'
+      - 'LICENSE'
+  workflow_dispatch:
 
-env:
-  JAVA_VERSION: '25'
-  MAVEN_OPTS: -Xmx2g -Xms512m
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  # ==================== Job 0: 依赖预构建 + 变更检测（共享给其他 jobs） ====================
-  setup:
-    name: 🔧 依赖构建 & 变更检测
+  build-and-test:
+    name: build-and-test
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      # 🚀 阶段2优化：输出变更的模块，供后续job使用
-      changed_modules: ${{ steps.changes.outputs.changed_modules }}
-      has_code_changes: ${{ steps.changes.outputs.has_code_changes }}
-      modules_to_build: ${{ steps.changes.outputs.modules_to_build }}
+    timeout-minutes: 25
 
     steps:
-      - name: 📥 Checkout 代码
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # 🚀 获取完整历史，用于变更检测
-
-      - name: 🔍 检测变更的模块
-        id: changes
-        run: |
-          # 检测自上次提交以来变更的文件
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
-          else
-            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
-          fi
-
-          echo "变更文件:"
-          echo "$CHANGED_FILES"
-
-          # 分析变更的模块
-          CHANGED_MODULES=""
-          BUILD_MODULES=""
-
-          # 检测各个模块的变更
-          declare -A MODULE_MAP
-          MODULE_MAP["patra-parent"]="patra-parent"
-          MODULE_MAP["patra-common"]="patra-common"
-          MODULE_MAP["patra-expr-kernel"]="patra-expr-kernel"
-          MODULE_MAP["patra-gateway-boot"]="patra-gateway-boot"
-          MODULE_MAP["patra-registry"]="patra-registry"
-          MODULE_MAP["patra-ingest"]="patra-ingest"
-          MODULE_MAP["patra-object-storage"]="patra-object-storage"
-          MODULE_MAP["patra-spring-boot-starter-core"]="patra-spring-boot-starter-core"
-          MODULE_MAP["patra-spring-boot-starter-web"]="patra-spring-boot-starter-web"
-          MODULE_MAP["patra-spring-boot-starter-jpa"]="patra-spring-boot-starter-jpa"
-          MODULE_MAP["patra-spring-boot-starter-expr"]="patra-spring-boot-starter-expr"
-          MODULE_MAP["patra-spring-boot-starter-provenance"]="patra-spring-boot-starter-provenance"
-          MODULE_MAP["patra-spring-boot-starter-object-storage"]="patra-spring-boot-starter-object-storage"
-          MODULE_MAP["patra-spring-boot-starter-http-interface"]="patra-spring-boot-starter-http-interface"
-
-          for module in "${!MODULE_MAP[@]}"; do
-            if echo "$CHANGED_FILES" | grep -q "^${module}/"; then
-              if [ -z "$CHANGED_MODULES" ]; then
-                CHANGED_MODULES="${MODULE_MAP[$module]}"
-                BUILD_MODULES="${MODULE_MAP[$module]}"
-              else
-                CHANGED_MODULES="$CHANGED_MODULES,${MODULE_MAP[$module]}"
-                BUILD_MODULES="$BUILD_MODULES,${MODULE_MAP[$module]}"
-              fi
-            fi
-          done
-
-          # 如果修改了根pom.xml，需要构建所有模块
-          if echo "$CHANGED_FILES" | grep -q "^pom.xml$"; then
-            CHANGED_MODULES="all"
-            BUILD_MODULES=""
-          fi
-
-          # 输出结果
-          if [ -z "$CHANGED_MODULES" ]; then
-            echo "has_code_changes=false" >> $GITHUB_OUTPUT
-            echo "changed_modules=none" >> $GITHUB_OUTPUT
-            echo "modules_to_build=" >> $GITHUB_OUTPUT
-            echo "✅ 无代码变更，跳过构建"
-          elif [ "$CHANGED_MODULES" == "all" ]; then
-            echo "has_code_changes=true" >> $GITHUB_OUTPUT
-            echo "changed_modules=all" >> $GITHUB_OUTPUT
-            echo "modules_to_build=" >> $GITHUB_OUTPUT
-            echo "📦 根pom.xml变更，需要构建所有模块"
-          else
-            echo "has_code_changes=true" >> $GITHUB_OUTPUT
-            echo "changed_modules=$CHANGED_MODULES" >> $GITHUB_OUTPUT
-            echo "modules_to_build=$BUILD_MODULES" >> $GITHUB_OUTPUT
-            echo "📦 变更模块: $CHANGED_MODULES"
-          fi
-
-      - name: ☕ 设置 Java 25
-        if: steps.changes.outputs.has_code_changes == 'true'
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: 'temurin'
-          cache: 'maven'
-
-      - name: 📦 恢复构建缓存
-        if: steps.changes.outputs.has_code_changes == 'true'
-        id: cache-restore
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            ~/.m2/repository
-            **/target
-          # 🚀 阶段1优化：基于pom.xml hash的缓存键，提高命中率
-          key: build-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}-${{ github.sha }}
-          restore-keys: |
-            build-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}-
-            build-${{ runner.os }}-
-
-      - name: 🔨 增量构建变更模块
-        if: steps.changes.outputs.has_code_changes == 'true' && steps.changes.outputs.modules_to_build != ''
-        run: |
-          # 🚀 阶段2优化：只构建变更的模块及其依赖
-          MODULES="${{ steps.changes.outputs.modules_to_build }}"
-          echo "增量构建模块: $MODULES"
-          # -pl: 指定模块列表, -am: also-make，构建依赖的模块
-          mvn install -pl "$MODULES" -am -DskipTests -T 1C -B -V
-
-      - name: 🔨 完整构建（pom.xml变更或首次构建）
-        if: steps.changes.outputs.has_code_changes == 'true' && steps.changes.outputs.modules_to_build == ''
-        run: |
-          # 🚀 阶段1优化：去掉clean，复用缓存的target目录
-          if [ "${{ steps.cache-restore.outputs.cache-hit }}" == "true" ]; then
-            echo "缓存命中，执行增量构建"
-            mvn install -DskipTests -T 1C -B -V
-          else
-            echo "缓存未命中，执行完整构建"
-            mvn clean install -DskipTests -T 1C -B -V
-          fi
-
-      - name: 📦 保存构建产物（供其他 jobs 使用）
-        if: steps.changes.outputs.has_code_changes == 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            ~/.m2/repository
-            **/target
-          # 🚀 阶段1优化：改进的缓存键
-          key: build-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}-${{ github.sha }}
-
-  # ==================== Job 1: 单元测试（195个测试） ====================
-  unit-tests:
-    name: 🚀 单元测试
-    # 🚀 阶段2优化：只在有代码变更时运行测试
-    if: needs.setup.outputs.has_code_changes == 'true'
-    runs-on: ubuntu-latest  # 🚀 阶段3优化：可选升级为 ubuntu-latest-4-cores（付费）
-    needs: setup
-    timeout-minutes: 8
-    strategy:
-      fail-fast: true
-
-    steps:
-      - name: 📥 Checkout 代码
+      - name: 📥 Checkout
         uses: actions/checkout@v4
 
-      - name: ☕ 设置 Java 25
+      - name: ☕ Setup JDK 25 (Temurin)
         uses: actions/setup-java@v4
         with:
-          java-version: ${{ env.JAVA_VERSION }}
+          java-version: '25'
           distribution: 'temurin'
-          cache: 'maven'
 
-      - name: 📦 恢复构建产物
-        uses: actions/cache/restore@v4
+      - name: 🐘 Setup Gradle (build cache + dependency cache + wrapper verify)
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: 🧪 Unit tests
+        run: ./gradlew test --no-daemon
+        # 注：本步骤暂不调 `./gradlew check`，因 spotbugsMain / spotlessCheck 需 PAP-12/13 完成 baseline 后才能阻断 CI
+
+      - name: 🔬 Integration tests (Testcontainers)
+        run: ./gradlew integrationTest --no-daemon
+
+      - name: 🎯 E2E tests
+        run: ./gradlew e2eTest --no-daemon
+
+      - name: 📊 JaCoCo aggregate reports
+        run: ./gradlew testCodeCoverageReport integrationTestCodeCoverageReport --no-daemon
+
+      - name: 📈 Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
         with:
-          path: |
-            ~/.m2/repository
-            **/target
-          # 🚀 阶段1优化：使用新的缓存键
-          key: build-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}-${{ github.sha }}
-          restore-keys: |
-            build-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}-
-            build-${{ runner.os }}-
-          fail-on-cache-miss: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: |
+            build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml
+            build/reports/jacoco/integrationTestCodeCoverageReport/integrationTestCodeCoverageReport.xml
+          fail_ci_if_error: false
 
-      - name: 🧪 并行运行单元测试（排除 IT 和 E2E）
-        run: |
-          # 🚀 阶段3优化：单元测试已在pom.xml中配置 forkCount=1C（每CPU核心一个JVM）
-          # 这使得测试可以并行执行，充分利用GitHub Actions的2核CPU
-          mvn test -Punit-only,ci-skip-compile -B -V
-
-      - name: 📊 上传测试报告
+      - name: 📦 Upload reports artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: unit-test-results
+          name: reports
           path: |
-            **/target/surefire-reports/
-            **/target/site/jacoco/
+            **/build/reports/
+            **/build/test-results/
           retention-days: 7
-
-  # ==================== Job 2: 集成测试（3个测试，使用容器） ====================
-  integration-tests:
-    name: 🔬 集成测试（IT）
-    # 🚀 阶段2优化：只在有代码变更时运行测试
-    if: needs.setup.outputs.has_code_changes == 'true'
-    runs-on: ubuntu-latest
-    needs: setup
-    timeout-minutes: 8
-    strategy:
-      fail-fast: true
-
-    steps:
-      - name: 📥 Checkout 代码
-        uses: actions/checkout@v4
-
-      - name: ☕ 设置 Java 25
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: 'temurin'
-          cache: 'maven'
-
-      - name: 📦 恢复构建产物
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            ~/.m2/repository
-            **/target
-          # 🚀 阶段1优化：使用新的缓存键
-          key: build-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}-${{ github.sha }}
-          restore-keys: |
-            build-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}-
-            build-${{ runner.os }}-
-          fail-on-cache-miss: true
-
-      - name: 🐳 验证 Docker 环境（用于 Testcontainers）
-        run: |
-          docker --version
-          docker info
-
-      - name: 🔧 配置 Testcontainers
-        run: |
-          mkdir -p ~/.testcontainers
-          echo "testcontainers.reuse.enable=false" > ~/.testcontainers.properties
-          echo "ryuk.container.privileged=true" >> ~/.testcontainers.properties
-
-      - name: 🧪 运行集成测试（*IT.java）
-        run: mvn test -Pintegration-only,ci-skip-compile -B -V
-        env:
-          DOCKER_HOST: unix:///var/run/docker.sock
-
-      - name: 📊 上传测试报告
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: integration-test-results
-          path: |
-            **/target/surefire-reports/
-            **/target/site/jacoco/
-          retention-days: 7
-
-      - name: 🐳 清理 Docker 容器
-        if: always()
-        run: |
-          docker ps -a
-          docker container prune -f
-          docker volume prune -f
-
-  # ==================== Job 3: E2E 测试（1个测试，使用容器） ====================
-  e2e-tests:
-    name: 🎯 E2E 测试
-    # 🚀 阶段2优化：只在有代码变更时运行测试
-    if: needs.setup.outputs.has_code_changes == 'true'
-    runs-on: ubuntu-latest
-    needs: setup
-    timeout-minutes: 8
-    strategy:
-      fail-fast: true
-
-    steps:
-      - name: 📥 Checkout 代码
-        uses: actions/checkout@v4
-
-      - name: ☕ 设置 Java 25
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: 'temurin'
-          cache: 'maven'
-
-      - name: 📦 恢复构建产物
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            ~/.m2/repository
-            **/target
-          # 🚀 阶段1优化：使用新的缓存键
-          key: build-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}-${{ github.sha }}
-          restore-keys: |
-            build-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}-
-            build-${{ runner.os }}-
-          fail-on-cache-miss: true
-
-      - name: 🐳 验证 Docker 环境（用于 Testcontainers）
-        run: |
-          docker --version
-          docker info
-
-      - name: 🔧 配置 Testcontainers
-        run: |
-          mkdir -p ~/.testcontainers
-          echo "testcontainers.reuse.enable=false" > ~/.testcontainers.properties
-          echo "ryuk.container.privileged=true" >> ~/.testcontainers.properties
-
-      - name: 🧪 运行 E2E 测试（*E2E.java）
-        run: mvn test -Pe2e-only,ci-skip-compile -B -V
-        env:
-          DOCKER_HOST: unix:///var/run/docker.sock
-
-      - name: 📊 上传测试报告
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-test-results
-          path: |
-            **/target/surefire-reports/
-            **/target/site/jacoco/
-          retention-days: 7
-
-      - name: 🐳 清理 Docker 容器
-        if: always()
-        run: |
-          docker ps -a
-          docker container prune -f
-          docker volume prune -f
-
-  # ==================== Job 4: 代码质量检查 ====================
-  code-quality:
-    name: 📐 代码质量检查
-    # 🚀 阶段2优化：只在有代码变更时运行检查
-    if: needs.setup.outputs.has_code_changes == 'true'
-    runs-on: ubuntu-latest
-    needs: setup
-    timeout-minutes: 2
-
-    steps:
-      - name: 📥 Checkout 代码
-        uses: actions/checkout@v4
-
-      - name: ☕ 设置 Java 25
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: 'temurin'
-          cache: 'maven'
-
-      - name: 📦 恢复构建产物
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            ~/.m2/repository
-            **/target
-          # 🚀 阶段1优化：使用新的缓存键
-          key: build-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}-${{ github.sha }}
-          restore-keys: |
-            build-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}-
-            build-${{ runner.os }}-
-          fail-on-cache-miss: true
-
-      - name: 🔍 编译检查
-        run: mvn compile -B -V -DskipTests
-
-      - name: 📐 代码格式检查（如果配置了 Spotless）
-        run: |
-          if grep -q "spotless" pom.xml; then
-            mvn spotless:check -B
-          else
-            echo "⚠️ 未配置 Spotless，跳过格式检查"
-          fi
-        continue-on-error: true
-
-  # ==================== Job 5: 汇总结果 ====================
-  test-summary:
-    name: 📋 测试汇总
-    runs-on: ubuntu-latest
-    if: always()
-    needs: [setup, unit-tests, integration-tests, e2e-tests, code-quality]
-
-    steps:
-      - name: 📊 检查测试结果
-        run: |
-          echo "🔍 变更检测: ${{ needs.setup.outputs.changed_modules }}"
-          echo "📦 代码变更: ${{ needs.setup.outputs.has_code_changes }}"
-          echo "🚀 单元测试: ${{ needs.unit-tests.result }}"
-          echo "🔬 集成测试: ${{ needs.integration-tests.result }}"
-          echo "🎯 E2E 测试: ${{ needs.e2e-tests.result }}"
-          echo "📐 代码质量: ${{ needs.code-quality.result }}"
-
-      - name: ⏭️ 无代码变更，跳过测试
-        if: needs.setup.outputs.has_code_changes != 'true'
-        run: |
-          echo "✅ 无代码变更，所有测试已跳过"
-          echo "🚀 可以安全合并到主分支"
-
-      - name: ✅ 验证所有测试通过
-        if: |
-          needs.setup.outputs.has_code_changes == 'true' &&
-          (needs.unit-tests.result != 'success' ||
-           needs.integration-tests.result != 'success' ||
-           needs.e2e-tests.result != 'success')
-        run: |
-          echo "❌ 测试失败！"
-          exit 1
-
-      - name: 🎉 所有测试通过
-        if: |
-          needs.setup.outputs.has_code_changes == 'true' &&
-          needs.unit-tests.result == 'success' &&
-          needs.integration-tests.result == 'success' &&
-          needs.e2e-tests.result == 'success'
-        run: |
-          echo "✅ 所有测试通过！"
-          echo "📦 变更模块: ${{ needs.setup.outputs.changed_modules }}"
-          echo "🚀 可以安全合并到主分支"
