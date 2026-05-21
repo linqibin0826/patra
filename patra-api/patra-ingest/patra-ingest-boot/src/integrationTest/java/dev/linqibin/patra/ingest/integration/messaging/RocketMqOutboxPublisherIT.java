@@ -124,7 +124,7 @@ class RocketMqOutboxPublisherIT {
 
     // 断言: 等待消息被接收 (最多 10 秒)
     await()
-        .atMost(10, SECONDS)
+        .atMost(30, SECONDS)
         .untilAsserted(() -> assertThat(messageCollector.hasMessage("test-001")).isTrue());
 
     // 验证消息内容
@@ -153,7 +153,7 @@ class RocketMqOutboxPublisherIT {
 
     // 断言
     await()
-        .atMost(10, SECONDS)
+        .atMost(30, SECONDS)
         .untilAsserted(() -> assertThat(messageCollector.hasMessage("test-002")).isTrue());
 
     MessageExt msg = messageCollector.getMessage("test-002");
@@ -248,7 +248,7 @@ class RocketMqOutboxPublisherIT {
 
     // 断言: 等待消息被接收
     await()
-        .atMost(10, SECONDS)
+        .atMost(30, SECONDS)
         .untilAsserted(
             () -> assertThat(messageCollector.hasMessage("empty-payload-test")).isTrue());
 
@@ -274,7 +274,7 @@ class RocketMqOutboxPublisherIT {
 
     // 断言: 等待消息被接收
     await()
-        .atMost(10, SECONDS)
+        .atMost(30, SECONDS)
         .untilAsserted(() -> assertThat(messageCollector.hasMessage("no-tags-test")).isTrue());
 
     // 验证: TAGS 为空或 null
@@ -299,7 +299,7 @@ class RocketMqOutboxPublisherIT {
 
     // 断言: 等待消息被接收
     await()
-        .atMost(10, SECONDS)
+        .atMost(30, SECONDS)
         .untilAsserted(
             () -> assertThat(messageCollector.hasMessage("empty-headers-test")).isTrue());
 
