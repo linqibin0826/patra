@@ -50,7 +50,7 @@
 
     <aside class="callout summary">
       <span class="title">关键决策摘要</span>
-      <p>为单人完成"产品 → UI/UX → BE → FE → QA"全链路制定清晰可执行的 SOP。核心决策：Linear 作为单一信息源（Project / Issue / Sub-issue 三层）；Issue 走 <strong>Tech Design → BE → Design → FE → Review → Done</strong> 六阶段状态机；三层质量门（Husky / CodeRabbit CLI / CodeRabbit App）自动守门；Claude Code 跨会话上下文恢复只依赖 Linear Issue + Sub-issue。Issue 字段（AC / Design URL / PR 链接 / Review Outcome）均通过 Issue Description 模板、Attachments 和 Label Group 实现，无需付费 Custom Fields。</p>
+      <p>为单人完成"产品 → UI/UX → BE → FE → QA"全链路制定清晰可执行的 SOP。核心决策：Linear 作为单一信息源（Project / Issue / Sub-Issue 三层）；Issue 状态机使用 Linear 默认 <strong>Backlog → Todo → In Progress → In Review → Done</strong> 5 态（对齐 Linear Method "Write issues, not user stories"）；跨界功能拆 <code>area:be</code> / <code>area:fe</code> / <code>area:design</code> 多个独立 Issue，阶段顺序由 Project Milestone 表达；三层质量门（Husky / CodeRabbit CLI / CodeRabbit App）自动守门；Claude Code 跨会话上下文恢复只依赖 Linear Issue + Sub-Issue。Issue 字段（AC / Design URL / PR 链接 / Review Outcome）均通过 Issue Description 模板、Attachments 和 Label Group 实现，无需付费 Custom Fields。</p>
     </aside>
 
     <section id="background">
@@ -79,7 +79,7 @@
           <span class="title">In Scope</span>
           <ul>
             <li>Project 层：产品维度版本规划 + Issue 池派生</li>
-            <li>Issue 层：Tech Design → BE → Design → FE → Review 全流程</li>
+            <li>Issue 层：Linear 默认 5 态状态机（Backlog → Todo → In Progress → In Review → Done）+ <code>area:be</code> / <code>area:fe</code> / <code>area:design</code> 分流 + Project Milestone 表达阶段顺序</li>
             <li>横切机制：上下文管理、中断恢复、回路、质量门、节奏</li>
             <li>补丁路径：fast-track、design-first</li>
             <li>工具栈选型与落地清单</li>
@@ -111,13 +111,15 @@
                        ↓
 ┌─────────────────────────────────────────────────────────┐
 │  Issue 层（工程维度）                                    │
-│  每个 Issue 走一遍：                                     │
-│  Tech Design → BE → Design → FE → Review → Done         │
+│  每个 Issue 走 Linear 默认 5 态状态机：                  │
+│  Backlog → Todo → In Progress → In Review → Done        │
+│  跨界功能（BE+FE+Design）拆多 Issue，                    │
+│  阶段顺序用 Project Milestone 表达                       │
 │  · 产物: docs/patra/specs/&lt;topic&gt;-design.html +         │
-│         GitHub PR(s) + Linear Sub-issues                │
+│         GitHub PR(s) + Linear Sub-Issues（按需）        │
 └─────────────────────────────────────────────────────────┘</code></pre>
 
-      <p>Linear 三层结构对应关系：</p>
+      <p>Linear 三层结构对应关系（对齐 Linear Method）：</p>
       <table>
         <thead>
           <tr><th>层级</th><th>含义</th><th>状态</th><th>数量</th></tr>
@@ -125,21 +127,21 @@
         <tbody>
           <tr>
             <td><strong>Project</strong></td>
-            <td>大版本 / Initiative（如 v0.2 PubMed 搜索）</td>
+            <td>大版本 / Release（如 v0.2 PubMed 搜索）；Description = 5 字段 release spec；Milestone 表达阶段顺序</td>
             <td>Draft / Active / Done</td>
             <td>1（每版本 1 个）</td>
           </tr>
           <tr>
             <td><strong>Issue</strong></td>
-            <td>用户故事（如"用户能搜 PubMed"）</td>
-            <td>Backlog / Tech Design / BE / Design / FE / Review / Done</td>
-            <td>多个/版本，每个 1-3 天</td>
+            <td>具体工程任务（如"实现 GET /api/v1/health"、"portal Health 卡片 + 30s 轮询"）；按 <code>area:*</code> 标签分流到 BE / FE / Design</td>
+            <td>Backlog / Todo / In Progress / In Review / Done</td>
+            <td>多个/版本，每个 ≈ 1 个 PR（几小时-几天）</td>
           </tr>
           <tr>
-            <td><strong>Sub-issue</strong></td>
-            <td>单阶段产物（Tech Design / BE PR / UI 稿 / FE PR / Review 反馈 / 中断快照）</td>
-            <td>Todo / In Progress / Done</td>
-            <td>多个/Issue</td>
+            <td><strong>Sub-Issue</strong></td>
+            <td>单 Issue 内部多步追踪（如"中断快照"、"Review 反馈 R1/R2"）；与父 Issue 共用同一状态机（Linear 限制）；<strong>按需使用，非默认派生层级</strong></td>
+            <td>Backlog / Todo / In Progress / In Review / Done</td>
+            <td>0-N / Issue</td>
           </tr>
         </tbody>
       </table>
@@ -182,8 +184,9 @@
 ## 1. 版本目标 / 价值
 1-2 句话描述这版的核心交付价值。
 
-## 2. 功能列表 / 要做的事
-bulleted list，每条 = 1 个用户故事 → 派生 1 个 Linear Issue。
+## 2. 工程任务列表 / 要做的事
+bulleted list，每条 = 1 个具体工程任务（按 area:be / area:fe / area:design 分流）→ 派生 1 个 Linear Issue（≈ 1 个 PR）。
+跨界功能拆多个 Issue，阶段顺序用 Milestone 表达。
 
 ## 3. 范围边界 / 不做的事
 明确"不做"以防 scope creep。
@@ -198,7 +201,8 @@ bulleted list，每条 = 1 个用户故事 → 派生 1 个 Linear Issue。
       <p>进入 Active 必须满足：</p>
       <ol>
         <li>5 字段全部填完</li>
-        <li>第 2 字段每条功能 → 已生成 1 个 Linear Issue（Description = 该故事 + 初步 AC）</li>
+        <li>第 2 字段每条工程任务 → 已生成 1 个 Linear Issue（Description 按 Magical.pm Everyday 三字段：Overview / To-Do / Acceptance Criteria），并打上 <code>area:*</code> 标签</li>
+        <li>跨界功能已拆为多个独立 Issue + Project Milestone 表达阶段顺序（默认 BE Ready → Design Ready → FE Ready → Released）</li>
         <li>第 3 字段"不做的事"显式列出</li>
         <li>第 5 字段 Done 判定可验证</li>
       </ol>
@@ -211,10 +215,15 @@ bulleted list，每条 = 1 个用户故事 → 派生 1 个 Linear Issue。
     <section id="issue-layer">
       <h2>5. Issue 层</h2>
 
-      <h3>5.1 状态机</h3>
-      <pre><code>Backlog → Tech Design → BE → Design → FE → Review → Done
-   ↑                                          │
-   └─────── No-Go 回路（退到对应阶段） ──────┘</code></pre>
+      <h3>5.1 状态机（Linear 默认 5 态）</h3>
+      <pre><code>Backlog → Todo → In Progress → In Review → Done
+                                     │
+                                     └── No-Go → 退回 In Progress
+                                                 （创建 Sub-Issue「Review 反馈 R1/R2/R3」）</code></pre>
+      <aside class="callout info">
+        <span class="title">为何不再用六阶段状态机</span>
+        <p>v0.1 SOP 设计把"Tech Design / BE / Design / FE / Review"作为 Issue 状态，与 Linear Method 哲学冲突（Linear Method 明确反对把工程阶段塞进 Issue 状态机：<a href="https://linear.app/method/write-issues-not-user-stories">Write issues, not user stories</a>），且 v0.2 SOP Trial 实测拆 BE/FE 多 Issue 后状态机自动失效（PAP-5 永远走不到 Design/FE）。详见决策 4（重写）。</p>
+      </aside>
       <table>
         <thead><tr><th>状态</th><th>主导</th><th>关键工具 / Skill</th><th>入口条件</th><th>出口条件（DoD）</th></tr></thead>
         <tbody>
@@ -222,112 +231,125 @@ bulleted list，每条 = 1 个用户故事 → 派生 1 个 Linear Issue。
             <td><code>Backlog</code></td>
             <td>—</td>
             <td>Linear</td>
-            <td>Project Active</td>
-            <td>你决定开始这个 Issue</td>
+            <td>Project Active 时由 release-planning skill 派生</td>
+            <td>你 pick 该 Issue 准备开始</td>
           </tr>
           <tr>
-            <td><code>Tech Design</code></td>
-            <td>Claude + 你决策</td>
-            <td><code>patra:brainstorming</code> + <code>patra:writing-plans</code></td>
-            <td>Issue Description 含用户故事 + 初步 AC</td>
-            <td>design.html 已写 + API 字段清单明确 + <code>path</code> / <code>flow</code> 标签确定</td>
+            <td><code>Todo</code></td>
+            <td>—</td>
+            <td>Linear</td>
+            <td>从 Backlog pick 出来（已确定下一步要做）</td>
+            <td>你打算立刻开做（或等前置 Milestone 解锁）</td>
           </tr>
           <tr>
-            <td><code>BE</code></td>
-            <td>Claude Code + patra-* skills</td>
-            <td><code>patra-hexagonal</code> / <code>patra-jpa</code> / <code>patra-events</code> + TDD</td>
-            <td>Tech Design 通过</td>
-            <td>BE PR + 单测+集成测试 GREEN + Bruno collection 入 git + OpenAPI schema 暴露</td>
+            <td><code>In Progress</code></td>
+            <td>视 <code>area:*</code> 标签分流</td>
+            <td>
+              <code>area:be</code> → patra-* skills + TDD<br>
+              <code>area:fe</code> → openapi-typescript + Handoff<br>
+              <code>area:design</code> → Claude Design + Handoff
+            </td>
+            <td>你开始动手；前置 Milestone 已通过</td>
+            <td>产物完成（PR 已开 / Design 稿已交付）；AC 自查全部满足</td>
           </tr>
           <tr>
-            <td><code>Design</code></td>
-            <td>Claude Design + 你 review</td>
-            <td>Claude Design + Handoff</td>
-            <td>BE 通过（或 <code>flow:design-first</code> 时 Tech Design 通过）</td>
-            <td>Claude Design URL + Handoff token + Sub-issue「UI 设计稿」已建</td>
-          </tr>
-          <tr>
-            <td><code>FE</code></td>
-            <td>Claude Code + 你 review</td>
-            <td>openapi-typescript + openapi-react-query + Bruno</td>
-            <td>Design 通过</td>
-            <td>FE PR + UI 还原 ≥ 95% + Vitest+RTL 测试 + 类型 100% 来自 openapi-typescript</td>
-          </tr>
-          <tr>
-            <td><code>Review</code></td>
+            <td><code>In Review</code></td>
             <td>CodeRabbit + 你 Go/No-Go</td>
             <td>CodeRabbit CLI + GitHub App</td>
-            <td>FE PR + BE PR 都开（或单 PR）</td>
-            <td>CodeRabbit 评论全处理 + 自测三件套通过 + PR merge + <code>review:pass</code> 标签挂上</td>
+            <td>PR 已开（或 Design 稿已交付）</td>
+            <td>CodeRabbit 评论 100% 处理 + 自测三件套通过 + PR merged + <code>review:pass</code> 标签</td>
           </tr>
           <tr>
             <td><code>Done</code></td>
             <td>—</td>
             <td>—</td>
-            <td>Review 通过 + PR merged</td>
-            <td>进入下一个 Issue</td>
+            <td>In Review 通过 + PR merged</td>
+            <td>触发后续 Milestone / 进入下一个 Issue</td>
           </tr>
         </tbody>
       </table>
+      <p><strong>Tech Design 不再是 Issue 状态</strong>——Tech Design 作为"开发活动"在 Project 启动期一次性产出（见 §6.1），产物 <code>docs/patra/specs/&lt;topic&gt;-design.html</code> 由各 area Issue 在 Description 里引用。fast-track Issue 可跳过 Tech Design 产物（见 §9.1）。</p>
 
-      <h3>5.2 Issue 上下文字段（正确实现方式）</h3>
+      <h3>5.2 Issue 上下文字段（按 area 分布）</h3>
       <aside class="callout info">
         <span class="title">跨会话恢复的核心来源</span>
-        <p>Claude 新会话恢复上下文只看三处：① Linear Issue Description（用户故事 + AC）② Description 里的链接 / Attachments / 标签 ③ 关联 GitHub PR + Sub-issues。</p>
+        <p>Claude 新会话恢复上下文只看三处：① Linear Issue Description（Overview + To-Do + AC）② Description 里的链接 / Attachments / 标签 ③ 关联 GitHub PR + Sub-Issues（如有）。</p>
       </aside>
+      <p><strong>模型变化</strong>：v0.1 SOP 假设单个 Issue 内含 BE PR + FE PR + Design URL（与"用户故事 = 1 Issue"绑定）；v0.2 起每个 Issue 是按 <code>area:*</code> 分流的独立工程任务，字段按 area 分布：</p>
       <table>
-        <thead><tr><th>信息</th><th>填写时机</th><th>正确实现方式</th></tr></thead>
+        <thead><tr><th>信息</th><th>适用 Issue（area）</th><th>填写时机</th><th>实现方式</th></tr></thead>
         <tbody>
           <tr>
             <td><code>Acceptance Criteria</code></td>
-            <td>Tech Design 阶段</td>
-            <td>Issue Template + Description 里 <code>- [ ]</code> checklist（≥ 3 条可验证）</td>
+            <td>全部</td>
+            <td>Issue 创建（最迟 Todo → In Progress 前）</td>
+            <td>Issue Description 里 <code>- [ ]</code> checklist（≥ 3 条可验证），遵循 Magical.pm Everyday 三字段模板</td>
           </tr>
           <tr>
-            <td><code>Design URL</code></td>
-            <td>Design 阶段</td>
-            <td>Description 链接 + Linear Attachments（粘贴 Claude Design URL）</td>
+            <td><code>Tech Design 文档链接</code></td>
+            <td><code>area:be</code> / <code>area:fe</code>（如 Project 有 Tech Design 产物）</td>
+            <td>Issue 创建</td>
+            <td>Description 链接到 <code>docs/patra/specs/&lt;topic&gt;-design.html</code></td>
           </tr>
           <tr>
-            <td><code>FE PR</code> / <code>BE PR</code></td>
-            <td>FE / BE 阶段</td>
+            <td><code>Design URL + Handoff token</code></td>
+            <td><code>area:design</code> Issue（产出）/ <code>area:fe</code> Issue（消费）</td>
+            <td>Design Issue 进 In Review 时 / FE Issue 进 In Progress 时</td>
+            <td>Linear Attachments + Description（粘贴 Claude Design URL）</td>
+          </tr>
+          <tr>
+            <td><code>PR 链接</code></td>
+            <td><code>area:be</code> / <code>area:fe</code> Issue</td>
+            <td>In Progress 末尾（PR 创建时）</td>
             <td>GitHub Integration 自动检测 + Description 补充 PR 链接</td>
           </tr>
           <tr>
             <td><code>Review Outcome</code></td>
-            <td>Review 阶段</td>
+            <td>全部</td>
+            <td>In Review → Done</td>
             <td>Label Group <code>review</code>（<code>review:pass</code> / <code>review:conditional</code> / <code>review:reject</code>）+ Review Outcome 评论</td>
           </tr>
         </tbody>
       </table>
 
       <h3>5.3 Issue 标签分流</h3>
+      <p>v0.2 起新增 <code>area:*</code> Label Group 作为开发活动分流锚点（替代旧六阶段状态机）；<code>flow:design-first</code> 标签删除（用 Project Milestone 表达 Design Issue 顺序）。</p>
       <table>
         <thead><tr><th>标签</th><th>含义</th><th>用途</th></tr></thead>
         <tbody>
           <tr>
+            <td><code>area:be</code></td>
+            <td>该 Issue 产出后端实现</td>
+            <td>In Progress 时按 §6.2 BE Issue 流程</td>
+          </tr>
+          <tr>
+            <td><code>area:fe</code></td>
+            <td>该 Issue 产出前端实现</td>
+            <td>In Progress 时按 §6.4 FE Issue 流程</td>
+          </tr>
+          <tr>
+            <td><code>area:design</code></td>
+            <td>该 Issue 产出 UI/UX 设计稿</td>
+            <td>In Progress 时按 §6.3 Design Issue 流程</td>
+          </tr>
+          <tr>
             <td><code>path:full</code>（默认）</td>
-            <td>走完整 5 阶段 SOP</td>
-            <td>默认所有 Issue</td>
+            <td>该 Issue 派生自 Project Tech Design 文档</td>
+            <td>默认所有非小修 Issue</td>
           </tr>
           <tr>
             <td><code>path:fast-track</code></td>
-            <td>跳过 Tech Design + Design，直接 BE/FE/Review</td>
+            <td>跳过 Project Tech Design 产出，直接创建 area:* Issue → In Progress → Review</td>
             <td>typo / UI 微调 / 纯重构 / 配置升级 / BUG fix（必须先写复现测试）</td>
-          </tr>
-          <tr>
-            <td><code>flow:design-first</code></td>
-            <td>翻转 BE 和 Design 顺序，Design 先</td>
-            <td>UI 探索性强 / 数据完全自己定义 / 对外部 API 非常熟悉</td>
           </tr>
           <tr>
             <td><code>paused:&lt;原因&gt;</code></td>
             <td>Issue 暂停</td>
-            <td>配合 Sub-issue「中断快照」使用</td>
+            <td>配合 Sub-Issue「中断快照」使用</td>
           </tr>
           <tr>
             <td><code>review:pass</code> / <code>review:conditional</code> / <code>review:reject</code></td>
-            <td>Review 阶段 Go/No-Go 结果</td>
+            <td>In Review Go/No-Go 结果</td>
             <td>Label Group <code>review</code>，替代 Custom Fields 中 Review Outcome 字段</td>
           </tr>
         </tbody>
@@ -335,30 +357,35 @@ bulleted list，每条 = 1 个用户故事 → 派生 1 个 Linear Issue。
     </section>
 
     <section id="stages">
-      <h2>6. 阶段详细定义</h2>
+      <h2>6. 开发活动详细定义</h2>
+      <aside class="callout info">
+        <span class="title">章节定位变化</span>
+        <p>v0.1 SOP 把本章定为"Issue 状态阶段"——六阶段每段对应一个 Issue 状态。v0.2 重构后 Issue 状态机精简为 5 态（见 §5.1），本章重新定位为<strong>开发活动</strong>：§6.1 Tech Design 是 Project 启动期一次性产物；§6.2~§6.4 是按 <code>area:*</code> 分流的 Issue 处理流程（每个 area:* Issue 走自己的小节）；§6.5 是所有 Issue 进入 In Review 时的统一流程。</p>
+      </aside>
 
-      <h3>6.1 Tech Design</h3>
-      <p><strong>入口</strong>：Issue 推到 <code>Tech Design</code> 状态 | <strong>主导</strong>：Claude Code（起草细化）+ 你（架构决策）</p>
+      <h3>6.1 Tech Design 活动（Project 启动期一次性完成）</h3>
+      <p><strong>入口</strong>：Project 进 Active 后、首个 <code>area:be</code> / <code>area:fe</code> Issue 开始之前 | <strong>主导</strong>：Claude Code（起草细化）+ 你（架构决策）</p>
       <p><strong>流程：</strong></p>
       <ol>
-        <li>在 Claude Code 里加载 <code>patra:brainstorming</code>，输入 Issue Description（用户故事 + 初步 AC）</li>
+        <li>在 Claude Code 里加载 <code>patra:brainstorming</code>，输入 Project Description（5 字段 release spec）+ 当前 area:be / area:fe Issue 列表</li>
         <li>Claude 通过对话探索技术方案、领域模型、外部 API 调研、字段清单初稿</li>
         <li>用 <code>patra:writing-plans</code> 产出实施计划</li>
         <li>产物路径：<code>docs/patra/specs/YYYY-MM-DD-&lt;topic&gt;-design.html</code></li>
-        <li>把细化后的 AC 回写到 Linear Issue Description 的 <code>- [ ]</code> checklist</li>
-        <li>决定 Issue 标签（<code>path:*</code> / <code>flow:*</code>）</li>
+        <li>把细化后的 AC 拆解到各 <code>area:*</code> Issue 的 Description checklist</li>
+        <li>确认每个 Issue 的 <code>path:*</code> + <code>area:*</code> 标签</li>
       </ol>
       <p><strong>DoD：</strong></p>
       <ul>
         <li>技术方案明确（领域模型 + 接口契约 + 数据流）</li>
-        <li>API 字段清单初稿（用于 UI Design 阶段参考）</li>
-        <li>AC ≥ 3 条可验证，已写入 Issue Description</li>
+        <li>API 字段清单初稿（用于 area:design / area:fe Issue 参考）</li>
+        <li>所有 area:* Issue 的 AC ≥ 3 条可验证，已写入 Description</li>
         <li>实施计划分步</li>
-        <li><code>path</code> / <code>flow</code> 标签确定</li>
+        <li><code>path</code> / <code>area</code> 标签确定</li>
       </ul>
+      <p><strong>fast-track 豁免</strong>：打 <code>path:fast-track</code> 标签的 Issue 可跳过本活动（不产 Tech Design 文档），直接创建 area:* Issue → In Progress。</p>
 
-      <h3>6.2 BE</h3>
-      <p><strong>入口</strong>：Issue 推到 <code>BE</code>（Tech Design 后，或 <code>flow:design-first</code> 时在 Design 后）| <strong>主导</strong>：Claude Code + patra-* skill 体系；你做架构决策</p>
+      <h3>6.2 BE Issue 处理流程（<code>area:be</code>）</h3>
+      <p><strong>入口</strong>：<code>area:be</code> Issue 推到 <code>In Progress</code>（前置 Milestone "BE Ready" 未通过的前驱 Issue 全部 Done）| <strong>主导</strong>：Claude Code + patra-* skill 体系；你做架构决策</p>
       <p><strong>流程：</strong></p>
       <ol>
         <li>加载 <code>patra:test-driven-development</code>（TDD 主流程，强制）</li>
@@ -368,19 +395,19 @@ bulleted list，每条 = 1 个用户故事 → 派生 1 个 Linear Issue。
         <li>如发现字段变化，立即回写 Tech Design 文档字段清单（保持 SoT 同步）</li>
         <li>Bruno collection 同步更新（API 契约入 git）</li>
         <li>OpenAPI schema 自动暴露（<code>patra-spring-boot-starter-openapi</code>）</li>
-        <li>创建 GitHub PR；Sub-issue「BE 实现」link PR；Description 补充 BE PR 链接</li>
+        <li>创建 GitHub PR；Issue Description 补充 PR 链接；Issue 推到 <code>In Review</code></li>
       </ol>
-      <p><strong>DoD：</strong></p>
+      <p><strong>DoD（出 In Progress 的条件）：</strong></p>
       <ul>
         <li>单元测试 + 集成测试全部 GREEN</li>
         <li>AC 在 BE 层可验证（curl / Bruno 跑通）</li>
         <li>Bruno collection 已更新并入 PR</li>
         <li>OpenAPI schema 已 sync</li>
-        <li>BE PR 链接已补充到 Issue Description</li>
+        <li>PR 链接已补充到 Issue Description</li>
       </ul>
 
-      <h3>6.3 Design (UI/UX)</h3>
-      <p><strong>入口</strong>：Issue 推到 <code>Design</code>（默认在 BE 后，或 <code>flow:design-first</code> 时在 Tech Design 后）| <strong>主导</strong>：Claude Design 生成 + 你 review 微调</p>
+      <h3>6.3 Design Issue 处理流程（<code>area:design</code>）</h3>
+      <p><strong>入口</strong>：<code>area:design</code> Issue 推到 <code>In Progress</code>（默认在前置 <code>area:be</code> Issue Done 后；Milestone "Design Ready" 表达此顺序）| <strong>主导</strong>：Claude Design 生成 + 你 review 微调</p>
       <aside class="callout info">
         <span class="title">跳过 wireframe 阶段</span>
         <p>AI 时代 hi-fi 成本接近零，思考流程在 Tech Design 已完成；wireframe 反而易产生"完成感幻觉"。直接生成可点击 hi-fi 原型。</p>
@@ -392,40 +419,40 @@ bulleted list，每条 = 1 个用户故事 → 派生 1 个 Linear Issue。
         <li>Claude Design 生成可点击的 hi-fi 原型</li>
         <li>你 review 并对话迭代到主要 user flow 可点击</li>
         <li>发起 <strong>Handoff to Claude Code</strong>，获得 token</li>
-        <li>Design URL + Handoff token 粘贴到 Linear Attachments + Issue Description</li>
-        <li>创建 Sub-issue「UI 设计稿」link Claude Design URL</li>
+        <li>Design URL + Handoff token 粘贴到本 Issue Attachments + Description</li>
+        <li>Issue 推到 <code>In Review</code>（你自审 hi-fi 可点击度）→ <code>Done</code> 后触发 Milestone "Design Ready"</li>
       </ol>
-      <p><strong>DoD：</strong></p>
+      <p><strong>DoD（出 In Progress 的条件）：</strong></p>
       <ul>
         <li>主要 user flow 在 Claude Design 中可点击</li>
         <li>每条 AC 在 UI 上能找到对应入口</li>
         <li>Handoff token 已生成</li>
-        <li>Design URL 已补充到 Issue Description / Attachments</li>
+        <li>Design URL + Handoff token 已补充到 Issue Attachments / Description</li>
       </ul>
 
-      <h3>6.4 FE</h3>
-      <p><strong>入口</strong>：Issue 推到 <code>FE</code>（Design 完成后）| <strong>主导</strong>：Claude Code 消费 Handoff + 你 review</p>
+      <h3>6.4 FE Issue 处理流程（<code>area:fe</code>）</h3>
+      <p><strong>入口</strong>：<code>area:fe</code> Issue 推到 <code>In Progress</code>（Milestone "Design Ready" 通过后，即前置 <code>area:design</code> Issue Done）| <strong>主导</strong>：Claude Code 消费 Handoff + 你 review</p>
       <p><strong>流程：</strong></p>
       <ol>
-        <li>在 Claude Code 把 Handoff token 喂给 Claude，翻译到前端栈</li>
+        <li>在 Claude Code 把前置 <code>area:design</code> Issue 的 Handoff token 喂给 Claude，翻译到前端栈</li>
         <li>跑 <code>pnpm gen:bootstrap</code>（一键 sync）：<code>gen:types</code>（openapi-typescript）+ <code>gen:hooks</code>（openapi-react-query）+ <code>gen:zod</code>（openapi-zod-client）</li>
         <li>实现页面 / 组件 / Zustand 状态 / RHF + Zod 表单</li>
         <li>用 Bruno collection 做本地联调（数据真实形态）</li>
         <li>Vitest + RTL 写关键交互单测</li>
         <li>Husky pre-commit：Biome + tsc --noEmit + Vitest 自动跑</li>
-        <li>创建 GitHub PR；Sub-issue「FE 实现」link PR；Description 补充 FE PR 链接</li>
+        <li>创建 GitHub PR；Issue Description 补充 PR 链接；Issue 推到 <code>In Review</code></li>
       </ol>
-      <p><strong>DoD：</strong></p>
+      <p><strong>DoD（出 In Progress 的条件）：</strong></p>
       <ul>
         <li>UI 还原 ≥ 95% 与 Claude Design 一致</li>
         <li>关键交互可手动跑通</li>
         <li>类型 100% 来自 openapi-typescript（零手写 API 类型）</li>
         <li>Vitest + RTL 测试覆盖关键交互</li>
-        <li>FE PR 链接已补充到 Issue Description</li>
+        <li>PR 链接已补充到 Issue Description</li>
       </ul>
 
-      <h3>6.5 Review</h3>
-      <p><strong>入口</strong>：FE PR + BE PR 都开（或单 PR）| <strong>主导</strong>：CodeRabbit（守门）+ 你做 Go/No-Go</p>
+      <h3>6.5 Issue Review 流程（<code>In Review</code> → <code>Done</code>）</h3>
+      <p><strong>入口</strong>：任一 Issue 推到 <code>In Review</code>（PR 已开 / Design 稿已交付）| <strong>主导</strong>：CodeRabbit（守门）+ 你做 Go/No-Go</p>
       <p><strong>Review 流程：</strong></p>
       <ol>
         <li>PR 创建 → CodeRabbit 自动 review，发 inline 评论 + summary</li>
@@ -433,21 +460,21 @@ bulleted list，每条 = 1 个用户故事 → 派生 1 个 Linear Issue。
         <li><strong>自测三件套</strong>：跑 Bruno collection（API 契约验证）+ 手测 UI flow（与 AC 一一对照）+ 检查 Sentry dashboard（如已引入）</li>
         <li><strong>Go/No-Go 决策</strong>：
           <ul>
-            <li>Go → merge PR；打 <code>review:pass</code> 标签；Issue 状态推到 <code>Done</code></li>
-            <li>No-Go → 打 <code>review:reject</code> 或 <code>review:conditional</code> 标签；Issue 状态退回出问题阶段；创建 Sub-issue「Review 反馈 Rn」</li>
+            <li>Go → merge PR；打 <code>review:pass</code> 标签；Issue 推到 <code>Done</code></li>
+            <li>No-Go → 打 <code>review:reject</code> 或 <code>review:conditional</code> 标签；Issue 退回 <code>In Progress</code>；创建 Sub-Issue「Review 反馈 Rn」</li>
           </ul>
         </li>
       </ol>
-      <p>Review Outcome 评论格式（写在 Issue 评论 / Sub-issue Description）：</p>
+      <p>Review Outcome 评论格式（写在 Issue 评论 / Sub-Issue Description）：</p>
       <pre><code>CodeRabbit: 12 条，已处理 12
 自测: Bruno ✓ | UI flow ✓ | AC 1/2/3 ✓
 决策: Go @ 2026-05-19 14:30</code></pre>
-      <p><strong>DoD：</strong></p>
+      <p><strong>DoD（出 In Review → Done 的条件）：</strong></p>
       <ul>
         <li>CodeRabbit 评论 100% 已处理（修复或解释）</li>
         <li>AC 全部手测通过</li>
         <li><code>review:pass</code> 标签已挂上</li>
-        <li>关联 GitHub PR 已 merge</li>
+        <li>关联 GitHub PR 已 merge（<code>area:design</code> Issue 例外：Design 稿交付即可）</li>
       </ul>
     </section>
 
@@ -458,7 +485,7 @@ bulleted list，每条 = 1 个用户故事 → 派生 1 个 Linear Issue。
       <table>
         <thead><tr><th>工具</th><th>职责</th><th>状态</th></tr></thead>
         <tbody>
-          <tr><td><strong>Linear</strong></td><td>单一信息源；Project / Issue / Sub-issue 三层结构；GitHub Integration</td><td>已用</td></tr>
+          <tr><td><strong>Linear</strong></td><td>单一信息源；Project / Issue / Sub-Issue 三层结构；GitHub Integration</td><td>已用</td></tr>
           <tr><td><strong>CLAUDE.md + patra-* skills</strong></td><td>Claude 跨会话规则；已构建完整 skill 体系</td><td>已有</td></tr>
           <tr><td><strong>Obsidian</strong></td><td>已有 vault；放想法 inbox、retro、长论证</td><td>已有</td></tr>
           <tr><td><strong>Claude Code + <code>patra:release-planning</code></strong></td><td>Project 层版本规划文档（5 字段对话引导 → 派生 Issue 池）</td><td>skill 待创建</td></tr>
@@ -502,9 +529,9 @@ bulleted list，每条 = 1 个用户故事 → 派生 1 个 Linear Issue。
       <h3>8.1 上下文管理</h3>
       <p>Claude 新会话恢复上下文只看三处：</p>
       <ol>
-        <li>Linear Issue Description（用户故事 + AC checklist）</li>
-        <li>Description / Attachments 里的链接（Design URL / PR 链接）+ <code>review:*</code> 标签</li>
-        <li>关联 GitHub PR + Sub-issues（中断快照 / 阶段产物）</li>
+        <li>Linear Issue Description（Overview + To-Do + AC checklist）+ <code>area:*</code> / <code>path:*</code> 标签</li>
+        <li>Description / Attachments 里的链接（Tech Design 文档 / Design URL / PR 链接）+ <code>review:*</code> 标签</li>
+        <li>关联 GitHub PR + Sub-Issues（按需：中断快照 / Review 反馈循环）+ Project Description（5 字段 release spec）+ 同 Project 内其他 Issue 状态</li>
       </ol>
       <p>项目级规则由 <code>CLAUDE.md</code> + <code>.claude/rules/</code> + skill 体系承载（已完备）。<strong>Claude 禁止在 Linear 之外另起"记忆库"；每次新会话先读 Issue 状态再决策。</strong></p>
 
@@ -512,25 +539,25 @@ bulleted list，每条 = 1 个用户故事 → 派生 1 个 Linear Issue。
       <p><strong>暂停 Issue：</strong></p>
       <ol>
         <li>Issue 加标签 <code>paused:&lt;原因&gt;</code>（如 <code>paused:waiting-pubmed-api-quota</code>）</li>
-        <li>创建 Sub-issue「中断快照」记录：当前状态（哪一阶段）+ 下一步具体动作（≤ 3 条）+ 关键决策（选 X 而非 Y 的理由）+ 引用的代码 / 文档 / Bruno collection link</li>
+        <li>创建 Sub-Issue「中断快照」记录：当前状态（哪一阶段）+ 下一步具体动作（≤ 3 条）+ 关键决策（选 X 而非 Y 的理由）+ 引用的代码 / 文档 / Bruno collection link</li>
         <li>关闭 Claude Code 会话</li>
       </ol>
       <p><strong>恢复 Issue：</strong></p>
       <ol>
-        <li>打开 Linear Issue，读「中断快照」Sub-issue</li>
-        <li>把 Sub-issue 内容粘贴到 Claude Code 新会话作为起始上下文</li>
-        <li>Claude 自动恢复 → 删除 <code>paused:</code> 标签 + 关闭「中断快照」Sub-issue</li>
+        <li>打开 Linear Issue，读「中断快照」Sub-Issue</li>
+        <li>把 Sub-Issue 内容粘贴到 Claude Code 新会话作为起始上下文</li>
+        <li>Claude 自动恢复 → 删除 <code>paused:</code> 标签 + 关闭「中断快照」Sub-Issue</li>
       </ol>
 
       <h3>8.3 回路机制（No-Go 处理）</h3>
       <ol>
         <li>Issue 状态退到出问题阶段（<code>BE</code> / <code>FE</code> / <code>Design</code> / <code>Tech Design</code>）</li>
-        <li>创建 Sub-issue「Review 反馈 R1」（R1/R2/R3… 递增）记录每轮反馈</li>
+        <li>创建 Sub-Issue「Review 反馈 R1」（R1/R2/R3… 递增）记录每轮反馈</li>
         <li>不允许 Skip Review：再次到 Review 要重跑三层门</li>
       </ol>
       <aside class="callout warning">
         <span class="title">升级机制</span>
-        <p>R3 仍 No-Go → 强制升级到 Tech Design 重审，从头梳理（避免在低层反复修补）；新增 Sub-issue「Tech Design v2」记录重审原因。</p>
+        <p>R3 仍 No-Go → 强制升级到 Tech Design 重审，从头梳理（避免在低层反复修补）；新增 Sub-Issue「Tech Design v2」记录重审原因。</p>
       </aside>
 
       <h3>8.4 三层质量门</h3>
@@ -559,15 +586,15 @@ bulleted list，每条 = 1 个用户故事 → 派生 1 个 Linear Issue。
       </table>
 
       <h3>8.5 节奏（事件驱动）</h3>
-      <p>不预设"周几做什么"。SOP 节奏由 Issue 状态机驱动：</p>
+      <p>不预设"周几做什么"。SOP 节奏由"Project Active / Issue 进 In Progress（按 area 分流）/ Issue 进 In Review"三类事件驱动：</p>
       <table>
-        <thead><tr><th>Issue 状态变化</th><th>你的工作模式</th></tr></thead>
+        <thead><tr><th>触发事件</th><th>你的工作模式</th></tr></thead>
         <tbody>
-          <tr><td>→ <code>Tech Design</code></td><td>Claude Code + <code>patra:brainstorming</code> + <code>patra:writing-plans</code></td></tr>
-          <tr><td>→ <code>BE</code></td><td>Claude Code + patra-* skill + TDD</td></tr>
-          <tr><td>→ <code>Design</code></td><td>Claude Design + Handoff</td></tr>
-          <tr><td>→ <code>FE</code></td><td>patra-portal + Handoff 消费 + <code>pnpm gen:bootstrap</code></td></tr>
-          <tr><td>→ <code>Review</code></td><td>GitHub PR + CodeRabbit + 自测三件套</td></tr>
+          <tr><td>Project Active（首次）</td><td>Claude Code + <code>patra:brainstorming</code> + <code>patra:writing-plans</code> 写 Project 级 Tech Design 文档（除非全部 Issue 都打 <code>path:fast-track</code>）</td></tr>
+          <tr><td><code>area:be</code> &amp; <code>In Progress</code></td><td>Claude Code + patra-* skill + TDD</td></tr>
+          <tr><td><code>area:design</code> &amp; <code>In Progress</code></td><td>Claude Design + Handoff</td></tr>
+          <tr><td><code>area:fe</code> &amp; <code>In Progress</code></td><td>patra-portal + Handoff 消费 + <code>pnpm gen:bootstrap</code></td></tr>
+          <tr><td>任一 Issue &amp; <code>In Review</code></td><td>GitHub PR + CodeRabbit + 自测三件套</td></tr>
         </tbody>
       </table>
       <p>避免角色切换的策略：</p>
@@ -583,8 +610,8 @@ bulleted list，每条 = 1 个用户故事 → 派生 1 个 Linear Issue。
       <h2>9. 补丁路径</h2>
 
       <h3>9.1 path:fast-track（小修小 enhance）</h3>
-      <p><strong>触发</strong>：Issue 创建时打 <code>path:fast-track</code> 标签。</p>
-      <p><strong>精简流程</strong>：跳过 Tech Design + Design，直接进 FE 或 BE（看改哪边）→ Review → Done。</p>
+      <p><strong>触发</strong>：Issue 创建时打 <code>path:fast-track</code> 标签（同时仍需打 <code>area:*</code> 决定走哪条 §6 流程）。</p>
+      <p><strong>精简流程</strong>：跳过 Project 级 Tech Design 文档 + 不派生 <code>area:design</code> Issue，直接创建 <code>area:be</code> 或 <code>area:fe</code> Issue → <code>In Progress</code> → <code>In Review</code> → <code>Done</code>。</p>
       <div class="two-col">
         <aside class="callout success">
           <span class="title">适用白名单</span>
@@ -607,13 +634,16 @@ bulleted list，每条 = 1 个用户故事 → 派生 1 个 Linear Issue。
       </div>
       <p>fast-track Issue 可独立存在，不必挂任何 Project（直接挂在 Linear Team / Workspace 下），适合零散小修。</p>
 
-      <h3>9.2 flow:design-first（UI 探索 / 内部数据）</h3>
-      <p><strong>触发</strong>：Issue 创建时打 <code>flow:design-first</code> 标签。</p>
-      <p><strong>翻转顺序</strong>：Tech Design → Design → BE → FE → Review → Done</p>
-      <p><strong>适用条件（任一）</strong>：UI 探索性强（想先看体验决定要不要做）/ 数据完全你自己定义（不依赖外部 API）/ 你对该外部 API 已经非常熟悉，确认字段不会变</p>
+      <h3>9.2 Project Milestone 表达阶段顺序（替代旧 flow:design-first）</h3>
+      <p>v0.2 起 <code>flow:design-first</code> 标签<strong>删除</strong>。Project 内 area:* Issue 的执行顺序统一用 Project Milestone 表达：</p>
+      <ul>
+        <li><strong>默认顺序</strong>：BE Ready → Design Ready → FE Ready → Released（消费外部 API 项目 BE 先 = 字段稳定 = 回路最少）</li>
+        <li><strong>Design-first 场景</strong>（UI 探索性强 / 数据完全自定义 / 对外部 API 已非常熟悉）：直接调整 Milestone 顺序为 Design Ready → BE Ready → FE Ready → Released，不需要标签开关</li>
+        <li><strong>Milestone 内的 Issue</strong> 全部 Done 后该 Milestone 通过；下一 Milestone 的 Issue 解锁可以进 Todo</li>
+      </ul>
       <aside class="callout info">
         <span class="title">默认 BE 先的理由</span>
-        <p>Patra 是消费外部 API 项目，字段稳定性来自真实调用；BE 先 = 回路最少。<code>flow:design-first</code> 是 escape hatch，不是默认路径。</p>
+        <p>Patra 是消费外部 API 项目，字段稳定性来自真实调用；BE 先 = 回路最少。Design-first 是 escape hatch，通过调整 Milestone 顺序实现，无需额外标签。</p>
       </aside>
     </section>
 
@@ -629,8 +659,8 @@ bulleted list，每条 = 1 个用户故事 → 派生 1 个 Linear Issue。
 
       <div class="decision">
         <h3>决策 2：任务卡载体 — Linear（非 GitHub Issues / Obsidian Bases）</h3>
-        <p>Linear 的 UI / workflow 足够灵活，三层结构（Project / Issue / Sub-issue）原生支持，Linear ↔ GitHub 集成成熟，PR 引用 <code>LIN-123</code> 自动关联。</p>
-        <p class="alternatives"><strong>备选 A：GitHub Issues</strong> — 否决：缺 Project 层 + Sub-issue 层，状态机太弱。<br>
+        <p>Linear 的 UI / workflow 足够灵活，三层结构（Project / Issue / Sub-Issue）原生支持，Linear ↔ GitHub 集成成熟，PR 引用 <code>LIN-123</code> 自动关联。</p>
+        <p class="alternatives"><strong>备选 A：GitHub Issues</strong> — 否决：缺 Project 层 + Sub-Issue 层，状态机太弱。<br>
         <strong>备选 B：Obsidian Bases</strong> — 否决：离线文件系统，与 GitHub 集成需要额外桥接，复杂度高。</p>
       </div>
 
@@ -641,9 +671,18 @@ bulleted list，每条 = 1 个用户故事 → 派生 1 个 Linear Issue。
       </div>
 
       <div class="decision">
-        <h3>决策 4：Issue 状态机顺序 — Tech Design → BE → Design → FE</h3>
-        <p>消费外部 API 项目 BE 先 = 字段稳定 = FE/Design 回路最少。</p>
-        <p class="alternatives"><strong>备选：Design 先</strong> — 否决：Patra 强依赖外部 API（PubMed/EPMC/Crossref），字段在 BE 真实调用前不稳定；Design 先会导致 UI → BE 实现不一致后大量返工。提供 <code>flow:design-first</code> 作为 escape hatch 应对特殊场景。</p>
+        <h3>决策 4：Issue 状态机使用 Linear 默认 5 态，阶段顺序用 Milestone 表达（v0.2 重写）</h3>
+        <p>Issue 状态机使用 Linear 默认 5 态（<code>Backlog</code> / <code>Todo</code> / <code>In Progress</code> / <code>In Review</code> / <code>Done</code>），跨界功能拆 <code>area:be</code> / <code>area:fe</code> / <code>area:design</code> 多个独立 Issue，阶段顺序用 Project Milestone 表达（默认 BE Ready → Design Ready → FE Ready → Released）。</p>
+        <p><strong>决策依据（三轮调研）</strong>：</p>
+        <ol>
+          <li><strong>Linear 官方</strong>：Linear Method 明确反对把工程阶段塞进 Issue 状态机（<a href="https://linear.app/method/write-issues-not-user-stories">Write issues, not user stories</a>）；Sub-Issue 与父 Issue 共用同一状态机，不允许独立状态机（<a href="https://linear.app/docs/parent-and-sub-issues">parent-and-sub-issues</a>）</li>
+          <li><strong>业界主流</strong>：跨界功能拆多 Issue + Milestone 是 Reversed Digital、Climate Policy Radar 等团队的公开做法；状态机扩展最常见的就是在默认 4 态基础上加 In Review（多个工程博客一致）</li>
+          <li><strong>Solo dev 共识</strong>：Lunch Pail Labs、morgen.so 等多个 solo dev 公开材料一致建议状态机不超过 4-5 态；Sub-Issue 审慎使用</li>
+        </ol>
+        <p class="alternatives">
+          <strong>备选 A（v0.1 SOP：六阶段塞 Issue 状态机 Tech Design → BE → Design → FE → Review → Done）</strong> — 否决：与 Linear Method 哲学冲突；v0.2 SOP Trial（Project: v0.2 SOP Trial Health Vertical Slice）实测拆 BE/FE 多 Issue 后状态机自动失效（PAP-5 永远走不到 Design/FE，PAP-6 永远走不到 Tech Design/BE）。<br>
+          <strong>备选 B（保留 <code>flow:design-first</code> 标签翻转 BE/Design 顺序）</strong> — 否决：标签表达顺序不如 Milestone 清晰；Project Milestone 是 Linear 原生支持的阶段表达机制，更直观。
+        </p>
       </div>
 
       <div class="decision">
@@ -662,6 +701,21 @@ bulleted list，每条 = 1 个用户故事 → 派生 1 个 Linear Issue。
         <h3>决策 7：节奏 — 事件驱动（非时间驱动）</h3>
         <p>SOP 节奏由 Issue 状态变化触发，不预设"周几做什么"。匹配"无时间压力"的单人绿地项目语境。</p>
         <p class="alternatives"><strong>备选：固定 sprint（1 周 / 2 周）</strong> — 否决：制造人工外压，与项目特征不符；sprint 规划会议 overhead 对单人无意义。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 8：Sub-Issue 不进默认派生流程（v0.2 新增）</h3>
+        <p>Sub-Issue 仅在单 Issue 自身需要分多步追踪时<strong>按需</strong>创建，<strong>不</strong>作为 <code>patra:release-planning</code> skill 的默认派生层级。典型用法：「中断快照」记录暂停状态、「Review 反馈 R1/R2/R3」记录回路反馈。</p>
+        <p><strong>决策依据</strong>：</p>
+        <ol>
+          <li>Linear 官方限制：Sub-Issue 与父 Issue 共用同一状态机，无法承载独立"阶段"语义（<a href="https://linear.app/docs/parent-and-sub-issues">parent-and-sub-issues</a>）</li>
+          <li>Solo dev 共识：Lunch Pail Labs（<a href="https://lunchpaillabs.com/blog/managing-projects-at-lpl-with-linear">来源</a>）、xavd.id（<a href="https://xavd.id/blog/post/perfect-project-management-with-linear/">来源</a>）、Commonwealth Creative（<a href="https://thecommonwealthcreative.com/the-codex/linear-issue-tracking/">来源</a>）一致建议 solo dev 默认保持 Issue 扁平结构，能不拆就不拆</li>
+          <li>业界使用习惯：典型团队 1 个 Issue 下 2-5 个 Sub-Issue，仅在"工作太大但不足以独立成 Project"时拆</li>
+        </ol>
+        <p><strong>判断规则</strong>：何时拆 Sub-Issue —— ① 单 Issue 工作量超过 1 个 PR / 几天还做不完；② 单 Issue 内有几个清晰可独立验证的子步骤；③ 中断快照 / Review 反馈循环记录。</p>
+        <p class="alternatives">
+          <strong>备选（v0.1 SOP：Sub-Issue 作为单阶段产物的默认派生）</strong> — 否决：v0.1 把 Sub-Issue 定义为「Tech Design / BE PR / UI 稿 / FE PR / Review 反馈」六类产物，但 Linear 共状态机限制使其无法承载阶段语义；且单人开发场景下增加额外维护成本（Lola/lunchpaillabs 等 solo dev 已验证）。
+        </p>
       </div>
     </section>
 
@@ -724,7 +778,7 @@ bulleted list，每条 = 1 个用户故事 → 派生 1 个 Linear Issue。
             <td>1</td>
             <td><strong>Linear</strong></td>
             <td><span class="pill create">setup</span></td>
-            <td>创建 workspace + Patra Team；自定义 Project 状态（Draft/Active/Done）；自定义 Issue 状态（Backlog/Tech Design/BE/Design/FE/Review/Done）；自定义 Sub-issue 状态（Todo/In Progress/Done）；创建标签（path:full / path:fast-track / flow:design-first / paused:* / review:pass / review:conditional / review:reject）；启用 Linear ↔ GitHub 集成；创建 Issue Template（含 AC checklist）</td>
+            <td>创建 workspace + Patra Team；自定义 Project 状态（Draft/Active/Done）；Issue 状态使用 Linear 默认 5 态（Backlog/Todo/In Progress/Done/Cancelled）+ 扩展一个 In Review（Sub-Issue 共用同一状态机，Linear 限制）；创建标签（area:be / area:fe / area:design / path:full / path:fast-track / paused:* / review:pass / review:conditional / review:reject）；启用 Linear ↔ GitHub 集成；创建 Issue Template（Magical.pm Everyday 三字段：Overview / To-Do / Acceptance Criteria）</td>
           </tr>
           <tr>
             <td>2</td>
@@ -787,7 +841,7 @@ bulleted list，每条 = 1 个用户故事 → 派生 1 个 Linear Issue。
           <li>CodeRabbit GitHub App 已安装，CLI 已装，<code>.coderabbit.yaml</code> 已入 git</li>
           <li>Bruno <code>bruno/</code> 目录已建，首批 collection 入 git</li>
           <li><code>patra:release-planning</code> skill 已创建（<code>.claude-marketplace/patra/skills/release-planning/SKILL.md</code>）</li>
-          <li>首个 Issue 已完整走完全部阶段（Tech Design → BE → Design → FE → Review → Done）</li>
+          <li>首个 Project 内 area:be / area:fe / area:design Issue 各至少 1 个完整走完 5 态（Backlog → Todo → In Progress → In Review → Done），且 Project Milestone 顺序通过</li>
           <li>retro 已写入 Obsidian，产出 SOP v0.2 改进列表</li>
         </ol>
       </aside>
@@ -820,6 +874,15 @@ bulleted list，每条 = 1 个用户故事 → 派生 1 个 Linear Issue。
       追加 entry 时同步更新下方 notes-stats footer 的对应 counter 数字。
       -->
 
+      <li class="note" data-type="change" data-time="2026-05-21T00:00">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-21T00:00">05-21 00:00</time>
+          <a href="#issue-layer">§ 3 / § 5 / § 6 / § 9 / § 10 / § 12.1</a>
+        </header>
+        <p><strong>v0.2 SOP Trial 实测后的全面对齐 Linear Method 重构</strong>。v0.1 SOP 把"Tech Design / BE / Design / FE / Review"作为 Issue 状态机阶段，并把 Sub-Issue 定义为"单阶段产物"。v0.2 SOP Trial（Project: v0.2 SOP Trial Health Vertical Slice，含 PAP-5 BE + PAP-6 FE 两个 Issue）实测暴露：① 拆 BE/FE 多 Issue 后六阶段状态机自动失效（PAP-5 永远走不到 Design/FE）；② Linear 官方限制 Sub-Issue 与父 Issue 共用同一状态机，无法承载阶段语义；③ Linear Method 明确反对工程阶段塞 Issue 状态机。本次重构（三轮调研：Linear 官方 + 业界团队 + Solo dev 实战）确定方向 X 全面对齐 Linear Method：(a) Issue 状态机改为 Linear 默认 5 态 <code>Backlog/Todo/In Progress/In Review/Done</code>；(b) 跨界功能拆 <code>area:be</code> / <code>area:fe</code> / <code>area:design</code> 多个独立 Issue，阶段顺序用 Project Milestone 表达（默认 BE Ready → Design Ready → FE Ready → Released）；(c) Sub-Issue 不进默认派生流程，按需拆；(d) §6 章节定位从"Issue 状态阶段"改为"开发活动"；(e) <code>flow:design-first</code> 标签删除（Milestone 顺序表达即可）；(f) Issue Template 采用 Magical.pm Everyday 三字段（Overview / To-Do / Acceptance Criteria）。详见决策 4（重写）+ 决策 8（新增）。</p>
+      </li>
+
       <li class="note" data-type="change" data-time="2026-05-20T00:00">
         <header>
           <span class="note-type">CHANGE</span>
@@ -851,7 +914,7 @@ bulleted list，每条 = 1 个用户故事 → 派生 1 个 Linear Issue。
     <footer class="notes-stats">
       总计:
       <span data-counter="decision">0</span> decisions /
-      <span data-counter="change">1</span> changes /
+      <span data-counter="change">2</span> changes /
       <span data-counter="tradeoff">0</span> tradeoffs /
       <span data-counter="other">2</span> others
     </footer>
