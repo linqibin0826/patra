@@ -20,7 +20,7 @@
       <li><a href="#file-structure">文件结构</a></li>
       <li><a href="#tasks">任务列表</a>
         <ol class="toc-tasks">
-          <li data-task-status="pending"><a href="#task-1">Task 1 — 引入 JVM Test Suites convention</a></li>
+          <li data-task-status="in-progress"><a href="#task-1">Task 1 — 引入 JVM Test Suites convention</a></li>
           <li data-task-status="pending"><a href="#task-2">Task 2 — 迁移 linqibin-commons IT</a></li>
           <li data-task-status="pending"><a href="#task-3">Task 3 — 迁移 patra-registry IT</a></li>
           <li data-task-status="pending"><a href="#task-4">Task 4 — 迁移 patra-ingest IT + E2E</a></li>
@@ -123,7 +123,7 @@ patra-api/patra-object-storage/patra-object-storage-adapter/
       <!-- ============================================================
            Task 1: 引入 JVM Test Suites convention
            ============================================================ -->
-      <article class="task" id="task-1" data-status="pending">
+      <article class="task" id="task-1" data-status="in-progress">
         <header>
           <h2>任务 1：在 linqibin.java-base 引入 JVM Test Suites convention</h2>
           <dl class="files">
@@ -132,7 +132,7 @@ patra-api/patra-object-storage/patra-object-storage-adapter/
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：完整替换 linqibin.java-base.gradle.kts 内容</strong>
             <p>整体替换文件内容为下面新版本。关键差异：</p>
             <ul>
@@ -358,19 +358,19 @@ dependencies {
 </code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：清理 build-logic 旧 build cache，避免脏缓存</strong>
             <pre><code class="lang-bash">./gradlew --stop
 rm -rf build-logic/build build-logic/.gradle</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：让 Gradle 重新生成 kotlin-dsl accessors</strong>
             <p>运行：<code>./gradlew help --no-daemon -q</code></p>
             <p>预期：退出码 0，无 build script 错误。如果报 "Cannot resolve external dependency"，先 commit 然后重试（kotlin-dsl accessors 与 buildSrc 缓存交互偶发）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：验证 3 个 suite 的 task 已生成</strong>
             <p>运行：<code>./gradlew :linqibin-commons-core:tasks --all --no-daemon | grep -E "(integrationTest|e2eTest)"</code></p>
             <p>预期输出至少包含：</p>
@@ -380,13 +380,13 @@ integrationTest
 e2eTest</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：验证 ./gradlew test 行为不变（unit only）</strong>
             <p>运行：<code>./gradlew :linqibin-commons-core:test --no-daemon</code></p>
             <p>预期：linqibin-commons-core 模块 unit test 全部通过（与 baseline 一致，因为此模块没有 IT/E2E）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="in-progress">
             <strong>步骤 6：Commit</strong>
             <pre><code class="lang-bash">git add build-logic/src/main/kotlin/linqibin.java-base.gradle.kts
 git commit -m "$(cat &lt;&lt;'EOF'
@@ -1303,16 +1303,22 @@ EOF
     </header>
 
     <ol class="notes-log">
+      <li class="note" data-type="other" data-time="2026-05-21T22:50">
+        <header>
+          <span class="note-type">OTHER</span>
+          <time datetime="2026-05-21T22:50">05-21 22:50</time>
+          <a href="#task-1">§ Task 1</a>
+        </header>
+        <p>SpotBugs plugin 在新建 <code>integrationTest</code> / <code>e2eTest</code> source set 时自动注册了 <code>spotbugsIntegrationTest</code> / <code>spotbugsE2eTest</code> task。这与 spec 决策 C "测试代码不做静态分析" 有偏差，但 PAP-10 CI 只调 <code>./gradlew test</code> 不调 <code>check</code>，故对本 Issue 无影响。处理时机推迟到 PAP-12 SpotBugs 定制——届时在 convention 里加 <code>tasks.withType&lt;SpotBugsTask&gt;().matching { it.name in listOf("spotbugsIntegrationTest","spotbugsE2eTest") }.configureEach { enabled = false }</code> 或 <code>spotbugsTest/spotbugsIntegrationTest/spotbugsE2eTest { enabled = false }</code> 排除。</p>
+      </li>
     </ol>
-
-    <p class="empty-state">no notes yet</p>
 
     <footer class="notes-stats">
       总计:
       <span data-counter="decision">0</span> decisions /
       <span data-counter="change">0</span> changes /
       <span data-counter="tradeoff">0</span> tradeoffs /
-      <span data-counter="other">0</span> others
+      <span data-counter="other">1</span> others
     </footer>
   </aside>
 
