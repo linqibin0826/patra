@@ -171,11 +171,16 @@ listOf("integrationTest", "e2eTest").forEach { suiteName ->
     }
 }
 
-// e2eTest 复用 integrationTest source set 输出（共享 *ContainerInitializer 等基础类）
+// integrationTest 复用 test source set 输出（共享 unit/IT 都用的 TestDataBuilder / Helper 等）
+// e2eTest 同时继承 integrationTest 与 test output（链式共享 *ContainerInitializer / test fixtures）
 sourceSets {
+    named("integrationTest") {
+        compileClasspath += sourceSets["test"].output
+        runtimeClasspath += sourceSets["test"].output
+    }
     named("e2eTest") {
-        compileClasspath += sourceSets["integrationTest"].output
-        runtimeClasspath += sourceSets["integrationTest"].output
+        compileClasspath += sourceSets["integrationTest"].output + sourceSets["test"].output
+        runtimeClasspath += sourceSets["integrationTest"].output + sourceSets["test"].output
     }
 }
 

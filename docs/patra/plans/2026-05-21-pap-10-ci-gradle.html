@@ -20,10 +20,10 @@
       <li><a href="#file-structure">文件结构</a></li>
       <li><a href="#tasks">任务列表</a>
         <ol class="toc-tasks">
-          <li data-task-status="in-progress"><a href="#task-1">Task 1 — 引入 JVM Test Suites convention</a></li>
-          <li data-task-status="pending"><a href="#task-2">Task 2 — 迁移 linqibin-commons IT</a></li>
-          <li data-task-status="pending"><a href="#task-3">Task 3 — 迁移 patra-registry IT</a></li>
-          <li data-task-status="pending"><a href="#task-4">Task 4 — 迁移 patra-ingest IT + E2E</a></li>
+          <li data-task-status="done"><a href="#task-1">Task 1 — 引入 JVM Test Suites convention</a></li>
+          <li data-task-status="done"><a href="#task-2">Task 2 — 迁移 linqibin-commons IT</a></li>
+          <li data-task-status="done"><a href="#task-3">Task 3 — 迁移 patra-registry IT</a></li>
+          <li data-task-status="in-progress"><a href="#task-4">Task 4 — 迁移 patra-ingest IT + E2E</a></li>
           <li data-task-status="pending"><a href="#task-5">Task 5 — 迁移 patra-catalog IT + E2E</a></li>
           <li data-task-status="pending"><a href="#task-6">Task 6 — 迁移 patra-object-storage IT</a></li>
           <li data-task-status="pending"><a href="#task-7">Task 7 — 测试分层全局验证</a></li>
@@ -123,7 +123,7 @@ patra-api/patra-object-storage/patra-object-storage-adapter/
       <!-- ============================================================
            Task 1: 引入 JVM Test Suites convention
            ============================================================ -->
-      <article class="task" id="task-1" data-status="in-progress">
+      <article class="task" id="task-1" data-status="done">
         <header>
           <h2>任务 1：在 linqibin.java-base 引入 JVM Test Suites convention</h2>
           <dl class="files">
@@ -386,7 +386,7 @@ e2eTest</code></pre>
             <p>预期：linqibin-commons-core 模块 unit test 全部通过（与 baseline 一致，因为此模块没有 IT/E2E）。</p>
           </li>
 
-          <li class="step" data-status="in-progress">
+          <li class="step" data-status="done">
             <strong>步骤 6：Commit</strong>
             <pre><code class="lang-bash">git add build-logic/src/main/kotlin/linqibin.java-base.gradle.kts
 git commit -m "$(cat &lt;&lt;'EOF'
@@ -410,7 +410,7 @@ EOF
       <!-- ============================================================
            Task 2: 迁移 linqibin-commons IT
            ============================================================ -->
-      <article class="task" id="task-2" data-status="pending">
+      <article class="task" id="task-2" data-status="done">
         <header>
           <h2>任务 2：迁移 linqibin-commons 的 5 个 IT 到 integrationTest source set</h2>
           <dl class="files">
@@ -482,7 +482,7 @@ EOF
       <!-- ============================================================
            Task 3: 迁移 patra-registry IT
            ============================================================ -->
-      <article class="task" id="task-3" data-status="pending">
+      <article class="task" id="task-3" data-status="done">
         <header>
           <h2>任务 3：迁移 patra-registry 的 8 个 IT + 1 个 Initializer</h2>
           <dl class="files">
@@ -547,7 +547,7 @@ EOF
       <!-- ============================================================
            Task 4: 迁移 patra-ingest IT + E2E
            ============================================================ -->
-      <article class="task" id="task-4" data-status="pending">
+      <article class="task" id="task-4" data-status="in-progress">
         <header>
           <h2>任务 4：迁移 patra-ingest 的 8 个 IT + 1 个 E2E + 3 个 Initializer</h2>
           <dl class="files">
@@ -1311,12 +1311,28 @@ EOF
         </header>
         <p>SpotBugs plugin 在新建 <code>integrationTest</code> / <code>e2eTest</code> source set 时自动注册了 <code>spotbugsIntegrationTest</code> / <code>spotbugsE2eTest</code> task。这与 spec 决策 C "测试代码不做静态分析" 有偏差，但 PAP-10 CI 只调 <code>./gradlew test</code> 不调 <code>check</code>，故对本 Issue 无影响。处理时机推迟到 PAP-12 SpotBugs 定制——届时在 convention 里加 <code>tasks.withType&lt;SpotBugsTask&gt;().matching { it.name in listOf("spotbugsIntegrationTest","spotbugsE2eTest") }.configureEach { enabled = false }</code> 或 <code>spotbugsTest/spotbugsIntegrationTest/spotbugsE2eTest { enabled = false }</code> 排除。</p>
       </li>
+      <li class="note" data-type="change" data-time="2026-05-21T23:05">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-21T23:05">05-21 23:05</time>
+          <a href="#task-1">§ Task 1</a>
+        </header>
+        <p>Plan Task 1 的 convention 只配了 <code>e2eTest</code> 继承 <code>integrationTest</code> output。Task 4 实施时发现 <code>integrationTest</code> 还需要继承 <code>test</code> output（部分 fixture 类如 <code>PubMedComputedAuthorTestDataGenerator</code> 被 unit test 和 IT 共享，必须留在 <code>src/test/java/</code>）。修正 convention：<code>integrationTest.compileClasspath += sourceSets["test"].output</code>，同时 <code>e2eTest</code> 也继承 <code>test</code> output 形成链式共享。已在 Task 4 commit 中一并落地。</p>
+      </li>
+      <li class="note" data-type="change" data-time="2026-05-21T23:08">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-21T23:08">05-21 23:08</time>
+          <a href="#task-4">§ Task 4</a>
+        </header>
+        <p>Plan 文件清单只列 <code>*IT.java</code> / <code>*E2E.java</code> / <code>*ContainerInitializer.java</code>，实施时发现还需迁移命名不规则的 IT 支持类：<code>ingest-boot/testutil/{OutboxMessageTestBuilder,RocketMQMessageCollector}.java</code>、<code>ingest-infra/TestApplication.java</code>、<code>registry-infra/TestApplication.java</code>、<code>registry-adapter/WebMvcTestConfiguration.java</code>、<code>object-storage-adapter/WebMvcTestConfiguration.java</code>、<code>catalog-adapter/config/TestConfiguration.java</code>、<code>catalog-infra/TestApplication.java</code>。判定规则：grep 看是否仅被 *IT 引用——是则搬到 integrationTest；若同时被 unit 与 IT 引用（如 <code>PubMedComputedAuthorTestDataGenerator</code>）则留在 src/test/java/ 靠 source set 共享。</p>
+      </li>
     </ol>
 
     <footer class="notes-stats">
       总计:
       <span data-counter="decision">0</span> decisions /
-      <span data-counter="change">0</span> changes /
+      <span data-counter="change">2</span> changes /
       <span data-counter="tradeoff">0</span> tradeoffs /
       <span data-counter="other">1</span> others
     </footer>
