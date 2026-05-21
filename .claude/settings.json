@@ -3,6 +3,7 @@
     "linear@claude-plugins-official": true,
     "context7@claude-plugins-official": true,
     "frontend-design@claude-plugins-official": true,
-    "codex@openai-codex": true
+    "codex@openai-codex": true,
+    "patra@patra-local": true
   }
 }

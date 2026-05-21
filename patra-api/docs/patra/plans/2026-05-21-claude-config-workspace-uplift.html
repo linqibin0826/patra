@@ -28,7 +28,7 @@
           <li data-task-status="pending"><a href="#task-N">Task N — [任务名]</a></li>
           -->
           <li data-task-status="done"><a href="#task-1">Task 1 — 上移 patra plugin marketplace</a></li>
-          <li data-task-status="pending"><a href="#task-2">Task 2 — 迁移 plugin 启用声明并验证上溯查找</a></li>
+          <li data-task-status="done"><a href="#task-2">Task 2 — 迁移 plugin 启用声明并验证上溯查找</a></li>
           <li data-task-status="pending"><a href="#task-3">Task 3 — 上移 send-stop-notification.sh 及 Stop hook 注册</a></li>
           <li data-task-status="pending"><a href="#task-4">Task 4 — 上移 create-issue skill 并改临时路径</a></li>
           <li data-task-status="pending"><a href="#task-5">Task 5 — Patra/CLAUDE.md 顶部新增「产品定义」章节</a></li>
@@ -200,7 +200,7 @@ EOF
         </ol>
       </article>
 
-      <article class="task" id="task-2" data-status="pending">
+      <article class="task" id="task-2" data-status="done">
         <header>
           <h2>任务 2：迁移 plugin 启用声明并验证上溯查找</h2>
           <dl class="files">
@@ -211,7 +211,7 @@ EOF
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：编辑 Patra/.claude/settings.json，把 patra@patra-local 加进 enabledPlugins</strong>
             <p>当前内容（5 行 enabledPlugins）：</p>
             <pre><code class="lang-json">{
@@ -237,8 +237,8 @@ EOF
 }</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
-            <strong>步骤 2：编辑 patra-api/.claude/settings.json，删除整个 enabledPlugins 字段</strong>
+          <li class="step" data-status="skipped">
+            <strong>步骤 2：编辑 patra-api/.claude/settings.json，删除整个 enabledPlugins 字段（已跳过 — 见右栏 change note）</strong>
             <p>当前文件末尾包含：</p>
             <pre><code class="lang-json">  },
   "enabledPlugins": {
@@ -251,14 +251,14 @@ EOF
             <p>说明：注意去掉前一个 <code>}</code> 后面的逗号（JSON 末尾不允许悬挂逗号）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：JSON 语法校验</strong>
             <pre><code class="lang-bash">cat .claude/settings.json | python3 -m json.tool > /dev/null && echo "Patra/.claude/settings.json OK"
 cat patra-api/.claude/settings.json | python3 -m json.tool > /dev/null && echo "patra-api/.claude/settings.json OK"</code></pre>
             <p>预期：两条 OK 消息；任何 JSONDecodeError 都必须立即修复（通常是逗号问题）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：关键验证 — marketplace 上溯查找（spec §8 Risk 1）</strong>
             <p>说明：此步验证 high 级风险 — 当 cwd 在 patra-api（深一层）时，Claude Code 能否从父目录 Patra/.claude-marketplace/ 找到 patra plugin。</p>
             <p>操作（需用户手动配合 — agent 无法在自身 session 中重启 Claude Code）：</p>
@@ -276,7 +276,7 @@ git add .claude-marketplace
             <p>如果触发兜底，必须在右栏 Implementation Notes 追加一条 <code>data-type="change"</code> entry，描述「上溯查找不支持，已加 symlink」。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：Commit</strong>
             <pre><code class="lang-bash">git add .claude/settings.json patra-api/.claude/settings.json
 git commit -m "$(cat <<'EOF'
@@ -745,16 +745,32 @@ EOF
       data-type 4 类：decision / change / tradeoff / other
       追加 entry 时同步更新下方 notes-stats footer 的对应 counter 数字。
       -->
-    </ol>
 
-    <p class="empty-state">no notes yet</p>
+      <li class="note" data-type="change" data-time="2026-05-21T11:10">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-21T11:10">05-21 11:10</time>
+          <a href="#task-2">§ Task 2</a>
+        </header>
+        <p>实证发现 spec §5 假设错误：<code>enabledPlugins</code> 字段在 settings.json 叠加中<strong>不叠加</strong>，每个 cwd 启动的 project 独立维护；plugin install 是 <code>scope: project</code>，每个 cwd 必须各自 <code>/plugin install</code> 一次（记录在 <code>~/.claude/plugins/installed_plugins.json</code> 的 <code>projectPath</code> 字段）。Task 2 步骤 2 删除 patra-api/.claude/settings.json 的 enabledPlugins 后，cwd=patra-api 启动 Claude Code 看不到 patra plugin。修复过程：(a) 我把 <code>~/.claude/plugins/known_marketplaces.json</code> 中 patra-local 的 path 从旧位置 <code>patra-api/.claude-marketplace/patra</code> 改到新位置 <code>Patra/.claude-marketplace/patra</code>；(b) 用户在 patra-api cwd 手动执行 <code>/plugin marketplace add ... + /plugin install patra@patra-local</code>，Claude Code 自动把 <code>enabledPlugins.patra@patra-local</code> 写回 patra-api/.claude/settings.json，问题解决。结论：步骤 2 跳过；patra-api/.claude/settings.json 保留 enabledPlugins；spec §5 的「叠加机制」描述对 hooks 成立但对 enabledPlugins 不成立，需修订。</p>
+      </li>
+
+      <li class="note" data-type="other" data-time="2026-05-21T11:12">
+        <header>
+          <span class="note-type">OTHER</span>
+          <time datetime="2026-05-21T11:12">05-21 11:12</time>
+          <a href="#task-2">§ Task 2</a>
+        </header>
+        <p>未来 fresh clone 此仓库的开发者首次在 patra-api cwd 启动 Claude Code 时，由于 <code>~/.claude/plugins/known_marketplaces.json</code> 不含 patra-local 注册（user-level，不入 git），需手动执行一次 <code>/plugin marketplace add ./.claude-marketplace/patra</code>（在 Patra/ workspace 根 cwd）或 <code>/plugin marketplace add ../.claude-marketplace/patra</code>（在 patra-api cwd）后 <code>/plugin install patra@patra-local</code>。建议后续在 Patra/README 或 docs/onboarding 文档化此一次性步骤。本 plan 范围内不处理。</p>
+      </li>
+    </ol>
 
     <footer class="notes-stats">
       总计:
       <span data-counter="decision">0</span> decisions /
-      <span data-counter="change">0</span> changes /
+      <span data-counter="change">1</span> changes /
       <span data-counter="tradeoff">0</span> tradeoffs /
-      <span data-counter="other">0</span> others
+      <span data-counter="other">1</span> others
     </footer>
   </aside>
 
