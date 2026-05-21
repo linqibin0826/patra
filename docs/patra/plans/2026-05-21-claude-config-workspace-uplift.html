@@ -33,7 +33,7 @@
           <li data-task-status="done"><a href="#task-4">Task 4 — 上移 create-issue skill 并改临时路径</a></li>
           <li data-task-status="done"><a href="#task-5">Task 5 — Patra/CLAUDE.md 顶部新增「产品定义」章节</a></li>
           <li data-task-status="done"><a href="#task-6">Task 6 — 删除 patra-portal/CLAUDE.md 的 FE 警示段</a></li>
-          <li data-task-status="in-progress"><a href="#task-7">Task 7 — 全链路端到端验证并推送 PR</a></li>
+          <li data-task-status="done"><a href="#task-7">Task 7 — 全链路端到端验证并推送 PR</a></li>
           <li data-task-status="done"><a href="#task-8">Task 8 — docs/ 上移到 workspace 根 + skill 默认路径修正（范围扩张）</a></li>
         </ol>
       </li>
@@ -597,7 +597,7 @@ EOF
         </ol>
       </article>
 
-      <article class="task" id="task-7" data-status="in-progress">
+      <article class="task" id="task-7" data-status="done">
         <header>
           <h2>任务 7：全链路端到端验证并推送 PR</h2>
           <dl class="files">
@@ -660,8 +660,8 @@ git log --follow --oneline .claude/hooks/send-stop-notification.sh | head -3
 # 预期：至少含 Task 3 的 commit + 它在 patra-api 时的早期 commit</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
-            <strong>步骤 5：推送 branch 并开 PR</strong>
+          <li class="step" data-status="done">
+            <strong>步骤 5：推送 branch 并开 PR — PR #42 已创建 (https://github.com/linqibin0826/patra/pull/42)</strong>
             <pre><code class="lang-bash">git push -u origin chore/claude-config-workspace-uplift
 gh pr create --title "chore(claude): patra plugin 配置上移到 workspace 层" --body "$(cat <<'EOF'
 ## Summary
