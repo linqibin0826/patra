@@ -80,7 +80,6 @@ __pycache__/
 ##############################
 # Env files (local only)
 ##############################
-# 仅匹配仓库顶层；infra/docker/.env* 不在此范围（沿用 patra-infra 入库现状）
 /.env
 /.env.*
 
