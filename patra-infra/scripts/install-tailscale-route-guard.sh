@@ -5,9 +5,9 @@
 # 检测到漂移自动 `route delete` + `tailscale down/up` 重新协商。
 #
 # Usage (注意必须 sudo):
-#   sudo bash infra/scripts/install-tailscale-route-guard.sh install
-#   sudo bash infra/scripts/install-tailscale-route-guard.sh uninstall
-#   sudo bash infra/scripts/install-tailscale-route-guard.sh status
+#   sudo bash patra-infra/scripts/install-tailscale-route-guard.sh install
+#   sudo bash patra-infra/scripts/install-tailscale-route-guard.sh uninstall
+#   sudo bash patra-infra/scripts/install-tailscale-route-guard.sh status
 
 set -euo pipefail
 

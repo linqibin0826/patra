@@ -8,9 +8,9 @@
 # 绕过 tailscale wireguard MTU 1280 对 gRPC HTTP/2 handshake 的限制。
 #
 # Usage:
-#   bash infra/scripts/install-nacos-tunnel.sh install      # 安装并启动
-#   bash infra/scripts/install-nacos-tunnel.sh uninstall    # 停止并卸载
-#   bash infra/scripts/install-nacos-tunnel.sh status       # 查看状态
+#   bash patra-infra/scripts/install-nacos-tunnel.sh install      # 安装并启动
+#   bash patra-infra/scripts/install-nacos-tunnel.sh uninstall    # 停止并卸载
+#   bash patra-infra/scripts/install-nacos-tunnel.sh status       # 查看状态
 
 set -euo pipefail
 

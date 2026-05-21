@@ -5,10 +5,10 @@
 # 运行位置：git clone 后的 patra-api 仓库根目录。
 #
 # 用法：
-#   bash infra/scripts/init-volumes.sh
+#   bash patra-infra/scripts/init-volumes.sh
 #
 # 完成后即可：
-#   docker compose -f infra/docker/docker-compose.dev.yaml up -d
+#   docker compose -f patra-infra/docker/docker-compose.dev.yaml up -d
 
 set -euo pipefail
 
