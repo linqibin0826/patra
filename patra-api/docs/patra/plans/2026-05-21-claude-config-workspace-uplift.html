@@ -32,7 +32,7 @@
           <li data-task-status="done"><a href="#task-3">Task 3 — 上移 send-stop-notification.sh 及 Stop hook 注册</a></li>
           <li data-task-status="done"><a href="#task-4">Task 4 — 上移 create-issue skill 并改临时路径</a></li>
           <li data-task-status="done"><a href="#task-5">Task 5 — Patra/CLAUDE.md 顶部新增「产品定义」章节</a></li>
-          <li data-task-status="pending"><a href="#task-6">Task 6 — 删除 patra-portal/CLAUDE.md 的 FE 警示段</a></li>
+          <li data-task-status="done"><a href="#task-6">Task 6 — 删除 patra-portal/CLAUDE.md 的 FE 警示段</a></li>
           <li data-task-status="pending"><a href="#task-7">Task 7 — 全链路端到端验证并推送 PR</a></li>
         </ol>
       </li>
@@ -539,16 +539,16 @@ EOF
         </ol>
       </article>
 
-      <article class="task" id="task-6" data-status="pending">
+      <article class="task" id="task-6" data-status="done">
         <header>
-          <h2>任务 6：删除 patra-portal/CLAUDE.md 的 FE 警示段</h2>
+          <h2>任务 6：删除 patra-portal/CLAUDE.md 的 FE 警示段（实际改为重写，见右栏 change note）</h2>
           <dl class="files">
             <dt>修改</dt><dd><code>patra-portal/CLAUDE.md</code>（删除第 25-34 行的「## ⚠️ Skill 加载现状」整段）</dd>
           </dl>
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：用 Edit 工具删除整段警示</strong>
             <p>当前文件第 24-34 行（共 34 行）：</p>
             <pre><code class="lang-text">详细规范见 `.claude/rules/` 下的具体规则文件（Claude Code 自动加载）。
@@ -567,14 +567,14 @@ EOF
             <p>说明：Edit 的 old_string 包含「详细规范见...自动加载）。」到文件末尾的整段；new_string 仅保留前一行。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：核对警示段已删除</strong>
             <pre><code class="lang-bash">grep -n "Skill 加载现状" patra-portal/CLAUDE.md || echo "✅ 警示段已清除"
 wc -l patra-portal/CLAUDE.md</code></pre>
             <p>预期：第一行输出 ✅；第二行输出 <code>24 patra-portal/CLAUDE.md</code>（从 34 行减到 24 行）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：Commit</strong>
             <pre><code class="lang-bash">git add patra-portal/CLAUDE.md
 git commit -m "$(cat <<'EOF'
@@ -763,12 +763,21 @@ EOF
         </header>
         <p>未来 fresh clone 此仓库的开发者首次在 patra-api cwd 启动 Claude Code 时，由于 <code>~/.claude/plugins/known_marketplaces.json</code> 不含 patra-local 注册（user-level，不入 git），需手动执行一次 <code>/plugin marketplace add ./.claude-marketplace/patra</code>（在 Patra/ workspace 根 cwd）或 <code>/plugin marketplace add ../.claude-marketplace/patra</code>（在 patra-api cwd）后 <code>/plugin install patra@patra-local</code>。建议后续在 Patra/README 或 docs/onboarding 文档化此一次性步骤。本 plan 范围内不处理。</p>
       </li>
+
+      <li class="note" data-type="change" data-time="2026-05-21T11:30">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-21T11:30">05-21 11:30</time>
+          <a href="#task-6">§ Task 6</a>
+        </header>
+        <p>spec §7 决策 6 + plan Task 6 原计划「删除 portal/CLAUDE.md 的 ⚠️ Skill 加载现状 整段」，前提是「plugin 上移后 BE/FE 自动共用」。实证发现 enabledPlugins 与 plugin install 都是 project-scoped（见上方 Task 2 change），portal cwd 用 patra plugin 仍需手动 <code>/plugin marketplace add + /plugin install</code>。所以警示段不能简单删除，否则 FE 开发者不知道怎么启用。改为<strong>重写</strong>该章节为「patra plugin 启用（按需）」指引：保留章节存在性，内容更新为 marketplace add + install 的 2 步命令 + LLM 跨技术栈映射说明。原 plan 第 25-34 行的 ❌/✅/🔜 警示替换为 portal/CLAUDE.md 第 26-38 行的新章节（共 13 行，含命令代码块）。spec §7 决策 6 的核心逻辑（取消独立 FE 适配工作）仍成立。</p>
+      </li>
     </ol>
 
     <footer class="notes-stats">
       总计:
       <span data-counter="decision">0</span> decisions /
-      <span data-counter="change">1</span> changes /
+      <span data-counter="change">2</span> changes /
       <span data-counter="tradeoff">0</span> tradeoffs /
       <span data-counter="other">1</span> others
     </footer>
