@@ -188,7 +188,7 @@ jobs:
       - uses: actions/setup-java@v4
         with: { java-version: '25', distribution: 'temurin' }
       - uses: gradle/actions/setup-gradle@v4   # 自动启用 build cache + dependency cache
-      - run: ./gradlew check --no-daemon       # unit + spotbugsMain + spotlessCheck
+      - run: ./gradlew test --no-daemon        # 仅 unit；spotbugs/spotless 进 check 由 PAP-12/13 启用
       - run: ./gradlew integrationTest --no-daemon
       - run: ./gradlew e2eTest --no-daemon
       - run: ./gradlew testCodeCoverageReport integrationTestCodeCoverageReport --no-daemon
@@ -334,6 +334,16 @@ jobs:
             <td><span class="pill low">low</span></td>
             <td>单人项目无 fork 场景；如未来开放贡献，<code>cache-read-only</code> 行为自动生效</td>
           </tr>
+          <tr>
+            <td>PAP-10 CI 只跑 <code>test</code>（不跑 <code>check</code>），spotbugs/spotless 暂不阻断；与 v0.3 决策 C"传统静态分析阻断 PR"的最终态有差距</td>
+            <td><span class="pill mid">mid</span></td>
+            <td>渐进激活：PAP-12（SpotBugs reportLevel + exclude baseline）和 PAP-13（spotlessApply 全代码 baseline）完成后，各自 PR 内追加 <code>./gradlew spotbugsMain</code> / <code>./gradlew spotlessCheck</code> step 到 ci.yml；PAP-15 把它们与 <code>build-and-test</code> 并列纳入分支保护 Required Status Checks 即可达到决策 C 的最终态</td>
+          </tr>
+          <tr>
+            <td>PAP-10 的 spec 决策与 Linear PAP-10 issue description 原 AC 有偏差（MODULE_MAP 删除、JaCoCo 路径变默认、job 结构由多 job 改单 job）</td>
+            <td><span class="pill low">low</span></td>
+            <td>实施完成后回写 Linear PAP-10 description：删 MODULE_MAP / JaCoCo 路径用 Gradle 默认两份 / job 结构改单 <code>build-and-test</code>。Linear 与 spec 互为 source-of-truth，避免漂移</td>
+          </tr>
         </tbody>
       </table>
     </section>
@@ -402,7 +412,7 @@ jobs:
       <ol>
         <li><strong>D1（workflow Gradle 化）：</strong><code>grep -r "mvn " .github/</code> 空输出；<code>.github/workflows/pr-checks.yml</code> 不存在；<code>ci.yml</code> 仅含 <code>./gradlew</code> 调用</li>
         <li><strong>D2（CI 全绿）：</strong>feature branch 推一次，<code>CI / build-and-test</code> 全部 step 通过</li>
-        <li><strong>D3（本地 check 绿）：</strong>根目录 <code>./gradlew check --no-daemon</code> 退出码 0（含 <code>spotlessCheck</code> + <code>spotbugsMain</code>，不含 IT/E2E）</li>
+        <li><strong>D3（本地 test 绿）：</strong>根目录 <code>./gradlew test --no-daemon</code> 退出码 0（unit only，不含 IT/E2E/spotbugs/spotless；后者由 PAP-12/13 wire 进 check）</li>
         <li><strong>D4（测试分层生效）：</strong><code>./gradlew :linqibin-commons-core:integrationTest --dry-run</code> 不报错；<code>./gradlew tasks | grep -E "(integrationTest|e2eTest)"</code> 见 task 列表</li>
         <li><strong>D5（JaCoCo 聚合产出）：</strong><code>./gradlew testCodeCoverageReport integrationTestCodeCoverageReport</code> 后<code>build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml</code> 和 <code>build/reports/jacoco/integrationTestCodeCoverageReport/integrationTestCodeCoverageReport.xml</code> 均存在且非空</li>
         <li><strong>D6（Codecov 上传成功）：</strong>CI run 中 codecov-action step 退出码 0；codecov.io 控制台见 patra 仓库覆盖率数字</li>
