@@ -20,7 +20,7 @@
     spring.cloud.nacos.discovery.server-addr: ${NACOS_HOST:127.0.0.1}:${NACOS_PORT:8848}
     （NACOS_HOST 默认走 tunnel，无需任何额外环境变量）
 
-  Install / uninstall: bash infra/scripts/install-nacos-tunnel.sh {install|uninstall|status}
+  Install / uninstall: bash patra-infra/scripts/install-nacos-tunnel.sh {install|uninstall|status}
 -->
 <plist version="1.0">
 <dict>

@@ -59,4 +59,4 @@ Patra 工作区包含以下子项目：
 |------|------|--------|
 | **patra-api** | 后端服务（微服务 + 六边形 + DDD） | Java 25 / Spring Boot 4 / Gradle |
 | **patra-portal** | 前端门户（管理控制台） | Next.js 15 / React 19 / TypeScript 5 strict / Tailwind v4 / shadcn/ui |
-| **patra-infra** | 基建配置（Docker Compose、DB 脚本） |  |
+| **patra-infra** | 基建配置（Docker Compose、DB 脚本） | Docker Compose / Bash / launchd |

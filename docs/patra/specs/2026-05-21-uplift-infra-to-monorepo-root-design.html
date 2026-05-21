@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>把 patra-api/infra/ 上移到 monorepo 根 patra-infra/</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- CSS 外置：相对路径 ../styles/ 是从生成位置 docs/patra/specs/ 出发；
+       模板本身在 .claude-marketplace/ 下打开时此 link 会 404（接受：模板预览以生成后的 spec 为准） -->
+  <link rel="stylesheet" href="../styles/journal.css">
+</head>
+<body>
+<div class="layout">
+
+  <!-- ============================================================
+       左栏：目录（TOC）
+       ============================================================ -->
+  <nav class="toc">
+    <h3>目录</h3>
+    <ol>
+      <li><a href="#background">背景与现状</a></li>
+      <li><a href="#scope">范围边界</a></li>
+      <li><a href="#migration">目录迁移</a></li>
+      <li><a href="#gradle">Gradle 路径修正</a></li>
+      <li><a href="#docs">文档同步</a></li>
+      <li><a href="#gitignore">.gitignore 处理</a></li>
+      <li><a href="#decisions">关键决策与备选</a></li>
+      <li><a href="#risks">风险与缓解</a></li>
+      <li><a href="#changes">改造文件清单</a></li>
+    </ol>
+  </nav>
+
+  <!-- ============================================================
+       中栏：内容
+       ============================================================ -->
+  <main class="content">
+
+    <header class="doc-header">
+      <h1>把 <code>patra-api/infra/</code> 上移到 monorepo 根 <code>patra-infra/</code></h1>
+      <div class="meta-bar">
+        <span>📅 2026-05-21</span>
+        <span>🌿 worktree-issue-44-uplift-infra</span>
+        <span>🎯 spec</span>
+        <span class="status-pill">draft</span>
+      </div>
+    </header>
+
+    <aside class="callout summary">
+      <span class="title">关键决策摘要</span>
+      <p>用 <code>git mv patra-api/infra patra-infra</code> 保留历史地把基建目录上移到 monorepo 根。让 Claude 等 AI 工具更好理解项目结构，同时给 patra-api 瘦身、聚焦业务领域。除路径变更外，<strong>不改 compose 服务内容、不改业务模块代码、不为 patra-portal 预备本地服务</strong>。<code>.env*</code> 在 <code>patra-infra/docker/</code> 下沿用<strong>隐式入库</strong>语义（根 <code>.gitignore</code> 无 <code>.env</code> 规则即默认入库），不显式声明。本次只调整一处 Gradle 路径（<code>otel.agent.path</code>），其余全部是文档 / 注释字符串同步。</p>
+    </aside>
+
+    <section id="background">
+      <h2>1. 背景与现状</h2>
+      <p>评估结论见 <a href="https://github.com/linqibin0826/patra/issues/43">#43</a>，决策为方案 B：把 <code>patra-api/infra/</code> 上移到 monorepo 根 <code>Patra/patra-infra/</code>。命名与 <code>patra-api/</code> / <code>patra-portal/</code> 风格统一，且根 <code>CLAUDE.md:62</code> 表格已预先采用 <code>patra-infra</code> 名称。</p>
+      <p>现状盘点（grep + ls 确认）：</p>
+      <ul>
+        <li><code>patra-api/infra/</code> 含 <code>docker/</code>（7 个 compose yaml + alertmanager/grafana/loki/mysql-ops/otel-agent/otel-collector/postgres/prometheus/tempo 等子目录 + <code>README.md</code> + <code>opentelemetry-javaagent.jar</code>）和 <code>scripts/</code>（3 个 <code>.sh</code> + 2 个 <code>.plist</code> + <code>tailscale-route-guard.sh</code>）。</li>
+        <li>compose 文件全部使用<strong>同目录相对路径</strong>（如 <code>./postgres/init-scripts:...</code>），grep 确认无任何 <code>../infra</code> 反向引用 ⇒ yaml 文件迁移后<strong>不需要修改</strong>。</li>
+        <li>Gradle 引用唯一一处：<code>patra-api/gradle.properties:51</code> 的 <code>otel.agent.path=infra/docker/opentelemetry-javaagent.jar</code>，被 <code>patra-api/build-logic/src/main/kotlin/linqibin.hexagonal-boot.gradle.kts:59</code> 经 <code>rootProject.projectDir.resolve(otelAgentPath)</code> 消费（rootProject = <code>patra-api/</code>）。</li>
+        <li><code>.env</code> 入库现状：<code>patra-api/infra/docker/.env</code>、<code>.env.dev</code>、<code>.env.example</code> <strong>已入库</strong>（<code>git ls-files</code> 确认），靠 <code>patra-api/.gitignore</code> 的 <code>/.env</code> 顶层匹配语义豁免子目录。</li>
+        <li><code>patra-api/CLAUDE.md</code> grep 确认无 <code>infra</code> 文本引用，不需要修改。</li>
+        <li><code>patra-api/plugins/</code> 与 <code>patra-api/.claude/</code> 下的 <code>infra/</code> 引用全是六边形架构模块名（<code>*-infra/</code>）或包名（<code>infra/persistence/...</code>），与本次迁移<strong>无关</strong>。</li>
+      </ul>
+    </section>
+
+    <section id="scope">
+      <h2>2. 范围边界</h2>
+      <div class="two-col">
+        <aside class="callout success">
+          <span class="title">In Scope</span>
+          <ul>
+            <li><code>git mv patra-api/infra patra-infra</code>（保留历史）</li>
+            <li>修正 <code>patra-api/gradle.properties:51</code> 的 <code>otel.agent.path</code></li>
+            <li>同步 <code>patra-infra/docker/README.md</code> 中约 22 处相对路径字符串</li>
+            <li>同步 3 个 <code>.sh</code> + 2 个 <code>.plist</code> 的注释里的安装命令提示</li>
+            <li>填写根 <code>CLAUDE.md:62</code> 的"技术栈"列</li>
+            <li>删除 <code>patra-api/.gitignore:81-83</code> 的过时注释</li>
+          </ul>
+        </aside>
+        <aside class="callout warning">
+          <span class="title">Out of Scope</span>
+          <ul>
+            <li>不调整 compose 服务内容（增/删服务、改端口、改环境变量）</li>
+            <li>不改 patra-api 业务模块代码</li>
+            <li>不为 patra-portal 预备本地服务</li>
+            <li>不引入"工作区共享基建"语义包装（infra 仍然是后端专属）</li>
+            <li>不新建 <code>patra-infra/.gitignore</code></li>
+            <li>不在根 <code>.gitignore</code> 加 <code>.env</code> 规则（保持隐式入库）</li>
+          </ul>
+        </aside>
+      </div>
+    </section>
+
+    <section id="migration">
+      <h2>3. 目录迁移</h2>
+      <p>核心动作：</p>
+      <pre><code>git mv patra-api/infra patra-infra</code></pre>
+      <p>这是单条 <code>git mv</code>，git 会记录为重命名而非删除+新增，<code>git log --follow</code> 可追溯历史。</p>
+      <p>迁移后立即做最小验证（不需要起容器）：</p>
+      <pre><code>cd patra-infra/docker && docker compose -f docker-compose.dev.yaml config &gt; /dev/null</code></pre>
+      <p>预期：解析通过、无 warning（同目录相对路径不变）。</p>
+    </section>
+
+    <section id="gradle">
+      <h2>4. Gradle 路径修正</h2>
+      <p>唯一一处需要改的 Gradle 配置：</p>
+      <table>
+        <thead><tr><th>文件:行</th><th>原值</th><th>新值</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>patra-api/gradle.properties:51</code></td>
+            <td><code>otel.agent.path=infra/docker/opentelemetry-javaagent.jar</code></td>
+            <td><code>otel.agent.path=../patra-infra/docker/opentelemetry-javaagent.jar</code></td>
+          </tr>
+        </tbody>
+      </table>
+      <p>理由：<code>patra-api/build-logic/src/main/kotlin/linqibin.hexagonal-boot.gradle.kts:59</code> 用 <code>rootProject.projectDir.resolve(otelAgentPath)</code> 解析此值，rootProject = <code>patra-api/</code>，所以从 patra-api 根出发的相对路径需要变成 <code>../patra-infra/docker/...</code>。</p>
+      <p>验证：</p>
+      <pre><code>cd patra-api && ./gradlew check</code></pre>
+    </section>
+
+    <section id="docs">
+      <h2>5. 文档同步</h2>
+      <p>CWD 语义从 <code>patra-api/</code> 上移到 <code>Patra/</code>，所有"从 CWD 出发"的相对路径示例需要加 <code>patra-</code> 前缀。</p>
+
+      <h3>5.1 <code>patra-infra/docker/README.md</code></h3>
+      <p>所有 <code>infra/docker/...</code> → <code>patra-infra/docker/...</code>；所有 <code>infra/scripts/...</code> → <code>patra-infra/scripts/...</code>。具体行号（迁移前以 <code>patra-api/infra/docker/README.md</code> 为准）：67、70、73、89、92、95、122、131、212、215、216、219、220、223、224、244、247、250、253、256、267、304（约 22 处命中）。</p>
+
+      <h3>5.2 脚本注释（3 个 <code>.sh</code>）</h3>
+      <table>
+        <thead><tr><th>文件</th><th>需改提示</th></tr></thead>
+        <tbody>
+          <tr><td><code>patra-infra/scripts/install-nacos-tunnel.sh:11-13</code></td><td>3 处 <code>bash infra/scripts/install-nacos-tunnel.sh ...</code> → <code>bash patra-infra/scripts/install-nacos-tunnel.sh ...</code></td></tr>
+          <tr><td><code>patra-infra/scripts/init-volumes.sh:8,11</code></td><td><code>bash infra/scripts/init-volumes.sh</code> → <code>bash patra-infra/scripts/init-volumes.sh</code>；<code>docker compose -f infra/docker/...</code> → <code>docker compose -f patra-infra/docker/...</code></td></tr>
+          <tr><td><code>patra-infra/scripts/install-tailscale-route-guard.sh:8-10</code></td><td>3 处 <code>sudo bash infra/scripts/install-tailscale-route-guard.sh ...</code> → <code>sudo bash patra-infra/scripts/install-tailscale-route-guard.sh ...</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3>5.3 plist 注释（2 个）</h3>
+      <table>
+        <thead><tr><th>文件</th><th>需改提示</th></tr></thead>
+        <tbody>
+          <tr><td><code>patra-infra/scripts/dev.patra.nacos-tunnel.plist:23</code></td><td><code>bash infra/scripts/install-nacos-tunnel.sh {install|uninstall|status}</code> → <code>bash patra-infra/scripts/install-nacos-tunnel.sh {install|uninstall|status}</code></td></tr>
+          <tr><td><code>patra-infra/scripts/dev.patra.tailscale-route-guard.plist:21</code></td><td><code>sudo bash infra/scripts/install-tailscale-route-guard.sh {install|uninstall|status}</code> → <code>sudo bash patra-infra/scripts/install-tailscale-route-guard.sh {install|uninstall|status}</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3>5.4 根 <code>CLAUDE.md:62</code></h3>
+      <p>当前该行 "技术栈" 列空着：</p>
+      <pre><code>| **patra-infra** | 基建配置（Docker Compose、DB 脚本） |  |</code></pre>
+      <p>填入与其他两行风格一致的技术栈值：</p>
+      <pre><code>| **patra-infra** | 基建配置（Docker Compose、DB 脚本） | Docker Compose / Bash / launchd |</code></pre>
+
+      <h3>5.5 不动的文件</h3>
+      <ul>
+        <li><code>patra-api/CLAUDE.md</code>：grep 已确认无 <code>infra</code> 文本引用</li>
+        <li><code>patra-api/patra-codex/skills/**/*.md</code>、<code>patra-api/.claude/**/*.md</code>：所有 <code>infra/</code> 命中均为六边形模块名 <code>*-infra/</code> 或 Java 包名 <code>infra/persistence/...</code>，与本次迁移无关</li>
+      </ul>
+    </section>
+
+    <section id="gitignore">
+      <h2>6. .gitignore 处理（隐式策略）</h2>
+      <p><code>patra-api/.gitignore:81-83</code> 当前形态：</p>
+      <pre><code># Env files (local only)
+##############################
+# 仅匹配仓库顶层；infra/docker/.env* 不在此范围（沿用 patra-infra 入库现状）
+/.env
+/.env.*</code></pre>
+      <p>改造：</p>
+      <ul>
+        <li><strong>删除</strong>第 83 行注释 <code># 仅匹配仓库顶层；infra/docker/.env* 不在此范围（沿用 patra-infra 入库现状）</code>（已过时，因为 <code>infra/docker</code> 不再属于 patra-api）</li>
+        <li><strong>保留</strong> <code>/.env</code>、<code>/.env.*</code> 两条规则（仍然保护 patra-api 工程根的本地 env 文件不被意外 commit）</li>
+        <li><strong>保留</strong>区块标题注释 <code># Env files (local only)</code> 和 <code>##############################</code> 分隔符</li>
+      </ul>
+      <p>新位置 <code>patra-infra/docker/.env*</code> 的入库行为：</p>
+      <ul>
+        <li>根 <code>.gitignore</code> 不含 <code>.env</code> 规则 ⇒ 默认<strong>不忽略</strong> ⇒ <code>.env</code>、<code>.env.dev</code>、<code>.env.example</code> 保持入库</li>
+        <li>行为与现状<strong>完全等价</strong>，只是触发机制从"patra-api 顶层规则的子目录豁免"变成"无规则即不忽略"</li>
+        <li>YAGNI：不新建 <code>patra-infra/.gitignore</code>，不在根 <code>.gitignore</code> 显式声明 <code>.env*</code> 入库豁免</li>
+      </ul>
+    </section>
+
+    <section id="decisions">
+      <h2>7. 关键决策与备选</h2>
+
+      <div class="decision">
+        <h3>决策 1：用 <code>git mv</code> 而非 <code>mv</code> + <code>git add</code>/<code>rm</code></h3>
+        <p>用 <code>git mv patra-api/infra patra-infra</code> 让 git 显式记录为 rename，保留 <code>git log --follow</code> 历史追溯能力。</p>
+        <p class="alternatives"><strong>备选 A：</strong>普通 <code>mv</code> + <code>git add patra-infra && git rm -r patra-api/infra</code> — 否决：依赖 git rename detection 的启发式匹配，对于多文件目录有误判风险。<br>
+        <strong>备选 B：</strong><code>git filter-repo</code> 重写历史 — 否决：YAGNI，单次目录上移无需重写历史；且会改写所有 commit hash，对单人项目无收益反而徒增麻烦。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 2：<code>.env*</code> 入库采用<strong>隐式</strong>语义</h3>
+        <p>不在根 <code>.gitignore</code> 加 <code>.env</code> 规则、不新建 <code>patra-infra/.gitignore</code>、不写 <code>!patra-infra/docker/.env*</code> 反忽略。无规则即默认入库，与现状行为等价。</p>
+        <p class="alternatives"><strong>备选 A：</strong>显式在 <code>patra-infra/.gitignore</code> 写 <code>!.env*</code> — 否决：需要先在根加 <code>.env*</code> 全局忽略才有反忽略目标，增量两条规则，违反 YAGNI。<br>
+        <strong>备选 B：</strong>全局忽略 <code>.env</code>、<code>.env.*</code> + <code>patra-infra/docker/.gitignore</code> 局部反忽略 — 否决：能保护 monorepo 任意位置不被意外 commit 本地 env，但单人绿地项目暂无此类风险，且增量规则跨两个文件维护成本不划算。如未来出现"在某子项目误 commit .env"事故，再升级到该方案。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 3：根 <code>CLAUDE.md:62</code> "技术栈" 列填 <code>Docker Compose / Bash / launchd</code></h3>
+        <p>与 <code>patra-api</code> / <code>patra-portal</code> 行的技术栈风格一致，列出本目录实际使用的工具链。</p>
+        <p class="alternatives"><strong>备选 A：</strong>留空 — 否决：表格三行有两行填了，留一行空看着突兀。<br>
+        <strong>备选 B：</strong>更详细如 "Docker Compose / Bash / launchd plist / Prometheus / Grafana" — 否决：罗列内部服务而非"技术栈"，与表头语义不符。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 4：不动 <code>patra-api/CLAUDE.md</code></h3>
+        <p>grep 已确认该文件无 <code>infra</code> 字面引用，不存在残留指向。</p>
+        <p class="alternatives"><strong>备选 A：</strong>添加 "基建配置已迁移到 <code>../patra-infra/</code>" 的指引行 — 否决：根 <code>CLAUDE.md:62</code> 已经在工作区目录表里列了 patra-infra，AI 工具读根 CLAUDE.md 就能找到，不需要在子项目 CLAUDE.md 重复。</p>
+      </div>
+    </section>
+
+    <section id="risks">
+      <h2>8. 风险与缓解</h2>
+      <table>
+        <thead>
+          <tr><th>风险</th><th>等级</th><th>缓解</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>漏改某处文档 / 注释里的 <code>infra/docker</code>、<code>infra/scripts</code> 字符串引用</td>
+            <td><span class="pill mid">mid</span></td>
+            <td>迁移完成后 grep 兜底：<code>grep -rn "infra/docker\|infra/scripts" patra-api/ patra-infra/ docs/ CLAUDE.md *.md</code>，预期仅在 <code>patra-codex</code>/<code>.claude</code> 的六边形架构文档里命中（六边形模块名，无关）</td>
+          </tr>
+          <tr>
+            <td><code>./gradlew check</code> 找不到 OTel agent jar，报错或测试场景跑不起来</td>
+            <td><span class="pill mid">mid</span></td>
+            <td>迁移后立即跑 <code>cd patra-api && ./gradlew check</code>；如失败，检查 <code>build-logic</code> 是否还有其它 hardcode 的 <code>infra/</code> 引用</td>
+          </tr>
+          <tr>
+            <td>compose 启动时 volume 找不到（理论可能性）</td>
+            <td><span class="pill low">low</span></td>
+            <td>已 grep 确认所有 compose volume 路径都是 <code>./xxx</code> 同目录形式，无 <code>../</code> 反向引用；<code>docker compose config</code> 解析通过即视为安全</td>
+          </tr>
+          <tr>
+            <td>PR squash-merge 后本地 main 与 origin/main divergent</td>
+            <td><span class="pill low">low</span></td>
+            <td>本次所有 commit 都在 worktree 分支（按 memory 的 brainstorming-branch-first feedback）。merge 后 <code>git fetch && git checkout main && git reset --hard origin/main</code> 即可</td>
+          </tr>
+          <tr>
+            <td>git rename detection 失败、历史不连续</td>
+            <td><span class="pill low">low</span></td>
+            <td>用 <code>git mv</code> 而非 <code>mv</code>，git 强制记录为 rename。验证：<code>git log --follow patra-infra/docker/README.md</code> 应能看到 <code>patra-api/infra/docker/README.md</code> 时代的历史</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="changes">
+      <h2>9. 改造文件清单</h2>
+      <table>
+        <thead>
+          <tr><th>#</th><th>文件</th><th>操作</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><code>patra-api/infra/</code> → <code>patra-infra/</code></td>
+            <td><span class="pill modify">modify</span></td>
+            <td>整目录 <code>git mv</code></td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><code>patra-api/gradle.properties:51</code></td>
+            <td><span class="pill modify">modify</span></td>
+            <td><code>otel.agent.path</code> 加 <code>../</code> 前缀</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><code>patra-infra/docker/README.md</code></td>
+            <td><span class="pill modify">modify</span></td>
+            <td>约 22 处 <code>infra/docker</code>、<code>infra/scripts</code> → <code>patra-infra/...</code></td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td><code>patra-infra/scripts/install-nacos-tunnel.sh</code></td>
+            <td><span class="pill modify">modify</span></td>
+            <td>第 11-13 行注释里 3 处命令提示</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td><code>patra-infra/scripts/init-volumes.sh</code></td>
+            <td><span class="pill modify">modify</span></td>
+            <td>第 8、11 行注释里 2 处命令提示</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td><code>patra-infra/scripts/install-tailscale-route-guard.sh</code></td>
+            <td><span class="pill modify">modify</span></td>
+            <td>第 8-10 行注释里 3 处命令提示</td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td><code>patra-infra/scripts/dev.patra.nacos-tunnel.plist</code></td>
+            <td><span class="pill modify">modify</span></td>
+            <td>第 23 行注释里 1 处</td>
+          </tr>
+          <tr>
+            <td>8</td>
+            <td><code>patra-infra/scripts/dev.patra.tailscale-route-guard.plist</code></td>
+            <td><span class="pill modify">modify</span></td>
+            <td>第 21 行注释里 1 处</td>
+          </tr>
+          <tr>
+            <td>9</td>
+            <td><code>CLAUDE.md</code>（工作区根）</td>
+            <td><span class="pill modify">modify</span></td>
+            <td>第 62 行 patra-infra 的"技术栈"列填 <code>Docker Compose / Bash / launchd</code></td>
+          </tr>
+          <tr>
+            <td>10</td>
+            <td><code>patra-api/.gitignore</code></td>
+            <td><span class="pill modify">modify</span></td>
+            <td>删除第 83 行过时注释；保留 <code>/.env</code>、<code>/.env.*</code></td>
+          </tr>
+          <tr>
+            <td>11</td>
+            <td><code>docs/patra/specs/2026-05-21-uplift-infra-to-monorepo-root-design.html</code></td>
+            <td><span class="pill create">create</span></td>
+            <td>本文档</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <aside class="callout info">
+      <span class="title">Done 判定</span>
+      <ol>
+        <li><code>cd patra-api && ./gradlew check</code> 通过</li>
+        <li><code>cd patra-infra/docker && docker compose -f docker-compose.dev.yaml config &gt; /dev/null</code> 解析无误</li>
+        <li><code>git log --follow patra-infra/docker/README.md</code> 能看到 <code>patra-api/infra/docker/README.md</code> 时代的历史（验证 <code>git mv</code> 保留历史）</li>
+        <li><code>grep -rn "infra/docker\|infra/scripts" patra-api/ patra-infra/ docs/ CLAUDE.md</code> 兜底，仅命中六边形架构文档中无关的 <code>*-infra/</code> 模块名</li>
+        <li><code>git status</code> 干净，无遗漏文件</li>
+        <li>PR squash-merge 后本地 main 与 <code>origin/main</code> 不 divergent</li>
+      </ol>
+    </aside>
+
+  </main>
+
+  <!-- ============================================================
+       右栏：Implementation Notes（实施期由 Claude Code 维护）
+       ============================================================ -->
+  <aside class="notes-panel" id="notes">
+    <header>
+      <h2>Implementation Notes</h2>
+      <p class="hint">实施期由 Claude Code 即时追加。规则：遇到 spec 未规定的<strong>决定</strong>、必要<strong>更改</strong>、不可避免的<strong>权衡</strong>、其他用户应知事项，立即用 Edit 追加 entry，不要等任务结束。</p>
+    </header>
+
+    <ol class="notes-log">
+      <!-- ENTRY TEMPLATE（注释保留供实施期 AI 复制）:
+
+      <li class="note" data-type="decision" data-time="YYYY-MM-DDTHH:MM">
+        <header>
+          <span class="note-type">DECISION</span>
+          <time datetime="YYYY-MM-DDTHH:MM">MM-DD HH:MM</time>
+          <a href="#sec-N">§ N 章节名</a>
+        </header>
+        <p>描述：spec 未规定 X，实施时选择 Y。理由：...</p>
+      </li>
+
+      data-type 4 类：decision / change / tradeoff / other
+      追加 entry 时同步更新下方 notes-stats footer 的对应 counter 数字。
+      -->
+    </ol>
+
+    <p class="empty-state">no notes yet</p>
+
+    <footer class="notes-stats">
+      总计:
+      <span data-counter="decision">0</span> decisions /
+      <span data-counter="change">0</span> changes /
+      <span data-counter="tradeoff">0</span> tradeoffs /
+      <span data-counter="other">0</span> others
+    </footer>
+  </aside>
+
+</div>
+</body>
+</html>

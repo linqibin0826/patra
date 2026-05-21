@@ -18,7 +18,7 @@
   - 30s 冷却防抖，避免连环修复。
 
   Install / uninstall:
-    sudo bash infra/scripts/install-tailscale-route-guard.sh {install|uninstall|status}
+    sudo bash patra-infra/scripts/install-tailscale-route-guard.sh {install|uninstall|status}
 
   Logs:
     /opt/homebrew/var/log/tailscale-route-guard.log

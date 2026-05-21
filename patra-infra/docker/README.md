@@ -64,13 +64,13 @@ cd ~/Projects/patra-api
 git checkout <branch-name>
 
 # 4. (Mac mini) 一次性初始化数据目录与配置文件
-bash infra/scripts/init-volumes.sh
+bash patra-infra/scripts/init-volumes.sh
 
 # 5. (Mac mini) 启动全栈
-docker compose -f infra/docker/docker-compose.dev.yaml up -d
+docker compose -f patra-infra/docker/docker-compose.dev.yaml up -d
 
 # 6. (Mac mini) 验证全部 healthy
-docker compose -f infra/docker/docker-compose.dev.yaml ps
+docker compose -f patra-infra/docker/docker-compose.dev.yaml ps
 
 # 7. (Mac mini) 首次初始化 Nacos 3.x admin 用户（一次性，nacos 容器 healthy 后执行）
 #    Nacos 3.x 鉴权开启后默认无 admin 用户；首次调用后该 API 失效，密码可设强密码
@@ -86,13 +86,13 @@ curl -X POST 'http://localhost:8848/nacos/v3/auth/user/admin' -d 'password=nacos
 
 ```bash
 # 一次性安装（首次部署 MacBook 时）
-bash infra/scripts/install-nacos-tunnel.sh install
+bash patra-infra/scripts/install-nacos-tunnel.sh install
 
 # 查看状态
-bash infra/scripts/install-nacos-tunnel.sh status
+bash patra-infra/scripts/install-nacos-tunnel.sh status
 
 # 卸载
-bash infra/scripts/install-nacos-tunnel.sh uninstall
+bash patra-infra/scripts/install-nacos-tunnel.sh uninstall
 ```
 
 安装后 launchd 自动启动 `dev.patra.nacos-tunnel` agent，把 MacBook 的 `127.0.0.1:{8848,9848,8080}` 转发到 mac mini 对应端口。应用 yml 中 `NACOS_HOST` 默认就是 `127.0.0.1`，**无需任何环境变量**。
@@ -119,7 +119,7 @@ ssh linqibin@linqibins-mac-mini "echo 'export PATH=/usr/local/bin:\$PATH' >> ~/.
 ssh linqibin@linqibins-mac-mini '
   cd ~/Projects/patra-api &&
   git pull &&
-  docker compose -f infra/docker/docker-compose.dev.yaml up -d --remove-orphans
+  docker compose -f patra-infra/docker/docker-compose.dev.yaml up -d --remove-orphans
 '
 ```
 
@@ -128,7 +128,7 @@ ssh linqibin@linqibins-mac-mini '
 ```bash
 ssh linqibin@linqibins-mac-mini '
   cd ~/Projects/patra-api &&
-  docker compose -f infra/docker/docker-compose.jobs.yaml restart rocketmq-broker
+  docker compose -f patra-infra/docker/docker-compose.jobs.yaml restart rocketmq-broker
 '
 ```
 
@@ -209,19 +209,19 @@ rocketmq:
 
 ```bash
 # 只起核心（最快）
-docker compose -f infra/docker/docker-compose.core.yaml up -d
+docker compose -f patra-infra/docker/docker-compose.core.yaml up -d
 
 # 核心 + 存储（开发文件上传）
-docker compose -f infra/docker/docker-compose.core.yaml \
-               -f infra/docker/docker-compose.storage.yaml up -d
+docker compose -f patra-infra/docker/docker-compose.core.yaml \
+               -f patra-infra/docker/docker-compose.storage.yaml up -d
 
 # 核心 + 任务（开发消息/定时任务）
-docker compose -f infra/docker/docker-compose.core.yaml \
-               -f infra/docker/docker-compose.jobs.yaml up -d
+docker compose -f patra-infra/docker/docker-compose.core.yaml \
+               -f patra-infra/docker/docker-compose.jobs.yaml up -d
 
 # 核心 + 监控
-docker compose -f infra/docker/docker-compose.core.yaml \
-               -f infra/docker/docker-compose.observability.yaml up -d
+docker compose -f patra-infra/docker/docker-compose.core.yaml \
+               -f patra-infra/docker/docker-compose.observability.yaml up -d
 ```
 
 ---
@@ -241,19 +241,19 @@ docker compose -f infra/docker/docker-compose.core.yaml \
 
 ```bash
 # 健康状态
-docker compose -f infra/docker/docker-compose.dev.yaml ps
+docker compose -f patra-infra/docker/docker-compose.dev.yaml ps
 
 # 单服务日志
-docker compose -f infra/docker/docker-compose.dev.yaml logs -f postgres
+docker compose -f patra-infra/docker/docker-compose.dev.yaml logs -f postgres
 
 # 重启单服务
-docker compose -f infra/docker/docker-compose.dev.yaml restart rocketmq-broker
+docker compose -f patra-infra/docker/docker-compose.dev.yaml restart rocketmq-broker
 
 # 停止全栈
-docker compose -f infra/docker/docker-compose.dev.yaml down
+docker compose -f patra-infra/docker/docker-compose.dev.yaml down
 
 # 停止 + 清理 volume（⚠️ 会删数据）
-docker compose -f infra/docker/docker-compose.dev.yaml down -v
+docker compose -f patra-infra/docker/docker-compose.dev.yaml down -v
 ```
 
 ---
@@ -264,7 +264,7 @@ docker compose -f infra/docker/docker-compose.dev.yaml down -v
 
 ```bash
 # 查看具体服务日志
-docker compose -f infra/docker/docker-compose.dev.yaml logs <service-name>
+docker compose -f patra-infra/docker/docker-compose.dev.yaml logs <service-name>
 
 # 在 Mac mini 上检查端口占用
 ssh linqibin@linqibins-mac-mini 'lsof -i :15432'
@@ -301,7 +301,7 @@ ssh linqibin@linqibins-mac-mini 'docker logs patra-rocketmq-broker 2>&1 | grep "
 `MINIO_BROWSER_REDIRECT_URL` 必须指向用户浏览器能访问的地址。默认 `linqibins-mac-mini:19001`，如改用 IP 部署可：
 
 ```bash
-PATRA_INFRA_HOST=100.73.7.112 docker compose -f infra/docker/docker-compose.storage.yaml up -d minio
+PATRA_INFRA_HOST=100.73.7.112 docker compose -f patra-infra/docker/docker-compose.storage.yaml up -d minio
 ```
 
 ---
