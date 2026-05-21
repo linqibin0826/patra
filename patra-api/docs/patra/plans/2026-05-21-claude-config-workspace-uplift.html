@@ -29,7 +29,7 @@
           -->
           <li data-task-status="done"><a href="#task-1">Task 1 — 上移 patra plugin marketplace</a></li>
           <li data-task-status="done"><a href="#task-2">Task 2 — 迁移 plugin 启用声明并验证上溯查找</a></li>
-          <li data-task-status="pending"><a href="#task-3">Task 3 — 上移 send-stop-notification.sh 及 Stop hook 注册</a></li>
+          <li data-task-status="done"><a href="#task-3">Task 3 — 上移 send-stop-notification.sh 及 Stop hook 注册</a></li>
           <li data-task-status="pending"><a href="#task-4">Task 4 — 上移 create-issue skill 并改临时路径</a></li>
           <li data-task-status="pending"><a href="#task-5">Task 5 — Patra/CLAUDE.md 顶部新增「产品定义」章节</a></li>
           <li data-task-status="pending"><a href="#task-6">Task 6 — 删除 patra-portal/CLAUDE.md 的 FE 警示段</a></li>
@@ -296,7 +296,7 @@ EOF
         </ol>
       </article>
 
-      <article class="task" id="task-3" data-status="pending">
+      <article class="task" id="task-3" data-status="done">
         <header>
           <h2>任务 3：上移 send-stop-notification.sh 及 Stop hook 注册</h2>
           <dl class="files">
@@ -307,20 +307,20 @@ EOF
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：用 git mv 搬移 hook 脚本</strong>
             <pre><code class="lang-bash">mkdir -p .claude/hooks
 git mv patra-api/.claude/hooks/send-stop-notification.sh .claude/hooks/send-stop-notification.sh</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：核对脚本权限与内容未变</strong>
             <pre><code class="lang-bash">ls -l .claude/hooks/send-stop-notification.sh
 head -3 .claude/hooks/send-stop-notification.sh</code></pre>
             <p>预期：权限位 <code>-rwxr-xr-x</code> 等可执行；前三行为 <code>#!/bin/bash</code> 与脚本注释。脚本内容字节不变（git mv 不改内容）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：在 Patra/.claude/settings.json 顶层添加 hooks.Stop 段</strong>
             <p>当前文件（Task 2 完成后）只有 <code>enabledPlugins</code> 字段。需在 <code>{</code> 之后插入 <code>hooks</code> 段。</p>
             <p>用 Edit 工具替换文件开头：</p>
@@ -344,7 +344,7 @@ head -3 .claude/hooks/send-stop-notification.sh</code></pre>
   "enabledPlugins": {</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：从 patra-api/.claude/settings.json 的 Stop 数组移除 send-stop-notification 条目</strong>
             <p>当前 patra-api 的 Stop 段含 3 个 hook：</p>
             <pre><code class="lang-json">    "Stop": [
@@ -383,13 +383,13 @@ head -3 .claude/hooks/send-stop-notification.sh</code></pre>
             <p>注意：删除 trigger-build-resolver-java 那个对象的尾部逗号（<code>          },</code> → <code>          }</code>），保持 JSON 合法。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：JSON 语法校验</strong>
             <pre><code class="lang-bash">cat .claude/settings.json | python3 -m json.tool > /dev/null && echo "Patra/.claude/settings.json OK"
 cat patra-api/.claude/settings.json | python3 -m json.tool > /dev/null && echo "patra-api/.claude/settings.json OK"</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：行为验证 — 触发 Stop 事件</strong>
             <p>说明：需用户手动配合（agent 无法在自身 session 触发 Stop event 来观察通知）。</p>
             <ol>
@@ -400,7 +400,7 @@ cat patra-api/.claude/settings.json | python3 -m json.tool > /dev/null && echo "
             <p>预期：通知正常弹出；项目名因 <code>$CLAUDE_PROJECT_DIR</code> 指向 cwd 而显示「patra-api」，符合预期（脚本逻辑未改）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7：Commit</strong>
             <pre><code class="lang-bash">git add .claude/hooks/send-stop-notification.sh .claude/settings.json patra-api/.claude/settings.json patra-api/.claude/hooks/send-stop-notification.sh
 git commit -m "$(cat <<'EOF'
