@@ -18,7 +18,8 @@ plugins {
 }
 
 // ==================== Project Info ====================
+// group 由 build-logic 中的身份 convention plugin 显式设置（linqibin.module-commons / linqibin.module-patra）。
+// 不再使用 allprojects { group = ... } 隐式设置，避免目录移动时 group 静默变化。
 allprojects {
-    group = property("patraGroup") as String
     version = property("patraVersion") as String
 }

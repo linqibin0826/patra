@@ -8,6 +8,8 @@
  */
 
 plugins {
+    id("linqibin.module-commons")
+    id("linqibin.boundary-check")
     id("linqibin.spring-boot-starter")
 }
 

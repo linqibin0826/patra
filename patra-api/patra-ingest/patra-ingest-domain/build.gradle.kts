@@ -6,6 +6,7 @@
  */
 
 plugins {
+    id("linqibin.module-patra")
     id("linqibin.hexagonal-domain")
 }
 

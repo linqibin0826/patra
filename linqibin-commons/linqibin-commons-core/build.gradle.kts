@@ -10,6 +10,8 @@
  */
 
 plugins {
+    id("linqibin.module-commons")
+    id("linqibin.boundary-check")
     id("linqibin.java-library") // Phase 1.3 后改为 linqibin.java-library
 }
 

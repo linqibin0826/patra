@@ -9,6 +9,7 @@
  */
 
 plugins {
+    id("linqibin.module-patra")
     id("linqibin.java-library")
 }
 

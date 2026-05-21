@@ -8,6 +8,7 @@
  */
 
 plugins {
+    id("linqibin.module-patra")
     id("linqibin.spring-boot-starter")
 }
 

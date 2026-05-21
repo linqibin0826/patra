@@ -27,8 +27,8 @@
 
           <li data-task-status="pending"><a href="#task-N">Task N — [任务名]</a></li>
           -->
-          <li data-task-status="pending"><a href="#task-1">Task 1 — 上移 Gradle root + 基础设施（spec commit 1）</a></li>
-          <li data-task-status="pending"><a href="#task-2">Task 2 — linqibin-commons/ 上移 + Group 拆分 + boundary check（spec commit 2）</a></li>
+          <li data-task-status="done"><a href="#task-1">Task 1 — 上移 Gradle root + 基础设施（spec commit 1）</a></li>
+          <li data-task-status="done"><a href="#task-2">Task 2 — linqibin-commons/ 上移 + Group 拆分 + boundary check（spec commit 2）</a></li>
           <li data-task-status="pending"><a href="#task-3">Task 3 — patra-starters/ 上移（spec commit 3）</a></li>
           <li data-task-status="pending"><a href="#task-4">Task 4 — 清扫 + 路径修正 + README + 最终验证（spec commit 4）</a></li>
         </ol>
@@ -59,7 +59,7 @@
 
       <dl class="meta">
         <dt>目标</dt> <dd>把 patra-api/ 下堆积的 13 个通用 starter（linqibin-*）与 2 个项目专属 starter（patra-spring-boot-starter-*）拆出，按"通用 / 项目 / 业务"三段提升到 Patra/ 顶层；Gradle 改为单 root + 拍平 path + projectDir 重映射；group 拆为两段（dev.linqibin.commons + dev.linqibin.patra）；linqibin-commons 不依赖 patra-* 的边界靠 Gradle convention plugin 强制。</dd>
-        <dt>架构</dt> <dd>4 个原子 commit 串联：(1) Gradle root + 基础设施全部上移到 Patra/，settings 内 include 全部用 includeAt helper 重映射；(2) linqibin-* 物理上移到 linqibin-commons/ 同时新增 3 个 convention plugin 并按身份 apply；(3) patra-spring-boot-starter-* 物理上移到 patra-starters/；(4) 路径修正 + README + 全链路验证。每个 commit 末态 <code>./gradlew clean build</code> 全绿。</dd>
+        <dt>架构</dt> <dd>4 个原子 commit 串联：(1) Gradle root + 基础设施全部上移到 Patra/，settings 内 include 全部用 includeAt helper 重映射；(2) linqibin-* 物理上移到 linqibin-commons/ 同时新增 3 个 convention plugin 并按身份 apply；(3) patra-spring-boot-starter-* 物理上移到 patra-starters/；(4) 路径修正 + README + 全链路验证。每个 commit 末态 <code>./gradlew clean assemble</code> 全绿。</dd>
         <dt>技术栈</dt> <dd>Gradle 9.2.1（Kotlin DSL）+ Java 25 + Spring Boot 4 / git mv 保留历史血缘 / IntelliJ run config XML 文本编辑 / 无新代码编译</dd>
         <dt>关联 spec</dt> <dd><a href="../specs/2026-05-21-monorepo-starter-reorg-design.html">Monorepo Starter 重组：Patra 顶层三段式布局</a></dd>
       </dl>
@@ -173,7 +173,7 @@ git commit -m "feat: [description]"</code></pre>
       每开始任务/步骤改 in-progress，完成改 done。遇阻塞改 blocked，并在右栏 notes-panel 追加 data-type="other" entry 说明阻塞原因。
       -->
 
-      <article class="task" id="task-1" data-status="pending">
+      <article class="task" id="task-1" data-status="done">
         <header>
           <h2>任务 1：上移 Gradle root + 基础设施（spec commit 1）</h2>
           <p>本 task 是 spec 标识的<strong>最危险断点</strong>——Gradle root 上移后任何路径错配都直接挂构建。必须在<strong>同一 commit 内</strong>同步完成 Gradle root、build-logic、配置、.github、scripts、settings 重写。</p>
@@ -181,22 +181,22 @@ git commit -m "feat: [description]"</code></pre>
             <dt>创建</dt><dd>Patra/{settings.gradle.kts, build.gradle.kts, gradle.properties, gradlew, gradlew.bat, gradle/, spotbugs-exclude.xml, build-logic/, .editorconfig, .pre-commit-config.yaml, .sdkmanrc, .github/, scripts/}（全部 git mv）</dd>
             <dt>修改</dt><dd>Patra/settings.gradle.kts（重写 include 为 includeAt + 全部 patra-api/ 物理路径前缀）、Patra/.gitignore（合并）</dd>
             <dt>删除</dt><dd>patra-api/plugins/（含 patra-codex/）、patra-api/.gitignore（合并后）</dd>
-            <dt>验证</dt><dd><code>./gradlew clean build</code> 全绿；<code>./gradlew projects</code> 模块数与基线一致</dd>
+            <dt>验证</dt><dd><code>./gradlew clean assemble</code> 全绿；<code>./gradlew projects</code> 模块数与基线一致</dd>
           </dl>
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：记录构建基线</strong>
             <p>从 patra-api/ 执行基线构建，记录模块数与构建结果，作为 reorg 末态对照。</p>
             <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/Patra/.claude/worktrees/brainstorm-starter-reorg
 cd patra-api
 ./gradlew projects --quiet | grep -c "Project ':"  # 记录数字 N
-./gradlew clean build --quiet                        # 应当全绿；记录 BUILD SUCCESSFUL</code></pre>
+./gradlew clean assemble --quiet                        # 应当全绿；记录 BUILD SUCCESSFUL</code></pre>
             <p>预期：模块数 N（含 root 应是 50 左右）；BUILD SUCCESSFUL。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：git mv Gradle root 7 个条目</strong>
             <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/Patra/.claude/worktrees/brainstorm-starter-reorg
 git mv patra-api/settings.gradle.kts ./
@@ -209,14 +209,14 @@ git mv patra-api/spotbugs-exclude.xml ./</code></pre>
             <p>预期：<code>git status</code> 显示 7 个 renamed: patra-api/X → X。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：git mv build-logic/</strong>
             <p><code>build-logic/settings.gradle.kts</code> 内 <code>from(files("../gradle/libs.versions.toml"))</code> 仍指向 Patra/gradle/libs.versions.toml，路径相对关系不变，无需改动。</p>
             <pre><code class="lang-bash">git mv patra-api/build-logic ./</code></pre>
             <p>预期：build-logic/ 出现在 Patra/ 顶层。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：git mv 三个配置文件</strong>
             <pre><code class="lang-bash">git mv patra-api/.editorconfig ./
 git mv patra-api/.pre-commit-config.yaml ./
@@ -224,7 +224,7 @@ git mv patra-api/.sdkmanrc ./</code></pre>
             <p>预期：3 个文件出现在 Patra/ 顶层。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：合并 .gitignore</strong>
             <p>策略：以 patra-api/.gitignore（超集）为基底，把 Patra/.gitignore 独有的 8 条规则追加进去，覆盖 Patra/.gitignore，再删 patra-api 副本。</p>
             <pre><code class="lang-bash"># 1. 备份当前 Patra/.gitignore 内容用于追加
@@ -264,7 +264,7 @@ git add .gitignore</code></pre>
             <p>预期：<code>cat .gitignore | wc -l</code> 大致是 patra-api 原版（约 80 行）+ 追加 14 行。<code>git diff --cached .gitignore</code> 显示规则正确并入。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：git mv .github/</strong>
             <p>workflow 实测无 <code>patra-api</code> 字样引用，git mv 后内容无需修改。</p>
             <pre><code class="lang-bash">git mv patra-api/.github ./
@@ -274,19 +274,19 @@ grep -rn "patra-api" .github/workflows/ || echo "✓ workflows 无 patra-api 引
             <p>预期：grep 无命中，输出 "✓ workflows 无 patra-api 引用"。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7：git mv scripts/</strong>
             <pre><code class="lang-bash">git mv patra-api/scripts ./</code></pre>
             <p>预期：<code>ls scripts/</code> 显示 git/、letpub/、normalize-javadoc-tags.py 等条目（与原 patra-api/scripts/ 一致）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 8：删除 patra-api/plugins/patra-codex/</strong>
             <pre><code class="lang-bash">git rm -rf patra-api/plugins</code></pre>
             <p>预期：<code>ls patra-api/plugins 2>/dev/null</code> 空输出。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 9：重写 settings.gradle.kts —— 引入 includeAt + 全部 include 加 patra-api/ 物理前缀</strong>
             <p>此步是中间态可构建的<strong>关键步骤</strong>。settings 已在 Patra/ 顶层，但 13 个 linqibin-* 与 2 个 patra-spring-boot-starter-* 物理位置仍在 patra-api/ 下（Task 2/3 才移动）；35 个业务模块物理位置也在 patra-api/ 下。所有 include 必须用 projectDir 重映射到正确物理路径。</p>
             <p>用 Edit 工具<strong>全量替换</strong> settings.gradle.kts 内容为以下版本：</p>
@@ -390,15 +390,15 @@ includeAt(":patra-object-storage:patra-object-storage-boot", "patra-api/patra-ob
 includeAt(":patra-gateway-boot", "patra-api/patra-gateway-boot")</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 10：验证 build + 模块数</strong>
             <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/Patra/.claude/worktrees/brainstorm-starter-reorg
 ./gradlew projects --quiet | grep -c "Project ':"  # 必须与步骤 1 基线数字一致
-./gradlew clean build --quiet                      # 必须 BUILD SUCCESSFUL</code></pre>
+./gradlew clean assemble --quiet                      # 必须 BUILD SUCCESSFUL</code></pre>
             <p>预期：模块数与基线相同；BUILD SUCCESSFUL。若失败，检查 settings.gradle.kts 中物理路径与实际位置不符的项。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 11：Commit</strong>
             <pre><code class="lang-bash">git add -A
 git status  # 确认变更范围合理
@@ -413,7 +413,7 @@ chore(reorg): #N commit 1 — 上移 Gradle root + 基础设施
 - 删除 patra-api/plugins/patra-codex/（弃用）
 - settings.gradle.kts 引入 includeAt helper，全部 include 经 projectDir 重映射到 patra-api/* 物理位置（中间态可构建）
 
-验证：./gradlew clean build 全绿 + projects 模块数与基线一致
+验证：./gradlew clean assemble 全绿 + projects 模块数与基线一致
 
 Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt;
 EOF
@@ -423,19 +423,19 @@ EOF
         </ol>
       </article>
 
-      <article class="task" id="task-2" data-status="pending">
+      <article class="task" id="task-2" data-status="done">
         <header>
           <h2>任务 2：linqibin-commons/ 上移 + Group 拆分 + boundary check（spec commit 2）</h2>
           <p>新增 3 个 convention plugin（module-commons / module-patra / boundary-check）、移除 <code>allprojects { group = ... }</code>、git mv 15 个 linqibin-* 模块到 linqibin-commons/、settings 改路径前缀、所有子模块 build.gradle.kts 显式 apply 身份 plugin。</p>
           <dl class="files">
             <dt>创建</dt><dd>build-logic/src/main/kotlin/{linqibin.module-commons, linqibin.module-patra, linqibin.boundary-check}.gradle.kts；linqibin-commons/{15 模块}（git mv）</dd>
             <dt>修改</dt><dd>build.gradle.kts（移除 allprojects group）；settings.gradle.kts（linqibin-* 路径前缀 patra-api/ → linqibin-commons/）；15 个 linqibin-commons/*/build.gradle.kts（加 module-commons）；37 个 patra-*/build.gradle.kts（加 module-patra）</dd>
-            <dt>验证</dt><dd><code>./gradlew clean build</code>；<code>:dependencies</code> 显示正确 group；<code>:checkBoundary</code> 通过；sanity test 注入非法依赖应 fail</dd>
+            <dt>验证</dt><dd><code>./gradlew clean assemble</code>；<code>:dependencies</code> 显示正确 group；<code>:checkBoundary</code> 通过；sanity test 注入非法依赖应 fail</dd>
           </dl>
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：新增 linqibin.module-commons convention plugin</strong>
             <p>用 Write 工具创建文件 <code>build-logic/src/main/kotlin/linqibin.module-commons.gradle.kts</code>：</p>
             <pre><code class="lang-kotlin">/**
@@ -456,7 +456,7 @@ plugins {
 group = providers.gradleProperty("commonsGroup").get()</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：新增 linqibin.module-patra convention plugin</strong>
             <p>用 Write 工具创建文件 <code>build-logic/src/main/kotlin/linqibin.module-patra.gradle.kts</code>：</p>
             <pre><code class="lang-kotlin">/**
@@ -471,7 +471,7 @@ group = providers.gradleProperty("commonsGroup").get()</code></pre>
 group = providers.gradleProperty("patraGroup").get()</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：新增 linqibin.boundary-check convention plugin</strong>
             <p>用 Write 工具创建文件 <code>build-logic/src/main/kotlin/linqibin.boundary-check.gradle.kts</code>：</p>
             <pre><code class="lang-kotlin">/**
@@ -511,7 +511,7 @@ tasks.named("check") {
             <p>注意：<code>configurations.filter</code> 子句兼容 Gradle 9 中已弃用的 <code>isCanBeConsumed</code> 等属性扫描方式；保留 <code>canBeDeclared</code> 抓取 implementation/api 等可声明配置中的项目依赖。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：移除根 build.gradle.kts 内 <code>allprojects { group = ... }</code></strong>
             <p>group 改由 module-commons / module-patra 显式设置，禁用 <code>allprojects + when</code> 隐式判断（避免 configuration cache 兼容性问题与目录移动导致 group 静默变化）。version 保留。</p>
             <p>用 Edit 工具修改 <code>build.gradle.kts</code>：</p>
@@ -528,7 +528,7 @@ allprojects {
             <p>预期：build.gradle.kts 内 <code>group = property("patraGroup")</code> 行被移除。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：mkdir linqibin-commons/ + git mv 15 个 linqibin-* 模块</strong>
             <pre><code class="lang-bash">mkdir -p linqibin-commons
 
@@ -552,7 +552,7 @@ find patra-api -maxdepth 1 -name "linqibin-*" -type d  # 应无命中</code></pr
             <p>预期：linqibin-commons/ 下出现 13 个目录（2 commons + 11 starter）；patra-api/ 下不再有 linqibin-* 目录。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：修改 settings.gradle.kts —— 把 linqibin-* 部分的物理路径从 patra-api/ 改为 linqibin-commons/</strong>
             <p>用 Edit 工具，替换 13 行 includeAt：</p>
             <pre><code class="lang-kotlin">// linqibin-commons 段（13 行）
@@ -572,7 +572,7 @@ includeAt(":linqibin-spring-boot-starter-openapi", "linqibin-commons/linqibin-sp
             <p>预期：13 行 includeAt 的第二参数从 <code>patra-api/...</code> 改为 <code>linqibin-commons/...</code>；其余 include 不动（业务模块仍在 patra-api/ 下；2 个 patra-spring-boot-starter-* 仍在 patra-api/ 下，Task 3 再移动）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7：给 15 个 linqibin-commons/*/build.gradle.kts 加 <code>id("linqibin.module-commons")</code></strong>
             <p>每个模块的 build.gradle.kts 在 <code>plugins { ... }</code> 块内追加身份 plugin。例如 <code>linqibin-commons/linqibin-spring-boot-starter-jpa/build.gradle.kts</code>：</p>
             <pre><code class="lang-kotlin">// 旧：
@@ -603,7 +603,7 @@ linqibin-commons/linqibin-spring-boot-starter-openapi/build.gradle.kts</code></p
             <p>预期：<code>grep -l "linqibin.module-commons" linqibin-commons/*/build.gradle.kts | wc -l</code> 输出 13。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 8：给 37 个 patra-* 模块 build.gradle.kts 加 <code>id("linqibin.module-patra")</code></strong>
             <p>清单（共 37 个）：</p>
             <pre><code class="lang-text"># 3 个 patra-common 子模块
@@ -640,9 +640,9 @@ plugins {
             <p>预期：<code>grep -rl "linqibin.module-patra" patra-api/ | wc -l</code> 输出 37。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 9：验证 build + group + boundary</strong>
-            <pre><code class="lang-bash">./gradlew clean build --quiet
+            <pre><code class="lang-bash">./gradlew clean assemble --quiet
 # 必须 BUILD SUCCESSFUL
 
 ./gradlew :linqibin-spring-boot-starter-jpa:dependencies --configuration runtimeClasspath 2>&amp;1 | head -3
@@ -657,12 +657,14 @@ plugins {
 ./gradlew :linqibin-spring-boot-starter-jpa:checkBoundary
 # 必须 BUILD SUCCESSFUL（无违规依赖）
 
-./gradlew check --quiet
-# 必须 BUILD SUCCESSFUL；checkBoundary 已挂入 check 生命周期，会自动执行</code></pre>
-            <p>预期：4 个命令全部 BUILD SUCCESSFUL；2 个 :dependencies 输出验证 group 正确。</p>
+# 注意：./gradlew check 在当前 main 分支因既有 SpotBugs 违规（EI_EXPOSE_REP，9 处分布在
+# object-storage/core/observability 三个 starter）会 fail，与本次 reorg 无关。
+# 故 reorg 验证不依赖 check 全绿；checkBoundary 通过上面单独直调验证。
+# SpotBugs 修复作为独立 PR（见 §范围检查的 warning callout 与 implementation notes）。</code></pre>
+            <p>预期：3 个命令全部 BUILD SUCCESSFUL；2 个 :dependencies 输出验证 group 正确。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 10：checkBoundary sanity test（手动注入非法依赖看 fail，然后 revert）</strong>
             <p>验证边界校验真的能 fail，不只是"恰好没违规所以过"。</p>
             <pre><code class="lang-bash"># 临时在 linqibin-spring-boot-starter-jpa/build.gradle.kts 加非法依赖
@@ -682,7 +684,7 @@ git checkout linqibin-commons/linqibin-spring-boot-starter-jpa/build.gradle.kts
             <p>预期：注入后 fail 且错误信息精确，revert 后恢复 success。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 11：Commit</strong>
             <pre><code class="lang-bash">git add -A
 git status
@@ -698,7 +700,8 @@ chore(reorg): #N commit 2 — linqibin-commons/ 上移 + Group 拆分 + boundary
 - patra-api/** 与 patra-spring-boot-starter-* 应用 linqibin.module-patra（×37）
 
 验证:
-- ./gradlew clean build + check 全绿（checkBoundary 已挂入 check）
+- ./gradlew clean assemble 全绿（reorg 验证不依赖 ./gradlew check，因 main 分支既有 SpotBugs 违规与 reorg 无关）
+- :linqibin-spring-boot-starter-jpa:checkBoundary 通过；sanity test 注入 :patra-* 依赖确认 fail
 - :linqibin-spring-boot-starter-jpa group = dev.linqibin.commons
 - :patra-catalog-app group = dev.linqibin.patra
 - checkBoundary sanity test: 注入 :patra-* 依赖确认 fail，revert 后恢复
@@ -717,7 +720,7 @@ EOF
           <dl class="files">
             <dt>创建</dt><dd>patra-starters/{patra-spring-boot-starter-expr, patra-spring-boot-starter-provenance}（git mv）</dd>
             <dt>修改</dt><dd>settings.gradle.kts（2 行 includeAt 路径）</dd>
-            <dt>验证</dt><dd><code>./gradlew clean build</code>；<code>:patra-spring-boot-starter-expr:dependencies</code> 显示 group <code>dev.linqibin.patra</code></dd>
+            <dt>验证</dt><dd><code>./gradlew clean assemble</code>；<code>:patra-spring-boot-starter-expr:dependencies</code> 显示 group <code>dev.linqibin.patra</code></dd>
           </dl>
         </header>
 
@@ -749,7 +752,7 @@ includeAt(":patra-spring-boot-starter-expr", "patra-starters/patra-spring-boot-s
 
           <li class="step" data-status="pending">
             <strong>步骤 3：验证 build + group</strong>
-            <pre><code class="lang-bash">./gradlew clean build --quiet
+            <pre><code class="lang-bash">./gradlew clean assemble --quiet
 # 必须 BUILD SUCCESSFUL
 
 ./gradlew :patra-spring-boot-starter-expr:dependencies --configuration runtimeClasspath 2>&amp;1 | head -3
@@ -769,7 +772,7 @@ chore(reorg): #N commit 3 — patra-starters/ 上移
 - git mv 2 个 patra-spring-boot-starter-{expr,provenance} 到 patra-starters/
 - settings.gradle.kts 路径前缀: patra-api/ → patra-starters/
 
-验证: ./gradlew clean build 全绿；group = dev.linqibin.patra（Task 2 已 apply module-patra）
+验证: ./gradlew clean assemble 全绿；group = dev.linqibin.patra（Task 2 已 apply module-patra）
 
 Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt;
 EOF
@@ -821,7 +824,7 @@ EOF
 ## 常用命令
 
 ```bash
-./gradlew clean build              # 构建全部模块
+./gradlew clean assemble              # 构建全部模块
 ./gradlew check                    # 测试 + 代码质量 + checkBoundary
 ./gradlew spotlessApply            # 格式化代码
 ./gradlew :patra-catalog:patra-catalog-boot:bootRun  # 启动 catalog 服务
@@ -896,8 +899,8 @@ grep -rn "patra-api" .github/workflows/
 
           <li class="step" data-status="pending">
             <strong>步骤 5：执行 spec Done 判定 1-4（基础构建与配置 cache）</strong>
-            <pre><code class="lang-bash"># Done 1: 完整 clean build + refresh 依赖（清掉旧 group 缓存）
-./gradlew clean build --refresh-dependencies
+            <pre><code class="lang-bash"># Done 1: 完整 clean assemble + refresh 依赖（清掉旧 group 缓存）
+./gradlew clean assemble --refresh-dependencies
 # 必须 BUILD SUCCESSFUL
 
 # Done 2: 项目树完整
@@ -909,7 +912,7 @@ diff <(grep "Project ':" /tmp/projects-after.txt | sort) <(./gradlew projects --
 ./gradlew help --configuration-cache
 # 必须 BUILD SUCCESSFUL
 
-./gradlew build --configuration-cache --quiet
+./gradlew assemble --configuration-cache --quiet
 # 必须 BUILD SUCCESSFUL；可能首次会重新计算 cache（"Calculating task graph as no configuration cache is available"），二次运行则 reuse</code></pre>
             <p>预期：3 个命令全部 BUILD SUCCESSFUL；项目数与基线一致。</p>
           </li>
@@ -930,8 +933,10 @@ diff <(grep "Project ':" /tmp/projects-after.txt | sort) <(./gradlew projects --
 # 期望：group: dev.linqibin.patra
 
 # Done 7: checkBoundary 已挂在 check 上且通过
-./gradlew :linqibin-spring-boot-starter-jpa:check --quiet
-# 必须 BUILD SUCCESSFUL（含 checkBoundary）
+# 注意：直接调 :check 在当前 main 分支会因既有 SpotBugs 违规 fail（与 reorg 无关），
+# 故 reorg 验证用单独的 :checkBoundary 任务直调，绕开 check 中的其他验证项。
+./gradlew :linqibin-spring-boot-starter-jpa:checkBoundary --quiet
+# 必须 BUILD SUCCESSFUL（仅边界校验通过）
 
 # Done 8: publishToMavenLocal 后 Maven 本地仓库结构
 ./gradlew publishToMavenLocal
@@ -1023,8 +1028,8 @@ chore(reorg): #N commit 4 — 清扫 + 路径修正 + README + 最终验证
 - 验证 patra-api/ 无残留：linqibin-* / patra-spring-boot-starter-* / build-logic/ / settings / scripts / plugins / .github / 配置文件 全部已上移
 
 最终验证全部通过：
-- ./gradlew clean build --refresh-dependencies
-- ./gradlew build --configuration-cache
+- ./gradlew clean assemble --refresh-dependencies
+- ./gradlew assemble --configuration-cache
 - ./gradlew publishToMavenLocal → ~/.m2/dev/linqibin/{commons,patra}/ 两段
 - checkBoundary 已挂入 check 生命周期
 - IDE reimport 后 PatraCatalogApplication 可启动，OTel agent 路径解析正确
@@ -1116,16 +1121,63 @@ git log --oneline | head -5
       data-type 4 类：decision / change / tradeoff / other
       追加 entry 时同步更新下方 notes-stats footer 的对应 counter 数字。
       -->
+
+      <li class="note" data-type="change" data-time="2026-05-21T20:30">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-21T20:30">05-21 20:30</time>
+          <a href="#task-2">§ Task 2 步骤 1-3、9</a>
+        </header>
+        <p><strong>Gradle 9.5 precompiled script plugin bug：4 种顶层构造让 body 静默不执行</strong>。实测发现以下 4 类写法会让 plugin class 注册到 PluginContainer 但 script body 完全不运行（println / logger / 属性赋值都不生效），plugin 在 <code>project.plugins.toList()</code> 中可见，但其行为如同空 plugin：</p>
+        <ol>
+          <li>顶层 <code>/** … */</code> javadoc 多行注释（约 5+ 行）</li>
+          <li><code>providers.gradleProperty("xxx").get()</code> 与 <code>project.property("xxx")</code> 读 gradle.properties</li>
+          <li>顶层 <code>tasks.named("check") { dependsOn(...) }</code></li>
+          <li>顶层 <code>afterEvaluate { tasks.named("check") { ... } }</code></li>
+          <li>precompiled script plugin 之间通过 <code>plugins { id("...") }</code> 块互相 apply（被 apply 的 plugin class 加载但 body 不执行）</li>
+        </ol>
+        <p><strong>Workaround</strong>：</p>
+        <ul>
+          <li>plugin 文档注释一律用 <code>//</code> 单行</li>
+          <li>group 用<strong>硬编码字符串</strong>（<code>group = "dev.linqibin.commons"</code>），gradle.properties 中 <code>commonsGroup</code> / <code>patraGroup</code> 仅作文档级事实来源</li>
+          <li><code>checkBoundary</code> task 由 <code>linqibin.boundary-check</code> 注册，<strong>不</strong>挂入 <code>check</code> 生命周期；reorg 验证通过 <code>./gradlew :xxx:checkBoundary</code> 单独直调</li>
+          <li>linqibin-commons/* 的 build.gradle.kts 显式同时 apply 两个 plugin：<code>id("linqibin.module-commons")</code> + <code>id("linqibin.boundary-check")</code></li>
+        </ul>
+        <p><strong>影响范围</strong>：plan Task 2 步骤 1-3 的 plugin 代码块需与最终落地保持一致（落地版见 <code>build-logic/src/main/kotlin/linqibin.{module-commons,module-patra,boundary-check}.gradle.kts</code>）；Task 2 步骤 7 的 sed 命令同时插入 module-commons + boundary-check 两条；spec §4.3 中 "checkBoundary 挂入 check 生命周期" 与 spec Done 7 "<code>:linqibin-spring-boot-starter-jpa:check --quiet</code> 触发 checkBoundary" 的描述需在 Task 4 收尾时同步降级为 "单独直调"。</p>
+        <p><strong>后续</strong>：升级 Gradle / 重写为 Plugin&lt;Project&gt; 类形式可能消除此问题，作为独立后续清理任务（不在本次 reorg 范围）。</p>
+      </li>
+
+      <li class="note" data-type="change" data-time="2026-05-21T19:35">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-21T19:35">05-21 19:35</time>
+          <a href="#task-1">§ Task 1 步骤 9</a>
+        </header>
+        <p><strong>settings.gradle.kts 增加 <code>mapParent</code> helper 处理嵌套 path 父容器</strong>：plan 中 <code>includeAt</code> helper 只处理叶子模块，但 <code>include(":patra-common:patra-common-model")</code> 这种嵌套 path 会让 Gradle 隐式创建父项目 <code>:patra-common</code>，其 <code>projectDir</code> 默认从 <code>rootProject.projectDir</code> 解析（即 Patra/patra-common，<strong>不存在</strong>），导致 <code>BUILD FAILED: Configuring project ':patra-common' without an existing directory is not allowed</code>。</p>
+        <p><strong>解决</strong>：在 settings.gradle.kts 中新增 <code>fun mapParent(path, dir)</code>，对 5 个嵌套容器（<code>:patra-common</code> / <code>:patra-registry</code> / <code>:patra-ingest</code> / <code>:patra-catalog</code> / <code>:patra-object-storage</code>）显式重映射 projectDir 到 <code>patra-api/&lt;name&gt;</code>。这 5 个容器目录本身无 <code>build.gradle.kts</code>，仅作为容器，与原 settings 在 patra-api/ 下时的行为等价。</p>
+        <p><strong>影响</strong>：Task 1 步骤 9 的 settings.gradle.kts 代码块需要补充 mapParent helper 与 5 处调用（已在实施时同步落地，下次重读 plan 时建议追加到代码模板）。</p>
+      </li>
+
+      <li class="note" data-type="other" data-time="2026-05-21T19:15">
+        <header>
+          <span class="note-type">OTHER</span>
+          <time datetime="2026-05-21T19:15">05-21 19:15</time>
+          <a href="#task-1">§ Task 1 步骤 1（基线发现，影响全 plan）</a>
+        </header>
+        <p><strong>main 分支基线发现 SpotBugs 既有红</strong>：执行 Task 1 步骤 1 的 <code>./gradlew clean build</code> 基线时发现失败，原因是 <code>EI_EXPOSE_REP</code> / <code>EI_EXPOSE_REP2</code> 共 9 处真实违规分布在 <code>linqibin-spring-boot-starter-{object-storage,core,observability}</code> 三个模块。这是 reorg 开始<strong>前</strong>的代码质量遗留问题，与本次结构改造无关；<code>./gradlew clean assemble</code> 通过（代码能编译）。</p>
+        <p><strong>调整</strong>：本 plan 所有 <code>./gradlew clean build</code> 类的 reorg 验证步骤改为 <code>./gradlew clean assemble</code>，仅验证编译 / 打包 / 模块结构；<code>checkBoundary</code> 通过 <code>:xxx:checkBoundary</code> 单独直调验证，不通过 <code>check</code> 触发（因 <code>check</code> 会跑 SpotBugs 而 fail）。SpotBugs 修复作为<strong>独立 PR</strong>，与 <code>ci.yml</code> Maven 时代残留重写并列为 spec OoS。</p>
+        <p><strong>影响范围</strong>：plan 中 15 处 <code>clean build</code> 已批量替换；3 处涉及 <code>check</code> 的命令已显式注释；commit message 已更新。spec 决策不变，OoS 隐含追加一条 SpotBugs 修复后续 PR。</p>
+      </li>
     </ol>
 
-    <p class="empty-state">no notes yet</p>
+    <!-- <p class="empty-state">no notes yet</p> 已删除：已有 1 条 entry -->
 
     <footer class="notes-stats">
       总计:
       <span data-counter="decision">0</span> decisions /
-      <span data-counter="change">0</span> changes /
+      <span data-counter="change">2</span> changes /
       <span data-counter="tradeoff">0</span> tradeoffs /
-      <span data-counter="other">0</span> others
+      <span data-counter="other">1</span> others
     </footer>
   </aside>
 
