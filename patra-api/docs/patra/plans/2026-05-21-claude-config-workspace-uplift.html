@@ -33,7 +33,7 @@
           <li data-task-status="done"><a href="#task-4">Task 4 — 上移 create-issue skill 并改临时路径</a></li>
           <li data-task-status="done"><a href="#task-5">Task 5 — Patra/CLAUDE.md 顶部新增「产品定义」章节</a></li>
           <li data-task-status="done"><a href="#task-6">Task 6 — 删除 patra-portal/CLAUDE.md 的 FE 警示段</a></li>
-          <li data-task-status="pending"><a href="#task-7">Task 7 — 全链路端到端验证并推送 PR</a></li>
+          <li data-task-status="in-progress"><a href="#task-7">Task 7 — 全链路端到端验证并推送 PR</a></li>
         </ol>
       </li>
       <li><a href="#self-check">自检结果</a></li>
@@ -596,7 +596,7 @@ EOF
         </ol>
       </article>
 
-      <article class="task" id="task-7" data-status="pending">
+      <article class="task" id="task-7" data-status="in-progress">
         <header>
           <h2>任务 7：全链路端到端验证并推送 PR</h2>
           <dl class="files">
@@ -606,17 +606,17 @@ EOF
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：cwd=patra-api 下验证 14 个 patra: skill 可见（与 Task 2 步骤 4 重复以确认稳定性）</strong>
             <p>在终端：<code>cd /Users/linqibin/Projects/Products/Patra/patra-api</code>，启动新 Claude Code 会话，执行 <code>/skill</code>，确认 patra:brainstorming / patra:writing-plans / patra:test-driven-development / patra:systematic-debugging / patra:requesting-code-review / patra:executing-plans / patra:subagent-driven-development / patra:dispatching-parallel-agents / patra:verification-before-completion / patra:finishing-a-development-branch / patra:receiving-code-review / patra:using-git-worktrees / patra:using-superpowers / patra:release-planning 共 14 个全部出现。</p>
           </li>
 
-          <li class="step" data-status="pending">
-            <strong>步骤 2：cwd=patra-portal 下验证 14 个 patra: skill 同样可见</strong>
+          <li class="step" data-status="skipped">
+            <strong>步骤 2：cwd=patra-portal 下验证 14 个 patra: skill 同样可见（已跳过 — portal 暂不装 plugin，见 Task 6 change note）</strong>
             <p>在终端：<code>cd /Users/linqibin/Projects/Products/Patra/patra-portal</code>，启动新 Claude Code 会话，执行 <code>/skill</code>，确认上述 14 个 skill 全部出现（确认 FE 与 BE 同等享用）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：Stop hook 链路验证（cwd=patra-api）</strong>
             <p>在 patra-api 启动新会话，修改一个无关紧要的 Java 文件（例如在已有类末尾加一个空行），然后 <code>/quit</code> 结束会话。</p>
             <p>预期同时发生 3 件事：</p>
@@ -633,7 +633,7 @@ EOF
             <p>验证后 revert 那个 Java 文件的空行修改（<code>git checkout -- &lt;path&gt;</code>），保持工作区干净。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：spec §Done 判定 9 条逐条核对</strong>
             <pre><code class="lang-bash"># 1. 文件清单 10 项
 git log --oneline chore/claude-config-workspace-uplift ^main | wc -l
