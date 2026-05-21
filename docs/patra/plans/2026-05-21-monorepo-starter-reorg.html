@@ -29,7 +29,7 @@
           -->
           <li data-task-status="done"><a href="#task-1">Task 1 — 上移 Gradle root + 基础设施（spec commit 1）</a></li>
           <li data-task-status="done"><a href="#task-2">Task 2 — linqibin-commons/ 上移 + Group 拆分 + boundary check（spec commit 2）</a></li>
-          <li data-task-status="pending"><a href="#task-3">Task 3 — patra-starters/ 上移（spec commit 3）</a></li>
+          <li data-task-status="done"><a href="#task-3">Task 3 — patra-starters/ 上移（spec commit 3）</a></li>
           <li data-task-status="pending"><a href="#task-4">Task 4 — 清扫 + 路径修正 + README + 最终验证（spec commit 4）</a></li>
         </ol>
       </li>
@@ -713,7 +713,7 @@ EOF
         </ol>
       </article>
 
-      <article class="task" id="task-3" data-status="pending">
+      <article class="task" id="task-3" data-status="done">
         <header>
           <h2>任务 3：patra-starters/ 上移（spec commit 3）</h2>
           <p>把 2 个 patra-spring-boot-starter-* 模块从 patra-api/ 移到 patra-starters/。settings 仅改路径前缀；不新增 plugin（Task 2 已为它们 apply 了 module-patra）。</p>
@@ -725,7 +725,7 @@ EOF
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：mkdir patra-starters/ + git mv 2 个模块</strong>
             <pre><code class="lang-bash">mkdir -p patra-starters
 
@@ -738,7 +738,7 @@ find patra-api -maxdepth 1 -name "patra-spring-boot-starter-*" -type d  # 应无
             <p>预期：patra-starters/ 下出现 2 个目录；patra-api/ 顶层无 patra-spring-boot-starter-* 残留。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：修改 settings.gradle.kts —— 把 patra-spring-boot-starter-* 部分的物理路径从 patra-api/ 改为 patra-starters/</strong>
             <p>用 Edit 工具，替换 2 行 includeAt：</p>
             <pre><code class="lang-kotlin">// 旧：
@@ -750,7 +750,7 @@ includeAt(":patra-spring-boot-starter-provenance", "patra-starters/patra-spring-
 includeAt(":patra-spring-boot-starter-expr", "patra-starters/patra-spring-boot-starter-expr")</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：验证 build + group</strong>
             <pre><code class="lang-bash">./gradlew clean assemble --quiet
 # 必须 BUILD SUCCESSFUL
@@ -763,7 +763,7 @@ includeAt(":patra-spring-boot-starter-expr", "patra-starters/patra-spring-boot-s
             <p>预期：build 全绿，2 个 dependencies 输出 group 正确。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：Commit</strong>
             <pre><code class="lang-bash">git add -A
 git commit -m "$(cat &lt;&lt;'EOF'

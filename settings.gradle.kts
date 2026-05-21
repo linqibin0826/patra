@@ -73,8 +73,8 @@ includeAt(":linqibin-spring-boot-starter-object-storage", "linqibin-commons/linq
 includeAt(":linqibin-spring-boot-starter-test", "linqibin-commons/linqibin-spring-boot-starter-test")
 includeAt(":linqibin-spring-boot-starter-openapi", "linqibin-commons/linqibin-spring-boot-starter-openapi")
 // patra-spring-boot-starter-* 共 2 个，物理仍在 patra-api/（Task 3 移动到 patra-starters/）
-includeAt(":patra-spring-boot-starter-provenance", "patra-api/patra-spring-boot-starter-provenance")
-includeAt(":patra-spring-boot-starter-expr", "patra-api/patra-spring-boot-starter-expr")
+includeAt(":patra-spring-boot-starter-provenance", "patra-starters/patra-spring-boot-starter-provenance")
+includeAt(":patra-spring-boot-starter-expr", "patra-starters/patra-spring-boot-starter-expr")
 
 // ==================== Microservices ====================
 includeAt(":patra-registry:patra-registry-domain", "patra-api/patra-registry/patra-registry-domain")
