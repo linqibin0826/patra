@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>实现计划：把 patra-api/infra/ 上移到 monorepo 根 patra-infra/</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- CSS 外置：相对路径 ../styles/ 是从生成位置 docs/patra/plans/ 出发；
+       模板本身在 .claude-marketplace/ 下打开时此 link 会 404（接受：模板预览以生成后的 plan 为准） -->
+  <link rel="stylesheet" href="../styles/journal.css">
+  <link rel="stylesheet" href="../styles/plan-extras.css">
+</head>
+<body>
+<div class="layout">
+
+  <!-- ============================================================
+       左栏：目录（TOC）
+       ============================================================ -->
+  <nav class="toc">
+    <h3>目录</h3>
+    <ol>
+      <li><a href="#scope-check">范围检查结果</a></li>
+      <li><a href="#file-structure">文件结构</a></li>
+      <li><a href="#tasks">任务列表</a>
+        <ol class="toc-tasks">
+          <!-- ENTRY TEMPLATE（注释保留供添加 task 时复制）:
+               每写一个 <article id="task-N">，在此处同步追加一条 li，初始 data-task-status="pending"。
+               实施期改 article 的 data-status 时，必须同步改此处 li 的 data-task-status，
+               否则 TOC 状态符号会与中栏卡片不一致。
+
+          <li data-task-status="pending"><a href="#task-N">Task N — [任务名]</a></li>
+          -->
+          <li data-task-status="pending"><a href="#task-1">Task 1 — git mv 上移整目录并验证 compose 解析</a></li>
+          <li data-task-status="pending"><a href="#task-2">Task 2 — 修正 Gradle otel.agent.path 并验证 build</a></li>
+          <li data-task-status="pending"><a href="#task-3">Task 3 — 批量同步文档与脚本中的相对路径字符串</a></li>
+          <li data-task-status="pending"><a href="#task-4">Task 4 — 填根 CLAUDE.md:62 技术栈列 + 清 patra-api/.gitignore 过时注释</a></li>
+          <li data-task-status="pending"><a href="#task-5">Task 5 — 全量验证（Done 判定）</a></li>
+        </ol>
+      </li>
+      <li><a href="#self-check">自检结果</a></li>
+    </ol>
+  </nav>
+
+  <!-- ============================================================
+       中栏：内容
+       ============================================================ -->
+  <main class="content">
+
+    <header class="doc-header">
+      <h1>实现计划：把 <code>patra-api/infra/</code> 上移到 monorepo 根 <code>patra-infra/</code></h1>
+      <div class="meta-bar">
+        <span>📅 2026-05-21</span>
+        <span>🌿 worktree-issue-44-uplift-infra</span>
+        <span>📋 plan</span>
+        <span class="status-pill">draft</span>
+      </div>
+
+      <aside class="for-ai-worker">
+        <strong>面向 AI 代理的工作者：</strong>
+        必需子技能：使用 <code>patra:subagent-driven-development</code>（推荐）
+        或 <code>patra:executing-plans</code> 逐任务实现。
+        通过修改任务卡片与步骤的 <code>data-status</code> 属性追踪进度
+        （pending / in-progress / done / blocked / skipped）。
+        每完成一个 task 立即 commit。
+      </aside>
+
+      <dl class="meta">
+        <dt>目标</dt> <dd>把 <code>patra-api/infra/</code> 整体上移到 monorepo 根 <code>patra-infra/</code>，让 Claude 等 AI 工具更好理解项目结构，并给 patra-api 瘦身聚焦业务领域。</dd>
+        <dt>架构</dt> <dd>单条 <code>git mv</code> 保留历史地上移整目录，配合一处 Gradle 路径修正（<code>otel.agent.path</code>）和约 33 处文档/注释字符串同步。Compose yaml 全部使用同目录相对路径，迁移后无需修改。</dd>
+        <dt>技术栈</dt> <dd>git (mv with rename detection) / Gradle (Kotlin DSL) / Docker Compose / Bash / sed</dd>
+        <dt>关联 spec</dt> <dd><a href="../specs/2026-05-21-uplift-infra-to-monorepo-root-design.html">把 patra-api/infra/ 上移到 monorepo 根 patra-infra/</a></dd>
+      </dl>
+    </header>
+
+    <section id="scope-check">
+      <h2>范围检查结果</h2>
+      <aside class="callout success">
+        <span class="title">单 plan 覆盖</span>
+        <p>本次为单子系统机械迁移：1 个目录上移 + 1 处 Gradle 路径 + 1 个 README + 5 个脚本/plist 注释 + 1 处根 CLAUDE.md + 1 处 patra-api/.gitignore。所有变更高度耦合（同一个 PR 内必须同进同出，否则 OTel agent 或文档示例会断），不可拆分；单 plan 覆盖。</p>
+      </aside>
+    </section>
+
+    <section id="file-structure">
+      <h2>文件结构</h2>
+      <div class="file-tree">
+        <pre>patra-api/
+├── infra/                              <span class="pill delete">delete</span>  整目录 git mv 到根
+├── gradle.properties                   <span class="pill modify">modify</span>  第 51 行 otel.agent.path 加 ../ 前缀
+└── .gitignore                          <span class="pill modify">modify</span>  删第 83 行过时注释
+
+patra-infra/                            <span class="pill create">create</span>  整目录由 patra-api/infra git mv 而来
+├── docker/
+│   ├── README.md                       <span class="pill modify">modify</span>  约 22 处 infra/{docker,scripts}/ → patra-infra/...
+│   └── ... (compose yaml + 子目录不变)
+└── scripts/
+    ├── init-volumes.sh                 <span class="pill modify">modify</span>  第 8、11 行注释命令提示
+    ├── install-nacos-tunnel.sh         <span class="pill modify">modify</span>  第 11-13 行注释命令提示
+    ├── install-tailscale-route-guard.sh <span class="pill modify">modify</span>  第 8-10 行注释命令提示
+    ├── dev.patra.nacos-tunnel.plist    <span class="pill modify">modify</span>  第 23 行注释
+    ├── dev.patra.tailscale-route-guard.plist <span class="pill modify">modify</span>  第 21 行注释
+    └── tailscale-route-guard.sh        <span class="pill keep">keep</span>    无 infra/ 字面引用
+
+CLAUDE.md (工作区根)                     <span class="pill modify">modify</span>  第 62 行 patra-infra 技术栈列填值
+
+docs/patra/plans/2026-05-21-uplift-infra-to-monorepo-root.html <span class="pill create">create</span>  本文档</pre>
+      </div>
+    </section>
+
+    <section id="tasks">
+      <h2>任务列表</h2>
+
+      <!-- TASK TEMPLATE（注释保留供添加新 task 时复制）:
+
+      <article class="task" id="task-N" data-status="pending">
+        <header>
+          <h2>任务 N：[任务标题]</h2>
+          <dl class="files">
+            <dt>创建</dt><dd><code>[exact/path/to/File.java]</code></dd>
+            <dt>修改</dt><dd><code>[exact/path/to/Existing.java:123-145]</code></dd>
+            <dt>测试</dt><dd><code>[tests/exact/path/to/Test.java]</code></dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：[描述]</strong>
+            <pre><code class="lang-java">[完整代码块，禁止占位]</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：运行测试验证</strong>
+            <p>运行：<code>[精确命令]</code></p>
+            <p>预期：[精确预期]</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：Commit</strong>
+            <pre><code class="lang-bash">git add [files]
+git commit -m "feat: [description]"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      data-status 5 类：pending / in-progress / done / blocked / skipped
+      每开始任务/步骤改 in-progress，完成改 done。遇阻塞改 blocked，并在右栏 notes-panel 追加 data-type="other" entry 说明阻塞原因。
+      -->
+
+      <!-- ============================================================
+           Task 1
+           ============================================================ -->
+      <article class="task" id="task-1" data-status="pending">
+        <header>
+          <h2>任务 1：git mv 上移整目录并验证 compose 解析</h2>
+          <dl class="files">
+            <dt>移动</dt><dd><code>patra-api/infra/</code> → <code>patra-infra/</code></dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1.1：确认起始状态（源存在、目标不存在）</strong>
+            <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)"
+ls -d patra-api/infra && ls -d patra-infra 2>&1 || true</code></pre>
+            <p>预期：<code>patra-api/infra</code> 输出；<code>ls: patra-infra: No such file or directory</code>（确认目标不存在）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 1.2：执行 git mv 上移整目录</strong>
+            <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)"
+git mv patra-api/infra patra-infra</code></pre>
+            <p>预期：无输出，命令成功返回。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 1.3：验证 git 把所有文件识别为 rename</strong>
+            <pre><code class="lang-bash">git status | head -30
+echo "---rename count---"
+git status --short | grep -cE '^R'</code></pre>
+            <p>预期：<code>git status</code> 列出大量 <code>renamed: patra-api/infra/... -&gt; patra-infra/...</code>；rename count &gt; 30（README、compose yaml、scripts、子目录文件全部为 R 状态）。如果出现 <code>D</code>/<code>?</code> 而非 <code>R</code>，立即 <code>git mv</code> 回滚后重试（rename detection 失败说明索引状态异常）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 1.4：验证 docker compose 仍能解析（不起容器）</strong>
+            <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)/patra-infra/docker"
+docker compose -f docker-compose.dev.yaml config &gt; /dev/null
+echo "exit=$?"</code></pre>
+            <p>预期：<code>exit=0</code>，无 WARN/ERROR 输出。如果有 WARN 涉及 <code>../</code> 路径，说明 compose 内有反向引用未被 spec 盘点到，停下并在右栏 notes-panel 追加 <code>data-type="change"</code> entry 说明发现。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 1.5：Commit</strong>
+            <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)"
+git commit -m "$(cat &lt;&lt;'EOF'
+chore(infra): #44 git mv patra-api/infra → patra-infra（上移到 monorepo 根）
+
+整目录上移以让 AI 工具更好理解项目结构。compose yaml 全部
+同目录相对路径，迁移后无需修改。后续 commit 处理 Gradle
+路径与文档/注释字符串。
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt;
+EOF
+)"
+git log --oneline -1</code></pre>
+            <p>预期：commit 创建成功，HEAD 显示新 commit。</p>
+          </li>
+        </ol>
+      </article>
+
+      <!-- ============================================================
+           Task 2
+           ============================================================ -->
+      <article class="task" id="task-2" data-status="pending">
+        <header>
+          <h2>任务 2：修正 Gradle otel.agent.path 并验证 build</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>patra-api/gradle.properties:51</code></dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 2.1：确认当前值</strong>
+            <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)"
+sed -n '48,54p' patra-api/gradle.properties</code></pre>
+            <p>预期输出（前缀 <code># OpenTelemetry Agent</code> 那段）：</p>
+            <pre><code class="lang-properties"># OpenTelemetry Agent
+# ============================================================
+# OTel Agent JAR 路径（相对于项目根目录）
+otel.agent.path=infra/docker/opentelemetry-javaagent.jar
+# OTLP 导出端点
+otel.exporter.endpoint=http://localhost:4317</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2.2：Edit gradle.properties 第 51 行</strong>
+            <p>用 Edit 工具把这一行：</p>
+            <pre><code class="lang-properties">otel.agent.path=infra/docker/opentelemetry-javaagent.jar</code></pre>
+            <p>替换为：</p>
+            <pre><code class="lang-properties">otel.agent.path=../patra-infra/docker/opentelemetry-javaagent.jar</code></pre>
+            <p>注释行（<code># OTel Agent JAR 路径（相对于项目根目录）</code>）保持不变 — "项目根目录" 概念仍然指 <code>patra-api/</code>，无需改注释。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2.3：验证 jar 文件在新位置可达</strong>
+            <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)/patra-api"
+test -f ../patra-infra/docker/opentelemetry-javaagent.jar && echo "OK: jar exists" || echo "FAIL: jar missing"</code></pre>
+            <p>预期：<code>OK: jar exists</code>。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2.4：跑 ./gradlew check 全量验证</strong>
+            <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)/patra-api"
+./gradlew check --no-daemon 2&gt;&amp;1 | tail -30
+echo "---exit code---"
+echo "$?"</code></pre>
+            <p>预期：<code>BUILD SUCCESSFUL</code>，exit code 0。如失败：（a）查 <code>build-logic/src/main/kotlin/linqibin.hexagonal-boot.gradle.kts</code> 是否还有其它 hardcode <code>infra/</code> 引用；（b）查报错任务名定位具体模块。任何修复在右栏 notes-panel 追加 <code>data-type="change"</code> entry 说明。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2.5：Commit</strong>
+            <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)"
+git add patra-api/gradle.properties
+git commit -m "$(cat &lt;&lt;'EOF'
+chore(gradle): #44 otel.agent.path 加 ../ 前缀指向 patra-infra/
+
+build-logic 用 rootProject.projectDir.resolve(otelAgentPath)
+解析，rootProject = patra-api/，所以路径需从 ../patra-infra/
+出发。./gradlew check 通过。
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt;
+EOF
+)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <!-- ============================================================
+           Task 3
+           ============================================================ -->
+      <article class="task" id="task-3" data-status="pending">
+        <header>
+          <h2>任务 3：批量同步文档与脚本中的相对路径字符串</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>patra-infra/docker/README.md</code>（约 22 处）</dd>
+            <dt>修改</dt><dd><code>patra-infra/scripts/install-nacos-tunnel.sh</code>（3 处）</dd>
+            <dt>修改</dt><dd><code>patra-infra/scripts/init-volumes.sh</code>（2 处）</dd>
+            <dt>修改</dt><dd><code>patra-infra/scripts/install-tailscale-route-guard.sh</code>（3 处）</dd>
+            <dt>修改</dt><dd><code>patra-infra/scripts/dev.patra.nacos-tunnel.plist</code>（1 处）</dd>
+            <dt>修改</dt><dd><code>patra-infra/scripts/dev.patra.tailscale-route-guard.plist</code>（1 处）</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 3.1：现状 grep 看命中清单</strong>
+            <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)"
+grep -rnE "infra/(docker|scripts)/" patra-infra/ | wc -l</code></pre>
+            <p>预期：约 30 行命中（README ≈22 + 脚本/plist ≈10），全部是 <code>infra/docker/...</code> 或 <code>infra/scripts/...</code> 形式。spec §1 现状盘点确认无其它字面字符串变体（已 grep 过滤验证）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3.2：用 sed 批量替换（macOS BSD sed 语法）</strong>
+            <p>sed 安全性：spec §1 现状盘点已 grep 确认 <code>patra-infra/{docker,scripts}/</code> 下所有 <code>infra/</code> 字面字符串均为 <code>infra/docker/</code> 或 <code>infra/scripts/</code>，无其它变体可被误伤。</p>
+            <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)"
+
+# README
+sed -i '' 's|infra/docker/|patra-infra/docker/|g; s|infra/scripts/|patra-infra/scripts/|g' \
+  patra-infra/docker/README.md
+
+# Shell 脚本（3 个）
+sed -i '' 's|infra/docker/|patra-infra/docker/|g; s|infra/scripts/|patra-infra/scripts/|g' \
+  patra-infra/scripts/install-nacos-tunnel.sh \
+  patra-infra/scripts/init-volumes.sh \
+  patra-infra/scripts/install-tailscale-route-guard.sh
+
+# plist（2 个）
+sed -i '' 's|infra/docker/|patra-infra/docker/|g; s|infra/scripts/|patra-infra/scripts/|g' \
+  patra-infra/scripts/dev.patra.nacos-tunnel.plist \
+  patra-infra/scripts/dev.patra.tailscale-route-guard.plist</code></pre>
+            <p>注：macOS BSD sed 需要 <code>-i ''</code>（空字符串备份后缀）；如果在 Linux 上跑用 <code>sed -i</code>（无空字符串参数）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3.3：验证替换清零</strong>
+            <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)"
+echo "=== patra-infra/ 内残留 infra/{docker,scripts}/ ==="
+grep -rnE "(^|[^-])infra/(docker|scripts)/" patra-infra/ || echo "OK: zero hits"
+echo ""
+echo "=== 全仓库残留（应仅命中 patra-codex/.claude 下的六边形模块名无关字符串）==="
+grep -rnE "(^|[^-])infra/(docker|scripts)/" \
+  --include="*.md" --include="*.sh" --include="*.plist" \
+  --include="*.kts" --include="*.gradle" --include="*.properties" \
+  --include="*.yml" --include="*.yaml" --include=".gitignore" \
+  . 2&gt;/dev/null | grep -v "\.git/" | grep -v "/build/" || echo "OK: zero hits"</code></pre>
+            <p>预期：<code>patra-infra/</code> 内零命中；全仓库残留仅在 <code>patra-codex</code>/<code>.claude</code> 的六边形架构文档命中 <code>*-infra/</code> 模块名（如 <code>patra-catalog-infra/</code>），那些是模块名不是路径，与本次迁移无关，**保留不动**。<br>正则用 <code>(^|[^-])infra/</code> 排除前缀连字符（如 <code>catalog-infra/docker</code> 这种六边形模块名形式，本仓库无此命中，但作为防御性正则保留）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3.4：抽查 README 样本（spot check）</strong>
+            <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)"
+sed -n '65,75p' patra-infra/docker/README.md
+echo "---"
+sed -n '210,225p' patra-infra/docker/README.md</code></pre>
+            <p>预期：所有命令示例的相对路径都已经是 <code>patra-infra/docker/...</code> 或 <code>patra-infra/scripts/...</code>，无残留 <code>infra/docker/</code> 或 <code>infra/scripts/</code>。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3.5：Commit</strong>
+            <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)"
+git add patra-infra/docker/README.md \
+        patra-infra/scripts/install-nacos-tunnel.sh \
+        patra-infra/scripts/init-volumes.sh \
+        patra-infra/scripts/install-tailscale-route-guard.sh \
+        patra-infra/scripts/dev.patra.nacos-tunnel.plist \
+        patra-infra/scripts/dev.patra.tailscale-route-guard.plist
+git commit -m "$(cat &lt;&lt;'EOF'
+docs(infra): #44 同步文档/脚本/plist 中的相对路径前缀
+
+CWD 语义从 patra-api/ 上移到 monorepo 根 Patra/，所有命令示例
+的相对路径需加 patra- 前缀。约 30 处 sed 替换：
+- README.md：≈22 处
+- 3 个 install/init 脚本注释：≈8 处
+- 2 个 plist 注释：2 处
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt;
+EOF
+)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <!-- ============================================================
+           Task 4
+           ============================================================ -->
+      <article class="task" id="task-4" data-status="pending">
+        <header>
+          <h2>任务 4：填根 CLAUDE.md:62 技术栈列 + 清 patra-api/.gitignore 过时注释</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>CLAUDE.md:62</code>（工作区根）</dd>
+            <dt>修改</dt><dd><code>patra-api/.gitignore:83</code>（删过时注释）</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 4.1：Edit 根 CLAUDE.md 第 62 行</strong>
+            <p>用 Edit 工具把这一行：</p>
+            <pre><code class="lang-markdown">| **patra-infra** | 基建配置（Docker Compose、DB 脚本） |  |</code></pre>
+            <p>替换为：</p>
+            <pre><code class="lang-markdown">| **patra-infra** | 基建配置（Docker Compose、DB 脚本） | Docker Compose / Bash / launchd |</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4.2：Edit patra-api/.gitignore 删第 83 行过时注释</strong>
+            <p>用 Edit 工具把这一段：</p>
+            <pre><code class="lang-gitignore">##############################
+# Env files (local only)
+##############################
+# 仅匹配仓库顶层；infra/docker/.env* 不在此范围（沿用 patra-infra 入库现状）
+/.env
+/.env.*</code></pre>
+            <p>替换为：</p>
+            <pre><code class="lang-gitignore">##############################
+# Env files (local only)
+##############################
+/.env
+/.env.*</code></pre>
+            <p>注：区块标题 <code># Env files (local only)</code> 和 <code>##############################</code> 分隔符保留；只删那一行过时注释。<code>/.env</code>、<code>/.env.*</code> 两条规则保留以保护 patra-api 工程根本地 env。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4.3：验证</strong>
+            <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)"
+echo "=== CLAUDE.md:62 ==="
+sed -n '62p' CLAUDE.md
+echo ""
+echo "=== patra-api/.gitignore 79-85 ==="
+sed -n '79,85p' patra-api/.gitignore</code></pre>
+            <p>预期：CLAUDE.md:62 的"技术栈"列显示 <code>Docker Compose / Bash / launchd</code>；patra-api/.gitignore 第 79-85 行恰好是上述 Edit 后的 6 行（区块标题 + 分隔符 + 2 条 /.env 规则），无过时注释。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4.4：Commit</strong>
+            <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)"
+git add CLAUDE.md patra-api/.gitignore
+git commit -m "$(cat &lt;&lt;'EOF'
+docs: #44 根 CLAUDE.md patra-infra 行补齐技术栈列；清 patra-api/.gitignore 过时注释
+
+- CLAUDE.md:62 patra-infra 行技术栈列填 'Docker Compose / Bash / launchd'，
+  与 patra-api / patra-portal 风格统一
+- patra-api/.gitignore:83 删除过时注释（infra/docker 已不在 patra-api 下），
+  保留 /.env、/.env.* 顶层规则保护 patra-api 工程根
+- 隐式入库策略：根 .gitignore 不加 .env 规则，patra-infra/docker/.env*
+  按现状继续入库
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt;
+EOF
+)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <!-- ============================================================
+           Task 5
+           ============================================================ -->
+      <article class="task" id="task-5" data-status="pending">
+        <header>
+          <h2>任务 5：全量验证（Done 判定）</h2>
+          <dl class="files">
+            <dt>验证</dt><dd>无文件改动，仅运行 spec §Done 判定的全部检查项</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 5.1：./gradlew check（patra-api 全量构建）</strong>
+            <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)/patra-api"
+./gradlew check --no-daemon 2&gt;&amp;1 | tail -10
+echo "---exit code: $?---"</code></pre>
+            <p>预期：<code>BUILD SUCCESSFUL</code>，exit 0。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5.2：docker compose config（解析所有 compose 文件）</strong>
+            <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)/patra-infra/docker"
+for f in docker-compose.dev.yaml docker-compose.core.yaml docker-compose.storage.yaml docker-compose.jobs.yaml docker-compose.search.yaml docker-compose.observability.yaml; do
+  if [ -f "$f" ]; then
+    docker compose -f "$f" config &gt; /dev/null 2&gt;&amp;1 && echo "OK: $f" || echo "FAIL: $f"
+  fi
+done</code></pre>
+            <p>预期：每个 compose 文件均输出 <code>OK: <文件名></code>。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5.3：git log --follow 验证历史保留</strong>
+            <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)"
+git log --follow --oneline patra-infra/docker/README.md | head -10</code></pre>
+            <p>预期：除本次 commit 外，能看到 <code>patra-api/infra/docker/README.md</code> 时代的历史（即至少 5+ 条 commit，最早一条 commit hash 与 <code>git log --all --oneline -- patra-api/infra/docker/README.md</code> 一致）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5.4：兜底 grep（确认无残留路径字符串）</strong>
+            <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)"
+grep -rnE "(^|[^-])infra/(docker|scripts)/" \
+  --include="*.md" --include="*.sh" --include="*.plist" \
+  --include="*.kts" --include="*.gradle" --include="*.properties" \
+  --include="*.yml" --include="*.yaml" --include=".gitignore" \
+  --include="CLAUDE.md" \
+  . 2&gt;/dev/null | grep -v "\.git/" | grep -v "/build/" | grep -v "/\.gradle/"</code></pre>
+            <p>预期：<strong>无任何输出</strong>。如果有命中，立即检查：</p>
+            <ul>
+              <li>若命中六边形模块名（如 <code>catalog-infra/docker</code>）→ 正则误判，调整正则或忽略</li>
+              <li>若命中真实路径残留 → 立即修复并 amend 到最近一次相关 commit（Task 3 或 Task 4）</li>
+            </ul>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5.5：git status 干净</strong>
+            <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)"
+git status</code></pre>
+            <p>预期：<code>nothing to commit, working tree clean</code>。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5.6：审查 commit 序列</strong>
+            <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)"
+git log --oneline main..HEAD</code></pre>
+            <p>预期：约 6 条 commit — 2 条 spec/plan 文档 commit（brainstorming + writing-plans 阶段产出）+ 4 条 task commit（Task 1 → 2 → 3 → 4 顺序，Task 5 不 commit）。每条 task commit 都引用 <code>#44</code>。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5.7：更新 plan 状态为 done 并交付</strong>
+            <p>所有验证通过后：</p>
+            <ul>
+              <li>把本 plan HTML 内所有 task <code>data-status</code>、TOC <code>data-task-status</code> 改为 <code>done</code>，header status-pill 改为 <code>done</code></li>
+              <li>调用 patra:finishing-a-development-branch 决定如何收尾（PR / merge / 清理 worktree）</li>
+            </ul>
+          </li>
+        </ol>
+      </article>
+
+    </section>
+
+    <section id="self-check" class="self-check">
+      <h2>自检结果</h2>
+
+      <aside class="callout success">
+        <span class="title">1. 规格覆盖度</span>
+        <p>逐章对照 spec：§3 目录迁移 → Task 1；§4 Gradle 路径 → Task 2；§5.1–5.3 文档/脚本/plist → Task 3；§5.4 根 CLAUDE.md → Task 4.1；§6 .gitignore → Task 4.2；§Done 判定 → Task 5。spec §5.5 "不动的文件"（patra-api/CLAUDE.md、patra-codex 等）在 file-structure 用 <code>keep</code> pill 明示；spec §7 全部 4 个决策已经在对应 Task 的 commit 信息与步骤注释里隐式应用。无遗漏。</p>
+      </aside>
+
+      <aside class="callout success">
+        <span class="title">2. 占位符扫描</span>
+        <p>已 grep 文件中所有 <code>FILL</code> 占位符，零命中。所有命令、Edit 内容、commit 信息均为完整可执行字面值，无 "TODO" / "待定" / "类似任务 N" / "添加适当的错误处理" 等模式。</p>
+      </aside>
+
+      <aside class="callout success">
+        <span class="title">3. 类型一致性</span>
+        <p>跨任务路径命名一致：所有任务使用 <code>patra-infra/docker/</code>、<code>patra-infra/scripts/</code> 形式；commit message 一致引用 <code>#44</code>；所有命令均以 <code>cd "$(git rev-parse --show-toplevel)"</code> 起手或显式 <code>cd ...</code> 切到子目录，避免 cwd 漂移。Task 3 的 sed 模式（<code>infra/docker/</code> 与 <code>infra/scripts/</code>）与 Task 5 的兜底 grep 正则（<code>infra/(docker|scripts)/</code>）覆盖范围一致。</p>
+      </aside>
+
+      <aside class="callout success">
+        <span class="title">4. HTML 结构完整性</span>
+        <p>5 个 <code>&lt;article class="task"&gt;</code> 各有唯一 <code>id="task-1"</code> 至 <code>id="task-5"</code> 与初始 <code>data-status="pending"</code>。所有 <code>&lt;li class="step"&gt;</code> 均带 <code>data-status="pending"</code>。<code>&lt;head&gt;</code> 含 2 个 <code>&lt;link&gt;</code> 引用外置 CSS，无 inline <code>&lt;style&gt;</code>。TOC 左栏 <code>&lt;ol class="toc-tasks"&gt;</code> 5 条 li 一一对应中栏 5 个 article，初始 <code>data-task-status="pending"</code> 一致。<code>&lt;dl class="meta"&gt;</code> 四项齐全（目标 / 架构 / 技术栈 / 关联 spec）。</p>
+      </aside>
+    </section>
+
+  </main>
+
+  <!-- ============================================================
+       右栏：Implementation Notes（实施期由 Claude Code 维护）
+       ============================================================ -->
+  <aside class="notes-panel" id="notes">
+    <header>
+      <h2>Implementation Notes</h2>
+      <p class="hint">实施期由 Claude Code 即时追加。规则：遇到 plan 未规定的<strong>决定</strong>、必要<strong>更改</strong>、不可避免的<strong>权衡</strong>、其他用户应知事项，立即用 Edit 追加 entry，不要等任务结束。</p>
+    </header>
+
+    <ol class="notes-log">
+      <!-- ENTRY TEMPLATE（注释保留供实施期 AI 复制）:
+
+      <li class="note" data-type="decision" data-time="YYYY-MM-DDTHH:MM">
+        <header>
+          <span class="note-type">DECISION</span>
+          <time datetime="YYYY-MM-DDTHH:MM">MM-DD HH:MM</time>
+          <a href="#task-N">§ Task N</a>
+        </header>
+        <p>描述：plan 未规定 X，实施时选择 Y。理由：...</p>
+      </li>
+
+      data-type 4 类：decision / change / tradeoff / other
+      追加 entry 时同步更新下方 notes-stats footer 的对应 counter 数字。
+      -->
+    </ol>
+
+    <p class="empty-state">no notes yet</p>
+
+    <footer class="notes-stats">
+      总计:
+      <span data-counter="decision">0</span> decisions /
+      <span data-counter="change">0</span> changes /
+      <span data-counter="tradeoff">0</span> tradeoffs /
+      <span data-counter="other">0</span> others
+    </footer>
+  </aside>
+
+</div>
+</body>
+</html>
