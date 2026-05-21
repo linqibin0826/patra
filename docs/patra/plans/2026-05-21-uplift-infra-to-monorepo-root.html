@@ -33,10 +33,10 @@
           <li data-task-status="pending"><a href="#task-N">Task N — [任务名]</a></li>
           -->
           <li data-task-status="done"><a href="#task-1">Task 1 — git mv 上移整目录并验证 compose 解析</a></li>
-          <li data-task-status="in-progress"><a href="#task-2">Task 2 — 修正 Gradle otel.agent.path 并验证 build</a></li>
-          <li data-task-status="pending"><a href="#task-3">Task 3 — 批量同步文档与脚本中的相对路径字符串</a></li>
-          <li data-task-status="pending"><a href="#task-4">Task 4 — 填根 CLAUDE.md:62 技术栈列 + 清 patra-api/.gitignore 过时注释</a></li>
-          <li data-task-status="pending"><a href="#task-5">Task 5 — 全量验证（Done 判定）</a></li>
+          <li data-task-status="done"><a href="#task-2">Task 2 — 修正 Gradle otel.agent.path 并验证 build</a></li>
+          <li data-task-status="done"><a href="#task-3">Task 3 — 批量同步文档与脚本中的相对路径字符串</a></li>
+          <li data-task-status="done"><a href="#task-4">Task 4 — 填根 CLAUDE.md:62 技术栈列 + 清 patra-api/.gitignore 过时注释</a></li>
+          <li data-task-status="done"><a href="#task-5">Task 5 — 全量验证（Done 判定）</a></li>
         </ol>
       </li>
       <li><a href="#self-check">自检结果</a></li>
@@ -54,7 +54,7 @@
         <span>📅 2026-05-21</span>
         <span>🌿 worktree-issue-44-uplift-infra</span>
         <span>📋 plan</span>
-        <span class="status-pill">draft</span>
+        <span class="status-pill">done</span>
       </div>
 
       <aside class="for-ai-worker">
@@ -211,7 +211,7 @@ git log --oneline -1</code></pre>
       <!-- ============================================================
            Task 2
            ============================================================ -->
-      <article class="task" id="task-2" data-status="in-progress">
+      <article class="task" id="task-2" data-status="done">
         <header>
           <h2>任务 2：修正 Gradle otel.agent.path 并验证 build</h2>
           <dl class="files">
@@ -220,7 +220,7 @@ git log --oneline -1</code></pre>
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2.1：确认当前值</strong>
             <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)"
 sed -n '48,54p' patra-api/gradle.properties</code></pre>
@@ -233,7 +233,7 @@ otel.agent.path=infra/docker/opentelemetry-javaagent.jar
 otel.exporter.endpoint=http://localhost:4317</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2.2：Edit gradle.properties 第 51 行</strong>
             <p>用 Edit 工具把这一行：</p>
             <pre><code class="lang-properties">otel.agent.path=infra/docker/opentelemetry-javaagent.jar</code></pre>
@@ -242,14 +242,14 @@ otel.exporter.endpoint=http://localhost:4317</code></pre>
             <p>注释行（<code># OTel Agent JAR 路径（相对于项目根目录）</code>）保持不变 — "项目根目录" 概念仍然指 <code>patra-api/</code>，无需改注释。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2.3：验证 jar 文件在新位置可达</strong>
             <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)/patra-api"
 test -f ../patra-infra/docker/opentelemetry-javaagent.jar && echo "OK: jar exists" || echo "FAIL: jar missing"</code></pre>
             <p>预期：<code>OK: jar exists</code>。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2.4：跑 ./gradlew check 全量验证</strong>
             <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)/patra-api"
 ./gradlew check --no-daemon 2&gt;&amp;1 | tail -30
@@ -258,7 +258,7 @@ echo "$?"</code></pre>
             <p>预期：<code>BUILD SUCCESSFUL</code>，exit code 0。如失败：（a）查 <code>build-logic/src/main/kotlin/linqibin.hexagonal-boot.gradle.kts</code> 是否还有其它 hardcode <code>infra/</code> 引用；（b）查报错任务名定位具体模块。任何修复在右栏 notes-panel 追加 <code>data-type="change"</code> entry 说明。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2.5：Commit</strong>
             <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)"
 git add patra-api/gradle.properties
@@ -279,7 +279,7 @@ EOF
       <!-- ============================================================
            Task 3
            ============================================================ -->
-      <article class="task" id="task-3" data-status="pending">
+      <article class="task" id="task-3" data-status="done">
         <header>
           <h2>任务 3：批量同步文档与脚本中的相对路径字符串</h2>
           <dl class="files">
@@ -293,14 +293,14 @@ EOF
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3.1：现状 grep 看命中清单</strong>
             <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)"
 grep -rnE "infra/(docker|scripts)/" patra-infra/ | wc -l</code></pre>
             <p>预期：约 30 行命中（README ≈22 + 脚本/plist ≈10），全部是 <code>infra/docker/...</code> 或 <code>infra/scripts/...</code> 形式。spec §1 现状盘点确认无其它字面字符串变体（已 grep 过滤验证）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3.2：用 sed 批量替换（macOS BSD sed 语法）</strong>
             <p>sed 安全性：spec §1 现状盘点已 grep 确认 <code>patra-infra/{docker,scripts}/</code> 下所有 <code>infra/</code> 字面字符串均为 <code>infra/docker/</code> 或 <code>infra/scripts/</code>，无其它变体可被误伤。</p>
             <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)"
@@ -322,7 +322,7 @@ sed -i '' 's|infra/docker/|patra-infra/docker/|g; s|infra/scripts/|patra-infra/s
             <p>注：macOS BSD sed 需要 <code>-i ''</code>（空字符串备份后缀）；如果在 Linux 上跑用 <code>sed -i</code>（无空字符串参数）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3.3：验证替换清零</strong>
             <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)"
 echo "=== patra-infra/ 内残留 infra/{docker,scripts}/ ==="
@@ -337,7 +337,7 @@ grep -rnE "(^|[^-])infra/(docker|scripts)/" \
             <p>预期：<code>patra-infra/</code> 内零命中；全仓库残留仅在 <code>patra-codex</code>/<code>.claude</code> 的六边形架构文档命中 <code>*-infra/</code> 模块名（如 <code>patra-catalog-infra/</code>），那些是模块名不是路径，与本次迁移无关，**保留不动**。<br>正则用 <code>(^|[^-])infra/</code> 排除前缀连字符（如 <code>catalog-infra/docker</code> 这种六边形模块名形式，本仓库无此命中，但作为防御性正则保留）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3.4：抽查 README 样本（spot check）</strong>
             <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)"
 sed -n '65,75p' patra-infra/docker/README.md
@@ -346,7 +346,7 @@ sed -n '210,225p' patra-infra/docker/README.md</code></pre>
             <p>预期：所有命令示例的相对路径都已经是 <code>patra-infra/docker/...</code> 或 <code>patra-infra/scripts/...</code>，无残留 <code>infra/docker/</code> 或 <code>infra/scripts/</code>。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3.5：Commit</strong>
             <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)"
 git add patra-infra/docker/README.md \
@@ -374,7 +374,7 @@ EOF
       <!-- ============================================================
            Task 4
            ============================================================ -->
-      <article class="task" id="task-4" data-status="pending">
+      <article class="task" id="task-4" data-status="done">
         <header>
           <h2>任务 4：填根 CLAUDE.md:62 技术栈列 + 清 patra-api/.gitignore 过时注释</h2>
           <dl class="files">
@@ -384,7 +384,7 @@ EOF
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4.1：Edit 根 CLAUDE.md 第 62 行</strong>
             <p>用 Edit 工具把这一行：</p>
             <pre><code class="lang-markdown">| **patra-infra** | 基建配置（Docker Compose、DB 脚本） |  |</code></pre>
@@ -392,7 +392,7 @@ EOF
             <pre><code class="lang-markdown">| **patra-infra** | 基建配置（Docker Compose、DB 脚本） | Docker Compose / Bash / launchd |</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4.2：Edit patra-api/.gitignore 删第 83 行过时注释</strong>
             <p>用 Edit 工具把这一段：</p>
             <pre><code class="lang-gitignore">##############################
@@ -410,7 +410,7 @@ EOF
             <p>注：区块标题 <code># Env files (local only)</code> 和 <code>##############################</code> 分隔符保留；只删那一行过时注释。<code>/.env</code>、<code>/.env.*</code> 两条规则保留以保护 patra-api 工程根本地 env。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4.3：验证</strong>
             <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)"
 echo "=== CLAUDE.md:62 ==="
@@ -421,7 +421,7 @@ sed -n '79,85p' patra-api/.gitignore</code></pre>
             <p>预期：CLAUDE.md:62 的"技术栈"列显示 <code>Docker Compose / Bash / launchd</code>；patra-api/.gitignore 第 79-85 行恰好是上述 Edit 后的 6 行（区块标题 + 分隔符 + 2 条 /.env 规则），无过时注释。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4.4：Commit</strong>
             <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)"
 git add CLAUDE.md patra-api/.gitignore
@@ -445,7 +445,7 @@ EOF
       <!-- ============================================================
            Task 5
            ============================================================ -->
-      <article class="task" id="task-5" data-status="pending">
+      <article class="task" id="task-5" data-status="done">
         <header>
           <h2>任务 5：全量验证（Done 判定）</h2>
           <dl class="files">
@@ -454,7 +454,7 @@ EOF
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5.1：./gradlew check（patra-api 全量构建）</strong>
             <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)/patra-api"
 ./gradlew check --no-daemon 2&gt;&amp;1 | tail -10
@@ -462,7 +462,7 @@ echo "---exit code: $?---"</code></pre>
             <p>预期：<code>BUILD SUCCESSFUL</code>，exit 0。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5.2：docker compose config（解析所有 compose 文件）</strong>
             <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)/patra-infra/docker"
 for f in docker-compose.dev.yaml docker-compose.core.yaml docker-compose.storage.yaml docker-compose.jobs.yaml docker-compose.search.yaml docker-compose.observability.yaml; do
@@ -473,14 +473,14 @@ done</code></pre>
             <p>预期：每个 compose 文件均输出 <code>OK: <文件名></code>。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5.3：git log --follow 验证历史保留</strong>
             <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)"
 git log --follow --oneline patra-infra/docker/README.md | head -10</code></pre>
             <p>预期：除本次 commit 外，能看到 <code>patra-api/infra/docker/README.md</code> 时代的历史（即至少 5+ 条 commit，最早一条 commit hash 与 <code>git log --all --oneline -- patra-api/infra/docker/README.md</code> 一致）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5.4：兜底 grep（确认无残留路径字符串）</strong>
             <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)"
 grep -rnE "(^|[^-])infra/(docker|scripts)/" \
@@ -496,21 +496,21 @@ grep -rnE "(^|[^-])infra/(docker|scripts)/" \
             </ul>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5.5：git status 干净</strong>
             <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)"
 git status</code></pre>
             <p>预期：<code>nothing to commit, working tree clean</code>。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5.6：审查 commit 序列</strong>
             <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)"
 git log --oneline main..HEAD</code></pre>
             <p>预期：约 6 条 commit — 2 条 spec/plan 文档 commit（brainstorming + writing-plans 阶段产出）+ 4 条 task commit（Task 1 → 2 → 3 → 4 顺序，Task 5 不 commit）。每条 task commit 都引用 <code>#44</code>。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5.7：更新 plan 状态为 done 并交付</strong>
             <p>所有验证通过后：</p>
             <ul>
