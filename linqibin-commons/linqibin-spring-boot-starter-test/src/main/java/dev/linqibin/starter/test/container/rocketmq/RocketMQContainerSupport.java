@@ -83,10 +83,13 @@ public class RocketMQContainerSupport {
 
     log.info("加载 Docker Compose 配置: {}", composeFile.getAbsolutePath());
 
-    // Testcontainers 2.0: 单参数构造函数默认使用本地 docker-compose 二进制文件
-    // withLocalCompose(boolean) 方法已在 2.0 版本移除
+    // Testcontainers 1.21.x ComposeContainer 默认 containerised 模式（启动 docker:24.0.2 容器跑 compose），
+    // 与 OrbStack 等部分 Docker daemon 不兼容（报 Status 500: unexpected EOF）。
+    // 显式 withLocalCompose(true) 走本地 docker compose CLI，兼容性更好；
+    // CI ubuntu-latest 自带 docker compose CLI，本地 OrbStack / Docker Desktop 也都自带，无副作用。
     this.composeContainer =
         new ComposeContainer(composeFile)
+            .withLocalCompose(true)
             .withExposedService(
                 "nameserver",
                 NAMESRV_PORT,
