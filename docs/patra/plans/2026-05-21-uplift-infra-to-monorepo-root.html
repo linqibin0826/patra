@@ -32,8 +32,8 @@
 
           <li data-task-status="pending"><a href="#task-N">Task N — [任务名]</a></li>
           -->
-          <li data-task-status="pending"><a href="#task-1">Task 1 — git mv 上移整目录并验证 compose 解析</a></li>
-          <li data-task-status="pending"><a href="#task-2">Task 2 — 修正 Gradle otel.agent.path 并验证 build</a></li>
+          <li data-task-status="done"><a href="#task-1">Task 1 — git mv 上移整目录并验证 compose 解析</a></li>
+          <li data-task-status="in-progress"><a href="#task-2">Task 2 — 修正 Gradle otel.agent.path 并验证 build</a></li>
           <li data-task-status="pending"><a href="#task-3">Task 3 — 批量同步文档与脚本中的相对路径字符串</a></li>
           <li data-task-status="pending"><a href="#task-4">Task 4 — 填根 CLAUDE.md:62 技术栈列 + 清 patra-api/.gitignore 过时注释</a></li>
           <li data-task-status="pending"><a href="#task-5">Task 5 — 全量验证（Done 判定）</a></li>
@@ -150,7 +150,7 @@ git commit -m "feat: [description]"</code></pre>
       <!-- ============================================================
            Task 1
            ============================================================ -->
-      <article class="task" id="task-1" data-status="pending">
+      <article class="task" id="task-1" data-status="done">
         <header>
           <h2>任务 1：git mv 上移整目录并验证 compose 解析</h2>
           <dl class="files">
@@ -159,21 +159,21 @@ git commit -m "feat: [description]"</code></pre>
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1.1：确认起始状态（源存在、目标不存在）</strong>
             <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)"
 ls -d patra-api/infra && ls -d patra-infra 2>&1 || true</code></pre>
             <p>预期：<code>patra-api/infra</code> 输出；<code>ls: patra-infra: No such file or directory</code>（确认目标不存在）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1.2：执行 git mv 上移整目录</strong>
             <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)"
 git mv patra-api/infra patra-infra</code></pre>
             <p>预期：无输出，命令成功返回。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1.3：验证 git 把所有文件识别为 rename</strong>
             <pre><code class="lang-bash">git status | head -30
 echo "---rename count---"
@@ -181,7 +181,7 @@ git status --short | grep -cE '^R'</code></pre>
             <p>预期：<code>git status</code> 列出大量 <code>renamed: patra-api/infra/... -&gt; patra-infra/...</code>；rename count &gt; 30（README、compose yaml、scripts、子目录文件全部为 R 状态）。如果出现 <code>D</code>/<code>?</code> 而非 <code>R</code>，立即 <code>git mv</code> 回滚后重试（rename detection 失败说明索引状态异常）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1.4：验证 docker compose 仍能解析（不起容器）</strong>
             <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)/patra-infra/docker"
 docker compose -f docker-compose.dev.yaml config &gt; /dev/null
@@ -189,7 +189,7 @@ echo "exit=$?"</code></pre>
             <p>预期：<code>exit=0</code>，无 WARN/ERROR 输出。如果有 WARN 涉及 <code>../</code> 路径，说明 compose 内有反向引用未被 spec 盘点到，停下并在右栏 notes-panel 追加 <code>data-type="change"</code> entry 说明发现。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1.5：Commit</strong>
             <pre><code class="lang-bash">cd "$(git rev-parse --show-toplevel)"
 git commit -m "$(cat &lt;&lt;'EOF'
@@ -211,7 +211,7 @@ git log --oneline -1</code></pre>
       <!-- ============================================================
            Task 2
            ============================================================ -->
-      <article class="task" id="task-2" data-status="pending">
+      <article class="task" id="task-2" data-status="in-progress">
         <header>
           <h2>任务 2：修正 Gradle otel.agent.path 并验证 build</h2>
           <dl class="files">
@@ -573,15 +573,31 @@ git log --oneline main..HEAD</code></pre>
       data-type 4 类：decision / change / tradeoff / other
       追加 entry 时同步更新下方 notes-stats footer 的对应 counter 数字。
       -->
-    </ol>
 
-    <p class="empty-state">no notes yet</p>
+      <li class="note" data-type="change" data-time="2026-05-21T15:58">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-21T15:58">05-21 15:58</time>
+          <a href="#task-2">§ Task 2</a>
+        </header>
+        <p>plan 步骤 2.3 要求 <code>test -f ../patra-infra/docker/opentelemetry-javaagent.jar</code>，但该 jar 文件<strong>从未在仓库内</strong>（<code>git check-ignore</code> 无规则、<code>find</code> 全仓库无命中、git 历史也无此文件入库）。读 build-logic <code>linqibin.hexagonal-boot.gradle.kts:50-68</code> 确认 <code>otel.agent.path</code> 仅在 <code>bootRun</code> 的 <code>jvmArgs("-javaagent:$agentJar", ...)</code> 中使用，<code>rootProject.projectDir.resolve(otelAgentPath)</code> 仅构造 <code>File</code> 对象、不读文件；<code>./gradlew check</code> 不依赖该 jar 实际存在。结论：跳过 plan 步骤 2.3 jar 可达性检查，直接以 2.4 <code>./gradlew check</code> 通过为准。该 jar 是开发者本地按需下载的资源（启动 bootRun 时才需要），不属于本次迁移的版本控制范围，issue #44 验收清单未涉及。</p>
+      </li>
+
+      <li class="note" data-type="tradeoff" data-time="2026-05-21T16:02">
+        <header>
+          <span class="note-type">TRADEOFF</span>
+          <time datetime="2026-05-21T16:02">05-21 16:02</time>
+          <a href="#task-2">§ Task 2</a>
+        </header>
+        <p>plan 步骤 2.4 期望 <code>./gradlew check</code> 通过（BUILD SUCCESSFUL），实际<strong>失败但与本次迁移无关</strong>。失败任务全部为 <code>:linqibin-spring-boot-starter-*:spotbugs{Main,Test}</code>（约 9 个 SpotBugs 静态分析任务），bug 报告中无任何 <code>infra/</code> 路径或 OTel 相关类。<strong>对照验证</strong>：临时在 <code>/tmp/patra-baseline-check</code> 用 <code>main</code> HEAD（<code>e0918f0d4</code>）创建 detached worktree 跑 <code>./gradlew check</code>，得到<strong>同样的 SpotBugs 失败集合</strong>，确认这是 pre-existing 问题。结论：本次 Task 2 的 OTel 路径修正未引入新回归；SpotBugs starter 模块的代码质量问题属于独立技术债，<strong>不在 #44 范围内</strong>，留给独立 issue 处理。Done 判定降级为"无新增 build 失败"，等价于"与 main baseline 输出一致"。</p>
+      </li>
+    </ol>
 
     <footer class="notes-stats">
       总计:
       <span data-counter="decision">0</span> decisions /
-      <span data-counter="change">0</span> changes /
-      <span data-counter="tradeoff">0</span> tradeoffs /
+      <span data-counter="change">1</span> changes /
+      <span data-counter="tradeoff">1</span> tradeoffs /
       <span data-counter="other">0</span> others
     </footer>
   </aside>
