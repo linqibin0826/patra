@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude 配置 workspace 上移 — 实现计划</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles/journal.css">
+  <link rel="stylesheet" href="../styles/plan-extras.css">
+</head>
+<body>
+<div class="layout">
+
+  <nav class="toc">
+    <h3>目录</h3>
+    <ol>
+      <li><a href="#scope-check">范围检查结果</a></li>
+      <li><a href="#file-structure">文件结构</a></li>
+      <li><a href="#tasks">任务列表</a>
+        <ol class="toc-tasks">
+          <!-- ENTRY TEMPLATE（注释保留供添加 task 时复制）:
+               每写一个 <article id="task-N">，在此处同步追加一条 li，初始 data-task-status="pending"。
+               实施期改 article 的 data-status 时，必须同步改此处 li 的 data-task-status，
+               否则 TOC 状态符号会与中栏卡片不一致。
+
+          <li data-task-status="pending"><a href="#task-N">Task N — [任务名]</a></li>
+          -->
+          <li data-task-status="pending"><a href="#task-1">Task 1 — 上移 patra plugin marketplace</a></li>
+          <li data-task-status="pending"><a href="#task-2">Task 2 — 迁移 plugin 启用声明并验证上溯查找</a></li>
+          <li data-task-status="pending"><a href="#task-3">Task 3 — 上移 send-stop-notification.sh 及 Stop hook 注册</a></li>
+          <li data-task-status="pending"><a href="#task-4">Task 4 — 上移 create-issue skill 并改临时路径</a></li>
+          <li data-task-status="pending"><a href="#task-5">Task 5 — Patra/CLAUDE.md 顶部新增「产品定义」章节</a></li>
+          <li data-task-status="pending"><a href="#task-6">Task 6 — 删除 patra-portal/CLAUDE.md 的 FE 警示段</a></li>
+          <li data-task-status="pending"><a href="#task-7">Task 7 — 全链路端到端验证并推送 PR</a></li>
+        </ol>
+      </li>
+      <li><a href="#self-check">自检结果</a></li>
+    </ol>
+  </nav>
+
+  <main class="content">
+
+    <header class="doc-header">
+      <h1>Claude 配置 workspace 上移 — 实现计划</h1>
+      <div class="meta-bar">
+        <span>📅 2026-05-21</span>
+        <span>🌿 chore/claude-config-workspace-uplift</span>
+        <span>📋 plan</span>
+        <span class="status-pill">draft</span>
+      </div>
+
+      <aside class="for-ai-worker">
+        <strong>面向 AI 代理的工作者：</strong>
+        必需子技能：使用 <code>patra:subagent-driven-development</code>（推荐）
+        或 <code>patra:executing-plans</code> 逐任务实现。
+        通过修改任务卡片与步骤的 <code>data-status</code> 属性追踪进度
+        （pending / in-progress / done / blocked / skipped）。
+        每完成一个 task 立即 commit。
+      </aside>
+
+      <dl class="meta">
+        <dt>目标</dt> <dd>把 patra-api/.claude/ 下 4 项 workspace 通用配置上移到 Patra/.claude/，并删除 portal/CLAUDE.md 的 FE 警示段，让 BE/FE 同等享用 patra plugin</dd>
+        <dt>架构</dt> <dd>纯文件搬移与 JSON/Markdown 文本编辑。利用 settings.json 叠加机制让 workspace 层 Stop hook 与 enabledPlugins 在 BE cwd 下仍生效。git mv 保留历史血缘。</dd>
+        <dt>技术栈</dt> <dd>git / bash / 文本编辑（无任何代码编译或测试运行）</dd>
+        <dt>关联 spec</dt> <dd><a href="../specs/2026-05-21-claude-config-workspace-uplift-design.html">Claude 配置 workspace 上移 v0.1</a></dd>
+      </dl>
+    </header>
+
+    <section id="scope-check">
+      <h2>范围检查结果</h2>
+      <aside class="callout success">
+        <span class="title">单 plan 覆盖</span>
+        <p>本 plan 覆盖 spec 全部 10 项文件改造（3 create + 4 modify + 1 delete + 2 keep）外加最终端到端验证。所有改造主题单一（配置层级搬移），无独立子系统，单 plan 即可完整产出可工作、可验证的结果。</p>
+      </aside>
+    </section>
+
+    <section id="file-structure">
+      <h2>文件结构</h2>
+      <div class="file-tree">
+<pre>Patra/                                                       # workspace 根
+├── CLAUDE.md                                                # modify (Task 5)
+├── .claude/
+│   ├── settings.json                                        # modify (Task 2 + 3)
+│   ├── settings.local.json                                  # keep
+│   ├── hooks/
+│   │   └── send-stop-notification.sh                        # create (Task 3, 来自 git mv)
+│   └── skills/
+│       └── create-issue/SKILL.md                            # create (Task 4, 来自 git mv) + 改 4 处临时路径
+├── .claude-marketplace/
+│   └── patra/                                               # create (Task 1, 来自 git mv) — 整目录
+├── .mcp.json                                                # keep
+├── patra-api/
+│   ├── CLAUDE.md                                            # keep
+│   ├── .claude-marketplace/                                 # delete (Task 1 git mv 副作用，git 不跟踪空目录)
+│   └── .claude/
+│       ├── settings.json                                    # modify (Task 2 + 3)
+│       ├── agents/test-checker.md                           # keep
+│       ├── hooks/{mark-java,gradle-compile,trigger-build}.sh  # keep
+│       ├── rules/{code-style,project-info,layers,testing,tech}/    # keep
+│       └── skills/patra-{hexagonal,jpa,events,troubleshooter}/      # keep
+└── patra-portal/
+    └── CLAUDE.md                                            # modify (Task 6, 删除 § ⚠️ Skill 加载现状)</pre>
+      </div>
+    </section>
+
+    <section id="tasks">
+      <h2>任务列表</h2>
+
+      <!-- TASK TEMPLATE（注释保留供添加新 task 时复制）:
+
+      <article class="task" id="task-N" data-status="pending">
+        <header>
+          <h2>任务 N：[任务标题]</h2>
+          <dl class="files">
+            <dt>创建</dt><dd><code>[exact/path/to/File.java]</code></dd>
+            <dt>修改</dt><dd><code>[exact/path/to/Existing.java:123-145]</code></dd>
+            <dt>测试</dt><dd><code>[tests/exact/path/to/Test.java]</code></dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：[描述]</strong>
+            <pre><code class="lang-java">[完整代码块，禁止占位]</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      data-status 5 类：pending / in-progress / done / blocked / skipped
+      每开始任务/步骤改 in-progress，完成改 done。遇阻塞改 blocked，并在右栏 notes-panel 追加 data-type="other" entry 说明阻塞原因。
+      -->
+
+      <article class="task" id="task-1" data-status="pending">
+        <header>
+          <h2>任务 1：上移 patra plugin marketplace</h2>
+          <dl class="files">
+            <dt>移动</dt><dd><code>patra-api/.claude-marketplace/patra/</code> → <code>Patra/.claude-marketplace/patra/</code></dd>
+            <dt>副作用</dt><dd><code>patra-api/.claude-marketplace/</code>（变空，git 自动不跟踪）</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：创建新分支</strong>
+            <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/Patra
+git checkout -b chore/claude-config-workspace-uplift</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：确认源目录存在且包含完整 marketplace</strong>
+            <p>运行：<code>ls patra-api/.claude-marketplace/patra/.claude-plugin/ &amp;&amp; ls patra-api/.claude-marketplace/patra/skills/ | wc -l</code></p>
+            <p>预期：列出 <code>marketplace.json</code> 与 <code>plugin.json</code>，skills 数量为 <code>14</code>（14 个方法论 skill 目录）</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：确认目标目录不存在（避免覆盖）</strong>
+            <p>运行：<code>ls .claude-marketplace/ 2&gt;/dev/null || echo "目标父目录不存在，符合预期"</code></p>
+            <p>预期：输出 <code>目标父目录不存在，符合预期</code>（Patra/.claude-marketplace/ 当前不应存在）</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：用 git mv 搬移整目录</strong>
+            <pre><code class="lang-bash">mkdir -p .claude-marketplace
+git mv patra-api/.claude-marketplace/patra .claude-marketplace/patra</code></pre>
+            <p>说明：<code>git mv</code> 保留每个文件的历史血缘；patra 子目录下含 hooks/ 与 skills/ 全部内容（marketplace.json、plugin.json、14 个 skill 目录）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：确认搬移结果与源目录变空</strong>
+            <pre><code class="lang-bash">ls .claude-marketplace/patra/.claude-plugin/ && \
+ls .claude-marketplace/patra/skills/ | wc -l && \
+ls patra-api/.claude-marketplace/ 2>&1 || echo "源目录已空，git 不跟踪空目录，符合预期"</code></pre>
+            <p>预期：<code>marketplace.json</code> 与 <code>plugin.json</code> 在新位置；skills 仍为 14 个；源目录列表为空或已不存在。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 6：git status 核对变更性质</strong>
+            <p>运行：<code>git status -s</code></p>
+            <p>预期：所有相关文件以 <code>R</code>（rename）状态出现，而非 <code>D</code>（delete）+ <code>A</code>（add）。如果出现 D+A，说明 git 未识别为 rename（通常因为内容相似度阈值），可继续但需在 commit message 说明；如果出现 R 即历史血缘保留。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 7：Commit</strong>
+            <pre><code class="lang-bash">git add -A .claude-marketplace patra-api/.claude-marketplace
+git commit -m "$(cat <<'EOF'
+chore(claude): patra plugin marketplace 上移到 workspace
+
+把 .claude-marketplace/patra/ 从 patra-api/ 上移到 Patra/ 根，
+让 BE/FE 任意 cwd 启动 Claude Code 都能加载同一份 plugin。
+
+git mv 保留 14 个 skill + 2 个 plugin meta 文件的历史血缘。
+patra-api/.claude-marketplace/ 变空后 git 自动不跟踪。
+
+关联 spec: docs/patra/specs/2026-05-21-claude-config-workspace-uplift-design.html
+EOF
+)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-2" data-status="pending">
+        <header>
+          <h2>任务 2：迁移 plugin 启用声明并验证上溯查找</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>Patra/.claude/settings.json</code>（新增 <code>enabledPlugins.patra@patra-local</code>）</dd>
+            <dt>修改</dt><dd><code>patra-api/.claude/settings.json</code>（删除整个 <code>enabledPlugins</code> 字段）</dd>
+            <dt>关键验证</dt><dd>spec §8 Risk 1（high）— marketplace 上溯查找</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：编辑 Patra/.claude/settings.json，把 patra@patra-local 加进 enabledPlugins</strong>
+            <p>当前内容（5 行 enabledPlugins）：</p>
+            <pre><code class="lang-json">{
+  "enabledPlugins": {
+    "linear@claude-plugins-official": true,
+    "context7@claude-plugins-official": true,
+    "frontend-design@claude-plugins-official": true,
+    "codex@openai-codex": true
+  }
+}</code></pre>
+            <p>用 Edit 工具替换 <code>"codex@openai-codex": true</code> 那一行为：</p>
+            <pre><code class="lang-json">    "codex@openai-codex": true,
+    "patra@patra-local": true</code></pre>
+            <p>结果应为：</p>
+            <pre><code class="lang-json">{
+  "enabledPlugins": {
+    "linear@claude-plugins-official": true,
+    "context7@claude-plugins-official": true,
+    "frontend-design@claude-plugins-official": true,
+    "codex@openai-codex": true,
+    "patra@patra-local": true
+  }
+}</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：编辑 patra-api/.claude/settings.json，删除整个 enabledPlugins 字段</strong>
+            <p>当前文件末尾包含：</p>
+            <pre><code class="lang-json">  },
+  "enabledPlugins": {
+    "patra@patra-local": true
+  }
+}</code></pre>
+            <p>用 Edit 工具替换上述四行为：</p>
+            <pre><code class="lang-json">  }
+}</code></pre>
+            <p>说明：注意去掉前一个 <code>}</code> 后面的逗号（JSON 末尾不允许悬挂逗号）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：JSON 语法校验</strong>
+            <pre><code class="lang-bash">cat .claude/settings.json | python3 -m json.tool > /dev/null && echo "Patra/.claude/settings.json OK"
+cat patra-api/.claude/settings.json | python3 -m json.tool > /dev/null && echo "patra-api/.claude/settings.json OK"</code></pre>
+            <p>预期：两条 OK 消息；任何 JSONDecodeError 都必须立即修复（通常是逗号问题）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：关键验证 — marketplace 上溯查找（spec §8 Risk 1）</strong>
+            <p>说明：此步验证 high 级风险 — 当 cwd 在 patra-api（深一层）时，Claude Code 能否从父目录 Patra/.claude-marketplace/ 找到 patra plugin。</p>
+            <p>操作（需用户手动配合 — agent 无法在自身 session 中重启 Claude Code）：</p>
+            <ol>
+              <li>在终端切换到 <code>cd /Users/linqibin/Projects/Products/Patra/patra-api</code></li>
+              <li>启动新 Claude Code 会话（独立 terminal 窗口，避免影响当前 session）</li>
+              <li>在新会话中输入 <code>/skill</code>，检查列表里是否含 <code>patra:brainstorming</code>、<code>patra:writing-plans</code>、<code>patra:test-driven-development</code>、<code>patra:systematic-debugging</code> 等 14 项</li>
+            </ol>
+            <p>预期：14 个 patra: skill 全部可见。</p>
+            <p><strong>失败兜底</strong>（仅当上一步预期不满足时执行）：</p>
+            <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/Patra/patra-api
+ln -s ../.claude-marketplace .claude-marketplace
+git add .claude-marketplace
+# 然后在新 Claude Code 会话重新执行 /skill 验证</code></pre>
+            <p>如果触发兜底，必须在右栏 Implementation Notes 追加一条 <code>data-type="change"</code> entry，描述「上溯查找不支持，已加 symlink」。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：Commit</strong>
+            <pre><code class="lang-bash">git add .claude/settings.json patra-api/.claude/settings.json
+git commit -m "$(cat <<'EOF'
+chore(claude): patra plugin 启用声明上移到 workspace settings
+
+把 enabledPlugins.patra@patra-local 从 patra-api/.claude/settings.json
+搬到 Patra/.claude/settings.json。BE/FE 任意 cwd 启动 Claude Code
+都会通过 settings 叠加机制启用同一个 patra plugin。
+
+验证：cwd=patra-api 时新会话 /skill 列表仍含 14 个 patra: skill，
+说明 Claude Code 能从父目录 marketplace 上溯查找。
+
+关联 spec §7 决策 1 / §8 Risk 1
+EOF
+)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-3" data-status="pending">
+        <header>
+          <h2>任务 3：上移 send-stop-notification.sh 及 Stop hook 注册</h2>
+          <dl class="files">
+            <dt>移动</dt><dd><code>patra-api/.claude/hooks/send-stop-notification.sh</code> → <code>Patra/.claude/hooks/send-stop-notification.sh</code></dd>
+            <dt>修改</dt><dd><code>Patra/.claude/settings.json</code>（新增 <code>hooks.Stop</code> 段）</dd>
+            <dt>修改</dt><dd><code>patra-api/.claude/settings.json</code>（从 Stop 数组移除 send-stop-notification.sh 条目）</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：用 git mv 搬移 hook 脚本</strong>
+            <pre><code class="lang-bash">mkdir -p .claude/hooks
+git mv patra-api/.claude/hooks/send-stop-notification.sh .claude/hooks/send-stop-notification.sh</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：核对脚本权限与内容未变</strong>
+            <pre><code class="lang-bash">ls -l .claude/hooks/send-stop-notification.sh
+head -3 .claude/hooks/send-stop-notification.sh</code></pre>
+            <p>预期：权限位 <code>-rwxr-xr-x</code> 等可执行；前三行为 <code>#!/bin/bash</code> 与脚本注释。脚本内容字节不变（git mv 不改内容）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：在 Patra/.claude/settings.json 顶层添加 hooks.Stop 段</strong>
+            <p>当前文件（Task 2 完成后）只有 <code>enabledPlugins</code> 字段。需在 <code>{</code> 之后插入 <code>hooks</code> 段。</p>
+            <p>用 Edit 工具替换文件开头：</p>
+            <p>old_string：</p>
+            <pre><code class="lang-json">{
+  "enabledPlugins": {</code></pre>
+            <p>new_string：</p>
+            <pre><code class="lang-json">{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/send-stop-notification.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "enabledPlugins": {</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：从 patra-api/.claude/settings.json 的 Stop 数组移除 send-stop-notification 条目</strong>
+            <p>当前 patra-api 的 Stop 段含 3 个 hook：</p>
+            <pre><code class="lang-json">    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/gradle-compile-check.sh"
+          },
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/trigger-build-resolver-java.sh"
+          },
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/send-stop-notification.sh"
+          }
+        ]
+      }
+    ]</code></pre>
+            <p>用 Edit 工具删除 trigger-build-resolver-java 之后的逗号与最后一个 hook 对象，结果为：</p>
+            <pre><code class="lang-json">    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/gradle-compile-check.sh"
+          },
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/trigger-build-resolver-java.sh"
+          }
+        ]
+      }
+    ]</code></pre>
+            <p>注意：删除 trigger-build-resolver-java 那个对象的尾部逗号（<code>          },</code> → <code>          }</code>），保持 JSON 合法。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：JSON 语法校验</strong>
+            <pre><code class="lang-bash">cat .claude/settings.json | python3 -m json.tool > /dev/null && echo "Patra/.claude/settings.json OK"
+cat patra-api/.claude/settings.json | python3 -m json.tool > /dev/null && echo "patra-api/.claude/settings.json OK"</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 6：行为验证 — 触发 Stop 事件</strong>
+            <p>说明：需用户手动配合（agent 无法在自身 session 触发 Stop event 来观察通知）。</p>
+            <ol>
+              <li>在 patra-api cwd 启动新 Claude Code 会话</li>
+              <li>结束该会话（输入 <code>/quit</code> 或关闭终端）</li>
+              <li>观察 macOS 通知：标题「Claude Code 已停止」、内容含「项目: patra-api」与「分支: chore/claude-config-workspace-uplift」</li>
+            </ol>
+            <p>预期：通知正常弹出；项目名因 <code>$CLAUDE_PROJECT_DIR</code> 指向 cwd 而显示「patra-api」，符合预期（脚本逻辑未改）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 7：Commit</strong>
+            <pre><code class="lang-bash">git add .claude/hooks/send-stop-notification.sh .claude/settings.json patra-api/.claude/settings.json patra-api/.claude/hooks/send-stop-notification.sh
+git commit -m "$(cat <<'EOF'
+chore(claude): send-stop-notification hook 上移到 workspace
+
+git mv hook 脚本到 Patra/.claude/hooks/，并在 Patra/.claude/settings.json
+新增 Stop hook 注册。patra-api/.claude/settings.json 的 Stop 数组同步
+移除 send-stop-notification 条目（保留 gradle-compile-check 与
+trigger-build-resolver-java 两个 Java 专属 hook）。
+
+settings.json 叠加机制让 BE cwd 下 Stop 事件依然能触发通知；
+$CLAUDE_PROJECT_DIR 解析为 cwd，项目名仍正确显示为 patra-api。
+
+关联 spec §5 settings.json 拆分
+EOF
+)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-4" data-status="pending">
+        <header>
+          <h2>任务 4：上移 create-issue skill 并改临时路径</h2>
+          <dl class="files">
+            <dt>移动</dt><dd><code>patra-api/.claude/skills/create-issue/</code> → <code>Patra/.claude/skills/create-issue/</code>（含 SKILL.md）</dd>
+            <dt>修改</dt><dd><code>Patra/.claude/skills/create-issue/SKILL.md</code>（4 处 <code>/tmp/patra-api/</code> → <code>/tmp/patra/</code>）</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：用 git mv 搬移整个 skill 目录</strong>
+            <pre><code class="lang-bash">mkdir -p .claude/skills
+git mv patra-api/.claude/skills/create-issue .claude/skills/create-issue</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：定位需替换的 4 处临时路径</strong>
+            <pre><code class="lang-bash">grep -n "/tmp/patra-api/" .claude/skills/create-issue/SKILL.md</code></pre>
+            <p>预期输出（4 行）：</p>
+            <pre><code class="lang-text">142:mkdir -p /tmp/patra-api
+145:#    路径：/tmp/patra-api/issue-&lt;类型&gt;-&lt;时间戳&gt;.md
+146:#    示例：/tmp/patra-api/issue-bug-20260516-173242.md
+151:gh issue create -t "修复邮箱含+号时登录报500" -F /tmp/patra-api/issue-bug-20260516-173242.md -l "bug" -a @me</code></pre>
+            <p>注意：行号在 git mv 后可能与上面一致（git mv 不改内容），如不一致说明文件被无意修改。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：用 Edit replace_all 一次性替换 4 处</strong>
+            <p>调用 Edit 工具：</p>
+            <ul>
+              <li>file_path: <code>/Users/linqibin/Projects/Products/Patra/.claude/skills/create-issue/SKILL.md</code></li>
+              <li>old_string: <code>/tmp/patra-api/</code></li>
+              <li>new_string: <code>/tmp/patra/</code></li>
+              <li>replace_all: <code>true</code></li>
+            </ul>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：核对替换完成且无遗漏</strong>
+            <pre><code class="lang-bash">grep -n "/tmp/patra-api/" .claude/skills/create-issue/SKILL.md || echo "✅ 0 匹配，patra-api 临时路径已清理干净"
+grep -n "/tmp/patra/" .claude/skills/create-issue/SKILL.md | wc -l</code></pre>
+            <p>预期：第一行输出 ✅；第二行输出 <code>4</code>（精确 4 处）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：Commit</strong>
+            <pre><code class="lang-bash">git add .claude/skills/create-issue/SKILL.md patra-api/.claude/skills/create-issue/SKILL.md
+git commit -m "$(cat <<'EOF'
+chore(claude): create-issue skill 上移到 workspace + 临时路径中性化
+
+git mv skill 目录到 Patra/.claude/skills/，并把 SKILL.md 中
+4 处 /tmp/patra-api/ 替换为 /tmp/patra/。skill 语言无关
+（基于 gh CLI），上移后 BE/FE 任意 cwd 都能正常使用。
+
+关联 spec §7 决策 4
+EOF
+)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-5" data-status="pending">
+        <header>
+          <h2>任务 5：Patra/CLAUDE.md 顶部新增「产品定义」章节</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>Patra/CLAUDE.md</code>（在 <code># CLAUDE.md</code> 之后、<code>## 项目背景</code> 之前插入一段）</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：用 Edit 工具在标题与「项目背景」之间插入「产品定义」</strong>
+            <p>old_string：</p>
+            <pre><code class="lang-text"># CLAUDE.md
+
+## 项目背景</code></pre>
+            <p>new_string：</p>
+            <pre><code class="lang-text"># CLAUDE.md
+
+## 产品定义
+
+**Patra** — 医学出版物数据平台，采集、解析、存储来自 PubMed / EPMC / Crossref 等 10+ 外部数据源的文献和期刊数据。
+
+## 项目背景</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：核对插入结果</strong>
+            <pre><code class="lang-bash">head -8 CLAUDE.md</code></pre>
+            <p>预期前 8 行：</p>
+            <pre><code class="lang-text"># CLAUDE.md
+
+## 产品定义
+
+**Patra** — 医学出版物数据平台，采集、解析、存储来自 PubMed / EPMC / Crossref 等 10+ 外部数据源的文献和期刊数据。
+
+## 项目背景
+</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：Commit</strong>
+            <pre><code class="lang-bash">git add CLAUDE.md
+git commit -m "$(cat <<'EOF'
+docs(workspace): CLAUDE.md 顶部新增「产品定义」章节
+
+一句话概括 Patra 的业务定位（医学出版物数据平台，10+ 数据源）。
+其余 BE 实现细节（技术栈、微服务清单、模块结构）整份留在
+patra-api/.claude/rules/project-info.md。
+
+关联 spec §6 产品定义补丁 / §7 决策 2-3
+EOF
+)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-6" data-status="pending">
+        <header>
+          <h2>任务 6：删除 patra-portal/CLAUDE.md 的 FE 警示段</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>patra-portal/CLAUDE.md</code>（删除第 25-34 行的「## ⚠️ Skill 加载现状」整段）</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：用 Edit 工具删除整段警示</strong>
+            <p>当前文件第 24-34 行（共 34 行）：</p>
+            <pre><code class="lang-text">详细规范见 `.claude/rules/` 下的具体规则文件（Claude Code 自动加载）。
+
+## ⚠️ Skill 加载现状
+
+**patra plugin（`patra:` 命名空间下的 13 个方法论 skill）当前仅适配后端**（六边形架构 + Java/Gradle），尚未为前端语境改造。
+
+在 `patra-portal/` cwd 工作时：
+
+- ❌ **不应**调用 `patra:brainstorming`、`patra:writing-plans`、`patra:test-driven-development` 等流程 skill —— 它们的代码示例、技术栈假设都是 Java
+- ✅ 可以使用其他通用 skill（如 IDE 提供的 frontend-design）
+- 🔜 前端专用 skill 体系将在后续 PR 中补充</code></pre>
+            <p>用 Edit 工具替换为（保留第 24 行 + 末尾换行）：</p>
+            <pre><code class="lang-text">详细规范见 `.claude/rules/` 下的具体规则文件（Claude Code 自动加载）。</code></pre>
+            <p>说明：Edit 的 old_string 包含「详细规范见...自动加载）。」到文件末尾的整段；new_string 仅保留前一行。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：核对警示段已删除</strong>
+            <pre><code class="lang-bash">grep -n "Skill 加载现状" patra-portal/CLAUDE.md || echo "✅ 警示段已清除"
+wc -l patra-portal/CLAUDE.md</code></pre>
+            <p>预期：第一行输出 ✅；第二行输出 <code>24 patra-portal/CLAUDE.md</code>（从 34 行减到 24 行）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：Commit</strong>
+            <pre><code class="lang-bash">git add patra-portal/CLAUDE.md
+git commit -m "$(cat <<'EOF'
+docs(portal): 删除 CLAUDE.md 的 FE Skill 警示段
+
+patra plugin marketplace 已上移到 workspace 层，BE/FE 同等享用。
+基于 LLM 自动跨技术栈映射能力（Opus 4.7 能把 Java 示例自动
+映射到 TS/React 语境），FE 工作时调用 patra: 流程 skill
+（brainstorming / writing-plans / TDD / debugging 等）无障碍。
+
+如未来 FE cognitive friction 实际超预期，再独立开
+「plugin 去技术栈化」PR（回归上游 obra/superpowers 风格 +
+保留中文翻译）。
+
+关联 spec §7 决策 6 / §8 末条 risk
+EOF
+)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-7" data-status="pending">
+        <header>
+          <h2>任务 7：全链路端到端验证并推送 PR</h2>
+          <dl class="files">
+            <dt>验证</dt><dd>spec §Done 判定 9 条全部通过</dd>
+            <dt>推送</dt><dd>branch <code>chore/claude-config-workspace-uplift</code> 到 origin，开 PR</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：cwd=patra-api 下验证 14 个 patra: skill 可见（与 Task 2 步骤 4 重复以确认稳定性）</strong>
+            <p>在终端：<code>cd /Users/linqibin/Projects/Products/Patra/patra-api</code>，启动新 Claude Code 会话，执行 <code>/skill</code>，确认 patra:brainstorming / patra:writing-plans / patra:test-driven-development / patra:systematic-debugging / patra:requesting-code-review / patra:executing-plans / patra:subagent-driven-development / patra:dispatching-parallel-agents / patra:verification-before-completion / patra:finishing-a-development-branch / patra:receiving-code-review / patra:using-git-worktrees / patra:using-superpowers / patra:release-planning 共 14 个全部出现。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：cwd=patra-portal 下验证 14 个 patra: skill 同样可见</strong>
+            <p>在终端：<code>cd /Users/linqibin/Projects/Products/Patra/patra-portal</code>，启动新 Claude Code 会话，执行 <code>/skill</code>，确认上述 14 个 skill 全部出现（确认 FE 与 BE 同等享用）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：Stop hook 链路验证（cwd=patra-api）</strong>
+            <p>在 patra-api 启动新会话，修改一个无关紧要的 Java 文件（例如在已有类末尾加一个空行），然后 <code>/quit</code> 结束会话。</p>
+            <p>预期同时发生 3 件事：</p>
+            <ol>
+              <li>macOS 通知弹出（项目名「patra-api」、分支「chore/claude-config-workspace-uplift」）— 来自 workspace 层 hook</li>
+              <li>终端打印 <code>🔨 运行 Gradle 编译检查...</code> 与 <code>✅ Gradle 编译成功</code> — 来自 patra-api 层 hook</li>
+              <li>trigger-build-resolver-java.sh 静默执行（编译成功时无输出）</li>
+            </ol>
+            <p>失败处理：</p>
+            <ul>
+              <li>通知未弹出 → 检查 Patra/.claude/settings.json 的 Stop 段；运行 <code>bash .claude/hooks/send-stop-notification.sh</code> 手动测试脚本</li>
+              <li>Gradle 编译未触发 → 检查 patra-api/.claude/settings.json 的 Stop 段；确认 <code>.claude/hooks/.java-files-modified</code> 标记文件被 mark-java-changes.sh 创建</li>
+            </ul>
+            <p>验证后 revert 那个 Java 文件的空行修改（<code>git checkout -- &lt;path&gt;</code>），保持工作区干净。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：spec §Done 判定 9 条逐条核对</strong>
+            <pre><code class="lang-bash"># 1. 文件清单 10 项
+git log --oneline chore/claude-config-workspace-uplift ^main | wc -l
+# 预期：6（Task 1-6 各一个 commit）
+
+# 2-3. patra: skill 在两个 cwd 都可见 — 已在步骤 1-2 完成
+
+# 4. Stop 通知 — 已在步骤 3 完成
+
+# 5. Java hook 链路 — 已在步骤 3 完成
+
+# 6. create-issue 中无 patra-api 路径残留
+grep -rn "patra-api" .claude/skills/create-issue/SKILL.md || echo "✅ 0 匹配"
+
+# 7. Patra/CLAUDE.md 顶部产品定义存在
+grep -A2 "## 产品定义" CLAUDE.md
+
+# 8. portal/CLAUDE.md 不含 Skill 加载现状
+grep -n "Skill 加载现状" patra-portal/CLAUDE.md || echo "✅ 已清除"
+
+# 9. git mv 历史血缘
+git log --follow --oneline .claude/hooks/send-stop-notification.sh | head -3
+# 预期：至少含 Task 3 的 commit + 它在 patra-api 时的早期 commit</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：推送 branch 并开 PR</strong>
+            <pre><code class="lang-bash">git push -u origin chore/claude-config-workspace-uplift
+gh pr create --title "chore(claude): patra plugin 配置上移到 workspace 层" --body "$(cat <<'EOF'
+## Summary
+
+延续 PR #37 三层化方向，把 patra-api/.claude/ 下 4 项 workspace
+通用配置上移到 Patra/.claude/，并删除 portal/CLAUDE.md 的 FE 警示段。
+
+- patra plugin marketplace（13 个方法论 skill）
+- enabledPlugins.patra@patra-local
+- send-stop-notification.sh（macOS 通用通知）
+- create-issue skill（gh CLI 批量建 issue，语言无关）
+- Patra/CLAUDE.md 顶部补一句产品定义
+- portal/CLAUDE.md 删 FE 警示（基于 LLM 自动跨技术栈映射能力）
+
+详细设计：[spec](docs/patra/specs/2026-05-21-claude-config-workspace-uplift-design.html)
+实现追踪：[plan](docs/patra/plans/2026-05-21-claude-config-workspace-uplift.html)
+
+## Test plan
+
+- [x] cwd=patra-api 启动新 Claude Code 会话，14 个 patra: skill 可见
+- [x] cwd=patra-portal 启动新 Claude Code 会话，14 个 patra: skill 可见
+- [x] Stop 事件触发 macOS 通知（项目名「patra-api」）
+- [x] Java 文件修改 → Stop 事件触发 Gradle 编译检查
+- [x] create-issue SKILL.md 无 /tmp/patra-api/ 残留
+- [x] Patra/CLAUDE.md 顶部含「产品定义」章节
+- [x] portal/CLAUDE.md 不再含「Skill 加载现状」段
+- [x] git log --follow 显示上移文件历史血缘保留
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+EOF
+)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+    </section>
+
+    <section id="self-check" class="self-check">
+      <h2>自检结果</h2>
+
+      <aside class="callout success">
+        <span class="title">1. 规格覆盖度</span>
+        <p>spec §9 改造文件清单 10 项 → plan 任务映射：#1 marketplace=Task 1；#2 patra-api/.claude-marketplace/ 删除=Task 1 副作用；#3 send-stop-notification=Task 3；#4 create-issue=Task 4；#5 Patra/settings.json=Task 2+3；#6 patra-api/settings.json=Task 2+3；#7 Patra/CLAUDE.md=Task 5；#8 project-info.md keep=无任务（不变即满足）；#9 patra-api/CLAUDE.md keep=无任务（不变即满足）；#10 portal/CLAUDE.md=Task 6。spec §Done 判定 9 条 → Task 7 步骤 1-4 覆盖。spec §8 Risk 1（high，marketplace 上溯查找）→ Task 2 步骤 4 + 兜底 symlink。无遗漏。</p>
+      </aside>
+
+      <aside class="callout success">
+        <span class="title">2. 占位符扫描</span>
+        <p>无 TODO / 待补 / 后续 / 「类似任务 N」/「添加适当错误处理」等占位。每个步骤都有完整 bash 命令或精确的 old_string/new_string Edit 内容。grep <code>&lt;!-- FILL:</code> 应为 0 匹配（自检时验证）。</p>
+      </aside>
+
+      <aside class="callout success">
+        <span class="title">3. 类型一致性</span>
+        <p>跨任务关键标识符核对：plugin id <code>patra@patra-local</code> 在 Task 2 步骤 1-2 一致；hook 文件名 <code>send-stop-notification.sh</code> 在 Task 3 全程一致；临时路径 <code>/tmp/patra/</code> 在 Task 4 步骤 3-4 一致；分支名 <code>chore/claude-config-workspace-uplift</code> 在 Task 1 步骤 1、Task 3 步骤 6、Task 7 步骤 5 一致；spec 文件路径 <code>docs/patra/specs/2026-05-21-claude-config-workspace-uplift-design.html</code> 在 header 与 Task 7 PR body 一致。</p>
+      </aside>
+
+      <aside class="callout success">
+        <span class="title">4. HTML 结构完整性</span>
+        <p>7 个 <code>&lt;article class="task"&gt;</code> 各有唯一 <code>id="task-1"</code> 到 <code>id="task-7"</code> 与初始 <code>data-status="pending"</code>；每个 <code>&lt;li class="step"&gt;</code> 初始 <code>data-status="pending"</code>；header <code>&lt;dl class="meta"&gt;</code> 含目标 / 架构 / 技术栈 / 关联 spec 四项；<code>&lt;head&gt;</code> 含 2 个 <code>&lt;link&gt;</code> 引用 journal.css + plan-extras.css，无 inline <code>&lt;style&gt;</code>；TOC <code>&lt;ol class="toc-tasks"&gt;</code> 含 7 个 li 一一对应 Task 1-7，初始 <code>data-task-status="pending"</code> 与 article 一致。</p>
+      </aside>
+    </section>
+
+  </main>
+
+  <aside class="notes-panel" id="notes">
+    <header>
+      <h2>Implementation Notes</h2>
+      <p class="hint">实施期由 Claude Code 即时追加。规则：遇到 plan 未规定的<strong>决定</strong>、必要<strong>更改</strong>、不可避免的<strong>权衡</strong>、其他用户应知事项，立即用 Edit 追加 entry，不要等任务结束。</p>
+    </header>
+
+    <ol class="notes-log">
+      <!-- ENTRY TEMPLATE（注释保留供实施期 AI 复制）:
+
+      <li class="note" data-type="decision" data-time="YYYY-MM-DDTHH:MM">
+        <header>
+          <span class="note-type">DECISION</span>
+          <time datetime="YYYY-MM-DDTHH:MM">MM-DD HH:MM</time>
+          <a href="#task-N">§ Task N</a>
+        </header>
+        <p>描述：plan 未规定 X，实施时选择 Y。理由：...</p>
+      </li>
+
+      data-type 4 类：decision / change / tradeoff / other
+      追加 entry 时同步更新下方 notes-stats footer 的对应 counter 数字。
+      -->
+    </ol>
+
+    <p class="empty-state">no notes yet</p>
+
+    <footer class="notes-stats">
+      总计:
+      <span data-counter="decision">0</span> decisions /
+      <span data-counter="change">0</span> changes /
+      <span data-counter="tradeoff">0</span> tradeoffs /
+      <span data-counter="other">0</span> others
+    </footer>
+  </aside>
+
+</div>
+</body>
+</html>
