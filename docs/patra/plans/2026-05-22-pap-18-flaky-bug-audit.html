@@ -34,7 +34,7 @@
           -->
           <li data-task-status="done"><a href="#task-1">Task 1 — PR-1 改 java-base.gradle.kts</a></li>
           <li data-task-status="done"><a href="#task-2">Task 2 — PR-1 改 PULL_REQUEST_TEMPLATE.md</a></li>
-          <li data-task-status="in-progress"><a href="#task-3">Task 3 — PR-1 验证 + commit + push + 开 PR</a></li>
+          <li data-task-status="done"><a href="#task-3">Task 3 — PR-1 验证 + commit + push + 开 PR</a></li>
           <li data-task-status="pending"><a href="#task-4">Task 4 — PR-2 清理 linqibin-commons-core</a></li>
           <li data-task-status="pending"><a href="#task-5">Task 5 — PR-2 清理 linqibin-spring-boot-starter-*</a></li>
           <li data-task-status="pending"><a href="#task-6">Task 6 — PR-2 清理 patra-spring-boot-starter-provenance</a></li>
@@ -278,7 +278,7 @@ git commit -m "feat: [description]"</code></pre>
         </ol>
       </article>
 
-      <article class="task" id="task-3" data-status="in-progress">
+      <article class="task" id="task-3" data-status="done">
         <header>
           <h2>任务 3：PR-1 全量验证 + commit + push + 开 PR</h2>
           <dl class="files">
@@ -1066,7 +1066,7 @@ git push origin pap-18-flaky-audit</code></pre>
           <time datetime="2026-05-22T13:55">05-22 13:55</time>
           <a href="#task-3">§ Task 3</a>
         </header>
-        <p>Task 3 步骤 1 本地全量 <code>./gradlew clean test integrationTest</code> 失败：所有 Testcontainers 依赖测试报 <code>Could not find a valid Docker environment</code>（本地 OrbStack/Docker daemon 未运行）。失败集中在：<code>linqibin-spring-boot-starter-batch:test</code>（含 <code>BatchDataSourceConfigurationTest</code>）+ <code>linqibin-spring-boot-starter-batch:integrationTest</code> + <code>patra-catalog-infra:integrationTest</code> + <code>patra-registry-infra:integrationTest</code> + <code>patra-ingest-infra:integrationTest</code>。全部属 <strong>pre-existing 环境依赖</strong>，错误是 Spring Context 启动 Postgres 容器失败，与 PR-1 forkEvery / 全局 timeout 改动无关。本地验证策略调整为：仅跑 unit-only <code>./gradlew test -x :linqibin-commons:linqibin-spring-boot-starter-batch:test</code>，验证 5s 全局 timeout 不误杀普通 unit；IT 验证完全交给 CI（CI 有 Docker）。</p>
+        <p>Task 3 步骤 1 本地全量 <code>./gradlew clean test integrationTest</code> 首次失败：所有 Testcontainers 依赖测试报 <code>Could not find a valid Docker environment</code>（本地 OrbStack/Docker daemon 未运行）。失败集中在：<code>linqibin-spring-boot-starter-batch:test</code>（含 <code>BatchDataSourceConfigurationTest</code>）+ <code>linqibin-spring-boot-starter-batch:integrationTest</code> + <code>patra-catalog-infra:integrationTest</code> + <code>patra-registry-infra:integrationTest</code> + <code>patra-ingest-infra:integrationTest</code>。<strong>用户启动 OrbStack 后 14:06 重跑 <code>./gradlew integrationTest --continue</code> 全绿（5 executed, 184 up-to-date）</strong>，IT 通过，PR-1 改动不会引起 Testcontainers IT 回归。本地完整验证矩阵：unit-only ✅ + integrationTest ✅（含全部 Postgres/Docker IT）；e2eTest 由 CI 跑。</p>
       </li>
     </ol>
 
