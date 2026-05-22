@@ -1235,13 +1235,21 @@ EOF</code></pre>
         </header>
         <p>当前 main baseline 远超 spec 假设：PR #77（patra-api 纳入 Gradle 容器层后）build-and-test 时长 <strong>18:25</strong>，PR #76 时长 <strong>14:38</strong>，平均 <strong>~16:30</strong>。spec §3 假设的 ~8 min baseline（基于 PAP-10 时期）已失效。含义：PR1+PR2+PR3 目标终值会从 spec 写的 "~3-4 min" 偏移上去（相对降幅目标不变，但绝对值需重算）。实测后 AC3 评估按 <strong>baseline ~16 min</strong> 校准，不按 ~8 min。</p>
       </li>
+      <li class="note" data-type="tradeoff" data-time="2026-05-22T15:45">
+        <header>
+          <span class="note-type">TRADEOFF</span>
+          <time datetime="2026-05-22T15:45">05-22 15:45</time>
+          <a href="#task-2">§ Task 2 step 3</a>
+        </header>
+        <p>PR1 上两个 run 的 build-and-test 仅 ~133s/139s，但<strong>这不代表真实降幅</strong>：两个 commit 只改 ci.yml + docs，零源码改动 → Gradle build cache 全命中（来自 PR #77 commit 2cd7fa96 的 cache），check step 51s / IT 14s / e2e 12s 都是 UP-TO-DATE 跳过。cc cache 行为符合预期：日志显示 "Calculating task graph as no cached configuration is available" + "Configuration cache entry stored." — 即首次 store 但不 restore；setup-gradle@v4 在 feature branch 默认 cache-read-only: true，PR 上 store 的 cc cache 不持久化到 GHA cache。真实 cc 收益时机：<strong>PR1 merge 到 main 后</strong>，main 上下次 run 会持久化 cc cache 到 GHA cache，PR2/PR3 等其他 PR 才能从 cache restore（PR1 自测看不到收益是 setup-gradle 设计限制）。</p>
+      </li>
     </ol>
 
     <footer class="notes-stats">
       总计:
       <span data-counter="decision">0</span> decisions /
       <span data-counter="change">1</span> changes /
-      <span data-counter="tradeoff">0</span> tradeoffs /
+      <span data-counter="tradeoff">1</span> tradeoffs /
       <span data-counter="other">2</span> others
     </footer>
   </aside>
