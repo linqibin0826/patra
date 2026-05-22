@@ -21,7 +21,7 @@
       <li><a href="#tasks">任务列表</a>
         <ol class="toc-tasks">
           <li data-task-status="done"><a href="#task-1">Task 1 — PR1 实施基础设施层</a></li>
-          <li data-task-status="in-progress"><a href="#task-2">Task 2 — PR1 实测验证 + merge</a></li>
+          <li data-task-status="done"><a href="#task-2">Task 2 — PR1 实测验证 + merge</a></li>
           <li data-task-status="pending"><a href="#task-3">Task 3 — PR2 jacoco-aggregation convention plugin + 本地 spike</a></li>
           <li data-task-status="pending"><a href="#task-4">Task 4 — PR2 ci.yml 拆 4 job + required-check 真正生效</a></li>
           <li data-task-status="pending"><a href="#task-5">Task 5 — PR2 实测 + 分支保护强制验证 + merge</a></li>
@@ -287,7 +287,7 @@ EOF
         </ol>
       </article>
 
-      <article class="task" id="task-2" data-status="in-progress">
+      <article class="task" id="task-2" data-status="done">
         <header>
           <h2>任务 2：PR1 实测验证 + merge</h2>
           <dl class="files">
@@ -341,7 +341,7 @@ git push origin --delete test/break-image-version</code></pre>
             <p>预期：测试分支的 CI 在 "Verify container image versions consistency" step 失败，错误信息含 "POSTGRESQL_IMAGE 常量与 workflow env POSTGRES_IMAGE=postgres:99 不一致"。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：Merge PR1（用户决策）</strong>
             <p>实测达预期（~6 min）→ 合并：</p>
             <pre><code class="lang-bash">gh pr merge feat/pap-24-pr1-ci-foundation --squash --delete-branch</code></pre>
@@ -1243,12 +1243,23 @@ EOF</code></pre>
         </header>
         <p>PR1 上两个 run 的 build-and-test 仅 ~133s/139s，但<strong>这不代表真实降幅</strong>：两个 commit 只改 ci.yml + docs，零源码改动 → Gradle build cache 全命中（来自 PR #77 commit 2cd7fa96 的 cache），check step 51s / IT 14s / e2e 12s 都是 UP-TO-DATE 跳过。cc cache 行为符合预期：日志显示 "Calculating task graph as no cached configuration is available" + "Configuration cache entry stored." — 即首次 store 但不 restore；setup-gradle@v4 在 feature branch 默认 cache-read-only: true，PR 上 store 的 cc cache 不持久化到 GHA cache。真实 cc 收益时机：<strong>PR1 merge 到 main 后</strong>，main 上下次 run 会持久化 cc cache 到 GHA cache，PR2/PR3 等其他 PR 才能从 cache restore（PR1 自测看不到收益是 setup-gradle 设计限制）。</p>
       </li>
+      <li class="note" data-type="change" data-time="2026-05-22T16:00">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-22T16:00">05-22 16:00</time>
+          <a href="#task-4">§ Task 4 step 1</a>
+        </header>
+        <p>CodeRabbit 在 PR1 review 中指出 2 处 ci.yml 健壮性 bug，PR2 重写 ci.yml 时一并修：
+        (a) Pre-pull step 用 bare <code>wait</code> 不传播 child 退出码 — 实测证据：故意失败测试中 <code>docker pull postgres:99</code>（不存在的镜像）居然让 Pre-pull step success，正是这个 bug 掩盖。修复：<code>docker pull "$X" &amp; pid_x=$!</code> 然后 <code>wait "$pid_x"</code> 逐个等待。
+        (b) 镜像版本校验用 <code>grep "image: $ROCKETMQ_IMAGE\b"</code> — <code>.</code> 在 BRE 模式下是元字符，且 <code>\b</code> 在 BSD grep 不可靠。修复：改用 <code>grep -F</code> fixed-string 匹配（含 PG_FILE 的 Java 常量检查也一并改用 <code>-F</code>）。
+        CodeRabbit 其他评论：#1 Action SHA pin 已开 <a href="https://linear.app/papertrace/issue/PAP-25">PAP-25</a> 独立跟踪；#4 HTML 转义 + #5 自检文案不一致按用户决策忽略。</p>
+      </li>
     </ol>
 
     <footer class="notes-stats">
       总计:
       <span data-counter="decision">0</span> decisions /
-      <span data-counter="change">1</span> changes /
+      <span data-counter="change">2</span> changes /
       <span data-counter="tradeoff">1</span> tradeoffs /
       <span data-counter="other">2</span> others
     </footer>
