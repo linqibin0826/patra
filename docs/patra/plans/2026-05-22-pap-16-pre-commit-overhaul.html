@@ -37,9 +37,9 @@
           <li data-task-status="done"><a href="#task-3">Task 3 — 装 pre-commit framework 与接管 hooks</a></li>
           <li data-task-status="done"><a href="#task-4">Task 4 — 中间验证:commitlint 拦截 garbage</a></li>
           <li data-task-status="done"><a href="#task-5">Task 5 — 主功能 commit</a></li>
-          <li data-task-status="in-progress"><a href="#task-6">Task 6 — 首次全仓清扫与 commit</a></li>
-          <li data-task-status="pending"><a href="#task-7">Task 7 — 完整 AC D6 本地验证矩阵</a></li>
-          <li data-task-status="pending"><a href="#task-8">Task 8 — push 开 PR 等 CI 全绿</a></li>
+          <li data-task-status="done"><a href="#task-6">Task 6 — 首次全仓清扫与 commit</a></li>
+          <li data-task-status="done"><a href="#task-7">Task 7 — 完整 AC D6 本地验证矩阵</a></li>
+          <li data-task-status="in-progress"><a href="#task-8">Task 8 — push 开 PR 等 CI 全绿</a></li>
         </ol>
       </li>
       <li><a href="#self-check">自检结果</a></li>
@@ -490,7 +490,7 @@ EOF
         </ol>
       </article>
 
-      <article class="task" id="task-6" data-status="in-progress">
+      <article class="task" id="task-6" data-status="done">
         <header>
           <h2>任务 6：首次全仓清扫 + 单独 commit</h2>
           <dl class="files">
@@ -499,7 +499,7 @@ EOF
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：跑 pre-commit run --all-files</strong>
             <p>运行：</p>
             <pre><code class="lang-bash">pre-commit run --all-files</code></pre>
@@ -512,7 +512,7 @@ EOF
             <p>耗时：首次约 1–3 分钟（gitleaks 全仓扫描最慢）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：查看 working tree 改动</strong>
             <p>运行：</p>
             <pre><code class="lang-bash">git status --short | head -30
@@ -521,7 +521,7 @@ git status --short | wc -l</code></pre>
             <p>预期：列出被 hygiene 修过的文件清单（可能数十个）。<strong>不预期改动巨大</strong>——若超过 200 个文件，停下来确认是否有非预期的 hook（比如 <code>mixed-line-ending</code> 误改了二进制）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：检查改动性质（防回归）</strong>
             <p>抽 3-5 个文件看 diff：</p>
             <pre><code class="lang-bash">git diff --stat | head -20</code></pre>
@@ -531,7 +531,7 @@ git status --short | wc -l</code></pre>
             <p>并在 <code>.pre-commit-config.yaml</code> 给对应 hook 加 <code>exclude: '\.(png|jar|...)$'</code>。本 plan 不预期此情况，若出现属 Implementation Note 记录在右栏。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：commit 清扫改动</strong>
             <p>运行：</p>
             <pre><code class="lang-bash">git add -A
@@ -551,7 +551,7 @@ EOF
             <p>预期：pre-commit hooks 再跑一遍，全绿（幂等）；commit 创建。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：再次跑 pre-commit run --all-files 验证幂等</strong>
             <p>运行：</p>
             <pre><code class="lang-bash">pre-commit run --all-files</code></pre>
@@ -560,7 +560,7 @@ EOF
         </ol>
       </article>
 
-      <article class="task" id="task-7" data-status="pending">
+      <article class="task" id="task-7" data-status="done">
         <header>
           <h2>任务 7：完整 AC D6 本地验证矩阵（7 步）</h2>
           <dl class="files">
@@ -569,28 +569,28 @@ EOF
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：AC#1 — install 输出</strong>
             <p>运行：</p>
             <pre><code class="lang-bash">pre-commit install --install-hooks --overwrite 2>&1 | head -5</code></pre>
             <p>预期：含 <code>pre-commit installed at .git/hooks/pre-commit</code> + <code>commit-msg</code>。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：AC#2 — run --all-files 全绿</strong>
             <p>运行：</p>
             <pre><code class="lang-bash">pre-commit run --all-files 2>&1 | tail -10</code></pre>
             <p>预期：所有 hook <code>Passed</code> 或 <code>Skipped</code>，无 <code>Failed</code>。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：AC#3 — commitlint 拒绝 garbage</strong>
             <p>运行：</p>
             <pre><code class="lang-bash">printf "garbage no prefix\n" &gt; /tmp/m && git commit --allow-empty -F /tmp/m; echo "exit=$?"</code></pre>
             <p>预期：exit 非 0。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：AC#4 — commitlint 接受 conventional</strong>
             <p>运行：</p>
             <pre><code class="lang-bash">printf "feat(pap-16): ac4 verify\n" &gt; /tmp/m && git commit --allow-empty -F /tmp/m && echo "ac4 ok"</code></pre>
@@ -598,21 +598,21 @@ EOF
             <pre><code class="lang-bash">git reset --soft HEAD~1</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：AC#5 — scripts/git/ 已消失</strong>
             <p>运行：</p>
             <pre><code class="lang-bash">ls scripts/git/mvn_*.sh 2>&1 | head -1</code></pre>
             <p>预期：<code>ls: scripts/git/mvn_*.sh: No such file or directory</code>。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：AC#6 — .gitignore 命中 __pycache__</strong>
             <p>运行：</p>
             <pre><code class="lang-bash">git check-ignore -v scripts/__pycache__/; echo "exit=$?"</code></pre>
             <p>预期：输出 <code>.gitignore:N:**/__pycache__/    scripts/__pycache__/</code>，exit=0。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7：AC#7 — hook 拦截格式化未修的 Java commit</strong>
             <p>用一个临时 Java 改动测试（避免污染真代码）：</p>
             <pre><code class="lang-bash">cat &gt; /tmp/Probe.java &lt;&lt;'EOF'
@@ -638,7 +638,7 @@ git status --short | grep Probe || echo "cleaned"</code></pre>
             <p>预期：<code>cleaned</code>。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 8：本 task 不 commit</strong>
             <p>所有验证均为"摸底"性质，不产生提交。</p>
             <p>运行：<code>git status</code></p>
@@ -647,7 +647,7 @@ git status --short | grep Probe || echo "cleaned"</code></pre>
         </ol>
       </article>
 
-      <article class="task" id="task-8" data-status="pending">
+      <article class="task" id="task-8" data-status="in-progress">
         <header>
           <h2>任务 8：push + 开 PR + 等 CI 全绿（AC D6#8）</h2>
           <dl class="files">
