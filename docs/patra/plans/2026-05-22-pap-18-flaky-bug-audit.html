@@ -1060,6 +1060,20 @@ git push origin pap-18-flaky-audit</code></pre>
         <p>仓库 <code>.pre-commit-config.yaml</code> 全文件被 <code>#</code> 注释，pre-commit framework 解析为 NoneType 报错，导致 commit 阻塞。该根因属 PAP-16（pre-commit-overhaul）范围，本 plan 不修复。已征得用户授权后，PAP-18 所有 commit 一律用 <code>git commit --no-verify</code> 绕过；hook 修复后续由 PAP-16 PR 单独处理。</p>
       </li>
 
+      <li class="note" data-type="tradeoff" data-time="2026-05-22T14:25">
+        <header>
+          <span class="note-type">TRADEOFF</span>
+          <time datetime="2026-05-22T14:25">05-22 14:25</time>
+          <a href="#task-3">§ Task 3</a>
+        </header>
+        <p>PR-1 首次 CI run (#26271862391) 失败：5s 全局 timeout 误杀两个测试方法的"测试类首次 @Test"（Spring context / Hikari / Postgres TestContainers 首次启动 >5s，后续方法 context cache 命中都很快）：</p>
+        <ul>
+          <li><code>BatchDataSourceConfigurationTest.batchDataSource_ShouldUseHikariDefaults()</code> — 5.426s</li>
+          <li><code>BatchProgressMetricsListenerTest$AfterStepMetricsTest.differentSteps_shouldUseDifferentCounters()</code> — 5.762s</li>
+        </ul>
+        <p>按 spec § 7 风险表 1 缓解策略，给这两个方法各加 <code>@Timeout(value=30, SECONDS)</code> 方法级覆盖 + 注释。<strong>结构性问题</strong>：<code>BatchDataSourceConfigurationTest</code> 实际是 Testcontainers IT 但错置在 <code>test</code> source set（PAP-16 commit message 已 acknowledge，属 PAP-12/13 范围迁移），临时修复后等结构性迁移；本 PR 不动 source set。本地 <code>./gradlew :linqibin-commons:linqibin-spring-boot-starter-batch:test</code> 验证全绿。</p>
+      </li>
+
       <li class="note" data-type="other" data-time="2026-05-22T13:55">
         <header>
           <span class="note-type">OTHER</span>
@@ -1074,7 +1088,7 @@ git push origin pap-18-flaky-audit</code></pre>
       总计:
       <span data-counter="decision">0</span> decisions /
       <span data-counter="change">0</span> changes /
-      <span data-counter="tradeoff">0</span> tradeoffs /
+      <span data-counter="tradeoff">1</span> tradeoffs /
       <span data-counter="other">2</span> others
     </footer>
   </aside>
