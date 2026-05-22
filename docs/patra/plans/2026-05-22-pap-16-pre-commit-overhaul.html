@@ -36,8 +36,8 @@
           <li data-task-status="done"><a href="#task-2">Task 2 — 清理 scripts/git 与 .gitignore</a></li>
           <li data-task-status="done"><a href="#task-3">Task 3 — 装 pre-commit framework 与接管 hooks</a></li>
           <li data-task-status="done"><a href="#task-4">Task 4 — 中间验证:commitlint 拦截 garbage</a></li>
-          <li data-task-status="in-progress"><a href="#task-5">Task 5 — 主功能 commit</a></li>
-          <li data-task-status="pending"><a href="#task-6">Task 6 — 首次全仓清扫与 commit</a></li>
+          <li data-task-status="done"><a href="#task-5">Task 5 — 主功能 commit</a></li>
+          <li data-task-status="in-progress"><a href="#task-6">Task 6 — 首次全仓清扫与 commit</a></li>
           <li data-task-status="pending"><a href="#task-7">Task 7 — 完整 AC D6 本地验证矩阵</a></li>
           <li data-task-status="pending"><a href="#task-8">Task 8 — push 开 PR 等 CI 全绿</a></li>
         </ol>
@@ -419,7 +419,7 @@ pre-commit installed at .git/hooks/commit-msg
         </ol>
       </article>
 
-      <article class="task" id="task-5" data-status="in-progress">
+      <article class="task" id="task-5" data-status="done">
         <header>
           <h2>任务 5：主功能 commit（配置 + scripts/git 删 + .gitignore）</h2>
           <dl class="files">
@@ -428,7 +428,7 @@ pre-commit installed at .git/hooks/commit-msg
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：stage 全部改动</strong>
             <p>运行：</p>
             <pre><code class="lang-bash">git add .pre-commit-config.yaml commitlint.config.cjs .gitignore
@@ -447,7 +447,7 @@ D  scripts/git/mvn_test_changed_modules.sh
 D  scripts/git/validate_commit_msg.sh</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：commit 主功能</strong>
             <p>用 HEREDOC 传 commit message（避免 shell 转义）。运行：</p>
             <pre><code class="lang-bash">git commit -m "$(cat &lt;&lt;'EOF'
@@ -479,7 +479,7 @@ EOF
             </ul>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：验证 commit 创建</strong>
             <p>运行：</p>
             <pre><code class="lang-bash">git log --oneline -2</code></pre>
@@ -490,7 +490,7 @@ EOF
         </ol>
       </article>
 
-      <article class="task" id="task-6" data-status="pending">
+      <article class="task" id="task-6" data-status="in-progress">
         <header>
           <h2>任务 6：首次全仓清扫 + 单独 commit</h2>
           <dl class="files">

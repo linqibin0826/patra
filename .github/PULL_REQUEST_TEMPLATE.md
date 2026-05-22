@@ -11,7 +11,7 @@
 - [ ] 本地启动 patra-portal，访问 /xxx 验证 ...
 -->
 
-- [ ] 
+- [ ]
 
 ## Linear
 

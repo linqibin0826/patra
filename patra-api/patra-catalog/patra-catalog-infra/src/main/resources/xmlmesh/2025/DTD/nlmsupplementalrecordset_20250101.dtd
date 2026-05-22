@@ -6,7 +6,7 @@
 <!-- ================================================================= -->
 <!--             Revision Notes Section
   20240101 to 20250101 Added RegistryNumberList and RegistryNumber is Optional and Repeatable
-  
+
 
 -->
 <!-- ================================================================= -->
@@ -21,7 +21,7 @@
 <!ATTLIST SupplementalRecordSet LanguageCode (eng) #REQUIRED>
 <!ELEMENT SupplementalRecord (%ChemicalReference;,
                             DateCreated,
-                            DateRevised?,  
+                            DateRevised?,
                             Note?,
                             Frequency?,
                             PreviousIndexingList?,
@@ -42,4 +42,3 @@
 <!ELEMENT IndexingInformation (DescriptorReferredTo?,QualifierReferredTo?,ChemicalReferredTo?)>
 <!ELEMENT SupplementalRecordUI (#PCDATA) >
 <!ELEMENT SupplementalRecordName (String) >
-
