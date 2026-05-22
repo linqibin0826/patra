@@ -28,19 +28,10 @@ env:
   ROCKETMQ_IMAGE: apache/rocketmq:5.3.1
 
 jobs:
-  required-check:
-    name: required-check
+  unit-tests:
+    name: unit-tests
     runs-on: ubuntu-latest
-    timeout-minutes: 1
-    steps:
-      - name: ✓ Required check satisfied
-        run: echo "Required check satisfied — gating job for branch protection"
-
-  build-and-test:
-    name: build-and-test
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-
+    timeout-minutes: 15
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v4
@@ -56,11 +47,63 @@ jobs:
         with:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
-      - name: 🐳 Pre-pull container images (并发预热,藏入编译关键路径)
+      - name: ✅ Unit tests + static analysis (no JaCoCo report)
+        run: ./gradlew check -x jacocoTestReport
+        # ./gradlew check 同时驱动 test + spotbugsMain + spotlessCheck (PAP-12/PAP-13 基线)
+        # -x jacocoTestReport: 节省 report 生成时间;.exec 文件仍生成供 coverage job 聚合
+
+      - name: 📦 Upload jacoco exec (unit)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-exec-unit
+          path: '**/build/jacoco/test.exec'
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: 📦 Upload reports (unit)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports-unit
+          path: |
+            **/build/reports/
+            **/build/test-results/test/
+          retention-days: 7
+
+      - name: 🐛 Upload spotbugs reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spotbugs-reports
+          path: '**/build/reports/spotbugs/**'
+          retention-days: 7
+
+  integration-tests:
+    name: integration-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup JDK 25 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+
+      - name: 🐘 Setup Gradle (build cache + dependency cache + configuration cache + wrapper verify)
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      - name: 🐳 Pre-pull container images (并发预热,捕获 PID 逐个 wait 以传播失败)
         run: |
-          docker pull "$POSTGRES_IMAGE" &
-          docker pull "$ROCKETMQ_IMAGE" &
-          wait
+          docker pull "$POSTGRES_IMAGE" & pid_pg=$!
+          docker pull "$ROCKETMQ_IMAGE" & pid_mq=$!
+          wait "$pid_pg"
+          wait "$pid_mq"
 
       - name: 🔍 Verify container image versions consistency
         run: |
@@ -68,7 +111,7 @@ jobs:
           FAIL=0
 
           PG_FILE="linqibin-commons/linqibin-spring-boot-starter-test/src/main/java/dev/linqibin/starter/test/container/initializer/PostgreSQLContainerInitializer.java"
-          if ! grep -q "private static final String POSTGRESQL_IMAGE = \"$POSTGRES_IMAGE\";" "$PG_FILE"; then
+          if ! grep -Fq "private static final String POSTGRESQL_IMAGE = \"$POSTGRES_IMAGE\";" "$PG_FILE"; then
             echo "::error file=$PG_FILE::POSTGRESQL_IMAGE 常量与 workflow env POSTGRES_IMAGE=$POSTGRES_IMAGE 不一致"
             FAIL=1
           fi
@@ -76,7 +119,7 @@ jobs:
           for COMPOSE in \
             "linqibin-commons/linqibin-spring-boot-starter-test/src/main/resources/docker-compose-rocketmq.yml" \
             "patra-api/patra-ingest/patra-ingest-boot/src/test/resources/docker-compose-rocketmq.yml"; do
-            COUNT=$(grep -c "image: $ROCKETMQ_IMAGE\b" "$COMPOSE" || true)
+            COUNT=$(grep -F -c "image: $ROCKETMQ_IMAGE" "$COMPOSE" || true)
             if [ "$COUNT" -ne 2 ]; then
               echo "::error file=$COMPOSE::期望 2 处 'image: $ROCKETMQ_IMAGE',实际 $COUNT 处"
               FAIL=1
@@ -89,18 +132,95 @@ jobs:
           fi
           echo "✓ 3 个文件的镜像版本与 workflow env 一致"
 
-      - name: ✅ Check (test + spotbugsMain + spotlessCheck)
-        run: ./gradlew check
-        # PAP-12 + PAP-13 baseline 完成后，./gradlew check 同时驱动 test + spotbugsMain + spotlessCheck
-        # 决策 C：spotbugsMain / spotlessCheck 失败阻断 PR
+      - name: 🔬 Integration tests (Testcontainers, no JaCoCo report)
+        run: ./gradlew integrationTest -x integrationTestCodeCoverageReport
 
-      - name: 🔬 Integration tests (Testcontainers)
-        run: ./gradlew integrationTest
+      - name: 📦 Upload jacoco exec (integration)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-exec-integration
+          path: '**/build/jacoco/integrationTest.exec'
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: 📦 Upload reports (integration)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports-integration
+          path: |
+            **/build/reports/
+            **/build/test-results/integrationTest/
+          retention-days: 7
+
+  e2e-tests:
+    name: e2e-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup JDK 25 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+
+      - name: 🐘 Setup Gradle (build cache + dependency cache + configuration cache + wrapper verify)
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      - name: 🐳 Pre-pull container images (并发预热,捕获 PID 逐个 wait 以传播失败)
+        run: |
+          docker pull "$POSTGRES_IMAGE" & pid_pg=$!
+          docker pull "$ROCKETMQ_IMAGE" & pid_mq=$!
+          wait "$pid_pg"
+          wait "$pid_mq"
 
       - name: 🎯 E2E tests
         run: ./gradlew e2eTest
 
-      - name: 📊 JaCoCo aggregate reports
+      - name: 📦 Upload reports (e2e)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports-e2e
+          path: |
+            **/build/reports/
+            **/build/test-results/e2eTest/
+          retention-days: 7
+
+  coverage-and-upload:
+    name: coverage-and-upload
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [unit-tests, integration-tests]
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup JDK 25 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+
+      - name: 🐘 Setup Gradle (build cache + dependency cache + configuration cache + wrapper verify)
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      - name: 📥 Download jacoco exec artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: jacoco-exec-*
+          merge-multiple: true
+          path: .
+
+      - name: 📊 Aggregate JaCoCo reports (test + integrationTest)
         run: ./gradlew testCodeCoverageReport integrationTestCodeCoverageReport
 
       - name: 📈 Upload coverage to Codecov
@@ -110,20 +230,13 @@ jobs:
           files: build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml,build/reports/jacoco/integrationTestCodeCoverageReport/integrationTestCodeCoverageReport.xml
           fail_ci_if_error: true
 
-      - name: 📦 Upload reports artifact
-        if: always()
-        uses: actions/upload-artifact@v4
+  required-check:
+    name: required-check
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, e2e-tests, coverage-and-upload]
+    if: always()
+    steps:
+      - name: ✓ Check all dependencies passed
+        uses: re-actors/alls-green@release/v1
         with:
-          name: reports
-          path: |
-            **/build/reports/
-            **/build/test-results/
-          retention-days: 7
-
-      - name: 🐛 Upload spotbugs reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: spotbugs-reports
-          path: '**/build/reports/spotbugs/**'
-          retention-days: 7
+          jobs: ${{ toJSON(needs) }}
