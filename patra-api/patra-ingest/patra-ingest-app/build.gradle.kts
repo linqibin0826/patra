@@ -12,13 +12,13 @@ plugins {
 dependencies {
     // 内部模块
     api(project(":patra-common:patra-common-enums"))
-    api(project(":linqibin-commons-core"))
+    api(project(":linqibin-commons:linqibin-commons-core"))
     api(project(":patra-ingest:patra-ingest-domain"))
     api(project(":patra-ingest:patra-ingest-api"))
-    api(project(":linqibin-spring-boot-starter-core"))
-    api(project(":patra-spring-boot-starter-expr"))
+    api(project(":linqibin-commons:linqibin-spring-boot-starter-core"))
+    api(project(":patra-starters:patra-spring-boot-starter-expr"))
     api(project(":patra-expr-kernel"))
-    api(project(":patra-spring-boot-starter-provenance"))
+    api(project(":patra-starters:patra-spring-boot-starter-provenance"))
 
     // Spring 依赖
     api("org.springframework:spring-tx")
@@ -28,5 +28,5 @@ dependencies {
     api("io.micrometer:micrometer-core")
 
     // 测试依赖
-    testImplementation(project(":linqibin-spring-boot-starter-test"))
+    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
 }

@@ -12,7 +12,7 @@ plugins {
 dependencies {
     api(project(":patra-registry:patra-registry-domain"))
     api(project(":patra-registry:patra-registry-api"))
-    api(project(":linqibin-spring-boot-starter-core"))
+    api(project(":linqibin-commons:linqibin-spring-boot-starter-core"))
 
     // MapStruct 由 patra.hexagonal-app 插件提供
     // annotationProcessor 由 patra.java-base 插件提供
@@ -20,5 +20,5 @@ dependencies {
     // Hibernate Validator 由 patra.hexagonal-app 插件提供
 
     // 测试依赖
-    testImplementation(project(":linqibin-spring-boot-starter-test"))
+    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
 }

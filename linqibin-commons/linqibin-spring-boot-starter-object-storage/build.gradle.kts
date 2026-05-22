@@ -18,7 +18,7 @@ dependencies {
     api("org.springframework.boot:spring-boot-starter")
 
     // Patra 内部依赖
-    api(project(":linqibin-commons-storage"))
+    api(project(":linqibin-commons:linqibin-commons-storage"))
 
     // MinIO Client
     api(libs.minio)
@@ -37,5 +37,5 @@ dependencies {
     annotationProcessor("org.springframework.boot:spring-boot-autoconfigure-processor")
 
     // 测试依赖
-    testImplementation(project(":linqibin-spring-boot-starter-test"))
+    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
 }

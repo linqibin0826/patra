@@ -15,7 +15,7 @@ plugins {
 
 dependencies {
     // Internal shared library: utilities/exceptions
-    api(project(":linqibin-commons-core"))
+    api(project(":linqibin-commons:linqibin-commons-core"))
 
     // Foundation for custom AutoConfiguration
     api("org.springframework.boot:spring-boot-autoconfigure")
@@ -36,7 +36,7 @@ dependencies {
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
 
     // 测试依赖
-    testImplementation(project(":linqibin-spring-boot-starter-test"))
+    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
 }
 
 // 覆盖率要求 75%

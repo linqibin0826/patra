@@ -11,7 +11,7 @@ plugins {
 
 dependencies {
     api(project(":patra-common:patra-common-enums"))
-    api(project(":linqibin-commons-core"))
+    api(project(":linqibin-commons:linqibin-commons-core"))
 
     // DTO 验证注解
     api("jakarta.validation:jakarta.validation-api")

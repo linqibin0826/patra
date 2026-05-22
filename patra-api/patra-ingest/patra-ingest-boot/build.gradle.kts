@@ -19,16 +19,16 @@ dependencies {
     implementation(project(":patra-ingest:patra-ingest-infra"))
 
     // Web Starter
-    implementation(project(":linqibin-spring-boot-starter-web"))
+    implementation(project(":linqibin-commons:linqibin-spring-boot-starter-web"))
 
     // HTTP Interface 客户端
-    implementation(project(":linqibin-spring-boot-starter-http-interface"))
+    implementation(project(":linqibin-commons:linqibin-spring-boot-starter-http-interface"))
 
     // 可观测性
-    implementation(project(":linqibin-spring-boot-starter-observability"))
+    implementation(project(":linqibin-commons:linqibin-spring-boot-starter-observability"))
 
     // Object Storage
-    implementation(project(":linqibin-spring-boot-starter-object-storage"))
+    implementation(project(":linqibin-commons:linqibin-spring-boot-starter-object-storage"))
     implementation(project(":patra-object-storage:patra-object-storage-api"))
 
     // RocketMQ
@@ -37,7 +37,7 @@ dependencies {
     }
 
     // 测试依赖
-    testImplementation(project(":linqibin-spring-boot-starter-test"))
+    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
 
     // JMH for performance benchmarks
     testImplementation(libs.jmh.core)

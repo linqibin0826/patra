@@ -15,8 +15,8 @@ springBoot {
 
 dependencies {
     // Patra Starter
-    implementation(project(":linqibin-spring-boot-starter-core"))
-    implementation(project(":linqibin-spring-boot-starter-observability"))
+    implementation(project(":linqibin-commons:linqibin-spring-boot-starter-core"))
+    implementation(project(":linqibin-commons:linqibin-spring-boot-starter-observability"))
 
     // Spring Cloud Gateway (WebFlux)
     implementation("org.springframework.cloud:spring-cloud-starter-gateway-server-webflux")
@@ -28,5 +28,5 @@ dependencies {
     implementation(libs.springdoc.openapi.webflux.scalar)
 
     // 测试依赖
-    testImplementation(project(":linqibin-spring-boot-starter-test"))
+    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
 }

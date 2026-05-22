@@ -15,8 +15,8 @@ plugins {
 
 dependencies {
     // Patra 内部依赖
-    api(project(":linqibin-commons-core"))
-    api(project(":linqibin-spring-boot-starter-core"))
+    api(project(":linqibin-commons:linqibin-commons-core"))
+    api(project(":linqibin-commons:linqibin-spring-boot-starter-core"))
 
     // Foundation for custom AutoConfiguration
     api("org.springframework.boot:spring-boot-autoconfigure")
@@ -43,7 +43,7 @@ dependencies {
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
 
     // 测试依赖
-    testImplementation(project(":linqibin-spring-boot-starter-test"))
+    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
     testImplementation("org.springframework.boot:spring-boot-starter-data-redis")
     testImplementation("org.springframework.boot:spring-boot-starter-data-jdbc")
     testImplementation("org.springframework.boot:spring-boot-starter-jackson")

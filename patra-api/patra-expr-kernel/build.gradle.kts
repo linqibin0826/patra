@@ -13,7 +13,7 @@ plugins {
 
 dependencies {
     api(project(":patra-common:patra-common-enums"))
-    api(project(":linqibin-commons-core"))
+    api(project(":linqibin-commons:linqibin-commons-core"))
     api("tools.jackson.core:jackson-databind")
 
     // 测试依赖由 patra.java-library 插件提供

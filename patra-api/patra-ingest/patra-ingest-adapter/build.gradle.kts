@@ -13,7 +13,7 @@ dependencies {
     // 内部模块
     api(project(":patra-ingest:patra-ingest-app"))
     api(project(":patra-ingest:patra-ingest-api"))
-    api(project(":linqibin-spring-boot-starter-web"))
+    api(project(":linqibin-commons:linqibin-spring-boot-starter-web"))
 
     // RocketMQ
     api(libs.rocketmq.spring.boot)
@@ -25,5 +25,5 @@ dependencies {
     api(libs.xxl.job)
 
     // 测试依赖
-    testImplementation(project(":linqibin-spring-boot-starter-test"))
+    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
 }

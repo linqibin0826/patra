@@ -13,11 +13,11 @@ dependencies {
     // 内部模块
     api(project(":patra-object-storage:patra-object-storage-app"))
     api(project(":patra-object-storage:patra-object-storage-api"))
-    api(project(":linqibin-spring-boot-starter-web"))
+    api(project(":linqibin-commons:linqibin-spring-boot-starter-web"))
 
     // Spring DAO exception hierarchy
     api("org.springframework:spring-tx")
 
     // 测试依赖
-    testImplementation(project(":linqibin-spring-boot-starter-test"))
+    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
 }

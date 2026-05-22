@@ -13,15 +13,15 @@ dependencies {
     // 内部模块
     api(project(":patra-catalog:patra-catalog-domain"))
     api(project(":patra-common:patra-common-model"))
-    api(project(":linqibin-spring-boot-starter-jpa"))
-    api(project(":linqibin-spring-boot-starter-batch"))
-    api(project(":linqibin-spring-boot-starter-rest-client"))
-    api(project(":linqibin-spring-boot-starter-http-interface"))
+    api(project(":linqibin-commons:linqibin-spring-boot-starter-jpa"))
+    api(project(":linqibin-commons:linqibin-spring-boot-starter-batch"))
+    api(project(":linqibin-commons:linqibin-spring-boot-starter-rest-client"))
+    api(project(":linqibin-commons:linqibin-spring-boot-starter-http-interface"))
     api(project(":patra-registry:patra-registry-api"))
-    api(project(":linqibin-spring-boot-starter-core"))
+    api(project(":linqibin-commons:linqibin-spring-boot-starter-core"))
 
     // 对象存储：VenueCoverImageDownloadAdapter 依赖此 starter 上传封面图到 MinIO/S3
-    api(project(":linqibin-spring-boot-starter-object-storage"))
+    api(project(":linqibin-commons:linqibin-spring-boot-starter-object-storage"))
 
     // WebFlux（WebClient 流式下载）
     api("org.springframework:spring-webflux")
@@ -46,7 +46,7 @@ dependencies {
     api("org.springframework.boot:spring-boot-starter")
 
     // 测试依赖（基础由 patra.java-library 提供）
-    testImplementation(project(":linqibin-spring-boot-starter-test"))
+    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
     testImplementation(libs.mockftpserver)
     // Apache HttpClient 5：隧道代理连通性测试需要（starter-rest-client 中为 compileOnly）
     testImplementation("org.apache.httpcomponents.client5:httpclient5")
