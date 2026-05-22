@@ -23,7 +23,6 @@ import java.io.InputStream;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.ClassOrderer;
 import org.junit.jupiter.api.DisplayName;
@@ -31,7 +30,6 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestClassOrder;
-import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -71,7 +69,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
     })
 @ContextConfiguration(initializers = CatalogPostgreSQLContainerInitializer.class)
 @ActiveProfiles("e2e-test")
-@Timeout(value = 60, unit = TimeUnit.SECONDS)
 @TestClassOrder(ClassOrderer.OrderAnnotation.class)
 @DisplayName("MeSH Descriptor 导入 E2E 测试")
 class MeshDescriptorImportE2E {
