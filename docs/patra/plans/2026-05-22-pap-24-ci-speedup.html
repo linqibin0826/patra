@@ -1124,7 +1124,7 @@ EOF
 )"</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：验证 4 shard 真正并行 + 收集时长</strong>
             <pre><code class="lang-bash">RUN_ID=$(gh run list --workflow ci.yml --branch feat/pap-24-pr3-unit-sharding --limit 1 --json databaseId -q '.[0].databaseId')
 gh run view "$RUN_ID" --json jobs -q '.jobs[] | select(.name | startswith("unit-tests")) | "\(.name) start=\(.startedAt) end=\(.completedAt)"'</code></pre>
@@ -1132,7 +1132,7 @@ gh run view "$RUN_ID" --json jobs -q '.jobs[] | select(.name | startswith("unit-
             <p><strong>回滚触发：</strong>如果单 shard 最长时长 &gt; 单 IT 时长（说明 unit 不再是瓶颈，sharding 收益小于复杂度成本）→ revert PR3，回到 PR2 形态。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：验证 coverage aggregation 正确合并所有 shard artifact</strong>
             <pre><code class="lang-bash">gh run view "$RUN_ID" --log | grep -A 5 "Download jacoco exec artifacts" | head -30</code></pre>
             <p>预期：日志显示下载 5 个 artifact（4 unit shard + 1 integration）。</p>
@@ -1140,7 +1140,7 @@ gh run view "$RUN_ID" --json jobs -q '.jobs[] | select(.name | startswith("unit-
             <p>预期：jacocoAggregatedReport 汇总所有 .exec，Codecov 显示覆盖率。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：检查 cache hit 率</strong>
             <pre><code class="lang-bash">gh run view "$RUN_ID" --log | grep -iE "(cache hit|cache miss|Restored from cache)" | head -20</code></pre>
             <p>预期：4 个 shard 均报告 cache hit（read-only 模式下，依赖 PR1+PR2 已经写入的 cache）。若 cache miss 率 &gt; 50% → 调研 cache key 设计。</p>
@@ -1271,12 +1271,20 @@ EOF</code></pre>
         <p>required-check 真正生效已验证 ✅。在测试 PR #84 中故意添加 <code>IntentionalFailTest.mustFailToVerifyRequiredCheckGating()</code>（<code>assertEquals(1, 2)</code>），CI 表现：unit-tests <strong>failure</strong> / integration-tests success / e2e-tests success / coverage-and-upload <strong>skipped</strong>（needs unit）/ required-check <strong>failure</strong>（alls-green 检测到 unit fail）。<code>gh pr merge 84 --squash</code> 被 branch protection 拒绝：<code>base branch policy prohibits the merge</code>，<code>mergeStateStatus=BLOCKED</code>。<strong>PAP-15 分支保护从「事实摆设」升级为真正强制生效。</strong></p>
         <p>过程中暴露一个潜在工作流坑（不影响 PR2 内容）：首次 <code>git commit</code> 时 spotless pre-commit hook 修改了 Java 文件格式，commit 实际失败但 <code>tail -3</code> 截断了失败信号，导致首次 push 推的是上一个 commit head — CI 跑的是 PR2 内容（已 success 过），全 success 误导。教训：未来 commit Java 文件后用 <code>git log --oneline -1</code> 确认 commit hash 而非依赖 <code>commit -m</code> 输出。</p>
       </li>
+          <li class="note" data-type="change" data-time="2026-05-22T17:30">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-22T17:30">05-22 17:30</time>
+          <a href="#task-6">§ Task 6 step 3 hotfix</a>
+        </header>
+        <p>PR3 实测发现 <code>coverage-and-upload</code> step 飙升到 302s（PR2 仅 89s，3.5× 增长）。根因：<code>jacoco-report-aggregation</code> plugin 的 <code>testCodeCoverageReport</code> 依赖所有模块的 <code>:test</code> task（44 模块 → 529 task deps），在 PR feature branch 上 <code>cache-read-only: true</code> 时 cache miss 触发全量重跑测试。修复：coverage job 命令加 <code>-x test -x integrationTest</code> — <code>.exec</code> 文件已通过 <code>download-artifact</code> 拿到，不需要重跑测试 task。dry-run 验证 task deps 从 529+44 降到 45（44 compileJava + 1 aggregation）。Hotfix 后 coverage step 从 302s → 68s。PR3 关键路径从 6:45 → 2:32。</p>
+      </li>
     </ol>
 
     <footer class="notes-stats">
       总计:
       <span data-counter="decision">0</span> decisions /
-      <span data-counter="change">3</span> changes /
+      <span data-counter="change">4</span> changes /
       <span data-counter="tradeoff">1</span> tradeoffs /
       <span data-counter="other">3</span> others
     </footer>
