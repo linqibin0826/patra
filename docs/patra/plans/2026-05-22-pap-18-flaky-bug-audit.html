@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PAP-18 — 单元测试 flaky bug 系统审计 + @Timeout / 全局状态共享治理 实现计划</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- CSS 外置：相对路径 ../styles/ 是从生成位置 docs/patra/plans/ 出发；
+       模板本身在 .claude-marketplace/ 下打开时此 link 会 404（接受：模板预览以生成后的 plan 为准） -->
+  <link rel="stylesheet" href="../styles/journal.css">
+  <link rel="stylesheet" href="../styles/plan-extras.css">
+</head>
+<body>
+<div class="layout">
+
+  <!-- ============================================================
+       左栏：目录（TOC）
+       ============================================================ -->
+  <nav class="toc">
+    <h3>目录</h3>
+    <ol>
+      <li><a href="#scope-check">范围检查结果</a></li>
+      <li><a href="#file-structure">文件结构</a></li>
+      <li><a href="#tasks">任务列表</a>
+        <ol class="toc-tasks">
+          <!-- ENTRY TEMPLATE（注释保留供添加 task 时复制）:
+               每写一个 <article id="task-N">，在此处同步追加一条 li，初始 data-task-status="pending"。
+               实施期改 article 的 data-status 时，必须同步改此处 li 的 data-task-status，
+               否则 TOC 状态符号会与中栏卡片不一致。
+
+          <li data-task-status="pending"><a href="#task-N">Task N — [任务名]</a></li>
+          -->
+          <li data-task-status="pending"><a href="#task-1">Task 1 — PR-1 改 java-base.gradle.kts</a></li>
+          <li data-task-status="pending"><a href="#task-2">Task 2 — PR-1 改 PULL_REQUEST_TEMPLATE.md</a></li>
+          <li data-task-status="pending"><a href="#task-3">Task 3 — PR-1 验证 + commit + push + 开 PR</a></li>
+          <li data-task-status="pending"><a href="#task-4">Task 4 — PR-2 清理 linqibin-commons-core</a></li>
+          <li data-task-status="pending"><a href="#task-5">Task 5 — PR-2 清理 linqibin-spring-boot-starter-*</a></li>
+          <li data-task-status="pending"><a href="#task-6">Task 6 — PR-2 清理 patra-spring-boot-starter-provenance</a></li>
+          <li data-task-status="pending"><a href="#task-7">Task 7 — PR-2 清理 catalog-domain</a></li>
+          <li data-task-status="pending"><a href="#task-8">Task 8 — PR-2 清理 catalog-app</a></li>
+          <li data-task-status="pending"><a href="#task-9">Task 9 — PR-2 清理 catalog-adapter</a></li>
+          <li data-task-status="pending"><a href="#task-10">Task 10 — PR-2 清理 catalog-infra（含 LetPub 保留）</a></li>
+          <li data-task-status="pending"><a href="#task-11">Task 11 — PR-2 清理 catalog-boot</a></li>
+          <li data-task-status="pending"><a href="#task-12">Task 12 — PR-2 清理 ingest-{app,infra}</a></li>
+          <li data-task-status="pending"><a href="#task-13">Task 13 — PR-2 清理 registry-*</a></li>
+          <li data-task-status="pending"><a href="#task-14">Task 14 — PR-2 清理 object-storage-adapter</a></li>
+          <li data-task-status="pending"><a href="#task-15">Task 15 — PR-2 全量验证（AC1+AC2 grep + 全量测试）</a></li>
+          <li data-task-status="pending"><a href="#task-16">Task 16 — PR-2 commit + push + 开 PR</a></li>
+          <li data-task-status="pending"><a href="#task-17">Task 17 — AC4 7 自然日观察窗口</a></li>
+        </ol>
+      </li>
+      <li><a href="#self-check">自检结果</a></li>
+    </ol>
+  </nav>
+
+  <!-- ============================================================
+       中栏：内容
+       ============================================================ -->
+  <main class="content">
+
+    <header class="doc-header">
+      <h1>PAP-18 — 单元测试 flaky bug 系统审计 + @Timeout / 全局状态共享治理 实现计划</h1>
+      <div class="meta-bar">
+        <span>📅 2026-05-22</span>
+        <span>🌿 pap-18-flaky-audit</span>
+        <span>📋 plan</span>
+        <span class="status-pill">draft</span>
+      </div>
+
+      <aside class="for-ai-worker">
+        <strong>面向 AI 代理的工作者：</strong>
+        必需子技能：使用 <code>patra:subagent-driven-development</code>（推荐）
+        或 <code>patra:executing-plans</code> 逐任务实现。
+        通过修改任务卡片与步骤的 <code>data-status</code> 属性追踪进度
+        （pending / in-progress / done / blocked / skipped）。
+        每完成一个 task 立即 commit。
+      </aside>
+
+      <dl class="meta">
+        <dt>目标</dt> <dd>执行 PAP-18 spec 两段式治理：PR-1「护栏先行」在 <code>linqibin.java-base.gradle.kts</code> 加 <code>forkEvery=50</code> + 三档全局 JUnit timeout、在 PR template 加 flaky checklist；PR-2「逐文件清理」手工删除 172 处类级 <code>@Timeout</code> 与孤儿 import，保留 6 处 LetPub 方法级注解并加注释。</dd>
+        <dt>架构</dt> <dd>PR-1 = 3 个 task（配置 + 模板 + 验证），合并即生效。PR-2 = 11 个模块清理 task + 1 个全量验证 task + 1 个 commit/PR task，按模块独立由 subagent 执行；最后 AC4 观察窗口任务非代码改动，跨 7 自然日统计 CI 5 次绿。</dd>
+        <dt>技术栈</dt> <dd>Gradle Kotlin DSL / JUnit 5 / Spotless（removeUnusedImports）/ ripgrep / GitHub Actions / gh CLI</dd>
+        <dt>关联 spec</dt> <dd><a href="../specs/2026-05-22-pap-18-flaky-bug-audit-design.html">PAP-18 — 单元测试 flaky bug 系统审计 + @Timeout / 全局状态共享治理</a></dd>
+      </dl>
+    </header>
+
+    <section id="scope-check">
+      <h2>范围检查结果</h2>
+      <aside class="callout success">
+        <span class="title">单 plan 覆盖</span>
+        <p>spec 决策 E 已锁定 PR-1 / PR-2 两段式拆分。PR-1 (~5 行配置) 与 PR-2 (~175 文件批量清理) 虽分两个 PR，但同源同 worktree、共用一份 AC，由本 plan 单一计划覆盖。AC4 7 自然日观察窗口作为 Task 17 收尾。无需拆分子计划。</p>
+      </aside>
+    </section>
+
+    <section id="file-structure">
+      <h2>文件结构</h2>
+      <div class="file-tree">
+        <pre>build-logic/src/main/kotlin/
+  linqibin.java-base.gradle.kts                              [modify]   PR-1：3 个 JvmTestSuite 各加 forkEvery + 全局 timeout
+
+.github/
+  PULL_REQUEST_TEMPLATE.md                                   [modify]   PR-1：Test plan 段补 flaky checklist
+
+linqibin-commons/
+  linqibin-commons-core/src/test/**/*Test.java               [modify]   PR-2：6 文件 删除类级 @Timeout
+  linqibin-spring-boot-starter-core/src/test/**/*Test.java   [modify]   PR-2：2 文件
+  linqibin-spring-boot-starter-batch/src/{test,integrationTest}/**/*Test.java
+                                                              [modify]   PR-2：5 文件
+  linqibin-spring-boot-starter-http-interface/src/{test,integrationTest}/**/*.java
+                                                              [modify]   PR-2：3 文件
+  linqibin-spring-boot-starter-rest-client/src/{test,integrationTest}/**/*.java
+                                                              [modify]   PR-2：6 文件
+  linqibin-spring-boot-starter-object-storage/src/test/**/*Test.java
+                                                              [modify]   PR-2：1 文件
+  linqibin-spring-boot-starter-observability                  [keep]    AC2 PAP-10 已修，无需动
+
+patra-starters/
+  patra-spring-boot-starter-provenance/src/test/**/*Test.java [modify]   PR-2：1 文件
+
+patra-api/
+  patra-catalog/
+    patra-catalog-domain/src/test/**/*Test.java               [modify]   PR-2：31 文件
+    patra-catalog-app/src/test/**/*Test.java                  [modify]   PR-2：20 文件
+    patra-catalog-adapter/src/{test,integrationTest}/**/*.java [modify]  PR-2：14 文件
+    patra-catalog-infra/src/{test,integrationTest}/**/*.java   [modify]  PR-2：61 文件（含 LetPub 6 处方法级保留 + 注释）
+    patra-catalog-boot/src/e2eTest/**/*E2E.java                [modify]  PR-2：2 文件（E2E @Timeout(60s) 删除）
+  patra-ingest/
+    patra-ingest-app/src/test/**/*Test.java                    [modify]  PR-2：1 文件
+    patra-ingest-infra/src/{test,integrationTest}/**/*.java    [modify]  PR-2：7 文件
+  patra-registry/
+    patra-registry-domain/src/test/**/*Test.java               [modify]  PR-2：4 文件
+    patra-registry-app/src/test/**/*Test.java                  [modify]  PR-2：1 文件
+    patra-registry-adapter/src/{test,integrationTest}/**/*.java [modify] PR-2：5 文件
+    patra-registry-infra/src/integrationTest/**/*IT.java       [modify]  PR-2：4 文件
+    patra-registry-boot/src/test/**/*Test.java                 [modify]  PR-2：1 文件
+  patra-object-storage/
+    patra-object-storage-adapter/src/integrationTest/**/*IT.java [modify] PR-2：1 文件
+
+docs/patra/
+  specs/2026-05-22-pap-18-flaky-bug-audit-design.html        [keep]     已 commit (7ae13fe85)
+  plans/2026-05-22-pap-18-flaky-bug-audit.html               [create]   本文件</pre>
+      </div>
+      <aside class="callout info">
+        <span class="title">职责边界与执行顺序</span>
+        <p><strong>PR-1 必须先合并到 main</strong>（Task 1-3），全局 timeout 兜底生效后，PR-2 才能安全删除类级注解。PR-2 各模块 task（4-14）相互独立，可由 subagent 并行调度；但 Task 15（全量验证）必须在 4-14 全部完成后；Task 16（commit + PR）依赖 15；Task 17（AC4 观察）依赖 16 合并到 main。</p>
+      </aside>
+    </section>
+
+    <section id="tasks">
+      <h2>任务列表</h2>
+
+      <!-- TASK TEMPLATE（注释保留供添加新 task 时复制）:
+
+      <article class="task" id="task-N" data-status="pending">
+        <header>
+          <h2>任务 N：[任务标题]</h2>
+          <dl class="files">
+            <dt>创建</dt><dd><code>[exact/path/to/File.java]</code></dd>
+            <dt>修改</dt><dd><code>[exact/path/to/Existing.java:123-145]</code></dd>
+            <dt>测试</dt><dd><code>[tests/exact/path/to/Test.java]</code></dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：[描述]</strong>
+            <pre><code class="lang-java">[完整代码块，禁止占位]</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：运行测试验证</strong>
+            <p>运行：<code>[精确命令]</code></p>
+            <p>预期：[精确预期]</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：Commit</strong>
+            <pre><code class="lang-bash">git add [files]
+git commit -m "feat: [description]"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      data-status 5 类：pending / in-progress / done / blocked / skipped
+      每开始任务/步骤改 in-progress，完成改 done。遇阻塞改 blocked，并在右栏 notes-panel 追加 data-type="other" entry 说明阻塞原因。
+      -->
+
+      <!-- ============================================================
+           PR-1 护栏先行
+           ============================================================ -->
+
+      <article class="task" id="task-1" data-status="pending">
+        <header>
+          <h2>任务 1：PR-1 改 <code>linqibin.java-base.gradle.kts</code>（forkEvery + 三档全局 timeout）</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>build-logic/src/main/kotlin/linqibin.java-base.gradle.kts</code>（三个 JvmTestSuite 各 testTask.configure 块）</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：定位 <code>val test by getting(JvmTestSuite::class)</code> 的 testTask.configure 块（约 105-115 行）</strong>
+            <p>在 <code>maxParallelForks = ...</code> 之后、<code>jvmArgs(...)</code> 之前插入 2 行：</p>
+            <pre><code class="lang-kotlin">                    maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
+                    forkEvery = 50
+                    systemProperty("junit.jupiter.execution.timeout.default", "5s")
+                    jvmArgs("--add-opens", "java.base/java.lang=ALL-UNNAMED")</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：定位 <code>register&lt;JvmTestSuite&gt;("integrationTest")</code> 的 testTask.configure 块（约 124-133 行）</strong>
+            <p>同样位置插入 2 行，timeout 改为 30s：</p>
+            <pre><code class="lang-kotlin">                    maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
+                    forkEvery = 50
+                    systemProperty("junit.jupiter.execution.timeout.default", "30s")
+                    jvmArgs("--add-opens", "java.base/java.lang=ALL-UNNAMED")</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：定位 <code>register&lt;JvmTestSuite&gt;("e2eTest")</code> 的 testTask.configure 块（约 143-152 行）</strong>
+            <p>同样位置插入 2 行，timeout 改为 180s：</p>
+            <pre><code class="lang-kotlin">                    maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
+                    forkEvery = 50
+                    systemProperty("junit.jupiter.execution.timeout.default", "180s")
+                    jvmArgs("--add-opens", "java.base/java.lang=ALL-UNNAMED")</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：本地校验 Gradle 配置语法</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">./gradlew help --no-daemon 2>&amp;1 | tail -20</code></pre>
+            <p>预期：<code>BUILD SUCCESSFUL</code>。任何 Kotlin DSL 语法错误（如缺逗号、缺括号）会在此暴露。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：暂不 commit</strong>
+            <p>本 task 仅修改文件，commit 集中在 Task 3 完成。</p>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-2" data-status="pending">
+        <header>
+          <h2>任务 2：PR-1 改 <code>.github/PULL_REQUEST_TEMPLATE.md</code>（追加 flaky checklist）</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>.github/PULL_REQUEST_TEMPLATE.md</code>（Test plan 段已有的空 <code>- [ ]</code> 之上或之后追加一行）</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：在 <code>Test plan</code> 段末尾的空 <code>- [ ]</code> 之后追加一行</strong>
+            <p>使用 Edit 工具，找到当前模板中的：</p>
+            <pre><code class="lang-markdown">- [ ]
+
+## Linear</code></pre>
+            <p>替换为：</p>
+            <pre><code class="lang-markdown">- [ ]
+- [ ] 本地 `./gradlew test` 通过 ✓ 且 CI 上无 flaky（无 step 因 flaky 重跑）
+
+## Linear</code></pre>
+            <p>不动 <code>## Summary</code> / <code>## Linear</code> 段，不动 HTML 注释。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：grep 校验改动落点</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">rg -c "flaky" .github/PULL_REQUEST_TEMPLATE.md</code></pre>
+            <p>预期输出：<code>1</code>（仅新增的一行命中 flaky 关键字）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：暂不 commit</strong>
+            <p>合并到 Task 3。</p>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-3" data-status="pending">
+        <header>
+          <h2>任务 3：PR-1 全量验证 + commit + push + 开 PR</h2>
+          <dl class="files">
+            <dt>修改</dt><dd>无新文件；Task 1 + Task 2 已修改的两个文件一起 commit。</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：本地全量测试（让 Task 1 的新 timeout / forkEvery 生效跑一次）</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">./gradlew clean test integrationTest --no-daemon 2>&amp;1 | tail -50</code></pre>
+            <p>预期：<code>BUILD SUCCESSFUL</code>。若个别 test 因 5s/30s 全局 timeout 被误杀，立即在 Implementation Notes 追加 <code>data-type="other"</code> entry 记录被杀测试，方法上单独加 <code>@Timeout(value=10, SECONDS)</code> 局部覆盖（spec 风险 1 缓解策略），再重试。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：抽样验证 timeout 配置已生效</strong>
+            <p>运行（看 test 报告里 systemProperty 注入痕迹）：</p>
+            <pre><code class="lang-bash">find . -path '*/build/test-results/test/*.xml' -newer build.gradle.kts 2>/dev/null | head -3</code></pre>
+            <p>预期：列出 3 个最近生成的 test 报告 xml。再 grep 一个验证：</p>
+            <pre><code class="lang-bash">rg -l "testsuite" $(find . -path '*/build/test-results/test/*.xml' | head -3)</code></pre>
+            <p>预期：3 个文件都命中。说明 test task 用新配置正常跑通。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：Commit PR-1 全部改动</strong>
+            <pre><code class="lang-bash">git add build-logic/src/main/kotlin/linqibin.java-base.gradle.kts .github/PULL_REQUEST_TEMPLATE.md
+git commit -m "$(cat &lt;&lt;'EOF'
+build(test): JVM worker 隔离 + 全局 timeout fallback + PR flaky checklist (PAP-18 PR-1)
+
+build-logic/src/main/kotlin/linqibin.java-base.gradle.kts:
+- 三个 JvmTestSuite 各加 forkEvery = 50（worker 跑 50 class 后重启）
+- 全局 junit.jupiter.execution.timeout.default 分三档：
+  test=5s / integrationTest=30s / e2eTest=180s
+
+.github/PULL_REQUEST_TEMPLATE.md:
+- Test plan 段追加 flaky checklist 一行
+
+Refs PAP-18
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt;
+EOF
+)"</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：Push 到 origin 并开 PR</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">git push -u origin pap-18-flaky-audit</code></pre>
+            <p>然后开 PR：</p>
+            <pre><code class="lang-bash">gh pr create --title "PAP-18 PR-1: JVM worker 隔离 + 全局 timeout fallback + PR flaky checklist" --body "$(cat &lt;&lt;'EOF'
+## Summary
+
+- `linqibin.java-base.gradle.kts` 三个 JvmTestSuite 各加 `forkEvery = 50` + 全局 `junit.jupiter.execution.timeout.default`（test=5s / IT=30s / E2E=180s）
+- `.github/PULL_REQUEST_TEMPLATE.md` Test plan 段追加 flaky checklist 一行
+
+## Test plan
+
+- [x] 本地 `./gradlew clean test integrationTest` 全绿
+- [x] CI build-and-test 全绿
+- [ ] 本地 `./gradlew test` 通过 ✓ 且 CI 上无 flaky
+
+## Linear
+
+Refs PAP-18 — https://linear.app/papertrace/issue/PAP-18
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+EOF
+)"</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：等 PR-1 合并到 main 后再继续 Task 4</strong>
+            <p>合并后 Task 4-17 才能基于"全局 timeout 兜底已生效"的前提安全删除类级注解。在 PR-1 未合并前不要启动 PR-2 任务。</p>
+          </li>
+        </ol>
+      </article>
+
+      <!-- ============================================================
+           PR-2 逐模块清理（Task 4-14）
+           ============================================================ -->
+
+      <article class="task" id="task-4" data-status="pending">
+        <header>
+          <h2>任务 4：PR-2 清理 <code>linqibin-commons-core</code>（6 文件）</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>linqibin-commons/linqibin-commons-core/src/test/**/*Test.java</code></dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：列出该模块所有含 <code>@Timeout</code> 的测试文件</strong>
+            <pre><code class="lang-bash">rg --type java -l "@Timeout" linqibin-commons/linqibin-commons-core/</code></pre>
+            <p>预期：6 个文件（AggregateRootTest / RemoteCallExceptionTest / RemoteErrorHelperTest / PagingParamsTest / PageResultTest / StringUtilsTest）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：对每个文件用 Edit 工具删除类级 <code>@Timeout(...)</code> 注解行</strong>
+            <p>类级注解位于 <code>class XxxTest {</code> 上方、与 <code>@DisplayName</code> 或 javadoc 相邻。删除示例（<code>AggregateRootTest.java</code>）：</p>
+            <pre><code class="lang-java">// 原代码
+/// 验证子实体变更追踪功能。
+@Timeout(2)
+class AggregateRootTest {
+
+// 删除后
+/// 验证子实体变更追踪功能。
+class AggregateRootTest {</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：检查并删除孤儿 import</strong>
+            <p>每个文件删除注解后，检查两条 import 是否孤儿：</p>
+            <pre><code class="lang-bash">grep -c "@Timeout\|TimeUnit\." linqibin-commons/linqibin-commons-core/src/test/java/dev/linqibin/commons/domain/AggregateRootTest.java</code></pre>
+            <p>规则：</p>
+            <ul>
+              <li>若 <code>@Timeout</code> 不再出现 → 删除 <code>import org.junit.jupiter.api.Timeout;</code></li>
+              <li>若 <code>TimeUnit.</code> 不再出现 → 删除 <code>import java.util.concurrent.TimeUnit;</code></li>
+              <li>若 <code>TimeUnit.</code> 仍在（如 <code>Duration.ofSeconds(...)</code> 或 <code>TimeUnit.MILLISECONDS</code> 实际业务用法）→ 保留 TimeUnit import</li>
+            </ul>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：spotlessApply 兜底</strong>
+            <pre><code class="lang-bash">./gradlew :linqibin-commons:linqibin-commons-core:spotlessApply --no-daemon</code></pre>
+            <p>Spotless 的 <code>removeUnusedImports</code> 会捕获遗漏的孤儿 import。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：模块测试</strong>
+            <pre><code class="lang-bash">./gradlew :linqibin-commons:linqibin-commons-core:test --no-daemon 2>&amp;1 | tail -20</code></pre>
+            <p>预期：<code>BUILD SUCCESSFUL</code>。若某测试因 PR-1 的 5s 全局 timeout 被误杀，在 Implementation Notes 追加 <code>tradeoff</code> entry 记录，该方法上单独加 <code>@Timeout(value=10, SECONDS)</code>。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 6：Commit</strong>
+            <pre><code class="lang-bash">git add linqibin-commons/linqibin-commons-core
+git commit -m "$(cat &lt;&lt;'EOF'
+test(commons-core): 删除类级 @Timeout，由全局 fallback 接管 (PAP-18 PR-2)
+
+6 文件类级注解清理，孤儿 import 一并删除。
+全局 timeout 在 PR-1 已配 test=5s 兜底。
+
+Refs PAP-18
+EOF
+)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-5" data-status="pending">
+        <header>
+          <h2>任务 5：PR-2 清理 <code>linqibin-spring-boot-starter-*</code>（5 个 starter，共 17 文件）</h2>
+          <dl class="files">
+            <dt>修改</dt><dd>
+              <code>linqibin-commons/linqibin-spring-boot-starter-core</code>（2 文件）<br>
+              <code>linqibin-commons/linqibin-spring-boot-starter-batch</code>（5 文件）<br>
+              <code>linqibin-commons/linqibin-spring-boot-starter-http-interface</code>（3 文件）<br>
+              <code>linqibin-commons/linqibin-spring-boot-starter-rest-client</code>（6 文件）<br>
+              <code>linqibin-commons/linqibin-spring-boot-starter-object-storage</code>（1 文件）
+            </dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：列出全部 17 文件</strong>
+            <pre><code class="lang-bash">rg --type java -l "@Timeout" linqibin-commons/ | grep -v observability</code></pre>
+            <p>注：<code>linqibin-spring-boot-starter-observability</code> 不动（AC2 已在 PAP-10 治理）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：对每个文件应用 Task 4 步骤 2-3 的删除规则</strong>
+            <p>类级 <code>@Timeout(...)</code> 删除 → 检查 <code>Timeout</code> import 孤儿 → 检查 <code>TimeUnit</code> import 孤儿。</p>
+            <p>特殊情况：</p>
+            <ul>
+              <li><code>HttpInterfaceAutoConfigurationTest.java</code> 是 <code>@Timeout(value=10, SECONDS)</code>，删除（IT 全局 30s 兜底）。</li>
+              <li><code>RestClientFactoryIT.java</code> 是 <code>@Timeout(value=30, SECONDS)</code> 在 integrationTest source set，删除（全局 30s 兜底等同）。</li>
+              <li><code>DownloadClientIT.java</code> 是 <code>@Timeout(30)</code>，同上。</li>
+            </ul>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：spotlessApply + 测试（每个 starter 各一次）</strong>
+            <pre><code class="lang-bash">./gradlew \
+  :linqibin-commons:linqibin-spring-boot-starter-core:test \
+  :linqibin-commons:linqibin-spring-boot-starter-batch:test \
+  :linqibin-commons:linqibin-spring-boot-starter-http-interface:test \
+  :linqibin-commons:linqibin-spring-boot-starter-rest-client:test \
+  :linqibin-commons:linqibin-spring-boot-starter-object-storage:test \
+  spotlessApply --no-daemon 2>&amp;1 | tail -30</code></pre>
+            <p>预期：<code>BUILD SUCCESSFUL</code>。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：integrationTest 任务（仅含 IT 的 starter）</strong>
+            <pre><code class="lang-bash">./gradlew \
+  :linqibin-commons:linqibin-spring-boot-starter-batch:integrationTest \
+  :linqibin-commons:linqibin-spring-boot-starter-http-interface:integrationTest \
+  :linqibin-commons:linqibin-spring-boot-starter-rest-client:integrationTest \
+  --no-daemon 2>&amp;1 | tail -30</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：Commit</strong>
+            <pre><code class="lang-bash">git add linqibin-commons/linqibin-spring-boot-starter-core linqibin-commons/linqibin-spring-boot-starter-batch linqibin-commons/linqibin-spring-boot-starter-http-interface linqibin-commons/linqibin-spring-boot-starter-rest-client linqibin-commons/linqibin-spring-boot-starter-object-storage
+git commit -m "test(commons-starters): 删除类级 @Timeout (PAP-18 PR-2)
+
+5 个 starter 共 17 文件清理。observability starter 不动 (AC2 已治理)。
+
+Refs PAP-18"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-6" data-status="pending">
+        <header>
+          <h2>任务 6：PR-2 清理 <code>patra-spring-boot-starter-provenance</code>（1 文件）</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>patra-starters/patra-spring-boot-starter-provenance/src/test/java/dev/linqibin/patra/starter/provenance/pubmed/converter/PubmedPublicationConverterTest.java</code></dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：删除类级 <code>@Timeout(value=2, SECONDS)</code> 及孤儿 import</strong>
+            <p>Edit 工具，参照 Task 4 步骤 2-3 规则。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：spotlessApply + 测试</strong>
+            <pre><code class="lang-bash">./gradlew :patra-starters:patra-spring-boot-starter-provenance:test spotlessApply --no-daemon 2>&amp;1 | tail -20</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：Commit</strong>
+            <pre><code class="lang-bash">git add patra-starters/patra-spring-boot-starter-provenance
+git commit -m "test(starter-provenance): 删除类级 @Timeout (PAP-18 PR-2)
+
+Refs PAP-18"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-7" data-status="pending">
+        <header>
+          <h2>任务 7：PR-2 清理 <code>patra-catalog-domain</code>（31 文件，纯 POJO/VO/enum 测试）</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>patra-api/patra-catalog/patra-catalog-domain/src/test/java/**/*Test.java</code>（约 31 文件）</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：列出全部文件</strong>
+            <pre><code class="lang-bash">rg --type java -l "@Timeout" patra-api/patra-catalog/patra-catalog-domain/</code></pre>
+            <p>预期：31 个文件，全部是纯 POJO/VO/enum/aggregate 单测，全部类级 <code>@Timeout(2)</code> 或 <code>@Timeout(value=2, SECONDS)</code>。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：批量逐文件应用 Task 4 步骤 2-3 删除规则</strong>
+            <p>该模块文件数较多，推荐 subagent 内部串行处理；每文件一次 Edit。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：spotlessApply + 测试</strong>
+            <pre><code class="lang-bash">./gradlew :patra-api:patra-catalog:patra-catalog-domain:test spotlessApply --no-daemon 2>&amp;1 | tail -20</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：Commit</strong>
+            <pre><code class="lang-bash">git add patra-api/patra-catalog/patra-catalog-domain
+git commit -m "test(catalog-domain): 删除类级 @Timeout (PAP-18 PR-2)
+
+31 个 POJO/VO/enum/aggregate 单测清理。
+
+Refs PAP-18"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-8" data-status="pending">
+        <header>
+          <h2>任务 8：PR-2 清理 <code>patra-catalog-app</code>（20 文件，use-case handler 单测）</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>patra-api/patra-catalog/patra-catalog-app/src/test/java/**/*Test.java</code>（约 20 文件）</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：列出全部文件 + 批量删除</strong>
+            <pre><code class="lang-bash">rg --type java -l "@Timeout" patra-api/patra-catalog/patra-catalog-app/</code></pre>
+            <p>应用 Task 4 步骤 2-3 删除规则。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：spotlessApply + 测试</strong>
+            <pre><code class="lang-bash">./gradlew :patra-api:patra-catalog:patra-catalog-app:test spotlessApply --no-daemon 2>&amp;1 | tail -20</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：Commit</strong>
+            <pre><code class="lang-bash">git add patra-api/patra-catalog/patra-catalog-app
+git commit -m "test(catalog-app): 删除类级 @Timeout (PAP-18 PR-2)
+
+20 个 use-case handler 单测清理。
+
+Refs PAP-18"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-9" data-status="pending">
+        <header>
+          <h2>任务 9：PR-2 清理 <code>patra-catalog-adapter</code>（14 文件，含 IT）</h2>
+          <dl class="files">
+            <dt>修改</dt><dd>
+              <code>patra-api/patra-catalog/patra-catalog-adapter/src/test/java/**/*Test.java</code><br>
+              <code>patra-api/patra-catalog/patra-catalog-adapter/src/integrationTest/java/**/*IT.java</code>
+            </dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：列出全部文件 + 删除</strong>
+            <pre><code class="lang-bash">rg --type java -l "@Timeout" patra-api/patra-catalog/patra-catalog-adapter/</code></pre>
+            <p>IT 文件多为类级 <code>@Timeout(value=30, SECONDS)</code>，删除（IT 全局 30s 兜底）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：spotlessApply + test + integrationTest</strong>
+            <pre><code class="lang-bash">./gradlew :patra-api:patra-catalog:patra-catalog-adapter:test :patra-api:patra-catalog:patra-catalog-adapter:integrationTest spotlessApply --no-daemon 2>&amp;1 | tail -30</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：Commit</strong>
+            <pre><code class="lang-bash">git add patra-api/patra-catalog/patra-catalog-adapter
+git commit -m "test(catalog-adapter): 删除类级 @Timeout (PAP-18 PR-2)
+
+14 文件清理（含 IT 切片测试）。
+
+Refs PAP-18"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-10" data-status="pending">
+        <header>
+          <h2>任务 10：PR-2 清理 <code>patra-catalog-infra</code>（61 文件，最大模块，含 LetPub 6 处方法级保留）</h2>
+          <dl class="files">
+            <dt>修改</dt><dd>
+              <code>patra-api/patra-catalog/patra-catalog-infra/src/test/java/**/*Test.java</code><br>
+              <code>patra-api/patra-catalog/patra-catalog-infra/src/integrationTest/java/**/*IT.java</code>
+            </dd>
+            <dt>特殊保留</dt><dd>
+              <code>.../integration/letpub/LetPubEnrichmentAdapterIT.java</code>（4 处方法级 <code>@Timeout(value=2, MINUTES)</code>）<br>
+              <code>.../integration/letpub/LetPubProxyConnectivityTest.java</code>（2 处方法级）
+            </dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：列出全部 61 文件 + 区分类级 vs 方法级</strong>
+            <pre><code class="lang-bash">rg --type java -l "@Timeout" patra-api/patra-catalog/patra-catalog-infra/</code></pre>
+            <p>LetPub 两个文件特殊处理（步骤 3）；其余 59 文件按 Task 4 删除规则。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：对 59 个非-LetPub 文件批量删除类级 <code>@Timeout</code></strong>
+            <p>按 Task 4 步骤 2-3 规则，删除注解 + 检查孤儿 import。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：LetPub 两个文件特殊处理</strong>
+            <p>这两个文件含<strong>方法级</strong> <code>@Timeout(value=2, MINUTES)</code>（共 6 处），<strong>保留</strong>注解，每处上方加注释：</p>
+            <pre><code class="lang-java">@Test
+// 真实网络调用，方法级超时覆盖全局 fallback
+@Timeout(value = 2, unit = TimeUnit.MINUTES)
+void shouldFetchLetPubData() { ... }</code></pre>
+            <p>两个文件无类级 <code>@Timeout</code>，故不动 import。检查具体路径：</p>
+            <pre><code class="lang-bash">rg -n "@Timeout" patra-api/patra-catalog/patra-catalog-infra/src/integrationTest/java/dev/linqibin/patra/catalog/infra/adapter/integration/letpub/LetPubEnrichmentAdapterIT.java patra-api/patra-catalog/patra-catalog-infra/src/test/java/dev/linqibin/patra/catalog/infra/adapter/integration/letpub/LetPubProxyConnectivityTest.java</code></pre>
+            <p>预期：6 行命中（4 + 2），全在方法上方。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：spotlessApply + test + integrationTest</strong>
+            <pre><code class="lang-bash">./gradlew :patra-api:patra-catalog:patra-catalog-infra:test :patra-api:patra-catalog:patra-catalog-infra:integrationTest spotlessApply --no-daemon 2>&amp;1 | tail -30</code></pre>
+            <p>注意：LetPub IT 标 <code>@Tag("external")</code> 类似 tag 会被默认 excludeTags 跳过；如果实际跑了，可能联网失败，属预期。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：Commit</strong>
+            <pre><code class="lang-bash">git add patra-api/patra-catalog/patra-catalog-infra
+git commit -m "$(cat &lt;&lt;'EOF'
+test(catalog-infra): 删除类级 @Timeout，保留 LetPub 6 处方法级 + 加注释 (PAP-18 PR-2)
+
+59 文件类级注解清理。
+LetPubEnrichmentAdapterIT (4 处) + LetPubProxyConnectivityTest (2 处)
+方法级 @Timeout(value=2, MINUTES) 保留并加注释「真实网络调用，方法级
+超时覆盖全局 fallback」。
+
+Refs PAP-18
+EOF
+)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-11" data-status="pending">
+        <header>
+          <h2>任务 11：PR-2 清理 <code>patra-catalog-boot</code>（2 文件 E2E）</h2>
+          <dl class="files">
+            <dt>修改</dt><dd>
+              <code>patra-api/patra-catalog/patra-catalog-boot/src/e2eTest/java/dev/linqibin/patra/catalog/integration/mesh/MeshDescriptorImportE2E.java</code>（删类级 <code>@Timeout(60s)</code>）<br>
+              <code>patra-api/patra-catalog/patra-catalog-boot/src/e2eTest/java/dev/linqibin/patra/catalog/integration/mesh/MeshScrImportE2E.java</code>（同上）
+            </dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：删除两个 E2E 类级 <code>@Timeout(value=60, SECONDS)</code> 与孤儿 import</strong>
+            <p>E2E suite 全局 180s 兜底足够。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：spotlessApply（不跑 e2eTest，因为是 Testcontainers 重）</strong>
+            <pre><code class="lang-bash">./gradlew :patra-api:patra-catalog:patra-catalog-boot:spotlessApply --no-daemon
+./gradlew :patra-api:patra-catalog:patra-catalog-boot:compileE2eTestJava --no-daemon</code></pre>
+            <p>仅编译 E2E source set 确认语法正确。E2E 实际执行留给 CI（或 Task 15 全量验证）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：Commit</strong>
+            <pre><code class="lang-bash">git add patra-api/patra-catalog/patra-catalog-boot
+git commit -m "test(catalog-boot): 删除 E2E 类级 @Timeout (PAP-18 PR-2)
+
+MeshDescriptorImportE2E + MeshScrImportE2E 各删除 @Timeout(60s)，
+由 e2eTest suite 全局 180s 兜底。
+
+Refs PAP-18"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-12" data-status="pending">
+        <header>
+          <h2>任务 12：PR-2 清理 <code>patra-ingest-{app,infra}</code>（共 8 文件）</h2>
+          <dl class="files">
+            <dt>修改</dt><dd>
+              <code>patra-api/patra-ingest/patra-ingest-app/src/test/java/**/*Test.java</code>（1 文件）<br>
+              <code>patra-api/patra-ingest/patra-ingest-infra/src/test/java/**/*Test.java</code>（1 文件）<br>
+              <code>patra-api/patra-ingest/patra-ingest-infra/src/integrationTest/java/**/*IT.java</code>（6 文件，全部 <code>@Timeout(30s)</code>）
+            </dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：列出文件 + 删除</strong>
+            <pre><code class="lang-bash">rg --type java -l "@Timeout" patra-api/patra-ingest/</code></pre>
+            <p>应用 Task 4 步骤 2-3 规则。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：spotlessApply + 测试</strong>
+            <pre><code class="lang-bash">./gradlew :patra-api:patra-ingest:patra-ingest-app:test :patra-api:patra-ingest:patra-ingest-infra:test :patra-api:patra-ingest:patra-ingest-infra:integrationTest spotlessApply --no-daemon 2>&amp;1 | tail -30</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：Commit</strong>
+            <pre><code class="lang-bash">git add patra-api/patra-ingest
+git commit -m "test(ingest): 删除类级 @Timeout (PAP-18 PR-2)
+
+8 文件清理（app/infra 单测 + Repository IT）。
+
+Refs PAP-18"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-13" data-status="pending">
+        <header>
+          <h2>任务 13：PR-2 清理 <code>patra-registry-*</code>（共 15 文件）</h2>
+          <dl class="files">
+            <dt>修改</dt><dd>
+              <code>patra-api/patra-registry/patra-registry-domain</code>（4 文件）<br>
+              <code>patra-api/patra-registry/patra-registry-app</code>（1 文件）<br>
+              <code>patra-api/patra-registry/patra-registry-adapter</code>（5 文件，含 IT）<br>
+              <code>patra-api/patra-registry/patra-registry-infra</code>（4 文件 IT）<br>
+              <code>patra-api/patra-registry/patra-registry-boot</code>（1 文件）
+            </dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：列出全部 15 文件 + 删除</strong>
+            <pre><code class="lang-bash">rg --type java -l "@Timeout" patra-api/patra-registry/</code></pre>
+            <p>应用 Task 4 步骤 2-3 规则。注：<code>RegistryErrorMappingContributorTest.java</code> 是 <code>@Timeout(2)</code> 简写形态，同样删除。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：spotlessApply + 测试（全 registry 子模块）</strong>
+            <pre><code class="lang-bash">./gradlew \
+  :patra-api:patra-registry:patra-registry-domain:test \
+  :patra-api:patra-registry:patra-registry-app:test \
+  :patra-api:patra-registry:patra-registry-adapter:test \
+  :patra-api:patra-registry:patra-registry-adapter:integrationTest \
+  :patra-api:patra-registry:patra-registry-infra:integrationTest \
+  :patra-api:patra-registry:patra-registry-boot:test \
+  spotlessApply --no-daemon 2>&amp;1 | tail -40</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：Commit</strong>
+            <pre><code class="lang-bash">git add patra-api/patra-registry
+git commit -m "test(registry): 删除类级 @Timeout (PAP-18 PR-2)
+
+15 文件清理跨 domain/app/adapter/infra/boot。
+
+Refs PAP-18"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-14" data-status="pending">
+        <header>
+          <h2>任务 14：PR-2 清理 <code>patra-object-storage-adapter</code>（1 文件）</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>patra-api/patra-object-storage/patra-object-storage-adapter/src/integrationTest/java/dev/linqibin/patra/objectstorage/adapter/rest/StorageEndpointIT.java</code></dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：删除类级 <code>@Timeout(value=30, SECONDS)</code> 与孤儿 import</strong>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：spotlessApply + IT</strong>
+            <pre><code class="lang-bash">./gradlew :patra-api:patra-object-storage:patra-object-storage-adapter:integrationTest spotlessApply --no-daemon 2>&amp;1 | tail -20</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：Commit</strong>
+            <pre><code class="lang-bash">git add patra-api/patra-object-storage
+git commit -m "test(object-storage): 删除类级 @Timeout (PAP-18 PR-2)
+
+Refs PAP-18"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <!-- ============================================================
+           PR-2 全量验证 + commit + PR
+           ============================================================ -->
+
+      <article class="task" id="task-15" data-status="pending">
+        <header>
+          <h2>任务 15：PR-2 全量验证（AC1 + AC2 grep + 全量测试）</h2>
+          <dl class="files">
+            <dt>修改</dt><dd>无文件改动；仅运行验证命令。</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：AC1 验证 — 全代码库 <code>@Timeout</code> 仅剩 6 处 LetPub 方法级</strong>
+            <pre><code class="lang-bash">rg -n --type java "@Timeout" -g '!**/build/**'</code></pre>
+            <p>预期输出：<strong>仅 6 行</strong>，全部位于：</p>
+            <ul>
+              <li><code>patra-api/patra-catalog/patra-catalog-infra/src/integrationTest/.../LetPubEnrichmentAdapterIT.java</code>（4 处）</li>
+              <li><code>patra-api/patra-catalog/patra-catalog-infra/src/test/.../LetPubProxyConnectivityTest.java</code>（2 处）</li>
+            </ul>
+            <p>如果残留其他文件，回到对应 Task 修复后重试。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：AC1 验证 — <code>import org.junit.jupiter.api.Timeout;</code> 仅剩这两个 LetPub 文件</strong>
+            <pre><code class="lang-bash">rg -n --type java "import org\.junit\.jupiter\.api\.Timeout" -g '!**/build/**'</code></pre>
+            <p>预期：2 个文件。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：AC2 验证 — 反模式 1（forEach + ::remove）零命中</strong>
+            <pre><code class="lang-bash">rg --type java '\.forEach\s*\(.*::remove\b' -g '!**/build/**'</code></pre>
+            <p>预期：零命中。注：<code>OtelMeterRegistryBridgeTest.java</code> 用 <code>new ArrayList&lt;&gt;(...).forEach(::remove)</code> 是先拷贝后迭代，<strong>不是</strong>原集合迭代时改集合，pattern 仍命中但 PAP-10 已治理。如果命中，逐个核对是否拷贝。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：AC2 验证 — 反模式 2（for-each + list.remove）零命中</strong>
+            <pre><code class="lang-bash">rg --type java -B1 -A5 'for\s*\(.*:\s*\w+\s*\)' \
+   -g '*Test*.java' -g '*IT.java' -g '*E2E.java' \
+   -g '!**/build/**' \
+   | rg -B1 'list\.remove\('</code></pre>
+            <p>预期：零命中。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：全量测试（test + integrationTest，e2eTest 留给 CI）</strong>
+            <pre><code class="lang-bash">./gradlew clean test integrationTest --no-daemon 2>&amp;1 | tail -50</code></pre>
+            <p>预期：<code>BUILD SUCCESSFUL</code>。如有失败：</p>
+            <ul>
+              <li>若是某测试因 5s/30s 全局 timeout 被误杀 → 方法上加 <code>@Timeout(value=10, SECONDS)</code>（或更宽），Implementation Notes 追加 <code>tradeoff</code> entry 记录。</li>
+              <li>若是其他原因 → 修复后重试。</li>
+            </ul>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 6：spotbugs 静态分析</strong>
+            <pre><code class="lang-bash">./gradlew spotbugsMain spotbugsTest --no-daemon 2>&amp;1 | tail -20</code></pre>
+            <p>预期：<code>BUILD SUCCESSFUL</code>。任何因 import 删除引入的告警在此暴露。</p>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-16" data-status="pending">
+        <header>
+          <h2>任务 16：PR-2 push + 开 PR</h2>
+          <dl class="files">
+            <dt>修改</dt><dd>无；Task 4-14 各自已 commit。本 task 仅 push + gh pr create。</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：检查待推送 commit</strong>
+            <pre><code class="lang-bash">git log --oneline origin/pap-18-flaky-audit..HEAD | head -30</code></pre>
+            <p>预期：11 个 commits（Task 4-14 各一个）。如果 Task 4-14 有多个 commit 也接受（如 Task 10 拆 commit），但确认无 work-in-progress 半成品。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：Push</strong>
+            <pre><code class="lang-bash">git push origin pap-18-flaky-audit</code></pre>
+            <p>注：PR-1 (Task 3) 已合并后，PR-2 可以基于同一分支继续 push；GitHub 自动识别为新 PR 或更新现有 PR。若要单独的 PR-2 分支，可 <code>git checkout -b pap-18-flaky-audit-cleanup</code> 后再 push。<strong>本 plan 默认两 PR 用同一分支</strong>（PR-1 merge 后 GitHub 关闭原 PR，再 push 时 open 新 PR）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：开 PR-2</strong>
+            <pre><code class="lang-bash">gh pr create --title "PAP-18 PR-2: 删除 172 处类级 @Timeout，保留 6 处 LetPub 方法级" --body "$(cat &lt;&lt;'EOF'
+## Summary
+
+按 PAP-18 spec 决策 A/C/G 执行类级 @Timeout 清理：
+
+- 删除全部 172 处类级 `@Timeout`（跨 ~175 文件、20 模块）
+- 由 PR-1 的 java-base convention 全局 fallback 接管（test=5s / IT=30s / E2E=180s）
+- 保留 6 处 LetPub 方法级 `@Timeout(value=2, MINUTES)`：
+  - `LetPubEnrichmentAdapterIT.java` × 4
+  - `LetPubProxyConnectivityTest.java` × 2
+  - 每处上方加注释「真实网络调用，方法级超时覆盖全局 fallback」
+- AC2「迭代时改集合」反模式 grep 零命中（PAP-10 已治理 `OtelMeterRegistryBridgeTest`）
+
+## Test plan
+
+- [x] `rg --type java "@Timeout"` 仅命中 6 处方法级
+- [x] `rg --type java "import org\.junit\.jupiter\.api\.Timeout"` 仅命中 2 文件
+- [x] `./gradlew clean test integrationTest` 全绿
+- [x] `./gradlew spotbugsMain spotbugsTest` 全绿
+- [ ] CI build-and-test 全绿
+- [ ] 本地 `./gradlew test` 通过 ✓ 且 CI 上无 flaky
+
+## Linear
+
+Closes PAP-18 — https://linear.app/papertrace/issue/PAP-18
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+EOF
+)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-17" data-status="pending">
+        <header>
+          <h2>任务 17：AC4 — 7 自然日观察窗口 + 连续 5 次绿统计</h2>
+          <dl class="files">
+            <dt>修改</dt><dd>无；本 task 为观察窗口，不产生代码改动。</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：PR-2 合并到 main 当时启动统计窗口</strong>
+            <p>记录起始时刻：</p>
+            <pre><code class="lang-bash">echo "AC4 窗口起始：$(date -Iseconds)" &gt;&gt; /tmp/pap-18-ac4-log
+git log -1 --format='%H %ci' origin/main &gt;&gt; /tmp/pap-18-ac4-log</code></pre>
+            <p>计 7 个自然日。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：每天检查 CI runs 状态</strong>
+            <pre><code class="lang-bash">gh run list --workflow=ci.yml --branch=main --limit=20 --json conclusion,createdAt,event,headSha</code></pre>
+            <p>统计：</p>
+            <ul>
+              <li>连续 5 次 <code>conclusion=success</code> 即达成 AC4。</li>
+              <li>任何 <code>conclusion=failure</code> 或人工 retry，重置计数器；在 Implementation Notes 追加 <code>data-type="other"</code> entry 记录原因。</li>
+            </ul>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：达成后关单（自动）</strong>
+            <p>PR-2 body 含 <code>Closes PAP-18</code>，PR merge 时 Linear 自动关单。无需手工操作。如果 7 自然日内未达成 5 次绿，<strong>不重开 Issue</strong>，而是单独评估根因后追加新 PR 调整 forkEvery / timeout（spec 风险表已定方案）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：将本 plan data-status 全置 done，commit 收尾</strong>
+            <p>用 Edit 把所有 <code>data-status="pending"</code> / <code>data-task-status="pending"</code> 改为 <code>done</code>（含本 task），然后：</p>
+            <pre><code class="lang-bash">git add docs/patra/plans/2026-05-22-pap-18-flaky-bug-audit.html
+git commit -m "docs(plan): PAP-18 plan 全部 task 完成状态更新"
+git push origin pap-18-flaky-audit</code></pre>
+            <p>plan 文件以最终 done 状态作为闭环记录。</p>
+          </li>
+        </ol>
+      </article>
+
+    </section>
+
+    <section id="self-check" class="self-check">
+      <h2>自检结果</h2>
+
+      <aside class="callout success">
+        <span class="title">1. 规格覆盖度</span>
+        <p><strong>spec § 3 PR-1 护栏</strong> → Task 1（java-base.gradle.kts）+ Task 2（PR template）+ Task 3（验证 + PR）；<strong>spec § 4 PR-2 清理</strong> → Task 4-14 按 11 个模块拆分覆盖 172 处类级 + LetPub 6 处保留；<strong>spec § 4.4 LetPub 保留注释</strong> → Task 10 步骤 3；<strong>spec § 5 AC2 验证</strong> → Task 15 步骤 3-4；<strong>spec § 6 AC4 窗口</strong> → Task 17；<strong>spec 决策 A-G 与 Done 判定 4 项</strong> 全部映射到对应 task。<strong>无遗漏</strong>。</p>
+      </aside>
+
+      <aside class="callout success">
+        <span class="title">2. 占位符扫描</span>
+        <p>每个步骤都含精确文件路径与可执行命令；无 "TODO" / "待补" / "后续实现" / "类似任务 N" 等占位；每个代码块都是完整可粘贴的；commit 文案均含 <code>Refs PAP-18</code> 或 <code>Closes PAP-18</code>。FILL 注释已全部替换。</p>
+      </aside>
+
+      <aside class="callout success">
+        <span class="title">3. 类型一致性</span>
+        <p>跨任务一致使用：<code>./gradlew :patra-api:patra-catalog:patra-catalog-XXX:test</code> Gradle 任务路径；<code>spotlessApply</code> 作 import 兜底；<code>Refs PAP-18</code> commit 关键字；<code>data-status="pending|in-progress|done|blocked|skipped"</code> 5 类状态机。模块名 / 路径 / commit message convention 在所有 task 内统一。</p>
+      </aside>
+
+      <aside class="callout success">
+        <span class="title">4. HTML 结构完整性</span>
+        <p>17 个 <code>&lt;article class="task"&gt;</code> 各有唯一 <code>id="task-N"</code> 与初始 <code>data-status="pending"</code>；TOC <code>&lt;ol class="toc-tasks"&gt;</code> 内 17 条 li 与 article 一一对应、初始 <code>data-task-status="pending"</code>。每个 step <code>&lt;li class="step"&gt;</code> 初始 <code>data-status="pending"</code>。header <code>&lt;dl class="meta"&gt;</code> 含目标 / 架构 / 技术栈 / 关联 spec 四项。<code>&lt;head&gt;</code> 引用 <code>../styles/journal.css</code> + <code>../styles/plan-extras.css</code>，无 inline <code>&lt;style&gt;</code> 块。</p>
+      </aside>
+    </section>
+
+  </main>
+
+  <!-- ============================================================
+       右栏：Implementation Notes（实施期由 Claude Code 维护）
+       ============================================================ -->
+  <aside class="notes-panel" id="notes">
+    <header>
+      <h2>Implementation Notes</h2>
+      <p class="hint">实施期由 Claude Code 即时追加。规则：遇到 plan 未规定的<strong>决定</strong>、必要<strong>更改</strong>、不可避免的<strong>权衡</strong>、其他用户应知事项，立即用 Edit 追加 entry，不要等任务结束。</p>
+    </header>
+
+    <ol class="notes-log">
+      <!-- ENTRY TEMPLATE（注释保留供实施期 AI 复制）:
+
+      <li class="note" data-type="decision" data-time="YYYY-MM-DDTHH:MM">
+        <header>
+          <span class="note-type">DECISION</span>
+          <time datetime="YYYY-MM-DDTHH:MM">MM-DD HH:MM</time>
+          <a href="#task-N">§ Task N</a>
+        </header>
+        <p>描述：plan 未规定 X，实施时选择 Y。理由：...</p>
+      </li>
+
+      data-type 4 类：decision / change / tradeoff / other
+      追加 entry 时同步更新下方 notes-stats footer 的对应 counter 数字。
+      -->
+    </ol>
+
+    <p class="empty-state">no notes yet</p>
+
+    <footer class="notes-stats">
+      总计:
+      <span data-counter="decision">0</span> decisions /
+      <span data-counter="change">0</span> changes /
+      <span data-counter="tradeoff">0</span> tradeoffs /
+      <span data-counter="other">0</span> others
+    </footer>
+  </aside>
+
+</div>
+</body>
+</html>
