@@ -13,11 +13,14 @@
 
 - [ ] 
 
-## 关联 Issue
+## Linear
 
 <!--
-用 GitHub 关键字关联，例如：
-- Closes #N / Fixes #N（合并后自动关闭对应 Issue）
-- Refs #N（仅引用）
-- Linear: PAP-XX（链接 Linear Issue）
+工程线 Issue 走 Linear，Linear App 会按关键字自动关单：
+  Closes PAP-XX — https://linear.app/papertrace/issue/PAP-XX
+  Fixes  PAP-XX
+  Refs   PAP-XX（仅引用，不关单）
+
+GitHub Issue（bug / feature / idea 流水）单独列：
+  Closes #N / Fixes #N / Refs #N
 -->
