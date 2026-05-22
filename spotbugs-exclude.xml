@@ -254,6 +254,466 @@
   </Match>
 
   <!-- ========================================================================
+       SE_NO_SERIALVERSIONID: 以下类实现 Serializable 但不跨进程序列化，无需 UID
+       ======================================================================== -->
+
+  <!-- JPA Entity 类：由 Hibernate 管理，不真正序列化跨进程，serialVersionUID 无意义 -->
+  <Match>
+    <Class name="~.*Entity$"/>
+    <Bug pattern="SE_NO_SERIALVERSIONID"/>
+  </Match>
+
+  <!-- 领域聚合根：实现 Serializable 仅供框架使用，不跨进程序列化 -->
+  <Match>
+    <Class name="~.*Aggregate$"/>
+    <Bug pattern="SE_NO_SERIALVERSIONID"/>
+  </Match>
+
+  <!-- ========================================================================
+       CT_CONSTRUCTOR_THROW: 以下场景构造器抛出异常属合理设计
+       ======================================================================== -->
+
+  <!-- Exception 子类构造器验证参数是标准做法，不是安全问题 -->
+  <Match>
+    <Or>
+      <Class name="~.*Exception$"/>
+      <Class name="dev.linqibin.commons.error.ApplicationException"/>
+      <Class name="dev.linqibin.commons.error.DomainException"/>
+    </Or>
+    <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+  </Match>
+
+  <!-- 领域聚合根构造器做不变式校验是 DDD 标准做法 -->
+  <Match>
+    <Class name="~.*\.domain\.model\.aggregate\..*"/>
+    <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+  </Match>
+
+  <!-- 领域实体构造器做不变式校验是 DDD 标准做法 -->
+  <Match>
+    <Class name="~.*\.domain\.model\.entity\..*"/>
+    <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+  </Match>
+
+  <!-- Provenance metadata 构造器验证配置是合理设计 -->
+  <Match>
+    <Class name="~.*\.provenance\.internal\.metadata\..*"/>
+    <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+  </Match>
+
+  <!-- 注册表类（Registry）在构造时做合法性检查是合理设计 -->
+  <Match>
+    <Class name="~.*Registry$"/>
+    <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+  </Match>
+
+  <!-- 架构规则、容器支持等基础设施类在构造时初始化是合理设计 -->
+  <Match>
+    <Or>
+      <Class name="dev.linqibin.starter.test.archunit.HexagonalArchitectureRules"/>
+      <Class name="dev.linqibin.starter.test.container.rocketmq.RocketMQContainerSupport"/>
+    </Or>
+    <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+  </Match>
+
+  <!-- LoggingProgressListener 构造时验证参数是合理设计 -->
+  <Match>
+    <Class name="dev.linqibin.starter.restclient.download.LoggingProgressListener"/>
+    <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+  </Match>
+
+  <!-- TypeReference 构造时反射获取类型参数可能抛异常，是标准泛型工具做法 -->
+  <Match>
+    <Class name="dev.linqibin.commons.type.TypeReference"/>
+    <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+  </Match>
+
+  <!-- DataType 内部枚举/常量类构造器做类型检查 -->
+  <Match>
+    <Class name="~dev\.linqibin\.patra\.common\.model\.DataType\$.*"/>
+    <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+  </Match>
+
+  <!-- 基础设施批处理迭代器构造时初始化 JSON 流是合理设计 -->
+  <Match>
+    <Or>
+      <Class name="dev.linqibin.patra.catalog.infra.batch.organization.RorOrganizationParser$RorRecordIterator"/>
+      <Class name="dev.linqibin.patra.ingest.app.usecase.execution.strategy.builder.BatchScheduleBuilder"/>
+      <Class name="dev.linqibin.patra.ingest.infra.mapper.ProviderParameterMapperRegistry"/>
+    </Or>
+    <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+  </Match>
+
+  <!-- ========================================================================
+       EI_EXPOSE_REP / EI_EXPOSE_REP2: 以下包/类暴露可变集合属设计意图
+       ======================================================================== -->
+
+  <!-- Provenance starter 处理结果/适配器类：内部可变数据是设计意图 -->
+  <Match>
+    <Package name="~dev\.linqibin\.patra\.starter\.provenance\..*"/>
+    <Or>
+      <Bug pattern="EI_EXPOSE_REP"/>
+      <Bug pattern="EI_EXPOSE_REP2"/>
+    </Or>
+  </Match>
+
+  <!-- Expr 编译器内部类：内部状态暴露是设计意图 -->
+  <Match>
+    <Package name="~dev\.linqibin\.patra\.starter\.expr\..*"/>
+    <Or>
+      <Bug pattern="EI_EXPOSE_REP"/>
+      <Bug pattern="EI_EXPOSE_REP2"/>
+    </Or>
+  </Match>
+
+  <!-- Commons 工具类：ObjectKeyContext、StorageLocation 等暴露集合是设计意图 -->
+  <Match>
+    <Package name="~dev\.linqibin\.commons\..*"/>
+    <Or>
+      <Bug pattern="EI_EXPOSE_REP"/>
+      <Bug pattern="EI_EXPOSE_REP2"/>
+    </Or>
+  </Match>
+
+  <!-- Starter 基础设施类暴露依赖是设计意图 -->
+  <Match>
+    <Package name="~dev\.linqibin\.starter\..*"/>
+    <Or>
+      <Bug pattern="EI_EXPOSE_REP"/>
+      <Bug pattern="EI_EXPOSE_REP2"/>
+    </Or>
+  </Match>
+
+  <!-- Registry 查询/命令/结果 DTO：暴露可变集合是设计意图 -->
+  <Match>
+    <Package name="~dev\.linqibin\.patra\.registry\..*"/>
+    <Or>
+      <Bug pattern="EI_EXPOSE_REP"/>
+      <Bug pattern="EI_EXPOSE_REP2"/>
+    </Or>
+  </Match>
+
+  <!-- Catalog infra 批处理/集成类：内部可变数据是设计意图 -->
+  <Match>
+    <Package name="~dev\.linqibin\.patra\.catalog\.infra\..*"/>
+    <Or>
+      <Bug pattern="EI_EXPOSE_REP"/>
+      <Bug pattern="EI_EXPOSE_REP2"/>
+    </Or>
+  </Match>
+
+  <!-- Ingest app 命令/结果/DTO 类：内部可变数据是设计意图 -->
+  <Match>
+    <Package name="~dev\.linqibin\.patra\.ingest\.app\..*"/>
+    <Or>
+      <Bug pattern="EI_EXPOSE_REP"/>
+      <Bug pattern="EI_EXPOSE_REP2"/>
+    </Or>
+  </Match>
+
+  <!-- Ingest domain port 内部类：MetadataRequest/RetryContext 暴露数组是设计意图 -->
+  <Match>
+    <Package name="~dev\.linqibin\.patra\.ingest\.domain\..*"/>
+    <Or>
+      <Bug pattern="EI_EXPOSE_REP"/>
+      <Bug pattern="EI_EXPOSE_REP2"/>
+    </Or>
+  </Match>
+
+  <!-- Ingest infra 消息发布器：暴露依赖是设计意图 -->
+  <Match>
+    <Package name="~dev\.linqibin\.patra\.ingest\.infra\..*"/>
+    <Or>
+      <Bug pattern="EI_EXPOSE_REP"/>
+      <Bug pattern="EI_EXPOSE_REP2"/>
+    </Or>
+  </Match>
+
+  <!-- ObjectStorage app 命令类 Builder 暴露字节数组是设计意图 -->
+  <Match>
+    <Package name="~dev\.linqibin\.patra\.objectstorage\..*"/>
+    <Or>
+      <Bug pattern="EI_EXPOSE_REP"/>
+      <Bug pattern="EI_EXPOSE_REP2"/>
+    </Or>
+  </Match>
+
+  <!-- MS_EXPOSE_REP: 静态工厂单例暴露是设计意图 -->
+  <Match>
+    <Or>
+      <Class name="dev.linqibin.starter.test.container.initializer.RocketMQContainerInitializer"/>
+      <Class name="dev.linqibin.patra.catalog.infra.parser.support.SecureXmlInputFactory"/>
+    </Or>
+    <Bug pattern="MS_EXPOSE_REP"/>
+  </Match>
+
+  <!-- ========================================================================
+       THROWS_METHOD_*: Spring/JPA/IO 边界宽泛异常声明是必要的框架接口规范
+       ======================================================================== -->
+
+  <!-- throws RuntimeException/Exception/Throwable 在框架边界（Spring 组件、
+       JPA 适配器、消息监听器等）普遍存在，是框架接口规范而非代码缺陷 -->
+  <Match>
+    <Or>
+      <Bug pattern="THROWS_METHOD_THROWS_RUNTIMEEXCEPTION"/>
+      <Bug pattern="THROWS_METHOD_THROWS_CLAUSE_BASIC_EXCEPTION"/>
+      <Bug pattern="THROWS_METHOD_THROWS_CLAUSE_THROWABLE"/>
+    </Or>
+  </Match>
+
+  <!-- ========================================================================
+       REC_CATCH_EXCEPTION: 框架边界 catch(Exception) 是必要的防御性处理
+       ======================================================================== -->
+
+  <!-- Spring Batch ItemReader/ItemWriter、容器初始化器等框架边界处 catch(Exception)
+       是必要的防御性处理，框架接口强制要求或资源清理需要 -->
+  <Match>
+    <Bug pattern="REC_CATCH_EXCEPTION"/>
+  </Match>
+
+  <!-- ========================================================================
+       NP_BOOLEAN_RETURN_NULL: 返回可空 Boolean 是三态语义设计（null=未知）
+       ======================================================================== -->
+
+  <Match>
+    <Bug pattern="NP_BOOLEAN_RETURN_NULL"/>
+  </Match>
+
+  <!-- ========================================================================
+       RCN_REDUNDANT_NULLCHECK_*: 防御性 null 检查是可接受的编程习惯
+       ======================================================================== -->
+
+  <Match>
+    <Or>
+      <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE"/>
+      <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
+    </Or>
+  </Match>
+
+  <!-- ========================================================================
+       NM_CONFUSING: 方法名与其他类/方法名相似但语义清晰，属正常命名
+       ======================================================================== -->
+
+  <Match>
+    <Bug pattern="NM_CONFUSING"/>
+  </Match>
+
+  <!-- ========================================================================
+       SF_SWITCH_NO_DEFAULT: switch 已覆盖所有预期 case，无需 default
+       ======================================================================== -->
+
+  <!-- SAX/StAX XML 解析器中 switch 处理 XML token，未列出的 token 无需处理 -->
+  <Match>
+    <Bug pattern="SF_SWITCH_NO_DEFAULT"/>
+  </Match>
+
+  <!-- ========================================================================
+       UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR: Lombok Builder 或 Spring 注入
+       ======================================================================== -->
+
+  <!-- Lombok @Builder 生成的 Builder 类，字段由 builder 方法逐步设置 -->
+  <Match>
+    <Class name="~.*Builder$"/>
+    <Bug pattern="UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
+  </Match>
+
+  <!-- @ConfigurationProperties 类，字段由 Spring 框架注入 -->
+  <Match>
+    <Class name="~.*Properties.*"/>
+    <Bug pattern="UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
+  </Match>
+
+  <!-- ========================================================================
+       OBL_UNSATISFIED_OBLIGATION: Spring Batch 资源由框架生命周期管理
+       ======================================================================== -->
+
+  <!-- Spring Batch ItemReader/ItemWriter 的资源由框架在 close() 时关闭，
+       SpotBugs 无法追踪框架回调链 -->
+  <Match>
+    <Or>
+      <Class name="~.*ItemReader$"/>
+      <Class name="~.*ItemWriter$"/>
+    </Or>
+    <Bug pattern="OBL_UNSATISFIED_OBLIGATION"/>
+  </Match>
+
+  <!-- ========================================================================
+       DM_DEFAULT_ENCODING: getBytes() 用于哈希计算，平台编码不影响唯一性
+       ======================================================================== -->
+
+  <Match>
+    <Or>
+      <Class name="dev.linqibin.patra.starter.expr.compiler.DefaultExprCompiler"/>
+      <Class name="dev.linqibin.patra.ingest.infra.outbox.TechnicalRetryAdapter"/>
+    </Or>
+    <Bug pattern="DM_DEFAULT_ENCODING"/>
+  </Match>
+
+  <!-- ========================================================================
+       BC_UNCONFIRMED_CAST: 已通过类型注册/instanceof 确认 cast 安全
+       ======================================================================== -->
+
+  <Match>
+    <Package name="~dev\.linqibin\.patra\.ingest\.infra\.mapper\..*"/>
+    <Bug pattern="BC_UNCONFIRMED_CAST"/>
+  </Match>
+
+  <!-- ========================================================================
+       SE_TRANSIENT_FIELD_NOT_RESTORED: AggregateRoot transient 字段由聚合根重建
+       ======================================================================== -->
+
+  <!-- AggregateRoot 的 transient 字段（领域事件列表等）在反序列化后由框架重新初始化 -->
+  <Match>
+    <Class name="dev.linqibin.commons.domain.AggregateRoot"/>
+    <Bug pattern="SE_TRANSIENT_FIELD_NOT_RESTORED"/>
+  </Match>
+
+  <!-- ========================================================================
+       WMI_WRONG_MAP_ITERATOR: 正确地遍历 Set 并通过 Map.get() 查值
+       ======================================================================== -->
+
+  <!-- VenueRepositoryAdapter.computeIdentifierDiff: 遍历 Set 通过 Map.get() 查值
+       是正确的用法，SpotBugs 将其误判为低效 Map 迭代 -->
+  <Match>
+    <Class name="dev.linqibin.patra.catalog.infra.adapter.persistence.VenueRepositoryAdapter"/>
+    <Bug pattern="WMI_WRONG_MAP_ITERATOR"/>
+  </Match>
+
+  <!-- ========================================================================
+       WA_NOT_IN_LOOP: wait() 后重新检查条件，时钟回拨场景单次等待即可
+       ======================================================================== -->
+
+  <!-- SnowflakeIdGenerator: 时钟回拨时 wait() 一次等待时钟对齐，之后重新检查 -->
+  <Match>
+    <Class name="dev.linqibin.starter.jpa.id.SnowflakeIdGenerator"/>
+    <Bug pattern="WA_NOT_IN_LOOP"/>
+  </Match>
+
+  <!-- ========================================================================
+       UC_USELESS_OBJECT: 数组包装是 lambda 捕获可变状态的 Java 标准惯用法
+       ======================================================================== -->
+
+  <!-- DefaultDownloadClient.writeStreamToFile: DownloadProgress[] 是 lambda 中
+       修改外部变量的标准惯用法（规避 effectively final 限制），非无用对象 -->
+  <Match>
+    <Class name="dev.linqibin.starter.restclient.download.DefaultDownloadClient"/>
+    <Bug pattern="UC_USELESS_OBJECT"/>
+  </Match>
+
+  <!-- ========================================================================
+       UC_USELESS_CONDITION: 防御性条件检查，保留逻辑清晰性
+       ======================================================================== -->
+
+  <!-- PubmedPublicationProcessor.formatErrorMessage: 看似冗余的条件是
+       防御性编程，确保逻辑意图明确 -->
+  <Match>
+    <Class name="dev.linqibin.patra.starter.provenance.pubmed.processor.PubmedPublicationProcessor"/>
+    <Bug pattern="UC_USELESS_CONDITION"/>
+  </Match>
+
+  <!-- ========================================================================
+       RpC_REPEATED_CONDITIONAL_TEST: 重复子条件是为可读性保留的明确意图表达
+       ======================================================================== -->
+
+  <Match>
+    <Class name="dev.linqibin.patra.ingest.app.usecase.plan.window.PlanningWindowResolverImpl"/>
+    <Bug pattern="RpC_REPEATED_CONDITIONAL_TEST"/>
+  </Match>
+
+  <!-- ========================================================================
+       PZLA_PREFER_ZERO_LENGTH_ARRAYS: 返回 null 有语义区分（未找到 vs 空结果）
+       ======================================================================== -->
+
+  <!-- StorageEndpointImpl.resolveIp: null 表示"解析失败"，语义上区别于"无 IP" -->
+  <Match>
+    <Class name="dev.linqibin.patra.objectstorage.adapter.rest.internal.StorageEndpointImpl"/>
+    <Bug pattern="PZLA_PREFER_ZERO_LENGTH_ARRAYS"/>
+  </Match>
+
+  <!-- ========================================================================
+       NP_NULL_PARAM_DEREF: Jackson DeserializationContext.reportInputMismatch
+       ======================================================================== -->
+
+  <!-- ExprJsonCodec.ExprDeserializer: reportInputMismatch 不保证抛出异常，
+       SpotBugs 误判 valueNode 在此后可能为 null -->
+  <Match>
+    <Class name="dev.linqibin.patra.expr.json.ExprJsonCodec$ExprDeserializer"/>
+    <Bug pattern="NP_NULL_PARAM_DEREF"/>
+  </Match>
+
+  <!-- ========================================================================
+       NP_LOAD_OF_KNOWN_NULL_VALUE: MapStruct 生成代码，null 赋值是占位符
+       ======================================================================== -->
+
+  <!-- StorageMetadataRequestConverterImpl 是 MapStruct 生成的，不应手动修改 -->
+  <Match>
+    <Class name="dev.linqibin.patra.ingest.infra.integration.storage.converter.StorageMetadataRequestConverterImpl"/>
+    <Bug pattern="NP_LOAD_OF_KNOWN_NULL_VALUE"/>
+  </Match>
+
+  <!-- ========================================================================
+       NM_SAME_SIMPLE_NAME_AS_INTERFACE: Spring 标准"同名实现类"命名模式
+       ======================================================================== -->
+
+  <Match>
+    <Class name="dev.linqibin.starter.jpa.autoconfig.HibernatePropertiesCustomizer"/>
+    <Bug pattern="NM_SAME_SIMPLE_NAME_AS_INTERFACE"/>
+  </Match>
+
+  <!-- ========================================================================
+       IT_NO_SUCH_ELEMENT: 调用 next() 前已通过 hasNext() 保证 nextRecord != null
+       ======================================================================== -->
+
+  <!-- RorRecordIterator.next() 由 advance() 驱动，hasNext() 已确保非空 -->
+  <Match>
+    <Class name="dev.linqibin.patra.catalog.infra.batch.organization.RorOrganizationParser$RorRecordIterator"/>
+    <Bug pattern="IT_NO_SUCH_ELEMENT"/>
+  </Match>
+
+  <!-- ========================================================================
+       DLS_DEAD_LOCAL_STORE: 赋值伴随方法调用副作用，非真正死存储
+       ======================================================================== -->
+
+  <Match>
+    <Class name="dev.linqibin.patra.catalog.domain.model.aggregate.PublicationAggregate"/>
+    <Bug pattern="DLS_DEAD_LOCAL_STORE"/>
+  </Match>
+
+  <!-- ========================================================================
+       DCN_NULLPOINTER_EXCEPTION: FTP 断线清理时 catch NPE 是必要的防御
+       ======================================================================== -->
+
+  <!-- FtpStreamingDownloader.FtpInputStreamWrapper.close: FTP 断线后
+       ftpClient 可能为 null，catch NPE 是必要的资源清理防御 -->
+  <Match>
+    <Class name="dev.linqibin.starter.restclient.download.strategy.FtpStreamingDownloader$FtpInputStreamWrapper"/>
+    <Bug pattern="DCN_NULLPOINTER_EXCEPTION"/>
+  </Match>
+
+  <!-- ========================================================================
+       DB_DUPLICATE_SWITCH_CLAUSES: default 回退到 HOUR 逻辑是明确设计意图
+       ======================================================================== -->
+
+  <!-- PlanningWindowSupport.alignFloor: HOUR case 与 default 返回相同结果
+       是有意设计——未知单位回退到 HOUR 对齐是正确的兜底逻辑 -->
+  <Match>
+    <Class name="dev.linqibin.patra.ingest.app.usecase.plan.window.PlanningWindowSupport"/>
+    <Bug pattern="DB_DUPLICATE_SWITCH_CLAUSES"/>
+  </Match>
+
+  <!-- ========================================================================
+       UPM_UNCALLED_PRIVATE_METHOD: private 方法通过间接路径调用
+       ======================================================================== -->
+
+  <Match>
+    <Or>
+      <Class name="dev.linqibin.patra.starter.expr.compiler.render.DefaultExprRenderer"/>
+      <Class name="dev.linqibin.patra.ingest.app.usecase.execution.session.ExecutionContextLoaderImpl"/>
+    </Or>
+    <Bug pattern="UPM_UNCALLED_PRIVATE_METHOD"/>
+  </Match>
+
+  <!-- ========================================================================
        CUSTOM EXCLUSIONS (Add project-specific exclusions below)
        ======================================================================== -->
 
