@@ -29,9 +29,65 @@ env:
 
 jobs:
   unit-tests:
-    name: unit-tests
+    name: unit-tests (${{ matrix.shard.name }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard:
+          - name: commons-and-starters
+            tasks: >-
+              :linqibin-commons:linqibin-commons-core:check
+              :linqibin-commons:linqibin-commons-storage:check
+              :linqibin-commons:linqibin-spring-boot-starter-batch:check
+              :linqibin-commons:linqibin-spring-boot-starter-core:check
+              :linqibin-commons:linqibin-spring-boot-starter-http-interface:check
+              :linqibin-commons:linqibin-spring-boot-starter-jpa:check
+              :linqibin-commons:linqibin-spring-boot-starter-object-storage:check
+              :linqibin-commons:linqibin-spring-boot-starter-observability:check
+              :linqibin-commons:linqibin-spring-boot-starter-openapi:check
+              :linqibin-commons:linqibin-spring-boot-starter-redisson:check
+              :linqibin-commons:linqibin-spring-boot-starter-rest-client:check
+              :linqibin-commons:linqibin-spring-boot-starter-test:check
+              :linqibin-commons:linqibin-spring-boot-starter-web:check
+              :patra-starters:patra-spring-boot-starter-expr:check
+              :patra-starters:patra-spring-boot-starter-provenance:check
+          - name: registry
+            tasks: >-
+              :patra-api:patra-registry:patra-registry-adapter:check
+              :patra-api:patra-registry:patra-registry-api:check
+              :patra-api:patra-registry:patra-registry-app:check
+              :patra-api:patra-registry:patra-registry-boot:check
+              :patra-api:patra-registry:patra-registry-domain:check
+              :patra-api:patra-registry:patra-registry-infra:check
+          - name: ingest
+            tasks: >-
+              :patra-api:patra-ingest:patra-ingest-adapter:check
+              :patra-api:patra-ingest:patra-ingest-api:check
+              :patra-api:patra-ingest:patra-ingest-app:check
+              :patra-api:patra-ingest:patra-ingest-boot:check
+              :patra-api:patra-ingest:patra-ingest-domain:check
+              :patra-api:patra-ingest:patra-ingest-infra:check
+          - name: catalog-and-misc
+            tasks: >-
+              :patra-api:patra-catalog:patra-catalog-adapter:check
+              :patra-api:patra-catalog:patra-catalog-api:check
+              :patra-api:patra-catalog:patra-catalog-app:check
+              :patra-api:patra-catalog:patra-catalog-boot:check
+              :patra-api:patra-catalog:patra-catalog-domain:check
+              :patra-api:patra-catalog:patra-catalog-infra:check
+              :patra-api:patra-common:patra-common-enums:check
+              :patra-api:patra-common:patra-common-model:check
+              :patra-api:patra-common:patra-common-provenance-api:check
+              :patra-api:patra-expr-kernel:check
+              :patra-api:patra-gateway-boot:check
+              :patra-api:patra-object-storage:patra-object-storage-adapter:check
+              :patra-api:patra-object-storage:patra-object-storage-api:check
+              :patra-api:patra-object-storage:patra-object-storage-app:check
+              :patra-api:patra-object-storage:patra-object-storage-boot:check
+              :patra-api:patra-object-storage:patra-object-storage-domain:check
+              :patra-api:patra-object-storage:patra-object-storage-infra:check
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v4
@@ -42,40 +98,42 @@ jobs:
           java-version: '25'
           distribution: 'temurin'
 
-      - name: 🐘 Setup Gradle (build cache + dependency cache + configuration cache + wrapper verify)
+      - name: 🐘 Setup Gradle (cache read-only for matrix shards)
         uses: gradle/actions/setup-gradle@v4
         with:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+          cache-read-only: true
 
-      - name: ✅ Unit tests + static analysis (no JaCoCo report)
-        run: ./gradlew check -x jacocoTestReport
-        # ./gradlew check 同时驱动 test + spotbugsMain + spotlessCheck (PAP-12/PAP-13 基线)
-        # -x jacocoTestReport: 节省 report 生成时间;.exec 文件仍生成供 coverage job 聚合
+      - name: ✅ Unit shard (${{ matrix.shard.name }}) — check (test + spotbugs + spotless), no JaCoCo report
+        run: ./gradlew ${{ matrix.shard.tasks }} -x jacocoTestReport
+        # check 同时驱动 test + spotbugsMain + spotlessCheck (PAP-12/PAP-13 基线)
+        # -x jacocoTestReport: 节省 report 生成,.exec 文件仍生成供 coverage job 聚合
+        # cache-read-only: true: 避免 4 个 shard 竞争写 cache
 
-      - name: 📦 Upload jacoco exec (unit)
+      - name: 📦 Upload jacoco exec (unit, shard ${{ matrix.shard.name }})
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: jacoco-exec-unit
+          name: jacoco-exec-unit-${{ matrix.shard.name }}
           path: '**/build/jacoco/test.exec'
           retention-days: 7
           if-no-files-found: warn
 
-      - name: 📦 Upload reports (unit)
+      - name: 📦 Upload reports (unit, shard ${{ matrix.shard.name }})
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: reports-unit
+          name: reports-unit-${{ matrix.shard.name }}
           path: |
             **/build/reports/
             **/build/test-results/test/
           retention-days: 7
 
-      - name: 🐛 Upload spotbugs reports
+      - name: 🐛 Upload spotbugs reports (shard ${{ matrix.shard.name }})
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: spotbugs-reports
+          name: spotbugs-reports-${{ matrix.shard.name }}
           path: '**/build/reports/spotbugs/**'
           retention-days: 7
 
@@ -221,7 +279,12 @@ jobs:
           path: .
 
       - name: 📊 Aggregate JaCoCo reports (test + integrationTest)
-        run: ./gradlew testCodeCoverageReport integrationTestCodeCoverageReport
+        run: ./gradlew testCodeCoverageReport integrationTestCodeCoverageReport -x test -x integrationTest
+        # -x test -x integrationTest: .exec 文件已经在前置 download-artifact 拿到,
+        # 不需要重跑 :test/:integrationTest task (否则 jacoco-report-aggregation
+        # 会触发所有模块的 :test 依赖,在 cache 不命中时全量重跑,导致 step
+        # 从 ~89s 飙升到 ~300s)。
+        # 保留 :compileJava 依赖 (jacoco report 需要 classes 来标注覆盖率)。
 
       - name: 📈 Upload coverage to Codecov
         uses: codecov/codecov-action@v4
