@@ -1060,6 +1060,15 @@ git push origin pap-18-flaky-audit</code></pre>
         <p>仓库 <code>.pre-commit-config.yaml</code> 全文件被 <code>#</code> 注释，pre-commit framework 解析为 NoneType 报错，导致 commit 阻塞。该根因属 PAP-16（pre-commit-overhaul）范围，本 plan 不修复。已征得用户授权后，PAP-18 所有 commit 一律用 <code>git commit --no-verify</code> 绕过；hook 修复后续由 PAP-16 PR 单独处理。</p>
       </li>
 
+      <li class="note" data-type="decision" data-time="2026-05-22T15:10">
+        <header>
+          <span class="note-type">DECISION</span>
+          <time datetime="2026-05-22T15:10">05-22 15:10</time>
+          <a href="#task-10">§ Task 10</a>
+        </header>
+        <p>PR-1 第 4 次 CI 失败暴露 <code>MeshImportJobExecutionListenerTest</code> 类级 <code>@Timeout(2)</code> pre-existing flaky（Logback / Batch classes 首次 load >2s）。这是 PR-2 Task 10 范围工作，但被 pre-existing flaky 阻挡 PR-1 合并。<strong>用户决定：PR-1 现有全局 timeout 配置不动，提前启动 PR-2 中 catalog-infra/batch 子包 11 个文件的类级 @Timeout 清理</strong>（commit 44f85960f），让 PR-1 能合。后续 PR-2 仍按 plan 拆模块继续；catalog-infra 模块 Task 10 内已完成 batch 子包，其余 ~50 文件留给后续。</p>
+      </li>
+
       <li class="note" data-type="change" data-time="2026-05-22T14:55">
         <header>
           <span class="note-type">CHANGE</span>
@@ -1104,7 +1113,7 @@ git push origin pap-18-flaky-audit</code></pre>
 
     <footer class="notes-stats">
       总计:
-      <span data-counter="decision">0</span> decisions /
+      <span data-counter="decision">1</span> decisions /
       <span data-counter="change">2</span> changes /
       <span data-counter="tradeoff">1</span> tradeoffs /
       <span data-counter="other">2</span> others
