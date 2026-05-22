@@ -2,18 +2,97 @@
 # Patra CodeRabbit 配置
 # - 决策 C：AI Review 不阻断 PR（Required Check 由分支保护规则控制，详见 PAP-15）
 # - 评论使用中文；忽略生成物、lockfile、wrapper 与构建输出
+# - profile=assertive：扩大设计风险覆盖；request_changes_workflow 仍为 false（与决策 C 一致）
+# - Linear KB 已启用：需在 app.coderabbit.ai/integrations 完成一次性 OAuth 授权
+# - auto_apply_labels=true：沿用仓库既有 area:* 体系，复用 area:api/area:portal + 新建 area:infra/area:migration/area:test
 language: zh-CN
-tone_instructions: 用中文写 review；以工程师同事的语气，指出 bug 与设计风险，避免礼貌性赞美与"凑评论"。
+tone_instructions: 用中文 review；工程师同事语气，指出 bug 与设计风险，避免礼貌性赞美（如"好的实现/写得清晰/不错的设计/看起来合理"）与凑评论。如无明确 bug 或设计风险，不发表评论。
 
 reviews:
-  profile: chill
+  profile: assertive
   request_changes_workflow: false
   high_level_summary: true
+  high_level_summary_instructions: |
+    摘要聚焦：① 变更了哪一六边形层（domain/app/adapter/infra/portal）；
+    ② 涉及哪个领域概念或外部数据源；
+    ③ 是否含 Flyway 迁移或破坏性 schema 变更。
+    不要重复文件列表，不要空洞的总结。
   poem: false
+  sequence_diagrams: false
+  changed_files_summary: false
+  collapse_walkthrough: true
   review_status: true
+  commit_status: false
+  fail_commit_status: false
+  auto_apply_labels: true
+  labeling_instructions:
+    - label: area:api
+      instructions: PR 涉及 patra-api 下任意 Java 文件。
+    - label: area:portal
+      instructions: PR 涉及 patra-portal 下任意 TS/TSX 文件。
+    - label: area:infra
+      instructions: PR 涉及 patra-infra、docker-compose、.github/workflows 下文件。
+    - label: area:migration
+      instructions: PR 涉及 db/migration 下的 SQL 迁移文件。
+    - label: area:test
+      instructions: PR 主要变更为测试文件（*Test.java / *IT.java / *.spec.ts）。
+
   auto_review:
     enabled: true
     drafts: false
+    # 单人项目 push 频繁，禁用"审 5 次后自动暂停"以保证每次 push 增量审查
+    auto_pause_after_reviewed_commits: 0
+    ignore_title_keywords:
+      - WIP
+      - DO NOT MERGE
+      - SKIP REVIEW
+    ignore_usernames:
+      - dependabot[bot]
+      - renovate[bot]
+
+  finishing_touches:
+    # TDD 强制（CLAUDE.md）：禁止 AI 事后生成 unit test 与 docstring 破坏红-绿-重构
+    docstrings:
+      enabled: false
+    unit_tests:
+      enabled: false
+
+  tools:
+    ast-grep:
+      essential_rules: true
+    # 与 SpotBugs（已在 ./gradlew check 阻断式运行）覆盖范围重复，避免双重报告噪声
+    pmd:
+      enabled: false
+    # 无内置规则集，需自写 .semgrep.yaml；留作后续 SAST 专项 issue
+    semgrep:
+      enabled: false
+    # 补 CI 盲区：以下工具 Patra CI 未覆盖
+    markdownlint:
+      enabled: true
+    yamllint:
+      enabled: true
+    shellcheck:
+      enabled: true
+    hadolint:
+      enabled: true
+    actionlint:
+      enabled: true
+    gitleaks:
+      enabled: true
+    # 与栈无关：显式关闭避免误触发
+    biome:
+      enabled: false
+    oxc:
+      enabled: false
+    detekt:
+      enabled: false
+    pylint:
+      enabled: false
+    ruff:
+      enabled: false
+    flake8:
+      enabled: false
+
   path_filters:
     - "!**/build/**"
     - "!**/.gradle/**"
@@ -32,6 +111,7 @@ reviews:
     - "!**/*.min.js"
     - "!**/*.min.css"
     - "!**/CHANGELOG.md"
+
   path_instructions:
     # 按 patra-<service>-<layer> 模块名分层下达 prompt，避免把分层约束误用到不相干的层
     - path: "**/patra-*-domain/**/*.java"
@@ -50,6 +130,7 @@ reviews:
       instructions: |
         Infrastructure 层：持久化、消息、外部集成实现。
         指出未实现 domain 端口的实体直接外泄、N+1、连接/事务/资源未释放。
+        【不要评论】Spring Data JPA 标准 Repository 继承写法、@Transactional 在 Service 上的位置等框架约定。
     - path: "patra-portal/**/*.{ts,tsx}"
       instructions: |
         Next.js 15 / React 19 / TypeScript strict / Tailwind v4 / shadcn/ui。
@@ -58,6 +139,44 @@ reviews:
     - path: "**/db/migration/**/*.sql"
       instructions: |
         Flyway 迁移：检查索引、字段命名、可空性、默认值、迁移可逆性，避免破坏性 DDL。
+    # TDD / 测试边界
+    - path: "**/*Test.java"
+      instructions: |
+        TDD 红-绿-重构：断言必须覆盖失败路径与边界值；测试名表达 given/when/then；
+        禁止空测试体、注释掉的断言、Thread.sleep 等待。
+    - path: "**/*IT.java"
+      instructions: |
+        集成测试：不要 mock 内部实现；DB 测试用 @Transactional 回滚或 Testcontainers 隔离。
+    # 构建脚本与模块注册
+    - path: "**/*.gradle.kts"
+      instructions: |
+        依赖 scope 是否正确（implementation/testImplementation/runtimeOnly/compileOnly）；
+        是否引入重复依赖；convention plugin 改动对所有子模块的潜在影响。
+    - path: "settings.gradle.kts"
+      instructions: 新模块名须符合 patra-<service>-<layer> 命名规范。
+    # CI 工作流安全
+    - path: ".github/workflows/**/*.{yml,yaml}"
+      instructions: |
+        禁止硬编码 secrets（必须用 ${{ secrets.X }}）；禁止 permissions: write-all；
+        Java 步骤须使用 JDK 25 与 gradlew wrapper，不要 system gradle/mvn。
+
+knowledge_base:
+  # 单 repo 项目：local 范围避免跨 repo learnings 污染
+  learnings:
+    scope: local
+  # 启用 Linear 集成：CodeRabbit 拉取 PR 描述中链接的 PAP-XX issue 上下文做 AC 验证
+  # 需在 app.coderabbit.ai/integrations 完成一次性 OAuth 授权
+  linear:
+    usage: enabled
+    team_keys:
+      - PAP
+  jira:
+    usage: disabled
 
 chat:
   auto_reply: true
+  integrations:
+    linear:
+      usage: enabled
+    jira:
+      usage: disabled
