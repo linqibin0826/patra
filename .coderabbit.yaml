@@ -4,7 +4,7 @@
 # - 评论使用中文；忽略生成物、lockfile、wrapper 与构建输出
 # - profile=assertive：扩大设计风险覆盖；request_changes_workflow 仍为 false（与决策 C 一致）
 # - Linear KB 已启用：需在 app.coderabbit.ai/integrations 完成一次性 OAuth 授权
-# - auto_apply_labels=true：需在 GH 仓库预先创建 backend/frontend/infra/migration/test 5 个 label
+# - auto_apply_labels=true：沿用仓库既有 area:* 体系，复用 area:api/area:portal + 新建 area:infra/area:migration/area:test
 language: zh-CN
 tone_instructions: 用中文 review；工程师同事语气，指出 bug 与设计风险，避免礼貌性赞美（如"好的实现/写得清晰/不错的设计/看起来合理"）与凑评论。如无明确 bug 或设计风险，不发表评论。
 
@@ -26,15 +26,15 @@ reviews:
   fail_commit_status: false
   auto_apply_labels: true
   labeling_instructions:
-    - label: backend
+    - label: area:api
       instructions: PR 涉及 patra-api 下任意 Java 文件。
-    - label: frontend
+    - label: area:portal
       instructions: PR 涉及 patra-portal 下任意 TS/TSX 文件。
-    - label: infra
+    - label: area:infra
       instructions: PR 涉及 patra-infra、docker-compose、.github/workflows 下文件。
-    - label: migration
+    - label: area:migration
       instructions: PR 涉及 db/migration 下的 SQL 迁移文件。
-    - label: test
+    - label: area:test
       instructions: PR 主要变更为测试文件（*Test.java / *IT.java / *.spec.ts）。
 
   auto_review:
