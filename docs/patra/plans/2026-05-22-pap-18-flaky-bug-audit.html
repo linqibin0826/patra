@@ -205,7 +205,7 @@ git commit -m "feat: [description]"</code></pre>
             <p>在 <code>maxParallelForks = ...</code> 之后、<code>jvmArgs(...)</code> 之前插入 2 行：</p>
             <pre><code class="lang-kotlin">                    maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
                     forkEvery = 50
-                    systemProperty("junit.jupiter.execution.timeout.default", "5s")
+                    systemProperty("junit.jupiter.execution.timeout.testable.method.default", "15s")
                     jvmArgs("--add-opens", "java.base/java.lang=ALL-UNNAMED")</code></pre>
           </li>
 
@@ -214,7 +214,7 @@ git commit -m "feat: [description]"</code></pre>
             <p>同样位置插入 2 行，timeout 改为 30s：</p>
             <pre><code class="lang-kotlin">                    maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
                     forkEvery = 50
-                    systemProperty("junit.jupiter.execution.timeout.default", "30s")
+                    systemProperty("junit.jupiter.execution.timeout.testable.method.default", "30s")
                     jvmArgs("--add-opens", "java.base/java.lang=ALL-UNNAMED")</code></pre>
           </li>
 
@@ -223,14 +223,14 @@ git commit -m "feat: [description]"</code></pre>
             <p>同样位置插入 2 行，timeout 改为 180s：</p>
             <pre><code class="lang-kotlin">                    maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
                     forkEvery = 50
-                    systemProperty("junit.jupiter.execution.timeout.default", "180s")
+                    systemProperty("junit.jupiter.execution.timeout.testable.method.default", "180s")
                     jvmArgs("--add-opens", "java.base/java.lang=ALL-UNNAMED")</code></pre>
           </li>
 
           <li class="step" data-status="pending">
             <strong>步骤 4：本地校验 Gradle 配置语法</strong>
             <p>运行：</p>
-            <pre><code class="lang-bash">./gradlew help --no-daemon 2>&amp;1 | tail -20</code></pre>
+            <pre><code class="lang-bash">./gradlew help --no-daemon 2&gt;&amp;1 | tail -20</code></pre>
             <p>预期：<code>BUILD SUCCESSFUL</code>。任何 Kotlin DSL 语法错误（如缺逗号、缺括号）会在此暴露。</p>
           </li>
 
@@ -290,14 +290,14 @@ git commit -m "feat: [description]"</code></pre>
           <li class="step" data-status="pending">
             <strong>步骤 1：本地全量测试（让 Task 1 的新 timeout / forkEvery 生效跑一次）</strong>
             <p>运行：</p>
-            <pre><code class="lang-bash">./gradlew clean test integrationTest --no-daemon 2>&amp;1 | tail -50</code></pre>
-            <p>预期：<code>BUILD SUCCESSFUL</code>。若个别 test 因 5s/30s 全局 timeout 被误杀，立即在 Implementation Notes 追加 <code>data-type="other"</code> entry 记录被杀测试，方法上单独加 <code>@Timeout(value=10, SECONDS)</code> 局部覆盖（spec 风险 1 缓解策略），再重试。</p>
+            <pre><code class="lang-bash">./gradlew clean test integrationTest --no-daemon 2&gt;&amp;1 | tail -50</code></pre>
+            <p>预期：<code>BUILD SUCCESSFUL</code>。若个别 test 因 15s/30s 全局 timeout 被误杀，立即在 Implementation Notes 追加 <code>data-type="other"</code> entry 记录被杀测试，方法上单独加 <code>@Timeout(value=10, SECONDS)</code> 局部覆盖（spec 风险 1 缓解策略），再重试。</p>
           </li>
 
           <li class="step" data-status="pending">
             <strong>步骤 2：抽样验证 timeout 配置已生效</strong>
             <p>运行（看 test 报告里 systemProperty 注入痕迹）：</p>
-            <pre><code class="lang-bash">find . -path '*/build/test-results/test/*.xml' -newer build.gradle.kts 2>/dev/null | head -3</code></pre>
+            <pre><code class="lang-bash">find . -path '*/build/test-results/test/*.xml' -newer build.gradle.kts 2&gt;/dev/null | head -3</code></pre>
             <p>预期：列出 3 个最近生成的 test 报告 xml。再 grep 一个验证：</p>
             <pre><code class="lang-bash">rg -l "testsuite" $(find . -path '*/build/test-results/test/*.xml' | head -3)</code></pre>
             <p>预期：3 个文件都命中。说明 test task 用新配置正常跑通。</p>
@@ -312,7 +312,7 @@ build(test): JVM worker 隔离 + 全局 timeout fallback + PR flaky checklist (P
 build-logic/src/main/kotlin/linqibin.java-base.gradle.kts:
 - 三个 JvmTestSuite 各加 forkEvery = 50（worker 跑 50 class 后重启）
 - 全局 junit.jupiter.execution.timeout.default 分三档：
-  test=5s / integrationTest=30s / e2eTest=180s
+  test=15s / integrationTest=30s / e2eTest=180s
 
 .github/PULL_REQUEST_TEMPLATE.md:
 - Test plan 段追加 flaky checklist 一行
@@ -332,7 +332,7 @@ EOF
             <pre><code class="lang-bash">gh pr create --title "PAP-18 PR-1: JVM worker 隔离 + 全局 timeout fallback + PR flaky checklist" --body "$(cat &lt;&lt;'EOF'
 ## Summary
 
-- `linqibin.java-base.gradle.kts` 三个 JvmTestSuite 各加 `forkEvery = 50` + 全局 `junit.jupiter.execution.timeout.default`（test=5s / IT=30s / E2E=180s）
+- `linqibin.java-base.gradle.kts` 三个 JvmTestSuite 各加 `forkEvery = 50` + 全局 `junit.jupiter.execution.timeout.testable.method.default`（test=15s / IT=30s / E2E=180s）
 - `.github/PULL_REQUEST_TEMPLATE.md` Test plan 段追加 flaky checklist 一行
 
 ## Test plan
@@ -409,8 +409,8 @@ class AggregateRootTest {</code></pre>
 
           <li class="step" data-status="pending">
             <strong>步骤 5：模块测试</strong>
-            <pre><code class="lang-bash">./gradlew :linqibin-commons:linqibin-commons-core:test --no-daemon 2>&amp;1 | tail -20</code></pre>
-            <p>预期：<code>BUILD SUCCESSFUL</code>。若某测试因 PR-1 的 5s 全局 timeout 被误杀，在 Implementation Notes 追加 <code>tradeoff</code> entry 记录，该方法上单独加 <code>@Timeout(value=10, SECONDS)</code>。</p>
+            <pre><code class="lang-bash">./gradlew :linqibin-commons:linqibin-commons-core:test --no-daemon 2&gt;&amp;1 | tail -20</code></pre>
+            <p>预期：<code>BUILD SUCCESSFUL</code>。若某测试因 PR-1 的 15s 全局 timeout 被误杀，在 Implementation Notes 追加 <code>tradeoff</code> entry 记录，该方法上单独加 <code>@Timeout(value=10, SECONDS)</code>。</p>
           </li>
 
           <li class="step" data-status="pending">
@@ -420,7 +420,7 @@ git commit -m "$(cat &lt;&lt;'EOF'
 test(commons-core): 删除类级 @Timeout，由全局 fallback 接管 (PAP-18 PR-2)
 
 6 文件类级注解清理，孤儿 import 一并删除。
-全局 timeout 在 PR-1 已配 test=5s 兜底。
+全局 timeout 在 PR-1 已配 test=15s 兜底。
 
 Refs PAP-18
 EOF
@@ -469,7 +469,7 @@ EOF
   :linqibin-commons:linqibin-spring-boot-starter-http-interface:test \
   :linqibin-commons:linqibin-spring-boot-starter-rest-client:test \
   :linqibin-commons:linqibin-spring-boot-starter-object-storage:test \
-  spotlessApply --no-daemon 2>&amp;1 | tail -30</code></pre>
+  spotlessApply --no-daemon 2&gt;&amp;1 | tail -30</code></pre>
             <p>预期：<code>BUILD SUCCESSFUL</code>。</p>
           </li>
 
@@ -479,7 +479,7 @@ EOF
   :linqibin-commons:linqibin-spring-boot-starter-batch:integrationTest \
   :linqibin-commons:linqibin-spring-boot-starter-http-interface:integrationTest \
   :linqibin-commons:linqibin-spring-boot-starter-rest-client:integrationTest \
-  --no-daemon 2>&amp;1 | tail -30</code></pre>
+  --no-daemon 2&gt;&amp;1 | tail -30</code></pre>
           </li>
 
           <li class="step" data-status="pending">
@@ -510,7 +510,7 @@ Refs PAP-18"</code></pre>
 
           <li class="step" data-status="pending">
             <strong>步骤 2：spotlessApply + 测试</strong>
-            <pre><code class="lang-bash">./gradlew :patra-starters:patra-spring-boot-starter-provenance:test spotlessApply --no-daemon 2>&amp;1 | tail -20</code></pre>
+            <pre><code class="lang-bash">./gradlew :patra-starters:patra-spring-boot-starter-provenance:test spotlessApply --no-daemon 2&gt;&amp;1 | tail -20</code></pre>
           </li>
 
           <li class="step" data-status="pending">
@@ -545,7 +545,7 @@ Refs PAP-18"</code></pre>
 
           <li class="step" data-status="pending">
             <strong>步骤 3：spotlessApply + 测试</strong>
-            <pre><code class="lang-bash">./gradlew :patra-api:patra-catalog:patra-catalog-domain:test spotlessApply --no-daemon 2>&amp;1 | tail -20</code></pre>
+            <pre><code class="lang-bash">./gradlew :patra-api:patra-catalog:patra-catalog-domain:test spotlessApply --no-daemon 2&gt;&amp;1 | tail -20</code></pre>
           </li>
 
           <li class="step" data-status="pending">
@@ -577,7 +577,7 @@ Refs PAP-18"</code></pre>
 
           <li class="step" data-status="pending">
             <strong>步骤 2：spotlessApply + 测试</strong>
-            <pre><code class="lang-bash">./gradlew :patra-api:patra-catalog:patra-catalog-app:test spotlessApply --no-daemon 2>&amp;1 | tail -20</code></pre>
+            <pre><code class="lang-bash">./gradlew :patra-api:patra-catalog:patra-catalog-app:test spotlessApply --no-daemon 2&gt;&amp;1 | tail -20</code></pre>
           </li>
 
           <li class="step" data-status="pending">
@@ -612,7 +612,7 @@ Refs PAP-18"</code></pre>
 
           <li class="step" data-status="pending">
             <strong>步骤 2：spotlessApply + test + integrationTest</strong>
-            <pre><code class="lang-bash">./gradlew :patra-api:patra-catalog:patra-catalog-adapter:test :patra-api:patra-catalog:patra-catalog-adapter:integrationTest spotlessApply --no-daemon 2>&amp;1 | tail -30</code></pre>
+            <pre><code class="lang-bash">./gradlew :patra-api:patra-catalog:patra-catalog-adapter:test :patra-api:patra-catalog:patra-catalog-adapter:integrationTest spotlessApply --no-daemon 2&gt;&amp;1 | tail -30</code></pre>
           </li>
 
           <li class="step" data-status="pending">
@@ -668,7 +668,7 @@ void shouldFetchLetPubData() { ... }</code></pre>
 
           <li class="step" data-status="pending">
             <strong>步骤 4：spotlessApply + test + integrationTest</strong>
-            <pre><code class="lang-bash">./gradlew :patra-api:patra-catalog:patra-catalog-infra:test :patra-api:patra-catalog:patra-catalog-infra:integrationTest spotlessApply --no-daemon 2>&amp;1 | tail -30</code></pre>
+            <pre><code class="lang-bash">./gradlew :patra-api:patra-catalog:patra-catalog-infra:test :patra-api:patra-catalog:patra-catalog-infra:integrationTest spotlessApply --no-daemon 2&gt;&amp;1 | tail -30</code></pre>
             <p>注意：LetPub IT 标 <code>@Tag("external")</code> 类似 tag 会被默认 excludeTags 跳过；如果实际跑了，可能联网失败，属预期。</p>
           </li>
 
@@ -748,7 +748,7 @@ Refs PAP-18"</code></pre>
 
           <li class="step" data-status="pending">
             <strong>步骤 2：spotlessApply + 测试</strong>
-            <pre><code class="lang-bash">./gradlew :patra-api:patra-ingest:patra-ingest-app:test :patra-api:patra-ingest:patra-ingest-infra:test :patra-api:patra-ingest:patra-ingest-infra:integrationTest spotlessApply --no-daemon 2>&amp;1 | tail -30</code></pre>
+            <pre><code class="lang-bash">./gradlew :patra-api:patra-ingest:patra-ingest-app:test :patra-api:patra-ingest:patra-ingest-infra:test :patra-api:patra-ingest:patra-ingest-infra:integrationTest spotlessApply --no-daemon 2&gt;&amp;1 | tail -30</code></pre>
           </li>
 
           <li class="step" data-status="pending">
@@ -793,7 +793,7 @@ Refs PAP-18"</code></pre>
   :patra-api:patra-registry:patra-registry-adapter:integrationTest \
   :patra-api:patra-registry:patra-registry-infra:integrationTest \
   :patra-api:patra-registry:patra-registry-boot:test \
-  spotlessApply --no-daemon 2>&amp;1 | tail -40</code></pre>
+  spotlessApply --no-daemon 2&gt;&amp;1 | tail -40</code></pre>
           </li>
 
           <li class="step" data-status="pending">
@@ -823,7 +823,7 @@ Refs PAP-18"</code></pre>
 
           <li class="step" data-status="pending">
             <strong>步骤 2：spotlessApply + IT</strong>
-            <pre><code class="lang-bash">./gradlew :patra-api:patra-object-storage:patra-object-storage-adapter:integrationTest spotlessApply --no-daemon 2>&amp;1 | tail -20</code></pre>
+            <pre><code class="lang-bash">./gradlew :patra-api:patra-object-storage:patra-object-storage-adapter:integrationTest spotlessApply --no-daemon 2&gt;&amp;1 | tail -20</code></pre>
           </li>
 
           <li class="step" data-status="pending">
@@ -883,17 +883,17 @@ Refs PAP-18"</code></pre>
 
           <li class="step" data-status="pending">
             <strong>步骤 5：全量测试（test + integrationTest，e2eTest 留给 CI）</strong>
-            <pre><code class="lang-bash">./gradlew clean test integrationTest --no-daemon 2>&amp;1 | tail -50</code></pre>
+            <pre><code class="lang-bash">./gradlew clean test integrationTest --no-daemon 2&gt;&amp;1 | tail -50</code></pre>
             <p>预期：<code>BUILD SUCCESSFUL</code>。如有失败：</p>
             <ul>
-              <li>若是某测试因 5s/30s 全局 timeout 被误杀 → 方法上加 <code>@Timeout(value=10, SECONDS)</code>（或更宽），Implementation Notes 追加 <code>tradeoff</code> entry 记录。</li>
+              <li>若是某测试因 15s/30s 全局 timeout 被误杀 → 方法上加 <code>@Timeout(value=10, SECONDS)</code>（或更宽），Implementation Notes 追加 <code>tradeoff</code> entry 记录。</li>
               <li>若是其他原因 → 修复后重试。</li>
             </ul>
           </li>
 
           <li class="step" data-status="pending">
             <strong>步骤 6：spotbugs 静态分析</strong>
-            <pre><code class="lang-bash">./gradlew spotbugsMain spotbugsTest --no-daemon 2>&amp;1 | tail -20</code></pre>
+            <pre><code class="lang-bash">./gradlew spotbugsMain spotbugsTest --no-daemon 2&gt;&amp;1 | tail -20</code></pre>
             <p>预期：<code>BUILD SUCCESSFUL</code>。任何因 import 删除引入的告警在此暴露。</p>
           </li>
         </ol>
@@ -928,7 +928,7 @@ Refs PAP-18"</code></pre>
 按 PAP-18 spec 决策 A/C/G 执行类级 @Timeout 清理：
 
 - 删除全部 172 处类级 `@Timeout`（跨 ~175 文件、20 模块）
-- 由 PR-1 的 java-base convention 全局 fallback 接管（test=5s / IT=30s / E2E=180s）
+- 由 PR-1 的 java-base convention 全局 fallback 接管（test=15s / IT=30s / E2E=180s）
 - 保留 6 处 LetPub 方法级 `@Timeout(value=2, MINUTES)`：
   - `LetPubEnrichmentAdapterIT.java` × 4
   - `LetPubProxyConnectivityTest.java` × 2
