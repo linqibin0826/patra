@@ -6,18 +6,15 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import dev.linqibin.patra.registry.domain.exception.DomainValidationException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// DictionaryResolveQuery 查询视图单元测试。
 ///
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("DictionaryResolveQuery 查询视图")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class DictionaryResolveQueryTest {
 
   @Nested

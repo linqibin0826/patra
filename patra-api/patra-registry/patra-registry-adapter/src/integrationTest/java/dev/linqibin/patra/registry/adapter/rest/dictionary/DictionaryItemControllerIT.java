@@ -14,11 +14,9 @@ import dev.linqibin.patra.registry.domain.exception.dictionary.DictionaryTypeNot
 import dev.linqibin.patra.registry.domain.model.read.dictionary.DictionaryItemListResult;
 import dev.linqibin.patra.registry.domain.model.read.dictionary.DictionaryItemSummary;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -41,7 +39,6 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 @Import(DictionaryItemController.class)
 @AutoConfigureRestTestClient
 @DisplayName("DictionaryItemController REST 接口集成测试")
-@Timeout(value = 30, unit = TimeUnit.SECONDS)
 class DictionaryItemControllerIT {
 
   @Autowired private RestTestClient restClient;

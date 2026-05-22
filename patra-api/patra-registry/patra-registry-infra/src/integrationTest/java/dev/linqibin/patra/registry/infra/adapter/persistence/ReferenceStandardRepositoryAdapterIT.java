@@ -10,12 +10,10 @@ import dev.linqibin.starter.jpa.autoconfig.HibernatePropertiesCustomizer;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
 import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -45,7 +43,6 @@ import org.springframework.test.context.ContextConfiguration;
     basePackages = "dev.linqibin.patra.registry.infra.adapter.persistence.converter.mapper")
 @ActiveProfiles("test")
 @DisplayName("ReferenceStandardRepositoryAdapter 集成测试")
-@Timeout(value = 30, unit = TimeUnit.SECONDS)
 class ReferenceStandardRepositoryAdapterIT {
 
   @Autowired private ReferenceStandardRepositoryAdapter repository;

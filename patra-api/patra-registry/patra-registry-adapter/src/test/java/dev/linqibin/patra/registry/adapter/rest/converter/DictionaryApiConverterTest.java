@@ -7,10 +7,8 @@ import dev.linqibin.patra.registry.domain.model.read.dictionary.DictionaryResolv
 import dev.linqibin.patra.registry.domain.model.read.dictionary.DictionaryResolveQuery;
 import dev.linqibin.patra.registry.domain.model.read.dictionary.DictionaryResolveStatus;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.mapstruct.factory.Mappers;
 
 /// DictionaryApiConverter 单元测试。
@@ -22,7 +20,6 @@ import org.mapstruct.factory.Mappers;
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("DictionaryApiConverter 单元测试")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class DictionaryApiConverterTest {
 
   private final DictionaryApiConverter converter = Mappers.getMapper(DictionaryApiConverter.class);

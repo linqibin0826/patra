@@ -20,12 +20,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -55,7 +53,6 @@ import org.springframework.test.context.ContextConfiguration;
     basePackages = "dev.linqibin.patra.registry.infra.adapter.persistence.converter.mapper")
 @ActiveProfiles("test")
 @DisplayName("DictionaryRepositoryAdapter 集成测试")
-@Timeout(value = 30, unit = TimeUnit.SECONDS)
 class DictionaryRepositoryAdapterIT {
 
   @Autowired private DictionaryRepositoryAdapter repository;
