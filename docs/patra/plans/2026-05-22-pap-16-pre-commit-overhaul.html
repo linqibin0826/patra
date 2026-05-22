@@ -830,14 +830,32 @@ EOF
         </header>
         <p><strong>开发机首次安装：<code>brew install pre-commit</code> 装了 pre-commit 4.6.0</strong>（plan 第 5 节技术栈写的是 "3.5.0+" 作为下限，4.6.0 满足）。本机之前未装；后续在 README / dev-setup 文档应明确"clone 后先 <code>brew install pre-commit</code>"——非本 issue 范围，留给 PAP-17。</p>
       </li>
+
+      <li class="note" data-type="tradeoff" data-time="2026-05-22T14:00">
+        <header>
+          <span class="note-type">TRADEOFF</span>
+          <time datetime="2026-05-22T14:00">05-22 14:00</time>
+          <a href="#task-8">§ Task 8 / spec § 3.2</a>
+        </header>
+        <p><strong>spec § 3.2 "CI 是强制门控"陈述不准确 —— CI 实际不跑 spotbugs。</strong> <code>.github/workflows/ci.yml</code> 的 build-and-test job 注释明确写："本步骤暂不调 <code>./gradlew check</code>，因 spotbugsMain / spotlessCheck 需 PAP-12/13 完成 baseline 后才能阻断 CI"。 CI 当前只跑 <code>test</code> / <code>integrationTest</code> / <code>e2eTest</code> / <code>jacoco aggregate</code>。<strong>意味着 PAP-16 选择"spotbugs only in CI"在 PAP-12/13 baseline 完成前实际是"spotbugs 完全不阻断"</strong>。这不是 PAP-16 引入的问题，是已有事实。落地后值得：(a) 回填 spec 第 3.2 节措辞，(b) 在 PAP-12/13 完成后开 issue 让 CI 启用 <code>./gradlew check</code>。</p>
+      </li>
+
+      <li class="note" data-type="other" data-time="2026-05-22T14:05">
+        <header>
+          <span class="note-type">OTHER</span>
+          <time datetime="2026-05-22T14:05">05-22 14:05</time>
+          <a href="#task-8">§ Task 8 — finishing</a>
+        </header>
+        <p><strong>本地 <code>./gradlew check</code> 失败 — 但根因都不在 PAP-16 改动范围。</strong> (1) <code>spotbugsMain/Test</code> 在多个 linqibin-commons / patra-expr-kernel 模块失败——属 PAP-12/13 baseline 待完成（spec 第 3.2 节预期）。(2) <code>BatchDataSourceConfigurationTest &gt; initializationError</code>：TestContainers 找不到 Docker socket（<code>/var/run/docker.sock</code> 不存在，本地 OrbStack/Docker Desktop 未启动）。本测试用了 TestContainers 但放在 <code>test</code> 而非 <code>integrationTest</code>，是 PAP-12/13 范围的配置问题。CI 全绿因为 CI runner 有 Docker 且 CI 不跑 spotbugs。<strong>finishing-a-development-branch 红线"check 失败必须修复"按字面执行会阻塞 PAP-16，但根因都不是本 PR 引入。需用户判断是否绕过。</strong></p>
+      </li>
     </ol>
 
     <footer class="notes-stats">
       总计:
       <span data-counter="decision">0</span> decisions /
       <span data-counter="change">3</span> changes /
-      <span data-counter="tradeoff">0</span> tradeoffs /
-      <span data-counter="other">1</span> others
+      <span data-counter="tradeoff">1</span> tradeoffs /
+      <span data-counter="other">2</span> others
     </footer>
   </aside>
 
