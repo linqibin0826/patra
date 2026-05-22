@@ -20,7 +20,7 @@
       <li><a href="#file-structure">文件结构</a></li>
       <li><a href="#tasks">任务列表</a>
         <ol class="toc-tasks">
-          <li data-task-status="pending"><a href="#task-1">Task 1 — PR1 实施基础设施层</a></li>
+          <li data-task-status="done"><a href="#task-1">Task 1 — PR1 实施基础设施层</a></li>
           <li data-task-status="pending"><a href="#task-2">Task 2 — PR1 实测验证 + merge</a></li>
           <li data-task-status="pending"><a href="#task-3">Task 3 — PR2 jacoco-aggregation convention plugin + 本地 spike</a></li>
           <li data-task-status="pending"><a href="#task-4">Task 4 — PR2 ci.yml 拆 4 job + required-check 真正生效</a></li>
@@ -97,7 +97,7 @@ GitHub repo secret GRADLE_ENCRYPTION_KEY                                      [c
            PR1 — 基础设施层
            ============================================================ -->
 
-      <article class="task" id="task-1" data-status="pending">
+      <article class="task" id="task-1" data-status="done">
         <header>
           <h2>任务 1：PR1 实施基础设施层</h2>
           <dl class="files">
@@ -106,7 +106,7 @@ GitHub repo secret GRADLE_ENCRYPTION_KEY                                      [c
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：从 main 切出 PR1 分支</strong>
             <p>运行：</p>
             <pre><code class="lang-bash">git fetch origin
@@ -114,7 +114,7 @@ git checkout -b feat/pap-24-pr1-ci-foundation origin/main</code></pre>
             <p>说明：spec/plan 已 commit 在 <code>worktree-pap-24-ci-speedup</code>，PR1 单独从 main 切；后续 PR2/PR3 各自从 main 切。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：在 ci.yml 顶部 env 添加镜像版本变量</strong>
             <p>编辑 <code>.github/workflows/ci.yml</code>，在 <code>concurrency:</code> 块之后、<code>jobs:</code> 之前插入：</p>
             <pre><code class="lang-yaml">env:
@@ -122,7 +122,7 @@ git checkout -b feat/pap-24-pr1-ci-foundation origin/main</code></pre>
   ROCKETMQ_IMAGE: apache/rocketmq:5.3.1</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：删除 build-and-test job 内所有 --no-daemon 标志</strong>
             <p>找到 build-and-test job 中的 4 处 <code>./gradlew ... --no-daemon</code>，删除 <code>--no-daemon</code>：</p>
             <pre><code class="lang-yaml"># Before
@@ -153,7 +153,7 @@ git checkout -b feat/pap-24-pr1-ci-foundation origin/main</code></pre>
             <p>理由：Gradle 9 + setup-gradle@v4 下 <code>--no-daemon</code> 是反模式（daemon 复用 JVM warmup 反而更快）。spec §1 已说明。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：给 setup-gradle@v4 加 cache-encryption-key</strong>
             <p>修改 setup-gradle step：</p>
             <pre><code class="lang-yaml"># Before
@@ -168,7 +168,7 @@ git checkout -b feat/pap-24-pr1-ci-foundation origin/main</code></pre>
             <p>理由：setup-gradle@v4 自带 configuration-cache 缓存能力，但只有在 <code>cache-encryption-key</code> 存在时才会保存到 GHA cache。secret 缺失时此参数为空字符串，setup-gradle 容忍降级（CI 不会失败，仅 cc cache 不持久化）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：新增 Pre-pull container images step</strong>
             <p>在 setup-gradle step 之后、check step 之前插入：</p>
             <pre><code class="lang-yaml">- name: 🐳 Pre-pull container images (并发预热,藏入编译关键路径)
@@ -182,7 +182,7 @@ git checkout -b feat/pap-24-pr1-ci-foundation origin/main</code></pre>
             <p>说明：GHA step 之间串行执行，但 step 内部并发 pull。两镜像并行 pull 总时长 ~40-50s，在 check step 的 Gradle 编译期间已完成。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：新增镜像版本一致性校验 step</strong>
             <p>在 Pre-pull step 之后插入：</p>
             <pre><code class="lang-yaml">- name: 🔍 Verify container image versions consistency
@@ -214,7 +214,7 @@ git checkout -b feat/pap-24-pr1-ci-foundation origin/main</code></pre>
             <p>说明：失败时给出明确指引；通过时打印 ✓ 行便于 CI 日志检索。grep 用 <code>\b</code> 防止 <code>5.3.10</code> 误中 <code>5.3.1</code>。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="skipped">
             <strong>步骤 7：手工添加 GRADLE_ENCRYPTION_KEY repo secret</strong>
             <p>用户在本地终端执行（注意：此步骤需要用户操作，AI 不能代为修改 GitHub secret）：</p>
             <pre><code class="lang-bash">openssl rand -base64 16</code></pre>
@@ -222,7 +222,7 @@ git checkout -b feat/pap-24-pr1-ci-foundation origin/main</code></pre>
             <p>说明：PR1 不依赖此 secret 也能 merge（setup-gradle 容忍降级），但缺失时 cc cache 不会持久化，PR1 收益打折。建议在 PR1 实测前完成。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 8：本地静态验证 ci.yml 语法</strong>
             <p>运行：</p>
             <pre><code class="lang-bash">command -v actionlint &>/dev/null && actionlint .github/workflows/ci.yml || echo "actionlint 未安装,跳过本地校验（CI 上仍会校验）"
@@ -230,7 +230,7 @@ yq eval '.jobs.build-and-test.steps[].name' .github/workflows/ci.yml</code></pre
             <p>预期：actionlint 无错误（如已安装）；yq 输出包含 "Pre-pull container images" 与 "Verify container image versions consistency" 两个新 step。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 9：Commit PR1 改动</strong>
             <pre><code class="lang-bash">git add .github/workflows/ci.yml
 git commit -m "$(cat &lt;&lt;'EOF'
@@ -250,7 +250,7 @@ EOF
 )"</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 10：Push + 开 PR</strong>
             <pre><code class="lang-bash">git push -u origin feat/pap-24-pr1-ci-foundation
 
@@ -1211,16 +1211,30 @@ EOF</code></pre>
     </header>
 
     <ol class="notes-log">
+      <li class="note" data-type="change" data-time="2026-05-22T15:00">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-22T15:00">05-22 15:00</time>
+          <a href="#task-1">§ Task 1</a>
+        </header>
+        <p>偏离 plan task 1 step 1：不从 origin/main 新切分支，改为在已有 worktree 分支 <code>worktree-pap-24-ci-speedup</code>（含 spec + plan 两个 docs commit）直接做 PR1 改动。Push 时映射到远端 <code>feat/pap-24-pr1-foundation</code> 分支名。理由：用户决策 PR1 同时携带 spec + plan + ci.yml 改动（PR0 docs-only 方案否决），少一个 PR；spec + plan 与 PR1 配套审阅。Trade-off：PR1 diff 范围含 docs + code 两部分，需在 PR description 明确分块说明。</p>
+      </li>
+      <li class="note" data-type="other" data-time="2026-05-22T15:10">
+        <header>
+          <span class="note-type">OTHER</span>
+          <time datetime="2026-05-22T15:10">05-22 15:10</time>
+          <a href="#task-1">§ Task 1 step 7</a>
+        </header>
+        <p>task 1 step 7（GRADLE_ENCRYPTION_KEY repo secret）标 skipped：AI 不能修改 GitHub repo secret，转移给用户在 PR1 merge 前手工添加（已在 PR description checklist 提醒）。PR1 不依赖此 secret 也能 CI 通过（setup-gradle 容忍降级），但缺失时 cc cache 不持久化，PR1 收益打折。</p>
+      </li>
     </ol>
-
-    <p class="empty-state">no notes yet</p>
 
     <footer class="notes-stats">
       总计:
       <span data-counter="decision">0</span> decisions /
-      <span data-counter="change">0</span> changes /
+      <span data-counter="change">1</span> changes /
       <span data-counter="tradeoff">0</span> tradeoffs /
-      <span data-counter="other">0</span> others
+      <span data-counter="other">1</span> others
     </footer>
   </aside>
 
