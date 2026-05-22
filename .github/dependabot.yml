@@ -1,0 +1,51 @@
+version: 2
+updates:
+  # ---- Java / Gradle ----
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    groups:
+      production-deps:
+        dependency-type: "production"
+      test-deps:
+        dependency-type: "development"
+
+  # ---- Next.js / pnpm ----
+  - package-ecosystem: "npm"
+    directory: "/patra-portal"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    groups:
+      production-deps:
+        dependency-type: "production"
+      dev-deps:
+        dependency-type: "development"
+
+  # ---- GitHub Actions ----
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    groups:
+      gh-actions:
+        patterns:
+          - "*"
