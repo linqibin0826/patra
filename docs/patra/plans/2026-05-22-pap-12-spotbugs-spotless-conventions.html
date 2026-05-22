@@ -24,10 +24,10 @@
           <li data-task-status="done"><a href="#task-2">Task 2 — 新建 linqibin.spotless.gradle.kts</a></li>
           <li data-task-status="done"><a href="#task-3">Task 3 — 改造 java-base 引入两个新 plugin</a></li>
           <li data-task-status="done"><a href="#task-4">Task 4 — spotlessApply 全量基线化</a></li>
-          <li data-task-status="in-progress"><a href="#task-5">Task 5 — spotbugsMain baseline + 告警决策处置</a></li>
-          <li data-task-status="pending"><a href="#task-6">Task 6 — CI workflow 改造</a></li>
-          <li data-task-status="pending"><a href="#task-7">Task 7 — 全量验证 10 条 Done 判定</a></li>
-          <li data-task-status="pending"><a href="#task-8">Task 8 — release-spec 缩进描述同步</a></li>
+          <li data-task-status="done"><a href="#task-5">Task 5 — spotbugsMain baseline + 告警决策处置</a></li>
+          <li data-task-status="done"><a href="#task-6">Task 6 — CI workflow 改造</a></li>
+          <li data-task-status="done"><a href="#task-7">Task 7 — 全量验证 10 条 Done 判定</a></li>
+          <li data-task-status="done"><a href="#task-8">Task 8 — release-spec 缩进描述同步</a></li>
           <li data-task-status="pending"><a href="#task-9">Task 9 — 交接 finishing-a-development-branch</a></li>
         </ol>
       </li>
@@ -399,7 +399,7 @@ reviewer 可在 PR 视图折叠此 commit。"</code></pre>
         </ol>
       </article>
 
-      <article class="task" id="task-5" data-status="in-progress">
+      <article class="task" id="task-5" data-status="done">
         <header>
           <h2>Task 5：spotbugsMain baseline + 告警决策处置</h2>
           <dl class="files">
@@ -424,7 +424,7 @@ reviewer 可在 PR 视图折叠此 commit。"</code></pre>
             <p>预期：输出 <code>Total SpotBugs warnings: N</code>。记录 N 值。</p>
           </li>
 
-          <li class="step" data-status="in-progress">
+          <li class="step" data-status="done">
             <strong>步骤 5.3：按 N 值分支处置（决策树）</strong>
             <p><strong>分支 A — N == 0</strong>：直接跳到步骤 5.5。在右栏 notes-panel 追加 <code>data-type="other"</code> entry 记录 "spotbugsMain 首次 baseline 跑出 0 告警"。</p>
 
@@ -459,13 +459,13 @@ reviewer 可在 PR 视图折叠此 commit。"</code></pre>
             <p>同步更新右栏 footer 的 <code>data-counter="other"</code> +1。本 task 状态改 <code>blocked</code>，等待用户选 A 或 B。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5.4：重跑 spotbugsMain 直到退出 0</strong>
             <p>运行：<code>./gradlew spotbugsMain --no-daemon</code></p>
             <p>预期：退出码 0；输出含 <code>BUILD SUCCESSFUL</code>。如果仍有告警，回步骤 5.3 继续处置；处置完所有告警后本步骤必须通过。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5.5：最终 Commit（如果分支 B 还有未 commit 的处置）</strong>
             <p>分支 A：本 task 无 commit。</p>
             <p>分支 B / C：把所有 exclude 与源码修复整理 commit。<code>spotbugs-exclude.xml</code> 改动可独立成一个 commit；源码 fix 按文件相关性拆 commit。</p>
@@ -486,7 +486,7 @@ PAP-12 baseline 2026-05-22 跑出 N 条告警，分类：
         </ol>
       </article>
 
-      <article class="task" id="task-6" data-status="pending">
+      <article class="task" id="task-6" data-status="done">
         <header>
           <h2>Task 6：CI workflow 改造</h2>
           <dl class="files">
@@ -495,7 +495,7 @@ PAP-12 baseline 2026-05-22 跑出 N 条告警，分类：
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6.1：替换 test step 为 check step</strong>
             <p>用 Edit 工具，<code>old_string</code>：</p>
             <pre><code class="lang-yaml">      - name: 🧪 Unit tests
@@ -508,7 +508,7 @@ PAP-12 baseline 2026-05-22 跑出 N 条告警，分类：
         # 决策 C：spotbugsMain / spotlessCheck 失败阻断 PR</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6.2：新增 spotbugs-reports artifact step</strong>
             <p>用 Edit 工具，<code>old_string</code>（现有通用 reports artifact step 整段）：</p>
             <pre><code class="lang-yaml">      - name: 📦 Upload reports artifact
@@ -540,14 +540,14 @@ PAP-12 baseline 2026-05-22 跑出 N 条告警，分类：
           retention-days: 7</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6.3：本地验证 ./gradlew check 退出 0</strong>
             <p>运行：<code>./gradlew check --no-daemon</code></p>
             <p>预期：退出码 0；输出含 <code>BUILD SUCCESSFUL</code>；执行的 task 至少包含 <code>:&lt;module&gt;:test</code>、<code>:&lt;module&gt;:spotbugsMain</code>、<code>:&lt;module&gt;:spotlessCheck</code>。</p>
             <p>失败处理：如果 <code>spotbugsMain</code> 失败，回 Task 5 处置剩余告警；如果 <code>spotlessCheck</code> 失败，跑 <code>./gradlew spotlessApply</code> 后 amend Task 4 commit。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6.4：Commit</strong>
             <pre><code class="lang-bash">git add .github/workflows/ci.yml
 git commit -m "ci: ./gradlew check 接入 spotbugsMain + spotlessCheck
@@ -562,7 +562,7 @@ git commit -m "ci: ./gradlew check 接入 spotbugsMain + spotlessCheck
         </ol>
       </article>
 
-      <article class="task" id="task-7" data-status="pending">
+      <article class="task" id="task-7" data-status="done">
         <header>
           <h2>Task 7：全量验证 10 条 Done 判定</h2>
           <dl class="files">
@@ -571,7 +571,7 @@ git commit -m "ci: ./gradlew check 接入 spotbugsMain + spotlessCheck
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7.1：D1 — 新文件存在 + java-base plugins 已切换</strong>
             <pre><code class="lang-bash">test -f build-logic/src/main/kotlin/linqibin.spotbugs.gradle.kts &amp;&amp; echo "D1.1 OK"
 test -f build-logic/src/main/kotlin/linqibin.spotless.gradle.kts &amp;&amp; echo "D1.2 OK"
@@ -582,7 +582,7 @@ grep -q 'id("linqibin.spotless")' build-logic/src/main/kotlin/linqibin.java-base
             <p>预期：6 行 OK 输出。任一缺失即 fail，回对应 task 修补。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7.2：D2 — spotbugsMain 退出 0 + 报告生成</strong>
             <pre><code class="lang-bash">./gradlew spotbugsMain --no-daemon
 echo "Exit code: $?"
@@ -591,28 +591,28 @@ find . -path '*/build/reports/spotbugs/main.xml' -not -path '*/.claude/*' | wc -
             <p>预期：Exit code 0；HTML + XML 报告各至少 1 份（实际数量 = Java 模块数）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7.3：D3 — spotbugsTest 等被禁用</strong>
             <pre><code class="lang-bash">./gradlew :linqibin-commons:linqibin-commons-core:spotbugsTest --info --no-daemon 2&gt;&amp;1 \
   | grep -E "SKIPPED|task disabled" | head -3</code></pre>
             <p>预期：输出含 <code>SKIPPED</code> 或 <code>task disabled</code>。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7.4：D4 — spotlessCheck 退出 0</strong>
             <pre><code class="lang-bash">./gradlew spotlessCheck --no-daemon
 echo "Exit code: $?"</code></pre>
             <p>预期：Exit code 0。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7.5：D5 — check 聚合退出 0</strong>
             <pre><code class="lang-bash">./gradlew check --no-daemon
 echo "Exit code: $?"</code></pre>
             <p>预期：Exit code 0。耗时可能 5-10 分钟（含 test + spotbugsMain + spotlessCheck）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7.6：D6 + D7 — ci.yml 注释与 artifact step</strong>
             <pre><code class="lang-bash">grep -n "暂不调" .github/workflows/ci.yml || echo "D6 OK: 旧注释已删"
 grep -n "spotbugs-reports" .github/workflows/ci.yml &amp;&amp; echo "D7 OK"
@@ -620,7 +620,7 @@ grep -A1 "name: 🐛 Upload spotbugs reports" .github/workflows/ci.yml</code></p
             <p>预期：D6 输出 "D6 OK"；D7 grep 找到 <code>name: spotbugs-reports</code> 行。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7.7：D8 — Push 后 CI 全绿 + artifact 列表</strong>
             <p>本步骤在 Task 9 push 远端后由 GitHub Actions 执行验证；plan 内仅记录 expected 行为：</p>
             <ul>
@@ -630,14 +630,14 @@ grep -A1 "name: 🐛 Upload spotbugs reports" .github/workflows/ci.yml</code></p
             <p>若 CI 红，从 PR Actions 页面下载 <code>spotbugs-reports</code> artifact 看具体告警，回 Task 5 处置。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7.8：D9 + D10 — Linear / release-spec 同步</strong>
             <p>D9 在 PR merge 之后人工同步（Task 9 末尾 callout）；D10 由 Task 8 commit 完成。本步骤本地无验证，仅在右栏 notes-panel 追加 entry 提醒 PR merge 后操作。</p>
           </li>
         </ol>
       </article>
 
-      <article class="task" id="task-8" data-status="pending">
+      <article class="task" id="task-8" data-status="done">
         <header>
           <h2>Task 8：release-spec 缩进描述同步</h2>
           <dl class="files">
@@ -646,7 +646,7 @@ grep -A1 "name: 🐛 Upload spotbugs reports" .github/workflows/ci.yml</code></p
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 8.1：Edit Issue 4 AC 缩进描述</strong>
             <p>用 Edit 工具修改 <code>docs/patra/release-specs/v0.3-dev-ready.md</code>。</p>
             <p><code>old_string</code>：</p>
@@ -655,13 +655,13 @@ grep -A1 "name: 🐛 Upload spotbugs reports" .github/workflows/ci.yml</code></p
             <pre><code class="lang-markdown">  - 配置规则：缩进 2 空格（与 `.editorconfig` 一致）/ import 顺序 / 行尾 LF / EOF 换行 / 去尾空白</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 8.2：验证修改唯一</strong>
             <p>运行：<code>grep -n "缩进" docs/patra/release-specs/v0.3-dev-ready.md</code></p>
             <p>预期：只命中刚改的那一行，且包含 "2 空格"。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 8.3：Commit</strong>
             <pre><code class="lang-bash">git add docs/patra/release-specs/v0.3-dev-ready.md
 git commit -m "docs(release-spec): PAP-13 缩进对齐 .editorconfig 2 空格
@@ -736,6 +736,23 @@ git commit -m "docs(release-spec): PAP-13 缩进对齐 .editorconfig 2 空格
     </header>
 
     <ol class="notes-log">
+      <li class="note" data-type="tradeoff" data-time="2026-05-22T14:30">
+        <header>
+          <span class="note-type">TRADEOFF</span>
+          <time datetime="2026-05-22T14:30">05-22 14:30</time>
+          <a href="#task-5">§ Task 5</a>
+        </header>
+        <p><strong>Subagent 派发策略反馈：用户提示"fan out subagents"，串行单 subagent 处置 7+ BugPattern 群组效率低。</strong></p>
+        <p>实施 Task 5 时派了 1 个 general-purpose subagent 顺序处置全部 415 条告警 / 7+ 个 BugPattern 群组（DM_CONVERT_CASE → SE_NO_SERIALVERSIONID → CT_CONSTRUCTOR_THROW → ... → 散落），主会话纯等待 18 min。用户当面纠正"现在这样修复，效率太低了"。</p>
+        <p>正解：fan out 多个 subagent 并行，每个负责一个 BugPattern 群组，主会话仅做 verify + commit 拼装。已记入 feedback memory <code>feedback_fan_out_subagents</code>。本次未返工（subagent 已完成），但下次同类工作（如 Task 4 spotlessApply 若有大量改动 / Task 6 多模块 CI 改造若拆得开）须 fan out。</p>
+        <p>本次 subagent 完成成果：</p>
+        <ul>
+          <li>commit 3819c24fc <code>fix(spotbugs): DM_CONVERT_CASE 122 条 — toLowerCase/toUpperCase 加 Locale.ROOT</code>（73 个源文件批量加 <code>Locale.ROOT</code>）</li>
+          <li>commit 7aae371b7 <code>chore(spotbugs): spotbugs-exclude.xml 覆盖剩余 293 条告警</code>（按 BugPattern 群组扩展 exclude，每条带中文注释）</li>
+          <li>commit 83007fa95 <code>style(spotless): 修复 import java.util.Locale 排序</code>（spotlessApply 自动对齐 import 顺序）</li>
+        </ul>
+        <p>验证：<code>./gradlew spotbugsMain</code> exit code 0；<code>./gradlew spotlessCheck</code> exit code 0。</p>
+      </li>
       <li class="note" data-type="decision" data-time="2026-05-22T13:40">
         <header>
           <span class="note-type">DECISION</span>
@@ -816,7 +833,7 @@ git commit -m "docs(release-spec): PAP-13 缩进对齐 .editorconfig 2 空格
       总计:
       <span data-counter="decision">2</span> decisions /
       <span data-counter="change">2</span> changes /
-      <span data-counter="tradeoff">0</span> tradeoffs /
+      <span data-counter="tradeoff">1</span> tradeoffs /
       <span data-counter="other">1</span> others
     </footer>
   </aside>
