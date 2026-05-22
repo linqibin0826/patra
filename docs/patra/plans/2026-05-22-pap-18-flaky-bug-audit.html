@@ -32,9 +32,9 @@
 
           <li data-task-status="pending"><a href="#task-N">Task N — [任务名]</a></li>
           -->
-          <li data-task-status="pending"><a href="#task-1">Task 1 — PR-1 改 java-base.gradle.kts</a></li>
-          <li data-task-status="pending"><a href="#task-2">Task 2 — PR-1 改 PULL_REQUEST_TEMPLATE.md</a></li>
-          <li data-task-status="pending"><a href="#task-3">Task 3 — PR-1 验证 + commit + push + 开 PR</a></li>
+          <li data-task-status="done"><a href="#task-1">Task 1 — PR-1 改 java-base.gradle.kts</a></li>
+          <li data-task-status="done"><a href="#task-2">Task 2 — PR-1 改 PULL_REQUEST_TEMPLATE.md</a></li>
+          <li data-task-status="in-progress"><a href="#task-3">Task 3 — PR-1 验证 + commit + push + 开 PR</a></li>
           <li data-task-status="pending"><a href="#task-4">Task 4 — PR-2 清理 linqibin-commons-core</a></li>
           <li data-task-status="pending"><a href="#task-5">Task 5 — PR-2 清理 linqibin-spring-boot-starter-*</a></li>
           <li data-task-status="pending"><a href="#task-6">Task 6 — PR-2 清理 patra-spring-boot-starter-provenance</a></li>
@@ -191,7 +191,7 @@ git commit -m "feat: [description]"</code></pre>
            PR-1 护栏先行
            ============================================================ -->
 
-      <article class="task" id="task-1" data-status="pending">
+      <article class="task" id="task-1" data-status="done">
         <header>
           <h2>任务 1：PR-1 改 <code>linqibin.java-base.gradle.kts</code>（forkEvery + 三档全局 timeout）</h2>
           <dl class="files">
@@ -241,7 +241,7 @@ git commit -m "feat: [description]"</code></pre>
         </ol>
       </article>
 
-      <article class="task" id="task-2" data-status="pending">
+      <article class="task" id="task-2" data-status="done">
         <header>
           <h2>任务 2：PR-1 改 <code>.github/PULL_REQUEST_TEMPLATE.md</code>（追加 flaky checklist）</h2>
           <dl class="files">
@@ -278,7 +278,7 @@ git commit -m "feat: [description]"</code></pre>
         </ol>
       </article>
 
-      <article class="task" id="task-3" data-status="pending">
+      <article class="task" id="task-3" data-status="in-progress">
         <header>
           <h2>任务 3：PR-1 全量验证 + commit + push + 开 PR</h2>
           <dl class="files">
@@ -1050,16 +1050,32 @@ git push origin pap-18-flaky-audit</code></pre>
       data-type 4 类：decision / change / tradeoff / other
       追加 entry 时同步更新下方 notes-stats footer 的对应 counter 数字。
       -->
-    </ol>
 
-    <p class="empty-state">no notes yet</p>
+      <li class="note" data-type="other" data-time="2026-05-22T12:50">
+        <header>
+          <span class="note-type">OTHER</span>
+          <time datetime="2026-05-22T12:50">05-22 12:50</time>
+          <a href="#tasks">§ 全 Task</a>
+        </header>
+        <p>仓库 <code>.pre-commit-config.yaml</code> 全文件被 <code>#</code> 注释，pre-commit framework 解析为 NoneType 报错，导致 commit 阻塞。该根因属 PAP-16（pre-commit-overhaul）范围，本 plan 不修复。已征得用户授权后，PAP-18 所有 commit 一律用 <code>git commit --no-verify</code> 绕过；hook 修复后续由 PAP-16 PR 单独处理。</p>
+      </li>
+
+      <li class="note" data-type="other" data-time="2026-05-22T13:55">
+        <header>
+          <span class="note-type">OTHER</span>
+          <time datetime="2026-05-22T13:55">05-22 13:55</time>
+          <a href="#task-3">§ Task 3</a>
+        </header>
+        <p>Task 3 步骤 1 本地全量 <code>./gradlew clean test integrationTest</code> 失败：所有 Testcontainers 依赖测试报 <code>Could not find a valid Docker environment</code>（本地 OrbStack/Docker daemon 未运行）。失败集中在：<code>linqibin-spring-boot-starter-batch:test</code>（含 <code>BatchDataSourceConfigurationTest</code>）+ <code>linqibin-spring-boot-starter-batch:integrationTest</code> + <code>patra-catalog-infra:integrationTest</code> + <code>patra-registry-infra:integrationTest</code> + <code>patra-ingest-infra:integrationTest</code>。全部属 <strong>pre-existing 环境依赖</strong>，错误是 Spring Context 启动 Postgres 容器失败，与 PR-1 forkEvery / 全局 timeout 改动无关。本地验证策略调整为：仅跑 unit-only <code>./gradlew test -x :linqibin-commons:linqibin-spring-boot-starter-batch:test</code>，验证 5s 全局 timeout 不误杀普通 unit；IT 验证完全交给 CI（CI 有 Docker）。</p>
+      </li>
+    </ol>
 
     <footer class="notes-stats">
       总计:
       <span data-counter="decision">0</span> decisions /
       <span data-counter="change">0</span> changes /
       <span data-counter="tradeoff">0</span> tradeoffs /
-      <span data-counter="other">0</span> others
+      <span data-counter="other">2</span> others
     </footer>
   </aside>
 
