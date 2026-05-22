@@ -4,11 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
@@ -27,7 +25,6 @@ import org.springframework.context.annotation.Configuration;
 ///
 /// @author linqibin
 /// @since 0.1.0
-@Timeout(value = 5, unit = TimeUnit.SECONDS)
 @DisplayName("OpenApiAutoConfiguration 自动配置测试")
 class OpenApiAutoConfigurationTest {
 

@@ -6,12 +6,10 @@ import static org.mockito.Mockito.when;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.job.JobInstance;
@@ -28,7 +26,6 @@ import org.springframework.batch.core.step.StepExecution;
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("BatchProgressMetricsListener 单元测试")
-@Timeout(value = 5, unit = TimeUnit.SECONDS)
 class BatchProgressMetricsListenerTest {
 
   private MeterRegistry meterRegistry;

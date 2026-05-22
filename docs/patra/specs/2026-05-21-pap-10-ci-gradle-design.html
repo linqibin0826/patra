@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PAP-10: CI 全面 Gradle 化 + JaCoCo 聚合 + Codecov</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles/journal.css">
+</head>
+<body>
+<div class="layout">
+
+  <nav class="toc">
+    <h3>目录</h3>
+    <ol>
+      <li><a href="#background">背景与现状</a></li>
+      <li><a href="#scope">范围边界</a></li>
+      <li><a href="#test-layering">测试分层（JVM Test Suites）</a></li>
+      <li><a href="#jacoco">JaCoCo 聚合</a></li>
+      <li><a href="#ci-workflow">CI Workflow 结构</a></li>
+      <li><a href="#codecov">Codecov 接入</a></li>
+      <li><a href="#migration">测试文件迁移</a></li>
+      <li><a href="#decisions">关键决策与备选</a></li>
+      <li><a href="#risks">风险与缓解</a></li>
+      <li><a href="#changes">改造文件清单</a></li>
+    </ol>
+  </nav>
+
+  <main class="content">
+
+    <header class="doc-header">
+      <h1>PAP-10: CI 全面 Gradle 化 + JaCoCo 聚合 + Codecov</h1>
+      <div class="meta-bar">
+        <span>📅 2026-05-21</span>
+        <span>🌿 worktree-pap-10-ci-gradle-jacoco</span>
+        <span>🎯 spec</span>
+        <span class="status-pill">draft</span>
+      </div>
+    </header>
+
+    <aside class="callout summary">
+      <span class="title">关键决策摘要</span>
+      <p>把 <code>.github/workflows/</code> 从已失效的 Maven 命令链改写为 Gradle，并借机一次性把测试分层重构到 JVM Test Suites（<code>src/integrationTest/</code> / <code>src/e2eTest/</code>）。CI 单 workflow（<code>ci.yml</code>）单 job（<code>build-and-test</code>），靠 <code>gradle/actions/setup-gradle@v4</code> 自带 build cache 加速，不再手写 MODULE_MAP 变更检测。JaCoCo 用官方 <code>jacoco-report-aggregation</code> plugin 聚合 unit + IT 覆盖率，通过 <code>codecov/codecov-action@v4</code> + <code>CODECOV_TOKEN</code> secret 上传。Required Status Check 命名 <code>CI / build-and-test</code>，留给 PAP-15 分支保护引用。</p>
+    </aside>
+
+    <section id="background">
+      <h2>1. 背景与现状</h2>
+      <p>当前 <code>.github/workflows/ci.yml</code> 和 <code>pr-checks.yml</code> 全部基于 Maven 命令链（<code>mvn install</code> / <code>mvn test -Punit-only</code> / <code>cd patra-ingest/patra-ingest-boot</code> ...），但 monorepo 已在 v0.2 阶段全量切到 Gradle，仓库内不存在任何 <code>pom.xml</code>；workflow 中引用的 <code>patra-ingest/patra-ingest-boot</code> 路径在 v0.2 reorg 之后也已不存在（实际位于 <code>patra-api/patra-ingest/patra-ingest-boot</code>）。两个 workflow 已**全链路失效**，触发即报错或空跑。</p>
+      <p>同时，<code>linqibin.java-base.gradle.kts</code> convention 已经 wire 了 JaCoCo / Spotless / SpotBugs 插件，但所有测试（<code>*Test.java</code> / <code>*IT.java</code> / <code>*E2E.java</code>）都挤在同一个 <code>src/test/</code> 目录、共享 <code>tasks.test</code>，意味着 <code>./gradlew test</code> 会一起拉起 Testcontainers（postgres:17、apache/rocketmq:5.3.1），任何缺 Docker 的环境直接 ERROR。</p>
+      <p>本次改造是工程基础设施基线（v0.3 Dev-Ready）的 P0 起点，PAP-12 / PAP-13 / PAP-15 都依赖本 Issue 完成后才能 wire 各自的门禁。</p>
+    </section>
+
+    <section id="scope">
+      <h2>2. 范围边界</h2>
+      <div class="two-col">
+        <aside class="callout success">
+          <span class="title">In Scope</span>
+          <ul>
+            <li>改写 <code>.github/workflows/ci.yml</code>：单 job <code>build-and-test</code>，全 Gradle 命令链</li>
+            <li>删除 <code>.github/workflows/pr-checks.yml</code>（全部逻辑失效）</li>
+            <li><code>linqibin.java-base.gradle.kts</code> 引入 JVM Test Suites（<code>test</code> / <code>integrationTest</code> / <code>e2eTest</code>）</li>
+            <li>59 个 <code>*IT.java</code> + 3 个 <code>*E2E.java</code> + 相关 <code>*ContainerInitializer.java</code> 用 <code>git mv</code> 物理迁移</li>
+            <li>根 <code>build.gradle.kts</code> 引入 <code>jacoco-report-aggregation</code> plugin，产出 unit + IT 两份聚合 XML</li>
+            <li>CI 接入 <code>codecov/codecov-action@v4</code>，用 <code>CODECOV_TOKEN</code> secret 上传</li>
+            <li>Required Status Check 命名固定为 <code>CI / build-and-test</code></li>
+          </ul>
+        </aside>
+        <aside class="callout warning">
+          <span class="title">Out of Scope</span>
+          <ul>
+            <li>SpotBugs <code>reportLevel</code> 调整（MEDIUM → LOW）→ <strong>PAP-12</strong></li>
+            <li><code>spotlessApply</code> 全代码 baseline → <strong>PAP-13</strong></li>
+            <li>CodeRabbit 接入 + PR/Issue 模板 → <strong>PAP-14</strong></li>
+            <li>main 分支保护规则 + Dependabot → <strong>PAP-15</strong></li>
+            <li>pre-commit hooks 重整 + commitlint → <strong>PAP-16</strong></li>
+            <li>README 工具链入口同步 → <strong>PAP-17</strong></li>
+            <li>JaCoCo 覆盖率阈值门禁（保留 <code>jacocoTestCoverageVerification</code> 但不挂 <code>check</code>）→ 决策 D，v0.3 不接</li>
+            <li>FindSecBugs / Semgrep 安全扫描 → 独立安全版本</li>
+            <li>JDK 多版本 matrix 测试 → 锁 Java 25</li>
+          </ul>
+        </aside>
+      </div>
+    </section>
+
+    <section id="test-layering">
+      <h2>3. 测试分层（JVM Test Suites）</h2>
+      <p>在 <code>build-logic/src/main/kotlin/linqibin.java-base.gradle.kts</code> convention plugin 中集中配置，让所有 java 模块自动获得三个 test suite。</p>
+      <pre><code>testing {
+    suites {
+        val test by getting(JvmTestSuite::class) {
+            useJUnitJupiter()
+            // 保留 manual / external tag exclude
+        }
+        register&lt;JvmTestSuite&gt;("integrationTest") {
+            useJUnitJupiter()
+            dependencies { implementation(project()) }
+            targets.configureEach {
+                testTask.configure {
+                    shouldRunAfter(test)
+                    useJUnitPlatform { excludeTags("manual"); if (!project.hasProperty("runExternal")) excludeTags("external") }
+                }
+            }
+        }
+        register&lt;JvmTestSuite&gt;("e2eTest") {
+            useJUnitJupiter()
+            dependencies { implementation(project()) }
+            targets.configureEach {
+                testTask.configure {
+                    shouldRunAfter(named("integrationTest"))
+                    useJUnitPlatform { excludeTags("manual"); if (!project.hasProperty("runExternal")) excludeTags("external") }
+                }
+            }
+        }
+    }
+}
+
+// check 默认只依赖 test；integrationTest / e2eTest 显式调用</code></pre>
+      <p><strong>目录布局（每个 java 模块）：</strong></p>
+      <ul>
+        <li><code>src/test/java/</code> — unit tests（<code>*Test.java</code>），无 Docker 依赖</li>
+        <li><code>src/integrationTest/java/</code> — IT（<code>*IT.java</code>）+ 关联的 <code>*ContainerInitializer.java</code> 基础类</li>
+        <li><code>src/e2eTest/java/</code> — E2E（<code>*E2E.java</code>），完整 Spring Context + 多容器</li>
+        <li><code>src/test/resources/</code> — 共享 fixtures（默认 unit + IT 均可访问，按 Gradle 隐式 testRuntimeOnly 合并）</li>
+        <li><code>src/integrationTest/resources/</code> — 仅 IT 专属（如 Flyway test data），按需创建</li>
+      </ul>
+      <p><strong>SpotBugs 范围：</strong>convention 中现有 <code>SpotBugsTask</code> 配置仅作用于 <code>spotbugsMain</code>，自然不会扫到任何 test source set（决策 C：测试代码不做静态分析）。新增 <code>integrationTest</code> / <code>e2eTest</code> source set 不影响这一点。</p>
+    </section>
+
+    <section id="jacoco">
+      <h2>4. JaCoCo 聚合</h2>
+      <p>根 <code>build.gradle.kts</code> 引入 Gradle 官方 <code>jacoco-report-aggregation</code> plugin（Gradle 7.4+，已是 stable API），生成聚合 XML。</p>
+      <pre><code>plugins {
+    base
+    `jacoco-report-aggregation`
+}
+
+dependencies {
+    subprojects {
+        if (plugins.hasPlugin("jacoco")) {
+            jacocoAggregation(project)
+        }
+    }
+}
+
+reporting {
+    reports {
+        register&lt;JacocoCoverageReport&gt;("testCodeCoverageReport") {
+            testSuiteName = "test"
+        }
+        register&lt;JacocoCoverageReport&gt;("integrationTestCodeCoverageReport") {
+            testSuiteName = "integrationTest"
+        }
+    }
+}</code></pre>
+      <p><strong>聚合输出路径（Gradle 默认）：</strong></p>
+      <ul>
+        <li><code>build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml</code>（unit 覆盖率聚合）</li>
+        <li><code>build/reports/jacoco/integrationTestCodeCoverageReport/integrationTestCodeCoverageReport.xml</code>（IT 覆盖率聚合）</li>
+      </ul>
+      <p><strong>AC 路径微调：</strong>Issue 池原 AC 写的是 <code>build/reports/jacoco/aggregate/jacoco.xml</code>（单文件路径），但 Gradle 官方 <code>jacoco-report-aggregation</code> 按 suite 拆分，每个 suite 一份。Codecov 上传时 <code>files:</code> 字段同时指向两个 XML 即可，比手写 Copy task 改名简洁。本 spec 内显式覆盖 AC。</p>
+      <p><strong>覆盖率门禁：</strong>现有 <code>tasks.jacocoTestCoverageVerification</code>（70% 阈值）<strong>不挂到 <code>check</code></strong>，仅作为可手动调用的 task 保留（决策 D：v0.3 不设阈值门禁）。</p>
+      <p><strong>e2eTest 覆盖率：</strong>暂不聚合（3 个 E2E 测试，覆盖率信号弱）。需要时按相同模式追加 <code>e2eTestCodeCoverageReport</code>。</p>
+    </section>
+
+    <section id="ci-workflow">
+      <h2>5. CI Workflow 结构</h2>
+      <p>删除 <code>.github/workflows/pr-checks.yml</code>，重写 <code>.github/workflows/ci.yml</code> 为单文件 + 单 job：</p>
+      <pre><code>name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**.md', 'docs/**', '.gitignore', '.editorconfig', 'LICENSE']
+  pull_request:
+    branches: [main]
+    paths-ignore: ['**.md', 'docs/**', '.gitignore', '.editorconfig', 'LICENSE']
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: build-and-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { java-version: '25', distribution: 'temurin' }
+      - uses: gradle/actions/setup-gradle@v4   # 自动启用 build cache + dependency cache
+      - run: ./gradlew test --no-daemon        # 仅 unit；spotbugs/spotless 进 check 由 PAP-12/13 启用
+      - run: ./gradlew integrationTest --no-daemon
+      - run: ./gradlew e2eTest --no-daemon
+      - run: ./gradlew testCodeCoverageReport integrationTestCodeCoverageReport --no-daemon
+      - uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: |
+            build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml
+            build/reports/jacoco/integrationTestCodeCoverageReport/integrationTestCodeCoverageReport.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reports
+          path: |
+            **/build/reports/
+            **/build/test-results/
+          retention-days: 7</code></pre>
+      <p><strong>关键设计点：</strong></p>
+      <ul>
+        <li><strong>单 job 串行</strong>：unit → IT → E2E → 聚合。同 job 内 Gradle 配置缓存/依赖缓存复用最大化；不拆 job 是为了 Required Status Check 单一稳定名字 + 简化 needs 依赖图</li>
+        <li><strong>Required Status Check 命名</strong>：<code>CI / build-and-test</code>（workflow name + job name）。PAP-15 分支保护规则将引用此名</li>
+        <li><strong>Docker</strong>：GitHub <code>ubuntu-latest</code> runner 自带 Docker daemon，Testcontainers 直接可用</li>
+        <li><strong>setup-gradle@v4</strong>：官方 action 自带 build cache（GHA cache 存储）+ dependency cache + wrapper 校验，比手写 <code>actions/cache</code> 更省心</li>
+        <li><strong>timeout-minutes: 25</strong>：保守值，覆盖 unit + 59 IT（Testcontainers 容器启动慢）+ 3 E2E + 聚合</li>
+      </ul>
+    </section>
+
+    <section id="codecov">
+      <h2>6. Codecov 接入</h2>
+      <p><strong>用户侧前置动作（不在本 Issue 自动化范围）：</strong></p>
+      <ol>
+        <li>登录 <a href="https://app.codecov.io">codecov.io</a>，添加 patra repo</li>
+        <li>从 Codecov 仓库设置页拿到 token</li>
+        <li>GitHub repo Settings → Secrets and variables → Actions，添加 secret <code>CODECOV_TOKEN</code></li>
+      </ol>
+      <p><strong>CI 自动化：</strong><code>codecov/codecov-action@v4</code> 用 token 上传两份 XML，控制台见 patra 覆盖率数字即满足 AC 中 Codecov 验证条件。</p>
+      <p><strong>不接 Codecov YAML 配置文件</strong>（如 <code>codecov.yml</code> 阈值规则）：v0.3 仅做可视化，不接门禁；后续需要时单独 Issue。</p>
+    </section>
+
+    <section id="migration">
+      <h2>7. 测试文件迁移</h2>
+      <p><strong>影响面统计：</strong></p>
+      <ul>
+        <li>62 个测试文件迁移：59 IT + 3 E2E</li>
+        <li>约 15 个子模块涉及：linqibin-commons 下 4 个 starter + patra-api 下 registry/ingest/catalog/object-storage 多个子模块</li>
+        <li>关联 <code>*ContainerInitializer.java</code> 基础类（数量待迁移时再统计，跟随 IT 走）</li>
+      </ul>
+      <p><strong>迁移规则：</strong></p>
+      <ul>
+        <li><code>git mv src/test/java/&lt;pkg&gt;/Xxx<strong>IT</strong>.java → src/integrationTest/java/&lt;pkg&gt;/Xxx<strong>IT</strong>.java</code></li>
+        <li><code>git mv src/test/java/&lt;pkg&gt;/Xxx<strong>E2E</strong>.java → src/e2eTest/java/&lt;pkg&gt;/Xxx<strong>E2E</strong>.java</code></li>
+        <li><code>git mv src/test/java/&lt;pkg&gt;/*ContainerInitializer.java → src/integrationTest/java/&lt;pkg&gt;/*ContainerInitializer.java</code></li>
+        <li><code>src/test/resources/</code> 保持原位（unit + IT 共享）；如果发现某 yml/sql 仅 IT 用 + 命名易冲突，可按需单独迁到 <code>src/integrationTest/resources/</code></li>
+      </ul>
+      <p><strong>验证：</strong>每个被迁移模块各跑一次 <code>./gradlew :module:compileIntegrationTestJava :module:integrationTest --no-daemon</code> 确认无编译错误、Docker 可用时测试绿。</p>
+    </section>
+
+    <section id="decisions">
+      <h2>关键决策与备选</h2>
+
+      <div class="decision">
+        <h3>决策 1：测试分层用 JVM Test Suites（方案 C），不用 @Tag 或文件名 filter</h3>
+        <p>在 <code>linqibin.java-base</code> convention 中用 Gradle <code>testing { suites { ... } }</code> DSL 声明 3 个 suite，物理 + 依赖双重隔离。</p>
+        <p class="alternatives"><strong>备选 A（文件名 filter）：</strong>单 Test task + <code>filter.includeTestsMatching("*IT")</code>，0 行源码改动 — 否决：无依赖隔离，Testcontainers 依赖永远污染 unit test classpath，违背绿地项目"直接最优"原则<br>
+        <strong>备选 B（JUnit @Tag）：</strong>62 个文件加 <code>@Tag("integration")</code> — 否决：仍无依赖隔离，且 tag 标错/漏标会静默漏跑<br>
+        <strong>备选 D（手动 source set）：</strong>手写 <code>sourceSets {}</code> + <code>configurations.integrationTestImplementation.extendsFrom</code> — 否决：JVM Test Suites 是其声明式取代，少写 80% 样板</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 2：删 MODULE_MAP 变更检测，全量跑 + Gradle build cache 加速</h3>
+        <p>原 <code>ci.yml</code> 用 bash declare -A MODULE_MAP 手工映射文件路径到 Maven 模块，逻辑复杂且已完全失效（命名 reorg 前）。改成全量跑 <code>./gradlew check integrationTest e2eTest</code>，靠 <code>gradle/actions/setup-gradle@v4</code> 提供的 build cache 加速增量。</p>
+        <p class="alternatives"><strong>备选 A（重写 MODULE_MAP path）：</strong>对齐 linqibin-commons / patra-starters / patra-api 三段命名 — 否决：单人项目反馈速度差距不显著，但 bash 逻辑长期维护成本高<br>
+        <strong>备选 B（dorny/paths-filter Action）：</strong>第三方 Action 接管 path → filter 映射 — 否决：仍是"变更才跑"的复杂模型，新增依赖；Gradle build cache 已经足够智能</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 3：Codecov 用 token + GitHub secret，不走 tokenless</h3>
+        <p>Codecov v5 推荐 token 化，免 rate limit + 防止 PR 伪造上传。token 通过 GitHub repo secret <code>CODECOV_TOKEN</code> 注入 CI。</p>
+        <p class="alternatives"><strong>备选 A（tokenless）：</strong>public repo 允许 — 否决：受 rate limit 影响，v5 已开始 deprecate tokenless 模式<br>
+        <strong>备选 B（不接 Codecov）：</strong>仅产出 XML artifact — 否决：与 Issue AC "Codecov 控制台见数字" 冲突</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 4：废弃 pr-checks.yml，单一 ci.yml 单 job</h3>
+        <p>原 <code>pr-checks.yml</code> 全部逻辑失效（mvn 命令 + 已不存在的 cd 路径），其 PR title/body 检查功能将由 PAP-14 的 CodeRabbit + PR 模板代替。</p>
+        <p class="alternatives"><strong>备选 A（保留 pr-checks.yml 但重写）：</strong>ci.yml 跑测试，pr-checks.yml 只做轻量 PR 信息检查 — 否决：多一套 workflow 维护成本，AI Review 已覆盖<br>
+        <strong>备选 B（拆 ci.yml + pr.yml 用 workflow_call）：</strong>过度设计，单人项目不需要</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 5：Required Status Check 命名 <code>CI / build-and-test</code></h3>
+        <p>workflow <code>name: CI</code> + job <code>name: build-and-test</code>，GitHub UI 显示 <code>CI / build-and-test</code>。该名字将被 PAP-15 分支保护规则引用，定下后改名需要同步更新分支保护配置，因此 v0.3 内必须稳定。</p>
+        <p class="alternatives"><strong>备选 A（<code>CI / required</code>）：</strong>job 命名更抽象，未来加子 check 不需改名 — 否决：v0.3 spec 原推荐 build-and-test，保持一致性<br>
+        <strong>备选 B（直接用 workflow check 名）：</strong>不拆 job — 否决：jobs 必须有 name；显示效果同等</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 6：JaCoCo 用官方 <code>jacoco-report-aggregation</code>，不手写聚合 task</h3>
+        <p>Gradle 7.4+ 官方插件，与 JVM Test Suites 联动，按 <code>testSuiteName</code> 分别产出聚合报告。比手写 root-level jacocoAggregateReport task 简洁稳定。</p>
+        <p class="alternatives"><strong>备选 A（手写 JacocoReport task）：</strong>遍历子模块 <code>executionData.from(...)</code> 拼接 — 否决：官方插件做的就是这件事，重复造轮子</p>
+      </div>
+    </section>
+
+    <section id="risks">
+      <h2>风险与缓解</h2>
+      <table>
+        <thead>
+          <tr><th>风险</th><th>等级</th><th>缓解</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>JVM Test Suites 在 Gradle 9.5 仍标 incubating，未来 API 可能变</td>
+            <td><span class="pill low">low</span></td>
+            <td>API 自 Gradle 7.3 稳定 3 年无破坏性改动；社区已大规模生产使用；绿地项目重构成本可控</td>
+          </tr>
+          <tr>
+            <td>62 个文件 <code>git mv</code> 后 IDE 索引混乱 / 同名包重复扫描</td>
+            <td><span class="pill mid">mid</span></td>
+            <td>迁移分模块逐个进行 + 每个模块迁移后立即 <code>./gradlew :module:compileIntegrationTestJava</code> 验证编译；最后整体 IDEA reimport 一次</td>
+          </tr>
+          <tr>
+            <td>共享 <code>src/test/resources/</code> 中部分 yml/sql 仅 IT 用，IT 迁出后路径变化导致 ClassLoader 找不到</td>
+            <td><span class="pill mid">mid</span></td>
+            <td>Gradle 默认 <code>integrationTest</code> 的 runtimeClasspath 继承 test，资源默认可访问；如出现冲突按需细分到 <code>src/integrationTest/resources/</code></td>
+          </tr>
+          <tr>
+            <td>Codecov token 未配置时 CI 上传 step 失败但其他 step 已经成功</td>
+            <td><span class="pill low">low</span></td>
+            <td><code>codecov-action</code> 设 <code>fail_ci_if_error: false</code>；spec 里明列 token 配置为用户侧前置动作；首次 PR 验证</td>
+          </tr>
+          <tr>
+            <td>Testcontainers 在 ubuntu-latest 启动 PostgreSQL/RocketMQ 超时（25 min 不够）</td>
+            <td><span class="pill low">low</span></td>
+            <td>本地实测 IT 套件单次跑 &lt; 8 min；首次 CI 实测后按需调高 <code>timeout-minutes</code></td>
+          </tr>
+          <tr>
+            <td>Gradle 9 configuration-cache 与 JVM Test Suites 兼容性</td>
+            <td><span class="pill low">low</span></td>
+            <td>JVM Test Suites 与 cc 严格模式兼容；测试时 <code>--configuration-cache</code> 显式验证</td>
+          </tr>
+          <tr>
+            <td>setup-gradle@v4 build cache 在 fork PR 上不可用（GitHub 安全策略禁写）</td>
+            <td><span class="pill low">low</span></td>
+            <td>单人项目无 fork 场景；如未来开放贡献，<code>cache-read-only</code> 行为自动生效</td>
+          </tr>
+          <tr>
+            <td>PAP-10 CI 只跑 <code>test</code>（不跑 <code>check</code>），spotbugs/spotless 暂不阻断；与 v0.3 决策 C"传统静态分析阻断 PR"的最终态有差距</td>
+            <td><span class="pill mid">mid</span></td>
+            <td>渐进激活：PAP-12（SpotBugs reportLevel + exclude baseline）和 PAP-13（spotlessApply 全代码 baseline）完成后，各自 PR 内追加 <code>./gradlew spotbugsMain</code> / <code>./gradlew spotlessCheck</code> step 到 ci.yml；PAP-15 把它们与 <code>build-and-test</code> 并列纳入分支保护 Required Status Checks 即可达到决策 C 的最终态</td>
+          </tr>
+          <tr>
+            <td>PAP-10 的 spec 决策与 Linear PAP-10 issue description 原 AC 有偏差（MODULE_MAP 删除、JaCoCo 路径变默认、job 结构由多 job 改单 job）</td>
+            <td><span class="pill low">low</span></td>
+            <td>实施完成后回写 Linear PAP-10 description：删 MODULE_MAP / JaCoCo 路径用 Gradle 默认两份 / job 结构改单 <code>build-and-test</code>。Linear 与 spec 互为 source-of-truth，避免漂移</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="changes">
+      <h2>改造文件清单</h2>
+      <table>
+        <thead>
+          <tr><th>#</th><th>文件</th><th>操作</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><code>.github/workflows/ci.yml</code></td>
+            <td><span class="pill modify">modify</span></td>
+            <td>整体重写为单 job <code>build-and-test</code>，全 Gradle 命令</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><code>.github/workflows/pr-checks.yml</code></td>
+            <td><span class="pill delete">delete</span></td>
+            <td>全部逻辑失效，PR 信息检查功能交给 PAP-14 CodeRabbit + PR 模板</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><code>build-logic/src/main/kotlin/linqibin.java-base.gradle.kts</code></td>
+            <td><span class="pill modify">modify</span></td>
+            <td>引入 <code>testing { suites { ... } }</code> DSL；保留现有 jacoco / spotless / spotbugs / Lombok 等配置；test task 的 tag exclude 移植到 3 个 suite</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td><code>build.gradle.kts</code>（根）</td>
+            <td><span class="pill modify">modify</span></td>
+            <td>引入 <code>jacoco-report-aggregation</code> plugin + <code>reporting { reports { ... } }</code> 声明两份聚合报告</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td><code>src/test/java/**/*IT.java</code>（约 15 个模块下共 59 个）</td>
+            <td><span class="pill modify">modify</span></td>
+            <td><code>git mv</code> 到对应模块的 <code>src/integrationTest/java/</code></td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td><code>src/test/java/**/*E2E.java</code>（3 个模块下共 3 个）</td>
+            <td><span class="pill modify">modify</span></td>
+            <td><code>git mv</code> 到 <code>src/e2eTest/java/</code></td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td><code>src/test/java/**/*ContainerInitializer.java</code></td>
+            <td><span class="pill modify">modify</span></td>
+            <td><code>git mv</code> 跟随 IT 一起到 <code>src/integrationTest/java/</code>（实施时按 grep 找全）</td>
+          </tr>
+          <tr>
+            <td>8</td>
+            <td><code>scripts/git/mvn_*.sh</code></td>
+            <td><span class="pill keep">keep</span></td>
+            <td>不删（属 PAP-16 范围）；本 Issue 不在 CI 中再调用</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <aside class="callout info">
+      <span class="title">Done 判定</span>
+      <ol>
+        <li><strong>D1（workflow Gradle 化）：</strong><code>grep -r "mvn " .github/</code> 空输出；<code>.github/workflows/pr-checks.yml</code> 不存在；<code>ci.yml</code> 仅含 <code>./gradlew</code> 调用</li>
+        <li><strong>D2（CI 全绿）：</strong>feature branch 推一次，<code>CI / build-and-test</code> 全部 step 通过</li>
+        <li><strong>D3（本地 test 绿）：</strong>根目录 <code>./gradlew test --no-daemon</code> 退出码 0（unit only，不含 IT/E2E/spotbugs/spotless；后者由 PAP-12/13 wire 进 check）</li>
+        <li><strong>D4（测试分层生效）：</strong><code>./gradlew :linqibin-commons-core:integrationTest --dry-run</code> 不报错；<code>./gradlew tasks | grep -E "(integrationTest|e2eTest)"</code> 见 task 列表</li>
+        <li><strong>D5（JaCoCo 聚合产出）：</strong><code>./gradlew testCodeCoverageReport integrationTestCodeCoverageReport</code> 后<code>build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml</code> 和 <code>build/reports/jacoco/integrationTestCodeCoverageReport/integrationTestCodeCoverageReport.xml</code> 均存在且非空</li>
+        <li><strong>D6（Codecov 上传成功）：</strong>CI run 中 codecov-action step 退出码 0；codecov.io 控制台见 patra 仓库覆盖率数字</li>
+        <li><strong>D7（Required Status Check 命名稳定）：</strong>PR 上能看到 <code>CI / build-and-test</code> 这个 check（PAP-15 将引用此名字）</li>
+        <li><strong>D8（无遗留 Maven）：</strong><code>find . -name "pom.xml"</code> 空；<code>grep -rn "mvn " scripts/git/</code> 仅命中 <code>scripts/git/mvn_*.sh</code> 本身（这些文件 PAP-16 删除）</li>
+      </ol>
+    </aside>
+
+  </main>
+
+  <aside class="notes-panel" id="notes">
+    <header>
+      <h2>Implementation Notes</h2>
+      <p class="hint">实施期由 Claude Code 即时追加。规则：遇到 spec 未规定的<strong>决定</strong>、必要<strong>更改</strong>、不可避免的<strong>权衡</strong>、其他用户应知事项，立即用 Edit 追加 entry，不要等任务结束。</p>
+    </header>
+
+    <ol class="notes-log">
+    </ol>
+
+    <p class="empty-state">no notes yet</p>
+
+    <footer class="notes-stats">
+      总计:
+      <span data-counter="decision">0</span> decisions /
+      <span data-counter="change">0</span> changes /
+      <span data-counter="tradeoff">0</span> tradeoffs /
+      <span data-counter="other">0</span> others
+    </footer>
+  </aside>
+
+</div>
+</body>
+</html>

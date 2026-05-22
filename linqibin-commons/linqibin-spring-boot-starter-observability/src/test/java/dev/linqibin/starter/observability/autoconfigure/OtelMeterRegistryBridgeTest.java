@@ -8,6 +8,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.simple.SimpleConfig;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.util.ArrayList;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -48,7 +49,8 @@ class OtelMeterRegistryBridgeTest {
     @BeforeEach
     void setUp() {
       // 清理 globalRegistry 中的所有注册表
-      Metrics.globalRegistry.getRegistries().forEach(Metrics.globalRegistry::remove);
+      new ArrayList<>(Metrics.globalRegistry.getRegistries())
+          .forEach(Metrics.globalRegistry::remove);
       // 添加模拟的 OpenTelemetryMeterRegistry
       mockOtelRegistry = new MockOpenTelemetryMeterRegistry();
       Metrics.globalRegistry.add(mockOtelRegistry);
@@ -57,7 +59,8 @@ class OtelMeterRegistryBridgeTest {
     @AfterEach
     void tearDown() {
       // 清理测试后的状态
-      Metrics.globalRegistry.getRegistries().forEach(Metrics.globalRegistry::remove);
+      new ArrayList<>(Metrics.globalRegistry.getRegistries())
+          .forEach(Metrics.globalRegistry::remove);
     }
 
     @Test
@@ -126,13 +129,15 @@ class OtelMeterRegistryBridgeTest {
     @BeforeEach
     void setUp() {
       // 清理 globalRegistry
-      Metrics.globalRegistry.getRegistries().forEach(Metrics.globalRegistry::remove);
+      new ArrayList<>(Metrics.globalRegistry.getRegistries())
+          .forEach(Metrics.globalRegistry::remove);
     }
 
     @AfterEach
     void tearDown() {
       // 清理测试后的状态
-      Metrics.globalRegistry.getRegistries().forEach(Metrics.globalRegistry::remove);
+      new ArrayList<>(Metrics.globalRegistry.getRegistries())
+          .forEach(Metrics.globalRegistry::remove);
     }
 
     @Test
@@ -186,12 +191,14 @@ class OtelMeterRegistryBridgeTest {
 
     @BeforeEach
     void setUp() {
-      Metrics.globalRegistry.getRegistries().forEach(Metrics.globalRegistry::remove);
+      new ArrayList<>(Metrics.globalRegistry.getRegistries())
+          .forEach(Metrics.globalRegistry::remove);
     }
 
     @AfterEach
     void tearDown() {
-      Metrics.globalRegistry.getRegistries().forEach(Metrics.globalRegistry::remove);
+      new ArrayList<>(Metrics.globalRegistry.getRegistries())
+          .forEach(Metrics.globalRegistry::remove);
     }
 
     @Test
@@ -244,12 +251,14 @@ class OtelMeterRegistryBridgeTest {
 
     @BeforeEach
     void setUp() {
-      Metrics.globalRegistry.getRegistries().forEach(Metrics.globalRegistry::remove);
+      new ArrayList<>(Metrics.globalRegistry.getRegistries())
+          .forEach(Metrics.globalRegistry::remove);
     }
 
     @AfterEach
     void tearDown() {
-      Metrics.globalRegistry.getRegistries().forEach(Metrics.globalRegistry::remove);
+      new ArrayList<>(Metrics.globalRegistry.getRegistries())
+          .forEach(Metrics.globalRegistry::remove);
     }
 
     @Test

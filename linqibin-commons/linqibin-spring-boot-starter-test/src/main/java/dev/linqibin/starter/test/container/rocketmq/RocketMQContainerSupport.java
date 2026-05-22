@@ -1,7 +1,10 @@
 package dev.linqibin.starter.test.container.rocketmq;
 
 import java.io.File;
-import java.net.URL;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,26 +64,32 @@ public class RocketMQContainerSupport {
   ///
   /// @throws IllegalStateException 如果找不到 docker-compose-rocketmq.yml 文件
   public RocketMQContainerSupport() {
-    // 从 classpath 加载 docker-compose 文件
-    URL composeUrl = getClass().getClassLoader().getResource(COMPOSE_FILE_NAME);
-    if (composeUrl == null) {
-      throw new IllegalStateException(
-          "找不到 " + COMPOSE_FILE_NAME + " 文件，请确保该文件在 test/resources 目录下");
-    }
-
-    File composeFile = new File(composeUrl.getFile());
-
-    if (!composeFile.exists()) {
-      throw new IllegalStateException(
-          "找不到 " + COMPOSE_FILE_NAME + " 文件，路径: " + composeFile.getAbsolutePath());
+    // 从 classpath 加载 docker-compose 文件并复制到临时文件
+    // 用 ComposeContainer 需要真实 File 对象；当 starter-test 被打成 jar 引用时
+    // classpath resource URL 形如 `jar:file:.../starter-test.jar!/docker-compose-rocketmq.yml`，
+    // 不能直接 new File() 解析。把流复制到临时文件兼容两种场景（classes 目录 / jar 内 entry）。
+    File composeFile;
+    try (InputStream is = getClass().getClassLoader().getResourceAsStream(COMPOSE_FILE_NAME)) {
+      if (is == null) {
+        throw new IllegalStateException(
+            "找不到 " + COMPOSE_FILE_NAME + " 文件，请确保该文件在 test/resources 目录下");
+      }
+      composeFile = File.createTempFile("docker-compose-rocketmq-", ".yml");
+      composeFile.deleteOnExit();
+      Files.copy(is, composeFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+    } catch (IOException e) {
+      throw new IllegalStateException("复制 " + COMPOSE_FILE_NAME + " 到临时文件失败", e);
     }
 
     log.info("加载 Docker Compose 配置: {}", composeFile.getAbsolutePath());
 
-    // Testcontainers 2.0: 单参数构造函数默认使用本地 docker-compose 二进制文件
-    // withLocalCompose(boolean) 方法已在 2.0 版本移除
+    // Testcontainers 1.21.x ComposeContainer 默认 containerised 模式（启动 docker:24.0.2 容器跑 compose），
+    // 与 OrbStack 等部分 Docker daemon 不兼容（报 Status 500: unexpected EOF）。
+    // 显式 withLocalCompose(true) 走本地 docker compose CLI，兼容性更好；
+    // CI ubuntu-latest 自带 docker compose CLI，本地 OrbStack / Docker Desktop 也都自带，无副作用。
     this.composeContainer =
         new ComposeContainer(composeFile)
+            .withLocalCompose(true)
             .withExposedService(
                 "nameserver",
                 NAMESRV_PORT,
