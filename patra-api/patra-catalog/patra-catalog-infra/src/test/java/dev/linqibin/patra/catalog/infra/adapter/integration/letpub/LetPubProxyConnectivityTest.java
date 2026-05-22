@@ -85,6 +85,7 @@ class LetPubProxyConnectivityTest {
   }
 
   @Test
+  // 真实网络调用，方法级超时覆盖全局 fallback
   @Timeout(value = 2, unit = TimeUnit.MINUTES)
   @DisplayName("通过代理查询 Nature（ISSN-L: 0028-0836）— 验证代理模式下的完整爬取流程")
   void shouldFindNatureByIssnThroughProxy() {
@@ -117,6 +118,7 @@ class LetPubProxyConnectivityTest {
   }
 
   @Test
+  // 真实网络调用，方法级超时覆盖全局 fallback
   @Timeout(value = 2, unit = TimeUnit.MINUTES)
   @DisplayName("通过代理查询不存在的 ISSN — 应返回 empty")
   void shouldReturnEmptyForUnknownIssnThroughProxy() {

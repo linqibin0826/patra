@@ -13,7 +13,6 @@ import dev.linqibin.patra.catalog.infra.parser.MeshXmlElements;
 import dev.linqibin.patra.catalog.infra.parser.support.XmlParsingContext;
 import java.io.StringReader;
 import java.time.LocalDate;
-import java.util.concurrent.TimeUnit;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
@@ -21,13 +20,11 @@ import javax.xml.stream.XMLStreamReader;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// ScrParsingStrategy 单元测试。
 ///
 /// 验证补充概念记录（SCR）解析策略的正确性。
 @DisplayName("ScrParsingStrategy 策略")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class ScrParsingStrategyTest {
 
   private static final XMLInputFactory XML_INPUT_FACTORY = XMLInputFactory.newInstance();

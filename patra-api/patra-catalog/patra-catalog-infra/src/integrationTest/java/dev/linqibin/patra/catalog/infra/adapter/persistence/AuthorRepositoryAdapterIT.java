@@ -12,11 +12,9 @@ import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
@@ -53,7 +51,6 @@ import org.springframework.test.context.ContextConfiguration;
 @ComponentScan(basePackages = "dev.linqibin.patra.catalog.infra.persistence.converter")
 @ActiveProfiles("test")
 @DisplayName("AuthorRepositoryAdapter 集成测试（JPA）")
-@Timeout(value = 30, unit = TimeUnit.SECONDS)
 class AuthorRepositoryAdapterIT {
 
   @Autowired private AuthorRepositoryAdapter authorRepository;

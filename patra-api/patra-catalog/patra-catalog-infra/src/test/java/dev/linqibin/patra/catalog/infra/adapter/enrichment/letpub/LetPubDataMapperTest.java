@@ -17,7 +17,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// LetPubDataMapper 单元测试。
 ///
@@ -31,7 +30,6 @@ import org.junit.jupiter.api.Timeout;
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("LetPubDataMapper 单元测试")
-@Timeout(2)
 class LetPubDataMapperTest {
 
   private static final Long VENUE_ID = 1001L;

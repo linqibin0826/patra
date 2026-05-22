@@ -23,12 +23,10 @@ import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
@@ -55,7 +53,6 @@ import tools.jackson.databind.json.JsonMapper;
 /// @since 0.1.0
 /// @see DictionaryResolverAdapterTest
 @WireMockTest
-@Timeout(value = 30, unit = TimeUnit.SECONDS)
 @DisplayName("DictionaryResolverAdapter WireMock 集成测试")
 class DictionaryResolverAdapterIT {
 

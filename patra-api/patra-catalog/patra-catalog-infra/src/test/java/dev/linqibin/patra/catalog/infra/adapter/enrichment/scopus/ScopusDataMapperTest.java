@@ -7,12 +7,10 @@ import dev.linqibin.patra.catalog.domain.port.enrichment.ScopusVenueData.YearlyM
 import dev.linqibin.patra.catalog.infra.persistence.entity.ScopusRatingEntity;
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// ScopusDataMapper 单元测试。
 ///
@@ -21,7 +19,6 @@ import org.junit.jupiter.api.Timeout;
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("ScopusDataMapper 单元测试")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class ScopusDataMapperTest {
 
   private static final Long VENUE_ID = 100L;

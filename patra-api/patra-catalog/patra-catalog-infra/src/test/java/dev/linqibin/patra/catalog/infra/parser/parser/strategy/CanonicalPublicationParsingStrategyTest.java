@@ -20,14 +20,12 @@ import dev.linqibin.patra.common.model.CanonicalPublication.PublicationType;
 import dev.linqibin.patra.common.model.enums.PublicationIdentifierType;
 import java.io.StringReader;
 import java.time.LocalDate;
-import java.util.concurrent.TimeUnit;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// CanonicalPublicationParsingStrategy 单元测试。
 ///
@@ -36,7 +34,6 @@ import org.junit.jupiter.api.Timeout;
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("CanonicalPublicationParsingStrategy 策略")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class CanonicalPublicationParsingStrategyTest {
 
   private static final javax.xml.stream.XMLInputFactory XML_INPUT_FACTORY =
