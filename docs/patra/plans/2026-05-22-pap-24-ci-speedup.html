@@ -21,7 +21,7 @@
       <li><a href="#tasks">任务列表</a>
         <ol class="toc-tasks">
           <li data-task-status="done"><a href="#task-1">Task 1 — PR1 实施基础设施层</a></li>
-          <li data-task-status="pending"><a href="#task-2">Task 2 — PR1 实测验证 + merge</a></li>
+          <li data-task-status="in-progress"><a href="#task-2">Task 2 — PR1 实测验证 + merge</a></li>
           <li data-task-status="pending"><a href="#task-3">Task 3 — PR2 jacoco-aggregation convention plugin + 本地 spike</a></li>
           <li data-task-status="pending"><a href="#task-4">Task 4 — PR2 ci.yml 拆 4 job + required-check 真正生效</a></li>
           <li data-task-status="pending"><a href="#task-5">Task 5 — PR2 实测 + 分支保护强制验证 + merge</a></li>
@@ -287,7 +287,7 @@ EOF
         </ol>
       </article>
 
-      <article class="task" id="task-2" data-status="pending">
+      <article class="task" id="task-2" data-status="in-progress">
         <header>
           <h2>任务 2：PR1 实测验证 + merge</h2>
           <dl class="files">
@@ -297,14 +297,14 @@ EOF
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：收集 baseline (main 最近 3 个 ci.yml run) 时长</strong>
             <pre><code class="lang-bash">gh run list --workflow ci.yml --branch main --limit 3 --json databaseId,createdAt,updatedAt,conclusion \
   | jq -r '.[] | "\(.databaseId) created=\(.createdAt) updated=\(.updatedAt) conclusion=\(.conclusion)"'</code></pre>
             <p>用 (updatedAt - createdAt) 算各 run 时长，平均作为 baseline。把数据贴到 PR description 表格。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：触发 PR 上 3 个连续 run</strong>
             <p>每次空 commit 触发：</p>
             <pre><code class="lang-bash"># 第 1 个 run 已由 push 触发
@@ -317,7 +317,7 @@ git push</code></pre>
             <p>说明：每次 push 都会 cancel-in-progress 取消上一个未完成的 run（concurrency 配置），需要等上一个 run 完成再 push 下一个。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：从 CI 日志确认 cc cache hit</strong>
             <pre><code class="lang-bash">RUN_ID=$(gh run list --workflow ci.yml --branch feat/pap-24-pr1-ci-foundation --limit 1 --json databaseId -q '.[0].databaseId')
 gh run view "$RUN_ID" --log | grep -iE "(configuration cache|Calculating task graph|Reusing configuration cache)" | head -20</code></pre>
@@ -325,7 +325,7 @@ gh run view "$RUN_ID" --log | grep -iE "(configuration cache|Calculating task gr
             <p>如果持续看到 "Calculating task graph" → 触发回滚条件：检查 GRADLE_ENCRYPTION_KEY secret 是否真的添加，或排查 build-logic 是否有 cc 不兼容代码。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：填 PR description 实测表格 + 触发故意失败镜像版本校验</strong>
             <p>用步骤 1-3 的数据填 PR description 表格。然后做一次性故意失败测试：</p>
             <pre><code class="lang-bash">git checkout -b test/break-image-version
