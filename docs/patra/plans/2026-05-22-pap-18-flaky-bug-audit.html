@@ -1060,6 +1060,15 @@ git push origin pap-18-flaky-audit</code></pre>
         <p>仓库 <code>.pre-commit-config.yaml</code> 全文件被 <code>#</code> 注释，pre-commit framework 解析为 NoneType 报错，导致 commit 阻塞。该根因属 PAP-16（pre-commit-overhaul）范围，本 plan 不修复。已征得用户授权后，PAP-18 所有 commit 一律用 <code>git commit --no-verify</code> 绕过；hook 修复后续由 PAP-16 PR 单独处理。</p>
       </li>
 
+      <li class="note" data-type="change" data-time="2026-05-22T14:55">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-22T14:55">05-22 14:55</time>
+          <a href="#task-1">§ Task 1</a>
+        </header>
+        <p>JUnit timeout 配置项精确化：<strong><code>junit.jupiter.execution.timeout.default</code> → <code>junit.jupiter.execution.timeout.testable.method.default</code></strong>。第三次 CI run (#26272571747) 暴露 <code>CatalogArchitectureTest.setup()</code>（<code>@BeforeAll</code>，ArchUnit 扫描全代码库 classes）跑 16.7s 被 15s 杀掉。JUnit 5 的 <code>timeout.default</code> 是兜底，作用于 testable + lifecycle 全部；<code>testable.method.default</code> 只作用 <code>@Test</code> / <code>@TestFactory</code> / <code>@TestTemplate</code>，lifecycle (<code>@BeforeAll</code> / <code>@BeforeEach</code> / <code>@AfterAll</code> / <code>@AfterEach</code>) 不受限。这符合 PAP-18 的本意：防 test 死循环 ≠ 限 setup/teardown 准备工作。本地 <code>./gradlew :patra-catalog:patra-catalog-boot:test</code> 验证通过。</p>
+      </li>
+
       <li class="note" data-type="change" data-time="2026-05-22T14:38">
         <header>
           <span class="note-type">CHANGE</span>
@@ -1096,7 +1105,7 @@ git push origin pap-18-flaky-audit</code></pre>
     <footer class="notes-stats">
       总计:
       <span data-counter="decision">0</span> decisions /
-      <span data-counter="change">1</span> changes /
+      <span data-counter="change">2</span> changes /
       <span data-counter="tradeoff">1</span> tradeoffs /
       <span data-counter="other">2</span> others
     </footer>

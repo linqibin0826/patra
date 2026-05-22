@@ -390,6 +390,15 @@ rg --type java -B1 -A5 'for\s*\(.*:\s*\w+\s*\)' \
       追加 entry 时同步更新下方 notes-stats footer 的对应 counter 数字。
       -->
 
+      <li class="note" data-type="change" data-time="2026-05-22T14:55">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-22T14:55">05-22 14:55</time>
+          <a href="#guardrail">§ 3 PR-1 护栏</a>
+        </header>
+        <p>JUnit timeout 系统属性精确化：实际配置改用 <code>junit.jupiter.execution.timeout.<strong>testable.method.</strong>default</code>（而非 spec § 3.1 写的 <code>timeout.default</code>）。原因：第三次 CI run 暴露 <code>CatalogArchitectureTest.setup()</code>（<code>@BeforeAll</code> ArchUnit 扫描）被 15s 杀掉。<code>timeout.default</code> 是 testable + lifecycle 双兜底；<code>testable.method.default</code> 仅限 <code>@Test</code> / <code>@TestFactory</code> / <code>@TestTemplate</code>。符合 PAP-18 本意：防 test 死循环 ≠ 限 lifecycle 准备工作。</p>
+      </li>
+
       <li class="note" data-type="change" data-time="2026-05-22T14:38">
         <header>
           <span class="note-type">CHANGE</span>
@@ -403,7 +412,7 @@ rg --type java -B1 -A5 'for\s*\(.*:\s*\w+\s*\)' \
     <footer class="notes-stats">
       总计:
       <span data-counter="decision">0</span> decisions /
-      <span data-counter="change">1</span> changes /
+      <span data-counter="change">2</span> changes /
       <span data-counter="tradeoff">0</span> tradeoffs /
       <span data-counter="other">0</span> others
     </footer>
