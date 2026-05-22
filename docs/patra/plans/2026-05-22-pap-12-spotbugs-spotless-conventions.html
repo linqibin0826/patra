@@ -21,7 +21,7 @@
       <li><a href="#tasks">任务列表</a>
         <ol class="toc-tasks">
           <li data-task-status="done"><a href="#task-1">Task 1 — 新建 linqibin.spotbugs.gradle.kts</a></li>
-          <li data-task-status="pending"><a href="#task-2">Task 2 — 新建 linqibin.spotless.gradle.kts</a></li>
+          <li data-task-status="done"><a href="#task-2">Task 2 — 新建 linqibin.spotless.gradle.kts</a></li>
           <li data-task-status="pending"><a href="#task-3">Task 3 — 改造 java-base 引入两个新 plugin</a></li>
           <li data-task-status="pending"><a href="#task-4">Task 4 — spotlessApply 全量基线化</a></li>
           <li data-task-status="pending"><a href="#task-5">Task 5 — spotbugsMain baseline + 告警决策处置</a></li>
@@ -177,7 +177,7 @@ git commit -m "build(spotbugs): 新增 linqibin.spotbugs convention plugin
         </ol>
       </article>
 
-      <article class="task" id="task-2" data-status="pending">
+      <article class="task" id="task-2" data-status="done">
         <header>
           <h2>Task 2：新建 linqibin.spotless.gradle.kts</h2>
           <dl class="files">
@@ -186,7 +186,7 @@ git commit -m "build(spotbugs): 新增 linqibin.spotbugs convention plugin
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2.1：写入完整 plugin 文件</strong>
             <p>注意：<code>googleJavaFormat</code> 默认 2 空格，与 <code>.editorconfig</code> <code>indent_size = 2</code> 对齐。PAP-13 release-spec AC 写的"4 空格"为口误（Task 8 同步修正）。</p>
             <pre><code class="lang-kotlin">/**
@@ -234,13 +234,13 @@ spotless {
 </code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2.2：跑 Gradle help 验证编译</strong>
             <p>运行：<code>./gradlew help --no-daemon</code></p>
             <p>预期：退出码 0；无 <code>linqibin.spotless.gradle.kts</code> 相关 Kotlin DSL 编译错误。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2.3：Commit</strong>
             <pre><code class="lang-bash">git add build-logic/src/main/kotlin/linqibin.spotless.gradle.kts
 git commit -m "build(spotless): 新增 linqibin.spotless convention plugin
