@@ -32,9 +32,10 @@
 
           <li data-task-status="pending"><a href="#task-N">Task N — [任务名]</a></li>
           -->
-          <li data-task-status="pending"><a href="#task-1">Task 1 — 创建 .github/dependabot.yml</a></li>
-          <li data-task-status="pending"><a href="#task-2">Task 2 — ci.yml 加 required-check 哨兵 job</a></li>
-          <li data-task-status="pending"><a href="#task-3">Task 3 — 创建 scripts/setup-branch-protection.sh</a></li>
+          <li data-task-status="done"><a href="#task-1">Task 1 — 创建 .github/dependabot.yml</a></li>
+          <!-- task-1 已完成；step-level data-status 在批量执行模式下不做细粒度切换，task 卡片状态为单一真相 -->
+          <li data-task-status="done"><a href="#task-2">Task 2 — ci.yml 加 required-check 哨兵 job</a></li>
+          <li data-task-status="done"><a href="#task-3">Task 3 — 创建 scripts/setup-branch-protection.sh</a></li>
           <li data-task-status="pending"><a href="#task-4">Task 4 — push 分支并开 PR</a></li>
           <li data-task-status="pending"><a href="#task-5">Task 5 — PR merge 后跑保护规则脚本</a></li>
           <li data-task-status="pending"><a href="#task-6">Task 6 — AC D5 四步验证</a></li>
@@ -145,7 +146,7 @@ git commit -m "feat: [description]"</code></pre>
       每开始任务/步骤改 in-progress，完成改 done。遇阻塞改 blocked，并在右栏 notes-panel 追加 data-type="other" entry 说明阻塞原因。
       -->
 
-      <article class="task" id="task-1" data-status="pending">
+      <article class="task" id="task-1" data-status="done">
         <header>
           <h2>任务 1：创建 <code>.github/dependabot.yml</code></h2>
           <dl class="files">
@@ -238,7 +239,7 @@ EOF
         </ol>
       </article>
 
-      <article class="task" id="task-2" data-status="pending">
+      <article class="task" id="task-2" data-status="done">
         <header>
           <h2>任务 2：<code>ci.yml</code> 新增 <code>required-check</code> 哨兵 job</h2>
           <dl class="files">
@@ -301,7 +302,7 @@ EOF
         </ol>
       </article>
 
-      <article class="task" id="task-3" data-status="pending">
+      <article class="task" id="task-3" data-status="done">
         <header>
           <h2>任务 3：创建 <code>scripts/setup-branch-protection.sh</code></h2>
           <dl class="files">
