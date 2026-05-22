@@ -4,8 +4,8 @@ import cn.hutool.core.util.StrUtil;
 import dev.linqibin.patra.catalog.domain.model.enums.AbstractType;
 import java.io.Serial;
 import java.io.Serializable;
-import java.util.Map;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import lombok.Builder;
 

@@ -1,7 +1,7 @@
 package dev.linqibin.patra.ingest.domain.model.enums;
 
-import lombok.Getter;
 import java.util.Locale;
+import lombok.Getter;
 
 /// 命名空间范围 (字典: ing_namespace_scope)。
 ///

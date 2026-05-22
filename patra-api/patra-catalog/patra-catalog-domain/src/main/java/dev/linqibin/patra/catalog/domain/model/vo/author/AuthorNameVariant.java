@@ -3,8 +3,8 @@ package dev.linqibin.patra.catalog.domain.model.vo.author;
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
 import java.io.Serial;
-import java.util.Locale;
 import java.io.Serializable;
+import java.util.Locale;
 
 /// 作者名字变体值对象。
 ///

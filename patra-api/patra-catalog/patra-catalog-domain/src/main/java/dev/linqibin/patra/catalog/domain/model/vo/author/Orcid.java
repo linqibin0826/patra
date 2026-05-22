@@ -2,8 +2,8 @@ package dev.linqibin.patra.catalog.domain.model.vo.author;
 
 import cn.hutool.core.lang.Assert;
 import java.io.Serial;
-import java.util.Locale;
 import java.io.Serializable;
+import java.util.Locale;
 
 /// ORCID 标识符值对象。封装 ORCID(Open Researcher and Contributor ID)的验证和管理。
 ///

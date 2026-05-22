@@ -1,8 +1,8 @@
 package dev.linqibin.patra.common.enums;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import java.util.Locale;
 import com.fasterxml.jackson.annotation.JsonValue;
+import java.util.Locale;
 import lombok.Getter;
 
 /// 上游数据源(溯源/Provenance)枚举。

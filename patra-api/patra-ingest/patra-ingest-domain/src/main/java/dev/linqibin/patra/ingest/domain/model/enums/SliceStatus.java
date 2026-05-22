@@ -1,7 +1,7 @@
 package dev.linqibin.patra.ingest.domain.model.enums;
 
-import lombok.Getter;
 import java.util.Locale;
+import lombok.Getter;
 
 /// 计划切片状态 (字典: ing_slice_status)。
 ///

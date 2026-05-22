@@ -3,8 +3,8 @@ package dev.linqibin.patra.catalog.domain.model.vo.venue;
 import cn.hutool.core.lang.Assert;
 import dev.linqibin.patra.catalog.domain.model.enums.VenueIdentifierType;
 import java.io.Serial;
-import java.util.Locale;
 import java.io.Serializable;
+import java.util.Locale;
 
 /// 载体标识符值对象（不可变）。
 ///

@@ -4,8 +4,8 @@ import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
 import dev.linqibin.patra.common.model.enums.PublicationIdentifierType;
 import java.io.Serial;
-import java.util.Locale;
 import java.io.Serializable;
+import java.util.Locale;
 
 /// 文献标识符值对象（单个标识符）。
 ///

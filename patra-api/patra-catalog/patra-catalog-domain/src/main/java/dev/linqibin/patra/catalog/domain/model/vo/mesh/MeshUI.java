@@ -2,8 +2,8 @@ package dev.linqibin.patra.catalog.domain.model.vo.mesh;
 
 import cn.hutool.core.lang.Assert;
 import java.io.Serial;
-import java.util.Locale;
 import java.io.Serializable;
+import java.util.Locale;
 
 /// MeSH 唯一标识符值对象。封装 MeSH UI 格式验证和类型区分。
 ///

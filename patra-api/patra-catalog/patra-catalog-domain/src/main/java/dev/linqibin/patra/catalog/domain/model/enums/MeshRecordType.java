@@ -1,7 +1,7 @@
 package dev.linqibin.patra.catalog.domain.model.enums;
 
-import lombok.Getter;
 import java.util.Locale;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 /// MeSH 记录类型枚举。

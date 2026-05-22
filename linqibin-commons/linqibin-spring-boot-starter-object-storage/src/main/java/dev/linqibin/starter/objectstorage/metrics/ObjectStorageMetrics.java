@@ -5,8 +5,8 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
-import java.util.concurrent.TimeUnit;
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 /// 对象存储指标收集器,记录上传/下载操作的性能和成功率。
 ///
@@ -137,7 +137,13 @@ public class ObjectStorageMetrics {
 
   private Counter counter(ProviderType providerType, String bucket, String status) {
     return Counter.builder(UPLOAD_TOTAL)
-        .tags("provider", providerType.name().toLowerCase(Locale.ROOT), "bucket", bucket, "status", status)
+        .tags(
+            "provider",
+            providerType.name().toLowerCase(Locale.ROOT),
+            "bucket",
+            bucket,
+            "status",
+            status)
         .register(meterRegistry);
   }
 
@@ -158,7 +164,13 @@ public class ObjectStorageMetrics {
 
   private Counter downloadCounter(ProviderType providerType, String bucket, String status) {
     return Counter.builder(DOWNLOAD_TOTAL)
-        .tags("provider", providerType.name().toLowerCase(Locale.ROOT), "bucket", bucket, "status", status)
+        .tags(
+            "provider",
+            providerType.name().toLowerCase(Locale.ROOT),
+            "bucket",
+            bucket,
+            "status",
+            status)
         .register(meterRegistry);
   }
 

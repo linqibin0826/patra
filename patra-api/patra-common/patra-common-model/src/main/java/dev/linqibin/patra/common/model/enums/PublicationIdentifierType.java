@@ -1,8 +1,8 @@
 package dev.linqibin.patra.common.model.enums;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import java.util.Locale;
 import com.fasterxml.jackson.annotation.JsonValue;
+import java.util.Locale;
 
 /// 标识符类型枚举。
 ///
