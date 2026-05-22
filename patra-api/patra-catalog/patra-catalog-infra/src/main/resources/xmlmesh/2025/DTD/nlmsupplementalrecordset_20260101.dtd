@@ -5,10 +5,10 @@
 
 <!-- ================================================================= -->
 <!--             Revision Notes Section
-  
+
   20250101 to 20260101 Removed DateCreated, DateRevised. Added DateIntroduced and LastUpdated
   20240101 to 20250101 Added RegistryNumberList and RegistryNumber is Optional and Repeatable
-  
+
 
 -->
 <!-- ================================================================= -->
@@ -44,4 +44,3 @@
 <!ELEMENT IndexingInformation (DescriptorReferredTo?,QualifierReferredTo?,ChemicalReferredTo?)>
 <!ELEMENT SupplementalRecordUI (#PCDATA) >
 <!ELEMENT SupplementalRecordName (String) >
-

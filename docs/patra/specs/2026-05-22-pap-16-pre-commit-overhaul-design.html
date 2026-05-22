@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PAP-16 — pre-commit hooks 重整 + commitlint + scripts/git Maven 清理</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- CSS 外置：相对路径 ../styles/ 是从生成位置 docs/patra/specs/ 出发；
+       模板本身在 .claude-marketplace/ 下打开时此 link 会 404（接受：模板预览以生成后的 spec 为准） -->
+  <link rel="stylesheet" href="../styles/journal.css">
+</head>
+<body>
+<div class="layout">
+
+  <!-- ============================================================
+       左栏：目录（TOC）
+       ============================================================ -->
+  <nav class="toc">
+    <h3>目录</h3>
+    <ol>
+      <li><a href="#background">背景与现状</a></li>
+      <li><a href="#scope">范围边界</a></li>
+      <li><a href="#research">业界调研采纳</a></li>
+      <li><a href="#architecture">Hook 体系架构</a></li>
+      <li><a href="#pre-commit-config">.pre-commit-config.yaml 设计</a></li>
+      <li><a href="#commitlint">commitlint 规则</a></li>
+      <li><a href="#cleanup">scripts/git 清理 + .gitignore</a></li>
+      <li><a href="#verification">落地步骤与 AC 验证</a></li>
+      <li><a href="#decisions">关键决策与备选</a></li>
+      <li><a href="#risks">风险与缓解</a></li>
+      <li><a href="#changes">改造文件清单</a></li>
+    </ol>
+  </nav>
+
+  <!-- ============================================================
+       中栏：内容
+       ============================================================ -->
+  <main class="content">
+
+    <header class="doc-header">
+      <h1>PAP-16 — pre-commit hooks 重整 + commitlint + scripts/git Maven 清理</h1>
+      <div class="meta-bar">
+        <span>📅 2026-05-22</span>
+        <span>🌿 worktree-pap-16-pre-commit-overhaul</span>
+        <span>🎯 spec</span>
+        <span class="status-pill">draft</span>
+      </div>
+    </header>
+
+    <aside class="callout summary">
+      <span class="title">关键决策摘要</span>
+      <p>把当前"<code>.pre-commit-config.yaml</code> 全注释 + 手写 <code>.git/hooks/pre-commit</code> bash 脚本 + 一批 Maven 时代的 <code>scripts/git/mvn_*.sh</code>"三件套替换成 pre-commit 框架统一管理的新体系。pre-commit 阶段挂 spotless（auto-apply）+ 文件 hygiene + gitleaks + commit-msg 阶段挂 commitlint（conventional commits，9 + 1 种 type）。<strong>不在本地挂 spotbugs</strong>（业界调研结论：spotbugs 单模块 10–60s、与 <code>--no-verify</code> 形成博弈，Spring Boot 等大型 Java OSS 均只在 CI 跑静态分析），spotbugs 完全交给 CI。删 <code>scripts/git/</code> 全部 5 个 <code>.sh</code> + <code>lib/maven_utils.sh</code> + <code>lib/jacoco_utils.sh</code>（成孤儿）。<code>.gitignore</code> 加宽匹配 <code>**/__pycache__/</code>。最终结果：<code>.pre-commit-config.yaml</code> 一文件描述全部本地门控，无 sh 包装。</p>
+    </aside>
+
+    <section id="background">
+      <h2>1. 背景与现状</h2>
+      <p>v0.3 Dev-Ready 的工程基线链条上，PAP-10 已落地 Gradle 化 CI，PAP-15 已落地 main 分支保护 + Required Status Checks + Dependabot。本 issue（PAP-16）把"本地开发机的 commit 时门控"补齐——这是单人开发者每天面对最高频的反馈回路，必须既快又稳。</p>
+      <p>Linear AC 原文叙述与仓库实际状态存在差异，必须先校准事实再设计。</p>
+
+      <h3>1.1 仓库当前真实状态（审计结果）</h3>
+      <table>
+        <thead>
+          <tr><th>路径</th><th>实际状态</th><th>是否影响 commit</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>.pre-commit-config.yaml</code></td>
+            <td>全文件被 <code>#</code> 注释，文件内容是 Maven 时代的旧配置（包含 <code>mvn-compile-changed-modules</code> 等 5 个 local hook 的草稿）。</td>
+            <td><strong>不生效</strong>（无活 hook）</td>
+          </tr>
+          <tr>
+            <td><code>.git/hooks/pre-commit</code></td>
+            <td>手写 bash 脚本（约 50 行），逻辑：<code>git diff --cached</code> 找 staged Java 文件 → <code>./gradlew spotlessApply -q --no-daemon</code> → 自动 <code>git add</code> 重格式化结果。<strong>非 husky / 非 pre-commit 框架。</strong></td>
+            <td><strong>生效</strong>（当前唯一活 hook）</td>
+          </tr>
+          <tr>
+            <td><code>.git/hooks/pre-push</code></td>
+            <td>整文件被 <code>#</code> 注释，内容是 pre-commit.com 框架的 stub（曾经装过 pre-commit 但失效）。</td>
+            <td>不生效</td>
+          </tr>
+          <tr>
+            <td><code>patra-portal/.husky/pre-commit</code></td>
+            <td>子目录 husky：<code>pnpm exec lint-staged; pnpm typecheck</code>。但 <code>core.hooksPath</code> 指向根 <code>.git/hooks/</code>，被根的手写脚本覆盖。</td>
+            <td><strong>不生效</strong>（历史摆设）</td>
+          </tr>
+          <tr>
+            <td><code>scripts/git/mvn_*.sh</code></td>
+            <td>5 个文件：<code>mvn_archunit_changed_modules.sh</code> / <code>mvn_compile_changed_modules.sh</code> / <code>mvn_spotbugs_changed_modules.sh</code> / <code>mvn_test_changed_modules.sh</code> / <code>validate_commit_msg.sh</code>。Maven 时代遗留，已无 <code>.pre-commit-config.yaml</code> 引用。</td>
+            <td>不生效（dead code）</td>
+          </tr>
+          <tr>
+            <td><code>scripts/git/lib/maven_utils.sh</code></td>
+            <td>被全部 <code>mvn_*.sh</code> source。</td>
+            <td>不生效</td>
+          </tr>
+          <tr>
+            <td><code>scripts/git/lib/jacoco_utils.sh</code></td>
+            <td>仅被 <code>mvn_test_changed_modules.sh</code> source。删 mvn_test 后将成孤儿。</td>
+            <td>不生效</td>
+          </tr>
+          <tr>
+            <td>commitlint</td>
+            <td>无任何配置，无任何 commit message 校验。</td>
+            <td>—</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>1.2 与 Linear AC 表述的差异</h3>
+      <p>Linear PAP-16 AC 写 "审计现有 <code>.pre-commit-config.yaml</code>，移除引用 Maven 的 hook" —— 但 <code>.pre-commit-config.yaml</code> 全文件被注释，根本没有"在生效的 Maven hook"可以移除。实际工作是<strong>整文件改写（立新）</strong>而非"重整"：从一个被注释禁用的旧配置，变成一个全新设计的活配置。本 spec 把 Linear AC 的精神（"删 Maven 残留 + 加 commitlint + 增量格式化检查"）翻译为基于真实仓库状态的执行计划。</p>
+    </section>
+
+    <section id="scope">
+      <h2>2. 范围边界</h2>
+      <div class="two-col">
+        <aside class="callout success">
+          <span class="title">In Scope</span>
+          <ul>
+            <li>整文件改写 <code>.pre-commit-config.yaml</code>（立新）。</li>
+            <li>新建 <code>commitlint.config.cjs</code>（根仓库），承载 commit-msg 规则。</li>
+            <li>删 <code>scripts/git/</code> 整个目录（5 个 <code>.sh</code> + <code>lib/maven_utils.sh</code> + <code>lib/jacoco_utils.sh</code>，最终 <code>scripts/git/</code> 不复存在）。</li>
+            <li>追加 <code>.gitignore</code>：<code>**/__pycache__/</code>（宽匹配，一次到位）。</li>
+            <li>本地执行 <code>pre-commit install --install-hooks --overwrite</code>，框架接管 <code>.git/hooks/pre-commit</code> + <code>.git/hooks/commit-msg</code>。</li>
+            <li>跑一次 <code>pre-commit run --all-files</code> 做首次清扫（end-of-file-fixer / trailing-whitespace 会改一批文件）。</li>
+            <li>跑 8 步 AC D6 验证（见第 8 节）。</li>
+          </ul>
+        </aside>
+        <aside class="callout warning">
+          <span class="title">Out of Scope</span>
+          <ul>
+            <li><code>patra-portal/.husky/</code> 不动（本就不生效；未来开独立 issue 处理 portal hooks 与根框架的关系）。</li>
+            <li><strong>不</strong>把 spotbugs 挂进 pre-commit 或 pre-push（业界调研结论，详见第 3 节）。</li>
+            <li>不动 <code>build-logic/</code>（spotless / spotbugs 插件配置维持现状）。</li>
+            <li>不动 CI workflow（<code>spotlessCheck</code> 与 <code>spotbugsMain</code> 已经在跑，是唯一强制门控）。</li>
+            <li><code>scripts/letpub/</code>（业务工具，归未来"数据接入"版本）。</li>
+            <li><code>scripts/migrate-javadoc-*.py</code> + <code>normalize-javadoc-tags.py</code> + <code>test-javadoc-migration.py</code>（一次性工具，留）。</li>
+            <li><code>scripts/setup-branch-protection.sh</code>（PAP-15 产物，留）。</li>
+            <li><code>origin/main</code> 上 <code>8e5c715b force push test</code> 污染 commit（PAP-15 扫尾，与本 issue 无关）。</li>
+          </ul>
+        </aside>
+      </div>
+    </section>
+
+    <section id="research">
+      <h2>3. 业界调研采纳：为什么 spotbugs 不进 hook</h2>
+      <p>Linear AC 原文写 "新增 spotless / spotbugs 增量检查 hook（仅变更模块，调用 Gradle）"。设计阶段对此条做了一次有针对性的业界调研，结论与 AC 原文相左，本 spec 采纳调研结论并显式修订 AC 措辞。</p>
+
+      <h3>3.1 调研要点</h3>
+      <ul>
+        <li><strong>Spring Boot 官方 <code>git/hooks/</code> 目录</strong>只有 <code>forward-merge</code> 一个脚本（自动建 GitHub issue），<strong>无任何静态分析 hook</strong>。</li>
+        <li>Elasticsearch / Apache 系大型 Java OSS 同理：本地 hooks 只做轻量门控（格式、commit-msg），SpotBugs / SonarQube 等静态分析全部交给 CI。</li>
+        <li>2024–2026 共识：本地 hook 执行 &gt; 几秒 = 坏体验，会被 <code>git commit --no-verify</code> 绕过，反而养成绕过习惯。</li>
+        <li>SpotBugs 单模块典型耗时 10–60s，需完整编译产物，且误报率不低。</li>
+        <li>对单人 greenfield 项目：CI 已是不可绕过的强制门控（PAP-15 落地），本地重复跑同一检查零增量价值。</li>
+      </ul>
+
+      <h3>3.2 采纳结论</h3>
+      <aside class="callout info">
+        <span class="title">采纳</span>
+        <ul>
+          <li><strong>spotless</strong>（格式化，auto-apply，秒级）→ <strong>pre-commit 阶段</strong>。</li>
+          <li><strong>commitlint</strong>（commit message 校验，毫秒级）→ <strong>commit-msg 阶段</strong>。</li>
+          <li><strong>spotbugs</strong>（静态分析）→ <strong>CI only</strong>，本地任何阶段都不挂。</li>
+          <li><strong>pre-push</strong> 阶段 → 不挂任何 hook（pre-commit 框架仍 install pre-push 入口文件，但配置中无 pre-push hook，触发时立即放行）。</li>
+        </ul>
+      </aside>
+      <p>这条调整不削弱质量保证：CI 的 <code>spotbugsMain</code> 仍在 PR 合并前强制执行（PAP-15 Required Status Checks 已绑定）。</p>
+    </section>
+
+    <section id="architecture">
+      <h2>4. Hook 体系架构</h2>
+      <pre><code>┌─────────────────────────────────────────────────────────────────┐
+│              Patra Hook 体系（PAP-16 落地后）                    │
+├─────────────────────────────────────────────────────────────────┤
+│  开发机本地                                                       │
+│  ────────────────                                                │
+│  commit  ──► .git/hooks/pre-commit（pre-commit 框架入口）         │
+│              stages: [pre-commit]                                │
+│              ├─ hygiene（pre-commit-hooks 仓库）                  │
+│              │   check-merge-conflict / check-yaml /              │
+│              │   check-json / check-toml /                        │
+│              │   check-added-large-files (--maxkb=2000) /         │
+│              │   detect-private-key /                             │
+│              │   end-of-file-fixer / trailing-whitespace /        │
+│              │   mixed-line-ending (--fix=lf)                     │
+│              ├─ secrets:gitleaks v8.21.2 --staged                 │
+│              └─ java-format（local hook）：                       │
+│                  ./gradlew spotlessApply -q --no-daemon           │
+│                  （files: \.java$|\.gradle\.kts$）                │
+│                                                                  │
+│  commit-msg ──► .git/hooks/commit-msg（pre-commit 框架入口）      │
+│                  stages: [commit-msg]                             │
+│                  └─ commitlint                                    │
+│                      （alessandrojcm/commitlint-pre-commit-hook   │
+│                       v9.18.0，自带 Node 容器，根仓库零 Node）   │
+│                                                                  │
+│  push    ──► .git/hooks/pre-push（pre-commit 框架入口）           │
+│              无 hook 配置 → 立即放行                              │
+│                                                                  │
+│  ────────────────                                                │
+│  GitHub Actions（CI）：唯一强制门控（PAP-15 Required Checks）    │
+│  ────────────────                                                │
+│  ├─ spotlessCheck（防 hook 被绕过的格式化二次校验）              │
+│  ├─ spotbugsMain / spotbugsTest（全量，Gradle build cache 加速） │
+│  ├─ 测试 + JaCoCo（PAP-10 已落地）                                │
+│  └─ CodeRabbit（PAP-14 已落地）                                   │
+└─────────────────────────────────────────────────────────────────┘</code></pre>
+      <p>体积：<code>.pre-commit-config.yaml</code> 约 50 行；<code>commitlint.config.cjs</code> 约 20 行；根仓库不引入任何 Node 依赖（commitlint hook 自带容器，spotless 走 Gradle）。</p>
+    </section>
+
+    <section id="pre-commit-config">
+      <h2>5. <code>.pre-commit-config.yaml</code> 设计</h2>
+      <p>整文件改写（立新）。结构：顶部全局配置 → 4 个 <code>repos:</code> 段。</p>
+      <pre><code class="language-yaml">default_install_hook_types: [pre-commit, commit-msg]
+default_stages: [pre-commit]
+fail_fast: false
+minimum_pre_commit_version: "3.5.0"
+
+repos:
+  # 1) 通用 hygiene
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-merge-conflict
+      - id: check-yaml
+        exclude: ^docs/patra/specs/
+      - id: check-json
+      - id: check-toml
+      - id: check-added-large-files
+        args: ['--maxkb=2000']
+      - id: detect-private-key
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  # 2) Secret scanning
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+
+  # 3) Java 格式化（auto-apply）
+  - repo: local
+    hooks:
+      - id: spotless-apply
+        name: spotless apply (Java + gradle.kts)
+        entry: ./gradlew spotlessApply -q --no-daemon
+        language: system
+        pass_filenames: false
+        files: '\.java$|\.gradle\.kts$'
+        stages: [pre-commit]
+
+  # 4) commit-msg：commitlint
+  - repo: https://github.com/alessandrojcm/commitlint-pre-commit-hook
+    rev: v9.18.0
+    hooks:
+      - id: commitlint
+        stages: [commit-msg]
+        additional_dependencies: ['@commitlint/config-conventional@19.5.0']
+</code></pre>
+      <h3>5.1 设计要点</h3>
+      <ul>
+        <li><strong>spotless 走 <code>language: system</code> + local hook</strong>，调 <code>gradlew</code>。<code>pass_filenames: false</code> 是因为 Gradle 任务不接受文件参数；<code>files: '\.java$|\.gradle\.kts$'</code> 对齐 <code>build-logic/src/main/kotlin/linqibin.java-base.gradle.kts</code> 中 spotless 实际 target（<code>java { target("src/**/*.java") }</code> + <code>kotlinGradle { target("*.gradle.kts") }</code>）——避免改 Markdown / 资源文件时触发空跑。</li>
+        <li><strong><code>--no-daemon</code></strong> 避免开发机 daemon 与 IDE Gradle daemon 抢端口；冷启动慢 1–2s，可接受。</li>
+        <li><strong>hook 执行后修改文件 → 框架自动报错 "files were modified by this hook"</strong>（标准行为）→ 开发者需 <code>git add</code> 重 commit。这与现有手写脚本的"悄悄 <code>git add</code>"行为相比，更显式更安全。</li>
+        <li><strong>commitlint 走 alessandrojcm/commitlint-pre-commit-hook</strong>，自带 Node 容器，根仓库不引入 <code>package.json</code> / <code>node_modules</code>。</li>
+        <li><strong>gitleaks v8.21.2</strong>：使用其官方仓库的 pre-commit hook（默认对 staged 区扫描）。</li>
+        <li><strong>不要 codespell</strong>：中文 commit/docs 占主，对英文 typo 价值不高。</li>
+      </ul>
+    </section>
+
+    <section id="commitlint">
+      <h2>6. commitlint 规则（<code>commitlint.config.cjs</code>）</h2>
+      <pre><code class="language-js">// commitlint.config.cjs
+module.exports = {
+  extends: ['@commitlint/config-conventional'],
+  rules: {
+    'type-enum': [2, 'always', [
+      'feat', 'fix', 'docs', 'refactor',
+      'test', 'chore', 'perf', 'style', 'ci',
+      'build',
+    ]],
+    'type-case': [2, 'always', 'lower-case'],
+    'type-empty': [2, 'never'],
+    'subject-empty': [2, 'never'],
+    'subject-full-stop': [2, 'never', '.'],
+    'header-max-length': [2, 'always', 100],
+    'scope-case': [2, 'always', 'lower-case'],
+  },
+};
+</code></pre>
+      <h3>6.1 规则取舍说明</h3>
+      <ul>
+        <li><strong>type-enum</strong>：Linear AC 给的 9 种 + <code>build</code>（Gradle 相关 commit 已经在用，例如最近的 <code>build(gradle): settings.gradle.kts...</code>）。</li>
+        <li><strong>header-max-length: 100</strong>：默认 72 对中文 commit 过紧（中文 commit 经常需要 60+ 字符），100 是社区常见折衷。</li>
+        <li><strong>scope 不强制白名单</strong>：绿地阶段模块还在演进（v0.3 仍在 Dev-Ready），强制 scope 白名单会频繁打断。仅要求 <code>scope-case: lower-case</code>。</li>
+        <li><strong>不强制 PAP-XX 前缀</strong>：Linear 的 issue 关联走 branch name + PR title 自动匹配（PAP-15 PR #62 已验证生效）。强制 commit 前缀会大量打断重构 / 文档 / 配置类 commit。未来若确实需要，单独开 issue 加 <code>references-empty: [2, 'never']</code> 与自定义 parser。</li>
+      </ul>
+    </section>
+
+    <section id="cleanup">
+      <h2>7. scripts/git 清理 + .gitignore</h2>
+
+      <h3>7.1 删除清单（整个 scripts/git/ 目录消失）</h3>
+      <table>
+        <thead>
+          <tr><th>路径</th><th>引用关系</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>scripts/git/mvn_archunit_changed_modules.sh</code></td><td>source <code>lib/maven_utils.sh</code></td></tr>
+          <tr><td><code>scripts/git/mvn_compile_changed_modules.sh</code></td><td>source <code>lib/maven_utils.sh</code></td></tr>
+          <tr><td><code>scripts/git/mvn_spotbugs_changed_modules.sh</code></td><td>source <code>lib/maven_utils.sh</code></td></tr>
+          <tr><td><code>scripts/git/mvn_test_changed_modules.sh</code></td><td>source <code>lib/maven_utils.sh</code> + <code>lib/jacoco_utils.sh</code></td></tr>
+          <tr><td><code>scripts/git/validate_commit_msg.sh</code></td><td>由 commitlint 取代</td></tr>
+          <tr><td><code>scripts/git/lib/maven_utils.sh</code></td><td>仅被上述 5 个 mvn 脚本引用</td></tr>
+          <tr><td><code>scripts/git/lib/jacoco_utils.sh</code></td><td>仅被 mvn_test 引用，删 mvn_test 后成孤儿</td></tr>
+        </tbody>
+      </table>
+      <p><strong>验证孤儿性</strong>：本 spec 撰写期已 <code>grep -rn</code> 全仓，确认 <code>maven_utils</code> / <code>jacoco_utils</code> 除上述 source 关系外无其他引用（CI、build.gradle.kts、build-logic、Makefile、.github 均无引用）。删除安全。</p>
+
+      <h3>7.2 <code>.gitignore</code> 改动</h3>
+      <pre><code class="language-diff"># 在 "Build outputs" 之后 / "Gradle" 之前合适位置
++
++##############################
++# Python script caches
++##############################
++**/__pycache__/</code></pre>
+      <p><strong>用宽匹配 <code>**/__pycache__/</code></strong>（而非 Linear AC 的窄路径 <code>scripts/__pycache__/</code>）：pre-commit 框架自身、portal/migrate-javadoc 等多个位置都会产生 <code>__pycache__</code>，一次到位避免后续二改。AC D6 的 <code>git check-ignore scripts/__pycache__/</code> 仍因 <code>**/__pycache__/</code> 匹配返回 0。</p>
+
+      <h3>7.3 <code>.git/hooks/pre-commit</code> 与 <code>.git/hooks/pre-push</code></h3>
+      <p>这两个文件不在 git 跟踪范围（<code>.git/</code> 全部 ignored），不能"删 commit"。处理方式：本地执行 <code>pre-commit install --install-hooks --overwrite</code>，该命令会自动覆盖现有手写 <code>pre-commit</code> 与老 pre-push stub，替换为 pre-commit 框架的入口。</p>
+    </section>
+
+    <section id="verification">
+      <h2>8. 落地步骤与 AC D6 验证</h2>
+
+      <h3>8.1 落地步骤（实施期顺序）</h3>
+      <ol>
+        <li>整文件改写 <code>.pre-commit-config.yaml</code>（第 5 节内容）。</li>
+        <li>新建 <code>commitlint.config.cjs</code>（第 6 节内容）。</li>
+        <li>删除 <code>scripts/git/</code> 整个目录（<code>git rm -r scripts/git/</code>）。</li>
+        <li>追加 <code>.gitignore</code>：<code>**/__pycache__/</code>。</li>
+        <li>本地执行 <code>pre-commit install --install-hooks --overwrite</code>。</li>
+        <li>跑 <code>pre-commit run --all-files</code> 做首次清扫（hygiene hooks 会修一批 EOL / trailing-ws），<strong>首次清扫单独 commit</strong>（不与功能改动混 PR）。</li>
+        <li>跑 8 步 AC D6 验证（下表）。</li>
+        <li>开 PR，等 CI 全绿合并。</li>
+      </ol>
+
+      <h3>8.2 AC D6 验证矩阵</h3>
+      <table>
+        <thead>
+          <tr><th>#</th><th>命令</th><th>期望</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><code>pre-commit install --install-hooks --overwrite</code></td>
+            <td>输出 <code>pre-commit installed at .git/hooks/pre-commit</code> + <code>.git/hooks/commit-msg</code></td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><code>pre-commit run --all-files</code></td>
+            <td>全部 hooks 跑一遍，首次会修一批 EOL/trailing-ws</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><code>echo "garbage no prefix" &gt; /tmp/m &amp;&amp; git commit --allow-empty -F /tmp/m</code></td>
+            <td>commitlint 拒绝（<code>type-empty</code> / <code>subject-empty</code>）</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td><code>echo "feat(pap-16): bootstrap hooks" &gt; /tmp/m &amp;&amp; git commit --allow-empty -F /tmp/m</code></td>
+            <td>commitlint 通过</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td><code>ls scripts/git/mvn_*.sh</code></td>
+            <td><code>No such file or directory</code>（整个 <code>scripts/git/</code> 已删）</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td><code>git check-ignore -v scripts/__pycache__/</code></td>
+            <td>命中 <code>.gitignore:N:**/__pycache__/</code></td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td>改一个有格式问题的 Java 文件 → <code>git commit -m "feat: x"</code></td>
+            <td>hook 提示 <code>files were modified by this hook</code>，要求 <code>git add</code> 后重 commit</td>
+          </tr>
+          <tr>
+            <td>8</td>
+            <td>开 PR，等 CI 跑完</td>
+            <td><code>spotlessCheck</code> 通过 + <code>spotbugsMain</code> 通过（回归保护）</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="decisions">
+      <h2>9. 关键决策与备选</h2>
+
+      <div class="decision">
+        <h3>决策 1：spotbugs 完全移出本地 hook，只在 CI 跑</h3>
+        <p>本地任何 stage 都不挂 spotbugs。CI 的 <code>spotbugsMain</code> + PAP-15 Required Status Checks 是唯一强制门控。</p>
+        <p class="alternatives"><strong>备选 A：</strong>pre-push 跑 spotbugsChanged（仅变更模块）— 否决：业界调研显示 Spring Boot 等无此实践；本地 push 慢，会被 <code>--no-verify</code> 绕过；CI 已是强制门控，本地重复零增量价值。<br>
+        <strong>备选 B：</strong>pre-commit 跑 spotbugs — 否决：commit 阶段几十秒延迟会被频繁绕过，反而劣化质量；唯一可能的好处（更早反馈）被 CI 反馈周期 &lt; 5 分钟覆盖。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 2：commitlint 走 alessandrojcm/commitlint-pre-commit-hook</h3>
+        <p>用 pre-commit 框架原生的 commitlint hook（自带 Node 容器）。根仓库不引入 <code>package.json</code> / <code>node_modules</code>。</p>
+        <p class="alternatives"><strong>备选 A：</strong>根仓库引 <code>@commitlint/cli</code> + husky — 否决：根仓库出现 Node 生态产物（package.json / node_modules），与 Java-first monorepo 结构混杂；且与 portal 的 husky 形成双套路。<br>
+        <strong>备选 B：</strong><code>commitlint-rs</code> 单二进制 — 否决：每台开发机要自行装 Rust 二进制，跨平台麻烦，价值不抵成本。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 3：spotless 走 <code>./gradlew spotlessApply</code> 全量，不引 ratchetFrom</h3>
+        <p>local hook 调用 <code>./gradlew spotlessApply -q --no-daemon</code>，信任 Gradle 任务级 UP-TO-DATE 缓存。</p>
+        <p class="alternatives"><strong>备选 A：</strong>build-logic 配置 <code>spotless { ratchetFrom 'origin/main' }</code>（文件级增量）— 否决：在 detached HEAD / shallow clone（如 CI runner 默认 fetch-depth:1）下可能失败；与 spotbugs 不再挂 hook 后，对称性需求消失，仅留复杂度。<br>
+        <strong>备选 B：</strong>build-logic 写聚合任务 <code>spotlessChanged</code>（仅变更模块）— 否决：spotbugs 不再挂 hook，对称性需求消失；spotless 任务本身已极轻量（秒级），全量已足够。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 4：<code>.gitignore</code> 用宽匹配 <code>**/__pycache__/</code></h3>
+        <p>一次到位匹配所有路径下的 Python 缓存。Linear AC 的窄匹配 <code>scripts/__pycache__/</code> 仍命中（被宽匹配覆盖）。</p>
+        <p class="alternatives"><strong>备选：</strong>严格按 AC 只加 <code>scripts/__pycache__/</code> — 否决：pre-commit 框架、portal 内的 Python 工具、migrate-javadoc 脚本都会产生 <code>__pycache__</code>，窄匹配后续需补充，浪费一次改动机会。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 5：portal <code>/.husky/</code> 不动</h3>
+        <p>当前不生效（被根 <code>.git/hooks/pre-commit</code> 手写脚本覆盖），保留待未来独立 issue 处理。本 issue 严格保持 surgical changes，不扩散到 portal。</p>
+        <p class="alternatives"><strong>备选：</strong>顺手删 portal husky + 把 portal lint/typecheck 迁到根 pre-commit 框架 — 否决：超出 PAP-16 范围；portal 工具链（biome / typecheck）与 Java hook 的混编需独立设计（例如 lint-staged 子目录过滤策略）。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 6：首次 <code>pre-commit run --all-files</code> 清扫单独 commit</h3>
+        <p>hygiene hooks（end-of-file-fixer / trailing-whitespace / mixed-line-ending）首次跑会改一批文件，单独成 commit，不与本 issue 主要功能改动混 PR diff，便于审查。</p>
+        <p class="alternatives"><strong>备选：</strong>合并到一个 commit — 否决：PR diff 中 hygiene 噪音会淹没核心配置改动，审查体验差。</p>
+      </div>
+    </section>
+
+    <section id="risks">
+      <h2>10. 风险与缓解</h2>
+      <table>
+        <thead>
+          <tr><th>风险</th><th>等级</th><th>缓解</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>首次 <code>pre-commit run --all-files</code> 改一大批文件（EOL/trailing-ws），PR diff 难审查</td>
+            <td><span class="pill mid">mid</span></td>
+            <td>实施步骤明确将首次清扫单独成 commit；主功能改动 commit 不含 hygiene 噪音。</td>
+          </tr>
+          <tr>
+            <td><code>./gradlew spotlessApply --no-daemon</code> 冷启动 1–2s，commit 体验略慢</td>
+            <td><span class="pill low">low</span></td>
+            <td>接受。仍符合 &lt; 3s 体验目标。后续若 daemon 与 IDE 抢端口问题不严重可考虑去 <code>--no-daemon</code>。</td>
+          </tr>
+          <tr>
+            <td>commitlint hook 首次拉取 Node 容器（pre-commit 框架自管）</td>
+            <td><span class="pill low">low</span></td>
+            <td>一次性成本（数十 MB / 数秒），之后框架缓存。文档明示首次安装会拉取。</td>
+          </tr>
+          <tr>
+            <td>开发者忘记 <code>pre-commit install</code>，hook 不生效</td>
+            <td><span class="pill mid">mid</span></td>
+            <td>README + dev-setup 文档强提示；CI 的 <code>spotlessCheck</code> + commitlint（可选在 CI 加 commitlint job，本 issue 不强制）作为兜底。</td>
+          </tr>
+          <tr>
+            <td>commitlint 误拦合理 commit，开发者频繁 <code>--no-verify</code></td>
+            <td><span class="pill low">low</span></td>
+            <td>规则保守（scope 不强制白名单、header 长度 100、不强制 PAP- 前缀），降低误拦率。落地一周后 review 拦截记录，必要时调整。</td>
+          </tr>
+          <tr>
+            <td>整个 <code>scripts/git/</code> 删除后，未来若需"变更模块 Gradle"脚本需重新设计</td>
+            <td><span class="pill low">low</span></td>
+            <td>本 spec 明确不需要——CI 全量 + 本地仅 spotlessApply 足够；真需要时另开 issue，按当时需求设计（不预先建摆设）。</td>
+          </tr>
+          <tr>
+            <td>Linear AC 与 spec 措辞差异（spotbugs 不进 hook），未来回溯审计可能困惑</td>
+            <td><span class="pill low">low</span></td>
+            <td>本 spec 第 3 节显式记录采纳调研结论的理由；落地后在 Linear issue 评论引用 spec 链接说明。</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="changes">
+      <h2>11. 改造文件清单</h2>
+      <table>
+        <thead>
+          <tr><th>#</th><th>文件</th><th>操作</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><code>.pre-commit-config.yaml</code></td>
+            <td><span class="pill modify">modify</span></td>
+            <td>整文件改写：删全部注释块，按第 5 节内容立新（hygiene + gitleaks + spotless + commitlint 4 段 repos）</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><code>commitlint.config.cjs</code></td>
+            <td><span class="pill create">create</span></td>
+            <td>第 6 节内容（约 20 行），承载 commit-msg 规则</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><code>scripts/git/mvn_archunit_changed_modules.sh</code></td>
+            <td><span class="pill delete">delete</span></td>
+            <td>Maven 时代遗留，无引用</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td><code>scripts/git/mvn_compile_changed_modules.sh</code></td>
+            <td><span class="pill delete">delete</span></td>
+            <td>同上</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td><code>scripts/git/mvn_spotbugs_changed_modules.sh</code></td>
+            <td><span class="pill delete">delete</span></td>
+            <td>同上</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td><code>scripts/git/mvn_test_changed_modules.sh</code></td>
+            <td><span class="pill delete">delete</span></td>
+            <td>同上</td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td><code>scripts/git/validate_commit_msg.sh</code></td>
+            <td><span class="pill delete">delete</span></td>
+            <td>由 commitlint 取代</td>
+          </tr>
+          <tr>
+            <td>8</td>
+            <td><code>scripts/git/lib/maven_utils.sh</code></td>
+            <td><span class="pill delete">delete</span></td>
+            <td>仅被上述 5 个 mvn 脚本引用，删后成孤儿</td>
+          </tr>
+          <tr>
+            <td>9</td>
+            <td><code>scripts/git/lib/jacoco_utils.sh</code></td>
+            <td><span class="pill delete">delete</span></td>
+            <td>仅被 mvn_test 引用，删后成孤儿</td>
+          </tr>
+          <tr>
+            <td>10</td>
+            <td><code>scripts/git/lib/</code>（空目录）</td>
+            <td><span class="pill delete">delete</span></td>
+            <td>git 不跟踪空目录，删 .sh 后自动消失</td>
+          </tr>
+          <tr>
+            <td>11</td>
+            <td><code>scripts/git/</code>（空目录）</td>
+            <td><span class="pill delete">delete</span></td>
+            <td>同上</td>
+          </tr>
+          <tr>
+            <td>12</td>
+            <td><code>.gitignore</code></td>
+            <td><span class="pill modify">modify</span></td>
+            <td>追加 Python 缓存段：<code>**/__pycache__/</code></td>
+          </tr>
+        </tbody>
+      </table>
+      <p><strong>不动</strong>（明确列出避免审查时困惑）：<code>.git/hooks/*</code>（不在 git 跟踪范围）、<code>patra-portal/.husky/*</code>、<code>build-logic/*</code>、<code>build.gradle.kts</code>、<code>.github/workflows/*</code>、<code>scripts/letpub/*</code>、<code>scripts/migrate-javadoc-*.py</code>、<code>scripts/normalize-javadoc-tags.py</code>、<code>scripts/test-javadoc-migration.py</code>、<code>scripts/setup-branch-protection.sh</code>。</p>
+    </section>
+
+    <aside class="callout info">
+      <span class="title">Done 判定</span>
+      <ol>
+        <li><code>.pre-commit-config.yaml</code> 已立新（hygiene + gitleaks + spotless + commitlint），无任何 Maven 残留措辞。</li>
+        <li><code>commitlint.config.cjs</code> 已落地，9 + 1 种 type，header-max-length: 100。</li>
+        <li><code>scripts/git/</code> 整个目录已删除（<code>ls scripts/git/</code> 报 No such file or directory）。</li>
+        <li><code>.gitignore</code> 含 <code>**/__pycache__/</code>，<code>git check-ignore scripts/__pycache__/</code> 命中。</li>
+        <li>本地 <code>pre-commit install --install-hooks --overwrite</code> 成功，<code>.git/hooks/pre-commit</code> 与 <code>commit-msg</code> 已被框架接管。</li>
+        <li>8 步 AC D6 验证矩阵全部通过。</li>
+        <li>PR 合并到 main，CI 全绿（<code>spotlessCheck</code> + <code>spotbugsMain</code> 不回归）。</li>
+        <li>PAP-17（README 同步）的依赖（本 issue blocks PAP-17）可推进。</li>
+      </ol>
+    </aside>
+
+  </main>
+
+  <!-- ============================================================
+       右栏：Implementation Notes（实施期由 Claude Code 维护）
+       ============================================================ -->
+  <aside class="notes-panel" id="notes">
+    <header>
+      <h2>Implementation Notes</h2>
+      <p class="hint">实施期由 Claude Code 即时追加。规则：遇到 spec 未规定的<strong>决定</strong>、必要<strong>更改</strong>、不可避免的<strong>权衡</strong>、其他用户应知事项，立即用 Edit 追加 entry，不要等任务结束。</p>
+    </header>
+
+    <ol class="notes-log">
+      <!-- ENTRY TEMPLATE（注释保留供实施期 AI 复制）:
+
+      <li class="note" data-type="decision" data-time="YYYY-MM-DDTHH:MM">
+        <header>
+          <span class="note-type">DECISION</span>
+          <time datetime="YYYY-MM-DDTHH:MM">MM-DD HH:MM</time>
+          <a href="#sec-N">§ N 章节名</a>
+        </header>
+        <p>描述：spec 未规定 X，实施时选择 Y。理由：...</p>
+      </li>
+
+      data-type 4 类：decision / change / tradeoff / other
+      追加 entry 时同步更新下方 notes-stats footer 的对应 counter 数字。
+      -->
+    </ol>
+
+    <p class="empty-state">no notes yet</p>
+
+    <footer class="notes-stats">
+      总计:
+      <span data-counter="decision">0</span> decisions /
+      <span data-counter="change">0</span> changes /
+      <span data-counter="tradeoff">0</span> tradeoffs /
+      <span data-counter="other">0</span> others
+    </footer>
+  </aside>
+
+</div>
+</body>
+</html>
