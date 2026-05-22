@@ -279,7 +279,12 @@ jobs:
           path: .
 
       - name: 📊 Aggregate JaCoCo reports (test + integrationTest)
-        run: ./gradlew testCodeCoverageReport integrationTestCodeCoverageReport
+        run: ./gradlew testCodeCoverageReport integrationTestCodeCoverageReport -x test -x integrationTest
+        # -x test -x integrationTest: .exec 文件已经在前置 download-artifact 拿到,
+        # 不需要重跑 :test/:integrationTest task (否则 jacoco-report-aggregation
+        # 会触发所有模块的 :test 依赖,在 cache 不命中时全量重跑,导致 step
+        # 从 ~89s 飙升到 ~300s)。
+        # 保留 :compileJava 依赖 (jacoco report 需要 classes 来标注覆盖率)。
 
       - name: 📈 Upload coverage to Codecov
         uses: codecov/codecov-action@v4
