@@ -1,5 +1,7 @@
 name: CI
 
+# paths-ignore 列出的路径在 docs-only PR 上由 ci-docs.yml 兜底上报 required-check。
+# 修改下面的 paths-ignore 时务必同步 ci-docs.yml 的 paths（保持互补，否则 docs-only PR 会卡在 required-check）。
 on:
   push:
     branches: [main]

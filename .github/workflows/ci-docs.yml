@@ -1,0 +1,44 @@
+name: CI (docs-only)
+
+# 与 ci.yml 的 paths-ignore 互补，专门覆盖 docs-only PR 场景：
+#
+# main 分支保护要求名为 `required-check` 的 status check 通过。
+# ci.yml 用 paths-ignore 把 `**.md` / `docs/**` / `.gitignore` / `.editorconfig` / `LICENSE` 整体排除掉，
+# 导致 docs-only PR 不触发 ci.yml，required-check 永不汇报，PR 永远卡在 "Waiting for status to be reported"。
+#
+# 本 workflow 用相反方向的 paths 触发，提供一个名同义的 `required-check` job，让 docs-only PR 也能 satisfy 分支保护。
+# 修改 paths 时必须与 ci.yml 的 paths-ignore 保持互补（任何一处变了，这里同步）。
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+      - '.editorconfig'
+      - 'LICENSE'
+  pull_request:
+    branches: [main]
+    paths:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+      - '.editorconfig'
+      - 'LICENSE'
+  workflow_dispatch:
+
+concurrency:
+  group: ci-docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  required-check:
+    name: required-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: ✓ Docs-only change — required-check satisfied
+        run: |
+          echo "Docs-only PR (paths matched **.md / docs/** / .gitignore / .editorconfig / LICENSE)"
+          echo "Required check 由本 docs-only workflow 直接上报，无需跑 Gradle build。"
