@@ -22,5 +22,5 @@ dependencies {
 
     // 测试依赖
     testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
-    testImplementation(project(path = ":patra-object-storage:patra-object-storage-domain", configuration = "testArtifacts"))
+    testImplementation(testFixtures(project(":patra-object-storage:patra-object-storage-domain")))
 }
