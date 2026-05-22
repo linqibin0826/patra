@@ -1060,6 +1060,33 @@ git push origin pap-18-flaky-audit</code></pre>
         <p>仓库 <code>.pre-commit-config.yaml</code> 全文件被 <code>#</code> 注释，pre-commit framework 解析为 NoneType 报错，导致 commit 阻塞。该根因属 PAP-16（pre-commit-overhaul）范围，本 plan 不修复。已征得用户授权后，PAP-18 所有 commit 一律用 <code>git commit --no-verify</code> 绕过；hook 修复后续由 PAP-16 PR 单独处理。</p>
       </li>
 
+      <li class="note" data-type="decision" data-time="2026-05-22T15:50">
+        <header>
+          <span class="note-type">DECISION</span>
+          <time datetime="2026-05-22T15:50">05-22 15:50</time>
+          <a href="#tasks">§ Task 4-14</a>
+        </header>
+        <p>PR-2 实施方式：按 <code>feedback_fan_out_subagents</code> memory，11 个并发 subagent 同时跑 Task 4-14（每个 task 一个 subagent 对应一个模块）。每个 subagent 自跑该模块 <code>:test</code>/<code>:integrationTest</code> 验证，<strong>不 commit</strong>——避免 11 个 subagent 同时 git add 引起 .git/index race。主会话集成时按模块串行 commit（11 commits）。结果：165 文件清理 / 488 行删除 / 6 行新增（LetPub 注释）；本地 <code>./gradlew test integrationTest</code> 全绿；全代码库 <code>@Timeout</code> 残留 8 处（6 LetPub 方法级 2 MINUTES + 2 batch defense-in-depth 方法级 30s），AC1 达成。</p>
+      </li>
+
+      <li class="note" data-type="other" data-time="2026-05-22T15:50">
+        <header>
+          <span class="note-type">OTHER</span>
+          <time datetime="2026-05-22T15:50">05-22 15:50</time>
+          <a href="#task-10">§ Task 10</a>
+        </header>
+        <p>Task 10 catalog-infra subagent 顺手补清 PR-1 漏的 2 个 batch IT 文件（<code>AuthorItemWriterIT.java</code> + <code>MeshDescriptorItemWriterIT.java</code>）——PR-1 commit 44f85960f 只清了 <code>src/test/.../batch/</code> 11 文件，遗漏 <code>src/integrationTest/.../batch/</code> 下 2 个 IT 类的类级 <code>@Timeout(value=30, SECONDS)</code>。</p>
+      </li>
+
+      <li class="note" data-type="other" data-time="2026-05-22T15:50">
+        <header>
+          <span class="note-type">OTHER</span>
+          <time datetime="2026-05-22T15:50">05-22 15:50</time>
+          <a href="#tasks">§ 集成阶段</a>
+        </header>
+        <p>本地集成验证发现：CI workflow（<code>.github/workflows/ci.yml</code>）实际只跑 <code>test + integrationTest + e2eTest</code>，<strong>不</strong>跑 <code>./gradlew check</code>（comment 明确"spotbugsMain / spotlessCheck 需 PAP-12/13 完成 baseline 后才能阻断 CI"）。<code>dispatching-parallel-agents</code> skill 建议的"集成后跑 <code>./gradlew check</code> 全栈门控"在 patra 当前 CI 上下文不适用——本地跑 check 暴露的 pre-existing spotbugs warnings（DLS / EI_EXPOSE_REP 等）与 PR-2 无关。改用 CI 等价命令 <code>./gradlew test integrationTest --no-daemon</code> 验证，BUILD SUCCESSFUL。</p>
+      </li>
+
       <li class="note" data-type="decision" data-time="2026-05-22T15:10">
         <header>
           <span class="note-type">DECISION</span>
@@ -1113,10 +1140,10 @@ git push origin pap-18-flaky-audit</code></pre>
 
     <footer class="notes-stats">
       总计:
-      <span data-counter="decision">1</span> decisions /
+      <span data-counter="decision">2</span> decisions /
       <span data-counter="change">2</span> changes /
       <span data-counter="tradeoff">1</span> tradeoffs /
-      <span data-counter="other">2</span> others
+      <span data-counter="other">4</span> others
     </footer>
   </aside>
 
