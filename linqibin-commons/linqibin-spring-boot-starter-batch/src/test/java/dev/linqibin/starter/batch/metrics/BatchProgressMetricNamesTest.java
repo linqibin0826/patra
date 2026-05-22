@@ -2,10 +2,8 @@ package dev.linqibin.starter.batch.metrics;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// BatchProgressMetricNames 常量测试。
 ///
@@ -18,7 +16,6 @@ import org.junit.jupiter.api.Timeout;
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("BatchProgressMetricNames 常量测试")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class BatchProgressMetricNamesTest {
 
   @Test

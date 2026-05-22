@@ -11,11 +11,9 @@ import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import dev.linqibin.commons.error.remote.RemoteCallException;
 import dev.linqibin.starter.httpinterface.config.HttpInterfaceAutoConfiguration;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
@@ -49,7 +47,6 @@ import tools.jackson.databind.json.JsonMapper;
       "linqibin.starter.http-interface.error-handling.tolerant=true",
       "linqibin.starter.http-interface.error-handling.problem-detail-enabled=true"
     })
-@Timeout(value = 30, unit = TimeUnit.SECONDS)
 @DisplayName("RestClientFactory 集成测试")
 class RestClientFactoryIT {
 

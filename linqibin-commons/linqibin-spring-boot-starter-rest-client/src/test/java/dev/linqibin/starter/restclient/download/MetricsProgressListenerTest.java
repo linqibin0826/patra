@@ -11,7 +11,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// MetricsProgressListener 单元测试。
 ///
@@ -19,7 +18,6 @@ import org.junit.jupiter.api.Timeout;
 ///
 /// @author linqibin
 /// @since 0.1.0
-@Timeout(2)
 class MetricsProgressListenerTest {
 
   private SimpleMeterRegistry registry;

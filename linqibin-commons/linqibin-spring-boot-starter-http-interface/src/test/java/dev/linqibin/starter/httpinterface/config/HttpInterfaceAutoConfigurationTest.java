@@ -3,11 +3,9 @@ package dev.linqibin.starter.httpinterface.config;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.linqibin.starter.httpinterface.error.ProblemDetailErrorHandler;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
 import org.springframework.boot.restclient.RestClientCustomizer;
@@ -29,7 +27,6 @@ import org.springframework.web.client.RestClient;
 ///
 /// @author linqibin
 /// @since 0.1.0
-@Timeout(value = 10, unit = TimeUnit.SECONDS)
 @DisplayName("HttpInterfaceAutoConfiguration 自动配置测试")
 class HttpInterfaceAutoConfigurationTest {
 

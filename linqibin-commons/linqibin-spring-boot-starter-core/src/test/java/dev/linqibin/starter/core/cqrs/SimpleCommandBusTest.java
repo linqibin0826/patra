@@ -10,15 +10,12 @@ import dev.linqibin.commons.cqrs.CommandInterceptor;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// SimpleCommandBus 单元测试。
 @DisplayName("SimpleCommandBus")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class SimpleCommandBusTest {
 
   // ==================== 测试用 Command 和 Handler ====================

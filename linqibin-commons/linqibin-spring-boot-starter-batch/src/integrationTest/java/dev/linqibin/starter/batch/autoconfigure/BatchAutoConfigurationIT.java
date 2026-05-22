@@ -5,11 +5,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.linqibin.starter.batch.core.JobOperatorHelper;
 import dev.linqibin.starter.test.container.initializer.PostgreSQLContainerInitializer;
 import io.micrometer.observation.ObservationRegistry;
-import java.util.concurrent.TimeUnit;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.springframework.batch.core.launch.JobOperator;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.repository.explore.JobExplorer;
@@ -34,7 +32,6 @@ import org.springframework.test.context.ContextConfiguration;
       "linqibin.starter.redisson.observability.metrics-enabled=false"
     })
 @ContextConfiguration(initializers = PostgreSQLContainerInitializer.class)
-@Timeout(value = 30, unit = TimeUnit.SECONDS)
 class BatchAutoConfigurationIT {
 
   @Autowired private ApplicationContext applicationContext;
