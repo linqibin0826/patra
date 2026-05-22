@@ -6,10 +6,12 @@ import static org.mockito.Mockito.when;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.job.JobInstance;
@@ -158,6 +160,8 @@ class BatchProgressMetricsListenerTest {
 
     @Test
     @DisplayName("不同 Step 应该使用不同的 Counter 实例")
+    // 此 Nested 类首个 @Test 方法，Spring/Micrometer 首次初始化偏慢，覆盖全局 5s fallback
+    @Timeout(value = 30, unit = TimeUnit.SECONDS)
     void differentSteps_shouldUseDifferentCounters() {
       // Given
       StepExecution step1 = createStepExecution("job1", "step1", 100, 100, 0, 1, 0);
