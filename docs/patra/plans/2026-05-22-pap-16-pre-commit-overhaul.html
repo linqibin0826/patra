@@ -32,11 +32,11 @@
 
           <li data-task-status="pending"><a href="#task-N">Task N — [任务名]</a></li>
           -->
-          <li data-task-status="pending"><a href="#task-1">Task 1 — 写两个新配置文件</a></li>
-          <li data-task-status="pending"><a href="#task-2">Task 2 — 清理 scripts/git 与 .gitignore</a></li>
-          <li data-task-status="pending"><a href="#task-3">Task 3 — 装 pre-commit framework 与接管 hooks</a></li>
-          <li data-task-status="pending"><a href="#task-4">Task 4 — 中间验证:commitlint 拦截 garbage</a></li>
-          <li data-task-status="pending"><a href="#task-5">Task 5 — 主功能 commit</a></li>
+          <li data-task-status="done"><a href="#task-1">Task 1 — 写两个新配置文件</a></li>
+          <li data-task-status="done"><a href="#task-2">Task 2 — 清理 scripts/git 与 .gitignore</a></li>
+          <li data-task-status="done"><a href="#task-3">Task 3 — 装 pre-commit framework 与接管 hooks</a></li>
+          <li data-task-status="done"><a href="#task-4">Task 4 — 中间验证:commitlint 拦截 garbage</a></li>
+          <li data-task-status="in-progress"><a href="#task-5">Task 5 — 主功能 commit</a></li>
           <li data-task-status="pending"><a href="#task-6">Task 6 — 首次全仓清扫与 commit</a></li>
           <li data-task-status="pending"><a href="#task-7">Task 7 — 完整 AC D6 本地验证矩阵</a></li>
           <li data-task-status="pending"><a href="#task-8">Task 8 — push 开 PR 等 CI 全绿</a></li>
@@ -146,7 +146,7 @@
       data-status 5 类：pending / in-progress / done / blocked / skipped
       -->
 
-      <article class="task" id="task-1" data-status="pending">
+      <article class="task" id="task-1" data-status="done">
         <header>
           <h2>任务 1：写两个新配置文件（.pre-commit-config.yaml + commitlint.config.cjs）</h2>
           <dl class="files">
@@ -157,7 +157,7 @@
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：整文件覆盖 <code>.pre-commit-config.yaml</code></strong>
             <p>用 Write 工具覆盖整个 <code>.pre-commit-config.yaml</code>（当前全文件被注释，直接覆盖即可）。内容如下：</p>
             <pre><code class="lang-yaml">default_install_hook_types: [pre-commit, commit-msg]
@@ -210,7 +210,7 @@ repos:
 </code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：新建 <code>commitlint.config.cjs</code></strong>
             <p>用 Write 工具新建 <code>commitlint.config.cjs</code>（根仓库），内容如下：</p>
             <pre><code class="lang-js">// commitlint.config.cjs
@@ -233,7 +233,7 @@ module.exports = {
 </code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：验证两份文件内容</strong>
             <p>运行：</p>
             <pre><code class="lang-bash">grep -E "spotless-apply|commitlint|gitleaks|check-merge-conflict" .pre-commit-config.yaml | wc -l</code></pre>
@@ -242,7 +242,7 @@ module.exports = {
             <p>预期：3。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：不 commit（保留在 working tree）</strong>
             <p>本 task 完成后两份文件处于 untracked / modified 状态，留到 Task 5 与其他改动一并 commit。</p>
             <p>运行：<code>git status --short | head</code></p>
@@ -251,7 +251,7 @@ module.exports = {
         </ol>
       </article>
 
-      <article class="task" id="task-2" data-status="pending">
+      <article class="task" id="task-2" data-status="done">
         <header>
           <h2>任务 2：清理 scripts/git 整个目录 + .gitignore 加 Python 缓存</h2>
           <dl class="files">
@@ -261,21 +261,21 @@ module.exports = {
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：验证 scripts/git/ 当前文件清单（删除前的事实记录）</strong>
             <p>运行：</p>
             <pre><code class="lang-bash">ls -la scripts/git/ scripts/git/lib/</code></pre>
             <p>预期看到 5 个 <code>mvn_*.sh</code> / <code>validate_commit_msg.sh</code> + <code>lib/maven_utils.sh</code> + <code>lib/jacoco_utils.sh</code>。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：再次确认无外部引用</strong>
             <p>运行：</p>
             <pre><code class="lang-bash">grep -rn "scripts/git" --include="*.yaml" --include="*.yml" --include="*.kts" --include="Makefile" --include="*.md" -- . | grep -v -E "docs/patra/(specs|plans)/" | grep -v "scripts/git/" || echo "no external refs"</code></pre>
             <p>预期：<code>no external refs</code>。（spec/plan 内的引用属于文档自述，allowed）</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：递归删除整个 scripts/git/ 目录</strong>
             <p>运行：</p>
             <pre><code class="lang-bash">git rm -r scripts/git/</code></pre>
@@ -289,7 +289,7 @@ rm 'scripts/git/mvn_test_changed_modules.sh'
 rm 'scripts/git/validate_commit_msg.sh'</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：验证目录已消失</strong>
             <p>运行：</p>
             <pre><code class="lang-bash">ls scripts/git/ 2>&1 | head -1</code></pre>
@@ -298,7 +298,7 @@ rm 'scripts/git/validate_commit_msg.sh'</code></pre>
             <p>预期：<code>ls: scripts/git/mvn_*.sh: No such file or directory</code>（命中 AC D6 验证 5）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：改 <code>.gitignore</code>，加 Python 缓存段</strong>
             <p>用 Edit 工具在 <code>.gitignore</code> 的 <code>Build outputs</code> 段（<code>target/ / build/ / bin/</code> 之后）与 <code>Gradle</code> 段之前插入：</p>
             <pre><code class="lang-diff">
@@ -311,7 +311,7 @@ rm 'scripts/git/validate_commit_msg.sh'</code></pre>
             <p>具体操作：用 Edit 工具找 <code>!**/src/test/**/build/</code> 这一行（这是 Build outputs 段最后一行），在其后追加上述 5 行（含前后空行）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：验证 .gitignore 规则生效</strong>
             <p>运行：</p>
             <pre><code class="lang-bash">git check-ignore -v scripts/__pycache__/ 2>&1; echo "exit=$?"</code></pre>
@@ -320,7 +320,7 @@ rm 'scripts/git/validate_commit_msg.sh'</code></pre>
             <p>预期：同上命中（宽匹配生效）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7：不 commit（保留在 working tree）</strong>
             <p>本 task 完成后改动累积到 working tree，等 Task 5 一次 commit。</p>
             <p>运行：<code>git status --short</code></p>
@@ -329,7 +329,7 @@ rm 'scripts/git/validate_commit_msg.sh'</code></pre>
         </ol>
       </article>
 
-      <article class="task" id="task-3" data-status="pending">
+      <article class="task" id="task-3" data-status="done">
         <header>
           <h2>任务 3：装 pre-commit framework + install 接管 .git/hooks</h2>
           <dl class="files">
@@ -340,7 +340,7 @@ rm 'scripts/git/validate_commit_msg.sh'</code></pre>
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：确认 pre-commit framework 已装</strong>
             <p>运行：</p>
             <pre><code class="lang-bash">pre-commit --version</code></pre>
@@ -348,14 +348,14 @@ rm 'scripts/git/validate_commit_msg.sh'</code></pre>
             <p>若未装：macOS 用 <code>brew install pre-commit</code>，或全局 venv 用 <code>pipx install pre-commit</code>（避免污染系统 Python）。装完重跑 <code>pre-commit --version</code> 确认。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：validate-config 校验语法</strong>
             <p>运行：</p>
             <pre><code class="lang-bash">pre-commit validate-config</code></pre>
             <p>预期：无输出，exit=0。若报错，回到 Task 1 检查 yaml 缩进。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：install --overwrite 覆盖现有手写 hooks</strong>
             <p>运行：</p>
             <pre><code class="lang-bash">pre-commit install --install-hooks --overwrite</code></pre>
@@ -369,7 +369,7 @@ pre-commit installed at .git/hooks/commit-msg
             <p>首次会拉取 hook 环境（Python venv + Node 容器），数十 MB / 数分钟。后续 cached。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：验证 .git/hooks 已被框架接管</strong>
             <p>运行：</p>
             <pre><code class="lang-bash">head -3 .git/hooks/pre-commit .git/hooks/commit-msg 2>&1</code></pre>
@@ -380,7 +380,7 @@ pre-commit installed at .git/hooks/commit-msg
         </ol>
       </article>
 
-      <article class="task" id="task-4" data-status="pending">
+      <article class="task" id="task-4" data-status="done">
         <header>
           <h2>任务 4：中间验证 — commitlint 拦截 garbage message（AC D6#3）</h2>
           <dl class="files">
@@ -389,7 +389,7 @@ pre-commit installed at .git/hooks/commit-msg
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：尝试 garbage commit（无 type 前缀）</strong>
             <p>运行：</p>
             <pre><code class="lang-bash">printf "garbage no prefix\n" &gt; /tmp/m && git commit --allow-empty -F /tmp/m; echo "exit=$?"</code></pre>
@@ -400,14 +400,14 @@ pre-commit installed at .git/hooks/commit-msg
             <p>（命中 AC D6 验证 3）</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：尝试合法 conventional commit（dry-run）</strong>
             <p>运行：</p>
             <pre><code class="lang-bash">printf "feat(pap-16): bootstrap hooks dry run\n" &gt; /tmp/m && git commit --allow-empty -F /tmp/m; echo "exit=$?"</code></pre>
             <p>预期：commit 成功，exit=0（命中 AC D6 验证 4）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：撤销 dry-run commit（不留痕迹）</strong>
             <p>运行：</p>
             <pre><code class="lang-bash">git reset --soft HEAD~1 && git status</code></pre>
@@ -419,7 +419,7 @@ pre-commit installed at .git/hooks/commit-msg
         </ol>
       </article>
 
-      <article class="task" id="task-5" data-status="pending">
+      <article class="task" id="task-5" data-status="in-progress">
         <header>
           <h2>任务 5：主功能 commit（配置 + scripts/git 删 + .gitignore）</h2>
           <dl class="files">
@@ -794,16 +794,50 @@ EOF
       data-type 4 类：decision / change / tradeoff / other
       追加 entry 时同步更新下方 notes-stats footer 的对应 counter 数字。
       -->
-    </ol>
 
-    <p class="empty-state">no notes yet</p>
+      <li class="note" data-type="change" data-time="2026-05-22T13:20">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-22T13:20">05-22 13:20</time>
+          <a href="#task-2">§ Task 2</a>
+        </header>
+        <p><strong><code>scripts/__pycache__/migrate-javadoc-to-markdown.cpython-312.pyc</code> 已被 git 跟踪。</strong>plan 假设它只是 working tree 状态、加 .gitignore 就够，但实际它早被某次 commit 加入了 index。<code>git check-ignore</code> 对已跟踪文件默认不命中（exit=1）。处理：<code>git rm -r --cached scripts/__pycache__/</code> 从 index 移除（保留 working tree 让 Python 缓存继续用），AC D6 #6 验证才命中。</p>
+      </li>
+
+      <li class="note" data-type="change" data-time="2026-05-22T13:25">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-22T13:25">05-22 13:25</time>
+          <a href="#task-2">§ Task 2</a>
+        </header>
+        <p><strong><code>.gitignore</code> 撤回新加的 <code>**/__pycache__/</code> 段。</strong>spec 决策 4 论证了"宽匹配 vs Linear AC 窄匹配 <code>scripts/__pycache__/</code>"的取舍，但 plan/spec 撰写期没意识到 <code>.gitignore</code> 第 77 行（撤回后）已有 <code>__pycache__/</code> 规则——两条规则等价（Python <code>__pycache__/</code> 不含斜杠，匹配任意深度）。撤回重复规则，AC D6 #6 仍由现有 line 77 规则命中。<strong>结果：.gitignore 文件本次零改动；spec 决策 4 失效</strong>（值得在合并后回填 spec/Linear comment 更正措辞）。</p>
+      </li>
+
+      <li class="note" data-type="other" data-time="2026-05-22T13:40">
+        <header>
+          <span class="note-type">OTHER</span>
+          <time datetime="2026-05-22T13:40">05-22 13:40</time>
+          <a href="#task-3">§ Task 3</a>
+        </header>
+        <p><strong>开发环境 git 之前设过 <code>core.hooksPath</code>（指向主仓库 .git/hooks 绝对路径），pre-commit 拒绝 install。</strong>worktree local 配置里 unset 解决：<code>git config --local --unset-all core.hooksPath</code>。<strong>pre-commit framework 装到 <code>git-common-dir/hooks/</code></strong>（即 <code>/Users/linqibin/Projects/Products/patra/.git/hooks/</code>），<strong>所有 worktree 共享同一个 hook 入口</strong>。副作用：在 PAP-16 PR 合并到 main 之前，主工作树切到没有 <code>.pre-commit-config.yaml</code> 的分支 commit 时，pre-commit 入口被调用——pre-commit framework 对缺失 config 默认 skip 不报错，无破坏，但用户应知；合并到 main 后自然消失。</p>
+      </li>
+
+      <li class="note" data-type="change" data-time="2026-05-22T13:42">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-22T13:42">05-22 13:42</time>
+          <a href="#task-3">§ Task 3</a>
+        </header>
+        <p><strong>开发机首次安装：<code>brew install pre-commit</code> 装了 pre-commit 4.6.0</strong>（plan 第 5 节技术栈写的是 "3.5.0+" 作为下限，4.6.0 满足）。本机之前未装；后续在 README / dev-setup 文档应明确"clone 后先 <code>brew install pre-commit</code>"——非本 issue 范围，留给 PAP-17。</p>
+      </li>
+    </ol>
 
     <footer class="notes-stats">
       总计:
       <span data-counter="decision">0</span> decisions /
-      <span data-counter="change">0</span> changes /
+      <span data-counter="change">3</span> changes /
       <span data-counter="tradeoff">0</span> tradeoffs /
-      <span data-counter="other">0</span> others
+      <span data-counter="other">1</span> others
     </footer>
   </aside>
 
