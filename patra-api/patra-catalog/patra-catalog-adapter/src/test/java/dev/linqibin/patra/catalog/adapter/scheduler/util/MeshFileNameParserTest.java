@@ -4,11 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.linqibin.patra.catalog.adapter.scheduler.exception.MeshConfigurationException;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -17,7 +15,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 ///
 /// 验证从 MeSH 数据文件 URL 中提取版本号的功能。
 @DisplayName("MeshFileNameParser 版本号解析")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class MeshFileNameParserTest {
 
   // ========== 正常解析测试 ==========

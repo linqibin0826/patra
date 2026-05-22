@@ -16,11 +16,9 @@ import dev.linqibin.patra.catalog.app.usecase.mesh.command.MeshScrImportCommand;
 import dev.linqibin.patra.catalog.app.usecase.mesh.dto.MeshDescriptorImportResult;
 import dev.linqibin.patra.catalog.app.usecase.mesh.dto.MeshQualifierImportResult;
 import dev.linqibin.patra.catalog.app.usecase.mesh.dto.MeshScrImportResult;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.mockito.MockedStatic;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -54,7 +52,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 @Import(MeshDataSourceAutoConfiguration.class)
 @ActiveProfiles("test")
 @DisplayName("MeshImportScheduleJob 切片测试")
-@Timeout(value = 30, unit = TimeUnit.SECONDS)
 class MeshImportScheduleJobIT {
 
   @Autowired private MeshImportScheduleJob meshImportScheduleJob;

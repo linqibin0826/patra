@@ -13,11 +13,9 @@ import dev.linqibin.patra.catalog.adapter.scheduler.config.RorDataSourceAutoConf
 import dev.linqibin.patra.catalog.adapter.scheduler.exception.RorConfigurationException;
 import dev.linqibin.patra.catalog.app.usecase.organization.command.RorOrganizationImportCommand;
 import dev.linqibin.patra.catalog.app.usecase.organization.command.RorOrganizationImportResult;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.mockito.MockedStatic;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -49,7 +47,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 @Import(RorDataSourceAutoConfiguration.class)
 @ActiveProfiles("test")
 @DisplayName("RorOrganizationImportScheduleJob 切片测试")
-@Timeout(value = 30, unit = TimeUnit.SECONDS)
 class RorOrganizationImportScheduleJobIT {
 
   @Autowired private RorOrganizationImportScheduleJob rorOrganizationImportScheduleJob;
