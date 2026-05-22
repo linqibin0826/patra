@@ -22,7 +22,7 @@
         <ol class="toc-tasks">
           <li data-task-status="done"><a href="#task-1">Task 1 — 新建 linqibin.spotbugs.gradle.kts</a></li>
           <li data-task-status="done"><a href="#task-2">Task 2 — 新建 linqibin.spotless.gradle.kts</a></li>
-          <li data-task-status="pending"><a href="#task-3">Task 3 — 改造 java-base 引入两个新 plugin</a></li>
+          <li data-task-status="done"><a href="#task-3">Task 3 — 改造 java-base 引入两个新 plugin</a></li>
           <li data-task-status="pending"><a href="#task-4">Task 4 — spotlessApply 全量基线化</a></li>
           <li data-task-status="pending"><a href="#task-5">Task 5 — spotbugsMain baseline + 告警决策处置</a></li>
           <li data-task-status="pending"><a href="#task-6">Task 6 — CI workflow 改造</a></li>
@@ -256,7 +256,7 @@ PAP-13 AC 4 空格为口误，本 plan Task 8 同步修正 release-spec。"</cod
         </ol>
       </article>
 
-      <article class="task" id="task-3" data-status="pending">
+      <article class="task" id="task-3" data-status="done">
         <header>
           <h2>Task 3：改造 java-base 引入两个新 plugin</h2>
           <dl class="files">
@@ -265,7 +265,7 @@ PAP-13 AC 4 空格为口误，本 plan Task 8 同步修正 release-spec。"</cod
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3.1：替换 plugins 块（行 14-20）</strong>
             <p>当前 plugins 块：</p>
             <pre><code class="lang-kotlin">plugins {
@@ -286,7 +286,7 @@ PAP-13 AC 4 空格为口误，本 plan Task 8 同步修正 release-spec。"</cod
             <p>使用 Edit 工具，<code>old_string</code> 为当前 plugins 块整段，<code>new_string</code> 为替换后整段。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3.2：删除内嵌的 Spotless 配置（当前行 41-56）</strong>
             <p>使用 Edit 工具删除以下整段（含 <code>// ==================== Spotless ====================</code> 标题行）：</p>
             <pre><code class="lang-kotlin">// ==================== Spotless ====================
@@ -308,7 +308,7 @@ spotless {
             <p>替换为空字符串（与下方 <code>// ==================== SpotBugs ====================</code> 之间留一个空行）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3.3：删除内嵌的 SpotBugs 配置（当前行 58-68）</strong>
             <p>使用 Edit 工具删除以下整段：</p>
             <pre><code class="lang-kotlin">// ==================== SpotBugs ====================
@@ -325,19 +325,19 @@ tasks.withType&lt;com.github.spotbugs.snom.SpotBugsTask&gt;().configureEach {
             <p>替换为空字符串（与下方 <code>// ==================== JaCoCo ====================</code> 之间留一个空行）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3.4：跑 Gradle tasks 验证编译 + 列出 SpotBugs task</strong>
             <p>运行：<code>./gradlew tasks --all --no-daemon 2&gt;&amp;1 | grep -iE "^(spotbugs|spotless)" | head -20</code></p>
             <p>预期：列表中至少包含 <code>spotbugsMain</code>；同时应可见 <code>spotbugsTest</code> / <code>spotbugsIntegrationTest</code> / <code>spotbugsE2eTest</code>（由 spotbugs plugin 6.x 根据 sourceSets 自动注册，未在 plan 中显式 named 引用，安全）。<code>spotlessCheck</code> / <code>spotlessApply</code> 也应可见。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3.5：跑 spotbugsTest 验证 SKIPPED</strong>
             <p>运行：<code>./gradlew :linqibin-commons:linqibin-commons-core:spotbugsTest --info --no-daemon 2&gt;&amp;1 | grep -E "SKIPPED|Skipping" | head -5</code></p>
             <p>预期：输出含 <code>Task :linqibin-commons:linqibin-commons-core:spotbugsTest SKIPPED</code> 或 <code>Skipping task ':...spotbugsTest' as task disabled</code>。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3.6：Commit</strong>
             <pre><code class="lang-bash">git add build-logic/src/main/kotlin/linqibin.java-base.gradle.kts
 git commit -m "build(java-base): 引入 linqibin.spotbugs/spotless convention plugins
@@ -736,6 +736,38 @@ git commit -m "docs(release-spec): PAP-13 缩进对齐 .editorconfig 2 空格
     </header>
 
     <ol class="notes-log">
+      <li class="note" data-type="change" data-time="2026-05-22T12:20">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-22T12:20">05-22 12:20</time>
+          <a href="#task-2">§ Task 2 / Task 3</a>
+        </header>
+        <p><strong>修复 plugin 文件顶部注释：<code>/** ... */</code> → <code>// ...</code></strong></p>
+        <p>实施 Task 2 后发现 <code>spotlessCheck</code> task 完全不存在；进一步发现 <code>spotbugsTest</code> 也没被禁用（Task 1 的 <code>tasks.matching { ... }.configureEach { enabled = false }</code> 配置代码没生效）。深度诊断（含反编译 <code>Linqibin_spotless_gradle.class</code> 仅 1162 字节、对比 <code>Linqibin_spotbugs_gradle.class</code> 同样仅有 constructor+main、检查 build-logic <code>plugins-blocks/compiled/</code> 目录缺失某些 plugin class 等）后命中 <code>linqibin.module-commons.gradle.kts</code> 顶部注释中早已记录的 known issue：</p>
+        <blockquote>知名 Gradle 9.5 bug：precompiled script plugin 顶层 <code>/** */</code> 注释、<code>tasks.named()</code>、<code>afterEvaluate{}</code>、<code>providers.gradleProperty().get()</code> 都会让 plugin body 静默不执行（编译产物只有 constructor + main，配置代码被丢弃；无任何编译错误 / 警告日志）。</blockquote>
+        <p>修复：把 <code>linqibin.spotbugs.gradle.kts</code> 与 <code>linqibin.spotless.gradle.kts</code> 顶部的 <code>/** ... */</code> Javadoc 块改为多行 <code>// ...</code>。验证后 <code>spotbugsTest SKIPPED</code> + <code>spotlessCheck</code> task 出现且 BUILD SUCCESSFUL。</p>
+        <p>诊断弯路（用时较多，留作记录）：</p>
+        <ul>
+          <li>错误怀疑过 plugin marker artifact 缺失 → 把 spotless 依赖改成 marker 形式（<code>com.diffplug.spotless:com.diffplug.spotless.gradle.plugin</code>）—— 顺手对齐 spotbugs，无害保留</li>
+          <li>错误怀疑过 plugin 文件名 <code>.spotless.</code> 与 <code>com.diffplug.spotless</code> 命名冲突 → 尝试 <code>git mv</code> 到 <code>linqibin.styling.gradle.kts</code>，验证后无效，已 revert 回原文件名</li>
+          <li>错误尝试 imperative <code>apply(plugin = "com.diffplug.spotless")</code> + <code>extensions.configure&lt;SpotlessExtension&gt;</code> —— 同样被注释 bug 屏蔽</li>
+          <li>最终通过对比 <code>module-commons</code> 文件头注释直接定位</li>
+        </ul>
+        <p>启示：build-logic 中所有 plugin 文件应统一用 <code>//</code> 行注释；<code>java-base / hexagonal-* / spring-*</code> 等还在用 <code>/** */</code> 的 plugin 文件 body 可能也被屏蔽（暂未单独验证；超出本 plan scope，不做横向整改，但需要在 PAP-17 README/上游 spec 中沉淀此约定）。</p>
+      </li>
+      <li class="note" data-type="decision" data-time="2026-05-22T11:05">
+        <header>
+          <span class="note-type">DECISION</span>
+          <time datetime="2026-05-22T11:05">05-22 11:05</time>
+          <a href="#task-3">§ Task 3 / 步骤 3.2-3.3</a>
+        </header>
+        <p>plan 步骤 3.2 / 3.3 描述为两次独立 Edit 分别删 Spotless 与 SpotBugs 配置块。实施时一次 Edit 合并删除（两块紧邻），并保留 5 行引用注释作锚点：</p>
+        <pre><code>// ==================== Spotless / SpotBugs ====================
+// 已抽出为独立 convention plugins：linqibin.spotless / linqibin.spotbugs
+// 见 build-logic/src/main/kotlin/linqibin.{spotless,spotbugs}.gradle.kts
+// 由本文件 plugins 块通过 id(...) 引入。</code></pre>
+        <p>理由：未来读 java-base 的人能立刻看到"为何此处没有 spotless/spotbugs 配置"——文件搜索 <code>spotless</code> 仍能命中此注释。最终行为与 plan 完全一致，仅多了 5 行注释。</p>
+      </li>
       <li class="note" data-type="change" data-time="2026-05-22T10:50">
         <header>
           <span class="note-type">CHANGE</span>
@@ -753,8 +785,8 @@ git commit -m "docs(release-spec): PAP-13 缩进对齐 .editorconfig 2 空格
 
     <footer class="notes-stats">
       总计:
-      <span data-counter="decision">0</span> decisions /
-      <span data-counter="change">1</span> changes /
+      <span data-counter="decision">1</span> decisions /
+      <span data-counter="change">2</span> changes /
       <span data-counter="tradeoff">0</span> tradeoffs /
       <span data-counter="other">0</span> others
     </footer>

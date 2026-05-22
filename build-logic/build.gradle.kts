@@ -17,7 +17,8 @@ dependencies {
     implementation("io.spring.dependency-management:io.spring.dependency-management.gradle.plugin:${libs.versions.spring.dependency.management.get()}")
 
     // Spotless - 代码格式化 (替代 google-fmt)
-    implementation("com.diffplug.spotless:spotless-plugin-gradle:${libs.versions.spotless.get()}")
+    // 使用 plugin marker artifact，与 spotbugs 依赖声明形式对称。
+    implementation("com.diffplug.spotless:com.diffplug.spotless.gradle.plugin:${libs.versions.spotless.get()}")
 
     // SpotBugs - 静态代码分析
     implementation("com.github.spotbugs:com.github.spotbugs.gradle.plugin:${libs.versions.spotbugs.plugin.get()}")

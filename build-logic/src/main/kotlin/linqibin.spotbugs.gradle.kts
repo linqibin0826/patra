@@ -1,17 +1,13 @@
-/**
- * SpotBugs Convention Plugin
- *
- * 应用范围：所有 Java 模块（通过 linqibin.java-base 间接 apply）。
- *
- * 配置：
- * - effort=MAX / reportLevel=LOW / ignoreFailures=false
- * - 锁 toolVersion=4.9.3（与 plugin 6.4.8 配套）
- * - 只跑 spotbugsMain，禁用 spotbugsTest / spotbugsIntegrationTest / spotbugsE2eTest 等
- * - excludeFilter 沿用根目录 spotbugs-exclude.xml
- * - HTML + XML 双报告
- *
- * 关联：PAP-12 + 决策 C（spotbugsTest 不阻断）。
- */
+// SpotBugs Convention Plugin
+// 应用于所有 Java 模块（通过 linqibin.java-base 间接 apply）。
+// 配置：effort=MAX / reportLevel=LOW / ignoreFailures=false / toolVersion=4.9.3。
+// 只跑 spotbugsMain，禁用 spotbugsTest / spotbugsIntegrationTest / spotbugsE2eTest 等。
+// excludeFilter 沿用根目录 spotbugs-exclude.xml。HTML + XML 双报告。
+// 关联：PAP-12 + 决策 C（spotbugsTest 不阻断）。
+//
+// 知名 Gradle 9.5 bug：precompiled script plugin 顶层 /** */ 注释、tasks.named()、
+// afterEvaluate{}、providers.gradleProperty().get() 都会让 plugin body 静默不执行
+// （编译产物只有 constructor + main，配置代码被丢弃）。统一用单行 // 注释规避。
 
 import com.github.spotbugs.snom.Confidence
 import com.github.spotbugs.snom.Effort
