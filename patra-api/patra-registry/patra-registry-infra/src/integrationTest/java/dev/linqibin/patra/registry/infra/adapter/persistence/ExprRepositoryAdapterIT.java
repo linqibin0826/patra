@@ -20,7 +20,7 @@ import dev.linqibin.patra.registry.infra.adapter.persistence.entity.expr.ProvApi
 import dev.linqibin.patra.registry.infra.adapter.persistence.entity.expr.ProvExprCapabilityEntity;
 import dev.linqibin.patra.registry.infra.adapter.persistence.entity.expr.ProvExprRenderRuleEntity;
 import dev.linqibin.patra.registry.infra.adapter.persistence.entity.provenance.ProvenanceEntity;
-import dev.linqibin.patra.registry.infra.config.RegistryPostgreSQLContainerInitializer;
+import dev.linqibin.patra.registry.infra.config.RegistryITPostgreSQLContainerInitializer;
 import dev.linqibin.starter.jpa.autoconfig.HibernatePropertiesCustomizer;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
 import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
@@ -66,7 +66,7 @@ import tools.jackson.databind.json.JsonMapper;
 /// @author linqibin
 /// @since 0.1.0
 @DataJpaTest
-@ContextConfiguration(initializers = RegistryPostgreSQLContainerInitializer.class)
+@ContextConfiguration(initializers = RegistryITPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ImportAutoConfiguration(FlywayAutoConfiguration.class)
 @Import({ExprRepositoryAdapter.class, JpaAuditingConfig.class, HibernatePropertiesCustomizer.class})

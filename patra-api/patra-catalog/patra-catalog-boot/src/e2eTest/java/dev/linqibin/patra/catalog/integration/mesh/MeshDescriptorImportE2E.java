@@ -16,7 +16,7 @@ import dev.linqibin.patra.catalog.infra.persistence.dao.MeshDescriptorDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshEntryCombinationDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshEntryTermDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshTreeNumberDao;
-import dev.linqibin.patra.catalog.integration.config.CatalogPostgreSQLContainerInitializer;
+import dev.linqibin.patra.catalog.integration.config.CatalogE2EPostgreSQLContainerInitializer;
 import dev.linqibin.starter.objectstorage.ObjectStorageOperations;
 import java.io.IOException;
 import java.io.InputStream;
@@ -67,7 +67,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
       "spring.cloud.nacos.discovery.enabled=false",
       "spring.config.import=classpath:catalog-error-config.yaml"
     })
-@ContextConfiguration(initializers = CatalogPostgreSQLContainerInitializer.class)
+@ContextConfiguration(initializers = CatalogE2EPostgreSQLContainerInitializer.class)
 @ActiveProfiles("e2e-test")
 @TestClassOrder(ClassOrderer.OrderAnnotation.class)
 @DisplayName("MeSH Descriptor 导入 E2E 测试")

@@ -16,7 +16,7 @@ import dev.linqibin.patra.catalog.domain.model.vo.organization.OrganizationLink;
 import dev.linqibin.patra.catalog.domain.model.vo.organization.OrganizationName;
 import dev.linqibin.patra.catalog.domain.model.vo.organization.OrganizationRelation;
 import dev.linqibin.patra.catalog.domain.model.vo.organization.RorId;
-import dev.linqibin.patra.catalog.infra.config.CatalogPostgreSQLContainerInitializer;
+import dev.linqibin.patra.catalog.infra.config.CatalogITPostgreSQLContainerInitializer;
 import dev.linqibin.patra.catalog.infra.persistence.dao.OrganizationDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.OrganizationExternalIdDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.OrganizationLocationDao;
@@ -48,7 +48,7 @@ import org.springframework.test.context.ContextConfiguration;
 /// @author linqibin
 /// @since 0.1.0
 @DataJpaTest
-@ContextConfiguration(initializers = CatalogPostgreSQLContainerInitializer.class)
+@ContextConfiguration(initializers = CatalogITPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
   OrganizationRepositoryAdapter.class,

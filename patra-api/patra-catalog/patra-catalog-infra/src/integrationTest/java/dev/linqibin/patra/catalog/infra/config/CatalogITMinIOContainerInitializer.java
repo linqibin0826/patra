@@ -10,7 +10,7 @@ import dev.linqibin.starter.test.container.initializer.MinIOContainerInitializer
 ///
 /// ```java
 /// @SpringBootTest
-/// @ContextConfiguration(initializers = CatalogMinIOContainerInitializer.class)
+/// @ContextConfiguration(initializers = CatalogITMinIOContainerInitializer.class)
 /// class SomeStorageIT {
 ///     // ...
 /// }
@@ -23,7 +23,7 @@ import dev.linqibin.starter.test.container.initializer.MinIOContainerInitializer
 /// @author linqibin
 /// @since 0.1.0
 /// @see MinIOContainerInitializer
-public class CatalogMinIOContainerInitializer extends MinIOContainerInitializer {
+public class CatalogITMinIOContainerInitializer extends MinIOContainerInitializer {
 
   /// 返回 catalog 服务的存储桶名。
   ///

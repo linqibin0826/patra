@@ -3,7 +3,7 @@ package dev.linqibin.patra.catalog.infra.adapter.read;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.linqibin.patra.catalog.domain.model.read.publication.PublicationDetailReadModel;
-import dev.linqibin.patra.catalog.infra.config.CatalogPostgreSQLContainerInitializer;
+import dev.linqibin.patra.catalog.infra.config.CatalogITPostgreSQLContainerInitializer;
 import dev.linqibin.patra.catalog.infra.persistence.dao.KeywordDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.PublicationAbstractDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.PublicationDao;
@@ -46,7 +46,7 @@ import org.springframework.test.context.ContextConfiguration;
 /// @author linqibin
 /// @since 0.1.0
 @DataJpaTest
-@ContextConfiguration(initializers = CatalogPostgreSQLContainerInitializer.class)
+@ContextConfiguration(initializers = CatalogITPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
   PublicationReadAdapter.class,
