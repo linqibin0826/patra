@@ -5,7 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import dev.linqibin.patra.catalog.adapter.config.TestConfiguration;
+import dev.linqibin.patra.catalog.adapter.config.CatalogAdapterITWebMvcConfig;
 import dev.linqibin.patra.catalog.app.usecase.publication.query.PublicationQueryService;
 import dev.linqibin.patra.catalog.app.usecase.venue.query.VenueQueryService;
 import dev.linqibin.patra.catalog.app.usecase.venue.query.dto.VenueRatingHistoryQuery;
@@ -34,7 +34,7 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 /// - 路径参数绑定正确
 /// - MapStruct 转换器字段映射正确（使用真实 VenueApiConverter）
 @WebMvcTest(controllers = VenueController.class)
-@ContextConfiguration(classes = TestConfiguration.class)
+@ContextConfiguration(classes = CatalogAdapterITWebMvcConfig.class)
 @Import(VenueController.class)
 @AutoConfigureRestTestClient
 @DisplayName("VenueController 评级历史查询 REST 接口切片测试")

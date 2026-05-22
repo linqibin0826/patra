@@ -6,7 +6,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import dev.linqibin.commons.query.PageResult;
-import dev.linqibin.patra.catalog.adapter.config.TestConfiguration;
+import dev.linqibin.patra.catalog.adapter.config.CatalogAdapterITWebMvcConfig;
 import dev.linqibin.patra.catalog.app.usecase.publication.query.PublicationQueryService;
 import dev.linqibin.patra.catalog.app.usecase.publication.query.dto.PublicationListQuery;
 import dev.linqibin.patra.catalog.app.usecase.venue.query.VenueQueryService;
@@ -34,7 +34,7 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 /// - 控制器委托链路正确（Controller -> PublicationQueryService -> PublicationApiConverter）
 /// - 响应结构与字段序列化正确
 @WebMvcTest(controllers = VenueController.class)
-@ContextConfiguration(classes = TestConfiguration.class)
+@ContextConfiguration(classes = CatalogAdapterITWebMvcConfig.class)
 @Import(VenueController.class)
 @AutoConfigureRestTestClient
 @DisplayName("VenueController 实例文献列表端点切片测试")
