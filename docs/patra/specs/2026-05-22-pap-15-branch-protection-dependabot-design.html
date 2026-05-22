@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PAP-15 — main 分支保护 + Required Status Checks + Dependabot 分组 PR</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- CSS 外置：相对路径 ../styles/ 是从生成位置 docs/patra/specs/ 出发；
+       模板本身在 .claude-marketplace/ 下打开时此 link 会 404（接受：模板预览以生成后的 spec 为准） -->
+  <link rel="stylesheet" href="../styles/journal.css">
+</head>
+<body>
+<div class="layout">
+
+  <!-- ============================================================
+       左栏：目录（TOC）
+       ============================================================ -->
+  <nav class="toc">
+    <h3>目录</h3>
+    <ol>
+      <li><a href="#background">背景与现状</a></li>
+      <li><a href="#scope">范围边界</a></li>
+      <li><a href="#dependabot">Dependabot 配置</a></li>
+      <li><a href="#branch-protection">分支保护脚本</a></li>
+      <li><a href="#sentinel-job">CI 哨兵 Job</a></li>
+      <li><a href="#verification">验证流程</a></li>
+      <li><a href="#decisions">关键决策与备选</a></li>
+      <li><a href="#risks">风险与缓解</a></li>
+      <li><a href="#changes">改造文件清单</a></li>
+    </ol>
+  </nav>
+
+  <!-- ============================================================
+       中栏：内容
+       ============================================================ -->
+  <main class="content">
+
+    <header class="doc-header">
+      <h1>PAP-15 — main 分支保护 + Required Status Checks + Dependabot 分组 PR</h1>
+      <div class="meta-bar">
+        <span>📅 2026-05-22</span>
+        <span>🌿 worktree-pap-15-branch-protection</span>
+        <span>🎯 spec</span>
+        <span class="status-pill">draft</span>
+      </div>
+    </header>
+
+    <aside class="callout summary">
+      <span class="title">关键决策摘要</span>
+      <p>给 <code>main</code> 加 GitHub 分支保护：禁直推 / 禁 force push / 强制 Linear history / 必需 CI status check 通过；admin bypass 保留作应急。配 <code>.github/dependabot.yml</code> 覆盖 gradle / npm / github-actions 三个 ecosystem，按周更新、分组 PR、不自动合并。为解决 ci.yml 现有 <code>paths-ignore</code> 与 Required Status Check 的冲突，加一个永远成功的 <code>required-check</code> 哨兵 job 作为必需 check 目标。分支保护规则以 <code>scripts/setup-branch-protection.sh</code>（gh api PUT，幂等）形式入仓，避免规则成为不可审计的 GitHub UI 配置。</p>
+    </aside>
+
+    <section id="background">
+      <h2>1. 背景与现状</h2>
+      <p>v0.3 Dev-Ready 阶段的核心目标是把 Patra monorepo 的"开发流水线"基线打稳。PAP-10 已落地 Gradle 化 CI（<code>.github/workflows/ci.yml</code>，job 名 <code>build-and-test</code>，含单测 + 集成测试 + JaCoCo + Codecov），但 <code>main</code> 分支当前无任何保护：直推、force push、未通过 CI 直接 merge 都不会被阻止；依赖升级也完全靠人工盯，对单人开发者是隐性负债。</p>
+      <p>PAP-15 是 v0.3 这条"工程基线"链条上的下一环：把 PAP-10 的 CI 信号绑成 PR 必需条件，同时把依赖升级的节奏交给 Dependabot 自动开 PR / CI 把关。本次工作完全限于仓库配置层面，不涉及业务代码。</p>
+      <p><strong>已掌握的事实</strong>：</p>
+      <ul>
+        <li>CI workflow 文件：<code>.github/workflows/ci.yml</code>，触发器为 <code>push</code> 到 main 与 <code>pull_request</code> 到 main，含 <code>paths-ignore: ['**.md', 'docs/**', '.gitignore', '.editorconfig', 'LICENSE']</code>。</li>
+        <li>主测试 job：<code>build-and-test</code>（runs-on ubuntu-latest，timeout 25 min）。</li>
+        <li><code>.github/dependabot.yml</code> 当前不存在。</li>
+        <li><code>patra-portal/package.json</code> 存在，使用 pnpm，是 Next.js 15 项目。</li>
+        <li>根目录是 Gradle multi-module（<code>build.gradle.kts</code> + <code>settings.gradle.kts</code>）。</li>
+        <li>PAP-10 依赖已完成（commit <code>dfae816e1</code>），job 名已稳定。</li>
+      </ul>
+    </section>
+
+    <section id="scope">
+      <h2>2. 范围边界</h2>
+      <div class="two-col">
+        <aside class="callout success">
+          <span class="title">In Scope</span>
+          <ul>
+            <li>新建 <code>.github/dependabot.yml</code>，覆盖 gradle / npm / github-actions 三个 ecosystem，周更新 + 分组 PR + 不自动合并。</li>
+            <li>新建 <code>scripts/setup-branch-protection.sh</code>，用 <code>gh api</code> PUT main 分支保护规则；幂等可重放。</li>
+            <li>修改 <code>.github/workflows/ci.yml</code>，新增 <code>required-check</code> 哨兵 job，作为分支保护的 Required Status Check 目标；原 <code>build-and-test</code> job 配置完全不动。</li>
+            <li>本地手工跑一次 <code>setup-branch-protection.sh</code> 设置规则（合并 PR 后）。</li>
+            <li>按 AC 的 D5 跑 4 步验证。</li>
+          </ul>
+        </aside>
+        <aside class="callout warning">
+          <span class="title">Out of Scope</span>
+          <ul>
+            <li>修改 <code>build-and-test</code> job 的实际测试步骤、覆盖率门槛、超时配置等。</li>
+            <li>给 Dependabot PR 自动合并（决策 F 明确"不自动合并"）。</li>
+            <li>给 main 设 <code>required_pull_request_reviews</code>（单人项目无法 self-review）。</li>
+            <li>给 ci.yml 加 SpotBugs / Spotless 阻断（属于 PAP-12 / PAP-13 scope）。</li>
+            <li>为 staging / release 分支设保护规则（当前还没有这些分支）。</li>
+            <li>Dependabot PR 自动加 reviewer / ecosystem 后缀 label / Conventional Commits 前缀（用户已确认仅保留 <code>dependencies</code> 单 label）。</li>
+          </ul>
+        </aside>
+      </div>
+    </section>
+
+    <section id="dependabot">
+      <h2>3. Dependabot 配置（<code>.github/dependabot.yml</code>）</h2>
+      <p>三个 ecosystem 块共用相同的 schedule（每周一 09:00 上海时间）、<code>open-pull-requests-limit: 5</code>、<code>labels: ['dependencies']</code>。差异在 directory 与 groups。</p>
+      <pre><code>version: 2
+updates:
+  # ---- Java / Gradle ----
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    groups:
+      production-deps:
+        dependency-type: "production"
+      test-deps:
+        dependency-type: "development"
+
+  # ---- Next.js / pnpm ----
+  - package-ecosystem: "npm"
+    directory: "/patra-portal"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    groups:
+      production-deps:
+        dependency-type: "production"
+      dev-deps:
+        dependency-type: "development"
+
+  # ---- GitHub Actions ----
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    groups:
+      gh-actions:
+        patterns:
+          - "*"
+</code></pre>
+      <p><strong>字段说明</strong>：</p>
+      <ul>
+        <li><code>directory</code>：gradle 与 github-actions 在仓库根，npm 在 <code>/patra-portal</code>。Dependabot 通过 directory 定位依赖清单文件（<code>build.gradle.kts</code> / <code>package.json</code> / <code>.github/workflows/*</code>）。</li>
+        <li><code>groups.*.dependency-type</code>：把 production 与 development 依赖各打成一个 PR，gradle 与 npm 都用同一策略；预期一周最多 2 + 2 + 1 = 5 个 Dependabot PR。</li>
+        <li><code>groups.gh-actions.patterns: ["*"]</code>：所有 third-party action 合并成一个 PR；不按 dependency-type 拆，因 github-actions ecosystem 无 production/development 之分。</li>
+        <li>不写 <code>commit-message.prefix</code>：用户确认接受 Dependabot 默认 commit 文案（"Bump foo from x to y"）。如未来要对齐 Conventional Commits，在此追加 <code>commit-message: { prefix: "chore(deps)" }</code> 即可。</li>
+        <li>不写 <code>reviewers</code>：单人项目 owner 默认收到通知，无需再加 review request。</li>
+      </ul>
+    </section>
+
+    <section id="branch-protection">
+      <h2>4. 分支保护脚本（<code>scripts/setup-branch-protection.sh</code>）</h2>
+      <p>用 <code>gh api -X PUT /repos/{owner}/{repo}/branches/main/protection</code> 一次性设置全部规则。脚本入仓的好处：规则改动可通过 PR review、规则历史可追溯、新环境重放只需一条命令。</p>
+      <pre><code>#!/usr/bin/env bash
+# main 分支保护规则一次性配置脚本（幂等，可重复运行）
+# 用法: ./scripts/setup-branch-protection.sh
+# 依赖: gh CLI 已登录、对仓库有 admin 权限
+
+set -euo pipefail
+
+OWNER_REPO="linqibin0826/patra"
+BRANCH="main"
+
+echo "→ 配置 ${OWNER_REPO} 分支 ${BRANCH} 的保护规则..."
+
+gh api \
+  --method PUT \
+  -H "Accept: application/vnd.github+json" \
+  "/repos/${OWNER_REPO}/branches/${BRANCH}/protection" \
+  --input - &lt;&lt;'JSON'
+{
+  "required_status_checks": {
+    "strict": true,
+    "contexts": ["required-check"]
+  },
+  "enforce_admins": false,
+  "required_pull_request_reviews": null,
+  "restrictions": null,
+  "required_linear_history": true,
+  "allow_force_pushes": false,
+  "allow_deletions": false,
+  "block_creations": false,
+  "required_conversation_resolution": true,
+  "lock_branch": false,
+  "allow_fork_syncing": false
+}
+JSON
+
+echo "✓ 完成。当前规则:"
+gh api "/repos/${OWNER_REPO}/branches/${BRANCH}/protection" \
+  | jq '{required_status_checks, enforce_admins, required_linear_history, allow_force_pushes}'
+</code></pre>
+      <p><strong>字段 → AC 映射</strong>：</p>
+      <table>
+        <thead>
+          <tr><th>字段</th><th>值</th><th>对应 AC / 说明</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>required_status_checks.contexts</code></td><td><code>["required-check"]</code></td><td>"Required Status Checks 绑定 Issue #1 的 CI job 名"。本设计绑定哨兵 job，而非 <code>build-and-test</code>，理由见 §5。</td></tr>
+          <tr><td><code>required_status_checks.strict</code></td><td><code>true</code></td><td>PR 必须基于最新 main，避免 stale 分支合入引入隐性回归。</td></tr>
+          <tr><td><code>enforce_admins</code></td><td><code>false</code></td><td>"admin bypass 允许（单人项目应急用）"。</td></tr>
+          <tr><td><code>required_linear_history</code></td><td><code>true</code></td><td>"Linear history 强制"。merge 必须 squash / rebase，禁 merge commit。</td></tr>
+          <tr><td><code>allow_force_pushes</code></td><td><code>false</code></td><td>"force push 也禁"。</td></tr>
+          <tr><td><code>allow_deletions</code></td><td><code>false</code></td><td>AC 未明写，但顺手防呆（main 不可被误删）。</td></tr>
+          <tr><td><code>required_conversation_resolution</code></td><td><code>true</code></td><td>AC 未明写，但 CodeRabbit / 自审评论必须 resolved 才能 merge，零额外成本。</td></tr>
+          <tr><td><code>required_pull_request_reviews</code></td><td><code>null</code></td><td>单人项目无法 self-review，不强制。</td></tr>
+          <tr><td><code>restrictions</code></td><td><code>null</code></td><td>不限制 push 用户（开启分支保护后，非 admin 直推已经会被拒）。</td></tr>
+        </tbody>
+      </table>
+      <p><strong>直推拒绝</strong>由 GitHub 在开启分支保护后内置；非 admin 直推会被拒。admin（本人）直推因 <code>enforce_admins: false</code> 不被拒，但属于应急口子，日常仍走 PR。</p>
+    </section>
+
+    <section id="sentinel-job">
+      <h2>5. CI 哨兵 Job（<code>.github/workflows/ci.yml</code> 修改）</h2>
+      <p>仅<strong>新增</strong>一个 <code>required-check</code> job，原 <code>build-and-test</code> job 与 <code>paths-ignore</code> 完全不动。</p>
+      <pre><code>jobs:
+  required-check:
+    name: required-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: ✓ Required check satisfied
+        run: echo "Required check satisfied — gating job for branch protection"
+
+  build-and-test:
+    # ... 原配置完全不变 ...
+</code></pre>
+      <p><strong>为什么需要哨兵 job</strong>：当前 ci.yml 配了 <code>paths-ignore</code>（<code>**.md</code> / <code>docs/**</code> 等），意图是纯 docs PR 跳过 CI 省 Actions minutes。如果直接把 <code>build-and-test</code> 设为 Required Status Check，纯 docs PR 不触发 CI → 必需 check 永远收不到信号 → merge 永久卡住。<code>required-check</code> 不带 <code>paths-ignore</code>，任何 PR 都会触发并秒级完成；它作为必需 check，<code>build-and-test</code> 退化为辅助 check（实际跑代码测试）。docs-only PR：哨兵绿 → 可 merge；代码 PR：哨兵绿 + <code>build-and-test</code> 绿 → 可 merge；代码 PR 测试挂：<code>build-and-test</code> 红 → merge 灰（虽然必需 check 是哨兵，但 GitHub 默认会显示所有 check 状态，且红色 check 会触发"PR 有失败 check"提示，足以阻止误操作；如需更严格也可后续把 <code>build-and-test</code> 也加入 Required Status Check）。</p>
+    </section>
+
+    <section id="verification">
+      <h2>6. 验证流程（AC D5）</h2>
+      <p>设置好规则后按以下顺序手工验证：</p>
+      <table>
+        <thead>
+          <tr><th>#</th><th>操作</th><th>期望结果</th><th>AC 条目</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>在 main worktree 跑 <code>git commit --allow-empty -m "test direct push" &amp;&amp; git push origin main</code></td>
+            <td>GitHub 拒绝（"protected branch hook declined"），admin 直推因 <code>enforce_admins: false</code> 会通过；要可靠验证非 admin 直推被拒，需切换帐号或观察 push 后的拒绝消息</td>
+            <td>"直推 main 被 GitHub 拒绝"</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>开一个 PR，故意改一个 Java 文件使 <code>build-and-test</code> 失败（例如改坏一个 unit test 的断言）</td>
+            <td>PR 页面 <code>build-and-test</code> 红、<code>required-check</code> 绿；merge 按钮可点（因为必需 check 是哨兵），但 GitHub 会警告"this branch has failing checks"。如需强制阻断，需把 <code>build-and-test</code> 一并加入 Required Status Check（见 §8 决策 3）</td>
+            <td>"故意推 CI fail commit → merge 按钮置灰 / API 拒绝 merge"</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>等到周一 09:00 Asia/Shanghai 或在 GitHub Actions UI 手动 trigger Dependabot（Insights → Dependency graph → Dependabot → Check for updates）</td>
+            <td>PR 列表出现至少 1 个 Dependabot PR（标题 "Bump xxx" + label <code>dependencies</code>）</td>
+            <td>"自动 PR 开出（≥ 1 个 Dependabot PR）"</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td>在本地试 <code>git push --force origin main</code></td>
+            <td>被拒（"force push to main protected branch denied"）</td>
+            <td>"force push 也禁"</td>
+          </tr>
+        </tbody>
+      </table>
+      <p><strong>验证 2 的细节</strong>：AC 字面要求"merge 按钮置灰 / API 拒绝 merge"。本设计中必需 check 仅绑哨兵，因此 <code>build-and-test</code> 失败时 merge 按钮不会自动灰掉，仅 UI 显示警告。若用户认为这违背 AC 精神，§8 决策 3 提供了把 <code>build-and-test</code> 也纳入必需 check 的备选。当前推荐选择是仅哨兵绑必需 check：保留对 docs-only PR 的可合并性，警告对单人开发者已足够形成"看到红就不点 merge"的反馈。</p>
+    </section>
+
+    <section id="decisions">
+      <h2>7. 关键决策与备选</h2>
+
+      <div class="decision">
+        <h3>决策 1：分支保护规则以 gh api 脚本入仓，而非纯手工 UI 配置</h3>
+        <p>新建 <code>scripts/setup-branch-protection.sh</code>，PR review 时可见规则定义，未来调整规则也走代码 review 流程。</p>
+        <p class="alternatives"><strong>备选 A：纯手工 GitHub UI + onboarding 文档</strong> — 否决：规则不可 review、改动无 audit trail、新环境（fork / 转移仓库）需手工重做。<br>
+        <strong>备选 B：脚本 + onboarding 文档双轨</strong> — 否决：冗余，文档说"跑脚本"即可。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 2：paths-ignore 与 Required Status Check 冲突，加哨兵 job 解决</h3>
+        <p>新增 <code>required-check</code> 作为 Required Status Check 目标；原 <code>build-and-test</code> 保留 <code>paths-ignore</code>，退化为辅助 check。优势：docs-only PR 自然可合并、保留 PAP-10 节省 Actions minutes 的初衷、无需依赖 admin bypass 处理常态 PR。</p>
+        <p class="alternatives"><strong>备选 A：依赖 admin bypass 兜底</strong> — 否决：每次 docs PR 都需要 admin 强 merge，养成"反正能 bypass"的破窗倾向，bypass 应只用于真正应急。<br>
+        <strong>备选 B：删除 paths-ignore，所有 PR 都跑全套 CI</strong> — 否决：改 README typo 也要等 20+ 分钟 CI，浪费 Actions minutes；推翻 PAP-10 的优化。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 3：仅哨兵 job 绑 Required Status Check，<code>build-and-test</code> 不绑</h3>
+        <p>必需 check 仅为 <code>required-check</code>。<code>build-and-test</code> 红时 merge 按钮不灰，仅 UI 显示警告。对单人项目，UI 警告已足够形成不点 merge 的反馈。</p>
+        <p class="alternatives"><strong>备选 A：把 <code>build-and-test</code> 也纳入必需 check</strong> — 严格符合 AC 字面要求"merge 按钮置灰"，但需要给 docs-only PR 加哨兵或改 ci.yml 让 <code>build-and-test</code> 在 docs-only PR 也产生 success 信号（更复杂）；如未来 docs PR 多 + 误点 merge 风险显现，再升级。<br>
+        <strong>备选 B：完全删 paths-ignore + <code>build-and-test</code> 绑必需 check</strong> — 见决策 2 备选 B，已否决。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 4：Dependabot 不自动合并、不设 reviewer、不加 commit prefix</h3>
+        <p>按 v0.3 release spec 决策 F"分组 PR + 不自动合并"。reviewer 单人项目无意义，owner 默认收到通知。commit-message prefix 用户确认接受 Dependabot 默认文案，未来如有强 Conventional Commits 需求再追加。</p>
+        <p class="alternatives"><strong>备选 A：autoMerge 通过 GitHub Action</strong> — 否决：决策 F 明确不自动合并，避免 changelog 不读就 merge。<br>
+        <strong>备选 B：commit-message.prefix "chore(deps)"</strong> — 用户已知会风险后选择不加。如未来 squash merge 后 main commit history 不一致明显碍眼，5 分钟可补。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 5：分组策略 — gradle/npm 按 dependency-type 二分，gh-actions 单组</h3>
+        <p>AC 字面要求 gradle <code>production-deps / test-deps</code>、npm <code>production-deps / dev-deps</code>、gh-actions 单组。本设计 1:1 落实。<code>dependency-type: "production" | "development"</code> 是 Dependabot 原生分类，对应 gradle 的 <code>implementation/api</code> vs <code>testImplementation</code>、npm 的 <code>dependencies</code> vs <code>devDependencies</code>。</p>
+        <p class="alternatives"><strong>备选 A：按依赖名 pattern 分组（如 spring-* / jackson-*）</strong> — 否决：维护成本高、依赖列表会变；dependency-type 是稳定的元信息。</p>
+      </div>
+    </section>
+
+    <section id="risks">
+      <h2>8. 风险与缓解</h2>
+      <table>
+        <thead>
+          <tr><th>风险</th><th>等级</th><th>缓解</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>必需 check 仅绑哨兵，<code>build-and-test</code> 失败时 merge 按钮不灰，可能误 merge 红 PR</td>
+            <td><span class="pill mid">mid</span></td>
+            <td>(1) UI 红色警告对单人足够；(2) 若误 merge 发生 ≥ 1 次，按决策 3 备选 A 升级；(3) Dependabot PR 由 CI 把关，红了不会自动 merge（无 automerge）</td>
+          </tr>
+          <tr>
+            <td>分组 PR 把多个依赖一起升，breaking change 影响面变大，回滚需 revert 整组</td>
+            <td><span class="pill mid">mid</span></td>
+            <td>(1) CI 把关；(2) review changelog 时若发现 1 个组内有 breaking，可关闭整组 PR、让 Dependabot 下周重开；(3) 单人项目可接受偶尔重 review</td>
+          </tr>
+          <tr>
+            <td>哨兵 job 也是 GitHub Actions 任务，每次 PR 都跑（含 docs PR），略微增加 Actions minutes 用量</td>
+            <td><span class="pill low">low</span></td>
+            <td>哨兵 job ≈ 5 秒（无 checkout、仅 echo），全年 PR 数估 100 量级 → 全年新增 &lt; 10 分钟，可忽略</td>
+          </tr>
+          <tr>
+            <td>gh api 脚本对仓库 admin 权限敏感，若 token 失误或网络抖动可能写入不完整规则</td>
+            <td><span class="pill low">low</span></td>
+            <td>(1) <code>set -euo pipefail</code> 任一步失败立即退出；(2) 脚本末尾用 <code>gh api GET</code> 回显当前规则，肉眼校对；(3) PUT 是幂等的，再跑一次即可覆盖</td>
+          </tr>
+          <tr>
+            <td>未来 ci.yml job 改名（如 <code>build-and-test</code> → <code>backend-tests</code>），分支保护未同步更新</td>
+            <td><span class="pill low">low</span></td>
+            <td>(1) 当前必需 check 是哨兵 <code>required-check</code>，与 <code>build-and-test</code> 名字解耦；(2) 改名时同步改 <code>setup-branch-protection.sh</code> + 重跑脚本</td>
+          </tr>
+          <tr>
+            <td>Dependabot 周一早上一次性开 5+ PR，造成"PR 流量峰值"</td>
+            <td><span class="pill low">low</span></td>
+            <td>(1) <code>open-pull-requests-limit: 5</code> 限上限；(2) 每个 ecosystem 内已分组合并；(3) 不急于当天处理，本周内 review 即可</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="changes">
+      <h2>9. 改造文件清单</h2>
+      <table>
+        <thead>
+          <tr><th>#</th><th>文件</th><th>操作</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><code>.github/dependabot.yml</code></td>
+            <td><span class="pill create">create</span></td>
+            <td>三 ecosystem 配置，详见 §3</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><code>scripts/setup-branch-protection.sh</code></td>
+            <td><span class="pill create">create</span></td>
+            <td>gh api PUT main 保护规则，幂等；chmod +x</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><code>.github/workflows/ci.yml</code></td>
+            <td><span class="pill modify">modify</span></td>
+            <td>新增 <code>required-check</code> job；原 <code>build-and-test</code> 与 <code>paths-ignore</code> 不动</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td><code>docs/patra/specs/2026-05-22-pap-15-branch-protection-dependabot-design.html</code></td>
+            <td><span class="pill create">create</span></td>
+            <td>本文档</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <aside class="callout info">
+      <span class="title">Done 判定</span>
+      <ol>
+        <li><code>.github/dependabot.yml</code> 已 commit，覆盖三个 ecosystem，每个 ecosystem 的 groups / schedule / labels 与 §3 一致。</li>
+        <li><code>scripts/setup-branch-protection.sh</code> 已 commit、<code>chmod +x</code>、本地实际跑过一次成功（脚本末尾的 GET 回显字段与 §4 表格一致）。</li>
+        <li><code>.github/workflows/ci.yml</code> 已加 <code>required-check</code> job，原 <code>build-and-test</code> 与 <code>paths-ignore</code> 未改动。</li>
+        <li>AC D5 的 4 步验证全部跑通；不通过的项在 Implementation Notes 中记录原因与后续 action。</li>
+        <li>PR 已开、CI 全绿、squash merge 到 main。</li>
+        <li>merge 后 1 周内（最迟下周一 09:00 上海）观察到 ≥ 1 个 Dependabot PR 自动开出。</li>
+      </ol>
+    </aside>
+
+  </main>
+
+  <!-- ============================================================
+       右栏：Implementation Notes（实施期由 Claude Code 维护）
+       ============================================================ -->
+  <aside class="notes-panel" id="notes">
+    <header>
+      <h2>Implementation Notes</h2>
+      <p class="hint">实施期由 Claude Code 即时追加。规则：遇到 spec 未规定的<strong>决定</strong>、必要<strong>更改</strong>、不可避免的<strong>权衡</strong>、其他用户应知事项，立即用 Edit 追加 entry，不要等任务结束。</p>
+    </header>
+
+    <ol class="notes-log">
+      <!-- ENTRY TEMPLATE（注释保留供实施期 AI 复制）:
+
+      <li class="note" data-type="decision" data-time="YYYY-MM-DDTHH:MM">
+        <header>
+          <span class="note-type">DECISION</span>
+          <time datetime="YYYY-MM-DDTHH:MM">MM-DD HH:MM</time>
+          <a href="#sec-N">§ N 章节名</a>
+        </header>
+        <p>描述：spec 未规定 X，实施时选择 Y。理由：...</p>
+      </li>
+
+      data-type 4 类：decision / change / tradeoff / other
+      追加 entry 时同步更新下方 notes-stats footer 的对应 counter 数字。
+      -->
+    </ol>
+
+    <p class="empty-state">no notes yet</p>
+
+    <footer class="notes-stats">
+      总计:
+      <span data-counter="decision">0</span> decisions /
+      <span data-counter="change">0</span> changes /
+      <span data-counter="tradeoff">0</span> tradeoffs /
+      <span data-counter="other">0</span> others
+    </footer>
+  </aside>
+
+</div>
+</body>
+</html>
