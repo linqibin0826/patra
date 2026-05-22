@@ -23,8 +23,8 @@
           <li data-task-status="done"><a href="#task-1">Task 1 — PR1 实施基础设施层</a></li>
           <li data-task-status="done"><a href="#task-2">Task 2 — PR1 实测验证 + merge</a></li>
           <li data-task-status="done"><a href="#task-3">Task 3 — PR2 jacoco-aggregation convention plugin + 本地 spike</a></li>
-          <li data-task-status="pending"><a href="#task-4">Task 4 — PR2 ci.yml 拆 4 job + required-check 真正生效</a></li>
-          <li data-task-status="pending"><a href="#task-5">Task 5 — PR2 实测 + 分支保护强制验证 + merge</a></li>
+          <li data-task-status="done"><a href="#task-4">Task 4 — PR2 ci.yml 拆 4 job + required-check 真正生效</a></li>
+          <li data-task-status="in-progress"><a href="#task-5">Task 5 — PR2 实测 + 分支保护强制验证 + merge</a></li>
           <li data-task-status="pending"><a href="#task-6">Task 6 — PR3 ci.yml unit-tests 改 4-shard matrix</a></li>
           <li data-task-status="pending"><a href="#task-7">Task 7 — PR3 实测 + 最终对比 + merge</a></li>
         </ol>
@@ -486,7 +486,7 @@ EOF
         </ol>
       </article>
 
-      <article class="task" id="task-4" data-status="pending">
+      <article class="task" id="task-4" data-status="done">
         <header>
           <h2>任务 4：PR2 ci.yml 拆 4 job + required-check 真正生效</h2>
           <dl class="files">
@@ -495,7 +495,7 @@ EOF
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：重写 ci.yml 完整 jobs 块</strong>
             <p>把现有 <code>required-check</code> + <code>build-and-test</code> 两 job 替换为 5 job 结构（unit-tests / integration-tests / e2e-tests / coverage-and-upload / required-check）。完整替换 <code>jobs:</code> 块为：</p>
             <pre><code class="lang-yaml">jobs:
@@ -703,14 +703,14 @@ EOF
           jobs: ${{ toJSON(needs) }}</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：本地静态校验 ci.yml</strong>
             <pre><code class="lang-bash">command -v actionlint &>/dev/null && actionlint .github/workflows/ci.yml || echo "actionlint 未安装"
 yq eval '.jobs | keys' .github/workflows/ci.yml</code></pre>
             <p>预期：yq 输出包含 5 个 job 名 <code>[coverage-and-upload, e2e-tests, integration-tests, required-check, unit-tests]</code>。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：Commit task 4</strong>
             <pre><code class="lang-bash">git add .github/workflows/ci.yml
 git commit -m "$(cat &lt;&lt;'EOF'
@@ -735,7 +735,7 @@ EOF
         </ol>
       </article>
 
-      <article class="task" id="task-5" data-status="pending">
+      <article class="task" id="task-5" data-status="in-progress">
         <header>
           <h2>任务 5：PR2 实测 + 分支保护强制验证 + merge</h2>
           <dl class="files">
