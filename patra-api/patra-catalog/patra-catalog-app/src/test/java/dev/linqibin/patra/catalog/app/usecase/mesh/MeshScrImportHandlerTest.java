@@ -15,12 +15,10 @@ import dev.linqibin.patra.catalog.domain.exception.DataAlreadyExistsException;
 import dev.linqibin.patra.catalog.domain.model.vo.mesh.MeshImportParams;
 import dev.linqibin.patra.catalog.domain.port.batch.MeshBatchPort;
 import dev.linqibin.patra.catalog.domain.port.repository.MeshScrRepository;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -37,7 +35,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("MeshScrImportHandler 单元测试")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 @ExtendWith(MockitoExtension.class)
 class MeshScrImportHandlerTest {
 

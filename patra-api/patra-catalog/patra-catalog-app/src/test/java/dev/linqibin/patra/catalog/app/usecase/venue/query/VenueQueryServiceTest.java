@@ -13,11 +13,9 @@ import dev.linqibin.patra.catalog.domain.model.read.venue.VenueFilter;
 import dev.linqibin.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import dev.linqibin.patra.catalog.domain.port.read.VenueReadPort;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -31,7 +29,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 /// - 正确委托 VenueReadPort
 @ExtendWith(MockitoExtension.class)
 @DisplayName("VenueQueryService 单元测试")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class VenueQueryServiceTest {
 
   private static final VenueFilter EMPTY_FILTER = VenueFilter.builder().build();

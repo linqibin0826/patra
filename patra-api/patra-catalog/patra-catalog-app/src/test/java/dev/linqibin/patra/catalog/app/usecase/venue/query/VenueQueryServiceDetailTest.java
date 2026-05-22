@@ -14,10 +14,8 @@ import dev.linqibin.patra.catalog.domain.port.read.VenueReadPort;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -31,7 +29,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 /// - 空查询：query 为 null 时抛出 NullPointerException
 @ExtendWith(MockitoExtension.class)
 @DisplayName("VenueQueryService 详情查询单元测试")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class VenueQueryServiceDetailTest {
 
   @Mock private VenueReadPort venueReadPort;

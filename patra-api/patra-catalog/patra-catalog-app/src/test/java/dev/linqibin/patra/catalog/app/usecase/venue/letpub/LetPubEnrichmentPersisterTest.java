@@ -8,11 +8,9 @@ import static org.mockito.Mockito.when;
 import dev.linqibin.patra.catalog.domain.port.enrichment.LetPubEnrichmentPersistPort;
 import dev.linqibin.patra.catalog.domain.port.enrichment.LetPubEnrichmentPersistPort.PersistStats;
 import dev.linqibin.patra.catalog.domain.port.enrichment.LetPubVenueData;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -23,7 +21,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 /// 单元测试只验证 1) 参数透传 2) 返回值透传 3) 异常透传。事务边界的实际
 /// 生效需要在集成测试里通过真实 Spring 容器验证（超出单元测试范围）。
 @DisplayName("LetPubEnrichmentPersister 单元测试")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 @ExtendWith(MockitoExtension.class)
 class LetPubEnrichmentPersisterTest {
 

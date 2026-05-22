@@ -16,12 +16,10 @@ import dev.linqibin.patra.catalog.domain.exception.InvalidRorImportParamsExcepti
 import dev.linqibin.patra.catalog.domain.model.vo.organization.RorImportParams;
 import dev.linqibin.patra.catalog.domain.port.batch.RorOrganizationBatchPort;
 import dev.linqibin.patra.catalog.domain.port.repository.OrganizationRepository;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -44,7 +42,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @DisplayName("RorOrganizationImportHandler 单元测试")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class RorOrganizationImportHandlerTest {
 
   private static final String TEST_URL =

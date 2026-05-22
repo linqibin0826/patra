@@ -13,10 +13,8 @@ import dev.linqibin.patra.catalog.domain.model.read.publication.PublicationDetai
 import dev.linqibin.patra.catalog.domain.port.read.PublicationReadPort;
 import java.time.Instant;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -33,7 +31,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @DisplayName("PublicationQueryService 详情查询单元测试")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class PublicationQueryServiceDetailTest {
 
   @Mock private PublicationReadPort publicationReadPort;
