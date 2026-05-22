@@ -72,6 +72,6 @@ dependencies {
     implementation(libs.findLibrary("spring-cloud-starter-alibaba-nacos-discovery").get())
 
     // 测试依赖
-    testImplementation(project(":linqibin-spring-boot-starter-test"))
+    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
     testImplementation(libs.findLibrary("testcontainers-jdbc").get())
 }

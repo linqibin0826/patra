@@ -13,7 +13,7 @@ dependencies {
     // 内部模块
     api(project(":patra-catalog:patra-catalog-app"))
     api(project(":patra-catalog:patra-catalog-api"))
-    api(project(":linqibin-spring-boot-starter-web"))
+    api(project(":linqibin-commons:linqibin-spring-boot-starter-web"))
 
     // RocketMQ
     api(libs.rocketmq.spring.boot)
@@ -25,5 +25,5 @@ dependencies {
     // annotationProcessor 由 patra.java-base 插件提供
 
     // 测试依赖
-    testImplementation(project(":linqibin-spring-boot-starter-test"))
+    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
 }

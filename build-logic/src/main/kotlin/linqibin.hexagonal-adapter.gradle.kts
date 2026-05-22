@@ -29,5 +29,5 @@ dependencies {
     compileOnly(libs.findLibrary("swagger-annotations-jakarta").get())
 
     // 测试依赖
-    testImplementation(project(":linqibin-spring-boot-starter-test"))
+    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
 }

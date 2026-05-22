@@ -29,5 +29,5 @@ dependencies {
     implementation("org.springframework:spring-tx")
 
     // 测试依赖
-    testImplementation(project(":linqibin-spring-boot-starter-test"))
+    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
 }

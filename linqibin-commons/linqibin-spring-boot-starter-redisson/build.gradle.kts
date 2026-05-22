@@ -14,8 +14,8 @@ plugins {
 
 dependencies {
     // Patra 内部依赖
-    api(project(":linqibin-commons-core"))
-    api(project(":linqibin-spring-boot-starter-core"))
+    api(project(":linqibin-commons:linqibin-commons-core"))
+    api(project(":linqibin-commons:linqibin-spring-boot-starter-core"))
 
     // Redisson 官方 Starter
     api(libs.redisson.spring.boot)
@@ -28,7 +28,7 @@ dependencies {
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
 
     // 测试依赖
-    testImplementation(project(":linqibin-spring-boot-starter-test"))
+    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
 }
 
 // 覆盖率要求 75%

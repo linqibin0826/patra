@@ -19,11 +19,11 @@ dependencies {
     implementation(project(":patra-object-storage:patra-object-storage-infra"))
 
     // Web Starter
-    implementation(project(":linqibin-spring-boot-starter-web"))
+    implementation(project(":linqibin-commons:linqibin-spring-boot-starter-web"))
 
     // 可观测性
-    implementation(project(":linqibin-spring-boot-starter-observability"))
+    implementation(project(":linqibin-commons:linqibin-spring-boot-starter-observability"))
 
     // 测试依赖
-    testImplementation(project(":linqibin-spring-boot-starter-test"))
+    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
 }

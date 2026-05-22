@@ -28,8 +28,7 @@ dependencyResolutionManagement {
 
 // ==================== include helper ====================
 /**
- * 集中映射 Gradle path 到物理目录。
- * 拍平 Gradle path 保持现有 project(":...") 引用兼容；物理目录通过 projectDir 重映射。
+ * 集中映射 Gradle path 到物理目录（决策 E：Gradle path 必须与物理目录一一对应）。
  */
 fun includeAt(path: String, dir: String) {
     include(path)
@@ -39,7 +38,7 @@ fun includeAt(path: String, dir: String) {
 /**
  * 设置嵌套 path 父容器的 projectDir。
  * 当 include(":parent:child") 时 Gradle 隐式创建 :parent；该父容器无 build.gradle.kts，仅作容器，
- * 其 projectDir 默认从 rootProject.projectDir 解析，需手动重映射到 patra-api/<parent>。
+ * 其 projectDir 默认从 rootProject.projectDir 解析，需手动重映射到实际物理目录。
  * 必须在所有子 include 之后调用（避免子 project 解析时父 project 还不存在）。
  */
 fun mapParent(path: String, dir: String) {
@@ -52,29 +51,30 @@ includeAt(":patra-common:patra-common-provenance-api", "patra-api/patra-common/p
 includeAt(":patra-common:patra-common-enums", "patra-api/patra-common/patra-common-enums")
 mapParent(":patra-common", "patra-api/patra-common")
 
-// ==================== linqibin-commons（物理仍在 patra-api/，Task 2 移动）====================
-includeAt(":linqibin-commons-core", "linqibin-commons/linqibin-commons-core")
-includeAt(":linqibin-commons-storage", "linqibin-commons/linqibin-commons-storage")
+// ==================== linqibin-commons ====================
+// 决策 E：嵌套 path 与物理目录一一对应
+includeAt(":linqibin-commons:linqibin-commons-core", "linqibin-commons/linqibin-commons-core")
+includeAt(":linqibin-commons:linqibin-commons-storage", "linqibin-commons/linqibin-commons-storage")
+includeAt(":linqibin-commons:linqibin-spring-boot-starter-core", "linqibin-commons/linqibin-spring-boot-starter-core")
+includeAt(":linqibin-commons:linqibin-spring-boot-starter-web", "linqibin-commons/linqibin-spring-boot-starter-web")
+includeAt(":linqibin-commons:linqibin-spring-boot-starter-jpa", "linqibin-commons/linqibin-spring-boot-starter-jpa")
+includeAt(":linqibin-commons:linqibin-spring-boot-starter-batch", "linqibin-commons/linqibin-spring-boot-starter-batch")
+includeAt(":linqibin-commons:linqibin-spring-boot-starter-rest-client", "linqibin-commons/linqibin-spring-boot-starter-rest-client")
+includeAt(":linqibin-commons:linqibin-spring-boot-starter-http-interface", "linqibin-commons/linqibin-spring-boot-starter-http-interface")
+includeAt(":linqibin-commons:linqibin-spring-boot-starter-observability", "linqibin-commons/linqibin-spring-boot-starter-observability")
+includeAt(":linqibin-commons:linqibin-spring-boot-starter-redisson", "linqibin-commons/linqibin-spring-boot-starter-redisson")
+includeAt(":linqibin-commons:linqibin-spring-boot-starter-object-storage", "linqibin-commons/linqibin-spring-boot-starter-object-storage")
+includeAt(":linqibin-commons:linqibin-spring-boot-starter-test", "linqibin-commons/linqibin-spring-boot-starter-test")
+includeAt(":linqibin-commons:linqibin-spring-boot-starter-openapi", "linqibin-commons/linqibin-spring-boot-starter-openapi")
+mapParent(":linqibin-commons", "linqibin-commons")
+
+// ==================== patra-starters ====================
+includeAt(":patra-starters:patra-spring-boot-starter-provenance", "patra-starters/patra-spring-boot-starter-provenance")
+includeAt(":patra-starters:patra-spring-boot-starter-expr", "patra-starters/patra-spring-boot-starter-expr")
+mapParent(":patra-starters", "patra-starters")
 
 // ==================== Expression Kernel ====================
 includeAt(":patra-expr-kernel", "patra-api/patra-expr-kernel")
-
-// ==================== Spring Boot Starters ====================
-// linqibin-* 共 11 个，物理仍在 patra-api/（Task 2 移动到 linqibin-commons/）
-includeAt(":linqibin-spring-boot-starter-core", "linqibin-commons/linqibin-spring-boot-starter-core")
-includeAt(":linqibin-spring-boot-starter-web", "linqibin-commons/linqibin-spring-boot-starter-web")
-includeAt(":linqibin-spring-boot-starter-jpa", "linqibin-commons/linqibin-spring-boot-starter-jpa")
-includeAt(":linqibin-spring-boot-starter-batch", "linqibin-commons/linqibin-spring-boot-starter-batch")
-includeAt(":linqibin-spring-boot-starter-rest-client", "linqibin-commons/linqibin-spring-boot-starter-rest-client")
-includeAt(":linqibin-spring-boot-starter-http-interface", "linqibin-commons/linqibin-spring-boot-starter-http-interface")
-includeAt(":linqibin-spring-boot-starter-observability", "linqibin-commons/linqibin-spring-boot-starter-observability")
-includeAt(":linqibin-spring-boot-starter-redisson", "linqibin-commons/linqibin-spring-boot-starter-redisson")
-includeAt(":linqibin-spring-boot-starter-object-storage", "linqibin-commons/linqibin-spring-boot-starter-object-storage")
-includeAt(":linqibin-spring-boot-starter-test", "linqibin-commons/linqibin-spring-boot-starter-test")
-includeAt(":linqibin-spring-boot-starter-openapi", "linqibin-commons/linqibin-spring-boot-starter-openapi")
-// patra-spring-boot-starter-* 共 2 个，物理仍在 patra-api/（Task 3 移动到 patra-starters/）
-includeAt(":patra-spring-boot-starter-provenance", "patra-starters/patra-spring-boot-starter-provenance")
-includeAt(":patra-spring-boot-starter-expr", "patra-starters/patra-spring-boot-starter-expr")
 
 // ==================== Microservices ====================
 includeAt(":patra-registry:patra-registry-domain", "patra-api/patra-registry/patra-registry-domain")
