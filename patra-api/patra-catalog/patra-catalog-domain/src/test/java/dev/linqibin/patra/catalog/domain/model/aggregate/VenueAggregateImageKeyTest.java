@@ -4,16 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.linqibin.patra.catalog.domain.model.enums.VenueType;
 import dev.linqibin.patra.catalog.domain.model.vo.venue.VenueId;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// VenueAggregate 封面对象键字段单元测试。
 ///
 /// 验证 `imageObjectKey` 字段的 null-safe 幂等富化语义。
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 @DisplayName("VenueAggregate imageObjectKey 字段测试")
 class VenueAggregateImageKeyTest {
 

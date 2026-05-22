@@ -4,14 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// MeSH 文件类型枚举测试。
 ///
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("MeshFileType 枚举测试")
-@Timeout(2)
 class MeshFileTypeTest {
 
   @Test

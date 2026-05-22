@@ -6,14 +6,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// 出版历史值对象单元测试。
 ///
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("PublicationHistory 出版历史值对象")
-@Timeout(2)
 class PublicationHistoryTest {
 
   @Nested

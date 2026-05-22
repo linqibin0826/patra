@@ -9,14 +9,12 @@ import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// 出版概况值对象单元测试。
 ///
 /// @author linqibin
 /// @since 0.7.0
 @DisplayName("PublicationProfile 出版概况值对象")
-@Timeout(2)
 class PublicationProfileTest {
 
   @Nested

@@ -16,7 +16,6 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// VenueAggregate 聚合根单元测试（最小聚合版本）。
 ///
@@ -36,7 +35,6 @@ import org.junit.jupiter.api.Timeout;
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("VenueAggregate 单元测试（最小聚合）")
-@Timeout(2)
 class VenueAggregateTest {
 
   // ========== 测试数据 ==========

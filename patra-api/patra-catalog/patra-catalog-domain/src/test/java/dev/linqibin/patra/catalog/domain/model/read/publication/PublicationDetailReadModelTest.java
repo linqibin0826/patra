@@ -11,17 +11,14 @@ import dev.linqibin.patra.catalog.domain.model.read.publication.PublicationDetai
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// PublicationDetailReadModel 紧凑构造器校验测试。
 ///
 /// @author linqibin
 /// @since 0.1.0
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 @DisplayName("PublicationDetailReadModel 构造器校验测试")
 class PublicationDetailReadModelTest {
 

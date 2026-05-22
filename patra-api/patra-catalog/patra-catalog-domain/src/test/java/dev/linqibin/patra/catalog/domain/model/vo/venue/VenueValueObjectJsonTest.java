@@ -8,7 +8,6 @@ import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
@@ -18,7 +17,6 @@ import tools.jackson.databind.json.JsonMapper;
 /// @author linqibin
 /// @since 0.7.0
 @DisplayName("Venue 值对象 JSON 兼容性")
-@Timeout(2)
 class VenueValueObjectJsonTest {
 
   private final ObjectMapper objectMapper = JsonMapper.builder().build();

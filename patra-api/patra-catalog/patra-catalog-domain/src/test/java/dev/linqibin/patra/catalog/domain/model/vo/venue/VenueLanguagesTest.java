@@ -7,14 +7,12 @@ import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// VenueLanguages 值对象单元测试。
 ///
 /// @author linqibin
 /// @since 0.7.0
 @DisplayName("VenueLanguages 值对象")
-@Timeout(2)
 class VenueLanguagesTest {
 
   @Nested

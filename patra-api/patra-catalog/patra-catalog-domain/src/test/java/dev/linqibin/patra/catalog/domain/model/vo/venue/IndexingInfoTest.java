@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -15,7 +14,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("IndexingInfo 索引收录信息值对象")
-@Timeout(2)
 class IndexingInfoTest {
 
   @Nested

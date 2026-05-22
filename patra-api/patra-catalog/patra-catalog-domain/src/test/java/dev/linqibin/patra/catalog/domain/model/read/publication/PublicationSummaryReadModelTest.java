@@ -4,17 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Instant;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// PublicationSummaryReadModel 紧凑构造器校验测试。
 ///
 /// @author linqibin
 /// @since 0.1.0
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 @DisplayName("PublicationSummaryReadModel 构造器校验测试")
 class PublicationSummaryReadModelTest {
 

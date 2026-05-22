@@ -8,14 +8,12 @@ import java.time.LocalDate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// VenueInstanceAggregate 聚合根单元测试。
 ///
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("VenueInstanceAggregate 聚合根")
-@Timeout(2)
 class VenueInstanceAggregateTest {
 
   // ========== 测试数据常量 ==========

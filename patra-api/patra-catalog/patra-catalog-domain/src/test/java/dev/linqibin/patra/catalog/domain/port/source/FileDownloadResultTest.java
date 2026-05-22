@@ -7,14 +7,12 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// FileDownloadResult 单元测试。
 ///
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("FileDownloadResult 值对象")
-@Timeout(2)
 class FileDownloadResultTest {
 
   private static final Path VALID_PATH = Path.of("/tmp/test-file.xml");

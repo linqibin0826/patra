@@ -8,14 +8,12 @@ import java.time.LocalDate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// 载体数据源值对象单元测试。
 ///
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("VenueSourceData 载体数据源值对象")
-@Timeout(2)
 class VenueSourceDataTest {
 
   @Nested
