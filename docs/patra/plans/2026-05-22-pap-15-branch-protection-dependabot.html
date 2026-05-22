@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PAP-15 — 分支保护 + Dependabot 实现计划</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- CSS 外置：相对路径 ../styles/ 是从生成位置 docs/patra/plans/ 出发；
+       模板本身在 .claude-marketplace/ 下打开时此 link 会 404（接受：模板预览以生成后的 plan 为准） -->
+  <link rel="stylesheet" href="../styles/journal.css">
+  <link rel="stylesheet" href="../styles/plan-extras.css">
+</head>
+<body>
+<div class="layout">
+
+  <!-- ============================================================
+       左栏：目录（TOC）
+       ============================================================ -->
+  <nav class="toc">
+    <h3>目录</h3>
+    <ol>
+      <li><a href="#scope-check">范围检查结果</a></li>
+      <li><a href="#file-structure">文件结构</a></li>
+      <li><a href="#tasks">任务列表</a>
+        <ol class="toc-tasks">
+          <!-- ENTRY TEMPLATE（注释保留供添加 task 时复制）:
+               每写一个 <article id="task-N">，在此处同步追加一条 li，初始 data-task-status="pending"。
+               实施期改 article 的 data-status 时，必须同步改此处 li 的 data-task-status，
+               否则 TOC 状态符号会与中栏卡片不一致。
+
+          <li data-task-status="pending"><a href="#task-N">Task N — [任务名]</a></li>
+          -->
+          <li data-task-status="pending"><a href="#task-1">Task 1 — 创建 .github/dependabot.yml</a></li>
+          <li data-task-status="pending"><a href="#task-2">Task 2 — ci.yml 加 required-check 哨兵 job</a></li>
+          <li data-task-status="pending"><a href="#task-3">Task 3 — 创建 scripts/setup-branch-protection.sh</a></li>
+          <li data-task-status="pending"><a href="#task-4">Task 4 — push 分支并开 PR</a></li>
+          <li data-task-status="pending"><a href="#task-5">Task 5 — PR merge 后跑保护规则脚本</a></li>
+          <li data-task-status="pending"><a href="#task-6">Task 6 — AC D5 四步验证</a></li>
+        </ol>
+      </li>
+      <li><a href="#self-check">自检结果</a></li>
+    </ol>
+  </nav>
+
+  <!-- ============================================================
+       中栏：内容
+       ============================================================ -->
+  <main class="content">
+
+    <header class="doc-header">
+      <h1>PAP-15 — 分支保护 + Dependabot 实现计划</h1>
+      <div class="meta-bar">
+        <span>📅 2026-05-22</span>
+        <span>🌿 worktree-pap-15-branch-protection</span>
+        <span>📋 plan</span>
+        <span class="status-pill">draft</span>
+      </div>
+
+      <aside class="for-ai-worker">
+        <strong>面向 AI 代理的工作者：</strong>
+        必需子技能：使用 <code>patra:subagent-driven-development</code>（推荐）
+        或 <code>patra:executing-plans</code> 逐任务实现。
+        通过修改任务卡片与步骤的 <code>data-status</code> 属性追踪进度
+        （pending / in-progress / done / blocked / skipped）。
+        每完成一个 task 立即 commit。
+      </aside>
+
+      <dl class="meta">
+        <dt>目标</dt> <dd>给 Patra 仓库的 <code>main</code> 分支加分支保护、绑定 Required Status Check、配置 Dependabot 自动开 PR；本地一次性运行保护规则脚本完成部署。</dd>
+        <dt>架构</dt> <dd>三个仓库内产物（dependabot.yml / setup-branch-protection.sh / ci.yml 加哨兵 job），PR merge 后本地手工跑一次脚本设置分支保护，最后按 AC D5 跑四步验证。</dd>
+        <dt>技术栈</dt> <dd>GitHub Actions YAML / GitHub Branch Protection REST API / gh CLI / bash</dd>
+        <dt>关联 spec</dt> <dd><a href="../specs/2026-05-22-pap-15-branch-protection-dependabot-design.html">PAP-15 — main 分支保护 + Required Status Checks + Dependabot 分组 PR</a></dd>
+      </dl>
+    </header>
+
+    <section id="scope-check">
+      <h2>范围检查结果</h2>
+      <aside class="callout success">
+        <span class="title">单 plan 覆盖</span>
+        <p>本 plan 覆盖 PAP-15 的全部 AC（分支保护规则、Dependabot 三 ecosystem 配置、D5 验证）。所有产物在仓库配置层、与业务代码无耦合，可在单个 PR 内完成实现。无需拆分子计划。</p>
+      </aside>
+    </section>
+
+    <section id="file-structure">
+      <h2>文件结构</h2>
+      <div class="file-tree">
+        <pre>.github/
+  dependabot.yml                              [create]   Dependabot 三 ecosystem 配置（gradle / npm / github-actions）
+  workflows/
+    ci.yml                                    [modify]   新增 required-check 哨兵 job；原 build-and-test + paths-ignore 不动
+
+scripts/
+  setup-branch-protection.sh                  [create]   gh api PUT main 保护规则；幂等；chmod +x
+
+docs/patra/
+  specs/
+    2026-05-22-pap-15-branch-protection-dependabot-design.html   [keep]   已 commit（commit 2db7d8260），实施期不再改动
+  plans/
+    2026-05-22-pap-15-branch-protection-dependabot.html          [create] 本文件</pre>
+      </div>
+      <aside class="callout info">
+        <span class="title">职责边界</span>
+        <p>三个产物各自独立，无依赖顺序约束（理论上可以任何顺序写），但实施按 dependabot.yml → ci.yml → setup script 顺序便于 review。验证（Task 6）必须在脚本跑过（Task 5）之后。</p>
+      </aside>
+    </section>
+
+    <section id="tasks">
+      <h2>任务列表</h2>
+
+      <!-- TASK TEMPLATE（注释保留供添加新 task 时复制）:
+
+      <article class="task" id="task-N" data-status="pending">
+        <header>
+          <h2>任务 N：[任务标题]</h2>
+          <dl class="files">
+            <dt>创建</dt><dd><code>[exact/path/to/File.java]</code></dd>
+            <dt>修改</dt><dd><code>[exact/path/to/Existing.java:123-145]</code></dd>
+            <dt>测试</dt><dd><code>[tests/exact/path/to/Test.java]</code></dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：[描述]</strong>
+            <pre><code class="lang-java">[完整代码块，禁止占位]</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：运行测试验证</strong>
+            <p>运行：<code>[精确命令]</code></p>
+            <p>预期：[精确预期]</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：Commit</strong>
+            <pre><code class="lang-bash">git add [files]
+git commit -m "feat: [description]"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      data-status 5 类：pending / in-progress / done / blocked / skipped
+      每开始任务/步骤改 in-progress，完成改 done。遇阻塞改 blocked，并在右栏 notes-panel 追加 data-type="other" entry 说明阻塞原因。
+      -->
+
+      <article class="task" id="task-1" data-status="pending">
+        <header>
+          <h2>任务 1：创建 <code>.github/dependabot.yml</code></h2>
+          <dl class="files">
+            <dt>创建</dt><dd><code>.github/dependabot.yml</code></dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：写完整内容到 <code>.github/dependabot.yml</code></strong>
+            <p>该文件不存在；直接 Write 创建。完整内容（来自 spec §3）：</p>
+            <pre><code class="lang-yaml">version: 2
+updates:
+  # ---- Java / Gradle ----
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    groups:
+      production-deps:
+        dependency-type: "production"
+      test-deps:
+        dependency-type: "development"
+
+  # ---- Next.js / pnpm ----
+  - package-ecosystem: "npm"
+    directory: "/patra-portal"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    groups:
+      production-deps:
+        dependency-type: "production"
+      dev-deps:
+        dependency-type: "development"
+
+  # ---- GitHub Actions ----
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    groups:
+      gh-actions:
+        patterns:
+          - "*"
+</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：本地 YAML 语法校验</strong>
+            <p>运行（在 worktree 根目录）：</p>
+            <pre><code class="lang-bash">python3 -c "import yaml; print('OK' if yaml.safe_load(open('.github/dependabot.yml')) else 'BAD')"</code></pre>
+            <p>预期输出：<code>OK</code>。任何 traceback 或非 OK 输出说明 YAML 不合法，对照步骤 1 内容修正后重试。</p>
+            <p><strong>说明</strong>：actionlint 不校验 dependabot.yml（仅校验 workflows/）。Dependabot 自身的 schema 校验在 push 到 GitHub 后由 Insights → Dependency graph → Dependabot 反馈，本地能做的就是 YAML 语法解析。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：Commit</strong>
+            <pre><code class="lang-bash">git add .github/dependabot.yml
+git commit -m "$(cat &lt;&lt;'EOF'
+ci(dependabot): 三 ecosystem 周更新 + 分组 PR (PAP-15)
+
+gradle (/): production-deps / test-deps 分组
+npm (/patra-portal): production-deps / dev-deps 分组
+github-actions (/): 单组合并
+schedule: weekly monday 09:00 Asia/Shanghai
+labels: dependencies；不自动合并
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt;
+EOF
+)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-2" data-status="pending">
+        <header>
+          <h2>任务 2：<code>ci.yml</code> 新增 <code>required-check</code> 哨兵 job</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>.github/workflows/ci.yml</code>（在 <code>jobs:</code> 下插入新 job，原 <code>build-and-test</code> 完全不动）</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：用 Edit 在 <code>jobs:</code> 之后、<code>build-and-test:</code> 之前插入哨兵 job</strong>
+            <p>找到 ci.yml 中以下片段：</p>
+            <pre><code class="lang-yaml">jobs:
+  build-and-test:
+    name: build-and-test
+    runs-on: ubuntu-latest</code></pre>
+            <p>替换为：</p>
+            <pre><code class="lang-yaml">jobs:
+  required-check:
+    name: required-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: ✓ Required check satisfied
+        run: echo "Required check satisfied — gating job for branch protection"
+
+  build-and-test:
+    name: build-and-test
+    runs-on: ubuntu-latest</code></pre>
+            <p><strong>注意</strong>：仅插入 <code>required-check</code> 这个 job 块，原 <code>build-and-test</code> 的所有 steps、<code>paths-ignore</code>（在 <code>on:</code> 块里）、<code>concurrency</code> 配置一律不动。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：actionlint 校验 workflow 语法</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">actionlint .github/workflows/ci.yml 2&gt;&amp;1 || echo "actionlint 未安装或报错"</code></pre>
+            <p>预期：actionlint 静默退出（exit 0）即通过；若未安装则跳过本步骤（用步骤 3 的 yaml 解析兜底）。</p>
+            <p>安装方式（按需）：<code>brew install actionlint</code>。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：YAML 语法兜底校验</strong>
+            <pre><code class="lang-bash">python3 -c "import yaml; d = yaml.safe_load(open('.github/workflows/ci.yml')); assert 'required-check' in d['jobs'] and 'build-and-test' in d['jobs']; print('OK: both jobs present')"</code></pre>
+            <p>预期输出：<code>OK: both jobs present</code>。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：Commit</strong>
+            <pre><code class="lang-bash">git add .github/workflows/ci.yml
+git commit -m "$(cat &lt;&lt;'EOF'
+ci(workflow): 新增 required-check 哨兵 job (PAP-15)
+
+为解决 paths-ignore 与 Required Status Check 冲突，
+新增永远 success 的 required-check job 作为必需 check 目标；
+build-and-test 原配置不动，作为辅助 check（受 paths-ignore 影响）。
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt;
+EOF
+)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-3" data-status="pending">
+        <header>
+          <h2>任务 3：创建 <code>scripts/setup-branch-protection.sh</code></h2>
+          <dl class="files">
+            <dt>创建</dt><dd><code>scripts/setup-branch-protection.sh</code>（chmod +x）</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：确认 scripts/ 目录存在</strong>
+            <pre><code class="lang-bash">ls -la scripts/ 2&gt;&amp;1 | head -5</code></pre>
+            <p>预期：目录存在（仓库根已有 <code>scripts/</code>，含其他脚本如 setup-jdk-mise.sh 等）。若不存在则先 <code>mkdir -p scripts</code>。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：写完整脚本到 <code>scripts/setup-branch-protection.sh</code></strong>
+            <p>完整内容（来自 spec §4）：</p>
+            <pre><code class="lang-bash">#!/usr/bin/env bash
+# main 分支保护规则一次性配置脚本（幂等，可重复运行）
+# 用法: ./scripts/setup-branch-protection.sh
+# 依赖: gh CLI 已登录、对仓库有 admin 权限
+
+set -euo pipefail
+
+OWNER_REPO="linqibin0826/patra"
+BRANCH="main"
+
+echo "→ 配置 ${OWNER_REPO} 分支 ${BRANCH} 的保护规则..."
+
+gh api \
+  --method PUT \
+  -H "Accept: application/vnd.github+json" \
+  "/repos/${OWNER_REPO}/branches/${BRANCH}/protection" \
+  --input - &lt;&lt;'JSON'
+{
+  "required_status_checks": {
+    "strict": true,
+    "contexts": ["required-check"]
+  },
+  "enforce_admins": false,
+  "required_pull_request_reviews": null,
+  "restrictions": null,
+  "required_linear_history": true,
+  "allow_force_pushes": false,
+  "allow_deletions": false,
+  "block_creations": false,
+  "required_conversation_resolution": true,
+  "lock_branch": false,
+  "allow_fork_syncing": false
+}
+JSON
+
+echo "✓ 完成。当前规则:"
+gh api "/repos/${OWNER_REPO}/branches/${BRANCH}/protection" \
+  | jq '{required_status_checks, enforce_admins, required_linear_history, allow_force_pushes, allow_deletions, required_conversation_resolution}'
+</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：chmod +x 并校验</strong>
+            <pre><code class="lang-bash">chmod +x scripts/setup-branch-protection.sh
+ls -la scripts/setup-branch-protection.sh</code></pre>
+            <p>预期：权限位含 <code>x</code>（如 <code>-rwxr-xr-x</code>）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：bash 语法校验 + shellcheck（如果安装了）</strong>
+            <pre><code class="lang-bash">bash -n scripts/setup-branch-protection.sh &amp;&amp; echo "bash syntax OK"
+shellcheck scripts/setup-branch-protection.sh 2&gt;&amp;1 || echo "shellcheck 未安装或有 lint 警告，可接受"</code></pre>
+            <p>预期 <code>bash -n</code> 输出 <code>bash syntax OK</code>。shellcheck 是可选 lint，可能对 set -euo pipefail 之类有建议，对功能不影响。</p>
+            <p><strong>不要在本步骤实际运行脚本</strong>——脚本会真的 PUT 分支保护规则；运行时机在 Task 5（PR merge 之后）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：Commit</strong>
+            <pre><code class="lang-bash">git add scripts/setup-branch-protection.sh
+git commit -m "$(cat &lt;&lt;'EOF'
+chore(scripts): main 分支保护规则配置脚本 (PAP-15)
+
+gh api PUT /repos/.../branches/main/protection
+- required check: required-check（哨兵 job）
+- linear history: true / force push: false
+- enforce_admins: false（单人项目 admin bypass）
+- conversation resolution: true / deletion: false
+
+幂等，可重复运行；本地手工执行一次完成部署。
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt;
+EOF
+)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-4" data-status="pending">
+        <header>
+          <h2>任务 4：push 分支并开 PR</h2>
+          <dl class="files">
+            <dt>修改</dt><dd>无 — 仅 git/gh 操作</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：确认当前分支与 commit 历史</strong>
+            <pre><code class="lang-bash">git branch --show-current
+git log --oneline main..HEAD</code></pre>
+            <p>预期：当前在 <code>worktree-pap-15-branch-protection</code>，HEAD 含 4 个 commit（spec + 三个产物）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：push 分支</strong>
+            <pre><code class="lang-bash">git push -u origin worktree-pap-15-branch-protection</code></pre>
+            <p>预期：push 成功，输出包含 "branch ... set up to track ..."。如果远端拒绝（分支保护尚未生效），按提示处理；如本地有未拉取的 commit 则 <code>git pull --rebase</code> 后重试。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：用 gh CLI 开 PR</strong>
+            <pre><code class="lang-bash">gh pr create \
+  --base main \
+  --head worktree-pap-15-branch-protection \
+  --title "PAP-15: main 分支保护 + Required Status Checks + Dependabot 分组 PR" \
+  --body "$(cat &lt;&lt;'EOF'
+## Summary
+- 新建 .github/dependabot.yml：gradle / npm / github-actions 三 ecosystem 周更新 + 分组 PR + 不自动合并
+- 修改 .github/workflows/ci.yml：新增 required-check 哨兵 job 解决 paths-ignore 与 Required Status Check 冲突
+- 新建 scripts/setup-branch-protection.sh：gh api PUT main 保护规则；幂等；merge 后本地跑一次
+
+## Linear
+PAP-15 — repo: main 分支保护 + Required Status Checks + Dependabot 分组 PR
+关联 spec：docs/patra/specs/2026-05-22-pap-15-branch-protection-dependabot-design.html
+关联 plan：docs/patra/plans/2026-05-22-pap-15-branch-protection-dependabot.html
+
+## Test plan
+- [ ] CI: required-check 绿、build-and-test 绿
+- [ ] merge 后本地跑 ./scripts/setup-branch-protection.sh
+- [ ] AC D5 四步验证（见 plan Task 6）
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+EOF
+)"</code></pre>
+            <p>预期：PR 创建成功，gh 返回 PR URL。把 URL 记录在 Implementation Notes 中（右栏 data-type="other"）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：等待 CI 完成并确认两个 check 都绿</strong>
+            <pre><code class="lang-bash">gh pr checks --watch</code></pre>
+            <p>预期：<code>required-check</code> 与 <code>build-and-test</code> 都通过。<code>required-check</code> &lt; 30 秒；<code>build-and-test</code> 约 15-25 分钟。</p>
+            <p><strong>本 plan 改动仅涉及 .yml + .sh + .html，按 ci.yml 现有 paths-ignore 规则不含这些路径，所以 build-and-test 会触发并跑完整 Gradle 测试套件。</strong></p>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-5" data-status="pending">
+        <header>
+          <h2>任务 5：PR merge 后跑保护规则脚本</h2>
+          <dl class="files">
+            <dt>修改</dt><dd>无仓库改动 — 通过 gh api 修改 GitHub 服务端分支保护配置</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：squash merge PR 到 main</strong>
+            <pre><code class="lang-bash">gh pr merge --squash --delete-branch</code></pre>
+            <p>预期：PR 状态变为 merged。如未配置 squash 默认，加 <code>--auto</code> 等待 check 完成；本 PR 此前已确认 check 全绿。</p>
+            <p><strong>注意</strong>：此时分支保护规则<em>尚未生效</em>（脚本还没跑），merge 不会被 Required Status Check 阻挡。这是预期行为：第一次部署必须先 merge 才能跑脚本（否则脚本里引用的哨兵 job 不存在于 main 上，PUT 会失败）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：切回主工作树的 main 并拉最新</strong>
+            <p>本 worktree 已被 <code>--delete-branch</code> 删了远端分支。回到主工作树：</p>
+            <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/patra
+git checkout main
+git pull origin main</code></pre>
+            <p>预期：HEAD 含刚 merge 的 squash commit；<code>.github/dependabot.yml</code>、<code>scripts/setup-branch-protection.sh</code> 都在 main 上可见。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：确认 gh CLI 已认证且有 admin 权限</strong>
+            <pre><code class="lang-bash">gh auth status
+gh api /repos/linqibin0826/patra --jq '.permissions.admin'</code></pre>
+            <p>预期：<code>gh auth status</code> 显示已登录；<code>permissions.admin</code> 返回 <code>true</code>。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：跑保护规则脚本</strong>
+            <pre><code class="lang-bash">./scripts/setup-branch-protection.sh</code></pre>
+            <p>预期输出：</p>
+            <pre><code>→ 配置 linqibin0826/patra 分支 main 的保护规则...
+✓ 完成。当前规则:
+{
+  "required_status_checks": {
+    "strict": true,
+    "contexts": ["required-check"],
+    "checks": [...]
+  },
+  "enforce_admins": {"enabled": false, ...},
+  "required_linear_history": {"enabled": true},
+  "allow_force_pushes": {"enabled": false},
+  "allow_deletions": {"enabled": false},
+  "required_conversation_resolution": {"enabled": true}
+}</code></pre>
+            <p><strong>注意</strong>：gh api GET 返回的字段嵌套在 <code>{enabled: true/false, ...}</code> 对象里，而 PUT 时是裸 boolean，这是 GitHub API 的非对称设计。脚本末尾 jq 输出会显示嵌套对象形式，对照值即可。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：如果脚本失败，按错误类型处理</strong>
+            <table>
+              <thead><tr><th>错误</th><th>原因</th><th>处理</th></tr></thead>
+              <tbody>
+                <tr><td><code>HTTP 422: required-check is not a valid check</code></td><td>GitHub 还没看见 required-check job 跑过</td><td>触发一次 CI（如 push 一个无关 commit 到 main 或手工 workflow_dispatch），等 CI 完成后重跑脚本</td></tr>
+                <tr><td><code>HTTP 403</code></td><td>gh token 权限不足</td><td>跑 <code>gh auth refresh -s repo</code> 重新授权后重试</td></tr>
+                <tr><td><code>jq: command not found</code></td><td>本机未装 jq</td><td><code>brew install jq</code> 后重试</td></tr>
+              </tbody>
+            </table>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-6" data-status="pending">
+        <header>
+          <h2>任务 6：AC D5 四步验证</h2>
+          <dl class="files">
+            <dt>修改</dt><dd>无 — 临时分支与 commit 用于验证，不入 main</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：直推 main 测试</strong>
+            <p>注意：当前用户是仓库 admin，因 <code>enforce_admins: false</code>，直推 main 不会被拒（这是有意的应急口子）。本步骤主要验证"分支保护已开启、非 admin 直推会被拒"的事实，对单人项目用以下间接方式确认：</p>
+            <pre><code class="lang-bash">gh api /repos/linqibin0826/patra/branches/main/protection \
+  --jq '{enforce_admins: .enforce_admins.enabled, contexts: .required_status_checks.contexts}'</code></pre>
+            <p>预期输出：</p>
+            <pre><code>{
+  "enforce_admins": false,
+  "contexts": ["required-check"]
+}</code></pre>
+            <p>含义：保护规则已激活；非 admin 用户直推会被拒（GitHub 内置行为，不需再做实际推送测试，因为单人项目没有非 admin 用户可用）。</p>
+            <p>在 Implementation Notes 追加 entry：<code>data-type="other"</code>，说明本步骤通过 API 状态间接验证（单人项目限制）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：故意推 CI fail 的 PR 测试</strong>
+            <p>开一个临时分支，加一个会 fail 的 Gradle 测试，观察 PR check 状态：</p>
+            <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/patra
+git checkout -b verify/pap-15-fail-test
+# 找一个已存在的测试文件加一行 fail 断言；或者新建一个总是 fail 的测试
+cat &gt; /tmp/AlwaysFailTest.java &lt;&lt; 'EOF'
+package com.patra.verify;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.fail;
+
+class AlwaysFailTest {
+    @Test
+    void thisAlwaysFails() {
+        fail("Intentional fail for PAP-15 D5 verification");
+    }
+}
+EOF
+mkdir -p patra-api/patra-api-app/src/test/java/com/patra/verify
+cp /tmp/AlwaysFailTest.java patra-api/patra-api-app/src/test/java/com/patra/verify/
+git add patra-api/patra-api-app/src/test/java/com/patra/verify/AlwaysFailTest.java
+git commit -m "test: intentional fail for PAP-15 D5 verification (will be reverted)"
+git push -u origin verify/pap-15-fail-test
+gh pr create --base main --head verify/pap-15-fail-test \
+  --title "[VERIFY-DO-NOT-MERGE] PAP-15 D5: CI fail check" \
+  --body "Verifying that branch protection rejects merge when build-and-test fails. Will be closed without merge."
+gh pr checks --watch</code></pre>
+            <p>预期：<code>build-and-test</code> 红、<code>required-check</code> 绿。</p>
+            <p><strong>本 plan 的设计明确</strong>（spec §6 验证 2 + §7 决策 3）：Required Status Check 仅绑 required-check，所以 build-and-test 红时 merge 按钮<em>不会自动灰</em>，但 PR 页面会显示"Some checks were not successful"红色警告。验证目标是：</p>
+            <ul>
+              <li>UI 显示警告（截图/文字记录）— <strong>通过</strong></li>
+              <li>merge 按钮可点但被警告 — 符合本设计选择 — <strong>通过</strong></li>
+            </ul>
+            <p>如果用户希望严格"merge 按钮置灰"，按 spec §7 决策 3 备选 A 后续升级（不在本 plan scope）。</p>
+            <p>验证完成后清理：</p>
+            <pre><code class="lang-bash">gh pr close verify/pap-15-fail-test --delete-branch
+git checkout main</code></pre>
+            <p>在 Implementation Notes 追加 entry：<code>data-type="other"</code>，记录"UI 红色警告生效；merge 按钮可点是已知设计（spec §7 决策 3）"。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：触发 Dependabot 手动检查</strong>
+            <p>Dependabot 默认按 schedule 周一 09:00 Asia/Shanghai 跑；为加速验证，手动触发：</p>
+            <pre><code class="lang-bash">gh api -X POST /repos/linqibin0826/patra/dependency-graph/dependabot/check-for-updates 2&gt;&amp;1 || \
+  echo "需要从 Web UI 手工触发：Insights → Dependency graph → Dependabot → 任一 ecosystem 旁的 'Last checked X minutes ago' → 'Check for updates'"</code></pre>
+            <p>等 5-15 分钟后检查 PR 列表：</p>
+            <pre><code class="lang-bash">gh pr list --search "author:app/dependabot"</code></pre>
+            <p>预期：列表至少出现 1 个 Dependabot PR。如果 5+ 个全部出现，说明三 ecosystem × 分组都生效（最多 production-deps + test-deps + production-deps + dev-deps + gh-actions = 5 个）。</p>
+            <p>如果没有任何 PR，可能原因：</p>
+            <ul>
+              <li>dependabot.yml schema 错误 — 去 Insights → Dependency graph → Dependabot 看是否有红色 error 提示，按提示修正</li>
+              <li>所有依赖都已最新 — 这种情况罕见但理论可能；可在 build.gradle.kts 故意降一个无关依赖版本（如 jackson 从最新降到次新）观察 Dependabot 是否开升级 PR</li>
+            </ul>
+            <p>记录到 Implementation Notes：开出的 Dependabot PR 链接。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：force push 测试</strong>
+            <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/patra
+git checkout main
+git commit --allow-empty -m "force push test"
+git push --force origin main 2&gt;&amp;1 | head -10
+git reset --hard HEAD~1</code></pre>
+            <p>预期：<code>git push --force</code> 输出包含 <code>error: GH006: Protected branch update failed</code> 或类似拒绝信息。立即用 <code>git reset --hard HEAD~1</code> 撤销本地多出的 empty commit。</p>
+            <p><strong>注意</strong>：因为 <code>enforce_admins: false</code>，admin 用户的 force push 理论上不会被 GitHub 在 enforce_admins 层面拦截。但 <code>allow_force_pushes: false</code> 是分支级规则，对所有用户（含 admin）生效，所以 force push 仍会被拒。如果意外发现 admin force push 没被拒，说明 GitHub API 行为与预期不符 — 在 Implementation Notes 记录并考虑切换到 ruleset（更新的保护机制）。</p>
+            <p>记录到 Implementation Notes：force push 实际响应消息。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：在 Linear PAP-15 issue 上更新状态</strong>
+            <p>所有验证完成后，把 PAP-15 issue 状态从 Backlog 改为 Done（或对应 Linear workflow 中的"已完成"态）。在 issue comment 中粘贴验证结果摘要（4 步各自的实际观察）。</p>
+            <p>本步骤可通过 Linear MCP 工具或 Linear Web UI 完成。</p>
+          </li>
+        </ol>
+      </article>
+
+    </section>
+
+    <section id="self-check" class="self-check">
+      <h2>自检结果</h2>
+
+      <aside class="callout success">
+        <span class="title">1. 规格覆盖度</span>
+        <p>spec §3 dependabot.yml → Task 1；§4 setup-branch-protection.sh → Task 3；§5 ci.yml required-check job → Task 2；§6 验证流程 4 步 → Task 6 步骤 1-4；§9 改造文件清单 4 项全部对应到 Task 1-3 + plan 本身。无遗漏。Task 4-5 是 spec 未单独描述但实施必经的"PR + 部署"流程。</p>
+      </aside>
+
+      <aside class="callout success">
+        <span class="title">2. 占位符扫描</span>
+        <p>无 TODO / 待定 / 后续 / "类似任务 N"等占位；所有代码块均为完整可复制内容；commit 模板用 HEREDOC 完整给出；每个验证步骤的预期输出明确。模板注释（"ENTRY TEMPLATE" / "TASK TEMPLATE"）保留供未来扩展，非占位。</p>
+      </aside>
+
+      <aside class="callout success">
+        <span class="title">3. 类型一致性</span>
+        <p>跨任务命名一致：哨兵 job 名 <code>required-check</code> 在 Task 2 (ci.yml)、Task 3 (脚本 contexts)、Task 6 (验证) 中拼写完全一致；分支名 <code>worktree-pap-15-branch-protection</code> 在 Task 4 push + Task 5 cleanup 中一致；脚本路径 <code>scripts/setup-branch-protection.sh</code> 在 Task 3、5 中一致；spec/plan 文件路径与 file-structure 完全一致。</p>
+      </aside>
+
+      <aside class="callout success">
+        <span class="title">4. HTML 结构完整性</span>
+        <p>6 个 <code>&lt;article class="task"&gt;</code> 均有唯一 <code>id="task-1..6"</code> 与初始 <code>data-status="pending"</code>；所有 <code>&lt;li class="step"&gt;</code> 均有初始 <code>data-status="pending"</code>；<code>&lt;dl class="meta"&gt;</code> 含目标/架构/技术栈/关联 spec 四项；<code>&lt;head&gt;</code> 含 journal.css + plan-extras.css 两个 link，无 inline style；TOC <code>&lt;ol class="toc-tasks"&gt;</code> 6 条 li 与 6 个 article 一一对应，初始 <code>data-task-status="pending"</code> 与 article <code>data-status="pending"</code> 一致。</p>
+      </aside>
+    </section>
+
+  </main>
+
+  <!-- ============================================================
+       右栏：Implementation Notes（实施期由 Claude Code 维护）
+       ============================================================ -->
+  <aside class="notes-panel" id="notes">
+    <header>
+      <h2>Implementation Notes</h2>
+      <p class="hint">实施期由 Claude Code 即时追加。规则：遇到 plan 未规定的<strong>决定</strong>、必要<strong>更改</strong>、不可避免的<strong>权衡</strong>、其他用户应知事项，立即用 Edit 追加 entry，不要等任务结束。</p>
+    </header>
+
+    <ol class="notes-log">
+      <!-- ENTRY TEMPLATE（注释保留供实施期 AI 复制）:
+
+      <li class="note" data-type="decision" data-time="YYYY-MM-DDTHH:MM">
+        <header>
+          <span class="note-type">DECISION</span>
+          <time datetime="YYYY-MM-DDTHH:MM">MM-DD HH:MM</time>
+          <a href="#task-N">§ Task N</a>
+        </header>
+        <p>描述：plan 未规定 X，实施时选择 Y。理由：...</p>
+      </li>
+
+      data-type 4 类：decision / change / tradeoff / other
+      追加 entry 时同步更新下方 notes-stats footer 的对应 counter 数字。
+      -->
+    </ol>
+
+    <p class="empty-state">no notes yet</p>
+
+    <footer class="notes-stats">
+      总计:
+      <span data-counter="decision">0</span> decisions /
+      <span data-counter="change">0</span> changes /
+      <span data-counter="tradeoff">0</span> tradeoffs /
+      <span data-counter="other">0</span> others
+    </footer>
+  </aside>
+
+</div>
+</body>
+</html>
