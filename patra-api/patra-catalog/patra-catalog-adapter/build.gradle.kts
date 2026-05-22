@@ -11,8 +11,8 @@ plugins {
 
 dependencies {
     // 内部模块
-    api(project(":patra-catalog:patra-catalog-app"))
-    api(project(":patra-catalog:patra-catalog-api"))
+    api(project(":patra-api:patra-catalog:patra-catalog-app"))
+    api(project(":patra-api:patra-catalog:patra-catalog-api"))
     api(project(":linqibin-commons:linqibin-spring-boot-starter-web"))
 
     // RocketMQ

@@ -11,8 +11,8 @@ plugins {
 
 dependencies {
     // 内部模块
-    api(project(":patra-object-storage:patra-object-storage-app"))
-    api(project(":patra-object-storage:patra-object-storage-api"))
+    api(project(":patra-api:patra-object-storage:patra-object-storage-app"))
+    api(project(":patra-api:patra-object-storage:patra-object-storage-api"))
     api(project(":linqibin-commons:linqibin-spring-boot-starter-web"))
 
     // Spring DAO exception hierarchy

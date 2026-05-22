@@ -11,16 +11,16 @@ plugins {
 
 dependencies {
     // 内部模块
-    api(project(":patra-ingest:patra-ingest-domain"))
-    api(project(":patra-common:patra-common-model"))
+    api(project(":patra-api:patra-ingest:patra-ingest-domain"))
+    api(project(":patra-api:patra-common:patra-common-model"))
     api(project(":linqibin-commons:linqibin-spring-boot-starter-jpa"))
-    api(project(":patra-expr-kernel"))
+    api(project(":patra-api:patra-expr-kernel"))
     api(project(":patra-starters:patra-spring-boot-starter-expr"))
     api(project(":linqibin-commons:linqibin-spring-boot-starter-http-interface"))
     api(project(":patra-starters:patra-spring-boot-starter-provenance"))
-    api(project(":patra-registry:patra-registry-api"))
+    api(project(":patra-api:patra-registry:patra-registry-api"))
     api(project(":linqibin-commons:linqibin-spring-boot-starter-object-storage"))
-    api(project(":patra-object-storage:patra-object-storage-api"))
+    api(project(":patra-api:patra-object-storage:patra-object-storage-api"))
 
     // RocketMQ
     api(libs.rocketmq.spring.boot)

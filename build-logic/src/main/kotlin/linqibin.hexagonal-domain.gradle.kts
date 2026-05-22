@@ -100,7 +100,7 @@ tasks.named("check") {
 // 使用 Version Catalog (libs) 声明依赖
 dependencies {
     // 领域层核心依赖
-    api(project(":patra-common:patra-common-enums"))
+    api(project(":patra-api:patra-common:patra-common-enums"))
     api(project(":linqibin-commons:linqibin-commons-core"))
 
     // Hutool 工具库

@@ -11,11 +11,11 @@ plugins {
 
 dependencies {
     // 内部模块
-    api(project(":patra-expr-kernel"))
-    api(project(":patra-common:patra-common-enums"))
+    api(project(":patra-api:patra-expr-kernel"))
+    api(project(":patra-api:patra-common:patra-common-enums"))
     api(project(":linqibin-commons:linqibin-commons-core"))
     api(project(":linqibin-commons:linqibin-spring-boot-starter-core"))
-    api(project(":patra-registry:patra-registry-api"))
+    api(project(":patra-api:patra-registry:patra-registry-api"))
 
     // HTTP Interface（可选）
     compileOnly(project(":linqibin-commons:linqibin-spring-boot-starter-http-interface"))

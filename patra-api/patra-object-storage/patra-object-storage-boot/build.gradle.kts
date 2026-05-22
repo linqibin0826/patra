@@ -15,8 +15,8 @@ springBoot {
 
 dependencies {
     // 六边形架构各层
-    implementation(project(":patra-object-storage:patra-object-storage-adapter"))
-    implementation(project(":patra-object-storage:patra-object-storage-infra"))
+    implementation(project(":patra-api:patra-object-storage:patra-object-storage-adapter"))
+    implementation(project(":patra-api:patra-object-storage:patra-object-storage-infra"))
 
     // Web Starter
     implementation(project(":linqibin-commons:linqibin-spring-boot-starter-web"))

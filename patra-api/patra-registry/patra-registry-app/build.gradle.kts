@@ -10,8 +10,8 @@ plugins {
 }
 
 dependencies {
-    api(project(":patra-registry:patra-registry-domain"))
-    api(project(":patra-registry:patra-registry-api"))
+    api(project(":patra-api:patra-registry:patra-registry-domain"))
+    api(project(":patra-api:patra-registry:patra-registry-api"))
     api(project(":linqibin-commons:linqibin-spring-boot-starter-core"))
 
     // MapStruct 由 patra.hexagonal-app 插件提供

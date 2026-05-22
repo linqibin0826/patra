@@ -15,8 +15,8 @@ springBoot {
 
 dependencies {
     // 六边形架构各层
-    implementation(project(":patra-registry:patra-registry-adapter"))
-    implementation(project(":patra-registry:patra-registry-infra"))
+    implementation(project(":patra-api:patra-registry:patra-registry-adapter"))
+    implementation(project(":patra-api:patra-registry:patra-registry-infra"))
 
     // Web Starter
     implementation(project(":linqibin-commons:linqibin-spring-boot-starter-web"))

@@ -11,13 +11,13 @@ plugins {
 
 dependencies {
     // 内部模块
-    api(project(":patra-common:patra-common-enums"))
+    api(project(":patra-api:patra-common:patra-common-enums"))
     api(project(":linqibin-commons:linqibin-commons-core"))
-    api(project(":patra-ingest:patra-ingest-domain"))
-    api(project(":patra-ingest:patra-ingest-api"))
+    api(project(":patra-api:patra-ingest:patra-ingest-domain"))
+    api(project(":patra-api:patra-ingest:patra-ingest-api"))
     api(project(":linqibin-commons:linqibin-spring-boot-starter-core"))
     api(project(":patra-starters:patra-spring-boot-starter-expr"))
-    api(project(":patra-expr-kernel"))
+    api(project(":patra-api:patra-expr-kernel"))
     api(project(":patra-starters:patra-spring-boot-starter-provenance"))
 
     // Spring 依赖

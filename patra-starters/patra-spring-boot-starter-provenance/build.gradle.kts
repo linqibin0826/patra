@@ -14,11 +14,11 @@ plugins {
 
 dependencies {
     // Patra 内部依赖
-    api(project(":patra-common:patra-common-enums"))
+    api(project(":patra-api:patra-common:patra-common-enums"))
     api(project(":linqibin-commons:linqibin-commons-core"))
     api(project(":linqibin-commons:linqibin-spring-boot-starter-rest-client"))
-    api(project(":patra-common:patra-common-model"))
-    api(project(":patra-common:patra-common-provenance-api"))
+    api(project(":patra-api:patra-common:patra-common-model"))
+    api(project(":patra-api:patra-common:patra-common-provenance-api"))
 
     // Spring Boot AutoConfiguration
     api("org.springframework.boot:spring-boot-autoconfigure")

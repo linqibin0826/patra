@@ -11,10 +11,10 @@ plugins {
 
 dependencies {
     // 内部模块
-    api(project(":patra-common:patra-common-enums"))
+    api(project(":patra-api:patra-common:patra-common-enums"))
     api(project(":linqibin-commons:linqibin-commons-core"))
-    api(project(":patra-catalog:patra-catalog-domain"))
-    api(project(":patra-catalog:patra-catalog-api"))
+    api(project(":patra-api:patra-catalog:patra-catalog-domain"))
+    api(project(":patra-api:patra-catalog:patra-catalog-api"))
     api(project(":linqibin-commons:linqibin-spring-boot-starter-core"))
     api(project(":linqibin-commons:linqibin-spring-boot-starter-batch"))
 

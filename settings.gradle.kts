@@ -45,11 +45,11 @@ fun mapParent(path: String, dir: String) {
     project(path).projectDir = file(dir)
 }
 
-// ==================== patra-common ====================
-includeAt(":patra-common:patra-common-model", "patra-api/patra-common/patra-common-model")
-includeAt(":patra-common:patra-common-provenance-api", "patra-api/patra-common/patra-common-provenance-api")
-includeAt(":patra-common:patra-common-enums", "patra-api/patra-common/patra-common-enums")
-mapParent(":patra-common", "patra-api/patra-common")
+// ==================== patra-api / patra-common ====================
+includeAt(":patra-api:patra-common:patra-common-model", "patra-api/patra-common/patra-common-model")
+includeAt(":patra-api:patra-common:patra-common-provenance-api", "patra-api/patra-common/patra-common-provenance-api")
+includeAt(":patra-api:patra-common:patra-common-enums", "patra-api/patra-common/patra-common-enums")
+mapParent(":patra-api:patra-common", "patra-api/patra-common")
 
 // ==================== linqibin-commons ====================
 // 决策 E：嵌套 path 与物理目录一一对应
@@ -73,41 +73,45 @@ includeAt(":patra-starters:patra-spring-boot-starter-provenance", "patra-starter
 includeAt(":patra-starters:patra-spring-boot-starter-expr", "patra-starters/patra-spring-boot-starter-expr")
 mapParent(":patra-starters", "patra-starters")
 
-// ==================== Expression Kernel ====================
-includeAt(":patra-expr-kernel", "patra-api/patra-expr-kernel")
+// ==================== patra-api / Expression Kernel ====================
+includeAt(":patra-api:patra-expr-kernel", "patra-api/patra-expr-kernel")
 
-// ==================== Microservices ====================
-includeAt(":patra-registry:patra-registry-domain", "patra-api/patra-registry/patra-registry-domain")
-includeAt(":patra-registry:patra-registry-api", "patra-api/patra-registry/patra-registry-api")
-includeAt(":patra-registry:patra-registry-app", "patra-api/patra-registry/patra-registry-app")
-includeAt(":patra-registry:patra-registry-infra", "patra-api/patra-registry/patra-registry-infra")
-includeAt(":patra-registry:patra-registry-adapter", "patra-api/patra-registry/patra-registry-adapter")
-includeAt(":patra-registry:patra-registry-boot", "patra-api/patra-registry/patra-registry-boot")
-mapParent(":patra-registry", "patra-api/patra-registry")
+// ==================== patra-api / Microservices ====================
+includeAt(":patra-api:patra-registry:patra-registry-domain", "patra-api/patra-registry/patra-registry-domain")
+includeAt(":patra-api:patra-registry:patra-registry-api", "patra-api/patra-registry/patra-registry-api")
+includeAt(":patra-api:patra-registry:patra-registry-app", "patra-api/patra-registry/patra-registry-app")
+includeAt(":patra-api:patra-registry:patra-registry-infra", "patra-api/patra-registry/patra-registry-infra")
+includeAt(":patra-api:patra-registry:patra-registry-adapter", "patra-api/patra-registry/patra-registry-adapter")
+includeAt(":patra-api:patra-registry:patra-registry-boot", "patra-api/patra-registry/patra-registry-boot")
+mapParent(":patra-api:patra-registry", "patra-api/patra-registry")
 
-includeAt(":patra-ingest:patra-ingest-domain", "patra-api/patra-ingest/patra-ingest-domain")
-includeAt(":patra-ingest:patra-ingest-api", "patra-api/patra-ingest/patra-ingest-api")
-includeAt(":patra-ingest:patra-ingest-app", "patra-api/patra-ingest/patra-ingest-app")
-includeAt(":patra-ingest:patra-ingest-infra", "patra-api/patra-ingest/patra-ingest-infra")
-includeAt(":patra-ingest:patra-ingest-adapter", "patra-api/patra-ingest/patra-ingest-adapter")
-includeAt(":patra-ingest:patra-ingest-boot", "patra-api/patra-ingest/patra-ingest-boot")
-mapParent(":patra-ingest", "patra-api/patra-ingest")
+includeAt(":patra-api:patra-ingest:patra-ingest-domain", "patra-api/patra-ingest/patra-ingest-domain")
+includeAt(":patra-api:patra-ingest:patra-ingest-api", "patra-api/patra-ingest/patra-ingest-api")
+includeAt(":patra-api:patra-ingest:patra-ingest-app", "patra-api/patra-ingest/patra-ingest-app")
+includeAt(":patra-api:patra-ingest:patra-ingest-infra", "patra-api/patra-ingest/patra-ingest-infra")
+includeAt(":patra-api:patra-ingest:patra-ingest-adapter", "patra-api/patra-ingest/patra-ingest-adapter")
+includeAt(":patra-api:patra-ingest:patra-ingest-boot", "patra-api/patra-ingest/patra-ingest-boot")
+mapParent(":patra-api:patra-ingest", "patra-api/patra-ingest")
 
-includeAt(":patra-catalog:patra-catalog-domain", "patra-api/patra-catalog/patra-catalog-domain")
-includeAt(":patra-catalog:patra-catalog-api", "patra-api/patra-catalog/patra-catalog-api")
-includeAt(":patra-catalog:patra-catalog-app", "patra-api/patra-catalog/patra-catalog-app")
-includeAt(":patra-catalog:patra-catalog-infra", "patra-api/patra-catalog/patra-catalog-infra")
-includeAt(":patra-catalog:patra-catalog-adapter", "patra-api/patra-catalog/patra-catalog-adapter")
-includeAt(":patra-catalog:patra-catalog-boot", "patra-api/patra-catalog/patra-catalog-boot")
-mapParent(":patra-catalog", "patra-api/patra-catalog")
+includeAt(":patra-api:patra-catalog:patra-catalog-domain", "patra-api/patra-catalog/patra-catalog-domain")
+includeAt(":patra-api:patra-catalog:patra-catalog-api", "patra-api/patra-catalog/patra-catalog-api")
+includeAt(":patra-api:patra-catalog:patra-catalog-app", "patra-api/patra-catalog/patra-catalog-app")
+includeAt(":patra-api:patra-catalog:patra-catalog-infra", "patra-api/patra-catalog/patra-catalog-infra")
+includeAt(":patra-api:patra-catalog:patra-catalog-adapter", "patra-api/patra-catalog/patra-catalog-adapter")
+includeAt(":patra-api:patra-catalog:patra-catalog-boot", "patra-api/patra-catalog/patra-catalog-boot")
+mapParent(":patra-api:patra-catalog", "patra-api/patra-catalog")
 
-includeAt(":patra-object-storage:patra-object-storage-domain", "patra-api/patra-object-storage/patra-object-storage-domain")
-includeAt(":patra-object-storage:patra-object-storage-api", "patra-api/patra-object-storage/patra-object-storage-api")
-includeAt(":patra-object-storage:patra-object-storage-app", "patra-api/patra-object-storage/patra-object-storage-app")
-includeAt(":patra-object-storage:patra-object-storage-infra", "patra-api/patra-object-storage/patra-object-storage-infra")
-includeAt(":patra-object-storage:patra-object-storage-adapter", "patra-api/patra-object-storage/patra-object-storage-adapter")
-includeAt(":patra-object-storage:patra-object-storage-boot", "patra-api/patra-object-storage/patra-object-storage-boot")
-mapParent(":patra-object-storage", "patra-api/patra-object-storage")
+includeAt(":patra-api:patra-object-storage:patra-object-storage-domain", "patra-api/patra-object-storage/patra-object-storage-domain")
+includeAt(":patra-api:patra-object-storage:patra-object-storage-api", "patra-api/patra-object-storage/patra-object-storage-api")
+includeAt(":patra-api:patra-object-storage:patra-object-storage-app", "patra-api/patra-object-storage/patra-object-storage-app")
+includeAt(":patra-api:patra-object-storage:patra-object-storage-infra", "patra-api/patra-object-storage/patra-object-storage-infra")
+includeAt(":patra-api:patra-object-storage:patra-object-storage-adapter", "patra-api/patra-object-storage/patra-object-storage-adapter")
+includeAt(":patra-api:patra-object-storage:patra-object-storage-boot", "patra-api/patra-object-storage/patra-object-storage-boot")
+mapParent(":patra-api:patra-object-storage", "patra-api/patra-object-storage")
 
-// ==================== Gateway ====================
-includeAt(":patra-gateway-boot", "patra-api/patra-gateway-boot")
+// ==================== patra-api / Gateway ====================
+includeAt(":patra-api:patra-gateway-boot", "patra-api/patra-gateway-boot")
+
+// ==================== patra-api 容器层 ====================
+// 所有子 include 之后再设置父容器 projectDir，避免子 project 解析时父 project 还不存在
+mapParent(":patra-api", "patra-api")

@@ -11,7 +11,7 @@ plugins {
 
 dependencies {
     // 内部模块
-    api(project(":patra-object-storage:patra-object-storage-domain"))
+    api(project(":patra-api:patra-object-storage:patra-object-storage-domain"))
     api(project(":linqibin-commons:linqibin-spring-boot-starter-jpa"))
     api(project(":linqibin-commons:linqibin-spring-boot-starter-core"))
 

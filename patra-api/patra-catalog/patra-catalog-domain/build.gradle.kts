@@ -12,5 +12,5 @@ plugins {
 
 // patra-common-core 由 patra.hexagonal-domain 插件提供
 dependencies {
-    api(project(":patra-common:patra-common-model"))
+    api(project(":patra-api:patra-common:patra-common-model"))
 }

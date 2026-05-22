@@ -15,8 +15,8 @@ springBoot {
 
 dependencies {
     // 六边形架构各层
-    implementation(project(":patra-ingest:patra-ingest-adapter"))
-    implementation(project(":patra-ingest:patra-ingest-infra"))
+    implementation(project(":patra-api:patra-ingest:patra-ingest-adapter"))
+    implementation(project(":patra-api:patra-ingest:patra-ingest-infra"))
 
     // Web Starter
     implementation(project(":linqibin-commons:linqibin-spring-boot-starter-web"))
@@ -29,7 +29,7 @@ dependencies {
 
     // Object Storage
     implementation(project(":linqibin-commons:linqibin-spring-boot-starter-object-storage"))
-    implementation(project(":patra-object-storage:patra-object-storage-api"))
+    implementation(project(":patra-api:patra-object-storage:patra-object-storage-api"))
 
     // RocketMQ
     implementation(libs.rocketmq.spring.boot) {
