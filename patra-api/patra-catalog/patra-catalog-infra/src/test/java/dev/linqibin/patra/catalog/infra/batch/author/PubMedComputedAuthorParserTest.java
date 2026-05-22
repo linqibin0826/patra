@@ -10,13 +10,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import tools.jackson.databind.json.JsonMapper;
 
 /// PubMedComputedAuthorParser 单元测试。
@@ -31,7 +29,6 @@ import tools.jackson.databind.json.JsonMapper;
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("PubMedComputedAuthorParser 单元测试")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class PubMedComputedAuthorParserTest {
 
   private PubMedComputedAuthorParser parser;

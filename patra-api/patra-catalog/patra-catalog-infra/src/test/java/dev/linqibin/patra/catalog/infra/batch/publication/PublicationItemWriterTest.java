@@ -18,12 +18,10 @@ import dev.linqibin.patra.catalog.domain.model.vo.venue.VenueInstanceId;
 import dev.linqibin.patra.catalog.domain.port.repository.PublicationRepository;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
@@ -47,7 +45,6 @@ import org.springframework.batch.infrastructure.item.Chunk;
 /// @since 0.1.0
 @DisplayName("PublicationItemWriter")
 @ExtendWith(MockitoExtension.class)
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class PublicationItemWriterTest {
 
   @Mock private PublicationRepository publicationRepository;

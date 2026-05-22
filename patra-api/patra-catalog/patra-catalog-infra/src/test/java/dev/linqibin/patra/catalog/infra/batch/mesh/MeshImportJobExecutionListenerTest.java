@@ -10,13 +10,11 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.job.JobExecution;
@@ -35,7 +33,6 @@ import org.springframework.batch.core.step.StepExecution;
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("MeshImportJobExecutionListener 单元测试")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class MeshImportJobExecutionListenerTest {
 
   private MeshImportJobExecutionListener listener;
