@@ -776,14 +776,14 @@ EOF
 )"</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：验证 3 个并行 job 实际并行</strong>
             <pre><code class="lang-bash">RUN_ID=$(gh run list --workflow ci.yml --branch feat/pap-24-pr2-job-topology --limit 1 --json databaseId -q '.[0].databaseId')
 gh run view "$RUN_ID" --json jobs -q '.jobs[] | "\(.name) start=\(.startedAt) end=\(.completedAt)"'</code></pre>
             <p>预期：unit-tests / integration-tests / e2e-tests 三 job 的 startedAt 接近（差异 &lt; 30s），说明真正并行。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：故意失败测试验证分支保护</strong>
             <p>关键测试：required-check 必须真正阻断失败 PR merge。</p>
             <pre><code class="lang-bash">git checkout -b test/break-unit-for-gate
@@ -1262,6 +1262,15 @@ EOF</code></pre>
         </header>
         <p>task 3 全部 step 标 skipped（task article 标 done）：现状已满足 plan 设计意图，<strong>无需新建 <code>linqibin.jacoco-aggregation.gradle.kts</code></strong>。根 <code>build.gradle.kts</code> 已应用 <code>jacoco-report-aggregation</code> plugin（line 23），并注册 <code>testCodeCoverageReport</code> + <code>integrationTestCodeCoverageReport</code> 两个聚合 task（line 60-66）。dry-run 验证 <code>testCodeCoverageReport</code> 直接依赖各模块 <code>:test</code> task，<strong>不依赖 <code>:jacocoTestReport</code></strong>，所以 task 4 的 unit shard 用 <code>./gradlew check -x jacocoTestReport</code> 完全不影响聚合。task 4 coverage-and-upload job 调整：跑现有 <code>./gradlew testCodeCoverageReport integrationTestCodeCoverageReport</code>（不是 plan 写的 <code>jacocoAggregatedReport</code>），上传两个 XML 到 Codecov（与 PR1 之前的行为一致）。</p>
       </li>
+      <li class="note" data-type="other" data-time="2026-05-22T16:50">
+        <header>
+          <span class="note-type">OTHER</span>
+          <time datetime="2026-05-22T16:50">05-22 16:50</time>
+          <a href="#task-5">§ Task 5 step 3</a>
+        </header>
+        <p>required-check 真正生效已验证 ✅。在测试 PR #84 中故意添加 <code>IntentionalFailTest.mustFailToVerifyRequiredCheckGating()</code>（<code>assertEquals(1, 2)</code>），CI 表现：unit-tests <strong>failure</strong> / integration-tests success / e2e-tests success / coverage-and-upload <strong>skipped</strong>（needs unit）/ required-check <strong>failure</strong>（alls-green 检测到 unit fail）。<code>gh pr merge 84 --squash</code> 被 branch protection 拒绝：<code>base branch policy prohibits the merge</code>，<code>mergeStateStatus=BLOCKED</code>。<strong>PAP-15 分支保护从「事实摆设」升级为真正强制生效。</strong></p>
+        <p>过程中暴露一个潜在工作流坑（不影响 PR2 内容）：首次 <code>git commit</code> 时 spotless pre-commit hook 修改了 Java 文件格式，commit 实际失败但 <code>tail -3</code> 截断了失败信号，导致首次 push 推的是上一个 commit head — CI 跑的是 PR2 内容（已 success 过），全 success 误导。教训：未来 commit Java 文件后用 <code>git log --oneline -1</code> 确认 commit hash 而非依赖 <code>commit -m</code> 输出。</p>
+      </li>
     </ol>
 
     <footer class="notes-stats">
@@ -1269,7 +1278,7 @@ EOF</code></pre>
       <span data-counter="decision">0</span> decisions /
       <span data-counter="change">3</span> changes /
       <span data-counter="tradeoff">1</span> tradeoffs /
-      <span data-counter="other">2</span> others
+      <span data-counter="other">3</span> others
     </footer>
   </aside>
 
