@@ -1,6 +1,7 @@
 package dev.linqibin.patra.catalog.domain.model.enums;
 
 import cn.hutool.core.lang.Assert;
+import java.util.Locale;
 import lombok.Getter;
 
 /// 机构关系类型枚举。
@@ -73,7 +74,7 @@ public enum OrganizationRelationType {
   /// @throws IllegalArgumentException 如果代码值为空或无效
   public static OrganizationRelationType fromCode(String value) {
     Assert.notBlank(value, "机构关系类型代码不能为空");
-    String normalized = value.trim().toLowerCase();
+    String normalized = value.trim().toLowerCase(Locale.ROOT);
     for (OrganizationRelationType type : values()) {
       if (type.code.equals(normalized)) {
         return type;
@@ -90,7 +91,7 @@ public enum OrganizationRelationType {
     if (value == null || value.isBlank()) {
       return null;
     }
-    String normalized = value.trim().toLowerCase();
+    String normalized = value.trim().toLowerCase(Locale.ROOT);
     for (OrganizationRelationType type : values()) {
       if (type.code.equals(normalized)) {
         return type;

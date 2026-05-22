@@ -1,6 +1,7 @@
 package dev.linqibin.patra.catalog.domain.model.enums;
 
 import cn.hutool.core.lang.Assert;
+import java.util.Locale;
 import lombok.Getter;
 
 /// 出版媒介枚举。
@@ -42,7 +43,7 @@ public enum PublicationMedium {
   /// @throws IllegalArgumentException 如果代码值无效
   public static PublicationMedium fromCode(String value) {
     Assert.notBlank(value, "媒介类型代码不能为空");
-    String normalized = value.trim().toLowerCase();
+    String normalized = value.trim().toLowerCase(Locale.ROOT);
     for (PublicationMedium type : values()) {
       if (type.code.equals(normalized)) {
         return type;

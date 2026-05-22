@@ -7,6 +7,7 @@ import dev.linqibin.starter.httpinterface.config.HttpInterfaceProperties;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -234,7 +235,7 @@ public class ProblemDetailErrorHandler implements RestClient.ResponseSpec.ErrorH
     if (contentType == null) {
       return false;
     }
-    String type = contentType.toString().toLowerCase();
+    String type = contentType.toString().toLowerCase(Locale.ROOT);
     return type.contains("application/problem+json");
   }
 

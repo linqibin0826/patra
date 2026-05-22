@@ -4,6 +4,7 @@ import cn.hutool.core.lang.Assert;
 import dev.linqibin.patra.catalog.domain.model.enums.VenueIdentifierType;
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.Locale;
 
 /// 载体标识符值对象（不可变）。
 ///
@@ -50,7 +51,7 @@ public record VenueIdentifier(VenueIdentifierType type, String value) implements
     if (type.isIssn()) {
       Assert.isTrue(value.matches(ISSN_PATTERN), "ISSN 格式无效，必须符合 'XXXX-XXXX' 格式：{}", value);
       // 标准化为大写（X 可能是小写）
-      value = value.toUpperCase();
+      value = value.toUpperCase(Locale.ROOT);
     }
   }
 

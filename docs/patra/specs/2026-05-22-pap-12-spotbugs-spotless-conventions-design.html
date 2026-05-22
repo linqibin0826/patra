@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PAP-12 + PAP-13: SpotBugs / Spotless Convention Plugins 抽出 + CI 接入</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles/journal.css">
+</head>
+<body>
+<div class="layout">
+
+  <nav class="toc">
+    <h3>目录</h3>
+    <ol>
+      <li><a href="#background">背景与现状</a></li>
+      <li><a href="#scope">范围边界</a></li>
+      <li><a href="#spotbugs-plugin">SpotBugs Convention Plugin</a></li>
+      <li><a href="#spotless-plugin">Spotless Convention Plugin</a></li>
+      <li><a href="#java-base-changes">java-base 改造</a></li>
+      <li><a href="#exclude-strategy">spotbugs-exclude.xml 处置策略</a></li>
+      <li><a href="#ci-changes">CI Workflow 改造</a></li>
+      <li><a href="#linear-sync">Linear / release-spec 同步</a></li>
+      <li><a href="#decisions">关键决策与备选</a></li>
+      <li><a href="#risks">风险与缓解</a></li>
+      <li><a href="#changes">改造文件清单</a></li>
+    </ol>
+  </nav>
+
+  <main class="content">
+
+    <header class="doc-header">
+      <h1>PAP-12 + PAP-13: SpotBugs / Spotless Convention Plugins 抽出 + CI 接入</h1>
+      <div class="meta-bar">
+        <span>📅 2026-05-22</span>
+        <span>🌿 worktree-pap-12-spotbugs</span>
+        <span>🎯 spec</span>
+        <span class="status-pill">draft</span>
+      </div>
+    </header>
+
+    <aside class="callout summary">
+      <span class="title">关键决策摘要</span>
+      <p>把 SpotBugs 与 Spotless 两套配置从 <code>linqibin.java-base.gradle.kts</code> 抽出为独立的 <code>linqibin.spotbugs.gradle.kts</code> 与 <code>linqibin.spotless.gradle.kts</code> convention plugins，仍由 <code>java-base</code> 通过 <code>id("...")</code> 引入；SpotBugs 参数对齐 PAP-12 AC（<code>effort=MAX</code> / <code>reportLevel=LOW</code> / <code>ignoreFailures=false</code> / 显式禁用 <code>spotbugsTest</code>、<code>spotbugsIntegrationTest</code>、<code>spotbugsE2eTest</code> / <code>toolVersion=4.9.3</code>）；Spotless 保留 <code>googleJavaFormat</code> 默认 2 空格缩进与 <code>.editorconfig</code> 对齐，PAP-13 AC 的"4 空格"为口误待校正。CI 把 <code>./gradlew test</code> 替换为 <code>./gradlew check</code> 一次性纳入 <code>spotbugsMain</code> + <code>spotlessCheck</code>，并额外上传名为 <code>spotbugs-reports</code> 的专门 artifact。PAP-12 与 PAP-13 合并为同一 PR。</p>
+    </aside>
+
+    <section id="background">
+      <h2>1. 背景与现状</h2>
+      <p>v0.3 Dev-Ready 工程基建版的目标是让 Patra monorepo 进入"业务功能开发开箱即敲"状态，<strong>关键决策 B</strong> 把静态分析工具栈最小化为 <strong>SpotBugs（抓逻辑 bug）+ Spotless（抓格式）</strong>，<strong>关键决策 C</strong> 进一步规定 <code>spotbugsMain</code> 与 <code>spotlessCheck</code> 失败必须阻断 PR（<code>spotbugsTest</code> 不阻断、测试代码不做静态分析）。</p>
+      <p>PAP-10（CI 全面 Gradle 化）已在 <code>main</code> 落地：<code>.github/workflows/ci.yml</code> 单 job <code>build-and-test</code> 跑通 <code>test</code> / <code>integrationTest</code> / <code>e2eTest</code> + JaCoCo 聚合 + Codecov 上传，但 step 内显式注释 <em>"暂不调 <code>./gradlew check</code>，因 spotbugsMain / spotlessCheck 需 PAP-12/13 完成 baseline 后才能阻断 CI"</em>。</p>
+      <p>SpotBugs 与 Spotless 在 <code>linqibin.java-base.gradle.kts</code>（222 行总入口）中已部分接入：插件 apply 与基础参数都在，<code>spotbugs-exclude.xml</code>（282 行）也已存在并填好 Lombok / MapStruct / DO/DTO/VO / Spring / 错误处理 / JPA 等场景的预排除；<code>build-logic/build.gradle.kts</code> 已显式引入 SpotBugs + Spotless plugin 依赖，<code>libs.versions.toml</code> 锁定 <code>spotbugs-plugin = 6.4.8</code>、<code>spotbugs = 4.9.3</code>、<code>spotless = 7.0.4</code>、<code>google-java-format = 1.29.0</code>、<code>ktlint = 1.5.0</code>。</p>
+      <p>但配置还有 <strong>7 处差异</strong>不满足 PAP-12 AC：文件位置不独立 / <code>reportLevel</code> 仍是 <code>MEDIUM</code> / 未显式声明 <code>ignoreFailures</code> 与 <code>toolVersion</code> / <code>spotbugsTest</code> 未禁用 / 报告配置用 <code>configureEach</code> 影响所有 SpotBugs task / java-base 直接 apply 上游插件而非引入本地 convention plugin。Spotless 也有类似情况：<code>targetExclude</code> 未排除生成代码、未显式 <code>importOrder()</code>、<code>kotlinGradle target</code> 未覆盖 <code>build-logic/</code>。</p>
+      <p>PAP-12 与 PAP-13 改造路径高度重叠（"build-logic 抽 convention plugin → CI 接入 → 基线化"三件套），且 release-spec 第 274 行明示 #3 #4 可并行，因此本次合并为同一 spec / 同一 plan / 同一 PR 落地。</p>
+    </section>
+
+    <section id="scope">
+      <h2>2. 范围边界</h2>
+      <div class="two-col">
+        <aside class="callout success">
+          <span class="title">In Scope</span>
+          <ul>
+            <li>新增 <code>build-logic/src/main/kotlin/linqibin.spotbugs.gradle.kts</code>（独立 SpotBugs convention plugin）</li>
+            <li>新增 <code>build-logic/src/main/kotlin/linqibin.spotless.gradle.kts</code>（独立 Spotless convention plugin）</li>
+            <li>SpotBugs 参数：<code>toolVersion=4.9.3</code> / <code>effort=MAX</code> / <code>reportLevel=LOW</code> / <code>ignoreFailures=false</code> / <code>excludeFilter=root/spotbugs-exclude.xml</code> / HTML+XML 双报告</li>
+            <li>SpotBugs 任务范围：显式 <code>tasks.named("spotbugsTest") { enabled = false }</code>、<code>spotbugsIntegrationTest</code>、<code>spotbugsE2eTest</code> 同样禁用</li>
+            <li>Spotless 配置：<code>googleJavaFormat</code> 默认 2 空格 + <code>importOrder()</code> + <code>removeUnusedImports()</code> + <code>trimTrailingWhitespace()</code> + <code>endWithNewline()</code>；<code>targetExclude("**/build/**", "**/generated/**")</code>；<code>kotlinGradle target</code> 扩展到 <code>build-logic/**/*.gradle.kts</code></li>
+            <li>改造 <code>linqibin.java-base.gradle.kts</code>：删除内嵌的 <code>spotbugs { }</code> / <code>spotless { }</code> / SpotBugs task 配置块（27 行），用 <code>id("linqibin.spotbugs")</code> + <code>id("linqibin.spotless")</code> 引入</li>
+            <li>跑一次 <code>./gradlew spotlessApply</code> 全量基线化（机械化重写格式）</li>
+            <li>跑一次 <code>./gradlew spotbugsMain</code>，逐告警决策（修代码 / <code>spotbugs-exclude.xml</code> 加注释条目）</li>
+            <li>改造 <code>.github/workflows/ci.yml</code>：把 <code>./gradlew test</code> 替换为 <code>./gradlew check</code>；删除 <em>"暂不调 check"</em> 注释；新增 <code>spotbugs-reports</code> artifact step</li>
+            <li>Linear PAP-13 关闭并指向本 PR；release-spec 同步 4 空格 → 2 空格修正</li>
+          </ul>
+        </aside>
+        <aside class="callout warning">
+          <span class="title">Out of Scope</span>
+          <ul>
+            <li>FindSecBugs 安全插件（决策 D 排除，留待独立安全扫描版本）</li>
+            <li>IDEA SpotBugs 插件强制配置（决策 E 排除，本版仅 CI 起步）</li>
+            <li>SonarQube / Sonar Cloud 接入（决策 C 排除，SpotBugs + Spotless 已覆盖 95%）</li>
+            <li>Checkstyle / PMD 等其他静态分析工具（关键决策 B：工具链最小化）</li>
+            <li>SpotBugs 自定义检测规则插件（fb-contrib / sb-contrib）— 现有 400+ 内置规则已够本版使用</li>
+            <li>JaCoCo 阈值门禁（决策 D，v0.3 不接，已在 PAP-10 中明示）</li>
+            <li><code>spotbugs-exclude.xml</code> 全量重审与重写（AC 沿用现有，仅按 baseline 报告增减条目）</li>
+            <li>分支保护规则配置（→ PAP-15）</li>
+            <li>pre-commit hooks 集成 spotless/spotbugs 增量检查（→ PAP-16）</li>
+          </ul>
+        </aside>
+      </div>
+    </section>
+
+    <section id="spotbugs-plugin">
+      <h2>3. SpotBugs Convention Plugin</h2>
+
+      <h3>3.1 文件落点</h3>
+      <p>新增 <code>build-logic/src/main/kotlin/linqibin.spotbugs.gradle.kts</code>，由 <code>linqibin.java-base</code> 通过 <code>id("linqibin.spotbugs")</code> 引入（决策 1）。所有 Java 模块仍通过现有的 <code>java-base</code> 链路自动继承 SpotBugs 配置，无需逐模块 apply。</p>
+
+      <h3>3.2 配置参数</h3>
+      <table>
+        <thead>
+          <tr><th>参数</th><th>取值</th><th>来源</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>toolVersion</code></td><td><code>4.9.3</code></td><td><code>libs.findVersion("spotbugs")</code></td></tr>
+          <tr><td><code>effort</code></td><td><code>Effort.MAX</code></td><td>PAP-12 AC + 当前 java-base</td></tr>
+          <tr><td><code>reportLevel</code></td><td><code>Confidence.LOW</code></td><td>PAP-12 AC（当前是 <code>MEDIUM</code>）</td></tr>
+          <tr><td><code>ignoreFailures</code></td><td><code>false</code>（显式声明）</td><td>PAP-12 AC</td></tr>
+          <tr><td><code>excludeFilter</code></td><td><code>rootProject.file("spotbugs-exclude.xml")</code></td><td>PAP-12 AC + 当前 java-base</td></tr>
+        </tbody>
+      </table>
+
+      <h3>3.3 任务范围（仅 main，禁用 test 系列）</h3>
+      <p>决策 C 与 PAP-12 AC 双重要求"不分析 test 代码"。当前 java-base 用 <code>tasks.withType&lt;SpotBugsTask&gt;().configureEach { ... }</code> 影响所有 SpotBugs task（含 <code>spotbugsTest</code> / <code>spotbugsIntegrationTest</code> / <code>spotbugsE2eTest</code>）。本 plugin 改为：</p>
+      <ol>
+        <li>显式 <code>tasks.named("spotbugsTest") { enabled = false }</code></li>
+        <li>显式 <code>tasks.named("spotbugsIntegrationTest") { enabled = false }</code>（由 JVM Test Suites 自动生成）</li>
+        <li>显式 <code>tasks.named("spotbugsE2eTest") { enabled = false }</code>（同上）</li>
+        <li>报告配置只针对 <code>spotbugsMain</code>：<code>tasks.named&lt;SpotBugsTask&gt;("spotbugsMain") { reports { create("html"){required=true}; create("xml"){required=true} } }</code></li>
+      </ol>
+      <p>这样 <code>./gradlew check</code> 触发的 SpotBugs 任务只剩 <code>spotbugsMain</code>，报告路径在每个模块的 <code>build/reports/spotbugs/main.html</code> / <code>main.xml</code>。</p>
+
+      <h3>3.4 与现状的 7 处差异回顾</h3>
+      <table>
+        <thead>
+          <tr><th>#</th><th>差异点</th><th>现状</th><th>目标</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>文件位置</td><td>嵌在 <code>java-base</code> 行 58-68</td><td>独立 <code>linqibin.spotbugs.gradle.kts</code></td></tr>
+          <tr><td>2</td><td><code>reportLevel</code></td><td><code>MEDIUM</code></td><td><code>LOW</code></td></tr>
+          <tr><td>3</td><td><code>ignoreFailures</code></td><td>未声明（默认 false）</td><td>显式 <code>false</code></td></tr>
+          <tr><td>4</td><td><code>toolVersion</code></td><td>未锁，跟随插件默认</td><td>锁 <code>4.9.3</code></td></tr>
+          <tr><td>5</td><td>spotbugsTest 等</td><td>跟着 <code>configureEach</code> 一起跑</td><td>显式 <code>enabled = false</code></td></tr>
+          <tr><td>6</td><td>报告配置作用范围</td><td><code>configureEach</code> 影响所有 SpotBugs task</td><td>只对 <code>spotbugsMain</code></td></tr>
+          <tr><td>7</td><td>apply 入口</td><td><code>java-base</code> 直接 <code>id("com.github.spotbugs")</code></td><td><code>java-base</code> 改为 <code>id("linqibin.spotbugs")</code></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="spotless-plugin">
+      <h2>4. Spotless Convention Plugin</h2>
+
+      <h3>4.1 文件落点</h3>
+      <p>新增 <code>build-logic/src/main/kotlin/linqibin.spotless.gradle.kts</code>，由 <code>linqibin.java-base</code> 通过 <code>id("linqibin.spotless")</code> 引入。</p>
+
+      <h3>4.2 Java 格式化规则</h3>
+      <ul>
+        <li><code>googleJavaFormat(libs.findVersion("google-java-format").get().requiredVersion)</code> — 锁定 1.29.0，<strong>默认 2 空格缩进</strong>（与 <code>.editorconfig</code> 一致）</li>
+        <li><code>importOrder()</code> — 默认 import 顺序（PAP-13 AC "import 顺序" 项）</li>
+        <li><code>removeUnusedImports()</code> — 移除未使用 import</li>
+        <li><code>trimTrailingWhitespace()</code> — 去尾空白</li>
+        <li><code>endWithNewline()</code> — EOF 换行</li>
+        <li><code>target("src/**/*.java")</code> — 仅源码</li>
+        <li><code>targetExclude("**/build/**", "**/generated/**")</code> — 排除生成代码（MapStruct <code>*MapperImpl.java</code> / Lombok 拓展产物）</li>
+      </ul>
+
+      <h3>4.3 Gradle 脚本格式化规则</h3>
+      <ul>
+        <li><code>kotlinGradle</code>：<code>target("*.gradle.kts", "build-logic/**/*.gradle.kts")</code></li>
+        <li><code>ktlint(libs.findVersion("ktlint").get().requiredVersion)</code> — 锁定 1.5.0</li>
+        <li><code>trimTrailingWhitespace()</code> / <code>endWithNewline()</code></li>
+      </ul>
+
+      <h3>4.4 缩进对齐说明（重要）</h3>
+      <p>PAP-13 release-spec AC 字面写"缩进 4 空格"，但项目 <code>.editorconfig</code>（已存在）第 16 行规定 <code>indent_size = 2</code>，<code>linqibin.java-base</code> 当前 <code>googleJavaFormat</code>（默认 2 空格）也已与之一致。三者要求一致才能避免编辑器与 Spotless 之间的"对手戏"，因此本 spec 决议 <strong>统一为 2 空格</strong>，PAP-13 AC 视为口误，待 release-spec 同步修正（见 §8）。</p>
+    </section>
+
+    <section id="java-base-changes">
+      <h2>5. java-base 改造</h2>
+
+      <h3>5.1 plugins 块</h3>
+      <p><code>linqibin.java-base.gradle.kts</code> 第 14-20 行：</p>
+      <ul>
+        <li>删除 <code>id("com.diffplug.spotless")</code></li>
+        <li>删除 <code>id("com.github.spotbugs")</code></li>
+        <li>新增 <code>id("linqibin.spotless")</code></li>
+        <li>新增 <code>id("linqibin.spotbugs")</code></li>
+        <li>保留：<code>java</code> / <code>jacoco</code> / <code>io.spring.dependency-management</code></li>
+      </ul>
+
+      <h3>5.2 body 删除</h3>
+      <p>删除当前第 42-68 行（共 27 行）：<code>spotless { ... }</code> 块（行 42-56）+ <code>spotbugs { ... }</code> 块（行 58-63）+ <code>tasks.withType&lt;SpotBugsTask&gt;().configureEach { ... }</code> 块（行 65-68）。整个 quality 相关配置完全迁移到两个独立 convention plugin。</p>
+
+      <h3>5.3 保留的 java-base 职责</h3>
+      <p>本次改造后 java-base 仍保留：Java 25 toolchain / compile options / JaCoCo 配置（行 70-99）/ JVM Test Suites（行 101-191）/ 注解处理器（行 194-222）。文件从 222 行缩到 ~195 行，职责更聚焦。</p>
+    </section>
+
+    <section id="exclude-strategy">
+      <h2>6. spotbugs-exclude.xml 处置策略</h2>
+
+      <h3>6.1 AC 要求</h3>
+      <p>"沿用根目录 <code>spotbugs-exclude.xml</code>"——不重写 282 行的现有内容，仅根据本次 baseline 跑出的报告按需增删条目。</p>
+
+      <h3>6.2 Baseline 决策树</h3>
+      <p>实施期执行 <code>./gradlew spotbugsMain --no-daemon</code> 跑出第一份完整报告后：</p>
+      <ol>
+        <li><strong>统计告警总数 N</strong></li>
+        <li><strong>N ≤ 30：逐条决策路径（默认）</strong>
+          <ul>
+            <li>真 bug → 修源码，独立 commit 引用本 spec</li>
+            <li>误报 → <code>spotbugs-exclude.xml</code> 加 <code>&lt;Match&gt;</code> 条目，必带 XML 注释说明"为什么是误报"（不接受裸 exclude）</li>
+          </ul>
+        </li>
+        <li><strong>N &gt; 30：暂停上报数字，由用户选 fallback</strong>
+          <ul>
+            <li>选项 A：继续硬清零（耗时大但最干净）</li>
+            <li>选项 B：降级 baseline mode（把当前所有告警 exclude，新代码零起步；存量告警记 TODO 留待后续）</li>
+          </ul>
+        </li>
+      </ol>
+
+      <h3>6.3 不接受的做法</h3>
+      <ul>
+        <li>批量 exclude 没有注释（违反"每条决策"原则）</li>
+        <li>用 <code>ignoreFailures = true</code> 绕过失败（违反 AC + 决策 C）</li>
+        <li>调高 <code>reportLevel</code> 隐藏低置信度告警（违反 AC）</li>
+      </ul>
+    </section>
+
+    <section id="ci-changes">
+      <h2>7. CI Workflow 改造（ci.yml）</h2>
+
+      <h3>7.1 Step 替换</h3>
+      <p>当前 <code>.github/workflows/ci.yml</code> 第 45-47 行：</p>
+      <pre><code>- name: 🧪 Unit tests
+  run: ./gradlew test --no-daemon
+  # 注：本步骤暂不调 `./gradlew check`，因 spotbugsMain / spotlessCheck 需 PAP-12/13 完成 baseline 后才能阻断 CI</code></pre>
+      <p>替换为：</p>
+      <pre><code>- name: ✅ Check (test + spotbugsMain + spotlessCheck)
+  run: ./gradlew check --no-daemon</code></pre>
+      <p>解释：Gradle 内置 <code>check</code> 生命周期 task 默认聚合 <code>test</code> + <code>spotbugsMain</code> + <code>spotlessCheck</code>（注：<code>jacocoTestCoverageVerification</code> 在 java-base 行 99 已显式不挂 <code>check</code>，符合决策 D）。<code>integrationTest</code> / <code>e2eTest</code> 仍保留独立 step（JVM Test Suites 不自动挂 <code>check</code>）。</p>
+
+      <h3>7.2 新增 spotbugs-reports artifact</h3>
+      <p>在现有 "📦 Upload reports artifact" step（第 65-73 行）之后追加：</p>
+      <pre><code>- name: 🐛 Upload spotbugs reports
+  if: always()
+  uses: actions/upload-artifact@v4
+  with:
+    name: spotbugs-reports
+    path: '**/build/reports/spotbugs/**'
+    retention-days: 7</code></pre>
+      <p>原通用 <code>reports</code> artifact 保留不动（已包含 spotbugs 报告），<code>spotbugs-reports</code> 为子集快速访问入口（决策 4）。</p>
+
+      <h3>7.3 不动项</h3>
+      <ul>
+        <li><code>integrationTest</code> step（第 49-50 行）</li>
+        <li><code>e2eTest</code> step（第 52-53 行）</li>
+        <li>JaCoCo aggregate + Codecov upload step（第 55-63 行）</li>
+        <li>通用 reports artifact step（第 65-73 行）</li>
+      </ul>
+    </section>
+
+    <section id="linear-sync">
+      <h2>8. Linear / release-spec 同步</h2>
+      <p>合并 scope 后需要的 housekeeping（plan execute 阶段作为最后一个 task 执行）：</p>
+      <ul>
+        <li>Linear <strong>PAP-12</strong> 描述追加："scope 扩展为 PAP-12 + PAP-13 合并落 PR"</li>
+        <li>Linear <strong>PAP-13</strong> 关闭时备注 "with PAP-12, 见 PR #xx"，状态 → Done</li>
+        <li>Linear <strong>PAP-13</strong> AC 中"缩进 4 空格" → "缩进 2 空格（与 <code>.editorconfig</code> 一致）"</li>
+        <li><code>docs/patra/release-specs/v0.3-dev-ready.md</code> Issue 4 章节 AC 同步修正缩进描述</li>
+      </ul>
+    </section>
+
+    <section id="decisions">
+      <h2>9. 关键决策与备选</h2>
+
+      <div class="decision">
+        <h3>决策 1：抽出独立 convention plugin，java-base 内部引入</h3>
+        <p>新增 <code>linqibin.spotbugs.gradle.kts</code> + <code>linqibin.spotless.gradle.kts</code>，<code>linqibin.java-base</code> 用 <code>id("linqibin.spotbugs")</code> / <code>id("linqibin.spotless")</code> 引入；所有 Java 模块沿现有 java-base 链路自动继承，无需逐模块 apply。</p>
+        <p class="alternatives"><strong>备选 A：</strong>每个 Java 模块的 <code>build.gradle.kts</code> 各自 apply — 否决：30+ 模块 30 多行重复代码，未来调参易遗漏。<br>
+        <strong>备选 B：</strong>不抽出，仅在 java-base 内修参数 — 否决：违反 PAP-12 AC 字面"新增 convention plugin"，且 java-base 文件已 222 行职责过载。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 2：PAP-12 + PAP-13 合并为同一 PR</h3>
+        <p>同一份 spec / 同一份 plan / 同一次 CI 改造 / 同一份基线提交。PAP-13 Linear 关闭并指向本 PR。</p>
+        <p class="alternatives"><strong>备选 A：</strong>拆分两个 PR — 否决：两者改造路径 80% 重叠（build-logic 抽插件 + CI 改 step + 基线化），分两次做有重复劳动；release-spec 第 274 行明示 #3 #4 可并行；单人 + 绿地项目 PR 体量不是问题。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 3：Spotless 缩进保留 2 空格</h3>
+        <p>保留现有 <code>googleJavaFormat</code> 默认 2 空格，与 <code>.editorconfig</code> 第 16 行 <code>indent_size = 2</code> 一致。PAP-13 release-spec AC 的"4 空格"判定为口误，待 §8 同步修正。</p>
+        <p class="alternatives"><strong>备选 A：</strong>改为 4 空格（<code>googleJavaFormat.aosp()</code> 或 palantir）— 否决：需同步改 <code>.editorconfig</code>（与编辑器对手戏风险）；<code>spotlessApply</code> 一次性重写所有源码格式（PR 噪音最大）；AOSP 风格业界资源较少。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 4：CI 上传专门的 spotbugs-reports artifact，与通用 reports artifact 并存</h3>
+        <p>保留 PAP-10 已配置的通用 <code>reports</code> artifact（含全部 <code>build/reports/</code>），额外新增 <code>spotbugs-reports</code> artifact（仅 <code>**/build/reports/spotbugs/**</code>）。</p>
+        <p class="alternatives"><strong>备选 A：</strong>仅保留通用 reports artifact + 加注释 — 否决：reviewer 下载大 zip 后需手动找路径，体验差。<br>
+        <strong>备选 B：</strong>拆分通用 reports artifact 为多个细化 artifact — 否决：与 PAP-10 刚调好的结构冲突，动作过大。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 5：CI 用 <code>./gradlew check</code> 一次性接入 spotbugsMain + spotlessCheck</h3>
+        <p>把 <code>./gradlew test</code> step 替换为 <code>./gradlew check</code>，让 Gradle 内置 lifecycle 同时驱动 <code>test</code> + <code>spotbugsMain</code> + <code>spotlessCheck</code>。</p>
+        <p class="alternatives"><strong>备选 A：</strong>在 test step 后单独加 <code>spotbugsMain</code> step（不动 test）— 否决：PAP-13 合并 scope 后 spotlessCheck 也要进 CI，要么再加 step（3 个 step）要么后续再改一次 ci.yml，不一次到位。<br>
+        <strong>备选 B：</strong>合并为 <code>./gradlew test spotbugsMain spotlessCheck</code> 单 step — 否决：失败语义混在一起，CI 日志定位错误略麻烦；与 <code>check</code> 语义等价但更绕。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 6：spotbugs-exclude.xml 沿用现有，按 baseline 增删；告警量 &gt; 30 时上报降级</h3>
+        <p>不重写现有 282 行 exclude 文件，跑 <code>spotbugsMain</code> 后逐条决策；告警量超 30 暂停上报让用户选 fallback。</p>
+        <p class="alternatives"><strong>备选 A：</strong>跑前先 audit 现有 exclude 是否仍合理（清理 Maven 时代残留）— 否决：违反 AC "沿用"字面；可作为后续独立任务（如 v0.4 quality 维护版）。<br>
+        <strong>备选 B：</strong>直接 baseline mode（不区分数量，把当前所有告警 exclude）— 否决：违反 AC "每条决策"原则；存量告警长期累积无人 review。</p>
+      </div>
+    </section>
+
+    <section id="risks">
+      <h2>10. 风险与缓解</h2>
+      <table>
+        <thead>
+          <tr><th>风险</th><th>等级</th><th>缓解</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>SpotBugs <code>reportLevel=LOW</code> + <code>effort=MAX</code> 跑出大量告警（&gt; 30）</td>
+            <td><span class="pill high">high</span></td>
+            <td>§6.2 决策树：&gt; 30 暂停上报，由用户选硬清零 / baseline mode 降级</td>
+          </tr>
+          <tr>
+            <td><code>spotlessApply</code> 改动量过大，PR 噪音淹没真实改动</td>
+            <td><span class="pill mid">mid</span></td>
+            <td>实施期独立 commit："chore(spotless): apply baseline formatting"；PR 描述明示"spotless baseline 在 commit X，业务变更在 commit Y"；CodeRabbit 评论可按文件 collapse</td>
+          </tr>
+          <tr>
+            <td>SpotBugs <code>toolVersion=4.9.3</code> 与 plugin <code>6.4.8</code> 不兼容</td>
+            <td><span class="pill low">low</span></td>
+            <td>SpotBugs Gradle plugin 6.x 官方支持 4.7+ 核心；当前 libs.versions.toml 已并存这两个版本，CI 中 sanity-run 即可验证；如不兼容回退 toolVersion 至插件捆绑默认</td>
+          </tr>
+          <tr>
+            <td>JVM Test Suites 生成的 <code>spotbugsIntegrationTest</code> / <code>spotbugsE2eTest</code> task 名变化导致 <code>tasks.named()</code> 找不到</td>
+            <td><span class="pill mid">mid</span></td>
+            <td>本地先 <code>./gradlew tasks --all | grep spotbugs</code> 验证 task 名；如名称不一致改用 <code>tasks.matching { it.name.startsWith("spotbugs") &amp;&amp; it.name != "spotbugsMain" }.configureEach { enabled = false }</code></td>
+          </tr>
+          <tr>
+            <td><code>spotbugs-exclude.xml</code> 现有规则与 LOW confidence 新告警相互抵消，掩盖真问题</td>
+            <td><span class="pill mid">mid</span></td>
+            <td>baseline 跑两次：首次保留现有 exclude 跑出 N；如 N 异常少（&lt; 5）二次清空 exclude 跑 N'，对比 N' - N 看现有 exclude 是否过宽</td>
+          </tr>
+          <tr>
+            <td><code>./gradlew check</code> 在 CI 比 <code>./gradlew test</code> 慢（加跑 spotbugs + spotless）</td>
+            <td><span class="pill low">low</span></td>
+            <td>spotbugs effort=MAX 在 patra 模块体量下预计单模块 10–30s，总体 ~2 min；可接受。如显著超时，CI 用 <code>--parallel</code></td>
+          </tr>
+          <tr>
+            <td>合并 scope 后 PR 体量增加导致 review 时间延长</td>
+            <td><span class="pill low">low</span></td>
+            <td>commit 序列严格分层：(1) build-logic 抽 plugin (2) java-base 改造 (3) spotlessApply 基线 (4) spotbugsMain baseline (5) CI 改造 (6) Linear 同步；reviewer 可按 commit 单独 review</td>
+          </tr>
+          <tr>
+            <td>Spotless <code>targetExclude("**/generated/**")</code> 路径不匹配 MapStruct 实际输出</td>
+            <td><span class="pill low">low</span></td>
+            <td>MapStruct 默认输出在 <code>build/generated/sources/annotationProcessor/</code>，<code>**/build/**</code> 已覆盖；<code>generated/</code> 是冗余保险，无副作用</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="changes">
+      <h2>11. 改造文件清单</h2>
+      <table>
+        <thead>
+          <tr><th>#</th><th>文件</th><th>操作</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><code>build-logic/src/main/kotlin/linqibin.spotbugs.gradle.kts</code></td>
+            <td><span class="pill create">create</span></td>
+            <td>独立 SpotBugs convention plugin（§3）</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><code>build-logic/src/main/kotlin/linqibin.spotless.gradle.kts</code></td>
+            <td><span class="pill create">create</span></td>
+            <td>独立 Spotless convention plugin（§4）</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><code>build-logic/src/main/kotlin/linqibin.java-base.gradle.kts</code></td>
+            <td><span class="pill modify">modify</span></td>
+            <td>plugins 块替换 + 删除 27 行内嵌配置（§5）</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td><code>spotbugs-exclude.xml</code></td>
+            <td><span class="pill modify">modify</span></td>
+            <td>按 baseline 报告增删条目，每条带注释（§6）</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td><code>.github/workflows/ci.yml</code></td>
+            <td><span class="pill modify">modify</span></td>
+            <td>test step → check step；删除"暂不调 check"注释；加 spotbugs-reports artifact step（§7）</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td><code>src/**/*.java</code>（全工程 Java 源码）</td>
+            <td><span class="pill modify">modify</span></td>
+            <td>spotlessApply 一次性基线化：缩进 / 空格 / import 顺序 / EOF 换行 / 尾空白</td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td>潜在源码修复</td>
+            <td><span class="pill modify">modify</span></td>
+            <td>spotbugsMain 跑出的真 bug 修复（数量 / 文件待 baseline 后确定）</td>
+          </tr>
+          <tr>
+            <td>8</td>
+            <td><code>docs/patra/release-specs/v0.3-dev-ready.md</code></td>
+            <td><span class="pill modify">modify</span></td>
+            <td>Issue 4 AC 缩进描述同步修正（4 空格 → 2 空格）</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <aside class="callout info">
+      <span class="title">Done 判定</span>
+      <ol>
+        <li><code>build-logic/src/main/kotlin/linqibin.spotbugs.gradle.kts</code> 与 <code>linqibin.spotless.gradle.kts</code> 均存在；<code>linqibin.java-base.gradle.kts</code> plugins 块包含 <code>id("linqibin.spotbugs")</code> 与 <code>id("linqibin.spotless")</code>，且不再直接 apply 上游插件</li>
+        <li><code>./gradlew spotbugsMain --no-daemon</code> 在 worktree 退出码 0；HTML/XML 报告生成在每个 Java 模块的 <code>build/reports/spotbugs/main.{html,xml}</code></li>
+        <li><code>./gradlew spotbugsTest --info</code> task 状态为 <code>SKIPPED</code>（disabled）；<code>spotbugsIntegrationTest</code> / <code>spotbugsE2eTest</code> 同样</li>
+        <li><code>./gradlew spotlessCheck --no-daemon</code> 退出码 0（全工程已基线化）</li>
+        <li><code>./gradlew check --no-daemon</code> 在 worktree 退出码 0（聚合验证）</li>
+        <li><code>grep -n "暂不调" .github/workflows/ci.yml</code> 空输出（旧注释已删）</li>
+        <li><code>.github/workflows/ci.yml</code> 包含 <code>name: 🐛 Upload spotbugs reports</code> step，且 <code>name: spotbugs-reports</code></li>
+        <li>本 PR 在 GitHub 上 CI 全绿（<code>build-and-test</code> job 通过 <code>./gradlew check</code> step），且 Actions 页面 artifact 列表里同时存在 <code>reports</code> 与 <code>spotbugs-reports</code></li>
+        <li>Linear PAP-12 描述含 "scope 扩展为 PAP-12 + PAP-13 合并"；PAP-13 状态 Done 并备注 "with PAP-12"</li>
+        <li><code>docs/patra/release-specs/v0.3-dev-ready.md</code> Issue 4 AC 缩进描述为 "2 空格"</li>
+      </ol>
+    </aside>
+
+  </main>
+
+  <aside class="notes-panel" id="notes">
+    <header>
+      <h2>Implementation Notes</h2>
+      <p class="hint">实施期由 Claude Code 即时追加。规则：遇到 spec 未规定的<strong>决定</strong>、必要<strong>更改</strong>、不可避免的<strong>权衡</strong>、其他用户应知事项，立即用 Edit 追加 entry，不要等任务结束。</p>
+    </header>
+
+    <ol class="notes-log">
+    </ol>
+
+    <p class="empty-state">no notes yet</p>
+
+    <footer class="notes-stats">
+      总计:
+      <span data-counter="decision">0</span> decisions /
+      <span data-counter="change">0</span> changes /
+      <span data-counter="tradeoff">0</span> tradeoffs /
+      <span data-counter="other">0</span> others
+    </footer>
+  </aside>
+
+</div>
+</body>
+</html>

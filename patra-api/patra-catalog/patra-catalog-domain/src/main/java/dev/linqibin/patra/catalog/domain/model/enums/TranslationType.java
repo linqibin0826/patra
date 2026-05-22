@@ -1,6 +1,7 @@
 package dev.linqibin.patra.catalog.domain.model.enums;
 
 import cn.hutool.core.lang.Assert;
+import java.util.Locale;
 import lombok.Getter;
 
 /// 翻译类型枚举。
@@ -55,7 +56,7 @@ public enum TranslationType {
   /// @throws IllegalArgumentException 如果代码值无效
   public static TranslationType fromCode(String value) {
     Assert.notBlank(value, "翻译类型代码不能为空");
-    String normalized = value.trim().toLowerCase();
+    String normalized = value.trim().toLowerCase(Locale.ROOT);
     for (TranslationType type : values()) {
       if (type.code.equals(normalized)) {
         return type;

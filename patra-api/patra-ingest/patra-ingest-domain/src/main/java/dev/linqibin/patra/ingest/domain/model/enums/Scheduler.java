@@ -1,5 +1,6 @@
 package dev.linqibin.patra.ingest.domain.model.enums;
 
+import java.util.Locale;
 import lombok.Getter;
 
 /// 调度器来源枚举 (字典: ing_scheduler)。
@@ -61,7 +62,7 @@ public enum Scheduler {
     if (value == null) {
       throw new IllegalArgumentException("调度器代码不能为 null");
     }
-    String normalized = value.trim().toUpperCase();
+    String normalized = value.trim().toUpperCase(Locale.ROOT);
     for (Scheduler type : values()) {
       if (type.code.equals(normalized)) {
         return type;

@@ -2,6 +2,7 @@ package dev.linqibin.patra.common.enums;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import java.util.Locale;
 import lombok.Getter;
 
 /// 上游数据源(溯源/Provenance)枚举。
@@ -41,7 +42,7 @@ public enum ProvenanceCode {
   ProvenanceCode(String code, String display) {
     this.code = code;
     this.description = display;
-    this.lowerCaseCode = code.toLowerCase();
+    this.lowerCaseCode = code.toLowerCase(Locale.ROOT);
   }
 
   /// 将字符串解析为 {@link ProvenanceCode},同时规范化大小写和常见别名。
@@ -53,7 +54,7 @@ public enum ProvenanceCode {
     if (s == null) {
       throw new IllegalArgumentException("数据源标识符不能为 null");
     }
-    String norm = s.trim().toLowerCase().replace('-', '_');
+    String norm = s.trim().toLowerCase(Locale.ROOT).replace('-', '_');
     return switch (norm) {
       case "europe_pmc", "europepmc", "epmc" -> EPMC;
       case "pubmed", "medline", "med" -> PUBMED;

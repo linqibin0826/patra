@@ -1,6 +1,7 @@
 package dev.linqibin.patra.catalog.domain.model.enums;
 
 import cn.hutool.core.lang.Assert;
+import java.util.Locale;
 import lombok.Getter;
 
 /// 文献版本类型枚举。
@@ -64,9 +65,9 @@ public enum VersionType {
   /// @throws IllegalArgumentException 如果代码值无效
   public static VersionType fromCode(String value) {
     Assert.notBlank(value, "版本类型代码不能为空");
-    String normalized = value.trim().toLowerCase().replace("_", "").replace("-", "");
+    String normalized = value.trim().toLowerCase(Locale.ROOT).replace("_", "").replace("-", "");
     for (VersionType type : values()) {
-      if (type.code.equals(normalized) || type.name().toLowerCase().equals(normalized)) {
+      if (type.code.equals(normalized) || type.name().toLowerCase(Locale.ROOT).equals(normalized)) {
         return type;
       }
     }

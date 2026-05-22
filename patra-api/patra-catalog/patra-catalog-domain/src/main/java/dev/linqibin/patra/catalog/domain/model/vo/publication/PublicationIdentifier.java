@@ -5,6 +5,7 @@ import cn.hutool.core.util.StrUtil;
 import dev.linqibin.patra.common.model.enums.PublicationIdentifierType;
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.Locale;
 
 /// 文献标识符值对象（单个标识符）。
 ///
@@ -72,7 +73,7 @@ public record PublicationIdentifier(PublicationIdentifierType type, String value
               value);
       case PMC ->
           Assert.isTrue(
-              value.toUpperCase().startsWith("PMC") && value.length() >= 4,
+              value.toUpperCase(Locale.ROOT).startsWith("PMC") && value.length() >= 4,
               "PMC ID 格式无效，必须以 'PMC' 开头后跟数字：%s",
               value);
       default -> {

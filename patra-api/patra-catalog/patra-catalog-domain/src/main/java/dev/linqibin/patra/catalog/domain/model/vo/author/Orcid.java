@@ -3,6 +3,7 @@ package dev.linqibin.patra.catalog.domain.model.vo.author;
 import cn.hutool.core.lang.Assert;
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.Locale;
 
 /// ORCID 标识符值对象。封装 ORCID(Open Researcher and Contributor ID)的验证和管理。
 ///
@@ -59,7 +60,7 @@ public record Orcid(String value) implements Serializable {
         value.matches(ORCID_PATTERN), "ORCID 格式无效,必须符合 'XXXX-XXXX-XXXX-XXXX' 格式：%s", value);
 
     // 标准化为大写(X校验位)
-    value = value.toUpperCase();
+    value = value.toUpperCase(Locale.ROOT);
   }
 
   /// 创建 ORCID。

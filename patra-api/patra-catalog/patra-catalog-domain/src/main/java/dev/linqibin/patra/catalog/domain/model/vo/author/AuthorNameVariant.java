@@ -4,6 +4,7 @@ import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.Locale;
 
 /// 作者名字变体值对象。
 ///
@@ -197,12 +198,12 @@ public record AuthorNameVariant(
 
     if (hasLastName()) {
       // 移除空格并转小写
-      sb.append(lastName.replaceAll("\\s+", "").toLowerCase());
+      sb.append(lastName.replaceAll("\\s+", "").toLowerCase(Locale.ROOT));
     }
 
     if (hasInitials()) {
       sb.append("+");
-      sb.append(initials.toLowerCase());
+      sb.append(initials.toLowerCase(Locale.ROOT));
     }
 
     return sb.toString();

@@ -1,6 +1,7 @@
 package dev.linqibin.patra.ingest.domain.model.enums;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import java.util.Locale;
 import lombok.Getter;
 
 /// 计划状态 (字典: ing_plan_status)。
@@ -39,7 +40,7 @@ public enum PlanStatus {
     if (value == null) {
       throw new IllegalArgumentException("计划状态代码不能为 null");
     }
-    String n = value.trim().toUpperCase();
+    String n = value.trim().toUpperCase(Locale.ROOT);
     for (PlanStatus e : values()) {
       if (e.code.equals(n)) return e;
     }

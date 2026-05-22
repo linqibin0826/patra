@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import org.slf4j.Logger;
@@ -251,7 +252,7 @@ public class RemoteCallException extends RuntimeException implements HasErrorTra
       return null;
     }
     try {
-      return StandardErrorTrait.valueOf(name.trim().toUpperCase());
+      return StandardErrorTrait.valueOf(name.trim().toUpperCase(Locale.ROOT));
     } catch (IllegalArgumentException e) {
       log.debug("忽略未知的错误特征: {}", name);
       return null;

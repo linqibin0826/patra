@@ -25,6 +25,7 @@ import dev.linqibin.patra.catalog.infra.batch.publication.PublicationImportResul
 import dev.linqibin.patra.catalog.infra.batch.publication.PublicationImportResult.QualifierData;
 import dev.linqibin.patra.catalog.infra.batch.publication.PublicationImportResult.SupplMeshData;
 import java.util.List;
+import java.util.Locale;
 import org.springframework.stereotype.Component;
 
 /// 文献导入结果映射器。
@@ -210,7 +211,7 @@ public class PublicationImportResultMapper {
       return TranslationType.OFFICIAL;
     }
 
-    String normalizedType = abstractType.trim().toLowerCase();
+    String normalizedType = abstractType.trim().toLowerCase(Locale.ROOT);
 
     if ("publisher".equals(normalizedType)) {
       return TranslationType.OFFICIAL;

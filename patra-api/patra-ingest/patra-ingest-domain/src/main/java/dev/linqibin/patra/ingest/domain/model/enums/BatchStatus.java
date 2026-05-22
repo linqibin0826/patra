@@ -1,5 +1,6 @@
 package dev.linqibin.patra.ingest.domain.model.enums;
 
+import java.util.Locale;
 import lombok.Getter;
 
 /// 批次执行状态 (字典: ing_batch_status)。
@@ -36,7 +37,7 @@ public enum BatchStatus {
     if (value == null) {
       throw new IllegalArgumentException("批次状态代码不能为 null");
     }
-    String n = value.trim().toUpperCase();
+    String n = value.trim().toUpperCase(Locale.ROOT);
     for (BatchStatus e : values()) {
       if (e.code.equals(n)) return e;
     }

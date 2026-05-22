@@ -3,6 +3,7 @@ package dev.linqibin.patra.catalog.domain.model.vo.mesh;
 import cn.hutool.core.lang.Assert;
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.Locale;
 
 /// MeSH 唯一标识符值对象。封装 MeSH UI 格式验证和类型区分。
 ///
@@ -87,7 +88,7 @@ public record MeshUI(String ui) implements Serializable {
     Assert.notBlank(ui, "MeSH UI 不能为空");
 
     // 标准化为大写
-    ui = ui.toUpperCase();
+    ui = ui.toUpperCase(Locale.ROOT);
 
     // UI 格式验证
     // - Descriptor: D + 6或9位数字

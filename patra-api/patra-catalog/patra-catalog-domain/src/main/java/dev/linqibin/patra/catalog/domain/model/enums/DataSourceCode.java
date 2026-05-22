@@ -1,6 +1,7 @@
 package dev.linqibin.patra.catalog.domain.model.enums;
 
 import cn.hutool.core.lang.Assert;
+import java.util.Locale;
 import lombok.Getter;
 
 /// 数据来源代码枚举。
@@ -91,7 +92,7 @@ public enum DataSourceCode {
   /// @throws IllegalArgumentException 如果代码值无效
   public static DataSourceCode fromCode(String value) {
     Assert.notBlank(value, "数据源代码不能为空");
-    String normalized = value.trim().toUpperCase();
+    String normalized = value.trim().toUpperCase(Locale.ROOT);
     for (DataSourceCode source : values()) {
       if (source.code.equals(normalized)) {
         return source;
@@ -108,7 +109,7 @@ public enum DataSourceCode {
     if (value == null || value.isBlank()) {
       return null;
     }
-    String normalized = value.trim().toUpperCase();
+    String normalized = value.trim().toUpperCase(Locale.ROOT);
     for (DataSourceCode source : values()) {
       if (source.code.equals(normalized)) {
         return source;

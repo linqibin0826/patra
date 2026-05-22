@@ -1,6 +1,7 @@
 package dev.linqibin.patra.catalog.domain.model.enums;
 
 import cn.hutool.core.lang.Assert;
+import java.util.Locale;
 import lombok.Getter;
 
 /// 摘要类型枚举。
@@ -49,7 +50,7 @@ public enum AbstractType {
   /// @throws IllegalArgumentException 如果代码值无效
   public static AbstractType fromCode(String value) {
     Assert.notBlank(value, "摘要类型代码不能为空");
-    String normalized = value.trim().toLowerCase();
+    String normalized = value.trim().toLowerCase(Locale.ROOT);
     for (AbstractType type : values()) {
       if (type.code.equals(normalized)) {
         return type;

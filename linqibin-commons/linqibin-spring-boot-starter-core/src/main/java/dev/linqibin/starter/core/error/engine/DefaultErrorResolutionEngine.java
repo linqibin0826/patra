@@ -15,6 +15,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -593,7 +594,7 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
   /// @return 如果异常名称包含客户端错误关键字则返回 true
 
   private boolean isClientErrorLike(Throwable exception) {
-    String className = exception.getClass().getSimpleName().toLowerCase();
+    String className = exception.getClass().getSimpleName().toLowerCase(Locale.ROOT);
     return className.contains("validation")
         || className.contains("notvalid")
         || className.contains("bind")

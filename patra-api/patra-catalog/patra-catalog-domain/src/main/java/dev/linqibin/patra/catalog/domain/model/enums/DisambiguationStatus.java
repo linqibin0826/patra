@@ -1,6 +1,7 @@
 package dev.linqibin.patra.catalog.domain.model.enums;
 
 import cn.hutool.core.lang.Assert;
+import java.util.Locale;
 import lombok.Getter;
 
 /// 机构消歧状态枚举。
@@ -68,7 +69,7 @@ public enum DisambiguationStatus {
   /// @throws IllegalArgumentException 如果代码值无效
   public static DisambiguationStatus fromCode(String value) {
     Assert.notBlank(value, "消歧状态代码不能为空");
-    String normalized = value.trim().toUpperCase();
+    String normalized = value.trim().toUpperCase(Locale.ROOT);
     for (DisambiguationStatus status : values()) {
       if (status.code.equals(normalized)) {
         return status;
@@ -85,7 +86,7 @@ public enum DisambiguationStatus {
     if (value == null || value.isBlank()) {
       return null;
     }
-    String normalized = value.trim().toUpperCase();
+    String normalized = value.trim().toUpperCase(Locale.ROOT);
     for (DisambiguationStatus status : values()) {
       if (status.code.equals(normalized)) {
         return status;

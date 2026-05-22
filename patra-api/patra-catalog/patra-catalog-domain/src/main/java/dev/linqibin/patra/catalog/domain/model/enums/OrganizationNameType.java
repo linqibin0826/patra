@@ -1,6 +1,7 @@
 package dev.linqibin.patra.catalog.domain.model.enums;
 
 import cn.hutool.core.lang.Assert;
+import java.util.Locale;
 import lombok.Getter;
 
 /// 机构名称类型枚举。
@@ -68,7 +69,7 @@ public enum OrganizationNameType {
   /// @throws IllegalArgumentException 如果代码值为空或无效
   public static OrganizationNameType fromCode(String value) {
     Assert.notBlank(value, "名称类型代码不能为空");
-    String normalized = value.trim().toLowerCase();
+    String normalized = value.trim().toLowerCase(Locale.ROOT);
     for (OrganizationNameType type : values()) {
       if (type.code.equals(normalized)) {
         return type;
@@ -85,7 +86,7 @@ public enum OrganizationNameType {
     if (value == null || value.isBlank()) {
       return null;
     }
-    String normalized = value.trim().toLowerCase();
+    String normalized = value.trim().toLowerCase(Locale.ROOT);
     for (OrganizationNameType type : values()) {
       if (type.code.equals(normalized)) {
         return type;

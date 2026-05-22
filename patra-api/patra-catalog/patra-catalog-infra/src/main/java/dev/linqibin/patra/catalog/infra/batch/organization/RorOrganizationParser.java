@@ -26,6 +26,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.Spliterator;
@@ -253,7 +254,7 @@ public class RorOrganizationParser {
     if (status == null) {
       return OrganizationStatus.ACTIVE; // 默认活跃
     }
-    return switch (status.toLowerCase()) {
+    return switch (status.toLowerCase(Locale.ROOT)) {
       case "active" -> OrganizationStatus.ACTIVE;
       case "inactive" -> OrganizationStatus.INACTIVE;
       case "withdrawn" -> OrganizationStatus.WITHDRAWN;
@@ -285,7 +286,7 @@ public class RorOrganizationParser {
     if (type == null) {
       return null;
     }
-    return switch (type.toLowerCase()) {
+    return switch (type.toLowerCase(Locale.ROOT)) {
       case "archive" -> OrganizationType.ARCHIVE;
       case "company" -> OrganizationType.COMPANY;
       case "education" -> OrganizationType.EDUCATION;
@@ -367,7 +368,7 @@ public class RorOrganizationParser {
       }
 
       String value = name.value().strip();
-      String lang = name.lang() != null ? name.lang().strip().toLowerCase() : "";
+      String lang = name.lang() != null ? name.lang().strip().toLowerCase(Locale.ROOT) : "";
       // 使用 ICU4J PRIMARY 强度生成 collation key（accent-/case-insensitive，与 DB collation 解耦）
       String collationKey = toCollationKey(value) + "|" + lang;
 
@@ -449,7 +450,7 @@ public class RorOrganizationParser {
     if (type == null) {
       return null;
     }
-    return switch (type.toLowerCase()) {
+    return switch (type.toLowerCase(Locale.ROOT)) {
       case "ror_display" -> OrganizationNameType.ROR_DISPLAY;
       case "label" -> OrganizationNameType.LABEL;
       case "alias" -> OrganizationNameType.ALIAS;
@@ -530,7 +531,7 @@ public class RorOrganizationParser {
     if (type == null) {
       return null;
     }
-    return switch (type.toLowerCase()) {
+    return switch (type.toLowerCase(Locale.ROOT)) {
       case "isni" -> ExternalIdType.ISNI;
       case "wikidata" -> ExternalIdType.WIKIDATA;
       case "fundref" -> ExternalIdType.FUNDREF;
@@ -612,7 +613,7 @@ public class RorOrganizationParser {
     if (type == null) {
       return null;
     }
-    return switch (type.toLowerCase()) {
+    return switch (type.toLowerCase(Locale.ROOT)) {
       case "parent" -> OrganizationRelationType.PARENT;
       case "child" -> OrganizationRelationType.CHILD;
       case "related" -> OrganizationRelationType.RELATED;

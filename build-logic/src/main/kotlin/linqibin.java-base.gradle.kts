@@ -14,8 +14,8 @@
 plugins {
     java
     jacoco
-    id("com.diffplug.spotless")
-    id("com.github.spotbugs")
+    id("linqibin.spotless")
+    id("linqibin.spotbugs")
     id("io.spring.dependency-management")
 }
 
@@ -38,34 +38,10 @@ tasks.withType<JavaCompile>().configureEach {
     options.compilerArgs.addAll(listOf("-parameters"))
 }
 
-// ==================== Spotless ====================
-spotless {
-    java {
-        target("src/**/*.java")
-        googleJavaFormat(libs.findVersion("google-java-format").get().requiredVersion)
-        removeUnusedImports()
-        trimTrailingWhitespace()
-        endWithNewline()
-    }
-    kotlinGradle {
-        target("*.gradle.kts")
-        ktlint(libs.findVersion("ktlint").get().requiredVersion)
-        trimTrailingWhitespace()
-        endWithNewline()
-    }
-}
-
-// ==================== SpotBugs ====================
-spotbugs {
-    effort = com.github.spotbugs.snom.Effort.MAX
-    reportLevel = com.github.spotbugs.snom.Confidence.MEDIUM
-    excludeFilter = rootProject.file("spotbugs-exclude.xml")
-}
-
-tasks.withType<com.github.spotbugs.snom.SpotBugsTask>().configureEach {
-    reports.create("html") { required = true }
-    reports.create("xml") { required = true }
-}
+// ==================== Spotless / SpotBugs ====================
+// 已抽出为独立 convention plugins：linqibin.spotless / linqibin.spotbugs
+// 见 build-logic/src/main/kotlin/linqibin.{spotless,spotbugs}.gradle.kts
+// 由本文件 plugins 块通过 id("linqibin.spotless") / id("linqibin.spotbugs") 引入。
 
 // ==================== JaCoCo ====================
 jacoco {

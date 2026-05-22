@@ -1,6 +1,7 @@
 package dev.linqibin.patra.catalog.domain.model.enums;
 
 import cn.hutool.core.lang.Assert;
+import java.util.Locale;
 import lombok.Getter;
 
 /// 日期精度枚举。
@@ -51,7 +52,7 @@ public enum DatePrecision {
   /// @throws IllegalArgumentException 如果代码值无效
   public static DatePrecision fromCode(String value) {
     Assert.notBlank(value, "日期精度代码不能为空");
-    String normalized = value.trim().toLowerCase();
+    String normalized = value.trim().toLowerCase(Locale.ROOT);
     for (DatePrecision precision : values()) {
       if (precision.code.equals(normalized)) {
         return precision;

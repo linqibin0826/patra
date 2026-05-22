@@ -29,6 +29,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -413,7 +414,7 @@ public class PlanAssemblerImpl implements PlanAssembler {
     if (offsetDateFormat == null || offsetDateFormat.isBlank()) {
       return true; // Default to DATE-only for safety
     }
-    String normalized = offsetDateFormat.trim().toUpperCase();
+    String normalized = offsetDateFormat.trim().toUpperCase(Locale.ROOT);
     // Check for timestamp indicators (time precision supported)
     if (normalized.contains("INSTANT")
         || normalized.contains("MILLIS")

@@ -6,6 +6,7 @@ import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
@@ -438,7 +439,7 @@ public class LetPubScrapingClient {
         return LetPubErrorCategory.UPSTREAM_TRUNCATED;
       }
       if (current instanceof SocketTimeoutException) {
-        return msg.toLowerCase().contains("connect")
+        return msg.toLowerCase(Locale.ROOT).contains("connect")
             ? LetPubErrorCategory.CONNECT_TIMEOUT
             : LetPubErrorCategory.SOCKET_TIMEOUT;
       }

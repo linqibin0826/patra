@@ -1,6 +1,7 @@
 package dev.linqibin.patra.catalog.domain.model.enums;
 
 import cn.hutool.core.lang.Assert;
+import java.util.Locale;
 import lombok.Getter;
 
 /// 质量评分枚举（等级制）。
@@ -57,7 +58,7 @@ public enum QualityScore {
   /// @throws IllegalArgumentException 如果代码值无效
   public static QualityScore fromCode(String value) {
     Assert.notBlank(value, "质量评分代码不能为空");
-    String normalized = value.trim().toUpperCase();
+    String normalized = value.trim().toUpperCase(Locale.ROOT);
     for (QualityScore score : values()) {
       if (score.code.equals(normalized)) {
         return score;

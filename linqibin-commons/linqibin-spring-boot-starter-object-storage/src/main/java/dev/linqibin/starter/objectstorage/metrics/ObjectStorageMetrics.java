@@ -5,6 +5,7 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 /// 对象存储指标收集器,记录上传/下载操作的性能和成功率。
@@ -62,7 +63,7 @@ public class ObjectStorageMetrics {
     Counter.builder(UPLOAD_TOTAL)
         .tags(
             "provider",
-            providerType.name().toLowerCase(),
+            providerType.name().toLowerCase(Locale.ROOT),
             "bucket",
             bucket,
             "status",
@@ -78,7 +79,7 @@ public class ObjectStorageMetrics {
       return;
     }
     Counter.builder(RETRY_COUNT)
-        .tags("provider", providerType.name().toLowerCase(), "bucket", bucket)
+        .tags("provider", providerType.name().toLowerCase(Locale.ROOT), "bucket", bucket)
         .register(meterRegistry)
         .increment(retryCount);
   }
@@ -111,7 +112,7 @@ public class ObjectStorageMetrics {
     Counter.builder(DOWNLOAD_TOTAL)
         .tags(
             "provider",
-            providerType.name().toLowerCase(),
+            providerType.name().toLowerCase(Locale.ROOT),
             "bucket",
             bucket,
             "status",
@@ -129,20 +130,26 @@ public class ObjectStorageMetrics {
       return;
     }
     Counter.builder(DOWNLOAD_TOTAL)
-        .tags("provider", providerType.name().toLowerCase(), "bucket", bucket)
+        .tags("provider", providerType.name().toLowerCase(Locale.ROOT), "bucket", bucket)
         .register(meterRegistry)
         .increment();
   }
 
   private Counter counter(ProviderType providerType, String bucket, String status) {
     return Counter.builder(UPLOAD_TOTAL)
-        .tags("provider", providerType.name().toLowerCase(), "bucket", bucket, "status", status)
+        .tags(
+            "provider",
+            providerType.name().toLowerCase(Locale.ROOT),
+            "bucket",
+            bucket,
+            "status",
+            status)
         .register(meterRegistry);
   }
 
   private Timer timer(ProviderType providerType, String bucket) {
     return Timer.builder(UPLOAD_DURATION)
-        .tags("provider", providerType.name().toLowerCase(), "bucket", bucket)
+        .tags("provider", providerType.name().toLowerCase(Locale.ROOT), "bucket", bucket)
         .publishPercentileHistogram()
         .publishPercentiles(0.5, 0.9, 0.99)
         .register(meterRegistry);
@@ -150,20 +157,26 @@ public class ObjectStorageMetrics {
 
   private DistributionSummary summary(ProviderType providerType, String bucket) {
     return DistributionSummary.builder(UPLOAD_SIZE)
-        .tags("provider", providerType.name().toLowerCase(), "bucket", bucket)
+        .tags("provider", providerType.name().toLowerCase(Locale.ROOT), "bucket", bucket)
         .publishPercentileHistogram()
         .register(meterRegistry);
   }
 
   private Counter downloadCounter(ProviderType providerType, String bucket, String status) {
     return Counter.builder(DOWNLOAD_TOTAL)
-        .tags("provider", providerType.name().toLowerCase(), "bucket", bucket, "status", status)
+        .tags(
+            "provider",
+            providerType.name().toLowerCase(Locale.ROOT),
+            "bucket",
+            bucket,
+            "status",
+            status)
         .register(meterRegistry);
   }
 
   private Timer downloadTimer(ProviderType providerType, String bucket) {
     return Timer.builder(DOWNLOAD_DURATION)
-        .tags("provider", providerType.name().toLowerCase(), "bucket", bucket)
+        .tags("provider", providerType.name().toLowerCase(Locale.ROOT), "bucket", bucket)
         .publishPercentileHistogram()
         .publishPercentiles(0.5, 0.9, 0.99)
         .register(meterRegistry);
@@ -171,7 +184,7 @@ public class ObjectStorageMetrics {
 
   private DistributionSummary downloadSummary(ProviderType providerType, String bucket) {
     return DistributionSummary.builder(DOWNLOAD_SIZE)
-        .tags("provider", providerType.name().toLowerCase(), "bucket", bucket)
+        .tags("provider", providerType.name().toLowerCase(Locale.ROOT), "bucket", bucket)
         .publishPercentileHistogram()
         .register(meterRegistry);
   }

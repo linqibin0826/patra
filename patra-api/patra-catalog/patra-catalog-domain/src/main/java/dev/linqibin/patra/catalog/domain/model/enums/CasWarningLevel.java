@@ -1,6 +1,7 @@
 package dev.linqibin.patra.catalog.domain.model.enums;
 
 import cn.hutool.core.lang.Assert;
+import java.util.Locale;
 import lombok.Getter;
 
 /// CAS 中科院期刊预警级别枚举。
@@ -50,7 +51,7 @@ public enum CasWarningLevel {
   /// @throws IllegalArgumentException 如果代码值无效
   public static CasWarningLevel fromCode(String value) {
     Assert.notBlank(value, "CAS 预警级别代码不能为空");
-    String normalized = value.trim().toLowerCase();
+    String normalized = value.trim().toLowerCase(Locale.ROOT);
     for (CasWarningLevel level : values()) {
       if (level.code.equals(normalized)) {
         return level;

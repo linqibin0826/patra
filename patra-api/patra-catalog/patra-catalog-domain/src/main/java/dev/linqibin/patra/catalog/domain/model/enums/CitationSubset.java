@@ -1,6 +1,7 @@
 package dev.linqibin.patra.catalog.domain.model.enums;
 
 import cn.hutool.core.lang.Assert;
+import java.util.Locale;
 import lombok.Getter;
 
 /// 引用子集枚举。
@@ -126,7 +127,7 @@ public enum CitationSubset {
   /// @throws IllegalArgumentException 如果代码值无效
   public static CitationSubset fromCode(String value) {
     Assert.notBlank(value, "引用子集代码不能为空");
-    String normalized = value.trim().toUpperCase();
+    String normalized = value.trim().toUpperCase(Locale.ROOT);
     for (CitationSubset subset : values()) {
       if (subset.code.equals(normalized)) {
         return subset;
@@ -143,7 +144,7 @@ public enum CitationSubset {
     if (value == null || value.isBlank()) {
       return null;
     }
-    String normalized = value.trim().toUpperCase();
+    String normalized = value.trim().toUpperCase(Locale.ROOT);
     for (CitationSubset subset : values()) {
       if (subset.code.equals(normalized)) {
         return subset;

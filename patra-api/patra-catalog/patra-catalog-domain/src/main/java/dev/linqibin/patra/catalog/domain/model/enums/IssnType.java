@@ -1,6 +1,7 @@
 package dev.linqibin.patra.catalog.domain.model.enums;
 
 import cn.hutool.core.lang.Assert;
+import java.util.Locale;
 import lombok.Getter;
 
 /// ISSN 类型枚举。
@@ -46,7 +47,7 @@ public enum IssnType {
   /// @throws IllegalArgumentException 如果代码值无效
   public static IssnType fromCode(String value) {
     Assert.notBlank(value, "ISSN类型代码不能为空");
-    String normalized = value.trim().toLowerCase();
+    String normalized = value.trim().toLowerCase(Locale.ROOT);
     for (IssnType type : values()) {
       if (type.code.equals(normalized)) {
         return type;

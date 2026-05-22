@@ -1,5 +1,6 @@
 package dev.linqibin.patra.ingest.domain.model.enums;
 
+import java.util.Locale;
 import lombok.Getter;
 
 /// 采集操作类型 (字典: ing_operation)。
@@ -48,7 +49,7 @@ public enum OperationCode {
     if (value == null) {
       throw new IllegalArgumentException("操作代码不能为 null");
     }
-    String normalized = value.trim().toUpperCase();
+    String normalized = value.trim().toUpperCase(Locale.ROOT);
     for (OperationCode oc : values()) {
       if (oc.code.equals(normalized)) {
         return oc;
