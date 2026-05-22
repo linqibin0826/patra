@@ -213,11 +213,11 @@ git commit -m "build(gradle): 启用 java-test-fixtures plugin (PAP-19 AC2 step 
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：</strong>用 IntelliJ IDEA 打开 <code>PubMedComputedAuthorTestDataGenerator.java</code>，执行 <strong>Refactor → Rename</strong>（Shift+F6），新名称 <code>PubMedAuthorFixture</code>，勾选 "Search in comments and strings"。IDEA 会自动更新 3 个引用文件（AuthorItemReaderTest、PubMedComputedAuthorParserTest、AuthorItemWriterIT）的 import 与类名引用。
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：</strong>用 git 命令把文件移到 testFixtures source set（保留 git 历史）：
             <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/patra/.claude/worktrees/pap-19-test-baseline
 
@@ -228,14 +228,14 @@ git mv \
   patra-catalog/patra-catalog-infra/src/testFixtures/java/dev/linqibin/patra/catalog/infra/batch/author/PubMedAuthorFixture.java</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：</strong>验证类的访问修饰符。<code>PubMedAuthorFixture</code> 在 testFixtures 中需被 test / integrationTest 都能访问，必须是 <code>public</code> class；其 static 方法（如 <code>writeJson(OutputStream)</code> 等）必须是 <code>public</code>。
             <pre><code class="lang-bash">grep -n "^class\|^public class\|public static\|static [a-z]" \
   patra-catalog/patra-catalog-infra/src/testFixtures/java/dev/linqibin/patra/catalog/infra/batch/author/PubMedAuthorFixture.java | head -20</code></pre>
             <p>如有非 public 的方法/类被外部引用，用 Edit 改为 public。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：</strong>编译验证：
             <pre><code class="lang-bash">./gradlew :patra-catalog:patra-catalog-infra:compileTestFixturesJava \
   :patra-catalog:patra-catalog-infra:compileTestJava \
@@ -243,14 +243,14 @@ git mv \
             <p>预期：3 个 task BUILD SUCCESSFUL。若 <code>compileTestJava</code> 报 "cannot find symbol PubMedAuthorFixture"，说明 test source set 默认 dependency 未生效，在 <code>linqibin.java-base.gradle.kts</code> 的 test suite dependencies 中显式补 <code>implementation(testFixtures(project()))</code>。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：</strong>跑相关测试：
             <pre><code class="lang-bash">./gradlew :patra-catalog:patra-catalog-infra:test \
   :patra-catalog:patra-catalog-infra:integrationTest --no-daemon --tests "*AuthorItemReader*" --tests "*PubMedComputedAuthorParser*" --tests "*AuthorItemWriterIT*"</code></pre>
             <p>预期：3 个测试类全过。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：Commit</strong>
             <pre><code class="lang-bash">git add -A patra-catalog/patra-catalog-infra/
 git commit -m "refactor(test): 迁移 PubMedAuthorFixture 至 testFixtures (PAP-19 AC1+AC2)"</code></pre>
@@ -269,11 +269,11 @@ git commit -m "refactor(test): 迁移 PubMedAuthorFixture 至 testFixtures (PAP-
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：</strong>IntelliJ Refactor → Rename <code>FileMetadataTestDataBuilder</code> 为 <code>FileMetadataFixture</code>。自动更新跨模块引用（<code>FileMetadataTest</code> 同 package、<code>RecordUploadHandlerTest</code> 有 import）。
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：</strong>物理迁移到 testFixtures source set：
             <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/patra/.claude/worktrees/pap-19-test-baseline
 
@@ -285,14 +285,14 @@ git mv \
   "$DOMAIN_DIR/src/testFixtures/java/dev/linqibin/patra/objectstorage/domain/model/aggregate/FileMetadataFixture.java"</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：</strong>修改 <code>patra-object-storage/patra-object-storage-domain/build.gradle.kts</code>，删除自定义 <code>testArtifacts</code> configuration 和对应 jar task。打开该文件，找到含 <code>val testArtifacts by configurations.creating</code> 或 <code>configurations.create("testArtifacts")</code> 的代码块（含其依赖的 <code>artifacts { ... }</code>、<code>tasks.register&lt;Jar&gt;("testJar")</code> 等），整段删除。
             <p>若不确定行号，先 grep 定位：</p>
             <pre><code class="lang-bash">grep -n "testArtifacts\|testJar" patra-object-storage/patra-object-storage-domain/build.gradle.kts</code></pre>
             <p>删除后该文件应不再含 "testArtifacts" 或 "testJar" 任何引用。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：</strong>修改 <code>patra-object-storage/patra-object-storage-app/build.gradle.kts</code>，把消费方引用从 <code>testArtifacts</code> configuration 改为标准 <code>testFixtures(project())</code>：
             <pre><code class="lang-kotlin">// 删除：
 // testImplementation(project(path = ":patra-object-storage:patra-object-storage-domain", configuration = "testArtifacts"))
@@ -301,13 +301,13 @@ git mv \
 testImplementation(testFixtures(project(":patra-object-storage:patra-object-storage-domain")))</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：</strong>确认 <code>FileMetadataFixture</code> 为 public class，且其静态工厂方法（如 <code>aFileMetadata()</code> / <code>fileMetadataWith(...)</code> 等）为 public。
             <pre><code class="lang-bash">grep -n "^class\|^public class\|public static" \
   patra-object-storage/patra-object-storage-domain/src/testFixtures/java/dev/linqibin/patra/objectstorage/domain/model/aggregate/FileMetadataFixture.java</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：</strong>编译 + 测试验证：
             <pre><code class="lang-bash">./gradlew :patra-object-storage:patra-object-storage-domain:compileTestFixturesJava \
   :patra-object-storage:patra-object-storage-domain:test \
@@ -315,7 +315,7 @@ testImplementation(testFixtures(project(":patra-object-storage:patra-object-stor
             <p>预期：BUILD SUCCESSFUL。<code>FileMetadataTest</code> 和 <code>RecordUploadHandlerTest</code> 全过。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7：Commit</strong>
             <pre><code class="lang-bash">git add -A patra-object-storage/
 git commit -m "refactor(test): 迁移 FileMetadataFixture 至 testFixtures 并替换跨模块 testArtifacts hack (PAP-19 AC2)"</code></pre>
@@ -332,7 +332,7 @@ git commit -m "refactor(test): 迁移 FileMetadataFixture 至 testFixtures 并�
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：</strong>用 Edit 删除 L162-172 整段 hack（含上方说明注释）。需要删除的代码片段：
             <pre><code class="lang-kotlin">// classpath 上，@SpringBootTest 找不到 @SpringBootApplication。显式补 sourceSets["main"].output
 // ... (类似的说明注释多行)
@@ -349,13 +349,13 @@ sourceSets {
             <p>删除范围：所有 <code>sourceSets { named("integrationTest") { compileClasspath += ... } named("e2eTest") { ... } }</code> 顶层块及其前面的解释注释。<strong>不要</strong>删除 <code>testing { suites { ... } }</code> JVM Test Suites 块。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：</strong>确认仅这一段被删除，文件其余部分（plugins / java toolchain / jacoco / configurations 继承 / testing.suites / tasks.withType&lt;Test&gt; 等）保持原样。
             <pre><code class="lang-bash">grep -n "sourceSets\s*{" build-logic/src/main/kotlin/linqibin.java-base.gradle.kts</code></pre>
             <p>预期：无输出（顶层 <code>sourceSets {</code> 块已删）。若 <code>testing.suites</code> 内部仍有 sourceSets 引用，那是正常的 DSL 用法，不要动。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：</strong>验证 testFixtures 已能填补 hack 删除留下的空缺。跑全模块 IT + E2E：
             <pre><code class="lang-bash">./gradlew clean assemble check integrationTest e2eTest --no-daemon</code></pre>
             <p>预期：BUILD SUCCESSFUL。所有 IT 和 E2E 测试通过。</p>
@@ -372,7 +372,7 @@ sourceSets {
             </ol>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：</strong>验证两个跨 sourceSet fixture 的引用通路（Task 2/3 的成果不应被破坏）：
             <pre><code class="lang-bash">./gradlew :patra-catalog:patra-catalog-infra:integrationTest \
   :patra-object-storage:patra-object-storage-app:test --no-daemon \
@@ -380,7 +380,7 @@ sourceSets {
             <p>预期：两个测试均过。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：Commit</strong>
             <pre><code class="lang-bash">git add build-logic/src/main/kotlin/linqibin.java-base.gradle.kts
 git commit -m "refactor(gradle): 删除 build-logic sourceSets 链式 output hack (PAP-19 AC2)"</code></pre>
@@ -397,7 +397,7 @@ git commit -m "refactor(gradle): 删除 build-logic sourceSets 链式 output hac
           </dl>
         </header>
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：</strong>git mv 8 个 application yaml 至各模块 testFixtures/resources/（同模块同 path 不变 package）：
             <pre><code class="lang-bash">patra-catalog/patra-catalog-infra/src/test/resources/application-test.yml          → src/testFixtures/resources/
 patra-ingest/patra-ingest-infra/src/test/resources/application-test.yml             → src/testFixtures/resources/
@@ -408,16 +408,16 @@ patra-ingest/patra-ingest-boot/src/test/resources/application-integration-test.y
 patra-ingest/patra-ingest-boot/src/test/resources/application-test-common.yml       → src/testFixtures/resources/
 linqibin-commons/linqibin-spring-boot-starter-batch/src/test/resources/application-test.yml → src/testFixtures/resources/</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：</strong>删 build-logic 中所有 sourceSet output 链 hack（保留 plugin apply）。
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：</strong>全验证 <code>./gradlew clean assemble check integrationTest e2eTest --no-daemon</code>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：</strong>若出新 failure（如 logback / xml 测试数据 / docker-compose-rocketmq.yml 也被借），增量补迁，每补一个再跑验证。
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：Commit</strong>
           </li>
         </ol>
@@ -432,7 +432,7 @@ linqibin-commons/linqibin-spring-boot-starter-batch/src/test/resources/applicati
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：</strong>在 IntelliJ 中分别对 3 个 <code>TestApplication</code> 执行 Refactor → Rename：
             <table>
               <thead><tr><th>当前文件</th><th>新名</th></tr></thead>
@@ -445,7 +445,7 @@ linqibin-commons/linqibin-spring-boot-starter-batch/src/test/resources/applicati
             <p>3 个文件 package-private 无 import 引用，Rename 仅改类名与文件名。IDEA 会同步处理同名 inner / static factory（如有）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：</strong>处理 <code>TestBatchApplication</code>（含 main 方法，同时迁 source set）：
             <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/patra/.claude/worktrees/pap-19-test-baseline
 
@@ -461,7 +461,7 @@ git mv \
             <p>具体的 package 路径可能不同，先用 <code>find $STARTER -name "TestBatchApplication.java"</code> 或重命名后 <code>find $STARTER -name "BatchITBootstrap.java"</code> 确认。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：</strong>验证所有 IT 仍能找到 <code>@SpringBootConfiguration</code> 根。3 个 infra 模块 + batch starter IT：
             <pre><code class="lang-bash">./gradlew :patra-catalog:patra-catalog-infra:integrationTest \
   :patra-ingest:patra-ingest-infra:integrationTest \
@@ -470,7 +470,7 @@ git mv \
             <p>预期：4 个 integrationTest task 全过。<strong>典型失败信号</strong>：<code>java.lang.IllegalStateException: Unable to find a @SpringBootConfiguration</code> — 此时检查 <code>BatchITBootstrap</code> 是否真的有 <code>@SpringBootApplication</code> 注解 + 是否在 batch package 根（让 Spring 按包扫描发现）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：Commit</strong>
             <pre><code class="lang-bash">git add -A
 git commit -m "refactor(test): rename IT Bootstrap → *ITBootstrap (PAP-19 AC1 group 1)"</code></pre>
@@ -487,7 +487,7 @@ git commit -m "refactor(test): rename IT Bootstrap → *ITBootstrap (PAP-19 AC1 
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：</strong>IntelliJ Refactor → Rename，逐个改：
             <table>
               <thead><tr><th>当前文件</th><th>新名</th><th>引用文件数</th></tr></thead>
@@ -500,7 +500,7 @@ git commit -m "refactor(test): rename IT Bootstrap → *ITBootstrap (PAP-19 AC1 
             <p>IDEA Rename 自动更新 14 个引用文件的 import 与 <code>@ContextConfiguration(classes = XxxConfig.class)</code> 注解中类名引用。务必勾选 "Search in comments and strings"（防止注解 String 参数残留旧名）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：</strong>验证编译 + 测试：
             <pre><code class="lang-bash">./gradlew :patra-object-storage:patra-object-storage-adapter:integrationTest \
   :patra-registry:patra-registry-adapter:integrationTest \
@@ -508,7 +508,7 @@ git commit -m "refactor(test): rename IT Bootstrap → *ITBootstrap (PAP-19 AC1 
             <p>预期：3 个 integrationTest task 全过；<code>@WebMvcTest</code> 切片测试能正常找到 <code>@SpringBootConfiguration</code> 根。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：Commit</strong>
             <pre><code class="lang-bash">git add -A
 git commit -m "refactor(test): rename WebMvcTestConfiguration → *ITWebMvcConfig (PAP-19 AC1 group 2)"</code></pre>
@@ -525,7 +525,7 @@ git commit -m "refactor(test): rename WebMvcTestConfiguration → *ITWebMvcConfi
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：</strong>IntelliJ Refactor → Rename：
             <table>
               <thead><tr><th>当前文件</th><th>新名</th><th>source set</th></tr></thead>
@@ -541,14 +541,14 @@ git commit -m "refactor(test): rename WebMvcTestConfiguration → *ITWebMvcConfi
             <p>务必在 IDEA Rename 对话框勾选 "Search in comments and strings"，因 <code>@ContextConfiguration(initializers = XxxContainerInitializer.class)</code> 这种引用可能在多种 annotation 形式中出现。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：</strong>grep 验证无残留旧名引用：
             <pre><code class="lang-bash">grep -rn "CatalogPostgreSQLContainerInitializer\|CatalogMinIOContainerInitializer\|IngestPostgreSQLContainerInitializer\|RegistryPostgreSQLContainerInitializer" \
-  patra-catalog patra-ingest patra-registry 2>/dev/null</code></pre>
+  patra-catalog patra-ingest patra-registry 2&gt;/dev/null</code></pre>
             <p>预期：无输出（所有旧名已被新名替换）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：</strong>跑 IT + E2E 验证：
             <pre><code class="lang-bash">./gradlew :patra-catalog:patra-catalog-infra:integrationTest \
   :patra-ingest:patra-ingest-infra:integrationTest \
@@ -557,7 +557,7 @@ git commit -m "refactor(test): rename WebMvcTestConfiguration → *ITWebMvcConfi
             <p>预期：BUILD SUCCESSFUL。所有依赖 ContainerInitializer 的 IT/E2E 通过。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：Commit</strong>
             <pre><code class="lang-bash">git add -A
 git commit -m "refactor(test): rename ContainerInitializer → *ITContainerInitializer / *E2EContainerInitializer (PAP-19 AC1 group 3)"</code></pre>
@@ -574,7 +574,7 @@ git commit -m "refactor(test): rename ContainerInitializer → *ITContainerIniti
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：</strong>IntelliJ Refactor → Rename：
             <table>
               <thead><tr><th>当前类名</th><th>新名</th><th>位置</th></tr></thead>
@@ -586,14 +586,14 @@ git commit -m "refactor(test): rename ContainerInitializer → *ITContainerIniti
             <p>这 2 个文件仅本模块 test 内使用（subagent 扫描结果），文件位置不变（不迁 testFixtures，YAGNI）。Rename 仅改类名 + 文件名。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：</strong>验证：
             <pre><code class="lang-bash">./gradlew :patra-ingest:patra-ingest-domain:test \
   :patra-ingest:patra-ingest-app:test --no-daemon</code></pre>
             <p>预期：BUILD SUCCESSFUL。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：Commit</strong>
             <pre><code class="lang-bash">git add -A
 git commit -m "refactor(test): rename remaining test data builders → *Fixture (PAP-19 AC1 group 4)"</code></pre>
@@ -610,7 +610,7 @@ git commit -m "refactor(test): rename remaining test data builders → *Fixture 
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：</strong>逐个 IntelliJ Refactor → Rename inner class（文件名不变，仅 inner class 名变）：
             <ol>
               <li><code>TestObservabilityApplication.java</code>：<code>TestConfiguration</code> → <code>ITSpringConfig</code></li>
@@ -623,7 +623,7 @@ git commit -m "refactor(test): rename remaining test data builders → *Fixture 
             <p>每个 inner class 仅被同文件内的 <code>@ContextConfiguration(classes = OuterClass.TestConfiguration.class)</code> 引用，IDEA Rename 处理范围限定在文件内。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：</strong>grep 验证文件内已无 <code>TestConfiguration</code>（但要小心：项目中可能有合法的 Spring <code>@TestConfiguration</code> import 或其他无关类，下面 grep 命令限定到 6 个文件）：
             <pre><code class="lang-bash">grep -n "static class TestConfiguration\|\.TestConfiguration\.class\|Outer\.TestConfiguration" \
   $(find . -name "TestObservabilityApplication.java" \
@@ -635,7 +635,7 @@ git commit -m "refactor(test): rename remaining test data builders → *Fixture 
             <p>预期：无输出（所有 inner class 已 rename）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：</strong>测试验证：
             <pre><code class="lang-bash">./gradlew test integrationTest --no-daemon \
   --tests "*ObservabilityAutoConfigurationTest*" \
@@ -647,7 +647,7 @@ git commit -m "refactor(test): rename remaining test data builders → *Fixture 
             <p>预期：6 个测试类全过。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：Commit</strong>
             <pre><code class="lang-bash">git add -A
 git commit -m "refactor(test): rename inner static TestConfiguration → ITSpringConfig (PAP-19 AC1 group 5)"</code></pre>
@@ -664,7 +664,7 @@ git commit -m "refactor(test): rename inner static TestConfiguration → ITSprin
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：</strong>修改 <code>.claude-marketplace/patra/skills/test-driven-development/SKILL.md</code>，"## Patra 项目测试规范" 表（约 L47-59）扩展为：
             <pre><code class="lang-markdown">## Patra 项目测试规范
 
@@ -681,14 +681,14 @@ git commit -m "refactor(test): rename inner static TestConfiguration → ITSprin
             <p>具体行号可能略有变化，定位时以 "Patra 项目测试规范" 标题为锚点。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：</strong>修改 <code>.claude-marketplace/patra/skills/test-driven-development/testing-anti-patterns.md</code>，把 L106 与 L131 附近的 <code>src/test/java/.../testsupport/</code> 路径建议替换：
             <pre><code class="lang-markdown">// 模块内私有 helper 放 src/test/java/.../testutil/ 工具类里；
 // 跨 sourceSet 或跨模块共享的 fixture / builder 放 src/testFixtures/java/.../</code></pre>
             <p>定位时以 "testsupport" 关键字为锚点。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：</strong>修改 <code>patra-api/.claude/agents/test-checker.md</code>，"## 1. 测试位置与命名" 表（约 L13-21）测试位置列拆分：
             <pre><code class="lang-markdown">| Domain         | patra-{service}-domain/src/test/         | *Test.java |
 | App            | patra-{service}-app/src/test/            | *Test.java |
@@ -699,7 +699,7 @@ git commit -m "refactor(test): rename inner static TestConfiguration → ITSprin
             <p>"### 测试位置与命名"（约 L79）若有相同结构，一并同步。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：</strong>修改 <code>patra-api/.claude/rules/testing/integration-test.md</code>，frontmatter <code>paths</code> 改为：
             <pre><code class="lang-markdown">---
 paths: patra-*/*-infra/**/src/integrationTest/**/*IT.java, patra-*/*-adapter/**/src/integrationTest/**/*IT.java
@@ -707,25 +707,25 @@ paths: patra-*/*-infra/**/src/integrationTest/**/*IT.java, patra-*/*-adapter/**/
             <p>正文中 <code>WebMvcTestConfiguration</code> 示例（约 L33-43）改为 <code>{Module}ITWebMvcConfig</code>（用 <code>RegistryITWebMvcConfig</code> 或 <code>CatalogAdapterITWebMvcConfig</code> 作示例）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：</strong>修改 <code>patra-api/.claude/rules/testing/e2e-test.md</code>，frontmatter <code>paths</code> 改为：
             <pre><code class="lang-markdown">---
 paths: patra-*/*-boot/**/src/e2eTest/**/*E2E.java
 ---</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：</strong>修改 <code>patra-api/.claude/skills/patra-events/resources/outbox-guide.md</code> L122 附近，把 <code>patra-ingest-boot/.../integration/outbox/OutboxPatternE2E.java</code> 引用更新为新 source set 路径（如 <code>patra-ingest-boot/src/e2eTest/java/.../outbox/OutboxPatternE2E.java</code>，具体 package 路径以实际 outbox E2E 文件位置为准）。
             <pre><code class="lang-bash">find patra-ingest -name "OutboxPattern*"  # 用结果路径填入 outbox-guide.md L122</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7：</strong>grep 验证无残留 <code>src/test/.../*IT</code> 路径示例（rule path glob 已全部切换）：
-            <pre><code class="lang-bash">grep -rn "src/test/[^\"]*\(IT\|E2E\)" .claude-marketplace patra-api/.claude 2>/dev/null</code></pre>
+            <pre><code class="lang-bash">grep -rn "src/test/[^\"]*\(IT\|E2E\)" .claude-marketplace patra-api/.claude 2&gt;/dev/null</code></pre>
             <p>预期：无输出。若有命中，是 rule / skill 文档中还有路径示例未跟上，按上下文判断要不要改。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 8：Commit</strong>
             <pre><code class="lang-bash">git add -A .claude-marketplace patra-api/.claude
 git commit -m "chore(skills): 同步测试相关 skill / rule / agent 适配新 source set + 命名 (PAP-19 AC3)"</code></pre>
@@ -779,7 +779,7 @@ grep -n "testArtifacts\|testJar" patra-object-storage/patra-object-storage-domai
 
           <li class="step" data-status="pending">
             <strong>步骤 5：</strong>创建 PR 触发 CI 第 1 次：
-            <pre><code class="lang-bash">gh pr create --title "test: 测试体系基线 (PAP-19 主线 A)" --body "$(cat <<'EOF'
+            <pre><code class="lang-bash">gh pr create --title "test: 测试体系基线 (PAP-19 主线 A)" --body "$(cat &lt;&lt;'EOF'
 ## Summary
 
 落实 PAP-19 主线 A（AC1+AC2+AC3+AC4）：
