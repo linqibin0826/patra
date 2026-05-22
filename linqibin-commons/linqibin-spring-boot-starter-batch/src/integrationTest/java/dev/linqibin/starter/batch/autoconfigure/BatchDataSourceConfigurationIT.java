@@ -16,12 +16,12 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-/// {@link BatchDataSourceConfiguration} 单元测试。
+/// {@link BatchDataSourceConfiguration} 集成测试。
 ///
 /// 验证 Batch 独立数据源的条件装配逻辑。
 /// 使用 PostgreSQL TestContainers 确保与生产环境一致。
 @Testcontainers
-class BatchDataSourceConfigurationTest {
+class BatchDataSourceConfigurationIT {
 
   /// PostgreSQL 容器（JVM 级别共享）。
   @Container
