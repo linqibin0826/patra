@@ -28,8 +28,8 @@
           <li data-task-status="done"><a href="#task-5">Task 5 — rename IT Bootstrap (Group 1, 剩 3 文件，batch 已在 T4b 完成)</a></li>
           <li data-task-status="done"><a href="#task-6">Task 6 — rename IT WebMvc Config (Group 2, 3 文件)</a></li>
           <li data-task-status="done"><a href="#task-7">Task 7 — rename IT Container Initializer (Group 3, 5 文件)</a></li>
-          <li data-task-status="pending"><a href="#task-8">Task 8 — rename 剩余 Fixture (Group 4, 2 文件原地)</a></li>
-          <li data-task-status="pending"><a href="#task-9">Task 9 — rename inner static TestConfiguration → ITSpringConfig (Group 5, 6 处)</a></li>
+          <li data-task-status="done"><a href="#task-8">Task 8 — rename 剩余 Fixture (Group 4, 2 文件原地)</a></li>
+          <li data-task-status="done"><a href="#task-9">Task 9 — rename inner static TestConfiguration → ITSpringConfig (Group 5, 6 处)</a></li>
           <li data-task-status="pending"><a href="#task-10">Task 10 — 同步 6 个 skill / rule / agent 文件 (AC3)</a></li>
           <li data-task-status="pending"><a href="#task-11">Task 11 — 本地全量验证 + push + CI 3 次绿 (AC4)</a></li>
         </ol>
@@ -565,7 +565,7 @@ git commit -m "refactor(test): rename ContainerInitializer → *ITContainerIniti
         </ol>
       </article>
 
-      <article class="task" id="task-8" data-status="pending">
+      <article class="task" id="task-8" data-status="done">
         <header>
           <h2>Task 8 — rename 剩余 Fixture (Group 4, 2 文件原地)</h2>
           <dl class="files">
@@ -601,7 +601,7 @@ git commit -m "refactor(test): rename remaining test data builders → *Fixture 
         </ol>
       </article>
 
-      <article class="task" id="task-9" data-status="pending">
+      <article class="task" id="task-9" data-status="done">
         <header>
           <h2>Task 9 — rename inner static TestConfiguration → ITSpringConfig (Group 5, 6 处)</h2>
           <dl class="files">
@@ -881,6 +881,14 @@ git push</code></pre>
         </header>
         <p>Task 4 完全删除 sourceSets hack 后，<code>:patra-registry:patra-registry-boot:compileTestJava</code> 失败：<code>RegistryErrorMappingContributor 找不到符号</code>。Root cause：Spring Boot <code>bootJar</code> 禁用 <code>jar</code> task 时，启用 <code>java-test-fixtures</code> plugin 改变了 boot 模块 <code>test</code> source set 的 main.output 默认可见性。触发 plan §8 high risk fallback。</p>
       </li>
+      <li class="note" data-type="other" data-time="2026-05-22T21:00">
+        <header>
+          <span class="note-type">OTHER</span>
+          <time datetime="2026-05-22T21:00">05-22 21:00</time>
+          <a href="#task-8">§ Task 8</a>
+        </header>
+        <p>发现 dead code：<code>TestHelper</code>（ingest-app/test）实际 0 引用（grep 全 patra-api 无任何 import 或调用）。按 spec 仍 rename 为 <code>TaskReadyCommandFixture</code> 维持命名一致性，但建议后续删除（不在本 spec scope 内）。</p>
+      </li>
       <li class="note" data-type="change" data-time="2026-05-22T20:00">
         <header>
           <span class="note-type">CHANGE</span>
@@ -914,7 +922,7 @@ git push</code></pre>
       <span data-counter="decision">0</span> decisions /
       <span data-counter="change">3</span> changes /
       <span data-counter="tradeoff">1</span> tradeoffs /
-      <span data-counter="other">1</span> others
+      <span data-counter="other">2</span> others
     </footer>
   </aside>
 

@@ -35,7 +35,7 @@ class HttpInterfaceAutoConfigurationTest {
           .withConfiguration(
               AutoConfigurations.of(
                   JacksonAutoConfiguration.class, HttpInterfaceAutoConfiguration.class))
-          .withUserConfiguration(TestConfiguration.class);
+          .withUserConfiguration(ITSpringConfig.class);
 
   @Nested
   @DisplayName("默认配置测试")
@@ -171,7 +171,7 @@ class HttpInterfaceAutoConfigurationTest {
 
   /// 空测试配置：HttpInterfaceAutoConfiguration 不再需要外部依赖 Bean
   @Configuration
-  static class TestConfiguration {
+  static class ITSpringConfig {
     // TraceId 传播已由 OpenTelemetry Java Agent 自动处理
   }
 

@@ -17,10 +17,10 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 class RestClientPropertiesTest {
 
   private final ApplicationContextRunner contextRunner =
-      new ApplicationContextRunner().withUserConfiguration(TestConfiguration.class);
+      new ApplicationContextRunner().withUserConfiguration(ITSpringConfig.class);
 
   @EnableConfigurationProperties(RestClientProperties.class)
-  static class TestConfiguration {}
+  static class ITSpringConfig {}
 
   @Test
   @DisplayName("应该使用默认配置值")

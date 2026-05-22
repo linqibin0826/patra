@@ -19,16 +19,16 @@ import java.time.Instant;
 ///
 /// ```java
 /// // 创建队列中的任务
-/// TaskAggregate task = TaskAggregateTestDataBuilder.aQueuedTask().build();
+/// TaskAggregate task = TaskAggregateFixture.aQueuedTask().build();
 ///
 /// // 创建运行中的任务，自定义租约信息
-/// TaskAggregate task = TaskAggregateTestDataBuilder.aRunningTask()
+/// TaskAggregate task = TaskAggregateFixture.aRunningTask()
 ///     .leaseOwner("worker-1")
 ///     .leasedUntil(Instant.now().plusSeconds(300))
 ///     .build();
 ///
 /// // 创建完全自定义的任务
-/// TaskAggregate task = TaskAggregateTestDataBuilder.aQueuedTask()
+/// TaskAggregate task = TaskAggregateFixture.aQueuedTask()
 ///     .id(1001L)
 ///     .provenanceCode("pubmed")
 ///     .operationCode("harvest")
@@ -39,7 +39,7 @@ import java.time.Instant;
 ///
 /// @author linqibin
 /// @since 0.1.0
-public class TaskAggregateTestDataBuilder {
+public class TaskAggregateFixture {
 
   // ========== 基础字段 ==========
   private TaskId id;
@@ -76,15 +76,15 @@ public class TaskAggregateTestDataBuilder {
 
   // ========== 构造函数（私有） ==========
 
-  private TaskAggregateTestDataBuilder() {}
+  private TaskAggregateFixture() {}
 
   // ========== 静态工厂方法 ==========
 
   /// 创建默认的队列中任务构建器。
   ///
   /// @return 任务构建器
-  public static TaskAggregateTestDataBuilder aQueuedTask() {
-    return new TaskAggregateTestDataBuilder().status(TaskStatus.QUEUED);
+  public static TaskAggregateFixture aQueuedTask() {
+    return new TaskAggregateFixture().status(TaskStatus.QUEUED);
   }
 
   /// 创建默认的运行中任务构建器。
@@ -98,8 +98,8 @@ public class TaskAggregateTestDataBuilder {
   ///   - 开始时间: 2025-01-01T10:00:00Z
   ///
   /// @return 任务构建器
-  public static TaskAggregateTestDataBuilder aRunningTask() {
-    return new TaskAggregateTestDataBuilder()
+  public static TaskAggregateFixture aRunningTask() {
+    return new TaskAggregateFixture()
         .status(TaskStatus.RUNNING)
         .leaseOwner("worker-1")
         .leasedUntil(Instant.now().plusSeconds(300))
@@ -116,8 +116,8 @@ public class TaskAggregateTestDataBuilder {
   ///   - 完成时间: 2025-01-01T10:05:00Z
   ///
   /// @return 任务构建器
-  public static TaskAggregateTestDataBuilder aSucceededTask() {
-    return new TaskAggregateTestDataBuilder()
+  public static TaskAggregateFixture aSucceededTask() {
+    return new TaskAggregateFixture()
         .status(TaskStatus.SUCCEEDED)
         .startedAt(Instant.parse("2025-01-01T10:00:00Z"))
         .finishedAt(Instant.parse("2025-01-01T10:05:00Z"));
@@ -134,8 +134,8 @@ public class TaskAggregateTestDataBuilder {
   ///   - 错误消息: Test error
   ///
   /// @return 任务构建器
-  public static TaskAggregateTestDataBuilder aFailedTask() {
-    return new TaskAggregateTestDataBuilder()
+  public static TaskAggregateFixture aFailedTask() {
+    return new TaskAggregateFixture()
         .status(TaskStatus.FAILED)
         .startedAt(Instant.parse("2025-01-01T10:00:00Z"))
         .finishedAt(Instant.parse("2025-01-01T10:03:00Z"))
@@ -145,138 +145,138 @@ public class TaskAggregateTestDataBuilder {
 
   // ========== Builder 方法 ==========
 
-  public TaskAggregateTestDataBuilder id(TaskId id) {
+  public TaskAggregateFixture id(TaskId id) {
     this.id = id;
     return this;
   }
 
-  public TaskAggregateTestDataBuilder scheduleInstanceId(ScheduleInstanceId scheduleInstanceId) {
+  public TaskAggregateFixture scheduleInstanceId(ScheduleInstanceId scheduleInstanceId) {
     this.scheduleInstanceId = scheduleInstanceId;
     return this;
   }
 
-  public TaskAggregateTestDataBuilder scheduleInstanceId(Long scheduleInstanceId) {
+  public TaskAggregateFixture scheduleInstanceId(Long scheduleInstanceId) {
     this.scheduleInstanceId =
         scheduleInstanceId != null ? ScheduleInstanceId.of(scheduleInstanceId) : null;
     return this;
   }
 
-  public TaskAggregateTestDataBuilder planId(PlanId planId) {
+  public TaskAggregateFixture planId(PlanId planId) {
     this.planId = planId;
     return this;
   }
 
-  public TaskAggregateTestDataBuilder planId(Long planId) {
+  public TaskAggregateFixture planId(Long planId) {
     this.planId = planId != null ? PlanId.of(planId) : null;
     return this;
   }
 
-  public TaskAggregateTestDataBuilder sliceId(PlanSliceId sliceId) {
+  public TaskAggregateFixture sliceId(PlanSliceId sliceId) {
     this.sliceId = sliceId;
     return this;
   }
 
-  public TaskAggregateTestDataBuilder sliceId(Long sliceId) {
+  public TaskAggregateFixture sliceId(Long sliceId) {
     this.sliceId = sliceId != null ? PlanSliceId.of(sliceId) : null;
     return this;
   }
 
-  public TaskAggregateTestDataBuilder provenanceCode(ProvenanceCode provenanceCode) {
+  public TaskAggregateFixture provenanceCode(ProvenanceCode provenanceCode) {
     this.provenanceCode = provenanceCode;
     return this;
   }
 
-  public TaskAggregateTestDataBuilder provenanceCode(String provenanceCode) {
+  public TaskAggregateFixture provenanceCode(String provenanceCode) {
     this.provenanceCode = ProvenanceCode.parse(provenanceCode);
     return this;
   }
 
-  public TaskAggregateTestDataBuilder operationCode(String operationCode) {
+  public TaskAggregateFixture operationCode(String operationCode) {
     this.operationCode = operationCode;
     return this;
   }
 
-  public TaskAggregateTestDataBuilder paramsJson(String paramsJson) {
+  public TaskAggregateFixture paramsJson(String paramsJson) {
     this.paramsJson = paramsJson;
     return this;
   }
 
-  public TaskAggregateTestDataBuilder idempotentKey(String idempotentKey) {
+  public TaskAggregateFixture idempotentKey(String idempotentKey) {
     this.idempotentKey = idempotentKey;
     return this;
   }
 
-  public TaskAggregateTestDataBuilder exprHash(String exprHash) {
+  public TaskAggregateFixture exprHash(String exprHash) {
     this.exprHash = exprHash;
     return this;
   }
 
-  public TaskAggregateTestDataBuilder priority(Integer priority) {
+  public TaskAggregateFixture priority(Integer priority) {
     this.priority = priority;
     return this;
   }
 
-  public TaskAggregateTestDataBuilder scheduledAt(Instant scheduledAt) {
+  public TaskAggregateFixture scheduledAt(Instant scheduledAt) {
     this.scheduledAt = scheduledAt;
     return this;
   }
 
-  public TaskAggregateTestDataBuilder lastHeartbeatAt(Instant lastHeartbeatAt) {
+  public TaskAggregateFixture lastHeartbeatAt(Instant lastHeartbeatAt) {
     this.lastHeartbeatAt = lastHeartbeatAt;
     return this;
   }
 
-  public TaskAggregateTestDataBuilder retryCount(Integer retryCount) {
+  public TaskAggregateFixture retryCount(Integer retryCount) {
     this.retryCount = retryCount;
     return this;
   }
 
-  public TaskAggregateTestDataBuilder lastErrorCode(String lastErrorCode) {
+  public TaskAggregateFixture lastErrorCode(String lastErrorCode) {
     this.lastErrorCode = lastErrorCode;
     return this;
   }
 
-  public TaskAggregateTestDataBuilder lastErrorMsg(String lastErrorMsg) {
+  public TaskAggregateFixture lastErrorMsg(String lastErrorMsg) {
     this.lastErrorMsg = lastErrorMsg;
     return this;
   }
 
-  public TaskAggregateTestDataBuilder status(TaskStatus status) {
+  public TaskAggregateFixture status(TaskStatus status) {
     this.status = status;
     return this;
   }
 
-  public TaskAggregateTestDataBuilder leaseOwner(String leaseOwner) {
+  public TaskAggregateFixture leaseOwner(String leaseOwner) {
     this.leaseOwner = leaseOwner;
     return this;
   }
 
-  public TaskAggregateTestDataBuilder leasedUntil(Instant leasedUntil) {
+  public TaskAggregateFixture leasedUntil(Instant leasedUntil) {
     this.leasedUntil = leasedUntil;
     return this;
   }
 
-  public TaskAggregateTestDataBuilder leaseCount(Integer leaseCount) {
+  public TaskAggregateFixture leaseCount(Integer leaseCount) {
     this.leaseCount = leaseCount;
     return this;
   }
 
-  public TaskAggregateTestDataBuilder startedAt(Instant startedAt) {
+  public TaskAggregateFixture startedAt(Instant startedAt) {
     this.startedAt = startedAt;
     return this;
   }
 
-  public TaskAggregateTestDataBuilder finishedAt(Instant finishedAt) {
+  public TaskAggregateFixture finishedAt(Instant finishedAt) {
     this.finishedAt = finishedAt;
     return this;
   }
 
-  public TaskAggregateTestDataBuilder correlationId(String correlationId) {
+  public TaskAggregateFixture correlationId(String correlationId) {
     this.correlationId = correlationId;
     return this;
   }
 
-  public TaskAggregateTestDataBuilder version(Long version) {
+  public TaskAggregateFixture version(Long version) {
     this.version = version;
     return this;
   }
