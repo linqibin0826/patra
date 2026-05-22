@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 /// 测试策略：
 ///
 /// - 纯 Java 单元测试，不依赖 Spring 容器
-///   - 使用 TestDataBuilder 模式构建测试数据
+///   - 使用 Fixture 模式构建测试数据
 ///   - 遵循 Given-When-Then 结构
 ///   - 使用 AssertJ 流畅断言
 ///
@@ -155,7 +155,7 @@ class OutboxMessageTest {
     @DisplayName("应该正确处理 toBuilder 复制")
     void shouldHandleToBuilderCorrectly() {
       // Given - 原始消息
-      OutboxMessage original = OutboxMessageTestDataBuilder.aPendingMessage().build();
+      OutboxMessage original = OutboxMessageFixture.aPendingMessage().build();
 
       // When - 使用 toBuilder 创建副本
       OutboxMessage copy = original.toBuilder().build();
@@ -185,7 +185,7 @@ class OutboxMessageTest {
     @DisplayName("应该支持通过 toBuilder 修改字段")
     void shouldSupportModifyingFieldsViaToBuilder() {
       // Given - 原始消息
-      OutboxMessage original = OutboxMessageTestDataBuilder.aPendingMessage().build();
+      OutboxMessage original = OutboxMessageFixture.aPendingMessage().build();
 
       // When - 通过 toBuilder 修改状态
       String newStatus = "PUBLISHED";
@@ -212,10 +212,7 @@ class OutboxMessageTest {
 
       // When & Then
       assertThatThrownBy(
-              () ->
-                  OutboxMessageTestDataBuilder.aPendingMessage()
-                      .aggregateType(aggregateType)
-                      .build())
+              () -> OutboxMessageFixture.aPendingMessage().aggregateType(aggregateType).build())
           .isInstanceOf(NullPointerException.class)
           .hasMessageContaining("aggregateType must not be null");
     }
@@ -228,7 +225,7 @@ class OutboxMessageTest {
 
       // When & Then
       assertThatThrownBy(
-              () -> OutboxMessageTestDataBuilder.aPendingMessage().aggregateId(aggregateId).build())
+              () -> OutboxMessageFixture.aPendingMessage().aggregateId(aggregateId).build())
           .isInstanceOf(NullPointerException.class)
           .hasMessageContaining("aggregateId must not be null");
     }
@@ -240,8 +237,7 @@ class OutboxMessageTest {
       String channel = null;
 
       // When & Then
-      assertThatThrownBy(
-              () -> OutboxMessageTestDataBuilder.aPendingMessage().channel(channel).build())
+      assertThatThrownBy(() -> OutboxMessageFixture.aPendingMessage().channel(channel).build())
           .isInstanceOf(NullPointerException.class)
           .hasMessageContaining("channel must not be null");
     }
@@ -253,8 +249,7 @@ class OutboxMessageTest {
       String opType = null;
 
       // When & Then
-      assertThatThrownBy(
-              () -> OutboxMessageTestDataBuilder.aPendingMessage().opType(opType).build())
+      assertThatThrownBy(() -> OutboxMessageFixture.aPendingMessage().opType(opType).build())
           .isInstanceOf(NullPointerException.class)
           .hasMessageContaining("opType must not be null");
     }
@@ -267,8 +262,7 @@ class OutboxMessageTest {
 
       // When & Then
       assertThatThrownBy(
-              () ->
-                  OutboxMessageTestDataBuilder.aPendingMessage().partitionKey(partitionKey).build())
+              () -> OutboxMessageFixture.aPendingMessage().partitionKey(partitionKey).build())
           .isInstanceOf(NullPointerException.class)
           .hasMessageContaining("partitionKey must not be null");
     }
@@ -280,8 +274,7 @@ class OutboxMessageTest {
       String dedupKey = null;
 
       // When & Then
-      assertThatThrownBy(
-              () -> OutboxMessageTestDataBuilder.aPendingMessage().dedupKey(dedupKey).build())
+      assertThatThrownBy(() -> OutboxMessageFixture.aPendingMessage().dedupKey(dedupKey).build())
           .isInstanceOf(NullPointerException.class)
           .hasMessageContaining("dedupKey must not be null");
     }
@@ -337,7 +330,7 @@ class OutboxMessageTest {
       // Given - 显式设置 statusCode
       String customStatus = "PUBLISHING";
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aPendingMessage().statusCode(customStatus).build();
+          OutboxMessageFixture.aPendingMessage().statusCode(customStatus).build();
 
       // When & Then - 应该使用自定义值
       assertThat(message.getStatusCode()).isEqualTo(customStatus);
@@ -349,7 +342,7 @@ class OutboxMessageTest {
       // Given - 显式设置 retryCount
       Integer customRetryCount = 5;
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aPendingMessage().retryCount(customRetryCount).build();
+          OutboxMessageFixture.aPendingMessage().retryCount(customRetryCount).build();
 
       // When & Then - 应该使用自定义值
       assertThat(message.getRetryCount()).isEqualTo(customRetryCount);
@@ -366,8 +359,7 @@ class OutboxMessageTest {
     @DisplayName("isPending() 应该在状态为 PENDING 时返回 true")
     void shouldReturnTrueWhenStatusIsPending() {
       // Given
-      OutboxMessage message =
-          OutboxMessageTestDataBuilder.aPendingMessage().statusCode("PENDING").build();
+      OutboxMessage message = OutboxMessageFixture.aPendingMessage().statusCode("PENDING").build();
 
       // When & Then
       assertThat(message.isPending()).isTrue();
@@ -378,7 +370,7 @@ class OutboxMessageTest {
     void shouldReturnFalseWhenStatusIsNotPending() {
       // Given
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aPendingMessage().statusCode("PUBLISHED").build();
+          OutboxMessageFixture.aPendingMessage().statusCode("PUBLISHED").build();
 
       // When & Then
       assertThat(message.isPending()).isFalse();
@@ -389,7 +381,7 @@ class OutboxMessageTest {
     void shouldReturnTrueWhenStatusIsPublishing() {
       // Given
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aPublishingMessage().statusCode("PUBLISHING").build();
+          OutboxMessageFixture.aPublishingMessage().statusCode("PUBLISHING").build();
 
       // When & Then
       assertThat(message.isPublishing()).isTrue();
@@ -399,8 +391,7 @@ class OutboxMessageTest {
     @DisplayName("isPublishing() 应该在状态非 PUBLISHING 时返回 false")
     void shouldReturnFalseWhenStatusIsNotPublishing() {
       // Given
-      OutboxMessage message =
-          OutboxMessageTestDataBuilder.aPendingMessage().statusCode("PENDING").build();
+      OutboxMessage message = OutboxMessageFixture.aPendingMessage().statusCode("PENDING").build();
 
       // When & Then
       assertThat(message.isPublishing()).isFalse();
@@ -411,7 +402,7 @@ class OutboxMessageTest {
     void shouldReturnTrueWhenStatusIsPublished() {
       // Given
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aPendingMessage().statusCode("PUBLISHED").build();
+          OutboxMessageFixture.aPendingMessage().statusCode("PUBLISHED").build();
 
       // When & Then
       assertThat(message.isTerminal()).isTrue();
@@ -421,8 +412,7 @@ class OutboxMessageTest {
     @DisplayName("isTerminal() 应该在状态为 FAILED 时返回 true")
     void shouldReturnTrueWhenStatusIsFailed() {
       // Given
-      OutboxMessage message =
-          OutboxMessageTestDataBuilder.aFailedMessage().statusCode("FAILED").build();
+      OutboxMessage message = OutboxMessageFixture.aFailedMessage().statusCode("FAILED").build();
 
       // When & Then
       assertThat(message.isTerminal()).isTrue();
@@ -432,8 +422,7 @@ class OutboxMessageTest {
     @DisplayName("isTerminal() 应该在状态为非终态时返回 false")
     void shouldReturnFalseWhenStatusIsNotTerminal() {
       // Given
-      OutboxMessage message =
-          OutboxMessageTestDataBuilder.aPendingMessage().statusCode("PENDING").build();
+      OutboxMessage message = OutboxMessageFixture.aPendingMessage().statusCode("PENDING").build();
 
       // When & Then
       assertThat(message.isTerminal()).isFalse();
@@ -453,7 +442,7 @@ class OutboxMessageTest {
       Instant now = Instant.parse("2025-01-01T10:00:00Z");
       Instant leaseExpireAt = Instant.parse("2025-01-01T10:05:00Z");
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aPublishingMessage()
+          OutboxMessageFixture.aPublishingMessage()
               .leaseOwner("relay-1")
               .leaseExpireAt(leaseExpireAt)
               .build();
@@ -469,7 +458,7 @@ class OutboxMessageTest {
       Instant now = Instant.parse("2025-01-01T10:10:00Z");
       Instant leaseExpireAt = Instant.parse("2025-01-01T10:05:00Z");
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aPublishingMessage()
+          OutboxMessageFixture.aPublishingMessage()
               .leaseOwner("relay-1")
               .leaseExpireAt(leaseExpireAt)
               .build();
@@ -484,10 +473,7 @@ class OutboxMessageTest {
       // Given - 无租约持有者
       Instant now = Instant.parse("2025-01-01T10:00:00Z");
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aPendingMessage()
-              .leaseOwner(null)
-              .leaseExpireAt(null)
-              .build();
+          OutboxMessageFixture.aPendingMessage().leaseOwner(null).leaseExpireAt(null).build();
 
       // When & Then
       assertThat(message.hasActiveLease(now)).isFalse();
@@ -499,7 +485,7 @@ class OutboxMessageTest {
       // Given - 有持有者但无到期时间
       Instant now = Instant.parse("2025-01-01T10:00:00Z");
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aPublishingMessage()
+          OutboxMessageFixture.aPublishingMessage()
               .leaseOwner("relay-1")
               .leaseExpireAt(null)
               .build();
@@ -515,7 +501,7 @@ class OutboxMessageTest {
       Instant now = Instant.parse("2025-01-01T10:10:00Z");
       Instant leaseExpireAt = Instant.parse("2025-01-01T10:05:00Z");
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aPublishingMessage()
+          OutboxMessageFixture.aPublishingMessage()
               .leaseOwner("relay-1")
               .leaseExpireAt(leaseExpireAt)
               .build();
@@ -531,7 +517,7 @@ class OutboxMessageTest {
       Instant now = Instant.parse("2025-01-01T10:00:00Z");
       Instant leaseExpireAt = Instant.parse("2025-01-01T10:05:00Z");
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aPublishingMessage()
+          OutboxMessageFixture.aPublishingMessage()
               .leaseOwner("relay-1")
               .leaseExpireAt(leaseExpireAt)
               .build();
@@ -546,10 +532,7 @@ class OutboxMessageTest {
       // Given
       Instant now = Instant.parse("2025-01-01T10:00:00Z");
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aPendingMessage()
-              .leaseOwner(null)
-              .leaseExpireAt(null)
-              .build();
+          OutboxMessageFixture.aPendingMessage().leaseOwner(null).leaseExpireAt(null).build();
 
       // When & Then - 无租约视为已过期
       assertThat(message.isLeaseExpired(now)).isTrue();
@@ -566,7 +549,7 @@ class OutboxMessageTest {
     @DisplayName("computeNextAttempt() 应该在首次尝试时返回 1")
     void shouldReturnOneForFirstAttempt() {
       // Given - retryCount = 0
-      OutboxMessage message = OutboxMessageTestDataBuilder.aPendingMessage().retryCount(0).build();
+      OutboxMessage message = OutboxMessageFixture.aPendingMessage().retryCount(0).build();
 
       // When
       int nextAttempt = message.computeNextAttempt();
@@ -579,7 +562,7 @@ class OutboxMessageTest {
     @DisplayName("computeNextAttempt() 应该在重试后递增")
     void shouldIncrementAfterRetry() {
       // Given - retryCount = 2
-      OutboxMessage message = OutboxMessageTestDataBuilder.aPendingMessage().retryCount(2).build();
+      OutboxMessage message = OutboxMessageFixture.aPendingMessage().retryCount(2).build();
 
       // When
       int nextAttempt = message.computeNextAttempt();
@@ -614,7 +597,7 @@ class OutboxMessageTest {
     @DisplayName("canRetry() 应该在未达到最大尝试次数时返回 true")
     void shouldReturnTrueWhenNotExceedingMaxAttempts() {
       // Given - retryCount = 2, maxAttempts = 5
-      OutboxMessage message = OutboxMessageTestDataBuilder.aPendingMessage().retryCount(2).build();
+      OutboxMessage message = OutboxMessageFixture.aPendingMessage().retryCount(2).build();
       int maxAttempts = 5;
 
       // When & Then - 下一次是第 3 次，未超过 5
@@ -625,7 +608,7 @@ class OutboxMessageTest {
     @DisplayName("canRetry() 应该在达到最大尝试次数时返回 false")
     void shouldReturnFalseWhenExceedingMaxAttempts() {
       // Given - retryCount = 5, maxAttempts = 5
-      OutboxMessage message = OutboxMessageTestDataBuilder.aPendingMessage().retryCount(5).build();
+      OutboxMessage message = OutboxMessageFixture.aPendingMessage().retryCount(5).build();
       int maxAttempts = 5;
 
       // When & Then - 下一次是第 6 次，超过 5
@@ -636,15 +619,14 @@ class OutboxMessageTest {
     @DisplayName("canRetry() 应该在恰好等于最大尝试次数时返回 false")
     void shouldReturnFalseWhenEqualsMaxAttempts() {
       // Given - retryCount = 4, maxAttempts = 5
-      OutboxMessage message = OutboxMessageTestDataBuilder.aPendingMessage().retryCount(4).build();
+      OutboxMessage message = OutboxMessageFixture.aPendingMessage().retryCount(4).build();
       int maxAttempts = 5;
 
       // When & Then - 下一次是第 5 次，等于 5，应该允许
       assertThat(message.canRetry(maxAttempts)).isTrue();
 
       // 再次重试后应该不行
-      OutboxMessage retriedMessage =
-          OutboxMessageTestDataBuilder.aPendingMessage().retryCount(5).build();
+      OutboxMessage retriedMessage = OutboxMessageFixture.aPendingMessage().retryCount(5).build();
       assertThat(retriedMessage.canRetry(maxAttempts)).isFalse();
     }
   }
@@ -661,7 +643,7 @@ class OutboxMessageTest {
       // Given - PENDING 状态，无时间限制
       Instant now = Instant.parse("2025-01-01T10:00:00Z");
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aPendingMessage()
+          OutboxMessageFixture.aPendingMessage()
               .statusCode("PENDING")
               .notBefore(null)
               .nextRetryAt(null)
@@ -677,7 +659,7 @@ class OutboxMessageTest {
       // Given - PUBLISHING 状态
       Instant now = Instant.parse("2025-01-01T10:00:00Z");
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aPublishingMessage().statusCode("PUBLISHING").build();
+          OutboxMessageFixture.aPublishingMessage().statusCode("PUBLISHING").build();
 
       // When & Then
       assertThat(message.isReadyToRelay(now)).isFalse();
@@ -690,7 +672,7 @@ class OutboxMessageTest {
       Instant now = Instant.parse("2025-01-01T10:00:00Z");
       Instant notBefore = Instant.parse("2025-01-01T10:05:00Z");
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aPendingMessage()
+          OutboxMessageFixture.aPendingMessage()
               .statusCode("PENDING")
               .notBefore(notBefore)
               .nextRetryAt(null)
@@ -707,7 +689,7 @@ class OutboxMessageTest {
       Instant now = Instant.parse("2025-01-01T10:05:00Z");
       Instant notBefore = Instant.parse("2025-01-01T10:00:00Z");
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aPendingMessage()
+          OutboxMessageFixture.aPendingMessage()
               .statusCode("PENDING")
               .notBefore(notBefore)
               .nextRetryAt(null)
@@ -724,7 +706,7 @@ class OutboxMessageTest {
       Instant now = Instant.parse("2025-01-01T10:00:00Z");
       Instant nextRetryAt = Instant.parse("2025-01-01T10:10:00Z");
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aPendingMessage()
+          OutboxMessageFixture.aPendingMessage()
               .statusCode("PENDING")
               .notBefore(null)
               .nextRetryAt(nextRetryAt)
@@ -741,7 +723,7 @@ class OutboxMessageTest {
       Instant now = Instant.parse("2025-01-01T10:10:00Z");
       Instant nextRetryAt = Instant.parse("2025-01-01T10:00:00Z");
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aPendingMessage()
+          OutboxMessageFixture.aPendingMessage()
               .statusCode("PENDING")
               .notBefore(null)
               .nextRetryAt(nextRetryAt)
@@ -759,7 +741,7 @@ class OutboxMessageTest {
       Instant notBefore = Instant.parse("2025-01-01T10:00:00Z");
       Instant nextRetryAt = Instant.parse("2025-01-01T10:10:00Z");
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aPendingMessage()
+          OutboxMessageFixture.aPendingMessage()
               .statusCode("PENDING")
               .notBefore(notBefore)
               .nextRetryAt(nextRetryAt)
@@ -787,7 +769,7 @@ class OutboxMessageTest {
     void shouldResetStatusToPending() {
       // Given - 失败的消息
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aFailedMessage()
+          OutboxMessageFixture.aFailedMessage()
               .statusCode("FAILED")
               .retryCount(3)
               .errorCode("ERR_TIMEOUT")
@@ -808,7 +790,7 @@ class OutboxMessageTest {
     void shouldResetRetryCountToZero() {
       // Given
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aFailedMessage()
+          OutboxMessageFixture.aFailedMessage()
               .retryCount(5)
               .nextRetryAt(Instant.parse("2025-01-01T10:00:00Z"))
               .build();
@@ -825,7 +807,7 @@ class OutboxMessageTest {
     void shouldClearNextRetryAt() {
       // Given
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aFailedMessage()
+          OutboxMessageFixture.aFailedMessage()
               .nextRetryAt(Instant.parse("2025-01-01T10:00:00Z"))
               .build();
 
@@ -841,7 +823,7 @@ class OutboxMessageTest {
     void shouldClearErrorInfo() {
       // Given
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aFailedMessage()
+          OutboxMessageFixture.aFailedMessage()
               .errorCode("ERR_NETWORK")
               .errorMsg("Network unreachable")
               .build();
@@ -858,7 +840,7 @@ class OutboxMessageTest {
     @DisplayName("refreshForRetry() 应该更新 payloadJson 和 headersJson")
     void shouldUpdatePayloadAndHeaders() {
       // Given
-      OutboxMessage message = OutboxMessageTestDataBuilder.aFailedMessage().build();
+      OutboxMessage message = OutboxMessageFixture.aFailedMessage().build();
       String newPayloadJson = "{\"updated\":true,\"version\":2}";
       String newHeadersJson = "{\"retry\":true,\"attempt\":2}";
 
@@ -875,7 +857,7 @@ class OutboxMessageTest {
     void shouldPreserveImmutableIdentityFields() {
       // Given
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aFailedMessage()
+          OutboxMessageFixture.aFailedMessage()
               .aggregateType("PlanAggregate")
               .aggregateId(2001L)
               .channel("plan_events")
@@ -915,7 +897,7 @@ class OutboxMessageTest {
       String dedupKey = "task:3001:completed:1640000000000";
 
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aPendingMessage()
+          OutboxMessageFixture.aPendingMessage()
               .aggregateType(aggregateType)
               .aggregateId(aggregateId)
               .channel(channel)
@@ -948,7 +930,7 @@ class OutboxMessageTest {
       Long id = 1001L;
       Long version = 5L;
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aPendingMessage().id(id).version(version).build();
+          OutboxMessageFixture.aPendingMessage().id(id).version(version).build();
 
       // When - 使用 toBuilder 创建新实例
       OutboxMessage modified = message.toBuilder().statusCode("PUBLISHED").build();
@@ -971,7 +953,7 @@ class OutboxMessageTest {
       // Given - Unix Epoch
       Instant epoch = Instant.parse("1970-01-01T00:00:00Z");
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aPendingMessage()
+          OutboxMessageFixture.aPendingMessage()
               .notBefore(epoch)
               .nextRetryAt(epoch)
               .leaseExpireAt(epoch)
@@ -989,7 +971,7 @@ class OutboxMessageTest {
       // Given - 远期未来
       Instant farFuture = Instant.parse("2099-12-31T23:59:59Z");
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aPendingMessage()
+          OutboxMessageFixture.aPendingMessage()
               .notBefore(farFuture)
               .nextRetryAt(farFuture)
               .leaseExpireAt(farFuture)
@@ -1007,7 +989,7 @@ class OutboxMessageTest {
       // Given - 10KB JSON 负载
       String largePayload = "{\"data\":\"" + "x".repeat(10000) + "\"}";
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aPendingMessage().payloadJson(largePayload).build();
+          OutboxMessageFixture.aPendingMessage().payloadJson(largePayload).build();
 
       // When & Then
       assertThat(message.getPayloadJson()).hasSize(largePayload.length());
@@ -1021,7 +1003,7 @@ class OutboxMessageTest {
       String emptyPayload = "";
       String emptyHeaders = "";
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aPendingMessage()
+          OutboxMessageFixture.aPendingMessage()
               .payloadJson(emptyPayload)
               .headersJson(emptyHeaders)
               .build();
@@ -1037,7 +1019,7 @@ class OutboxMessageTest {
       // Given - 极大重试次数
       Integer largeRetryCount = Integer.MAX_VALUE;
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aPendingMessage().retryCount(largeRetryCount).build();
+          OutboxMessageFixture.aPendingMessage().retryCount(largeRetryCount).build();
 
       // When & Then
       assertThat(message.getRetryCount()).isEqualTo(largeRetryCount);
@@ -1055,7 +1037,7 @@ class OutboxMessageTest {
 
       // When
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aPendingMessage()
+          OutboxMessageFixture.aPendingMessage()
               .aggregateType(longAggregateType)
               .channel(longChannel)
               .opType(longOpType)
@@ -1080,7 +1062,7 @@ class OutboxMessageTest {
 
       // When
       OutboxMessage message =
-          OutboxMessageTestDataBuilder.aPendingMessage()
+          OutboxMessageFixture.aPendingMessage()
               .payloadJson(specialPayload)
               .headersJson(specialHeaders)
               .build();
@@ -1091,12 +1073,12 @@ class OutboxMessageTest {
     }
   }
 
-  // ========== TestDataBuilder (辅助类) ==========
+  // ========== Fixture (辅助类) ==========
 
   /// OutboxMessage 测试数据构建器。
   ///
   /// 遵循 Builder 模式，提供默认值以简化测试数据构建。
-  static class OutboxMessageTestDataBuilder {
+  static class OutboxMessageFixture {
     private Long id = null;
     private Long version = 0L;
     private String aggregateType = "TestAggregate";
@@ -1117,113 +1099,113 @@ class OutboxMessageTest {
     private Instant leaseExpireAt = null;
 
     /// 创建一个默认的 PENDING 状态消息构建器。
-    public static OutboxMessageTestDataBuilder aPendingMessage() {
-      return new OutboxMessageTestDataBuilder().statusCode("PENDING");
+    public static OutboxMessageFixture aPendingMessage() {
+      return new OutboxMessageFixture().statusCode("PENDING");
     }
 
     /// 创建一个 PUBLISHING 状态消息构建器。
-    public static OutboxMessageTestDataBuilder aPublishingMessage() {
-      return new OutboxMessageTestDataBuilder()
+    public static OutboxMessageFixture aPublishingMessage() {
+      return new OutboxMessageFixture()
           .statusCode("PUBLISHING")
           .leaseOwner("relay-1")
           .leaseExpireAt(Instant.now().plusSeconds(300));
     }
 
     /// 创建一个 FAILED 状态消息构建器。
-    public static OutboxMessageTestDataBuilder aFailedMessage() {
-      return new OutboxMessageTestDataBuilder()
+    public static OutboxMessageFixture aFailedMessage() {
+      return new OutboxMessageFixture()
           .statusCode("FAILED")
           .retryCount(3)
           .errorCode("ERR_UNKNOWN")
           .errorMsg("Unknown error occurred");
     }
 
-    public OutboxMessageTestDataBuilder id(Long id) {
+    public OutboxMessageFixture id(Long id) {
       this.id = id;
       return this;
     }
 
-    public OutboxMessageTestDataBuilder version(Long version) {
+    public OutboxMessageFixture version(Long version) {
       this.version = version;
       return this;
     }
 
-    public OutboxMessageTestDataBuilder aggregateType(String aggregateType) {
+    public OutboxMessageFixture aggregateType(String aggregateType) {
       this.aggregateType = aggregateType;
       return this;
     }
 
-    public OutboxMessageTestDataBuilder aggregateId(Long aggregateId) {
+    public OutboxMessageFixture aggregateId(Long aggregateId) {
       this.aggregateId = aggregateId;
       return this;
     }
 
-    public OutboxMessageTestDataBuilder channel(String channel) {
+    public OutboxMessageFixture channel(String channel) {
       this.channel = channel;
       return this;
     }
 
-    public OutboxMessageTestDataBuilder opType(String opType) {
+    public OutboxMessageFixture opType(String opType) {
       this.opType = opType;
       return this;
     }
 
-    public OutboxMessageTestDataBuilder partitionKey(String partitionKey) {
+    public OutboxMessageFixture partitionKey(String partitionKey) {
       this.partitionKey = partitionKey;
       return this;
     }
 
-    public OutboxMessageTestDataBuilder dedupKey(String dedupKey) {
+    public OutboxMessageFixture dedupKey(String dedupKey) {
       this.dedupKey = dedupKey;
       return this;
     }
 
-    public OutboxMessageTestDataBuilder payloadJson(String payloadJson) {
+    public OutboxMessageFixture payloadJson(String payloadJson) {
       this.payloadJson = payloadJson;
       return this;
     }
 
-    public OutboxMessageTestDataBuilder headersJson(String headersJson) {
+    public OutboxMessageFixture headersJson(String headersJson) {
       this.headersJson = headersJson;
       return this;
     }
 
-    public OutboxMessageTestDataBuilder notBefore(Instant notBefore) {
+    public OutboxMessageFixture notBefore(Instant notBefore) {
       this.notBefore = notBefore;
       return this;
     }
 
-    public OutboxMessageTestDataBuilder statusCode(String statusCode) {
+    public OutboxMessageFixture statusCode(String statusCode) {
       this.statusCode = statusCode;
       return this;
     }
 
-    public OutboxMessageTestDataBuilder retryCount(Integer retryCount) {
+    public OutboxMessageFixture retryCount(Integer retryCount) {
       this.retryCount = retryCount;
       return this;
     }
 
-    public OutboxMessageTestDataBuilder nextRetryAt(Instant nextRetryAt) {
+    public OutboxMessageFixture nextRetryAt(Instant nextRetryAt) {
       this.nextRetryAt = nextRetryAt;
       return this;
     }
 
-    public OutboxMessageTestDataBuilder errorCode(String errorCode) {
+    public OutboxMessageFixture errorCode(String errorCode) {
       this.errorCode = errorCode;
       return this;
     }
 
-    public OutboxMessageTestDataBuilder errorMsg(String errorMsg) {
+    public OutboxMessageFixture errorMsg(String errorMsg) {
       this.errorMsg = errorMsg;
       return this;
     }
 
-    public OutboxMessageTestDataBuilder leaseOwner(String leaseOwner) {
+    public OutboxMessageFixture leaseOwner(String leaseOwner) {
       this.leaseOwner = leaseOwner;
       return this;
     }
 
-    public OutboxMessageTestDataBuilder leaseExpireAt(Instant leaseExpireAt) {
+    public OutboxMessageFixture leaseExpireAt(Instant leaseExpireAt) {
       this.leaseExpireAt = leaseExpireAt;
       return this;
     }

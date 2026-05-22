@@ -42,12 +42,10 @@ class ExprSnapshotTest {
     @DisplayName("应该成功创建包含所有非空列表的快照")
     void shouldCreateSnapshotWithAllNonEmptyLists() {
       // Given: 准备测试数据
-      List<ExprField> fields = List.of(ExprSnapshotTestDataBuilder.buildExprField());
-      List<ExprCapability> capabilities =
-          List.of(ExprSnapshotTestDataBuilder.buildExprCapability());
-      List<ExprRenderRule> renderRules = List.of(ExprSnapshotTestDataBuilder.buildExprRenderRule());
-      List<ApiParamMapping> apiParamMappings =
-          List.of(ExprSnapshotTestDataBuilder.buildApiParamMapping());
+      List<ExprField> fields = List.of(ExprSnapshotFixture.buildExprField());
+      List<ExprCapability> capabilities = List.of(ExprSnapshotFixture.buildExprCapability());
+      List<ExprRenderRule> renderRules = List.of(ExprSnapshotFixture.buildExprRenderRule());
+      List<ApiParamMapping> apiParamMappings = List.of(ExprSnapshotFixture.buildApiParamMapping());
 
       // When: 创建 ExprSnapshot
       ExprSnapshot snapshot = new ExprSnapshot(fields, capabilities, renderRules, apiParamMappings);
@@ -86,20 +84,20 @@ class ExprSnapshotTest {
       // Given: 准备包含多个元素的列表
       List<ExprField> fields =
           List.of(
-              ExprSnapshotTestDataBuilder.buildExprField(1L, "title"),
-              ExprSnapshotTestDataBuilder.buildExprField(2L, "abstract"));
+              ExprSnapshotFixture.buildExprField(1L, "title"),
+              ExprSnapshotFixture.buildExprField(2L, "abstract"));
       List<ExprCapability> capabilities =
           List.of(
-              ExprSnapshotTestDataBuilder.buildExprCapability(1L, "title"),
-              ExprSnapshotTestDataBuilder.buildExprCapability(2L, "abstract"));
+              ExprSnapshotFixture.buildExprCapability(1L, "title"),
+              ExprSnapshotFixture.buildExprCapability(2L, "abstract"));
       List<ExprRenderRule> renderRules =
           List.of(
-              ExprSnapshotTestDataBuilder.buildExprRenderRule(1L, "title"),
-              ExprSnapshotTestDataBuilder.buildExprRenderRule(2L, "abstract"));
+              ExprSnapshotFixture.buildExprRenderRule(1L, "title"),
+              ExprSnapshotFixture.buildExprRenderRule(2L, "abstract"));
       List<ApiParamMapping> apiParamMappings =
           List.of(
-              ExprSnapshotTestDataBuilder.buildApiParamMapping(1L, "from"),
-              ExprSnapshotTestDataBuilder.buildApiParamMapping(2L, "to"));
+              ExprSnapshotFixture.buildApiParamMapping(1L, "from"),
+              ExprSnapshotFixture.buildApiParamMapping(2L, "to"));
 
       // When: 创建 ExprSnapshot
       ExprSnapshot snapshot = new ExprSnapshot(fields, capabilities, renderRules, apiParamMappings);
@@ -123,11 +121,9 @@ class ExprSnapshotTest {
     void shouldThrowExceptionWhenFieldsIsNull() {
       // Given: fields 为 null
       List<ExprField> fields = null;
-      List<ExprCapability> capabilities =
-          List.of(ExprSnapshotTestDataBuilder.buildExprCapability());
-      List<ExprRenderRule> renderRules = List.of(ExprSnapshotTestDataBuilder.buildExprRenderRule());
-      List<ApiParamMapping> apiParamMappings =
-          List.of(ExprSnapshotTestDataBuilder.buildApiParamMapping());
+      List<ExprCapability> capabilities = List.of(ExprSnapshotFixture.buildExprCapability());
+      List<ExprRenderRule> renderRules = List.of(ExprSnapshotFixture.buildExprRenderRule());
+      List<ApiParamMapping> apiParamMappings = List.of(ExprSnapshotFixture.buildApiParamMapping());
 
       // When & Then: 创建快照应该失败
       assertThatThrownBy(
@@ -140,11 +136,10 @@ class ExprSnapshotTest {
     @DisplayName("应该抛出异常当 capabilities 为 null")
     void shouldThrowExceptionWhenCapabilitiesIsNull() {
       // Given: capabilities 为 null
-      List<ExprField> fields = List.of(ExprSnapshotTestDataBuilder.buildExprField());
+      List<ExprField> fields = List.of(ExprSnapshotFixture.buildExprField());
       List<ExprCapability> capabilities = null;
-      List<ExprRenderRule> renderRules = List.of(ExprSnapshotTestDataBuilder.buildExprRenderRule());
-      List<ApiParamMapping> apiParamMappings =
-          List.of(ExprSnapshotTestDataBuilder.buildApiParamMapping());
+      List<ExprRenderRule> renderRules = List.of(ExprSnapshotFixture.buildExprRenderRule());
+      List<ApiParamMapping> apiParamMappings = List.of(ExprSnapshotFixture.buildApiParamMapping());
 
       // When & Then: 创建快照应该失败
       assertThatThrownBy(
@@ -157,12 +152,10 @@ class ExprSnapshotTest {
     @DisplayName("应该抛出异常当 renderRules 为 null")
     void shouldThrowExceptionWhenRenderRulesIsNull() {
       // Given: renderRules 为 null
-      List<ExprField> fields = List.of(ExprSnapshotTestDataBuilder.buildExprField());
-      List<ExprCapability> capabilities =
-          List.of(ExprSnapshotTestDataBuilder.buildExprCapability());
+      List<ExprField> fields = List.of(ExprSnapshotFixture.buildExprField());
+      List<ExprCapability> capabilities = List.of(ExprSnapshotFixture.buildExprCapability());
       List<ExprRenderRule> renderRules = null;
-      List<ApiParamMapping> apiParamMappings =
-          List.of(ExprSnapshotTestDataBuilder.buildApiParamMapping());
+      List<ApiParamMapping> apiParamMappings = List.of(ExprSnapshotFixture.buildApiParamMapping());
 
       // When & Then: 创建快照应该失败
       assertThatThrownBy(
@@ -175,10 +168,9 @@ class ExprSnapshotTest {
     @DisplayName("应该抛出异常当 apiParamMappings 为 null")
     void shouldThrowExceptionWhenApiParamMappingsIsNull() {
       // Given: apiParamMappings 为 null
-      List<ExprField> fields = List.of(ExprSnapshotTestDataBuilder.buildExprField());
-      List<ExprCapability> capabilities =
-          List.of(ExprSnapshotTestDataBuilder.buildExprCapability());
-      List<ExprRenderRule> renderRules = List.of(ExprSnapshotTestDataBuilder.buildExprRenderRule());
+      List<ExprField> fields = List.of(ExprSnapshotFixture.buildExprField());
+      List<ExprCapability> capabilities = List.of(ExprSnapshotFixture.buildExprCapability());
+      List<ExprRenderRule> renderRules = List.of(ExprSnapshotFixture.buildExprRenderRule());
       List<ApiParamMapping> apiParamMappings = null;
 
       // When & Then: 创建快照应该失败
@@ -210,8 +202,7 @@ class ExprSnapshotTest {
       List<ExprField> fields = null;
       List<ExprCapability> capabilities = null;
       List<ExprRenderRule> renderRules = null;
-      List<ApiParamMapping> apiParamMappings =
-          List.of(ExprSnapshotTestDataBuilder.buildApiParamMapping());
+      List<ApiParamMapping> apiParamMappings = List.of(ExprSnapshotFixture.buildApiParamMapping());
 
       // When & Then: 创建快照应该失败
       assertThatThrownBy(
@@ -230,13 +221,12 @@ class ExprSnapshotTest {
     @DisplayName("Record 字段应该是不可变的")
     void recordFieldsShouldBeImmutable() {
       // Given: 创建快照
-      List<ExprField> originalFields = List.of(ExprSnapshotTestDataBuilder.buildExprField());
+      List<ExprField> originalFields = List.of(ExprSnapshotFixture.buildExprField());
       List<ExprCapability> originalCapabilities =
-          List.of(ExprSnapshotTestDataBuilder.buildExprCapability());
-      List<ExprRenderRule> originalRenderRules =
-          List.of(ExprSnapshotTestDataBuilder.buildExprRenderRule());
+          List.of(ExprSnapshotFixture.buildExprCapability());
+      List<ExprRenderRule> originalRenderRules = List.of(ExprSnapshotFixture.buildExprRenderRule());
       List<ApiParamMapping> originalApiParamMappings =
-          List.of(ExprSnapshotTestDataBuilder.buildApiParamMapping());
+          List.of(ExprSnapshotFixture.buildApiParamMapping());
 
       ExprSnapshot snapshot =
           new ExprSnapshot(
@@ -261,15 +251,15 @@ class ExprSnapshotTest {
       // Given: 创建包含多个元素的快照
       List<ExprField> fields =
           List.of(
-              ExprSnapshotTestDataBuilder.buildExprField(1L, "title"),
-              ExprSnapshotTestDataBuilder.buildExprField(2L, "abstract"));
+              ExprSnapshotFixture.buildExprField(1L, "title"),
+              ExprSnapshotFixture.buildExprField(2L, "abstract"));
 
       ExprSnapshot snapshot =
           new ExprSnapshot(
               fields,
-              List.of(ExprSnapshotTestDataBuilder.buildExprCapability()),
-              List.of(ExprSnapshotTestDataBuilder.buildExprRenderRule()),
-              List.of(ExprSnapshotTestDataBuilder.buildApiParamMapping()));
+              List.of(ExprSnapshotFixture.buildExprCapability()),
+              List.of(ExprSnapshotFixture.buildExprRenderRule()),
+              List.of(ExprSnapshotFixture.buildApiParamMapping()));
 
       // When: 获取列表大小
       int originalSize = snapshot.fields().size();
@@ -292,12 +282,10 @@ class ExprSnapshotTest {
     @DisplayName("应该正确实现 equals 方法（相同值对象相等）")
     void shouldImplementEqualsCorrectly() {
       // Given: 两个相同值的快照
-      List<ExprField> fields = List.of(ExprSnapshotTestDataBuilder.buildExprField());
-      List<ExprCapability> capabilities =
-          List.of(ExprSnapshotTestDataBuilder.buildExprCapability());
-      List<ExprRenderRule> renderRules = List.of(ExprSnapshotTestDataBuilder.buildExprRenderRule());
-      List<ApiParamMapping> apiParamMappings =
-          List.of(ExprSnapshotTestDataBuilder.buildApiParamMapping());
+      List<ExprField> fields = List.of(ExprSnapshotFixture.buildExprField());
+      List<ExprCapability> capabilities = List.of(ExprSnapshotFixture.buildExprCapability());
+      List<ExprRenderRule> renderRules = List.of(ExprSnapshotFixture.buildExprRenderRule());
+      List<ApiParamMapping> apiParamMappings = List.of(ExprSnapshotFixture.buildApiParamMapping());
 
       ExprSnapshot snapshot1 =
           new ExprSnapshot(fields, capabilities, renderRules, apiParamMappings);
@@ -313,22 +301,22 @@ class ExprSnapshotTest {
     @DisplayName("应该正确实现 equals 方法（不同值对象不相等）")
     void shouldImplementEqualsCorrectlyForDifferentObjects() {
       // Given: 两个不同值的快照
-      List<ExprField> fields1 = List.of(ExprSnapshotTestDataBuilder.buildExprField(1L, "title"));
-      List<ExprField> fields2 = List.of(ExprSnapshotTestDataBuilder.buildExprField(2L, "abstract"));
+      List<ExprField> fields1 = List.of(ExprSnapshotFixture.buildExprField(1L, "title"));
+      List<ExprField> fields2 = List.of(ExprSnapshotFixture.buildExprField(2L, "abstract"));
 
       ExprSnapshot snapshot1 =
           new ExprSnapshot(
               fields1,
-              List.of(ExprSnapshotTestDataBuilder.buildExprCapability()),
-              List.of(ExprSnapshotTestDataBuilder.buildExprRenderRule()),
-              List.of(ExprSnapshotTestDataBuilder.buildApiParamMapping()));
+              List.of(ExprSnapshotFixture.buildExprCapability()),
+              List.of(ExprSnapshotFixture.buildExprRenderRule()),
+              List.of(ExprSnapshotFixture.buildApiParamMapping()));
 
       ExprSnapshot snapshot2 =
           new ExprSnapshot(
               fields2,
-              List.of(ExprSnapshotTestDataBuilder.buildExprCapability()),
-              List.of(ExprSnapshotTestDataBuilder.buildExprRenderRule()),
-              List.of(ExprSnapshotTestDataBuilder.buildApiParamMapping()));
+              List.of(ExprSnapshotFixture.buildExprCapability()),
+              List.of(ExprSnapshotFixture.buildExprRenderRule()),
+              List.of(ExprSnapshotFixture.buildApiParamMapping()));
 
       // When & Then: 不应该相等
       assertThat(snapshot1).isNotEqualTo(snapshot2);
@@ -338,12 +326,10 @@ class ExprSnapshotTest {
     @DisplayName("应该正确实现 hashCode 方法")
     void shouldImplementHashCodeCorrectly() {
       // Given: 两个相同值的快照
-      List<ExprField> fields = List.of(ExprSnapshotTestDataBuilder.buildExprField());
-      List<ExprCapability> capabilities =
-          List.of(ExprSnapshotTestDataBuilder.buildExprCapability());
-      List<ExprRenderRule> renderRules = List.of(ExprSnapshotTestDataBuilder.buildExprRenderRule());
-      List<ApiParamMapping> apiParamMappings =
-          List.of(ExprSnapshotTestDataBuilder.buildApiParamMapping());
+      List<ExprField> fields = List.of(ExprSnapshotFixture.buildExprField());
+      List<ExprCapability> capabilities = List.of(ExprSnapshotFixture.buildExprCapability());
+      List<ExprRenderRule> renderRules = List.of(ExprSnapshotFixture.buildExprRenderRule());
+      List<ApiParamMapping> apiParamMappings = List.of(ExprSnapshotFixture.buildApiParamMapping());
 
       ExprSnapshot snapshot1 =
           new ExprSnapshot(fields, capabilities, renderRules, apiParamMappings);
@@ -360,10 +346,10 @@ class ExprSnapshotTest {
       // Given: 创建快照
       ExprSnapshot snapshot =
           new ExprSnapshot(
-              List.of(ExprSnapshotTestDataBuilder.buildExprField()),
-              List.of(ExprSnapshotTestDataBuilder.buildExprCapability()),
-              List.of(ExprSnapshotTestDataBuilder.buildExprRenderRule()),
-              List.of(ExprSnapshotTestDataBuilder.buildApiParamMapping()));
+              List.of(ExprSnapshotFixture.buildExprField()),
+              List.of(ExprSnapshotFixture.buildExprCapability()),
+              List.of(ExprSnapshotFixture.buildExprRenderRule()),
+              List.of(ExprSnapshotFixture.buildApiParamMapping()));
 
       // When: 调用 toString
       String toString = snapshot.toString();
@@ -382,10 +368,10 @@ class ExprSnapshotTest {
       // Given: 创建快照
       ExprSnapshot snapshot =
           new ExprSnapshot(
-              List.of(ExprSnapshotTestDataBuilder.buildExprField()),
-              List.of(ExprSnapshotTestDataBuilder.buildExprCapability()),
-              List.of(ExprSnapshotTestDataBuilder.buildExprRenderRule()),
-              List.of(ExprSnapshotTestDataBuilder.buildApiParamMapping()));
+              List.of(ExprSnapshotFixture.buildExprField()),
+              List.of(ExprSnapshotFixture.buildExprCapability()),
+              List.of(ExprSnapshotFixture.buildExprRenderRule()),
+              List.of(ExprSnapshotFixture.buildApiParamMapping()));
 
       // When & Then: 对象应该等于自身
       assertThat(snapshot).isEqualTo(snapshot);
@@ -395,12 +381,10 @@ class ExprSnapshotTest {
     @DisplayName("应该支持 equals 对称性")
     void shouldSupportEqualsSymmetry() {
       // Given: 两个相同值的快照
-      List<ExprField> fields = List.of(ExprSnapshotTestDataBuilder.buildExprField());
-      List<ExprCapability> capabilities =
-          List.of(ExprSnapshotTestDataBuilder.buildExprCapability());
-      List<ExprRenderRule> renderRules = List.of(ExprSnapshotTestDataBuilder.buildExprRenderRule());
-      List<ApiParamMapping> apiParamMappings =
-          List.of(ExprSnapshotTestDataBuilder.buildApiParamMapping());
+      List<ExprField> fields = List.of(ExprSnapshotFixture.buildExprField());
+      List<ExprCapability> capabilities = List.of(ExprSnapshotFixture.buildExprCapability());
+      List<ExprRenderRule> renderRules = List.of(ExprSnapshotFixture.buildExprRenderRule());
+      List<ApiParamMapping> apiParamMappings = List.of(ExprSnapshotFixture.buildApiParamMapping());
 
       ExprSnapshot snapshot1 =
           new ExprSnapshot(fields, capabilities, renderRules, apiParamMappings);
@@ -417,12 +401,10 @@ class ExprSnapshotTest {
     @DisplayName("应该支持 equals 传递性")
     void shouldSupportEqualsTransitivity() {
       // Given: 三个相同值的快照
-      List<ExprField> fields = List.of(ExprSnapshotTestDataBuilder.buildExprField());
-      List<ExprCapability> capabilities =
-          List.of(ExprSnapshotTestDataBuilder.buildExprCapability());
-      List<ExprRenderRule> renderRules = List.of(ExprSnapshotTestDataBuilder.buildExprRenderRule());
-      List<ApiParamMapping> apiParamMappings =
-          List.of(ExprSnapshotTestDataBuilder.buildApiParamMapping());
+      List<ExprField> fields = List.of(ExprSnapshotFixture.buildExprField());
+      List<ExprCapability> capabilities = List.of(ExprSnapshotFixture.buildExprCapability());
+      List<ExprRenderRule> renderRules = List.of(ExprSnapshotFixture.buildExprRenderRule());
+      List<ApiParamMapping> apiParamMappings = List.of(ExprSnapshotFixture.buildApiParamMapping());
 
       ExprSnapshot snapshot1 =
           new ExprSnapshot(fields, capabilities, renderRules, apiParamMappings);
@@ -467,7 +449,7 @@ class ExprSnapshotTest {
     @DisplayName("应该处理仅 fields 非空的情况")
     void shouldHandleOnlyFieldsNonEmpty() {
       // Given: 仅 fields 非空
-      List<ExprField> fields = List.of(ExprSnapshotTestDataBuilder.buildExprField());
+      List<ExprField> fields = List.of(ExprSnapshotFixture.buildExprField());
       List<ExprCapability> capabilities = List.of();
       List<ExprRenderRule> renderRules = List.of();
       List<ApiParamMapping> apiParamMappings = List.of();
@@ -488,19 +470,19 @@ class ExprSnapshotTest {
       // Given: 准备包含大量元素的列表（模拟大规模配置）
       List<ExprField> fields =
           List.of(
-              ExprSnapshotTestDataBuilder.buildExprField(1L, "field1"),
-              ExprSnapshotTestDataBuilder.buildExprField(2L, "field2"),
-              ExprSnapshotTestDataBuilder.buildExprField(3L, "field3"),
-              ExprSnapshotTestDataBuilder.buildExprField(4L, "field4"),
-              ExprSnapshotTestDataBuilder.buildExprField(5L, "field5"));
+              ExprSnapshotFixture.buildExprField(1L, "field1"),
+              ExprSnapshotFixture.buildExprField(2L, "field2"),
+              ExprSnapshotFixture.buildExprField(3L, "field3"),
+              ExprSnapshotFixture.buildExprField(4L, "field4"),
+              ExprSnapshotFixture.buildExprField(5L, "field5"));
 
       // When: 创建快照
       ExprSnapshot snapshot =
           new ExprSnapshot(
               fields,
-              List.of(ExprSnapshotTestDataBuilder.buildExprCapability()),
-              List.of(ExprSnapshotTestDataBuilder.buildExprRenderRule()),
-              List.of(ExprSnapshotTestDataBuilder.buildApiParamMapping()));
+              List.of(ExprSnapshotFixture.buildExprCapability()),
+              List.of(ExprSnapshotFixture.buildExprRenderRule()),
+              List.of(ExprSnapshotFixture.buildApiParamMapping()));
 
       // Then: 应该成功创建并保留所有元素
       assertThat(snapshot.fields()).hasSize(5);
@@ -509,12 +491,12 @@ class ExprSnapshotTest {
     }
   }
 
-  // ========== TestDataBuilder (辅助类) ==========
+  // ========== Fixture (辅助类) ==========
 
   /// ExprSnapshot 测试数据构建器。
   ///
   /// 提供便捷的测试数据构建方法以简化测试用例编写。
-  static class ExprSnapshotTestDataBuilder {
+  static class ExprSnapshotFixture {
 
     /// 构建默认的 ExprField
     static ExprField buildExprField() {

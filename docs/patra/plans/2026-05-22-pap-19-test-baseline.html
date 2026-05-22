@@ -31,7 +31,7 @@
           <li data-task-status="done"><a href="#task-8">Task 8 — rename 剩余 Fixture (Group 4, 2 文件原地)</a></li>
           <li data-task-status="done"><a href="#task-9">Task 9 — rename inner static TestConfiguration → ITSpringConfig (Group 5, 6 处)</a></li>
           <li data-task-status="done"><a href="#task-10">Task 10 — 同步 6 个 skill / rule / agent 文件 (AC3)</a></li>
-          <li data-task-status="pending"><a href="#task-11">Task 11 — 本地全量验证 + push + CI 3 次绿 (AC4)</a></li>
+          <li data-task-status="in-progress"><a href="#task-11">Task 11 — 本地全量验证 + push + CI 3 次绿 (AC4)</a></li>
         </ol>
       </li>
       <li><a href="#self-check">自检结果</a></li>
@@ -733,7 +733,7 @@ git commit -m "chore(skills): 同步测试相关 skill / rule / agent 适配新 
         </ol>
       </article>
 
-      <article class="task" id="task-11" data-status="pending">
+      <article class="task" id="task-11" data-status="in-progress">
         <header>
           <h2>Task 11 — 本地全量验证 + push + CI 3 次绿 (AC4)</h2>
           <dl class="files">
@@ -881,6 +881,21 @@ git push</code></pre>
         </header>
         <p>Task 4 完全删除 sourceSets hack 后，<code>:patra-registry:patra-registry-boot:compileTestJava</code> 失败：<code>RegistryErrorMappingContributor 找不到符号</code>。Root cause：Spring Boot <code>bootJar</code> 禁用 <code>jar</code> task 时，启用 <code>java-test-fixtures</code> plugin 改变了 boot 模块 <code>test</code> source set 的 main.output 默认可见性。触发 plan §8 high risk fallback。</p>
       </li>
+      <li class="note" data-type="change" data-time="2026-05-22T22:00">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-22T22:00">05-22 22:00</time>
+          <a href="#task-11">§ Task 11</a>
+        </header>
+        <p>Task 11 本地全验证 grep 残留检查发现 <strong>spec/subagent 漏扫 9 个 inner static class TestDataBuilder</strong>：</p>
+        <ul>
+          <li><code>ExprSnapshotTest.java</code> 内 <code>ExprSnapshotTestDataBuilder</code></li>
+          <li><code>ProvenanceConfigurationTest.java</code> 内 <code>ProvenanceConfigurationTestDataBuilder</code></li>
+          <li>ingest-domain 7 个 Test 文件内嵌的 <code>CursorEventTestDataBuilder</code> / <code>TaskRunTestDataBuilder</code> / <code>CursorTestDataBuilder</code> / <code>OutboxMessageTestDataBuilder</code> / <code>ScheduleInstanceAggregateTestDataBuilder</code> / <code>PlanSliceAggregateTestDataBuilder</code> / <code>PlanAggregateTestDataBuilder</code></li>
+        </ul>
+        <p>这些 inner static class 之前的 subagent 扫描用 <code>find -name "*TestDataBuilder.java"</code> 找独立文件，漏看 inner class 形式。按 spec AC1 命名规范一并补做：<code>*TestDataBuilder</code> → <code>*Fixture</code>（含 inner class 声明 + 同文件内所有调用 + 2 处 JavaDoc 注释）。</p>
+        <p>验证：所有相关 domain test 全过 (17s)。最终 AC1 覆盖范围比 spec 列出的 16 个独立文件 + 6 个 inner class 多出 9 个 inner class（共 25 个支持类完成命名规范化）。</p>
+      </li>
       <li class="note" data-type="other" data-time="2026-05-22T21:00">
         <header>
           <span class="note-type">OTHER</span>
@@ -920,7 +935,7 @@ git push</code></pre>
     <footer class="notes-stats">
       总计:
       <span data-counter="decision">0</span> decisions /
-      <span data-counter="change">3</span> changes /
+      <span data-counter="change">4</span> changes /
       <span data-counter="tradeoff">1</span> tradeoffs /
       <span data-counter="other">2</span> others
     </footer>

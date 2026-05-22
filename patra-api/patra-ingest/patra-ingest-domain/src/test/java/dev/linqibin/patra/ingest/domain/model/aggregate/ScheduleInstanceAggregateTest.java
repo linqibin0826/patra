@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 /// 测试策略：
 ///
 /// - 纯 Java 单元测试，不依赖 Spring 容器
-///   - 使用 TestDataBuilder 模式构建测试数据
+///   - 使用 Fixture 模式构建测试数据
 ///   - 遵循 Given-When-Then 结构
 ///   - 使用 AssertJ 流畅断言
 ///
@@ -89,7 +89,7 @@ class ScheduleInstanceAggregateTest {
 
       // When
       ScheduleInstanceAggregate instance =
-          ScheduleInstanceAggregateTestDataBuilder.builder().triggeredAt(triggeredAt).build();
+          ScheduleInstanceAggregateFixture.builder().triggeredAt(triggeredAt).build();
 
       Instant afterCreation = Instant.now();
 
@@ -111,7 +111,7 @@ class ScheduleInstanceAggregateTest {
 
       // When
       ScheduleInstanceAggregate instance =
-          ScheduleInstanceAggregateTestDataBuilder.builder()
+          ScheduleInstanceAggregateFixture.builder()
               .schedulerJobId(schedulerJobId)
               .schedulerLogId(schedulerLogId)
               .triggerParams(triggerParams)
@@ -133,7 +133,7 @@ class ScheduleInstanceAggregateTest {
 
       // When & Then
       assertThatThrownBy(
-              () -> ScheduleInstanceAggregateTestDataBuilder.builder().scheduler(scheduler).build())
+              () -> ScheduleInstanceAggregateFixture.builder().scheduler(scheduler).build())
           .isInstanceOf(NullPointerException.class)
           .hasMessageContaining("schedulerCode must not be null");
     }
@@ -146,10 +146,7 @@ class ScheduleInstanceAggregateTest {
 
       // When & Then
       assertThatThrownBy(
-              () ->
-                  ScheduleInstanceAggregateTestDataBuilder.builder()
-                      .triggerType(triggerType)
-                      .build())
+              () -> ScheduleInstanceAggregateFixture.builder().triggerType(triggerType).build())
           .isInstanceOf(NullPointerException.class)
           .hasMessageContaining("triggerType must not be null");
     }
@@ -252,7 +249,7 @@ class ScheduleInstanceAggregateTest {
       ProvenanceCode originalProvenanceCode = ProvenanceCode.PUBMED;
 
       ScheduleInstanceAggregate instance =
-          ScheduleInstanceAggregateTestDataBuilder.builder()
+          ScheduleInstanceAggregateFixture.builder()
               .scheduler(originalScheduler)
               .schedulerJobId(originalJobId)
               .schedulerLogId(originalLogId)
@@ -283,7 +280,7 @@ class ScheduleInstanceAggregateTest {
       triggerParams.put("original", "value");
 
       ScheduleInstanceAggregate instance =
-          ScheduleInstanceAggregateTestDataBuilder.builder().triggerParams(triggerParams).build();
+          ScheduleInstanceAggregateFixture.builder().triggerParams(triggerParams).build();
 
       // When - 修改外部 Map
       triggerParams.put("modified", "newValue");
@@ -311,7 +308,7 @@ class ScheduleInstanceAggregateTest {
       // When & Then - 每个调度器都应该成功创建调度实例
       for (Scheduler scheduler : allSchedulers) {
         ScheduleInstanceAggregate instance =
-            ScheduleInstanceAggregateTestDataBuilder.builder().scheduler(scheduler).build();
+            ScheduleInstanceAggregateFixture.builder().scheduler(scheduler).build();
 
         assertThat(instance.getScheduler()).isEqualTo(scheduler);
       }
@@ -326,7 +323,7 @@ class ScheduleInstanceAggregateTest {
       // When & Then - 每个触发类型都应该成功创建调度实例
       for (TriggerType triggerType : allTriggerTypes) {
         ScheduleInstanceAggregate instance =
-            ScheduleInstanceAggregateTestDataBuilder.builder().triggerType(triggerType).build();
+            ScheduleInstanceAggregateFixture.builder().triggerType(triggerType).build();
 
         assertThat(instance.getTriggerType()).isEqualTo(triggerType);
       }
@@ -346,7 +343,7 @@ class ScheduleInstanceAggregateTest {
 
       // When
       ScheduleInstanceAggregate instance =
-          ScheduleInstanceAggregateTestDataBuilder.builder().triggerParams(complexParams).build();
+          ScheduleInstanceAggregateFixture.builder().triggerParams(complexParams).build();
 
       // Then
       assertThat(instance.getTriggerParams()).isEqualTo(complexParams);
@@ -359,8 +356,7 @@ class ScheduleInstanceAggregateTest {
     @DisplayName("recordSnapshots() 方法应该是幂等的")
     void shouldBeIdempotentForRecordSnapshots() {
       // Given
-      ScheduleInstanceAggregate instance =
-          ScheduleInstanceAggregateTestDataBuilder.builder().build();
+      ScheduleInstanceAggregate instance = ScheduleInstanceAggregateFixture.builder().build();
 
       // When - 多次调用 recordSnapshots()
       instance.recordSnapshots();
@@ -387,11 +383,11 @@ class ScheduleInstanceAggregateTest {
 
       // When - 使用 EPOCH 时间
       ScheduleInstanceAggregate instance1 =
-          ScheduleInstanceAggregateTestDataBuilder.builder().triggeredAt(epochTime).build();
+          ScheduleInstanceAggregateFixture.builder().triggeredAt(epochTime).build();
 
       // When - 使用未来时间
       ScheduleInstanceAggregate instance2 =
-          ScheduleInstanceAggregateTestDataBuilder.builder().triggeredAt(farFutureTime).build();
+          ScheduleInstanceAggregateFixture.builder().triggeredAt(farFutureTime).build();
 
       // Then
       assertThat(instance1.getTriggeredAt()).isEqualTo(epochTime);
@@ -406,7 +402,7 @@ class ScheduleInstanceAggregateTest {
 
       // When
       ScheduleInstanceAggregate instance =
-          ScheduleInstanceAggregateTestDataBuilder.builder().triggerParams(emptyParams).build();
+          ScheduleInstanceAggregateFixture.builder().triggerParams(emptyParams).build();
 
       // Then
       assertThat(instance.getTriggerParams()).isNotNull();
@@ -422,7 +418,7 @@ class ScheduleInstanceAggregateTest {
 
       // When
       ScheduleInstanceAggregate instance =
-          ScheduleInstanceAggregateTestDataBuilder.builder()
+          ScheduleInstanceAggregateFixture.builder()
               .schedulerJobId(longJobId)
               .schedulerLogId(longLogId)
               .build();
@@ -443,7 +439,7 @@ class ScheduleInstanceAggregateTest {
 
       // When
       ScheduleInstanceAggregate instance =
-          ScheduleInstanceAggregateTestDataBuilder.builder()
+          ScheduleInstanceAggregateFixture.builder()
               .schedulerJobId(emptyJobId)
               .schedulerLogId(emptyLogId)
               .provenanceCode(emptyProvenanceCode)
@@ -466,7 +462,7 @@ class ScheduleInstanceAggregateTest {
 
       // When
       ScheduleInstanceAggregate instance =
-          ScheduleInstanceAggregateTestDataBuilder.builder().triggerParams(paramsWithNull).build();
+          ScheduleInstanceAggregateFixture.builder().triggerParams(paramsWithNull).build();
 
       // Then
       assertThat(instance.getTriggerParams()).containsEntry("key1", "value1");
@@ -485,8 +481,7 @@ class ScheduleInstanceAggregateTest {
     @DisplayName("应该正确处理 ID 分配")
     void shouldHandleIdAssignment() {
       // Given - 新创建的调度实例
-      ScheduleInstanceAggregate instance =
-          ScheduleInstanceAggregateTestDataBuilder.builder().build();
+      ScheduleInstanceAggregate instance = ScheduleInstanceAggregateFixture.builder().build();
       assertThat(instance.getId()).isNull();
       assertThat(instance.isTransient()).isTrue();
 
@@ -503,8 +498,7 @@ class ScheduleInstanceAggregateTest {
     @DisplayName("应该抛出异常当分配 null ID")
     void shouldThrowExceptionWhenAssigningNullId() {
       // Given
-      ScheduleInstanceAggregate instance =
-          ScheduleInstanceAggregateTestDataBuilder.builder().build();
+      ScheduleInstanceAggregate instance = ScheduleInstanceAggregateFixture.builder().build();
 
       // When & Then
       assertThatThrownBy(() -> instance.assignId(null))
@@ -516,8 +510,7 @@ class ScheduleInstanceAggregateTest {
     @DisplayName("应该正确处理版本分配")
     void shouldHandleVersionAssignment() {
       // Given
-      ScheduleInstanceAggregate instance =
-          ScheduleInstanceAggregateTestDataBuilder.builder().build();
+      ScheduleInstanceAggregate instance = ScheduleInstanceAggregateFixture.builder().build();
       assertThat(instance.getVersion()).isEqualTo(0L);
 
       // When - 分配版本
@@ -532,8 +525,7 @@ class ScheduleInstanceAggregateTest {
     @DisplayName("应该抛出异常当分配负版本")
     void shouldThrowExceptionWhenAssigningNegativeVersion() {
       // Given
-      ScheduleInstanceAggregate instance =
-          ScheduleInstanceAggregateTestDataBuilder.builder().build();
+      ScheduleInstanceAggregate instance = ScheduleInstanceAggregateFixture.builder().build();
 
       // When & Then
       assertThatThrownBy(() -> instance.assignVersion(-1L))
@@ -546,7 +538,7 @@ class ScheduleInstanceAggregateTest {
     void shouldHandleVersionIncrement() {
       // Given - 从持久化恢复的调度实例
       ScheduleInstanceAggregate instance =
-          ScheduleInstanceAggregateTestDataBuilder.builder()
+          ScheduleInstanceAggregateFixture.builder()
               .id(ScheduleInstanceId.of(100L))
               .version(5L)
               .buildRestored();
@@ -581,7 +573,7 @@ class ScheduleInstanceAggregateTest {
 
       // When
       ScheduleInstanceAggregate instance =
-          ScheduleInstanceAggregateTestDataBuilder.builder()
+          ScheduleInstanceAggregateFixture.builder()
               .scheduler(scheduler)
               .schedulerJobId(schedulerJobId)
               .schedulerLogId(schedulerLogId)
@@ -610,7 +602,7 @@ class ScheduleInstanceAggregateTest {
 
       // When
       ScheduleInstanceAggregate instance =
-          ScheduleInstanceAggregateTestDataBuilder.builder()
+          ScheduleInstanceAggregateFixture.builder()
               .scheduler(scheduler)
               .schedulerJobId(schedulerJobId)
               .schedulerLogId(schedulerLogId)
@@ -640,7 +632,7 @@ class ScheduleInstanceAggregateTest {
 
       // When
       ScheduleInstanceAggregate instance =
-          ScheduleInstanceAggregateTestDataBuilder.builder()
+          ScheduleInstanceAggregateFixture.builder()
               .scheduler(scheduler)
               .schedulerJobId(schedulerJobId)
               .schedulerLogId(schedulerLogId)
@@ -670,7 +662,7 @@ class ScheduleInstanceAggregateTest {
 
       // When
       ScheduleInstanceAggregate instance =
-          ScheduleInstanceAggregateTestDataBuilder.builder()
+          ScheduleInstanceAggregateFixture.builder()
               .scheduler(scheduler)
               .schedulerJobId(schedulerJobId)
               .schedulerLogId(schedulerLogId)
@@ -707,7 +699,7 @@ class ScheduleInstanceAggregateTest {
 
       // When - 创建调度实例
       ScheduleInstanceAggregate instance =
-          ScheduleInstanceAggregateTestDataBuilder.builder()
+          ScheduleInstanceAggregateFixture.builder()
               .scheduler(scheduler)
               .schedulerJobId(schedulerJobId)
               .schedulerLogId(schedulerLogId)
@@ -732,7 +724,7 @@ class ScheduleInstanceAggregateTest {
     void shouldSupportOneToManyRelationshipWithPlanAggregate() {
       // Given - 一个调度实例可以产生多个计划
       ScheduleInstanceAggregate instance =
-          ScheduleInstanceAggregateTestDataBuilder.builder()
+          ScheduleInstanceAggregateFixture.builder()
               .id(ScheduleInstanceId.of(1001L))
               .buildRestored();
 
@@ -747,12 +739,12 @@ class ScheduleInstanceAggregateTest {
     }
   }
 
-  // ========== TestDataBuilder (辅助类) ==========
+  // ========== Fixture (辅助类) ==========
 
   /// ScheduleInstanceAggregate 测试数据构建器。
   ///
   /// 遵循 Builder 模式，提供默认值以简化测试数据构建。
-  static class ScheduleInstanceAggregateTestDataBuilder {
+  static class ScheduleInstanceAggregateFixture {
     private ScheduleInstanceId id = null; // 默认为 null（新创建的聚合根）
     private Scheduler scheduler = Scheduler.XXL;
     private String schedulerJobId = "default-job-001";
@@ -763,56 +755,54 @@ class ScheduleInstanceAggregateTest {
     private ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
     private long version = 0L;
 
-    public static ScheduleInstanceAggregateTestDataBuilder builder() {
-      ScheduleInstanceAggregateTestDataBuilder builder =
-          new ScheduleInstanceAggregateTestDataBuilder();
+    public static ScheduleInstanceAggregateFixture builder() {
+      ScheduleInstanceAggregateFixture builder = new ScheduleInstanceAggregateFixture();
       // 默认触发参数
       builder.triggerParams.put("batchSize", 100);
       return builder;
     }
 
-    public ScheduleInstanceAggregateTestDataBuilder id(ScheduleInstanceId id) {
+    public ScheduleInstanceAggregateFixture id(ScheduleInstanceId id) {
       this.id = id;
       return this;
     }
 
-    public ScheduleInstanceAggregateTestDataBuilder scheduler(Scheduler scheduler) {
+    public ScheduleInstanceAggregateFixture scheduler(Scheduler scheduler) {
       this.scheduler = scheduler;
       return this;
     }
 
-    public ScheduleInstanceAggregateTestDataBuilder schedulerJobId(String schedulerJobId) {
+    public ScheduleInstanceAggregateFixture schedulerJobId(String schedulerJobId) {
       this.schedulerJobId = schedulerJobId;
       return this;
     }
 
-    public ScheduleInstanceAggregateTestDataBuilder schedulerLogId(String schedulerLogId) {
+    public ScheduleInstanceAggregateFixture schedulerLogId(String schedulerLogId) {
       this.schedulerLogId = schedulerLogId;
       return this;
     }
 
-    public ScheduleInstanceAggregateTestDataBuilder triggerType(TriggerType triggerType) {
+    public ScheduleInstanceAggregateFixture triggerType(TriggerType triggerType) {
       this.triggerType = triggerType;
       return this;
     }
 
-    public ScheduleInstanceAggregateTestDataBuilder triggeredAt(Instant triggeredAt) {
+    public ScheduleInstanceAggregateFixture triggeredAt(Instant triggeredAt) {
       this.triggeredAt = triggeredAt;
       return this;
     }
 
-    public ScheduleInstanceAggregateTestDataBuilder triggerParams(
-        Map<String, Object> triggerParams) {
+    public ScheduleInstanceAggregateFixture triggerParams(Map<String, Object> triggerParams) {
       this.triggerParams = triggerParams;
       return this;
     }
 
-    public ScheduleInstanceAggregateTestDataBuilder provenanceCode(ProvenanceCode provenanceCode) {
+    public ScheduleInstanceAggregateFixture provenanceCode(ProvenanceCode provenanceCode) {
       this.provenanceCode = provenanceCode;
       return this;
     }
 
-    public ScheduleInstanceAggregateTestDataBuilder version(long version) {
+    public ScheduleInstanceAggregateFixture version(long version) {
       this.version = version;
       return this;
     }

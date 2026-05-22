@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
 /// 测试策略：
 ///
 /// - 纯 Java 单元测试，不依赖 Spring 容器
-///   - 使用 TestDataBuilder 模式构建测试数据
+///   - 使用 Fixture 模式构建测试数据
 ///   - 遵循 Given-When-Then 结构
 ///   - 使用 AssertJ 流畅断言
 ///
@@ -552,7 +552,7 @@ class CursorEventTest {
     void shouldSupportForwardDirection() {
       // Given & When
       CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent().direction(CursorDirection.FORWARD).build();
+          CursorEventFixture.aTimeEvent().direction(CursorDirection.FORWARD).build();
 
       // Then
       assertThat(event.getDirection()).isEqualTo(CursorDirection.FORWARD);
@@ -563,7 +563,7 @@ class CursorEventTest {
     void shouldSupportBackfillDirection() {
       // Given & When
       CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent().direction(CursorDirection.BACKFILL).build();
+          CursorEventFixture.aTimeEvent().direction(CursorDirection.BACKFILL).build();
 
       // Then
       assertThat(event.getDirection()).isEqualTo(CursorDirection.BACKFILL);
@@ -585,7 +585,7 @@ class CursorEventTest {
 
       // When
       CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent().windowFrom(windowFrom).windowTo(windowTo).build();
+          CursorEventFixture.aTimeEvent().windowFrom(windowFrom).windowTo(windowTo).build();
 
       // Then
       assertThat(event.getWindowFrom()).isEqualTo(windowFrom);
@@ -601,7 +601,7 @@ class CursorEventTest {
 
       // When
       CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent()
+          CursorEventFixture.aTimeEvent()
               .cursorType(CursorType.ID)
               .windowFrom(windowFrom)
               .windowTo(windowTo)
@@ -621,7 +621,7 @@ class CursorEventTest {
 
       // When
       CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent().windowFrom(windowFrom).windowTo(windowTo).build();
+          CursorEventFixture.aTimeEvent().windowFrom(windowFrom).windowTo(windowTo).build();
 
       // Then
       assertThat(event.getWindowFrom()).isEqualTo(windowFrom);
@@ -637,7 +637,7 @@ class CursorEventTest {
 
       // When
       CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent().windowFrom(windowFrom).windowTo(windowTo).build();
+          CursorEventFixture.aTimeEvent().windowFrom(windowFrom).windowTo(windowTo).build();
 
       // Then
       assertThat(event.getWindowFrom()).isEqualTo(windowFrom);
@@ -663,7 +663,7 @@ class CursorEventTest {
 
       // When
       CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent()
+          CursorEventFixture.aTimeEvent()
               .provenanceCode(provenanceCode)
               .operationCode(operationCode)
               .cursorKey(cursorKey)
@@ -683,11 +683,9 @@ class CursorEventTest {
     @DisplayName("应该正确返回游标类型")
     void shouldReturnCursorType() {
       // Given & When
-      CursorEvent timeEvent =
-          CursorEventTestDataBuilder.aTimeEvent().cursorType(CursorType.TIME).build();
+      CursorEvent timeEvent = CursorEventFixture.aTimeEvent().cursorType(CursorType.TIME).build();
 
-      CursorEvent numericEvent =
-          CursorEventTestDataBuilder.aTimeEvent().cursorType(CursorType.ID).build();
+      CursorEvent numericEvent = CursorEventFixture.aTimeEvent().cursorType(CursorType.ID).build();
 
       // Then
       assertThat(timeEvent.getCursorType()).isEqualTo(CursorType.TIME);
@@ -705,7 +703,7 @@ class CursorEventTest {
 
       // When
       CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent()
+          CursorEventFixture.aTimeEvent()
               .prevValue(prevValue)
               .newValue(newValue)
               .prevInstant(prevInstant)
@@ -726,8 +724,7 @@ class CursorEventTest {
       String idempotentKey = "idem-key-12345";
 
       // When
-      CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent().idempotentKey(idempotentKey).build();
+      CursorEvent event = CursorEventFixture.aTimeEvent().idempotentKey(idempotentKey).build();
 
       // Then
       assertThat(event.getIdempotentKey()).isEqualTo(idempotentKey);
@@ -740,7 +737,7 @@ class CursorEventTest {
       String exprHash = "expr-hash-67890";
 
       // When
-      CursorEvent event = CursorEventTestDataBuilder.aTimeEvent().exprHash(exprHash).build();
+      CursorEvent event = CursorEventFixture.aTimeEvent().exprHash(exprHash).build();
 
       // Then
       assertThat(event.getExprHash()).isEqualTo(exprHash);
@@ -754,9 +751,7 @@ class CursorEventTest {
 
       // When
       CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent()
-              .observedMaxValue(observedMaxValue)
-              .buildRestored();
+          CursorEventFixture.aTimeEvent().observedMaxValue(observedMaxValue).buildRestored();
 
       // Then
       assertThat(event.getObservedMaxValue()).isEqualTo(observedMaxValue);
@@ -769,7 +764,7 @@ class CursorEventTest {
       CursorLineage lineage = new CursorLineage(1001L, 2001L, 3001L, 4001L, 5001L, 6001L);
 
       // When
-      CursorEvent event = CursorEventTestDataBuilder.aTimeEvent().lineage(lineage).build();
+      CursorEvent event = CursorEventFixture.aTimeEvent().lineage(lineage).build();
 
       // Then
       assertThat(event.getLineage()).isEqualTo(lineage);
@@ -796,10 +791,7 @@ class CursorEventTest {
 
       // When
       CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent()
-              .newInstant(epoch)
-              .newValue(epoch.toString())
-              .build();
+          CursorEventFixture.aTimeEvent().newInstant(epoch).newValue(epoch.toString()).build();
 
       // Then
       assertThat(event.getNewInstant()).isEqualTo(epoch);
@@ -813,10 +805,7 @@ class CursorEventTest {
 
       // When
       CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent()
-              .newInstant(future)
-              .newValue(future.toString())
-              .build();
+          CursorEventFixture.aTimeEvent().newInstant(future).newValue(future.toString()).build();
 
       // Then
       assertThat(event.getNewInstant()).isEqualTo(future);
@@ -830,7 +819,7 @@ class CursorEventTest {
 
       // When
       CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent()
+          CursorEventFixture.aTimeEvent()
               .cursorType(CursorType.ID)
               .newNumeric(largeValue)
               .buildRestored();
@@ -847,7 +836,7 @@ class CursorEventTest {
 
       // When
       CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent()
+          CursorEventFixture.aTimeEvent()
               .cursorType(CursorType.ID)
               .newNumeric(smallValue)
               .buildRestored();
@@ -866,7 +855,7 @@ class CursorEventTest {
 
       // When
       CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent()
+          CursorEventFixture.aTimeEvent()
               .provenanceCode(provenanceCode)
               .cursorKey(longCursorKey)
               .namespaceKey(longNamespaceKey)
@@ -886,7 +875,7 @@ class CursorEventTest {
 
       // When
       CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent()
+          CursorEventFixture.aTimeEvent()
               .newInstant(preciseTime)
               .newValue(preciseTime.toString())
               .build();
@@ -904,7 +893,7 @@ class CursorEventTest {
 
       // When
       CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent()
+          CursorEventFixture.aTimeEvent()
               .prevValue(sameValue)
               .newValue(sameValue)
               .prevInstant(sameInstant)
@@ -930,7 +919,7 @@ class CursorEventTest {
     void shouldEnsureEventIsImmutable() {
       // Given
       CursorLineage lineage = new CursorLineage(1001L, 2001L, 3001L, 4001L, 5001L, 6001L);
-      CursorEvent event = CursorEventTestDataBuilder.aTimeEvent().lineage(lineage).build();
+      CursorEvent event = CursorEventFixture.aTimeEvent().lineage(lineage).build();
 
       // When - 保存初始值
       ProvenanceCode initialProvenanceCode = event.getProvenanceCode();
@@ -963,7 +952,7 @@ class CursorEventTest {
 
       // When
       CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent()
+          CursorEventFixture.aTimeEvent()
               .prevValue(prevValue)
               .prevInstant(prevInstant)
               .newValue(newValue)
@@ -988,7 +977,7 @@ class CursorEventTest {
 
       // When
       CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent()
+          CursorEventFixture.aTimeEvent()
               .prevValue(prevValue)
               .prevInstant(prevInstant)
               .newValue(newValue)
@@ -1015,7 +1004,7 @@ class CursorEventTest {
 
       // When
       CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent()
+          CursorEventFixture.aTimeEvent()
               .prevValue(prevValue)
               .prevInstant(prevInstant)
               .newValue(newValue)
@@ -1035,7 +1024,7 @@ class CursorEventTest {
       CursorLineage lineage = new CursorLineage(1001L, 2001L, 3001L, 4001L, 5001L, 6001L);
 
       // When
-      CursorEvent event = CursorEventTestDataBuilder.aTimeEvent().lineage(lineage).build();
+      CursorEvent event = CursorEventFixture.aTimeEvent().lineage(lineage).build();
 
       // Then - 血缘应该完整记录用于追溯
       assertThat(event.getLineage().scheduleInstanceId()).isEqualTo(1001L);
@@ -1053,7 +1042,7 @@ class CursorEventTest {
       String exprHash = "expr-hash-strategy-v2";
 
       // When
-      CursorEvent event = CursorEventTestDataBuilder.aTimeEvent().exprHash(exprHash).build();
+      CursorEvent event = CursorEventFixture.aTimeEvent().exprHash(exprHash).build();
 
       // Then - 表达式哈希应该被记录用于策略变更追踪
       assertThat(event.getExprHash()).isEqualTo(exprHash);
@@ -1068,7 +1057,7 @@ class CursorEventTest {
 
       // When
       CursorEvent event =
-          CursorEventTestDataBuilder.aTimeEvent().windowFrom(windowFrom).windowTo(windowTo).build();
+          CursorEventFixture.aTimeEvent().windowFrom(windowFrom).windowTo(windowTo).build();
 
       // Then - 窗口时间应该被记录用于审计
       assertThat(event.getWindowFrom()).isEqualTo(windowFrom);
@@ -1076,12 +1065,12 @@ class CursorEventTest {
     }
   }
 
-  // ========== TestDataBuilder (辅助类) ==========
+  // ========== Fixture (辅助类) ==========
 
   /// CursorEvent 测试数据构建器。
   ///
   /// 遵循 Builder 模式，提供默认值以简化测试数据构建。
-  static class CursorEventTestDataBuilder {
+  static class CursorEventFixture {
     private Long id = null; // 默认为 null（新创建的事件）
     private ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
     private String operationCode = "HARVEST";
@@ -1103,106 +1092,106 @@ class CursorEventTest {
     private Instant windowFrom = null;
     private Instant windowTo = null;
 
-    public static CursorEventTestDataBuilder aTimeEvent() {
-      return new CursorEventTestDataBuilder();
+    public static CursorEventFixture aTimeEvent() {
+      return new CursorEventFixture();
     }
 
-    public CursorEventTestDataBuilder id(Long id) {
+    public CursorEventFixture id(Long id) {
       this.id = id;
       return this;
     }
 
-    public CursorEventTestDataBuilder provenanceCode(ProvenanceCode provenanceCode) {
+    public CursorEventFixture provenanceCode(ProvenanceCode provenanceCode) {
       this.provenanceCode = provenanceCode;
       return this;
     }
 
-    public CursorEventTestDataBuilder operationCode(String operationCode) {
+    public CursorEventFixture operationCode(String operationCode) {
       this.operationCode = operationCode;
       return this;
     }
 
-    public CursorEventTestDataBuilder cursorKey(String cursorKey) {
+    public CursorEventFixture cursorKey(String cursorKey) {
       this.cursorKey = cursorKey;
       return this;
     }
 
-    public CursorEventTestDataBuilder namespaceScopeCode(String namespaceScopeCode) {
+    public CursorEventFixture namespaceScopeCode(String namespaceScopeCode) {
       this.namespaceScopeCode = namespaceScopeCode;
       return this;
     }
 
-    public CursorEventTestDataBuilder namespaceKey(String namespaceKey) {
+    public CursorEventFixture namespaceKey(String namespaceKey) {
       this.namespaceKey = namespaceKey;
       return this;
     }
 
-    public CursorEventTestDataBuilder cursorType(CursorType cursorType) {
+    public CursorEventFixture cursorType(CursorType cursorType) {
       this.cursorType = cursorType;
       return this;
     }
 
-    public CursorEventTestDataBuilder prevValue(String prevValue) {
+    public CursorEventFixture prevValue(String prevValue) {
       this.prevValue = prevValue;
       return this;
     }
 
-    public CursorEventTestDataBuilder newValue(String newValue) {
+    public CursorEventFixture newValue(String newValue) {
       this.newValue = newValue;
       return this;
     }
 
-    public CursorEventTestDataBuilder direction(CursorDirection direction) {
+    public CursorEventFixture direction(CursorDirection direction) {
       this.direction = direction;
       return this;
     }
 
-    public CursorEventTestDataBuilder idempotentKey(String idempotentKey) {
+    public CursorEventFixture idempotentKey(String idempotentKey) {
       this.idempotentKey = idempotentKey;
       return this;
     }
 
-    public CursorEventTestDataBuilder observedMaxValue(String observedMaxValue) {
+    public CursorEventFixture observedMaxValue(String observedMaxValue) {
       this.observedMaxValue = observedMaxValue;
       return this;
     }
 
-    public CursorEventTestDataBuilder prevInstant(Instant prevInstant) {
+    public CursorEventFixture prevInstant(Instant prevInstant) {
       this.prevInstant = prevInstant;
       return this;
     }
 
-    public CursorEventTestDataBuilder newInstant(Instant newInstant) {
+    public CursorEventFixture newInstant(Instant newInstant) {
       this.newInstant = newInstant;
       return this;
     }
 
-    public CursorEventTestDataBuilder prevNumeric(BigDecimal prevNumeric) {
+    public CursorEventFixture prevNumeric(BigDecimal prevNumeric) {
       this.prevNumeric = prevNumeric;
       return this;
     }
 
-    public CursorEventTestDataBuilder newNumeric(BigDecimal newNumeric) {
+    public CursorEventFixture newNumeric(BigDecimal newNumeric) {
       this.newNumeric = newNumeric;
       return this;
     }
 
-    public CursorEventTestDataBuilder lineage(CursorLineage lineage) {
+    public CursorEventFixture lineage(CursorLineage lineage) {
       this.lineage = lineage;
       return this;
     }
 
-    public CursorEventTestDataBuilder exprHash(String exprHash) {
+    public CursorEventFixture exprHash(String exprHash) {
       this.exprHash = exprHash;
       return this;
     }
 
-    public CursorEventTestDataBuilder windowFrom(Instant windowFrom) {
+    public CursorEventFixture windowFrom(Instant windowFrom) {
       this.windowFrom = windowFrom;
       return this;
     }
 
-    public CursorEventTestDataBuilder windowTo(Instant windowTo) {
+    public CursorEventFixture windowTo(Instant windowTo) {
       this.windowTo = windowTo;
       return this;
     }

@@ -57,7 +57,7 @@ class RecordUploadHandlerTest {
         .thenAnswer(
             invocation -> {
               FileMetadata metadata = invocation.getArgument(0);
-              // 使用 TestDataBuilder 构建 Mock 返回值，模拟数据库保存后的状态
+              // 使用 Fixture 构建 Mock 返回值，模拟数据库保存后的状态
               return FileMetadataFixture.anActiveFile()
                   .id(123L)
                   .storageKey(metadata.getStorageKey())

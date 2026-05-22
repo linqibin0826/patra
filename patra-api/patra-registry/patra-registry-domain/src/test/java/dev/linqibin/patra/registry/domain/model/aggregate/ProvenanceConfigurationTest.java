@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test;
 /// 测试策略：
 ///
 /// - 纯 Java 单元测试，不依赖 Spring 容器
-///   - 使用 TestDataBuilder 模式构建测试数据
+///   - 使用 Fixture 模式构建测试数据
 ///   - 遵循 Given-When-Then 结构
 ///   - 使用 AssertJ 流畅断言
 ///
@@ -47,7 +47,7 @@ class ProvenanceConfigurationTest {
     @DisplayName("应该成功创建仅包含必需字段的配置")
     void shouldCreateConfigurationWithOnlyRequiredFields() {
       // Given: 仅必需的 Provenance
-      Provenance provenance = ProvenanceConfigurationTestDataBuilder.buildActiveProvenance();
+      Provenance provenance = ProvenanceConfigurationFixture.buildActiveProvenance();
 
       // When: 创建配置
       ProvenanceConfiguration config =
@@ -68,13 +68,13 @@ class ProvenanceConfigurationTest {
     @DisplayName("应该成功创建包含所有可选配置的完整配置")
     void shouldCreateFullConfigurationWithAllOptionalFields() {
       // Given: 所有配置组件
-      Provenance provenance = ProvenanceConfigurationTestDataBuilder.buildActiveProvenance();
-      WindowOffsetConfig windowOffset = ProvenanceConfigurationTestDataBuilder.buildWindowOffset();
-      PaginationConfig pagination = ProvenanceConfigurationTestDataBuilder.buildPagination();
-      HttpConfig http = ProvenanceConfigurationTestDataBuilder.buildHttp();
-      BatchingConfig batching = ProvenanceConfigurationTestDataBuilder.buildBatching();
-      RetryConfig retry = ProvenanceConfigurationTestDataBuilder.buildRetry();
-      RateLimitConfig rateLimit = ProvenanceConfigurationTestDataBuilder.buildRateLimit();
+      Provenance provenance = ProvenanceConfigurationFixture.buildActiveProvenance();
+      WindowOffsetConfig windowOffset = ProvenanceConfigurationFixture.buildWindowOffset();
+      PaginationConfig pagination = ProvenanceConfigurationFixture.buildPagination();
+      HttpConfig http = ProvenanceConfigurationFixture.buildHttp();
+      BatchingConfig batching = ProvenanceConfigurationFixture.buildBatching();
+      RetryConfig retry = ProvenanceConfigurationFixture.buildRetry();
+      RateLimitConfig rateLimit = ProvenanceConfigurationFixture.buildRateLimit();
 
       // When: 创建完整配置
       ProvenanceConfiguration config =
@@ -117,8 +117,8 @@ class ProvenanceConfigurationTest {
     void hasWindowOffsetShouldReturnTrueWhenConfigExists() {
       // Given: 包含 WindowOffsetConfig 的配置
       ProvenanceConfiguration config =
-          ProvenanceConfigurationTestDataBuilder.builder()
-              .windowOffset(ProvenanceConfigurationTestDataBuilder.buildWindowOffset())
+          ProvenanceConfigurationFixture.builder()
+              .windowOffset(ProvenanceConfigurationFixture.buildWindowOffset())
               .build();
 
       // When & Then
@@ -130,7 +130,7 @@ class ProvenanceConfigurationTest {
     void hasWindowOffsetShouldReturnFalseWhenConfigNotExists() {
       // Given: 不包含 WindowOffsetConfig 的配置
       ProvenanceConfiguration config =
-          ProvenanceConfigurationTestDataBuilder.builder().windowOffset(null).build();
+          ProvenanceConfigurationFixture.builder().windowOffset(null).build();
 
       // When & Then
       assertThat(config.hasWindowOffset()).isFalse();
@@ -141,8 +141,8 @@ class ProvenanceConfigurationTest {
     void hasPaginationShouldReturnTrueWhenConfigExists() {
       // Given: 包含 PaginationConfig 的配置
       ProvenanceConfiguration config =
-          ProvenanceConfigurationTestDataBuilder.builder()
-              .pagination(ProvenanceConfigurationTestDataBuilder.buildPagination())
+          ProvenanceConfigurationFixture.builder()
+              .pagination(ProvenanceConfigurationFixture.buildPagination())
               .build();
 
       // When & Then
@@ -154,7 +154,7 @@ class ProvenanceConfigurationTest {
     void hasPaginationShouldReturnFalseWhenConfigNotExists() {
       // Given: 不包含 PaginationConfig 的配置
       ProvenanceConfiguration config =
-          ProvenanceConfigurationTestDataBuilder.builder().pagination(null).build();
+          ProvenanceConfigurationFixture.builder().pagination(null).build();
 
       // When & Then
       assertThat(config.hasPagination()).isFalse();
@@ -165,8 +165,8 @@ class ProvenanceConfigurationTest {
     void hasHttpConfigShouldReturnTrueWhenConfigExists() {
       // Given: 包含 HttpConfig 的配置
       ProvenanceConfiguration config =
-          ProvenanceConfigurationTestDataBuilder.builder()
-              .http(ProvenanceConfigurationTestDataBuilder.buildHttp())
+          ProvenanceConfigurationFixture.builder()
+              .http(ProvenanceConfigurationFixture.buildHttp())
               .build();
 
       // When & Then
@@ -177,8 +177,7 @@ class ProvenanceConfigurationTest {
     @DisplayName("hasHttpConfig 应该在不存在配置时返回 false")
     void hasHttpConfigShouldReturnFalseWhenConfigNotExists() {
       // Given: 不包含 HttpConfig 的配置
-      ProvenanceConfiguration config =
-          ProvenanceConfigurationTestDataBuilder.builder().http(null).build();
+      ProvenanceConfiguration config = ProvenanceConfigurationFixture.builder().http(null).build();
 
       // When & Then
       assertThat(config.hasHttpConfig()).isFalse();
@@ -189,7 +188,7 @@ class ProvenanceConfigurationTest {
     void hasBatchingShouldReturnTrueWhenConfigExists() {
       // Given: 包含 BatchingConfig 的配置 (使用占位符对象)
       // 注意：BatchingConfig 未实现，使用模拟对象测试
-      BatchingConfig mockBatching = ProvenanceConfigurationTestDataBuilder.buildBatching();
+      BatchingConfig mockBatching = ProvenanceConfigurationFixture.buildBatching();
 
       // 如果 mockBatching 为 null，跳过此测试
       if (mockBatching == null) {
@@ -198,7 +197,7 @@ class ProvenanceConfigurationTest {
       }
 
       ProvenanceConfiguration config =
-          ProvenanceConfigurationTestDataBuilder.builder().batching(mockBatching).build();
+          ProvenanceConfigurationFixture.builder().batching(mockBatching).build();
 
       // When & Then
       assertThat(config.hasBatching()).isTrue();
@@ -209,7 +208,7 @@ class ProvenanceConfigurationTest {
     void hasBatchingShouldReturnFalseWhenConfigNotExists() {
       // Given: 不包含 BatchingConfig 的配置
       ProvenanceConfiguration config =
-          ProvenanceConfigurationTestDataBuilder.builder().batching(null).build();
+          ProvenanceConfigurationFixture.builder().batching(null).build();
 
       // When & Then
       assertThat(config.hasBatching()).isFalse();
@@ -220,7 +219,7 @@ class ProvenanceConfigurationTest {
     void hasRetryShouldReturnTrueWhenConfigExists() {
       // Given: 包含 RetryConfig 的配置 (使用占位符对象)
       // 注意：RetryConfig 未实现，使用模拟对象测试
-      RetryConfig mockRetry = ProvenanceConfigurationTestDataBuilder.buildRetry();
+      RetryConfig mockRetry = ProvenanceConfigurationFixture.buildRetry();
 
       // 如果 mockRetry 为 null，跳过此测试
       if (mockRetry == null) {
@@ -229,7 +228,7 @@ class ProvenanceConfigurationTest {
       }
 
       ProvenanceConfiguration config =
-          ProvenanceConfigurationTestDataBuilder.builder().retry(mockRetry).build();
+          ProvenanceConfigurationFixture.builder().retry(mockRetry).build();
 
       // When & Then
       assertThat(config.hasRetry()).isTrue();
@@ -239,8 +238,7 @@ class ProvenanceConfigurationTest {
     @DisplayName("hasRetry 应该在不存在配置时返回 false")
     void hasRetryShouldReturnFalseWhenConfigNotExists() {
       // Given: 不包含 RetryConfig 的配置
-      ProvenanceConfiguration config =
-          ProvenanceConfigurationTestDataBuilder.builder().retry(null).build();
+      ProvenanceConfiguration config = ProvenanceConfigurationFixture.builder().retry(null).build();
 
       // When & Then
       assertThat(config.hasRetry()).isFalse();
@@ -251,7 +249,7 @@ class ProvenanceConfigurationTest {
     void hasRateLimitShouldReturnTrueWhenConfigExists() {
       // Given: 包含 RateLimitConfig 的配置 (使用占位符对象)
       // 注意：RateLimitConfig 未实现，使用模拟对象测试
-      RateLimitConfig mockRateLimit = ProvenanceConfigurationTestDataBuilder.buildRateLimit();
+      RateLimitConfig mockRateLimit = ProvenanceConfigurationFixture.buildRateLimit();
 
       // 如果 mockRateLimit 为 null，跳过此测试
       if (mockRateLimit == null) {
@@ -260,7 +258,7 @@ class ProvenanceConfigurationTest {
       }
 
       ProvenanceConfiguration config =
-          ProvenanceConfigurationTestDataBuilder.builder().rateLimit(mockRateLimit).build();
+          ProvenanceConfigurationFixture.builder().rateLimit(mockRateLimit).build();
 
       // When & Then
       assertThat(config.hasRateLimit()).isTrue();
@@ -271,7 +269,7 @@ class ProvenanceConfigurationTest {
     void hasRateLimitShouldReturnFalseWhenConfigNotExists() {
       // Given: 不包含 RateLimitConfig 的配置
       ProvenanceConfiguration config =
-          ProvenanceConfigurationTestDataBuilder.builder().rateLimit(null).build();
+          ProvenanceConfigurationFixture.builder().rateLimit(null).build();
 
       // When & Then
       assertThat(config.hasRateLimit()).isFalse();
@@ -282,7 +280,7 @@ class ProvenanceConfigurationTest {
     void shouldHandleAllOptionalConfigsBeingNull() {
       // Given: 仅必需 Provenance 的配置
       ProvenanceConfiguration config =
-          ProvenanceConfigurationTestDataBuilder.builder()
+          ProvenanceConfigurationFixture.builder()
               .windowOffset(null)
               .pagination(null)
               .http(null)
@@ -306,13 +304,13 @@ class ProvenanceConfigurationTest {
       // Given: 包含所有可选配置的完整配置
       // 注意：部分配置可能未实现 (返回 null)
       ProvenanceConfiguration config =
-          ProvenanceConfigurationTestDataBuilder.builder()
-              .windowOffset(ProvenanceConfigurationTestDataBuilder.buildWindowOffset())
-              .pagination(ProvenanceConfigurationTestDataBuilder.buildPagination())
-              .http(ProvenanceConfigurationTestDataBuilder.buildHttp())
-              .batching(ProvenanceConfigurationTestDataBuilder.buildBatching())
-              .retry(ProvenanceConfigurationTestDataBuilder.buildRetry())
-              .rateLimit(ProvenanceConfigurationTestDataBuilder.buildRateLimit())
+          ProvenanceConfigurationFixture.builder()
+              .windowOffset(ProvenanceConfigurationFixture.buildWindowOffset())
+              .pagination(ProvenanceConfigurationFixture.buildPagination())
+              .http(ProvenanceConfigurationFixture.buildHttp())
+              .batching(ProvenanceConfigurationFixture.buildBatching())
+              .retry(ProvenanceConfigurationFixture.buildRetry())
+              .rateLimit(ProvenanceConfigurationFixture.buildRateLimit())
               .build();
 
       // When & Then: 已实现的配置应该返回 true
@@ -338,8 +336,8 @@ class ProvenanceConfigurationTest {
     void isCompleteShouldReturnTrueWhenProvenanceIsActive() {
       // Given: 激活状态的 Provenance
       ProvenanceConfiguration config =
-          ProvenanceConfigurationTestDataBuilder.builder()
-              .provenance(ProvenanceConfigurationTestDataBuilder.buildActiveProvenance())
+          ProvenanceConfigurationFixture.builder()
+              .provenance(ProvenanceConfigurationFixture.buildActiveProvenance())
               .build();
 
       // When & Then
@@ -351,8 +349,8 @@ class ProvenanceConfigurationTest {
     void isCompleteShouldReturnFalseWhenProvenanceIsInactive() {
       // Given: 未激活状态的 Provenance
       ProvenanceConfiguration config =
-          ProvenanceConfigurationTestDataBuilder.builder()
-              .provenance(ProvenanceConfigurationTestDataBuilder.buildInactiveProvenance())
+          ProvenanceConfigurationFixture.builder()
+              .provenance(ProvenanceConfigurationFixture.buildInactiveProvenance())
               .build();
 
       // When & Then
@@ -364,8 +362,8 @@ class ProvenanceConfigurationTest {
     void isCompleteShouldIgnoreOptionalConfigsPresence() {
       // Given: 激活状态的 Provenance，但无任何可选配置
       ProvenanceConfiguration configWithoutOptionals =
-          ProvenanceConfigurationTestDataBuilder.builder()
-              .provenance(ProvenanceConfigurationTestDataBuilder.buildActiveProvenance())
+          ProvenanceConfigurationFixture.builder()
+              .provenance(ProvenanceConfigurationFixture.buildActiveProvenance())
               .windowOffset(null)
               .pagination(null)
               .http(null)
@@ -376,14 +374,14 @@ class ProvenanceConfigurationTest {
 
       // Given: 激活状态的 Provenance，包含所有可选配置
       ProvenanceConfiguration configWithAllOptionals =
-          ProvenanceConfigurationTestDataBuilder.builder()
-              .provenance(ProvenanceConfigurationTestDataBuilder.buildActiveProvenance())
-              .windowOffset(ProvenanceConfigurationTestDataBuilder.buildWindowOffset())
-              .pagination(ProvenanceConfigurationTestDataBuilder.buildPagination())
-              .http(ProvenanceConfigurationTestDataBuilder.buildHttp())
-              .batching(ProvenanceConfigurationTestDataBuilder.buildBatching())
-              .retry(ProvenanceConfigurationTestDataBuilder.buildRetry())
-              .rateLimit(ProvenanceConfigurationTestDataBuilder.buildRateLimit())
+          ProvenanceConfigurationFixture.builder()
+              .provenance(ProvenanceConfigurationFixture.buildActiveProvenance())
+              .windowOffset(ProvenanceConfigurationFixture.buildWindowOffset())
+              .pagination(ProvenanceConfigurationFixture.buildPagination())
+              .http(ProvenanceConfigurationFixture.buildHttp())
+              .batching(ProvenanceConfigurationFixture.buildBatching())
+              .retry(ProvenanceConfigurationFixture.buildRetry())
+              .rateLimit(ProvenanceConfigurationFixture.buildRateLimit())
               .build();
 
       // When & Then: 完整性判断应该只依赖 Provenance 的激活状态
@@ -396,14 +394,14 @@ class ProvenanceConfigurationTest {
     void isCompleteShouldReturnFalseEvenWithAllConfigsWhenProvenanceIsInactive() {
       // Given: 未激活的 Provenance，包含所有可选配置
       ProvenanceConfiguration config =
-          ProvenanceConfigurationTestDataBuilder.builder()
-              .provenance(ProvenanceConfigurationTestDataBuilder.buildInactiveProvenance())
-              .windowOffset(ProvenanceConfigurationTestDataBuilder.buildWindowOffset())
-              .pagination(ProvenanceConfigurationTestDataBuilder.buildPagination())
-              .http(ProvenanceConfigurationTestDataBuilder.buildHttp())
-              .batching(ProvenanceConfigurationTestDataBuilder.buildBatching())
-              .retry(ProvenanceConfigurationTestDataBuilder.buildRetry())
-              .rateLimit(ProvenanceConfigurationTestDataBuilder.buildRateLimit())
+          ProvenanceConfigurationFixture.builder()
+              .provenance(ProvenanceConfigurationFixture.buildInactiveProvenance())
+              .windowOffset(ProvenanceConfigurationFixture.buildWindowOffset())
+              .pagination(ProvenanceConfigurationFixture.buildPagination())
+              .http(ProvenanceConfigurationFixture.buildHttp())
+              .batching(ProvenanceConfigurationFixture.buildBatching())
+              .retry(ProvenanceConfigurationFixture.buildRetry())
+              .rateLimit(ProvenanceConfigurationFixture.buildRateLimit())
               .build();
 
       // When & Then: 即使有完整配置，未激活仍不完整
@@ -421,16 +419,13 @@ class ProvenanceConfigurationTest {
     @DisplayName("Record 字段应该是不可变的")
     void recordFieldsShouldBeImmutable() {
       // Given: 创建配置
-      Provenance originalProvenance =
-          ProvenanceConfigurationTestDataBuilder.buildActiveProvenance();
-      WindowOffsetConfig originalWindowOffset =
-          ProvenanceConfigurationTestDataBuilder.buildWindowOffset();
-      PaginationConfig originalPagination =
-          ProvenanceConfigurationTestDataBuilder.buildPagination();
-      HttpConfig originalHttp = ProvenanceConfigurationTestDataBuilder.buildHttp();
-      BatchingConfig originalBatching = ProvenanceConfigurationTestDataBuilder.buildBatching();
-      RetryConfig originalRetry = ProvenanceConfigurationTestDataBuilder.buildRetry();
-      RateLimitConfig originalRateLimit = ProvenanceConfigurationTestDataBuilder.buildRateLimit();
+      Provenance originalProvenance = ProvenanceConfigurationFixture.buildActiveProvenance();
+      WindowOffsetConfig originalWindowOffset = ProvenanceConfigurationFixture.buildWindowOffset();
+      PaginationConfig originalPagination = ProvenanceConfigurationFixture.buildPagination();
+      HttpConfig originalHttp = ProvenanceConfigurationFixture.buildHttp();
+      BatchingConfig originalBatching = ProvenanceConfigurationFixture.buildBatching();
+      RetryConfig originalRetry = ProvenanceConfigurationFixture.buildRetry();
+      RateLimitConfig originalRateLimit = ProvenanceConfigurationFixture.buildRateLimit();
 
       ProvenanceConfiguration config =
           new ProvenanceConfiguration(
@@ -470,7 +465,7 @@ class ProvenanceConfigurationTest {
               1001L, "pubmed", "PubMed", "https://api.pubmed.org", "UTC", null, true, "ACTIVE");
 
       ProvenanceConfiguration config =
-          ProvenanceConfigurationTestDataBuilder.builder().provenance(provenance).build();
+          ProvenanceConfigurationFixture.builder().provenance(provenance).build();
 
       // When: 获取 Provenance 标识符
       Long originalId = config.provenance().id();
@@ -494,9 +489,9 @@ class ProvenanceConfigurationTest {
     @DisplayName("激活状态的 Provenance 应该被视为完整配置")
     void activeProvenanceShouldBeConsideredComplete() {
       // Given: 激活状态的数据源
-      Provenance activeProvenance = ProvenanceConfigurationTestDataBuilder.buildActiveProvenance();
+      Provenance activeProvenance = ProvenanceConfigurationFixture.buildActiveProvenance();
       ProvenanceConfiguration config =
-          ProvenanceConfigurationTestDataBuilder.builder().provenance(activeProvenance).build();
+          ProvenanceConfigurationFixture.builder().provenance(activeProvenance).build();
 
       // When & Then: 激活的数据源应该是完整的
       assertThat(activeProvenance.isActive()).isTrue();
@@ -507,10 +502,9 @@ class ProvenanceConfigurationTest {
     @DisplayName("未激活状态的 Provenance 不应该被视为完整配置")
     void inactiveProvenanceShouldNotBeConsideredComplete() {
       // Given: 未激活状态的数据源
-      Provenance inactiveProvenance =
-          ProvenanceConfigurationTestDataBuilder.buildInactiveProvenance();
+      Provenance inactiveProvenance = ProvenanceConfigurationFixture.buildInactiveProvenance();
       ProvenanceConfiguration config =
-          ProvenanceConfigurationTestDataBuilder.builder().provenance(inactiveProvenance).build();
+          ProvenanceConfigurationFixture.builder().provenance(inactiveProvenance).build();
 
       // When & Then: 未激活的数据源不应该是完整的
       assertThat(inactiveProvenance.isActive()).isFalse();
@@ -522,7 +516,7 @@ class ProvenanceConfigurationTest {
     void optionalConfigFieldsCanBeNull() {
       // Given: 仅必需字段的配置
       ProvenanceConfiguration config =
-          ProvenanceConfigurationTestDataBuilder.builder()
+          ProvenanceConfigurationFixture.builder()
               .windowOffset(null)
               .pagination(null)
               .http(null)
@@ -547,25 +541,25 @@ class ProvenanceConfigurationTest {
     void configurationScopeShouldFollowPriorityRules() {
       // Given: 完整配置（模拟 TASK 级别配置）
       ProvenanceConfiguration taskLevelConfig =
-          ProvenanceConfigurationTestDataBuilder.builder()
-              .provenance(ProvenanceConfigurationTestDataBuilder.buildActiveProvenance())
-              .windowOffset(ProvenanceConfigurationTestDataBuilder.buildWindowOffset())
-              .pagination(ProvenanceConfigurationTestDataBuilder.buildPagination())
-              .http(ProvenanceConfigurationTestDataBuilder.buildHttp())
-              .batching(ProvenanceConfigurationTestDataBuilder.buildBatching())
-              .retry(ProvenanceConfigurationTestDataBuilder.buildRetry())
-              .rateLimit(ProvenanceConfigurationTestDataBuilder.buildRateLimit())
+          ProvenanceConfigurationFixture.builder()
+              .provenance(ProvenanceConfigurationFixture.buildActiveProvenance())
+              .windowOffset(ProvenanceConfigurationFixture.buildWindowOffset())
+              .pagination(ProvenanceConfigurationFixture.buildPagination())
+              .http(ProvenanceConfigurationFixture.buildHttp())
+              .batching(ProvenanceConfigurationFixture.buildBatching())
+              .retry(ProvenanceConfigurationFixture.buildRetry())
+              .rateLimit(ProvenanceConfigurationFixture.buildRateLimit())
               .build();
 
       // Given: 部分配置（模拟 SOURCE 级别配置）
       ProvenanceConfiguration sourceLevelConfig =
-          ProvenanceConfigurationTestDataBuilder.builder()
-              .provenance(ProvenanceConfigurationTestDataBuilder.buildActiveProvenance())
+          ProvenanceConfigurationFixture.builder()
+              .provenance(ProvenanceConfigurationFixture.buildActiveProvenance())
               .windowOffset(null)
-              .pagination(ProvenanceConfigurationTestDataBuilder.buildPagination())
-              .http(ProvenanceConfigurationTestDataBuilder.buildHttp())
+              .pagination(ProvenanceConfigurationFixture.buildPagination())
+              .http(ProvenanceConfigurationFixture.buildHttp())
               .batching(null)
-              .retry(ProvenanceConfigurationTestDataBuilder.buildRetry())
+              .retry(ProvenanceConfigurationFixture.buildRetry())
               .rateLimit(null)
               .build();
 
@@ -596,7 +590,7 @@ class ProvenanceConfigurationTest {
 
       // When: 创建配置
       ProvenanceConfiguration config =
-          ProvenanceConfigurationTestDataBuilder.builder().provenance(provenance).build();
+          ProvenanceConfigurationFixture.builder().provenance(provenance).build();
 
       // Then: 应该成功创建
       assertThat(config.provenance().id()).isEqualTo(1L);
@@ -611,7 +605,7 @@ class ProvenanceConfigurationTest {
 
       // When: 创建配置
       ProvenanceConfiguration config =
-          ProvenanceConfigurationTestDataBuilder.builder().provenance(provenance).build();
+          ProvenanceConfigurationFixture.builder().provenance(provenance).build();
 
       // Then: 应该成功创建
       assertThat(config.provenance().id()).isEqualTo(Long.MAX_VALUE);
@@ -626,7 +620,7 @@ class ProvenanceConfigurationTest {
 
       // When: 创建配置
       ProvenanceConfiguration config =
-          ProvenanceConfigurationTestDataBuilder.builder().provenance(provenance).build();
+          ProvenanceConfigurationFixture.builder().provenance(provenance).build();
 
       // Then: 应该成功创建
       assertThat(config.provenance().code()).isEqualTo("a");
@@ -642,7 +636,7 @@ class ProvenanceConfigurationTest {
 
       // When: 创建配置
       ProvenanceConfiguration config =
-          ProvenanceConfigurationTestDataBuilder.builder().provenance(provenance).build();
+          ProvenanceConfigurationFixture.builder().provenance(provenance).build();
 
       // Then: 应该成功创建
       assertThat(config.provenance().code()).hasSize(255);
@@ -657,7 +651,7 @@ class ProvenanceConfigurationTest {
 
       // When: 创建配置
       ProvenanceConfiguration config =
-          ProvenanceConfigurationTestDataBuilder.builder().provenance(provenance).build();
+          ProvenanceConfigurationFixture.builder().provenance(provenance).build();
 
       // Then: 应该成功创建
       assertThat(config.provenance().baseUrlDefault()).isNull();
@@ -670,7 +664,7 @@ class ProvenanceConfigurationTest {
       // Given: 所有可选配置为 null
       ProvenanceConfiguration config =
           new ProvenanceConfiguration(
-              ProvenanceConfigurationTestDataBuilder.buildActiveProvenance(),
+              ProvenanceConfigurationFixture.buildActiveProvenance(),
               null,
               null,
               null,
@@ -698,8 +692,8 @@ class ProvenanceConfigurationTest {
     @DisplayName("应该正确实现 equals 方法（相同值对象相等）")
     void shouldImplementEqualsCorrectly() {
       // Given: 两个相同值的配置
-      Provenance provenance = ProvenanceConfigurationTestDataBuilder.buildActiveProvenance();
-      WindowOffsetConfig windowOffset = ProvenanceConfigurationTestDataBuilder.buildWindowOffset();
+      Provenance provenance = ProvenanceConfigurationFixture.buildActiveProvenance();
+      WindowOffsetConfig windowOffset = ProvenanceConfigurationFixture.buildWindowOffset();
 
       ProvenanceConfiguration config1 =
           new ProvenanceConfiguration(provenance, windowOffset, null, null, null, null, null);
@@ -715,8 +709,8 @@ class ProvenanceConfigurationTest {
     @DisplayName("应该正确实现 hashCode 方法")
     void shouldImplementHashCodeCorrectly() {
       // Given: 两个相同值的配置
-      Provenance provenance = ProvenanceConfigurationTestDataBuilder.buildActiveProvenance();
-      WindowOffsetConfig windowOffset = ProvenanceConfigurationTestDataBuilder.buildWindowOffset();
+      Provenance provenance = ProvenanceConfigurationFixture.buildActiveProvenance();
+      WindowOffsetConfig windowOffset = ProvenanceConfigurationFixture.buildWindowOffset();
 
       ProvenanceConfiguration config1 =
           new ProvenanceConfiguration(provenance, windowOffset, null, null, null, null, null);
@@ -732,7 +726,7 @@ class ProvenanceConfigurationTest {
     @DisplayName("应该正确实现 toString 方法")
     void shouldImplementToStringCorrectly() {
       // Given: 配置
-      ProvenanceConfiguration config = ProvenanceConfigurationTestDataBuilder.builder().build();
+      ProvenanceConfiguration config = ProvenanceConfigurationFixture.builder().build();
 
       // When: 调用 toString
       String toString = config.toString();
@@ -743,12 +737,12 @@ class ProvenanceConfigurationTest {
     }
   }
 
-  // ========== TestDataBuilder (辅助类) ==========
+  // ========== Fixture (辅助类) ==========
 
   /// ProvenanceConfiguration 测试数据构建器。
   ///
   /// 遵循 Builder 模式，提供默认值以简化测试数据构建。
-  static class ProvenanceConfigurationTestDataBuilder {
+  static class ProvenanceConfigurationFixture {
     private Provenance provenance = buildActiveProvenance();
     private WindowOffsetConfig windowOffset = null;
     private PaginationConfig pagination = null;
@@ -757,41 +751,41 @@ class ProvenanceConfigurationTest {
     private RetryConfig retry = null;
     private RateLimitConfig rateLimit = null;
 
-    public static ProvenanceConfigurationTestDataBuilder builder() {
-      return new ProvenanceConfigurationTestDataBuilder();
+    public static ProvenanceConfigurationFixture builder() {
+      return new ProvenanceConfigurationFixture();
     }
 
-    public ProvenanceConfigurationTestDataBuilder provenance(Provenance provenance) {
+    public ProvenanceConfigurationFixture provenance(Provenance provenance) {
       this.provenance = provenance;
       return this;
     }
 
-    public ProvenanceConfigurationTestDataBuilder windowOffset(WindowOffsetConfig windowOffset) {
+    public ProvenanceConfigurationFixture windowOffset(WindowOffsetConfig windowOffset) {
       this.windowOffset = windowOffset;
       return this;
     }
 
-    public ProvenanceConfigurationTestDataBuilder pagination(PaginationConfig pagination) {
+    public ProvenanceConfigurationFixture pagination(PaginationConfig pagination) {
       this.pagination = pagination;
       return this;
     }
 
-    public ProvenanceConfigurationTestDataBuilder http(HttpConfig http) {
+    public ProvenanceConfigurationFixture http(HttpConfig http) {
       this.http = http;
       return this;
     }
 
-    public ProvenanceConfigurationTestDataBuilder batching(BatchingConfig batching) {
+    public ProvenanceConfigurationFixture batching(BatchingConfig batching) {
       this.batching = batching;
       return this;
     }
 
-    public ProvenanceConfigurationTestDataBuilder retry(RetryConfig retry) {
+    public ProvenanceConfigurationFixture retry(RetryConfig retry) {
       this.retry = retry;
       return this;
     }
 
-    public ProvenanceConfigurationTestDataBuilder rateLimit(RateLimitConfig rateLimit) {
+    public ProvenanceConfigurationFixture rateLimit(RateLimitConfig rateLimit) {
       this.rateLimit = rateLimit;
       return this;
     }
