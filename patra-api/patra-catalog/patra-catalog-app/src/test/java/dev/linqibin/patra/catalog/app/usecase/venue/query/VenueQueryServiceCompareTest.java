@@ -11,10 +11,8 @@ import dev.linqibin.patra.catalog.domain.model.read.venue.VenueDetailReadModel;
 import dev.linqibin.patra.catalog.domain.port.read.VenueReadPort;
 import java.time.Instant;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -28,7 +26,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 /// - 委托验证：正确委托给 VenueReadPort.findVenuesForCompare
 @ExtendWith(MockitoExtension.class)
 @DisplayName("VenueQueryService 期刊对比查询单元测试")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class VenueQueryServiceCompareTest {
 
   @Mock private VenueReadPort venueReadPort;

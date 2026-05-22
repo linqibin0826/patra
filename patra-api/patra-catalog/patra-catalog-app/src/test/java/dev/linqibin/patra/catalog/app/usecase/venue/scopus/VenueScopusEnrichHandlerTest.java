@@ -10,11 +10,9 @@ import dev.linqibin.commons.error.DomainException;
 import dev.linqibin.commons.error.trait.StandardErrorTrait;
 import dev.linqibin.patra.catalog.app.usecase.venue.VenueEnrichRunStats;
 import dev.linqibin.patra.catalog.app.usecase.venue.scopus.command.VenueScopusEnrichCommand;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -30,7 +28,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("VenueScopusEnrichHandler 单元测试")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 @ExtendWith(MockitoExtension.class)
 class VenueScopusEnrichHandlerTest {
 

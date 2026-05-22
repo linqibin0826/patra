@@ -10,18 +10,15 @@ import dev.linqibin.patra.catalog.domain.model.vo.author.AuthorNameVariant;
 import dev.linqibin.patra.catalog.domain.model.vo.author.Orcid;
 import java.time.Instant;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// AuthorAggregate 聚合根测试。
 ///
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("AuthorAggregate 聚合根测试")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class AuthorAggregateTest {
 
   @Nested

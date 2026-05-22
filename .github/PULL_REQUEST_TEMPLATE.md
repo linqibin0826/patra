@@ -12,6 +12,7 @@
 -->
 
 - [ ]
+- [ ] 本地 `./gradlew test` 通过 ✓ 且 CI 上无 flaky（无 step 因 flaky 重跑）
 
 ## Linear
 

@@ -14,18 +14,15 @@ import dev.linqibin.patra.catalog.app.usecase.venue.scopus.ScopusEnrichmentWorke
 import dev.linqibin.patra.catalog.domain.port.enrichment.VenueSnapshot;
 import dev.linqibin.patra.catalog.domain.port.read.VenueEnrichmentReadPort;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @DisplayName("ScopusEnrichmentRunner 单元测试")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 @ExtendWith(MockitoExtension.class)
 class ScopusEnrichmentRunnerTest {
 

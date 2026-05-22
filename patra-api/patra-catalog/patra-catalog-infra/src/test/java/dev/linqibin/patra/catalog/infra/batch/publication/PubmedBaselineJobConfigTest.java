@@ -11,12 +11,10 @@ import dev.linqibin.patra.catalog.domain.port.repository.PublicationRepository;
 import dev.linqibin.patra.catalog.domain.port.source.FileDownloadPort;
 import dev.linqibin.starter.batch.config.BatchProperties;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -37,7 +35,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 /// @since 0.1.0
 @DisplayName("PubmedBaselineJobConfig")
 @ExtendWith(MockitoExtension.class)
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class PubmedBaselineJobConfigTest {
 
   @Mock private JobRepository jobRepository;

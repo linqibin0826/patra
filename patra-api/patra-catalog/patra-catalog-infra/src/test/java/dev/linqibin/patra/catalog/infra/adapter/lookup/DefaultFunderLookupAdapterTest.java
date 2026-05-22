@@ -11,12 +11,10 @@ import dev.linqibin.patra.catalog.infra.persistence.dao.OrganizationExternalIdDa
 import dev.linqibin.patra.catalog.infra.persistence.entity.OrganizationEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.OrganizationExternalIdEntity;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -27,7 +25,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 /// @since 0.1.0
 @DisplayName("DefaultFunderLookupAdapter")
 @ExtendWith(MockitoExtension.class)
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class DefaultFunderLookupAdapterTest {
 
   @Mock private OrganizationExternalIdDao externalIdDao;

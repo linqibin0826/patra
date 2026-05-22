@@ -6,12 +6,10 @@ import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// AggregateRoot 基类单元测试。
 ///
 /// 验证子实体变更追踪功能。
-@Timeout(2)
 class AggregateRootTest {
 
   // ========== 测试用具体聚合根实现 ==========

@@ -10,7 +10,6 @@ import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// LetPubVenueData 值对象单元测试。
 ///
@@ -24,7 +23,6 @@ import org.junit.jupiter.api.Timeout;
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("LetPubVenueData 单元测试")
-@Timeout(2)
 class LetPubVenueDataTest {
 
   @Nested

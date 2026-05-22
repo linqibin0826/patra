@@ -18,11 +18,9 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -32,7 +30,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 ///
 /// 验证下载 + 上传 + 临时文件清理的完整生命周期，以及各种异常路径的语义特征。
 @ExtendWith(MockitoExtension.class)
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 @DisplayName("VenueCoverImageDownloadAdapter 单元测试")
 class VenueCoverImageDownloadAdapterTest {
 

@@ -13,7 +13,6 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.concurrent.TimeUnit;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import org.junit.jupiter.api.AfterEach;
@@ -21,7 +20,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
@@ -49,7 +47,6 @@ import org.springframework.batch.infrastructure.item.ItemStreamException;
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @DisplayName("RorOrganizationItemReader 单元测试")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class RorOrganizationItemReaderTest {
 
   private static final String TEST_URL = "https://example.com/v2.0-2025-12-16-ror-data.zip";

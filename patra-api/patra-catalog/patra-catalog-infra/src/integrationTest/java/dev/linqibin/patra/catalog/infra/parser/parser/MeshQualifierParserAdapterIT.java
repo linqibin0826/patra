@@ -13,13 +13,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// MeshQualifierParserAdapter 集成测试。
 ///
@@ -32,7 +30,6 @@ import org.junit.jupiter.api.Timeout;
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("MeshQualifierParserAdapter 集成测试")
-@Timeout(value = 30, unit = TimeUnit.SECONDS)
 class MeshQualifierParserAdapterIT {
 
   private static final String TEST_MESH_VERSION = "2025";

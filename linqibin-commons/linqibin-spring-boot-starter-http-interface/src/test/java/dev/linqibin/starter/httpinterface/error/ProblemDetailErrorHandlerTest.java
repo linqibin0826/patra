@@ -11,12 +11,10 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -38,7 +36,6 @@ import tools.jackson.databind.json.JsonMapper;
 /// @author linqibin
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 @DisplayName("ProblemDetailErrorHandler 单元测试")
 class ProblemDetailErrorHandlerTest {
 

@@ -13,10 +13,8 @@ import dev.linqibin.patra.catalog.domain.exception.VenueNotFoundException;
 import dev.linqibin.patra.catalog.domain.model.read.venue.VenueRatingHistoryReadModel;
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
@@ -40,7 +38,6 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 @Import(VenueController.class)
 @AutoConfigureRestTestClient
 @DisplayName("VenueController 评级历史查询 REST 接口切片测试")
-@Timeout(value = 30, unit = TimeUnit.SECONDS)
 class VenueControllerRatingHistoryIT {
 
   @Autowired private RestTestClient restClient;

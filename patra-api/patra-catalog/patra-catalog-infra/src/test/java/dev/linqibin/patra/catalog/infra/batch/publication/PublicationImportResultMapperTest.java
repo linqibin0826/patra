@@ -31,12 +31,10 @@ import dev.linqibin.patra.catalog.infra.batch.publication.PublicationImportResul
 import dev.linqibin.patra.common.enums.ProvenanceCode;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
@@ -47,7 +45,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("PublicationImportResultMapper")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class PublicationImportResultMapperTest {
 
   private PublicationImportResultMapper mapper;

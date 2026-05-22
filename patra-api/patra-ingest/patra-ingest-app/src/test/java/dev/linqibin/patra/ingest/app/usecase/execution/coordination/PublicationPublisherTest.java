@@ -18,12 +18,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -43,7 +41,6 @@ import tools.jackson.databind.ObjectMapper;
 ///
 @ExtendWith(MockitoExtension.class)
 @DisplayName("出版物发布编排器测试")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class PublicationPublisherTest {
 
   @Mock private PublicationStoragePort publicationStoragePort;

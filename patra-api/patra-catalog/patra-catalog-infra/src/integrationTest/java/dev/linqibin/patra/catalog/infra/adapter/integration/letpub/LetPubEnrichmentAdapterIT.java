@@ -71,6 +71,7 @@ class LetPubEnrichmentAdapterIT {
   }
 
   @Test
+  // 真实网络调用，方法级超时覆盖全局 fallback
   @Timeout(value = 2, unit = TimeUnit.MINUTES)
   @DisplayName("查询 Nature（ISSN-L: 0028-0836）— 验证完整字段解析")
   void shouldFindNatureByIssn() {
@@ -91,6 +92,7 @@ class LetPubEnrichmentAdapterIT {
   }
 
   @Test
+  // 真实网络调用，方法级超时覆盖全局 fallback
   @Timeout(value = 2, unit = TimeUnit.MINUTES)
   @DisplayName("查询 Science（ISSN-L: 0036-8075）— 验证多分区期刊解析")
   void shouldFindScienceByIssn() {
@@ -109,6 +111,7 @@ class LetPubEnrichmentAdapterIT {
   }
 
   @Test
+  // 真实网络调用，方法级超时覆盖全局 fallback
   @Timeout(value = 2, unit = TimeUnit.MINUTES)
   @DisplayName("查询不存在的 ISSN（9999-9999）— 应返回 empty")
   void shouldReturnEmptyForUnknownIssn() {
@@ -121,6 +124,7 @@ class LetPubEnrichmentAdapterIT {
   }
 
   @Test
+  // 真实网络调用，方法级超时覆盖全局 fallback
   @Timeout(value = 2, unit = TimeUnit.MINUTES)
   @DisplayName("查询空白 ISSN — 应返回 empty（不发起 HTTP 请求）")
   void shouldReturnEmptyForBlankIssn() {

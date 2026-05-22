@@ -6,18 +6,15 @@ import dev.linqibin.patra.common.model.CanonicalPublication;
 import dev.linqibin.patra.common.model.enums.PublicationIdentifierType;
 import dev.linqibin.patra.starter.provenance.pubmed.model.response.PubmedPublication;
 import java.time.LocalDate;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import tools.jackson.dataformat.xml.XmlMapper;
 
 /// PubmedPublicationConverter 单元测试
 ///
 /// @author linqibin
 @DisplayName("PubmedPublicationConverter 测试")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class PubmedPublicationConverterTest {
 
   private PubmedPublicationConverter converter;

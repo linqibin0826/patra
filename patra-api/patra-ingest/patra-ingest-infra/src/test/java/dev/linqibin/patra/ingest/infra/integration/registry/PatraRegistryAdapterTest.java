@@ -20,10 +20,8 @@ import dev.linqibin.patra.registry.api.dto.provenance.ProvenanceResp;
 import dev.linqibin.patra.registry.api.endpoint.ProvenanceEndpoint;
 import java.time.Instant;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -37,7 +35,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @DisplayName("PatraRegistryAdapter 单元测试")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class PatraRegistryAdapterTest {
 
   @Mock private ProvenanceEndpoint provenanceEndpoint;

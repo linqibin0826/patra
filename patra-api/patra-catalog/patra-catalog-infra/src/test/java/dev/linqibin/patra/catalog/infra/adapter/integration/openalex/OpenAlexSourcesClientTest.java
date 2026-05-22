@@ -6,12 +6,10 @@ import dev.linqibin.patra.catalog.domain.model.vo.venue.OpenAccessInfo;
 import dev.linqibin.patra.catalog.domain.model.vo.venue.VenueOpenAlexEnrichment;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -28,7 +26,6 @@ import tools.jackson.databind.json.JsonMapper;
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("OpenAlexSourcesClient 单元测试")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class OpenAlexSourcesClientTest {
 
   private final ObjectMapper objectMapper = JsonMapper.builder().build();

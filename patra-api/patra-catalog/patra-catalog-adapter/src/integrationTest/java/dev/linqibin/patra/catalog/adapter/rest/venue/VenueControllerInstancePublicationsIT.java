@@ -13,10 +13,8 @@ import dev.linqibin.patra.catalog.app.usecase.venue.query.VenueQueryService;
 import dev.linqibin.patra.catalog.domain.model.read.publication.PublicationSummaryReadModel;
 import java.time.Instant;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
@@ -40,7 +38,6 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 @Import(VenueController.class)
 @AutoConfigureRestTestClient
 @DisplayName("VenueController 实例文献列表端点切片测试")
-@Timeout(value = 30, unit = TimeUnit.SECONDS)
 class VenueControllerInstancePublicationsIT {
 
   @Autowired private RestTestClient restClient;

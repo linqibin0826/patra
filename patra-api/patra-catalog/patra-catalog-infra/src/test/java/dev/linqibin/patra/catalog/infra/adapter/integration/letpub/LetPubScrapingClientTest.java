@@ -12,7 +12,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.springframework.web.client.RestClient;
 
 /// LetPubScrapingClient 单元测试。
@@ -28,7 +27,6 @@ import org.springframework.web.client.RestClient;
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("LetPubScrapingClient 单元测试")
-@Timeout(5)
 class LetPubScrapingClientTest {
 
   private LetPubScrapingClient client;

@@ -36,10 +36,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
@@ -65,7 +63,6 @@ import org.springframework.test.context.ContextConfiguration;
 })
 @ActiveProfiles("test")
 @DisplayName("VenueReadAdapter 详情查询集成测试")
-@Timeout(value = 30, unit = TimeUnit.SECONDS)
 class VenueReadAdapterDetailIT {
 
   @Autowired private VenueReadAdapter venueReadAdapter;

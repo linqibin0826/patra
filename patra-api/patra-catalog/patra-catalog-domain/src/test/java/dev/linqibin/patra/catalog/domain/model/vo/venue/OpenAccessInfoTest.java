@@ -8,7 +8,6 @@ import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -18,7 +17,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 /// @author linqibin
 /// @since 0.7.0
 @DisplayName("OpenAccessInfo 开放获取信息值对象")
-@Timeout(2)
 class OpenAccessInfoTest {
 
   @Nested

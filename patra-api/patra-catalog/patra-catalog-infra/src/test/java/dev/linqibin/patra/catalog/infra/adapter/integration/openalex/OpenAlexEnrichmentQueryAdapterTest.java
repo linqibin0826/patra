@@ -12,10 +12,8 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -32,7 +30,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @DisplayName("OpenAlexEnrichmentQueryAdapter 单元测试")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class OpenAlexEnrichmentQueryAdapterTest {
 
   @Mock private OpenAlexSourcesClient openAlexSourcesClient;

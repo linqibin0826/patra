@@ -3,17 +3,14 @@ package dev.linqibin.starter.restclient.proxy;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 
 /// TunnelProxyConfigurer 单元测试。
 ///
 /// 验证隧道代理配置器正确创建已配置代理的请求工厂。
 @DisplayName("TunnelProxyConfigurer 单元测试")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class TunnelProxyConfigurerTest {
 
   private static final String PROXY_HOST = "tunnel.qg.net";

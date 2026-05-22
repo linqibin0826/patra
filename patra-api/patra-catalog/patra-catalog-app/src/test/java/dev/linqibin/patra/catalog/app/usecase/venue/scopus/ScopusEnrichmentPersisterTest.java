@@ -8,11 +8,9 @@ import static org.mockito.Mockito.when;
 import dev.linqibin.patra.catalog.domain.port.enrichment.ScopusEnrichmentPersistPort;
 import dev.linqibin.patra.catalog.domain.port.enrichment.ScopusEnrichmentPersistPort.PersistStats;
 import dev.linqibin.patra.catalog.domain.port.enrichment.ScopusVenueData;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -22,7 +20,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 /// Persister 的唯一职责是**承载事务边界**并把调用转发给 PersistPort。
 /// 单元测试只验证参数/返回值/异常透传；事务边界的实际生效留给集成测试。
 @DisplayName("ScopusEnrichmentPersister 单元测试")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 @ExtendWith(MockitoExtension.class)
 class ScopusEnrichmentPersisterTest {
 

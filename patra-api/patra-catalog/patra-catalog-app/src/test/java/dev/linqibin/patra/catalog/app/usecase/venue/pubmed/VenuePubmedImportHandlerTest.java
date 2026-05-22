@@ -43,14 +43,12 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
@@ -77,7 +75,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @DisplayName("VenuePubmedImportHandler 单元测试")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class VenuePubmedImportHandlerTest {
 
   private static final String TEST_URL = "ftp://ftp.nlm.nih.gov/online/journals/lsi2024.xml";

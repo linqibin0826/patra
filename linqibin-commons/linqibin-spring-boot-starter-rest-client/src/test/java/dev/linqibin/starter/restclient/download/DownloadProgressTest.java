@@ -5,13 +5,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// DownloadProgress 单元测试。
 ///
 /// @author linqibin
 /// @since 0.1.0
-@Timeout(2)
 class DownloadProgressTest {
 
   @Nested

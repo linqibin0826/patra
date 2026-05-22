@@ -13,11 +13,9 @@ import dev.linqibin.patra.objectstorage.app.recordupload.RecordUploadCommand;
 import dev.linqibin.patra.objectstorage.app.recordupload.RecordUploadResult;
 import java.time.Instant;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -46,7 +44,6 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 @Import(StorageEndpointImpl.class)
 @AutoConfigureRestTestClient
 @DisplayName("StorageEndpoint REST 接口集成测试")
-@Timeout(value = 30, unit = TimeUnit.SECONDS)
 class StorageEndpointIT {
 
   @Autowired private RestTestClient restClient;

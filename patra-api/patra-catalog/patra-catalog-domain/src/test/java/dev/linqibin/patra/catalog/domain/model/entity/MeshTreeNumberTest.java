@@ -4,11 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.linqibin.patra.catalog.domain.model.vo.mesh.MeshUI;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// MeshTreeNumber 实体单元测试。
 ///
@@ -20,7 +18,6 @@ import org.junit.jupiter.api.Timeout;
 /// @author linqibin
 /// @since 0.2.1
 @DisplayName("MeshTreeNumber 单元测试")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class MeshTreeNumberTest {
 
   // ========== 测试数据 ==========

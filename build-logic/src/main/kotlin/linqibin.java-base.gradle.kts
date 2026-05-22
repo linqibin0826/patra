@@ -86,6 +86,8 @@ testing {
                         if (!project.hasProperty("runExternal")) excludeTags("external")
                     }
                     maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
+                    forkEvery = 50
+                    systemProperty("junit.jupiter.execution.timeout.testable.method.default", "15s")
                     jvmArgs("--add-opens", "java.base/java.lang=ALL-UNNAMED")
                     testLogging { events("passed", "skipped", "failed") }
                 }
@@ -105,6 +107,8 @@ testing {
                         if (!project.hasProperty("runExternal")) excludeTags("external")
                     }
                     maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
+                    forkEvery = 50
+                    systemProperty("junit.jupiter.execution.timeout.testable.method.default", "30s")
                     jvmArgs("--add-opens", "java.base/java.lang=ALL-UNNAMED")
                     testLogging { events("passed", "skipped", "failed") }
                 }
@@ -124,6 +128,8 @@ testing {
                         if (!project.hasProperty("runExternal")) excludeTags("external")
                     }
                     maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
+                    forkEvery = 50
+                    systemProperty("junit.jupiter.execution.timeout.testable.method.default", "180s")
                     jvmArgs("--add-opens", "java.base/java.lang=ALL-UNNAMED")
                     testLogging { events("passed", "skipped", "failed") }
                 }

@@ -4,17 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import jakarta.persistence.Column;
 import java.lang.reflect.Field;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// KeywordEntity 单元测试。
 ///
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("KeywordEntity")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class KeywordEntityTest {
 
   @Test

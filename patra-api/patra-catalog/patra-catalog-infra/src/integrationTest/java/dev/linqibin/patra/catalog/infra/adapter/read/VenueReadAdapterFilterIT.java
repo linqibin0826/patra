@@ -23,12 +23,10 @@ import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
 import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
@@ -57,7 +55,6 @@ import org.springframework.test.context.ContextConfiguration;
 })
 @ActiveProfiles("test")
 @DisplayName("VenueReadAdapter 高级筛选集成测试")
-@Timeout(value = 30, unit = TimeUnit.SECONDS)
 class VenueReadAdapterFilterIT {
 
   @Autowired private VenueReadAdapter venueReadAdapter;

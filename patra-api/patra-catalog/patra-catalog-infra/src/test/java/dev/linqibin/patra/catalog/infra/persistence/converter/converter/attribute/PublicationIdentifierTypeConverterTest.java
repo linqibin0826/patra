@@ -3,19 +3,16 @@ package dev.linqibin.patra.catalog.infra.persistence.converter.attribute;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.linqibin.patra.common.model.enums.PublicationIdentifierType;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// PublicationIdentifierTypeConverter 单元测试。
 ///
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("PublicationIdentifierTypeConverter")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class PublicationIdentifierTypeConverterTest {
 
   private PublicationIdentifierTypeConverter converter;

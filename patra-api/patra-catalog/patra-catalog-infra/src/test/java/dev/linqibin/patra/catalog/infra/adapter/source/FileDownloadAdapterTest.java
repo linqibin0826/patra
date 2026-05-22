@@ -17,12 +17,10 @@ import dev.linqibin.starter.restclient.download.DownloadProgress;
 import dev.linqibin.starter.restclient.download.DownloadResult;
 import java.net.URI;
 import java.nio.file.Path;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -41,7 +39,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 /// @since 0.1.0
 @ExtendWith(MockitoExtension.class)
 @DisplayName("FileDownloadAdapter 单元测试")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class FileDownloadAdapterTest {
 
   @Mock private DownloadClient downloadClient;

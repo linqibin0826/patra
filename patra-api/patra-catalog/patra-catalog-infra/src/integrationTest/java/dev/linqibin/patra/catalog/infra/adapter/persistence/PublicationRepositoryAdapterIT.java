@@ -51,12 +51,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
@@ -91,7 +89,6 @@ import org.springframework.test.context.ContextConfiguration;
 @ComponentScan(basePackages = "dev.linqibin.patra.catalog.infra.persistence.converter")
 @ActiveProfiles("test")
 @DisplayName("PublicationRepositoryAdapter 集成测试（JPA）")
-@Timeout(value = 30, unit = TimeUnit.SECONDS)
 class PublicationRepositoryAdapterIT {
 
   @Autowired private PublicationRepositoryAdapter repository;

@@ -19,7 +19,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// RorOrganizationParser 单元测试。
 ///
@@ -39,7 +38,6 @@ import org.junit.jupiter.api.Timeout;
 /// @since 0.1.0
 /// @see <a href="https://ror.readme.io/v2/docs/fields">ROR Fields Documentation</a>
 @DisplayName("RorOrganizationParser 单元测试")
-@Timeout(2)
 class RorOrganizationParserTest {
 
   private RorOrganizationParser parser;

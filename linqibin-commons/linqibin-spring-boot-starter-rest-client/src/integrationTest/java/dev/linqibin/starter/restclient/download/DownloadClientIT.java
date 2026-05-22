@@ -19,7 +19,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -29,7 +28,6 @@ import org.springframework.web.reactive.function.client.WebClient;
 ///
 /// @author linqibin
 /// @since 0.1.0
-@Timeout(30)
 @WireMockTest
 class DownloadClientIT {
 

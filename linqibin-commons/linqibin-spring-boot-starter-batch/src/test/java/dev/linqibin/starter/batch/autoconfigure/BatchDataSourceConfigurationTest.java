@@ -3,10 +3,12 @@ package dev.linqibin.starter.batch.autoconfigure;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.zaxxer.hikari.HikariDataSource;
+import java.util.concurrent.TimeUnit;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -82,6 +84,8 @@ class BatchDataSourceConfigurationTest {
 
   @Test
   @DisplayName("未配置 Hikari 参数时：应使用默认 Hikari 配置")
+  // Spring context 子环境首次启动 HikariCP + PostgreSQL TestContainers，覆盖全局 5s fallback
+  @Timeout(value = 30, unit = TimeUnit.SECONDS)
   void batchDataSource_ShouldUseHikariDefaults() {
     // When: 只配置 URL，不配置 Hikari 参数（使用 PostgreSQL TestContainers）
     contextRunner

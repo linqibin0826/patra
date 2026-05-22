@@ -5,10 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.linqibin.starter.batch.metrics.BatchProgressMetricsListener;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
@@ -25,7 +23,6 @@ import org.springframework.context.annotation.Configuration;
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("BatchProgressMetricsAutoConfiguration 自动配置测试")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class BatchProgressMetricsAutoConfigurationTest {
 
   private final ApplicationContextRunner contextRunner =

@@ -3,11 +3,9 @@ package dev.linqibin.starter.batch.autoconfigure;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.zaxxer.hikari.HikariDataSource;
-import java.util.concurrent.TimeUnit;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.repository.explore.JobExplorer;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,7 +47,6 @@ import org.springframework.test.context.ActiveProfiles;
       "spring.flyway.enabled=false"
     })
 @ActiveProfiles("test")
-@Timeout(value = 30, unit = TimeUnit.SECONDS)
 class DualDataSourceIT {
 
   @Autowired private ApplicationContext applicationContext;

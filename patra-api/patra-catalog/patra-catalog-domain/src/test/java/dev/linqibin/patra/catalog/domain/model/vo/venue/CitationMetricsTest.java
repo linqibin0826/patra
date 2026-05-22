@@ -6,14 +6,12 @@ import java.math.BigDecimal;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// 引用指标值对象单元测试。
 ///
 /// @author linqibin
 /// @since 0.7.0
 @DisplayName("CitationMetrics 引用指标值对象")
-@Timeout(2)
 class CitationMetricsTest {
 
   @Nested

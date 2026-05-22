@@ -15,11 +15,9 @@ import dev.linqibin.patra.registry.domain.model.read.dictionary.DictionaryResolv
 import dev.linqibin.patra.registry.domain.model.read.dictionary.DictionaryResolveQuery;
 import dev.linqibin.patra.registry.domain.model.read.dictionary.DictionaryResolveStatus;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -47,7 +45,6 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 @Import(DictionaryEndpointImpl.class)
 @AutoConfigureRestTestClient
 @DisplayName("DictionaryEndpoint REST 接口集成测试")
-@Timeout(value = 30, unit = TimeUnit.SECONDS)
 class DictionaryEndpointIT {
 
   @Autowired private RestTestClient restClient;
