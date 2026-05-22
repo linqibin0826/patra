@@ -39,7 +39,7 @@
           <li data-task-status="done"><a href="#task-5">Task 5 — 主功能 commit</a></li>
           <li data-task-status="done"><a href="#task-6">Task 6 — 首次全仓清扫与 commit</a></li>
           <li data-task-status="done"><a href="#task-7">Task 7 — 完整 AC D6 本地验证矩阵</a></li>
-          <li data-task-status="in-progress"><a href="#task-8">Task 8 — push 开 PR 等 CI 全绿</a></li>
+          <li data-task-status="done"><a href="#task-8">Task 8 — push 开 PR 等 CI 全绿</a></li>
         </ol>
       </li>
       <li><a href="#self-check">自检结果</a></li>
@@ -57,7 +57,7 @@
         <span>📅 2026-05-22</span>
         <span>🌿 worktree-pap-16-pre-commit-overhaul</span>
         <span>📋 plan</span>
-        <span class="status-pill">draft</span>
+        <span class="status-pill">done</span>
       </div>
 
       <aside class="for-ai-worker">
@@ -647,7 +647,7 @@ git status --short | grep Probe || echo "cleaned"</code></pre>
         </ol>
       </article>
 
-      <article class="task" id="task-8" data-status="in-progress">
+      <article class="task" id="task-8" data-status="done">
         <header>
           <h2>任务 8：push + 开 PR + 等 CI 全绿（AC D6#8）</h2>
           <dl class="files">
@@ -657,7 +657,7 @@ git status --short | grep Probe || echo "cleaned"</code></pre>
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：push 分支</strong>
             <p>当前分支：<code>worktree-pap-16-pre-commit-overhaul</code>。运行：</p>
             <pre><code class="lang-bash">git log --oneline origin/main..HEAD</code></pre>
@@ -669,7 +669,7 @@ git status --short | grep Probe || echo "cleaned"</code></pre>
             <p>预期：push 成功。注意 <code>origin/main</code> 上的 <code>8e5c715b force push test</code> 污染 commit 不在本分支链路上（worktree 基于 origin/main，但 HEAD 链路只含本 issue 3 个 commit + 上游的真正 PAP-15 commit）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：开 PR</strong>
             <p>运行（用 HEREDOC 传 body）：</p>
             <pre><code class="lang-bash">gh pr create --title "PAP-16: pre-commit hooks 重整 + commitlint + scripts/git Maven 清理" --body "$(cat &lt;&lt;'EOF'
@@ -699,7 +699,7 @@ EOF
             <p>预期：输出 PR URL，例如 <code>https://github.com/linqibin0826/patra/pull/63</code>。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：等 CI 跑完并验证</strong>
             <p>运行：</p>
             <pre><code class="lang-bash">gh pr checks --watch</code></pre>
@@ -718,7 +718,7 @@ EOF
             </ul>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：等待 CodeRabbit review</strong>
             <p>CodeRabbit 会自动留 review。检查其评论：</p>
             <pre><code class="lang-bash">gh pr view --comments | head -50</code></pre>
@@ -730,7 +730,7 @@ EOF
             <p>不在本 task 内修复——根据 receiving-code-review skill 单独处理。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：CI 全绿后通知用户决定合并时机</strong>
             <p>本 task 不自动 merge（PAP-15 已设 branch protection，需用户在 Linear / GitHub 上手动 review-approve + squash merge）。</p>
             <p>结束陈述：</p>
