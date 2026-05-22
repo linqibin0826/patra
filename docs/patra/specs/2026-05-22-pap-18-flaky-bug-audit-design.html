@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PAP-18 — 单元测试 flaky bug 系统审计 + @Timeout / 全局状态共享治理</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- CSS 外置：相对路径 ../styles/ 是从生成位置 docs/patra/specs/ 出发；
+       模板本身在 .claude-marketplace/ 下打开时此 link 会 404（接受：模板预览以生成后的 spec 为准） -->
+  <link rel="stylesheet" href="../styles/journal.css">
+</head>
+<body>
+<div class="layout">
+
+  <!-- ============================================================
+       左栏：目录（TOC）
+       ============================================================ -->
+  <nav class="toc">
+    <h3>目录</h3>
+    <ol>
+      <li><a href="#background">背景与现状</a></li>
+      <li><a href="#scope">范围边界</a></li>
+      <li><a href="#guardrail">PR-1 护栏：JVM 隔离 + 全局 timeout + PR checklist</a></li>
+      <li><a href="#cleanup">PR-2 清理：类级 @Timeout 逐文件删除</a></li>
+      <li><a href="#ac2-verify">AC2 反模式验证</a></li>
+      <li><a href="#ac4-verify">AC4 5 次绿统计窗口</a></li>
+      <li><a href="#decisions">关键决策与备选</a></li>
+      <li><a href="#risks">风险与缓解</a></li>
+      <li><a href="#changes">改造文件清单</a></li>
+    </ol>
+  </nav>
+
+  <!-- ============================================================
+       中栏：内容
+       ============================================================ -->
+  <main class="content">
+
+    <header class="doc-header">
+      <h1>PAP-18 — 单元测试 flaky bug 系统审计 + @Timeout / 全局状态共享治理</h1>
+      <div class="meta-bar">
+        <span>📅 2026-05-22</span>
+        <span>🌿 pap-18-flaky-audit</span>
+        <span>🎯 spec</span>
+        <span class="status-pill">draft</span>
+      </div>
+    </header>
+
+    <aside class="callout summary">
+      <span class="title">关键决策摘要</span>
+      <p>PAP-10 已修过 7 处 flaky 症状，但代码库内 <strong>178 处 <code>@Timeout</code> 仍在</strong>（172 处类级、6 处 LetPub 方法级），属于"魔法数字 + 防 hang 拍脑袋"惯性写法。本次治理拆两个 PR：<strong>PR-1「护栏先行」</strong>在 <code>linqibin.java-base.gradle.kts</code> 三个 JvmTestSuite 各加 <code>forkEvery = 50</code> + 三档全局 <code>junit.jupiter.execution.timeout.default</code>（test=5s / IT=30s / E2E=180s），并在 <code>.github/PULL_REQUEST_TEMPLATE.md</code> 补一条 flaky checklist；<strong>PR-2「逐文件清理」</strong>手工删除全部 172 处类级 <code>@Timeout</code> 与孤儿 import，保留 6 处 LetPub 网络调用方法级注解并加注释。AC2 已在 PAP-10 期间治理，仅作 grep 验证。AC4 = PR-2 合并后第 7 个自然日内 CI 连续 5 次全绿。</p>
+    </aside>
+
+    <section id="background">
+      <h2>1. 背景与现状</h2>
+      <p>PAP-10 首次启用 Gradle CI 后，连续两轮 CI run 暴露 7 处 pre-existing flaky test。本地 <code>./gradlew :module:test</code> 单测不复现，只有 CI 冷启动 + 多模块并行 + JVM worker 复用场景下才暴露。PAP-10 PR 期间已按下症状（commit <code>7372ecaa9</code> + <code>1f6779bec</code>），但根因没动：</p>
+      <ol>
+        <li><strong>本地与 CI 行为差异未对齐</strong>：本地 = 热路径 + 单模块 daemon 复用；CI = 冷启动 + 多模块并行 + JVM worker 跨 class 复用。</li>
+        <li><code>@Timeout</code> <strong>滥用 / 魔法数字</strong>：作者用类级 <code>@Timeout(5s)</code> 当 hang 保护，实质成了"每个方法的硬预算"，5 秒拍脑袋。</li>
+        <li><strong>JVM worker 复用 + 全局状态泄漏</strong>：<code>Metrics.globalRegistry</code> 是 process-wide 单例，Gradle 默认 worker 跨 test class 复用 JVM，测试间状态污染。</li>
+        <li><strong>flaky test 无治理流程</strong>：无 retry policy / flaky tag / PR-level flaky guard。</li>
+      </ol>
+      <p><strong>本次审计实测结果</strong>（在 <code>main</code> 当前 HEAD 上）：</p>
+      <ul>
+        <li><code>rg --type java "@Timeout"</code> 命中 <strong>178 处声明</strong>，分布在约 150 个测试文件、5+ 模块。</li>
+        <li>按值分布：<code>@Timeout(2)</code> / <code>(value=2, SECONDS)</code> 共 115 处；<code>30 SECONDS</code> 53 处；<code>5</code> 3 处；<code>10 SECONDS</code> 1 处；<code>60 SECONDS</code> 2 处（E2E）；<code>2 MINUTES</code> 6 处（LetPub 真实网络调用，方法级）。</li>
+        <li>除 6 处 LetPub 方法级外，<strong>其余 172 处均为类级</strong>。</li>
+        <li>AC2 "迭代时改集合" 反模式：仅 <code>OtelMeterRegistryBridgeTest</code> 历史 8 处，PAP-10 已用 <code>new ArrayList&lt;&gt;(getRegistries()).forEach(::remove)</code> 治理；全代码库 grep <code>\.forEach\s*\(.*::remove</code> 无其他命中。</li>
+        <li><code>build-logic/src/main/kotlin/linqibin.java-base.gradle.kts</code> 三个 JvmTestSuite 仅设 <code>maxParallelForks</code>，<strong>无 <code>forkEvery</code></strong>（默认 0 = JVM worker 永久复用）。</li>
+        <li>PAP-14 已合并到 main，<code>.github/PULL_REQUEST_TEMPLATE.md</code> 存在，AC5 不再被阻塞。</li>
+      </ul>
+    </section>
+
+    <section id="scope">
+      <h2>2. 范围边界</h2>
+      <div class="two-col">
+        <aside class="callout success">
+          <span class="title">In Scope</span>
+          <ul>
+            <li><strong>AC3</strong>：在 <code>linqibin.java-base.gradle.kts</code> 三个 JvmTestSuite 各加 <code>forkEvery = 50</code>。</li>
+            <li><strong>全局 timeout fallback</strong>：在同文件三个 JvmTestSuite 各设 <code>junit.jupiter.execution.timeout.default</code>，test=5s / IT=30s / E2E=180s。</li>
+            <li><strong>AC1</strong>：删除全部 172 处类级 <code>@Timeout</code> 与对应孤儿 import；6 处 LetPub 方法级保留并加 <code>// 真实网络调用，方法级超时覆盖全局 fallback</code> 注释。</li>
+            <li><strong>AC2</strong>：补两条 grep 验证（forEach + ::remove 与 for-each + list.remove）。无代码改动。</li>
+            <li><strong>AC5</strong>：在 <code>.github/PULL_REQUEST_TEMPLATE.md</code> 的 Test plan 段加一条 checklist：<code>- [ ] 本地 ./gradlew test 通过 ✓ 且 CI 上无 flaky（无 step 因 flaky 重跑）</code>。</li>
+            <li><strong>AC4</strong>：PR-2 合并后启动 7 自然日观察窗口，连续 5 次 CI run 全绿（含 PR run 与 main push run）即达成。</li>
+          </ul>
+        </aside>
+        <aside class="callout warning">
+          <span class="title">Out of Scope</span>
+          <ul>
+            <li>测试覆盖率提升 / 补充缺失的 unit test（独立 Issue）。</li>
+            <li>ArchUnit 边界检查（独立 Issue）。</li>
+            <li>把 <code>Metrics.globalRegistry</code> 的 process-wide 单例改为依赖注入（属架构改造，由 <code>forkEvery=50</code> 缓解即可）。</li>
+            <li>新增 flaky test retry plugin（如 <code>org.gradle.test-retry</code>）；治理思路是消除根因而非掩盖。</li>
+            <li>flaky test tag / 隔离 suite。</li>
+            <li>修改 <code>maxParallelForks</code> / JVM heap / GC 等其他 test task 配置。</li>
+            <li>调整 spotbugs / jacoco 配置。</li>
+            <li>机械化脚本批量清理 <code>@Timeout</code>（决策 C 明确"逐文件手工过"）。</li>
+          </ul>
+        </aside>
+      </div>
+    </section>
+
+    <section id="guardrail">
+      <h2>3. PR-1 护栏：JVM 隔离 + 全局 timeout + PR checklist</h2>
+      <p>PR-1 单一目标：用最小配置变更，让 CI 上的 flaky 多 4 道护栏。合并即生效，不依赖后续 AC1 大批量清理。</p>
+
+      <h3>3.1 Gradle convention 改动</h3>
+      <p>文件：<code>build-logic/src/main/kotlin/linqibin.java-base.gradle.kts</code>。三个 JvmTestSuite 的 <code>testTask.configure</code> 块各加 2 行：</p>
+      <pre><code>// test suite
+testTask.configure {
+    useJUnitPlatform { /* 保持 */ }
+    maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
+    forkEvery = 50                                                          // 新增
+    systemProperty("junit.jupiter.execution.timeout.default", "5s")         // 新增
+    jvmArgs("--add-opens", "java.base/java.lang=ALL-UNNAMED")
+    testLogging { events("passed", "skipped", "failed") }
+}
+
+// integrationTest suite — 同上，仅 timeout=30s
+// e2eTest suite        — 同上，仅 timeout=180s</code></pre>
+      <p><strong>设计依据</strong>：</p>
+      <ul>
+        <li><code>forkEvery = 50</code>：JVM worker 跑 50 个 test class 后重启，限制 <code>Metrics.globalRegistry</code> 这类 process-wide 单例的累积污染窗口；Spring context 缓存仍保留 50× reuse，启动开销可控。</li>
+        <li><code>junit.jupiter.execution.timeout.default</code> = JUnit 5 全局兜底（仅作用于 <code>@Test</code> / <code>@TestFactory</code> / <code>@TestTemplate</code> 方法），方法上仍可用 <code>@Timeout</code> 局部覆盖，LetPub 的 6 处方法级 2-min 不受影响。</li>
+        <li>三档分层贴合实际：当前 <code>@Timeout(2)</code> 单测主流 → 5s 留 2.5× 余量；<code>@Timeout(30 SECONDS)</code> IT 主流 → 30s 保持；E2E <code>@Timeout(60 SECONDS)</code> → 180s 留充足容错。</li>
+      </ul>
+
+      <h3>3.2 PR template checklist</h3>
+      <p>文件：<code>.github/PULL_REQUEST_TEMPLATE.md</code>，在 <code>Test plan</code> 段已有的空 <code>- [ ]</code> 之上或之下补一条：</p>
+      <pre><code>- [ ] 本地 `./gradlew test` 通过 ✓ 且 CI 上无 flaky（无 step 因 flaky 重跑）</code></pre>
+      <p>不修改 markdown 结构，仅在现有 checklist 区域内追加一行。</p>
+
+      <h3>3.3 验证</h3>
+      <ul>
+        <li>本地 <code>./gradlew clean test integrationTest</code> 全部绿。</li>
+        <li>CI 触发一次 PR run，<code>Configure :module:test</code> 日志可见 timeout / forkEvery 已接收。</li>
+        <li>抽样 1-2 个 module 看 test 报告，验证某些 <code>@Timeout(2)</code> 标的的方法在被 5s 全局兜底接管后行为不变。</li>
+      </ul>
+    </section>
+
+    <section id="cleanup">
+      <h2>4. PR-2 清理：类级 @Timeout 逐文件删除</h2>
+      <p>PR-2 在 PR-1 合并后启动。手工逐文件过，<strong>禁止机械化脚本</strong>（决策 C），按模块拆 task，由 subagent-driven-development 流程执行（见后续 plan）。</p>
+
+      <h3>4.1 分类与处理</h3>
+      <table>
+        <thead>
+          <tr><th>类别</th><th>数量</th><th>处理</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>类级 <code>@Timeout(2)</code> / <code>(value=2, SECONDS)</code></td><td>115</td><td>删除注解 + 孤儿 import</td></tr>
+          <tr><td>类级 <code>@Timeout(30)</code> / <code>(value=30, SECONDS)</code></td><td>53</td><td>删除注解 + 孤儿 import</td></tr>
+          <tr><td>类级 <code>@Timeout(5)</code></td><td>3</td><td>删除注解 + 孤儿 import</td></tr>
+          <tr><td>类级 <code>@Timeout(value=10, SECONDS)</code></td><td>1</td><td>删除注解 + 孤儿 import</td></tr>
+          <tr><td>类级 <code>@Timeout(value=60, SECONDS)</code></td><td>2</td><td>删除注解 + 孤儿 import（E2E 由全局 180s 兜底）</td></tr>
+          <tr><td>方法级 <code>@Timeout(value=2, MINUTES)</code>（LetPub）</td><td>6</td><td><strong>保留</strong> + 加 <code>// 真实网络调用，方法级超时覆盖全局 fallback</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3>4.2 模块拆分（plan 阶段细化为独立 task）</h3>
+      <p>预估按 plan 拆 ~10 个独立 task，每个 task 处理一个模块。粗划：</p>
+      <ul>
+        <li><code>linqibin-commons/linqibin-commons-core</code></li>
+        <li><code>linqibin-commons/linqibin-spring-boot-starter-*</code>（按 starter 拆若干 task）</li>
+        <li><code>patra-starters/patra-spring-boot-starter-provenance</code></li>
+        <li><code>patra-api/patra-catalog</code>（domain / app / adapter / infra / boot 各一个 task）</li>
+        <li><code>patra-api/patra-ingest</code>（app / infra 各一个 task）</li>
+        <li><code>patra-api/patra-registry</code>（domain / app / adapter / infra / boot 各一个 task）</li>
+        <li><code>patra-api/patra-object-storage</code></li>
+      </ul>
+
+      <h3>4.3 单文件处理标准动作</h3>
+      <ol>
+        <li>读取文件，定位类级 <code>@Timeout(...)</code> 注解行（位于 class 声明之上、无 <code>@Test</code> 紧邻的）。</li>
+        <li>删除该注解行。</li>
+        <li>检查 <code>import org.junit.jupiter.api.Timeout;</code>：若文件内已无其他 <code>@Timeout</code>（即非 LetPub 方法级保留场景），删除该 import。</li>
+        <li>检查 <code>import java.util.concurrent.TimeUnit;</code>：grep 该文件内 <code>TimeUnit\.</code> 还有其他用法（断言、Duration 等）才保留，否则删除。</li>
+        <li>运行该模块 <code>./gradlew :module:test</code> 确认全绿。</li>
+        <li>commit 该模块为一组（一个 task = 一个或多个 commit）。</li>
+      </ol>
+      <p>每完成一个模块跑 <code>./gradlew spotlessApply</code>，由 Spotless 的 <code>removeUnusedImports</code> 兜底捕获遗漏的孤儿 import。</p>
+
+      <h3>4.4 LetPub 6 处方法级注解保留示例</h3>
+      <pre><code>@Test
+// 真实网络调用，方法级超时覆盖全局 fallback
+@Timeout(value = 2, unit = TimeUnit.MINUTES)
+void shouldFetchLetPubData() { ... }</code></pre>
+    </section>
+
+    <section id="ac2-verify">
+      <h2>5. AC2 反模式验证</h2>
+      <p>PAP-10 已治理 <code>OtelMeterRegistryBridgeTest</code> 8 处 ConcurrentModificationException 风险（<code>new ArrayList&lt;&gt;(getRegistries()).forEach(::remove)</code> 拷贝快照后迭代）。本 spec 不新增代码改动，仅在 plan 验证步骤里加两条 grep，要求<strong>零命中</strong>：</p>
+      <pre><code># 反模式 1：forEach(::remove)
+rg --type java '\.forEach\s*\(.*::remove\b' -g '!**/build/**'
+
+# 反模式 2：for-each + list.remove(x)
+rg --type java -B1 -A5 'for\s*\(.*:\s*\w+\s*\)' \
+   -g '*Test*.java' -g '*IT.java' -g '*E2E.java' \
+   | rg -B1 'list\.remove\('</code></pre>
+      <p>AC2 的根因（<code>Metrics.globalRegistry</code> process-wide 单例 + JVM worker 复用导致跨 test class 污染）由 AC3 的 <code>forkEvery=50</code> 兜底，不在 AC2 范围内单独处理。</p>
+    </section>
+
+    <section id="ac4-verify">
+      <h2>6. AC4 5 次绿统计窗口</h2>
+      <ul>
+        <li><strong>启动时刻</strong>：PR-2 合并到 main 当时。</li>
+        <li><strong>统计范围</strong>：合并日起 7 个自然日内，所有 GitHub Actions <code>build-and-test</code> job run（含 PR run 与 main push run）。</li>
+        <li><strong>达成标准</strong>：连续 5 次绿，无任何 step 因 flaky 被重跑或人工 retry。</li>
+        <li><strong>失败处理</strong>：
+          <ol>
+            <li>排查是否被 PR-1 全局 timeout 误杀 → 该方法局部 <code>@Timeout</code> 覆盖。</li>
+            <li>排查是否新增全局状态污染源 → 评估 <code>forkEvery</code> 调至 25 或 1。</li>
+            <li>每次失败重置计数器，从下一次绿重新计数。</li>
+          </ol>
+        </li>
+      </ul>
+    </section>
+
+    <section id="decisions">
+      <h2>7. 关键决策与备选</h2>
+
+      <div class="decision">
+        <h3>决策 A：AC1 治理策略 = 全删 + 全局 fallback</h3>
+        <p>删除全部 172 处类级 <code>@Timeout</code>（保留 6 处 LetPub 方法级），在 java-base convention 设三档全局 <code>junit.jupiter.execution.timeout.default</code> 作为兜底。</p>
+        <p class="alternatives"><strong>备选 A：</strong>全删，无 fallback — 否决：真出现死循环时只靠 CI step timeout 兜底，反馈链条长。<br>
+        <strong>备选 B：</strong>保守逐处评估保留 — 否决：172 处人工判断耗时大、决策易反复，且违背 AC1 倾向（默认删除）。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 B：forkEvery 取值 = 50</h3>
+        <p>三个 JvmTestSuite 统一 <code>forkEvery = 50</code>。</p>
+        <p class="alternatives"><strong>备选 A：</strong><code>forkEvery = 1</code> — 否决：每个 test class fresh JVM，Spring Boot context init 开销 ×N，CI 时间可能 3-5×。<br>
+        <strong>备选 B：</strong><code>forkEvery = 100</code> — 否决：对 <code>Metrics.globalRegistry</code> 单例保护不够彻底。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 C：AC1 清理方式 = 逐文件手工过，禁止机械化脚本</h3>
+        <p>由 plan 拆 ~10 个独立 task，每个 task 一个模块，subagent-driven 执行；每个文件人工判断 import 是否孤儿、是否还有别的 TimeUnit 用法。</p>
+        <p class="alternatives"><strong>备选 A：</strong>写 Bash + sed 脚本批量删除 + spotlessApply 兜底 — 否决：用户明确要求"一个个过"；脚本难处理嵌套 <code>@Timeout</code>、Nested 类内的方法级注解、注释中的字面量等边界。<br>
+        <strong>备选 B：</strong>用 IDE 全局 search & replace — 否决：跨模块批量回归风险大，无 task 粒度可追踪进度。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 D：全局 timeout 分三档（test=5s / IT=30s / E2E=180s）</h3>
+        <p>按 JvmTestSuite 分别设 <code>systemProperty("junit.jupiter.execution.timeout.default", ...)</code>。</p>
+        <p class="alternatives"><strong>备选 A：</strong>全部统一 60s — 否决：单测 60s 才被杀，反馈环路过长。<br>
+        <strong>备选 B：</strong>更宽松 test=10s / IT=60s / E2E=300s — 否决：失去早发现死循环的能力。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 E：PR 拆 2 个（PR-1 护栏 / PR-2 清理）</h3>
+        <p>PR-1 = AC3 + AC5 + 全局 timeout（~5 行）；PR-2 = AC1 逐文件清理（~200-300 行 net delete）。</p>
+        <p class="alternatives"><strong>备选 A：</strong>单 PR 覆盖全部 AC — 否决：diff 大、护栏与清理耦合，护栏不能立即生效。<br>
+        <strong>备选 B：</strong>AC1 按模块再拆多个 PR — 否决：过场费高，单人项目不需要这种粒度的 revert 能力；plan 内 task 拆分已足够。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 F：AC2 不重构 Metrics.globalRegistry</h3>
+        <p>不动 <code>MicrometerAutoConfiguration</code> 与 <code>OtelMeterRegistryBridgeTest</code> 的当前实现；由 AC3 <code>forkEvery=50</code> 缓解跨 test class 污染。</p>
+        <p class="alternatives"><strong>备选 A：</strong>把 <code>Metrics.globalRegistry</code> 注入而非静态访问 — 否决：属架构改造，超出 PAP-18 范围；OTel Agent 仍会向 globalRegistry 注册，无法真正消除单例。<br>
+        <strong>备选 B：</strong>每个 test 用 <code>@BeforeEach</code> 全量清理 — 否决：已实现但不彻底，且依赖每个测试作者自觉。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 G：6 处 LetPub 方法级 @Timeout(2 MINUTES) 保留</h3>
+        <p><code>LetPubEnrichmentAdapterIT</code> × 4 与 <code>LetPubProxyConnectivityTest</code> × 2 是真实网络调用，方法级 2-min 远超 IT 全局 30s，必须保留。每处加注释说明。</p>
+        <p class="alternatives"><strong>备选 A：</strong>调高 IT 全局 timeout 到 2 min — 否决：全局值膨胀影响其他无网络的 IT 反馈环路。<br>
+        <strong>备选 B：</strong>把这两个测试移到 e2eTest suite — 否决：当前测试代码组织结构非本次 scope，迁移涉及 build.gradle、profile、CI workflow 联动改动。</p>
+      </div>
+    </section>
+
+    <section id="risks">
+      <h2>8. 风险与缓解</h2>
+      <table>
+        <thead>
+          <tr><th>风险</th><th>等级</th><th>缓解</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>全局 <code>5s</code> timeout 误杀某些慢单测（如有意外 IO 或 mock 慢）</td>
+            <td><span class="pill mid">mid</span></td>
+            <td>受影响测试单独加方法级 <code>@Timeout(value=10, SECONDS)</code> 覆盖；plan 中 PR-1 验证步骤要求跑全量 <code>./gradlew test</code> 暴露此类。</td>
+          </tr>
+          <tr>
+            <td><code>forkEvery=50</code> 导致 CI 时间明显上升</td>
+            <td><span class="pill low">low</span></td>
+            <td>PR-1 合并后对比 PAP-10 历史 build time，若上升 &gt;30% 调至 100；当前 main 单 job timeout 25 min，有充足余量。</td>
+          </tr>
+          <tr>
+            <td>删除类级 <code>@Timeout</code> 后某 test 真死循环</td>
+            <td><span class="pill low">low</span></td>
+            <td>三档全局 fallback 兜底；CI workflow job-level <code>timeout-minutes: 25</code> 再兜底；本地 IDE 跑该测试也会卡，会被发现。</td>
+          </tr>
+          <tr>
+            <td>PR-2 大批量改动遗漏孤儿 import</td>
+            <td><span class="pill low">low</span></td>
+            <td><code>./gradlew spotlessApply</code> 自动 <code>removeUnusedImports</code>；编译期未使用 import 会被 IDE / spotless 标记。</td>
+          </tr>
+          <tr>
+            <td>AC4 窗口内出现 flaky 复发，5 次绿无法达成</td>
+            <td><span class="pill mid">mid</span></td>
+            <td>逐次诊断：误杀 → 局部 <code>@Timeout</code>；状态污染 → <code>forkEvery</code> 调小；其他 → 单独排查并在 Implementation Notes 记录。</td>
+          </tr>
+          <tr>
+            <td>PR-2 改动 ~150 文件，review 成本高</td>
+            <td><span class="pill low">low</span></td>
+            <td>diff 全是注解 + import 删除，模式简单；按模块拆 commit；reviewer 抽样 + 信赖 CI 即可。</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="changes">
+      <h2>9. 改造文件清单</h2>
+      <table>
+        <thead>
+          <tr><th>#</th><th>文件</th><th>操作</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><code>build-logic/src/main/kotlin/linqibin.java-base.gradle.kts</code></td>
+            <td><span class="pill modify">modify</span></td>
+            <td>PR-1：三个 JvmTestSuite 各加 <code>forkEvery=50</code> + <code>systemProperty("junit.jupiter.execution.timeout.default", ...)</code>，timeout 分三档。</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><code>.github/PULL_REQUEST_TEMPLATE.md</code></td>
+            <td><span class="pill modify">modify</span></td>
+            <td>PR-1：Test plan 段补一条 flaky checklist。</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><code>linqibin-commons/**/*Test.java</code> 等约 150 文件</td>
+            <td><span class="pill modify">modify</span></td>
+            <td>PR-2：删除 172 处类级 <code>@Timeout</code> 注解与孤儿 import；按模块分 task / commit。</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td><code>patra-api/patra-catalog/patra-catalog-infra/src/integrationTest/java/dev/linqibin/patra/catalog/infra/adapter/integration/letpub/LetPubEnrichmentAdapterIT.java</code></td>
+            <td><span class="pill modify">modify</span></td>
+            <td>PR-2：4 处方法级 <code>@Timeout(value=2, MINUTES)</code> 保留，每处上方加 <code>// 真实网络调用，方法级超时覆盖全局 fallback</code>。</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td><code>patra-api/patra-catalog/patra-catalog-infra/src/test/java/dev/linqibin/patra/catalog/infra/adapter/integration/letpub/LetPubProxyConnectivityTest.java</code></td>
+            <td><span class="pill modify">modify</span></td>
+            <td>PR-2：2 处方法级注解保留 + 加注释，同上。</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <aside class="callout info">
+      <span class="title">Done 判定</span>
+      <ol>
+        <li><strong>PR-1 合并到 main</strong>：<code>linqibin.java-base.gradle.kts</code> 三个 JvmTestSuite 各含 <code>forkEvery=50</code> 与对应 <code>junit.jupiter.execution.timeout.default</code>；<code>.github/PULL_REQUEST_TEMPLATE.md</code> 含 flaky checklist 行。本地 <code>./gradlew clean test integrationTest</code> 全绿。</li>
+        <li><strong>PR-2 合并到 main</strong>：全代码库 <code>rg --type java "@Timeout"</code> 仅命中 6 处 LetPub 方法级（含 <code>import</code> 行另算），且每处上方有保留注释。AC2 两条 grep 验证零命中。</li>
+        <li><strong>AC4 窗口达成</strong>：PR-2 合并日起 7 自然日内，<code>build-and-test</code> job 连续 5 次绿，无 flaky-triggered retry。</li>
+        <li><strong>Issue 关单</strong>：PR-2 PR body 含 <code>Closes PAP-18</code>，AC4 达成后 Linear 自动关单。</li>
+      </ol>
+    </aside>
+
+  </main>
+
+  <!-- ============================================================
+       右栏：Implementation Notes（实施期由 Claude Code 维护）
+       ============================================================ -->
+  <aside class="notes-panel" id="notes">
+    <header>
+      <h2>Implementation Notes</h2>
+      <p class="hint">实施期由 Claude Code 即时追加。规则：遇到 spec 未规定的<strong>决定</strong>、必要<strong>更改</strong>、不可避免的<strong>权衡</strong>、其他用户应知事项，立即用 Edit 追加 entry，不要等任务结束。</p>
+    </header>
+
+    <ol class="notes-log">
+      <!-- ENTRY TEMPLATE（注释保留供实施期 AI 复制）:
+
+      <li class="note" data-type="decision" data-time="YYYY-MM-DDTHH:MM">
+        <header>
+          <span class="note-type">DECISION</span>
+          <time datetime="YYYY-MM-DDTHH:MM">MM-DD HH:MM</time>
+          <a href="#sec-N">§ N 章节名</a>
+        </header>
+        <p>描述：spec 未规定 X，实施时选择 Y。理由：...</p>
+      </li>
+
+      data-type 4 类：decision / change / tradeoff / other
+      追加 entry 时同步更新下方 notes-stats footer 的对应 counter 数字。
+      -->
+    </ol>
+
+    <p class="empty-state">no notes yet</p>
+
+    <footer class="notes-stats">
+      总计:
+      <span data-counter="decision">0</span> decisions /
+      <span data-counter="change">0</span> changes /
+      <span data-counter="tradeoff">0</span> tradeoffs /
+      <span data-counter="other">0</span> others
+    </footer>
+  </aside>
+
+</div>
+</body>
+</html>
