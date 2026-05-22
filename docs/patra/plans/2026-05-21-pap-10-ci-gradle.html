@@ -27,9 +27,9 @@
           <li data-task-status="done"><a href="#task-5">Task 5 — 迁移 patra-catalog IT + E2E</a></li>
           <li data-task-status="done"><a href="#task-6">Task 6 — 迁移 patra-object-storage IT</a></li>
           <li data-task-status="done"><a href="#task-7">Task 7 — 测试分层全局验证</a></li>
-          <li data-task-status="in-progress"><a href="#task-8">Task 8 — 根 build.gradle.kts 引入 JaCoCo 聚合</a></li>
-          <li data-task-status="pending"><a href="#task-9">Task 9 — 重写 ci.yml + 删 pr-checks.yml</a></li>
-          <li data-task-status="pending"><a href="#task-10">Task 10 — 推分支验证 CI + 配置 CODECOV_TOKEN</a></li>
+          <li data-task-status="done"><a href="#task-8">Task 8 — 根 build.gradle.kts 引入 JaCoCo 聚合</a></li>
+          <li data-task-status="done"><a href="#task-9">Task 9 — 重写 ci.yml + 删 pr-checks.yml</a></li>
+          <li data-task-status="in-progress"><a href="#task-10">Task 10 — 推分支验证 CI + 配置 CODECOV_TOKEN</a></li>
           <li data-task-status="pending"><a href="#task-11">Task 11 — 开 PR + 回写 Linear AC</a></li>
         </ol>
       </li>
@@ -849,7 +849,7 @@ Refs: PAP-10"</code></pre>
       <!-- ============================================================
            Task 8: 根 build.gradle.kts 引入 JaCoCo 聚合
            ============================================================ -->
-      <article class="task" id="task-8" data-status="in-progress">
+      <article class="task" id="task-8" data-status="done">
         <header>
           <h2>任务 8：根 build.gradle.kts 引入 jacoco-report-aggregation</h2>
           <dl class="files">
@@ -957,7 +957,7 @@ EOF
       <!-- ============================================================
            Task 9: 重写 ci.yml + 删 pr-checks.yml
            ============================================================ -->
-      <article class="task" id="task-9" data-status="pending">
+      <article class="task" id="task-9" data-status="done">
         <header>
           <h2>任务 9：重写 ci.yml + 删除 pr-checks.yml</h2>
           <dl class="files">
@@ -1096,7 +1096,7 @@ EOF
       <!-- ============================================================
            Task 10: 推分支 + Codecov token + CI 验证
            ============================================================ -->
-      <article class="task" id="task-10" data-status="pending">
+      <article class="task" id="task-10" data-status="in-progress">
         <header>
           <h2>任务 10：推 worktree 分支 + 配置 CODECOV_TOKEN + 观察 CI 全绿</h2>
           <dl class="files">
@@ -1335,12 +1335,20 @@ EOF
         </header>
         <p>Plan Task 8 写的根 build.gradle.kts 只 apply <code>base</code> + <code>jacoco-report-aggregation</code>，但实际跑 <code>testCodeCoverageReport</code> 时报 "Could not find org.springframework.cloud:spring-cloud-starter-gateway-server-webflux:."——jacoco-report-aggregation 触发根项目 resolve 子项目（如 patra-gateway-boot / patra-catalog-infra）的 runtime 依赖，但根没注入 Spring Cloud BOM 故版本号为空。修正：根 build.gradle.kts 也 apply <code>id("io.spring.dependency-management") version "1.1.7"</code> + 复制 <code>linqibin.java-base</code> 的 5 个 BOM imports (spring-boot / spring-cloud / spring-cloud-alibaba / resilience4j / testcontainers)。版本号写死 "1.1.7"（与 libs.versions.toml 的 <code>spring-dependency-management</code> 同步），因为 libs.versions.toml 无 <code>[plugins]</code> 表，无法用 <code>alias(libs.plugins.xxx)</code>。后续若改版本需同步两处。</p>
       </li>
+      <li class="note" data-type="change" data-time="2026-05-22T09:25">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-22T09:25">05-22 09:25</time>
+          <a href="#task-10">§ Task 10</a>
+        </header>
+        <p>Plan Task 9 写的 ci.yml Codecov 步骤用 YAML 块标量 <code>files: |</code> 列两行路径，第 6 次 CI run（commit 24955f9e7）发现 codecov-action@v4 把整个块当成单字符串（中间嵌入 <code>\n</code>），日志报 <code>not_found_files: ["...testCodeCoverageReport.xml\n...integrationTestCodeCoverageReport.xml"]</code>，最终 <code>Found 0 coverage files to report</code>。修正：<code>files:</code> 改为单行逗号分隔 <code>files: A.xml,B.xml</code>（codecov-action v4 文档的多文件标准写法）。同时把 <code>fail_ci_if_error</code> 从 <code>false</code> 改为 <code>true</code>——PAP-10 AC 要求 Codecov 上传成功，静默失败违背 AC。</p>
+      </li>
     </ol>
 
     <footer class="notes-stats">
       总计:
       <span data-counter="decision">0</span> decisions /
-      <span data-counter="change">3</span> changes /
+      <span data-counter="change">4</span> changes /
       <span data-counter="tradeoff">0</span> tradeoffs /
       <span data-counter="other">1</span> others
     </footer>
