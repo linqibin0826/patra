@@ -1,6 +1,7 @@
 package dev.linqibin.patra.catalog.domain.model.enums;
 
 import cn.hutool.core.lang.Assert;
+import java.util.Locale;
 import lombok.Getter;
 
 /// 审核状态枚举。
@@ -49,7 +50,7 @@ public enum ReviewStatus {
   /// @throws IllegalArgumentException 如果代码值无效
   public static ReviewStatus fromCode(String value) {
     Assert.notBlank(value, "审核状态代码不能为空");
-    String normalized = value.trim().toLowerCase();
+    String normalized = value.trim().toLowerCase(Locale.ROOT);
     for (ReviewStatus status : values()) {
       if (status.code.equals(normalized)) {
         return status;

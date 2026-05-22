@@ -1,6 +1,7 @@
 package dev.linqibin.patra.ingest.domain.model.enums;
 
 import lombok.Getter;
+import java.util.Locale;
 
 /// 任务状态 (字典: ing_task_status)。
 ///
@@ -41,7 +42,7 @@ public enum TaskStatus {
     if (value == null) {
       throw new IllegalArgumentException("任务状态代码不能为 null");
     }
-    String n = value.trim().toUpperCase();
+    String n = value.trim().toUpperCase(Locale.ROOT);
     for (TaskStatus e : values()) {
       if (e.code.equals(n)) return e;
     }

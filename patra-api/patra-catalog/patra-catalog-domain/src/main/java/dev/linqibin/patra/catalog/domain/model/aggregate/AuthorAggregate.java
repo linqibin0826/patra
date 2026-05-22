@@ -10,6 +10,7 @@ import dev.linqibin.patra.catalog.domain.model.vo.author.Orcid;
 import java.io.Serial;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -244,11 +245,11 @@ public class AuthorAggregate extends AggregateRoot<AuthorId> {
 
     // 收集当前已有的 fullString（使用 toLowerCase 进行大小写不敏感去重）
     var existingFullStrings =
-        nameVariants.stream().map(v -> v.fullString().toLowerCase()).collect(Collectors.toSet());
+        nameVariants.stream().map(v -> v.fullString().toLowerCase(Locale.ROOT)).collect(Collectors.toSet());
 
     // 添加不重复的名字变体
     for (AuthorNameVariant variant : other.getNameVariants()) {
-      String lowerFullString = variant.fullString().toLowerCase();
+      String lowerFullString = variant.fullString().toLowerCase(Locale.ROOT);
       if (!existingFullStrings.contains(lowerFullString)) {
         nameVariants.add(variant);
         existingFullStrings.add(lowerFullString);

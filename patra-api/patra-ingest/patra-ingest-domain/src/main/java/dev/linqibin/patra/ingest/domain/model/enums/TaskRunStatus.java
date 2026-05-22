@@ -1,6 +1,7 @@
 package dev.linqibin.patra.ingest.domain.model.enums;
 
 import lombok.Getter;
+import java.util.Locale;
 
 /// 任务运行(尝试)状态 (字典: ing_task_run_status)。
 ///
@@ -40,7 +41,7 @@ public enum TaskRunStatus {
     if (value == null) {
       throw new IllegalArgumentException("TaskRun 状态代码不能为 null");
     }
-    String n = value.trim().toUpperCase();
+    String n = value.trim().toUpperCase(Locale.ROOT);
     for (TaskRunStatus e : values()) {
       if (e.code.equals(n)) return e;
     }

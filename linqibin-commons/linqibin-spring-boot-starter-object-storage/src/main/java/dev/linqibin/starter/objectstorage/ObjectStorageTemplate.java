@@ -16,6 +16,7 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.nio.file.Path;
 import java.util.Optional;
+import java.util.Locale;
 import org.springframework.retry.support.RetryTemplate;
 
 /// 对象存储模板类,包装提供者操作并增强重试和可观测性能力。
@@ -216,7 +217,7 @@ public class ObjectStorageTemplate implements ObjectStorageOperations {
     // 检查异常消息中的常见模式
     String message = ex.getMessage();
     if (message != null) {
-      String lowerMessage = message.toLowerCase();
+      String lowerMessage = message.toLowerCase(Locale.ROOT);
       if (lowerMessage.contains("auth") || lowerMessage.contains("credential")) {
         return "auth";
       }

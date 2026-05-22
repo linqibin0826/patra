@@ -48,6 +48,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -1008,9 +1009,9 @@ public class PubmedArticleItemProcessor
     String raw =
         String.join(
             "|",
-            nullToEmpty(lastName).toLowerCase().trim(),
-            nullToEmpty(foreName).toLowerCase().trim(),
-            nullToEmpty(orcid).toLowerCase().trim());
+            nullToEmpty(lastName).toLowerCase(Locale.ROOT).trim(),
+            nullToEmpty(foreName).toLowerCase(Locale.ROOT).trim(),
+            nullToEmpty(orcid).toLowerCase(Locale.ROOT).trim());
     return md5Hex(raw);
   }
 

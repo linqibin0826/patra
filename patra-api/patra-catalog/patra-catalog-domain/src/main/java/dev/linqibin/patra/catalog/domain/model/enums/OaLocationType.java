@@ -1,6 +1,7 @@
 package dev.linqibin.patra.catalog.domain.model.enums;
 
 import cn.hutool.core.lang.Assert;
+import java.util.Locale;
 import lombok.Getter;
 
 /// 开放获取位置类型枚举。
@@ -63,7 +64,7 @@ public enum OaLocationType {
   /// @throws IllegalArgumentException 如果代码值无效
   public static OaLocationType fromCode(String value) {
     Assert.notBlank(value, "OA 位置类型代码不能为空");
-    String normalized = value.trim().toLowerCase();
+    String normalized = value.trim().toLowerCase(Locale.ROOT);
     for (OaLocationType type : values()) {
       if (type.code.equals(normalized)) {
         return type;

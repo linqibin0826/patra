@@ -1,6 +1,7 @@
 package dev.linqibin.patra.catalog.domain.model.enums;
 
 import lombok.Getter;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 
 /// MeSH 记录类型枚举。
@@ -46,7 +47,7 @@ public enum MeshRecordType {
     if (code == null) {
       throw new IllegalArgumentException("未知的 MeSH 记录类型: null");
     }
-    String upperCode = code.toUpperCase();
+    String upperCode = code.toUpperCase(Locale.ROOT);
     for (MeshRecordType type : values()) {
       if (type.code.equals(upperCode)) {
         return type;

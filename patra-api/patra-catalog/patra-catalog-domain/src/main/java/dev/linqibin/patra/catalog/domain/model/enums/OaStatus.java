@@ -1,6 +1,7 @@
 package dev.linqibin.patra.catalog.domain.model.enums;
 
 import cn.hutool.core.lang.Assert;
+import java.util.Locale;
 import lombok.Getter;
 
 /// 开放获取状态枚举（字典：cat_oa_status）。
@@ -75,7 +76,7 @@ public enum OaStatus {
   /// @throws IllegalArgumentException 如果代码值无效
   public static OaStatus fromCode(String value) {
     Assert.notBlank(value, "OA 状态代码不能为空");
-    String normalized = value.trim().toLowerCase();
+    String normalized = value.trim().toLowerCase(Locale.ROOT);
     for (OaStatus status : values()) {
       if (status.code.equals(normalized)) {
         return status;

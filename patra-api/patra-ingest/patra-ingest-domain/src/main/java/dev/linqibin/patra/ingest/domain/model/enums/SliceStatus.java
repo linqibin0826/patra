@@ -1,6 +1,7 @@
 package dev.linqibin.patra.ingest.domain.model.enums;
 
 import lombok.Getter;
+import java.util.Locale;
 
 /// 计划切片状态 (字典: ing_slice_status)。
 ///
@@ -34,7 +35,7 @@ public enum SliceStatus {
     if (value == null) {
       throw new IllegalArgumentException("切片状态代码不能为 null");
     }
-    String n = value.trim().toUpperCase();
+    String n = value.trim().toUpperCase(Locale.ROOT);
     for (SliceStatus e : values()) {
       if (e.code.equals(n)) return e;
     }

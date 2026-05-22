@@ -1,6 +1,7 @@
 package dev.linqibin.patra.catalog.domain.model.enums;
 
 import cn.hutool.core.lang.Assert;
+import java.util.Locale;
 import lombok.Getter;
 
 /// 质量级别枚举（描述性）。
@@ -53,7 +54,7 @@ public enum QualityLevel {
   /// @throws IllegalArgumentException 如果代码值无效
   public static QualityLevel fromCode(String value) {
     Assert.notBlank(value, "质量级别代码不能为空");
-    String normalized = value.trim().toLowerCase();
+    String normalized = value.trim().toLowerCase(Locale.ROOT);
     for (QualityLevel level : values()) {
       if (level.code.equals(normalized)) {
         return level;

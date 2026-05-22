@@ -16,6 +16,7 @@ import dev.linqibin.patra.catalog.infra.parser.support.XmlParsingHelper;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.List;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
@@ -857,7 +858,7 @@ public final class SerialParsingStrategy implements RecordParsingStrategy<Pubmed
     if (text == null || text.trim().isEmpty()) {
       return null;
     }
-    String trimmed = text.trim().toUpperCase();
+    String trimmed = text.trim().toUpperCase(Locale.ROOT);
     if ("Y".equals(trimmed) || "YES".equals(trimmed)) {
       return true;
     } else if ("N".equals(trimmed) || "NO".equals(trimmed)) {

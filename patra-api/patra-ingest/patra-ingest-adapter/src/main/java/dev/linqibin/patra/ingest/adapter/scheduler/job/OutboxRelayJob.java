@@ -15,6 +15,7 @@ import dev.linqibin.patra.ingest.domain.exception.IngestScheduleParameterExcepti
 import dev.linqibin.patra.ingest.domain.exception.OutboxRelayExecutionException;
 import dev.linqibin.patra.ingest.domain.messaging.IngestPublishingChannels;
 import java.time.Clock;
+import java.util.Locale;
 import java.time.Duration;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
@@ -139,7 +140,7 @@ public class OutboxRelayJob {
       return byChannel.get();
     }
     try {
-      return IngestPublishingChannels.valueOf(trimmed.toUpperCase());
+      return IngestPublishingChannels.valueOf(trimmed.toUpperCase(Locale.ROOT));
     } catch (IllegalArgumentException ex) {
       throw new IngestScheduleParameterException("非法的通道值: " + channel, ex);
     }

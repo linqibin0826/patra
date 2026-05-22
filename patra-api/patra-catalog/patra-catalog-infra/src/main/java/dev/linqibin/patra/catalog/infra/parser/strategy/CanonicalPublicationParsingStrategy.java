@@ -22,6 +22,7 @@ import dev.linqibin.patra.common.model.CanonicalPublication.SupplMeshName;
 import dev.linqibin.patra.common.model.enums.PublicationIdentifierType;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -720,7 +721,7 @@ public final class CanonicalPublicationParsingStrategy
       return Integer.parseInt(monthStr);
     } catch (NumberFormatException e) {
       // 尝试解析英文缩写
-      return MONTH_MAP.get(monthStr.toLowerCase());
+      return MONTH_MAP.get(monthStr.toLowerCase(Locale.ROOT));
     }
   }
 
@@ -756,7 +757,7 @@ public final class CanonicalPublicationParsingStrategy
     if (rawLang == null || rawLang.isBlank()) {
       return null;
     }
-    return rawLang.trim().toLowerCase();
+    return rawLang.trim().toLowerCase(Locale.ROOT);
   }
 
   /// 构建 CanonicalPublication。

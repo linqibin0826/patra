@@ -1,6 +1,7 @@
 package dev.linqibin.patra.ingest.domain.model.enums;
 
 import lombok.Getter;
+import java.util.Locale;
 
 /// 命名空间范围 (字典: ing_namespace_scope)。
 ///
@@ -33,7 +34,7 @@ public enum NamespaceScope {
     if (value == null) {
       throw new IllegalArgumentException("命名空间范围代码不能为 null");
     }
-    String n = value.trim().toUpperCase();
+    String n = value.trim().toUpperCase(Locale.ROOT);
     for (NamespaceScope e : values()) {
       if (e.code.equals(n)) return e;
     }

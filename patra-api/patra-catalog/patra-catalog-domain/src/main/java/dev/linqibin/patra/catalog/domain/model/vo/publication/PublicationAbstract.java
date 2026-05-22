@@ -5,6 +5,7 @@ import dev.linqibin.patra.catalog.domain.model.enums.AbstractType;
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.Map;
+import java.util.Locale;
 import java.util.Optional;
 import lombok.Builder;
 
@@ -180,9 +181,9 @@ public record PublicationAbstract(
     if (sectionName == null) {
       return Optional.empty();
     }
-    String upperName = sectionName.toUpperCase();
+    String upperName = sectionName.toUpperCase(Locale.ROOT);
     return structuredSections.entrySet().stream()
-        .filter(e -> e.getKey().toUpperCase().equals(upperName))
+        .filter(e -> e.getKey().toUpperCase(Locale.ROOT).equals(upperName))
         .map(Map.Entry::getValue)
         .findFirst();
   }

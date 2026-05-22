@@ -1,6 +1,7 @@
 package dev.linqibin.patra.common.model.enums;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import java.util.Locale;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 /// 标识符类型枚举。
@@ -103,7 +104,7 @@ public enum PublicationIdentifierType {
     if (value == null || value.isBlank()) {
       throw new IllegalArgumentException("标识符类型代码不能为空");
     }
-    String normalized = value.trim().toLowerCase();
+    String normalized = value.trim().toLowerCase(Locale.ROOT);
     for (PublicationIdentifierType type : values()) {
       if (type.code.equals(normalized)) {
         return type;
@@ -123,7 +124,7 @@ public enum PublicationIdentifierType {
     if (value == null || value.isBlank()) {
       return OTHER;
     }
-    String normalized = value.trim().toLowerCase();
+    String normalized = value.trim().toLowerCase(Locale.ROOT);
     for (PublicationIdentifierType type : values()) {
       if (type.code.equals(normalized)) {
         return type;

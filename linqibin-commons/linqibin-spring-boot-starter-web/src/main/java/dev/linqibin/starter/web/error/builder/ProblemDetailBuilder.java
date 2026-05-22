@@ -16,6 +16,7 @@ import java.net.URI;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -279,6 +280,6 @@ public class ProblemDetailBuilder {
     if (!baseUrl.endsWith("/")) {
       baseUrl += "/";
     }
-    return URI.create(baseUrl + errorCode.code().toLowerCase());
+    return URI.create(baseUrl + errorCode.code().toLowerCase(Locale.ROOT));
   }
 }

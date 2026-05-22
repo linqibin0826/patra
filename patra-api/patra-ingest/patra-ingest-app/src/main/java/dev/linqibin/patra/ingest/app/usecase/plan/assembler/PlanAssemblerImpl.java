@@ -27,6 +27,7 @@ import dev.linqibin.patra.ingest.domain.model.vo.plan.WindowSpec;
 import dev.linqibin.patra.ingest.domain.model.vo.schedule.ScheduleInstanceId;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
@@ -413,7 +414,7 @@ public class PlanAssemblerImpl implements PlanAssembler {
     if (offsetDateFormat == null || offsetDateFormat.isBlank()) {
       return true; // Default to DATE-only for safety
     }
-    String normalized = offsetDateFormat.trim().toUpperCase();
+    String normalized = offsetDateFormat.trim().toUpperCase(Locale.ROOT);
     // Check for timestamp indicators (time precision supported)
     if (normalized.contains("INSTANT")
         || normalized.contains("MILLIS")

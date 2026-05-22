@@ -3,6 +3,7 @@ package dev.linqibin.starter.web.error.formatter;
 import dev.linqibin.starter.web.error.model.ValidationError;
 import dev.linqibin.starter.web.error.spi.ValidationErrorsFormatter;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -87,7 +88,7 @@ public class DefaultValidationErrorsFormatter implements ValidationErrorsFormatt
       return value;
     }
 
-    String lowerFieldName = fieldName.toLowerCase();
+    String lowerFieldName = fieldName.toLowerCase(Locale.ROOT);
     boolean isSensitive = SENSITIVE_PATTERNS.stream().anyMatch(lowerFieldName::contains);
 
     if (isSensitive) {

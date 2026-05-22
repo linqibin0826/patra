@@ -8,6 +8,7 @@ import dev.linqibin.patra.ingest.domain.policy.RelayRetryPolicy;
 import dev.linqibin.patra.ingest.domain.port.OutboxPublisherPort;
 import dev.linqibin.patra.ingest.domain.port.OutboxRelayRepository;
 import java.time.Duration;
+import java.util.Locale;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -228,7 +229,7 @@ public class RelayPublishCoordinator {
   /// @param exception 要从中提取代码的异常
   /// @return 从异常类名派生的错误代码
   private String extractErrorCode(Exception exception) {
-    return exception.getClass().getSimpleName().replaceAll("([a-z])([A-Z])", "$1_$2").toUpperCase();
+    return exception.getClass().getSimpleName().replaceAll("([a-z])([A-Z])", "$1_$2").toUpperCase(Locale.ROOT);
   }
 
   /// 将错误消息截断到指定的最大长度

@@ -1,6 +1,7 @@
 package dev.linqibin.patra.catalog.domain.model.enums;
 
 import cn.hutool.core.lang.Assert;
+import java.util.Locale;
 import lombok.Getter;
 
 /// 出版载体类型枚举。
@@ -83,7 +84,7 @@ public enum VenueType {
   /// @throws IllegalArgumentException 如果代码值无效
   public static VenueType fromCode(String value) {
     Assert.notBlank(value, "载体类型代码不能为空");
-    String normalized = value.trim().toUpperCase().replace(" ", "_");
+    String normalized = value.trim().toUpperCase(Locale.ROOT).replace(" ", "_");
     for (VenueType type : values()) {
       if (type.code.equals(normalized)) {
         return type;

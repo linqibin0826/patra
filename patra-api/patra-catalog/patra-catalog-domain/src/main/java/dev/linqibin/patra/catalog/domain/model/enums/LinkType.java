@@ -1,6 +1,7 @@
 package dev.linqibin.patra.catalog.domain.model.enums;
 
 import cn.hutool.core.lang.Assert;
+import java.util.Locale;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
@@ -70,7 +71,7 @@ public enum LinkType {
   @JsonCreator
   public static LinkType fromCode(String value) {
     Assert.notBlank(value, "链接类型代码不能为空");
-    String normalized = value.trim().toLowerCase();
+    String normalized = value.trim().toLowerCase(Locale.ROOT);
     for (LinkType type : values()) {
       if (type.code.equals(normalized)) {
         return type;
@@ -87,7 +88,7 @@ public enum LinkType {
     if (value == null || value.isBlank()) {
       return null;
     }
-    String normalized = value.trim().toLowerCase();
+    String normalized = value.trim().toLowerCase(Locale.ROOT);
     for (LinkType type : values()) {
       if (type.code.equals(normalized)) {
         return type;

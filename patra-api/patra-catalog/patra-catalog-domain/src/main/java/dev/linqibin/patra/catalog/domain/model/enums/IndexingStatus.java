@@ -1,6 +1,7 @@
 package dev.linqibin.patra.catalog.domain.model.enums;
 
 import cn.hutool.core.lang.Assert;
+import java.util.Locale;
 import lombok.Getter;
 
 /// 文献索引状态枚举。
@@ -65,7 +66,7 @@ public enum IndexingStatus {
   /// @throws IllegalArgumentException 如果代码值无效
   public static IndexingStatus fromCode(String value) {
     Assert.notBlank(value, "索引状态代码不能为空");
-    String normalized = value.trim().toLowerCase();
+    String normalized = value.trim().toLowerCase(Locale.ROOT);
     for (IndexingStatus status : values()) {
       if (status.code.equals(normalized)) {
         return status;

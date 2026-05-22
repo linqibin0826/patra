@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -404,7 +405,7 @@ public class DefaultExprRenderer implements ExprRenderer {
           // 函数可能修改占位符或返回派生值
           // 如果函数返回非空值，则使用标准占位符名称存储结果
           if (result != null && !result.isBlank()) {
-            placeholders.put("{{" + rule.functionCode().toLowerCase() + "}}", result);
+            placeholders.put("{{" + rule.functionCode().toLowerCase(Locale.ROOT) + "}}", result);
             log.debug("已执行 fn_code={}，result={}", rule.functionCode(), result);
           }
         } else {

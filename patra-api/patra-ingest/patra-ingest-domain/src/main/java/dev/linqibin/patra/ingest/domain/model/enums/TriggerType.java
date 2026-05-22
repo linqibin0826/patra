@@ -1,6 +1,7 @@
 package dev.linqibin.patra.ingest.domain.model.enums;
 
 import lombok.Getter;
+import java.util.Locale;
 
 /// 触发类型 (字典: ing_trigger_type)。
 ///
@@ -33,7 +34,7 @@ public enum TriggerType {
     if (value == null) {
       throw new IllegalArgumentException("触发类型代码不能为 null");
     }
-    String normalized = value.trim().toUpperCase();
+    String normalized = value.trim().toUpperCase(Locale.ROOT);
     for (TriggerType type : values()) {
       if (type.code.equals(normalized)) {
         return type;

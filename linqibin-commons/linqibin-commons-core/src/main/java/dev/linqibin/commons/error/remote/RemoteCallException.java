@@ -5,6 +5,7 @@ import dev.linqibin.commons.error.trait.ErrorTrait;
 import dev.linqibin.commons.error.trait.HasErrorTraits;
 import dev.linqibin.commons.error.trait.StandardErrorTrait;
 import java.util.Collections;
+import java.util.Locale;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -251,7 +252,7 @@ public class RemoteCallException extends RuntimeException implements HasErrorTra
       return null;
     }
     try {
-      return StandardErrorTrait.valueOf(name.trim().toUpperCase());
+      return StandardErrorTrait.valueOf(name.trim().toUpperCase(Locale.ROOT));
     } catch (IllegalArgumentException e) {
       log.debug("忽略未知的错误特征: {}", name);
       return null;

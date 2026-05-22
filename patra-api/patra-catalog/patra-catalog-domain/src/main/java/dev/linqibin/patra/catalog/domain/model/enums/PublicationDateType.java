@@ -1,6 +1,7 @@
 package dev.linqibin.patra.catalog.domain.model.enums;
 
 import cn.hutool.core.lang.Assert;
+import java.util.Locale;
 import lombok.Getter;
 
 /// 文献日期类型枚举。
@@ -69,7 +70,7 @@ public enum PublicationDateType {
   /// @throws IllegalArgumentException 如果代码值无效
   public static PublicationDateType fromCode(String value) {
     Assert.notBlank(value, "日期类型代码不能为空");
-    String normalized = value.trim().toLowerCase();
+    String normalized = value.trim().toLowerCase(Locale.ROOT);
     for (PublicationDateType type : values()) {
       if (type.code.equals(normalized)) {
         return type;

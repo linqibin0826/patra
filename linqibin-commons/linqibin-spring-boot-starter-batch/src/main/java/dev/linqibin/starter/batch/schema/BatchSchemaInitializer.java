@@ -5,6 +5,7 @@ import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Locale;
 import javax.sql.DataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -91,14 +92,14 @@ public class BatchSchemaInitializer {
       // PG 默认将未加引号的标识符折叠为小写，BATCH_JOB_INSTANCE 实际存储为 batch_job_instance；
       // 查询时同样折叠，行为一致。此处同时检测大写与小写以覆盖两种情形。
       try (ResultSet tables =
-          metaData.getTables(null, null, tableName.toUpperCase(), new String[] {"TABLE"})) {
+          metaData.getTables(null, null, tableName.toUpperCase(Locale.ROOT), new String[] {"TABLE"})) {
         if (tables.next()) {
           return true;
         }
       }
       // 也检查小写（兼容不同配置）
       try (ResultSet tables =
-          metaData.getTables(null, null, tableName.toLowerCase(), new String[] {"TABLE"})) {
+          metaData.getTables(null, null, tableName.toLowerCase(Locale.ROOT), new String[] {"TABLE"})) {
         return tables.next();
       }
     } catch (SQLException e) {

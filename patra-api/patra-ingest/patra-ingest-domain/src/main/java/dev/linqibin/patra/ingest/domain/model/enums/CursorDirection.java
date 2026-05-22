@@ -1,6 +1,7 @@
 package dev.linqibin.patra.ingest.domain.model.enums;
 
 import lombok.Getter;
+import java.util.Locale;
 
 /// 游标推进方向 (字典: ing_cursor_direction)。
 ///
@@ -30,7 +31,7 @@ public enum CursorDirection {
     if (value == null) {
       throw new IllegalArgumentException("游标方向代码不能为 null");
     }
-    String n = value.trim().toUpperCase();
+    String n = value.trim().toUpperCase(Locale.ROOT);
     for (CursorDirection e : values()) {
       if (e.code.equals(n)) return e;
     }

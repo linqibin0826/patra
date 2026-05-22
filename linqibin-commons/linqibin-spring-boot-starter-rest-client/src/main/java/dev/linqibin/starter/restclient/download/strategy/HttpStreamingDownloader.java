@@ -13,6 +13,7 @@ import java.io.PipedOutputStream;
 import java.io.UncheckedIOException;
 import java.net.URI;
 import java.util.Objects;
+import java.util.Locale;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.buffer.DataBuffer;
@@ -55,7 +56,7 @@ public class HttpStreamingDownloader implements StreamingDownloader {
     if (url == null || url.getScheme() == null) {
       return false;
     }
-    String scheme = url.getScheme().toLowerCase();
+    String scheme = url.getScheme().toLowerCase(Locale.ROOT);
     return "http".equals(scheme) || "https".equals(scheme);
   }
 

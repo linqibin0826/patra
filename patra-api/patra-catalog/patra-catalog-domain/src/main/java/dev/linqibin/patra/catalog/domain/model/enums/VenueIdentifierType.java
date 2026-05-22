@@ -1,6 +1,7 @@
 package dev.linqibin.patra.catalog.domain.model.enums;
 
 import cn.hutool.core.lang.Assert;
+import java.util.Locale;
 import lombok.Getter;
 
 /// 载体标识符类型枚举。
@@ -89,7 +90,7 @@ public enum VenueIdentifierType {
   /// @throws IllegalArgumentException 如果代码值无效
   public static VenueIdentifierType fromCode(String value) {
     Assert.notBlank(value, "标识符类型代码不能为空");
-    String normalized = value.trim().toUpperCase();
+    String normalized = value.trim().toUpperCase(Locale.ROOT);
     for (VenueIdentifierType type : values()) {
       if (type.code.equals(normalized)) {
         return type;

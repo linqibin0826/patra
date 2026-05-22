@@ -2,6 +2,7 @@ package dev.linqibin.patra.catalog.domain.model.enums;
 
 import cn.hutool.core.lang.Assert;
 import java.math.BigDecimal;
+import java.util.Locale;
 import lombok.Getter;
 
 /// 机构消歧方法枚举。
@@ -71,7 +72,7 @@ public enum DisambiguationMethod {
   /// @throws IllegalArgumentException 如果代码值无效
   public static DisambiguationMethod fromCode(String value) {
     Assert.notBlank(value, "消歧方法代码不能为空");
-    String normalized = value.trim().toUpperCase();
+    String normalized = value.trim().toUpperCase(Locale.ROOT);
     for (DisambiguationMethod method : values()) {
       if (method.code.equals(normalized)) {
         return method;
@@ -88,7 +89,7 @@ public enum DisambiguationMethod {
     if (value == null || value.isBlank()) {
       return null;
     }
-    String normalized = value.trim().toUpperCase();
+    String normalized = value.trim().toUpperCase(Locale.ROOT);
     for (DisambiguationMethod method : values()) {
       if (method.code.equals(normalized)) {
         return method;

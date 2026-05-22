@@ -1,6 +1,7 @@
 package dev.linqibin.patra.catalog.domain.model.enums;
 
 import cn.hutool.core.lang.Assert;
+import java.util.Locale;
 import lombok.Getter;
 
 /// 索引处理方式枚举。
@@ -71,7 +72,7 @@ public enum IndexingTreatment {
   /// @throws IllegalArgumentException 如果代码值无效
   public static IndexingTreatment fromCode(String value) {
     Assert.notBlank(value, "索引处理方式代码不能为空");
-    String normalized = value.trim().toUpperCase();
+    String normalized = value.trim().toUpperCase(Locale.ROOT);
     for (IndexingTreatment treatment : values()) {
       if (treatment.code.equals(normalized)) {
         return treatment;
@@ -88,7 +89,7 @@ public enum IndexingTreatment {
     if (value == null || value.isBlank()) {
       return null;
     }
-    String normalized = value.trim().toUpperCase();
+    String normalized = value.trim().toUpperCase(Locale.ROOT);
     for (IndexingTreatment treatment : values()) {
       if (treatment.code.equals(normalized)) {
         return treatment;
@@ -105,7 +106,7 @@ public enum IndexingTreatment {
     if (lsiouValue == null || lsiouValue.isBlank()) {
       return null;
     }
-    return switch (lsiouValue.trim().toLowerCase()) {
+    return switch (lsiouValue.trim().toLowerCase(Locale.ROOT)) {
       case "full" -> FULL;
       case "selective" -> SELECTIVE;
       case "unknown" -> UNKNOWN;

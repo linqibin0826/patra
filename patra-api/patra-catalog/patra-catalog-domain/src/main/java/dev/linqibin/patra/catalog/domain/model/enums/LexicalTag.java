@@ -1,6 +1,7 @@
 package dev.linqibin.patra.catalog.domain.model.enums;
 
 import cn.hutool.core.lang.Assert;
+import java.util.Locale;
 import lombok.Getter;
 
 /// MeSH 入口术语词法标记枚举。
@@ -88,7 +89,7 @@ public enum LexicalTag {
   /// @throws IllegalArgumentException 如果代码值无效
   public static LexicalTag fromCode(String value) {
     Assert.notBlank(value, "词法标记代码不能为空");
-    String normalized = value.trim().toUpperCase();
+    String normalized = value.trim().toUpperCase(Locale.ROOT);
     for (LexicalTag tag : values()) {
       if (tag.code.equals(normalized)) {
         return tag;

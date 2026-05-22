@@ -14,6 +14,7 @@ import dev.linqibin.patra.ingest.domain.model.enums.Scheduler;
 import dev.linqibin.patra.ingest.domain.model.enums.TriggerType;
 import java.time.Instant;
 import java.util.Collections;
+import java.util.Locale;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -150,7 +151,7 @@ public abstract class AbstractProvenanceScheduleJob {
     if (CharSequenceUtil.isBlank(priority)) {
       return null;
     }
-    String normalized = CharSequenceUtil.trim(priority).toUpperCase();
+    String normalized = CharSequenceUtil.trim(priority).toUpperCase(Locale.ROOT);
     try {
       return Priority.valueOf(normalized);
     } catch (IllegalArgumentException ex) {
