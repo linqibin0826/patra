@@ -1227,6 +1227,14 @@ EOF</code></pre>
         </header>
         <p>task 1 step 7（GRADLE_ENCRYPTION_KEY repo secret）标 skipped：AI 不能修改 GitHub repo secret，转移给用户在 PR1 merge 前手工添加（已在 PR description checklist 提醒）。PR1 不依赖此 secret 也能 CI 通过（setup-gradle 容忍降级），但缺失时 cc cache 不持久化，PR1 收益打折。</p>
       </li>
+      <li class="note" data-type="other" data-time="2026-05-22T15:30">
+        <header>
+          <span class="note-type">OTHER</span>
+          <time datetime="2026-05-22T15:30">05-22 15:30</time>
+          <a href="#task-2">§ Task 2 step 1</a>
+        </header>
+        <p>当前 main baseline 远超 spec 假设：PR #77（patra-api 纳入 Gradle 容器层后）build-and-test 时长 <strong>18:25</strong>，PR #76 时长 <strong>14:38</strong>，平均 <strong>~16:30</strong>。spec §3 假设的 ~8 min baseline（基于 PAP-10 时期）已失效。含义：PR1+PR2+PR3 目标终值会从 spec 写的 "~3-4 min" 偏移上去（相对降幅目标不变，但绝对值需重算）。实测后 AC3 评估按 <strong>baseline ~16 min</strong> 校准，不按 ~8 min。</p>
+      </li>
     </ol>
 
     <footer class="notes-stats">
@@ -1234,7 +1242,7 @@ EOF</code></pre>
       <span data-counter="decision">0</span> decisions /
       <span data-counter="change">1</span> changes /
       <span data-counter="tradeoff">0</span> tradeoffs /
-      <span data-counter="other">1</span> others
+      <span data-counter="other">2</span> others
     </footer>
   </aside>
 
