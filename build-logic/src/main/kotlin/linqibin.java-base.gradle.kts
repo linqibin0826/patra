@@ -154,34 +154,26 @@ listOf("integrationTest", "e2eTest").forEach { suiteName ->
     }
 }
 
-// ==================== Spring Boot bootJar + 跨 sourceSet resources 共享补丁 ====================
-// 两个独立问题需要补丁：
+// ==================== Spring Boot bootJar main.output 可见性补丁 ====================
+// Spring Boot plugin 默认禁用 `jar` task（只产 bootJar），导致 `implementation(project())`
+// 引用的 default configuration artifact 为空，main classes 不在 test/integrationTest/e2eTest
+// 的 classpath 上，@SpringBootTest / 直接 import 主类 会 cannot find symbol。
+// 显式补 sourceSets["main"].output 绕过。
 //
-// 1. Spring Boot bootJar 副作用：Spring Boot plugin 默认禁用 `jar` task（只产 bootJar），
-//    导致 `implementation(project())` 引用的 default configuration artifact 为空，
-//    main classes 不在 test/integrationTest/e2eTest 的 classpath 上。
-//    @SpringBootTest / 直接 import 主类 都会 cannot find symbol。
-//    → 显式补 sourceSets["main"].output 绕过。
-//
-// 2. 跨 sourceSet resources 共享：unit test 用的 application-test.yml / logback-test.xml
-//    需要被 integrationTest / e2eTest 也加载（@DataJpaTest 等 Spring 切片测试会读取该配置）。
-//    java-test-fixtures plugin 只共享 Java 类，不共享 resources 文件。
-//    → 保留 PAP-10 原 hack 中的 sourceSet.output 链式共享，专门为 resources 服务。
-//
-// 跨 sourceSet 共享的 *Java 类* 已迁至 src/testFixtures/（java-test-fixtures plugin 提供），
-// 详见 PAP-19 spec 与 plan。
+// 跨 sourceSet 共享的 Java 类与 resources 均通过 src/testFixtures/ source set
+// （java-test-fixtures plugin 提供）共享，不再使用 sourceSet output 链式 hack。
 sourceSets {
     named("test") {
         compileClasspath += sourceSets["main"].output
         runtimeClasspath += sourceSets["main"].output
     }
     named("integrationTest") {
-        compileClasspath += sourceSets["main"].output + sourceSets["test"].output
-        runtimeClasspath += sourceSets["main"].output + sourceSets["test"].output
+        compileClasspath += sourceSets["main"].output
+        runtimeClasspath += sourceSets["main"].output
     }
     named("e2eTest") {
-        compileClasspath += sourceSets["main"].output + sourceSets["integrationTest"].output + sourceSets["test"].output
-        runtimeClasspath += sourceSets["main"].output + sourceSets["integrationTest"].output + sourceSets["test"].output
+        compileClasspath += sourceSets["main"].output
+        runtimeClasspath += sourceSets["main"].output
     }
 }
 

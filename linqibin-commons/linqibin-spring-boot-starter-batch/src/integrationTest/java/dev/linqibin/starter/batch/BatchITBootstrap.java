@@ -12,7 +12,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * @since 0.1.0
  */
 @SpringBootApplication
-public class TestBatchApplication {
+public class BatchITBootstrap {
 
   /**
    * 启动测试应用
@@ -20,6 +20,6 @@ public class TestBatchApplication {
    * @param args 命令行参数
    */
   public static void main(String[] args) {
-    SpringApplication.run(TestBatchApplication.class, args);
+    SpringApplication.run(BatchITBootstrap.class, args);
   }
 }

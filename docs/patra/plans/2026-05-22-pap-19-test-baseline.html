@@ -24,6 +24,7 @@
           <li data-task-status="done"><a href="#task-2">Task 2 — 迁移 PubMedAuthorFixture 至 testFixtures（catalog-infra）</a></li>
           <li data-task-status="done"><a href="#task-3">Task 3 — 迁移 FileMetadataFixture 至 testFixtures + 替换 testArtifacts hack（object-storage）</a></li>
           <li data-task-status="done"><a href="#task-4">Task 4 — 删除 build-logic sourceSets 链式 output hack（部分降级，详见 notes）</a></li>
+          <li data-task-status="done"><a href="#task-4b">Task 4b — 迁共享 application yaml 至 testFixtures/resources/ + 彻底删 hack（AC2 残留补做）</a></li>
           <li data-task-status="pending"><a href="#task-5">Task 5 — rename IT Bootstrap (Group 1, 4 文件)</a></li>
           <li data-task-status="pending"><a href="#task-6">Task 6 — rename IT WebMvc Config (Group 2, 3 文件)</a></li>
           <li data-task-status="pending"><a href="#task-7">Task 7 — rename IT Container Initializer (Group 3, 5 文件)</a></li>
@@ -383,6 +384,41 @@ sourceSets {
             <strong>步骤 5：Commit</strong>
             <pre><code class="lang-bash">git add build-logic/src/main/kotlin/linqibin.java-base.gradle.kts
 git commit -m "refactor(gradle): 删除 build-logic sourceSets 链式 output hack (PAP-19 AC2)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-4b" data-status="done">
+        <header>
+          <h2>Task 4b — 迁共享 application yaml 至 testFixtures/resources/ + 彻底删 hack（AC2 残留补做）</h2>
+          <dl class="files">
+            <dt>迁移</dt><dd>8 个 application-*.yml 从 src/test/resources/ → src/testFixtures/resources/</dd>
+            <dt>修改</dt><dd><code>build-logic/src/main/kotlin/linqibin.java-base.gradle.kts</code> 删除 sourceSets 链式 output hack（仅保留 test → main 补丁）</dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：</strong>git mv 8 个 application yaml 至各模块 testFixtures/resources/（同模块同 path 不变 package）：
+            <pre><code class="lang-bash">patra-catalog/patra-catalog-infra/src/test/resources/application-test.yml          → src/testFixtures/resources/
+patra-ingest/patra-ingest-infra/src/test/resources/application-test.yml             → src/testFixtures/resources/
+patra-registry/patra-registry-infra/src/test/resources/application-test.yml         → src/testFixtures/resources/
+patra-catalog/patra-catalog-boot/src/test/resources/application-e2e-test.yml        → src/testFixtures/resources/
+patra-ingest/patra-ingest-boot/src/test/resources/application-e2e-test.yml          → src/testFixtures/resources/
+patra-ingest/patra-ingest-boot/src/test/resources/application-integration-test.yml  → src/testFixtures/resources/
+patra-ingest/patra-ingest-boot/src/test/resources/application-test-common.yml       → src/testFixtures/resources/
+linqibin-commons/linqibin-spring-boot-starter-batch/src/test/resources/application-test.yml → src/testFixtures/resources/</code></pre>
+          </li>
+          <li class="step" data-status="pending">
+            <strong>步骤 2：</strong>删 build-logic 中所有 sourceSet output 链 hack（保留 plugin apply）。
+          </li>
+          <li class="step" data-status="pending">
+            <strong>步骤 3：</strong>全验证 <code>./gradlew clean assemble check integrationTest e2eTest --no-daemon</code>
+          </li>
+          <li class="step" data-status="pending">
+            <strong>步骤 4：</strong>若出新 failure（如 logback / xml 测试数据 / docker-compose-rocketmq.yml 也被借），增量补迁，每补一个再跑验证。
+          </li>
+          <li class="step" data-status="pending">
+            <strong>步骤 5：Commit</strong>
           </li>
         </ol>
       </article>
@@ -845,6 +881,22 @@ git push</code></pre>
         </header>
         <p>Task 4 完全删除 sourceSets hack 后，<code>:patra-registry:patra-registry-boot:compileTestJava</code> 失败：<code>RegistryErrorMappingContributor 找不到符号</code>。Root cause：Spring Boot <code>bootJar</code> 禁用 <code>jar</code> task 时，启用 <code>java-test-fixtures</code> plugin 改变了 boot 模块 <code>test</code> source set 的 main.output 默认可见性。触发 plan §8 high risk fallback。</p>
       </li>
+      <li class="note" data-type="change" data-time="2026-05-22T20:00">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-22T20:00">05-22 20:00</time>
+          <a href="#task-4b">§ Task 4b</a>
+        </header>
+        <p><strong>Task 4b 完成 AC2 完整目标</strong>：用户选择 A2 方案后插入 Task 4b，做 yaml + 增量 xml 补迁。最终：</p>
+        <ul>
+          <li>迁 8 个 <code>application-*.yml</code> 至各模块 <code>src/testFixtures/resources/</code>（让 IT/E2E 都能加载）</li>
+          <li>增量补迁 2 个 e2e xml 测试数据：<code>test-scr-e2e.xml</code> / <code>test-descriptors-e2e.xml</code> 至 <code>catalog-boot/src/testFixtures/resources/xml/</code></li>
+          <li>提前完成 Task 5 Group 1 中 1 项：<code>TestBatchApplication</code> → <code>BatchITBootstrap</code> rename + 迁至 <code>integrationTest</code> source set（删 hack 后该 Bootstrap 必须迁 source set 才能被 IT 发现）</li>
+          <li>删除 build-logic 全部 sourceSet output 链 hack，仅保留 <code>test/IT/E2E → main.output</code> 单行补丁（Spring Boot bootJar 副作用必需）</li>
+        </ul>
+        <p>验证：<code>./gradlew clean check integrationTest e2eTest</code> BUILD SUCCESSFUL in 42s。AC2 实际比原 spec 更彻底（spec/plan 漏看 resources 共享需求，现已完整覆盖）。</p>
+        <p>Task 5 后续仍需 rename 3 个 ITBootstrap（catalog / ingest / registry），<code>BatchITBootstrap</code> 部分已在 Task 4b 完成，Task 5 实施时跳过。</p>
+      </li>
       <li class="note" data-type="tradeoff" data-time="2026-05-22T19:00">
         <header>
           <span class="note-type">TRADEOFF</span>
@@ -860,7 +912,7 @@ git push</code></pre>
     <footer class="notes-stats">
       总计:
       <span data-counter="decision">0</span> decisions /
-      <span data-counter="change">2</span> changes /
+      <span data-counter="change">3</span> changes /
       <span data-counter="tradeoff">1</span> tradeoffs /
       <span data-counter="other">1</span> others
     </footer>
