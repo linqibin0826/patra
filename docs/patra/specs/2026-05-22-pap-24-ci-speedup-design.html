@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PAP-24 CI 提速 — 容器预拉取 + Job 拆分 + Configuration Cache + Unit Sharding 设计</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles/journal.css">
+</head>
+<body>
+<div class="layout">
+
+  <nav class="toc">
+    <h3>目录</h3>
+    <ol>
+      <li><a href="#background">背景与现状</a></li>
+      <li><a href="#scope">范围边界</a></li>
+      <li><a href="#targets">目标与收益预期</a></li>
+      <li><a href="#topology">最终态 Job 拓扑</a></li>
+      <li><a href="#pr1">PR1 — 基础设施层</a></li>
+      <li><a href="#pr2">PR2 — Job 拓扑重构 + JaCoCo Aggregation</a></li>
+      <li><a href="#pr3">PR3 — Unit Sharding</a></li>
+      <li><a href="#measurement">AC3 实测与回滚机制</a></li>
+      <li><a href="#decisions">关键决策与备选</a></li>
+      <li><a href="#risks">风险与缓解</a></li>
+      <li><a href="#changes">改造文件清单</a></li>
+    </ol>
+  </nav>
+
+  <main class="content">
+
+    <header class="doc-header">
+      <h1>PAP-24 CI 提速 — 容器预拉取 + Job 拆分 + Configuration Cache + Unit Sharding 设计</h1>
+      <div class="meta-bar">
+        <span>📅 2026-05-22</span>
+        <span>🌿 worktree-pap-24-ci-speedup</span>
+        <span>🎯 spec</span>
+        <span class="status-pill">draft</span>
+      </div>
+    </header>
+
+    <aside class="callout summary">
+      <span class="title">关键决策摘要</span>
+      <p>把 PAP-24 拆为 <strong>3 个 PR 收敛</strong>实施：PR1 基础设施层（删 <code>--no-daemon</code> + cc 加密 key + docker pull 并发隐藏 + 镜像版本一致性校验）；PR2 Job 拓扑重构（拆 unit / IT / e2e / coverage 四 job + <code>required-check</code> 改为 needs 依赖 + 引入 <code>jacoco-report-aggregation</code> plugin）；PR3 Unit Sharding（unit-tests 改 4-shard matrix）。<strong>不做</strong>调研判定收益不确定的动作：fork 数翻倍（AC5b 推迟至后续 Issue，先 build scan 取 baseline）。Required Status Check（<code>required-check</code>）顺便修补为真正依赖测试 job，让 PAP-15 分支保护从「事实摆设」变为强制生效。目标：CI 总时长 ~8 min → ~3-4 min。</p>
+    </aside>
+
+    <section id="background">
+      <h2>1. 背景与现状</h2>
+      <p>PAP-19 brainstorming 阶段拆分的「CI 提速主线 B」在 PR #77 合并主线 A 时漏拆 Issue、被一并误关。本 spec 承载 PAP-24 补齐这部分，并新增针对 unit test 真测试时长的专项优化（用户反馈 unit 是当前最大瓶颈）。</p>
+      <p>当前 CI 单 job <code>build-and-test</code> 串行跑 <code>check → integrationTest → e2eTest → JaCoCo aggregate → Codecov upload</code>，PAP-10 baseline 实测稳定 ~7-8 min，可分解为「冷启动 3:05」+「真测试 4:30」两大段。</p>
+      <p><strong>探索阶段对 PAP-24 描述的 3 处事实修正：</strong></p>
+      <table>
+        <thead>
+          <tr><th>PAP-24 假设</th><th>实际</th><th>含义</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Required Status Check 是 <code>CI / build-and-test</code></td>
+            <td>实际是 <code>required-check</code>（1 min dummy job, 无 <code>needs:</code>，独立 echo），<code>build-and-test</code> 不是必需检查</td>
+            <td>job 拓扑可自由重组；分支保护实际处于「摆设」状态，本 spec 顺便修补</td>
+          </tr>
+          <tr>
+            <td>需要在 <code>gradle.properties</code> 启用 cc</td>
+            <td><code>org.gradle.configuration-cache=true</code> 已开（含 <code>problems=warn</code>），<code>parallel</code> / <code>caching</code> / <code>daemon</code> 也已开</td>
+            <td>AC4 唯一动作变为给 <code>setup-gradle@v4</code> 加 <code>cache-encryption-key</code> 让 cc cache 跨 run 持久化</td>
+          </tr>
+          <tr>
+            <td>RocketMQ 用 GenericContainer / Testcontainers 模块</td>
+            <td>实际用 <strong>docker-compose</strong>（<code>docker-compose-rocketmq.yml</code>），双容器 NameServer + Broker</td>
+            <td>docker pull 预热仍然有效；镜像版本散落于 Java 源码 + 两份 compose 文件共 5 处</td>
+          </tr>
+        </tbody>
+      </table>
+      <p><strong>调研对 PAP-24 计划的 5 处反驳：</strong></p>
+      <ul>
+        <li><code>gradle/actions/setup-gradle@v4</code> 自带 cc cache 支持，<strong>不需要</strong>叠加 <code>actions/cache@v4</code>；只要传 <code>cache-encryption-key</code> 即生效</li>
+        <li>JaCoCo on-the-fly instrumentation 真实开销 &lt;10%（官方文档），「20-30% 节省」混淆了 <code>jacocoTestReport</code> 报告生成时间</li>
+        <li>业界 unit test sharding 甜点为 <strong>3-4 shard</strong>，单 shard 冷启动 ~30-60s 叠加；原计划 7 shard 过细</li>
+        <li>Gradle 9 + <code>setup-gradle@v4</code> 下 <code>--no-daemon</code> 是反模式（daemon 复用 JVM warmup 反而更快）</li>
+        <li><code>maxParallelForks = availableProcessors()</code> 收益不确定（JVM startup 200-500ms/进程），需 build scan baseline 才能决策</li>
+      </ul>
+    </section>
+
+    <section id="scope">
+      <h2>2. 范围边界</h2>
+      <div class="two-col">
+        <aside class="callout success">
+          <span class="title">In Scope</span>
+          <ul>
+            <li>PR1：删 <code>--no-daemon</code>、setup-gradle 加 <code>cache-encryption-key</code>、docker pull 与编译并发、镜像版本一致性校验 step</li>
+            <li>PR2：拆 4 个 job（unit / IT / e2e / coverage-and-upload）、<code>required-check</code> 改 needs 依赖 + alls-green、引入 <code>jacoco-report-aggregation</code> convention plugin</li>
+            <li>PR3：unit-tests 改 4-shard matrix（commons-and-starters / registry / ingest / catalog-and-misc），<code>fail-fast: false</code> + <code>cache-read-only: true</code></li>
+            <li>每个 PR 描述贴 3 个连续 run 实测耗时（AC3）</li>
+            <li>Required Status Check（<code>required-check</code>）从 dummy 改为真正依赖测试 job，让分支保护强制生效</li>
+          </ul>
+        </aside>
+        <aside class="callout warning">
+          <span class="title">Out of Scope</span>
+          <ul>
+            <li><strong>AC5b fork 数翻倍</strong>（<code>maxParallelForks = availableProcessors()</code>）— 调研判定收益不确定，需要 build scan baseline 后另开 Issue</li>
+            <li>JUnit 5 intra-JVM 并行（<code>parallel.enabled</code>）— 风险高于收益，与 fork 并行是不同层级，与 PAP-18 治理范围不重叠</li>
+            <li>Spring Context 跨 IT 共享（需逐个审计 <code>@DirtiesContext</code> / <code>@MockitoBean</code>）— 另开 Issue</li>
+            <li>镜像版本集中到 <code>libs.versions.toml</code> + 代码读取改造 — 选择更轻量的 CI 一致性校验方案替代</li>
+            <li>AppCDS / JDK 启动调优、Develocity remote cache、补 unit test、提升测试覆盖率</li>
+          </ul>
+        </aside>
+      </div>
+    </section>
+
+    <section id="targets">
+      <h2>3. 目标与收益预期</h2>
+      <table>
+        <thead>
+          <tr><th>阶段</th><th>CI 总时长</th><th>关键路径</th><th>主要收益来源</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>当前 baseline (PAP-10)</td>
+            <td>~8 min</td>
+            <td>单 job 串行 check → IT → e2e → coverage</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td>PR1 后</td>
+            <td>~6 min</td>
+            <td>单 job 串行，但冷启动压缩</td>
+            <td>cc cache hit 省 ~25-30s + docker pull 完全藏入编译时间 ~30-50s + 去掉 <code>--no-daemon</code> 让 daemon 复用</td>
+          </tr>
+          <tr>
+            <td>PR2 后</td>
+            <td>~5 min</td>
+            <td>max(unit, IT, e2e) + coverage</td>
+            <td>3 job 并行；unit job 关 <code>jacocoTestReport</code> 报告生成省 5-15%</td>
+          </tr>
+          <tr>
+            <td>PR3 后</td>
+            <td>~3-4 min</td>
+            <td>max(shard×4, IT, e2e) + coverage</td>
+            <td>unit 4-shard 并行；理想下单 shard ~1.5-2 min</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>实测达标判据：每个 PR merge 前在 PR description 贴 3 个连续 run 数据；若任一 PR 实测显示净负收益，按对应 PR 的回滚条件回退。</p>
+    </section>
+
+    <section id="topology">
+      <h2>4. 最终态 Job 拓扑（PR3 落地后）</h2>
+      <pre><code>PR/push 触发
+  │
+  ├─ unit-tests (matrix shard × 4, parallel, fail-fast: false)
+  │   ├─ shard: commons-and-starters
+  │   │     :linqibin-commons:* + :patra-starters:*
+  │   ├─ shard: registry
+  │   │     :patra-api:patra-registry:*
+  │   ├─ shard: ingest
+  │   │     :patra-api:patra-ingest:*
+  │   └─ shard: catalog-and-misc
+  │         :patra-api:patra-catalog:* + gateway-boot + common:* + object-storage:*
+  │   每 shard: ./gradlew &lt;modules&gt;:test -x jacocoTestReport
+  │   setup-gradle: cache-read-only: true (避免竞争写)
+  │   upload-artifact: jacoco-exec-${{ matrix.shard.name }}
+  │
+  ├─ integration-tests (single job)
+  │   Pre-pull postgres:17 &amp; apache/rocketmq:5.3.1 并发
+  │   ./gradlew integrationTest -x integrationTestCodeCoverageReport
+  │   upload-artifact: jacoco-exec-integration
+  │
+  ├─ e2e-tests (single job)
+  │   Pre-pull 同上
+  │   ./gradlew e2eTest
+  │
+  └─ coverage-and-upload (needs: unit-tests, integration-tests)
+      download-artifact: jacoco-exec-*
+      ./gradlew jacocoAggregatedReport
+      Codecov upload
+
+汇总 gate:
+  required-check (needs: ALL above, if: always())
+    使用 re-actors/alls-green@release/v1 校验所有依赖 success/skipped
+    任一非 success 则失败 → branch protection 真正生效</code></pre>
+    </section>
+
+    <section id="pr1">
+      <h2>5. PR1 — 基础设施层（低风险高收益打底）</h2>
+      <p><strong>目标</strong>：在不改 job 拓扑的前提下，把冷启动 3:05 大段压缩到 ~1:30。</p>
+      <p><strong>改动</strong>：</p>
+      <ul>
+        <li><code>.github/workflows/ci.yml</code>：删所有 <code>--no-daemon</code>（4 处：check / integrationTest / e2eTest / jacoco aggregate）</li>
+        <li><code>.github/workflows/ci.yml</code>：<code>setup-gradle@v4</code> 增加 <code>cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}</code>，让 cc cache 跨 run 持久化</li>
+        <li><code>.github/workflows/ci.yml</code>：新增 step <strong>「Pre-pull container images」</strong>，置于 setup-gradle 之后、check 之前；用 <code>docker pull postgres:17 &amp; docker pull apache/rocketmq:5.3.1 &amp; wait</code>。GHA step 串行执行但 step 内部并发，pull 总时长 ~40-50s。由于 check 阶段 Gradle 编译占主导（~3 min），pull 整体藏在编译路径下</li>
+        <li><code>.github/workflows/ci.yml</code>：新增 step <strong>「Verify container image versions consistency」</strong>。workflow 顶部 <code>env:</code> 声明 <code>POSTGRES_IMAGE: postgres:17</code> / <code>ROCKETMQ_IMAGE: apache/rocketmq:5.3.1</code>；step 用 grep 校验 4 个文件中的镜像声明与 env 一致：
+          <ul>
+            <li><code>linqibin-commons/linqibin-spring-boot-starter-test/src/main/java/dev/linqibin/starter/test/container/initializer/PostgreSQLContainerInitializer.java</code>（POSTGRESQL_IMAGE 常量）</li>
+            <li><code>linqibin-commons/linqibin-spring-boot-starter-test/src/main/resources/docker-compose-rocketmq.yml</code>（2 个 image: 行）</li>
+            <li><code>patra-api/patra-ingest/patra-ingest-boot/src/test/resources/docker-compose-rocketmq.yml</code>（2 个 image: 行）</li>
+          </ul>
+          不一致则 fail，强制 PR 同时更新 4 处
+        </li>
+      </ul>
+      <p><strong>GitHub repo secret 一次性手工准备</strong>：</p>
+      <ol>
+        <li>本地生成密钥：<code>openssl rand -base64 16</code></li>
+        <li>GitHub repo → Settings → Secrets and variables → Actions → New repository secret，名 <code>GRADLE_ENCRYPTION_KEY</code>，值为上一步输出</li>
+        <li>此动作在 PR1 description 里给出明确指令；PR1 不依赖此 secret 也能 merge（缺失时 cc cache 不生效，但 CI 不会失败，因为 setup-gradle 容忍缺失）</li>
+      </ol>
+      <p><strong>不在 PR1 范围</strong>：job 拆分、sharding、JaCoCo 配置改动、build-logic 改动。</p>
+      <p><strong>预期实测</strong>：~8 min → ~6 min。</p>
+      <p><strong>回滚条件</strong>：若 cc cache 持续降级（CI 日志反复出现 "Calculating task graph as no cached configuration is available"），从 <code>setup-gradle</code> 移除 <code>cache-encryption-key</code> 临时回退；<code>gradle.properties</code> 中的 <code>org.gradle.configuration-cache=true</code> 不动（本地构建仍受益）。</p>
+    </section>
+
+    <section id="pr2">
+      <h2>6. PR2 — Job 拓扑重构 + JaCoCo Aggregation</h2>
+      <p><strong>目标</strong>：从单 job 串行升级为 3 job 并行，引入 coverage aggregation 框架，<code>required-check</code> 从 dummy 升级为真正 gate。</p>
+      <p><strong>改动</strong>：</p>
+      <ol>
+        <li><strong>新建 convention plugin</strong> <code>build-logic/src/main/kotlin/linqibin.jacoco-aggregation.gradle.kts</code>：
+          <ul>
+            <li>应用 <code>jacoco-report-aggregation</code> plugin</li>
+            <li>定义新 task <code>jacocoAggregatedReport</code>：扫描 <code>**/build/jacoco/*.exec</code>（含 download-artifact 解出来的位置）、聚合所有项目的 classes/sources、输出 XML + HTML 到 <code>build/reports/jacoco/aggregated/</code></li>
+            <li>沿用现有 exclude：<code>net/sf/jsqlparser/**</code></li>
+            <li>挂载到根项目（<code>settings.gradle.kts</code> 已有 includeBuild build-logic，无需额外引用）</li>
+          </ul>
+          单一职责 convention plugin，命名风格与现有 <code>linqibin.spotless</code> / <code>linqibin.spotbugs</code> 一致。
+        </li>
+        <li><code>.github/workflows/ci.yml</code> 重构 jobs：
+          <ul>
+            <li><code>unit-tests</code>（先单 job）：<code>./gradlew check -x jacocoTestReport</code> + upload-artifact <code>jacoco-exec-unit</code> 含 <code>**/build/jacoco/test.exec</code></li>
+            <li><code>integration-tests</code>：含 PR1 的 docker pull + <code>./gradlew integrationTest -x integrationTestCodeCoverageReport</code> + upload-artifact <code>jacoco-exec-integration</code></li>
+            <li><code>e2e-tests</code>：含 docker pull + <code>./gradlew e2eTest</code>（不上传 coverage artifact，沿用现状）</li>
+            <li><code>coverage-and-upload</code>（<code>needs: [unit-tests, integration-tests]</code>）：download-artifact <code>jacoco-exec-*</code> → <code>./gradlew jacocoAggregatedReport</code> → Codecov upload</li>
+            <li><code>required-check</code> 改为 <code>needs: [unit-tests, integration-tests, e2e-tests, coverage-and-upload]</code> + <code>if: always()</code> + 使用 <code>re-actors/alls-green@release/v1</code> action 校验所有依赖 success/skipped；任一非 success 则失败</li>
+            <li>reports / spotbugs-reports artifact 上传从汇总改为每 job <code>if: always()</code> 各自上传</li>
+          </ul>
+        </li>
+        <li><code>build-logic/src/main/kotlin/linqibin.java-base.gradle.kts</code> 微调：<code>jacocoTestReport</code> task 保持现状（本地 <code>./gradlew check</code> 仍会顺带跑），CI 通过 <code>-x</code> 跳过</li>
+      </ol>
+      <p><strong>Spike</strong>：PR2 merge 前在本地验证 <code>jacoco-report-aggregation</code> plugin 对 Java 25 + Spring Boot 4 + 30+ 模块结构的兼容性：</p>
+      <ul>
+        <li>本地跑 <code>./gradlew test integrationTest jacocoAggregatedReport</code></li>
+        <li>确认输出 XML 路径、格式符合 Codecov 期望（<code>codecov-action</code> 自动识别 jacoco XML 格式即可）</li>
+        <li>确认 exclude pattern <code>net/sf/jsqlparser/**</code> 生效</li>
+      </ul>
+      <p><strong>Spike 失败 fallback</strong>：<code>coverage-and-upload</code> job 改为重跑全量 <code>./gradlew testCodeCoverageReport integrationTestCodeCoverageReport</code>（即「双跑」模式），与原 ci.yml 行为一致，仅 coverage job 与 unit/IT 并行。</p>
+      <p><strong>预期实测</strong>：~6 min → ~5 min（关键路径 = max(unit, IT, e2e) + coverage，并行度从 1 升到 3）。</p>
+      <p><strong>回滚条件</strong>：
+        <ul>
+          <li><code>required-check</code> 与 branch protection 联动异常（PR 永远不能 merge 或永远绿）→ 临时把 <code>required-check</code> 改回独立 dummy job，分支保护规则 contexts 不动</li>
+          <li>jacoco-report-aggregation 在 CI 环境失败 → 走 fallback 双跑模式</li>
+        </ul>
+      </p>
+    </section>
+
+    <section id="pr3">
+      <h2>7. PR3 — Unit Sharding</h2>
+      <p><strong>目标</strong>：把 unit-tests 单 job 改为 4-shard matrix，压缩 unit 关键路径从 ~3 min 到 ~1.5-2 min。</p>
+      <p><strong>改动</strong>：</p>
+      <ol>
+        <li><code>.github/workflows/ci.yml</code> 改 <code>unit-tests</code> job：
+          <ul>
+            <li>添加 <code>strategy.matrix.shard</code>，4 个 shard 各含 <code>name</code> 和 <code>modules</code>（直接写 Gradle 命令参数，不引入辅助脚本）：</li>
+          </ul>
+          <pre><code>strategy:
+  fail-fast: false
+  matrix:
+    shard:
+      - name: commons-and-starters
+        gradle-tasks: >-
+          :linqibin-commons:linqibin-commons-core:test
+          :linqibin-commons:linqibin-commons-storage:test
+          :linqibin-commons:linqibin-spring-boot-starter-core:test
+          :linqibin-commons:linqibin-spring-boot-starter-web:test
+          :linqibin-commons:linqibin-spring-boot-starter-jpa:test
+          [...剩余 starters...]
+      - name: registry
+        gradle-tasks: >-
+          :patra-api:patra-registry:patra-registry-domain:test
+          :patra-api:patra-registry:patra-registry-app:test
+          :patra-api:patra-registry:patra-registry-infra:test
+          [...]
+      - name: ingest
+        gradle-tasks: >-
+          :patra-api:patra-ingest:patra-ingest-domain:test
+          [...]
+      - name: catalog-and-misc
+        gradle-tasks: >-
+          :patra-api:patra-catalog:patra-catalog-domain:test
+          [...] + gateway-boot + common:* + object-storage:*</code></pre>
+          实际命令展开到所有模块的 <code>:test</code> task，单 PR 一次性维护清单，模块新增/删除时改一处
+        </li>
+        <li><code>setup-gradle@v4</code> 在 shard job 中加 <code>cache-read-only: true</code>（避免 N 个 shard 竞争写 cache 导致污染）</li>
+        <li><code>upload-artifact</code> 名称加 shard 区分：<code>jacoco-exec-${{ matrix.shard.name }}</code></li>
+        <li><code>coverage-and-upload</code> job 用 glob pattern download：<code>pattern: jacoco-exec-*</code> + <code>merge-multiple: true</code></li>
+      </ol>
+      <p><strong>预期实测</strong>：~5 min → ~3-4 min。</p>
+      <p><strong>回滚条件</strong>：
+        <ul>
+          <li>实测显示单 shard 时长 &gt; 单 IT 时长（说明 unit 不再是瓶颈，sharding 收益小于复杂度成本）→ 回退到 PR2 形态的单 unit job</li>
+          <li>matrix 任一 shard 连续 3 个 run cache miss 率 &gt; 50% → 排查 cache key 设计，必要时调整 shard 划分</li>
+          <li>4 shard 模块清单遗漏某模块（全量 unit test 覆盖断层）→ 在 spec 检视阶段用 <code>./gradlew projects</code> 输出对照清单</li>
+        </ul>
+      </p>
+    </section>
+
+    <section id="measurement">
+      <h2>8. AC3 实测与回滚机制</h2>
+      <p>每个 PR 在 merge 前必须在 PR description 贴对照表：</p>
+      <table>
+        <thead>
+          <tr><th>Run</th><th>触发</th><th>总时长</th><th>关键路径分解</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>baseline</td><td>main 上最近 3 run（PR1 前）</td><td>—</td><td>—</td></tr>
+          <tr><td>本 PR run 1-3</td><td>本 PR 连续 3 个 push</td><td>—</td><td>—</td></tr>
+          <tr><td>结论</td><td>—</td><td>—</td><td>是否达预期、是否触发回滚</td></tr>
+        </tbody>
+      </table>
+      <p>数据来源：GitHub Actions UI 各 job 的 wall-clock；关键路径分解从最长 job 取值。若某 PR 实测净负收益，按对应 PR 节中的回滚条件处理；不达预期但仍正收益 → 接受，写明原因。</p>
+    </section>
+
+    <section id="decisions">
+      <h2>9. 关键决策与备选</h2>
+
+      <div class="decision">
+        <h3>决策 1：顺便修补 Required Status Check 配置错误</h3>
+        <p>探索发现实际 Required Status Check 是 1 min dummy <code>required-check</code> job（无 <code>needs:</code>，独立 echo），<code>build-and-test</code> 不是必需检查。即 PAP-15 分支保护实际处于「摆设」状态——任何 PR 即使测试全挂仍可 merge。本 spec 在 PR2 把 <code>required-check</code> 改为 <code>needs: [unit-tests, integration-tests, e2e-tests, coverage-and-upload]</code> + <code>if: always()</code> + alls-green，让分支保护真正强制生效。</p>
+        <p class="alternatives"><strong>备选 A：</strong>本 Issue 只做 CI 提速，分支保护 bug 另开 Issue — 否决：拆 job 拓扑后 <code>required-check</code> 无论如何都要改，分两个 Issue 会反复改 ci.yml<br>
+        <strong>备选 B：</strong>本 Issue 改 ci.yml 但不动 branch protection rule — 已实质等同于「顺便修补」，因为 branch protection contexts 仍指向 <code>required-check</code>，仅是不明确改动 PAP-15 范围</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 2：unit test 加速选 4-shard sharding，不动 fork 数</h3>
+        <p>调研显示 AC5a sharding 与 AC5b fork 翻倍性质不同：sharding 业界 3-4 shard 是甜点（单 shard 冷启动 ~30-60s 叠加），4 shard 起步保守稳健；fork 翻倍调研判定「方向对但收益不确定」（JVM startup 200-500ms/进程，可能净负）。本 spec 做 sharding 不做 fork 调整，AC5b 推迟至后续 Issue，先收集本 Issue 落地后的 build scan baseline 再决策。</p>
+        <p class="alternatives"><strong>备选 A：</strong>两者都做，fork=availableProcessors 收集数据后决定保留 — 否决：变量太多，AC3 实测难以归因；推迟 AC5b 损失最多 1 min 收益，可接受<br>
+        <strong>备选 B：</strong>只做 fork 不做 sharding — 否决：不解决 unit 真测试 4:30 主瓶颈，目标无法达成<br>
+        <strong>备选 C：</strong>都不做 — 否决：与本 Issue 目标不符</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 3：JaCoCo 用 shard 关 report + aggregation merge .exec 模式</h3>
+        <p>shard job 加 <code>-x jacocoTestReport</code>（agent 仍记录 .exec，跳过报告生成）→ upload-artifact <code>.exec</code> → coverage job 用 Gradle 原生 <code>jacoco-report-aggregation</code> plugin 合并出报告。无重复跑测试，总算力最省。</p>
+        <p class="alternatives"><strong>备选 A：</strong>shard 完全关 JaCoCo agent（<code>-Djacoco.skip=true</code>）+ coverage job 重跑全量 unit/IT — 否决：「双跑」浪费算力且拉长总 CI 时长；agent 开销 &lt;10% 不值得完全关<br>
+        <strong>备选 B：</strong>shard 关 report，coverage job 重跑 testCodeCoverageReport — 否决：仍要跑全量 unit test，本质同备选 A</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 4：镜像版本治理用 CI yaml 一致性校验，不改 Java/compose 源</h3>
+        <p>workflow 顶部 <code>env:</code> 声明镜像版本，新增 step 用 grep 校验 4 个文件（Java 常量 + 2 份 compose）镜像版本与 env 一致；不一致则 fail。零构建逆依赖，添加一重防护。</p>
+        <p class="alternatives"><strong>备选 A：</strong>集中到 <code>gradle.properties</code> + system property + processResources 占位符替换 — 否决：构建逻辑复杂度过高，仅为镜像版本治理引入跨层耦合，YAGNI<br>
+        <strong>备选 B：</strong>仅 README 加修改 checklist — 否决：依赖人能纪律，无强制力</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 5：PR 拆分用 3 PR 收敛而非 5 PR 完全拆分</h3>
+        <p>PR1（基础设施层 4 个高内聚动作）+ PR2（Job 拓扑重构含 JaCoCo aggregation，两者必然耦合）+ PR3（最复杂结构变更，单独便于回滚和实测调优）。</p>
+        <p class="alternatives"><strong>备选 A：</strong>5 PR 完全拆分（AC1 / AC4 / AC2 / AC5c / AC5a 各一 PR） — 否决：PR2/PR3/PR4 都改 ci.yml，merge 冲突频繁；收益归因清晰度提升不足以抵消 churn<br>
+        <strong>备选 B：</strong>一锅端单 PR — 否决：变量太多，AC3 实测每个 AC 收益归因困难；CI yaml 重写出问题难定位</p>
+      </div>
+
+    </section>
+
+    <section id="risks">
+      <h2>10. 风险与缓解</h2>
+      <table>
+        <thead>
+          <tr><th>风险</th><th>等级</th><th>缓解</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>cc cache 持续降级（CI 日志反复 "Calculating task graph"），收益不达预期</td>
+            <td><span class="pill mid">mid</span></td>
+            <td>PR1 实测验证；若降级，从 setup-gradle 移除 <code>cache-encryption-key</code> 临时回退；排查是否 build-logic 中存在 cc 不兼容代码（如 task action 中访问 <code>project</code>）</td>
+          </tr>
+          <tr>
+            <td><code>jacoco-report-aggregation</code> plugin 与 Java 25 / Spring Boot 4 / 30+ 模块结构不兼容</td>
+            <td><span class="pill mid">mid</span></td>
+            <td>PR2 spike 本地先验证；fallback 走「双跑」模式（coverage job 重跑全量带 JaCoCo），与原 ci.yml 行为一致</td>
+          </tr>
+          <tr>
+            <td>alls-green 与 branch protection 联动异常（PR 永远不能 merge / 永远绿）</td>
+            <td><span class="pill mid">mid</span></td>
+            <td>PR2 在测试 PR 上验证 alls-green 行为后再 merge；异常时临时把 <code>required-check</code> 改回独立 dummy，分支保护 contexts 不动</td>
+          </tr>
+          <tr>
+            <td>4 shard 模块清单遗漏某模块，全量 unit test 覆盖断层</td>
+            <td><span class="pill mid">mid</span></td>
+            <td>PR3 spike：用 <code>./gradlew projects</code> 输出对照 shard 清单；CI 加 assertion step 检查所有模块都被某 shard 覆盖（可选）</td>
+          </tr>
+          <tr>
+            <td>shard 后单 shard 冷启动叠加吃掉收益，CI 总时长反而增加</td>
+            <td><span class="pill low">low</span></td>
+            <td>AC3 实测 3 个连续 run 验证；不达预期回退到 PR2 形态单 unit job；4 shard 而非 7 shard 已主动控制风险</td>
+          </tr>
+          <tr>
+            <td>matrix shard 缓存竞争导致 cache miss 率高</td>
+            <td><span class="pill low">low</span></td>
+            <td><code>cache-read-only: true</code> 已在设计中包含；监控 setup-gradle 输出的 cache hit/miss 日志</td>
+          </tr>
+          <tr>
+            <td>GitHub Free plan 单仓 20 concurrent jobs 上限</td>
+            <td><span class="pill low">low</span></td>
+            <td>4 unit shard + IT + e2e + coverage + required-check = 8 jobs，远低于 20；多 PR 同时跑时 GitHub 自动排队</td>
+          </tr>
+          <tr>
+            <td>Docker pull 网络抖动 / Docker Hub rate limit</td>
+            <td><span class="pill low">low</span></td>
+            <td>pull 失败 fail-fast；监控 PR1 后 docker pull step 失败率；必要时切换 GHCR mirror 或 docker login</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="changes">
+      <h2>11. 改造文件清单</h2>
+      <table>
+        <thead>
+          <tr><th>#</th><th>文件</th><th>操作</th><th>说明</th><th>PR</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><code>.github/workflows/ci.yml</code></td>
+            <td><span class="pill modify">modify</span></td>
+            <td>PR1: 删 <code>--no-daemon</code> + cache-encryption-key + docker pull step + image version check step；PR2: 拆 4 job + required-check needs + alls-green；PR3: unit-tests matrix sharding</td>
+            <td>1,2,3</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><code>build-logic/src/main/kotlin/linqibin.jacoco-aggregation.gradle.kts</code></td>
+            <td><span class="pill create">create</span></td>
+            <td>新建独立 convention plugin，应用 jacoco-report-aggregation plugin 并定义 <code>jacocoAggregatedReport</code> task；命名风格与 linqibin.spotless / linqibin.spotbugs 一致</td>
+            <td>2</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><code>build-logic/src/main/kotlin/linqibin.java-base.gradle.kts</code></td>
+            <td><span class="pill keep">keep</span></td>
+            <td>不动 — jacocoTestReport task 保持现状供本地 <code>./gradlew check</code> 使用；CI 通过 <code>-x</code> 跳过</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td>GitHub repo secret <code>GRADLE_ENCRYPTION_KEY</code></td>
+            <td><span class="pill create">create</span></td>
+            <td>一次性手工动作，<code>openssl rand -base64 16</code> 生成；PR1 description 给指令</td>
+            <td>1</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td><code>linqibin-commons/linqibin-spring-boot-starter-test/src/main/java/dev/linqibin/starter/test/container/initializer/PostgreSQLContainerInitializer.java</code></td>
+            <td><span class="pill keep">keep</span></td>
+            <td>不动 — POSTGRESQL_IMAGE 常量被 ci.yml 一致性校验 step 监控；改镜像版本时 4 处同步改</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td><code>linqibin-commons/linqibin-spring-boot-starter-test/src/main/resources/docker-compose-rocketmq.yml</code></td>
+            <td><span class="pill keep">keep</span></td>
+            <td>不动 — 同上</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td><code>patra-api/patra-ingest/patra-ingest-boot/src/test/resources/docker-compose-rocketmq.yml</code></td>
+            <td><span class="pill keep">keep</span></td>
+            <td>不动 — 同上</td>
+            <td>—</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <aside class="callout info">
+      <span class="title">Done 判定</span>
+      <ol>
+        <li>3 个 PR 全部 merge 到 main，AC3 实测数据贴在各自 PR description</li>
+        <li><code>required-check</code> 在 branch protection 上真正强制生效（手工验证：故意 push 一个测试失败的 PR，确认无法 merge）</li>
+        <li>PR3 后 CI 总时长稳定在 ~3-4 min（3 个连续 run 平均），未达 ~3 min 不算失败但需 PR description 写明原因</li>
+        <li>所有镜像版本治理一致性校验 step 在 ci.yml 中生效，故意改坏一处镜像版本能在 CI 复现 fail</li>
+        <li>jacoco-report-aggregation 输出在 Codecov 上正常可见，覆盖率与 baseline 不下降</li>
+        <li>本 spec 在 Implementation Notes 中追加实施期所有 spec 未规定的决定 / 必要更改 / 权衡</li>
+      </ol>
+    </aside>
+
+  </main>
+
+  <aside class="notes-panel" id="notes">
+    <header>
+      <h2>Implementation Notes</h2>
+      <p class="hint">实施期由 Claude Code 即时追加。规则：遇到 spec 未规定的<strong>决定</strong>、必要<strong>更改</strong>、不可避免的<strong>权衡</strong>、其他用户应知事项，立即用 Edit 追加 entry，不要等任务结束。</p>
+    </header>
+
+    <ol class="notes-log">
+    </ol>
+
+    <p class="empty-state">no notes yet</p>
+
+    <footer class="notes-stats">
+      总计:
+      <span data-counter="decision">0</span> decisions /
+      <span data-counter="change">0</span> changes /
+      <span data-counter="tradeoff">0</span> tradeoffs /
+      <span data-counter="other">0</span> others
+    </footer>
+  </aside>
+
+</div>
+</body>
+</html>
