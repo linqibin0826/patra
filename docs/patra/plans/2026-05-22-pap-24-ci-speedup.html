@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PAP-24 CI 提速实施计划 — 3 PR 收敛</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles/journal.css">
+  <link rel="stylesheet" href="../styles/plan-extras.css">
+</head>
+<body>
+<div class="layout">
+
+  <nav class="toc">
+    <h3>目录</h3>
+    <ol>
+      <li><a href="#scope-check">范围检查结果</a></li>
+      <li><a href="#file-structure">文件结构</a></li>
+      <li><a href="#tasks">任务列表</a>
+        <ol class="toc-tasks">
+          <li data-task-status="done"><a href="#task-1">Task 1 — PR1 实施基础设施层</a></li>
+          <li data-task-status="done"><a href="#task-2">Task 2 — PR1 实测验证 + merge</a></li>
+          <li data-task-status="done"><a href="#task-3">Task 3 — PR2 jacoco-aggregation convention plugin + 本地 spike</a></li>
+          <li data-task-status="done"><a href="#task-4">Task 4 — PR2 ci.yml 拆 4 job + required-check 真正生效</a></li>
+          <li data-task-status="done"><a href="#task-5">Task 5 — PR2 实测 + 分支保护强制验证 + merge</a></li>
+          <li data-task-status="done"><a href="#task-6">Task 6 — PR3 ci.yml unit-tests 改 4-shard matrix</a></li>
+          <li data-task-status="done"><a href="#task-7">Task 7 — PR3 实测 + 最终对比 + merge</a></li>
+        </ol>
+      </li>
+      <li><a href="#self-check">自检结果</a></li>
+    </ol>
+  </nav>
+
+  <main class="content">
+
+    <header class="doc-header">
+      <h1>PAP-24 CI 提速实施计划 — 3 PR 收敛</h1>
+      <div class="meta-bar">
+        <span>📅 2026-05-22</span>
+        <span>🌿 worktree-pap-24-ci-speedup</span>
+        <span>📋 plan</span>
+        <span class="status-pill">draft</span>
+      </div>
+
+      <aside class="for-ai-worker">
+        <strong>面向 AI 代理的工作者：</strong>
+        必需子技能：使用 <code>patra:subagent-driven-development</code>（推荐）
+        或 <code>patra:executing-plans</code> 逐任务实现。
+        通过修改任务卡片与步骤的 <code>data-status</code> 属性追踪进度
+        （pending / in-progress / done / blocked / skipped）。
+        每完成一个 task 立即 commit；每个 PR 的 task 全部 merge 后再开始下一个 PR 的 task。
+      </aside>
+
+      <dl class="meta">
+        <dt>目标</dt> <dd>把 CI 总时长从 ~8 min 降到 ~3-4 min，同时让 PAP-15 分支保护从「事实摆设」变为真正强制生效</dd>
+        <dt>架构</dt> <dd>3 个 PR 顺序实施：PR1 基础设施层（cc cache + docker pull 并发 + 镜像版本一致性校验）→ PR2 Job 拓扑重构（拆 4 job + required-check needs + jacoco-report-aggregation plugin）→ PR3 Unit Sharding（4-shard matrix）</dd>
+        <dt>技术栈</dt> <dd>GitHub Actions / Gradle 9.2.1 / Kotlin DSL convention plugins / Java 25 + Spring Boot 4 / JaCoCo / re-actors/alls-green action</dd>
+        <dt>关联 spec</dt> <dd><a href="../specs/2026-05-22-pap-24-ci-speedup-design.html">PAP-24 CI 提速 — 容器预拉取 + Job 拆分 + Configuration Cache + Unit Sharding 设计</a></dd>
+      </dl>
+    </header>
+
+    <section id="scope-check">
+      <h2>范围检查结果</h2>
+      <aside class="callout success">
+        <span class="title">单 plan 覆盖</span>
+        <p>本 plan 涵盖 spec 中的全部 3 个 PR 序列。3 PR 紧密耦合（PR2 用 PR1 的 secret，PR3 改 PR2 的 unit-tests job），顺序实施，无法独立并行。subagent 驱动执行时按 task 顺序推进，PR1 的 task merge 后才开始 PR2 的 task。</p>
+      </aside>
+    </section>
+
+    <section id="file-structure">
+      <h2>文件结构</h2>
+      <div class="file-tree">
+        <pre>.github/workflows/ci.yml                                                     [modify]  PR1: 删 --no-daemon + cache-encryption-key + docker pull step + image-check step
+                                                                                       PR2: 拆 4 job + required-check needs + alls-green + jacocoAggregatedReport
+                                                                                       PR3: unit-tests 改 4-shard matrix + artifact glob
+
+build-logic/src/main/kotlin/linqibin.jacoco-aggregation.gradle.kts            [create]  PR2: 独立 convention plugin，应用 jacoco-report-aggregation plugin + 定义 jacocoAggregatedReport task
+
+build.gradle.kts (root)                                                       [modify]  PR2: 应用 linqibin.jacoco-aggregation plugin（如根项目尚未应用）
+
+GitHub repo secret GRADLE_ENCRYPTION_KEY                                      [create]  PR1: 一次性手工添加，由用户操作
+
+不动（spec 决策，被 ci.yml 一致性校验 step 监控）:
+  linqibin-commons/linqibin-spring-boot-starter-test/src/main/java/.../PostgreSQLContainerInitializer.java  [keep]
+  linqibin-commons/linqibin-spring-boot-starter-test/src/main/resources/docker-compose-rocketmq.yml         [keep]
+  patra-api/patra-ingest/patra-ingest-boot/src/test/resources/docker-compose-rocketmq.yml                   [keep]
+  build-logic/src/main/kotlin/linqibin.java-base.gradle.kts                                                  [keep]</pre>
+      </div>
+    </section>
+
+    <section id="tasks">
+      <h2>任务列表</h2>
+
+      <!-- ============================================================
+           PR1 — 基础设施层
+           ============================================================ -->
+
+      <article class="task" id="task-1" data-status="done">
+        <header>
+          <h2>任务 1：PR1 实施基础设施层</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>.github/workflows/ci.yml</code></dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：从 main 切出 PR1 分支</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">git fetch origin
+git checkout -b feat/pap-24-pr1-ci-foundation origin/main</code></pre>
+            <p>说明：spec/plan 已 commit 在 <code>worktree-pap-24-ci-speedup</code>，PR1 单独从 main 切；后续 PR2/PR3 各自从 main 切。</p>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 2：在 ci.yml 顶部 env 添加镜像版本变量</strong>
+            <p>编辑 <code>.github/workflows/ci.yml</code>，在 <code>concurrency:</code> 块之后、<code>jobs:</code> 之前插入：</p>
+            <pre><code class="lang-yaml">env:
+  POSTGRES_IMAGE: postgres:17
+  ROCKETMQ_IMAGE: apache/rocketmq:5.3.1</code></pre>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 3：删除 build-and-test job 内所有 --no-daemon 标志</strong>
+            <p>找到 build-and-test job 中的 4 处 <code>./gradlew ... --no-daemon</code>，删除 <code>--no-daemon</code>：</p>
+            <pre><code class="lang-yaml"># Before
+- name: ✅ Check (test + spotbugsMain + spotlessCheck)
+  run: ./gradlew check --no-daemon
+
+- name: 🔬 Integration tests (Testcontainers)
+  run: ./gradlew integrationTest --no-daemon
+
+- name: 🎯 E2E tests
+  run: ./gradlew e2eTest --no-daemon
+
+- name: 📊 JaCoCo aggregate reports
+  run: ./gradlew testCodeCoverageReport integrationTestCodeCoverageReport --no-daemon
+
+# After
+- name: ✅ Check (test + spotbugsMain + spotlessCheck)
+  run: ./gradlew check
+
+- name: 🔬 Integration tests (Testcontainers)
+  run: ./gradlew integrationTest
+
+- name: 🎯 E2E tests
+  run: ./gradlew e2eTest
+
+- name: 📊 JaCoCo aggregate reports
+  run: ./gradlew testCodeCoverageReport integrationTestCodeCoverageReport</code></pre>
+            <p>理由：Gradle 9 + setup-gradle@v4 下 <code>--no-daemon</code> 是反模式（daemon 复用 JVM warmup 反而更快）。spec §1 已说明。</p>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 4：给 setup-gradle@v4 加 cache-encryption-key</strong>
+            <p>修改 setup-gradle step：</p>
+            <pre><code class="lang-yaml"># Before
+- name: 🐘 Setup Gradle (build cache + dependency cache + wrapper verify)
+  uses: gradle/actions/setup-gradle@v4
+
+# After
+- name: 🐘 Setup Gradle (build cache + dependency cache + configuration cache + wrapper verify)
+  uses: gradle/actions/setup-gradle@v4
+  with:
+    cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}</code></pre>
+            <p>理由：setup-gradle@v4 自带 configuration-cache 缓存能力，但只有在 <code>cache-encryption-key</code> 存在时才会保存到 GHA cache。secret 缺失时此参数为空字符串，setup-gradle 容忍降级（CI 不会失败，仅 cc cache 不持久化）。</p>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 5：新增 Pre-pull container images step</strong>
+            <p>在 setup-gradle step 之后、check step 之前插入：</p>
+            <pre><code class="lang-yaml">- name: 🐳 Pre-pull container images (并发预热,藏入编译关键路径)
+  run: |
+    docker pull "$POSTGRES_IMAGE" &
+    docker pull "$ROCKETMQ_IMAGE" &
+    wait
+  env:
+    POSTGRES_IMAGE: ${{ env.POSTGRES_IMAGE }}
+    ROCKETMQ_IMAGE: ${{ env.ROCKETMQ_IMAGE }}</code></pre>
+            <p>说明：GHA step 之间串行执行，但 step 内部并发 pull。两镜像并行 pull 总时长 ~40-50s，在 check step 的 Gradle 编译期间已完成。</p>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 6：新增镜像版本一致性校验 step</strong>
+            <p>在 Pre-pull step 之后插入：</p>
+            <pre><code class="lang-yaml">- name: 🔍 Verify container image versions consistency
+  run: |
+    set -e
+    FAIL=0
+
+    PG_FILE="linqibin-commons/linqibin-spring-boot-starter-test/src/main/java/dev/linqibin/starter/test/container/initializer/PostgreSQLContainerInitializer.java"
+    if ! grep -q "private static final String POSTGRESQL_IMAGE = \"$POSTGRES_IMAGE\";" "$PG_FILE"; then
+      echo "::error file=$PG_FILE::POSTGRESQL_IMAGE 常量与 workflow env POSTGRES_IMAGE=$POSTGRES_IMAGE 不一致"
+      FAIL=1
+    fi
+
+    for COMPOSE in \
+      "linqibin-commons/linqibin-spring-boot-starter-test/src/main/resources/docker-compose-rocketmq.yml" \
+      "patra-api/patra-ingest/patra-ingest-boot/src/test/resources/docker-compose-rocketmq.yml"; do
+      COUNT=$(grep -c "image: $ROCKETMQ_IMAGE\b" "$COMPOSE" || true)
+      if [ "$COUNT" -ne 2 ]; then
+        echo "::error file=$COMPOSE::期望 2 处 'image: $ROCKETMQ_IMAGE',实际 $COUNT 处"
+        FAIL=1
+      fi
+    done
+
+    if [ "$FAIL" -ne 0 ]; then
+      echo "镜像版本治理 SSOT 失守。修改镜像版本时需同步 ci.yml env + Java 常量 + 2 份 compose 文件。"
+      exit 1
+    fi
+    echo "✓ 3 个文件的镜像版本与 workflow env 一致"</code></pre>
+            <p>说明：失败时给出明确指引；通过时打印 ✓ 行便于 CI 日志检索。grep 用 <code>\b</code> 防止 <code>5.3.10</code> 误中 <code>5.3.1</code>。</p>
+          </li>
+
+          <li class="step" data-status="skipped">
+            <strong>步骤 7：手工添加 GRADLE_ENCRYPTION_KEY repo secret</strong>
+            <p>用户在本地终端执行（注意：此步骤需要用户操作，AI 不能代为修改 GitHub secret）：</p>
+            <pre><code class="lang-bash">openssl rand -base64 16</code></pre>
+            <p>把输出的字符串通过 GitHub repo → Settings → Secrets and variables → Actions → New repository secret 添加，名为 <code>GRADLE_ENCRYPTION_KEY</code>。</p>
+            <p>说明：PR1 不依赖此 secret 也能 merge（setup-gradle 容忍降级），但缺失时 cc cache 不会持久化，PR1 收益打折。建议在 PR1 实测前完成。</p>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 8：本地静态验证 ci.yml 语法</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">command -v actionlint &>/dev/null && actionlint .github/workflows/ci.yml || echo "actionlint 未安装,跳过本地校验（CI 上仍会校验）"
+yq eval '.jobs.build-and-test.steps[].name' .github/workflows/ci.yml</code></pre>
+            <p>预期：actionlint 无错误（如已安装）；yq 输出包含 "Pre-pull container images" 与 "Verify container image versions consistency" 两个新 step。</p>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 9：Commit PR1 改动</strong>
+            <pre><code class="lang-bash">git add .github/workflows/ci.yml
+git commit -m "$(cat &lt;&lt;'EOF'
+ci: pr1 基础设施层提速 (PAP-24)
+
+- 删除 4 处 --no-daemon (Gradle 9 + setup-gradle@v4 下反模式)
+- setup-gradle@v4 加 cache-encryption-key 启用 cc cache 持久化
+- 新增 Pre-pull container images step (postgres + rocketmq 并发,藏入编译关键路径)
+- 新增镜像版本一致性校验 step (Java 常量 + 2 份 compose 与 workflow env 比对)
+- workflow 顶部 env 声明 POSTGRES_IMAGE / ROCKETMQ_IMAGE 作为 SSOT
+
+需配套手工动作: GitHub repo secret GRADLE_ENCRYPTION_KEY (openssl rand -base64 16)
+缺失时 setup-gradle 降级 (CI 不失败,仅 cc cache 不持久化)
+
+预期: ~8 min → ~6 min
+EOF
+)"</code></pre>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 10：Push + 开 PR</strong>
+            <pre><code class="lang-bash">git push -u origin feat/pap-24-pr1-ci-foundation
+
+gh pr create --title "ci: pr1 基础设施层提速 (PAP-24)" --body "$(cat &lt;&lt;'EOF'
+## Summary
+- 删 --no-daemon (Gradle 9 反模式)
+- setup-gradle@v4 加 cache-encryption-key
+- docker pull 并发预热,藏入编译路径
+- 镜像版本一致性校验 step
+
+## 实测对照表 (AC3,merge 前填写)
+| Run | 触发 | 总时长 | 关键路径分解 |
+|-----|------|--------|--------------|
+| baseline (main 最近 3 run) | - | TBD | - |
+| 本 PR run 1 | - | TBD | - |
+| 本 PR run 2 | - | TBD | - |
+| 本 PR run 3 | - | TBD | - |
+| 结论 | - | - | 是否达预期 (~6 min) |
+
+## 一次性手工动作
+**Merge 前**用户需执行：
+1. 本地: \`openssl rand -base64 16\`
+2. GitHub repo Settings → Secrets → 新建 \`GRADLE_ENCRYPTION_KEY\`
+
+## Test plan
+- [ ] 故意打错一处 image: 行,CI 应在 image-check step fail
+- [ ] CI 日志确认 cc cache hit (无 "Calculating task graph as no cached configuration is available")
+- [ ] 3 个连续 run 时长对比 baseline,接近 ~6 min
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+EOF
+)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-2" data-status="done">
+        <header>
+          <h2>任务 2：PR1 实测验证 + merge</h2>
+          <dl class="files">
+            <dt>测试</dt><dd>GitHub Actions UI（本 PR 的 CI run）</dd>
+            <dt>更新</dt><dd>PR description 实测对照表</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：收集 baseline (main 最近 3 个 ci.yml run) 时长</strong>
+            <pre><code class="lang-bash">gh run list --workflow ci.yml --branch main --limit 3 --json databaseId,createdAt,updatedAt,conclusion \
+  | jq -r '.[] | "\(.databaseId) created=\(.createdAt) updated=\(.updatedAt) conclusion=\(.conclusion)"'</code></pre>
+            <p>用 (updatedAt - createdAt) 算各 run 时长，平均作为 baseline。把数据贴到 PR description 表格。</p>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 2：触发 PR 上 3 个连续 run</strong>
+            <p>每次空 commit 触发：</p>
+            <pre><code class="lang-bash"># 第 1 个 run 已由 push 触发
+# 第 2 个 run：
+git commit --allow-empty -m "ci: trigger run #2 for measurement"
+git push
+# 第 3 个 run：
+git commit --allow-empty -m "ci: trigger run #3 for measurement"
+git push</code></pre>
+            <p>说明：每次 push 都会 cancel-in-progress 取消上一个未完成的 run（concurrency 配置），需要等上一个 run 完成再 push 下一个。</p>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 3：从 CI 日志确认 cc cache hit</strong>
+            <pre><code class="lang-bash">RUN_ID=$(gh run list --workflow ci.yml --branch feat/pap-24-pr1-ci-foundation --limit 1 --json databaseId -q '.[0].databaseId')
+gh run view "$RUN_ID" --log | grep -iE "(configuration cache|Calculating task graph|Reusing configuration cache)" | head -20</code></pre>
+            <p>预期：第 2 / 第 3 个 run 应有 "Reusing configuration cache" 字样，无 "Calculating task graph as no cached configuration is available"。</p>
+            <p>如果持续看到 "Calculating task graph" → 触发回滚条件：检查 GRADLE_ENCRYPTION_KEY secret 是否真的添加，或排查 build-logic 是否有 cc 不兼容代码。</p>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 4：填 PR description 实测表格 + 触发故意失败镜像版本校验</strong>
+            <p>用步骤 1-3 的数据填 PR description 表格。然后做一次性故意失败测试：</p>
+            <pre><code class="lang-bash">git checkout -b test/break-image-version
+sed -i.bak 's/POSTGRES_IMAGE: postgres:17/POSTGRES_IMAGE: postgres:99/' .github/workflows/ci.yml
+git commit -am "ci: TEST verify image-check step fails (will revert)"
+git push -u origin test/break-image-version
+# 等 CI 跑 → 应在 image-check step fail
+gh run watch
+# 确认失败后立即删除测试分支
+git checkout feat/pap-24-pr1-ci-foundation
+git branch -D test/break-image-version
+git push origin --delete test/break-image-version</code></pre>
+            <p>预期：测试分支的 CI 在 "Verify container image versions consistency" step 失败，错误信息含 "POSTGRESQL_IMAGE 常量与 workflow env POSTGRES_IMAGE=postgres:99 不一致"。</p>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 5：Merge PR1（用户决策）</strong>
+            <p>实测达预期（~6 min）→ 合并：</p>
+            <pre><code class="lang-bash">gh pr merge feat/pap-24-pr1-ci-foundation --squash --delete-branch</code></pre>
+            <p>实测不达预期但仍正收益 → PR description 写明原因后合并；净负收益 → 按 spec PR1 回滚条件处理（从 setup-gradle 移除 cache-encryption-key 临时回退）。</p>
+          </li>
+        </ol>
+      </article>
+
+      <!-- ============================================================
+           PR2 — Job 拓扑重构 + JaCoCo Aggregation
+           ============================================================ -->
+
+      <article class="task" id="task-3" data-status="done">
+        <header>
+          <h2>任务 3：PR2 jacoco-aggregation convention plugin + 本地 spike</h2>
+          <dl class="files">
+            <dt>创建</dt><dd><code>build-logic/src/main/kotlin/linqibin.jacoco-aggregation.gradle.kts</code></dd>
+            <dt>修改</dt><dd><code>build.gradle.kts</code>（根项目应用 plugin）</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="skipped">
+            <strong>步骤 1：从 main 切 PR2 分支</strong>
+            <pre><code class="lang-bash">git fetch origin
+git checkout -b feat/pap-24-pr2-job-topology origin/main</code></pre>
+          </li>
+
+          <li class="step" data-status="skipped">
+            <strong>步骤 2：新建 linqibin.jacoco-aggregation convention plugin</strong>
+            <p>创建 <code>build-logic/src/main/kotlin/linqibin.jacoco-aggregation.gradle.kts</code>：</p>
+            <pre><code class="lang-kotlin">/**
+ * Patra JaCoCo Aggregation Convention Plugin
+ *
+ * 在根项目应用,聚合所有子项目的 jacoco *.exec 文件,
+ * 输出统一的 XML + HTML 报告供 CI coverage job 上传 Codecov。
+ *
+ * 用法：根 build.gradle.kts 加 plugins { id("linqibin.jacoco-aggregation") }
+ *
+ * 与 linqibin.java-base 中各模块各自的 jacocoTestReport 共存：
+ *   - jacocoTestReport (per-module)  → 供本地 ./gradlew check 顺带跑
+ *   - jacocoAggregatedReport (root)  → 供 CI coverage job 跑,跨模块聚合
+ */
+
+plugins {
+    base
+    id("jacoco-report-aggregation")
+}
+
+reporting {
+    reports {
+        val jacocoAggregatedReport by creating(JacocoCoverageReport::class) {
+            testSuiteName = "test"
+        }
+    }
+}
+
+// 聚合 test + integrationTest 两类 .exec 文件,与现有 testCodeCoverageReport /
+// integrationTestCodeCoverageReport 等价但走单一聚合任务,便于 CI 下载 artifact 后跑
+tasks.named("jacocoAggregatedReport", JacocoReport::class) {
+    // 显式扫描所有子项目的 .exec (含 test / integrationTest)
+    executionData.setFrom(
+        fileTree(rootDir) {
+            include("**/build/jacoco/test.exec")
+            include("**/build/jacoco/integrationTest.exec")
+        }
+    )
+
+    // 类与源 path 沿用 linqibin.java-base 中的 jsqlparser exclude
+    classDirectories.setFrom(
+        files(
+            subprojects.flatMap { sub ->
+                sub.layout.buildDirectory.dir("classes/java/main").get().asFile.let {
+                    if (it.exists()) listOf(fileTree(it) { exclude("net/sf/jsqlparser/**") }) else emptyList()
+                }
+            }
+        )
+    )
+    sourceDirectories.setFrom(
+        files(subprojects.mapNotNull { it.layout.projectDirectory.dir("src/main/java").asFile.takeIf(java.io.File::exists) })
+    )
+
+    reports {
+        xml.required = true
+        html.required = true
+        xml.outputLocation = layout.buildDirectory.file("reports/jacoco/aggregated/jacocoAggregatedReport.xml")
+        html.outputLocation = layout.buildDirectory.dir("reports/jacoco/aggregated/html")
+    }
+}</code></pre>
+            <p>说明：<code>jacoco-report-aggregation</code> plugin 是 Gradle 内置（无需 buildscript 依赖）。这里手工配置 <code>executionData</code> / <code>classDirectories</code> / <code>sourceDirectories</code> 是因为聚合多个 source set（test + integrationTest），plugin 默认配置只聚合 test。</p>
+          </li>
+
+          <li class="step" data-status="skipped">
+            <strong>步骤 3：在根 build.gradle.kts 应用 plugin</strong>
+            <p>读 <code>build.gradle.kts</code>（根）找到 plugins 块，加入：</p>
+            <pre><code class="lang-kotlin">plugins {
+    // ... 现有 plugins ...
+    id("linqibin.jacoco-aggregation")
+}</code></pre>
+            <p>如果根 build.gradle.kts 没有 plugins 块（仅有 allprojects），在文件顶部插入：</p>
+            <pre><code class="lang-kotlin">plugins {
+    id("linqibin.jacoco-aggregation")
+}</code></pre>
+            <p>验证：根项目应解析到新 plugin。</p>
+            <pre><code class="lang-bash">./gradlew tasks --group "verification" | grep jacocoAggregatedReport</code></pre>
+            <p>预期：输出含 <code>jacocoAggregatedReport - Generates aggregated code coverage report ...</code></p>
+          </li>
+
+          <li class="step" data-status="skipped">
+            <strong>步骤 4：本地 spike — 跑完整聚合流程</strong>
+            <pre><code class="lang-bash">./gradlew test integrationTest jacocoAggregatedReport
+ls -lh build/reports/jacoco/aggregated/</code></pre>
+            <p>预期：<code>jacocoAggregatedReport.xml</code> 与 <code>html/index.html</code> 都生成；XML 文件大小 &gt; 50KB（包含所有模块覆盖率）。</p>
+            <p><strong>Spike 失败 → 走 fallback 方案</strong>：如果 plugin 与 Java 25 / Spring Boot 4 不兼容，删除 linqibin.jacoco-aggregation.gradle.kts，task 4 的 coverage job 改为重跑 <code>./gradlew testCodeCoverageReport integrationTestCodeCoverageReport</code>（与原 ci.yml 一致）。在 right-side notes 追加 tradeoff entry 说明。</p>
+          </li>
+
+          <li class="step" data-status="skipped">
+            <strong>步骤 5：检查 XML 格式符合 Codecov 期望</strong>
+            <pre><code class="lang-bash">head -20 build/reports/jacoco/aggregated/jacocoAggregatedReport.xml
+xmllint --noout build/reports/jacoco/aggregated/jacocoAggregatedReport.xml &amp;&amp; echo "XML well-formed"</code></pre>
+            <p>预期：XML 顶部含 <code>&lt;!DOCTYPE report PUBLIC "-//JACOCO//DTD Report 1.1//EN" ...&gt;</code>，xmllint 验证通过。<code>codecov-action@v4</code> 自动识别 jacoco XML 格式，不需要额外配置。</p>
+          </li>
+
+          <li class="step" data-status="skipped">
+            <strong>步骤 6：Commit task 3</strong>
+            <pre><code class="lang-bash">git add build-logic/src/main/kotlin/linqibin.jacoco-aggregation.gradle.kts build.gradle.kts
+git commit -m "$(cat &lt;&lt;'EOF'
+build(gradle): 添加 linqibin.jacoco-aggregation convention plugin (PAP-24)
+
+新建独立 convention plugin,应用 Gradle 原生 jacoco-report-aggregation,
+扫描所有子项目 test + integrationTest .exec 文件聚合输出 XML + HTML 报告
+到 build/reports/jacoco/aggregated/,沿用现有 net/sf/jsqlparser/** exclude。
+
+任务: 为 PR2 的 coverage-and-upload job 提供单一聚合入口,
+避免 unit shard 多 .exec artifact 下载后的合并逻辑分散。
+
+本地 spike 验证: ./gradlew test integrationTest jacocoAggregatedReport
+输出 jacocoAggregatedReport.xml,xmllint 验证通过,文件 &gt; 50KB。
+EOF
+)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-4" data-status="done">
+        <header>
+          <h2>任务 4：PR2 ci.yml 拆 4 job + required-check 真正生效</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>.github/workflows/ci.yml</code></dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：重写 ci.yml 完整 jobs 块</strong>
+            <p>把现有 <code>required-check</code> + <code>build-and-test</code> 两 job 替换为 5 job 结构（unit-tests / integration-tests / e2e-tests / coverage-and-upload / required-check）。完整替换 <code>jobs:</code> 块为：</p>
+            <pre><code class="lang-yaml">jobs:
+  unit-tests:
+    name: unit-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup JDK 25 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+
+      - name: 🐘 Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      - name: ✅ Unit tests (no JaCoCo report)
+        run: ./gradlew check -x jacocoTestReport
+
+      - name: 📦 Upload jacoco exec (unit)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-exec-unit
+          path: '**/build/jacoco/test.exec'
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: 📦 Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports-unit
+          path: |
+            **/build/reports/
+            **/build/test-results/
+          retention-days: 7
+
+      - name: 🐛 Upload spotbugs reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spotbugs-reports
+          path: '**/build/reports/spotbugs/**'
+          retention-days: 7
+
+  integration-tests:
+    name: integration-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup JDK 25 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+
+      - name: 🐘 Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      - name: 🐳 Pre-pull container images
+        run: |
+          docker pull "$POSTGRES_IMAGE" &
+          docker pull "$ROCKETMQ_IMAGE" &
+          wait
+
+      - name: 🔍 Verify container image versions consistency
+        run: |
+          set -e
+          FAIL=0
+          PG_FILE="linqibin-commons/linqibin-spring-boot-starter-test/src/main/java/dev/linqibin/starter/test/container/initializer/PostgreSQLContainerInitializer.java"
+          if ! grep -q "private static final String POSTGRESQL_IMAGE = \"$POSTGRES_IMAGE\";" "$PG_FILE"; then
+            echo "::error file=$PG_FILE::POSTGRESQL_IMAGE 常量与 env POSTGRES_IMAGE=$POSTGRES_IMAGE 不一致"
+            FAIL=1
+          fi
+          for COMPOSE in \
+            "linqibin-commons/linqibin-spring-boot-starter-test/src/main/resources/docker-compose-rocketmq.yml" \
+            "patra-api/patra-ingest/patra-ingest-boot/src/test/resources/docker-compose-rocketmq.yml"; do
+            COUNT=$(grep -c "image: $ROCKETMQ_IMAGE\b" "$COMPOSE" || true)
+            if [ "$COUNT" -ne 2 ]; then
+              echo "::error file=$COMPOSE::期望 2 处 'image: $ROCKETMQ_IMAGE',实际 $COUNT 处"
+              FAIL=1
+            fi
+          done
+          if [ "$FAIL" -ne 0 ]; then exit 1; fi
+          echo "✓ image versions consistent"
+
+      - name: 🔬 Integration tests (no JaCoCo report)
+        run: ./gradlew integrationTest -x integrationTestCodeCoverageReport
+
+      - name: 📦 Upload jacoco exec (integration)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-exec-integration
+          path: '**/build/jacoco/integrationTest.exec'
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: 📦 Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports-integration
+          path: |
+            **/build/reports/
+            **/build/test-results/
+          retention-days: 7
+
+  e2e-tests:
+    name: e2e-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup JDK 25 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+
+      - name: 🐘 Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      - name: 🐳 Pre-pull container images
+        run: |
+          docker pull "$POSTGRES_IMAGE" &
+          docker pull "$ROCKETMQ_IMAGE" &
+          wait
+
+      - name: 🎯 E2E tests
+        run: ./gradlew e2eTest
+
+      - name: 📦 Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports-e2e
+          path: |
+            **/build/reports/
+            **/build/test-results/
+          retention-days: 7
+
+  coverage-and-upload:
+    name: coverage-and-upload
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [unit-tests, integration-tests]
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup JDK 25 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+
+      - name: 🐘 Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      - name: 📥 Download jacoco exec artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: jacoco-exec-*
+          merge-multiple: true
+          path: .
+
+      - name: 📊 Aggregate JaCoCo report
+        run: ./gradlew jacocoAggregatedReport
+
+      - name: 📈 Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: build/reports/jacoco/aggregated/jacocoAggregatedReport.xml
+          fail_ci_if_error: true
+
+  required-check:
+    name: required-check
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, e2e-tests, coverage-and-upload]
+    if: always()
+    steps:
+      - name: ✓ Check all dependencies
+        uses: re-actors/alls-green@release/v1
+        with:
+          jobs: ${{ toJSON(needs) }}</code></pre>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 2：本地静态校验 ci.yml</strong>
+            <pre><code class="lang-bash">command -v actionlint &>/dev/null && actionlint .github/workflows/ci.yml || echo "actionlint 未安装"
+yq eval '.jobs | keys' .github/workflows/ci.yml</code></pre>
+            <p>预期：yq 输出包含 5 个 job 名 <code>[coverage-and-upload, e2e-tests, integration-tests, required-check, unit-tests]</code>。</p>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 3：Commit task 4</strong>
+            <pre><code class="lang-bash">git add .github/workflows/ci.yml
+git commit -m "$(cat &lt;&lt;'EOF'
+ci: pr2 拆 4 job + required-check 真正生效 (PAP-24)
+
+Jobs:
+- unit-tests:        ./gradlew check -x jacocoTestReport,上传 jacoco-exec-unit
+- integration-tests: docker pull 预热 + 镜像版本校验 + integrationTest,上传 jacoco-exec-integration
+- e2e-tests:         docker pull 预热 + e2eTest
+- coverage-and-upload (needs unit+integration): 下载 .exec → jacocoAggregatedReport → Codecov
+- required-check (needs ALL, if always): re-actors/alls-green 校验所有依赖 success/skipped
+
+效果:
+- 3 job 并行 (unit / IT / e2e),关键路径 = max(三者) + coverage
+- required-check 从 dummy 升级为真正 gate,PAP-15 分支保护强制生效
+- JaCoCo agent 仍跑 (-x 只跳过 report 生成,节省 ~5-15% test 时间)
+
+预期: ~6 min → ~5 min
+EOF
+)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-5" data-status="done">
+        <header>
+          <h2>任务 5：PR2 实测 + 分支保护强制验证 + merge</h2>
+          <dl class="files">
+            <dt>测试</dt><dd>GitHub Actions UI + branch protection 行为测试</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：Push + 开 PR</strong>
+            <pre><code class="lang-bash">git push -u origin feat/pap-24-pr2-job-topology
+
+gh pr create --title "ci: pr2 拆 4 job + required-check 真正生效 (PAP-24)" --body "$(cat &lt;&lt;'EOF'
+## Summary
+- 拆 unit-tests / integration-tests / e2e-tests / coverage-and-upload 四 job
+- required-check 改 needs + alls-green,分支保护强制生效
+- 新增 linqibin.jacoco-aggregation convention plugin
+
+## 实测对照表 (AC3)
+| Run | 触发 | 总时长 | 关键路径分解 |
+|-----|------|--------|--------------|
+| baseline (PR1 后 main) | - | TBD | - |
+| 本 PR run 1 | - | TBD | - |
+| 本 PR run 2 | - | TBD | - |
+| 本 PR run 3 | - | TBD | - |
+| 结论 | - | - | 是否达预期 (~5 min) |
+
+## Required Status Check 升级验证
+- [ ] 故意 push 一个 unit test 失败的测试 PR,确认 required-check 失败 → PR 无法 merge
+- [ ] 测试完恢复 main,确认 required-check 恢复绿色
+
+## Test plan
+- [ ] coverage-and-upload 在 Codecov 显示与 PR1 baseline 一致的覆盖率 (不下降)
+- [ ] all jobs 显示在 GitHub PR check 列表,unit/IT/e2e 并行执行
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+EOF
+)"</code></pre>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 2：验证 3 个并行 job 实际并行</strong>
+            <pre><code class="lang-bash">RUN_ID=$(gh run list --workflow ci.yml --branch feat/pap-24-pr2-job-topology --limit 1 --json databaseId -q '.[0].databaseId')
+gh run view "$RUN_ID" --json jobs -q '.jobs[] | "\(.name) start=\(.startedAt) end=\(.completedAt)"'</code></pre>
+            <p>预期：unit-tests / integration-tests / e2e-tests 三 job 的 startedAt 接近（差异 &lt; 30s），说明真正并行。</p>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 3：故意失败测试验证分支保护</strong>
+            <p>关键测试：required-check 必须真正阻断失败 PR merge。</p>
+            <pre><code class="lang-bash">git checkout -b test/break-unit-for-gate
+# 制造一个必然失败的 unit test
+cat &gt;&gt; linqibin-commons/linqibin-commons-core/src/test/java/dev/linqibin/commons/core/IntentionalFailTest.java &lt;&lt; 'EOF'
+package dev.linqibin.commons.core;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+class IntentionalFailTest {
+  @Test void thisMustFail() { assertEquals(1, 2, "TEMP test to verify required-check gating"); }
+}
+EOF
+git add linqibin-commons/linqibin-commons-core/src/test/java/dev/linqibin/commons/core/IntentionalFailTest.java
+git commit -m "test: TEMP intentional fail to verify required-check gating (will revert)"
+git push -u origin test/break-unit-for-gate
+gh pr create --title "test: verify required-check gating" --body "Intentional fail to verify branch protection"
+
+# 等 CI 完成
+gh run watch
+# 检查 required-check 状态
+gh pr checks
+# 尝试 merge → 预期被 branch protection 拒绝
+gh pr merge --squash &amp;&amp; echo "❌ 错误: required-check 未生效" || echo "✓ 正确: branch protection 阻止 merge"
+
+# 清理测试 PR + 分支
+gh pr close --delete-branch
+git checkout feat/pap-24-pr2-job-topology
+git branch -D test/break-unit-for-gate</code></pre>
+            <p>预期：<code>gh pr merge</code> 失败，错误信息含 "required status check has failed" 或类似。</p>
+            <p>如果 merge 成功 → required-check 配置错误，回滚 PR2 中的 required-check needs，恢复 dummy 状态。</p>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 4：填实测表格 + merge PR2</strong>
+            <p>用 gh run list / gh run view 获取 3 个连续 run 数据，填 PR description。然后：</p>
+            <pre><code class="lang-bash">gh pr merge feat/pap-24-pr2-job-topology --squash --delete-branch</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <!-- ============================================================
+           PR3 — Unit Sharding
+           ============================================================ -->
+
+      <article class="task" id="task-6" data-status="done">
+        <header>
+          <h2>任务 6：PR3 ci.yml unit-tests 改 4-shard matrix</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>.github/workflows/ci.yml</code> 中的 <code>unit-tests</code> job + <code>coverage-and-upload</code> job</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：从 main 切 PR3 分支</strong>
+            <pre><code class="lang-bash">git fetch origin
+git checkout -b feat/pap-24-pr3-unit-sharding origin/main</code></pre>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 2：用 ./gradlew projects 输出审计 4-shard 划分</strong>
+            <pre><code class="lang-bash">./gradlew projects --quiet | grep "Project '" | awk '{print $2}' | sed 's/[:'"'"']//g' | sort &gt; /tmp/all-modules.txt
+wc -l /tmp/all-modules.txt
+cat /tmp/all-modules.txt</code></pre>
+            <p>预期：输出 44 个模块（含根项目），按 shard 划分如下：</p>
+            <pre><code>shard commons-and-starters (15 模块):
+  :linqibin-commons:linqibin-commons-core
+  :linqibin-commons:linqibin-commons-storage
+  :linqibin-commons:linqibin-spring-boot-starter-batch
+  :linqibin-commons:linqibin-spring-boot-starter-core
+  :linqibin-commons:linqibin-spring-boot-starter-http-interface
+  :linqibin-commons:linqibin-spring-boot-starter-jpa
+  :linqibin-commons:linqibin-spring-boot-starter-object-storage
+  :linqibin-commons:linqibin-spring-boot-starter-observability
+  :linqibin-commons:linqibin-spring-boot-starter-openapi
+  :linqibin-commons:linqibin-spring-boot-starter-redisson
+  :linqibin-commons:linqibin-spring-boot-starter-rest-client
+  :linqibin-commons:linqibin-spring-boot-starter-test
+  :linqibin-commons:linqibin-spring-boot-starter-web
+  :patra-starters:patra-spring-boot-starter-expr
+  :patra-starters:patra-spring-boot-starter-provenance
+
+shard registry (6 模块):
+  :patra-api:patra-registry:patra-registry-adapter
+  :patra-api:patra-registry:patra-registry-api
+  :patra-api:patra-registry:patra-registry-app
+  :patra-api:patra-registry:patra-registry-boot
+  :patra-api:patra-registry:patra-registry-domain
+  :patra-api:patra-registry:patra-registry-infra
+
+shard ingest (6 模块):
+  :patra-api:patra-ingest:patra-ingest-adapter
+  :patra-api:patra-ingest:patra-ingest-api
+  :patra-api:patra-ingest:patra-ingest-app
+  :patra-api:patra-ingest:patra-ingest-boot
+  :patra-api:patra-ingest:patra-ingest-domain
+  :patra-api:patra-ingest:patra-ingest-infra
+
+shard catalog-and-misc (17 模块):
+  :patra-api:patra-catalog:patra-catalog-adapter
+  :patra-api:patra-catalog:patra-catalog-api
+  :patra-api:patra-catalog:patra-catalog-app
+  :patra-api:patra-catalog:patra-catalog-boot
+  :patra-api:patra-catalog:patra-catalog-domain
+  :patra-api:patra-catalog:patra-catalog-infra
+  :patra-api:patra-common:patra-common-enums
+  :patra-api:patra-common:patra-common-model
+  :patra-api:patra-common:patra-common-provenance-api
+  :patra-api:patra-expr-kernel
+  :patra-api:patra-gateway-boot
+  :patra-api:patra-object-storage:patra-object-storage-adapter
+  :patra-api:patra-object-storage:patra-object-storage-api
+  :patra-api:patra-object-storage:patra-object-storage-app
+  :patra-api:patra-object-storage:patra-object-storage-boot
+  :patra-api:patra-object-storage:patra-object-storage-domain
+  :patra-api:patra-object-storage:patra-object-storage-infra
+
+合计: 15 + 6 + 6 + 17 = 44 模块</code></pre>
+            <p>说明：若 <code>./gradlew projects</code> 输出与上述不一致（如新增/删除模块），调整 shard 划分。</p>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 3：把 unit-tests job 改为 matrix strategy</strong>
+            <p>在 <code>.github/workflows/ci.yml</code> 中，把 task 4 写入的 <code>unit-tests</code> job 完整替换为：</p>
+            <pre><code class="lang-yaml">  unit-tests:
+    name: unit-tests (${{ matrix.shard.name }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard:
+          - name: commons-and-starters
+            tasks: >-
+              :linqibin-commons:linqibin-commons-core:test
+              :linqibin-commons:linqibin-commons-storage:test
+              :linqibin-commons:linqibin-spring-boot-starter-batch:test
+              :linqibin-commons:linqibin-spring-boot-starter-core:test
+              :linqibin-commons:linqibin-spring-boot-starter-http-interface:test
+              :linqibin-commons:linqibin-spring-boot-starter-jpa:test
+              :linqibin-commons:linqibin-spring-boot-starter-object-storage:test
+              :linqibin-commons:linqibin-spring-boot-starter-observability:test
+              :linqibin-commons:linqibin-spring-boot-starter-openapi:test
+              :linqibin-commons:linqibin-spring-boot-starter-redisson:test
+              :linqibin-commons:linqibin-spring-boot-starter-rest-client:test
+              :linqibin-commons:linqibin-spring-boot-starter-test:test
+              :linqibin-commons:linqibin-spring-boot-starter-web:test
+              :patra-starters:patra-spring-boot-starter-expr:test
+              :patra-starters:patra-spring-boot-starter-provenance:test
+          - name: registry
+            tasks: >-
+              :patra-api:patra-registry:patra-registry-adapter:test
+              :patra-api:patra-registry:patra-registry-api:test
+              :patra-api:patra-registry:patra-registry-app:test
+              :patra-api:patra-registry:patra-registry-boot:test
+              :patra-api:patra-registry:patra-registry-domain:test
+              :patra-api:patra-registry:patra-registry-infra:test
+          - name: ingest
+            tasks: >-
+              :patra-api:patra-ingest:patra-ingest-adapter:test
+              :patra-api:patra-ingest:patra-ingest-api:test
+              :patra-api:patra-ingest:patra-ingest-app:test
+              :patra-api:patra-ingest:patra-ingest-boot:test
+              :patra-api:patra-ingest:patra-ingest-domain:test
+              :patra-api:patra-ingest:patra-ingest-infra:test
+          - name: catalog-and-misc
+            tasks: >-
+              :patra-api:patra-catalog:patra-catalog-adapter:test
+              :patra-api:patra-catalog:patra-catalog-api:test
+              :patra-api:patra-catalog:patra-catalog-app:test
+              :patra-api:patra-catalog:patra-catalog-boot:test
+              :patra-api:patra-catalog:patra-catalog-domain:test
+              :patra-api:patra-catalog:patra-catalog-infra:test
+              :patra-api:patra-common:patra-common-enums:test
+              :patra-api:patra-common:patra-common-model:test
+              :patra-api:patra-common:patra-common-provenance-api:test
+              :patra-api:patra-expr-kernel:test
+              :patra-api:patra-gateway-boot:test
+              :patra-api:patra-object-storage:patra-object-storage-adapter:test
+              :patra-api:patra-object-storage:patra-object-storage-api:test
+              :patra-api:patra-object-storage:patra-object-storage-app:test
+              :patra-api:patra-object-storage:patra-object-storage-boot:test
+              :patra-api:patra-object-storage:patra-object-storage-domain:test
+              :patra-api:patra-object-storage:patra-object-storage-infra:test
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup JDK 25 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+
+      - name: 🐘 Setup Gradle (cache read-only for matrix shards)
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+          cache-read-only: true
+
+      - name: ✅ Unit tests shard (no JaCoCo report)
+        run: ./gradlew ${{ matrix.shard.tasks }} -x jacocoTestReport
+
+      - name: 📦 Upload jacoco exec (shard-${{ matrix.shard.name }})
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-exec-unit-${{ matrix.shard.name }}
+          path: '**/build/jacoco/test.exec'
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: 📦 Upload reports (shard-${{ matrix.shard.name }})
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports-unit-${{ matrix.shard.name }}
+          path: |
+            **/build/reports/
+            **/build/test-results/
+          retention-days: 7
+
+      - name: 🐛 Upload spotbugs reports (shard-${{ matrix.shard.name }})
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spotbugs-reports-${{ matrix.shard.name }}
+          path: '**/build/reports/spotbugs/**'
+          retention-days: 7</code></pre>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 4：调整 coverage-and-upload job 的 artifact glob</strong>
+            <p>在 ci.yml 中找到 coverage-and-upload job 的 download-artifact step，把 pattern 改为同时匹配 unit shard artifact 与 integration artifact：</p>
+            <pre><code class="lang-yaml"># Before (task 4 写入)
+- name: 📥 Download jacoco exec artifacts
+  uses: actions/download-artifact@v4
+  with:
+    pattern: jacoco-exec-*
+    merge-multiple: true
+    path: .
+
+# After (无需变更 - pattern jacoco-exec-* 已经覆盖 jacoco-exec-unit-{shard} 和 jacoco-exec-integration)
+# 验证: jacoco-exec-unit-commons-and-starters / jacoco-exec-unit-registry / ... / jacoco-exec-integration
+# 都匹配 jacoco-exec-*,无需改动</code></pre>
+            <p>说明：task 4 已用 <code>jacoco-exec-*</code> glob，与 task 6 的 <code>jacoco-exec-unit-{shard.name}</code> 命名兼容，无需改动。如果想更精确可改为 <code>jacoco-exec-unit-*</code> + <code>jacoco-exec-integration</code> 两个 step，但当前足够。</p>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 5：本地静态校验 ci.yml</strong>
+            <pre><code class="lang-bash">command -v actionlint &>/dev/null && actionlint .github/workflows/ci.yml || echo "actionlint 未安装"
+yq eval '.jobs.unit-tests.strategy.matrix.shard | length' .github/workflows/ci.yml
+yq eval '.jobs.unit-tests.strategy.matrix.shard[].name' .github/workflows/ci.yml</code></pre>
+            <p>预期：matrix shard 数量 = 4；shard 名 commons-and-starters / registry / ingest / catalog-and-misc。</p>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 6：审计 shard 模块清单覆盖完整性</strong>
+            <pre><code class="lang-bash"># 提取 ci.yml 中所有 shard tasks 的模块名,去重,与 ./gradlew projects 输出对比
+yq eval '.jobs.unit-tests.strategy.matrix.shard[].tasks' .github/workflows/ci.yml \
+  | tr ' ' '\n' | grep -E '^:' | sed 's/:test$//' | sort -u &gt; /tmp/shard-modules.txt
+
+./gradlew projects --quiet | grep "Project '" | awk '{print $2}' | sed "s/['\":]//g" \
+  | grep -v '^patra$' | sed 's/^/:/' | sort -u &gt; /tmp/all-modules.txt
+
+echo "=== shard 中有但 ./gradlew projects 不报告的（应为空） ==="
+comm -23 /tmp/shard-modules.txt /tmp/all-modules.txt
+
+echo "=== ./gradlew projects 报告但 shard 漏掉的（应为空） ==="
+comm -13 /tmp/shard-modules.txt /tmp/all-modules.txt</code></pre>
+            <p>预期：两个 comm 输出都为空。如有漏掉的模块，加入对应 shard。</p>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 7：Commit task 6</strong>
+            <pre><code class="lang-bash">git add .github/workflows/ci.yml
+git commit -m "$(cat &lt;&lt;'EOF'
+ci: pr3 unit-tests 改 4-shard matrix (PAP-24)
+
+Shard 划分 (按 sub-tree,44 模块):
+- commons-and-starters (15): linqibin-commons + patra-starters
+- registry (6):              patra-registry-{adapter,api,app,boot,domain,infra}
+- ingest (6):                patra-ingest-{adapter,api,app,boot,domain,infra}
+- catalog-and-misc (17):     patra-catalog-* + patra-common:* + patra-object-storage:* + expr-kernel + gateway-boot
+
+关键配置:
+- strategy.fail-fast: false (业界 unit sharding 必选,避免一个 shard 失败 cancel 其他)
+- cache-read-only: true (避免 N 个 shard 竞争写 cache 导致污染)
+- artifact 名加 shard 后缀: jacoco-exec-unit-{shard.name}
+- coverage-and-upload job 的 download pattern jacoco-exec-* 兼容,无需改
+
+预期: ~5 min → ~3-4 min
+EOF
+)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-7" data-status="done">
+        <header>
+          <h2>任务 7：PR3 实测 + 最终对比 + merge</h2>
+          <dl class="files">
+            <dt>测试</dt><dd>GitHub Actions UI（4 shard 并行 + coverage aggregation）</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：Push + 开 PR</strong>
+            <pre><code class="lang-bash">git push -u origin feat/pap-24-pr3-unit-sharding
+
+gh pr create --title "ci: pr3 unit-tests 4-shard matrix (PAP-24)" --body "$(cat &lt;&lt;'EOF'
+## Summary
+- unit-tests 改为 strategy.matrix,4 shard 并行 (commons-and-starters / registry / ingest / catalog-and-misc)
+- cache-read-only: true 避免 shard 竞争写 cache
+- artifact 名加 shard 后缀
+
+## 实测对照表 (AC3,完整对比 baseline → PR3)
+| 阶段 | 总时长 | 关键路径 | 备注 |
+|------|--------|----------|------|
+| baseline (PAP-10 主线 A 后) | ~8 min | 单 job 串行 | - |
+| PR1 后 | TBD | 单 job 串行,冷启动压缩 | - |
+| PR2 后 | TBD | max(unit, IT, e2e) + coverage | - |
+| 本 PR run 1 | TBD | max(shard×4, IT, e2e) + coverage | - |
+| 本 PR run 2 | TBD | - | - |
+| 本 PR run 3 | TBD | - | - |
+| 单 shard 最长 | TBD | - | - |
+
+## 验证清单
+- [ ] 4 个 shard 真正并行 (startedAt 差异 &lt; 30s)
+- [ ] 单 shard 最长 &lt; 单 IT 时长 (否则触发回滚)
+- [ ] coverage-and-upload 下载 5 个 artifact (4 unit shard + 1 integration) 并合并出聚合报告
+- [ ] Codecov 覆盖率与 PR2 baseline 一致 (不下降)
+- [ ] cache hit/miss 率 &lt; 50%
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+EOF
+)"</code></pre>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 2：验证 4 shard 真正并行 + 收集时长</strong>
+            <pre><code class="lang-bash">RUN_ID=$(gh run list --workflow ci.yml --branch feat/pap-24-pr3-unit-sharding --limit 1 --json databaseId -q '.[0].databaseId')
+gh run view "$RUN_ID" --json jobs -q '.jobs[] | select(.name | startswith("unit-tests")) | "\(.name) start=\(.startedAt) end=\(.completedAt)"'</code></pre>
+            <p>预期：4 个 <code>unit-tests (shard-name)</code> job 的 startedAt 差异 &lt; 30s（真正并行）；逐个 shard 时长记录到 PR description。</p>
+            <p><strong>回滚触发：</strong>如果单 shard 最长时长 &gt; 单 IT 时长（说明 unit 不再是瓶颈，sharding 收益小于复杂度成本）→ revert PR3，回到 PR2 形态。</p>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 3：验证 coverage aggregation 正确合并所有 shard artifact</strong>
+            <pre><code class="lang-bash">gh run view "$RUN_ID" --log | grep -A 5 "Download jacoco exec artifacts" | head -30</code></pre>
+            <p>预期：日志显示下载 5 个 artifact（4 unit shard + 1 integration）。</p>
+            <pre><code class="lang-bash">gh run view "$RUN_ID" --log | grep -E "(Total of \d+ executions|Coverage)" | head -10</code></pre>
+            <p>预期：jacocoAggregatedReport 汇总所有 .exec，Codecov 显示覆盖率。</p>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 4：检查 cache hit 率</strong>
+            <pre><code class="lang-bash">gh run view "$RUN_ID" --log | grep -iE "(cache hit|cache miss|Restored from cache)" | head -20</code></pre>
+            <p>预期：4 个 shard 均报告 cache hit（read-only 模式下，依赖 PR1+PR2 已经写入的 cache）。若 cache miss 率 &gt; 50% → 调研 cache key 设计。</p>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 5：触发 3 个连续 run + 填实测表 + merge</strong>
+            <pre><code class="lang-bash">git commit --allow-empty -m "ci: trigger run #2"
+git push
+gh run watch  # 等 run #2 完成
+git commit --allow-empty -m "ci: trigger run #3"
+git push
+gh run watch  # 等 run #3 完成
+
+# 填表（手动整理 gh run view 数据到 PR description）
+# 达预期则 merge
+gh pr merge feat/pap-24-pr3-unit-sharding --squash --delete-branch</code></pre>
+          </li>
+
+          <li class="step" data-status="done">
+            <strong>步骤 6：Linear comment 上同步最终对比 + 关 PAP-24</strong>
+            <p>在 Linear PAP-24 上贴最终对比表。</p>
+            <pre><code class="lang-bash">cat &lt;&lt;EOF | gh pr comment $(gh pr list --state merged --limit 1 --json number -q '.[0].number') --body-file -
+PAP-24 全部 3 PR 已合并。最终对比表见 spec 与 plan。Done 判定:
+- [x] 3 PR merge 完成
+- [x] required-check 真正生效 (Task 5 步骤 3 验证)
+- [x] CI 总时长 ~X min (实测填入)
+- [x] 镜像版本校验 step 故意失败测试通过
+- [x] jacoco-report-aggregation 在 Codecov 正常
+EOF</code></pre>
+            <p>在 Linear PAP-24 上：右侧栏 Status → Done；右侧 Implementation Notes 追加完结声明。</p>
+          </li>
+        </ol>
+      </article>
+
+    </section>
+
+    <section id="self-check" class="self-check">
+      <h2>自检结果</h2>
+
+      <aside class="callout success">
+        <span class="title">1. 规格覆盖度</span>
+        <p>spec §5 PR1 → task 1（实施）+ task 2（实测 merge）；spec §6 PR2 → task 3（jacoco-aggregation plugin + spike）+ task 4（拆 4 job）+ task 5（实测 + 分支保护验证 + merge）；spec §7 PR3 → task 6（matrix sharding）+ task 7（实测 merge + Linear 收尾）。spec §8 AC3 实测要求由每个 PR 的 task 中的「填实测对照表」步骤覆盖。spec §9 5 个决策已在 plan 各任务 step 注释中提及理由（不在 plan 中重复决策卡片）。spec §10 风险与缓解的回滚条件已嵌入对应 task 步骤（PR1 cc 降级、PR2 alls-green 异常、PR3 单 shard 时长超 IT）。spec §11 改造文件清单与 plan 文件结构一致（4 个 modify/create + 4 个 keep）。无遗漏。</p>
+      </aside>
+
+      <aside class="callout success">
+        <span class="title">2. 占位符扫描</span>
+        <p>无 "待定" / "TODO" / "后续实现" / "添加适当的错误处理" 等占位。"TBD" 仅出现在 PR description 实测表格（实测时填入）和 Linear 收尾的 "X min"（实测后填入），属于预留实测数据位，非计划缺陷。所有 <code>&lt;!-- FILL: --&gt;</code> 注释已替换完毕。</p>
+      </aside>
+
+      <aside class="callout success">
+        <span class="title">3. 类型一致性</span>
+        <p>artifact 命名一致：task 4 写 <code>jacoco-exec-unit</code> + <code>jacoco-exec-integration</code>，task 6 升级为 <code>jacoco-exec-unit-{shard.name}</code>；coverage-and-upload 用 glob <code>jacoco-exec-*</code> 覆盖两阶段命名。Convention plugin 名称一致：<code>linqibin.jacoco-aggregation</code>（task 3 创建，task 4 内的 coverage job 调用）。task 名称 <code>jacocoAggregatedReport</code> 在 task 3 plugin 定义与 task 4 coverage job 命令中拼写一致。workflow env 名称 <code>POSTGRES_IMAGE</code> / <code>ROCKETMQ_IMAGE</code> 在 task 1 引入，task 4 沿用。分支名规约：<code>feat/pap-24-prN-XXX</code> 在 3 个 PR 一致。</p>
+      </aside>
+
+      <aside class="callout success">
+        <span class="title">4. HTML 结构完整性</span>
+        <p>7 个 <code>&lt;article class="task"&gt;</code>，id 从 task-1 到 task-7 唯一，初始 data-status="pending"。所有 <code>&lt;li class="step"&gt;</code> 初始 data-status="pending"。<code>&lt;head&gt;</code> 两个 link 引用 <code>../styles/journal.css</code> + <code>../styles/plan-extras.css</code>，无 inline <code>&lt;style&gt;</code>。<code>&lt;dl class="meta"&gt;</code> 含目标 / 架构 / 技术栈 / 关联 spec 四项。TOC <code>&lt;ol class="toc-tasks"&gt;</code> 7 个 li 与 7 个 article 一一对应，data-task-status="pending" 与 article data-status="pending" 一致。</p>
+      </aside>
+    </section>
+
+  </main>
+
+  <aside class="notes-panel" id="notes">
+    <header>
+      <h2>Implementation Notes</h2>
+      <p class="hint">实施期由 Claude Code 即时追加。规则：遇到 plan 未规定的<strong>决定</strong>、必要<strong>更改</strong>、不可避免的<strong>权衡</strong>、其他用户应知事项，立即用 Edit 追加 entry，不要等任务结束。</p>
+    </header>
+
+    <ol class="notes-log">
+      <li class="note" data-type="change" data-time="2026-05-22T15:00">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-22T15:00">05-22 15:00</time>
+          <a href="#task-1">§ Task 1</a>
+        </header>
+        <p>偏离 plan task 1 step 1：不从 origin/main 新切分支，改为在已有 worktree 分支 <code>worktree-pap-24-ci-speedup</code>（含 spec + plan 两个 docs commit）直接做 PR1 改动。Push 时映射到远端 <code>feat/pap-24-pr1-foundation</code> 分支名。理由：用户决策 PR1 同时携带 spec + plan + ci.yml 改动（PR0 docs-only 方案否决），少一个 PR；spec + plan 与 PR1 配套审阅。Trade-off：PR1 diff 范围含 docs + code 两部分，需在 PR description 明确分块说明。</p>
+      </li>
+      <li class="note" data-type="other" data-time="2026-05-22T15:10">
+        <header>
+          <span class="note-type">OTHER</span>
+          <time datetime="2026-05-22T15:10">05-22 15:10</time>
+          <a href="#task-1">§ Task 1 step 7</a>
+        </header>
+        <p>task 1 step 7（GRADLE_ENCRYPTION_KEY repo secret）标 skipped：AI 不能修改 GitHub repo secret，转移给用户在 PR1 merge 前手工添加（已在 PR description checklist 提醒）。PR1 不依赖此 secret 也能 CI 通过（setup-gradle 容忍降级），但缺失时 cc cache 不持久化，PR1 收益打折。</p>
+      </li>
+      <li class="note" data-type="other" data-time="2026-05-22T15:30">
+        <header>
+          <span class="note-type">OTHER</span>
+          <time datetime="2026-05-22T15:30">05-22 15:30</time>
+          <a href="#task-2">§ Task 2 step 1</a>
+        </header>
+        <p>当前 main baseline 远超 spec 假设：PR #77（patra-api 纳入 Gradle 容器层后）build-and-test 时长 <strong>18:25</strong>，PR #76 时长 <strong>14:38</strong>，平均 <strong>~16:30</strong>。spec §3 假设的 ~8 min baseline（基于 PAP-10 时期）已失效。含义：PR1+PR2+PR3 目标终值会从 spec 写的 "~3-4 min" 偏移上去（相对降幅目标不变，但绝对值需重算）。实测后 AC3 评估按 <strong>baseline ~16 min</strong> 校准，不按 ~8 min。</p>
+      </li>
+      <li class="note" data-type="tradeoff" data-time="2026-05-22T15:45">
+        <header>
+          <span class="note-type">TRADEOFF</span>
+          <time datetime="2026-05-22T15:45">05-22 15:45</time>
+          <a href="#task-2">§ Task 2 step 3</a>
+        </header>
+        <p>PR1 上两个 run 的 build-and-test 仅 ~133s/139s，但<strong>这不代表真实降幅</strong>：两个 commit 只改 ci.yml + docs，零源码改动 → Gradle build cache 全命中（来自 PR #77 commit 2cd7fa96 的 cache），check step 51s / IT 14s / e2e 12s 都是 UP-TO-DATE 跳过。cc cache 行为符合预期：日志显示 "Calculating task graph as no cached configuration is available" + "Configuration cache entry stored." — 即首次 store 但不 restore；setup-gradle@v4 在 feature branch 默认 cache-read-only: true，PR 上 store 的 cc cache 不持久化到 GHA cache。真实 cc 收益时机：<strong>PR1 merge 到 main 后</strong>，main 上下次 run 会持久化 cc cache 到 GHA cache，PR2/PR3 等其他 PR 才能从 cache restore（PR1 自测看不到收益是 setup-gradle 设计限制）。</p>
+      </li>
+      <li class="note" data-type="change" data-time="2026-05-22T16:00">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-22T16:00">05-22 16:00</time>
+          <a href="#task-4">§ Task 4 step 1</a>
+        </header>
+        <p>CodeRabbit 在 PR1 review 中指出 2 处 ci.yml 健壮性 bug，PR2 重写 ci.yml 时一并修：
+        (a) Pre-pull step 用 bare <code>wait</code> 不传播 child 退出码 — 实测证据：故意失败测试中 <code>docker pull postgres:99</code>（不存在的镜像）居然让 Pre-pull step success，正是这个 bug 掩盖。修复：<code>docker pull "$X" &amp; pid_x=$!</code> 然后 <code>wait "$pid_x"</code> 逐个等待。
+        (b) 镜像版本校验用 <code>grep "image: $ROCKETMQ_IMAGE\b"</code> — <code>.</code> 在 BRE 模式下是元字符，且 <code>\b</code> 在 BSD grep 不可靠。修复：改用 <code>grep -F</code> fixed-string 匹配（含 PG_FILE 的 Java 常量检查也一并改用 <code>-F</code>）。
+        CodeRabbit 其他评论：#1 Action SHA pin 已开 <a href="https://linear.app/papertrace/issue/PAP-25">PAP-25</a> 独立跟踪；#4 HTML 转义 + #5 自检文案不一致按用户决策忽略。</p>
+      </li>
+      <li class="note" data-type="change" data-time="2026-05-22T16:20">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-22T16:20">05-22 16:20</time>
+          <a href="#task-3">§ Task 3</a>
+        </header>
+        <p>task 3 全部 step 标 skipped（task article 标 done）：现状已满足 plan 设计意图，<strong>无需新建 <code>linqibin.jacoco-aggregation.gradle.kts</code></strong>。根 <code>build.gradle.kts</code> 已应用 <code>jacoco-report-aggregation</code> plugin（line 23），并注册 <code>testCodeCoverageReport</code> + <code>integrationTestCodeCoverageReport</code> 两个聚合 task（line 60-66）。dry-run 验证 <code>testCodeCoverageReport</code> 直接依赖各模块 <code>:test</code> task，<strong>不依赖 <code>:jacocoTestReport</code></strong>，所以 task 4 的 unit shard 用 <code>./gradlew check -x jacocoTestReport</code> 完全不影响聚合。task 4 coverage-and-upload job 调整：跑现有 <code>./gradlew testCodeCoverageReport integrationTestCodeCoverageReport</code>（不是 plan 写的 <code>jacocoAggregatedReport</code>），上传两个 XML 到 Codecov（与 PR1 之前的行为一致）。</p>
+      </li>
+      <li class="note" data-type="other" data-time="2026-05-22T16:50">
+        <header>
+          <span class="note-type">OTHER</span>
+          <time datetime="2026-05-22T16:50">05-22 16:50</time>
+          <a href="#task-5">§ Task 5 step 3</a>
+        </header>
+        <p>required-check 真正生效已验证 ✅。在测试 PR #84 中故意添加 <code>IntentionalFailTest.mustFailToVerifyRequiredCheckGating()</code>（<code>assertEquals(1, 2)</code>），CI 表现：unit-tests <strong>failure</strong> / integration-tests success / e2e-tests success / coverage-and-upload <strong>skipped</strong>（needs unit）/ required-check <strong>failure</strong>（alls-green 检测到 unit fail）。<code>gh pr merge 84 --squash</code> 被 branch protection 拒绝：<code>base branch policy prohibits the merge</code>，<code>mergeStateStatus=BLOCKED</code>。<strong>PAP-15 分支保护从「事实摆设」升级为真正强制生效。</strong></p>
+        <p>过程中暴露一个潜在工作流坑（不影响 PR2 内容）：首次 <code>git commit</code> 时 spotless pre-commit hook 修改了 Java 文件格式，commit 实际失败但 <code>tail -3</code> 截断了失败信号，导致首次 push 推的是上一个 commit head — CI 跑的是 PR2 内容（已 success 过），全 success 误导。教训：未来 commit Java 文件后用 <code>git log --oneline -1</code> 确认 commit hash 而非依赖 <code>commit -m</code> 输出。</p>
+      </li>
+          <li class="note" data-type="change" data-time="2026-05-22T17:30">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-22T17:30">05-22 17:30</time>
+          <a href="#task-6">§ Task 6 step 3 hotfix</a>
+        </header>
+        <p>PR3 实测发现 <code>coverage-and-upload</code> step 飙升到 302s（PR2 仅 89s，3.5× 增长）。根因：<code>jacoco-report-aggregation</code> plugin 的 <code>testCodeCoverageReport</code> 依赖所有模块的 <code>:test</code> task（44 模块 → 529 task deps），在 PR feature branch 上 <code>cache-read-only: true</code> 时 cache miss 触发全量重跑测试。修复：coverage job 命令加 <code>-x test -x integrationTest</code> — <code>.exec</code> 文件已通过 <code>download-artifact</code> 拿到，不需要重跑测试 task。dry-run 验证 task deps 从 529+44 降到 45（44 compileJava + 1 aggregation）。Hotfix 后 coverage step 从 302s → 68s。PR3 关键路径从 6:45 → 2:32。</p>
+      </li>
+      <li class="note" data-type="other" data-time="2026-05-23T11:00">
+        <header>
+          <span class="note-type">OTHER</span>
+          <time datetime="2026-05-23T11:00">05-23 11:00</time>
+          <a href="#task-7">§ Task 7 — PAP-24 完结</a>
+        </header>
+        <p><strong>PAP-24 全部 3 PR 已 merge 到 main</strong>（#80 / #83 / #85）。task 7 全 7 step done。最终实测对比表（main 上 PR merge 后触发的 CI run，含真实业务 PR 场景）：</p>
+        <table>
+          <thead>
+            <tr><th>阶段</th><th>关键路径</th><th>vs baseline</th><th>备注</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>baseline (PR #77 / #76 平均)</td><td>~16:30 (990s)</td><td>—</td><td>真实 main baseline (PAP-19 主线 A merge 后)</td></tr>
+            <tr><td>PR1 merge 后 (commit 1eac778)</td><td>~2:27 (147s)</td><td>-85%</td><td>cc cache + 删 <code>--no-daemon</code> + docker pull 并发预热</td></tr>
+            <tr><td>PR2 merge 后 (commit fed6c00) ⚠️</td><td>~7:41 (461s)</td><td>-53%</td><td>含 coverage 320s bug — 被 PR3 hotfix 修复</td></tr>
+            <tr><td><strong>PR3 merge 后 (commit bb6e5ed)</strong></td><td><strong>~3:25 (205s)</strong></td><td><strong>-79%</strong></td><td>含 PR3 sharding + hotfix；关键路径 = max(unit shard 88s, IT 91s, e2e 83s) + coverage 109s + required 5s</td></tr>
+          </tbody>
+        </table>
+        <p><strong>目标对比</strong>：spec §3 目标 "~3-4 min" — ✅ <strong>3:25 在范围内</strong>；spec 假设的 baseline ~8 min 是错的（实际 16:30），但绝对终值符合目标。</p>
+        <p><strong>意外洞察</strong>：PR2 单独 merge 后 main 上反而 7:41（比 PR1 还慢 5+ 分钟），是 <code>testCodeCoverageReport</code> 触发 529 个 :test 重跑的性能退化。PR3 hotfix (<code>-x test -x integrationTest</code>) 不只是 sharding 收益，更关键是救了 PR2 留下的 coverage 性能退化。如果 PR3 没合并，PR2 阶段会变成性能负优化。</p>
+        <p><strong>Done 判定</strong>：✅ 3 PR 全 merge / ✅ required-check 真正强制 (PR #84 验证) / ✅ ~3:25 在目标范围 / ✅ 镜像版本一致性校验 (PR1 验证) / ✅ Codecov 覆盖率未下降 / ✅ jacoco-report-aggregation 输出正常。</p>
+      </li>
+    </ol>
+
+    <footer class="notes-stats">
+      总计:
+      <span data-counter="decision">0</span> decisions /
+      <span data-counter="change">4</span> changes /
+      <span data-counter="tradeoff">1</span> tradeoffs /
+      <span data-counter="other">4</span> others
+    </footer>
+  </aside>
+
+</div>
+</body>
+</html>
