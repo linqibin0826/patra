@@ -26,7 +26,7 @@
           <li data-task-status="done"><a href="#task-4">Task 4 — PR2 ci.yml 拆 4 job + required-check 真正生效</a></li>
           <li data-task-status="done"><a href="#task-5">Task 5 — PR2 实测 + 分支保护强制验证 + merge</a></li>
           <li data-task-status="done"><a href="#task-6">Task 6 — PR3 ci.yml unit-tests 改 4-shard matrix</a></li>
-          <li data-task-status="in-progress"><a href="#task-7">Task 7 — PR3 实测 + 最终对比 + merge</a></li>
+          <li data-task-status="done"><a href="#task-7">Task 7 — PR3 实测 + 最终对比 + merge</a></li>
         </ol>
       </li>
       <li><a href="#self-check">自检结果</a></li>
@@ -1082,7 +1082,7 @@ EOF
         </ol>
       </article>
 
-      <article class="task" id="task-7" data-status="in-progress">
+      <article class="task" id="task-7" data-status="done">
         <header>
           <h2>任务 7：PR3 实测 + 最终对比 + merge</h2>
           <dl class="files">
@@ -1146,7 +1146,7 @@ gh run view "$RUN_ID" --json jobs -q '.jobs[] | select(.name | startswith("unit-
             <p>预期：4 个 shard 均报告 cache hit（read-only 模式下，依赖 PR1+PR2 已经写入的 cache）。若 cache miss 率 &gt; 50% → 调研 cache key 设计。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：触发 3 个连续 run + 填实测表 + merge</strong>
             <pre><code class="lang-bash">git commit --allow-empty -m "ci: trigger run #2"
 git push
@@ -1160,7 +1160,7 @@ gh run watch  # 等 run #3 完成
 gh pr merge feat/pap-24-pr3-unit-sharding --squash --delete-branch</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：Linear comment 上同步最终对比 + 关 PAP-24</strong>
             <p>在 Linear PAP-24 上贴最终对比表。</p>
             <pre><code class="lang-bash">cat &lt;&lt;EOF | gh pr comment $(gh pr list --state merged --limit 1 --json number -q '.[0].number') --body-file -
@@ -1279,6 +1279,28 @@ EOF</code></pre>
         </header>
         <p>PR3 实测发现 <code>coverage-and-upload</code> step 飙升到 302s（PR2 仅 89s，3.5× 增长）。根因：<code>jacoco-report-aggregation</code> plugin 的 <code>testCodeCoverageReport</code> 依赖所有模块的 <code>:test</code> task（44 模块 → 529 task deps），在 PR feature branch 上 <code>cache-read-only: true</code> 时 cache miss 触发全量重跑测试。修复：coverage job 命令加 <code>-x test -x integrationTest</code> — <code>.exec</code> 文件已通过 <code>download-artifact</code> 拿到，不需要重跑测试 task。dry-run 验证 task deps 从 529+44 降到 45（44 compileJava + 1 aggregation）。Hotfix 后 coverage step 从 302s → 68s。PR3 关键路径从 6:45 → 2:32。</p>
       </li>
+      <li class="note" data-type="other" data-time="2026-05-23T11:00">
+        <header>
+          <span class="note-type">OTHER</span>
+          <time datetime="2026-05-23T11:00">05-23 11:00</time>
+          <a href="#task-7">§ Task 7 — PAP-24 完结</a>
+        </header>
+        <p><strong>PAP-24 全部 3 PR 已 merge 到 main</strong>（#80 / #83 / #85）。task 7 全 7 step done。最终实测对比表（main 上 PR merge 后触发的 CI run，含真实业务 PR 场景）：</p>
+        <table>
+          <thead>
+            <tr><th>阶段</th><th>关键路径</th><th>vs baseline</th><th>备注</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>baseline (PR #77 / #76 平均)</td><td>~16:30 (990s)</td><td>—</td><td>真实 main baseline (PAP-19 主线 A merge 后)</td></tr>
+            <tr><td>PR1 merge 后 (commit 1eac778)</td><td>~2:27 (147s)</td><td>-85%</td><td>cc cache + 删 <code>--no-daemon</code> + docker pull 并发预热</td></tr>
+            <tr><td>PR2 merge 后 (commit fed6c00) ⚠️</td><td>~7:41 (461s)</td><td>-53%</td><td>含 coverage 320s bug — 被 PR3 hotfix 修复</td></tr>
+            <tr><td><strong>PR3 merge 后 (commit bb6e5ed)</strong></td><td><strong>~3:25 (205s)</strong></td><td><strong>-79%</strong></td><td>含 PR3 sharding + hotfix；关键路径 = max(unit shard 88s, IT 91s, e2e 83s) + coverage 109s + required 5s</td></tr>
+          </tbody>
+        </table>
+        <p><strong>目标对比</strong>：spec §3 目标 "~3-4 min" — ✅ <strong>3:25 在范围内</strong>；spec 假设的 baseline ~8 min 是错的（实际 16:30），但绝对终值符合目标。</p>
+        <p><strong>意外洞察</strong>：PR2 单独 merge 后 main 上反而 7:41（比 PR1 还慢 5+ 分钟），是 <code>testCodeCoverageReport</code> 触发 529 个 :test 重跑的性能退化。PR3 hotfix (<code>-x test -x integrationTest</code>) 不只是 sharding 收益，更关键是救了 PR2 留下的 coverage 性能退化。如果 PR3 没合并，PR2 阶段会变成性能负优化。</p>
+        <p><strong>Done 判定</strong>：✅ 3 PR 全 merge / ✅ required-check 真正强制 (PR #84 验证) / ✅ ~3:25 在目标范围 / ✅ 镜像版本一致性校验 (PR1 验证) / ✅ Codecov 覆盖率未下降 / ✅ jacoco-report-aggregation 输出正常。</p>
+      </li>
     </ol>
 
     <footer class="notes-stats">
@@ -1286,7 +1308,7 @@ EOF</code></pre>
       <span data-counter="decision">0</span> decisions /
       <span data-counter="change">4</span> changes /
       <span data-counter="tradeoff">1</span> tradeoffs /
-      <span data-counter="other">3</span> others
+      <span data-counter="other">4</span> others
     </footer>
   </aside>
 
