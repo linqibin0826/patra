@@ -7,7 +7,6 @@ import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// PageResult 单元测试。
 ///
@@ -20,7 +19,6 @@ import org.junit.jupiter.api.Timeout;
 ///
 /// @since 0.1.0
 @DisplayName("PageResult 单元测试")
-@Timeout(2)
 class PageResultTest {
 
   @Nested

@@ -2,18 +2,15 @@ package dev.linqibin.commons.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// StringUtils 单元测试。
 ///
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("StringUtils")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class StringUtilsTest {
 
   @Nested

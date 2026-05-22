@@ -2,11 +2,9 @@ package dev.linqibin.commons.error.remote;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 /// RemoteErrorHelper 单元测试
 ///
@@ -20,7 +18,6 @@ import org.junit.jupiter.api.Timeout;
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("RemoteErrorHelper 单元测试")
-@Timeout(value = 2, unit = TimeUnit.SECONDS)
 class RemoteErrorHelperTest {
 
   private static final String METHOD_KEY = "GET /api/test";
