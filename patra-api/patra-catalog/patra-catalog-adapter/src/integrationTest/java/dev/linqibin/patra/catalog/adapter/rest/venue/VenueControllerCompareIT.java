@@ -4,7 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import dev.linqibin.patra.catalog.adapter.config.TestConfiguration;
+import dev.linqibin.patra.catalog.adapter.config.CatalogAdapterITWebMvcConfig;
 import dev.linqibin.patra.catalog.app.usecase.publication.query.PublicationQueryService;
 import dev.linqibin.patra.catalog.app.usecase.venue.query.VenueQueryService;
 import dev.linqibin.patra.catalog.app.usecase.venue.query.dto.VenueCompareQuery;
@@ -34,7 +34,7 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 /// - 不存在的 ID 被静默忽略
 /// - 参数校验：数量不足或超出限制时返回错误
 @WebMvcTest(controllers = VenueController.class)
-@ContextConfiguration(classes = TestConfiguration.class)
+@ContextConfiguration(classes = CatalogAdapterITWebMvcConfig.class)
 @Import(VenueController.class)
 @AutoConfigureRestTestClient
 @DisplayName("VenueController 期刊对比查询 REST 接口切片测试")

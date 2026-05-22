@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.linqibin.patra.catalog.domain.model.aggregate.AuthorAggregate;
 import dev.linqibin.patra.catalog.infra.adapter.persistence.AuthorRepositoryAdapter;
-import dev.linqibin.patra.catalog.infra.config.CatalogPostgreSQLContainerInitializer;
+import dev.linqibin.patra.catalog.infra.config.CatalogITPostgreSQLContainerInitializer;
 import dev.linqibin.patra.catalog.infra.persistence.dao.AuthorDao;
 import dev.linqibin.patra.catalog.infra.persistence.entity.AuthorEntity;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
@@ -44,7 +44,7 @@ import tools.jackson.databind.ObjectMapper;
 /// @author linqibin
 /// @since 0.1.0
 @DataJpaTest
-@ContextConfiguration(initializers = CatalogPostgreSQLContainerInitializer.class)
+@ContextConfiguration(initializers = CatalogITPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
   AuthorItemWriter.class,
@@ -79,7 +79,7 @@ class AuthorItemWriterIT {
     void write500Authors_shouldSaveAllToDatabase() throws Exception {
       // Given: 生成并解析 500 条测试数据
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      PubMedComputedAuthorTestDataGenerator.generate(500, baos);
+      PubMedAuthorFixture.generate(500, baos);
       InputStream inputStream = new ByteArrayInputStream(baos.toByteArray());
 
       List<AuthorAggregate> authors;
@@ -101,7 +101,7 @@ class AuthorItemWriterIT {
     void writeAuthors_shouldSaveNameVariantsCorrectly() throws Exception {
       // Given: 生成并解析测试数据
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      PubMedComputedAuthorTestDataGenerator.generate(100, baos);
+      PubMedAuthorFixture.generate(100, baos);
       InputStream inputStream = new ByteArrayInputStream(baos.toByteArray());
 
       List<AuthorAggregate> authors;
@@ -135,7 +135,7 @@ class AuthorItemWriterIT {
     void writeAuthors_shouldSaveOrcidsCorrectly() throws Exception {
       // Given: 生成测试数据（约 30% 有 ORCID）
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      PubMedComputedAuthorTestDataGenerator.generate(100, baos);
+      PubMedAuthorFixture.generate(100, baos);
       InputStream inputStream = new ByteArrayInputStream(baos.toByteArray());
 
       List<AuthorAggregate> authors;
@@ -173,7 +173,7 @@ class AuthorItemWriterIT {
     void verifyNormalizedKeyUniqueness() throws Exception {
       // Given
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      PubMedComputedAuthorTestDataGenerator.generate(100, baos);
+      PubMedAuthorFixture.generate(100, baos);
       InputStream inputStream = new ByteArrayInputStream(baos.toByteArray());
 
       List<AuthorAggregate> authors;
@@ -197,7 +197,7 @@ class AuthorItemWriterIT {
     void verifyProvenanceCode() throws Exception {
       // Given
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      PubMedComputedAuthorTestDataGenerator.generate(50, baos);
+      PubMedAuthorFixture.generate(50, baos);
       InputStream inputStream = new ByteArrayInputStream(baos.toByteArray());
 
       List<AuthorAggregate> authors;
@@ -219,7 +219,7 @@ class AuthorItemWriterIT {
     void verifyStatus() throws Exception {
       // Given
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      PubMedComputedAuthorTestDataGenerator.generate(50, baos);
+      PubMedAuthorFixture.generate(50, baos);
       InputStream inputStream = new ByteArrayInputStream(baos.toByteArray());
 
       List<AuthorAggregate> authors;
@@ -241,7 +241,7 @@ class AuthorItemWriterIT {
     void verifyChineseNames() throws Exception {
       // Given: 生成包含中文姓名的数据（约 20%）
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      PubMedComputedAuthorTestDataGenerator.generate(100, baos);
+      PubMedAuthorFixture.generate(100, baos);
       InputStream inputStream = new ByteArrayInputStream(baos.toByteArray());
 
       List<AuthorAggregate> authors;

@@ -28,7 +28,7 @@ import org.springframework.test.context.TestPropertySource;
  * @author Jobs
  * @since 1.0.0
  */
-@SpringBootTest(classes = TestObservabilityApplication.TestConfiguration.class)
+@SpringBootTest(classes = TestObservabilityApplication.ITSpringConfig.class)
 @TestPropertySource(
     properties = {
       "linqibin.starter.observability.enabled=true",
@@ -279,7 +279,7 @@ class TestObservabilityApplication {
         DataRedisAutoConfiguration.class,
         DataRedisRepositoriesAutoConfiguration.class
       })
-  static class TestConfiguration {
+  static class ITSpringConfig {
     /**
      * 创建 SimpleMeterRegistry 用于测试。
      *

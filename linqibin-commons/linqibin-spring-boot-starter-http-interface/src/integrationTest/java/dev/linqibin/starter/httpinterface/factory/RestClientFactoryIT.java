@@ -38,7 +38,7 @@ import tools.jackson.databind.json.JsonMapper;
 ///
 /// @author linqibin
 /// @since 0.1.0
-@SpringBootTest(classes = RestClientFactoryIT.TestConfiguration.class)
+@SpringBootTest(classes = RestClientFactoryIT.ITSpringConfig.class)
 @WireMockTest
 @TestPropertySource(
     properties = {
@@ -182,7 +182,7 @@ class RestClientFactoryIT {
         org.springframework.cloud.loadbalancer.config.LoadBalancerAutoConfiguration.class
       })
   @ImportAutoConfiguration(HttpInterfaceAutoConfiguration.class)
-  static class TestConfiguration {
+  static class ITSpringConfig {
 
     /// 提供 ObjectMapper Bean（HTTP Interface 自动配置依赖）
     @org.springframework.context.annotation.Bean

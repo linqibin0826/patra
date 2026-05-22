@@ -32,7 +32,7 @@ import tools.jackson.databind.node.ObjectNode;
 ///
 /// @author linqibin
 /// @since 0.1.0
-public class PubMedComputedAuthorTestDataGenerator {
+public class PubMedAuthorFixture {
 
   private static final ObjectMapper OBJECT_MAPPER = JsonMapper.builder().build();
   private static final Random RANDOM = new Random(42); // 固定种子确保可重复

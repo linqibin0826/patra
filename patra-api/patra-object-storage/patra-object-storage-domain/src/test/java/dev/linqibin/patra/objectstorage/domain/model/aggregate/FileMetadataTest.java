@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test;
 /// 测试策略：
 ///
 /// - 纯 Java 单元测试，不依赖 Spring 容器
-///   - 使用 TestDataBuilder 模式构建测试数据
+///   - 使用 Fixture 模式构建测试数据
 ///   - 遵循 Given-When-Then 结构
 ///   - 使用 AssertJ 流畅断言
 ///
@@ -312,7 +312,7 @@ class FileMetadataTest {
     @DisplayName("应该成功为新聚合根分配 ID")
     void shouldAssignIdToNewAggregate() {
       // Given - 新创建的聚合根
-      FileMetadata metadata = FileMetadataTestDataBuilder.anActiveFile().build();
+      FileMetadata metadata = FileMetadataFixture.anActiveFile().build();
       assertThat(metadata.getId()).isNull();
 
       // When - 分配 ID
@@ -327,7 +327,7 @@ class FileMetadataTest {
     @DisplayName("应该抛出异常当分配 null ID")
     void shouldThrowExceptionWhenAssigningNullId() {
       // Given
-      FileMetadata metadata = FileMetadataTestDataBuilder.anActiveFile().build();
+      FileMetadata metadata = FileMetadataFixture.anActiveFile().build();
 
       // When & Then
       assertThatThrownBy(() -> metadata.assignId(null))
@@ -339,7 +339,7 @@ class FileMetadataTest {
     @DisplayName("应该抛出异常当聚合根已有 ID")
     void shouldThrowExceptionWhenAggregateAlreadyHasId() {
       // Given - 已持久化的聚合根
-      FileMetadata metadata = FileMetadataTestDataBuilder.anActiveFile().id(100L).buildRestored();
+      FileMetadata metadata = FileMetadataFixture.anActiveFile().id(100L).buildRestored();
       assertThat(metadata.getId()).isNotNull();
 
       // When & Then
@@ -359,7 +359,7 @@ class FileMetadataTest {
     @DisplayName("应该成功更新版本号")
     void shouldUpdateVersion() {
       // Given
-      FileMetadata metadata = FileMetadataTestDataBuilder.anActiveFile().version(0L).build();
+      FileMetadata metadata = FileMetadataFixture.anActiveFile().version(0L).build();
       assertThat(metadata.getVersion()).isEqualTo(0L);
 
       // When
@@ -373,7 +373,7 @@ class FileMetadataTest {
     @DisplayName("应该抛出异常当更新版本为 null")
     void shouldThrowExceptionWhenUpdatingVersionToNull() {
       // Given
-      FileMetadata metadata = FileMetadataTestDataBuilder.anActiveFile().build();
+      FileMetadata metadata = FileMetadataFixture.anActiveFile().build();
 
       // When & Then
       assertThatThrownBy(() -> metadata.updateVersion(null))
@@ -392,7 +392,7 @@ class FileMetadataTest {
     @DisplayName("应该成功配置 ContentType")
     void shouldConfigureContentType() {
       // Given
-      FileMetadata metadata = FileMetadataTestDataBuilder.anActiveFile().build();
+      FileMetadata metadata = FileMetadataFixture.anActiveFile().build();
       assertThat(metadata.getContentType()).isNull();
 
       // When
@@ -407,7 +407,7 @@ class FileMetadataTest {
     @DisplayName("应该成功配置过期时间")
     void shouldConfigureExpiresAt() {
       // Given
-      FileMetadata metadata = FileMetadataTestDataBuilder.anActiveFile().build();
+      FileMetadata metadata = FileMetadataFixture.anActiveFile().build();
       assertThat(metadata.getExpiresAt()).isNull();
 
       // When
@@ -422,7 +422,7 @@ class FileMetadataTest {
     @DisplayName("应该成功配置审计备注")
     void shouldConfigureRecordRemarks() {
       // Given
-      FileMetadata metadata = FileMetadataTestDataBuilder.anActiveFile().build();
+      FileMetadata metadata = FileMetadataFixture.anActiveFile().build();
       assertThat(metadata.getRecordRemarks()).isNull();
 
       // When
@@ -437,7 +437,7 @@ class FileMetadataTest {
     @DisplayName("应该成功配置 IP 地址")
     void shouldConfigureIpAddress() {
       // Given
-      FileMetadata metadata = FileMetadataTestDataBuilder.anActiveFile().build();
+      FileMetadata metadata = FileMetadataFixture.anActiveFile().build();
       assertThat(metadata.getIpAddress()).isNull();
 
       // When
@@ -453,7 +453,7 @@ class FileMetadataTest {
     void shouldReturnDefensiveCopyOfIpAddress() {
       // Given
       byte[] originalIp = new byte[] {(byte) 192, (byte) 168, 1, 100};
-      FileMetadata metadata = FileMetadataTestDataBuilder.anActiveFile().build();
+      FileMetadata metadata = FileMetadataFixture.anActiveFile().build();
       metadata.withIpAddress(originalIp);
 
       // When - 修改返回的副本
@@ -468,7 +468,7 @@ class FileMetadataTest {
     @DisplayName("应该支持链式调用配置可选字段")
     void shouldSupportMethodChainingForOptionalFields() {
       // Given
-      FileMetadata metadata = FileMetadataTestDataBuilder.anActiveFile().build();
+      FileMetadata metadata = FileMetadataFixture.anActiveFile().build();
 
       // When - 链式调用
       metadata
@@ -496,7 +496,7 @@ class FileMetadataTest {
     void shouldMarkFileAsDeleted() {
       // Given - ACTIVE 状态的文件
       FileMetadata metadata =
-          FileMetadataTestDataBuilder.anActiveFile().status(FileStatus.ACTIVE).buildRestored();
+          FileMetadataFixture.anActiveFile().status(FileStatus.ACTIVE).buildRestored();
       assertThat(metadata.getStatus()).isEqualTo(FileStatus.ACTIVE);
 
       // When - 标记为已删除
@@ -517,7 +517,7 @@ class FileMetadataTest {
     void shouldThrowExceptionWhenFileAlreadyDeleted() {
       // Given - 已删除的文件
       FileMetadata metadata =
-          FileMetadataTestDataBuilder.aDeletedFile().status(FileStatus.DELETED).buildRestored();
+          FileMetadataFixture.aDeletedFile().status(FileStatus.DELETED).buildRestored();
 
       // When & Then
       assertThatThrownBy(() -> metadata.markAsDeleted(1001L, "张三"))
@@ -538,7 +538,7 @@ class FileMetadataTest {
       // Given - 过期时间设置为过去
       Instant pastTime = Instant.now().minusSeconds(3600); // 1 小时前
       FileMetadata metadata =
-          FileMetadataTestDataBuilder.anActiveFile().expiresAt(pastTime).buildRestored();
+          FileMetadataFixture.anActiveFile().expiresAt(pastTime).buildRestored();
 
       // When & Then
       assertThat(metadata.isExpired()).isTrue();
@@ -550,7 +550,7 @@ class FileMetadataTest {
       // Given - 过期时间设置为未来
       Instant futureTime = Instant.now().plusSeconds(3600); // 1 小时后
       FileMetadata metadata =
-          FileMetadataTestDataBuilder.anActiveFile().expiresAt(futureTime).buildRestored();
+          FileMetadataFixture.anActiveFile().expiresAt(futureTime).buildRestored();
 
       // When & Then
       assertThat(metadata.isExpired()).isFalse();
@@ -560,7 +560,7 @@ class FileMetadataTest {
     @DisplayName("应该判断文件未过期当未设置过期时间")
     void shouldDetermineFileIsNotExpiredWhenExpiresAtIsNull() {
       // Given - 未设置过期时间
-      FileMetadata metadata = FileMetadataTestDataBuilder.anActiveFile().build();
+      FileMetadata metadata = FileMetadataFixture.anActiveFile().build();
       assertThat(metadata.getExpiresAt()).isNull();
 
       // When & Then
@@ -571,7 +571,7 @@ class FileMetadataTest {
     @DisplayName("应该正确更新审计元数据")
     void shouldCorrectlyUpdateAuditMetadata() {
       // Given
-      FileMetadata metadata = FileMetadataTestDataBuilder.anActiveFile().buildRestored();
+      FileMetadata metadata = FileMetadataFixture.anActiveFile().buildRestored();
       Instant beforeUpdate = metadata.getUpdatedAt();
 
       // When - 更新审计信息
@@ -589,7 +589,7 @@ class FileMetadataTest {
     @DisplayName("应该允许 null 操作员信息更新审计元数据")
     void shouldAllowNullOperatorInfoWhenUpdatingAudit() {
       // Given
-      FileMetadata metadata = FileMetadataTestDataBuilder.anActiveFile().buildRestored();
+      FileMetadata metadata = FileMetadataFixture.anActiveFile().buildRestored();
 
       // When
       metadata.touchAudit(null, null);
@@ -619,7 +619,7 @@ class FileMetadataTest {
       StorageProvider originalProvider = StorageProvider.MINIO;
 
       FileMetadata metadata =
-          FileMetadataTestDataBuilder.anActiveFile()
+          FileMetadataFixture.anActiveFile()
               .storageKey(originalStorageKey)
               .fileSize(originalFileSize)
               .checksum(originalChecksum)
@@ -645,7 +645,7 @@ class FileMetadataTest {
     @DisplayName("应该保证上传时间在创建后不可变")
     void shouldEnsureUploadedAtRemainsImmutableAfterCreation() {
       // Given
-      FileMetadata metadata = FileMetadataTestDataBuilder.anActiveFile().build();
+      FileMetadata metadata = FileMetadataFixture.anActiveFile().build();
       Instant originalUploadedAt = metadata.getUploadedAt();
 
       // When - 执行各种操作
@@ -670,7 +670,7 @@ class FileMetadataTest {
       FileSize zeroSize = new FileSize(0L);
 
       // When
-      FileMetadata metadata = FileMetadataTestDataBuilder.anActiveFile().fileSize(zeroSize).build();
+      FileMetadata metadata = FileMetadataFixture.anActiveFile().fileSize(zeroSize).build();
 
       // Then
       assertThat(metadata.getFileSize().bytes()).isEqualTo(0L);
@@ -684,8 +684,7 @@ class FileMetadataTest {
       FileSize largeSize = new FileSize(10L * 1024 * 1024 * 1024);
 
       // When
-      FileMetadata metadata =
-          FileMetadataTestDataBuilder.anActiveFile().fileSize(largeSize).build();
+      FileMetadata metadata = FileMetadataFixture.anActiveFile().fileSize(largeSize).build();
 
       // Then
       assertThat(metadata.getFileSize().bytes()).isEqualTo(10L * 1024 * 1024 * 1024);
@@ -699,8 +698,7 @@ class FileMetadataTest {
       StorageKey specialKey = new StorageKey("bucket", "文献/2024/文章 (副本).pdf");
 
       // When
-      FileMetadata metadata =
-          FileMetadataTestDataBuilder.anActiveFile().storageKey(specialKey).build();
+      FileMetadata metadata = FileMetadataFixture.anActiveFile().storageKey(specialKey).build();
 
       // Then
       assertThat(metadata.getStorageKey().objectKey()).contains("文献");
@@ -714,8 +712,7 @@ class FileMetadataTest {
       String longRemarks = "{\"note\":\"" + "x".repeat(10000) + "\"}";
 
       // When
-      FileMetadata metadata =
-          FileMetadataTestDataBuilder.anActiveFile().recordRemarks(longRemarks).build();
+      FileMetadata metadata = FileMetadataFixture.anActiveFile().recordRemarks(longRemarks).build();
 
       // Then
       assertThat(metadata.getRecordRemarks()).hasSize(longRemarks.length());
@@ -729,7 +726,7 @@ class FileMetadataTest {
 
       // When
       FileMetadata metadata =
-          FileMetadataTestDataBuilder.anActiveFile().expiresAt(farFuture).buildRestored();
+          FileMetadataFixture.anActiveFile().expiresAt(farFuture).buildRestored();
 
       // Then
       assertThat(metadata.getExpiresAt()).isEqualTo(farFuture);
@@ -748,8 +745,7 @@ class FileMetadataTest {
     void shouldCorrectlyUseStorageKeyFullKeyMethod() {
       // Given
       StorageKey storageKey = new StorageKey("publication-files", "2024/01/article.pdf");
-      FileMetadata metadata =
-          FileMetadataTestDataBuilder.anActiveFile().storageKey(storageKey).build();
+      FileMetadata metadata = FileMetadataFixture.anActiveFile().storageKey(storageKey).build();
 
       // When
       String fullKey = metadata.getStorageKey().fullKey();
@@ -763,7 +759,7 @@ class FileMetadataTest {
     void shouldCorrectlyUseFileSizeHumanReadableMethod() {
       // Given
       FileSize fileSize = new FileSize(2 * 1024 * 1024); // 2 MB
-      FileMetadata metadata = FileMetadataTestDataBuilder.anActiveFile().fileSize(fileSize).build();
+      FileMetadata metadata = FileMetadataFixture.anActiveFile().fileSize(fileSize).build();
 
       // When
       String readable = metadata.getFileSize().humanReadable();
@@ -780,7 +776,7 @@ class FileMetadataTest {
           new FileChecksum(
               "D41D8CD98F00B204E9800998ECF8427E",
               "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855");
-      FileMetadata metadata = FileMetadataTestDataBuilder.anActiveFile().checksum(checksum).build();
+      FileMetadata metadata = FileMetadataFixture.anActiveFile().checksum(checksum).build();
 
       // When & Then - 哈希值应该被标准化为小写
       assertThat(metadata.getChecksum().md5Hash()).isEqualTo("d41d8cd98f00b204e9800998ecf8427e");
@@ -796,7 +792,7 @@ class FileMetadataTest {
           Map.of("source", "pubmed", "year", 2024, "importBatchId", "batch-001");
       BusinessContext context =
           new BusinessContext("patra-ingest", "publication_batch", "id-001", correlationData);
-      FileMetadata metadata = FileMetadataTestDataBuilder.anActiveFile().context(context).build();
+      FileMetadata metadata = FileMetadataFixture.anActiveFile().context(context).build();
 
       // When & Then
       assertThat(metadata.getContext().correlationData()).containsEntry("source", "pubmed");
@@ -817,7 +813,7 @@ class FileMetadataTest {
     void shouldCompleteFullLifecycleFromActiveToDeleted() {
       // Given - 新上传的文件
       FileMetadata metadata =
-          FileMetadataTestDataBuilder.anActiveFile()
+          FileMetadataFixture.anActiveFile()
               .storageKey(new StorageKey("bucket", "file.pdf"))
               .fileSize(new FileSize(1024 * 1024))
               .build();

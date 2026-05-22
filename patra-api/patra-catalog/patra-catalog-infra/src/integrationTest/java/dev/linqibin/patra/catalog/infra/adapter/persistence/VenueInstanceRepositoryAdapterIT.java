@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.linqibin.patra.catalog.domain.model.aggregate.VenueInstanceAggregate;
 import dev.linqibin.patra.catalog.domain.model.vo.venue.VenueId;
-import dev.linqibin.patra.catalog.infra.config.CatalogPostgreSQLContainerInitializer;
+import dev.linqibin.patra.catalog.infra.config.CatalogITPostgreSQLContainerInitializer;
 import dev.linqibin.patra.catalog.infra.persistence.dao.VenueInstanceDao;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
 import java.time.LocalDate;
@@ -39,7 +39,7 @@ import org.springframework.test.context.ContextConfiguration;
 /// @author linqibin
 /// @since 0.1.0
 @DataJpaTest
-@ContextConfiguration(initializers = CatalogPostgreSQLContainerInitializer.class)
+@ContextConfiguration(initializers = CatalogITPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
   VenueInstanceRepositoryAdapter.class,

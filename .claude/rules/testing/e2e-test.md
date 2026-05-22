@@ -1,5 +1,5 @@
 ---
-paths: patra-*/*-boot/**/src/test/**/*E2E.java
+paths: patra-*/*-boot/**/src/e2eTest/**/*E2E.java
 ---
 
 # E2E 测试规范

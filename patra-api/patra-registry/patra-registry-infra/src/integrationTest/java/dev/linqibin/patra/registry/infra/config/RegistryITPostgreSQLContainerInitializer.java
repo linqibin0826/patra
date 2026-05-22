@@ -10,7 +10,7 @@ import dev.linqibin.starter.test.container.initializer.PostgreSQLContainerInitia
 ///
 /// ```java
 /// @DataJpaTest
-/// @ContextConfiguration(initializers = RegistryPostgreSQLContainerInitializer.class)
+/// @ContextConfiguration(initializers = RegistryITPostgreSQLContainerInitializer.class)
 /// class SomeRepositoryIT {
 ///     // ...
 /// }
@@ -19,7 +19,7 @@ import dev.linqibin.starter.test.container.initializer.PostgreSQLContainerInitia
 /// @author linqibin
 /// @since 0.1.0
 /// @see PostgreSQLContainerInitializer
-public class RegistryPostgreSQLContainerInitializer extends PostgreSQLContainerInitializer {
+public class RegistryITPostgreSQLContainerInitializer extends PostgreSQLContainerInitializer {
 
   /// 返回 registry 服务的数据库名。
   ///

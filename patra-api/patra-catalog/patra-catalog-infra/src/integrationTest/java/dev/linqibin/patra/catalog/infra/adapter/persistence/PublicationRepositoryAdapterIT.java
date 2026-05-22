@@ -27,7 +27,7 @@ import dev.linqibin.patra.catalog.domain.model.vo.publication.PublicationSupplMe
 import dev.linqibin.patra.catalog.domain.model.vo.publication.PublicationTypeInfo;
 import dev.linqibin.patra.catalog.domain.model.vo.venue.VenueId;
 import dev.linqibin.patra.catalog.domain.model.vo.venue.VenueInstanceId;
-import dev.linqibin.patra.catalog.infra.config.CatalogPostgreSQLContainerInitializer;
+import dev.linqibin.patra.catalog.infra.config.CatalogITPostgreSQLContainerInitializer;
 import dev.linqibin.patra.catalog.infra.persistence.dao.InvestigatorDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.KeywordDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.PublicationAbstractDao;
@@ -79,7 +79,7 @@ import org.springframework.test.context.ContextConfiguration;
 /// @author linqibin
 /// @since 0.1.0
 @DataJpaTest
-@ContextConfiguration(initializers = CatalogPostgreSQLContainerInitializer.class)
+@ContextConfiguration(initializers = CatalogITPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
   PublicationRepositoryAdapter.class,

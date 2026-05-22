@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /// 测试辅助类
-public class TestHelper {
+public class TaskReadyCommandFixture {
 
   public static TaskReadyCommand createTestCommand(long taskId, String idempotentKey) {
     Map<String, Object> headers = new HashMap<>();

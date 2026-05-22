@@ -103,7 +103,9 @@ void cleanup() {
 // ✅ 好：测试工具处理测试清理
 // Session 没有 destroy()——它在生产中不直接销毁资源
 
-// 在 src/test/java/.../testsupport/SessionTestSupport.java
+// 模块内私有 helper → 放 src/test/java/.../testutil/；
+// 跨 sourceSet 或跨模块共享的 fixture → 放 src/testFixtures/java/.../
+// 在 src/test/java/.../testutil/SessionTestSupport.java（仅本模块使用）
 public class SessionTestSupport {
     public static void cleanupSession(Session session, WorkspaceManager wm) {
         WorkspaceInfo workspace = session.workspaceInfo();
@@ -128,7 +130,7 @@ void cleanup() {
 
   如果是：
     停下——不要加到生产类
-    放到 src/test/java/.../testsupport/ 工具类里
+    模块内私有放 src/test/java/.../testutil/ 工具类；跨 sourceSet/模块共享放 src/testFixtures/java/.../
 
   问："这个类是否拥有此资源的生命周期？"
 
@@ -309,7 +311,7 @@ TDD 循环：
 | 反模式 | 修复方式 |
 |--------|----------|
 | `verify(mock).xxx(...)` 当核心断言 | 测真实结果（事件、状态、返回值）or 用 fake / InMemory* |
-| 生产代码中的仅测试用方法 | 移到 `src/test/java/.../testsupport/` |
+| 生产代码中的仅测试用方法 | 模块内私有移 `src/test/java/.../testutil/`；跨 sourceSet/模块共享移 `src/testFixtures/java/.../` |
 | 不理解就 mock | 先理解依赖，最少 mock |
 | 不完整的 mock | 完整镜像真实数据结构 |
 | 测试作为事后补充 | TDD——先写测试 |

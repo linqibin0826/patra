@@ -28,7 +28,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * @author Patra Team
  * @since 1.0.0
  */
-@SpringBootTest(classes = DistributedLockIT.TestConfiguration.class)
+@SpringBootTest(classes = DistributedLockIT.ITSpringConfig.class)
 @Testcontainers
 @Slf4j
 class DistributedLockIT {
@@ -254,7 +254,7 @@ class DistributedLockIT {
         "org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration",
         "org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration"
       })
-  static class TestConfiguration {
+  static class ITSpringConfig {
     // Spring Boot 自动配置会自动加载 LockAutoConfiguration
     // 无需手动注册 LockAspect 和其他 Bean
 

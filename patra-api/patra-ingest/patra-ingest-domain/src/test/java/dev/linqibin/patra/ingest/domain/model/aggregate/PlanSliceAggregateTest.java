@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 /// 测试策略：
 ///
 /// - 纯 Java 单元测试，不依赖 Spring 容器
-///   - 使用 TestDataBuilder 模式构建测试数据
+///   - 使用 Fixture 模式构建测试数据
 ///   - 遵循 Given-When-Then 结构
 ///   - 使用 AssertJ 流畅断言
 ///
@@ -85,7 +85,7 @@ class PlanSliceAggregateTest {
       // When & Then: 创建切片应该失败
       assertThatThrownBy(
               () ->
-                  PlanSliceAggregateTestDataBuilder.builder()
+                  PlanSliceAggregateFixture.builder()
                       .sliceSignatureHash(sliceSignatureHash)
                       .build())
           .isInstanceOf(NullPointerException.class)
@@ -99,7 +99,7 @@ class PlanSliceAggregateTest {
       Long planId = null;
 
       // When: 创建切片
-      PlanSliceAggregate slice = PlanSliceAggregateTestDataBuilder.builder().planId(planId).build();
+      PlanSliceAggregate slice = PlanSliceAggregateFixture.builder().planId(planId).build();
 
       // Then: 应该成功创建
       assertThat(slice).isNotNull();
@@ -117,7 +117,7 @@ class PlanSliceAggregateTest {
 
       // When: 创建切片
       PlanSliceAggregate slice =
-          PlanSliceAggregateTestDataBuilder.builder()
+          PlanSliceAggregateFixture.builder()
               .provenanceCode(provenanceCode)
               .windowSpecJson(windowSpecJson)
               .exprHash(exprHash)
@@ -216,7 +216,7 @@ class PlanSliceAggregateTest {
     @DisplayName("应该允许从 PENDING 转换到 ASSIGNED（标记为已分配）")
     void shouldAllowTransitionFromPendingToAssigned() {
       // Given: 新创建的切片处于 PENDING 状态
-      PlanSliceAggregate slice = PlanSliceAggregateTestDataBuilder.builder().build();
+      PlanSliceAggregate slice = PlanSliceAggregateFixture.builder().build();
       assertThat(slice.getStatus()).isEqualTo(SliceStatus.PENDING);
 
       // When: 标记为已分配（任务创建后）
@@ -231,7 +231,7 @@ class PlanSliceAggregateTest {
     void shouldAllowTransitionFromAssignedToFinished() {
       // Given: 切片处于 ASSIGNED 状态
       PlanSliceAggregate slice =
-          PlanSliceAggregateTestDataBuilder.builder().status(SliceStatus.ASSIGNED).buildRestored();
+          PlanSliceAggregateFixture.builder().status(SliceStatus.ASSIGNED).buildRestored();
 
       // When: 更新状态为 FINISHED（任务完成后）
       slice.updateStatus(SliceStatus.FINISHED);
@@ -245,7 +245,7 @@ class PlanSliceAggregateTest {
     void shouldAllowRepeatedMarkAssignedCalls() {
       // Given: 切片处于 ASSIGNED 状态
       PlanSliceAggregate slice =
-          PlanSliceAggregateTestDataBuilder.builder().status(SliceStatus.ASSIGNED).buildRestored();
+          PlanSliceAggregateFixture.builder().status(SliceStatus.ASSIGNED).buildRestored();
 
       // When: 再次标记为已分配
       slice.markAssigned();
@@ -259,7 +259,7 @@ class PlanSliceAggregateTest {
     void shouldAllowArbitraryTransitionViaUpdateStatus() {
       // Given: 切片处于 FINISHED 状态
       PlanSliceAggregate slice =
-          PlanSliceAggregateTestDataBuilder.builder().status(SliceStatus.FINISHED).buildRestored();
+          PlanSliceAggregateFixture.builder().status(SliceStatus.FINISHED).buildRestored();
 
       // When: 更新状态为 PENDING（虽然不是标准流程，但技术上允许）
       slice.updateStatus(SliceStatus.PENDING);
@@ -272,7 +272,7 @@ class PlanSliceAggregateTest {
     @DisplayName("应该抛出异常当 updateStatus() 参数为 null")
     void shouldThrowExceptionWhenUpdateStatusWithNull() {
       // Given: 任意状态的切片
-      PlanSliceAggregate slice = PlanSliceAggregateTestDataBuilder.builder().build();
+      PlanSliceAggregate slice = PlanSliceAggregateFixture.builder().build();
 
       // When & Then: 使用 null 更新状态应该失败
       assertThatThrownBy(() -> slice.updateStatus(null))
@@ -291,7 +291,7 @@ class PlanSliceAggregateTest {
     @DisplayName("应该成功完成 PENDING → ASSIGNED → FINISHED 流程")
     void shouldCompleteFullStateTransitionFlow() {
       // Given: 新创建的切片
-      PlanSliceAggregate slice = PlanSliceAggregateTestDataBuilder.builder().build();
+      PlanSliceAggregate slice = PlanSliceAggregateFixture.builder().build();
       assertThat(slice.getStatus()).isEqualTo(SliceStatus.PENDING);
 
       // When: 任务创建后标记为已分配
@@ -318,8 +318,7 @@ class PlanSliceAggregateTest {
     @DisplayName("应该成功绑定计划")
     void shouldBindPlanSuccessfully() {
       // Given: 未绑定计划的切片
-      PlanSliceAggregate slice =
-          PlanSliceAggregateTestDataBuilder.builder().planId((PlanId) null).build();
+      PlanSliceAggregate slice = PlanSliceAggregateFixture.builder().planId((PlanId) null).build();
       assertThat(slice.getPlanId()).isNull();
 
       // When: 绑定计划
@@ -334,8 +333,7 @@ class PlanSliceAggregateTest {
     @DisplayName("应该抛出异常当 bindPlan() 参数为 null")
     void shouldThrowExceptionWhenBindPlanWithNull() {
       // Given: 未绑定计划的切片
-      PlanSliceAggregate slice =
-          PlanSliceAggregateTestDataBuilder.builder().planId((PlanId) null).build();
+      PlanSliceAggregate slice = PlanSliceAggregateFixture.builder().planId((PlanId) null).build();
 
       // When & Then: 使用 null 绑定计划应该失败
       assertThatThrownBy(() -> slice.bindPlan((PlanId) null))
@@ -347,7 +345,7 @@ class PlanSliceAggregateTest {
     @DisplayName("应该允许重新绑定计划（覆盖现有值）")
     void shouldAllowRebindingPlan() {
       // Given: 已绑定计划的切片
-      PlanSliceAggregate slice = PlanSliceAggregateTestDataBuilder.builder().planId(1001L).build();
+      PlanSliceAggregate slice = PlanSliceAggregateFixture.builder().planId(1001L).build();
       assertThat(slice.getPlanId()).isEqualTo(PlanId.of(1001L));
 
       // When: 重新绑定到新计划
@@ -366,14 +364,10 @@ class PlanSliceAggregateTest {
 
       // When: 创建两个切片
       PlanSliceAggregate slice1 =
-          PlanSliceAggregateTestDataBuilder.builder()
-              .sliceSignatureHash(sliceSignatureHash)
-              .build();
+          PlanSliceAggregateFixture.builder().sliceSignatureHash(sliceSignatureHash).build();
 
       PlanSliceAggregate slice2 =
-          PlanSliceAggregateTestDataBuilder.builder()
-              .sliceSignatureHash(sliceSignatureHash)
-              .build();
+          PlanSliceAggregateFixture.builder().sliceSignatureHash(sliceSignatureHash).build();
 
       // Then: 切片签名哈希应该相同（用于去重）
       assertThat(slice1.getSliceSignatureHash()).isEqualTo(slice2.getSliceSignatureHash());
@@ -388,10 +382,10 @@ class PlanSliceAggregateTest {
 
       // When: 创建两个切片
       PlanSliceAggregate slice1 =
-          PlanSliceAggregateTestDataBuilder.builder().sliceSignatureHash(hash1).build();
+          PlanSliceAggregateFixture.builder().sliceSignatureHash(hash1).build();
 
       PlanSliceAggregate slice2 =
-          PlanSliceAggregateTestDataBuilder.builder().sliceSignatureHash(hash2).build();
+          PlanSliceAggregateFixture.builder().sliceSignatureHash(hash2).build();
 
       // Then: 切片签名哈希应该不同
       assertThat(slice1.getSliceSignatureHash()).isNotEqualTo(slice2.getSliceSignatureHash());
@@ -416,7 +410,7 @@ class PlanSliceAggregateTest {
       String originalExprSnapshotJson = "{\"expr\":\"original\"}";
 
       PlanSliceAggregate slice =
-          PlanSliceAggregateTestDataBuilder.builder()
+          PlanSliceAggregateFixture.builder()
               .provenanceCode(originalProvenanceCode)
               .sliceNo(originalSliceNo)
               .sliceSignatureHash(originalSliceSignatureHash)
@@ -443,7 +437,7 @@ class PlanSliceAggregateTest {
     @DisplayName("应该允许状态字段发生变化")
     void shouldAllowStatusFieldToChange() {
       // Given: 新创建的切片
-      PlanSliceAggregate slice = PlanSliceAggregateTestDataBuilder.builder().build();
+      PlanSliceAggregate slice = PlanSliceAggregateFixture.builder().build();
       SliceStatus initialStatus = slice.getStatus();
 
       // When: 改变状态
@@ -458,8 +452,7 @@ class PlanSliceAggregateTest {
     @DisplayName("应该允许 planId 字段发生变化")
     void shouldAllowPlanIdFieldToChange() {
       // Given: 未绑定计划的切片
-      PlanSliceAggregate slice =
-          PlanSliceAggregateTestDataBuilder.builder().planId((PlanId) null).build();
+      PlanSliceAggregate slice = PlanSliceAggregateFixture.builder().planId((PlanId) null).build();
 
       // When: 绑定计划
       slice.bindPlan(PlanId.of(3001L));
@@ -482,8 +475,7 @@ class PlanSliceAggregateTest {
       int minSliceNo = Integer.MIN_VALUE;
 
       // When: 创建切片
-      PlanSliceAggregate slice =
-          PlanSliceAggregateTestDataBuilder.builder().sliceNo(minSliceNo).build();
+      PlanSliceAggregate slice = PlanSliceAggregateFixture.builder().sliceNo(minSliceNo).build();
 
       // Then: 应该成功创建
       assertThat(slice.getSliceNo()).isEqualTo(minSliceNo);
@@ -496,8 +488,7 @@ class PlanSliceAggregateTest {
       int maxSliceNo = Integer.MAX_VALUE;
 
       // When: 创建切片
-      PlanSliceAggregate slice =
-          PlanSliceAggregateTestDataBuilder.builder().sliceNo(maxSliceNo).build();
+      PlanSliceAggregate slice = PlanSliceAggregateFixture.builder().sliceNo(maxSliceNo).build();
 
       // Then: 应该成功创建
       assertThat(slice.getSliceNo()).isEqualTo(maxSliceNo);
@@ -510,8 +501,7 @@ class PlanSliceAggregateTest {
       int zeroSliceNo = 0;
 
       // When: 创建切片
-      PlanSliceAggregate slice =
-          PlanSliceAggregateTestDataBuilder.builder().sliceNo(zeroSliceNo).build();
+      PlanSliceAggregate slice = PlanSliceAggregateFixture.builder().sliceNo(zeroSliceNo).build();
 
       // Then: 应该成功创建
       assertThat(slice.getSliceNo()).isEqualTo(zeroSliceNo);
@@ -525,7 +515,7 @@ class PlanSliceAggregateTest {
 
       // When: 创建切片
       PlanSliceAggregate slice =
-          PlanSliceAggregateTestDataBuilder.builder().sliceNo(negativeSliceNo).build();
+          PlanSliceAggregateFixture.builder().sliceNo(negativeSliceNo).build();
 
       // Then: 应该成功创建
       assertThat(slice.getSliceNo()).isEqualTo(negativeSliceNo);
@@ -541,7 +531,7 @@ class PlanSliceAggregateTest {
 
       // When: 创建切片
       PlanSliceAggregate slice =
-          PlanSliceAggregateTestDataBuilder.builder()
+          PlanSliceAggregateFixture.builder()
               .sliceSignatureHash(longSignatureHash)
               .windowSpecJson(longWindowSpecJson)
               .exprSnapshotJson(longExprSnapshotJson)
@@ -564,7 +554,7 @@ class PlanSliceAggregateTest {
 
       // When: 创建切片
       PlanSliceAggregate slice =
-          PlanSliceAggregateTestDataBuilder.builder()
+          PlanSliceAggregateFixture.builder()
               .provenanceCode(emptyProvenanceCode)
               .windowSpecJson(emptyWindowSpecJson)
               .exprHash(emptyExprHash)
@@ -589,7 +579,7 @@ class PlanSliceAggregateTest {
     @DisplayName("应该正确处理 ID 分配")
     void shouldHandleIdAssignment() {
       // Given: 新创建的切片
-      PlanSliceAggregate slice = PlanSliceAggregateTestDataBuilder.builder().build();
+      PlanSliceAggregate slice = PlanSliceAggregateFixture.builder().build();
       assertThat(slice.getId()).isNull();
       assertThat(slice.isTransient()).isTrue();
 
@@ -606,7 +596,7 @@ class PlanSliceAggregateTest {
     @DisplayName("应该抛出异常当分配 null ID")
     void shouldThrowExceptionWhenAssigningNullId() {
       // Given: 新创建的切片
-      PlanSliceAggregate slice = PlanSliceAggregateTestDataBuilder.builder().build();
+      PlanSliceAggregate slice = PlanSliceAggregateFixture.builder().build();
 
       // When & Then: 分配 null ID 应该失败
       assertThatThrownBy(() -> slice.assignId(null))
@@ -618,7 +608,7 @@ class PlanSliceAggregateTest {
     @DisplayName("应该正确处理版本分配")
     void shouldHandleVersionAssignment() {
       // Given: 新创建的切片
-      PlanSliceAggregate slice = PlanSliceAggregateTestDataBuilder.builder().build();
+      PlanSliceAggregate slice = PlanSliceAggregateFixture.builder().build();
       assertThat(slice.getVersion()).isEqualTo(0L);
 
       // When: 分配版本
@@ -633,7 +623,7 @@ class PlanSliceAggregateTest {
     @DisplayName("应该抛出异常当分配负版本")
     void shouldThrowExceptionWhenAssigningNegativeVersion() {
       // Given: 新创建的切片
-      PlanSliceAggregate slice = PlanSliceAggregateTestDataBuilder.builder().build();
+      PlanSliceAggregate slice = PlanSliceAggregateFixture.builder().build();
 
       // When & Then: 分配负版本应该失败
       assertThatThrownBy(() -> slice.assignVersion(-1L))
@@ -642,12 +632,12 @@ class PlanSliceAggregateTest {
     }
   }
 
-  // ========== TestDataBuilder（辅助类）==========
+  // ========== Fixture（辅助类）==========
 
   /// PlanSliceAggregate 测试数据构建器。
   ///
   /// 遵循 Builder 模式，提供默认值以简化测试数据构建。
-  static class PlanSliceAggregateTestDataBuilder {
+  static class PlanSliceAggregateFixture {
     private PlanSliceId id = null; // 默认为 null（新创建的聚合根）
     private PlanId planId = PlanId.of(1001L);
     private ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
@@ -659,61 +649,61 @@ class PlanSliceAggregateTest {
     private SliceStatus status = SliceStatus.PENDING;
     private long version = 0L;
 
-    public static PlanSliceAggregateTestDataBuilder builder() {
-      return new PlanSliceAggregateTestDataBuilder();
+    public static PlanSliceAggregateFixture builder() {
+      return new PlanSliceAggregateFixture();
     }
 
-    public PlanSliceAggregateTestDataBuilder id(PlanSliceId id) {
+    public PlanSliceAggregateFixture id(PlanSliceId id) {
       this.id = id;
       return this;
     }
 
-    public PlanSliceAggregateTestDataBuilder planId(PlanId planId) {
+    public PlanSliceAggregateFixture planId(PlanId planId) {
       this.planId = planId;
       return this;
     }
 
-    public PlanSliceAggregateTestDataBuilder planId(Long planId) {
+    public PlanSliceAggregateFixture planId(Long planId) {
       this.planId = planId != null ? PlanId.of(planId) : null;
       return this;
     }
 
-    public PlanSliceAggregateTestDataBuilder provenanceCode(ProvenanceCode provenanceCode) {
+    public PlanSliceAggregateFixture provenanceCode(ProvenanceCode provenanceCode) {
       this.provenanceCode = provenanceCode;
       return this;
     }
 
-    public PlanSliceAggregateTestDataBuilder sliceNo(int sliceNo) {
+    public PlanSliceAggregateFixture sliceNo(int sliceNo) {
       this.sliceNo = sliceNo;
       return this;
     }
 
-    public PlanSliceAggregateTestDataBuilder sliceSignatureHash(String sliceSignatureHash) {
+    public PlanSliceAggregateFixture sliceSignatureHash(String sliceSignatureHash) {
       this.sliceSignatureHash = sliceSignatureHash;
       return this;
     }
 
-    public PlanSliceAggregateTestDataBuilder windowSpecJson(String windowSpecJson) {
+    public PlanSliceAggregateFixture windowSpecJson(String windowSpecJson) {
       this.windowSpecJson = windowSpecJson;
       return this;
     }
 
-    public PlanSliceAggregateTestDataBuilder exprHash(String exprHash) {
+    public PlanSliceAggregateFixture exprHash(String exprHash) {
       this.exprHash = exprHash;
       return this;
     }
 
-    public PlanSliceAggregateTestDataBuilder exprSnapshotJson(String exprSnapshotJson) {
+    public PlanSliceAggregateFixture exprSnapshotJson(String exprSnapshotJson) {
       this.exprSnapshotJson = exprSnapshotJson;
       return this;
     }
 
-    public PlanSliceAggregateTestDataBuilder status(SliceStatus status) {
+    public PlanSliceAggregateFixture status(SliceStatus status) {
       this.status = status;
       return this;
     }
 
-    public PlanSliceAggregateTestDataBuilder version(long version) {
+    public PlanSliceAggregateFixture version(long version) {
       this.version = version;
       return this;
     }

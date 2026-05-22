@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 /// 测试策略：
 ///
 /// - 纯 Java 单元测试，不依赖 Spring 容器
-///   - 使用 TestDataBuilder 模式构建测试数据
+///   - 使用 Fixture 模式构建测试数据
 ///   - 遵循 Given-When-Then 结构
 ///   - 使用 AssertJ 流畅断言
 ///
@@ -78,7 +78,7 @@ class TaskRunTest {
     @DisplayName("应该正确初始化默认值对象")
     void shouldInitializeDefaultValueObjects() {
       // Given & When
-      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun().build();
+      TaskRun taskRun = TaskRunFixture.aPendingTaskRun().build();
 
       // Then: 验证默认值对象不为 null
       assertThat(taskRun.getStats()).isNotNull().isEqualTo(RunStats.empty());
@@ -154,7 +154,7 @@ class TaskRunTest {
       RunStats stats = null;
 
       // When
-      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun().stats(stats).buildRestored();
+      TaskRun taskRun = TaskRunFixture.aPendingTaskRun().stats(stats).buildRestored();
 
       // Then: 应该使用空 stats
       assertThat(taskRun.getStats()).isNotNull().isEqualTo(RunStats.empty());
@@ -167,8 +167,7 @@ class TaskRunTest {
       TaskRunCheckpoint checkpoint = null;
 
       // When
-      TaskRun taskRun =
-          TaskRunTestDataBuilder.aPendingTaskRun().checkpoint(checkpoint).buildRestored();
+      TaskRun taskRun = TaskRunFixture.aPendingTaskRun().checkpoint(checkpoint).buildRestored();
 
       // Then: 应该使用空 checkpoint
       assertThat(taskRun.getCheckpoint()).isNotNull().isEqualTo(TaskRunCheckpoint.empty());
@@ -181,8 +180,7 @@ class TaskRunTest {
       RunContext runContext = null;
 
       // When
-      TaskRun taskRun =
-          TaskRunTestDataBuilder.aPendingTaskRun().runContext(runContext).buildRestored();
+      TaskRun taskRun = TaskRunFixture.aPendingTaskRun().runContext(runContext).buildRestored();
 
       // Then: 应该使用空 runContext
       assertThat(taskRun.getRunContext()).isNotNull().isEqualTo(RunContext.empty());
@@ -199,7 +197,7 @@ class TaskRunTest {
     @DisplayName("应该允许从 PENDING 转换到 RUNNING")
     void shouldAllowTransitionFromPendingToRunning() {
       // Given: PENDING 状态的 TaskRun
-      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun().build();
+      TaskRun taskRun = TaskRunFixture.aPendingTaskRun().build();
       assertThat(taskRun.getStatus()).isEqualTo(TaskRunStatus.PENDING);
       assertThat(taskRun.getStartedAt()).isNull();
 
@@ -218,7 +216,7 @@ class TaskRunTest {
       // Given: RUNNING 状态的 TaskRun
       Instant originalStartedAt = Instant.parse("2025-01-01T09:00:00Z");
       TaskRun taskRun =
-          TaskRunTestDataBuilder.aRunningTaskRun().startedAt(originalStartedAt).buildRestored();
+          TaskRunFixture.aRunningTaskRun().startedAt(originalStartedAt).buildRestored();
 
       assertThat(taskRun.getStatus()).isEqualTo(TaskRunStatus.RUNNING);
 
@@ -235,7 +233,7 @@ class TaskRunTest {
     @DisplayName("应该忽略从 SUCCEEDED 状态调用 start()")
     void shouldIgnoreStartFromSucceededStatus() {
       // Given: SUCCEEDED 状态的 TaskRun
-      TaskRun taskRun = TaskRunTestDataBuilder.aSucceededTaskRun().buildRestored();
+      TaskRun taskRun = TaskRunFixture.aSucceededTaskRun().buildRestored();
       assertThat(taskRun.getStatus()).isEqualTo(TaskRunStatus.SUCCEEDED);
 
       // When: 尝试启动
@@ -254,7 +252,7 @@ class TaskRunTest {
     @DisplayName("应该正确执行 succeed() 并记录完成时间")
     void shouldSucceedAndRecordFinishTime() {
       // Given: RUNNING 状态的 TaskRun
-      TaskRun taskRun = TaskRunTestDataBuilder.aRunningTaskRun().buildRestored();
+      TaskRun taskRun = TaskRunFixture.aRunningTaskRun().buildRestored();
       assertThat(taskRun.getStatus()).isEqualTo(TaskRunStatus.RUNNING);
       assertThat(taskRun.getFinishedAt()).isNull();
 
@@ -272,7 +270,7 @@ class TaskRunTest {
     @DisplayName("应该允许从任意状态调用 succeed()")
     void shouldAllowSucceedFromAnyStatus() {
       // Given: PENDING 状态的 TaskRun
-      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun().build();
+      TaskRun taskRun = TaskRunFixture.aPendingTaskRun().build();
 
       // When: 标记为成功
       Instant now = Instant.now();
@@ -292,7 +290,7 @@ class TaskRunTest {
     @DisplayName("应该正确执行 fail() 并记录错误信息")
     void shouldFailAndRecordErrorInfo() {
       // Given: RUNNING 状态的 TaskRun
-      TaskRun taskRun = TaskRunTestDataBuilder.aRunningTaskRun().buildRestored();
+      TaskRun taskRun = TaskRunFixture.aRunningTaskRun().buildRestored();
       assertThat(taskRun.getStatus()).isEqualTo(TaskRunStatus.RUNNING);
       assertThat(taskRun.getFinishedAt()).isNull();
       assertThat(taskRun.getError()).isNull();
@@ -312,7 +310,7 @@ class TaskRunTest {
     @DisplayName("应该允许错误信息为 null")
     void shouldAllowNullErrorMessage() {
       // Given: RUNNING 状态的 TaskRun
-      TaskRun taskRun = TaskRunTestDataBuilder.aRunningTaskRun().buildRestored();
+      TaskRun taskRun = TaskRunFixture.aRunningTaskRun().buildRestored();
 
       // When: 使用 null 错误信息标记为失败
       taskRun.fail(null, Instant.now());
@@ -326,7 +324,7 @@ class TaskRunTest {
     @DisplayName("应该允许从任意状态调用 fail()")
     void shouldAllowFailFromAnyStatus() {
       // Given: PENDING 状态的 TaskRun
-      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun().build();
+      TaskRun taskRun = TaskRunFixture.aPendingTaskRun().build();
 
       // When: 标记为失败
       taskRun.fail("Early failure", Instant.now());
@@ -345,7 +343,7 @@ class TaskRunTest {
     @DisplayName("应该正确执行 markPartial() 并记录错误信息")
     void shouldMarkPartialAndRecordErrorInfo() {
       // Given: RUNNING 状态的 TaskRun
-      TaskRun taskRun = TaskRunTestDataBuilder.aRunningTaskRun().buildRestored();
+      TaskRun taskRun = TaskRunFixture.aRunningTaskRun().buildRestored();
       assertThat(taskRun.getStatus()).isEqualTo(TaskRunStatus.RUNNING);
       assertThat(taskRun.getFinishedAt()).isNull();
       assertThat(taskRun.getError()).isNull();
@@ -365,7 +363,7 @@ class TaskRunTest {
     @DisplayName("应该允许错误信息为 null")
     void shouldAllowNullErrorMessage() {
       // Given: RUNNING 状态的 TaskRun
-      TaskRun taskRun = TaskRunTestDataBuilder.aRunningTaskRun().buildRestored();
+      TaskRun taskRun = TaskRunFixture.aRunningTaskRun().buildRestored();
 
       // When: 使用 null 错误信息标记为部分完成
       taskRun.markPartial(null, Instant.now());
@@ -380,8 +378,7 @@ class TaskRunTest {
     void shouldPreserveCheckpointForResumableExecution() {
       // Given: RUNNING 状态的 TaskRun，包含检查点
       TaskRunCheckpoint checkpoint = new TaskRunCheckpoint("{\"lastProcessedId\":1000}");
-      TaskRun taskRun =
-          TaskRunTestDataBuilder.aRunningTaskRun().checkpoint(checkpoint).buildRestored();
+      TaskRun taskRun = TaskRunFixture.aRunningTaskRun().checkpoint(checkpoint).buildRestored();
 
       // When: 标记为部分完成
       taskRun.markPartial("Partial completion", Instant.now());
@@ -401,7 +398,7 @@ class TaskRunTest {
     @DisplayName("应该成功完成 PENDING → RUNNING → SUCCEEDED 流程")
     void shouldCompleteFullSuccessFlow() {
       // Given: 新创建的 TaskRun
-      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun().build();
+      TaskRun taskRun = TaskRunFixture.aPendingTaskRun().build();
       assertThat(taskRun.getStatus()).isEqualTo(TaskRunStatus.PENDING);
 
       // When: 启动任务
@@ -425,7 +422,7 @@ class TaskRunTest {
     @DisplayName("应该成功完成 PENDING → RUNNING → FAILED 流程")
     void shouldCompleteFullFailureFlow() {
       // Given: 新创建的 TaskRun
-      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun().build();
+      TaskRun taskRun = TaskRunFixture.aPendingTaskRun().build();
 
       // When: 启动任务
       taskRun.start(Instant.parse("2025-01-01T10:00:00Z"));
@@ -445,7 +442,7 @@ class TaskRunTest {
     @DisplayName("应该成功完成 PENDING → RUNNING → PARTIAL 流程")
     void shouldCompleteFullPartialFlow() {
       // Given: 新创建的 TaskRun
-      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun().build();
+      TaskRun taskRun = TaskRunFixture.aPendingTaskRun().build();
 
       // When: 启动任务
       taskRun.start(Instant.parse("2025-01-01T10:00:00Z"));
@@ -473,7 +470,7 @@ class TaskRunTest {
     @DisplayName("应该成功更新心跳时间")
     void shouldUpdateHeartbeatTime() {
       // Given: RUNNING 状态的 TaskRun
-      TaskRun taskRun = TaskRunTestDataBuilder.aRunningTaskRun().buildRestored();
+      TaskRun taskRun = TaskRunFixture.aRunningTaskRun().buildRestored();
       assertThat(taskRun.getLastHeartbeat()).isNull();
 
       // When: 更新心跳
@@ -488,7 +485,7 @@ class TaskRunTest {
     @DisplayName("应该允许多次更新心跳时间")
     void shouldAllowMultipleHeartbeatUpdates() {
       // Given: RUNNING 状态的 TaskRun
-      TaskRun taskRun = TaskRunTestDataBuilder.aRunningTaskRun().buildRestored();
+      TaskRun taskRun = TaskRunFixture.aRunningTaskRun().buildRestored();
 
       // When: 第一次心跳
       Instant firstHeartbeat = Instant.parse("2025-01-01T10:01:00Z");
@@ -509,7 +506,7 @@ class TaskRunTest {
     @DisplayName("应该允许从任意状态更新心跳")
     void shouldAllowHeartbeatFromAnyStatus() {
       // Given: PENDING 状态的 TaskRun
-      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun().build();
+      TaskRun taskRun = TaskRunFixture.aPendingTaskRun().build();
 
       // When: 更新心跳
       Instant heartbeatAt = Instant.now();
@@ -530,7 +527,7 @@ class TaskRunTest {
     @DisplayName("应该成功更新检查点")
     void shouldUpdateCheckpoint() {
       // Given: RUNNING 状态的 TaskRun
-      TaskRun taskRun = TaskRunTestDataBuilder.aRunningTaskRun().buildRestored();
+      TaskRun taskRun = TaskRunFixture.aRunningTaskRun().buildRestored();
       assertThat(taskRun.getCheckpoint()).isEqualTo(TaskRunCheckpoint.empty());
 
       // When: 更新检查点
@@ -549,7 +546,7 @@ class TaskRunTest {
       // Given: RUNNING 状态的 TaskRun，已有检查点
       TaskRunCheckpoint existingCheckpoint = new TaskRunCheckpoint("{\"data\":\"old\"}");
       TaskRun taskRun =
-          TaskRunTestDataBuilder.aRunningTaskRun().checkpoint(existingCheckpoint).buildRestored();
+          TaskRunFixture.aRunningTaskRun().checkpoint(existingCheckpoint).buildRestored();
 
       assertThat(taskRun.getCheckpoint().isPresent()).isTrue();
 
@@ -565,7 +562,7 @@ class TaskRunTest {
     @DisplayName("应该允许多次更新检查点")
     void shouldAllowMultipleCheckpointUpdates() {
       // Given: RUNNING 状态的 TaskRun
-      TaskRun taskRun = TaskRunTestDataBuilder.aRunningTaskRun().buildRestored();
+      TaskRun taskRun = TaskRunFixture.aRunningTaskRun().buildRestored();
 
       // When: 第一次更新检查点
       TaskRunCheckpoint checkpoint1 = new TaskRunCheckpoint("{\"page\":1}");
@@ -586,7 +583,7 @@ class TaskRunTest {
     @DisplayName("应该允许从任意状态更新检查点")
     void shouldAllowCheckpointUpdateFromAnyStatus() {
       // Given: PENDING 状态的 TaskRun
-      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun().build();
+      TaskRun taskRun = TaskRunFixture.aPendingTaskRun().build();
 
       // When: 更新检查点
       TaskRunCheckpoint checkpoint = new TaskRunCheckpoint("{\"init\":true}");
@@ -607,7 +604,7 @@ class TaskRunTest {
     @DisplayName("应该成功累加统计信息")
     void shouldAppendStats() {
       // Given: RUNNING 状态的 TaskRun，初始统计为空
-      TaskRun taskRun = TaskRunTestDataBuilder.aRunningTaskRun().buildRestored();
+      TaskRun taskRun = TaskRunFixture.aRunningTaskRun().buildRestored();
       assertThat(taskRun.getStats()).isEqualTo(RunStats.empty());
 
       // When: 追加统计信息
@@ -626,7 +623,7 @@ class TaskRunTest {
     @DisplayName("应该正确累加多次统计信息")
     void shouldAppendStatsMultipleTimes() {
       // Given: RUNNING 状态的 TaskRun
-      TaskRun taskRun = TaskRunTestDataBuilder.aRunningTaskRun().buildRestored();
+      TaskRun taskRun = TaskRunFixture.aRunningTaskRun().buildRestored();
 
       // When: 第一次追加统计
       RunStats delta1 = new RunStats(100, 95, 5, 10);
@@ -651,8 +648,7 @@ class TaskRunTest {
     void shouldHandleZeroDelta() {
       // Given: RUNNING 状态的 TaskRun，已有统计
       RunStats initialStats = new RunStats(100, 95, 5, 10);
-      TaskRun taskRun =
-          TaskRunTestDataBuilder.aRunningTaskRun().stats(initialStats).buildRestored();
+      TaskRun taskRun = TaskRunFixture.aRunningTaskRun().stats(initialStats).buildRestored();
 
       // When: 追加零值增量
       RunStats zeroDelta = RunStats.empty();
@@ -666,7 +662,7 @@ class TaskRunTest {
     @DisplayName("应该允许从任意状态追加统计")
     void shouldAllowAppendStatsFromAnyStatus() {
       // Given: PENDING 状态的 TaskRun
-      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun().build();
+      TaskRun taskRun = TaskRunFixture.aPendingTaskRun().build();
 
       // When: 追加统计
       RunStats delta = new RunStats(10, 10, 0, 1);
@@ -687,7 +683,7 @@ class TaskRunTest {
     @DisplayName("应该成功分配时间窗口")
     void shouldAssignTimeWindow() {
       // Given: TaskRun 无窗口
-      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun().build();
+      TaskRun taskRun = TaskRunFixture.aPendingTaskRun().build();
       assertThat(taskRun.getWindowSpec()).isNull();
 
       // When: 分配时间窗口
@@ -704,7 +700,7 @@ class TaskRunTest {
     @DisplayName("应该成功分配 ID 范围窗口")
     void shouldAssignIdRangeWindow() {
       // Given: TaskRun 无窗口
-      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun().build();
+      TaskRun taskRun = TaskRunFixture.aPendingTaskRun().build();
 
       // When: 分配 ID 范围窗口
       WindowSpec windowSpec = WindowSpec.ofIdRange(1000L, 2000L);
@@ -718,7 +714,7 @@ class TaskRunTest {
     @DisplayName("应该成功分配游标窗口")
     void shouldAssignCursorWindow() {
       // Given: TaskRun 无窗口
-      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun().build();
+      TaskRun taskRun = TaskRunFixture.aPendingTaskRun().build();
 
       // When: 分配游标窗口
       WindowSpec windowSpec = WindowSpec.ofCursor("start-token", "end-token");
@@ -734,7 +730,7 @@ class TaskRunTest {
       // Given: TaskRun 已有窗口
       WindowSpec oldWindow = WindowSpec.ofSingle();
       TaskRun taskRun =
-          TaskRunTestDataBuilder.aPendingTaskRun()
+          TaskRunFixture.aPendingTaskRun()
               .windowSpec(oldWindow)
               .buildRestored(); // 使用 buildRestored() 以保留 windowSpec
 
@@ -756,7 +752,7 @@ class TaskRunTest {
       // Given: TaskRun 已有窗口
       WindowSpec window = WindowSpec.ofSingle();
       TaskRun taskRun =
-          TaskRunTestDataBuilder.aPendingTaskRun()
+          TaskRunFixture.aPendingTaskRun()
               .windowSpec(window)
               .buildRestored(); // 使用 buildRestored() 以保留 windowSpec
 
@@ -778,7 +774,7 @@ class TaskRunTest {
     @DisplayName("应该成功绑定 correlationId")
     void shouldBindCorrelationId() {
       // Given: TaskRun 无 correlationId
-      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun().build();
+      TaskRun taskRun = TaskRunFixture.aPendingTaskRun().build();
       assertThat(taskRun.getRunContext().correlationId()).isNull();
 
       // When: 绑定 correlationId
@@ -794,8 +790,7 @@ class TaskRunTest {
     void shouldAllowOverwritingExistingCorrelationId() {
       // Given: TaskRun 已有 correlationId
       RunContext oldContext = new RunContext("trace-old");
-      TaskRun taskRun =
-          TaskRunTestDataBuilder.aPendingTaskRun().runContext(oldContext).buildRestored();
+      TaskRun taskRun = TaskRunFixture.aPendingTaskRun().runContext(oldContext).buildRestored();
 
       assertThat(taskRun.getRunContext().correlationId()).isEqualTo("trace-old");
 
@@ -812,8 +807,7 @@ class TaskRunTest {
     void shouldAllowBindingNullCorrelationId() {
       // Given: TaskRun 已有 correlationId
       RunContext context = new RunContext("trace-001");
-      TaskRun taskRun =
-          TaskRunTestDataBuilder.aPendingTaskRun().runContext(context).buildRestored();
+      TaskRun taskRun = TaskRunFixture.aPendingTaskRun().runContext(context).buildRestored();
 
       // When: 绑定 null correlationId
       taskRun.bindRunContext(null);
@@ -868,7 +862,7 @@ class TaskRunTest {
       RunStats largeStats = new RunStats(largeValue, largeValue, largeValue, largeValue);
 
       // When: 创建 TaskRun
-      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun().stats(largeStats).buildRestored();
+      TaskRun taskRun = TaskRunFixture.aPendingTaskRun().stats(largeStats).buildRestored();
 
       // Then: 应该正确处理
       assertThat(taskRun.getStats()).isEqualTo(largeStats);
@@ -882,8 +876,7 @@ class TaskRunTest {
       TaskRunCheckpoint longCheckpoint = new TaskRunCheckpoint(longJson);
 
       // When: 创建 TaskRun
-      TaskRun taskRun =
-          TaskRunTestDataBuilder.aPendingTaskRun().checkpoint(longCheckpoint).buildRestored();
+      TaskRun taskRun = TaskRunFixture.aPendingTaskRun().checkpoint(longCheckpoint).buildRestored();
 
       // Then: 应该正确处理
       assertThat(taskRun.getCheckpoint()).isEqualTo(longCheckpoint);
@@ -897,7 +890,7 @@ class TaskRunTest {
       String longError = "Error: " + "x".repeat(5000);
 
       // When: 创建 TaskRun
-      TaskRun taskRun = TaskRunTestDataBuilder.aFailedTaskRun().error(longError).buildRestored();
+      TaskRun taskRun = TaskRunFixture.aFailedTaskRun().error(longError).buildRestored();
 
       // Then: 应该正确处理
       assertThat(taskRun.getError()).isEqualTo(longError);
@@ -910,7 +903,7 @@ class TaskRunTest {
       int attemptNo = 1;
 
       // When: 创建 TaskRun
-      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun().attemptNo(attemptNo).build();
+      TaskRun taskRun = TaskRunFixture.aPendingTaskRun().attemptNo(attemptNo).build();
 
       // Then: 应该正确处理
       assertThat(taskRun.getAttemptNo()).isEqualTo(attemptNo);
@@ -923,7 +916,7 @@ class TaskRunTest {
       int attemptNo = Integer.MAX_VALUE;
 
       // When: 创建 TaskRun
-      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun().attemptNo(attemptNo).build();
+      TaskRun taskRun = TaskRunFixture.aPendingTaskRun().attemptNo(attemptNo).build();
 
       // Then: 应该正确处理
       assertThat(taskRun.getAttemptNo()).isEqualTo(attemptNo);
@@ -992,7 +985,7 @@ class TaskRunTest {
       TaskRunCheckpoint checkpoint =
           new TaskRunCheckpoint("{\"lastBatchId\":50,\"processedCount\":5000}");
       TaskRun taskRun =
-          TaskRunTestDataBuilder.aPartialTaskRun()
+          TaskRunFixture.aPartialTaskRun()
               .checkpoint(checkpoint)
               .stats(new RunStats(5000, 4950, 50, 50))
               .buildRestored();
@@ -1043,12 +1036,12 @@ class TaskRunTest {
     }
   }
 
-  // ========== TestDataBuilder (辅助类) ==========
+  // ========== Fixture (辅助类) ==========
 
   /// TaskRun 测试数据构建器。
   ///
   /// 遵循 Builder 模式，提供默认值以简化测试数据构建。
-  static class TaskRunTestDataBuilder {
+  static class TaskRunFixture {
     private Long id = 1001L;
     private Long taskId = 2001L;
     private int attemptNo = 1;
@@ -1064,33 +1057,33 @@ class TaskRunTest {
     private WindowSpec windowSpec = null;
     private RunContext runContext = RunContext.empty();
 
-    public static TaskRunTestDataBuilder aPendingTaskRun() {
-      return new TaskRunTestDataBuilder().status(TaskRunStatus.PENDING);
+    public static TaskRunFixture aPendingTaskRun() {
+      return new TaskRunFixture().status(TaskRunStatus.PENDING);
     }
 
-    public static TaskRunTestDataBuilder aRunningTaskRun() {
-      return new TaskRunTestDataBuilder()
+    public static TaskRunFixture aRunningTaskRun() {
+      return new TaskRunFixture()
           .status(TaskRunStatus.RUNNING)
           .startedAt(Instant.parse("2025-01-01T10:00:00Z"));
     }
 
-    public static TaskRunTestDataBuilder aSucceededTaskRun() {
-      return new TaskRunTestDataBuilder()
+    public static TaskRunFixture aSucceededTaskRun() {
+      return new TaskRunFixture()
           .status(TaskRunStatus.SUCCEEDED)
           .startedAt(Instant.parse("2025-01-01T10:00:00Z"))
           .finishedAt(Instant.parse("2025-01-01T10:10:00Z"));
     }
 
-    public static TaskRunTestDataBuilder aFailedTaskRun() {
-      return new TaskRunTestDataBuilder()
+    public static TaskRunFixture aFailedTaskRun() {
+      return new TaskRunFixture()
           .status(TaskRunStatus.FAILED)
           .startedAt(Instant.parse("2025-01-01T10:00:00Z"))
           .finishedAt(Instant.parse("2025-01-01T10:05:00Z"))
           .error("Test failure");
     }
 
-    public static TaskRunTestDataBuilder aPartialTaskRun() {
-      return new TaskRunTestDataBuilder()
+    public static TaskRunFixture aPartialTaskRun() {
+      return new TaskRunFixture()
           .status(TaskRunStatus.PARTIAL)
           .startedAt(Instant.parse("2025-01-01T10:00:00Z"))
           .finishedAt(Instant.parse("2025-01-01T10:08:00Z"))
@@ -1098,72 +1091,72 @@ class TaskRunTest {
           .checkpoint(new TaskRunCheckpoint("{\"lastProcessedId\":1000}"));
     }
 
-    public TaskRunTestDataBuilder id(Long id) {
+    public TaskRunFixture id(Long id) {
       this.id = id;
       return this;
     }
 
-    public TaskRunTestDataBuilder taskId(Long taskId) {
+    public TaskRunFixture taskId(Long taskId) {
       this.taskId = taskId;
       return this;
     }
 
-    public TaskRunTestDataBuilder attemptNo(int attemptNo) {
+    public TaskRunFixture attemptNo(int attemptNo) {
       this.attemptNo = attemptNo;
       return this;
     }
 
-    public TaskRunTestDataBuilder provenanceCode(ProvenanceCode provenanceCode) {
+    public TaskRunFixture provenanceCode(ProvenanceCode provenanceCode) {
       this.provenanceCode = provenanceCode;
       return this;
     }
 
-    public TaskRunTestDataBuilder operationCode(String operationCode) {
+    public TaskRunFixture operationCode(String operationCode) {
       this.operationCode = operationCode;
       return this;
     }
 
-    public TaskRunTestDataBuilder status(TaskRunStatus status) {
+    public TaskRunFixture status(TaskRunStatus status) {
       this.status = status;
       return this;
     }
 
-    public TaskRunTestDataBuilder stats(RunStats stats) {
+    public TaskRunFixture stats(RunStats stats) {
       this.stats = stats;
       return this;
     }
 
-    public TaskRunTestDataBuilder startedAt(Instant startedAt) {
+    public TaskRunFixture startedAt(Instant startedAt) {
       this.startedAt = startedAt;
       return this;
     }
 
-    public TaskRunTestDataBuilder finishedAt(Instant finishedAt) {
+    public TaskRunFixture finishedAt(Instant finishedAt) {
       this.finishedAt = finishedAt;
       return this;
     }
 
-    public TaskRunTestDataBuilder lastHeartbeat(Instant lastHeartbeat) {
+    public TaskRunFixture lastHeartbeat(Instant lastHeartbeat) {
       this.lastHeartbeat = lastHeartbeat;
       return this;
     }
 
-    public TaskRunTestDataBuilder error(String error) {
+    public TaskRunFixture error(String error) {
       this.error = error;
       return this;
     }
 
-    public TaskRunTestDataBuilder checkpoint(TaskRunCheckpoint checkpoint) {
+    public TaskRunFixture checkpoint(TaskRunCheckpoint checkpoint) {
       this.checkpoint = checkpoint;
       return this;
     }
 
-    public TaskRunTestDataBuilder windowSpec(WindowSpec windowSpec) {
+    public TaskRunFixture windowSpec(WindowSpec windowSpec) {
       this.windowSpec = windowSpec;
       return this;
     }
 
-    public TaskRunTestDataBuilder runContext(RunContext runContext) {
+    public TaskRunFixture runContext(RunContext runContext) {
       this.runContext = runContext;
       return this;
     }

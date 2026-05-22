@@ -96,7 +96,7 @@ class TaskAggregateTest {
 
       // When: 从持久化恢复
       TaskAggregate task =
-          TaskAggregateTestDataBuilder.aRunningTask()
+          TaskAggregateFixture.aRunningTask()
               .id(TaskId.of(5001L))
               .scheduleInstanceId(1001L)
               .planId(2001L)
@@ -162,7 +162,7 @@ class TaskAggregateTest {
     @DisplayName("应该成功为无租约的任务获取租约")
     void shouldAcquireLeaseForUnleasedTask() {
       // Given: 无租约的任务
-      TaskAggregate task = TaskAggregateTestDataBuilder.aQueuedTask().build();
+      TaskAggregate task = TaskAggregateFixture.aQueuedTask().build();
       assertThat(task.getLeaseInfo().isHeld()).isFalse();
 
       // When: 获取租约
@@ -180,7 +180,7 @@ class TaskAggregateTest {
     @DisplayName("获取租约时应该增加租约计数")
     void shouldIncrementLeaseCountWhenAcquiringLease() {
       // Given: 无租约的任务
-      TaskAggregate task = TaskAggregateTestDataBuilder.aQueuedTask().build();
+      TaskAggregate task = TaskAggregateFixture.aQueuedTask().build();
 
       // When: 获取租约
       task.acquireLease("worker-1", Instant.now().plusSeconds(300));
@@ -194,7 +194,7 @@ class TaskAggregateTest {
     void shouldThrowExceptionWhenAcquiringAlreadyHeldLease() {
       // Given: 已持有租约的任务
       TaskAggregate task =
-          TaskAggregateTestDataBuilder.aRunningTask()
+          TaskAggregateFixture.aRunningTask()
               .leaseOwner("worker-1")
               .leasedUntil(Instant.now().plusSeconds(300))
               .build();
@@ -211,7 +211,7 @@ class TaskAggregateTest {
     @DisplayName("获取租约时所有者为 null 应该抛出异常")
     void shouldThrowExceptionWhenAcquiringLeaseWithNullOwner() {
       // Given: 无租约的任务
-      TaskAggregate task = TaskAggregateTestDataBuilder.aQueuedTask().build();
+      TaskAggregate task = TaskAggregateFixture.aQueuedTask().build();
 
       // When & Then: 使用 null 所有者获取租约应该失败
       assertThatThrownBy(() -> task.acquireLease(null, Instant.now().plusSeconds(300)))
@@ -223,7 +223,7 @@ class TaskAggregateTest {
     @DisplayName("获取租约时所有者为空字符串应该抛出异常")
     void shouldThrowExceptionWhenAcquiringLeaseWithBlankOwner() {
       // Given: 无租约的任务
-      TaskAggregate task = TaskAggregateTestDataBuilder.aQueuedTask().build();
+      TaskAggregate task = TaskAggregateFixture.aQueuedTask().build();
 
       // When & Then: 使用空字符串所有者获取租约应该失败
       assertThatThrownBy(() -> task.acquireLease("  ", Instant.now().plusSeconds(300)))
@@ -235,7 +235,7 @@ class TaskAggregateTest {
     @DisplayName("获取租约时过期时间为 null 应该抛出异常")
     void shouldThrowExceptionWhenAcquiringLeaseWithNullExpiration() {
       // Given: 无租约的任务
-      TaskAggregate task = TaskAggregateTestDataBuilder.aQueuedTask().build();
+      TaskAggregate task = TaskAggregateFixture.aQueuedTask().build();
 
       // When & Then: 使用 null 过期时间获取租约应该失败
       assertThatThrownBy(() -> task.acquireLease("worker-1", null))
@@ -254,7 +254,7 @@ class TaskAggregateTest {
       // Given: 持有租约的任务
       Instant initialExpiry = Instant.parse("2025-01-01T10:10:00Z");
       TaskAggregate task =
-          TaskAggregateTestDataBuilder.aRunningTask()
+          TaskAggregateFixture.aRunningTask()
               .leaseOwner("worker-1")
               .leasedUntil(initialExpiry)
               .leaseCount(1)
@@ -276,7 +276,7 @@ class TaskAggregateTest {
     void shouldIncrementLeaseCountWhenRenewingLease() {
       // Given: 持有租约的任务，租约计数为 3
       TaskAggregate task =
-          TaskAggregateTestDataBuilder.aRunningTask()
+          TaskAggregateFixture.aRunningTask()
               .leaseOwner("worker-1")
               .leasedUntil(Instant.now().plusSeconds(300))
               .leaseCount(3)
@@ -293,7 +293,7 @@ class TaskAggregateTest {
     @DisplayName("当任务无租约时尝试续约应该抛出异常")
     void shouldThrowExceptionWhenRenewingUnheldLease() {
       // Given: 无租约的任务
-      TaskAggregate task = TaskAggregateTestDataBuilder.aQueuedTask().build();
+      TaskAggregate task = TaskAggregateFixture.aQueuedTask().build();
 
       // When & Then: 尝试续约应该失败
       assertThatThrownBy(() -> task.renewLease("worker-1", Instant.now().plusSeconds(300)))
@@ -306,7 +306,7 @@ class TaskAggregateTest {
     void shouldThrowExceptionWhenRenewingWithDifferentHolder() {
       // Given: worker-1 持有租约
       TaskAggregate task =
-          TaskAggregateTestDataBuilder.aRunningTask()
+          TaskAggregateFixture.aRunningTask()
               .leaseOwner("worker-1")
               .leasedUntil(Instant.now().plusSeconds(300))
               .build();
@@ -322,7 +322,7 @@ class TaskAggregateTest {
     void shouldThrowExceptionWhenRenewingWithNullHolder() {
       // Given: 持有租约的任务
       TaskAggregate task =
-          TaskAggregateTestDataBuilder.aRunningTask()
+          TaskAggregateFixture.aRunningTask()
               .leaseOwner("worker-1")
               .leasedUntil(Instant.now().plusSeconds(300))
               .build();
@@ -338,7 +338,7 @@ class TaskAggregateTest {
     void shouldThrowExceptionWhenRenewingWithNullExpiration() {
       // Given: 持有租约的任务
       TaskAggregate task =
-          TaskAggregateTestDataBuilder.aRunningTask()
+          TaskAggregateFixture.aRunningTask()
               .leaseOwner("worker-1")
               .leasedUntil(Instant.now().plusSeconds(300))
               .build();
@@ -359,7 +359,7 @@ class TaskAggregateTest {
     void shouldReleaseHeldLease() {
       // Given: 持有租约的任务
       TaskAggregate task =
-          TaskAggregateTestDataBuilder.aRunningTask()
+          TaskAggregateFixture.aRunningTask()
               .leaseOwner("worker-1")
               .leasedUntil(Instant.now().plusSeconds(300))
               .leaseCount(2)
@@ -382,7 +382,7 @@ class TaskAggregateTest {
     void shouldPreserveLeaseCountWhenReleasingLease() {
       // Given: 持有租约的任务，租约计数为 5
       TaskAggregate task =
-          TaskAggregateTestDataBuilder.aRunningTask()
+          TaskAggregateFixture.aRunningTask()
               .leaseOwner("worker-1")
               .leasedUntil(Instant.now().plusSeconds(300))
               .leaseCount(5)
@@ -399,7 +399,7 @@ class TaskAggregateTest {
     @DisplayName("释放未持有的租约应该是幂等的")
     void shouldBeIdempotentWhenReleasingUnheldLease() {
       // Given: 无租约的任务
-      TaskAggregate task = TaskAggregateTestDataBuilder.aQueuedTask().build();
+      TaskAggregate task = TaskAggregateFixture.aQueuedTask().build();
       assertThat(task.getLeaseInfo().isHeld()).isFalse();
 
       // When: 释放租约
@@ -421,7 +421,7 @@ class TaskAggregateTest {
     void shouldNotAllowMultipleWorkersToHoldLease() {
       // Given: worker-1 持有租约
       TaskAggregate task =
-          TaskAggregateTestDataBuilder.aRunningTask()
+          TaskAggregateFixture.aRunningTask()
               .leaseOwner("worker-1")
               .leasedUntil(Instant.now().plusSeconds(300))
               .build();
@@ -437,7 +437,7 @@ class TaskAggregateTest {
     void shouldAllowNewWorkerToAcquireAfterRelease() {
       // Given: worker-1 持有租约然后释放
       TaskAggregate task =
-          TaskAggregateTestDataBuilder.aRunningTask()
+          TaskAggregateFixture.aRunningTask()
               .leaseOwner("worker-1")
               .leasedUntil(Instant.now().plusSeconds(300))
               .leaseCount(2)
@@ -466,7 +466,7 @@ class TaskAggregateTest {
     @DisplayName("标记为运行中时应该记录开始时间")
     void shouldRecordStartTimeWhenMarkingAsRunning() {
       // Given: 队列中的任务
-      TaskAggregate task = TaskAggregateTestDataBuilder.aQueuedTask().build();
+      TaskAggregate task = TaskAggregateFixture.aQueuedTask().build();
       assertThat(task.getExecutionTimeline().hasStarted()).isFalse();
 
       // When: 标记为运行中
@@ -486,7 +486,7 @@ class TaskAggregateTest {
     void shouldRecordFinishTimeWhenMarkingAsSucceeded() {
       // Given: 运行中的任务
       Instant startedAt = Instant.parse("2025-01-01T10:05:00Z");
-      TaskAggregate task = TaskAggregateTestDataBuilder.aRunningTask().startedAt(startedAt).build();
+      TaskAggregate task = TaskAggregateFixture.aRunningTask().startedAt(startedAt).build();
 
       // When: 标记为成功
       Instant finishedAt = Instant.parse("2025-01-01T10:10:00Z");
@@ -504,7 +504,7 @@ class TaskAggregateTest {
     void shouldRecordFinishTimeWhenMarkingAsFailed() {
       // Given: 运行中的任务
       Instant startedAt = Instant.parse("2025-01-01T10:05:00Z");
-      TaskAggregate task = TaskAggregateTestDataBuilder.aRunningTask().startedAt(startedAt).build();
+      TaskAggregate task = TaskAggregateFixture.aRunningTask().startedAt(startedAt).build();
 
       // When: 标记为失败
       Instant finishedAt = Instant.parse("2025-01-01T10:08:00Z");
@@ -522,7 +522,7 @@ class TaskAggregateTest {
     void shouldEnsureFinishTimeIsAfterStartTime() {
       // Given: 运行中的任务
       Instant startedAt = Instant.parse("2025-01-01T10:05:00Z");
-      TaskAggregate task = TaskAggregateTestDataBuilder.aRunningTask().startedAt(startedAt).build();
+      TaskAggregate task = TaskAggregateFixture.aRunningTask().startedAt(startedAt).build();
 
       // When & Then: 尝试使用早于开始时间的完成时间应该失败
       Instant invalidFinishedAt = Instant.parse("2025-01-01T10:00:00Z");
@@ -542,7 +542,7 @@ class TaskAggregateTest {
     @DisplayName("应该正确执行 QUEUED -> RUNNING 转换")
     void shouldTransitionFromQueuedToRunning() {
       // Given: QUEUED 状态的任务
-      TaskAggregate task = TaskAggregateTestDataBuilder.aQueuedTask().build();
+      TaskAggregate task = TaskAggregateFixture.aQueuedTask().build();
       assertThat(task.getStatus()).isEqualTo(TaskStatus.QUEUED);
 
       // When: 标记为运行中
@@ -557,7 +557,7 @@ class TaskAggregateTest {
     void shouldTransitionFromRunningToSucceeded() {
       // Given: RUNNING 状态的任务
       TaskAggregate task =
-          TaskAggregateTestDataBuilder.aRunningTask()
+          TaskAggregateFixture.aRunningTask()
               .startedAt(Instant.parse("2025-01-01T10:00:00Z"))
               .build();
 
@@ -575,7 +575,7 @@ class TaskAggregateTest {
     void shouldTransitionFromRunningToFailed() {
       // Given: RUNNING 状态的任务
       TaskAggregate task =
-          TaskAggregateTestDataBuilder.aRunningTask()
+          TaskAggregateFixture.aRunningTask()
               .startedAt(Instant.parse("2025-01-01T10:00:00Z"))
               .build();
 
@@ -593,7 +593,7 @@ class TaskAggregateTest {
     void shouldTransitionFromFailedToQueuedWhenPreparingForRetry() {
       // Given: FAILED 状态的任务
       TaskAggregate task =
-          TaskAggregateTestDataBuilder.aRunningTask()
+          TaskAggregateFixture.aRunningTask()
               .status(TaskStatus.FAILED)
               .leaseOwner("worker-1")
               .leasedUntil(Instant.now().plusSeconds(300))
@@ -622,7 +622,7 @@ class TaskAggregateTest {
     void shouldReleaseLeaseWhenPreparingForRetry() {
       // Given: 持有租约的失败任务
       TaskAggregate task =
-          TaskAggregateTestDataBuilder.aRunningTask()
+          TaskAggregateFixture.aRunningTask()
               .status(TaskStatus.FAILED)
               .leaseOwner("worker-1")
               .leasedUntil(Instant.now().plusSeconds(300))
@@ -644,7 +644,7 @@ class TaskAggregateTest {
     void shouldClearExecutionTimelineWhenPreparingForRetry() {
       // Given: 有执行时间线的失败任务
       TaskAggregate task =
-          TaskAggregateTestDataBuilder.aRunningTask()
+          TaskAggregateFixture.aRunningTask()
               .status(TaskStatus.FAILED)
               .startedAt(Instant.parse("2025-01-01T10:00:00Z"))
               .finishedAt(Instant.parse("2025-01-01T10:05:00Z"))
@@ -666,7 +666,7 @@ class TaskAggregateTest {
     void shouldClearSchedulerContextWhenPreparingForRetry() {
       // Given: 有调度器上下文的失败任务
       TaskAggregate task =
-          TaskAggregateTestDataBuilder.aRunningTask()
+          TaskAggregateFixture.aRunningTask()
               .status(TaskStatus.FAILED)
               .correlationId("old-correlation-001")
               .build();
@@ -684,8 +684,7 @@ class TaskAggregateTest {
     @DisplayName("准备重试时应该将状态重置为 QUEUED")
     void shouldResetStatusToQueuedWhenPreparingForRetry() {
       // Given: FAILED 状态的任务
-      TaskAggregate task =
-          TaskAggregateTestDataBuilder.aRunningTask().status(TaskStatus.FAILED).build();
+      TaskAggregate task = TaskAggregateFixture.aRunningTask().status(TaskStatus.FAILED).build();
 
       // When: 准备重试
       task.prepareForRetry();
@@ -699,7 +698,7 @@ class TaskAggregateTest {
     void shouldClearAllRuntimeContextWhenPreparingForRetry() {
       // Given: 完整的失败任务
       TaskAggregate task =
-          TaskAggregateTestDataBuilder.aRunningTask()
+          TaskAggregateFixture.aRunningTask()
               .status(TaskStatus.FAILED)
               .leaseOwner("worker-1")
               .leasedUntil(Instant.now().plusSeconds(300))
@@ -734,7 +733,7 @@ class TaskAggregateTest {
     void shouldPublishTaskQueuedEvent() {
       // Given: 新创建的任务
       TaskAggregate task =
-          TaskAggregateTestDataBuilder.aQueuedTask()
+          TaskAggregateFixture.aQueuedTask()
               .id(TaskId.of(1001L))
               .planId(2001L)
               .sliceId(3001L)
@@ -773,7 +772,7 @@ class TaskAggregateTest {
     void shouldPublishCompletedEventWhenTaskSucceeds() {
       // Given: 运行中的任务
       TaskAggregate task =
-          TaskAggregateTestDataBuilder.aRunningTask()
+          TaskAggregateFixture.aRunningTask()
               .id(TaskId.of(1001L))
               .sliceId(3001L)
               .planId(2001L)
@@ -801,7 +800,7 @@ class TaskAggregateTest {
     void shouldPublishCompletedEventWithErrorInfoWhenTaskFails() {
       // Given: 运行中的任务，包含错误信息
       TaskAggregate task =
-          TaskAggregateTestDataBuilder.aRunningTask()
+          TaskAggregateFixture.aRunningTask()
               .id(TaskId.of(1001L))
               .sliceId(3001L)
               .planId(2001L)
@@ -838,7 +837,7 @@ class TaskAggregateTest {
     void shouldSupportBindingPlanAndSlice() {
       // Given: 创建的任务
       TaskAggregate task =
-          TaskAggregateTestDataBuilder.aQueuedTask()
+          TaskAggregateFixture.aQueuedTask()
               .planId((PlanId) null)
               .sliceId((PlanSliceId) null)
               .build();
@@ -858,8 +857,7 @@ class TaskAggregateTest {
     @DisplayName("标记为队列中状态应该更新状态为 QUEUED")
     void shouldUpdateStatusToQueuedWhenMarkingAsQueued() {
       // Given: 任意状态的任务
-      TaskAggregate task =
-          TaskAggregateTestDataBuilder.aRunningTask().status(TaskStatus.RUNNING).build();
+      TaskAggregate task = TaskAggregateFixture.aRunningTask().status(TaskStatus.RUNNING).build();
 
       // When: 标记为队列中
       task.markQueued();
@@ -873,7 +871,7 @@ class TaskAggregateTest {
     void shouldPreserveImmutableFieldsAfterCreation() {
       // Given: 创建任务
       TaskAggregate task =
-          TaskAggregateTestDataBuilder.aQueuedTask()
+          TaskAggregateFixture.aQueuedTask()
               .provenanceCode(ProvenanceCode.PUBMED)
               .operationCode("harvest")
               .paramsJson("{\"original\":true}")

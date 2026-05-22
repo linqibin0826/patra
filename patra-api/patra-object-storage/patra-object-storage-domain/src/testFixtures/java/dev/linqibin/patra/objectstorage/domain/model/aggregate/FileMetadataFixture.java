@@ -17,14 +17,14 @@ import java.util.Map;
 ///
 /// ```java
 /// // 创建活跃状态的文件元数据
-/// FileMetadata metadata = FileMetadataTestDataBuilder.anActiveFile().build();
+/// FileMetadata metadata = FileMetadataFixture.anActiveFile().build();
 ///
 /// // 创建已删除的文件元数据
-/// FileMetadata metadata = FileMetadataTestDataBuilder.aDeletedFile()
+/// FileMetadata metadata = FileMetadataFixture.aDeletedFile()
 ///     .buildRestored();
 ///
 /// // 创建完全自定义的文件元数据
-/// FileMetadata metadata = FileMetadataTestDataBuilder.anActiveFile()
+/// FileMetadata metadata = FileMetadataFixture.anActiveFile()
 ///     .id(1001L)
 ///     .storageKey(new StorageKey("my-bucket", "my-file.pdf"))
 ///     .fileSize(new FileSize(2 * 1024 * 1024))
@@ -34,7 +34,7 @@ import java.util.Map;
 ///
 /// @author linqibin
 /// @since 0.1.0
-public class FileMetadataTestDataBuilder {
+public class FileMetadataFixture {
 
   // ========== 核心字段 ==========
   private Long id;
@@ -64,7 +64,7 @@ public class FileMetadataTestDataBuilder {
 
   // ========== 构造函数（私有） ==========
 
-  private FileMetadataTestDataBuilder() {}
+  private FileMetadataFixture() {}
 
   // ========== 静态工厂方法 ==========
 
@@ -81,8 +81,8 @@ public class FileMetadataTestDataBuilder {
   ///   - 校验和: MD5 (示例哈希)
   ///
   /// @return 文件元数据构建器
-  public static FileMetadataTestDataBuilder anActiveFile() {
-    return new FileMetadataTestDataBuilder().status(FileStatus.ACTIVE);
+  public static FileMetadataFixture anActiveFile() {
+    return new FileMetadataFixture().status(FileStatus.ACTIVE);
   }
 
   /// 创建默认的已删除文件构建器。
@@ -93,8 +93,8 @@ public class FileMetadataTestDataBuilder {
   ///   - 其他字段同 {@link #anActiveFile()}
   ///
   /// @return 文件元数据构建器
-  public static FileMetadataTestDataBuilder aDeletedFile() {
-    return new FileMetadataTestDataBuilder().status(FileStatus.DELETED);
+  public static FileMetadataFixture aDeletedFile() {
+    return new FileMetadataFixture().status(FileStatus.DELETED);
   }
 
   /// 创建默认的已过期文件构建器。
@@ -106,105 +106,105 @@ public class FileMetadataTestDataBuilder {
   ///   - 其他字段同 {@link #anActiveFile()}
   ///
   /// @return 文件元数据构建器
-  public static FileMetadataTestDataBuilder anExpiredFile() {
-    return new FileMetadataTestDataBuilder()
+  public static FileMetadataFixture anExpiredFile() {
+    return new FileMetadataFixture()
         .status(FileStatus.EXPIRED)
         .expiresAt(Instant.now().minusSeconds(3600)); // 1 小时前
   }
 
   // ========== Builder 方法 ==========
 
-  public FileMetadataTestDataBuilder id(Long id) {
+  public FileMetadataFixture id(Long id) {
     this.id = id;
     return this;
   }
 
-  public FileMetadataTestDataBuilder storageKey(StorageKey storageKey) {
+  public FileMetadataFixture storageKey(StorageKey storageKey) {
     this.storageKey = storageKey;
     return this;
   }
 
-  public FileMetadataTestDataBuilder fileSize(FileSize fileSize) {
+  public FileMetadataFixture fileSize(FileSize fileSize) {
     this.fileSize = fileSize;
     return this;
   }
 
-  public FileMetadataTestDataBuilder contentType(String contentType) {
+  public FileMetadataFixture contentType(String contentType) {
     this.contentType = contentType;
     return this;
   }
 
-  public FileMetadataTestDataBuilder checksum(FileChecksum checksum) {
+  public FileMetadataFixture checksum(FileChecksum checksum) {
     this.checksum = checksum;
     return this;
   }
 
-  public FileMetadataTestDataBuilder context(BusinessContext context) {
+  public FileMetadataFixture context(BusinessContext context) {
     this.context = context;
     return this;
   }
 
-  public FileMetadataTestDataBuilder provider(StorageProvider provider) {
+  public FileMetadataFixture provider(StorageProvider provider) {
     this.provider = provider;
     return this;
   }
 
-  public FileMetadataTestDataBuilder status(FileStatus status) {
+  public FileMetadataFixture status(FileStatus status) {
     this.status = status;
     return this;
   }
 
-  public FileMetadataTestDataBuilder uploadedAt(Instant uploadedAt) {
+  public FileMetadataFixture uploadedAt(Instant uploadedAt) {
     this.uploadedAt = uploadedAt;
     return this;
   }
 
-  public FileMetadataTestDataBuilder expiresAt(Instant expiresAt) {
+  public FileMetadataFixture expiresAt(Instant expiresAt) {
     this.expiresAt = expiresAt;
     return this;
   }
 
-  public FileMetadataTestDataBuilder recordRemarks(String recordRemarks) {
+  public FileMetadataFixture recordRemarks(String recordRemarks) {
     this.recordRemarks = recordRemarks;
     return this;
   }
 
-  public FileMetadataTestDataBuilder version(Long version) {
+  public FileMetadataFixture version(Long version) {
     this.version = version;
     return this;
   }
 
-  public FileMetadataTestDataBuilder ipAddress(byte[] ipAddress) {
+  public FileMetadataFixture ipAddress(byte[] ipAddress) {
     this.ipAddress = ipAddress;
     return this;
   }
 
-  public FileMetadataTestDataBuilder createdAt(Instant createdAt) {
+  public FileMetadataFixture createdAt(Instant createdAt) {
     this.createdAt = createdAt;
     return this;
   }
 
-  public FileMetadataTestDataBuilder createdBy(Long createdBy) {
+  public FileMetadataFixture createdBy(Long createdBy) {
     this.createdBy = createdBy;
     return this;
   }
 
-  public FileMetadataTestDataBuilder createdByName(String createdByName) {
+  public FileMetadataFixture createdByName(String createdByName) {
     this.createdByName = createdByName;
     return this;
   }
 
-  public FileMetadataTestDataBuilder updatedAt(Instant updatedAt) {
+  public FileMetadataFixture updatedAt(Instant updatedAt) {
     this.updatedAt = updatedAt;
     return this;
   }
 
-  public FileMetadataTestDataBuilder updatedBy(Long updatedBy) {
+  public FileMetadataFixture updatedBy(Long updatedBy) {
     this.updatedBy = updatedBy;
     return this;
   }
 
-  public FileMetadataTestDataBuilder updatedByName(String updatedByName) {
+  public FileMetadataFixture updatedByName(String updatedByName) {
     this.updatedByName = updatedByName;
     return this;
   }
@@ -218,7 +218,7 @@ public class FileMetadataTestDataBuilder {
   /// @param businessId 业务 ID
   /// @param correlationData 关联数据
   /// @return 当前构建器
-  public FileMetadataTestDataBuilder withBusinessContext(
+  public FileMetadataFixture withBusinessContext(
       String serviceName,
       String businessType,
       String businessId,
@@ -232,7 +232,7 @@ public class FileMetadataTestDataBuilder {
   /// @param md5Hash MD5 哈希值
   /// @param sha256Hash SHA-256 哈希值
   /// @return 当前构建器
-  public FileMetadataTestDataBuilder withChecksum(String md5Hash, String sha256Hash) {
+  public FileMetadataFixture withChecksum(String md5Hash, String sha256Hash) {
     this.checksum = new FileChecksum(md5Hash, sha256Hash);
     return this;
   }
@@ -242,7 +242,7 @@ public class FileMetadataTestDataBuilder {
   /// @param bucket 存储桶名称
   /// @param objectKey 对象键
   /// @return 当前构建器
-  public FileMetadataTestDataBuilder withStorageKey(String bucket, String objectKey) {
+  public FileMetadataFixture withStorageKey(String bucket, String objectKey) {
     this.storageKey = new StorageKey(bucket, objectKey);
     return this;
   }
@@ -251,7 +251,7 @@ public class FileMetadataTestDataBuilder {
   ///
   /// @param bytes 文件字节数
   /// @return 当前构建器
-  public FileMetadataTestDataBuilder withFileSize(long bytes) {
+  public FileMetadataFixture withFileSize(long bytes) {
     this.fileSize = new FileSize(bytes);
     return this;
   }
