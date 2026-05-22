@@ -119,4 +119,4 @@ try {
 
 - **领域模型**: `patra-ingest-domain/.../model/entity/OutboxMessage.java`
 - **中继执行器**: `patra-ingest-app/.../usecase/relay/executor/OutboxRelayExecutor.java`
-- **集成测试**: `patra-ingest-boot/.../integration/outbox/OutboxPatternE2E.java`
+- **E2E 测试**: `patra-ingest-boot/src/e2eTest/java/.../integration/outbox/OutboxPatternE2E.java`
