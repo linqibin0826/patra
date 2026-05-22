@@ -1,6 +1,6 @@
 # Port 与 Service 详细指南
 
-> 命名规范表和选择指南见 `rules/tech/port-service.md`（自动加载）。
+> 命名规范表和选择指南见 `.claude/rules/tech/port-service.md`（自动加载）。
 > 本文档提供各 Port 类型的详细说明、依赖方向图、注入方式和目录结构示例。
 
 ## Repository（仓储）
