@@ -29,8 +29,8 @@
           <li data-task-status="done"><a href="#task-7">Task 7 — 测试分层全局验证</a></li>
           <li data-task-status="done"><a href="#task-8">Task 8 — 根 build.gradle.kts 引入 JaCoCo 聚合</a></li>
           <li data-task-status="done"><a href="#task-9">Task 9 — 重写 ci.yml + 删 pr-checks.yml</a></li>
-          <li data-task-status="in-progress"><a href="#task-10">Task 10 — 推分支验证 CI + 配置 CODECOV_TOKEN</a></li>
-          <li data-task-status="pending"><a href="#task-11">Task 11 — 开 PR + 回写 Linear AC</a></li>
+          <li data-task-status="done"><a href="#task-10">Task 10 — 推分支验证 CI + 配置 CODECOV_TOKEN</a></li>
+          <li data-task-status="in-progress"><a href="#task-11">Task 11 — 开 PR + 回写 Linear AC</a></li>
         </ol>
       </li>
       <li><a href="#self-check">自检结果</a></li>
@@ -1096,7 +1096,7 @@ EOF
       <!-- ============================================================
            Task 10: 推分支 + Codecov token + CI 验证
            ============================================================ -->
-      <article class="task" id="task-10" data-status="in-progress">
+      <article class="task" id="task-10" data-status="done">
         <header>
           <h2>任务 10：推 worktree 分支 + 配置 CODECOV_TOKEN + 观察 CI 全绿</h2>
           <dl class="files">
@@ -1106,7 +1106,7 @@ EOF
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：让用户先去 codecov.io 启用 patra 并配置 secret</strong>
             <p>暂停，向用户输出以下指引并等待确认：</p>
             <pre><code>请完成以下用户侧动作（无法由 AI 自动化）：
@@ -1123,7 +1123,7 @@ EOF
 完成后回复 "OK，token 已配"。</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：推送 worktree 分支到 origin</strong>
             <pre><code class="lang-bash">git push -u origin worktree-pap-10-ci-gradle-jacoco</code></pre>
             <p>预期：push 成功，GitHub Actions 立即触发（因为 ci.yml 的 on.push 监听任何分支变更——但实际本配置只监听 main，所以 push 到 feature branch 不会触发 ci.yml）。</p>
@@ -1131,7 +1131,7 @@ EOF
             <p>采用：直接开 draft PR（pull_request 监听 main 即触发 ci.yml）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：开 draft PR 触发 CI</strong>
             <pre><code class="lang-bash">gh pr create --draft --title "ci: 全面 Gradle 化 + JVM Test Suites + JaCoCo 聚合 + Codecov (PAP-10)" \
   --body "WIP — testing CI workflow before flipping to ready-for-review.
@@ -1140,7 +1140,7 @@ Refs: PAP-10
 https://linear.app/papertrace/issue/PAP-10"</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：观察 CI run</strong>
             <pre><code class="lang-bash">gh run watch --exit-status</code></pre>
             <p>预期：build-and-test job 所有 step 退出码 0。常见失败排查：</p>
@@ -1152,17 +1152,17 @@ https://linear.app/papertrace/issue/PAP-10"</code></pre>
             </ul>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：D6 验证——Codecov 控制台见数字</strong>
             <p>浏览器打开 <code>https://app.codecov.io/gh/&lt;your-org&gt;/patra</code>。预期看到 patra 仓库覆盖率百分比。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：D7 验证——PR check 名字</strong>
             <p>浏览器打开 PR 页面，下方 Checks 区域应能看到 <code>CI / build-and-test</code> 这一项。截图记录，PAP-15 分支保护配置需引用此名字。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7：此 task 无 commit（验证 + 等待用户）</strong>
             <p>如所有验证通过，进入 Task 11（开正式 PR）。如失败，按 Step 4 排查列表迭代修复。</p>
           </li>
@@ -1181,7 +1181,7 @@ https://linear.app/papertrace/issue/PAP-10"</code></pre>
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：补充 PR 描述</strong>
             <pre><code class="lang-bash">gh pr edit --body "$(cat &lt;&lt;'EOF'
 ## Summary
@@ -1236,12 +1236,12 @@ EOF
 )"</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：把 draft PR 转为 ready-for-review</strong>
             <pre><code class="lang-bash">gh pr ready</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：回写 Linear PAP-10 description（标注 AC 微调）</strong>
             <p>用 <code>mcp__plugin_linear_linear__save_issue</code> 更新 PAP-10 description，在原 AC 列表后追加一段 "实施时 AC 微调"。具体调用：</p>
             <pre><code>mcp__plugin_linear_linear__save_issue({
@@ -1260,7 +1260,7 @@ EOF
             <p>注：此步在 PR merge 之后执行；如 PR 还在 review 中，跳过此步等 PR 完成。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：输出 PR URL 给用户</strong>
             <pre><code class="lang-bash">gh pr view --json url -q .url</code></pre>
             <p>把 URL 输出给用户，PAP-10 SOP 闭环完成。</p>
@@ -1343,6 +1343,22 @@ EOF
         </header>
         <p>Plan Task 9 写的 ci.yml Codecov 步骤用 YAML 块标量 <code>files: |</code> 列两行路径，第 6 次 CI run（commit 24955f9e7）发现 codecov-action@v4 把整个块当成单字符串（中间嵌入 <code>\n</code>），日志报 <code>not_found_files: ["...testCodeCoverageReport.xml\n...integrationTestCodeCoverageReport.xml"]</code>，最终 <code>Found 0 coverage files to report</code>。修正：<code>files:</code> 改为单行逗号分隔 <code>files: A.xml,B.xml</code>（codecov-action v4 文档的多文件标准写法）。同时把 <code>fail_ci_if_error</code> 从 <code>false</code> 改为 <code>true</code>——PAP-10 AC 要求 Codecov 上传成功，静默失败违背 AC。</p>
       </li>
+      <li class="note" data-type="other" data-time="2026-05-22T09:38">
+        <header>
+          <span class="note-type">OTHER</span>
+          <time datetime="2026-05-22T09:38">05-22 09:38</time>
+          <a href="#task-10">§ Task 10</a>
+        </header>
+        <p>第 7 次 CI run（commit 6b7bf3aee）全绿：unit 7:13 / IT 3:53 / E2E 1:15 / JaCoCo 37s / <strong>Codecov upload 4s 成功</strong> / artifact upload 10s，总耗时约 13 分钟。Done 判定 D1-D8 全部通过。Required Status Check 名 <code>CI / build-and-test</code> 已固定。</p>
+      </li>
+      <li class="note" data-type="other" data-time="2026-05-22T09:42">
+        <header>
+          <span class="note-type">OTHER</span>
+          <time datetime="2026-05-22T09:42">05-22 09:42</time>
+          <a href="#task-11">§ Task 11</a>
+        </header>
+        <p>用户问"为什么 unit test 7 分钟"。分析后定性：测试本身 7927 个 / 5 min cumulative = <strong>38 ms/test</strong>，健康速度。CI 7:35 中 3:05 是冷启动（wrapper / 配置 / build-logic / 30+ 模块 compileJava），4:30 才是真测试。瓶颈：2-core runner + feature branch <code>Cache is read-only</code>。下次 PAP-10 merge 进 main 后 cache warm，预期降到 4-5 分钟。等用户决定是否在 PAP-19 补"开 configuration cache CI 缓存 + 并行测试 fork"。</p>
+      </li>
     </ol>
 
     <footer class="notes-stats">
@@ -1350,7 +1366,7 @@ EOF
       <span data-counter="decision">0</span> decisions /
       <span data-counter="change">4</span> changes /
       <span data-counter="tradeoff">0</span> tradeoffs /
-      <span data-counter="other">1</span> others
+      <span data-counter="other">3</span> others
     </footer>
   </aside>
 
