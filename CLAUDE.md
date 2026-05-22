@@ -51,6 +51,13 @@
 3. 禁止编写超出当前测试需求的"预防性"代码
 4. 禁止在测试失败时继续添加新功能
 
+## PR 与代码评审
+
+每次通过 `gh pr create` 开 PR 后，必须在同一工作会话内立即启动 Monitor 并绑定该 PR（覆盖 CodeRabbit AI Review 与人工 review），杜绝 review 反馈被遗漏。
+
+- **持续期**：Monitor 持续到 PR 合并或关闭，期间不得停止对评论流的跟踪。
+- **处理状态**：对每条 review 意见必须在 PR 评论中明确给出处理状态——`已修复`（附 commit SHA）/ `不修复`（附明确理由）。
+
 ## Workspace Layout
 
 Patra 工作区包含以下子项目：
