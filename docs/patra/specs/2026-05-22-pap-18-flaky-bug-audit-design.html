@@ -389,14 +389,21 @@ rg --type java -B1 -A5 'for\s*\(.*:\s*\w+\s*\)' \
       data-type 4 类：decision / change / tradeoff / other
       追加 entry 时同步更新下方 notes-stats footer 的对应 counter 数字。
       -->
-    </ol>
 
-    <p class="empty-state">no notes yet</p>
+      <li class="note" data-type="change" data-time="2026-05-22T14:38">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-22T14:38">05-22 14:38</time>
+          <a href="#decisions">§ 7 决策 D</a>
+        </header>
+        <p>偏离决策 D：<strong>test 全局 timeout 从 5s 调整为 15s</strong>。PR-1 连续两次 CI run 暴露 Spring autoconfig + Testcontainers 首次 context 加载 >5s 的边界场景（<code>BatchDataSourceConfigurationTest.batchDataSource_ShouldUseHikariDefaults</code> 5.4s / <code>BatchProgressMetricsListenerTest$AfterStepMetricsTest.differentSteps_shouldUseDifferentCounters</code> 5.7s / <code>RestClientAutoConfigurationTest.should_create_logging_interceptor_with_configuration</code>）。实测显示 5s 边界会持续在不同模块暴露同类回归；调到 15s 给 Spring 4 + JDK 25 冷启动充足余量（实测 5-7s），仍能 catch 真死循环。IT=30s / E2E=180s 不动；决策 D 备选 B (test=10s) 被实测推翻。实施期追加方法级 <code>@Timeout(value=30, SECONDS)</code> 给 batch 两个慢测试作为 defense-in-depth。详见 plan Notes change entry。</p>
+      </li>
+    </ol>
 
     <footer class="notes-stats">
       总计:
       <span data-counter="decision">0</span> decisions /
-      <span data-counter="change">0</span> changes /
+      <span data-counter="change">1</span> changes /
       <span data-counter="tradeoff">0</span> tradeoffs /
       <span data-counter="other">0</span> others
     </footer>
