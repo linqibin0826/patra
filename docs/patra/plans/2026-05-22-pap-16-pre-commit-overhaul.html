@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PAP-16 — pre-commit hooks 重整实现计划</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- CSS 外置：相对路径 ../styles/ 是从生成位置 docs/patra/plans/ 出发；
+       模板本身在 .claude-marketplace/ 下打开时此 link 会 404（接受：模板预览以生成后的 plan 为准） -->
+  <link rel="stylesheet" href="../styles/journal.css">
+  <link rel="stylesheet" href="../styles/plan-extras.css">
+</head>
+<body>
+<div class="layout">
+
+  <!-- ============================================================
+       左栏：目录（TOC）
+       ============================================================ -->
+  <nav class="toc">
+    <h3>目录</h3>
+    <ol>
+      <li><a href="#scope-check">范围检查结果</a></li>
+      <li><a href="#file-structure">文件结构</a></li>
+      <li><a href="#tasks">任务列表</a>
+        <ol class="toc-tasks">
+          <!-- ENTRY TEMPLATE（注释保留供添加 task 时复制）:
+               每写一个 <article id="task-N">，在此处同步追加一条 li，初始 data-task-status="pending"。
+               实施期改 article 的 data-status 时，必须同步改此处 li 的 data-task-status，
+               否则 TOC 状态符号会与中栏卡片不一致。
+
+          <li data-task-status="pending"><a href="#task-N">Task N — [任务名]</a></li>
+          -->
+          <li data-task-status="pending"><a href="#task-1">Task 1 — 写两个新配置文件</a></li>
+          <li data-task-status="pending"><a href="#task-2">Task 2 — 清理 scripts/git 与 .gitignore</a></li>
+          <li data-task-status="pending"><a href="#task-3">Task 3 — 装 pre-commit framework 与接管 hooks</a></li>
+          <li data-task-status="pending"><a href="#task-4">Task 4 — 中间验证:commitlint 拦截 garbage</a></li>
+          <li data-task-status="pending"><a href="#task-5">Task 5 — 主功能 commit</a></li>
+          <li data-task-status="pending"><a href="#task-6">Task 6 — 首次全仓清扫与 commit</a></li>
+          <li data-task-status="pending"><a href="#task-7">Task 7 — 完整 AC D6 本地验证矩阵</a></li>
+          <li data-task-status="pending"><a href="#task-8">Task 8 — push 开 PR 等 CI 全绿</a></li>
+        </ol>
+      </li>
+      <li><a href="#self-check">自检结果</a></li>
+    </ol>
+  </nav>
+
+  <!-- ============================================================
+       中栏：内容
+       ============================================================ -->
+  <main class="content">
+
+    <header class="doc-header">
+      <h1>PAP-16 — pre-commit hooks 重整实现计划</h1>
+      <div class="meta-bar">
+        <span>📅 2026-05-22</span>
+        <span>🌿 worktree-pap-16-pre-commit-overhaul</span>
+        <span>📋 plan</span>
+        <span class="status-pill">draft</span>
+      </div>
+
+      <aside class="for-ai-worker">
+        <strong>面向 AI 代理的工作者：</strong>
+        必需子技能：使用 <code>patra:subagent-driven-development</code>（推荐）
+        或 <code>patra:executing-plans</code> 逐任务实现。
+        通过修改任务卡片与步骤的 <code>data-status</code> 属性追踪进度
+        （pending / in-progress / done / blocked / skipped）。
+        每完成一个 task 立即 commit。<strong>注意：本 plan 的 Task 5 与 Task 6 才是创建 commit 的 task；
+        Task 1-4 属于"准备 + 中间验证"，不产生 commit。</strong>
+      </aside>
+
+      <dl class="meta">
+        <dt>目标</dt> <dd>把当前"<code>.pre-commit-config.yaml</code> 全注释 + 手写 <code>.git/hooks/pre-commit</code> + Maven 时代 <code>scripts/git/mvn_*.sh</code>"三件套换成 pre-commit 框架统一管理的新体系（spotless apply + commitlint + hygiene + gitleaks）。spotbugs 不进 hook，只在 CI 跑。</dd>
+        <dt>架构</dt> <dd>整文件改写 <code>.pre-commit-config.yaml</code>（4 段 repos：hygiene / gitleaks / spotless / commitlint）+ 新建 <code>commitlint.config.cjs</code>（conventional commits，9 + 1 种 type）+ 删 <code>scripts/git/</code> 整个目录 + <code>.gitignore</code> 加 <code>**/__pycache__/</code>。</dd>
+        <dt>技术栈</dt> <dd>pre-commit framework 3.5.0+ / commitlint-pre-commit-hook v9.18.0 / Gradle spotless / pre-commit-hooks v5.0.0 / gitleaks v8.21.2。</dd>
+        <dt>关联 spec</dt> <dd><a href="../specs/2026-05-22-pap-16-pre-commit-overhaul-design.html">PAP-16 — pre-commit hooks 重整 + commitlint + scripts/git Maven 清理</a></dd>
+      </dl>
+    </header>
+
+    <section id="scope-check">
+      <h2>范围检查结果</h2>
+      <aside class="callout success">
+        <span class="title">单 plan 覆盖</span>
+        <p>本 plan 覆盖 PAP-16 全部 AC（pre-commit hooks 重整 + commitlint + scripts/git Maven 清理 + .gitignore + D6 验证）。8 个 task，单个 PR 交付，不拆分子项目。</p>
+      </aside>
+    </section>
+
+    <section id="file-structure">
+      <h2>文件结构</h2>
+      <div class="file-tree">
+        <pre>patra/                                  (worktree: .claude/worktrees/pap-16-pre-commit-overhaul/)
+├── .pre-commit-config.yaml             [modify] 整文件改写：4 段 repos
+├── commitlint.config.cjs               [create] 新建：conventional commits 规则
+├── .gitignore                          [modify] 追加 Python 缓存段
+├── scripts/git/                        [delete] 整个目录递归删除
+│   ├── lib/
+│   │   ├── jacoco_utils.sh             [delete]
+│   │   └── maven_utils.sh              [delete]
+│   ├── mvn_archunit_changed_modules.sh [delete]
+│   ├── mvn_compile_changed_modules.sh  [delete]
+│   ├── mvn_spotbugs_changed_modules.sh [delete]
+│   ├── mvn_test_changed_modules.sh     [delete]
+│   └── validate_commit_msg.sh          [delete]
+├── docs/patra/specs/
+│   └── 2026-05-22-pap-16-pre-commit-overhaul-design.html  (已 commit)
+├── docs/patra/plans/
+│   └── 2026-05-22-pap-16-pre-commit-overhaul.html         (本文件)
+│
+└── .git/hooks/                         (不在 git 跟踪范围)
+    ├── pre-commit                      [overwrite] pre-commit install --overwrite 接管
+    ├── commit-msg                      [overwrite] 同上
+    └── pre-push                        [overwrite] 同上（即使无 hook 配置）
+
+不动（明确列出避免审查时困惑）：
+- patra-portal/.husky/*                  (历史摆设，OOS)
+- build-logic/*                          (spotless / spotbugs 插件配置不变)
+- .github/workflows/*                    (CI 已有 spotlessCheck + spotbugsMain)
+- scripts/letpub/, scripts/migrate-javadoc-*.py, scripts/setup-branch-protection.sh</pre>
+      </div>
+    </section>
+
+    <section id="tasks">
+      <h2>任务列表</h2>
+
+      <!-- TASK TEMPLATE（注释保留供添加新 task 时复制）:
+
+      <article class="task" id="task-N" data-status="pending">
+        <header>
+          <h2>任务 N：[任务标题]</h2>
+          <dl class="files">
+            <dt>创建</dt><dd><code>[exact/path/to/File.java]</code></dd>
+            <dt>修改</dt><dd><code>[exact/path/to/Existing.java:123-145]</code></dd>
+            <dt>测试</dt><dd><code>[tests/exact/path/to/Test.java]</code></dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：[描述]</strong>
+            <pre><code class="lang-java">[完整代码块，禁止占位]</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      data-status 5 类：pending / in-progress / done / blocked / skipped
+      -->
+
+      <article class="task" id="task-1" data-status="pending">
+        <header>
+          <h2>任务 1：写两个新配置文件（.pre-commit-config.yaml + commitlint.config.cjs）</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>.pre-commit-config.yaml</code>（整文件改写）</dd>
+            <dt>创建</dt><dd><code>commitlint.config.cjs</code></dd>
+            <dt>验证</dt><dd><code>grep</code> 关键字 + <code>cat</code> 核对内容</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：整文件覆盖 <code>.pre-commit-config.yaml</code></strong>
+            <p>用 Write 工具覆盖整个 <code>.pre-commit-config.yaml</code>（当前全文件被注释，直接覆盖即可）。内容如下：</p>
+            <pre><code class="lang-yaml">default_install_hook_types: [pre-commit, commit-msg]
+default_stages: [pre-commit]
+fail_fast: false
+minimum_pre_commit_version: "3.5.0"
+
+repos:
+  # 1) 通用 hygiene
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-merge-conflict
+      - id: check-yaml
+        exclude: ^docs/patra/specs/
+      - id: check-json
+      - id: check-toml
+      - id: check-added-large-files
+        args: ['--maxkb=2000']
+      - id: detect-private-key
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  # 2) Secret scanning
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+
+  # 3) Java 格式化（auto-apply）
+  - repo: local
+    hooks:
+      - id: spotless-apply
+        name: spotless apply (Java + gradle.kts)
+        entry: ./gradlew spotlessApply -q --no-daemon
+        language: system
+        pass_filenames: false
+        files: '\.java$|\.gradle\.kts$'
+        stages: [pre-commit]
+
+  # 4) commit-msg：commitlint
+  - repo: https://github.com/alessandrojcm/commitlint-pre-commit-hook
+    rev: v9.18.0
+    hooks:
+      - id: commitlint
+        stages: [commit-msg]
+        additional_dependencies: ['@commitlint/config-conventional@19.5.0']
+</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：新建 <code>commitlint.config.cjs</code></strong>
+            <p>用 Write 工具新建 <code>commitlint.config.cjs</code>（根仓库），内容如下：</p>
+            <pre><code class="lang-js">// commitlint.config.cjs
+module.exports = {
+  extends: ['@commitlint/config-conventional'],
+  rules: {
+    'type-enum': [2, 'always', [
+      'feat', 'fix', 'docs', 'refactor',
+      'test', 'chore', 'perf', 'style', 'ci',
+      'build',
+    ]],
+    'type-case': [2, 'always', 'lower-case'],
+    'type-empty': [2, 'never'],
+    'subject-empty': [2, 'never'],
+    'subject-full-stop': [2, 'never', '.'],
+    'header-max-length': [2, 'always', 100],
+    'scope-case': [2, 'always', 'lower-case'],
+  },
+};
+</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：验证两份文件内容</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">grep -E "spotless-apply|commitlint|gitleaks|check-merge-conflict" .pre-commit-config.yaml | wc -l</code></pre>
+            <p>预期：≥ 4（4 个关键字均命中）。</p>
+            <pre><code class="lang-bash">grep -E "type-enum|header-max-length|config-conventional" commitlint.config.cjs | wc -l</code></pre>
+            <p>预期：3。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：不 commit（保留在 working tree）</strong>
+            <p>本 task 完成后两份文件处于 untracked / modified 状态，留到 Task 5 与其他改动一并 commit。</p>
+            <p>运行：<code>git status --short | head</code></p>
+            <p>预期含 <code>M  .pre-commit-config.yaml</code> 与 <code>?? commitlint.config.cjs</code>。</p>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-2" data-status="pending">
+        <header>
+          <h2>任务 2：清理 scripts/git 整个目录 + .gitignore 加 Python 缓存</h2>
+          <dl class="files">
+            <dt>删除</dt><dd><code>scripts/git/</code>（递归，含 lib/ 与 7 个 .sh）</dd>
+            <dt>修改</dt><dd><code>.gitignore</code>（追加 Python 缓存段）</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：验证 scripts/git/ 当前文件清单（删除前的事实记录）</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">ls -la scripts/git/ scripts/git/lib/</code></pre>
+            <p>预期看到 5 个 <code>mvn_*.sh</code> / <code>validate_commit_msg.sh</code> + <code>lib/maven_utils.sh</code> + <code>lib/jacoco_utils.sh</code>。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：再次确认无外部引用</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">grep -rn "scripts/git" --include="*.yaml" --include="*.yml" --include="*.kts" --include="Makefile" --include="*.md" -- . | grep -v -E "docs/patra/(specs|plans)/" | grep -v "scripts/git/" || echo "no external refs"</code></pre>
+            <p>预期：<code>no external refs</code>。（spec/plan 内的引用属于文档自述，allowed）</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：递归删除整个 scripts/git/ 目录</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">git rm -r scripts/git/</code></pre>
+            <p>预期输出：</p>
+            <pre><code>rm 'scripts/git/lib/jacoco_utils.sh'
+rm 'scripts/git/lib/maven_utils.sh'
+rm 'scripts/git/mvn_archunit_changed_modules.sh'
+rm 'scripts/git/mvn_compile_changed_modules.sh'
+rm 'scripts/git/mvn_spotbugs_changed_modules.sh'
+rm 'scripts/git/mvn_test_changed_modules.sh'
+rm 'scripts/git/validate_commit_msg.sh'</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：验证目录已消失</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">ls scripts/git/ 2>&1 | head -1</code></pre>
+            <p>预期：<code>ls: scripts/git/: No such file or directory</code>。</p>
+            <pre><code class="lang-bash">ls scripts/git/mvn_*.sh 2>&1 | head -1</code></pre>
+            <p>预期：<code>ls: scripts/git/mvn_*.sh: No such file or directory</code>（命中 AC D6 验证 5）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：改 <code>.gitignore</code>，加 Python 缓存段</strong>
+            <p>用 Edit 工具在 <code>.gitignore</code> 的 <code>Build outputs</code> 段（<code>target/ / build/ / bin/</code> 之后）与 <code>Gradle</code> 段之前插入：</p>
+            <pre><code class="lang-diff">
++##############################
++# Python script caches
++##############################
++**/__pycache__/
++
+</code></pre>
+            <p>具体操作：用 Edit 工具找 <code>!**/src/test/**/build/</code> 这一行（这是 Build outputs 段最后一行），在其后追加上述 5 行（含前后空行）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 6：验证 .gitignore 规则生效</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">git check-ignore -v scripts/__pycache__/ 2>&1; echo "exit=$?"</code></pre>
+            <p>预期：输出 <code>.gitignore:N:**/__pycache__/    scripts/__pycache__/</code>，exit=0（命中 AC D6 验证 6）。</p>
+            <pre><code class="lang-bash">git check-ignore -v patra-portal/__pycache__/ 2>&1; echo "exit=$?"</code></pre>
+            <p>预期：同上命中（宽匹配生效）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 7：不 commit（保留在 working tree）</strong>
+            <p>本 task 完成后改动累积到 working tree，等 Task 5 一次 commit。</p>
+            <p>运行：<code>git status --short</code></p>
+            <p>预期含 <code>M .gitignore</code> + 7 个 <code>D scripts/git/...</code>。</p>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-3" data-status="pending">
+        <header>
+          <h2>任务 3：装 pre-commit framework + install 接管 .git/hooks</h2>
+          <dl class="files">
+            <dt>覆盖</dt><dd><code>.git/hooks/pre-commit</code>（手写脚本 → 框架入口）</dd>
+            <dt>覆盖</dt><dd><code>.git/hooks/commit-msg</code>（新装）</dd>
+            <dt>覆盖</dt><dd><code>.git/hooks/pre-push</code>（老 stub → 框架入口）</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：确认 pre-commit framework 已装</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">pre-commit --version</code></pre>
+            <p>预期：<code>pre-commit 3.5.0</code> 或更高。</p>
+            <p>若未装：macOS 用 <code>brew install pre-commit</code>，或全局 venv 用 <code>pipx install pre-commit</code>（避免污染系统 Python）。装完重跑 <code>pre-commit --version</code> 确认。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：validate-config 校验语法</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">pre-commit validate-config</code></pre>
+            <p>预期：无输出，exit=0。若报错，回到 Task 1 检查 yaml 缩进。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：install --overwrite 覆盖现有手写 hooks</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">pre-commit install --install-hooks --overwrite</code></pre>
+            <p>预期输出：</p>
+            <pre><code>pre-commit installed at .git/hooks/pre-commit
+pre-commit installed at .git/hooks/commit-msg
+[INFO] Installing environment for https://github.com/pre-commit/pre-commit-hooks.
+[INFO] Installing environment for https://github.com/gitleaks/gitleaks.
+[INFO] Installing environment for https://github.com/alessandrojcm/commitlint-pre-commit-hook.
+</code></pre>
+            <p>首次会拉取 hook 环境（Python venv + Node 容器），数十 MB / 数分钟。后续 cached。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：验证 .git/hooks 已被框架接管</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">head -3 .git/hooks/pre-commit .git/hooks/commit-msg 2>&1</code></pre>
+            <p>预期：两个文件第二行均含 <code># File generated by pre-commit: https://pre-commit.com</code>（替代了原手写 bash 脚本与无 commit-msg 状态）。</p>
+            <pre><code class="lang-bash">grep -c "spotlessApply" .git/hooks/pre-commit 2>/dev/null || echo "0"</code></pre>
+            <p>预期：<code>0</code>（手写脚本里的 <code>spotlessApply</code> 已被覆盖）。</p>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-4" data-status="pending">
+        <header>
+          <h2>任务 4：中间验证 — commitlint 拦截 garbage message（AC D6#3）</h2>
+          <dl class="files">
+            <dt>验证</dt><dd>commitlint hook 已生效，能拒绝非 conventional commit</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：尝试 garbage commit（无 type 前缀）</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">printf "garbage no prefix\n" &gt; /tmp/m && git commit --allow-empty -F /tmp/m; echo "exit=$?"</code></pre>
+            <p>预期：commit 失败，<code>exit</code> 非 0；输出含类似：</p>
+            <pre><code>✖   subject may not be empty [subject-empty]
+✖   type may not be empty [type-empty]
+✖   found 2 problems, 0 warnings</code></pre>
+            <p>（命中 AC D6 验证 3）</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：尝试合法 conventional commit（dry-run）</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">printf "feat(pap-16): bootstrap hooks dry run\n" &gt; /tmp/m && git commit --allow-empty -F /tmp/m; echo "exit=$?"</code></pre>
+            <p>预期：commit 成功，exit=0（命中 AC D6 验证 4）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：撤销 dry-run commit（不留痕迹）</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">git reset --soft HEAD~1 && git status</code></pre>
+            <p>预期：HEAD 回退一位，working tree 改动保留（Task 1-2 的改动不丢）。</p>
+            <p>再确认：</p>
+            <pre><code class="lang-bash">git log --oneline -1</code></pre>
+            <p>预期：上一个 commit 是 <code>278cd9317 docs(pap-16): pre-commit hooks 重整设计 spec</code>（spec commit）。</p>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-5" data-status="pending">
+        <header>
+          <h2>任务 5：主功能 commit（配置 + scripts/git 删 + .gitignore）</h2>
+          <dl class="files">
+            <dt>commit</dt><dd>Task 1-2 全部改动一次 commit</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：stage 全部改动</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">git add .pre-commit-config.yaml commitlint.config.cjs .gitignore
+# scripts/git/ 已经被 git rm 自动 stage，无需再 add
+git status --short</code></pre>
+            <p>预期 staged 区含：</p>
+            <pre><code>M  .gitignore
+M  .pre-commit-config.yaml
+A  commitlint.config.cjs
+D  scripts/git/lib/jacoco_utils.sh
+D  scripts/git/lib/maven_utils.sh
+D  scripts/git/mvn_archunit_changed_modules.sh
+D  scripts/git/mvn_compile_changed_modules.sh
+D  scripts/git/mvn_spotbugs_changed_modules.sh
+D  scripts/git/mvn_test_changed_modules.sh
+D  scripts/git/validate_commit_msg.sh</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：commit 主功能</strong>
+            <p>用 HEREDOC 传 commit message（避免 shell 转义）。运行：</p>
+            <pre><code class="lang-bash">git commit -m "$(cat &lt;&lt;'EOF'
+feat(pap-16): pre-commit hooks 重整 + commitlint + scripts/git Maven 清理
+
+把"`.pre-commit-config.yaml` 全注释 + 手写 `.git/hooks/pre-commit` + Maven 时代 mvn_*.sh"
+三件套换成 pre-commit 框架统一管理的新体系。
+
+- `.pre-commit-config.yaml` 整文件改写：hygiene + gitleaks + spotless + commitlint
+- 新建 `commitlint.config.cjs`：conventional commits，9 + 1 种 type，header-max-length 100
+- 删 `scripts/git/` 整个目录（5 个 .sh + lib/ 整体）
+- `.gitignore` 加 `**/__pycache__/`（宽匹配）
+
+spotbugs 不进本地 hook，只在 CI 跑（业界调研结论，详见 spec § 3）。
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt;
+EOF
+)"</code></pre>
+            <p>预期：</p>
+            <ul>
+              <li>pre-commit hooks 跑一遍（hygiene + gitleaks + spotless，仅对 staged 文件）</li>
+              <li>commitlint 验证 message：subject 含 type <code>feat</code> + scope <code>pap-16</code>，通过</li>
+              <li>commit 成功创建</li>
+            </ul>
+            <p><strong>常见拦截</strong>：</p>
+            <ul>
+              <li>若 <code>end-of-file-fixer</code> 或 <code>trailing-whitespace</code> 修了 <code>.pre-commit-config.yaml</code> / <code>commitlint.config.cjs</code> / <code>.gitignore</code> → hook exit 非 0，提示 <code>files were modified by this hook</code>。<strong>处置：</strong><code>git add -u</code> 重新 stage 修过的文件，重跑 commit。</li>
+              <li>若 <code>spotlessApply</code> 修了任何 Java/gradle.kts → 同上 add + 重 commit。</li>
+            </ul>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：验证 commit 创建</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">git log --oneline -2</code></pre>
+            <p>预期：</p>
+            <pre><code>[hash] feat(pap-16): pre-commit hooks 重整 + commitlint + scripts/git Maven 清理
+278cd9317 docs(pap-16): pre-commit hooks 重整设计 spec</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-6" data-status="pending">
+        <header>
+          <h2>任务 6：首次全仓清扫 + 单独 commit</h2>
+          <dl class="files">
+            <dt>commit</dt><dd>hygiene hooks 对全仓首次跑修出的改动</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：跑 pre-commit run --all-files</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">pre-commit run --all-files</code></pre>
+            <p>预期：</p>
+            <ul>
+              <li>大部分 hook 报 <code>Passed</code></li>
+              <li>少数 hook（<code>end-of-file-fixer</code> / <code>trailing-whitespace</code> / <code>mixed-line-ending</code>）可能报 <code>Failed</code> + <code>files were modified by this hook</code>，并列出修改的文件清单</li>
+              <li><code>spotless-apply</code>：因为已存在的 Java/gradle.kts 文件改动量 0（hook 配置 <code>files</code> 过滤后无匹配），<strong>Skipped</strong>（输出 <code>(no files to check) Skipped</code>）。这是符合预期的——<code>pre-commit run --all-files</code> 会忽略 <code>files</code> 过滤,但 spotless local hook 的 entry 是 <code>./gradlew spotlessApply -q --no-daemon</code>,Gradle 任务级缓存会使其极快(秒级)。如果 spotlessApply 修了文件,也算清扫的一部分</li>
+            </ul>
+            <p>耗时：首次约 1–3 分钟（gitleaks 全仓扫描最慢）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：查看 working tree 改动</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">git status --short | head -30
+echo "---total changed files:"
+git status --short | wc -l</code></pre>
+            <p>预期：列出被 hygiene 修过的文件清单（可能数十个）。<strong>不预期改动巨大</strong>——若超过 200 个文件，停下来确认是否有非预期的 hook（比如 <code>mixed-line-ending</code> 误改了二进制）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：检查改动性质（防回归）</strong>
+            <p>抽 3-5 个文件看 diff：</p>
+            <pre><code class="lang-bash">git diff --stat | head -20</code></pre>
+            <p>预期：每个文件改动 1–10 行，主要是末尾换行、行尾空格、CRLF→LF 等无害改动。</p>
+            <p>若发现 <strong>非预期改动</strong>（如 .png/.jar 等二进制被改）：</p>
+            <pre><code class="lang-bash">git checkout -- &lt;binary-file&gt;</code></pre>
+            <p>并在 <code>.pre-commit-config.yaml</code> 给对应 hook 加 <code>exclude: '\.(png|jar|...)$'</code>。本 plan 不预期此情况，若出现属 Implementation Note 记录在右栏。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：commit 清扫改动</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">git add -A
+git commit -m "$(cat &lt;&lt;'EOF'
+chore(pap-16): pre-commit hooks 首次全仓清扫
+
+`pre-commit run --all-files` 首次跑出的 hygiene 改动：
+- end-of-file-fixer：补齐文件末尾换行
+- trailing-whitespace：删行尾空格
+- mixed-line-ending：CRLF/CR → LF
+
+历史代码累积，单独成 commit 避免与 PAP-16 主功能 commit 的 diff 混淆。
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt;
+EOF
+)"</code></pre>
+            <p>预期：pre-commit hooks 再跑一遍，全绿（幂等）；commit 创建。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：再次跑 pre-commit run --all-files 验证幂等</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">pre-commit run --all-files</code></pre>
+            <p>预期：全部 hook <code>Passed</code>，无 <code>Failed</code>。若仍有 Failed 说明清扫不彻底，回到步骤 1 再跑一次（少数文件可能需多轮）。</p>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-7" data-status="pending">
+        <header>
+          <h2>任务 7：完整 AC D6 本地验证矩阵（7 步）</h2>
+          <dl class="files">
+            <dt>验证</dt><dd>spec § 8.2 矩阵 8 项中的前 7 项（CI 部分留给 Task 8）</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：AC#1 — install 输出</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">pre-commit install --install-hooks --overwrite 2>&1 | head -5</code></pre>
+            <p>预期：含 <code>pre-commit installed at .git/hooks/pre-commit</code> + <code>commit-msg</code>。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：AC#2 — run --all-files 全绿</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">pre-commit run --all-files 2>&1 | tail -10</code></pre>
+            <p>预期：所有 hook <code>Passed</code> 或 <code>Skipped</code>，无 <code>Failed</code>。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：AC#3 — commitlint 拒绝 garbage</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">printf "garbage no prefix\n" &gt; /tmp/m && git commit --allow-empty -F /tmp/m; echo "exit=$?"</code></pre>
+            <p>预期：exit 非 0。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：AC#4 — commitlint 接受 conventional</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">printf "feat(pap-16): ac4 verify\n" &gt; /tmp/m && git commit --allow-empty -F /tmp/m && echo "ac4 ok"</code></pre>
+            <p>预期：<code>ac4 ok</code>。然后撤销 dry-run commit：</p>
+            <pre><code class="lang-bash">git reset --soft HEAD~1</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：AC#5 — scripts/git/ 已消失</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">ls scripts/git/mvn_*.sh 2>&1 | head -1</code></pre>
+            <p>预期：<code>ls: scripts/git/mvn_*.sh: No such file or directory</code>。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 6：AC#6 — .gitignore 命中 __pycache__</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">git check-ignore -v scripts/__pycache__/; echo "exit=$?"</code></pre>
+            <p>预期：输出 <code>.gitignore:N:**/__pycache__/    scripts/__pycache__/</code>，exit=0。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 7：AC#7 — hook 拦截格式化未修的 Java commit</strong>
+            <p>用一个临时 Java 改动测试（避免污染真代码）：</p>
+            <pre><code class="lang-bash">cat &gt; /tmp/Probe.java &lt;&lt;'EOF'
+package test;
+public class Probe   {     // 多个空格,spotless 会修
+  public void m( ) {}
+}
+EOF
+mkdir -p patra-common/patra-common-enums/src/main/java/test
+cp /tmp/Probe.java patra-common/patra-common-enums/src/main/java/test/Probe.java
+git add patra-common/patra-common-enums/src/main/java/test/Probe.java
+git commit -m "test(pap-16): probe spotless hook" 2>&1 | tail -20
+echo "exit=$?"</code></pre>
+            <p>预期：</p>
+            <ul>
+              <li>spotless-apply hook 跑，修改 <code>Probe.java</code></li>
+              <li>commit 失败，输出 <code>files were modified by this hook</code>，exit 非 0</li>
+            </ul>
+            <p>清理：</p>
+            <pre><code class="lang-bash">git restore --staged patra-common/patra-common-enums/src/main/java/test/Probe.java
+rm -rf patra-common/patra-common-enums/src/main/java/test/
+git status --short | grep Probe || echo "cleaned"</code></pre>
+            <p>预期：<code>cleaned</code>。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 8：本 task 不 commit</strong>
+            <p>所有验证均为"摸底"性质，不产生提交。</p>
+            <p>运行：<code>git status</code></p>
+            <p>预期：<code>nothing to commit, working tree clean</code>（Task 5/6 的 commit 已落地，Probe 已清理）。</p>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-8" data-status="pending">
+        <header>
+          <h2>任务 8：push + 开 PR + 等 CI 全绿（AC D6#8）</h2>
+          <dl class="files">
+            <dt>远端</dt><dd>push 当前 worktree 分支到 origin</dd>
+            <dt>PR</dt><dd>开 PR 关联 PAP-16，等 CI</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：push 分支</strong>
+            <p>当前分支：<code>worktree-pap-16-pre-commit-overhaul</code>。运行：</p>
+            <pre><code class="lang-bash">git log --oneline origin/main..HEAD</code></pre>
+            <p>预期看到 3 个 commit：</p>
+            <pre><code>[hash3] chore(pap-16): pre-commit hooks 首次全仓清扫
+[hash2] feat(pap-16): pre-commit hooks 重整 + commitlint + scripts/git Maven 清理
+278cd9317 docs(pap-16): pre-commit hooks 重整设计 spec</code></pre>
+            <pre><code class="lang-bash">git push -u origin HEAD</code></pre>
+            <p>预期：push 成功。注意 <code>origin/main</code> 上的 <code>8e5c715b force push test</code> 污染 commit 不在本分支链路上（worktree 基于 origin/main，但 HEAD 链路只含本 issue 3 个 commit + 上游的真正 PAP-15 commit）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：开 PR</strong>
+            <p>运行（用 HEREDOC 传 body）：</p>
+            <pre><code class="lang-bash">gh pr create --title "PAP-16: pre-commit hooks 重整 + commitlint + scripts/git Maven 清理" --body "$(cat &lt;&lt;'EOF'
+## Summary
+
+把当前"`.pre-commit-config.yaml` 全注释 + 手写 `.git/hooks/pre-commit` + Maven 时代 `scripts/git/mvn_*.sh`"三件套换成 pre-commit 框架统一管理的新体系。
+
+- 整文件改写 `.pre-commit-config.yaml`：hygiene + gitleaks + spotless + commitlint
+- 新建 `commitlint.config.cjs`：conventional commits，9 + 1 种 type
+- 删 `scripts/git/` 整个目录（5 个 .sh + lib/ 整体）
+- `.gitignore` 加 `**/__pycache__/`
+
+## 与 Linear AC 的差异
+
+spotbugs 不进本地 hook，只在 CI 跑。理由：业界调研显示 Spring Boot 等大型 Java OSS 均无 pre-push 静态分析；本地 hook &gt; 几秒会被 `--no-verify` 绕过；CI 已是强制门控（PAP-15 Required Status Checks），本地重复零增量价值。详见 spec § 3。
+
+## Test plan
+
+- [x] AC D6 矩阵 1-7（本地）全通过：commitlint 拦截 garbage、接受 conventional、scripts/git/ 消失、.gitignore 命中 __pycache__、spotless hook 修文件后阻止 commit
+- [ ] CI `spotlessCheck` 通过（防 hook 被绕过的二次校验）
+- [ ] CI `spotbugsMain` 通过（回归保护）
+- [ ] CI `build-and-test` 通过
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+EOF
+)"</code></pre>
+            <p>预期：输出 PR URL，例如 <code>https://github.com/linqibin0826/patra/pull/63</code>。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：等 CI 跑完并验证</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">gh pr checks --watch</code></pre>
+            <p>预期：所有 check 显示 <code>pass</code>，包含：</p>
+            <ul>
+              <li><code>build-and-test</code>（PAP-10 已落地，含 spotbugsMain + spotlessCheck）</li>
+              <li><code>required-check</code>（PAP-15 哨兵 job）</li>
+              <li><code>codecov/patch</code></li>
+              <li><code>CodeRabbit</code> review（PAP-14 落地）</li>
+            </ul>
+            <p><strong>命中 AC D6 验证 8。</strong></p>
+            <p>若 CI 失败：</p>
+            <ul>
+              <li><code>spotlessCheck</code> 红 → 说明本地 hook 漏修了某文件，本地补跑 <code>./gradlew spotlessApply</code>，commit fixup，push</li>
+              <li><code>spotbugsMain</code> 红 → 说明触发了 spotbugs 新规则。本 issue 范围不调整 spotbugs 规则，若是无关回归，单独开 issue；若是 spec 影响（不预期），右栏记录 Implementation Note</li>
+            </ul>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：等待 CodeRabbit review</strong>
+            <p>CodeRabbit 会自动留 review。检查其评论：</p>
+            <pre><code class="lang-bash">gh pr view --comments | head -50</code></pre>
+            <p>对每条 review：</p>
+            <ul>
+              <li>如指出真实问题（如 hook 配置错误）→ fixup commit 修复</li>
+              <li>如建议风格调整（绿地原则可拒）→ 在 PR 评论说明 surgical/YAGNI 拒绝理由</li>
+            </ul>
+            <p>不在本 task 内修复——根据 receiving-code-review skill 单独处理。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：CI 全绿后通知用户决定合并时机</strong>
+            <p>本 task 不自动 merge（PAP-15 已设 branch protection，需用户在 Linear / GitHub 上手动 review-approve + squash merge）。</p>
+            <p>结束陈述：</p>
+            <pre><code>PAP-16 实施完成。PR #N 已开，CI 全绿。请在 GitHub 上 review 并 squash merge。
+合并后单独跑：
+  git checkout main && git pull
+  scripts/setup-branch-protection.sh   # 若已落地保护规则则跳过</code></pre>
+          </li>
+        </ol>
+      </article>
+
+    </section>
+
+    <section id="self-check" class="self-check">
+      <h2>自检结果</h2>
+
+      <aside class="callout success">
+        <span class="title">1. 规格覆盖度</span>
+        <p>spec § 5（.pre-commit-config.yaml）→ Task 1；§ 6（commitlint）→ Task 1；§ 7.1（scripts/git 删除）→ Task 2；§ 7.2（.gitignore）→ Task 2；§ 7.3（.git/hooks 接管）→ Task 3；§ 8.1（落地步骤）→ Tasks 1-8；§ 8.2 矩阵 8 项 → Task 4（#3 中间验证）+ Task 7（#1-7 完整本地）+ Task 8（#8 CI）。spec § 9 决策 6（首次清扫单独 commit）→ Task 6。无遗漏。</p>
+      </aside>
+
+      <aside class="callout success">
+        <span class="title">2. 占位符扫描</span>
+        <p>无 TODO / 待定 / 后续 / "类似任务 N" 等占位。每个步骤都含精确命令、完整代码或具体预期。<code>&lt;!-- FILL --&gt;</code> 注释只保留为模板提示（HTML 注释块内，不在内容里）。</p>
+      </aside>
+
+      <aside class="callout success">
+        <span class="title">3. 类型一致性</span>
+        <p>跨任务命名一致：<code>.pre-commit-config.yaml</code> / <code>commitlint.config.cjs</code> / <code>scripts/git/</code> / <code>**/__pycache__/</code> 在所有 task 用同一拼写。commit message type 前缀 <code>feat(pap-16)</code> / <code>chore(pap-16)</code> / <code>test(pap-16)</code> / <code>docs(pap-16)</code> 全部在 commitlint type-enum 范围内。hook id 一致：<code>spotless-apply</code> / <code>commitlint</code> / <code>gitleaks</code>。</p>
+      </aside>
+
+      <aside class="callout success">
+        <span class="title">4. HTML 结构完整性</span>
+        <p>8 个 <code>&lt;article class="task" id="task-N"&gt;</code> 与 8 个 <code>&lt;li data-task-status="pending"&gt;&lt;a href="#task-N"&gt;</code> 一一对应；每个 article 含 <code>data-status="pending"</code>；每个 <code>&lt;li class="step"&gt;</code> 含 <code>data-status="pending"</code>；头部 <code>&lt;dl class="meta"&gt;</code> 含目标 / 架构 / 技术栈 / 关联 spec 四项；<code>&lt;head&gt;</code> 引用 <code>../styles/journal.css</code> + <code>../styles/plan-extras.css</code>，无 inline <code>&lt;style&gt;</code> 块。</p>
+      </aside>
+    </section>
+
+  </main>
+
+  <!-- ============================================================
+       右栏：Implementation Notes（实施期由 Claude Code 维护）
+       ============================================================ -->
+  <aside class="notes-panel" id="notes">
+    <header>
+      <h2>Implementation Notes</h2>
+      <p class="hint">实施期由 Claude Code 即时追加。规则：遇到 plan 未规定的<strong>决定</strong>、必要<strong>更改</strong>、不可避免的<strong>权衡</strong>、其他用户应知事项，立即用 Edit 追加 entry，不要等任务结束。</p>
+    </header>
+
+    <ol class="notes-log">
+      <!-- ENTRY TEMPLATE（注释保留供实施期 AI 复制）:
+
+      <li class="note" data-type="decision" data-time="YYYY-MM-DDTHH:MM">
+        <header>
+          <span class="note-type">DECISION</span>
+          <time datetime="YYYY-MM-DDTHH:MM">MM-DD HH:MM</time>
+          <a href="#task-N">§ Task N</a>
+        </header>
+        <p>描述：plan 未规定 X，实施时选择 Y。理由：...</p>
+      </li>
+
+      data-type 4 类：decision / change / tradeoff / other
+      追加 entry 时同步更新下方 notes-stats footer 的对应 counter 数字。
+      -->
+    </ol>
+
+    <p class="empty-state">no notes yet</p>
+
+    <footer class="notes-stats">
+      总计:
+      <span data-counter="decision">0</span> decisions /
+      <span data-counter="change">0</span> changes /
+      <span data-counter="tradeoff">0</span> tradeoffs /
+      <span data-counter="other">0</span> others
+    </footer>
+  </aside>
+
+</div>
+</body>
+</html>
