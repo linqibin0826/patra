@@ -21,7 +21,7 @@
       <li><a href="#tasks">任务列表</a>
         <ol class="toc-tasks">
           <li data-task-status="done"><a href="#task-1">Task 1 — 启用 java-test-fixtures plugin（build-logic）</a></li>
-          <li data-task-status="pending"><a href="#task-2">Task 2 — 迁移 PubMedAuthorFixture 至 testFixtures（catalog-infra）</a></li>
+          <li data-task-status="done"><a href="#task-2">Task 2 — 迁移 PubMedAuthorFixture 至 testFixtures（catalog-infra）</a></li>
           <li data-task-status="pending"><a href="#task-3">Task 3 — 迁移 FileMetadataFixture 至 testFixtures + 替换 testArtifacts hack（object-storage）</a></li>
           <li data-task-status="pending"><a href="#task-4">Task 4 — 删除 build-logic sourceSets 链式 output hack</a></li>
           <li data-task-status="pending"><a href="#task-5">Task 5 — rename IT Bootstrap (Group 1, 4 文件)</a></li>
@@ -180,7 +180,7 @@ patra-api/.claude/
             <strong>步骤 2：</strong>不要在三个 JVM Test Suite 的 dependencies 块中显式加 <code>implementation(testFixtures(project()))</code>。Gradle 自 7.6+ 默认让 <code>test</code> source set 自动继承 testFixtures，<code>integrationTest</code> / <code>e2eTest</code> 由 PAP-10 设的 <code>integrationTestImplementation.extendsFrom(testImplementation)</code> 配置层继承自动获得。<strong>不动 dependencies 块</strong>，跳到下一步。
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：</strong>本步暂不删除 L164-172 sourceSets hack（Task 4 才删）。先验证 plugin 启用后全 build 不破坏：
             <pre><code class="lang-bash">cd /Users/linqibin/Projects/Products/patra/.claude/worktrees/pap-19-test-baseline
 ./gradlew clean assemble check --no-daemon</code></pre>
@@ -201,7 +201,7 @@ git commit -m "build(gradle): 启用 java-test-fixtures plugin (PAP-19 AC2 step 
         </ol>
       </article>
 
-      <article class="task" id="task-2" data-status="pending">
+      <article class="task" id="task-2" data-status="done">
         <header>
           <h2>Task 2 — 迁移 PubMedAuthorFixture 至 testFixtures（catalog-infra 跨 sourceSet 共享）</h2>
           <dl class="files">

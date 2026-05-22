@@ -443,7 +443,7 @@ class PubMedComputedAuthorParserTest {
     void parse_largeData_shouldStreamProcess() throws IOException {
       // Given: 生成 500 条测试数据
       java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-      PubMedComputedAuthorTestDataGenerator.generate(500, baos);
+      PubMedAuthorFixture.generate(500, baos);
       InputStream inputStream = new ByteArrayInputStream(baos.toByteArray());
 
       // When
