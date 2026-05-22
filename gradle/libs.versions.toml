@@ -62,7 +62,7 @@ objenesis = "3.4"
 
 # Code Quality
 spotbugs-plugin = "6.4.8"
-spotbugs = "4.9.3"
+spotbugs = "4.9.8"
 jacoco = "0.8.14"
 spotless = "7.0.4"
 google-java-format = "1.29.0"

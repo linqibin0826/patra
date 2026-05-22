@@ -23,8 +23,8 @@
           <li data-task-status="done"><a href="#task-1">Task 1 — 新建 linqibin.spotbugs.gradle.kts</a></li>
           <li data-task-status="done"><a href="#task-2">Task 2 — 新建 linqibin.spotless.gradle.kts</a></li>
           <li data-task-status="done"><a href="#task-3">Task 3 — 改造 java-base 引入两个新 plugin</a></li>
-          <li data-task-status="pending"><a href="#task-4">Task 4 — spotlessApply 全量基线化</a></li>
-          <li data-task-status="pending"><a href="#task-5">Task 5 — spotbugsMain baseline + 告警决策处置</a></li>
+          <li data-task-status="done"><a href="#task-4">Task 4 — spotlessApply 全量基线化</a></li>
+          <li data-task-status="in-progress"><a href="#task-5">Task 5 — spotbugsMain baseline + 告警决策处置</a></li>
           <li data-task-status="pending"><a href="#task-6">Task 6 — CI workflow 改造</a></li>
           <li data-task-status="pending"><a href="#task-7">Task 7 — 全量验证 10 条 Done 判定</a></li>
           <li data-task-status="pending"><a href="#task-8">Task 8 — release-spec 缩进描述同步</a></li>
@@ -350,7 +350,7 @@ git commit -m "build(java-base): 引入 linqibin.spotbugs/spotless convention pl
         </ol>
       </article>
 
-      <article class="task" id="task-4" data-status="pending">
+      <article class="task" id="task-4" data-status="done">
         <header>
           <h2>Task 4：spotlessApply 全量基线化</h2>
           <dl class="files">
@@ -359,27 +359,27 @@ git commit -m "build(java-base): 引入 linqibin.spotbugs/spotless convention pl
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4.1：本地跑 spotlessApply</strong>
             <p>运行：<code>./gradlew spotlessApply --no-daemon</code></p>
             <p>预期：退出码 0；可能耗时 1-3 分钟（首次跑 google-java-format 1.29.0 要下载）；输出含 <code>BUILD SUCCESSFUL</code>。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4.2：查看改动量统计</strong>
             <p>运行：<code>git diff --stat | tail -5</code></p>
             <p>预期：列出修改文件数（可能上百），最后一行类似 <code>N files changed, X insertions(+), Y deletions(-)</code>。</p>
             <p>异常处理：如果 <code>files changed</code> 为 0，说明当前代码已经 100% 符合规则——继续下一步无 commit；如果 <code>files changed</code> 超出预期（例如 &gt; 500），右栏 notes-panel 追加 <code>data-type="other"</code> entry 记录数字，但<strong>继续推进</strong>（基线化本就一次到位）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4.3：跑 spotlessCheck 验证</strong>
             <p>运行：<code>./gradlew spotlessCheck --no-daemon</code></p>
             <p>预期：退出码 0；输出含 <code>BUILD SUCCESSFUL</code>。</p>
             <p>失败处理：如果 <code>spotlessCheck</code> 仍失败，跑 <code>./gradlew spotlessApply --no-daemon</code> 二次，再 check。如果二次仍失败，右栏 notes-panel 追加 <code>data-type="other"</code> entry 报告失败文件，本 task 状态改 <code>blocked</code>，等待用户决策。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="skipped">
             <strong>步骤 4.4：Commit 基线化（独立 commit）</strong>
             <p>独立 commit 让 reviewer 在 PR 视图能单独折叠/审查机械化改动。</p>
             <pre><code class="lang-bash">git add -u
@@ -399,7 +399,7 @@ reviewer 可在 PR 视图折叠此 commit。"</code></pre>
         </ol>
       </article>
 
-      <article class="task" id="task-5" data-status="pending">
+      <article class="task" id="task-5" data-status="in-progress">
         <header>
           <h2>Task 5：spotbugsMain baseline + 告警决策处置</h2>
           <dl class="files">
@@ -408,14 +408,14 @@ reviewer 可在 PR 视图折叠此 commit。"</code></pre>
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5.1：本地跑 spotbugsMain（允许失败）</strong>
             <p>运行：<code>./gradlew spotbugsMain --no-daemon --continue || true</code></p>
             <p>说明：<code>--continue</code> 让 Gradle 不在第一个失败模块停下；<code>|| true</code> 防止脚本因 build fail 退出。预期会有告警（首次启用 LOW + MAX）。</p>
             <p>报告路径：每个 Java 模块的 <code>build/reports/spotbugs/main.html</code>（人读）/ <code>main.xml</code>（机读）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5.2：聚合统计告警总数 N</strong>
             <p>运行：</p>
             <pre><code class="lang-bash">find . -path '*/build/reports/spotbugs/main.xml' -not -path '*/.claude/*' \
@@ -424,7 +424,7 @@ reviewer 可在 PR 视图折叠此 commit。"</code></pre>
             <p>预期：输出 <code>Total SpotBugs warnings: N</code>。记录 N 值。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="in-progress">
             <strong>步骤 5.3：按 N 值分支处置（决策树）</strong>
             <p><strong>分支 A — N == 0</strong>：直接跳到步骤 5.5。在右栏 notes-panel 追加 <code>data-type="other"</code> entry 记录 "spotbugsMain 首次 baseline 跑出 0 告警"。</p>
 
@@ -736,6 +736,35 @@ git commit -m "docs(release-spec): PAP-13 缩进对齐 .editorconfig 2 空格
     </header>
 
     <ol class="notes-log">
+      <li class="note" data-type="decision" data-time="2026-05-22T13:40">
+        <header>
+          <span class="note-type">DECISION</span>
+          <time datetime="2026-05-22T13:40">05-22 13:40</time>
+          <a href="#task-5">§ Task 5 / 步骤 5.3</a>
+        </header>
+        <p><strong>SpotBugs baseline 415 条告警；用户决策走硬清零路径（plan 分支 B 默认逻辑，超阈值仍坚持逐条决策）。</strong></p>
+        <p>先决：SpotBugs core 版本 4.9.3 不支持 Java 25 class files（major version 69），spotbugsMain 全工程 exit code 4，报告空文件。升级到 4.9.8（spotbugs-plugin 6.4.8 默认版本，本地已缓存），重跑得 415 条真告警，exit code 1。<code>libs.versions.toml</code> + plugin 文件头注释同步更新 toolVersion=4.9.8。</p>
+        <p>BugPattern 分布（top 7 占 ~85%）：</p>
+        <ul>
+          <li><code>DM_CONVERT_CASE</code> 122 — toLowerCase/toUpperCase 漏 Locale</li>
+          <li><code>SE_NO_SERIALVERSIONID</code> 85 — Serializable 类没 serialVersionUID</li>
+          <li><code>CT_CONSTRUCTOR_THROW</code> 48 — 构造器抛异常</li>
+          <li><code>EI_EXPOSE_REP</code> 44 — 内部可变状态暴露</li>
+          <li><code>THROWS_METHOD_THROWS_RUNTIMEEXCEPTION</code> 19 + <code>THROWS_METHOD_THROWS_CLAUSE_BASIC_EXCEPTION</code> 15</li>
+          <li><code>REC_CATCH_EXCEPTION</code> 14</li>
+          <li>剩余散落 BugPattern ~68</li>
+        </ul>
+        <p>处置策略（用户选硬清零）：每个 BugPattern 群组进行 fix-vs-exclude 决策，按 (BugPattern × Package/Class 模式) 添加 exclude，必带 XML 注释说明原因；真问题模式（如 DM_CONVERT_CASE 多数）批量修代码。子任务派 subagent 高密度处置，主会话 review 结果。</p>
+      </li>
+      <li class="note" data-type="other" data-time="2026-05-22T13:20">
+        <header>
+          <span class="note-type">OTHER</span>
+          <time datetime="2026-05-22T13:20">05-22 13:20</time>
+          <a href="#task-4">§ Task 4</a>
+        </header>
+        <p>Task 4 spotlessApply 跑全工程 <strong>0 文件改动</strong>——所有 Java 源 + 各模块 build.gradle.kts 已经符合 googleJavaFormat 默认 2 空格 + import order + EOF newline 等规则。<code>./gradlew spotlessCheck</code> 全工程 BUILD SUCCESSFUL（186 task UP-TO-DATE）。</p>
+        <p>原因推断：项目用 IntelliJ default 格式 + <code>.editorconfig</code> 严格管理（缩进 2 空格 / EOF newline / trim trailing），与 googleJavaFormat 默认规则天然一致。按 plan 步骤 4.4 描述（"如果 4.2 显示 0 文件变动，跳过 4.4"），<strong>本 task 无 commit</strong>。步骤 4.4 状态标 <code>skipped</code>。</p>
+      </li>
       <li class="note" data-type="change" data-time="2026-05-22T12:20">
         <header>
           <span class="note-type">CHANGE</span>
@@ -785,10 +814,10 @@ git commit -m "docs(release-spec): PAP-13 缩进对齐 .editorconfig 2 空格
 
     <footer class="notes-stats">
       总计:
-      <span data-counter="decision">1</span> decisions /
+      <span data-counter="decision">2</span> decisions /
       <span data-counter="change">2</span> changes /
       <span data-counter="tradeoff">0</span> tradeoffs /
-      <span data-counter="other">0</span> others
+      <span data-counter="other">1</span> others
     </footer>
   </aside>
 

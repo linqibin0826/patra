@@ -1,6 +1,6 @@
 // SpotBugs Convention Plugin
 // 应用于所有 Java 模块（通过 linqibin.java-base 间接 apply）。
-// 配置：effort=MAX / reportLevel=LOW / ignoreFailures=false / toolVersion=4.9.3。
+// 配置：effort=MAX / reportLevel=LOW / ignoreFailures=false / toolVersion=4.9.8。
 // 只跑 spotbugsMain，禁用 spotbugsTest / spotbugsIntegrationTest / spotbugsE2eTest 等。
 // excludeFilter 沿用根目录 spotbugs-exclude.xml。HTML + XML 双报告。
 // 关联：PAP-12 + 决策 C（spotbugsTest 不阻断）。
