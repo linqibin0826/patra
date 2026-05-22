@@ -53,7 +53,10 @@
 
 ## PR 与代码评审
 
-每次通过 `gh pr create` 开 PR 后，必须立即用 Monitor 工具在后台监控该 PR 的评论流（CodeRabbit AI Review + 人工 review），收到 review 意见立刻评估并修复，避免 review 反馈被遗漏；不修复的意见也必须在评论中明确给出理由。
+每次通过 `gh pr create` 开 PR 后，必须在同一工作会话内立即启动 Monitor 并绑定该 PR（覆盖 CodeRabbit AI Review 与人工 review），杜绝 review 反馈被遗漏。
+
+- **持续期**：Monitor 持续到 PR 合并或关闭，期间不得停止对评论流的跟踪。
+- **处理状态**：对每条 review 意见必须在 PR 评论中明确给出处理状态——`已修复`（附 commit SHA）/ `不修复`（附明确理由）。
 
 ## Workspace Layout
 
