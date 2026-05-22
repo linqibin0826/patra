@@ -14,19 +14,7 @@ plugins {
 // - patra-common-core (api)
 // - Hutool, MapStruct
 // - 测试依赖
-
-// 生成 test-jar 供其他模块使用
-val testJar by tasks.registering(Jar::class) {
-    archiveClassifier = "tests"
-    from(sourceSets.test.get().output)
-}
-
-configurations {
-    create("testArtifacts") {
-        extendsFrom(configurations.testImplementation.get())
-    }
-}
-
-artifacts {
-    add("testArtifacts", testJar)
-}
+//
+// 跨模块共享 fixture 通过 src/testFixtures/ source set 暴露
+// （linqibin.java-base 已 apply java-test-fixtures plugin）。
+// 消费方用 testImplementation(testFixtures(project(":..."))) 引用。

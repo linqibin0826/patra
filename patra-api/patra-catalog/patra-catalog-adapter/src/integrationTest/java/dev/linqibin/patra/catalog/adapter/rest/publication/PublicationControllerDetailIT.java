@@ -5,7 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import dev.linqibin.patra.catalog.adapter.config.TestConfiguration;
+import dev.linqibin.patra.catalog.adapter.config.CatalogAdapterITWebMvcConfig;
 import dev.linqibin.patra.catalog.app.usecase.publication.query.PublicationQueryService;
 import dev.linqibin.patra.catalog.app.usecase.publication.query.dto.PublicationDetailQuery;
 import dev.linqibin.patra.catalog.domain.exception.PublicationNotFoundException;
@@ -38,7 +38,7 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 /// - 路径参数绑定正确
 /// - MapStruct 转换器字段映射正确（使用真实 PublicationApiConverter）
 @WebMvcTest(controllers = PublicationController.class)
-@ContextConfiguration(classes = TestConfiguration.class)
+@ContextConfiguration(classes = CatalogAdapterITWebMvcConfig.class)
 @Import(PublicationController.class)
 @AutoConfigureRestTestClient
 @DisplayName("PublicationController 详情查询 REST 接口切片测试")

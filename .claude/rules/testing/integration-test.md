@@ -1,5 +1,5 @@
 ---
-paths: patra-*/*-infra/**/src/test/**/*IT.java, patra-*/*-adapter/**/src/test/**/*IT.java
+paths: patra-*/*-infra/**/src/integrationTest/**/*IT.java, patra-*/*-adapter/**/src/integrationTest/**/*IT.java
 ---
 
 # 集成测试规范
@@ -30,9 +30,10 @@ paths: patra-*/*-infra/**/src/test/**/*IT.java, patra-*/*-adapter/**/src/test/**
 
 ### 测试配置类
 
-由于 adapter 模块不包含 `@SpringBootApplication`，需要提供 `WebMvcTestConfiguration`：
+由于 adapter 模块不包含 `@SpringBootApplication`，需要提供 `{Module}ITWebMvcConfig`（命名规则见 `patra:test-driven-development` skill）：
 
 ```java
+// 例：catalog-adapter 的 CatalogAdapterITWebMvcConfig
 @SpringBootConfiguration
 @EnableAutoConfiguration
 @ImportAutoConfiguration({
@@ -40,7 +41,7 @@ paths: patra-*/*-infra/**/src/test/**/*IT.java, patra-*/*-adapter/**/src/test/**
     WebErrorAutoConfiguration.class,
     JacksonAutoConfiguration.class
 })
-public class WebMvcTestConfiguration {
+public class CatalogAdapterITWebMvcConfig {
     // 空配置类，提供 @SpringBootConfiguration 标记
 }
 ```

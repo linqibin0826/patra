@@ -12,7 +12,7 @@ import dev.linqibin.patra.catalog.domain.model.vo.venue.CitationMetrics;
 import dev.linqibin.patra.catalog.domain.model.vo.venue.OpenAccessInfo;
 import dev.linqibin.patra.catalog.domain.model.vo.venue.PublicationProfile;
 import dev.linqibin.patra.catalog.domain.model.vo.venue.Society;
-import dev.linqibin.patra.catalog.infra.config.CatalogPostgreSQLContainerInitializer;
+import dev.linqibin.patra.catalog.infra.config.CatalogITPostgreSQLContainerInitializer;
 import dev.linqibin.patra.catalog.infra.persistence.dao.CasRatingDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.CasWarningDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.JcrRatingDao;
@@ -53,7 +53,7 @@ import org.springframework.test.context.ContextConfiguration;
 /// - 正常查询：插入测试数据后查询，验证所有字段映射正确
 /// - 不存在：查询不存在的 ID，返回 Optional.empty()
 @DataJpaTest
-@ContextConfiguration(initializers = CatalogPostgreSQLContainerInitializer.class)
+@ContextConfiguration(initializers = CatalogITPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
   VenueReadAdapter.class,

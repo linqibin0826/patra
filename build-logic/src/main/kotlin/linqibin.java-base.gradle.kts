@@ -14,6 +14,7 @@
 plugins {
     java
     jacoco
+    `java-test-fixtures`
     id("linqibin.spotless")
     id("linqibin.spotbugs")
     id("io.spring.dependency-management")
@@ -153,22 +154,26 @@ listOf("integrationTest", "e2eTest").forEach { suiteName ->
     }
 }
 
-// integrationTest 复用 test source set 输出（共享 unit/IT 都用的 TestDataBuilder / Helper 等）
-// e2eTest 同时继承 integrationTest 与 test output（链式共享 *ContainerInitializer / test fixtures）
-//
-// 同时显式补充 main source set output 到 compileClasspath / runtimeClasspath:
+// ==================== Spring Boot bootJar main.output 可见性补丁 ====================
 // Spring Boot plugin 默认禁用 `jar` task（只产 bootJar），导致 `implementation(project())`
-// 引用的 default configuration artifact 为空，main classes 不在 integrationTest 的 runtime
-// classpath 上，@SpringBootTest 找不到 @SpringBootApplication。显式补 sourceSets["main"].output
-// 绕过该限制，让 @SpringBootTest 的 package 搜索能定位主类。
+// 引用的 default configuration artifact 为空，main classes 不在 test/integrationTest/e2eTest
+// 的 classpath 上，@SpringBootTest / 直接 import 主类 会 cannot find symbol。
+// 显式补 sourceSets["main"].output 绕过。
+//
+// 跨 sourceSet 共享的 Java 类与 resources 均通过 src/testFixtures/ source set
+// （java-test-fixtures plugin 提供）共享，不再使用 sourceSet output 链式 hack。
 sourceSets {
+    named("test") {
+        compileClasspath += sourceSets["main"].output
+        runtimeClasspath += sourceSets["main"].output
+    }
     named("integrationTest") {
-        compileClasspath += sourceSets["main"].output + sourceSets["test"].output
-        runtimeClasspath += sourceSets["main"].output + sourceSets["test"].output
+        compileClasspath += sourceSets["main"].output
+        runtimeClasspath += sourceSets["main"].output
     }
     named("e2eTest") {
-        compileClasspath += sourceSets["main"].output + sourceSets["integrationTest"].output + sourceSets["test"].output
-        runtimeClasspath += sourceSets["main"].output + sourceSets["integrationTest"].output + sourceSets["test"].output
+        compileClasspath += sourceSets["main"].output
+        runtimeClasspath += sourceSets["main"].output
     }
 }
 

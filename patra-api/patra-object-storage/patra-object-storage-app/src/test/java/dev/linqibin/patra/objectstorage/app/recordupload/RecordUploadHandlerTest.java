@@ -8,7 +8,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import dev.linqibin.patra.objectstorage.domain.model.aggregate.FileMetadata;
-import dev.linqibin.patra.objectstorage.domain.model.aggregate.FileMetadataTestDataBuilder;
+import dev.linqibin.patra.objectstorage.domain.model.aggregate.FileMetadataFixture;
 import dev.linqibin.patra.objectstorage.domain.model.enums.FileStatus;
 import dev.linqibin.patra.objectstorage.domain.model.enums.StorageProvider;
 import dev.linqibin.patra.objectstorage.domain.port.FileMetadataRepository;
@@ -57,8 +57,8 @@ class RecordUploadHandlerTest {
         .thenAnswer(
             invocation -> {
               FileMetadata metadata = invocation.getArgument(0);
-              // 使用 TestDataBuilder 构建 Mock 返回值，模拟数据库保存后的状态
-              return FileMetadataTestDataBuilder.anActiveFile()
+              // 使用 Fixture 构建 Mock 返回值，模拟数据库保存后的状态
+              return FileMetadataFixture.anActiveFile()
                   .id(123L)
                   .storageKey(metadata.getStorageKey())
                   .fileSize(metadata.getFileSize())

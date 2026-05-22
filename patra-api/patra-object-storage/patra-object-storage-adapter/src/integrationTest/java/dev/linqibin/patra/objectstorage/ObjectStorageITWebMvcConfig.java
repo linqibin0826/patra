@@ -29,6 +29,6 @@ import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 @SpringBootConfiguration
 @EnableAutoConfiguration
 @ImportAutoConfiguration({CoreErrorAutoConfiguration.class, WebErrorAutoConfiguration.class})
-public class WebMvcTestConfiguration {
+public class ObjectStorageITWebMvcConfig {
   // 空配置类，仅提供 @SpringBootConfiguration 标记
 }

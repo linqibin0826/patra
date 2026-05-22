@@ -11,7 +11,7 @@ import dev.linqibin.patra.catalog.domain.model.vo.mesh.IndexingInfo;
 import dev.linqibin.patra.catalog.domain.model.vo.mesh.MeshUI;
 import dev.linqibin.patra.catalog.domain.model.vo.mesh.PharmacologicalAction;
 import dev.linqibin.patra.catalog.domain.model.vo.mesh.ScrSource;
-import dev.linqibin.patra.catalog.infra.config.CatalogPostgreSQLContainerInitializer;
+import dev.linqibin.patra.catalog.infra.config.CatalogITPostgreSQLContainerInitializer;
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshConceptDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshScrDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshScrHeadingMappedToDao;
@@ -48,7 +48,7 @@ import org.springframework.test.context.ContextConfiguration;
 /// @author linqibin
 /// @since 0.1.0
 @DataJpaTest
-@ContextConfiguration(initializers = CatalogPostgreSQLContainerInitializer.class)
+@ContextConfiguration(initializers = CatalogITPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({MeshScrRepositoryAdapter.class, JpaAuditingConfig.class, JacksonAutoConfiguration.class})
 @ComponentScan(basePackages = "dev.linqibin.patra.catalog.infra.persistence.converter")

@@ -33,7 +33,7 @@ import tools.jackson.databind.json.JsonMapper;
 /// - 使用 Mock 的 FileDownloadPort 模拟文件下载
 /// - 使用 @TempDir 创建临时 JSON Lines 文件模拟下载结果
 /// - 使用真实的 PubMedComputedAuthorParser 验证端到端解析逻辑
-/// - 使用 PubMedComputedAuthorTestDataGenerator 生成测试数据
+/// - 使用 PubMedAuthorFixture 生成测试数据
 /// - 验证断点续传（ExecutionContext 保存/恢复）
 /// - 验证 maxRecords 限制功能
 /// - 验证临时文件正确删除
@@ -74,7 +74,7 @@ class AuthorItemReaderTest {
   /// @return FileDownloadResult
   private FileDownloadResult createTestDataFileResult(int count) throws Exception {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    PubMedComputedAuthorTestDataGenerator.generate(count, baos);
+    PubMedAuthorFixture.generate(count, baos);
     Path tempFile = tempDir.resolve("test-authors.jsonl");
     Files.write(tempFile, baos.toByteArray());
     return FileDownloadResult.of(tempFile, Files.size(tempFile));
@@ -320,7 +320,7 @@ class AuthorItemReaderTest {
       // Given
       Path tempFile = tempDir.resolve("test-close.jsonl");
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      PubMedComputedAuthorTestDataGenerator.generate(2, baos);
+      PubMedAuthorFixture.generate(2, baos);
       Files.write(tempFile, baos.toByteArray());
       FileDownloadResult downloadResult = FileDownloadResult.of(tempFile, Files.size(tempFile));
 

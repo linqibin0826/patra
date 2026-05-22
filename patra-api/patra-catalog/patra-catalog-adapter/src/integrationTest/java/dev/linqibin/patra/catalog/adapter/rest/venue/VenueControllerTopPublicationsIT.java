@@ -5,7 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import dev.linqibin.patra.catalog.adapter.config.TestConfiguration;
+import dev.linqibin.patra.catalog.adapter.config.CatalogAdapterITWebMvcConfig;
 import dev.linqibin.patra.catalog.app.usecase.publication.query.PublicationQueryService;
 import dev.linqibin.patra.catalog.app.usecase.publication.query.dto.TopPublicationsQuery;
 import dev.linqibin.patra.catalog.app.usecase.venue.query.VenueQueryService;
@@ -34,7 +34,7 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 /// - `limit > 20` 触发 Bean Validation 返回 400
 /// - 响应字段与 `TopPublicationItemResponse` 结构一致
 @WebMvcTest(controllers = VenueController.class)
-@ContextConfiguration(classes = TestConfiguration.class)
+@ContextConfiguration(classes = CatalogAdapterITWebMvcConfig.class)
 @Import(VenueController.class)
 @AutoConfigureRestTestClient
 @DisplayName("VenueController#listTopPublicationsByVenue 切片测试")

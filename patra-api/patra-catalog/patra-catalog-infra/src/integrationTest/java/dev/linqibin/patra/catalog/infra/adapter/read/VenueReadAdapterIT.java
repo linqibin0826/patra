@@ -8,7 +8,7 @@ import dev.linqibin.patra.catalog.domain.model.read.venue.VenueFilter;
 import dev.linqibin.patra.catalog.domain.model.read.venue.VenueSummaryReadModel;
 import dev.linqibin.patra.catalog.domain.model.vo.venue.CitationMetrics;
 import dev.linqibin.patra.catalog.domain.model.vo.venue.OpenAccessInfo;
-import dev.linqibin.patra.catalog.infra.config.CatalogPostgreSQLContainerInitializer;
+import dev.linqibin.patra.catalog.infra.config.CatalogITPostgreSQLContainerInitializer;
 import dev.linqibin.patra.catalog.infra.persistence.dao.VenueDao;
 import dev.linqibin.patra.catalog.infra.persistence.entity.VenueEntity;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
@@ -34,7 +34,7 @@ import org.springframework.test.context.ContextConfiguration;
 /// - 各筛选条件独立生效（keyword 前缀匹配、countryCode/issnL/nlmId 精确匹配）
 /// - 分页元信息与排序规则
 @DataJpaTest
-@ContextConfiguration(initializers = CatalogPostgreSQLContainerInitializer.class)
+@ContextConfiguration(initializers = CatalogITPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
   VenueReadAdapter.class,

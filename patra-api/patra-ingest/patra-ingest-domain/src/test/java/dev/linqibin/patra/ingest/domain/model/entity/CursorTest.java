@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test;
 /// 测试策略：
 ///
 /// - 纯 Java 单元测试，不依赖 Spring 容器
-///   - 使用 TestDataBuilder 模式构建测试数据
+///   - 使用 Fixture 模式构建测试数据
 ///   - 遵循 Given-When-Then 结构
 ///   - 使用 AssertJ 流畅断言
 ///
@@ -344,7 +344,7 @@ class CursorTest {
     @DisplayName("应该成功前进游标值")
     void shouldAdvanceCursorValue() {
       // Given
-      Cursor cursor = CursorTestDataBuilder.aTimeCursor().build();
+      Cursor cursor = CursorFixture.aTimeCursor().build();
       Instant newWatermark = Instant.parse("2024-02-01T00:00:00Z");
       CursorValue newValue = CursorValue.time(newWatermark);
 
@@ -360,7 +360,7 @@ class CursorTest {
     @DisplayName("应该更新水位线当提供新水位线")
     void shouldUpdateWatermarkWhenProvided() {
       // Given
-      Cursor cursor = CursorTestDataBuilder.aTimeCursor().build();
+      Cursor cursor = CursorFixture.aTimeCursor().build();
       Instant newWatermark = Instant.parse("2024-02-01T00:00:00Z");
       CursorValue newValue = CursorValue.time(newWatermark);
       CursorWatermark newWatermarkVO =
@@ -378,7 +378,7 @@ class CursorTest {
     void shouldKeepOriginalWatermarkWhenNewIsNull() {
       // Given
       Instant originalWatermark = Instant.parse("2024-01-01T00:00:00Z");
-      Cursor cursor = CursorTestDataBuilder.aTimeCursor().watermark(originalWatermark).build();
+      Cursor cursor = CursorFixture.aTimeCursor().watermark(originalWatermark).build();
       CursorWatermark originalWatermarkVO = cursor.getWatermark();
 
       Instant newWatermark = Instant.parse("2024-02-01T00:00:00Z");
@@ -395,7 +395,7 @@ class CursorTest {
     @DisplayName("应该更新血缘当提供新血缘")
     void shouldUpdateLineageWhenProvided() {
       // Given
-      Cursor cursor = CursorTestDataBuilder.aTimeCursor().build();
+      Cursor cursor = CursorFixture.aTimeCursor().build();
       CursorLineage newLineage = new CursorLineage(9001L, 9002L, 9003L, 9004L, 9005L, 9006L);
       CursorValue newValue = CursorValue.time(Instant.parse("2024-02-01T00:00:00Z"));
 
@@ -411,7 +411,7 @@ class CursorTest {
     void shouldKeepOriginalLineageWhenNewIsNull() {
       // Given
       CursorLineage originalLineage = new CursorLineage(1001L, 2001L, 3001L, 4001L, 5001L, 6001L);
-      Cursor cursor = CursorTestDataBuilder.aTimeCursor().lineage(originalLineage).build();
+      Cursor cursor = CursorFixture.aTimeCursor().lineage(originalLineage).build();
       CursorValue newValue = CursorValue.time(Instant.parse("2024-02-01T00:00:00Z"));
 
       // When - 不提供新血缘
@@ -425,7 +425,7 @@ class CursorTest {
     @DisplayName("应该更新表达式哈希当提供新哈希")
     void shouldUpdateExprHashWhenProvided() {
       // Given
-      Cursor cursor = CursorTestDataBuilder.aTimeCursor().exprHash("old-hash").build();
+      Cursor cursor = CursorFixture.aTimeCursor().exprHash("old-hash").build();
       String newExprHash = "new-hash-67890";
       CursorValue newValue = CursorValue.time(Instant.parse("2024-02-01T00:00:00Z"));
 
@@ -441,7 +441,7 @@ class CursorTest {
     void shouldKeepOriginalHashWhenNewIsNull() {
       // Given
       String originalHash = "original-hash-12345";
-      Cursor cursor = CursorTestDataBuilder.aTimeCursor().exprHash(originalHash).build();
+      Cursor cursor = CursorFixture.aTimeCursor().exprHash(originalHash).build();
       CursorValue newValue = CursorValue.time(Instant.parse("2024-02-01T00:00:00Z"));
 
       // When - 不提供新哈希
@@ -456,7 +456,7 @@ class CursorTest {
     void shouldKeepOriginalHashWhenNewIsBlank() {
       // Given
       String originalHash = "original-hash-12345";
-      Cursor cursor = CursorTestDataBuilder.aTimeCursor().exprHash(originalHash).build();
+      Cursor cursor = CursorFixture.aTimeCursor().exprHash(originalHash).build();
       CursorValue newValue = CursorValue.time(Instant.parse("2024-02-01T00:00:00Z"));
 
       // When - 提供空哈希
@@ -470,7 +470,7 @@ class CursorTest {
     @DisplayName("应该抛出异常当新游标值为 null")
     void shouldThrowExceptionWhenNewValueIsNull() {
       // Given
-      Cursor cursor = CursorTestDataBuilder.aTimeCursor().build();
+      Cursor cursor = CursorFixture.aTimeCursor().build();
 
       // When & Then
       assertThatThrownBy(() -> cursor.advance(null, null, null, null))
@@ -488,7 +488,7 @@ class CursorTest {
     void shouldAdvanceToNewTimeWatermark() {
       // Given
       Instant originalWatermark = Instant.parse("2024-01-01T00:00:00Z");
-      Cursor cursor = CursorTestDataBuilder.aTimeCursor().watermark(originalWatermark).build();
+      Cursor cursor = CursorFixture.aTimeCursor().watermark(originalWatermark).build();
 
       // When
       Instant newWatermark = Instant.parse("2024-02-01T00:00:00Z");
@@ -504,7 +504,7 @@ class CursorTest {
     void shouldAllowAdvancingToSameTimeWatermark() {
       // Given
       Instant watermark = Instant.parse("2024-01-01T00:00:00Z");
-      Cursor cursor = CursorTestDataBuilder.aTimeCursor().watermark(watermark).build();
+      Cursor cursor = CursorFixture.aTimeCursor().watermark(watermark).build();
 
       // When & Then - 前进到相同水位线应该成功
       assertThatNoException().isThrownBy(() -> cursor.advanceTo(watermark));
@@ -516,7 +516,7 @@ class CursorTest {
     void shouldThrowExceptionWhenMovingWatermarkBackwards() {
       // Given
       Instant currentWatermark = Instant.parse("2024-02-01T00:00:00Z");
-      Cursor cursor = CursorTestDataBuilder.aTimeCursor().watermark(currentWatermark).build();
+      Cursor cursor = CursorFixture.aTimeCursor().watermark(currentWatermark).build();
 
       // When & Then - 尝试回退水位线应该失败
       Instant olderWatermark = Instant.parse("2024-01-01T00:00:00Z");
@@ -531,7 +531,7 @@ class CursorTest {
     @DisplayName("应该抛出异常当新水位线为 null")
     void shouldThrowExceptionWhenNewWatermarkIsNull() {
       // Given
-      Cursor cursor = CursorTestDataBuilder.aTimeCursor().build();
+      Cursor cursor = CursorFixture.aTimeCursor().build();
 
       // When & Then
       assertThatThrownBy(() -> cursor.advanceTo((Instant) null))
@@ -543,7 +543,7 @@ class CursorTest {
     @DisplayName("应该成功前进首次使用的空游标")
     void shouldAdvanceEmptyCursorForFirstTime() {
       // Given - 空水位线的游标
-      Cursor cursor = CursorTestDataBuilder.aTimeCursor().watermark((Instant) null).buildRestored();
+      Cursor cursor = CursorFixture.aTimeCursor().watermark((Instant) null).buildRestored();
 
       // When - 首次前进
       Instant firstWatermark = Instant.parse("2024-01-01T00:00:00Z");
@@ -565,10 +565,7 @@ class CursorTest {
       Instant originalWatermark = Instant.parse("2024-01-01T00:00:00Z");
       CursorLineage originalLineage = new CursorLineage(1001L, 2001L, 3001L, 4001L, 5001L, 6001L);
       Cursor cursor =
-          CursorTestDataBuilder.aTimeCursor()
-              .watermark(originalWatermark)
-              .lineage(originalLineage)
-              .build();
+          CursorFixture.aTimeCursor().watermark(originalWatermark).lineage(originalLineage).build();
 
       // When
       Instant newWatermark = Instant.parse("2024-02-01T00:00:00Z");
@@ -586,7 +583,7 @@ class CursorTest {
       // Given
       CursorLineage originalLineage = new CursorLineage(1001L, 2001L, 3001L, 4001L, 5001L, 6001L);
       Cursor cursor =
-          CursorTestDataBuilder.aTimeCursor()
+          CursorFixture.aTimeCursor()
               .watermark(Instant.parse("2024-01-01T00:00:00Z"))
               .lineage(originalLineage)
               .build();
@@ -609,7 +606,7 @@ class CursorTest {
       // Given
       String exprHash = "expr-hash-12345";
       Cursor cursor =
-          CursorTestDataBuilder.aTimeCursor()
+          CursorFixture.aTimeCursor()
               .watermark(Instant.parse("2024-01-01T00:00:00Z"))
               .exprHash(exprHash)
               .build();
@@ -629,7 +626,7 @@ class CursorTest {
     void shouldReturnExpressionChangedWhenHashMismatch() {
       // Given
       Cursor cursor =
-          CursorTestDataBuilder.aTimeCursor()
+          CursorFixture.aTimeCursor()
               .watermark(Instant.parse("2024-01-01T00:00:00Z"))
               .exprHash("old-hash")
               .build();
@@ -654,7 +651,7 @@ class CursorTest {
     void shouldReturnSuccessWhenBothHashesAreNull() {
       // Given - 无表达式哈希的游标
       Cursor cursor =
-          CursorTestDataBuilder.aTimeCursor()
+          CursorFixture.aTimeCursor()
               .watermark(Instant.parse("2024-01-01T00:00:00Z"))
               .exprHash(null)
               .build();
@@ -672,7 +669,7 @@ class CursorTest {
     void shouldReturnExpressionChangedWhenOldHashIsNullAndNewIsNot() {
       // Given
       Cursor cursor =
-          CursorTestDataBuilder.aTimeCursor()
+          CursorFixture.aTimeCursor()
               .watermark(Instant.parse("2024-01-01T00:00:00Z"))
               .exprHash(null)
               .build();
@@ -690,7 +687,7 @@ class CursorTest {
     void shouldReturnExpressionChangedWhenOldHashIsNotNullAndNewIsNull() {
       // Given
       Cursor cursor =
-          CursorTestDataBuilder.aTimeCursor()
+          CursorFixture.aTimeCursor()
               .watermark(Instant.parse("2024-01-01T00:00:00Z"))
               .exprHash("old-hash")
               .build();
@@ -709,7 +706,7 @@ class CursorTest {
       // Given
       String exprHash = "expr-hash-12345";
       Cursor cursor =
-          CursorTestDataBuilder.aTimeCursor()
+          CursorFixture.aTimeCursor()
               .watermark(Instant.parse("2024-01-01T00:00:00Z"))
               .exprHash(exprHash)
               .build();
@@ -728,7 +725,7 @@ class CursorTest {
     void shouldUpdateLineageWhenProvidedAndAdvancementSucceeds() {
       // Given
       Cursor cursor =
-          CursorTestDataBuilder.aTimeCursor()
+          CursorFixture.aTimeCursor()
               .watermark(Instant.parse("2024-01-01T00:00:00Z"))
               .exprHash("hash")
               .build();
@@ -747,7 +744,7 @@ class CursorTest {
     @DisplayName("应该抛出异常当新水位线为 null（即使表达式哈希匹配）")
     void shouldThrowExceptionWhenNewWatermarkIsNullEvenIfHashMatches() {
       // Given
-      Cursor cursor = CursorTestDataBuilder.aTimeCursor().exprHash("hash").build();
+      Cursor cursor = CursorFixture.aTimeCursor().exprHash("hash").build();
 
       // When & Then
       assertThatThrownBy(() -> cursor.advanceTo(null, null, "hash"))
@@ -760,7 +757,7 @@ class CursorTest {
     void shouldValidateWatermarkMonotonicityBeforeCheckingHash() {
       // Given
       Cursor cursor =
-          CursorTestDataBuilder.aTimeCursor()
+          CursorFixture.aTimeCursor()
               .watermark(Instant.parse("2024-02-01T00:00:00Z"))
               .exprHash("hash")
               .build();
@@ -784,7 +781,7 @@ class CursorTest {
     void shouldReturnTrueWhenExprHashMatches() {
       // Given
       String exprHash = "expr-hash-12345";
-      Cursor cursor = CursorTestDataBuilder.aTimeCursor().exprHash(exprHash).build();
+      Cursor cursor = CursorFixture.aTimeCursor().exprHash(exprHash).build();
 
       // When & Then
       assertThat(cursor.matchesExpression(exprHash)).isTrue();
@@ -794,7 +791,7 @@ class CursorTest {
     @DisplayName("应该返回 false 当表达式哈希不匹配")
     void shouldReturnFalseWhenExprHashDoesNotMatch() {
       // Given
-      Cursor cursor = CursorTestDataBuilder.aTimeCursor().exprHash("old-hash").build();
+      Cursor cursor = CursorFixture.aTimeCursor().exprHash("old-hash").build();
 
       // When & Then
       assertThat(cursor.matchesExpression("new-hash")).isFalse();
@@ -804,7 +801,7 @@ class CursorTest {
     @DisplayName("应该返回 true 当两个表达式哈希都为 null")
     void shouldReturnTrueWhenBothHashesAreNull() {
       // Given
-      Cursor cursor = CursorTestDataBuilder.aTimeCursor().exprHash(null).build();
+      Cursor cursor = CursorFixture.aTimeCursor().exprHash(null).build();
 
       // When & Then
       assertThat(cursor.matchesExpression(null)).isTrue();
@@ -814,7 +811,7 @@ class CursorTest {
     @DisplayName("应该返回 false 当当前哈希为 null 而比较哈希不为 null")
     void shouldReturnFalseWhenCurrentHashIsNullAndComparedIsNot() {
       // Given
-      Cursor cursor = CursorTestDataBuilder.aTimeCursor().exprHash(null).build();
+      Cursor cursor = CursorFixture.aTimeCursor().exprHash(null).build();
 
       // When & Then
       assertThat(cursor.matchesExpression("some-hash")).isFalse();
@@ -824,7 +821,7 @@ class CursorTest {
     @DisplayName("应该返回 false 当当前哈希不为 null 而比较哈希为 null")
     void shouldReturnFalseWhenCurrentHashIsNotNullAndComparedIsNull() {
       // Given
-      Cursor cursor = CursorTestDataBuilder.aTimeCursor().exprHash("some-hash").build();
+      Cursor cursor = CursorFixture.aTimeCursor().exprHash("some-hash").build();
 
       // When & Then
       assertThat(cursor.matchesExpression(null)).isFalse();
@@ -842,7 +839,7 @@ class CursorTest {
     void shouldUpdateObservedMaxValue() {
       // Given
       Instant originalWatermark = Instant.parse("2024-01-01T00:00:00Z");
-      Cursor cursor = CursorTestDataBuilder.aTimeCursor().watermark(originalWatermark).build();
+      Cursor cursor = CursorFixture.aTimeCursor().watermark(originalWatermark).build();
 
       // When
       String newObservedMax = "2024-01-15T12:30:45Z";
@@ -862,7 +859,7 @@ class CursorTest {
       Instant normalizedInstant = Instant.parse("2024-01-01T00:00:00Z");
       BigDecimal normalizedNumeric = new BigDecimal("12345");
       Cursor cursor =
-          CursorTestDataBuilder.aTimeCursor()
+          CursorFixture.aTimeCursor()
               .watermark(new CursorWatermark("original", normalizedInstant, normalizedNumeric))
               .buildRestored();
 
@@ -887,7 +884,7 @@ class CursorTest {
     void shouldReturnCurrentTimeWatermark() {
       // Given
       Instant watermark = Instant.parse("2024-01-01T00:00:00Z");
-      Cursor cursor = CursorTestDataBuilder.aTimeCursor().watermark(watermark).build();
+      Cursor cursor = CursorFixture.aTimeCursor().watermark(watermark).build();
 
       // When
       Instant currentWatermark = cursor.getCurrentWatermark();
@@ -900,7 +897,7 @@ class CursorTest {
     @DisplayName("应该返回 null 当水位线为空")
     void shouldReturnNullWhenWatermarkIsEmpty() {
       // Given
-      Cursor cursor = CursorTestDataBuilder.aTimeCursor().watermark((Instant) null).buildRestored();
+      Cursor cursor = CursorFixture.aTimeCursor().watermark((Instant) null).buildRestored();
 
       // When
       Instant currentWatermark = cursor.getCurrentWatermark();
@@ -1054,9 +1051,7 @@ class CursorTest {
     void shouldHandleRapidSuccessiveAdvancements() {
       // Given
       Cursor cursor =
-          CursorTestDataBuilder.aTimeCursor()
-              .watermark(Instant.parse("2024-01-01T00:00:00Z"))
-              .build();
+          CursorFixture.aTimeCursor().watermark(Instant.parse("2024-01-01T00:00:00Z")).build();
 
       // When - 连续 10 次前进
       for (int i = 1; i <= 10; i++) {
@@ -1133,7 +1128,7 @@ class CursorTest {
       String cursorKey = "publication_date";
 
       Cursor cursor =
-          CursorTestDataBuilder.aTimeCursor()
+          CursorFixture.aTimeCursor()
               .provenanceCode(provenanceCode)
               .operationCode(operationCode)
               .cursorKey(cursorKey)
@@ -1159,7 +1154,7 @@ class CursorTest {
     void shouldSupportCursorResetOnExpressionHashChange() {
       // Given - 现有游标带旧哈希
       Cursor cursor =
-          CursorTestDataBuilder.aTimeCursor()
+          CursorFixture.aTimeCursor()
               .watermark(Instant.parse("2024-06-01T00:00:00Z"))
               .exprHash("old-expr-hash")
               .build();
@@ -1178,7 +1173,7 @@ class CursorTest {
     void shouldHandleLineageIntegrity() {
       // Given
       CursorLineage lineage = new CursorLineage(1001L, 2001L, 3001L, 4001L, 5001L, 6001L);
-      Cursor cursor = CursorTestDataBuilder.aTimeCursor().lineage(lineage).build();
+      Cursor cursor = CursorFixture.aTimeCursor().lineage(lineage).build();
 
       // When & Then - 血缘应该完整保留
       assertThat(cursor.getLineage().scheduleInstanceId()).isEqualTo(1001L);
@@ -1190,12 +1185,12 @@ class CursorTest {
     }
   }
 
-  // ========== TestDataBuilder (辅助类) ==========
+  // ========== Fixture (辅助类) ==========
 
   /// Cursor 测试数据构建器。
   ///
   /// 遵循 Builder 模式，提供默认值以简化测试数据构建。
-  static class CursorTestDataBuilder {
+  static class CursorFixture {
     private Long id = null;
     private ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
     private String operationCode = "HARVEST";
@@ -1209,56 +1204,56 @@ class CursorTest {
     private CursorLineage lineage = CursorLineage.empty();
     private String exprHash = null;
 
-    public static CursorTestDataBuilder aTimeCursor() {
-      return new CursorTestDataBuilder();
+    public static CursorFixture aTimeCursor() {
+      return new CursorFixture();
     }
 
-    public CursorTestDataBuilder id(Long id) {
+    public CursorFixture id(Long id) {
       this.id = id;
       return this;
     }
 
-    public CursorTestDataBuilder provenanceCode(ProvenanceCode provenanceCode) {
+    public CursorFixture provenanceCode(ProvenanceCode provenanceCode) {
       this.provenanceCode = provenanceCode;
       return this;
     }
 
-    public CursorTestDataBuilder provenanceCode(String provenanceCode) {
+    public CursorFixture provenanceCode(String provenanceCode) {
       this.provenanceCode = ProvenanceCode.parse(provenanceCode);
       return this;
     }
 
-    public CursorTestDataBuilder operationCode(String operationCode) {
+    public CursorFixture operationCode(String operationCode) {
       this.operationCode = operationCode;
       return this;
     }
 
-    public CursorTestDataBuilder cursorKey(String cursorKey) {
+    public CursorFixture cursorKey(String cursorKey) {
       this.cursorKey = cursorKey;
       return this;
     }
 
-    public CursorTestDataBuilder namespaceScope(NamespaceScope namespaceScope) {
+    public CursorFixture namespaceScope(NamespaceScope namespaceScope) {
       this.namespaceScope = namespaceScope;
       return this;
     }
 
-    public CursorTestDataBuilder namespaceKey(String namespaceKey) {
+    public CursorFixture namespaceKey(String namespaceKey) {
       this.namespaceKey = namespaceKey;
       return this;
     }
 
-    public CursorTestDataBuilder cursorType(CursorType cursorType) {
+    public CursorFixture cursorType(CursorType cursorType) {
       this.cursorType = cursorType;
       return this;
     }
 
-    public CursorTestDataBuilder value(CursorValue value) {
+    public CursorFixture value(CursorValue value) {
       this.value = value;
       return this;
     }
 
-    public CursorTestDataBuilder watermark(Instant watermark) {
+    public CursorFixture watermark(Instant watermark) {
       if (watermark == null) {
         this.watermark = CursorWatermark.empty();
         this.value = CursorValue.empty();
@@ -1269,17 +1264,17 @@ class CursorTest {
       return this;
     }
 
-    public CursorTestDataBuilder watermark(CursorWatermark watermark) {
+    public CursorFixture watermark(CursorWatermark watermark) {
       this.watermark = watermark;
       return this;
     }
 
-    public CursorTestDataBuilder lineage(CursorLineage lineage) {
+    public CursorFixture lineage(CursorLineage lineage) {
       this.lineage = lineage;
       return this;
     }
 
-    public CursorTestDataBuilder exprHash(String exprHash) {
+    public CursorFixture exprHash(String exprHash) {
       this.exprHash = exprHash;
       return this;
     }

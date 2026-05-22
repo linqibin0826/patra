@@ -1,4 +1,4 @@
-package dev.linqibin.patra.ingest.infra;
+package dev.linqibin.patra.catalog.infra;
 
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -10,4 +10,4 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 /// @author linqibin
 /// @since 0.1.0
 @SpringBootApplication
-class TestApplication {}
+class CatalogITBootstrap {}
