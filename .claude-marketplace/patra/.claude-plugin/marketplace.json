@@ -1,6 +1,6 @@
 {
   "name": "patra-local",
-  "description": "Patra 项目内置 marketplace，承载 patra plugin 全套能力",
+  "description": "Patra 项目内置 marketplace，承载 patra（通用方法论）与 patra-backend（patra-api 专属）两个 plugin",
   "owner": {
     "name": "linqibin0826",
     "url": "https://github.com/linqibin0826"
@@ -8,9 +8,19 @@
   "plugins": [
     {
       "name": "patra",
-      "description": "Patra 项目专属能力 plugin：13 个方法论 skills，基于 jnMetaCode/superpowers-zh fork 精简并按 patra-api 六边形架构 + Java/Gradle 技术栈深度定制。",
+      "description": "Patra 项目专属能力 plugin：15 个 skills（含 release-planning / create-issue），基于 jnMetaCode/superpowers-zh fork 精简并按 patra-api 六边形架构 + Java/Gradle 技术栈深度定制。",
       "version": "0.1.0",
       "source": "./",
+      "author": {
+        "name": "linqibin0826",
+        "url": "https://github.com/linqibin0826"
+      }
+    },
+    {
+      "name": "patra-backend",
+      "description": "Patra 后端（patra-api / Java 25 / Spring Boot 4）专属 skills：六边形架构 + DDD 编排、JPA 数据层、领域事件 + Outbox、异常排查。",
+      "version": "0.1.0",
+      "source": "./patra-backend",
       "author": {
         "name": "linqibin0826",
         "url": "https://github.com/linqibin0826"

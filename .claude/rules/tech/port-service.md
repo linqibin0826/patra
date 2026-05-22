@@ -42,4 +42,4 @@
 3. 禁止 QueryService 定义接口（CQRS 读端不需要抽象）
 4. 禁止在 Domain 层定义接口但在 Domain 层实现
 
-> 详细说明、依赖方向图、注入方式和目录结构示例见 `patra-hexagonal` 技能的 [port-service-guide.md](../../skills/patra-hexagonal/resources/port-service-guide.md)
+> 详细说明、依赖方向图、注入方式和目录结构示例见 `patra-backend:patra-hexagonal` skill 内的 `resources/port-service-guide.md`

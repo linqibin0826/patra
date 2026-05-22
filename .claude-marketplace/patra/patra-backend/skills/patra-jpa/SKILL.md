@@ -14,7 +14,7 @@ allowed-tools: Read, Edit, Write, Grep, Glob, Bash
 
 在 Patra 的 infra 层实现数据持久化时，按此指南创建和组织 JPA 相关组件。
 
-基本约束（基类选择、命名规范）已在 `rules/tech/jpa.md` 中自动加载，本技能聚焦于**实操模板和决策指导**。
+基本约束（基类选择、命名规范）已在 `.claude/rules/tech/jpa.md` 中自动加载，本技能聚焦于**实操模板和决策指导**。
 
 ## 四步创建流程
 

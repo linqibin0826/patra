@@ -1,0 +1,21 @@
+{
+  "name": "patra-backend",
+  "description": "Patra 后端（patra-api / Java 25 / Spring Boot 4）专属 skills：六边形架构 + DDD 编排（patra-hexagonal）、JPA 数据层模式（patra-jpa）、领域事件 + Outbox（patra-events）、异常堆栈与日志排查（patra-troubleshooter）。",
+  "version": "0.1.0",
+  "author": {
+    "name": "linqibin0826",
+    "url": "https://github.com/linqibin0826"
+  },
+  "homepage": "https://github.com/linqibin0826/patra-api",
+  "license": "MIT",
+  "keywords": [
+    "patra",
+    "backend",
+    "java",
+    "spring-boot",
+    "hexagonal",
+    "ddd",
+    "jpa",
+    "outbox"
+  ]
+}
