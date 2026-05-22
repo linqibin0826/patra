@@ -28,7 +28,7 @@
           <li data-task-status="done"><a href="#task-6">Task 6 — CI workflow 改造</a></li>
           <li data-task-status="done"><a href="#task-7">Task 7 — 全量验证 10 条 Done 判定</a></li>
           <li data-task-status="done"><a href="#task-8">Task 8 — release-spec 缩进描述同步</a></li>
-          <li data-task-status="pending"><a href="#task-9">Task 9 — 交接 finishing-a-development-branch</a></li>
+          <li data-task-status="done"><a href="#task-9">Task 9 — 交接 finishing-a-development-branch</a></li>
         </ol>
       </li>
       <li><a href="#self-check">自检结果</a></li>
@@ -674,7 +674,7 @@ git commit -m "docs(release-spec): PAP-13 缩进对齐 .editorconfig 2 空格
         </ol>
       </article>
 
-      <article class="task" id="task-9" data-status="pending">
+      <article class="task" id="task-9" data-status="done">
         <header>
           <h2>Task 9：交接 finishing-a-development-branch</h2>
           <dl class="files">
@@ -683,13 +683,13 @@ git commit -m "docs(release-spec): PAP-13 缩进对齐 .editorconfig 2 空格
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 9.1：调用 finishing-a-development-branch 技能</strong>
             <p>本 plan 范围结束于本地全部 commit 完成 + Done 判定本地通过。后续 PR 流程交给 <code>patra:finishing-a-development-branch</code> 技能引导（rebase / push / 开 PR / fill PR body）。</p>
             <p>触发：本会话内调用 <code>Skill</code> 工具，<code>skill="patra:finishing-a-development-branch"</code>，args 简述 "PAP-12 + PAP-13 合并 scope，9 task 全部 done，请引导 PR 流程"。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 9.2：PR merge 之后人工同步 Linear（由用户做）</strong>
             <p>本步骤本地无操作，仅作 plan 留痕。PR merge 后用户在 Linear 控制台操作：</p>
             <ul>
