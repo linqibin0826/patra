@@ -14,6 +14,7 @@
 plugins {
     java
     jacoco
+    `java-test-fixtures`
     id("linqibin.spotless")
     id("linqibin.spotbugs")
     id("io.spring.dependency-management")

@@ -20,7 +20,7 @@
       <li><a href="#file-structure">文件结构</a></li>
       <li><a href="#tasks">任务列表</a>
         <ol class="toc-tasks">
-          <li data-task-status="pending"><a href="#task-1">Task 1 — 启用 java-test-fixtures plugin（build-logic）</a></li>
+          <li data-task-status="done"><a href="#task-1">Task 1 — 启用 java-test-fixtures plugin（build-logic）</a></li>
           <li data-task-status="pending"><a href="#task-2">Task 2 — 迁移 PubMedAuthorFixture 至 testFixtures（catalog-infra）</a></li>
           <li data-task-status="pending"><a href="#task-3">Task 3 — 迁移 FileMetadataFixture 至 testFixtures + 替换 testArtifacts hack（object-storage）</a></li>
           <li data-task-status="pending"><a href="#task-4">Task 4 — 删除 build-logic sourceSets 链式 output hack</a></li>
@@ -158,7 +158,7 @@ patra-api/.claude/
     <section id="tasks">
       <h2>任务列表</h2>
 
-      <article class="task" id="task-1" data-status="pending">
+      <article class="task" id="task-1" data-status="done">
         <header>
           <h2>Task 1 — 启用 java-test-fixtures plugin（build-logic）</h2>
           <dl class="files">
@@ -167,7 +167,7 @@ patra-api/.claude/
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：</strong>在 <code>plugins { }</code> 块中追加 <code>id("java-test-fixtures")</code>。文件顶部的 plugins 块原本含 <code>id("java")</code> / <code>jacoco</code> / 等，找到合适位置追加：
             <pre><code class="lang-kotlin">plugins {
     java
@@ -176,7 +176,7 @@ patra-api/.claude/
 }</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：</strong>不要在三个 JVM Test Suite 的 dependencies 块中显式加 <code>implementation(testFixtures(project()))</code>。Gradle 自 7.6+ 默认让 <code>test</code> source set 自动继承 testFixtures，<code>integrationTest</code> / <code>e2eTest</code> 由 PAP-10 设的 <code>integrationTestImplementation.extendsFrom(testImplementation)</code> 配置层继承自动获得。<strong>不动 dependencies 块</strong>，跳到下一步。
           </li>
 
@@ -187,13 +187,13 @@ patra-api/.claude/
             <p>预期：BUILD SUCCESSFUL，无 <code>compileTestFixturesJava</code> 失败（此时各模块均无 <code>src/testFixtures/</code> 目录，对应 task 应直接 NO-SOURCE 跳过）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：</strong>验证 testFixtures source set 已在所有模块注册：
             <pre><code class="lang-bash">./gradlew :patra-ingest:patra-ingest-domain:sourceSets --no-daemon | grep -A2 testFixtures</code></pre>
             <p>预期：输出含 <code>Test fixtures source set 'testFixtures'</code>。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：Commit</strong>
             <pre><code class="lang-bash">git add build-logic/src/main/kotlin/linqibin.java-base.gradle.kts
 git commit -m "build(gradle): 启用 java-test-fixtures plugin (PAP-19 AC2 step 1)"</code></pre>
@@ -821,16 +821,30 @@ git push</code></pre>
     </header>
 
     <ol class="notes-log">
+      <li class="note" data-type="other" data-time="2026-05-22T17:00">
+        <header>
+          <span class="note-type">OTHER</span>
+          <time datetime="2026-05-22T17:00">05-22 17:00</time>
+          <a href="#tasks">§ 所有 Task</a>
+        </header>
+        <p>路径事实修正：spec / plan 里写的 <code>patra-catalog/</code>、<code>patra-ingest/</code>、<code>patra-registry/</code>、<code>patra-object-storage/</code>、<code>linqibin-spring-boot-starter-batch/</code> 实际位于 monorepo 重组后的 <code>patra-api/</code> 子目录下（commit f99990e4e 重组）。执行时所有路径前置 <code>patra-api/</code>。例：<code>patra-api/patra-catalog/patra-catalog-infra/src/integrationTest/...</code>。</p>
+      </li>
+      <li class="note" data-type="change" data-time="2026-05-22T17:00">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-22T17:00">05-22 17:00</time>
+          <a href="#tasks">§ 所有 rename Task (T2/T3/T5/T6/T7/T8/T9)</a>
+        </header>
+        <p>Plan 假设用 IntelliJ IDEA Refactor → Rename。实际执行环境是 Claude Code agent，无 IDE 可用。Serena Java LSP 因 worktree 不在主 Gradle project root 内、无法索引，rename_symbol 工具不可用。替代策略：grep 找所有引用位置 → 用 perl word-boundary 批量替换（仅类名 token，跳过 javadoc / String 字面值的字符串）→ git mv 改文件名 → 用 Edit 工具逐文件验证 → 跑 gradle compile* 验证编译通过。每个 rename task 多 1-2 步骤，但精度可控。</p>
+      </li>
     </ol>
-
-    <p class="empty-state">no notes yet</p>
 
     <footer class="notes-stats">
       总计:
       <span data-counter="decision">0</span> decisions /
-      <span data-counter="change">0</span> changes /
+      <span data-counter="change">1</span> changes /
       <span data-counter="tradeoff">0</span> tradeoffs /
-      <span data-counter="other">0</span> others
+      <span data-counter="other">1</span> others
     </footer>
   </aside>
 
