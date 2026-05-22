@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 工程线 Issue（PAP-*）请到 Linear
+    url: https://linear.app/papertrace/team/PAP/active
+    about: 版本规划派生的工程 Issue 走 Linear；GitHub Issue 仅用于 bug / feature / idea 日常流水快记。
