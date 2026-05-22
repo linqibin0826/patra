@@ -14,8 +14,6 @@ reviews:
   auto_review:
     enabled: true
     drafts: false
-    base_branches:
-      - main
   path_filters:
     - "!**/build/**"
     - "!**/.gradle/**"
@@ -35,19 +33,31 @@ reviews:
     - "!**/*.min.css"
     - "!**/CHANGELOG.md"
   path_instructions:
-    - path: "patra-api/**/*.java"
+    # 按 patra-<service>-<layer> 模块名分层下达 prompt，避免把分层约束误用到不相干的层
+    - path: "**/patra-*-domain/**/*.java"
       instructions: |
-        后端遵循六边形 + DDD：domain 层禁止依赖框架/JPA/Spring；
-        application 层为用例编排；adapter 层连接外部。
-        指出违反分层的导入、贫血域模型、未受测试覆盖的领域逻辑。
+        DDD domain 层：禁止依赖 Spring / JPA / MyBatis / 任何持久化或 Web 框架。
+        关注充血模型、不变量、领域事件；指出贫血实体、跨聚合直接引用、把基础设施类型暴露到 domain。
+    - path: "**/patra-*-app/**/*.java"
+      instructions: |
+        Application 层：用例编排与事务边界，不放业务规则。
+        指出把领域逻辑下沉到 Service、把持久化细节上浮到用例、缺失事务划定。
+    - path: "**/patra-*-adapter/**/*.java"
+      instructions: |
+        Adapter 层：HTTP / MQ / 外部 API 等驱动适配器。
+        指出 DTO ↔ 领域模型的双向耦合、把领域类型暴露到对外契约、缺失输入校验。
+    - path: "**/patra-*-infra/**/*.java"
+      instructions: |
+        Infrastructure 层：持久化、消息、外部集成实现。
+        指出未实现 domain 端口的实体直接外泄、N+1、连接/事务/资源未释放。
     - path: "patra-portal/**/*.{ts,tsx}"
       instructions: |
         Next.js 15 / React 19 / TypeScript strict / Tailwind v4 / shadcn/ui。
         指出 any、未处理的 Promise、客户端组件中泄漏的 Server Action，
         以及未跟随 shadcn/ui 约定的样式。
-    - path: "**/*.{sql,xml}"
+    - path: "**/db/migration/**/*.sql"
       instructions: |
-        MyBatis / DB schema 改动：检查索引、字段命名、可空性、迁移可逆性。
+        Flyway 迁移：检查索引、字段命名、可空性、默认值、迁移可逆性，避免破坏性 DDL。
 
 chat:
   auto_reply: true
