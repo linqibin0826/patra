@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>v0.4 Portal Foundation 实现设计 — 6 个 FE Issue 单 PR 合并落地</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles/journal.css">
+</head>
+<body>
+<div class="layout">
+
+  <nav class="toc">
+    <h3>目录</h3>
+    <ol>
+      <li><a href="#background">背景与现状</a></li>
+      <li><a href="#scope">范围边界</a></li>
+      <li><a href="#architecture">架构层级与目录</a></li>
+      <li><a href="#commits">Commit 切片与 Subagent fan-out</a></li>
+      <li><a href="#data">Mock 数据与类型定义</a></li>
+      <li><a href="#responsive">响应式断点策略</a></li>
+      <li><a href="#theme">shadcn 主题覆盖与 globals.css</a></li>
+      <li><a href="#tests">测试矩阵与 CI 改动</a></li>
+      <li><a href="#decisions">关键决策与备选</a></li>
+      <li><a href="#risks">风险与缓解</a></li>
+      <li><a href="#changes">改造文件清单</a></li>
+    </ol>
+  </nav>
+
+  <main class="content">
+
+    <header class="doc-header">
+      <h1>v0.4 Portal Foundation 实现设计 — 6 个 FE Issue 单 PR 合并落地</h1>
+      <div class="meta-bar">
+        <span>📅 2026-05-23</span>
+        <span>🌿 feat/v0.4-portal-foundation</span>
+        <span>🎯 spec</span>
+        <span class="status-pill">draft</span>
+      </div>
+    </header>
+
+    <aside class="callout summary">
+      <span class="title">关键决策摘要</span>
+      <p>本 spec 覆盖 v0.4 Portal Foundation 剩余 6 个 FE Issue（<strong>PAP-28 / PAP-30 / PAP-31 / PAP-32 / PAP-33 / PAP-34</strong>）在<strong>一个 PR</strong>内合并落地的实现路径。核心决策：<strong>① Tailwind-first 样式策略</strong>（handoff 作为视觉真相，所有 CSS class 改写为 Tailwind utility，禁用 CSS Modules / inline style / @apply）；<strong>② 两份 handoff 拆分职责</strong>（design system zip = shadcn 主题覆盖 + 设计原则真相；portal handoff zip = 6 区块首页落地真相）；<strong>③ 按层拆 6 个 commit</strong>（tokens / mock / 组件 / 装配 / 响应式 / e2e），squash-merge 时压成 1 个；<strong>④ 关键节点 fan-out subagent</strong>（Stage 1 token+mock 并行；Stage 2 组件库按区块分 3 个 subagent；Stage 3 主对话亲自做 page 装配 / 响应式 / e2e）；<strong>⑤ 忠实 handoff fidelity</strong>，与 release-spec 文档冲突时以 handoff 为准（区块名 TopicCloud / Journals、mock 32 topic / 6 journal / 14 paper、响应式 4 档 880/720/640/1200）。</p>
+    </aside>
+
+    <section id="background">
+      <h2>1. 背景与现状</h2>
+
+      <h3>1.1 v0.4 Project 总览</h3>
+
+      <p><strong>Linear Project</strong>：<a href="https://linear.app/papertrace/project/v04-portal-foundation-fb49b56d6331">v0.4 Portal Foundation</a>（In Progress，2026-05-23 启动）。版本目标：让 patra-portal 长出第一张"医学文献门户首页"的脸——FE 工程基线 + 用 Claude Design 建立的 Patra design system + 基于该 system 的首页 hi-fi 设计稿，并落地到 patra-portal（占位 mock 数据）。</p>
+
+      <p><strong>Issue 池状态</strong>（9 个 Issue，PAP-26 ~ PAP-34）：</p>
+      <ul>
+        <li><span class="pill done">Done</span> <strong>PAP-26</strong> [Design] Claude Design 接入 + Patra design system 建立</li>
+        <li><span class="pill done">Done</span> <strong>PAP-27</strong> [FE] patra-portal CI workflow + main 分支保护 required check</li>
+        <li><span class="pill done">Done</span> <strong>PAP-29</strong> [Design] 首页 hi-fi 原型（桌面 + 移动 · 同源响应式）</li>
+        <li><span class="pill mid">待办</span> <strong>PAP-28</strong> [FE] Mock 数据层 + 类型定义</li>
+        <li><span class="pill mid">待办</span> <strong>PAP-30</strong> [FE] Design tokens → Tailwind v4 @theme + shadcn 主题覆盖</li>
+        <li><span class="pill mid">待办</span> <strong>PAP-31</strong> [FE] 公共组件库 + Vitest 单测</li>
+        <li><span class="pill mid">待办</span> <strong>PAP-32</strong> [FE] 首页 page 实现（src/app/page.tsx 装配 6 区块 + Composer toast）</li>
+        <li><span class="pill mid">待办</span> <strong>PAP-33</strong> [FE] 响应式布局：880 / 720 双断点 + 折叠规则</li>
+        <li><span class="pill mid">待办</span> <strong>PAP-34</strong> [FE] Playwright 接入 + 首页 e2e smoke test</li>
+      </ul>
+
+      <p>本 spec 仅覆盖<strong>剩余 6 个 FE Issue</strong>（PAP-28/30/31/32/33/34），且<strong>合并到同一个 PR</strong>。</p>
+
+      <h3>1.2 Design 资产现状</h3>
+
+      <p>两份 zip 快照已 commit 入 <code>docs/patra/design/snapshots/</code>：</p>
+
+      <ul>
+        <li><strong><code>2026-05-23-design-system.zip</code></strong>（PAP-26 产出）：Patra <strong>基础语言</strong>——<code>colors_and_type.css</code>（5 类完整 tokens：color / typography / spacing / radius / shadow / motion）+ <code>README.md</code>（voice / casing / iconography / 5 级 elevation / 5 种 card variant）+ <code>preview/comp-*.html</code>（6 套组件预览：button / input / card / chip-badge / menu-palette / table）+ brand assets（patra-mark / monogram / wordmark）。</li>
+        <li><strong><code>2026-05-23-homepage-hifi.zip</code></strong>（PAP-29 产出）：基于 design system <strong>落地首页</strong>——<code>app.jsx</code> + <code>components.jsx</code>（TopNav / Hero / TopicCloud / Journals / ExploreFeed / Footer 6 区块 React+Babel standalone 实现）+ <code>tokens.css</code>（与 design system 的 colors_and_type.css 逐行同源）+ <code>homepage.css</code> + 30 张 screenshots。</li>
+      </ul>
+
+      <h3>1.3 patra-portal 现状</h3>
+
+      <p><strong>已就绪的工程基线</strong>：Next.js 15.5.18 + React 19.2.6 + TypeScript 6.0.3 strict + Tailwind v4.3 + shadcn/ui + Biome 2.4.15 + Vitest 4.1.6 + Testing Library + pnpm + Husky/lint-staged。<code>portal-ci.yml</code> 已含 lint / typecheck / test / aggregator 4 个 job（PAP-27 完成产物）。</p>
+
+      <p><strong>当前 src 状态</strong>（v0.1.0 占位 landing）：</p>
+      <ul>
+        <li><code>src/app/page.tsx</code> 是单 h1 + 副标占位页（"patra-portal · v0.1.0"）</li>
+        <li><code>src/app/layout.tsx</code> 用 Geist 单字体（与 Patra serif/sans/mono 三族不符）</li>
+        <li><code>src/app/globals.css</code> 含 shadcn 默认 oklch 主题（中性灰，与 Patra warm paper 不符）+ <code>--color-brand: #4338ca</code>（紫色，无关）+ <code>.dark</code> 块（v0.4 不做暗色）</li>
+        <li><code>src/components/ui/</code> 只有 <code>button.tsx</code> 一个 shadcn 原语</li>
+        <li><code>src/components/portal/</code> <strong>不存在</strong>，需新建</li>
+        <li><code>src/types/</code> 只有 <code>globals.d.ts</code>，无 portal 业务类型</li>
+        <li><code>src/data/</code> <strong>不存在</strong>，需新建</li>
+        <li><code>src/styles/</code> <strong>不存在</strong>，需新建</li>
+        <li><code>src/lib/</code> 已有 <code>query-client.ts</code> + <code>utils.ts</code>（含 <code>cn()</code>）</li>
+        <li><code>src/providers/query-provider.tsx</code> 已有（TanStack Query）</li>
+        <li><code>tests/</code> 集中布局：<code>smoke.test.tsx</code> + <code>setup.test.ts</code> + <code>providers/query-provider.test.tsx</code>。<code>vitest.config.ts</code> 的 include glob 是 <code>tests/**/*.{test,spec}.{ts,tsx}</code></li>
+      </ul>
+
+      <h3>1.4 release-spec 与 handoff 的偏差</h3>
+
+      <p><code>docs/patra/release-specs/v0.4-portal-foundation.md</code> 创建于 PAP-26 之前，部分描述已被 handoff 实际产出推翻。本 spec <strong>不修改 release-spec 文档</strong>（那是版本规划文档，"已发生"部分只读），但落地实现时<strong>以 handoff 为准</strong>。已识别的偏差：</p>
+
+      <table>
+        <thead>
+          <tr><th>#</th><th>release-spec 描述</th><th>handoff 实际产出</th><th>实施依据</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>区块顺序：TopNav → Hero → <strong>TopicGrid（学科卡片网格）</strong> → <strong>JournalChips（chip 行）</strong> → ExploreFeed → Footer</td>
+            <td>TopNav → Hero → <strong>TopicCloud（5 级 tier 词云，32 词条）</strong> → <strong>Journals（6 张期刊封面卡）</strong> → ExploreFeed → Footer</td>
+            <td>handoff 为准；Linear PAP-31 / PAP-32 标题已同步更新</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>Mock 量级：8 topic / 5 journal / 6-9 paper</td>
+            <td>32 topic / 6 journal / 14 paper（trending 6 + recent 4 + cited 4）</td>
+            <td>handoff 为准；量大反而填得满</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>响应式断点：md=768 单断点</td>
+            <td>880 / 720 / 640 / 1200 多档</td>
+            <td>handoff 为准；Linear PAP-33 标题已改成"880 / 720 双断点"</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="scope">
+      <h2>2. 范围边界</h2>
+      <div class="two-col">
+        <aside class="callout success">
+          <span class="title">In Scope</span>
+          <ul>
+            <li>Design tokens 入库（<code>src/styles/tokens.css</code> 与 design system 同源）</li>
+            <li>Tailwind v4 <code>@theme inline</code> 桥接：Patra primitives → utility（<code>bg-paper-50</code> / <code>text-clay-700</code> 等）</li>
+            <li>shadcn 标准 slot 全量映射到 Patra tokens（<code>--primary</code> / <code>--background</code> / <code>--ring</code> 等 17 个变量）</li>
+            <li>补装 6 个 shadcn 原语：<code>input</code> / <code>card</code> / <code>badge</code> / <code>tabs</code> / <code>sheet</code> / <code>sonner</code></li>
+            <li>替换 Geist 单字体为 5 字体组合：Inter + Source Serif 4 + JetBrains Mono + Noto Sans SC + Noto Serif SC（next/font/google）</li>
+            <li><code>src/types/portal.ts</code> 11 个领域类型 + <code>src/data/*.ts</code> 7 份 mock 数据文件（32 topic / 6 journal / 14 paper / 4 search mode / 4 example query / portal stats）</li>
+            <li><code>src/components/portal/</code> 下 10 个组件 + 对应 <code>tests/components/portal/*.test.tsx</code> Vitest 单测</li>
+            <li><code>src/app/page.tsx</code> 装配 6 区块（RSC 默认，仅 4 个 client component）+ Composer onSubmit toast</li>
+            <li>响应式 4 档断点（1200 / 880 / 720 / 640）忠实 handoff</li>
+            <li>Playwright 接入 + 1 条 e2e smoke test（覆盖 6 区块 DOM + Hero composer + AI 速读文案）</li>
+            <li><code>portal-ci.yml</code> 追加 e2e job（<code>continue-on-error: true</code>，非阻断）</li>
+            <li><code>.gitignore</code> 追加 playwright 产物路径</li>
+            <li><code>layout.tsx</code> 注入 <code>&lt;Toaster /&gt;</code> 与 5 字体 CSS variable</li>
+            <li><code>metadata</code> 更新（title / description / themeColor=#176B62 teal-600）</li>
+          </ul>
+        </aside>
+        <aside class="callout warning">
+          <span class="title">Out of Scope</span>
+          <ul>
+            <li><strong>真实后端 API</strong>：数据全 hardcoded mock，BE 接入与联调留 v0.5</li>
+            <li><strong>用户系统</strong>：登录 / 注册 / 收藏提交 / 评论提交均不实现；卡片"收藏 / 评论"是静态展示</li>
+            <li><strong>其他页面</strong>：搜索结果页 / 文献详情页 / 主题聚合页 / 期刊聚合页一律不做；TopNav 其他 tab 显式 disabled</li>
+            <li><strong>真实搜索 submit</strong>：回车 / 点搜索仅弹"功能即将上线"toast，不跳转</li>
+            <li><strong>AI 文献解读真实调用</strong>：卡片"AI 速读"是 mock 文案，不调 LLM</li>
+            <li><strong>i18n / 暗色模式 / 主题切换</strong>：v0.4 单一中文 light theme；删除 <code>globals.css</code> 现有 <code>.dark</code> 块</li>
+            <li><strong>Storybook / Lighthouse perf / 深度 a11y 审计</strong>：公共组件有 Vitest + 1 条 e2e 即可</li>
+            <li><strong>shadcn 额外原语</strong>：dropdown / dialog / tooltip 不装（YAGNI，v0.4 用不到）</li>
+            <li><strong>视觉回归测试</strong>：不做 Percy / Chromatic</li>
+            <li><strong>修改 <code>docs/patra/release-specs/v0.4-portal-foundation.md</code></strong>：保留过时叙述作为版本规划历史</li>
+            <li><strong>e2e job 阻断 PR</strong>：本版 <code>continue-on-error: true</code>，后续视稳定度切换</li>
+          </ul>
+        </aside>
+      </div>
+    </section>
+
+    <section id="architecture">
+      <h2>3. 架构层级与目录</h2>
+
+      <h3>3.1 目录结构（★ = 本 PR 新增 / 改造）</h3>
+
+      <pre><code>patra-portal/
+├── src/
+│   ├── styles/
+│   │   └── tokens.css                  ★ 新增：搬 design system colors_and_type.css，仅 2 处本地化
+│   ├── app/
+│   │   ├── globals.css                 ★ 重写：@import tokens + @theme inline + shadcn override
+│   │   ├── layout.tsx                  ★ 改字体 5 族 + &lt;Toaster /&gt; + metadata
+│   │   └── page.tsx                    ★ 重写：装配 6 区块（RSC，无 'use client'）
+│   ├── types/
+│   │   └── portal.ts                   ★ 新增：11 个领域类型
+│   ├── data/
+│   │   ├── index.ts                    ★ barrel
+│   │   ├── portal-stats.ts             ★ PORTAL_STATS
+│   │   ├── search-modes.ts             ★ SEARCH_MODES (4)
+│   │   ├── example-queries.ts          ★ EXAMPLE_QUERIES (4)
+│   │   ├── topics.ts                   ★ TOPIC_CLOUD (32) + topicTier()
+│   │   ├── journals.ts                 ★ JOURNALS (6)
+│   │   └── feed.ts                     ★ FEED { trending: 6, recent: 4, cited: 4 }
+│   ├── components/
+│   │   ├── ui/                         ★ 扩：button(已有) + input + card + badge + tabs + sheet + sonner
+│   │   └── portal/                     ★ 新增 10 个组件
+│   │       ├── TopNav.tsx              'use client' (汉堡 state)
+│   │       ├── Hero.tsx                RSC
+│   │       ├── Composer.tsx            'use client' (tab/value/submit)
+│   │       ├── TopicCloud.tsx          RSC
+│   │       ├── Journals.tsx            RSC
+│   │       ├── JournalCoverCard.tsx    RSC
+│   │       ├── ExploreFeed.tsx         'use client' (active tab via shadcn Tabs)
+│   │       ├── PaperCard.tsx           RSC
+│   │       ├── AISummaryBadge.tsx      RSC
+│   │       └── Footer.tsx              RSC
+│   ├── lib/
+│   │   └── utils.ts                    保持（含 cn()）
+│   └── providers/
+│       └── query-provider.tsx          保持
+└── tests/
+    ├── components/portal/              ★ 新增：每组件配 .test.tsx (Vitest)
+    │   ├── TopNav.test.tsx
+    │   ├── Hero.test.tsx
+    │   ├── Composer.test.tsx
+    │   ├── TopicCloud.test.tsx
+    │   ├── Journals.test.tsx
+    │   ├── JournalCoverCard.test.tsx
+    │   ├── ExploreFeed.test.tsx
+    │   ├── PaperCard.test.tsx
+    │   ├── AISummaryBadge.test.tsx
+    │   └── Footer.test.tsx
+    ├── data/
+    │   └── topics.test.ts              ★ topicTier() 纯函数测试
+    └── e2e/
+        └── homepage.spec.ts            ★ Playwright smoke</code></pre>
+
+      <h3>3.2 RSC / Client 边界规则</h3>
+
+      <p>默认 Server Component；仅当组件需要 <code>useState</code> / <code>useEffect</code> / 事件处理时加 <code>'use client'</code>。本 PR 共 4 个 client component：</p>
+
+      <ul>
+        <li><strong>TopNav</strong>：汉堡菜单 open/close state + Sheet 触发</li>
+        <li><strong>Composer</strong>：active tab + input value + onSubmit handler（Hero 的 RSC 子组件）</li>
+        <li><strong>ExploreFeed</strong>：shadcn <code>&lt;Tabs&gt;</code> 的 active tab state</li>
+        <li><strong>Toaster</strong>：sonner 自身要求（layout.tsx 内）</li>
+      </ul>
+
+      <p>其余 6 个 portal 组件（Hero / TopicCloud / Journals / JournalCoverCard / PaperCard / AISummaryBadge / Footer）+ <code>page.tsx</code> 全部 RSC。</p>
+
+      <h3>3.3 globals.css 重写要点</h3>
+
+      <ul>
+        <li>顶部 <code>@import "tailwindcss"</code> + <code>@import "tw-animate-css"</code> + <code>@import "../styles/tokens.css"</code></li>
+        <li><strong>删除</strong>现有 <code>@import "shadcn/tailwind.css"</code>（shadcn CLI stub，会覆盖我们的主题）</li>
+        <li><strong>删除</strong> <code>@custom-variant dark</code> 与整个 <code>.dark { ... }</code> 块（YAGNI）</li>
+        <li><strong>删除</strong> <code>--color-brand: #4338ca</code> 与所有 <code>--color-sidebar-*</code> / <code>--color-chart-*</code> shadcn CLI 占位变量</li>
+        <li><code>@theme inline</code> 块映射 Patra primitives 为 Tailwind utility（color / font / text-size / leading / tracking / radius / shadow）</li>
+        <li><code>:root</code> 内重写 shadcn 17 个标准 slot（详见 §7）</li>
+        <li><code>@layer base</code> 仅保留 5 处全局基础：body 字体/平滑 / <code>::selection</code> / font-feature-settings / <code>html font-family</code> / <code>@keyframes patra-live-pulse</code></li>
+      </ul>
+    </section>
+
+    <section id="commits">
+      <h2>4. Commit 切片与 Subagent fan-out</h2>
+
+      <h3>4.1 按层拆 6 个 commit</h3>
+
+      <p>squash-merge 时压成 1 个 main commit；PR 内可分组 review。</p>
+
+      <table>
+        <thead>
+          <tr><th>#</th><th>Commit message</th><th>内容</th><th>关联 Issue</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>C1</td>
+            <td><code>feat(portal): patra tokens + shadcn theme override + font swap</code></td>
+            <td>tokens.css 入库 / globals.css 重写 / shadcn 17 slot 映射 / 补装 6 个 shadcn 原语 / 字体 5 族 / layout 注入 <code>&lt;Toaster /&gt;</code> + metadata</td>
+            <td>PAP-30</td>
+          </tr>
+          <tr>
+            <td>C2</td>
+            <td><code>feat(portal): mock data layer + portal types</code></td>
+            <td><code>src/types/portal.ts</code> + 7 份 <code>src/data/*.ts</code></td>
+            <td>PAP-28</td>
+          </tr>
+          <tr>
+            <td>C3</td>
+            <td><code>feat(portal): public components + vitest specs</code></td>
+            <td>10 个组件 + 10 份 <code>.test.tsx</code> + <code>topicTier</code> 纯函数测试</td>
+            <td>PAP-31</td>
+          </tr>
+          <tr>
+            <td>C4</td>
+            <td><code>feat(portal): assemble homepage with composer toast</code></td>
+            <td><code>app/page.tsx</code> 装配 6 区块 + Composer onSubmit → sonner toast("功能即将上线")</td>
+            <td>PAP-32</td>
+          </tr>
+          <tr>
+            <td>C5</td>
+            <td><code>feat(portal): responsive breakpoints 880/720/640/1200</code></td>
+            <td>TopNav 汉堡 sheet / Hero ornament 隐藏 / Journals 6→3→横滑 / Hero composer 紧凑 / masthead 简化</td>
+            <td>PAP-33</td>
+          </tr>
+          <tr>
+            <td>C6</td>
+            <td><code>test(portal): playwright e2e smoke + ci e2e job</code></td>
+            <td><code>playwright.config.ts</code> / <code>homepage.spec.ts</code> / <code>portal-ci.yml</code> 加非阻断 e2e job / <code>.gitignore</code> 追加</td>
+            <td>PAP-34</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>4.2 Subagent fan-out 计划</h3>
+
+      <p>遵循 memory rule "大批量同构工作 fan out subagents"。三个 Stage：</p>
+
+      <pre><code>Stage 1（并行 2 个 subagent → 合在 C1+C2 提交）：
+  SA-tokens (C1)   ─┐
+                    ├─→ 主对话 review → commit C1 + C2
+  SA-mock (C2)     ─┘
+
+Stage 2（并行 3 个 subagent → 合在 C3 提交）：
+  SA-nav     (TopNav + Footer + AISummaryBadge)              ─┐
+  SA-hero    (Hero + Composer)                                ├─→ 主对话 review → commit C3
+  SA-feed    (TopicCloud + Journals + JournalCoverCard
+              + ExploreFeed + PaperCard)                      ─┘
+
+Stage 3（主对话亲自做，3 个独立 commit）：
+  主对话: page.tsx 装配 (C4) → 响应式调试 (C5) → e2e + CI (C6)</code></pre>
+
+      <p><strong>Stage 3 不 fan-out 的理由</strong>：page 装配 / 响应式 / e2e 都需要看着浏览器或 dev server 反复调，subagent 没有视觉反馈，不如主对话 + 真实 dev server 高效；且这三步彼此强依赖（page 完才能响应式，响应式完才能 e2e 验证）。</p>
+
+      <h3>4.3 Subagent 的 TDD 约束</h3>
+
+      <p>每个 SA 必须按红-绿-重构循环：</p>
+      <ol>
+        <li>先写 <code>.test.tsx</code>，列 3-5 个用例 → <code>pnpm test</code> <strong>红</strong></li>
+        <li>写最小组件实现 → 测试转<strong>绿</strong></li>
+        <li>重构样式 / 抽 prop → 保持绿</li>
+        <li>SA 回传：组件文件 + 测试文件 + 测试通过证据（pnpm test 输出片段）</li>
+      </ol>
+
+      <p>测试查询规则（来自 <code>.claude/rules/testing.md</code>）：<code>getByRole</code> &gt; <code>getByLabelText</code> &gt; <code>getByPlaceholderText</code> &gt; <code>getByText</code> &gt; ~~<code>getByTestId</code>~~（禁止作为首选）。禁止 snapshot 测试。禁止断言实现细节。</p>
+    </section>
+
+    <section id="data">
+      <h2>5. Mock 数据与类型定义</h2>
+
+      <h3>5.1 类型 <code>src/types/portal.ts</code></h3>
+
+      <p>11 个领域类型，基于 handoff <code>data.jsx</code> 实际字段萃取：</p>
+
+      <pre><code>export type ComposerMode = "keyword" | "pmid" | "doi" | "author";
+export type FeedTab = "trending" | "recent" | "cited";
+export type PaperSource = "PubMed" | "Europe PMC" | "Crossref";
+export type TopicHeatTier = 1 | 2 | 3 | 4 | 5;
+
+export interface SearchMode {
+  id: ComposerMode;
+  label: string;          // 关键词 / PMID / DOI / 作者
+  placeholder: string;
+  mono: boolean;          // PMID/DOI 用等宽字体
+}
+
+export interface ExampleQuery { mode: ComposerMode; text: string; }
+
+export interface PortalStats {
+  records: number;        // 4_238_917
+  sources: number;        // 10
+  lastIngestMin: number;  // 3
+  todayAdded: number;     // 12_431
+  todayDelta: number;     // 8.4 (百分比)
+}
+
+export interface Topic {
+  term: string;
+  heat: number;           // 0..100
+  count: number;
+  delta?: string;         // 仅 tier 1 显示 "+34%"
+}
+
+export interface JournalCoverStyle { bg: string; ink: string; rule: string; }
+
+export interface Journal {
+  id: string;
+  name: string;
+  abbr: string;
+  cover: string;          // 期刊封面上印的字（可含 \n）
+  coverStyle: JournalCoverStyle;
+  impact: number;
+  weekly: number;
+  founded: number;
+}
+
+export interface Paper {
+  id: string;
+  title: string;
+  journal: string;
+  year: number;
+  authors: string[];      // 前几位
+  authorCount: number;
+  cites: number;
+  bookmarks: number;
+  readMin: number;
+  doi: string;
+  pmid: string;
+  source: PaperSource;
+  ai: string;             // AI 速读，1-2 句
+  kind: string;           // "RCT · phase 3" 等
+  minutesAgo?: number;    // 仅 recent tab 部分 paper 用
+}
+
+export type Feed = Record&lt;FeedTab, Paper[]&gt;;</code></pre>
+
+      <h3>5.2 数据文件组织</h3>
+
+      <table>
+        <thead>
+          <tr><th>文件</th><th>导出</th><th>来源</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>src/data/portal-stats.ts</code></td><td><code>PORTAL_STATS: PortalStats</code></td><td>handoff PATRA_STATS</td></tr>
+          <tr><td><code>src/data/search-modes.ts</code></td><td><code>SEARCH_MODES: readonly SearchMode[]</code></td><td>handoff SEARCH_MODES (4 项)</td></tr>
+          <tr><td><code>src/data/example-queries.ts</code></td><td><code>EXAMPLE_QUERIES: readonly ExampleQuery[]</code></td><td>handoff EXAMPLE_QUERIES (4 项)</td></tr>
+          <tr><td><code>src/data/topics.ts</code></td><td><code>TOPIC_CLOUD: readonly Topic[]</code> + <code>topicTier(heat): TopicHeatTier</code></td><td>handoff TOPIC_CLOUD (32 项 + topicTier 阈值 88/70/45/25)</td></tr>
+          <tr><td><code>src/data/journals.ts</code></td><td><code>JOURNALS: readonly Journal[]</code></td><td>handoff JOURNALS (6 本：NEJM / Lancet / JAMA / BMJ / Nat Med / Cell)</td></tr>
+          <tr><td><code>src/data/feed.ts</code></td><td><code>FEED: Feed</code></td><td>handoff FEED (trending 6 + recent 4 + cited 4)</td></tr>
+          <tr><td><code>src/data/index.ts</code></td><td>barrel re-export</td><td>—</td></tr>
+        </tbody>
+      </table>
+
+      <h3>5.3 类型设计决策</h3>
+
+      <ul>
+        <li>数组用 <code>readonly Topic[]</code> 而非 <code>as const</code>——后者字面量类型过窄，组件 props 不好用</li>
+        <li><code>topicTier()</code> 与 <code>TOPIC_CLOUD</code> 同文件（<code>topics.ts</code>），因为它是基于阈值数据的派生函数</li>
+        <li><code>PaperSource</code> 用字面量联合而非 <code>string</code>——防止笔误</li>
+        <li><code>minutesAgo?</code> 可选：只 recent tab 部分 paper 有</li>
+        <li><code>noUncheckedIndexedAccess</code> 已开 → 访问 <code>JOURNALS[0]</code> 得 <code>Journal | undefined</code>，组件用 <code>.map()</code> 避免</li>
+      </ul>
+    </section>
+
+    <section id="responsive">
+      <h2>6. 响应式断点策略</h2>
+
+      <h3>6.1 4 档断点（忠实 handoff fidelity）</h3>
+
+      <table>
+        <thead>
+          <tr><th>层级</th><th>触发宽度</th><th>Tailwind v4 写法</th><th>影响区域</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>L1</strong></td>
+            <td><code>&lt; 1200px</code></td>
+            <td><code>max-[1200px]:</code></td>
+            <td>Journals 网格 6 列 → 3 列</td>
+          </tr>
+          <tr>
+            <td><strong>L2</strong></td>
+            <td><code>&lt; 880px</code></td>
+            <td><code>max-[880px]:</code></td>
+            <td>TopNav 中间 nav 折叠为汉堡 + Sheet drawer / cmdk + about-link 隐藏 / Hero ornament <code>hidden</code> / Hero padding 收窄 / Hero headline grid 由两栏改单栏 / TopicCloud gap 22→16</td>
+          </tr>
+          <tr>
+            <td><strong>L3</strong></td>
+            <td><code>&lt; 720px</code></td>
+            <td><code>max-[720px]:</code></td>
+            <td>Journals 3 列 → 横滑（<code>snap-x snap-mandatory</code>，每卡 <code>shrink-0 basis-[56vw] snap-start</code>，外层 <code>overflow-x-auto</code>，scrollbar 隐藏）</td>
+          </tr>
+          <tr>
+            <td><strong>L4</strong></td>
+            <td><code>&lt; 640px</code></td>
+            <td><code>max-sm:</code>（Tailwind 内建）</td>
+            <td>Hero masthead 第 3 个 stats "更新于 N 分钟前" 隐藏 / masthead padding 收窄 / Composer input 字号 18→16px / Composer submit-label 隐藏（只剩 ⌘↵ 图标）</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>6.2 实现要点</h3>
+
+      <ol>
+        <li><strong>arbitrary breakpoint 而非自定义 theme</strong>——不改 Tailwind 默认 sm/md/lg，避免与 shadcn 内置假设冲突；用 <code>max-[880px]:</code> 字面值，断点数字直接在调用点</li>
+        <li><strong>shadcn Sheet 替代手写汉堡 drawer</strong>——handoff 是手写 <code>.mobile-drawer fixed inset-56px-0-0-0</code>，改用 <code>&lt;Sheet&gt;</code> + <code>&lt;SheetContent side="top"&gt;</code>，自带焦点陷阱 / Esc 关闭 / <code>aria-modal</code> / 滚动锁定</li>
+        <li><strong>Composer 4 tabs + ExploreFeed 3 tabs 都用 shadcn <code>&lt;Tabs&gt;</code></strong>——通过 <code>data-[state=active]:</code> 修饰器套 Patra 视觉</li>
+        <li><strong>所有 arbitrary value Biome 不会报错</strong>（已配 <code>tailwindDirectives: true</code>）</li>
+      </ol>
+
+      <h3>6.3 AC 验证矩阵</h3>
+
+      <table>
+        <thead>
+          <tr><th>视口</th><th>触发断点</th><th>预期表现</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>375 × 812（手机）</td><td>L2 + L3 + L4</td><td>汉堡 sheet 可用 / Journals 横滑 / Hero 紧凑 / masthead 简化</td></tr>
+          <tr><td>800 × 600（窄桌面）</td><td>L1 + L2</td><td>汉堡 / Journals 3 列（无横滑）</td></tr>
+          <tr><td>1024 × 768（平板桌面）</td><td>L1</td><td>完整 nav / Journals 3 列</td></tr>
+          <tr><td>1440 × 900（桌面）</td><td>—</td><td>完整 nav / Hero 宽幅 / Journals 6 列</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="theme">
+      <h2>7. shadcn 主题覆盖与 globals.css</h2>
+
+      <h3>7.1 shadcn 17 个 slot 映射表</h3>
+
+      <table>
+        <thead>
+          <tr><th>shadcn slot</th><th>Patra token</th><th>用在哪</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>--background</code></td><td><code>--paper-100</code> (#F7F2E8)</td><td>页面底色</td></tr>
+          <tr><td><code>--foreground</code></td><td><code>--ink-900</code> (#1C1917)</td><td>主文字</td></tr>
+          <tr><td><code>--card</code></td><td><code>--paper-50</code> (#FBF8F2)</td><td><code>&lt;Card&gt;</code> 底色（PaperCard）</td></tr>
+          <tr><td><code>--card-foreground</code></td><td><code>--ink-900</code></td><td>卡片内文字</td></tr>
+          <tr><td><code>--popover</code></td><td><code>#FFFFFF</code></td><td><code>&lt;Sheet&gt;</code> / dropdown</td></tr>
+          <tr><td><code>--popover-foreground</code></td><td><code>--ink-900</code></td><td>popover 内文字</td></tr>
+          <tr><td><code>--primary</code></td><td><code>--teal-600</code> (#176B62)</td><td><code>&lt;Button&gt;</code> default / Composer 提交</td></tr>
+          <tr><td><code>--primary-foreground</code></td><td><code>--fg-on-clay</code> (#FBF8F2)</td><td>主按钮文字</td></tr>
+          <tr><td><code>--secondary</code></td><td><code>--paper-200</code> (#F1EADC)</td><td><code>variant="secondary"</code></td></tr>
+          <tr><td><code>--secondary-foreground</code></td><td><code>--ink-900</code></td><td>—</td></tr>
+          <tr><td><code>--muted</code></td><td><code>--paper-200</code></td><td><code>&lt;Badge variant="secondary"&gt;</code></td></tr>
+          <tr><td><code>--muted-foreground</code></td><td><code>--fg-3</code> (<code>--ink-600</code>)</td><td>副文字</td></tr>
+          <tr><td><code>--accent</code></td><td><code>--clay-50</code> (#FBF1E8)</td><td>hover 浅底</td></tr>
+          <tr><td><code>--accent-foreground</code></td><td><code>--clay-900</code></td><td>hover 暗字</td></tr>
+          <tr><td><code>--destructive</code></td><td><code>--rust-500</code> (#B23A2E)</td><td>error variant</td></tr>
+          <tr><td><code>--border</code></td><td><code>--border-default</code> (#DDD5C4)</td><td>1px hairline</td></tr>
+          <tr><td><code>--input</code></td><td><code>--border-default</code></td><td><code>&lt;Input&gt;</code> 边框</td></tr>
+          <tr><td><code>--ring</code></td><td><code>--clay-500</code> (#CE6A37)</td><td>3px focus ring（28% opacity 由 <code>ring/28</code> utility 控制）</td></tr>
+          <tr><td><code>--radius</code></td><td><code>--radius-lg</code> (8px)</td><td><code>&lt;Card&gt;</code> 默认</td></tr>
+        </tbody>
+      </table>
+
+      <h3>7.2 tokens.css 本地化调整</h3>
+
+      <p>tokens.css 与 design system 的 <code>colors_and_type.css</code> 同源，但需做 2 处本地化（在文件头部加注释说明）：</p>
+
+      <ol>
+        <li><strong>删除顶部 2 行 google fonts <code>@import url</code></strong>——字体改由 next/font/google 加载，避免双重 CDN 请求与字体闪烁</li>
+        <li><strong>重命名 <code>--font-sans/-serif/-mono</code> → <code>--patra-font-sans/-serif/-mono</code></strong>，避免与 <code>@theme</code> 内 Tailwind 消费的 <code>--font-sans</code> 同名冲突；值改为引用 next/font CSS variable：
+          <pre><code>--patra-font-sans:  var(--font-inter), var(--font-noto-sans-sc), ui-sans-serif, system-ui, sans-serif;
+--patra-font-serif: var(--font-source-serif), var(--font-noto-serif-sc), Georgia, serif;
+--patra-font-mono:  var(--font-jetbrains-mono), ui-monospace, "SF Mono", Menlo, monospace;</code></pre>
+        </li>
+      </ol>
+
+      <h3>7.3 layout.tsx 改造</h3>
+
+      <pre><code>import { Inter, Source_Serif_4, JetBrains_Mono, Noto_Sans_SC, Noto_Serif_SC } from "next/font/google";
+import { Toaster } from "@/components/ui/sonner";
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
+const sourceSerif = Source_Serif_4({ subsets: ["latin"], variable: "--font-source-serif", display: "swap" });
+const jbMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains-mono", display: "swap" });
+const notoSansSC = Noto_Sans_SC({
+  subsets: ["latin"], variable: "--font-noto-sans-sc",
+  display: "swap", weight: ["400","500","600","700"]
+});
+const notoSerifSC = Noto_Serif_SC({
+  subsets: ["latin"], variable: "--font-noto-serif-sc",
+  display: "swap", weight: ["400","500","600","700"]
+});
+
+export const metadata: Metadata = {
+  title: "Patra · 医学文献门户",
+  description: "Patra 汇集 PubMed、Europe PMC、Crossref 等 10 个来源的学术文献，提供统一检索、出处追溯与 AI 辅助速读。",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#176B62",  // teal-600 Patra primary (替代旧 #4338ca indigo)
+};
+
+return (
+  &lt;html lang="zh-CN" className={cn(
+    inter.variable, sourceSerif.variable, jbMono.variable,
+    notoSansSC.variable, notoSerifSC.variable,
+  )}&gt;
+    &lt;body&gt;
+      &lt;QueryProvider&gt;
+        {children}
+        &lt;Toaster richColors position="bottom-right" /&gt;
+      &lt;/QueryProvider&gt;
+    &lt;/body&gt;
+  &lt;/html&gt;
+);</code></pre>
+
+      <h3>7.4 Iconography 与 emoji 处理</h3>
+
+      <ul>
+        <li><strong>用 <code>lucide-react</code> 包，不内联手写 SVG</strong>——portal 已依赖 <code>lucide-react@1.16</code>；handoff 内 22 个 <code>IconXxx</code> 函数全部换成 <code>import { Search, ArrowRight, Star, ... } from "lucide-react"</code>，stroke=1.5（lucide-react 默认就是 1.5px）</li>
+        <li><strong>禁用 emoji</strong>——design system 明确"No emoji in product UI"，但 release-spec 写了"📖 详情 / ⭐ 收藏 / 💬 12"。落地一律用 Lucide 图标：<code>BookOpen</code> / <code>Bookmark</code> / <code>MessageSquare</code></li>
+        <li>Brand SVG（<code>patra-mark.svg</code> / <code>patra-monogram.svg</code> / <code>patra-wordmark.svg</code>）放 <code>public/brand/</code>，通过 <code>&lt;Image src="/brand/patra-mark.svg"&gt;</code> 引用</li>
+      </ul>
+    </section>
+
+    <section id="tests">
+      <h2>8. 测试矩阵与 CI 改动</h2>
+
+      <h3>8.1 Vitest 单测矩阵</h3>
+
+      <p>布局：<code>tests/components/portal/*.test.tsx</code> 集中（对齐 <code>tests/smoke.test.tsx</code> 与 <code>vitest.config.ts</code> 的 <code>include: ["tests/**/*.{test,spec}.{ts,tsx}"]</code>）。</p>
+
+      <table>
+        <thead>
+          <tr><th>测试文件</th><th>关键用例</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>TopNav.test.tsx</code></td>
+            <td><code>&lt;header role="banner"&gt;</code> 渲染；首页 link 含 <code>aria-current="page"</code>；文献/期刊/主题 link 含 <code>aria-disabled="true"</code>；点击汉堡 button → <code>&lt;Sheet&gt;</code> <code>role="dialog"</code> 出现</td>
+          </tr>
+          <tr>
+            <td><code>Hero.test.tsx</code></td>
+            <td><code>&lt;h1&gt;</code> 含 "可被检索"；masthead 显示 records 数（mock 4,238,917 经 toLocaleString）；Composer 子组件 mount</td>
+          </tr>
+          <tr>
+            <td><code>Composer.test.tsx</code></td>
+            <td>默认 "关键词" tab <code>aria-selected="true"</code>；切到 "PMID" → input placeholder 变 "38491203"；DOI tab → input 含 <code>font-mono</code> 类；填入文字按 submit → <code>onSubmit</code> prop（<code>vi.fn</code>）被调；"试试"chip 点击 → input value 改变</td>
+          </tr>
+          <tr>
+            <td><code>TopicCloud.test.tsx</code></td>
+            <td>列表共 32 项；tier 1 项（heat ≥ 88）显示 <code>↗ +N%</code> delta；tier 5 项不显示 delta；含 "此刻热议" eyebrow</td>
+          </tr>
+          <tr>
+            <td><code>tests/data/topics.test.ts</code></td>
+            <td><code>topicTier()</code> 阈值边界：87→2 / 88→1 / 44→4 / 45→3 / 24→5 / 25→4 共 6 个用例</td>
+          </tr>
+          <tr>
+            <td><code>Journals.test.tsx</code></td>
+            <td>6 张 <code>&lt;a&gt;</code> link；每张含 abbr + impact + "本周收录" + weekly</td>
+          </tr>
+          <tr>
+            <td><code>JournalCoverCard.test.tsx</code></td>
+            <td>接收 <code>j: Journal</code> prop；渲染 cover 文字 + impact <code>toFixed(1)</code> + founded；style 应用 <code>coverStyle.bg</code></td>
+          </tr>
+          <tr>
+            <td><code>ExploreFeed.test.tsx</code></td>
+            <td>3 个 <code>&lt;Tabs&gt;</code> trigger（trending/recent/cited）；默认 trending active；切到 recent → 显示 4 张 paper（含 minutesAgo）</td>
+          </tr>
+          <tr>
+            <td><code>PaperCard.test.tsx</code></td>
+            <td>渲染 title/journal/year/authors（前 3 位 + 省略）/cites/bookmarks/readMin；DOI/PMID 用 <code>font-mono</code> 类；actions 行用 Lucide <code>&lt;svg&gt;</code> 图标，container.textContent 不含 emoji 字符（<code>📖|⭐|💬</code>）</td>
+          </tr>
+          <tr>
+            <td><code>AISummaryBadge.test.tsx</code></td>
+            <td>显示 "AI 速读" 标签 + summary 文字；container 含 <code>border-l-clay-500 bg-clay-50</code> 类</td>
+          </tr>
+          <tr>
+            <td><code>Footer.test.tsx</code></td>
+            <td><code>&lt;footer role="contentinfo"&gt;</code>；含 brand wordmark + Patra 文案</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>8.2 Playwright e2e</h3>
+
+      <p>新增文件：</p>
+      <ul>
+        <li><code>patra-portal/playwright.config.ts</code>：<code>testDir: "tests/e2e"</code> / <code>use.baseURL: "http://localhost:3000"</code> / <code>webServer: { command: "pnpm dev", port: 3000, reuseExistingServer: !process.env.CI, timeout: 120000 }</code> / <code>projects: [{ name: "chromium", use: devices["Desktop Chrome"] }]</code></li>
+        <li><code>patra-portal/tests/e2e/homepage.spec.ts</code>：1 条 smoke test</li>
+        <li><code>patra-portal/package.json</code>：加 <code>"test:e2e": "playwright test"</code> script</li>
+      </ul>
+
+      <p><code>homepage.spec.ts</code> 断言矩阵（对齐 PAP-34 AC）：</p>
+
+      <pre><code>test("homepage smoke", async ({ page }) =&gt; {
+  await page.goto("/");
+  await expect(page.getByRole("banner")).toBeVisible();                       // TopNav
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("可被检索");
+  await expect(page.getByPlaceholder(/JAK1|PMID|DOI|Topol/)).toBeVisible();   // Composer input
+  await expect(page.getByText("此刻热议")).toBeVisible();                       // TopicCloud
+  expect(await page.locator("[data-section='topic-cloud'] a").count())
+    .toBeGreaterThanOrEqual(4);
+  expect(await page.locator("[data-section='journals'] a").count())
+    .toBeGreaterThanOrEqual(3);
+  await expect(page.getByText("AI 速读").first()).toBeVisible();
+  await expect(page.getByRole("contentinfo")).toBeVisible();                  // Footer
+});</code></pre>
+
+      <p>每个区块 section 标 <code>data-section="topnav|hero|topic-cloud|journals|explore-feed|footer"</code>，给 Playwright 提供稳定锚点。Vitest 单测不依赖 <code>data-section</code>，全用 a11y query。</p>
+
+      <h3>8.3 portal-ci.yml 追加 e2e job</h3>
+
+      <pre><code>e2e:
+  name: e2e
+  runs-on: ubuntu-latest
+  timeout-minutes: 20
+  continue-on-error: true            # v0.4 本版不阻断 PR，后续视稳定度再开
+  steps:
+    - uses: actions/checkout@v4
+    - uses: pnpm/action-setup@v4
+      with: { version: '10' }
+    - uses: actions/setup-node@v4
+      with:
+        node-version-file: 'patra-portal/.nvmrc'
+        cache: 'pnpm'
+        cache-dependency-path: patra-portal/pnpm-lock.yaml
+    - run: pnpm install --frozen-lockfile
+    - run: pnpm exec playwright install --with-deps chromium
+    - run: pnpm test:e2e
+    - uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: playwright-report
+        path: patra-portal/playwright-report/
+        retention-days: 7</code></pre>
+
+      <p><strong>aggregator 改动</strong>：<code>portal-ci-required-check</code> 的 <code>needs</code> <strong>不加</strong> e2e——因为 <code>continue-on-error: true</code>，e2e 失败不应让 aggregator 红。后续 v0.5 稳定后再切换为阻断式。</p>
+
+      <p><strong><code>.gitignore</code> 追加</strong>：<code>patra-portal/test-results/</code> + <code>patra-portal/playwright-report/</code> + <code>patra-portal/.playwright/</code>。</p>
+    </section>
+
+    <section id="decisions">
+      <h2>9. 关键决策与备选</h2>
+
+      <div class="decision">
+        <h3>决策 1：Tailwind-first 样式策略，禁用 CSS Modules</h3>
+        <p>handoff bundle 是<strong>设计真相</strong>（视觉、信息层级、token 数值），不是<strong>代码真相</strong>。所有 CSS class 改写为 Tailwind utility（含 <code>before:</code> / <code>after:</code> / <code>aspect-[3/4]</code> / <code>text-[clamp()]</code> arbitrary value / <code>snap-x snap-mandatory</code>）。少量全局基础（body 字体 / <code>::selection</code> / <code>@keyframes patra-live-pulse</code>）留 <code>globals.css</code> 的 <code>@layer base</code>。</p>
+        <p class="alternatives"><strong>备选 A：</strong>CSS-first（搬 <code>homepage.css</code> 原样，组件用 <code>className="composer-tab"</code> 引用）— 否决：与 portal 现有 Tailwind utility + shadcn 风格混搭，违反 <code>.claude/rules/code-style.md</code> "Class 顺序由 Biome 插件自动排" 与 "禁止 inline style"<br>
+        <strong>备选 B：</strong>混合（tokens + 局部 <code>.module.css</code>）— 否决：两套体系并存的认知成本；CSS Modules 与 Biome / Tailwind 工具链协同薄弱</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 2：6 个 Issue 单 PR 合并 + 按层拆 6 个 commit</h3>
+        <p>所有 6 个 FE Issue（PAP-28/30/31/32/33/34）在 <code>feat/v0.4-portal-foundation</code> 单分支单 PR 内合并。PR 内按层拆 6 个 commit（tokens / mock / 组件 / 装配 / 响应式 / e2e），squash-merge 时压成 1 个；中间状态便于 review 与回滚。</p>
+        <p class="alternatives"><strong>备选 A：</strong>每 Issue 单独 PR — 否决：用户明确要求合并到一个 PR；单 Issue PR 之间依赖链强，串行 review 反而慢<br>
+        <strong>备选 B：</strong>按 Issue 拆 commit（每 commit 对应一个 Linear issue 号）— 备选可行，但层次切分更贴近"代码改动维度"而非"Issue 管理维度"，且 squash-merge 后等价</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 3：handoff 为 source of truth，与 release-spec 冲突时以 handoff 为准</h3>
+        <p>release-spec 描述与 hi-fi 实际产出存在 3 处偏差（区块名 / mock 量级 / 响应式断点），统一以 handoff 为准。release-spec 文档本身<strong>不修改</strong>（作为版本规划历史保留）。Linear PAP-31/32/33 标题已同步跟齐 handoff。</p>
+        <p class="alternatives"><strong>备选 A：</strong>release-spec 为准（按 8 topic / 5 journal / 768 单断点严格落地）— 否决：违背 PAP-29 hi-fi 已交付事实；视觉与数据规模会失真<br>
+        <strong>备选 B：</strong>混合（视觉细节按 handoff，量级按 release-spec）— 否决：量级砍半后 TopicCloud 5 级 tier 与 ExploreFeed 三 tab 都填不满，破坏视觉密度</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 4：关键节点 fan-out subagent（3 Stage）</h3>
+        <p>Stage 1：token (C1) + mock (C2) 并行 2 个 SA。Stage 2：公共组件库 (C3) 按区块分组 3 个 SA（nav/hero/feed）。Stage 3：主对话亲自做 page 装配 (C4) / 响应式 (C5) / e2e (C6)，因这三步需要看着 dev server 反复调，subagent 无视觉反馈。</p>
+        <p class="alternatives"><strong>备选 A：</strong>完全串行 — 否决：违反 memory rule "大批量同构工作 fan out subagents"<br>
+        <strong>备选 B：</strong>全 fan out（6 issue 各一个 SA）— 否决：PAP-32/33/34 强依赖前序产出，SA 互等反而慢</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 5：补装 shadcn 6 个原语，不多装</h3>
+        <p>补装 input / card / badge / tabs / sheet / sonner 共 6 个，达到 v0.4 最小集。dropdown / dialog / tooltip 不装（v0.4 用不到，YAGNI）。</p>
+        <p class="alternatives"><strong>备选 A：</strong>多装 3 个预热（dropdown/dialog/tooltip） — 否决：违反 YAGNI 与 <code>CLAUDE.md</code> "禁止以"如果时间允许""<br>
+        <strong>备选 B：</strong>少装（不装 badge + 不装 sonner） — 否决：badge 直接对应 design system 的 chip-badge 规范；sonner 是 v0.4 spec 明确要求的 toast 库</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 6：Server Component 优先，仅 4 个 client component</h3>
+        <p>page.tsx + 6 个静态组件全部 RSC。只有 TopNav（汉堡 state）/ Composer（tab+value state）/ ExploreFeed（active tab）/ Toaster（sonner 自身要求）4 个用 <code>'use client'</code>。</p>
+        <p class="alternatives"><strong>备选 A：</strong>page.tsx 整体 <code>'use client'</code> 一刀切 — 否决：违反 <code>patra-portal/CLAUDE.md</code> "Server Components 优先"<br>
+        <strong>备选 B：</strong>更细粒度（TopicCloud 也 client，便于交互动画） — 否决：v0.4 不实现 topic 点击跳转，TopicCloud 是纯展示</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 7：Playwright e2e 非阻断式（<code>continue-on-error: true</code>）</h3>
+        <p>v0.4 加 e2e job 到 portal-ci，但 <code>continue-on-error: true</code>，不进入 aggregator 的 <code>needs</code> 列表。理由：webServer 启动 + dev build 在 CI 不稳定（pnpm dev 冷启可能超 60s）；先观察 1-2 个 PR 稳定度。v0.5 视情况切换阻断式。</p>
+        <p class="alternatives"><strong>备选 A：</strong>直接阻断（<code>required check</code>）— 否决：CI 冷启时间不稳定，可能让 PR 卡住<br>
+        <strong>备选 B：</strong>不加 e2e 到 CI，只本地跑 — 否决：违反 PAP-34 AC "CI 中 e2e job 跑通"</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 8：响应式 4 档断点而非"880/720 双断点"</h3>
+        <p>PAP-33 标题写"880/720 双断点"是简化叙述。忠实 handoff hi-fi 实际用了 4 档（1200 / 880 / 720 / 640）。L1=1200 仅 Journals 6→3 列；L4=640 仅 Hero composer 紧凑。AC 验证矩阵覆盖 4 个视口（375/800/1024/1440）。</p>
+        <p class="alternatives"><strong>备选 A：</strong>严格 880/720 双档 — 否决：删除 1200 后 Journals 在 880-1200 段仍 6 列挤；删除 640 后 mobile composer 字号不收窄<br>
+        <strong>备选 B：</strong>用 Tailwind 默认 md/lg/xl 断点 — 否决：handoff 视觉切换点是 880 而非 768，错位会破坏 hi-fi 视觉</p>
+      </div>
+    </section>
+
+    <section id="risks">
+      <h2>10. 风险与缓解</h2>
+
+      <table>
+        <thead>
+          <tr><th>风险</th><th>等级</th><th>缓解</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>shadcn 标准 slot 与 Patra tokens 命名空间冲突（如 <code>--radius</code> 同时被 shadcn 和 Patra 使用）</td>
+            <td><span class="pill mid">mid</span></td>
+            <td>在 <code>@theme inline</code> 内明确指定优先级（Patra 的 <code>--radius-lg</code> 通过 <code>--radius: var(--radius-lg)</code> 桥接给 shadcn）；tokens.css 内的 <code>--font-sans</code> 重命名为 <code>--patra-font-sans</code></td>
+          </tr>
+          <tr>
+            <td>Tailwind v4 arbitrary breakpoint (<code>max-[880px]:</code>) Biome 误报 unknown-selector</td>
+            <td><span class="pill low">low</span></td>
+            <td>biome.json 已配 <code>tailwindDirectives: true</code>；实施前在 SA-tokens commit 内跑 <code>pnpm lint</code> 验证 arbitrary 写法被识别</td>
+          </tr>
+          <tr>
+            <td>next/font 5 字体首屏加载体积膨胀（5 个 woff2 文件 + Noto SC 子集大）</td>
+            <td><span class="pill mid">mid</span></td>
+            <td>所有字体设 <code>display: "swap"</code>；Noto SC 限定 weight=["400","500","600","700"]（不加载 italic）；首屏验证 LCP 仍可接受；后续如确需优化，v0.5 自托管 + subset</td>
+          </tr>
+          <tr>
+            <td>RSC / Client 边界设错（TopNav 等含 state 的组件忘加 <code>'use client'</code>）</td>
+            <td><span class="pill low">low</span></td>
+            <td>Next.js 编译期会报错（<code>useState in server component</code>），typecheck 阶段拦截；Vitest 单测在 jsdom 环境下也会暴露</td>
+          </tr>
+          <tr>
+            <td>handoff 的 32 个 topic / 14 个 paper mock 数据移植笔误（中文标点 / hex 颜色 / URL）</td>
+            <td><span class="pill mid">mid</span></td>
+            <td>SA-mock 用脚本化方式从 handoff <code>data.jsx</code> 提取（regex + 手工转换），不手抄；测试用 <code>JSON.stringify</code> diff 校验</td>
+          </tr>
+          <tr>
+            <td>shadcn <code>&lt;Sheet&gt;</code> 默认动画 / 主题色与 Patra warm paper 不匹配</td>
+            <td><span class="pill low">low</span></td>
+            <td>所有 shadcn 颜色由 <code>--background</code> / <code>--popover</code> / <code>--border</code> 等 slot 驱动，已在 globals.css 重写为 Patra tokens；动画时长用 Patra <code>--dur-fast/normal/slow</code> 替换默认</td>
+          </tr>
+          <tr>
+            <td>Playwright webServer 在 CI 冷启 &gt; 60s，e2e job 超时</td>
+            <td><span class="pill mid">mid</span></td>
+            <td><code>webServer.timeout: 120000</code>；e2e job 本版 <code>continue-on-error: true</code>，超时不阻断 PR；记录冷启时间，v0.5 切换为 <code>pnpm build &amp;&amp; pnpm start</code> 跑 e2e 减少冷启</td>
+          </tr>
+          <tr>
+            <td>Stage 2 三个 subagent 并行写组件时，<code>src/components/portal/</code> 同目录可能冲突</td>
+            <td><span class="pill low">low</span></td>
+            <td>每个 SA 分到不同组件文件（按 §4.2 分组），无重叠；主对话 review 时 <code>git status</code> 验证无意外文件</td>
+          </tr>
+          <tr>
+            <td>tokens.css 内仍含 <code>.patra { ... }</code> 语义元素样式（hairline / h1-h4 / .eyebrow），与 Tailwind utility 双轨</td>
+            <td><span class="pill mid">mid</span></td>
+            <td>tokens.css 仅保留 <code>:root</code> 内的 CSS 变量定义，删除 <code>.patra</code> 命名空间内所有语义元素样式（h1/h2/.eyebrow/.reading 等），改由 Tailwind utility 在组件内表达；保留 tokens.css 顶部注释说明此调整</td>
+          </tr>
+          <tr>
+            <td>Geist 字体在 layout.tsx 移除后，可能 portal-ci 历史 smoke test 引用 <code>font-sans</code> 触发回归</td>
+            <td><span class="pill low">low</span></td>
+            <td>现有 <code>smoke.test.tsx</code> 只测 h1 文本存在，不测字体；C1 commit 后跑一遍 <code>pnpm test</code> 验证现有测试全绿</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="changes">
+      <h2>11. 改造文件清单</h2>
+
+      <table>
+        <thead>
+          <tr><th>#</th><th>文件</th><th>操作</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td><code>patra-portal/src/styles/tokens.css</code></td><td><span class="pill create">create</span></td><td>从 design system <code>colors_and_type.css</code> 同源搬入；删 2 行 google fonts <code>@import url</code>；重命名 <code>--font-*</code> → <code>--patra-font-*</code>；删除 <code>.patra</code> 命名空间语义元素样式</td></tr>
+          <tr><td>2</td><td><code>patra-portal/src/app/globals.css</code></td><td><span class="pill modify">modify</span></td><td>完全重写：<code>@import tokens.css</code> + <code>@theme inline</code> 桥接 + shadcn 17 slot 映射 + <code>@layer base</code> 5 处全局；删除 <code>.dark</code> / <code>@custom-variant dark</code> / <code>--color-brand</code> / 所有 sidebar/chart 占位变量</td></tr>
+          <tr><td>3</td><td><code>patra-portal/src/app/layout.tsx</code></td><td><span class="pill modify">modify</span></td><td>替换 Geist 为 5 字体（Inter/Source Serif 4/JetBrains Mono/Noto Sans SC/Noto Serif SC）；更新 metadata（title/description）；改 <code>themeColor</code> 为 <code>#176B62</code>；注入 <code>&lt;Toaster /&gt;</code></td></tr>
+          <tr><td>4</td><td><code>patra-portal/src/app/page.tsx</code></td><td><span class="pill modify">modify</span></td><td>完全重写：装配 6 区块（RSC）+ <code>data-section</code> 锚点</td></tr>
+          <tr><td>5</td><td><code>patra-portal/src/components/ui/input.tsx</code></td><td><span class="pill create">create</span></td><td>shadcn add input</td></tr>
+          <tr><td>6</td><td><code>patra-portal/src/components/ui/card.tsx</code></td><td><span class="pill create">create</span></td><td>shadcn add card</td></tr>
+          <tr><td>7</td><td><code>patra-portal/src/components/ui/badge.tsx</code></td><td><span class="pill create">create</span></td><td>shadcn add badge</td></tr>
+          <tr><td>8</td><td><code>patra-portal/src/components/ui/tabs.tsx</code></td><td><span class="pill create">create</span></td><td>shadcn add tabs</td></tr>
+          <tr><td>9</td><td><code>patra-portal/src/components/ui/sheet.tsx</code></td><td><span class="pill create">create</span></td><td>shadcn add sheet</td></tr>
+          <tr><td>10</td><td><code>patra-portal/src/components/ui/sonner.tsx</code></td><td><span class="pill create">create</span></td><td>shadcn add sonner</td></tr>
+          <tr><td>11</td><td><code>patra-portal/src/types/portal.ts</code></td><td><span class="pill create">create</span></td><td>11 个领域类型</td></tr>
+          <tr><td>12</td><td><code>patra-portal/src/data/portal-stats.ts</code></td><td><span class="pill create">create</span></td><td>PORTAL_STATS 实例</td></tr>
+          <tr><td>13</td><td><code>patra-portal/src/data/search-modes.ts</code></td><td><span class="pill create">create</span></td><td>SEARCH_MODES (4)</td></tr>
+          <tr><td>14</td><td><code>patra-portal/src/data/example-queries.ts</code></td><td><span class="pill create">create</span></td><td>EXAMPLE_QUERIES (4)</td></tr>
+          <tr><td>15</td><td><code>patra-portal/src/data/topics.ts</code></td><td><span class="pill create">create</span></td><td>TOPIC_CLOUD (32) + topicTier()</td></tr>
+          <tr><td>16</td><td><code>patra-portal/src/data/journals.ts</code></td><td><span class="pill create">create</span></td><td>JOURNALS (6)</td></tr>
+          <tr><td>17</td><td><code>patra-portal/src/data/feed.ts</code></td><td><span class="pill create">create</span></td><td>FEED (14 paper)</td></tr>
+          <tr><td>18</td><td><code>patra-portal/src/data/index.ts</code></td><td><span class="pill create">create</span></td><td>barrel re-export</td></tr>
+          <tr><td>19</td><td><code>patra-portal/src/components/portal/TopNav.tsx</code></td><td><span class="pill create">create</span></td><td>'use client'，含 Sheet 汉堡</td></tr>
+          <tr><td>20</td><td><code>patra-portal/src/components/portal/Hero.tsx</code></td><td><span class="pill create">create</span></td><td>RSC，masthead + headline + ornament + 嵌 Composer</td></tr>
+          <tr><td>21</td><td><code>patra-portal/src/components/portal/Composer.tsx</code></td><td><span class="pill create">create</span></td><td>'use client'，shadcn Tabs + Input + 提交按钮 + 试试 chip</td></tr>
+          <tr><td>22</td><td><code>patra-portal/src/components/portal/TopicCloud.tsx</code></td><td><span class="pill create">create</span></td><td>RSC，5 级 tier 词云</td></tr>
+          <tr><td>23</td><td><code>patra-portal/src/components/portal/Journals.tsx</code></td><td><span class="pill create">create</span></td><td>RSC，6 张封面网格容器</td></tr>
+          <tr><td>24</td><td><code>patra-portal/src/components/portal/JournalCoverCard.tsx</code></td><td><span class="pill create">create</span></td><td>RSC，单张封面卡（接收 Journal prop）</td></tr>
+          <tr><td>25</td><td><code>patra-portal/src/components/portal/ExploreFeed.tsx</code></td><td><span class="pill create">create</span></td><td>'use client'，shadcn Tabs（trending/recent/cited）</td></tr>
+          <tr><td>26</td><td><code>patra-portal/src/components/portal/PaperCard.tsx</code></td><td><span class="pill create">create</span></td><td>RSC，含 AISummaryBadge 子组件</td></tr>
+          <tr><td>27</td><td><code>patra-portal/src/components/portal/AISummaryBadge.tsx</code></td><td><span class="pill create">create</span></td><td>RSC，clay border + paper bg</td></tr>
+          <tr><td>28</td><td><code>patra-portal/src/components/portal/Footer.tsx</code></td><td><span class="pill create">create</span></td><td>RSC，contentinfo + brand wordmark + 版权</td></tr>
+          <tr><td>29</td><td><code>patra-portal/tests/components/portal/*.test.tsx</code></td><td><span class="pill create">create</span></td><td>10 份 Vitest 单测（每组件 1 份）</td></tr>
+          <tr><td>30</td><td><code>patra-portal/tests/data/topics.test.ts</code></td><td><span class="pill create">create</span></td><td>topicTier 阈值边界用例</td></tr>
+          <tr><td>31</td><td><code>patra-portal/tests/e2e/homepage.spec.ts</code></td><td><span class="pill create">create</span></td><td>Playwright smoke</td></tr>
+          <tr><td>32</td><td><code>patra-portal/playwright.config.ts</code></td><td><span class="pill create">create</span></td><td>chromium / baseURL / webServer 配置</td></tr>
+          <tr><td>33</td><td><code>patra-portal/package.json</code></td><td><span class="pill modify">modify</span></td><td><code>devDependencies</code> 加 <code>@playwright/test</code>；<code>scripts</code> 加 <code>"test:e2e": "playwright test"</code></td></tr>
+          <tr><td>34</td><td><code>patra-portal/pnpm-lock.yaml</code></td><td><span class="pill modify">modify</span></td><td>装新依赖时自动更新</td></tr>
+          <tr><td>35</td><td><code>patra-portal/public/brand/patra-mark.svg</code></td><td><span class="pill create">create</span></td><td>从 handoff <code>assets/</code> 移植</td></tr>
+          <tr><td>36</td><td><code>patra-portal/public/brand/patra-monogram.svg</code></td><td><span class="pill create">create</span></td><td>从 handoff <code>assets/</code> 移植</td></tr>
+          <tr><td>37</td><td><code>patra-portal/public/brand/patra-wordmark.svg</code></td><td><span class="pill create">create</span></td><td>从 handoff <code>assets/</code> 移植</td></tr>
+          <tr><td>38</td><td><code>patra-portal/.gitignore</code></td><td><span class="pill modify">modify</span></td><td>追加 <code>test-results/</code> / <code>playwright-report/</code> / <code>.playwright/</code></td></tr>
+          <tr><td>39</td><td><code>.github/workflows/portal-ci.yml</code></td><td><span class="pill modify">modify</span></td><td>追加 e2e job（continue-on-error: true，不进 aggregator needs）</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <aside class="callout info">
+      <span class="title">Done 判定</span>
+      <ol>
+        <li><strong>D1</strong>：6 个 Linear Issue（PAP-28/30/31/32/33/34）状态 = Done</li>
+        <li><strong>D2</strong>：单 PR 已创建（feat/v0.4-portal-foundation → main），含 6 个 commit；PR squash-merge 后 main 上 1 个 commit</li>
+        <li><strong>D3</strong>：<code>cd patra-portal &amp;&amp; pnpm dev</code> → 浏览器 <code>http://localhost:3000</code> 可见完整 6 区块首页（TopNav / Hero / TopicCloud / Journals / ExploreFeed / Footer）</li>
+        <li><strong>D4</strong>：DevTools 4 视口（375/800/1024/1440）布局正确；汉堡 sheet 可用 / Journals 在 720 以下横滑 / Hero composer 在 640 以下紧凑</li>
+        <li><strong>D5</strong>：<code>pnpm lint &amp;&amp; pnpm typecheck</code> 退出码 0；<code>pnpm test</code> 全绿（含 11 份新单测）；<code>pnpm test:e2e</code> 本地通过</li>
+        <li><strong>D6</strong>：PR 触发 portal-ci.yml；lint / typecheck / test / aggregator 4 个 required check 全绿；e2e job 跑通（即便失败也不阻断）</li>
+        <li><strong>D7</strong>：SearchBar 按回车 → sonner toast 弹出 "功能即将上线"；TopNav 文献/期刊/主题 tab 显式 disabled 不可点</li>
+        <li><strong>D8</strong>：grep <code>📖|⭐|💬</code> 在 <code>patra-portal/src/</code> 下 0 命中（design system 禁 emoji 已贯彻）</li>
+        <li><strong>D9</strong>：Tailwind v4 落地验证：<code>grep -q "@theme" patra-portal/src/app/globals.css</code>；<code>test ! -e patra-portal/tailwind.config.ts</code>；<code>test ! -e patra-portal/tailwind.config.js</code></li>
+        <li><strong>D10</strong>：<code>patra-portal/src/styles/tokens.css</code> 存在并被 <code>globals.css</code> import</li>
+      </ol>
+    </aside>
+
+  </main>
+
+  <aside class="notes-panel" id="notes">
+    <header>
+      <h2>Implementation Notes</h2>
+      <p class="hint">实施期由 Claude Code 即时追加。规则：遇到 spec 未规定的<strong>决定</strong>、必要<strong>更改</strong>、不可避免的<strong>权衡</strong>、其他用户应知事项，立即用 Edit 追加 entry，不要等任务结束。</p>
+    </header>
+
+    <ol class="notes-log">
+    </ol>
+
+    <p class="empty-state">no notes yet</p>
+
+    <footer class="notes-stats">
+      总计:
+      <span data-counter="decision">0</span> decisions /
+      <span data-counter="change">0</span> changes /
+      <span data-counter="tradeoff">0</span> tradeoffs /
+      <span data-counter="other">0</span> others
+    </footer>
+  </aside>
+
+</div>
+</body>
+</html>
