@@ -30,6 +30,7 @@ docs/patra/design/snapshots/<YYYY-MM-DD>-<topic>.zip
 | 文件 | 关联 Issue | 关联 Project | 内容 |
 |---|---|---|---|
 | `2026-05-23-design-system.zip` | [PAP-26](https://linear.app/papertrace/issue/PAP-26) | v0.4 Portal Foundation | Patra DS — 色板（paper / ink / clay / teal + 语义 moss/amber/rust/slate）+ 字体（Inter / Source Serif 4 / JetBrains Mono）+ 4px spacing scale + radius/shadows/motion tokens + 6 类核心组件（buttons / cards / inputs / chips-badges / table / menu-palette） |
+| `2026-05-23-homepage-hifi.zip` | [PAP-29](https://linear.app/papertrace/issue/PAP-29) | v0.4 Portal Foundation | 首页 hi-fi 可运行原型（HTML/CSS/JS · 桌面 + 移动同源响应式）— 6 区块（TopNav / Hero / TopicCloud / Journals / ExploreFeed / Footer）+ 880/720 双断点 + clay AI 速读 + Tweaks 调参面板 6 项 + 品牌 SVG 三件套；作为 [PAP-32](https://linear.app/papertrace/issue/PAP-32) 像素级复刻到 Next.js 15 + Tailwind v4 + shadcn/ui 的输入 |
 
 ## 解压与查看
 
