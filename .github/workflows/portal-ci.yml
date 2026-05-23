@@ -1,5 +1,8 @@
 name: Portal CI
 
+permissions:
+  contents: read
+
 # paths 限定 patra-portal/** 触发，非 portal 变更不触发本 workflow。
 # 后续如需将 patra-portal/** 从 ci.yml 的 paths-ignore 中排除，
 # 可避免 portal-only PR 同时触发后端 Gradle 全量构建。
