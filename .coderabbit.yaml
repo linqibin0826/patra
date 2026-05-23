@@ -2,14 +2,14 @@
 # Patra CodeRabbit 配置
 # - 决策 C：AI Review 不阻断 PR（Required Check 由分支保护规则控制，详见 PAP-15）
 # - 评论使用中文；忽略生成物、lockfile、wrapper 与构建输出
-# - profile=assertive：扩大设计风险覆盖；request_changes_workflow 仍为 false（与决策 C 一致）
+# - profile=chill：降噪优先，只报高置信度 bug 与设计风险；request_changes_workflow 仍为 false（与决策 C 一致）
 # - Linear KB 已启用：需在 app.coderabbit.ai/integrations 完成一次性 OAuth 授权
 # - auto_apply_labels=true：沿用仓库既有 area:* 体系，复用 area:api/area:portal + 新建 area:infra/area:migration/area:test
 language: zh-CN
 tone_instructions: 用中文 review；工程师同事语气，指出 bug 与设计风险，避免礼貌性赞美（如"好的实现/写得清晰/不错的设计/看起来合理"）与凑评论。如无明确 bug 或设计风险，不发表评论。
 
 reviews:
-  profile: assertive
+  profile: chill
   request_changes_workflow: false
   high_level_summary: true
   high_level_summary_instructions: |
@@ -21,7 +21,8 @@ reviews:
   sequence_diagrams: false
   changed_files_summary: false
   collapse_walkthrough: true
-  review_status: true
+  # 关闭 "Review in progress" 之类的状态评论，减少 PR 时间线刷屏
+  review_status: false
   commit_status: false
   fail_commit_status: false
   auto_apply_labels: true
@@ -67,8 +68,9 @@ reviews:
     semgrep:
       enabled: false
     # 补 CI 盲区：以下工具 Patra CI 未覆盖
+    # markdownlint 在文档密集型项目（docs/、release-spec/、Linear notes 同步）噪音过大，关闭
     markdownlint:
-      enabled: true
+      enabled: false
     yamllint:
       enabled: true
     shellcheck:
@@ -174,7 +176,8 @@ knowledge_base:
     usage: disabled
 
 chat:
-  auto_reply: true
+  # 关闭 @coderabbitai 的自动回复，减少互动评论噪音；如需对话仍可显式 @ 召唤
+  auto_reply: false
   integrations:
     linear:
       usage: enabled

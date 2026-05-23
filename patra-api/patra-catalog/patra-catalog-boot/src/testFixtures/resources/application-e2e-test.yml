@@ -12,8 +12,8 @@ spring:
     exclude:
       - org.redisson.spring.starter.RedissonAutoConfigurationV2
       - org.redisson.spring.starter.RedissonAutoConfigurationV4
-      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
-      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+      - org.springframework.boot.data.redis.autoconfigure.DataRedisAutoConfiguration
+      # DataRedisRepositoriesAutoConfiguration 已在 PatraCatalogApplication @SpringBootApplication.exclude 中排除
       # 排除对象存储配置（E2E 测试不需要 MinIO）
       - dev.linqibin.starter.objectstorage.ObjectStorageAutoConfiguration
       - dev.linqibin.starter.objectstorage.S3StorageAutoConfiguration
