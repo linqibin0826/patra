@@ -26,9 +26,21 @@ describe("PaperCard", () => {
     expect(doi.className).toMatch(/font-mono/);
   });
 
+  it("渲染 source 标签", () => {
+    render(<PaperCard paper={p} />);
+    expect(screen.getByText(p.source)).toBeInTheDocument();
+  });
+
+  it("作者文本展示 visible 数 + remaining 数", () => {
+    render(<PaperCard paper={p} />);
+    const remaining = p.authorCount - 2;
+    expect(screen.getByText(new RegExp(`等\\s*${remaining}\\s*位作者`))).toBeInTheDocument();
+  });
+
   it("含 AI 速读区域 + summary 文字片段", () => {
     render(<PaperCard paper={p} />);
     expect(screen.getByText("AI 速读")).toBeInTheDocument();
+    expect(screen.getByText("自动生成")).toBeInTheDocument();
     expect(screen.getByText(/心血管事件下降/)).toBeInTheDocument();
   });
 

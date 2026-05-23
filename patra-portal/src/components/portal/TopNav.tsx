@@ -24,7 +24,7 @@ export function TopNav() {
     >
       <div className="container mx-auto grid h-14 max-w-[1200px] grid-cols-[auto_1fr_auto] items-center gap-6 px-6 max-[880px]:gap-3">
         <a href="#top" className="inline-flex items-center gap-2 text-ink-900" aria-label="Patra">
-          <Image src="/brand/patra-mark.svg" alt="" aria-hidden width={28} height={28} />
+          <Image src="/brand/patra-mark.svg" alt="" aria-hidden width={10} height={36} />
           <span className="font-serif text-xl tracking-tight">Patra</span>
           <span className="ml-1 rounded-sm border border-clay-200 bg-clay-50 px-1.5 text-[10px] font-medium uppercase tracking-caps text-clay-700">
             门户

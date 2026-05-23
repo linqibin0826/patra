@@ -12,7 +12,7 @@ export function Journals() {
       <div className="mb-6 flex items-end justify-between gap-3 max-[880px]:flex-col max-[880px]:items-start">
         <div>
           <span className="inline-flex items-center gap-1.5 font-sans text-2xs font-semibold uppercase tracking-caps text-fg-3">
-            <Image src="/brand/patra-monogram.svg" alt="" aria-hidden width={14} height={14} />
+            <Image src="/brand/patra-mark.svg" alt="" aria-hidden width={4} height={14} />
             按期刊浏览
           </span>
           <h2 className="mt-1 font-serif text-3xl font-medium leading-tight tracking-tight text-ink-900">

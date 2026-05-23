@@ -37,7 +37,7 @@ export function JournalCoverCard({ journal, className }: JournalCoverCardProps) 
         <div className="whitespace-pre-line font-serif font-medium leading-[1.05] tracking-tight text-[clamp(20px,2.2vw,26px)]">
           {journal.cover}
         </div>
-        <div className="absolute bottom-3 left-2 right-2 text-center font-mono text-[9px] uppercase tracking-[0.14em] opacity-60">
+        <div className="absolute bottom-3 left-2 right-2 text-center font-mono text-[9px] tracking-[0.14em] opacity-60">
           vol · 2026
         </div>
       </div>

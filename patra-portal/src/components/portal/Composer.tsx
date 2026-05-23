@@ -56,13 +56,16 @@ export function Composer({ onSubmit }: ComposerProps) {
       onSubmit={handleSubmit}
       className="overflow-hidden rounded-lg border border-ink-800 bg-white shadow-sm"
     >
-      <Tabs value={mode} onValueChange={handleModeChange}>
-        <TabsList className="flex h-auto items-center gap-0 rounded-none border-b border-border-default bg-paper-50 p-0 px-1.5">
+      <Tabs value={mode} onValueChange={handleModeChange} className="!flex-col">
+        <TabsList
+          variant="line"
+          className="flex h-auto w-full items-center justify-start gap-0 rounded-none border-b border-border-default bg-paper-50 p-0 px-1.5"
+        >
           {SEARCH_MODES.map((m) => (
             <TabsTrigger
               key={m.id}
               value={m.id}
-              className="rounded-none border-b-2 border-transparent bg-transparent px-3.5 py-2.5 text-sm font-medium text-fg-3 shadow-none hover:text-ink-900 data-[state=active]:border-teal-600 data-[state=active]:bg-transparent data-[state=active]:text-ink-900 data-[state=active]:shadow-none"
+              className="relative -mb-px flex-none rounded-none border-x-0 border-t-0 border-b-2 border-transparent bg-transparent px-3.5 py-2.5 text-sm font-medium text-fg-3 shadow-none transition-colors duration-150 hover:text-ink-900 data-active:border-teal-600! data-active:bg-transparent data-active:text-ink-900! data-active:shadow-none"
             >
               {m.label}
               {m.id === "keyword" && (

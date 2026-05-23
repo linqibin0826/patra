@@ -19,7 +19,7 @@ export function TopicCloud() {
         <div className="mb-2 flex items-end justify-between gap-3 max-[880px]:flex-col max-[880px]:items-start">
           <div>
             <span className="inline-flex items-center gap-1.5 font-sans text-2xs font-semibold uppercase tracking-caps text-fg-3">
-              <Image src="/brand/patra-monogram.svg" alt="" aria-hidden width={14} height={14} />
+              <Image src="/brand/patra-mark.svg" alt="" aria-hidden width={4} height={14} />
               此刻热议 · trending now
             </span>
             <h2 className="mt-1 font-serif text-3xl font-medium leading-tight tracking-tight text-ink-900">
@@ -63,6 +63,11 @@ export function TopicCloud() {
 
         <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-4 font-mono text-2xs uppercase tracking-caps text-fg-3">
+            <span
+              aria-hidden
+              data-topic-heat-bar
+              className="h-3 w-24 rounded-sm bg-[linear-gradient(to_right,var(--color-ink-700),var(--color-ink-400),var(--color-clay-300),var(--color-clay-600))]"
+            />
             <span>冷 → 热</span>
             <span>↗ Δ 较上周</span>
           </div>
