@@ -1,0 +1,189 @@
+/* ============================================================
+   PATRA — Foundations
+   Colors + typography tokens for the Patra Portal & related
+   surfaces. Warm, paper-like, editorial. Pair with Tailwind v4
+   `@theme` or import directly.
+   ============================================================ */
+
+/* ============================================================
+   PATRA tokens — 与 design system colors_and_type.css 同源
+   本地化调整 2 处：
+   1. 删除 google fonts @import url（字体改由 next/font 注入）
+   2. 重命名 --font-sans/-serif/-mono → --patra-font-sans/-serif/-mono
+      （避免与 @theme 内 Tailwind 消费的 --font-sans 同名冲突）
+   ============================================================ */
+
+:root {
+  /* ============ COLOR PRIMITIVES ============ */
+  /* Paper / cream backgrounds */
+  --paper-50: #fbf8f2;
+  --paper-100: #f7f2e8;
+  --paper-200: #f1eadc;
+  --paper-300: #e7e1d4;
+  --paper-400: #d6cfc0;
+
+  /* Ink (warm near-blacks & grays) */
+  --ink-900: #1c1917; /* primary text */
+  --ink-800: #292524;
+  --ink-700: #44403c;
+  --ink-600: #57534e; /* muted text */
+  --ink-500: #78716c;
+  --ink-400: #a8a29e; /* subtle / placeholder */
+  --ink-300: #c7c0b6;
+  --ink-200: #e0dacc;
+
+  /* Clay — the single warm accent. Derived from the patra mark. */
+  --clay-50: #fbf1e8;
+  --clay-100: #f4e0cb;
+  --clay-200: #e9c39b;
+  --clay-300: #dc9d6a;
+  --clay-400: #d17f45;
+  --clay-500: #ce6a37; /* canonical accent */
+  --clay-600: #b85727;
+  --clay-700: #97441e;
+  --clay-800: #6e3216;
+  --clay-900: #3e1c0c; /* mark "deep" — for marks/illustrations */
+
+  /* Teal — discovery surface accent (public homepage, search, cloud).
+     Medical-journal teal — NEJM/JAMA family — pulled slightly warm so
+     it doesn't fight the cream paper. */
+  --teal-50: #ecf5f3;
+  --teal-100: #d0e6e2;
+  --teal-200: #a4cec7;
+  --teal-300: #74b3aa;
+  --teal-400: #4d958c;
+  --teal-500: #2b7d73;
+  --teal-600: #176b62; /* primary action on public surface */
+  --teal-700: #0e574f;
+  --teal-800: #08443d;
+  --teal-900: #03332e;
+
+  /* Semantic — muted, editorial, not SaaS-bright */
+  --moss-500: #5f7a47; /* success */
+  --moss-50: #eef1e6;
+  --amber-500: #b8862f; /* warning */
+  --amber-50: #f6eeda;
+  --rust-500: #b23a2e; /* danger */
+  --rust-50: #f6e1dc;
+  --slate-500: #4a6479; /* info / link-secondary */
+  --slate-50: #e2e8ee;
+
+  /* ============ SEMANTIC ASSIGNMENTS ============ */
+  /* Surfaces */
+  --bg-canvas: var(--paper-100); /* page background */
+  --bg-paper: var(--paper-50); /* card / panel */
+  --bg-elevated: #ffffff; /* dialog / popover */
+  --bg-sunken: var(--paper-200); /* well / inset */
+  --bg-tint: var(--clay-50); /* accent-tinted region */
+
+  /* Foreground */
+  --fg-1: var(--ink-900); /* primary */
+  --fg-2: var(--ink-700); /* secondary */
+  --fg-3: var(--ink-600); /* muted */
+  --fg-4: var(--ink-400); /* subtle / placeholder */
+  --fg-on-clay: #fbf8f2; /* text on clay buttons */
+
+  /* Borders — hairlines, paper-y */
+  --border-subtle: var(--paper-300);
+  --border-default: #ddd5c4;
+  --border-strong: var(--paper-400);
+  --border-focus: var(--clay-500);
+
+  /* Accent (clay) */
+  --accent: var(--clay-500);
+  --accent-hover: var(--clay-600);
+  --accent-press: var(--clay-700);
+  --accent-tint: var(--clay-50);
+  --accent-ink: var(--clay-900); /* dark form of accent */
+
+  /* Status */
+  --status-success: var(--moss-500);
+  --status-success-bg: var(--moss-50);
+  --status-warning: var(--amber-500);
+  --status-warning-bg: var(--amber-50);
+  --status-danger: var(--rust-500);
+  --status-danger-bg: var(--rust-50);
+  --status-info: var(--slate-500);
+  --status-info-bg: var(--slate-50);
+
+  /* Link */
+  --link: var(--clay-700);
+  --link-hover: var(--clay-800);
+
+  /* Selection */
+  --selection-bg: #f4d9b8;
+  --selection-fg: var(--ink-900);
+
+  /* ============ TYPOGRAPHY ============ */
+  --patra-font-sans:
+    var(--font-inter), var(--font-noto-sans-sc), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", sans-serif;
+  --patra-font-serif:
+    var(--font-source-serif), var(--font-noto-serif-sc), "Source Serif Pro", Georgia,
+    "Iowan Old Style", serif;
+  --patra-font-mono:
+    var(--font-jetbrains-mono), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* Type scale — UI-leaning, tight, dense.
+     Each step uses a paired line-height + tracking. */
+  --text-2xs: 10.5px;
+  --text-xs: 11.5px;
+  --text-sm: 12.5px; /* table cells, dense rows */
+  --text-base: 13.5px; /* body UI */
+  --text-md: 14.5px;
+  --text-lg: 16px;
+  --text-xl: 18px;
+  --text-2xl: 22px;
+  --text-3xl: 28px;
+  --text-4xl: 36px;
+  --text-5xl: 48px;
+
+  --leading-tight: 1.15;
+  --leading-snug: 1.3;
+  --leading-normal: 1.45;
+  --leading-relaxed: 1.6;
+  --leading-reading: 1.65; /* serif long-form */
+
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.02em;
+  --tracking-caps: 0.08em;
+
+  /* ============ SHAPE & SPACE ============ */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-pill: 999px;
+
+  /* Spacing — 4px base */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Shadows — restrained. Borders do the work; shadows are subtle. */
+  --shadow-xs: 0 1px 0 0 rgba(28, 25, 23, 0.04);
+  --shadow-sm: 0 1px 2px 0 rgba(28, 25, 23, 0.05), 0 0 0 1px rgba(28, 25, 23, 0.04);
+  --shadow-md: 0 4px 12px -4px rgba(28, 25, 23, 0.1), 0 0 0 1px rgba(28, 25, 23, 0.05);
+  --shadow-lg: 0 12px 32px -8px rgba(28, 25, 23, 0.16), 0 0 0 1px rgba(28, 25, 23, 0.05);
+  --shadow-inset: inset 0 1px 0 0 rgba(28, 25, 23, 0.04);
+
+  /* Focus ring */
+  --ring-focus: 0 0 0 3px rgba(206, 106, 55, 0.28);
+
+  /* Motion */
+  --ease-standard: cubic-bezier(0.2, 0.6, 0.2, 1);
+  --ease-emphasized: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur-normal: 180ms;
+  --dur-slow: 280ms;
+}
