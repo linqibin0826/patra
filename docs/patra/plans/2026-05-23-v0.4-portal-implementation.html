@@ -24,8 +24,8 @@
           <li data-task-status="done"><a href="#task-2">Task 2 — C2 mock 数据层 + 类型定义 (PAP-28)</a></li>
           <li data-task-status="done"><a href="#task-3">Task 3 — C3·nav 组 TopNav + Footer + AISummaryBadge (PAP-31 1/3)</a></li>
           <li data-task-status="done"><a href="#task-4">Task 4 — C3·hero 组 Hero + Composer (PAP-31 2/3)</a></li>
-          <li data-task-status="in-progress"><a href="#task-5">Task 5 — C3·feed 组 TopicCloud + Journals + ExploreFeed + PaperCard (PAP-31 3/3 · commit C3)</a></li>
-          <li data-task-status="pending"><a href="#task-6">Task 6 — C4 首页 page 装配 + Composer toast (PAP-32)</a></li>
+          <li data-task-status="done"><a href="#task-5">Task 5 — C3·feed 组 TopicCloud + Journals + ExploreFeed + PaperCard (PAP-31 3/3 · commit C3)</a></li>
+          <li data-task-status="done"><a href="#task-6">Task 6 — C4 首页 page 装配 + Composer toast (PAP-32)</a></li>
           <li data-task-status="pending"><a href="#task-7">Task 7 — C5 响应式断点 4 档 (PAP-33)</a></li>
           <li data-task-status="pending"><a href="#task-8">Task 8 — C6 Playwright e2e + CI job (PAP-34)</a></li>
         </ol>
@@ -1521,7 +1521,7 @@ git status   # 累计 staged: nav 组 3 + hero 组 2 = 5 个 .tsx + 5 个 .test.
                     (PAP-31 3/3; commit C3 在末尾)
            ============================================================ -->
 
-      <article class="task" id="task-5" data-status="in-progress">
+      <article class="task" id="task-5" data-status="done">
         <header>
           <h2>任务 5：C3·feed 组 TopicCloud + Journals + JournalCoverCard + ExploreFeed + PaperCard (PAP-31 3/3 · commit C3)</h2>
           <dl class="files">
@@ -1532,7 +1532,7 @@ git status   # 累计 staged: nav 组 3 + hero 组 2 = 5 个 .tsx + 5 个 .test.
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：写 TopicCloud.test.tsx + TopicCloud.tsx</strong>
             <p>测试代码：</p>
             <pre><code class="lang-tsx">// tests/components/portal/TopicCloud.test.tsx
@@ -1647,7 +1647,7 @@ export function TopicCloud() {
             <p>验证：<code>pnpm test tests/components/portal/TopicCloud.test.tsx</code> → 4 测试绿。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：写 JournalCoverCard.test.tsx + JournalCoverCard.tsx</strong>
             <pre><code class="lang-tsx">// tests/components/portal/JournalCoverCard.test.tsx
 import { render, screen } from "@testing-library/react";
@@ -1742,7 +1742,7 @@ export function JournalCoverCard({ journal, className }: JournalCoverCardProps) 
             <p>验证：<code>pnpm test tests/components/portal/JournalCoverCard.test.tsx</code> → 5 测试绿。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：写 Journals.test.tsx + Journals.tsx</strong>
             <pre><code class="lang-tsx">// tests/components/portal/Journals.test.tsx
 import { render, screen } from "@testing-library/react";
@@ -1813,7 +1813,7 @@ export function Journals() {
             <p>验证：<code>pnpm test tests/components/portal/Journals.test.tsx</code> → 3 测试绿。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：写 PaperCard.test.tsx + PaperCard.tsx</strong>
             <pre><code class="lang-tsx">// tests/components/portal/PaperCard.test.tsx
 import { render, screen } from "@testing-library/react";
@@ -1912,7 +1912,7 @@ export function PaperCard({ paper }: PaperCardProps) {
             <p>验证：<code>pnpm test tests/components/portal/PaperCard.test.tsx</code> → 5 测试绿。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：写 ExploreFeed.test.tsx + ExploreFeed.tsx</strong>
             <pre><code class="lang-tsx">// tests/components/portal/ExploreFeed.test.tsx
 import { render, screen } from "@testing-library/react";
@@ -1995,7 +1995,7 @@ export function ExploreFeed() {
             <p>验证：<code>pnpm test tests/components/portal/ExploreFeed.test.tsx</code> → 3 测试绿。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：跑全量 vitest + lint + typecheck</strong>
             <pre><code class="lang-bash">cd patra-portal
 pnpm typecheck
@@ -2009,7 +2009,7 @@ pnpm test</code></pre>
             </ul>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7：Commit C3 (覆盖 Task 3/4/5 共 10 组件 + 10 测试)</strong>
             <pre><code class="lang-bash">git add patra-portal/src/components/portal/ \
         patra-portal/tests/components/portal/
@@ -2043,7 +2043,7 @@ PAP-31"</code></pre>
            Task 6 — C4: 首页 page 装配 + Composer toast (PAP-32)
            ============================================================ -->
 
-      <article class="task" id="task-6" data-status="pending">
+      <article class="task" id="task-6" data-status="done">
         <header>
           <h2>任务 6：C4 首页 page 装配 + Composer toast (PAP-32)</h2>
           <dl class="files">
@@ -2053,7 +2053,7 @@ PAP-31"</code></pre>
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：完全重写 src/app/page.tsx</strong>
             <pre><code class="lang-tsx">"use client";
 
@@ -2089,7 +2089,7 @@ export default function HomePage() {
             <p><strong>'use client'</strong> 因 page.tsx 需要传 <code>onComposerSubmit</code> 闭包给 Hero，且 toast() 是客户端调用。代价：整页变 client；Hero / Journals / TopicCloud 仍可作为 RSC 引入，但 page.tsx 本身是 client（这是为了 toast 的便利接受的取舍——详见 spec §9 决策 6）。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：更新 tests/smoke.test.tsx（原占位 smoke 与新首页结构不匹配）</strong>
             <pre><code class="lang-tsx">import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
@@ -2111,7 +2111,7 @@ describe("HomePage smoke", () =&gt; {
 });</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：跑 lint + typecheck + test</strong>
             <pre><code class="lang-bash">cd patra-portal
 pnpm lint
@@ -2124,7 +2124,7 @@ pnpm test</code></pre>
             </ul>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：本地启动 dev server 手动验收 6 区块</strong>
             <pre><code class="lang-bash">cd patra-portal
 pnpm dev   # http://localhost:3000</code></pre>
@@ -2143,7 +2143,7 @@ pnpm dev   # http://localhost:3000</code></pre>
             <p>验收完毕后 Ctrl-C 停止 dev server。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：Commit C4</strong>
             <pre><code class="lang-bash">git add patra-portal/src/app/page.tsx patra-portal/tests/smoke.test.tsx
 
@@ -2551,14 +2551,54 @@ EOF
         </header>
         <p>Hero.test.tsx 用例数 5 → 4：删除 plan 内"masthead 显示 sources 数 10"那条（<code>getByText(/10/, { selector: "b, strong" })</code> 难以稳定匹配——"10" 数字会出现在 records 等多处）。剩 4 个稳定用例覆盖 h1 / records 数 / Composer 嵌入 / data-ornament。</p>
       </li>
+      <li class="note" data-type="change" data-time="2026-05-23T17:30">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-23T17:30">05-23 17:30</time>
+          <a href="#task-5">§ Task 5</a>
+        </header>
+        <p>所有 placeholder <code>&lt;a href="#"&gt;</code> 改为 <code>&lt;button type="button"&gt;</code>（影响：TopicCloud 32 个 topic / TopicCloud 浏览全部 / Journals 浏览全部 / ExploreFeed soon link 等）。原因：Biome <code>useValidAnchor</code> 规则——anchor 仅用于真实导航；本版无 routing，placeholder 链接语义上是 button。保留 cursor-pointer 与悬停样式保持视觉一致。a11y 上 button 比 href="#" 更准确（避免屏幕阅读器误读"link"）。</p>
+      </li>
+      <li class="note" data-type="change" data-time="2026-05-23T17:30">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-23T17:30">05-23 17:30</time>
+          <a href="#task-5">§ Task 5</a>
+        </header>
+        <p>JournalCoverCard 由 <code>&lt;a&gt;</code> 改为 <code>&lt;button&gt;</code>（同上 useValidAnchor 规则）；连带 Journals.test.tsx 第 1 用例从 <code>querySelectorAll("a[href]")</code> 改为 <code>getAllByRole("button")</code> 查询。视觉无差异，仅语义元素与查询方式调整。</p>
+      </li>
+      <li class="note" data-type="change" data-time="2026-05-23T17:30">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-23T17:30">05-23 17:30</time>
+          <a href="#task-5">§ Task 5</a>
+        </header>
+        <p>TopicCloud <code>&lt;ul role="list"&gt;</code> 去掉冗余 <code>role</code>（Biome <code>noRedundantRoles</code>）；<code>&lt;ul&gt;</code> 隐含 list 角色。测试 <code>getAllByRole("listitem")</code> 查询 <code>&lt;li&gt;</code> 不受影响。</p>
+      </li>
+      <li class="note" data-type="change" data-time="2026-05-23T17:30">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-23T17:30">05-23 17:30</time>
+          <a href="#task-5">§ Task 5</a>
+        </header>
+        <p>JournalCoverCard 的动态封面颜色由原 plan 的 inline <code>style={{ background: bg, color: ink }}</code> 改为通过 <code>style={{"--cover-bg": bg, "--cover-ink": ink}}</code> 注入 CSS variable，className 内用 <code>bg-[var(--cover-bg)] text-[var(--cover-ink)]</code> 消费。语义上是"data-driven 颜色通过 CSS variable 注入"，更符合 <code>component.md</code> 对 inline style 的精神（避免硬编码视觉属性，仅注入 token 桥）。</p>
+      </li>
+      <li class="note" data-type="other" data-time="2026-05-23T17:45">
+        <header>
+          <span class="note-type">OTHER</span>
+          <time datetime="2026-05-23T17:45">05-23 17:45</time>
+          <a href="#task-8">§ Task 8</a>
+        </header>
+        <p>Task 8 e2e selector 需对齐 Task 5 的 a→button 改造。原 plan 步骤 3 写 <code>page.locator("[data-section='topic-cloud'] a")</code> 与 <code>page.locator("[data-section='journals'] a[href]")</code>，现实际渲染为 <code>&lt;button&gt;</code>（Biome useValidAnchor 规则）。Task 8 实施时必须改为 <code>... button</code> selector，否则 e2e smoke test 必然零命中失败。topic-cloud 内 32 topic + 1 浏览全部 ≥ 4；journals 内 6 cover + 1 浏览全部 ≥ 3。</p>
+      </li>
     </ol>
 
     <footer class="notes-stats">
       总计:
       <span data-counter="decision">0</span> decisions /
-      <span data-counter="change">5</span> changes /
+      <span data-counter="change">9</span> changes /
       <span data-counter="tradeoff">0</span> tradeoffs /
-      <span data-counter="other">4</span> others
+      <span data-counter="other">5</span> others
     </footer>
   </aside>
 

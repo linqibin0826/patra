@@ -1,8 +1,31 @@
+"use client";
+
+import { toast } from "sonner";
+import { ExploreFeed } from "@/components/portal/ExploreFeed";
+import { Footer } from "@/components/portal/Footer";
+import { Hero } from "@/components/portal/Hero";
+import { Journals } from "@/components/portal/Journals";
+import { TopicCloud } from "@/components/portal/TopicCloud";
+import { TopNav } from "@/components/portal/TopNav";
+
 export default function HomePage() {
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center gap-3 px-6">
-      <h1 className="text-4xl font-bold tracking-tight">patra-portal</h1>
-      <p className="text-sm text-gray-500">Patra C-end portal · v0.1.0</p>
-    </main>
+    <>
+      <TopNav />
+      <main>
+        <Hero
+          onComposerSubmit={({ value }) => {
+            if (!value.trim()) return;
+            toast("功能即将上线", {
+              description: "搜索接入留待 v0.5 BE 联调。",
+            });
+          }}
+        />
+        <TopicCloud />
+        <Journals />
+        <ExploreFeed />
+      </main>
+      <Footer />
+    </>
   );
 }
