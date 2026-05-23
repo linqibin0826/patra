@@ -18,12 +18,12 @@
 
 ## 命名规则
 
-```
+```text
 docs/patra/design/snapshots/<YYYY-MM-DD>-<topic>.zip
 ```
 
 - `<YYYY-MM-DD>`：下载日期（不是发布日期）
-- `<topic>`：snake-case 主题名，如 `design-system`、`homepage-hifi`、`search-results-hifi`
+- `<topic>`：kebab-case 主题名，如 `design-system`、`homepage-hifi`、`search-results-hifi`
 
 ## 现有快照
 
