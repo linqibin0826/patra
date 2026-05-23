@@ -55,6 +55,19 @@ docs/patra/                     # spec 与 plan
 - spec：`docs/patra/specs/2026-05-18-patra-portal-init-design.html`
 - plan：`docs/patra/plans/2026-05-18-patra-portal-init.html`
 
+## CI
+
+Portal CI 由 `.github/workflows/portal-ci.yml` 驱动，监听 `patra-portal/**` 路径变更自动触发：
+
+| Job | 命令 | 说明 |
+|-----|------|------|
+| `lint` | `pnpm lint` | Biome 静态检查 |
+| `typecheck` | `pnpm typecheck` | TypeScript 类型检查（`tsc --noEmit`） |
+| `test` | `pnpm test` | Vitest 单元测试 |
+
+`portal-ci-required-check` 聚合三个 job，已在 main 分支保护中设为 Required Status Check。
+故意推入 lint/type 错误即可验证 CI fail 阻断 PR merge。
+
 ## 提交规范
 
 - 提交触发 Husky `pre-commit`：`lint-staged`（对 staged 文件跑 `biome check --write`） + 仓库级 `pnpm typecheck`
