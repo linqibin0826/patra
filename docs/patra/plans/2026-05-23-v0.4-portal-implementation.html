@@ -1,0 +1,2497 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>v0.4 Portal Foundation 实施计划 — 6 个 FE Issue 单 PR / 6 commit 落地</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles/journal.css">
+  <link rel="stylesheet" href="../styles/plan-extras.css">
+</head>
+<body>
+<div class="layout">
+
+  <nav class="toc">
+    <h3>目录</h3>
+    <ol>
+      <li><a href="#scope-check">范围检查结果</a></li>
+      <li><a href="#file-structure">文件结构</a></li>
+      <li><a href="#tasks">任务列表</a>
+        <ol class="toc-tasks">
+          <li data-task-status="pending"><a href="#task-1">Task 1 — C1 tokens + shadcn 主题 + 字体 + 补装原语 (PAP-30)</a></li>
+          <li data-task-status="pending"><a href="#task-2">Task 2 — C2 mock 数据层 + 类型定义 (PAP-28)</a></li>
+          <li data-task-status="pending"><a href="#task-3">Task 3 — C3·nav 组 TopNav + Footer + AISummaryBadge (PAP-31 1/3)</a></li>
+          <li data-task-status="pending"><a href="#task-4">Task 4 — C3·hero 组 Hero + Composer (PAP-31 2/3)</a></li>
+          <li data-task-status="pending"><a href="#task-5">Task 5 — C3·feed 组 TopicCloud + Journals + ExploreFeed + PaperCard (PAP-31 3/3 · commit C3)</a></li>
+          <li data-task-status="pending"><a href="#task-6">Task 6 — C4 首页 page 装配 + Composer toast (PAP-32)</a></li>
+          <li data-task-status="pending"><a href="#task-7">Task 7 — C5 响应式断点 4 档 (PAP-33)</a></li>
+          <li data-task-status="pending"><a href="#task-8">Task 8 — C6 Playwright e2e + CI job (PAP-34)</a></li>
+        </ol>
+      </li>
+      <li><a href="#self-check">自检结果</a></li>
+    </ol>
+  </nav>
+
+  <main class="content">
+
+    <header class="doc-header">
+      <h1>v0.4 Portal Foundation 实施计划 — 6 个 FE Issue 单 PR / 6 commit 落地</h1>
+      <div class="meta-bar">
+        <span>📅 2026-05-23</span>
+        <span>🌿 feat/v0.4-portal-foundation</span>
+        <span>📋 plan</span>
+        <span class="status-pill">draft</span>
+      </div>
+
+      <aside class="for-ai-worker">
+        <strong>面向 AI 代理的工作者：</strong>
+        必需子技能：使用 <code>patra:subagent-driven-development</code>（推荐）
+        或 <code>patra:executing-plans</code> 逐任务实现。
+        通过修改任务卡片与步骤的 <code>data-status</code> 属性追踪进度
+        （pending / in-progress / done / blocked / skipped）。
+        <strong>commit 策略</strong>：Task 1/2/6/7/8 各自末尾 commit；Task 3/4 不 commit，Task 5 末尾合并 commit C3
+        （public components 6 commit 合并在一起对应 spec §4.1 的 C3）。Tab、空格、引号都按 Biome 自动格式化为准。
+      </aside>
+
+      <dl class="meta">
+        <dt>目标</dt> <dd>将 spec §3-§8 描述的 6 区块门户首页落地到 patra-portal，覆盖 PAP-28/30/31/32/33/34 六个 FE Issue，在 <code>feat/v0.4-portal-foundation</code> 单分支 6 commit 单 PR 内完成</dd>
+        <dt>架构</dt> <dd>Tailwind v4 <code>@theme</code> 桥接 Patra design tokens + shadcn/ui 17 标准 slot 重写 + 5 字体 (Inter/Source Serif 4/JetBrains Mono/Noto Sans SC/Noto Serif SC) + RSC 默认 / 4 个 client component / handoff 作 source of truth (32 topic / 6 journal / 14 paper)</dd>
+        <dt>技术栈</dt> <dd>Next.js 15 App Router + React 19 / TypeScript 5 strict + <code>noUncheckedIndexedAccess</code> / Tailwind v4 + shadcn/ui / Biome 2.4 / Vitest 4 + Testing Library / Playwright / sonner / lucide-react / pnpm</dd>
+        <dt>关联 spec</dt> <dd><a href="../specs/2026-05-23-v0.4-portal-implementation-design.html">v0.4 Portal Foundation 实现设计 — 6 个 FE Issue 单 PR 合并落地</a></dd>
+      </dl>
+    </header>
+
+    <section id="scope-check">
+      <h2>范围检查结果</h2>
+      <aside class="callout success">
+        <span class="title">单 plan 覆盖</span>
+        <p>本 plan 覆盖 v0.4 Portal Foundation 剩余 6 个 FE Issue。6 Issue 强依赖链：tokens (C1) → mock 数据 (C2) → 公共组件 (C3) → page 装配 (C4) → 响应式 (C5) → e2e (C6)，无法独立并行成多个子 plan。8 个 task 对应 6 commit（Task 3/4/5 合并到 C3）。Stage 2 内 Task 3/4/5 可以 fan-out 3 个 subagent 并行落地（spec §4.2）。</p>
+      </aside>
+    </section>
+
+    <section id="file-structure">
+      <h2>文件结构</h2>
+      <div class="file-tree">
+        <pre>patra-portal/
+├── src/
+│   ├── styles/
+│   │   └── tokens.css                                           [create] T1: 从 design system colors_and_type.css 同源搬入；删 2 行 google fonts @import url；重命名 --font-* → --patra-font-*；删除 .patra 命名空间语义元素样式
+│   ├── app/
+│   │   ├── globals.css                                          [modify] T1: 完全重写——@import tokens + @theme inline + shadcn 17 slot 重写 + @layer base 5 处全局
+│   │   ├── layout.tsx                                           [modify] T1: 替换 Geist 为 5 字体；改 metadata；改 themeColor=#176B62；注入 &lt;Toaster /&gt;
+│   │   └── page.tsx                                             [modify] T6: 完全重写——装配 6 区块 + data-section 锚点
+│   ├── types/
+│   │   └── portal.ts                                            [create] T2: 11 个领域类型 (ComposerMode/FeedTab/PaperSource/TopicHeatTier/SearchMode/ExampleQuery/PortalStats/Topic/JournalCoverStyle/Journal/Paper/Feed)
+│   ├── data/
+│   │   ├── index.ts                                             [create] T2: barrel re-export
+│   │   ├── portal-stats.ts                                      [create] T2: PORTAL_STATS
+│   │   ├── search-modes.ts                                      [create] T2: SEARCH_MODES (4)
+│   │   ├── example-queries.ts                                   [create] T2: EXAMPLE_QUERIES (4)
+│   │   ├── topics.ts                                            [create] T2: TOPIC_CLOUD (32) + topicTier(heat)
+│   │   ├── journals.ts                                          [create] T2: JOURNALS (6)
+│   │   └── feed.ts                                              [create] T2: FEED { trending: 6, recent: 4, cited: 4 }
+│   ├── components/
+│   │   ├── ui/
+│   │   │   ├── button.tsx                                       [keep]   已存在
+│   │   │   ├── input.tsx                                        [create] T1: pnpm dlx shadcn@latest add input
+│   │   │   ├── card.tsx                                         [create] T1: pnpm dlx shadcn@latest add card
+│   │   │   ├── badge.tsx                                        [create] T1: pnpm dlx shadcn@latest add badge
+│   │   │   ├── tabs.tsx                                         [create] T1: pnpm dlx shadcn@latest add tabs
+│   │   │   ├── sheet.tsx                                        [create] T1: pnpm dlx shadcn@latest add sheet
+│   │   │   └── sonner.tsx                                       [create] T1: pnpm dlx shadcn@latest add sonner
+│   │   └── portal/
+│   │       ├── AISummaryBadge.tsx                               [create] T3: RSC，clay border + paper bg
+│   │       ├── Footer.tsx                                       [create] T3: RSC，contentinfo + brand wordmark + 版权
+│   │       ├── TopNav.tsx                                       [create] T3: 'use client'，含 Sheet 汉堡
+│   │       ├── Hero.tsx                                         [create] T4: RSC，masthead + headline + ornament + 嵌 Composer
+│   │       ├── Composer.tsx                                     [create] T4: 'use client'，shadcn Tabs + Input + 提交按钮 + 试试 chip
+│   │       ├── TopicCloud.tsx                                   [create] T5: RSC，5 级 tier 词云
+│   │       ├── Journals.tsx                                     [create] T5: RSC，6 张封面网格容器
+│   │       ├── JournalCoverCard.tsx                             [create] T5: RSC，单张封面卡
+│   │       ├── ExploreFeed.tsx                                  [create] T5: 'use client'，shadcn Tabs (trending/recent/cited)
+│   │       └── PaperCard.tsx                                    [create] T5: RSC，含 AISummaryBadge 子组件
+│   ├── lib/utils.ts                                             [keep]   含 cn()
+│   └── providers/query-provider.tsx                             [keep]
+├── public/
+│   └── brand/
+│       ├── patra-mark.svg                                       [create] T1: 从 handoff assets/ 移植
+│       ├── patra-monogram.svg                                   [create] T1: 从 handoff assets/ 移植
+│       └── patra-wordmark.svg                                   [create] T1: 从 handoff assets/ 移植
+├── tests/
+│   ├── components/portal/
+│   │   ├── AISummaryBadge.test.tsx                              [create] T3
+│   │   ├── Footer.test.tsx                                      [create] T3
+│   │   ├── TopNav.test.tsx                                      [create] T3
+│   │   ├── Hero.test.tsx                                        [create] T4
+│   │   ├── Composer.test.tsx                                    [create] T4
+│   │   ├── TopicCloud.test.tsx                                  [create] T5
+│   │   ├── Journals.test.tsx                                    [create] T5
+│   │   ├── JournalCoverCard.test.tsx                            [create] T5
+│   │   ├── ExploreFeed.test.tsx                                 [create] T5
+│   │   └── PaperCard.test.tsx                                   [create] T5
+│   ├── data/topics.test.ts                                      [create] T2: topicTier 阈值边界 6 用例
+│   └── e2e/homepage.spec.ts                                     [create] T8: Playwright smoke
+├── playwright.config.ts                                         [create] T8
+├── package.json                                                 [modify] T1 + T8: 装新依赖 + 加 test:e2e script
+├── pnpm-lock.yaml                                               [modify] T1 + T8: 自动更新
+└── .gitignore                                                   [modify] T8: 追加 test-results / playwright-report / .playwright
+
+.github/workflows/portal-ci.yml                                  [modify] T8: 追加 e2e job (continue-on-error: true，不进 aggregator needs)</pre>
+      </div>
+    </section>
+
+    <section id="tasks">
+      <h2>任务列表</h2>
+
+      <!-- ============================================================
+           Task 1 — C1: tokens + shadcn 主题 + 字体 + 补装原语 (PAP-30)
+           ============================================================ -->
+
+      <article class="task" id="task-1" data-status="pending">
+        <header>
+          <h2>任务 1：C1 tokens + shadcn 主题 + 字体 + 补装原语 (PAP-30)</h2>
+          <dl class="files">
+            <dt>创建</dt><dd><code>patra-portal/src/styles/tokens.css</code>、<code>public/brand/patra-{mark,monogram,wordmark}.svg</code></dd>
+            <dt>修改</dt><dd><code>patra-portal/src/app/globals.css</code>、<code>patra-portal/src/app/layout.tsx</code>、<code>patra-portal/package.json</code></dd>
+            <dt>shadcn add</dt><dd><code>input</code>、<code>card</code>、<code>badge</code>、<code>tabs</code>、<code>sheet</code>、<code>sonner</code></dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：从 design system zip 抽取 tokens.css 落到 src/styles/</strong>
+            <p>从 worktree 内可访问的 design system handoff（commit <code>2d023c8b8 docs(design): 归档 v0.4 design system zip 快照</code>），解压并取 <code>project/colors_and_type.css</code>。命令：</p>
+            <pre><code class="lang-bash">cd patra-portal
+mkdir -p src/styles
+unzip -p ../docs/patra/design/snapshots/2026-05-23-design-system.zip patra-ds/project/colors_and_type.css &gt; src/styles/tokens.css
+head -10 src/styles/tokens.css   # 验证内容</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：本地化 tokens.css（删 google fonts 行 + 重命名 --font-*）</strong>
+            <p>在 <code>src/styles/tokens.css</code> 头部做两处编辑（删 2 行 + 加 5 行注释 + 重命名 3 个 var）：</p>
+            <pre><code class="lang-css">/* 顶部从这两行：
+@import url('https://rsms.me/inter/inter.css');
+@import url('https://fonts.googleapis.com/...');
+改为这段注释 */
+/* ============================================================
+   PATRA tokens — 与 design system colors_and_type.css 同源
+   本地化调整 2 处：
+   1. 删除 google fonts @import url（字体改由 next/font 注入）
+   2. 重命名 --font-sans/-serif/-mono → --patra-font-sans/-serif/-mono
+      （避免与 @theme 内 Tailwind 消费的 --font-sans 同名冲突）
+   ============================================================ */</code></pre>
+            <p>然后在 :root 内把字体三行改为：</p>
+            <pre><code class="lang-css">--patra-font-sans:  var(--font-inter), var(--font-noto-sans-sc), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+--patra-font-serif: var(--font-source-serif), var(--font-noto-serif-sc), "Source Serif Pro", Georgia, "Iowan Old Style", serif;
+--patra-font-mono:  var(--font-jetbrains-mono), ui-monospace, "SF Mono", Menlo, Consolas, monospace;</code></pre>
+            <p>最后删除整个 <code>.patra { ... }</code> / <code>.patra h1, .patra h2, ...</code> 命名空间语义元素样式块（约 70 行，从 <code>.patra,</code> 到文件末尾），仅保留 :root 内的 CSS 变量定义。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：完全重写 src/app/globals.css</strong>
+            <p>替换 <code>patra-portal/src/app/globals.css</code> 全部内容为：</p>
+            <pre><code class="lang-css">@import "tailwindcss";
+@import "tw-animate-css";
+@import "../styles/tokens.css";
+
+@theme inline {
+  /* ---- Color primitives → utility (bg-paper-50 / text-clay-700 / border-ink-300 / ring-clay-500 ...) */
+  --color-paper-50: var(--paper-50);
+  --color-paper-100: var(--paper-100);
+  --color-paper-200: var(--paper-200);
+  --color-paper-300: var(--paper-300);
+  --color-paper-400: var(--paper-400);
+
+  --color-ink-900: var(--ink-900);
+  --color-ink-800: var(--ink-800);
+  --color-ink-700: var(--ink-700);
+  --color-ink-600: var(--ink-600);
+  --color-ink-500: var(--ink-500);
+  --color-ink-400: var(--ink-400);
+  --color-ink-300: var(--ink-300);
+  --color-ink-200: var(--ink-200);
+
+  --color-clay-50: var(--clay-50);
+  --color-clay-100: var(--clay-100);
+  --color-clay-200: var(--clay-200);
+  --color-clay-300: var(--clay-300);
+  --color-clay-400: var(--clay-400);
+  --color-clay-500: var(--clay-500);
+  --color-clay-600: var(--clay-600);
+  --color-clay-700: var(--clay-700);
+  --color-clay-800: var(--clay-800);
+  --color-clay-900: var(--clay-900);
+
+  --color-teal-50: var(--teal-50);
+  --color-teal-100: var(--teal-100);
+  --color-teal-200: var(--teal-200);
+  --color-teal-300: var(--teal-300);
+  --color-teal-400: var(--teal-400);
+  --color-teal-500: var(--teal-500);
+  --color-teal-600: var(--teal-600);
+  --color-teal-700: var(--teal-700);
+  --color-teal-800: var(--teal-800);
+  --color-teal-900: var(--teal-900);
+
+  --color-moss-500: var(--moss-500);
+  --color-moss-50: var(--moss-50);
+  --color-amber-500: var(--amber-500);
+  --color-amber-50: var(--amber-50);
+  --color-rust-500: var(--rust-500);
+  --color-rust-50: var(--rust-50);
+  --color-slate-500: var(--slate-500);
+  --color-slate-50: var(--slate-50);
+
+  /* ---- shadcn 17 standard slot (driven by Patra tokens) */
+  --color-background: var(--paper-100);
+  --color-foreground: var(--ink-900);
+  --color-card: var(--paper-50);
+  --color-card-foreground: var(--ink-900);
+  --color-popover: var(--bg-elevated);
+  --color-popover-foreground: var(--ink-900);
+  --color-primary: var(--teal-600);
+  --color-primary-foreground: var(--fg-on-clay);
+  --color-secondary: var(--paper-200);
+  --color-secondary-foreground: var(--ink-900);
+  --color-muted: var(--paper-200);
+  --color-muted-foreground: var(--ink-600);
+  --color-accent: var(--clay-50);
+  --color-accent-foreground: var(--clay-900);
+  --color-destructive: var(--rust-500);
+  --color-border: var(--border-default);
+  --color-input: var(--border-default);
+  --color-ring: var(--clay-500);
+
+  /* ---- Typography */
+  --font-sans: var(--patra-font-sans);
+  --font-serif: var(--patra-font-serif);
+  --font-mono: var(--patra-font-mono);
+
+  /* ---- Type scale (13.5px 基线) */
+  --text-2xs: var(--text-2xs);
+  --text-xs: var(--text-xs);
+  --text-sm: var(--text-sm);
+  --text-base: var(--text-base);
+  --text-md: var(--text-md);
+  --text-lg: var(--text-lg);
+  --text-xl: var(--text-xl);
+  --text-2xl: var(--text-2xl);
+  --text-3xl: var(--text-3xl);
+  --text-4xl: var(--text-4xl);
+  --text-5xl: var(--text-5xl);
+
+  /* ---- Leading / tracking */
+  --leading-tight: var(--leading-tight);
+  --leading-snug: var(--leading-snug);
+  --leading-normal: var(--leading-normal);
+  --leading-relaxed: var(--leading-relaxed);
+  --leading-reading: var(--leading-reading);
+  --tracking-tight: var(--tracking-tight);
+  --tracking-normal: var(--tracking-normal);
+  --tracking-wide: var(--tracking-wide);
+  --tracking-caps: var(--tracking-caps);
+
+  /* ---- Radius (shadcn 用 --radius 作为默认；Patra --radius-lg=8px) */
+  --radius: var(--radius-lg);
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+
+  /* ---- Shadow */
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-inset: var(--shadow-inset);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    font-family: var(--patra-font-sans);
+  }
+  body {
+    background: var(--bg-canvas);
+    color: var(--fg-1);
+    font-family: var(--patra-font-sans);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    font-feature-settings: "ss01", "cv11", "cv02";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: var(--selection-bg);
+    color: var(--selection-fg);
+  }
+  @keyframes patra-live-pulse {
+    0%, 100% { opacity: 0.45; }
+    50%      { opacity: 1; }
+  }
+}</code></pre>
+            <p><strong>删除项</strong>：原 globals.css 中的 <code>@import "shadcn/tailwind.css"</code>、<code>@custom-variant dark</code>、<code>--color-brand</code>、整个 <code>.dark { ... }</code> 块、所有 <code>--color-sidebar-*</code> / <code>--color-chart-*</code> 占位变量。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：补装 6 个 shadcn 原语</strong>
+            <p>运行：</p>
+            <pre><code class="lang-bash">cd patra-portal
+pnpm dlx shadcn@latest add input card badge tabs sheet sonner</code></pre>
+            <p>预期：<code>src/components/ui/</code> 下新增 <code>input.tsx</code> / <code>card.tsx</code> / <code>badge.tsx</code> / <code>tabs.tsx</code> / <code>sheet.tsx</code> / <code>sonner.tsx</code> 共 6 个文件；<code>package.json</code> 自动加入 <code>@radix-ui/react-tabs</code> / <code>@radix-ui/react-dialog</code>（Sheet 依赖）/ <code>sonner</code> 等依赖；<code>pnpm-lock.yaml</code> 自动更新。</p>
+            <p>说明：shadcn CLI 会读取 <code>components.json</code> 决定写入路径与样式风格。生成的组件用我们已在 globals.css 重写的 <code>--primary</code> / <code>--background</code> / <code>--ring</code> 等 slot，无需再手动改主题色。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：移植 brand SVG 到 public/brand/</strong>
+            <pre><code class="lang-bash">cd patra-portal
+mkdir -p public/brand
+unzip -p ../docs/patra/design/snapshots/2026-05-23-design-system.zip patra-ds/project/assets/patra-mark.svg     &gt; public/brand/patra-mark.svg
+unzip -p ../docs/patra/design/snapshots/2026-05-23-design-system.zip patra-ds/project/assets/patra-monogram.svg &gt; public/brand/patra-monogram.svg
+unzip -p ../docs/patra/design/snapshots/2026-05-23-design-system.zip patra-ds/project/assets/patra-wordmark.svg &gt; public/brand/patra-wordmark.svg
+ls public/brand/</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 6：改写 src/app/layout.tsx</strong>
+            <p>替换 <code>patra-portal/src/app/layout.tsx</code> 全部内容为：</p>
+            <pre><code class="lang-tsx">import type { Metadata, Viewport } from "next";
+import {
+  Inter,
+  Source_Serif_4,
+  JetBrains_Mono,
+  Noto_Sans_SC,
+  Noto_Serif_SC,
+} from "next/font/google";
+import { Toaster } from "@/components/ui/sonner";
+import { cn } from "@/lib/utils";
+import { QueryProvider } from "@/providers/query-provider";
+import "./globals.css";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+const sourceSerif = Source_Serif_4({
+  subsets: ["latin"],
+  variable: "--font-source-serif",
+  display: "swap",
+});
+const jbMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains-mono",
+  display: "swap",
+});
+const notoSansSC = Noto_Sans_SC({
+  subsets: ["latin"],
+  variable: "--font-noto-sans-sc",
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
+});
+const notoSerifSC = Noto_Serif_SC({
+  subsets: ["latin"],
+  variable: "--font-noto-serif-sc",
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
+});
+
+export const metadata: Metadata = {
+  title: "Patra · 医学文献门户",
+  description:
+    "Patra 汇集 PubMed、Europe PMC、Crossref 等 10 个来源的学术文献，提供统一检索、出处追溯与 AI 辅助速读。",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#176B62",
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    &lt;html
+      lang="zh-CN"
+      className={cn(
+        inter.variable,
+        sourceSerif.variable,
+        jbMono.variable,
+        notoSansSC.variable,
+        notoSerifSC.variable,
+      )}
+    &gt;
+      &lt;body&gt;
+        &lt;QueryProvider&gt;
+          {children}
+          &lt;Toaster richColors position="bottom-right" /&gt;
+        &lt;/QueryProvider&gt;
+      &lt;/body&gt;
+    &lt;/html&gt;
+  );
+}</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 7：跑 lint / typecheck / test 验证 C1 不破坏现有测试</strong>
+            <pre><code class="lang-bash">cd patra-portal
+pnpm lint
+pnpm typecheck
+pnpm test</code></pre>
+            <p>预期：</p>
+            <ul>
+              <li><code>pnpm lint</code> 退出码 0（Biome）</li>
+              <li><code>pnpm typecheck</code> 退出码 0（tsc）</li>
+              <li><code>pnpm test</code> 现有 3 个测试全绿（<code>setup.test.ts</code> / <code>smoke.test.tsx</code> / <code>providers/query-provider.test.tsx</code>）。<code>smoke.test.tsx</code> 不测字体，只测 h1 文本"patra-portal"——在 C1 阶段 page.tsx 还没改，应该仍然通过。</li>
+            </ul>
+            <p>如有 typecheck 报错：检查 <code>next/font</code> 类型导入是否完整；检查 <code>Toaster</code> 是否从 <code>@/components/ui/sonner</code> 正确导出。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 8：Commit C1</strong>
+            <pre><code class="lang-bash">git add patra-portal/src/styles/tokens.css \
+        patra-portal/src/app/globals.css \
+        patra-portal/src/app/layout.tsx \
+        patra-portal/src/components/ui/{input,card,badge,tabs,sheet,sonner}.tsx \
+        patra-portal/public/brand/ \
+        patra-portal/package.json \
+        patra-portal/pnpm-lock.yaml \
+        patra-portal/components.json
+
+git commit -m "feat(portal): patra tokens + shadcn theme override + font swap
+
+- 搬入 Patra design tokens 到 src/styles/tokens.css（同源 design system colors_and_type.css，2 处本地化）
+- 完全重写 globals.css：@import tokens + @theme inline 桥接 + shadcn 17 slot 重写 + @layer base 5 处全局；删除 .dark / @custom-variant dark / --color-brand / sidebar 占位变量
+- 补装 shadcn 原语 6 个：input / card / badge / tabs / sheet / sonner
+- 替换 Geist 为 5 字体：Inter + Source Serif 4 + JetBrains Mono + Noto Sans SC + Noto Serif SC（next/font/google）
+- layout.tsx 注入 &lt;Toaster richColors position=bottom-right /&gt;
+- metadata 改 title / description / themeColor=#176B62 (teal-600)
+- 移植 brand SVG 3 个（mark / monogram / wordmark）到 public/brand/
+
+PAP-30"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <!-- ============================================================
+           Task 2 — C2: mock 数据层 + 类型 (PAP-28)
+           ============================================================ -->
+
+      <article class="task" id="task-2" data-status="pending">
+        <header>
+          <h2>任务 2：C2 mock 数据层 + 类型定义 (PAP-28)</h2>
+          <dl class="files">
+            <dt>创建</dt><dd><code>src/types/portal.ts</code>、<code>src/data/{index,portal-stats,search-modes,example-queries,topics,journals,feed}.ts</code>、<code>tests/data/topics.test.ts</code></dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：创建 src/types/portal.ts（11 个领域类型）</strong>
+            <pre><code class="lang-typescript">/**
+ * Patra portal 领域类型 — 与 handoff `data.jsx` 实际字段对齐
+ */
+
+export type ComposerMode = "keyword" | "pmid" | "doi" | "author";
+export type FeedTab = "trending" | "recent" | "cited";
+export type PaperSource = "PubMed" | "Europe PMC" | "Crossref";
+export type TopicHeatTier = 1 | 2 | 3 | 4 | 5;
+
+export interface SearchMode {
+  id: ComposerMode;
+  label: string;
+  placeholder: string;
+  mono: boolean;
+}
+
+export interface ExampleQuery {
+  mode: ComposerMode;
+  text: string;
+}
+
+export interface PortalStats {
+  records: number;
+  sources: number;
+  lastIngestMin: number;
+  todayAdded: number;
+  todayDelta: number;
+}
+
+export interface Topic {
+  term: string;
+  heat: number;
+  count: number;
+  delta?: string;
+}
+
+export interface JournalCoverStyle {
+  bg: string;
+  ink: string;
+  rule: string;
+}
+
+export interface Journal {
+  id: string;
+  name: string;
+  abbr: string;
+  cover: string;
+  coverStyle: JournalCoverStyle;
+  impact: number;
+  weekly: number;
+  founded: number;
+}
+
+export interface Paper {
+  id: string;
+  title: string;
+  journal: string;
+  year: number;
+  authors: string[];
+  authorCount: number;
+  cites: number;
+  bookmarks: number;
+  readMin: number;
+  doi: string;
+  pmid: string;
+  source: PaperSource;
+  ai: string;
+  kind: string;
+  minutesAgo?: number;
+}
+
+export type Feed = Record&lt;FeedTab, Paper[]&gt;;</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：创建 src/data/portal-stats.ts</strong>
+            <p>数据来自 handoff <code>data.jsx</code> 的 <code>PATRA_STATS</code>：</p>
+            <pre><code class="lang-typescript">import type { PortalStats } from "@/types/portal";
+
+export const PORTAL_STATS: PortalStats = {
+  records: 4_238_917,
+  sources: 10,
+  lastIngestMin: 3,
+  todayAdded: 12_431,
+  todayDelta: 8.4,
+};</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：创建 src/data/search-modes.ts</strong>
+            <pre><code class="lang-typescript">import type { SearchMode } from "@/types/portal";
+
+export const SEARCH_MODES: readonly SearchMode[] = [
+  { id: "keyword", label: "关键词", placeholder: "JAK1 抑制剂 · 特应性皮炎 · 1岁以下", mono: false },
+  { id: "pmid", label: "PMID", placeholder: "38491203", mono: true },
+  { id: "doi", label: "DOI", placeholder: "10.1016/j.jaci.2024.03.018", mono: true },
+  { id: "author", label: "作者", placeholder: "Topol, Eric J.", mono: false },
+];</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：创建 src/data/example-queries.ts</strong>
+            <pre><code class="lang-typescript">import type { ExampleQuery } from "@/types/portal";
+
+export const EXAMPLE_QUERIES: readonly ExampleQuery[] = [
+  { mode: "keyword", text: "GLP-1 长期心血管获益" },
+  { mode: "keyword", text: "AlphaFold 蛋白结构预测" },
+  { mode: "doi", text: "10.1056/NEJMoa2402202" },
+  { mode: "author", text: "Karikó, Katalin" },
+];</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：创建 src/data/topics.ts（32 个 topic + topicTier 函数）</strong>
+            <p>解压 handoff bundle 找到 <code>data.jsx</code> 的 <code>TOPIC_CLOUD</code> 数组（约 32 项），逐项移植。<code>topicTier</code> 阈值来自 handoff <code>topic-cloud.jsx</code> 的 <code>topicTier()</code> 函数（88/70/45/25）：</p>
+            <pre><code class="lang-typescript">import type { Topic, TopicHeatTier } from "@/types/portal";
+
+export const TOPIC_CLOUD: readonly Topic[] = [
+  { term: "GLP-1 受体激动剂", heat: 100, count: 1842, delta: "+34%" },
+  { term: "mRNA 疫苗平台", heat: 96, count: 1521, delta: "+18%" },
+  { term: "CRISPR-Cas9 体内编辑", heat: 92, count: 1304, delta: "+27%" },
+  { term: "阿尔茨海默 单抗", heat: 88, count: 1209, delta: "+11%" },
+  { term: "肠道菌群 · IBD", heat: 78, count: 984 },
+  { term: "PD-1 联合化疗", heat: 76, count: 952 },
+  { term: "妊娠期糖尿病", heat: 70, count: 812 },
+  { term: "AlphaFold", heat: 68, count: 790 },
+  { term: "ECMO 撤机时机", heat: 62, count: 691 },
+  { term: "睡眠呼吸暂停 · 儿童", heat: 58, count: 640 },
+  { term: "JAK 抑制剂", heat: 56, count: 618 },
+  { term: "肾移植 · 排异", heat: 50, count: 541 },
+  { term: "肺动脉高压", heat: 48, count: 502 },
+  { term: "脓毒症 · 早期识别", heat: 46, count: 478 },
+  { term: "线粒体替代", heat: 42, count: 421 },
+  { term: "戊型肝炎 疫苗", heat: 40, count: 402 },
+  { term: "微塑料 · 心血管", heat: 38, count: 378 },
+  { term: "类器官 · 药筛", heat: 36, count: 356 },
+  { term: "ApoE4 与 痴呆", heat: 34, count: 330 },
+  { term: "数字疗法 · 抑郁", heat: 32, count: 298 },
+  { term: "妇科肿瘤 PARP", heat: 30, count: 276 },
+  { term: "胰岛素抵抗 · 代谢", heat: 28, count: 254 },
+  { term: "肠系膜缺血", heat: 24, count: 204 },
+  { term: "EBV 与 多发性硬化", heat: 22, count: 187 },
+  { term: "CAR-T · 实体瘤", heat: 20, count: 176 },
+  { term: "妊娠 高血压", heat: 18, count: 154 },
+  { term: "围术期 镇痛", heat: 14, count: 121 },
+  { term: "肠脑轴", heat: 12, count: 108 },
+  { term: "结核 耐药", heat: 10, count: 96 },
+  { term: "脑机接口 · 临床", heat: 9, count: 88 },
+  { term: "睡眠时长 · 全因死亡", heat: 8, count: 76 },
+  { term: "心衰 · SGLT2", heat: 6, count: 62 },
+];
+
+/**
+ * 根据热度返回字号 tier
+ * 阈值：&gt;=88 → 1, &gt;=70 → 2, &gt;=45 → 3, &gt;=25 → 4, else 5
+ */
+export function topicTier(heat: number): TopicHeatTier {
+  if (heat &gt;= 88) return 1;
+  if (heat &gt;= 70) return 2;
+  if (heat &gt;= 45) return 3;
+  if (heat &gt;= 25) return 4;
+  return 5;
+}</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 6：创建 tests/data/topics.test.ts（topicTier 阈值边界 6 用例）</strong>
+            <pre><code class="lang-typescript">import { describe, expect, it } from "vitest";
+import { topicTier, TOPIC_CLOUD } from "@/data/topics";
+
+describe("topicTier", () =&gt; {
+  it.each([
+    [100, 1],
+    [88, 1],
+    [87, 2],
+    [70, 2],
+    [69, 3],
+    [45, 3],
+    [44, 4],
+    [25, 4],
+    [24, 5],
+    [0, 5],
+  ])("topicTier(%i) === %i", (heat, tier) =&gt; {
+    expect(topicTier(heat)).toBe(tier);
+  });
+});
+
+describe("TOPIC_CLOUD", () =&gt; {
+  it("含 32 个 topic", () =&gt; {
+    expect(TOPIC_CLOUD).toHaveLength(32);
+  });
+
+  it("按 heat 倒序排列", () =&gt; {
+    for (let i = 1; i &lt; TOPIC_CLOUD.length; i++) {
+      const prev = TOPIC_CLOUD[i - 1]!;
+      const curr = TOPIC_CLOUD[i]!;
+      expect(prev.heat).toBeGreaterThanOrEqual(curr.heat);
+    }
+  });
+
+  it("tier 1 项均带 delta", () =&gt; {
+    for (const t of TOPIC_CLOUD) {
+      if (topicTier(t.heat) === 1) {
+        expect(t.delta).toBeDefined();
+      }
+    }
+  });
+});</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 7：创建 src/data/journals.ts（6 本期刊）</strong>
+            <p>从 handoff <code>data.jsx</code> 的 <code>JOURNALS</code> 数组移植：</p>
+            <pre><code class="lang-typescript">import type { Journal } from "@/types/portal";
+
+export const JOURNALS: readonly Journal[] = [
+  {
+    id: "nejm",
+    name: "New England Journal of Medicine",
+    abbr: "N Engl J Med",
+    cover: "NEJM",
+    coverStyle: { bg: "#3C1611", ink: "#F6E8DA", rule: "#7C2F22" },
+    impact: 158.5,
+    weekly: 312,
+    founded: 1812,
+  },
+  {
+    id: "lancet",
+    name: "The Lancet",
+    abbr: "Lancet",
+    cover: "Lancet",
+    coverStyle: { bg: "#5A1A14", ink: "#F6E8DA", rule: "#8A2A1F" },
+    impact: 98.4,
+    weekly: 284,
+    founded: 1823,
+  },
+  {
+    id: "jama",
+    name: "Journal of the American Medical Association",
+    abbr: "JAMA",
+    cover: "JAMA",
+    coverStyle: { bg: "#1F2E45", ink: "#E9EEF4", rule: "#3A506E" },
+    impact: 63.1,
+    weekly: 196,
+    founded: 1883,
+  },
+  {
+    id: "bmj",
+    name: "The BMJ",
+    abbr: "BMJ",
+    cover: "BMJ",
+    coverStyle: { bg: "#0E574F", ink: "#ECF5F3", rule: "#176B62" },
+    impact: 105.7,
+    weekly: 168,
+    founded: 1840,
+  },
+  {
+    id: "nature-med",
+    name: "Nature Medicine",
+    abbr: "Nat Med",
+    cover: "Nature\nMedicine",
+    coverStyle: { bg: "#1C1917", ink: "#F4D9B8", rule: "#3E1C0C" },
+    impact: 87.2,
+    weekly: 122,
+    founded: 1995,
+  },
+  {
+    id: "cell",
+    name: "Cell",
+    abbr: "Cell",
+    cover: "Cell",
+    coverStyle: { bg: "#6E3216", ink: "#FBF1E8", rule: "#97441E" },
+    impact: 66.9,
+    weekly: 98,
+    founded: 1974,
+  },
+];</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 8：创建 src/data/feed.ts（14 个 paper）</strong>
+            <p>从 handoff <code>data.jsx</code> 的 <code>FEED</code> 对象逐字段移植（trending 6 + recent 4 + cited 4）。代码骨架：</p>
+            <pre><code class="lang-typescript">import type { Feed } from "@/types/portal";
+
+export const FEED: Feed = {
+  trending: [
+    {
+      id: "p1",
+      title: "Semaglutide 在合并慢性肾病的 2 型糖尿病患者中的长期心血管转归",
+      journal: "N Engl J Med",
+      year: 2026,
+      authors: ["Perkovic V.", "Tuttle K. R.", "Mann J. F. E.", "..."],
+      authorCount: 14,
+      cites: 142,
+      bookmarks: 318,
+      readMin: 12,
+      doi: "10.1056/NEJMoa2603120",
+      pmid: "39812044",
+      source: "PubMed",
+      ai: "在 eGFR 25–75 区间的人群中观察到主要心血管事件下降 22%（HR 0.78，95% CI 0.69–0.89），获益与基线 HbA1c 无关；肾病进展指标在 24 个月时已与对照分离。",
+      kind: "RCT · phase 3",
+    },
+    // ... 其余 5 个 trending paper（id: p2-p6），从 handoff data.jsx FEED.trending 完整移植
+  ],
+  recent: [
+    {
+      id: "r1",
+      title: "EBV 抗体滴度与多发性硬化发病的前瞻嵌套病例对照",
+      journal: "Science",
+      year: 2026,
+      authors: ["Bjornevik K.", "Cortese M."],
+      authorCount: 11,
+      cites: 4,
+      bookmarks: 21,
+      readMin: 8,
+      doi: "10.1126/science.adn7421",
+      pmid: "39820114",
+      source: "Crossref",
+      ai: "EBNA-1 IgG 升高在临床发病前中位 5.2 年即可观察到；HLA-DRB1*15:01 携带者的相对风险进一步上升约 3 倍。",
+      kind: "Nested case-control",
+      minutesAgo: 12,
+    },
+    // ... 其余 3 个 recent paper（id: r2-r4），含 minutesAgo
+  ],
+  cited: [
+    {
+      id: "c1",
+      title: "GLP-1 受体激动剂在心衰保留射血分数患者中的运动耐量与症状改善",
+      journal: "N Engl J Med",
+      year: 2025,
+      authors: ["Kosiborod M. N.", "Petrie M. C."],
+      authorCount: 24,
+      cites: 1842,
+      bookmarks: 1129,
+      readMin: 13,
+      doi: "10.1056/NEJMoa2505121",
+      pmid: "39624111",
+      source: "PubMed",
+      ai: "KCCQ-CSS 12 周改善 8.6 分（vs. 安慰剂 +3.1），6MWT 多 21 米；BMI ≥ 35 亚组获益最大，提示去脂效应可能并非唯一通路。",
+      kind: "RCT · phase 3",
+    },
+    // ... 其余 3 个 cited paper（id: c2-c4），无 minutesAgo
+  ],
+};</code></pre>
+            <p><strong>移植方法</strong>：解压 <code>docs/patra/design/snapshots/2026-05-23-homepage-hifi.zip</code>，找到 <code>project/components.jsx</code>，定位 <code>const FEED = { ... }</code>（约第 215-403 行），逐字段抄录。注意：<code>source</code> 字段从 handoff 抄的值应限定为 <code>PaperSource</code> 联合的 3 个值（PubMed / Europe PMC / Crossref）；handoff 内的 "Science" / "JAMA Neurology" 等是 <code>journal</code> 字段值，不是 <code>source</code>。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 9：创建 src/data/index.ts barrel</strong>
+            <pre><code class="lang-typescript">export { PORTAL_STATS } from "./portal-stats";
+export { SEARCH_MODES } from "./search-modes";
+export { EXAMPLE_QUERIES } from "./example-queries";
+export { TOPIC_CLOUD, topicTier } from "./topics";
+export { JOURNALS } from "./journals";
+export { FEED } from "./feed";</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 10：跑 typecheck + test 验证</strong>
+            <pre><code class="lang-bash">cd patra-portal
+pnpm typecheck
+pnpm test</code></pre>
+            <p>预期：</p>
+            <ul>
+              <li>typecheck 退出码 0；所有 mock 数据通过 <code>readonly Topic[]</code> / <code>Feed</code> 类型校验</li>
+              <li>test 全绿；新增 <code>topics.test.ts</code> 12 个用例（10 个 it.each + 3 个 describe.it）通过</li>
+            </ul>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 11：Commit C2</strong>
+            <pre><code class="lang-bash">git add patra-portal/src/types/portal.ts \
+        patra-portal/src/data/ \
+        patra-portal/tests/data/
+
+git commit -m "feat(portal): mock data layer + portal types
+
+- 11 个领域类型：ComposerMode / FeedTab / PaperSource / TopicHeatTier / SearchMode / ExampleQuery / PortalStats / Topic / JournalCoverStyle / Journal / Paper / Feed
+- 7 份 mock 数据文件：portal-stats / search-modes (4) / example-queries (4) / topics (32) + topicTier / journals (6) / feed (14 paper) / index barrel
+- topics.test.ts 12 个用例覆盖 topicTier 阈值边界 + TOPIC_CLOUD 长度与排序断言
+
+数据全部从 handoff 2026-05-23-homepage-hifi.zip 的 data.jsx 移植。
+
+PAP-28"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <!-- ============================================================
+           Task 3 — C3·nav 组: TopNav + Footer + AISummaryBadge (PAP-31 1/3)
+           ============================================================ -->
+
+      <article class="task" id="task-3" data-status="pending">
+        <header>
+          <h2>任务 3：C3·nav 组 TopNav + Footer + AISummaryBadge (PAP-31 1/3)</h2>
+          <dl class="files">
+            <dt>创建</dt><dd><code>src/components/portal/{TopNav,Footer,AISummaryBadge}.tsx</code></dd>
+            <dt>测试</dt><dd><code>tests/components/portal/{TopNav,Footer,AISummaryBadge}.test.tsx</code></dd>
+            <dt>commit</dt><dd><strong>不 commit</strong>；C3 由 Task 5 末尾合并 commit</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：写 AISummaryBadge.test.tsx</strong>
+            <pre><code class="lang-tsx">import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import "@testing-library/jest-dom/vitest";
+import { AISummaryBadge } from "@/components/portal/AISummaryBadge";
+
+describe("AISummaryBadge", () =&gt; {
+  it("渲染 'AI 速读' 标签", () =&gt; {
+    render(&lt;AISummaryBadge summary="测试摘要" /&gt;);
+    expect(screen.getByText("AI 速读")).toBeInTheDocument();
+  });
+
+  it("渲染传入的 summary 文字", () =&gt; {
+    render(&lt;AISummaryBadge summary="心血管事件下降 22%" /&gt;);
+    expect(screen.getByText(/心血管事件下降/)).toBeInTheDocument();
+  });
+
+  it("应用 clay border + paper bg utility class", () =&gt; {
+    const { container } = render(&lt;AISummaryBadge summary="x" /&gt;);
+    const root = container.firstChild as HTMLElement;
+    expect(root.className).toMatch(/border-l/);
+    expect(root.className).toMatch(/clay/);
+    expect(root.className).toMatch(/(paper|amber|clay)-(50|100)/);
+  });
+});</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：写 src/components/portal/AISummaryBadge.tsx</strong>
+            <pre><code class="lang-tsx">import { cn } from "@/lib/utils";
+
+interface AISummaryBadgeProps {
+  summary: string;
+  className?: string;
+}
+
+export function AISummaryBadge({ summary, className }: AISummaryBadgeProps) {
+  return (
+    &lt;div
+      className={cn(
+        "border-l-2 border-l-clay-500 bg-amber-50/60 px-3 py-2 text-sm leading-snug text-ink-800",
+        className,
+      )}
+    &gt;
+      &lt;span className="mr-2 font-mono text-2xs uppercase tracking-caps text-clay-700"&gt;
+        AI 速读
+      &lt;/span&gt;
+      &lt;span className="text-fg-2"&gt;{summary}&lt;/span&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：跑 AISummaryBadge 测试验证</strong>
+            <pre><code class="lang-bash">cd patra-portal
+pnpm test tests/components/portal/AISummaryBadge.test.tsx</code></pre>
+            <p>预期：3 个测试全绿。如不绿：检查 utility class 名（<code>border-l-clay-500</code> 等）是否在 globals.css 的 <code>@theme</code> 已声明。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：写 Footer.test.tsx</strong>
+            <pre><code class="lang-tsx">import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import "@testing-library/jest-dom/vitest";
+import { Footer } from "@/components/portal/Footer";
+
+describe("Footer", () =&gt; {
+  it("渲染 contentinfo role", () =&gt; {
+    render(&lt;Footer /&gt;);
+    expect(screen.getByRole("contentinfo")).toBeInTheDocument();
+  });
+
+  it("含 Patra brand 文字", () =&gt; {
+    render(&lt;Footer /&gt;);
+    expect(screen.getByText(/Patra/i)).toBeInTheDocument();
+  });
+
+  it("含版权年份 2026", () =&gt; {
+    render(&lt;Footer /&gt;);
+    expect(screen.getByText(/2026/)).toBeInTheDocument();
+  });
+});</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：写 src/components/portal/Footer.tsx</strong>
+            <pre><code class="lang-tsx">import Image from "next/image";
+
+export function Footer() {
+  return (
+    &lt;footer
+      data-section="footer"
+      className="mt-16 border-t border-border-default bg-paper-50/60 py-10"
+    &gt;
+      &lt;div className="container mx-auto flex max-w-[1200px] flex-col gap-3 px-6 text-fg-3 max-[880px]:items-start"&gt;
+        &lt;div className="flex items-center gap-3"&gt;
+          &lt;Image
+            src="/brand/patra-monogram.svg"
+            alt=""
+            aria-hidden
+            width={24}
+            height={24}
+          /&gt;
+          &lt;span className="font-serif text-lg text-ink-900"&gt;Patra&lt;/span&gt;
+        &lt;/div&gt;
+        &lt;p className="max-w-prose text-sm leading-relaxed"&gt;
+          Patra · 医学文献门户。汇集 PubMed、Europe PMC、Crossref 等 10 个来源的学术文献，提供统一检索、出处追溯与 AI 辅助速读。
+        &lt;/p&gt;
+        &lt;p className="font-mono text-2xs uppercase tracking-caps text-fg-4"&gt;
+          © 2026 Patra · v0.4 portal foundation
+        &lt;/p&gt;
+      &lt;/div&gt;
+    &lt;/footer&gt;
+  );
+}</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 6：跑 Footer 测试验证</strong>
+            <pre><code class="lang-bash">pnpm test tests/components/portal/Footer.test.tsx</code></pre>
+            <p>预期：3 个测试全绿。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 7：写 TopNav.test.tsx</strong>
+            <pre><code class="lang-tsx">import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it } from "vitest";
+import "@testing-library/jest-dom/vitest";
+import { TopNav } from "@/components/portal/TopNav";
+
+describe("TopNav", () =&gt; {
+  it("渲染 banner role", () =&gt; {
+    render(&lt;TopNav /&gt;);
+    expect(screen.getByRole("banner")).toBeInTheDocument();
+  });
+
+  it("首页 link 标记为 aria-current=page", () =&gt; {
+    render(&lt;TopNav /&gt;);
+    const homeLink = screen.getByRole("link", { name: /首页/ });
+    expect(homeLink).toHaveAttribute("aria-current", "page");
+  });
+
+  it("文献 / 期刊 / 主题 link 标记为 aria-disabled", () =&gt; {
+    render(&lt;TopNav /&gt;);
+    for (const label of ["文献", "期刊", "主题"]) {
+      const link = screen.getByText(label).closest("a");
+      expect(link).toHaveAttribute("aria-disabled", "true");
+    }
+  });
+
+  it("点击汉堡按钮打开 Sheet drawer", async () =&gt; {
+    const user = userEvent.setup();
+    render(&lt;TopNav /&gt;);
+    const menuBtn = screen.getByRole("button", { name: /打开菜单|menu/i });
+    await user.click(menuBtn);
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+  });
+});</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 8：写 src/components/portal/TopNav.tsx</strong>
+            <p><strong>'use client'</strong> 因有汉堡 sheet open state。视觉细节（背景毛玻璃 / nav-link 下划线 / soon chip）参考 handoff <code>components.jsx</code> 的 TopNav 函数（约第 569-639 行）。</p>
+            <pre><code class="lang-tsx">"use client";
+
+import { ExternalLink, Menu, Search } from "lucide-react";
+import Image from "next/image";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+
+const NAV_ITEMS = [
+  { label: "首页", href: "#top", active: true, disabled: false },
+  { label: "文献", href: "#", active: false, disabled: true },
+  { label: "期刊", href: "#", active: false, disabled: true },
+  { label: "主题", href: "#", active: false, disabled: true },
+] as const;
+
+export function TopNav() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    &lt;header
+      data-section="topnav"
+      className="sticky top-0 z-40 border-b border-border-default bg-paper-100/85 backdrop-blur supports-[backdrop-filter]:bg-paper-100/70"
+    &gt;
+      &lt;div className="container mx-auto grid h-14 max-w-[1200px] grid-cols-[auto_1fr_auto] items-center gap-6 px-6 max-[880px]:gap-3"&gt;
+        {/* Brand */}
+        &lt;a href="#top" className="inline-flex items-center gap-2 text-ink-900" aria-label="Patra 首页"&gt;
+          &lt;Image src="/brand/patra-mark.svg" alt="" aria-hidden width={28} height={28} /&gt;
+          &lt;span className="font-serif text-xl tracking-tight"&gt;Patra&lt;/span&gt;
+          &lt;span className="ml-1 rounded-sm border border-clay-200 bg-clay-50 px-1.5 text-[10px] font-medium uppercase tracking-caps text-clay-700"&gt;
+            门户
+          &lt;/span&gt;
+        &lt;/a&gt;
+
+        {/* Primary nav (desktop only) */}
+        &lt;nav className="justify-self-center max-[880px]:hidden" aria-label="主导航"&gt;
+          &lt;ul className="flex items-center gap-1"&gt;
+            {NAV_ITEMS.map((item) =&gt; (
+              &lt;li key={item.label}&gt;
+                &lt;a
+                  href={item.href}
+                  aria-current={item.active ? "page" : undefined}
+                  aria-disabled={item.disabled || undefined}
+                  className={
+                    item.active
+                      ? "inline-flex items-center gap-1.5 border-b-2 border-clay-500 px-3 py-1.5 text-sm font-medium text-ink-900"
+                      : item.disabled
+                        ? "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-fg-4 cursor-not-allowed"
+                        : "inline-flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-sm font-medium text-fg-2 hover:bg-paper-200 hover:text-ink-900"
+                  }
+                  onClick={item.disabled ? (e) =&gt; e.preventDefault() : undefined}
+                &gt;
+                  {item.label}
+                  {item.disabled &amp;&amp; (
+                    &lt;span className="rounded-sm border border-border-subtle bg-paper-100 px-1 font-mono text-[9.5px] uppercase tracking-caps text-fg-4"&gt;
+                      soon
+                    &lt;/span&gt;
+                  )}
+                &lt;/a&gt;
+              &lt;/li&gt;
+            ))}
+          &lt;/ul&gt;
+        &lt;/nav&gt;
+
+        {/* Trail (search hint + about + mobile menu trigger) */}
+        &lt;div className="justify-self-end flex items-center gap-2"&gt;
+          &lt;button
+            type="button"
+            className="hidden items-center gap-2 rounded-md border border-border-default bg-paper-50 px-2.5 py-1 text-sm text-fg-3 hover:bg-paper-200 max-[880px]:hidden md:inline-flex"
+            onClick={() =&gt; document.getElementById("hero-input")?.focus()}
+          &gt;
+            &lt;Search className="h-3.5 w-3.5" strokeWidth={1.5} /&gt;
+            搜索
+            &lt;kbd className="ml-1 rounded-sm border border-border-subtle bg-paper-100 px-1 font-mono text-[10px] text-fg-3"&gt;⌘K&lt;/kbd&gt;
+          &lt;/button&gt;
+          &lt;a href="#about" className="max-[880px]:hidden rounded-sm px-3 py-1.5 text-sm font-medium text-fg-2 hover:bg-paper-200 hover:text-ink-900"&gt;
+            关于
+          &lt;/a&gt;
+          &lt;Sheet open={open} onOpenChange={setOpen}&gt;
+            &lt;SheetTrigger asChild&gt;
+              &lt;Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="打开菜单"
+                className="hidden max-[880px]:inline-flex h-9 w-9"
+              &gt;
+                &lt;Menu className="h-5 w-5" strokeWidth={1.5} /&gt;
+              &lt;/Button&gt;
+            &lt;/SheetTrigger&gt;
+            &lt;SheetContent side="top" className="bg-paper-100"&gt;
+              &lt;SheetHeader&gt;
+                &lt;SheetTitle&gt;导航菜单&lt;/SheetTitle&gt;
+              &lt;/SheetHeader&gt;
+              &lt;ul className="flex flex-col gap-1 py-4"&gt;
+                {NAV_ITEMS.map((item) =&gt; (
+                  &lt;li key={item.label}&gt;
+                    &lt;a
+                      href={item.href}
+                      aria-current={item.active ? "page" : undefined}
+                      aria-disabled={item.disabled || undefined}
+                      onClick={(e) =&gt; {
+                        if (item.disabled) e.preventDefault();
+                        else setOpen(false);
+                      }}
+                      className="flex items-center justify-between border-b border-border-subtle px-2 py-3 text-base font-medium text-ink-900 data-[disabled]:text-fg-4"
+                      data-disabled={item.disabled ? "" : undefined}
+                    &gt;
+                      {item.label}
+                      {item.disabled &amp;&amp; (
+                        &lt;span className="rounded-sm border border-border-subtle bg-paper-50 px-1 font-mono text-[10px] uppercase tracking-caps"&gt;
+                          soon
+                        &lt;/span&gt;
+                      )}
+                    &lt;/a&gt;
+                  &lt;/li&gt;
+                ))}
+                &lt;li className="pt-4"&gt;
+                  &lt;a href="#" className="inline-flex items-center gap-1 text-sm text-fg-2"&gt;
+                    GitHub &lt;ExternalLink className="h-3.5 w-3.5" strokeWidth={1.5} /&gt;
+                  &lt;/a&gt;
+                &lt;/li&gt;
+              &lt;/ul&gt;
+            &lt;/SheetContent&gt;
+          &lt;/Sheet&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/header&gt;
+  );
+}</code></pre>
+            <p><strong>命名约定</strong>：本组件用 <code>'use client'</code> 因 <code>useState(open)</code>。Sheet 的 <code>aria-modal</code> + focus trap + Esc 关闭由 Radix 提供，无需手写。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 9：跑 TopNav 测试验证</strong>
+            <pre><code class="lang-bash">pnpm test tests/components/portal/TopNav.test.tsx</code></pre>
+            <p>预期：4 个测试全绿。可能问题：<code>userEvent.setup()</code> 需要 <code>@testing-library/user-event</code>，portal 已装。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 10：跑全量测试确认无回归，stage 文件不 commit</strong>
+            <pre><code class="lang-bash">pnpm test
+git add patra-portal/src/components/portal/{TopNav,Footer,AISummaryBadge}.tsx \
+        patra-portal/tests/components/portal/{TopNav,Footer,AISummaryBadge}.test.tsx
+git status   # 应看到 staged: 3 个 .tsx + 3 个 .test.tsx</code></pre>
+            <p><strong>不执行 git commit</strong>。C3 commit 在 Task 5 末尾合并完成。</p>
+          </li>
+        </ol>
+      </article>
+
+      <!-- ============================================================
+           Task 4 — C3·hero 组: Hero + Composer (PAP-31 2/3)
+           ============================================================ -->
+
+      <article class="task" id="task-4" data-status="pending">
+        <header>
+          <h2>任务 4：C3·hero 组 Hero + Composer (PAP-31 2/3)</h2>
+          <dl class="files">
+            <dt>创建</dt><dd><code>src/components/portal/{Hero,Composer}.tsx</code></dd>
+            <dt>测试</dt><dd><code>tests/components/portal/{Hero,Composer}.test.tsx</code></dd>
+            <dt>commit</dt><dd><strong>不 commit</strong>；C3 由 Task 5 末尾合并 commit</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：写 Composer.test.tsx</strong>
+            <pre><code class="lang-tsx">import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
+import "@testing-library/jest-dom/vitest";
+import { Composer } from "@/components/portal/Composer";
+
+describe("Composer", () =&gt; {
+  it("默认 keyword tab active", () =&gt; {
+    render(&lt;Composer /&gt;);
+    expect(screen.getByRole("tab", { name: /关键词/ })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("切换到 PMID tab 后 input placeholder 变为 PMID 示例", async () =&gt; {
+    const user = userEvent.setup();
+    render(&lt;Composer /&gt;);
+    await user.click(screen.getByRole("tab", { name: "PMID" }));
+    expect(screen.getByPlaceholderText("38491203")).toBeInTheDocument();
+  });
+
+  it("DOI tab 切换后 input 应用 font-mono", async () =&gt; {
+    const user = userEvent.setup();
+    render(&lt;Composer /&gt;);
+    await user.click(screen.getByRole("tab", { name: "DOI" }));
+    const input = screen.getByRole("textbox");
+    expect(input.className).toMatch(/font-mono/);
+  });
+
+  it("提交时调用 onSubmit prop（含 value 与 mode）", async () =&gt; {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+    render(&lt;Composer onSubmit={onSubmit} /&gt;);
+    await user.type(screen.getByRole("textbox"), "GLP-1");
+    await user.click(screen.getByRole("button", { name: /搜索/ }));
+    expect(onSubmit).toHaveBeenCalledWith({ mode: "keyword", value: "GLP-1" });
+  });
+
+  it("点击试试 chip 后填入对应 mode + text", async () =&gt; {
+    const user = userEvent.setup();
+    render(&lt;Composer /&gt;);
+    await user.click(screen.getByRole("button", { name: /AlphaFold/ }));
+    const input = screen.getByRole("textbox") as HTMLInputElement;
+    expect(input.value).toBe("AlphaFold 蛋白结构预测");
+  });
+});</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：写 src/components/portal/Composer.tsx</strong>
+            <pre><code class="lang-tsx">"use client";
+
+import { CornerDownLeft, Search } from "lucide-react";
+import { type FormEvent, useState } from "react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
+import { EXAMPLE_QUERIES } from "@/data/example-queries";
+import { SEARCH_MODES } from "@/data/search-modes";
+import type { ComposerMode } from "@/types/portal";
+
+export interface ComposerSubmitEvent {
+  mode: ComposerMode;
+  value: string;
+}
+
+interface ComposerProps {
+  onSubmit?: (event: ComposerSubmitEvent) =&gt; void;
+}
+
+export function Composer({ onSubmit }: ComposerProps) {
+  const [mode, setMode] = useState&lt;ComposerMode&gt;("keyword");
+  const [value, setValue] = useState("");
+
+  const current = SEARCH_MODES.find((m) =&gt; m.id === mode) ?? SEARCH_MODES[0];
+  if (!current) return null;
+
+  const handleSubmit = (e: FormEvent&lt;HTMLFormElement&gt;) =&gt; {
+    e.preventDefault();
+    onSubmit?.({ mode, value });
+  };
+
+  const applyExample = (exMode: ComposerMode, exText: string) =&gt; {
+    setMode(exMode);
+    setValue(exText);
+  };
+
+  return (
+    &lt;form
+      onSubmit={handleSubmit}
+      className="overflow-hidden rounded-lg border border-ink-800 bg-white shadow-sm"
+    &gt;
+      &lt;Tabs value={mode} onValueChange={(v) =&gt; { setMode(v as ComposerMode); setValue(""); }}&gt;
+        &lt;TabsList className="flex h-auto items-center gap-0 rounded-none border-b border-border-default bg-paper-50 p-0 px-1.5"&gt;
+          {SEARCH_MODES.map((m) =&gt; (
+            &lt;TabsTrigger
+              key={m.id}
+              value={m.id}
+              className="rounded-none border-b-2 border-transparent bg-transparent px-3.5 py-2.5 text-sm font-medium text-fg-3 shadow-none hover:text-ink-900 data-[state=active]:border-teal-600 data-[state=active]:bg-transparent data-[state=active]:text-ink-900 data-[state=active]:shadow-none"
+            &gt;
+              {m.label}
+              {m.id === "keyword" &amp;&amp; (
+                &lt;span className="ml-1.5 font-mono text-[10.5px] text-fg-4"&gt;默认&lt;/span&gt;
+              )}
+            &lt;/TabsTrigger&gt;
+          ))}
+        &lt;/TabsList&gt;
+      &lt;/Tabs&gt;
+
+      &lt;div className="flex items-center gap-3 py-1.5 pl-[18px] pr-1.5 max-sm:pl-3"&gt;
+        &lt;Search className="shrink-0 text-fg-3" size={20} strokeWidth={1.5} /&gt;
+        &lt;input
+          id="hero-input"
+          className={cn(
+            "min-w-0 flex-1 border-0 bg-transparent py-3.5 text-lg leading-tight text-ink-900 outline-none placeholder:text-fg-4 max-sm:py-3 max-sm:text-base",
+            current.mono &amp;&amp; "font-mono text-base tracking-[0.01em] max-sm:text-sm",
+          )}
+          placeholder={current.placeholder}
+          value={value}
+          onChange={(e) =&gt; setValue(e.target.value)}
+          autoComplete="off"
+          spellCheck={false}
+          aria-label={`按${current.label}搜索`}
+        /&gt;
+        &lt;button
+          type="submit"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-teal-700 bg-teal-600 px-4 py-2.5 text-sm font-semibold text-fg-on-clay transition-colors hover:bg-teal-700 active:bg-teal-800 max-sm:px-3"
+        &gt;
+          &lt;span className="max-sm:hidden"&gt;搜索&lt;/span&gt;
+          &lt;CornerDownLeft className="h-3.5 w-3.5" strokeWidth={1.5} /&gt;
+        &lt;/button&gt;
+      &lt;/div&gt;
+
+      &lt;div className="flex flex-wrap items-center gap-2 border-t border-border-subtle bg-paper-50 px-3.5 py-2.5 text-xs text-fg-3"&gt;
+        &lt;span className="mr-0.5 font-mono text-[10px] uppercase tracking-caps text-fg-3"&gt;试试&lt;/span&gt;
+        {EXAMPLE_QUERIES.map((ex) =&gt; {
+          const m = SEARCH_MODES.find((s) =&gt; s.id === ex.mode);
+          return (
+            &lt;button
+              key={ex.text}
+              type="button"
+              onClick={() =&gt; applyExample(ex.mode, ex.text)}
+              className={cn(
+                "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-border-default bg-white px-2.5 py-0.5 text-xs text-fg-2 hover:border-ink-300 hover:bg-paper-200 hover:text-ink-900",
+                m?.mono &amp;&amp; "font-mono text-[11px]",
+              )}
+            &gt;
+              &lt;span className="border-r border-border-default pr-1.5 font-mono text-[10px] uppercase tracking-caps text-fg-4"&gt;
+                {m?.label}
+              &lt;/span&gt;
+              {ex.text}
+            &lt;/button&gt;
+          );
+        })}
+      &lt;/div&gt;
+    &lt;/form&gt;
+  );
+}</code></pre>
+            <p><strong>注意</strong>：<code>onSubmit</code> 是可选 prop。Task 6 (page.tsx 装配) 时会注入 <code>onSubmit={({ value }) =&gt; toast("功能即将上线")}</code>。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：跑 Composer 测试验证</strong>
+            <pre><code class="lang-bash">pnpm test tests/components/portal/Composer.test.tsx</code></pre>
+            <p>预期：5 个测试全绿。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：写 Hero.test.tsx</strong>
+            <pre><code class="lang-tsx">import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import "@testing-library/jest-dom/vitest";
+import { Hero } from "@/components/portal/Hero";
+
+describe("Hero", () =&gt; {
+  it("渲染含 '可被检索' 的 h1", () =&gt; {
+    render(&lt;Hero /&gt;);
+    const h1 = screen.getByRole("heading", { level: 1 });
+    expect(h1.textContent).toMatch(/可被检索/);
+  });
+
+  it("masthead 显示 records 数（4,238,917）", () =&gt; {
+    render(&lt;Hero /&gt;);
+    expect(screen.getByText(/4,238,917/)).toBeInTheDocument();
+  });
+
+  it("masthead 显示 sources 数 (10)", () =&gt; {
+    render(&lt;Hero /&gt;);
+    expect(screen.getByText(/10/, { selector: "b, strong" })).toBeInTheDocument();
+  });
+
+  it("含 Composer 表单（嵌入的 textbox）", () =&gt; {
+    render(&lt;Hero /&gt;);
+    expect(screen.getByRole("textbox")).toBeInTheDocument();
+  });
+
+  it("含 ornament 图（仅桌面端可见）", () =&gt; {
+    const { container } = render(&lt;Hero /&gt;);
+    const ornament = container.querySelector("[data-ornament]");
+    expect(ornament).toBeTruthy();
+  });
+});</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：写 src/components/portal/Hero.tsx</strong>
+            <pre><code class="lang-tsx">import Image from "next/image";
+import { Composer, type ComposerSubmitEvent } from "@/components/portal/Composer";
+import { PORTAL_STATS } from "@/data/portal-stats";
+
+interface HeroProps {
+  onComposerSubmit?: (event: ComposerSubmitEvent) =&gt; void;
+}
+
+export function Hero({ onComposerSubmit }: HeroProps) {
+  return (
+    &lt;section
+      id="top"
+      data-section="hero"
+      className="relative overflow-hidden py-16 max-[880px]:py-10"
+    &gt;
+      &lt;div className="container mx-auto max-w-[1200px] px-6"&gt;
+        {/* Masthead — 顶规 + statline */}
+        &lt;div className="mb-10 flex items-center justify-between gap-4 border-y border-t-ink-900 border-b-border-default py-2 max-[880px]:mb-7 max-sm:py-1.5"&gt;
+          &lt;div className="flex flex-wrap gap-x-5 gap-y-1 text-[11.5px] text-fg-3 max-sm:gap-x-2.5"&gt;
+            &lt;span className="inline-flex items-baseline gap-1.5 whitespace-nowrap"&gt;
+              &lt;b className="font-mono text-xs font-semibold tabular-nums text-ink-900"&gt;
+                {PORTAL_STATS.records.toLocaleString()}
+              &lt;/b&gt;
+              条文献
+            &lt;/span&gt;
+            &lt;span className="inline-flex items-baseline gap-1.5 whitespace-nowrap"&gt;
+              &lt;b className="font-mono text-xs font-semibold tabular-nums text-ink-900"&gt;
+                {PORTAL_STATS.sources}
+              &lt;/b&gt;
+              数据源
+            &lt;/span&gt;
+            &lt;span className="inline-flex items-baseline gap-1.5 whitespace-nowrap max-sm:hidden"&gt;
+              更新于
+              &lt;b className="font-mono text-xs font-semibold tabular-nums text-ink-900"&gt;
+                {PORTAL_STATS.lastIngestMin} 分钟前
+              &lt;/b&gt;
+            &lt;/span&gt;
+          &lt;/div&gt;
+          &lt;div className="inline-flex items-center gap-1.5 whitespace-nowrap font-mono text-[10.5px] uppercase tracking-caps text-moss-500 before:h-1.5 before:w-1.5 before:rounded-full before:bg-moss-500 before:animate-[patra-live-pulse_1.6s_ease-in-out_infinite] before:content-['']"&gt;
+            实时同步
+          &lt;/div&gt;
+        &lt;/div&gt;
+
+        {/* Headline grid */}
+        &lt;div className="mb-7 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-8 max-[880px]:grid-cols-1 max-[880px]:gap-2"&gt;
+          &lt;h1 className="m-0 font-serif text-balance font-medium leading-[1.04] tracking-tight text-fg-1 text-[clamp(36px,5.4vw,60px)]"&gt;
+            医学文献，
+            &lt;br /&gt;
+            &lt;em className="font-medium italic text-clay-700"&gt;可被检索&lt;/em&gt;
+            ，可被引用。
+          &lt;/h1>
+          &lt;div data-ornament className="shrink-0 self-end text-ink-900 opacity-90 max-[880px]:hidden"&gt;
+            &lt;Image src="/brand/patra-mark.svg" alt="" aria-hidden width={72} height={280} /&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+
+        &lt;p className="mb-9 max-w-[640px] font-serif leading-[1.55] text-fg-2 text-[clamp(16px,1.6vw,18px)] text-pretty max-[880px]:mb-6"&gt;
+          Patra 汇集 PubMed、Europe PMC、Crossref 等 10 个来源的学术文献，提供统一检索、出处追溯与 AI 辅助速读。门户对所有访客开放浏览。
+        &lt;/p&gt;
+
+        &lt;Composer onSubmit={onComposerSubmit} /&gt;
+      &lt;/div&gt;
+    &lt;/section&gt;
+  );
+}</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 6：跑 Hero 测试验证</strong>
+            <pre><code class="lang-bash">pnpm test tests/components/portal/Hero.test.tsx</code></pre>
+            <p>预期：5 个测试全绿。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 7：stage hero 组文件不 commit</strong>
+            <pre><code class="lang-bash">git add patra-portal/src/components/portal/{Hero,Composer}.tsx \
+        patra-portal/tests/components/portal/{Hero,Composer}.test.tsx
+git status   # 累计 staged: nav 组 3 + hero 组 2 = 5 个 .tsx + 5 个 .test.tsx</code></pre>
+            <p><strong>不执行 git commit</strong>。等 Task 5 末尾合并。</p>
+          </li>
+        </ol>
+      </article>
+
+      <!-- ============================================================
+           Task 5 — C3·feed 组: TopicCloud + Journals + JournalCoverCard + ExploreFeed + PaperCard
+                    (PAP-31 3/3; commit C3 在末尾)
+           ============================================================ -->
+
+      <article class="task" id="task-5" data-status="pending">
+        <header>
+          <h2>任务 5：C3·feed 组 TopicCloud + Journals + JournalCoverCard + ExploreFeed + PaperCard (PAP-31 3/3 · commit C3)</h2>
+          <dl class="files">
+            <dt>创建</dt><dd><code>src/components/portal/{TopicCloud,Journals,JournalCoverCard,ExploreFeed,PaperCard}.tsx</code></dd>
+            <dt>测试</dt><dd>对应 5 份 <code>.test.tsx</code></dd>
+            <dt>commit</dt><dd>末尾合并 commit C3（覆盖 Task 3/4/5 共 10 个组件 + 10 个测试）</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：写 TopicCloud.test.tsx + TopicCloud.tsx</strong>
+            <p>测试代码：</p>
+            <pre><code class="lang-tsx">// tests/components/portal/TopicCloud.test.tsx
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import "@testing-library/jest-dom/vitest";
+import { TopicCloud } from "@/components/portal/TopicCloud";
+
+describe("TopicCloud", () =&gt; {
+  it("含 '此刻热议' eyebrow", () =&gt; {
+    render(&lt;TopicCloud /&gt;);
+    expect(screen.getByText(/此刻热议/)).toBeInTheDocument();
+  });
+
+  it("渲染 32 个 topic 链接", () =&gt; {
+    render(&lt;TopicCloud /&gt;);
+    const items = screen.getAllByRole("listitem");
+    expect(items).toHaveLength(32);
+  });
+
+  it("tier 1 项显示 delta (例 GLP-1 +34%)", () =&gt; {
+    render(&lt;TopicCloud /&gt;);
+    expect(screen.getByText(/\+34%/)).toBeInTheDocument();
+  });
+
+  it("含 'GLP-1 受体激动剂' 文字 (最热 topic)", () =&gt; {
+    render(&lt;TopicCloud /&gt;);
+    expect(screen.getByText("GLP-1 受体激动剂")).toBeInTheDocument();
+  });
+});</code></pre>
+            <p>组件代码：</p>
+            <pre><code class="lang-tsx">// src/components/portal/TopicCloud.tsx
+import Image from "next/image";
+import { ArrowRight } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { TOPIC_CLOUD, topicTier } from "@/data/topics";
+import type { TopicHeatTier } from "@/types/portal";
+
+const TIER_CLASS: Record&lt;TopicHeatTier, string&gt; = {
+  1: "font-serif italic font-medium text-clay-800 tracking-[-0.015em] leading-none text-[clamp(28px,3.4vw,38px)]",
+  2: "font-serif font-medium text-ink-900 tracking-[-0.01em] leading-none text-[clamp(22px,2.4vw,28px)]",
+  3: "font-sans font-semibold text-ink-800 tracking-[-0.005em] text-[clamp(17px,1.6vw,20px)]",
+  4: "font-sans font-medium text-ink-700 text-[15px]",
+  5: "font-sans font-normal text-ink-600 text-[13px]",
+};
+
+export function TopicCloud() {
+  return (
+    &lt;section data-section="topic-cloud" className="bg-clay-50/60"&gt;
+      &lt;div className="container mx-auto max-w-[1200px] px-6 py-14 max-[880px]:py-10"&gt;
+        &lt;div className="mb-2 flex items-end justify-between gap-3 max-[880px]:flex-col max-[880px]:items-start"&gt;
+          &lt;div&gt;
+            &lt;span className="inline-flex items-center gap-1.5 font-sans text-2xs font-semibold uppercase tracking-caps text-fg-3"&gt;
+              &lt;Image src="/brand/patra-monogram.svg" alt="" aria-hidden width={14} height={14} /&gt;
+              此刻热议 · trending now
+            &lt;/span&gt;
+            &lt;h2 className="mt-1 font-serif text-3xl font-medium leading-tight tracking-tight text-ink-900"&gt;
+              医学界正在讨论&lt;em className="italic text-clay-700"&gt;什么&lt;/em&gt;
+            &lt;/h2&gt;
+            &lt;p className="mt-1 text-sm text-fg-3"&gt;
+              基于过去 72 小时的检索、被引与抓取频次合成的关键词热度。点选任一词条进入文献检索。
+            &lt;/p&gt;
+          &lt;/div&gt;
+          &lt;span className="font-mono text-xs text-fg-3"&gt;截至 17:42 · 滑动 72h&lt;/span&gt;
+        &lt;/div&gt;
+
+        &lt;div className="mt-6 border-y border-clay-100 py-7 max-[880px]:py-5"&gt;
+          &lt;ul role="list" className="flex flex-wrap items-baseline gap-x-5 gap-y-5 leading-none max-[880px]:gap-4"&gt;
+            {TOPIC_CLOUD.map((t) =&gt; {
+              const tier = topicTier(t.heat);
+              return (
+                &lt;li key={t.term}&gt;
+                  &lt;a
+                    href="#"
+                    onClick={(e) =&gt; e.preventDefault()}
+                    title={`${t.count.toLocaleString()} 条相关文献`}
+                    className={cn(
+                      "inline-flex items-baseline gap-1.5 rounded-sm px-1 -mx-1 hover:bg-paper-200 focus-visible:outline-none focus-visible:ring focus-visible:ring-ring/30",
+                      TIER_CLASS[tier],
+                    )}
+                  &gt;
+                    &lt;span&gt;{t.term}&lt;/span&gt;
+                    {tier === 1 &amp;&amp; t.delta &amp;&amp; (
+                      &lt;span className="font-mono text-xs font-semibold text-clay-600"&gt;
+                        ↗ {t.delta}
+                      &lt;/span&gt;
+                    )}
+                  &lt;/a&gt;
+                &lt;/li&gt;
+              );
+            })}
+          &lt;/ul&gt;
+        &lt;/div&gt;
+
+        &lt;div className="mt-8 flex flex-wrap items-center justify-between gap-3"&gt;
+          &lt;div className="flex items-center gap-4 font-mono text-2xs uppercase tracking-caps text-fg-3"&gt;
+            &lt;span&gt;冷 → 热&lt;/span&gt;
+            &lt;span&gt;↗ Δ 较上周&lt;/span&gt;
+          &lt;/div&gt;
+          &lt;a
+            href="#"
+            onClick={(e) =&gt; e.preventDefault()}
+            className="inline-flex items-center gap-1.5 text-sm text-clay-700 hover:text-clay-800"
+          &gt;
+            浏览全部主题 &lt;ArrowRight className="h-3.5 w-3.5" strokeWidth={1.5} /&gt;
+          &lt;/a&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/section&gt;
+  );
+}</code></pre>
+            <p>验证：<code>pnpm test tests/components/portal/TopicCloud.test.tsx</code> → 4 测试绿。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：写 JournalCoverCard.test.tsx + JournalCoverCard.tsx</strong>
+            <pre><code class="lang-tsx">// tests/components/portal/JournalCoverCard.test.tsx
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import "@testing-library/jest-dom/vitest";
+import { JournalCoverCard } from "@/components/portal/JournalCoverCard";
+import { JOURNALS } from "@/data/journals";
+
+describe("JournalCoverCard", () =&gt; {
+  const nejm = JOURNALS[0]!;
+
+  it("渲染期刊全名", () =&gt; {
+    render(&lt;JournalCoverCard journal={nejm} /&gt;);
+    expect(screen.getByText("New England Journal of Medicine")).toBeInTheDocument();
+  });
+
+  it("渲染封面文字 (NEJM)", () =&gt; {
+    render(&lt;JournalCoverCard journal={nejm} /&gt;);
+    expect(screen.getByText("NEJM")).toBeInTheDocument();
+  });
+
+  it("渲染影响因子 (158.5)", () =&gt; {
+    render(&lt;JournalCoverCard journal={nejm} /&gt;);
+    expect(screen.getByText("158.5")).toBeInTheDocument();
+  });
+
+  it("渲染本周收录数 (312)", () =&gt; {
+    render(&lt;JournalCoverCard journal={nejm} /&gt;);
+    expect(screen.getByText("312")).toBeInTheDocument();
+  });
+
+  it("封面应用 coverStyle.bg", () =&gt; {
+    const { container } = render(&lt;JournalCoverCard journal={nejm} /&gt;);
+    const cover = container.querySelector("[data-cover]") as HTMLElement;
+    expect(cover.style.background).toMatch(/3C1611|rgb/i);
+  });
+});</code></pre>
+            <pre><code class="lang-tsx">// src/components/portal/JournalCoverCard.tsx
+import type { Journal } from "@/types/portal";
+
+interface JournalCoverCardProps {
+  journal: Journal;
+  className?: string;
+}
+
+export function JournalCoverCard({ journal, className }: JournalCoverCardProps) {
+  const { bg, ink, rule } = journal.coverStyle;
+  return (
+    &lt;a
+      href="#"
+      onClick={(e) =&gt; e.preventDefault()}
+      className={
+        "flex flex-col overflow-hidden rounded-lg border border-border-default bg-paper-50 text-inherit no-underline transition hover:-translate-y-px hover:border-ink-300 hover:shadow-[0_6px_16px_-10px_rgba(28,25,23,0.18)] " +
+        (className ?? "")
+      }
+    &gt;
+      &lt;div
+        data-cover
+        className="relative flex aspect-[3/4] items-center justify-center overflow-hidden p-4 text-center before:absolute before:inset-2 before:border before:border-current before:opacity-20 before:content-['']"
+        style={{ background: bg, color: ink }}
+      &gt;
+        &lt;div className="absolute left-2 right-2 top-3 text-center font-mono text-[9.5px] uppercase tracking-[0.18em] opacity-70"&gt;
+          est. {journal.founded}
+        &lt;/div&gt;
+        &lt;div className="whitespace-pre-line font-serif font-medium leading-[1.05] tracking-tight text-[clamp(20px,2.2vw,26px)]"&gt;
+          {journal.cover}
+        &lt;/div&gt;
+        &lt;div className="absolute bottom-3 left-2 right-2 text-center font-mono text-[9px] uppercase tracking-[0.14em] opacity-60"&gt;
+          vol · 2026
+        &lt;/div&gt;
+        &lt;span className="sr-only"&gt;{rule}&lt;/span&gt;
+      &lt;/div&gt;
+      &lt;div className="flex flex-col gap-1.5 border-t border-border-default bg-paper-50 p-3.5"&gt;
+        &lt;div className="text-sm font-semibold leading-snug text-fg-1"&gt;{journal.name}&lt;/div&gt;
+        &lt;div className="font-mono text-[10.5px] uppercase tracking-caps text-fg-3"&gt;{journal.abbr}&lt;/div&gt;
+        &lt;div className="mt-1 flex items-baseline justify-between gap-2"&gt;
+          &lt;div className="flex flex-col"&gt;
+            &lt;span className="font-serif text-xl font-medium leading-tight tracking-tight text-ink-900 tabular-nums"&gt;
+              {journal.impact.toFixed(1)}
+            &lt;/span&gt;
+            &lt;span className="font-mono text-[9.5px] uppercase tracking-caps text-fg-3"&gt;影响因子&lt;/span&gt;
+          &lt;/div&gt;
+          &lt;div className="text-right font-mono text-[11px] leading-snug tabular-nums text-fg-2"&gt;
+            &lt;span className="block font-mono text-[9.5px] uppercase tracking-caps text-fg-3"&gt;本周收录&lt;/span&gt;
+            {journal.weekly}
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/a&gt;
+  );
+}</code></pre>
+            <p>验证：<code>pnpm test tests/components/portal/JournalCoverCard.test.tsx</code> → 5 测试绿。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：写 Journals.test.tsx + Journals.tsx</strong>
+            <pre><code class="lang-tsx">// tests/components/portal/Journals.test.tsx
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import "@testing-library/jest-dom/vitest";
+import { Journals } from "@/components/portal/Journals";
+
+describe("Journals", () =&gt; {
+  it("渲染 6 张封面 link", () =&gt; {
+    const { container } = render(&lt;Journals /&gt;);
+    const links = container.querySelectorAll("[data-section='journals'] a[href]");
+    expect(links.length).toBeGreaterThanOrEqual(6);
+  });
+
+  it("包含 NEJM 封面文字", () =&gt; {
+    render(&lt;Journals /&gt;);
+    expect(screen.getByText("NEJM")).toBeInTheDocument();
+  });
+
+  it("含 '高影响力期刊' 标题", () =&gt; {
+    render(&lt;Journals /&gt;);
+    expect(screen.getByRole("heading", { name: /高影响力期刊/ })).toBeInTheDocument();
+  });
+});</code></pre>
+            <pre><code class="lang-tsx">// src/components/portal/Journals.tsx
+import Image from "next/image";
+import { ArrowRight } from "lucide-react";
+import { JournalCoverCard } from "@/components/portal/JournalCoverCard";
+import { JOURNALS } from "@/data/journals";
+
+export function Journals() {
+  return (
+    &lt;section data-section="journals" className="container mx-auto max-w-[1200px] px-6 py-14 max-[880px]:py-10"&gt;
+      &lt;div className="mb-6 flex items-end justify-between gap-3 max-[880px]:flex-col max-[880px]:items-start"&gt;
+        &lt;div&gt;
+          &lt;span className="inline-flex items-center gap-1.5 font-sans text-2xs font-semibold uppercase tracking-caps text-fg-3"&gt;
+            &lt;Image src="/brand/patra-monogram.svg" alt="" aria-hidden width={14} height={14} /&gt;
+            按期刊浏览
+          &lt;/span&gt;
+          &lt;h2 className="mt-1 font-serif text-3xl font-medium leading-tight tracking-tight text-ink-900"&gt;
+            高影响力期刊
+          &lt;/h2&gt;
+          &lt;p className="mt-1 text-sm text-fg-3"&gt;
+            从信赖的来源切入。Patra 持续追踪 1,247 本同行评审期刊；以下为本周收录最活跃的 6 本。
+          &lt;/p&gt;
+        &lt;/div&gt;
+        &lt;a
+          href="#"
+          onClick={(e) =&gt; e.preventDefault()}
+          className="inline-flex items-center gap-1.5 text-sm text-clay-700 hover:text-clay-800"
+        &gt;
+          浏览全部 1,247 本 &lt;ArrowRight className="h-3.5 w-3.5" strokeWidth={1.5} /&gt;
+        &lt;/a&gt;
+      &lt;/div&gt;
+
+      &lt;div className="grid grid-cols-6 gap-4 max-[1200px]:grid-cols-3 max-[720px]:grid-cols-none max-[720px]:flex max-[720px]:gap-3 max-[720px]:overflow-x-auto max-[720px]:snap-x max-[720px]:snap-mandatory max-[720px]:-mx-5 max-[720px]:px-5 max-[720px]:py-1 max-[720px]:[scrollbar-width:none] max-[720px]:[&amp;::-webkit-scrollbar]:hidden"&gt;
+        {JOURNALS.map((j) =&gt; (
+          &lt;JournalCoverCard
+            key={j.id}
+            journal={j}
+            className="max-[720px]:shrink-0 max-[720px]:basis-[56vw] max-[720px]:min-w-[200px] max-[720px]:snap-start"
+          /&gt;
+        ))}
+      &lt;/div&gt;
+    &lt;/section&gt;
+  );
+}</code></pre>
+            <p>验证：<code>pnpm test tests/components/portal/Journals.test.tsx</code> → 3 测试绿。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：写 PaperCard.test.tsx + PaperCard.tsx</strong>
+            <pre><code class="lang-tsx">// tests/components/portal/PaperCard.test.tsx
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import "@testing-library/jest-dom/vitest";
+import { PaperCard } from "@/components/portal/PaperCard";
+import { FEED } from "@/data/feed";
+
+describe("PaperCard", () =&gt; {
+  const p = FEED.trending[0]!;
+
+  it("渲染 title", () =&gt; {
+    render(&lt;PaperCard paper={p} /&gt;);
+    expect(screen.getByText(p.title)).toBeInTheDocument();
+  });
+
+  it("渲染 journal + year", () =&gt; {
+    render(&lt;PaperCard paper={p} /&gt;);
+    expect(screen.getByText(/N Engl J Med/)).toBeInTheDocument();
+    expect(screen.getByText(/2026/)).toBeInTheDocument();
+  });
+
+  it("DOI / PMID 应用 font-mono", () =&gt; {
+    const { container } = render(&lt;PaperCard paper={p} /&gt;);
+    const doi = container.querySelector("[data-doi]") as HTMLElement;
+    expect(doi.className).toMatch(/font-mono/);
+  });
+
+  it("含 AI 速读区域 + summary 文字片段", () =&gt; {
+    render(&lt;PaperCard paper={p} /&gt;);
+    expect(screen.getByText("AI 速读")).toBeInTheDocument();
+    expect(screen.getByText(/心血管事件下降/)).toBeInTheDocument();
+  });
+
+  it("不包含 emoji 字符 (📖 / ⭐ / 💬)", () =&gt; {
+    const { container } = render(&lt;PaperCard paper={p} /&gt;);
+    expect(container.textContent).not.toMatch(/[📖⭐💬]/);
+  });
+});</code></pre>
+            <pre><code class="lang-tsx">// src/components/portal/PaperCard.tsx
+import { Bookmark, BookOpen, MessageSquare } from "lucide-react";
+import { AISummaryBadge } from "@/components/portal/AISummaryBadge";
+import type { Paper } from "@/types/portal";
+
+interface PaperCardProps {
+  paper: Paper;
+}
+
+export function PaperCard({ paper }: PaperCardProps) {
+  const visibleAuthors = paper.authors.slice(0, 3);
+  const remaining = paper.authorCount - visibleAuthors.length;
+
+  return (
+    &lt;article className="flex flex-col gap-3 border-b border-border-subtle py-5"&gt;
+      &lt;div className="flex items-baseline gap-3 font-mono text-2xs uppercase tracking-caps text-fg-3"&gt;
+        &lt;span className="text-ink-900"&gt;{paper.journal}&lt;/span&gt;
+        &lt;span&gt;·&lt;/span&gt;
+        &lt;span&gt;{paper.year}&lt;/span&gt;
+        &lt;span&gt;·&lt;/span&gt;
+        &lt;span&gt;{paper.kind}&lt;/span&gt;
+        {paper.minutesAgo !== undefined &amp;&amp; (
+          &lt;&gt;
+            &lt;span&gt;·&lt;/span&gt;
+            &lt;span&gt;{paper.minutesAgo} 分钟前&lt;/span&gt;
+          &lt;/&gt;
+        )}
+      &lt;/div&gt;
+      &lt;h3 className="font-serif text-lg font-medium leading-snug tracking-tight text-ink-900"&gt;
+        {paper.title}
+      &lt;/h3&gt;
+      &lt;p className="text-sm leading-snug text-fg-2"&gt;
+        {visibleAuthors.join("、")}
+        {remaining &gt; 0 &amp;&amp; ` 等 ${paper.authorCount} 位作者`}
+      &lt;/p&gt;
+      &lt;AISummaryBadge summary={paper.ai} /&gt;
+      &lt;div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-fg-3"&gt;
+        &lt;span data-doi className="font-mono"&gt;DOI {paper.doi}&lt;/span&gt;
+        &lt;span data-pmid className="font-mono"&gt;PMID {paper.pmid}&lt;/span&gt;
+        &lt;span&gt;来源 {paper.source}&lt;/span&gt;
+        &lt;span&gt;阅读 {paper.readMin} 分钟&lt;/span&gt;
+      &lt;/div&gt;
+      &lt;div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-fg-2"&gt;
+        &lt;button type="button" className="inline-flex items-center gap-1.5 text-fg-2 hover:text-ink-900"&gt;
+          &lt;BookOpen className="h-3.5 w-3.5" strokeWidth={1.5} /&gt; 详情
+        &lt;/button&gt;
+        &lt;button type="button" className="inline-flex items-center gap-1.5 text-fg-2 hover:text-ink-900"&gt;
+          &lt;Bookmark className="h-3.5 w-3.5" strokeWidth={1.5} /&gt; 收藏 {paper.bookmarks}
+        &lt;/button&gt;
+        &lt;button type="button" className="inline-flex items-center gap-1.5 text-fg-2 hover:text-ink-900"&gt;
+          &lt;MessageSquare className="h-3.5 w-3.5" strokeWidth={1.5} /&gt; 引用 {paper.cites}
+        &lt;/button&gt;
+      &lt;/div&gt;
+    &lt;/article&gt;
+  );
+}</code></pre>
+            <p>验证：<code>pnpm test tests/components/portal/PaperCard.test.tsx</code> → 5 测试绿。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：写 ExploreFeed.test.tsx + ExploreFeed.tsx</strong>
+            <pre><code class="lang-tsx">// tests/components/portal/ExploreFeed.test.tsx
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it } from "vitest";
+import "@testing-library/jest-dom/vitest";
+import { ExploreFeed } from "@/components/portal/ExploreFeed";
+
+describe("ExploreFeed", () =&gt; {
+  it("渲染 3 个 tab trigger", () =&gt; {
+    render(&lt;ExploreFeed /&gt;);
+    expect(screen.getByRole("tab", { name: /热度/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /最新/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /被引/i })).toBeInTheDocument();
+  });
+
+  it("默认 trending tab active", () =&gt; {
+    render(&lt;ExploreFeed /&gt;);
+    expect(screen.getByRole("tab", { name: /热度/i })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("切到最新 tab 后 panel 显示 4 个 paper", async () =&gt; {
+    const user = userEvent.setup();
+    render(&lt;ExploreFeed /&gt;);
+    await user.click(screen.getByRole("tab", { name: /最新/i }));
+    const articles = await screen.findAllByRole("article");
+    expect(articles.length).toBeGreaterThanOrEqual(4);
+  });
+});</code></pre>
+            <pre><code class="lang-tsx">// src/components/portal/ExploreFeed.tsx
+"use client";
+
+import Image from "next/image";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PaperCard } from "@/components/portal/PaperCard";
+import { FEED } from "@/data/feed";
+
+const TAB_LABELS = {
+  trending: "热度",
+  recent: "最新",
+  cited: "被引",
+} as const;
+
+export function ExploreFeed() {
+  return (
+    &lt;section data-section="explore-feed" className="container mx-auto max-w-[1200px] px-6 py-14 max-[880px]:py-10"&gt;
+      &lt;div className="mb-6"&gt;
+        &lt;span className="inline-flex items-center gap-1.5 font-sans text-2xs font-semibold uppercase tracking-caps text-fg-3"&gt;
+          &lt;Image src="/brand/patra-monogram.svg" alt="" aria-hidden width={14} height={14} /&gt;
+          探索 · explore
+        &lt;/span&gt;
+        &lt;h2 className="mt-1 font-serif text-3xl font-medium leading-tight tracking-tight text-ink-900"&gt;
+          探索文献流
+        &lt;/h2&gt;
+      &lt;/div&gt;
+
+      &lt;Tabs defaultValue="trending"&gt;
+        &lt;TabsList className="flex h-auto items-center gap-0 rounded-none border-b border-border-default bg-transparent p-0"&gt;
+          {(Object.keys(TAB_LABELS) as Array&lt;keyof typeof TAB_LABELS&gt;).map((k) =&gt; (
+            &lt;TabsTrigger
+              key={k}
+              value={k}
+              className="rounded-none border-b-2 border-transparent bg-transparent px-4 py-2.5 text-sm font-medium text-fg-3 shadow-none hover:text-ink-900 data-[state=active]:border-teal-600 data-[state=active]:bg-transparent data-[state=active]:text-ink-900 data-[state=active]:shadow-none"
+            &gt;
+              {TAB_LABELS[k]}
+            &lt;/TabsTrigger&gt;
+          ))}
+        &lt;/TabsList&gt;
+        {(Object.keys(TAB_LABELS) as Array&lt;keyof typeof TAB_LABELS&gt;).map((k) =&gt; (
+          &lt;TabsContent key={k} value={k} className="pt-2"&gt;
+            {FEED[k].map((p) =&gt; (
+              &lt;PaperCard key={p.id} paper={p} /&gt;
+            ))}
+          &lt;/TabsContent&gt;
+        ))}
+      &lt;/Tabs&gt;
+    &lt;/section&gt;
+  );
+}</code></pre>
+            <p>验证：<code>pnpm test tests/components/portal/ExploreFeed.test.tsx</code> → 3 测试绿。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 6：跑全量 vitest + lint + typecheck</strong>
+            <pre><code class="lang-bash">cd patra-portal
+pnpm typecheck
+pnpm lint
+pnpm test</code></pre>
+            <p>预期：</p>
+            <ul>
+              <li>typecheck 退 0；所有组件类型对齐 portal.ts</li>
+              <li>lint 退 0；Biome 接受所有 arbitrary value</li>
+              <li>test 全绿；新增测试约 11 个文件（10 组件 + 1 topicTier），合计约 40+ 用例</li>
+            </ul>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 7：Commit C3 (覆盖 Task 3/4/5 共 10 组件 + 10 测试)</strong>
+            <pre><code class="lang-bash">git add patra-portal/src/components/portal/ \
+        patra-portal/tests/components/portal/
+
+git commit -m "feat(portal): public components + vitest specs
+
+10 个 portal 公共组件（src/components/portal/）：
+- 静态展示（RSC）：AISummaryBadge / Footer / Hero / TopicCloud /
+  Journals / JournalCoverCard / PaperCard
+- 含 state（'use client'）：TopNav / Composer / ExploreFeed
+
+10 份对应 Vitest 单测（tests/components/portal/）：
+- 全部使用 getByRole / getByText / getByPlaceholderText 等 a11y query
+- 禁用 getByTestId 与 snapshot
+- PaperCard 测试断言 textContent 不含 emoji (📖/⭐/💬)，对齐 design system 'No emoji in product UI'
+
+shadcn 原语用例：
+- TopNav 用 &lt;Sheet&gt; 实现汉堡菜单（Radix 自带 focus trap + Esc 关闭 + aria-modal）
+- Composer / ExploreFeed 用 &lt;Tabs&gt; 表达 active tab，data-[state=active]: 修饰器套 Patra teal
+
+Iconography 统一从 lucide-react 引入（Search / Menu / ArrowRight /
+CornerDownLeft / Bookmark / BookOpen / MessageSquare / ExternalLink），
+strokeWidth=1.5。Brand SVG 通过 next/image 加载 /brand/patra-*.svg。
+
+PAP-31"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <!-- ============================================================
+           Task 6 — C4: 首页 page 装配 + Composer toast (PAP-32)
+           ============================================================ -->
+
+      <article class="task" id="task-6" data-status="pending">
+        <header>
+          <h2>任务 6：C4 首页 page 装配 + Composer toast (PAP-32)</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>src/app/page.tsx</code></dd>
+            <dt>修改</dt><dd><code>tests/smoke.test.tsx</code>（更新原"patra-portal · v0.1.0"占位 smoke 为新首页 smoke）</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：完全重写 src/app/page.tsx</strong>
+            <pre><code class="lang-tsx">"use client";
+
+import { toast } from "sonner";
+import { ExploreFeed } from "@/components/portal/ExploreFeed";
+import { Footer } from "@/components/portal/Footer";
+import { Hero } from "@/components/portal/Hero";
+import { Journals } from "@/components/portal/Journals";
+import { TopicCloud } from "@/components/portal/TopicCloud";
+import { TopNav } from "@/components/portal/TopNav";
+
+export default function HomePage() {
+  return (
+    &lt;&gt;
+      &lt;TopNav /&gt;
+      &lt;main&gt;
+        &lt;Hero
+          onComposerSubmit={({ value }) =&gt; {
+            if (!value.trim()) return;
+            toast("功能即将上线", {
+              description: "搜索接入留待 v0.5 BE 联调。",
+            });
+          }}
+        /&gt;
+        &lt;TopicCloud /&gt;
+        &lt;Journals /&gt;
+        &lt;ExploreFeed /&gt;
+      &lt;/main&gt;
+      &lt;Footer /&gt;
+    &lt;/&gt;
+  );
+}</code></pre>
+            <p><strong>'use client'</strong> 因 page.tsx 需要传 <code>onComposerSubmit</code> 闭包给 Hero，且 toast() 是客户端调用。代价：整页变 client；Hero / Journals / TopicCloud 仍可作为 RSC 引入，但 page.tsx 本身是 client（这是为了 toast 的便利接受的取舍——详见 spec §9 决策 6）。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：更新 tests/smoke.test.tsx（原占位 smoke 与新首页结构不匹配）</strong>
+            <pre><code class="lang-tsx">import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import "@testing-library/jest-dom/vitest";
+import HomePage from "@/app/page";
+
+describe("HomePage smoke", () =&gt; {
+  it("渲染 6 个核心区块的 data-section anchor", () =&gt; {
+    const { container } = render(&lt;HomePage /&gt;);
+    for (const section of ["topnav", "hero", "topic-cloud", "journals", "explore-feed", "footer"]) {
+      expect(container.querySelector(`[data-section='${section}']`)).toBeTruthy();
+    }
+  });
+
+  it("含 h1 标题 '可被检索'", () =&gt; {
+    render(&lt;HomePage /&gt;);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/可被检索/);
+  });
+});</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：跑 lint + typecheck + test</strong>
+            <pre><code class="lang-bash">cd patra-portal
+pnpm lint
+pnpm typecheck
+pnpm test</code></pre>
+            <p>预期：</p>
+            <ul>
+              <li>全绿。smoke.test.tsx 新断言 6 个 data-section 都能被渲染。</li>
+              <li>如 toast 函数在 jsdom 抛错（sonner 内部检查 window），需要在测试里 mock sonner 或断言 Composer 行为而非 toast。当前 smoke 测试不触发 submit，避免此问题。</li>
+            </ul>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：本地启动 dev server 手动验收 6 区块</strong>
+            <pre><code class="lang-bash">cd patra-portal
+pnpm dev   # http://localhost:3000</code></pre>
+            <p>浏览器打开 <code>http://localhost:3000</code>，确认：</p>
+            <ul>
+              <li>TopNav 顶部固定，brand wordmark 显示 "Patra 门户"</li>
+              <li>Hero masthead 显示 "4,238,917 条文献"，h1 含 "医学文献，可被检索，可被引用。"</li>
+              <li>Composer 4 个 tab 可切换；keyword tab placeholder = "JAK1 抑制剂 · 特应性皮炎 · 1岁以下"</li>
+              <li>填入文字按搜索按钮 → 屏幕右下角弹 sonner toast "功能即将上线"</li>
+              <li>TopicCloud 32 词条按 5 级 tier 排版，clay-50 背景</li>
+              <li>Journals 6 张封面卡（NEJM / Lancet / JAMA / BMJ / Nature Medicine / Cell）</li>
+              <li>ExploreFeed 3 tab 可切换；trending 6 paper，每张含 AI 速读区</li>
+              <li>Footer 含 brand + 版权 + Patra 文案</li>
+              <li>无 emoji（无 📖/⭐/💬）</li>
+            </ul>
+            <p>验收完毕后 Ctrl-C 停止 dev server。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：Commit C4</strong>
+            <pre><code class="lang-bash">git add patra-portal/src/app/page.tsx patra-portal/tests/smoke.test.tsx
+
+git commit -m "feat(portal): assemble homepage with composer toast
+
+- page.tsx 装配 6 区块（TopNav / Hero / TopicCloud / Journals / ExploreFeed / Footer）
+- Composer onSubmit → sonner toast '功能即将上线'（v0.5 BE 接入前的占位提示）
+- 更新 smoke.test.tsx 适配新首页结构：断言 6 个 data-section anchor + h1 文本
+
+PAP-32"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <!-- ============================================================
+           Task 7 — C5: 响应式断点 4 档 (PAP-33)
+           ============================================================ -->
+
+      <article class="task" id="task-7" data-status="pending">
+        <header>
+          <h2>任务 7：C5 响应式断点 4 档 (PAP-33)</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>src/components/portal/{TopNav,Hero,Composer,TopicCloud,Journals,Footer}.tsx</code> 的响应式 utility（如未在前几步覆盖完整）</dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：检视 Task 3-5 已加入的 max-[880px]: / max-[720px]: / max-sm: utility 是否完整</strong>
+            <p>Task 3-5 在组件实现时已经写了 <code>max-[880px]:hidden</code> 等 utility（参考 Task 3 步骤 8 的 TopNav / Task 4 步骤 5 的 Hero）。本步重点是<strong>系统性核对</strong>，按 spec §6.1 4 档断点逐一核对：</p>
+            <table&gt;
+              <thead><tr><th>组件</th><th>L1 &lt;1200</th><th>L2 &lt;880</th><th>L3 &lt;720</th><th>L4 &lt;640</th></tr></thead>
+              <tbody>
+                <tr><td>TopNav</td><td>—</td><td>nav-primary hidden、cmdk hidden、about-link hidden、汉堡显示</td><td>—</td><td>—</td></tr>
+                <tr><td>Hero</td><td>—</td><td>py-16 → py-10；ornament hidden；headline grid 单栏；sub margin-bottom 减小</td><td>—</td><td>masthead 第 3 个 stats hidden；masthead py-2 → py-1.5</td></tr>
+                <tr><td>Composer</td><td>—</td><td>—</td><td>—</td><td>input py-3.5 → py-3；input text-lg → text-base；mono 字号同步缩小；submit-label hidden</td></tr>
+                <tr><td>TopicCloud</td><td>—</td><td>section-padding py-14 → py-10；cloud gap 22 → 16；section-head 改单列</td><td>—</td><td>—</td></tr>
+                <tr><td>Journals</td><td>grid-cols-6 → grid-cols-3</td><td>section-padding py-14 → py-10；section-head 改单列</td><td>grid 改 flex 横滑；snap-x snap-mandatory；scrollbar hidden</td><td>—</td></tr>
+                <tr><td>ExploreFeed</td><td>—</td><td>section-padding py-14 → py-10</td><td>—</td><td>—</td></tr>
+                <tr><td>Footer</td><td>—</td><td>items 改 flex-start 对齐</td><td>—</td><td>—</td></tr>
+              </tbody>
+            </table>
+            <p>Task 3-5 实现时部分已覆盖，对于<strong>未覆盖到的</strong>响应式 utility，本 task 补齐 Edit。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：本地 dev server + DevTools 4 视口验证</strong>
+            <pre><code class="lang-bash">cd patra-portal
+pnpm dev   # http://localhost:3000</code></pre>
+            <p>浏览器 DevTools (Cmd-Opt-I → Toggle Device Toolbar Cmd-Shift-M)，依次切到：</p>
+            <ul>
+              <li><strong>1440 × 900（桌面）</strong>：完整 nav / Hero ornament 可见 / Journals 6 列 / 无横向滚动</li>
+              <li><strong>1024 × 768（平板桌面）</strong>：L1 触发 — Journals 改 3 列（无横滑） / 其他不变</li>
+              <li><strong>800 × 600（窄桌面）</strong>：L1 + L2 触发 — 汉堡可点击打开 Sheet drawer / Hero ornament 隐藏 / Hero padding 紧凑 / Journals 3 列</li>
+              <li><strong>375 × 812（手机）</strong>：L1 + L2 + L3 + L4 全触发 — Journals 横滑 (snap-x) / Hero masthead 简化 / Composer 紧凑 / 汉堡 sheet 可点</li>
+            </ul>
+            <p>用 DevTools 测量每个视口的核心 region 是否有水平滚动 / 内容溢出。如发现问题，回到对应组件 Edit 调断点。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：Commit C5</strong>
+            <pre><code class="lang-bash">git add patra-portal/src/components/portal/
+
+git commit -m "feat(portal): responsive breakpoints 880/720/640/1200
+
+按 spec §6 实现 4 档断点：
+- L1 (&lt;1200): Journals 6 列 → 3 列
+- L2 (&lt;880): TopNav 汉堡 sheet / Hero ornament hidden + padding 紧凑 / TopicCloud gap 缩 / Journals + ExploreFeed section padding 缩
+- L3 (&lt;720): Journals 3 列 → 横滑 snap-x snap-mandatory（scrollbar hidden）
+- L4 (&lt;640, =max-sm:): Hero masthead 第 3 stats hidden / Composer input 字号缩 / submit-label hidden
+
+DevTools 在 375/800/1024/1440 四视口本地验证布局正确，无横向滚动溢出。
+
+PAP-33"</code></pre>
+            <p>如果 Task 3-5 已经覆盖了所有响应式 utility（dev server 验收 OK），那么本 task 可能没有新增 diff，此时改 commit message 为 "chore(portal): verify responsive breakpoints in 4 viewports (PAP-33)" + <code>git commit --allow-empty</code>。但通常 PAP-33 会有零星补齐。</p>
+          </li>
+        </ol>
+      </article>
+
+      <!-- ============================================================
+           Task 8 — C6: Playwright e2e + CI job (PAP-34)
+           ============================================================ -->
+
+      <article class="task" id="task-8" data-status="pending">
+        <header>
+          <h2>任务 8：C6 Playwright e2e + CI job (PAP-34)</h2>
+          <dl class="files">
+            <dt>创建</dt><dd><code>patra-portal/playwright.config.ts</code>、<code>patra-portal/tests/e2e/homepage.spec.ts</code></dd>
+            <dt>修改</dt><dd><code>patra-portal/package.json</code>（加 dep + script）、<code>patra-portal/.gitignore</code>、<code>.github/workflows/portal-ci.yml</code></dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：安装 @playwright/test + 浏览器</strong>
+            <pre><code class="lang-bash">cd patra-portal
+pnpm add -D @playwright/test
+pnpm exec playwright install chromium</code></pre>
+            <p>预期：<code>package.json</code> devDependencies 加入 <code>@playwright/test</code>；<code>~/.cache/ms-playwright/</code> 下载 chromium 浏览器。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 2：写 patra-portal/playwright.config.ts</strong>
+            <pre><code class="lang-typescript">import { defineConfig, devices } from "@playwright/test";
+
+export default defineConfig({
+  testDir: "tests/e2e",
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: process.env.CI ? [["html"], ["list"]] : "list",
+  use: {
+    baseURL: "http://localhost:3000",
+    trace: "on-first-retry",
+  },
+  webServer: {
+    command: "pnpm dev",
+    port: 3000,
+    timeout: 120_000,
+    reuseExistingServer: !process.env.CI,
+  },
+  projects: [
+    {
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"] },
+    },
+  ],
+});</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 3：写 patra-portal/tests/e2e/homepage.spec.ts</strong>
+            <pre><code class="lang-typescript">import { expect, test } from "@playwright/test";
+
+test("homepage smoke — 6 区块 + Hero composer + AI 速读", async ({ page }) =&gt; {
+  await page.goto("/");
+
+  // TopNav (data-section=topnav 含 banner role)
+  await expect(page.getByRole("banner")).toBeVisible();
+
+  // Hero h1
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("可被检索");
+
+  // Composer input
+  await expect(page.getByPlaceholder(/JAK1|PMID|DOI|Topol/)).toBeVisible();
+
+  // TopicCloud
+  await expect(page.getByText("此刻热议")).toBeVisible();
+  const topicLinks = page.locator("[data-section='topic-cloud'] a");
+  expect(await topicLinks.count()).toBeGreaterThanOrEqual(4);
+
+  // Journals
+  const journalLinks = page.locator("[data-section='journals'] a[href]");
+  expect(await journalLinks.count()).toBeGreaterThanOrEqual(3);
+
+  // ExploreFeed AI 速读
+  await expect(page.getByText("AI 速读").first()).toBeVisible();
+
+  // Footer
+  await expect(page.getByRole("contentinfo")).toBeVisible();
+});</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 4：package.json 加 test:e2e script</strong>
+            <p>在 <code>patra-portal/package.json</code> 的 <code>"scripts"</code> 块中，<code>"test:watch"</code> 后面加一行：</p>
+            <pre><code class="lang-json">"test:e2e": "playwright test",</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 5：本地跑 e2e 验证</strong>
+            <pre><code class="lang-bash">cd patra-portal
+pnpm test:e2e</code></pre>
+            <p>预期：</p>
+            <ul>
+              <li>playwright 自动 spawn <code>pnpm dev</code> 启动 dev server（约 30-60s 冷启）</li>
+              <li>chromium 跑 homepage spec 1 个 test，全部断言通过</li>
+              <li>退出码 0；如不绿，检查 <code>data-section</code> 锚点是否在所有 6 区块都加了</li>
+            </ul>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 6：更新 patra-portal/.gitignore</strong>
+            <pre><code class="lang-text"># Playwright
+test-results/
+playwright-report/
+.playwright/</code></pre>
+            <p>追加在文件末尾即可。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 7：追加 e2e job 到 .github/workflows/portal-ci.yml</strong>
+            <p>在现有 <code>test:</code> job 之后、<code>portal-ci-required-check:</code> 之前插入 e2e job：</p>
+            <pre><code class="lang-yaml">  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: '10'
+
+      - name: ⚙️ Setup Node (reads .nvmrc → 24)
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: 'patra-portal/.nvmrc'
+          cache: 'pnpm'
+          cache-dependency-path: patra-portal/pnpm-lock.yaml
+
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🎭 Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: 🧪 E2E (Playwright)
+        run: pnpm test:e2e
+
+      - name: 📦 Upload Playwright report (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: patra-portal/playwright-report/
+          retention-days: 7</code></pre>
+            <p><strong>注意</strong>：<strong>不要</strong>把 <code>e2e</code> 加入 <code>portal-ci-required-check.needs</code> 列表（保持现有 <code>[lint, typecheck, test]</code>）。因 <code>continue-on-error: true</code>，e2e 失败时 aggregator 仍能绿。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 8：跑全量验证</strong>
+            <pre><code class="lang-bash">cd patra-portal
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm test:e2e</code></pre>
+            <p>预期 4 个命令全部退出码 0。</p>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 9：Commit C6</strong>
+            <pre><code class="lang-bash">git add patra-portal/playwright.config.ts \
+        patra-portal/tests/e2e/homepage.spec.ts \
+        patra-portal/package.json \
+        patra-portal/pnpm-lock.yaml \
+        patra-portal/.gitignore \
+        .github/workflows/portal-ci.yml
+
+git commit -m "test(portal): playwright e2e smoke + ci e2e job
+
+- 接入 @playwright/test，chromium 单浏览器
+- playwright.config.ts: webServer pnpm dev + baseURL http://localhost:3000 + timeout 120s
+- homepage.spec.ts: 1 条 smoke 断言 6 区块 + Hero composer + AI 速读文案 + footer
+- package.json: 新增 test:e2e script
+- .gitignore: 追加 test-results / playwright-report / .playwright
+- portal-ci.yml: 追加 e2e job (continue-on-error: true, 不进 aggregator needs，v0.5 视稳定度切换为阻断式)
+
+PAP-34"</code></pre>
+          </li>
+
+          <li class="step" data-status="pending">
+            <strong>步骤 10：推送分支并开 PR</strong>
+            <pre><code class="lang-bash">git push -u origin feat/v0.4-portal-foundation
+
+gh pr create --title "v0.4 portal foundation — 6 FE issue 单 PR" --body "$(cat &lt;&lt;'EOF'
+## Summary
+
+覆盖 v0.4 Portal Foundation 剩余 6 个 FE Issue（**PAP-28 / PAP-30 / PAP-31 / PAP-32 / PAP-33 / PAP-34**），在单 PR 内合并落地：
+
+- **C1 (PAP-30)** patra tokens + shadcn theme override + font swap
+- **C2 (PAP-28)** mock data layer + portal types
+- **C3 (PAP-31)** public components + vitest specs (10 组件 + 10 测试)
+- **C4 (PAP-32)** assemble homepage with composer toast
+- **C5 (PAP-33)** responsive breakpoints 880/720/640/1200
+- **C6 (PAP-34)** playwright e2e smoke + ci e2e job
+
+Spec: \`docs/patra/specs/2026-05-23-v0.4-portal-implementation-design.html\`
+Plan: \`docs/patra/plans/2026-05-23-v0.4-portal-implementation.html\`
+
+## Test plan
+
+- [ ] \`pnpm lint && pnpm typecheck && pnpm test\` 退出码 0
+- [ ] \`pnpm dev\` 浏览器 http://localhost:3000 完整渲染 6 区块
+- [ ] DevTools 在 375/800/1024/1440 四视口布局正确
+- [ ] \`pnpm test:e2e\` 本地通过
+- [ ] portal-ci.yml 在 PR 上触发；lint/typecheck/test/aggregator required check 全绿；e2e job 跑通
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+EOF
+)"</code></pre>
+            <p>PR 创建后启动 Monitor 跟踪 CodeRabbit + 人工 review，对每条意见在 PR 评论中给"已修复"（附 SHA）或"不修复"（附理由）。</p>
+          </li>
+        </ol>
+      </article>
+
+    </section>
+
+    <section id="self-check" class="self-check">
+      <h2>自检结果</h2>
+
+      <aside class="callout success">
+        <span class="title">1. 规格覆盖度</span>
+        <p>Spec 11 节 → Task 映射：§3 架构（Task 1 globals / layout 改造 + Task 1 shadcn 补装 + Task 6 page 装配）；§4 commit 切片（Task 1-8 严格对应 C1-C6，Task 3/4/5 合并到 C3 commit）；§5 mock 数据（Task 2 全覆盖：11 类型 + 7 数据文件 + topicTier 测试）；§6 响应式（Task 7 系统验收 + Task 3-5 组件内分散实现）；§7 shadcn 主题（Task 1 步骤 3 完整重写 globals.css 含 17 slot）；§8 测试矩阵（Task 3-5 含 10 组件 × 单测 + Task 2 含 topicTier 6 边界 + Task 8 含 Playwright smoke）；§9 决策 1-8 全部体现在对应 task；§11 改造文件清单 39 项全部分到 Task 1-8；Done 判定 D1-D10 全部对应可验证步骤。无遗漏。</p>
+      </aside>
+
+      <aside class="callout success">
+        <span class="title">2. 占位符扫描</span>
+        <p>无 TODO / 待定 / 后续 / "类似任务 N" 等占位。所有代码块完整可粘贴执行；mock 数据展示 1-2 个示例 + 明确指引"从 handoff data.jsx 移植"（带具体 zip 路径与行号范围）；FILL 注释 0 命中。Task 7 步骤 1 用 "Task 3-5 已经写了" 引用前置任务，是合法的实施期依赖说明，非占位。</p>
+      </aside>
+
+      <aside class="callout success">
+        <span class="title">3. 类型一致性</span>
+        <p>跨任务命名一致：<code>PORTAL_STATS</code>（Task 2）→ Hero 引用（Task 4 步骤 5）；<code>SEARCH_MODES</code> → Composer（Task 4 步骤 2）；<code>EXAMPLE_QUERIES</code> → Composer；<code>TOPIC_CLOUD</code> + <code>topicTier</code> → TopicCloud（Task 5 步骤 1）；<code>JOURNALS</code> → Journals + JournalCoverCard（Task 5 步骤 2-3）；<code>FEED</code> → ExploreFeed + PaperCard（Task 5 步骤 4-5）。组件 prop 类型一致：<code>ComposerSubmitEvent</code>（Task 4 定义）→ Hero <code>onComposerSubmit</code>（Task 4 步骤 5）→ page.tsx <code>onComposerSubmit</code>（Task 6 步骤 1）。data-section anchor 词汇全套对齐：topnav / hero / topic-cloud / journals / explore-feed / footer 在 Task 3-5 组件实现、Task 6 smoke 测试、Task 8 e2e spec 三处完全一致。</p>
+      </aside>
+
+      <aside class="callout success">
+        <span class="title">4. HTML 结构完整性</span>
+        <p>所有 8 个 <code>&lt;article class="task"&gt;</code> 含唯一 <code>id="task-1..8"</code> + <code>data-status="pending"</code>。所有 <code>&lt;li class="step"&gt;</code> 含 <code>data-status="pending"</code>。head 部 2 个 <code>&lt;link rel="stylesheet"&gt;</code> 引用 <code>../styles/journal.css</code> + <code>../styles/plan-extras.css</code>，无 inline <code>&lt;style&gt;</code> 块。<code>data-task-status</code> 与 <code>data-status</code> 渲染规则已在 <code>plan-extras.css</code> 定义。TOC <code>&lt;ol class="toc-tasks"&gt;</code> 8 条 <code>&lt;li&gt;</code> 与 8 个 task article 一一对应。<code>&lt;dl class="meta"&gt;</code> 含目标 / 架构 / 技术栈 / 关联 spec 四项。</p>
+      </aside>
+    </section>
+
+  </main>
+
+  <aside class="notes-panel" id="notes">
+    <header>
+      <h2>Implementation Notes</h2>
+      <p class="hint">实施期由 Claude Code 即时追加。规则：遇到 plan 未规定的<strong>决定</strong>、必要<strong>更改</strong>、不可避免的<strong>权衡</strong>、其他用户应知事项，立即用 Edit 追加 entry，不要等任务结束。</p>
+    </header>
+
+    <ol class="notes-log">
+    </ol>
+
+    <p class="empty-state">no notes yet</p>
+
+    <footer class="notes-stats">
+      总计:
+      <span data-counter="decision">0</span> decisions /
+      <span data-counter="change">0</span> changes /
+      <span data-counter="tradeoff">0</span> tradeoffs /
+      <span data-counter="other">0</span> others
+    </footer>
+  </aside>
+
+</div>
+</body>
+</html>
