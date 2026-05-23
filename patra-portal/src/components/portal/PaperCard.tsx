@@ -46,21 +46,30 @@ export function PaperCard({ paper }: PaperCardProps) {
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-fg-2">
         <button
           type="button"
-          className="inline-flex items-center gap-1.5 text-fg-2 hover:text-ink-900"
+          disabled
+          aria-disabled="true"
+          title="功能即将上线"
+          className="inline-flex items-center gap-1.5 text-fg-2 hover:text-ink-900 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <BookOpen className="h-3.5 w-3.5" strokeWidth={1.5} /> 详情
+          <BookOpen className="h-3.5 w-3.5" strokeWidth={1.5} aria-hidden /> 详情
         </button>
         <button
           type="button"
-          className="inline-flex items-center gap-1.5 text-fg-2 hover:text-ink-900"
+          disabled
+          aria-disabled="true"
+          title="功能即将上线"
+          className="inline-flex items-center gap-1.5 text-fg-2 hover:text-ink-900 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <Bookmark className="h-3.5 w-3.5" strokeWidth={1.5} /> 收藏 {paper.bookmarks}
+          <Bookmark className="h-3.5 w-3.5" strokeWidth={1.5} aria-hidden /> 收藏 {paper.bookmarks}
         </button>
         <button
           type="button"
-          className="inline-flex items-center gap-1.5 text-fg-2 hover:text-ink-900"
+          disabled
+          aria-disabled="true"
+          title="功能即将上线"
+          className="inline-flex items-center gap-1.5 text-fg-2 hover:text-ink-900 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <MessageSquare className="h-3.5 w-3.5" strokeWidth={1.5} /> 引用 {paper.cites}
+          <MessageSquare className="h-3.5 w-3.5" strokeWidth={1.5} aria-hidden /> 引用 {paper.cites}
         </button>
       </div>
     </article>

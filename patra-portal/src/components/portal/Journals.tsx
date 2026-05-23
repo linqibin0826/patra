@@ -24,7 +24,10 @@ export function Journals() {
         </div>
         <button
           type="button"
-          className="inline-flex cursor-pointer items-center gap-1.5 text-sm text-clay-700 hover:text-clay-800"
+          disabled
+          aria-disabled="true"
+          title="功能即将上线"
+          className="inline-flex items-center gap-1.5 text-sm text-clay-700 hover:text-clay-800 disabled:cursor-not-allowed disabled:opacity-60"
         >
           浏览全部 1,247 本 <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.5} />
         </button>

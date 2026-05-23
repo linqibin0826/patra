@@ -40,9 +40,11 @@ export function TopicCloud() {
                 <li key={t.term}>
                   <button
                     type="button"
-                    title={`${t.count.toLocaleString()} 条相关文献`}
+                    disabled
+                    aria-disabled="true"
+                    title={`${t.count.toLocaleString()} 条相关文献 · 功能即将上线`}
                     className={cn(
-                      "-mx-1 inline-flex cursor-pointer items-baseline gap-1.5 rounded-sm px-1 hover:bg-paper-200 focus-visible:outline-none focus-visible:ring focus-visible:ring-ring/30",
+                      "-mx-1 inline-flex items-baseline gap-1.5 rounded-sm px-1 hover:bg-paper-200 focus-visible:outline-none focus-visible:ring focus-visible:ring-ring/30 disabled:cursor-not-allowed",
                       TIER_CLASS[tier],
                     )}
                   >
@@ -66,7 +68,10 @@ export function TopicCloud() {
           </div>
           <button
             type="button"
-            className="inline-flex cursor-pointer items-center gap-1.5 text-sm text-clay-700 hover:text-clay-800"
+            disabled
+            aria-disabled="true"
+            title="功能即将上线"
+            className="inline-flex items-center gap-1.5 text-sm text-clay-700 hover:text-clay-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
             浏览全部主题 <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.5} />
           </button>

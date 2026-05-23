@@ -63,8 +63,9 @@ export function TopNav() {
         <div className="justify-self-end flex items-center gap-2">
           <button
             type="button"
-            className="hidden items-center gap-2 rounded-md border border-border-default bg-paper-50 px-2.5 py-1 text-sm text-fg-3 hover:bg-paper-200 max-[880px]:hidden md:inline-flex"
+            className="hidden min-[881px]:inline-flex items-center gap-2 rounded-md border border-border-default bg-paper-50 px-2.5 py-1 text-sm text-fg-3 hover:bg-paper-200"
             onClick={() => document.getElementById("hero-input")?.focus()}
+            aria-label="跳转到搜索框"
           >
             <Search className="h-3.5 w-3.5" strokeWidth={1.5} />
             搜索

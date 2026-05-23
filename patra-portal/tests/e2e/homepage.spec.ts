@@ -14,12 +14,14 @@ test("homepage smoke — 6 区块 + Hero composer + AI 速读", async ({ page })
 
   // TopicCloud
   await expect(page.getByText("此刻热议")).toBeVisible();
-  const topicButtons = page.locator("[data-section='topic-cloud'] button");
-  expect(await topicButtons.count()).toBeGreaterThanOrEqual(4);
+  await expect
+    .poll(async () => page.locator("[data-section='topic-cloud'] button").count())
+    .toBeGreaterThanOrEqual(4);
 
   // Journals
-  const journalButtons = page.locator("[data-section='journals'] button");
-  expect(await journalButtons.count()).toBeGreaterThanOrEqual(3);
+  await expect
+    .poll(async () => page.locator("[data-section='journals'] button").count())
+    .toBeGreaterThanOrEqual(3);
 
   // ExploreFeed AI 速读
   await expect(page.getByText("AI 速读").first()).toBeVisible();

@@ -79,10 +79,11 @@ export function Composer({ onSubmit }: ComposerProps) {
         />
         <button
           type="submit"
+          aria-label="搜索"
           className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-teal-700 bg-teal-600 px-4 py-2.5 text-sm font-semibold text-fg-on-clay transition-colors hover:bg-teal-700 active:bg-teal-800 max-sm:px-3"
         >
           <span className="max-sm:hidden">搜索</span>
-          <CornerDownLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
+          <CornerDownLeft className="h-3.5 w-3.5" strokeWidth={1.5} aria-hidden />
         </button>
       </div>
 

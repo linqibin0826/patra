@@ -127,7 +127,7 @@
     line-height: var(--leading-normal);
     font-feature-settings: "ss01", "cv11", "cv02";
     -webkit-font-smoothing: antialiased;
-    text-rendering: optimizeLegibility;
+    text-rendering: optimizelegibility;
   }
   ::selection {
     background: var(--selection-bg);

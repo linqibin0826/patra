@@ -18,8 +18,11 @@ export function JournalCoverCard({ journal, className }: JournalCoverCardProps) 
   return (
     <button
       type="button"
+      disabled
+      aria-disabled="true"
+      title={`${journal.name} · 功能即将上线`}
       className={
-        "flex flex-col cursor-pointer overflow-hidden rounded-lg border border-border-default bg-paper-50 text-inherit no-underline transition hover:-translate-y-px hover:border-ink-300 hover:shadow-[0_6px_16px_-10px_rgba(28,25,23,0.18)] " +
+        "flex flex-col overflow-hidden rounded-lg border border-border-default bg-paper-50 text-inherit no-underline transition hover:-translate-y-px hover:border-ink-300 hover:shadow-[0_6px_16px_-10px_rgba(28,25,23,0.18)] disabled:cursor-not-allowed " +
         (className ?? "")
       }
     >
