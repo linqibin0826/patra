@@ -47,12 +47,18 @@ fun Project.applyLinqibinDependencyManagement(libs: VersionCatalog) {
     val commonsCompressVersion = libs.findVersion("commons-compress").get().requiredVersion
     val httpclientVersion = libs.findVersion("httpclient").get().requiredVersion
     val objenesisVersion = libs.findVersion("objenesis").get().requiredVersion
+    val log4jVersion = libs.findVersion("log4j").get().requiredVersion
 
     extensions.configure<DependencyManagementExtension> {
         imports {
             mavenBom("org.springframework.boot:spring-boot-dependencies:$springBootVersion")
             mavenBom("org.springframework.cloud:spring-cloud-dependencies:$springCloudVersion")
-            mavenBom("com.alibaba.cloud:spring-cloud-alibaba-dependencies:$springCloudAlibabaVersion")
+            // spring-cloud-alibaba 2025.1.0.0 BOM 内锁定的 log4j-core 2.25.1 上游 POM 损坏
+            // 通过 bomProperty 覆盖 BOM 内部属性，使最终解析跳过坏版本
+            mavenBom("com.alibaba.cloud:spring-cloud-alibaba-dependencies:$springCloudAlibabaVersion") {
+                bomProperty("log4j-core.version", log4jVersion)
+                bomProperty("log4j-slf4j2-impl.version", log4jVersion)
+            }
             mavenBom("io.github.resilience4j:resilience4j-bom:$resilience4jVersion")
             mavenBom("org.testcontainers:testcontainers-bom:$testcontainersVersion")
         }

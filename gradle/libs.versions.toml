@@ -42,6 +42,12 @@ therapi-javadoc = "0.15.0"
 resilience4j = "2.2.0"
 opentelemetry-logback = "2.22.0-alpha"
 
+# Logging
+# 覆盖 spring-cloud-alibaba 2025.1.0.0 BOM 锁定的 log4j-core 2.25.1
+# 该版本上游发布的 POM 存在未解析占位符 ${error-prone.version}，会导致 Gradle 警告
+# 2.25.4 与 Spring Boot 4.0.6 默认版本一致
+log4j = "2.25.4"
+
 # Data & Storage
 aws-sdk = "2.25.36"
 redisson = "4.1.0"
