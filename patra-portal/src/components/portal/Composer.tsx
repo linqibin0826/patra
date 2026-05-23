@@ -56,7 +56,7 @@ export function Composer({ onSubmit }: ComposerProps) {
       onSubmit={handleSubmit}
       className="overflow-hidden rounded-lg border border-ink-800 bg-white shadow-sm"
     >
-      <Tabs value={mode} onValueChange={handleModeChange} className="!flex-col">
+      <Tabs value={mode} onValueChange={handleModeChange} className="flex-col!">
         <TabsList
           variant="line"
           className="flex h-auto w-full items-center justify-start gap-0 rounded-none border-b border-border-default bg-paper-50 p-0 px-1.5"

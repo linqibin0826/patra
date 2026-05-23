@@ -42,7 +42,7 @@ export function ExploreFeed() {
         </p>
       </div>
 
-      <Tabs defaultValue="trending" className="!flex-col">
+      <Tabs defaultValue="trending" className="flex-col!">
         <TabsList
           variant="line"
           className="flex h-auto w-full items-center justify-start gap-0 rounded-none border-b border-border-default bg-transparent p-0"

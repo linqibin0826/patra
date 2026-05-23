@@ -86,6 +86,7 @@ export function PaperCard({ paper }: PaperCardProps) {
           type="button"
           disabled
           aria-disabled="true"
+          aria-label="分享"
           title="功能即将上线"
           className="inline-flex items-center gap-1.5 text-fg-2 hover:text-ink-900 disabled:cursor-not-allowed disabled:opacity-60"
         >
