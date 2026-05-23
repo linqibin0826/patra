@@ -8,7 +8,7 @@ describe("Journals", () => {
     render(<Journals />);
     const buttons = screen.getAllByRole("button");
     // 6 张 JournalCoverCard（每张渲染为 button）+ 1 个"浏览全部"button
-    expect(buttons.length).toBeGreaterThanOrEqual(6);
+    expect(buttons).toHaveLength(7);
   });
 
   it("包含 NEJM 封面文字", () => {

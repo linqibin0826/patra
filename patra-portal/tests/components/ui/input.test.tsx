@@ -10,10 +10,10 @@ describe("Input", () => {
   });
 
   it("透传 className 合并", () => {
-    const { container } = render(<Input className="custom-class" />);
-    const input = container.querySelector("input");
-    expect(input?.className).toMatch(/custom-class/);
-    expect(input?.className).toMatch(/border-/);
+    render(<Input className="custom-class" />);
+    const input = screen.getByRole("textbox");
+    expect(input.className).toMatch(/custom-class/);
+    expect(input.className).toMatch(/border-/);
   });
 
   it("disabled 状态可识别", () => {
