@@ -26,3 +26,8 @@ coverage/
 .idea/
 .vscode/
 *.swp
+
+# Playwright
+test-results/
+playwright-report/
+.playwright/

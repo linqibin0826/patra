@@ -26,8 +26,8 @@
           <li data-task-status="done"><a href="#task-4">Task 4 — C3·hero 组 Hero + Composer (PAP-31 2/3)</a></li>
           <li data-task-status="done"><a href="#task-5">Task 5 — C3·feed 组 TopicCloud + Journals + ExploreFeed + PaperCard (PAP-31 3/3 · commit C3)</a></li>
           <li data-task-status="done"><a href="#task-6">Task 6 — C4 首页 page 装配 + Composer toast (PAP-32)</a></li>
-          <li data-task-status="pending"><a href="#task-7">Task 7 — C5 响应式断点 4 档 (PAP-33)</a></li>
-          <li data-task-status="pending"><a href="#task-8">Task 8 — C6 Playwright e2e + CI job (PAP-34)</a></li>
+          <li data-task-status="done"><a href="#task-7">Task 7 — C5 响应式断点 4 档 (PAP-33)</a></li>
+          <li data-task-status="done"><a href="#task-8">Task 8 — C6 Playwright e2e + CI job (PAP-34)</a></li>
         </ol>
       </li>
       <li><a href="#self-check">自检结果</a></li>
@@ -2162,7 +2162,7 @@ PAP-32"</code></pre>
            Task 7 — C5: 响应式断点 4 档 (PAP-33)
            ============================================================ -->
 
-      <article class="task" id="task-7" data-status="pending">
+      <article class="task" id="task-7" data-status="done">
         <header>
           <h2>任务 7：C5 响应式断点 4 档 (PAP-33)</h2>
           <dl class="files">
@@ -2171,7 +2171,7 @@ PAP-32"</code></pre>
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：检视 Task 3-5 已加入的 max-[880px]: / max-[720px]: / max-sm: utility 是否完整</strong>
             <p>Task 3-5 在组件实现时已经写了 <code>max-[880px]:hidden</code> 等 utility（参考 Task 3 步骤 8 的 TopNav / Task 4 步骤 5 的 Hero）。本步重点是<strong>系统性核对</strong>，按 spec §6.1 4 档断点逐一核对：</p>
             <table&gt;
@@ -2189,7 +2189,7 @@ PAP-32"</code></pre>
             <p>Task 3-5 实现时部分已覆盖，对于<strong>未覆盖到的</strong>响应式 utility，本 task 补齐 Edit。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：本地 dev server + DevTools 4 视口验证</strong>
             <pre><code class="lang-bash">cd patra-portal
 pnpm dev   # http://localhost:3000</code></pre>
@@ -2203,7 +2203,7 @@ pnpm dev   # http://localhost:3000</code></pre>
             <p>用 DevTools 测量每个视口的核心 region 是否有水平滚动 / 内容溢出。如发现问题，回到对应组件 Edit 调断点。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：Commit C5</strong>
             <pre><code class="lang-bash">git add patra-portal/src/components/portal/
 
@@ -2227,7 +2227,7 @@ PAP-33"</code></pre>
            Task 8 — C6: Playwright e2e + CI job (PAP-34)
            ============================================================ -->
 
-      <article class="task" id="task-8" data-status="pending">
+      <article class="task" id="task-8" data-status="done">
         <header>
           <h2>任务 8：C6 Playwright e2e + CI job (PAP-34)</h2>
           <dl class="files">
@@ -2237,7 +2237,7 @@ PAP-33"</code></pre>
         </header>
 
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：安装 @playwright/test + 浏览器</strong>
             <pre><code class="lang-bash">cd patra-portal
 pnpm add -D @playwright/test
@@ -2245,7 +2245,7 @@ pnpm exec playwright install chromium</code></pre>
             <p>预期：<code>package.json</code> devDependencies 加入 <code>@playwright/test</code>；<code>~/.cache/ms-playwright/</code> 下载 chromium 浏览器。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：写 patra-portal/playwright.config.ts</strong>
             <pre><code class="lang-typescript">import { defineConfig, devices } from "@playwright/test";
 
@@ -2275,7 +2275,7 @@ export default defineConfig({
 });</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：写 patra-portal/tests/e2e/homepage.spec.ts</strong>
             <pre><code class="lang-typescript">import { expect, test } from "@playwright/test";
 
@@ -2308,13 +2308,13 @@ test("homepage smoke — 6 区块 + Hero composer + AI 速读", async ({ page })
 });</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：package.json 加 test:e2e script</strong>
             <p>在 <code>patra-portal/package.json</code> 的 <code>"scripts"</code> 块中，<code>"test:watch"</code> 后面加一行：</p>
             <pre><code class="lang-json">"test:e2e": "playwright test",</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：本地跑 e2e 验证</strong>
             <pre><code class="lang-bash">cd patra-portal
 pnpm test:e2e</code></pre>
@@ -2326,7 +2326,7 @@ pnpm test:e2e</code></pre>
             </ul>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：更新 patra-portal/.gitignore</strong>
             <pre><code class="lang-text"># Playwright
 test-results/
@@ -2335,7 +2335,7 @@ playwright-report/
             <p>追加在文件末尾即可。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7：追加 e2e job 到 .github/workflows/portal-ci.yml</strong>
             <p>在现有 <code>test:</code> job 之后、<code>portal-ci-required-check:</code> 之前插入 e2e job：</p>
             <pre><code class="lang-yaml">  e2e:
@@ -2378,7 +2378,7 @@ playwright-report/
             <p><strong>注意</strong>：<strong>不要</strong>把 <code>e2e</code> 加入 <code>portal-ci-required-check.needs</code> 列表（保持现有 <code>[lint, typecheck, test]</code>）。因 <code>continue-on-error: true</code>，e2e 失败时 aggregator 仍能绿。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 8：跑全量验证</strong>
             <pre><code class="lang-bash">cd patra-portal
 pnpm lint
@@ -2388,7 +2388,7 @@ pnpm test:e2e</code></pre>
             <p>预期 4 个命令全部退出码 0。</p>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 9：Commit C6</strong>
             <pre><code class="lang-bash">git add patra-portal/playwright.config.ts \
         patra-portal/tests/e2e/homepage.spec.ts \
@@ -2409,7 +2409,7 @@ git commit -m "test(portal): playwright e2e smoke + ci e2e job
 PAP-34"</code></pre>
           </li>
 
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 10：推送分支并开 PR</strong>
             <pre><code class="lang-bash">git push -u origin feat/v0.4-portal-foundation
 
@@ -2591,12 +2591,20 @@ EOF
         </header>
         <p>Task 8 e2e selector 需对齐 Task 5 的 a→button 改造。原 plan 步骤 3 写 <code>page.locator("[data-section='topic-cloud'] a")</code> 与 <code>page.locator("[data-section='journals'] a[href]")</code>，现实际渲染为 <code>&lt;button&gt;</code>（Biome useValidAnchor 规则）。Task 8 实施时必须改为 <code>... button</code> selector，否则 e2e smoke test 必然零命中失败。topic-cloud 内 32 topic + 1 浏览全部 ≥ 4；journals 内 6 cover + 1 浏览全部 ≥ 3。</p>
       </li>
+      <li class="note" data-type="change" data-time="2026-05-23T18:00">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-05-23T18:00">05-23 18:00</time>
+          <a href="#task-8">§ Task 8</a>
+        </header>
+        <p>vitest.config.ts 追加 <code>exclude: ["tests/e2e/**"]</code>。plan 原文未提，但 vitest 默认 glob 会扫到 <code>tests/e2e/homepage.spec.ts</code>，因 <code>@playwright/test</code> 的 <code>test()</code> API 与 vitest 不兼容会导致 unit test 失败。排除后 15 vitest 文件 56 用例仍全绿，playwright 单独跑 1 个 e2e。</p>
+      </li>
     </ol>
 
     <footer class="notes-stats">
       总计:
       <span data-counter="decision">0</span> decisions /
-      <span data-counter="change">9</span> changes /
+      <span data-counter="change">10</span> changes /
       <span data-counter="tradeoff">0</span> tradeoffs /
       <span data-counter="other">5</span> others
     </footer>
