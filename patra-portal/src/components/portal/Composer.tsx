@@ -1,12 +1,21 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import { CornerDownLeft, Search } from "lucide-react";
-import { type FormEvent, useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EXAMPLE_QUERIES } from "@/data/example-queries";
 import { SEARCH_MODES } from "@/data/search-modes";
 import { cn } from "@/lib/utils";
 import type { ComposerMode } from "@/types/portal";
+
+const composerSchema = z.object({
+  mode: z.enum(["keyword", "pmid", "doi", "author"]),
+  value: z.string(),
+});
+
+type ComposerFormValues = z.infer<typeof composerSchema>;
 
 export interface ComposerSubmitEvent {
   mode: ComposerMode;
@@ -18,20 +27,28 @@ interface ComposerProps {
 }
 
 export function Composer({ onSubmit }: ComposerProps) {
-  const [mode, setMode] = useState<ComposerMode>("keyword");
-  const [value, setValue] = useState("");
+  const form = useForm<ComposerFormValues>({
+    resolver: zodResolver(composerSchema),
+    defaultValues: { mode: "keyword", value: "" },
+  });
+
+  const mode = form.watch("mode");
 
   const current = SEARCH_MODES.find((m) => m.id === mode) ?? SEARCH_MODES[0];
   if (!current) return null;
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    onSubmit?.({ mode, value });
+  const handleSubmit = form.handleSubmit((data) => {
+    onSubmit?.({ mode: data.mode, value: data.value });
+  });
+
+  const handleModeChange = (next: string) => {
+    form.setValue("mode", next as ComposerMode);
+    form.setValue("value", "");
   };
 
   const applyExample = (exMode: ComposerMode, exText: string) => {
-    setMode(exMode);
-    setValue(exText);
+    form.setValue("mode", exMode);
+    form.setValue("value", exText);
   };
 
   return (
@@ -39,13 +56,7 @@ export function Composer({ onSubmit }: ComposerProps) {
       onSubmit={handleSubmit}
       className="overflow-hidden rounded-lg border border-ink-800 bg-white shadow-sm"
     >
-      <Tabs
-        value={mode}
-        onValueChange={(v) => {
-          setMode(v as ComposerMode);
-          setValue("");
-        }}
-      >
+      <Tabs value={mode} onValueChange={handleModeChange}>
         <TabsList className="flex h-auto items-center gap-0 rounded-none border-b border-border-default bg-paper-50 p-0 px-1.5">
           {SEARCH_MODES.map((m) => (
             <TabsTrigger
@@ -66,13 +77,12 @@ export function Composer({ onSubmit }: ComposerProps) {
         <Search className="shrink-0 text-fg-3" size={20} strokeWidth={1.5} />
         <input
           id="hero-input"
+          {...form.register("value")}
           className={cn(
             "min-w-0 flex-1 border-0 bg-transparent py-3.5 text-lg leading-tight text-ink-900 outline-none placeholder:text-fg-4 max-sm:py-3 max-sm:text-base",
             current.mono && "font-mono text-base tracking-[0.01em] max-sm:text-sm",
           )}
           placeholder={current.placeholder}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
           autoComplete="off"
           spellCheck={false}
           aria-label={`按${current.label}搜索`}
