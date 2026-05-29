@@ -1,0 +1,91 @@
+version: "3.9"
+
+name: patra
+
+# Tailnet 网关：让 patra-net 上的容器能主动外连 tailnet（如 MacBook 执行器 100.x）。
+# ---------------------------------------------------------------------------
+# 背景：xxl-job-admin 等容器需主动回调跑在 MacBook 上的进程（XXL-Job 执行器、
+# 以后可能更多）。两台机器在同一 LAN 却被路由器 AP 隔离，唯一互通路径是 tailscale；
+# 而容器命名空间里没有 macOS 宿主的 tailscale 接口，OrbStack 的 host 网络也只是
+# Linux VM 的网络，同样到不了 100.x。
+#
+# 方案：在 patra-net 上跑一个 tailscale 容器作共享网关（自身加入 tailnet），
+# 开 IP 转发 + 对 tailnet 网段 MASQUERADE；其余容器把 100.64.0.0/10 的路由指向它。
+# 任何容器由此可达任意 tailnet 机器的任意端口，新增容器无需改网关。
+#
+# 详见 ../docs/mac-mini-connectivity.md。
+
+services:
+  tailscale-gw:
+    image: ghcr.io/tailscale/tailscale:stable   # ghcr.io 对国内网络比 docker.io 稳
+    container_name: patra-tailscale-gw
+    hostname: patra-docker-gw           # tailnet 中显示的设备名
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
+    sysctls:
+      - net.ipv4.ip_forward=1           # 转发其它容器经此网关去 tailnet 的流量
+    env_file:
+      - ./.env.secret                   # 提供 TS_AUTHKEY（gitignore，不进仓库）
+    environment:
+      TZ: Asia/Shanghai
+      TS_STATE_DIR: /var/lib/tailscale  # 持久化登录态，重启不需重新授权
+      TS_USERSPACE: "false"             # 内核态 tun，作网关必须
+      TS_ACCEPT_DNS: "false"            # 不接管容器 DNS（仅做出向路由）
+      TS_HOSTNAME: patra-docker-gw
+    # 官方镜像不会为「容器子网 → tailnet」方向加 SNAT，需自行补 MASQUERADE。
+    # -d 100.64.0.0/10 与出接口无关，可在 tailscale0 建立前就加好。加完 exec 原 entrypoint。
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        iptables -t nat -C POSTROUTING -d 100.64.0.0/10 -j MASQUERADE 2>/dev/null \
+          || iptables -t nat -A POSTROUTING -d 100.64.0.0/10 -j MASQUERADE
+        exec /usr/local/bin/containerboot
+    volumes:
+      - ${HOME}/.patra/docker/tailscale-gw/state:/var/lib/tailscale
+    healthcheck:
+      test: ["CMD-SHELL", "tailscale status >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  # ---- 路由注入边车（每个需外连 tailnet 的业务容器配一个）----
+  # 共享 xxl-job-admin 的网络命名空间，把 100.64.0.0/10 路由指向网关。
+  # 用边车是因为 xxl-job-admin 镜像内无 ip 命令；netshoot 自带 ip/getent。
+  # 循环维持：xxl-job-admin 重启重建命名空间后能重新补上路由。
+  xxl-job-tailnet-route:
+    image: ghcr.io/nicolaka/netshoot:latest     # 同上，ghcr.io 优先
+    container_name: patra-xxl-job-tailnet-route
+    restart: unless-stopped
+    network_mode: "service:xxl-job-admin"
+    cap_add:
+      - NET_ADMIN
+    depends_on:
+      tailscale-gw:
+        condition: service_healthy
+      xxl-job-admin:
+        condition: service_started
+    command:
+      - /bin/sh
+      - -c
+      - |
+        echo "[tailnet-route] 维持 xxl-job-admin → tailnet(100.64.0.0/10) via tailscale-gw"
+        while true; do
+          GW=$$(getent hosts tailscale-gw | awk '{print $$1}')
+          if [ -n "$$GW" ]; then
+            ip route replace 100.64.0.0/10 via "$$GW" \
+              && echo "[tailnet-route] ok: 100.64.0.0/10 via $$GW" \
+              || echo "[tailnet-route] WARN: 路由设置失败 (gw=$$GW)"
+          else
+            echo "[tailnet-route] 等待 tailscale-gw DNS 解析..."
+          fi
+          sleep 30
+        done
+
+networks:
+  default:
+    name: patra-net

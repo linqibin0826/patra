@@ -16,7 +16,9 @@ docker/
 ├── docker-compose.search.yaml       # elasticsearch
 ├── docker-compose.observability.yaml # otel/prom/loki/tempo/grafana
 ├── docker-compose.jobs.yaml         # rocketmq + xxl-job-admin
+├── docker-compose.tailnet.yaml      # tailscale 网关（容器外连 tailnet）
 ├── .env                              # BROKER_IP1 等环境变量
+├── .env.secret                       # TS_AUTHKEY 等真实密钥（gitignore，不入库）
 └── README.md                         # 本文件
 ```
 
@@ -28,7 +30,7 @@ docker/
 |---|---|
 | 主机 | `linqibins-mac-mini`（tailscale MagicDNS 短名） |
 | 容器引擎 | OrbStack |
-| 仓库副本位置 | `~/Projects/patra-api/` |
+| 仓库副本位置 | `~/Projects/patra/`（monorepo，sparse-checkout 仅 patra-infra；部署 SSOT） |
 | 数据卷根目录 | `~/.patra/docker/` |
 
 **MacBook ↔ Mac mini 链路**：
@@ -58,15 +60,21 @@ git push -u origin <branch-name>
 # 2. (MacBook) ssh 到 Mac mini
 ssh linqibin@linqibins-mac-mini
 
-# 3. (Mac mini) clone 仓库到固定位置
-git clone <git-remote-url> ~/Projects/patra-api
-cd ~/Projects/patra-api
+# 3. (Mac mini) sparse-checkout monorepo（仅 patra-infra，保持精简）到固定位置
+git clone --filter=blob:none --sparse git@github.com:linqibin0826/patra.git ~/Projects/patra
+cd ~/Projects/patra
+git sparse-checkout set patra-infra
 git checkout <branch-name>
 
 # 4. (Mac mini) 一次性初始化数据目录与配置文件
 bash patra-infra/scripts/init-volumes.sh
 
-# 5. (Mac mini) 启动全栈
+# 4b. (Mac mini) 创建 .env.secret 供 tailscale 网关使用（gitignore，不随 git 同步）
+#     auth key 在 https://login.tailscale.com/admin/settings/keys 生成（reusable、非 ephemeral）
+cp patra-infra/docker/.env.secret.example patra-infra/docker/.env.secret
+# 编辑 .env.secret，把 TS_AUTHKEY 填成真实值（tskey-auth-...）
+
+# 5. (Mac mini) 启动全栈（含 tailscale 网关；镜像走 ghcr.io，docker.io 在国内常 502）
 docker compose -f patra-infra/docker/docker-compose.dev.yaml up -d
 
 # 6. (Mac mini) 验证全部 healthy
@@ -117,7 +125,7 @@ ssh linqibin@linqibins-mac-mini "echo 'export PATH=/usr/local/bin:\$PATH' >> ~/.
 
 ```bash
 ssh linqibin@linqibins-mac-mini '
-  cd ~/Projects/patra-api &&
+  cd ~/Projects/patra &&
   git pull &&
   docker compose -f patra-infra/docker/docker-compose.dev.yaml up -d --remove-orphans
 '
@@ -127,7 +135,7 @@ ssh linqibin@linqibins-mac-mini '
 
 ```bash
 ssh linqibin@linqibins-mac-mini '
-  cd ~/Projects/patra-api &&
+  cd ~/Projects/patra &&
   docker compose -f patra-infra/docker/docker-compose.jobs.yaml restart rocketmq-broker
 '
 ```
