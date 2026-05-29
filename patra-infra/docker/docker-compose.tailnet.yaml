@@ -17,7 +17,7 @@ name: patra
 
 services:
   tailscale-gw:
-    image: tailscale/tailscale:stable
+    image: ghcr.io/tailscale/tailscale:stable   # ghcr.io 对国内网络比 docker.io 稳
     container_name: patra-tailscale-gw
     hostname: patra-docker-gw           # tailnet 中显示的设备名
     restart: unless-stopped
@@ -58,7 +58,7 @@ services:
   # 用边车是因为 xxl-job-admin 镜像内无 ip 命令；netshoot 自带 ip/getent。
   # 循环维持：xxl-job-admin 重启重建命名空间后能重新补上路由。
   xxl-job-tailnet-route:
-    image: nicolaka/netshoot:latest
+    image: ghcr.io/nicolaka/netshoot:latest     # 同上，ghcr.io 优先
     container_name: patra-xxl-job-tailnet-route
     restart: unless-stopped
     network_mode: "service:xxl-job-admin"
