@@ -11,6 +11,7 @@ include:
   - docker-compose.search.yaml        # Elasticsearch
   - docker-compose.observability.yaml # OpenTelemetry + Grafana Stack
   - docker-compose.jobs.yaml          # XXL-Job, RocketMQ
+  - docker-compose.tailnet.yaml       # tailscale 网关（容器外连 tailnet，如 MacBook 执行器）
 
 # This file serves as the entry point for full development environment
 # Individual stacks can be started separately for faster startup:

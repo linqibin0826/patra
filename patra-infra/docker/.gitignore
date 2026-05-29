@@ -1,0 +1,3 @@
+# 真实敏感密钥：只存在于运行容器的机器上，绝不提交到公开仓库
+# 模板见 .env.secret.example
+.env.secret
