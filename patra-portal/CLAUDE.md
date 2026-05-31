@@ -23,16 +23,10 @@
 
 详细规范见 `.claude/rules/` 下的具体规则文件（Claude Code 自动加载）。
 
-## patra plugin 启用（按需）
+## patra plugin 自动加载
 
-`patra:` 命名空间下的 14 个流程方法论 skill（brainstorming / writing-plans / TDD / debugging / code review 等）已统一放在 workspace 层 `Patra/.claude-marketplace/patra/`。Claude Code 的 plugin 注册与安装是 **project-scoped**（按 cwd 隔离），portal 这个 project 尚未注册 —— 如需在 FE 工作中使用这些流程 skill，首次进入 portal cwd 时执行：
+`patra:` 与 `patra-backend:` 命名空间下的流程方法论与后端专属 skill（brainstorming / writing-plans / TDD / debugging / code review / hexagonal / jpa / events / troubleshooter 等）已放在**仓库根** `.claude/skills/patra/` 与 `.claude/skills/patra-backend/`。
 
-```bash
-# 1. 注册 marketplace（仅首次，会写入 ~/.claude/plugins/known_marketplaces.json）
-/plugin marketplace add ../.claude-marketplace/patra
+Claude Code 的项目级 `.claude/skills` 会从启动 cwd **向上递归查找到仓库根**，因此从 portal 子目录（`patra/patra-portal/`）启动 Claude Code 时，仓库根的这两个 plugin 会**自动加载**，无需任何 `/plugin marketplace add` 或 `install` 操作 —— 接受 workspace trust 后即可调用 `patra:brainstorming` 等。
 
-# 2. 安装并启用 plugin（仅首次，会自动写入 portal/.claude/settings.json 的 enabledPlugins）
-/plugin install patra@patra-local
-```
-
-后续 portal cwd 启动 Claude Code 即可调用 `patra:brainstorming` 等。skill 内示例当前以 Java 为主，但 LLM 可自动跨技术栈映射 —— FE 工作时把 Java 示例理解为 TS/React 等价物即可。若实际使用 cognitive friction 显著超预期，再独立开「plugin 去技术栈化」PR（回归上游 obra/superpowers 风格 + 保留中文翻译）。
+skill 内示例当前以 Java 为主，但 LLM 可自动跨技术栈映射 —— FE 工作时把 Java 示例理解为 TS/React 等价物即可。若实际使用 cognitive friction 显著超预期，再独立开「plugin 去技术栈化」PR（回归上游 obra/superpowers 风格 + 保留中文翻译）。
