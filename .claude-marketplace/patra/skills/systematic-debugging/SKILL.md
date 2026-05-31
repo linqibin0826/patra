@@ -304,6 +304,7 @@ description: 遇到任何 bug、测试失败或异常行为时使用，在提出
 **相关技能：**
 - **patra:test-driven-development** - 用于创建失败测试用例（第四阶段，第 1 步）
 - **patra:verification-before-completion** - 在宣称成功之前验证修复确实有效
+- **patra-backend:patra-troubleshooter** - 领域专家。**当且仅当排查对象是 Patra 后端（Java / Spring / JPA）运行时报错**时，用它执行第一阶段「根因调查」的具体证据收集：异常堆栈分析、traceId 链路追踪、`logs/*.log` 日志定位、源码定位、context7 文档查询与联网搜索。前端（patra-portal）、基建（patra-infra）调试不走此项，仍按本技能四阶段通用流程执行。
 
 ## 实际效果
 
