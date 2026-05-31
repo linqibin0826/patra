@@ -18,7 +18,7 @@ description: |
 > - **修复前先写失败测试**——走 `patra:test-driven-development`，用最简复现锁定 bug。
 > - **3 次修复失败 → 停止打补丁，质疑架构**（见 systematic-debugging 第四阶段第 5 步），而不是发起第 4 次猜测式修复。
 >
-> 即定位故障源后，回到 systematic-debugging 的第二～四阶段（模式对比 → 假设验证 → 实施）完成修复。
+> 即定位根因后，回到 systematic-debugging 的第二～四阶段（模式对比 → 假设验证 → 实施）完成修复。
 
 ## 排查流程
 
