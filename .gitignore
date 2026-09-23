@@ -138,3 +138,6 @@ ds-bundle/
 patra-learn/.design-sync-assets/entry.css
 patra-learn/.design-sync-assets/tailwind.css
 patra-learn/.design-sync-assets/process-shim.js
+
+# Playwright MCP 调试产物（控制台日志、页面快照）
+.playwright-mcp/
