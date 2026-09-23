@@ -61,8 +61,7 @@ tasks.bootRun {
             "-javaagent:$agentJar",
             "-Dotel.service.name=${project.name}",
             "-Dotel.exporter.otlp.endpoint=$otelExporterEndpoint",
-            // HTTP/protobuf 而非 gRPC：tailscale MTU=1280 丢 gRPC 的 HTTP/2 SETTINGS 帧
-            // （endpoint 须指向 collector 的 4318 HTTP 端口，见 gradle.properties）
+            // HTTP/protobuf（agent 2.x 默认），endpoint 须指向 collector 的 4318 HTTP 端口（见 gradle.properties）
             "-Dotel.exporter.otlp.protocol=http/protobuf",
             "-Dotel.traces.exporter=otlp"
         )
