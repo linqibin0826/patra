@@ -28,33 +28,6 @@ dependencyResolutionManagement {
     repositoriesMode = RepositoriesMode.FAIL_ON_PROJECT_REPOS
 }
 
-// ============================================================================
-// 两层构建缓存。第一层=CI 的 GHA 缓存（gradle/actions）。第二层=Mac mini 远程节点。
-// 信任边界：仅 trusted 环境（GRADLE_CACHE_PUSH=true：push:main / nightly / 本地 dev 显式）可写；
-// PR 只读；缺凭据（fork PR）→ 远程禁用，退化为本地/GHA 缓存。fail-soft 仅解可用性，写权限由此控。
-// ============================================================================
-buildCache {
-    local {
-        isEnabled = true
-    }
-    remote(HttpBuildCache::class) {
-        val url = providers.environmentVariable("GRADLE_REMOTE_CACHE_URL").orNull
-        val user = providers.environmentVariable("GRADLE_CACHE_USERNAME").orNull
-        val pass = providers.environmentVariable("GRADLE_CACHE_PASSWORD").orNull
-        // 无 URL 或无凭据 → 远程缓存禁用（fork PR / 未配置环境安全退化）
-        isEnabled = url != null && user != null && pass != null
-        if (isEnabled) {
-            this.url = uri(url!!)
-            isAllowInsecureProtocol = true   // tailnet 内网 http
-            isPush = providers.environmentVariable("GRADLE_CACHE_PUSH").orElse("false").get().toBoolean()
-            credentials {
-                username = user
-                password = pass
-            }
-        }
-    }
-}
-
 // ==================== include helper ====================
 /**
  * 集中映射 Gradle path 到物理目录（决策 E：Gradle path 必须与物理目录一一对应）。
