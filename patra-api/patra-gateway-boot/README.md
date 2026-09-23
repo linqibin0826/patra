@@ -83,7 +83,7 @@ spring:
       username: ${NACOS_USERNAME:nacos}
       password: ${NACOS_PASSWORD:nacos}
       discovery:
-        server-addr: ${NACOS_HOST:127.0.0.1}:${NACOS_PORT:8848}
+        server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:127.0.0.1}}:${NACOS_PORT:8848}
         service: ${spring.application.name}
         fail-fast: true
 ```
@@ -150,7 +150,7 @@ scalar:
 | 变量名 | 说明 | 默认值 |
 |--------|------|--------|
 | `SPRING_PROFILES_ACTIVE` | 激活的配置文件 | `dev` |
-| `NACOS_HOST` | Nacos 服务器地址 | `localhost` |
+| `NACOS_HOST` | Nacos 服务器地址 | 跟随 `PATRA_INFRA_HOST`（再缺省为 `127.0.0.1`） |
 | `NACOS_PORT` | Nacos 端口 | `8848` |
 | `NACOS_USERNAME` | Nacos 认证用户名 | `nacos` |
 | `NACOS_PASSWORD` | Nacos 认证密码 | `nacos` |

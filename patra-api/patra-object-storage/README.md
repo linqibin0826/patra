@@ -257,7 +257,7 @@ spring:
       username: ${NACOS_USERNAME:nacos}
       password: ${NACOS_PASSWORD:nacos}
       discovery:
-        server-addr: ${NACOS_HOST:127.0.0.1}:${NACOS_PORT:8848}
+        server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:127.0.0.1}}:${NACOS_PORT:8848}
         service: ${spring.application.name}
         fail-fast: true
 
@@ -305,7 +305,7 @@ psql -h 127.0.0.1 -p 15432 -U postgres -c "CREATE DATABASE patra_storage;"
 ```bash
 export DB_USERNAME=root
 export DB_PASSWORD=your_password
-export NACOS_HOST=localhost
+export NACOS_HOST=$PATRA_INFRA_HOST  # 缺省即跟随 PATRA_INFRA_HOST，通常无需设置
 export NACOS_PORT=8848
 export NACOS_USERNAME=nacos
 export NACOS_PASSWORD=nacos  # 生产必须改密
@@ -324,7 +324,7 @@ export NACOS_PASSWORD=nacos  # 生产必须改密
 curl http://localhost:8080/actuator/health
 
 # 查看服务注册（Nacos）
-curl 'http://localhost:8848/nacos/v1/ns/catalog/services?pageNo=1&pageSize=10&namespaceId=public'
+curl "http://${PATRA_INFRA_HOST}:8848/nacos/v1/ns/catalog/services?pageNo=1&pageSize=10&namespaceId=public"
 ```
 
 ### 代码规范

@@ -42,7 +42,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 非显性约束（改之前必须知道）
 
-1. **Nacos gRPC 跨 tailscale 必须走 ssh tunnel，不能直连。** tailscale wireguard MTU=1280，Nacos gRPC 的 HTTP/2 SETTINGS frame 经 Docker bridge(1500)→OrbStack→tailscale 时超过 1280 被静默丢弃，nacos-client 永远收不到 SETTINGS ACK 而卡 STARTING。解决办法是 MacBook 上跑 `scripts/install-nacos-tunnel.sh install` 装一个 launchd agent（`dev.patra.nacos-tunnel`），把本机 `127.0.0.1:{8848,9848,8080}` ssh 转发到 Mac mini。应用因此用 `NACOS_HOST=127.0.0.1`（默认值）即可，**不要**把 Nacos 地址改成 `PATRA_INFRA_HOST`。
+1. **MacBook 应用直连 Mac mini 的 Nacos，不经 ssh tunnel。** 各服务 yml 为 `${NACOS_HOST:${PATRA_INFRA_HOST:127.0.0.1}}`，与其它基建同一个开关；容器内由 `.env.common` 显式覆盖为 `NACOS_HOST=nacos`。曾因 MTU 丢 gRPC HTTP/2 帧而必须走 ssh tunnel，2026-09-23 在当前拓扑（mini 官方 tailscale GUI）实测直连注册与心跳均正常，tunnel 已拆除（见 `docs/mac-mini-connectivity.md` §2）。若直连再次卡 STARTING，先按 §2 复核，别直接恢复 tunnel。
 
 2. **Mac mini 非交互 ssh 找不到 docker。** 非登录 shell 不加载完整 profile，OrbStack 的 docker 路径需写进 `~/.zshenv`：`echo 'export PATH=/usr/local/bin:$PATH' >> ~/.zshenv`。否则远程 `ssh ... docker ...` 报 command not found。
 
@@ -65,7 +65,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **失败通知**：走 GitHub 原生（失败 run 推 App/邮件给触发者），不设自建通知通道——单人 dev 环境，自己 push 自己看结果（2026-08-28 决策，曾配过 ntfy 后拆除）。
 - **runner 看门狗**：`runner-watchdog.yml` 每日 API 查在线 + mini canary（docker/磁盘/unhealthy 容器）。防「离线 30 天被 GitHub 注销」（2026-08 实际发生）。需 secrets `RUNNER_ADMIN_TOKEN`（fine-grained PAT，仅本仓库 Administration:Read）。
 - **运维红线**：派发任务期间严禁重启 runner（杀 Worker）；runner 自更新已禁用（`--disableupdate`），升级=闲时重跑 `install-github-runner.sh`。
-- **容器内 Nacos 无需 ssh tunnel**：应用容器和 nacos 同在 `patra-net`，gRPC 走 Docker bridge 不经 tailscale，直接 `NACOS_HOST=nacos`。
+- **容器内 Nacos 走服务名**：应用容器和 nacos 同在 `patra-net`，gRPC 走 Docker bridge 不经 tailscale，直接 `NACOS_HOST=nacos`。
 - **env 三层 + 密钥二分**：`env_file` 顺序叠加 `.env.common`（共享基建坐标，patra-net 服务名 + 内网 dev 默认）→ `.env.<svc>`（服务专属 DB/Redis/bucket/日志路径）→ `.env.<svc>.secret`（真敏感密钥，被 `.gitignore` 的 `.env.*.secret` 挡住，绝不进仓库，缺失时跳过，后者覆盖同名）。**外部数据源 API key（Scopus / 青果 proxy / RocketMQ ACL 等）一律只进 `.secret`**，committed 文件只放内网 dev 默认值。
 
 ## scripts 一览
@@ -73,7 +73,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | 脚本 | 跑在哪 | 作用 |
 |---|---|---|
 | `init-volumes.sh` | Mac mini | 首次部署建数据卷目录骨架（幂等） |
-| `install-nacos-tunnel.sh {install\|uninstall\|status}` | MacBook | 装/卸 Nacos ssh tunnel launchd agent |
 | `install-github-runner.sh <token>` | Mac mini | 安装 GitHub self-hosted runner 为 launchd 常驻服务（CD deploy job 在此执行） |
 | `install-tailscale-route-guard.sh` + `tailscale-route-guard.sh` | macOS（root LaunchDaemon） | 守护 tailnet 路由：Shadowrocket 等代理拨断重连时清除被抢占的克隆主机路由并 `tailscale down/up` 重协商 |
-| `*.plist` | — | 上述两个 launchd 任务的模板 |
+| `dev.patra.tailscale-route-guard.plist` | — | 上述路由守护 LaunchDaemon 的模板 |

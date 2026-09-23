@@ -31,15 +31,19 @@
 - **坑**：macOS GUI（Dock/Spotlight）启动的 IntelliJ **不继承** `env.zsh` 的环境变量。需从终端 `bootRun`，或在 IDEA 运行配置的 Environment variables 里手填。
 - **注意**：设对 IP 后若仍 `Connect timed out`，是 admin 容器自身到不了 tailnet，见 §6。
 
-### 2. Nacos gRPC 跨 tailscale 卡 STARTING（MTU 1280）
+### 2. Nacos gRPC 跨 tailscale 卡 STARTING（MTU 1280）——当前拓扑已不复现
 
 - **症状**：应用启动卡在 Nacos 注册，nacos-client 永远收不到 gRPC SETTINGS ACK。
-- **根因**：tailscale wireguard MTU=1280，Nacos gRPC 的 HTTP/2 SETTINGS frame 经 Docker bridge(1500)→OrbStack→tailscale 时超过 1280 被静默丢弃。tailscale 已知架构限制（PMTU discovery 未实现）。
-- **解决**：MacBook 上跑 ssh tunnel launchd agent 绕过 MTU，应用以 `NACOS_HOST=127.0.0.1` 直连。
+- **当时的根因**：tailscale wireguard MTU=1280，Nacos gRPC 的 HTTP/2 SETTINGS frame 经 Docker bridge(1500)→OrbStack→tailscale 时超过 1280 被静默丢弃（tailscale PMTU discovery 未实现），曾靠 MacBook 上的 ssh tunnel launchd agent 绕过。
+- **现状**：2026-09-23 在当前拓扑（mini 改用官方 tailscale GUI、节点重建后）实测 MacBook 直连 `$PATRA_INFRA_HOST:9848` 的 HTTP/2 握手、服务注册与心跳均正常，大响应/大请求体跨 tailscale 双向也无丢包，tunnel 已拆除。应用 yml 的 `NACOS_HOST` 缺省跟随 `PATRA_INFRA_HOST`。
+- **若复发**：对比 HTTP 与 gRPC 端口，区分是不是 MTU——
   ```sh
-  bash ../scripts/install-nacos-tunnel.sh install
+  # HTTP 端口：正常回 JSON
+  curl -s -m 8 "http://$PATRA_INFRA_HOST:8848/nacos/v1/ns/instance/list?serviceName=patra-gateway&username=nacos&password=nacos"
+  # gRPC 端口：纯 h2 请求回 415 即说明 HTTP/2 握手通了
+  curl -s -m 8 -o /dev/null -w '%{http_code}\n' --http2-prior-knowledge http://$PATRA_INFRA_HOST:9848/
   ```
-  详见 `../docker/README.md` §"MacBook 应用跨 tailscale 访问 Nacos 的端口转发"。
+  8848 正常而 9848 握手超时才指向 MTU 问题（注：`ping -D -s 1400` 在本机 tailscale 网卡 MTU 1280 下必然 `Message too long`，正常时也如此，不能作判据）。临时解法是 `ssh -N -L 8848:127.0.0.1:8848 -L 9848:127.0.0.1:9848 linqibin@linqibins-mac-mini` 并以 `NACOS_HOST=127.0.0.1` 启动应用。
 
 ### 3. RocketMQ 客户端连不上 broker（BROKER_IP1 注册错误）
 
@@ -66,6 +70,8 @@
 - **解决**：`patra-net` 上跑**一个**共享 tailscale 网关容器（`docker-compose.tailnet.yaml`）：`tailscale-gw` 自身加入 tailnet + `ip_forward` + 对 `100.64.0.0/10` MASQUERADE；业务容器用路由注入边车（共享其网络命名空间）加 `100.64.0.0/10 via tailscale-gw`。任意容器由此可达任意 tailnet 机器的任意端口，新增容器复用同一网关、无需改它。
 - **前置**：tailscale auth key 放 `docker/.env.secret`（gitignore，不进公开仓库，模板见 `.env.secret.example`）。镜像走 ghcr.io（docker.io 在国内常 502）。
 - **验证**：`docker exec patra-tailscale-gw tailscale ip -4` 出现 `100.x`；业务容器命名空间内 `nc -zv <MacBook tailscale IP> <port>` 由 `timed out` 变 `succeeded`（或 `refused`=通了只是没人监听）。
+- **现状（2026-09-23 实测）**：mini 改用官方 tailscale GUI 后，**未挂路由边车的普通应用容器**（`patra-gateway`、`patra-catalog`）也能直接访问 MacBook 的 `100.x` 与 mini 自身的 tailscale IP——容器内无 `100.64/10` 路由，流量由 OrbStack 交给 mini 的 macOS 宿主发出。本节的网关 + 边车方案是否仍必要待评估，评估前保持原样。
+- **排查注意**：经 OrbStack 宿主转发时，目标端口无人监听表现为 curl `Empty reply`（exit 52）而非 `Connection refused`；判断连通性应在目标端临时起监听（如 `python3 -m http.server <port> --bind <tailscale IP>`）再探测。
 
 ---
 
