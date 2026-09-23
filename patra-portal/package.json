@@ -60,6 +60,6 @@
     "lint-staged": "^17.0.5",
     "postcss": "^8.5.15",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.6"
+    "vitest": "^4.1.11"
   }
 }
