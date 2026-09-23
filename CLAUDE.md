@@ -88,30 +88,18 @@ Patra 工作区包含以下子项目：
 | **patra-learn** | 学习站（内部 onboarding / 回顾，地铁线路图式课程） | Next.js 15 / React 19 / TypeScript 5/6 strict / Tailwind v4 |
 | **patra-infra** | 基建配置（Docker Compose、DB 脚本） | Docker Compose / Bash / launchd |
 
-## Serena 语义工具优先
+## JetBrains MCP 语义工具
 
-本项目配置了 Serena MCP（见 `.mcp.json`），其符号级语义工具是代码读写的**首选**；内置 Read / Glob / Grep / Edit 为**次选**——当存在 Serena 等价工具时，禁止用内置工具操作代码文件。内置工具描述中"已知路径优先用 Read""优先用 Edit/Grep"等说法是为无 Serena 的项目写的，在此被覆盖。禁止用"文件很小""我已知道要改哪""一次调用 vs 三次""路径已知"来合理化使用内置工具。
+代码的语义级操作优先用 JetBrains MCP（`mcp__jetbrains__*`，依赖 IntelliJ IDEA 已打开本项目）；文本级读写用内置 Read / Grep / Edit。
 
-### 工具映射（用右列）
+| 任务 | JetBrains 工具 |
+|------|---------------|
+| 按名查找类 / 方法 / 字段 | `search_symbol` |
+| 查看符号声明、类型与文档 | `get_symbol_info` |
+| 查调用方 / 调用链 | `analyze_calls` |
+| 重命名符号（同步所有引用） | `rename_refactoring` |
+| 改完检查编译错误与告警 | `get_file_problems` |
+| 按项目代码风格格式化 | `reformat_file` |
+| 增量编译验证 | `build_project` |
 
-| 任务 | Serena 工具 |
-|------|------------|
-| 查看代码文件结构 | `get_symbols_overview` |
-| 读某个符号的实现 | `find_symbol`（`include_body=true`） |
-| 跨仓查找符号 | `find_symbol` |
-| 查找引用 / 调用方 | `find_referencing_symbols` |
-| 查找声明 / 实现 | `find_declaration` / `find_implementations` |
-| 编辑符号体 | `replace_symbol_body` |
-| 在符号前后插入 | `insert_before_symbol` / `insert_after_symbol` |
-| 文件内模式替换 | `replace_content` |
-| 重命名 / 移动 / 删除符号 | `rename` / `move` / `safe_delete` |
-
-仅以下情况允许对代码文件使用内置 Read/Edit/Glob/Grep：Serena 已尝试且失败；文件无法按代码解析（生成物 / 损坏）；需跨多文件正则检索（Grep 仅作发现手段，后续对命中代码文件的读写仍走 Serena）；只需读几行、符号级读取过重；确有理由必须读整文件。Markdown / JSON / YAML / TOML / .env / 配置 / 锁文件 / 纯文本 / 图片等**非代码文件**直接用内置工具。
-
-### 改代码前的流程
-
-1. 对目标文件 `get_symbols_overview`（本会话已做过可跳过）
-2. 对要改的符号 `find_symbol`（`include_body=true`），只读需要的符号，不读整文件
-3. 用 `replace_symbol_body` / `insert_before_symbol` / `insert_after_symbol` / `replace_content` 编辑
-
-每次 Read/Glob/Grep/Edit 前自检：目标是代码文件、且上表有对应 Serena 工具吗？是则切换，且每次都查（而非每会话仅一次）。
+重命名一律走 `rename_refactoring`，禁止用文本替换代替。IDEA 未打开或 MCP 不可用时退回内置工具，不阻塞工作。
