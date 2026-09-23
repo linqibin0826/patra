@@ -35,5 +35,10 @@
     "@types/react-dom": "^19.2.3",
     "typescript": "^6.0.3",
     "vitest": "^4.1.6"
+  },
+  "pnpm": {
+    "overrides": {
+      "postcss": "^8.5.28"
+    }
   }
 }
