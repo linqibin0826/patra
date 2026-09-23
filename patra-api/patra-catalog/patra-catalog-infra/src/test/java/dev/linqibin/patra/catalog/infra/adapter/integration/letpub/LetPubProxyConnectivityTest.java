@@ -11,6 +11,7 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.springframework.web.client.RestClient;
@@ -19,18 +20,22 @@ import org.springframework.web.client.RestClient;
 ///
 /// 通过隧道代理访问 LetPub 网站，验证代理模式下的爬取和解析流程。
 ///
+/// 真实 HTTP 调用外部隧道代理与 LetPub，依赖外网与第三方服务可用性。
+/// 标记 `external` 标签，默认 `./gradlew test` 跳过；通过 `-PrunExternal` 显式启用。
+///
 /// **运行条件**：需设置环境变量 `PROXY_AUTH_KEY` 和 `PROXY_AUTH_PWD`，未设置时自动跳过。
 ///
 /// **运行方式**：
 ///
 /// ```shell
-/// ./gradlew :patra-catalog:patra-catalog-infra:test \
+/// ./gradlew :patra-api:patra-catalog:patra-catalog-infra:test -PrunExternal \
 ///   --tests="*.LetPubProxyConnectivityTest"
 /// ```
 ///
 /// @author linqibin
 /// @since 0.1.0
 @DisplayName("LetPub 隧道代理连通性测试")
+@Tag("external")
 class LetPubProxyConnectivityTest {
 
   private static final String LETPUB_BASE_URL = "https://www.letpub.com.cn";
