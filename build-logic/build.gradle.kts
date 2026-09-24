@@ -22,4 +22,9 @@ dependencies {
 
     // SpotBugs - 静态代码分析
     implementation("com.github.spotbugs:com.github.spotbugs.gradle.plugin:${libs.versions.spotbugs.plugin.get()}")
+
+    // 安全版本约束：spring-boot-gradle-plugin 经 commons-compress 1.27.1 传递引入有漏洞的 commons-lang3 3.16.0
+    constraints {
+        implementation("org.apache.commons:commons-lang3:${libs.versions.commons.lang3.get()}")
+    }
 }

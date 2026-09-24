@@ -32,6 +32,7 @@ import org.gradle.kotlin.dsl.configure
 /// 包括：
 /// - Spring Boot / Cloud / Cloud Alibaba / Resilience4j / Testcontainers BOM
 /// - 强制版本约束（解决依赖冲突）
+/// - 安全版本覆盖（上游 BOM / 传递依赖尚未跟进漏洞修复的构件）
 ///
 /// 版本统一从 `gradle/libs.versions.toml` 获取，确保单一来源。
 ///
@@ -48,10 +49,17 @@ fun Project.applyLinqibinDependencyManagement(libs: VersionCatalog) {
     val httpclientVersion = libs.findVersion("httpclient").get().requiredVersion
     val objenesisVersion = libs.findVersion("objenesis").get().requiredVersion
     val log4jVersion = libs.findVersion("log4j").get().requiredVersion
+    // 安全版本覆盖（上游 BOM / 传递依赖尚未跟进漏洞修复）
+    fun version(alias: String) = libs.findVersion(alias).get().requiredVersion
 
     extensions.configure<DependencyManagementExtension> {
         imports {
-            mavenBom("org.springframework.boot:spring-boot-dependencies:$springBootVersion")
+            mavenBom("org.springframework.boot:spring-boot-dependencies:$springBootVersion") {
+                bomProperty("tomcat.version", version("tomcat"))
+                bomProperty("httpclient5.version", version("httpclient5"))
+                bomProperty("httpcore5.version", version("httpcore5"))
+                bomProperty("opentelemetry.version", version("opentelemetry"))
+            }
             mavenBom("org.springframework.cloud:spring-cloud-dependencies:$springCloudVersion")
             // spring-cloud-alibaba 2025.1.0.0 BOM 内锁定的 log4j-core 2.25.1 上游 POM 损坏
             // 通过 bomProperty 覆盖 BOM 内部属性，使最终解析跳过坏版本
@@ -61,6 +69,16 @@ fun Project.applyLinqibinDependencyManagement(libs: VersionCatalog) {
             }
             mavenBom("io.github.resilience4j:resilience4j-bom:$resilience4jVersion")
             mavenBom("org.testcontainers:testcontainers-bom:$testcontainersVersion")
+            // rocketmq-common 5.3.1 传递引入的 grpc 1.53 / protobuf 3.20 有漏洞；BOM 保证同族构件版本一致
+            mavenBom("io.grpc:grpc-bom:${version("grpc")}")
+            mavenBom("com.google.protobuf:protobuf-bom:${version("protobuf")}")
+        }
+        dependencies {
+            // minio 8.6.0 / spring-cloud-starter 传递引入
+            dependency("org.bouncycastle:bcprov-jdk18on:${version("bouncycastle")}")
+            // commons-validator 1.7 传递引入
+            dependency("commons-beanutils:commons-beanutils:${version("commons-beanutils")}")
+            dependency("org.springframework.retry:spring-retry:${version("spring-retry")}")
         }
     }
 
@@ -73,6 +91,12 @@ fun Project.applyLinqibinDependencyManagement(libs: VersionCatalog) {
             force("org.apache.httpcomponents:httpclient:$httpclientVersion")
             // Mockito vs Kryo 版本冲突
             force("org.objenesis:objenesis:$objenesisVersion")
+            // org.lz4:lz4-java 已停更且有未修复漏洞（rocketmq-common 传递引入），替换为同包名的维护 fork
+            dependencySubstitution {
+                substitute(module("org.lz4:lz4-java"))
+                    .using(module("at.yawk.lz4:lz4-java:${version("lz4")}"))
+                    .because("org.lz4:lz4-java 已停更，漏洞仅在 at.yawk.lz4 fork 修复")
+            }
         }
     }
 }

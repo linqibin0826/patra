@@ -17,14 +17,11 @@ plugins {
     `java-test-fixtures`
     id("linqibin.spotless")
     id("linqibin.spotbugs")
-    id("io.spring.dependency-management")
+    id("linqibin.dependency-management")
 }
 
 // ==================== Version Catalog 访问 ====================
 val libs = the<org.gradle.api.artifacts.VersionCatalogsExtension>().named("libs")
-
-// ==================== 统一依赖管理 ====================
-applyLinqibinDependencyManagement(libs)
 
 // ==================== Java Toolchain ====================
 java {

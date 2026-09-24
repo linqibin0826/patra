@@ -21,29 +21,14 @@
 plugins {
     base
     `jacoco-report-aggregation`
-    // 与 build-logic/linqibin.java-base 中应用的同名插件版本一致（来自 gradle/libs.versions.toml 的 spring-dependency-management）
-    id("io.spring.dependency-management") version "1.1.7"
+    // jacoco-report-aggregation 解析全部子项目运行时依赖，须与子项目共用同一套依赖管理规则
+    id("linqibin.dependency-management")
 }
 
 // ==================== Project Info ====================
 // group 由 build-logic 中的身份 convention plugin 显式设置（linqibin.module-commons / linqibin.module-patra）。
 allprojects {
     version = property("patraVersion") as String
-}
-
-// ==================== Dependency Management ====================
-// jacoco-report-aggregation 在 resolve 子项目依赖时需要相同的 BOM imports，
-// 与 build-logic/LinqibinDependencyManagement.kt 中的 BOM 列表保持一致。
-val libs = the<org.gradle.api.artifacts.VersionCatalogsExtension>().named("libs")
-
-dependencyManagement {
-    imports {
-        mavenBom("org.springframework.boot:spring-boot-dependencies:${libs.findVersion("spring-boot").get().requiredVersion}")
-        mavenBom("org.springframework.cloud:spring-cloud-dependencies:${libs.findVersion("spring-cloud").get().requiredVersion}")
-        mavenBom("com.alibaba.cloud:spring-cloud-alibaba-dependencies:${libs.findVersion("spring-cloud-alibaba").get().requiredVersion}")
-        mavenBom("io.github.resilience4j:resilience4j-bom:${libs.findVersion("resilience4j").get().requiredVersion}")
-        mavenBom("org.testcontainers:testcontainers-bom:${libs.findVersion("testcontainers").get().requiredVersion}")
-    }
 }
 
 // ==================== JaCoCo Aggregation ====================
