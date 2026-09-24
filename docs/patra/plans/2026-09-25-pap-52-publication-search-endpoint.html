@@ -37,7 +37,7 @@
           <li data-task-status="done"><a href="#task-2">Task 2 — PublicationSearchSort 排序枚举</a></li>
           <li data-task-status="done"><a href="#task-3">Task 3 — PublicationSearchFilter 过滤 record</a></li>
           <li data-task-status="done"><a href="#task-4">Task 4 — EvidenceLevel.typeValuesOf 暴露映射表</a></li>
-          <li data-task-status="in-progress"><a href="#task-5">Task 5 — InlineMarkup 标签白名单与可见纯文本</a></li>
+          <li data-task-status="done"><a href="#task-5">Task 5 — InlineMarkup 标签白名单与可见纯文本</a></li>
           <li data-task-status="pending"><a href="#task-6">Task 6 — PublicationSearchFacets、PortalPaperReadModel 扩展、PublicationSearchReadPort</a></li>
           <li data-task-status="pending"><a href="#task-7">Task 7 — infra 列表查询：DAO + 投影 + 适配器 search（组装 / 排序 / 片段）</a></li>
           <li data-task-status="pending"><a href="#task-8">Task 8 — infra 筛选条件：逐条 Red-Green 追加共享 WHERE</a></li>
@@ -587,7 +587,7 @@ git commit -m "feat(catalog): EvidenceLevel.typeValuesOf 暴露证据等级映�
         </ol>
       </article>
 
-      <article class="task" id="task-5" data-status="in-progress">
+      <article class="task" id="task-5" data-status="done">
         <header>
           <h2>任务 5：InlineMarkup 标签白名单与可见纯文本</h2>
           <dl class="files">
@@ -595,7 +595,7 @@ git commit -m "feat(catalog): EvidenceLevel.typeValuesOf 暴露证据等级映�
           </dl>
         </header>
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：写失败测试（第一组：白名单剥标签）</strong>
 <pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-domain/src/test/java/dev/linqibin/patra/catalog/domain/model/vo/publication/InlineMarkupTest.java
 package dev.linqibin.patra.catalog.domain.model.vo.publication;
@@ -647,12 +647,12 @@ class InlineMarkupTest {
   }
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：运行测试确认失败</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:test --tests "*InlineMarkupTest"</code></p>
             <p>预期：编译错误 <code>cannot find symbol InlineMarkup</code></p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：创建 InlineMarkup（先只做剥标签）</strong>
 <pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/linqibin/patra/catalog/domain/model/vo/publication/InlineMarkup.java
 package dev.linqibin.patra.catalog.domain.model.vo.publication;
@@ -691,12 +691,12 @@ public final class InlineMarkup {
   }
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：运行测试确认通过</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:test --tests "*InlineMarkupTest"</code></p>
             <p>预期：5 passed</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：追加失败测试（第二组：annotation 子树与实体）</strong>
 <pre><code class="lang-java">  // 追加到 InlineMarkupTest 类体末尾
 
@@ -730,12 +730,12 @@ public final class InlineMarkup {
     assertThat(InlineMarkup.toPlainText("&amp;lt;sub&amp;gt;2&amp;lt;/sub&amp;gt;")).isEqualTo("&lt;sub&gt;2&lt;/sub&gt;");
   }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：运行测试确认失败</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:test --tests "*InlineMarkupTest"</code></p>
             <p>预期：4 failed（dropsClosedAnnotationSubtree / decodesEntities / decodedAngleBracketsStayLiteral 断言失败；keepsUnclosedAnnotationText 可能已过）</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7：实现 annotation 删除与实体解码（顺序：删 annotation → 剥标签 → 解实体）</strong>
 <pre><code class="lang-java">// InlineMarkup.java：import 区追加 java.util.regex.Matcher。
 // 步骤 3 的 TAG_PATTERN 与 TAG 两个常量原样保留；在 TAG 之后追加以下常量，并把 toPlainText 整个替换为下面的版本：
@@ -804,12 +804,12 @@ public final class InlineMarkup {
     };
   }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 8：运行测试确认通过</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:test --tests "*InlineMarkupTest"</code></p>
             <p>预期：9 passed</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 9：追加失败测试（第三组：码点截断）</strong>
 <pre><code class="lang-java">  // 追加到 InlineMarkupTest 类体末尾
 
@@ -832,12 +832,12 @@ public final class InlineMarkup {
     assertThat(snippet).hasSize(300).endsWith("a&amp;");
   }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 10：运行测试确认失败</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:test --tests "*InlineMarkupTest"</code></p>
             <p>预期：编译错误 <code>cannot find symbol truncate</code></p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 11：追加 truncate</strong>
 <pre><code class="lang-java">  // InlineMarkup.java：toPlainText 之后追加
 
@@ -853,12 +853,12 @@ public final class InlineMarkup {
     return text.substring(0, text.offsetByCodePoints(0, maxCodePoints));
   }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 12：运行测试确认通过</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:test --tests "*InlineMarkupTest"</code></p>
             <p>预期：11 passed</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 13：Commit</strong>
 <pre><code class="lang-bash">git add patra-api/patra-catalog/patra-catalog-domain
 git commit -m "feat(catalog): InlineMarkup 标签白名单与可见纯文本派生 (PAP-52)"</code></pre>
