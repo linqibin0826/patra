@@ -168,6 +168,159 @@ class PublicationSearchReadAdapterIT {
     assertThat(items.get(1).abstractSnippet()).isNull();
   }
 
+  // ===== 任务 8：筛选 =====
+
+  @Test
+  @DisplayName("keyword：对剥标签后的标题子串 ILIKE；% 与 _ 按字面；x<y and z>0 可搜到")
+  void filterByKeyword() {
+    Long co2 = persist(publication("CO<sub>2</sub> fixation in algae"));
+    Long pct = persist(publication("Response rate of 50% cohort"));
+    Long angle = persist(publication("Cases where x<y and z>0 hold"));
+    persist(publication("Unrelated"));
+    flush();
+
+    assertThat(ids(PublicationSearchFilter.builder().keyword("co2").build())).containsExactly(co2);
+    assertThat(ids(PublicationSearchFilter.builder().keyword("50%").build())).containsExactly(pct);
+    assertThat(ids(PublicationSearchFilter.builder().keyword("x<y and z>0").build()))
+        .containsExactly(angle);
+    assertThat(ids(PublicationSearchFilter.builder().keyword("zzz").build())).isEmpty();
+  }
+
+  @Test
+  @DisplayName("author：匹配快照 display_name 子串，author_id 为 null 的行也命中")
+  void filterByAuthor() {
+    Long hit = persist(publication("hit"));
+    saveAuthors(hit, "Perkovic V.", "Tuttle K. R.");
+    Long miss = persist(publication("miss"));
+    saveAuthors(miss, "Someone Else");
+    flush();
+
+    assertThat(ids(PublicationSearchFilter.builder().author("tuttle").build()))
+        .containsExactly(hit);
+    assertThat(miss).isNotNull();
+  }
+
+  @Test
+  @DisplayName("pmid 精确等值；doi 去 https://doi.org/ 与 doi: 前缀后大小写不敏感等值；未命中为空页")
+  void filterByPmidAndDoi() {
+    Long a = persist(publication("a").pmid("39812044").doi("10.1056/NEJMoa2603120"));
+    persist(publication("b").pmid("1").doi("10.1000/other"));
+    flush();
+
+    assertThat(ids(PublicationSearchFilter.builder().pmid("39812044").build())).containsExactly(a);
+    assertThat(ids(PublicationSearchFilter.builder().pmid("398120").build())).isEmpty();
+    assertThat(
+            ids(
+                PublicationSearchFilter.builder()
+                    .doi("https://doi.org/10.1056/nejmoa2603120")
+                    .build()))
+        .containsExactly(a);
+    assertThat(ids(PublicationSearchFilter.builder().doi("doi:10.1056/NEJMOA2603120").build()))
+        .containsExactly(a);
+    assertThat(ids(PublicationSearchFilter.builder().doi("10.1056/none").build())).isEmpty();
+  }
+
+  @Test
+  @DisplayName("yearFrom / yearTo 闭区间，可只给一端")
+  void filterByYearRange() {
+    Long y2023 = persist(publication("2023").publicationYear(2023));
+    Long y2025 = persist(publication("2025").publicationYear(2025));
+    Long y2026 = persist(publication("2026").publicationYear(2026));
+    flush();
+
+    assertThat(ids(PublicationSearchFilter.builder().yearFrom(2025).yearTo(2025).build()))
+        .containsExactly(y2025);
+    assertThat(ids(PublicationSearchFilter.builder().yearFrom(2025).build()))
+        .containsExactlyInAnyOrder(y2025, y2026);
+    assertThat(ids(PublicationSearchFilter.builder().yearTo(2023).build())).containsExactly(y2023);
+  }
+
+  @Test
+  @DisplayName("venue 多值 OR；type 完整值含逗号、大小写不敏感；lang 按 language_base；oa；跨维度 AND")
+  void filterByVenueTypeLangOa() {
+    Long nejm = saveVenue("NEJM");
+    Long lancet = saveVenue("Lancet");
+    Long a = persist(publication("a").venueId(nejm).languageCode("en").isOa(true));
+    savePublicationType(a, "Clinical Trial, Phase III", 1);
+    Long b = persist(publication("b").venueId(lancet).languageCode("zh-Hans").isOa(false));
+    savePublicationType(b, "Review", 1);
+    Long c = persist(publication("c").languageCode("de").isOa(false));
+    flush();
+
+    assertThat(ids(PublicationSearchFilter.builder().venueIds(List.of(nejm, lancet)).build()))
+        .containsExactlyInAnyOrder(a, b);
+    assertThat(
+            ids(
+                PublicationSearchFilter.builder()
+                    .types(List.of("clinical trial, phase iii"))
+                    .build()))
+        .containsExactly(a);
+    assertThat(ids(PublicationSearchFilter.builder().types(List.of("Review", "Letter")).build()))
+        .containsExactly(b);
+    assertThat(ids(PublicationSearchFilter.builder().languages(List.of("zh", "de")).build()))
+        .containsExactlyInAnyOrder(b, c);
+    assertThat(ids(PublicationSearchFilter.builder().isOpenAccess(true).build()))
+        .containsExactly(a);
+    assertThat(
+            ids(
+                PublicationSearchFilter.builder()
+                    .venueIds(List.of(nejm))
+                    .types(List.of("Review"))
+                    .build()))
+        .isEmpty();
+  }
+
+  @Test
+  @DisplayName("evidence：同时标 Meta-Analysis 与 RCT 的文献只落 5 级；UNKNOWN 可选；多值 OR；首尾空白同口径")
+  void filterByEvidenceLevel() {
+    Long both = persist(publication("both"));
+    savePublicationType(both, "Randomized Controlled Trial", 1);
+    savePublicationType(both, "Meta-Analysis", 2);
+    Long rct = persist(publication("rct"));
+    savePublicationType(rct, "Randomized Controlled Trial", 1);
+    Long plain = persist(publication("plain"));
+    savePublicationType(plain, "Journal Article", 1);
+    Long untyped = persist(publication("untyped"));
+    Long padded = persist(publication("padded"));
+    savePublicationType(padded, " Meta-Analysis ", 1); // 首尾空白：SQL trim 与 Java trim 同口径
+    flush();
+
+    PublicationSearchFilter sr =
+        PublicationSearchFilter.builder()
+            .evidenceLevels(List.of(EvidenceLevel.SYSTEMATIC_REVIEW))
+            .build();
+    assertThat(ids(sr)).containsExactlyInAnyOrder(both, padded);
+    assertThat(adapter.search(sr, FIRST_PAGE).items())
+        .allSatisfy(m -> assertThat(m.evidenceLevel()).isEqualTo(EvidenceLevel.SYSTEMATIC_REVIEW));
+    assertThat(
+            ids(
+                PublicationSearchFilter.builder()
+                    .evidenceLevels(List.of(EvidenceLevel.RANDOMIZED_CONTROLLED_TRIAL))
+                    .build()))
+        .containsExactly(rct);
+    assertThat(
+            ids(
+                PublicationSearchFilter.builder()
+                    .evidenceLevels(List.of(EvidenceLevel.UNKNOWN))
+                    .build()))
+        .containsExactlyInAnyOrder(plain, untyped);
+    assertThat(
+            ids(
+                PublicationSearchFilter.builder()
+                    .evidenceLevels(
+                        List.of(
+                            EvidenceLevel.SYSTEMATIC_REVIEW,
+                            EvidenceLevel.RANDOMIZED_CONTROLLED_TRIAL))
+                    .build()))
+        .containsExactlyInAnyOrder(both, padded, rct);
+  }
+
+  private List<Long> ids(PublicationSearchFilter filter) {
+    return adapter.search(filter, FIRST_PAGE).items().stream()
+        .map(PortalPaperReadModel::id)
+        .toList();
+  }
+
   // ===== fixtures =====
 
   private void flush() {

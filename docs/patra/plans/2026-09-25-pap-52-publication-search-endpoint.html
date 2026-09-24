@@ -40,7 +40,7 @@
           <li data-task-status="done"><a href="#task-5">Task 5 — InlineMarkup 标签白名单与可见纯文本</a></li>
           <li data-task-status="done"><a href="#task-6">Task 6 — PublicationSearchFacets、PortalPaperReadModel 扩展、PublicationSearchReadPort</a></li>
           <li data-task-status="done"><a href="#task-7">Task 7 — infra 列表查询：DAO + 投影 + 适配器 search（组装 / 排序 / 片段）</a></li>
-          <li data-task-status="pending"><a href="#task-8">Task 8 — infra 筛选条件：逐条 Red-Green 追加共享 WHERE</a></li>
+          <li data-task-status="done"><a href="#task-8">Task 8 — infra 筛选条件：逐条 Red-Green 追加共享 WHERE</a></li>
           <li data-task-status="pending"><a href="#task-9">Task 9 — infra facets：years / types / evidence / languages / openAccess / total / lastSyncedAt</a></li>
           <li data-task-status="pending"><a href="#task-10">Task 10 — app：PortalPublicationSearchQueryService</a></li>
           <li data-task-status="pending"><a href="#task-11">Task 11 — app：feed 迁到新端口，删除 PortalFeed* 读端六类与其 IT</a></li>
@@ -1648,7 +1648,7 @@ git commit -m "feat(catalog): 文献检索读适配器——列表组装、三�
         </ol>
       </article>
 
-      <article class="task" id="task-8" data-status="pending">
+      <article class="task" id="task-8" data-status="done">
         <header>
           <h2>任务 8：infra 筛选条件：逐条 Red-Green 追加共享 WHERE</h2>
           <dl class="files">
@@ -1656,7 +1656,7 @@ git commit -m "feat(catalog): 文献检索读适配器——列表组装、三�
           </dl>
         </header>
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：追加失败测试——标题关键词：剥白名单标签、LIKE 转义、字面尖括号保留</strong>
 <pre><code class="lang-java">  // ===== 任务 8：筛选 =====
 
@@ -1679,12 +1679,12 @@ git commit -m "feat(catalog): 文献检索读适配器——列表组装、三�
     return adapter.search(filter, FIRST_PAGE).items().stream().map(PortalPaperReadModel::id).toList();
   }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：运行 IT 确认失败</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
             <p>预期：新用例失败（keyword 未过滤，返回全部）</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：实现——WHERE 追加条件、DAO 加参数、适配器传参</strong>
 <p><code>PublicationSearchDao.WHERE</code> 末尾追加：</p><pre><code class="lang-sql">        AND (:keyword IS NULL OR regexp_replace(p.title, :tagPattern, '', 'gi')
                                  ILIKE CONCAT('%', :keyword, '%') ESCAPE '!')</code></pre><p><code>findSearchPage</code> 与 <code>countMatching</code> 的参数列表在 <code>@Param("sortMode")</code> 之前（<code>countMatching</code> 在末尾）追加：</p><pre><code class="lang-java">      @Param("keyword") String keyword,
@@ -1699,12 +1699,12 @@ git commit -m "feat(catalog): 文献检索读适配器——列表组装、三�
     return raw.trim().replace("!", "!!").replace("%", "!%").replace("_", "!_");
   }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：运行 IT 确认通过</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
             <p>预期：全部 passed</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：追加失败测试——作者：cat_publication_author.display_name 快照子串</strong>
 <pre><code class="lang-java">  @Test
   @DisplayName("author：匹配快照 display_name 子串，author_id 为 null 的行也命中")
@@ -1719,23 +1719,23 @@ git commit -m "feat(catalog): 文献检索读适配器——列表组装、三�
     assertThat(miss).isNotNull();
   }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：运行 IT 确认失败</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
             <p>预期：新用例失败（author 未过滤）</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7：实现——WHERE 追加条件、DAO 加参数、适配器传参</strong>
 <p><code>PublicationSearchDao.WHERE</code> 末尾追加：</p><pre><code class="lang-sql">        AND (:author IS NULL OR EXISTS (SELECT 1 FROM cat_publication_author pa
                WHERE pa.publication_id = p.id
                  AND pa.display_name ILIKE CONCAT('%', :author, '%') ESCAPE '!'))</code></pre><p><code>findSearchPage</code> 与 <code>countMatching</code> 的参数列表在 <code>@Param("sortMode")</code> 之前（<code>countMatching</code> 在末尾）追加：</p><pre><code class="lang-java">      @Param("author") String author,</code></pre><p><code>PublicationSearchReadAdapter.search</code> 调用 <code>dao.findSearchPage(...)</code> 时按同一位置传：</p><pre><code class="lang-java">            escapeLike(filter.author()),</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 8：运行 IT 确认通过</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
             <p>预期：全部 passed</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 9：追加失败测试——PMID / DOI 精确：DOI 去前缀、大小写不敏感</strong>
 <pre><code class="lang-java">  @Test
   @DisplayName("pmid 精确等值；doi 去 https://doi.org/ 与 doi: 前缀后大小写不敏感等值；未命中为空页")
@@ -1752,12 +1752,12 @@ git commit -m "feat(catalog): 文献检索读适配器——列表组装、三�
     assertThat(ids(PublicationSearchFilter.builder().doi("10.1056/none").build())).isEmpty();
   }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 10：运行 IT 确认失败</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
             <p>预期：新用例失败（pmid / doi 未过滤）</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 11：实现——WHERE 追加条件、DAO 加参数、适配器传参</strong>
 <p><code>PublicationSearchDao.WHERE</code> 末尾追加：</p><pre><code class="lang-sql">        AND (:pmid IS NULL OR p.pmid = :pmid)
         AND (:doi IS NULL OR lower(p.doi) = :doi)</code></pre><p><code>findSearchPage</code> 与 <code>countMatching</code> 的参数列表在 <code>@Param("sortMode")</code> 之前（<code>countMatching</code> 在末尾）追加：</p><pre><code class="lang-java">      @Param("pmid") String pmid,
@@ -1783,12 +1783,12 @@ git commit -m "feat(catalog): 文献检索读适配器——列表组装、三�
     return raw == null || raw.isBlank() ? null : raw.trim();
   }</code></pre><p>import 区追加 <code>java.util.Locale</code>。</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 12：运行 IT 确认通过</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
             <p>预期：全部 passed</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 13：追加失败测试——年份闭区间</strong>
 <pre><code class="lang-java">  @Test
   @DisplayName("yearFrom / yearTo 闭区间，可只给一端")
@@ -1803,23 +1803,23 @@ git commit -m "feat(catalog): 文献检索读适配器——列表组装、三�
     assertThat(ids(PublicationSearchFilter.builder().yearTo(2023).build())).containsExactly(y2023);
   }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 14：运行 IT 确认失败</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
             <p>预期：新用例失败（yearFrom / yearTo 未过滤）</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 15：实现——WHERE 追加条件、DAO 加参数、适配器传参</strong>
 <p><code>PublicationSearchDao.WHERE</code> 末尾追加：</p><pre><code class="lang-sql">        AND (:yearFrom IS NULL OR p.publication_year &gt;= :yearFrom)
         AND (:yearTo IS NULL OR p.publication_year &lt;= :yearTo)</code></pre><p><code>findSearchPage</code> 与 <code>countMatching</code> 的参数列表在 <code>@Param("sortMode")</code> 之前（<code>countMatching</code> 在末尾）追加：</p><pre><code class="lang-java">      @Param("yearFrom") Integer yearFrom,
       @Param("yearTo") Integer yearTo,</code></pre><p><code>PublicationSearchReadAdapter.search</code> 调用 <code>dao.findSearchPage(...)</code> 时按同一位置传：</p><pre><code class="lang-java">            filter.yearFrom(), filter.yearTo(),</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 16：运行 IT 确认通过</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
             <p>预期：全部 passed</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 17：追加失败测试——期刊 / 类型 / 语言 / OA 多值与组合</strong>
 <pre><code class="lang-java">  @Test
   @DisplayName("venue 多值 OR；type 完整值含逗号、大小写不敏感；lang 按 language_base；oa；跨维度 AND")
@@ -1845,12 +1845,12 @@ git commit -m "feat(catalog): 文献检索读适配器——列表组装、三�
         .isEmpty();
   }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 18：运行 IT 确认失败</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
             <p>预期：新用例失败（venue / type / lang / oa 未过滤）</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 19：实现——WHERE 追加条件、DAO 加参数、适配器传参</strong>
 <p><code>PublicationSearchDao.WHERE</code> 末尾追加：</p><pre><code class="lang-sql">        AND ((:venueIds)::bigint[] IS NULL OR p.venue_id = ANY((:venueIds)::bigint[]))
         AND ((:types)::text[] IS NULL OR EXISTS (SELECT 1 FROM cat_publication_type pt
@@ -1872,12 +1872,12 @@ git commit -m "feat(catalog): 文献检索读适配器——列表组装、三�
     return list.isEmpty() ? null : list.toArray(generator);
   }</code></pre><p>import 区追加 <code>java.util.function.IntFunction</code>。若 Hibernate 对 <code>Long[]</code> 绑定 <code>bigint[]</code> 报类型错误，改为传 <code>String[]</code> 并把 SQL 改成 <code>((:venueIds)::text[])::bigint[]</code>，在右栏 notes 记 change。</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 20：运行 IT 确认通过</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
             <p>预期：全部 passed</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 21：追加失败测试——证据等级：SQL 先算最强档再等值，与 classify() 一致</strong>
 <pre><code class="lang-java">  @Test
   @DisplayName("evidence：同时标 Meta-Analysis 与 RCT 的文献只落 5 级；UNKNOWN 可选；多值 OR")
@@ -1908,12 +1908,12 @@ git commit -m "feat(catalog): 文献检索读适配器——列表组装、三�
         .containsExactlyInAnyOrder(both, rct);
   }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 22：运行 IT 确认失败</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
             <p>预期：新用例失败（evidence 未过滤）</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 23：实现——WHERE 追加条件、DAO 加参数、适配器传参</strong>
 <p><code>PublicationSearchDao.WHERE</code> 末尾追加：</p><pre><code class="lang-sql">        AND ((:evidenceRanks)::int[] IS NULL OR
       """ + EVIDENCE_RANK + " = ANY((:evidenceRanks)::int[]))\n"</code></pre><p><code>findSearchPage</code> 与 <code>countMatching</code> 的参数列表在 <code>@Param("sortMode")</code> 之前（<code>countMatching</code> 在末尾）追加：</p><pre><code class="lang-java">      @Param("evidenceRanks") Integer[] evidenceRanks,
@@ -1947,12 +1947,12 @@ git commit -m "feat(catalog): 文献检索读适配器——列表组装、三�
     return EvidenceLevel.typeValuesOf(level).toArray(String[]::new);
   }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 24：运行 IT 确认通过</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
             <p>预期：全部 passed</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 25：核对 DAO 全貌（任务 8 完成态，供任务 9 复用同一参数顺序）</strong>
 <pre><code class="lang-java">  // PublicationSearchDao 完成态的方法签名（WHERE / SELECT_LIST / ORDER_BY / EVIDENCE_RANK 常量如上）：
 
@@ -2042,7 +2042,7 @@ git commit -m "feat(catalog): 文献检索读适配器——列表组装、三�
     return PageResult.of(items, paging.page(), paging.pageSize(), page.getTotalElements());
   }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 26：运行 IT 全部通过后 Commit</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
             <p>预期：12 passed</p><pre><code class="lang-bash">git add patra-api/patra-catalog/patra-catalog-infra

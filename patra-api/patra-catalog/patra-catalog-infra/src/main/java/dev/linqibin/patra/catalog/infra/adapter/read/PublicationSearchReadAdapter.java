@@ -10,6 +10,8 @@ import dev.linqibin.patra.catalog.domain.model.vo.publication.InlineMarkup;
 import dev.linqibin.patra.catalog.domain.port.read.PublicationSearchReadPort;
 import dev.linqibin.patra.catalog.infra.persistence.dao.PublicationSearchDao;
 import java.util.List;
+import java.util.Locale;
+import java.util.function.IntFunction;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -32,14 +34,75 @@ public class PublicationSearchReadAdapter implements PublicationSearchReadPort {
   /// 摘要片段长度（码点）。
   private static final int SNIPPET_CODE_POINTS = 300;
 
+  private static final String[] LVL5 = typeValues(EvidenceLevel.SYSTEMATIC_REVIEW);
+  private static final String[] LVL4 = typeValues(EvidenceLevel.RANDOMIZED_CONTROLLED_TRIAL);
+  private static final String[] LVL3 = typeValues(EvidenceLevel.COHORT_OR_CASE_CONTROL);
+  private static final String[] LVL2 = typeValues(EvidenceLevel.NON_SYSTEMATIC_REVIEW);
+  private static final String[] LVL1 = typeValues(EvidenceLevel.CASE_REPORT);
+
   private final PublicationSearchDao dao;
+
+  /// 一次检索的已绑定参数（LIKE 已转义、DOI 已归一化、列表已转数组）。facets 的 drill-down 靠把某维度置 null 实现。
+  private record Bound(
+      String keyword,
+      String author,
+      String pmid,
+      String doi,
+      Integer yearFrom,
+      Integer yearTo,
+      Long[] venueIds,
+      String[] types,
+      Boolean isOpenAccess,
+      String[] languages,
+      Integer[] evidenceRanks) {
+
+    /// 由领域过滤参数构建。
+    ///
+    /// @param f 过滤参数
+    /// @return 已绑定参数
+    static Bound of(PublicationSearchFilter f) {
+      return new Bound(
+          escapeLike(f.keyword()),
+          escapeLike(f.author()),
+          blankToNull(f.pmid()),
+          normalizeDoi(f.doi()),
+          f.yearFrom(),
+          f.yearTo(),
+          toArray(f.venueIds(), Long[]::new),
+          toArray(
+              f.types().stream().map(t -> t.trim().toLowerCase(Locale.ROOT)).toList(),
+              String[]::new),
+          f.isOpenAccess(),
+          toArray(f.languages(), String[]::new),
+          toArray(f.evidenceLevels().stream().map(EvidenceLevel::rank).toList(), Integer[]::new));
+    }
+  }
 
   @Override
   public PageResult<PortalPaperReadModel> search(
       PublicationSearchFilter filter, PagingParams paging) {
+    Bound b = Bound.of(filter);
     Page<PublicationSearchRow> page =
         dao.findSearchPage(
-            filter.sort().name(), PageRequest.of(paging.page() - 1, paging.pageSize()));
+            b.keyword(),
+            InlineMarkup.TAG_PATTERN,
+            b.author(),
+            b.pmid(),
+            b.doi(),
+            b.yearFrom(),
+            b.yearTo(),
+            b.venueIds(),
+            b.types(),
+            b.isOpenAccess(),
+            b.languages(),
+            b.evidenceRanks(),
+            LVL5,
+            LVL4,
+            LVL3,
+            LVL2,
+            LVL1,
+            filter.sort().name(),
+            PageRequest.of(paging.page() - 1, paging.pageSize()));
     List<PortalPaperReadModel> items = page.getContent().stream().map(this::toReadModel).toList();
     return PageResult.of(items, paging.page(), paging.pageSize(), page.getTotalElements());
   }
@@ -71,6 +134,67 @@ public class PublicationSearchReadAdapter implements PublicationSearchReadPort {
         .abstractSnippet(toSnippet(row.getAbstractRaw()))
         .lastSyncedAt(row.getLastSyncedAt())
         .build();
+  }
+
+  /// LIKE 通配转义，转义符 `!`，与 SQL `ESCAPE '!'` 配套；null / 空白 → null。
+  ///
+  /// @param raw 原始关键词
+  /// @return 转义后的关键词或 null
+  private static String escapeLike(String raw) {
+    if (raw == null || raw.isBlank()) {
+      return null;
+    }
+    return raw.trim().replace("!", "!!").replace("%", "!%").replace("_", "!_");
+  }
+
+  /// DOI 归一化：去 `https://doi.org/` / `http://dx.doi.org/` 等 URL 前缀与 `doi:` 前缀，转小写；空白 → null。
+  ///
+  /// @param raw 原始 DOI
+  /// @return 归一化 DOI 或 null
+  private static String normalizeDoi(String raw) {
+    String value = blankToNull(raw);
+    if (value == null) {
+      return null;
+    }
+    String lower = value.toLowerCase(Locale.ROOT);
+    for (String prefix :
+        List.of(
+            "https://doi.org/",
+            "http://doi.org/",
+            "https://dx.doi.org/",
+            "http://dx.doi.org/",
+            "doi:")) {
+      if (lower.startsWith(prefix)) {
+        return lower.substring(prefix.length()).trim();
+      }
+    }
+    return lower;
+  }
+
+  /// 证据等级 → 小写类型值数组（SQL 参数）。
+  ///
+  /// @param level 证据等级
+  /// @return 类型值数组
+  private static String[] typeValues(EvidenceLevel level) {
+    return EvidenceLevel.typeValuesOf(level).toArray(String[]::new);
+  }
+
+  /// List → 数组；空列表转 null（SQL 里 `IS NULL` 短路为不过滤）。
+  ///
+  /// @param list 输入列表
+  /// @param generator 数组构造器
+  /// @param <T> 元素类型
+  /// @return 数组或 null
+  private static <T> T[] toArray(List<T> list, IntFunction<T[]> generator) {
+    return list.isEmpty() ? null : list.toArray(generator);
+  }
+
+  /// 空白 → null，否则 trim。
+  ///
+  /// @param raw 原始字符串
+  /// @return trim 后的字符串或 null
+  private static String blankToNull(String raw) {
+    return raw == null || raw.isBlank() ? null : raw.trim();
   }
 
   /// 摘要原文 → 可见纯文本前 300 码点；空白结果视为无摘要。

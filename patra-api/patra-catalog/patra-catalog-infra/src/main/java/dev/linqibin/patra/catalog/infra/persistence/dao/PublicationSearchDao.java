@@ -17,11 +17,42 @@ import org.springframework.data.repository.query.Param;
 /// @since 0.1.0
 public interface PublicationSearchDao extends JpaRepository<PublicationEntity, Long> {
 
-  /// 共享 WHERE：`p` 为 `cat_publication`。
+  /// 每篇文献的证据等级 rank：按五档类型数组取 max，无命中为 0（UNKNOWN）。数组由适配器从
+  /// [dev.linqibin.patra.catalog.domain.model.vo.publication.EvidenceLevel#typeValuesOf] 传入，SQL
+  // 不含类型字符串。
+  String EVIDENCE_RANK =
+      """
+      COALESCE((SELECT max(CASE
+          WHEN lower(trim(pt.type_value)) = ANY((:lvl5)::text[]) THEN 5
+          WHEN lower(trim(pt.type_value)) = ANY((:lvl4)::text[]) THEN 4
+          WHEN lower(trim(pt.type_value)) = ANY((:lvl3)::text[]) THEN 3
+          WHEN lower(trim(pt.type_value)) = ANY((:lvl2)::text[]) THEN 2
+          WHEN lower(trim(pt.type_value)) = ANY((:lvl1)::text[]) THEN 1
+          ELSE 0 END)
+        FROM cat_publication_type pt WHERE pt.publication_id = p.id), 0)""";
+
+  /// 共享 WHERE：`p` 为 `cat_publication`。尾段是普通字符串——文本块开头三引号后必须紧跟换行。
   String WHERE =
       """
       WHERE p.deleted_at IS NULL
-      """;
+        AND (:keyword IS NULL OR regexp_replace(p.title, :tagPattern, '', 'gi')
+                                 ILIKE CONCAT('%', :keyword, '%') ESCAPE '!')
+        AND (:author IS NULL OR EXISTS (SELECT 1 FROM cat_publication_author pa
+               WHERE pa.publication_id = p.id
+                 AND pa.display_name ILIKE CONCAT('%', :author, '%') ESCAPE '!'))
+        AND (:pmid IS NULL OR p.pmid = :pmid)
+        AND (:doi IS NULL OR lower(p.doi) = :doi)
+        AND (:yearFrom IS NULL OR p.publication_year >= :yearFrom)
+        AND (:yearTo IS NULL OR p.publication_year <= :yearTo)
+        AND ((:venueIds)::bigint[] IS NULL OR p.venue_id = ANY((:venueIds)::bigint[]))
+        AND ((:types)::text[] IS NULL OR EXISTS (SELECT 1 FROM cat_publication_type pt
+               WHERE pt.publication_id = p.id AND lower(trim(pt.type_value)) = ANY((:types)::text[])))
+        AND (:isOpenAccess IS NULL OR p.is_oa = :isOpenAccess)
+        AND ((:languages)::text[] IS NULL OR p.language_base = ANY((:languages)::text[]))
+        AND ((:evidenceRanks)::int[] IS NULL OR
+      """
+          + EVIDENCE_RANK
+          + " = ANY((:evidenceRanks)::int[]))\n";
 
   /// 列表投影 SELECT + FROM（venue LEFT JOIN、abstract LEFT JOIN，作者 / 类型用相关子查询聚合）。
   String SELECT_LIST =
@@ -61,6 +92,8 @@ public interface PublicationSearchDao extends JpaRepository<PublicationEntity, L
 
   /// 分页检索文献列表（单条 SQL，无 N+1）。
   ///
+  /// @param keyword 已 LIKE 转义的标题关键词，null 不过滤
+  /// @param tagPattern 内联标记白名单正则（InlineMarkup.TAG_PATTERN）
   /// @param sortMode 排序枚举名（LATEST / YEAR / CITED）
   /// @param pageable 仅携带分页，排序内嵌 SQL
   /// @return 当前页投影
@@ -68,11 +101,49 @@ public interface PublicationSearchDao extends JpaRepository<PublicationEntity, L
       value = SELECT_LIST + WHERE + ORDER_BY,
       countQuery = "SELECT count(*) FROM cat_publication p " + WHERE,
       nativeQuery = true)
-  Page<PublicationSearchRow> findSearchPage(@Param("sortMode") String sortMode, Pageable pageable);
+  Page<PublicationSearchRow> findSearchPage(
+      @Param("keyword") String keyword,
+      @Param("tagPattern") String tagPattern,
+      @Param("author") String author,
+      @Param("pmid") String pmid,
+      @Param("doi") String doi,
+      @Param("yearFrom") Integer yearFrom,
+      @Param("yearTo") Integer yearTo,
+      @Param("venueIds") Long[] venueIds,
+      @Param("types") String[] types,
+      @Param("isOpenAccess") Boolean isOpenAccess,
+      @Param("languages") String[] languages,
+      @Param("evidenceRanks") Integer[] evidenceRanks,
+      @Param("lvl5") String[] lvl5,
+      @Param("lvl4") String[] lvl4,
+      @Param("lvl3") String[] lvl3,
+      @Param("lvl2") String[] lvl2,
+      @Param("lvl1") String[] lvl1,
+      @Param("sortMode") String sortMode,
+      Pageable pageable);
 
   /// 满足条件的文献总数（facets 的 total 也用它）。
   ///
+  /// @param keyword 已 LIKE 转义的标题关键词，null 不过滤
+  /// @param tagPattern 内联标记白名单正则
   /// @return 总数
   @Query(value = "SELECT count(*) FROM cat_publication p " + WHERE, nativeQuery = true)
-  long countMatching();
+  long countMatching(
+      @Param("keyword") String keyword,
+      @Param("tagPattern") String tagPattern,
+      @Param("author") String author,
+      @Param("pmid") String pmid,
+      @Param("doi") String doi,
+      @Param("yearFrom") Integer yearFrom,
+      @Param("yearTo") Integer yearTo,
+      @Param("venueIds") Long[] venueIds,
+      @Param("types") String[] types,
+      @Param("isOpenAccess") Boolean isOpenAccess,
+      @Param("languages") String[] languages,
+      @Param("evidenceRanks") Integer[] evidenceRanks,
+      @Param("lvl5") String[] lvl5,
+      @Param("lvl4") String[] lvl4,
+      @Param("lvl3") String[] lvl3,
+      @Param("lvl2") String[] lvl2,
+      @Param("lvl1") String[] lvl1);
 }
