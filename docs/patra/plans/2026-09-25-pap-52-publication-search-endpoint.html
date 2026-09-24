@@ -39,7 +39,7 @@
           <li data-task-status="done"><a href="#task-4">Task 4 — EvidenceLevel.typeValuesOf 暴露映射表</a></li>
           <li data-task-status="done"><a href="#task-5">Task 5 — InlineMarkup 标签白名单与可见纯文本</a></li>
           <li data-task-status="done"><a href="#task-6">Task 6 — PublicationSearchFacets、PortalPaperReadModel 扩展、PublicationSearchReadPort</a></li>
-          <li data-task-status="pending"><a href="#task-7">Task 7 — infra 列表查询：DAO + 投影 + 适配器 search（组装 / 排序 / 片段）</a></li>
+          <li data-task-status="done"><a href="#task-7">Task 7 — infra 列表查询：DAO + 投影 + 适配器 search（组装 / 排序 / 片段）</a></li>
           <li data-task-status="pending"><a href="#task-8">Task 8 — infra 筛选条件：逐条 Red-Green 追加共享 WHERE</a></li>
           <li data-task-status="pending"><a href="#task-9">Task 9 — infra facets：years / types / evidence / languages / openAccess / total / lastSyncedAt</a></li>
           <li data-task-status="pending"><a href="#task-10">Task 10 — app：PortalPublicationSearchQueryService</a></li>
@@ -1142,7 +1142,7 @@ git commit -m "feat(catalog): 文献检索读模型与读端口，列表读模�
         </ol>
       </article>
 
-      <article class="task" id="task-7" data-status="pending">
+      <article class="task" id="task-7" data-status="done">
         <header>
           <h2>任务 7：infra 列表查询：DAO + 投影 + 适配器 search（组装 / 排序 / 片段）</h2>
           <dl class="files">
@@ -1150,7 +1150,7 @@ git commit -m "feat(catalog): 文献检索读模型与读端口，列表读模�
           </dl>
         </header>
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：写失败 IT（两个用例 + 全部 fixture）</strong>
 <pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-infra/src/integrationTest/java/dev/linqibin/patra/catalog/infra/adapter/read/PublicationSearchReadAdapterIT.java
 package dev.linqibin.patra.catalog.infra.adapter.read;
@@ -1330,12 +1330,12 @@ class PublicationSearchReadAdapterIT {
   }
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：运行 IT 确认编译失败</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
             <p>预期：编译错误 <code>cannot find symbol PublicationSearchReadAdapter</code></p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：创建投影 PublicationSearchRow</strong>
 <pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/linqibin/patra/catalog/infra/adapter/read/PublicationSearchRow.java
 package dev.linqibin.patra.catalog.infra.adapter.read;
@@ -1380,7 +1380,7 @@ public interface PublicationSearchRow {
   Instant getLastSyncedAt();
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：创建 DAO（此时 WHERE 只有 deleted_at）</strong>
 <pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/linqibin/patra/catalog/infra/persistence/dao/PublicationSearchDao.java
 package dev.linqibin.patra.catalog.infra.persistence.dao;
@@ -1461,7 +1461,7 @@ public interface PublicationSearchDao extends JpaRepository&lt;PublicationEntity
   long countMatching();
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：创建适配器（facets 先抛 UnsupportedOperationException，任务 9 实现）</strong>
 <pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/linqibin/patra/catalog/infra/adapter/read/PublicationSearchReadAdapter.java
 package dev.linqibin.patra.catalog.infra.adapter.read;
@@ -1562,12 +1562,12 @@ public class PublicationSearchReadAdapter implements PublicationSearchReadPort {
   }
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：运行 IT 确认通过</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
             <p>预期：2 passed（Testcontainers 首次拉镜像约 1 分钟）</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7：追加失败测试：三种排序</strong>
 <pre><code class="lang-java">  // 追加到 IT「任务 7」分区
 
@@ -1635,12 +1635,12 @@ public class PublicationSearchReadAdapter implements PublicationSearchReadPort {
     assertThat(items.get(1).abstractSnippet()).isNull();
   }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 8：运行 IT 确认通过（排序 / 分页 / 片段逻辑已在步骤 4–5 就位，本步验证行为而非新增实现）</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
             <p>预期：6 passed；若 sortByYear 失败，检查 ORDER_BY 中 YEAR 分支的 <code>NULLS LAST</code></p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 9：Commit</strong>
 <pre><code class="lang-bash">git add patra-api/patra-catalog/patra-catalog-infra
 git commit -m "feat(catalog): 文献检索读适配器——列表组装、三种排序、摘要片段 (PAP-52)"</code></pre>
