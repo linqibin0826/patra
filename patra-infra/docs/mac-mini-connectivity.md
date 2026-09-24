@@ -73,6 +73,22 @@
 - **现状（2026-09-23 实测）**：mini 改用官方 tailscale GUI 后，**未挂路由边车的普通应用容器**（`patra-gateway`、`patra-catalog`）也能直接访问 MacBook 的 `100.x` 与 mini 自身的 tailscale IP——容器内无 `100.64/10` 路由，流量由 OrbStack 交给 mini 的 macOS 宿主发出。本节的网关 + 边车方案是否仍必要待评估，评估前保持原样。
 - **排查注意**：经 OrbStack 宿主转发时，目标端口无人监听表现为 curl `Empty reply`（exit 52）而非 `Connection refused`；判断连通性应在目标端临时起监听（如 `python3 -m http.server <port> --bind <tailscale IP>`）再探测。
 
+### 7. MacBook 本地服务经 Nacos 调不到 mini 容器服务
+
+- **症状**：本地起的服务（如 catalog）调 `lb://patra-registry` 超时；Nacos 里 mini 容器实例的地址是 `192.168.97.x`。
+- **根因**：容器用 `patra-net` 内网 IP 注册 Nacos，该网段只存在于 mini 的 Docker 里，MacBook 路由表没有它（落进 `192.168.0.0/16 → Wi-Fi` 的泛匹配）。
+- **解决（子网路由，2026-09-24 落地）**：`tailscale-gw` 以 `TS_ROUTES=192.168.97.0/24` 把 `patra-net` 网段发布到 tailnet，MacBook 装上更具体的 `192.168.97.0/24 → tailscale` 路由后即可直达容器 IP。容器侧不改注册地址，mini 上容器间调用仍走 Docker 内网，不依赖 tailscale 在线。三个前提缺一不可：
+  1. 网段固定：`scripts/compose-all.sh` 以 `--subnet 192.168.97.0/24` 创建 `patra-net`（与 `TS_ROUTES` 必须一致）。
+  2. 管理后台批准：login.tailscale.com → Machines → `patra-docker-gw` → Edit route settings 勾选该网段（一次性，随网关登录态保留；网关登录态丢失重新入网后需再批准）。
+  3. MacBook 接受路由：tailscale 设置里「Use Tailscale subnets」开启（`tailscale debug prefs` 中 `RouteAll: true`）。
+- **与 Shadowrocket 共存**：该路由为非 scoped（`netstat -rn` 标志 `UCS`，不含 `I`），`/24` 比 Shadowrocket 的 `128.0/1` 与 Wi-Fi 的 `192.168/16` 都具体，最长前缀匹配下走 tailscale，不受 §5 那类抢占影响。
+- **已知限制**：若所连 Wi-Fi 本身就是 `192.168.97.0/24`，会与子网路由冲突；本地服务注册后，mini 的 gateway 会在容器实例与本地实例间轮询。
+- **验证**：
+  ```sh
+  route -n get 192.168.97.10 | grep interface     # 应为 tailscale 的 utun
+  curl -s -o /dev/null -w '%{http_code}\n' http://192.168.97.10:6300/actuator/health   # 容器 IP 以 Nacos 实际注册为准
+  ```
+
 ---
 
 ## 通用排查命令

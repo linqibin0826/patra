@@ -27,12 +27,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `patra-storage` | minio / minio-init |
 | `patra-search` | elasticsearch |
 | `patra-observability` | otel-collector / prometheus / loki / tempo / grafana / alertmanager |
-| `patra-tailnet` | tailscale-gw（共享出向网关） |
+| `patra-tailnet` | tailscale-gw（共享出向网关 + 发布 `patra-net` 网段 `192.168.97.0/24` 的子网路由，见 `docs/mac-mini-connectivity.md` §7） |
 | `patra-jobs` | mysql-ops / xxl-job-admin / xxl-job-tailnet-route / rocketmq(namesrv+broker+dashboard) |
 | `patra-apps` | registry / object-storage / catalog / ingest / gateway / portal / learn（应用容器，由 CD 自动部署） |
 
 - **多 project 编排入口是 `scripts/compose-all.sh`**（取代已删除的 `docker-compose.dev.yaml`）。compose 的 `include:` 会把所有子栈合并进同一个 project 无法分组，多 project 只能逐个 `up`，故用脚本编排：`compose-all.sh up [stack...]` / `down` / `ps`。
-- **网络 `patra-net` 声明为 `external: true`**，须先于任何子栈存在；`compose-all.sh up` 会幂等创建。各 project 在共享网络上靠容器/服务名 DNS 互通（跨 project 同样生效，因 DNS 是网络作用域而非 project 作用域）。
+- **网络 `patra-net` 声明为 `external: true`**，须先于任何子栈存在；`compose-all.sh up` 会幂等创建，网段写死为 `192.168.97.0/24`（子网路由依赖它，改网段须同步 `docker-compose.tailnet.yaml` 的 `TS_ROUTES`）。各 project 在共享网络上靠容器/服务名 DNS 互通（跨 project 同样生效，因 DNS 是网络作用域而非 project 作用域）。
 - **路由边车 `xxl-job-tailnet-route` 在 `patra-jobs` 而非 `patra-tailnet`**：它用 `network_mode: "service:xxl-job-admin"` 共享 xxl-job-admin 的网络命名空间，`service:` 模式不能跨 project，故必须与 xxl-job-admin 同 project；`tailscale-gw` 作为共享网关独立在 `patra-tailnet`，边车靠 `patra-net` DNS 解析到它。
 - 容器数据卷全是 bind mount，根目录是 Mac mini 上的 `~/.patra/docker/`，首次部署前必须跑 `scripts/init-volumes.sh` 建目录骨架（幂等）。
 

@@ -13,6 +13,11 @@ name: patra-tailnet
 # 开 IP 转发 + 对 tailnet 网段 MASQUERADE；其余容器把 100.64.0.0/10 的路由指向它。
 # 任何容器由此可达任意 tailnet 机器的任意端口，新增容器无需改网关。
 #
+# 反方向（子网路由）：网关把 patra-net 网段 192.168.97.0/24 发布到 tailnet（TS_ROUTES），
+# MacBook 由此直达容器 IP。用途：容器在 Nacos 注册的是 patra-net 内网 IP，MacBook 本地起的
+# 服务经 Nacos 调 mini 容器服务时需要能连上这些 IP。网段在 scripts/compose-all.sh 创建网络时写死；
+# 路由须在 tailscale 管理后台批准一次（批准记录在服务端，随 TS_STATE_DIR 登录态保留）。
+#
 # 详见 ../docs/mac-mini-connectivity.md。
 
 services:
@@ -35,6 +40,7 @@ services:
       TS_USERSPACE: "false"             # 内核态 tun，作网关必须
       TS_ACCEPT_DNS: "false"            # 不接管容器 DNS（仅做出向路由）
       TS_HOSTNAME: patra-docker-gw
+      TS_ROUTES: 192.168.97.0/24        # 子网路由：发布 patra-net 网段（须与 compose-all.sh 的 --subnet 一致）
     # 官方镜像不会为「容器子网 → tailnet」方向加 SNAT，需自行补 MASQUERADE。
     # -d 100.64.0.0/10 与出接口无关，可在 tailscale0 建立前就加好。加完 exec 原 entrypoint。
     entrypoint:

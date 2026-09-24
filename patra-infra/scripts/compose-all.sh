@@ -24,7 +24,9 @@ compose() { docker compose -f "$DOCKER_DIR/docker-compose.$1.yaml" "${@:2}"; }
 
 ensure_network() {
   # 外部网络须先于任何子栈存在（compose 声明 external: true，不会自动创建）。幂等。
-  docker network inspect patra-net >/dev/null 2>&1 || docker network create patra-net
+  # 网段写死：tailscale-gw 把它作为子网路由发布到 tailnet（TS_ROUTES），网段变了 MacBook 就连不上容器。
+  docker network inspect patra-net >/dev/null 2>&1 \
+    || docker network create --subnet 192.168.97.0/24 patra-net
 }
 
 # 校验子栈参数：未知名直接报错退出非 0，避免拼写错误导致静默空执行（up/down 什么都不做却返回成功）。
