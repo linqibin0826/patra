@@ -1,16 +1,4 @@
 {
-  "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/send-stop-notification.sh"
-          }
-        ]
-      }
-    ]
-  },
   "enabledPlugins": {
     "linear@claude-plugins-official": true,
     "frontend-design@claude-plugins-official": true
