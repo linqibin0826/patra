@@ -91,12 +91,11 @@ fun Project.applyLinqibinDependencyManagement(libs: VersionCatalog) {
             force("org.apache.httpcomponents:httpclient:$httpclientVersion")
             // Mockito vs Kryo 版本冲突
             force("org.objenesis:objenesis:$objenesisVersion")
-            // org.lz4:lz4-java 已停更且有未修复漏洞（rocketmq-common 传递引入），替换为同包名的维护 fork
-            dependencySubstitution {
-                substitute(module("org.lz4:lz4-java"))
-                    .using(module("at.yawk.lz4:lz4-java:${version("lz4")}"))
-                    .because("org.lz4:lz4-java 已停更，漏洞仅在 at.yawk.lz4 fork 修复")
-            }
         }
+    }
+
+    // org.lz4:lz4-java 已停更且有未修复漏洞，在元数据层改写为同包名维护 fork（原因见 Lz4ForkRule）
+    dependencies.components.all(Lz4ForkRule::class.java) {
+        params(version("lz4"))
     }
 }
