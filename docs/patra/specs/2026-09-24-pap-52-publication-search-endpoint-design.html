@@ -93,7 +93,7 @@
 
     <section id="request">
       <h2>3. 请求契约</h2>
-      <p>两个端点共用一个请求 record <code>PortalPublicationSearchRequest</code>（adapter 层，Spring MVC 自动绑定 query params，逗号分隔绑定为 <code>List</code>）。facets 端点忽略 <code>sort</code> / <code>page</code> / <code>pageSize</code>。参数名 camelCase，与 <code>/portal/venues</code> 现有约定（<code>pageSize</code> / <code>casTop</code>）一致，前端 query 名同名零映射。</p>
+      <p>两个端点共用一个请求 record <code>PortalPublicationSearchRequest</code>（adapter 层，Spring MVC 自动绑定 query params）。facets 端点忽略 <code>sort</code> / <code>page</code> / <code>pageSize</code>。<strong>多值参数一律用重复参数</strong>（<code>type=Review&amp;type=Clinical%20Trial%2C%20Phase%20III</code>），<strong>不按逗号拆分</strong>：真实类型值含逗号（库里 <code>Clinical Trial, Phase I/II/III/IV/Veterinary</code> 共 19 行），Spring 默认的 <code>String→List</code> 逗号拆分会把它切成两个值而漏掉目标文献。实现：<code>PortalPublicationController</code> 加 <code>@InitBinder</code>，为 <code>List</code> 类型注册一个不拆分的 <code>PropertyEditor</code>（单值→单元素列表，多值→原样），只影响本控制器；元素级转换（<code>venue</code> 的 <code>Long</code>）仍由 ConversionService 完成。adapter IT 用单个含逗号的 <code>type</code> 值作 Red 起点验证。期刊端点的逗号约定不动。参数名 camelCase，与 <code>/portal/venues</code> 现有约定（<code>pageSize</code> / <code>casTop</code>）一致，前端 query 名同名零映射。</p>
       <table>
         <thead><tr><th>参数</th><th>类型</th><th>校验（400）</th><th>语义</th></tr></thead>
         <tbody>
@@ -102,11 +102,11 @@
           <tr><td><code>pmid</code></td><td>String</td><td><code>@Pattern("\\d{1,15}")</code></td><td>精确等值</td></tr>
           <tr><td><code>doi</code></td><td>String</td><td><code>@Size(max=200)</code></td><td>去掉 <code>https://doi.org/</code>、<code>http://dx.doi.org/</code>、<code>doi:</code> 前缀后大小写不敏感等值</td></tr>
           <tr><td><code>yearFrom</code> / <code>yearTo</code></td><td>Integer</td><td><code>@Min(1000) @Max(9999)</code>；<code>@AssertTrue yearFrom &lt;= yearTo</code>（任一为 null 即通过）</td><td><code>publication_year</code> 闭区间</td></tr>
-          <tr><td><code>venue</code></td><td>List&lt;Long&gt;</td><td>元素 <code>@Positive</code></td><td><code>venue_id</code> 多值 OR</td></tr>
-          <tr><td><code>type</code></td><td>List&lt;String&gt;</td><td>trim + 去空 token</td><td><code>cat_publication_type.type_value</code> 多值 OR，大小写不敏感</td></tr>
+          <tr><td><code>venue</code></td><td>List&lt;Long&gt;</td><td>元素 <code>@Positive</code>；重复参数</td><td><code>venue_id</code> 多值 OR</td></tr>
+          <tr><td><code>type</code></td><td>List&lt;String&gt;</td><td>trim + 去空 token；重复参数，值内逗号保留</td><td><code>cat_publication_type.type_value</code> 完整值，多值 OR，大小写不敏感</td></tr>
           <tr><td><code>evidence</code></td><td>List&lt;String&gt;</td><td>元素 <code>@Pattern("(?i)SYSTEMATIC_REVIEW|RANDOMIZED_CONTROLLED_TRIAL|COHORT_OR_CASE_CONTROL|NON_SYSTEMATIC_REVIEW|CASE_REPORT|UNKNOWN")</code></td><td>按每篇最强命中档等值，多值 OR，含 <code>UNKNOWN</code></td></tr>
           <tr><td><code>oa</code></td><td>Boolean</td><td>—</td><td><code>is_oa</code></td></tr>
-          <tr><td><code>lang</code></td><td>List&lt;String&gt;</td><td>trim + 去空 token</td><td><code>language_base</code> 多值 OR</td></tr>
+          <tr><td><code>lang</code></td><td>List&lt;String&gt;</td><td>trim + 去空 token；重复参数</td><td><code>language_base</code> 多值 OR</td></tr>
           <tr><td><code>sort</code></td><td>String</td><td><code>@Pattern("(?i)latest|year")</code></td><td>默认 <code>latest</code></td></tr>
           <tr><td><code>page</code> / <code>pageSize</code></td><td>Integer</td><td><code>page @Min(1)</code>；<code>pageSize @Min(1) @Max(50)</code></td><td>默认 1 / 20</td></tr>
         </tbody>
@@ -122,8 +122,8 @@
         <thead><tr><th>字段</th><th>类型</th><th>来源</th></tr></thead>
         <tbody>
           <tr><td><code>venueId</code></td><td>String，可空</td><td><code>cat_publication.venue_id</code>；String 避免 JS 精度问题，与 <code>id</code> 同规矩</td></tr>
-          <tr><td><code>evidenceLevel</code></td><td><code>EvidenceLevelView { code, rank, label, derived }</code></td><td>与详情端点同一个视图 record，从 <code>PortalPublicationDetailResponse</code> 内嵌类提到 <code>response</code> 包顶层</td></tr>
-          <tr><td><code>abstractSnippet</code></td><td>String，可空</td><td><code>cat_publication_abstract.plain_text</code> 前 300 字，SQL <code>left()</code> 截断；无摘要为 null</td></tr>
+          <tr><td><code>evidenceLevel</code></td><td><code>EvidenceLevelView { level, rank, label, derived }</code></td><td>与详情端点同一个视图 record，从 <code>PortalPublicationDetailResponse</code> 内嵌类提到 <code>response</code> 包顶层</td></tr>
+          <tr><td><code>abstractSnippet</code></td><td>String，可空</td><td><code>cat_publication_abstract.plain_text</code> <strong>先剥内联标签再</strong>取前 300 字（<code>left(regexp_replace(plain_text, '&lt;/?[a-z][^&lt;&gt;]*&gt;', '', 'gi'), 300)</code>）；库里 4,497 篇摘要保真存有 <code>&lt;sub&gt;</code> 等标签，直接 <code>left()</code> 会返回标签甚至切在 <code>&lt;s</code> 中间。残留 HTML 实体（10 篇）由前端 <code>RichInlineText</code> 解码，截断切在实体中间的概率极低，接受。无摘要为 null</td></tr>
         </tbody>
       </table>
       <h3>4.2 facets 响应：<code>PortalPublicationFacetsResponse</code></h3>
@@ -133,7 +133,7 @@
   "evidence":   [{ "value": "SYSTEMATIC_REVIEW", "count": 346 }, ...,
                  { "value": "UNKNOWN", "count": 15500 }],              // 固定 6 项，rank 降序，count 为 0 也返回
   "languages":  [{ "value": "en", "count": 18488 }, ...],              // 计数降序
-  "openAccess": 0,                       // 满足当前全部筛选且 is_oa=true 的篇数
+  "openAccess": 0,                       // drill-down：忽略 oa 自身筛选、保留其他条件，is_oa=true 的篇数
   "total":      18807,                   // 满足当前全部筛选的篇数
   "lastSyncedAt": "2026-08-30T04:06:00Z" // 全库 max(last_synced_at)，不随筛选变
 }</code></pre>
@@ -159,7 +159,7 @@
         <thead><tr><th>参数</th><th>条件（<code>p</code> = <code>cat_publication</code>）</th></tr></thead>
         <tbody>
           <tr><td>固定</td><td><code>p.deleted_at IS NULL</code></td></tr>
-          <tr><td><code>:keyword</code></td><td><code>regexp_replace(p.title, '&lt;[^&gt;]+&gt;', '', 'g') ILIKE CONCAT('%', :keyword, '%') ESCAPE '!'</code>，Java 侧先 <code>escapeLike</code>（<code>!</code> / <code>%</code> / <code>_</code>）</td></tr>
+          <tr><td><code>:keyword</code></td><td><code>regexp_replace(p.title, '&lt;/?[a-z][^&lt;&gt;]*&gt;', '', 'gi') ILIKE CONCAT('%', :keyword, '%') ESCAPE '!'</code>，Java 侧先 <code>escapeLike</code>（<code>!</code> / <code>%</code> / <code>_</code>）。正则只吃「<code>&lt;</code> 或 <code>&lt;/</code> 后紧跟字母」的真实标签，库里 7 篇标题含 <code>age &lt; 5</code> 这类字面比较符，不会被吞。实体对齐：匹配对象是落库原文，前端 <code>RichInlineText</code> 的实体解码不参与；库里 0 篇标题含 <code>&amp;amp;</code> 类实体，接受不解码</td></tr>
           <tr><td><code>:author</code></td><td><code>EXISTS (SELECT 1 FROM cat_publication_author pa WHERE pa.publication_id = p.id AND pa.display_name ILIKE CONCAT('%', :author, '%') ESCAPE '!')</code></td></tr>
           <tr><td><code>:pmid</code></td><td><code>p.pmid = :pmid</code></td></tr>
           <tr><td><code>:doi</code></td><td><code>lower(p.doi) = :doi</code>，Java 侧去前缀并小写</td></tr>
@@ -185,7 +185,7 @@
       <p>feed 那条 SQL 的升级版，单次查询、无 N+1：</p>
       <ul>
         <li><code>studyType</code> 子查询换成 <code>string_agg(pt.type_value, E'\x1f' ORDER BY pt.type_order ASC NULLS LAST, pt.id ASC)</code> 聚合一列 <code>publicationTypesAgg</code>。Java 拆开后第一个当 <code>kind</code>、整个列表喂 <code>classify()</code> 得 <code>evidenceLevel</code>，一列两用。</li>
-        <li>新增 <code>p.venue_id AS "venueId"</code>、<code>left(a.plain_text, 300) AS "abstractSnippet"</code>（<code>LEFT JOIN cat_publication_abstract a ON a.publication_id = p.id</code>；<code>uk_pub_abstract</code> 保证 1:1，不会放大行数）。</li>
+        <li>新增 <code>p.venue_id AS "venueId"</code>、<code>left(regexp_replace(a.plain_text, '&lt;/?[a-z][^&lt;&gt;]*&gt;', '', 'gi'), 300) AS "abstractSnippet"</code>（先剥标签再截断，见 §4.1）（<code>LEFT JOIN cat_publication_abstract a ON a.publication_id = p.id</code>；<code>uk_pub_abstract</code> 保证 1:1，不会放大行数）。</li>
         <li>作者 <code>string_agg(pa.display_name, E'\x1f' ORDER BY pa.author_order)</code> 沿用。</li>
         <li>排序内嵌 SQL，<code>:sortMode</code> 传枚举名：
           <ul>
@@ -204,7 +204,7 @@
           <tr><td><code>types</code></td><td><code>FROM cat_publication p JOIN cat_publication_type pt ON pt.publication_id = p.id … GROUP BY pt.type_value ORDER BY count DESC</code>，计数用 <code>count(DISTINCT p.id)</code>（同一 <code>type_value</code> 可来自多个 <code>vocabulary_source</code>）</td><td><code>types</code></td></tr>
           <tr><td><code>evidence</code></td><td>外层 <code>SELECT rank, count(*) FROM (SELECT &lt;rank 表达式&gt; AS rank FROM cat_publication p WHERE …) t GROUP BY rank</code>；Java 把 rank 映射回枚举并补齐 6 项、按 rank 降序</td><td><code>evidenceRanks</code></td></tr>
           <tr><td><code>languages</code></td><td><code>GROUP BY p.language_base</code>，排除 null，计数降序</td><td><code>languages</code></td></tr>
-          <tr><td><code>openAccess</code></td><td><code>countMatching</code>，<code>isOpenAccess</code> 强制 <code>true</code></td><td>—</td></tr>
+          <tr><td><code>openAccess</code></td><td><code>countMatching</code>，<code>isOpenAccess</code> 传 <code>true</code>（忽略请求里的 <code>oa</code>，保留其他条件，与期刊侧 <code>countOpenAccess</code> 同口径）</td><td><code>isOpenAccess</code></td></tr>
           <tr><td><code>total</code></td><td><code>countMatching</code>，全量 filter</td><td>—</td></tr>
           <tr><td><code>lastSyncedAt</code></td><td><code>SELECT max(last_synced_at) FROM cat_publication WHERE deleted_at IS NULL</code></td><td>全部（不带 filter）</td></tr>
         </tbody>
@@ -257,7 +257,7 @@
         <tbody>
           <tr><td>domain 单测</td><td><code>PublicationSearchFilterTest</code> / <code>PublicationSearchSortTest</code></td><td>紧凑构造器 null 列表转空、sort 默认 <code>LATEST</code>、防御性拷贝；<code>fromCode</code> 大小写与未知值</td></tr>
           <tr><td>domain 单测</td><td><code>EvidenceLevelTest</code> 追加</td><td><code>typeValuesOf()</code> 各档返回小写集合、与 <code>classify()</code> 互为逆映射、rank 值锁定 5..1、<code>UNKNOWN</code> 空集</td></tr>
-          <tr><td>infra IT</td><td><code>PublicationSearchReadAdapterIT</code>（Testcontainers PG）</td><td>无条件浏览 total；关键词命中含 <code>&lt;sub&gt;</code> 标记的标题、<code>%</code> 字面匹配；作者快照匹配（<code>author_id</code> 为 null 也命中）；pmid / doi 命中与未命中、doi 前缀与大小写；年份区间；venue / type / lang / oa 多值 OR 与跨维度 AND；证据等级过滤与 <code>classify()</code> 一致（同时标 Meta-Analysis 与 RCT 只落 5 级）；facets drill-down（选中年份后 <code>years</code> 计数不变、<code>types</code> 收窄）；<code>evidence</code> 固定 6 项含 0；<code>total</code> / <code>openAccess</code> / <code>lastSyncedAt</code>；<code>LATEST</code> / <code>YEAR</code> / <code>CITED</code> 排序；作者顺序与 <code>kind</code> 取第一个（从 feed IT 迁入）；<code>abstractSnippet</code> 截断与无摘要 null；分页 total</td></tr>
+          <tr><td>infra IT</td><td><code>PublicationSearchReadAdapterIT</code>（Testcontainers PG）</td><td>无条件浏览 total；关键词命中含 <code>&lt;sub&gt;</code> 标记的标题、<code>%</code> 字面匹配；作者快照匹配（<code>author_id</code> 为 null 也命中）；pmid / doi 命中与未命中、doi 前缀与大小写；年份区间；venue / type / lang / oa 多值 OR 与跨维度 AND；证据等级过滤与 <code>classify()</code> 一致（同时标 Meta-Analysis 与 RCT 只落 5 级）；facets drill-down（选中年份后 <code>years</code> 计数不变、<code>types</code> 收窄）；<code>evidence</code> 固定 6 项含 0；<code>total</code> / <code>openAccess</code>（<code>oa=false</code> 请求下仍返回 OA 篇数）/ <code>lastSyncedAt</code>；<code>LATEST</code> / <code>YEAR</code> / <code>CITED</code> 排序；作者顺序与 <code>kind</code> 取第一个（从 feed IT 迁入）；<code>abstractSnippet</code> 截断与无摘要 null；分页 total</td></tr>
           <tr><td>app 单测</td><td><code>PortalPublicationSearchQueryServiceTest</code> / <code>PortalFeedQueryServiceTest</code> 改写</td><td>委托端口；feed tab→sort 映射、分页归一化</td></tr>
           <tr><td>adapter 单测</td><td><code>PortalPublicationSearchRequestTest</code></td><td>校验逐条：pageSize 51、yearFrom &gt; yearTo、sort 非法、evidence 非法、pmid 非数字、列表 token 归一化</td></tr>
           <tr><td>adapter IT</td><td><code>PortalPublicationControllerIT</code> 追加</td><td><code>/search</code> 与 <code>/search/facets</code> 端到端；<code>toFilter</code> 映射；<code>evidenceLevel</code> 视图与详情端点同形；feed 端点三个新字段有值；非法参数 400</td></tr>
@@ -305,7 +305,7 @@
 
       <div class="decision">
         <h3>决策 6：关键词对剥标记后的标题匹配，作者匹配快照列</h3>
-        <p><code>regexp_replace(title, '&lt;[^&gt;]+&gt;', '', 'g')</code> 让 <code>CO2</code> 能搜到 <code>CO&lt;sub&gt;2&lt;/sub&gt;</code>，本版本就无索引，剥标记不改变成本模型。作者匹配 <code>cat_publication_author.display_name</code>，因为 <code>author_id</code> 仅 ORCID 命中才有值。</p>
+        <p><code>regexp_replace(title, '&lt;/?[a-z][^&lt;&gt;]*&gt;', '', 'gi')</code> 让 <code>CO2</code> 能搜到 <code>CO&lt;sub&gt;2&lt;/sub&gt;</code>，且不吞 <code>age &lt; 5</code> 这类字面比较符；本版本就无索引，剥标记不改变成本模型。作者匹配 <code>cat_publication_author.display_name</code>，因为 <code>author_id</code> 仅 ORCID 命中才有值。</p>
         <p class="alternatives"><strong>备选：</strong>经 <code>cat_author</code> 关联匹配 — 否决：漏掉绝大多数作者行。</p>
       </div>
     </section>
@@ -343,9 +343,14 @@
             <td>纯类型移动，JSON 形状不变；现有期刊 / 详情 IT 覆盖。</td>
           </tr>
           <tr>
-            <td>Spring MVC 把 <code>venue=1,2</code> 绑定为 <code>List&lt;Long&gt;</code> 失败</td>
+            <td>record 构造绑定不消费 <code>@InitBinder</code> 注册的 <code>List</code> 编辑器，含逗号的单个 <code>type</code> 值仍被拆分</td>
+            <td><span class="pill mid">mid</span></td>
+            <td>adapter IT 以 <code>?type=Clinical Trial, Phase III</code> 单值作第一个 Red；若编辑器不生效，退回在控制器方法上以 <code>@RequestParam MultiValueMap</code> 读取列表参数再组装 record，契约不变。</td>
+          </tr>
+          <tr>
+            <td>前端 PAP-53 沿用期刊页的逗号拼接习惯，把 <code>type</code> 拼成一个值</td>
             <td><span class="pill low">low</span></td>
-            <td>与 <code>List&lt;String&gt;</code> 同一转换器；adapter IT 端到端覆盖多值 venue。</td>
+            <td>本 spec §3 与 Linear PAP-53 明确「重复参数」约定；BE 对单个含逗号值按完整类型匹配，拼错会命中 0 条而不是错误结果。</td>
           </tr>
         </tbody>
       </table>
@@ -405,7 +410,7 @@
         <li>feed 端点 recent / cited 排序、分页行为不变，并新增 <code>venueId</code> / <code>evidenceLevel</code> / <code>abstractSnippet</code>。</li>
         <li><code>PortalFeed*</code> 六个类与其 IT 已删除，无残留引用。</li>
         <li>无 Flyway 变更、无新增索引；列表查询单条 SQL 无 N+1。</li>
-        <li><code>./gradlew :patra-catalog:check</code>（含 integrationTest）全绿。</li>
+        <li>catalog 四个模块 <code>check</code> + infra / adapter <code>integrationTest</code> 全绿（<code>check</code> 不挂 <code>integrationTest</code>，CI 也是显式跑）：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:check :patra-api:patra-catalog:patra-catalog-app:check :patra-api:patra-catalog:patra-catalog-infra:check :patra-api:patra-catalog:patra-catalog-infra:integrationTest :patra-api:patra-catalog:patra-catalog-adapter:check :patra-api:patra-catalog:patra-catalog-adapter:integrationTest</code></li>
       </ol>
     </aside>
 
