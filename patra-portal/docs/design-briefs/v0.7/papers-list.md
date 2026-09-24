@@ -74,7 +74,7 @@
   2. **标题**（最重要，衬线，内联标签渲染 `RichInlineText`，最多两行截断）
   3. 期刊 · 年份 · 作者前 2–3 位 + "等 N 位作者"（期刊名可点，进期刊详情）
   4. 徽章行：文献类型 badge（`kind`）+ 证据等级 `EvidenceBadge`（仅成功分级时渲染，沿用 v0.6 降噪规则）
-  5. 摘要首两行（纯文本 `abstractPlainText` 截断；无摘要则该行不占位）
+  5. 摘要首两行（BE 已截断的纯文本 `abstractSnippet`；无摘要则该行不占位）
 - 卡片底部**不放**收藏 / 评论 / 引用占位按钮（首页 PaperCard 有，本页去掉，边界 D）
 - 信息密度：高 —— 一屏 6–8 条，参照首页 explore-feed 紧凑卡片。
 
@@ -260,7 +260,7 @@
 
 | 能力 | 现状 | 来源 / 备注 |
 |------|------|------------|
-| 关键词（标题子串） | 🟡→新端点 | 对**剥除内联标记后**的标题做 `ILIKE '%q%'`（`regexp_replace(title, '<[^>]+>', '', 'g')`），否则 `CO<sub>2</sub>` 搜不到 `CO2`；决策 A：不做全文检索、不加索引 |
+| 关键词（标题子串） | 🟡→新端点 | 对**剥除内联标记后**的标题做 `ILIKE '%q%'`（`regexp_replace(title, '<[^>]+>', '', 'g')`），否则 `CO<sub>2</sub>` 搜不到 `CO2`；`q` 中的 `%` / `_` / `!` 先转义再拼模式并带 `ESCAPE '!'`（与期刊检索同一套转义）；决策 A：不做全文检索、不加索引 |
 | 作者名 | 🟡→新端点 | 直接匹配 `cat_publication_author.display_name` 快照（`author_id` 仅 ORCID 命中时才有值，绝大多数行为 null，不能经 `cat_author` 走） |
 | PMID / DOI 精确 | 🟡→新端点 | `uk_pmid` / `uk_doi` 唯一约束已有，精确命中 0 或 1 条 |
 | 排序：最近更新 | 🟡→新端点 | `last_synced_at` / `created_at`（feed 已按此排） |
@@ -268,7 +268,7 @@
 | 排序：相关度 / 被引 | 🔴 | 边界 C，不做 |
 | 筛选：年份（含近 1/3/5 年快捷） | 🟡→新端点 | `publication_year`；现状 2026: 17,520 / 2025: 1,268 / 2024: 14 |
 | 筛选：文献类型 | 🟡→新端点 | `cat_publication_type.type_value`；Top: Journal Article 17,680 / Review 2,040 / Letter 471 / Editorial 349 / Case Reports 318 / Systematic Review 236 / Observational Study 166 / Comparative Study 146 / RCT 139 / Meta-Analysis 110 |
-| 筛选：证据等级 | 🔶→新端点 | 决策 D：BE 把等级翻译成类型集合过滤；估算 5 级 346 / 4 级 139 / 3 级 421 / 2 级 2,040 / 1 级 318 / **未分级 ~15,500（约 84%）** |
+| 筛选：证据等级 | 🔶→新端点 | 决策 D：BE 在 SQL 里按 `EvidenceLevel.classify()` 同一映射表先算每篇最强命中档，再按单一等级过滤与计数（多类型文献只落一档）；估算 5 级 346 / 4 级 139 / 3 级 421 / 2 级 2,040 / 1 级 318 / **未分级 ~15,500（约 84%）** |
 | 筛选：期刊 | 🟡→新端点 | `venue_id`，2,924 本不同期刊 → facet 必须可搜索；候选下拉复用 `/portal/venues?q=` |
 | 筛选：语言 | 🟡→新端点 | `language_base` 生成列；en 18,488 / de 107 / zh 93 / fr 52 / ru 27 / es 19 |
 | 筛选：开放获取 | 🔴 | `is_oa` 全库 false、`oa_status` 全 null（PubMed baseline 不含 OA 信息，需 Unpaywall 等来源）→ **本版 facet 计数为 0，整组不渲染**；端点仍支持 `oa=` 参数，数据到位即生效 |
