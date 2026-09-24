@@ -11,6 +11,7 @@ import dev.linqibin.commons.query.PageResult;
 import dev.linqibin.patra.catalog.adapter.config.CatalogAdapterITWebMvcConfig;
 import dev.linqibin.patra.catalog.app.usecase.portal.query.PortalVenueBrowseQueryService;
 import dev.linqibin.patra.catalog.app.usecase.portal.query.PortalVenueDetailQueryService;
+import dev.linqibin.patra.catalog.domain.model.read.portal.FacetCount;
 import dev.linqibin.patra.catalog.domain.model.read.portal.VenueBrowseFacets;
 import dev.linqibin.patra.catalog.domain.model.read.portal.VenueBrowseFilter;
 import dev.linqibin.patra.catalog.domain.model.read.portal.VenueBrowseReadModel;
@@ -162,11 +163,8 @@ class PortalVenueControllerIT {
   void shouldReturnFacets() {
     VenueBrowseFacets facets =
         VenueBrowseFacets.builder()
-            .subjects(
-                List.of(
-                    VenueBrowseFacets.FacetCount.of("Medicine", 120),
-                    VenueBrowseFacets.FacetCount.of("Oncology", 45)))
-            .jcrQuartiles(List.of(VenueBrowseFacets.FacetCount.of("Q1", 80)))
+            .subjects(List.of(FacetCount.of("Medicine", 120), FacetCount.of("Oncology", 45)))
+            .jcrQuartiles(List.of(FacetCount.of("Q1", 80)))
             .casQuartiles(List.of())
             .countries(List.of())
             .casTop(15)

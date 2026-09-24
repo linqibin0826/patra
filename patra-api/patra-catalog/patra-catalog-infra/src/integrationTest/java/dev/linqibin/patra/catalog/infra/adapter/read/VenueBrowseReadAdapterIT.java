@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.linqibin.commons.query.PageResult;
 import dev.linqibin.commons.query.PagingParams;
+import dev.linqibin.patra.catalog.domain.model.read.portal.FacetCount;
 import dev.linqibin.patra.catalog.domain.model.read.portal.VenueBrowseFacets;
 import dev.linqibin.patra.catalog.domain.model.read.portal.VenueBrowseFilter;
 import dev.linqibin.patra.catalog.domain.model.read.portal.VenueBrowseReadModel;
@@ -317,16 +318,16 @@ class VenueBrowseReadAdapterIT {
     VenueBrowseFacets facets = adapter.facets(filter);
 
     assertThat(facets.subjects())
-        .extracting(VenueBrowseFacets.FacetCount::value)
+        .extracting(FacetCount::value)
         .containsExactlyInAnyOrder("MEDICINE", "BIOLOGY");
     assertThat(facets.jcrQuartiles())
-        .extracting(VenueBrowseFacets.FacetCount::value)
+        .extracting(FacetCount::value)
         .containsExactlyInAnyOrder("Q1", "Q2");
     assertThat(facets.casQuartiles())
-        .extracting(VenueBrowseFacets.FacetCount::value)
+        .extracting(FacetCount::value)
         .containsExactlyInAnyOrder("Q1", "Q2");
     assertThat(facets.countries())
-        .extracting(VenueBrowseFacets.FacetCount::value)
+        .extracting(FacetCount::value)
         .containsExactlyInAnyOrder("US", "CN");
     assertThat(facets.casTop()).isEqualTo(1);
     assertThat(facets.openAccess()).isEqualTo(1);
@@ -353,7 +354,7 @@ class VenueBrowseReadAdapterIT {
     VenueBrowseFacets facets = adapter.facets(filter);
 
     assertThat(facets.jcrQuartiles())
-        .extracting(VenueBrowseFacets.FacetCount::value)
+        .extracting(FacetCount::value)
         .containsExactlyInAnyOrder("Q1", "Q2", "Q3");
   }
 
@@ -377,12 +378,10 @@ class VenueBrowseReadAdapterIT {
     VenueBrowseFacets facets = adapter.facets(filter);
 
     // casQuartiles 受 jcr=Q1 约束，只有 Q1
-    assertThat(facets.casQuartiles())
-        .extracting(VenueBrowseFacets.FacetCount::value)
-        .containsExactly("Q1");
+    assertThat(facets.casQuartiles()).extracting(FacetCount::value).containsExactly("Q1");
     // jcrQuartiles 忽略自身，仍含 Q1 和 Q2
     assertThat(facets.jcrQuartiles())
-        .extracting(VenueBrowseFacets.FacetCount::value)
+        .extracting(FacetCount::value)
         .containsExactlyInAnyOrder("Q1", "Q2");
   }
 
@@ -402,12 +401,8 @@ class VenueBrowseReadAdapterIT {
     VenueBrowseFacets facets = adapter.facets(filter);
 
     // keyword 过滤后只有 j1，所以 subjects 只有 MEDICINE，countries 只有 US
-    assertThat(facets.subjects())
-        .extracting(VenueBrowseFacets.FacetCount::value)
-        .containsExactly("MEDICINE");
-    assertThat(facets.countries())
-        .extracting(VenueBrowseFacets.FacetCount::value)
-        .containsExactly("US");
+    assertThat(facets.subjects()).extracting(FacetCount::value).containsExactly("MEDICINE");
+    assertThat(facets.countries()).extracting(FacetCount::value).containsExactly("US");
   }
 
   @Test

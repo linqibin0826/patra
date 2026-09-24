@@ -33,8 +33,8 @@
 
           <li data-task-status="pending"><a href="#task-N">Task N — [任务名]</a></li>
           -->
-          <li data-task-status="pending"><a href="#task-1">Task 1 — FacetCount 顶层 record，期刊侧引用迁移</a></li>
-          <li data-task-status="pending"><a href="#task-2">Task 2 — PublicationSearchSort 排序枚举</a></li>
+          <li data-task-status="done"><a href="#task-1">Task 1 — FacetCount 顶层 record，期刊侧引用迁移</a></li>
+          <li data-task-status="in-progress"><a href="#task-2">Task 2 — PublicationSearchSort 排序枚举</a></li>
           <li data-task-status="pending"><a href="#task-3">Task 3 — PublicationSearchFilter 过滤 record</a></li>
           <li data-task-status="pending"><a href="#task-4">Task 4 — EvidenceLevel.typeValuesOf 暴露映射表</a></li>
           <li data-task-status="pending"><a href="#task-5">Task 5 — InlineMarkup 标签白名单与可见纯文本</a></li>
@@ -192,7 +192,7 @@ docs/patra/specs/2026-09-24-pap-52-publication-search-endpoint-design.html  <spa
       每开始任务/步骤改 in-progress，完成改 done。遇阻塞改 blocked，并在右栏 notes-panel 追加 data-type="other" entry 说明阻塞原因。
       -->
 
-      <article class="task" id="task-1" data-status="pending">
+      <article class="task" id="task-1" data-status="done">
         <header>
           <h2>任务 1：FacetCount 顶层 record，期刊侧引用迁移</h2>
           <dl class="files">
@@ -201,7 +201,7 @@ docs/patra/specs/2026-09-24-pap-52-publication-search-endpoint-design.html  <spa
           </dl>
         </header>
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：写失败测试 FacetCountTest</strong>
 <pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-domain/src/test/java/dev/linqibin/patra/catalog/domain/model/read/portal/FacetCountTest.java
 package dev.linqibin.patra.catalog.domain.model.read.portal;
@@ -223,12 +223,12 @@ class FacetCountTest {
   }
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：运行测试确认编译失败</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:test --tests "*FacetCountTest"</code></p>
             <p>预期：编译错误 <code>cannot find symbol FacetCount</code></p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：创建 FacetCount</strong>
 <pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/linqibin/patra/catalog/domain/model/read/portal/FacetCount.java
 package dev.linqibin.patra.catalog.domain.model.read.portal;
@@ -251,20 +251,20 @@ public record FacetCount(String value, long count) {
   }
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：VenueBrowseFacets 删内嵌 FacetCount，改引用顶层</strong>
 <p>在 <code>VenueBrowseFacets.java</code> 中删除整个内嵌 <code>public record FacetCount(...) {...}</code> 块（含其 JavaDoc）。四个 <code>List&lt;FacetCount&gt;</code> 字段因同包无需 import，其余不变。</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：更新四处引用</strong>
 <p>把以下文件里所有 <code>VenueBrowseFacets.FacetCount</code> 文本替换为 <code>FacetCount</code>，并在跨包文件加 <code>import dev.linqibin.patra.catalog.domain.model.read.portal.FacetCount;</code>：</p><ul><li><code>VenueBrowseReadAdapter.java</code>（4 处 <code>VenueBrowseFacets.FacetCount.of(...)</code>）</li><li><code>VenueBrowseReadAdapterIT.java</code>（5 处 <code>VenueBrowseFacets.FacetCount::value</code>）</li><li><code>PortalApiConverter.java</code>（<code>toFacetCountResponses(List&lt;VenueBrowseFacets.FacetCount&gt;)</code> 参数类型）</li><li><code>PortalVenueControllerIT.java</code>（3 处 <code>VenueBrowseFacets.FacetCount.of(...)</code>）</li></ul>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：运行测试与编译验证</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:test --tests "*FacetCountTest" :patra-api:patra-catalog:patra-catalog-infra:compileIntegrationTestJava :patra-api:patra-catalog:patra-catalog-adapter:compileIntegrationTestJava</code></p>
             <p>预期：BUILD SUCCESSFUL，FacetCountTest 1 passed</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7：Commit</strong>
 <pre><code class="lang-bash">git add patra-api/patra-catalog
 git commit -m "refactor(catalog): FacetCount 抽为顶层读模型，期刊 facets 改引用 (PAP-52)"</code></pre>
@@ -272,7 +272,7 @@ git commit -m "refactor(catalog): FacetCount 抽为顶层读模型，期刊 face
         </ol>
       </article>
 
-      <article class="task" id="task-2" data-status="pending">
+      <article class="task" id="task-2" data-status="in-progress">
         <header>
           <h2>任务 2：PublicationSearchSort 排序枚举</h2>
           <dl class="files">

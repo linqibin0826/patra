@@ -5,6 +5,7 @@ import dev.linqibin.patra.catalog.adapter.rest.portal.response.PortalPublication
 import dev.linqibin.patra.catalog.adapter.rest.portal.response.PortalVenueBrowseResponse;
 import dev.linqibin.patra.catalog.adapter.rest.portal.response.PortalVenueDetailResponse;
 import dev.linqibin.patra.catalog.adapter.rest.portal.response.PortalVenueFacetsResponse;
+import dev.linqibin.patra.catalog.domain.model.read.portal.FacetCount;
 import dev.linqibin.patra.catalog.domain.model.read.portal.PortalPaperReadModel;
 import dev.linqibin.patra.catalog.domain.model.read.portal.PublicationDetailReadModel;
 import dev.linqibin.patra.catalog.domain.model.read.portal.VenueBrowseFacets;
@@ -89,7 +90,7 @@ public class PortalApiConverter {
   }
 
   private List<PortalVenueFacetsResponse.FacetCountResponse> toFacetCountResponses(
-      List<VenueBrowseFacets.FacetCount> facets) {
+      List<FacetCount> facets) {
     return facets.stream()
         .map(f -> PortalVenueFacetsResponse.FacetCountResponse.of(f.value(), f.count()))
         .toList();
