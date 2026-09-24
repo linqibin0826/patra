@@ -59,6 +59,23 @@ assert_field "patra-learn/src/app/page.tsx" '.portal_changed' 'false' "learn 不
 assert_field "docs/foo.md" '.learn_changed' 'false' "docs-only 不触发 learn"
 assert_field ".github/workflows/ci.yml" '.learn_changed' 'true' "workflow 额外含 learn"
 
+echo "== 场景 10：纯基建路径（应用以外的 compose 栈 / 运维脚本）→ 不触发后端 =="
+assert_field "patra-infra/scripts/compose-all.sh" '.backend_units' '[]' "运维脚本 backend 空"
+assert_field "patra-infra/scripts/compose-all.sh" '.full_run' 'false' "运维脚本非全量"
+assert_field "patra-infra/docker/docker-compose.tailnet.yaml" '.backend_units' '[]' "tailnet 栈 backend 空"
+assert_field "patra-infra/docker/docker-compose.core.yaml" '.backend_units' '[]' "core 栈 backend 空"
+assert_field "patra-infra/docker/prometheus/prometheus.yml" '.backend_units' '[]' "基建栈配置目录 backend 空"
+assert_field "patra-infra/docker/.env.dev" '.backend_units' '[]' "基建栈 .env.dev backend 空"
+assert_field "patra-infra/docker/docker-compose.tailnet.yaml" '.docs_only' 'false' "纯基建不算 docs_only"
+F="$(printf 'patra-infra/docker/docker-compose.tailnet.yaml\npatra-api/patra-catalog/patra-catalog-infra/src/main/java/X.java')"
+assert_field "$F" '.backend_units' '["catalog"]' "基建 + catalog 混合只跑 catalog"
+
+echo "== 场景 11：应用编排与应用环境变量仍保守全量 =="
+assert_field "patra-infra/docker/docker-compose.apps.yaml" '.full_run' 'true' "apps 栈全量"
+assert_field "patra-infra/docker/service.Dockerfile" '.full_run' 'true' "共享 Dockerfile 全量"
+assert_field "patra-infra/docker/.env.catalog" '.full_run' 'true' "应用 .env.<svc> 全量"
+assert_field "patra-infra/docker/.env.common" '.full_run' 'true' "应用 .env.common 全量"
+
 echo
 echo "通过 $PASS / 失败 $FAIL"
 [ "$FAIL" -eq 0 ]

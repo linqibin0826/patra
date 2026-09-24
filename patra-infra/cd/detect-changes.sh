@@ -44,6 +44,17 @@ classify() {
       patra-infra/docker/service.Dockerfile|patra-infra/docker/docker-compose.apps.yaml) full=true; docs_all=false; continue;;
       patra-infra/cd/*) full=true; docs_all=false; continue;;
     esac
+    # 纯基建路径：应用以外的 compose 栈及其配置、基建栈 .env、运维脚本、本地 OTel agent 配置。
+    # 不进应用镜像也不影响应用容器，由 mini 上 compose-all.sh 手动生效 → 不触发任何后端单元。
+    # 注意 apps 栈与 service.Dockerfile 已在上面判全量；应用容器的 .env.common / .env.<svc> 未列入，
+    # 仍走下方「模块图外 → 全量」保守分支（改了需重部署才生效）。
+    case "$f" in
+      patra-infra/scripts/*|patra-infra/docker/docker-compose.*.yaml) docs_all=false; continue;;
+      patra-infra/docker/.env|patra-infra/docker/.env.dev|patra-infra/docker/*.example) docs_all=false; continue;;
+      patra-infra/docker/alertmanager/*|patra-infra/docker/grafana/*|patra-infra/docker/loki/*) docs_all=false; continue;;
+      patra-infra/docker/mysql-ops/*|patra-infra/docker/otel-agent/*|patra-infra/docker/otel-collector/*) docs_all=false; continue;;
+      patra-infra/docker/postgres/*|patra-infra/docker/prometheus/*|patra-infra/docker/tempo/*) docs_all=false; continue;;
+    esac
     case "$f" in patra-portal/*) portal=true; docs_all=false; continue;; esac
     case "$f" in patra-learn/*) LEARN_CHANGED=true; docs_all=false; continue;; esac
     case "$f" in *.md|docs/*|.gitignore|.editorconfig|LICENSE|.claude/*) continue;; esac
