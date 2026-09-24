@@ -35,7 +35,7 @@
           -->
           <li data-task-status="done"><a href="#task-1">Task 1 — FacetCount 顶层 record，期刊侧引用迁移</a></li>
           <li data-task-status="done"><a href="#task-2">Task 2 — PublicationSearchSort 排序枚举</a></li>
-          <li data-task-status="pending"><a href="#task-3">Task 3 — PublicationSearchFilter 过滤 record</a></li>
+          <li data-task-status="done"><a href="#task-3">Task 3 — PublicationSearchFilter 过滤 record</a></li>
           <li data-task-status="pending"><a href="#task-4">Task 4 — EvidenceLevel.typeValuesOf 暴露映射表</a></li>
           <li data-task-status="pending"><a href="#task-5">Task 5 — InlineMarkup 标签白名单与可见纯文本</a></li>
           <li data-task-status="pending"><a href="#task-6">Task 6 — PublicationSearchFacets、PortalPaperReadModel 扩展、PublicationSearchReadPort</a></li>
@@ -377,7 +377,7 @@ git commit -m "feat(catalog): 文献检索排序枚举 PublicationSearchSort (PA
         </ol>
       </article>
 
-      <article class="task" id="task-3" data-status="pending">
+      <article class="task" id="task-3" data-status="done">
         <header>
           <h2>任务 3：PublicationSearchFilter 过滤 record</h2>
           <dl class="files">
@@ -385,7 +385,7 @@ git commit -m "feat(catalog): 文献检索排序枚举 PublicationSearchSort (PA
           </dl>
         </header>
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：写失败测试</strong>
 <pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-domain/src/test/java/dev/linqibin/patra/catalog/domain/model/read/portal/PublicationSearchFilterTest.java
 package dev.linqibin.patra.catalog.domain.model.read.portal;
@@ -437,12 +437,12 @@ class PublicationSearchFilterTest {
   }
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：运行测试确认失败</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:test --tests "*PublicationSearchFilterTest"</code></p>
             <p>预期：编译错误 <code>cannot find symbol PublicationSearchFilter</code></p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：创建 record</strong>
 <pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/linqibin/patra/catalog/domain/model/read/portal/PublicationSearchFilter.java
 package dev.linqibin.patra.catalog.domain.model.read.portal;
@@ -496,12 +496,12 @@ public record PublicationSearchFilter(
   }
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：运行测试确认通过</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:test --tests "*PublicationSearchFilterTest"</code></p>
             <p>预期：3 passed</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：Commit</strong>
 <pre><code class="lang-bash">git add patra-api/patra-catalog/patra-catalog-domain
 git commit -m "feat(catalog): 文献检索过滤 record PublicationSearchFilter (PAP-52)"</code></pre>
