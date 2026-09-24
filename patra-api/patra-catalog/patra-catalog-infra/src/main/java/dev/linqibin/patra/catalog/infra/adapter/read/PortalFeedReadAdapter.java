@@ -40,18 +40,19 @@ public class PortalFeedReadAdapter implements PortalFeedReadPort {
   }
 
   private PortalPaperReadModel toReadModel(PortalFeedRow row) {
-    return new PortalPaperReadModel(
-        row.getId(),
-        row.getTitle(),
-        row.getVenueName(),
-        row.getPublicationYear(),
-        splitAuthors(row.getAuthorNames()),
-        row.getCitationCount(),
-        row.getDoi(),
-        row.getPmid(),
-        row.getProvenanceCode(),
-        row.getStudyType(),
-        row.getLastSyncedAt());
+    return PortalPaperReadModel.builder()
+        .id(row.getId())
+        .title(row.getTitle())
+        .venueName(row.getVenueName())
+        .publicationYear(row.getPublicationYear())
+        .authors(splitAuthors(row.getAuthorNames()))
+        .citationCount(row.getCitationCount())
+        .doi(row.getDoi())
+        .pmid(row.getPmid())
+        .provenanceCode(row.getProvenanceCode())
+        .studyType(row.getStudyType())
+        .lastSyncedAt(row.getLastSyncedAt())
+        .build();
   }
 
   private List<String> splitAuthors(String authorNames) {

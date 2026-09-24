@@ -38,7 +38,7 @@
           <li data-task-status="done"><a href="#task-3">Task 3 — PublicationSearchFilter 过滤 record</a></li>
           <li data-task-status="done"><a href="#task-4">Task 4 — EvidenceLevel.typeValuesOf 暴露映射表</a></li>
           <li data-task-status="done"><a href="#task-5">Task 5 — InlineMarkup 标签白名单与可见纯文本</a></li>
-          <li data-task-status="pending"><a href="#task-6">Task 6 — PublicationSearchFacets、PortalPaperReadModel 扩展、PublicationSearchReadPort</a></li>
+          <li data-task-status="done"><a href="#task-6">Task 6 — PublicationSearchFacets、PortalPaperReadModel 扩展、PublicationSearchReadPort</a></li>
           <li data-task-status="pending"><a href="#task-7">Task 7 — infra 列表查询：DAO + 投影 + 适配器 search（组装 / 排序 / 片段）</a></li>
           <li data-task-status="pending"><a href="#task-8">Task 8 — infra 筛选条件：逐条 Red-Green 追加共享 WHERE</a></li>
           <li data-task-status="pending"><a href="#task-9">Task 9 — infra facets：years / types / evidence / languages / openAccess / total / lastSyncedAt</a></li>
@@ -866,7 +866,7 @@ git commit -m "feat(catalog): InlineMarkup 标签白名单与可见纯文本派�
         </ol>
       </article>
 
-      <article class="task" id="task-6" data-status="pending">
+      <article class="task" id="task-6" data-status="done">
         <header>
           <h2>任务 6：PublicationSearchFacets、PortalPaperReadModel 扩展、PublicationSearchReadPort</h2>
           <dl class="files">
@@ -875,7 +875,7 @@ git commit -m "feat(catalog): InlineMarkup 标签白名单与可见纯文本派�
           </dl>
         </header>
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：写失败测试 PublicationSearchFacetsTest</strong>
 <pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-domain/src/test/java/dev/linqibin/patra/catalog/domain/model/read/portal/PublicationSearchFacetsTest.java
 package dev.linqibin.patra.catalog.domain.model.read.portal;
@@ -916,7 +916,7 @@ class PublicationSearchFacetsTest {
   }
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：写失败测试 PortalPaperReadModelTest</strong>
 <pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-domain/src/test/java/dev/linqibin/patra/catalog/domain/model/read/portal/PortalPaperReadModelTest.java
 package dev.linqibin.patra.catalog.domain.model.read.portal;
@@ -959,12 +959,12 @@ class PortalPaperReadModelTest {
   }
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：运行两个测试确认编译失败</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:test --tests "*PublicationSearchFacetsTest" --tests "*PortalPaperReadModelTest"</code></p>
             <p>预期：编译错误：<code>PublicationSearchFacets</code> 不存在、<code>PortalPaperReadModel.builder()</code> 不存在</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：创建 PublicationSearchFacets</strong>
 <pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/linqibin/patra/catalog/domain/model/read/portal/PublicationSearchFacets.java
 package dev.linqibin.patra.catalog.domain.model.read.portal;
@@ -1006,7 +1006,7 @@ public record PublicationSearchFacets(
   }
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：PortalPaperReadModel 改 @Builder 并加三字段（整文件替换）</strong>
 <pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/linqibin/patra/catalog/domain/model/read/portal/PortalPaperReadModel.java
 package dev.linqibin.patra.catalog.domain.model.read.portal;
@@ -1064,7 +1064,7 @@ public record PortalPaperReadModel(
   }
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：创建 PublicationSearchReadPort</strong>
 <pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/linqibin/patra/catalog/domain/port/read/PublicationSearchReadPort.java
 package dev.linqibin.patra.catalog.domain.port.read;
@@ -1098,7 +1098,7 @@ public interface PublicationSearchReadPort {
   PublicationSearchFacets facets(PublicationSearchFilter filter);
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7：编译适配两处旧构造调用</strong>
 <p><code>PortalFeedReadAdapter.toReadModel</code> 改为 builder（该类任务 11 删除，这里只保编译）：</p><pre><code class="lang-java">  private PortalPaperReadModel toReadModel(PortalFeedRow row) {
     return PortalPaperReadModel.builder()
@@ -1129,12 +1129,12 @@ public interface PublicationSearchReadPort {
             .lastSyncedAt(Instant.parse("2026-01-01T00:00:00Z"))
             .build();</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 8：运行测试与全模块编译</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:test :patra-api:patra-catalog:patra-catalog-infra:compileIntegrationTestJava :patra-api:patra-catalog:patra-catalog-app:compileTestJava :patra-api:patra-catalog:patra-catalog-adapter:compileIntegrationTestJava</code></p>
             <p>预期：BUILD SUCCESSFUL，domain 新增 4 个测试通过</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 9：Commit</strong>
 <pre><code class="lang-bash">git add patra-api/patra-catalog
 git commit -m "feat(catalog): 文献检索读模型与读端口，列表读模型加 venueId/evidenceLevel/abstractSnippet (PAP-52)"</code></pre>

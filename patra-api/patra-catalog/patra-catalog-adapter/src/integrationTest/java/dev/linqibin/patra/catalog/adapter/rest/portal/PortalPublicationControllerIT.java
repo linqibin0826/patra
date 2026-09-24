@@ -47,18 +47,19 @@ class PortalPublicationControllerIT {
   @DisplayName("GET /portal/publications 返回 200 + 对齐前端的分页信封")
   void shouldReturnFeedEnvelope() {
     PortalPaperReadModel model =
-        new PortalPaperReadModel(
-            100428830191L,
-            "Semaglutide 长期心血管转归",
-            "N Engl J Med",
-            2026,
-            List.of("Perkovic V.", "Tuttle K. R."),
-            142,
-            "10.1056/NEJMoa2603120",
-            "39812044",
-            "PUBMED",
-            "Journal Article",
-            Instant.parse("2026-01-01T00:00:00Z"));
+        PortalPaperReadModel.builder()
+            .id(100428830191L)
+            .title("Semaglutide 长期心血管转归")
+            .venueName("N Engl J Med")
+            .publicationYear(2026)
+            .authors(List.of("Perkovic V.", "Tuttle K. R."))
+            .citationCount(142)
+            .doi("10.1056/NEJMoa2603120")
+            .pmid("39812044")
+            .provenanceCode("PUBMED")
+            .studyType("Journal Article")
+            .lastSyncedAt(Instant.parse("2026-01-01T00:00:00Z"))
+            .build();
     when(portalFeedQueryService.listFeed(any(PortalFeedQuery.class)))
         .thenReturn(PageResult.of(List.of(model), 1, 14, 137));
 
