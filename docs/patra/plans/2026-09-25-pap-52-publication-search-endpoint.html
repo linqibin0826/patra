@@ -43,7 +43,7 @@
           <li data-task-status="done"><a href="#task-8">Task 8 — infra 筛选条件：逐条 Red-Green 追加共享 WHERE</a></li>
           <li data-task-status="done"><a href="#task-9">Task 9 — infra facets：years / types / evidence / languages / openAccess / total / lastSyncedAt</a></li>
           <li data-task-status="done"><a href="#task-10">Task 10 — app：PortalPublicationSearchQueryService</a></li>
-          <li data-task-status="pending"><a href="#task-11">Task 11 — app：feed 迁到新端口，删除 PortalFeed* 读端六类与其 IT</a></li>
+          <li data-task-status="done"><a href="#task-11">Task 11 — app：feed 迁到新端口，删除 PortalFeed* 读端六类与其 IT</a></li>
           <li data-task-status="pending"><a href="#task-12">Task 12 — adapter 响应：EvidenceLevelView / FacetCountResponse 顶层，PortalPaperResponse 三字段，converter</a></li>
           <li data-task-status="pending"><a href="#task-13">Task 13 — adapter 请求：PortalPublicationSearchRequest 校验 + RepeatedParamListEditor</a></li>
           <li data-task-status="pending"><a href="#task-14">Task 14 — adapter 端点：search / facets + @InitBinder + 控制器 IT</a></li>
@@ -2529,7 +2529,7 @@ git commit -m "feat(catalog): 文献检索查询服务 PortalPublicationSearchQu
         </ol>
       </article>
 
-      <article class="task" id="task-11" data-status="pending">
+      <article class="task" id="task-11" data-status="done">
         <header>
           <h2>任务 11：app：feed 迁到新端口，删除 PortalFeed* 读端六类与其 IT</h2>
           <dl class="files">
@@ -2538,7 +2538,7 @@ git commit -m "feat(catalog): 文献检索查询服务 PortalPublicationSearchQu
           </dl>
         </header>
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：改写 PortalFeedQueryServiceTest 为失败测试（mock 新端口）</strong>
 <pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-app/src/test/java/dev/linqibin/patra/catalog/app/usecase/portal/query/PortalFeedQueryServiceTest.java（整文件替换）
 package dev.linqibin.patra.catalog.app.usecase.portal.query;
@@ -2608,12 +2608,12 @@ class PortalFeedQueryServiceTest {
   }
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：运行测试确认失败</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-app:test --tests "*PortalFeedQueryServiceTest"</code></p>
             <p>预期：<code>@InjectMocks</code> 构造失败或断言失败（服务仍依赖 PortalFeedReadPort）</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：改写 PortalFeedQueryService</strong>
 <pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-app/src/main/java/dev/linqibin/patra/catalog/app/usecase/portal/query/PortalFeedQueryService.java（整文件替换）
 package dev.linqibin.patra.catalog.app.usecase.portal.query;
@@ -2680,12 +2680,12 @@ public class PortalFeedQueryService {
   }
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：运行测试确认通过</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-app:test --tests "*PortalFeedQueryServiceTest"</code></p>
             <p>预期：3 passed</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：删除旧读端七个文件</strong>
 <pre><code class="lang-bash">git rm patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/linqibin/patra/catalog/domain/model/read/portal/PortalFeedFilter.java \
        patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/linqibin/patra/catalog/domain/model/read/portal/PortalFeedTab.java \
@@ -2695,12 +2695,12 @@ public class PortalFeedQueryService {
        patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/linqibin/patra/catalog/infra/persistence/dao/PortalFeedDao.java \
        patra-api/patra-catalog/patra-catalog-infra/src/integrationTest/java/dev/linqibin/patra/catalog/infra/adapter/read/PortalFeedReadAdapterIT.java</code></pre><p>然后全仓 grep 确认无残留引用：</p><pre><code class="lang-bash">grep -rn "PortalFeedFilter\|PortalFeedTab\|PortalFeedReadPort\|PortalFeedReadAdapter\|PortalFeedRow\|PortalFeedDao" patra-api/ --include=*.java --include=*.md --include=*.html | grep -v build/</code></pre><p>预期：无输出。若 README / spec 有提及，一并更新文案。</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：全模块编译 + 单测</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:check :patra-api:patra-catalog:patra-catalog-app:check :patra-api:patra-catalog:patra-catalog-infra:compileIntegrationTestJava :patra-api:patra-catalog:patra-catalog-adapter:compileIntegrationTestJava</code></p>
             <p>预期：BUILD SUCCESSFUL</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7：Commit</strong>
 <pre><code class="lang-bash">git add patra-api/patra-catalog
 git commit -m "refactor(catalog): 首页 feed 迁到文献检索读端口，删除 PortalFeed 读端 (PAP-52)"</code></pre>
