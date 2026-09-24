@@ -108,9 +108,11 @@ PR squash-merge 时 GitHub 会用 PR title 作为 commit message，所以 **PR �
 
 ### CodeRabbit AI Review
 
+仓库另有 Codex（`chatgpt-codex-connector`）在 PR ready 时自动评审，与 CodeRabbit 同为正式 reviewer，流程见 `CLAUDE.md`「PR 与代码评审」。
+
 `.coderabbit.yaml` 配置（PAP-22 深化版）：
 
-- **触发**：每次 push 到 PR 分支自动 review（drafts PR 不触发；title 含 `WIP` / `DO NOT MERGE` / `SKIP REVIEW` 不触发）
+- **触发**：不自动评审；PR 转 ready 后由 Claude 发 `@coderabbitai review` 触发**首评**，不复评（0 star 公开仓库的 OSS 额度仅每小时 1 次 PR 评审）。drafts PR、title 含 `WIP` / `DO NOT MERGE` / `SKIP REVIEW` 不评
 - **profile**：`chill`（降噪优先，只报高置信度 bug 与设计风险）+ `request_changes_workflow=false`（**不阻断 PR**，决策 C）
 - **语言**：中文 review；engineer 语气，禁礼貌赞美 + 凑评论
 - **分层 prompt**：按 `**/patra-*-{domain,app,adapter,infra}/**/*.java` 下达不同的 review 指南（domain 禁框架依赖、app 不放业务规则、adapter 关注 DTO 双向耦合等）

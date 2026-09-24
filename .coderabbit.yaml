@@ -1,7 +1,8 @@
 # yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
 # Patra CodeRabbit 配置。原则：降 rate limit（关增量）+ 降噪 + 工具聚合 + TDD 约束 + Linear。
-# 与 Claude Code /review 分工：CodeRabbit=广度（行级 nitpick + lint/安全工具聚合 + AC），
-# Claude=深度（六边形架构 + DDD 领域逻辑）。各 PR 评一次，复评由 Claude 手动 @ 触发。
+# 分工：CodeRabbit=广度（行级 nitpick + lint/安全工具聚合 + AC），Codex=PR ready 时自动的补充评审，
+# Claude=深度（六边形架构 + DDD 领域逻辑）。每个 PR 只做首评（Claude 手动 @ 触发），不复评：
+# 0 star 公开仓库的 OSS 额度仅每小时 1 次 PR 评审。
 language: zh-CN
 tone_instructions: 用中文 review；工程师同事语气，直接指出 bug 与设计风险；如无明确问题不发表评论；避免礼貌性赞美。
 
@@ -27,7 +28,7 @@ reviews:
   auto_apply_labels: true
 
   auto_review:
-    enabled: false                        # 关自动评审：首评与复评均由 @coderabbitai review 手动触发
+    enabled: false                        # 关自动评审：首评由 @coderabbitai review 手动触发，不复评
     auto_incremental_review: false        # 关增量复评（enabled: false 时冗余，双保险留着）
     drafts: false
     ignore_title_keywords:

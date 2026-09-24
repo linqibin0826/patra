@@ -71,10 +71,16 @@
 
 ## PR 与代码评审
 
-仓库唯一 AI reviewer 为 **CodeRabbit**（行级 nitpick + lint/安全工具聚合 + Linear AC 对齐）。仓库不自动评审（`auto_review.enabled: false`），首评与复评均由 Claude 在 PR 评论区发 `@coderabbitai review` 触发。
+仓库有两位正式 AI reviewer，分工互补：
 
-- **评审由 Claude 驱动，用户不参与**：开发期 PR 挂 `draft`（不评）→ 完工转 ready 后发 `@coderabbitai review` 触发首评 → 处理完**一批**反馈、推送后再 @ 触发复评。不是每次 push 都 @。
-- **必启 Monitor**：每次 `gh pr create` 后，同一工作会话内立即启动 Monitor 并绑定该 PR，覆盖**两条流**（CodeRabbit + 人工），持续到 PR 合并或关闭。
+- **CodeRabbit**：行级 nitpick + lint/安全工具聚合（gitleaks / trivy / fbinfer 等）+ Linear AC 对齐。不自动评审（`auto_review.enabled: false`），由 Claude 在 PR 评论区发 `@coderabbitai review` 触发。
+- **Codex**（`chatgpt-codex-connector`）：PR 以非 draft 打开或转 ready 时自动评审，不占 CodeRabbit 额度。
+
+规则：
+
+- **评审由 Claude 驱动，用户不参与**：开发期 PR 挂 `draft`（两位都不评）→ 完工转 ready：Codex 自动首评，Claude 发 `@coderabbitai review` 触发 CodeRabbit 首评。
+- **只做首评，不复评**：CodeRabbit 对 0 star 公开仓库的 OSS 额度仅**每小时 1 次** PR 评审（滚动窗口），复评几乎必然限流。修复是否正确由 Claude 自行验证 + CI 兜底，不再 @ 任何 reviewer 复评。首评被限流时，等距上次评审满 60 分钟后再触发一次。
+- **必启 Monitor**：每次 `gh pr create` 后，同一工作会话内立即启动 Monitor 并绑定该 PR，覆盖**两条流**（AI reviewer + 人工），持续到 PR 合并或关闭。
 - **处理状态**：对每条 review 意见必须在 PR 评论中明确给出处理状态——`已修复`（附 commit SHA）/ `不修复`（附明确理由）。
 
 ## Workspace Layout

@@ -129,7 +129,7 @@ export default function OpenPrArticle() {
                 必须全绿
               </text>
               <text x="380" y="122" textAnchor="middle" fontSize="11.5" fill="#8b929b">
-                CodeRabbit
+                CodeRabbit + Codex
               </text>
               <text x="380" y="140" textAnchor="middle" fontSize="11.5" fill="#8b929b">
                 逐行挑毛病
@@ -146,21 +146,27 @@ export default function OpenPrArticle() {
             </svg>
           </div>
           <figcaption className="text-xs text-fog">
-            一个 PR 的完整旅程。前四站可以来回折返（改了再考、考了再评），终点站只有一个：squash
-            合并进 main。
+            一个 PR 的完整旅程。改了代码就得重新考（CI
+            每次推送都重跑），评审则只评一次；终点站只有一个：squash 合并进 main。
           </figcaption>
         </figure>
       </ArticleSection>
 
-      <ArticleSection title="AI 评审员：CodeRabbit">
+      <ArticleSection title="AI 评审员：CodeRabbit + Codex">
         <p>
-          这个仓库是单人项目，没有同事帮你看代码——但评审环节没有省掉，替补上场的是 CodeRabbit，一个
-          AI 评审员。PR 完工转 ready 后在评论区喊一声 <InlineCode>@coderabbitai review</InlineCode>
-          ，它就逐行挑毛病：可疑的空指针、漏掉的边界条件、不一致的命名，都会以行级评论的形式贴出来。
+          这个仓库是单人项目，没有同事帮你看代码——但评审环节没有省掉，替补上场的是两位 AI 评审员。PR
+          完工转 ready 时 Codex 自动开评；再在评论区喊一声{" "}
+          <InlineCode>@coderabbitai review</InlineCode>
+          ，CodeRabbit 也逐行挑毛病，还顺带跑一批安全与 lint
+          扫描。可疑的空指针、漏掉的边界条件、不一致的命名，都会以行级评论的形式贴出来。
         </p>
         <p>
-          对每条意见的处理规则很硬：要么修掉（附上修复的提交号），要么明确回复不修的理由——不允许已读不回。别小看它：这套
-          CI/CD 体系自己改造时的 PR 里，它就真抓出过 bug。
+          每个 PR 只评一次，不复评：CodeRabbit 给公开小仓库的免费额度只有每小时 1
+          次，改完再评几乎必然被限流。修得对不对，交给自己验证和 CI 重跑来把关。
+        </p>
+        <p>
+          对每条意见的处理规则很硬：要么修掉（附上修复的提交号），要么明确回复不修的理由——不允许已读不回。别小看它们：这套
+          CI/CD 体系自己改造时的 PR 里，它们就真抓出过 bug。
         </p>
       </ArticleSection>
 
