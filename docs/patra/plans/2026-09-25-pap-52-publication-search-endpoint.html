@@ -47,7 +47,7 @@
           <li data-task-status="done"><a href="#task-12">Task 12 — adapter 响应：EvidenceLevelView / FacetCountResponse 顶层，PortalPaperResponse 三字段，converter</a></li>
           <li data-task-status="done"><a href="#task-13">Task 13 — adapter 请求：PortalPublicationSearchRequest 校验 + RepeatedParamListEditor</a></li>
           <li data-task-status="done"><a href="#task-14">Task 14 — adapter 端点：search / facets + @InitBinder + 控制器 IT</a></li>
-          <li data-task-status="pending"><a href="#task-15">Task 15 — 全量验证、spec 收尾、PR</a></li>
+          <li data-task-status="done"><a href="#task-15">Task 15 — 全量验证、spec 收尾、PR</a></li>
         </ol>
       </li>
       <li><a href="#self-check">自检结果</a></li>
@@ -65,7 +65,7 @@
         <span>📅 2026-09-25</span>
         <span>🌿 feat/pap-52-publication-search</span>
         <span>📋 plan</span>
-        <span class="status-pill">draft</span>
+        <span class="status-pill">done</span>
       </div>
 
       <aside class="for-ai-worker">
@@ -3400,7 +3400,7 @@ git commit -m "feat(catalog): 文献检索端点 GET /portal/publications/search
         </ol>
       </article>
 
-      <article class="task" id="task-15" data-status="pending">
+      <article class="task" id="task-15" data-status="done">
         <header>
           <h2>任务 15：全量验证、spec 收尾、PR</h2>
           <dl class="files">
@@ -3408,17 +3408,17 @@ git commit -m "feat(catalog): 文献检索端点 GET /portal/publications/search
           </dl>
         </header>
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：catalog 四模块 check + infra / adapter integrationTest</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:check :patra-api:patra-catalog:patra-catalog-app:check :patra-api:patra-catalog:patra-catalog-infra:check :patra-api:patra-catalog:patra-catalog-infra:integrationTest :patra-api:patra-catalog:patra-catalog-adapter:check :patra-api:patra-catalog:patra-catalog-adapter:integrationTest</code></p>
             <p>预期：BUILD SUCCESSFUL；spotless / spotbugs / 单测 / IT 全绿</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：boot 模块 ArchUnit 架构测试（六边形分层约束）</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-boot:test</code></p>
             <p>预期：BUILD SUCCESSFUL。它不启动 Spring 上下文；DAO 17 个 <code>@Param</code> 与 SQL 的一致性由 infra <code>@DataJpaTest</code> 在仓库 bean 初始化时校验，任务 7–9 的 IT 已覆盖（报 <code>Using named parameters for method ... not found in annotated query</code> 即在那里失败）</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：Mac mini 真实数据冒烟（网关经 tailscale）</strong>
 <pre><code class="lang-bash">BASE=http://100.103.73.27:9528/patra-catalog/portal/publications
 curl -s "$BASE/search?q=diabetes&amp;pageSize=2" | jq '{total, first: .items[0] | {title, venueId, evidenceLevel, abstractSnippet}}'
@@ -3427,11 +3427,11 @@ curl -s "$BASE/search/facets" | jq '{total, lastSyncedAt, evidence, years: .year
 curl -s "$BASE?tab=recent&amp;pageSize=1" | jq '.items[0] | {venueId, evidenceLevel, abstractSnippet}'
 curl -s -o /dev/null -w "%{http_code}\n" "$BASE/search?sort=cited"</code></pre><p>预期：第一条 total &gt; 0 且三个新字段有值；第二条 total = 3（库里 Phase III 共 3 行）；facets 的 evidence 6 项、lastSyncedAt 为 2026-08-30 附近；feed 首条有三个新字段；最后一条输出 <code>422</code>。这一步要先把分支部署到 mini 或本地起 catalog 指向 mini 库，未部署则跳过并在 notes 记 other。</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：spec 收尾</strong>
 <p><code>docs/patra/specs/2026-09-24-pap-52-publication-search-endpoint-design.html</code>：① <code>&lt;span class="status-pill"&gt;draft&lt;/span&gt;</code> 改 <code>implemented</code>；② §3 表头「校验（400）」与 §7.1 里的 400 改 422；③ 改造文件清单 #29 <code>PortalVenueFacetsResponse</code> 由 keep 改 modify（删内嵌 FacetCountResponse）；④ 文件清单追加 <code>RepeatedParamListEditor</code> / <code>FacetCountResponse</code> / <code>PublicationLastSyncedRow</code> 三行。本 plan 的 status-pill 改 <code>done</code>。</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：Commit 收尾文档；push 与开 PR 需用户确认后执行</strong>
 <pre><code class="lang-bash">git add docs/patra/specs/2026-09-24-pap-52-publication-search-endpoint-design.html docs/patra/plans/2026-09-25-pap-52-publication-search-endpoint.html
 git commit -m "docs(spec): PAP-52 spec/plan 标记实现完成，校验状态码对齐 422 (PAP-52)"</code></pre><p>到此停下，向用户汇报验证结果并<strong>征得确认</strong>后再执行 <code>git push -u origin feat/pap-52-publication-search</code> 与 <code>gh pr create --base main --draft --title "feat(catalog): 文献检索端点 search/facets，feed 迁到同一读端口 (PAP-52)"</code>。PR body 写：Linear PAP-52 / Closes #188、六条决策摘要、验证命令与 mini 冒烟结果。按仓库评审规则：开发期 draft，完工转 ready 触发 Codex，再评论 <code>@coderabbitai review</code>，同一会话内启动 Monitor 盯到合并；每条评审意见回复 已修复（SHA）/ 不修复（理由）。Linear PAP-52 推到 Review 并附 PR 链接。</p>
@@ -3477,6 +3477,22 @@ git commit -m "docs(spec): PAP-52 spec/plan 标记实现完成，校验状态码
     </header>
 
     <ol class="notes-log">
+      <li class="note" data-type="other" data-time="2026-09-25T13:50">
+        <header>
+          <span class="note-type">OTHER</span>
+          <time datetime="2026-09-25T13:50">09-25 13:50</time>
+          <a href="#task-15">§ Task 15</a>
+        </header>
+        <p>步骤 3 的 Mac mini 真实数据冒烟未执行：分支尚未部署到 mini，本地也没有指向 mini 库的 catalog 实例。合并部署后按步骤 3 的 curl 清单补跑（重点：<code>type=Clinical Trial, Phase III</code> 应命中 3 篇、facets.evidence 6 项、feed 首条带三个新字段）。</p>
+      </li>
+      <li class="note" data-type="change" data-time="2026-09-25T13:40">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-09-25T13:40">09-25 13:40</time>
+          <a href="#task-13">§ Task 13</a>
+        </header>
+        <p>plan 写的是 <code>Stream.toList()</code> 直接赋给 record 组件，adapter 的 SpotBugs 报 4 处 <code>EI_EXPOSE_REP</code>（它不认 <code>toList()</code> 的不可变性）。改为外包一层 <code>List.copyOf(...)</code>，与 <code>PortalVenueListRequest</code> 同写法，行为不变。</p>
+      </li>
       <!-- ENTRY TEMPLATE（注释保留供实施期 AI 复制）:
 
       <li class="note" data-type="decision" data-time="YYYY-MM-DDTHH:MM">
@@ -3493,14 +3509,13 @@ git commit -m "docs(spec): PAP-52 spec/plan 标记实现完成，校验状态码
       -->
     </ol>
 
-    <p class="empty-state">no notes yet</p>
 
     <footer class="notes-stats">
       总计:
       <span data-counter="decision">0</span> decisions /
-      <span data-counter="change">0</span> changes /
+      <span data-counter="change">1</span> changes /
       <span data-counter="tradeoff">0</span> tradeoffs /
-      <span data-counter="other">0</span> others
+      <span data-counter="other">1</span> others
     </footer>
   </aside>
 

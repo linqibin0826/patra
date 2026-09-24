@@ -59,10 +59,12 @@ public record PortalPublicationSearchRequest(
 
   /// 紧凑构造器：各 List 归一化（trim + 去空白 token；venue 丢弃 null 元素）后防御性拷贝为不可变列表。
   public PortalPublicationSearchRequest {
-    venue = venue == null ? List.of() : venue.stream().filter(Objects::nonNull).toList();
-    type = normalize(type);
-    evidence = normalize(evidence);
-    lang = normalize(lang);
+    // List.copyOf 让 SpotBugs 认出不可变副本（Stream.toList() 它不认，报 EI_EXPOSE_REP）
+    venue =
+        venue == null ? List.of() : List.copyOf(venue.stream().filter(Objects::nonNull).toList());
+    type = List.copyOf(normalize(type));
+    evidence = List.copyOf(normalize(evidence));
+    lang = List.copyOf(normalize(lang));
   }
 
   /// 年份区间自检：任一为 null 即通过，否则要求 yearFrom ≤ yearTo。

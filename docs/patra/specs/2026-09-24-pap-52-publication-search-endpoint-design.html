@@ -47,7 +47,7 @@
         <span>👤 linqibin</span>
         <span>🎫 PAP-52 / Issue #188</span>
         <span>🎯 spec</span>
-        <span class="status-pill">draft</span>
+        <span class="status-pill">implemented</span>
       </div>
     </header>
 
@@ -95,7 +95,7 @@
       <h2>3. 请求契约</h2>
       <p>两个端点共用一个请求 record <code>PortalPublicationSearchRequest</code>（adapter 层，Spring MVC 自动绑定 query params）。facets 端点忽略 <code>sort</code> / <code>page</code> / <code>pageSize</code>。<strong>多值参数一律用重复参数</strong>（<code>type=Review&amp;type=Clinical%20Trial%2C%20Phase%20III</code>），<strong>不按逗号拆分</strong>：真实类型值含逗号（库里 <code>Clinical Trial, Phase I/II/III/IV/Veterinary</code> 共 19 行），Spring 默认的 <code>String→List</code> 逗号拆分会把它切成两个值而漏掉目标文献。实现：<code>PortalPublicationController</code> 加 <code>@InitBinder</code>，为 <code>List</code> 类型注册一个不拆分的 <code>PropertyEditor</code>，只影响本控制器。编辑器必须同时覆写两个入口：<code>setAsText(String)</code>（单个参数值 → 单元素 <code>List</code>，不拆逗号）与 <code>setValue(Object)</code>（<code>String[]</code> → 逐元素 <code>List</code>）——Spring 的 <code>TypeConverterDelegate</code> 在走 <code>setAsText</code> 之前会先把 <code>String[]</code> 用逗号 join 成一个 String，只实现 <code>setAsText</code> 会让重复参数合并成 <code>"A,B"</code> 一个元素。元素级转换（<code>venue</code> 的 <code>Long</code>）仍由 ConversionService 完成。adapter 单测覆盖单值含逗号与重复参数两种形态，adapter IT 以单个含逗号的 <code>type</code> 值作 Red 起点。期刊端点的逗号约定不动。参数名 camelCase，与 <code>/portal/venues</code> 现有约定（<code>pageSize</code> / <code>casTop</code>）一致，前端 query 名同名零映射。</p>
       <table>
-        <thead><tr><th>参数</th><th>类型</th><th>校验（400）</th><th>语义</th></tr></thead>
+        <thead><tr><th>参数</th><th>类型</th><th>校验（422）</th><th>语义</th></tr></thead>
         <tbody>
           <tr><td><code>q</code></td><td>String</td><td><code>@Size(max=200)</code>；空白视为不传</td><td>标题子串，对剥除内联标记后的标题 <code>ILIKE</code></td></tr>
           <tr><td><code>author</code></td><td>String</td><td><code>@Size(max=200)</code>；空白视为不传</td><td><code>cat_publication_author.display_name</code> 子串 <code>ILIKE</code>，EXISTS 子查询</td></tr>
@@ -248,10 +248,10 @@
       <h2>7. 错误处理与测试</h2>
       <h3>7.1 错误处理</h3>
       <ul>
-        <li>参数校验全部在 adapter 层 request record 收敛为 400，走现有全局校验异常映射，不新增异常类型。</li>
+        <li>参数校验全部在 adapter 层 request record 收敛为 422（现有全局校验异常映射的状态码，<code>PortalPublicationControllerIT</code> 既有断言），不新增异常类型。</li>
         <li><code>evidence</code> 非法值由 <code>@Pattern</code> 拦截，控制器 <code>valueOf(upper)</code> 不会再抛。</li>
         <li>读端口无业务异常。0 命中返回空页；<code>pmid</code> / <code>doi</code> 未命中同样是空页，不是 404。</li>
-        <li>feed 的 tab 非法值：request <code>@Pattern</code> 拦在 400，服务层 <code>IllegalArgumentException</code> 兜底，行为不变。</li>
+        <li>feed 的 tab 非法值：request <code>@Pattern</code> 拦在 422，服务层 <code>IllegalArgumentException</code> 兜底，行为不变。</li>
       </ul>
       <h3>7.2 测试（TDD，每层一个 Red 起步）</h3>
       <table>
@@ -263,7 +263,7 @@
           <tr><td>infra IT</td><td><code>PublicationSearchReadAdapterIT</code>（Testcontainers PG）</td><td>无条件浏览 total；关键词命中含 <code>&lt;sub&gt;</code> 标记的标题、<code>x&lt;y and z&gt;0</code> 字面尖括号可搜到、<code>%</code> 字面匹配；作者快照匹配（<code>author_id</code> 为 null 也命中）；pmid / doi 命中与未命中、doi 前缀与大小写；年份区间；venue / type / lang / oa 多值 OR 与跨维度 AND；证据等级过滤与 <code>classify()</code> 一致（同时标 Meta-Analysis 与 RCT 只落 5 级）；facets drill-down（选中年份后 <code>years</code> 计数不变、<code>types</code> 收窄）；<code>evidence</code> 固定 6 项含 0；<code>total</code> / <code>openAccess</code>（<code>oa=false</code> 请求下仍返回 OA 篇数）/ <code>lastSyncedAt</code>；<code>LATEST</code> / <code>YEAR</code> / <code>CITED</code> 排序；作者顺序与 <code>kind</code> 取第一个（从 feed IT 迁入）；<code>abstractSnippet</code> 为剥标签 + 去 annotation + 解实体后的 300 码点、无摘要 null；分页 total</td></tr>
           <tr><td>app 单测</td><td><code>PortalPublicationSearchQueryServiceTest</code> / <code>PortalFeedQueryServiceTest</code> 改写</td><td>委托端口；feed tab→sort 映射、分页归一化</td></tr>
           <tr><td>adapter 单测</td><td><code>PortalPublicationSearchRequestTest</code></td><td>校验逐条：pageSize 51、yearFrom &gt; yearTo、sort 非法、evidence 非法、pmid 非数字、列表 token 归一化；<code>List</code> 编辑器：单值 <code>"Clinical Trial, Phase III"</code> 得 1 个元素、<code>String[]{"A","B"}</code> 得 2 个元素</td></tr>
-          <tr><td>adapter IT</td><td><code>PortalPublicationControllerIT</code> 追加</td><td><code>/search</code> 与 <code>/search/facets</code> 端到端；<code>toFilter</code> 映射；<code>evidenceLevel</code> 视图与详情端点同形；feed 端点三个新字段有值；非法参数 400</td></tr>
+          <tr><td>adapter IT</td><td><code>PortalPublicationControllerIT</code> 追加</td><td><code>/search</code> 与 <code>/search/facets</code> 端到端；<code>toFilter</code> 映射；<code>evidenceLevel</code> 视图与详情端点同形；feed 端点三个新字段有值；非法参数 422</td></tr>
         </tbody>
       </table>
     </section>
@@ -285,10 +285,10 @@
       </div>
 
       <div class="decision">
-        <h3>决策 3：参数名 camelCase，sort 非法值 400，venue facet 不返回候选</h3>
-        <p><code>yearFrom</code> / <code>pageSize</code> 与 <code>/portal/venues</code> 现有约定一致；<code>sort</code> 非法值按 Issue AC "非法参数 400" 处理，与 feed 的 <code>tab</code> 一致；2,924 本期刊的计数列表没有意义，前端用期刊检索端点选。</p>
+        <h3>决策 3：参数名 camelCase，sort 非法值 422，venue facet 不返回候选</h3>
+        <p><code>yearFrom</code> / <code>pageSize</code> 与 <code>/portal/venues</code> 现有约定一致；<code>sort</code> 非法值按 Issue AC "非法参数 400" 处理（项目全局校验映射实际为 422，以 422 为准），与 feed 的 <code>tab</code> 一致；2,924 本期刊的计数列表没有意义，前端用期刊检索端点选。</p>
         <p class="alternatives"><strong>备选：</strong>snake_case（release-spec 草稿写法）— 否决：与期刊端点和前端现有 query 名不一致。<br>
-        <strong>备选：</strong><code>sort</code> 静默回落默认（期刊端点做法）— 否决：Issue AC 明确 400。</p>
+        <strong>备选：</strong><code>sort</code> 静默回落默认（期刊端点做法）— 否决：Issue AC 明确非法参数要拒绝。</p>
       </div>
 
       <div class="decision">
@@ -404,7 +404,10 @@
           <tr><td>26</td><td><code>adapter/rest/portal/response/PortalPublicationFacetsResponse.java</code></td><td><span class="pill create">create</span></td><td>facets 响应</td></tr>
           <tr><td>27</td><td><code>adapter/rest/portal/response/PortalPaperResponse.java</code></td><td><span class="pill modify">modify</span></td><td>加三字段</td></tr>
           <tr><td>28</td><td><code>adapter/rest/portal/response/PortalPublicationDetailResponse.java</code></td><td><span class="pill modify">modify</span></td><td>删内嵌 EvidenceLevelView</td></tr>
-          <tr><td>29</td><td><code>adapter/rest/portal/response/PortalVenueFacetsResponse.java</code></td><td><span class="pill keep">keep</span></td><td>响应 DTO 自带 FacetCountResponse，不动</td></tr>
+          <tr><td>29</td><td><code>adapter/rest/portal/response/PortalVenueFacetsResponse.java</code></td><td><span class="pill modify">modify</span></td><td>删内嵌 FacetCountResponse，改用顶层共用类型（JSON 不变）</td></tr>
+          <tr><td>29a</td><td><code>adapter/rest/portal/response/FacetCountResponse.java</code></td><td><span class="pill create">create</span></td><td>顶层 facet 项响应，期刊与文献共用</td></tr>
+          <tr><td>29b</td><td><code>adapter/rest/portal/request/RepeatedParamListEditor.java</code></td><td><span class="pill create">create</span></td><td>重复参数 List 编辑器，不拆逗号，丢弃空白元素</td></tr>
+          <tr><td>29c</td><td><code>infra/adapter/read/PublicationLastSyncedRow.java</code></td><td><span class="pill create">create</span></td><td>lastSyncedAt 标量投影</td></tr>
           <tr><td>30</td><td><code>adapter/rest/portal/PortalApiConverter.java</code></td><td><span class="pill modify">modify</span></td><td>toResponse 加三字段；toPublicationFacetsResponse；FacetCount 引用改顶层</td></tr>
           <tr><td>31</td><td><code>adapter/rest/portal/PortalPublicationController.java</code></td><td><span class="pill modify">modify</span></td><td>加 search / facets 端点与 toFilter</td></tr>
           <tr><td>32</td><td><code>adapter/src/test/.../PortalPublicationSearchRequestTest.java</code></td><td><span class="pill create">create</span></td><td>校验单测</td></tr>
