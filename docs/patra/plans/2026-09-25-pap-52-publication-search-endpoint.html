@@ -1374,7 +1374,7 @@ public interface PublicationSearchRow {
   /// 作者展示名，单元分隔符（U+001F）拼接，按 author_order 升序；无作者时为 null。
   String getAuthorNames();
 
-  /// 摘要原文前 2000 字（含内联标记）；无摘要时为 null。
+  /// 摘要原文全文（含内联标记，不在 SQL 里预截断——截开长 annotation 会让隐藏公式注释露出来）；无摘要时为 null。
   String getAbstractRaw();
 
   Instant getLastSyncedAt();
@@ -1425,7 +1425,7 @@ public interface PublicationSearchDao extends JpaRepository&lt;PublicationEntity
            FROM cat_publication_type pt WHERE pt.publication_id = p.id) AS "publicationTypesAgg",
         (SELECT string_agg(pa.display_name, E'\\x1f' ORDER BY pa.author_order)
            FROM cat_publication_author pa WHERE pa.publication_id = p.id) AS "authorNames",
-        left(a.plain_text, 2000) AS "abstractRaw",
+        a.plain_text AS "abstractRaw",
         p.last_synced_at AS "lastSyncedAt"
       FROM cat_publication p
       LEFT JOIN cat_venue v ON v.id = p.venue_id
@@ -1433,12 +1433,13 @@ public interface PublicationSearchDao extends JpaRepository&lt;PublicationEntity
       """;
 
   /// 排序：`:sortMode` 为 [dev.linqibin.patra.catalog.domain.model.read.portal.PublicationSearchSort] 名称。
+  /// CITED 只按被引 + id（与原 feed 一致，同被引不看采集时间）；LATEST / YEAR 才用 last_synced_at。
   String ORDER_BY =
       """
       ORDER BY
         CASE WHEN :sortMode = 'CITED' THEN COALESCE(p.citation_count, -1) ELSE NULL END DESC,
         CASE WHEN :sortMode = 'YEAR' THEN p.publication_year ELSE NULL END DESC NULLS LAST,
-        p.last_synced_at DESC NULLS LAST,
+        CASE WHEN :sortMode IN ('LATEST', 'YEAR') THEN p.last_synced_at ELSE NULL END DESC NULLS LAST,
         p.id DESC
       """;
 
@@ -1585,16 +1586,20 @@ public class PublicationSearchReadAdapter implements PublicationSearchReadPort {
   }
 
   @Test
-  @DisplayName("sort=CITED 按 citation_count 降序（feed cited tab）")
+  @DisplayName("sort=CITED 按 citation_count 降序；同被引按 id 降序，不看采集时间（与原 feed 一致）")
   void sortByCited() {
     Long low = persist(publication("Low").citationCount(10).lastSyncedAt(T2));
     Long high = persist(publication("High").citationCount(999).lastSyncedAt(T1));
+    Long tieOlderIdNewerTime = persist(publication("tie-1").citationCount(50).lastSyncedAt(T2));
+    Long tieNewerIdOlderTime = persist(publication("tie-2").citationCount(50).lastSyncedAt(T1));
     flush();
 
     PageResult&lt;PortalPaperReadModel&gt; page =
         adapter.search(PublicationSearchFilter.builder().sort(PublicationSearchSort.CITED).build(), FIRST_PAGE);
 
-    assertThat(page.items()).extracting(PortalPaperReadModel::id).containsExactly(high, low);
+    assertThat(page.items())
+        .extracting(PortalPaperReadModel::id)
+        .containsExactly(high, tieNewerIdOlderTime, tieOlderIdNewerTime, low);
   }
 
   @Test
@@ -1612,11 +1617,13 @@ public class PublicationSearchReadAdapter implements PublicationSearchReadPort {
   }
 
   @Test
-  @DisplayName("摘要片段：去 annotation、剥标签、解实体后截 300 码点；纯空白摘要为 null")
+  @DisplayName("摘要片段：先取全文再去 annotation / 剥标签 / 解实体，最后截 300 码点；超长 annotation 不露出；纯空白为 null")
   void abstractSnippetDerivation() {
     Long withMath = persist(publication("math").lastSyncedAt(T2));
     saveAbstract(withMath,
-        "&lt;math&gt;&lt;semantics&gt;&lt;mi&gt;x&lt;/mi&gt;&lt;annotation encoding=\"application/x-tex\"&gt;x&lt;/annotation&gt;&lt;/semantics&gt;&lt;/math&gt; "
+        "&lt;math&gt;&lt;semantics&gt;&lt;mi&gt;x&lt;/mi&gt;&lt;annotation encoding=\"application/x-tex\"&gt;"
+            + "L".repeat(2500) // 超过任何"预截断"长度：若 SQL 先 left() 再清理，注释会被切开并露出 LLLL…
+            + "&lt;/annotation&gt;&lt;/semantics&gt;&lt;/math&gt; "
             + "a".repeat(400));
     Long blank = persist(publication("blank").lastSyncedAt(T1));
     saveAbstract(blank, "   ");
@@ -1624,7 +1631,7 @@ public class PublicationSearchReadAdapter implements PublicationSearchReadPort {
 
     List&lt;PortalPaperReadModel&gt; items = adapter.search(NO_FILTER, FIRST_PAGE).items();
 
-    assertThat(items.get(0).abstractSnippet()).hasSize(300).startsWith("x aaaa");
+    assertThat(items.get(0).abstractSnippet()).hasSize(300).startsWith("x aaaa").doesNotContain("L");
     assertThat(items.get(1).abstractSnippet()).isNull();
   }</code></pre>
           </li>
@@ -1847,13 +1854,13 @@ git commit -m "feat(catalog): 文献检索读适配器——列表组装、三�
             <strong>步骤 19：实现——WHERE 追加条件、DAO 加参数、适配器传参</strong>
 <p><code>PublicationSearchDao.WHERE</code> 末尾追加：</p><pre><code class="lang-sql">        AND ((:venueIds)::bigint[] IS NULL OR p.venue_id = ANY((:venueIds)::bigint[]))
         AND ((:types)::text[] IS NULL OR EXISTS (SELECT 1 FROM cat_publication_type pt
-               WHERE pt.publication_id = p.id AND lower(pt.type_value) = ANY((:types)::text[])))
+               WHERE pt.publication_id = p.id AND lower(trim(pt.type_value)) = ANY((:types)::text[])))
         AND (:isOpenAccess IS NULL OR p.is_oa = :isOpenAccess)
         AND ((:languages)::text[] IS NULL OR p.language_base = ANY((:languages)::text[]))</code></pre><p><code>findSearchPage</code> 与 <code>countMatching</code> 的参数列表在 <code>@Param("sortMode")</code> 之前（<code>countMatching</code> 在末尾）追加：</p><pre><code class="lang-java">      @Param("venueIds") Long[] venueIds,
       @Param("types") String[] types,
       @Param("isOpenAccess") Boolean isOpenAccess,
       @Param("languages") String[] languages,</code></pre><p><code>PublicationSearchReadAdapter.search</code> 调用 <code>dao.findSearchPage(...)</code> 时按同一位置传：</p><pre><code class="lang-java">            toArray(filter.venueIds(), Long[]::new),
-            toArray(filter.types().stream().map(t -&gt; t.toLowerCase(Locale.ROOT)).toList(), String[]::new),
+            toArray(filter.types().stream().map(t -&gt; t.trim().toLowerCase(Locale.ROOT)).toList(), String[]::new),
             filter.isOpenAccess(),
             toArray(filter.languages(), String[]::new),</code></pre><p>适配器追加（空列表 → null 表示"不过滤"）：</p><pre><code class="lang-java">  /// List → 数组；空列表转 null（SQL 里 `IS NULL` 短路为不过滤）。
   ///
@@ -1883,10 +1890,15 @@ git commit -m "feat(catalog): 文献检索读适配器——列表组装、三�
     Long plain = persist(publication("plain"));
     savePublicationType(plain, "Journal Article", 1);
     Long untyped = persist(publication("untyped"));
+    Long padded = persist(publication("padded"));
+    savePublicationType(padded, " Meta-Analysis ", 1); // 首尾空白：SQL trim 与 Java trim 同口径
     flush();
 
     assertThat(ids(PublicationSearchFilter.builder().evidenceLevels(List.of(EvidenceLevel.SYSTEMATIC_REVIEW)).build()))
-        .containsExactly(both);
+        .containsExactlyInAnyOrder(both, padded);
+    assertThat(adapter.search(PublicationSearchFilter.builder().evidenceLevels(List.of(EvidenceLevel.SYSTEMATIC_REVIEW)).build(), FIRST_PAGE)
+            .items())
+        .allSatisfy(m -&gt; assertThat(m.evidenceLevel()).isEqualTo(EvidenceLevel.SYSTEMATIC_REVIEW));
     assertThat(ids(PublicationSearchFilter.builder().evidenceLevels(List.of(EvidenceLevel.RANDOMIZED_CONTROLLED_TRIAL)).build()))
         .containsExactly(rct);
     assertThat(ids(PublicationSearchFilter.builder().evidenceLevels(List.of(EvidenceLevel.UNKNOWN)).build()))
@@ -1904,22 +1916,22 @@ git commit -m "feat(catalog): 文献检索读适配器——列表组装、三�
           <li class="step" data-status="pending">
             <strong>步骤 23：实现——WHERE 追加条件、DAO 加参数、适配器传参</strong>
 <p><code>PublicationSearchDao.WHERE</code> 末尾追加：</p><pre><code class="lang-sql">        AND ((:evidenceRanks)::int[] IS NULL OR
-             """ + EVIDENCE_RANK + """ = ANY((:evidenceRanks)::int[]))</code></pre><p><code>findSearchPage</code> 与 <code>countMatching</code> 的参数列表在 <code>@Param("sortMode")</code> 之前（<code>countMatching</code> 在末尾）追加：</p><pre><code class="lang-java">      @Param("evidenceRanks") Integer[] evidenceRanks,
+      """ + EVIDENCE_RANK + " = ANY((:evidenceRanks)::int[]))\n"</code></pre><p><code>findSearchPage</code> 与 <code>countMatching</code> 的参数列表在 <code>@Param("sortMode")</code> 之前（<code>countMatching</code> 在末尾）追加：</p><pre><code class="lang-java">      @Param("evidenceRanks") Integer[] evidenceRanks,
       @Param("lvl5") String[] lvl5,
       @Param("lvl4") String[] lvl4,
       @Param("lvl3") String[] lvl3,
       @Param("lvl2") String[] lvl2,
       @Param("lvl1") String[] lvl1,</code></pre><p><code>PublicationSearchReadAdapter.search</code> 调用 <code>dao.findSearchPage(...)</code> 时按同一位置传：</p><pre><code class="lang-java">            toArray(filter.evidenceLevels().stream().map(EvidenceLevel::rank).toList(), Integer[]::new),
-            LVL5, LVL4, LVL3, LVL2, LVL1,</code></pre><p>WHERE 的最后一条引用新常量 <code>EVIDENCE_RANK</code>（每篇文献的最强命中档，无命中为 0），在 DAO 里定义于 <code>WHERE</code> 之前，并把 <code>WHERE</code> 的文本块改为三段拼接 <code>"""…AND ((:evidenceRanks)::int[] IS NULL OR\n""" + EVIDENCE_RANK + """ = ANY((:evidenceRanks)::int[]))\n"""</code>：</p><pre><code class="lang-java">  /// 每篇文献的证据等级 rank：按五档类型数组取 max，无命中为 0（UNKNOWN）。数组由适配器从
+            LVL5, LVL4, LVL3, LVL2, LVL1,</code></pre><p>WHERE 的最后一条引用新常量 <code>EVIDENCE_RANK</code>（每篇文献的最强命中档，无命中为 0），在 DAO 里定义于 <code>WHERE</code> 之前，并把 <code>WHERE</code> 改为「文本块 + 常量 + 普通字符串」三段拼接：文本块以 <code>…IS NULL OR\n"""</code> 结束，接 <code>+ EVIDENCE_RANK + " = ANY((:evidenceRanks)::int[]))\n"</code>。<strong>尾段必须是普通字符串</strong>——文本块的开头三引号后必须紧跟换行，<code>""" = ANY…</code> 这种写法 Java 25 直接编译错误。</p><pre><code class="lang-java">  /// 每篇文献的证据等级 rank：按五档类型数组取 max，无命中为 0（UNKNOWN）。数组由适配器从
   /// [dev.linqibin.patra.catalog.domain.model.vo.publication.EvidenceLevel#typeValuesOf] 传入，SQL 不含类型字符串。
   String EVIDENCE_RANK =
       """
       COALESCE((SELECT max(CASE
-          WHEN lower(pt.type_value) = ANY((:lvl5)::text[]) THEN 5
-          WHEN lower(pt.type_value) = ANY((:lvl4)::text[]) THEN 4
-          WHEN lower(pt.type_value) = ANY((:lvl3)::text[]) THEN 3
-          WHEN lower(pt.type_value) = ANY((:lvl2)::text[]) THEN 2
-          WHEN lower(pt.type_value) = ANY((:lvl1)::text[]) THEN 1
+          WHEN lower(trim(pt.type_value)) = ANY((:lvl5)::text[]) THEN 5
+          WHEN lower(trim(pt.type_value)) = ANY((:lvl4)::text[]) THEN 4
+          WHEN lower(trim(pt.type_value)) = ANY((:lvl3)::text[]) THEN 3
+          WHEN lower(trim(pt.type_value)) = ANY((:lvl2)::text[]) THEN 2
+          WHEN lower(trim(pt.type_value)) = ANY((:lvl1)::text[]) THEN 1
           ELSE 0 END)
         FROM cat_publication_type pt WHERE pt.publication_id = p.id), 0)""";</code></pre><p>适配器追加五个常量（类顶部）：</p><pre><code class="lang-java">  private static final String[] LVL5 = typeValues(EvidenceLevel.SYSTEMATIC_REVIEW);
   private static final String[] LVL4 = typeValues(EvidenceLevel.RANDOMIZED_CONTROLLED_TRIAL);
@@ -2010,7 +2022,7 @@ git commit -m "feat(catalog): 文献检索读适配器——列表组装、三�
           f.yearFrom(),
           f.yearTo(),
           toArray(f.venueIds(), Long[]::new),
-          toArray(f.types().stream().map(t -&gt; t.toLowerCase(Locale.ROOT)).toList(), String[]::new),
+          toArray(f.types().stream().map(t -&gt; t.trim().toLowerCase(Locale.ROOT)).toList(), String[]::new),
           f.isOpenAccess(),
           toArray(f.languages(), String[]::new),
           toArray(f.evidenceLevels().stream().map(EvidenceLevel::rank).toList(), Integer[]::new));
@@ -2332,7 +2344,7 @@ public interface PublicationLastSyncedRow {
   @DisplayName("facets.evidence 固定 6 项 rank 降序 UNKNOWN 末尾，缺档为 0；选中某档不影响其他档计数")
   void facetsEvidenceFixedSixEntries() {
     Long sr = persist(publication("sr"));
-    savePublicationType(sr, "Systematic Review", 1);
+    savePublicationType(sr, " Systematic Review ", 1); // 首尾空白也归 5 级，与列表 / 筛选同口径
     Long cr = persist(publication("cr"));
     savePublicationType(cr, "Case Reports", 1);
     persist(publication("untyped"));
@@ -2905,14 +2917,18 @@ class RepeatedParamListEditorTest {
   }
 
   @Test
-  @DisplayName("setValue(非字符串) 原样透传；setAsText(null) → 空列表")
-  void passThroughAndNull() {
+  @DisplayName("setValue(非字符串) 原样透传；setAsText(null / 空白) → 空列表；数组里的空白元素被丢弃")
+  void passThroughAndBlank() {
     RepeatedParamListEditor editor = new RepeatedParamListEditor();
     List&lt;Long&gt; already = List.of(1L, 2L);
     editor.setValue(already);
     assertThat(editor.getValue()).isSameAs(already);
     editor.setAsText(null);
     assertThat(editor.getValue()).isEqualTo(List.of());
+    editor.setAsText("   ");
+    assertThat(editor.getValue()).isEqualTo(List.of());
+    editor.setValue(new String[] {"1", "", "  "});
+    assertThat(editor.getValue()).isEqualTo(List.of("1"));
   }
 }</code></pre>
           </li>
@@ -2927,6 +2943,7 @@ class RepeatedParamListEditorTest {
 package dev.linqibin.patra.catalog.adapter.rest.portal.request;
 
 import java.beans.PropertyEditorSupport;
+import java.util.Arrays;
 import java.util.List;
 
 /// 把 query 重复参数绑定为 `List`，且**不按逗号拆分**单个值的 PropertyEditor。
@@ -2941,21 +2958,23 @@ import java.util.List;
 /// @since 0.1.0
 public class RepeatedParamListEditor extends PropertyEditorSupport {
 
-  /// 单个参数值 → 单元素列表；null → 空列表。不拆逗号。
+  /// 单个参数值 → 单元素列表；null / 空白（如 `?venue=`）→ 空列表。不拆逗号。
+  ///
+  /// 空白必须在这里丢掉：空串交给后续 `String→Long` 转换会变成 null 元素，record 的 `List.copyOf` 随即 NPE → 500。
   ///
   /// @param text 单个参数值
   @Override
   public void setAsText(String text) {
-    super.setValue(text == null ? List.of() : List.of(text));
+    super.setValue(text == null || text.isBlank() ? List.of() : List.of(text));
   }
 
-  /// `String[]`（重复参数）→ 逐元素列表；单个 `String` 同 [#setAsText]；其他类型原样透传。
+  /// `String[]`（重复参数）→ 逐元素列表，丢弃空白元素（`venue=1&amp;venue=`）；单个 `String` 同 [#setAsText]；其他类型原样透传。
   ///
   /// @param value 绑定源值
   @Override
   public void setValue(Object value) {
     if (value instanceof String[] values) {
-      super.setValue(List.of(values));
+      super.setValue(Arrays.stream(values).filter(v -&gt; v != null &amp;&amp; !v.isBlank()).toList());
     } else if (value instanceof String single) {
       setAsText(single);
     } else {
@@ -2992,11 +3011,11 @@ class PortalPublicationSearchRequestTest {
   }
 
   @Test
-  @DisplayName("列表 trim + 去空 token；null 列表 → 空不可变列表；值内逗号保留")
+  @DisplayName("列表 trim + 去空 token；null 列表 → 空不可变列表；值内逗号保留；venue 里的 null 元素被丢弃")
   void normalizesLists() {
-    var req = of(null, Arrays.asList(" Clinical Trial, Phase III ", "", "  ", "Review"), null, null, null, null);
+    var req = of(Arrays.asList(1L, null), Arrays.asList(" Clinical Trial, Phase III ", "", "  ", "Review"), null, null, null, null);
     assertThat(req.type()).containsExactly("Clinical Trial, Phase III", "Review");
-    assertThat(req.venue()).isEmpty();
+    assertThat(req.venue()).containsExactly(1L);
     assertThat(req.evidence()).isEmpty();
     assertThat(req.lang()).isEmpty();
   }
@@ -3028,6 +3047,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import java.util.List;
+import java.util.Objects;
 
 /// Portal 文献检索 / facets 请求（两个端点共用；facets 忽略 sort / page / pageSize）。
 ///
@@ -3076,9 +3096,9 @@ public record PortalPublicationSearchRequest(
     @Min(value = 1, message = "pageSize 最小为 1") @Max(value = 50, message = "pageSize 最大为 50")
         Integer pageSize) {
 
-  /// 紧凑构造器：各 List 归一化（trim + 去空白 token）后防御性拷贝为不可变列表。
+  /// 紧凑构造器：各 List 归一化（trim + 去空白 token；venue 丢弃 null 元素）后防御性拷贝为不可变列表。
   public PortalPublicationSearchRequest {
-    venue = venue != null ? List.copyOf(venue) : List.of();
+    venue = venue == null ? List.of() : venue.stream().filter(Objects::nonNull).toList();
     type = normalize(type);
     evidence = normalize(evidence);
     lang = normalize(lang);
@@ -3127,7 +3147,7 @@ git commit -m "feat(catalog): 文献检索请求校验与重复参数 List 编�
         <ol class="steps">
           <li class="step" data-status="pending">
             <strong>步骤 1：追加失败 IT——search 信封 + toFilter 映射（含单个含逗号 type 与重复参数）</strong>
-<p>IT 类追加 <code>@MockitoBean private PortalPublicationSearchQueryService portalPublicationSearchQueryService;</code>，import 区追加 <code>PortalPublicationSearchQueryService</code>、<code>PublicationSearchFacets</code>、<code>PublicationSearchFilter</code>、<code>PublicationSearchSort</code>、<code>FacetCount</code>、<code>PagingParams</code>。追加用例：</p><pre><code class="lang-java">  @Test
+<p>IT 类追加 <code>@MockitoBean private PortalPublicationSearchQueryService portalPublicationSearchQueryService;</code>，static import 追加 <code>org.mockito.Mockito.times</code>，import 区追加 <code>PortalPublicationSearchQueryService</code>、<code>PublicationSearchFacets</code>、<code>PublicationSearchFilter</code>、<code>PublicationSearchSort</code>、<code>FacetCount</code>、<code>PagingParams</code>。追加用例：</p><pre><code class="lang-java">  @Test
   @DisplayName("GET /portal/publications/search 返回分页信封，query 映射为 filter，重复参数不拆逗号")
   void shouldSearchAndMapFilter() {
     PortalPaperReadModel model =
@@ -3137,14 +3157,27 @@ git commit -m "feat(catalog): 文献检索请求校验与重复参数 List 编�
     when(portalPublicationSearchQueryService.search(any(), any()))
         .thenReturn(PageResult.of(List.of(model), 2, 10, 11));
 
+    // 用 uriBuilder 传未编码值：`.uri(String)` 会把已编码的 %20 二次编码成 %2520
     restClient
         .get()
         .uri(
-            "/portal/publications/search?q=%20GLP-1%20&amp;author=Tuttle&amp;pmid=39812044"
-                + "&amp;doi=https://doi.org/10.1056/X&amp;yearFrom=2020&amp;yearTo=2026"
-                + "&amp;venue=8841&amp;venue=1284&amp;type=Clinical%20Trial,%20Phase%20III"
-                + "&amp;evidence=case_report&amp;evidence=UNKNOWN&amp;oa=true&amp;lang=en&amp;lang=zh"
-                + "&amp;sort=year&amp;page=2&amp;pageSize=10")
+            b -&gt;
+                b.path("/portal/publications/search")
+                    .queryParam("q", " GLP-1 ")
+                    .queryParam("author", "Tuttle")
+                    .queryParam("pmid", "39812044")
+                    .queryParam("doi", "https://doi.org/10.1056/X")
+                    .queryParam("yearFrom", 2020)
+                    .queryParam("yearTo", 2026)
+                    .queryParam("venue", 8841, 1284)
+                    .queryParam("type", "Clinical Trial, Phase III")
+                    .queryParam("evidence", "case_report", "UNKNOWN")
+                    .queryParam("oa", true)
+                    .queryParam("lang", "en", "zh")
+                    .queryParam("sort", "year")
+                    .queryParam("page", 2)
+                    .queryParam("pageSize", 10)
+                    .build())
         .exchange()
         .expectStatus()
         .isOk()
@@ -3332,6 +3365,21 @@ git commit -m "feat(catalog): 文献检索请求校验与重复参数 List 编�
   }
 
   @Test
+  @DisplayName("空的重复参数被忽略：?venue= 与 venue=1&amp;venue= 都是 200，不是 500")
+  void shouldIgnoreBlankRepeatedParams() {
+    when(portalPublicationSearchQueryService.search(any(), any())).thenReturn(PageResult.empty(1, 20));
+
+    restClient.get().uri("/portal/publications/search?venue=&amp;type=").exchange().expectStatus().isOk();
+    restClient.get().uri("/portal/publications/search?venue=1&amp;venue=").exchange().expectStatus().isOk();
+
+    ArgumentCaptor&lt;PublicationSearchFilter&gt; filter = ArgumentCaptor.forClass(PublicationSearchFilter.class);
+    verify(portalPublicationSearchQueryService, times(2)).search(filter.capture(), any());
+    assertThat(filter.getAllValues().get(0).venueIds()).isEmpty();
+    assertThat(filter.getAllValues().get(0).types()).isEmpty();
+    assertThat(filter.getAllValues().get(1).venueIds()).containsExactly(1L);
+  }
+
+  @Test
   @DisplayName("/search 与 /{id} 路由不冲突：search 是字面路径优先")
   void searchPathWinsOverIdPattern() {
     when(portalPublicationSearchQueryService.search(any(), any())).thenReturn(PageResult.empty(1, 20));
@@ -3366,9 +3414,9 @@ git commit -m "feat(catalog): 文献检索端点 GET /portal/publications/search
             <p>预期：BUILD SUCCESSFUL；spotless / spotbugs / 单测 / IT 全绿</p>
           </li>
           <li class="step" data-status="pending">
-            <strong>步骤 2：boot 模块编译与上下文启动（确认 Spring Data 对 DAO 17 个 @Param 与 SQL 一致）</strong>
+            <strong>步骤 2：boot 模块 ArchUnit 架构测试（六边形分层约束）</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-boot:test</code></p>
-            <p>预期：BUILD SUCCESSFUL；若报 <code>Using named parameters for method ... but parameter ... not found in annotated query</code>，回到 DAO 补齐/删除对应 <code>@Param</code></p>
+            <p>预期：BUILD SUCCESSFUL。它不启动 Spring 上下文；DAO 17 个 <code>@Param</code> 与 SQL 的一致性由 infra <code>@DataJpaTest</code> 在仓库 bean 初始化时校验，任务 7–9 的 IT 已覆盖（报 <code>Using named parameters for method ... not found in annotated query</code> 即在那里失败）</p>
           </li>
           <li class="step" data-status="pending">
             <strong>步骤 3：Mac mini 真实数据冒烟（网关经 tailscale）</strong>
@@ -3384,11 +3432,9 @@ curl -s -o /dev/null -w "%{http_code}\n" "$BASE/search?sort=cited"</code></pre><
 <p><code>docs/patra/specs/2026-09-24-pap-52-publication-search-endpoint-design.html</code>：① <code>&lt;span class="status-pill"&gt;draft&lt;/span&gt;</code> 改 <code>implemented</code>；② §3 表头「校验（400）」与 §7.1 里的 400 改 422；③ 改造文件清单 #29 <code>PortalVenueFacetsResponse</code> 由 keep 改 modify（删内嵌 FacetCountResponse）；④ 文件清单追加 <code>RepeatedParamListEditor</code> / <code>FacetCountResponse</code> / <code>PublicationLastSyncedRow</code> 三行。本 plan 的 status-pill 改 <code>done</code>。</p>
           </li>
           <li class="step" data-status="pending">
-            <strong>步骤 5：Commit + push + PR</strong>
+            <strong>步骤 5：Commit 收尾文档；push 与开 PR 需用户确认后执行</strong>
 <pre><code class="lang-bash">git add docs/patra/specs/2026-09-24-pap-52-publication-search-endpoint-design.html docs/patra/plans/2026-09-25-pap-52-publication-search-endpoint.html
-git commit -m "docs(spec): PAP-52 spec/plan 标记实现完成，校验状态码对齐 422 (PAP-52)"
-git push -u origin feat/pap-52-publication-search
-gh pr create --base main --draft --title "feat(catalog): 文献检索端点 search/facets，feed 迁到同一读端口 (PAP-52)" --body-file -</code></pre><p>PR body 写：Linear PAP-52 / Closes #188、六条决策摘要、验证命令与 mini 冒烟结果。按仓库评审规则：开发期 draft，完工转 ready 触发 Codex，再评论 <code>@coderabbitai review</code>，同一会话内启动 Monitor 盯到合并；每条评审意见回复 已修复（SHA）/ 不修复（理由）。Linear PAP-52 推到 Review 并附 PR 链接。</p>
+git commit -m "docs(spec): PAP-52 spec/plan 标记实现完成，校验状态码对齐 422 (PAP-52)"</code></pre><p>到此停下，向用户汇报验证结果并<strong>征得确认</strong>后再执行 <code>git push -u origin feat/pap-52-publication-search</code> 与 <code>gh pr create --base main --draft --title "feat(catalog): 文献检索端点 search/facets，feed 迁到同一读端口 (PAP-52)"</code>。PR body 写：Linear PAP-52 / Closes #188、六条决策摘要、验证命令与 mini 冒烟结果。按仓库评审规则：开发期 draft，完工转 ready 触发 Codex，再评论 <code>@coderabbitai review</code>，同一会话内启动 Monitor 盯到合并；每条评审意见回复 已修复（SHA）/ 不修复（理由）。Linear PAP-52 推到 Review 并附 PR 链接。</p>
           </li>
         </ol>
       </article>
