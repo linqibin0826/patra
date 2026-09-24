@@ -1,7 +1,10 @@
 package dev.linqibin.patra.catalog.infra.persistence.dao;
 
+import dev.linqibin.patra.catalog.infra.adapter.read.PublicationFacetCountRow;
+import dev.linqibin.patra.catalog.infra.adapter.read.PublicationLastSyncedRow;
 import dev.linqibin.patra.catalog.infra.adapter.read.PublicationSearchRow;
 import dev.linqibin.patra.catalog.infra.persistence.entity.PublicationEntity;
+import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -146,4 +149,118 @@ public interface PublicationSearchDao extends JpaRepository<PublicationEntity, L
       @Param("lvl3") String[] lvl3,
       @Param("lvl2") String[] lvl2,
       @Param("lvl1") String[] lvl1);
+
+  /// 年份 facet（调用方把 yearFrom / yearTo 传 null 实现 drill-down），年份降序。参数同 [#countMatching]。
+  @Query(
+      value =
+          "SELECT p.publication_year::text AS \"value\", count(*) AS \"count\" FROM cat_publication p "
+              + WHERE
+              + " AND p.publication_year IS NOT NULL GROUP BY p.publication_year ORDER BY p.publication_year DESC",
+      nativeQuery = true)
+  List<PublicationFacetCountRow> facetYears(
+      @Param("keyword") String keyword,
+      @Param("tagPattern") String tagPattern,
+      @Param("author") String author,
+      @Param("pmid") String pmid,
+      @Param("doi") String doi,
+      @Param("yearFrom") Integer yearFrom,
+      @Param("yearTo") Integer yearTo,
+      @Param("venueIds") Long[] venueIds,
+      @Param("types") String[] types,
+      @Param("isOpenAccess") Boolean isOpenAccess,
+      @Param("languages") String[] languages,
+      @Param("evidenceRanks") Integer[] evidenceRanks,
+      @Param("lvl5") String[] lvl5,
+      @Param("lvl4") String[] lvl4,
+      @Param("lvl3") String[] lvl3,
+      @Param("lvl2") String[] lvl2,
+      @Param("lvl1") String[] lvl1);
+
+  /// 类型 facet（调用方把 types 传 null），按 distinct 文献数降序、类型名升序。别名 `t` 避免与 WHERE 子查询的 `pt` 混淆。
+  @Query(
+      value =
+          "SELECT t.type_value AS \"value\", count(DISTINCT p.id) AS \"count\" FROM cat_publication p "
+              + "JOIN cat_publication_type t ON t.publication_id = p.id "
+              + WHERE
+              + " GROUP BY t.type_value ORDER BY count(DISTINCT p.id) DESC, t.type_value ASC",
+      nativeQuery = true)
+  List<PublicationFacetCountRow> facetTypes(
+      @Param("keyword") String keyword,
+      @Param("tagPattern") String tagPattern,
+      @Param("author") String author,
+      @Param("pmid") String pmid,
+      @Param("doi") String doi,
+      @Param("yearFrom") Integer yearFrom,
+      @Param("yearTo") Integer yearTo,
+      @Param("venueIds") Long[] venueIds,
+      @Param("types") String[] types,
+      @Param("isOpenAccess") Boolean isOpenAccess,
+      @Param("languages") String[] languages,
+      @Param("evidenceRanks") Integer[] evidenceRanks,
+      @Param("lvl5") String[] lvl5,
+      @Param("lvl4") String[] lvl4,
+      @Param("lvl3") String[] lvl3,
+      @Param("lvl2") String[] lvl2,
+      @Param("lvl1") String[] lvl1);
+
+  /// 证据等级 facet（调用方把 evidenceRanks 传 null）：外层按 rank 分组，rank 由适配器映射回枚举并补齐 6 项。
+  @Query(
+      value =
+          "SELECT r.rank::text AS \"value\", count(*) AS \"count\" FROM (SELECT "
+              + EVIDENCE_RANK
+              + " AS rank FROM cat_publication p "
+              + WHERE
+              + ") r GROUP BY r.rank ORDER BY r.rank DESC",
+      nativeQuery = true)
+  List<PublicationFacetCountRow> facetEvidence(
+      @Param("keyword") String keyword,
+      @Param("tagPattern") String tagPattern,
+      @Param("author") String author,
+      @Param("pmid") String pmid,
+      @Param("doi") String doi,
+      @Param("yearFrom") Integer yearFrom,
+      @Param("yearTo") Integer yearTo,
+      @Param("venueIds") Long[] venueIds,
+      @Param("types") String[] types,
+      @Param("isOpenAccess") Boolean isOpenAccess,
+      @Param("languages") String[] languages,
+      @Param("evidenceRanks") Integer[] evidenceRanks,
+      @Param("lvl5") String[] lvl5,
+      @Param("lvl4") String[] lvl4,
+      @Param("lvl3") String[] lvl3,
+      @Param("lvl2") String[] lvl2,
+      @Param("lvl1") String[] lvl1);
+
+  /// 语言 facet（调用方把 languages 传 null），计数降序、语言码升序。
+  @Query(
+      value =
+          "SELECT p.language_base AS \"value\", count(*) AS \"count\" FROM cat_publication p "
+              + WHERE
+              + " AND p.language_base IS NOT NULL GROUP BY p.language_base ORDER BY count(*) DESC, p.language_base ASC",
+      nativeQuery = true)
+  List<PublicationFacetCountRow> facetLanguages(
+      @Param("keyword") String keyword,
+      @Param("tagPattern") String tagPattern,
+      @Param("author") String author,
+      @Param("pmid") String pmid,
+      @Param("doi") String doi,
+      @Param("yearFrom") Integer yearFrom,
+      @Param("yearTo") Integer yearTo,
+      @Param("venueIds") Long[] venueIds,
+      @Param("types") String[] types,
+      @Param("isOpenAccess") Boolean isOpenAccess,
+      @Param("languages") String[] languages,
+      @Param("evidenceRanks") Integer[] evidenceRanks,
+      @Param("lvl5") String[] lvl5,
+      @Param("lvl4") String[] lvl4,
+      @Param("lvl3") String[] lvl3,
+      @Param("lvl2") String[] lvl2,
+      @Param("lvl1") String[] lvl1);
+
+  /// 全库最后采集时间（不带任何 filter）。
+  @Query(
+      value =
+          "SELECT max(p.last_synced_at) AS \"lastSyncedAt\" FROM cat_publication p WHERE p.deleted_at IS NULL",
+      nativeQuery = true)
+  PublicationLastSyncedRow findLastSyncedAt();
 }

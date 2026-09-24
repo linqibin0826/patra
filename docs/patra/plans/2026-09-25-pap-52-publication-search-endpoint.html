@@ -41,7 +41,7 @@
           <li data-task-status="done"><a href="#task-6">Task 6 — PublicationSearchFacets、PortalPaperReadModel 扩展、PublicationSearchReadPort</a></li>
           <li data-task-status="done"><a href="#task-7">Task 7 — infra 列表查询：DAO + 投影 + 适配器 search（组装 / 排序 / 片段）</a></li>
           <li data-task-status="done"><a href="#task-8">Task 8 — infra 筛选条件：逐条 Red-Green 追加共享 WHERE</a></li>
-          <li data-task-status="pending"><a href="#task-9">Task 9 — infra facets：years / types / evidence / languages / openAccess / total / lastSyncedAt</a></li>
+          <li data-task-status="done"><a href="#task-9">Task 9 — infra facets：years / types / evidence / languages / openAccess / total / lastSyncedAt</a></li>
           <li data-task-status="pending"><a href="#task-10">Task 10 — app：PortalPublicationSearchQueryService</a></li>
           <li data-task-status="pending"><a href="#task-11">Task 11 — app：feed 迁到新端口，删除 PortalFeed* 读端六类与其 IT</a></li>
           <li data-task-status="pending"><a href="#task-12">Task 12 — adapter 响应：EvidenceLevelView / FacetCountResponse 顶层，PortalPaperResponse 三字段，converter</a></li>
@@ -2051,7 +2051,7 @@ git commit -m "feat(catalog): 文献检索十类筛选——关键词/作者/PMI
         </ol>
       </article>
 
-      <article class="task" id="task-9" data-status="pending">
+      <article class="task" id="task-9" data-status="done">
         <header>
           <h2>任务 9：infra facets：years / types / evidence / languages / openAccess / total / lastSyncedAt</h2>
           <dl class="files">
@@ -2060,7 +2060,7 @@ git commit -m "feat(catalog): 文献检索十类筛选——关键词/作者/PMI
           </dl>
         </header>
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：追加失败测试——分组 facet 与 drill-down</strong>
 <pre><code class="lang-java">  // ===== 任务 9：facets =====
 
@@ -2111,12 +2111,12 @@ git commit -m "feat(catalog): 文献检索十类筛选——关键词/作者/PMI
     assertThat(countOf(adapter.facets(NO_FILTER).types(), "Review")).isEqualTo(1);
   }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：运行 IT 确认失败</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
             <p>预期：两个新用例抛 <code>UnsupportedOperationException</code></p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：创建两个投影</strong>
 <pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/linqibin/patra/catalog/infra/adapter/read/PublicationFacetCountRow.java
 package dev.linqibin.patra.catalog.infra.adapter.read;
@@ -2147,7 +2147,7 @@ public interface PublicationLastSyncedRow {
   Instant getLastSyncedAt();
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：DAO 追加四个 facet 查询与 lastSyncedAt（参数列表与 countMatching 完全相同，17 个）</strong>
 <pre><code class="lang-java">  // PublicationSearchDao：import 区追加 java.util.List、
   // dev.linqibin.patra.catalog.infra.adapter.read.PublicationFacetCountRow、
@@ -2267,7 +2267,7 @@ public interface PublicationLastSyncedRow {
       nativeQuery = true)
   PublicationLastSyncedRow findLastSyncedAt();</code></pre><p><strong>注意</strong>：Spring Data 对 <code>@Param</code> 未出现在 SQL 里会启动报错，SQL 里有而方法没声明也报错，所以四个方法都必须完整声明 WHERE 引用的 17 个参数。</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：适配器实现 facets（drill-down 副本 + 6 档回填）</strong>
 <pre><code class="lang-java">  // PublicationSearchReadAdapter：import 区追加 java.time.Instant、java.util.Map、java.util.stream.Collectors、
   // dev.linqibin.patra.catalog.domain.model.read.portal.FacetCount。替换 facets()：
@@ -2333,12 +2333,12 @@ public interface PublicationLastSyncedRow {
     return row == null ? null : row.getLastSyncedAt();
   }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：运行 IT 确认通过</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
             <p>预期：14 passed；若 <code>findLastSyncedAt</code> 投影为 null 导致 NPE，说明 max() 的单行未被投影包装，改为 <code>Optional&lt;PublicationLastSyncedRow&gt;</code> 并在 notes 记 change</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7：追加失败测试——evidence 固定 6 项、openAccess drill-down、lastSyncedAt</strong>
 <pre><code class="lang-java">  @Test
   @DisplayName("facets.evidence 固定 6 项 rank 降序 UNKNOWN 末尾，缺档为 0；选中某档不影响其他档计数")
@@ -2390,12 +2390,12 @@ public interface PublicationLastSyncedRow {
     assertThat(f.lastSyncedAt()).isNull();
   }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 8：运行 IT 确认通过（步骤 5 已实现，本步验证边界行为）</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
             <p>预期：17 passed</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 9：Commit</strong>
 <pre><code class="lang-bash">git add patra-api/patra-catalog/patra-catalog-infra
 git commit -m "feat(catalog): 文献检索 facets——年份/类型/证据/语言 drill-down 与 OA/total/lastSyncedAt (PAP-52)"</code></pre>

@@ -2,6 +2,7 @@ package dev.linqibin.patra.catalog.infra.adapter.read;
 
 import dev.linqibin.commons.query.PageResult;
 import dev.linqibin.commons.query.PagingParams;
+import dev.linqibin.patra.catalog.domain.model.read.portal.FacetCount;
 import dev.linqibin.patra.catalog.domain.model.read.portal.PortalPaperReadModel;
 import dev.linqibin.patra.catalog.domain.model.read.portal.PublicationSearchFacets;
 import dev.linqibin.patra.catalog.domain.model.read.portal.PublicationSearchFilter;
@@ -9,9 +10,12 @@ import dev.linqibin.patra.catalog.domain.model.vo.publication.EvidenceLevel;
 import dev.linqibin.patra.catalog.domain.model.vo.publication.InlineMarkup;
 import dev.linqibin.patra.catalog.domain.port.read.PublicationSearchReadPort;
 import dev.linqibin.patra.catalog.infra.persistence.dao.PublicationSearchDao;
+import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.function.IntFunction;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -109,7 +113,166 @@ public class PublicationSearchReadAdapter implements PublicationSearchReadPort {
 
   @Override
   public PublicationSearchFacets facets(PublicationSearchFilter filter) {
-    throw new UnsupportedOperationException("任务 9 实现");
+    Bound b = Bound.of(filter);
+    return PublicationSearchFacets.builder()
+        .years(
+            toFacets(
+                dao.facetYears(
+                    b.keyword(),
+                    InlineMarkup.TAG_PATTERN,
+                    b.author(),
+                    b.pmid(),
+                    b.doi(),
+                    null,
+                    null,
+                    b.venueIds(),
+                    b.types(),
+                    b.isOpenAccess(),
+                    b.languages(),
+                    b.evidenceRanks(),
+                    LVL5,
+                    LVL4,
+                    LVL3,
+                    LVL2,
+                    LVL1)))
+        .types(
+            toFacets(
+                dao.facetTypes(
+                    b.keyword(),
+                    InlineMarkup.TAG_PATTERN,
+                    b.author(),
+                    b.pmid(),
+                    b.doi(),
+                    b.yearFrom(),
+                    b.yearTo(),
+                    b.venueIds(),
+                    null,
+                    b.isOpenAccess(),
+                    b.languages(),
+                    b.evidenceRanks(),
+                    LVL5,
+                    LVL4,
+                    LVL3,
+                    LVL2,
+                    LVL1)))
+        .evidence(
+            toEvidenceFacets(
+                dao.facetEvidence(
+                    b.keyword(),
+                    InlineMarkup.TAG_PATTERN,
+                    b.author(),
+                    b.pmid(),
+                    b.doi(),
+                    b.yearFrom(),
+                    b.yearTo(),
+                    b.venueIds(),
+                    b.types(),
+                    b.isOpenAccess(),
+                    b.languages(),
+                    null,
+                    LVL5,
+                    LVL4,
+                    LVL3,
+                    LVL2,
+                    LVL1)))
+        .languages(
+            toFacets(
+                dao.facetLanguages(
+                    b.keyword(),
+                    InlineMarkup.TAG_PATTERN,
+                    b.author(),
+                    b.pmid(),
+                    b.doi(),
+                    b.yearFrom(),
+                    b.yearTo(),
+                    b.venueIds(),
+                    b.types(),
+                    b.isOpenAccess(),
+                    null,
+                    b.evidenceRanks(),
+                    LVL5,
+                    LVL4,
+                    LVL3,
+                    LVL2,
+                    LVL1)))
+        .openAccess(
+            dao.countMatching(
+                b.keyword(),
+                InlineMarkup.TAG_PATTERN,
+                b.author(),
+                b.pmid(),
+                b.doi(),
+                b.yearFrom(),
+                b.yearTo(),
+                b.venueIds(),
+                b.types(),
+                Boolean.TRUE,
+                b.languages(),
+                b.evidenceRanks(),
+                LVL5,
+                LVL4,
+                LVL3,
+                LVL2,
+                LVL1))
+        .total(
+            dao.countMatching(
+                b.keyword(),
+                InlineMarkup.TAG_PATTERN,
+                b.author(),
+                b.pmid(),
+                b.doi(),
+                b.yearFrom(),
+                b.yearTo(),
+                b.venueIds(),
+                b.types(),
+                b.isOpenAccess(),
+                b.languages(),
+                b.evidenceRanks(),
+                LVL5,
+                LVL4,
+                LVL3,
+                LVL2,
+                LVL1))
+        .lastSyncedAt(lastSyncedAt())
+        .build();
+  }
+
+  /// 投影行 → FacetCount 列表（保持 SQL 排序）。
+  ///
+  /// @param rows 投影行
+  /// @return facet 列表
+  private static List<FacetCount> toFacets(List<PublicationFacetCountRow> rows) {
+    return rows.stream().map(r -> FacetCount.of(r.getValue(), r.getCount())).toList();
+  }
+
+  /// rank 分组 → 固定 6 项（rank 降序，UNKNOWN 末尾），缺档补 0。
+  ///
+  /// @param rows rank 分组行（value 为 rank 文本）
+  /// @return 6 项 facet
+  private static List<FacetCount> toEvidenceFacets(List<PublicationFacetCountRow> rows) {
+    Map<Integer, Long> byRank =
+        rows.stream()
+            .collect(
+                Collectors.toMap(
+                    r -> Integer.parseInt(r.getValue()), PublicationFacetCountRow::getCount));
+    return List.of(
+            EvidenceLevel.SYSTEMATIC_REVIEW,
+            EvidenceLevel.RANDOMIZED_CONTROLLED_TRIAL,
+            EvidenceLevel.COHORT_OR_CASE_CONTROL,
+            EvidenceLevel.NON_SYSTEMATIC_REVIEW,
+            EvidenceLevel.CASE_REPORT,
+            EvidenceLevel.UNKNOWN)
+        .stream()
+        .map(level -> FacetCount.of(level.name(), byRank.getOrDefault(level.rank(), 0L)))
+        .toList();
+  }
+
+  /// 全库最后采集时间；空库为 null。
+  ///
+  /// @return 时间或 null
+  private Instant lastSyncedAt() {
+    PublicationLastSyncedRow row = dao.findLastSyncedAt();
+    return row == null ? null : row.getLastSyncedAt();
   }
 
   /// 投影行 → 读模型：类型聚合列拆开后第一个当 studyType、整个列表衍生证据等级；摘要原文派生片段。

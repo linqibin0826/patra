@@ -6,6 +6,7 @@ import dev.linqibin.commons.query.PageResult;
 import dev.linqibin.commons.query.PagingParams;
 import dev.linqibin.patra.catalog.domain.model.read.portal.FacetCount;
 import dev.linqibin.patra.catalog.domain.model.read.portal.PortalPaperReadModel;
+import dev.linqibin.patra.catalog.domain.model.read.portal.PublicationSearchFacets;
 import dev.linqibin.patra.catalog.domain.model.read.portal.PublicationSearchFilter;
 import dev.linqibin.patra.catalog.domain.model.read.portal.PublicationSearchSort;
 import dev.linqibin.patra.catalog.domain.model.vo.publication.EvidenceLevel;
@@ -319,6 +320,132 @@ class PublicationSearchReadAdapterIT {
     return adapter.search(filter, FIRST_PAGE).items().stream()
         .map(PortalPaperReadModel::id)
         .toList();
+  }
+
+  // ===== 任务 9：facets =====
+
+  @Test
+  @DisplayName("facets：years 年份降序 / types 计数降序 / languages；drill-down 忽略本维度自身筛选")
+  void facetsGroupsAndDrillDown() {
+    Long a = persist(publication("a").publicationYear(2026).languageCode("en"));
+    savePublicationType(a, "Journal Article", 1);
+    savePublicationType(a, "Review", 2);
+    Long b = persist(publication("b").publicationYear(2025).languageCode("en"));
+    savePublicationType(b, "Journal Article", 1);
+    Long c = persist(publication("c").publicationYear(2026).languageCode("zh-Hans"));
+    savePublicationType(c, "Letter", 1);
+    flush();
+
+    PublicationSearchFacets all = adapter.facets(NO_FILTER);
+    assertThat(values(all.years())).containsExactly("2026", "2025");
+    assertThat(countOf(all.years(), "2026")).isEqualTo(2);
+    assertThat(values(all.types())).containsExactly("Journal Article", "Letter", "Review");
+    assertThat(countOf(all.types(), "Journal Article")).isEqualTo(2);
+    assertThat(values(all.languages())).containsExactly("en", "zh");
+    assertThat(all.total()).isEqualTo(3);
+
+    // 选中 2026 年：years 仍给出 2025 的计数（drill-down），types 按年份收窄
+    PublicationSearchFacets y2026 =
+        adapter.facets(PublicationSearchFilter.builder().yearFrom(2026).yearTo(2026).build());
+    assertThat(countOf(y2026.years(), "2025")).isEqualTo(1);
+    assertThat(values(y2026.types()))
+        .containsExactlyInAnyOrder("Journal Article", "Review", "Letter");
+    assertThat(countOf(y2026.types(), "Journal Article")).isEqualTo(1);
+    assertThat(y2026.total()).isEqualTo(2);
+
+    // 选中 Letter 类型：types 仍给出 Journal Article 计数，years 收窄到 2026
+    PublicationSearchFacets letter =
+        adapter.facets(PublicationSearchFilter.builder().types(List.of("Letter")).build());
+    assertThat(countOf(letter.types(), "Journal Article")).isEqualTo(2);
+    assertThat(values(letter.years())).containsExactly("2026");
+    assertThat(b).isNotNull();
+  }
+
+  @Test
+  @DisplayName("facets.types 同一 type_value 来自两个 vocabulary_source 只计一篇")
+  void facetsTypesCountDistinctPublications() {
+    Long a = persist(publication("a"));
+    em.persist(
+        PublicationTypeEntity.builder()
+            .id(SnowflakeIdGenerator.getId())
+            .publicationId(a)
+            .typeValue("Review")
+            .vocabularySource("MeSH")
+            .typeOrder(1)
+            .build());
+    em.persist(
+        PublicationTypeEntity.builder()
+            .id(SnowflakeIdGenerator.getId())
+            .publicationId(a)
+            .typeValue("Review")
+            .vocabularySource("Crossref")
+            .typeOrder(2)
+            .build());
+    flush();
+
+    assertThat(countOf(adapter.facets(NO_FILTER).types(), "Review")).isEqualTo(1);
+  }
+
+  @Test
+  @DisplayName("facets.evidence 固定 6 项 rank 降序 UNKNOWN 末尾，缺档为 0；选中某档不影响其他档计数；首尾空白同口径")
+  void facetsEvidenceFixedSixEntries() {
+    Long sr = persist(publication("sr"));
+    savePublicationType(sr, " Systematic Review ", 1); // 首尾空白也归 5 级，与列表 / 筛选同口径
+    Long cr = persist(publication("cr"));
+    savePublicationType(cr, "Case Reports", 1);
+    persist(publication("untyped"));
+    flush();
+
+    List<FacetCount> evidence = adapter.facets(NO_FILTER).evidence();
+    assertThat(values(evidence))
+        .containsExactly(
+            "SYSTEMATIC_REVIEW",
+            "RANDOMIZED_CONTROLLED_TRIAL",
+            "COHORT_OR_CASE_CONTROL",
+            "NON_SYSTEMATIC_REVIEW",
+            "CASE_REPORT",
+            "UNKNOWN");
+    assertThat(countOf(evidence, "SYSTEMATIC_REVIEW")).isEqualTo(1);
+    assertThat(countOf(evidence, "RANDOMIZED_CONTROLLED_TRIAL")).isZero();
+    assertThat(countOf(evidence, "UNKNOWN")).isEqualTo(1);
+
+    List<FacetCount> drill =
+        adapter
+            .facets(
+                PublicationSearchFilter.builder()
+                    .evidenceLevels(List.of(EvidenceLevel.CASE_REPORT))
+                    .build())
+            .evidence();
+    assertThat(countOf(drill, "SYSTEMATIC_REVIEW")).isEqualTo(1);
+  }
+
+  @Test
+  @DisplayName("facets.openAccess 忽略 oa 自身筛选；total 随全部筛选；lastSyncedAt 为全库最大值不随筛选变")
+  void facetsScalars() {
+    persist(publication("oa").isOa(true).publicationYear(2026).lastSyncedAt(T1));
+    persist(publication("closed").isOa(false).publicationYear(2025).lastSyncedAt(T2));
+    flush();
+
+    PublicationSearchFacets f =
+        adapter.facets(PublicationSearchFilter.builder().isOpenAccess(false).build());
+    assertThat(f.openAccess()).isEqualTo(1);
+    assertThat(f.total()).isEqualTo(1);
+    assertThat(f.lastSyncedAt()).isEqualTo(T2);
+
+    PublicationSearchFacets y =
+        adapter.facets(PublicationSearchFilter.builder().yearFrom(2025).yearTo(2025).build());
+    assertThat(y.openAccess()).isZero();
+    assertThat(y.lastSyncedAt()).isEqualTo(T2);
+  }
+
+  @Test
+  @DisplayName("空库：facets 各列表为空、evidence 仍 6 项全 0、lastSyncedAt 为 null")
+  void facetsOnEmptyDatabase() {
+    PublicationSearchFacets f = adapter.facets(NO_FILTER);
+    assertThat(f.years()).isEmpty();
+    assertThat(f.evidence()).hasSize(6).allSatisfy(fc -> assertThat(fc.count()).isZero());
+    assertThat(f.total()).isZero();
+    assertThat(f.lastSyncedAt()).isNull();
   }
 
   // ===== fixtures =====
