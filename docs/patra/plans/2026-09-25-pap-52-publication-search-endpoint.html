@@ -36,8 +36,8 @@
           <li data-task-status="done"><a href="#task-1">Task 1 — FacetCount 顶层 record，期刊侧引用迁移</a></li>
           <li data-task-status="done"><a href="#task-2">Task 2 — PublicationSearchSort 排序枚举</a></li>
           <li data-task-status="done"><a href="#task-3">Task 3 — PublicationSearchFilter 过滤 record</a></li>
-          <li data-task-status="pending"><a href="#task-4">Task 4 — EvidenceLevel.typeValuesOf 暴露映射表</a></li>
-          <li data-task-status="pending"><a href="#task-5">Task 5 — InlineMarkup 标签白名单与可见纯文本</a></li>
+          <li data-task-status="done"><a href="#task-4">Task 4 — EvidenceLevel.typeValuesOf 暴露映射表</a></li>
+          <li data-task-status="in-progress"><a href="#task-5">Task 5 — InlineMarkup 标签白名单与可见纯文本</a></li>
           <li data-task-status="pending"><a href="#task-6">Task 6 — PublicationSearchFacets、PortalPaperReadModel 扩展、PublicationSearchReadPort</a></li>
           <li data-task-status="pending"><a href="#task-7">Task 7 — infra 列表查询：DAO + 投影 + 适配器 search（组装 / 排序 / 片段）</a></li>
           <li data-task-status="pending"><a href="#task-8">Task 8 — infra 筛选条件：逐条 Red-Green 追加共享 WHERE</a></li>
@@ -509,7 +509,7 @@ git commit -m "feat(catalog): 文献检索过滤 record PublicationSearchFilter 
         </ol>
       </article>
 
-      <article class="task" id="task-4" data-status="pending">
+      <article class="task" id="task-4" data-status="done">
         <header>
           <h2>任务 4：EvidenceLevel.typeValuesOf 暴露映射表</h2>
           <dl class="files">
@@ -517,7 +517,7 @@ git commit -m "feat(catalog): 文献检索过滤 record PublicationSearchFilter 
           </dl>
         </header>
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：在 EvidenceLevelTest 末尾追加失败测试</strong>
 <pre><code class="lang-java">  // 追加到 EvidenceLevelTest 类体末尾；import 区追加 java.util.Locale
 
@@ -552,12 +552,12 @@ git commit -m "feat(catalog): 文献检索过滤 record PublicationSearchFilter 
     assertThat(EvidenceLevel.UNKNOWN.rank()).isEqualTo(0);
   }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：运行测试确认失败</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:test --tests "*EvidenceLevelTest"</code></p>
             <p>预期：编译错误 <code>cannot find symbol typeValuesOf</code></p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：在 EvidenceLevel 的 classify() 之后追加方法</strong>
 <pre><code class="lang-java">  // EvidenceLevel.java：import 区追加 java.util.Set、java.util.stream.Collectors；classify() 方法之后追加：
 
@@ -574,12 +574,12 @@ git commit -m "feat(catalog): 文献检索过滤 record PublicationSearchFilter 
         .collect(Collectors.toUnmodifiableSet());
   }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：运行测试确认通过</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:test --tests "*EvidenceLevelTest"</code></p>
             <p>预期：全部 passed（原 12 + 新 3）</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：Commit</strong>
 <pre><code class="lang-bash">git add patra-api/patra-catalog/patra-catalog-domain
 git commit -m "feat(catalog): EvidenceLevel.typeValuesOf 暴露证据等级映射表 (PAP-52)"</code></pre>
@@ -587,7 +587,7 @@ git commit -m "feat(catalog): EvidenceLevel.typeValuesOf 暴露证据等级映�
         </ol>
       </article>
 
-      <article class="task" id="task-5" data-status="pending">
+      <article class="task" id="task-5" data-status="in-progress">
         <header>
           <h2>任务 5：InlineMarkup 标签白名单与可见纯文本</h2>
           <dl class="files">

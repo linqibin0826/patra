@@ -3,6 +3,7 @@ package dev.linqibin.patra.catalog.domain.model.vo.publication;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
+import java.util.Locale;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -89,5 +90,37 @@ class EvidenceLevelTest {
   void derivedFlag() {
     assertThat(EvidenceLevel.RANDOMIZED_CONTROLLED_TRIAL.isDerived()).isTrue();
     assertThat(EvidenceLevel.UNKNOWN.isDerived()).isFalse();
+  }
+
+  @Test
+  @DisplayName("typeValuesOf 返回该档全部小写类型值，与 classify 互为逆映射")
+  void typeValuesOf_roundTripsWithClassify() {
+    for (EvidenceLevel level : EvidenceLevel.values()) {
+      for (String typeValue : EvidenceLevel.typeValuesOf(level)) {
+        assertThat(typeValue).isEqualTo(typeValue.toLowerCase(Locale.ROOT));
+        assertThat(EvidenceLevel.classify(List.of(typeValue))).isEqualTo(level);
+      }
+    }
+    assertThat(EvidenceLevel.typeValuesOf(EvidenceLevel.SYSTEMATIC_REVIEW))
+        .containsExactlyInAnyOrder("systematic review", "meta-analysis", "network meta-analysis");
+    assertThat(EvidenceLevel.typeValuesOf(EvidenceLevel.CASE_REPORT))
+        .containsExactly("case reports");
+  }
+
+  @Test
+  @DisplayName("UNKNOWN 无类型值")
+  void typeValuesOf_unknownIsEmpty() {
+    assertThat(EvidenceLevel.typeValuesOf(EvidenceLevel.UNKNOWN)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("rank 固定为 5..0，SQL 里的 CASE 常量依赖这组值")
+  void ranksArePinned() {
+    assertThat(EvidenceLevel.SYSTEMATIC_REVIEW.rank()).isEqualTo(5);
+    assertThat(EvidenceLevel.RANDOMIZED_CONTROLLED_TRIAL.rank()).isEqualTo(4);
+    assertThat(EvidenceLevel.COHORT_OR_CASE_CONTROL.rank()).isEqualTo(3);
+    assertThat(EvidenceLevel.NON_SYSTEMATIC_REVIEW.rank()).isEqualTo(2);
+    assertThat(EvidenceLevel.CASE_REPORT.rank()).isEqualTo(1);
+    assertThat(EvidenceLevel.UNKNOWN.rank()).isEqualTo(0);
   }
 }
