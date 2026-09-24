@@ -260,8 +260,8 @@
 
 | 能力 | 现状 | 来源 / 备注 |
 |------|------|------------|
-| 关键词（标题子串） | 🟡→新端点 | `title ILIKE '%q%'`，决策 A：不做全文检索、不加索引 |
-| 作者名 | 🟡→新端点 | `cat_author` 展示名匹配，经 `cat_publication_author` 关联 |
+| 关键词（标题子串） | 🟡→新端点 | 对**剥除内联标记后**的标题做 `ILIKE '%q%'`（`regexp_replace(title, '<[^>]+>', '', 'g')`），否则 `CO<sub>2</sub>` 搜不到 `CO2`；决策 A：不做全文检索、不加索引 |
+| 作者名 | 🟡→新端点 | 直接匹配 `cat_publication_author.display_name` 快照（`author_id` 仅 ORCID 命中时才有值，绝大多数行为 null，不能经 `cat_author` 走） |
 | PMID / DOI 精确 | 🟡→新端点 | `uk_pmid` / `uk_doi` 唯一约束已有，精确命中 0 或 1 条 |
 | 排序：最近更新 | 🟡→新端点 | `last_synced_at` / `created_at`（feed 已按此排） |
 | 排序：年份 | 🟡→新端点 | `publication_year` |
