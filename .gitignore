@@ -103,6 +103,13 @@ __pycache__/
 .worktrees/
 .claude/worktrees/
 
+##############################
+# Codex（本地配置，不入库）
+##############################
+/.agents/
+/.codex/
+/AGENTS.md
+
 # JAR files (except Gradle wrapper)
 *.jar
 !gradle/wrapper/gradle-wrapper.jar
