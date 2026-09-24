@@ -20,6 +20,9 @@ import java.util.List;
 /// @param estimatedReadMin 原文预计阅读时长（本版恒 null，TODO 接入原文采集/字数估算）
 /// @param kind 文献类型（可空）
 /// @param minutesAgo 距最后采集的分钟数（可空）
+/// @param venueId 载体主键（String，可空）
+/// @param evidenceLevel 证据等级视图（与详情端点同形）
+/// @param abstractSnippet 摘要可见纯文本前 300 码点（可空）
 /// @author linqibin
 /// @since 0.1.0
 public record PortalPaperResponse(
@@ -36,7 +39,10 @@ public record PortalPaperResponse(
     String aiSummary,
     Integer estimatedReadMin,
     String kind,
-    Integer minutesAgo) {
+    Integer minutesAgo,
+    String venueId,
+    EvidenceLevelView evidenceLevel,
+    String abstractSnippet) {
 
   public PortalPaperResponse {
     authors = authors != null ? List.copyOf(authors) : List.of();

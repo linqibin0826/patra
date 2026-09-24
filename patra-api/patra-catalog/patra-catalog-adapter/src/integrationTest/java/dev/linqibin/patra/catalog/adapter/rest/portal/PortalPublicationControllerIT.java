@@ -59,6 +59,9 @@ class PortalPublicationControllerIT {
             .provenanceCode("PUBMED")
             .studyType("Journal Article")
             .lastSyncedAt(Instant.parse("2026-01-01T00:00:00Z"))
+            .venueId(8841L)
+            .evidenceLevel(EvidenceLevel.SYSTEMATIC_REVIEW)
+            .abstractSnippet("BACKGROUND: ...")
             .build();
     when(portalFeedQueryService.listFeed(any(PortalFeedQuery.class)))
         .thenReturn(PageResult.of(List.of(model), 1, 14, 137));
@@ -99,7 +102,17 @@ class PortalPublicationControllerIT {
         .jsonPath("$.items[0].estimatedReadMin")
         .isEmpty()
         .jsonPath("$.items[0].minutesAgo")
-        .isNumber();
+        .isNumber()
+        .jsonPath("$.items[0].venueId")
+        .isEqualTo("8841")
+        .jsonPath("$.items[0].evidenceLevel.level")
+        .isEqualTo("SYSTEMATIC_REVIEW")
+        .jsonPath("$.items[0].evidenceLevel.rank")
+        .isEqualTo(5)
+        .jsonPath("$.items[0].evidenceLevel.derived")
+        .isEqualTo(true)
+        .jsonPath("$.items[0].abstractSnippet")
+        .isEqualTo("BACKGROUND: ...");
 
     ArgumentCaptor<PortalFeedQuery> captor = ArgumentCaptor.forClass(PortalFeedQuery.class);
     verify(portalFeedQueryService).listFeed(captor.capture());

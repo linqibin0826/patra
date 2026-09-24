@@ -85,26 +85,6 @@ public record PortalPublicationDetailResponse(
     dates = dates != null ? List.copyOf(dates) : List.of();
   }
 
-  /// 证据等级视图。
-  ///
-  /// @param level 等级名称（EvidenceLevel 枚举名）
-  /// @param rank 等级权重
-  /// @param label 中文展示标签
-  /// @param derived 是否已成功衍生（非 UNKNOWN）
-  public record EvidenceLevelView(String level, int rank, String label, boolean derived) {
-
-    /// 创建证据等级视图。
-    ///
-    /// @param level 等级名称
-    /// @param rank 等级权重
-    /// @param label 中文展示标签
-    /// @param derived 是否已成功衍生
-    /// @return 证据等级视图
-    public static EvidenceLevelView of(String level, int rank, String label, boolean derived) {
-      return new EvidenceLevelView(level, rank, label, derived);
-    }
-  }
-
   /// 结构化摘要段落响应。
   ///
   /// @param label 段落标签（如 BACKGROUND、METHODS、RESULTS）；混合摘要的无标签段为 null

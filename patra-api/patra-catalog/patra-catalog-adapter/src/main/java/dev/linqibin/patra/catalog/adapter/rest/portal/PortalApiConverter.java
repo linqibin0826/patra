@@ -1,13 +1,17 @@
 package dev.linqibin.patra.catalog.adapter.rest.portal;
 
+import dev.linqibin.patra.catalog.adapter.rest.portal.response.EvidenceLevelView;
+import dev.linqibin.patra.catalog.adapter.rest.portal.response.FacetCountResponse;
 import dev.linqibin.patra.catalog.adapter.rest.portal.response.PortalPaperResponse;
 import dev.linqibin.patra.catalog.adapter.rest.portal.response.PortalPublicationDetailResponse;
+import dev.linqibin.patra.catalog.adapter.rest.portal.response.PortalPublicationFacetsResponse;
 import dev.linqibin.patra.catalog.adapter.rest.portal.response.PortalVenueBrowseResponse;
 import dev.linqibin.patra.catalog.adapter.rest.portal.response.PortalVenueDetailResponse;
 import dev.linqibin.patra.catalog.adapter.rest.portal.response.PortalVenueFacetsResponse;
 import dev.linqibin.patra.catalog.domain.model.read.portal.FacetCount;
 import dev.linqibin.patra.catalog.domain.model.read.portal.PortalPaperReadModel;
 import dev.linqibin.patra.catalog.domain.model.read.portal.PublicationDetailReadModel;
+import dev.linqibin.patra.catalog.domain.model.read.portal.PublicationSearchFacets;
 import dev.linqibin.patra.catalog.domain.model.read.portal.VenueBrowseFacets;
 import dev.linqibin.patra.catalog.domain.model.read.portal.VenueBrowseReadModel;
 import dev.linqibin.patra.catalog.domain.model.read.portal.VenueDetailReadModel;
@@ -45,7 +49,10 @@ public class PortalApiConverter {
         // TODO(read-time)：接入原文采集/字数后估算原文阅读时长
         null,
         model.studyType(),
-        toMinutesAgo(model.lastSyncedAt()));
+        toMinutesAgo(model.lastSyncedAt()),
+        model.venueId() != null ? Long.toString(model.venueId()) : null,
+        EvidenceLevelView.of(model.evidenceLevel()),
+        model.abstractSnippet());
   }
 
   /// 将期刊浏览读模型转为响应 DTO。
@@ -89,11 +96,25 @@ public class PortalApiConverter {
         .build();
   }
 
-  private List<PortalVenueFacetsResponse.FacetCountResponse> toFacetCountResponses(
-      List<FacetCount> facets) {
-    return facets.stream()
-        .map(f -> PortalVenueFacetsResponse.FacetCountResponse.of(f.value(), f.count()))
-        .toList();
+  private List<FacetCountResponse> toFacetCountResponses(List<FacetCount> facets) {
+    return facets.stream().map(f -> FacetCountResponse.of(f.value(), f.count())).toList();
+  }
+
+  /// 将文献 facets 读模型转为响应 DTO。
+  ///
+  /// @param model facets 读模型
+  /// @return 响应 DTO
+  public PortalPublicationFacetsResponse toPublicationFacetsResponse(
+      PublicationSearchFacets model) {
+    return PortalPublicationFacetsResponse.builder()
+        .years(toFacetCountResponses(model.years()))
+        .types(toFacetCountResponses(model.types()))
+        .evidence(toFacetCountResponses(model.evidence()))
+        .languages(toFacetCountResponses(model.languages()))
+        .openAccess(model.openAccess())
+        .total(model.total())
+        .lastSyncedAt(model.lastSyncedAt())
+        .build();
   }
 
   /// 将期刊详情读模型转为响应 DTO。
@@ -207,12 +228,7 @@ public class PortalApiConverter {
         .venueId(model.venueId() != null ? Long.toString(model.venueId()) : null)
         .venueName(model.venueName())
         .publicationYear(model.publicationYear())
-        .evidenceLevel(
-            PortalPublicationDetailResponse.EvidenceLevelView.of(
-                model.evidenceLevel().name(),
-                model.evidenceLevel().rank(),
-                model.evidenceLevel().label(),
-                model.evidenceLevel().isDerived()))
+        .evidenceLevel(EvidenceLevelView.of(model.evidenceLevel()))
         .abstractType(model.abstractType())
         .abstractSections(
             model.abstractSections().stream()
