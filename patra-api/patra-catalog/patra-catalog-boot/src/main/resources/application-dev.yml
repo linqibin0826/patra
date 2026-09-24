@@ -66,3 +66,10 @@ linqibin:
           access-key: minioadmin
           secret-key: minioadmin123
           bucket: patra-catalog-cache
+
+    # 服务间调用连接超时：本地开发放宽到 10s（全局默认 2s，见 application.yml；容器不受影响）。
+    # 原因：本地服务经 Nacos 调 mini 容器走 tailscale 子网路由，到网关的通道空闲约 5 分钟被回收；
+    # 再次访问要经官方 DERP（香港）重新协商，电信直连香港丢包时首个请求建连实测 3~5s，2s 会直接失败。
+    # 详见 patra-infra/docs/mac-mini-connectivity.md §7。
+    http-interface:
+      connect-timeout: 10s

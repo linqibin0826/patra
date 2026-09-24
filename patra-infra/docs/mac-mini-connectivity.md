@@ -83,6 +83,9 @@
   3. MacBook 接受路由：tailscale 设置里「Use Tailscale subnets」开启（`tailscale debug prefs` 中 `RouteAll: true`）。
 - **与 Shadowrocket 共存**：该路由为非 scoped（`netstat -rn` 标志 `UCS`，不含 `I`），`/24` 比 Shadowrocket 的 `128.0/1` 与 Wi-Fi 的 `192.168/16` 都具体，最长前缀匹配下走 tailscale，不受 §5 那类抢占影响。
 - **已知限制**：若所连 Wi-Fi 本身就是 `192.168.97.0/24`，会与子网路由冲突；本地服务注册后，mini 的 gateway 会在容器实例与本地实例间轮询。
+- **冷启动慢（2026-09-24 实测）**：MacBook ↔ `patra-docker-gw` 平时走 tencent peer relay（~40ms），但该通道空闲约 5 分钟会被回收（`tailscale status --json` 里该 peer `Active=false`、`Relay` 退回 `hkg`）。再次访问需经官方 DERP（网关的 home DERP 为香港）重新协商 peer relay；若此时 tailscale 到香港 DERP 的连接已断开要重连，而电信直连香港丢包（TCP 建连常见 1.4~2.3s，即首个 SYN 丢失重传），首个请求建连实测 3~5s，此间 TCP SYN 被丢弃按退避重传。现成连接仍在时冷启动约 0.6s。tailscale 的 DERP 连接绑定物理网卡直连，不经 Shadowrocket。
+  - 应对：catalog / ingest 的 `application-dev.yml` 把 `linqibin.starter.http-interface.connect-timeout` 从全局 2s 放宽到 10s，首个请求慢但不失败；容器（`container` profile）走 Docker 内网，不受影响。
+  - 根治方向（未做）：ACL `derpMap` 排除香港区域让网关 home DERP 落到东京（直连东京较稳），或在 tencent 自建 DERP。
 - **验证**：
   ```sh
   route -n get 192.168.97.10 | grep interface     # 应为 tailscale 的 utun
