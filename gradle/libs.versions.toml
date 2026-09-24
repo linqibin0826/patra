@@ -67,6 +67,7 @@ protobuf = "3.25.9"
 lz4 = "1.11.3"                # org.lz4:lz4-java 已停更，替换为维护中的 fork at.yawk.lz4:lz4-java
 commons-beanutils = "1.11.0"  # 经 commons-validator 1.7 传递引入
 spring-retry = "2.0.13"
+commons-lang3 = "3.19.0"      # build-logic：spring-boot-gradle-plugin → commons-compress 1.27.1 传递引入 3.16.0
 
 # Testing
 junit = "5.11.4"
