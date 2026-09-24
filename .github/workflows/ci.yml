@@ -198,6 +198,8 @@ jobs:
         run: pnpm typecheck
       - name: 🧪 Unit test (Vitest)
         run: pnpm test
+      - name: 🏗 Build (Next.js standalone)
+        run: pnpm build
       - name: 🎭 Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
       - name: 🧪 E2E (Playwright; PR 非阻塞 / nightly 阻塞)
