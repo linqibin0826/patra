@@ -11,6 +11,7 @@ on:
     branches: [main]
     paths:
       - '**/*.gradle.kts'
+      - 'build-logic/**/*.kt'   # LinqibinDependencyManagement.kt 定义 BOM 与强制版本
       - 'gradle/**'
       - 'gradle.properties'
       - '.github/workflows/dependency-submission.yml'
