@@ -122,46 +122,46 @@ reviews:
       instructions: |
         同 .yml：禁硬编码 secret、禁 write-all、pin SHA、JDK 25 + gradlew。
 
-tools:
-  fbinfer:
-    enabled: true
-    enable_java: true        # 默认 false，Java 项目必须显式开
-  gitleaks:
-    enabled: true
-  trufflehog:
-    enabled: true
-  checkov:
-    enabled: true
-  trivy:
-    enabled: true
-  hadolint:
-    enabled: true
-  shellcheck:
-    enabled: true
-  yamllint:
-    enabled: true
-  actionlint:
-    enabled: true
-  zizmor:
-    enabled: true
-  osv_scanner:
-    enabled: true
-  opengrep:
-    enabled: true
-  ast-grep:
-    essential_rules: true
-  pmd:
-    enabled: false           # CI 已有 SpotBugs
-  semgrep:
-    enabled: false           # opengrep 覆盖
-  biome:
-    enabled: false
-  detekt:
-    enabled: false
-  markdownlint:
-    enabled: false
-  languagetool:
-    enabled: false
+  tools:
+    fbinfer:
+      enabled: true
+      enable_java: true        # 默认 false，Java 项目必须显式开
+    gitleaks:
+      enabled: true
+    trufflehog:
+      enabled: true
+    checkov:
+      enabled: true
+    trivy:
+      enabled: true
+    hadolint:
+      enabled: true
+    shellcheck:
+      enabled: true
+    yamllint:
+      enabled: true
+    actionlint:
+      enabled: true
+    zizmor:
+      enabled: true
+    osvScanner:
+      enabled: true
+    opengrep:
+      enabled: true
+    ast-grep:
+      essential_rules: true
+    pmd:
+      enabled: false           # CI 已有 SpotBugs
+    semgrep:
+      enabled: false           # opengrep 覆盖
+    biome:
+      enabled: false
+    detekt:
+      enabled: false
+    markdownlint:
+      enabled: false
+    languagetool:
+      enabled: false
 
 knowledge_base:
   code_guidelines:
