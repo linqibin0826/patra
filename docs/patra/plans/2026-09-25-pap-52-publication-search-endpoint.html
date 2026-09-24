@@ -45,7 +45,7 @@
           <li data-task-status="done"><a href="#task-10">Task 10 — app：PortalPublicationSearchQueryService</a></li>
           <li data-task-status="done"><a href="#task-11">Task 11 — app：feed 迁到新端口，删除 PortalFeed* 读端六类与其 IT</a></li>
           <li data-task-status="done"><a href="#task-12">Task 12 — adapter 响应：EvidenceLevelView / FacetCountResponse 顶层，PortalPaperResponse 三字段，converter</a></li>
-          <li data-task-status="pending"><a href="#task-13">Task 13 — adapter 请求：PortalPublicationSearchRequest 校验 + RepeatedParamListEditor</a></li>
+          <li data-task-status="done"><a href="#task-13">Task 13 — adapter 请求：PortalPublicationSearchRequest 校验 + RepeatedParamListEditor</a></li>
           <li data-task-status="pending"><a href="#task-14">Task 14 — adapter 端点：search / facets + @InitBinder + 控制器 IT</a></li>
           <li data-task-status="pending"><a href="#task-15">Task 15 — 全量验证、spec 收尾、PR</a></li>
         </ol>
@@ -2878,7 +2878,7 @@ git commit -m "feat(catalog): 文献列表响应加 venueId/evidenceLevel/abstra
         </ol>
       </article>
 
-      <article class="task" id="task-13" data-status="pending">
+      <article class="task" id="task-13" data-status="done">
         <header>
           <h2>任务 13：adapter 请求：PortalPublicationSearchRequest 校验 + RepeatedParamListEditor</h2>
           <dl class="files">
@@ -2886,7 +2886,7 @@ git commit -m "feat(catalog): 文献列表响应加 venueId/evidenceLevel/abstra
           </dl>
         </header>
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：写失败测试 RepeatedParamListEditorTest</strong>
 <pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-adapter/src/test/java/dev/linqibin/patra/catalog/adapter/rest/portal/request/RepeatedParamListEditorTest.java
 package dev.linqibin.patra.catalog.adapter.rest.portal.request;
@@ -2932,12 +2932,12 @@ class RepeatedParamListEditorTest {
   }
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：运行测试确认编译失败</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-adapter:test --tests "*RepeatedParamListEditorTest"</code></p>
             <p>预期：编译错误 <code>cannot find symbol RepeatedParamListEditor</code></p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：创建编辑器</strong>
 <pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-adapter/src/main/java/dev/linqibin/patra/catalog/adapter/rest/portal/request/RepeatedParamListEditor.java
 package dev.linqibin.patra.catalog.adapter.rest.portal.request;
@@ -2983,12 +2983,12 @@ public class RepeatedParamListEditor extends PropertyEditorSupport {
   }
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：运行测试确认通过</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-adapter:test --tests "*RepeatedParamListEditorTest"</code></p>
             <p>预期：3 passed</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：写失败测试 PortalPublicationSearchRequestTest（归一化 + 年份区间）</strong>
 <pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-adapter/src/test/java/dev/linqibin/patra/catalog/adapter/rest/portal/request/PortalPublicationSearchRequestTest.java
 package dev.linqibin.patra.catalog.adapter.rest.portal.request;
@@ -3030,12 +3030,12 @@ class PortalPublicationSearchRequestTest {
   }
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：运行测试确认编译失败</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-adapter:test --tests "*PortalPublicationSearchRequestTest"</code></p>
             <p>预期：编译错误 <code>cannot find symbol PortalPublicationSearchRequest</code></p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7：创建请求 record</strong>
 <pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-adapter/src/main/java/dev/linqibin/patra/catalog/adapter/rest/portal/request/PortalPublicationSearchRequest.java
 package dev.linqibin.patra.catalog.adapter.rest.portal.request;
@@ -3124,12 +3124,12 @@ public record PortalPublicationSearchRequest(
   }
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 8：运行测试确认通过</strong>
             <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-adapter:test --tests "*PortalPublicationSearchRequestTest" --tests "*RepeatedParamListEditorTest"</code></p>
             <p>预期：5 passed</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 9：Commit</strong>
 <pre><code class="lang-bash">git add patra-api/patra-catalog/patra-catalog-adapter
 git commit -m "feat(catalog): 文献检索请求校验与重复参数 List 编辑器 (PAP-52)"</code></pre>
