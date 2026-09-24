@@ -93,7 +93,7 @@
 
     <section id="request">
       <h2>3. 请求契约</h2>
-      <p>两个端点共用一个请求 record <code>PortalPublicationSearchRequest</code>（adapter 层，Spring MVC 自动绑定 query params）。facets 端点忽略 <code>sort</code> / <code>page</code> / <code>pageSize</code>。<strong>多值参数一律用重复参数</strong>（<code>type=Review&amp;type=Clinical%20Trial%2C%20Phase%20III</code>），<strong>不按逗号拆分</strong>：真实类型值含逗号（库里 <code>Clinical Trial, Phase I/II/III/IV/Veterinary</code> 共 19 行），Spring 默认的 <code>String→List</code> 逗号拆分会把它切成两个值而漏掉目标文献。实现：<code>PortalPublicationController</code> 加 <code>@InitBinder</code>，为 <code>List</code> 类型注册一个不拆分的 <code>PropertyEditor</code>（单值→单元素列表，多值→原样），只影响本控制器；元素级转换（<code>venue</code> 的 <code>Long</code>）仍由 ConversionService 完成。adapter IT 用单个含逗号的 <code>type</code> 值作 Red 起点验证。期刊端点的逗号约定不动。参数名 camelCase，与 <code>/portal/venues</code> 现有约定（<code>pageSize</code> / <code>casTop</code>）一致，前端 query 名同名零映射。</p>
+      <p>两个端点共用一个请求 record <code>PortalPublicationSearchRequest</code>（adapter 层，Spring MVC 自动绑定 query params）。facets 端点忽略 <code>sort</code> / <code>page</code> / <code>pageSize</code>。<strong>多值参数一律用重复参数</strong>（<code>type=Review&amp;type=Clinical%20Trial%2C%20Phase%20III</code>），<strong>不按逗号拆分</strong>：真实类型值含逗号（库里 <code>Clinical Trial, Phase I/II/III/IV/Veterinary</code> 共 19 行），Spring 默认的 <code>String→List</code> 逗号拆分会把它切成两个值而漏掉目标文献。实现：<code>PortalPublicationController</code> 加 <code>@InitBinder</code>，为 <code>List</code> 类型注册一个不拆分的 <code>PropertyEditor</code>，只影响本控制器。编辑器必须同时覆写两个入口：<code>setAsText(String)</code>（单个参数值 → 单元素 <code>List</code>，不拆逗号）与 <code>setValue(Object)</code>（<code>String[]</code> → 逐元素 <code>List</code>）——Spring 的 <code>TypeConverterDelegate</code> 在走 <code>setAsText</code> 之前会先把 <code>String[]</code> 用逗号 join 成一个 String，只实现 <code>setAsText</code> 会让重复参数合并成 <code>"A,B"</code> 一个元素。元素级转换（<code>venue</code> 的 <code>Long</code>）仍由 ConversionService 完成。adapter 单测覆盖单值含逗号与重复参数两种形态，adapter IT 以单个含逗号的 <code>type</code> 值作 Red 起点。期刊端点的逗号约定不动。参数名 camelCase，与 <code>/portal/venues</code> 现有约定（<code>pageSize</code> / <code>casTop</code>）一致，前端 query 名同名零映射。</p>
       <table>
         <thead><tr><th>参数</th><th>类型</th><th>校验（400）</th><th>语义</th></tr></thead>
         <tbody>
@@ -123,7 +123,7 @@
         <tbody>
           <tr><td><code>venueId</code></td><td>String，可空</td><td><code>cat_publication.venue_id</code>；String 避免 JS 精度问题，与 <code>id</code> 同规矩</td></tr>
           <tr><td><code>evidenceLevel</code></td><td><code>EvidenceLevelView { level, rank, label, derived }</code></td><td>与详情端点同一个视图 record，从 <code>PortalPublicationDetailResponse</code> 内嵌类提到 <code>response</code> 包顶层</td></tr>
-          <tr><td><code>abstractSnippet</code></td><td>String，可空</td><td><code>cat_publication_abstract.plain_text</code> <strong>先剥内联标签再</strong>取前 300 字（<code>left(regexp_replace(plain_text, '&lt;/?[a-z][^&lt;&gt;]*&gt;', '', 'gi'), 300)</code>）；库里 4,497 篇摘要保真存有 <code>&lt;sub&gt;</code> 等标签，直接 <code>left()</code> 会返回标签甚至切在 <code>&lt;s</code> 中间。残留 HTML 实体（10 篇）由前端 <code>RichInlineText</code> 解码，截断切在实体中间的概率极低，接受。无摘要为 null</td></tr>
+          <tr><td><code>abstractSnippet</code></td><td>String，可空</td><td><strong>可见纯文本</strong>前 300 个码点。SQL 只取 <code>left(plain_text, 2000)</code> 原文，Java 侧 <code>InlineMarkup.toPlainText()</code> 按顺序：① 整体删除已闭合的 <code>&lt;annotation&gt;…&lt;/annotation&gt;</code> 子树（MathML 的 LaTeX 重复表述，前端也不显示，否则公式 <code>x</code> 变成 <code>xx</code>）；② 按白名单剥标签；③ 解码 HTML 实体（命名 5 个 + 十进制 / 十六进制）；④ 按码点截到 300。先解码再截断，不会切出 <code>&amp;a</code> 这类残缺实体；先剥标签再截断，不会切在 <code>&lt;s</code> 中间。库里 4,497 篇摘要保真存有标签、10 篇残留实体。无摘要为 null</td></tr>
         </tbody>
       </table>
       <h3>4.2 facets 响应：<code>PortalPublicationFacetsResponse</code></h3>
@@ -146,6 +146,7 @@
         <li><code>PublicationSearchFacets</code>（<code>@Builder</code> record）：<code>years</code> / <code>types</code> / <code>evidence</code> / <code>languages</code>（<code>List&lt;FacetCount&gt;</code>）+ <code>openAccess</code> / <code>total</code>（long）+ <code>lastSyncedAt</code>（<code>Instant</code>，可空）。</li>
         <li><code>PortalPaperReadModel</code> 追加 <code>venueId</code>（Long）/ <code>evidenceLevel</code>（<code>EvidenceLevel</code>，非空，无类型时 <code>UNKNOWN</code>）/ <code>abstractSnippet</code>。字段数 14，从工厂构造改为 <code>@Builder</code>。</li>
         <li><code>PublicationSearchReadPort</code>：<code>search(filter, paging)</code> + <code>facets(filter)</code>，签名与 <code>VenueBrowseReadPort</code> 同构。</li>
+        <li><code>InlineMarkup</code>（<code>domain/model/vo/publication/</code>，纯 Java）：<code>TAG_PATTERN</code> 常量——与前端 <code>rich-inline-text.ts</code> 同一份标签白名单（<code>i b u sub sup</code> + <code>math mrow mi mo mn msub msup msubsup mtext mspace mstyle mover munder munderover mfrac msqrt semantics annotation</code>）的正则 <code>&lt;/?(i|b|u|sub|sup|math|…|annotation)(\s[^&lt;&gt;]*)?\s*/?\s*&gt;</code>，PostgreSQL ARE 与 <code>java.util.regex</code> 语法兼容；<code>toPlainText(String)</code>：删闭合 annotation 子树 → 剥白名单标签 → 解码实体；<code>truncate(String, int)</code> 按码点截断。标题检索的 SQL 与摘要片段的 Java 共用这一个白名单。</li>
         <li><code>EvidenceLevel</code> 新增 <code>typeValuesOf(EvidenceLevel)</code>：返回该档在映射表里的小写 type_value 集合（<code>UNKNOWN</code> 返回空集）；映射表仍只在这个枚举里。</li>
         <li>删除 <code>PortalFeedFilter</code> / <code>PortalFeedTab</code> / <code>PortalFeedReadPort</code>。recent / cited 解析挪到 <code>PortalFeedQueryService</code>。</li>
       </ul>
@@ -159,7 +160,7 @@
         <thead><tr><th>参数</th><th>条件（<code>p</code> = <code>cat_publication</code>）</th></tr></thead>
         <tbody>
           <tr><td>固定</td><td><code>p.deleted_at IS NULL</code></td></tr>
-          <tr><td><code>:keyword</code></td><td><code>regexp_replace(p.title, '&lt;/?[a-z][^&lt;&gt;]*&gt;', '', 'gi') ILIKE CONCAT('%', :keyword, '%') ESCAPE '!'</code>，Java 侧先 <code>escapeLike</code>（<code>!</code> / <code>%</code> / <code>_</code>）。正则只吃「<code>&lt;</code> 或 <code>&lt;/</code> 后紧跟字母」的真实标签，库里 7 篇标题含 <code>age &lt; 5</code> 这类字面比较符，不会被吞。实体对齐：匹配对象是落库原文，前端 <code>RichInlineText</code> 的实体解码不参与；库里 0 篇标题含 <code>&amp;amp;</code> 类实体，接受不解码</td></tr>
+          <tr><td><code>:keyword</code></td><td><code>regexp_replace(p.title, :tagPattern, '', 'gi') ILIKE CONCAT('%', :keyword, '%') ESCAPE '!'</code>，Java 侧先 <code>escapeLike</code>（<code>!</code> / <code>%</code> / <code>_</code>）。<code>:tagPattern</code> 绑定 <code>InlineMarkup.TAG_PATTERN</code>，只剥白名单标签：<code>age &lt; 5</code>、<code>x&lt;y and z&gt;0</code> 这类字面尖括号原样保留（前端 <code>RichInlineText</code> 同样按字面显示），库里 7 篇标题含字面尖括号。实体：匹配对象是落库原文，库里 0 篇标题含 <code>&amp;amp;</code> 类实体，不解码</td></tr>
           <tr><td><code>:author</code></td><td><code>EXISTS (SELECT 1 FROM cat_publication_author pa WHERE pa.publication_id = p.id AND pa.display_name ILIKE CONCAT('%', :author, '%') ESCAPE '!')</code></td></tr>
           <tr><td><code>:pmid</code></td><td><code>p.pmid = :pmid</code></td></tr>
           <tr><td><code>:doi</code></td><td><code>lower(p.doi) = :doi</code>，Java 侧去前缀并小写</td></tr>
@@ -185,7 +186,7 @@
       <p>feed 那条 SQL 的升级版，单次查询、无 N+1：</p>
       <ul>
         <li><code>studyType</code> 子查询换成 <code>string_agg(pt.type_value, E'\x1f' ORDER BY pt.type_order ASC NULLS LAST, pt.id ASC)</code> 聚合一列 <code>publicationTypesAgg</code>。Java 拆开后第一个当 <code>kind</code>、整个列表喂 <code>classify()</code> 得 <code>evidenceLevel</code>，一列两用。</li>
-        <li>新增 <code>p.venue_id AS "venueId"</code>、<code>left(regexp_replace(a.plain_text, '&lt;/?[a-z][^&lt;&gt;]*&gt;', '', 'gi'), 300) AS "abstractSnippet"</code>（先剥标签再截断，见 §4.1）（<code>LEFT JOIN cat_publication_abstract a ON a.publication_id = p.id</code>；<code>uk_pub_abstract</code> 保证 1:1，不会放大行数）。</li>
+        <li>新增 <code>p.venue_id AS "venueId"</code>、<code>left(a.plain_text, 2000) AS "abstractRaw"</code>（原文有界取回，片段派生在 Java，见 §4.1；2000 字原文足以在剥标签后凑满 300 可见字）（<code>LEFT JOIN cat_publication_abstract a ON a.publication_id = p.id</code>；<code>uk_pub_abstract</code> 保证 1:1，不会放大行数）。</li>
         <li>作者 <code>string_agg(pa.display_name, E'\x1f' ORDER BY pa.author_order)</code> 沿用。</li>
         <li>排序内嵌 SQL，<code>:sortMode</code> 传枚举名：
           <ul>
@@ -221,8 +222,9 @@
           <tr><td>domain</td><td><code>PublicationSearchFilter</code> / <code>PublicationSearchSort</code> / <code>PublicationSearchFacets</code> / <code>FacetCount</code></td><td>过滤、排序、facet 读模型</td></tr>
           <tr><td>domain</td><td><code>PublicationSearchReadPort</code></td><td><code>search()</code> + <code>facets()</code></td></tr>
           <tr><td>domain</td><td><code>EvidenceLevel#typeValuesOf</code></td><td>暴露映射表供 SQL 参数</td></tr>
+          <tr><td>domain</td><td><code>InlineMarkup</code></td><td>标签白名单正则常量（SQL 与 Java 共用）+ 可见纯文本派生 + 码点截断</td></tr>
           <tr><td>infra</td><td><code>PublicationSearchDao</code></td><td>共享 WHERE 常量 + 列表 / count / 4 个 GROUP BY facet / lastSyncedAt 查询</td></tr>
-          <tr><td>infra</td><td><code>PublicationSearchReadAdapter</code> + <code>PublicationSearchRow</code> + <code>PublicationFacetCountRow</code></td><td>实现端口：LIKE 转义、DOI 归一化、类型拆分、<code>classify()</code>、rank 回填 6 项、<code>List→数组</code>（空→null）</td></tr>
+          <tr><td>infra</td><td><code>PublicationSearchReadAdapter</code> + <code>PublicationSearchRow</code> + <code>PublicationFacetCountRow</code></td><td>实现端口：LIKE 转义、DOI 归一化、类型拆分、<code>classify()</code>、<code>InlineMarkup.toPlainText</code> + 300 码点截断得 <code>abstractSnippet</code>、rank 回填 6 项、<code>List→数组</code>（空→null）、<code>:tagPattern</code> / <code>:lvl1..5</code> 固定参数</td></tr>
           <tr><td>app</td><td><code>PortalPublicationSearchQueryService</code></td><td><code>search(filter, paging)</code> / <code>facets(filter)</code>，直接委托端口，<code>@Transactional(readOnly = true)</code></td></tr>
           <tr><td>adapter</td><td><code>PortalPublicationSearchRequest</code></td><td>§3 校验规则，含 <code>@AssertTrue</code> 年份区间</td></tr>
           <tr><td>adapter</td><td><code>PortalPublicationFacetsResponse</code> + 顶层 <code>EvidenceLevelView</code></td><td>facets 响应；证据等级视图共用</td></tr>
@@ -256,10 +258,11 @@
         <thead><tr><th>层</th><th>测试</th><th>覆盖</th></tr></thead>
         <tbody>
           <tr><td>domain 单测</td><td><code>PublicationSearchFilterTest</code> / <code>PublicationSearchSortTest</code></td><td>紧凑构造器 null 列表转空、sort 默认 <code>LATEST</code>、防御性拷贝；<code>fromCode</code> 大小写与未知值</td></tr>
+          <tr><td>domain 单测</td><td><code>InlineMarkupTest</code></td><td>白名单标签剥除、<code>x&lt;y and z&gt;0</code> 与 <code>age &lt; 5</code> 保留、闭合 annotation 子树整体删除、未闭合 annotation 只展开、命名 / 十进制 / 十六进制实体解码、第 299 字后接 <code>&amp;amp;</code> 截断不残缺、码点截断不切代理对、<code>TAG_PATTERN</code> 能被 <code>java.util.regex</code> 编译</td></tr>
           <tr><td>domain 单测</td><td><code>EvidenceLevelTest</code> 追加</td><td><code>typeValuesOf()</code> 各档返回小写集合、与 <code>classify()</code> 互为逆映射、rank 值锁定 5..1、<code>UNKNOWN</code> 空集</td></tr>
-          <tr><td>infra IT</td><td><code>PublicationSearchReadAdapterIT</code>（Testcontainers PG）</td><td>无条件浏览 total；关键词命中含 <code>&lt;sub&gt;</code> 标记的标题、<code>%</code> 字面匹配；作者快照匹配（<code>author_id</code> 为 null 也命中）；pmid / doi 命中与未命中、doi 前缀与大小写；年份区间；venue / type / lang / oa 多值 OR 与跨维度 AND；证据等级过滤与 <code>classify()</code> 一致（同时标 Meta-Analysis 与 RCT 只落 5 级）；facets drill-down（选中年份后 <code>years</code> 计数不变、<code>types</code> 收窄）；<code>evidence</code> 固定 6 项含 0；<code>total</code> / <code>openAccess</code>（<code>oa=false</code> 请求下仍返回 OA 篇数）/ <code>lastSyncedAt</code>；<code>LATEST</code> / <code>YEAR</code> / <code>CITED</code> 排序；作者顺序与 <code>kind</code> 取第一个（从 feed IT 迁入）；<code>abstractSnippet</code> 截断与无摘要 null；分页 total</td></tr>
+          <tr><td>infra IT</td><td><code>PublicationSearchReadAdapterIT</code>（Testcontainers PG）</td><td>无条件浏览 total；关键词命中含 <code>&lt;sub&gt;</code> 标记的标题、<code>x&lt;y and z&gt;0</code> 字面尖括号可搜到、<code>%</code> 字面匹配；作者快照匹配（<code>author_id</code> 为 null 也命中）；pmid / doi 命中与未命中、doi 前缀与大小写；年份区间；venue / type / lang / oa 多值 OR 与跨维度 AND；证据等级过滤与 <code>classify()</code> 一致（同时标 Meta-Analysis 与 RCT 只落 5 级）；facets drill-down（选中年份后 <code>years</code> 计数不变、<code>types</code> 收窄）；<code>evidence</code> 固定 6 项含 0；<code>total</code> / <code>openAccess</code>（<code>oa=false</code> 请求下仍返回 OA 篇数）/ <code>lastSyncedAt</code>；<code>LATEST</code> / <code>YEAR</code> / <code>CITED</code> 排序；作者顺序与 <code>kind</code> 取第一个（从 feed IT 迁入）；<code>abstractSnippet</code> 为剥标签 + 去 annotation + 解实体后的 300 码点、无摘要 null；分页 total</td></tr>
           <tr><td>app 单测</td><td><code>PortalPublicationSearchQueryServiceTest</code> / <code>PortalFeedQueryServiceTest</code> 改写</td><td>委托端口；feed tab→sort 映射、分页归一化</td></tr>
-          <tr><td>adapter 单测</td><td><code>PortalPublicationSearchRequestTest</code></td><td>校验逐条：pageSize 51、yearFrom &gt; yearTo、sort 非法、evidence 非法、pmid 非数字、列表 token 归一化</td></tr>
+          <tr><td>adapter 单测</td><td><code>PortalPublicationSearchRequestTest</code></td><td>校验逐条：pageSize 51、yearFrom &gt; yearTo、sort 非法、evidence 非法、pmid 非数字、列表 token 归一化；<code>List</code> 编辑器：单值 <code>"Clinical Trial, Phase III"</code> 得 1 个元素、<code>String[]{"A","B"}</code> 得 2 个元素</td></tr>
           <tr><td>adapter IT</td><td><code>PortalPublicationControllerIT</code> 追加</td><td><code>/search</code> 与 <code>/search/facets</code> 端到端；<code>toFilter</code> 映射；<code>evidenceLevel</code> 视图与详情端点同形；feed 端点三个新字段有值；非法参数 400</td></tr>
         </tbody>
       </table>
@@ -304,9 +307,11 @@
       </div>
 
       <div class="decision">
-        <h3>决策 6：关键词对剥标记后的标题匹配，作者匹配快照列</h3>
-        <p><code>regexp_replace(title, '&lt;/?[a-z][^&lt;&gt;]*&gt;', '', 'gi')</code> 让 <code>CO2</code> 能搜到 <code>CO&lt;sub&gt;2&lt;/sub&gt;</code>，且不吞 <code>age &lt; 5</code> 这类字面比较符；本版本就无索引，剥标记不改变成本模型。作者匹配 <code>cat_publication_author.display_name</code>，因为 <code>author_id</code> 仅 ORCID 命中才有值。</p>
-        <p class="alternatives"><strong>备选：</strong>经 <code>cat_author</code> 关联匹配 — 否决：漏掉绝大多数作者行。</p>
+        <h3>决策 6：关键词对剥白名单标签后的标题匹配，摘要片段在 Java 派生，作者匹配快照列</h3>
+        <p><code>regexp_replace(title, :tagPattern, '', 'gi')</code> 以 <code>InlineMarkup.TAG_PATTERN</code> 白名单剥标签，让 <code>CO2</code> 能搜到 <code>CO&lt;sub&gt;2&lt;/sub&gt;</code>，且不吞 <code>x&lt;y and z&gt;0</code> 这类字面尖括号；白名单与前端 <code>rich-inline-text.ts</code> 同一份。本版本就无索引，剥标记不改变成本模型。作者匹配 <code>cat_publication_author.display_name</code>，因为 <code>author_id</code> 仅 ORCID 命中才有值。</p>
+        <p class="alternatives"><strong>备选 A：</strong>经 <code>cat_author</code> 关联匹配 — 否决：漏掉绝大多数作者行。<br>
+        <strong>备选 B：</strong>剥标签用泛型正则 <code>&lt;[^&gt;]+&gt;</code> 或 <code>&lt;/?[a-z][^&lt;&gt;]*&gt;</code> — 否决：吞掉 <code>age &lt; 5</code>、<code>x&lt;y and z&gt;0</code> 这类可见文字，与前端渲染不一致（Codex 两轮各指出一次）。<br>
+        <strong>备选 C：</strong>摘要片段在 SQL 里 <code>left(regexp_replace(...), 300)</code> — 否决：SQL 解不了实体、去不掉 annotation 子树，会产出 <code>xx</code> 和 <code>&amp;a</code>；PG 里没有实体解码函数，硬做只能堆嵌套 <code>replace</code>。</p>
       </div>
     </section>
 
@@ -331,6 +336,11 @@
             <td>接口文本块常量拼接超出注解常量表达式的编译器支持</td>
             <td><span class="pill low">low</span></td>
             <td>Java 15+ 文本块是常量表达式，接口字段隐含 <code>static final</code>；第一个 DAO 测试编译即验证。</td>
+          </tr>
+          <tr>
+            <td>标签白名单在 BE <code>InlineMarkup</code> 与 FE <code>rich-inline-text.ts</code> 两份，日后一边加标签另一边忘了</td>
+            <td><span class="pill low">low</span></td>
+            <td>两边注释互相指向；白名单来源是 PubMed DTD 固定集合，实际变动概率极低。</td>
           </tr>
           <tr>
             <td>feed 迁移改变现有排序 / 作者顺序行为</td>
@@ -370,6 +380,8 @@
           <tr><td>4</td><td><code>domain/model/read/portal/PublicationSearchFacets.java</code></td><td><span class="pill create">create</span></td><td>@Builder facet 读模型</td></tr>
           <tr><td>5</td><td><code>domain/port/read/PublicationSearchReadPort.java</code></td><td><span class="pill create">create</span></td><td>search + facets</td></tr>
           <tr><td>6</td><td><code>domain/model/vo/publication/EvidenceLevel.java</code></td><td><span class="pill modify">modify</span></td><td>新增 <code>typeValuesOf()</code></td></tr>
+          <tr><td>6a</td><td><code>domain/model/vo/publication/InlineMarkup.java</code></td><td><span class="pill create">create</span></td><td>标签白名单正则 + 可见纯文本派生 + 码点截断</td></tr>
+          <tr><td>6b</td><td><code>domain/src/test/.../InlineMarkupTest.java</code></td><td><span class="pill create">create</span></td><td>白名单 / annotation / 实体 / 截断边界</td></tr>
           <tr><td>7</td><td><code>domain/model/read/portal/PortalPaperReadModel.java</code></td><td><span class="pill modify">modify</span></td><td>加 venueId / evidenceLevel / abstractSnippet，改 @Builder</td></tr>
           <tr><td>8</td><td><code>domain/model/read/portal/VenueBrowseFacets.java</code></td><td><span class="pill modify">modify</span></td><td>删内嵌 FacetCount，引用顶层</td></tr>
           <tr><td>9</td><td><code>domain/model/read/portal/PortalFeedFilter.java</code> / <code>PortalFeedTab.java</code></td><td><span class="pill delete">delete</span></td><td>由 PublicationSearchFilter / Sort 取代</td></tr>
