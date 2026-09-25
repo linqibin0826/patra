@@ -53,7 +53,7 @@ export function IdentifierChip({ label, value, href }: IdentifierChipProps) {
         <span
           className={cn(
             "inline-flex items-center border-r px-2.5 text-3xs uppercase tracking-mono",
-            done ? "border-moss-500 text-moss-500" : "border-border-default text-fg-3",
+            done ? "border-moss-500 text-status-success-ink" : "border-border-default text-fg-3",
           )}
         >
           {label}
@@ -61,7 +61,7 @@ export function IdentifierChip({ label, value, href }: IdentifierChipProps) {
         <span
           className={cn(
             "inline-flex items-center px-2.5 py-1.5 text-sm tabular-nums",
-            done ? "text-moss-500" : "text-ink-900",
+            done ? "text-status-success-ink" : "text-ink-900",
           )}
         >
           {value}
@@ -69,7 +69,7 @@ export function IdentifierChip({ label, value, href }: IdentifierChipProps) {
         <span
           className={cn(
             "inline-flex items-center pr-2.5 pl-0.5",
-            done ? "text-moss-500" : "text-fg-4",
+            done ? "text-status-success-ink" : "text-fg-3",
           )}
           aria-hidden
         >

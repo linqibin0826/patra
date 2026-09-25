@@ -27,7 +27,7 @@ function System({ name, source, children }: { name: string; source: string; chil
     <div>
       <div className="mb-2 flex items-baseline gap-2.5">
         <span className="font-sans text-md font-semibold text-ink-900">{name}</span>
-        <span className="font-mono text-3xs uppercase tracking-mono text-fg-4">{source}</span>
+        <span className="font-mono text-3xs uppercase tracking-mono text-fg-3">{source}</span>
       </div>
       {children}
     </div>

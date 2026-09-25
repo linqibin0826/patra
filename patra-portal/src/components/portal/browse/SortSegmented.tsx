@@ -23,7 +23,7 @@ export function SortSegmented<T extends string>({
 }: SortSegmentedProps<T>) {
   return (
     <div className="flex shrink-0 items-center gap-2">
-      <span className="font-mono text-3xs uppercase tracking-caps text-fg-4">排序</span>
+      <span className="font-mono text-3xs uppercase tracking-caps text-fg-3">排序</span>
       <fieldset
         aria-label="排序方式"
         className="m-0 inline-flex min-w-0 items-center overflow-hidden rounded-md border border-border-default p-0"

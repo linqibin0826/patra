@@ -83,7 +83,7 @@ export function JournalSearchSortControls() {
         onSubmit={handleSubmit}
         className="flex min-w-0 flex-1 basis-[360px] items-center gap-2"
       >
-        <div className="flex min-w-0 flex-1 items-center gap-2.5 rounded-md border border-border-strong bg-bg-elevated px-3 shadow-inner transition-colors focus-within:border-border-focus">
+        <div className="flex min-w-0 flex-1 items-center gap-2.5 rounded-md border border-border-strong bg-bg-elevated px-3 shadow-inset transition-colors focus-within:border-border-focus">
           <SearchIcon className="size-4 shrink-0 text-fg-3" aria-hidden="true" />
           <input
             type="search"

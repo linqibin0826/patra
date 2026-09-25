@@ -31,7 +31,7 @@ export async function PapersInfoRow({ query }: { query: PaperSearchQuery }) {
       篇
       {syncedAt && (
         <>
-          <span aria-hidden="true" className="mx-2 text-fg-4">
+          <span aria-hidden="true" className="mx-2 text-ink-300">
             ·
           </span>
           最近同步{" "}

@@ -22,7 +22,7 @@ export function JournalCoverCard({ journal, className }: JournalCoverCardProps) 
       href={`/journals/${journal.id}`}
       title={journal.name}
       className={
-        "flex flex-col overflow-hidden rounded-lg border border-border-default bg-paper-50 text-inherit no-underline transition hover:-translate-y-px hover:border-ink-300 hover:shadow-[0_6px_16px_-10px_rgba(28,25,23,0.18)] " +
+        "flex flex-col overflow-hidden rounded-lg border border-border-default bg-paper-50 text-inherit no-underline transition hover:-translate-y-px hover:border-ink-300 hover:shadow-md " +
         (className ?? "")
       }
     >

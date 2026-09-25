@@ -142,7 +142,7 @@ export function VenueFacetSearch({ selected, names, onAdd, onRemove }: VenueFace
           </div>
         )}
       </div>
-      <p className="text-xs text-fg-4">
+      <p className="text-xs text-fg-3">
         {full ? `最多选择 ${MAX_VENUES} 本期刊` : "输入刊名，从候选中添加"}
       </p>
       {selected.map((id) => (

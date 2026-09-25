@@ -36,7 +36,7 @@ export function Hero({ onComposerSubmit }: HeroProps) {
               </b>
             </span>
           </div>
-          <div className="inline-flex items-center gap-1.5 whitespace-nowrap font-mono text-2xs uppercase tracking-caps text-moss-500 before:h-1.5 before:w-1.5 before:rounded-full before:bg-moss-500 before:animate-[patra-live-pulse_1.6s_ease-in-out_infinite] before:content-['']">
+          <div className="inline-flex items-center gap-1.5 whitespace-nowrap font-mono text-2xs uppercase tracking-caps text-status-success-ink before:h-1.5 before:w-1.5 before:rounded-full before:bg-moss-500 before:animate-[patra-live-pulse_1.6s_ease-in-out_infinite] before:content-['']">
             实时同步
           </div>
         </div>

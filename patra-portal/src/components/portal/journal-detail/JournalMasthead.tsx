@@ -33,7 +33,7 @@ export function JournalMasthead({ venue }: { venue: VenueDetail }) {
           )}
         </div>
       ) : (
-        <div className="flex aspect-[3/4] items-center justify-center rounded-lg border border-dashed border-border-default bg-paper-200 text-ink-400">
+        <div className="flex aspect-[3/4] items-center justify-center rounded-lg border border-dashed border-border-default bg-paper-200 text-fg-3">
           <span className="flex flex-col items-center gap-1.5 font-mono text-3xs uppercase tracking-caps">
             <Book size={22} /> 暂无封面
           </span>
@@ -42,7 +42,7 @@ export function JournalMasthead({ venue }: { venue: VenueDetail }) {
 
       <div className="flex min-w-0 flex-col gap-2.5">
         {venue.isOpenAccess ? (
-          <span className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-full border border-moss-500 bg-moss-50 px-2 py-0.5 font-mono text-3xs uppercase tracking-mono text-moss-500">
+          <span className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-full border border-moss-500 bg-moss-50 px-2 py-0.5 font-mono text-3xs uppercase tracking-mono text-status-success-ink">
             <Leaf size={12} /> 开放获取
           </span>
         ) : (

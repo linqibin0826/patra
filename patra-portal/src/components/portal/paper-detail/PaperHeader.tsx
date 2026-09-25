@@ -23,7 +23,7 @@ export function PaperHeader({ paper }: { paper: PaperDetail }) {
           </span>
         ))}
         {paper.isOa && (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-moss-500 bg-moss-50 px-2 py-0.5 font-mono text-3xs uppercase tracking-mono text-moss-500">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-moss-500 bg-moss-50 px-2 py-0.5 font-mono text-3xs uppercase tracking-mono text-status-success-ink">
             开放获取
           </span>
         )}

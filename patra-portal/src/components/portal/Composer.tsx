@@ -69,7 +69,7 @@ export function Composer({ onSubmit }: ComposerProps) {
             >
               {m.label}
               {m.id === "keyword" && (
-                <span className="ml-1.5 font-mono text-2xs text-fg-4">默认</span>
+                <span className="ml-1.5 font-mono text-2xs text-fg-3">默认</span>
               )}
             </TabsTrigger>
           ))}
@@ -114,7 +114,7 @@ export function Composer({ onSubmit }: ComposerProps) {
                 m?.mono && "font-mono text-xs",
               )}
             >
-              <span className="border-r border-border-default pr-1.5 font-mono text-3xs uppercase tracking-caps text-fg-4">
+              <span className="border-r border-border-default pr-1.5 font-mono text-3xs uppercase tracking-caps text-fg-3">
                 {m?.label}
               </span>
               {ex.text}

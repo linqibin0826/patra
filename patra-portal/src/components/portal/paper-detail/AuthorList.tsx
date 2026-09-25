@@ -8,7 +8,7 @@ export function AuthorList({ authors }: { authors: Author[] }) {
           key={a.order}
           className="flex items-baseline gap-3 border-t border-border-subtle py-2.5 first:border-t-0"
         >
-          <span className="w-[22px] flex-shrink-0 text-right font-mono text-xs tabular-nums text-fg-4">
+          <span className="w-[22px] flex-shrink-0 text-right font-mono text-xs tabular-nums text-fg-3">
             {a.order}
           </span>
           <span className="flex min-w-0 flex-col gap-0.5">

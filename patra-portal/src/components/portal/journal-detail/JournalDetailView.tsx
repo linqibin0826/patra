@@ -35,7 +35,7 @@ export function JournalDetailView({ venue }: { venue: VenueDetail }) {
     <div className="pb-6">
       <nav
         aria-label="面包屑"
-        className="sticky top-14 z-30 border-b border-border-default bg-[rgba(247,242,232,0.88)] backdrop-blur"
+        className="sticky top-14 z-30 border-b border-border-default bg-bg-sticky backdrop-blur"
       >
         <ol className="mx-auto flex h-11 max-w-[1200px] items-center gap-2 px-6 font-sans text-sm text-fg-3">
           <li>
