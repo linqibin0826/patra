@@ -134,6 +134,7 @@ __pycache__/
 
 # Claude Code 本地偏好（不入版本）
 .claude/settings.local.json
+.claude/launch.json
 # design-sync 机器状态（脚本暂存/构建产物/缓存）
 .ds-sync/
 ds-bundle/
