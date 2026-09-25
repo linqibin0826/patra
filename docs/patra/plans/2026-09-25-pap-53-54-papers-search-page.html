@@ -48,7 +48,7 @@
           <li data-task-status="done"><a href="#task-13">Task 13 — 证据徽章挪到文献公用位置并增加紧凑变体；来源色点抽为公用</a></li>
           <li data-task-status="done"><a href="#task-14">Task 14 — 文献列表项 PaperListItem 与列表骨架</a></li>
           <li data-task-status="done"><a href="#task-15">Task 15 — 文献页 Provider、空态与结果区</a></li>
-          <li data-task-status="pending"><a href="#task-16">Task 16 — 文献检索条 PaperSearchBar（四 tab + 排序 + 移动端筛选按钮）</a></li>
+          <li data-task-status="done"><a href="#task-16">Task 16 — 文献检索条 PaperSearchBar（四 tab + 排序 + 移动端筛选按钮）</a></li>
           <li data-task-status="pending"><a href="#task-17">Task 17 — 期刊 facet：候选 combobox 与刊名缓存 store</a></li>
           <li data-task-status="pending"><a href="#task-18">Task 18 — 文献 facet 栏 PaperFilters 与服务端包装</a></li>
           <li data-task-status="pending"><a href="#task-19">Task 19 — 信息行 PapersInfoRow 与文献 chip 行</a></li>
@@ -4949,7 +4949,7 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
         </ol>
       </article>
 
-      <article class="task" id="task-16" data-status="pending">
+      <article class="task" id="task-16" data-status="done">
         <header>
           <h2>任务 16：文献检索条 PaperSearchBar（四 tab + 排序 + 移动端筛选按钮）</h2>
           <dl class="files">
@@ -4957,7 +4957,7 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
           </dl>
         </header>
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：写失败测试</strong>
             <pre><code class="lang-tsx">// patra-portal/tests/components/portal/papers/PaperSearchBar.test.tsx
 import { fireEvent, render, screen } from "@testing-library/react";
@@ -5076,12 +5076,12 @@ describe("PaperSearchBar", () =&gt; {
   });
 });</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：运行确认失败</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm exec vitest run tests/components/portal/papers/PaperSearchBar.test.tsx</code></p>
             <p>预期：导入缺失失败</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：创建 PaperSearchBar.tsx</strong>
             <pre><code class="lang-tsx">// patra-portal/src/components/portal/papers/PaperSearchBar.tsx
 "use client";
@@ -5265,12 +5265,12 @@ export function PaperSearchBar() {
   );
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：运行确认通过</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm exec vitest run tests/components/portal/papers/PaperSearchBar.test.tsx &amp;&amp; pnpm typecheck</code></p>
             <p>预期：11 passed；typecheck 0 错误</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：Commit</strong>
             <pre><code class="lang-bash">git add patra-portal/src/components/portal/papers/PaperSearchBar.tsx patra-portal/tests/components/portal/papers/PaperSearchBar.test.tsx
 git commit -m "feat(portal): 新增文献检索条，四 tab 叠加与精确定位语义 (PAP-53)
