@@ -1,23 +1,14 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { SearchIcon } from "lucide-react";
 import { type KeyboardEvent, useEffect, useId, useState } from "react";
 import { FacetCheckRow } from "@/components/portal/browse/FacetCheckRow";
 import { MAX_VENUES } from "@/lib/portal-api/paper-search";
-import { queryKeys } from "@/lib/query-keys";
+import { useVenueSuggestQuery } from "@/lib/portal-api/venue-suggest-query";
 import { cn } from "@/lib/utils";
 import type { VenueSuggestion } from "@/types/portal";
 
 const DEBOUNCE_MS = 250;
-
-async function fetchSuggestions(q: string): Promise<VenueSuggestion[]> {
-  const res = await fetch(`/api/venues/suggest?q=${encodeURIComponent(q)}`);
-  if (!res.ok) {
-    throw new Error(`期刊候选加载失败：${res.status}`);
-  }
-  return (await res.json()) as VenueSuggestion[];
-}
 
 interface VenueFacetSearchProps {
   selected: readonly string[];
@@ -41,11 +32,7 @@ export function VenueFacetSearch({ selected, names, onAdd, onRemove }: VenueFace
     return () => clearTimeout(timer);
   }, [input]);
 
-  const { data, isFetching, isError } = useQuery({
-    queryKey: queryKeys.venueSuggest(debounced),
-    queryFn: () => fetchSuggestions(debounced),
-    enabled: debounced.length > 0,
-  });
+  const { data, isFetching, isError } = useVenueSuggestQuery(debounced);
 
   // 候选只属于"已防抖的关键词"：输入与之不一致时视为加载中，禁止选择，避免回车选中上一个词的候选
   // 已选满上限：URL 解析只保留前 MAX_VENUES 个，再添加会被丢弃，故直接禁用输入
