@@ -3,7 +3,7 @@
 import { ActiveChips } from "@/components/portal/browse/ActiveChips";
 import { useBrowseQuery } from "@/components/portal/browse/BrowseQueryProvider";
 import { clearAllConditions, derivePaperChips } from "@/lib/portal-api/paper-search";
-import { useVenueNamesStore } from "@/store/venue-names";
+import { useSuggestedVenueNames } from "@/lib/portal-api/venue-suggest-query";
 import type { PaperSearchQuery } from "@/types/portal";
 
 interface PaperActiveChipsProps {
@@ -12,13 +12,13 @@ interface PaperActiveChipsProps {
   venueNames: Readonly<Record<string, string>>;
 }
 
-/// 文献页已选条件 chip 行：从乐观 query 推导（操作后即时变化）；期刊刊名依次取服务端名、刚添加的缓存、"期刊 #id"。
+/// 文献页已选条件 chip 行：从乐观 query 推导（操作后即时变化）；期刊刊名依次取服务端名、候选缓存里的刊名、"期刊 #id"。
 export function PaperActiveChips({ currentYear, venueNames }: PaperActiveChipsProps) {
   const { query } = useBrowseQuery<PaperSearchQuery>();
-  const rememberedNames = useVenueNamesStore((s) => s.names);
+  const suggestedNames = useSuggestedVenueNames();
   const chips = derivePaperChips(query, {
     currentYear,
-    venueNames: { ...rememberedNames, ...venueNames },
+    venueNames: { ...suggestedNames, ...venueNames },
   }).map((chip) => ({
     key: `${chip.group}-${chip.value}`,
     group: chip.group,

@@ -21,9 +21,9 @@ import {
   toggleOpenAccess,
   visibleFacetOptions,
 } from "@/lib/portal-api/paper-search";
+import { useSuggestedVenueNames } from "@/lib/portal-api/venue-suggest-query";
 import { cn } from "@/lib/utils";
 import { useBrowseFilterUiStore } from "@/store/browse-filter-ui";
-import { useVenueNamesStore } from "@/store/venue-names";
 import type { PaperSearchQuery, PublicationFacets } from "@/types/portal";
 
 /** 长列表 facet 折叠时显示的项数 */
@@ -63,8 +63,7 @@ function evidenceLabel(value: string): string {
 
 function PaperFilterControls({ facets, currentYear, venueNames }: PaperFiltersProps) {
   const { query, navigate } = useBrowseQuery<PaperSearchQuery>();
-  const rememberedNames = useVenueNamesStore((s) => s.names);
-  const rememberName = useVenueNamesStore((s) => s.remember);
+  const suggestedNames = useSuggestedVenueNames();
   const [typesExpanded, setTypesExpanded] = useState(false);
   const [langsExpanded, setLangsExpanded] = useState(false);
 
@@ -155,11 +154,8 @@ function PaperFilterControls({ facets, currentYear, venueNames }: PaperFiltersPr
       <FacetGroup title="期刊" selCount={query.venue.length}>
         <VenueFacetSearch
           selected={query.venue}
-          names={{ ...rememberedNames, ...venueNames }}
-          onAdd={(venue) => {
-            rememberName(venue.id, venue.name);
-            navigate((cur) => toggleListValue(cur, "venue", venue.id));
-          }}
+          names={{ ...suggestedNames, ...venueNames }}
+          onAdd={(venue) => navigate((cur) => toggleListValue(cur, "venue", venue.id))}
           onRemove={(id) => navigate((cur) => toggleListValue(cur, "venue", id))}
         />
       </FacetGroup>

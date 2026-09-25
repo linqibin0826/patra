@@ -1,27 +1,33 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { PaperActiveChips } from "@/components/portal/papers/PaperActiveChips";
 import { PapersQueryProvider } from "@/components/portal/papers/PapersQueryProvider";
 import { EMPTY_PAPER_QUERY } from "@/lib/portal-api/paper-search";
-import { useVenueNamesStore } from "@/store/venue-names";
+import { queryKeys } from "@/lib/query-keys";
 import type { PaperSearchQuery } from "@/types/portal";
 
 const mockPush = vi.fn<(url: string) => void>();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mockPush, replace: vi.fn() }) }));
 
-function renderChips(query: PaperSearchQuery, venueNames: Record<string, string> = {}) {
+function renderChips(
+  query: PaperSearchQuery,
+  venueNames: Record<string, string> = {},
+  client = new QueryClient(),
+) {
   return render(
-    <PapersQueryProvider query={query}>
-      <PaperActiveChips currentYear={2026} venueNames={venueNames} />
-    </PapersQueryProvider>,
+    <QueryClientProvider client={client}>
+      <PapersQueryProvider query={query}>
+        <PaperActiveChips currentYear={2026} venueNames={venueNames} />
+      </PapersQueryProvider>
+    </QueryClientProvider>,
   );
 }
 
 describe("PaperActiveChips", () => {
   beforeEach(() => {
     mockPush.mockClear();
-    useVenueNamesStore.setState({ names: {} });
   });
 
   it("浏览态不渲染", () => {
@@ -29,9 +35,17 @@ describe("PaperActiveChips", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("期刊刊名：服务端名优先，其次刚添加的缓存，最后回退 期刊 #id", () => {
-    useVenueNamesStore.setState({ names: { "456": "Cell" } });
-    renderChips({ ...EMPTY_PAPER_QUERY, venue: ["123", "456", "789"] }, { "123": "The Lancet" });
+  it("期刊刊名：服务端名优先，其次候选缓存里的刊名，最后回退 期刊 #id", () => {
+    const client = new QueryClient();
+    client.setQueryData(queryKeys.venueSuggest("ce"), [
+      { id: "456", name: "Cell", abbr: "Cell" },
+      { id: "123", name: "候选里的旧名", abbr: "" },
+    ]);
+    renderChips(
+      { ...EMPTY_PAPER_QUERY, venue: ["123", "456", "789"] },
+      { "123": "The Lancet" },
+      client,
+    );
     expect(screen.getByText("The Lancet")).toBeInTheDocument();
     expect(screen.getByText("Cell")).toBeInTheDocument();
     expect(screen.getByText("期刊 #789")).toBeInTheDocument();

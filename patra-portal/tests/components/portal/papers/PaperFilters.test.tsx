@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { PaperFilters } from "@/components/portal/papers/PaperFilters";
 import { PapersQueryProvider } from "@/components/portal/papers/PapersQueryProvider";
@@ -134,6 +134,26 @@ describe("PaperFilters", () => {
     expect(row).toBeChecked();
     fireEvent.click(row);
     expect(mockPush).toHaveBeenCalledWith("/papers");
+  });
+
+  describe("从候选添加期刊", () => {
+    afterEach(() => vi.unstubAllGlobals());
+
+    it("选中候选：跳转带 venue，已选行立即显示候选里的刊名", async () => {
+      const lancet = { id: "1", name: "The Lancet", abbr: "Lancet" };
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(() => Promise.resolve(new Response(JSON.stringify([lancet])))),
+      );
+      renderFilters();
+      const input = within(group("期刊")).getByRole("combobox", { name: "搜索期刊" });
+      fireEvent.change(input, { target: { value: "lan" } });
+      fireEvent.mouseDown(await screen.findByRole("option", { name: /The Lancet/ }));
+      expect(mockPush).toHaveBeenLastCalledWith("/papers?venue=1");
+      await waitFor(() =>
+        expect(within(group("期刊")).getByRole("checkbox", { name: "The Lancet" })).toBeChecked(),
+      );
+    });
   });
 
   it("清除全部筛选保留排序", () => {
