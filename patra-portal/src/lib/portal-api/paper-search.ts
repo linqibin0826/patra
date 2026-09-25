@@ -1,4 +1,12 @@
-import type { EvidenceLevelCode, PaperSearchQuery } from "@/types/portal";
+import { EVIDENCE_LABELS, languageName, typeName } from "@/lib/paper-labels";
+import type {
+  ActiveFilterChip,
+  ComposerMode,
+  EvidenceLevelCode,
+  FacetOption,
+  PaperSearchQuery,
+  PaperSortId,
+} from "@/types/portal";
 
 // ---- 常量 ----
 
@@ -216,4 +224,290 @@ export function filterCount(query: PaperSearchQuery): number {
 /** 是否处于检索态（有任何检索或筛选条件；排序与页码不算）。 */
 export function hasSearchConditions(query: PaperSearchQuery): boolean {
   return isExactLookup(query) || query.q !== "" || query.author !== "" || filterCount(query) > 0;
+}
+
+// ---- 状态变换（交互 → 下一个查询） ----
+
+/** "近 N 年"快捷项 */
+export const RECENT_YEAR_SPANS = [1, 3, 5] as const;
+
+/** 提交关键词 / 作者：只替换该字段，清除 pmid / doi，保留其余筛选，回第 1 页。 */
+export function submitTextSearch(
+  query: PaperSearchQuery,
+  field: "q" | "author",
+  value: string,
+): PaperSearchQuery {
+  const base = { ...query, pmid: "", doi: "", page: 1 };
+  const text = value.trim();
+  return field === "q" ? { ...base, q: text } : { ...base, author: text };
+}
+
+/** 提交 PMID / DOI：精确定位，生成只含该字段的全新查询。 */
+export function submitExactLookup(field: "pmid" | "doi", value: string): PaperSearchQuery {
+  const text = value.trim();
+  return field === "pmid"
+    ? { ...EMPTY_PAPER_QUERY, pmid: text }
+    : { ...EMPTY_PAPER_QUERY, doi: text };
+}
+
+function toggled<T extends string>(list: readonly T[], value: T): T[] {
+  return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
+}
+
+/** 大小写不敏感的包含判断（类型与 BE lower(trim()) 比较一致）。 */
+export function containsIgnoreCase(list: readonly string[], value: string): boolean {
+  const key = value.toLowerCase();
+  return list.some((v) => v.toLowerCase() === key);
+}
+
+function toggledIgnoreCase(list: readonly string[], value: string): string[] {
+  const key = value.toLowerCase();
+  return containsIgnoreCase(list, value)
+    ? list.filter((v) => v.toLowerCase() !== key)
+    : [...list, value];
+}
+
+/**
+ * 筛选 / 年份 / 排序操作一律退出精确定位模式：否则下次解析时 pmid/doi 优先，
+ * 刚做的操作会被丢弃（用户看到勾选后又恢复）。
+ */
+function leaveExactLookup(query: PaperSearchQuery): PaperSearchQuery {
+  return isExactLookup(query) ? { ...query, pmid: "", doi: "" } : query;
+}
+
+/** 勾选 / 取消多值筛选项，回第 1 页；类型忽略大小写，语言统一小写；evidence 非法值原样返回。 */
+export function toggleListValue(
+  query: PaperSearchQuery,
+  key: "type" | "evidence" | "venue" | "lang",
+  value: string,
+): PaperSearchQuery {
+  const base = leaveExactLookup(query);
+  switch (key) {
+    case "type":
+      return { ...base, type: toggledIgnoreCase(base.type, value), page: 1 };
+    case "venue":
+      return { ...base, venue: toggled(base.venue, value), page: 1 };
+    case "lang":
+      return { ...base, lang: toggled(base.lang, value.toLowerCase()), page: 1 };
+    case "evidence": {
+      const code = value.toUpperCase();
+      return isEvidenceCode(code)
+        ? { ...base, evidence: toggled(base.evidence, code), page: 1 }
+        : query;
+    }
+  }
+}
+
+/** 切换"仅开放获取"，回第 1 页。 */
+export function toggleOpenAccess(query: PaperSearchQuery): PaperSearchQuery {
+  return { ...leaveExactLookup(query), oa: !query.oa, page: 1 };
+}
+
+/** 切换排序，回第 1 页。 */
+export function withSort(query: PaperSearchQuery, sort: PaperSortId): PaperSearchQuery {
+  return { ...leaveExactLookup(query), sort, page: 1 };
+}
+
+/** 清除全部条件（保留排序偏好）。 */
+export function clearAllConditions(query: PaperSearchQuery): PaperSearchQuery {
+  return { ...EMPTY_PAPER_QUERY, sort: query.sort };
+}
+
+/** 单选某一年（from = to = year）；已选中则取消。 */
+export function selectExactYear(query: PaperSearchQuery, year: number): PaperSearchQuery {
+  const active = query.yearFrom === year && query.yearTo === year;
+  return {
+    ...leaveExactLookup(query),
+    yearFrom: active ? null : year,
+    yearTo: active ? null : year,
+    page: 1,
+  };
+}
+
+/** "近 N 年"对应的 yearFrom（绝对年份，链接不随时间漂移）。 */
+function recentYearsFrom(span: number, currentYear: number): number {
+  return currentYear - span + 1;
+}
+
+/** "近 N 年"是否生效：yearFrom 恰为当年−N+1 且无上限。 */
+export function isRecentYearsActive(
+  query: PaperSearchQuery,
+  span: number,
+  currentYear: number,
+): boolean {
+  return query.yearTo === null && query.yearFrom === recentYearsFrom(span, currentYear);
+}
+
+/** 选中"近 N 年"（与逐年项互斥）；已选中则取消。 */
+export function selectRecentYears(
+  query: PaperSearchQuery,
+  span: number,
+  currentYear: number,
+): PaperSearchQuery {
+  const base = leaveExactLookup(query);
+  if (isRecentYearsActive(query, span, currentYear)) {
+    return { ...base, yearFrom: null, yearTo: null, page: 1 };
+  }
+  return { ...base, yearFrom: recentYearsFrom(span, currentYear), yearTo: null, page: 1 };
+}
+
+/** 门户"当前年份"：按 Asia/Shanghai 计算，由服务端算出后下发，保证两端一致。 */
+export function currentPortalYear(now: Date = new Date()): number {
+  const year = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Shanghai",
+    year: "numeric",
+  }).format(now);
+  return Number(year);
+}
+
+/** 年份 chip 文案；无年份条件时为 null。 */
+export function yearChipLabel(
+  yearFrom: number | null,
+  yearTo: number | null,
+  currentYear: number,
+): string | null {
+  if (yearFrom !== null && yearTo !== null) {
+    return yearFrom === yearTo ? `${yearFrom} 年` : `${yearFrom}–${yearTo} 年`;
+  }
+  if (yearFrom !== null) {
+    const span = currentYear - yearFrom + 1;
+    return (RECENT_YEAR_SPANS as readonly number[]).includes(span)
+      ? `近 ${span} 年`
+      : `${yearFrom} 年起`;
+  }
+  if (yearTo !== null) return `${yearTo} 年及以前`;
+  return null;
+}
+
+/**
+ * facet 组可见项：折叠时取前 limit 项，已选但不在其中的项追加在后（保留计数，缺失记 0）；
+ * 展开时全部可见，缺失的已选项同样以 0 追加。比较忽略大小写（展示用 facet 的规范写法）。
+ */
+export function visibleFacetOptions(
+  options: readonly FacetOption[],
+  selected: readonly string[],
+  expanded: boolean,
+  limit: number,
+): FacetOption[] {
+  const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+  const head = expanded ? [...options] : options.slice(0, limit);
+  const extra = selected
+    .filter((value) => !head.some((o) => same(o.value, value)))
+    .map((value) => options.find((o) => same(o.value, value)) ?? { value, count: 0 });
+  return [...head, ...extra];
+}
+
+// ---- chip ----
+
+interface ChipContext {
+  currentYear: number;
+  venueNames: Readonly<Record<string, string>>;
+}
+
+/** 从查询推导已选条件 chip（每个 chip 带移除后的 next）。 */
+export function derivePaperChips(
+  query: PaperSearchQuery,
+  ctx: ChipContext,
+): ActiveFilterChip<PaperSearchQuery>[] {
+  const chips: ActiveFilterChip<PaperSearchQuery>[] = [];
+  if (query.q) {
+    chips.push({
+      group: "关键词",
+      value: query.q,
+      label: query.q,
+      next: { ...query, q: "", page: 1 },
+    });
+  }
+  if (query.author) {
+    chips.push({
+      group: "作者",
+      value: query.author,
+      label: query.author,
+      next: { ...query, author: "", page: 1 },
+    });
+  }
+  const yearLabel = yearChipLabel(query.yearFrom, query.yearTo, ctx.currentYear);
+  if (yearLabel) {
+    chips.push({
+      group: "年份",
+      value: "year",
+      label: yearLabel,
+      next: { ...query, yearFrom: null, yearTo: null, page: 1 },
+    });
+  }
+  for (const value of query.type) {
+    chips.push({
+      group: "类型",
+      value,
+      label: typeName(value),
+      next: toggleListValue(query, "type", value),
+    });
+  }
+  for (const value of query.evidence) {
+    chips.push({
+      group: "证据等级",
+      value,
+      label: EVIDENCE_LABELS[value],
+      next: toggleListValue(query, "evidence", value),
+    });
+  }
+  for (const value of query.venue) {
+    chips.push({
+      group: "期刊",
+      value,
+      label: ctx.venueNames[value] ?? `期刊 #${value}`,
+      next: toggleListValue(query, "venue", value),
+    });
+  }
+  for (const value of query.lang) {
+    chips.push({
+      group: "语言",
+      value,
+      label: languageName(value),
+      next: toggleListValue(query, "lang", value),
+    });
+  }
+  if (query.oa) {
+    chips.push({
+      group: "开放获取",
+      value: "oa",
+      label: "仅开放获取",
+      next: toggleOpenAccess(query),
+    });
+  }
+  return chips;
+}
+
+// ---- 首页搜索框 ----
+
+export type ComposerTarget =
+  | { kind: "empty" }
+  | { kind: "invalid"; message: string }
+  | { kind: "ok"; href: string };
+
+/**
+ * 提交前校验（与 BE 约束一致）：PMID 须为 1–15 位数字，其余检索词不超过 200 字。
+ * 合法返回 null；不合法返回提示文案——超长词若放行，解析层会丢弃它，用户会静默得到全库结果。
+ */
+export function validateSearchInput(mode: ComposerMode, text: string): string | null {
+  if (mode === "pmid") return isValidPmid(text) ? null : "PMID 应为纯数字";
+  return text.length <= MAX_TEXT_LENGTH ? null : `检索词最长 ${MAX_TEXT_LENGTH} 字`;
+}
+
+/** 首页 Composer 提交 → 跳转目标（与 /papers 解析规则同源）。 */
+export function composerTarget(mode: ComposerMode, value: string): ComposerTarget {
+  const text = value.trim();
+  if (!text) return { kind: "empty" };
+  const error = validateSearchInput(mode, text);
+  if (error) return { kind: "invalid", message: error };
+  switch (mode) {
+    case "keyword":
+      return { kind: "ok", href: buildPapersHref({ q: text }) };
+    case "author":
+      return { kind: "ok", href: buildPapersHref({ author: text }) };
+    case "pmid":
+      return { kind: "ok", href: buildPapersHref({ pmid: text }) };
+    case "doi":
+      return { kind: "ok", href: buildPapersHref({ doi: text }) };
+  }
 }

@@ -36,7 +36,7 @@
           <li data-task-status="done"><a href="#task-1">Task 1 — 类型扩展、Paper 测试工厂与中文名字典</a></li>
           <li data-task-status="done"><a href="#task-2">Task 2 — paper-search：URL 解析与脏参数过滤</a></li>
           <li data-task-status="done"><a href="#task-3">Task 3 — paper-search：序列化、后端 query 与状态判定</a></li>
-          <li data-task-status="pending"><a href="#task-4">Task 4 — paper-search：状态变换、年份、chip 与首页入口</a></li>
+          <li data-task-status="done"><a href="#task-4">Task 4 — paper-search：状态变换、年份、chip 与首页入口</a></li>
           <li data-task-status="pending"><a href="#task-5">Task 5 — 标题高亮：highlightInlineNodes 与 RichInlineText highlight</a></li>
           <li data-task-status="pending"><a href="#task-6">Task 6 — 取数层：search / facets、期刊候选中转与刊名查询</a></li>
           <li data-task-status="pending"><a href="#task-7">Task 7 — 公用导航钩子 BrowseQueryProvider、PendingRegion 与筛选抽屉 store 更名</a></li>
@@ -1047,7 +1047,7 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
         </ol>
       </article>
 
-      <article class="task" id="task-4" data-status="pending">
+      <article class="task" id="task-4" data-status="done">
         <header>
           <h2>任务 4：paper-search：状态变换、年份、chip 与首页入口</h2>
           <dl class="files">
@@ -1055,7 +1055,7 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
           </dl>
         </header>
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：追加失败测试</strong>
             <p>在顶部 import 里追加 <code>clearAllConditions, composerTarget, containsIgnoreCase, currentPortalYear, derivePaperChips, isRecentYearsActive, selectExactYear, selectRecentYears, submitExactLookup, submitTextSearch, toggleListValue, toggleOpenAccess, validateSearchInput, visibleFacetOptions, withSort, yearChipLabel</code>，并在文件末尾追加：</p>
             <pre><code class="lang-ts">const roundTrip = (q: PaperSearchQuery) =&gt; parsePaperSearchQuery(toRecord(serializePaperSearchQuery(q)));
@@ -1243,12 +1243,12 @@ describe("composerTarget（首页搜索框）", () =&gt; {
   });
 });</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：运行确认失败</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm exec vitest run tests/lib/portal-api/paper-search.test.ts</code></p>
             <p>预期：失败：新导入的函数未导出</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：扩展 paper-search.ts</strong>
             <p>① 把文件第一行 import 改为：</p>
             <pre><code class="lang-ts">import { EVIDENCE_LABELS, languageName, typeName } from "@/lib/paper-labels";
@@ -1513,12 +1513,12 @@ export function composerTarget(mode: ComposerMode, value: string): ComposerTarge
   }
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：运行测试、类型检查与 lint</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm exec vitest run tests/lib/portal-api/paper-search.test.ts &amp;&amp; pnpm typecheck &amp;&amp; pnpm exec biome check src/lib/portal-api/paper-search.ts tests/lib/portal-api/paper-search.test.ts</code></p>
             <p>预期：测试全部通过；typecheck 与 biome 无错误（biome 若只报格式问题，运行 <code>pnpm exec biome check --write</code> 于这两个文件后复跑）</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：Commit</strong>
             <pre><code class="lang-bash">git add patra-portal/src/lib/portal-api/paper-search.ts patra-portal/tests/lib/portal-api/paper-search.test.ts
 git commit -m "feat(portal): 新增文献检索状态变换、年份推算、chip 与首页跳转目标 (PAP-53)
