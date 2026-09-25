@@ -188,12 +188,12 @@
         <thead><tr><th>参数</th><th>类型</th><th>规则</th></tr></thead>
         <tbody>
           <tr><td><code>q</code> / <code>author</code></td><td>string</td><td>可以同时存在</td></tr>
-          <tr><td><code>pmid</code> / <code>doi</code></td><td>string</td><td>由检索条写入时，其他条件都已清空（§5.2）</td></tr>
+          <tr><td><code>pmid</code> / <code>doi</code></td><td>string</td><td><strong>精确定位模式</strong>：URL 中只要出现其一，就只保留它（pmid 优先于 doi），其余条件、<code>sort</code>、<code>page</code> 一律丢弃（§4.2）</td></tr>
           <tr><td><code>yearFrom</code> / <code>yearTo</code></td><td>int</td><td>单选某一年写成 <code>yearFrom=Y&amp;yearTo=Y</code>；"近 N 年"写成 <code>yearFrom=当年−N+1</code>（绝对年份，链接不随时间漂移）</td></tr>
           <tr><td><code>type</code> / <code>evidence</code> / <code>venue</code> / <code>lang</code></td><td>重复参数</td><td>不按逗号拆分，也不用逗号拼接</td></tr>
           <tr><td><code>oa</code></td><td>bool</td><td>只在 true 时写 <code>oa=true</code></td></tr>
           <tr><td><code>sort</code></td><td><code>latest | year</code></td><td>默认 latest，不写入 URL</td></tr>
-          <tr><td><code>page</code></td><td>int ≥ 1</td><td>1 不写入 URL；每页固定 20 条，<code>pageSize</code> 不进 URL</td></tr>
+          <tr><td><code>page</code></td><td>1 … <code>MAX_PAGE</code></td><td>1 不写入 URL；每页固定 20 条，<code>pageSize</code> 不进 URL。<code>MAX_PAGE = ⌊2147483647 / 20⌋ = 107374182</code>：后端 offset 是 Integer，实测 <code>page=107374184</code> 起即 422</td></tr>
         </tbody>
       </table>
 
@@ -203,9 +203,10 @@
         <li>字符串：trim，空白视为未传；<code>q</code> / <code>author</code> / <code>doi</code> 超过 200 字时丢弃。</li>
         <li><code>pmid</code>：不匹配 <code>^\d{1,15}$</code> 时丢弃。</li>
         <li>年份：非整数，或不在 1000–9999 范围内时丢弃；<code>yearFrom &gt; yearTo</code> 时自动对调。</li>
-        <li><code>venue</code>：非正整数元素丢弃；<code>evidence</code>：不在 6 个枚举名内的丢弃（大小写归一为大写）。</li>
+        <li><code>venue</code>：保持字符串，须匹配 <code>^[1-9]\d{0,18}$</code> 且用 <code>BigInt</code> 比较不超过 Long 上限 <code>9223372036854775807</code>，不经 <code>Number</code> 转换以免损失精度（实测超上限即 422）；<code>evidence</code>：不在 6 个枚举名内的丢弃（大小写归一为大写）。</li>
         <li>多值：去空白、去重，保持首次出现的顺序。</li>
-        <li><code>sort</code>：只接受 <code>latest</code> / <code>year</code>，否则用默认值；<code>page</code>：非正整数时取 1。</li>
+        <li><code>sort</code>：只接受 <code>latest</code> / <code>year</code>，否则用默认值；<code>page</code>：非正整数或大于 <code>MAX_PAGE</code> 时取 1。</li>
+        <li><strong>精确定位归一</strong>：过滤后若 <code>pmid</code> 存在，query 只保留 <code>pmid</code>；否则若 <code>doi</code> 存在，只保留 <code>doi</code>。<code>sort</code> 回默认、<code>page</code> 回 1。于是精确定位永远查第 1 页，也不会与其他条件组合出"看不见原因的空结果"。</li>
       </ul>
       <p>往返一致：<code>parse(serialize(q))</code> 等于 <code>q</code>，并且序列化结果的参数顺序稳定。结果区的 Suspense key 用的就是序列化结果。</p>
 
@@ -213,8 +214,8 @@
 <pre><code>searchParams → parsePaperSearchQuery → query
   │
   ├─ query.pmid 或 query.doi 存在？
-  │     在 page 顶层 await fetchPublicationSearch(query)（此时尚未开始流式输出）
-  │       ├─ total === 1 → redirect(`/papers/${items[0].id}`)
+  │     在 page 顶层 await fetchPublicationSearch(query)（query 已归一为第 1 页）
+  │       ├─ items.length === 1 → redirect(`/papers/${items[0].id}`)
   │       └─ 否则继续渲染，已取到的结果传给 PaperResults，不再重复请求
   │
   └─ &lt;PapersQueryProvider query currentYear&gt;
@@ -240,6 +241,8 @@
       </ul>
       <ul>
         <li>所有交互都经 <code>navigate</code>：检索提交、勾选、chip 移除、排序、清除全部。改动筛选或排序时 <code>page</code> 归 1。分页用普通 <code>&lt;Link&gt;</code>，天然会滚回页面顶部。</li>
+        <li><strong>pending 期间分页不可点</strong>：旧页码属于旧结果集，且链接由旧的服务端 query 生成，此时点击会撤销刚做的筛选。所以 <code>isPending</code> 为真时 <code>BrowsePagination</code> 整体 <code>aria-disabled</code> 并禁止指针事件，新结果到达后恢复。</li>
+        <li><strong>切换时结果区的实际观感</strong>：点击后先等服务端返回新页面骨架（通常很短），这段时间旧列表变淡；骨架到达后结果区因 key 变化换成列表骨架，再换成新结果。</li>
         <li>每次操作都 <code>push</code>，产生一条浏览历史，"后退"即撤销上一步。与期刊页一致。</li>
         <li>期刊页的 <code>JournalFilters</code>、<code>JournalActiveChips</code>、<code>JournalSearchSortControls</code> 改用同一个钩子。期刊检索框原有的 300 ms 防抖与 <code>replace</code> 行为保持不变。</li>
       </ul>
@@ -270,7 +273,7 @@
       <ul>
         <li><strong>初始 tab</strong>：有 <code>pmid</code> 选 PMID；有 <code>doi</code> 选 DOI；只有 <code>author</code> 选作者；其余情况选关键词。</li>
         <li><strong>切 tab</strong>：只切换输入框内容，显示该 tab 对应参数的当前值，没有则为空，不触发导航。PMID 与 DOI 用等宽字体。</li>
-        <li><strong>关键词 / 作者提交</strong>：只替换各自的参数，保留其余条件，<code>page</code> 归 1。提交空值等于移除该参数。</li>
+        <li><strong>关键词 / 作者提交</strong>：只替换各自的参数，同时清除 <code>pmid</code> / <code>doi</code>，保留普通筛选以及关键词与作者之间的叠加，<code>page</code> 归 1。提交空值等于移除该参数。</li>
         <li><strong>PMID / DOI 提交</strong>：生成只含 <code>pmid</code> 或 <code>doi</code> 的全新 query，命中 1 篇由服务端直跳详情。PMID 输入非纯数字时，框下提示"PMID 应为纯数字"，不提交。</li>
         <li>chip 移除关键词或作者后，输入框同步清空（跟随乐观 query）。</li>
       </ul>
@@ -312,11 +315,11 @@
         <thead><tr><th>状态</th><th>触发</th><th>表现</th></tr></thead>
         <tbody>
           <tr><td>首屏加载</td><td>首次进入 <code>/papers</code></td><td><code>app/papers/loading.tsx</code> 整页骨架：页头、检索条、<code>FacetSkeleton</code>、<code>PaperListSkeleton</code></td></tr>
-          <tr><td>切换中</td><td>勾选 / chip / 排序 / 检索提交</td><td>控件按乐观值立即变化；结果区变淡并标记 <code>aria-busy</code>，直到新结果到达</td></tr>
+          <tr><td>切换中</td><td>勾选 / chip / 排序 / 检索提交</td><td>控件与 chip 按乐观值立即变化；结果区先变淡并标记 <code>aria-busy</code>，分页不可点；随后显示列表骨架，再出新结果</td></tr>
           <tr><td>翻页</td><td>点页码</td><td>结果区的 Suspense key 变化，显示列表骨架，并滚回顶部</td></tr>
           <tr><td>关键词无结果</td><td>有 <code>q</code> 或 <code>author</code>，total 为 0</td><td>"未找到匹配"xxx"的文献"，两条建议（换个关键词 / 放宽筛选），加"清除全部筛选"</td></tr>
           <tr><td>仅筛选无结果</td><td>只有筛选条件，total 为 0</td><td>"当前筛选条件下没有文献"，加"清除全部筛选"</td></tr>
-          <tr><td>PMID / DOI 未命中</td><td>有 <code>pmid</code> 或 <code>doi</code>，total 为 0</td><td>"未找到 PMID 38491203 对应的文献"，提示核对号码，加"浏览全部文献"</td></tr>
+          <tr><td>PMID / DOI 未命中</td><td>精确定位模式，items 为空</td><td>"未找到 PMID 38491203 对应的文献"，提示核对号码，加"浏览全部文献"</td></tr>
           <tr><td>空库</td><td>浏览态且 total 为 0</td><td>"库中暂无文献"，加"返回首页"；信息行显示"共 0 篇"</td></tr>
           <tr><td>页码越界</td><td>total 大于 0 但 items 为空</td><td>"该页没有内容"，加"回到第 1 页"</td></tr>
           <tr><td>取数失败</td><td>search / facets 非 2xx 或超时</td><td>冒泡到全局 <code>error.tsx</code></td></tr>
@@ -347,12 +350,12 @@
       <table>
         <thead><tr><th>对象</th><th>覆盖点</th></tr></thead>
         <tbody>
-          <tr><td><code>paper-search.ts</code></td><td>重复参数解析；含逗号的类型值原样保留；§4.2 各类脏参数丢弃；年份对调；序列化往返一致且顺序稳定；后端 query 用重复参数、不含 page 的 facets query；chip 生成与移除后的 next；年份 chip 四种文案；<code>buildPapersHref</code> 四个 tab</td></tr>
+          <tr><td><code>paper-search.ts</code></td><td>重复参数解析；含逗号的类型值原样保留；§4.2 各类脏参数丢弃（含 <code>page</code> 越过 <code>MAX_PAGE</code>、<code>venue</code> 超过 Long 上限且不损失精度）；精确定位归一（pmid 优先、丢弃其余条件与 page）；关键词提交清除 pmid / doi；年份对调；序列化往返一致且顺序稳定；后端 query 用重复参数、不含 page 的 facets query；chip 生成与移除后的 next；年份 chip 四种文案；<code>buildPapersHref</code> 四个 tab</td></tr>
           <tr><td><code>highlightInlineNodes</code></td><td>大小写不敏感；多处命中；跨标签命中；q 为空时原样返回；正则元字符按字面匹配</td></tr>
           <tr><td><code>paper-labels.ts</code></td><td>字典命中；未命中时回退原值</td></tr>
           <tr><td><code>BrowseQueryProvider</code></td><td>navigate 后立即返回乐观值；连续两次函数式 navigate 叠加；服务端 query 更新后对齐</td></tr>
-          <tr><td>浏览页公用部件</td><td><code>BrowsePagination</code>（含 <code>pageWindow</code>）、<code>ActiveChips</code>、<code>FacetGroup</code> / 行、<code>SortSegmented</code>、<code>FilterPanel</code>；原 journals 测试迁移后全部保持绿</td></tr>
-          <tr><td>期刊页</td><td>新增"连点两个筛选项，URL 两项都在"</td></tr>
+          <tr><td>浏览页公用部件</td><td><code>BrowsePagination</code>（含 <code>pageWindow</code>、pending 时禁用）、<code>ActiveChips</code>、<code>FacetGroup</code> / 行、<code>SortSegmented</code>、<code>FilterPanel</code>；原 journals 测试迁移后全部保持绿</td></tr>
+          <tr><td>期刊页</td><td>新增"连点两个筛选项，URL 两项都在"与"勾选后 pending 期间分页不可点"</td></tr>
           <tr><td>文献页部件</td><td><code>PaperSearchBar</code>（初始 tab、叠加 / 清空语义、PMID 校验）；<code>PaperFilters</code>（年份单选与快捷互斥、OA 组隐藏、更多类型、已选项不被折叠、未分级弱化）；<code>VenueFacetSearch</code>（三态、键盘、已选过滤）；<code>PaperListItem</code>（无摘要、未分级无徽章、期刊链接、高亮）；<code>PapersEmptyResult</code> 四种文案与越界；<code>PapersInfoRow</code> 两态</td></tr>
           <tr><td><code>/api/venues/suggest</code></td><td>空 q 返回 []、转发参数与字段映射、后端失败返回 502</td></tr>
           <tr><td>PAP-54</td><td><code>TopNav</code> 文献可点与高亮；<code>HeroWithSearch</code> 四 tab 跳转与空值不跳；<code>TopicCloud</code> 词条链接；<code>ExploreFeed</code>"查看更多"；<code>JournalMasthead</code>"查看该刊文献"</td></tr>
@@ -397,7 +400,7 @@
 
       <div class="decision">
         <h3>决策 4：关键词 / 作者叠加，PMID / DOI 清空</h3>
-        <p>关键词和作者 tab 只替换自己的参数；PMID 和 DOI 是精确定位，提交时生成全新 query，命中 1 篇直跳详情。</p>
+        <p>关键词和作者 tab 只替换自己的参数，并清除 pmid / doi；PMID 和 DOI 是精确定位，提交时生成全新 query，命中 1 篇直跳详情。解析层同样保证精确定位与其他条件互斥（§4.2），手拼的 URL 也遵守。</p>
         <p class="alternatives"><strong>备选 A：</strong>任何 tab 都叠加 — 否决：残留的筛选条件会让 PMID 查不到，落到空态。<br>
         <strong>备选 B：</strong>任何 tab 提交都重置 — 否决：在已筛选的结果里换个词，就得重新勾选全部筛选。</p>
       </div>
@@ -416,10 +419,11 @@
       </div>
 
       <div class="decision">
-        <h3>决策 7：PMID / DOI 直跳放在 page 顶层 <code>redirect</code></h3>
-        <p>只在带 <code>pmid</code> / <code>doi</code> 时，于流式输出开始前 await 一次 search。命中 1 篇就返回服务端跳转；未命中时复用这次结果渲染空态。</p>
-        <p class="alternatives"><strong>备选 A：</strong>在 Suspense 内部 <code>redirect</code> — 否决：流式输出已开始，跳转会退化为客户端注入，会先闪一下页面。<br>
-        <strong>备选 B：</strong>客户端 <code>useEffect</code> 跳转 — 否决：用户会先看到一闪而过的列表页。</p>
+        <h3>决策 7：PMID / DOI 直跳放在 page 顶层 <code>redirect</code>，接受定位时的加载骨架</h3>
+        <p>只在精确定位模式下，page 顶层 await 一次 search（第 1 页）。<code>items.length === 1</code> 时 <code>redirect</code> 到详情；未命中时复用这次结果渲染空态。由于 <code>app/papers/loading.tsx</code> 会在 page 外自动建立 Suspense，直接打开这类链接时响应是 HTTP 200：先输出整页骨架，再由 Next 注入跳转（经 Codex 用 Next 15.5.26 最小复现确认），而不是 307。本版接受这一点：用户看到的是约 0.3 s 的加载骨架，不会看到列表。站内从检索条或首页提交时走客户端导航，本来就不涉及 HTTP 状态码。</p>
+        <p class="alternatives"><strong>备选 A：</strong>去掉 <code>loading.tsx</code>，换取直开链接时的真 307 — 否决：从导航进入 <code>/papers</code> 时会失去即时骨架反馈，为少见的"直开 PMID 链接"场景牺牲高频路径。<br>
+        <strong>备选 B：</strong>独立定位入口（如 <code>/papers/lookup</code> Route Handler 返回 307） — 否决：多一条路由和一套链接规则，而 <code>/papers?pmid=</code> 仍须处理；收益只是 HTTP 状态码。<br>
+        <strong>备选 C：</strong>客户端 <code>useEffect</code> 跳转 — 否决：要先渲染完列表页再跳，用户会看到一闪而过的页面。</p>
       </div>
 
       <div class="decision">
