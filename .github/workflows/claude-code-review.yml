@@ -34,13 +34,19 @@ jobs:
       - name: Run Claude Code Review
         id: claude-review
         uses: anthropics/claude-code-action@v1
+        env:
+          # 插件把子 agent 放后台跑，Action 在主回合结束即退出、不会等后台结果，评审静默为空
+          # （anthropics/claude-code-action#1646）；强制子 agent 前台同步执行
+          CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: 1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
           plugins: 'code-review@claude-code-plugins'
           prompt: '/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
-          # 与 code-review 插件 frontmatter 的 allowed-tools 对齐：插件靠 gh 查 PR 状态、读 diff、发总结评论，
-          # 只放行 inline comment 工具会让这些调用全部被拒，评审静默产出为空
-          claude_args: '--allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh search:*),Read,Glob,Grep"'
+          # 子 agent 实际发出的命令（管道、git、多行 body 的 gh pr comment 等）按前缀白名单匹配不上，
+          # 会被大量拒绝；Bash 整体放行。fork / Dependabot PR 拿不到 OAuth secret 跑不起来，输入均来自仓库成员
+          claude_args: '--allowedTools "Bash,Read,Glob,Grep,Task,TodoWrite,mcp__github_inline_comment__create_inline_comment"'
+          # 在 job summary 输出评审报告，静默无输出时一眼可见
+          display_report: true
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
