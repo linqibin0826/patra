@@ -52,7 +52,7 @@
           <li data-task-status="done"><a href="#task-17">Task 17 — 期刊 facet：候选 combobox 与刊名缓存 store</a></li>
           <li data-task-status="done"><a href="#task-18">Task 18 — 文献 facet 栏 PaperFilters 与服务端包装</a></li>
           <li data-task-status="done"><a href="#task-19">Task 19 — 信息行 PapersInfoRow 与文献 chip 行</a></li>
-          <li data-task-status="pending"><a href="#task-20">Task 20 — 装配 /papers 页面：精确定位直跳、分块流式与整页骨架</a></li>
+          <li data-task-status="done"><a href="#task-20">Task 20 — 装配 /papers 页面：精确定位直跳、分块流式与整页骨架</a></li>
           <li data-task-status="pending"><a href="#task-21">Task 21 — 导航"文献"解锁与主题云词条接通（PAP-54）</a></li>
           <li data-task-status="pending"><a href="#task-22">Task 22 — 首页文献流"查看更多"与期刊详情"查看该刊文献"（PAP-54）</a></li>
           <li data-task-status="pending"><a href="#task-23">Task 23 — 首页搜索框接通 /papers：HeroWithToast → HeroWithSearch（PAP-54）</a></li>
@@ -6276,7 +6276,7 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
         </ol>
       </article>
 
-      <article class="task" id="task-20" data-status="pending">
+      <article class="task" id="task-20" data-status="done">
         <header>
           <h2>任务 20：装配 /papers 页面：精确定位直跳、分块流式与整页骨架</h2>
           <dl class="files">
@@ -6284,7 +6284,7 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
           </dl>
         </header>
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：写失败测试 papers-page.test.tsx</strong>
             <pre><code class="lang-tsx">// patra-portal/tests/app/papers-page.test.tsx
 import { isValidElement } from "react";
@@ -6342,12 +6342,12 @@ describe("/papers page", () =&gt; {
   });
 });</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：运行确认失败</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm exec vitest run tests/app/papers-page.test.tsx</code></p>
             <p>预期：失败：<code>Failed to resolve import "@/app/papers/page"</code></p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：创建 app/papers/page.tsx</strong>
             <pre><code class="lang-tsx">// patra-portal/src/app/papers/page.tsx
 import { redirect } from "next/navigation";
@@ -6436,7 +6436,7 @@ export default async function PapersPage({
   );
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：创建 app/papers/loading.tsx</strong>
             <pre><code class="lang-tsx">// patra-portal/src/app/papers/loading.tsx
 import { FacetSkeleton } from "@/components/portal/browse/FacetSkeleton";
@@ -6488,12 +6488,12 @@ export default function Loading() {
   );
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：运行确认通过</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm exec vitest run tests/app/papers-page.test.tsx &amp;&amp; pnpm typecheck &amp;&amp; pnpm lint</code></p>
             <p>预期：4 passed；typecheck 与 biome 0 错误</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：浏览器走查（dev 连 Mac mini）</strong>
             <p>用 <code>preview_start</code> 起 <code>.claude/launch.json</code> 的 <code>portal-dev</code>（端口 4000，已剥代理、网关指 mini），依次打开并核对：</p>
             <pre><code class="lang-text">/papers                                   浏览态：信息行"共 18,807 篇 · 最近同步 2026-08-30"，facet 带计数，无开放获取组
@@ -6505,7 +6505,7 @@ export default function Loading() {
 /papers?sort=cited&amp;venue=-1&amp;yearFrom=20x6 脏参数被忽略，正常渲染浏览态</code></pre>
             <p>连点两个类型 facet：勾选框立即打勾、chip 立即出现、最终 URL 两项都在。任何不符记 notes 并修正后再 commit。</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7：Commit</strong>
             <pre><code class="lang-bash">git add patra-portal/src/app/papers/page.tsx patra-portal/src/app/papers/loading.tsx patra-portal/tests/app/papers-page.test.tsx
 git commit -m "feat(portal): 装配 /papers 文献检索页，精确定位命中直跳详情 (PAP-53)
