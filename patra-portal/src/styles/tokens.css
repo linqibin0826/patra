@@ -44,20 +44,6 @@
   --clay-800: #6e3216;
   --clay-900: #3e1c0c; /* mark "deep" — for marks/illustrations */
 
-  /* Teal — discovery surface accent (public homepage, search, cloud).
-     Medical-journal teal — NEJM/JAMA family — pulled slightly warm so
-     it doesn't fight the cream paper. */
-  --teal-50: #ecf5f3;
-  --teal-100: #d0e6e2;
-  --teal-200: #a4cec7;
-  --teal-300: #74b3aa;
-  --teal-400: #4d958c;
-  --teal-500: #2b7d73;
-  --teal-600: #176b62; /* primary action on public surface */
-  --teal-700: #0e574f;
-  --teal-800: #08443d;
-  --teal-900: #03332e;
-
   /* Semantic — muted, editorial, not SaaS-bright */
   --moss-500: #5f7a47; /* success */
   --moss-50: #eef1e6;

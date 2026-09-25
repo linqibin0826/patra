@@ -30,17 +30,6 @@
   --color-clay-800: var(--clay-800);
   --color-clay-900: var(--clay-900);
 
-  --color-teal-50: var(--teal-50);
-  --color-teal-100: var(--teal-100);
-  --color-teal-200: var(--teal-200);
-  --color-teal-300: var(--teal-300);
-  --color-teal-400: var(--teal-400);
-  --color-teal-500: var(--teal-500);
-  --color-teal-600: var(--teal-600);
-  --color-teal-700: var(--teal-700);
-  --color-teal-800: var(--teal-800);
-  --color-teal-900: var(--teal-900);
-
   --color-moss-500: var(--moss-500);
   --color-moss-50: var(--moss-50);
   --color-amber-500: var(--amber-500);
@@ -101,7 +90,7 @@
   --color-card-foreground: var(--ink-900);
   --color-popover: var(--bg-elevated);
   --color-popover-foreground: var(--ink-900);
-  --color-primary: var(--teal-600);
+  --color-primary: var(--action-primary);
   --color-primary-foreground: var(--fg-on-clay);
   --color-secondary: var(--paper-200);
   --color-secondary-foreground: var(--ink-900);
@@ -112,7 +101,7 @@
   --color-destructive: var(--rust-500);
   --color-border: var(--border-default);
   --color-input: var(--border-default);
-  --color-ring: var(--clay-500);
+  --color-ring: var(--border-focus);
 
   /* ---- Typography */
   --font-sans: var(--patra-font-sans);

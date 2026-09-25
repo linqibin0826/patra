@@ -65,7 +65,7 @@ export function Composer({ onSubmit }: ComposerProps) {
             <TabsTrigger
               key={m.id}
               value={m.id}
-              className="relative -mb-px flex-none rounded-none border-x-0 border-t-0 border-b-2 border-transparent bg-transparent px-3.5 py-2.5 text-sm font-medium text-fg-3 shadow-none transition-colors duration-150 hover:text-ink-900 data-active:border-teal-600! data-active:bg-transparent data-active:text-ink-900! data-active:shadow-none"
+              className="relative -mb-px flex-none rounded-none border-x-0 border-t-0 border-b-2 border-transparent bg-transparent px-3.5 py-2.5 text-sm font-medium text-fg-3 shadow-none transition-colors duration-150 hover:text-ink-900 data-active:border-clay-500! data-active:bg-transparent data-active:text-ink-900! data-active:shadow-none"
             >
               {m.label}
               {m.id === "keyword" && (
@@ -93,7 +93,7 @@ export function Composer({ onSubmit }: ComposerProps) {
         <button
           type="submit"
           aria-label="搜索"
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-teal-700 bg-teal-600 px-4 py-2.5 text-sm font-semibold text-fg-on-clay transition-colors hover:bg-teal-700 active:bg-teal-800 max-sm:px-3"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-action-primary bg-action-primary px-4 py-2.5 text-sm font-semibold text-fg-on-clay transition-colors hover:border-action-primary-hover hover:bg-action-primary-hover active:bg-action-primary-press max-sm:px-3"
         >
           <span className="max-sm:hidden">搜索</span>
           <CornerDownLeft className="h-3.5 w-3.5" strokeWidth={1.5} aria-hidden />
