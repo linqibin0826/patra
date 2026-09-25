@@ -204,7 +204,7 @@
         <li><code>pmid</code>：不匹配 <code>^\d{1,15}$</code> 时丢弃。</li>
         <li>年份：非整数，或不在 1000–9999 范围内时丢弃；<code>yearFrom &gt; yearTo</code> 时自动对调。</li>
         <li><code>venue</code>：保持字符串，须匹配 <code>^[1-9]\d{0,18}$</code> 且用 <code>BigInt</code> 比较不超过 Long 上限 <code>9223372036854775807</code>，不经 <code>Number</code> 转换以免损失精度（实测超上限即 422）；<code>evidence</code>：不在 6 个枚举名内的丢弃（大小写归一为大写）。</li>
-        <li>多值：去空白、去重，保持首次出现的顺序。</li>
+        <li>多值：去空白、去重，保持首次出现的顺序。<code>type</code> 去重与勾选 / 取消均<strong>忽略大小写</strong>（BE 按 <code>lower(trim(type_value))</code> 比较，<code>type=review</code> 与 <code>Review</code> 等价），展示用 facet 返回的规范写法；<code>lang</code> 统一转小写（BE 语言比较区分大小写，<code>lang=EN</code> 实测 0 条）。</li>
         <li><code>sort</code>：只接受 <code>latest</code> / <code>year</code>，否则用默认值；<code>page</code>：非正整数或大于 <code>MAX_PAGE</code> 时取 1。</li>
         <li><strong>精确定位归一</strong>：过滤后若 <code>pmid</code> 存在，query 只保留 <code>pmid</code>；否则若 <code>doi</code> 存在，只保留 <code>doi</code>。<code>sort</code> 回默认、<code>page</code> 回 1。于是精确定位永远查第 1 页，也不会与其他条件组合出"看不见原因的空结果"。</li>
       </ul>
@@ -235,8 +235,8 @@
       <h3>4.4 交互 → URL：公用导航钩子</h3>
       <p><code>BrowseQueryProvider</code>（client）持有服务端下发的 <code>query</code>，对外提供三样东西：</p>
       <ul>
-        <li><code>query</code>：乐观值。由 <code>useOptimistic</code> 维护；transition 期间是用户最新操作后的状态，transition 结束后回落为服务端下发的真实 query。</li>
-        <li><code>navigate(next | (cur) =&gt; next)</code>：在 <code>startTransition</code> 内先设置乐观值，再 <code>router.push(basePath + serialize(next))</code>。函数式写法基于<strong>当前乐观值</strong>计算下一状态，所以连点会叠加，不会互相覆盖。</li>
+        <li><code>query</code>：乐观值。<code>navigate</code> 后立即生效；服务端 query 一变（导航完成 / 后退 / 前进）即在渲染期清空，因此 A → B → 后退 A 不会复活 B。用 <code>useState</code> 而非 <code>useOptimistic</code>：乐观值须覆盖整个导航期，且要在单测里可确定性验证。</li>
+        <li><code>navigate(next | (cur) =&gt; next)</code>：在 <code>startTransition</code> 内先设置乐观值，再 <code>router.push(basePath + serialize(next))</code>。函数式写法基于<strong>此刻最新</strong>的查询计算下一状态（内部用 ref 保存最新值，<code>navigate</code> 引用稳定），所以连点会叠加；防抖定时器等持有旧 <code>navigate</code> 引用的延迟回调也不会覆盖别的操作。</li>
         <li><code>isPending</code>：给 <code>PendingRegion</code> 用，让结果区变淡。</li>
       </ul>
       <ul>
@@ -274,6 +274,7 @@
         <li><strong>初始 tab</strong>：有 <code>pmid</code> 选 PMID；有 <code>doi</code> 选 DOI；只有 <code>author</code> 选作者；其余情况选关键词。</li>
         <li><strong>切 tab</strong>：只切换输入框内容，显示该 tab 对应参数的当前值，没有则为空，不触发导航。PMID 与 DOI 用等宽字体。</li>
         <li><strong>关键词 / 作者提交</strong>：只替换各自的参数，同时清除 <code>pmid</code> / <code>doi</code>，保留普通筛选以及关键词与作者之间的叠加，<code>page</code> 归 1。提交空值等于移除该参数。</li>
+        <li><strong>长度校验</strong>：关键词 / 作者 / DOI 超过 200 字时框下提示"检索词最长 200 字"且不提交（首页搜索框同一校验，弹 toast）。否则解析层会丢弃超长词，用户静默得到全库结果。</li>
         <li><strong>PMID / DOI 提交</strong>：生成只含 <code>pmid</code> 或 <code>doi</code> 的全新 query，命中 1 篇由服务端直跳详情。PMID 输入非纯数字时，框下提示"PMID 应为纯数字"，不提交。</li>
         <li>chip 移除关键词或作者后，输入框同步清空（跟随乐观 query）。</li>
       </ul>
@@ -292,7 +293,9 @@
       </table>
       <ul>
         <li><strong>空组不渲染</strong>：某组没有可选项、也没有已选项时整组不渲染。本库 OA 全为 0，所以开放获取组本版不可见。</li>
-        <li>计数用千分位（<code>Intl.NumberFormat("en-US")</code>）；计数为 0 的未选项变淡，但仍可点。</li>
+        <li>计数用千分位（<code>Intl.NumberFormat("en-US")</code>）；计数为 0 的未选项变淡，但仍可点。勾选框的可访问名只取标签（不含计数）。</li>
+        <li><strong>精确定位模式下的筛选</strong>：PMID / DOI 未命中时页面仍显示 facet；此时任何筛选、年份、开放获取、排序操作都退出精确模式（清除 <code>pmid</code> / <code>doi</code>），否则下次解析时精确模式优先，刚做的操作会被丢弃。</li>
+        <li><strong>期刊候选与输入同步</strong>：候选只属于已防抖的关键词；输入改变而候选未更新时显示"加载中…"并禁止选择，候选变少时高亮夹回有效项。</li>
         <li>桌面侧栏底部有"清除全部筛选"。</li>
         <li><strong>移动抽屉</strong>：从底部弹出，标题"筛选 · 已选 N 项"，页脚是"清除全部"与"查看 N 篇结果"（N 取 <code>facets.total</code>）。勾选时抽屉不关，结果在后台刷新。</li>
       </ul>

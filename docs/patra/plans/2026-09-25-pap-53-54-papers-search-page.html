@@ -103,7 +103,8 @@
       <aside class="callout warning">
         <span class="title">相对 spec 的细化（执行以本 plan 为准）</span>
         <ul>
-          <li><strong>乐观 query 的实现</strong>：spec 写 <code>useOptimistic</code>。plan 改用 <code>useState</code> 保存 <code>{base: 服务端序列化, query}</code>，服务端 query 一变（导航完成 / 后退）乐观值自动失效。原因：乐观值必须覆盖整个导航期间，且要能在 jsdom 单测里确定性验证（mock 的 <code>router.push</code> 不会让 transition 保持 pending，<code>useOptimistic</code> 会立即回落）。行为与 spec §4.4 一致。</li>
+          <li><strong>乐观 query 的实现</strong>（已同步回 spec §4.4）：<code>useState</code> 保存乐观值，服务端 query 一变即在渲染期清空（A → B → 后退 A 不复活 B）；<code>navigate</code> 引用稳定，函数形式经 ref 读取此刻最新查询（防抖定时器等延迟回调不覆盖别的操作）。</li>
+          <li><strong>Codex 评审后补入的规则</strong>（已同步回 spec §4.2 / §5.2 / §5.3）：类型大小写不敏感、语言统一小写；精确定位模式下的筛选 / 年份 / 排序操作退出精确模式；关键词 / 作者 / DOI 超 200 字提示不提交；期刊候选只在输入与已防抖关键词一致时可选，高亮夹回有效范围；facet 勾选框可访问名只取标签。</li>
           <li><strong><code>JournalPagination</code> 删除</strong>而非"薄封装"：分页变成读 Provider 的 client 部件后，薄封装没有任何职责；<code>JournalResults</code> 直接用 <code>BrowsePagination</code>，其测试迁到 <code>BrowsePagination.test.tsx</code>。</li>
           <li><strong>新增 3 个小文件</strong>：<code>browse/FilterTrigger.tsx</code>（两页共用的移动端"筛选"按钮 + 角标）、<code>store/venue-names.ts</code>（刚从候选添加的期刊名，在服务端刊名到达前供 chip 与已选行显示）、<code>tests/fixtures/paper.ts</code>（<code>Paper</code> 测试工厂）。</li>
           <li><strong><code>EvidenceBadge</code> 增加 <code>compact</code> 变体</strong>：hi-fi 列表里是单行小徽章，详情页大徽章不变。</li>
@@ -257,6 +258,10 @@ describe("文献类型中文名", () =&gt; {
     expect(typeName("Clinical Trial, Phase III")).toBe("III 期临床试验");
   });
 
+  it("typeName：大小写不敏感（与 BE 一致）", () =&gt; {
+    expect(typeName("review")).toBe("综述");
+  });
+
   it("typeName：未收录的类型回退原值", () =&gt; {
     expect(typeName("Some New Type")).toBe("Some New Type");
   });
@@ -373,7 +378,7 @@ export const EVIDENCE_LABELS: Record&lt;EvidenceLevelCode, string&gt; = {
 };
 
 /** PubMed Publication Type → 中文名（short 为 facet 行里替代英文原值的短名）。未收录的类型按原值展示。 */
-const TYPE_NAMES = new Map&lt;string, { zh: string; short?: string }&gt;([
+const TYPE_NAME_ENTRIES: [string, { zh: string; short?: string }][] = [
   ["Journal Article", { zh: "期刊论文" }],
   ["Review", { zh: "综述" }],
   ["Systematic Review", { zh: "系统综述" }],
@@ -423,7 +428,10 @@ const TYPE_NAMES = new Map&lt;string, { zh: string; short?: string }&gt;([
   ["Research Support, N.I.H., Intramural", { zh: "研究资助（NIH 院内）" }],
   ["Research Support, U.S. Gov't, P.H.S.", { zh: "研究资助（美国公共卫生署）" }],
   ["Research Support, U.S. Gov't, Non-P.H.S.", { zh: "研究资助（美国政府非 PHS）" }],
-]);
+];
+
+/** 小写键：与 BE lower(trim()) 比较一致，URL 里写成 review 也能查到中文名。 */
+const TYPE_NAMES = new Map(TYPE_NAME_ENTRIES.map(([value, name]) =&gt; [value.toLowerCase(), name]));
 
 /** 语言基码 → 中文名（小写键）。 */
 const LANGUAGE_NAMES = new Map&lt;string, string&gt;([
@@ -455,12 +463,12 @@ const LANGUAGE_NAMES = new Map&lt;string, string&gt;([
 
 /** 类型 chip 文案：中文名；未收录回退原值。 */
 export function typeName(value: string): string {
-  return TYPE_NAMES.get(value)?.zh ?? value;
+  return TYPE_NAMES.get(value.toLowerCase())?.zh ?? value;
 }
 
 /** 类型 facet 行文案："综述 · Review"；有短名时用短名；未收录回退原值。 */
 export function typeFacetLabel(value: string): string {
-  const name = TYPE_NAMES.get(value);
+  const name = TYPE_NAMES.get(value.toLowerCase());
   return name ? `${name.zh} · ${name.short ?? value}` : value;
 }
 
@@ -558,6 +566,14 @@ describe("parsePaperSearchQuery", () =&gt; {
     const q = parsePaperSearchQuery({ type: ["Clinical Trial, Phase III", "Review", "Review", " "] });
     expect(q.type).toEqual(["Clinical Trial, Phase III", "Review"]);
     expect(parsePaperSearchQuery({ type: "Review" }).type).toEqual(["Review"]);
+  });
+
+  it("类型去重忽略大小写（与 BE 一致），保留首次写法", () =&gt; {
+    expect(parsePaperSearchQuery({ type: ["Review", "review", "REVIEW"] }).type).toEqual(["Review"]);
+  });
+
+  it("语言统一小写（BE 语言比较区分大小写）", () =&gt; {
+    expect(parsePaperSearchQuery({ lang: ["EN", "en", "De"] }).lang).toEqual(["en", "de"]);
   });
 
   it("evidence 统一大写、去重，非法枚举名丢弃", () =&gt; {
@@ -658,7 +674,7 @@ export const PAPER_PAGE_SIZE = 20;
 export const MAX_PAGE = Math.floor(2_147_483_647 / PAPER_PAGE_SIZE);
 
 /** 文本参数长度上限（与 BE @Size(max = 200) 一致） */
-const MAX_TEXT_LENGTH = 200;
+export const MAX_TEXT_LENGTH = 200;
 
 /** BE venue 为 Long：id 不得超过 Long.MAX_VALUE */
 const LONG_MAX = 9_223_372_036_854_775_807n;
@@ -713,6 +729,17 @@ function listValues(raw: RawParam): string[] {
   return [...new Set(values.map((v) =&gt; v.trim()).filter((v) =&gt; v.length &gt; 0))];
 }
 
+/** 多值去重（忽略大小写，保留首次出现的写法）——与 BE lower(trim()) 的类型比较一致。 */
+function uniqueIgnoreCase(values: string[]): string[] {
+  const seen = new Set&lt;string&gt;();
+  return values.filter((value) =&gt; {
+    const key = value.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 function yearValue(raw: RawParam): number | null {
   const value = firstValue(raw);
   return /^[1-9]\d{3}$/.test(value) ? Number(value) : null;
@@ -762,12 +789,13 @@ export function parsePaperSearchQuery(sp: Record&lt;string, RawParam&gt;): Paper
     doi: "",
     yearFrom,
     yearTo,
-    type: listValues(sp.type),
+    type: uniqueIgnoreCase(listValues(sp.type)),
     evidence: [...new Set(listValues(sp.evidence).map((v) =&gt; v.toUpperCase()))].filter(
       isEvidenceCode,
     ),
     venue: listValues(sp.venue).filter(isVenueId),
-    lang: listValues(sp.lang),
+    // BE 语言比较区分大小写，语言基码本身为小写
+    lang: [...new Set(listValues(sp.lang).map((v) =&gt; v.toLowerCase()))],
     oa: firstValue(sp.oa) === "true",
     sort: firstValue(sp.sort).toLowerCase() === "year" ? "year" : "latest",
     page: pageValue(sp.page),
@@ -777,7 +805,7 @@ export function parsePaperSearchQuery(sp: Record&lt;string, RawParam&gt;): Paper
           <li class="step" data-status="pending">
             <strong>步骤 4：运行确认通过</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm exec vitest run tests/lib/portal-api/paper-search.test.ts</code></p>
-            <p>预期：16 passed</p>
+            <p>预期：18 passed</p>
           </li>
           <li class="step" data-status="pending">
             <strong>步骤 5：Commit</strong>
@@ -1029,8 +1057,51 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
         <ol class="steps">
           <li class="step" data-status="pending">
             <strong>步骤 1：追加失败测试</strong>
-            <p>在顶部 import 里追加 <code>clearAllConditions, composerTarget, currentPortalYear, derivePaperChips, isRecentYearsActive, selectExactYear, selectRecentYears, submitExactLookup, submitTextSearch, toggleListValue, toggleOpenAccess, visibleFacetOptions, withSort, yearChipLabel</code>，并在文件末尾追加：</p>
-            <pre><code class="lang-ts">describe("检索提交", () =&gt; {
+            <p>在顶部 import 里追加 <code>clearAllConditions, composerTarget, containsIgnoreCase, currentPortalYear, derivePaperChips, isRecentYearsActive, selectExactYear, selectRecentYears, submitExactLookup, submitTextSearch, toggleListValue, toggleOpenAccess, validateSearchInput, visibleFacetOptions, withSort, yearChipLabel</code>，并在文件末尾追加：</p>
+            <pre><code class="lang-ts">const roundTrip = (q: PaperSearchQuery) =&gt; parsePaperSearchQuery(toRecord(serializePaperSearchQuery(q)));
+
+describe("精确定位模式下的筛选操作", () =&gt; {
+  const exact = { ...EMPTY_PAPER_QUERY, pmid: "1" };
+
+  it("筛选 / 年份 / 开放获取 / 排序操作退出精确模式；序列化再解析后条件保留", () =&gt; {
+    expect(roundTrip(toggleListValue(exact, "type", "Review"))).toMatchObject({ pmid: "", type: ["Review"] });
+    expect(roundTrip(toggleOpenAccess(exact))).toMatchObject({ pmid: "", oa: true });
+    expect(roundTrip(selectExactYear(exact, 2025))).toMatchObject({ pmid: "", yearFrom: 2025, yearTo: 2025 });
+    expect(roundTrip(selectRecentYears(exact, 3, 2026))).toMatchObject({ pmid: "", yearFrom: 2024 });
+    expect(roundTrip(withSort({ ...EMPTY_PAPER_QUERY, doi: "10.1/x" }, "year"))).toMatchObject({
+      doi: "",
+      sort: "year",
+    });
+  });
+});
+
+describe("大小写与 BE 一致", () =&gt; {
+  it("类型勾选 / 取消忽略大小写", () =&gt; {
+    expect(containsIgnoreCase(["review"], "Review")).toBe(true);
+    expect(toggleListValue({ ...EMPTY_PAPER_QUERY, type: ["review"] }, "type", "Review").type).toEqual([]);
+  });
+
+  it("语言勾选统一小写", () =&gt; {
+    expect(toggleListValue(EMPTY_PAPER_QUERY, "lang", "EN").lang).toEqual(["en"]);
+  });
+
+  it("visibleFacetOptions：已选值与 facet 值仅大小写不同时不重复追加", () =&gt; {
+    const options = [{ value: "Review", count: 5 }];
+    expect(visibleFacetOptions(options, ["review"], false, 6)).toEqual(options);
+  });
+});
+
+describe("validateSearchInput", () =&gt; {
+  it("PMID 须为纯数字；其余检索词不超过 200 字", () =&gt; {
+    expect(validateSearchInput("pmid", "38491203")).toBeNull();
+    expect(validateSearchInput("pmid", "abc")).toBe("PMID 应为纯数字");
+    expect(validateSearchInput("keyword", "a".repeat(200))).toBeNull();
+    expect(validateSearchInput("author", "a".repeat(201))).toBe("检索词最长 200 字");
+    expect(validateSearchInput("doi", "a".repeat(201))).toBe("检索词最长 200 字");
+  });
+});
+
+describe("检索提交", () =&gt; {
   it("submitTextSearch：替换关键词、清除 pmid/doi、保留筛选、回第 1 页", () =&gt; {
     const base = { ...EMPTY_PAPER_QUERY, author: "Smith", type: ["Review"], page: 4 };
     expect(submitTextSearch(base, "q", " GLP-1 ")).toEqual({ ...base, q: "GLP-1", page: 1 });
@@ -1165,9 +1236,10 @@ describe("composerTarget（首页搜索框）", () =&gt; {
     });
   });
 
-  it("空内容不跳转；PMID 非数字给出提示", () =&gt; {
+  it("空内容不跳转；PMID 非数字 / 超长检索词给出提示（不静默变成全库浏览）", () =&gt; {
     expect(composerTarget("keyword", "  ")).toEqual({ kind: "empty" });
     expect(composerTarget("pmid", "abc")).toEqual({ kind: "invalid", message: "PMID 应为纯数字" });
+    expect(composerTarget("keyword", "a".repeat(201))).toEqual({ kind: "invalid", message: "检索词最长 200 字" });
   });
 });</code></pre>
           </li>
@@ -1215,34 +1287,54 @@ function toggled&lt;T extends string&gt;(list: readonly T[], value: T): T[] {
   return list.includes(value) ? list.filter((v) =&gt; v !== value) : [...list, value];
 }
 
-/** 勾选 / 取消多值筛选项，回第 1 页；evidence 非法值原样返回。 */
+/** 大小写不敏感的包含判断（类型与 BE lower(trim()) 比较一致）。 */
+export function containsIgnoreCase(list: readonly string[], value: string): boolean {
+  const key = value.toLowerCase();
+  return list.some((v) =&gt; v.toLowerCase() === key);
+}
+
+function toggledIgnoreCase(list: readonly string[], value: string): string[] {
+  const key = value.toLowerCase();
+  return containsIgnoreCase(list, value) ? list.filter((v) =&gt; v.toLowerCase() !== key) : [...list, value];
+}
+
+/**
+ * 筛选 / 年份 / 排序操作一律退出精确定位模式：否则下次解析时 pmid/doi 优先，
+ * 刚做的操作会被丢弃（用户看到勾选后又恢复）。
+ */
+function leaveExactLookup(query: PaperSearchQuery): PaperSearchQuery {
+  return isExactLookup(query) ? { ...query, pmid: "", doi: "" } : query;
+}
+
+/** 勾选 / 取消多值筛选项，回第 1 页；类型忽略大小写，语言统一小写；evidence 非法值原样返回。 */
 export function toggleListValue(
   query: PaperSearchQuery,
   key: "type" | "evidence" | "venue" | "lang",
   value: string,
 ): PaperSearchQuery {
+  const base = leaveExactLookup(query);
   switch (key) {
     case "type":
-      return { ...query, type: toggled(query.type, value), page: 1 };
+      return { ...base, type: toggledIgnoreCase(base.type, value), page: 1 };
     case "venue":
-      return { ...query, venue: toggled(query.venue, value), page: 1 };
+      return { ...base, venue: toggled(base.venue, value), page: 1 };
     case "lang":
-      return { ...query, lang: toggled(query.lang, value), page: 1 };
-    case "evidence":
-      return isEvidenceCode(value)
-        ? { ...query, evidence: toggled(query.evidence, value), page: 1 }
-        : query;
+      return { ...base, lang: toggled(base.lang, value.toLowerCase()), page: 1 };
+    case "evidence": {
+      const code = value.toUpperCase();
+      return isEvidenceCode(code) ? { ...base, evidence: toggled(base.evidence, code), page: 1 } : query;
+    }
   }
 }
 
 /** 切换"仅开放获取"，回第 1 页。 */
 export function toggleOpenAccess(query: PaperSearchQuery): PaperSearchQuery {
-  return { ...query, oa: !query.oa, page: 1 };
+  return { ...leaveExactLookup(query), oa: !query.oa, page: 1 };
 }
 
 /** 切换排序，回第 1 页。 */
 export function withSort(query: PaperSearchQuery, sort: PaperSortId): PaperSearchQuery {
-  return { ...query, sort, page: 1 };
+  return { ...leaveExactLookup(query), sort, page: 1 };
 }
 
 /** 清除全部条件（保留排序偏好）。 */
@@ -1253,7 +1345,7 @@ export function clearAllConditions(query: PaperSearchQuery): PaperSearchQuery {
 /** 单选某一年（from = to = year）；已选中则取消。 */
 export function selectExactYear(query: PaperSearchQuery, year: number): PaperSearchQuery {
   const active = query.yearFrom === year &amp;&amp; query.yearTo === year;
-  return { ...query, yearFrom: active ? null : year, yearTo: active ? null : year, page: 1 };
+  return { ...leaveExactLookup(query), yearFrom: active ? null : year, yearTo: active ? null : year, page: 1 };
 }
 
 /** "近 N 年"对应的 yearFrom（绝对年份，链接不随时间漂移）。 */
@@ -1276,10 +1368,11 @@ export function selectRecentYears(
   span: number,
   currentYear: number,
 ): PaperSearchQuery {
+  const base = leaveExactLookup(query);
   if (isRecentYearsActive(query, span, currentYear)) {
-    return { ...query, yearFrom: null, yearTo: null, page: 1 };
+    return { ...base, yearFrom: null, yearTo: null, page: 1 };
   }
-  return { ...query, yearFrom: recentYearsFrom(span, currentYear), yearTo: null, page: 1 };
+  return { ...base, yearFrom: recentYearsFrom(span, currentYear), yearTo: null, page: 1 };
 }
 
 /** 门户"当前年份"：按 Asia/Shanghai 计算，由服务端算出后下发，保证两端一致。 */
@@ -1309,7 +1402,7 @@ export function yearChipLabel(
 
 /**
  * facet 组可见项：折叠时取前 limit 项，已选但不在其中的项追加在后（保留计数，缺失记 0）；
- * 展开时全部可见，缺失的已选项同样以 0 追加。
+ * 展开时全部可见，缺失的已选项同样以 0 追加。比较忽略大小写（展示用 facet 的规范写法）。
  */
 export function visibleFacetOptions(
   options: readonly FacetOption[],
@@ -1317,10 +1410,11 @@ export function visibleFacetOptions(
   expanded: boolean,
   limit: number,
 ): FacetOption[] {
+  const same = (a: string, b: string) =&gt; a.toLowerCase() === b.toLowerCase();
   const head = expanded ? [...options] : options.slice(0, limit);
   const extra = selected
-    .filter((value) =&gt; !head.some((o) =&gt; o.value === value))
-    .map((value) =&gt; options.find((o) =&gt; o.value === value) ?? { value, count: 0 });
+    .filter((value) =&gt; !head.some((o) =&gt; same(o.value, value)))
+    .map((value) =&gt; options.find((o) =&gt; same(o.value, value)) ?? { value, count: 0 });
   return [...head, ...extra];
 }
 
@@ -1392,19 +1486,28 @@ export type ComposerTarget =
   | { kind: "invalid"; message: string }
   | { kind: "ok"; href: string };
 
+/**
+ * 提交前校验（与 BE 约束一致）：PMID 须为 1–15 位数字，其余检索词不超过 200 字。
+ * 合法返回 null；不合法返回提示文案——超长词若放行，解析层会丢弃它，用户会静默得到全库结果。
+ */
+export function validateSearchInput(mode: ComposerMode, text: string): string | null {
+  if (mode === "pmid") return isValidPmid(text) ? null : "PMID 应为纯数字";
+  return text.length &lt;= MAX_TEXT_LENGTH ? null : `检索词最长 ${MAX_TEXT_LENGTH} 字`;
+}
+
 /** 首页 Composer 提交 → 跳转目标（与 /papers 解析规则同源）。 */
 export function composerTarget(mode: ComposerMode, value: string): ComposerTarget {
   const text = value.trim();
   if (!text) return { kind: "empty" };
+  const error = validateSearchInput(mode, text);
+  if (error) return { kind: "invalid", message: error };
   switch (mode) {
     case "keyword":
       return { kind: "ok", href: buildPapersHref({ q: text }) };
     case "author":
       return { kind: "ok", href: buildPapersHref({ author: text }) };
     case "pmid":
-      return isValidPmid(text)
-        ? { kind: "ok", href: buildPapersHref({ pmid: text }) }
-        : { kind: "invalid", message: "PMID 应为纯数字" };
+      return { kind: "ok", href: buildPapersHref({ pmid: text }) };
     case "doi":
       return { kind: "ok", href: buildPapersHref({ doi: text }) };
   }
@@ -2023,7 +2126,7 @@ grep -rn "journal-filter-ui\|JournalFilterUi" patra-portal/src patra-portal/test
           <li class="step" data-status="pending">
             <strong>步骤 3：写失败测试 BrowseQueryProvider.test.tsx</strong>
             <pre><code class="lang-tsx">// patra-portal/tests/components/portal/browse/BrowseQueryProvider.test.tsx
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
@@ -2095,9 +2198,27 @@ function Probe() {
   );
 }
 
+/** 保存某一时刻拿到的 navigate，模拟防抖定时器等延迟回调持有旧引用。 */
+let savedNavigate: BrowseQueryContextValue&lt;TestQuery&gt;["navigate"] | null = null;
+
+function Saver() {
+  const { navigate } = useBrowseQuery&lt;TestQuery&gt;();
+  return (
+    &lt;button
+      type="button"
+      onClick={() =&gt; {
+        savedNavigate = navigate;
+      }}
+    &gt;
+      保存
+    &lt;/button&gt;
+  );
+}
+
 afterEach(() =&gt; {
   mockPush.mockClear();
   mockReplace.mockClear();
+  savedNavigate = null;
 });
 
 describe("BrowseQueryProvider", () =&gt; {
@@ -2128,6 +2249,29 @@ describe("BrowseQueryProvider", () =&gt; {
     fireEvent.click(screen.getByRole("button", { name: "加 a" }));
     rerender(withProvider(&lt;Probe /&gt;, { ...EMPTY, tags: ["x"] }));
     expect(screen.getByLabelText("tags")).toHaveTextContent("x");
+  });
+
+  it("导航完成后再后退到原查询：旧乐观值不会复活", () =&gt; {
+    const { rerender } = render(withProvider(&lt;Probe /&gt;));
+    fireEvent.click(screen.getByRole("button", { name: "加 a" }));
+    rerender(withProvider(&lt;Probe /&gt;, { ...EMPTY, tags: ["a"] })); // 服务端确认 A → B
+    rerender(withProvider(&lt;Probe /&gt;)); // 浏览器后退回 A
+    expect(screen.getByLabelText("tags")).toHaveTextContent("");
+  });
+
+  it("延迟回调持有旧 navigate 引用时，仍基于最新查询计算", () =&gt; {
+    render(
+      withProvider(
+        &lt;&gt;
+          &lt;Probe /&gt;
+          &lt;Saver /&gt;
+        &lt;/&gt;,
+      ),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
+    fireEvent.click(screen.getByRole("button", { name: "加 a" }));
+    act(() =&gt; savedNavigate?.((cur) =&gt; ({ ...cur, tags: [...cur.tags, "c"] })));
+    expect(mockPush).toHaveBeenLastCalledWith("/items?tag=a&amp;tag=c");
   });
 
   it("hrefFor 拼出 basePath + querystring", () =&gt; {
@@ -2233,7 +2377,9 @@ import {
   type ReactNode,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
   useTransition,
 } from "react";
@@ -2274,8 +2420,10 @@ function isUpdater&lt;Q&gt;(next: Q | ((current: Q) =&gt; Q)): next is (current:
 
 /**
  * 浏览页地址栏导航 Provider：地址栏是唯一状态来源，本组件只补"即时反馈"。
- * 乐观值绑定发起导航时的服务端查询（序列化结果）；服务端查询一变（导航完成 / 后退）乐观值自动失效，
- * 无需 effect 清理。所有交互经 navigate()，函数形式基于最新乐观值，快速连点不会互相覆盖。
+ * - 乐观值：navigate 后立即生效；服务端查询一变（导航完成 / 后退 / 前进）即清空，
+ *   所以 A → B → 后退 A 不会复活 B。
+ * - 最新值引用：navigate 引用稳定，函数形式总基于"此刻最新"的查询计算——快速连点、
+ *   防抖定时器等持有旧 navigate 引用的延迟回调都不会覆盖别的操作。
  */
 export function BrowseQueryProvider&lt;Q extends BrowseQueryBase&gt;({
   query,
@@ -2286,8 +2434,19 @@ export function BrowseQueryProvider&lt;Q extends BrowseQueryBase&gt;({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const serverKey = serialize(query);
-  const [optimistic, setOptimistic] = useState&lt;{ base: string; query: Q } | null&gt;(null);
-  const current = optimistic !== null &amp;&amp; optimistic.base === serverKey ? optimistic.query : query;
+  const [optimistic, setOptimistic] = useState&lt;Q | null&gt;(null);
+  const [seenServerKey, setSeenServerKey] = useState(serverKey);
+  // 服务端查询变化：渲染期清空乐观值（派生状态写法，本次渲染即用服务端查询）
+  if (serverKey !== seenServerKey) {
+    setSeenServerKey(serverKey);
+    setOptimistic(null);
+  }
+  const current = optimistic !== null &amp;&amp; serverKey === seenServerKey ? optimistic : query;
+
+  const latestRef = useRef(current);
+  useEffect(() =&gt; {
+    latestRef.current = current;
+  }, [current]);
 
   const hrefFor = useCallback(
     (q: Q) =&gt; {
@@ -2299,8 +2458,10 @@ export function BrowseQueryProvider&lt;Q extends BrowseQueryBase&gt;({
 
   const navigate = useCallback(
     (next: Q | ((c: Q) =&gt; Q), options?: NavigateOptions) =&gt; {
-      const target = isUpdater(next) ? next(current) : next;
-      setOptimistic({ base: serverKey, query: target });
+      const target = isUpdater(next) ? next(latestRef.current) : next;
+      // 同一 tick 内的连续调用也要看到本次结果
+      latestRef.current = target;
+      setOptimistic(target);
       const href = hrefFor(target);
       startTransition(() =&gt; {
         if (options?.replace) {
@@ -2310,7 +2471,7 @@ export function BrowseQueryProvider&lt;Q extends BrowseQueryBase&gt;({
         }
       });
     },
-    [current, serverKey, hrefFor, router],
+    [hrefFor, router],
   );
 
   const value = useMemo(
@@ -2359,7 +2520,7 @@ export function PendingRegion({ children }: { children: ReactNode }) {
           <li class="step" data-status="pending">
             <strong>步骤 8：运行确认通过</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm exec vitest run tests/components/portal/browse tests/store &amp;&amp; pnpm typecheck</code></p>
-            <p>预期：browse 9 个、store 5 个用例通过；typecheck 0 错误</p>
+            <p>预期：browse 11 个、store 5 个用例通过；typecheck 0 错误</p>
           </li>
           <li class="step" data-status="pending">
             <strong>步骤 9：Commit</strong>
@@ -2973,11 +3134,11 @@ describe("FacetGroup", () =&gt; {
 });
 
 describe("FacetCheckRow", () =&gt; {
-  it("checkbox：千分位计数，点击触发 onToggle", () =&gt; {
+  it("checkbox：千分位计数，可访问名为标签本身（不含计数），点击触发 onToggle", () =&gt; {
     const onToggle = vi.fn();
     render(&lt;FacetCheckRow label="综述 · Review" count={2040} checked={false} onToggle={onToggle} /&gt;);
     expect(screen.getByText("2,040")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("checkbox", { name: /综述/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "综述 · Review" }));
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
 
@@ -2989,7 +3150,7 @@ describe("FacetCheckRow", () =&gt; {
   it("radio：点击已选中项也触发 onToggle（再点取消）", () =&gt; {
     const onToggle = vi.fn();
     render(&lt;FacetCheckRow type="radio" name="year" label="2026" count={5} checked onToggle={onToggle} /&gt;);
-    fireEvent.click(screen.getByRole("radio", { name: /2026/ }));
+    fireEvent.click(screen.getByRole("radio", { name: "2026" }));
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
 
@@ -3006,7 +3167,7 @@ describe("FacetToggleRow", () =&gt; {
     const onToggle = vi.fn();
     render(&lt;FacetToggleRow label="仅开放获取" count={1234} checked={false} onToggle={onToggle} /&gt;);
     expect(screen.getByText("1,234")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("checkbox", { name: /仅开放获取/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "仅开放获取" }));
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
 });</code></pre>
@@ -3143,6 +3304,8 @@ export function FacetCheckRow({
       &lt;input
         type={type}
         name={name}
+        // 可访问名只取标签本身：label 内标签与计数是相邻 span，浏览器会拼成"T793"这类无分隔名称
+        aria-label={label}
         checked={checked}
         // radio 在点击已选中项时不触发 onChange，改用 onClick 才能"再点取消"
         onChange={type === "checkbox" ? onToggle : noop}
@@ -3170,7 +3333,13 @@ interface FacetToggleRowProps {
 export function FacetToggleRow({ label, checked, onToggle, count }: FacetToggleRowProps) {
   return (
     &lt;label className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 text-sm hover:bg-muted/60"&gt;
-      &lt;input type="checkbox" checked={checked} onChange={onToggle} className="size-3.5 accent-primary" /&gt;
+      &lt;input
+        type="checkbox"
+        aria-label={label}
+        checked={checked}
+        onChange={onToggle}
+        className="size-3.5 accent-primary"
+      /&gt;
       &lt;span className="flex-1"&gt;{label}&lt;/span&gt;
       {count !== undefined &amp;&amp; (
         &lt;span className="text-xs tabular-nums text-muted-foreground"&gt;{count.toLocaleString("en-US")}&lt;/span&gt;
@@ -3463,6 +3632,35 @@ function renderControls(query: VenueBrowseQuery) {
   );
 }</code></pre>
             <p><code>JournalActiveChips.test.tsx</code> 与 <code>JournalFilters.test.tsx</code> 的 <code>vi.mock("next/navigation")</code> 返回值补上 <code>replace</code>：<code>useRouter: () => ({ push: mockPush, replace: vi.fn() })</code>。</p>
+            <p>在 <code>JournalSearchSortControls.test.tsx</code> 末尾（最外层 describe 内）追加"防抖期间勾选筛选"用例（该文件已用 fake timers；import 补 <code>JournalFilters</code>）：</p>
+            <pre><code class="lang-tsx">  describe("防抖回调不覆盖新筛选", () =&gt; {
+    it("输入 Nature 后 300ms 内勾选 Q1：防抖触发的 replace 同时带 q 与 jcr", () =&gt; {
+      const facets = {
+        subject: [],
+        jcr: [{ value: "Q1", count: 3 }],
+        cas: [],
+        country: [],
+        casTop: 0,
+        oa: 0,
+        doaj: 0,
+      };
+      render(
+        &lt;JournalsQueryProvider query={baseQuery}&gt;
+          &lt;JournalSearchSortControls /&gt;
+          &lt;JournalFilters facets={facets} /&gt;
+        &lt;/JournalsQueryProvider&gt;,
+      );
+      fireEvent.change(screen.getByRole("searchbox"), { target: { value: "Nature" } });
+      fireEvent.click(screen.getByRole("checkbox", { name: /Q1/ }));
+      expect(mockPush).toHaveBeenLastCalledWith("/journals?jcr=Q1");
+      act(() =&gt; {
+        vi.advanceTimersByTime(300);
+      });
+      const url = mockReplace.mock.calls.at(-1)?.[0] ?? "";
+      expect(url).toContain("q=Nature");
+      expect(url).toContain("jcr=Q1");
+    });
+  });</code></pre>
             <p>最后在 <code>JournalFilters.test.tsx</code> 末尾（最外层 describe 内）追加连点用例：</p>
             <pre><code class="lang-tsx">  describe("连点（乐观 query）", () =&gt; {
     it("连续勾选 Q1、Q2：勾选框立即打勾，第二次跳转两项都在", () =&gt; {
@@ -4845,6 +5043,14 @@ describe("PaperSearchBar", () =&gt; {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
+  it("超长关键词：提示且不导航（不静默变成全库浏览）", () =&gt; {
+    render(ui(EMPTY_PAPER_QUERY));
+    fireEvent.change(input(), { target: { value: "a".repeat(201) } });
+    submit();
+    expect(screen.getByRole("alert")).toHaveTextContent("检索词最长 200 字");
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
   it("清除按钮：关键词 tab 下同时移除 q", () =&gt; {
     render(ui({ ...EMPTY_PAPER_QUERY, q: "GLP-1" }));
     fireEvent.click(screen.getByRole("button", { name: "清除输入" }));
@@ -4888,9 +5094,9 @@ import { type SortOption, SortSegmented } from "@/components/portal/browse/SortS
 import { SEARCH_MODES } from "@/data/search-modes";
 import {
   filterCount,
-  isValidPmid,
   submitExactLookup,
   submitTextSearch,
+  validateSearchInput,
   withSort,
 } from "@/lib/portal-api/paper-search";
 import { cn } from "@/lib/utils";
@@ -4952,12 +5158,15 @@ export function PaperSearchBar() {
   const handleSubmit = (e: FormEvent) =&gt; {
     e.preventDefault();
     const text = value.trim();
-    if (mode === "pmid" || mode === "doi") {
-      if (!text) return;
-      if (mode === "pmid" &amp;&amp; !isValidPmid(text)) {
-        setError("PMID 应为纯数字");
-        return;
-      }
+    const isExact = mode === "pmid" || mode === "doi";
+    if (isExact &amp;&amp; !text) return;
+    // 与 BE 约束一致：PMID 纯数字、检索词 ≤ 200 字；超长词若放行会被解析层丢弃，静默变成全库浏览
+    const invalid = text ? validateSearchInput(mode, text) : null;
+    if (invalid) {
+      setError(invalid);
+      return;
+    }
+    if (isExact) {
       navigate(submitExactLookup(mode, text));
       return;
     }
@@ -5059,7 +5268,7 @@ export function PaperSearchBar() {
           <li class="step" data-status="pending">
             <strong>步骤 4：运行确认通过</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm exec vitest run tests/components/portal/papers/PaperSearchBar.test.tsx &amp;&amp; pnpm typecheck</code></p>
-            <p>预期：10 passed；typecheck 0 错误</p>
+            <p>预期：11 passed；typecheck 0 错误</p>
           </li>
           <li class="step" data-status="pending">
             <strong>步骤 5：Commit</strong>
@@ -5116,6 +5325,17 @@ function stubSuggest(body: unknown, status = 200) {
   return fetchMock;
 }
 
+/** 按 q 返回不同候选 */
+function stubSuggestBy(byQuery: Record&lt;string, VenueSuggestion[]&gt;) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn((url: string) =&gt; {
+      const q = new URL(url, "http://localhost").searchParams.get("q") ?? "";
+      return Promise.resolve(new Response(JSON.stringify(byQuery[q] ?? [])));
+    }),
+  );
+}
+
 function renderSearch(props: Partial&lt;Parameters&lt;typeof VenueFacetSearch&gt;[0]&gt; = {}) {
   const onAdd = vi.fn();
   const onRemove = vi.fn();
@@ -5165,7 +5385,38 @@ describe("VenueFacetSearch", () =&gt; {
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
   });
 
-  it("无候选 → 未找到匹配期刊；请求失败 → 候选加载失败", async () =&gt; {
+  it("输入已变、候选尚未更新时回车不会选中旧候选", async () =&gt; {
+    stubSuggestBy({ lan: [LANCET], cell: [] });
+    const { input, onAdd } = renderSearch();
+    fireEvent.change(input, { target: { value: "lan" } });
+    await screen.findByRole("option", { name: /The Lancet/ });
+    fireEvent.change(input, { target: { value: "cell" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onAdd).not.toHaveBeenCalled();
+    expect(screen.queryByRole("option")).not.toBeInTheDocument();
+  });
+
+  it("候选变少后高亮夹回有效项（如候选在别处被选中）", async () =&gt; {
+    stubSuggest([LANCET, LANCET_ONC]);
+    const onAdd = vi.fn();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = (selected: string[]) =&gt; (
+      &lt;QueryClientProvider client={client}&gt;
+        &lt;VenueFacetSearch selected={selected} names={{}} onAdd={onAdd} onRemove={() =&gt; {}} /&gt;
+      &lt;/QueryClientProvider&gt;
+    );
+    const { rerender } = render(view([]));
+    const input = screen.getByRole("combobox", { name: "搜索期刊" });
+    fireEvent.change(input, { target: { value: "lan" } });
+    await screen.findByRole("option", { name: /Oncology/ });
+    fireEvent.keyDown(input, { key: "ArrowDown" });
+    rerender(view(["2"]));
+    expect(screen.getByRole("option", { name: /The Lancet/ })).toHaveAttribute("aria-selected", "true");
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onAdd).toHaveBeenCalledWith(LANCET);
+  });
+
+  it("无候选 → 未找到匹配期刊", async () =&gt; {
     stubSuggest([]);
     const first = renderSearch();
     fireEvent.change(first.input, { target: { value: "zzz" } });
@@ -5259,13 +5510,17 @@ export function VenueFacetSearch({ selected, names, onAdd, onRemove }: VenueFace
     enabled: debounced.length &gt; 0,
   });
 
-  const candidates = (data ?? []).filter((venue) =&gt; !selected.includes(venue.id));
-  const showList = open &amp;&amp; debounced.length &gt; 0;
-  const activeOption = showList ? candidates[active] : undefined;
+  // 候选只属于"已防抖的关键词"：输入与之不一致时视为加载中，禁止选择，避免回车选中上一个词的候选
+  const settled = input.trim() === debounced;
+  const candidates = settled ? (data ?? []).filter((venue) =&gt; !selected.includes(venue.id)) : [];
+  const showList = open &amp;&amp; input.trim().length &gt; 0;
+  // 候选变少时把高亮夹回有效范围
+  const activeIndex = Math.min(active, Math.max(candidates.length - 1, 0));
+  const activeOption = showList ? candidates[activeIndex] : undefined;
 
   let status: string | null = null;
-  if (isError &amp;&amp; !data) status = "候选加载失败";
-  else if (isFetching &amp;&amp; !data) status = "加载中…";
+  if (!settled || (isFetching &amp;&amp; !data)) status = "加载中…";
+  else if (isError &amp;&amp; !data) status = "候选加载失败";
   else if (data &amp;&amp; candidates.length === 0) status = "未找到匹配期刊";
 
   const pick = (venue: VenueSuggestion) =&gt; {
@@ -5280,10 +5535,10 @@ export function VenueFacetSearch({ selected, names, onAdd, onRemove }: VenueFace
     if (e.key === "ArrowDown") {
       e.preventDefault();
       setOpen(true);
-      setActive((i) =&gt; Math.min(i + 1, Math.max(candidates.length - 1, 0)));
+      setActive(Math.min(activeIndex + 1, Math.max(candidates.length - 1, 0)));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setActive((i) =&gt; Math.max(i - 1, 0));
+      setActive(Math.max(activeIndex - 1, 0));
     } else if (e.key === "Enter") {
       if (activeOption) {
         e.preventDefault();
@@ -5329,13 +5584,13 @@ export function VenueFacetSearch({ selected, names, onAdd, onRemove }: VenueFace
                     key={venue.id}
                     id={`${listId}-${venue.id}`}
                     role="option"
-                    aria-selected={index === active}
+                    aria-selected={index === activeIndex}
                     // mouseDown 早于 input blur，保证点选生效
                     onMouseDown={(e) =&gt; {
                       e.preventDefault();
                       pick(venue);
                     }}
-                    className={cn("cursor-pointer px-2 py-1.5 text-xs", index === active &amp;&amp; "bg-paper-200")}
+                    className={cn("cursor-pointer px-2 py-1.5 text-xs", index === activeIndex &amp;&amp; "bg-paper-200")}
                   &gt;
                     &lt;span className="block truncate text-(--fg-1)"&gt;{venue.name}&lt;/span&gt;
                     {venue.abbr &amp;&amp; &lt;span className="block truncate font-mono text-[10px] text-(--fg-3)"&gt;{venue.abbr}&lt;/span&gt;}
@@ -5465,14 +5720,29 @@ describe("PaperFilters", () =&gt; {
     expect(within(group("文献类型")).getAllByRole("checkbox")).toHaveLength(8);
     unmount();
     renderFilters({ ...EMPTY_PAPER_QUERY, type: ["T7"] });
-    // 可访问名含计数（"T7 93"），按前缀匹配
-    expect(within(group("文献类型")).getByRole("checkbox", { name: /^T7 / })).toBeChecked();
+    expect(within(group("文献类型")).getByRole("checkbox", { name: "T7" })).toBeChecked();
+  });
+
+  it("URL 类型与 facet 仅大小写不同：只显示一项且为已选，取消后清空", () =&gt; {
+    renderFilters({ ...EMPTY_PAPER_QUERY, type: ["t7"] });
+    const rows = within(group("文献类型")).getAllByRole("checkbox");
+    expect(rows).toHaveLength(7);
+    const t7 = within(group("文献类型")).getByRole("checkbox", { name: "T7" });
+    expect(t7).toBeChecked();
+    fireEvent.click(t7);
+    expect(mockPush).toHaveBeenCalledWith("/papers");
+  });
+
+  it("精确定位未命中时勾选类型：退出精确模式，URL 不再带 pmid", () =&gt; {
+    renderFilters({ ...EMPTY_PAPER_QUERY, pmid: "1" });
+    fireEvent.click(screen.getByRole("checkbox", { name: "T0" }));
+    expect(mockPush).toHaveBeenCalledWith("/papers?type=T0");
   });
 
   it("连点两个类型：两项都在第二次跳转里", () =&gt; {
     renderFilters();
-    fireEvent.click(screen.getByRole("checkbox", { name: /^T0 / }));
-    fireEvent.click(screen.getByRole("checkbox", { name: /^T1 / }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "T0" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "T1" }));
     expect(mockPush).toHaveBeenLastCalledWith("/papers?type=T0&amp;type=T1");
   });
 
@@ -5530,6 +5800,7 @@ import { VenueFacetSearch } from "@/components/portal/papers/VenueFacetSearch";
 import { EVIDENCE_LABELS, languageFacetLabel, typeFacetLabel } from "@/lib/paper-labels";
 import {
   clearAllConditions,
+  containsIgnoreCase,
   filterCount,
   hasSearchConditions,
   isRecentYearsActive,
@@ -5634,7 +5905,7 @@ function PaperFilterControls({ facets, currentYear, venueNames }: PaperFiltersPr
               key={opt.value}
               label={typeFacetLabel(opt.value)}
               count={opt.count}
-              checked={query.type.includes(opt.value)}
+              checked={containsIgnoreCase(query.type, opt.value)}
               onToggle={() =&gt; navigate((cur) =&gt; toggleListValue(cur, "type", opt.value))}
             /&gt;
           ))}
