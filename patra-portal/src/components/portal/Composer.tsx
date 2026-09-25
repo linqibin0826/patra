@@ -54,7 +54,7 @@ export function Composer({ onSubmit }: ComposerProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="overflow-hidden rounded-lg border border-ink-800 bg-bg-elevated shadow-sm"
+      className="overflow-hidden rounded-lg border border-ink-800 bg-bg-elevated shadow-sm transition-colors focus-within:border-border-focus"
     >
       <Tabs value={mode} onValueChange={handleModeChange} className="flex-col!">
         <TabsList

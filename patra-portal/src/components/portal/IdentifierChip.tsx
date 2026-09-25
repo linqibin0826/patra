@@ -39,7 +39,7 @@ export function IdentifierChip({ label, value, href }: IdentifierChipProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-stretch overflow-hidden rounded-md border bg-paper-50 font-mono transition-colors",
+        "inline-flex items-stretch overflow-hidden rounded-md border bg-paper-50 font-mono transition-colors has-[:focus-visible]:shadow-(--ring-focus)",
         done ? "border-moss-500" : "border-border-default hover:border-ink-300",
       )}
     >
@@ -48,7 +48,7 @@ export function IdentifierChip({ label, value, href }: IdentifierChipProps) {
         onClick={onCopy}
         aria-label={`复制 ${label}：${value}`}
         title={`复制 ${label}`}
-        className="inline-flex items-stretch bg-transparent transition-colors hover:bg-paper-200 focus-visible:shadow-(--ring-focus) focus-visible:outline-none"
+        className="inline-flex items-stretch bg-transparent transition-colors hover:bg-paper-200"
       >
         <span
           className={cn(
@@ -83,7 +83,7 @@ export function IdentifierChip({ label, value, href }: IdentifierChipProps) {
           rel="noopener noreferrer"
           aria-label={`在新窗口打开 ${label}`}
           title="打开链接 ↗"
-          className="inline-flex w-8 items-center justify-center border-l border-border-default bg-paper-50 text-fg-3 transition-colors hover:bg-clay-50 hover:text-clay-700 focus-visible:shadow-(--ring-focus) focus-visible:outline-none"
+          className="inline-flex w-8 items-center justify-center border-l border-border-default bg-paper-50 text-fg-3 transition-colors hover:bg-clay-50 hover:text-clay-700"
         >
           <Link2 size={13} />
         </a>

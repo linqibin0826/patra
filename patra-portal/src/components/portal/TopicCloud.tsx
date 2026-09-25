@@ -44,7 +44,7 @@ export function TopicCloud() {
                     href={buildPapersHref({ q: t.term })}
                     title={`${t.count.toLocaleString()} 条相关文献`}
                     className={cn(
-                      "-mx-1 inline-flex items-baseline gap-1.5 rounded-sm px-1 hover:bg-paper-200 focus-visible:outline-none focus-visible:ring focus-visible:ring-ring/30",
+                      "-mx-1 inline-flex items-baseline gap-1.5 rounded-sm px-1 hover:bg-paper-200",
                       TIER_CLASS[tier],
                     )}
                   >

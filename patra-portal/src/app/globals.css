@@ -180,3 +180,20 @@
     }
   }
 }
+
+/* 非文本可交互元素统一焦点环。放在所有 @layer 之外：不分层样式优先于任何层，
+   组件上的 shadow-* 工具类不会把焦点环盖掉。文本框由外层容器 focus-within 改描边为 border-focus。 */
+:where(
+  a[href],
+  button,
+  summary,
+  select,
+  [role="tab"],
+  [role="button"],
+  [type="checkbox"],
+  [type="radio"],
+  [tabindex]
+):focus-visible {
+  outline: none;
+  box-shadow: var(--ring-focus);
+}
