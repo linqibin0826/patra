@@ -1,9 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import "@testing-library/jest-dom/vitest";
+import { makePaper } from "@tests/fixtures/paper";
 import { PaperListItem } from "@/components/portal/papers/PaperListItem";
 import { PaperListSkeleton } from "@/components/portal/papers/PaperListSkeleton";
-import { makePaper } from "../../../fixtures/paper";
 
 describe("PaperListItem", () => {
   it("标题链接到详情页；来源行显示来源与 DOI", () => {

@@ -1,11 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
+import { makePaper } from "@tests/fixtures/paper";
 import { PaperResults } from "@/components/portal/papers/PaperResults";
 import { PapersQueryProvider } from "@/components/portal/papers/PapersQueryProvider";
 import { EMPTY_PAPER_QUERY } from "@/lib/portal-api/paper-search";
 import type { PageResult, Paper, PaperSearchQuery } from "@/types/portal";
-import { makePaper } from "../../../fixtures/paper";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
 vi.mock("@/lib/portal-api/publication-search", () => ({

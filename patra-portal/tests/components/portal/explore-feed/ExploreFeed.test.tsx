@@ -1,8 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
+import { makePaper } from "@tests/fixtures/paper";
 import { ExploreFeed } from "@/components/portal/explore-feed";
-import { makePaper } from "../../../fixtures/paper";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("@/lib/portal-api/publications", () => ({

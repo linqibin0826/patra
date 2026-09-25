@@ -1,9 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import "@testing-library/jest-dom/vitest";
+import { makePaper } from "@tests/fixtures/paper";
 import { PapersEmptyResult, papersEmptyKind } from "@/components/portal/papers/PapersEmptyResult";
 import { EMPTY_PAPER_QUERY } from "@/lib/portal-api/paper-search";
-import { makePaper } from "../../../fixtures/paper";
 
 const none = { total: 0, items: [] };
 

@@ -1,8 +1,8 @@
+import { makePaper } from "@tests/fixtures/paper";
 import { isValidElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EMPTY_PAPER_QUERY } from "@/lib/portal-api/paper-search";
 import type { PageResult, Paper } from "@/types/portal";
-import { makePaper } from "../fixtures/paper";
 
 vi.mock("next/navigation", () => ({
   redirect: vi.fn((url: string) => {

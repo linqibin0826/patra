@@ -1,10 +1,10 @@
+import { makePaper } from "@tests/fixtures/paper";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EMPTY_PAPER_QUERY } from "@/lib/portal-api/paper-search";
 import {
   fetchPublicationFacets,
   fetchPublicationSearch,
 } from "@/lib/portal-api/publication-search";
-import { makePaper } from "../../fixtures/paper";
 
 const BASE = "http://gw.test:9528/patra-catalog/portal/publications";
 
