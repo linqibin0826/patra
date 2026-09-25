@@ -33,7 +33,7 @@
 
           <li data-task-status="pending"><a href="#task-N">Task N — [任务名]</a></li>
           -->
-          <li data-task-status="pending"><a href="#task-1">Task 1 — 类型扩展、Paper 测试工厂与中文名字典</a></li>
+          <li data-task-status="done"><a href="#task-1">Task 1 — 类型扩展、Paper 测试工厂与中文名字典</a></li>
           <li data-task-status="pending"><a href="#task-2">Task 2 — paper-search：URL 解析与脏参数过滤</a></li>
           <li data-task-status="pending"><a href="#task-3">Task 3 — paper-search：序列化、后端 query 与状态判定</a></li>
           <li data-task-status="pending"><a href="#task-4">Task 4 — paper-search：状态变换、年份、chip 与首页入口</a></li>
@@ -218,7 +218,7 @@ tests/
       每开始任务/步骤改 in-progress，完成改 done。遇阻塞改 blocked，并在右栏 notes-panel 追加 data-type="other" entry 说明阻塞原因。
       -->
 
-      <article class="task" id="task-1" data-status="pending">
+      <article class="task" id="task-1" data-status="done">
         <header>
           <h2>任务 1：类型扩展、Paper 测试工厂与中文名字典</h2>
           <dl class="files">
@@ -227,7 +227,7 @@ tests/
           </dl>
         </header>
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：写失败测试 paper-labels.test.ts</strong>
             <pre><code class="lang-ts">// patra-portal/tests/lib/paper-labels.test.ts
 import { describe, expect, it } from "vitest";
@@ -289,12 +289,12 @@ describe("语言中文名", () =&gt; {
   });
 });</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：运行确认失败</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm exec vitest run tests/lib/paper-labels.test.ts</code></p>
             <p>预期：失败：<code>Failed to resolve import "@/lib/paper-labels"</code></p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：扩展 src/types/portal.ts</strong>
             <p>① 在 <code>Paper</code> 接口的 <code>minutesAgo</code> 行之后追加三个字段：</p>
             <pre><code class="lang-ts">  venueId: string | null; // 载体主键（String，避免 JS 超 2^53 精度损失）；无载体为 null
@@ -362,7 +362,7 @@ export interface VenueSuggestion {
   abbr: string;
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：创建 src/lib/paper-labels.ts</strong>
             <pre><code class="lang-ts">// patra-portal/src/lib/paper-labels.ts
 import type { EvidenceLevelCode } from "@/types/portal";
@@ -483,7 +483,7 @@ export function languageFacetLabel(code: string): string {
   return zh ? `${zh} · ${code}` : code;
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：创建 Paper 测试工厂 tests/fixtures/paper.ts</strong>
             <pre><code class="lang-ts">// patra-portal/tests/fixtures/paper.ts
 import type { Paper } from "@/types/portal";
@@ -512,19 +512,19 @@ export function makePaper(overrides: Partial&lt;Paper&gt; = {}): Paper {
   };
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：补齐 PaperCard.test.tsx 的本地工厂字段</strong>
             <p><code>Paper</code> 新增了必填字段，<code>tests/components/portal/PaperCard.test.tsx</code> 的 <code>makePaper</code> 在 <code>minutesAgo: 120,</code> 之后追加：</p>
             <pre><code class="lang-ts">    venueId: null,
     evidenceLevel: { level: "UNKNOWN", rank: 0, label: "未分级", derived: false },
     abstractSnippet: null,</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7：运行测试与类型检查</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm exec vitest run tests/lib/paper-labels.test.ts tests/components/portal/PaperCard.test.tsx &amp;&amp; pnpm typecheck</code></p>
             <p>预期：两个测试文件全部通过；<code>tsc --noEmit</code> 退出码 0</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 8：Commit</strong>
             <pre><code class="lang-bash">git add patra-portal/src/types/portal.ts patra-portal/src/lib/paper-labels.ts patra-portal/tests/lib/paper-labels.test.ts patra-portal/tests/fixtures/paper.ts patra-portal/tests/components/portal/PaperCard.test.tsx
 git commit -m "feat(portal): 扩展文献检索类型并新增类型与语言中文名字典 (PAP-53)
