@@ -108,7 +108,6 @@ __pycache__/
 ##############################
 /.agents/
 /.codex/
-/AGENTS.md
 
 # JAR files (except Gradle wrapper)
 *.jar
