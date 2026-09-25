@@ -60,13 +60,13 @@ export function BrowsePagination({ page: rawPage, total, pageSize, unit }: Brows
   const edgeClass = (disabled: boolean) =>
     cn(
       CELL,
-      "border-(--border-default)",
+      "border-border-default",
       disabled ? "pointer-events-none opacity-40" : "hover:border-ink-300 hover:bg-paper-100",
     );
 
   return (
     <div className="flex flex-col items-center gap-3">
-      <p className="text-sm text-(--fg-3)">
+      <p className="text-sm text-fg-3">
         第 {fmt(start + 1)}–{fmt(end)} {unit} · 共 {fmt(total)} {unit}
       </p>
       <nav
@@ -89,7 +89,7 @@ export function BrowsePagination({ page: rawPage, total, pageSize, unit }: Brows
             <span
               // biome-ignore lint/suspicious/noArrayIndexKey: 省略号无业务 id，位置索引是唯一标识；加 gap- 前缀避免与数字页码 key 相撞
               key={`gap-${position}`}
-              className="flex h-8 w-8 items-center justify-center text-sm text-(--fg-3)"
+              className="flex h-8 w-8 items-center justify-center text-sm text-fg-3"
             >
               …
             </span>
@@ -104,7 +104,7 @@ export function BrowsePagination({ page: rawPage, total, pageSize, unit }: Brows
                 CELL,
                 item === page
                   ? "border-ink-900 bg-ink-900 font-semibold text-paper-50"
-                  : "border-(--border-default) hover:border-ink-300 hover:bg-paper-100",
+                  : "border-border-default hover:border-ink-300 hover:bg-paper-100",
               )}
             >
               {item}

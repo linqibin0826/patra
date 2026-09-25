@@ -23,10 +23,10 @@ export function SortSegmented<T extends string>({
 }: SortSegmentedProps<T>) {
   return (
     <div className="flex shrink-0 items-center gap-2">
-      <span className="font-mono text-[9.5px] uppercase tracking-[0.08em] text-(--fg-4)">排序</span>
+      <span className="font-mono text-[9.5px] uppercase tracking-[0.08em] text-fg-4">排序</span>
       <fieldset
         aria-label="排序方式"
-        className="m-0 inline-flex min-w-0 items-center overflow-hidden rounded-md border border-(--border-default) p-0"
+        className="m-0 inline-flex min-w-0 items-center overflow-hidden rounded-md border border-border-default p-0"
       >
         {options.map((opt) => {
           const active = value === opt.id;
@@ -37,10 +37,10 @@ export function SortSegmented<T extends string>({
               aria-pressed={active}
               onClick={() => onChange(opt.id)}
               className={cn(
-                "border-0 border-r border-(--border-subtle) px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors last:border-r-0",
+                "border-0 border-r border-border-subtle px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors last:border-r-0",
                 active
                   ? "bg-ink-900 text-paper-50 hover:bg-ink-800"
-                  : "text-(--fg-3) hover:bg-paper-200 hover:text-ink-900",
+                  : "text-fg-3 hover:bg-paper-200 hover:text-ink-900",
               )}
             >
               {opt.label}

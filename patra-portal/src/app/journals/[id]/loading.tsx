@@ -9,7 +9,7 @@ export default function Loading() {
     <>
       <TopNav />
       <main>
-        <div className="border-b border-(--border-default)">
+        <div className="border-b border-border-default">
           <div className="mx-auto h-11 max-w-[1200px] px-6" />
         </div>
         <div

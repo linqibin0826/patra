@@ -78,13 +78,13 @@ export function JournalSearchSortControls() {
     (query.doaj ? 1 : 0);
 
   return (
-    <div className="flex flex-wrap items-center gap-3.5 border-b border-(--border-default) py-3">
+    <div className="flex flex-wrap items-center gap-3.5 border-b border-border-default py-3">
       <form
         onSubmit={handleSubmit}
         className="flex min-w-0 flex-1 basis-[360px] items-center gap-2"
       >
-        <div className="flex min-w-0 flex-1 items-center gap-2.5 rounded-md border border-(--border-strong) bg-bg-elevated px-3 shadow-inner transition-colors focus-within:border-clay-400">
-          <SearchIcon className="size-4 shrink-0 text-(--fg-3)" aria-hidden="true" />
+        <div className="flex min-w-0 flex-1 items-center gap-2.5 rounded-md border border-border-strong bg-bg-elevated px-3 shadow-inner transition-colors focus-within:border-clay-400">
+          <SearchIcon className="size-4 shrink-0 text-fg-3" aria-hidden="true" />
           <input
             type="search"
             placeholder="按刊名 / 缩写检索期刊"
@@ -93,14 +93,14 @@ export function JournalSearchSortControls() {
             autoComplete="off"
             spellCheck="false"
             aria-label="按刊名检索期刊"
-            className="min-w-0 flex-1 border-0 bg-transparent py-2.5 text-base text-ink-900 outline-none placeholder:text-(--fg-4)"
+            className="min-w-0 flex-1 border-0 bg-transparent py-2.5 text-base text-ink-900 outline-none placeholder:text-fg-4"
           />
           {localQ && (
             <button
               type="button"
               aria-label="清除搜索"
               onClick={handleClear}
-              className="flex size-6 shrink-0 items-center justify-center rounded text-(--fg-3) hover:bg-paper-200 hover:text-ink-900"
+              className="flex size-6 shrink-0 items-center justify-center rounded text-fg-3 hover:bg-paper-200 hover:text-ink-900"
             >
               <XIcon className="size-3.5" />
             </button>
@@ -108,7 +108,7 @@ export function JournalSearchSortControls() {
         </div>
         <button
           type="submit"
-          className="flex shrink-0 items-center gap-1.5 self-stretch rounded-md border border-(--border-strong) bg-paper-50 px-3.5 text-sm font-semibold text-(--fg-1) transition-colors hover:bg-paper-200"
+          className="flex shrink-0 items-center gap-1.5 self-stretch rounded-md border border-border-strong bg-paper-50 px-3.5 text-sm font-semibold text-fg-1 transition-colors hover:bg-paper-200"
         >
           <SearchIcon className="size-3.5 text-clay-600" aria-hidden="true" />
           检索

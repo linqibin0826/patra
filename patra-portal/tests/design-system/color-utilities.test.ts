@@ -38,3 +38,14 @@ describe("颜色类工具", () => {
     expect(format(offenders)).toEqual([]);
   });
 });
+
+describe("颜色的写法", () => {
+  it("@theme 已映射的颜色用标准类名，不用 -(--x) 或 [var(--x)] 临时写法", () => {
+    const colors = themeColors();
+    const offenders = findAll(/-(?:\(--([a-z0-9-]+)\)|\[var\(--([a-z0-9-]+)\)\])/).filter(({ match }) => {
+      const name = /--([a-z0-9-]+)/.exec(match)?.[1] ?? "";
+      return colors.has(name);
+    });
+    expect(format(offenders)).toEqual([]);
+  });
+});

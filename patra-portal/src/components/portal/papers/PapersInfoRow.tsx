@@ -23,7 +23,7 @@ export async function PapersInfoRow({ query }: { query: PaperSearchQuery }) {
   const syncedAt = hasSearchConditions(query) ? null : facets.lastSyncedAt;
 
   return (
-    <p className="text-sm text-(--fg-2)">
+    <p className="text-sm text-fg-2">
       共{" "}
       <strong className="font-mono font-semibold text-ink-900">
         {facets.total.toLocaleString("en-US")}
@@ -31,7 +31,7 @@ export async function PapersInfoRow({ query }: { query: PaperSearchQuery }) {
       篇
       {syncedAt && (
         <>
-          <span aria-hidden="true" className="mx-2 text-(--fg-4)">
+          <span aria-hidden="true" className="mx-2 text-fg-4">
             ·
           </span>
           最近同步{" "}

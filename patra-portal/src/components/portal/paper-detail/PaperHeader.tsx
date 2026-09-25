@@ -17,7 +17,7 @@ export function PaperHeader({ paper }: { paper: PaperDetail }) {
         {paper.publicationTypes.slice(0, 2).map((t) => (
           <span
             key={t}
-            className="rounded-sm bg-paper-200 px-2 py-0.5 font-mono text-[10.5px] uppercase tracking-[0.05em] text-(--fg-3)"
+            className="rounded-sm bg-paper-200 px-2 py-0.5 font-mono text-[10.5px] uppercase tracking-[0.05em] text-fg-3"
           >
             {t}
           </span>
@@ -29,16 +29,16 @@ export function PaperHeader({ paper }: { paper: PaperDetail }) {
         )}
       </div>
 
-      <h1 className="m-0 mb-1.5 text-pretty font-serif text-[clamp(26px,3.4vw,36px)] font-medium leading-[1.16] tracking-[-0.02em] text-(--fg-1)">
+      <h1 className="m-0 mb-1.5 text-pretty font-serif text-[clamp(26px,3.4vw,36px)] font-medium leading-[1.16] tracking-[-0.02em] text-fg-1">
         <RichInlineText text={paper.title} />
       </h1>
       {paper.originalTitle && (
-        <p className="m-0 mb-4 font-serif text-lg italic leading-snug text-(--fg-3)">
+        <p className="m-0 mb-4 font-serif text-lg italic leading-snug text-fg-3">
           <RichInlineText text={paper.originalTitle} />
         </p>
       )}
 
-      <div className="mb-4 flex flex-wrap items-center font-sans text-md leading-normal text-(--fg-2)">
+      <div className="mb-4 flex flex-wrap items-center font-sans text-md leading-normal text-fg-2">
         {shown.map((a, i) => (
           <span key={a.order} className="whitespace-nowrap">
             {a.name}
@@ -51,12 +51,12 @@ export function PaperHeader({ paper }: { paper: PaperDetail }) {
             {i < shown.length - 1 ? "、" : ""}
           </span>
         ))}
-        {extra > 0 && <span className="italic text-(--fg-3)">&nbsp;等 {extra} 位</span>}
+        {extra > 0 && <span className="italic text-fg-3">&nbsp;等 {extra} 位</span>}
         <span aria-hidden className="mx-2.5 inline-block h-[3px] w-[3px] rounded-full bg-ink-300" />
         {paper.venueId && paper.venueName ? (
           <Link
             href={`/journals/${paper.venueId}`}
-            className="font-serif font-medium italic text-(--link) underline decoration-clay-300 underline-offset-[3px] hover:text-clay-800 hover:decoration-clay-600"
+            className="font-serif font-medium italic text-link underline decoration-clay-300 underline-offset-[3px] hover:text-clay-800 hover:decoration-clay-600"
           >
             {paper.venueName}
           </Link>
@@ -66,7 +66,7 @@ export function PaperHeader({ paper }: { paper: PaperDetail }) {
           )
         )}
         {paper.publicationYear != null && (
-          <span className="tabular-nums text-(--fg-2)">&nbsp;· {paper.publicationYear}</span>
+          <span className="tabular-nums text-fg-2">&nbsp;· {paper.publicationYear}</span>
         )}
       </div>
 

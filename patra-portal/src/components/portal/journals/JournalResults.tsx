@@ -29,7 +29,7 @@ export async function JournalResults({ query }: { query: VenueBrowseQuery }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <p className="text-sm text-[var(--fg-3)]">共 {page.total} 本期刊</p>
+      <p className="text-sm text-fg-3">共 {page.total} 本期刊</p>
       <JournalGrid items={page.items} />
       <BrowsePagination page={query.page} total={page.total} pageSize={page.pageSize} unit="本" />
     </div>

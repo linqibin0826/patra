@@ -34,7 +34,7 @@ export function FacetCheckRow({
       className={cn(
         "flex cursor-pointer items-center gap-2 rounded px-1 py-1 text-sm hover:bg-muted/60",
         isZero && "is-zero opacity-50",
-        muted && "text-(--fg-3)",
+        muted && "text-fg-3",
       )}
     >
       <input

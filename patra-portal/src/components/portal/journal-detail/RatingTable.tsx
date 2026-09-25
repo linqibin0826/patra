@@ -12,7 +12,7 @@ function Cell({
 }) {
   return (
     <div className="flex flex-col gap-0.5 bg-paper-50 px-3 py-2.5">
-      <span className="font-mono text-[9px] uppercase tracking-[0.05em] text-(--fg-3)">
+      <span className="font-mono text-[9px] uppercase tracking-[0.05em] text-fg-3">
         {label}
       </span>
       <span
@@ -29,7 +29,7 @@ function System({ name, source, children }: { name: string; source: string; chil
     <div>
       <div className="mb-2 flex items-baseline gap-2.5">
         <span className="font-sans text-md font-semibold text-ink-900">{name}</span>
-        <span className="font-mono text-[9.5px] uppercase tracking-[0.06em] text-(--fg-4)">
+        <span className="font-mono text-[9.5px] uppercase tracking-[0.06em] text-fg-4">
           {source}
         </span>
       </div>
@@ -39,7 +39,7 @@ function System({ name, source, children }: { name: string; source: string; chil
 }
 
 const GRID =
-  "grid gap-px overflow-hidden rounded-md border border-(--border-default) bg-(--border-subtle)";
+  "grid gap-px overflow-hidden rounded-md border border-border-default bg-border-subtle";
 
 export function RatingTable({ metrics }: { metrics: JournalMetrics }) {
   const { jcr, cas, scopus } = metrics;
@@ -58,7 +58,7 @@ export function RatingTable({ metrics }: { metrics: JournalMetrics }) {
             <Cell label="排名">{jcr.rank ?? "—"}</Cell>
           </div>
           {jcr.subject && (
-            <p className="mt-2 font-sans text-xs text-(--fg-3)">学科 · {jcr.subject}</p>
+            <p className="mt-2 font-sans text-xs text-fg-3">学科 · {jcr.subject}</p>
           )}
         </System>
       )}
@@ -89,7 +89,7 @@ export function RatingTable({ metrics }: { metrics: JournalMetrics }) {
         </System>
       ) : (
         <System name="中科院分区 · CAS" source="CAS">
-          <p className="rounded-md border border-dashed border-(--border-default) bg-paper-100 px-3 py-2.5 font-sans text-sm text-(--fg-3)">
+          <p className="rounded-md border border-dashed border-border-default bg-paper-100 px-3 py-2.5 font-sans text-sm text-fg-3">
             该刊暂无中科院分区数据。
           </p>
         </System>

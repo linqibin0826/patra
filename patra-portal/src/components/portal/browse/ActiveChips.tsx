@@ -63,7 +63,7 @@ export function ActiveChips<Q extends BrowseQueryBase>({
         <button
           type="button"
           onClick={() => navigate(clearAll)}
-          className="text-xs text-(--fg-3) underline underline-offset-2 hover:text-clay-700"
+          className="text-xs text-fg-3 underline underline-offset-2 hover:text-clay-700"
         >
           清除全部
         </button>

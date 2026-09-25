@@ -14,8 +14,8 @@ interface BrowseHeadProps {
  */
 export function BrowseHead({ crumb, eyebrow, title, description }: BrowseHeadProps) {
   return (
-    <div className="border-b border-(--border-default) pb-6">
-      <nav aria-label="面包屑" className="mb-4 flex items-center gap-1.5 text-xs text-(--fg-3)">
+    <div className="border-b border-border-default pb-6">
+      <nav aria-label="面包屑" className="mb-4 flex items-center gap-1.5 text-xs text-fg-3">
         <Link href="/" className="transition-colors hover:text-ink-700">
           Patra
         </Link>
@@ -23,7 +23,7 @@ export function BrowseHead({ crumb, eyebrow, title, description }: BrowseHeadPro
         <span aria-current="page">{crumb}</span>
       </nav>
 
-      <span className="inline-flex items-center gap-1.5 font-sans text-2xs font-semibold uppercase tracking-caps text-(--fg-3)">
+      <span className="inline-flex items-center gap-1.5 font-sans text-2xs font-semibold uppercase tracking-caps text-fg-3">
         <Image src="/brand/patra-mark.svg" alt="" aria-hidden width={4} height={14} />
         {eyebrow}
       </span>
@@ -32,7 +32,7 @@ export function BrowseHead({ crumb, eyebrow, title, description }: BrowseHeadPro
         {title}
       </h1>
 
-      <p className="mt-2 max-w-xl text-sm text-(--fg-3)">{description}</p>
+      <p className="mt-2 max-w-xl text-sm text-fg-3">{description}</p>
     </div>
   );
 }

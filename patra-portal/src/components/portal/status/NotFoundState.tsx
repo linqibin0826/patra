@@ -17,7 +17,7 @@ export function NotFoundState({ kind = "page" }: { kind?: NotFoundKind }) {
     <div className="flex min-h-[calc(100vh-56px)] items-center justify-center px-6 py-[72px]">
       <div className="flex w-full max-w-[540px] flex-col items-center text-center">
         <div className="mb-7 inline-flex items-center justify-center gap-[clamp(16px,4vw,28px)]">
-          <span className="shrink-0 border-r border-(--border-default) pr-[clamp(16px,4vw,28px)] opacity-90">
+          <span className="shrink-0 border-r border-border-default pr-[clamp(16px,4vw,28px)] opacity-90">
             <Image src="/brand/patra-mark.svg" alt="" aria-hidden width={25} height={88} />
           </span>
           <span className="font-serif font-medium leading-[0.9] tracking-[-0.04em] text-ink-200 tabular-nums text-[clamp(64px,13vw,120px)]">
@@ -27,10 +27,10 @@ export function NotFoundState({ kind = "page" }: { kind?: NotFoundKind }) {
         <span className="mb-3.5 inline-flex items-center gap-2 whitespace-nowrap font-mono text-xs uppercase tracking-[0.1em] text-clay-700">
           <span className="h-1.5 w-1.5 rounded-full bg-clay-500" /> HTTP 404 · not found
         </span>
-        <h1 className="mb-3.5 font-serif font-medium leading-[1.18] tracking-tight text-(--fg-1) text-balance text-[clamp(24px,4vw,32px)]">
+        <h1 className="mb-3.5 font-serif font-medium leading-[1.18] tracking-tight text-fg-1 text-balance text-[clamp(24px,4vw,32px)]">
           没有这一页
         </h1>
-        <p className="mb-7 max-w-[440px] font-serif text-lg leading-relaxed text-(--fg-2) text-pretty">
+        <p className="mb-7 max-w-[440px] font-serif text-lg leading-relaxed text-fg-2 text-pretty">
           {LINES[kind]}
         </p>
         <div className="flex flex-wrap justify-center gap-2.5">

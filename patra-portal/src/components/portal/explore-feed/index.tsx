@@ -40,7 +40,7 @@ export async function ExploreFeed({ tab }: { tab: FeedTab }) {
             <div className="mt-8 flex justify-center">
               <Link
                 href="/papers"
-                className="inline-flex items-center gap-1.5 rounded-md border border-(--border-default) bg-paper-50 px-4 py-2 text-sm font-medium text-(--fg-1) transition-colors hover:bg-paper-200"
+                className="inline-flex items-center gap-1.5 rounded-md border border-border-default bg-paper-50 px-4 py-2 text-sm font-medium text-fg-1 transition-colors hover:bg-paper-200"
               >
                 查看更多文献
                 <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.5} aria-hidden />
