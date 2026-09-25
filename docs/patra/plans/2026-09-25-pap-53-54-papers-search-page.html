@@ -56,7 +56,7 @@
           <li data-task-status="done"><a href="#task-21">Task 21 — 导航"文献"解锁与主题云词条接通（PAP-54）</a></li>
           <li data-task-status="done"><a href="#task-22">Task 22 — 首页文献流"查看更多"与期刊详情"查看该刊文献"（PAP-54）</a></li>
           <li data-task-status="done"><a href="#task-23">Task 23 — 首页搜索框接通 /papers：HeroWithToast → HeroWithSearch（PAP-54）</a></li>
-          <li data-task-status="in-progress"><a href="#task-24">Task 24 — Playwright 冒烟、全量验证与 hi-fi 对照</a></li>
+          <li data-task-status="done"><a href="#task-24">Task 24 — Playwright 冒烟、全量验证与 hi-fi 对照</a></li>
         </ol>
       </li>
       <li><a href="#self-check">自检结果</a></li>
@@ -74,7 +74,7 @@
         <span>📅 2026-09-25</span>
         <span>🌿 feat/v0.7-papers-search-fe</span>
         <span>📋 plan</span>
-        <span class="status-pill">draft</span>
+        <span class="status-pill">done</span>
       </div>
 
       <aside class="for-ai-worker">
@@ -6860,7 +6860,7 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
         </ol>
       </article>
 
-      <article class="task" id="task-24" data-status="in-progress">
+      <article class="task" id="task-24" data-status="done">
         <header>
           <h2>任务 24：Playwright 冒烟、全量验证与 hi-fi 对照</h2>
           <dl class="files">
@@ -6979,7 +6979,7 @@ test.describe("/papers 移动端冒烟", () =&gt; {
   });
 });</code></pre>
           </li>
-          <li class="step" data-status="blocked">
+          <li class="step" data-status="done">
             <strong>步骤 2：跑冒烟（连 Mac mini）</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>PATRA_GATEWAY_BASE_URL=http://100.103.73.27:9528 pnpm exec playwright test tests/e2e/papers-search.spec.ts tests/e2e/journals-browse.spec.ts tests/e2e/homepage.spec.ts</code></p>
             <p>预期：全部 passed（无 skipped——mini 可达时每条都应真实执行）；若 dev server 已在 4000 端口运行，Playwright 复用之</p>
@@ -7000,11 +7000,11 @@ Filters-Mobile.dc.html  ↔ /papers 打开筛选抽屉             （375）
 Empty-Mobile.dc.html    ↔ /papers?pmid=1                  （375）</code></pre>
             <p>差异按"设计意图 vs 数据现状"判断：数据现状导致的（如 OA 组不渲染、无"来源"段）不改；视觉偏差直接修，并在右栏 notes 记 CHANGE。</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：更新 spec 与 plan 状态</strong>
             <p>spec 头部 <code>status-pill</code> 改为 <code>implemented</code>；本 plan 所有任务与步骤 <code>data-status</code> 置 <code>done</code>，TOC 同步；notes 统计更新。</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：Commit</strong>
             <pre><code class="lang-bash">git add patra-portal/tests/e2e/papers-search.spec.ts docs/patra/specs/2026-09-25-pap-53-54-papers-search-page-design.html docs/patra/plans/2026-09-25-pap-53-54-papers-search-page.html
 git commit -m "test(portal): 新增文献检索页冒烟并标记 spec 与 plan 完成 (PAP-53, PAP-54)
@@ -7114,15 +7114,39 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
         </header>
         <p>步骤 2 Playwright 冒烟未能执行：本机缺 Chromium（<code>chromium_headless_shell-1243</code>），需 <code>pnpm exec playwright install chromium</code> 下载浏览器，等待用户确认后再跑。已用内置浏览器手动走查任务 20 的 7 个 URL 与连点，全部符合预期。</p>
       </li>
+      <li class="note" data-type="change" data-time="2026-09-25T15:57">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-09-25T15:57">09-25 15:57</time>
+          <a href="#task-24">§ Task 24</a>
+        </header>
+        <p>按用户要求，步骤 2 不装 Playwright 浏览器，改用 Claude Desktop 内置浏览器逐条手动走 <code>papers-search.spec.ts</code> 的 5 条流程（连 Mac mini 真实数据），全部通过：① 检索 diabetes → 高亮 / chip → 勾选 facet → 移除 chip → 翻到第 2 页（20 条、回顶部）→ 进详情；② 首页关键词 → <code>/papers?q=GLP-1</code>（18 篇），PMID 41605285 → 直达详情；③ 期刊详情"查看该刊文献" → chip 显示刊名（Journal of advanced research，10 篇）；④ 移动菜单"文献" → /papers 且高亮，主题云词条 → <code>/papers?q=…</code>；⑤ 375 宽抽屉勾选 → 计数即时更新 → "查看 2,040 篇结果"关闭抽屉、角标 1。另回归 /journals：连点两个国家，两项即时勾上、URL 都在。spec 文件保留在仓库，本次未用 Playwright 执行。</p>
+      </li>
+      <li class="note" data-type="change" data-time="2026-09-25T15:57">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-09-25T15:57">09-25 15:57</time>
+          <a href="#task-24">§ Task 24</a>
+        </header>
+        <p>走查发现检索框聚焦 / 悬停时出现两个 ×（Chromium 对 <code>type="search"</code> 自带清除按钮 + 自绘 ×），/journals 同样存在。在 <code>globals.css</code> 的 base 层隐藏 <code>::-webkit-search-cancel-button</code>，两页只剩自绘 ×；纯样式，jsdom 测不到，已在浏览器确认。</p>
+      </li>
+      <li class="note" data-type="other" data-time="2026-09-25T15:57">
+        <header>
+          <span class="note-type">OTHER</span>
+          <time datetime="2026-09-25T15:57">09-25 15:57</time>
+          <a href="#task-24">§ Task 24</a>
+        </header>
+        <p>主题云词条是中文静态数据（如"GLP-1 受体激动剂"，标"1,842 条相关文献"），库里几乎全是英文文献，点进去是 0 篇。跳转本身正确；词条数据与展示计数不属于本 PR 范围（spec 边界 E），建议另立 Issue 处理。</p>
+      </li>
     </ol>
 
 
     <footer class="notes-stats">
       总计:
       <span data-counter="decision">0</span> decisions /
-      <span data-counter="change">3</span> changes /
+      <span data-counter="change">5</span> changes /
       <span data-counter="tradeoff">1</span> tradeoffs /
-      <span data-counter="other">2</span> others
+      <span data-counter="other">3</span> others
     </footer>
   </aside>
 

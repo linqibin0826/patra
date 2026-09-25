@@ -133,6 +133,10 @@
     background: var(--selection-bg);
     color: var(--selection-fg);
   }
+  /* 检索框都自带 × 清除按钮，隐藏 Chromium / Safari 原生的清除按钮，避免出现两个 × */
+  input[type="search"]::-webkit-search-cancel-button {
+    appearance: none;
+  }
   @keyframes patra-live-pulse {
     0%,
     100% {
