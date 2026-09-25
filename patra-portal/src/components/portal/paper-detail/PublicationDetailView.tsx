@@ -133,9 +133,7 @@ export function PublicationDetailView({ paper }: { paper: PaperDetail }) {
                         <dd className={DD}>
                           {f.funder ?? "—"}
                           {f.grantId && (
-                            <span className="ml-2 font-mono text-sm text-fg-3">
-                              · {f.grantId}
-                            </span>
+                            <span className="ml-2 font-mono text-sm text-fg-3">· {f.grantId}</span>
                           )}
                         </dd>
                       </Fragment>

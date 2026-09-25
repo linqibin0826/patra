@@ -38,9 +38,7 @@ export function DisclosureSection({
           {title}
         </span>
         {count != null && (
-          <span className="ml-auto shrink-0 font-mono text-xs tabular-nums text-fg-3">
-            {count}
-          </span>
+          <span className="ml-auto shrink-0 font-mono text-xs tabular-nums text-fg-3">{count}</span>
         )}
       </button>
       <div id={bodyId} hidden={!open} className="border-t border-border-subtle px-5 pb-5 pt-4">

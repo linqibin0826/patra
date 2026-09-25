@@ -4,10 +4,8 @@ import type { EvidenceLevel } from "@/types/portal";
 
 const TONE_CLASS: Record<EvidenceTone, string> = {
   moss: "bg-moss-50 text-moss-500 border-[color-mix(in_oklab,var(--moss-500)_30%,transparent)]",
-  amber:
-    "bg-amber-50 text-amber-500 border-[color-mix(in_oklab,var(--amber-500)_30%,transparent)]",
-  slate:
-    "bg-slate-50 text-slate-500 border-[color-mix(in_oklab,var(--slate-500)_30%,transparent)]",
+  amber: "bg-amber-50 text-amber-500 border-[color-mix(in_oklab,var(--amber-500)_30%,transparent)]",
+  slate: "bg-slate-50 text-slate-500 border-[color-mix(in_oklab,var(--slate-500)_30%,transparent)]",
   muted: "border-dashed border-border-default bg-paper-200 text-fg-3",
 };
 const RUNG_CLASS = ["h-[7px]", "h-[10px]", "h-[12px]", "h-[14px]", "h-[16px]"];

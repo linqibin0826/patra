@@ -12,9 +12,7 @@ function Cell({
 }) {
   return (
     <div className="flex flex-col gap-0.5 bg-paper-50 px-3 py-2.5">
-      <span className="font-mono text-[9px] uppercase tracking-[0.05em] text-fg-3">
-        {label}
-      </span>
+      <span className="font-mono text-[9px] uppercase tracking-[0.05em] text-fg-3">{label}</span>
       <span
         className={`font-sans text-lg font-semibold leading-tight tabular-nums ${accent ? "text-clay-700" : "text-ink-900"}`}
       >
@@ -38,8 +36,7 @@ function System({ name, source, children }: { name: string; source: string; chil
   );
 }
 
-const GRID =
-  "grid gap-px overflow-hidden rounded-md border border-border-default bg-border-subtle";
+const GRID = "grid gap-px overflow-hidden rounded-md border border-border-default bg-border-subtle";
 
 export function RatingTable({ metrics }: { metrics: JournalMetrics }) {
   const { jcr, cas, scopus } = metrics;
@@ -57,9 +54,7 @@ export function RatingTable({ metrics }: { metrics: JournalMetrics }) {
             <Cell label="学科百分位">{jcr.percentile != null ? `${jcr.percentile}%` : "—"}</Cell>
             <Cell label="排名">{jcr.rank ?? "—"}</Cell>
           </div>
-          {jcr.subject && (
-            <p className="mt-2 font-sans text-xs text-fg-3">学科 · {jcr.subject}</p>
-          )}
+          {jcr.subject && <p className="mt-2 font-sans text-xs text-fg-3">学科 · {jcr.subject}</p>}
         </System>
       )}
       {cas ? (

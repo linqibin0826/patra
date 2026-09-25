@@ -40,7 +40,10 @@ export function readSrc(path: string): string {
 /// 在全部源文件里找 pattern 的命中，返回 `文件:行 片段`，便于失败信息直接定位。
 export function findAll(pattern: RegExp, files = sourceFiles()): Hit[] {
   const hits: Hit[] = [];
-  const global = new RegExp(pattern.source, pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`);
+  const global = new RegExp(
+    pattern.source,
+    pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`,
+  );
   for (const f of files) {
     f.text.split("\n").forEach((lineText, i) => {
       for (const m of lineText.matchAll(global)) {
