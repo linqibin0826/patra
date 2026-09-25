@@ -90,7 +90,7 @@ function PaperFilterControls({ facets, currentYear, venueNames }: PaperFiltersPr
                     "rounded-full border px-2.5 py-0.5 text-xs transition-colors",
                     active
                       ? "border-clay-300 bg-clay-50 text-clay-800"
-                      : "border-(--border-default) text-(--fg-2) hover:bg-paper-200",
+                      : "border-border-default text-fg-2 hover:bg-paper-200",
                   )}
                 >
                   近 {span} 年
@@ -196,7 +196,7 @@ function PaperFilterControls({ facets, currentYear, venueNames }: PaperFiltersPr
         <button
           type="button"
           onClick={() => navigate(clearAllConditions)}
-          className="mt-3 self-start px-1 text-xs text-(--fg-3) underline underline-offset-2 hover:text-clay-700"
+          className="mt-3 self-start px-1 text-xs text-fg-3 underline underline-offset-2 hover:text-clay-700"
         >
           清除全部筛选
         </button>
@@ -221,7 +221,7 @@ export function PaperFilters(props: PaperFiltersProps) {
           <button
             type="button"
             onClick={() => navigate(clearAllConditions)}
-            className="flex-1 rounded-lg border border-(--border-default) bg-paper-50 px-4 py-2 text-sm font-medium text-(--fg-1)"
+            className="flex-1 rounded-lg border border-border-default bg-paper-50 px-4 py-2 text-sm font-medium text-fg-1"
           >
             清除全部
           </button>

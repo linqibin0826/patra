@@ -54,8 +54,8 @@ export function PaperListItem({ paper, highlight }: PaperListItemProps) {
   const showBadges = paper.kind !== null || paper.evidenceLevel.derived;
 
   return (
-    <article className="flex flex-col gap-1.5 border-b border-(--border-subtle) py-4">
-      <div className="flex min-w-0 items-center gap-2.5 font-mono text-[10.5px] text-(--fg-2)">
+    <article className="flex flex-col gap-1.5 border-b border-border-subtle py-4">
+      <div className="flex min-w-0 items-center gap-2.5 font-mono text-2xs text-fg-2">
         <span className="inline-flex shrink-0 items-center gap-1.5">
           <span
             aria-hidden
@@ -63,17 +63,17 @@ export function PaperListItem({ paper, highlight }: PaperListItemProps) {
           />
           {paper.source}
         </span>
-        {paper.doi && <span className="truncate text-(--fg-3)">{paper.doi}</span>}
+        {paper.doi && <span className="truncate text-fg-3">{paper.doi}</span>}
       </div>
 
-      <h3 className="line-clamp-2 font-serif text-[17.5px] font-medium leading-snug tracking-tight text-ink-900">
+      <h3 className="line-clamp-2 font-serif text-xl font-medium leading-snug tracking-tight text-ink-900">
         <Link href={`/papers/${paper.id}`} className="hover:text-clay-700">
           <RichInlineText text={paper.title} highlight={highlight} />
         </Link>
       </h3>
 
       {meta.length > 0 && (
-        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-(--fg-2)">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-fg-2">
           {meta.map((item, index) => (
             <Fragment key={item.key}>
               {index > 0 && <span aria-hidden="true">·</span>}
@@ -86,7 +86,7 @@ export function PaperListItem({ paper, highlight }: PaperListItemProps) {
       {showBadges && (
         <div className="flex flex-wrap items-center gap-2">
           {paper.kind && (
-            <span className="rounded-sm border border-(--border-subtle) bg-paper-100 px-1.5 py-0.5 font-mono text-[10.5px] uppercase tracking-caps text-(--fg-3)">
+            <span className="rounded-sm border border-border-subtle bg-paper-100 px-1.5 py-0.5 font-mono text-2xs uppercase tracking-caps text-fg-3">
               {paper.kind}
             </span>
           )}
@@ -95,9 +95,7 @@ export function PaperListItem({ paper, highlight }: PaperListItemProps) {
       )}
 
       {paper.abstractSnippet && (
-        <p className="line-clamp-2 text-[13px] leading-relaxed text-(--fg-2)">
-          {paper.abstractSnippet}
-        </p>
+        <p className="line-clamp-2 text-base leading-relaxed text-fg-2">{paper.abstractSnippet}</p>
       )}
     </article>
   );

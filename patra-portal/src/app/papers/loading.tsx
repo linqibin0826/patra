@@ -13,7 +13,7 @@ export default function Loading() {
       <TopNav />
       <main aria-busy="true">
         <div className="mx-auto max-w-[1200px] px-6 py-8">
-          <div className="border-b border-(--border-default) pb-6">
+          <div className="border-b border-border-default pb-6">
             <div className="mb-4 flex items-center gap-1.5">
               <Block className="h-3 w-10" />
               <Block className="h-3 w-3" />

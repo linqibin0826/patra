@@ -78,8 +78,8 @@ export function VenueFacetSearch({ selected, names, onAdd, onRemove }: VenueFace
   return (
     <div className="flex flex-col gap-1.5 pr-1">
       <div className="relative">
-        <div className="flex items-center gap-1.5 rounded-md border border-(--border-default) bg-white px-2">
-          <SearchIcon className="size-3.5 shrink-0 text-(--fg-3)" aria-hidden="true" />
+        <div className="flex items-center gap-1.5 rounded-md border border-border-default bg-bg-elevated px-2 transition-colors focus-within:border-border-focus">
+          <SearchIcon className="size-3.5 shrink-0 text-fg-3" aria-hidden="true" />
           <input
             role="combobox"
             aria-label="搜索期刊"
@@ -97,13 +97,13 @@ export function VenueFacetSearch({ selected, names, onAdd, onRemove }: VenueFace
             }}
             onKeyDown={handleKeyDown}
             onBlur={() => setOpen(false)}
-            className="h-7 min-w-0 flex-1 border-0 bg-transparent text-xs outline-none placeholder:text-(--fg-4)"
+            className="h-7 min-w-0 flex-1 border-0 bg-transparent text-xs outline-none placeholder:text-fg-4"
           />
         </div>
         {showList && (
-          <div className="absolute inset-x-0 top-full z-20 mt-1 rounded-md border border-(--border-default) bg-paper-50 py-1 shadow-md">
+          <div className="absolute inset-x-0 top-full z-20 mt-1 rounded-md border border-border-default bg-paper-50 py-1 shadow-md">
             {status ? (
-              <p className="px-2 py-1.5 text-xs text-(--fg-3)">{status}</p>
+              <p className="px-2 py-1.5 text-xs text-fg-3">{status}</p>
             ) : (
               <div
                 id={listId}
@@ -129,9 +129,9 @@ export function VenueFacetSearch({ selected, names, onAdd, onRemove }: VenueFace
                       index === activeIndex && "bg-paper-200",
                     )}
                   >
-                    <span className="block truncate text-(--fg-1)">{venue.name}</span>
+                    <span className="block truncate text-fg-1">{venue.name}</span>
                     {venue.abbr && (
-                      <span className="block truncate font-mono text-[10px] text-(--fg-3)">
+                      <span className="block truncate font-mono text-3xs text-fg-3">
                         {venue.abbr}
                       </span>
                     )}
@@ -142,7 +142,7 @@ export function VenueFacetSearch({ selected, names, onAdd, onRemove }: VenueFace
           </div>
         )}
       </div>
-      <p className="text-[11px] text-(--fg-4)">
+      <p className="text-xs text-fg-3">
         {full ? `最多选择 ${MAX_VENUES} 本期刊` : "输入刊名，从候选中添加"}
       </p>
       {selected.map((id) => (

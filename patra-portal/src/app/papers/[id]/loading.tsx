@@ -9,7 +9,7 @@ export default function Loading() {
     <>
       <TopNav />
       <main aria-busy="true">
-        <div className="border-b border-(--border-default)">
+        <div className="border-b border-border-default">
           <div className="mx-auto h-11 max-w-[1200px] px-6" />
         </div>
         <div

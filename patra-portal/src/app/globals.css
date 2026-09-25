@@ -30,17 +30,6 @@
   --color-clay-800: var(--clay-800);
   --color-clay-900: var(--clay-900);
 
-  --color-teal-50: var(--teal-50);
-  --color-teal-100: var(--teal-100);
-  --color-teal-200: var(--teal-200);
-  --color-teal-300: var(--teal-300);
-  --color-teal-400: var(--teal-400);
-  --color-teal-500: var(--teal-500);
-  --color-teal-600: var(--teal-600);
-  --color-teal-700: var(--teal-700);
-  --color-teal-800: var(--teal-800);
-  --color-teal-900: var(--teal-900);
-
   --color-moss-500: var(--moss-500);
   --color-moss-50: var(--moss-50);
   --color-amber-500: var(--amber-500);
@@ -50,6 +39,50 @@
   --color-slate-500: var(--slate-500);
   --color-slate-50: var(--slate-50);
 
+  --color-moss-700: var(--moss-700);
+  --color-amber-700: var(--amber-700);
+
+  /* ---- Semantic */
+  --color-bg-canvas: var(--bg-canvas);
+  --color-bg-paper: var(--bg-paper);
+  --color-bg-elevated: var(--bg-elevated);
+  --color-bg-sunken: var(--bg-sunken);
+  --color-bg-tint: var(--bg-tint);
+  --color-bg-sticky: var(--bg-sticky);
+  --color-bg-scrim: var(--bg-scrim);
+  --color-fg-1: var(--fg-1);
+  --color-fg-2: var(--fg-2);
+  --color-fg-3: var(--fg-3);
+  --color-fg-4: var(--fg-4);
+  --color-fg-on-clay: var(--fg-on-clay);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-default: var(--border-default);
+  --color-border-strong: var(--border-strong);
+  --color-border-hover: var(--border-hover);
+  --color-border-focus: var(--border-focus);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-tint: var(--accent-tint);
+  --color-accent-border: var(--accent-border);
+  --color-action-primary: var(--action-primary);
+  --color-action-primary-hover: var(--action-primary-hover);
+  --color-action-primary-press: var(--action-primary-press);
+  --color-status-success: var(--status-success);
+  --color-status-success-bg: var(--status-success-bg);
+  --color-status-success-ink: var(--status-success-ink);
+  --color-status-warning: var(--status-warning);
+  --color-status-warning-bg: var(--status-warning-bg);
+  --color-status-warning-ink: var(--status-warning-ink);
+  --color-status-danger: var(--status-danger);
+  --color-status-danger-bg: var(--status-danger-bg);
+  --color-status-info: var(--status-info);
+  --color-status-info-bg: var(--status-info-bg);
+  --color-source-pubmed: var(--source-pubmed);
+  --color-source-epmc: var(--source-epmc);
+  --color-source-crossref: var(--source-crossref);
+  --color-source-other: var(--source-other);
+  --color-link: var(--link);
+  --color-link-hover: var(--link-hover);
+
   /* ---- shadcn 17 standard slot */
   --color-background: var(--paper-100);
   --color-foreground: var(--ink-900);
@@ -57,7 +90,7 @@
   --color-card-foreground: var(--ink-900);
   --color-popover: var(--bg-elevated);
   --color-popover-foreground: var(--ink-900);
-  --color-primary: var(--teal-600);
+  --color-primary: var(--action-primary);
   --color-primary-foreground: var(--fg-on-clay);
   --color-secondary: var(--paper-200);
   --color-secondary-foreground: var(--ink-900);
@@ -68,7 +101,7 @@
   --color-destructive: var(--rust-500);
   --color-border: var(--border-default);
   --color-input: var(--border-default);
-  --color-ring: var(--clay-500);
+  --color-ring: var(--border-focus);
 
   /* ---- Typography */
   --font-sans: var(--patra-font-sans);
@@ -76,6 +109,7 @@
   --font-mono: var(--patra-font-mono);
 
   /* ---- Type scale */
+  --text-3xs: var(--text-3xs);
   --text-2xs: var(--text-2xs);
   --text-xs: var(--text-xs);
   --text-sm: var(--text-sm);
@@ -97,7 +131,9 @@
   --tracking-tight: var(--tracking-tight);
   --tracking-normal: var(--tracking-normal);
   --tracking-wide: var(--tracking-wide);
+  --tracking-mono: var(--tracking-mono);
   --tracking-caps: var(--tracking-caps);
+  --tracking-spaced: var(--tracking-spaced);
 
   /* ---- Radius */
   --radius: var(--radius-lg);
@@ -146,4 +182,21 @@
       opacity: 1;
     }
   }
+}
+
+/* 非文本可交互元素统一焦点环。放在所有 @layer 之外：不分层样式优先于任何层，
+   组件上的 shadow-* 工具类不会把焦点环盖掉。文本框由外层容器 focus-within 改描边为 border-focus。 */
+:where(
+  a[href],
+  button,
+  summary,
+  select,
+  [role="tab"],
+  [role="button"],
+  [type="checkbox"],
+  [type="radio"],
+  [tabindex]
+):focus-visible {
+  outline: none;
+  box-shadow: var(--ring-focus);
 }

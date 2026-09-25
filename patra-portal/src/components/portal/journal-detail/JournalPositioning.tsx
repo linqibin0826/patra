@@ -24,18 +24,18 @@ export function JournalPositioning({
   });
 
   return (
-    <section className="rounded-lg border border-(--border-default) bg-paper-50 px-5 py-[18px]">
+    <section className="rounded-lg border border-border-default bg-paper-50 px-5 py-[18px]">
       <SectionEyebrow>定位与范围</SectionEyebrow>
-      <p className="mb-3 font-sans text-sm leading-normal text-(--fg-3)">
+      <p className="mb-3 font-sans text-sm leading-normal text-fg-3">
         由结构化事实组合 —— 该刊暂无编辑撰写的简介文本。
       </p>
       <div className="flex flex-wrap gap-2">
         {tags.map((t) => (
           <span
             key={`${t.k}-${t.v}`}
-            className="inline-flex items-center gap-1.5 rounded-sm border border-(--border-default) bg-paper-100 px-2.5 py-1 font-sans text-sm font-medium leading-normal text-(--fg-2)"
+            className="inline-flex items-center gap-1.5 rounded-sm border border-border-default bg-paper-100 px-2.5 py-1 font-sans text-sm font-medium leading-normal text-fg-2"
           >
-            <span className="mr-px border-r border-(--border-default) pr-1.5 font-mono text-[9.5px] uppercase tracking-[0.05em] text-(--fg-4)">
+            <span className="mr-px border-r border-border-default pr-1.5 font-mono text-3xs uppercase tracking-mono text-fg-3">
               {t.k}
             </span>
             {t.v}

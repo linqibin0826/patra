@@ -34,7 +34,7 @@ export function TopNav() {
         <a href="#top" className="inline-flex items-center gap-2 text-ink-900" aria-label="Patra">
           <Image src="/brand/patra-mark.svg" alt="" aria-hidden width={10} height={36} />
           <span className="font-serif text-xl tracking-tight">Patra</span>
-          <span className="ml-1 rounded-sm border border-clay-200 bg-clay-50 px-1.5 text-[10px] font-medium uppercase tracking-caps text-clay-700">
+          <span className="ml-1 rounded-sm border border-clay-200 bg-clay-50 px-1.5 text-3xs font-medium uppercase tracking-caps text-clay-700">
             门户
           </span>
         </a>
@@ -71,7 +71,7 @@ export function TopNav() {
           >
             <Search className="h-3.5 w-3.5" strokeWidth={1.5} />
             搜索
-            <kbd className="ml-1 rounded-sm border border-border-subtle bg-paper-100 px-1 font-mono text-[10px] text-fg-3">
+            <kbd className="ml-1 rounded-sm border border-border-subtle bg-paper-100 px-1 font-mono text-3xs text-fg-3">
               ⌘K
             </kbd>
           </button>

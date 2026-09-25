@@ -22,7 +22,7 @@ export function JournalCoverCard({ journal, className }: JournalCoverCardProps) 
       href={`/journals/${journal.id}`}
       title={journal.name}
       className={
-        "flex flex-col overflow-hidden rounded-lg border border-border-default bg-paper-50 text-inherit no-underline transition hover:-translate-y-px hover:border-ink-300 hover:shadow-[0_6px_16px_-10px_rgba(28,25,23,0.18)] " +
+        "flex flex-col overflow-hidden rounded-lg border border-border-default bg-paper-50 text-inherit no-underline transition hover:-translate-y-px hover:border-ink-300 hover:shadow-md " +
         (className ?? "")
       }
     >
@@ -32,14 +32,14 @@ export function JournalCoverCard({ journal, className }: JournalCoverCardProps) 
         className="relative flex aspect-[3/4] items-center justify-center overflow-hidden bg-(--cover-bg) p-4 text-center text-(--cover-ink) before:absolute before:inset-2 before:border before:border-current before:opacity-20 before:content-['']"
       >
         {journal.foundedYear !== null && (
-          <div className="absolute left-2 right-2 top-3 text-center font-mono text-[9.5px] uppercase tracking-[0.18em] opacity-70">
+          <div className="absolute left-2 right-2 top-3 text-center font-mono text-3xs uppercase tracking-spaced opacity-75">
             est. {journal.foundedYear}
           </div>
         )}
         <div className="whitespace-pre-line font-serif font-medium leading-[1.05] tracking-tight text-[clamp(20px,2.2vw,26px)]">
           {journal.abbr}
         </div>
-        <div className="absolute bottom-3 left-2 right-2 text-center font-mono text-[9px] tracking-[0.14em] opacity-60">
+        <div className="absolute bottom-3 left-2 right-2 text-center font-mono text-3xs tracking-spaced opacity-75">
           vol · 2026
         </div>
       </div>
@@ -47,23 +47,19 @@ export function JournalCoverCard({ journal, className }: JournalCoverCardProps) 
         <div className="line-clamp-2 min-h-[2.6rem] text-sm font-semibold leading-snug text-fg-1">
           {journal.name}
         </div>
-        <div className="font-mono text-[10.5px] uppercase tracking-caps text-fg-3">
-          {journal.abbr}
-        </div>
+        <div className="font-mono text-2xs uppercase tracking-caps text-fg-3">{journal.abbr}</div>
         <div className="mt-1 flex items-baseline justify-between gap-2">
           <div className="flex flex-col">
             <span className="font-serif text-xl font-medium leading-tight tracking-tight text-ink-900 tabular-nums">
               {journal.impactFactor != null ? journal.impactFactor.toFixed(1) : "—"}
             </span>
-            <span className="font-mono text-[9.5px] uppercase tracking-caps text-fg-3">
-              影响因子
-            </span>
+            <span className="font-mono text-3xs uppercase tracking-caps text-fg-3">影响因子</span>
           </div>
           <div className="text-right font-mono leading-snug text-fg-2">
-            <span className="block font-mono text-[9.5px] uppercase tracking-caps text-fg-3">
+            <span className="block font-mono text-3xs uppercase tracking-caps text-fg-3">
               JCR 分区
             </span>
-            <span className="text-[13px] font-semibold tabular-nums">
+            <span className="text-base font-semibold tabular-nums">
               {journal.jcrQuartile ?? "—"}
             </span>
           </div>

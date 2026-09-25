@@ -18,10 +18,8 @@ export function PaperRail({ paper }: { paper: PaperDetail }) {
 
   return (
     <>
-      <div className="rounded-lg border border-(--border-default) bg-paper-50 p-4">
-        <div className="mb-3 font-mono text-[9.5px] uppercase tracking-[0.06em] text-(--fg-3)">
-          操作
-        </div>
+      <div className="rounded-lg border border-border-default bg-paper-50 p-4">
+        <div className="mb-3 font-mono text-3xs uppercase tracking-mono text-fg-3">操作</div>
         <div className="flex flex-col gap-2">
           {fullText.href ? (
             <a
@@ -42,16 +40,16 @@ export function PaperRail({ paper }: { paper: PaperDetail }) {
       </div>
 
       <div className="rounded-lg border border-clay-200 bg-clay-50 p-4">
-        <div className="mb-2.5 flex items-center gap-2 font-mono text-[9.5px] uppercase tracking-[0.06em] text-(--fg-3)">
+        <div className="mb-2.5 flex items-center gap-2 font-mono text-3xs uppercase tracking-mono text-fg-3">
           <Image src="/brand/patra-mark.svg" alt="" aria-hidden width={4} height={13} /> AI 速读
-          <span className="ml-auto rounded-sm border border-clay-200 bg-paper-50 px-1.5 py-px text-[9px] normal-case text-clay-700">
+          <span className="ml-auto rounded-sm border border-clay-200 bg-paper-50 px-1.5 py-px text-3xs normal-case text-clay-700">
             mock · 占位
           </span>
         </div>
         {paper.aiSummary ? (
           <p className="m-0 font-serif text-sm leading-normal text-ink-800">{paper.aiSummary}</p>
         ) : (
-          <p className="m-0 font-sans text-sm italic text-(--fg-3)">尚未生成 AI 速读。</p>
+          <p className="m-0 font-sans text-sm italic text-fg-3">尚未生成 AI 速读。</p>
         )}
         <button
           type="button"
@@ -63,17 +61,15 @@ export function PaperRail({ paper }: { paper: PaperDetail }) {
         </button>
       </div>
 
-      <div className="rounded-lg border border-(--border-default) bg-paper-50 p-4">
-        <div className="mb-3 font-mono text-[9.5px] uppercase tracking-[0.06em] text-(--fg-3)">
-          速览
-        </div>
+      <div className="rounded-lg border border-border-default bg-paper-50 p-4">
+        <div className="mb-3 font-mono text-3xs uppercase tracking-mono text-fg-3">速览</div>
         <div className="flex flex-col">
           {stats.map((s) => (
             <div
               key={s.k}
-              className="flex items-baseline justify-between gap-3 border-t border-(--border-subtle) py-2.5 first:border-t-0"
+              className="flex items-baseline justify-between gap-3 border-t border-border-subtle py-2.5 first:border-t-0"
             >
-              <span className="font-sans text-sm text-(--fg-3)">{s.k}</span>
+              <span className="font-sans text-sm text-fg-3">{s.k}</span>
               <span className="font-mono text-md font-medium tabular-nums text-ink-900">{s.v}</span>
             </div>
           ))}

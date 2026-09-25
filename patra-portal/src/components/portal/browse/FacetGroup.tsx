@@ -26,7 +26,7 @@ export function FacetGroup({ title, selCount, defaultOpen = true, children }: Fa
         <ChevronDownIcon className={cn("size-3.5 transition-transform", !open && "-rotate-90")} />
         <span className="flex-1 text-left">{title}</span>
         {selCount > 0 && (
-          <span className="flex size-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
+          <span className="flex size-4 items-center justify-center rounded-full bg-primary text-3xs text-primary-foreground">
             {selCount}
           </span>
         )}

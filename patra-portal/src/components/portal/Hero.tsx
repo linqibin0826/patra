@@ -16,7 +16,7 @@ export function Hero({ onComposerSubmit }: HeroProps) {
       <div className="container mx-auto max-w-[1200px] px-6">
         {/* Masthead */}
         <div className="mb-10 flex items-center justify-between gap-4 border-y border-t-ink-900 border-b-border-default py-2 max-[880px]:mb-7 max-sm:py-1.5">
-          <div className="flex flex-wrap gap-x-5 gap-y-1 text-[11.5px] text-fg-3 max-sm:gap-x-2.5">
+          <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-fg-3 max-sm:gap-x-2.5">
             <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap">
               <b className="font-mono text-xs font-semibold tabular-nums text-ink-900">
                 {PORTAL_STATS.records.toLocaleString()}
@@ -36,7 +36,7 @@ export function Hero({ onComposerSubmit }: HeroProps) {
               </b>
             </span>
           </div>
-          <div className="inline-flex items-center gap-1.5 whitespace-nowrap font-mono text-[10.5px] uppercase tracking-caps text-moss-500 before:h-1.5 before:w-1.5 before:rounded-full before:bg-moss-500 before:animate-[patra-live-pulse_1.6s_ease-in-out_infinite] before:content-['']">
+          <div className="inline-flex items-center gap-1.5 whitespace-nowrap font-mono text-2xs uppercase tracking-caps text-status-success-ink before:h-1.5 before:w-1.5 before:rounded-full before:bg-moss-500 before:animate-[patra-live-pulse_1.6s_ease-in-out_infinite] before:content-['']">
             实时同步
           </div>
         </div>

@@ -6,7 +6,7 @@ import type { PaperDetail } from "@/types/portal";
 function BodyText({ text }: { text: string }) {
   return (
     // 左对齐 + text-wrap:pretty：断行更均匀、消孤行，右缘参差显著缓解；不用 justify（浏览器贪心断行会拉出不均匀词距，WCAG 亦不建议）
-    <p className="m-0 text-pretty font-serif text-lg leading-relaxed text-ink-800">
+    <p className="m-0 text-pretty font-serif text-lg leading-reading text-ink-800">
       <RichInlineText text={text} />
     </p>
   );
@@ -16,7 +16,7 @@ export function AbstractBlock({ paper }: { paper: PaperDetail }) {
   const abstract = deriveAbstract(paper);
   if (abstract.kind === "empty") {
     return (
-      <div className="rounded-md border border-dashed border-(--border-default) bg-paper-100 p-5 text-center font-sans text-md italic text-(--fg-3)">
+      <div className="rounded-lg border border-dashed border-border-default bg-paper-100 p-5 text-center font-sans text-md italic text-fg-3">
         暂无摘要 · 该来源未提供结构化或纯文本摘要
       </div>
     );
@@ -31,7 +31,7 @@ export function AbstractBlock({ paper }: { paper: PaperDetail }) {
         const key = `${s.label ?? "unlabeled"}-${i}`;
         if (s.label === null) {
           return (
-            <div key={key} className="border-t border-(--border-subtle) py-3.5 first:border-t-0">
+            <div key={key} className="border-t border-border-subtle py-3.5 first:border-t-0">
               <BodyText text={s.text} />
             </div>
           );
@@ -39,9 +39,9 @@ export function AbstractBlock({ paper }: { paper: PaperDetail }) {
         return (
           <div
             key={key}
-            className="grid grid-cols-[92px_1fr] gap-[18px] border-t border-(--border-subtle) py-3.5 first:border-t-0 max-[640px]:grid-cols-1 max-[640px]:gap-[5px]"
+            className="grid grid-cols-[92px_1fr] gap-[18px] border-t border-border-subtle py-3.5 first:border-t-0 max-[640px]:grid-cols-1 max-[640px]:gap-[5px]"
           >
-            <div className="pt-1 font-mono text-[10px] font-medium uppercase tracking-[0.06em] text-clay-700">
+            <div className="pt-1 font-mono text-3xs font-medium uppercase tracking-mono text-clay-700">
               {s.label}
             </div>
             <BodyText text={s.text} />

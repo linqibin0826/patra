@@ -21,29 +21,27 @@ export function DisclosureSection({
   const [open, setOpen] = useState(defaultOpen);
   const bodyId = useId();
   return (
-    <section className="overflow-hidden rounded-lg border border-(--border-default) bg-paper-50 [&+&]:-mt-px">
+    <section className="overflow-hidden rounded-lg has-[>button:focus-visible]:shadow-(--ring-focus) border border-border-default bg-paper-50 [&+&]:-mt-px">
       <button
         type="button"
         aria-expanded={open}
         aria-controls={bodyId}
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center gap-3 px-5 py-4 text-left font-sans transition-colors hover:bg-paper-100 focus-visible:shadow-(--ring-focus) focus-visible:outline-none"
+        className="flex w-full items-center gap-3 px-5 py-4 text-left font-sans transition-colors hover:bg-paper-100"
       >
         <ChevronRight
           size={16}
           data-open={open ? "true" : "false"}
-          className="shrink-0 text-(--fg-3) transition-transform duration-200 data-[open=true]:rotate-90"
+          className="shrink-0 text-fg-3 transition-transform duration-200 data-[open=true]:rotate-90"
         />
         <span className="text-lg font-semibold leading-snug tracking-tight text-ink-900">
           {title}
         </span>
         {count != null && (
-          <span className="ml-auto shrink-0 font-mono text-xs tabular-nums text-(--fg-3)">
-            {count}
-          </span>
+          <span className="ml-auto shrink-0 font-mono text-xs tabular-nums text-fg-3">{count}</span>
         )}
       </button>
-      <div id={bodyId} hidden={!open} className="border-t border-(--border-subtle) px-5 pb-5 pt-4">
+      <div id={bodyId} hidden={!open} className="border-t border-border-subtle px-5 pb-5 pt-4">
         {children}
       </div>
     </section>

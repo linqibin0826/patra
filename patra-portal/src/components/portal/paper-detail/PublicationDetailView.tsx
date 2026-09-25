@@ -10,9 +10,9 @@ import { SectionEyebrow } from "@/components/portal/SectionEyebrow";
 import type { PaperDetail } from "@/types/portal";
 
 const DL = "grid grid-cols-[max-content_1fr] gap-x-5 gap-y-2.5 max-[540px]:grid-cols-1";
-const DT = "whitespace-nowrap font-sans text-sm text-(--fg-3)";
-const DD = "m-0 font-sans text-md text-(--fg-1)";
-const DD_MONO = "m-0 font-mono text-sm text-(--fg-1)";
+const DT = "whitespace-nowrap font-sans text-sm text-fg-3";
+const DD = "m-0 font-sans text-md text-fg-1";
+const DD_MONO = "m-0 font-mono text-sm text-fg-1";
 
 const DATE_LABELS: Record<string, string> = {
   received: "投稿",
@@ -31,13 +31,13 @@ export function PublicationDetailView({ paper }: { paper: PaperDetail }) {
     <div className="pb-6">
       <nav
         aria-label="面包屑"
-        className="sticky top-14 z-30 border-b border-(--border-default) bg-[rgba(247,242,232,0.88)] backdrop-blur"
+        className="sticky top-14 z-30 border-b border-border-default bg-bg-sticky backdrop-blur"
       >
-        <ol className="mx-auto flex h-11 max-w-[1200px] items-center gap-2 px-6 font-sans text-sm text-(--fg-3)">
+        <ol className="mx-auto flex h-11 max-w-[1200px] items-center gap-2 px-6 font-sans text-sm text-fg-3">
           <li>
             <Link
               href="/"
-              className="rounded-sm px-1 py-0.5 text-(--fg-2) hover:bg-paper-200 hover:text-clay-700"
+              className="rounded-sm px-1 py-0.5 text-fg-2 hover:bg-paper-200 hover:text-clay-700"
             >
               Patra
             </Link>
@@ -48,7 +48,7 @@ export function PublicationDetailView({ paper }: { paper: PaperDetail }) {
           <li className="max-[720px]:hidden">
             <Link
               href="/"
-              className="rounded-sm px-1 py-0.5 text-(--fg-2) hover:bg-paper-200 hover:text-clay-700"
+              className="rounded-sm px-1 py-0.5 text-fg-2 hover:bg-paper-200 hover:text-clay-700"
             >
               文献
             </Link>
@@ -56,7 +56,7 @@ export function PublicationDetailView({ paper }: { paper: PaperDetail }) {
           <li aria-hidden className="text-ink-300 max-[720px]:hidden">
             /
           </li>
-          <li aria-current="page" className="truncate font-mono font-medium text-(--fg-1)">
+          <li aria-current="page" className="truncate font-mono font-medium text-fg-1">
             {crumb}
           </li>
         </ol>
@@ -103,7 +103,7 @@ export function PublicationDetailView({ paper }: { paper: PaperDetail }) {
                         className={
                           h.major
                             ? "rounded-sm border border-clay-200 bg-clay-50 px-2 py-0.5 font-sans text-sm text-clay-800"
-                            : "rounded-sm border border-(--border-default) bg-paper-100 px-2 py-0.5 font-sans text-sm text-(--fg-2)"
+                            : "rounded-sm border border-border-default bg-paper-100 px-2 py-0.5 font-sans text-sm text-fg-2"
                         }
                       >
                         {h.major && <span title="主要主题词">★ </span>}
@@ -114,7 +114,7 @@ export function PublicationDetailView({ paper }: { paper: PaperDetail }) {
                   {paper.keywords.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {paper.keywords.map((k) => (
-                        <span key={k} className="font-mono text-[11px] text-(--fg-3)">
+                        <span key={k} className="font-mono text-xs text-fg-3">
                           #{k}
                         </span>
                       ))}
@@ -133,9 +133,7 @@ export function PublicationDetailView({ paper }: { paper: PaperDetail }) {
                         <dd className={DD}>
                           {f.funder ?? "—"}
                           {f.grantId && (
-                            <span className="ml-2 font-mono text-sm text-(--fg-3)">
-                              · {f.grantId}
-                            </span>
+                            <span className="ml-2 font-mono text-sm text-fg-3">· {f.grantId}</span>
                           )}
                         </dd>
                       </Fragment>

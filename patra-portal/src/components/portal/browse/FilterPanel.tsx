@@ -43,7 +43,7 @@ export function FilterPanel({
             <SheetTitle>{sheetTitle}</SheetTitle>
           </SheetHeader>
           <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-2">{children}</div>
-          <SheetFooter className="border-t border-(--border-subtle) px-4 py-3">
+          <SheetFooter className="border-t border-border-subtle px-4 py-3">
             {sheetFooter}
           </SheetFooter>
         </SheetContent>

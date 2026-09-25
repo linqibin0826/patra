@@ -1,7 +1,7 @@
 import { ArrowRight } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { JournalCoverCard } from "@/components/portal/JournalCoverCard";
+import { SectionEyebrow } from "@/components/portal/SectionEyebrow";
 import { fetchVenues } from "@/lib/portal-api/venues";
 import type { VenueBrowse } from "@/types/portal";
 
@@ -24,10 +24,7 @@ export async function Journals() {
     >
       <div className="mb-6 flex items-end justify-between gap-3 max-[880px]:flex-col max-[880px]:items-start">
         <div>
-          <span className="inline-flex items-center gap-1.5 font-sans text-2xs font-semibold uppercase tracking-caps text-fg-3">
-            <Image src="/brand/patra-mark.svg" alt="" aria-hidden width={4} height={14} />
-            按期刊浏览
-          </span>
+          <SectionEyebrow className="mb-0">按期刊浏览</SectionEyebrow>
           <h2 className="mt-1 font-serif text-3xl font-medium leading-tight tracking-tight text-ink-900">
             高影响力期刊
           </h2>

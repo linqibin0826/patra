@@ -1,17 +1,17 @@
 import { ArrowRight } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
+import { SectionEyebrow } from "@/components/portal/SectionEyebrow";
 import { TOPIC_CLOUD, topicTier } from "@/data/topics";
 import { buildPapersHref } from "@/lib/portal-api/paper-search";
 import { cn } from "@/lib/utils";
 import type { TopicHeatTier } from "@/types/portal";
 
 const TIER_CLASS: Record<TopicHeatTier, string> = {
-  1: "font-serif italic font-medium text-clay-800 tracking-[-0.015em] leading-none text-[clamp(28px,3.4vw,38px)]",
-  2: "font-serif font-medium text-ink-900 tracking-[-0.01em] leading-none text-[clamp(22px,2.4vw,28px)]",
-  3: "font-sans font-semibold text-ink-800 tracking-[-0.005em] text-[clamp(17px,1.6vw,20px)]",
-  4: "font-sans font-medium text-ink-700 text-[15px]",
-  5: "font-sans font-normal text-ink-600 text-[13px]",
+  1: "font-serif italic font-medium text-clay-800 tracking-tight leading-none text-[clamp(28px,3.4vw,38px)]",
+  2: "font-serif font-medium text-ink-900 tracking-tight leading-none text-[clamp(22px,2.4vw,28px)]",
+  3: "font-sans font-semibold text-ink-800 text-[clamp(17px,1.6vw,20px)]",
+  4: "font-sans font-medium text-ink-700 text-md",
+  5: "font-sans font-normal text-ink-600 text-sm",
 };
 
 export function TopicCloud() {
@@ -20,10 +20,7 @@ export function TopicCloud() {
       <div className="container mx-auto max-w-[1200px] px-6 py-14 max-[880px]:py-10">
         <div className="mb-2 flex items-end justify-between gap-3 max-[880px]:flex-col max-[880px]:items-start">
           <div>
-            <span className="inline-flex items-center gap-1.5 font-sans text-2xs font-semibold uppercase tracking-caps text-fg-3">
-              <Image src="/brand/patra-mark.svg" alt="" aria-hidden width={4} height={14} />
-              此刻热议 · trending now
-            </span>
+            <SectionEyebrow className="mb-0">此刻热议 · trending now</SectionEyebrow>
             <h2 className="mt-1 font-serif text-3xl font-medium leading-tight tracking-tight text-ink-900">
               医学界正在讨论<em className="italic text-clay-700">什么</em>
             </h2>
@@ -44,7 +41,7 @@ export function TopicCloud() {
                     href={buildPapersHref({ q: t.term })}
                     title={`${t.count.toLocaleString()} 条相关文献`}
                     className={cn(
-                      "-mx-1 inline-flex items-baseline gap-1.5 rounded-sm px-1 hover:bg-paper-200 focus-visible:outline-none focus-visible:ring focus-visible:ring-ring/30",
+                      "-mx-1 inline-flex items-baseline gap-1.5 rounded-sm px-1 hover:bg-paper-200",
                       TIER_CLASS[tier],
                     )}
                   >
