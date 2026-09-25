@@ -61,8 +61,10 @@
   /* Semantic — muted, editorial, not SaaS-bright */
   --moss-500: #5f7a47; /* success */
   --moss-50: #eef1e6;
+  --moss-700: #4f6a3a; /* success text on moss-50 (5.31:1) */
   --amber-500: #b8862f; /* warning */
   --amber-50: #f6eeda;
+  --amber-700: #8a6420; /* warning text on amber-50 (4.63:1) */
   --rust-500: #b23a2e; /* danger */
   --rust-50: #f6e1dc;
   --slate-500: #4a6479; /* info / link-secondary */
@@ -71,40 +73,55 @@
   /* ============ SEMANTIC ASSIGNMENTS ============ */
   /* Surfaces */
   --bg-canvas: var(--paper-100); /* page background */
-  --bg-paper: var(--paper-50); /* card / panel */
-  --bg-elevated: #ffffff; /* dialog / popover */
-  --bg-sunken: var(--paper-200); /* well / inset */
+  --bg-paper: var(--paper-50); /* card / panel / input */
+  --bg-elevated: #ffffff; /* popover / sheet / composer — 纯白只给浮起的表面 */
+  --bg-sunken: var(--paper-200); /* well / neutral hover / skeleton */
   --bg-tint: var(--clay-50); /* accent-tinted region */
+  --bg-sticky: rgba(247, 242, 232, 0.88); /* paper-100 · 88%，吸顶条配 backdrop-blur */
+  --bg-scrim: rgba(28, 25, 23, 0.32); /* sheet / dialog 遮罩 */
 
-  /* Foreground */
+  /* Foreground — 可读文字最浅到 fg-3；fg-4 只给占位符与禁用态 */
   --fg-1: var(--ink-900); /* primary */
   --fg-2: var(--ink-700); /* secondary */
-  --fg-3: var(--ink-600); /* muted */
-  --fg-4: var(--ink-400); /* subtle / placeholder */
-  --fg-on-clay: #fbf8f2; /* text on clay buttons */
+  --fg-3: var(--ink-600); /* muted — 可读下限 */
+  --fg-4: var(--ink-400); /* placeholder / disabled only */
+  --fg-on-clay: #fbf8f2; /* text on action-primary */
 
   /* Borders — hairlines, paper-y */
   --border-subtle: var(--paper-300);
   --border-default: #ddd5c4;
   --border-strong: var(--paper-400);
-  --border-focus: var(--clay-500);
+  --border-hover: var(--ink-300); /* 可点击卡片 / chip / 分页格 hover */
+  --border-focus: var(--clay-600);
 
-  /* Accent (clay) */
-  --accent: var(--clay-500);
-  --accent-hover: var(--clay-600);
-  --accent-press: var(--clay-700);
+  /* Accent (clay) — 唯一强调色 */
+  --accent: var(--clay-500); /* 图形：下划线、圆点、色块；不作小字 */
+  --accent-strong: var(--clay-700); /* 强调文字 */
   --accent-tint: var(--clay-50);
-  --accent-ink: var(--clay-900); /* dark form of accent */
+  --accent-border: var(--clay-200);
 
-  /* Status */
+  /* Primary action */
+  --action-primary: var(--clay-700);
+  --action-primary-hover: var(--clay-800);
+  --action-primary-press: var(--clay-900);
+
+  /* Status — 圆点/描边 · 浅底 · 文字 */
   --status-success: var(--moss-500);
   --status-success-bg: var(--moss-50);
+  --status-success-ink: var(--moss-700);
   --status-warning: var(--amber-500);
   --status-warning-bg: var(--amber-50);
+  --status-warning-ink: var(--amber-700);
   --status-danger: var(--rust-500);
   --status-danger-bg: var(--rust-50);
   --status-info: var(--slate-500);
   --status-info-bg: var(--slate-50);
+
+  /* Data sources — 圆点旁必须有来源名 */
+  --source-pubmed: var(--slate-500);
+  --source-epmc: var(--clay-500);
+  --source-crossref: var(--moss-500);
+  --source-other: var(--ink-400);
 
   /* Link */
   --link: var(--clay-700);

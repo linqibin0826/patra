@@ -6,13 +6,13 @@ export const btnPrimary = `${BTN_BASE} border-clay-700 bg-clay-600 text-(--fg-on
 export const btnSecondary = `${BTN_BASE} border-(--border-default) bg-paper-50 text-(--fg-1) hover:bg-paper-200`;
 export const btnBlock = "w-full px-3.5 py-2.5";
 
-/// 数据来源色点 class（PaperCard / PaperListItem 共用）；未知来源回退弱化灰。
+/// 数据来源色点 class（PaperCard / PaperListItem 共用）；未知来源回退 `source-other`。
 const SOURCE_DOT_CLASS: Record<string, string> = {
-  PubMed: "bg-emerald-500",
-  "Europe PMC": "bg-clay-500",
-  Crossref: "bg-sky-500",
+  PubMed: "bg-source-pubmed",
+  "Europe PMC": "bg-source-epmc",
+  Crossref: "bg-source-crossref",
 };
 
 export function sourceDotClass(source: string): string {
-  return SOURCE_DOT_CLASS[source] ?? "bg-(--fg-3)";
+  return SOURCE_DOT_CLASS[source] ?? "bg-source-other";
 }

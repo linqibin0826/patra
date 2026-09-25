@@ -50,6 +50,50 @@
   --color-slate-500: var(--slate-500);
   --color-slate-50: var(--slate-50);
 
+  --color-moss-700: var(--moss-700);
+  --color-amber-700: var(--amber-700);
+
+  /* ---- Semantic */
+  --color-bg-canvas: var(--bg-canvas);
+  --color-bg-paper: var(--bg-paper);
+  --color-bg-elevated: var(--bg-elevated);
+  --color-bg-sunken: var(--bg-sunken);
+  --color-bg-tint: var(--bg-tint);
+  --color-bg-sticky: var(--bg-sticky);
+  --color-bg-scrim: var(--bg-scrim);
+  --color-fg-1: var(--fg-1);
+  --color-fg-2: var(--fg-2);
+  --color-fg-3: var(--fg-3);
+  --color-fg-4: var(--fg-4);
+  --color-fg-on-clay: var(--fg-on-clay);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-default: var(--border-default);
+  --color-border-strong: var(--border-strong);
+  --color-border-hover: var(--border-hover);
+  --color-border-focus: var(--border-focus);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-tint: var(--accent-tint);
+  --color-accent-border: var(--accent-border);
+  --color-action-primary: var(--action-primary);
+  --color-action-primary-hover: var(--action-primary-hover);
+  --color-action-primary-press: var(--action-primary-press);
+  --color-status-success: var(--status-success);
+  --color-status-success-bg: var(--status-success-bg);
+  --color-status-success-ink: var(--status-success-ink);
+  --color-status-warning: var(--status-warning);
+  --color-status-warning-bg: var(--status-warning-bg);
+  --color-status-warning-ink: var(--status-warning-ink);
+  --color-status-danger: var(--status-danger);
+  --color-status-danger-bg: var(--status-danger-bg);
+  --color-status-info: var(--status-info);
+  --color-status-info-bg: var(--status-info-bg);
+  --color-source-pubmed: var(--source-pubmed);
+  --color-source-epmc: var(--source-epmc);
+  --color-source-crossref: var(--source-crossref);
+  --color-source-other: var(--source-other);
+  --color-link: var(--link);
+  --color-link-hover: var(--link-hover);
+
   /* ---- shadcn 17 standard slot */
   --color-background: var(--paper-100);
   --color-foreground: var(--ink-900);

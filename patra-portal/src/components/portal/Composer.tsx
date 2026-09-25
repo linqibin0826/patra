@@ -54,7 +54,7 @@ export function Composer({ onSubmit }: ComposerProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="overflow-hidden rounded-lg border border-ink-800 bg-white shadow-sm"
+      className="overflow-hidden rounded-lg border border-ink-800 bg-bg-elevated shadow-sm"
     >
       <Tabs value={mode} onValueChange={handleModeChange} className="flex-col!">
         <TabsList
@@ -110,7 +110,7 @@ export function Composer({ onSubmit }: ComposerProps) {
               type="button"
               onClick={() => applyExample(ex.mode, ex.text)}
               className={cn(
-                "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-border-default bg-white px-2.5 py-0.5 text-xs text-fg-2 hover:border-ink-300 hover:bg-paper-200 hover:text-ink-900",
+                "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-border-default bg-bg-elevated px-2.5 py-0.5 text-xs text-fg-2 hover:border-ink-300 hover:bg-paper-200 hover:text-ink-900",
                 m?.mono && "font-mono text-[11px]",
               )}
             >

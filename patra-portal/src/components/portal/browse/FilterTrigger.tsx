@@ -16,7 +16,7 @@ export function FilterTrigger({ count }: { count: number }) {
       <SlidersHorizontalIcon className="size-3.5" />
       筛选
       {count > 0 && (
-        <span className="absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full bg-clay-500 text-[10px] font-semibold text-white">
+        <span className="absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full bg-action-primary text-[10px] font-semibold text-fg-on-clay">
           {count}
         </span>
       )}

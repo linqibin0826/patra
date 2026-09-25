@@ -78,7 +78,7 @@ export function VenueFacetSearch({ selected, names, onAdd, onRemove }: VenueFace
   return (
     <div className="flex flex-col gap-1.5 pr-1">
       <div className="relative">
-        <div className="flex items-center gap-1.5 rounded-md border border-(--border-default) bg-white px-2">
+        <div className="flex items-center gap-1.5 rounded-md border border-(--border-default) bg-bg-elevated px-2">
           <SearchIcon className="size-3.5 shrink-0 text-(--fg-3)" aria-hidden="true" />
           <input
             role="combobox"
