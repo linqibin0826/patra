@@ -51,7 +51,7 @@
           <li data-task-status="done"><a href="#task-16">Task 16 — 文献检索条 PaperSearchBar（四 tab + 排序 + 移动端筛选按钮）</a></li>
           <li data-task-status="done"><a href="#task-17">Task 17 — 期刊 facet：候选 combobox 与刊名缓存 store</a></li>
           <li data-task-status="done"><a href="#task-18">Task 18 — 文献 facet 栏 PaperFilters 与服务端包装</a></li>
-          <li data-task-status="pending"><a href="#task-19">Task 19 — 信息行 PapersInfoRow 与文献 chip 行</a></li>
+          <li data-task-status="done"><a href="#task-19">Task 19 — 信息行 PapersInfoRow 与文献 chip 行</a></li>
           <li data-task-status="pending"><a href="#task-20">Task 20 — 装配 /papers 页面：精确定位直跳、分块流式与整页骨架</a></li>
           <li data-task-status="pending"><a href="#task-21">Task 21 — 导航"文献"解锁与主题云词条接通（PAP-54）</a></li>
           <li data-task-status="pending"><a href="#task-22">Task 22 — 首页文献流"查看更多"与期刊详情"查看该刊文献"（PAP-54）</a></li>
@@ -6044,7 +6044,7 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
         </ol>
       </article>
 
-      <article class="task" id="task-19" data-status="pending">
+      <article class="task" id="task-19" data-status="done">
         <header>
           <h2>任务 19：信息行 PapersInfoRow 与文献 chip 行</h2>
           <dl class="files">
@@ -6052,7 +6052,7 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
           </dl>
         </header>
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：写失败测试 PapersInfoRow.test.tsx</strong>
             <pre><code class="lang-tsx">// patra-portal/tests/components/portal/papers/PapersInfoRow.test.tsx
 import { render } from "@testing-library/react";
@@ -6111,7 +6111,7 @@ describe("PapersInfoRow", () =&gt; {
   });
 });</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：写失败测试 PaperActiveChips.test.tsx</strong>
             <pre><code class="lang-tsx">// patra-portal/tests/components/portal/papers/PaperActiveChips.test.tsx
 import { fireEvent, render, screen } from "@testing-library/react";
@@ -6172,12 +6172,12 @@ describe("PaperActiveChips", () =&gt; {
   });
 });</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：运行确认失败</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm exec vitest run tests/components/portal/papers/PapersInfoRow.test.tsx tests/components/portal/papers/PaperActiveChips.test.tsx</code></p>
             <p>预期：导入缺失失败</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：创建 PapersInfoRow.tsx</strong>
             <pre><code class="lang-tsx">// patra-portal/src/components/portal/papers/PapersInfoRow.tsx
 import { hasSearchConditions } from "@/lib/portal-api/paper-search";
@@ -6222,7 +6222,7 @@ export async function PapersInfoRow({ query }: { query: PaperSearchQuery }) {
   );
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：创建 PaperActiveChips.tsx 与 PaperActiveChipsServer.tsx</strong>
             <pre><code class="lang-tsx">// patra-portal/src/components/portal/papers/PaperActiveChips.tsx
 "use client";
@@ -6261,12 +6261,12 @@ export async function PaperActiveChipsServer({ query, currentYear }: { query: Pa
   return &lt;PaperActiveChips currentYear={currentYear} venueNames={venueNames} /&gt;;
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：运行确认通过</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm exec vitest run tests/components/portal/papers &amp;&amp; pnpm typecheck</code></p>
             <p>预期：papers 目录全部通过；typecheck 0 错误</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7：Commit</strong>
             <pre><code class="lang-bash">git add patra-portal/src/components/portal/papers patra-portal/tests/components/portal/papers
 git commit -m "feat(portal): 新增文献页信息行与已选条件 chip 行 (PAP-53)
