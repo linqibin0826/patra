@@ -71,16 +71,17 @@
 
 ## PR 与代码评审
 
-仓库有两位正式 AI reviewer，分工互补：
+仓库有三位正式 AI reviewer，分工互补：
 
 - **CodeRabbit**：行级 nitpick + lint/安全工具聚合（gitleaks / trivy / fbinfer 等）+ Linear AC 对齐。不自动评审（`auto_review.enabled: false`），由编码 agent 在 PR 评论区发 `@coderabbitai review` 触发。
-- **Codex**（`chatgpt-codex-connector`）：PR 以非 draft 打开或转 ready 时自动评审，不占 CodeRabbit 额度。只报 P0/P1，评审关注点见下方 `Code Review Rules`。
+- **Codex**（`chatgpt-codex-connector`）：PR 以非 draft 打开或转 ready 时自动评审，之后每次推送由编码 agent 发 `@codex review` 触发复评。不占 CodeRabbit 额度。只报 P0/P1，评审关注点见下方 `Code Review Rules`。
+- **Claude Action**（`.github/workflows/claude-code-review.yml`，官方 `code-review` 插件）：非 draft PR 打开、转 ready 及每次推送时自动评审（bug + CLAUDE.md 合规）。另有 `claude.yml`：在 PR / Issue 评论里 `@claude` 可直接对话。
 
 规则：
 
 - **PR 粒度：Issue 是跟踪单位，PR 按技术栈合并**：每个版本最多两个 PR（后端一个、前端一个），design / 纯文档 Issue 不单独开 PR；release spec、设计简报、设计快照、工程 spec、plan 随同版本第一个代码 PR 提交（仍写在 feature branch 上，不直接提交 main）；PR 描述逐行列出 `Closes PAP-xx` 关闭所承载的全部 Issue。设计文档由用户在写代码前本地让 Codex 评审，不为评审开 PR。详见 `patra:release-planning`。
-- **评审由编码 agent 驱动，用户不参与**：开发期 PR 挂 `draft`（两位都不评）→ 完工转 ready：Codex 自动首评，编码 agent 发 `@coderabbitai review` 触发 CodeRabbit 首评。
-- **只做首评，不复评**：CodeRabbit 对 0 star 公开仓库的 OSS 额度仅**每小时 1 次** PR 评审（滚动窗口），复评几乎必然限流。修复是否正确由编码 agent 自行验证 + CI 兜底，不再 @ 任何 reviewer 复评。首评被限流时，等距上次评审满 60 分钟后再触发一次。
+- **评审由编码 agent 驱动，用户不参与**：开发期 PR 挂 `draft`（都不评）→ 完工转 ready：Codex 与 Claude Action 自动首评，编码 agent 发 `@coderabbitai review` 触发 CodeRabbit 首评 → 之后每次推送：Claude Action 自动复评，编码 agent 发 `@codex review` 触发 Codex 复评。
+- **CodeRabbit 只做首评**：CodeRabbit 对 0 star 公开仓库的 OSS 额度仅**每小时 1 次** PR 评审（滚动窗口），复评几乎必然限流，不再 @ 它复评；修复是否正确由编码 agent 自行验证 + CI + Claude Action / Codex 复评兜底。首评被限流时，等距上次评审满 60 分钟后再触发一次。Claude Action 与 Codex 无此限流，每次推送都评。
 - **必启 Monitor**：每次 `gh pr create` 后，同一工作会话内立即启动 Monitor 并绑定该 PR，覆盖**两条流**（AI reviewer + 人工），持续到 PR 合并或关闭。
 - **处理状态**：对每条 review 意见必须在 PR 评论中明确给出处理状态——`已修复`（附 commit SHA）/ `不修复`（附明确理由）。
 
