@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { decodeEntities, type InlineNode, parseInlineMarkup } from "@/lib/rich-inline-text";
+import {
+  decodeEntities,
+  highlightInlineNodes,
+  type InlineNode,
+  parseInlineMarkup,
+} from "@/lib/rich-inline-text";
 
 /** 简写：文本节点。 */
 const text = (value: string): InlineNode => ({ kind: "text", value });
@@ -217,5 +222,52 @@ describe("parseInlineMarkup · MathML 公式组", () => {
     expect(parseInlineMarkup('<math><mi>a</mi><mspace width="0.25em"/><mi>b</mi></math>')).toEqual([
       el("math", el("mi", text("a")), el("mspace"), el("mi", text("b"))),
     ]);
+  });
+});
+
+describe("highlightInlineNodes", () => {
+  const mark = (value: string): InlineNode => el("mark", text(value));
+
+  it("q 为空时原样返回", () => {
+    const nodes = parseInlineMarkup("GLP-1 agonists");
+    expect(highlightInlineNodes(nodes, "  ")).toBe(nodes);
+  });
+
+  it("大小写不敏感，多处命中", () => {
+    expect(highlightInlineNodes(parseInlineMarkup("GLP-1 and glp-1"), "glp-1")).toEqual([
+      mark("GLP-1"),
+      text(" and "),
+      mark("glp-1"),
+    ]);
+  });
+
+  it("跨标签命中拆成多段 mark，标签结构不变", () => {
+    expect(highlightInlineNodes(parseInlineMarkup("CO<sub>2</sub> fixation"), "co2")).toEqual([
+      mark("CO"),
+      el("sub", mark("2")),
+      text(" fixation"),
+    ]);
+  });
+
+  it("正则元字符按字面匹配", () => {
+    expect(highlightInlineNodes(parseInlineMarkup("IL-(6) level"), "(6)")).toEqual([
+      text("IL-"),
+      mark("(6)"),
+      text(" level"),
+    ]);
+  });
+
+  it("math 子树不插 mark，但其文本参与偏移计算", () => {
+    const nodes = parseInlineMarkup("<math><mi>x</mi></math> x");
+    expect(highlightInlineNodes(nodes, "x")).toEqual([
+      el("math", el("mi", text("x"))),
+      text(" "),
+      mark("x"),
+    ]);
+  });
+
+  it("无命中时返回等价节点树", () => {
+    const nodes = parseInlineMarkup("<i>abc</i>");
+    expect(highlightInlineNodes(nodes, "zzz")).toEqual(nodes);
   });
 });

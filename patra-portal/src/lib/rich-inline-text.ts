@@ -184,3 +184,81 @@ function stripAnnotations(nodes: InlineNode[], unclosed: ReadonlySet<InlineNode>
   }
   return out;
 }
+
+/** 节点树的可见纯文本长度（与 highlightInlineNodes 的遍历顺序一致）。 */
+function textLength(nodes: InlineNode[]): number {
+  return nodes.reduce(
+    (sum, node) => sum + (node.kind === "text" ? node.value.length : textLength(node.children)),
+    0,
+  );
+}
+
+function collectText(nodes: InlineNode[]): string {
+  return nodes
+    .map((node) => (node.kind === "text" ? node.value : collectText(node.children)))
+    .join("");
+}
+
+/** 把一个文本节点按命中区间切成 文本 / mark 交替片段。start 为该节点在全文中的起始偏移。 */
+function splitByRanges(
+  value: string,
+  start: number,
+  ranges: readonly [number, number][],
+): InlineNode[] {
+  const out: InlineNode[] = [];
+  let cursor = 0;
+  for (const [rangeStart, rangeEnd] of ranges) {
+    const s = Math.max(rangeStart - start, cursor);
+    const e = Math.min(rangeEnd - start, value.length);
+    if (s >= e) continue;
+    if (s > cursor) out.push({ kind: "text", value: value.slice(cursor, s) });
+    out.push({
+      kind: "element",
+      tag: "mark",
+      children: [{ kind: "text", value: value.slice(s, e) }],
+    });
+    cursor = e;
+  }
+  if (cursor < value.length) out.push({ kind: "text", value: value.slice(cursor) });
+  return out;
+}
+
+/**
+ * 在节点树上高亮检索词：大小写不敏感、按字面匹配，命中片段包成 `mark` 元素节点。
+ * 命中跨越标签时拆成多段 mark，不改动原有标签结构；`math` 子树不插 mark（避免破坏 MathML），
+ * 但其文本仍计入偏移。q 为空白时原样返回。
+ */
+export function highlightInlineNodes(nodes: InlineNode[], query: string): InlineNode[] {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return nodes;
+  const full = collectText(nodes);
+  const haystack = full.toLowerCase();
+  // 个别字符小写后长度变化（如 İ）时偏移不可靠，放弃高亮
+  if (haystack.length !== full.length) return nodes;
+
+  const ranges: [number, number][] = [];
+  for (
+    let from = haystack.indexOf(needle);
+    from !== -1;
+    from = haystack.indexOf(needle, from + needle.length)
+  ) {
+    ranges.push([from, from + needle.length]);
+  }
+  if (ranges.length === 0) return nodes;
+
+  let offset = 0;
+  const walk = (list: InlineNode[]): InlineNode[] =>
+    list.flatMap((node): InlineNode[] => {
+      if (node.kind === "element") {
+        if (node.tag === "math") {
+          offset += textLength(node.children);
+          return [node];
+        }
+        return [{ ...node, children: walk(node.children) }];
+      }
+      const start = offset;
+      offset += node.value.length;
+      return splitByRanges(node.value, start, ranges);
+    });
+  return walk(nodes);
+}
