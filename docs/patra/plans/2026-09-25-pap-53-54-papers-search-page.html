@@ -40,7 +40,7 @@
           <li data-task-status="done"><a href="#task-5">Task 5 — 标题高亮：highlightInlineNodes 与 RichInlineText highlight</a></li>
           <li data-task-status="done"><a href="#task-6">Task 6 — 取数层：search / facets、期刊候选中转与刊名查询</a></li>
           <li data-task-status="done"><a href="#task-7">Task 7 — 公用导航钩子 BrowseQueryProvider、PendingRegion 与筛选抽屉 store 更名</a></li>
-          <li data-task-status="pending"><a href="#task-8">Task 8 — 公用分页、chip 行、排序段控件与筛选按钮</a></li>
+          <li data-task-status="done"><a href="#task-8">Task 8 — 公用分页、chip 行、排序段控件与筛选按钮</a></li>
           <li data-task-status="pending"><a href="#task-9">Task 9 — 公用 facet 部件与筛选容器</a></li>
           <li data-task-status="pending"><a href="#task-10">Task 10 — 公用页头、筛选骨架与空态外壳</a></li>
           <li data-task-status="pending"><a href="#task-11">Task 11 — 期刊页交互部件改用公用部件与导航钩子（修复连点丢操作）</a></li>
@@ -2532,7 +2532,7 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
         </ol>
       </article>
 
-      <article class="task" id="task-8" data-status="pending">
+      <article class="task" id="task-8" data-status="done">
         <header>
           <h2>任务 8：公用分页、chip 行、排序段控件与筛选按钮</h2>
           <dl class="files">
@@ -2540,7 +2540,7 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
           </dl>
         </header>
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：写失败测试 BrowsePagination.test.tsx（含从 JournalPagination 迁来的用例 + pending 禁用）</strong>
             <pre><code class="lang-tsx">// patra-portal/tests/components/portal/browse/BrowsePagination.test.tsx
 import { render, screen } from "@testing-library/react";
@@ -2663,7 +2663,7 @@ describe("BrowsePagination", () =&gt; {
   });
 });</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：写失败测试 ActiveChips / SortSegmented / FilterTrigger</strong>
             <pre><code class="lang-tsx">// tests/components/portal/browse/ActiveChips.test.tsx
 import { fireEvent, render, screen } from "@testing-library/react";
@@ -2790,12 +2790,12 @@ describe("FilterTrigger", () =&gt; {
   });
 });</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：运行确认失败</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm exec vitest run tests/components/portal/browse</code></p>
             <p>预期：新增的 4 个测试文件因导入缺失失败</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：创建 BrowsePagination.tsx（pageWindow 原样迁自 JournalPagination）</strong>
             <pre><code class="lang-tsx">// patra-portal/src/components/portal/browse/BrowsePagination.tsx
 "use client";
@@ -2922,7 +2922,7 @@ export function BrowsePagination({ page: rawPage, total, pageSize, unit }: Brows
   );
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：创建 ActiveChips.tsx</strong>
             <pre><code class="lang-tsx">// patra-portal/src/components/portal/browse/ActiveChips.tsx
 "use client";
@@ -2990,7 +2990,7 @@ export function ActiveChips&lt;Q extends BrowseQueryBase&gt;({ chips, clearAll, 
   );
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：创建 SortSegmented.tsx 与 FilterTrigger.tsx（样式原样迁自 JournalSearchSortControls）</strong>
             <pre><code class="lang-tsx">// patra-portal/src/components/portal/browse/SortSegmented.tsx
 "use client";
@@ -3075,12 +3075,12 @@ export function FilterTrigger({ count }: { count: number }) {
   );
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7：运行确认通过</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm exec vitest run tests/components/portal/browse &amp;&amp; pnpm typecheck</code></p>
             <p>预期：browse 目录全部通过；typecheck 0 错误</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 8：Commit</strong>
             <pre><code class="lang-bash">git add patra-portal/src/components/portal/browse patra-portal/tests/components/portal/browse
 git commit -m "feat(portal): 新增浏览页公用分页、chip 行、排序与筛选按钮 (PAP-53)
