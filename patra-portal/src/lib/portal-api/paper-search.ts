@@ -19,6 +19,9 @@ export const MAX_PAGE = Math.floor(2_147_483_647 / PAPER_PAGE_SIZE);
 /** 文本参数长度上限（与 BE @Size(max = 200) 一致） */
 export const MAX_TEXT_LENGTH = 200;
 
+/** 已选期刊上限：每个期刊 id 渲染时要单独查一次刊名，超出即丢弃，防止构造的 URL 放大后端请求 */
+export const MAX_VENUES = 20;
+
 /** BE venue 为 Long：id 不得超过 Long.MAX_VALUE */
 const LONG_MAX = 9_223_372_036_854_775_807n;
 
@@ -136,7 +139,7 @@ export function parsePaperSearchQuery(sp: Record<string, RawParam>): PaperSearch
     evidence: [...new Set(listValues(sp.evidence).map((v) => v.toUpperCase()))].filter(
       isEvidenceCode,
     ),
-    venue: listValues(sp.venue).filter(isVenueId),
+    venue: listValues(sp.venue).filter(isVenueId).slice(0, MAX_VENUES),
     // BE 语言比较区分大小写，语言基码本身为小写
     lang: [...new Set(listValues(sp.lang).map((v) => v.toLowerCase()))],
     oa: firstValue(sp.oa) === "true",

@@ -132,4 +132,11 @@ describe("VenueFacetSearch", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: "期刊 #999" }));
     await waitFor(() => expect(onRemove).toHaveBeenCalledWith("999"));
   });
+
+  it("已选满 20 本：输入框禁用并提示上限", () => {
+    const selected = Array.from({ length: 20 }, (_, i) => String(i + 1));
+    const { input } = renderSearch({ selected });
+    expect(input).toBeDisabled();
+    expect(screen.getByText("最多选择 20 本期刊")).toBeInTheDocument();
+  });
 });

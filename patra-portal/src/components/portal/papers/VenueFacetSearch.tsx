@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { SearchIcon } from "lucide-react";
 import { type KeyboardEvent, useEffect, useId, useState } from "react";
 import { FacetCheckRow } from "@/components/portal/browse/FacetCheckRow";
+import { MAX_VENUES } from "@/lib/portal-api/paper-search";
 import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/utils";
 import type { VenueSuggestion } from "@/types/portal";
@@ -47,6 +48,8 @@ export function VenueFacetSearch({ selected, names, onAdd, onRemove }: VenueFace
   });
 
   // 候选只属于"已防抖的关键词"：输入与之不一致时视为加载中，禁止选择，避免回车选中上一个词的候选
+  // 已选满上限：URL 解析只保留前 MAX_VENUES 个，再添加会被丢弃，故直接禁用输入
+  const full = selected.length >= MAX_VENUES;
   const settled = input.trim() === debounced;
   const candidates = settled ? (data ?? []).filter((venue) => !selected.includes(venue.id)) : [];
   const showList = open && input.trim().length > 0;
@@ -98,6 +101,7 @@ export function VenueFacetSearch({ selected, names, onAdd, onRemove }: VenueFace
             aria-autocomplete="list"
             aria-activedescendant={activeOption ? `${listId}-${activeOption.id}` : undefined}
             placeholder="搜刊名添加…"
+            disabled={full}
             value={input}
             onChange={(e) => {
               setInput(e.target.value);
@@ -151,7 +155,9 @@ export function VenueFacetSearch({ selected, names, onAdd, onRemove }: VenueFace
           </div>
         )}
       </div>
-      <p className="text-[11px] text-(--fg-4)">输入刊名，从候选中添加</p>
+      <p className="text-[11px] text-(--fg-4)">
+        {full ? `最多选择 ${MAX_VENUES} 本期刊` : "输入刊名，从候选中添加"}
+      </p>
       {selected.map((id) => (
         <FacetCheckRow
           key={id}

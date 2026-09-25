@@ -203,7 +203,7 @@
         <li>字符串：trim，空白视为未传；<code>q</code> / <code>author</code> / <code>doi</code> 超过 200 字时丢弃。</li>
         <li><code>pmid</code>：不匹配 <code>^\d{1,15}$</code> 时丢弃。</li>
         <li>年份：非整数，或不在 1000–9999 范围内时丢弃；<code>yearFrom &gt; yearTo</code> 时自动对调。</li>
-        <li><code>venue</code>：保持字符串，须匹配 <code>^[1-9]\d{0,18}$</code> 且用 <code>BigInt</code> 比较不超过 Long 上限 <code>9223372036854775807</code>，不经 <code>Number</code> 转换以免损失精度（实测超上限即 422）；<code>evidence</code>：不在 6 个枚举名内的丢弃（大小写归一为大写）。</li>
+        <li><code>venue</code>：保持字符串，须匹配 <code>^[1-9]\d{0,18}$</code> 且用 <code>BigInt</code> 比较不超过 Long 上限 <code>9223372036854775807</code>，不经 <code>Number</code> 转换以免损失精度（实测超上限即 422）；去重后最多保留前 <code>MAX_VENUES = 20</code> 个（每个 id 渲染时各查一次刊名，防止构造的 URL 放大后端请求；已选满时期刊输入框禁用并提示"最多选择 20 本期刊"）；<code>evidence</code>：不在 6 个枚举名内的丢弃（大小写归一为大写）。</li>
         <li>多值：去空白、去重，保持首次出现的顺序。<code>type</code> 去重与勾选 / 取消均<strong>忽略大小写</strong>（BE 按 <code>lower(trim(type_value))</code> 比较，<code>type=review</code> 与 <code>Review</code> 等价），展示用 facet 返回的规范写法；<code>lang</code> 统一转小写（BE 语言比较区分大小写，<code>lang=EN</code> 实测 0 条）。</li>
         <li><code>sort</code>：只接受 <code>latest</code> / <code>year</code>，否则用默认值；<code>page</code>：非正整数或大于 <code>MAX_PAGE</code> 时取 1。</li>
         <li><strong>精确定位归一</strong>：过滤后若 <code>pmid</code> 存在，query 只保留 <code>pmid</code>；否则若 <code>doi</code> 存在，只保留 <code>doi</code>。<code>sort</code> 回默认、<code>page</code> 回 1。于是精确定位永远查第 1 页，也不会与其他条件组合出"看不见原因的空结果"。</li>

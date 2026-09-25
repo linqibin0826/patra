@@ -14,6 +14,7 @@ import {
   isExactLookup,
   isRecentYearsActive,
   MAX_PAGE,
+  MAX_VENUES,
   papersHref,
   parsePaperSearchQuery,
   selectExactYear,
@@ -99,6 +100,12 @@ describe("parsePaperSearchQuery", () => {
       venue: ["123", "0", "-1", "abc", "0123", "9223372036854775807", "9223372036854775808"],
     });
     expect(q.venue).toEqual(["123", "9223372036854775807"]);
+  });
+
+  it("venue 最多保留 20 个（每个 id 渲染时各查一次刊名，防构造 URL 放大后端请求）", () => {
+    expect(MAX_VENUES).toBe(20);
+    const ids = Array.from({ length: 25 }, (_, i) => String(i + 1));
+    expect(parsePaperSearchQuery({ venue: ids }).venue).toEqual(ids.slice(0, 20));
   });
 
   it("非法年份丢弃（非 4 位数字 / 越界）", () => {
