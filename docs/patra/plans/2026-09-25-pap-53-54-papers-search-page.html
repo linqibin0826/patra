@@ -39,7 +39,7 @@
           <li data-task-status="done"><a href="#task-4">Task 4 — paper-search：状态变换、年份、chip 与首页入口</a></li>
           <li data-task-status="done"><a href="#task-5">Task 5 — 标题高亮：highlightInlineNodes 与 RichInlineText highlight</a></li>
           <li data-task-status="done"><a href="#task-6">Task 6 — 取数层：search / facets、期刊候选中转与刊名查询</a></li>
-          <li data-task-status="pending"><a href="#task-7">Task 7 — 公用导航钩子 BrowseQueryProvider、PendingRegion 与筛选抽屉 store 更名</a></li>
+          <li data-task-status="done"><a href="#task-7">Task 7 — 公用导航钩子 BrowseQueryProvider、PendingRegion 与筛选抽屉 store 更名</a></li>
           <li data-task-status="pending"><a href="#task-8">Task 8 — 公用分页、chip 行、排序段控件与筛选按钮</a></li>
           <li data-task-status="pending"><a href="#task-9">Task 9 — 公用 facet 部件与筛选容器</a></li>
           <li data-task-status="pending"><a href="#task-10">Task 10 — 公用页头、筛选骨架与空态外壳</a></li>
@@ -2096,7 +2096,7 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
         </ol>
       </article>
 
-      <article class="task" id="task-7" data-status="pending">
+      <article class="task" id="task-7" data-status="done">
         <header>
           <h2>任务 7：公用导航钩子 BrowseQueryProvider、PendingRegion 与筛选抽屉 store 更名</h2>
           <dl class="files">
@@ -2105,7 +2105,7 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
           </dl>
         </header>
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：store 更名（两页共用，不再叫 journal）</strong>
             <p>在仓库根执行（<code>git mv</code> 保留历史；sed 为 macOS BSD 语法）：</p>
             <pre><code class="lang-bash">git mv patra-portal/src/store/journal-filter-ui.ts patra-portal/src/store/browse-filter-ui.ts
@@ -2118,12 +2118,12 @@ grep -rl "journal-filter-ui\|useJournalFilterUiStore\|JournalFilterUiState" patr
 grep -rn "journal-filter-ui\|JournalFilterUi" patra-portal/src patra-portal/tests   # 预期无输出</code></pre>
             <p>再把 <code>src/store/browse-filter-ui.ts</code> 的注释改为：<code>/// 浏览页（/journals、/papers）筛选抽屉 UI 状态（移动端 sheet 开关）。</code></p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：确认更名后既有测试仍绿</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm exec vitest run tests/store/browse-filter-ui.test.ts tests/components/portal/journals</code></p>
             <p>预期：全部通过（纯更名，无行为变化）</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：写失败测试 BrowseQueryProvider.test.tsx</strong>
             <pre><code class="lang-tsx">// patra-portal/tests/components/portal/browse/BrowseQueryProvider.test.tsx
 import { act, fireEvent, render, screen } from "@testing-library/react";
@@ -2291,7 +2291,7 @@ describe("BrowseQueryProvider", () =&gt; {
   });
 });</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：写失败测试 PendingRegion.test.tsx</strong>
             <pre><code class="lang-tsx">// patra-portal/tests/components/portal/browse/PendingRegion.test.tsx
 import { render, screen } from "@testing-library/react";
@@ -2361,12 +2361,12 @@ describe("PendingRegion", () =&gt; {
   });
 });</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：运行确认失败</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm exec vitest run tests/components/portal/browse</code></p>
             <p>预期：失败：<code>Failed to resolve import "@/components/portal/browse/BrowseQueryProvider"</code></p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：创建 BrowseQueryProvider.tsx</strong>
             <pre><code class="lang-tsx">// patra-portal/src/components/portal/browse/BrowseQueryProvider.tsx
 "use client";
@@ -2495,7 +2495,7 @@ export function useBrowseQuery&lt;Q extends BrowseQueryBase&gt;(): BrowseQueryCo
   return ctx as unknown as BrowseQueryContextValue&lt;Q&gt;;
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7：创建 PendingRegion.tsx</strong>
             <pre><code class="lang-tsx">// patra-portal/src/components/portal/browse/PendingRegion.tsx
 "use client";
@@ -2517,12 +2517,12 @@ export function PendingRegion({ children }: { children: ReactNode }) {
   );
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 8：运行确认通过</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm exec vitest run tests/components/portal/browse tests/store &amp;&amp; pnpm typecheck</code></p>
             <p>预期：browse 11 个、store 5 个用例通过；typecheck 0 错误</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 9：Commit</strong>
             <pre><code class="lang-bash">git add patra-portal/src/store patra-portal/tests/store patra-portal/src/components/portal/browse patra-portal/tests/components/portal/browse patra-portal/src/components/portal/journals/JournalFilters.tsx patra-portal/src/components/portal/journals/JournalSearchSortControls.tsx patra-portal/tests/components/portal/journals/JournalFilters.test.tsx patra-portal/tests/components/portal/journals/JournalSearchSortControls.test.tsx
 git commit -m "feat(portal): 新增浏览页公用导航钩子与 pending 区域，筛选抽屉 store 更名 (PAP-53)

@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { JournalFilters } from "@/components/portal/journals/JournalFilters";
-import { useJournalFilterUiStore } from "@/store/journal-filter-ui";
+import { useBrowseFilterUiStore } from "@/store/browse-filter-ui";
 import type { VenueBrowseFacets, VenueBrowseQuery } from "@/types/portal";
 
 const mockPush = vi.fn<(url: string) => void>();
@@ -49,7 +49,7 @@ const baseFacets: VenueBrowseFacets = {
 describe("JournalFilters", () => {
   beforeEach(() => {
     mockPush.mockClear();
-    useJournalFilterUiStore.setState({ sheetOpen: false });
+    useBrowseFilterUiStore.setState({ sheetOpen: false });
   });
 
   describe("facet 勾选", () => {

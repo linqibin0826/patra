@@ -11,7 +11,7 @@ import {
   serializeVenueBrowseQuery,
 } from "@/lib/portal-api/venue-browse";
 import { cn } from "@/lib/utils";
-import { useJournalFilterUiStore } from "@/store/journal-filter-ui";
+import { useBrowseFilterUiStore } from "@/store/browse-filter-ui";
 import type { VenueBrowseFacets, VenueBrowseQuery } from "@/types/portal";
 
 interface Props {
@@ -264,8 +264,8 @@ function FilterControls({ facets, query, onFilter }: FilterControlsProps) {
 /// 桌面（md+）渲染为侧栏 aside；移动端用 shadcn Sheet 抽屉。
 export function JournalFilters({ facets, query, resultTotal }: Props) {
   const router = useRouter();
-  const sheetOpen = useJournalFilterUiStore((s) => s.sheetOpen);
-  const close = useJournalFilterUiStore((s) => s.close);
+  const sheetOpen = useBrowseFilterUiStore((s) => s.sheetOpen);
+  const close = useBrowseFilterUiStore((s) => s.close);
 
   const handleFilter = (nextQuery: VenueBrowseQuery) => {
     const qs = serializeVenueBrowseQuery(nextQuery);

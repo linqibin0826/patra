@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SORT_OPTIONS, serializeVenueBrowseQuery } from "@/lib/portal-api/venue-browse";
 import { cn } from "@/lib/utils";
-import { useJournalFilterUiStore } from "@/store/journal-filter-ui";
+import { useBrowseFilterUiStore } from "@/store/browse-filter-ui";
 import type { VenueBrowseQuery } from "@/types/portal";
 
 interface Props {
@@ -18,7 +18,7 @@ interface Props {
 /// 移动端附「筛选」按钮（开抽屉）。
 export function JournalSearchSortControls({ query }: Props) {
   const router = useRouter();
-  const open = useJournalFilterUiStore((s) => s.open);
+  const open = useBrowseFilterUiStore((s) => s.open);
 
   const [localQ, setLocalQ] = useState(query.q);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);

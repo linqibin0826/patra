@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { JournalSearchSortControls } from "@/components/portal/journals/JournalSearchSortControls";
-import { useJournalFilterUiStore } from "@/store/journal-filter-ui";
+import { useBrowseFilterUiStore } from "@/store/browse-filter-ui";
 import type { VenueBrowseQuery } from "@/types/portal";
 
 // mock next/navigation
@@ -30,7 +30,7 @@ describe("JournalSearchSortControls", () => {
     vi.useFakeTimers();
     mockReplace.mockClear();
     mockPush.mockClear();
-    useJournalFilterUiStore.setState({ sheetOpen: false });
+    useBrowseFilterUiStore.setState({ sheetOpen: false });
   });
 
   afterEach(() => {
@@ -123,7 +123,7 @@ describe("JournalSearchSortControls", () => {
       render(<JournalSearchSortControls query={baseQuery} />);
       const filterBtn = screen.getByRole("button", { name: /筛选/i });
       fireEvent.click(filterBtn);
-      expect(useJournalFilterUiStore.getState().sheetOpen).toBe(true);
+      expect(useBrowseFilterUiStore.getState().sheetOpen).toBe(true);
     });
 
     it("有已选项时显示角标", () => {
