@@ -15,7 +15,7 @@ export function PaperCard({ paper }: PaperCardProps) {
   const dotClass = sourceDotClass(paper.source);
 
   return (
-    <article className="flex flex-col gap-3.5 rounded-lg border border-border-default bg-paper-50 p-5">
+    <article className="flex flex-col gap-3.5 rounded-lg border border-border-default bg-paper-50 p-5 transition duration-180 hover:-translate-y-px hover:border-border-hover hover:shadow-md motion-reduce:transition-none motion-reduce:hover:translate-y-0">
       <div className="flex items-center justify-between gap-3">
         <span className="inline-flex items-center gap-1.5 font-mono text-2xs font-medium text-fg-2">
           <span aria-hidden className={`inline-block h-1.5 w-1.5 rounded-full ${dotClass}`} />

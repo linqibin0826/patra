@@ -1,8 +1,8 @@
 import { ArrowRight } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { PaperCard } from "@/components/portal/PaperCard";
+import { SectionEyebrow } from "@/components/portal/SectionEyebrow";
 import { fetchFeed } from "@/lib/portal-api/publications";
 import type { FeedTab, Paper } from "@/types/portal";
 import { ExploreFeedEmpty } from "./empty";
@@ -60,10 +60,7 @@ function FeedSection({ children }: { children: ReactNode }) {
       className="container mx-auto max-w-[1200px] px-6 py-14 max-[880px]:py-10"
     >
       <div className="mb-6">
-        <span className="inline-flex items-center gap-1.5 font-sans text-2xs font-semibold uppercase tracking-caps text-fg-3">
-          <Image src="/brand/patra-mark.svg" alt="" aria-hidden width={4} height={14} />
-          文献流
-        </span>
+        <SectionEyebrow className="mb-0">文献流</SectionEyebrow>
         <h2 className="mt-1 font-serif text-3xl font-medium leading-tight tracking-tight text-ink-900">
           值得读一读的文献
         </h2>

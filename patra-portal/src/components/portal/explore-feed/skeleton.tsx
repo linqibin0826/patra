@@ -1,5 +1,4 @@
-import Image from "next/image";
-
+import { SectionEyebrow } from "@/components/portal/SectionEyebrow";
 /// ExploreFeed 加载态骨架（Suspense fallback）。结构与真实 FeedSection 容器一致，避免布局跳动。
 export function ExploreFeedSkeleton() {
   return (
@@ -9,10 +8,7 @@ export function ExploreFeedSkeleton() {
       className="container mx-auto max-w-[1200px] px-6 py-14 max-[880px]:py-10"
     >
       <div className="mb-6">
-        <span className="inline-flex items-center gap-1.5 font-sans text-2xs font-semibold uppercase tracking-caps text-fg-3">
-          <Image src="/brand/patra-mark.svg" alt="" aria-hidden width={4} height={14} />
-          文献流
-        </span>
+        <SectionEyebrow className="mb-0">文献流</SectionEyebrow>
         <h2 className="mt-1 font-serif text-3xl font-medium leading-tight tracking-tight text-ink-900">
           值得读一读的文献
         </h2>

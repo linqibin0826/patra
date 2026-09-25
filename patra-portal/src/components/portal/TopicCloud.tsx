@@ -1,6 +1,6 @@
 import { ArrowRight } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
+import { SectionEyebrow } from "@/components/portal/SectionEyebrow";
 import { TOPIC_CLOUD, topicTier } from "@/data/topics";
 import { buildPapersHref } from "@/lib/portal-api/paper-search";
 import { cn } from "@/lib/utils";
@@ -20,10 +20,7 @@ export function TopicCloud() {
       <div className="container mx-auto max-w-[1200px] px-6 py-14 max-[880px]:py-10">
         <div className="mb-2 flex items-end justify-between gap-3 max-[880px]:flex-col max-[880px]:items-start">
           <div>
-            <span className="inline-flex items-center gap-1.5 font-sans text-2xs font-semibold uppercase tracking-caps text-fg-3">
-              <Image src="/brand/patra-mark.svg" alt="" aria-hidden width={4} height={14} />
-              此刻热议 · trending now
-            </span>
+            <SectionEyebrow className="mb-0">此刻热议 · trending now</SectionEyebrow>
             <h2 className="mt-1 font-serif text-3xl font-medium leading-tight tracking-tight text-ink-900">
               医学界正在讨论<em className="italic text-clay-700">什么</em>
             </h2>

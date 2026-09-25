@@ -32,14 +32,14 @@ export function JournalCoverCard({ journal, className }: JournalCoverCardProps) 
         className="relative flex aspect-[3/4] items-center justify-center overflow-hidden bg-(--cover-bg) p-4 text-center text-(--cover-ink) before:absolute before:inset-2 before:border before:border-current before:opacity-20 before:content-['']"
       >
         {journal.foundedYear !== null && (
-          <div className="absolute left-2 right-2 top-3 text-center font-mono text-3xs uppercase tracking-spaced opacity-70">
+          <div className="absolute left-2 right-2 top-3 text-center font-mono text-3xs uppercase tracking-spaced opacity-75">
             est. {journal.foundedYear}
           </div>
         )}
         <div className="whitespace-pre-line font-serif font-medium leading-[1.05] tracking-tight text-[clamp(20px,2.2vw,26px)]">
           {journal.abbr}
         </div>
-        <div className="absolute bottom-3 left-2 right-2 text-center font-mono text-3xs tracking-spaced opacity-60">
+        <div className="absolute bottom-3 left-2 right-2 text-center font-mono text-3xs tracking-spaced opacity-75">
           vol · 2026
         </div>
       </div>

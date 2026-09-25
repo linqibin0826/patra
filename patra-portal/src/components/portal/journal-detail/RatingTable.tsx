@@ -34,7 +34,7 @@ function System({ name, source, children }: { name: string; source: string; chil
   );
 }
 
-const GRID = "grid gap-px overflow-hidden rounded-md border border-border-default bg-border-subtle";
+const GRID = "grid gap-px overflow-hidden rounded-lg border border-border-default bg-border-subtle";
 
 export function RatingTable({ metrics }: { metrics: JournalMetrics }) {
   const { jcr, cas, scopus } = metrics;
@@ -82,7 +82,7 @@ export function RatingTable({ metrics }: { metrics: JournalMetrics }) {
         </System>
       ) : (
         <System name="中科院分区 · CAS" source="CAS">
-          <p className="rounded-md border border-dashed border-border-default bg-paper-100 px-3 py-2.5 font-sans text-sm text-fg-3">
+          <p className="rounded-lg border border-dashed border-border-default bg-paper-100 px-3 py-2.5 font-sans text-sm text-fg-3">
             该刊暂无中科院分区数据。
           </p>
         </System>

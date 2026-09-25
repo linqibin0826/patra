@@ -34,7 +34,7 @@ export function pageWindow(cur: number, total: number): (number | "…")[] {
 
 const fmt = (n: number) => n.toLocaleString("en-US");
 
-const CELL = "flex h-8 w-8 items-center justify-center rounded border text-sm transition";
+const CELL = "flex h-8 w-8 items-center justify-center rounded-md border text-sm transition";
 
 interface BrowsePaginationProps {
   page: number;

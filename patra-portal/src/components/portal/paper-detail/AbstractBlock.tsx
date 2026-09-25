@@ -6,7 +6,7 @@ import type { PaperDetail } from "@/types/portal";
 function BodyText({ text }: { text: string }) {
   return (
     // 左对齐 + text-wrap:pretty：断行更均匀、消孤行，右缘参差显著缓解；不用 justify（浏览器贪心断行会拉出不均匀词距，WCAG 亦不建议）
-    <p className="m-0 text-pretty font-serif text-lg leading-relaxed text-ink-800">
+    <p className="m-0 text-pretty font-serif text-lg leading-reading text-ink-800">
       <RichInlineText text={text} />
     </p>
   );
@@ -16,7 +16,7 @@ export function AbstractBlock({ paper }: { paper: PaperDetail }) {
   const abstract = deriveAbstract(paper);
   if (abstract.kind === "empty") {
     return (
-      <div className="rounded-md border border-dashed border-border-default bg-paper-100 p-5 text-center font-sans text-md italic text-fg-3">
+      <div className="rounded-lg border border-dashed border-border-default bg-paper-100 p-5 text-center font-sans text-md italic text-fg-3">
         暂无摘要 · 该来源未提供结构化或纯文本摘要
       </div>
     );

@@ -1,5 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
+import { SectionEyebrow } from "@/components/portal/SectionEyebrow";
 
 interface BrowseHeadProps {
   /** 面包屑末级（当前页） */
@@ -23,10 +23,7 @@ export function BrowseHead({ crumb, eyebrow, title, description }: BrowseHeadPro
         <span aria-current="page">{crumb}</span>
       </nav>
 
-      <span className="inline-flex items-center gap-1.5 font-sans text-2xs font-semibold uppercase tracking-caps text-fg-3">
-        <Image src="/brand/patra-mark.svg" alt="" aria-hidden width={4} height={14} />
-        {eyebrow}
-      </span>
+      <SectionEyebrow className="mb-0">{eyebrow}</SectionEyebrow>
 
       <h1 className="mt-1 font-serif text-3xl font-medium leading-tight tracking-tight text-ink-900">
         {title}
