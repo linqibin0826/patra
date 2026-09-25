@@ -54,7 +54,7 @@
           <li data-task-status="done"><a href="#task-19">Task 19 — 信息行 PapersInfoRow 与文献 chip 行</a></li>
           <li data-task-status="done"><a href="#task-20">Task 20 — 装配 /papers 页面：精确定位直跳、分块流式与整页骨架</a></li>
           <li data-task-status="done"><a href="#task-21">Task 21 — 导航"文献"解锁与主题云词条接通（PAP-54）</a></li>
-          <li data-task-status="pending"><a href="#task-22">Task 22 — 首页文献流"查看更多"与期刊详情"查看该刊文献"（PAP-54）</a></li>
+          <li data-task-status="done"><a href="#task-22">Task 22 — 首页文献流"查看更多"与期刊详情"查看该刊文献"（PAP-54）</a></li>
           <li data-task-status="pending"><a href="#task-23">Task 23 — 首页搜索框接通 /papers：HeroWithToast → HeroWithSearch（PAP-54）</a></li>
           <li data-task-status="pending"><a href="#task-24">Task 24 — Playwright 冒烟、全量验证与 hi-fi 对照</a></li>
         </ol>
@@ -6635,7 +6635,7 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
         </ol>
       </article>
 
-      <article class="task" id="task-22" data-status="pending">
+      <article class="task" id="task-22" data-status="done">
         <header>
           <h2>任务 22：首页文献流"查看更多"与期刊详情"查看该刊文献"（PAP-54）</h2>
           <dl class="files">
@@ -6644,7 +6644,7 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
           </dl>
         </header>
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：写失败测试</strong>
             <pre><code class="lang-tsx">// patra-portal/tests/components/portal/explore-feed/ExploreFeed.test.tsx
 import { render, screen } from "@testing-library/react";
@@ -6684,12 +6684,12 @@ describe("ExploreFeed 查看更多", () =&gt; {
     );
   });</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：运行确认失败</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm exec vitest run tests/components/portal/explore-feed tests/components/portal/JournalMasthead.test.tsx</code></p>
             <p>预期：两个新用例失败（链接不存在）</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：ExploreFeed 加"查看更多文献"</strong>
             <p>import 补 <code>import { ArrowRight } from "lucide-react";</code> 与 <code>import Link from "next/link";</code>。把非空分支的网格外包一层并追加入口：</p>
             <pre><code class="lang-tsx">        {papers.length === 0 ? (
@@ -6713,19 +6713,19 @@ describe("ExploreFeed 查看更多", () =&gt; {
           &lt;/&gt;
         )}</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：JournalMasthead 加"查看该刊文献"</strong>
             <p>import：lucide 行加 <code>ArrowRight</code>，并加 <code>import Link from "next/link";</code> 与 <code>import { buildPapersHref } from "@/lib/portal-api/paper-search";</code>。在操作区 <code>&lt;div className="mt-1.5 flex flex-wrap gap-2.5"&gt;</code> 内、官网按钮之后追加：</p>
             <pre><code class="lang-tsx">          &lt;Link href={buildPapersHref({ venue: [venue.id] })} className={btnSecondary}&gt;
             查看该刊文献 &lt;ArrowRight size={14} /&gt;
           &lt;/Link&gt;</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：运行确认通过</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm exec vitest run tests/components/portal/explore-feed tests/components/portal/JournalMasthead.test.tsx &amp;&amp; pnpm typecheck</code></p>
             <p>预期：全部通过</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：Commit</strong>
             <pre><code class="lang-bash">git add patra-portal/src/components/portal/explore-feed/index.tsx patra-portal/src/components/portal/journal-detail/JournalMasthead.tsx patra-portal/tests/components/portal/explore-feed patra-portal/tests/components/portal/JournalMasthead.test.tsx
 git commit -m "feat(portal): 首页文献流与期刊详情接通文献检索页 (PAP-54)
