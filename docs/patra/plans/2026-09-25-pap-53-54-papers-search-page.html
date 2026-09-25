@@ -7074,13 +7074,21 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
         </header>
         <p>plan 步骤 7 的 grep 还命中 <code>tests/e2e/journals-browse.spec.ts</code> 里一处注释（"结果不足一页时 JournalPagination 返回 null"），不在本任务文件清单内；已把注释改为 BrowsePagination（行为相同：页数 ≤ 1 返回 null）。</p>
       </li>
+      <li class="note" data-type="change" data-time="2026-09-25T15:22">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-09-25T15:22">09-25 15:22</time>
+          <a href="#task-16">§ Task 16</a>
+        </header>
+        <p>plan 给出的 PaperSearchBar 过不了 biome：<code>valueOf</code> 与全局名同名（noShadowRestrictedNames）→ 改名 <code>fieldValue</code>；检索方式按钮组 <code>&lt;div role="group"&gt;</code> 触发 useSemanticElements → 改为 <code>&lt;fieldset aria-label="检索方式"&gt;</code>（加 <code>min-w-0</code> 保住移动端横向滚动）。行为与可访问名不变，11 个用例仍通过。</p>
+      </li>
     </ol>
 
 
     <footer class="notes-stats">
       总计:
       <span data-counter="decision">0</span> decisions /
-      <span data-counter="change">1</span> changes /
+      <span data-counter="change">2</span> changes /
       <span data-counter="tradeoff">0</span> tradeoffs /
       <span data-counter="other">0</span> others
     </footer>

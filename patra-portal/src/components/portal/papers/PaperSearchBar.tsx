@@ -30,7 +30,7 @@ function initialMode(query: PaperSearchQuery): ComposerMode {
   return "keyword";
 }
 
-function valueOf(query: PaperSearchQuery, mode: ComposerMode): string {
+function fieldValue(query: PaperSearchQuery, mode: ComposerMode): string {
   switch (mode) {
     case "keyword":
       return query.q;
@@ -48,11 +48,11 @@ function valueOf(query: PaperSearchQuery, mode: ComposerMode): string {
 export function PaperSearchBar() {
   const { query, navigate } = useBrowseQuery<PaperSearchQuery>();
   const [mode, setMode] = useState<ComposerMode>(() => initialMode(query));
-  const [value, setValue] = useState(() => valueOf(query, initialMode(query)));
+  const [value, setValue] = useState(() => fieldValue(query, initialMode(query)));
   const [error, setError] = useState<string | null>(null);
 
   // 外部 query 变化（chip 移除 / 后退 / 清除全部）时同步输入框：渲染期比较上次同步值（派生状态写法，无 effect）
-  const synced = valueOf(query, mode);
+  const synced = fieldValue(query, mode);
   const [lastSynced, setLastSynced] = useState(synced);
   if (synced !== lastSynced) {
     setLastSynced(synced);
@@ -62,7 +62,7 @@ export function PaperSearchBar() {
   const current = SEARCH_MODES.find((m) => m.id === mode);
 
   const switchMode = (next: ComposerMode) => {
-    const nextValue = valueOf(query, next);
+    const nextValue = fieldValue(query, next);
     setMode(next);
     setValue(nextValue);
     setLastSynced(nextValue);
@@ -97,10 +97,9 @@ export function PaperSearchBar() {
 
   return (
     <div className="flex flex-col gap-2.5 border-b border-(--border-default) pb-3">
-      <div
-        role="group"
+      <fieldset
         aria-label="检索方式"
-        className="flex items-center gap-1 max-md:overflow-x-auto"
+        className="flex min-w-0 items-center gap-1 max-md:overflow-x-auto"
       >
         {SEARCH_MODES.map((m) => (
           <button
@@ -121,7 +120,7 @@ export function PaperSearchBar() {
             )}
           </button>
         ))}
-      </div>
+      </fieldset>
 
       <div className="flex flex-wrap items-center gap-3.5">
         <form
