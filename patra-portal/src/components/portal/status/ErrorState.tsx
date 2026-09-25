@@ -19,11 +19,11 @@ export function ErrorState({ onRetry, context = "加载" }: ErrorStateProps) {
           <span className="shrink-0 border-r border-border-default pr-[clamp(16px,4vw,28px)] opacity-85">
             <Image src="/brand/patra-mark.svg" alt="" aria-hidden width={25} height={88} />
           </span>
-          <span className="font-serif font-medium leading-[0.9] tracking-[-0.04em] text-rust-500 tabular-nums text-[clamp(64px,13vw,120px)]">
+          <span className="font-serif font-medium leading-[0.9] tracking-tight text-rust-500 tabular-nums text-[clamp(64px,13vw,120px)]">
             500
           </span>
         </div>
-        <span className="mb-3.5 inline-flex items-center gap-2 whitespace-nowrap font-mono text-xs uppercase tracking-[0.1em] text-rust-500">
+        <span className="mb-3.5 inline-flex items-center gap-2 whitespace-nowrap font-mono text-xs uppercase tracking-caps text-rust-500">
           <span className="h-1.5 w-1.5 rounded-full bg-rust-500" /> 服务异常 · 兜底页
         </span>
         <h1 className="mb-3.5 font-serif font-medium leading-[1.18] tracking-tight text-fg-1 text-balance text-[clamp(24px,4vw,32px)]">

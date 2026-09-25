@@ -7,11 +7,11 @@ import { cn } from "@/lib/utils";
 import type { TopicHeatTier } from "@/types/portal";
 
 const TIER_CLASS: Record<TopicHeatTier, string> = {
-  1: "font-serif italic font-medium text-clay-800 tracking-[-0.015em] leading-none text-[clamp(28px,3.4vw,38px)]",
-  2: "font-serif font-medium text-ink-900 tracking-[-0.01em] leading-none text-[clamp(22px,2.4vw,28px)]",
-  3: "font-sans font-semibold text-ink-800 tracking-[-0.005em] text-[clamp(17px,1.6vw,20px)]",
-  4: "font-sans font-medium text-ink-700 text-[15px]",
-  5: "font-sans font-normal text-ink-600 text-[13px]",
+  1: "font-serif italic font-medium text-clay-800 tracking-tight leading-none text-[clamp(28px,3.4vw,38px)]",
+  2: "font-serif font-medium text-ink-900 tracking-tight leading-none text-[clamp(22px,2.4vw,28px)]",
+  3: "font-sans font-semibold text-ink-800 text-[clamp(17px,1.6vw,20px)]",
+  4: "font-sans font-medium text-ink-700 text-md",
+  5: "font-sans font-normal text-ink-600 text-sm",
 };
 
 export function TopicCloud() {

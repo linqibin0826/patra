@@ -69,7 +69,7 @@ export function Composer({ onSubmit }: ComposerProps) {
             >
               {m.label}
               {m.id === "keyword" && (
-                <span className="ml-1.5 font-mono text-[10.5px] text-fg-4">默认</span>
+                <span className="ml-1.5 font-mono text-2xs text-fg-4">默认</span>
               )}
             </TabsTrigger>
           ))}
@@ -83,7 +83,7 @@ export function Composer({ onSubmit }: ComposerProps) {
           {...form.register("value")}
           className={cn(
             "min-w-0 flex-1 border-0 bg-transparent py-3.5 text-lg leading-tight text-ink-900 outline-none placeholder:text-fg-4 max-sm:py-3 max-sm:text-base",
-            current.mono && "font-mono text-base tracking-[0.01em] max-sm:text-sm",
+            current.mono && "font-mono text-base max-sm:text-sm",
           )}
           placeholder={current.placeholder}
           autoComplete="off"
@@ -101,7 +101,7 @@ export function Composer({ onSubmit }: ComposerProps) {
       </div>
 
       <div className="flex flex-wrap items-center gap-2 border-t border-border-subtle bg-paper-50 px-3.5 py-2.5 text-xs text-fg-3">
-        <span className="mr-0.5 font-mono text-[10px] uppercase tracking-caps text-fg-3">试试</span>
+        <span className="mr-0.5 font-mono text-3xs uppercase tracking-caps text-fg-3">试试</span>
         {EXAMPLE_QUERIES.map((ex) => {
           const m = SEARCH_MODES.find((s) => s.id === ex.mode);
           return (
@@ -111,10 +111,10 @@ export function Composer({ onSubmit }: ComposerProps) {
               onClick={() => applyExample(ex.mode, ex.text)}
               className={cn(
                 "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-border-default bg-bg-elevated px-2.5 py-0.5 text-xs text-fg-2 hover:border-ink-300 hover:bg-paper-200 hover:text-ink-900",
-                m?.mono && "font-mono text-[11px]",
+                m?.mono && "font-mono text-xs",
               )}
             >
-              <span className="border-r border-border-default pr-1.5 font-mono text-[10px] uppercase tracking-caps text-fg-4">
+              <span className="border-r border-border-default pr-1.5 font-mono text-3xs uppercase tracking-caps text-fg-4">
                 {m?.label}
               </span>
               {ex.text}

@@ -35,7 +35,7 @@ export function JournalPositioning({
             key={`${t.k}-${t.v}`}
             className="inline-flex items-center gap-1.5 rounded-sm border border-border-default bg-paper-100 px-2.5 py-1 font-sans text-sm font-medium leading-normal text-fg-2"
           >
-            <span className="mr-px border-r border-border-default pr-1.5 font-mono text-[9.5px] uppercase tracking-[0.05em] text-fg-4">
+            <span className="mr-px border-r border-border-default pr-1.5 font-mono text-3xs uppercase tracking-mono text-fg-4">
               {t.k}
             </span>
             {t.v}

@@ -52,7 +52,7 @@ export function IdentifierChip({ label, value, href }: IdentifierChipProps) {
       >
         <span
           className={cn(
-            "inline-flex items-center border-r px-2.5 text-[9.5px] uppercase tracking-[0.06em]",
+            "inline-flex items-center border-r px-2.5 text-3xs uppercase tracking-mono",
             done ? "border-moss-500 text-moss-500" : "border-border-default text-fg-3",
           )}
         >

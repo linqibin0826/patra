@@ -27,7 +27,7 @@ export function EvidenceBadge({
     return (
       <span
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 font-sans text-[11.5px] font-semibold",
+          "inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 font-sans text-xs font-semibold",
           TONE_CLASS[ev.tone],
         )}
         title={`证据等级 · ${ev.label}`}
@@ -63,11 +63,11 @@ export function EvidenceBadge({
       </span>
       <span className="flex flex-col leading-[1.15]">
         <span className="font-sans text-sm font-semibold">{ev.label}</span>
-        <span className="font-mono text-[9px] uppercase tracking-[0.06em] opacity-70">
+        <span className="font-mono text-3xs uppercase tracking-mono opacity-70">
           证据等级 · {ev.en}
         </span>
       </span>
-      <span className="rounded-[3px] border border-current px-1.5 py-px font-mono text-[9px] uppercase tracking-[0.04em] opacity-50">
+      <span className="rounded-[3px] border border-current px-1.5 py-px font-mono text-3xs uppercase tracking-mono opacity-50">
         衍生
       </span>
     </span>

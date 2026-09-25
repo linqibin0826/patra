@@ -17,19 +17,19 @@ export function PaperHeader({ paper }: { paper: PaperDetail }) {
         {paper.publicationTypes.slice(0, 2).map((t) => (
           <span
             key={t}
-            className="rounded-sm bg-paper-200 px-2 py-0.5 font-mono text-[10.5px] uppercase tracking-[0.05em] text-fg-3"
+            className="rounded-sm bg-paper-200 px-2 py-0.5 font-mono text-2xs uppercase tracking-mono text-fg-3"
           >
             {t}
           </span>
         ))}
         {paper.isOa && (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-moss-500 bg-moss-50 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.04em] text-moss-500">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-moss-500 bg-moss-50 px-2 py-0.5 font-mono text-3xs uppercase tracking-mono text-moss-500">
             开放获取
           </span>
         )}
       </div>
 
-      <h1 className="m-0 mb-1.5 text-pretty font-serif text-[clamp(26px,3.4vw,36px)] font-medium leading-[1.16] tracking-[-0.02em] text-fg-1">
+      <h1 className="m-0 mb-1.5 text-pretty font-serif text-[clamp(26px,3.4vw,36px)] font-medium leading-[1.16] tracking-tight text-fg-1">
         <RichInlineText text={paper.title} />
       </h1>
       {paper.originalTitle && (

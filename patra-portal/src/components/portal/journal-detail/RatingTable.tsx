@@ -12,7 +12,7 @@ function Cell({
 }) {
   return (
     <div className="flex flex-col gap-0.5 bg-paper-50 px-3 py-2.5">
-      <span className="font-mono text-[9px] uppercase tracking-[0.05em] text-fg-3">{label}</span>
+      <span className="font-mono text-3xs uppercase tracking-mono text-fg-3">{label}</span>
       <span
         className={`font-sans text-lg font-semibold leading-tight tabular-nums ${accent ? "text-clay-700" : "text-ink-900"}`}
       >
@@ -27,9 +27,7 @@ function System({ name, source, children }: { name: string; source: string; chil
     <div>
       <div className="mb-2 flex items-baseline gap-2.5">
         <span className="font-sans text-md font-semibold text-ink-900">{name}</span>
-        <span className="font-mono text-[9.5px] uppercase tracking-[0.06em] text-fg-4">
-          {source}
-        </span>
+        <span className="font-mono text-3xs uppercase tracking-mono text-fg-4">{source}</span>
       </div>
       {children}
     </div>

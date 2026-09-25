@@ -41,7 +41,7 @@ export function AbstractBlock({ paper }: { paper: PaperDetail }) {
             key={key}
             className="grid grid-cols-[92px_1fr] gap-[18px] border-t border-border-subtle py-3.5 first:border-t-0 max-[640px]:grid-cols-1 max-[640px]:gap-[5px]"
           >
-            <div className="pt-1 font-mono text-[10px] font-medium uppercase tracking-[0.06em] text-clay-700">
+            <div className="pt-1 font-mono text-3xs font-medium uppercase tracking-mono text-clay-700">
               {s.label}
             </div>
             <BodyText text={s.text} />

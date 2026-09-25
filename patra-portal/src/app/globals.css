@@ -109,6 +109,7 @@
   --font-mono: var(--patra-font-mono);
 
   /* ---- Type scale */
+  --text-3xs: var(--text-3xs);
   --text-2xs: var(--text-2xs);
   --text-xs: var(--text-xs);
   --text-sm: var(--text-sm);
@@ -130,7 +131,9 @@
   --tracking-tight: var(--tracking-tight);
   --tracking-normal: var(--tracking-normal);
   --tracking-wide: var(--tracking-wide);
+  --tracking-mono: var(--tracking-mono);
   --tracking-caps: var(--tracking-caps);
+  --tracking-spaced: var(--tracking-spaced);
 
   /* ---- Radius */
   --radius: var(--radius-lg);

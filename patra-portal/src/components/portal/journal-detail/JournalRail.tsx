@@ -29,7 +29,7 @@ export function JournalRail({ venue, metrics }: { venue: VenueDetail; metrics: J
   return (
     <>
       <div className="rounded-lg border border-clay-200 bg-clay-50 p-4">
-        <div className="mb-3 flex items-center gap-2 font-mono text-[9.5px] uppercase tracking-[0.06em] text-fg-3">
+        <div className="mb-3 flex items-center gap-2 font-mono text-3xs uppercase tracking-mono text-fg-3">
           <Image src="/brand/patra-mark.svg" alt="" aria-hidden width={4} height={13} /> 本刊速览
         </div>
         <div className="flex flex-col">
@@ -56,9 +56,7 @@ export function JournalRail({ venue, metrics }: { venue: VenueDetail; metrics: J
       </div>
 
       <div className="rounded-lg border border-border-default bg-paper-50 p-4">
-        <div className="mb-3 font-mono text-[9.5px] uppercase tracking-[0.06em] text-fg-3">
-          边界 · v0.5
-        </div>
+        <div className="mb-3 font-mono text-3xs uppercase tracking-mono text-fg-3">边界 · v0.5</div>
         <p className="m-0 font-sans text-sm leading-normal text-fg-3">
           本页用于认识与评估期刊，<b className="text-fg-2">不含该刊的文献列表</b>
           。文献浏览将在后续版本提供。

@@ -114,7 +114,7 @@ export function PublicationDetailView({ paper }: { paper: PaperDetail }) {
                   {paper.keywords.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {paper.keywords.map((k) => (
-                        <span key={k} className="font-mono text-[11px] text-fg-3">
+                        <span key={k} className="font-mono text-xs text-fg-3">
                           #{k}
                         </span>
                       ))}

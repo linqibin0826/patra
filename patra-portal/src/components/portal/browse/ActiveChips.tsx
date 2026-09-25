@@ -45,7 +45,7 @@ export function ActiveChips<Q extends BrowseQueryBase>({
           key={chip.key}
           className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-clay-200 bg-clay-50 py-0.5 pr-1 pl-2.5 text-xs font-medium text-clay-800"
         >
-          <span className="font-mono text-[9px] uppercase tracking-[0.04em] text-clay-600">
+          <span className="font-mono text-3xs uppercase tracking-mono text-clay-600">
             {chip.group}
           </span>
           <span className="max-w-[16rem] truncate">{chip.label}</span>

@@ -116,7 +116,7 @@ export function PaperSearchBar() {
           >
             {m.label}
             {m.id === "keyword" && (
-              <span className="ml-1.5 font-mono text-[10px] opacity-70">默认</span>
+              <span className="ml-1.5 font-mono text-3xs opacity-70">默认</span>
             )}
           </button>
         ))}

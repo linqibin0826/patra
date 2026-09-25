@@ -129,6 +129,7 @@
 
   /* Type scale — UI-leaning, tight, dense.
      Each step uses a paired line-height + tracking. */
+  --text-3xs: 9.5px; /* 微标签，全站字号下限 */
   --text-2xs: 10.5px;
   --text-xs: 11.5px;
   --text-sm: 12.5px; /* table cells, dense rows */
@@ -150,7 +151,9 @@
   --tracking-tight: -0.02em;
   --tracking-normal: 0;
   --tracking-wide: 0.02em;
-  --tracking-caps: 0.08em;
+  --tracking-mono: 0.06em; /* 等宽大写标签 */
+  --tracking-caps: 0.08em; /* sans 大写 eyebrow */
+  --tracking-spaced: 0.14em; /* 期刊封面装饰小字 */
 
   /* ============ SHAPE & SPACE ============ */
   --radius-xs: 2px;
