@@ -49,7 +49,7 @@
           <li data-task-status="done"><a href="#task-14">Task 14 — 文献列表项 PaperListItem 与列表骨架</a></li>
           <li data-task-status="done"><a href="#task-15">Task 15 — 文献页 Provider、空态与结果区</a></li>
           <li data-task-status="done"><a href="#task-16">Task 16 — 文献检索条 PaperSearchBar（四 tab + 排序 + 移动端筛选按钮）</a></li>
-          <li data-task-status="pending"><a href="#task-17">Task 17 — 期刊 facet：候选 combobox 与刊名缓存 store</a></li>
+          <li data-task-status="done"><a href="#task-17">Task 17 — 期刊 facet：候选 combobox 与刊名缓存 store</a></li>
           <li data-task-status="pending"><a href="#task-18">Task 18 — 文献 facet 栏 PaperFilters 与服务端包装</a></li>
           <li data-task-status="pending"><a href="#task-19">Task 19 — 信息行 PapersInfoRow 与文献 chip 行</a></li>
           <li data-task-status="pending"><a href="#task-20">Task 20 — 装配 /papers 页面：精确定位直跳、分块流式与整页骨架</a></li>
@@ -5280,7 +5280,7 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
         </ol>
       </article>
 
-      <article class="task" id="task-17" data-status="pending">
+      <article class="task" id="task-17" data-status="done">
         <header>
           <h2>任务 17：期刊 facet：候选 combobox 与刊名缓存 store</h2>
           <dl class="files">
@@ -5288,7 +5288,7 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
           </dl>
         </header>
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：写失败测试 venue-names.test.ts</strong>
             <pre><code class="lang-ts">// patra-portal/tests/store/venue-names.test.ts
 import { beforeEach, describe, expect, it } from "vitest";
@@ -5305,7 +5305,7 @@ describe("useVenueNamesStore", () =&gt; {
   });
 });</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：写失败测试 VenueFacetSearch.test.tsx</strong>
             <pre><code class="lang-tsx">// patra-portal/tests/components/portal/papers/VenueFacetSearch.test.tsx
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -5438,12 +5438,12 @@ describe("VenueFacetSearch", () =&gt; {
   });
 });</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：运行确认失败</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm exec vitest run tests/store/venue-names.test.ts tests/components/portal/papers/VenueFacetSearch.test.tsx</code></p>
             <p>预期：导入缺失失败</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：创建 venue-names store</strong>
             <pre><code class="lang-ts">// patra-portal/src/store/venue-names.ts
 import { create } from "zustand";
@@ -5459,7 +5459,7 @@ export const useVenueNamesStore = create&lt;VenueNamesState&gt;((set) =&gt; ({
   remember: (id, name) =&gt; set((s) =&gt; ({ names: { ...s.names, [id]: name } })),
 }));</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：创建 VenueFacetSearch.tsx</strong>
             <pre><code class="lang-tsx">// patra-portal/src/components/portal/papers/VenueFacetSearch.tsx
 "use client";
@@ -5609,12 +5609,12 @@ export function VenueFacetSearch({ selected, names, onAdd, onRemove }: VenueFace
   );
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：运行确认通过</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm exec vitest run tests/store/venue-names.test.ts tests/components/portal/papers/VenueFacetSearch.test.tsx &amp;&amp; pnpm typecheck &amp;&amp; pnpm exec biome check src/components/portal/papers/VenueFacetSearch.tsx</code></p>
             <p>预期：全部通过；typecheck / biome 0 错误（若 biome 对 combobox 的 role 给出 a11y 建议，按提示改用等价写法并在 notes 记 CHANGE）</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7：Commit</strong>
             <pre><code class="lang-bash">git add patra-portal/src/store/venue-names.ts patra-portal/src/components/portal/papers/VenueFacetSearch.tsx patra-portal/tests/store/venue-names.test.ts patra-portal/tests/components/portal/papers/VenueFacetSearch.test.tsx
 git commit -m "feat(portal): 新增期刊 facet 候选搜索与刊名缓存 (PAP-53)
@@ -7082,13 +7082,21 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
         </header>
         <p>plan 给出的 PaperSearchBar 过不了 biome：<code>valueOf</code> 与全局名同名（noShadowRestrictedNames）→ 改名 <code>fieldValue</code>；检索方式按钮组 <code>&lt;div role="group"&gt;</code> 触发 useSemanticElements → 改为 <code>&lt;fieldset aria-label="检索方式"&gt;</code>（加 <code>min-w-0</code> 保住移动端横向滚动）。行为与可访问名不变，11 个用例仍通过。</p>
       </li>
+      <li class="note" data-type="change" data-time="2026-09-25T15:23">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-09-25T15:23">09-25 15:23</time>
+          <a href="#task-17">§ Task 17</a>
+        </header>
+        <p>biome 对候选列表报 a11y 错（ul/li 挂 listbox/option 角色、option 不可聚焦）。按计划提示改为等价写法：<code>&lt;div role="listbox"&gt;</code> + <code>&lt;div role="option" tabIndex={-1}&gt;</code>，焦点仍留在输入框（aria-activedescendant 模式）；可访问角色与名称不变，9 个用例通过。</p>
+      </li>
     </ol>
 
 
     <footer class="notes-stats">
       总计:
       <span data-counter="decision">0</span> decisions /
-      <span data-counter="change">2</span> changes /
+      <span data-counter="change">3</span> changes /
       <span data-counter="tradeoff">0</span> tradeoffs /
       <span data-counter="other">0</span> others
     </footer>
