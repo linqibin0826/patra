@@ -1,0 +1,65 @@
+# Claude PR 评审：三位 AI reviewer 中负责「架构与领域深度」的一位。
+# 分工：CodeRabbit=广度（行级 nitpick + lint/安全工具聚合 + AC），Codex=P0/P1 bug，
+# Claude=六边形分层 + DDD 领域逻辑 + 项目规范。与 Codex 同时机触发：PR 以非 draft 打开或 draft 转 ready。
+# 只做首评；首评失败或需重评时在 Actions 页面对该次运行点 Re-run。
+# 认证用订阅 OAuth token（本地 `claude setup-token` 生成，存为仓库 secret CLAUDE_CODE_OAUTH_TOKEN）。
+name: Claude Review
+
+on:
+  pull_request:
+    types: [opened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    name: claude-review
+    # 跳过 draft；fork PR 与 dependabot 拿不到仓库 secret，直接跳过
+    if: >-
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+
+      - uses: anthropics/claude-code-action@9171db3e57d6a3140a37ddc2ba92788584e0ead6 # v1.0.234
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # 用 workflow 自带的 GITHUB_TOKEN 发评论（身份为 github-actions[bot]），无需安装 Claude GitHub App
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # 行内评论分类需要 API key，订阅 token 下直接发布
+          classify_inline_comments: "false"
+          claude_args: |
+            --model claude-opus-5-5
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            你是本仓库 PR 的架构与领域评审。仓库另有两位 AI reviewer：CodeRabbit 负责行级风格、lint 与安全扫描，
+            Codex 负责 P0/P1 级 bug。不要重复它们的工作，把精力放在它们看不到的深度问题上。
+
+            先读根目录 CLAUDE.md 和 .claude/rules/ 下与本次改动相关的规则文件（layers/ 按层、tech/ 按主题、
+            testing/ 看测试），再用 `gh pr diff` 和 `gh pr view` 了解改动，必要时读改动文件周边的代码。
+
+            重点检查：
+            1. 六边形分层：依赖方向是否正确；domain 是否混入框架依赖；app 层是否只做编排；
+               Port / Adapter / Repository / Gateway / QueryService 的定义层、实现层与命名是否符合 .claude/rules/tech/port-service.md。
+            2. DDD 领域逻辑：聚合边界与不变量是否守住；业务规则是否泄漏到 app / adapter / infra；值对象与实体的职责是否清晰。
+            3. 异常分层：是否符合 .claude/rules/tech/error-handling.md（领域异常直接传播、下游调用走 RemoteCallException）。
+            4. 测试：行为变更是否有对应测试，测试放置位置与 Mock 策略是否符合 .claude/rules/testing/。
+            5. linqibin-commons/ 的改动：是否破坏下游 super-nb-platform 依赖的契约（见 CLAUDE.md「下游消费者」一节）。
+
+            评论规则：
+            - 全部用中文，工程师同事语气，直接指出问题和建议的改法，不写客套与赞美。
+            - 针对具体代码的问题，用 mcp__github_inline_comment__create_inline_comment 发行内评论，并标注严重度（高 / 中 / 低）。
+            - 格式、import 顺序、拼写这类 nitpick 不要评论。
+            - 最后用 `gh pr comment` 发一条总评：列出发现的问题数量和最关键的一两点；没有发现问题就只写一句「架构与领域层面未发现问题」。

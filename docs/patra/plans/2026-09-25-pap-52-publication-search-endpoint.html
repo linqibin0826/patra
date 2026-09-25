@@ -1,0 +1,3524 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PAP-52 文献检索端点实现计划</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- CSS 外置：「工程简报」主题（与 spec 共享 spec-theme.css）+ plan 专属 plan-extras.css。
+       相对路径 ../styles/ 从生成位置 docs/patra/plans/ 出发；
+       模板本身在 .claude/skills/ 下打开时此 link 会 404（接受：以生成后的 plan 为准） -->
+  <link rel="stylesheet" href="../styles/spec-theme.css">
+  <link rel="stylesheet" href="../styles/plan-extras.css">
+</head>
+<body>
+<div class="layout layout-with-notes">
+
+  <!-- ============================================================
+       左栏：目录（TOC）
+       ============================================================ -->
+  <nav class="toc">
+    <h3>目录</h3>
+    <ol>
+      <li><a href="#scope-check">范围检查结果</a></li>
+      <li><a href="#file-structure">文件结构</a></li>
+      <li><a href="#tasks">任务列表</a>
+        <ol class="toc-tasks">
+          <!-- ENTRY TEMPLATE（注释保留供添加 task 时复制）:
+               每写一个 <article id="task-N">，在此处同步追加一条 li，初始 data-task-status="pending"。
+               实施期改 article 的 data-status 时，必须同步改此处 li 的 data-task-status，
+               否则 TOC 状态符号会与中栏卡片不一致。
+
+          <li data-task-status="pending"><a href="#task-N">Task N — [任务名]</a></li>
+          -->
+          <li data-task-status="done"><a href="#task-1">Task 1 — FacetCount 顶层 record，期刊侧引用迁移</a></li>
+          <li data-task-status="done"><a href="#task-2">Task 2 — PublicationSearchSort 排序枚举</a></li>
+          <li data-task-status="done"><a href="#task-3">Task 3 — PublicationSearchFilter 过滤 record</a></li>
+          <li data-task-status="done"><a href="#task-4">Task 4 — EvidenceLevel.typeValuesOf 暴露映射表</a></li>
+          <li data-task-status="done"><a href="#task-5">Task 5 — InlineMarkup 标签白名单与可见纯文本</a></li>
+          <li data-task-status="done"><a href="#task-6">Task 6 — PublicationSearchFacets、PortalPaperReadModel 扩展、PublicationSearchReadPort</a></li>
+          <li data-task-status="done"><a href="#task-7">Task 7 — infra 列表查询：DAO + 投影 + 适配器 search（组装 / 排序 / 片段）</a></li>
+          <li data-task-status="done"><a href="#task-8">Task 8 — infra 筛选条件：逐条 Red-Green 追加共享 WHERE</a></li>
+          <li data-task-status="done"><a href="#task-9">Task 9 — infra facets：years / types / evidence / languages / openAccess / total / lastSyncedAt</a></li>
+          <li data-task-status="done"><a href="#task-10">Task 10 — app：PortalPublicationSearchQueryService</a></li>
+          <li data-task-status="done"><a href="#task-11">Task 11 — app：feed 迁到新端口，删除 PortalFeed* 读端六类与其 IT</a></li>
+          <li data-task-status="done"><a href="#task-12">Task 12 — adapter 响应：EvidenceLevelView / FacetCountResponse 顶层，PortalPaperResponse 三字段，converter</a></li>
+          <li data-task-status="done"><a href="#task-13">Task 13 — adapter 请求：PortalPublicationSearchRequest 校验 + RepeatedParamListEditor</a></li>
+          <li data-task-status="done"><a href="#task-14">Task 14 — adapter 端点：search / facets + @InitBinder + 控制器 IT</a></li>
+          <li data-task-status="done"><a href="#task-15">Task 15 — 全量验证、spec 收尾、PR</a></li>
+        </ol>
+      </li>
+      <li><a href="#self-check">自检结果</a></li>
+    </ol>
+  </nav>
+
+  <!-- ============================================================
+       中栏：内容
+       ============================================================ -->
+  <main class="content">
+
+    <header class="doc-header">
+      <h1>PAP-52 文献检索端点：<code>GET /portal/publications/search</code> + <code>/search/facets</code></h1>
+      <div class="meta-bar">
+        <span>📅 2026-09-25</span>
+        <span>🌿 feat/pap-52-publication-search</span>
+        <span>📋 plan</span>
+        <span class="status-pill">done</span>
+      </div>
+
+      <aside class="for-ai-worker">
+        <strong>面向 AI 代理的工作者：</strong>
+        必需子技能：使用 <code>patra:subagent-driven-development</code>（推荐）
+        或 <code>patra:executing-plans</code> 逐任务实现。
+        通过修改任务卡片与步骤的 <code>data-status</code> 属性追踪进度
+        （pending / in-progress / done / blocked / skipped）。
+        每完成一个 task 立即 commit。
+      </aside>
+
+      <dl class="meta">
+        <dt>目标</dt> <dd>在 patra-catalog 交付文献检索读端点 <code>GET /portal/publications/search</code> 与 <code>/search/facets</code>，并让首页 feed 端点迁到同一条读端口，列表 DTO 追加 <code>venueId</code> / <code>evidenceLevel</code> / <code>abstractSnippet</code>。</dd>
+        <dt>架构</dt> <dd>CQRS 读端三件套：domain 定义 <code>PublicationSearchFilter</code> / <code>PublicationSearchReadPort</code> / 读模型，infra 用一条共享 WHERE 常量拼出列表、count 与 4 个 GROUP BY facet 的 native query（drill-down 靠把本维度参数置 null），app 两个 QueryService 直接委托端口，adapter 请求 record 校验 + <code>@InitBinder</code> 重复参数编辑器 + 响应 DTO。旧 <code>PortalFeed*</code> 读端整套删除。证据等级在 SQL 里按 <code>EvidenceLevel</code> 映射表先算每篇最强档再等值过滤；标题剥标签与摘要片段共用 domain <code>InlineMarkup</code> 白名单。</dd>
+        <dt>技术栈</dt> <dd>Java 25 / Spring Boot 4 / Spring Data JPA native query（接口投影）/ PostgreSQL 17 regexp_replace + 数组参数 / Lombok / JUnit 5 + AssertJ + Mockito / Testcontainers（<code>@DataJpaTest</code>）/ <code>@WebMvcTest</code> + <code>RestTestClient</code></dd>
+        <dt>关联 spec</dt> <dd><a href="../specs/2026-09-24-pap-52-publication-search-endpoint-design.html">PAP-52 文献检索端点设计</a></dd>
+      </dl>
+    </header>
+
+    <section id="scope-check">
+      <h2>范围检查结果</h2>
+      <aside class="callout success">
+        <span class="title">单 plan 覆盖</span>
+        <p>spec 只涉及 patra-catalog 一个服务的读端（domain → infra → app → adapter 一条纵切），无 Flyway、无前端、无其他服务。15 个任务按层自底向上，每个任务独立编译通过并可测。校验失败的 HTTP 状态按现有全局映射为 <strong>422</strong>（<code>PortalPublicationControllerIT</code> 既有断言），spec 里写的 400 以此为准。</p>
+      </aside>
+      <aside class="callout info">
+        <span class="title">环境前提</span>
+        <ul>
+          <li>infra / adapter 的 <code>integrationTest</code> 需本地 Docker（Testcontainers PostgreSQL）。</li>
+          <li>IDEA 自动构建会与命令行 Gradle 抢 <code>build/classes</code>；遇 <code>bad class file</code> / <code>NoSuchFileException</code> 先关 IDEA 自动构建或换独立 worktree。</li>
+          <li>所有 Gradle 命令在仓库根目录执行；项目路径前缀是 <code>:patra-api:patra-catalog:</code>。</li>
+        </ul>
+      </aside>
+    </section>
+
+    <section id="file-structure">
+      <h2>文件结构</h2>
+      <p>路径相对仓库根；<code>catalog/</code> = <code>patra-api/patra-catalog/</code>，包前缀 <code>dev.linqibin.patra.catalog</code> 省略。</p>
+      <div class="file-tree">
+        <pre>catalog/patra-catalog-domain/src/main/java/.../domain/
+  model/read/portal/
+    FacetCount.java                       <span class="pill create">create</span>  顶层 facet 项 record（value + count）
+    PublicationSearchSort.java            <span class="pill create">create</span>  LATEST / YEAR / CITED + fromCode
+    PublicationSearchFilter.java          <span class="pill create">create</span>  @Builder 过滤 record，紧凑构造器归一化
+    PublicationSearchFacets.java          <span class="pill create">create</span>  facet 读模型（years/types/evidence/languages/openAccess/total/lastSyncedAt）
+    PortalPaperReadModel.java             <span class="pill modify">modify</span>  改 @Builder，加 venueId / evidenceLevel / abstractSnippet
+    VenueBrowseFacets.java                <span class="pill modify">modify</span>  删内嵌 FacetCount，引用顶层
+    PortalFeedFilter.java / PortalFeedTab.java  <span class="pill delete">delete</span>
+  model/vo/publication/
+    InlineMarkup.java                     <span class="pill create">create</span>  标签白名单正则 + toPlainText + truncate
+    EvidenceLevel.java                    <span class="pill modify">modify</span>  加 typeValuesOf(level)
+  port/read/
+    PublicationSearchReadPort.java        <span class="pill create">create</span>  search + facets
+    PortalFeedReadPort.java               <span class="pill delete">delete</span>
+catalog/patra-catalog-domain/src/test/java/.../domain/
+  model/read/portal/FacetCountTest / PublicationSearchSortTest / PublicationSearchFilterTest / PublicationSearchFacetsTest / PortalPaperReadModelTest  <span class="pill create">create</span>
+  model/vo/publication/InlineMarkupTest.java  <span class="pill create">create</span>
+  model/vo/publication/EvidenceLevelTest.java <span class="pill modify">modify</span>
+
+catalog/patra-catalog-infra/src/main/java/.../infra/
+  persistence/dao/PublicationSearchDao.java   <span class="pill create">create</span>  共享 WHERE 常量 + 列表 / count / 4 facet / lastSyncedAt
+  persistence/dao/PortalFeedDao.java          <span class="pill delete">delete</span>
+  adapter/read/PublicationSearchReadAdapter.java  <span class="pill create">create</span>  端口实现
+  adapter/read/PublicationSearchRow.java / PublicationFacetCountRow.java / PublicationLastSyncedRow.java  <span class="pill create">create</span>  接口投影
+  adapter/read/VenueBrowseReadAdapter.java    <span class="pill modify">modify</span>  FacetCount 引用改顶层
+  adapter/read/PortalFeedReadAdapter.java / PortalFeedRow.java  <span class="pill delete">delete</span>
+catalog/patra-catalog-infra/src/integrationTest/java/.../infra/adapter/read/
+  PublicationSearchReadAdapterIT.java   <span class="pill create">create</span>  含从 feed IT 迁入的断言
+  VenueBrowseReadAdapterIT.java         <span class="pill modify">modify</span>  FacetCount 引用改顶层
+  PortalFeedReadAdapterIT.java          <span class="pill delete">delete</span>
+
+catalog/patra-catalog-app/src/main/java/.../app/usecase/portal/query/
+  PortalPublicationSearchQueryService.java  <span class="pill create">create</span>
+  PortalFeedQueryService.java               <span class="pill modify">modify</span>  依赖新端口，tab→sort
+catalog/patra-catalog-app/src/test/java/.../app/usecase/portal/query/
+  PortalPublicationSearchQueryServiceTest.java  <span class="pill create">create</span>
+  PortalFeedQueryServiceTest.java               <span class="pill modify">modify</span>
+
+catalog/patra-catalog-adapter/src/main/java/.../adapter/rest/portal/
+  request/PortalPublicationSearchRequest.java  <span class="pill create">create</span>  校验 + 列表归一化 + yearFrom≤yearTo
+  request/RepeatedParamListEditor.java         <span class="pill create">create</span>  不拆逗号的 List PropertyEditor
+  response/EvidenceLevelView.java              <span class="pill create">create</span>  顶层证据视图 + of(EvidenceLevel)
+  response/FacetCountResponse.java             <span class="pill create">create</span>  顶层 facet 项响应
+  response/PortalPublicationFacetsResponse.java <span class="pill create">create</span>
+  response/PortalPaperResponse.java            <span class="pill modify">modify</span>  加三字段
+  response/PortalPublicationDetailResponse.java <span class="pill modify">modify</span>  删内嵌 EvidenceLevelView
+  response/PortalVenueFacetsResponse.java      <span class="pill modify">modify</span>  删内嵌 FacetCountResponse，引用顶层（JSON 不变）
+  PortalApiConverter.java                      <span class="pill modify">modify</span>  toResponse 三字段、toPublicationFacetsResponse、EvidenceLevelView.of
+  PortalPublicationController.java             <span class="pill modify">modify</span>  search / facets 端点 + @InitBinder + toFilter
+catalog/patra-catalog-adapter/src/test/java/.../adapter/rest/portal/request/
+  PortalPublicationSearchRequestTest.java / RepeatedParamListEditorTest.java  <span class="pill create">create</span>
+catalog/patra-catalog-adapter/src/integrationTest/java/.../adapter/rest/portal/
+  PortalPublicationControllerIT.java  <span class="pill modify">modify</span>  feed 三字段断言 + search / facets / 422 / 重复参数用例
+  PortalVenueControllerIT.java        <span class="pill modify">modify</span>  FacetCount 引用改顶层
+
+docs/patra/specs/2026-09-24-pap-52-publication-search-endpoint-design.html  <span class="pill modify">modify</span>  状态 pill draft → implemented；400 改 422；文件清单 #29 改 modify</pre>
+      </div>
+    </section>
+
+    <section id="tasks">
+      <h2>任务列表</h2>
+
+      <!-- TASK TEMPLATE（注释保留供添加新 task 时复制）:
+
+      <article class="task" id="task-N" data-status="pending">
+        <header>
+          <h2>任务 N：[任务标题]</h2>
+          <dl class="files">
+            <dt>创建</dt><dd><code>[exact/path/to/File.java]</code></dd>
+            <dt>修改</dt><dd><code>[exact/path/to/Existing.java:123-145]</code></dd>
+            <dt>测试</dt><dd><code>[tests/exact/path/to/Test.java]</code></dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：[描述]</strong>
+            <pre><code class="lang-java">[完整代码块，禁止占位]</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      data-status 5 类：pending / in-progress / done / blocked / skipped
+      每开始任务/步骤改 in-progress，完成改 done。遇阻塞改 blocked，并在右栏 notes-panel 追加 data-type="other" entry 说明阻塞原因。
+      -->
+
+      <article class="task" id="task-1" data-status="done">
+        <header>
+          <h2>任务 1：FacetCount 顶层 record，期刊侧引用迁移</h2>
+          <dl class="files">
+            <dt>创建</dt><dd><code>patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/linqibin/patra/catalog/domain/model/read/portal/FacetCount.java</code><br><code>patra-api/patra-catalog/patra-catalog-domain/src/test/java/dev/linqibin/patra/catalog/domain/model/read/portal/FacetCountTest.java</code></dd>
+            <dt>修改</dt><dd><code>patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/linqibin/patra/catalog/domain/model/read/portal/VenueBrowseFacets.java</code><br><code>patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/linqibin/patra/catalog/infra/adapter/read/VenueBrowseReadAdapter.java</code><br><code>patra-api/patra-catalog/patra-catalog-infra/src/integrationTest/java/dev/linqibin/patra/catalog/infra/adapter/read/VenueBrowseReadAdapterIT.java</code><br><code>patra-api/patra-catalog/patra-catalog-adapter/src/main/java/dev/linqibin/patra/catalog/adapter/rest/portal/PortalApiConverter.java</code><br><code>patra-api/patra-catalog/patra-catalog-adapter/src/integrationTest/java/dev/linqibin/patra/catalog/adapter/rest/portal/PortalVenueControllerIT.java</code></dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：写失败测试 FacetCountTest</strong>
+<pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-domain/src/test/java/dev/linqibin/patra/catalog/domain/model/read/portal/FacetCountTest.java
+package dev.linqibin.patra.catalog.domain.model.read.portal;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+@DisplayName("FacetCount 顶层 facet 项")
+class FacetCountTest {
+
+  @Test
+  @DisplayName("of() 持有维度值与计数")
+  void ofHoldsValueAndCount() {
+    FacetCount fc = FacetCount.of("2026", 17520L);
+    assertThat(fc.value()).isEqualTo("2026");
+    assertThat(fc.count()).isEqualTo(17520L);
+  }
+}</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 2：运行测试确认编译失败</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:test --tests "*FacetCountTest"</code></p>
+            <p>预期：编译错误 <code>cannot find symbol FacetCount</code></p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 3：创建 FacetCount</strong>
+<pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/linqibin/patra/catalog/domain/model/read/portal/FacetCount.java
+package dev.linqibin.patra.catalog.domain.model.read.portal;
+
+/// Portal facet 单项：维度值及其命中数量（期刊浏览与文献检索共用）。
+///
+/// @param value 维度值（如 "Q1"、"2026"、"Journal Article"、"en"）
+/// @param count 该维度值下的命中数量
+/// @author linqibin
+/// @since 0.1.0
+public record FacetCount(String value, long count) {
+
+  /// 创建 [FacetCount] 实例。
+  ///
+  /// @param value 维度值
+  /// @param count 命中数量
+  /// @return 新建的 [FacetCount]
+  public static FacetCount of(String value, long count) {
+    return new FacetCount(value, count);
+  }
+}</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 4：VenueBrowseFacets 删内嵌 FacetCount，改引用顶层</strong>
+<p>在 <code>VenueBrowseFacets.java</code> 中删除整个内嵌 <code>public record FacetCount(...) {...}</code> 块（含其 JavaDoc）。四个 <code>List&lt;FacetCount&gt;</code> 字段因同包无需 import，其余不变。</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 5：更新四处引用</strong>
+<p>把以下文件里所有 <code>VenueBrowseFacets.FacetCount</code> 文本替换为 <code>FacetCount</code>，并在跨包文件加 <code>import dev.linqibin.patra.catalog.domain.model.read.portal.FacetCount;</code>：</p><ul><li><code>VenueBrowseReadAdapter.java</code>（4 处 <code>VenueBrowseFacets.FacetCount.of(...)</code>）</li><li><code>VenueBrowseReadAdapterIT.java</code>（5 处 <code>VenueBrowseFacets.FacetCount::value</code>）</li><li><code>PortalApiConverter.java</code>（<code>toFacetCountResponses(List&lt;VenueBrowseFacets.FacetCount&gt;)</code> 参数类型）</li><li><code>PortalVenueControllerIT.java</code>（3 处 <code>VenueBrowseFacets.FacetCount.of(...)</code>）</li></ul>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 6：运行测试与编译验证</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:test --tests "*FacetCountTest" :patra-api:patra-catalog:patra-catalog-infra:compileIntegrationTestJava :patra-api:patra-catalog:patra-catalog-adapter:compileIntegrationTestJava</code></p>
+            <p>预期：BUILD SUCCESSFUL，FacetCountTest 1 passed</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 7：Commit</strong>
+<pre><code class="lang-bash">git add patra-api/patra-catalog
+git commit -m "refactor(catalog): FacetCount 抽为顶层读模型，期刊 facets 改引用 (PAP-52)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-2" data-status="done">
+        <header>
+          <h2>任务 2：PublicationSearchSort 排序枚举</h2>
+          <dl class="files">
+            <dt>创建</dt><dd><code>patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/linqibin/patra/catalog/domain/model/read/portal/PublicationSearchSort.java</code><br><code>patra-api/patra-catalog/patra-catalog-domain/src/test/java/dev/linqibin/patra/catalog/domain/model/read/portal/PublicationSearchSortTest.java</code></dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：写失败测试</strong>
+<pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-domain/src/test/java/dev/linqibin/patra/catalog/domain/model/read/portal/PublicationSearchSortTest.java
+package dev.linqibin.patra.catalog.domain.model.read.portal;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+@DisplayName("PublicationSearchSort.fromCode")
+class PublicationSearchSortTest {
+
+  @Test
+  @DisplayName("null → LATEST")
+  void nullDefaultsToLatest() {
+    assertThat(PublicationSearchSort.fromCode(null)).isEqualTo(PublicationSearchSort.LATEST);
+  }
+
+  @Test
+  @DisplayName("year / YEAR → YEAR，大小写不敏感")
+  void yearCaseInsensitive() {
+    assertThat(PublicationSearchSort.fromCode("year")).isEqualTo(PublicationSearchSort.YEAR);
+    assertThat(PublicationSearchSort.fromCode("YEAR")).isEqualTo(PublicationSearchSort.YEAR);
+  }
+
+  @Test
+  @DisplayName("cited → CITED（仅 feed 使用）")
+  void cited() {
+    assertThat(PublicationSearchSort.fromCode("cited")).isEqualTo(PublicationSearchSort.CITED);
+  }
+
+  @Test
+  @DisplayName("未知值 → LATEST")
+  void unknownDefaultsToLatest() {
+    assertThat(PublicationSearchSort.fromCode("relevance")).isEqualTo(PublicationSearchSort.LATEST);
+  }
+}</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 2：运行测试确认失败</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:test --tests "*PublicationSearchSortTest"</code></p>
+            <p>预期：编译错误 <code>cannot find symbol PublicationSearchSort</code></p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 3：创建枚举</strong>
+<pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/linqibin/patra/catalog/domain/model/read/portal/PublicationSearchSort.java
+package dev.linqibin.patra.catalog.domain.model.read.portal;
+
+import java.util.Locale;
+
+/// 文献检索排序方式。
+///
+/// [#CITED] 只服务首页 feed 的 cited tab，检索端点的请求校验不放行该值（release-spec 边界 C）。
+///
+/// @author linqibin
+/// @since 0.1.0
+public enum PublicationSearchSort {
+
+  /// 按最后采集时间降序（默认）。
+  LATEST,
+
+  /// 按出版年份降序，同年按最后采集时间降序。
+  YEAR,
+
+  /// 按被引次数降序（feed 专用）。
+  CITED;
+
+  /// 将外部字符串码解析为枚举值，大小写不敏感；null 或未识别值返回 [#LATEST]。
+  ///
+  /// @param code 外部传入的排序码，可为 null
+  /// @return 对应的枚举值
+  public static PublicationSearchSort fromCode(String code) {
+    if (code == null) {
+      return LATEST;
+    }
+    return switch (code.toLowerCase(Locale.ROOT)) {
+      case "year" -&gt; YEAR;
+      case "cited" -&gt; CITED;
+      default -&gt; LATEST;
+    };
+  }
+}</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 4：运行测试确认通过</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:test --tests "*PublicationSearchSortTest"</code></p>
+            <p>预期：4 passed</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 5：Commit</strong>
+<pre><code class="lang-bash">git add patra-api/patra-catalog/patra-catalog-domain
+git commit -m "feat(catalog): 文献检索排序枚举 PublicationSearchSort (PAP-52)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-3" data-status="done">
+        <header>
+          <h2>任务 3：PublicationSearchFilter 过滤 record</h2>
+          <dl class="files">
+            <dt>创建</dt><dd><code>patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/linqibin/patra/catalog/domain/model/read/portal/PublicationSearchFilter.java</code><br><code>patra-api/patra-catalog/patra-catalog-domain/src/test/java/dev/linqibin/patra/catalog/domain/model/read/portal/PublicationSearchFilterTest.java</code></dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：写失败测试</strong>
+<pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-domain/src/test/java/dev/linqibin/patra/catalog/domain/model/read/portal/PublicationSearchFilterTest.java
+package dev.linqibin.patra.catalog.domain.model.read.portal;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import dev.linqibin.patra.catalog.domain.model.vo.publication.EvidenceLevel;
+import java.util.ArrayList;
+import java.util.List;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+@DisplayName("PublicationSearchFilter 紧凑构造器")
+class PublicationSearchFilterTest {
+
+  @Test
+  @DisplayName("全空构建：sort 默认 LATEST，五个列表为空不可变列表")
+  void emptyBuildDefaults() {
+    PublicationSearchFilter f = PublicationSearchFilter.builder().build();
+    assertThat(f.sort()).isEqualTo(PublicationSearchSort.LATEST);
+    assertThat(f.venueIds()).isNotNull().isEmpty();
+    assertThat(f.types()).isNotNull().isEmpty();
+    assertThat(f.evidenceLevels()).isNotNull().isEmpty();
+    assertThat(f.languages()).isNotNull().isEmpty();
+    assertThat(f.keyword()).isNull();
+    assertThat(f.isOpenAccess()).isNull();
+  }
+
+  @Test
+  @DisplayName("列表做防御性拷贝：外部修改不影响 filter")
+  void listsAreDefensivelyCopied() {
+    List&lt;String&gt; types = new ArrayList&lt;&gt;(List.of("Review"));
+    PublicationSearchFilter f = PublicationSearchFilter.builder().types(types).build();
+    types.add("Letter");
+    assertThat(f.types()).containsExactly("Review");
+    assertThatThrownBy(() -&gt; f.types().add("x")).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  @DisplayName("evidenceLevels 保留枚举值与顺序")
+  void keepsEvidenceLevels() {
+    PublicationSearchFilter f =
+        PublicationSearchFilter.builder()
+            .evidenceLevels(List.of(EvidenceLevel.UNKNOWN, EvidenceLevel.CASE_REPORT))
+            .build();
+    assertThat(f.evidenceLevels())
+        .containsExactly(EvidenceLevel.UNKNOWN, EvidenceLevel.CASE_REPORT);
+  }
+}</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 2：运行测试确认失败</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:test --tests "*PublicationSearchFilterTest"</code></p>
+            <p>预期：编译错误 <code>cannot find symbol PublicationSearchFilter</code></p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 3：创建 record</strong>
+<pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/linqibin/patra/catalog/domain/model/read/portal/PublicationSearchFilter.java
+package dev.linqibin.patra.catalog.domain.model.read.portal;
+
+import dev.linqibin.patra.catalog.domain.model.vo.publication.EvidenceLevel;
+import java.util.List;
+import lombok.Builder;
+
+/// 文献检索过滤参数（CQRS 读端）。
+///
+/// 全部字段为"原始意图"：LIKE 转义、DOI 前缀归一化、类型小写化由读适配器负责。
+///
+/// @param keyword 标题子串关键词；null 表示不过滤
+/// @param author 作者展示名子串；null 表示不过滤
+/// @param pmid PubMed ID 精确值；null 表示不过滤
+/// @param doi DOI 精确值（可带 URL / doi: 前缀）；null 表示不过滤
+/// @param yearFrom 出版年份下限（含）；null 表示不限
+/// @param yearTo 出版年份上限（含）；null 表示不限
+/// @param venueIds 期刊 ID 列表，空表示不过滤；多值 OR
+/// @param types 文献类型完整值列表，空表示不过滤；多值 OR，大小写不敏感
+/// @param evidenceLevels 证据等级列表（按每篇最强档等值），空表示不过滤；多值 OR
+/// @param isOpenAccess 是否开放获取；null 表示不过滤
+/// @param languages 语言基码（language_base）列表，空表示不过滤；多值 OR
+/// @param sort 排序方式，null 时替换为 [PublicationSearchSort.LATEST]
+/// @author linqibin
+/// @since 0.1.0
+@Builder
+public record PublicationSearchFilter(
+    String keyword,
+    String author,
+    String pmid,
+    String doi,
+    Integer yearFrom,
+    Integer yearTo,
+    List&lt;Long&gt; venueIds,
+    List&lt;String&gt; types,
+    List&lt;EvidenceLevel&gt; evidenceLevels,
+    Boolean isOpenAccess,
+    List&lt;String&gt; languages,
+    PublicationSearchSort sort) {
+
+  /// 紧凑构造器：sort 为 null 时默认 LATEST；各 List 为 null 时替换为空不可变列表，否则防御性拷贝。
+  public PublicationSearchFilter {
+    if (sort == null) {
+      sort = PublicationSearchSort.LATEST;
+    }
+    venueIds = venueIds != null ? List.copyOf(venueIds) : List.of();
+    types = types != null ? List.copyOf(types) : List.of();
+    evidenceLevels = evidenceLevels != null ? List.copyOf(evidenceLevels) : List.of();
+    languages = languages != null ? List.copyOf(languages) : List.of();
+  }
+}</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 4：运行测试确认通过</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:test --tests "*PublicationSearchFilterTest"</code></p>
+            <p>预期：3 passed</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 5：Commit</strong>
+<pre><code class="lang-bash">git add patra-api/patra-catalog/patra-catalog-domain
+git commit -m "feat(catalog): 文献检索过滤 record PublicationSearchFilter (PAP-52)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-4" data-status="done">
+        <header>
+          <h2>任务 4：EvidenceLevel.typeValuesOf 暴露映射表</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/linqibin/patra/catalog/domain/model/vo/publication/EvidenceLevel.java</code><br><code>patra-api/patra-catalog/patra-catalog-domain/src/test/java/dev/linqibin/patra/catalog/domain/model/vo/publication/EvidenceLevelTest.java</code></dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：在 EvidenceLevelTest 末尾追加失败测试</strong>
+<pre><code class="lang-java">  // 追加到 EvidenceLevelTest 类体末尾；import 区追加 java.util.Locale
+
+  @Test
+  @DisplayName("typeValuesOf 返回该档全部小写类型值，与 classify 互为逆映射")
+  void typeValuesOf_roundTripsWithClassify() {
+    for (EvidenceLevel level : EvidenceLevel.values()) {
+      for (String typeValue : EvidenceLevel.typeValuesOf(level)) {
+        assertThat(typeValue).isEqualTo(typeValue.toLowerCase(Locale.ROOT));
+        assertThat(EvidenceLevel.classify(List.of(typeValue))).isEqualTo(level);
+      }
+    }
+    assertThat(EvidenceLevel.typeValuesOf(EvidenceLevel.SYSTEMATIC_REVIEW))
+        .containsExactlyInAnyOrder("systematic review", "meta-analysis", "network meta-analysis");
+    assertThat(EvidenceLevel.typeValuesOf(EvidenceLevel.CASE_REPORT)).containsExactly("case reports");
+  }
+
+  @Test
+  @DisplayName("UNKNOWN 无类型值")
+  void typeValuesOf_unknownIsEmpty() {
+    assertThat(EvidenceLevel.typeValuesOf(EvidenceLevel.UNKNOWN)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("rank 固定为 5..0，SQL 里的 CASE 常量依赖这组值")
+  void ranksArePinned() {
+    assertThat(EvidenceLevel.SYSTEMATIC_REVIEW.rank()).isEqualTo(5);
+    assertThat(EvidenceLevel.RANDOMIZED_CONTROLLED_TRIAL.rank()).isEqualTo(4);
+    assertThat(EvidenceLevel.COHORT_OR_CASE_CONTROL.rank()).isEqualTo(3);
+    assertThat(EvidenceLevel.NON_SYSTEMATIC_REVIEW.rank()).isEqualTo(2);
+    assertThat(EvidenceLevel.CASE_REPORT.rank()).isEqualTo(1);
+    assertThat(EvidenceLevel.UNKNOWN.rank()).isEqualTo(0);
+  }</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 2：运行测试确认失败</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:test --tests "*EvidenceLevelTest"</code></p>
+            <p>预期：编译错误 <code>cannot find symbol typeValuesOf</code></p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 3：在 EvidenceLevel 的 classify() 之后追加方法</strong>
+<pre><code class="lang-java">  // EvidenceLevel.java：import 区追加 java.util.Set、java.util.stream.Collectors；classify() 方法之后追加：
+
+  /// 返回映射到指定等级的全部规范化（小写）类型值；[#UNKNOWN] 返回空集。
+  ///
+  /// 供读适配器把映射表以数组参数传入 SQL，保证过滤 / 计数与 [#classify] 同源。
+  ///
+  /// @param level 证据等级
+  /// @return 该等级对应的小写 type_value 集合（不可变）
+  public static Set&lt;String&gt; typeValuesOf(EvidenceLevel level) {
+    return TYPE_TO_LEVEL.entrySet().stream()
+        .filter(e -&gt; e.getValue() == level)
+        .map(Map.Entry::getKey)
+        .collect(Collectors.toUnmodifiableSet());
+  }</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 4：运行测试确认通过</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:test --tests "*EvidenceLevelTest"</code></p>
+            <p>预期：全部 passed（原 12 + 新 3）</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 5：Commit</strong>
+<pre><code class="lang-bash">git add patra-api/patra-catalog/patra-catalog-domain
+git commit -m "feat(catalog): EvidenceLevel.typeValuesOf 暴露证据等级映射表 (PAP-52)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-5" data-status="done">
+        <header>
+          <h2>任务 5：InlineMarkup 标签白名单与可见纯文本</h2>
+          <dl class="files">
+            <dt>创建</dt><dd><code>patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/linqibin/patra/catalog/domain/model/vo/publication/InlineMarkup.java</code><br><code>patra-api/patra-catalog/patra-catalog-domain/src/test/java/dev/linqibin/patra/catalog/domain/model/vo/publication/InlineMarkupTest.java</code></dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：写失败测试（第一组：白名单剥标签）</strong>
+<pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-domain/src/test/java/dev/linqibin/patra/catalog/domain/model/vo/publication/InlineMarkupTest.java
+package dev.linqibin.patra.catalog.domain.model.vo.publication;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.regex.Pattern;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+@DisplayName("InlineMarkup 可见纯文本派生")
+class InlineMarkupTest {
+
+  @Test
+  @DisplayName("剥白名单排版标签：CO&lt;sub&gt;2&lt;/sub&gt; → CO2，&lt;i&gt;E. coli&lt;/i&gt; → E. coli")
+  void stripsFormattingTags() {
+    assertThat(InlineMarkup.toPlainText("CO&lt;sub&gt;2&lt;/sub&gt; fixation")).isEqualTo("CO2 fixation");
+    assertThat(InlineMarkup.toPlainText("&lt;i&gt;E. coli&lt;/i&gt; strains")).isEqualTo("E. coli strains");
+    assertThat(InlineMarkup.toPlainText("&lt;sup&gt;18&lt;/sup&gt;F-FDG &lt;b&gt;PET&lt;/b&gt;")).isEqualTo("18F-FDG PET");
+  }
+
+  @Test
+  @DisplayName("字面尖括号不是标签：x&lt;y and z&gt;0、age &lt; 5 原样保留")
+  void keepsLiteralAngleBrackets() {
+    assertThat(InlineMarkup.toPlainText("x&lt;y and z&gt;0")).isEqualTo("x&lt;y and z&gt;0");
+    assertThat(InlineMarkup.toPlainText("age &lt; 5 versus age &gt; 10")).isEqualTo("age &lt; 5 versus age &gt; 10");
+    assertThat(InlineMarkup.toPlainText("&lt;br&gt; is not allowed")).isEqualTo("&lt;br&gt; is not allowed");
+  }
+
+  @Test
+  @DisplayName("带属性与自闭合的白名单标签也剥掉")
+  void stripsTagsWithAttributesAndSelfClosing() {
+    assertThat(InlineMarkup.toPlainText("&lt;math display=\"inline\"&gt;&lt;mi&gt;x&lt;/mi&gt;&lt;/math&gt;")).isEqualTo("x");
+    assertThat(InlineMarkup.toPlainText("a&lt;mspace width=\"1em\"/&gt;b")).isEqualTo("ab");
+    assertThat(InlineMarkup.toPlainText("&lt;SUB&gt;2&lt;/SUB&gt;")).isEqualTo("2");
+  }
+
+  @Test
+  @DisplayName("null 透传")
+  void nullPassesThrough() {
+    assertThat(InlineMarkup.toPlainText(null)).isNull();
+  }
+
+  @Test
+  @DisplayName("TAG_PATTERN 可被 java.util.regex 编译且不含 PG 不支持的语法")
+  void tagPatternCompiles() {
+    assertThat(Pattern.compile(InlineMarkup.TAG_PATTERN, Pattern.CASE_INSENSITIVE)).isNotNull();
+    assertThat(InlineMarkup.TAG_PATTERN).doesNotContain("(?i)").doesNotContain("\\p{");
+  }
+}</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 2：运行测试确认失败</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:test --tests "*InlineMarkupTest"</code></p>
+            <p>预期：编译错误 <code>cannot find symbol InlineMarkup</code></p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 3：创建 InlineMarkup（先只做剥标签）</strong>
+<pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/linqibin/patra/catalog/domain/model/vo/publication/InlineMarkup.java
+package dev.linqibin.patra.catalog.domain.model.vo.publication;
+
+import java.util.regex.Pattern;
+
+/// PubMed 内联标记（排版标签 + MathML）的纯文本派生工具。
+///
+/// 标签白名单与前端 `patra-portal/src/lib/rich-inline-text.ts` 的 `FORMATTING_TAGS` + `MATH_TAGS`
+/// 同一份；两边任一处增删标签必须同步。[#TAG_PATTERN] 同时用于 SQL `regexp_replace`（PostgreSQL ARE，
+/// 带 `i` 标志）与本类的 Java 正则，因此只使用两者共有的语法。
+///
+/// @author linqibin
+/// @since 0.1.0
+public final class InlineMarkup {
+
+  /// 白名单标签正则：`&lt;` 或 `&lt;/` 紧跟白名单标签名，可选属性段（不含尖括号），可选自闭合 `/`。
+  /// 字面尖括号（`x&lt;y and z&gt;0`、`age &lt; 5`）与白名单外标签（`&lt;br&gt;`）都不匹配，按文本保留。
+  public static final String TAG_PATTERN =
+      "&lt;/?(i|b|u|sub|sup|math|mrow|mi|mo|mn|msub|msup|msubsup|mtext|mspace|mstyle|mover|munder"
+          + "|munderover|mfrac|msqrt|semantics|annotation)(\\s[^&lt;&gt;]*)?\\s*/?\\s*&gt;";
+
+  private static final Pattern TAG = Pattern.compile(TAG_PATTERN, Pattern.CASE_INSENSITIVE);
+
+  private InlineMarkup() {}
+
+  /// 把内联标记文本转为可见纯文本：剥白名单标签。
+  ///
+  /// @param markup 含内联标记的原文，可为 null
+  /// @return 可见纯文本；入参 null 时返回 null
+  public static String toPlainText(String markup) {
+    if (markup == null) {
+      return null;
+    }
+    return TAG.matcher(markup).replaceAll("");
+  }
+}</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 4：运行测试确认通过</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:test --tests "*InlineMarkupTest"</code></p>
+            <p>预期：5 passed</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 5：追加失败测试（第二组：annotation 子树与实体）</strong>
+<pre><code class="lang-java">  // 追加到 InlineMarkupTest 类体末尾
+
+  @Test
+  @DisplayName("已闭合的 annotation 子树整体删除：公式不显示两遍")
+  void dropsClosedAnnotationSubtree() {
+    String markup =
+        "&lt;math&gt;&lt;semantics&gt;&lt;mrow&gt;&lt;mi&gt;x&lt;/mi&gt;&lt;/mrow&gt;"
+            + "&lt;annotation encoding=\"application/x-tex\"&gt;x&lt;/annotation&gt;&lt;/semantics&gt;&lt;/math&gt; value";
+    assertThat(InlineMarkup.toPlainText(markup)).isEqualTo("x value");
+  }
+
+  @Test
+  @DisplayName("未闭合的 annotation 只展开不删：上游截断时不吞正文")
+  void keepsUnclosedAnnotationText() {
+    assertThat(InlineMarkup.toPlainText("&lt;annotation&gt;tail text")).isEqualTo("tail text");
+  }
+
+  @Test
+  @DisplayName("解码命名 / 十进制 / 十六进制实体")
+  void decodesEntities() {
+    assertThat(InlineMarkup.toPlainText("A &amp;amp; B &amp;lt; C &amp;gt; D &amp;quot;E&amp;quot; &amp;apos;F&amp;apos;"))
+        .isEqualTo("A &amp; B &lt; C &gt; D \"E\" 'F'");
+    assertThat(InlineMarkup.toPlainText("&amp;#8722;5 &amp;#x2212;5")).isEqualTo("\u22125 \u22125");
+    assertThat(InlineMarkup.toPlainText("&amp;unknown; stays")).isEqualTo("&amp;unknown; stays");
+  }
+
+  @Test
+  @DisplayName("解码出的尖括号是文本，不会被当成标签二次处理")
+  void decodedAngleBracketsStayLiteral() {
+    assertThat(InlineMarkup.toPlainText("&amp;lt;sub&amp;gt;2&amp;lt;/sub&amp;gt;")).isEqualTo("&lt;sub&gt;2&lt;/sub&gt;");
+  }</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 6：运行测试确认失败</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:test --tests "*InlineMarkupTest"</code></p>
+            <p>预期：4 failed（dropsClosedAnnotationSubtree / decodesEntities / decodedAngleBracketsStayLiteral 断言失败；keepsUnclosedAnnotationText 可能已过）</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 7：实现 annotation 删除与实体解码（顺序：删 annotation → 剥标签 → 解实体）</strong>
+<pre><code class="lang-java">// InlineMarkup.java：import 区追加 java.util.regex.Matcher。
+// 步骤 3 的 TAG_PATTERN 与 TAG 两个常量原样保留；在 TAG 之后追加以下常量，并把 toPlainText 整个替换为下面的版本：
+
+  /// 已闭合的 annotation 元素（MathML 公式的 LaTeX 重复表述），整体删除；未闭合的由 TAG 只剥标签。
+  private static final Pattern CLOSED_ANNOTATION =
+      Pattern.compile(
+          "&lt;annotation(\\s[^&lt;&gt;]*)?&gt;.*?&lt;/annotation\\s*&gt;", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+
+  /// HTML 实体：命名 5 个 + 十进制（≤7 位）+ 十六进制（≤6 位）；其余原样保留。
+  private static final Pattern ENTITY =
+      Pattern.compile("&amp;(#[xX][0-9a-fA-F]{1,6}|#[0-9]{1,7}|amp|lt|gt|quot|apos);");
+
+  private InlineMarkup() {}
+
+  /// 把内联标记文本转为可见纯文本：删除已闭合 annotation 子树 → 剥白名单标签 → 解码实体。
+  ///
+  /// 解码放最后，解出的 `&lt;` / `&gt;` 是文本，不会被当成标签二次处理。
+  ///
+  /// @param markup 含内联标记的原文，可为 null
+  /// @return 可见纯文本；入参 null 时返回 null
+  public static String toPlainText(String markup) {
+    if (markup == null) {
+      return null;
+    }
+    String withoutAnnotation = CLOSED_ANNOTATION.matcher(markup).replaceAll("");
+    String withoutTags = TAG.matcher(withoutAnnotation).replaceAll("");
+    return decodeEntities(withoutTags);
+  }
+
+  /// 解码 HTML 实体；无法识别或码点非法的实体原样保留。
+  ///
+  /// @param text 剥完标签的文本
+  /// @return 解码后的文本
+  private static String decodeEntities(String text) {
+    Matcher m = ENTITY.matcher(text);
+    StringBuilder sb = new StringBuilder(text.length());
+    while (m.find()) {
+      m.appendReplacement(sb, Matcher.quoteReplacement(decode(m.group(1), m.group(0))));
+    }
+    m.appendTail(sb);
+    return sb.toString();
+  }
+
+  /// 单个实体体 → 字符；数字实体码点非法时返回原实体文本。
+  ///
+  /// @param body `&amp;` 与 `;` 之间的实体体
+  /// @param raw 原实体文本（含 `&amp;` 与 `;`）
+  /// @return 解码结果
+  private static String decode(String body, String raw) {
+    return switch (body) {
+      case "amp" -&gt; "&amp;";
+      case "lt" -&gt; "&lt;";
+      case "gt" -&gt; "&gt;";
+      case "quot" -&gt; "\"";
+      case "apos" -&gt; "'";
+      default -&gt; {
+        int codePoint =
+            body.charAt(1) == 'x' || body.charAt(1) == 'X'
+                ? Integer.parseInt(body.substring(2), 16)
+                : Integer.parseInt(body.substring(1));
+        yield Character.isValidCodePoint(codePoint) &amp;&amp; codePoint != 0
+            ? new String(Character.toChars(codePoint))
+            : raw;
+      }
+    };
+  }</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 8：运行测试确认通过</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:test --tests "*InlineMarkupTest"</code></p>
+            <p>预期：9 passed</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 9：追加失败测试（第三组：码点截断）</strong>
+<pre><code class="lang-java">  // 追加到 InlineMarkupTest 类体末尾
+
+  @Test
+  @DisplayName("truncate 按码点截断，不切代理对")
+  void truncateByCodePoints() {
+    String emoji = "\uD83E\uDDEC"; // 🧬 一个码点、两个 char
+    String text = "ab" + emoji + "cd";
+    assertThat(InlineMarkup.truncate(text, 3)).isEqualTo("ab" + emoji);
+    assertThat(InlineMarkup.truncate(text, 2)).isEqualTo("ab");
+    assertThat(InlineMarkup.truncate(text, 10)).isEqualTo(text);
+    assertThat(InlineMarkup.truncate(null, 3)).isNull();
+  }
+
+  @Test
+  @DisplayName("先解实体再截断：第 299 字后接 &amp;amp; 不会截出残缺实体")
+  void decodeBeforeTruncate() {
+    String markup = "a".repeat(299) + "&amp;amp;" + "b".repeat(50);
+    String snippet = InlineMarkup.truncate(InlineMarkup.toPlainText(markup), 300);
+    assertThat(snippet).hasSize(300).endsWith("a&amp;");
+  }</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 10：运行测试确认失败</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:test --tests "*InlineMarkupTest"</code></p>
+            <p>预期：编译错误 <code>cannot find symbol truncate</code></p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 11：追加 truncate</strong>
+<pre><code class="lang-java">  // InlineMarkup.java：toPlainText 之后追加
+
+  /// 按 Unicode 码点截断，不会切在代理对中间。
+  ///
+  /// @param text 待截断文本，可为 null
+  /// @param maxCodePoints 最大码点数
+  /// @return 截断后的文本；入参 null 时返回 null
+  public static String truncate(String text, int maxCodePoints) {
+    if (text == null || text.codePointCount(0, text.length()) &lt;= maxCodePoints) {
+      return text;
+    }
+    return text.substring(0, text.offsetByCodePoints(0, maxCodePoints));
+  }</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 12：运行测试确认通过</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:test --tests "*InlineMarkupTest"</code></p>
+            <p>预期：11 passed</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 13：Commit</strong>
+<pre><code class="lang-bash">git add patra-api/patra-catalog/patra-catalog-domain
+git commit -m "feat(catalog): InlineMarkup 标签白名单与可见纯文本派生 (PAP-52)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-6" data-status="done">
+        <header>
+          <h2>任务 6：PublicationSearchFacets、PortalPaperReadModel 扩展、PublicationSearchReadPort</h2>
+          <dl class="files">
+            <dt>创建</dt><dd><code>patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/linqibin/patra/catalog/domain/model/read/portal/PublicationSearchFacets.java</code><br><code>patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/linqibin/patra/catalog/domain/port/read/PublicationSearchReadPort.java</code><br><code>patra-api/patra-catalog/patra-catalog-domain/src/test/java/dev/linqibin/patra/catalog/domain/model/read/portal/PublicationSearchFacetsTest.java</code><br><code>patra-api/patra-catalog/patra-catalog-domain/src/test/java/dev/linqibin/patra/catalog/domain/model/read/portal/PortalPaperReadModelTest.java</code></dd>
+            <dt>修改</dt><dd><code>patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/linqibin/patra/catalog/domain/model/read/portal/PortalPaperReadModel.java</code><br><code>patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/linqibin/patra/catalog/infra/adapter/read/PortalFeedReadAdapter.java（编译适配，任务 11 删除）</code><br><code>patra-api/patra-catalog/patra-catalog-adapter/src/integrationTest/java/dev/linqibin/patra/catalog/adapter/rest/portal/PortalPublicationControllerIT.java（构造改 builder）</code></dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：写失败测试 PublicationSearchFacetsTest</strong>
+<pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-domain/src/test/java/dev/linqibin/patra/catalog/domain/model/read/portal/PublicationSearchFacetsTest.java
+package dev.linqibin.patra.catalog.domain.model.read.portal;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.time.Instant;
+import java.util.List;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+@DisplayName("PublicationSearchFacets 读模型")
+class PublicationSearchFacetsTest {
+
+  @Test
+  @DisplayName("null 列表替换为空不可变列表，标量原样")
+  void nullListsBecomeEmpty() {
+    PublicationSearchFacets f =
+        PublicationSearchFacets.builder().openAccess(0).total(18807).lastSyncedAt(null).build();
+    assertThat(f.years()).isNotNull().isEmpty();
+    assertThat(f.types()).isNotNull().isEmpty();
+    assertThat(f.evidence()).isNotNull().isEmpty();
+    assertThat(f.languages()).isNotNull().isEmpty();
+    assertThat(f.total()).isEqualTo(18807);
+    assertThat(f.lastSyncedAt()).isNull();
+  }
+
+  @Test
+  @DisplayName("列表防御性拷贝")
+  void copiesLists() {
+    PublicationSearchFacets f =
+        PublicationSearchFacets.builder()
+            .years(List.of(FacetCount.of("2026", 1)))
+            .lastSyncedAt(Instant.parse("2026-08-30T04:06:00Z"))
+            .build();
+    assertThat(f.years()).containsExactly(FacetCount.of("2026", 1));
+    assertThat(f.lastSyncedAt()).isEqualTo(Instant.parse("2026-08-30T04:06:00Z"));
+  }
+}</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 2：写失败测试 PortalPaperReadModelTest</strong>
+<pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-domain/src/test/java/dev/linqibin/patra/catalog/domain/model/read/portal/PortalPaperReadModelTest.java
+package dev.linqibin.patra.catalog.domain.model.read.portal;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import dev.linqibin.patra.catalog.domain.model.vo.publication.EvidenceLevel;
+import java.util.List;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+@DisplayName("PortalPaperReadModel 紧凑构造器")
+class PortalPaperReadModelTest {
+
+  @Test
+  @DisplayName("authors null → 空列表，evidenceLevel null → UNKNOWN")
+  void defaults() {
+    PortalPaperReadModel m = PortalPaperReadModel.builder().id(1L).title("t").build();
+    assertThat(m.authors()).isNotNull().isEmpty();
+    assertThat(m.evidenceLevel()).isEqualTo(EvidenceLevel.UNKNOWN);
+    assertThat(m.venueId()).isNull();
+    assertThat(m.abstractSnippet()).isNull();
+  }
+
+  @Test
+  @DisplayName("新三字段透传")
+  void carriesNewFields() {
+    PortalPaperReadModel m =
+        PortalPaperReadModel.builder()
+            .id(1L)
+            .title("t")
+            .venueId(42L)
+            .evidenceLevel(EvidenceLevel.SYSTEMATIC_REVIEW)
+            .abstractSnippet("snip")
+            .authors(List.of("A"))
+            .build();
+    assertThat(m.venueId()).isEqualTo(42L);
+    assertThat(m.evidenceLevel()).isEqualTo(EvidenceLevel.SYSTEMATIC_REVIEW);
+    assertThat(m.abstractSnippet()).isEqualTo("snip");
+  }
+}</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 3：运行两个测试确认编译失败</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:test --tests "*PublicationSearchFacetsTest" --tests "*PortalPaperReadModelTest"</code></p>
+            <p>预期：编译错误：<code>PublicationSearchFacets</code> 不存在、<code>PortalPaperReadModel.builder()</code> 不存在</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 4：创建 PublicationSearchFacets</strong>
+<pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/linqibin/patra/catalog/domain/model/read/portal/PublicationSearchFacets.java
+package dev.linqibin.patra.catalog.domain.model.read.portal;
+
+import java.time.Instant;
+import java.util.List;
+import lombok.Builder;
+
+/// 文献检索 facet 聚合结果（CQRS 读端）。
+///
+/// 分组维度（years / types / evidence / languages）遵循 drill-down 语义：某维度的计数按
+/// 「当前其他已选维度」计算，忽略本维度自身已选值。`evidence` 固定 6 项（含 UNKNOWN），按 rank 降序。
+///
+/// @param years 出版年份 facet，年份降序
+/// @param types 文献类型 facet，计数降序
+/// @param evidence 证据等级 facet，固定 6 项，值为 [dev.linqibin.patra.catalog.domain.model.vo.publication.EvidenceLevel] 名称
+/// @param languages 语言基码 facet，计数降序
+/// @param openAccess 忽略 oa 自身筛选、保留其他条件下 is_oa=true 的篇数
+/// @param total 满足当前全部筛选的篇数
+/// @param lastSyncedAt 全库最后采集时间（不随筛选变），空库为 null
+/// @author linqibin
+/// @since 0.1.0
+@Builder
+public record PublicationSearchFacets(
+    List&lt;FacetCount&gt; years,
+    List&lt;FacetCount&gt; types,
+    List&lt;FacetCount&gt; evidence,
+    List&lt;FacetCount&gt; languages,
+    long openAccess,
+    long total,
+    Instant lastSyncedAt) {
+
+  /// 紧凑构造器：各 List 为 null 时替换为空不可变列表。
+  public PublicationSearchFacets {
+    years = years != null ? List.copyOf(years) : List.of();
+    types = types != null ? List.copyOf(types) : List.of();
+    evidence = evidence != null ? List.copyOf(evidence) : List.of();
+    languages = languages != null ? List.copyOf(languages) : List.of();
+  }
+}</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 5：PortalPaperReadModel 改 @Builder 并加三字段（整文件替换）</strong>
+<pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/linqibin/patra/catalog/domain/model/read/portal/PortalPaperReadModel.java
+package dev.linqibin.patra.catalog.domain.model.read.portal;
+
+import dev.linqibin.patra.catalog.domain.model.vo.publication.EvidenceLevel;
+import java.time.Instant;
+import java.util.List;
+import lombok.Builder;
+
+/// Portal 文献列表项读模型（CQRS 读端），首页 feed 与文献检索共用。
+///
+/// 字段来源于 `cat_publication` 主表 + venue / author / publication_type / abstract 关联，
+/// 由 Infra 层一次查询组装。`aiSummary` / `estimatedReadMin` 不在读模型中——
+/// 后端暂无数据来源，由 Adapter 层 Response 置 null。
+///
+/// @param id 文献主键
+/// @param title 标题（含内联标记原文）
+/// @param venueId 载体主键（可空）
+/// @param venueName 载体名称（可空）
+/// @param publicationYear 出版年份（可空）
+/// @param authors 全部作者展示名，按 author_order 升序（无作者则空列表）
+/// @param citationCount 被引次数（可空）
+/// @param doi DOI（可空）
+/// @param pmid PubMed ID（可空）
+/// @param provenanceCode 数据来源代码
+/// @param studyType 文献类型（第一个 publication_type，可空）
+/// @param evidenceLevel 证据等级（由全部 publication_type 衍生；null 时替换为 UNKNOWN）
+/// @param abstractSnippet 摘要可见纯文本前 300 码点（可空）
+/// @param lastSyncedAt 最后采集时间（可空）
+/// @author linqibin
+/// @since 0.1.0
+@Builder
+public record PortalPaperReadModel(
+    Long id,
+    String title,
+    Long venueId,
+    String venueName,
+    Integer publicationYear,
+    List&lt;String&gt; authors,
+    Integer citationCount,
+    String doi,
+    String pmid,
+    String provenanceCode,
+    String studyType,
+    EvidenceLevel evidenceLevel,
+    String abstractSnippet,
+    Instant lastSyncedAt) {
+
+  /// 紧凑构造器：authors 防御性拷贝；evidenceLevel 为 null 时降级为 [EvidenceLevel.UNKNOWN]。
+  public PortalPaperReadModel {
+    authors = authors != null ? List.copyOf(authors) : List.of();
+    if (evidenceLevel == null) {
+      evidenceLevel = EvidenceLevel.UNKNOWN;
+    }
+  }
+}</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 6：创建 PublicationSearchReadPort</strong>
+<pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/linqibin/patra/catalog/domain/port/read/PublicationSearchReadPort.java
+package dev.linqibin.patra.catalog.domain.port.read;
+
+import dev.linqibin.commons.query.PageResult;
+import dev.linqibin.commons.query.PagingParams;
+import dev.linqibin.patra.catalog.domain.model.read.portal.PortalPaperReadModel;
+import dev.linqibin.patra.catalog.domain.model.read.portal.PublicationSearchFacets;
+import dev.linqibin.patra.catalog.domain.model.read.portal.PublicationSearchFilter;
+
+/// 文献检索 CQRS 读端口，首页 feed 与 `/portal/publications/search` 共用。
+///
+/// 由 Infra 层 [PublicationSearchReadAdapter] 实现：单条 native query 组装列表项，
+/// facets 采用 drill-down 语义（分组维度忽略自身已选值）。
+///
+/// @author linqibin
+/// @since 0.1.0
+public interface PublicationSearchReadPort {
+
+  /// 分页检索文献。
+  ///
+  /// @param filter 过滤 + 排序参数
+  /// @param paging 已归一化的分页参数
+  /// @return 分页结果
+  PageResult&lt;PortalPaperReadModel&gt; search(PublicationSearchFilter filter, PagingParams paging);
+
+  /// 计算各维度 facet 计数（忽略 filter.sort）。
+  ///
+  /// @param filter 过滤参数（含已选维度）
+  /// @return facet 聚合结果
+  PublicationSearchFacets facets(PublicationSearchFilter filter);
+}</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 7：编译适配两处旧构造调用</strong>
+<p><code>PortalFeedReadAdapter.toReadModel</code> 改为 builder（该类任务 11 删除，这里只保编译）：</p><pre><code class="lang-java">  private PortalPaperReadModel toReadModel(PortalFeedRow row) {
+    return PortalPaperReadModel.builder()
+        .id(row.getId())
+        .title(row.getTitle())
+        .venueName(row.getVenueName())
+        .publicationYear(row.getPublicationYear())
+        .authors(splitAuthors(row.getAuthorNames()))
+        .citationCount(row.getCitationCount())
+        .doi(row.getDoi())
+        .pmid(row.getPmid())
+        .provenanceCode(row.getProvenanceCode())
+        .studyType(row.getStudyType())
+        .lastSyncedAt(row.getLastSyncedAt())
+        .build();
+  }</code></pre><p><code>PortalPublicationControllerIT.shouldReturnFeedEnvelope</code> 里的 <code>new PortalPaperReadModel(...)</code> 改为：</p><pre><code class="lang-java">    PortalPaperReadModel model =
+        PortalPaperReadModel.builder()
+            .id(100428830191L)
+            .title("Semaglutide 长期心血管转归")
+            .venueName("N Engl J Med")
+            .publicationYear(2026)
+            .authors(List.of("Perkovic V.", "Tuttle K. R."))
+            .citationCount(142)
+            .doi("10.1056/NEJMoa2603120")
+            .pmid("39812044")
+            .provenanceCode("PUBMED")
+            .studyType("Journal Article")
+            .lastSyncedAt(Instant.parse("2026-01-01T00:00:00Z"))
+            .build();</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 8：运行测试与全模块编译</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:test :patra-api:patra-catalog:patra-catalog-infra:compileIntegrationTestJava :patra-api:patra-catalog:patra-catalog-app:compileTestJava :patra-api:patra-catalog:patra-catalog-adapter:compileIntegrationTestJava</code></p>
+            <p>预期：BUILD SUCCESSFUL，domain 新增 4 个测试通过</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 9：Commit</strong>
+<pre><code class="lang-bash">git add patra-api/patra-catalog
+git commit -m "feat(catalog): 文献检索读模型与读端口，列表读模型加 venueId/evidenceLevel/abstractSnippet (PAP-52)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-7" data-status="done">
+        <header>
+          <h2>任务 7：infra 列表查询：DAO + 投影 + 适配器 search（组装 / 排序 / 片段）</h2>
+          <dl class="files">
+            <dt>创建</dt><dd><code>patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/linqibin/patra/catalog/infra/persistence/dao/PublicationSearchDao.java</code><br><code>patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/linqibin/patra/catalog/infra/adapter/read/PublicationSearchRow.java</code><br><code>patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/linqibin/patra/catalog/infra/adapter/read/PublicationSearchReadAdapter.java</code><br><code>patra-api/patra-catalog/patra-catalog-infra/src/integrationTest/java/dev/linqibin/patra/catalog/infra/adapter/read/PublicationSearchReadAdapterIT.java</code></dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：写失败 IT（两个用例 + 全部 fixture）</strong>
+<pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-infra/src/integrationTest/java/dev/linqibin/patra/catalog/infra/adapter/read/PublicationSearchReadAdapterIT.java
+package dev.linqibin.patra.catalog.infra.adapter.read;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import dev.linqibin.commons.query.PageResult;
+import dev.linqibin.commons.query.PagingParams;
+import dev.linqibin.patra.catalog.domain.model.read.portal.FacetCount;
+import dev.linqibin.patra.catalog.domain.model.read.portal.PortalPaperReadModel;
+import dev.linqibin.patra.catalog.domain.model.read.portal.PublicationSearchFacets;
+import dev.linqibin.patra.catalog.domain.model.read.portal.PublicationSearchFilter;
+import dev.linqibin.patra.catalog.domain.model.read.portal.PublicationSearchSort;
+import dev.linqibin.patra.catalog.domain.model.vo.publication.EvidenceLevel;
+import dev.linqibin.patra.catalog.infra.config.CatalogITPostgreSQLContainerInitializer;
+import dev.linqibin.patra.catalog.infra.persistence.entity.PublicationAbstractEntity;
+import dev.linqibin.patra.catalog.infra.persistence.entity.PublicationAuthorEntity;
+import dev.linqibin.patra.catalog.infra.persistence.entity.PublicationEntity;
+import dev.linqibin.patra.catalog.infra.persistence.entity.PublicationTypeEntity;
+import dev.linqibin.patra.catalog.infra.persistence.entity.VenueEntity;
+import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
+import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
+import java.time.Instant;
+import java.util.List;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
+
+/// `PublicationSearchReadAdapter` 文献检索集成测试：列表组装 / 排序 / 各筛选 / facets drill-down。
+///
+/// @author linqibin
+/// @since 0.1.0
+@DataJpaTest
+@ContextConfiguration(initializers = CatalogITPostgreSQLContainerInitializer.class)
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@Import({PublicationSearchReadAdapter.class, JpaAuditingConfig.class})
+@ActiveProfiles("test")
+@DisplayName("PublicationSearchReadAdapter 文献检索集成测试")
+class PublicationSearchReadAdapterIT {
+
+  @Autowired private PublicationSearchReadAdapter adapter;
+  @Autowired private TestEntityManager em;
+
+  private static final PagingParams FIRST_PAGE = PagingParams.of(1, 20);
+  private static final PublicationSearchFilter NO_FILTER = PublicationSearchFilter.builder().build();
+  private static final Instant T1 = Instant.parse("2026-01-01T00:00:00Z");
+  private static final Instant T2 = Instant.parse("2026-05-01T00:00:00Z");
+
+  // ===== 任务 7：列表组装与排序 =====
+
+  @Test
+  @DisplayName("无筛选：按 last_synced_at 降序，组装 venue / venueId / authors / kind / evidence / snippet")
+  void noFilter_assemblesAndSortsByLatest() {
+    Long venueId = saveVenue("N Engl J Med");
+    Long older = persist(publication("Older paper").venueId(venueId).lastSyncedAt(T1));
+    Long newer = persist(publication("Newer paper").venueId(venueId).citationCount(5).lastSyncedAt(T2));
+    saveAuthors(newer, "Perkovic V.", "Tuttle K. R.");
+    savePublicationType(newer, "Journal Article", 1);
+    savePublicationType(newer, "Meta-Analysis", 2);
+    saveAbstract(newer, "BACKGROUND: CO&lt;sub&gt;2&lt;/sub&gt; matters &amp;amp; more.");
+    flush();
+
+    PageResult&lt;PortalPaperReadModel&gt; page = adapter.search(NO_FILTER, FIRST_PAGE);
+
+    assertThat(page.total()).isEqualTo(2);
+    assertThat(page.items()).extracting(PortalPaperReadModel::id).containsExactly(newer, older);
+    PortalPaperReadModel head = page.items().get(0);
+    assertThat(head.venueId()).isEqualTo(venueId);
+    assertThat(head.venueName()).isEqualTo("N Engl J Med");
+    assertThat(head.authors()).containsExactly("Perkovic V.", "Tuttle K. R.");
+    assertThat(head.studyType()).isEqualTo("Journal Article");
+    assertThat(head.evidenceLevel()).isEqualTo(EvidenceLevel.SYSTEMATIC_REVIEW);
+    assertThat(head.abstractSnippet()).isEqualTo("BACKGROUND: CO2 matters &amp; more.");
+    assertThat(head.citationCount()).isEqualTo(5);
+  }
+
+  @Test
+  @DisplayName("无作者 / 无类型 / 无 venue / 无摘要时降级：空列表 / null / UNKNOWN / null")
+  void degradesGracefully() {
+    persist(publication("Lonely paper"));
+    flush();
+
+    PortalPaperReadModel only = adapter.search(NO_FILTER, FIRST_PAGE).items().get(0);
+
+    assertThat(only.authors()).isEmpty();
+    assertThat(only.studyType()).isNull();
+    assertThat(only.evidenceLevel()).isEqualTo(EvidenceLevel.UNKNOWN);
+    assertThat(only.venueId()).isNull();
+    assertThat(only.venueName()).isNull();
+    assertThat(only.abstractSnippet()).isNull();
+  }
+
+  // ===== fixtures =====
+
+  private void flush() {
+    em.flush();
+    em.clear();
+  }
+
+  private Long saveVenue(String title) {
+    VenueEntity v = new VenueEntity();
+    v.setId(SnowflakeIdGenerator.getId());
+    v.setVenueType("JOURNAL");
+    v.setTitle(title);
+    v.setProvenanceCode("OPENALEX");
+    v.setCountryCode("US");
+    em.persist(v);
+    return v.getId();
+  }
+
+  /// 带默认值的文献 builder：2026 年、PUBMED、非 OA、0 被引、T2 采集；测试按需覆盖。
+  private PublicationEntity.PublicationEntityBuilder&lt;?, ?&gt; publication(String title) {
+    return PublicationEntity.builder()
+        .id(SnowflakeIdGenerator.getId())
+        .provenanceCode("PUBMED")
+        .title(title)
+        .publicationYear(2026)
+        .venueInstanceId(SnowflakeIdGenerator.getId())
+        .isOa(false)
+        .authorsComplete(true)
+        .citationCount(0)
+        .lastSyncedAt(T2);
+  }
+
+  private Long persist(PublicationEntity.PublicationEntityBuilder&lt;?, ?&gt; builder) {
+    PublicationEntity p = builder.build();
+    em.persist(p);
+    return p.getId();
+  }
+
+  /// 只写 cat_publication_author 快照行（author_id 为 null），倒序插入以验证 ORDER BY author_order。
+  private void saveAuthors(Long publicationId, String... displayNames) {
+    for (int i = displayNames.length - 1; i &gt;= 0; i--) {
+      em.persist(
+          PublicationAuthorEntity.builder()
+              .id(SnowflakeIdGenerator.getId())
+              .publicationId(publicationId)
+              .displayName(displayNames[i])
+              .authorOrder(i + 1)
+              .isFirstAuthor(i == 0)
+              .isCorrespondingAuthor(false)
+              .isEqualContribution(false)
+              .build());
+    }
+  }
+
+  private void savePublicationType(Long publicationId, String typeValue, int order) {
+    em.persist(
+        PublicationTypeEntity.builder()
+            .id(SnowflakeIdGenerator.getId())
+            .publicationId(publicationId)
+            .typeValue(typeValue)
+            .typeOrder(order)
+            .build());
+  }
+
+  private void saveAbstract(Long publicationId, String plainText) {
+    PublicationAbstractEntity a = new PublicationAbstractEntity();
+    a.setId(SnowflakeIdGenerator.getId());
+    a.setPublicationId(publicationId);
+    a.setPlainText(plainText);
+    em.persist(a);
+  }
+
+  private static List&lt;String&gt; values(List&lt;FacetCount&gt; facets) {
+    return facets.stream().map(FacetCount::value).toList();
+  }
+
+  private static long countOf(List&lt;FacetCount&gt; facets, String value) {
+    return facets.stream().filter(f -&gt; f.value().equals(value)).mapToLong(FacetCount::count).findFirst().orElse(-1L);
+  }
+}</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 2：运行 IT 确认编译失败</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
+            <p>预期：编译错误 <code>cannot find symbol PublicationSearchReadAdapter</code></p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 3：创建投影 PublicationSearchRow</strong>
+<pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/linqibin/patra/catalog/infra/adapter/read/PublicationSearchRow.java
+package dev.linqibin.patra.catalog.infra.adapter.read;
+
+import java.time.Instant;
+
+/// [dev.linqibin.patra.catalog.infra.persistence.dao.PublicationSearchDao#findSearchPage] 的接口投影。
+///
+/// getter 名与 SQL 列别名一一对应（别名在 SQL 中加双引号保持 camelCase）。
+///
+/// @author linqibin
+/// @since 0.1.0
+public interface PublicationSearchRow {
+
+  Long getId();
+
+  String getTitle();
+
+  Long getVenueId();
+
+  String getVenueName();
+
+  Integer getPublicationYear();
+
+  Integer getCitationCount();
+
+  String getDoi();
+
+  String getPmid();
+
+  String getProvenanceCode();
+
+  /// 全部类型值，单元分隔符（U+001F）拼接，按 type_order 升序；无类型时为 null。
+  String getPublicationTypesAgg();
+
+  /// 作者展示名，单元分隔符（U+001F）拼接，按 author_order 升序；无作者时为 null。
+  String getAuthorNames();
+
+  /// 摘要原文全文（含内联标记，不在 SQL 里预截断——截开长 annotation 会让隐藏公式注释露出来）；无摘要时为 null。
+  String getAbstractRaw();
+
+  Instant getLastSyncedAt();
+}</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 4：创建 DAO（此时 WHERE 只有 deleted_at）</strong>
+<pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/linqibin/patra/catalog/infra/persistence/dao/PublicationSearchDao.java
+package dev.linqibin.patra.catalog.infra.persistence.dao;
+
+import dev.linqibin.patra.catalog.infra.adapter.read.PublicationSearchRow;
+import dev.linqibin.patra.catalog.infra.persistence.entity.PublicationEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+/// 文献检索 native query DAO：列表 / count / facet 共用一段 [#WHERE] 常量。
+///
+/// 所有条件都是 `(:x IS NULL OR …)` 形式，facet 的 drill-down 靠调用方把本维度参数传 null 实现。
+/// 常量是编译期常量（接口字段 + 文本块），可直接在 `@Query` 里拼接。
+///
+/// @author linqibin
+/// @since 0.1.0
+public interface PublicationSearchDao extends JpaRepository&lt;PublicationEntity, Long&gt; {
+
+  /// 共享 WHERE：`p` 为 `cat_publication`。任务 8 逐条追加筛选条件。
+  String WHERE =
+      """
+      WHERE p.deleted_at IS NULL
+      """;
+
+  /// 列表投影 SELECT + FROM（venue LEFT JOIN、abstract LEFT JOIN，作者 / 类型用相关子查询聚合）。
+  String SELECT_LIST =
+      """
+      SELECT
+        p.id AS "id",
+        p.title AS "title",
+        p.venue_id AS "venueId",
+        v.title AS "venueName",
+        p.publication_year AS "publicationYear",
+        p.citation_count AS "citationCount",
+        p.doi AS "doi",
+        p.pmid AS "pmid",
+        p.provenance_code AS "provenanceCode",
+        (SELECT string_agg(pt.type_value, E'\\x1f' ORDER BY pt.type_order ASC NULLS LAST, pt.id ASC)
+           FROM cat_publication_type pt WHERE pt.publication_id = p.id) AS "publicationTypesAgg",
+        (SELECT string_agg(pa.display_name, E'\\x1f' ORDER BY pa.author_order)
+           FROM cat_publication_author pa WHERE pa.publication_id = p.id) AS "authorNames",
+        a.plain_text AS "abstractRaw",
+        p.last_synced_at AS "lastSyncedAt"
+      FROM cat_publication p
+      LEFT JOIN cat_venue v ON v.id = p.venue_id
+      LEFT JOIN cat_publication_abstract a ON a.publication_id = p.id
+      """;
+
+  /// 排序：`:sortMode` 为 [dev.linqibin.patra.catalog.domain.model.read.portal.PublicationSearchSort] 名称。
+  /// CITED 只按被引 + id（与原 feed 一致，同被引不看采集时间）；LATEST / YEAR 才用 last_synced_at。
+  String ORDER_BY =
+      """
+      ORDER BY
+        CASE WHEN :sortMode = 'CITED' THEN COALESCE(p.citation_count, -1) ELSE NULL END DESC,
+        CASE WHEN :sortMode = 'YEAR' THEN p.publication_year ELSE NULL END DESC NULLS LAST,
+        CASE WHEN :sortMode IN ('LATEST', 'YEAR') THEN p.last_synced_at ELSE NULL END DESC NULLS LAST,
+        p.id DESC
+      """;
+
+  /// 分页检索文献列表（单条 SQL，无 N+1）。
+  ///
+  /// @param sortMode 排序枚举名（LATEST / YEAR / CITED）
+  /// @param pageable 仅携带分页，排序内嵌 SQL
+  /// @return 当前页投影
+  @Query(
+      value = SELECT_LIST + WHERE + ORDER_BY,
+      countQuery = "SELECT count(*) FROM cat_publication p " + WHERE,
+      nativeQuery = true)
+  Page&lt;PublicationSearchRow&gt; findSearchPage(@Param("sortMode") String sortMode, Pageable pageable);
+
+  /// 满足条件的文献总数（facets 的 total 也用它）。
+  ///
+  /// @return 总数
+  @Query(value = "SELECT count(*) FROM cat_publication p " + WHERE, nativeQuery = true)
+  long countMatching();
+}</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 5：创建适配器（facets 先抛 UnsupportedOperationException，任务 9 实现）</strong>
+<pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/linqibin/patra/catalog/infra/adapter/read/PublicationSearchReadAdapter.java
+package dev.linqibin.patra.catalog.infra.adapter.read;
+
+import dev.linqibin.commons.query.PageResult;
+import dev.linqibin.commons.query.PagingParams;
+import dev.linqibin.patra.catalog.domain.model.read.portal.PortalPaperReadModel;
+import dev.linqibin.patra.catalog.domain.model.read.portal.PublicationSearchFacets;
+import dev.linqibin.patra.catalog.domain.model.read.portal.PublicationSearchFilter;
+import dev.linqibin.patra.catalog.domain.model.vo.publication.EvidenceLevel;
+import dev.linqibin.patra.catalog.domain.model.vo.publication.InlineMarkup;
+import dev.linqibin.patra.catalog.domain.port.read.PublicationSearchReadPort;
+import dev.linqibin.patra.catalog.infra.persistence.dao.PublicationSearchDao;
+import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.stereotype.Repository;
+
+/// 文献检索 CQRS 读适配器。
+///
+/// 单条 native query 组装列表项；负责 LIKE 转义、DOI 归一化、类型拆分 + [EvidenceLevel#classify]、
+/// 摘要片段派生（[InlineMarkup]）。facets 采用 drill-down 语义（任务 9）。
+///
+/// @author linqibin
+/// @since 0.1.0
+@Repository
+@RequiredArgsConstructor
+public class PublicationSearchReadAdapter implements PublicationSearchReadPort {
+
+  /// 聚合列分隔符，与 DAO 的 `string_agg(..., E'\\x1f', ...)` 一致（U+001F）。
+  private static final String DELIMITER = "\u001f";
+
+  /// 摘要片段长度（码点）。
+  private static final int SNIPPET_CODE_POINTS = 300;
+
+  private final PublicationSearchDao dao;
+
+  @Override
+  public PageResult&lt;PortalPaperReadModel&gt; search(PublicationSearchFilter filter, PagingParams paging) {
+    Page&lt;PublicationSearchRow&gt; page =
+        dao.findSearchPage(
+            filter.sort().name(), PageRequest.of(paging.page() - 1, paging.pageSize()));
+    List&lt;PortalPaperReadModel&gt; items = page.getContent().stream().map(this::toReadModel).toList();
+    return PageResult.of(items, paging.page(), paging.pageSize(), page.getTotalElements());
+  }
+
+  @Override
+  public PublicationSearchFacets facets(PublicationSearchFilter filter) {
+    throw new UnsupportedOperationException("任务 9 实现");
+  }
+
+  /// 投影行 → 读模型：类型聚合列拆开后第一个当 studyType、整个列表衍生证据等级；摘要原文派生片段。
+  ///
+  /// @param row 投影行
+  /// @return 读模型
+  private PortalPaperReadModel toReadModel(PublicationSearchRow row) {
+    List&lt;String&gt; types = split(row.getPublicationTypesAgg());
+    return PortalPaperReadModel.builder()
+        .id(row.getId())
+        .title(row.getTitle())
+        .venueId(row.getVenueId())
+        .venueName(row.getVenueName())
+        .publicationYear(row.getPublicationYear())
+        .authors(split(row.getAuthorNames()))
+        .citationCount(row.getCitationCount())
+        .doi(row.getDoi())
+        .pmid(row.getPmid())
+        .provenanceCode(row.getProvenanceCode())
+        .studyType(types.isEmpty() ? null : types.get(0))
+        .evidenceLevel(EvidenceLevel.classify(types))
+        .abstractSnippet(toSnippet(row.getAbstractRaw()))
+        .lastSyncedAt(row.getLastSyncedAt())
+        .build();
+  }
+
+  /// 摘要原文 → 可见纯文本前 300 码点；空白结果视为无摘要。
+  ///
+  /// @param abstractRaw 摘要原文（含内联标记），可为 null
+  /// @return 片段或 null
+  private static String toSnippet(String abstractRaw) {
+    if (abstractRaw == null) {
+      return null;
+    }
+    String plain = InlineMarkup.truncate(InlineMarkup.toPlainText(abstractRaw), SNIPPET_CODE_POINTS);
+    return plain.isBlank() ? null : plain;
+  }
+
+  /// 拆分单元分隔符聚合列；null / 空白 → 空列表。
+  ///
+  /// @param agg 聚合列值
+  /// @return 拆分结果
+  private static List&lt;String&gt; split(String agg) {
+    if (agg == null || agg.isBlank()) {
+      return List.of();
+    }
+    return List.of(agg.split(DELIMITER, -1));
+  }
+}</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 6：运行 IT 确认通过</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
+            <p>预期：2 passed（Testcontainers 首次拉镜像约 1 分钟）</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 7：追加失败测试：三种排序</strong>
+<pre><code class="lang-java">  // 追加到 IT「任务 7」分区
+
+  @Test
+  @DisplayName("sort=YEAR 按 publication_year 降序，同年按 last_synced_at 降序，年份 null 垫底")
+  void sortByYear() {
+    Long y2024 = persist(publication("2024").publicationYear(2024).lastSyncedAt(T2));
+    Long y2026old = persist(publication("2026 old").publicationYear(2026).lastSyncedAt(T1));
+    Long y2026new = persist(publication("2026 new").publicationYear(2026).lastSyncedAt(T2));
+    flush();
+
+    PageResult&lt;PortalPaperReadModel&gt; page =
+        adapter.search(PublicationSearchFilter.builder().sort(PublicationSearchSort.YEAR).build(), FIRST_PAGE);
+
+    assertThat(page.items()).extracting(PortalPaperReadModel::id).containsExactly(y2026new, y2026old, y2024);
+  }
+
+  @Test
+  @DisplayName("sort=CITED 按 citation_count 降序；同被引按 id 降序，不看采集时间（与原 feed 一致）")
+  void sortByCited() {
+    Long low = persist(publication("Low").citationCount(10).lastSyncedAt(T2));
+    Long high = persist(publication("High").citationCount(999).lastSyncedAt(T1));
+    Long tieOlderIdNewerTime = persist(publication("tie-1").citationCount(50).lastSyncedAt(T2));
+    Long tieNewerIdOlderTime = persist(publication("tie-2").citationCount(50).lastSyncedAt(T1));
+    flush();
+
+    PageResult&lt;PortalPaperReadModel&gt; page =
+        adapter.search(PublicationSearchFilter.builder().sort(PublicationSearchSort.CITED).build(), FIRST_PAGE);
+
+    assertThat(page.items())
+        .extracting(PortalPaperReadModel::id)
+        .containsExactly(high, tieNewerIdOlderTime, tieOlderIdNewerTime, low);
+  }
+
+  @Test
+  @DisplayName("分页：pageSize=1 第二页拿到第二条，total 仍为 2")
+  void paginates() {
+    Long first = persist(publication("first").lastSyncedAt(T2));
+    Long second = persist(publication("second").lastSyncedAt(T1));
+    flush();
+
+    PageResult&lt;PortalPaperReadModel&gt; page = adapter.search(NO_FILTER, PagingParams.of(2, 1));
+
+    assertThat(page.total()).isEqualTo(2);
+    assertThat(page.items()).extracting(PortalPaperReadModel::id).containsExactly(second);
+    assertThat(first).isNotNull();
+  }
+
+  @Test
+  @DisplayName("摘要片段：先取全文再去 annotation / 剥标签 / 解实体，最后截 300 码点；超长 annotation 不露出；纯空白为 null")
+  void abstractSnippetDerivation() {
+    Long withMath = persist(publication("math").lastSyncedAt(T2));
+    saveAbstract(withMath,
+        "&lt;math&gt;&lt;semantics&gt;&lt;mi&gt;x&lt;/mi&gt;&lt;annotation encoding=\"application/x-tex\"&gt;"
+            + "L".repeat(2500) // 超过任何"预截断"长度：若 SQL 先 left() 再清理，注释会被切开并露出 LLLL…
+            + "&lt;/annotation&gt;&lt;/semantics&gt;&lt;/math&gt; "
+            + "a".repeat(400));
+    Long blank = persist(publication("blank").lastSyncedAt(T1));
+    saveAbstract(blank, "   ");
+    flush();
+
+    List&lt;PortalPaperReadModel&gt; items = adapter.search(NO_FILTER, FIRST_PAGE).items();
+
+    assertThat(items.get(0).abstractSnippet()).hasSize(300).startsWith("x aaaa").doesNotContain("L");
+    assertThat(items.get(1).abstractSnippet()).isNull();
+  }</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 8：运行 IT 确认通过（排序 / 分页 / 片段逻辑已在步骤 4–5 就位，本步验证行为而非新增实现）</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
+            <p>预期：6 passed；若 sortByYear 失败，检查 ORDER_BY 中 YEAR 分支的 <code>NULLS LAST</code></p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 9：Commit</strong>
+<pre><code class="lang-bash">git add patra-api/patra-catalog/patra-catalog-infra
+git commit -m "feat(catalog): 文献检索读适配器——列表组装、三种排序、摘要片段 (PAP-52)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-8" data-status="done">
+        <header>
+          <h2>任务 8：infra 筛选条件：逐条 Red-Green 追加共享 WHERE</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/linqibin/patra/catalog/infra/persistence/dao/PublicationSearchDao.java</code><br><code>patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/linqibin/patra/catalog/infra/adapter/read/PublicationSearchReadAdapter.java</code><br><code>patra-api/patra-catalog/patra-catalog-infra/src/integrationTest/java/dev/linqibin/patra/catalog/infra/adapter/read/PublicationSearchReadAdapterIT.java</code></dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：追加失败测试——标题关键词：剥白名单标签、LIKE 转义、字面尖括号保留</strong>
+<pre><code class="lang-java">  // ===== 任务 8：筛选 =====
+
+  @Test
+  @DisplayName("keyword：对剥标签后的标题子串 ILIKE；% 与 _ 按字面；x&lt;y and z&gt;0 可搜到")
+  void filterByKeyword() {
+    Long co2 = persist(publication("CO&lt;sub&gt;2&lt;/sub&gt; fixation in algae"));
+    Long pct = persist(publication("Response rate of 50% cohort"));
+    Long angle = persist(publication("Cases where x&lt;y and z&gt;0 hold"));
+    persist(publication("Unrelated"));
+    flush();
+
+    assertThat(ids(PublicationSearchFilter.builder().keyword("co2").build())).containsExactly(co2);
+    assertThat(ids(PublicationSearchFilter.builder().keyword("50%").build())).containsExactly(pct);
+    assertThat(ids(PublicationSearchFilter.builder().keyword("x&lt;y and z&gt;0").build())).containsExactly(angle);
+    assertThat(ids(PublicationSearchFilter.builder().keyword("zzz").build())).isEmpty();
+  }
+
+  private List&lt;Long&gt; ids(PublicationSearchFilter filter) {
+    return adapter.search(filter, FIRST_PAGE).items().stream().map(PortalPaperReadModel::id).toList();
+  }</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 2：运行 IT 确认失败</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
+            <p>预期：新用例失败（keyword 未过滤，返回全部）</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 3：实现——WHERE 追加条件、DAO 加参数、适配器传参</strong>
+<p><code>PublicationSearchDao.WHERE</code> 末尾追加：</p><pre><code class="lang-sql">        AND (:keyword IS NULL OR regexp_replace(p.title, :tagPattern, '', 'gi')
+                                 ILIKE CONCAT('%', :keyword, '%') ESCAPE '!')</code></pre><p><code>findSearchPage</code> 与 <code>countMatching</code> 的参数列表在 <code>@Param("sortMode")</code> 之前（<code>countMatching</code> 在末尾）追加：</p><pre><code class="lang-java">      @Param("keyword") String keyword,
+      @Param("tagPattern") String tagPattern,</code></pre><p><code>PublicationSearchReadAdapter.search</code> 调用 <code>dao.findSearchPage(...)</code> 时按同一位置传：</p><pre><code class="lang-java">            escapeLike(filter.keyword()), InlineMarkup.TAG_PATTERN,</code></pre><p>适配器追加私有方法（与 <code>VenueBrowseReadAdapter#escapeLike</code> 同规则）：</p><pre><code class="lang-java">  /// LIKE 通配转义，转义符 `!`，与 SQL `ESCAPE '!'` 配套；null / 空白 → null。
+  ///
+  /// @param raw 原始关键词
+  /// @return 转义后的关键词或 null
+  private static String escapeLike(String raw) {
+    if (raw == null || raw.isBlank()) {
+      return null;
+    }
+    return raw.trim().replace("!", "!!").replace("%", "!%").replace("_", "!_");
+  }</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 4：运行 IT 确认通过</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
+            <p>预期：全部 passed</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 5：追加失败测试——作者：cat_publication_author.display_name 快照子串</strong>
+<pre><code class="lang-java">  @Test
+  @DisplayName("author：匹配快照 display_name 子串，author_id 为 null 的行也命中")
+  void filterByAuthor() {
+    Long hit = persist(publication("hit"));
+    saveAuthors(hit, "Perkovic V.", "Tuttle K. R.");
+    Long miss = persist(publication("miss"));
+    saveAuthors(miss, "Someone Else");
+    flush();
+
+    assertThat(ids(PublicationSearchFilter.builder().author("tuttle").build())).containsExactly(hit);
+    assertThat(miss).isNotNull();
+  }</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 6：运行 IT 确认失败</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
+            <p>预期：新用例失败（author 未过滤）</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 7：实现——WHERE 追加条件、DAO 加参数、适配器传参</strong>
+<p><code>PublicationSearchDao.WHERE</code> 末尾追加：</p><pre><code class="lang-sql">        AND (:author IS NULL OR EXISTS (SELECT 1 FROM cat_publication_author pa
+               WHERE pa.publication_id = p.id
+                 AND pa.display_name ILIKE CONCAT('%', :author, '%') ESCAPE '!'))</code></pre><p><code>findSearchPage</code> 与 <code>countMatching</code> 的参数列表在 <code>@Param("sortMode")</code> 之前（<code>countMatching</code> 在末尾）追加：</p><pre><code class="lang-java">      @Param("author") String author,</code></pre><p><code>PublicationSearchReadAdapter.search</code> 调用 <code>dao.findSearchPage(...)</code> 时按同一位置传：</p><pre><code class="lang-java">            escapeLike(filter.author()),</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 8：运行 IT 确认通过</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
+            <p>预期：全部 passed</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 9：追加失败测试——PMID / DOI 精确：DOI 去前缀、大小写不敏感</strong>
+<pre><code class="lang-java">  @Test
+  @DisplayName("pmid 精确等值；doi 去 https://doi.org/ 与 doi: 前缀后大小写不敏感等值；未命中为空页")
+  void filterByPmidAndDoi() {
+    Long a = persist(publication("a").pmid("39812044").doi("10.1056/NEJMoa2603120"));
+    persist(publication("b").pmid("1").doi("10.1000/other"));
+    flush();
+
+    assertThat(ids(PublicationSearchFilter.builder().pmid("39812044").build())).containsExactly(a);
+    assertThat(ids(PublicationSearchFilter.builder().pmid("398120").build())).isEmpty();
+    assertThat(ids(PublicationSearchFilter.builder().doi("https://doi.org/10.1056/nejmoa2603120").build()))
+        .containsExactly(a);
+    assertThat(ids(PublicationSearchFilter.builder().doi("doi:10.1056/NEJMOA2603120").build())).containsExactly(a);
+    assertThat(ids(PublicationSearchFilter.builder().doi("10.1056/none").build())).isEmpty();
+  }</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 10：运行 IT 确认失败</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
+            <p>预期：新用例失败（pmid / doi 未过滤）</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 11：实现——WHERE 追加条件、DAO 加参数、适配器传参</strong>
+<p><code>PublicationSearchDao.WHERE</code> 末尾追加：</p><pre><code class="lang-sql">        AND (:pmid IS NULL OR p.pmid = :pmid)
+        AND (:doi IS NULL OR lower(p.doi) = :doi)</code></pre><p><code>findSearchPage</code> 与 <code>countMatching</code> 的参数列表在 <code>@Param("sortMode")</code> 之前（<code>countMatching</code> 在末尾）追加：</p><pre><code class="lang-java">      @Param("pmid") String pmid,
+      @Param("doi") String doi,</code></pre><p><code>PublicationSearchReadAdapter.search</code> 调用 <code>dao.findSearchPage(...)</code> 时按同一位置传：</p><pre><code class="lang-java">            blankToNull(filter.pmid()), normalizeDoi(filter.doi()),</code></pre><p>适配器追加：</p><pre><code class="lang-java">  /// DOI 归一化：去 `https://doi.org/` / `http://dx.doi.org/` 等 URL 前缀与 `doi:` 前缀，转小写；空白 → null。
+  ///
+  /// @param raw 原始 DOI
+  /// @return 归一化 DOI 或 null
+  private static String normalizeDoi(String raw) {
+    String value = blankToNull(raw);
+    if (value == null) {
+      return null;
+    }
+    String lower = value.toLowerCase(Locale.ROOT);
+    for (String prefix : List.of("https://doi.org/", "http://doi.org/", "https://dx.doi.org/", "http://dx.doi.org/", "doi:")) {
+      if (lower.startsWith(prefix)) {
+        return lower.substring(prefix.length()).trim();
+      }
+    }
+    return lower;
+  }
+
+  private static String blankToNull(String raw) {
+    return raw == null || raw.isBlank() ? null : raw.trim();
+  }</code></pre><p>import 区追加 <code>java.util.Locale</code>。</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 12：运行 IT 确认通过</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
+            <p>预期：全部 passed</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 13：追加失败测试——年份闭区间</strong>
+<pre><code class="lang-java">  @Test
+  @DisplayName("yearFrom / yearTo 闭区间，可只给一端")
+  void filterByYearRange() {
+    Long y2023 = persist(publication("2023").publicationYear(2023));
+    Long y2025 = persist(publication("2025").publicationYear(2025));
+    Long y2026 = persist(publication("2026").publicationYear(2026));
+    flush();
+
+    assertThat(ids(PublicationSearchFilter.builder().yearFrom(2025).yearTo(2025).build())).containsExactly(y2025);
+    assertThat(ids(PublicationSearchFilter.builder().yearFrom(2025).build())).containsExactlyInAnyOrder(y2025, y2026);
+    assertThat(ids(PublicationSearchFilter.builder().yearTo(2023).build())).containsExactly(y2023);
+  }</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 14：运行 IT 确认失败</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
+            <p>预期：新用例失败（yearFrom / yearTo 未过滤）</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 15：实现——WHERE 追加条件、DAO 加参数、适配器传参</strong>
+<p><code>PublicationSearchDao.WHERE</code> 末尾追加：</p><pre><code class="lang-sql">        AND (:yearFrom IS NULL OR p.publication_year &gt;= :yearFrom)
+        AND (:yearTo IS NULL OR p.publication_year &lt;= :yearTo)</code></pre><p><code>findSearchPage</code> 与 <code>countMatching</code> 的参数列表在 <code>@Param("sortMode")</code> 之前（<code>countMatching</code> 在末尾）追加：</p><pre><code class="lang-java">      @Param("yearFrom") Integer yearFrom,
+      @Param("yearTo") Integer yearTo,</code></pre><p><code>PublicationSearchReadAdapter.search</code> 调用 <code>dao.findSearchPage(...)</code> 时按同一位置传：</p><pre><code class="lang-java">            filter.yearFrom(), filter.yearTo(),</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 16：运行 IT 确认通过</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
+            <p>预期：全部 passed</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 17：追加失败测试——期刊 / 类型 / 语言 / OA 多值与组合</strong>
+<pre><code class="lang-java">  @Test
+  @DisplayName("venue 多值 OR；type 完整值含逗号、大小写不敏感；lang 按 language_base；oa；跨维度 AND")
+  void filterByVenueTypeLangOa() {
+    Long nejm = saveVenue("NEJM");
+    Long lancet = saveVenue("Lancet");
+    Long a = persist(publication("a").venueId(nejm).languageCode("en").isOa(true));
+    savePublicationType(a, "Clinical Trial, Phase III", 1);
+    Long b = persist(publication("b").venueId(lancet).languageCode("zh-Hans").isOa(false));
+    savePublicationType(b, "Review", 1);
+    Long c = persist(publication("c").languageCode("de").isOa(false));
+    flush();
+
+    assertThat(ids(PublicationSearchFilter.builder().venueIds(List.of(nejm, lancet)).build()))
+        .containsExactlyInAnyOrder(a, b);
+    assertThat(ids(PublicationSearchFilter.builder().types(List.of("clinical trial, phase iii")).build()))
+        .containsExactly(a);
+    assertThat(ids(PublicationSearchFilter.builder().types(List.of("Review", "Letter")).build())).containsExactly(b);
+    assertThat(ids(PublicationSearchFilter.builder().languages(List.of("zh", "de")).build()))
+        .containsExactlyInAnyOrder(b, c);
+    assertThat(ids(PublicationSearchFilter.builder().isOpenAccess(true).build())).containsExactly(a);
+    assertThat(ids(PublicationSearchFilter.builder().venueIds(List.of(nejm)).types(List.of("Review")).build()))
+        .isEmpty();
+  }</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 18：运行 IT 确认失败</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
+            <p>预期：新用例失败（venue / type / lang / oa 未过滤）</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 19：实现——WHERE 追加条件、DAO 加参数、适配器传参</strong>
+<p><code>PublicationSearchDao.WHERE</code> 末尾追加：</p><pre><code class="lang-sql">        AND ((:venueIds)::bigint[] IS NULL OR p.venue_id = ANY((:venueIds)::bigint[]))
+        AND ((:types)::text[] IS NULL OR EXISTS (SELECT 1 FROM cat_publication_type pt
+               WHERE pt.publication_id = p.id AND lower(trim(pt.type_value)) = ANY((:types)::text[])))
+        AND (:isOpenAccess IS NULL OR p.is_oa = :isOpenAccess)
+        AND ((:languages)::text[] IS NULL OR p.language_base = ANY((:languages)::text[]))</code></pre><p><code>findSearchPage</code> 与 <code>countMatching</code> 的参数列表在 <code>@Param("sortMode")</code> 之前（<code>countMatching</code> 在末尾）追加：</p><pre><code class="lang-java">      @Param("venueIds") Long[] venueIds,
+      @Param("types") String[] types,
+      @Param("isOpenAccess") Boolean isOpenAccess,
+      @Param("languages") String[] languages,</code></pre><p><code>PublicationSearchReadAdapter.search</code> 调用 <code>dao.findSearchPage(...)</code> 时按同一位置传：</p><pre><code class="lang-java">            toArray(filter.venueIds(), Long[]::new),
+            toArray(filter.types().stream().map(t -&gt; t.trim().toLowerCase(Locale.ROOT)).toList(), String[]::new),
+            filter.isOpenAccess(),
+            toArray(filter.languages(), String[]::new),</code></pre><p>适配器追加（空列表 → null 表示"不过滤"）：</p><pre><code class="lang-java">  /// List → 数组；空列表转 null（SQL 里 `IS NULL` 短路为不过滤）。
+  ///
+  /// @param list 输入列表
+  /// @param generator 数组构造器
+  /// @param &lt;T&gt; 元素类型
+  /// @return 数组或 null
+  private static &lt;T&gt; T[] toArray(List&lt;T&gt; list, IntFunction&lt;T[]&gt; generator) {
+    return list.isEmpty() ? null : list.toArray(generator);
+  }</code></pre><p>import 区追加 <code>java.util.function.IntFunction</code>。若 Hibernate 对 <code>Long[]</code> 绑定 <code>bigint[]</code> 报类型错误，改为传 <code>String[]</code> 并把 SQL 改成 <code>((:venueIds)::text[])::bigint[]</code>，在右栏 notes 记 change。</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 20：运行 IT 确认通过</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
+            <p>预期：全部 passed</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 21：追加失败测试——证据等级：SQL 先算最强档再等值，与 classify() 一致</strong>
+<pre><code class="lang-java">  @Test
+  @DisplayName("evidence：同时标 Meta-Analysis 与 RCT 的文献只落 5 级；UNKNOWN 可选；多值 OR")
+  void filterByEvidenceLevel() {
+    Long both = persist(publication("both"));
+    savePublicationType(both, "Randomized Controlled Trial", 1);
+    savePublicationType(both, "Meta-Analysis", 2);
+    Long rct = persist(publication("rct"));
+    savePublicationType(rct, "Randomized Controlled Trial", 1);
+    Long plain = persist(publication("plain"));
+    savePublicationType(plain, "Journal Article", 1);
+    Long untyped = persist(publication("untyped"));
+    Long padded = persist(publication("padded"));
+    savePublicationType(padded, " Meta-Analysis ", 1); // 首尾空白：SQL trim 与 Java trim 同口径
+    flush();
+
+    assertThat(ids(PublicationSearchFilter.builder().evidenceLevels(List.of(EvidenceLevel.SYSTEMATIC_REVIEW)).build()))
+        .containsExactlyInAnyOrder(both, padded);
+    assertThat(adapter.search(PublicationSearchFilter.builder().evidenceLevels(List.of(EvidenceLevel.SYSTEMATIC_REVIEW)).build(), FIRST_PAGE)
+            .items())
+        .allSatisfy(m -&gt; assertThat(m.evidenceLevel()).isEqualTo(EvidenceLevel.SYSTEMATIC_REVIEW));
+    assertThat(ids(PublicationSearchFilter.builder().evidenceLevels(List.of(EvidenceLevel.RANDOMIZED_CONTROLLED_TRIAL)).build()))
+        .containsExactly(rct);
+    assertThat(ids(PublicationSearchFilter.builder().evidenceLevels(List.of(EvidenceLevel.UNKNOWN)).build()))
+        .containsExactlyInAnyOrder(plain, untyped);
+    assertThat(ids(PublicationSearchFilter.builder()
+            .evidenceLevels(List.of(EvidenceLevel.SYSTEMATIC_REVIEW, EvidenceLevel.RANDOMIZED_CONTROLLED_TRIAL)).build()))
+        .containsExactlyInAnyOrder(both, rct);
+  }</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 22：运行 IT 确认失败</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
+            <p>预期：新用例失败（evidence 未过滤）</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 23：实现——WHERE 追加条件、DAO 加参数、适配器传参</strong>
+<p><code>PublicationSearchDao.WHERE</code> 末尾追加：</p><pre><code class="lang-sql">        AND ((:evidenceRanks)::int[] IS NULL OR
+      """ + EVIDENCE_RANK + " = ANY((:evidenceRanks)::int[]))\n"</code></pre><p><code>findSearchPage</code> 与 <code>countMatching</code> 的参数列表在 <code>@Param("sortMode")</code> 之前（<code>countMatching</code> 在末尾）追加：</p><pre><code class="lang-java">      @Param("evidenceRanks") Integer[] evidenceRanks,
+      @Param("lvl5") String[] lvl5,
+      @Param("lvl4") String[] lvl4,
+      @Param("lvl3") String[] lvl3,
+      @Param("lvl2") String[] lvl2,
+      @Param("lvl1") String[] lvl1,</code></pre><p><code>PublicationSearchReadAdapter.search</code> 调用 <code>dao.findSearchPage(...)</code> 时按同一位置传：</p><pre><code class="lang-java">            toArray(filter.evidenceLevels().stream().map(EvidenceLevel::rank).toList(), Integer[]::new),
+            LVL5, LVL4, LVL3, LVL2, LVL1,</code></pre><p>WHERE 的最后一条引用新常量 <code>EVIDENCE_RANK</code>（每篇文献的最强命中档，无命中为 0），在 DAO 里定义于 <code>WHERE</code> 之前，并把 <code>WHERE</code> 改为「文本块 + 常量 + 普通字符串」三段拼接：文本块以 <code>…IS NULL OR\n"""</code> 结束，接 <code>+ EVIDENCE_RANK + " = ANY((:evidenceRanks)::int[]))\n"</code>。<strong>尾段必须是普通字符串</strong>——文本块的开头三引号后必须紧跟换行，<code>""" = ANY…</code> 这种写法 Java 25 直接编译错误。</p><pre><code class="lang-java">  /// 每篇文献的证据等级 rank：按五档类型数组取 max，无命中为 0（UNKNOWN）。数组由适配器从
+  /// [dev.linqibin.patra.catalog.domain.model.vo.publication.EvidenceLevel#typeValuesOf] 传入，SQL 不含类型字符串。
+  String EVIDENCE_RANK =
+      """
+      COALESCE((SELECT max(CASE
+          WHEN lower(trim(pt.type_value)) = ANY((:lvl5)::text[]) THEN 5
+          WHEN lower(trim(pt.type_value)) = ANY((:lvl4)::text[]) THEN 4
+          WHEN lower(trim(pt.type_value)) = ANY((:lvl3)::text[]) THEN 3
+          WHEN lower(trim(pt.type_value)) = ANY((:lvl2)::text[]) THEN 2
+          WHEN lower(trim(pt.type_value)) = ANY((:lvl1)::text[]) THEN 1
+          ELSE 0 END)
+        FROM cat_publication_type pt WHERE pt.publication_id = p.id), 0)""";</code></pre><p>适配器追加五个常量（类顶部）：</p><pre><code class="lang-java">  private static final String[] LVL5 = typeValues(EvidenceLevel.SYSTEMATIC_REVIEW);
+  private static final String[] LVL4 = typeValues(EvidenceLevel.RANDOMIZED_CONTROLLED_TRIAL);
+  private static final String[] LVL3 = typeValues(EvidenceLevel.COHORT_OR_CASE_CONTROL);
+  private static final String[] LVL2 = typeValues(EvidenceLevel.NON_SYSTEMATIC_REVIEW);
+  private static final String[] LVL1 = typeValues(EvidenceLevel.CASE_REPORT);
+
+  /// 证据等级 → 小写类型值数组（SQL 参数）。
+  ///
+  /// @param level 证据等级
+  /// @return 类型值数组
+  private static String[] typeValues(EvidenceLevel level) {
+    return EvidenceLevel.typeValuesOf(level).toArray(String[]::new);
+  }</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 24：运行 IT 确认通过</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
+            <p>预期：全部 passed</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 25：核对 DAO 全貌（任务 8 完成态，供任务 9 复用同一参数顺序）</strong>
+<pre><code class="lang-java">  // PublicationSearchDao 完成态的方法签名（WHERE / SELECT_LIST / ORDER_BY / EVIDENCE_RANK 常量如上）：
+
+  @Query(
+      value = SELECT_LIST + WHERE + ORDER_BY,
+      countQuery = "SELECT count(*) FROM cat_publication p " + WHERE,
+      nativeQuery = true)
+  Page&lt;PublicationSearchRow&gt; findSearchPage(
+      @Param("keyword") String keyword,
+      @Param("tagPattern") String tagPattern,
+      @Param("author") String author,
+      @Param("pmid") String pmid,
+      @Param("doi") String doi,
+      @Param("yearFrom") Integer yearFrom,
+      @Param("yearTo") Integer yearTo,
+      @Param("venueIds") Long[] venueIds,
+      @Param("types") String[] types,
+      @Param("isOpenAccess") Boolean isOpenAccess,
+      @Param("languages") String[] languages,
+      @Param("evidenceRanks") Integer[] evidenceRanks,
+      @Param("lvl5") String[] lvl5,
+      @Param("lvl4") String[] lvl4,
+      @Param("lvl3") String[] lvl3,
+      @Param("lvl2") String[] lvl2,
+      @Param("lvl1") String[] lvl1,
+      @Param("sortMode") String sortMode,
+      Pageable pageable);
+
+  @Query(value = "SELECT count(*) FROM cat_publication p " + WHERE, nativeQuery = true)
+  long countMatching(
+      @Param("keyword") String keyword,
+      @Param("tagPattern") String tagPattern,
+      @Param("author") String author,
+      @Param("pmid") String pmid,
+      @Param("doi") String doi,
+      @Param("yearFrom") Integer yearFrom,
+      @Param("yearTo") Integer yearTo,
+      @Param("venueIds") Long[] venueIds,
+      @Param("types") String[] types,
+      @Param("isOpenAccess") Boolean isOpenAccess,
+      @Param("languages") String[] languages,
+      @Param("evidenceRanks") Integer[] evidenceRanks,
+      @Param("lvl5") String[] lvl5,
+      @Param("lvl4") String[] lvl4,
+      @Param("lvl3") String[] lvl3,
+      @Param("lvl2") String[] lvl2,
+      @Param("lvl1") String[] lvl1);</code></pre><p>适配器把 12 个随 filter 变化的参数收进私有嵌套 record <code>Bound</code>（任务 9 的 drill-down 靠它做"置 null"副本）：</p><pre><code class="lang-java">  /// 一次检索的已绑定参数（LIKE 已转义、DOI 已归一化、列表已转数组）。
+  private record Bound(
+      String keyword,
+      String author,
+      String pmid,
+      String doi,
+      Integer yearFrom,
+      Integer yearTo,
+      Long[] venueIds,
+      String[] types,
+      Boolean isOpenAccess,
+      String[] languages,
+      Integer[] evidenceRanks) {
+
+    static Bound of(PublicationSearchFilter f) {
+      return new Bound(
+          escapeLike(f.keyword()),
+          escapeLike(f.author()),
+          blankToNull(f.pmid()),
+          normalizeDoi(f.doi()),
+          f.yearFrom(),
+          f.yearTo(),
+          toArray(f.venueIds(), Long[]::new),
+          toArray(f.types().stream().map(t -&gt; t.trim().toLowerCase(Locale.ROOT)).toList(), String[]::new),
+          f.isOpenAccess(),
+          toArray(f.languages(), String[]::new),
+          toArray(f.evidenceLevels().stream().map(EvidenceLevel::rank).toList(), Integer[]::new));
+    }
+  }
+
+  @Override
+  public PageResult&lt;PortalPaperReadModel&gt; search(PublicationSearchFilter filter, PagingParams paging) {
+    Bound b = Bound.of(filter);
+    Page&lt;PublicationSearchRow&gt; page =
+        dao.findSearchPage(
+            b.keyword(), InlineMarkup.TAG_PATTERN, b.author(), b.pmid(), b.doi(), b.yearFrom(), b.yearTo(),
+            b.venueIds(), b.types(), b.isOpenAccess(), b.languages(), b.evidenceRanks(),
+            LVL5, LVL4, LVL3, LVL2, LVL1,
+            filter.sort().name(), PageRequest.of(paging.page() - 1, paging.pageSize()));
+    List&lt;PortalPaperReadModel&gt; items = page.getContent().stream().map(this::toReadModel).toList();
+    return PageResult.of(items, paging.page(), paging.pageSize(), page.getTotalElements());
+  }</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 26：运行 IT 全部通过后 Commit</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
+            <p>预期：12 passed</p><pre><code class="lang-bash">git add patra-api/patra-catalog/patra-catalog-infra
+git commit -m "feat(catalog): 文献检索十类筛选——关键词/作者/PMID/DOI/年份/期刊/类型/语言/OA/证据等级 (PAP-52)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-9" data-status="done">
+        <header>
+          <h2>任务 9：infra facets：years / types / evidence / languages / openAccess / total / lastSyncedAt</h2>
+          <dl class="files">
+            <dt>创建</dt><dd><code>patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/linqibin/patra/catalog/infra/adapter/read/PublicationFacetCountRow.java</code><br><code>patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/linqibin/patra/catalog/infra/adapter/read/PublicationLastSyncedRow.java</code></dd>
+            <dt>修改</dt><dd><code>patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/linqibin/patra/catalog/infra/persistence/dao/PublicationSearchDao.java</code><br><code>patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/linqibin/patra/catalog/infra/adapter/read/PublicationSearchReadAdapter.java</code><br><code>patra-api/patra-catalog/patra-catalog-infra/src/integrationTest/java/dev/linqibin/patra/catalog/infra/adapter/read/PublicationSearchReadAdapterIT.java</code></dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：追加失败测试——分组 facet 与 drill-down</strong>
+<pre><code class="lang-java">  // ===== 任务 9：facets =====
+
+  @Test
+  @DisplayName("facets：years 年份降序 / types 计数降序 / languages；drill-down 忽略本维度自身筛选")
+  void facetsGroupsAndDrillDown() {
+    Long a = persist(publication("a").publicationYear(2026).languageCode("en"));
+    savePublicationType(a, "Journal Article", 1);
+    savePublicationType(a, "Review", 2);
+    Long b = persist(publication("b").publicationYear(2025).languageCode("en"));
+    savePublicationType(b, "Journal Article", 1);
+    Long c = persist(publication("c").publicationYear(2026).languageCode("zh-Hans"));
+    savePublicationType(c, "Letter", 1);
+    flush();
+
+    PublicationSearchFacets all = adapter.facets(NO_FILTER);
+    assertThat(values(all.years())).containsExactly("2026", "2025");
+    assertThat(countOf(all.years(), "2026")).isEqualTo(2);
+    assertThat(values(all.types())).containsExactly("Journal Article", "Letter", "Review");
+    assertThat(countOf(all.types(), "Journal Article")).isEqualTo(2);
+    assertThat(values(all.languages())).containsExactly("en", "zh");
+    assertThat(all.total()).isEqualTo(3);
+
+    // 选中 2026 年：years 仍给出 2025 的计数（drill-down），types 按年份收窄
+    PublicationSearchFacets y2026 = adapter.facets(PublicationSearchFilter.builder().yearFrom(2026).yearTo(2026).build());
+    assertThat(countOf(y2026.years(), "2025")).isEqualTo(1);
+    assertThat(values(y2026.types())).containsExactlyInAnyOrder("Journal Article", "Review", "Letter");
+    assertThat(countOf(y2026.types(), "Journal Article")).isEqualTo(1);
+    assertThat(y2026.total()).isEqualTo(2);
+
+    // 选中 Letter 类型：types 仍给出 Journal Article 计数，years 收窄到 2026
+    PublicationSearchFacets letter = adapter.facets(PublicationSearchFilter.builder().types(List.of("Letter")).build());
+    assertThat(countOf(letter.types(), "Journal Article")).isEqualTo(2);
+    assertThat(values(letter.years())).containsExactly("2026");
+    assertThat(b).isNotNull();
+  }
+
+  @Test
+  @DisplayName("facets.types 同一 type_value 来自两个 vocabulary_source 只计一篇")
+  void facetsTypesCountDistinctPublications() {
+    Long a = persist(publication("a"));
+    em.persist(PublicationTypeEntity.builder().id(SnowflakeIdGenerator.getId()).publicationId(a)
+        .typeValue("Review").vocabularySource("MeSH").typeOrder(1).build());
+    em.persist(PublicationTypeEntity.builder().id(SnowflakeIdGenerator.getId()).publicationId(a)
+        .typeValue("Review").vocabularySource("Crossref").typeOrder(2).build());
+    flush();
+
+    assertThat(countOf(adapter.facets(NO_FILTER).types(), "Review")).isEqualTo(1);
+  }</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 2：运行 IT 确认失败</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
+            <p>预期：两个新用例抛 <code>UnsupportedOperationException</code></p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 3：创建两个投影</strong>
+<pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/linqibin/patra/catalog/infra/adapter/read/PublicationFacetCountRow.java
+package dev.linqibin.patra.catalog.infra.adapter.read;
+
+/// [dev.linqibin.patra.catalog.infra.persistence.dao.PublicationSearchDao] facet 聚合查询的接口投影（`value` / `count`）。
+///
+/// @author linqibin
+/// @since 0.1.0
+public interface PublicationFacetCountRow {
+
+  String getValue();
+
+  long getCount();
+}
+
+// patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/linqibin/patra/catalog/infra/adapter/read/PublicationLastSyncedRow.java
+package dev.linqibin.patra.catalog.infra.adapter.read;
+
+import java.time.Instant;
+
+/// [dev.linqibin.patra.catalog.infra.persistence.dao.PublicationSearchDao#findLastSyncedAt] 的接口投影。
+///
+/// @author linqibin
+/// @since 0.1.0
+public interface PublicationLastSyncedRow {
+
+  /// 全库 `max(last_synced_at)`；空库为 null。
+  Instant getLastSyncedAt();
+}</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 4：DAO 追加四个 facet 查询与 lastSyncedAt（参数列表与 countMatching 完全相同，17 个）</strong>
+<pre><code class="lang-java">  // PublicationSearchDao：import 区追加 java.util.List、
+  // dev.linqibin.patra.catalog.infra.adapter.read.PublicationFacetCountRow、
+  // dev.linqibin.patra.catalog.infra.adapter.read.PublicationLastSyncedRow。
+  // 下面四个方法的参数列表与 countMatching 逐字相同（keyword … lvl1 共 17 个）。
+
+  /// 年份 facet（调用方把 yearFrom / yearTo 传 null 实现 drill-down），年份降序。
+  @Query(
+      value =
+          "SELECT p.publication_year::text AS \"value\", count(*) AS \"count\" FROM cat_publication p "
+              + WHERE
+              + " AND p.publication_year IS NOT NULL GROUP BY p.publication_year ORDER BY p.publication_year DESC",
+      nativeQuery = true)
+  List&lt;PublicationFacetCountRow&gt; facetYears(
+      @Param("keyword") String keyword,
+      @Param("tagPattern") String tagPattern,
+      @Param("author") String author,
+      @Param("pmid") String pmid,
+      @Param("doi") String doi,
+      @Param("yearFrom") Integer yearFrom,
+      @Param("yearTo") Integer yearTo,
+      @Param("venueIds") Long[] venueIds,
+      @Param("types") String[] types,
+      @Param("isOpenAccess") Boolean isOpenAccess,
+      @Param("languages") String[] languages,
+      @Param("evidenceRanks") Integer[] evidenceRanks,
+      @Param("lvl5") String[] lvl5,
+      @Param("lvl4") String[] lvl4,
+      @Param("lvl3") String[] lvl3,
+      @Param("lvl2") String[] lvl2,
+      @Param("lvl1") String[] lvl1);
+
+  /// 类型 facet（调用方把 types 传 null），按 distinct 文献数降序、类型名升序。别名 `t` 避免与 WHERE 子查询的 `pt` 混淆。
+  @Query(
+      value =
+          "SELECT t.type_value AS \"value\", count(DISTINCT p.id) AS \"count\" FROM cat_publication p "
+              + "JOIN cat_publication_type t ON t.publication_id = p.id "
+              + WHERE
+              + " GROUP BY t.type_value ORDER BY count(DISTINCT p.id) DESC, t.type_value ASC",
+      nativeQuery = true)
+  List&lt;PublicationFacetCountRow&gt; facetTypes(
+      @Param("keyword") String keyword,
+      @Param("tagPattern") String tagPattern,
+      @Param("author") String author,
+      @Param("pmid") String pmid,
+      @Param("doi") String doi,
+      @Param("yearFrom") Integer yearFrom,
+      @Param("yearTo") Integer yearTo,
+      @Param("venueIds") Long[] venueIds,
+      @Param("types") String[] types,
+      @Param("isOpenAccess") Boolean isOpenAccess,
+      @Param("languages") String[] languages,
+      @Param("evidenceRanks") Integer[] evidenceRanks,
+      @Param("lvl5") String[] lvl5,
+      @Param("lvl4") String[] lvl4,
+      @Param("lvl3") String[] lvl3,
+      @Param("lvl2") String[] lvl2,
+      @Param("lvl1") String[] lvl1);
+
+  /// 证据等级 facet（调用方把 evidenceRanks 传 null）：外层按 rank 分组，rank 由适配器映射回枚举并补齐 6 项。
+  @Query(
+      value =
+          "SELECT r.rank::text AS \"value\", count(*) AS \"count\" FROM (SELECT "
+              + EVIDENCE_RANK
+              + " AS rank FROM cat_publication p "
+              + WHERE
+              + ") r GROUP BY r.rank ORDER BY r.rank DESC",
+      nativeQuery = true)
+  List&lt;PublicationFacetCountRow&gt; facetEvidence(
+      @Param("keyword") String keyword,
+      @Param("tagPattern") String tagPattern,
+      @Param("author") String author,
+      @Param("pmid") String pmid,
+      @Param("doi") String doi,
+      @Param("yearFrom") Integer yearFrom,
+      @Param("yearTo") Integer yearTo,
+      @Param("venueIds") Long[] venueIds,
+      @Param("types") String[] types,
+      @Param("isOpenAccess") Boolean isOpenAccess,
+      @Param("languages") String[] languages,
+      @Param("evidenceRanks") Integer[] evidenceRanks,
+      @Param("lvl5") String[] lvl5,
+      @Param("lvl4") String[] lvl4,
+      @Param("lvl3") String[] lvl3,
+      @Param("lvl2") String[] lvl2,
+      @Param("lvl1") String[] lvl1);
+
+  /// 语言 facet（调用方把 languages 传 null），计数降序、语言码升序。
+  @Query(
+      value =
+          "SELECT p.language_base AS \"value\", count(*) AS \"count\" FROM cat_publication p "
+              + WHERE
+              + " AND p.language_base IS NOT NULL GROUP BY p.language_base ORDER BY count(*) DESC, p.language_base ASC",
+      nativeQuery = true)
+  List&lt;PublicationFacetCountRow&gt; facetLanguages(
+      @Param("keyword") String keyword,
+      @Param("tagPattern") String tagPattern,
+      @Param("author") String author,
+      @Param("pmid") String pmid,
+      @Param("doi") String doi,
+      @Param("yearFrom") Integer yearFrom,
+      @Param("yearTo") Integer yearTo,
+      @Param("venueIds") Long[] venueIds,
+      @Param("types") String[] types,
+      @Param("isOpenAccess") Boolean isOpenAccess,
+      @Param("languages") String[] languages,
+      @Param("evidenceRanks") Integer[] evidenceRanks,
+      @Param("lvl5") String[] lvl5,
+      @Param("lvl4") String[] lvl4,
+      @Param("lvl3") String[] lvl3,
+      @Param("lvl2") String[] lvl2,
+      @Param("lvl1") String[] lvl1);
+
+  /// 全库最后采集时间（不带任何 filter）。
+  @Query(
+      value = "SELECT max(p.last_synced_at) AS \"lastSyncedAt\" FROM cat_publication p WHERE p.deleted_at IS NULL",
+      nativeQuery = true)
+  PublicationLastSyncedRow findLastSyncedAt();</code></pre><p><strong>注意</strong>：Spring Data 对 <code>@Param</code> 未出现在 SQL 里会启动报错，SQL 里有而方法没声明也报错，所以四个方法都必须完整声明 WHERE 引用的 17 个参数。</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 5：适配器实现 facets（drill-down 副本 + 6 档回填）</strong>
+<pre><code class="lang-java">  // PublicationSearchReadAdapter：import 区追加 java.time.Instant、java.util.Map、java.util.stream.Collectors、
+  // dev.linqibin.patra.catalog.domain.model.read.portal.FacetCount。替换 facets()：
+
+  @Override
+  public PublicationSearchFacets facets(PublicationSearchFilter filter) {
+    Bound b = Bound.of(filter);
+    return PublicationSearchFacets.builder()
+        .years(toFacets(dao.facetYears(b.keyword(), InlineMarkup.TAG_PATTERN, b.author(), b.pmid(), b.doi(),
+            null, null, b.venueIds(), b.types(), b.isOpenAccess(), b.languages(), b.evidenceRanks(),
+            LVL5, LVL4, LVL3, LVL2, LVL1)))
+        .types(toFacets(dao.facetTypes(b.keyword(), InlineMarkup.TAG_PATTERN, b.author(), b.pmid(), b.doi(),
+            b.yearFrom(), b.yearTo(), b.venueIds(), null, b.isOpenAccess(), b.languages(), b.evidenceRanks(),
+            LVL5, LVL4, LVL3, LVL2, LVL1)))
+        .evidence(toEvidenceFacets(dao.facetEvidence(b.keyword(), InlineMarkup.TAG_PATTERN, b.author(), b.pmid(), b.doi(),
+            b.yearFrom(), b.yearTo(), b.venueIds(), b.types(), b.isOpenAccess(), b.languages(), null,
+            LVL5, LVL4, LVL3, LVL2, LVL1)))
+        .languages(toFacets(dao.facetLanguages(b.keyword(), InlineMarkup.TAG_PATTERN, b.author(), b.pmid(), b.doi(),
+            b.yearFrom(), b.yearTo(), b.venueIds(), b.types(), b.isOpenAccess(), null, b.evidenceRanks(),
+            LVL5, LVL4, LVL3, LVL2, LVL1)))
+        .openAccess(dao.countMatching(b.keyword(), InlineMarkup.TAG_PATTERN, b.author(), b.pmid(), b.doi(),
+            b.yearFrom(), b.yearTo(), b.venueIds(), b.types(), Boolean.TRUE, b.languages(), b.evidenceRanks(),
+            LVL5, LVL4, LVL3, LVL2, LVL1))
+        .total(dao.countMatching(b.keyword(), InlineMarkup.TAG_PATTERN, b.author(), b.pmid(), b.doi(),
+            b.yearFrom(), b.yearTo(), b.venueIds(), b.types(), b.isOpenAccess(), b.languages(), b.evidenceRanks(),
+            LVL5, LVL4, LVL3, LVL2, LVL1))
+        .lastSyncedAt(lastSyncedAt())
+        .build();
+  }
+
+  /// 投影行 → FacetCount 列表（保持 SQL 排序）。
+  ///
+  /// @param rows 投影行
+  /// @return facet 列表
+  private static List&lt;FacetCount&gt; toFacets(List&lt;PublicationFacetCountRow&gt; rows) {
+    return rows.stream().map(r -&gt; FacetCount.of(r.getValue(), r.getCount())).toList();
+  }
+
+  /// rank 分组 → 固定 6 项（rank 降序，UNKNOWN 末尾），缺档补 0。
+  ///
+  /// @param rows rank 分组行（value 为 rank 文本）
+  /// @return 6 项 facet
+  private static List&lt;FacetCount&gt; toEvidenceFacets(List&lt;PublicationFacetCountRow&gt; rows) {
+    Map&lt;Integer, Long&gt; byRank =
+        rows.stream().collect(Collectors.toMap(r -&gt; Integer.parseInt(r.getValue()), PublicationFacetCountRow::getCount));
+    return List.of(
+            EvidenceLevel.SYSTEMATIC_REVIEW,
+            EvidenceLevel.RANDOMIZED_CONTROLLED_TRIAL,
+            EvidenceLevel.COHORT_OR_CASE_CONTROL,
+            EvidenceLevel.NON_SYSTEMATIC_REVIEW,
+            EvidenceLevel.CASE_REPORT,
+            EvidenceLevel.UNKNOWN)
+        .stream()
+        .map(level -&gt; FacetCount.of(level.name(), byRank.getOrDefault(level.rank(), 0L)))
+        .toList();
+  }
+
+  /// 全库最后采集时间；空库为 null。
+  ///
+  /// @return 时间或 null
+  private Instant lastSyncedAt() {
+    PublicationLastSyncedRow row = dao.findLastSyncedAt();
+    return row == null ? null : row.getLastSyncedAt();
+  }</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 6：运行 IT 确认通过</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
+            <p>预期：14 passed；若 <code>findLastSyncedAt</code> 投影为 null 导致 NPE，说明 max() 的单行未被投影包装，改为 <code>Optional&lt;PublicationLastSyncedRow&gt;</code> 并在 notes 记 change</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 7：追加失败测试——evidence 固定 6 项、openAccess drill-down、lastSyncedAt</strong>
+<pre><code class="lang-java">  @Test
+  @DisplayName("facets.evidence 固定 6 项 rank 降序 UNKNOWN 末尾，缺档为 0；选中某档不影响其他档计数")
+  void facetsEvidenceFixedSixEntries() {
+    Long sr = persist(publication("sr"));
+    savePublicationType(sr, " Systematic Review ", 1); // 首尾空白也归 5 级，与列表 / 筛选同口径
+    Long cr = persist(publication("cr"));
+    savePublicationType(cr, "Case Reports", 1);
+    persist(publication("untyped"));
+    flush();
+
+    List&lt;FacetCount&gt; evidence = adapter.facets(NO_FILTER).evidence();
+    assertThat(values(evidence)).containsExactly(
+        "SYSTEMATIC_REVIEW", "RANDOMIZED_CONTROLLED_TRIAL", "COHORT_OR_CASE_CONTROL",
+        "NON_SYSTEMATIC_REVIEW", "CASE_REPORT", "UNKNOWN");
+    assertThat(countOf(evidence, "SYSTEMATIC_REVIEW")).isEqualTo(1);
+    assertThat(countOf(evidence, "RANDOMIZED_CONTROLLED_TRIAL")).isZero();
+    assertThat(countOf(evidence, "UNKNOWN")).isEqualTo(1);
+
+    List&lt;FacetCount&gt; drill = adapter.facets(
+        PublicationSearchFilter.builder().evidenceLevels(List.of(EvidenceLevel.CASE_REPORT)).build()).evidence();
+    assertThat(countOf(drill, "SYSTEMATIC_REVIEW")).isEqualTo(1);
+  }
+
+  @Test
+  @DisplayName("facets.openAccess 忽略 oa 自身筛选；total 随全部筛选；lastSyncedAt 为全库最大值不随筛选变")
+  void facetsScalars() {
+    persist(publication("oa").isOa(true).publicationYear(2026).lastSyncedAt(T1));
+    persist(publication("closed").isOa(false).publicationYear(2025).lastSyncedAt(T2));
+    flush();
+
+    PublicationSearchFacets f = adapter.facets(PublicationSearchFilter.builder().isOpenAccess(false).build());
+    assertThat(f.openAccess()).isEqualTo(1);
+    assertThat(f.total()).isEqualTo(1);
+    assertThat(f.lastSyncedAt()).isEqualTo(T2);
+
+    PublicationSearchFacets y = adapter.facets(PublicationSearchFilter.builder().yearFrom(2025).yearTo(2025).build());
+    assertThat(y.openAccess()).isZero();
+    assertThat(y.lastSyncedAt()).isEqualTo(T2);
+  }
+
+  @Test
+  @DisplayName("空库：facets 各列表为空、evidence 仍 6 项全 0、lastSyncedAt 为 null")
+  void facetsOnEmptyDatabase() {
+    PublicationSearchFacets f = adapter.facets(NO_FILTER);
+    assertThat(f.years()).isEmpty();
+    assertThat(f.evidence()).hasSize(6).allSatisfy(fc -&gt; assertThat(fc.count()).isZero());
+    assertThat(f.total()).isZero();
+    assertThat(f.lastSyncedAt()).isNull();
+  }</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 8：运行 IT 确认通过（步骤 5 已实现，本步验证边界行为）</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-infra:integrationTest --tests "*PublicationSearchReadAdapterIT"</code></p>
+            <p>预期：17 passed</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 9：Commit</strong>
+<pre><code class="lang-bash">git add patra-api/patra-catalog/patra-catalog-infra
+git commit -m "feat(catalog): 文献检索 facets——年份/类型/证据/语言 drill-down 与 OA/total/lastSyncedAt (PAP-52)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-10" data-status="done">
+        <header>
+          <h2>任务 10：app：PortalPublicationSearchQueryService</h2>
+          <dl class="files">
+            <dt>创建</dt><dd><code>patra-api/patra-catalog/patra-catalog-app/src/main/java/dev/linqibin/patra/catalog/app/usecase/portal/query/PortalPublicationSearchQueryService.java</code><br><code>patra-api/patra-catalog/patra-catalog-app/src/test/java/dev/linqibin/patra/catalog/app/usecase/portal/query/PortalPublicationSearchQueryServiceTest.java</code></dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：写失败测试</strong>
+<pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-app/src/test/java/dev/linqibin/patra/catalog/app/usecase/portal/query/PortalPublicationSearchQueryServiceTest.java
+package dev.linqibin.patra.catalog.app.usecase.portal.query;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import dev.linqibin.commons.query.PageResult;
+import dev.linqibin.commons.query.PagingParams;
+import dev.linqibin.patra.catalog.domain.model.read.portal.PortalPaperReadModel;
+import dev.linqibin.patra.catalog.domain.model.read.portal.PublicationSearchFacets;
+import dev.linqibin.patra.catalog.domain.model.read.portal.PublicationSearchFilter;
+import dev.linqibin.patra.catalog.domain.port.read.PublicationSearchReadPort;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+@ExtendWith(MockitoExtension.class)
+@DisplayName("PortalPublicationSearchQueryService 单元测试")
+class PortalPublicationSearchQueryServiceTest {
+
+  @Mock private PublicationSearchReadPort readPort;
+  @InjectMocks private PortalPublicationSearchQueryService service;
+
+  @Test
+  @DisplayName("search 直接委托 readPort.search，透传 filter 与 paging")
+  void searchDelegates() {
+    PagingParams paging = PagingParams.of(1, 20);
+    PublicationSearchFilter filter = PublicationSearchFilter.builder().keyword("glp").build();
+    PageResult&lt;PortalPaperReadModel&gt; expected = PageResult.empty(1, 20);
+    when(readPort.search(filter, paging)).thenReturn(expected);
+
+    assertThat(service.search(filter, paging)).isSameAs(expected);
+    verify(readPort).search(filter, paging);
+  }
+
+  @Test
+  @DisplayName("facets 直接委托 readPort.facets")
+  void facetsDelegates() {
+    PublicationSearchFilter filter = PublicationSearchFilter.builder().build();
+    PublicationSearchFacets expected = PublicationSearchFacets.builder().total(3).build();
+    when(readPort.facets(filter)).thenReturn(expected);
+
+    assertThat(service.facets(filter)).isSameAs(expected);
+    verify(readPort).facets(filter);
+  }
+}</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 2：运行测试确认编译失败</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-app:test --tests "*PortalPublicationSearchQueryServiceTest"</code></p>
+            <p>预期：编译错误 <code>cannot find symbol PortalPublicationSearchQueryService</code></p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 3：创建服务</strong>
+<pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-app/src/main/java/dev/linqibin/patra/catalog/app/usecase/portal/query/PortalPublicationSearchQueryService.java
+package dev.linqibin.patra.catalog.app.usecase.portal.query;
+
+import dev.linqibin.commons.query.PageResult;
+import dev.linqibin.commons.query.PagingParams;
+import dev.linqibin.patra.catalog.domain.model.read.portal.PortalPaperReadModel;
+import dev.linqibin.patra.catalog.domain.model.read.portal.PublicationSearchFacets;
+import dev.linqibin.patra.catalog.domain.model.read.portal.PublicationSearchFilter;
+import dev.linqibin.patra.catalog.domain.port.read.PublicationSearchReadPort;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/// Portal 文献检索 CQRS 查询服务。
+///
+/// 分页归一化与请求校验由 Adapter 层负责；本服务直接委托 [PublicationSearchReadPort]。
+///
+/// @author linqibin
+/// @since 0.1.0
+@Service
+@RequiredArgsConstructor
+public class PortalPublicationSearchQueryService {
+
+  private final PublicationSearchReadPort readPort;
+
+  /// 分页检索文献。
+  ///
+  /// @param filter 过滤 + 排序参数
+  /// @param paging 已归一化的分页参数
+  /// @return 分页结果
+  @Transactional(readOnly = true)
+  public PageResult&lt;PortalPaperReadModel&gt; search(PublicationSearchFilter filter, PagingParams paging) {
+    return readPort.search(filter, paging);
+  }
+
+  /// 计算各维度 facet 计数（drill-down 语义）。
+  ///
+  /// @param filter 过滤参数（忽略 sort）
+  /// @return facet 聚合结果
+  @Transactional(readOnly = true)
+  public PublicationSearchFacets facets(PublicationSearchFilter filter) {
+    return readPort.facets(filter);
+  }
+}</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 4：运行测试确认通过</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-app:test --tests "*PortalPublicationSearchQueryServiceTest"</code></p>
+            <p>预期：2 passed</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 5：Commit</strong>
+<pre><code class="lang-bash">git add patra-api/patra-catalog/patra-catalog-app
+git commit -m "feat(catalog): 文献检索查询服务 PortalPublicationSearchQueryService (PAP-52)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-11" data-status="done">
+        <header>
+          <h2>任务 11：app：feed 迁到新端口，删除 PortalFeed* 读端六类与其 IT</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>patra-api/patra-catalog/patra-catalog-app/src/main/java/dev/linqibin/patra/catalog/app/usecase/portal/query/PortalFeedQueryService.java</code><br><code>patra-api/patra-catalog/patra-catalog-app/src/test/java/dev/linqibin/patra/catalog/app/usecase/portal/query/PortalFeedQueryServiceTest.java</code></dd>
+            <dt>删除</dt><dd><code>patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/linqibin/patra/catalog/domain/model/read/portal/PortalFeedFilter.java</code><br><code>patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/linqibin/patra/catalog/domain/model/read/portal/PortalFeedTab.java</code><br><code>patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/linqibin/patra/catalog/domain/port/read/PortalFeedReadPort.java</code><br><code>patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/linqibin/patra/catalog/infra/adapter/read/PortalFeedReadAdapter.java</code><br><code>patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/linqibin/patra/catalog/infra/adapter/read/PortalFeedRow.java</code><br><code>patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/linqibin/patra/catalog/infra/persistence/dao/PortalFeedDao.java</code><br><code>patra-api/patra-catalog/patra-catalog-infra/src/integrationTest/java/dev/linqibin/patra/catalog/infra/adapter/read/PortalFeedReadAdapterIT.java</code></dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：改写 PortalFeedQueryServiceTest 为失败测试（mock 新端口）</strong>
+<pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-app/src/test/java/dev/linqibin/patra/catalog/app/usecase/portal/query/PortalFeedQueryServiceTest.java（整文件替换）
+package dev.linqibin.patra.catalog.app.usecase.portal.query;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import dev.linqibin.commons.query.PageResult;
+import dev.linqibin.commons.query.PagingParams;
+import dev.linqibin.patra.catalog.app.usecase.portal.query.dto.PortalFeedQuery;
+import dev.linqibin.patra.catalog.domain.model.read.portal.PublicationSearchFilter;
+import dev.linqibin.patra.catalog.domain.model.read.portal.PublicationSearchSort;
+import dev.linqibin.patra.catalog.domain.port.read.PublicationSearchReadPort;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+@ExtendWith(MockitoExtension.class)
+@DisplayName("PortalFeedQueryService 单元测试（feed = 无筛选的检索）")
+class PortalFeedQueryServiceTest {
+
+  @Mock private PublicationSearchReadPort readPort;
+  @InjectMocks private PortalFeedQueryService service;
+
+  @Test
+  @DisplayName("默认 pageSize=14，tab 缺省映射为 LATEST，filter 无任何筛选")
+  void shouldApplyDefaults() {
+    when(readPort.search(any(), any())).thenReturn(PageResult.empty(1, 14));
+
+    service.listFeed(PortalFeedQuery.of(null, null, null));
+
+    ArgumentCaptor&lt;PublicationSearchFilter&gt; filter = ArgumentCaptor.forClass(PublicationSearchFilter.class);
+    ArgumentCaptor&lt;PagingParams&gt; paging = ArgumentCaptor.forClass(PagingParams.class);
+    verify(readPort).search(filter.capture(), paging.capture());
+    assertThat(paging.getValue().page()).isEqualTo(1);
+    assertThat(paging.getValue().pageSize()).isEqualTo(14);
+    assertThat(filter.getValue().sort()).isEqualTo(PublicationSearchSort.LATEST);
+    assertThat(filter.getValue()).isEqualTo(PublicationSearchFilter.builder().build());
+  }
+
+  @Test
+  @DisplayName("tab=cited（大小写不敏感）映射为 CITED；pageSize 超过 50 截断为 50")
+  void shouldMapCitedAndCapPageSize() {
+    when(readPort.search(any(), any())).thenReturn(PageResult.empty(1, 50));
+
+    service.listFeed(PortalFeedQuery.of("Cited", 1, 999));
+
+    ArgumentCaptor&lt;PublicationSearchFilter&gt; filter = ArgumentCaptor.forClass(PublicationSearchFilter.class);
+    ArgumentCaptor&lt;PagingParams&gt; paging = ArgumentCaptor.forClass(PagingParams.class);
+    verify(readPort).search(filter.capture(), paging.capture());
+    assertThat(filter.getValue().sort()).isEqualTo(PublicationSearchSort.CITED);
+    assertThat(paging.getValue().pageSize()).isEqualTo(50);
+  }
+
+  @Test
+  @DisplayName("非法 tab 抛 IllegalArgumentException")
+  void shouldRejectInvalidTab() {
+    assertThatThrownBy(() -&gt; service.listFeed(PortalFeedQuery.of("hottest", 1, 14)))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+}</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 2：运行测试确认失败</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-app:test --tests "*PortalFeedQueryServiceTest"</code></p>
+            <p>预期：<code>@InjectMocks</code> 构造失败或断言失败（服务仍依赖 PortalFeedReadPort）</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 3：改写 PortalFeedQueryService</strong>
+<pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-app/src/main/java/dev/linqibin/patra/catalog/app/usecase/portal/query/PortalFeedQueryService.java（整文件替换）
+package dev.linqibin.patra.catalog.app.usecase.portal.query;
+
+import dev.linqibin.commons.query.PageResult;
+import dev.linqibin.commons.query.PagingParams;
+import dev.linqibin.patra.catalog.app.usecase.portal.query.dto.PortalFeedQuery;
+import dev.linqibin.patra.catalog.domain.model.read.portal.PortalPaperReadModel;
+import dev.linqibin.patra.catalog.domain.model.read.portal.PublicationSearchFilter;
+import dev.linqibin.patra.catalog.domain.model.read.portal.PublicationSearchSort;
+import dev.linqibin.patra.catalog.domain.port.read.PublicationSearchReadPort;
+import java.util.Locale;
+import java.util.Objects;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+/// Portal 首页文献流 CQRS 查询服务。
+///
+/// feed 是"无筛选、按 tab 排序"的文献检索特例：归一化分页、把 tab 映射为
+/// [PublicationSearchSort] 后委托 [PublicationSearchReadPort]。只读，无 `@Transactional`。
+///
+/// @author linqibin
+/// @since 0.1.0
+@Service
+@RequiredArgsConstructor
+public class PortalFeedQueryService {
+
+  /// Portal 文献流默认每页大小（首页一屏视觉密度）。
+  private static final int DEFAULT_PAGE_SIZE = 14;
+
+  /// Portal 文献流每页大小上限。
+  private static final int MAX_PAGE_SIZE = 50;
+
+  private final PublicationSearchReadPort readPort;
+
+  /// 查询 portal 文献流。
+  ///
+  /// @param query 未归一化的外部查询参数
+  /// @return 分页结果
+  /// @throws IllegalArgumentException 当 tab 非法时
+  public PageResult&lt;PortalPaperReadModel&gt; listFeed(PortalFeedQuery query) {
+    Objects.requireNonNull(query, "query must not be null");
+    PagingParams paging =
+        PagingParams.normalize(query.page(), query.pageSize(), DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+    PublicationSearchFilter filter =
+        PublicationSearchFilter.builder().sort(toSort(query.tab())).build();
+    return readPort.search(filter, paging);
+  }
+
+  /// feed tab → 排序：recent（默认）→ LATEST，cited → CITED，大小写不敏感。
+  ///
+  /// @param tab tab 字符串，可为 null
+  /// @return 排序枚举
+  /// @throws IllegalArgumentException 当 tab 不是 recent / cited 时
+  private static PublicationSearchSort toSort(String tab) {
+    if (tab == null) {
+      return PublicationSearchSort.LATEST;
+    }
+    return switch (tab.toLowerCase(Locale.ROOT)) {
+      case "recent" -&gt; PublicationSearchSort.LATEST;
+      case "cited" -&gt; PublicationSearchSort.CITED;
+      default -&gt; throw new IllegalArgumentException("Unsupported feed tab: " + tab);
+    };
+  }
+}</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 4：运行测试确认通过</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-app:test --tests "*PortalFeedQueryServiceTest"</code></p>
+            <p>预期：3 passed</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 5：删除旧读端七个文件</strong>
+<pre><code class="lang-bash">git rm patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/linqibin/patra/catalog/domain/model/read/portal/PortalFeedFilter.java \
+       patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/linqibin/patra/catalog/domain/model/read/portal/PortalFeedTab.java \
+       patra-api/patra-catalog/patra-catalog-domain/src/main/java/dev/linqibin/patra/catalog/domain/port/read/PortalFeedReadPort.java \
+       patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/linqibin/patra/catalog/infra/adapter/read/PortalFeedReadAdapter.java \
+       patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/linqibin/patra/catalog/infra/adapter/read/PortalFeedRow.java \
+       patra-api/patra-catalog/patra-catalog-infra/src/main/java/dev/linqibin/patra/catalog/infra/persistence/dao/PortalFeedDao.java \
+       patra-api/patra-catalog/patra-catalog-infra/src/integrationTest/java/dev/linqibin/patra/catalog/infra/adapter/read/PortalFeedReadAdapterIT.java</code></pre><p>然后全仓 grep 确认无残留引用：</p><pre><code class="lang-bash">grep -rn "PortalFeedFilter\|PortalFeedTab\|PortalFeedReadPort\|PortalFeedReadAdapter\|PortalFeedRow\|PortalFeedDao" patra-api/ --include=*.java --include=*.md --include=*.html | grep -v build/</code></pre><p>预期：无输出。若 README / spec 有提及，一并更新文案。</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 6：全模块编译 + 单测</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:check :patra-api:patra-catalog:patra-catalog-app:check :patra-api:patra-catalog:patra-catalog-infra:compileIntegrationTestJava :patra-api:patra-catalog:patra-catalog-adapter:compileIntegrationTestJava</code></p>
+            <p>预期：BUILD SUCCESSFUL</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 7：Commit</strong>
+<pre><code class="lang-bash">git add patra-api/patra-catalog
+git commit -m "refactor(catalog): 首页 feed 迁到文献检索读端口，删除 PortalFeed 读端 (PAP-52)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-12" data-status="done">
+        <header>
+          <h2>任务 12：adapter 响应：EvidenceLevelView / FacetCountResponse 顶层，PortalPaperResponse 三字段，converter</h2>
+          <dl class="files">
+            <dt>创建</dt><dd><code>patra-api/patra-catalog/patra-catalog-adapter/src/main/java/dev/linqibin/patra/catalog/adapter/rest/portal/response/EvidenceLevelView.java</code><br><code>patra-api/patra-catalog/patra-catalog-adapter/src/main/java/dev/linqibin/patra/catalog/adapter/rest/portal/response/FacetCountResponse.java</code><br><code>patra-api/patra-catalog/patra-catalog-adapter/src/main/java/dev/linqibin/patra/catalog/adapter/rest/portal/response/PortalPublicationFacetsResponse.java</code></dd>
+            <dt>修改</dt><dd><code>patra-api/patra-catalog/patra-catalog-adapter/src/main/java/dev/linqibin/patra/catalog/adapter/rest/portal/response/PortalPaperResponse.java</code><br><code>patra-api/patra-catalog/patra-catalog-adapter/src/main/java/dev/linqibin/patra/catalog/adapter/rest/portal/response/PortalPublicationDetailResponse.java</code><br><code>patra-api/patra-catalog/patra-catalog-adapter/src/main/java/dev/linqibin/patra/catalog/adapter/rest/portal/response/PortalVenueFacetsResponse.java</code><br><code>patra-api/patra-catalog/patra-catalog-adapter/src/main/java/dev/linqibin/patra/catalog/adapter/rest/portal/PortalApiConverter.java</code><br><code>patra-api/patra-catalog/patra-catalog-adapter/src/integrationTest/java/dev/linqibin/patra/catalog/adapter/rest/portal/PortalPublicationControllerIT.java</code></dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：在 PortalPublicationControllerIT.shouldReturnFeedEnvelope 追加失败断言（feed 也返回三字段）</strong>
+<p>在步骤 6 构造的 builder 上追加 <code>.venueId(8841L).evidenceLevel(EvidenceLevel.SYSTEMATIC_REVIEW).abstractSnippet("BACKGROUND: ...")</code>；在 <code>.jsonPath("$.items[0].minutesAgo").isNumber()</code> 之后追加：</p><pre><code class="lang-java">        .jsonPath("$.items[0].venueId")
+        .isEqualTo("8841")
+        .jsonPath("$.items[0].evidenceLevel.level")
+        .isEqualTo("SYSTEMATIC_REVIEW")
+        .jsonPath("$.items[0].evidenceLevel.rank")
+        .isEqualTo(5)
+        .jsonPath("$.items[0].evidenceLevel.derived")
+        .isEqualTo(true)
+        .jsonPath("$.items[0].abstractSnippet")
+        .isEqualTo("BACKGROUND: ...")</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 2：运行 IT 确认失败</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-adapter:integrationTest --tests "*PortalPublicationControllerIT"</code></p>
+            <p>预期：shouldReturnFeedEnvelope 失败：<code>$.items[0].venueId</code> 不存在</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 3：创建顶层 EvidenceLevelView 与 FacetCountResponse</strong>
+<pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-adapter/src/main/java/dev/linqibin/patra/catalog/adapter/rest/portal/response/EvidenceLevelView.java
+package dev.linqibin.patra.catalog.adapter.rest.portal.response;
+
+import dev.linqibin.patra.catalog.domain.model.vo.publication.EvidenceLevel;
+
+/// 证据等级视图，文献列表与详情共用。
+///
+/// @param level 等级名称（[EvidenceLevel] 枚举名）
+/// @param rank 等级权重
+/// @param label 中文展示标签
+/// @param derived 是否已成功衍生（非 UNKNOWN）
+/// @author linqibin
+/// @since 0.1.0
+public record EvidenceLevelView(String level, int rank, String label, boolean derived) {
+
+  /// 由领域枚举创建视图。
+  ///
+  /// @param level 证据等级
+  /// @return 视图
+  public static EvidenceLevelView of(EvidenceLevel level) {
+    return new EvidenceLevelView(level.name(), level.rank(), level.label(), level.isDerived());
+  }
+}
+
+// patra-api/patra-catalog/patra-catalog-adapter/src/main/java/dev/linqibin/patra/catalog/adapter/rest/portal/response/FacetCountResponse.java
+package dev.linqibin.patra.catalog.adapter.rest.portal.response;
+
+/// facet 单项响应 DTO，期刊与文献 facets 共用。
+///
+/// @param value 维度值
+/// @param count 该维度值下的命中数量
+/// @author linqibin
+/// @since 0.1.0
+public record FacetCountResponse(String value, long count) {
+
+  /// 创建 [FacetCountResponse] 实例。
+  ///
+  /// @param value 维度值
+  /// @param count 命中数量
+  /// @return 新建的 [FacetCountResponse]
+  public static FacetCountResponse of(String value, long count) {
+    return new FacetCountResponse(value, count);
+  }
+}</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 4：PortalPaperResponse 追加三字段</strong>
+<p>record 组件在 <code>Integer minutesAgo</code> 之后追加，JavaDoc 同步加三行 <code>@param</code>：</p><pre><code class="lang-java">    Integer minutesAgo,
+    String venueId,
+    EvidenceLevelView evidenceLevel,
+    String abstractSnippet) {</code></pre><p>JavaDoc 追加：<code>/// @param venueId 载体主键（String，可空）</code>、<code>/// @param evidenceLevel 证据等级视图（与详情端点同形）</code>、<code>/// @param abstractSnippet 摘要可见纯文本前 300 码点（可空）</code>。</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 5：PortalPublicationDetailResponse 删内嵌 EvidenceLevelView；PortalVenueFacetsResponse 删内嵌 FacetCountResponse</strong>
+<p>两处都是整块删除内嵌 record（含 JavDoc）；字段类型名不变、同包无需 import。</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 6：创建 PortalPublicationFacetsResponse</strong>
+<pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-adapter/src/main/java/dev/linqibin/patra/catalog/adapter/rest/portal/response/PortalPublicationFacetsResponse.java
+package dev.linqibin.patra.catalog.adapter.rest.portal.response;
+
+import java.time.Instant;
+import java.util.List;
+import lombok.Builder;
+
+/// Portal 文献 facets 响应 DTO，镜像领域读模型
+/// [dev.linqibin.patra.catalog.domain.model.read.portal.PublicationSearchFacets]，字段名对齐前端零映射。
+///
+/// @param years 年份 facet，年份降序
+/// @param types 文献类型 facet，计数降序
+/// @param evidence 证据等级 facet，固定 6 项（rank 降序，UNKNOWN 末尾）
+/// @param languages 语言基码 facet，计数降序
+/// @param openAccess 忽略 oa 自身筛选、保留其他条件下的 OA 篇数
+/// @param total 满足当前全部筛选的篇数
+/// @param lastSyncedAt 全库最后采集时间，空库为 null
+/// @author linqibin
+/// @since 0.1.0
+@Builder
+public record PortalPublicationFacetsResponse(
+    List&lt;FacetCountResponse&gt; years,
+    List&lt;FacetCountResponse&gt; types,
+    List&lt;FacetCountResponse&gt; evidence,
+    List&lt;FacetCountResponse&gt; languages,
+    long openAccess,
+    long total,
+    Instant lastSyncedAt) {
+
+  /// 紧凑构造器：各 List 为 null 时替换为空不可变列表。
+  public PortalPublicationFacetsResponse {
+    years = years != null ? List.copyOf(years) : List.of();
+    types = types != null ? List.copyOf(types) : List.of();
+    evidence = evidence != null ? List.copyOf(evidence) : List.of();
+    languages = languages != null ? List.copyOf(languages) : List.of();
+  }
+}</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 7：PortalApiConverter 改三处</strong>
+<p>① <code>toResponse</code> 末尾三个新参数；② 详情的 <code>evidenceLevel</code> 改用 <code>EvidenceLevelView.of</code>；③ <code>toFacetCountResponses</code> 返回顶层类型并新增 <code>toPublicationFacetsResponse</code>：</p><pre><code class="lang-java">  // ① toResponse：最后一个实参 toMinutesAgo(model.lastSyncedAt()) 之后追加
+        toMinutesAgo(model.lastSyncedAt()),
+        model.venueId() != null ? Long.toString(model.venueId()) : null,
+        EvidenceLevelView.of(model.evidenceLevel()),
+        model.abstractSnippet());
+
+  // ② toPublicationDetailResponse：替换 .evidenceLevel(...) 整段为
+        .evidenceLevel(EvidenceLevelView.of(model.evidenceLevel()))
+
+  // ③ 替换 toFacetCountResponses，并新增 toPublicationFacetsResponse
+  private List&lt;FacetCountResponse&gt; toFacetCountResponses(List&lt;FacetCount&gt; facets) {
+    return facets.stream().map(f -&gt; FacetCountResponse.of(f.value(), f.count())).toList();
+  }
+
+  /// 将文献 facets 读模型转为响应 DTO。
+  ///
+  /// @param model facets 读模型
+  /// @return 响应 DTO
+  public PortalPublicationFacetsResponse toPublicationFacetsResponse(PublicationSearchFacets model) {
+    return PortalPublicationFacetsResponse.builder()
+        .years(toFacetCountResponses(model.years()))
+        .types(toFacetCountResponses(model.types()))
+        .evidence(toFacetCountResponses(model.evidence()))
+        .languages(toFacetCountResponses(model.languages()))
+        .openAccess(model.openAccess())
+        .total(model.total())
+        .lastSyncedAt(model.lastSyncedAt())
+        .build();
+  }</code></pre><p>import 区追加：<code>EvidenceLevelView</code>、<code>FacetCountResponse</code>、<code>PortalPublicationFacetsResponse</code>（同 response 包）、<code>PublicationSearchFacets</code>；<code>toVenueFacetsResponse</code> 因 <code>FacetCountResponse</code> 顶层化无需改动。</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 8：运行 adapter 单测 + 两个控制器 IT</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-adapter:test :patra-api:patra-catalog:patra-catalog-adapter:integrationTest --tests "*PortalPublicationControllerIT" --tests "*PortalVenueControllerIT"</code></p>
+            <p>预期：全部 passed；期刊 facets JSON 形状不变</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 9：Commit</strong>
+<pre><code class="lang-bash">git add patra-api/patra-catalog/patra-catalog-adapter
+git commit -m "feat(catalog): 文献列表响应加 venueId/evidenceLevel/abstractSnippet，证据视图与 facet 项响应顶层化 (PAP-52)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-13" data-status="done">
+        <header>
+          <h2>任务 13：adapter 请求：PortalPublicationSearchRequest 校验 + RepeatedParamListEditor</h2>
+          <dl class="files">
+            <dt>创建</dt><dd><code>patra-api/patra-catalog/patra-catalog-adapter/src/main/java/dev/linqibin/patra/catalog/adapter/rest/portal/request/PortalPublicationSearchRequest.java</code><br><code>patra-api/patra-catalog/patra-catalog-adapter/src/main/java/dev/linqibin/patra/catalog/adapter/rest/portal/request/RepeatedParamListEditor.java</code><br><code>patra-api/patra-catalog/patra-catalog-adapter/src/test/java/dev/linqibin/patra/catalog/adapter/rest/portal/request/PortalPublicationSearchRequestTest.java</code><br><code>patra-api/patra-catalog/patra-catalog-adapter/src/test/java/dev/linqibin/patra/catalog/adapter/rest/portal/request/RepeatedParamListEditorTest.java</code></dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：写失败测试 RepeatedParamListEditorTest</strong>
+<pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-adapter/src/test/java/dev/linqibin/patra/catalog/adapter/rest/portal/request/RepeatedParamListEditorTest.java
+package dev.linqibin.patra.catalog.adapter.rest.portal.request;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.List;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+@DisplayName("RepeatedParamListEditor：重复参数不拆逗号")
+class RepeatedParamListEditorTest {
+
+  @Test
+  @DisplayName("setAsText：单个含逗号的值 → 单元素列表")
+  void singleValueKeepsComma() {
+    RepeatedParamListEditor editor = new RepeatedParamListEditor();
+    editor.setAsText("Clinical Trial, Phase III");
+    assertThat(editor.getValue()).isEqualTo(List.of("Clinical Trial, Phase III"));
+  }
+
+  @Test
+  @DisplayName("setValue(String[])：重复参数 → 逐元素列表，元素内逗号保留")
+  void arrayBecomesList() {
+    RepeatedParamListEditor editor = new RepeatedParamListEditor();
+    editor.setValue(new String[] {"Review", "Clinical Trial, Phase III"});
+    assertThat(editor.getValue()).isEqualTo(List.of("Review", "Clinical Trial, Phase III"));
+  }
+
+  @Test
+  @DisplayName("setValue(非字符串) 原样透传；setAsText(null / 空白) → 空列表；数组里的空白元素被丢弃")
+  void passThroughAndBlank() {
+    RepeatedParamListEditor editor = new RepeatedParamListEditor();
+    List&lt;Long&gt; already = List.of(1L, 2L);
+    editor.setValue(already);
+    assertThat(editor.getValue()).isSameAs(already);
+    editor.setAsText(null);
+    assertThat(editor.getValue()).isEqualTo(List.of());
+    editor.setAsText("   ");
+    assertThat(editor.getValue()).isEqualTo(List.of());
+    editor.setValue(new String[] {"1", "", "  "});
+    assertThat(editor.getValue()).isEqualTo(List.of("1"));
+  }
+}</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 2：运行测试确认编译失败</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-adapter:test --tests "*RepeatedParamListEditorTest"</code></p>
+            <p>预期：编译错误 <code>cannot find symbol RepeatedParamListEditor</code></p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 3：创建编辑器</strong>
+<pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-adapter/src/main/java/dev/linqibin/patra/catalog/adapter/rest/portal/request/RepeatedParamListEditor.java
+package dev.linqibin.patra.catalog.adapter.rest.portal.request;
+
+import java.beans.PropertyEditorSupport;
+import java.util.Arrays;
+import java.util.List;
+
+/// 把 query 重复参数绑定为 `List`，且**不按逗号拆分**单个值的 PropertyEditor。
+///
+/// 真实文献类型值含逗号（`Clinical Trial, Phase III`），Spring 默认的 `String→List` 转换会把它切成两个值。
+/// 必须同时覆写两个入口：Spring 的 `TypeConverterDelegate` 在走 [#setAsText] 之前会先把 `String[]`
+/// 用逗号 join 成一个 String，只覆写 `setAsText` 会让重复参数合并成 `"A,B"` 一个元素；
+/// 覆写 [#setValue] 在 join 之前拦住 `String[]`。元素级类型转换（如 `List&lt;Long&gt;`）由后续
+/// ConversionService 完成。
+///
+/// @author linqibin
+/// @since 0.1.0
+public class RepeatedParamListEditor extends PropertyEditorSupport {
+
+  /// 单个参数值 → 单元素列表；null / 空白（如 `?venue=`）→ 空列表。不拆逗号。
+  ///
+  /// 空白必须在这里丢掉：空串交给后续 `String→Long` 转换会变成 null 元素，record 的 `List.copyOf` 随即 NPE → 500。
+  ///
+  /// @param text 单个参数值
+  @Override
+  public void setAsText(String text) {
+    super.setValue(text == null || text.isBlank() ? List.of() : List.of(text));
+  }
+
+  /// `String[]`（重复参数）→ 逐元素列表，丢弃空白元素（`venue=1&amp;venue=`）；单个 `String` 同 [#setAsText]；其他类型原样透传。
+  ///
+  /// @param value 绑定源值
+  @Override
+  public void setValue(Object value) {
+    if (value instanceof String[] values) {
+      super.setValue(Arrays.stream(values).filter(v -&gt; v != null &amp;&amp; !v.isBlank()).toList());
+    } else if (value instanceof String single) {
+      setAsText(single);
+    } else {
+      super.setValue(value);
+    }
+  }
+}</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 4：运行测试确认通过</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-adapter:test --tests "*RepeatedParamListEditorTest"</code></p>
+            <p>预期：3 passed</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 5：写失败测试 PortalPublicationSearchRequestTest（归一化 + 年份区间）</strong>
+<pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-adapter/src/test/java/dev/linqibin/patra/catalog/adapter/rest/portal/request/PortalPublicationSearchRequestTest.java
+package dev.linqibin.patra.catalog.adapter.rest.portal.request;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.Arrays;
+import java.util.List;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+/// [PortalPublicationSearchRequest] 紧凑构造器归一化与年份区间自检；注解校验在控制器 IT 里以 422 验证。
+@DisplayName("PortalPublicationSearchRequest 归一化")
+class PortalPublicationSearchRequestTest {
+
+  private static PortalPublicationSearchRequest of(
+      List&lt;Long&gt; venue, List&lt;String&gt; type, List&lt;String&gt; evidence, List&lt;String&gt; lang, Integer from, Integer to) {
+    return new PortalPublicationSearchRequest(
+        null, null, null, null, from, to, venue, type, evidence, null, lang, null, null, null);
+  }
+
+  @Test
+  @DisplayName("列表 trim + 去空 token；null 列表 → 空不可变列表；值内逗号保留；venue 里的 null 元素被丢弃")
+  void normalizesLists() {
+    var req = of(Arrays.asList(1L, null), Arrays.asList(" Clinical Trial, Phase III ", "", "  ", "Review"), null, null, null, null);
+    assertThat(req.type()).containsExactly("Clinical Trial, Phase III", "Review");
+    assertThat(req.venue()).containsExactly(1L);
+    assertThat(req.evidence()).isEmpty();
+    assertThat(req.lang()).isEmpty();
+  }
+
+  @Test
+  @DisplayName("yearFrom ≤ yearTo 或任一为 null 时区间合法，否则非法")
+  void yearRangeValidity() {
+    assertThat(of(null, null, null, null, 2020, 2026).isYearRangeValid()).isTrue();
+    assertThat(of(null, null, null, null, null, 2026).isYearRangeValid()).isTrue();
+    assertThat(of(null, null, null, null, 2020, null).isYearRangeValid()).isTrue();
+    assertThat(of(null, null, null, null, 2026, 2020).isYearRangeValid()).isFalse();
+  }
+}</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 6：运行测试确认编译失败</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-adapter:test --tests "*PortalPublicationSearchRequestTest"</code></p>
+            <p>预期：编译错误 <code>cannot find symbol PortalPublicationSearchRequest</code></p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 7：创建请求 record</strong>
+<pre><code class="lang-java">// patra-api/patra-catalog/patra-catalog-adapter/src/main/java/dev/linqibin/patra/catalog/adapter/rest/portal/request/PortalPublicationSearchRequest.java
+package dev.linqibin.patra.catalog.adapter.rest.portal.request;
+
+import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
+import java.util.List;
+import java.util.Objects;
+
+/// Portal 文献检索 / facets 请求（两个端点共用；facets 忽略 sort / page / pageSize）。
+///
+/// 适配器入口校验：非法参数在此收敛为 422。多值参数用**重复参数**（`type=A&amp;type=B`），由
+/// [RepeatedParamListEditor] 绑定，不按逗号拆分——类型值本身含逗号。
+///
+/// @param q 标题子串关键词，≤200 字，空白视为不传
+/// @param author 作者展示名子串，≤200 字，空白视为不传
+/// @param pmid PubMed ID，纯数字 1–15 位
+/// @param doi DOI，≤200 字，可带 URL / doi: 前缀
+/// @param yearFrom 出版年份下限（1000–9999）
+/// @param yearTo 出版年份上限（1000–9999），须 ≥ yearFrom
+/// @param venue 期刊 ID 列表，元素为正整数
+/// @param type 文献类型完整值列表
+/// @param evidence 证据等级名称列表（EvidenceLevel 枚举名，大小写不敏感）
+/// @param oa 是否开放获取
+/// @param lang 语言基码列表
+/// @param sort 排序码：latest / year（大小写不敏感），缺省 latest
+/// @param page 页码（≥1），缺省 1
+/// @param pageSize 每页大小（1..50），缺省 20
+/// @author linqibin
+/// @since 0.1.0
+public record PortalPublicationSearchRequest(
+    @Size(max = 200, message = "q 最长 200 字") String q,
+    @Size(max = 200, message = "author 最长 200 字") String author,
+    @Pattern(regexp = "\\d{1,15}", message = "pmid 须为 1–15 位数字") String pmid,
+    @Size(max = 200, message = "doi 最长 200 字") String doi,
+    @Min(value = 1000, message = "yearFrom 最小为 1000") @Max(value = 9999, message = "yearFrom 最大为 9999")
+        Integer yearFrom,
+    @Min(value = 1000, message = "yearTo 最小为 1000") @Max(value = 9999, message = "yearTo 最大为 9999")
+        Integer yearTo,
+    List&lt;@Positive(message = "venue 须为正整数") Long&gt; venue,
+    List&lt;String&gt; type,
+    List&lt;
+            @Pattern(
+                regexp =
+                    "(?i)SYSTEMATIC_REVIEW|RANDOMIZED_CONTROLLED_TRIAL|COHORT_OR_CASE_CONTROL"
+                        + "|NON_SYSTEMATIC_REVIEW|CASE_REPORT|UNKNOWN",
+                message = "evidence 须为证据等级名称")
+            String&gt;
+        evidence,
+    Boolean oa,
+    List&lt;String&gt; lang,
+    @Pattern(regexp = "(?i)latest|year", message = "sort 仅支持 latest 或 year") String sort,
+    @Min(value = 1, message = "page 最小为 1") Integer page,
+    @Min(value = 1, message = "pageSize 最小为 1") @Max(value = 50, message = "pageSize 最大为 50")
+        Integer pageSize) {
+
+  /// 紧凑构造器：各 List 归一化（trim + 去空白 token；venue 丢弃 null 元素）后防御性拷贝为不可变列表。
+  public PortalPublicationSearchRequest {
+    venue = venue == null ? List.of() : venue.stream().filter(Objects::nonNull).toList();
+    type = normalize(type);
+    evidence = normalize(evidence);
+    lang = normalize(lang);
+  }
+
+  /// 年份区间自检：任一为 null 即通过，否则要求 yearFrom ≤ yearTo。
+  ///
+  /// @return 区间是否合法
+  @AssertTrue(message = "yearFrom 不能大于 yearTo")
+  public boolean isYearRangeValid() {
+    return yearFrom == null || yearTo == null || yearFrom &lt;= yearTo;
+  }
+
+  /// 归一化字符串列表：trim 每个元素并过滤空白 token；null 时返回空不可变列表。
+  ///
+  /// @param raw 原始列表，可空
+  /// @return 归一化后的不可变列表
+  private static List&lt;String&gt; normalize(List&lt;String&gt; raw) {
+    if (raw == null) {
+      return List.of();
+    }
+    return raw.stream().map(String::trim).filter(s -&gt; !s.isEmpty()).toList();
+  }
+}</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 8：运行测试确认通过</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-adapter:test --tests "*PortalPublicationSearchRequestTest" --tests "*RepeatedParamListEditorTest"</code></p>
+            <p>预期：5 passed</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 9：Commit</strong>
+<pre><code class="lang-bash">git add patra-api/patra-catalog/patra-catalog-adapter
+git commit -m "feat(catalog): 文献检索请求校验与重复参数 List 编辑器 (PAP-52)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-14" data-status="done">
+        <header>
+          <h2>任务 14：adapter 端点：search / facets + @InitBinder + 控制器 IT</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>patra-api/patra-catalog/patra-catalog-adapter/src/main/java/dev/linqibin/patra/catalog/adapter/rest/portal/PortalPublicationController.java</code><br><code>patra-api/patra-catalog/patra-catalog-adapter/src/integrationTest/java/dev/linqibin/patra/catalog/adapter/rest/portal/PortalPublicationControllerIT.java</code></dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：追加失败 IT——search 信封 + toFilter 映射（含单个含逗号 type 与重复参数）</strong>
+<p>IT 类追加 <code>@MockitoBean private PortalPublicationSearchQueryService portalPublicationSearchQueryService;</code>，static import 追加 <code>org.mockito.Mockito.times</code>，import 区追加 <code>PortalPublicationSearchQueryService</code>、<code>PublicationSearchFacets</code>、<code>PublicationSearchFilter</code>、<code>PublicationSearchSort</code>、<code>FacetCount</code>、<code>PagingParams</code>。追加用例：</p><pre><code class="lang-java">  @Test
+  @DisplayName("GET /portal/publications/search 返回分页信封，query 映射为 filter，重复参数不拆逗号")
+  void shouldSearchAndMapFilter() {
+    PortalPaperReadModel model =
+        PortalPaperReadModel.builder()
+            .id(7L).title("t").venueId(8841L).evidenceLevel(EvidenceLevel.CASE_REPORT)
+            .provenanceCode("PUBMED").abstractSnippet("snip").build();
+    when(portalPublicationSearchQueryService.search(any(), any()))
+        .thenReturn(PageResult.of(List.of(model), 2, 10, 11));
+
+    // 用 uriBuilder 传未编码值：`.uri(String)` 会把已编码的 %20 二次编码成 %2520
+    restClient
+        .get()
+        .uri(
+            b -&gt;
+                b.path("/portal/publications/search")
+                    .queryParam("q", " GLP-1 ")
+                    .queryParam("author", "Tuttle")
+                    .queryParam("pmid", "39812044")
+                    .queryParam("doi", "https://doi.org/10.1056/X")
+                    .queryParam("yearFrom", 2020)
+                    .queryParam("yearTo", 2026)
+                    .queryParam("venue", 8841, 1284)
+                    .queryParam("type", "Clinical Trial, Phase III")
+                    .queryParam("evidence", "case_report", "UNKNOWN")
+                    .queryParam("oa", true)
+                    .queryParam("lang", "en", "zh")
+                    .queryParam("sort", "year")
+                    .queryParam("page", 2)
+                    .queryParam("pageSize", 10)
+                    .build())
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .jsonPath("$.page").isEqualTo(2)
+        .jsonPath("$.total").isEqualTo(11)
+        .jsonPath("$.items[0].id").isEqualTo("7")
+        .jsonPath("$.items[0].venueId").isEqualTo("8841")
+        .jsonPath("$.items[0].evidenceLevel.level").isEqualTo("CASE_REPORT")
+        .jsonPath("$.items[0].abstractSnippet").isEqualTo("snip");
+
+    ArgumentCaptor&lt;PublicationSearchFilter&gt; filter = ArgumentCaptor.forClass(PublicationSearchFilter.class);
+    ArgumentCaptor&lt;PagingParams&gt; paging = ArgumentCaptor.forClass(PagingParams.class);
+    verify(portalPublicationSearchQueryService).search(filter.capture(), paging.capture());
+    PublicationSearchFilter f = filter.getValue();
+    assertThat(f.keyword()).isEqualTo("GLP-1");
+    assertThat(f.author()).isEqualTo("Tuttle");
+    assertThat(f.pmid()).isEqualTo("39812044");
+    assertThat(f.doi()).isEqualTo("https://doi.org/10.1056/X");
+    assertThat(f.yearFrom()).isEqualTo(2020);
+    assertThat(f.yearTo()).isEqualTo(2026);
+    assertThat(f.venueIds()).containsExactly(8841L, 1284L);
+    assertThat(f.types()).containsExactly("Clinical Trial, Phase III");
+    assertThat(f.evidenceLevels()).containsExactly(EvidenceLevel.CASE_REPORT, EvidenceLevel.UNKNOWN);
+    assertThat(f.isOpenAccess()).isTrue();
+    assertThat(f.languages()).containsExactly("en", "zh");
+    assertThat(f.sort()).isEqualTo(PublicationSearchSort.YEAR);
+    assertThat(paging.getValue().page()).isEqualTo(2);
+    assertThat(paging.getValue().pageSize()).isEqualTo(10);
+  }
+
+  @Test
+  @DisplayName("search 无参数：默认 page=1 / pageSize=20 / LATEST，filter 无筛选")
+  void shouldSearchWithDefaults() {
+    when(portalPublicationSearchQueryService.search(any(), any())).thenReturn(PageResult.empty(1, 20));
+
+    restClient.get().uri("/portal/publications/search").exchange().expectStatus().isOk();
+
+    ArgumentCaptor&lt;PublicationSearchFilter&gt; filter = ArgumentCaptor.forClass(PublicationSearchFilter.class);
+    ArgumentCaptor&lt;PagingParams&gt; paging = ArgumentCaptor.forClass(PagingParams.class);
+    verify(portalPublicationSearchQueryService).search(filter.capture(), paging.capture());
+    assertThat(filter.getValue()).isEqualTo(PublicationSearchFilter.builder().build());
+    assertThat(paging.getValue()).isEqualTo(PagingParams.of(1, 20));
+  }</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 2：运行 IT 确认失败</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-adapter:integrationTest --tests "*PortalPublicationControllerIT"</code></p>
+            <p>预期：两个新用例 404（路由不存在）</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 3：控制器加端点、@InitBinder、toFilter</strong>
+<pre><code class="lang-java">// PortalPublicationController.java：import 区追加
+//   PortalPublicationSearchRequest、PortalPublicationFacetsResponse、RepeatedParamListEditor、
+//   PortalPublicationSearchQueryService、PublicationSearchFilter、PublicationSearchSort、EvidenceLevel、
+//   dev.linqibin.commons.query.PagingParams、java.util.List、java.util.Locale、
+//   org.springframework.web.bind.WebDataBinder、org.springframework.web.bind.annotation.InitBinder
+// 字段追加 private final PortalPublicationSearchQueryService portalPublicationSearchQueryService;
+// 常量与方法追加：
+
+  /// 检索端点默认每页大小。
+  private static final int SEARCH_DEFAULT_PAGE_SIZE = 20;
+
+  /// 检索端点每页大小上限。
+  private static final int SEARCH_MAX_PAGE_SIZE = 50;
+
+  /// 本控制器的 `List` 参数全部按重复参数绑定、不拆逗号（类型值含逗号，见 [RepeatedParamListEditor]）。
+  ///
+  /// @param binder 当前请求的数据绑定器
+  @InitBinder
+  void registerRepeatedParamLists(WebDataBinder binder) {
+    binder.registerCustomEditor(List.class, new RepeatedParamListEditor());
+  }
+
+  /// 检索文献（关键词 / 作者 / PMID / DOI / 六类筛选 / 两种排序 / 分页）。
+  ///
+  /// @param req 检索请求（Spring MVC 自动绑定 query params）
+  /// @return 分页文献列表（与 feed 同形）
+  @GetMapping("/search")
+  public PageResult&lt;PortalPaperResponse&gt; search(@Valid PortalPublicationSearchRequest req) {
+    PagingParams paging =
+        PagingParams.normalize(req.page(), req.pageSize(), SEARCH_DEFAULT_PAGE_SIZE, SEARCH_MAX_PAGE_SIZE);
+    return portalPublicationSearchQueryService
+        .search(toFilter(req), paging)
+        .map(portalApiConverter::toResponse);
+  }
+
+  /// 检索 facets 计数（忽略 sort / page / pageSize）。
+  ///
+  /// @param req 检索请求
+  /// @return facets 聚合结果
+  @GetMapping("/search/facets")
+  public PortalPublicationFacetsResponse facets(@Valid PortalPublicationSearchRequest req) {
+    return portalApiConverter.toPublicationFacetsResponse(
+        portalPublicationSearchQueryService.facets(toFilter(req)));
+  }
+
+  /// 请求 DTO → 领域过滤参数。LIKE 转义与 DOI 归一化在读适配器做。
+  ///
+  /// @param req 请求 DTO
+  /// @return 领域过滤参数
+  private PublicationSearchFilter toFilter(PortalPublicationSearchRequest req) {
+    return PublicationSearchFilter.builder()
+        .keyword(blankToNull(req.q()))
+        .author(blankToNull(req.author()))
+        .pmid(blankToNull(req.pmid()))
+        .doi(blankToNull(req.doi()))
+        .yearFrom(req.yearFrom())
+        .yearTo(req.yearTo())
+        .venueIds(req.venue())
+        .types(req.type())
+        .evidenceLevels(
+            req.evidence().stream().map(e -&gt; EvidenceLevel.valueOf(e.toUpperCase(Locale.ROOT))).toList())
+        .isOpenAccess(req.oa())
+        .languages(req.lang())
+        .sort(PublicationSearchSort.fromCode(req.sort()))
+        .build();
+  }
+
+  private static String blankToNull(String value) {
+    return value == null || value.isBlank() ? null : value.trim();
+  }</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 4：运行 IT 确认通过</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-adapter:integrationTest --tests "*PortalPublicationControllerIT"</code></p>
+            <p>预期：全部 passed。<strong>若 <code>f.types()</code> 断言得到两个元素</strong>（"Clinical Trial" / "Phase III"），说明 record 构造绑定未消费 <code>@InitBinder</code> 编辑器：改为在两个端点方法上加 <code>@RequestParam MultiValueMap&lt;String, String&gt; params</code>，用 <code>params.get("venue")</code> 等四个列表手工构造 <code>PortalPublicationSearchRequest</code> 后 <code>validator.validate</code>，并在右栏 notes 记 change。</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 5：追加失败 IT——facets 响应与 422 校验</strong>
+<pre><code class="lang-java">  @Test
+  @DisplayName("GET /portal/publications/search/facets 返回 6 项 evidence 与标量")
+  void shouldReturnFacets() {
+    PublicationSearchFacets facets =
+        PublicationSearchFacets.builder()
+            .years(List.of(FacetCount.of("2026", 17520)))
+            .types(List.of(FacetCount.of("Journal Article", 17680)))
+            .evidence(List.of(FacetCount.of("SYSTEMATIC_REVIEW", 346), FacetCount.of("UNKNOWN", 15500)))
+            .languages(List.of(FacetCount.of("en", 18488)))
+            .openAccess(0)
+            .total(18807)
+            .lastSyncedAt(Instant.parse("2026-08-30T04:06:00Z"))
+            .build();
+    when(portalPublicationSearchQueryService.facets(any())).thenReturn(facets);
+
+    restClient
+        .get()
+        .uri("/portal/publications/search/facets?yearFrom=2025&amp;sort=year&amp;page=3")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .jsonPath("$.years[0].value").isEqualTo("2026")
+        .jsonPath("$.years[0].count").isEqualTo(17520)
+        .jsonPath("$.evidence[1].value").isEqualTo("UNKNOWN")
+        .jsonPath("$.openAccess").isEqualTo(0)
+        .jsonPath("$.total").isEqualTo(18807)
+        .jsonPath("$.lastSyncedAt").isEqualTo("2026-08-30T04:06:00Z");
+
+    ArgumentCaptor&lt;PublicationSearchFilter&gt; filter = ArgumentCaptor.forClass(PublicationSearchFilter.class);
+    verify(portalPublicationSearchQueryService).facets(filter.capture());
+    assertThat(filter.getValue().yearFrom()).isEqualTo(2025);
+  }
+
+  @Test
+  @DisplayName("非法参数在适配器校验层收敛为 422，不触达应用层")
+  void shouldRejectInvalidSearchParams() {
+    for (String query :
+        List.of(
+            "pageSize=51",
+            "yearFrom=2026&amp;yearTo=2020",
+            "sort=cited",
+            "evidence=LEVEL_9",
+            "pmid=abc",
+            "venue=0",
+            "q=" + "x".repeat(201))) {
+      restClient
+          .get()
+          .uri("/portal/publications/search?" + query)
+          .exchange()
+          .expectStatus()
+          .isEqualTo(422);
+    }
+    verifyNoInteractions(portalPublicationSearchQueryService);
+  }
+
+  @Test
+  @DisplayName("空的重复参数被忽略：?venue= 与 venue=1&amp;venue= 都是 200，不是 500")
+  void shouldIgnoreBlankRepeatedParams() {
+    when(portalPublicationSearchQueryService.search(any(), any())).thenReturn(PageResult.empty(1, 20));
+
+    restClient.get().uri("/portal/publications/search?venue=&amp;type=").exchange().expectStatus().isOk();
+    restClient.get().uri("/portal/publications/search?venue=1&amp;venue=").exchange().expectStatus().isOk();
+
+    ArgumentCaptor&lt;PublicationSearchFilter&gt; filter = ArgumentCaptor.forClass(PublicationSearchFilter.class);
+    verify(portalPublicationSearchQueryService, times(2)).search(filter.capture(), any());
+    assertThat(filter.getAllValues().get(0).venueIds()).isEmpty();
+    assertThat(filter.getAllValues().get(0).types()).isEmpty();
+    assertThat(filter.getAllValues().get(1).venueIds()).containsExactly(1L);
+  }
+
+  @Test
+  @DisplayName("/search 与 /{id} 路由不冲突：search 是字面路径优先")
+  void searchPathWinsOverIdPattern() {
+    when(portalPublicationSearchQueryService.search(any(), any())).thenReturn(PageResult.empty(1, 20));
+    restClient.get().uri("/portal/publications/search").exchange().expectStatus().isOk();
+    verifyNoInteractions(portalPublicationDetailQueryService);
+  }</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 6：运行 IT 确认通过（端点已在步骤 3 就位，本步验证契约与校验）</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-adapter:integrationTest --tests "*PortalPublicationControllerIT"</code></p>
+            <p>预期：全部 passed</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 7：Commit</strong>
+<pre><code class="lang-bash">git add patra-api/patra-catalog/patra-catalog-adapter
+git commit -m "feat(catalog): 文献检索端点 GET /portal/publications/search 与 /search/facets (PAP-52)"</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-15" data-status="done">
+        <header>
+          <h2>任务 15：全量验证、spec 收尾、PR</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>docs/patra/specs/2026-09-24-pap-52-publication-search-endpoint-design.html</code><br><code>docs/patra/plans/2026-09-25-pap-52-publication-search-endpoint.html</code></dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：catalog 四模块 check + infra / adapter integrationTest</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-domain:check :patra-api:patra-catalog:patra-catalog-app:check :patra-api:patra-catalog:patra-catalog-infra:check :patra-api:patra-catalog:patra-catalog-infra:integrationTest :patra-api:patra-catalog:patra-catalog-adapter:check :patra-api:patra-catalog:patra-catalog-adapter:integrationTest</code></p>
+            <p>预期：BUILD SUCCESSFUL；spotless / spotbugs / 单测 / IT 全绿</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 2：boot 模块 ArchUnit 架构测试（六边形分层约束）</strong>
+            <p>运行：<code>./gradlew :patra-api:patra-catalog:patra-catalog-boot:test</code></p>
+            <p>预期：BUILD SUCCESSFUL。它不启动 Spring 上下文；DAO 17 个 <code>@Param</code> 与 SQL 的一致性由 infra <code>@DataJpaTest</code> 在仓库 bean 初始化时校验，任务 7–9 的 IT 已覆盖（报 <code>Using named parameters for method ... not found in annotated query</code> 即在那里失败）</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 3：Mac mini 真实数据冒烟（网关经 tailscale）</strong>
+<pre><code class="lang-bash">BASE=http://100.103.73.27:9528/patra-catalog/portal/publications
+curl -s "$BASE/search?q=diabetes&amp;pageSize=2" | jq '{total, first: .items[0] | {title, venueId, evidenceLevel, abstractSnippet}}'
+curl -s "$BASE/search?type=Clinical%20Trial,%20Phase%20III" | jq '.total'
+curl -s "$BASE/search/facets" | jq '{total, lastSyncedAt, evidence, years: .years[:3]}'
+curl -s "$BASE?tab=recent&amp;pageSize=1" | jq '.items[0] | {venueId, evidenceLevel, abstractSnippet}'
+curl -s -o /dev/null -w "%{http_code}\n" "$BASE/search?sort=cited"</code></pre><p>预期：第一条 total &gt; 0 且三个新字段有值；第二条 total = 3（库里 Phase III 共 3 行）；facets 的 evidence 6 项、lastSyncedAt 为 2026-08-30 附近；feed 首条有三个新字段；最后一条输出 <code>422</code>。这一步要先把分支部署到 mini 或本地起 catalog 指向 mini 库，未部署则跳过并在 notes 记 other。</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 4：spec 收尾</strong>
+<p><code>docs/patra/specs/2026-09-24-pap-52-publication-search-endpoint-design.html</code>：① <code>&lt;span class="status-pill"&gt;draft&lt;/span&gt;</code> 改 <code>implemented</code>；② §3 表头「校验（400）」与 §7.1 里的 400 改 422；③ 改造文件清单 #29 <code>PortalVenueFacetsResponse</code> 由 keep 改 modify（删内嵌 FacetCountResponse）；④ 文件清单追加 <code>RepeatedParamListEditor</code> / <code>FacetCountResponse</code> / <code>PublicationLastSyncedRow</code> 三行。本 plan 的 status-pill 改 <code>done</code>。</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 5：Commit 收尾文档；push 与开 PR 需用户确认后执行</strong>
+<pre><code class="lang-bash">git add docs/patra/specs/2026-09-24-pap-52-publication-search-endpoint-design.html docs/patra/plans/2026-09-25-pap-52-publication-search-endpoint.html
+git commit -m "docs(spec): PAP-52 spec/plan 标记实现完成，校验状态码对齐 422 (PAP-52)"</code></pre><p>到此停下，向用户汇报验证结果并<strong>征得确认</strong>后再执行 <code>git push -u origin feat/pap-52-publication-search</code> 与 <code>gh pr create --base main --draft --title "feat(catalog): 文献检索端点 search/facets，feed 迁到同一读端口 (PAP-52)"</code>。PR body 写：Linear PAP-52 / Closes #188、六条决策摘要、验证命令与 mini 冒烟结果。按仓库评审规则：开发期 draft，完工转 ready 触发 Codex，再评论 <code>@coderabbitai review</code>，同一会话内启动 Monitor 盯到合并；每条评审意见回复 已修复（SHA）/ 不修复（理由）。Linear PAP-52 推到 Review 并附 PR 链接。</p>
+          </li>
+        </ol>
+      </article>
+
+    </section>
+
+    <section id="self-check" class="self-check">
+      <h2>自检结果</h2>
+
+      <aside class="callout success">
+        <span class="title">1. 规格覆盖度</span>
+        <p>spec §3 请求契约 → 任务 13 / 14；§4.1 列表响应 → 任务 6 / 12；§4.2 facets 响应 → 任务 9 / 12 / 14；§4.3 领域层 → 任务 1–6；§5.1 共享 WHERE 与各筛选 → 任务 7 / 8；§5.2 证据 rank 表达式 → 任务 4 / 8；§5.3 列表查询与排序 → 任务 7；§5.4 facet 查询 → 任务 9；§6.2 feed 迁移 → 任务 6 / 11；§6.3 删除 PortalFeed* → 任务 11；§7.1 错误处理 → 任务 13 / 14（422）；§7.2 全部测试项 → 各任务 Red 步骤；Done 判定 7 条 → 任务 15。无遗漏。</p>
+      </aside>
+
+      <aside class="callout success">
+        <span class="title">2. 占位符扫描</span>
+        <p>每个代码步骤给完整代码；每个验证步骤给精确命令与预期；无"类似任务 N"、无 TODO；<code>&lt;!-- FILL: --&gt;</code> 已全部替换。</p>
+      </aside>
+
+      <aside class="callout success">
+        <span class="title">3. 类型一致性</span>
+        <p>跨任务签名统一：<code>PublicationSearchReadPort.search(PublicationSearchFilter, PagingParams)</code> / <code>facets(PublicationSearchFilter)</code>；<code>PublicationSearchDao</code> 参数顺序在任务 7–9 一致（keyword, tagPattern, author, pmid, doi, yearFrom, yearTo, venueIds, types, isOpenAccess, languages, evidenceRanks, lvl5..lvl1）；<code>FacetCount.of(String, long)</code>；<code>EvidenceLevelView.of(EvidenceLevel)</code>；<code>InlineMarkup.TAG_PATTERN</code> / <code>toPlainText</code> / <code>truncate</code>；<code>PortalPaperReadModel.builder()</code> 14 字段。</p>
+      </aside>
+
+      <aside class="callout success">
+        <span class="title">4. HTML 结构完整性</span>
+        <p>15 个 <code>&lt;article class="task" id="task-1..15" data-status="pending"&gt;</code>，TOC <code>toc-tasks</code> 15 条一一对应；每个 <code>&lt;li class="step"&gt;</code> 初始 <code>data-status="pending"</code>；<code>&lt;dl class="meta"&gt;</code> 含目标 / 架构 / 技术栈 / 关联 spec；<code>&lt;head&gt;</code> 只有两个 <code>&lt;link&gt;</code>（spec-theme.css + plan-extras.css），无 inline style；5 种状态选择器均在 plan-extras.css 定义。</p>
+      </aside>
+    </section>
+
+  </main>
+
+  <!-- ============================================================
+       右栏：Implementation Notes（实施期由 Claude Code 维护）
+       ============================================================ -->
+  <aside class="notes-panel" id="notes">
+    <header>
+      <h2>Implementation Notes</h2>
+      <p class="hint">实施期由 Claude Code 即时追加。规则：遇到 plan 未规定的<strong>决定</strong>、必要<strong>更改</strong>、不可避免的<strong>权衡</strong>、其他用户应知事项，立即用 Edit 追加 entry，不要等任务结束。</p>
+    </header>
+
+    <ol class="notes-log">
+      <li class="note" data-type="other" data-time="2026-09-25T13:50">
+        <header>
+          <span class="note-type">OTHER</span>
+          <time datetime="2026-09-25T13:50">09-25 13:50</time>
+          <a href="#task-15">§ Task 15</a>
+        </header>
+        <p>步骤 3 的 Mac mini 真实数据冒烟未执行：分支尚未部署到 mini，本地也没有指向 mini 库的 catalog 实例。合并部署后按步骤 3 的 curl 清单补跑（重点：<code>type=Clinical Trial, Phase III</code> 应命中 3 篇、facets.evidence 6 项、feed 首条带三个新字段）。</p>
+      </li>
+      <li class="note" data-type="change" data-time="2026-09-25T13:40">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-09-25T13:40">09-25 13:40</time>
+          <a href="#task-13">§ Task 13</a>
+        </header>
+        <p>plan 写的是 <code>Stream.toList()</code> 直接赋给 record 组件，adapter 的 SpotBugs 报 4 处 <code>EI_EXPOSE_REP</code>（它不认 <code>toList()</code> 的不可变性）。改为外包一层 <code>List.copyOf(...)</code>，与 <code>PortalVenueListRequest</code> 同写法，行为不变。</p>
+      </li>
+      <!-- ENTRY TEMPLATE（注释保留供实施期 AI 复制）:
+
+      <li class="note" data-type="decision" data-time="YYYY-MM-DDTHH:MM">
+        <header>
+          <span class="note-type">DECISION</span>
+          <time datetime="YYYY-MM-DDTHH:MM">MM-DD HH:MM</time>
+          <a href="#task-N">§ Task N</a>
+        </header>
+        <p>描述：plan 未规定 X，实施时选择 Y。理由：...</p>
+      </li>
+
+      data-type 4 类：decision / change / tradeoff / other
+      追加 entry 时同步更新下方 notes-stats footer 的对应 counter 数字。
+      -->
+    </ol>
+
+
+    <footer class="notes-stats">
+      总计:
+      <span data-counter="decision">0</span> decisions /
+      <span data-counter="change">1</span> changes /
+      <span data-counter="tradeoff">0</span> tradeoffs /
+      <span data-counter="other">1</span> others
+    </footer>
+  </aside>
+
+</div>
+</body>
+</html>

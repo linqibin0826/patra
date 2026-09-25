@@ -34,20 +34,4 @@ public record PortalVenueFacetsResponse(
     casQuartiles = casQuartiles != null ? List.copyOf(casQuartiles) : List.of();
     countries = countries != null ? List.copyOf(countries) : List.of();
   }
-
-  /// 单个 facet 项响应 DTO。
-  ///
-  /// @param value 维度值（如 "Q1"、"CN"、"Medicine"）
-  /// @param count 该维度值下的期刊数量
-  public record FacetCountResponse(String value, long count) {
-
-    /// 创建 [FacetCountResponse] 实例。
-    ///
-    /// @param value 维度值
-    /// @param count 期刊数量
-    /// @return 新建的 [FacetCountResponse]
-    public static FacetCountResponse of(String value, long count) {
-      return new FacetCountResponse(value, count);
-    }
-  }
 }
