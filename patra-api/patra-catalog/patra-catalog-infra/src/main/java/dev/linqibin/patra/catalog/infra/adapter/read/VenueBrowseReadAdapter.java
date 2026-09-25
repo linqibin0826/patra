@@ -2,6 +2,7 @@ package dev.linqibin.patra.catalog.infra.adapter.read;
 
 import dev.linqibin.commons.query.PageResult;
 import dev.linqibin.commons.query.PagingParams;
+import dev.linqibin.patra.catalog.domain.model.read.portal.FacetCount;
 import dev.linqibin.patra.catalog.domain.model.read.portal.VenueBrowseFacets;
 import dev.linqibin.patra.catalog.domain.model.read.portal.VenueBrowseFilter;
 import dev.linqibin.patra.catalog.domain.model.read.portal.VenueBrowseReadModel;
@@ -85,28 +86,28 @@ public class VenueBrowseReadAdapter implements VenueBrowseReadPort {
                 .facetSubjects(
                     kw, jcrQuartiles, casQuartiles, casTop, isOpenAccess, doaj, countryCodes)
                 .stream()
-                .map(r -> VenueBrowseFacets.FacetCount.of(r.getValue(), r.getCount()))
+                .map(r -> FacetCount.of(r.getValue(), r.getCount()))
                 .toList())
         .jcrQuartiles(
             venueDao
                 .facetJcrQuartiles(
                     kw, subjects, casQuartiles, casTop, isOpenAccess, doaj, countryCodes)
                 .stream()
-                .map(r -> VenueBrowseFacets.FacetCount.of(r.getValue(), r.getCount()))
+                .map(r -> FacetCount.of(r.getValue(), r.getCount()))
                 .toList())
         .casQuartiles(
             venueDao
                 .facetCasQuartiles(
                     kw, subjects, jcrQuartiles, casTop, isOpenAccess, doaj, countryCodes)
                 .stream()
-                .map(r -> VenueBrowseFacets.FacetCount.of(r.getValue(), r.getCount()))
+                .map(r -> FacetCount.of(r.getValue(), r.getCount()))
                 .toList())
         .countries(
             venueDao
                 .facetCountries(
                     kw, subjects, jcrQuartiles, casQuartiles, casTop, isOpenAccess, doaj)
                 .stream()
-                .map(r -> VenueBrowseFacets.FacetCount.of(r.getValue(), r.getCount()))
+                .map(r -> FacetCount.of(r.getValue(), r.getCount()))
                 .toList())
         .casTop(
             venueDao.countCasTop(

@@ -35,20 +35,4 @@ public record VenueBrowseFacets(
     casQuartiles = casQuartiles != null ? List.copyOf(casQuartiles) : List.of();
     countries = countries != null ? List.copyOf(countries) : List.of();
   }
-
-  /// 单个 facet 项，包含维度值及其对应的命中数量。
-  ///
-  /// @param value 维度值（如 "Q1"、"CN"、"Medicine"）
-  /// @param count 该维度值下的期刊数量
-  public record FacetCount(String value, long count) {
-
-    /// 创建 [FacetCount] 实例。
-    ///
-    /// @param value 维度值
-    /// @param count 期刊数量
-    /// @return 新建的 [FacetCount]
-    public static FacetCount of(String value, long count) {
-      return new FacetCount(value, count);
-    }
-  }
 }

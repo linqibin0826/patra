@@ -3,6 +3,8 @@ package dev.linqibin.patra.catalog.domain.model.vo.publication;
 import java.util.Collection;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /// 文献证据等级（基于出版类型 MeSH 词汇衍生的领域值对象）。
 ///
@@ -94,5 +96,18 @@ public enum EvidenceLevel {
       }
     }
     return best;
+  }
+
+  /// 返回映射到指定等级的全部规范化（小写）类型值；[#UNKNOWN] 返回空集。
+  ///
+  /// 供读适配器把映射表以数组参数传入 SQL，保证过滤 / 计数与 [#classify] 同源。
+  ///
+  /// @param level 证据等级
+  /// @return 该等级对应的小写 type_value 集合（不可变）
+  public static Set<String> typeValuesOf(EvidenceLevel level) {
+    return TYPE_TO_LEVEL.entrySet().stream()
+        .filter(e -> e.getValue() == level)
+        .map(Map.Entry::getKey)
+        .collect(Collectors.toUnmodifiableSet());
   }
 }
