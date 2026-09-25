@@ -1,16 +1,10 @@
 /* ============================================================
-   PATRA — Foundations
-   Colors + typography tokens for the Patra Portal & related
-   surfaces. Warm, paper-like, editorial. Pair with Tailwind v4
-   `@theme` or import directly.
-   ============================================================ */
-
-/* ============================================================
-   PATRA tokens — 与 design system colors_and_type.css 同源
-   本地化调整 2 处：
-   1. 删除 google fonts @import url（字体改由 next/font 注入）
-   2. 重命名 --font-sans/-serif/-mono → --patra-font-sans/-serif/-mono
-      （避免与 @theme 内 Tailwind 消费的 --font-sans 同名冲突）
+   PATRA tokens — portal 设计 token 的唯一来源
+   设计系统（目标态、用法说明、组件规范）：
+   https://claude.ai/artifact/H6ghni1vGUZen5cZubg1R9
+   字体由 next/font 注入 --font-*，这里用 --patra-font-* 包一层，
+   避免与 @theme 内 Tailwind 消费的 --font-sans 同名冲突。
+   新增或修改 token 时同步更新设计系统的 tokens.json。
    ============================================================ */
 
 :root {
