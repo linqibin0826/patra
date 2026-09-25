@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>文献检索页 /papers 与全站文献出口 设计</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- CSS 外置：「工程简报」主题。相对路径 ../styles/ 从生成位置 docs/patra/specs/ 出发；
+       放进子目录的 spec（如 docs/patra/specs/<feature>/）改成 ../../styles/。
+       模板本身在 .claude/skills/ 下打开时此 link 会 404（接受：以生成后的 spec 为准） -->
+  <link rel="stylesheet" href="../styles/spec-theme.css">
+</head>
+<body>
+<div class="layout layout-with-notes">
+
+  <!-- ============================================================
+       左栏：目录（TOC）
+       ============================================================ -->
+  <nav class="toc">
+    <h3>目录</h3>
+    <ol>
+      <li><a href="#background">背景与现状</a></li>
+      <li><a href="#scope">范围边界</a></li>
+      <li><a href="#layers">组件分层</a></li>
+      <li><a href="#url">URL 契约与数据流</a></li>
+      <li><a href="#page">页面结构与部件规则</a></li>
+      <li><a href="#states">状态矩阵</a></li>
+      <li><a href="#exits">全站文献出口（PAP-54）</a></li>
+      <li><a href="#testing">测试策略</a></li>
+      <li><a href="#decisions">关键决策与备选</a></li>
+      <li><a href="#risks">风险与缓解</a></li>
+      <li><a href="#changes">改造文件清单</a></li>
+    </ol>
+  </nav>
+
+  <!-- ============================================================
+       中栏：内容
+       ============================================================ -->
+  <main class="content">
+
+    <header class="doc-header">
+      <h1>文献检索页 /papers 与全站文献出口 设计</h1>
+      <div class="meta-bar">
+        <span>📅 2026-09-25</span>
+        <span>🌿 feat/v0.7-papers-search-fe</span>
+        <span>👤 linqibin</span>
+        <span>🎫 PAP-53, PAP-54（GitHub #189, #190）</span>
+        <span>🎯 spec</span>
+        <span class="status-pill">draft</span>
+      </div>
+    </header>
+
+    <aside class="callout summary">
+      <span class="title">关键决策摘要</span>
+      <p>新建 <code>/papers</code> 文献检索页，并把导航、首页搜索框、主题云、首页文献流、期刊详情五处文献入口全部接到这个页面（两个 Issue 合为一份 spec，进同一个前端 PR）。页面沿用 <code>/journals</code> 的做法，<strong>地址栏即状态、服务端取数</strong>。在此基础上补一个公用的地址栏导航钩子，解决现有写法"点了没反应（约 0.5 s）"和"快速连点丢操作"两个缺陷，期刊页一并受益。两页共有的筛选组、chip 行、排序、分页、骨架、空态外壳从期刊页抽到 <code>components/portal/browse/</code> 共用，期刊页外观与行为不变。交互上：年份单选（逐年项与"近 N 年"互斥）；关键词和作者可叠加，PMID / DOI 提交时清空其他条件、命中 1 篇由服务端直跳详情；信息行本版不显示"来源"。</p>
+    </aside>
+
+    <section id="background">
+      <h2>1. 背景与现状</h2>
+      <p>v0.7 Papers Search 已完成前三个 Issue：设计简报 PAP-50、hi-fi 稿 PAP-51（快照 <code>docs/patra/design/snapshots/2026-09-24-papers-list-hifi.zip</code>）、后端端点 PAP-52（<code>GET /portal/publications/search</code> 与 <code>/search/facets</code>，已部署 Mac mini，真实数据冒烟通过）。本 spec 覆盖最后两个前端 Issue：</p>
+      <ul>
+        <li><strong>PAP-53</strong>：<code>/papers</code> 页面本身，包括浏览态、检索态、facet、chip、分页和各种状态。</li>
+        <li><strong>PAP-54</strong>：接通全站指向文献的入口。目前导航"文献"是 SOON 占位，首页搜索框提交只弹"功能即将上线"，主题云词条是 disabled 状态。</li>
+      </ul>
+      <p>前端现状与约束：</p>
+      <ul>
+        <li><code>/journals</code> 已跑通"RSC 服务端取数 + URL query 同步"：<code>page.tsx</code> 用两个 Suspense 分别渲染筛选栏（无 key）和结果区（key = 序列化后的 query）。但它的组件写死了 <code>/journals</code> 路径和 <code>VenueBrowseQuery</code> 类型，多值参数用逗号拼接，文献页无法原样复用。</li>
+        <li><code>/journals</code> 的筛选组件用 props 里的 <code>query</code> 计算下一状态，勾选框的 <code>checked</code> 直接读 <code>query</code>。实测 Mac mini 上一次筛选变更，search 与 facets 两个请求并行，较慢的一个约 <strong>0.3–0.5 s</strong>。这导致两个缺陷：勾选后要等这段时间才打勾；连点时第二次点击基于旧 query 计算，第一次点击会丢失。</li>
+        <li>前端 <code>Paper</code> 类型还没有 PAP-52 新增的 <code>venueId</code> / <code>evidenceLevel</code> / <code>abstractSnippet</code>。</li>
+        <li>后端对本端点<strong>不按逗号拆分</strong>多值参数（真实类型值含逗号，如 <code>Clinical Trial, Phase III</code>），非法参数统一返回 422；在 RSC 中 422 会抛错，落到全局错误页。</li>
+        <li>gateway 地址（<code>PATRA_GATEWAY_BASE_URL</code>）只在服务端可见，浏览器无法直连后端。</li>
+      </ul>
+    </section>
+
+    <section id="scope">
+      <h2>2. 范围边界</h2>
+      <div class="two-col">
+        <aside class="callout success">
+          <span class="title">In Scope</span>
+          <ul>
+            <li><code>/papers</code> 浏览态与检索态：四 tab 检索条、信息行、chip 行、六组 facet（年份 / 类型 / 证据等级 / 期刊 / 语言 / 开放获取）、紧凑列表、页码分页</li>
+            <li>PMID / DOI 命中 1 篇时服务端直跳 <code>/papers/[id]</code></li>
+            <li>加载、切换中、四种空态、页码越界、错误等状态；1440 桌面与 375 手机两种布局</li>
+            <li>从期刊页抽出公用浏览部件，期刊页改为调用它们（外观与行为不变）</li>
+            <li>公用地址栏导航钩子：即时反馈、连点叠加、pending 标记（期刊页一并接入）</li>
+            <li>标题关键词高亮（支持跨内联标签）</li>
+            <li>期刊候选中转 <code>/api/venues/suggest</code></li>
+            <li>PAP-54：导航"文献"、首页搜索框四 tab、主题云、首页文献流"查看更多"、期刊详情"查看该刊文献"</li>
+            <li>Vitest 单测与 Playwright 冒烟（连 Mac mini 真实数据）</li>
+          </ul>
+        </aside>
+        <aside class="callout warning">
+          <span class="title">Out of Scope</span>
+          <ul>
+            <li>高级检索语法、自动补全、相关度 / 被引排序（release spec 边界 A / B / C）</li>
+            <li>收藏、保存检索式、导出引用（边界 D）；PaperCard 上的占位按钮保持不动</li>
+            <li>主题云热词真实计算，以及"浏览全部主题"按钮（边界 E，按钮保持占位）</li>
+            <li>信息行的"来源"段：后端没有该数据，本版不显示，也不写死</li>
+            <li>任何后端改动：search / facets 契约以 PAP-52 为准</li>
+            <li>暗色模式、i18n（边界 G）</li>
+            <li>期刊页视觉改版：只做部件抽取与缺陷修复，外观不变</li>
+          </ul>
+        </aside>
+      </div>
+    </section>
+
+    <section id="layers">
+      <h2>3. 组件分层</h2>
+      <p>按"谁在用"分四层：<strong>全局</strong>是整站底座，任何页面都能用；<strong>浏览页公用</strong>是 <code>/journals</code> 与 <code>/papers</code> 两个"列表 + 筛选"页共享的部件；<strong>文献公用</strong>是文献详情页与文献列表共享的部件；<strong>文献页专属</strong>只在 <code>/papers</code> 使用。</p>
+
+      <h3>3.1 全局（已有，直接用或小改）</h3>
+      <table>
+        <thead><tr><th>部件</th><th>处理</th></tr></thead>
+        <tbody>
+          <tr><td><code>components/ui/*</code>（button / badge / input / sheet / tabs）</td><td>直接用</td></tr>
+          <tr><td><code>TopNav</code> / <code>Footer</code></td><td>直接用；PAP-54 解锁 TopNav 的"文献"</td></tr>
+          <tr><td><code>app/error.tsx</code> / <code>not-found.tsx</code></td><td>取数失败直接冒泡到全局错误页</td></tr>
+          <tr><td><code>RichInlineText</code> + <code>lib/rich-inline-text.ts</code></td><td>新增可选 <code>highlight</code> 能力（§5.4）</td></tr>
+          <tr><td><code>data/search-modes.ts</code></td><td>首页 Composer 与文献页检索条共用四个 tab 的文案与 <code>mono</code> 标记</td></tr>
+        </tbody>
+      </table>
+
+      <h3>3.2 浏览页公用（新目录 <code>components/portal/browse/</code>）</h3>
+      <table>
+        <thead><tr><th>部件</th><th>职责 / 接口</th><th>来源</th></tr></thead>
+        <tbody>
+          <tr><td><code>BrowseHead</code></td><td>面包屑 + eyebrow + h1 + 副文案，文案由 props 传入（RSC）</td><td><code>JournalsBrowseHead</code></td></tr>
+          <tr><td><code>FacetGroup</code></td><td>可折叠的一组 facet，带已选数角标；内容区是 <code>fieldset[aria-label]</code></td><td><code>JournalFilters</code> 内</td></tr>
+          <tr><td><code>FacetCheckRow</code> / <code>FacetToggleRow</code></td><td>勾选行 + 千分位计数（计数可省略）；计数为 0 且未选中时变淡；支持 <code>type="radio"</code>（年份用）</td><td><code>JournalFilters</code> 内</td></tr>
+          <tr><td><code>FilterPanel</code></td><td>桌面 <code>md+</code> 时是左侧 aside；移动端是 Sheet 抽屉。<code>side</code> 可选（期刊页 left，文献页 bottom），页脚按钮文案由 props 传入</td><td><code>JournalFilters</code> 内</td></tr>
+          <tr><td><code>ActiveChips</code></td><td>接收 <code>{key, group, label, next}[]</code> 与"清除全部"的目标状态，经导航钩子跳转。chip 由各页的 client 组件从乐观 query 推导</td><td><code>JournalActiveChips</code></td></tr>
+          <tr><td><code>SortSegmented</code></td><td>接收排序选项、当前值和 <code>onChange</code> 的段控件</td><td><code>JournalSearchSortControls</code> 内</td></tr>
+          <tr><td><code>BrowsePagination</code></td><td>页码窗口 <code>pageWindow</code> + 链接；接收 <code>hrefFor(page)</code> 与计量单位（本 / 篇）</td><td><code>JournalPagination</code></td></tr>
+          <tr><td><code>FacetSkeleton</code></td><td>筛选栏骨架</td><td><code>JournalFilterSkeleton</code></td></tr>
+          <tr><td><code>EmptyState</code></td><td>空态外壳：标题 + 说明 + 按钮组</td><td><code>JournalEmptyResult</code> 外壳</td></tr>
+          <tr><td><code>BrowseQueryProvider</code> + <code>useBrowseQuery()</code></td><td>地址栏导航钩子（§4.4）：乐观 query、<code>navigate(next)</code>、<code>isPending</code></td><td>新增</td></tr>
+          <tr><td><code>PendingRegion</code></td><td>读 <code>isPending</code>，给结果区加变淡效果与 <code>aria-busy</code></td><td>新增</td></tr>
+          <tr><td><code>store/browse-filter-ui.ts</code></td><td>移动端抽屉的开关（Zustand）</td><td>由 <code>journal-filter-ui.ts</code> 更名</td></tr>
+        </tbody>
+      </table>
+      <p>期刊页独有的部件留在期刊页，例如学科 / 国家的 <code>SearchableCheckList</code>。</p>
+
+      <h3>3.3 文献公用</h3>
+      <ul>
+        <li><code>EvidenceBadge</code>：从 <code>paper-detail/</code> 挪到 <code>components/portal/</code> 根目录，详情页与列表共用。</li>
+        <li><code>Paper</code> 类型：补 <code>venueId: string | null</code>、<code>evidenceLevel: EvidenceLevel</code>、<code>abstractSnippet: string | null</code>。</li>
+      </ul>
+
+      <h3>3.4 文献页专属（<code>components/portal/papers/</code>）</h3>
+      <table>
+        <thead><tr><th>部件</th><th>职责</th><th>RSC / client</th></tr></thead>
+        <tbody>
+          <tr><td><code>PapersQueryProvider</code></td><td>包 <code>BrowseQueryProvider</code>，注入文献页的序列化函数与 <code>/papers</code> 路径（函数不能从 RSC 传给 client，所以要一层 client 包装）</td><td>client</td></tr>
+          <tr><td><code>PaperSearchBar</code></td><td>四 tab 检索条 + 排序 + 移动端筛选按钮</td><td>client</td></tr>
+          <tr><td><code>PapersInfoRow</code></td><td>浏览态"共 N 篇 · 最近同步 …"，检索态"共 N 篇"</td><td>RSC</td></tr>
+          <tr><td><code>PaperActiveChipsServer</code> / <code>PaperActiveChips</code></td><td>RSC 外壳并行查已选期刊的刊名，得到 <code>{id: 刊名}</code> 后下发；client 从<strong>乐观 query</strong> 推导 chip 再交给 <code>ActiveChips</code>，所以 chip 也会随操作即时变化</td><td>RSC / client</td></tr>
+          <tr><td><code>PaperFiltersServer</code> / <code>PaperFilters</code></td><td>取 facets，组装六组筛选</td><td>RSC / client</td></tr>
+          <tr><td><code>VenueFacetSearch</code></td><td>期刊的"搜索 → 选候选 → 加入"（combobox）</td><td>client</td></tr>
+          <tr><td><code>PaperResults</code></td><td>取 search，渲染列表 + 分页，或空态</td><td>RSC</td></tr>
+          <tr><td><code>PaperListItem</code></td><td>紧凑列表项</td><td>RSC</td></tr>
+          <tr><td><code>PaperListSkeleton</code></td><td>列表骨架</td><td>RSC</td></tr>
+          <tr><td><code>PapersEmptyResult</code></td><td>四种空态文案 + 页码越界</td><td>RSC</td></tr>
+        </tbody>
+      </table>
+
+      <h3>3.5 逻辑层（<code>lib/</code> 与 <code>app/api/</code>）</h3>
+      <table>
+        <thead><tr><th>文件</th><th>职责</th><th>归属</th></tr></thead>
+        <tbody>
+          <tr><td><code>lib/portal-api/paper-search.ts</code></td><td>纯函数：URL ↔ <code>PaperSearchQuery</code> 解析 / 序列化；后端 query 拼装（多值用重复参数）；chip 生成；"近 N 年"推算；<code>buildPapersHref(partial)</code></td><td>文献专属；PAP-54 的入口也调用 <code>buildPapersHref</code></td></tr>
+          <tr><td><code>lib/portal-api/publication-search.ts</code></td><td>server-only：<code>fetchPublicationSearch</code> / <code>fetchPublicationFacets</code>，后者用 React <code>cache()</code> 在单次渲染内去重</td><td>文献专属</td></tr>
+          <tr><td><code>lib/paper-labels.ts</code></td><td>文献类型、语言的中文名字典，查不到回退原值</td><td>文献专属</td></tr>
+          <tr><td><code>lib/query-keys.ts</code></td><td>TanStack Query key 集中管理（按 state 规范首次创建）</td><td>全局</td></tr>
+          <tr><td><code>app/api/venues/suggest/route.ts</code></td><td>期刊候选中转：<code>GET ?q=</code> → 后端 <code>/portal/venues?q=&amp;pageSize=8</code></td><td>文献页用，写法通用</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="url">
+      <h2>4. URL 契约与数据流</h2>
+
+      <h3>4.1 地址栏参数</h3>
+      <p>FE query 名与 BE 参数名一一对应（release spec 决策 C），camelCase。示例：</p>
+      <pre><code>/papers?q=GLP-1&amp;author=Smith&amp;yearFrom=2024&amp;type=Review&amp;type=Clinical+Trial%2C+Phase+III&amp;evidence=RANDOMIZED_CONTROLLED_TRIAL&amp;venue=123&amp;lang=en&amp;sort=year&amp;page=2</code></pre>
+      <table>
+        <thead><tr><th>参数</th><th>类型</th><th>规则</th></tr></thead>
+        <tbody>
+          <tr><td><code>q</code> / <code>author</code></td><td>string</td><td>可以同时存在</td></tr>
+          <tr><td><code>pmid</code> / <code>doi</code></td><td>string</td><td>由检索条写入时，其他条件都已清空（§5.2）</td></tr>
+          <tr><td><code>yearFrom</code> / <code>yearTo</code></td><td>int</td><td>单选某一年写成 <code>yearFrom=Y&amp;yearTo=Y</code>；"近 N 年"写成 <code>yearFrom=当年−N+1</code>（绝对年份，链接不随时间漂移）</td></tr>
+          <tr><td><code>type</code> / <code>evidence</code> / <code>venue</code> / <code>lang</code></td><td>重复参数</td><td>不按逗号拆分，也不用逗号拼接</td></tr>
+          <tr><td><code>oa</code></td><td>bool</td><td>只在 true 时写 <code>oa=true</code></td></tr>
+          <tr><td><code>sort</code></td><td><code>latest | year</code></td><td>默认 latest，不写入 URL</td></tr>
+          <tr><td><code>page</code></td><td>int ≥ 1</td><td>1 不写入 URL；每页固定 20 条，<code>pageSize</code> 不进 URL</td></tr>
+        </tbody>
+      </table>
+
+      <h3>4.2 解析规则：脏参数在前端丢弃</h3>
+      <p><code>parsePaperSearchQuery(searchParams)</code> 对照后端校验规则，逐项过滤。原因是后端 422 会把整页打到全局错误页，一个拼错的参数不应该让整页失败。</p>
+      <ul>
+        <li>字符串：trim，空白视为未传；<code>q</code> / <code>author</code> / <code>doi</code> 超过 200 字时丢弃。</li>
+        <li><code>pmid</code>：不匹配 <code>^\d{1,15}$</code> 时丢弃。</li>
+        <li>年份：非整数，或不在 1000–9999 范围内时丢弃；<code>yearFrom &gt; yearTo</code> 时自动对调。</li>
+        <li><code>venue</code>：非正整数元素丢弃；<code>evidence</code>：不在 6 个枚举名内的丢弃（大小写归一为大写）。</li>
+        <li>多值：去空白、去重，保持首次出现的顺序。</li>
+        <li><code>sort</code>：只接受 <code>latest</code> / <code>year</code>，否则用默认值；<code>page</code>：非正整数时取 1。</li>
+      </ul>
+      <p>往返一致：<code>parse(serialize(q))</code> 等于 <code>q</code>，并且序列化结果的参数顺序稳定。结果区的 Suspense key 用的就是序列化结果。</p>
+
+      <h3>4.3 服务端渲染流程（<code>app/papers/page.tsx</code>）</h3>
+<pre><code>searchParams → parsePaperSearchQuery → query
+  │
+  ├─ query.pmid 或 query.doi 存在？
+  │     在 page 顶层 await fetchPublicationSearch(query)（此时尚未开始流式输出）
+  │       ├─ total === 1 → redirect(`/papers/${items[0].id}`)
+  │       └─ 否则继续渲染，已取到的结果传给 PaperResults，不再重复请求
+  │
+  └─ &lt;PapersQueryProvider query currentYear&gt;
+       BrowseHead                                  立即渲染
+       PaperSearchBar                              立即渲染（client）
+       Suspense → PapersInfoRow                    fetchPublicationFacets（cache 去重）
+       Suspense → PaperActiveChipsServer           已选期刊并行 fetchVenueDetail 取刊名，client 从乐观 query 推导 chip
+       ┌ Suspense（无 key）  → PaperFiltersServer  fetchPublicationFacets（与信息行共用一次请求）
+       └ PendingRegion → Suspense key=serialize(query) → PaperResults   fetchPublicationSearch</code></pre>
+      <ul>
+        <li>后端请求：search 带全部筛选、<code>sort</code>、<code>page</code> 和 <code>pageSize=20</code>；facets 只带筛选条件。非 2xx 时 throw，落到全局错误页。</li>
+        <li><strong>浏览态与检索态</strong>：没有任何筛选或检索条件时是浏览态。<code>sort</code> 和 <code>page</code> 不算条件。</li>
+        <li><code>currentYear</code> 由服务端算出，作为 prop 下发，保证服务端与客户端对"近 N 年"的推算一致。</li>
+        <li>期刊刊名查不到（404）时，chip 显示"期刊 #id"，仍然可以移除。</li>
+      </ul>
+
+      <h3>4.4 交互 → URL：公用导航钩子</h3>
+      <p><code>BrowseQueryProvider</code>（client）持有服务端下发的 <code>query</code>，对外提供三样东西：</p>
+      <ul>
+        <li><code>query</code>：乐观值。由 <code>useOptimistic</code> 维护；transition 期间是用户最新操作后的状态，transition 结束后回落为服务端下发的真实 query。</li>
+        <li><code>navigate(next | (cur) =&gt; next)</code>：在 <code>startTransition</code> 内先设置乐观值，再 <code>router.push(basePath + serialize(next))</code>。函数式写法基于<strong>当前乐观值</strong>计算下一状态，所以连点会叠加，不会互相覆盖。</li>
+        <li><code>isPending</code>：给 <code>PendingRegion</code> 用，让结果区变淡。</li>
+      </ul>
+      <ul>
+        <li>所有交互都经 <code>navigate</code>：检索提交、勾选、chip 移除、排序、清除全部。改动筛选或排序时 <code>page</code> 归 1。分页用普通 <code>&lt;Link&gt;</code>，天然会滚回页面顶部。</li>
+        <li>每次操作都 <code>push</code>，产生一条浏览历史，"后退"即撤销上一步。与期刊页一致。</li>
+        <li>期刊页的 <code>JournalFilters</code>、<code>JournalActiveChips</code>、<code>JournalSearchSortControls</code> 改用同一个钩子。期刊检索框原有的 300 ms 防抖与 <code>replace</code> 行为保持不变。</li>
+      </ul>
+
+      <h3>4.5 期刊候选</h3>
+      <p><code>VenueFacetSearch</code> 输入后防抖 250 ms，经 TanStack Query 请求 <code>/api/venues/suggest?q=</code>（key 为 <code>queryKeys.venueSuggest(q)</code>）。Route Handler 转发到后端 <code>/portal/venues?q=&amp;pageSize=8</code>，返回 <code>{id, name, abbr}[]</code>：</p>
+      <ul>
+        <li>trim 后为空时直接返回 <code>[]</code>，不打后端。</li>
+        <li>后端失败时返回 502 与 <code>[]</code>，下拉显示"候选加载失败"，不影响整页。</li>
+        <li>选中候选即 <code>navigate</code>，给 <code>venue</code> 追加该 id；已选的期刊不再出现在候选里。</li>
+      </ul>
+    </section>
+
+    <section id="page">
+      <h2>5. 页面结构与部件规则</h2>
+      <p>视觉以 hi-fi 快照为准（桌面浏览态 / 检索态 / 无结果态；移动检索态 / 筛选抽屉 / PMID 未命中）。本节只记录交互规则，以及设计稿没有说清的地方。</p>
+
+      <h3>5.1 页面结构（从上到下）</h3>
+      <ol>
+        <li><strong>页头</strong>：面包屑"Patra / 文献浏览"，eyebrow"按文献浏览"，h1"浏览全部文献"，副文案。</li>
+        <li><strong>检索条</strong>：tab 行（关键词·默认 / PMID / DOI / 作者），然后是输入框（带 × 清除）与"检索"按钮。桌面端排序段控件（最近更新 ↓ / 年份）放在检索按钮右侧；移动端下移一行，与"筛选"按钮并列，筛选按钮角标为已选条件数。</li>
+        <li><strong>信息行</strong>：浏览态显示"共 18,807 篇 · 最近同步 2026-08-30"（<code>lastSyncedAt</code> 按本地时区格式化为 yyyy-MM-dd，空库时省略）；检索态显示"共 1,284 篇"。</li>
+        <li><strong>chip 行</strong>：只在检索态出现。分组依次为关键词、作者、年份、类型、证据等级、期刊、语言、开放获取；末尾是"清除全部"。移动端横向滚动。</li>
+        <li><strong>两栏</strong>：左侧 facet 栏（移动端进抽屉），右侧列表 + 分页。</li>
+      </ol>
+
+      <h3>5.2 检索条</h3>
+      <ul>
+        <li><strong>初始 tab</strong>：有 <code>pmid</code> 选 PMID；有 <code>doi</code> 选 DOI；只有 <code>author</code> 选作者；其余情况选关键词。</li>
+        <li><strong>切 tab</strong>：只切换输入框内容，显示该 tab 对应参数的当前值，没有则为空，不触发导航。PMID 与 DOI 用等宽字体。</li>
+        <li><strong>关键词 / 作者提交</strong>：只替换各自的参数，保留其余条件，<code>page</code> 归 1。提交空值等于移除该参数。</li>
+        <li><strong>PMID / DOI 提交</strong>：生成只含 <code>pmid</code> 或 <code>doi</code> 的全新 query，命中 1 篇由服务端直跳详情。PMID 输入非纯数字时，框下提示"PMID 应为纯数字"，不提交。</li>
+        <li>chip 移除关键词或作者后，输入框同步清空（跟随乐观 query）。</li>
+      </ul>
+
+      <h3>5.3 facet 栏</h3>
+      <table>
+        <thead><tr><th>组</th><th>规则</th></tr></thead>
+        <tbody>
+          <tr><td>发表年份</td><td>快捷项"近 1 年 / 近 3 年 / 近 5 年"，下面是 <code>facets.years</code> 的年份倒序单选列表（radio 语义），带计数。快捷项与逐年项互斥，再点一次已选项即取消。chip 文案：<code>from == to</code> 时显示"2025 年"；只有 from 且等于 <code>currentYear−N+1</code>（N ∈ 1/3/5）时显示"近 N 年"；其他只有 from 的情况显示"2024 年起"；只有 to 时显示"2025 年及以前"</td></tr>
+          <tr><td>文献类型</td><td>默认显示计数前 6 项，其余收进"更多类型 ↓"；已选项即使不在前 6 也始终显示。标签为"综述 · Review"，字典查不到时只显示原值</td></tr>
+          <tr><td>证据等级</td><td>固定 6 档，按后端顺序（强 → 弱，UNKNOWN 末尾），标签与 <code>EvidenceBadge</code> 一致。"未分级"一行用弱化色</td></tr>
+          <tr><td>期刊</td><td><code>VenueFacetSearch</code>：输入框占位"搜刊名添加…"，候选下拉有三态（加载中 / 有候选 / "未找到匹配期刊"），支持 ↑↓ / Enter / Esc，ARIA combobox + listbox。已选期刊列在输入框下，是没有计数的勾选行，取消勾选即移除</td></tr>
+          <tr><td>语言</td><td>标签为"英文 · en"，带计数；超过 6 项时折叠</td></tr>
+          <tr><td>开放获取</td><td><code>FacetToggleRow</code>"仅开放获取"，计数为 <code>facets.openAccess</code></td></tr>
+        </tbody>
+      </table>
+      <ul>
+        <li><strong>空组不渲染</strong>：某组没有可选项、也没有已选项时整组不渲染。本库 OA 全为 0，所以开放获取组本版不可见。</li>
+        <li>计数用千分位（<code>Intl.NumberFormat("en-US")</code>）；计数为 0 的未选项变淡，但仍可点。</li>
+        <li>桌面侧栏底部有"清除全部筛选"。</li>
+        <li><strong>移动抽屉</strong>：从底部弹出，标题"筛选 · 已选 N 项"，页脚是"清除全部"与"查看 N 篇结果"（N 取 <code>facets.total</code>）。勾选时抽屉不关，结果在后台刷新。</li>
+      </ul>
+
+      <h3>5.4 列表项 <code>PaperListItem</code></h3>
+      <ol>
+        <li><strong>来源行</strong>：来源色点 + <code>source</code> + DOI（等宽、弱色）。</li>
+        <li><strong>标题</strong>：衬线字体，最多两行，超出用 line-clamp 截断；链接到 <code>/papers/{id}</code>。有 <code>q</code> 时高亮命中片段，用 <code>&lt;mark&gt;</code>。</li>
+        <li><strong>元信息行</strong>：期刊名（斜体；有 <code>venueId</code> 时链接 <code>/journals/{venueId}</code>，单行截断）· 年份 · 前 2 位作者，后接"等 N 位作者"。作者为空时省略该段。</li>
+        <li><strong>徽章行</strong>：<code>kind</code> 类型徽章，加上 <code>EvidenceBadge</code>（仅 <code>derived</code> 为 true 时显示）。两者都没有时该行不占位。</li>
+        <li><strong>摘要</strong>：<code>abstractSnippet</code> 最多两行，为 null 时不占位。</li>
+        <li><strong>不显示</strong>：收藏、评论、引用按钮，以及被引数。</li>
+      </ol>
+      <p><strong>高亮实现</strong>：<code>highlightInlineNodes(nodes, q)</code> 在 <code>parseInlineMarkup</code> 的节点树上工作。先把全部文本节点拼成纯文本，大小写不敏感地找出所有命中区间（按字面匹配），再遍历节点树，把落在区间内的文本片段包成 <code>mark</code> 节点。命中跨越标签时（如搜 CO2 命中 <code>CO&lt;sub&gt;2&lt;/sub&gt;</code>），会拆成多段 <code>mark</code>。不改动原有标签结构，也不拼 HTML 字符串。</p>
+    </section>
+
+    <section id="states">
+      <h2>6. 状态矩阵</h2>
+      <table>
+        <thead><tr><th>状态</th><th>触发</th><th>表现</th></tr></thead>
+        <tbody>
+          <tr><td>首屏加载</td><td>首次进入 <code>/papers</code></td><td><code>app/papers/loading.tsx</code> 整页骨架：页头、检索条、<code>FacetSkeleton</code>、<code>PaperListSkeleton</code></td></tr>
+          <tr><td>切换中</td><td>勾选 / chip / 排序 / 检索提交</td><td>控件按乐观值立即变化；结果区变淡并标记 <code>aria-busy</code>，直到新结果到达</td></tr>
+          <tr><td>翻页</td><td>点页码</td><td>结果区的 Suspense key 变化，显示列表骨架，并滚回顶部</td></tr>
+          <tr><td>关键词无结果</td><td>有 <code>q</code> 或 <code>author</code>，total 为 0</td><td>"未找到匹配"xxx"的文献"，两条建议（换个关键词 / 放宽筛选），加"清除全部筛选"</td></tr>
+          <tr><td>仅筛选无结果</td><td>只有筛选条件，total 为 0</td><td>"当前筛选条件下没有文献"，加"清除全部筛选"</td></tr>
+          <tr><td>PMID / DOI 未命中</td><td>有 <code>pmid</code> 或 <code>doi</code>，total 为 0</td><td>"未找到 PMID 38491203 对应的文献"，提示核对号码，加"浏览全部文献"</td></tr>
+          <tr><td>空库</td><td>浏览态且 total 为 0</td><td>"库中暂无文献"，加"返回首页"；信息行显示"共 0 篇"</td></tr>
+          <tr><td>页码越界</td><td>total 大于 0 但 items 为空</td><td>"该页没有内容"，加"回到第 1 页"</td></tr>
+          <tr><td>取数失败</td><td>search / facets 非 2xx 或超时</td><td>冒泡到全局 <code>error.tsx</code></td></tr>
+          <tr><td>facet 局部态</td><td>组为空 / 项过多 / 期刊下拉</td><td>见 §5.3</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="exits">
+      <h2>7. 全站文献出口（PAP-54）</h2>
+      <p>所有入口都用 <code>buildPapersHref(partial)</code> 拼链接，与文献页的解析规则同源。</p>
+      <table>
+        <thead><tr><th>入口</th><th>改动</th></tr></thead>
+        <tbody>
+          <tr><td><code>TopNav</code></td><td>"文献"去掉 disabled 与 SOON，<code>href="/papers"</code>，桌面与移动抽屉两处都改；在 <code>/papers</code> 与 <code>/papers/[id]</code> 时高亮</td></tr>
+          <tr><td>首页搜索框</td><td><code>HeroWithToast</code> 更名为 <code>HeroWithSearch</code>：按当前 tab 跳转 <code>?q=</code> / <code>?author=</code> / <code>?pmid=</code> / <code>?doi=</code>，空内容不跳，删除 toast</td></tr>
+          <tr><td><code>TopicCloud</code></td><td>词条从 disabled button 改为 <code>Link</code>，指向 <code>/papers?q=词条</code>；"浏览全部主题"保持占位</td></tr>
+          <tr><td>首页文献流 <code>ExploreFeed</code></td><td>底部加"查看更多文献 →"，指向 <code>/papers</code></td></tr>
+          <tr><td>期刊详情 <code>JournalMasthead</code></td><td>操作区加"查看该刊文献"，指向 <code>/papers?venue={id}</code></td></tr>
+        </tbody>
+      </table>
+      <p>PMID / DOI 的直跳由 <code>/papers</code> 服务端统一处理，首页不重复实现。首页 <code>PaperCard</code> 的收藏、评论、引用占位按钮保持不动。</p>
+    </section>
+
+    <section id="testing">
+      <h2>8. 测试策略</h2>
+      <h3>8.1 Vitest（TDD，逐个红绿）</h3>
+      <table>
+        <thead><tr><th>对象</th><th>覆盖点</th></tr></thead>
+        <tbody>
+          <tr><td><code>paper-search.ts</code></td><td>重复参数解析；含逗号的类型值原样保留；§4.2 各类脏参数丢弃；年份对调；序列化往返一致且顺序稳定；后端 query 用重复参数、不含 page 的 facets query；chip 生成与移除后的 next；年份 chip 四种文案；<code>buildPapersHref</code> 四个 tab</td></tr>
+          <tr><td><code>highlightInlineNodes</code></td><td>大小写不敏感；多处命中；跨标签命中；q 为空时原样返回；正则元字符按字面匹配</td></tr>
+          <tr><td><code>paper-labels.ts</code></td><td>字典命中；未命中时回退原值</td></tr>
+          <tr><td><code>BrowseQueryProvider</code></td><td>navigate 后立即返回乐观值；连续两次函数式 navigate 叠加；服务端 query 更新后对齐</td></tr>
+          <tr><td>浏览页公用部件</td><td><code>BrowsePagination</code>（含 <code>pageWindow</code>）、<code>ActiveChips</code>、<code>FacetGroup</code> / 行、<code>SortSegmented</code>、<code>FilterPanel</code>；原 journals 测试迁移后全部保持绿</td></tr>
+          <tr><td>期刊页</td><td>新增"连点两个筛选项，URL 两项都在"</td></tr>
+          <tr><td>文献页部件</td><td><code>PaperSearchBar</code>（初始 tab、叠加 / 清空语义、PMID 校验）；<code>PaperFilters</code>（年份单选与快捷互斥、OA 组隐藏、更多类型、已选项不被折叠、未分级弱化）；<code>VenueFacetSearch</code>（三态、键盘、已选过滤）；<code>PaperListItem</code>（无摘要、未分级无徽章、期刊链接、高亮）；<code>PapersEmptyResult</code> 四种文案与越界；<code>PapersInfoRow</code> 两态</td></tr>
+          <tr><td><code>/api/venues/suggest</code></td><td>空 q 返回 []、转发参数与字段映射、后端失败返回 502</td></tr>
+          <tr><td>PAP-54</td><td><code>TopNav</code> 文献可点与高亮；<code>HeroWithSearch</code> 四 tab 跳转与空值不跳；<code>TopicCloud</code> 词条链接；<code>ExploreFeed</code>"查看更多"；<code>JournalMasthead</code>"查看该刊文献"</td></tr>
+        </tbody>
+      </table>
+      <h3>8.2 Playwright 冒烟（<code>tests/e2e/papers-search.spec.ts</code>）</h3>
+      <p>指向 Mac mini 真实数据（内联 <code>PATRA_GATEWAY_BASE_URL=http://100.103.73.27:9528</code>），后端不可达时 <code>test.skip</code>：</p>
+      <ol>
+        <li>直接打开 <code>/papers</code> 有列表，提交关键词后 URL 含 <code>q=</code>。</li>
+        <li>勾选一个类型，chip 出现、URL 含 <code>type=</code>；移除 chip。</li>
+        <li>翻到第 2 页，再点卡片进 <code>/papers/[id]</code>。</li>
+        <li>首页搜关键词进 <code>/papers?q=</code>；首页搜一个真实 PMID 直达详情。</li>
+        <li>期刊详情"查看该刊文献"，期刊 chip 显示刊名。</li>
+        <li>375×812 下打开抽屉、勾选、点"查看结果"。</li>
+      </ol>
+      <p>现有 <code>journals-browse.spec.ts</code> 与 <code>homepage.spec.ts</code> 须保持通过，首页 toast 相关断言随 PAP-54 同步更新。</p>
+    </section>
+
+    <section id="decisions">
+      <h2>关键决策与备选</h2>
+
+      <div class="decision">
+        <h3>决策 1：保留"地址栏即状态 + 服务端取数"，补公用导航钩子</h3>
+        <p>地址栏仍是唯一的状态来源。<code>BrowseQueryProvider</code> 用 <code>useOptimistic</code> + <code>useTransition</code> 提供即时反馈、连点叠加和 pending 标记，期刊页一并接入。</p>
+        <p class="alternatives"><strong>备选 A：</strong>浏览器取数（TanStack Query + 客户端状态，再同步到 URL）— 否决：首屏先白屏再转圈；每个后端接口都要加中转；出现内存状态与 URL 两份真相，需要同步。<br>
+        <strong>备选 B：</strong>原样照抄期刊页 — 否决：会把"点了没反应约 0.5 s"和"连点丢操作"两个缺陷带进文献页。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 2：抽浏览页公用部件到 <code>components/portal/browse/</code></h3>
+        <p>把 facet 组 / 行、筛选容器、chip 行、排序、分页、骨架、空态外壳抽成与具体页面无关的部件；期刊页改为调用，外观与行为不变。</p>
+        <p class="alternatives"><strong>备选 A：</strong>为文献页另写一套 — 否决：约 400 行近似重复，两页样式会逐渐漂移，也违背设计稿"骨架与 /journals 同构"的要求。<br>
+        <strong>备选 B：</strong>让期刊组件整体泛型化（query 类型参数 + 注入序列化） — 否决：两页 facet 组成差异大，泛型化会产生大量配置分支，属过度抽象。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 3：年份单选，"近 N 年"与逐年项互斥</h3>
+        <p>逐年项写成 <code>yearFrom = yearTo = Y</code>；"近 N 年"写成 <code>yearFrom = 当年 − N + 1</code>。语义上是 radio，视觉沿用设计稿的行样式。</p>
+        <p class="alternatives"><strong>备选 A：</strong>多选后取连续区间 — 否决：勾 2024 与 2026 会隐式包含 2025，但界面上 2025 没被勾，容易误导。<br>
+        <strong>备选 B：</strong>改成起止年输入框 — 否决：偏离设计稿，也失去逐年计数。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 4：关键词 / 作者叠加，PMID / DOI 清空</h3>
+        <p>关键词和作者 tab 只替换自己的参数；PMID 和 DOI 是精确定位，提交时生成全新 query，命中 1 篇直跳详情。</p>
+        <p class="alternatives"><strong>备选 A：</strong>任何 tab 都叠加 — 否决：残留的筛选条件会让 PMID 查不到，落到空态。<br>
+        <strong>备选 B：</strong>任何 tab 提交都重置 — 否决：在已筛选的结果里换个词，就得重新勾选全部筛选。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 5：信息行本版不显示"来源"</h3>
+        <p>只显示"共 N 篇 · 最近同步 …"。PAP-53 验收标准中的"来源"同步删除。</p>
+        <p class="alternatives"><strong>备选 A：</strong>前端写死"PubMed" — 否决：接入第二个数据源后会静默过期，属于页面上的假数据。<br>
+        <strong>备选 B：</strong>后端 facets 增加 sources — 否决：需要在前端 PR 里改后端，或另开后端 PR，与本版"后端契约冻结"冲突。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 6：前端解析时丢弃脏参数</h3>
+        <p>按后端校验规则在 <code>parsePaperSearchQuery</code> 中过滤非法值，保证发往后端的请求一定合法。</p>
+        <p class="alternatives"><strong>备选：</strong>透传给后端，由 422 兜底 — 否决：RSC 中 422 抛错会让整页落到全局错误页，一个拼错的参数就能打挂整页。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 7：PMID / DOI 直跳放在 page 顶层 <code>redirect</code></h3>
+        <p>只在带 <code>pmid</code> / <code>doi</code> 时，于流式输出开始前 await 一次 search。命中 1 篇就返回服务端跳转；未命中时复用这次结果渲染空态。</p>
+        <p class="alternatives"><strong>备选 A：</strong>在 Suspense 内部 <code>redirect</code> — 否决：流式输出已开始，跳转会退化为客户端注入，会先闪一下页面。<br>
+        <strong>备选 B：</strong>客户端 <code>useEffect</code> 跳转 — 否决：用户会先看到一闪而过的列表页。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 8：期刊候选走 Route Handler + TanStack Query</h3>
+        <p><code>/api/venues/suggest</code> 在服务端转发，客户端用 TanStack Query 带防抖请求，按 q 缓存。</p>
+        <p class="alternatives"><strong>备选 A：</strong>浏览器直连后端 — 否决：gateway 地址只在服务端可见。<br>
+        <strong>备选 B：</strong>Server Action — 否决：Server Action 是 POST，逐个串行执行，也不进 TanStack 缓存，不适合"边打字边查"的高频只读请求。</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 9：标题高亮在节点树上做，前端负责</h3>
+        <p><code>highlightInlineNodes</code> 在 <code>parseInlineMarkup</code> 的结果上切分文本节点并插入 <code>mark</code>，<code>RichInlineText</code> 增加可选 <code>highlight</code> prop。</p>
+        <p class="alternatives"><strong>备选 A：</strong>在原始标题字符串里插 <code>&lt;mark&gt;</code> — 否决：可能切断标签或实体，还要额外做转义，有注入风险。<br>
+        <strong>备选 B：</strong>后端返回高亮片段 — 否决：后端已合并，设计简报 A.1 也已定为前端完成。</p>
+      </div>
+    </section>
+
+    <section id="risks">
+      <h2>风险与缓解</h2>
+      <table>
+        <thead>
+          <tr><th>风险</th><th>等级</th><th>缓解</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>抽公用部件时改坏期刊页</td>
+            <td><span class="pill mid">mid</span></td>
+            <td>先迁移 journals 现有测试并保持绿，再抽部件；<code>journals-browse.spec.ts</code> 冒烟回归；桌面与手机截图对照</td>
+          </tr>
+          <tr>
+            <td>乐观值与服务端结果短暂不一致（例如请求失败）</td>
+            <td><span class="pill low">low</span></td>
+            <td>transition 结束后乐观值自动回落到服务端 query；请求失败落全局错误页，不会残留假状态</td>
+          </tr>
+          <tr>
+            <td>facets 慢（实测约 0.5 s），全量 baseline 导入后标题 ILIKE 会更慢</td>
+            <td><span class="pill mid">mid</span></td>
+            <td>本版靠乐观反馈与 pending 提示掩盖延迟；性能问题属 release spec 决策 A 的已知取舍，高级检索专题换搜索引擎时整体替换</td>
+          </tr>
+          <tr>
+            <td>类型中文名字典覆盖不全</td>
+            <td><span class="pill low">low</span></td>
+            <td>查不到时回退原值；字典覆盖 facet 实际出现的高频类型</td>
+          </tr>
+          <tr>
+            <td>跨年边界时服务端与客户端对"近 N 年"推算不一致</td>
+            <td><span class="pill low">low</span></td>
+            <td>currentYear 只由服务端计算、以 prop 下发</td>
+          </tr>
+          <tr>
+            <td>E2E 依赖 Mac mini 真实数据</td>
+            <td><span class="pill low">low</span></td>
+            <td>后端不可达时 <code>test.skip</code>；数据断言只断言"有结果 / URL 形状"，不断言具体计数</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="changes">
+      <h2>改造文件清单</h2>
+      <p>路径均相对 <code>patra-portal/</code>。</p>
+      <table>
+        <thead>
+          <tr><th>#</th><th>文件</th><th>操作</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td><code>src/types/portal.ts</code></td><td><span class="pill modify">modify</span></td><td><code>Paper</code> 补 3 字段；新增 <code>PaperSearchQuery</code> / <code>PaperSortId</code> / <code>PublicationFacets</code> / <code>VenueSuggestion</code>；<code>ActiveFilterChip</code> 泛型化</td></tr>
+          <tr><td>2</td><td><code>src/lib/rich-inline-text.ts</code></td><td><span class="pill modify">modify</span></td><td>新增 <code>highlightInlineNodes</code></td></tr>
+          <tr><td>3</td><td><code>src/components/portal/RichInlineText.tsx</code></td><td><span class="pill modify">modify</span></td><td>新增可选 <code>highlight</code> prop</td></tr>
+          <tr><td>4</td><td><code>src/lib/portal-api/paper-search.ts</code></td><td><span class="pill create">create</span></td><td>解析 / 序列化 / 后端 query / chip / 年份 / <code>buildPapersHref</code></td></tr>
+          <tr><td>5</td><td><code>src/lib/portal-api/publication-search.ts</code></td><td><span class="pill create">create</span></td><td>server-only 的 search / facets 取数（facets 用 <code>cache()</code>）</td></tr>
+          <tr><td>6</td><td><code>src/lib/portal-api/venues.ts</code></td><td><span class="pill modify">modify</span></td><td>新增 <code>fetchVenueSuggestions(q)</code>；<code>fetchVenueDetail</code> 用 <code>cache()</code> 包装以便 chip 复用</td></tr>
+          <tr><td>7</td><td><code>src/lib/paper-labels.ts</code></td><td><span class="pill create">create</span></td><td>类型 / 语言中文名字典</td></tr>
+          <tr><td>8</td><td><code>src/lib/query-keys.ts</code></td><td><span class="pill create">create</span></td><td><code>venueSuggest(q)</code></td></tr>
+          <tr><td>9</td><td><code>src/app/api/venues/suggest/route.ts</code></td><td><span class="pill create">create</span></td><td>期刊候选中转</td></tr>
+          <tr><td>10</td><td><code>src/components/portal/browse/BrowseHead.tsx</code></td><td><span class="pill create">create</span></td><td>页头</td></tr>
+          <tr><td>11</td><td><code>src/components/portal/browse/FacetGroup.tsx</code></td><td><span class="pill create">create</span></td><td>可折叠 facet 组</td></tr>
+          <tr><td>12</td><td><code>src/components/portal/browse/FacetCheckRow.tsx</code></td><td><span class="pill create">create</span></td><td>勾选 / 单选行</td></tr>
+          <tr><td>13</td><td><code>src/components/portal/browse/FacetToggleRow.tsx</code></td><td><span class="pill create">create</span></td><td>开关行</td></tr>
+          <tr><td>14</td><td><code>src/components/portal/browse/FilterPanel.tsx</code></td><td><span class="pill create">create</span></td><td>侧栏 / 抽屉容器</td></tr>
+          <tr><td>15</td><td><code>src/components/portal/browse/ActiveChips.tsx</code></td><td><span class="pill create">create</span></td><td>chip 行</td></tr>
+          <tr><td>16</td><td><code>src/components/portal/browse/SortSegmented.tsx</code></td><td><span class="pill create">create</span></td><td>排序段控件</td></tr>
+          <tr><td>17</td><td><code>src/components/portal/browse/BrowsePagination.tsx</code></td><td><span class="pill create">create</span></td><td>分页 + <code>pageWindow</code></td></tr>
+          <tr><td>18</td><td><code>src/components/portal/browse/FacetSkeleton.tsx</code></td><td><span class="pill create">create</span></td><td>筛选骨架</td></tr>
+          <tr><td>19</td><td><code>src/components/portal/browse/EmptyState.tsx</code></td><td><span class="pill create">create</span></td><td>空态外壳</td></tr>
+          <tr><td>20</td><td><code>src/components/portal/browse/BrowseQueryProvider.tsx</code></td><td><span class="pill create">create</span></td><td>导航钩子 Provider + <code>useBrowseQuery</code></td></tr>
+          <tr><td>21</td><td><code>src/components/portal/browse/PendingRegion.tsx</code></td><td><span class="pill create">create</span></td><td>pending 变淡区域</td></tr>
+          <tr><td>22</td><td><code>src/store/journal-filter-ui.ts</code> → <code>browse-filter-ui.ts</code></td><td><span class="pill modify">modify</span></td><td>更名为 <code>useBrowseFilterUiStore</code></td></tr>
+          <tr><td>23</td><td><code>src/components/portal/journals/JournalsBrowseHead.tsx</code></td><td><span class="pill delete">delete</span></td><td>page 直接用 <code>BrowseHead</code></td></tr>
+          <tr><td>24</td><td><code>src/components/portal/journals/JournalFilters.tsx</code></td><td><span class="pill modify">modify</span></td><td>改用公用 facet 部件、<code>FilterPanel</code> 与导航钩子；保留 <code>SearchableCheckList</code></td></tr>
+          <tr><td>25</td><td><code>src/components/portal/journals/JournalActiveChips.tsx</code></td><td><span class="pill modify">modify</span></td><td>生成 chip 后交给 <code>ActiveChips</code></td></tr>
+          <tr><td>26</td><td><code>src/components/portal/journals/JournalSearchSortControls.tsx</code></td><td><span class="pill modify">modify</span></td><td>改用 <code>SortSegmented</code> 与导航钩子</td></tr>
+          <tr><td>27</td><td><code>src/components/portal/journals/JournalPagination.tsx</code></td><td><span class="pill modify">modify</span></td><td>薄封装 <code>BrowsePagination</code></td></tr>
+          <tr><td>28</td><td><code>src/components/portal/journals/JournalFilterSkeleton.tsx</code></td><td><span class="pill delete">delete</span></td><td>由 <code>FacetSkeleton</code> 取代</td></tr>
+          <tr><td>29</td><td><code>src/components/portal/journals/JournalEmptyResult.tsx</code></td><td><span class="pill modify">modify</span></td><td>改用 <code>EmptyState</code> 外壳</td></tr>
+          <tr><td>30</td><td><code>src/components/portal/journals/JournalsQueryProvider.tsx</code></td><td><span class="pill create">create</span></td><td>注入期刊页序列化函数</td></tr>
+          <tr><td>31</td><td><code>src/app/journals/page.tsx</code> / <code>loading.tsx</code></td><td><span class="pill modify">modify</span></td><td>接 <code>BrowseHead</code> / Provider / <code>FacetSkeleton</code></td></tr>
+          <tr><td>32</td><td><code>src/components/portal/paper-detail/EvidenceBadge.tsx</code> → <code>portal/EvidenceBadge.tsx</code></td><td><span class="pill modify">modify</span></td><td>挪到文献公用位置，更新 <code>PaperHeader</code> 的 import</td></tr>
+          <tr><td>33</td><td><code>src/components/portal/papers/PapersQueryProvider.tsx</code></td><td><span class="pill create">create</span></td><td>注入文献页序列化函数</td></tr>
+          <tr><td>34</td><td><code>src/components/portal/papers/PaperSearchBar.tsx</code></td><td><span class="pill create">create</span></td><td>四 tab 检索条</td></tr>
+          <tr><td>35</td><td><code>src/components/portal/papers/PapersInfoRow.tsx</code></td><td><span class="pill create">create</span></td><td>信息行</td></tr>
+          <tr><td>36</td><td><code>src/components/portal/papers/PaperActiveChipsServer.tsx</code> / <code>PaperActiveChips.tsx</code></td><td><span class="pill create">create</span></td><td>刊名查询（RSC）+ 乐观 chip（client）</td></tr>
+          <tr><td>37</td><td><code>src/components/portal/papers/PaperFiltersServer.tsx</code></td><td><span class="pill create">create</span></td><td>facets 取数包装</td></tr>
+          <tr><td>38</td><td><code>src/components/portal/papers/PaperFilters.tsx</code></td><td><span class="pill create">create</span></td><td>六组 facet</td></tr>
+          <tr><td>39</td><td><code>src/components/portal/papers/VenueFacetSearch.tsx</code></td><td><span class="pill create">create</span></td><td>期刊 combobox</td></tr>
+          <tr><td>40</td><td><code>src/components/portal/papers/PaperResults.tsx</code></td><td><span class="pill create">create</span></td><td>结果区</td></tr>
+          <tr><td>41</td><td><code>src/components/portal/papers/PaperListItem.tsx</code></td><td><span class="pill create">create</span></td><td>列表项</td></tr>
+          <tr><td>42</td><td><code>src/components/portal/papers/PaperListSkeleton.tsx</code></td><td><span class="pill create">create</span></td><td>列表骨架</td></tr>
+          <tr><td>43</td><td><code>src/components/portal/papers/PapersEmptyResult.tsx</code></td><td><span class="pill create">create</span></td><td>空态</td></tr>
+          <tr><td>44</td><td><code>src/app/papers/page.tsx</code></td><td><span class="pill create">create</span></td><td>页面编排 + PMID / DOI 直跳</td></tr>
+          <tr><td>45</td><td><code>src/app/papers/loading.tsx</code></td><td><span class="pill create">create</span></td><td>整页骨架</td></tr>
+          <tr><td>46</td><td><code>src/components/portal/TopNav.tsx</code></td><td><span class="pill modify">modify</span></td><td>PAP-54：解锁"文献"</td></tr>
+          <tr><td>47</td><td><code>src/components/portal/HeroWithToast.tsx</code> → <code>HeroWithSearch.tsx</code></td><td><span class="pill modify">modify</span></td><td>PAP-54：提交跳转 <code>/papers</code></td></tr>
+          <tr><td>48</td><td><code>src/app/page.tsx</code></td><td><span class="pill modify">modify</span></td><td>引用 <code>HeroWithSearch</code></td></tr>
+          <tr><td>49</td><td><code>src/components/portal/TopicCloud.tsx</code></td><td><span class="pill modify">modify</span></td><td>PAP-54：词条链接</td></tr>
+          <tr><td>50</td><td><code>src/components/portal/explore-feed/index.tsx</code></td><td><span class="pill modify">modify</span></td><td>PAP-54："查看更多文献"</td></tr>
+          <tr><td>51</td><td><code>src/components/portal/journal-detail/JournalMasthead.tsx</code></td><td><span class="pill modify">modify</span></td><td>PAP-54："查看该刊文献"</td></tr>
+          <tr><td>52</td><td><code>tests/lib/…</code>、<code>tests/components/portal/{browse,papers,journals}/…</code>、<code>tests/store/…</code>、<code>tests/app/api/…</code></td><td><span class="pill create">create</span></td><td>§8.1 单测；journals 测试随部件迁移做 modify</td></tr>
+          <tr><td>53</td><td><code>tests/e2e/papers-search.spec.ts</code></td><td><span class="pill create">create</span></td><td>§8.2 冒烟；<code>homepage.spec.ts</code> 随 PAP-54 做 modify</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <aside class="callout info">
+      <span class="title">Done 判定</span>
+      <ol>
+        <li><code>/papers</code> 无参数时按最近更新渲染真实数据，信息行、带计数的 facet、分页可用。</li>
+        <li><code>/papers?q=GLP-1</code> 出结果；五组可用 facet 任一生效且 URL 同步；chip 可单个移除；排序切换生效；连点两个筛选项两项都生效。</li>
+        <li>刷新、后退、分享 URL 都还原同一结果；PMID / DOI 命中直跳详情，未命中落空态。</li>
+        <li>四种空态、页码越界、错误态正确；375×812 与 1440×900 布局与 hi-fi 一致。</li>
+        <li>PAP-54 五处入口全部接通；全站不再有指向文献的"功能即将上线"（收藏 / 评论 / 引用除外）。</li>
+        <li>期刊页外观与行为不变，原测试全绿，连点缺陷已修复。</li>
+        <li><code>pnpm lint &amp;&amp; pnpm typecheck &amp;&amp; pnpm test</code> 全绿；Playwright 冒烟连 Mac mini 通过。</li>
+      </ol>
+    </aside>
+
+  </main>
+
+  <!-- ============================================================
+       右栏：我的备注（设计 / 评审时随手记，存浏览器 localStorage）
+       由 ../styles/user-notes.js 驱动，仅本机本浏览器、不进 git；
+       放子目录的 spec 把下方 <script src> 同改成 ../../styles/
+       ============================================================ -->
+  <aside class="notes-panel" id="user-notes-panel">
+    <header>
+      <h2>📝 我的备注</h2>
+      <p class="hint">边读边记，存到浏览器 <strong>localStorage</strong>（仅本机本浏览器，不进 git）。Ctrl/Cmd+Enter 快速提交。</p>
+    </header>
+
+    <form id="user-note-form" class="user-note-form">
+      <textarea id="user-note-input" placeholder="加一条备注（Ctrl/Cmd+Enter 提交）…" rows="3"></textarea>
+      <button type="submit">添加</button>
+    </form>
+
+    <ol class="notes-log" id="user-notes-list"></ol>
+
+    <p class="empty-state" id="user-notes-empty">no notes yet</p>
+
+    <div class="notes-stats">
+      <span id="user-notes-count">0</span> 条备注 · localStorage
+    </div>
+
+    <footer class="user-notes-actions">
+      <button type="button" id="user-notes-clear">🗑️ 清空全部</button>
+    </footer>
+  </aside>
+
+</div>
+<script src="../styles/user-notes.js" defer></script>
+</body>
+</html>
