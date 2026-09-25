@@ -12,7 +12,7 @@ import lombok.Builder;
 /// @param years 出版年份 facet，年份降序
 /// @param types 文献类型 facet，计数降序
 /// @param evidence 证据等级 facet，固定 6 项，值为
-// [dev.linqibin.patra.catalog.domain.model.vo.publication.EvidenceLevel] 名称
+///     [dev.linqibin.patra.catalog.domain.model.vo.publication.EvidenceLevel] 名称
 /// @param languages 语言基码 facet，计数降序
 /// @param openAccess 忽略 oa 自身筛选、保留其他条件下 is_oa=true 的篇数
 /// @param total 满足当前全部筛选的篇数

@@ -21,8 +21,8 @@ import org.springframework.data.repository.query.Param;
 public interface PublicationSearchDao extends JpaRepository<PublicationEntity, Long> {
 
   /// 每篇文献的证据等级 rank：按五档类型数组取 max，无命中为 0（UNKNOWN）。数组由适配器从
-  /// [dev.linqibin.patra.catalog.domain.model.vo.publication.EvidenceLevel#typeValuesOf] 传入，SQL
-  // 不含类型字符串。
+  /// [dev.linqibin.patra.catalog.domain.model.vo.publication.EvidenceLevel#typeValuesOf] 传入，
+  /// SQL 不含类型字符串。
   String EVIDENCE_RANK =
       """
       COALESCE((SELECT max(CASE
@@ -81,8 +81,8 @@ public interface PublicationSearchDao extends JpaRepository<PublicationEntity, L
       LEFT JOIN cat_publication_abstract a ON a.publication_id = p.id
       """;
 
-  /// 排序：`:sortMode` 为 [dev.linqibin.patra.catalog.domain.model.read.portal.PublicationSearchSort]
-  // 名称。
+  /// 排序：`:sortMode` 为
+  /// [dev.linqibin.patra.catalog.domain.model.read.portal.PublicationSearchSort] 名称。
   /// CITED 只按被引 + id（与原 feed 一致，同被引不看采集时间）；LATEST / YEAR 才用 last_synced_at。
   String ORDER_BY =
       """

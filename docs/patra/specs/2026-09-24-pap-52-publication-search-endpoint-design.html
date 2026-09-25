@@ -123,7 +123,7 @@
         <tbody>
           <tr><td><code>venueId</code></td><td>String，可空</td><td><code>cat_publication.venue_id</code>；String 避免 JS 精度问题，与 <code>id</code> 同规矩</td></tr>
           <tr><td><code>evidenceLevel</code></td><td><code>EvidenceLevelView { level, rank, label, derived }</code></td><td>与详情端点同一个视图 record，从 <code>PortalPublicationDetailResponse</code> 内嵌类提到 <code>response</code> 包顶层</td></tr>
-          <tr><td><code>abstractSnippet</code></td><td>String，可空</td><td><strong>可见纯文本</strong>前 300 个码点。SQL 只取 <code>left(plain_text, 2000)</code> 原文，Java 侧 <code>InlineMarkup.toPlainText()</code> 按顺序：① 整体删除已闭合的 <code>&lt;annotation&gt;…&lt;/annotation&gt;</code> 子树（MathML 的 LaTeX 重复表述，前端也不显示，否则公式 <code>x</code> 变成 <code>xx</code>）；② 按白名单剥标签；③ 解码 HTML 实体（命名 5 个 + 十进制 / 十六进制）；④ 按码点截到 300。先解码再截断，不会切出 <code>&amp;a</code> 这类残缺实体；先剥标签再截断，不会切在 <code>&lt;s</code> 中间。库里 4,497 篇摘要保真存有标签、10 篇残留实体。无摘要为 null</td></tr>
+          <tr><td><code>abstractSnippet</code></td><td>String，可空</td><td><strong>可见纯文本</strong>前 300 个码点。SQL 取 <code>plain_text</code> <strong>全文</strong>、不预截断，Java 侧 <code>InlineMarkup.toPlainText()</code> 按顺序：① 整体删除已闭合的 <code>&lt;annotation&gt;…&lt;/annotation&gt;</code> 子树（MathML 的 LaTeX 重复表述，前端也不显示，否则公式 <code>x</code> 变成 <code>xx</code>）；② 按白名单剥标签；③ 解码 HTML 实体（命名 5 个 + 十进制 / 十六进制）；④ 按码点截到 300。先解码再截断，不会切出 <code>&amp;a</code> 这类残缺实体；先剥标签再截断，不会切在 <code>&lt;s</code> 中间。库里 4,497 篇摘要保真存有标签、10 篇残留实体。无摘要为 null</td></tr>
         </tbody>
       </table>
       <h3>4.2 facets 响应：<code>PortalPublicationFacetsResponse</code></h3>
@@ -186,7 +186,7 @@
       <p>feed 那条 SQL 的升级版，单次查询、无 N+1：</p>
       <ul>
         <li><code>studyType</code> 子查询换成 <code>string_agg(pt.type_value, E'\x1f' ORDER BY pt.type_order ASC NULLS LAST, pt.id ASC)</code> 聚合一列 <code>publicationTypesAgg</code>。Java 拆开后第一个当 <code>kind</code>、整个列表喂 <code>classify()</code> 得 <code>evidenceLevel</code>，一列两用。</li>
-        <li>新增 <code>p.venue_id AS "venueId"</code>、<code>left(a.plain_text, 2000) AS "abstractRaw"</code>（原文有界取回，片段派生在 Java，见 §4.1；2000 字原文足以在剥标签后凑满 300 可见字）（<code>LEFT JOIN cat_publication_abstract a ON a.publication_id = p.id</code>；<code>uk_pub_abstract</code> 保证 1:1，不会放大行数）。</li>
+        <li>新增 <code>p.venue_id AS "venueId"</code>、<code>a.plain_text AS "abstractRaw"</code>（摘要全文取回，片段派生在 Java，见 §4.1；不在 SQL 里 <code>left()</code> 预截断，理由见决策 6 备选 D）（<code>LEFT JOIN cat_publication_abstract a ON a.publication_id = p.id</code>；<code>uk_pub_abstract</code> 保证 1:1，不会放大行数）。</li>
         <li>作者 <code>string_agg(pa.display_name, E'\x1f' ORDER BY pa.author_order)</code> 沿用。</li>
         <li>排序内嵌 SQL，<code>:sortMode</code> 传枚举名：
           <ul>
@@ -311,7 +311,8 @@
         <p><code>regexp_replace(title, :tagPattern, '', 'gi')</code> 以 <code>InlineMarkup.TAG_PATTERN</code> 白名单剥标签，让 <code>CO2</code> 能搜到 <code>CO&lt;sub&gt;2&lt;/sub&gt;</code>，且不吞 <code>x&lt;y and z&gt;0</code> 这类字面尖括号；白名单与前端 <code>rich-inline-text.ts</code> 同一份。本版本就无索引，剥标记不改变成本模型。作者匹配 <code>cat_publication_author.display_name</code>，因为 <code>author_id</code> 仅 ORCID 命中才有值。</p>
         <p class="alternatives"><strong>备选 A：</strong>经 <code>cat_author</code> 关联匹配 — 否决：漏掉绝大多数作者行。<br>
         <strong>备选 B：</strong>剥标签用泛型正则 <code>&lt;[^&gt;]+&gt;</code> 或 <code>&lt;/?[a-z][^&lt;&gt;]*&gt;</code> — 否决：吞掉 <code>age &lt; 5</code>、<code>x&lt;y and z&gt;0</code> 这类可见文字，与前端渲染不一致（Codex 两轮各指出一次）。<br>
-        <strong>备选 C：</strong>摘要片段在 SQL 里 <code>left(regexp_replace(...), 300)</code> — 否决：SQL 解不了实体、去不掉 annotation 子树，会产出 <code>xx</code> 和 <code>&amp;a</code>；PG 里没有实体解码函数，硬做只能堆嵌套 <code>replace</code>。</p>
+        <strong>备选 C：</strong>摘要片段在 SQL 里 <code>left(regexp_replace(...), 300)</code> — 否决：SQL 解不了实体、去不掉 annotation 子树，会产出 <code>xx</code> 和 <code>&amp;a</code>；PG 里没有实体解码函数，硬做只能堆嵌套 <code>replace</code>。<br>
+        <strong>备选 D：</strong>SQL 先 <code>left(plain_text, N)</code> 预截断、Java 再清理 — 否决：截断点可能落在一段长 <code>&lt;annotation&gt;</code> 中间，闭合标签被切掉后整段隐藏的 LaTeX 会作为正文露出（IT <code>abstractSnippetDerivation</code> 用 2,500 字 annotation 锁定）；取全文的代价只是列表页每行多传一段摘要，可接受。</p>
       </div>
     </section>
 
