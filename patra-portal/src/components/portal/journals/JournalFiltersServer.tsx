@@ -9,5 +9,5 @@ import type { VenueBrowseQuery } from "@/types/portal";
  */
 export async function JournalFiltersServer({ query }: { query: VenueBrowseQuery }) {
   const facets = await fetchVenuesFacets(toFilters(query));
-  return <JournalFilters facets={facets} query={query} />;
+  return <JournalFilters facets={facets} />;
 }

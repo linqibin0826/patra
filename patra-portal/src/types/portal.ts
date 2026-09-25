@@ -157,6 +157,9 @@ export interface Paper {
   estimatedReadMin: number | null;
   kind: string | null;
   minutesAgo: number | null; // 后端提供，UI 暂未展示（留作"X 分钟前"标签）
+  venueId: string | null; // 载体主键（String，避免 JS 超 2^53 精度损失）；无载体为 null
+  evidenceLevel: EvidenceLevel; // 与详情端点同形；未分级为 UNKNOWN（derived=false）
+  abstractSnippet: string | null; // 摘要可见纯文本前 300 码点；无摘要为 null
 }
 
 /** 证据等级（BE EvidenceLevelView：rank 0–5，越大越强；derived = 非 UNKNOWN） */
@@ -290,10 +293,62 @@ export interface VenueBrowseFacets {
 
 export type VenueBrowsePage = PageResult<VenueBrowse>;
 
-/** 已选筛选 chip（供 client 组件渲染 + 生成移除后的 URL） */
-export interface ActiveFilterChip {
-  group: string; // 中文组名，如 "学科" / "JCR 分区"
-  value: string; // 原始值（用于移除定位）
+/** 已选筛选 chip（供 client 组件渲染 + 生成移除后的 query） */
+export interface ActiveFilterChip<Q = VenueBrowseQuery> {
+  group: string; // 中文组名，如 "学科" / "年份"
+  value: string; // 原始值（用于移除定位与 React key）
   label: string; // 展示文案
-  next: VenueBrowseQuery; // 移除该项后的 query
+  next: Q; // 移除该项后的 query
+}
+
+// ---- 文献检索 ----
+
+/** 文献检索排序：latest = 最近更新（默认），year = 出版年份降序 */
+export type PaperSortId = "latest" | "year";
+
+/** 证据等级枚举名（与 BE EvidenceLevel 一致，强 → 弱） */
+export type EvidenceLevelCode =
+  | "SYSTEMATIC_REVIEW"
+  | "RANDOMIZED_CONTROLLED_TRIAL"
+  | "COHORT_OR_CASE_CONTROL"
+  | "NON_SYSTEMATIC_REVIEW"
+  | "CASE_REPORT"
+  | "UNKNOWN";
+
+/**
+ * `/papers` 查询状态（URL 即状态）。字段名与 BE `/portal/publications/search` 参数一一对应。
+ * 精确定位模式：pmid 或 doi 非空时其余字段恒为默认值（由 parsePaperSearchQuery 保证）。
+ */
+export interface PaperSearchQuery {
+  q: string;
+  author: string;
+  pmid: string;
+  doi: string;
+  yearFrom: number | null;
+  yearTo: number | null;
+  type: string[];
+  evidence: EvidenceLevelCode[];
+  venue: string[]; // 期刊 id 保持字符串（Long 超出 JS 安全整数）
+  lang: string[];
+  oa: boolean;
+  sort: PaperSortId;
+  page: number; // 1-based
+}
+
+/** BE `/portal/publications/search/facets` 响应 */
+export interface PublicationFacets {
+  years: FacetOption[];
+  types: FacetOption[];
+  evidence: FacetOption[];
+  languages: FacetOption[];
+  openAccess: number;
+  total: number;
+  lastSyncedAt: string | null; // ISO-8601 Instant；空库为 null
+}
+
+/** 期刊候选（`/api/venues/suggest` 响应项） */
+export interface VenueSuggestion {
+  id: string;
+  name: string;
+  abbr: string;
 }

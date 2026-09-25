@@ -56,7 +56,7 @@ test("/journals 浏览检索 e2e smoke", async ({ page }) => {
   }
 
   // 6. 翻页：若分页导航存在则点「下一页」，断言 URL 含 page=2。
-  //    结果不足一页时 JournalPagination 返回 null，跳过此步。
+  //    结果不足一页时 BrowsePagination 返回 null，跳过此步。
   const nextPageLink = page.getByRole("link", { name: "下一页" });
   const paginationExists =
     (await nextPageLink.count()) > 0 &&

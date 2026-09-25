@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import {
   buildVenuesFacetsApiQuery,
   buildVenuesPageApiQuery,
@@ -12,6 +13,7 @@ import type {
   VenueBrowsePage,
   VenueBrowseQuery,
   VenueDetail,
+  VenueSuggestion,
 } from "@/types/portal";
 
 /** 服务端 fetch 超时（ms）：慢后端不应无限阻塞 RSC 渲染线程 */
@@ -153,4 +155,48 @@ export async function fetchVenueDetail(id: string): Promise<VenueDetail | null> 
     throw new Error(`期刊详情加载失败：${res.status}`);
   }
   return (await res.json()) as VenueDetail;
+}
+
+/**
+ * 期刊候选（文献页期刊 facet 的"搜索 → 选候选"）。仅 Route Handler 调用（server-only）。
+ * 端点：`GET /portal/venues?q=&pageSize=8`，按影响因子默认排序；非 2xx throw。
+ */
+export async function fetchVenueSuggestions(q: string): Promise<VenueSuggestion[]> {
+  const baseUrl = process.env.PATRA_GATEWAY_BASE_URL;
+  if (!baseUrl) {
+    throw new Error("PATRA_GATEWAY_BASE_URL 未配置");
+  }
+  const params = new URLSearchParams({ q, pageSize: "8" });
+  const res = await fetch(`${baseUrl}/patra-catalog/portal/venues?${params}`, {
+    cache: "no-store",
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  });
+  if (!res.ok) {
+    throw new Error(`期刊候选加载失败：${res.status}`);
+  }
+  const data = (await res.json()) as Partial<PageResult<VenueBrowse>>;
+  return (Array.isArray(data?.items) ? data.items : []).map((v) => ({
+    id: v.id,
+    name: v.name,
+    abbr: v.abbr,
+  }));
+}
+
+/** 单个刊名（chip 与已选期刊行用）：查不到或失败返回 null，不让一个刊名拖垮整页。React cache 单次渲染去重。 */
+const fetchVenueTitle = cache(async (id: string): Promise<string | null> => {
+  try {
+    return (await fetchVenueDetail(id))?.title ?? null;
+  } catch {
+    return null;
+  }
+});
+
+/** 批量取刊名 → `{id: 刊名}`；查不到的 id 不出现在结果中（调用方回退为"期刊 #id"）。 */
+export async function fetchVenueTitles(ids: readonly string[]): Promise<Record<string, string>> {
+  const entries = await Promise.all(
+    ids.map(async (id) => [id, await fetchVenueTitle(id)] as const),
+  );
+  return Object.fromEntries(
+    entries.filter((entry): entry is readonly [string, string] => entry[1] !== null),
+  );
 }

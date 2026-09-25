@@ -41,4 +41,17 @@ describe("RichInlineText", () => {
     const { container } = render(<RichInlineText text="<math><mspace/></math>" />);
     expect(container.querySelector("math mspace")).not.toBeNull();
   });
+
+  it("highlight 命中片段渲染为 mark", () => {
+    const { container } = render(<RichInlineText text="Semaglutide and GLP-1" highlight="glp-1" />);
+    // mark 无稳定 ARIA role，querySelector 是此处最后手段
+    const marks = container.querySelectorAll("mark");
+    expect(marks).toHaveLength(1);
+    expect(marks[0]?.textContent).toBe("GLP-1");
+  });
+
+  it("不传 highlight 时不产生 mark", () => {
+    const { container } = render(<RichInlineText text="GLP-1" />);
+    expect(container.querySelector("mark")).toBeNull();
+  });
 });

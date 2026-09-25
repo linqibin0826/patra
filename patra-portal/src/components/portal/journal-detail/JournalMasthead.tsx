@@ -1,6 +1,8 @@
-import { Book, ExternalLink, Leaf } from "lucide-react";
+import { ArrowRight, Book, ExternalLink, Leaf } from "lucide-react";
+import Link from "next/link";
 import type { CSSProperties } from "react";
 import { pickCover } from "@/lib/portal-api/cover-palette";
+import { buildPapersHref } from "@/lib/portal-api/paper-search";
 import { btnPrimary, btnSecondary } from "@/lib/portal-ui";
 import type { VenueDetail } from "@/types/portal";
 
@@ -81,6 +83,9 @@ export function JournalMasthead({ venue }: { venue: VenueDetail }) {
               官网链接待采集
             </button>
           )}
+          <Link href={buildPapersHref({ venue: [venue.id] })} className={btnSecondary}>
+            查看该刊文献 <ArrowRight size={14} />
+          </Link>
         </div>
       </div>
     </header>

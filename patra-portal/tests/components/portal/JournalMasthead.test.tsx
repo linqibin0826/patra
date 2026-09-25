@@ -59,4 +59,12 @@ describe("JournalMasthead", () => {
     render(<JournalMasthead venue={makeVenue({ abbreviatedTitle: "Nat" })} />);
     expect(screen.getAllByText("Nat").length).toBeGreaterThanOrEqual(1);
   });
+
+  it("「查看该刊文献」跳 /papers?venue=id", () => {
+    render(<JournalMasthead venue={makeVenue({ id: "319041872872550658" })} />);
+    expect(screen.getByRole("link", { name: /查看该刊文献/ })).toHaveAttribute(
+      "href",
+      "/papers?venue=319041872872550658",
+    );
+  });
 });

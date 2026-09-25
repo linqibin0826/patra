@@ -10,15 +10,14 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
-  { label: "首页", href: "/", disabled: false },
-  { label: "文献", href: "#", disabled: true },
-  { label: "期刊", href: "/journals", disabled: false },
+  { label: "首页", href: "/" },
+  { label: "文献", href: "/papers" },
+  { label: "期刊", href: "/journals" },
 ] as const;
 
-/// 当前路径是否命中导航项。首页要求精确匹配，其余按前缀匹配以覆盖 `/journals/[id]` 等子路由。
+/// 当前路径是否命中导航项。首页要求精确匹配，其余按前缀匹配以覆盖 `/papers/[id]`、`/journals/[id]` 等子路由。
 function isNavActive(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/";
-  if (href === "#") return false;
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -43,23 +42,6 @@ export function TopNav() {
         <nav className="justify-self-center max-[880px]:hidden" aria-label="主导航">
           <ul className="flex items-center gap-1">
             {NAV_ITEMS.map((item) => {
-              if (item.disabled) {
-                return (
-                  <li key={item.label}>
-                    <a
-                      href={item.href}
-                      aria-disabled="true"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-(--fg-4) cursor-not-allowed"
-                      onClick={(e) => e.preventDefault()}
-                    >
-                      {item.label}
-                      <span className="rounded-sm border border-(--border-subtle) bg-paper-100 px-1 font-mono text-[9.5px] uppercase tracking-caps text-(--fg-4)">
-                        soon
-                      </span>
-                    </a>
-                  </li>
-                );
-              }
               const active = isNavActive(pathname, item.href);
               return (
                 <li key={item.label}>
@@ -115,23 +97,6 @@ export function TopNav() {
               </SheetHeader>
               <ul className="flex flex-col gap-1 py-4">
                 {NAV_ITEMS.map((item) => {
-                  if (item.disabled) {
-                    return (
-                      <li key={item.label}>
-                        <a
-                          href={item.href}
-                          aria-disabled="true"
-                          onClick={(e) => e.preventDefault()}
-                          className="flex items-center justify-between border-b border-(--border-subtle) px-2 py-3 text-base font-medium text-(--fg-4)"
-                        >
-                          {item.label}
-                          <span className="rounded-sm border border-(--border-subtle) bg-paper-50 px-1 font-mono text-[10px] uppercase tracking-caps">
-                            soon
-                          </span>
-                        </a>
-                      </li>
-                    );
-                  }
                   const active = isNavActive(pathname, item.href);
                   return (
                     <li key={item.label}>

@@ -1,4 +1,6 @@
+import { ArrowRight } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { PaperCard } from "@/components/portal/PaperCard";
 import { fetchFeed } from "@/lib/portal-api/publications";
@@ -29,11 +31,22 @@ export async function ExploreFeed({ tab }: { tab: FeedTab }) {
         {papers.length === 0 ? (
           <ExploreFeedEmpty reason="empty" />
         ) : (
-          <div className="grid grid-cols-2 gap-5 max-[880px]:grid-cols-1">
-            {papers.map((p) => (
-              <PaperCard key={p.id} paper={p} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-2 gap-5 max-[880px]:grid-cols-1">
+              {papers.map((p) => (
+                <PaperCard key={p.id} paper={p} />
+              ))}
+            </div>
+            <div className="mt-8 flex justify-center">
+              <Link
+                href="/papers"
+                className="inline-flex items-center gap-1.5 rounded-md border border-(--border-default) bg-paper-50 px-4 py-2 text-sm font-medium text-(--fg-1) transition-colors hover:bg-paper-200"
+              >
+                查看更多文献
+                <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.5} aria-hidden />
+              </Link>
+            </div>
+          </>
         )}
       </div>
     </FeedSection>

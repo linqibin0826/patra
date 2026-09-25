@@ -20,6 +20,9 @@ function makePaper(overrides: Partial<Paper> = {}): Paper {
     estimatedReadMin: 12,
     kind: "Journal Article",
     minutesAgo: 120,
+    venueId: null,
+    evidenceLevel: { level: "UNKNOWN", rank: 0, label: "未分级", derived: false },
+    abstractSnippet: null,
     ...overrides,
   };
 }

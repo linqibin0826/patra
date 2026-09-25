@@ -1,7 +1,7 @@
 import { ExternalLink } from "lucide-react";
 import Link from "next/link";
+import { EvidenceBadge } from "@/components/portal/EvidenceBadge";
 import { BookmarkButton } from "@/components/portal/paper-detail/BookmarkButton";
-import { EvidenceBadge } from "@/components/portal/paper-detail/EvidenceBadge";
 import { RichInlineText } from "@/components/portal/RichInlineText";
 import { deriveByline, deriveFullText } from "@/lib/portal-api/publication-derive";
 import { btnPrimary, btnSecondary } from "@/lib/portal-ui";
