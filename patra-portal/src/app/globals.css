@@ -165,6 +165,13 @@
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizelegibility;
   }
+  /* 桌面触控板滚到顶 / 底时不做弹性回弹，否则吸顶的 TopNav、面包屑、侧栏会随整页被拖出再弹回。
+     只作用于细指针设备：触屏保留 iOS 回弹手感与 Android 下拉刷新 */
+  @media (hover: hover) and (pointer: fine) {
+    html {
+      overscroll-behavior-y: none;
+    }
+  }
   ::selection {
     background: var(--selection-bg);
     color: var(--selection-fg);
