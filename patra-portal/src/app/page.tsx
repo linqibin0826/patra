@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { ExploreFeed } from "@/components/portal/explore-feed";
 import { ExploreFeedSkeleton } from "@/components/portal/explore-feed/skeleton";
 import { Footer } from "@/components/portal/Footer";
-import { HeroWithToast } from "@/components/portal/HeroWithToast";
+import { HeroWithSearch } from "@/components/portal/HeroWithSearch";
 import { Journals } from "@/components/portal/Journals";
 import { TopicCloud } from "@/components/portal/TopicCloud";
 import { TopNav } from "@/components/portal/TopNav";
@@ -19,7 +19,7 @@ export default async function HomePage({
     <>
       <TopNav />
       <main>
-        <HeroWithToast />
+        <HeroWithSearch />
         <TopicCloud />
         <Journals />
         <Suspense fallback={<ExploreFeedSkeleton />}>
