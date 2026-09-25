@@ -2,22 +2,17 @@ import { ArrowLeftRight, Bookmark, ChevronRight, MessageSquare, Share2 } from "l
 import Link from "next/link";
 import { AISummaryBadge } from "@/components/portal/AISummaryBadge";
 import { RichInlineText } from "@/components/portal/RichInlineText";
+import { sourceDotClass } from "@/lib/portal-ui";
 import type { Paper } from "@/types/portal";
 
 interface PaperCardProps {
   paper: Paper;
 }
 
-const SOURCE_DOT_CLASS: Record<string, string> = {
-  PubMed: "bg-emerald-500",
-  "Europe PMC": "bg-clay-500",
-  Crossref: "bg-sky-500",
-};
-
 export function PaperCard({ paper }: PaperCardProps) {
   const visibleAuthors = paper.authors.slice(0, 2);
   const remaining = paper.authors.length - visibleAuthors.length;
-  const dotClass = SOURCE_DOT_CLASS[paper.source] ?? "bg-fg-3";
+  const dotClass = sourceDotClass(paper.source);
 
   return (
     <article className="flex flex-col gap-3.5 rounded-lg border border-border-default bg-paper-50 p-5">

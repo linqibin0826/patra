@@ -45,7 +45,7 @@
           <li data-task-status="done"><a href="#task-10">Task 10 — 公用页头、筛选骨架与空态外壳</a></li>
           <li data-task-status="done"><a href="#task-11">Task 11 — 期刊页交互部件改用公用部件与导航钩子（修复连点丢操作）</a></li>
           <li data-task-status="done"><a href="#task-12">Task 12 — 期刊页静态部件改用公用部件，删除被取代的期刊组件</a></li>
-          <li data-task-status="pending"><a href="#task-13">Task 13 — 证据徽章挪到文献公用位置并增加紧凑变体；来源色点抽为公用</a></li>
+          <li data-task-status="done"><a href="#task-13">Task 13 — 证据徽章挪到文献公用位置并增加紧凑变体；来源色点抽为公用</a></li>
           <li data-task-status="pending"><a href="#task-14">Task 14 — 文献列表项 PaperListItem 与列表骨架</a></li>
           <li data-task-status="pending"><a href="#task-15">Task 15 — 文献页 Provider、空态与结果区</a></li>
           <li data-task-status="pending"><a href="#task-16">Task 16 — 文献检索条 PaperSearchBar（四 tab + 排序 + 移动端筛选按钮）</a></li>
@@ -4269,7 +4269,7 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
         </ol>
       </article>
 
-      <article class="task" id="task-13" data-status="pending">
+      <article class="task" id="task-13" data-status="done">
         <header>
           <h2>任务 13：证据徽章挪到文献公用位置并增加紧凑变体；来源色点抽为公用</h2>
           <dl class="files">
@@ -4279,7 +4279,7 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
           </dl>
         </header>
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：移动文件并修正引用</strong>
             <pre><code class="lang-bash">git mv patra-portal/src/components/portal/paper-detail/EvidenceBadge.tsx patra-portal/src/components/portal/EvidenceBadge.tsx
 git mv patra-portal/tests/components/portal/paper-detail/EvidenceBadge.test.tsx patra-portal/tests/components/portal/EvidenceBadge.test.tsx
@@ -4287,7 +4287,7 @@ grep -rl "portal/paper-detail/EvidenceBadge" patra-portal/src patra-portal/tests
   | xargs sed -i '' 's#@/components/portal/paper-detail/EvidenceBadge#@/components/portal/EvidenceBadge#g'
 grep -rn "paper-detail/EvidenceBadge" patra-portal/src patra-portal/tests   # 预期无输出</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：写失败测试</strong>
             <p>在 <code>tests/components/portal/EvidenceBadge.test.tsx</code> 的 describe 内追加：</p>
             <pre><code class="lang-tsx">  it("compact：单行小徽章，只有阶梯与中文名，无英文副标与衍生标记", () =&gt; {
@@ -4324,12 +4324,12 @@ describe("sourceDotClass", () =&gt; {
   });
 });</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：运行确认失败</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm exec vitest run tests/components/portal/EvidenceBadge.test.tsx tests/lib/portal-ui.test.ts</code></p>
             <p>预期：compact 用例失败（仍渲染"衍生"）；<code>sourceDotClass</code> 未导出</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：EvidenceBadge 增加 compact 变体</strong>
             <p>在 import 区加 <code>import { cn } from "@/lib/utils";</code>，在 <code>RUNG_CLASS</code> 之后加常量，并把组件改为：</p>
             <pre><code class="lang-tsx">// patra-portal/src/components/portal/EvidenceBadge.tsx
@@ -4387,7 +4387,7 @@ export function EvidenceBadge({ level, compact = false }: { level: EvidenceLevel
   );
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：portal-ui.ts 追加 sourceDotClass，PaperCard 改用</strong>
             <pre><code class="lang-ts">// patra-portal/src/lib/portal-ui.ts（末尾追加）
 /// 数据来源色点 class（PaperCard / PaperListItem 共用）；未知来源回退弱化灰。
@@ -4402,12 +4402,12 @@ export function sourceDotClass(source: string): string {
 }</code></pre>
             <p><code>PaperCard.tsx</code>：删除文件内的 <code>SOURCE_DOT_CLASS</code> 常量，加 <code>import { sourceDotClass } from "@/lib/portal-ui";</code>，把 <code>const dotClass = SOURCE_DOT_CLASS[paper.source] ?? "bg-fg-3";</code> 改为 <code>const dotClass = sourceDotClass(paper.source);</code>（顺带修掉未映射的死类 <code>bg-fg-3</code>）。</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：运行确认通过</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm exec vitest run tests/components/portal/EvidenceBadge.test.tsx tests/lib/portal-ui.test.ts tests/components/portal/PaperCard.test.tsx tests/components/portal/paper-detail &amp;&amp; pnpm typecheck</code></p>
             <p>预期：全部通过；typecheck 0 错误</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7：Commit</strong>
             <pre><code class="lang-bash">git add patra-portal/src/components/portal/EvidenceBadge.tsx patra-portal/src/components/portal/paper-detail patra-portal/src/components/portal/PaperCard.tsx patra-portal/src/lib/portal-ui.ts patra-portal/tests/components/portal/EvidenceBadge.test.tsx patra-portal/tests/components/portal/paper-detail patra-portal/tests/lib/portal-ui.test.ts
 git commit -m "refactor(portal): 证据徽章挪到文献公用位置并增加紧凑变体，来源色点抽为公用 (PAP-53)
@@ -7066,7 +7066,7 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
       data-type 4 类：decision / change / tradeoff / other
       追加 entry 时同步更新下方 notes-stats footer 的对应 counter 数字。
       -->
-          <li class="note" data-type="change" data-time="2026-09-25T15:19">
+      <li class="note" data-type="change" data-time="2026-09-25T15:19">
         <header>
           <span class="note-type">CHANGE</span>
           <time datetime="2026-09-25T15:19">09-25 15:19</time>
