@@ -107,6 +107,6 @@ test.describe("/papers 移动端冒烟", () => {
     await expect(page).toHaveURL(/[?&]type=/);
     await sheet.getByRole("button", { name: /查看 .* 篇结果/ }).click();
     await expect(sheet).toBeHidden();
-    await expect(page.getByTestId("filter-badge")).toHaveText("1");
+    await expect(page.getByRole("button", { name: "筛选" }).getByText("1")).toBeVisible();
   });
 });

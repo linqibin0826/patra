@@ -144,8 +144,8 @@ describe("JournalSearchSortControls", () => {
 
     it("无已选项时不渲染角标", () => {
       renderControls(baseQuery);
-      // 无 "0" 角标
-      expect(screen.queryByTestId("filter-badge")).not.toBeInTheDocument();
+      // 无角标：按钮里只有"筛选"两个字
+      expect(screen.getByRole("button", { name: "筛选" })).toHaveTextContent(/^筛选$/);
     });
   });
 

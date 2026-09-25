@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { PaperSearchBar } from "@/components/portal/papers/PaperSearchBar";
@@ -110,6 +110,6 @@ describe("PaperSearchBar", () => {
 
   it("移动端筛选按钮角标 = 已选筛选项数（不含关键词）", () => {
     render(ui({ ...EMPTY_PAPER_QUERY, q: "x", type: ["A", "B"] }));
-    expect(screen.getByTestId("filter-badge")).toHaveTextContent("2");
+    expect(within(screen.getByRole("button", { name: "筛选" })).getByText("2")).toBeInTheDocument();
   });
 });
