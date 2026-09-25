@@ -56,7 +56,7 @@
           <li data-task-status="done"><a href="#task-21">Task 21 — 导航"文献"解锁与主题云词条接通（PAP-54）</a></li>
           <li data-task-status="done"><a href="#task-22">Task 22 — 首页文献流"查看更多"与期刊详情"查看该刊文献"（PAP-54）</a></li>
           <li data-task-status="done"><a href="#task-23">Task 23 — 首页搜索框接通 /papers：HeroWithToast → HeroWithSearch（PAP-54）</a></li>
-          <li data-task-status="pending"><a href="#task-24">Task 24 — Playwright 冒烟、全量验证与 hi-fi 对照</a></li>
+          <li data-task-status="in-progress"><a href="#task-24">Task 24 — Playwright 冒烟、全量验证与 hi-fi 对照</a></li>
         </ol>
       </li>
       <li><a href="#self-check">自检结果</a></li>
@@ -6860,7 +6860,7 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
         </ol>
       </article>
 
-      <article class="task" id="task-24" data-status="pending">
+      <article class="task" id="task-24" data-status="in-progress">
         <header>
           <h2>任务 24：Playwright 冒烟、全量验证与 hi-fi 对照</h2>
           <dl class="files">
@@ -6869,7 +6869,7 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
           </dl>
         </header>
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：写冒烟 papers-search.spec.ts</strong>
             <pre><code class="lang-ts">// patra-portal/tests/e2e/papers-search.spec.ts
 import { expect, type Page, test } from "@playwright/test";
@@ -6979,17 +6979,17 @@ test.describe("/papers 移动端冒烟", () =&gt; {
   });
 });</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="blocked">
             <strong>步骤 2：跑冒烟（连 Mac mini）</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>PATRA_GATEWAY_BASE_URL=http://100.103.73.27:9528 pnpm exec playwright test tests/e2e/papers-search.spec.ts tests/e2e/journals-browse.spec.ts tests/e2e/homepage.spec.ts</code></p>
             <p>预期：全部 passed（无 skipped——mini 可达时每条都应真实执行）；若 dev server 已在 4000 端口运行，Playwright 复用之</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：全量静态检查与单测</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm lint &amp;&amp; pnpm typecheck &amp;&amp; pnpm test</code></p>
             <p>预期：三者退出码均为 0</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：hi-fi 对照（1440×900 与 375×812）</strong>
             <p>解压 <code>docs/patra/design/snapshots/2026-09-24-papers-list-hifi.zip</code> 到 scratchpad，用内置浏览器并排对照以下画板与实页，逐项核对：页头 / 检索条 tab 与排序位置 / 信息行 / chip 行 / facet 组顺序与计数格式 / 列表项层级与徽章 / 分页 / 空态 / 移动抽屉页脚。</p>
             <pre><code class="lang-text">Main.dc.html            ↔ /papers                         （1440）
@@ -7090,6 +7090,30 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
         </header>
         <p>biome 对候选列表报 a11y 错（ul/li 挂 listbox/option 角色、option 不可聚焦）。按计划提示改为等价写法：<code>&lt;div role="listbox"&gt;</code> + <code>&lt;div role="option" tabIndex={-1}&gt;</code>，焦点仍留在输入框（aria-activedescendant 模式）；可访问角色与名称不变，9 个用例通过。</p>
       </li>
+      <li class="note" data-type="tradeoff" data-time="2026-09-25T15:38">
+        <header>
+          <span class="note-type">TRADEOFF</span>
+          <time datetime="2026-09-25T15:38">09-25 15:38</time>
+          <a href="#task-24">§ Task 24</a>
+        </header>
+        <p>hi-fi 对照：设计稿的 facet 角标 / 勾选框用陶土橙（#ce6a37），实页沿用期刊页的 <code>primary</code>（青绿）。这些部件与 /journals 共用，spec 要求期刊页外观不变，故本 PR 不改色；统一到设计系统色板留给"portal 设计系统落地"一并处理。</p>
+      </li>
+      <li class="note" data-type="other" data-time="2026-09-25T15:38">
+        <header>
+          <span class="note-type">OTHER</span>
+          <time datetime="2026-09-25T15:38">09-25 15:38</time>
+          <a href="#task-24">§ Task 24</a>
+        </header>
+        <p>hi-fi 对照中按 spec 保留、不改的差异：① 年份用单选圆点（决策：年份单选）；② 类型 facet 按计数取前 6，故"期刊论文"排第一（设计稿未列）；③ PMID 未命中不出 PMID chip、按钮为"浏览全部文献"（spec §6 状态矩阵）；④ 信息行无"来自 PubMed"（决策 5）；⑤ 无结果时 facet 随条件收敛为 0 计数。移动端排序段前的"排序"小标签设计稿未画，属共用 SortSegmented 现状，未改。</p>
+      </li>
+      <li class="note" data-type="other" data-time="2026-09-25T15:38">
+        <header>
+          <span class="note-type">OTHER</span>
+          <time datetime="2026-09-25T15:38">09-25 15:38</time>
+          <a href="#task-24">§ Task 24</a>
+        </header>
+        <p>步骤 2 Playwright 冒烟未能执行：本机缺 Chromium（<code>chromium_headless_shell-1243</code>），需 <code>pnpm exec playwright install chromium</code> 下载浏览器，等待用户确认后再跑。已用内置浏览器手动走查任务 20 的 7 个 URL 与连点，全部符合预期。</p>
+      </li>
     </ol>
 
 
@@ -7097,8 +7121,8 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
       总计:
       <span data-counter="decision">0</span> decisions /
       <span data-counter="change">3</span> changes /
-      <span data-counter="tradeoff">0</span> tradeoffs /
-      <span data-counter="other">0</span> others
+      <span data-counter="tradeoff">1</span> tradeoffs /
+      <span data-counter="other">2</span> others
     </footer>
   </aside>
 
