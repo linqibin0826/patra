@@ -1,4 +1,4 @@
-import { JournalFilterSkeleton } from "@/components/portal/journals/JournalFilterSkeleton";
+import { FacetSkeleton } from "@/components/portal/browse/FacetSkeleton";
 import { JournalGridSkeleton } from "@/components/portal/journals/JournalGridSkeleton";
 import { TopNav } from "@/components/portal/TopNav";
 
@@ -38,7 +38,7 @@ export default function Loading() {
           {/* 两栏占位 */}
           <div className="mt-6 flex items-start gap-8" aria-hidden>
             <div className="hidden md:block w-56 shrink-0">
-              <JournalFilterSkeleton />
+              <FacetSkeleton />
             </div>
             <div className="min-w-0 flex-1">
               <JournalGridSkeleton />

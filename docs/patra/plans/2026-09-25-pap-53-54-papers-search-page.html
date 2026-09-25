@@ -44,7 +44,7 @@
           <li data-task-status="done"><a href="#task-9">Task 9 — 公用 facet 部件与筛选容器</a></li>
           <li data-task-status="done"><a href="#task-10">Task 10 — 公用页头、筛选骨架与空态外壳</a></li>
           <li data-task-status="done"><a href="#task-11">Task 11 — 期刊页交互部件改用公用部件与导航钩子（修复连点丢操作）</a></li>
-          <li data-task-status="pending"><a href="#task-12">Task 12 — 期刊页静态部件改用公用部件，删除被取代的期刊组件</a></li>
+          <li data-task-status="done"><a href="#task-12">Task 12 — 期刊页静态部件改用公用部件，删除被取代的期刊组件</a></li>
           <li data-task-status="pending"><a href="#task-13">Task 13 — 证据徽章挪到文献公用位置并增加紧凑变体；来源色点抽为公用</a></li>
           <li data-task-status="pending"><a href="#task-14">Task 14 — 文献列表项 PaperListItem 与列表骨架</a></li>
           <li data-task-status="pending"><a href="#task-15">Task 15 — 文献页 Provider、空态与结果区</a></li>
@@ -4102,7 +4102,7 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
         </ol>
       </article>
 
-      <article class="task" id="task-12" data-status="pending">
+      <article class="task" id="task-12" data-status="done">
         <header>
           <h2>任务 12：期刊页静态部件改用公用部件，删除被取代的期刊组件</h2>
           <dl class="files">
@@ -4111,7 +4111,7 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
           </dl>
         </header>
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：JournalResults 测试改为经 Provider 渲染，并补分页断言</strong>
             <pre><code class="lang-bash">perl -0pi -e 's/render\(await JournalResults\(\{ query: (.*?) \}\)\)/await renderResults($1)/g' tests/components/portal/journals/JournalResults.test.tsx
 grep -n "render(await" tests/components/portal/journals/JournalResults.test.tsx   # 预期无输出</code></pre>
@@ -4129,17 +4129,17 @@ async function renderResults(query: VenueBrowseQuery) {
     expect(screen.getByRole("link", { name: "2" })).toHaveAttribute("href", "/journals?page=2");
   });</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：运行确认基线</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm exec vitest run tests/components/portal/journals/JournalResults.test.tsx</code></p>
             <p>预期：全部通过——本任务是行为不变的重构，新增分页用例作为回归护栏，先确认基线为绿</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：JournalResults 改用 BrowsePagination</strong>
             <p>import 中把 <code>JournalPagination</code> 换成 <code>import { BrowsePagination } from "@/components/portal/browse/BrowsePagination";</code>，并把分页行改为：</p>
             <pre><code class="lang-tsx">      &lt;BrowsePagination page={query.page} total={page.total} pageSize={page.pageSize} unit="本" /&gt;</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：JournalEmptyResult 改用 EmptyState</strong>
             <pre><code class="lang-tsx">// patra-portal/src/components/portal/journals/JournalEmptyResult.tsx
 import { EmptyState } from "@/components/portal/browse/EmptyState";
@@ -4178,7 +4178,7 @@ export function JournalEmptyResult({ kind, query }: JournalEmptyResultProps) {
   );
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：page.tsx 改用 BrowseHead / FacetSkeleton / PendingRegion</strong>
             <pre><code class="lang-tsx">// patra-portal/src/app/journals/page.tsx
 import { Suspense } from "react";
@@ -4241,11 +4241,11 @@ export default async function JournalsPage({
   );
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：loading.tsx 改用 FacetSkeleton</strong>
             <p>把 <code>import { JournalFilterSkeleton } from "@/components/portal/journals/JournalFilterSkeleton";</code> 换成 <code>import { FacetSkeleton } from "@/components/portal/browse/FacetSkeleton";</code>，并把 <code>&lt;JournalFilterSkeleton /&gt;</code> 换成 <code>&lt;FacetSkeleton /&gt;</code>。</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7：删除被取代的组件与测试</strong>
             <pre><code class="lang-bash">git rm patra-portal/src/components/portal/journals/JournalsBrowseHead.tsx \
        patra-portal/src/components/portal/journals/JournalFilterSkeleton.tsx \
@@ -4254,12 +4254,12 @@ export default async function JournalsPage({
 grep -rn "JournalsBrowseHead\|JournalFilterSkeleton\|JournalPagination" patra-portal/src patra-portal/tests   # 预期无输出</code></pre>
             <p><code>JournalPagination.test.tsx</code> 的全部断言已在任务 8 迁入 <code>BrowsePagination.test.tsx</code>。</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 8：运行全量单测、类型检查与 lint</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm test &amp;&amp; pnpm typecheck &amp;&amp; pnpm lint</code></p>
             <p>预期：全部通过；0 错误</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 9：Commit</strong>
             <pre><code class="lang-bash">git add patra-portal/src/components/portal/journals patra-portal/tests/components/portal/journals patra-portal/src/app/journals
 git commit -m "refactor(portal): 期刊页静态部件改用公用部件并删除被取代的组件 (PAP-53)
@@ -7066,14 +7066,21 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
       data-type 4 类：decision / change / tradeoff / other
       追加 entry 时同步更新下方 notes-stats footer 的对应 counter 数字。
       -->
+          <li class="note" data-type="change" data-time="2026-09-25T15:19">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-09-25T15:19">09-25 15:19</time>
+          <a href="#task-12">§ Task 12</a>
+        </header>
+        <p>plan 步骤 7 的 grep 还命中 <code>tests/e2e/journals-browse.spec.ts</code> 里一处注释（"结果不足一页时 JournalPagination 返回 null"），不在本任务文件清单内；已把注释改为 BrowsePagination（行为相同：页数 ≤ 1 返回 null）。</p>
+      </li>
     </ol>
 
-    <p class="empty-state">no notes yet</p>
 
     <footer class="notes-stats">
       总计:
       <span data-counter="decision">0</span> decisions /
-      <span data-counter="change">0</span> changes /
+      <span data-counter="change">1</span> changes /
       <span data-counter="tradeoff">0</span> tradeoffs /
       <span data-counter="other">0</span> others
     </footer>

@@ -1,6 +1,6 @@
+import { BrowsePagination } from "@/components/portal/browse/BrowsePagination";
 import { JournalEmptyResult } from "@/components/portal/journals/JournalEmptyResult";
 import { JournalGrid } from "@/components/portal/journals/JournalGrid";
-import { JournalPagination } from "@/components/portal/journals/JournalPagination";
 import { fetchVenuesPage } from "@/lib/portal-api/venues";
 import type { VenueBrowseQuery } from "@/types/portal";
 
@@ -31,7 +31,7 @@ export async function JournalResults({ query }: { query: VenueBrowseQuery }) {
     <div className="flex flex-col gap-6">
       <p className="text-sm text-[var(--fg-3)]">共 {page.total} 本期刊</p>
       <JournalGrid items={page.items} />
-      <JournalPagination query={query} total={page.total} pageSize={page.pageSize} />
+      <BrowsePagination page={query.page} total={page.total} pageSize={page.pageSize} unit="本" />
     </div>
   );
 }
