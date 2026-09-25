@@ -78,6 +78,7 @@
 
 规则：
 
+- **PR 粒度：Issue 是跟踪单位，PR 按技术栈合并**：每个版本最多两个 PR（后端一个、前端一个），design / 纯文档 Issue 不单独开 PR；release spec、设计简报、设计快照、工程 spec、plan 随同版本第一个代码 PR 提交（仍写在 feature branch 上，不直接提交 main）；PR 描述逐行列出 `Closes PAP-xx` 关闭所承载的全部 Issue。设计文档由用户在写代码前本地让 Codex 评审，不为评审开 PR。详见 `patra:release-planning`。
 - **评审由 Claude 驱动，用户不参与**：开发期 PR 挂 `draft`（两位都不评）→ 完工转 ready：Codex 自动首评，Claude 发 `@coderabbitai review` 触发 CodeRabbit 首评。
 - **只做首评，不复评**：CodeRabbit 对 0 star 公开仓库的 OSS 额度仅**每小时 1 次** PR 评审（滚动窗口），复评几乎必然限流。修复是否正确由 Claude 自行验证 + CI 兜底，不再 @ 任何 reviewer 复评。首评被限流时，等距上次评审满 60 分钟后再触发一次。
 - **必启 Monitor**：每次 `gh pr create` 后，同一工作会话内立即启动 Monitor 并绑定该 PR，覆盖**两条流**（AI reviewer + 人工），持续到 PR 合并或关闭。

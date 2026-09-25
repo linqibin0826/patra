@@ -165,11 +165,17 @@ gh pr create --title "<title>" --body "$(cat <<'EOF'
 ## 摘要
 <2-3 条变更要点>
 
+## 关联 Issue
+Closes PAP-xx
+Closes PAP-yy
+
 ## 测试计划
 - [ ] <验证步骤>
 EOF
 )"
 ```
+
+**PR 按技术栈合并，一个 PR 关闭多个 Issue：** 同版本同技术栈的 Issue 共用这条分支和这个 PR（每版最多后端、前端两个 PR）。「关联 Issue」逐行列出本 PR 承载的全部 Linear Issue，包括随本 PR 提交的 design / 纯文档 Issue（release spec、设计简报、设计快照、spec、plan 随同版本第一个代码 PR 提交），每行一个 `Closes`。
 
 **不要清理 worktree** —— 用户在 PR 反馈迭代时还需要它存活。
 

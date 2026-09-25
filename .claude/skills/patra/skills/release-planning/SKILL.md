@@ -31,6 +31,16 @@ description: 启动新版本 / 创建 Linear Project 时使用——产出"5 字
 | 产物 | `<git-root>/docs/patra/release-specs/<version>.md`（MD）| `<git-root>/docs/patra/specs/<topic>-design.html`（HTML）|
 | 终止 | Linear Project 进 Active + Issue 池就绪 | 调用 writing-plans 写实施计划 |
 
+## Issue 是跟踪单位，PR 按技术栈合并
+
+Issue 与 PR 解耦：Issue 保持细粒度，只用来跟踪进度；PR 是合并单位，按技术栈合并，控制每版的 CI / AI 评审 / Monitor / Linear 同步开销。
+
+1. **每版最多两个 PR**：后端 PR（承载本版全部 `area:be` Issue）+ 前端 PR（承载本版全部 `area:fe` Issue）。`area:design` 与纯文档 Issue 不单独开 PR。
+2. **文档随代码 PR 提交**：release spec（`docs/patra/release-specs/`）、设计简报（`patra-portal/docs/design-briefs/<version>/`）、设计快照（`docs/patra/design/snapshots/`）、工程 spec（`docs/patra/specs/`）、plan（`docs/patra/plans/`）随同版本第一个代码 PR 提交；产出时该 PR 已合并的（如前端 spec / plan），随下一个代码 PR 提交。它们仍写在 feature branch 上，不直接提交到 main。
+3. **一个 PR 关闭多个 Issue**：PR 描述逐行列出 `Closes PAP-xx`，覆盖该 PR 承载的全部 Issue（含随附的 design / 文档 Issue）。
+4. **设计文档在写代码前评审**：用户在本地让 Codex 审 spec 和 plan，不为评审单独开 PR。
+5. **小改动并入依赖页面**：出口接通这类只改几处链接的小改动，与它依赖的页面在同一 PR、同一份 plan 里完成，不单独拆分支。
+
 **HARD-GATE**：在产出版本规划文档并获得用户批准之前，不要进入 Issue 层的任何工程活动（Tech Design 起草 / area:be / area:fe / area:design Issue 的 In Progress 工作），不要写任何实现代码。
 
 ## 反模式："这个想法太小不需要 release spec"
@@ -49,7 +59,7 @@ description: 启动新版本 / 创建 Linear Project 时使用——产出"5 字
 2. **5 字段对话引导** — 一次只问一个字段，顺序：版本目标 → 功能列表 → 范围边界 → 关键决策 → Done 判定
 3. **分节展示草案** — 每个字段问完 + 草拟 + 用户批准后再进下一个
 4. **写到文件** — `<git-root>/docs/patra/release-specs/<version>.md`
-5. **派生 Linear Issue 列表（建议）** — 第 2 字段每条工程任务 → 1 个 Issue 建议（Title + Magical.pm Everyday 三字段 Description: Overview / To-Do / Acceptance Criteria + `area:be|fe|design` + `path:full` 标签 + Backlog 状态）；跨界功能拆 2-3 个 Issue + Project Milestone 表达阶段顺序（默认 BE Ready → Design Ready → FE Ready → Released）
+5. **派生 Linear Issue 列表（建议）** — 第 2 字段每条工程任务 → 1 个 Issue 建议（Title + Magical.pm Everyday 三字段 Description: Overview / To-Do / Acceptance Criteria + `area:be|fe|design` + `path:full` 标签 + Backlog 状态）并按 PR 归属分组（后端 PR / 前端 PR，每版 ≤ 2 个）；跨界功能拆 2-3 个 Issue + Project Milestone 表达阶段顺序（默认 BE Ready → Design Ready → FE Ready → Released）
 6. **用户审查** — 请用户审阅 spec + Issue 列表
 7. **终止** — 提示用户在 Linear 中创建 Issues + Project 推到 Active；**不调用其他 skill**
 
@@ -98,7 +108,7 @@ digraph release_planning {
 
 ### 字段 2：工程任务列表 / 要做的事
 
-**提问**："这一版要做哪些事？bulleted list，每条 = 1 个具体工程任务（按 area:be / area:fe / area:design 分流）→ 派生 1 个 Linear Issue（≈ 1 个 PR）；跨界功能直接拆多个并列 Issue（不要塞同一个）。"
+**提问**："这一版要做哪些事？bulleted list，每条 = 1 个具体工程任务（按 area:be / area:fe / area:design 分流）→ 派生 1 个 Linear Issue（跟踪单位，不是 PR 单位——PR 按技术栈合并，见上方「Issue 是跟踪单位，PR 按技术栈合并」）；跨界功能直接拆多个并列 Issue（不要塞同一个）。"
 
 **形式**：遵循 Linear Method 「[Write issues, not user stories](https://linear.app/method/write-issues-not-user-stories)」——每条直接写交付物，不写用户故事格式。
 
@@ -112,8 +122,9 @@ digraph release_planning {
 
 **字段 DoD**：
 - [ ] 每条是具体工程任务（标明 area:be / area:fe / area:design）
-- [ ] 每条 ≈ 1 个 PR（几小时-几天工作量；超出则拆 Sub-Issue 或继续拆 Issue）
+- [ ] 每条能独立验收（AC 可单独判定）；过大则拆 Sub-Issue 或继续拆 Issue——粒度按跟踪与验收定，不按 PR 定
 - [ ] 跨界功能已按 area 拆为 2-3 个并列 Issue（不要单 Issue 内塞 BE+FE）
+- [ ] 每条标注 PR 归属：`area:be` → 本版后端 PR；`area:fe` → 本版前端 PR；`area:design` / 纯文档 → 随同版本第一个代码 PR，整版不超过 2 个 PR
 - [ ] 整版 Issue 数量合理（建议 3-10 个；超过 10 个考虑拆分版本）
 - [ ] 列出阶段顺序（默认 area:be → area:design → area:fe；Project Milestone 表达）
 
@@ -215,7 +226,8 @@ patra-api 是单人开发的绿地项目（无历史包袱、无外部用户）�
      - 必填 path：`path:full`（默认；小修则 `path:fast-track`）
    - **Project Milestone**：把 Issue 挂到对应 Milestone（默认 BE Ready / Design Ready / FE Ready）表达执行顺序
 4. **跨界功能拆多 Issue**：1 个用户视角的能力（如"Health 状态显示"）派生 2-3 个并列 Issue：area:be Issue + area:design Issue + area:fe Issue。**不要**塞同一个 Issue。
-5. **不自动创建 Issue**——除非用户明确同意 + 有 Linear MCP 接入；默认只列出建议清单由用户在 Linear 手动创建
+5. **标注 PR 归属**：Issue 列表按 PR 分组展示（后端 PR / 前端 PR），design / 文档 Issue 归到同版本第一个代码 PR 名下；规则见「Issue 是跟踪单位，PR 按技术栈合并」
+6. **不自动创建 Issue**——除非用户明确同意 + 有 Linear MCP 接入；默认只列出建议清单由用户在 Linear 手动创建
 
 ## 用户审查关卡
 
@@ -223,8 +235,12 @@ patra-api 是单人开发的绿地项目（无历史包袱、无外部用户）�
 
 > "版本规划文档已写到 `<path>`。下面是建议派生的 Issue 列表：
 >
+> **后端 PR**（随附 release spec / 设计文档）
 > 1. **<Issue 1 title>** — <一句话描述>
 > 2. **<Issue 2 title>** — <一句话描述>
+>
+> **前端 PR**
+> 3. **<Issue 3 title>** — <一句话描述>
 > ...
 >
 > 请审阅 spec 和 Issue 列表。如果都 OK，告诉我后我会停止——你在 Linear 中：① 创建 Issues ② Project 状态推到 Active。"
@@ -237,7 +253,7 @@ patra-api 是单人开发的绿地项目（无历史包袱、无外部用户）�
 
 1. **占位符扫描**：是否有"待定"、"TODO"、未完成的字段？修复。
 2. **5 字段 DoD**：每个字段的 DoD 是否都 ✓？
-3. **Issue 派生完整性**：第 2 字段每条功能是否都有对应 Issue 建议？
+3. **Issue 派生完整性**：第 2 字段每条功能是否都有对应 Issue 建议？每个 Issue 是否都有 PR 归属，且整版不超过 2 个 PR？
 4. **范围一致性**：第 3 字段"不做的事"是否真的与第 2 字段"要做的事"互补、不冲突？
 5. **Done 判定可验证性**：第 5 字段每条是否 boolean 可判断？
 
@@ -252,7 +268,7 @@ patra-api 是单人开发的绿地项目（无历史包袱、无外部用户）�
 > 2. 配置 Project Milestone（默认 BE Ready → Design Ready → FE Ready → Released），把 Issue 挂到对应 Milestone
 > 3. Project 状态推到 `Active`
 >
-> 后续每个 Issue 走 Linear 默认 5 态状态机（Backlog → Todo → In Progress → In Review → Done），按 area 分流：area:be Issue 进 In Progress 时触发 patra:brainstorming + patra:writing-plans + TDD；area:design Issue 进 In Progress 时用 Claude Design；area:fe Issue 进 In Progress 时消费 Handoff token。详见 SOP §5.1 / §6。"
+> 后续每个 Issue 走 Linear 默认 5 态状态机（Backlog → Todo → In Progress → In Review → Done），按 area 分流：area:be Issue 进 In Progress 时触发 patra:brainstorming + patra:writing-plans + TDD；area:design Issue 进 In Progress 时用 Claude Design；area:fe Issue 进 In Progress 时消费 Handoff token。同版本同技术栈的 Issue 共用一条 feature branch 和一个 PR，PR 描述逐行 `Closes` 所承载的 Issue。详见 SOP §5.1 / §6。"
 
 **到此结束。不调用任何其他 skill。**
 
