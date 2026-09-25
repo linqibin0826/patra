@@ -21,8 +21,8 @@
 }
 
 /* 桌面触控板滚到顶 / 底时不做弹性回弹，否则整页会被拖出一段再弹回。
-   只作用于细指针设备：触屏保留 iOS 回弹手感与 Android 下拉刷新 */
-@media (hover: hover) and (pointer: fine) {
+   只作用于细指针且无触屏的设备：触屏（含带触控板的 iPad、触屏笔记本）保留 iOS 回弹手感与 Android 下拉刷新 */
+@media (hover: hover) and (pointer: fine) and (not (any-pointer: coarse)) {
   html {
     overscroll-behavior-y: none;
   }

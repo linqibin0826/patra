@@ -166,8 +166,8 @@
     text-rendering: optimizelegibility;
   }
   /* 桌面触控板滚到顶 / 底时不做弹性回弹，否则吸顶的 TopNav、面包屑、侧栏会随整页被拖出再弹回。
-     只作用于细指针设备：触屏保留 iOS 回弹手感与 Android 下拉刷新 */
-  @media (hover: hover) and (pointer: fine) {
+     只作用于细指针且无触屏的设备：触屏（含带触控板的 iPad、触屏笔记本）保留 iOS 回弹手感与 Android 下拉刷新 */
+  @media (hover: hover) and (pointer: fine) and (not (any-pointer: coarse)) {
     html {
       overscroll-behavior-y: none;
     }
