@@ -136,3 +136,84 @@ export function parsePaperSearchQuery(sp: Record<string, RawParam>): PaperSearch
     page: pageValue(sp.page),
   };
 }
+
+// ---- 序列化 ----
+
+/** 按固定顺序写入条件（sort / page 除外）；多值用重复参数，不拼逗号。 */
+function appendConditions(params: URLSearchParams, query: PaperSearchQuery): void {
+  if (query.q) params.set("q", query.q);
+  if (query.author) params.set("author", query.author);
+  if (query.pmid) params.set("pmid", query.pmid);
+  if (query.doi) params.set("doi", query.doi);
+  if (query.yearFrom !== null) params.set("yearFrom", String(query.yearFrom));
+  if (query.yearTo !== null) params.set("yearTo", String(query.yearTo));
+  for (const value of query.type) params.append("type", value);
+  for (const value of query.evidence) params.append("evidence", value);
+  for (const value of query.venue) params.append("venue", value);
+  for (const value of query.lang) params.append("lang", value);
+  if (query.oa) params.set("oa", "true");
+}
+
+/**
+ * 把 PaperSearchQuery 序列化为 querystring（无前导 `?`）。
+ * 默认值省略（sort=latest、page=1、空值），顺序稳定，可作 Suspense key。
+ */
+export function serializePaperSearchQuery(query: PaperSearchQuery): string {
+  const params = new URLSearchParams();
+  appendConditions(params, query);
+  if (query.sort !== "latest") params.set("sort", query.sort);
+  if (query.page > 1) params.set("page", String(query.page));
+  return params.toString();
+}
+
+/** 查询对象 → `/papers` 站内链接。 */
+export function papersHref(query: PaperSearchQuery): string {
+  const qs = serializePaperSearchQuery(query);
+  return qs ? `/papers?${qs}` : "/papers";
+}
+
+/** 按部分字段拼 `/papers` 链接（导航 / 首页搜索框 / 主题云 / 期刊详情等入口用）。 */
+export function buildPapersHref(partial: Partial<PaperSearchQuery>): string {
+  return papersHref({ ...EMPTY_PAPER_QUERY, ...partial });
+}
+
+/** BE `/portal/publications/search` query（无前导 ?）。 */
+export function buildSearchApiQuery(query: PaperSearchQuery): string {
+  const params = new URLSearchParams();
+  appendConditions(params, query);
+  params.set("sort", query.sort);
+  params.set("page", String(query.page));
+  params.set("pageSize", String(PAPER_PAGE_SIZE));
+  return params.toString();
+}
+
+/** BE `/portal/publications/search/facets` query（无前导 ?）：只带条件。 */
+export function buildFacetsApiQuery(query: PaperSearchQuery): string {
+  const params = new URLSearchParams();
+  appendConditions(params, query);
+  return params.toString();
+}
+
+// ---- 状态判定 ----
+
+/** 精确定位模式：pmid 或 doi 非空。 */
+export function isExactLookup(query: PaperSearchQuery): boolean {
+  return query.pmid !== "" || query.doi !== "";
+}
+
+/** 已选筛选项数（年份算 1 项；关键词 / 作者 / 精确定位不计入）——移动端角标与抽屉标题用。 */
+export function filterCount(query: PaperSearchQuery): number {
+  return (
+    (query.yearFrom !== null || query.yearTo !== null ? 1 : 0) +
+    query.type.length +
+    query.evidence.length +
+    query.venue.length +
+    query.lang.length +
+    (query.oa ? 1 : 0)
+  );
+}
+
+/** 是否处于检索态（有任何检索或筛选条件；排序与页码不算）。 */
+export function hasSearchConditions(query: PaperSearchQuery): boolean {
+  return isExactLookup(query) || query.q !== "" || query.author !== "" || filterCount(query) > 0;
+}

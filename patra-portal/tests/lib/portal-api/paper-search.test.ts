@@ -1,5 +1,42 @@
 import { describe, expect, it } from "vitest";
-import { EMPTY_PAPER_QUERY, MAX_PAGE, parsePaperSearchQuery } from "@/lib/portal-api/paper-search";
+import {
+  buildFacetsApiQuery,
+  buildPapersHref,
+  buildSearchApiQuery,
+  EMPTY_PAPER_QUERY,
+  filterCount,
+  hasSearchConditions,
+  isExactLookup,
+  MAX_PAGE,
+  papersHref,
+  parsePaperSearchQuery,
+  serializePaperSearchQuery,
+} from "@/lib/portal-api/paper-search";
+import type { PaperSearchQuery } from "@/types/portal";
+
+/** URLSearchParams → Next searchParams 形态（重复参数聚成数组） */
+function toRecord(qs: string): Record<string, string | string[]> {
+  const out: Record<string, string | string[]> = {};
+  for (const [key, value] of new URLSearchParams(qs)) {
+    const prev = out[key];
+    out[key] = prev === undefined ? value : Array.isArray(prev) ? [...prev, value] : [prev, value];
+  }
+  return out;
+}
+
+const FULL: PaperSearchQuery = {
+  ...EMPTY_PAPER_QUERY,
+  q: "GLP-1",
+  author: "Smith",
+  yearFrom: 2024,
+  type: ["Review"],
+  evidence: ["RANDOMIZED_CONTROLLED_TRIAL"],
+  venue: ["123"],
+  lang: ["en"],
+  oa: true,
+  sort: "year",
+  page: 2,
+};
 
 describe("parsePaperSearchQuery", () => {
   it("空参数 → 浏览态默认查询", () => {
@@ -116,5 +153,85 @@ describe("parsePaperSearchQuery", () => {
   it("pmid 优先于 doi", () => {
     const q = parsePaperSearchQuery({ pmid: "1", doi: "10.1/x" });
     expect(q).toEqual({ ...EMPTY_PAPER_QUERY, pmid: "1" });
+  });
+});
+
+describe("serializePaperSearchQuery", () => {
+  it("默认查询序列化为空串", () => {
+    expect(serializePaperSearchQuery(EMPTY_PAPER_QUERY)).toBe("");
+  });
+
+  it("参数顺序稳定：条件 → sort → page", () => {
+    expect(serializePaperSearchQuery(FULL)).toBe(
+      "q=GLP-1&author=Smith&yearFrom=2024&type=Review&evidence=RANDOMIZED_CONTROLLED_TRIAL&venue=123&lang=en&oa=true&sort=year&page=2",
+    );
+  });
+
+  it("多值用重复参数，含逗号的值被编码而不是拆开", () => {
+    const qs = serializePaperSearchQuery({
+      ...EMPTY_PAPER_QUERY,
+      type: ["Clinical Trial, Phase III", "Review"],
+    });
+    expect(qs).toBe("type=Clinical+Trial%2C+Phase+III&type=Review");
+  });
+
+  it("往返一致：parse(serialize(q)) 等于 q", () => {
+    expect(parsePaperSearchQuery(toRecord(serializePaperSearchQuery(FULL)))).toEqual(FULL);
+    const exact = { ...EMPTY_PAPER_QUERY, doi: "10.1016/j.x" };
+    expect(parsePaperSearchQuery(toRecord(serializePaperSearchQuery(exact)))).toEqual(exact);
+  });
+
+  it("MAX_PAGE 往返保持", () => {
+    const q = { ...EMPTY_PAPER_QUERY, page: MAX_PAGE };
+    expect(parsePaperSearchQuery(toRecord(serializePaperSearchQuery(q))).page).toBe(MAX_PAGE);
+  });
+});
+
+describe("papersHref / buildPapersHref", () => {
+  it("无条件时为 /papers", () => {
+    expect(papersHref(EMPTY_PAPER_QUERY)).toBe("/papers");
+  });
+
+  it("按部分字段拼出 /papers 链接（全站入口用）", () => {
+    expect(buildPapersHref({ q: "GLP-1" })).toBe("/papers?q=GLP-1");
+    expect(buildPapersHref({ venue: ["123"] })).toBe("/papers?venue=123");
+    expect(buildPapersHref({ pmid: "41605285" })).toBe("/papers?pmid=41605285");
+  });
+});
+
+describe("后端 query", () => {
+  it("search：条件 + sort + page + pageSize=20", () => {
+    expect(buildSearchApiQuery(EMPTY_PAPER_QUERY)).toBe("sort=latest&page=1&pageSize=20");
+    expect(buildSearchApiQuery({ ...EMPTY_PAPER_QUERY, type: ["A", "B"], page: 3 })).toBe(
+      "type=A&type=B&sort=latest&page=3&pageSize=20",
+    );
+  });
+
+  it("facets：只带条件，不带 sort / page", () => {
+    expect(buildFacetsApiQuery({ ...EMPTY_PAPER_QUERY, q: "x", sort: "year", page: 3 })).toBe(
+      "q=x",
+    );
+    expect(buildFacetsApiQuery(EMPTY_PAPER_QUERY)).toBe("");
+  });
+});
+
+describe("状态判定", () => {
+  it("isExactLookup：pmid 或 doi 非空", () => {
+    expect(isExactLookup(EMPTY_PAPER_QUERY)).toBe(false);
+    expect(isExactLookup({ ...EMPTY_PAPER_QUERY, pmid: "1" })).toBe(true);
+    expect(isExactLookup({ ...EMPTY_PAPER_QUERY, doi: "10.1/x" })).toBe(true);
+  });
+
+  it("hasSearchConditions：排序与页码不算条件", () => {
+    expect(hasSearchConditions(EMPTY_PAPER_QUERY)).toBe(false);
+    expect(hasSearchConditions({ ...EMPTY_PAPER_QUERY, sort: "year", page: 2 })).toBe(false);
+    expect(hasSearchConditions({ ...EMPTY_PAPER_QUERY, q: "x" })).toBe(true);
+    expect(hasSearchConditions({ ...EMPTY_PAPER_QUERY, pmid: "1" })).toBe(true);
+    expect(hasSearchConditions({ ...EMPTY_PAPER_QUERY, oa: true })).toBe(true);
+  });
+
+  it("filterCount：年份算 1 项，文本检索不计入", () => {
+    expect(filterCount({ ...EMPTY_PAPER_QUERY, yearFrom: 2024, yearTo: 2025 })).toBe(1);
+    expect(filterCount({ ...EMPTY_PAPER_QUERY, type: ["A", "B"], oa: true, q: "x" })).toBe(3);
   });
 });

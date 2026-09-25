@@ -35,7 +35,7 @@
           -->
           <li data-task-status="done"><a href="#task-1">Task 1 — 类型扩展、Paper 测试工厂与中文名字典</a></li>
           <li data-task-status="done"><a href="#task-2">Task 2 — paper-search：URL 解析与脏参数过滤</a></li>
-          <li data-task-status="pending"><a href="#task-3">Task 3 — paper-search：序列化、后端 query 与状态判定</a></li>
+          <li data-task-status="done"><a href="#task-3">Task 3 — paper-search：序列化、后端 query 与状态判定</a></li>
           <li data-task-status="pending"><a href="#task-4">Task 4 — paper-search：状态变换、年份、chip 与首页入口</a></li>
           <li data-task-status="pending"><a href="#task-5">Task 5 — 标题高亮：highlightInlineNodes 与 RichInlineText highlight</a></li>
           <li data-task-status="pending"><a href="#task-6">Task 6 — 取数层：search / facets、期刊候选中转与刊名查询</a></li>
@@ -817,7 +817,7 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
         </ol>
       </article>
 
-      <article class="task" id="task-3" data-status="pending">
+      <article class="task" id="task-3" data-status="done">
         <header>
           <h2>任务 3：paper-search：序列化、后端 query 与状态判定</h2>
           <dl class="files">
@@ -825,7 +825,7 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
           </dl>
         </header>
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：追加失败测试</strong>
             <p>把测试文件顶部 import 扩为下列形式，并在文件末尾追加 describe：</p>
             <pre><code class="lang-ts">import {
@@ -944,12 +944,12 @@ describe("状态判定", () =&gt; {
   });
 });</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：运行确认失败</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm exec vitest run tests/lib/portal-api/paper-search.test.ts</code></p>
             <p>预期：失败：<code>serializePaperSearchQuery is not a function</code> 等导入缺失</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：在 paper-search.ts 末尾追加实现</strong>
             <pre><code class="lang-ts">// ---- 序列化 ----
 
@@ -1032,12 +1032,12 @@ export function hasSearchConditions(query: PaperSearchQuery): boolean {
   return isExactLookup(query) || query.q !== "" || query.author !== "" || filterCount(query) &gt; 0;
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：运行确认通过</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm exec vitest run tests/lib/portal-api/paper-search.test.ts</code></p>
             <p>预期：全部通过（新增 12 个用例）</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：Commit</strong>
             <pre><code class="lang-bash">git add patra-portal/src/lib/portal-api/paper-search.ts patra-portal/tests/lib/portal-api/paper-search.test.ts
 git commit -m "feat(portal): 新增文献检索序列化、后端 query 与状态判定 (PAP-53)
