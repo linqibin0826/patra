@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
@@ -51,14 +51,6 @@ describe("TopNav", () => {
     expect(journalLink).toHaveAttribute("aria-current", "page");
   });
 
-  it("文献 link 仍标记为 aria-disabled 且用可生效的 (--fg-4) 灰置灰", () => {
-    render(<TopNav />);
-    const link = screen.getByText("文献").closest("a");
-    expect(link).toHaveAttribute("aria-disabled", "true");
-    // 死类 text-fg-4 不生成 CSS；必须用 arbitrary value (--fg-4) 才真正变灰
-    expect(link?.className).toMatch(/\(--fg-4\)/);
-  });
-
   it("主题 tab 已移除（不再渲染）", () => {
     render(<TopNav />);
     expect(screen.queryByText("主题")).not.toBeInTheDocument();
@@ -70,5 +62,27 @@ describe("TopNav", () => {
     const menuBtn = screen.getByRole("button", { name: /打开菜单|menu/i });
     await user.click(menuBtn);
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("文献 link 指向 /papers，不再 disabled / SOON", () => {
+    render(<TopNav />);
+    const link = screen.getByRole("link", { name: "文献" });
+    expect(link).toHaveAttribute("href", "/papers");
+    expect(link).not.toHaveAttribute("aria-disabled");
+    expect(screen.queryByText(/soon/i)).not.toBeInTheDocument();
+  });
+
+  it("在 /papers 与 /papers/[id] 下，文献 高亮", () => {
+    mockPathname = "/papers/123";
+    render(<TopNav />);
+    expect(screen.getByRole("link", { name: "文献" })).toHaveAttribute("aria-current", "page");
+  });
+
+  it("移动菜单中文献同样可点", async () => {
+    const user = userEvent.setup();
+    render(<TopNav />);
+    await user.click(screen.getByRole("button", { name: /打开菜单|menu/i }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByRole("link", { name: "文献" })).toHaveAttribute("href", "/papers");
   });
 });

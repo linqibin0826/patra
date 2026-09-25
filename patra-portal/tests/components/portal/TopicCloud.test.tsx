@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { TopicCloud } from "@/components/portal/TopicCloud";
+import { buildPapersHref } from "@/lib/portal-api/paper-search";
 
 describe("TopicCloud", () => {
   it("含 '此刻热议' eyebrow", () => {
@@ -23,5 +24,18 @@ describe("TopicCloud", () => {
   it("含 'GLP-1 受体激动剂' 文字 (最热 topic)", () => {
     render(<TopicCloud />);
     expect(screen.getByText("GLP-1 受体激动剂")).toBeInTheDocument();
+  });
+
+  it("词条是链接，跳 /papers?q=词条", () => {
+    render(<TopicCloud />);
+    expect(screen.getByRole("link", { name: /GLP-1 受体激动剂/ })).toHaveAttribute(
+      "href",
+      buildPapersHref({ q: "GLP-1 受体激动剂" }),
+    );
+  });
+
+  it("「浏览全部主题」本版仍为占位（边界 E）", () => {
+    render(<TopicCloud />);
+    expect(screen.getByRole("button", { name: /浏览全部主题/ })).toBeDisabled();
   });
 });

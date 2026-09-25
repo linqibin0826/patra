@@ -53,7 +53,7 @@
           <li data-task-status="done"><a href="#task-18">Task 18 — 文献 facet 栏 PaperFilters 与服务端包装</a></li>
           <li data-task-status="done"><a href="#task-19">Task 19 — 信息行 PapersInfoRow 与文献 chip 行</a></li>
           <li data-task-status="done"><a href="#task-20">Task 20 — 装配 /papers 页面：精确定位直跳、分块流式与整页骨架</a></li>
-          <li data-task-status="pending"><a href="#task-21">Task 21 — 导航"文献"解锁与主题云词条接通（PAP-54）</a></li>
+          <li data-task-status="done"><a href="#task-21">Task 21 — 导航"文献"解锁与主题云词条接通（PAP-54）</a></li>
           <li data-task-status="pending"><a href="#task-22">Task 22 — 首页文献流"查看更多"与期刊详情"查看该刊文献"（PAP-54）</a></li>
           <li data-task-status="pending"><a href="#task-23">Task 23 — 首页搜索框接通 /papers：HeroWithToast → HeroWithSearch（PAP-54）</a></li>
           <li data-task-status="pending"><a href="#task-24">Task 24 — Playwright 冒烟、全量验证与 hi-fi 对照</a></li>
@@ -6515,7 +6515,7 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
         </ol>
       </article>
 
-      <article class="task" id="task-21" data-status="pending">
+      <article class="task" id="task-21" data-status="done">
         <header>
           <h2>任务 21：导航"文献"解锁与主题云词条接通（PAP-54）</h2>
           <dl class="files">
@@ -6523,7 +6523,7 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
           </dl>
         </header>
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：改写失败测试</strong>
             <p><code>TopNav.test.tsx</code>：删除用例"文献 link 仍标记为 aria-disabled 且用可生效的 (--fg-4) 灰置灰"，追加：</p>
             <pre><code class="lang-tsx">  it("文献 link 指向 /papers，不再 disabled / SOON", () =&gt; {
@@ -6562,12 +6562,12 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
   });</code></pre>
             <p>（import 补 <code>import { buildPapersHref } from "@/lib/portal-api/paper-search";</code>。）</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：运行确认失败</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm exec vitest run tests/components/portal/TopNav.test.tsx tests/components/portal/TopicCloud.test.tsx</code></p>
             <p>预期：文献 / 词条链接用例失败</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：TopNav 去掉禁用分支</strong>
             <p>"文献"解锁后 <code>NAV_ITEMS</code> 不再有禁用项，禁用渲染分支与 <code>#</code> 判断成为死代码，一并删除：</p>
             <pre><code class="lang-tsx">const NAV_ITEMS = [
@@ -6602,7 +6602,7 @@ function isNavActive(pathname: string, href: string): boolean {
             })}</code></pre>
             <p>移动 Sheet 内的 map 同样删去 <code>if (item.disabled) {…}</code> 整段，只保留原有的 <code>Link</code> 分支（含 <code>onClick={() =&gt; setOpen(false)}</code>）。</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：TopicCloud 词条改为 Link</strong>
             <p>import 补 <code>import Link from "next/link";</code> 与 <code>import { buildPapersHref } from "@/lib/portal-api/paper-search";</code>，把词条 <code>&lt;button …disabled…&gt;</code> 换成：</p>
             <pre><code class="lang-tsx">                  &lt;Link
@@ -6620,12 +6620,12 @@ function isNavActive(pathname: string, href: string): boolean {
                   &lt;/Link&gt;</code></pre>
             <p>底部"浏览全部主题"按钮保持不动。</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：运行确认通过</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm exec vitest run tests/components/portal/TopNav.test.tsx tests/components/portal/TopicCloud.test.tsx &amp;&amp; pnpm typecheck</code></p>
             <p>预期：全部通过</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：Commit</strong>
             <pre><code class="lang-bash">git add patra-portal/src/components/portal/TopNav.tsx patra-portal/src/components/portal/TopicCloud.tsx patra-portal/tests/components/portal/TopNav.test.tsx patra-portal/tests/components/portal/TopicCloud.test.tsx
 git commit -m "feat(portal): 导航文献入口解锁，主题云词条跳转文献检索 (PAP-54)

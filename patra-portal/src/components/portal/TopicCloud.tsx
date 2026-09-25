@@ -1,6 +1,8 @@
 import { ArrowRight } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { TOPIC_CLOUD, topicTier } from "@/data/topics";
+import { buildPapersHref } from "@/lib/portal-api/paper-search";
 import { cn } from "@/lib/utils";
 import type { TopicHeatTier } from "@/types/portal";
 
@@ -38,13 +40,11 @@ export function TopicCloud() {
               const tier = topicTier(t.heat);
               return (
                 <li key={t.term}>
-                  <button
-                    type="button"
-                    disabled
-                    aria-disabled="true"
-                    title={`${t.count.toLocaleString()} 条相关文献 · 功能即将上线`}
+                  <Link
+                    href={buildPapersHref({ q: t.term })}
+                    title={`${t.count.toLocaleString()} 条相关文献`}
                     className={cn(
-                      "-mx-1 inline-flex items-baseline gap-1.5 rounded-sm px-1 hover:bg-paper-200 focus-visible:outline-none focus-visible:ring focus-visible:ring-ring/30 disabled:cursor-not-allowed",
+                      "-mx-1 inline-flex items-baseline gap-1.5 rounded-sm px-1 hover:bg-paper-200 focus-visible:outline-none focus-visible:ring focus-visible:ring-ring/30",
                       TIER_CLASS[tier],
                     )}
                   >
@@ -54,7 +54,7 @@ export function TopicCloud() {
                         ↗ {t.delta}
                       </span>
                     )}
-                  </button>
+                  </Link>
                 </li>
               );
             })}
