@@ -76,6 +76,17 @@ assert_field "patra-infra/docker/service.Dockerfile" '.full_run' 'true' "共享 
 assert_field "patra-infra/docker/.env.catalog" '.full_run' 'true' "应用 .env.<svc> 全量"
 assert_field "patra-infra/docker/.env.common" '.full_run' 'true' "应用 .env.common 全量"
 
+echo "== 场景 12：前端 / 学习站目录下的 Markdown 是文档，不触发 portal / learn（与 portal-cd / learn-cd 的 '!**/*.md' 口径一致）=="
+F="patra-portal/docs/design-briefs/v0.7/papers-list.md"
+assert_field "$F" '.portal_changed' 'false' "portal 设计简报不触发 portal"
+assert_field "$F" '.docs_only' 'true' "portal 设计简报算 docs_only"
+assert_field "patra-portal/.claude/rules/tokens.md" '.portal_changed' 'false' "portal 规则文档不触发 portal"
+assert_field "patra-learn/README.md" '.learn_changed' 'false' "learn README 不触发 learn"
+assert_field "patra-learn/README.md" '.docs_only' 'true' "learn README 算 docs_only"
+F="$(printf 'patra-portal/docs/x.md\npatra-portal/src/app/page.tsx')"
+assert_field "$F" '.portal_changed' 'true' "文档 + 前端代码混合仍触发 portal"
+assert_field "$F" '.docs_only' 'false' "文档 + 前端代码混合非 docs_only"
+
 echo
 echo "通过 $PASS / 失败 $FAIL"
 [ "$FAIL" -eq 0 ]
