@@ -186,8 +186,9 @@ export function PublicationDetailView({ paper }: { paper: PaperDetail }) {
           </section>
         </div>
 
-        {/* sticky top = TopNav 56px + 面包屑 bar 44px + 16px 间距 = 116px */}
-        <aside className="sticky top-[116px] flex flex-col gap-4 max-[980px]:static">
+        {/* sticky top = 侧栏自然位置：TopNav 57px + 面包屑 45px（均含 1px 底边）+ 网格 pt-8 32px = 134px。
+            两者不等时，开始滚动那一段侧栏会先随页面移动再吸住，看起来在晃 */}
+        <aside className="sticky top-[134px] flex flex-col gap-4 max-[980px]:static">
           <PaperRail paper={paper} />
         </aside>
       </div>
