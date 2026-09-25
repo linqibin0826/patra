@@ -55,9 +55,11 @@ classify() {
       patra-infra/docker/mysql-ops/*|patra-infra/docker/otel-agent/*|patra-infra/docker/otel-collector/*) docs_all=false; continue;;
       patra-infra/docker/postgres/*|patra-infra/docker/prometheus/*|patra-infra/docker/tempo/*) docs_all=false; continue;;
     esac
+    # 文档判定必须排在 portal / learn 之前：两者目录下的 *.md（设计简报、README、规则文档）
+    # 不进应用构建，portal-cd / learn-cd 也用 '!**/*.md' 排除，这里保持同一口径。
+    case "$f" in *.md|docs/*|.gitignore|.editorconfig|LICENSE|.claude/*) continue;; esac
     case "$f" in patra-portal/*) portal=true; docs_all=false; continue;; esac
     case "$f" in patra-learn/*) LEARN_CHANGED=true; docs_all=false; continue;; esac
-    case "$f" in *.md|docs/*|.gitignore|.editorconfig|LICENSE|.claude/*) continue;; esac
     docs_all=false
     # 文件落到哪个模块（module-graph dir 为其最长前缀）→ 取该模块 impacts
     hit="$(jq -r --arg f "$f" '
