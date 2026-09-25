@@ -43,7 +43,7 @@
           <li data-task-status="done"><a href="#task-8">Task 8 — 公用分页、chip 行、排序段控件与筛选按钮</a></li>
           <li data-task-status="done"><a href="#task-9">Task 9 — 公用 facet 部件与筛选容器</a></li>
           <li data-task-status="done"><a href="#task-10">Task 10 — 公用页头、筛选骨架与空态外壳</a></li>
-          <li data-task-status="pending"><a href="#task-11">Task 11 — 期刊页交互部件改用公用部件与导航钩子（修复连点丢操作）</a></li>
+          <li data-task-status="done"><a href="#task-11">Task 11 — 期刊页交互部件改用公用部件与导航钩子（修复连点丢操作）</a></li>
           <li data-task-status="pending"><a href="#task-12">Task 12 — 期刊页静态部件改用公用部件，删除被取代的期刊组件</a></li>
           <li data-task-status="pending"><a href="#task-13">Task 13 — 证据徽章挪到文献公用位置并增加紧凑变体；来源色点抽为公用</a></li>
           <li data-task-status="pending"><a href="#task-14">Task 14 — 文献列表项 PaperListItem 与列表骨架</a></li>
@@ -3588,7 +3588,7 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
         </ol>
       </article>
 
-      <article class="task" id="task-11" data-status="pending">
+      <article class="task" id="task-11" data-status="done">
         <header>
           <h2>任务 11：期刊页交互部件改用公用部件与导航钩子（修复连点丢操作）</h2>
           <dl class="files">
@@ -3597,7 +3597,7 @@ Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;"</code></pre>
           </dl>
         </header>
         <ol class="steps">
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 1：测试改为经 Provider 渲染</strong>
             <p>三个组件不再接收 <code>query</code> prop，改从 Provider 读乐观 query。先机械替换测试里的渲染调用（在 <code>patra-portal/</code> 下执行）：</p>
             <pre><code class="lang-bash">perl -0pi -e 's/render\(\s*&lt;JournalFilters facets=\{baseFacets\} query=\{(.*?)\} \/&gt;\s*\)/renderFilters($1)/gs' tests/components/portal/journals/JournalFilters.test.tsx
@@ -3673,12 +3673,12 @@ function renderControls(query: VenueBrowseQuery) {
     });
   });</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 2：运行确认失败</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm exec vitest run tests/components/portal/journals</code></p>
             <p>预期：失败：<code>JournalsQueryProvider</code> 不存在；组件仍要求 query prop</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 3：创建 JournalsQueryProvider.tsx</strong>
             <pre><code class="lang-tsx">// patra-portal/src/components/portal/journals/JournalsQueryProvider.tsx
 "use client";
@@ -3697,7 +3697,7 @@ export function JournalsQueryProvider({ query, children }: { query: VenueBrowseQ
   );
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 4：重写 JournalFilters.tsx</strong>
             <pre><code class="lang-tsx">// patra-portal/src/components/portal/journals/JournalFilters.tsx
 "use client";
@@ -3878,11 +3878,11 @@ export function JournalFilters({ facets, resultTotal }: Props) {
   );
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 5：JournalFiltersServer 不再传 query 给 client</strong>
             <p>把 <code>return &lt;JournalFilters facets={facets} query={query} /&gt;;</code> 改为 <code>return &lt;JournalFilters facets={facets} /&gt;;</code>（<code>query</code> 仍用于取 facets）。</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 6：重写 JournalActiveChips.tsx</strong>
             <pre><code class="lang-tsx">// patra-portal/src/components/portal/journals/JournalActiveChips.tsx
 "use client";
@@ -3907,7 +3907,7 @@ export function JournalActiveChips() {
   return &lt;ActiveChips chips={chips} clearAll={CLEARED} /&gt;;
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 7：重写 JournalSearchSortControls.tsx</strong>
             <pre><code class="lang-tsx">// patra-portal/src/components/portal/journals/JournalSearchSortControls.tsx
 "use client";
@@ -4031,7 +4031,7 @@ export function JournalSearchSortControls() {
   );
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 8：journals page.tsx 接入 Provider</strong>
             <p>用 <code>JournalsQueryProvider</code> 包住页头到两栏的整块内容，<code>JournalSearchSortControls</code> / <code>JournalActiveChips</code> 去掉 <code>query</code> prop：</p>
             <pre><code class="lang-tsx">// patra-portal/src/app/journals/page.tsx
@@ -4087,12 +4087,12 @@ export default async function JournalsPage({
   );
 }</code></pre>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 9：运行测试、类型检查与 lint</strong>
             <p>运行（<code>patra-portal/</code> 下）：<code>pnpm exec vitest run tests/components/portal/journals tests/components/portal/browse &amp;&amp; pnpm typecheck &amp;&amp; pnpm lint</code></p>
             <p>预期：journals 全部通过（含新增连点用例）；typecheck 与 biome 0 错误</p>
           </li>
-          <li class="step" data-status="pending">
+          <li class="step" data-status="done">
             <strong>步骤 10：Commit</strong>
             <pre><code class="lang-bash">git add patra-portal/src/components/portal/journals patra-portal/tests/components/portal/journals patra-portal/src/app/journals/page.tsx
 git commit -m "refactor(portal): 期刊页交互部件改用公用部件与导航钩子，修复连点丢操作 (PAP-53)

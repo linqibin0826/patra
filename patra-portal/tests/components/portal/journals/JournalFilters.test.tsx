@@ -2,12 +2,13 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { JournalFilters } from "@/components/portal/journals/JournalFilters";
+import { JournalsQueryProvider } from "@/components/portal/journals/JournalsQueryProvider";
 import { useBrowseFilterUiStore } from "@/store/browse-filter-ui";
 import type { VenueBrowseFacets, VenueBrowseQuery } from "@/types/portal";
 
 const mockPush = vi.fn<(url: string) => void>();
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: mockPush }),
+  useRouter: () => ({ push: mockPush, replace: vi.fn() }),
 }));
 
 const baseQuery: VenueBrowseQuery = {
@@ -46,6 +47,14 @@ const baseFacets: VenueBrowseFacets = {
   doaj: 18,
 };
 
+function renderFilters(query: VenueBrowseQuery = baseQuery) {
+  return render(
+    <JournalsQueryProvider query={query}>
+      <JournalFilters facets={baseFacets} />
+    </JournalsQueryProvider>,
+  );
+}
+
 describe("JournalFilters", () => {
   beforeEach(() => {
     mockPush.mockClear();
@@ -54,7 +63,7 @@ describe("JournalFilters", () => {
 
   describe("facet 勾选", () => {
     it("勾选 JCR Q1 → router.push 含 jcr=Q1 且 page 归 1", () => {
-      render(<JournalFilters facets={baseFacets} query={baseQuery} />);
+      renderFilters(baseQuery);
       const q1Checkbox = screen.getByRole("checkbox", { name: /Q1/i });
       fireEvent.click(q1Checkbox);
       expect(mockPush).toHaveBeenCalledTimes(1);
@@ -64,7 +73,7 @@ describe("JournalFilters", () => {
     });
 
     it("已勾选的 JCR Q1 再次勾选 → 移除 Q1", () => {
-      render(<JournalFilters facets={baseFacets} query={{ ...baseQuery, jcr: ["Q1"] }} />);
+      renderFilters({ ...baseQuery, jcr: ["Q1"] });
       const q1Checkbox = screen.getByRole("checkbox", { name: /Q1/i });
       fireEvent.click(q1Checkbox);
       expect(mockPush).toHaveBeenCalledTimes(1);
@@ -73,7 +82,7 @@ describe("JournalFilters", () => {
     });
 
     it("勾选学科 → URL 含 subject 值", () => {
-      render(<JournalFilters facets={baseFacets} query={baseQuery} />);
+      renderFilters(baseQuery);
       const checkbox = screen.getByRole("checkbox", { name: /医学/i });
       fireEvent.click(checkbox);
       const url = mockPush.mock.calls[0]?.[0];
@@ -84,12 +93,12 @@ describe("JournalFilters", () => {
 
   describe("count 渲染", () => {
     it("渲染 Q1 的 count（30）", () => {
-      render(<JournalFilters facets={baseFacets} query={baseQuery} />);
+      renderFilters(baseQuery);
       expect(screen.getByText("30")).toBeInTheDocument();
     });
 
     it("count=0 的项（化学）灰显（has is-zero class 或 opacity 样式）", () => {
-      render(<JournalFilters facets={baseFacets} query={baseQuery} />);
+      renderFilters(baseQuery);
       // 化学存在于 DOM 中（不隐藏）
       const label = screen.getByText("化学").closest("label");
       expect(label).not.toBeNull();
@@ -100,7 +109,7 @@ describe("JournalFilters", () => {
 
   describe("学科本地搜索", () => {
     it("本地搜索过滤后只显示匹配项，不触发 router", () => {
-      render(<JournalFilters facets={baseFacets} query={baseQuery} />);
+      renderFilters(baseQuery);
       const searchInput = screen.getByPlaceholderText(/搜索学科/i);
       fireEvent.change(searchInput, { target: { value: "医" } });
       // 医学可见，生物和化学不可见
@@ -112,7 +121,7 @@ describe("JournalFilters", () => {
     });
 
     it("清空搜索后恢复所有项", () => {
-      render(<JournalFilters facets={baseFacets} query={baseQuery} />);
+      renderFilters(baseQuery);
       const searchInput = screen.getByPlaceholderText(/搜索学科/i);
       fireEvent.change(searchInput, { target: { value: "医" } });
       fireEvent.change(searchInput, { target: { value: "" } });
@@ -123,7 +132,7 @@ describe("JournalFilters", () => {
 
   describe("国家本地搜索", () => {
     it("本地搜索过滤后只显示匹配项，不触发 router", () => {
-      render(<JournalFilters facets={baseFacets} query={baseQuery} />);
+      renderFilters(baseQuery);
       const searchInput = screen.getByPlaceholderText(/搜索国家/i);
       fireEvent.change(searchInput, { target: { value: "US" } });
       expect(screen.getByText("US")).toBeInTheDocument();
@@ -132,7 +141,7 @@ describe("JournalFilters", () => {
     });
 
     it("清空搜索后恢复所有国家项", () => {
-      render(<JournalFilters facets={baseFacets} query={baseQuery} />);
+      renderFilters(baseQuery);
       const searchInput = screen.getByPlaceholderText(/搜索国家/i);
       fireEvent.change(searchInput, { target: { value: "US" } });
       fireEvent.change(searchInput, { target: { value: "" } });
@@ -143,7 +152,7 @@ describe("JournalFilters", () => {
 
   describe("布尔开关", () => {
     it("切换「仅开放获取」→ URL 含 oa=true", () => {
-      render(<JournalFilters facets={baseFacets} query={baseQuery} />);
+      renderFilters(baseQuery);
       const oaCheckbox = screen.getByRole("checkbox", { name: /仅开放获取/i });
       fireEvent.click(oaCheckbox);
       expect(mockPush).toHaveBeenCalledTimes(1);
@@ -152,7 +161,7 @@ describe("JournalFilters", () => {
     });
 
     it("oa=true 时再次切换 → URL 不含 oa", () => {
-      render(<JournalFilters facets={baseFacets} query={{ ...baseQuery, oa: true }} />);
+      renderFilters({ ...baseQuery, oa: true });
       const oaCheckbox = screen.getByRole("checkbox", { name: /仅开放获取/i });
       fireEvent.click(oaCheckbox);
       const url = mockPush.mock.calls[0]?.[0];
@@ -160,7 +169,7 @@ describe("JournalFilters", () => {
     });
 
     it("切换「仅 Top 期刊」→ URL 含 casTop=true", () => {
-      render(<JournalFilters facets={baseFacets} query={baseQuery} />);
+      renderFilters(baseQuery);
       const topCheckbox = screen.getByRole("checkbox", { name: /仅 Top 期刊/i });
       fireEvent.click(topCheckbox);
       const url = mockPush.mock.calls[0]?.[0];
@@ -168,11 +177,22 @@ describe("JournalFilters", () => {
     });
 
     it("切换「收录于 DOAJ」→ URL 含 doaj=true", () => {
-      render(<JournalFilters facets={baseFacets} query={baseQuery} />);
+      renderFilters(baseQuery);
       const doajCheckbox = screen.getByRole("checkbox", { name: /DOAJ/i });
       fireEvent.click(doajCheckbox);
       const url = mockPush.mock.calls[0]?.[0];
       expect(url).toContain("doaj=true");
+    });
+  });
+
+  describe("连点（乐观 query）", () => {
+    it("连续勾选 Q1、Q2：勾选框立即打勾，第二次跳转两项都在", () => {
+      renderFilters();
+      fireEvent.click(screen.getByRole("checkbox", { name: /Q1/i }));
+      expect(screen.getByRole("checkbox", { name: /Q1/i })).toBeChecked();
+      fireEvent.click(screen.getByRole("checkbox", { name: /Q2/i }));
+      expect(mockPush).toHaveBeenCalledTimes(2);
+      expect(mockPush.mock.calls[1]?.[0]).toContain("jcr=Q1%2CQ2");
     });
   });
 });
