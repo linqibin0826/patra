@@ -37,7 +37,7 @@ Issue 与 PR 解耦：Issue 保持细粒度，只用来跟踪进度；PR 是合�
 
 1. **每版最多两个 PR**：后端 PR（承载本版全部 `area:be` Issue）+ 前端 PR（承载本版全部 `area:fe` Issue）。`area:design` 与纯文档 Issue 不单独开 PR。
 2. **文档随代码 PR 提交**：release spec（`docs/patra/release-specs/`）、设计简报（`patra-portal/docs/design-briefs/<version>/`）、设计快照（`docs/patra/design/snapshots/`）、工程 spec（`docs/patra/specs/`）、plan（`docs/patra/plans/`）随同版本第一个代码 PR 提交；产出时该 PR 已合并的（如前端 spec / plan），随下一个代码 PR 提交。它们仍写在 feature branch 上，不直接提交到 main。
-3. **一个 PR 关闭多个 Issue**：PR 描述逐行列出 `Closes PAP-xx`，覆盖该 PR 承载的全部 Issue（含随附的 design / 文档 Issue）。
+3. **一个 PR 关闭多个 Issue**：PR 描述逐行列出 `Closes PAP-xx`，只列本 PR 合并时 AC 已满足的 Issue（含产物随本 PR 提交的 design / 文档 Issue）；产物尚未交付的 Issue 不写 `Closes`，避免 PR 合并时被提前关闭、提前解锁下一个 Milestone。
 4. **设计文档在写代码前评审**：用户在本地让 Codex 审 spec 和 plan，不为评审单独开 PR。
 5. **小改动并入依赖页面**：出口接通这类只改几处链接的小改动，与它依赖的页面在同一 PR、同一份 plan 里完成，不单独拆分支。
 
@@ -124,7 +124,7 @@ digraph release_planning {
 - [ ] 每条是具体工程任务（标明 area:be / area:fe / area:design）
 - [ ] 每条能独立验收（AC 可单独判定）；过大则拆 Sub-Issue 或继续拆 Issue——粒度按跟踪与验收定，不按 PR 定
 - [ ] 跨界功能已按 area 拆为 2-3 个并列 Issue（不要单 Issue 内塞 BE+FE）
-- [ ] 每条标注 PR 归属：`area:be` → 本版后端 PR；`area:fe` → 本版前端 PR；`area:design` / 纯文档 → 随同版本第一个代码 PR，整版不超过 2 个 PR
+- [ ] 每条标注 PR 归属：`area:be` → 本版后端 PR；`area:fe` → 本版前端 PR；`area:design` / 纯文档 → 产物交付时仍在开发的第一个代码 PR（默认 BE → Design → FE 顺序下，design Issue 在后端 PR 合并后才开工，归前端 PR），整版不超过 2 个 PR
 - [ ] 整版 Issue 数量合理（建议 3-10 个；超过 10 个考虑拆分版本）
 - [ ] 列出阶段顺序（默认 area:be → area:design → area:fe；Project Milestone 表达）
 
@@ -226,7 +226,7 @@ patra-api 是单人开发的绿地项目（无历史包袱、无外部用户）�
      - 必填 path：`path:full`（默认；小修则 `path:fast-track`）
    - **Project Milestone**：把 Issue 挂到对应 Milestone（默认 BE Ready / Design Ready / FE Ready）表达执行顺序
 4. **跨界功能拆多 Issue**：1 个用户视角的能力（如"Health 状态显示"）派生 2-3 个并列 Issue：area:be Issue + area:design Issue + area:fe Issue。**不要**塞同一个 Issue。
-5. **标注 PR 归属**：Issue 列表按 PR 分组展示（后端 PR / 前端 PR），design / 文档 Issue 归到同版本第一个代码 PR 名下；规则见「Issue 是跟踪单位，PR 按技术栈合并」
+5. **标注 PR 归属**：Issue 列表按 PR 分组展示（后端 PR / 前端 PR），design / 文档 Issue 归到产物交付时仍在开发的第一个代码 PR 名下（默认顺序下 design Issue 归前端 PR）；规则见「Issue 是跟踪单位，PR 按技术栈合并」
 6. **不自动创建 Issue**——除非用户明确同意 + 有 Linear MCP 接入；默认只列出建议清单由用户在 Linear 手动创建
 
 ## 用户审查关卡
@@ -235,11 +235,11 @@ patra-api 是单人开发的绿地项目（无历史包袱、无外部用户）�
 
 > "版本规划文档已写到 `<path>`。下面是建议派生的 Issue 列表：
 >
-> **后端 PR**（随附 release spec / 设计文档）
+> **后端 PR**（随附 release spec / 后端 spec 与 plan）
 > 1. **<Issue 1 title>** — <一句话描述>
 > 2. **<Issue 2 title>** — <一句话描述>
 >
-> **前端 PR**
+> **前端 PR**（随附设计简报 / 设计快照 / 前端 spec 与 plan）
 > 3. **<Issue 3 title>** — <一句话描述>
 > ...
 >

@@ -160,8 +160,8 @@ git branch -d <feature-branch>
 # 推送分支
 git push -u origin <feature-branch>
 
-# 创建 PR
-gh pr create --title "<title>" --body "$(cat <<'EOF'
+# 创建 PR（开发期一律 draft，两位 AI reviewer 都不评）
+gh pr create --draft --title "<title>" --body "$(cat <<'EOF'
 ## 摘要
 <2-3 条变更要点>
 
@@ -173,9 +173,12 @@ Closes PAP-yy
 - [ ] <验证步骤>
 EOF
 )"
+
+# 本 PR 承载的 Issue 全部完成后才转 ready（触发 Codex 等自动首评），再发 @coderabbitai review
+gh pr ready <PR 号>
 ```
 
-**PR 按技术栈合并，一个 PR 关闭多个 Issue：** 同版本同技术栈的 Issue 共用这条分支和这个 PR（每版最多后端、前端两个 PR）。「关联 Issue」逐行列出本 PR 承载的全部 Linear Issue，包括随本 PR 提交的 design / 纯文档 Issue（release spec、设计简报、设计快照、spec、plan 随同版本第一个代码 PR 提交），每行一个 `Closes`。
+**PR 按技术栈合并，一个 PR 关闭多个 Issue：** 同版本同技术栈的 Issue 共用这条分支和这个 PR（每版最多后端、前端两个 PR）。「关联 Issue」每行一个 `Closes`，只列本 PR 合并时 AC 已满足的 Linear Issue，包括产物随本 PR 提交的 design / 纯文档 Issue（release spec、设计简报、设计快照、spec、plan 随交付时仍在开发的第一个代码 PR 提交）；产物尚未交付的 Issue 不写，免得 PR 合并时被提前关闭。同栈还有 Issue 没做完时，PR 保持 draft，不执行 `gh pr ready`。
 
 **不要清理 worktree** —— 用户在 PR 反馈迭代时还需要它存活。
 

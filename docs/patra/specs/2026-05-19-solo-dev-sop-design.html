@@ -151,7 +151,7 @@
         <ul>
           <li><strong>每版最多两个 PR</strong>：后端 PR 承载本版全部 <code>area:be</code> Issue，前端 PR 承载本版全部 <code>area:fe</code> Issue；<code>area:design</code> 与纯文档 Issue 不单独开 PR。</li>
           <li><strong>文档随代码 PR 提交</strong>：release spec、设计简报、设计快照、工程 spec、plan 随同版本第一个代码 PR 提交（产出时该 PR 已合并的，随下一个代码 PR）；仍写在 feature branch 上，不直接提交 main。</li>
-          <li><strong>一个 PR 关闭多个 Issue</strong>：PR 描述逐行列出 <code>Closes PAP-xx</code>。</li>
+          <li><strong>一个 PR 关闭多个 Issue</strong>：PR 描述逐行列出 <code>Closes PAP-xx</code>，只列本 PR 合并时 AC 已满足的 Issue；产物尚未交付的 Issue（如默认顺序下后端 PR 合并时还没开工的 design Issue）不写，归到产物实际随附的代码 PR。</li>
           <li><strong>设计文档在写代码前评审</strong>：你在本地让 Codex 审 spec 和 plan，不为评审单独开 PR。</li>
           <li><strong>小改动并入依赖页面</strong>：出口接通这类只改几处链接的小改动，与它依赖的页面在同一 PR、同一份 plan 里完成。</li>
         </ul>
@@ -215,7 +215,7 @@ bulleted list，每条 = 1 个具体工程任务（按 area:be / area:fe / area:
         <li>5 字段全部填完</li>
         <li>第 2 字段每条工程任务 → 已生成 1 个 Linear Issue（Description 按 Magical.pm Everyday 三字段：Overview / To-Do / Acceptance Criteria），并打上 <code>area:*</code> 标签</li>
         <li>跨界功能已拆为多个独立 Issue + Project Milestone 表达阶段顺序（默认 BE Ready → Design Ready → FE Ready → Released）</li>
-        <li>每个 Issue 已标注 PR 归属（后端 PR / 前端 PR / 随同版本第一个代码 PR），整版不超过 2 个 PR</li>
+        <li>每个 Issue 已标注 PR 归属（后端 PR / 前端 PR；design / 文档 Issue 归产物交付时仍在开发的第一个代码 PR，默认顺序下 design Issue 归前端 PR），整版不超过 2 个 PR</li>
         <li>第 3 字段"不做的事"显式列出</li>
         <li>第 5 字段 Done 判定可验证</li>
       </ol>
@@ -343,7 +343,7 @@ bulleted list，每条 = 1 个具体工程任务（按 area:be / area:fe / area:
           <tr>
             <td><code>area:design</code></td>
             <td>该 Issue 产出 UI/UX 设计稿</td>
-            <td>In Progress 时按 §6.3 Design Issue 流程；设计简报 / 快照随同版本第一个代码 PR 提交，不单独开 PR</td>
+            <td>In Progress 时按 §6.3 Design Issue 流程；设计简报 / 快照随交付时仍在开发的代码 PR 提交（默认顺序下是前端 PR），不单独开 PR</td>
           </tr>
           <tr>
             <td><code>path:full</code>（默认）</td>
@@ -433,7 +433,7 @@ bulleted list，每条 = 1 个具体工程任务（按 area:be / area:fe / area:
         <li>Claude Design 生成可点击的 hi-fi 原型</li>
         <li>你 review 并对话迭代到主要 user flow 可点击</li>
         <li>发起 <strong>Handoff to Claude Code</strong>，获得 token</li>
-        <li>Design URL + Handoff token 粘贴到本 Issue Attachments + Description；设计简报 / 快照随同版本第一个代码 PR 提交</li>
+        <li>Design URL + Handoff token 粘贴到本 Issue Attachments + Description；设计简报 / 快照随交付时仍在开发的代码 PR 提交（默认顺序下是前端 PR），本 Issue 由该 PR 的 <code>Closes</code> 关闭</li>
         <li>Issue 推到 <code>In Review</code>（你自审 hi-fi 可点击度）→ <code>Done</code> 后触发 Milestone "Design Ready"</li>
       </ol>
       <p><strong>DoD（出 In Progress 的条件）：</strong></p>
