@@ -15,7 +15,7 @@ description: 当你有规格说明或需求用于多步骤任务时使用，在�
 
 **开始时宣布：** "我正在使用 writing-plans 技能创建实现计划。"
 
-**上下文：** 此技能应在专用 worktree 中运行（由 brainstorming 技能创建）。
+**上下文：** 此技能应在专用 worktree 中运行（由 brainstorming 技能创建）。分支按"版本 × 技术栈"划分，不按 Issue 划分：同版本同技术栈的所有 Issue 共用一条 feature branch 和一个 PR；出口接通这类只改几处链接的小改动并入它依赖页面的 plan，不单独拆分支。plan 的提交规则与 spec 相同：提交到同版本第一个代码 PR 的分支（该 PR 已合并则用下一个），不直接提交到 main，不单独开 PR。
 
 **计划保存位置：** `<git-root>/docs/patra/plans/YYYY-MM-DD-<feature-name>.html`
 - 用户对计划位置的偏好优先于此默认值
@@ -110,7 +110,7 @@ patra-api 是单人开发的绿地项目（无历史包袱），编计划时主�
 
 ## 执行交接
 
-保存计划后，执行 `open <path>` 在浏览器中打开 plan 供用户查看（macOS；Linux 用 `xdg-open <path>`，Windows 用 `start <path>`），然后提供执行选项：
+保存计划后，执行 `open <path>` 在浏览器中打开 plan 供用户查看（macOS；Linux 用 `xdg-open <path>`，Windows 用 `start <path>`）。设计文档在写代码前评审：用户会在本地让 Codex 审 spec 和 plan，不为评审开 PR；用户反馈修改意见时先改 plan，再提供执行选项：
 
 **"计划已完成并保存到 `<git-root>/docs/patra/plans/<filename>.html`，已在浏览器中打开。两种执行方式：**
 

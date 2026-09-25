@@ -114,7 +114,7 @@ digraph brainstorming {
   - （用户对规格位置的偏好优先于此默认值）
   - **不要**改 `<link>` href / 章节顺序 / HTML 结构；CSS 已在 `<git-root>/docs/patra/styles/spec-theme.css`（spec 专用），生成的 HTML 不得嵌入 `<style>` 块
   - 设计的视觉层次（callout / 风险 pill / 决策卡 / 决策表 / 三栏布局 + 右栏 localStorage「我的备注」）已在模板里固化
-- 将设计文档 commit 到 git
+- 将设计文档 commit 到 git——提交到同版本第一个代码 PR 的 feature branch（产出时该 PR 已合并则用下一个代码 PR 的分支），**不直接提交到 main**，也不为 spec 单独开 PR。一份 spec 可覆盖同一技术栈的多个 Issue，模板 ticket 栏列出全部相关 Issue
 
 **规格自检：**
 编写规格文档后，以全新的视角审视它：
@@ -131,7 +131,7 @@ digraph brainstorming {
 
 > "规格已编写并 commit 到 `<path>`，已在浏览器中打开。请审查一下，如果在我们开始编写实现计划之前你想做任何修改，请告诉我。"
 
-等待用户回复。如果他们要求修改，做出修改并重新运行规格自检。只有在用户批准后才继续。
+等待用户回复（用户会在本地让 Codex 审 spec，评审不走 PR）。如果他们要求修改，做出修改并重新运行规格自检。只有在用户批准后才继续。
 
 **实现：**
 

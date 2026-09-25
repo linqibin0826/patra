@@ -116,7 +116,7 @@
 │  跨界功能（BE+FE+Design）拆多 Issue，                    │
 │  阶段顺序用 Project Milestone 表达                       │
 │  · 产物: docs/patra/specs/&lt;topic&gt;-design.html +         │
-│         GitHub PR(s) + Linear Sub-Issues（按需）        │
+│         BE / FE 各至多 1 个 PR + Sub-Issues（按需）      │
 └─────────────────────────────────────────────────────────┘</code></pre>
 
       <p>Linear 三层结构对应关系（对齐 Linear Method）：</p>
@@ -135,7 +135,7 @@
             <td><strong>Issue</strong></td>
             <td>具体工程任务（如"实现 GET /api/v1/health"、"portal Health 卡片 + 30s 轮询"）；按 <code>area:*</code> 标签分流到 BE / FE / Design</td>
             <td>Backlog / Todo / In Progress / In Review / Done</td>
-            <td>多个/版本，每个 ≈ 1 个 PR（几小时-几天）</td>
+            <td>多个/版本；Issue 是跟踪单位，PR 按技术栈合并（见下）</td>
           </tr>
           <tr>
             <td><strong>Sub-Issue</strong></td>
@@ -145,6 +145,18 @@
           </tr>
         </tbody>
       </table>
+
+      <aside class="callout info">
+        <span class="title">Issue 是跟踪单位，PR 按技术栈合并</span>
+        <ul>
+          <li><strong>每版最多两个 PR</strong>：后端 PR 承载本版全部 <code>area:be</code> Issue，前端 PR 承载本版全部 <code>area:fe</code> Issue；<code>area:design</code> 与纯文档 Issue 不单独开 PR。</li>
+          <li><strong>文档随代码 PR 提交</strong>：release spec、设计简报、设计快照、工程 spec、plan 随同版本第一个代码 PR 提交（产出时该 PR 已合并的，随下一个代码 PR）；仍写在 feature branch 上，不直接提交 main。</li>
+          <li><strong>一个 PR 关闭多个 Issue</strong>：PR 描述逐行列出 <code>Closes PAP-xx</code>，只列本 PR 合并时 AC 已满足的 Issue；产物尚未交付的 Issue（如默认顺序下后端 PR 合并时还没开工的 design Issue）不写，归到产物实际随附的代码 PR。</li>
+          <li><strong>设计文档在写代码前评审</strong>：你在本地让 Codex 审 spec 和 plan，不为评审单独开 PR。</li>
+          <li><strong>小改动并入依赖页面</strong>：出口接通这类只改几处链接的小改动，与它依赖的页面在同一 PR、同一份 plan 里完成。</li>
+        </ul>
+        <p>理由：每个 PR 都要走一遍 CI、两位 AI reviewer 首评、Monitor、逐条标处理状态、同步 Linear 状态；v0.7 文献页一版拆出 4 个 PR（文档 #191、后端 #192、前端 PAP-53、前端出口 PAP-54），单人开发开销过大。</p>
+      </aside>
     </section>
 
     <section id="project-layer">
@@ -185,7 +197,7 @@
 1-2 句话描述这版的核心交付价值。
 
 ## 2. 工程任务列表 / 要做的事
-bulleted list，每条 = 1 个具体工程任务（按 area:be / area:fe / area:design 分流）→ 派生 1 个 Linear Issue（≈ 1 个 PR）。
+bulleted list，每条 = 1 个具体工程任务（按 area:be / area:fe / area:design 分流）→ 派生 1 个 Linear Issue（跟踪单位；PR 按技术栈合并，每版 ≤ 2 个）。
 跨界功能拆多个 Issue，阶段顺序用 Milestone 表达。
 
 ## 3. 范围边界 / 不做的事
@@ -203,6 +215,7 @@ bulleted list，每条 = 1 个具体工程任务（按 area:be / area:fe / area:
         <li>5 字段全部填完</li>
         <li>第 2 字段每条工程任务 → 已生成 1 个 Linear Issue（Description 按 Magical.pm Everyday 三字段：Overview / To-Do / Acceptance Criteria），并打上 <code>area:*</code> 标签</li>
         <li>跨界功能已拆为多个独立 Issue + Project Milestone 表达阶段顺序（默认 BE Ready → Design Ready → FE Ready → Released）</li>
+        <li>每个 Issue 已标注 PR 归属（后端 PR / 前端 PR；design / 文档 Issue 归产物交付时仍在开发的第一个代码 PR，默认顺序下 design Issue 归前端 PR），整版不超过 2 个 PR</li>
         <li>第 3 字段"不做的事"显式列出</li>
         <li>第 5 字段 Done 判定可验证</li>
       </ol>
@@ -250,20 +263,20 @@ bulleted list，每条 = 1 个具体工程任务（按 area:be / area:fe / area:
               <code>area:design</code> → Claude Design + Handoff
             </td>
             <td>你开始动手；前置 Milestone 已通过</td>
-            <td>产物完成（PR 已开 / Design 稿已交付）；AC 自查全部满足</td>
+            <td>产物已提交到所属 PR 的分支（Design 稿已交付）；AC 自查全部满足</td>
           </tr>
           <tr>
             <td><code>In Review</code></td>
             <td>CodeRabbit + 你 Go/No-Go</td>
             <td>CodeRabbit CLI + GitHub App</td>
-            <td>PR 已开（或 Design 稿已交付）</td>
-            <td>CodeRabbit 评论 100% 处理 + 自测三件套通过 + PR merged + <code>review:pass</code> 标签</td>
+            <td>所属 PR 已转 ready（或 Design 稿已交付）；同一 PR 承载的 Issue 一起进入</td>
+            <td>CodeRabbit 评论 100% 处理 + 自测三件套通过 + 所属 PR merged + <code>review:pass</code> 标签</td>
           </tr>
           <tr>
             <td><code>Done</code></td>
             <td>—</td>
             <td>—</td>
-            <td>In Review 通过 + PR merged</td>
+            <td>In Review 通过 + 所属 PR merged（PR 描述 <code>Closes</code> 自动关闭）</td>
             <td>触发后续 Milestone / 进入下一个 Issue</td>
           </tr>
         </tbody>
@@ -301,7 +314,7 @@ bulleted list，每条 = 1 个具体工程任务（按 area:be / area:fe / area:
             <td><code>PR 链接</code></td>
             <td><code>area:be</code> / <code>area:fe</code> Issue</td>
             <td>In Progress 末尾（PR 创建时）</td>
-            <td>GitHub Integration 自动检测 + Description 补充 PR 链接</td>
+            <td>PR 描述逐行 <code>Closes PAP-xx</code>，GitHub Integration 自动关联到每个 Issue + Description 补充 PR 链接</td>
           </tr>
           <tr>
             <td><code>Review Outcome</code></td>
@@ -313,24 +326,24 @@ bulleted list，每条 = 1 个具体工程任务（按 area:be / area:fe / area:
       </table>
 
       <h3>5.3 Issue 标签分流</h3>
-      <p>v0.2 起新增 <code>area:*</code> Label Group 作为开发活动分流锚点（替代旧六阶段状态机）；<code>flow:design-first</code> 标签删除（用 Project Milestone 表达 Design Issue 顺序）。</p>
+      <p>v0.2 起新增 <code>area:*</code> Label Group 作为开发活动分流锚点（替代旧六阶段状态机）；<code>flow:design-first</code> 标签删除（用 Project Milestone 表达 Design Issue 顺序）。<code>area:*</code> 同时决定 Issue 的 PR 归属（见 §3「Issue 是跟踪单位，PR 按技术栈合并」）。</p>
       <table>
         <thead><tr><th>标签</th><th>含义</th><th>用途</th></tr></thead>
         <tbody>
           <tr>
             <td><code>area:be</code></td>
             <td>该 Issue 产出后端实现</td>
-            <td>In Progress 时按 §6.2 BE Issue 流程</td>
+            <td>In Progress 时按 §6.2 BE Issue 流程；归入本版后端 PR</td>
           </tr>
           <tr>
             <td><code>area:fe</code></td>
             <td>该 Issue 产出前端实现</td>
-            <td>In Progress 时按 §6.4 FE Issue 流程</td>
+            <td>In Progress 时按 §6.4 FE Issue 流程；归入本版前端 PR</td>
           </tr>
           <tr>
             <td><code>area:design</code></td>
             <td>该 Issue 产出 UI/UX 设计稿</td>
-            <td>In Progress 时按 §6.3 Design Issue 流程</td>
+            <td>In Progress 时按 §6.3 Design Issue 流程；设计简报 / 快照随交付时仍在开发的代码 PR 提交（默认顺序下是前端 PR），不单独开 PR</td>
           </tr>
           <tr>
             <td><code>path:full</code>（默认）</td>
@@ -370,7 +383,8 @@ bulleted list，每条 = 1 个具体工程任务（按 area:be / area:fe / area:
         <li>在 Claude Code 里加载 <code>patra:brainstorming</code>，输入 Project Description（5 字段 release spec）+ 当前 area:be / area:fe Issue 列表</li>
         <li>Claude 通过对话探索技术方案、领域模型、外部 API 调研、字段清单初稿</li>
         <li>用 <code>patra:writing-plans</code> 产出实施计划</li>
-        <li>产物路径：<code>docs/patra/specs/YYYY-MM-DD-&lt;topic&gt;-design.html</code></li>
+        <li>产物路径：<code>docs/patra/specs/YYYY-MM-DD-&lt;topic&gt;-design.html</code>；spec / plan 写在同版本第一个代码 PR 的 feature branch 上，随该 PR 提交，不直接提交 main</li>
+        <li>写代码前你在本地让 Codex 审 spec 和 plan，不为评审单独开 PR</li>
         <li>把细化后的 AC 拆解到各 <code>area:*</code> Issue 的 Description checklist</li>
         <li>确认每个 Issue 的 <code>path:*</code> + <code>area:*</code> 标签</li>
       </ol>
@@ -395,7 +409,7 @@ bulleted list，每条 = 1 个具体工程任务（按 area:be / area:fe / area:
         <li>如发现字段变化，立即回写 Tech Design 文档字段清单（保持 SoT 同步）</li>
         <li>Bruno collection 同步更新（API 契约入 git）</li>
         <li>OpenAPI schema 自动暴露（<code>patra-spring-boot-starter-openapi</code>）</li>
-        <li>创建 GitHub PR；Issue Description 补充 PR 链接；Issue 推到 <code>In Review</code></li>
+        <li>提交到本版后端 PR（首个 BE Issue 开工时建 draft，本版全部 <code>area:be</code> Issue 共用）；Issue Description 补充 PR 链接；本栈 Issue 全部完成后 PR 转 ready，承载的 Issue 一起推到 <code>In Review</code></li>
       </ol>
       <p><strong>DoD（出 In Progress 的条件）：</strong></p>
       <ul>
@@ -419,7 +433,7 @@ bulleted list，每条 = 1 个具体工程任务（按 area:be / area:fe / area:
         <li>Claude Design 生成可点击的 hi-fi 原型</li>
         <li>你 review 并对话迭代到主要 user flow 可点击</li>
         <li>发起 <strong>Handoff to Claude Code</strong>，获得 token</li>
-        <li>Design URL + Handoff token 粘贴到本 Issue Attachments + Description</li>
+        <li>Design URL + Handoff token 粘贴到本 Issue Attachments + Description；设计简报 / 快照随交付时仍在开发的代码 PR 提交（默认顺序下是前端 PR），本 Issue 由该 PR 的 <code>Closes</code> 关闭</li>
         <li>Issue 推到 <code>In Review</code>（你自审 hi-fi 可点击度）→ <code>Done</code> 后触发 Milestone "Design Ready"</li>
       </ol>
       <p><strong>DoD（出 In Progress 的条件）：</strong></p>
@@ -440,7 +454,7 @@ bulleted list，每条 = 1 个具体工程任务（按 area:be / area:fe / area:
         <li>用 Bruno collection 做本地联调（数据真实形态）</li>
         <li>Vitest + RTL 写关键交互单测</li>
         <li>Husky pre-commit：Biome + tsc --noEmit + Vitest 自动跑</li>
-        <li>创建 GitHub PR；Issue Description 补充 PR 链接；Issue 推到 <code>In Review</code></li>
+        <li>提交到本版前端 PR（首个 FE Issue 开工时建 draft，本版全部 <code>area:fe</code> Issue 共用；出口接通等小改动与依赖页面同 PR）；Issue Description 补充 PR 链接；本栈 Issue 全部完成后 PR 转 ready，承载的 Issue 一起推到 <code>In Review</code></li>
       </ol>
       <p><strong>DoD（出 In Progress 的条件）：</strong></p>
       <ul>
@@ -632,7 +646,7 @@ bulleted list，每条 = 1 个具体工程任务（按 area:be / area:fe / area:
           </ul>
         </aside>
       </div>
-      <p>fast-track Issue 可独立存在，不必挂任何 Project（直接挂在 Linear Team / Workspace 下），适合零散小修。</p>
+      <p>fast-track Issue 可独立存在，不必挂任何 Project（直接挂在 Linear Team / Workspace 下），适合零散小修；不挂 Project 的 fast-track Issue 不受"每版 ≤ 2 个 PR"约束。</p>
 
       <h3>9.2 Project Milestone 表达阶段顺序（替代旧 flow:design-first）</h3>
       <p>v0.2 起 <code>flow:design-first</code> 标签<strong>删除</strong>。Project 内 area:* Issue 的执行顺序统一用 Project Milestone 表达：</p>
@@ -640,6 +654,7 @@ bulleted list，每条 = 1 个具体工程任务（按 area:be / area:fe / area:
         <li><strong>默认顺序</strong>：BE Ready → Design Ready → FE Ready → Released（消费外部 API 项目 BE 先 = 字段稳定 = 回路最少）</li>
         <li><strong>Design-first 场景</strong>（UI 探索性强 / 数据完全自定义 / 对外部 API 已非常熟悉）：直接调整 Milestone 顺序为 Design Ready → BE Ready → FE Ready → Released，不需要标签开关</li>
         <li><strong>Milestone 内的 Issue</strong> 全部 Done 后该 Milestone 通过；下一 Milestone 的 Issue 解锁可以进 Todo</li>
+        <li><strong>Milestone 与 PR</strong>：BE Ready 对应后端 PR merged，FE Ready 对应前端 PR merged；Design Ready 是 design Issue 交付，产物随代码 PR 提交，不产生独立 PR</li>
       </ul>
       <aside class="callout info">
         <span class="title">默认 BE 先的理由</span>
@@ -712,7 +727,7 @@ bulleted list，每条 = 1 个具体工程任务（按 area:be / area:fe / area:
           <li>Solo dev 共识：Lunch Pail Labs（<a href="https://lunchpaillabs.com/blog/managing-projects-at-lpl-with-linear">来源</a>）、xavd.id（<a href="https://xavd.id/blog/post/perfect-project-management-with-linear/">来源</a>）、Commonwealth Creative（<a href="https://thecommonwealthcreative.com/the-codex/linear-issue-tracking/">来源</a>）一致建议 solo dev 默认保持 Issue 扁平结构，能不拆就不拆</li>
           <li>业界使用习惯：典型团队 1 个 Issue 下 2-5 个 Sub-Issue，仅在"工作太大但不足以独立成 Project"时拆</li>
         </ol>
-        <p><strong>判断规则</strong>：何时拆 Sub-Issue —— ① 单 Issue 工作量超过 1 个 PR / 几天还做不完；② 单 Issue 内有几个清晰可独立验证的子步骤；③ 中断快照 / Review 反馈循环记录。</p>
+        <p><strong>判断规则</strong>：何时拆 Sub-Issue —— ① 单 Issue 几天还做不完；② 单 Issue 内有几个清晰可独立验证的子步骤；③ 中断快照 / Review 反馈循环记录。</p>
         <p class="alternatives">
           <strong>备选（v0.1 SOP：Sub-Issue 作为单阶段产物的默认派生）</strong> — 否决：v0.1 把 Sub-Issue 定义为「Tech Design / BE PR / UI 稿 / FE PR / Review 反馈」六类产物，但 Linear 共状态机限制使其无法承载阶段语义；且单人开发场景下增加额外维护成本（Lola/lunchpaillabs 等 solo dev 已验证）。
         </p>
@@ -874,6 +889,15 @@ bulleted list，每条 = 1 个具体工程任务（按 area:be / area:fe / area:
       追加 entry 时同步更新下方 notes-stats footer 的对应 counter 数字。
       -->
 
+      <li class="note" data-type="change" data-time="2026-09-25T00:00">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-09-25T00:00">09-25 00:00</time>
+          <a href="#architecture">§ 3 / § 4 / § 5 / § 6 / § 9 / § 10</a>
+        </header>
+        <p><strong>Issue 与 PR 解耦：Issue 是跟踪单位，PR 按技术栈合并</strong>。旧模型"每个 Issue ≈ 1 个 PR"让 v0.7 文献页拆出 4 个 PR（文档 #191、后端 #192、前端 PAP-53、前端出口 PAP-54），每个 PR 都要走 CI、两位 AI reviewer 首评、Monitor、逐条标处理状态、同步 Linear。改为：(a) 每版最多两个 PR（后端 / 前端），design 与纯文档 Issue 不单独开 PR；(b) release spec、设计简报、设计快照、工程 spec、plan 随同版本第一个代码 PR 提交，仍写在 feature branch 上；(c) Issue 粒度不变，一个 PR 逐行 <code>Closes</code> 多个 Issue；(d) 设计文档在写代码前由你本地让 Codex 评审，不为评审开 PR；(e) 出口接通这类小改动与依赖页面同 PR、同 plan。</p>
+      </li>
+
       <li class="note" data-type="change" data-time="2026-05-21T00:00">
         <header>
           <span class="note-type">CHANGE</span>
@@ -914,7 +938,7 @@ bulleted list，每条 = 1 个具体工程任务（按 area:be / area:fe / area:
     <footer class="notes-stats">
       总计:
       <span data-counter="decision">0</span> decisions /
-      <span data-counter="change">2</span> changes /
+      <span data-counter="change">3</span> changes /
       <span data-counter="tradeoff">0</span> tradeoffs /
       <span data-counter="other">2</span> others
     </footer>
