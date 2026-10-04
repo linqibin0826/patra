@@ -2,10 +2,10 @@ import { render, screen } from "@testing-library/react";
 import type { ComponentType } from "react";
 import { describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
+import JournalsLoading from "@/app/journals/(list)/loading";
 import JournalDetailLoading from "@/app/journals/[id]/loading";
-import JournalsLoading from "@/app/journals/loading";
+import PapersLoading from "@/app/papers/(list)/loading";
 import PaperDetailLoading from "@/app/papers/[id]/loading";
-import PapersLoading from "@/app/papers/loading";
 
 vi.mock("next/navigation", async (importOriginal) => {
   const actual = await importOriginal<typeof import("next/navigation")>();

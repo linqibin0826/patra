@@ -49,7 +49,7 @@ function paper(overrides: Partial<PaperDetail> = {}): PaperDetail {
 }
 
 describe("deriveEvidence", () => {
-  it("rank 决定色温与阶梯：5→moss/5，3→amber/3，1→slate/1，0→muted/0", () => {
+  it("rank 决定色温与阶梯：5→moss/5，3→amber/3，1 与 0→slate", () => {
     expect(deriveEvidence(ev("SYSTEMATIC_REVIEW", 5, true))).toMatchObject({
       tone: "moss",
       lit: 5,
@@ -59,7 +59,8 @@ describe("deriveEvidence", () => {
       lit: 3,
     });
     expect(deriveEvidence(ev("CASE_REPORT", 1, true))).toMatchObject({ tone: "slate", lit: 1 });
-    expect(deriveEvidence(ev("UNKNOWN", 0, false))).toMatchObject({ tone: "muted", lit: 0 });
+    // 未分级不出徽章（EvidenceBadge 只渲染 derived），色温无意义：归入最低档，不另设一档用不到的样式
+    expect(deriveEvidence(ev("UNKNOWN", 0, false))).toMatchObject({ tone: "slate", lit: 0 });
   });
   it("en 标签按 level 映射，derived 透传", () => {
     const v = deriveEvidence(ev("RANDOMIZED_CONTROLLED_TRIAL", 4, true));

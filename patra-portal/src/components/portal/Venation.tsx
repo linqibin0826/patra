@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { type CSSProperties, useId } from "react";
 import { cn } from "@/lib/utils";
 import { generateVenation, type VeinKind } from "@/lib/venation";
 
@@ -23,8 +23,6 @@ const DRAW_LEAD_MS = 250;
 const DRAW_SPAN_MS = 1500;
 
 interface VenationProps {
-  /** 渐变 id 前缀：同页多片叶脉时必须不同 */
-  id: string;
   className?: string;
   /** 按绘制次序错峰描线入场（仅 motion-safe 生效） */
   animated?: boolean;
@@ -33,7 +31,9 @@ interface VenationProps {
 }
 
 /// 叶脉线稿（品牌母题，纯装饰）：Patra 梵语意为「叶」，每条支脉汇入同一根主脉。
-export function Venation({ id, className, animated = false, tone = "paper", seed }: VenationProps) {
+export function Venation({ className, animated = false, tone = "paper", seed }: VenationProps) {
+  // 描边渐变 id 由组件自己生成：同页多片叶脉不会互相引用到别人的渐变
+  const gradId = useId();
   const { width, height, paths } = generateVenation({ seed });
   return (
     <svg
@@ -43,19 +43,12 @@ export function Venation({ id, className, animated = false, tone = "paper", seed
       className={cn(TONE[tone], className)}
     >
       <defs>
-        <linearGradient
-          id={`${id}-grad`}
-          gradientUnits="userSpaceOnUse"
-          x1="0"
-          y1={height}
-          x2="0"
-          y2="0"
-        >
+        <linearGradient id={gradId} gradientUnits="userSpaceOnUse" x1="0" y1={height} x2="0" y2="0">
           <stop offset="0" className="[stop-color:var(--leaf-base)]" />
           <stop offset="1" className="[stop-color:var(--leaf-tip)]" />
         </linearGradient>
       </defs>
-      <g stroke={`url(#${id}-grad)`} strokeLinecap="round" strokeLinejoin="round">
+      <g stroke={`url(#${gradId})`} strokeLinecap="round" strokeLinejoin="round">
         {paths.map((p, i) => (
           <path
             // 路径由确定性生成器产出、静态不重排，index 作 key 安全

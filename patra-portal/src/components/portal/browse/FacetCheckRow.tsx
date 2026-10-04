@@ -1,6 +1,6 @@
 "use client";
 
-import { CHECK_INPUT, RADIO_INPUT } from "@/lib/portal-ui";
+import { CHECK_INPUT, CHECK_MARK, RADIO_INPUT } from "@/lib/portal-ui";
 import { cn } from "@/lib/utils";
 
 interface FacetCheckRowProps {
@@ -19,7 +19,7 @@ interface FacetCheckRowProps {
 
 const noop = () => undefined;
 
-/// facet 勾选行：自绘复选 / 单选 + 标签 + 右侧千分位计数；计数为 0 且未选中时变淡但仍可点。
+/// facet 勾选行：自绘复选（勾线描出）/ 单选 + 标签 + 右侧千分位计数；计数为 0 且未选中时变淡但仍可点。
 export function FacetCheckRow({
   label,
   checked,
@@ -33,7 +33,7 @@ export function FacetCheckRow({
   return (
     <label
       className={cn(
-        "-mx-2 flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-fg-1 transition-colors duration-150 hover:bg-paper-200/70",
+        "relative -mx-2 flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-fg-1 transition-colors duration-150 hover:bg-paper-200/70",
         checked && "font-medium",
         isZero && "is-zero opacity-50",
         muted && "text-fg-3",
@@ -50,6 +50,12 @@ export function FacetCheckRow({
         onClick={type === "radio" ? onToggle : undefined}
         className={type === "radio" ? RADIO_INPUT : CHECK_INPUT}
       />
+      {type === "checkbox" && (
+        // 勾线叠在方框正上方（行内边距 px-2 即方框位置），紧跟 input 才能靠 peer-checked 描出
+        <svg data-check-mark aria-hidden viewBox="0 0 16 16" className={CHECK_MARK}>
+          <path d="M3.6 8.4l2.9 2.9 5.9-6.6" pathLength={1} />
+        </svg>
+      )}
       <span className="min-w-0 flex-1 truncate">{label}</span>
       {count !== undefined && (
         <span className="font-mono text-2xs tabular-nums text-fg-3">

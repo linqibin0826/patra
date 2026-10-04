@@ -85,6 +85,13 @@ describe("BrowsePagination", () => {
     expect(screen.getByText("第 1–20 篇 · 共 18,807 篇")).toBeInTheDocument();
   });
 
+  it("页码也用千分位（与区间文案、计数一致）", () => {
+    // 18,807 篇 / 每页 10 → 末页 1,881
+    render(withProvider(<BrowsePagination page={1} total={18807} pageSize={10} unit="篇" />));
+    const last = screen.getByRole("link", { name: "1,881" });
+    expect(last).toHaveTextContent("1,881");
+  });
+
   it("首页禁用上一页、末页禁用下一页", () => {
     const { unmount } = render(
       withProvider(<BrowsePagination page={1} total={50} pageSize={12} unit="本" />),

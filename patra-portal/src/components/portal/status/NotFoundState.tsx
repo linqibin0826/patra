@@ -1,13 +1,14 @@
 import { ArrowRight, Home } from "lucide-react";
 import Link from "next/link";
+import { CjkDashText } from "@/components/portal/CjkDashText";
 import { StatusScreen } from "@/components/portal/status/StatusScreen";
 import { btnPrimary, btnSecondary } from "@/lib/portal-ui";
 
 type NotFoundKind = "journal" | "paper" | "page";
 
 const LINES: Record<NotFoundKind, string> = {
-  journal: "这本期刊不在 Patra 的索引里 —— 可能 ID 有误，或它尚未被收录。",
-  paper: "这篇文献不在 Patra 的索引里 —— 可能 ID 有误，或它尚未被采集。",
+  journal: "这本期刊不在 Patra 的索引里——可能 ID 有误，或它尚未被收录。",
+  paper: "这篇文献不在 Patra 的索引里——可能 ID 有误，或它尚未被采集。",
   page: "这个地址在 Patra 里找不到对应内容。链接可能已失效，或从未存在。",
 };
 
@@ -26,7 +27,7 @@ export function NotFoundState({ kind = "page" }: { kind?: NotFoundKind }) {
       badge="HTTP 404 · not found"
       tone="clay"
       title="没有这一页"
-      body={LINES[kind]}
+      body={<CjkDashText>{LINES[kind]}</CjkDashText>}
       actions={
         <>
           <Link href="/" className={btnPrimary}>

@@ -25,7 +25,7 @@ export function JournalMasthead({ venue }: { venue: VenueDetail }) {
       {word ? (
         <div
           style={coverVars}
-          className="anim-rise relative flex aspect-[3/4] items-center justify-center overflow-hidden rounded-[3px] bg-(--cover-bg) pr-3 pl-5 text-center text-(--cover-ink) shadow-cover before:absolute before:inset-y-0 before:left-0 before:w-4 before:bg-(image:--cover-spine) before:content-[''] after:absolute after:inset-y-2.5 after:right-2.5 after:left-5 after:border after:border-current after:opacity-25 after:content-['']"
+          className="anim-rise relative flex aspect-[3/4] items-center justify-center overflow-hidden rounded-[3px] bg-(--cover-bg) bg-(image:--grain-soft) bg-blend-overlay pr-3 pl-5 text-center text-(--cover-ink) shadow-cover before:absolute before:inset-y-0 before:left-0 before:w-4 before:bg-(image:--cover-spine) before:content-[''] after:absolute after:inset-y-2.5 after:right-2.5 after:left-5 after:border after:border-current after:opacity-25 after:content-['']"
         >
           <span className="font-serif text-[clamp(16px,4.4vw,24px)] leading-[1.05] font-medium tracking-tight whitespace-pre-line">
             {word}

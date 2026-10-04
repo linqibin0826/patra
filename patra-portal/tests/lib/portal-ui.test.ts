@@ -4,6 +4,7 @@ import {
   btnSecondary,
   CHECK_INPUT,
   RADIO_INPUT,
+  SWITCH_INPUT,
   sourceDotClass,
 } from "@/lib/portal-ui";
 
@@ -32,8 +33,23 @@ describe("勾选控件类串", () => {
     ["CHECK_INPUT", CHECK_INPUT],
     ["RADIO_INPUT", RADIO_INPUT],
   ])("%s 的 hover 只加深未选中控件的描边，选中态保持 action-primary", (_, cls) => {
-    expect(tokens(cls)).toContain("not-checked:hover:border-ink-500");
+    expect(tokens(cls)).toContain("not-disabled:not-checked:hover:border-ink-500");
     expect(tokens(cls)).not.toContain("hover:border-ink-500");
+  });
+
+  it.each([
+    ["CHECK_INPUT", CHECK_INPUT],
+    ["RADIO_INPUT", RADIO_INPUT],
+    ["SWITCH_INPUT", SWITCH_INPUT],
+  ])("%s 有悬停反馈但禁用态不响应，禁用态变淡并显示禁止光标", (_, cls) => {
+    const hover = tokens(cls).filter((t) => /(?:^|:)hover:/.test(t));
+    expect(hover.length).toBeGreaterThan(0);
+    for (const t of hover) {
+      expect(t, t).toMatch(/(?:^|:)not-disabled:/);
+    }
+    expect(tokens(cls)).toEqual(
+      expect.arrayContaining(["disabled:cursor-not-allowed", "disabled:opacity-50"]),
+    );
   });
 });
 

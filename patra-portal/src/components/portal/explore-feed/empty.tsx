@@ -12,7 +12,7 @@ export function ExploreFeedEmpty({ reason }: ExploreFeedEmptyProps) {
       data-feed-state={reason}
       className="flex min-h-56 flex-col items-center justify-center gap-4 border-y border-border-default text-sm text-fg-3"
     >
-      <Venation id={`feed-${reason}-leaf`} className="h-20 w-auto opacity-50" />
+      <Venation className="h-20 w-auto opacity-50" />
       {text}
     </div>
   );

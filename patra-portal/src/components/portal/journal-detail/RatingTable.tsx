@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Pill } from "@/components/portal/Pill";
 import type { JournalMetrics } from "@/lib/portal-api/venue-derive";
 import { formatSubject } from "@/lib/subject-label";
 
@@ -75,16 +76,8 @@ export function RatingTable({ metrics }: { metrics: JournalMetrics }) {
           </div>
           {(cas.isTop || cas.isReview) && (
             <div className="mt-3 flex flex-wrap gap-2">
-              {cas.isTop && (
-                <span className="rounded-full border border-clay-200 bg-clay-50 px-3 py-1 font-sans text-xs font-semibold text-clay-800">
-                  Top 期刊
-                </span>
-              )}
-              {cas.isReview && (
-                <span className="rounded-full border border-clay-200 bg-clay-50 px-3 py-1 font-sans text-xs font-semibold text-clay-800">
-                  综述期刊
-                </span>
-              )}
+              {cas.isTop && <Pill tone="clay">Top 期刊</Pill>}
+              {cas.isReview && <Pill tone="clay">综述期刊</Pill>}
             </div>
           )}
         </System>

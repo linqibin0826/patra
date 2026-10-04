@@ -16,7 +16,7 @@ vi.mock("@/lib/portal-api/publication-search", () => ({
   fetchPublicationFacets: vi.fn(),
 }));
 
-import PapersPage from "@/app/papers/page";
+import PapersPage from "@/app/papers/(list)/page";
 import { fetchPublicationSearch } from "@/lib/portal-api/publication-search";
 
 function pageOf(items: Paper[], total = items.length): PageResult<Paper> {

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CjkDashText } from "@/components/portal/CjkDashText";
 import { SectionEyebrow } from "@/components/portal/SectionEyebrow";
 
 interface BrowseHeadProps {
@@ -35,7 +36,7 @@ export function BrowseHead({ crumb, eyebrow, title, description }: BrowseHeadPro
       </h1>
 
       <p className="anim-rise mt-4 max-w-[46em] text-md leading-relaxed break-keep text-fg-2 [--delay:140ms]">
-        {description}
+        <CjkDashText>{description}</CjkDashText>
       </p>
     </div>
   );

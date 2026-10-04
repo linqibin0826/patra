@@ -9,7 +9,7 @@ export function snippetText(snippet: string): string {
   return SENTENCE_END.test(text) ? text : `${text}…`;
 }
 
-export type EvidenceTone = "moss" | "amber" | "slate" | "muted";
+export type EvidenceTone = "moss" | "amber" | "slate";
 
 export interface EvidenceView {
   tone: EvidenceTone;
@@ -38,12 +38,11 @@ const EN_LABEL: Record<string, string> = {
   UNKNOWN: "Undetermined",
 };
 
-/** rank 分档色温：≥4 moss（高强度）/ ≥2 amber（中）/ ≥1 slate（低）/ 0 muted（未分级）。 */
+/** rank 分档色温：≥4 moss（高强度）/ ≥2 amber（中）/ 其余 slate（低）。未分级（rank 0）不出徽章，色温无意义，归入 slate。 */
 function toneOf(rank: number): EvidenceTone {
   if (rank >= 4) return "moss";
   if (rank >= 2) return "amber";
-  if (rank >= 1) return "slate";
-  return "muted";
+  return "slate";
 }
 
 /** 证据等级 → 徽章视图：色温 + 阶梯点亮数（clamp 到 [0,5]）+ 英文标签。 */

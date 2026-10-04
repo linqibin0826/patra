@@ -70,6 +70,18 @@ describe("FacetCheckRow", () => {
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
 
+  it("checkbox 的勾线是可描出的装饰路径：勾选时描线，只在 motion-safe 下带过渡", () => {
+    const { container } = render(<FacetCheckRow label="综述" checked onToggle={() => {}} />);
+    const checkbox = screen.getByRole("checkbox", { name: "综述" });
+    const mark = container.querySelector("svg[data-check-mark]");
+    expect(mark).toHaveAttribute("aria-hidden", "true");
+    expect(mark?.querySelector("path")).toHaveAttribute("pathLength", "1");
+    // 勾线紧跟 input，靠 peer-checked 切换描线进度
+    expect(checkbox.className).toMatch(/\bpeer\b/);
+    expect(mark?.getAttribute("class")).toMatch(/peer-checked:\[stroke-dashoffset:0\]/);
+    expect(mark?.getAttribute("class")).toMatch(/motion-safe:transition-\[stroke-dashoffset\]/);
+  });
+
   it("未传 count 时不渲染计数；muted 时弱化文字", () => {
     render(<FacetCheckRow label="未分级" checked={false} onToggle={() => {}} muted />);
     const label = screen.getByText("未分级").closest("label");

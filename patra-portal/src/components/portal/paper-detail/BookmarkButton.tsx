@@ -13,7 +13,7 @@ interface BookmarkButtonProps {
   compact?: boolean;
 }
 
-/// 收藏按钮 —— 本版为 mock：无用户系统、无后端，状态存 Zustand（按 paperId 共享，同页多实例同步）。
+/// 收藏按钮——本版为 mock：无用户系统、无后端，状态存 Zustand（按 paperId 共享，同页多实例同步）。
 export function BookmarkButton({ paperId, block = false, compact = false }: BookmarkButtonProps) {
   const bookmarked = useBookmarkStore((s) => s.ids.has(paperId));
   const toggle = useBookmarkStore((s) => s.toggle);
@@ -26,7 +26,7 @@ export function BookmarkButton({ paperId, block = false, compact = false }: Book
         aria-label={bookmarked ? "已收藏" : "收藏"}
         title={bookmarked ? "取消收藏" : "收藏"}
         onClick={() => toggle(paperId)}
-        className="relative z-10 inline-flex size-8 items-center justify-center rounded-full text-fg-3 transition-colors duration-200 hover:bg-paper-200 hover:text-ink-900 aria-pressed:text-clay-600"
+        className="inline-flex size-8 items-center justify-center rounded-full text-fg-3 transition-colors duration-200 hover:bg-paper-200 hover:text-ink-900 aria-pressed:text-clay-600"
       >
         <Bookmark
           size={15}

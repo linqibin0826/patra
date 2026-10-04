@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { findAll, format, readSrc } from "./source-scan";
 
+describe("中文破折号", () => {
+  it("「——」前后不加空格（中文排版惯例）", () => {
+    expect(format(findAll(/\S ——|—— \S/))).toEqual([]);
+  });
+});
+
 describe("字号与字距", () => {
   it("字号阶整体 +0.5px：下限 text-3xs 为 10px、base 14px；字距含 mono / spaced / display", () => {
     const tokens = readSrc("styles/tokens.css");

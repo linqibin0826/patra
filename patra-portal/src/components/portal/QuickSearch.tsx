@@ -27,6 +27,7 @@ export function QuickSearch({ open, onOpenChange }: QuickSearchProps) {
         >
           <Dialog.Title className="sr-only">快速检索</Dialog.Title>
           <Composer
+            surface="dialog"
             inputId={INPUT_ID}
             onSubmit={({ mode, value }) => {
               const target = composerTarget(mode, value);

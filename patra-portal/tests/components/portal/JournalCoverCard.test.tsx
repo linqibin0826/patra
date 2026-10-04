@@ -24,6 +24,18 @@ const journal: VenueBrowse = {
 };
 
 describe("JournalCoverCard", () => {
+  it("封面叠一层纸纹（与页面画布同一张噪点，overlay 混合只添质感）", () => {
+    const { container } = render(<JournalCoverCard journal={journal} />);
+    const cover = container.querySelector("[data-cover]");
+    expect(cover).toHaveClass("bg-(image:--grain-soft)", "bg-blend-overlay");
+  });
+
+  it("封面立在书架线上：线画在封面外层，hover 抬起封面时线不动", () => {
+    const { container } = render(<JournalCoverCard journal={journal} />);
+    const shelf = container.querySelector("[data-cover]")?.parentElement;
+    expect(shelf).toHaveAttribute("data-shelf");
+  });
+
   it("渲染期刊全名", () => {
     render(<JournalCoverCard journal={journal} />);
     expect(screen.getByText("Annals of oncology")).toBeInTheDocument();
