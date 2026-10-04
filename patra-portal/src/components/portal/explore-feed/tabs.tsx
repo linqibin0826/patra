@@ -2,7 +2,7 @@
 
 import { Clock, Quote } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsIndicator, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { FeedTab } from "@/types/portal";
 
 const TABS: { value: FeedTab; label: string; Icon: typeof Clock }[] = [
@@ -10,6 +10,7 @@ const TABS: { value: FeedTab; label: string; Icon: typeof Clock }[] = [
   { value: "cited", label: "高被引", Icon: Quote },
 ];
 
+/// 文献流 tab：药丸分段控件，墨色滑块随选中项滑动（URL ?tab= 为唯一状态来源）。
 export function ExploreFeedTabs({ currentTab }: { currentTab: FeedTab }) {
   const router = useRouter();
   return (
@@ -23,15 +24,16 @@ export function ExploreFeedTabs({ currentTab }: { currentTab: FeedTab }) {
     >
       <TabsList
         variant="line"
-        className="flex h-auto w-full items-center justify-start gap-0 rounded-none border-b border-border-default bg-transparent p-0"
+        className="relative h-auto gap-0 rounded-full border border-border-default bg-paper-50 p-1"
       >
+        <TabsIndicator className="top-(--active-tab-top) left-(--active-tab-left) h-(--active-tab-height) w-(--active-tab-width) rounded-full bg-ink-900 motion-safe:transition-[left,width] duration-500 ease-out-expo" />
         {TABS.map(({ value, label, Icon }) => (
           <TabsTrigger
             key={value}
             value={value}
-            className="group/feed-tab relative -mb-px flex-none rounded-none border-x-0 border-t-0 border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-fg-3 shadow-none transition-colors duration-150 hover:text-ink-900 data-active:border-clay-500! data-active:text-ink-900!"
+            className="relative z-10 flex-none rounded-full border-0 px-4 py-2 text-sm font-medium text-fg-2 shadow-none transition-colors duration-300 after:hidden hover:text-ink-900 data-active:text-paper-50! data-active:hover:text-paper-50"
           >
-            <Icon className="h-3.5 w-3.5" strokeWidth={1.5} aria-hidden />
+            <Icon className="size-3.5" strokeWidth={1.5} aria-hidden />
             {label}
           </TabsTrigger>
         ))}

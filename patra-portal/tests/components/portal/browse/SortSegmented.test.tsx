@@ -19,6 +19,17 @@ describe("SortSegmented", () => {
     );
   });
 
+  it("降序项向辅助技术读出「降序」（↓ 只是图形）", () => {
+    render(<SortSegmented options={OPTIONS} value="latest" onChange={() => {}} />);
+    expect(screen.getByRole("button", { name: "最近更新，降序" })).toBeInTheDocument();
+  });
+
+  it("选项放得下时不加右缘渐隐标记", () => {
+    render(<SortSegmented options={OPTIONS} value="latest" onChange={() => {}} />);
+    const scroller = screen.getByRole("group", { name: "排序方式" }).parentElement;
+    expect(scroller).not.toHaveAttribute("data-fade-end");
+  });
+
   it("点击触发 onChange(id)", () => {
     const onChange = vi.fn();
     render(<SortSegmented options={OPTIONS} value="latest" onChange={onChange} />);

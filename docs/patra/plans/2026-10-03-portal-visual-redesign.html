@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal 视觉重设计实现计划</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- CSS 外置：「工程简报」主题（与 spec 共享 spec-theme.css）+ plan 专属 plan-extras.css。
+       相对路径 ../styles/ 从生成位置 docs/patra/plans/ 出发；
+       模板本身在 .claude/skills/ 下打开时此 link 会 404（接受：以生成后的 plan 为准） -->
+  <link rel="stylesheet" href="../styles/spec-theme.css">
+  <link rel="stylesheet" href="../styles/plan-extras.css">
+</head>
+<body>
+<div class="layout layout-with-notes">
+
+  <!-- ============================================================
+       左栏：目录（TOC）
+       ============================================================ -->
+  <nav class="toc">
+    <h3>目录</h3>
+    <ol>
+      <li><a href="#scope-check">范围检查结果</a></li>
+      <li><a href="#file-structure">文件结构</a></li>
+      <li><a href="#tasks">任务列表</a>
+        <ol class="toc-tasks">
+          <!-- ENTRY TEMPLATE（注释保留供添加 task 时复制）:
+               每写一个 <article id="task-N">，在此处同步追加一条 li，初始 data-task-status="pending"。
+               实施期改 article 的 data-status 时，必须同步改此处 li 的 data-task-status，
+               否则 TOC 状态符号会与中栏卡片不一致。
+
+          <li data-task-status="pending"><a href="#task-N">Task N — [任务名]</a></li>
+          -->
+          <li data-task-status="done"><a href="#task-1">Task 1 — 设计 token 与守护测试</a></li>
+          <li data-task-status="done"><a href="#task-2">Task 2 — 全局样式与动效系统</a></li>
+          <li data-task-status="done"><a href="#task-3">Task 3 — 字体切换</a></li>
+          <li data-task-status="done"><a href="#task-4">Task 4 — 叶脉生成器与渲染组件</a></li>
+          <li data-task-status="done"><a href="#task-5">Task 5 — 国家码中文名</a></li>
+          <li data-task-status="done"><a href="#task-6">Task 6 — Composer 与 Tabs 指示器</a></li>
+          <li data-task-status="done"><a href="#task-7">Task 7 — TopNav 与 ⌘K 快速检索</a></li>
+          <li data-task-status="done"><a href="#task-8">Task 8 — 页脚版权页与区块眉题</a></li>
+          <li data-task-status="done"><a href="#task-9">Task 9 — Hero 与「图 1」</a></li>
+          <li data-task-status="done"><a href="#task-10">Task 10 — 墨色热议区</a></li>
+          <li data-task-status="done"><a href="#task-11">Task 11 — 期刊书架与封面卡</a></li>
+          <li data-task-status="done"><a href="#task-12">Task 12 — 编辑排版文献流</a></li>
+          <li data-task-status="done"><a href="#task-13">Task 13 — 浏览页框架与筛选</a></li>
+          <li data-task-status="done"><a href="#task-14">Task 14 — 结果列表 / 网格 / 分页 / 空态</a></li>
+          <li data-task-status="done"><a href="#task-15">Task 15 — 文献详情页</a></li>
+          <li data-task-status="done"><a href="#task-16">Task 16 — 期刊详情页</a></li>
+          <li data-task-status="done"><a href="#task-17">Task 17 — 状态页与加载骨架</a></li>
+          <li data-task-status="done"><a href="#task-18">Task 18 — 八维自检与迭代</a></li>
+        </ol>
+      </li>
+      <li><a href="#self-check">自检结果</a></li>
+    </ol>
+  </nav>
+
+  <!-- ============================================================
+       中栏：内容
+       ============================================================ -->
+  <main class="content">
+
+    <header class="doc-header">
+      <h1>Portal 视觉重设计实现计划</h1>
+      <div class="meta-bar">
+        <span>📅 2026-10-03</span>
+        <span>🌿 feat/portal-visual-redesign</span>
+        <span>📋 plan</span>
+        <span class="status-pill">draft</span>
+      </div>
+
+      <aside class="for-ai-worker">
+        <strong>面向 AI 代理的工作者：</strong>
+        必需子技能：使用 <code>patra:subagent-driven-development</code>（推荐）
+        或 <code>patra:executing-plans</code> 逐任务实现。
+        通过修改任务卡片与步骤的 <code>data-status</code> 属性追踪进度
+        （pending / in-progress / done / blocked / skipped）。
+        每完成一个 task 立即 commit。
+      </aside>
+
+      <dl class="meta">
+        <dt>目标</dt> <dd>把 patra-portal 全部页面重做到获奖站水准的「叶脉 · 学术编辑风」，并修掉现有可见缺陷。</dd>
+        <dt>架构</dt> <dd>先扩设计 token 与全局样式（字体 / 字号 / 反相表面 / 动效），再做全站框架（导航、⌘K、页脚），然后自首页、浏览页、详情页、状态页逐页落地；动效全部纯 CSS（keyframes + scroll-driven + @starting-style），叶脉母题由确定性纯函数生成、RSC 内联渲染。</dd>
+        <dt>技术栈</dt> <dd>Next.js 15 App Router · React 19 · Tailwind v4 · Base UI · next/font（Newsreader / IBM Plex Mono / Inter / Noto SC）· Vitest + Testing Library · Playwright（截图走查）</dd>
+        <dt>关联 spec</dt> <dd><a href="../specs/2026-10-03-portal-visual-redesign-design.html">Portal 视觉重设计：叶脉 · 学术编辑风</a></dd>
+      </dl>
+    </header>
+
+    <section id="scope-check">
+      <h2>范围检查结果</h2>
+      <aside class="callout success">
+        <span class="title">单 plan 覆盖</span>
+        <p>单一子系统（patra-portal 前端视觉与交互），一个 plan 覆盖。执行方式取舍：含逻辑的任务（守护测试、叶脉生成器、国家名、⌘K、页脚锚点、文献卡行为、期刊侧栏文案）给出完整测试与实现代码，严格红绿；纯视觉任务给出设计规格、关键类名与截图验收标准——视觉代码需要对着四档宽度截图反复迭代，预先写死整段 JSX 没有意义。用户规则「改动先本地验收再开 PR」优先于模板的逐任务 commit：全部任务完成后停在本地 worktree，不 commit。</p>
+      </aside>
+    </section>
+
+    <section id="file-structure">
+      <h2>文件结构</h2>
+      <div class="file-tree">
+        <pre>patra-portal/
+├── src/styles/tokens.css                         modify  字体 / 字号 / 反相 / 阴影 / 动效 / 容器 token
+├── src/app/globals.css                           modify  @theme 映射、纸纹、keyframes、入场工具类、自绘复选、折叠过渡
+├── src/app/layout.tsx                            modify  Newsreader / IBM Plex Mono / Inter opsz
+├── src/lib/venation.ts                           create  叶脉生成器（纯函数）
+├── src/lib/country-name.ts                       create  国家码 → 中文名
+├── src/lib/portal-ui.ts                          modify  按钮 / 复选 / 链接共享 class 串
+├── src/components/ui/tabs.tsx                    modify  导出 TabsIndicator
+├── src/components/portal/Venation.tsx            create  叶脉 SVG（RSC）
+├── src/components/portal/QuickSearch.tsx         create  ⌘K 快速检索对话框
+├── src/components/portal/{TopNav,Hero,HeroWithSearch,Composer,Footer,SectionEyebrow,
+│     TopicCloud,Journals,JournalCoverCard,PaperCard,AISummaryBadge,EvidenceBadge,
+│     IdentifierChip,DisclosureSection}.tsx      modify  全站框架与首页
+├── src/components/portal/explore-feed/*          modify  编辑排版文献流
+├── src/components/portal/browse/*                modify  浏览页框架、筛选、分页、空态、骨架
+├── src/components/portal/papers/*                modify  文献检索
+├── src/components/portal/journals/*              modify  期刊浏览（国家名）
+├── src/components/portal/paper-detail/*          modify  文献详情
+├── src/components/portal/journal-detail/*        modify  期刊详情
+├── src/components/portal/status/*                modify  404 / 500
+├── src/app/**/{page,loading,not-found,error}.tsx modify  页面骨架与状态页框架
+└── tests/
+    ├── design-system/tokens.ts                   create  token 解析 + WCAG 对比度
+    ├── design-system/{typography,contrast,components}.test.ts  modify
+    ├── design-system/motion.test.ts              create  reduced-motion 守护
+    ├── lib/venation.test.ts                      create
+    ├── lib/country-name.test.ts                  create
+    └── components/portal/{TopNav,Footer,Composer,PaperCard,…}.test.tsx  modify</pre>
+      </div>
+    </section>
+
+    <section id="tasks">
+      <h2>任务列表</h2>
+
+      <!-- TASK TEMPLATE（注释保留供添加新 task 时复制）:
+
+      <article class="task" id="task-N" data-status="pending">
+        <header>
+          <h2>任务 N：[任务标题]</h2>
+          <dl class="files">
+            <dt>创建</dt><dd><code>[exact/path/to/File.java]</code></dd>
+            <dt>修改</dt><dd><code>[exact/path/to/Existing.java:123-145]</code></dd>
+            <dt>测试</dt><dd><code>[tests/exact/path/to/Test.java]</code></dd>
+          </dl>
+        </header>
+
+        <ol class="steps">
+          <li class="step" data-status="pending">
+            <strong>步骤 1：[描述]</strong>
+            <pre><code class="lang-java">[完整代码块，禁止占位]</code></pre>
+          </li>
+        </ol>
+      </article>
+
+      data-status 5 类：pending / in-progress / done / blocked / skipped
+      -->
+
+      <article class="task" id="task-1" data-status="done">
+        <header>
+          <h2>任务 1：设计 token 与守护测试</h2>
+          <dl class="files">
+            <dt>创建</dt><dd><code>patra-portal/tests/design-system/tokens.ts</code></dd>
+            <dt>修改</dt><dd><code>patra-portal/src/styles/tokens.css</code>、<code>patra-portal/src/app/globals.css</code>（@theme）</dd>
+            <dt>测试</dt><dd><code>patra-portal/tests/design-system/typography.test.ts</code>、<code>contrast.test.ts</code></dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：token 解析与对比度工具（测试辅助）</strong>
+            <pre><code class="lang-ts">// tests/design-system/tokens.ts
+import { readSrc } from "./source-scan";
+
+/// 解析 tokens.css 的 :root 变量，递归展开 var() 到最终取值。
+export function resolveToken(name: string, css = readSrc("styles/tokens.css")): string {
+  const map = new Map([...css.matchAll(/--([a-z0-9-]+):\s*([^;]+);/g)].map((m) =&gt; [m[1] as string, (m[2] as string).trim()]));
+  let value = map.get(name);
+  for (let guard = 0; value?.startsWith("var(") &amp;&amp; guard &lt; 10; guard++) {
+    value = map.get(/var\(--([a-z0-9-]+)\)/.exec(value)?.[1] ?? "");
+  }
+  if (!value) throw new Error(`token --${name} 未定义`);
+  return value;
+}
+
+const channel = (c: number) =&gt; (c &lt;= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+function luminance(hex: string): number {
+  const [r, g, b] = [1, 3, 5].map((i) =&gt; channel(Number.parseInt(hex.slice(i, i + 2), 16) / 255));
+  return 0.2126 * (r ?? 0) + 0.7152 * (g ?? 0) + 0.0722 * (b ?? 0);
+}
+
+/// WCAG 2 对比度（仅接受 #rrggbb）。
+export function contrastRatio(fg: string, bg: string): number {
+  const [hi, lo] = [luminance(fg), luminance(bg)].sort((a, b) =&gt; b - a);
+  return ((hi ?? 0) + 0.05) / ((lo ?? 0) + 0.05);
+}</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 2：改写 typography 守护测试（先红）</strong>
+            <pre><code class="lang-ts">it("字号阶整体 +0.5px：下限 text-3xs 为 10px、base 14px；字距含 mono / spaced / display", () =&gt; {
+  const tokens = readSrc("styles/tokens.css");
+  expect(tokens).toMatch(/--text-3xs:\s*10px;/);
+  expect(tokens).toMatch(/--text-base:\s*14px;/);
+  expect(tokens).toMatch(/--tracking-mono:\s*0\.06em;/);
+  expect(tokens).toMatch(/--tracking-spaced:\s*0\.14em;/);
+  expect(tokens).toMatch(/--tracking-display:\s*-0\.035em;/);
+  const theme = readSrc("app/globals.css");
+  for (const name of ["text-3xs", "tracking-mono", "tracking-spaced", "tracking-display", "leading-display"]) {
+    expect(theme).toContain(`--${name}: var(--${name});`);
+  }
+});
+
+it("流体显示字号 display-1/2/3 用 clamp() 定义并映射到 @theme", () =&gt; {
+  const tokens = readSrc("styles/tokens.css");
+  const theme = readSrc("app/globals.css");
+  for (const n of [1, 2, 3]) {
+    expect(tokens).toMatch(new RegExp(`--text-display-${n}:\\s*clamp\\(`));
+    expect(theme).toContain(`--text-display-${n}: var(--text-display-${n});`);
+  }
+});
+
+it("字体：Newsreader 衬线 + IBM Plex Mono 等宽，等宽栈带中文回退", () =&gt; {
+  const tokens = readSrc("styles/tokens.css");
+  expect(tokens).toMatch(/--patra-font-serif:\s*var\(--font-newsreader\)/);
+  expect(tokens).toMatch(/--patra-font-mono:\s*var\(--font-plex-mono\),\s*var\(--font-noto-sans-sc\)/);
+  const layout = readSrc("app/layout.tsx");
+  expect(layout).toMatch(/Newsreader/);
+  expect(layout).toMatch(/IBM_Plex_Mono/);
+  expect(layout).not.toMatch(/Source_Serif_4|JetBrains_Mono/);
+});</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 3：反相 token 对比度测试（先红）</strong>
+            <pre><code class="lang-ts">// contrast.test.ts 追加
+import { contrastRatio, resolveToken } from "./tokens";
+
+describe("墨色反相区", () =&gt; {
+  it("反相文字 token 在 bg-inverse 上对比度达标（正文 ≥ 7:1，强调 ≥ 4.5:1）", () =&gt; {
+    const bg = resolveToken("bg-inverse");
+    for (const fg of ["fg-inverse-1", "fg-inverse-2", "fg-inverse-3"]) {
+      expect(contrastRatio(resolveToken(fg), bg), fg).toBeGreaterThanOrEqual(7);
+    }
+    expect(contrastRatio(resolveToken("accent-on-inverse"), bg)).toBeGreaterThanOrEqual(4.5);
+  });
+});</code></pre>
+            <p>运行：<code>pnpm vitest run tests/design-system</code>；预期：上述新用例 FAIL（token 未定义 / 值不符）。</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 4：tokens.css 扩展（转绿）</strong>
+            <pre><code class="lang-css">/* 字体：Newsreader 显示 / 阅读衬线；IBM Plex Mono 元数据（中文回退到 Noto Sans SC） */
+--patra-font-serif: var(--font-newsreader), var(--font-noto-serif-sc), Georgia, "Iowan Old Style", serif;
+--patra-font-mono: var(--font-plex-mono), var(--font-noto-sans-sc), ui-monospace, "SF Mono", Menlo, monospace;
+
+/* 字号阶：整体 +0.5px，全站下限 10px */
+--text-3xs: 10px; --text-2xs: 11px; --text-xs: 12px; --text-sm: 13px; --text-base: 14px; --text-md: 15px;
+--text-lg: 17px; --text-xl: 19px; --text-2xl: 24px; --text-3xl: 30px; --text-4xl: 40px; --text-5xl: 52px;
+/* 流体显示字号（海报级标题） */
+--text-display-1: clamp(2.875rem, 1.6rem + 5.4vw, 7rem);
+--text-display-2: clamp(2.25rem, 1.5rem + 3.4vw, 4.5rem);
+--text-display-3: clamp(1.75rem, 1.3rem + 1.9vw, 3rem);
+--leading-display: 1.02;
+--leading-heading: 1.12;
+--tracking-display: -0.035em;
+
+/* 反相（墨色）表面：热议区 / 页脚 */
+--bg-inverse: var(--ink-900);
+--bg-inverse-raised: var(--ink-800);
+--fg-inverse-1: var(--paper-50);
+--fg-inverse-2: var(--ink-200);
+--fg-inverse-3: var(--ink-300);
+--accent-on-inverse: var(--clay-300);
+--border-inverse: rgba(251, 248, 242, 0.12);
+--border-inverse-strong: rgba(251, 248, 242, 0.24);
+
+/* 阴影：对话框 / 期刊封面 / 检索框 */
+--shadow-xl: 0 28px 72px -20px rgba(28, 25, 23, 0.32), 0 0 0 1px rgba(28, 25, 23, 0.06);
+--shadow-cover: 0 1px 2px rgba(28, 25, 23, 0.14), 0 10px 22px -12px rgba(28, 25, 23, 0.42);
+--shadow-cover-hover: 0 2px 4px rgba(28, 25, 23, 0.12), 0 26px 44px -18px rgba(28, 25, 23, 0.5);
+--shadow-composer: 0 1px 0 rgba(28, 25, 23, 0.04), 0 22px 48px -28px rgba(28, 25, 23, 0.34);
+--cover-spine: linear-gradient(90deg, rgba(0, 0, 0, 0.32) 0, rgba(0, 0, 0, 0.1) 5px, rgba(255, 255, 255, 0.1) 7px, rgba(255, 255, 255, 0) 16px);
+
+/* 动效 */
+--ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+--ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+--ease-in-out-quint: cubic-bezier(0.83, 0, 0.17, 1);
+--dur-reveal: 900ms;
+--dur-draw: 2400ms;
+
+/* 版心 */
+--page-max: 1280px;
+--gutter: clamp(20px, 4vw, 48px);</code></pre>
+            <p>同时在 <code>globals.css</code> 的 <code>@theme inline</code> 追加映射：<code>--color-bg-inverse / -raised、--color-fg-inverse-1/2/3、--color-accent-on-inverse、--color-border-inverse / -strong、--text-display-1/2/3、--leading-display / heading、--tracking-display、--shadow-xl / cover / cover-hover / composer、--ease-out-expo / out-quart / in-out-quint、--container-page: var(--page-max)、--spacing-gutter: var(--gutter)</code>。</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 5：运行验证</strong>
+            <p>运行：<code>pnpm vitest run tests/design-system</code>；预期：除依赖字体切换（任务 3）的用例外全部 PASS。</p>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-2" data-status="done">
+        <header>
+          <h2>任务 2：全局样式与动效系统</h2>
+          <dl class="files">
+            <dt>创建</dt><dd><code>patra-portal/tests/design-system/motion.test.ts</code></dd>
+            <dt>修改</dt><dd><code>patra-portal/src/app/globals.css</code>、<code>patra-portal/src/lib/portal-ui.ts</code>、所有使用 <code>animate-pulse</code> / <code>animate-[…]</code> 的组件</dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：reduced-motion 守护测试（先红）</strong>
+            <pre><code class="lang-ts">// tests/design-system/motion.test.ts
+import { describe, expect, it } from "vitest";
+import { findAll, format, readSrc } from "./source-scan";
+
+/// 找出不在 `@media (prefers-reduced-motion: no-preference)` 内的 animation 声明（`animation: none` 不算）。
+function animationsOutsideNoPreference(css: string): string[] {
+  const stack: string[] = [];
+  const offenders: string[] = [];
+  let buf = "";
+  const check = (decl: string) =&gt; {
+    const d = decl.trim();
+    if (!/^animation(?:-name)?\s*:/.test(d) || /:\s*none\b/.test(d)) return;
+    if (stack.some((p) =&gt; /prefers-reduced-motion:\s*no-preference/.test(p))) return;
+    offenders.push(`${stack.join(" &gt; ")} { ${d} }`);
+  };
+  for (const ch of css.replace(/\/\*[\s\S]*?\*\//g, "")) {
+    if (ch === "{") { stack.push(buf.trim()); buf = ""; }
+    else if (ch === "}") { check(buf); stack.pop(); buf = ""; }
+    else if (ch === ";") { check(buf); buf = ""; }
+    else buf += ch;
+  }
+  return offenders;
+}
+
+describe("动效", () =&gt; {
+  it("token 定义入场曲线与时长", () =&gt; {
+    const tokens = readSrc("styles/tokens.css");
+    expect(tokens).toMatch(/--ease-out-expo:\s*cubic-bezier\(0\.16, 1, 0\.3, 1\);/);
+    expect(tokens).toMatch(/--dur-reveal:\s*\d+ms;/);
+    expect(tokens).toMatch(/--dur-draw:\s*\d+ms;/);
+  });
+
+  it("globals.css 的 animation 声明全部包在 prefers-reduced-motion: no-preference 内", () =&gt; {
+    expect(animationsOutsideNoPreference(readSrc("app/globals.css"))).toEqual([]);
+  });
+
+  it("组件里的 animate-* 必须带 motion-safe: 前缀（加载转圈 animate-spin 除外）", () =&gt; {
+    const hits = findAll(/(?&lt;![\w-])(?:[\w\-[\]=&amp;&gt;*:@.]+:)*animate-[\w[\]\-_.()%,]+/).filter(
+      ({ match }) =&gt; !/(?:^|:)motion-safe:/.test(match) &amp;&amp; !/animate-spin\b/.test(match),
+    );
+    expect(format(hits)).toEqual([]);
+  });
+});</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 2：globals.css 动效与基础样式</strong>
+            <pre><code class="lang-css">@layer base {
+  body { background-color: var(--bg-canvas); background-image: var(--grain); /* 其余沿用 */ }
+  :root { interpolate-size: allow-keywords; }
+}
+
+@keyframes patra-rise { from { opacity: 0; translate: 0 18px; } }
+@keyframes patra-fade { from { opacity: 0; } }
+@keyframes patra-mask-up { from { translate: 0 108%; } }
+@keyframes patra-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes patra-grow-y { from { scale: 1 0; } }
+@keyframes patra-progress { from { scale: 0 1; } to { scale: 1 1; } }
+@keyframes patra-shimmer { from { background-position: 160% 0; } to { background-position: -60% 0; } }
+@keyframes patra-live-pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+
+@media (prefers-reduced-motion: no-preference) {
+  .anim-rise { animation: patra-rise var(--dur-reveal) var(--ease-out-expo) var(--delay, 0ms) both; }
+  .anim-fade { animation: patra-fade var(--dur-reveal) var(--ease-out-quart) var(--delay, 0ms) both; }
+  .anim-mask { display: inline-block; animation: patra-mask-up 1.1s var(--ease-out-expo) var(--delay, 0ms) both; }
+  .anim-draw { stroke-dasharray: 1; animation: patra-draw var(--dur, var(--dur-draw)) var(--ease-in-out-quint) var(--delay, 0ms) both; }
+  .shimmer { background-image: linear-gradient(100deg, transparent 20%, var(--paper-50) 50%, transparent 80%); background-size: 200% 100%; animation: patra-shimmer 1.8s linear infinite; }
+  @supports (animation-timeline: view()) {
+    .reveal { animation: patra-rise linear both; animation-timeline: view(); animation-range: entry 0% entry 70%; }
+    .reveal-grow { transform-origin: bottom; animation: patra-grow-y var(--ease-out-quart) both; animation-timeline: view(); animation-range: entry 20% cover 45%; }
+    .read-progress { transform-origin: left; animation: patra-progress linear both; animation-timeline: scroll(root); }
+  }
+}
+.read-progress { scale: 0 1; }  /* 不支持 scroll-driven 时不显示，避免满格误导 */</code></pre>
+            <p>另：纸纹 <code>--grain</code>（feTurbulence data URI）放 tokens.css；<code>link-draw</code> 下划线绘出用 <code>@utility</code>；自绘复选 / 单选 class 串 <code>CHECK_INPUT</code> 放 <code>portal-ui.ts</code>；折叠区 <code>.disclosure-body</code> 用 <code>@starting-style</code> + <code>transition-behavior: allow-discrete</code>（包在 no-preference 内）。</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 3：既有 animate 用法改为 motion-safe（转绿）</strong>
+            <p>Hero「实时同步」圆点 <code>before:animate-[patra-live-pulse…]</code> → <code>motion-safe:before:animate-[patra-live-pulse…]</code>；所有骨架 <code>animate-pulse</code> → 静态 <code>bg-paper-200</code> + <code>shimmer</code>。运行 <code>pnpm vitest run tests/design-system</code> 预期 PASS。</p>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-3" data-status="done">
+        <header>
+          <h2>任务 3：字体切换</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>patra-portal/src/app/layout.tsx</code></dd>
+            <dt>测试</dt><dd><code>patra-portal/tests/design-system/typography.test.ts</code>（任务 1 已写）</dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：替换 next/font 声明</strong>
+            <pre><code class="lang-tsx">import { IBM_Plex_Mono, Inter, Newsreader, Noto_Sans_SC, Noto_Serif_SC } from "next/font/google";
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap", axes: ["opsz"] });
+const newsreader = Newsreader({
+  subsets: ["latin"], variable: "--font-newsreader", display: "swap", style: ["normal", "italic"], axes: ["opsz"],
+});
+const plexMono = IBM_Plex_Mono({ subsets: ["latin"], variable: "--font-plex-mono", display: "swap", weight: ["400", "500", "600"] });
+// notoSansSC / notoSerifSC 保持；html className 改为 inter / newsreader / plexMono / notoSansSC / notoSerifSC 的 variable</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 2：验证</strong>
+            <p>运行：<code>pnpm vitest run tests/design-system/typography.test.ts &amp;&amp; pnpm typecheck</code>；预期 PASS。截图确认标题已换为 Newsreader、等宽标签为 Plex Mono。</p>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-4" data-status="done">
+        <header>
+          <h2>任务 4：叶脉生成器与渲染组件</h2>
+          <dl class="files">
+            <dt>创建</dt><dd><code>patra-portal/src/lib/venation.ts</code>、<code>patra-portal/src/components/portal/Venation.tsx</code></dd>
+            <dt>测试</dt><dd><code>patra-portal/tests/lib/venation.test.ts</code></dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：编写失败测试</strong>
+            <pre><code class="lang-ts">import { describe, expect, it } from "vitest";
+import { generateVenation, type VeinKind } from "@/lib/venation";
+
+const numbers = (d: string) =&gt; [...d.matchAll(/-?\d+(?:\.\d+)?/g)].map((m) =&gt; Number(m[0]));
+
+describe("generateVenation 叶脉生成器", () =&gt; {
+  it("同参同输出（SSR 与 CSR 渲染一致）", () =&gt; {
+    expect(generateVenation({ seed: 7 })).toEqual(generateVenation({ seed: 7 }));
+  });
+
+  it("结构数量：1 叶缘 + 1 主脉 + 2N 二级脉 + 2(N−1) 环结 + 6(N−1) 三级脉", () =&gt; {
+    const { paths } = generateVenation({ secondaryCount: 8 });
+    const count = (k: VeinKind) =&gt; paths.filter((p) =&gt; p.kind === k).length;
+    expect([count("margin"), count("midrib"), count("secondary"), count("loop"), count("tertiary")]).toEqual([1, 1, 16, 14, 42]);
+  });
+
+  it("种子只改变细微抖动，不改变结构", () =&gt; {
+    const a = generateVenation({ seed: 1 });
+    const b = generateVenation({ seed: 2 });
+    expect(a.paths.map((p) =&gt; p.kind)).toEqual(b.paths.map((p) =&gt; p.kind));
+    expect(a.paths.map((p) =&gt; p.d)).not.toEqual(b.paths.map((p) =&gt; p.d));
+  });
+
+  it("所有坐标落在画布内", () =&gt; {
+    const { width, height, paths } = generateVenation();
+    for (const p of paths) {
+      const xs = numbers(p.d);
+      for (let i = 0; i &lt; xs.length; i += 2) {
+        expect(xs[i]).toBeGreaterThanOrEqual(0);
+        expect(xs[i]).toBeLessThanOrEqual(width);
+        expect(xs[i + 1]).toBeGreaterThanOrEqual(0);
+        expect(xs[i + 1]).toBeLessThanOrEqual(height);
+      }
+    }
+  });
+
+  it("绘制顺序：叶缘与主脉为 0，二级脉自叶基向叶尖递增，三级脉最后", () =&gt; {
+    const { paths } = generateVenation();
+    const orders = (k: VeinKind) =&gt; paths.filter((p) =&gt; p.kind === k).map((p) =&gt; p.order);
+    expect([...orders("margin"), ...orders("midrib")]).toEqual([0, 0]);
+    expect(Math.min(...orders("tertiary"))).toBeGreaterThan(Math.max(...orders("secondary")));
+    for (const p of paths) {
+      expect(p.order).toBeGreaterThanOrEqual(0);
+      expect(p.order).toBeLessThanOrEqual(1);
+    }
+  });
+});</code></pre>
+            <p>运行：<code>pnpm vitest run tests/lib/venation.test.ts</code>；预期 FAIL（模块不存在）。</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 2：实现生成器</strong>
+            <pre><code class="lang-ts">/// 叶脉生成器：在「主脉参数 t × 法向偏移 v」坐标里描述羽状环结脉，再映射到平面。纯函数、同参同输出。
+export type VeinKind = "margin" | "midrib" | "secondary" | "loop" | "tertiary";
+export interface VeinPath { kind: VeinKind; d: string; order: number }
+export interface Venation { width: number; height: number; paths: VeinPath[] }
+export interface VenationOptions { seed?: number; secondaryCount?: number }
+
+interface Point { x: number; y: number }
+interface Secondary { end: number; outward: number; pts: Point[] }
+
+const WIDTH = 420;
+const HEIGHT = 940;
+const BASE: Point = { x: 214, y: 860 };
+const TIP: Point = { x: 190, y: 40 };
+const CTRL: Point = { x: 262, y: 470 };
+const HALF_WIDTH = 160;
+const SHAPE_A = 0.75;
+const SHAPE_B = 1.1;
+const T_STAR = SHAPE_A / (SHAPE_A + SHAPE_B);
+const F_MAX = T_STAR ** SHAPE_A * (1 - T_STAR) ** SHAPE_B;
+const TERTIARY_STOPS = [0.28, 0.5, 0.72] as const;
+
+/// 线性同余伪随机数：同 seed 同序列。
+function lcg(seed: number): () =&gt; number {
+  let s = seed &gt;&gt;&gt; 0;
+  return () =&gt; {
+    s = (Math.imul(s, 1664525) + 1013904223) &gt;&gt;&gt; 0;
+    return s / 4294967296;
+  };
+}
+
+/// 主脉参数 t 处的叶片半宽：t^a(1−t)^b 归一到 HALF_WIDTH。
+function halfWidth(t: number): number {
+  if (t &lt;= 0 || t &gt;= 1) return 0;
+  return (HALF_WIDTH * (t ** SHAPE_A * (1 - t) ** SHAPE_B)) / F_MAX;
+}
+
+/// 主脉（二次贝塞尔）上的点。
+function midrib(t: number): Point {
+  const u = 1 - t;
+  return { x: u * u * BASE.x + 2 * u * t * CTRL.x + t * t * TIP.x, y: u * u * BASE.y + 2 * u * t * CTRL.y + t * t * TIP.y };
+}
+
+/// 主脉在 t 处的单位法向量（左侧为正）。
+function normal(t: number): Point {
+  const x = 2 * (1 - t) * (CTRL.x - BASE.x) + 2 * t * (TIP.x - CTRL.x);
+  const y = 2 * (1 - t) * (CTRL.y - BASE.y) + 2 * t * (TIP.y - CTRL.y);
+  const len = Math.hypot(x, y);
+  return { x: -y / len, y: x / len };
+}
+
+/// 叶面坐标 → 平面坐标。
+function at(t: number, side: 1 | -1, v: number): Point {
+  const m = midrib(t);
+  const n = normal(t);
+  return { x: m.x + side * n.x * v, y: m.y + side * n.y * v };
+}
+
+const fmt = (p: Point) =&gt; `${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
+const polyline = (pts: Point[]) =&gt; `M${pts.map(fmt).join(" L")}`;
+
+export function generateVenation({ seed = 11, secondaryCount = 10 }: VenationOptions = {}): Venation {
+  const rnd = lcg(seed);
+  const paths: VeinPath[] = [];
+
+  const outline: Point[] = [];
+  for (let i = 0; i &lt;= 160; i++) outline.push(at(i / 160, 1, halfWidth(i / 160)));
+  for (let i = 160; i &gt;= 0; i--) outline.push(at(i / 160, -1, halfWidth(i / 160)));
+  paths.push({ kind: "margin", d: `${polyline(outline)} Z`, order: 0 });
+
+  const stem: Point[] = [{ x: BASE.x + 5, y: BASE.y + 34 }];
+  for (let i = 0; i &lt;= 80; i++) stem.push(midrib(i / 80));
+  paths.push({ kind: "midrib", d: polyline(stem), order: 0 });
+
+  const sides: Record&lt;"left" | "right", Secondary[]&gt; = { left: [], right: [] };
+  for (let i = 0; i &lt; secondaryCount; i++) {
+    for (const side of [1, -1] as const) {
+      const t0 = 0.04 + 0.84 * ((i + (side === 1 ? 0.15 : 0.6)) / secondaryCount) ** 1.05;
+      const reach = 0.13 + 0.08 * (1 - t0) + (rnd() - 0.5) * 0.015;
+      const outward = 0.86 + (rnd() - 0.5) * 0.04;
+      const pts: Point[] = [];
+      for (let j = 0; j &lt;= 22; j++) {
+        const tau = j / 22;
+        const t = Math.min(t0 + reach * tau, 0.995);
+        pts.push(at(t, side, halfWidth(t) * outward * (1 - (1 - tau) ** 1.9)));
+      }
+      sides[side === 1 ? "left" : "right"].push({ end: Math.min(t0 + reach, 0.995), outward, pts });
+      paths.push({ kind: "secondary", d: polyline(pts), order: 0.08 + 0.5 * t0 });
+    }
+  }
+
+  for (const [key, side] of [["left", 1], ["right", -1]] as const) {
+    const veins = sides[key];
+    for (let k = 0; k &lt; veins.length - 1; k++) {
+      const a = veins[k] as Secondary;
+      const b = veins[k + 1] as Secondary;
+      const loop: Point[] = [];
+      for (let j = 0; j &lt;= 10; j++) {
+        const s = j / 10;
+        const t = Math.min(a.end + (b.end - a.end) * s, 0.995);
+        loop.push(at(t, side, halfWidth(t) * (a.outward + (b.outward - a.outward) * s + 0.06 * Math.sin(Math.PI * s))));
+      }
+      paths.push({ kind: "loop", d: polyline(loop), order: 0.56 + 0.3 * a.end });
+      for (const stop of TERTIARY_STOPS) {
+        const pick = (pts: Point[], s: number) =&gt; pts[Math.max(1, Math.min(pts.length - 2, Math.round(s * (pts.length - 1))))] as Point;
+        const p = pick(a.pts, stop + (rnd() - 0.5) * 0.08);
+        const q = pick(b.pts, stop - 0.1 + (rnd() - 0.5) * 0.08);
+        const m = { x: (p.x + q.x) / 2 + (rnd() - 0.5) * 7, y: (p.y + q.y) / 2 + (rnd() - 0.5) * 7 };
+        paths.push({ kind: "tertiary", d: `M${fmt(p)} Q${fmt(m)} ${fmt(q)}`, order: 0.7 + 0.28 * a.end });
+      }
+    }
+  }
+  return { width: WIDTH, height: HEIGHT, paths };
+}</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 3：渲染组件（RSC）</strong>
+            <pre><code class="lang-tsx">import type { CSSProperties } from "react";
+import { cn } from "@/lib/utils";
+import { generateVenation, type VeinKind } from "@/lib/venation";
+
+const STROKE: Record&lt;VeinKind, { width: number; opacity: number; dur: number }&gt; = {
+  margin: { width: 1.1, opacity: 0.9, dur: 2200 },
+  midrib: { width: 2.1, opacity: 0.95, dur: 1500 },
+  secondary: { width: 1.05, opacity: 0.8, dur: 1100 },
+  loop: { width: 0.8, opacity: 0.6, dur: 800 },
+  tertiary: { width: 0.55, opacity: 0.45, dur: 600 },
+};
+const TONE = {
+  paper: "[--leaf-base:var(--color-clay-700)] [--leaf-tip:var(--color-ink-900)]",
+  inverse: "[--leaf-base:var(--color-clay-300)] [--leaf-tip:var(--color-paper-50)]",
+} as const;
+
+/// 叶脉线稿（装饰，aria-hidden）。animated=true 时按 order 错峰描线入场（仅 motion-safe 生效）。
+export function Venation({ id, className, animated = false, tone = "paper", seed }: {
+  id: string; className?: string; animated?: boolean; tone?: keyof typeof TONE; seed?: number;
+}) {
+  const { width, height, paths } = generateVenation({ seed });
+  return (
+    &lt;svg viewBox={`0 0 ${width} ${height}`} fill="none" aria-hidden className={cn(TONE[tone], className)}&gt;
+      &lt;defs&gt;
+        &lt;linearGradient id={`${id}-grad`} gradientUnits="userSpaceOnUse" x1="0" y1={height} x2="0" y2="0"&gt;
+          &lt;stop offset="0" className="[stop-color:var(--leaf-base)]" /&gt;
+          &lt;stop offset="1" className="[stop-color:var(--leaf-tip)]" /&gt;
+        &lt;/linearGradient&gt;
+      &lt;/defs&gt;
+      &lt;g stroke={`url(#${id}-grad)`} strokeLinecap="round" strokeLinejoin="round"&gt;
+        {paths.map((p, i) =&gt; (
+          &lt;path
+            // 路径由确定性生成器产出、静态不重排，index 作 key 安全
+            key={i}
+            d={p.d}
+            pathLength={1}
+            strokeWidth={STROKE[p.kind].width}
+            opacity={STROKE[p.kind].opacity}
+            vectorEffect="non-scaling-stroke"
+            className={animated ? "anim-draw" : undefined}
+            style={animated ? ({ "--delay": `${Math.round(200 + p.order * 1500)}ms`, "--dur": `${STROKE[p.kind].dur}ms` } as CSSProperties) : undefined}
+          /&gt;
+        ))}
+      &lt;/g&gt;
+    &lt;/svg&gt;
+  );
+}</code></pre>
+            <p>运行：<code>pnpm vitest run tests/lib/venation.test.ts</code>；预期 PASS。</p>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-5" data-status="done">
+        <header>
+          <h2>任务 5：国家码中文名</h2>
+          <dl class="files">
+            <dt>创建</dt><dd><code>patra-portal/src/lib/country-name.ts</code></dd>
+            <dt>修改</dt><dd><code>journals/JournalFiltersServer.tsx</code>、<code>journals/JournalFilters.tsx</code>、<code>journal-detail/JournalMasthead.tsx</code>、<code>journal-detail/JournalDetailView.tsx</code></dd>
+            <dt>测试</dt><dd><code>patra-portal/tests/lib/country-name.test.ts</code>、<code>tests/components/portal/journals/JournalFilters.test.tsx</code></dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：失败测试</strong>
+            <pre><code class="lang-ts">import { describe, expect, it } from "vitest";
+import { countryLabel, countryName } from "@/lib/country-name";
+
+describe("countryName / countryLabel", () =&gt; {
+  it("ISO 3166 两位码 → 简体中文名（大小写不敏感）", () =&gt; {
+    expect(countryName("DE")).toBe("德国");
+    expect(countryName("us")).toBe("美国");
+  });
+  it("非两位码或未知码 → null", () =&gt; {
+    expect(countryName("XX")).toBeNull();
+    expect(countryName("USA")).toBeNull();
+    expect(countryName("")).toBeNull();
+  });
+  it("label：「中文名 · 代码」，未知时原样返回", () =&gt; {
+    expect(countryLabel("DE")).toBe("德国 · DE");
+    expect(countryLabel("XX")).toBe("XX");
+  });
+});</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 2：实现</strong>
+            <pre><code class="lang-ts">const REGION_NAMES = new Intl.DisplayNames(["zh-CN"], { type: "region" });
+
+/// ISO 3166-1 alpha-2 → 简体中文国家 / 地区名；非两位码或 ICU 不认识时返回 null。
+export function countryName(code: string): string | null {
+  if (!/^[a-z]{2}$/i.test(code)) return null;
+  const upper = code.toUpperCase();
+  try {
+    const name = REGION_NAMES.of(upper);
+    return name &amp;&amp; name !== upper ? name : null;
+  } catch {
+    return null;
+  }
+}
+
+/// 展示用标签：「德国 · DE」；未知码原样返回。
+export function countryLabel(code: string): string {
+  const name = countryName(code);
+  return name ? `${name} · ${code.toUpperCase()}` : code;
+}</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 3：接入期刊筛选（服务端算标签，避免 ICU 差异导致 hydration 不一致）</strong>
+            <p><code>JournalFiltersServer</code> 计算 <code>countryLabels = Object.fromEntries(facets.country.map((o) =&gt; [o.value, countryLabel(o.value)]))</code> 传给 <code>JournalFilters</code>；<code>SearchableCheckList</code> 增加 <code>labels</code> 参数，显示用标签、过滤同时匹配标签与代码。补测试：传入 <code>{ DE: "德国 · DE" }</code> 时渲染「德国 · DE」，输入「德」只剩该项。期刊详情 masthead 与「收录与出版」里的国家 / 地区也改用 <code>countryLabel</code>。</p>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-6" data-status="done">
+        <header>
+          <h2>任务 6：Composer 与 Tabs 滑动指示器</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>patra-portal/src/components/ui/tabs.tsx</code>、<code>patra-portal/src/components/portal/Composer.tsx</code></dd>
+            <dt>测试</dt><dd><code>patra-portal/tests/components/portal/Composer.test.tsx</code></dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：失败测试（inputId 可配置）</strong>
+            <pre><code class="lang-tsx">it("输入框 id 默认 hero-input，可由 inputId 覆盖（快速检索对话框与 Hero 同屏时避免重复 id）", () =&gt; {
+  const { unmount } = render(&lt;Composer /&gt;);
+  expect(screen.getByRole("textbox")).toHaveAttribute("id", "hero-input");
+  unmount();
+  render(&lt;Composer inputId="quick-search-input" /&gt;);
+  expect(screen.getByRole("textbox")).toHaveAttribute("id", "quick-search-input");
+});</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 2：实现 + 视觉</strong>
+            <p><code>tabs.tsx</code> 导出 <code>TabsIndicator</code>（包 <code>TabsPrimitive.Indicator</code>）。Composer：<code>inputId</code> 属性；Tab 行用指示器 <code>absolute bottom-0 h-0.5 bg-clay-500 left-(--active-tab-left) w-(--active-tab-width) transition-[left,width] duration-500 ease-out-expo</code> 替代逐个 border；外框 <code>rounded-xl border-ink-900 shadow-composer</code>，聚焦描边 <code>focus-within:border-border-focus</code>；输入框字号 <code>text-xl</code>；提交按钮保持可访问名精确为「搜索」，hover 时回车图标右移 2px；示例 chip hover 上浮 1px。</p>
+            <p>运行：<code>pnpm vitest run tests/components/portal/Composer.test.tsx tests/components/portal/HeroWithSearch.test.tsx</code>；预期 PASS。</p>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-7" data-status="done">
+        <header>
+          <h2>任务 7：TopNav 与 ⌘K 快速检索</h2>
+          <dl class="files">
+            <dt>创建</dt><dd><code>patra-portal/src/components/portal/QuickSearch.tsx</code></dd>
+            <dt>修改</dt><dd><code>patra-portal/src/components/portal/TopNav.tsx</code></dd>
+            <dt>测试</dt><dd><code>patra-portal/tests/components/portal/TopNav.test.tsx</code></dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：失败测试</strong>
+            <pre><code class="lang-tsx">const mockPush = vi.fn&lt;(url: string) =&gt; void&gt;();
+vi.mock("next/navigation", async (importOriginal) =&gt; {
+  const actual = await importOriginal&lt;typeof import("next/navigation")&gt;();
+  return { ...actual, usePathname: () =&gt; mockPathname, useRouter: () =&gt; ({ push: mockPush }) };
+});
+
+it("⌘K 打开快速检索对话框", async () =&gt; {
+  const user = userEvent.setup();
+  render(&lt;TopNav /&gt;);
+  await user.keyboard("{Meta&gt;}k{/Meta}");
+  expect(await screen.findByRole("dialog", { name: "快速检索" })).toBeInTheDocument();
+});
+
+it("Ctrl+K 同样打开", async () =&gt; {
+  const user = userEvent.setup();
+  render(&lt;TopNav /&gt;);
+  await user.keyboard("{Control&gt;}k{/Control}");
+  expect(await screen.findByRole("dialog", { name: "快速检索" })).toBeInTheDocument();
+});
+
+it("点导航「快速检索」打开对话框，提交关键词跳 /papers?q= 并关闭", async () =&gt; {
+  const user = userEvent.setup();
+  render(&lt;TopNav /&gt;);
+  await user.click(screen.getByRole("button", { name: /快速检索/ }));
+  const dialog = await screen.findByRole("dialog", { name: "快速检索" });
+  await user.type(within(dialog).getByRole("textbox"), "GLP-1");
+  await user.click(within(dialog).getByRole("button", { name: "搜索" }));
+  expect(mockPush).toHaveBeenCalledWith("/papers?q=GLP-1");
+  await waitFor(() =&gt; expect(screen.queryByRole("dialog", { name: "快速检索" })).not.toBeInTheDocument());
+});
+
+it("「关于」指向页脚 #about", () =&gt; {
+  render(&lt;TopNav /&gt;);
+  expect(screen.getByRole("link", { name: "关于" })).toHaveAttribute("href", "#about");
+});</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 2：实现 QuickSearch</strong>
+            <pre><code class="lang-tsx">"use client";
+
+import { Dialog } from "@base-ui/react/dialog";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Composer } from "@/components/portal/Composer";
+import { composerTarget } from "@/lib/portal-api/paper-search";
+
+/// ⌘K 快速检索：居中对话框内嵌 Composer，提交复用首页的 composerTarget 跳转规则。
+export function QuickSearch({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) =&gt; void }) {
+  const router = useRouter();
+  return (
+    &lt;Dialog.Root open={open} onOpenChange={onOpenChange}&gt;
+      &lt;Dialog.Portal&gt;
+        &lt;Dialog.Backdrop className="fixed inset-0 z-50 bg-bg-scrim backdrop-blur-xs transition-opacity duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0" /&gt;
+        &lt;Dialog.Popup
+          initialFocus={() =&gt; document.getElementById("quick-search-input")}
+          className="fixed top-[14vh] left-1/2 z-50 w-[min(720px,calc(100vw-32px))] -translate-x-1/2 rounded-xl bg-bg-elevated p-3 shadow-xl transition-[opacity,translate,scale] duration-300 ease-out-expo data-ending-style:scale-[0.98] data-ending-style:opacity-0 data-starting-style:scale-[0.98] data-starting-style:opacity-0"
+        &gt;
+          &lt;Dialog.Title className="sr-only"&gt;快速检索&lt;/Dialog.Title&gt;
+          &lt;Composer
+            inputId="quick-search-input"
+            onSubmit={({ mode, value }) =&gt; {
+              const target = composerTarget(mode, value);
+              if (target.kind === "invalid") { toast(target.message); return; }
+              if (target.kind === "ok") { onOpenChange(false); router.push(target.href); }
+            }}
+          /&gt;
+          &lt;p className="mt-2.5 flex justify-end gap-4 px-1 font-mono text-2xs text-fg-3"&gt;
+            &lt;span&gt;↵ 检索&lt;/span&gt;&lt;span&gt;Esc 关闭&lt;/span&gt;
+          &lt;/p&gt;
+        &lt;/Dialog.Popup&gt;
+      &lt;/Dialog.Portal&gt;
+    &lt;/Dialog.Root&gt;
+  );
+}</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 3：TopNav 重做</strong>
+            <p>状态：<code>const [searchOpen, setSearchOpen] = useState(false)</code>；<code>useEffect</code> 监听 <code>keydown</code>：<code>(e.metaKey || e.ctrlKey) &amp;&amp; e.key.toLowerCase() === "k"</code> → <code>preventDefault</code> + 切换。滚动态：<code>scrollY &gt; 4</code> 时 <code>data-scrolled</code>，透明 → <code>bg-bg-sticky backdrop-blur border-border-default</code> 过渡；高度固定 <code>h-14</code>。品牌：叶标 + Newsreader「Patra」+ 发丝分隔「门户」等宽小字；导航项 hover 下划线自左绘出（<code>link-draw</code>）、当前项下方陶土圆点；右侧药丸按钮「快速检索 ⌘K」（<code>aria-label="快速检索"</code>）；「关于」→ <code>#about</code>。移动端全屏菜单：<code>SheetContent side="top"</code> 撑满视口，导航为 <code>text-display-3</code> 衬线大字 + 序号 01/02/03，错峰 <code>anim-rise</code>。</p>
+            <p>运行：<code>pnpm vitest run tests/components/portal/TopNav.test.tsx</code>；预期 PASS（含原有 10 条）。</p>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-8" data-status="done">
+        <header>
+          <h2>任务 8：页脚版权页与区块眉题</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>patra-portal/src/components/portal/Footer.tsx</code>、<code>patra-portal/src/components/portal/SectionEyebrow.tsx</code></dd>
+            <dt>测试</dt><dd><code>patra-portal/tests/components/portal/Footer.test.tsx</code></dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：改写页脚测试（先红）</strong>
+            <pre><code class="lang-tsx">it("品牌链接回到页首", () =&gt; {
+  render(&lt;Footer /&gt;);
+  expect(screen.getByRole("link", { name: "Patra" })).toHaveAttribute("href", "#top");
+});
+
+it("「关于」锚点落在页脚的关于段", () =&gt; {
+  render(&lt;Footer /&gt;);
+  expect(screen.getByRole("link", { name: "关于" })).toHaveAttribute("href", "#about");
+  expect(screen.getByRole("region", { name: "关于 Patra" })).toHaveAttribute("id", "about");
+});
+
+it("「数据源」锚点落在来源列表，列出主要来源", () =&gt; {
+  render(&lt;Footer /&gt;);
+  expect(screen.getByRole("link", { name: "数据源" })).toHaveAttribute("href", "#sources");
+  const list = screen.getByRole("list", { name: "数据来源" });
+  expect(list).toHaveAttribute("id", "sources");
+  for (const s of ["PubMed", "Europe PMC", "Crossref"]) {
+    expect(within(list).getByText(s)).toBeInTheDocument();
+  }
+});
+
+it("GitHub 与更新日志指向真实仓库", () =&gt; {
+  render(&lt;Footer /&gt;);
+  expect(screen.getByRole("link", { name: /GitHub/ })).toHaveAttribute("href", "https://github.com/linqibin0826/patra");
+  expect(screen.getByRole("link", { name: /更新日志/ })).toHaveAttribute("href", "https://github.com/linqibin0826/patra/commits/main");
+});</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 2：实现版权页</strong>
+            <p>墨色 <code>bg-bg-inverse text-fg-inverse-1</code>；顶部宣言 <code>text-display-2</code>「医学知识，&lt;br&gt;自古写在叶上。」（「叶」用 accent-on-inverse）；<code>&lt;section id="about" aria-labelledby&gt;</code> 标题「关于 Patra」+ 名字由来段落；三列导航（浏览 / 数据源 <code>ul#sources aria-label="数据来源"</code> / 项目：关于、数据源、更新日志、GitHub）；底栏「© 2026 Patra」+「V0.4 · 索引快照 17:42 UTC+8」；右下大幅 <code>Venation tone="inverse"</code> 低不透明度水印 + 底部巨型裁切字标（<code>aria-hidden</code>）。<code>SectionEyebrow</code> 增加可选 <code>index</code>（渲染 <code>01 —</code> 等宽序号）。</p>
+            <p>运行：<code>pnpm vitest run tests/components/portal/Footer.test.tsx tests/design-system</code>；预期 PASS。</p>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-9" data-status="done">
+        <header>
+          <h2>任务 9：Hero 与「图 1」</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>patra-portal/src/components/portal/Hero.tsx</code></dd>
+            <dt>测试</dt><dd><code>patra-portal/tests/components/portal/Hero.test.tsx</code>（行为不变，保持全绿）</dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：版式</strong>
+            <p>12 栏：刊头条（统计 · 实时同步）横跨；标题区 8 栏，「医学文献，」「可被检索，可被引用。」两行，每行包 <code>overflow-hidden</code> 外层 + <code>anim-mask</code> 内层（<code>[--delay:…]</code> 错峰 90ms）；字号 <code>text-display-1 leading-display</code>，中文 Noto Serif SC 600、拉丁 Newsreader；「可被检索」改 <code>text-clay-700</code> + 下方手绘下划线 SVG（<code>anim-draw</code>，延迟 750ms），移除伪斜体。导语 <code>anim-rise</code>；Composer <code>anim-rise</code>（延迟 450ms）。右侧 4 栏 <code>&lt;figure data-ornament&gt;</code>：<code>Venation id="hero-leaf" animated</code>，桌面高约 560px、微旋 −12°，<code>figcaption</code>「图 1　叶脉——十个来源，汇入同一根主脉。」等宽小字；移动端叶脉降为标题背后右上角的淡色背景（<code>opacity-25</code>，不占流）。</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 2：验证</strong>
+            <p>运行：<code>pnpm vitest run tests/components/portal/Hero.test.tsx tests/components/portal/HeroWithSearch.test.tsx</code>；预期 PASS。截图：1440 / 390 首屏与加载过程（0.3s / 1.2s / 3s 三帧）。</p>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-10" data-status="done">
+        <header>
+          <h2>任务 10：墨色热议区</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>patra-portal/src/components/portal/TopicCloud.tsx</code></dd>
+            <dt>测试</dt><dd><code>patra-portal/tests/components/portal/TopicCloud.test.tsx</code>（32 个 listitem、+34%、链接、禁用按钮不变）</dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：版式</strong>
+            <p><code>bg-bg-inverse</code> 全宽区块；左 4 栏：<code>SectionEyebrow index="02" tone="inverse"</code>、<code>text-display-3</code> 标题「医学界正在讨论什么」、说明、冷热图例、「截至 17:42 · 滑动 72h」；右 8 栏：前 4 名 <code>ol</code>，每行「01」等宽序号 + <code>text-4xl</code> 衬线词条 + <code>text-accent-on-inverse</code> 增幅，行间 <code>border-border-inverse</code> 发丝线；其余 28 个为 <code>ul</code> 分级词云（tier 2–5 映射 <code>fg-inverse-1/2/3</code> 与字号）。hover：词条变 <code>accent-on-inverse</code> + 出现 ↗。底部「浏览全部主题」禁用按钮保留。区块 <code>reveal</code> 入场。</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 2：验证</strong>
+            <p>运行：<code>pnpm vitest run tests/components/portal/TopicCloud.test.tsx tests/design-system</code>；预期 PASS。</p>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-11" data-status="done">
+        <header>
+          <h2>任务 11：期刊书架与封面卡</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>patra-portal/src/components/portal/Journals.tsx</code>、<code>patra-portal/src/components/portal/JournalCoverCard.tsx</code></dd>
+            <dt>测试</dt><dd><code>tests/components/portal/{Journals,JournalCoverCard}.test.tsx</code> + DS「封面小字 ≥75%」</dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：封面卡</strong>
+            <p>封面 <code>rounded-sm</code> 书本比例 3:4、<code>shadow-cover</code>，<code>before:bg-(image:--cover-spine)</code> 书脊高光，内框压印 <code>after:inset-2.5 after:border after:border-current after:opacity-25</code>；刊名 Newsreader <code>text-2xl</code>；上下装饰小字 ≥ opacity-75。hover（<code>motion-safe</code>）：<code>-translate-y-1.5 -rotate-[0.6deg] shadow-cover-hover</code>，<code>duration-500 ease-out-expo</code>。信息区去边框：全称（两行截断）、等宽缩写、IF 大号衬线数字 + JCR 分区。</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 2：书架</strong>
+            <p>首页区块：<code>SectionEyebrow index="03"</code> + <code>text-display-3</code> 标题 + 右侧「浏览全部期刊 →」（<code>link-draw</code>）；6 本一排，底部「书架线」<code>border-b-2 border-ink-900</code> + 下方 12px 渐隐投影；移动端横滑 snap 保留。运行 <code>pnpm vitest run tests/components/portal/Journals.test.tsx tests/components/portal/JournalCoverCard.test.tsx tests/design-system</code> 预期 PASS。</p>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-12" data-status="done">
+        <header>
+          <h2>任务 12：编辑排版文献流</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>PaperCard.tsx</code>、<code>paper-detail/BookmarkButton.tsx</code>、<code>explore-feed/{index,tabs,skeleton,empty}.tsx</code></dd>
+            <dt>测试</dt><dd><code>tests/components/portal/PaperCard.test.tsx</code>、<code>tests/design-system/components.test.ts</code></dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：失败测试</strong>
+            <pre><code class="lang-tsx">it("不再渲染禁用的「评论」「分享」占位按钮", () =&gt; {
+  render(&lt;PaperCard paper={makePaper()} /&gt;);
+  expect(screen.queryByRole("button", { name: /评论/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /分享/ })).not.toBeInTheDocument();
+});
+
+it("收藏是可切换按钮（与详情页共用 mock store）", async () =&gt; {
+  const user = userEvent.setup();
+  render(&lt;PaperCard paper={makePaper({ id: "card-bookmark" })} /&gt;);
+  const btn = screen.getByRole("button", { name: /收藏/ });
+  expect(btn).toHaveAttribute("aria-pressed", "false");
+  await user.click(btn);
+  expect(btn).toHaveAttribute("aria-pressed", "true");
+});
+
+it("lead 变体展示摘要片段", () =&gt; {
+  render(&lt;PaperCard paper={makePaper({ abstractSnippet: "BACKGROUND: lead text" })} variant="lead" /&gt;);
+  expect(screen.getByText(/BACKGROUND: lead text/)).toBeInTheDocument();
+});
+
+it("index 以两位序号显示", () =&gt; {
+  render(&lt;PaperCard paper={makePaper()} index={3} /&gt;);
+  expect(screen.getByText("03")).toBeInTheDocument();
+});</code></pre>
+            <p>DS 测试「可点击的文献卡 hover」改为：<code>PaperCard</code> 含 <code>group/paper</code>、标题 <code>group-hover/paper:</code> 下划线、左侧陶土线 <code>before:</code> 生长类。</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 2：实现</strong>
+            <p><code>BookmarkButton</code> 增加 <code>compact</code>（仅图标 + <code>aria-label</code>「收藏 / 已收藏」+ 填充过渡）。<code>PaperCard</code>：props <code>variant?: "lead" | "default"</code>、<code>index?: number</code>；无卡片边框，顶部发丝线，序号「03」等宽 + 来源色点 + DOI；标题衬线（lead 用 <code>text-display-3</code>，default <code>text-xl</code>）整块可点（<code>Link</code> 包标题，「阅读详情」链接保留可访问名含「详情」）；lead 展示 <code>abstractSnippet</code> 三行截断；底行「阅读详情 →」+ 紧凑收藏 + 引用数。ExploreFeed：<code>grid-cols-12</code>，第 1 篇 lead 占 7 栏，2–4 篇在右 5 栏纵列，其余两栏发丝线列表；Tab 用 <code>TabsIndicator</code>；骨架同构 + shimmer。</p>
+            <p>运行：<code>pnpm vitest run tests/components/portal/PaperCard.test.tsx tests/components/portal/explore-feed tests/design-system</code>；预期 PASS。</p>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-13" data-status="done">
+        <header>
+          <h2>任务 13：浏览页框架与筛选</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>browse/{BrowseHead,FacetGroup,FacetCheckRow,FacetToggleRow,FilterPanel,FilterTrigger,SortSegmented,ActiveChips}.tsx</code>、<code>papers/{PaperSearchBar,PaperFilters,PapersInfoRow,VenueFacetSearch}.tsx</code>、<code>journals/{JournalSearchSortControls,JournalFilters}.tsx</code>、<code>app/{papers,journals}/page.tsx</code></dd>
+            <dt>测试</dt><dd><code>tests/design-system/components.test.ts</code> 及 browse / papers / journals 既有测试</dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：fieldset 溢出守护测试（先红）</strong>
+            <pre><code class="lang-ts">it("所有 fieldset 带 min-w-0（默认 min-width: min-content 会撑破侧栏，期刊学科筛选溢出的根因）", () =&gt; {
+  for (const f of sourceFiles()) {
+    for (const m of f.text.matchAll(/&lt;fieldset[\s\S]*?className="([^"]*)"/g)) {
+      expect(m[1], f.path).toMatch(/\bmin-w-0\b/);
+    }
+  }
+});</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 2：实现</strong>
+            <p>版心 <code>max-w-page px-gutter</code>；<code>BrowseHead</code>：面包屑等宽小字、眉题、<code>text-display-2</code> 标题、说明，底部叶脉分隔（主脉发丝线 + 两端小叶）；检索模式与排序为分段控件（选中墨底纸字、过渡 180ms）；输入框 <code>h-12</code>；筛选组标题 <code>text-2xs</code> 等宽大写 + 已选角标；复选 / 单选改 <code>CHECK_INPUT</code>；计数等宽 <code>tabular-nums</code>；FacetGroup 展开用 <code>@starting-style</code> 淡入；chip 陶土浅底 + 移除按钮 hover 旋转 90°；移动抽屉标题衬线。</p>
+            <p>运行：<code>pnpm vitest run tests/components/portal/browse tests/components/portal/papers tests/components/portal/journals tests/design-system</code>；预期 PASS。</p>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-14" data-status="done">
+        <header>
+          <h2>任务 14：结果列表 / 网格 / 分页 / 空态</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>papers/{PaperListItem,PaperResults,PaperListSkeleton,PapersEmptyResult}.tsx</code>、<code>journals/{JournalGrid,JournalGridSkeleton,JournalResults}.tsx</code>、<code>browse/{BrowsePagination,EmptyState,FacetSkeleton}.tsx</code></dd>
+            <dt>测试</dt><dd>既有列表 / 分页 / 空态测试 + DS「分页格 radius-md」</dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：实现</strong>
+            <p>列表行 <code>group relative</code>，hover 左侧 2px 陶土线 <code>before:scale-y-0 group-hover:before:scale-y-100 before:origin-top</code>、标题 <code>link-draw</code>；徽章行与摘要层级拉开；期刊网格 4 列封面卡；分页格 <code>rounded-md</code>，当前页墨底，前后翻页带箭头图标；<code>EmptyState</code> 上方加 <code>Venation</code> 小叶（96px，静态）；骨架改 shimmer。</p>
+            <p>运行：<code>pnpm vitest run tests/components/portal tests/design-system</code>；预期 PASS。</p>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-15" data-status="done">
+        <header>
+          <h2>任务 15：文献详情页</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>paper-detail/{PublicationDetailView,PaperHeader,AbstractBlock,AuthorList,PaperRail}.tsx</code>、<code>IdentifierChip.tsx</code>、<code>DisclosureSection.tsx</code>、<code>EvidenceBadge.tsx</code>、<code>app/papers/[id]/{loading,not-found}.tsx</code></dd>
+            <dt>测试</dt><dd>paper-detail 既有测试 + DisclosureSection / IdentifierChip 测试</dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：实现</strong>
+            <p>面包屑条保持 <code>sticky top-14 h-11</code>，底部加 <code>read-progress</code> 2px 陶土线（侧栏 <code>top-[134px]</code> 不变）；版心改 <code>max-w-page</code>。<code>PaperHeader</code>：刊头行等宽（来源 · 类型 · OA）、<code>text-display-3</code> 标题 <code>text-balance</code>、作者行、刊名斜体 <code>link-draw</code>；摘要正文保持 <code>font-serif text-lg leading-reading</code>（DS 约束）、标签列陶土等宽；<code>IdentifierChip</code> 复制成功时图标缩放切换；<code>DisclosureSection</code> 保留 <code>hidden</code> 语义，body 加 <code>disclosure-body</code> 过渡类、chevron 旋转 <code>ease-out-expo</code>；侧栏卡片统一 <code>rounded-lg</code>，速览数值等宽、证据等级 / 被引放大。</p>
+            <p>运行：<code>pnpm vitest run tests/components/portal/paper-detail tests/components/portal/DisclosureSection.test.tsx tests/components/portal/IdentifierChip.test.tsx tests/design-system</code>；预期 PASS。</p>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-16" data-status="done">
+        <header>
+          <h2>任务 16：期刊详情页</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>journal-detail/{JournalDetailView,JournalMasthead,JournalPositioning,JournalRail,MetricBadge,RatingTable,TrendChart}.tsx</code>、<code>app/journals/[id]/{loading,not-found}.tsx</code></dd>
+            <dt>测试</dt><dd><code>tests/components/portal/journal-detail/JournalRail.test.tsx</code>（新建）</dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：失败测试（侧栏过时文案）</strong>
+            <pre><code class="lang-tsx">it("侧栏引导到该刊文献列表，不再显示过时的版本边界说明", () =&gt; {
+  const venue = makeVenueDetail({ id: "42" });
+  render(&lt;JournalRail venue={venue} metrics={deriveMetrics(venue)} /&gt;);
+  expect(screen.queryByText(/后续版本/)).not.toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /该刊文献/ })).toHaveAttribute("href", buildPapersHref({ venue: ["42"] }));
+});</code></pre>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 2：实现</strong>
+            <p>Masthead 封面放大至 168px 宽并复用封面卡书脊 / 压印；刊名 <code>text-display-3</code>；国家用 <code>countryLabel</code>；<code>MetricBadge</code> 数值 <code>text-5xl</code> Newsreader <code>lining-nums tabular-nums</code>；<code>RatingTable</code> 单元格等宽标签 + 衬线数值；<code>TrendChart</code> 柱体 <code>reveal-grow</code>；侧栏第二张卡改为「该刊文献」引导（链接 <code>buildPapersHref({ venue: [id] })</code>）。</p>
+            <p>运行：<code>pnpm vitest run tests/components/portal/journal-detail tests/components/portal/JournalMasthead.test.tsx tests/design-system</code>；预期 PASS。</p>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-17" data-status="done">
+        <header>
+          <h2>任务 17：状态页与加载骨架</h2>
+          <dl class="files">
+            <dt>修改</dt><dd><code>status/{NotFoundState,ErrorState}.tsx</code>、<code>app/{not-found,error}.tsx</code>、<code>app/**/loading.tsx</code></dd>
+            <dt>测试</dt><dd><code>tests/components/portal/status-screens.test.tsx</code></dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：实现</strong>
+            <p>404 / 500：<code>text-[clamp(96px,20vw,220px)]</code> Newsreader 数字（404 用 <code>text-ink-200</code> 描边感、500 用 <code>text-rust-500</code>），数字旁「缺页之叶」<code>Venation</code>（静态、低不透明度）；原文案与按钮保留；<code>app/not-found.tsx</code> 与 <code>error.tsx</code> 补 <code>Footer</code>（保证 <code>#about</code> 处处可达）。所有 loading 骨架与页面版心同构，块用 <code>bg-paper-200 shimmer</code>。</p>
+            <p>运行：<code>pnpm vitest run tests/components/portal/status-screens.test.tsx tests/design-system</code>；预期 PASS。</p>
+          </li>
+        </ol>
+      </article>
+
+      <article class="task" id="task-18" data-status="done">
+        <header>
+          <h2>任务 18：八维自检与迭代</h2>
+          <dl class="files">
+            <dt>测试</dt><dd>全量 vitest / typecheck / biome / e2e + Playwright 截图走查</dd>
+          </dl>
+        </header>
+        <ol class="steps">
+          <li class="step" data-status="done">
+            <strong>步骤 1：全量回归</strong>
+            <p>运行：<code>pnpm test &amp;&amp; pnpm typecheck &amp;&amp; pnpm lint</code>；预期全绿。e2e：<code>PATRA_GATEWAY_BASE_URL=http://100.103.73.27:9528 pnpm exec playwright test</code>（以 4100 端口的 dev 为 baseURL）。</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 2：截图走查</strong>
+            <p>7 类页面 × 1440 / 1180 / 820 / 390 全页截图（reduced-motion 模拟下取全页，另取首屏动效三帧）；控制台无报错 / hydration 警告。</p>
+          </li>
+          <li class="step" data-status="done">
+            <strong>步骤 3：八维打分与迭代</strong>
+            <p>排版 / 留白 / 视觉层级 / 色彩 / 动效 / 微交互 / 响应式 / 原创性逐项列问题 → 修复 → 复截图，直到无明显可提升项；结论记入右栏 notes。</p>
+          </li>
+        </ol>
+      </article>
+
+    </section>
+
+    <section id="self-check" class="self-check">
+      <h2>自检结果</h2>
+
+      <aside class="callout success">
+        <span class="title">1. 规格覆盖度</span>
+        <p>spec §4 设计系统 → 任务 1–3；§5 叶脉 → 任务 4（复用于 8 / 14 / 17）；§6.1 框架 → 任务 6–8；§6.2 首页 → 任务 9–12；§6.3 浏览页 → 任务 5、13、14；§6.4 详情页 → 任务 15–16；§6.5 状态页 → 任务 17；§7 动效 → 任务 2 + 各页；§8 质量与 Done 判定 → 任务 18。无遗漏。</p>
+      </aside>
+
+      <aside class="callout success">
+        <span class="title">2. 占位符扫描</span>
+        <p>无 TODO / 待定 / 「类似任务 N」。纯视觉任务以设计规格 + 关键类名 + 截图验收描述（见范围检查中的取舍说明），不属占位。</p>
+      </aside>
+
+      <aside class="callout success">
+        <span class="title">3. 类型一致性</span>
+        <p><code>generateVenation / VeinKind / VeinPath</code>（任务 4）与 <code>Venation</code> 的 <code>id / tone / animated</code> 属性在任务 8、9、14、17 一致；<code>countryLabel</code>（任务 5）在任务 16 复用；<code>Composer.inputId</code>（任务 6）被 <code>QuickSearch</code>（任务 7）使用；<code>BookmarkButton.compact</code>（任务 12）；<code>SectionEyebrow.index</code>（任务 8）在任务 10、11 使用。</p>
+      </aside>
+
+      <aside class="callout success">
+        <span class="title">4. HTML 结构完整性</span>
+        <p>18 个 article 均有唯一 <code>id="task-N"</code> 与 <code>data-status="pending"</code>，与 TOC 18 条 li 一一对应；全部 step 初始 pending；head 仅两个外链样式表，无 inline style 块。</p>
+      </aside>
+    </section>
+
+  </main>
+
+  <!-- ============================================================
+       右栏：Implementation Notes（实施期由 Claude Code 维护）
+       ============================================================ -->
+  <aside class="notes-panel" id="notes">
+    <header>
+      <h2>Implementation Notes</h2>
+      <p class="hint">实施期由 Claude Code 即时追加。规则：遇到 plan 未规定的<strong>决定</strong>、必要<strong>更改</strong>、不可避免的<strong>权衡</strong>、其他用户应知事项，立即用 Edit 追加 entry，不要等任务结束。</p>
+    </header>
+
+    <ol class="notes-log">
+      <!-- ENTRY TEMPLATE（注释保留供实施期 AI 复制）:
+
+      <li class="note" data-type="decision" data-time="YYYY-MM-DDTHH:MM">
+        <header>
+          <span class="note-type">DECISION</span>
+          <time datetime="YYYY-MM-DDTHH:MM">MM-DD HH:MM</time>
+          <a href="#task-N">§ Task N</a>
+        </header>
+        <p>描述：plan 未规定 X，实施时选择 Y。理由：...</p>
+      </li>
+
+      data-type 4 类：decision / change / tradeoff / other
+      追加 entry 时同步更新下方 notes-stats footer 的对应 counter 数字。
+      -->
+      <li class="note" data-type="other" data-time="2026-10-03T22:26">
+        <header>
+          <span class="note-type">OTHER</span>
+          <time datetime="2026-10-03T22:26">10-03 22:26</time>
+          <a href="#task-1">§ Task 1</a>
+        </header>
+        <p>不逐任务 commit：用户规则「改动先本地验收再开 PR」优先于 executing-plans 的逐任务提交，全部任务完成后停在本地 worktree 等验收。</p>
+      </li>
+      <li class="note" data-type="change" data-time="2026-10-03T22:26">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-10-03T22:26">10-03 22:26</time>
+          <a href="#task-2">§ Task 2</a>
+        </header>
+        <p>纸纹实现改为「以 50% 灰为中心的灰阶噪点 + body overlay 混合 + 滤镜 color-interpolation-filters=sRGB」：原方案（暗色噪点叠加）把画布均色从 #f7f2e8 压到 #f1ece1、整体发灰；linearRGB 默认空间会让噪点均值偏亮。实测新方案均色精确为 #f7f2e8。</p>
+      </li>
+      <li class="note" data-type="tradeoff" data-time="2026-10-03T22:26">
+        <header>
+          <span class="note-type">TRADEOFF</span>
+          <time datetime="2026-10-03T22:26">10-03 22:26</time>
+          <a href="#task-10">§ Task 10</a>
+        </header>
+        <p>墨色区块（热议、页脚）不叠纸纹：overlay 在深底上把噪点放大成「电视雪花」，纯墨色更沉稳。</p>
+      </li>
+      <li class="note" data-type="decision" data-time="2026-10-03T22:26">
+        <header>
+          <span class="note-type">DECISION</span>
+          <time datetime="2026-10-03T22:26">10-03 22:26</time>
+          <a href="#task-7">§ Task 7</a>
+        </header>
+        <p>TopNav 品牌链接改指向首页 /（原 #top 在非首页无落点）；id=top 移到 header 本身，页脚「Patra」回到页首在每一页都有效。外链常量放 src/lib/site.ts（&quot;use client&quot; 模块导出的常量在 RSC 里会变成客户端引用）。</p>
+      </li>
+      <li class="note" data-type="decision" data-time="2026-10-03T22:26">
+        <header>
+          <span class="note-type">DECISION</span>
+          <time datetime="2026-10-03T22:26">10-03 22:26</time>
+          <a href="#task-9">§ Task 9</a>
+        </header>
+        <p>Hero 标题由两行改为三行排比「医学文献，/ 可被检索，/ 可被引用。」：display-1 字号下第二行 10 字放不下 8 栏；叶脉图脱离文档流向下伸到检索框旁，保证检索框在 1440×900 首屏内；检索框下新增「或者，直接浏览 全部文献 / 全部期刊」。</p>
+      </li>
+      <li class="note" data-type="change" data-time="2026-10-03T22:26">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-10-03T22:26">10-03 22:26</time>
+          <a href="#task-12">§ Task 12</a>
+        </header>
+        <p>文献流说明「每篇都带一段 AI 速读」与真实数据不符（feed 14 条 aiSummary 全为空），改为「最近入库与高被引的文献。AI 速读由 Patra 在采集时生成，仅作为线索，不能替代阅读原文。」</p>
+      </li>
+      <li class="note" data-type="change" data-time="2026-10-03T22:29">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-10-03T22:29">10-03 22:29</time>
+          <a href="#task-13">§ Task 13</a>
+        </header>
+        <p>新增守护测试「12 栏网格只在 lg 以上启用」：窄屏 12 列 × 栏距最小宽度会撑破容器（页脚、热议区都踩过）；单栏时须显式 grid-cols-1（minmax(0,1fr)），否则隐式 auto 列会被截断文本的 min-content 撑宽，导致移动端整页缩放到 753px。</p>
+      </li>
+      <li class="note" data-type="decision" data-time="2026-10-03T22:31">
+        <header>
+          <span class="note-type">DECISION</span>
+          <time datetime="2026-10-03T22:31">10-03 22:31</time>
+          <a href="#task-12">§ Task 12</a>
+        </header>
+        <p>品牌叶标统一走新组件 BrandMark：width/height 属性按固有比例 0.2565 推出（取 6/9/25 使高度近整数），消除 next/image「宽高只改一边」告警；13–14px 高的眉题 / 侧栏小标看不出叶纹，改为 CSS 陶土短竖条。</p>
+      </li>
+      <li class="note" data-type="decision" data-time="2026-10-03T22:46">
+        <header>
+          <span class="note-type">DECISION</span>
+          <time datetime="2026-10-03T22:46">10-03 22:46</time>
+          <a href="#task-17">§ Task 17</a>
+        </header>
+        <p>404 / 500 共用新外壳 StatusScreen：巨号状态码里的 0 画成一片描线入场的叶子（「4 叶 4」= 缺的那一页 / 一叶），并补页脚，保证导航「关于 #about」在状态页也有落点；404 额外给出按缺失对象区分的浏览入口（期刊 → /journals，其余 → /papers）。</p>
+      </li>
+      <li class="note" data-type="change" data-time="2026-10-03T22:46">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-10-03T22:46">10-03 22:46</time>
+          <a href="#task-15">§ Task 15</a>
+        </header>
+        <p>文献详情面包屑「文献」原链接到首页 /（/papers 上线前的遗留），改指 /papers；当前项显示为「PMID 41605285」。两个详情页面包屑抽成 DetailCrumbs，底边叠滚动驱动的阅读进度线。</p>
+      </li>
+      <li class="note" data-type="change" data-time="2026-10-03T22:52">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-10-03T22:52">10-03 22:52</time>
+          <a href="#task-18">§ Task 18</a>
+        </header>
+        <p>滚动入场在热议区失效：.reveal 的祖先 section 是 overflow-hidden，成为 view() 的滚动容器导致时间线不随页面滚动。改用 overflow-clip（裁切但不建滚动容器），并在 globals.css 的 .reveal 旁注明此坑。实测修复后视口外行 opacity 0 / 入场中途 0.75 / 视口内 1。</p>
+      </li>
+      <li class="note" data-type="decision" data-time="2026-10-03T22:55">
+        <header>
+          <span class="note-type">DECISION</span>
+          <time datetime="2026-10-03T22:55">10-03 22:55</time>
+          <a href="#task-18">§ Task 18</a>
+        </header>
+        <p>八维自检中补充：JCR / 中科院学科名为全大写原值（截断后难扫读），新增纯函数 formatSubject 转标题式大小写（虚词小写、中文原样），用于期刊筛选、已选 chip（ChipGroupConfig.getLabel）、定位标签与评级表；取值与 URL 不变。</p>
+      </li>
+      <li class="note" data-type="tradeoff" data-time="2026-10-03T22:59">
+        <header>
+          <span class="note-type">TRADEOFF</span>
+          <time datetime="2026-10-03T22:59">10-03 22:59</time>
+          <a href="#task-7">§ Task 7</a>
+        </header>
+        <p>QuickSearch 挂在全站 TopNav 上会把 RHF + zod 带进每页首屏包；改为 next/dynamic（ssr:false）首次唤起才加载、之后常驻（保留退出动画），并在指针移入 / 聚焦「快速检索」时预取。代价：极少数直接按 ⌘K 的首次打开要等一次分包加载。</p>
+      </li>
+      <li class="note" data-type="decision" data-time="2026-10-03T22:59">
+        <header>
+          <span class="note-type">DECISION</span>
+          <time datetime="2026-10-03T22:59">10-03 22:59</time>
+          <a href="#task-18">§ Task 18</a>
+        </header>
+        <p>新增 app/icon.svg（陶土圆角底 + 纸色叶脉简化标），原站点无 favicon；空态标题的英文直引号改为中文直角引号「」（文献、期刊两处，测试先行）。</p>
+      </li>
+      <li class="note" data-type="decision" data-time="2026-10-03T23:03">
+        <header>
+          <span class="note-type">DECISION</span>
+          <time datetime="2026-10-03T23:03">10-03 23:03</time>
+          <a href="#task-18">§ Task 18</a>
+        </header>
+        <p>响应式细节：Hero 检索框在 lg+ 让出 17rem 给「图 1」图注（1180 宽曾被盖住）；导语与各区块短说明用 break-keep 只在标点 / 空格断行；移动端文献流只露前 8 篇；「试试」「排序」标签不收缩不换行。</p>
+      </li>
+      <li class="note" data-type="change" data-time="2026-10-03T23:12">
+        <header>
+          <span class="note-type">CHANGE</span>
+          <time datetime="2026-10-03T23:12">10-03 23:12</time>
+          <a href="#task-18">§ Task 18</a>
+        </header>
+        <p>代码审查发现：id=top 挂在吸顶 header 上，页脚「回到页首」只滚 72px（实测 1849→1777）。锚点改为 body 顶部的非吸顶空元素，实测回到 0。</p>
+      </li>
+    </ol>
+
+
+    <footer class="notes-stats">
+      总计:
+      <span data-counter="decision">7</span> decisions /
+      <span data-counter="change">6</span> changes /
+      <span data-counter="tradeoff">2</span> tradeoffs /
+      <span data-counter="other">1</span> others
+    </footer>
+  </aside>
+
+</div>
+</body>
+</html>

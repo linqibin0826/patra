@@ -62,6 +62,19 @@ function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
   );
 }
 
+/// 滑动指示器：Base UI 以 --active-tab-left / --active-tab-width 等 CSS 变量给出当前 tab 的位置，
+/// 由调用方用这些变量定位并过渡；renderBeforeHydration 让首屏在水合前就落到正确位置，不闪。
+function TabsIndicator({ className, ...props }: TabsPrimitive.Indicator.Props) {
+  return (
+    <TabsPrimitive.Indicator
+      data-slot="tabs-indicator"
+      renderBeforeHydration
+      className={cn("pointer-events-none absolute", className)}
+      {...props}
+    />
+  );
+}
+
 function TabsContent({ className, ...props }: TabsPrimitive.Panel.Props) {
   return (
     <TabsPrimitive.Panel
@@ -72,4 +85,4 @@ function TabsContent({ className, ...props }: TabsPrimitive.Panel.Props) {
   );
 }
 
-export { Tabs, TabsContent, TabsList, TabsTrigger, tabsListVariants };
+export { Tabs, TabsContent, TabsIndicator, TabsList, TabsTrigger, tabsListVariants };

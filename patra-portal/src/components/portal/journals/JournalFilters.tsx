@@ -7,13 +7,19 @@ import { FacetGroup } from "@/components/portal/browse/FacetGroup";
 import { FacetToggleRow } from "@/components/portal/browse/FacetToggleRow";
 import { FilterPanel } from "@/components/portal/browse/FilterPanel";
 import { Input } from "@/components/ui/input";
-import { CAS_ZONE_ORDER, JCR_QUARTILE_ORDER } from "@/lib/portal-api/venue-browse";
+import {
+  CAS_ZONE_ORDER,
+  JCR_QUARTILE_ORDER,
+  venueFilterCount,
+} from "@/lib/portal-api/venue-browse";
+import { formatSubject } from "@/lib/subject-label";
 import { useBrowseFilterUiStore } from "@/store/browse-filter-ui";
 import type { VenueBrowseFacets, VenueBrowseQuery } from "@/types/portal";
 
 interface Props {
   facets: VenueBrowseFacets;
-  resultTotal?: number;
+  /** 国家码 → 展示标签（服务端用 countryLabel 算好传入，避免两端 ICU 差异） */
+  countryLabels?: Readonly<Record<string, string>>;
 }
 
 // ---- 内部 helper ----
@@ -37,6 +43,8 @@ interface SearchableCheckListProps {
   selected: string[];
   searchPlaceholder: string;
   onToggle: (value: string) => void;
+  /** 取值 → 展示标签；缺省显示原值。检索同时匹配标签与原值 */
+  labels?: Readonly<Record<string, string>>;
 }
 
 // 可搜索 + 可滚动的复选列表（学科、国家等长列表 facet 共用，期刊页专属）
@@ -45,26 +53,33 @@ function SearchableCheckList({
   selected,
   searchPlaceholder,
   onToggle,
+  labels,
 }: SearchableCheckListProps) {
   const [search, setSearch] = useState("");
-  const filtered = search
-    ? options.filter((opt) => opt.value.toLowerCase().includes(search.toLowerCase()))
+  const labelOf = (value: string) => labels?.[value] ?? value;
+  const keyword = search.trim().toLowerCase();
+  const filtered = keyword
+    ? options.filter(
+        (opt) =>
+          opt.value.toLowerCase().includes(keyword) ||
+          labelOf(opt.value).toLowerCase().includes(keyword),
+      )
     : options;
   return (
     <>
-      <div className="mb-1.5 pr-1">
+      <div className="mb-2">
         <Input
           placeholder={searchPlaceholder}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="h-7 text-xs"
+          className="h-9 rounded-lg bg-bg-elevated text-sm md:text-sm"
         />
       </div>
-      <div className="max-h-48 overflow-y-auto">
+      <div className="max-h-56 overflow-y-auto px-2 [scrollbar-width:thin]">
         {filtered.map((opt) => (
           <FacetCheckRow
             key={opt.value}
-            label={opt.value}
+            label={labelOf(opt.value)}
             count={opt.count}
             checked={selected.includes(opt.value)}
             onToggle={() => onToggle(opt.value)}
@@ -77,7 +92,13 @@ function SearchableCheckList({
 
 // ---- 主筛选内容（rail 与 sheet 共用） ----
 
-function FilterControls({ facets }: { facets: VenueBrowseFacets }) {
+function FilterControls({
+  facets,
+  countryLabels,
+}: {
+  facets: VenueBrowseFacets;
+  countryLabels?: Readonly<Record<string, string>>;
+}) {
   const { query, navigate } = useBrowseQuery<VenueBrowseQuery>();
 
   // JCR / CAS 按规范顺序排列，只展示 facets 中有的项
@@ -94,6 +115,7 @@ function FilterControls({ facets }: { facets: VenueBrowseFacets }) {
           options={facets.subject}
           selected={query.subject}
           searchPlaceholder="搜索学科…"
+          labels={Object.fromEntries(facets.subject.map((o) => [o.value, formatSubject(o.value)]))}
           onToggle={(value) => navigate((cur) => toggleArrValue(cur, "subject", value))}
         />
       </FacetGroup>
@@ -120,7 +142,7 @@ function FilterControls({ facets }: { facets: VenueBrowseFacets }) {
             onToggle={() => navigate((cur) => toggleArrValue(cur, "cas", z))}
           />
         ))}
-        <div className="mt-1 border-t border-border pt-1">
+        <div className="mt-2 border-t border-border-subtle pt-2">
           <FacetToggleRow
             label="仅 Top 期刊"
             checked={query.casTop}
@@ -150,6 +172,7 @@ function FilterControls({ facets }: { facets: VenueBrowseFacets }) {
           options={facets.country}
           selected={query.country}
           searchPlaceholder="搜索国家 / 地区…"
+          labels={countryLabels}
           onToggle={(value) => navigate((cur) => toggleArrValue(cur, "country", value))}
         />
       </FacetGroup>
@@ -161,22 +184,23 @@ function FilterControls({ facets }: { facets: VenueBrowseFacets }) {
 
 /// 期刊浏览筛选面板：勾选状态读 Provider 的乐观 query（点击即打勾），变更经 navigate 基于最新状态叠加。
 /// 桌面（md+）为侧栏；移动端为左侧 Sheet 抽屉。
-export function JournalFilters({ facets, resultTotal }: Props) {
+export function JournalFilters({ facets, countryLabels }: Props) {
   const close = useBrowseFilterUiStore((s) => s.close);
+  const { query } = useBrowseQuery<VenueBrowseQuery>();
   return (
     <FilterPanel
-      sheetTitle="筛选"
+      sheetTitle={`筛选 · 已选 ${venueFilterCount(query)} 项`}
       sheetFooter={
         <button
           type="button"
           onClick={close}
-          className="w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+          className="h-11 w-full rounded-full bg-ink-900 px-4 text-sm font-semibold text-paper-50"
         >
-          {resultTotal != null ? `查看 ${resultTotal} 本结果` : "查看结果"}
+          查看结果
         </button>
       }
     >
-      <FilterControls facets={facets} />
+      <FilterControls facets={facets} countryLabels={countryLabels} />
     </FilterPanel>
   );
 }

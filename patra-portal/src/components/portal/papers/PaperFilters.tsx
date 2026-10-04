@@ -50,7 +50,7 @@ function MoreToggle({
       type="button"
       aria-expanded={expanded}
       onClick={onClick}
-      className="mt-1 px-1 text-xs text-clay-700 hover:text-clay-800"
+      className="link-draw mt-2 pb-px text-xs font-medium text-clay-700 hover:text-clay-800"
     >
       {expanded ? "收起" : `${label} ↓`}
     </button>
@@ -77,7 +77,7 @@ function PaperFilterControls({ facets, currentYear, venueNames }: PaperFiltersPr
     <div className="flex flex-col">
       {(facets.years.length > 0 || yearSelected) && (
         <FacetGroup title="发表年份" selCount={yearSelected ? 1 : 0}>
-          <div className="mb-1.5 flex flex-wrap gap-1.5 px-1">
+          <div className="mb-2 flex flex-wrap gap-1.5">
             {RECENT_YEAR_SPANS.map((span) => {
               const active = isRecentYearsActive(query, span, currentYear);
               return (
@@ -87,10 +87,10 @@ function PaperFilterControls({ facets, currentYear, venueNames }: PaperFiltersPr
                   aria-pressed={active}
                   onClick={() => navigate((cur) => selectRecentYears(cur, span, currentYear))}
                   className={cn(
-                    "rounded-full border px-2.5 py-0.5 text-xs transition-colors",
+                    "rounded-full border px-3 py-1 text-xs font-medium transition-colors duration-200",
                     active
                       ? "border-clay-300 bg-clay-50 text-clay-800"
-                      : "border-border-default text-fg-2 hover:bg-paper-200",
+                      : "border-border-default bg-paper-50 text-fg-2 hover:border-border-hover hover:text-ink-900",
                   )}
                 >
                   近 {span} 年
@@ -196,7 +196,7 @@ function PaperFilterControls({ facets, currentYear, venueNames }: PaperFiltersPr
         <button
           type="button"
           onClick={() => navigate(clearAllConditions)}
-          className="mt-3 self-start px-1 text-xs text-fg-3 underline underline-offset-2 hover:text-clay-700"
+          className="link-draw mt-4 self-start pb-px text-xs font-medium text-fg-2 hover:text-clay-700"
         >
           清除全部筛选
         </button>
@@ -221,14 +221,14 @@ export function PaperFilters(props: PaperFiltersProps) {
           <button
             type="button"
             onClick={() => navigate(clearAllConditions)}
-            className="flex-1 rounded-lg border border-border-default bg-paper-50 px-4 py-2 text-sm font-medium text-fg-1"
+            className="h-11 flex-1 rounded-full border border-border-strong bg-paper-50 px-4 text-sm font-semibold text-fg-1"
           >
             清除全部
           </button>
           <button
             type="button"
             onClick={close}
-            className="flex-1 rounded-lg bg-ink-900 px-4 py-2 text-sm font-medium text-paper-50"
+            className="h-11 flex-1 rounded-full bg-ink-900 px-4 text-sm font-semibold text-paper-50"
           >
             查看 {props.facets.total.toLocaleString("en-US")} 篇结果
           </button>

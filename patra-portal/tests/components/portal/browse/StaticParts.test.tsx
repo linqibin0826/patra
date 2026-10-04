@@ -49,4 +49,15 @@ describe("FacetSkeleton", () => {
     expect(aside).toHaveAttribute("aria-hidden", "true");
     expect(aside?.className).toMatch(/w-60/);
   });
+
+  it("默认与筛选侧栏一致：窄屏隐藏、md 起显示、宽 w-56；传入宽度时覆盖默认宽", () => {
+    const { container, rerender } = render(<FacetSkeleton />);
+    const aside = () => container.querySelector("aside");
+    for (const cls of ["hidden", "md:flex", "w-56", "shrink-0"]) {
+      expect(aside()).toHaveClass(cls);
+    }
+    rerender(<FacetSkeleton className="w-60" />);
+    expect(aside()).toHaveClass("w-60");
+    expect(aside()).not.toHaveClass("w-56");
+  });
 });

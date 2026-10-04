@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useBrowseQuery } from "@/components/portal/browse/BrowseQueryProvider";
 import { FilterTrigger } from "@/components/portal/browse/FilterTrigger";
 import { SortSegmented } from "@/components/portal/browse/SortSegmented";
-import { SORT_OPTIONS } from "@/lib/portal-api/venue-browse";
+import { SORT_OPTIONS, venueFilterCount } from "@/lib/portal-api/venue-browse";
 import type { VenueBrowseQuery } from "@/types/portal";
 
 /// 期刊浏览页检索 / 排序条。
@@ -68,22 +68,13 @@ export function JournalSearchSortControls() {
     [navigate],
   );
 
-  const activeFilterCount =
-    query.subject.length +
-    query.jcr.length +
-    query.cas.length +
-    query.country.length +
-    (query.casTop ? 1 : 0) +
-    (query.oa ? 1 : 0) +
-    (query.doaj ? 1 : 0);
-
   return (
-    <div className="flex flex-wrap items-center gap-3.5 border-b border-border-default py-3">
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
       <form
         onSubmit={handleSubmit}
-        className="flex min-w-0 flex-1 basis-[360px] items-center gap-2"
+        className="flex min-w-0 flex-1 basis-[420px] items-center gap-2.5"
       >
-        <div className="flex min-w-0 flex-1 items-center gap-2.5 rounded-md border border-border-strong bg-bg-elevated px-3 shadow-inset transition-colors focus-within:border-border-focus">
+        <div className="flex h-12 min-w-0 flex-1 items-center gap-3 rounded-xl border border-border-strong bg-bg-elevated pr-2 pl-4 shadow-inset transition-colors duration-200 focus-within:border-border-focus">
           <SearchIcon className="size-4 shrink-0 text-fg-3" aria-hidden="true" />
           <input
             type="search"
@@ -93,14 +84,14 @@ export function JournalSearchSortControls() {
             autoComplete="off"
             spellCheck="false"
             aria-label="按刊名检索期刊"
-            className="min-w-0 flex-1 border-0 bg-transparent py-2.5 text-base text-ink-900 outline-none placeholder:text-fg-4"
+            className="min-w-0 flex-1 border-0 bg-transparent text-md text-ink-900 outline-none placeholder:text-fg-4"
           />
           {localQ && (
             <button
               type="button"
-              aria-label="清除搜索"
+              aria-label="清除输入"
               onClick={handleClear}
-              className="flex size-6 shrink-0 items-center justify-center rounded text-fg-3 hover:bg-paper-200 hover:text-ink-900"
+              className="flex size-7 shrink-0 items-center justify-center rounded-full text-fg-3 transition-colors hover:bg-paper-200 hover:text-ink-900"
             >
               <XIcon className="size-3.5" />
             </button>
@@ -108,16 +99,16 @@ export function JournalSearchSortControls() {
         </div>
         <button
           type="submit"
-          className="flex shrink-0 items-center gap-1.5 self-stretch rounded-md border border-border-strong bg-paper-50 px-3.5 text-sm font-semibold text-fg-1 transition-colors hover:bg-paper-200"
+          className="flex h-12 shrink-0 items-center gap-1.5 rounded-full bg-ink-900 px-6 text-sm font-semibold text-paper-50 transition duration-200 hover:bg-ink-800 motion-safe:active:scale-[0.97]"
         >
-          <SearchIcon className="size-3.5 text-clay-600" aria-hidden="true" />
+          <SearchIcon className="size-3.5" aria-hidden="true" />
           检索
         </button>
       </form>
 
       <SortSegmented options={SORT_OPTIONS} value={query.sort} onChange={handleSort} />
 
-      <FilterTrigger count={activeFilterCount} />
+      <FilterTrigger count={venueFilterCount(query)} />
     </div>
   );
 }

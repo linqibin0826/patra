@@ -12,6 +12,14 @@ describe("NotFoundState", () => {
     expect(screen.getByText(/这本期刊不在 Patra/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /返回首页/ })).toHaveAttribute("href", "/");
   });
+
+  it("只有末尾图标标记为 trailing（hover 前移），前置图标不标", () => {
+    render(<NotFoundState kind="paper" />);
+    const home = screen.getByRole("link", { name: /返回首页/ }).querySelector("svg");
+    const browse = screen.getByRole("link", { name: /浏览全部文献/ }).querySelector("svg");
+    expect(home).not.toHaveAttribute("data-icon");
+    expect(browse).toHaveAttribute("data-icon", "trailing");
+  });
 });
 
 describe("ErrorState", () => {

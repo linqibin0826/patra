@@ -1,9 +1,15 @@
-import { ExternalLink } from "lucide-react";
-import Image from "next/image";
+import { ArrowRight, ExternalLink } from "lucide-react";
+import Link from "next/link";
+import { buildPapersHref } from "@/lib/portal-api/paper-search";
 import type { JournalMetrics } from "@/lib/portal-api/venue-derive";
 import { btnBlock, btnPrimary } from "@/lib/portal-ui";
+import { cn } from "@/lib/utils";
 import type { VenueDetail } from "@/types/portal";
 
+const CARD_LABEL =
+  "mb-4 flex items-center gap-2 font-mono text-2xs uppercase tracking-mono text-fg-3";
+
+/// 期刊详情右侧栏：本刊速览（核心指标 + 官网）→ 该刊文献入口（跳 /papers?venue=id）。
 export function JournalRail({ venue, metrics }: { venue: VenueDetail; metrics: JournalMetrics }) {
   const { jcr, cas, bibliometric } = metrics;
   const stats: { k: string; v: string }[] = [];
@@ -28,40 +34,54 @@ export function JournalRail({ venue, metrics }: { venue: VenueDetail; metrics: J
 
   return (
     <>
-      <div className="rounded-lg border border-clay-200 bg-clay-50 p-4">
-        <div className="mb-3 flex items-center gap-2 font-mono text-3xs uppercase tracking-mono text-fg-3">
-          <Image src="/brand/patra-mark.svg" alt="" aria-hidden width={4} height={13} /> 本刊速览
+      <div className="rounded-xl border border-clay-200 bg-clay-50 p-5">
+        <div className={CARD_LABEL}>
+          <span aria-hidden className="h-3 w-1 rounded-[1px] bg-clay-600" />
+          本刊速览
         </div>
-        <div className="flex flex-col">
+        <dl className="m-0 flex flex-col">
           {stats.map((s) => (
             <div
               key={s.k}
-              className="flex items-baseline justify-between gap-3 border-t border-border-subtle py-2.5 first:border-t-0"
+              className="flex items-baseline justify-between gap-3 border-t border-clay-100 py-3 first:border-t-0 first:pt-0 last:pb-0"
             >
-              <span className="font-sans text-sm text-fg-3">{s.k}</span>
-              <span className="font-mono text-md font-medium tabular-nums text-ink-900">{s.v}</span>
+              <dt className="font-sans text-sm text-fg-3">{s.k}</dt>
+              <dd className="m-0 text-right font-sans text-md font-semibold tabular-nums text-ink-900">
+                {s.v}
+              </dd>
             </div>
           ))}
-        </div>
+        </dl>
         {venue.homepageUrl && (
           <a
             href={venue.homepageUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className={`${btnPrimary} ${btnBlock} mt-3.5`}
+            className={cn(btnPrimary, btnBlock, "mt-5")}
           >
-            访问官网 <ExternalLink size={14} />
+            访问官网 <ExternalLink size={14} data-icon="trailing" />
           </a>
         )}
       </div>
 
-      <div className="rounded-lg border border-border-default bg-paper-50 p-4">
-        <div className="mb-3 font-mono text-3xs uppercase tracking-mono text-fg-3">边界 · v0.5</div>
-        <p className="m-0 font-sans text-sm leading-normal text-fg-3">
-          本页用于认识与评估期刊，<b className="text-fg-2">不含该刊的文献列表</b>
-          。文献浏览将在后续版本提供。
-        </p>
-      </div>
+      <Link
+        href={buildPapersHref({ venue: [venue.id] })}
+        className="group/papers flex items-center justify-between gap-4 rounded-xl border border-border-default bg-paper-50 p-5 transition-colors duration-200 hover:border-ink-500"
+      >
+        <span className="flex flex-col gap-1.5">
+          <span className="font-mono text-2xs uppercase tracking-mono text-fg-3">文献</span>
+          <span className="font-serif text-xl leading-snug font-medium text-ink-900">
+            浏览该刊文献
+          </span>
+          <span className="text-sm text-fg-3">按年份、类型与证据等级继续收敛</span>
+        </span>
+        <span
+          aria-hidden
+          className="flex size-10 shrink-0 items-center justify-center rounded-full bg-ink-900 text-paper-50 motion-safe:transition-transform duration-300 ease-out-expo motion-safe:group-hover/papers:translate-x-1"
+        >
+          <ArrowRight className="size-4" strokeWidth={1.75} />
+        </span>
+      </Link>
     </>
   );
 }

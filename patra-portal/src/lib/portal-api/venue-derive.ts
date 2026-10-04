@@ -1,4 +1,4 @@
-import type { VenueDetail, YearlyStat } from "@/types/portal";
+import type { VenueDetail, VenueIdentifier, YearlyStat } from "@/types/portal";
 
 // ---- 派生视图类型（FE 内部，非 wire 契约） ----
 export interface JcrView {
@@ -114,11 +114,11 @@ export function deriveSubjectAreas(v: VenueDetail): string[] {
 /** 影响力速览卡（最多 3 张，缺值降级）。 */
 export function deriveMetricCards(m: JournalMetrics): MetricCard[] {
   const cards: MetricCard[] = [];
-  if (m.jcr?.impactFactor != null) {
+  if (m.jcr?.impactFactor != null && m.jcr.impactFactor > 0) {
     cards.push({
       key: "if",
       label: "JCR 影响因子",
-      value: m.jcr.impactFactor.toFixed(1),
+      value: formatImpactFactor(m.jcr.impactFactor),
       sub: "最新年度",
       accent: true,
     });
@@ -150,6 +150,32 @@ export function deriveMetricCards(m: JournalMetrics): MetricCard[] {
     });
   }
   return cards;
+}
+
+/// 影响因子展示值：一位小数；缺值或非正数（后端用 0 表示没有影响因子）显示 `—`。
+export function formatImpactFactor(value: number | null | undefined): string {
+  return value != null && value > 0 ? value.toFixed(1) : "—";
+}
+
+/// 标识符的展示键名：后端原始类型 → 读者认得的写法；未收录的类型原样返回。
+const IDENTIFIER_LABELS: Record<string, string> = {
+  ISSN_L: "ISSN-L",
+  NLM: "NLM ID",
+  OPENALEX: "OpenAlex",
+};
+
+/// ISSN 尚未采集时后端给的占位值。
+const ISSN_PLACEHOLDER = "XXXX-XXXX";
+
+/// 期刊标识符的展示列表：换成可读键名、去掉空值与占位符；ISSN-L 与某个 ISSN 相同时不重复显示。
+export function deriveIdentifiers(
+  identifiers: VenueIdentifier[],
+): { label: string; value: string }[] {
+  const valid = identifiers.filter((i) => i.value && i.value !== ISSN_PLACEHOLDER);
+  const issns = new Set(valid.filter((i) => i.type === "ISSN").map((i) => i.value));
+  return valid
+    .filter((i) => !(i.type === "ISSN_L" && issns.has(i.value)))
+    .map((i) => ({ label: IDENTIFIER_LABELS[i.type] ?? i.type, value: i.value }));
 }
 
 /** 年度趋势：按 year 升序；空 → []。组件据此渲染双柱图（无则不显）。 */

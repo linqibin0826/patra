@@ -35,7 +35,7 @@ describe("PapersEmptyResult", () => {
         query={{ ...EMPTY_PAPER_QUERY, q: "GLP-9", type: ["Review"], sort: "year" }}
       />,
     );
-    expect(screen.getByRole("heading")).toHaveTextContent('未找到匹配 "GLP-9" 的文献');
+    expect(screen.getByRole("heading")).toHaveTextContent("未找到匹配「GLP-9」的文献");
     expect(screen.getByRole("link", { name: "清除全部筛选" })).toHaveAttribute(
       "href",
       "/papers?sort=year",

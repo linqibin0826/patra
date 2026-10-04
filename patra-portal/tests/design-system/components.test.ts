@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findAll, format, readSrc } from "./source-scan";
+import { findAll, format, readSrc, sourceFiles } from "./source-scan";
 
 const comp = (path: string) => readSrc(`components/${path}`);
 
@@ -22,15 +22,22 @@ describe("组件对齐设计系统", () => {
     }
   });
 
-  it("可点击的文献卡 hover：上浮 1px + border-hover + shadow-md", () => {
+  it("首页文献条目 hover：顶部陶土线自左生长 + 标题下划线绘出（编辑排版，无卡片框）", () => {
     const src = comp("portal/PaperCard.tsx");
-    for (const cls of ["hover:-translate-y-px", "hover:border-border-hover", "hover:shadow-md"]) {
+    for (const cls of [
+      "group/paper",
+      "before:bg-clay-500",
+      "hover:before:w-full",
+      "group-hover/paper:[background-size:100%_1px]",
+    ]) {
       expect(src).toContain(cls);
     }
   });
 
   it("分页格圆角为 radius-md", () => {
-    expect(comp("portal/browse/BrowsePagination.tsx")).toMatch(/const CELL = "[^"]*\brounded-md\b/);
+    expect(comp("portal/browse/BrowsePagination.tsx")).toMatch(
+      /const CELL =\s*"[^"]*\brounded-md\b/,
+    );
   });
 
   it("摘要正文使用 leading-reading", () => {
@@ -53,6 +60,27 @@ describe("组件对齐设计系统", () => {
       (h) => !h.file.endsWith("SectionEyebrow.tsx"),
     );
     expect(format(hits)).toEqual([]);
+  });
+
+  it("所有 fieldset 带 min-w-0（默认 min-width: min-content 会撑破侧栏，期刊学科筛选溢出的根因）", () => {
+    for (const f of sourceFiles()) {
+      for (const m of f.text.matchAll(
+        /<fieldset[\s\S]*?className=(?:"([^"]*)"|\{[^}]*?"([^"]*)")/g,
+      )) {
+        expect(m[1] ?? m[2], f.path).toMatch(/\bmin-w-0\b/);
+      }
+    }
+  });
+
+  it("12 栏网格只在 lg 以上启用（窄屏下 12 列 × 栏距的最小宽度会撑破容器，内容被裁）", () => {
+    const hits = findAll(/(?<![\w:-])(?:[\w-]+:)*grid-cols-12\b/).filter(
+      ({ match }) => !/(?:^|:)(?:lg|xl|2xl):grid-cols-12$/.test(match),
+    );
+    expect(format(hits)).toEqual([]);
+  });
+
+  it("btnBlock 经 cn() 与按钮类串合并（模板字符串拼接时 btnBlock 的 px-4 会被 BTN_BASE 的 px-5 盖掉）", () => {
+    expect(format(findAll(/\$\{btn(?:Primary|Secondary)\}\s+\$\{btnBlock\}/))).toEqual([]);
   });
 
   it("本版不做暗色：sonner 不依赖 next-themes", () => {

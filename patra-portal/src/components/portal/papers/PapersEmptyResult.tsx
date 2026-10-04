@@ -43,7 +43,7 @@ export function PapersEmptyResult({
     case "no-match":
       return (
         <EmptyState
-          title={`未找到匹配 "${query.q || query.author}" 的文献`}
+          title={`未找到匹配「${query.q || query.author}」的文献`}
           description="换个关键词试试，或放宽 / 清除筛选条件。"
           actions={[
             { href: clearHref, label: "清除全部筛选" },

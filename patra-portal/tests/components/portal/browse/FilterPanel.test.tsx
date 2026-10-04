@@ -34,4 +34,12 @@ describe("FilterPanel", () => {
     expect(within(dialog).getByText("筛选内容")).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "查看结果" })).toBeInTheDocument();
   });
+
+  it("左侧抽屉宽 w-80：覆盖 Sheet 默认的 data-[side=left]:w-3/4", async () => {
+    useBrowseFilterUiStore.setState({ sheetOpen: true });
+    renderPanel("left");
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog).toHaveClass("data-[side=left]:w-80");
+    expect(dialog).not.toHaveClass("data-[side=left]:w-3/4");
+  });
 });

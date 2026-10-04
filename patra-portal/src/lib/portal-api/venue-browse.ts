@@ -1,3 +1,4 @@
+import { formatSubject } from "@/lib/subject-label";
 import type {
   ActiveFilterChip,
   VenueBrowseFilters,
@@ -80,6 +81,19 @@ export function parseVenueBrowseQuery(
     doaj: parseBool(sp.doaj),
     country: parseMultiValue(sp.country),
   };
+}
+
+/// 已选筛选条件数（检索词、排序、页码不算）：多值维度按选项数计，布尔开关各计 1。
+export function venueFilterCount(query: VenueBrowseQuery): number {
+  return (
+    query.subject.length +
+    query.jcr.length +
+    query.cas.length +
+    query.country.length +
+    (query.casTop ? 1 : 0) +
+    (query.oa ? 1 : 0) +
+    (query.doaj ? 1 : 0)
+  );
 }
 
 /**
@@ -168,6 +182,7 @@ const CHIP_GROUP_CONFIGS: ChipGroupConfig[] = [
   {
     group: "学科",
     getValues: (q) => q.subject,
+    getLabel: formatSubject,
     makeNext: (q, value) => ({ ...q, subject: q.subject.filter((v) => v !== value), page: 1 }),
   },
   {

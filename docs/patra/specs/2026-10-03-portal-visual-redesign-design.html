@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal 视觉重设计：叶脉 · 学术编辑风</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- CSS 外置：「工程简报」主题。相对路径 ../styles/ 从生成位置 docs/patra/specs/ 出发；
+       放进子目录的 spec（如 docs/patra/specs/<feature>/）改成 ../../styles/。
+       模板本身在 .claude/skills/ 下打开时此 link 会 404（接受：以生成后的 spec 为准） -->
+  <link rel="stylesheet" href="../styles/spec-theme.css">
+</head>
+<body>
+<div class="layout layout-with-notes">
+
+  <!-- ============================================================
+       左栏：目录（TOC）
+       ============================================================ -->
+  <nav class="toc">
+    <h3>目录</h3>
+    <ol>
+      <li><a href="#background">背景与现状</a></li>
+      <li><a href="#scope">范围边界</a></li>
+      <li><a href="#direction">设计方向（三选一）</a></li>
+      <li><a href="#system">设计系统改动</a></li>
+      <li><a href="#motif">签名母题：叶脉</a></li>
+      <li><a href="#pages">逐页设计</a></li>
+      <li><a href="#motion">动效与微交互</a></li>
+      <li><a href="#quality">响应式 · 可访问性 · 性能</a></li>
+      <li><a href="#testing">测试策略</a></li>
+      <li><a href="#decisions">关键决策与备选</a></li>
+      <li><a href="#risks">风险与缓解</a></li>
+      <li><a href="#changes">改造文件清单</a></li>
+    </ol>
+  </nav>
+
+  <!-- ============================================================
+       中栏：内容
+       ============================================================ -->
+  <main class="content">
+
+    <header class="doc-header">
+      <h1>Portal 视觉重设计：叶脉 · 学术编辑风</h1>
+      <div class="meta-bar">
+        <span>📅 2026-10-03</span>
+        <span>🌿 feat/portal-visual-redesign</span>
+        <span>👤 Claude（linqibin /goal 指令）</span>
+        <span>🎯 spec</span>
+        <span class="status-pill">draft</span>
+      </div>
+    </header>
+
+    <aside class="callout summary">
+      <span class="title">关键决策摘要</span>
+      <p>以 Awwwards / Webby / FWA 获奖站为标尺重做 patra-portal 的视觉与交互。方向选「叶脉 · 学术编辑风」：保留暖纸底 + 陶土色唯一强调色的品牌基因，在其上建立完整的编辑排版系统（Newsreader 显示衬线 + IBM Plex Mono 元数据 + 流体字号阶）、明暗交替的版面节奏（墨色区块）、以程序生成「叶脉」为签名母题（Patra 梵语意为「叶」），以及纯 CSS 的动效体系（加载编排、滚动驱动入场、@starting-style 展开），零新增运行时依赖、全部尊重 prefers-reduced-motion。顺带修掉现有的可见缺陷：⌘K 不可用、期刊筛选栏溢出、页脚死链、过时边界文案。</p>
+    </aside>
+
+    <section id="background">
+      <h2>1. 背景与现状</h2>
+      <p>PAP-56 刚把 portal 样式对齐到设计系统（暖纸 paper-* / 墨色 ink-* / 陶土 clay-* 唯一强调色、Source Serif 4 + Inter + JetBrains Mono），底子扎实但仍停留在「整洁的工具站」水准。对照获奖站标尺，现状的主要差距：</p>
+      <ul>
+        <li><strong>排版</strong>：正文字号阶偏小（基准 13.5px、下限 9.5px，中文小字吃力）；显示字号缺少「海报级」层级；中文强调用浏览器伪斜体（<code>&lt;em class="italic"&gt;可被检索</code>），观感廉价。</li>
+        <li><strong>版面节奏</strong>：首页五个区块同为纸色，缺少明暗对比与视觉高潮；文献流为 12 张同构卡片，信息层级扁平。</li>
+        <li><strong>原创性</strong>：品牌标是一片带叶脉的陶土叶，但站内没有任何与之呼应的视觉母题，整体易被识别为「通用 AI 暖色模板」。</li>
+        <li><strong>动效 / 微交互</strong>：几乎为零——无加载编排、无滚动入场、Tab 指示器不滑动、折叠区硬切、复选框为原生样式。</li>
+        <li><strong>可见缺陷</strong>：导航「搜索 ⌘K」按钮在非首页无响应且 ⌘K 未绑定；期刊页学科筛选（fieldset 默认 <code>min-width: min-content</code>）溢出压到卡片上；页脚「数据源 / 更新日志」为 <code>#</code> 死链、「关于」指向不存在的 <code>#about</code>；期刊详情侧栏仍写「文献浏览将在后续版本提供」（v0.7 已上线）；国家筛选显示裸 ISO 码。</li>
+      </ul>
+    </section>
+
+    <section id="scope">
+      <h2>2. 范围边界</h2>
+      <div class="two-col">
+        <aside class="callout success">
+          <span class="title">In Scope</span>
+          <ul>
+            <li>全部 7 类页面的视觉与交互重做：首页、文献检索、文献详情、期刊浏览、期刊详情、404 / 500、各级加载骨架</li>
+            <li>设计 token 扩展：字体、字号阶、反相（墨色）表面、动效曲线与时长、纸纹、容器宽度</li>
+            <li>签名母题：确定性叶脉生成器 + 首页「图 1」+ 页脚 / 空态 / 404 复用</li>
+            <li>动效系统：加载编排、滚动入场、Tab 滑动指示器、折叠区展开、阅读进度条、骨架微光</li>
+            <li>修复：⌘K 快速检索对话框、期刊筛选溢出、页脚死链与 #about、过时文案、国家码中文名</li>
+            <li>设计系统守护测试同步更新（先改测试再改实现）</li>
+          </ul>
+        </aside>
+        <aside class="callout warning">
+          <span class="title">Out of Scope</span>
+          <ul>
+            <li>暗色模式（DS 决策「本版不做暗色」不变）</li>
+            <li>新的业务功能 / 新的数据字段 / 后端改动</li>
+            <li>WebGL / 3D / 自定义光标 / 滚动劫持等重型效果</li>
+            <li>引入动画库（Framer Motion / GSAP 等）或任何新的运行时依赖</li>
+            <li>设计系统 Artifact 的同步（等用户本地验收后另行同步）</li>
+            <li>Linear Issue 建立与 PR（按用户规则：本地验收通过后再走）</li>
+          </ul>
+        </aside>
+      </div>
+    </section>
+
+    <section id="direction">
+      <h2>3. 设计方向（三选一）</h2>
+      <table>
+        <thead><tr><th>方向</th><th>核心手法</th><th>评估</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>A · 叶脉 · 学术编辑风</strong>（推荐）</td>
+            <td>期刊 / 杂志的编辑排版语言（刊头、栏线、图注、编号、版权页）+ 程序生成叶脉作为签名母题 + 暖纸 / 墨色明暗节奏 + 克制而精确的 CSS 动效</td>
+            <td>与品牌标（叶）、产品（医学文献）、既有 DS（暖纸陶土）三者同源，原创性强；工具区（检索 / 筛选 / 列表）仍可保持高效</td>
+          </tr>
+          <tr>
+            <td>B · Apple 式液态玻璃</td>
+            <td>浅灰白底、统一白色表面、毛玻璃浮层、负字距无衬线</td>
+            <td>精致但通用，丢掉暖纸编辑气质与品牌基因，识别度低——否决</td>
+          </tr>
+          <tr>
+            <td>C · 实验型沉浸式</td>
+            <td>WebGL 叶片、3D 书架、自定义光标、滚动劫持叙事</td>
+            <td>获奖站常见，但对检索工具伤害可用性、性能与可访问性，且需重型依赖——否决</td>
+          </tr>
+        </tbody>
+      </table>
+      <p><strong>一句话概念</strong>：「医学知识，自古写在叶上。」——贝叶写本是纸张普及前南亚医典的载体；Patra 把散落在十余个来源的文献重新装订成一册。叶脉 = 文献网络：每条支脉都汇入同一根主脉（统一索引）。</p>
+    </section>
+
+    <section id="system">
+      <h2>4. 设计系统改动</h2>
+      <h3>4.1 字体</h3>
+      <table>
+        <thead><tr><th>角色</th><th>现状</th><th>改为</th><th>理由</th></tr></thead>
+        <tbody>
+          <tr><td>显示 / 阅读衬线</td><td>Source Serif 4</td><td><strong>Newsreader</strong>（opsz 6–72 + wght 200–800 + 真斜体）</td><td>为屏幕新闻阅读设计，大字号光学尺寸锋利优雅，斜体适合刊名（学术引文惯例）</td></tr>
+          <tr><td>元数据等宽</td><td>JetBrains Mono</td><td><strong>IBM Plex Mono</strong>（400 / 500 / 600）</td><td>人文主义等宽，更像学术打字稿，适合 DOI / PMID / 标签</td></tr>
+          <tr><td>界面无衬线</td><td>Inter</td><td>Inter（启用 opsz 轴）</td><td>界面主力不换，大字号自动走显示光学尺寸</td></tr>
+          <tr><td>中文</td><td>Noto Sans SC / Noto Serif SC</td><td>不变（衬线补 900 字重给海报级标题）</td><td>—</td></tr>
+        </tbody>
+      </table>
+      <h3>4.2 字号阶（整体上调 0.5px，下限 10px）+ 流体显示字号</h3>
+      <p><code>3xs 10 · 2xs 11 · xs 12 · sm 13 · base 14 · md 15 · lg 17 · xl 19 · 2xl 24 · 3xl 30 · 4xl 40 · 5xl 52</code>；新增流体 <code>display-1 clamp(46px → 112px)</code>、<code>display-2 clamp(36px → 72px)</code>、<code>display-3 clamp(28px → 48px)</code>。行高新增 <code>leading-display 1.02</code>；字距新增 <code>tracking-display -0.035em</code>（仅拉丁显示字）。</p>
+      <h3>4.3 颜色</h3>
+      <ul>
+        <li>保留全部原色与语义 token；陶土仍是唯一强调色。</li>
+        <li>新增<strong>反相表面</strong>：<code>bg-inverse</code>（ink-900）/ <code>bg-inverse-raised</code>（ink-800）/ <code>fg-inverse-1/2/3</code>（paper-50 / ink-200 / ink-300，均 ≥ 9:1）/ <code>accent-on-inverse</code>（clay-300，7.6:1）/ <code>border-inverse</code>。用于热议区与页脚，制造明暗节奏。</li>
+        <li><strong>纸纹</strong>：极低不透明度 feTurbulence 噪点作为 body 背景层，给暖纸以触感（只在 CSS，不进 className）。</li>
+      </ul>
+      <h3>4.4 形状 · 阴影 · 空间</h3>
+      <ul>
+        <li>新增 <code>shadow-cover</code> / <code>shadow-cover-hover</code>（期刊封面的书脊 + 落影）与 <code>shadow-xl</code>（对话框）。</li>
+        <li>容器：<code>max-w-page</code> 1280px，页边距 <code>px-gutter</code> = clamp(20px, 4vw, 48px)；首页区块纵向节奏 clamp(80px, 10vw, 144px)。</li>
+      </ul>
+      <h3>4.5 动效 token</h3>
+      <p><code>ease-out-expo cubic-bezier(.16,1,.3,1)</code>（入场主曲线）· <code>ease-out-quart</code> · <code>ease-in-out-quint</code>；时长 <code>dur-reveal 900ms</code> · <code>dur-draw 2400ms</code>，保留 fast / normal / slow。</p>
+    </section>
+
+    <section id="motif">
+      <h2>5. 签名母题：叶脉</h2>
+      <p>确定性生成器 <code>src/lib/venation.ts</code>（纯函数、同参同输出、可单测）：沿二次贝塞尔主脉建立「参数 t × 法向偏移 v」坐标，叶形半宽 <code>w(t) ∝ t<sup>a</sup>(1−t)<sup>b</sup></code>；二级脉两侧交错、以锐角斜向叶尖发出并在叶缘内侧环结（brochidodromous）；相邻二级脉间加三级横脉。输出叶缘 / 主脉 / 二级脉 / 环结 / 三级脉五类 path 及绘制顺序。</p>
+      <ul>
+        <li><strong>首页「图 1」</strong>：Hero 右侧大幅叶脉，按主脉 → 二级脉（自基至尖）→ 环结 → 三级脉的顺序描线入场（stroke-dashoffset，pathLength=1），陶土 → 墨色渐变描边；下附图注「图 1 · 叶脉——十个来源，汇入同一根主脉。」</li>
+        <li><strong>复用</strong>：页脚大幅水印、404 / 500「缺页之叶」、空态小叶、加载态。</li>
+      </ul>
+    </section>
+
+    <section id="pages">
+      <h2>6. 逐页设计</h2>
+      <p>遵循 portal「默认层 / 深数据层」渐进式披露约束：本次只改呈现，不改两层的归属。</p>
+      <h3>6.1 全站框架</h3>
+      <ul>
+        <li><strong>TopNav</strong>：高度保持 56px（详情页吸顶偏移不变）；首页顶部透明、滚动后出现纸色毛玻璃与发丝线；导航项 hover 下划线自左绘出、当前项陶土圆点；右侧「快速检索 ⌘K」药丸按钮。移动端汉堡打开全屏菜单：大号衬线导航 + 序号 + 错峰入场。</li>
+        <li><strong>QuickSearch（新）</strong>：⌘K / Ctrl+K 或导航按钮打开居中对话框，内嵌 Composer，提交复用 <code>composerTarget</code> 跳转；Esc 关闭；任何页面都可用。</li>
+        <li><strong>Footer → 版权页（Colophon）</strong>：墨色底；宣言「医学知识，自古写在叶上。」+ <code>#about</code> 关于段（名字由来与数据来源）+ 三列（浏览 / 数据源 <code>#sources</code> / 项目）+ 底栏版本与索引快照 + 巨型裁切字标与叶脉水印。GitHub / 更新日志指向真实仓库。</li>
+        <li><strong>SectionEyebrow</strong>：支持序号（<code>01 — 此刻热议</code>），首页各区块编号。</li>
+      </ul>
+      <h3>6.2 首页</h3>
+      <ul>
+        <li><strong>Hero</strong>：刊头条（统计 + 实时同步）→ 海报级标题「医学文献，/ 可被检索，可被引用。」逐行遮罩上移入场，「可被检索」改陶土色 + 手绘下划线描出（替代伪斜体）→ 导语 → Composer（Tab 滑动指示器、聚焦陶土描边光晕、提交按钮箭头微动）；右侧「图 1」叶脉。</li>
+        <li><strong>此刻热议</strong>（墨色区）：左栏标题 / 说明 / 冷热图例；右栏前 4 名为编号大字条目（陶土增幅），其余为分级词云；hover 词条变陶土并出现 ↗。</li>
+        <li><strong>高影响力期刊</strong>（书架）：封面加书脊阴影、内框压印、纸纹；hover 上浮 + 微倾 + 落影加深；整排下方一道「书架」线。</li>
+        <li><strong>值得读一读的文献</strong>（编辑排版）：Tab 滑动指示器；第 1 篇为头条（大标题 + 摘要片段），其余为带序号的两栏发丝线列表；移除禁用占位按钮「评论 / 分享」，收藏改为可用的图标切换（复用 mock store），保留引用数。</li>
+      </ul>
+      <h3>6.3 文献检索 / 期刊浏览</h3>
+      <ul>
+        <li>页头：大号衬线标题 + 说明 + 叶脉分隔线；检索模式改为带滑动指示器的分段控件；排序控件同风格。</li>
+        <li>筛选栏：自绘复选 / 单选（陶土填充 + 勾线描出动画）、组标题带已选角标、修复 fieldset 溢出；国家码显示为「德国 · DE」且检索同时匹配中文名与代码。</li>
+        <li>结果：列表行 hover 左侧陶土细线自上而下生长 + 标题下划线；期刊网格复用新封面卡；分页、chip、空态（小叶插图）统一新语言；骨架改为纸面微光扫过。</li>
+      </ul>
+      <h3>6.4 文献详情 / 期刊详情</h3>
+      <ul>
+        <li>面包屑吸顶条底部加 2px 陶土阅读进度条（scroll-driven，不支持时不显示）。</li>
+        <li>文献：刊头行（来源 · 类型 · 年份，等宽）→ 显示级标题 → 作者行 → 刊名斜体下划线 → 证据徽章与操作；摘要正文 Newsreader 文本光学尺寸、标签在页边；标识符 chip 复制反馈动效；深数据折叠区展开 / 收起有过渡。</li>
+        <li>期刊：大封面（书脊）+ 显示级刊名；影响力速览为大号衬线数字；趋势柱进入视口时自底生长；侧栏过时边界文案改为「查看该刊文献」引导。</li>
+      </ul>
+      <h3>6.5 状态页与加载</h3>
+      <ul>
+        <li>404 / 500：巨号衬线数字 + 半描线的「缺页之叶」+ 原文案，补页脚。</li>
+        <li>所有骨架：纸面微光（reduced-motion 下静止）。</li>
+      </ul>
+    </section>
+
+    <section id="motion">
+      <h2>7. 动效与微交互</h2>
+      <table>
+        <thead><tr><th>类别</th><th>实现</th><th>规则</th></tr></thead>
+        <tbody>
+          <tr><td>加载编排</td><td>CSS keyframes + 错峰 delay（Hero 文字遮罩上移、叶脉描线、下划线描出）</td><td>仅首屏；总时长 ≤ 2.4s；文字 1s 内可读</td></tr>
+          <tr><td>滚动入场</td><td><code>animation-timeline: view()</code>（@supports 渐进增强）</td><td>位移 ≤ 24px、只做一次视觉过渡、不支持的浏览器直接显示</td></tr>
+          <tr><td>状态过渡</td><td><code>@starting-style</code> + <code>transition-behavior: allow-discrete</code>（折叠区、对话框）</td><td>保留 <code>hidden</code> 语义</td></tr>
+          <tr><td>指示器</td><td>Base UI <code>Tabs.Indicator</code> 的 CSS 变量驱动滑动</td><td>—</td></tr>
+          <tr><td>悬停</td><td>下划线绘出、卡片上浮、箭头微动、封面微倾</td><td>只用 transform / opacity；触屏不依赖 hover</td></tr>
+          <tr><td>减弱动效</td><td>全部包在 <code>prefers-reduced-motion: no-preference</code> 内</td><td>减弱时零位移零描线、内容立即完整可见</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="quality">
+      <h2>8. 响应式 · 可访问性 · 性能</h2>
+      <ul>
+        <li><strong>断点验收</strong>：1440 / 1180 / 820 / 390 四档截图逐页检查；无横向滚动、无文字溢出、触控目标 ≥ 40px。</li>
+        <li><strong>可访问性</strong>：文字对比 ≥ 4.5:1（守护测试覆盖新 token）；焦点环规则不变；叶脉与装饰元素 <code>aria-hidden</code>；对话框焦点陷阱与 Esc 由 Base UI 提供；动效尊重系统偏好。</li>
+        <li><strong>性能</strong>：零新增依赖；叶脉为 RSC 内联 SVG（约 20KB）；动效全部 CSS（无 JS 动画循环、无滚动监听，导航透明态除外用 IntersectionObserver 哨兵）；字体按需字重。</li>
+      </ul>
+    </section>
+
+    <section id="testing">
+      <h2>9. 测试策略</h2>
+      <ul>
+        <li><strong>设计系统守护测试先行</strong>：字体、字号下限、反相 token 对比度、动效 token、reduced-motion 包裹等 DS 决策变化，先改 <code>tests/design-system/*</code> 使之失败，再改实现。</li>
+        <li><strong>新逻辑 TDD</strong>：叶脉生成器（确定性、路径数量 / 顺序、几何在叶缘内）、国家名格式化、QuickSearch（⌘K 打开、Esc 关闭、提交跳转）、页脚锚点与链接、导航滚动态。</li>
+        <li><strong>纯样式</strong>：以截图走查为验收（四档宽度 + reduced-motion），既有行为测试保持全绿。</li>
+        <li><strong>回归</strong>：vitest / typecheck / biome / e2e（指向 Mac mini 网关）全绿。</li>
+      </ul>
+    </section>
+
+    <section id="decisions">
+      <h2>关键决策与备选</h2>
+
+      <div class="decision">
+        <h3>决策 1：保留陶土唯一强调色，新增墨色反相表面制造节奏</h3>
+        <p>品牌标即陶土叶，强调色不动；用 ink-900 墨色区块（热议、页脚）打破全纸色的单调，形成「纸—墨—纸—纸—墨」节奏。</p>
+        <p class="alternatives"><strong>备选 A：</strong>换新配色 — 否决：与品牌标冲突，PAP-56 刚落地<br>
+        <strong>备选 B：</strong>期刊书架做墨色区 — 否决：深色封面在墨底上失去对比</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 2：Newsreader + IBM Plex Mono 替换 Source Serif 4 + JetBrains Mono</h3>
+        <p>编辑气质与学术感更强、显示光学尺寸更好；Inter 保留为界面主力。</p>
+        <p class="alternatives"><strong>备选 A：</strong>Fraunces — 否决：软圆怪趣，不适合医学<br>
+        <strong>备选 B：</strong>仅给 Source Serif 4 开 opsz — 否决：识别度提升有限</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 3：字号阶整体 +0.5px（下限 9.5 → 10px）</h3>
+        <p>中文小字可读性优先；比例不变，密度轻微下降可接受。守护测试同步更新下限。</p>
+        <p class="alternatives"><strong>备选：</strong>只放大显示字号 — 否决：小字等宽标签仍吃力</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 4：动效纯 CSS，零新增依赖</h3>
+        <p>keyframes + scroll-driven + @starting-style + Base UI 指示器即可覆盖全部设计；RSC 不必为动效变成客户端组件。</p>
+        <p class="alternatives"><strong>备选：</strong>Framer Motion / GSAP — 否决：包体积、客户端化、与 RSC 架构相悖</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 5：首页文献卡移除禁用的「评论 / 分享」，收藏改为可用</h3>
+        <p>与 /papers 列表「边界 D」一致；禁用占位是获奖级设计中的噪音。收藏复用详情页同一 mock store，图标切换带填充动效。</p>
+        <p class="alternatives"><strong>备选：</strong>保留但弱化 — 否决：仍是不可用的视觉噪音</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 6：新增 ⌘K 快速检索对话框</h3>
+        <p>导航已显示 ⌘K 提示与搜索按钮，但在非首页无响应——修复为全站可用的对话框，内嵌既有 Composer 与跳转逻辑。</p>
+        <p class="alternatives"><strong>备选：</strong>非首页跳回首页聚焦 — 否决：打断当前浏览上下文</p>
+      </div>
+
+      <div class="decision">
+        <h3>决策 7：TopNav 高度固定 56px，只做背景 / 发丝线过渡</h3>
+        <p>详情页侧栏吸顶偏移（134px）依赖导航高度；收缩导航会让侧栏在滚动起点晃动（PAP-58 回归）。</p>
+        <p class="alternatives"><strong>备选：</strong>64→56 收缩导航 — 否决：破坏 PAP-58 不变量</p>
+      </div>
+    </section>
+
+    <section id="risks">
+      <h2>风险与缓解</h2>
+      <table>
+        <thead>
+          <tr><th>风险</th><th>等级</th><th>缓解</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>换字体 / 字号阶导致局部溢出、截断</td>
+            <td><span class="pill mid">mid</span></td>
+            <td>四档宽度逐页截图走查；长刊名 / 长标题用真实数据验证</td>
+          </tr>
+          <tr>
+            <td>入场动画让内容在慢设备上「迟到」或截图半透明</td>
+            <td><span class="pill mid">mid</span></td>
+            <td>首屏文字 1s 内完成；滚动入场仅作用于视觉装饰位移、以 @supports 渐进增强；reduced-motion 全关</td>
+          </tr>
+          <tr>
+            <td>叶脉生成效果不够「像」</td>
+            <td><span class="pill low">low</span></td>
+            <td>已做探针验证羽状环结脉形态；参数集中可调</td>
+          </tr>
+          <tr>
+            <td>与并行会话（e2e 选择器修复）冲突</td>
+            <td><span class="pill low">low</span></td>
+            <td>独立 worktree；Composer 提交按钮可访问名保持精确「搜索」；不改 e2e 选择器</td>
+          </tr>
+          <tr>
+            <td>Google Fonts 拉取慢（直连超时重试）</td>
+            <td><span class="pill low">low</span></td>
+            <td>next/font 构建期自托管，线上无影响；本地 dev 首次稍慢</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="changes">
+      <h2>改造文件清单</h2>
+      <table>
+        <thead>
+          <tr><th>#</th><th>文件</th><th>操作</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td><code>patra-portal/src/styles/tokens.css</code></td><td><span class="pill modify">modify</span></td><td>字体 / 字号 / 反相 / 阴影 / 动效 / 容器 token</td></tr>
+          <tr><td>2</td><td><code>patra-portal/src/app/globals.css</code></td><td><span class="pill modify">modify</span></td><td>@theme 映射、纸纹、keyframes、滚动入场、自绘复选、折叠过渡</td></tr>
+          <tr><td>3</td><td><code>patra-portal/src/app/layout.tsx</code></td><td><span class="pill modify">modify</span></td><td>Newsreader / IBM Plex Mono / Inter opsz；挂载 QuickSearch</td></tr>
+          <tr><td>4</td><td><code>patra-portal/src/lib/venation.ts</code></td><td><span class="pill create">create</span></td><td>叶脉生成器（纯函数）</td></tr>
+          <tr><td>5</td><td><code>patra-portal/src/components/portal/Venation.tsx</code></td><td><span class="pill create">create</span></td><td>叶脉 SVG 渲染（RSC）</td></tr>
+          <tr><td>6</td><td><code>patra-portal/src/components/portal/QuickSearch.tsx</code></td><td><span class="pill create">create</span></td><td>⌘K 快速检索对话框</td></tr>
+          <tr><td>7</td><td><code>patra-portal/src/lib/country-name.ts</code></td><td><span class="pill create">create</span></td><td>国家码 → 中文名</td></tr>
+          <tr><td>8</td><td><code>patra-portal/src/components/portal/{TopNav,Hero,Composer,TopicCloud,Journals,JournalCoverCard,PaperCard,Footer,SectionEyebrow,…}.tsx</code></td><td><span class="pill modify">modify</span></td><td>首页与全站框架</td></tr>
+          <tr><td>9</td><td><code>patra-portal/src/components/portal/{browse,papers,journals}/*</code></td><td><span class="pill modify">modify</span></td><td>浏览页</td></tr>
+          <tr><td>10</td><td><code>patra-portal/src/components/portal/{paper-detail,journal-detail,status}/*</code></td><td><span class="pill modify">modify</span></td><td>详情页与状态页</td></tr>
+          <tr><td>11</td><td><code>patra-portal/src/app/**/loading.tsx · not-found.tsx · error.tsx</code></td><td><span class="pill modify">modify</span></td><td>骨架与状态页框架</td></tr>
+          <tr><td>12</td><td><code>patra-portal/tests/design-system/*</code> 及相关组件测试</td><td><span class="pill modify">modify</span></td><td>守护测试先行</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <aside class="callout info">
+      <span class="title">Done 判定</span>
+      <ol>
+        <li>7 类页面在 1440 / 1180 / 820 / 390 四档宽度下按本 spec 呈现，无溢出、无横向滚动</li>
+        <li>按排版、留白、视觉层级、色彩、动效、微交互、响应式、原创性八个维度自检，记录问题并迭代至无明显可提升项</li>
+        <li>vitest / typecheck / biome 全绿；e2e（指向 Mac mini 网关）全绿</li>
+        <li>prefers-reduced-motion 下无任何位移 / 描线动画，内容立即完整可见</li>
+        <li>浏览器控制台无报错、无 hydration 警告</li>
+        <li>改动停在本地 worktree 供用户验收，不 commit / 不开 PR</li>
+      </ol>
+    </aside>
+
+  </main>
+
+  <!-- ============================================================
+       右栏：我的备注（设计 / 评审时随手记，存浏览器 localStorage）
+       由 ../styles/user-notes.js 驱动，仅本机本浏览器、不进 git；
+       放子目录的 spec 把下方 <script src> 同改成 ../../styles/
+       ============================================================ -->
+  <aside class="notes-panel" id="user-notes-panel">
+    <header>
+      <h2>📝 我的备注</h2>
+      <p class="hint">边读边记，存到浏览器 <strong>localStorage</strong>（仅本机本浏览器，不进 git）。Ctrl/Cmd+Enter 快速提交。</p>
+    </header>
+
+    <form id="user-note-form" class="user-note-form">
+      <textarea id="user-note-input" placeholder="加一条备注（Ctrl/Cmd+Enter 提交）…" rows="3"></textarea>
+      <button type="submit">添加</button>
+    </form>
+
+    <ol class="notes-log" id="user-notes-list"></ol>
+
+    <p class="empty-state" id="user-notes-empty">no notes yet</p>
+
+    <div class="notes-stats">
+      <span id="user-notes-count">0</span> 条备注 · localStorage
+    </div>
+
+    <footer class="user-notes-actions">
+      <button type="button" id="user-notes-clear">🗑️ 清空全部</button>
+    </footer>
+  </aside>
+
+</div>
+<script src="../styles/user-notes.js" defer></script>
+</body>
+</html>

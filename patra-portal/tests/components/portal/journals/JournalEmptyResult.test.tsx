@@ -26,7 +26,7 @@ describe("JournalEmptyResult", () => {
 
     it("q 非空时标题带上搜索词", () => {
       render(<JournalEmptyResult kind="no-results" query={{ ...baseQuery, q: "nature" }} />);
-      expect(screen.getByRole("heading")).toHaveTextContent("nature");
+      expect(screen.getByRole("heading")).toHaveTextContent("未找到匹配「nature」的期刊");
     });
 
     it("渲染「清除全部筛选」链接", () => {

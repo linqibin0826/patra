@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useBrowseQuery } from "@/components/portal/browse/BrowseQueryProvider";
 import { cn } from "@/lib/utils";
@@ -34,7 +35,8 @@ export function pageWindow(cur: number, total: number): (number | "…")[] {
 
 const fmt = (n: number) => n.toLocaleString("en-US");
 
-const CELL = "flex h-8 w-8 items-center justify-center rounded-md border text-sm transition";
+const CELL =
+  "flex h-10 min-w-10 items-center justify-center rounded-md border px-2 font-mono text-sm tabular-nums transition-colors duration-200";
 
 interface BrowsePaginationProps {
   page: number;
@@ -60,19 +62,19 @@ export function BrowsePagination({ page: rawPage, total, pageSize, unit }: Brows
   const edgeClass = (disabled: boolean) =>
     cn(
       CELL,
-      "border-border-default",
-      disabled ? "pointer-events-none opacity-40" : "hover:border-ink-300 hover:bg-paper-100",
+      "border-border-default bg-paper-50 text-fg-1",
+      disabled ? "pointer-events-none opacity-40" : "hover:border-ink-500",
     );
 
   return (
-    <div className="flex flex-col items-center gap-3">
-      <p className="text-sm text-fg-3">
+    <div className="flex flex-col items-center gap-4 border-t border-border-default pt-10">
+      <p className="font-mono text-2xs tracking-mono text-fg-3">
         第 {fmt(start + 1)}–{fmt(end)} {unit} · 共 {fmt(total)} {unit}
       </p>
       <nav
         aria-label="分页"
         aria-disabled={isPending || undefined}
-        className={cn("flex items-center gap-1", isPending && "pointer-events-none opacity-50")}
+        className={cn("flex items-center gap-1.5", isPending && "pointer-events-none opacity-50")}
       >
         <Link
           href={hrefOf(page - 1)}
@@ -81,7 +83,7 @@ export function BrowsePagination({ page: rawPage, total, pageSize, unit }: Brows
           tabIndex={page <= 1 || isPending ? -1 : undefined}
           className={edgeClass(page <= 1)}
         >
-          ‹
+          <ChevronLeft className="size-4" strokeWidth={1.75} aria-hidden />
         </Link>
 
         {pageWindow(page, pageCount).map((item, position) =>
@@ -89,7 +91,7 @@ export function BrowsePagination({ page: rawPage, total, pageSize, unit }: Brows
             <span
               // biome-ignore lint/suspicious/noArrayIndexKey: 省略号无业务 id，位置索引是唯一标识；加 gap- 前缀避免与数字页码 key 相撞
               key={`gap-${position}`}
-              className="flex h-8 w-8 items-center justify-center text-sm text-fg-3"
+              className="flex h-10 min-w-8 items-center justify-center font-mono text-sm text-fg-3"
             >
               …
             </span>
@@ -104,7 +106,7 @@ export function BrowsePagination({ page: rawPage, total, pageSize, unit }: Brows
                 CELL,
                 item === page
                   ? "border-ink-900 bg-ink-900 font-semibold text-paper-50"
-                  : "border-border-default hover:border-ink-300 hover:bg-paper-100",
+                  : "border-transparent text-fg-2 hover:border-border-hover hover:bg-paper-50 hover:text-ink-900",
               )}
             >
               {item}
@@ -119,7 +121,7 @@ export function BrowsePagination({ page: rawPage, total, pageSize, unit }: Brows
           tabIndex={page >= pageCount || isPending ? -1 : undefined}
           className={edgeClass(page >= pageCount)}
         >
-          ›
+          <ChevronRight className="size-4" strokeWidth={1.75} aria-hidden />
         </Link>
       </nav>
     </div>

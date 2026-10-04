@@ -16,6 +16,19 @@ describe("PaperListItem", () => {
     expect(screen.getByText("10.1016/j.jare.2026.01.066")).toBeInTheDocument();
   });
 
+  it("摘要片段停在半句时补省略号", () => {
+    render(<PaperListItem paper={makePaper({ abstractSnippet: "Here, we demonst" })} />);
+    expect(screen.getByText("Here, we demonst…")).toBeInTheDocument();
+  });
+
+  it("标题的两行截断放在链接内部：链接自身不被裁，键盘焦点环完整", () => {
+    render(<PaperListItem paper={makePaper()} />);
+    const link = screen.getByRole("link", { name: /OSBPL6 protects/ });
+    // 截断容器（overflow: hidden）若是链接的祖先，会把链接的焦点环裁掉
+    expect(link.closest(".line-clamp-2")).toBeNull();
+    expect(link.querySelector(".line-clamp-2")).not.toBeNull();
+  });
+
   it("highlight 时标题命中片段渲染为 mark", () => {
     const { container } = render(<PaperListItem paper={makePaper()} highlight="osbpl6" />);
     // mark 无稳定 ARIA role，querySelector 是此处最后手段

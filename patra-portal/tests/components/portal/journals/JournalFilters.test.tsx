@@ -185,6 +185,32 @@ describe("JournalFilters", () => {
     });
   });
 
+  describe("国家 / 地区", () => {
+    it("显示服务端传入的中文标签，检索同时匹配中文名与代码", () => {
+      render(
+        <JournalsQueryProvider query={baseQuery}>
+          <JournalFilters facets={baseFacets} countryLabels={{ US: "美国 · US" }} />
+        </JournalsQueryProvider>,
+      );
+      expect(screen.getByRole("checkbox", { name: "美国 · US" })).toBeInTheDocument();
+      const search = screen.getByPlaceholderText("搜索国家 / 地区…");
+      fireEvent.change(search, { target: { value: "美" } });
+      expect(screen.getByRole("checkbox", { name: "美国 · US" })).toBeInTheDocument();
+      expect(screen.queryByRole("checkbox", { name: "UK" })).not.toBeInTheDocument();
+      fireEvent.change(search, { target: { value: "uk" } });
+      expect(screen.getByRole("checkbox", { name: "UK" })).toBeInTheDocument();
+      expect(screen.queryByRole("checkbox", { name: "美国 · US" })).not.toBeInTheDocument();
+    });
+  });
+
+  describe("移动抽屉", () => {
+    it("标题写出已选条件数（与文献页一致）", () => {
+      useBrowseFilterUiStore.setState({ sheetOpen: true });
+      renderFilters({ ...baseQuery, jcr: ["Q1"], oa: true });
+      expect(screen.getByRole("dialog", { name: "筛选 · 已选 2 项" })).toBeInTheDocument();
+    });
+  });
+
   describe("连点（乐观 query）", () => {
     it("连续勾选 Q1、Q2：勾选框立即打勾，第二次跳转两项都在", () => {
       renderFilters();

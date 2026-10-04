@@ -17,6 +17,16 @@ describe("Composer", () => {
     expect(screen.getByPlaceholderText("38491203")).toBeInTheDocument();
   });
 
+  it("切换到等宽模式时输入框行高不变（检索框高度不跳）", async () => {
+    const user = userEvent.setup();
+    render(<Composer />);
+    const leading = () => screen.getByRole("textbox").className.match(/(?:^|\s)leading-\S+/g);
+    const before = leading();
+    expect(before).not.toBeNull();
+    await user.click(screen.getByRole("tab", { name: "PMID" }));
+    expect(leading()).toEqual(before);
+  });
+
   it("DOI tab 切换后 input 应用 font-mono", async () => {
     const user = userEvent.setup();
     render(<Composer />);
@@ -32,6 +42,14 @@ describe("Composer", () => {
     await user.type(screen.getByRole("textbox"), "GLP-1");
     await user.click(screen.getByRole("button", { name: /搜索/ }));
     expect(onSubmit).toHaveBeenCalledWith({ mode: "keyword", value: "GLP-1" });
+  });
+
+  it("输入框 id 默认 hero-input，可由 inputId 覆盖（快速检索对话框与 Hero 同屏时避免重复 id）", () => {
+    const { unmount } = render(<Composer />);
+    expect(screen.getByRole("textbox")).toHaveAttribute("id", "hero-input");
+    unmount();
+    render(<Composer inputId="quick-search-input" />);
+    expect(screen.getByRole("textbox")).toHaveAttribute("id", "quick-search-input");
   });
 
   it("点击试试 chip 后填入对应 mode + text", async () => {

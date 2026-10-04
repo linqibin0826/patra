@@ -28,6 +28,21 @@ describe("FacetGroup", () => {
     );
     expect(screen.getByText("2")).toBeInTheDocument();
   });
+
+  it("标题按钮的可访问名写出已选数（不只念一个孤零零的数字）", () => {
+    const { rerender } = render(
+      <FacetGroup title="JCR 分区" selCount={1}>
+        <span />
+      </FacetGroup>,
+    );
+    expect(screen.getByRole("button", { name: "JCR 分区，已选 1 项" })).toBeInTheDocument();
+    rerender(
+      <FacetGroup title="JCR 分区" selCount={0}>
+        <span />
+      </FacetGroup>,
+    );
+    expect(screen.getByRole("button", { name: "JCR 分区" })).toBeInTheDocument();
+  });
 });
 
 describe("FacetCheckRow", () => {

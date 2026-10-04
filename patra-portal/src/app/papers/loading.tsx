@@ -3,7 +3,7 @@ import { PaperListSkeleton } from "@/components/portal/papers/PaperListSkeleton"
 import { TopNav } from "@/components/portal/TopNav";
 
 function Block({ className }: { className?: string }) {
-  return <div className={`animate-pulse rounded-lg bg-paper-200 ${className ?? ""}`} />;
+  return <div className={`shimmer rounded-lg bg-paper-200 ${className ?? ""}`} />;
 }
 
 /** /papers 首次进入的整页骨架（页头 / 检索条 / facet / 列表）。 */
@@ -12,7 +12,7 @@ export default function Loading() {
     <>
       <TopNav />
       <main aria-busy="true">
-        <div className="mx-auto max-w-[1200px] px-6 py-8">
+        <div className="mx-auto max-w-page px-gutter pt-10 pb-8 max-md:pt-6">
           <div className="border-b border-border-default pb-6">
             <div className="mb-4 flex items-center gap-1.5">
               <Block className="h-3 w-10" />
@@ -24,7 +24,7 @@ export default function Loading() {
             <Block className="mt-2 h-4 w-96 max-w-full" />
           </div>
 
-          <div className="mt-6 flex flex-col gap-3" aria-hidden>
+          <div className="mt-8 flex flex-col gap-4" aria-hidden>
             <div className="flex gap-1">
               <Block className="h-7 w-20" />
               <Block className="h-7 w-14" />
@@ -35,8 +35,8 @@ export default function Loading() {
             <Block className="h-5 w-56" />
           </div>
 
-          <div className="mt-6 flex items-start gap-8" aria-hidden>
-            <FacetSkeleton className="hidden w-60 shrink-0 md:flex" />
+          <div className="mt-10 flex items-start gap-12 max-lg:gap-8" aria-hidden>
+            <FacetSkeleton className="w-60" />
             <div className="min-w-0 flex-1">
               <PaperListSkeleton />
             </div>

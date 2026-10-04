@@ -77,6 +77,11 @@ describe("JournalSearchSortControls", () => {
       expect(url).not.toContain("page=");
     });
 
+    it("清除按钮与文献页同名「清除输入」", () => {
+      renderControls({ ...baseQuery, q: "nature" });
+      expect(screen.getByRole("button", { name: "清除输入" })).toBeInTheDocument();
+    });
+
     it("清除按钮清空输入并立即触发 router.replace", () => {
       renderControls({ ...baseQuery, q: "nature" });
       const clearBtn = screen.getByRole("button", { name: /清除/i });
@@ -90,17 +95,18 @@ describe("JournalSearchSortControls", () => {
   describe("排序段控件", () => {
     it("渲染全部 SORT_OPTIONS", () => {
       renderControls(baseQuery);
-      expect(screen.getByRole("button", { name: "影响因子" })).toBeInTheDocument();
+      // 降序项的可访问名带「，降序」（↓ 只是图形）
+      expect(screen.getByRole("button", { name: "影响因子，降序" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "中科院分区" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "刊名 A–Z" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "被引总数" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "被引总数，降序" })).toBeInTheDocument();
     });
 
     it("当前 sort 按钮 aria-pressed=true", () => {
       renderControls({ ...baseQuery, sort: "cas" });
       const casBtn = screen.getByRole("button", { name: "中科院分区" });
       expect(casBtn).toHaveAttribute("aria-pressed", "true");
-      const ifBtn = screen.getByRole("button", { name: "影响因子" });
+      const ifBtn = screen.getByRole("button", { name: "影响因子，降序" });
       expect(ifBtn).toHaveAttribute("aria-pressed", "false");
     });
 

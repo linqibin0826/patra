@@ -23,7 +23,7 @@ export default async function JournalsPage({
     <>
       <TopNav />
       <main>
-        <div className="mx-auto max-w-[1200px] px-6 py-8">
+        <div className="mx-auto max-w-page px-gutter pt-10 pb-8 max-md:pt-6">
           <JournalsQueryProvider query={query}>
             <BrowseHead
               crumb="期刊浏览"
@@ -31,12 +31,12 @@ export default async function JournalsPage({
               title="浏览全部期刊"
               description="Patra 追踪的同行评审期刊——按刊名检索，按影响因子 / 中科院分区 / 被引排序，按学科与分区收敛。"
             />
-            <div className="mt-6 flex flex-col gap-4">
+            <div className="mt-8 flex flex-col gap-4">
               <JournalSearchSortControls />
               <JournalActiveChips />
             </div>
             {/* 两栏：桌面 filter 侧栏 + 结果区 */}
-            <div className="mt-6 flex items-start gap-8">
+            <div className="mt-10 flex items-start gap-12 max-lg:gap-8">
               {/* 筛选面板：无 key——导航时保留旧面板平滑换计数，移动 sheet 不重挂 */}
               <Suspense fallback={<FacetSkeleton />}>
                 <JournalFiltersServer query={query} />

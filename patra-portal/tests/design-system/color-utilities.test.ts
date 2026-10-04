@@ -3,7 +3,7 @@ import { findAll, format, themeColors } from "./source-scan";
 
 /// 颜色类工具前缀 → 该前缀下「不是颜色」的取值（宽度、样式、尺寸等）。
 const NON_COLOR: Record<string, RegExp> = {
-  text: /^(\d?xs|sm|base|md|lg|\d?xl|left|center|right|justify|start|end|balance|pretty|nowrap|wrap|ellipsis|clip)$/,
+  text: /^(\d?xs|sm|base|md|lg|\d?xl|display-\d|left|center|right|justify|start|end|balance|pretty|nowrap|wrap|ellipsis|clip)$/,
   bg: /^(clip-.+|origin-.+|fixed|local|scroll|auto|cover|contain|center|top|bottom|left|right|no-repeat|repeat.*|none|gradient-.+|linear.*|radial.*|conic.*|blend-.+)$/,
   border:
     /^(\d+|x|y|t|b|l|r|s|e|[xytblrse]-\d+|solid|dashed|dotted|double|hidden|none|collapse|separate|spacing.*)$/,
