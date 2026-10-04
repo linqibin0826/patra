@@ -9,7 +9,7 @@
 | **linqibin-commons/** | 个人通用 Spring Boot 基建（commons + 11 starter） | Java 25 / Spring Boot 4 / Gradle |
 | **patra-starters/** | Patra 项目专属 starter（expr / provenance） | Java 25 / Spring Boot 4 |
 | **patra-api/** | 后端业务服务（微服务 + 六边形 + DDD） | Java 25 / Spring Boot 4 |
-| **patra-portal/** | 前端管理控制台（工程基建在 v0.4 启动，见 [v0.4 Portal Foundation](docs/patra/release-specs/)） | Next.js 15 / React 19 / TypeScript 5 / Tailwind v4 |
+| **patra-portal/** | 前端管理控制台（工程基建在 v0.4 启动，见 [v0.4 Portal Foundation](docs/patra/release-specs/)） | Next.js 16 / React 19 / TypeScript 5 / Tailwind v4 |
 | **patra-infra/** | 本地基建配置（Docker Compose、launchd） | Docker Compose / Bash / launchd |
 
 辅助目录：

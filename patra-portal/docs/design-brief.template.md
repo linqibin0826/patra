@@ -86,7 +86,7 @@
 ## 7. 约束
 
 - 视觉：沿用现有暖纸感 editorial 风格 + 高信息密度（borders 做活、阴影克制）
-- 技术：产出需能映射到 **Next 15 App Router（RSC 优先）/ Tailwind v4 / base-ui(shadcn)**
+- 技术：产出需能映射到 **Next 16 App Router（RSC 优先）/ Tailwind v4 / base-ui(shadcn)**
 - 可访问性：语义化 HTML + ARIA + 键盘可达 + 合理 focus order
 - 暗色模式：<要 / 不要>
 
