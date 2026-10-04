@@ -21,7 +21,7 @@ pnpm dev          # http://localhost:4001
 |---|---|
 | `pnpm dev` | 开发服务器（:4001） |
 | `pnpm build` | 生产构建 |
-| `pnpm typecheck` | `tsc --noEmit` |
+| `pnpm typecheck` | `next typegen && tsc --noEmit` |
 | `pnpm test` | `vitest run`（内容 integrity + 纯逻辑单测） |
 | `pnpm test:e2e` | Playwright smoke（仅本地，不进 CI；基座用 :4010——本机 QQ 占 127.0.0.1:4001） |
 | `pnpm lint` | `biome check .` |
