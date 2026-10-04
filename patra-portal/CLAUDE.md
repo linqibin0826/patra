@@ -14,7 +14,7 @@
 - **状态**：TanStack Query v5（服务端状态）+ Zustand（客户端 UI 状态）
 - **表单**：React Hook Form + Zod
 - **测试**：Vitest + Testing Library
-- **工具**：Biome（格式化 + lint）+ pnpm + Husky/lint-staged
+- **工具**：Biome（格式化 + lint）+ pnpm
 
 ## FE 工作原则
 

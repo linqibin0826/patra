@@ -17,13 +17,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "lint": "biome check .",
-    "format": "biome format --write .",
-    "prepare": "husky"
-  },
-  "lint-staged": {
-    "*.{ts,tsx,js,jsx,mjs,json,css}": [
-      "biome check --write --no-errors-on-unmatched"
-    ]
+    "format": "biome format --write ."
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -55,9 +49,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
-    "husky": "^9.1.7",
     "jsdom": "^29.1.1",
-    "lint-staged": "^17.5.1",
     "postcss": "^8.5.28",
     "typescript": "^6.0.3",
     "vite": "^8.3.0",
