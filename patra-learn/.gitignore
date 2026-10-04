@@ -15,6 +15,9 @@ coverage/
 # typescript incremental cache
 *.tsbuildinfo
 
+# Next.js 生成的类型入口：dev 与 build 写入的内容不同，由 next dev / build / typegen 重新生成
+next-env.d.ts
+
 # env / system
 .env
 .env.*

@@ -4,7 +4,7 @@
 
 Patra **内部学习站**（onboarding + 回顾）——把本仓库的 CI / CD / 巡检体系做成「地铁线路图」式课程。仅 tailscale 内网访问，端口 **4001**；部署走 `.github/workflows/learn-cd.yml`（deploy-only：pnpm 构建全在 `patra-learn/Dockerfile` 内完成，CD 只做 docker build + `deploy.sh`）。
 
-技术栈：Next.js 15 App Router + React 19（SSG，纯静态站无后端依赖）· TypeScript strict · Tailwind v4 · Biome · Vitest · Playwright。
+技术栈：Next.js 16 App Router + React 19（SSG，纯静态站无后端依赖）· TypeScript strict · Tailwind v4 · Biome · Vitest · Playwright。
 
 ## 内容即代码（扩展流程）
 
@@ -21,7 +21,7 @@ Patra **内部学习站**（onboarding + 回顾）——把本仓库的 CI / CD 
 
 - **线路 5 色**在 `src/content/lines.ts` 数据里（`color` / `softColor`），经内联 `style` 使用；
 - **中性 / 语义色**在 `src/app/globals.css` 的 `@theme` token（每个 token 必须真被 utility 消费，防死类）；
-- **字体**：`next/font` 自托管 Noto Sans SC（400/500/700/900，标题用 900）+ JetBrains Mono。
+- **字体**：正文用系统字体（西文 `system-ui`，中文系统黑体 `"PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC"`，与 portal 同一组）；代码用 JetBrains Mono，随 npm 包 `@fontsource-variable/jetbrains-mono` 安装、由 `layout.tsx` 引入。构建时不联网下载字体，所以能用 Next 16 默认的 Turbopack（它遇到任何一个字体请求失败都会让构建失败）。不要用 `next/font/google` 引入字体，也不要加中文网页字体：每个中文字族有 101 个切片，首次访问每页要多下载约 1 MB（`fonts.test.ts` 兜底）。
 
 ## 测试约定
 
@@ -33,3 +33,13 @@ Patra **内部学习站**（onboarding + 回顾）——把本仓库的 CI / CD 
 
 1. 文章讲的是**本仓库的真实系统**：技术事实以仓库代码为准（`cd.yml` / `learn-cd.yml` / `deploy.sh` / `runner-watchdog.yml` 等）。改基建后，相关课程文章要同步更新——不要让学习站讲一个已经不存在的系统。
 2. JSX 中文文本**不要句中断行**：JSX 内换行会渲染成可见空格，中文句子中间会出现异常空格。长句写一行，交给编辑器软换行。
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
