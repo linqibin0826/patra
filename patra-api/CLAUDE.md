@@ -15,12 +15,12 @@
 
 ## Skill 加载优先级
 
-1. **流程层 `patra:`**（plugin namespace，13 个方法论 skill）— 决定"怎么推进工作"：
-   - 新功能 → `patra:brainstorming` 先行
-   - 写计划 → `patra:writing-plans`
-   - 写代码 → `patra:test-driven-development` 全程
-   - 调 bug → `patra:systematic-debugging` 四阶段
-   - 完成任务 → `patra:requesting-code-review` + `patra:finishing-a-development-branch`
+1. **流程层 `superpowers:`**（上游 obra/superpowers plugin，Patra 约定见根 `.claude/rules/superpowers.md`）— 决定"怎么推进工作"：
+   - 新功能 → `superpowers:brainstorming` 先行
+   - 写计划 → `superpowers:writing-plans`
+   - 写代码 → `superpowers:test-driven-development` 全程
+   - 调 bug → `superpowers:systematic-debugging` 四阶段
+   - 完成任务 → `superpowers:requesting-code-review` + `superpowers:finishing-a-development-branch`
 
 2. **领域层 `patra-*`**（项目本地 skill）— 决定"代码写成什么样"：
    - 架构决策 / 创建组件 → `patra-hexagonal`
@@ -30,4 +30,4 @@
 
 **调用顺序**：流程层先行，领域层落地。示例"添加 Venue 导入功能"：
 
-`patra:brainstorming` → `patra:writing-plans` → `patra:test-driven-development(RED)` → `patra-hexagonal`（指导 Handler）→ `patra-jpa`（指导 Repository）→ `patra:test-driven-development(GREEN)` → `patra:requesting-code-review`
+`superpowers:brainstorming` → `superpowers:writing-plans` → `superpowers:test-driven-development(RED)` → `patra-hexagonal`（指导 Handler）→ `patra-jpa`（指导 Repository）→ `superpowers:test-driven-development(GREEN)` → `superpowers:requesting-code-review`

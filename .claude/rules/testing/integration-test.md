@@ -30,7 +30,7 @@ paths: patra-*/*-infra/**/src/integrationTest/**/*IT.java, patra-*/*-adapter/**/
 
 ### 测试配置类
 
-由于 adapter 模块不包含 `@SpringBootApplication`，需要提供 `{Module}ITWebMvcConfig`（命名规则见 `patra:test-driven-development` skill）：
+由于 adapter 模块不包含 `@SpringBootApplication`，需要提供 `{Module}ITWebMvcConfig`（命名规则见 `.claude/rules/testing/conventions.md`）：
 
 ```java
 // 例：catalog-adapter 的 CatalogAdapterITWebMvcConfig

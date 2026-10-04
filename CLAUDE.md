@@ -110,4 +110,6 @@ Patra 工作区包含以下子项目：
 | 按项目代码风格格式化 | `reformat_file` |
 | 增量编译验证 | `build_project` |
 
-重命名一律走 `rename_refactoring`，禁止用文本替换代替。IDEA 未打开或 MCP 不可用时退回内置工具，不阻塞工作。
+这些工具是 deferred tool，会话开始时只有名字、不能直接调用。**遇到上表任务时，先用 ToolSearch 加载（如 `select:mcp__jetbrains__search_symbol,mcp__jetbrains__analyze_calls`）再调用**，禁止因为"还没加载"就改用 grep / sed 代替。
+
+重命名一律走 `rename_refactoring`，禁止用文本替换代替。仅当加载后实际调用失败（IDEA 未打开、MCP 无响应）时才退回内置工具，不阻塞工作；不许未经尝试就预设不可用。
