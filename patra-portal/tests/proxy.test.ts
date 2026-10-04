@@ -16,8 +16,9 @@ afterEach(() => {
   fetchMock.mockReset();
 });
 
-/** 浏览器地址栏直接打开（文档请求）；`rsc` 为站内跳转 / 预取带的请求头 */
-function request(path: string, headers: Record<string, string> = {}) {
+/** 默认是浏览器地址栏直接打开（文档请求）。Next 交给中间层之前会剥掉 `rsc` 等内部请求头，
+ *  所以区分靠浏览器自带的 `Sec-Fetch-Dest`：地址栏打开是 document，页面里发起的 fetch 是 empty */
+function request(path: string, headers: Record<string, string> = { "sec-fetch-dest": "document" }) {
   return new NextRequest(`http://portal.test${path}`, { headers });
 }
 
@@ -59,8 +60,15 @@ describe("详情页直接打开时先确认存在", () => {
     expect(fetchMock.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal);
   });
 
-  it("站内跳转 / 预取（带 rsc 头）不问后端，照常流式出骨架", async () => {
-    const res = await proxy(request("/papers/not-a-real-id", { rsc: "1" }));
+  it("爬虫、curl 不带 Sec-Fetch-Dest，按直接打开处理，照样先确认存在", async () => {
+    fetchMock.mockResolvedValue(new Response(null, { status: 404 }));
+    const res = await proxy(request("/papers/42", {}));
+    expect(rewrittenTo(res)).toBe("http://portal.test/missing/paper");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("站内跳转 / 预取（页面里发起的 fetch）不问后端，照常流式出骨架", async () => {
+    const res = await proxy(request("/papers/not-a-real-id", { "sec-fetch-dest": "empty" }));
     expect(res.headers.get("x-middleware-next")).toBe("1");
     expect(fetchMock).not.toHaveBeenCalled();
   });
