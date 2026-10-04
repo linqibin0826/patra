@@ -1,18 +1,54 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { TopNav } from "@/components/portal/TopNav";
 
-// 仅覆写 usePathname，保留 next/navigation 其余导出（Next <Link> 渲染所需）
+// 覆写 usePathname / useRouter，保留 next/navigation 其余导出（Next <Link> 渲染所需）
 let mockPathname = "/";
+const mockPush = vi.fn<(url: string) => void>();
 vi.mock("next/navigation", async (importOriginal) => {
   const actual = await importOriginal<typeof import("next/navigation")>();
-  return { ...actual, usePathname: () => mockPathname };
+  return { ...actual, usePathname: () => mockPathname, useRouter: () => ({ push: mockPush }) };
 });
 
 afterEach(() => {
   mockPathname = "/";
+  mockPush.mockClear();
+});
+
+describe("TopNav 快速检索", () => {
+  it("⌘K 打开快速检索对话框", async () => {
+    const user = userEvent.setup();
+    render(<TopNav />);
+    await user.keyboard("{Meta>}k{/Meta}");
+    expect(await screen.findByRole("dialog", { name: "快速检索" })).toBeInTheDocument();
+  });
+
+  it("Ctrl+K 同样打开", async () => {
+    const user = userEvent.setup();
+    render(<TopNav />);
+    await user.keyboard("{Control>}k{/Control}");
+    expect(await screen.findByRole("dialog", { name: "快速检索" })).toBeInTheDocument();
+  });
+
+  it("点导航「快速检索」打开对话框，提交关键词跳 /papers?q= 并关闭", async () => {
+    const user = userEvent.setup();
+    render(<TopNav />);
+    await user.click(screen.getByRole("button", { name: /快速检索/ }));
+    const dialog = await screen.findByRole("dialog", { name: "快速检索" });
+    await user.type(within(dialog).getByRole("textbox"), "GLP-1");
+    await user.click(within(dialog).getByRole("button", { name: "搜索" }));
+    expect(mockPush).toHaveBeenCalledWith("/papers?q=GLP-1");
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: "快速检索" })).not.toBeInTheDocument(),
+    );
+  });
+
+  it("「关于」指向页脚 #about", () => {
+    render(<TopNav />);
+    expect(screen.getByRole("link", { name: "关于" })).toHaveAttribute("href", "#about");
+  });
 });
 
 describe("TopNav", () => {

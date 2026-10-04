@@ -1,7 +1,7 @@
 import { TopNav } from "@/components/portal/TopNav";
 
 function Block({ className }: { className?: string }) {
-  return <div className={`animate-pulse rounded-lg bg-paper-200 ${className ?? ""}`} />;
+  return <div className={`rounded-lg bg-paper-200 shimmer ${className ?? ""}`} />;
 }
 
 export default function Loading() {
@@ -10,10 +10,10 @@ export default function Loading() {
       <TopNav />
       <main>
         <div className="border-b border-border-default">
-          <div className="mx-auto h-11 max-w-[1200px] px-6" />
+          <div className="mx-auto h-11 max-w-page px-gutter" />
         </div>
         <div
-          className="mx-auto grid max-w-[1200px] grid-cols-[minmax(0,1fr)_340px] items-start gap-10 px-6 pt-8 max-[980px]:grid-cols-1"
+          className="mx-auto grid max-w-page grid-cols-[minmax(0,1fr)_340px] items-start gap-14 px-gutter pt-8 max-[1100px]:gap-10 max-[980px]:grid-cols-1"
           aria-hidden
         >
           <div className="flex min-w-0 flex-col gap-7">

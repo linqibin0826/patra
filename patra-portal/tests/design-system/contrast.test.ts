@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { findAll, format } from "./source-scan";
+import { contrastRatio, resolveToken } from "./tokens";
 
 describe("文字对比度", () => {
   it("可读文字不浅于 fg-3：fg-4 / ink-400 / ink-500 只用于占位符与禁用态", () => {
@@ -15,6 +16,16 @@ describe("文字对比度", () => {
     expect(format(findAll(/(?<![\w-])(?:[\w\-[\]=&>*:@.]+:)*text-(?:moss|amber)-500\b/))).toEqual(
       [],
     );
+  });
+});
+
+describe("墨色反相区", () => {
+  it("反相文字 token 在 bg-inverse 上对比度达标（正文 ≥ 7:1，强调 ≥ 4.5:1）", () => {
+    const bg = resolveToken("bg-inverse");
+    for (const fg of ["fg-inverse-1", "fg-inverse-2", "fg-inverse-3"]) {
+      expect(contrastRatio(resolveToken(fg), bg), fg).toBeGreaterThanOrEqual(7);
+    }
+    expect(contrastRatio(resolveToken("accent-on-inverse"), bg)).toBeGreaterThanOrEqual(4.5);
   });
 });
 

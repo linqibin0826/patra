@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { DetailCrumbs } from "@/components/portal/DetailCrumbs";
 import { DisclosureSection } from "@/components/portal/DisclosureSection";
 import { IdentifierChip } from "@/components/portal/IdentifierChip";
 import { JournalMasthead } from "@/components/portal/journal-detail/JournalMasthead";
@@ -8,6 +8,7 @@ import { MetricBadge } from "@/components/portal/journal-detail/MetricBadge";
 import { RatingTable } from "@/components/portal/journal-detail/RatingTable";
 import { TrendChart } from "@/components/portal/journal-detail/TrendChart";
 import { SectionEyebrow } from "@/components/portal/SectionEyebrow";
+import { countryLabel } from "@/lib/country-name";
 import {
   deriveMetricCards,
   deriveMetrics,
@@ -17,10 +18,10 @@ import {
 import type { VenueDetail } from "@/types/portal";
 
 const ISSN_PLACEHOLDER = "XXXX-XXXX";
-const DL = "grid grid-cols-[max-content_1fr] gap-x-5 gap-y-2.5 max-[540px]:grid-cols-1";
-const DT = "whitespace-nowrap font-sans text-sm text-fg-3";
+const DL = "grid grid-cols-[max-content_1fr] gap-x-8 gap-y-3 max-[540px]:grid-cols-1";
+const DT = "whitespace-nowrap font-mono text-2xs tracking-mono text-fg-3 pt-0.5";
 const DD = "m-0 font-sans text-md text-fg-1";
-const DD_MONO = "m-0 font-mono text-sm text-fg-1";
+const DD_MONO = "m-0 font-mono text-sm text-fg-1 tabular-nums";
 
 export function JournalDetailView({ venue }: { venue: VenueDetail }) {
   const metrics = deriveMetrics(venue);
@@ -33,47 +34,22 @@ export function JournalDetailView({ venue }: { venue: VenueDetail }) {
 
   return (
     <div className="pb-6">
-      <nav
-        aria-label="面包屑"
-        className="sticky top-14 z-30 border-b border-border-default bg-bg-sticky backdrop-blur"
-      >
-        <ol className="mx-auto flex h-11 max-w-[1200px] items-center gap-2 px-6 font-sans text-sm text-fg-3">
-          <li>
-            <Link
-              href="/"
-              className="rounded-sm px-1 py-0.5 text-fg-2 hover:bg-paper-200 hover:text-clay-700"
-            >
-              Patra
-            </Link>
-          </li>
-          <li aria-hidden className="text-ink-300">
-            /
-          </li>
-          <li className="max-[720px]:hidden">
-            <Link
-              href="/journals"
-              className="rounded-sm px-1 py-0.5 text-fg-2 hover:bg-paper-200 hover:text-clay-700"
-            >
-              期刊
-            </Link>
-          </li>
-          <li aria-hidden className="text-ink-300 max-[720px]:hidden">
-            /
-          </li>
-          <li aria-current="page" className="truncate font-medium text-fg-1">
-            {venue.abbreviatedTitle || venue.title}
-          </li>
-        </ol>
-      </nav>
+      <DetailCrumbs
+        trail={[
+          { label: "Patra", href: "/" },
+          { label: "期刊", href: "/journals" },
+        ]}
+        current={venue.abbreviatedTitle || venue.title}
+      />
 
-      <div className="mx-auto grid max-w-[1200px] grid-cols-[minmax(0,1fr)_340px] items-start gap-10 px-6 pt-8 max-[980px]:grid-cols-1 max-[980px]:gap-7 max-[980px]:pt-6">
-        <div className="flex min-w-0 flex-col gap-7">
+      <div className="mx-auto grid max-w-page grid-cols-[minmax(0,1fr)_340px] items-start gap-14 px-gutter pt-8 max-[1100px]:gap-10 max-[980px]:grid-cols-1 max-[980px]:gap-8 max-[980px]:pt-6">
+        <div className="flex min-w-0 flex-col gap-12 max-md:gap-10">
           <JournalMasthead venue={venue} />
 
           {cards.length > 0 && (
             <section aria-label="影响力速览">
-              <SectionEyebrow>影响力速览</SectionEyebrow>
-              <div className="grid grid-cols-3 gap-3 max-[540px]:grid-cols-2">
+              <SectionEyebrow className="mb-5">影响力速览</SectionEyebrow>
+              <div className="grid grid-cols-3 gap-4 max-[540px]:grid-cols-2 max-[540px]:gap-3">
                 {cards.map((c) => (
                   <MetricBadge key={c.key} card={c} />
                 ))}
@@ -84,7 +60,7 @@ export function JournalDetailView({ venue }: { venue: VenueDetail }) {
           <JournalPositioning venue={venue} subjects={subjects} />
 
           <section aria-label="深度数据">
-            <SectionEyebrow>深度数据 · 按需展开</SectionEyebrow>
+            <SectionEyebrow className="mb-2">深度数据 · 按需展开</SectionEyebrow>
             <div>
               <DisclosureSection title="完整评级明细" count="JCR · CAS · Scopus" defaultOpen>
                 <RatingTable metrics={metrics} />
@@ -129,7 +105,9 @@ export function JournalDetailView({ venue }: { venue: VenueDetail }) {
                   <dt className={DT}>语言</dt>
                   <dd className={DD}>{venue.primaryLanguage ?? "—"}</dd>
                   <dt className={DT}>国家 / 地区</dt>
-                  <dd className={DD}>{venue.countryCode ?? "—"}</dd>
+                  <dd className={DD}>
+                    {venue.countryCode ? countryLabel(venue.countryCode) : "—"}
+                  </dd>
                 </dl>
               </DisclosureSection>
 

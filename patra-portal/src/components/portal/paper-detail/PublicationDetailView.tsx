@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { Fragment } from "react";
+import { DetailCrumbs } from "@/components/portal/DetailCrumbs";
 import { DisclosureSection } from "@/components/portal/DisclosureSection";
 import { IdentifierChip } from "@/components/portal/IdentifierChip";
 import { AbstractBlock } from "@/components/portal/paper-detail/AbstractBlock";
@@ -9,10 +9,10 @@ import { PaperRail } from "@/components/portal/paper-detail/PaperRail";
 import { SectionEyebrow } from "@/components/portal/SectionEyebrow";
 import type { PaperDetail } from "@/types/portal";
 
-const DL = "grid grid-cols-[max-content_1fr] gap-x-5 gap-y-2.5 max-[540px]:grid-cols-1";
-const DT = "whitespace-nowrap font-sans text-sm text-fg-3";
+const DL = "grid grid-cols-[max-content_1fr] gap-x-8 gap-y-3 max-[540px]:grid-cols-1";
+const DT = "whitespace-nowrap font-mono text-2xs tracking-mono text-fg-3 pt-0.5";
 const DD = "m-0 font-sans text-md text-fg-1";
-const DD_MONO = "m-0 font-mono text-sm text-fg-1";
+const DD_MONO = "m-0 font-mono text-sm text-fg-1 tabular-nums";
 
 const DATE_LABELS: Record<string, string> = {
   received: "投稿",
@@ -21,59 +21,35 @@ const DATE_LABELS: Record<string, string> = {
   published: "正式出版",
 };
 
+/// 文献详情：吸顶面包屑（阅读进度）+ 主栏（题录头 → 摘要 → 关键标识 → 深度数据折叠区）+ 右侧吸顶栏。
 export function PublicationDetailView({ paper }: { paper: PaperDetail }) {
   const mesh = paper.meshHeadings;
   const funding = paper.funding;
   const hasOtherIds = Boolean(paper.pmcid || paper.pii);
-  const crumb = paper.pmid ?? paper.id;
+  const crumb = paper.pmid ? `PMID ${paper.pmid}` : `#${paper.id}`;
 
   return (
     <div className="pb-6">
-      <nav
-        aria-label="面包屑"
-        className="sticky top-14 z-30 border-b border-border-default bg-bg-sticky backdrop-blur"
-      >
-        <ol className="mx-auto flex h-11 max-w-[1200px] items-center gap-2 px-6 font-sans text-sm text-fg-3">
-          <li>
-            <Link
-              href="/"
-              className="rounded-sm px-1 py-0.5 text-fg-2 hover:bg-paper-200 hover:text-clay-700"
-            >
-              Patra
-            </Link>
-          </li>
-          <li aria-hidden className="text-ink-300">
-            /
-          </li>
-          <li className="max-[720px]:hidden">
-            <Link
-              href="/"
-              className="rounded-sm px-1 py-0.5 text-fg-2 hover:bg-paper-200 hover:text-clay-700"
-            >
-              文献
-            </Link>
-          </li>
-          <li aria-hidden className="text-ink-300 max-[720px]:hidden">
-            /
-          </li>
-          <li aria-current="page" className="truncate font-mono font-medium text-fg-1">
-            {crumb}
-          </li>
-        </ol>
-      </nav>
+      <DetailCrumbs
+        trail={[
+          { label: "Patra", href: "/" },
+          { label: "文献", href: "/papers" },
+        ]}
+        current={crumb}
+      />
 
-      <div className="mx-auto grid max-w-[1200px] grid-cols-[minmax(0,1fr)_340px] items-start gap-10 px-6 pt-8 max-[980px]:grid-cols-1 max-[980px]:gap-7 max-[980px]:pt-6">
-        <div className="flex min-w-0 flex-col gap-7">
+      <div className="mx-auto grid max-w-page grid-cols-[minmax(0,1fr)_340px] items-start gap-14 px-gutter pt-8 max-[1100px]:gap-10 max-[980px]:grid-cols-1 max-[980px]:gap-8 max-[980px]:pt-6">
+        <div className="flex min-w-0 flex-col gap-12 max-md:gap-10">
           <PaperHeader paper={paper} />
 
           <section aria-label="摘要">
-            <SectionEyebrow>摘要</SectionEyebrow>
+            <SectionEyebrow className="mb-5">摘要</SectionEyebrow>
             <AbstractBlock paper={paper} />
           </section>
 
           <section aria-label="关键标识">
-            <SectionEyebrow>关键标识</SectionEyebrow>
-            <div className="flex flex-wrap gap-2.5">
+            <SectionEyebrow className="mb-5">关键标识</SectionEyebrow>
+            <div className="flex flex-wrap gap-3">
               <IdentifierChip
                 label="DOI"
                 value={paper.doi}
@@ -88,7 +64,7 @@ export function PublicationDetailView({ paper }: { paper: PaperDetail }) {
           </section>
 
           <section aria-label="深度数据">
-            <SectionEyebrow>深度数据 · 按需展开</SectionEyebrow>
+            <SectionEyebrow className="mb-2">深度数据 · 按需展开</SectionEyebrow>
             <div>
               <DisclosureSection title="完整作者与机构" count={`${paper.authors.length} 位`}>
                 <AuthorList authors={paper.authors} />
@@ -102,8 +78,8 @@ export function PublicationDetailView({ paper }: { paper: PaperDetail }) {
                         key={h.descriptorUi}
                         className={
                           h.major
-                            ? "rounded-sm border border-clay-200 bg-clay-50 px-2 py-0.5 font-sans text-sm text-clay-800"
-                            : "rounded-sm border border-border-default bg-paper-100 px-2 py-0.5 font-sans text-sm text-fg-2"
+                            ? "rounded-full border border-clay-200 bg-clay-50 px-3 py-1 font-sans text-sm text-clay-800"
+                            : "rounded-full border border-border-default bg-paper-50 px-3 py-1 font-sans text-sm text-fg-2"
                         }
                       >
                         {h.major && <span title="主要主题词">★ </span>}
@@ -112,7 +88,7 @@ export function PublicationDetailView({ paper }: { paper: PaperDetail }) {
                     ))}
                   </div>
                   {paper.keywords.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-2">
+                    <div className="mt-4 flex flex-wrap gap-x-3 gap-y-1.5">
                       {paper.keywords.map((k) => (
                         <span key={k} className="font-mono text-xs text-fg-3">
                           #{k}
@@ -144,7 +120,7 @@ export function PublicationDetailView({ paper }: { paper: PaperDetail }) {
 
               {hasOtherIds && (
                 <DisclosureSection title="其他标识符">
-                  <div className="flex flex-wrap gap-2.5">
+                  <div className="flex flex-wrap gap-3">
                     {paper.pmcid && (
                       <IdentifierChip
                         label="PMCID"

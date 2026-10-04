@@ -10,26 +10,33 @@ interface BrowseHeadProps {
 }
 
 /**
- * 浏览页标题区（静态 RSC）：面包屑 + eyebrow + h1 + 副文案。
+ * 浏览页标题区（静态 RSC）：等宽面包屑 + eyebrow + 显示级 h1 + 副文案，底部发丝线收束。
  */
 export function BrowseHead({ crumb, eyebrow, title, description }: BrowseHeadProps) {
   return (
-    <div className="border-b border-border-default pb-6">
-      <nav aria-label="面包屑" className="mb-4 flex items-center gap-1.5 text-xs text-fg-3">
-        <Link href="/" className="transition-colors hover:text-ink-700">
+    <div className="border-b border-border-default pb-8 max-md:pb-7">
+      <nav
+        aria-label="面包屑"
+        className="mb-7 flex items-center gap-2 font-mono text-2xs tracking-mono text-fg-3 max-md:mb-5"
+      >
+        <Link href="/" className="link-draw pb-px transition-colors hover:text-ink-900">
           Patra
         </Link>
         <span aria-hidden="true">/</span>
-        <span aria-current="page">{crumb}</span>
+        <span aria-current="page" className="text-fg-2">
+          {crumb}
+        </span>
       </nav>
 
-      <SectionEyebrow className="mb-0">{eyebrow}</SectionEyebrow>
+      <SectionEyebrow className="anim-fade mb-4">{eyebrow}</SectionEyebrow>
 
-      <h1 className="mt-1 font-serif text-3xl font-medium leading-tight tracking-tight text-ink-900">
+      <h1 className="anim-rise font-serif text-display-3 leading-heading font-medium tracking-tight text-ink-900 [--delay:60ms]">
         {title}
       </h1>
 
-      <p className="mt-2 max-w-xl text-sm text-fg-3">{description}</p>
+      <p className="anim-rise mt-4 max-w-[46em] text-md leading-relaxed break-keep text-fg-2 [--delay:140ms]">
+        {description}
+      </p>
     </div>
   );
 }

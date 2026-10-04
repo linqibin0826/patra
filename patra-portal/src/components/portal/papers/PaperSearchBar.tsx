@@ -96,10 +96,10 @@ export function PaperSearchBar() {
   };
 
   return (
-    <div className="flex flex-col gap-2.5 border-b border-border-default pb-3">
+    <div className="flex flex-col gap-3.5">
       <fieldset
         aria-label="检索方式"
-        className="flex min-w-0 items-center gap-1 max-md:overflow-x-auto"
+        className="m-0 flex min-w-0 items-center gap-1 border-0 p-0 max-md:overflow-x-auto max-md:[scrollbar-width:none]"
       >
         {SEARCH_MODES.map((m) => (
           <button
@@ -108,10 +108,10 @@ export function PaperSearchBar() {
             aria-pressed={mode === m.id}
             onClick={() => switchMode(m.id)}
             className={cn(
-              "shrink-0 rounded-md px-3 py-1 text-sm font-medium transition-colors",
+              "shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors duration-200",
               mode === m.id
                 ? "bg-ink-900 text-paper-50"
-                : "text-fg-3 hover:bg-paper-200 hover:text-ink-900",
+                : "text-fg-2 hover:bg-paper-200 hover:text-ink-900",
             )}
           >
             {m.label}
@@ -122,12 +122,12 @@ export function PaperSearchBar() {
         ))}
       </fieldset>
 
-      <div className="flex flex-wrap items-center gap-3.5">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
         <form
           onSubmit={handleSubmit}
-          className="flex min-w-0 flex-1 basis-[360px] items-center gap-2"
+          className="flex min-w-0 flex-1 basis-[420px] items-center gap-2.5"
         >
-          <div className="flex min-w-0 flex-1 items-center gap-2.5 rounded-md border border-border-strong bg-bg-elevated px-3 shadow-inset transition-colors focus-within:border-border-focus">
+          <div className="flex h-12 min-w-0 flex-1 items-center gap-3 rounded-xl border border-border-strong bg-bg-elevated pr-2 pl-4 shadow-inset transition-colors duration-200 focus-within:border-border-focus">
             <SearchIcon className="size-4 shrink-0 text-fg-3" aria-hidden="true" />
             <input
               type="search"
@@ -143,7 +143,7 @@ export function PaperSearchBar() {
               autoComplete="off"
               spellCheck="false"
               className={cn(
-                "min-w-0 flex-1 border-0 bg-transparent py-2.5 text-base text-ink-900 outline-none placeholder:text-fg-4",
+                "min-w-0 flex-1 border-0 bg-transparent text-md text-ink-900 outline-none placeholder:text-fg-4",
                 current?.mono && "font-mono text-sm",
               )}
             />
@@ -152,7 +152,7 @@ export function PaperSearchBar() {
                 type="button"
                 aria-label="清除输入"
                 onClick={handleClear}
-                className="flex size-6 shrink-0 items-center justify-center rounded text-fg-3 hover:bg-paper-200 hover:text-ink-900"
+                className="flex size-7 shrink-0 items-center justify-center rounded-full text-fg-3 transition-colors hover:bg-paper-200 hover:text-ink-900"
               >
                 <XIcon className="size-3.5" />
               </button>
@@ -160,9 +160,9 @@ export function PaperSearchBar() {
           </div>
           <button
             type="submit"
-            className="flex shrink-0 items-center gap-1.5 self-stretch rounded-md border border-border-strong bg-paper-50 px-3.5 text-sm font-semibold text-fg-1 transition-colors hover:bg-paper-200"
+            className="flex h-12 shrink-0 items-center gap-1.5 rounded-full bg-ink-900 px-6 text-sm font-semibold text-paper-50 transition duration-200 hover:bg-ink-800 motion-safe:active:scale-[0.97]"
           >
-            <SearchIcon className="size-3.5 text-clay-600" aria-hidden="true" />
+            <SearchIcon className="size-3.5" aria-hidden="true" />
             检索
           </button>
         </form>

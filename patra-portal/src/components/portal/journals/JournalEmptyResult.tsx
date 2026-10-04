@@ -24,7 +24,7 @@ export function JournalEmptyResult({ kind, query }: JournalEmptyResultProps) {
 
   return (
     <EmptyState
-      title={query.q ? `未找到匹配 "${query.q}" 的期刊` : "未找到匹配的期刊"}
+      title={query.q ? `未找到匹配「${query.q}」的期刊` : "未找到匹配的期刊"}
       description="请尝试更换搜索词，或放宽筛选条件后重试。"
       actions={[
         { href: "/journals", label: "清除全部筛选" },

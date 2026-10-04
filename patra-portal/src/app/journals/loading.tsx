@@ -3,7 +3,7 @@ import { JournalGridSkeleton } from "@/components/portal/journals/JournalGridSke
 import { TopNav } from "@/components/portal/TopNav";
 
 function Block({ className }: { className?: string }) {
-  return <div className={`animate-pulse rounded-lg bg-paper-200 ${className ?? ""}`} />;
+  return <div className={`shimmer rounded-lg bg-paper-200 ${className ?? ""}`} />;
 }
 
 export default function Loading() {
@@ -11,7 +11,7 @@ export default function Loading() {
     <>
       <TopNav />
       <main aria-busy="true">
-        <div className="mx-auto max-w-[1200px] px-6 py-8">
+        <div className="mx-auto max-w-page px-gutter pt-10 pb-8 max-md:pt-6">
           {/* Head 占位 */}
           <div className="border-b border-border-default pb-6">
             <div className="mb-4 flex items-center gap-1.5">
@@ -25,7 +25,7 @@ export default function Loading() {
           </div>
 
           {/* 检索条占位 */}
-          <div className="mt-6 flex flex-col gap-3" aria-hidden>
+          <div className="mt-8 flex flex-col gap-4" aria-hidden>
             <Block className="h-9 w-full" />
             <div className="flex gap-2">
               <Block className="h-8 w-20" />
@@ -36,7 +36,7 @@ export default function Loading() {
           </div>
 
           {/* 两栏占位 */}
-          <div className="mt-6 flex items-start gap-8" aria-hidden>
+          <div className="mt-10 flex items-start gap-12 max-lg:gap-8" aria-hidden>
             <div className="hidden md:block w-56 shrink-0">
               <FacetSkeleton />
             </div>

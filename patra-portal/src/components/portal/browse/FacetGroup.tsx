@@ -12,27 +12,33 @@ interface FacetGroupProps {
   children: ReactNode;
 }
 
-/// 可折叠的一组 facet：标题按钮控制展开，内容区是以组名为可访问名的 fieldset。
+/// 可折叠的一组 facet：标题按钮控制展开，内容区是以组名为可访问名的 fieldset（展开时淡入下落）。
 export function FacetGroup({ title, selCount, defaultOpen = true, children }: FacetGroupProps) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border-b border-border last:border-0">
+    <div className="border-b border-border-subtle last:border-0">
       <button
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center gap-1 px-1 py-2 text-sm font-medium"
+        className="group/fg flex w-full items-center gap-2 py-3.5 text-left"
       >
-        <ChevronDownIcon className={cn("size-3.5 transition-transform", !open && "-rotate-90")} />
-        <span className="flex-1 text-left">{title}</span>
+        <span className="flex-1 text-sm font-semibold text-ink-900">{title}</span>
         {selCount > 0 && (
-          <span className="flex size-4 items-center justify-center rounded-full bg-primary text-3xs text-primary-foreground">
+          <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-action-primary px-1 font-mono text-3xs font-semibold text-fg-on-clay tabular-nums">
             {selCount}
           </span>
         )}
+        <ChevronDownIcon
+          aria-hidden
+          className={cn(
+            "size-3.5 text-fg-3 transition-transform duration-300 ease-out-expo group-hover/fg:text-ink-900",
+            !open && "-rotate-90",
+          )}
+        />
       </button>
       {open && (
-        <fieldset aria-label={title} className="border-0 p-0 pb-2 pl-1">
+        <fieldset aria-label={title} className="disclosure-body m-0 min-w-0 border-0 p-0 pb-4">
           {children}
         </fieldset>
       )}

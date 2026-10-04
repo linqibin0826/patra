@@ -1,3 +1,4 @@
+import { Footer } from "@/components/portal/Footer";
 import { NotFoundState } from "@/components/portal/status/NotFoundState";
 import { TopNav } from "@/components/portal/TopNav";
 
@@ -8,6 +9,7 @@ export default function JournalNotFound() {
       <main>
         <NotFoundState kind="journal" />
       </main>
+      <Footer />
     </>
   );
 }

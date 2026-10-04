@@ -1,10 +1,14 @@
 import { ExternalLink, Sparkles } from "lucide-react";
-import Image from "next/image";
 import { BookmarkButton } from "@/components/portal/paper-detail/BookmarkButton";
 import { deriveEvidence, deriveFullText } from "@/lib/portal-api/publication-derive";
 import { btnBlock, btnPrimary, btnSecondary } from "@/lib/portal-ui";
 import type { PaperDetail } from "@/types/portal";
 
+const CARD = "rounded-xl border border-border-default bg-paper-50 p-5";
+const CARD_LABEL =
+  "mb-4 flex items-center gap-2 font-mono text-2xs uppercase tracking-mono text-fg-3";
+
+/// 文献详情右侧栏：操作（去全文 / 收藏）→ AI 速读（mock 占位）→ 速览数据。
 export function PaperRail({ paper }: { paper: PaperDetail }) {
   const fullText = deriveFullText(paper);
   const ev = deriveEvidence(paper.evidenceLevel);
@@ -18,9 +22,10 @@ export function PaperRail({ paper }: { paper: PaperDetail }) {
 
   return (
     <>
-      <div className="rounded-lg border border-border-default bg-paper-50 p-4">
-        <div className="mb-3 font-mono text-3xs uppercase tracking-mono text-fg-3">操作</div>
-        <div className="flex flex-col gap-2">
+      {/* 单栏布局时侧栏落到正文之后，题录头已有同样的操作按钮，不再重复 */}
+      <div className={`${CARD} max-[980px]:hidden`}>
+        <div className={CARD_LABEL}>操作</div>
+        <div className="flex flex-col gap-2.5">
           {fullText.href ? (
             <a
               className={`${btnPrimary} ${btnBlock}`}
@@ -39,41 +44,44 @@ export function PaperRail({ paper }: { paper: PaperDetail }) {
         </div>
       </div>
 
-      <div className="rounded-lg border border-clay-200 bg-clay-50 p-4">
-        <div className="mb-2.5 flex items-center gap-2 font-mono text-3xs uppercase tracking-mono text-fg-3">
-          <Image src="/brand/patra-mark.svg" alt="" aria-hidden width={4} height={13} /> AI 速读
-          <span className="ml-auto rounded-sm border border-clay-200 bg-paper-50 px-1.5 py-px text-3xs normal-case text-clay-700">
+      <div className="rounded-xl border border-clay-200 bg-clay-50 p-5">
+        <div className={CARD_LABEL}>
+          <span aria-hidden className="h-3 w-1 rounded-[1px] bg-clay-600" />
+          AI 速读
+          <span className="ml-auto rounded-full border border-clay-200 bg-paper-50 px-2 py-px text-3xs normal-case text-clay-700">
             mock · 占位
           </span>
         </div>
         {paper.aiSummary ? (
-          <p className="m-0 font-serif text-sm leading-normal text-ink-800">{paper.aiSummary}</p>
+          <p className="m-0 font-serif text-md leading-relaxed text-ink-800">{paper.aiSummary}</p>
         ) : (
-          <p className="m-0 font-sans text-sm italic text-fg-3">尚未生成 AI 速读。</p>
+          <p className="m-0 font-serif text-md text-fg-3 italic">尚未生成 AI 速读。</p>
         )}
         <button
           type="button"
           disabled
           title="AI 速读为本版占位（mock），未接真实模型"
-          className="mt-3 inline-flex cursor-not-allowed items-center gap-1.5 rounded-md border border-clay-200 bg-paper-50 px-2.5 py-1.5 font-sans text-sm text-clay-700 opacity-70"
+          className="mt-4 inline-flex cursor-not-allowed items-center gap-1.5 rounded-full border border-clay-200 bg-paper-50 px-3 py-1.5 font-sans text-sm text-clay-700 opacity-70"
         >
           <Sparkles size={13} aria-hidden /> {paper.aiSummary ? "重新生成" : "生成速读"}
         </button>
       </div>
 
-      <div className="rounded-lg border border-border-default bg-paper-50 p-4">
-        <div className="mb-3 font-mono text-3xs uppercase tracking-mono text-fg-3">速览</div>
-        <div className="flex flex-col">
+      <div className={CARD}>
+        <div className={CARD_LABEL}>速览</div>
+        <dl className="m-0 flex flex-col">
           {stats.map((s) => (
             <div
               key={s.k}
-              className="flex items-baseline justify-between gap-3 border-t border-border-subtle py-2.5 first:border-t-0"
+              className="flex items-baseline justify-between gap-3 border-t border-border-subtle py-3 first:border-t-0 first:pt-0 last:pb-0"
             >
-              <span className="font-sans text-sm text-fg-3">{s.k}</span>
-              <span className="font-mono text-md font-medium tabular-nums text-ink-900">{s.v}</span>
+              <dt className="font-sans text-sm text-fg-3">{s.k}</dt>
+              <dd className="m-0 text-right font-sans text-md font-semibold tabular-nums text-ink-900">
+                {s.v}
+              </dd>
             </div>
           ))}
-        </div>
+        </dl>
       </div>
     </>
   );

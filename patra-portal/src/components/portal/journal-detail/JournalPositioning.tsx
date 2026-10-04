@@ -1,6 +1,8 @@
 import { SectionEyebrow } from "@/components/portal/SectionEyebrow";
+import { formatSubject } from "@/lib/subject-label";
 import type { VenueDetail } from "@/types/portal";
 
+/// 定位与范围：由结构化事实（学科、出版频率、索引、获取方式）组合成的标签行。
 export function JournalPositioning({
   venue,
   subjects,
@@ -10,7 +12,7 @@ export function JournalPositioning({
 }) {
   const tags: { k: string; v: string }[] = [];
   for (const s of subjects) {
-    tags.push({ k: "学科", v: s });
+    tags.push({ k: "学科", v: formatSubject(s) });
   }
   if (venue.frequency) {
     tags.push({ k: "出版", v: venue.frequency });
@@ -24,20 +26,18 @@ export function JournalPositioning({
   });
 
   return (
-    <section className="rounded-lg border border-border-default bg-paper-50 px-5 py-[18px]">
-      <SectionEyebrow>定位与范围</SectionEyebrow>
-      <p className="mb-3 font-sans text-sm leading-normal text-fg-3">
+    <section aria-label="定位与范围">
+      <SectionEyebrow className="mb-2">定位与范围</SectionEyebrow>
+      <p className="mb-4 font-sans text-sm leading-normal text-fg-3">
         由结构化事实组合 —— 该刊暂无编辑撰写的简介文本。
       </p>
       <div className="flex flex-wrap gap-2">
         {tags.map((t) => (
           <span
             key={`${t.k}-${t.v}`}
-            className="inline-flex items-center gap-1.5 rounded-sm border border-border-default bg-paper-100 px-2.5 py-1 font-sans text-sm font-medium leading-normal text-fg-2"
+            className="inline-flex items-center gap-2 rounded-full border border-border-default bg-paper-50 py-1.5 pr-3.5 pl-3 font-sans text-sm font-medium leading-normal text-fg-1"
           >
-            <span className="mr-px border-r border-border-default pr-1.5 font-mono text-3xs uppercase tracking-mono text-fg-3">
-              {t.k}
-            </span>
+            <span className="font-mono text-3xs uppercase tracking-mono text-fg-3">{t.k}</span>
             {t.v}
           </span>
         ))}

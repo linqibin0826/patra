@@ -44,7 +44,7 @@ export default async function PapersPage({
     <>
       <TopNav />
       <main>
-        <div className="mx-auto max-w-[1200px] px-6 py-8">
+        <div className="mx-auto max-w-page px-gutter pt-10 pb-8 max-md:pt-6">
           <PapersQueryProvider query={query}>
             <BrowseHead
               crumb="文献浏览"
@@ -52,11 +52,11 @@ export default async function PapersPage({
               title="浏览全部文献"
               description="Patra 收录的医学文献——按关键词、PMID、DOI 或作者检索，按年份 / 文献类型 / 证据等级 / 期刊收敛，点任一篇查看完整元信息与摘要。"
             />
-            <div className="mt-6 flex flex-col gap-3">
+            <div className="mt-8 flex flex-col gap-4">
               <PaperSearchBar />
               <Suspense
                 fallback={
-                  <div aria-hidden="true" className="h-5 w-56 animate-pulse rounded bg-paper-200" />
+                  <div aria-hidden="true" className="h-5 w-56 shimmer rounded bg-paper-200" />
                 }
               >
                 <PapersInfoRow query={query} />
@@ -66,7 +66,7 @@ export default async function PapersPage({
               </Suspense>
             </div>
             {/* 两栏：桌面 facet 侧栏 + 结果区 */}
-            <div className="mt-6 flex items-start gap-8">
+            <div className="mt-10 flex items-start gap-12 max-lg:gap-8">
               {/* facet：无 key——导航时保留旧面板平滑换计数，移动抽屉不重挂 */}
               <Suspense fallback={<FacetSkeleton className="hidden w-60 shrink-0 md:flex" />}>
                 <PaperFiltersServer query={query} currentYear={currentYear} />

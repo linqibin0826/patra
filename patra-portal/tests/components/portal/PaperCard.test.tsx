@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { PaperCard } from "@/components/portal/PaperCard";
@@ -59,6 +60,33 @@ describe("PaperCard", () => {
     render(<PaperCard paper={makePaper({ journal: null, year: null })} />);
     expect(screen.getByText(/Perkovic V\./)).toBeInTheDocument();
     expect(screen.queryByText("·")).not.toBeInTheDocument();
+  });
+
+  it("不再渲染禁用的「评论」「分享」占位按钮", () => {
+    render(<PaperCard paper={makePaper()} />);
+    expect(screen.queryByRole("button", { name: /评论/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /分享/ })).not.toBeInTheDocument();
+  });
+
+  it("收藏是可切换按钮（与详情页共用 mock store）", async () => {
+    const user = userEvent.setup();
+    render(<PaperCard paper={makePaper({ id: "card-bookmark" })} />);
+    const btn = screen.getByRole("button", { name: /收藏/ });
+    expect(btn).toHaveAttribute("aria-pressed", "false");
+    await user.click(btn);
+    expect(btn).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("lead 变体展示摘要片段", () => {
+    render(
+      <PaperCard paper={makePaper({ abstractSnippet: "BACKGROUND: lead text" })} variant="lead" />,
+    );
+    expect(screen.getByText(/BACKGROUND: lead text/)).toBeInTheDocument();
+  });
+
+  it("index 以两位序号显示", () => {
+    render(<PaperCard paper={makePaper()} index={3} />);
+    expect(screen.getByText("03")).toBeInTheDocument();
   });
 
   it("详情链接指向 /papers/[id]", () => {

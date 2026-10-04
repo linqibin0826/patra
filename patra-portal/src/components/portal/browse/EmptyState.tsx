@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { Venation } from "@/components/portal/Venation";
+import { btnSecondary } from "@/lib/portal-ui";
 
 export interface EmptyStateAction {
   href: string;
@@ -11,20 +13,20 @@ interface EmptyStateProps {
   actions: EmptyStateAction[];
 }
 
-const ACTION_CLASS =
-  "rounded-md border border-border-default px-4 py-2 text-sm transition hover:border-ink-300 hover:bg-paper-100";
-
 /**
- * 浏览页空态外壳（RSC 纯渲染）：衬线标题 + 说明 + 按钮组，文案由调用方决定。
+ * 浏览页空态外壳（RSC 纯渲染）：一片静态小叶 + 衬线标题 + 说明 + 药丸按钮组，文案由调用方决定。
  */
 export function EmptyState({ title, description, actions }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center gap-4 py-20 text-center">
-      <h2 className="font-serif text-2xl font-medium text-fg-1">{title}</h2>
-      <p className="max-w-sm text-sm text-fg-3">{description}</p>
-      <div className="flex flex-wrap justify-center gap-3">
+    <div className="flex flex-col items-center gap-4 border-y border-border-subtle py-20 text-center">
+      <Venation id="empty-leaf" className="mb-2 h-24 w-auto -rotate-12 opacity-60" />
+      <h2 className="max-w-[24em] font-serif text-3xl leading-heading font-medium tracking-tight text-balance text-fg-1">
+        {title}
+      </h2>
+      <p className="max-w-sm text-sm leading-relaxed text-fg-3">{description}</p>
+      <div className="mt-2 flex flex-wrap justify-center gap-3">
         {actions.map((action) => (
-          <Link key={action.href + action.label} href={action.href} className={ACTION_CLASS}>
+          <Link key={action.href + action.label} href={action.href} className={btnSecondary}>
             {action.label}
           </Link>
         ))}

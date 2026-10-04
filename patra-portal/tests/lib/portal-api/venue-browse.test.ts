@@ -374,6 +374,12 @@ describe("deriveActiveChips", () => {
     expect(chips.at(0)?.label).toBe("Medicine");
   });
 
+  it("全大写学科名的 chip 标签转为标题式大小写，取值保持原样", () => {
+    const [chip] = deriveActiveChips(q({ subject: ["MEDICINE, GENERAL & INTERNAL"] }));
+    expect(chip?.value).toBe("MEDICINE, GENERAL & INTERNAL");
+    expect(chip?.label).toBe("Medicine, General & Internal");
+  });
+
   it("jcr 生成 chip，group='JCR 分区'", () => {
     const chips = deriveActiveChips(q({ jcr: ["Q1", "Q2"] }));
     expect(chips).toHaveLength(2);

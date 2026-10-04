@@ -60,6 +60,19 @@
   --bg-sticky: rgba(247, 242, 232, 0.88); /* paper-100 · 88%，吸顶条配 backdrop-blur */
   --bg-scrim: rgba(28, 25, 23, 0.32); /* sheet / dialog 遮罩 */
 
+  /* Inverse (ink) surfaces — 热议区 / 页脚等墨色区块，制造明暗节奏 */
+  --bg-inverse: var(--ink-900);
+  --bg-inverse-raised: var(--ink-800);
+  --fg-inverse-1: var(--paper-50); /* 17:1 */
+  --fg-inverse-2: var(--ink-200); /* 13:1 */
+  --fg-inverse-3: var(--ink-300); /* 9.8:1 — 墨底上的可读下限 */
+  --accent-on-inverse: var(--clay-300); /* 7.7:1 — 墨底上的强调文字 */
+  --border-inverse: rgba(251, 248, 242, 0.12);
+  --border-inverse-strong: rgba(251, 248, 242, 0.24);
+
+  /* 纸纹：以 50% 灰为中心的灰阶 fractal noise，配合 body 的 overlay 混合只添质感、不改画布均色 */
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='1.5 0 0 0 -0.25 1.5 0 0 0 -0.25 1.5 0 0 0 -0.25 0 0 0 0 1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+
   /* Foreground — 可读文字最浅到 fg-3；fg-4 只给占位符与禁用态 */
   --fg-1: var(--ink-900); /* primary */
   --fg-2: var(--ink-700); /* secondary */
@@ -107,6 +120,12 @@
   --link: var(--clay-700);
   --link-hover: var(--clay-800);
 
+  /* 自绘复选 / 单选的选中图形（纸色勾线 / 圆点，叠在 action-primary 填充上） */
+  --check-mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.6 8.4l2.9 2.9 5.9-6.6' fill='none' stroke='%23fbf8f2' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --radio-dot: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='3.2' fill='%23fbf8f2'/%3E%3C/svg%3E");
+
+  --switch-knob: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Ccircle cx='7' cy='7' r='6.5' fill='%23ffffff'/%3E%3C/svg%3E");
+
   /* Selection */
   --selection-bg: #f4d9b8;
   --selection-fg: var(--ink-900);
@@ -115,32 +134,40 @@
   --patra-font-sans:
     var(--font-inter), var(--font-noto-sans-sc), ui-sans-serif, system-ui, -apple-system,
     "Segoe UI", sans-serif;
+  /* Newsreader：屏幕阅读衬线，opsz 6–72 随字号自动切换光学尺寸 */
   --patra-font-serif:
-    var(--font-source-serif), var(--font-noto-serif-sc), "Source Serif Pro", Georgia,
-    "Iowan Old Style", serif;
+    var(--font-newsreader), var(--font-noto-serif-sc), Georgia, "Iowan Old Style", serif;
+  /* IBM Plex Mono：人文主义等宽，DOI / PMID / 标签；中文回退到 Noto Sans SC 而非系统字体 */
   --patra-font-mono:
-    var(--font-jetbrains-mono), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    var(--font-plex-mono), var(--font-noto-sans-sc), ui-monospace, "SF Mono", Menlo, Consolas,
+    monospace;
 
-  /* Type scale — UI-leaning, tight, dense.
+  /* Type scale — UI-leaning 但不逼仄：整体 +0.5px，中文小字可读优先。
      Each step uses a paired line-height + tracking. */
-  --text-3xs: 9.5px; /* 微标签，全站字号下限 */
-  --text-2xs: 10.5px;
-  --text-xs: 11.5px;
-  --text-sm: 12.5px; /* table cells, dense rows */
-  --text-base: 13.5px; /* body UI */
-  --text-md: 14.5px;
-  --text-lg: 16px;
-  --text-xl: 18px;
-  --text-2xl: 22px;
-  --text-3xl: 28px;
-  --text-4xl: 36px;
-  --text-5xl: 48px;
+  --text-3xs: 10px; /* 微标签，全站字号下限 */
+  --text-2xs: 11px;
+  --text-xs: 12px;
+  --text-sm: 13px; /* table cells, dense rows */
+  --text-base: 14px; /* body UI */
+  --text-md: 15px;
+  --text-lg: 17px;
+  --text-xl: 19px;
+  --text-2xl: 24px;
+  --text-3xl: 30px;
+  --text-4xl: 40px;
+  --text-5xl: 52px;
+  /* 流体显示字号：海报级标题，随视口在区间内线性缩放 */
+  --text-display-1: clamp(2.875rem, 1.6rem + 5.4vw, 7rem); /* 46 → 112 */
+  --text-display-2: clamp(2.25rem, 1.5rem + 3.4vw, 4.5rem); /* 36 → 72 */
+  --text-display-3: clamp(1.75rem, 1.3rem + 1.9vw, 3rem); /* 28 → 48 */
 
   --leading-tight: 1.15;
   --leading-snug: 1.3;
   --leading-normal: 1.45;
   --leading-relaxed: 1.6;
   --leading-reading: 1.65; /* serif long-form */
+  --leading-display: 1.02; /* 海报级标题 */
+  --leading-heading: 1.12; /* 区块标题 */
 
   --tracking-tight: -0.02em;
   --tracking-normal: 0;
@@ -148,6 +175,7 @@
   --tracking-mono: 0.06em; /* 等宽大写标签 */
   --tracking-caps: 0.08em; /* sans 大写 eyebrow */
   --tracking-spaced: 0.14em; /* 期刊封面装饰小字 */
+  --tracking-display: -0.035em; /* 拉丁显示字收紧 */
 
   /* ============ SHAPE & SPACE ============ */
   --radius-xs: 2px;
@@ -176,6 +204,20 @@
   --shadow-md: 0 4px 12px -4px rgba(28, 25, 23, 0.1), 0 0 0 1px rgba(28, 25, 23, 0.05);
   --shadow-lg: 0 12px 32px -8px rgba(28, 25, 23, 0.16), 0 0 0 1px rgba(28, 25, 23, 0.05);
   --shadow-inset: inset 0 1px 0 0 rgba(28, 25, 23, 0.04);
+  --shadow-xl: 0 28px 72px -20px rgba(28, 25, 23, 0.32), 0 0 0 1px rgba(28, 25, 23, 0.06);
+  /* 期刊封面：贴面落影；hover 抬起后影子拉长变淡 */
+  --shadow-cover: 0 1px 2px rgba(28, 25, 23, 0.14), 0 10px 22px -12px rgba(28, 25, 23, 0.42);
+  --shadow-cover-hover: 0 2px 4px rgba(28, 25, 23, 0.12), 0 26px 44px -18px rgba(28, 25, 23, 0.5);
+  /* 首页检索框：悬浮在纸面上的长投影 */
+  --shadow-composer: 0 1px 0 rgba(28, 25, 23, 0.04), 0 22px 48px -28px rgba(28, 25, 23, 0.34);
+  /* 期刊封面书脊：左缘暗、紧接一道高光 */
+  --cover-spine: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.32) 0,
+    rgba(0, 0, 0, 0.1) 5px,
+    rgba(255, 255, 255, 0.1) 7px,
+    rgba(255, 255, 255, 0) 16px
+  );
 
   /* Focus ring */
   --ring-focus:
@@ -187,4 +229,13 @@
   --dur-fast: 120ms;
   --dur-normal: 180ms;
   --dur-slow: 280ms;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1); /* 入场主曲线：快起、长尾 */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-in-out-quint: cubic-bezier(0.83, 0, 0.17, 1); /* 描线：慢起慢收 */
+  --dur-reveal: 900ms;
+  --dur-draw: 2400ms;
+
+  /* Layout — 版心与页边距 */
+  --page-max: 1280px;
+  --gutter: clamp(20px, 4vw, 48px);
 }

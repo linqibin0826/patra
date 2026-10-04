@@ -34,6 +34,14 @@ describe("Composer", () => {
     expect(onSubmit).toHaveBeenCalledWith({ mode: "keyword", value: "GLP-1" });
   });
 
+  it("输入框 id 默认 hero-input，可由 inputId 覆盖（快速检索对话框与 Hero 同屏时避免重复 id）", () => {
+    const { unmount } = render(<Composer />);
+    expect(screen.getByRole("textbox")).toHaveAttribute("id", "hero-input");
+    unmount();
+    render(<Composer inputId="quick-search-input" />);
+    expect(screen.getByRole("textbox")).toHaveAttribute("id", "quick-search-input");
+  });
+
   it("点击试试 chip 后填入对应 mode + text", async () => {
     const user = userEvent.setup();
     render(<Composer />);

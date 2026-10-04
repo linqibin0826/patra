@@ -1,3 +1,4 @@
+import { formatSubject } from "@/lib/subject-label";
 import type {
   ActiveFilterChip,
   VenueBrowseFilters,
@@ -168,6 +169,7 @@ const CHIP_GROUP_CONFIGS: ChipGroupConfig[] = [
   {
     group: "学科",
     getValues: (q) => q.subject,
+    getLabel: formatSubject,
     makeNext: (q, value) => ({ ...q, subject: q.subject.filter((v) => v !== value), page: 1 }),
   },
   {
