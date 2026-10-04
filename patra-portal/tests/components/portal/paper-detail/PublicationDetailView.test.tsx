@@ -47,13 +47,13 @@ function paper(overrides: Partial<PaperDetail> = {}): PaperDetail {
 }
 
 describe("PublicationDetailView", () => {
-  it("AI 速读尚未接入：侧栏如实写「未上线」，不对访客露出 mock 字样", () => {
+  it("AI 速读尚未接入：按未上线功能的统一写法挂「即将上线」，不对访客露出 mock 字样", () => {
     render(<PublicationDetailView paper={paper()} />);
-    expect(screen.getByText("未上线")).toBeInTheDocument();
+    expect(screen.getByText("即将上线")).toBeInTheDocument();
     expect(screen.queryByText(/mock/i)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /生成速读|重新生成/ })).toHaveAttribute(
       "title",
-      "AI 速读尚未上线",
+      "功能即将上线",
     );
   });
 

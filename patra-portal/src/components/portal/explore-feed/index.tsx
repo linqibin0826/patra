@@ -94,7 +94,7 @@ export function FeedSection({ children, tabs }: { children: ReactNode; tabs: Rea
             值得读一读的文献
           </h2>
           <p className="mt-4 max-w-[40em] text-sm leading-relaxed break-keep text-fg-3">
-            最近入库与高被引的文献。AI 速读尚未上线；上线后也只作线索，不能替代阅读原文。
+            最近入库与高被引的文献。AI 速读即将上线，上线后也只作线索，不能替代阅读原文。
           </p>
         </div>
         <div className="shrink-0">{tabs}</div>
