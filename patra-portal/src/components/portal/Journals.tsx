@@ -41,7 +41,7 @@ export async function Journals() {
         >
           <span className="link-draw pb-px">浏览全部期刊</span>
           <ArrowRight
-            className="size-3.5 transition-transform duration-300 ease-out-expo motion-safe:group-hover/link:translate-x-0.5"
+            className="size-3.5 motion-safe:transition-transform duration-300 ease-out-expo motion-safe:group-hover/link:translate-x-0.5"
             strokeWidth={1.75}
             aria-hidden
           />

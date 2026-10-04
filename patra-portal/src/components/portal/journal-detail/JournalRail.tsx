@@ -3,6 +3,7 @@ import Link from "next/link";
 import { buildPapersHref } from "@/lib/portal-api/paper-search";
 import type { JournalMetrics } from "@/lib/portal-api/venue-derive";
 import { btnBlock, btnPrimary } from "@/lib/portal-ui";
+import { cn } from "@/lib/utils";
 import type { VenueDetail } from "@/types/portal";
 
 const CARD_LABEL =
@@ -56,9 +57,9 @@ export function JournalRail({ venue, metrics }: { venue: VenueDetail; metrics: J
             href={venue.homepageUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className={`${btnPrimary} ${btnBlock} mt-5`}
+            className={cn(btnPrimary, btnBlock, "mt-5")}
           >
-            访问官网 <ExternalLink size={14} />
+            访问官网 <ExternalLink size={14} data-icon="trailing" />
           </a>
         )}
       </div>
@@ -76,7 +77,7 @@ export function JournalRail({ venue, metrics }: { venue: VenueDetail; metrics: J
         </span>
         <span
           aria-hidden
-          className="flex size-10 shrink-0 items-center justify-center rounded-full bg-ink-900 text-paper-50 transition-transform duration-300 ease-out-expo motion-safe:group-hover/papers:translate-x-1"
+          className="flex size-10 shrink-0 items-center justify-center rounded-full bg-ink-900 text-paper-50 motion-safe:transition-transform duration-300 ease-out-expo motion-safe:group-hover/papers:translate-x-1"
         >
           <ArrowRight className="size-4" strokeWidth={1.75} />
         </span>

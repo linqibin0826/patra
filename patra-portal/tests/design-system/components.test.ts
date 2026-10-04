@@ -79,6 +79,10 @@ describe("组件对齐设计系统", () => {
     expect(format(hits)).toEqual([]);
   });
 
+  it("btnBlock 经 cn() 与按钮类串合并（模板字符串拼接时 btnBlock 的 px-4 会被 BTN_BASE 的 px-5 盖掉）", () => {
+    expect(format(findAll(/\$\{btn(?:Primary|Secondary)\}\s+\$\{btnBlock\}/))).toEqual([]);
+  });
+
   it("本版不做暗色：sonner 不依赖 next-themes", () => {
     expect(comp("ui/sonner.tsx")).not.toMatch(/next-themes/);
   });

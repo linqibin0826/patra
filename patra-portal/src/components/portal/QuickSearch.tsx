@@ -23,7 +23,7 @@ export function QuickSearch({ open, onOpenChange }: QuickSearchProps) {
         <Dialog.Backdrop className="fixed inset-0 z-50 bg-ink-900/70 backdrop-blur-sm transition-opacity duration-300 data-ending-style:opacity-0 data-starting-style:opacity-0" />
         <Dialog.Popup
           initialFocus={() => document.getElementById(INPUT_ID)}
-          className="fixed top-[16vh] left-1/2 z-50 w-[min(760px,calc(100vw-32px))] -translate-x-1/2 transition-[opacity,scale,translate] duration-300 ease-out-expo data-ending-style:-translate-y-1 data-ending-style:scale-[0.98] data-ending-style:opacity-0 data-starting-style:-translate-y-2 data-starting-style:scale-[0.98] data-starting-style:opacity-0 max-sm:top-4"
+          className="fixed top-[16vh] left-1/2 z-50 w-[min(760px,calc(100vw-32px))] -translate-x-1/2 transition-opacity motion-safe:transition-[opacity,scale,translate] duration-300 ease-out-expo motion-safe:data-ending-style:-translate-y-1 motion-safe:data-ending-style:scale-[0.98] data-ending-style:opacity-0 motion-safe:data-starting-style:-translate-y-2 motion-safe:data-starting-style:scale-[0.98] data-starting-style:opacity-0 max-sm:top-4"
         >
           <Dialog.Title className="sr-only">快速检索</Dialog.Title>
           <Composer
@@ -49,7 +49,6 @@ export function QuickSearch({ open, onOpenChange }: QuickSearchProps) {
             className="mt-4 flex justify-center gap-6 font-mono text-2xs tracking-mono text-fg-inverse-1 max-sm:hidden"
           >
             <span>↵ 检索</span>
-            <span>Tab 切换检索方式</span>
             <span>Esc 关闭</span>
           </p>
         </Dialog.Popup>

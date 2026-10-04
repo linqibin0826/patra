@@ -8,7 +8,7 @@ export default function Loading() {
   return (
     <>
       <TopNav />
-      <main>
+      <main aria-busy="true">
         <div className="border-b border-border-default">
           <div className="mx-auto h-11 max-w-page px-gutter" />
         </div>

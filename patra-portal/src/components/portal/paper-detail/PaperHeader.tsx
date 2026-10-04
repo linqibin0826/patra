@@ -63,7 +63,7 @@ export function PaperHeader({ paper }: { paper: PaperDetail }) {
         {paper.venueId && paper.venueName ? (
           <Link
             href={`/journals/${paper.venueId}`}
-            className="link-draw pb-px font-serif text-lg font-medium text-link italic transition-colors hover:text-link-hover"
+            className="link-draw pb-px font-serif text-lg font-medium text-link italic hover:text-link-hover"
           >
             {paper.venueName}
           </Link>
@@ -87,7 +87,7 @@ export function PaperHeader({ paper }: { paper: PaperDetail }) {
               target="_blank"
               rel="noopener noreferrer"
             >
-              {fullText.label} <ExternalLink size={14} />
+              {fullText.label} <ExternalLink size={14} data-icon="trailing" />
             </a>
           ) : (
             <button className={`${btnSecondary} opacity-55`} type="button" disabled>

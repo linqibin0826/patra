@@ -99,7 +99,8 @@ export function PaperSearchBar() {
     <div className="flex flex-col gap-3.5">
       <fieldset
         aria-label="检索方式"
-        className="m-0 flex min-w-0 items-center gap-1 border-0 p-0 max-md:overflow-x-auto max-md:[scrollbar-width:none]"
+        // 窄屏横向滚动时四周留 4px 再用负外边距抵消：滚动容器会裁掉越界的焦点环
+        className="m-0 flex min-w-0 items-center gap-1 border-0 p-0 max-md:-m-1 max-md:overflow-x-auto max-md:p-1 max-md:[scrollbar-width:none]"
       >
         {SEARCH_MODES.map((m) => (
           <button

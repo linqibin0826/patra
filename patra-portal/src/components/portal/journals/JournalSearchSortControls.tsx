@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useBrowseQuery } from "@/components/portal/browse/BrowseQueryProvider";
 import { FilterTrigger } from "@/components/portal/browse/FilterTrigger";
 import { SortSegmented } from "@/components/portal/browse/SortSegmented";
-import { SORT_OPTIONS } from "@/lib/portal-api/venue-browse";
+import { SORT_OPTIONS, venueFilterCount } from "@/lib/portal-api/venue-browse";
 import type { VenueBrowseQuery } from "@/types/portal";
 
 /// 期刊浏览页检索 / 排序条。
@@ -68,15 +68,6 @@ export function JournalSearchSortControls() {
     [navigate],
   );
 
-  const activeFilterCount =
-    query.subject.length +
-    query.jcr.length +
-    query.cas.length +
-    query.country.length +
-    (query.casTop ? 1 : 0) +
-    (query.oa ? 1 : 0) +
-    (query.doaj ? 1 : 0);
-
   return (
     <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
       <form
@@ -98,7 +89,7 @@ export function JournalSearchSortControls() {
           {localQ && (
             <button
               type="button"
-              aria-label="清除搜索"
+              aria-label="清除输入"
               onClick={handleClear}
               className="flex size-7 shrink-0 items-center justify-center rounded-full text-fg-3 transition-colors hover:bg-paper-200 hover:text-ink-900"
             >
@@ -117,7 +108,7 @@ export function JournalSearchSortControls() {
 
       <SortSegmented options={SORT_OPTIONS} value={query.sort} onChange={handleSort} />
 
-      <FilterTrigger count={activeFilterCount} />
+      <FilterTrigger count={venueFilterCount(query)} />
     </div>
   );
 }

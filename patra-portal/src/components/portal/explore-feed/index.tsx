@@ -71,7 +71,7 @@ function FeedLayout({ papers }: { papers: Paper[] }) {
         >
           查看更多文献
           <ArrowRight
-            className="size-4 transition-transform duration-300 ease-out-expo motion-safe:group-hover/more:translate-x-1"
+            className="size-4 motion-safe:transition-transform duration-300 ease-out-expo motion-safe:group-hover/more:translate-x-1"
             strokeWidth={1.75}
             aria-hidden
           />

@@ -4,6 +4,7 @@ import { Fragment, type ReactNode } from "react";
 import { AISummaryBadge } from "@/components/portal/AISummaryBadge";
 import { BookmarkButton } from "@/components/portal/paper-detail/BookmarkButton";
 import { RichInlineText } from "@/components/portal/RichInlineText";
+import { snippetText } from "@/lib/portal-api/publication-derive";
 import { sourceDotClass } from "@/lib/portal-ui";
 import { cn } from "@/lib/utils";
 import type { Paper } from "@/types/portal";
@@ -43,7 +44,7 @@ export function PaperCard({ paper, variant = "default", index }: PaperCardProps)
   return (
     <article
       className={cn(
-        "group/paper relative flex h-full flex-col border-t border-border-default before:absolute before:-top-px before:left-0 before:h-0.5 before:w-0 before:bg-clay-500 before:transition-[width] before:duration-700 before:ease-out-expo hover:before:w-full",
+        "group/paper relative flex h-full flex-col border-t border-border-default before:absolute before:-top-px before:left-0 before:h-0.5 before:w-0 before:bg-clay-500 motion-safe:before:transition-[width] before:duration-700 before:ease-out-expo hover:before:w-full",
         lead ? "gap-4 pt-6" : "gap-3 pt-5 pb-7",
       )}
     >
@@ -108,7 +109,7 @@ export function PaperCard({ paper, variant = "default", index }: PaperCardProps)
 
       {lead && paper.abstractSnippet && (
         <p className="line-clamp-5 max-w-[62ch] font-serif text-lg leading-relaxed text-pretty text-fg-2">
-          {paper.abstractSnippet}
+          {snippetText(paper.abstractSnippet)}
         </p>
       )}
 
@@ -123,7 +124,7 @@ export function PaperCard({ paper, variant = "default", index }: PaperCardProps)
         >
           阅读详情
           <ArrowRight
-            className="size-3.5 transition-transform duration-300 ease-out-expo motion-safe:group-hover/more:translate-x-0.5"
+            className="size-3.5 motion-safe:transition-transform duration-300 ease-out-expo motion-safe:group-hover/more:translate-x-0.5"
             strokeWidth={1.75}
             aria-hidden
           />

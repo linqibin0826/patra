@@ -42,8 +42,14 @@ describe("Footer", () => {
     );
   });
 
-  it("含版本与索引快照标签", () => {
+  it("底栏不写过期的版本号与写死的快照时间", () => {
     render(<Footer />);
-    expect(screen.getByText(/索引快照/)).toBeInTheDocument();
+    expect(screen.queryByText(/V0\.4/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/索引快照/)).not.toBeInTheDocument();
+  });
+
+  it("关于段全角句号后不多出半角空格", () => {
+    render(<Footer />);
+    expect(screen.getByText(/装订成册。Patra 把散落在/)).toBeInTheDocument();
   });
 });

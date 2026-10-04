@@ -36,14 +36,22 @@ function isNavActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-/// 吸顶导航：高度恒为 56px（详情页面包屑 / 侧栏的吸顶偏移依赖它），滚动离开顶部后才出现纸色毛玻璃与发丝线。
+/// 吸顶导航：内容区恒高 56px，另有 1px 下边框（详情页面包屑 / 侧栏的吸顶偏移依赖它），滚动离开顶部后才出现纸色毛玻璃与发丝线。
 /// ⌘K / Ctrl+K 与「快速检索」按钮在任何页面唤起检索对话框。
 export function TopNav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchLoaded, setSearchLoaded] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  // 快捷键提示：服务端与首帧写 ⌘K，挂载后在非 Apple 平台改写 Ctrl K（避免水合不一致）
+  const [shortcut, setShortcut] = useState("⌘K");
   const pathname = usePathname();
+
+  useEffect(() => {
+    if (!/Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent)) {
+      setShortcut("Ctrl K");
+    }
+  }, []);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -99,7 +107,7 @@ export function TopNav() {
                     <span className="link-draw pb-px">{item.label}</span>
                     <span
                       aria-hidden
-                      className="absolute -bottom-0.5 left-1/2 size-1 -translate-x-1/2 scale-0 rounded-full bg-clay-500 transition-transform duration-300 ease-out-expo group-aria-[current=page]/nav:scale-100"
+                      className="absolute -bottom-0.5 left-1/2 size-1 -translate-x-1/2 scale-0 rounded-full bg-clay-500 motion-safe:transition-transform duration-300 ease-out-expo group-aria-[current=page]/nav:scale-100"
                     />
                   </Link>
                 </li>
@@ -122,7 +130,7 @@ export function TopNav() {
               aria-hidden
               className="rounded-full border border-border-subtle bg-paper-100 px-2 py-0.5 font-mono text-3xs text-fg-3 transition-colors group-hover/qs:border-border-default max-[880px]:hidden"
             >
-              ⌘K
+              {shortcut}
             </kbd>
           </button>
           <a

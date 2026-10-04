@@ -17,6 +17,16 @@ describe("Composer", () => {
     expect(screen.getByPlaceholderText("38491203")).toBeInTheDocument();
   });
 
+  it("切换到等宽模式时输入框行高不变（检索框高度不跳）", async () => {
+    const user = userEvent.setup();
+    render(<Composer />);
+    const leading = () => screen.getByRole("textbox").className.match(/(?:^|\s)leading-\S+/g);
+    const before = leading();
+    expect(before).not.toBeNull();
+    await user.click(screen.getByRole("tab", { name: "PMID" }));
+    expect(leading()).toEqual(before);
+  });
+
   it("DOI tab 切换后 input 应用 font-mono", async () => {
     const user = userEvent.setup();
     render(<Composer />);

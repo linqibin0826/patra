@@ -5,7 +5,9 @@ const BLOCK = "rounded-sm bg-paper-200 shimmer";
 /// 单条文献的骨架：来源行 → 两行标题 → 元信息，与 PaperCard 同构。
 function EntrySkeleton({ lead = false }: { lead?: boolean }) {
   return (
-    <div className="flex flex-col gap-3 border-t border-border-default pt-5 pb-7">
+    <div
+      className={`flex flex-col border-t border-border-default ${lead ? "gap-4 pt-6" : "gap-3 pt-5 pb-7"}`}
+    >
       <div className={`h-3 w-40 ${BLOCK}`} />
       <div className={`${lead ? "h-10" : "h-5"} w-11/12 ${BLOCK}`} />
       <div className={`${lead ? "h-10" : "h-5"} w-2/3 ${BLOCK}`} />

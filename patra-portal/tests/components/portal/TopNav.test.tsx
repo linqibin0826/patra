@@ -45,9 +45,39 @@ describe("TopNav 快速检索", () => {
     );
   });
 
+  it("对话框的键位提示只写真实可用的按键（不写「Tab 切换检索方式」）", async () => {
+    const user = userEvent.setup();
+    render(<TopNav />);
+    await user.keyboard("{Meta>}k{/Meta}");
+    const dialog = await screen.findByRole("dialog", { name: "快速检索" });
+    expect(within(dialog).getByText("↵ 检索")).toBeInTheDocument();
+    expect(within(dialog).queryByText(/Tab/)).not.toBeInTheDocument();
+  });
+
   it("「关于」指向页脚 #about", () => {
     render(<TopNav />);
     expect(screen.getByRole("link", { name: "关于" })).toHaveAttribute("href", "#about");
+  });
+});
+
+describe("TopNav 快捷键提示", () => {
+  const setPlatform = (platform: string) =>
+    Object.defineProperty(window.navigator, "platform", { value: platform, configurable: true });
+  afterEach(() => {
+    Reflect.deleteProperty(window.navigator, "platform");
+  });
+
+  it("Apple 平台写 ⌘K", async () => {
+    setPlatform("MacIntel");
+    render(<TopNav />);
+    expect(await screen.findByText("⌘K")).toBeInTheDocument();
+  });
+
+  it("其他平台写 Ctrl K（Windows / Linux 实际按 Ctrl+K）", async () => {
+    setPlatform("Win32");
+    render(<TopNav />);
+    expect(await screen.findByText("Ctrl K")).toBeInTheDocument();
+    expect(screen.queryByText("⌘K")).not.toBeInTheDocument();
   });
 });
 
@@ -112,6 +142,14 @@ describe("TopNav", () => {
     mockPathname = "/papers/123";
     render(<TopNav />);
     expect(screen.getByRole("link", { name: "文献" })).toHaveAttribute("aria-current", "page");
+  });
+
+  it("移动菜单的关闭按钮用中文可访问名「关闭」", async () => {
+    const user = userEvent.setup();
+    render(<TopNav />);
+    await user.click(screen.getByRole("button", { name: /打开菜单|menu/i }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByRole("button", { name: "关闭" })).toBeInTheDocument();
   });
 
   it("移动菜单中文献同样可点", async () => {

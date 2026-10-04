@@ -4,6 +4,7 @@ import {
   deriveByline,
   deriveEvidence,
   deriveFullText,
+  snippetText,
 } from "@/lib/portal-api/publication-derive";
 import type { Author, EvidenceLevel, PaperDetail } from "@/types/portal";
 
@@ -141,5 +142,19 @@ describe("deriveByline", () => {
     }));
     expect(deriveByline(authors).extra).toBe(0);
     expect(deriveByline([]).extra).toBe(0);
+  });
+});
+
+describe("snippetText", () => {
+  it("后端截断的摘要片段（不以句末标点收尾）补省略号", () => {
+    expect(snippetText("Here, we demonst")).toBe("Here, we demonst…");
+    expect(snippetText("…ends with space ")).toBe("…ends with space…");
+  });
+
+  it("完整句子原样返回", () => {
+    expect(snippetText("We found no difference.")).toBe("We found no difference.");
+    expect(snippetText("结论明确。")).toBe("结论明确。");
+    expect(snippetText("Was it effective?")).toBe("Was it effective?");
+    expect(snippetText("已经截断…")).toBe("已经截断…");
   });
 });

@@ -196,7 +196,7 @@ function PaperFilterControls({ facets, currentYear, venueNames }: PaperFiltersPr
         <button
           type="button"
           onClick={() => navigate(clearAllConditions)}
-          className="link-draw mt-4 self-start pb-px text-xs font-medium text-fg-2 transition-colors hover:text-clay-700"
+          className="link-draw mt-4 self-start pb-px text-xs font-medium text-fg-2 hover:text-clay-700"
         >
           清除全部筛选
         </button>

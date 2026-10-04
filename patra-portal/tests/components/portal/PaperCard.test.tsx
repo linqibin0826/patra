@@ -84,6 +84,11 @@ describe("PaperCard", () => {
     expect(screen.getByText(/BACKGROUND: lead text/)).toBeInTheDocument();
   });
 
+  it("lead 摘要片段停在半句时补省略号（后端按码点截断、不带省略号）", () => {
+    render(<PaperCard paper={makePaper({ abstractSnippet: "Here, we demonst" })} variant="lead" />);
+    expect(screen.getByText("Here, we demonst…")).toBeInTheDocument();
+  });
+
   it("index 以两位序号显示", () => {
     render(<PaperCard paper={makePaper()} index={3} />);
     expect(screen.getByText("03")).toBeInTheDocument();

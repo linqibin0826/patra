@@ -73,7 +73,7 @@ export function JournalMasthead({ venue }: { venue: VenueDetail }) {
               rel="noopener noreferrer"
               className={btnPrimary}
             >
-              访问期刊官网 <ExternalLink size={14} />
+              访问期刊官网 <ExternalLink size={14} data-icon="trailing" />
             </a>
           ) : (
             <button
@@ -86,7 +86,7 @@ export function JournalMasthead({ venue }: { venue: VenueDetail }) {
             </button>
           )}
           <Link href={buildPapersHref({ venue: [venue.id] })} className={btnSecondary}>
-            查看该刊文献 <ArrowRight size={14} />
+            查看该刊文献 <ArrowRight size={14} data-icon="trailing" />
           </Link>
         </div>
       </div>

@@ -110,6 +110,8 @@ describe("PaperSearchBar", () => {
 
   it("移动端筛选按钮角标 = 已选筛选项数（不含关键词）", () => {
     render(ui({ ...EMPTY_PAPER_QUERY, q: "x", type: ["A", "B"] }));
-    expect(within(screen.getByRole("button", { name: "筛选" })).getByText("2")).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("button", { name: "筛选，已选 2 项" })).getByText("2"),
+    ).toBeInTheDocument();
   });
 });

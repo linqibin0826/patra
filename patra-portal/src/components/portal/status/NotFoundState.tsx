@@ -33,7 +33,7 @@ export function NotFoundState({ kind = "page" }: { kind?: NotFoundKind }) {
             <Home size={15} /> 返回首页
           </Link>
           <Link href={BROWSE[kind].href} className={btnSecondary}>
-            {BROWSE[kind].label} <ArrowRight size={15} />
+            {BROWSE[kind].label} <ArrowRight size={15} data-icon="trailing" />
           </Link>
         </>
       }

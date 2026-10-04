@@ -96,7 +96,7 @@ export function TopicCloud() {
                     href={buildPapersHref({ q: t.term })}
                     title={`${t.count.toLocaleString()} 条相关文献`}
                     className={cn(
-                      "link-draw pb-0.5 transition-colors duration-200 hover:text-accent-on-inverse",
+                      "link-draw pb-0.5 hover:text-accent-on-inverse",
                       TIER_CLASS[tier === 1 ? 2 : tier],
                     )}
                   >

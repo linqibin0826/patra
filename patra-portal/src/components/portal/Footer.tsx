@@ -14,8 +14,7 @@ const BROWSE_LINKS = [
 ] as const;
 
 const COLUMN_TITLE = "font-mono text-2xs uppercase tracking-caps text-fg-inverse-3";
-const COLUMN_LINK =
-  "link-draw pb-px text-fg-inverse-2 transition-colors duration-200 hover:text-fg-inverse-1";
+const COLUMN_LINK = "link-draw pb-px text-fg-inverse-2 hover:text-fg-inverse-1";
 
 /// 版权页（Colophon）：墨色底的全站页脚。宣言 + 关于（#about，导航「关于」的落点）+ 浏览 / 数据源（#sources）/ 项目三列
 /// + 版本与索引快照；背景是叶脉水印与巨型裁切字标（均为装饰，aria-hidden）。
@@ -42,7 +41,9 @@ export function Footer() {
               关于 Patra
             </h2>
             <p className="mt-4 max-w-[44ch] font-serif text-lg leading-relaxed text-pretty text-fg-inverse-2">
-              Patra（पत्र）在梵语中意为「叶」。纸张普及之前，南亚的医典写在贝叶上，一叶一叶装订成册。
+              {
+                "Patra（पत्र）在梵语中意为「叶」。纸张普及之前，南亚的医典写在贝叶上，一叶一叶装订成册。"
+              }
               Patra 把散落在 {PORTAL_STATS.sources}{" "}
               个来源的医学文献重新装订：统一检索、追溯出处，辅以速读。
             </p>
@@ -127,7 +128,6 @@ export function Footer() {
             <span className="font-serif text-xl tracking-tight normal-case">Patra</span>
           </a>
           <p className="uppercase">© 2026 Patra · 医学文献门户</p>
-          <p className="uppercase">V0.4 · 索引快照 17:42 UTC+8</p>
         </div>
       </div>
 

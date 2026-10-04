@@ -19,7 +19,7 @@ export function BrowseHead({ crumb, eyebrow, title, description }: BrowseHeadPro
         aria-label="面包屑"
         className="mb-7 flex items-center gap-2 font-mono text-2xs tracking-mono text-fg-3 max-md:mb-5"
       >
-        <Link href="/" className="link-draw pb-px transition-colors hover:text-ink-900">
+        <Link href="/" className="link-draw pb-px hover:text-ink-900">
           Patra
         </Link>
         <span aria-hidden="true">/</span>

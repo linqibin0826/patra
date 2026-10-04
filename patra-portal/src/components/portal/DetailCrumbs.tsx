@@ -21,10 +21,7 @@ export function DetailCrumbs({ trail, current }: DetailCrumbsProps) {
         {trail.map((item, i) => (
           <Fragment key={item.href}>
             <li className={cn(i > 0 && "max-[720px]:hidden")}>
-              <Link
-                href={item.href}
-                className="link-draw pb-px transition-colors hover:text-ink-900"
-              >
+              <Link href={item.href} className="link-draw pb-px hover:text-ink-900">
                 {item.label}
               </Link>
             </li>

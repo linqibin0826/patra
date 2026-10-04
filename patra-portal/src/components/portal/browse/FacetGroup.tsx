@@ -25,14 +25,20 @@ export function FacetGroup({ title, selCount, defaultOpen = true, children }: Fa
       >
         <span className="flex-1 text-sm font-semibold text-ink-900">{title}</span>
         {selCount > 0 && (
-          <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-action-primary px-1 font-mono text-3xs font-semibold text-fg-on-clay tabular-nums">
-            {selCount}
-          </span>
+          <>
+            <span
+              aria-hidden
+              className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-action-primary px-1 font-mono text-3xs font-semibold text-fg-on-clay tabular-nums"
+            >
+              {selCount}
+            </span>
+            <span className="sr-only">，已选 {selCount} 项</span>
+          </>
         )}
         <ChevronDownIcon
           aria-hidden
           className={cn(
-            "size-3.5 text-fg-3 transition-transform duration-300 ease-out-expo group-hover/fg:text-ink-900",
+            "size-3.5 text-fg-3 motion-safe:transition-transform duration-300 ease-out-expo group-hover/fg:text-ink-900",
             !open && "-rotate-90",
           )}
         />

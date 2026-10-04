@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { JournalCoverCard } from "@/components/portal/JournalCoverCard";
 import type { VenueBrowse } from "@/types/portal";
@@ -63,6 +63,23 @@ describe("JournalCoverCard", () => {
   it("impactFactor 有值时渲染 toFixed(1)", () => {
     render(<JournalCoverCard journal={{ ...journal, impactFactor: 12.345 }} />);
     expect(screen.getByText("12.3")).toBeInTheDocument();
+  });
+
+  it("影响因子为 0（后端用 0 表示没有影响因子）显示 —", () => {
+    render(<JournalCoverCard journal={{ ...journal, impactFactor: 0 }} />);
+    expect(screen.queryByText("0.0")).not.toBeInTheDocument();
+    expect(screen.getByText("—")).toBeInTheDocument();
+  });
+
+  it("封面底部的 vol 年份取当前年份，不写死", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2027-03-01T00:00:00Z"));
+    try {
+      render(<JournalCoverCard journal={journal} />);
+      expect(screen.getByText("vol · 2027")).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("链接到对应期刊详情页", () => {

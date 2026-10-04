@@ -116,7 +116,7 @@ export function Hero({ onComposerSubmit }: HeroProps) {
             >
               <span className="link-draw pb-px">全部文献</span>
               <ArrowRight
-                className="size-3.5 transition-transform duration-300 ease-out-expo motion-safe:group-hover/link:translate-x-0.5"
+                className="size-3.5 motion-safe:transition-transform duration-300 ease-out-expo motion-safe:group-hover/link:translate-x-0.5"
                 strokeWidth={1.75}
                 aria-hidden
               />
@@ -127,7 +127,7 @@ export function Hero({ onComposerSubmit }: HeroProps) {
             >
               <span className="link-draw pb-px">全部期刊</span>
               <ArrowRight
-                className="size-3.5 transition-transform duration-300 ease-out-expo motion-safe:group-hover/link:translate-x-0.5"
+                className="size-3.5 motion-safe:transition-transform duration-300 ease-out-expo motion-safe:group-hover/link:translate-x-0.5"
                 strokeWidth={1.75}
                 aria-hidden
               />

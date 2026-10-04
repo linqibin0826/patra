@@ -42,6 +42,51 @@ describe("动效", () => {
     expect(animationsOutsideNoPreference(readSrc("app/globals.css"))).toEqual([]);
   });
 
+  it("link-draw 自带下划线与文字颜色两种过渡", () => {
+    const block =
+      /@utility link-draw\s*\{([\s\S]*?)\n\}/.exec(readSrc("app/globals.css"))?.[1] ?? "";
+    const transition = /transition:\s*([^;]+);/.exec(block)?.[1] ?? "";
+    expect(transition).toMatch(/background-size/);
+    expect(transition).toMatch(/(?<![\w-])color(?![\w-])/);
+  });
+
+  it("link-draw 不与 transition-* 写在同一处：后者会盖掉下划线的 background-size 过渡", () => {
+    const hits = findAll(/^.*(?<![\w-])link-draw(?![\w-]).*$/).filter(({ match }) =>
+      /(?<![\w-])(?:[\w\-[\]=&>*:@./]+:)*transition(?:-[\w[\],-]+)?(?![\w-])/.test(match),
+    );
+    expect(format(hits)).toEqual([]);
+  });
+
+  it("减弱动效时，没有显式过渡属性的元素不过渡（初始值 all 会让不带前缀的 duration-* 照样把位移过渡出来）", () => {
+    const css = readSrc("app/globals.css").replace(/\/\*[\s\S]*?\*\//g, "");
+    const base = /@layer base\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? "";
+    expect(base).toMatch(
+      /@media \(prefers-reduced-motion: reduce\)\s*\{\s*\*,\s*::before,\s*::after\s*\{\s*transition-property:\s*none;/,
+    );
+  });
+
+  it("位移与几何属性的过渡只在 motion-safe 下存在（状态照常切换，只是不带动画；开关旋钮靠 background-position 移动）", () => {
+    const hits = findAll(
+      /(?<![\w-])(?:[\w\-[\]=&>*:@./()%,]+:)*transition-(?:transform|\[[^\]\s]*(?:translate|scale|rotate|transform|left|right|top|bottom|width|height|background-position)[^\]\s]*\])(?![\w-])/,
+    ).filter(({ match }) => !/(?:^|:)motion-safe:/.test(match));
+    expect(format(hits)).toEqual([]);
+  });
+
+  it("用通用 transition 的元素上，状态触发的位移带 motion-safe: 前缀", () => {
+    const bareTransition = /(?<![\w\-:[])transition(?:-all)?(?![\w-])/;
+    const variantTransform =
+      /(?<![\w-])(?:[\w\-[\]=&>*:@./()%,]+:)+-?(?:translate|scale|rotate)-[\w\-.[\]()%/]+(?![\w-])/g;
+    const hits = findAll(/^.*$/)
+      .filter(({ match }) => bareTransition.test(match))
+      .flatMap((hit) =>
+        [...hit.match.matchAll(variantTransform)]
+          .map((m) => m[0])
+          .filter((t) => !/(?:^|:)motion-safe:/.test(t))
+          .map((t) => ({ ...hit, match: t })),
+      );
+    expect(format(hits)).toEqual([]);
+  });
+
   it("组件里的 animate-* 必须带 motion-safe: 前缀（加载转圈 animate-spin 除外）", () => {
     const hits = findAll(/(?<![\w-])(?:[\w\-[\]=&>*:@.]+:)*animate-[\w[\]\-_.()%,]+/).filter(
       ({ match }) => !/(?:^|:)motion-safe:/.test(match) && !/animate-spin\b/.test(match),

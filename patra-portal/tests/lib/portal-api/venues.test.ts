@@ -372,6 +372,19 @@ describe("fetchVenueDetail", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("0 与带前导零的 id 不是合法 id：直接 null，不发起请求（BE 对 0 返回 422）", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await fetchVenueDetail("0")).toBeNull();
+    expect(await fetchVenueDetail("007")).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it.each([400, 422])("BE %s（id 不合法）按不存在处理 → 返回 null", async (status) => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status })));
+    expect(await fetchVenueDetail("123")).toBeNull();
+  });
+
   it("BE 404 → 返回 null", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 404 })));
     expect(await fetchVenueDetail("123")).toBeNull();

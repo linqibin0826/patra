@@ -1,5 +1,14 @@
 import type { AbstractSection, Author, EvidenceLevel, PaperDetail } from "@/types/portal";
 
+/// 句末标点：以它们收尾的摘要片段视为完整句子。
+const SENTENCE_END = /[.!?。！？…」』)）"'”’]$/;
+
+/// 摘要片段的展示文本：后端按码点截断、不带省略号，片段停在半句时补「…」。
+export function snippetText(snippet: string): string {
+  const text = snippet.trimEnd();
+  return SENTENCE_END.test(text) ? text : `${text}…`;
+}
+
 export type EvidenceTone = "moss" | "amber" | "slate" | "muted";
 
 export interface EvidenceView {

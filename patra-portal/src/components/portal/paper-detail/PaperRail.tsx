@@ -2,6 +2,7 @@ import { ExternalLink, Sparkles } from "lucide-react";
 import { BookmarkButton } from "@/components/portal/paper-detail/BookmarkButton";
 import { deriveEvidence, deriveFullText } from "@/lib/portal-api/publication-derive";
 import { btnBlock, btnPrimary, btnSecondary } from "@/lib/portal-ui";
+import { cn } from "@/lib/utils";
 import type { PaperDetail } from "@/types/portal";
 
 const CARD = "rounded-xl border border-border-default bg-paper-50 p-5";
@@ -28,15 +29,15 @@ export function PaperRail({ paper }: { paper: PaperDetail }) {
         <div className="flex flex-col gap-2.5">
           {fullText.href ? (
             <a
-              className={`${btnPrimary} ${btnBlock}`}
+              className={cn(btnPrimary, btnBlock)}
               href={fullText.href}
               target="_blank"
               rel="noopener noreferrer"
             >
-              {fullText.label} <ExternalLink size={14} />
+              {fullText.label} <ExternalLink size={14} data-icon="trailing" />
             </a>
           ) : (
-            <button className={`${btnSecondary} ${btnBlock} opacity-55`} type="button" disabled>
+            <button className={cn(btnSecondary, btnBlock, "opacity-55")} type="button" disabled>
               {fullText.label}
             </button>
           )}

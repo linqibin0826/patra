@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
 import { EvidenceBadge } from "@/components/portal/EvidenceBadge";
 import { RichInlineText } from "@/components/portal/RichInlineText";
+import { snippetText } from "@/lib/portal-api/publication-derive";
 import { sourceDotClass } from "@/lib/portal-ui";
 import { cn } from "@/lib/utils";
 import type { Paper } from "@/types/portal";
@@ -29,7 +30,7 @@ export function PaperListItem({ paper, highlight }: PaperListItemProps) {
       node: paper.venueId ? (
         <Link
           href={`/journals/${paper.venueId}`}
-          className="link-draw max-w-full truncate pb-px font-serif text-md text-ink-700 italic transition-colors hover:text-clay-700 max-md:basis-full"
+          className="link-draw max-w-full truncate pb-px font-serif text-md text-ink-700 italic hover:text-clay-700 max-md:basis-full"
         >
           {paper.journal}
         </Link>
@@ -56,7 +57,7 @@ export function PaperListItem({ paper, highlight }: PaperListItemProps) {
   }
 
   return (
-    <article className="group/item relative flex flex-col gap-2 border-b border-border-subtle py-6 before:absolute before:top-6 before:bottom-6 before:-left-5 before:w-0.5 before:origin-top before:scale-y-0 before:rounded-full before:bg-clay-500 before:transition-transform before:duration-500 before:ease-out-expo hover:before:scale-y-100 max-md:before:hidden">
+    <article className="group/item relative flex flex-col gap-2 border-b border-border-subtle py-6 before:absolute before:top-6 before:bottom-6 before:-left-5 before:w-0.5 before:origin-top before:scale-y-0 before:rounded-full before:bg-clay-500 motion-safe:before:transition-transform before:duration-500 before:ease-out-expo hover:before:scale-y-100 max-md:before:hidden">
       <div className="flex min-w-0 items-center gap-2.5 font-mono text-2xs text-fg-3">
         <span className="inline-flex shrink-0 items-center gap-1.5 font-medium text-fg-2">
           <span
@@ -73,12 +74,14 @@ export function PaperListItem({ paper, highlight }: PaperListItemProps) {
         )}
       </div>
 
-      <h3 className="line-clamp-2 font-serif text-xl leading-snug font-medium tracking-tight text-pretty text-ink-900">
-        <Link
-          href={`/papers/${paper.id}`}
-          className="link-draw pb-0.5 transition-colors group-hover/item:[background-size:100%_1px]"
-        >
-          <RichInlineText text={paper.title} highlight={highlight} />
+      {/* 两行截断放在链接里面：截断容器的 overflow: hidden 若在链接外层，会裁掉链接的键盘焦点环 */}
+      <h3 className="font-serif text-xl leading-snug font-medium tracking-tight text-pretty text-ink-900">
+        <Link href={`/papers/${paper.id}`} className="group/title block">
+          <span className="line-clamp-2">
+            <span className="link-draw pb-0.5 group-hover/item:[background-size:100%_1px] group-focus-visible/title:[background-size:100%_1px]">
+              <RichInlineText text={paper.title} highlight={highlight} />
+            </span>
+          </span>
         </Link>
       </h3>
 
@@ -112,7 +115,7 @@ export function PaperListItem({ paper, highlight }: PaperListItemProps) {
 
       {paper.abstractSnippet && (
         <p className="mt-1 line-clamp-2 max-w-[72ch] font-serif text-md leading-relaxed text-fg-2">
-          {paper.abstractSnippet}
+          {snippetText(paper.abstractSnippet)}
         </p>
       )}
     </article>

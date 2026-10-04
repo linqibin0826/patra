@@ -45,7 +45,7 @@ export function DisclosureSection({
           <Plus
             size={15}
             strokeWidth={1.75}
-            className="transition-transform duration-300 ease-out-expo group-aria-expanded/d:rotate-45"
+            className="motion-safe:transition-transform duration-300 ease-out-expo group-aria-expanded/d:rotate-45"
           />
         </span>
       </button>

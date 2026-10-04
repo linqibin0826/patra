@@ -211,6 +211,16 @@
     background: var(--selection-bg);
     color: var(--selection-fg);
   }
+  /* 减弱动效时，没有显式声明过渡属性的元素一律不过渡：motion-safe:transition-* 只在允许动效时声明属性，
+     而 duration-* / ease-* 不带前缀，若沿用初始值 transition-property: all，位移照样会被过渡。
+     显式写了 transition-colors 等的元素在 utilities 层，优先级更高，颜色过渡照常 */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      transition-property: none;
+    }
+  }
   /* 检索框都自带 × 清除按钮，隐藏 Chromium / Safari 原生的清除按钮，避免出现两个 × */
   input[type="search"]::-webkit-search-cancel-button {
     appearance: none;
@@ -358,6 +368,9 @@
         animation-timeline: view();
         animation-range: entry 20% cover 45%;
       }
+    }
+    /* 阅读进度条跟随整页滚动：按 scroll() 单独检测 */
+    @supports (animation-timeline: scroll()) {
       .read-progress {
         transform-origin: left;
         animation: patra-progress auto linear both;
@@ -367,13 +380,16 @@
   }
 }
 
-/* 链接下划线自左绘出（hover / 键盘聚焦时） */
+/* 链接下划线自左绘出（hover / 键盘聚焦时）。文字颜色的过渡也由它负责：
+   同一元素再加 transition-colors 会盖掉这里的 background-size 过渡，下划线就变成瞬间出现 */
 @utility link-draw {
   background-image: linear-gradient(currentColor, currentColor);
   background-position: 0 100%;
   background-repeat: no-repeat;
   background-size: 0% 1px;
-  transition: background-size var(--dur-slow) var(--ease-out-expo);
+  transition:
+    background-size var(--dur-slow) var(--ease-out-expo),
+    color var(--dur-normal) var(--ease-out-expo);
   &:hover,
   &:focus-visible {
     background-size: 100% 1px;

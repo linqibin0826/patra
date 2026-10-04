@@ -10,6 +10,7 @@ import { TrendChart } from "@/components/portal/journal-detail/TrendChart";
 import { SectionEyebrow } from "@/components/portal/SectionEyebrow";
 import { countryLabel } from "@/lib/country-name";
 import {
+  deriveIdentifiers,
   deriveMetricCards,
   deriveMetrics,
   deriveSubjectAreas,
@@ -17,7 +18,6 @@ import {
 } from "@/lib/portal-api/venue-derive";
 import type { VenueDetail } from "@/types/portal";
 
-const ISSN_PLACEHOLDER = "XXXX-XXXX";
 const DL = "grid grid-cols-[max-content_1fr] gap-x-8 gap-y-3 max-[540px]:grid-cols-1";
 const DT = "whitespace-nowrap font-mono text-2xs tracking-mono text-fg-3 pt-0.5";
 const DD = "m-0 font-sans text-md text-fg-1";
@@ -29,7 +29,7 @@ export function JournalDetailView({ venue }: { venue: VenueDetail }) {
   const subjects = deriveSubjectAreas(venue);
   const yearly = deriveYearlyStats(venue);
   const { bibliometric } = metrics;
-  const idents = venue.identifiers.filter((i) => i.value && i.value !== ISSN_PLACEHOLDER);
+  const idents = deriveIdentifiers(venue.identifiers);
   const hasBiblio = bibliometric != null || yearly.length > 0;
 
   return (
@@ -134,7 +134,11 @@ export function JournalDetailView({ venue }: { venue: VenueDetail }) {
                 <DisclosureSection title="关系与标识">
                   <div className="flex flex-wrap gap-2.5">
                     {idents.map((i) => (
-                      <IdentifierChip key={`${i.type}-${i.value}`} label={i.type} value={i.value} />
+                      <IdentifierChip
+                        key={`${i.label}-${i.value}`}
+                        label={i.label}
+                        value={i.value}
+                      />
                     ))}
                   </div>
                 </DisclosureSection>

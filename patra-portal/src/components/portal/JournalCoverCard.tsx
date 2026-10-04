@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import { pickCover } from "@/lib/portal-api/cover-palette";
+import { formatImpactFactor } from "@/lib/portal-api/venue-derive";
 import { cn } from "@/lib/utils";
 import type { VenueBrowse } from "@/types/portal";
 
@@ -28,7 +29,7 @@ export function JournalCoverCard({ journal, className }: JournalCoverCardProps) 
       <div
         data-cover
         style={coverVars}
-        className="relative aspect-[3/4] overflow-hidden rounded-[3px] bg-(--cover-bg) text-(--cover-ink) shadow-cover transition-[translate,rotate,box-shadow] duration-500 ease-out-expo before:absolute before:inset-y-0 before:left-0 before:w-4 before:bg-(image:--cover-spine) before:content-[''] after:absolute after:inset-y-2.5 after:right-2.5 after:left-5 after:border after:border-current after:opacity-25 after:content-[''] group-hover/cover:shadow-cover-hover motion-safe:group-hover/cover:-translate-y-1.5 motion-safe:group-hover/cover:-rotate-[0.6deg]"
+        className="relative aspect-[3/4] overflow-hidden rounded-[3px] bg-(--cover-bg) text-(--cover-ink) shadow-cover transition-shadow motion-safe:transition-[translate,rotate,box-shadow] duration-500 ease-out-expo before:absolute before:inset-y-0 before:left-0 before:w-4 before:bg-(image:--cover-spine) before:content-[''] after:absolute after:inset-y-2.5 after:right-2.5 after:left-5 after:border after:border-current after:opacity-25 after:content-[''] group-hover/cover:shadow-cover-hover motion-safe:group-hover/cover:-translate-y-1.5 motion-safe:group-hover/cover:-rotate-[0.6deg]"
       >
         {journal.foundedYear !== null && (
           <div className="absolute top-4 right-3 left-5 text-center font-mono text-3xs uppercase tracking-spaced opacity-75">
@@ -41,7 +42,7 @@ export function JournalCoverCard({ journal, className }: JournalCoverCardProps) 
           </span>
         </div>
         <div className="absolute right-3 bottom-4 left-5 text-center font-mono text-3xs tracking-spaced opacity-75">
-          vol · 2026
+          {`vol · ${new Date().getFullYear()}`}
         </div>
       </div>
 
@@ -55,7 +56,7 @@ export function JournalCoverCard({ journal, className }: JournalCoverCardProps) 
         <div className="mt-auto flex items-end justify-between gap-2 border-t border-border-subtle pt-2.5">
           <div className="flex flex-col">
             <span className="font-serif text-2xl leading-none font-medium tracking-tight tabular-nums text-ink-900">
-              {journal.impactFactor != null ? journal.impactFactor.toFixed(1) : "—"}
+              {formatImpactFactor(journal.impactFactor)}
             </span>
             <span className="mt-1.5 font-mono text-3xs uppercase tracking-caps text-fg-3">
               影响因子

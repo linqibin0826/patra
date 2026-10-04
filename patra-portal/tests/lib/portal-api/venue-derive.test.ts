@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  deriveIdentifiers,
   deriveMetricCards,
   deriveMetrics,
   deriveSubjectAreas,
   deriveYearlyStats,
+  formatImpactFactor,
 } from "@/lib/portal-api/venue-derive";
 import type { VenueDetail } from "@/types/portal";
 
@@ -185,5 +187,57 @@ describe("deriveYearlyStats", () => {
     const before = v.yearlyStats.map((s) => s.year);
     deriveYearlyStats(v);
     expect(v.yearlyStats.map((s) => s.year)).toEqual(before);
+  });
+});
+
+describe("formatImpactFactor", () => {
+  it("保留一位小数", () => {
+    expect(formatImpactFactor(65.4)).toBe("65.4");
+    expect(formatImpactFactor(12)).toBe("12.0");
+  });
+
+  it("缺值与非正数显示 —（后端用 0 表示没有影响因子）", () => {
+    expect(formatImpactFactor(null)).toBe("—");
+    expect(formatImpactFactor(undefined)).toBe("—");
+    expect(formatImpactFactor(0)).toBe("—");
+    expect(formatImpactFactor(-1)).toBe("—");
+  });
+});
+
+describe("deriveIdentifiers", () => {
+  const raw = [
+    { type: "NLM", value: "9007735", primary: false },
+    { type: "ISSN_L", value: "0923-7534", primary: false },
+    { type: "CODEN", value: "ANONE2", primary: false },
+    { type: "ISSN", value: "0923-7534", primary: false },
+    { type: "ISSN", value: "1569-8041", primary: false },
+    { type: "OPENALEX", value: "S41454044", primary: false },
+  ];
+
+  it("原始类型换成可读的键名，按原顺序输出", () => {
+    expect(deriveIdentifiers(raw)).toEqual([
+      { label: "NLM ID", value: "9007735" },
+      { label: "CODEN", value: "ANONE2" },
+      { label: "ISSN", value: "0923-7534" },
+      { label: "ISSN", value: "1569-8041" },
+      { label: "OpenAlex", value: "S41454044" },
+    ]);
+  });
+
+  it("ISSN-L 与某个 ISSN 相同时不重复显示；不同时保留并写作 ISSN-L", () => {
+    expect(deriveIdentifiers(raw).some((i) => i.label === "ISSN-L")).toBe(false);
+    expect(deriveIdentifiers([{ type: "ISSN_L", value: "1111-2222", primary: false }])).toEqual([
+      { label: "ISSN-L", value: "1111-2222" },
+    ]);
+  });
+
+  it("空值与 ISSN 占位符 XXXX-XXXX 不显示；未知类型原样作键名", () => {
+    expect(
+      deriveIdentifiers([
+        { type: "ISSN", value: "XXXX-XXXX", primary: false },
+        { type: "ISSN", value: "", primary: false },
+        { type: "WIKIDATA", value: "Q123", primary: false },
+      ]),
+    ).toEqual([{ label: "WIKIDATA", value: "Q123" }]);
   });
 });

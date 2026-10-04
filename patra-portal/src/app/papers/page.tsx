@@ -68,7 +68,7 @@ export default async function PapersPage({
             {/* 两栏：桌面 facet 侧栏 + 结果区 */}
             <div className="mt-10 flex items-start gap-12 max-lg:gap-8">
               {/* facet：无 key——导航时保留旧面板平滑换计数，移动抽屉不重挂 */}
-              <Suspense fallback={<FacetSkeleton className="hidden w-60 shrink-0 md:flex" />}>
+              <Suspense fallback={<FacetSkeleton className="w-60" />}>
                 <PaperFiltersServer query={query} currentYear={currentYear} />
               </Suspense>
               {/* 结果区：导航进行中先变淡；带 key——任意 query 变（含翻页）出列表骨架 */}

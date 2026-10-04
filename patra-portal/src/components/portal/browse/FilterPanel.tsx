@@ -43,7 +43,8 @@ export function FilterPanel({
           side={side}
           className={cn(
             "gap-0 bg-bg-canvas p-0 md:hidden",
-            side === "left" ? "w-80" : "max-h-[85vh] rounded-t-2xl",
+            // 同一 data 变体才能经 tailwind-merge 覆盖 Sheet 默认的 data-[side=left]:w-3/4
+            side === "left" ? "data-[side=left]:w-80" : "max-h-[85vh] rounded-t-2xl",
           )}
         >
           <SheetHeader className="border-b border-border-subtle px-5 pt-5 pb-4">

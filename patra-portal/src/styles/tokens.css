@@ -63,10 +63,10 @@
   /* Inverse (ink) surfaces — 热议区 / 页脚等墨色区块，制造明暗节奏 */
   --bg-inverse: var(--ink-900);
   --bg-inverse-raised: var(--ink-800);
-  --fg-inverse-1: var(--paper-50); /* 17:1 */
-  --fg-inverse-2: var(--ink-200); /* 13:1 */
-  --fg-inverse-3: var(--ink-300); /* 9.8:1 — 墨底上的可读下限 */
-  --accent-on-inverse: var(--clay-300); /* 7.7:1 — 墨底上的强调文字 */
+  --fg-inverse-1: var(--paper-50); /* 16.5:1 */
+  --fg-inverse-2: var(--ink-200); /* 12.6:1 */
+  --fg-inverse-3: var(--ink-300); /* 9.7:1 — 墨底上的可读下限 */
+  --accent-on-inverse: var(--clay-300); /* 7.6:1 — 墨底上的强调文字 */
   --border-inverse: rgba(251, 248, 242, 0.12);
   --border-inverse-strong: rgba(251, 248, 242, 0.24);
 

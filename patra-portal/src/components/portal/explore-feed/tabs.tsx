@@ -26,7 +26,7 @@ export function ExploreFeedTabs({ currentTab }: { currentTab: FeedTab }) {
         variant="line"
         className="relative h-auto gap-0 rounded-full border border-border-default bg-paper-50 p-1"
       >
-        <TabsIndicator className="top-(--active-tab-top) left-(--active-tab-left) h-(--active-tab-height) w-(--active-tab-width) rounded-full bg-ink-900 transition-[left,width] duration-500 ease-out-expo" />
+        <TabsIndicator className="top-(--active-tab-top) left-(--active-tab-left) h-(--active-tab-height) w-(--active-tab-width) rounded-full bg-ink-900 motion-safe:transition-[left,width] duration-500 ease-out-expo" />
         {TABS.map(({ value, label, Icon }) => (
           <TabsTrigger
             key={value}

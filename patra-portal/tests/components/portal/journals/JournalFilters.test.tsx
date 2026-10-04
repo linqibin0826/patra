@@ -203,6 +203,14 @@ describe("JournalFilters", () => {
     });
   });
 
+  describe("移动抽屉", () => {
+    it("标题写出已选条件数（与文献页一致）", () => {
+      useBrowseFilterUiStore.setState({ sheetOpen: true });
+      renderFilters({ ...baseQuery, jcr: ["Q1"], oa: true });
+      expect(screen.getByRole("dialog", { name: "筛选 · 已选 2 项" })).toBeInTheDocument();
+    });
+  });
+
   describe("连点（乐观 query）", () => {
     it("连续勾选 Q1、Q2：勾选框立即打勾，第二次跳转两项都在", () => {
       renderFilters();

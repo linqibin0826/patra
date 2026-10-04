@@ -7,7 +7,7 @@ export function PaperListSkeleton() {
   return (
     <div aria-hidden="true" className="flex flex-col">
       {ROWS.map((key) => (
-        <div key={key} className="flex flex-col gap-2.5 border-b border-border-subtle py-6">
+        <div key={key} className="flex flex-col gap-2 border-b border-border-subtle py-6">
           <div className={`h-3 w-48 ${BLOCK}`} />
           <div className={`h-5 w-11/12 ${BLOCK}`} />
           <div className={`h-3 w-2/3 ${BLOCK}`} />

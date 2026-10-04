@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /// 区块小标题（大写标签），首页区块、浏览页页头、详情页各段统一复用。
-/// - 默认以品牌叶起头；传 `index`（如 "02"）时改为「序号 + 短线」，用于首页编号区块。
+/// - 默认以 clay-600 短竖条起头；传 `index`（如 "02"）时改为「序号 + 短线」，用于首页编号区块。
 /// - `tone="inverse"` 用于墨色区块。`className` 用于调整外边距（如紧接标题时传 `mb-0`）。
 export function SectionEyebrow({
   children,

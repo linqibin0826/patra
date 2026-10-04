@@ -131,12 +131,12 @@ export async function fetchVenuesFacets(filters: VenueBrowseFilters): Promise<Ve
  *
  * 端点：`GET /patra-catalog/portal/venues/{id}`，响应 `VenueDetail`（扁平 + 评级列表）。
  * 返回约定：
- * - 非数字 id（坏 URL）→ 直接 `null`，不触达 BE
- * - BE 404（刊不存在）→ `null`，由调用方转 `notFound()`
+ * - 非正整数 id（坏 URL，含 0 与前导零）→ 直接 `null`，不触达 BE
+ * - BE 404（刊不存在）/ 400 / 422（id 被拒）→ `null`，由调用方转 `notFound()`
  * - 其他失败（5xx / 超时 / 网络）→ throw，冒泡到全局 error boundary
  */
 export async function fetchVenueDetail(id: string): Promise<VenueDetail | null> {
-  if (!/^\d+$/.test(id)) {
+  if (!/^[1-9]\d*$/.test(id)) {
     return null;
   }
   const baseUrl = process.env.PATRA_GATEWAY_BASE_URL;
@@ -148,7 +148,7 @@ export async function fetchVenueDetail(id: string): Promise<VenueDetail | null> 
     cache: "no-store",
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
-  if (res.status === 404) {
+  if (res.status === 404 || res.status === 400 || res.status === 422) {
     return null;
   }
   if (!res.ok) {

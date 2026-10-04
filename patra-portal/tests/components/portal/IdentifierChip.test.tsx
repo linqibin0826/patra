@@ -15,6 +15,16 @@ describe("IdentifierChip", () => {
     expect(screen.getByText("1234-5678")).toBeInTheDocument();
   });
 
+  it("长标识符在胶囊内截断：值可收缩，复制图标与外链格不被挤出", () => {
+    const long = "10.1016/j.ijid.2026.108341.supplementary";
+    render(<IdentifierChip label="DOI" value={long} href={`https://doi.org/${long}`} />);
+    expect(screen.getByText(long)).toHaveClass("truncate");
+    expect(screen.getByRole("button", { name: `复制 DOI：${long}` })).toHaveClass("min-w-0");
+    expect(screen.getByRole("button", { name: `复制 DOI：${long}` }).parentElement).toHaveClass(
+      "max-w-full",
+    );
+  });
+
   it("有 href → 渲染外链（target=_blank + rel 含 noopener）", () => {
     render(<IdentifierChip label="DOI" value="10.1/x" href="https://doi.org/10.1/x" />);
     const link = screen.getByRole("link", { name: /打开/ });

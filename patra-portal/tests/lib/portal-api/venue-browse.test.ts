@@ -11,6 +11,7 @@ import {
   SORT_OPTIONS,
   serializeVenueBrowseQuery,
   toFilters,
+  venueFilterCount,
 } from "@/lib/portal-api/venue-browse";
 import type { VenueBrowseQuery } from "@/types/portal";
 
@@ -450,5 +451,24 @@ describe("deriveActiveChips", () => {
     const chips = deriveActiveChips(original);
     // subject:1 + jcr:2 + cas:1 + casTop:1 + oa:1 + country:2 = 8
     expect(chips).toHaveLength(8);
+  });
+});
+
+describe("venueFilterCount", () => {
+  it("无筛选为 0；检索词、排序、页码不算筛选", () => {
+    expect(venueFilterCount(parseVenueBrowseQuery({ q: "nature", sort: "if", page: "3" }))).toBe(0);
+  });
+
+  it("多值维度按选项数计，布尔开关各计 1", () => {
+    const query = parseVenueBrowseQuery({
+      subject: "Oncology,Medicine",
+      jcr: "Q1,Q2",
+      cas: "1区",
+      casTop: "true",
+      oa: "true",
+      doaj: "true",
+      country: "US",
+    });
+    expect(venueFilterCount(query)).toBe(9);
   });
 });

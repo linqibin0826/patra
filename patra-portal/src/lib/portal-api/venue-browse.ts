@@ -83,6 +83,19 @@ export function parseVenueBrowseQuery(
   };
 }
 
+/// 已选筛选条件数（检索词、排序、页码不算）：多值维度按选项数计，布尔开关各计 1。
+export function venueFilterCount(query: VenueBrowseQuery): number {
+  return (
+    query.subject.length +
+    query.jcr.length +
+    query.cas.length +
+    query.country.length +
+    (query.casTop ? 1 : 0) +
+    (query.oa ? 1 : 0) +
+    (query.doaj ? 1 : 0)
+  );
+}
+
 /**
  * 把 VenueBrowseQuery 序列化为 querystring（无前导 `?`）。
  * 默认值省略：sort==="if"、page<=1、空数组、false、q==="" 均不写。

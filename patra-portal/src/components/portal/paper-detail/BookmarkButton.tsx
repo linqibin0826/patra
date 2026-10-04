@@ -33,7 +33,7 @@ export function BookmarkButton({ paperId, block = false, compact = false }: Book
           strokeWidth={1.6}
           aria-hidden
           className={cn(
-            "transition-transform duration-300 ease-out-expo",
+            "motion-safe:transition-transform duration-300 ease-out-expo",
             bookmarked && "fill-current motion-safe:scale-110",
           )}
         />
@@ -53,7 +53,7 @@ export function BookmarkButton({ paperId, block = false, compact = false }: Book
         strokeWidth={1.5}
         aria-hidden
         className={cn(
-          "transition-transform duration-300 ease-out-expo",
+          "motion-safe:transition-transform duration-300 ease-out-expo",
           bookmarked && "fill-clay-500 text-clay-500 motion-safe:scale-110",
         )}
       />

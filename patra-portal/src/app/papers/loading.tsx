@@ -36,7 +36,7 @@ export default function Loading() {
           </div>
 
           <div className="mt-10 flex items-start gap-12 max-lg:gap-8" aria-hidden>
-            <FacetSkeleton className="hidden w-60 shrink-0 md:flex" />
+            <FacetSkeleton className="w-60" />
             <div className="min-w-0 flex-1">
               <PaperListSkeleton />
             </div>

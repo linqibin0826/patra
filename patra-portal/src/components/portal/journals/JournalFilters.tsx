@@ -7,14 +7,17 @@ import { FacetGroup } from "@/components/portal/browse/FacetGroup";
 import { FacetToggleRow } from "@/components/portal/browse/FacetToggleRow";
 import { FilterPanel } from "@/components/portal/browse/FilterPanel";
 import { Input } from "@/components/ui/input";
-import { CAS_ZONE_ORDER, JCR_QUARTILE_ORDER } from "@/lib/portal-api/venue-browse";
+import {
+  CAS_ZONE_ORDER,
+  JCR_QUARTILE_ORDER,
+  venueFilterCount,
+} from "@/lib/portal-api/venue-browse";
 import { formatSubject } from "@/lib/subject-label";
 import { useBrowseFilterUiStore } from "@/store/browse-filter-ui";
 import type { VenueBrowseFacets, VenueBrowseQuery } from "@/types/portal";
 
 interface Props {
   facets: VenueBrowseFacets;
-  resultTotal?: number;
   /** 国家码 → 展示标签（服务端用 countryLabel 算好传入，避免两端 ICU 差异） */
   countryLabels?: Readonly<Record<string, string>>;
 }
@@ -181,18 +184,19 @@ function FilterControls({
 
 /// 期刊浏览筛选面板：勾选状态读 Provider 的乐观 query（点击即打勾），变更经 navigate 基于最新状态叠加。
 /// 桌面（md+）为侧栏；移动端为左侧 Sheet 抽屉。
-export function JournalFilters({ facets, resultTotal, countryLabels }: Props) {
+export function JournalFilters({ facets, countryLabels }: Props) {
   const close = useBrowseFilterUiStore((s) => s.close);
+  const { query } = useBrowseQuery<VenueBrowseQuery>();
   return (
     <FilterPanel
-      sheetTitle="筛选"
+      sheetTitle={`筛选 · 已选 ${venueFilterCount(query)} 项`}
       sheetFooter={
         <button
           type="button"
           onClick={close}
           className="h-11 w-full rounded-full bg-ink-900 px-4 text-sm font-semibold text-paper-50"
         >
-          {resultTotal != null ? `查看 ${resultTotal} 本结果` : "查看结果"}
+          查看结果
         </button>
       }
     >

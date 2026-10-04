@@ -19,4 +19,9 @@ describe("FilterTrigger", () => {
     rerender(<FilterTrigger count={0} />);
     expect(screen.queryByText("0")).not.toBeInTheDocument();
   });
+
+  it("有已选条件时可访问名带上数量（aria-label 不再盖掉角标）", () => {
+    render(<FilterTrigger count={3} />);
+    expect(screen.getByRole("button", { name: "筛选，已选 3 项" })).toBeInTheDocument();
+  });
 });

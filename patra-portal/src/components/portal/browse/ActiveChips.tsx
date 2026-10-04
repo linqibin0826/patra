@@ -56,7 +56,7 @@ export function ActiveChips<Q extends BrowseQueryBase>({
             onClick={() => navigate(chip.next)}
             className="group/x flex size-5 items-center justify-center rounded-full text-clay-700 transition-colors hover:bg-clay-100 hover:text-clay-900"
           >
-            <XIcon className="size-3 transition-transform duration-300 ease-out-expo motion-safe:group-hover/x:rotate-90" />
+            <XIcon className="size-3 motion-safe:transition-transform duration-300 ease-out-expo motion-safe:group-hover/x:rotate-90" />
           </button>
         </li>
       ))}
@@ -64,7 +64,7 @@ export function ActiveChips<Q extends BrowseQueryBase>({
         <button
           type="button"
           onClick={() => navigate(clearAll)}
-          className="link-draw ml-1 pb-px text-xs text-fg-2 transition-colors hover:text-clay-700"
+          className="link-draw ml-1 pb-px text-xs text-fg-2 hover:text-clay-700"
         >
           清除全部
         </button>
