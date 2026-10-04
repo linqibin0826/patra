@@ -1,3 +1,4 @@
+import { Pill } from "@/components/portal/Pill";
 import type { Author } from "@/types/portal";
 
 export function AuthorList({ authors }: { authors: Author[] }) {
@@ -15,14 +16,14 @@ export function AuthorList({ authors }: { authors: Author[] }) {
             <span className="font-sans text-md font-semibold text-ink-900">
               {a.name}
               {a.first && (
-                <span className="ml-2 rounded-full border border-border-default bg-paper-50 px-2 py-px align-middle font-sans text-3xs font-semibold text-fg-2">
+                <Pill size="sm" className="ml-2 align-middle">
                   第一作者
-                </span>
+                </Pill>
               )}
               {a.corresponding && (
-                <span className="ml-2 rounded-full border border-clay-200 bg-clay-50 px-2 py-px align-middle font-sans text-3xs font-semibold text-clay-800">
+                <Pill tone="clay" size="sm" className="ml-2 align-middle">
                   <span aria-hidden>✉</span> 通讯
-                </span>
+                </Pill>
               )}
             </span>
             {a.affiliation && (

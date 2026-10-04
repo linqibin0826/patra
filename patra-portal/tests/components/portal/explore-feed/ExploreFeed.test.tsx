@@ -41,3 +41,17 @@ describe("ExploreFeed 查看更多", () => {
     expect(screen.queryByRole("link", { name: /查看更多文献/ })).not.toBeInTheDocument();
   });
 });
+
+describe("ExploreFeed 区块说明", () => {
+  it("不宣称「AI 速读在采集时生成」：速读尚未上线", async () => {
+    vi.mocked(fetchFeed).mockResolvedValue({
+      page: 1,
+      pageSize: 14,
+      total: 1,
+      totalPages: 1,
+      items: [makePaper()],
+    });
+    render(await ExploreFeed({ tab: "recent" }));
+    expect(screen.getByText(/最近入库与高被引的文献/)).not.toHaveTextContent(/采集时生成/);
+  });
+});

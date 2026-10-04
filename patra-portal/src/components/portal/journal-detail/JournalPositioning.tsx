@@ -1,3 +1,4 @@
+import { CjkDashText } from "@/components/portal/CjkDashText";
 import { SectionEyebrow } from "@/components/portal/SectionEyebrow";
 import { formatSubject } from "@/lib/subject-label";
 import type { VenueDetail } from "@/types/portal";
@@ -29,7 +30,7 @@ export function JournalPositioning({
     <section aria-label="定位与范围">
       <SectionEyebrow className="mb-2">定位与范围</SectionEyebrow>
       <p className="mb-4 font-sans text-sm leading-normal text-fg-3">
-        由结构化事实组合 —— 该刊暂无编辑撰写的简介文本。
+        <CjkDashText>由结构化事实组合——该刊暂无编辑撰写的简介文本。</CjkDashText>
       </p>
       <div className="flex flex-wrap gap-2">
         {tags.map((t) => (

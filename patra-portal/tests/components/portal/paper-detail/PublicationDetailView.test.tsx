@@ -47,6 +47,16 @@ function paper(overrides: Partial<PaperDetail> = {}): PaperDetail {
 }
 
 describe("PublicationDetailView", () => {
+  it("AI 速读尚未接入：侧栏如实写「未上线」，不对访客露出 mock 字样", () => {
+    render(<PublicationDetailView paper={paper()} />);
+    expect(screen.getByText("未上线")).toBeInTheDocument();
+    expect(screen.queryByText(/mock/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /生成速读|重新生成/ })).toHaveAttribute(
+      "title",
+      "AI 速读尚未上线",
+    );
+  });
+
   it("渲染面包屑（pmid）+ 标题 + 摘要节 + 关键标识", () => {
     render(<PublicationDetailView paper={paper()} />);
     const nav = screen.getByRole("navigation", { name: "面包屑" });

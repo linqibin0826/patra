@@ -27,9 +27,13 @@ interface ComposerProps {
   onSubmit?: (event: ComposerSubmitEvent) => void;
   /** 输入框 id：首页 Hero 用默认值（导航「快速检索」也可定位到它），对话框内另起一个避免重复 */
   inputId?: string;
+  /** 所在表面：页面上用悬浮长投影；快速检索对话框里浮在遮罩上，用对话框阴影 */
+  surface?: "page" | "dialog";
 }
 
-export function Composer({ onSubmit, inputId = "hero-input" }: ComposerProps) {
+const SURFACE_SHADOW = { page: "shadow-composer", dialog: "shadow-xl" } as const;
+
+export function Composer({ onSubmit, inputId = "hero-input", surface = "page" }: ComposerProps) {
   const form = useForm<ComposerFormValues>({
     resolver: zodResolver(composerSchema),
     defaultValues: { mode: "keyword", value: "" },
@@ -58,7 +62,11 @@ export function Composer({ onSubmit, inputId = "hero-input" }: ComposerProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="relative overflow-hidden rounded-xl border border-ink-900 bg-bg-elevated shadow-composer transition-colors duration-300 focus-within:border-border-focus"
+      // 表单内有焦点时描边换成焦点色，外面再加一圈淡陶土光晕（ring 与 shadow 叠加，不互相覆盖）
+      className={cn(
+        "relative overflow-hidden rounded-xl border border-ink-900 bg-bg-elevated ring-clay-500/15 transition-[border-color,box-shadow] duration-300 focus-within:border-border-focus focus-within:ring-4",
+        SURFACE_SHADOW[surface],
+      )}
     >
       <Tabs value={mode} onValueChange={handleModeChange} className="flex-col!">
         <TabsList

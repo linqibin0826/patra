@@ -5,6 +5,16 @@ import { describe, expect, it, vi } from "vitest";
 import { ErrorState } from "@/components/portal/status/ErrorState";
 import { NotFoundState } from "@/components/portal/status/NotFoundState";
 
+describe("状态页文案里的破折号", () => {
+  it.each([
+    ["NotFoundState", () => render(<NotFoundState kind="paper" />)],
+    ["ErrorState", () => render(<ErrorState onRetry={() => {}} context="加载期刊" />)],
+  ])("%s：破折号交给中文字体渲染", (_, renderScreen) => {
+    const { container } = renderScreen();
+    expect(container.querySelector("[data-cjk-dash]")).toHaveTextContent("——");
+  });
+});
+
 describe("NotFoundState", () => {
   it("渲染 404 标题、期刊文案与返回首页链接", () => {
     render(<NotFoundState kind="journal" />);

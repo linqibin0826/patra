@@ -99,7 +99,7 @@ export function BrowsePagination({ page: rawPage, total, pageSize, unit }: Brows
             <Link
               key={item}
               href={hrefOf(item)}
-              aria-label={String(item)}
+              aria-label={fmt(item)}
               aria-current={item === page ? "page" : undefined}
               tabIndex={isPending ? -1 : undefined}
               className={cn(
@@ -109,7 +109,7 @@ export function BrowsePagination({ page: rawPage, total, pageSize, unit }: Brows
                   : "border-transparent text-fg-2 hover:border-border-hover hover:bg-paper-50 hover:text-ink-900",
               )}
             >
-              {item}
+              {fmt(item)}
             </Link>
           ),
         )}

@@ -49,6 +49,21 @@ describe("组件对齐设计系统", () => {
     expect(comp("portal/EvidenceBadge.tsx")).not.toMatch(/opacity-(?:[4-9]\d)\b/);
   });
 
+  it("期刊封面（封面卡与详情页刊头）都叠纸纹", () => {
+    const covers = findAll(/[^"]*bg-\(--cover-bg\)[^"]*/);
+    expect(covers.length).toBeGreaterThanOrEqual(2);
+    expect(
+      format(covers.filter((h) => !/bg-\(image:--grain-soft\) bg-blend-overlay/.test(h.match))),
+    ).toEqual([]);
+  });
+
+  it("只读胶囊（作者身份、期刊分级、MeSH）统一用 Pill，不在各处手写", () => {
+    const hits = findAll(
+      /rounded-full border border-(?:clay-200 bg-clay-50|border-default bg-paper-50) px-[23] py-/,
+    ).filter((h) => !h.file.endsWith("Pill.tsx"));
+    expect(format(hits)).toEqual([]);
+  });
+
   it("期刊封面装饰小字不透明度不低于 75%", () => {
     expect(comp("portal/JournalCoverCard.tsx")).not.toMatch(
       /tracking-spaced opacity-(?:[1-6]\d|70)\b/,

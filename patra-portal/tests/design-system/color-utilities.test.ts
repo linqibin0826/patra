@@ -21,8 +21,9 @@ const NON_COLOR: Record<string, RegExp> = {
 /// Tailwind 自带、不属于任何色板的颜色关键字。
 const KEYWORDS = new Set(["transparent", "current", "inherit"]);
 
+/// 紧跟在 ( 或 [ 后面的不算：那是 -(--x) 写法或任意属性（如 [stroke-dasharray:1]），不是颜色类。
 const UTILITY =
-  /(?<![\w\-(])(?:[\w\-[\]=&>*:@.]+:)*!?(text|bg|border(?:-[xytblrse])?|ring|outline|fill|stroke|divide|decoration|accent|placeholder|caret)-([a-z][a-z0-9-]*)(?:\/\d+)?!?(?![\w-])/;
+  /(?<![\w\-([])(?:[\w\-[\]=&>*:@.]+:)*!?(text|bg|border(?:-[xytblrse])?|ring|outline|fill|stroke|divide|decoration|accent|placeholder|caret)-([a-z][a-z0-9-]*)(?:\/\d+)?!?(?![\w-])/;
 
 describe("颜色类工具", () => {
   it("只引用 @theme 里声明过的颜色（否则编译后不生效）", () => {

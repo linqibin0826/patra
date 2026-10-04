@@ -22,10 +22,7 @@ const TONE = {
 export function StatusScreen({ code, badge, tone, title, body, actions }: StatusScreenProps) {
   return (
     <div className="relative isolate flex min-h-[calc(100dvh-56px)] items-center overflow-hidden py-20">
-      <Venation
-        id={`status-${code}-bg`}
-        className="pointer-events-none absolute top-1/2 right-[-8%] -z-10 h-[110%] w-auto -translate-y-1/2 rotate-[22deg] opacity-[0.1] max-md:right-[-40%]"
-      />
+      <Venation className="pointer-events-none absolute top-1/2 right-[-8%] -z-10 h-[110%] w-auto -translate-y-1/2 rotate-[22deg] opacity-[0.1] max-md:right-[-40%]" />
       <div className="mx-auto w-full max-w-page px-gutter">
         <p
           className={cn(
@@ -46,7 +43,6 @@ export function StatusScreen({ code, badge, tone, title, body, actions }: Status
                 // 状态码字符序列静态不变，位置即身份
                 // biome-ignore lint/suspicious/noArrayIndexKey: 同上
                 key={i}
-                id={`status-${code}-${i}`}
                 animated
                 className="mx-[0.03em] inline-block h-[0.76em] w-auto -rotate-[10deg]"
               />

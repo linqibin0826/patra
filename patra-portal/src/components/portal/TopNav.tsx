@@ -153,10 +153,7 @@ export function TopNav() {
               side="top"
               className="isolate gap-0 overflow-hidden bg-bg-canvas px-gutter pt-0 pb-10 data-[side=top]:h-dvh"
             >
-              <Venation
-                id="menu-leaf"
-                className="pointer-events-none absolute right-[-14%] bottom-[-10%] -z-10 h-[62%] w-auto rotate-[24deg] opacity-[0.18]"
-              />
+              <Venation className="pointer-events-none absolute right-[-14%] bottom-[-10%] -z-10 h-[62%] w-auto rotate-[24deg] opacity-[0.18]" />
               <SheetHeader className="h-14 justify-center p-0">
                 <SheetTitle className="font-mono text-2xs font-normal tracking-caps text-fg-3">
                   导航菜单

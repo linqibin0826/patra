@@ -25,7 +25,6 @@ export function Footer() {
       className="relative isolate mt-24 overflow-hidden bg-bg-inverse text-fg-inverse-2"
     >
       <Venation
-        id="footer-leaf"
         tone="inverse"
         className="pointer-events-none absolute top-[-12%] right-[-6%] -z-10 h-[125%] w-auto rotate-[28deg] opacity-[0.13] max-md:right-[-30%] max-md:opacity-[0.08]"
       />

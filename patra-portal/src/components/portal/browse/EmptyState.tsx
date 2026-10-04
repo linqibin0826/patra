@@ -19,7 +19,7 @@ interface EmptyStateProps {
 export function EmptyState({ title, description, actions }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center gap-4 border-y border-border-subtle py-20 text-center">
-      <Venation id="empty-leaf" className="mb-2 h-24 w-auto -rotate-12 opacity-60" />
+      <Venation className="mb-2 h-24 w-auto -rotate-12 opacity-60" />
       <h2 className="max-w-[24em] font-serif text-3xl leading-heading font-medium tracking-tight text-balance text-fg-1">
         {title}
       </h2>

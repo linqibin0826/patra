@@ -9,7 +9,7 @@ const CARD = "rounded-xl border border-border-default bg-paper-50 p-5";
 const CARD_LABEL =
   "mb-4 flex items-center gap-2 font-mono text-2xs uppercase tracking-mono text-fg-3";
 
-/// 文献详情右侧栏：操作（去全文 / 收藏）→ AI 速读（mock 占位）→ 速览数据。
+/// 文献详情右侧栏：操作（去全文 / 收藏）→ AI 速读（尚未上线：后端 aiSummary 恒为 null）→ 速览数据。
 export function PaperRail({ paper }: { paper: PaperDetail }) {
   const fullText = deriveFullText(paper);
   const ev = deriveEvidence(paper.evidenceLevel);
@@ -50,7 +50,7 @@ export function PaperRail({ paper }: { paper: PaperDetail }) {
           <span aria-hidden className="h-3 w-1 rounded-[1px] bg-clay-600" />
           AI 速读
           <span className="ml-auto rounded-full border border-clay-200 bg-paper-50 px-2 py-px text-3xs normal-case text-clay-700">
-            mock · 占位
+            未上线
           </span>
         </div>
         {paper.aiSummary ? (
@@ -61,7 +61,7 @@ export function PaperRail({ paper }: { paper: PaperDetail }) {
         <button
           type="button"
           disabled
-          title="AI 速读为本版占位（mock），未接真实模型"
+          title="AI 速读尚未上线"
           className="mt-4 inline-flex cursor-not-allowed items-center gap-1.5 rounded-full border border-clay-200 bg-paper-50 px-3 py-1.5 font-sans text-sm text-clay-700 opacity-70"
         >
           <Sparkles size={13} aria-hidden /> {paper.aiSummary ? "重新生成" : "生成速读"}

@@ -30,8 +30,9 @@ test("explore-feed 点文献 → 跳转详情页并渲染摘要区", async ({ pa
   await expect(page.getByRole("region", { name: "摘要" })).toBeVisible();
 });
 
-test("非数字 id → not-found 页", async ({ page }) => {
-  await page.goto("/papers/not-a-real-id");
+test("非数字 id → not-found 页，HTTP 状态码 404", async ({ page }) => {
+  const res = await page.goto("/papers/not-a-real-id");
+  expect(res?.status()).toBe(404);
   await expect(page.getByRole("heading", { name: "没有这一页" })).toBeVisible();
   await expect(page.getByText(/这篇文献不在 Patra/)).toBeVisible();
 });

@@ -6,6 +6,18 @@ import { EmptyState } from "@/components/portal/browse/EmptyState";
 import { FacetSkeleton } from "@/components/portal/browse/FacetSkeleton";
 
 describe("BrowseHead", () => {
+  it("副文案里的破折号交给中文字体渲染", () => {
+    const { container } = render(
+      <BrowseHead
+        crumb="文献"
+        eyebrow="按文献浏览"
+        title="文献"
+        description="收录的医学文献——按关键词检索"
+      />,
+    );
+    expect(container.querySelector("[data-cjk-dash]")).toHaveTextContent("——");
+  });
+
   it("渲染面包屑、eyebrow、h1 与副文案", () => {
     render(
       <BrowseHead

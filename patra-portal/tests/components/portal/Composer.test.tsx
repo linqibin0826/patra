@@ -44,6 +44,25 @@ describe("Composer", () => {
     expect(onSubmit).toHaveBeenCalledWith({ mode: "keyword", value: "GLP-1" });
   });
 
+  it("表单内有焦点时描边换成焦点色，外面再加一圈淡陶土光晕", () => {
+    const { container } = render(<Composer />);
+    expect(container.querySelector("form")).toHaveClass(
+      "focus-within:border-border-focus",
+      "focus-within:ring-4",
+      "ring-clay-500/15",
+    );
+  });
+
+  it("页面上用长投影；快速检索对话框里浮在遮罩上，用对话框阴影 shadow-xl", () => {
+    const { container, unmount } = render(<Composer />);
+    expect(container.querySelector("form")).toHaveClass("shadow-composer");
+    unmount();
+    const dialog = render(<Composer surface="dialog" />);
+    const form = dialog.container.querySelector("form");
+    expect(form).toHaveClass("shadow-xl");
+    expect(form).not.toHaveClass("shadow-composer");
+  });
+
   it("输入框 id 默认 hero-input，可由 inputId 覆盖（快速检索对话框与 Hero 同屏时避免重复 id）", () => {
     const { unmount } = render(<Composer />);
     expect(screen.getByRole("textbox")).toHaveAttribute("id", "hero-input");

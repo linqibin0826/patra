@@ -48,7 +48,7 @@ export async function Journals() {
         </Link>
       </div>
 
-      <ul className="reveal mt-12 grid grid-cols-6 gap-x-6 gap-y-10 max-[1200px]:grid-cols-3 max-[720px]:-mx-gutter max-[720px]:flex max-[720px]:snap-x max-[720px]:snap-mandatory max-[720px]:gap-4 max-[720px]:overflow-x-auto max-[720px]:scroll-px-gutter max-[720px]:px-gutter max-[720px]:pt-2 max-[720px]:pb-4 max-[720px]:[scrollbar-width:none]">
+      <ul className="reveal mt-12 grid grid-cols-6 gap-x-6 [--shelf-gap:--spacing(6)] max-[720px]:[--shelf-gap:--spacing(4)] gap-y-10 max-[1200px]:grid-cols-3 max-[720px]:-mx-gutter max-[720px]:flex max-[720px]:snap-x max-[720px]:snap-mandatory max-[720px]:gap-4 max-[720px]:overflow-x-auto max-[720px]:scroll-px-gutter max-[720px]:px-gutter max-[720px]:pt-2 max-[720px]:pb-4 max-[720px]:[scrollbar-width:none]">
         {journals.map((j) => (
           <li
             key={j.id}

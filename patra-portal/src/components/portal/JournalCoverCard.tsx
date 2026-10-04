@@ -10,7 +10,7 @@ interface JournalCoverCardProps {
   className?: string;
 }
 
-/// 期刊封面卡：深色学术封面（书脊高光 + 内框压印 + 贴面落影），hover 时抬起、微倾、落影拉长；
+/// 期刊封面卡：深色学术封面（书脊高光 + 内框压印 + 纸纹 + 贴面落影），立在书架线上；hover 时抬起、微倾、落影拉长；
 /// 下方信息区为全称、缩写、影响因子与 JCR 分区。首页书架与 /journals 网格共用。
 export function JournalCoverCard({ journal, className }: JournalCoverCardProps) {
   const { bg, ink } = pickCover(journal.id);
@@ -26,23 +26,30 @@ export function JournalCoverCard({ journal, className }: JournalCoverCardProps) 
       title={journal.name}
       className={cn("group/cover flex flex-col text-inherit no-underline", className)}
     >
+      {/* 书架线画在封面外层：hover 时封面抬起离开搁板，线不动。容器用 --shelf-gap 告知网格列距，
+          线向两侧各伸出半个列距，同一排相邻封面的线连成一道 */}
       <div
-        data-cover
-        style={coverVars}
-        className="relative aspect-[3/4] overflow-hidden rounded-[3px] bg-(--cover-bg) text-(--cover-ink) shadow-cover transition-shadow motion-safe:transition-[translate,rotate,box-shadow] duration-500 ease-out-expo before:absolute before:inset-y-0 before:left-0 before:w-4 before:bg-(image:--cover-spine) before:content-[''] after:absolute after:inset-y-2.5 after:right-2.5 after:left-5 after:border after:border-current after:opacity-25 after:content-[''] group-hover/cover:shadow-cover-hover motion-safe:group-hover/cover:-translate-y-1.5 motion-safe:group-hover/cover:-rotate-[0.6deg]"
+        data-shelf
+        className="relative after:absolute after:inset-x-[calc(var(--shelf-gap,0px)/-2)] after:-bottom-px after:h-px after:bg-border-strong after:content-['']"
       >
-        {journal.foundedYear !== null && (
-          <div className="absolute top-4 right-3 left-5 text-center font-mono text-3xs uppercase tracking-spaced opacity-75">
-            est. {journal.foundedYear}
+        <div
+          data-cover
+          style={coverVars}
+          className="relative aspect-[3/4] overflow-hidden rounded-[3px] bg-(--cover-bg) bg-(image:--grain-soft) bg-blend-overlay text-(--cover-ink) shadow-cover transition-shadow motion-safe:transition-[translate,rotate,box-shadow] duration-500 ease-out-expo before:absolute before:inset-y-0 before:left-0 before:w-4 before:bg-(image:--cover-spine) before:content-[''] after:absolute after:inset-y-2.5 after:right-2.5 after:left-5 after:border after:border-current after:opacity-25 after:content-[''] group-hover/cover:shadow-cover-hover motion-safe:group-hover/cover:-translate-y-1.5 motion-safe:group-hover/cover:-rotate-[0.6deg]"
+        >
+          {journal.foundedYear !== null && (
+            <div className="absolute top-4 right-3 left-5 text-center font-mono text-3xs uppercase tracking-spaced opacity-75">
+              est. {journal.foundedYear}
+            </div>
+          )}
+          <div className="absolute inset-0 flex items-center justify-center pr-4 pl-6 text-center">
+            <span className="font-serif text-[clamp(20px,2vw,26px)] leading-[1.05] font-medium tracking-tight whitespace-pre-line">
+              {journal.abbr}
+            </span>
           </div>
-        )}
-        <div className="absolute inset-0 flex items-center justify-center pr-4 pl-6 text-center">
-          <span className="font-serif text-[clamp(20px,2vw,26px)] leading-[1.05] font-medium tracking-tight whitespace-pre-line">
-            {journal.abbr}
-          </span>
-        </div>
-        <div className="absolute right-3 bottom-4 left-5 text-center font-mono text-3xs tracking-spaced opacity-75">
-          {`vol · ${new Date().getFullYear()}`}
+          <div className="absolute right-3 bottom-4 left-5 text-center font-mono text-3xs tracking-spaced opacity-75">
+            {`vol · ${new Date().getFullYear()}`}
+          </div>
         </div>
       </div>
 

@@ -2,6 +2,7 @@
 
 import { Home, RefreshCw } from "lucide-react";
 import Link from "next/link";
+import { CjkDashText } from "@/components/portal/CjkDashText";
 import { StatusScreen } from "@/components/portal/status/StatusScreen";
 import { btnPrimary, btnSecondary } from "@/lib/portal-ui";
 
@@ -18,7 +19,9 @@ export function ErrorState({ onRetry, context = "加载" }: ErrorStateProps) {
       badge="服务异常 · 兜底页"
       tone="rust"
       title="这一页没能加载出来"
-      body={`${context}时出了点问题 —— 可能是上游来源短暂不可用，或一次性的网络抖动。这通常重试就能恢复。`}
+      body={
+        <CjkDashText>{`${context}时出了点问题——可能是上游来源短暂不可用，或一次性的网络抖动。这通常重试就能恢复。`}</CjkDashText>
+      }
       actions={
         <>
           <button type="button" onClick={onRetry} className={btnPrimary}>

@@ -6,7 +6,6 @@ const TONE_CLASS: Record<EvidenceTone, string> = {
   moss: "border-status-success bg-status-success-bg text-status-success-ink",
   amber: "border-status-warning bg-status-warning-bg text-status-warning-ink",
   slate: "border-status-info bg-status-info-bg text-status-info",
-  muted: "border-dashed border-border-default bg-paper-200 text-fg-3",
 };
 const RUNG_CLASS = ["h-[7px]", "h-[10px]", "h-[12px]", "h-[14px]", "h-[16px]"];
 const COMPACT_RUNG_CLASS = ["h-[4px]", "h-[6px]", "h-[8px]", "h-[10px]", "h-[11px]"];

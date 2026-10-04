@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import { DetailCrumbs } from "@/components/portal/DetailCrumbs";
 import { DisclosureSection } from "@/components/portal/DisclosureSection";
 import { IdentifierChip } from "@/components/portal/IdentifierChip";
+import { Pill } from "@/components/portal/Pill";
 import { AbstractBlock } from "@/components/portal/paper-detail/AbstractBlock";
 import { AuthorList } from "@/components/portal/paper-detail/AuthorList";
 import { PaperHeader } from "@/components/portal/paper-detail/PaperHeader";
@@ -74,17 +75,10 @@ export function PublicationDetailView({ paper }: { paper: PaperDetail }) {
                 <DisclosureSection title="MeSH 主题词 / 关键词" count={`${mesh.length} 项`}>
                   <div className="flex flex-wrap gap-2">
                     {mesh.map((h) => (
-                      <span
-                        key={h.descriptorUi}
-                        className={
-                          h.major
-                            ? "rounded-full border border-clay-200 bg-clay-50 px-3 py-1 font-sans text-sm text-clay-800"
-                            : "rounded-full border border-border-default bg-paper-50 px-3 py-1 font-sans text-sm text-fg-2"
-                        }
-                      >
-                        {h.major && <span title="主要主题词">★ </span>}
+                      <Pill key={h.descriptorUi} tone={h.major ? "clay" : "neutral"}>
+                        {h.major && <span title="主要主题词">★</span>}
                         {h.term}
-                      </span>
+                      </Pill>
                     ))}
                   </div>
                   {paper.keywords.length > 0 && (

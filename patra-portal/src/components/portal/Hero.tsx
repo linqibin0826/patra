@@ -1,5 +1,6 @@
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { CjkDashText } from "@/components/portal/CjkDashText";
 import { Composer, type ComposerSubmitEvent } from "@/components/portal/Composer";
 import { Venation } from "@/components/portal/Venation";
 import { PORTAL_STATS } from "@/data/portal-stats";
@@ -96,12 +97,12 @@ export function Hero({ onComposerSubmit }: HeroProps) {
             className="pointer-events-none absolute top-[-12px] right-[-1%] m-0 flex flex-col items-end max-lg:top-0 max-lg:right-[-16%] max-lg:opacity-30 max-sm:right-[-38%] max-sm:opacity-20"
           >
             <Venation
-              id="hero-leaf"
               animated
               className="h-[clamp(420px,46vw,680px)] w-auto -rotate-[16deg] max-sm:h-[400px]"
             />
             <figcaption className="anim-fade mt-1 mr-2 max-w-[24em] font-mono text-2xs leading-relaxed tracking-mono text-balance text-fg-3 [--delay:1600ms] max-lg:hidden">
-              <span className="text-accent-strong">图 1</span>　叶脉——十个来源，汇入同一根主脉。
+              <span className="text-accent-strong">图 1</span>　
+              <CjkDashText>叶脉——十个来源，汇入同一根主脉。</CjkDashText>
             </figcaption>
           </figure>
         </div>
