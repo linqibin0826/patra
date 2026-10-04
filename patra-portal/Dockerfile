@@ -5,6 +5,8 @@
 # ---- deps：装依赖（锁文件不变则该层缓存命中）----
 FROM node:24-alpine AS deps
 WORKDIR /app
+# 镜像在国内（Mac mini）构建，npm / pnpm 走国内镜像（官方源在国内慢且不稳）；包的完整性仍由锁文件校验
+ENV npm_config_registry=https://registry.npmmirror.com
 # pnpm 版本对齐 portal-ci.yml（pnpm/action-setup version '10'）；package.json 无 packageManager 字段
 RUN npm install -g pnpm@10
 COPY package.json pnpm-lock.yaml ./
@@ -13,6 +15,7 @@ RUN pnpm install --frozen-lockfile
 # ---- builder：next build（output:"standalone" → 产出 .next/standalone）----
 FROM node:24-alpine AS builder
 WORKDIR /app
+ENV npm_config_registry=https://registry.npmmirror.com
 RUN npm install -g pnpm@10
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
