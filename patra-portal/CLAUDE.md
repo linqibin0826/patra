@@ -7,6 +7,8 @@
 技术栈：
 
 - **框架**：Next.js 16 App Router + React 19（Server Components 优先）
+- **打包**：webpack（`dev` / `build` 脚本带 `--webpack`），不用 Next 16 默认的 Turbopack。三个西文字体在构建时仍由 `next/font` 从 Google 下载（28 个文件）：Turbopack 下任何一个请求失败都会让构建失败，webpack 会重试 3 次（Mac mini 的历史构建里约三成出现过这类重试）
+- **字体**：西文 Inter / Newsreader / IBM Plex Mono 走 `next/font/google`；中文正文用系统黑体（`--patra-font-cjk-sans`）；中文衬线 Noto Serif SC 随 npm 包 `@fontsource-variable/noto-serif-sc` 安装。不要用 `next/font/google` 引入中文字体：每个字族要在构建时下载 101 个切片
 - **类型**：TypeScript 5 strict 模式
 - **样式**：Tailwind v4 + shadcn/ui（组件原语在 `src/components/ui/`）
 - **状态**：TanStack Query v5（服务端状态）+ Zustand（客户端 UI 状态）
