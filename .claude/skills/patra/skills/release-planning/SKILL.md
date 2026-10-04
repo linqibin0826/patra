@@ -28,7 +28,7 @@ description: 启动新版本 / 创建 Linear Project 时使用——产出"5 字
 | 层级 | **Project（产品维度）** | **Issue（工程维度）** |
 | 时机 | 启动新版本时 | 开始具体 feature 实现时 |
 | 涵盖 | 版本目标、工程任务范围（拆 area:be/fe/design Issue）、Done 判定 | 架构、组件、数据流、错误处理、测试 |
-| 产物 | `<git-root>/docs/patra/release-specs/<version>.md`（MD）| `<git-root>/docs/patra/specs/<topic>-design.html`（HTML）|
+| 产物 | `<git-root>/docs/patra/release-specs/<version>.md`（MD）| `<git-root>/docs/patra/specs/YYYY-MM-DD-<topic>-design.md`（MD）|
 | 终止 | Linear Project 进 Active + Issue 池就绪 | 调用 writing-plans 写实施计划 |
 
 ## Issue 是跟踪单位，PR 按技术栈合并
@@ -268,7 +268,7 @@ patra-api 是单人开发的绿地项目（无历史包袱、无外部用户）�
 > 2. 配置 Project Milestone（默认 BE Ready → Design Ready → FE Ready → Released），把 Issue 挂到对应 Milestone
 > 3. Project 状态推到 `Active`
 >
-> 后续每个 Issue 走 Linear 默认 5 态状态机（Backlog → Todo → In Progress → In Review → Done），按 area 分流：area:be Issue 进 In Progress 时触发 patra:brainstorming + patra:writing-plans + TDD；area:design Issue 进 In Progress 时用 Claude Design；area:fe Issue 进 In Progress 时消费 Handoff token。同版本同技术栈的 Issue 共用一条 feature branch 和一个 PR，PR 描述逐行 `Closes` 所承载的 Issue。详见 SOP §5.1 / §6。"
+> 后续每个 Issue 走 Linear 默认 5 态状态机（Backlog → Todo → In Progress → In Review → Done），按 area 分流：area:be Issue 进 In Progress 时触发 superpowers:brainstorming + superpowers:writing-plans + TDD；area:design Issue 进 In Progress 时用 Claude Design；area:fe Issue 进 In Progress 时消费 Handoff token。同版本同技术栈的 Issue 共用一条 feature branch 和一个 PR，PR 描述逐行 `Closes` 所承载的 Issue。详见 SOP §5.1 / §6。"
 
 **到此结束。不调用任何其他 skill。**
 
