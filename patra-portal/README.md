@@ -2,7 +2,7 @@
 
 Patra C 端前端 —— 医学出版物发现与浏览门户。
 
-- **技术栈**：Next.js 15 App Router · React 19 · TypeScript 5/6 strict · Tailwind v4 · shadcn/ui · TanStack Query · Zustand · React Hook Form + Zod
+- **技术栈**：Next.js 16 App Router · React 19 · TypeScript 5/6 strict · Tailwind v4 · shadcn/ui · TanStack Query · Zustand · React Hook Form + Zod
 - **工具链**：pnpm · Biome · Vitest + Testing Library · Husky + lint-staged
 - **Node**：24 LTS（由 `.nvmrc` / `.tool-versions` 锁定）
 
@@ -24,7 +24,7 @@ pnpm dev          # http://localhost:3000
 | `pnpm test:watch` | `vitest`（watch 模式） |
 | `pnpm lint` | `biome check .` |
 | `pnpm format` | `biome format --write .` |
-| `pnpm typecheck` | `tsc --noEmit` |
+| `pnpm typecheck` | `next typegen && tsc --noEmit`（先生成 Next 类型，再做类型检查） |
 
 ## 目录结构
 
@@ -62,7 +62,7 @@ Portal CI 由 `.github/workflows/portal-ci.yml` 驱动，监听 `patra-portal/**
 | Job | 命令 | 说明 |
 |-----|------|------|
 | `lint` | `pnpm lint` | Biome 静态检查 |
-| `typecheck` | `pnpm typecheck` | TypeScript 类型检查（`tsc --noEmit`） |
+| `typecheck` | `pnpm typecheck` | TypeScript 类型检查（`next typegen && tsc --noEmit`） |
 | `test` | `pnpm test` | Vitest 单元测试 |
 
 `portal-ci-required-check` 聚合三个 job，已在 main 分支保护中设为 Required Status Check。

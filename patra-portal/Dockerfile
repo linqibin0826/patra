@@ -1,4 +1,4 @@
-# patra-portal 运行镜像（Next.js 15 standalone Node server）
+# patra-portal 运行镜像（Next.js 16 standalone Node server）
 # 三阶段：deps（装依赖，缓存层）→ builder（next build，standalone trace）→ runner（精简运行镜像）。
 # 用法：docker build -f patra-portal/Dockerfile patra-portal
 

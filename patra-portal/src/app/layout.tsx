@@ -52,6 +52,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="zh-CN"
+      // globals.css 给 html 开了平滑滚动；声明后 Next 在换页回顶时临时关掉它，换页瞬间回顶
+      data-scroll-behavior="smooth"
       className={cn(
         inter.variable,
         newsreader.variable,

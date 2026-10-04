@@ -10,7 +10,7 @@ const DETAIL = {
 
 const CHECK_TIMEOUT_MS = 3_000;
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   // 站内跳转与预取都带 rsc 头，它们本来就不看 HTTP 状态码
   if (req.headers.has("rsc")) {
     return NextResponse.next();
@@ -37,5 +37,4 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: ["/papers/:id", "/journals/:id"],
-  runtime: "nodejs",
 };
