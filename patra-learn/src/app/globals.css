@@ -16,8 +16,9 @@
   --color-warn: #b98014; /* 提醒 */
   --color-danger: #cc4747; /* 危险/红线 */
 
-  --font-sans: var(--font-noto-sans-sc), "PingFang SC", sans-serif;
-  --font-mono: var(--font-jetbrains-mono), "SF Mono", monospace;
+  --font-sans:
+    ui-sans-serif, system-ui, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  --font-mono: "JetBrains Mono Variable", "SF Mono", monospace;
 }
 
 /* 桌面触控板滚到顶 / 底时不做弹性回弹，否则整页会被拖出一段再弹回。

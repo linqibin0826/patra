@@ -93,7 +93,7 @@ Patra 工作区包含以下子项目：
 |------|------|--------|
 | **patra-api** | 后端服务（微服务 + 六边形 + DDD） | Java 25 / Spring Boot 4 / Gradle |
 | **patra-portal** | 前端门户（管理控制台） | Next.js 16 / React 19 / TypeScript 5/6 strict / Tailwind v4 / shadcn/ui |
-| **patra-learn** | 学习站（内部 onboarding / 回顾，地铁线路图式课程） | Next.js 15 / React 19 / TypeScript 5/6 strict / Tailwind v4 |
+| **patra-learn** | 学习站（内部 onboarding / 回顾，地铁线路图式课程） | Next.js 16 / React 19 / TypeScript 5/6 strict / Tailwind v4 |
 | **patra-infra** | 基建配置（Docker Compose、DB 脚本） | Docker Compose / Bash / launchd |
 
 ## JetBrains MCP 语义工具

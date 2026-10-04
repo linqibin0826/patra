@@ -4,7 +4,7 @@ Patra 学习站 —— 把你的系统，一条线一条线学明白。
 
 内部学习站（onboarding + 回顾）：把本仓库的 CI / CD / 巡检体系做成「地铁线路图」式课程——3 条开通线 13 站正文，配套词条图鉴、事故档案、运维小抄。纯静态站（SSG + localStorage 打卡进度），无后端依赖。
 
-- **技术栈**：Next.js 15 App Router · React 19 · TypeScript strict · Tailwind v4 · Biome · Vitest · Playwright
+- **技术栈**：Next.js 16 App Router · React 19 · TypeScript strict · Tailwind v4 · Biome · Vitest · Playwright
 - **Node**：24（`.nvmrc` 锁定）+ pnpm 10
 - **访问**：部署在 Mac mini，仅 tailscale 内网 —— `http://linqibins-mac-mini:4001`
 
@@ -38,7 +38,7 @@ src/
 │   ├── archive/page.tsx                # /archive 事故档案（6 份）
 │   ├── cheatsheet/page.tsx             # /cheatsheet 运维小抄（3 张操作卡）
 │   ├── api/health/route.ts             # GET /api/health（容器健康检查）
-│   ├── layout.tsx                      # 根布局：next/font（Noto Sans SC + JetBrains Mono）+ TopBar
+│   ├── layout.tsx                      # 根布局：字体（正文系统字体 + JetBrains Mono）+ TopBar
 │   └── globals.css                     # Tailwind v4 @theme 设计 token
 ├── content/                            # 内容层（内容即代码，无 CMS）
 │   ├── types.ts                        # Line / Station / StationRef / GlossaryEntry / Incident / OpsCard
