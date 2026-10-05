@@ -29,15 +29,6 @@
 3. 禁止以时间限制、人力不足、快速交付为由采用次优方案
 4. 禁止提及"如果时间允许"、"建议后续优化"、"分阶段实施"
 
-## 下游消费者（linqibin-commons 兼容红线）
-
-**"零历史包袱 / 禁止考虑向后兼容"对 `linqibin-commons/` 不再成立**——它有仓库外的下游消费者，改动前必须评估影响：
-
-1. **super-nb-platform**（`~/Projects/Products/super-nb/super-nb-platform`）通过 `scripts/bootstrap-commons.sh` clone 本仓库、checkout `gradle.properties` 中 `patraRef` 钉住的 commit、`publishToMavenLocal` 后以 `dev.linqibin.commons:*:0.1.0-SNAPSHOT` 消费 5 个模块：commons-core、starter-core、starter-web、**starter-jpa**、starter-test。
-2. **高危耦合面（starter-jpa）**：`BaseJpaEntity` 家族的字段/列名/类型已物化进 super-nb 的 Flyway baseline 且 `ddl-auto=validate`——改列契约会让下游启动直接失败；`Jackson3JsonFormatMapper` 的 String/Object 透传行为被下游 JSONB `record_remarks` 数据依赖——回退或改动会让下游读数据 500。`commons-core` 的 CQRS（Command/CommandHandler/CommandBus）与错误体系（DomainException/StandardErrorTrait）也被大量 import。
-3. **分支操作前检查 patraRef**：删除或强推分支前，确认 super-nb 的 `patraRef` 没有钉在该分支的 commit 上（曾钉过非 main 分支 `fix/jackson3-string-passthrough`）。commons 修复合入 main 后，应提醒用户把下游 `patraRef` 更新到 main commit。
-4. 改动 `linqibin-commons/` 时，视同维护一个有外部用户的库：行为变更、删除公开 API、改自动配置默认值，都要先看下游用法（可 grep super-nb-platform 的 import）。
-
 ## 安全红线（公开仓库）
 
 **本仓库 `linqibin0826/patra` 是 GitHub 公开仓库**——任何提交内容（含 git 历史）都全互联网可读且永久留痕。
@@ -92,8 +83,8 @@ Patra 工作区包含以下子项目：
 | 目录 | 用途 | 技术栈 |
 |------|------|--------|
 | **patra-api** | 后端服务（微服务 + 六边形 + DDD） | Java 25 / Spring Boot 4 / Gradle |
-| **patra-portal** | 前端门户（管理控制台） | Next.js 15 / React 19 / TypeScript 5/6 strict / Tailwind v4 / shadcn/ui |
-| **patra-learn** | 学习站（内部 onboarding / 回顾，地铁线路图式课程） | Next.js 15 / React 19 / TypeScript 5/6 strict / Tailwind v4 |
+| **patra-portal** | 前端门户（管理控制台） | Next.js 16 / React 19 / TypeScript 5/6 strict / Tailwind v4 / shadcn/ui |
+| **patra-learn** | 学习站（内部 onboarding / 回顾，地铁线路图式课程） | Next.js 16 / React 19 / TypeScript 5/6 strict / Tailwind v4 |
 | **patra-infra** | 基建配置（Docker Compose、DB 脚本） | Docker Compose / Bash / launchd |
 
 ## JetBrains MCP 语义工具
@@ -110,4 +101,6 @@ Patra 工作区包含以下子项目：
 | 按项目代码风格格式化 | `reformat_file` |
 | 增量编译验证 | `build_project` |
 
-重命名一律走 `rename_refactoring`，禁止用文本替换代替。IDEA 未打开或 MCP 不可用时退回内置工具，不阻塞工作。
+这些工具是 deferred tool，会话开始时只有名字、不能直接调用。**遇到上表任务时，先用 ToolSearch 加载（如 `select:mcp__jetbrains__search_symbol,mcp__jetbrains__analyze_calls`）再调用**，禁止因为"还没加载"就改用 grep / sed 代替。
+
+重命名一律走 `rename_refactoring`，禁止用文本替换代替。仅当加载后实际调用失败（IDEA 未打开、MCP 无响应）时才退回内置工具，不阻塞工作；不许未经尝试就预设不可用。

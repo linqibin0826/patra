@@ -132,15 +132,18 @@
   --selection-fg: var(--ink-900);
 
   /* ============ TYPOGRAPHY ============ */
+  /* 中文黑体用系统自带字体：苹方（macOS / iOS）、微软雅黑（Windows）、思源黑体（Linux），不下载网络字体 */
+  --patra-font-cjk-sans: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC";
   --patra-font-sans:
-    var(--font-inter), var(--font-noto-sans-sc), ui-sans-serif, system-ui, -apple-system,
+    var(--font-inter), var(--patra-font-cjk-sans), ui-sans-serif, system-ui, -apple-system,
     "Segoe UI", sans-serif;
-  /* Newsreader：屏幕阅读衬线，opsz 6–72 随字号自动切换光学尺寸 */
+  /* Newsreader：屏幕阅读衬线，opsz 6–72 随字号自动切换光学尺寸。
+     中文衬线 Noto Serif SC 随 npm 包安装（@fontsource-variable/noto-serif-sc，在 layout.tsx 引入） */
   --patra-font-serif:
-    var(--font-newsreader), var(--font-noto-serif-sc), Georgia, "Iowan Old Style", serif;
-  /* IBM Plex Mono：人文主义等宽，DOI / PMID / 标签；中文回退到 Noto Sans SC 而非系统字体 */
+    var(--font-newsreader), "Noto Serif SC Variable", Georgia, "Iowan Old Style", serif;
+  /* IBM Plex Mono：人文主义等宽，DOI / PMID / 标签；中文回退到系统黑体，而不是等宽字体带出的宋体 */
   --patra-font-mono:
-    var(--font-plex-mono), var(--font-noto-sans-sc), ui-monospace, "SF Mono", Menlo, Consolas,
+    var(--font-plex-mono), var(--patra-font-cjk-sans), ui-monospace, "SF Mono", Menlo, Consolas,
     monospace;
 
   /* Type scale — UI-leaning 但不逼仄：整体 +0.5px，中文小字可读优先。

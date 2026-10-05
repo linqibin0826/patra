@@ -40,7 +40,7 @@ tasks.jar {
 tasks.bootRun {
     // bootRun 退出 Configuration Cache:
     // (1) OTel agent 配置在 configuration 阶段求值,每次变化都让 cc 失效(见下方 NOTE);
-    // (2) bootRun 与 publishToMavenLocal 等任务复用同一 cc entry 时会污染 runtime classpath
+    // (2) bootRun 与其他任务复用同一 cc entry 时会污染 runtime classpath
     //     (曾出现 catalog-infra 编译期看不到 patra-common-model 的诡异错误)。
     // 主动 mark 让 Gradle 跳过 cc 复用,每次重新算 task graph,避免污染。
     notCompatibleWithConfigurationCache(

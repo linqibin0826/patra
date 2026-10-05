@@ -16,7 +16,7 @@ describe("CjkDashText", () => {
     for (const d of dashes) {
       expect(d).toHaveTextContent(/^——$/);
       // 字距清零：tracking 会在两段之间再撑出缝
-      expect(d).toHaveClass("font-[family-name:var(--font-noto-sans-sc)]", "tracking-normal");
+      expect(d).toHaveClass("font-[family-name:var(--patra-font-cjk-sans)]", "tracking-normal");
     }
   });
 

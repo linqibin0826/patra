@@ -97,11 +97,12 @@ reviews:
         META-INF/spring 注册文件须与 AutoConfiguration 同步。
     - path: "patra-portal/**/*.ts"
       instructions: |
-        Next.js 15 / React 19 / TS strict / Tailwind v4 / shadcn/ui。指出 any、未处理 Promise、
-        客户端组件泄漏 Server Action。text-fg-3/border-border-default 是空操作，用 text-[var(--fg-3)]。
+        Next.js 16 / React 19 / TS strict / Tailwind v4 / shadcn/ui。指出 any、未处理 Promise、
+        客户端组件泄漏 Server Action。语义色用 @theme 已映射的标准类名（如 text-fg-3、
+        border-border-default），不要写 text-[var(--fg-3)]、text-(--fg-3) 这类临时写法。
     - path: "patra-portal/**/*.tsx"
       instructions: |
-        同 .ts：Next.js 15 / React 19 / TS strict。指出 any、未处理 Promise、Server Action 泄漏、
+        同 .ts：Next.js 16 / React 19 / TS strict。指出 any、未处理 Promise、Server Action 泄漏、
         违反 shadcn/ui 样式约定。
     - path: "**/db/migration/**/*.sql"
       instructions: |

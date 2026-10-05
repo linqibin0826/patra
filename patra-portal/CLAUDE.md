@@ -6,13 +6,15 @@
 
 技术栈：
 
-- **框架**：Next.js 15 App Router + React 19（Server Components 优先）
+- **框架**：Next.js 16 App Router + React 19（Server Components 优先）
+- **打包**：webpack（`dev` / `build` 脚本带 `--webpack`），不用 Next 16 默认的 Turbopack。三个西文字体在构建时仍由 `next/font` 从 Google 下载（28 个文件）：Turbopack 下任何一个请求失败都会让构建失败，webpack 会重试 3 次（Mac mini 的历史构建里约三成出现过这类重试）
+- **字体**：西文 Inter / Newsreader / IBM Plex Mono 走 `next/font/google`；中文正文用系统黑体（`--patra-font-cjk-sans`）；中文衬线 Noto Serif SC 随 npm 包 `@fontsource-variable/noto-serif-sc` 安装。不要用 `next/font/google` 引入中文字体：每个字族要在构建时下载 101 个切片
 - **类型**：TypeScript 5 strict 模式
 - **样式**：Tailwind v4 + shadcn/ui（组件原语在 `src/components/ui/`）
 - **状态**：TanStack Query v5（服务端状态）+ Zustand（客户端 UI 状态）
 - **表单**：React Hook Form + Zod
 - **测试**：Vitest + Testing Library
-- **工具**：Biome（格式化 + lint）+ pnpm + Husky/lint-staged
+- **工具**：Biome（格式化 + lint）+ pnpm
 
 ## FE 工作原则
 
@@ -39,8 +41,16 @@ Patra 门户面向**所有类型用户**（临床医生、科研人员、研究�
 
 ## patra plugin 自动加载
 
-`patra:` 与 `patra-backend:` 命名空间下的流程方法论与后端专属 skill（brainstorming / writing-plans / TDD / debugging / code review / hexagonal / jpa / events / troubleshooter 等）已放在**仓库根** `.claude/skills/patra/` 与 `.claude/skills/patra-backend/`。
+流程方法论（brainstorming / writing-plans / TDD / debugging / code review 等）使用上游 `superpowers:` plugin（根 `.claude/settings.json` 以 project scope 启用），Patra 约定见根 `.claude/rules/superpowers.md`。`patra:`（release-planning / create-issue）与 `patra-backend:`（hexagonal / jpa / events / troubleshooter 等）放在**仓库根** `.claude/skills/patra/` 与 `.claude/skills/patra-backend/`。
 
-Claude Code 的项目级 `.claude/skills` 会从启动 cwd **向上递归查找到仓库根**，因此从 portal 子目录（`patra/patra-portal/`）启动 Claude Code 时，仓库根的这两个 plugin 会**自动加载**，无需任何 `/plugin marketplace add` 或 `install` 操作 —— 接受 workspace trust 后即可调用 `patra:brainstorming` 等。
+Claude Code 的项目级 `.claude/skills` 会从启动 cwd **向上递归查找到仓库根**，因此从 portal 子目录（`patra/patra-portal/`）启动 Claude Code 时，仓库根的这两个 plugin 会**自动加载**，无需任何 `/plugin marketplace add` 或 `install` 操作。
 
-skill 内示例当前以 Java 为主，但 LLM 可自动跨技术栈映射 —— FE 工作时把 Java 示例理解为 TS/React 等价物即可。若实际使用 cognitive friction 显著超预期，再独立开「plugin 去技术栈化」PR（回归上游 obra/superpowers 风格 + 保留中文翻译）。
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

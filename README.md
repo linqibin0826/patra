@@ -9,7 +9,7 @@
 | **linqibin-commons/** | 个人通用 Spring Boot 基建（commons + 11 starter） | Java 25 / Spring Boot 4 / Gradle |
 | **patra-starters/** | Patra 项目专属 starter（expr / provenance） | Java 25 / Spring Boot 4 |
 | **patra-api/** | 后端业务服务（微服务 + 六边形 + DDD） | Java 25 / Spring Boot 4 |
-| **patra-portal/** | 前端管理控制台（工程基建在 v0.4 启动，见 [v0.4 Portal Foundation](docs/patra/release-specs/)） | Next.js 15 / React 19 / TypeScript 5 / Tailwind v4 |
+| **patra-portal/** | 前端管理控制台（工程基建在 v0.4 启动，见 [v0.4 Portal Foundation](docs/patra/release-specs/)） | Next.js 16 / React 19 / TypeScript 5 / Tailwind v4 |
 | **patra-infra/** | 本地基建配置（Docker Compose、launchd） | Docker Compose / Bash / launchd |
 
 辅助目录：
@@ -56,7 +56,6 @@ Gradle path `:parent:child` 必须与物理目录 `parent/child/` **一一对应
 ./gradlew spotbugsMain             # 跑 SpotBugs 静态分析（HTML 报告在 build/reports/spotbugs/）
 ./gradlew :patra-api:patra-catalog:patra-catalog-boot:bootRun  # 启动 catalog 服务
 ./gradlew :<commons-module>:checkBoundary                      # 校验依赖边界
-./gradlew publishToMavenLocal      # 发布到 ~/.m2 本地仓库
 ```
 
 ## 工具链入口

@@ -4,7 +4,7 @@
 
 - 格式化与 lint 全部交给 Biome（`biome.json`）
 - 禁止与 Biome 配置冲突的手动格式化
-- pre-commit 通过 Husky + lint-staged 自动跑 Biome
+- 提交时不会自动跑 Biome（仓库的 git 钩子里没有它）：提交前执行 `pnpm lint`，需要自动修复时用 `pnpm exec biome check --write .`；CI 会把关
 
 ## TypeScript strict 模式
 

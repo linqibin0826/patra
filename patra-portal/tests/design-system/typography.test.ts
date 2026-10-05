@@ -40,12 +40,30 @@ describe("字号与字距", () => {
     const tokens = readSrc("styles/tokens.css");
     expect(tokens).toMatch(/--patra-font-serif:\s*var\(--font-newsreader\)/);
     expect(tokens).toMatch(
-      /--patra-font-mono:\s*var\(--font-plex-mono\),\s*var\(--font-noto-sans-sc\)/,
+      /--patra-font-mono:\s*var\(--font-plex-mono\),\s*var\(--patra-font-cjk-sans\)/,
     );
     const layout = readSrc("app/layout.tsx");
     expect(layout).toMatch(/Newsreader/);
     expect(layout).toMatch(/IBM_Plex_Mono/);
     expect(layout).not.toMatch(/Source_Serif_4|JetBrains_Mono/);
+  });
+
+  it("中文黑体用系统自带字体，不下载 Noto Sans SC", () => {
+    const tokens = readSrc("styles/tokens.css");
+    expect(tokens).toMatch(/--patra-font-cjk-sans:\s*"PingFang SC",\s*"Microsoft YaHei"/);
+    expect(tokens).toMatch(
+      /--patra-font-sans:\s*var\(--font-inter\),\s*var\(--patra-font-cjk-sans\)/,
+    );
+    expect(readSrc("app/layout.tsx")).not.toMatch(/Noto_Sans_SC/);
+  });
+
+  it("中文衬线 Noto Serif SC 随 npm 包安装，构建时不向 Google 下载", () => {
+    expect(readSrc("styles/tokens.css")).toMatch(
+      /--patra-font-serif:\s*var\(--font-newsreader\),\s*"Noto Serif SC Variable"/,
+    );
+    const layout = readSrc("app/layout.tsx");
+    expect(layout).toContain('import "@fontsource-variable/noto-serif-sc";');
+    expect(layout).not.toMatch(/Noto_Serif_SC/);
   });
 
   it("不写死像素字号，一律用字号阶（响应式 clamp() 除外）", () => {

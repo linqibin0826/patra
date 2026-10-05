@@ -10,9 +10,12 @@ const DETAIL = {
 
 const CHECK_TIMEOUT_MS = 3_000;
 
-export async function middleware(req: NextRequest) {
-  // 站内跳转与预取都带 rsc 头，它们本来就不看 HTTP 状态码
-  if (req.headers.has("rsc")) {
+export async function proxy(req: NextRequest) {
+  // 站内跳转与预取是页面里发起的 fetch，本来就不看 HTTP 状态码，直接放行。
+  // 认它们靠浏览器自带的 Sec-Fetch-Dest（fetch 是 empty，地址栏打开是 document）：
+  // Next 交给这里之前会剥掉 rsc 等内部请求头，在这里读不到。
+  // 爬虫、curl 不带这个头，按直接打开处理，照样能拿到真正的 404
+  if (req.headers.get("sec-fetch-dest") === "empty") {
     return NextResponse.next();
   }
   const [, section, id = ""] = req.nextUrl.pathname.split("/");
@@ -37,5 +40,4 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: ["/papers/:id", "/journals/:id"],
-  runtime: "nodejs",
 };
