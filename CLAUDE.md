@@ -29,15 +29,6 @@
 3. 禁止以时间限制、人力不足、快速交付为由采用次优方案
 4. 禁止提及"如果时间允许"、"建议后续优化"、"分阶段实施"
 
-## 下游消费者（linqibin-commons 兼容红线）
-
-**"零历史包袱 / 禁止考虑向后兼容"对 `linqibin-commons/` 不再成立**——它有仓库外的下游消费者，改动前必须评估影响：
-
-1. **super-nb-platform**（`~/Projects/Products/super-nb/super-nb-platform`）通过 `scripts/bootstrap-commons.sh` clone 本仓库、checkout `gradle.properties` 中 `patraRef` 钉住的 commit、`publishToMavenLocal` 后以 `dev.linqibin.commons:*:0.1.0-SNAPSHOT` 消费 5 个模块：commons-core、starter-core、starter-web、**starter-jpa**、starter-test。
-2. **高危耦合面（starter-jpa）**：`BaseJpaEntity` 家族的字段/列名/类型已物化进 super-nb 的 Flyway baseline 且 `ddl-auto=validate`——改列契约会让下游启动直接失败；`Jackson3JsonFormatMapper` 的 String/Object 透传行为被下游 JSONB `record_remarks` 数据依赖——回退或改动会让下游读数据 500。`commons-core` 的 CQRS（Command/CommandHandler/CommandBus）与错误体系（DomainException/StandardErrorTrait）也被大量 import。
-3. **分支操作前检查 patraRef**：删除或强推分支前，确认 super-nb 的 `patraRef` 没有钉在该分支的 commit 上（曾钉过非 main 分支 `fix/jackson3-string-passthrough`）。commons 修复合入 main 后，应提醒用户把下游 `patraRef` 更新到 main commit。
-4. 改动 `linqibin-commons/` 时，视同维护一个有外部用户的库：行为变更、删除公开 API、改自动配置默认值，都要先看下游用法（可 grep super-nb-platform 的 import）。
-
 ## 安全红线（公开仓库）
 
 **本仓库 `linqibin0826/patra` 是 GitHub 公开仓库**——任何提交内容（含 git 历史）都全互联网可读且永久留痕。
