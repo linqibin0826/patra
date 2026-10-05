@@ -56,7 +56,6 @@ Gradle path `:parent:child` 必须与物理目录 `parent/child/` **一一对应
 ./gradlew spotbugsMain             # 跑 SpotBugs 静态分析（HTML 报告在 build/reports/spotbugs/）
 ./gradlew :patra-api:patra-catalog:patra-catalog-boot:bootRun  # 启动 catalog 服务
 ./gradlew :<commons-module>:checkBoundary                      # 校验依赖边界
-./gradlew publishToMavenLocal      # 发布到 ~/.m2 本地仓库
 ```
 
 ## 工具链入口
