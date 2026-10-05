@@ -1,0 +1,7 @@
+# 安全 starter 集成测试配置
+linqibin:
+  starter:
+    core:
+      error:
+        # 错误码前缀：断言里的 TEST-0401 / TEST-0403 / TEST-0500 由它决定
+        context-prefix: TEST

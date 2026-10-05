@@ -366,6 +366,15 @@
     </Or>
   </Match>
 
+  <!-- Security starter 基础设施类：持有注入的依赖是设计意图 -->
+  <Match>
+    <Package name="~dev\.linqibin\.patra\.starter\.security(\..*)?"/>
+    <Or>
+      <Bug pattern="EI_EXPOSE_REP"/>
+      <Bug pattern="EI_EXPOSE_REP2"/>
+    </Or>
+  </Match>
+
   <!-- Commons 工具类：ObjectKeyContext、StorageLocation 等暴露集合是设计意图 -->
   <Match>
     <Package name="~dev\.linqibin\.commons\..*"/>

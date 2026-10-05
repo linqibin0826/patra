@@ -1,0 +1,3 @@
+dev.linqibin.patra.starter.security.config.SecurityCoreAutoConfiguration
+dev.linqibin.patra.starter.security.config.SecurityAuditingAutoConfiguration
+dev.linqibin.patra.starter.security.config.SecurityServletAutoConfiguration
