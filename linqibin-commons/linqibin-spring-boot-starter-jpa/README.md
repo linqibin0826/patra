@@ -34,6 +34,7 @@ Spring Data JPA Starter，提供基于 Hibernate 7.1 的数据持久化支持，
 | `SnowflakeIdGenerator` | 雪花算法 ID 生成器，单例模式，线程安全 |
 | `JpaErrorMappingContributor` | JPA/Hibernate/SQL 异常到标准错误码的映射 |
 | `JpaAuditingConfig` | Spring Data JPA 审计配置 |
+| `CurrentAuditorProvider` | 当前操作人提供者接口，审计列的操作人 ID 从它来 |
 | `HibernatePropertiesCustomizer` | Hibernate 属性定制器 |
 
 ## BaseJpaEntity 实体基类
@@ -173,19 +174,20 @@ String idStr = SnowflakeIdGenerator.getIdStr();
 # 审计功能开箱即用，无需额外配置
 ```
 
-### 自定义审计用户
+### 接入当前操作人
 
-默认的 `AuditorAware` 返回空 Optional（系统操作）。应用应覆盖此 Bean：
+默认的 `AuditorAware` 会向容器里的 `CurrentAuditorProvider` 要当前操作人。容器里没有这个接口的实现时返回空（系统操作），`created_by` / `updated_by` 两列留空。
+
+引入了 `patra-spring-boot-starter-security` 的服务不用写任何代码：它自带一个实现，从当前登录用户取 ID。操作人来自别处时，自己提供一个 Bean：
 
 ```java
 @Bean
-public AuditorAware<Long> auditorAware() {
-    return () -> Optional.ofNullable(SecurityContextHolder.getContext())
-        .map(SecurityContext::getAuthentication)
-        .filter(Authentication::isAuthenticated)
-        .map(auth -> ((UserDetails) auth.getPrincipal()).getId());
+public CurrentAuditorProvider currentAuditorProvider() {
+    return () -> Optional.of(SYSTEM_OPERATOR_ID);
 }
 ```
+
+不要用「自己声明一个 `auditorAware` Bean」的办法来替换默认实现：各服务的启动类扫描整个 `dev.linqibin`，`JpaAuditingConfig` 会被提前扫到，默认的那个总是先注册。
 
 ### 自定义时钟（测试用）
 
@@ -382,6 +384,8 @@ patra-spring-boot-starter-jpa
 
 ```
 dev.linqibin.starter.jpa
+├── audit/
+│   └── CurrentAuditorProvider          # 当前操作人提供者接口
 ├── autoconfig/
 │   ├── PatraJpaAutoConfiguration       # 主自动配置类
 │   ├── JpaAuditingConfig               # JPA 审计配置

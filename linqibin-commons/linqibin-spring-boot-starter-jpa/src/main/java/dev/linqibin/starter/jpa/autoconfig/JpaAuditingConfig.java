@@ -1,8 +1,10 @@
 package dev.linqibin.starter.jpa.autoconfig;
 
+import dev.linqibin.starter.jpa.audit.CurrentAuditorProvider;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Optional;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,7 +22,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 ///
 /// **扩展点**：
 ///
-/// - 应用可以自定义 `AuditorAware<Long>` Bean 来提供真实的用户 ID（如从 SecurityContext 获取）
+/// - 提供一个 {@link CurrentAuditorProvider} Bean 来告诉审计「当前操作人是谁」
+///   （安全 starter 已经内置了实现）
 /// - 应用可以自定义 `Clock` Bean 来控制时间（用于测试场景）
 ///
 /// @author linqibin
@@ -31,19 +34,20 @@ public class JpaAuditingConfig {
 
   /// 默认的审计用户提供者。
   ///
-  /// 返回空 Optional，表示系统操作（无用户上下文）。
-  /// 应用应该覆盖此 Bean 以从安全上下文获取实际用户 ID。
+  /// 容器里有 {@link CurrentAuditorProvider} 的实现就问它；没有就返回空，表示系统操作。
+  /// 用注入来接入，而不是让别的模块提供同名 Bean 来替换，所以不受配置类加载顺序影响。
   ///
+  /// @param currentAuditorProvider 当前操作人提供者（可能不存在）
   /// @return 审计用户提供者
   @Bean
   @ConditionalOnMissingBean
-  public AuditorAware<Long> auditorAware() {
-    // TODO: 从安全上下文获取当前用户 ID
-    // 示例: return () -> Optional.ofNullable(SecurityContextHolder.getContext())
-    //           .map(SecurityContext::getAuthentication)
-    //           .filter(Authentication::isAuthenticated)
-    //           .map(auth -> ((UserDetails) auth.getPrincipal()).getId());
-    return () -> Optional.empty();
+  public AuditorAware<Long> auditorAware(
+      ObjectProvider<CurrentAuditorProvider> currentAuditorProvider) {
+    CurrentAuditorProvider provider = currentAuditorProvider.getIfAvailable();
+    if (provider == null) {
+      return Optional::empty;
+    }
+    return provider::currentAuditorId;
   }
 
   /// 日期时间提供者。

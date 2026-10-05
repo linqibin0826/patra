@@ -21,6 +21,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
@@ -43,6 +46,15 @@ class GlobalRestExceptionHandlerTest {
   @BeforeEach
   void setUp() {
     handler = new GlobalRestExceptionHandler(problemDetailAdapter, validationErrorsFormatter);
+  }
+
+  @Test
+  @DisplayName("优先级应比最高优先级低一级，给安全异常处理器留出位置")
+  void shouldRankOneBelowHighestPrecedence() {
+    Order order = AnnotationUtils.findAnnotation(GlobalRestExceptionHandler.class, Order.class);
+
+    assertThat(order).isNotNull();
+    assertThat(order.value()).isEqualTo(Ordered.HIGHEST_PRECEDENCE + 1);
   }
 
   @Test

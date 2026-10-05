@@ -44,13 +44,14 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 ///   ]
 /// ```
 ///
-/// **优先级:** {@link Ordered#HIGHEST_PRECEDENCE},确保在其他异常处理器之前执行。
+/// **优先级:** 比 {@link Ordered#HIGHEST_PRECEDENCE} 低一级。最高的位置留给安全 starter
+/// 的处理器：它只把 Spring Security 的异常原样抛回安全过滤器，其余异常仍由本类兜底。
 ///
 /// @see ProblemDetailAdapter
 /// @see ValidationErrorsFormatter
 @Slf4j
 @RestControllerAdvice
-@Order(Ordered.HIGHEST_PRECEDENCE)
+@Order(Ordered.HIGHEST_PRECEDENCE + 1)
 public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
 
   /// 附加到问题详情载荷的验证错误的最大数量。
