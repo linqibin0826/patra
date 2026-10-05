@@ -93,7 +93,8 @@
                 "registry"
             ],
             "tasks": [
-                "check"
+                "check",
+                "integrationTest"
             ]
         },
         {
@@ -299,6 +300,17 @@
             "impacts": [
                 "foundation",
                 "ingest"
+            ],
+            "tasks": [
+                "check"
+            ]
+        },
+        {
+            "dir": "patra-api/patra-common/patra-common-security",
+            "project": ":patra-api:patra-common:patra-common-security",
+            "unit": "foundation",
+            "impacts": [
+                "foundation"
             ],
             "tasks": [
                 "check"
@@ -555,6 +567,18 @@
             ],
             "tasks": [
                 "check"
+            ]
+        },
+        {
+            "dir": "patra-starters/patra-spring-boot-starter-security",
+            "project": ":patra-starters:patra-spring-boot-starter-security",
+            "unit": "foundation",
+            "impacts": [
+                "foundation"
+            ],
+            "tasks": [
+                "check",
+                "integrationTest"
             ]
         }
     ]

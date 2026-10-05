@@ -3,7 +3,7 @@
 > **Issue**：[PAP-62](https://linear.app/papertrace/issue/PAP-62)
 > **版本**：[v0.8 Accounts](../release-specs/v0.8-accounts.md)
 > **日期**：2026-10-05
-> **状态**：待评审
+> **状态**：已实现
 
 ## 1. 要解决的问题
 
@@ -313,7 +313,7 @@ Boot 在检测不到任何认证相关的 Bean 时，会生成一个带随机密
 - 启动日志里没有生成的随机密码。
 - 审计列（Testcontainers 起 PostgreSQL）：登录用户写入的记录 `created_by` 是他的用户 ID；匿名写入时为空。
 - 没有 starter-jpa 的应用加上本 starter 能正常启动。
-- 两个 starter 都在、以非 Web 方式启动的应用能正常启动，`CurrentUserRunner` 里写入的记录带上用户 ID。
+- 两个 starter 都在、以非 Web 方式启动的应用能正常启动，`CurrentUserRunner` 里写入的记录带上用户 ID。这个用例的测试应用只用自动配置，不扫描整个 `dev.linqibin`：starter-web 的全局异常处理器会被组件扫描注册，而它依赖的 Bean 只在 servlet 环境下才有，所以大范围扫描的应用本来就不能以非 Web 方式启动，这与本模块无关。
 
 回归：
 
@@ -327,15 +327,17 @@ Boot 在检测不到任何认证相关的 Bean 时，会生成一个带随机密
 - `patra-common-security` 的依赖里只有 `linqibin-commons-core`。
 - `./gradlew dumpModuleGraph` 后 `module-graph.json` 与构建一致。
 
-## 14. 待实测的点
+## 14. 实测结果
 
-以下结论来自阅读源码，没有运行验证。实现时逐个用测试确认，结果与预期不符就回来改设计：
+设计阶段有五个结论来自阅读源码，实现时逐个用测试确认。
 
-1. `SecurityProblemWriter` 补上 `instance` 之后，输出的 ProblemDetail 是否与全局异常处理器的输出完全一致（字段集合、字段顺序无关）。
-2. 安全异常重抛处理器：原样抛出后是否确实回到安全过滤器，并且日志里不留多余的错误记录。
-3. 拒绝所有请求的 `AuthenticationManager` Bean 是否足以让 Boot 不生成随机密码用户。
-4. `STATELESS` 加自定义认证过滤器在 `@WebMvcTest` 加 `RestTestClient` 的切片测试里是否正常工作。
-5. `GlobalRestExceptionHandler` 降优先级后，对网关代理失败的异常表现（网关的路由也是处理函数，全局异常处理器会接管）。
+| # | 结论 | 结果 | 对应测试 |
+|---|---|---|---|
+| 1 | `SecurityProblemWriter` 补上 `instance` 之后，输出与全局异常处理器的字段集合一致 | 成立 | `SecurityErrorResponseIT` |
+| 2 | 安全异常重抛处理器原样抛出后回到安全过滤器，日志里不留多余的错误记录 | 成立 | `SecurityErrorResponseIT` |
+| 3 | 拒绝所有请求的 `AuthenticationManager` Bean 足以让 Boot 不生成随机密码用户 | 成立 | `SecurityServletAutoConfigurationTest`、`StatelessSessionIT` |
+| 4 | `STATELESS` 加自定义认证过滤器在 `@WebMvcTest` 加 `RestTestClient` 的切片测试里正常工作 | 成立 | `SecurityWebMvcSliceIT` |
+| 5 | `GlobalRestExceptionHandler` 降优先级后，对网关代理失败的异常表现 | 本 Issue 无法实测：网关还是 WebFlux 版，classpath 上没有 starter-web。移交 PAP-69，见第 16 节 | 无 |
 
 ## 15. README
 
@@ -346,7 +348,7 @@ Boot 在检测不到任何认证相关的 Bean 时，会生成一个带随机密
 3. 业务代码怎么取当前用户：注入 `CurrentUserPort`，需要登录时调 `require()`。
 4. 定时任务、消息消费里怎么带身份：`CurrentUserRunner`。
 5. 测试怎么构造已登录请求，切片测试要导入什么。
-6. 信任前提：身份头没有签名，安全性依赖服务不对外暴露和内部令牌不泄露。
+6. 信任前提：身份头没有签名，安全性依赖服务不对外暴露、内部令牌不泄露，以及网关转发前删掉外部请求自带的身份头和内部令牌头。
 
 ## 16. 交给其他 Issue 的约束
 
@@ -362,3 +364,4 @@ Boot 在检测不到任何认证相关的 Bean 时，会生成一个带随机密
 | 登出在网关上是公开路由，identity 用 `current()`：有当前用户就删会话，没有就直接返回成功 | PAP-64、PAP-65 |
 | 密码哈希只需要 `spring-security-crypto`。算法必须支持设计简报定下的整个密码范围（8 到 64 个 Unicode 码点），不能为了迁就算法去缩小范围。BCrypt 对超过 72 字节的输入会抛异常，64 个码点的密码可能超过这个长度，所以直接用它不满足要求。具体选型由 PAP-63 决定 | PAP-63 |
 | 内部令牌由 secret 注入，网关和 identity 拿到同一个值 | PAP-66 |
+| 网关切到 WebMVC 版并引入 starter-web 之后，实测全局异常处理器（已降一级优先级）对代理失败异常的表现（原第 14 节第 5 条） | PAP-69 |
