@@ -9,6 +9,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
@@ -25,6 +26,7 @@ import org.springframework.test.context.ContextConfiguration;
 class PatraIdentityApplicationIT {
 
   @Autowired private JdbcTemplate jdbcTemplate;
+  @Autowired private Environment environment;
 
   @Test
   @DisplayName("启动时 Flyway 建好两张表")
@@ -37,5 +39,12 @@ class PatraIdentityApplicationIT {
             String.class);
 
     assertThat(tables).containsExactly("idn_user", "idn_user_password_credential");
+  }
+
+  @Test
+  @DisplayName("不靠 dev 配置也有 Redis 超时：Redis 卡住时登录几秒内返回 503，不用等 60 秒")
+  void should_bound_redis_timeouts_without_dev_profile() {
+    assertThat(environment.getProperty("spring.data.redis.timeout")).isEqualTo("5s");
+    assertThat(environment.getProperty("spring.data.redis.connect-timeout")).isEqualTo("10s");
   }
 }

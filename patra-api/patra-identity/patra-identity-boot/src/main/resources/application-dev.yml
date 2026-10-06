@@ -14,8 +14,6 @@ spring:
   data:
     redis:
       url: ${IDENTITY_REDIS_URL:redis://${PATRA_INFRA_HOST:127.0.0.1}:16379}
-      connect-timeout: 10s
-      timeout: 5s
 
 logging:
   file:

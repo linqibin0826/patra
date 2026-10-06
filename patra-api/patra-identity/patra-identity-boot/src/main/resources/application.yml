@@ -33,6 +33,11 @@ spring:
     # 关掉 OSIV：开着时请求第一次查库拿到的连接会一直占到请求结束，
     # Argon2 排队和计算期间也占着，连接池会被一批登录拖垮
     open-in-view: false
+  data:
+    redis:
+      # 所有环境都设超时：Redis 卡住时登录几秒内返回 503，不用等 Lettuce 默认的 60 秒
+      connect-timeout: 10s
+      timeout: 5s
 
 linqibin:
   starter:
