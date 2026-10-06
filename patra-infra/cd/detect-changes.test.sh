@@ -87,6 +87,11 @@ F="$(printf 'patra-portal/docs/x.md\npatra-portal/src/app/page.tsx')"
 assert_field "$F" '.portal_changed' 'true' "文档 + 前端代码混合仍触发 portal"
 assert_field "$F" '.docs_only' 'false' "文档 + 前端代码混合非 docs_only"
 
+echo "== 场景 13：identity 单元（私有改动只跑 identity；全量运行也包含 identity）=="
+F="patra-api/patra-identity/patra-identity-app/src/main/java/X.java"
+assert_field "$F" '.backend_units' '["identity"]' "identity 私有只跑 identity"
+assert_field "settings.gradle.kts" '.backend_units | index("identity") != null' 'true' "全量运行包含 identity"
+
 echo
 echo "通过 $PASS / 失败 $FAIL"
 [ "$FAIL" -eq 0 ]

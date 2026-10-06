@@ -117,7 +117,7 @@ identity 介于两者之间：密码从用户表移出去，但不用「通用�
 
 - `spring-security-crypto` 不依赖 Spring Security 的过滤器链和自动配置，加进来不会触发 Boot 的默认登录规则，和 PAP-62「Spring Security 只经安全 starter 进入 classpath」不冲突。
 - 构建接入：`settings.gradle.kts` 加五条 `includeAt` 和 `mapParent(":patra-api:patra-identity", ...)`。
-- 模块图：`dumpModuleGraph` 加 `identity` 单元（`patra-api/patra-identity` 下的模块都归它），重新生成 `module-graph.json`。CD 按 `services.json` 的服务名部署，identity 的条目由 PAP-66 加；两者在同一个后端 PR 里。CI 全量运行的单元列表是 `patra-infra/cd/detect-changes.sh` 里写死的 `ALL_UNITS`，identity 和 `services.json` 的条目一起由 PAP-66 加。
+- 模块图：`dumpModuleGraph` 加 `identity` 单元（`patra-api/patra-identity` 下的模块都归它），重新生成 `module-graph.json`。CD 按 `services.json` 的服务名部署，identity 的条目由 PAP-66 加；两者在同一个后端 PR 里。CI 全量运行的单元列表是 `patra-infra/cd/detect-changes.sh` 里写死的 `ALL_UNITS`，已加入 identity，CI 也预拉 Redis 测试镜像；CD 只在 main 上运行，`services.json` 的条目由 PAP-66 在同一个后端 PR 里加。
 
 ## 6. 领域模型
 
@@ -484,7 +484,7 @@ PAP-62 已经在本分支提交、还没推送，改动范围小：
 | 会话契约如果放在 identity，建 `patra-identity-api` 模块 | PAP-64 |
 | 路由 `/patra-identity/**`；`/auth/register`、`/auth/login`、`/auth/logout` 公开，`/auth/me` 需要登录 | PAP-65 |
 | 拒绝外部访问 `/*/admin/**`，和 `/*/_internal/**`、actuator 一样处理：匿名和已登录得到同一个结果 | PAP-65 |
-| 建库 `patra_identity`；compose 服务（端口 6400）；数据库和 Redis（带密码）的环境变量；`services.json` 加 identity；网关 OpenAPI 聚合加 identity；`detect-changes.sh` 的 `ALL_UNITS` 加 identity，和 `services.json` 的条目一起加；部署后在 mini 上测一次单次哈希耗时，写回第 14 节第 1 条 | PAP-66 |
+| 建库 `patra_identity`；compose 服务（端口 6400）；数据库和 Redis（带密码）的环境变量；`services.json` 加 identity；网关 OpenAPI 聚合加 identity；合并前 `services.json` 必须有 identity 条目（`ALL_UNITS` 已含 identity，没有条目时 main 上的 CD 会被 `deploy.sh` 以未知服务拒绝）；部署后在 mini 上测一次单次哈希耗时，写回第 14 节第 1 条 | PAP-66 |
 | 前端校验：邮箱去掉首尾空格后用 Zod 默认 `z.email()` 加 `.max(254)`；密码长度按码点（`[...password].length`） | PAP-67、PAP-68 |
 | 前端按原因码选文案：`REQUIRED`、`TOO_LONG`、`INVALID_FORMAT`、`TOO_SHORT`、`TOO_COMMON`、`INVALID_CHARACTER`；不认识的原因码显示该字段的通用错误 | PAP-67、PAP-68 |
 | 429 用 `retryAfterSeconds`；`userId` 是字符串 | PAP-67、PAP-68 |

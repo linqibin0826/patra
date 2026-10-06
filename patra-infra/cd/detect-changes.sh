@@ -3,7 +3,7 @@
 # 受影响单元路由 SSOT —— ci.yml 与 cd.yml 共用。输出一个 JSON 对象到 stdout：
 #   { "backend_units":[...], "portal_changed":bool, "learn_changed":bool,
 #     "docs_only":bool, "full_run":bool, "coverage_mode":"none|flags|full" }
-#   backend_units ⊆ [registry,object-storage,catalog,ingest,gateway,foundation]
+#   backend_units ⊆ [registry,object-storage,catalog,ingest,identity,gateway,foundation]
 #
 # 模式：
 #   detect-changes.sh pr <BASE_SHA> <HEAD_SHA>    # pull_request：merge-base..head
@@ -18,7 +18,7 @@
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GRAPH="$SCRIPT_DIR/module-graph.json"
-ALL_UNITS='["registry","object-storage","catalog","ingest","gateway","foundation"]'
+ALL_UNITS='["registry","object-storage","catalog","ingest","identity","gateway","foundation"]'
 LEARN_CHANGED=false   # 全局初始化：防环境注入假阳性 / 非布尔值炸 --argjson
 
 emit() { # $1=units_json $2=portal $3=docs_only $4=full_run $5=coverage_mode（learn 走全局 LEARN_CHANGED）

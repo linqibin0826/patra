@@ -21,6 +21,7 @@ permissions:
 
 env:
   POSTGRES_IMAGE: postgres:17
+  REDIS_IMAGE: redis:7.0.15
   ROCKETMQ_IMAGE: apache/rocketmq:5.3.1
 
 jobs:
@@ -75,6 +76,11 @@ jobs:
           PG_FILE="linqibin-commons/linqibin-spring-boot-starter-test/src/main/java/dev/linqibin/starter/test/container/initializer/PostgreSQLContainerInitializer.java"
           if ! grep -Fq "private static final String POSTGRESQL_IMAGE = \"$POSTGRES_IMAGE\";" "$PG_FILE"; then
             echo "::error file=$PG_FILE::POSTGRESQL_IMAGE 常量与 workflow env POSTGRES_IMAGE=$POSTGRES_IMAGE 不一致"
+            FAIL=1
+          fi
+          REDIS_FILE="linqibin-commons/linqibin-spring-boot-starter-test/src/main/java/dev/linqibin/starter/test/container/initializer/RedisContainerInitializer.java"
+          if ! grep -Fq "private static final String REDIS_IMAGE = \"$REDIS_IMAGE\";" "$REDIS_FILE"; then
+            echo "::error file=$REDIS_FILE::REDIS_IMAGE 常量与 workflow env REDIS_IMAGE=$REDIS_IMAGE 不一致"
             FAIL=1
           fi
           for COMPOSE in \
@@ -140,8 +146,9 @@ jobs:
         if: contains(steps.tasks.outputs.list, 'integrationTest') || contains(steps.tasks.outputs.list, 'e2eTest')
         run: |
           docker pull "$POSTGRES_IMAGE" & pid_pg=$!
+          docker pull "$REDIS_IMAGE" & pid_redis=$!
           docker pull "$ROCKETMQ_IMAGE" & pid_mq=$!
-          wait "$pid_pg"; wait "$pid_mq"
+          wait "$pid_pg"; wait "$pid_redis"; wait "$pid_mq"
       - name: ✅ Test unit (check + integrationTest + e2eTest)
         run: ./gradlew ${{ steps.tasks.outputs.list }} -x jacocoTestReport -x integrationTestCodeCoverageReport --build-cache
       - name: 📦 Upload jacoco exec (${{ matrix.unit }})
