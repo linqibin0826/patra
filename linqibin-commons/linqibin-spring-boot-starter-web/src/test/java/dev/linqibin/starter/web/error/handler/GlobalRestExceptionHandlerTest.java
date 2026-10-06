@@ -12,9 +12,11 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import dev.linqibin.commons.error.codes.ErrorCodeLike;
+import dev.linqibin.commons.error.field.FieldViolation;
 import dev.linqibin.commons.error.problem.ErrorKeys;
 import dev.linqibin.starter.core.error.model.ErrorResolution;
 import dev.linqibin.starter.core.error.model.ResolutionStrategy;
+import dev.linqibin.starter.web.error.FieldViolationsException;
 import dev.linqibin.starter.web.error.RetryAfterException;
 import dev.linqibin.starter.web.error.adapter.ProblemDetailAdapter;
 import dev.linqibin.starter.web.error.adapter.model.ProblemDetailResponse;
@@ -481,6 +483,28 @@ class GlobalRestExceptionHandlerTest {
     ResponseEntity<ProblemDetail> result = handler.handleException(exception, request);
 
     assertThat(result.getHeaders().getFirst(HttpHeaders.RETRY_AFTER)).isNull();
+  }
+
+  @Test
+  @DisplayName("领域层报的字段错误：WARN 日志带上「字段:原因码」，不带字段值和堆栈")
+  void should_log_field_codes_for_domain_field_violations() {
+    Exception exception =
+        new FieldViolationsException(
+            List.of(FieldViolation.of("password", "TOO_COMMON", "这个密码太常见")));
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    ProblemDetailResponse invalid = response(HttpStatus.UNPROCESSABLE_CONTENT, "TEST-0422");
+    when(problemDetailAdapter.adapt(exception, request)).thenReturn(invalid);
+
+    handler.handleException(exception, request);
+
+    assertThat(logAppender.list)
+        .singleElement()
+        .satisfies(
+            event -> {
+              assertThat(event.getLevel()).isEqualTo(Level.WARN);
+              assertThat(event.getThrowableProxy()).isNull();
+              assertThat(event.getFormattedMessage()).contains("password:TOO_COMMON");
+            });
   }
 
   @ParameterizedTest

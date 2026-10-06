@@ -1,5 +1,6 @@
 package dev.linqibin.starter.web.error.handler;
 
+import dev.linqibin.commons.error.field.HasFieldViolations;
 import dev.linqibin.commons.error.problem.ErrorKeys;
 import dev.linqibin.commons.error.retry.HasRetryAfter;
 import dev.linqibin.starter.core.error.model.ResolutionStrategy;
@@ -163,7 +164,7 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
   /// 记录通用异常处理。4xx 是调用方的问题，记 WARN、不带堆栈；5xx 记 ERROR、带堆栈。
   ///
   /// 按类名关键字或原因链兜底分类出来的 4xx（如 `IllegalStateException` 被归为 422）可能是服务端缺陷，
-  /// 仍记 WARN，但保留堆栈。
+  /// 仍记 WARN，但保留堆栈。带字段错误的异常额外记「字段:原因码」，不记字段值。
   ///
   /// @param response 包含错误元数据的问题详情响应
   /// @param ex 被处理的异常
@@ -192,6 +193,19 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
           ex);
       return;
     }
+    List<String> fieldCodes = fieldCodesOf(ex);
+    if (!fieldCodes.isEmpty()) {
+      log.warn(
+          "Exception handled: error code [{}], HTTP status {}, request path [{}], "
+              + "exception={}: {}, errors={}",
+          code,
+          status,
+          path,
+          ex.getClass().getSimpleName(),
+          ex.getMessage(),
+          fieldCodes);
+      return;
+    }
     log.warn(
         "Exception handled: error code [{}], HTTP status {}, request path [{}], exception={}: {}",
         code,
@@ -199,6 +213,20 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
         path,
         ex.getClass().getSimpleName(),
         ex.getMessage());
+  }
+
+  /// 取异常携带的字段错误，转成「字段:原因码」列表，不带字段值。
+  ///
+  /// @param ex 异常
+  /// @return 「字段:原因码」列表；异常不带字段错误时为空
+  private static List<String> fieldCodesOf(Exception ex) {
+    if (ex instanceof HasFieldViolations hasViolations
+        && hasViolations.getFieldViolations() != null) {
+      return hasViolations.getFieldViolations().stream()
+          .map(violation -> violation.field() + ":" + violation.code())
+          .toList();
+    }
+    return List.of();
   }
 
   /// 解析结果是不是兜底推断出来的：按类名关键字或原因链猜的状态码，而不是异常自己声明的语义。
