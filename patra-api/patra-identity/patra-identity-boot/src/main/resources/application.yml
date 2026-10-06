@@ -29,6 +29,10 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+  jpa:
+    # 关掉 OSIV：开着时请求第一次查库拿到的连接会一直占到请求结束，
+    # Argon2 排队和计算期间也占着，连接池会被一批登录拖垮
+    open-in-view: false
 
 linqibin:
   starter:
