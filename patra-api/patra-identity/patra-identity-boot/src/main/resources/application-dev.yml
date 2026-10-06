@@ -1,0 +1,24 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+  # dev 场景：用 TAILSCALE_IP 注册，确保跨主机服务发现拿到的 IP 可达。
+  cloud:
+    nacos:
+      discovery:
+        ip: ${TAILSCALE_IP:}
+  datasource:
+    url: ${IDENTITY_DB_URL:jdbc:postgresql://${PATRA_INFRA_HOST:127.0.0.1}:15432/patra_identity}
+    username: ${IDENTITY_DB_USERNAME:postgres}
+    password: ${IDENTITY_DB_PASSWORD:123456}
+  data:
+    redis:
+      url: ${IDENTITY_REDIS_URL:redis://${PATRA_INFRA_HOST:127.0.0.1}:16379}
+      connect-timeout: 10s
+      timeout: 5s
+
+logging:
+  file:
+    path: ${PATRA_LOG_DIR:./logs}/patra-identity
+  level:
+    dev.linqibin.patra.identity: INFO

@@ -113,6 +113,13 @@ includeAt(":patra-api:patra-object-storage:patra-object-storage-adapter", "patra
 includeAt(":patra-api:patra-object-storage:patra-object-storage-boot", "patra-api/patra-object-storage/patra-object-storage-boot")
 mapParent(":patra-api:patra-object-storage", "patra-api/patra-object-storage")
 
+includeAt(":patra-api:patra-identity:patra-identity-domain", "patra-api/patra-identity/patra-identity-domain")
+includeAt(":patra-api:patra-identity:patra-identity-app", "patra-api/patra-identity/patra-identity-app")
+includeAt(":patra-api:patra-identity:patra-identity-infra", "patra-api/patra-identity/patra-identity-infra")
+includeAt(":patra-api:patra-identity:patra-identity-adapter", "patra-api/patra-identity/patra-identity-adapter")
+includeAt(":patra-api:patra-identity:patra-identity-boot", "patra-api/patra-identity/patra-identity-boot")
+mapParent(":patra-api:patra-identity", "patra-api/patra-identity")
+
 // ==================== patra-api / Gateway ====================
 includeAt(":patra-api:patra-gateway-boot", "patra-api/patra-gateway-boot")
 

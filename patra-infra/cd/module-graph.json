@@ -5,6 +5,7 @@
         "object-storage",
         "catalog",
         "ingest",
+        "identity",
         "gateway",
         "foundation"
     ],
@@ -17,6 +18,7 @@
                 "catalog",
                 "foundation",
                 "gateway",
+                "identity",
                 "ingest",
                 "object-storage",
                 "registry"
@@ -59,6 +61,7 @@
                 "catalog",
                 "foundation",
                 "gateway",
+                "identity",
                 "ingest",
                 "object-storage",
                 "registry"
@@ -88,6 +91,7 @@
             "impacts": [
                 "catalog",
                 "foundation",
+                "identity",
                 "ingest",
                 "object-storage",
                 "registry"
@@ -118,6 +122,7 @@
                 "catalog",
                 "foundation",
                 "gateway",
+                "identity",
                 "ingest",
                 "object-storage",
                 "registry"
@@ -132,7 +137,8 @@
             "unit": "foundation",
             "impacts": [
                 "catalog",
-                "foundation"
+                "foundation",
+                "identity"
             ],
             "tasks": [
                 "check"
@@ -173,12 +179,14 @@
                 "catalog",
                 "foundation",
                 "gateway",
+                "identity",
                 "ingest",
                 "object-storage",
                 "registry"
             ],
             "tasks": [
-                "check"
+                "check",
+                "integrationTest"
             ]
         },
         {
@@ -188,6 +196,7 @@
             "impacts": [
                 "catalog",
                 "foundation",
+                "identity",
                 "ingest",
                 "object-storage",
                 "registry"
@@ -272,6 +281,7 @@
             "impacts": [
                 "catalog",
                 "foundation",
+                "identity",
                 "ingest",
                 "object-storage",
                 "registry"
@@ -310,7 +320,8 @@
             "project": ":patra-api:patra-common:patra-common-security",
             "unit": "foundation",
             "impacts": [
-                "foundation"
+                "foundation",
+                "identity"
             ],
             "tasks": [
                 "check"
@@ -334,6 +345,62 @@
             "unit": "gateway",
             "impacts": [
                 "gateway"
+            ],
+            "tasks": [
+                "check"
+            ]
+        },
+        {
+            "dir": "patra-api/patra-identity/patra-identity-adapter",
+            "project": ":patra-api:patra-identity:patra-identity-adapter",
+            "unit": "identity",
+            "impacts": [
+                "identity"
+            ],
+            "tasks": [
+                "check"
+            ]
+        },
+        {
+            "dir": "patra-api/patra-identity/patra-identity-app",
+            "project": ":patra-api:patra-identity:patra-identity-app",
+            "unit": "identity",
+            "impacts": [
+                "identity"
+            ],
+            "tasks": [
+                "check"
+            ]
+        },
+        {
+            "dir": "patra-api/patra-identity/patra-identity-boot",
+            "project": ":patra-api:patra-identity:patra-identity-boot",
+            "unit": "identity",
+            "impacts": [
+                "identity"
+            ],
+            "tasks": [
+                "check",
+                "integrationTest"
+            ]
+        },
+        {
+            "dir": "patra-api/patra-identity/patra-identity-domain",
+            "project": ":patra-api:patra-identity:patra-identity-domain",
+            "unit": "identity",
+            "impacts": [
+                "identity"
+            ],
+            "tasks": [
+                "check"
+            ]
+        },
+        {
+            "dir": "patra-api/patra-identity/patra-identity-infra",
+            "project": ":patra-api:patra-identity:patra-identity-infra",
+            "unit": "identity",
+            "impacts": [
+                "identity"
             ],
             "tasks": [
                 "check"

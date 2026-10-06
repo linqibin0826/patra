@@ -91,6 +91,7 @@ tasks.register("dumpModuleGraph") {
             dir == "patra-api/patra-object-storage" || dir.startsWith("patra-api/patra-object-storage/") -> "object-storage"
             dir == "patra-api/patra-catalog" || dir.startsWith("patra-api/patra-catalog/") -> "catalog"
             dir == "patra-api/patra-ingest" || dir.startsWith("patra-api/patra-ingest/") -> "ingest"
+            dir == "patra-api/patra-identity" || dir.startsWith("patra-api/patra-identity/") -> "identity"
             dir == "patra-api/patra-gateway-boot" -> "gateway"
             else -> "foundation"
         }
@@ -111,7 +112,7 @@ tasks.register("dumpModuleGraph") {
 
         val root = linkedMapOf(
             "_comment" to "dumpModuleGraph 产物，勿手改。受影响单元门控 SSOT。改 build 文件后重跑 ./gradlew dumpModuleGraph。",
-            "units" to listOf("registry", "object-storage", "catalog", "ingest", "gateway", "foundation"),
+            "units" to listOf("registry", "object-storage", "catalog", "ingest", "identity", "gateway", "foundation"),
             "modules" to modules
         )
         val json = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(root)) + "\n"

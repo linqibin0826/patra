@@ -1,0 +1,12 @@
+# 容器部署：所有连接信息都从环境变量读，没有默认值。变量名由 PAP-66 定稿。
+spring:
+  config:
+    activate:
+      on-profile: container
+  datasource:
+    url: ${IDENTITY_DB_URL}
+    username: ${IDENTITY_DB_USERNAME}
+    password: ${IDENTITY_DB_PASSWORD}
+  data:
+    redis:
+      url: ${IDENTITY_REDIS_URL}
