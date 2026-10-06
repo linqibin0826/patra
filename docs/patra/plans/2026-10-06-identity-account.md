@@ -52,7 +52,7 @@
 - 文档、注释、commit message 用中文；代码标识符用英文。
 - 所有方法（任何访问级别）写 `///` 风格的 Markdown JavaDoc，每行不超过 100 列，否则 google-java-format 会把它折成 `//`。测试类写 `///`，测试方法用中文 `@DisplayName`，不再单独写 `///`（沿用 PAP-62 的写法）。
 - 不写全类名，用 `import`。优先用 Lombok。参数不超过 4 个的 record 用静态工厂方法 `of()`，不用 `@Builder`。改已有文件时，不顺手清理文件里原有的全类名。
-- 格式由 Spotless（google-java-format）决定：每个任务提交前跑一次 `./gradlew spotlessApply`，以它的输出为准。
+- 格式由 Spotless（google-java-format）决定：任何 `check` 之前先跑 `./gradlew spotlessApply`（`check` 含 `spotlessJavaCheck`，计划里的代码没有按 google-java-format 排版），以它的输出为准。
 - SpotBugs 是 `effort=MAX`、`reportLevel=LOW`、`ignoreFailures=false`，任何提示都会让 `check` 失败。本计划已经预防的写法：构造器可能抛异常的类声明为 `final`；返回集合字段时返回 `List.copyOf(...)`。出现其他提示时修代码，不要扩大 `spotbugs-exclude.xml` 的范围。
 - 测试位置与命名：单元测试 `src/test`、`*Test`；集成测试 `src/integrationTest`、`*IT`；测试方法 snake_case（`should_<期望行为>`）。
 - 测试里禁止：反射访问私有成员、`@SuppressWarnings("unchecked")`、为了测试给生产类加 setter。
@@ -79,7 +79,7 @@ spec 没有逐条写明、但使用这个服务的人最可能踩到的五种输
 1. **同一个邮箱换了大小写或带首尾空白**：用 `Chen.Yu@Example.com ` 注册之后，用 `chen.yu@example.com` 再注册应返回 409，用任意大小写组合登录都应成功。→ 任务 18 的 `AccountFlowIT`。
 2. **请求体缺字段或字段为 `null`**（`{}`、`{"email": null}`）：应返回 422 和 `REQUIRED`，不是 500。→ 任务 14、15 的处理器单元测试，任务 17 的 `AuthControllerIT`。
 3. **密码首尾带空格**：注册时原样保存，登录时少了空格就是错密码，带上空格才对。→ 任务 18 的 `AccountFlowIT`。
-4. **超长输入**（1 MB 的邮箱或密码）：注册在长度校验处拒绝，不做哈希；登录按普通的凭据错误处理，不出 500。→ 任务 14、15 的处理器单元测试。
+4. **超长输入**（1 MB 的邮箱或密码）：注册在长度校验处拒绝，不做哈希；登录：超长密码按凭据错误 401，超长邮箱按字段校验 422 `TOO_LONG`，都不出 500。→ 任务 14、15 的处理器单元测试。
 5. **请求体里夹带多余字段**（`id`、`status`、`role`）：这些字段被忽略，注册出来的账号状态是正常、ID 由服务端分配。这正是调研里合表系统出过事故的批量赋值路径。→ 任务 18 的 `AccountFlowIT`。
 
 ## 与 spec 的出入
@@ -179,9 +179,9 @@ patra-api/patra-identity/
 | 11 | infra：密码哈希 | 9 |
 | 12 | infra：常见密码名单 | 9 |
 | 13 | infra：登录失败限制（Redis），并接进 boot 配置 | 6、9、11、12 |
-| 14 | app：注册 | 9 |
-| 15 | app：登录校验 | 9 |
-| 16 | app：封禁与解封 | 9 |
+| 14 | app：注册 | 9、10、13 |
+| 15 | app：登录校验 | 9、10、13 |
+| 16 | app：封禁与解封 | 9、10 |
 | 17 | adapter：两个 Controller 与错误契约 | 3、14、15、16 |
 | 18 | boot：端到端测试、README、spec 收尾 | 全部 |
 
@@ -194,6 +194,7 @@ patra-api/patra-identity/
 - Modify: `patra-api/patra-common/patra-common-security/src/main/java/dev/linqibin/patra/common/security/AccountType.java`
 - Modify: `patra-api/patra-common/patra-common-security/src/test/java/dev/linqibin/patra/common/security/AccountTypeTest.java`
 - Modify（随重命名自动更新）: `patra-common-security` 的 `CurrentUserTest`、`CurrentUserPortTest`；安全 starter 的 `TestIdentity`（testFixtures）、`TestIdentityTest`、`CurrentUserRunnerTest`、`SecurityContextCurrentUserAdapterTest`、`CurrentUserAuthenticationTest`、`GatewayHeaderAuthenticationConverterTest`、`IdentityHeadersTest`、`NonWebStartupIT`
+- Modify（手工改写死的字符串）: 安全 starter 的 `GatewayHeaderAuthenticationIT`、`SecurityErrorResponseIT`（integrationTest）
 - Modify: `docs/patra/specs/2026-10-05-security-starter-design.md`
 
 **Interfaces:**
@@ -281,19 +282,21 @@ public enum AccountType {
 }
 ```
 
-- [ ] **步骤 4：改测试里写死的请求头值**
+- [ ] **步骤 4：改测试里写死的账号类型字符串和一处注释**
 
-重命名只改符号，不改字符串。手工改这两个文件：
+重命名只改符号，不改字符串和注释。手工改这几个文件：
 
 - `patra-starters/patra-spring-boot-starter-security/src/test/java/dev/linqibin/patra/starter/security/authentication/GatewayHeaderAuthenticationConverterTest.java`：三处 `"portal"` 都改成 `"user"`（`IdentityHeaders.ACCOUNT_TYPE` 的值、全小写头名 `x-patra-account-type` 的值）。
 - `patra-starters/patra-spring-boot-starter-security/src/test/java/dev/linqibin/patra/starter/security/header/IdentityHeadersTest.java`：
   - `assertThat(headers.getFirst(IdentityHeaders.ACCOUNT_TYPE)).isEqualTo("portal");` 改为 `isEqualTo("user")`。
   - 账号类型不认识的用例 `@ValueSource(strings = {"", "PORTAL", "admin"})` 改为 `@ValueSource(strings = {"", "USER", "portal", "admin"})`，把旧值 `portal` 也列为不认识。
+- `patra-starters/patra-spring-boot-starter-security/src/integrationTest/java/dev/linqibin/patra/starter/security/GatewayHeaderAuthenticationIT.java` 和同目录的 `SecurityErrorResponseIT.java`：探针接口输出的是 `accountType.getCode()`，两处 `.isEqualTo("1001:2001:portal:web")` 都改为 `.isEqualTo("1001:2001:user:web")`。
+- `patra-starters/patra-spring-boot-starter-security/src/testFixtures/java/dev/linqibin/patra/starter/security/test/TestIdentity.java`：`user()` 注释里的「门户网页端用户」改为「前台网页端用户」。
 
 核对：
 
 ```bash
-grep -rn 'PORTAL\|"portal"' patra-api/patra-common/patra-common-security patra-starters/patra-spring-boot-starter-security --include='*.java'
+grep -rn 'PORTAL\|portal' patra-api/patra-common/patra-common-security patra-starters/patra-spring-boot-starter-security --include='*.java'
 ```
 
 预期：只剩两个测试里故意列为「不认识」的值（`AccountTypeTest` 的 `"portal"` 和 `IdentityHeadersTest` 的 `"portal"`），没有别的。
@@ -534,6 +537,8 @@ git commit -m "feat(commons): 新增字段错误与剩余等待时间两个异�
 - Modify: `linqibin-commons/linqibin-spring-boot-starter-web/src/main/java/dev/linqibin/starter/web/error/formatter/DefaultValidationErrorsFormatter.java`
 - Modify: `linqibin-commons/linqibin-spring-boot-starter-web/src/main/java/dev/linqibin/starter/web/error/builder/ProblemDetailBuilder.java`
 - Modify: `linqibin-commons/linqibin-spring-boot-starter-web/src/main/java/dev/linqibin/starter/web/error/handler/GlobalRestExceptionHandler.java`
+- Modify: `linqibin-commons/linqibin-spring-boot-starter-web/README.md`（`errors[]` 示例和自定义格式化器示例）
+- Create: `linqibin-commons/linqibin-spring-boot-starter-web/src/test/java/dev/linqibin/starter/web/error/RetryAfterException.java`（两个测试类共用的测试异常）
 - Test: 同目录结构下的 `DefaultValidationErrorsFormatterTest`、`ProblemDetailBuilderTest`、`GlobalRestExceptionHandlerTest`（都是已有文件，加用例）
 
 **Interfaces:**
@@ -542,7 +547,7 @@ git commit -m "feat(commons): 新增字段错误与剩余等待时间两个异�
 - Produces：
   - `record ValidationError(String field, String code, Object rejectedValue, String message)`。
   - 异常实现 `HasFieldViolations` 时，`ProblemDetail` 带 `errors`：`List<ValidationError>`，每项 `rejectedValue` 为 `null`。
-  - 异常实现 `HasRetryAfter` 时，`ProblemDetail` 带 `retryAfterSeconds`（`long`），`GlobalRestExceptionHandler.handleException` 的响应带 `Retry-After` 头，值相同。
+  - 异常实现 `HasRetryAfter` 时，`ProblemDetail` 带 `retryAfterSeconds`（`Integer`，以 JSON 数字输出：starter-core 把 `Long` 序列化成字符串），`GlobalRestExceptionHandler.handleException` 的响应带 `Retry-After` 头，值相同。
   - Bean Validation 错误的 `code`：取 `ObjectError.getCode()`（Spring 给的最后一个、最通用的错误码，即约束名），驼峰转大写下划线，比如 `NotBlank` → `NOT_BLANK`、`typeMismatch` → `TYPE_MISMATCH`；没有错误码时为 `null`。
 
 - [ ] **步骤 1：给格式化器加原因码的失败测试**
@@ -616,7 +621,38 @@ git commit -m "feat(commons): 新增字段错误与剩余等待时间两个异�
 
 - [ ] **步骤 2：给构建器加 `errors[]` 和 `retryAfterSeconds` 的失败测试**
 
-在 `ProblemDetailBuilderTest` 里加 import（`dev.linqibin.commons.error.field.FieldViolation`、`dev.linqibin.commons.error.field.HasFieldViolations`、`dev.linqibin.commons.error.retry.HasRetryAfter`、`dev.linqibin.starter.web.error.model.ValidationError`、`java.time.Duration`），再在类末尾加：
+先新建两个测试类共用的测试异常 `src/test/java/dev/linqibin/starter/web/error/RetryAfterException.java`（`ProblemDetailBuilderTest` 和 `GlobalRestExceptionHandlerTest` 在不同的包里，所以它是 `public`）：
+
+```java
+package dev.linqibin.starter.web.error;
+
+import dev.linqibin.commons.error.retry.HasRetryAfter;
+import java.time.Duration;
+
+/// 带剩余等待时间的测试异常，`ProblemDetailBuilderTest` 和 `GlobalRestExceptionHandlerTest` 共用。
+public final class RetryAfterException extends RuntimeException implements HasRetryAfter {
+
+  private final Duration retryAfter;
+
+  /// 创建测试异常。
+  ///
+  /// @param retryAfter 剩余等待时间
+  public RetryAfterException(Duration retryAfter) {
+    super("请稍后再试");
+    this.retryAfter = retryAfter;
+  }
+
+  /// 返回剩余等待时间。
+  ///
+  /// @return 剩余等待时间
+  @Override
+  public Duration getRetryAfter() {
+    return retryAfter;
+  }
+}
+```
+
+在 `ProblemDetailBuilderTest` 里加 import（`dev.linqibin.commons.error.field.FieldViolation`、`dev.linqibin.commons.error.field.HasFieldViolations`、`dev.linqibin.starter.web.error.RetryAfterException`、`dev.linqibin.starter.web.error.model.ValidationError`、`java.time.Duration`），再在类末尾加：
 
 ```java
   @Test
@@ -649,7 +685,7 @@ git commit -m "feat(commons): 新增字段错误与剩余等待时间两个异�
 
     ProblemDetail result = builder.build(resolution, exception, request);
 
-    assertThat(result.getProperties()).containsEntry(ErrorKeys.RETRY_AFTER_SECONDS, 900L);
+    assertThat(result.getProperties()).containsEntry(ErrorKeys.RETRY_AFTER_SECONDS, 900);
   }
 
   @Test
@@ -702,29 +738,6 @@ git commit -m "feat(commons): 新增字段错误与剩余等待时间两个异�
       return violations;
     }
   }
-
-  /// 带剩余等待时间的测试异常。
-  private static final class RetryAfterException extends RuntimeException
-      implements HasRetryAfter {
-
-    private final Duration retryAfter;
-
-    /// 创建测试异常。
-    ///
-    /// @param retryAfter 剩余等待时间
-    RetryAfterException(Duration retryAfter) {
-      super("请稍后再试");
-      this.retryAfter = retryAfter;
-    }
-
-    /// 返回剩余等待时间。
-    ///
-    /// @return 剩余等待时间
-    @Override
-    public Duration getRetryAfter() {
-      return retryAfter;
-    }
-  }
 ```
 
 如果 `ProblemDetailBuilderTest` 里 `ErrorResolution` 等的 mock 写法和这里的 `resolution(...)` 冲突（比如已有同名方法），把新方法改个名字即可。
@@ -737,8 +750,8 @@ git commit -m "feat(commons): 新增字段错误与剩余等待时间两个异�
    - `new ValidationError("email", "invalid", "必须是有效的邮箱")` → `new ValidationError("email", "EMAIL", "invalid", "必须是有效的邮箱")`
    - `new ValidationError("field" + i, "value" + i, "message" + i)` → `new ValidationError("field" + i, "SIZE", "value" + i, "message" + i)`
    - 第三处同理，`code` 填 `"SIZE"`。
-2. 加 import：`dev.linqibin.commons.error.codes.ErrorCodeLike`、`dev.linqibin.commons.error.retry.HasRetryAfter`、`java.time.Duration`、`org.springframework.http.HttpHeaders`。
-3. 在类末尾加：
+2. 加 import：`dev.linqibin.commons.error.codes.ErrorCodeLike`、`dev.linqibin.starter.web.error.RetryAfterException`、`java.time.Duration`、`org.springframework.http.HttpHeaders`。
+3. 在类末尾加（`response(...)` 里面自己也会 stub，所以先放进局部变量，再交给 `thenReturn`；写成 `thenReturn(response(...))` 会抛 `UnfinishedStubbingException`）：
 
 ```java
   @Test
@@ -746,8 +759,8 @@ git commit -m "feat(commons): 新增字段错误与剩余等待时间两个异�
   void should_add_retry_after_header_when_exception_has_retry_after() {
     Exception exception = new RetryAfterException(Duration.ofMinutes(15));
     HttpServletRequest request = mock(HttpServletRequest.class);
-    when(problemDetailAdapter.adapt(exception, request))
-        .thenReturn(response(HttpStatus.TOO_MANY_REQUESTS, "TEST-0429"));
+    ProblemDetailResponse tooMany = response(HttpStatus.TOO_MANY_REQUESTS, "TEST-0429");
+    when(problemDetailAdapter.adapt(exception, request)).thenReturn(tooMany);
 
     ResponseEntity<ProblemDetail> result = handler.handleException(exception, request);
 
@@ -759,8 +772,8 @@ git commit -m "feat(commons): 新增字段错误与剩余等待时间两个异�
   void should_not_add_retry_after_header_for_plain_exception() {
     Exception exception = new IllegalStateException("x");
     HttpServletRequest request = mock(HttpServletRequest.class);
-    when(problemDetailAdapter.adapt(exception, request))
-        .thenReturn(response(HttpStatus.CONFLICT, "TEST-0409"));
+    ProblemDetailResponse conflict = response(HttpStatus.CONFLICT, "TEST-0409");
+    when(problemDetailAdapter.adapt(exception, request)).thenReturn(conflict);
 
     ResponseEntity<ProblemDetail> result = handler.handleException(exception, request);
 
@@ -778,29 +791,6 @@ git commit -m "feat(commons): 新增字段错误与剩余等待时间两个异�
     ErrorResolution errorResolution = mock(ErrorResolution.class);
     when(errorResolution.errorCode()).thenReturn(errorCode);
     return new ProblemDetailResponse(ProblemDetail.forStatus(status), status, errorResolution);
-  }
-
-  /// 带剩余等待时间的测试异常。
-  private static final class RetryAfterException extends RuntimeException
-      implements HasRetryAfter {
-
-    private final Duration retryAfter;
-
-    /// 创建测试异常。
-    ///
-    /// @param retryAfter 剩余等待时间
-    RetryAfterException(Duration retryAfter) {
-      super("请稍后再试");
-      this.retryAfter = retryAfter;
-    }
-
-    /// 返回剩余等待时间。
-    ///
-    /// @return 剩余等待时间
-    @Override
-    public Duration getRetryAfter() {
-      return retryAfter;
-    }
   }
 ```
 
@@ -911,12 +901,16 @@ public record ValidationError(String field, String code, Object rejectedValue, S
 
   /// 异常带剩余等待时间时，输出 `retryAfterSeconds`。
   ///
+  /// 存成 `Integer`：starter-core 的 Jackson 配置把 `Long` 一律序列化成字符串（防雪花 ID 丢精度），
+  /// 这个字段要以 JSON 数字输出。超过 `Integer.MAX_VALUE` 秒时取上限。
+  ///
   /// @param problemDetail 目标问题详情实例
   /// @param exception 源异常
   private void addRetryAfterIfPresent(ProblemDetail problemDetail, Throwable exception) {
     if (exception instanceof HasRetryAfter hasRetryAfter) {
+      long seconds = hasRetryAfter.getRetryAfterSeconds();
       problemDetail.setProperty(
-          ErrorKeys.RETRY_AFTER_SECONDS, hasRetryAfter.getRetryAfterSeconds());
+          ErrorKeys.RETRY_AFTER_SECONDS, (int) Math.min(seconds, Integer.MAX_VALUE));
     }
   }
 ```
@@ -957,7 +951,31 @@ public record ValidationError(String field, String code, Object rejectedValue, S
 运行：`./gradlew :patra-starters:patra-spring-boot-starter-security:test :patra-starters:patra-spring-boot-starter-security:integrationTest :patra-api:patra-object-storage:patra-object-storage-adapter:integrationTest`
 预期：`BUILD SUCCESSFUL`。
 
-- [ ] **步骤 11：提交**
+- [ ] **步骤 11：README 的示例跟上新的 `ValidationError`**
+
+`linqibin-commons/linqibin-spring-boot-starter-web/README.md`：
+
+1. 「验证异常响应」示例里 `errors` 的两项补上 `code`，改为：
+
+```json
+  "errors": [
+    { "field": "email", "code": "EMAIL", "rejectedValue": "invalid", "message": "must be a valid email" },
+    { "field": "password", "code": "SIZE", "rejectedValue": "***", "message": "size must be between 8 and 32" }
+  ]
+```
+
+2. 「自定义验证错误格式化器」示例里的 `new ValidationError(...)` 改成四个参数，`code` 放第二位：
+
+```java
+            .map(error -> new ValidationError(
+                error.getField(),
+                error.getCode(), // 约束名，如 Size；默认格式化器会转成大写下划线 SIZE
+                maskValue(error.getField(), error.getRejectedValue()),
+                error.getDefaultMessage()
+            ))
+```
+
+- [ ] **步骤 12：提交**
 
 ```bash
 ./gradlew spotlessApply
@@ -1008,7 +1026,7 @@ git commit -m "feat(commons): 统一错误格式输出字段原因码和剩余�
   }
 ```
 
-3. 在类末尾加三个用例（`response(...)` 是任务 3 加的辅助方法，`dummyMethod` 是文件里已有的占位方法）：
+3. 在类末尾加三个用例（`response(...)` 是任务 3 加的辅助方法，它自己也会 stub，所以先放进局部变量再交给 `thenReturn`；`dummyMethod` 是文件里已有的占位方法）：
 
 ```java
   @Test
@@ -1016,8 +1034,8 @@ git commit -m "feat(commons): 统一错误格式输出字段原因码和剩余�
   void should_log_client_error_at_warn_without_stack_trace() {
     Exception exception = new IllegalStateException("邮箱或密码错误");
     HttpServletRequest request = mock(HttpServletRequest.class);
-    when(problemDetailAdapter.adapt(exception, request))
-        .thenReturn(response(HttpStatus.UNAUTHORIZED, "TEST-0401"));
+    ProblemDetailResponse unauthorized = response(HttpStatus.UNAUTHORIZED, "TEST-0401");
+    when(problemDetailAdapter.adapt(exception, request)).thenReturn(unauthorized);
 
     handler.handleException(exception, request);
 
@@ -1036,8 +1054,8 @@ git commit -m "feat(commons): 统一错误格式输出字段原因码和剩余�
   void should_log_server_error_at_error_with_stack_trace() {
     Exception exception = new IllegalStateException("连接池耗尽");
     HttpServletRequest request = mock(HttpServletRequest.class);
-    when(problemDetailAdapter.adapt(exception, request))
-        .thenReturn(response(HttpStatus.INTERNAL_SERVER_ERROR, "TEST-0500"));
+    ProblemDetailResponse serverError = response(HttpStatus.INTERNAL_SERVER_ERROR, "TEST-0500");
+    when(problemDetailAdapter.adapt(exception, request)).thenReturn(serverError);
 
     handler.handleException(exception, request);
 
@@ -1089,7 +1107,7 @@ git commit -m "feat(commons): 统一错误格式输出字段原因码和剩余�
 - [ ] **步骤 2：运行，确认失败**
 
 运行：`./gradlew :linqibin-commons:linqibin-spring-boot-starter-web:test --tests '*GlobalRestExceptionHandlerTest'`
-预期：三个新用例失败：4xx 现在记的是 ERROR 且带堆栈；校验失败的 `detail` 仍是原始消息、日志是 ERROR。
+预期：两个新用例失败：4xx 现在记的是 ERROR 且带堆栈；校验失败的 `detail` 仍是原始消息、日志是 ERROR。5xx 的用例本来就通过（现有代码对所有异常都记 ERROR 带堆栈），留着防回归。
 
 - [ ] **步骤 3：改处理器**
 
@@ -1261,6 +1279,7 @@ import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTe
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.client.RestTestClient;
 import tools.jackson.databind.JsonNode;
@@ -1268,6 +1287,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 /// 参数校验失败时，响应和日志里都不能出现字段的原始值。
 @WebMvcTest(controllers = ValidationProbeController.class)
+@Import(ValidationProbeController.class)
 @AutoConfigureRestTestClient
 @ExtendWith(OutputCaptureExtension.class)
 @DisplayName("参数校验失败时不泄露字段原始值")
@@ -1456,6 +1476,15 @@ class LoggingCommandInterceptorTest {
 
 `intercept` 方法的注释补一句：「领域异常记 WARN，其他异常记 ERROR。」
 
+类注释「日志输出示例」里写的是 `ERROR <<< 命令失败: CreateUserCommand (15ms) - User already exists`，和新行为不符。示例代码块里原来的三行改为下面四行（领域异常记 WARN，其他异常记 ERROR）：
+
+```java
+/// INFO  >>> 执行命令: CreateUserCommand
+/// INFO  <<< 命令完成: CreateUserCommand (42ms)
+/// WARN  <<< 命令失败: CreateUserCommand (15ms) - User already exists
+/// ERROR <<< 命令失败: CreateUserCommand (3ms) - Connection refused
+```
+
 - [ ] **步骤 4：运行，确认通过**
 
 运行：`./gradlew :linqibin-commons:linqibin-spring-boot-starter-core:test`
@@ -1609,7 +1638,7 @@ public class RedisContainerInitializer
 
 - [ ] **步骤 4：运行，确认通过**
 
-运行：`docker info > /dev/null && ./gradlew :linqibin-commons:linqibin-spring-boot-starter-test:check :linqibin-commons:linqibin-spring-boot-starter-test:integrationTest`
+运行：`docker info > /dev/null && ./gradlew spotlessApply && ./gradlew :linqibin-commons:linqibin-spring-boot-starter-test:check :linqibin-commons:linqibin-spring-boot-starter-test:integrationTest`
 预期：`BUILD SUCCESSFUL`。
 
 - [ ] **步骤 5：提交**
@@ -2139,12 +2168,12 @@ CREATE TRIGGER trg_idn_user_password_credential_updated_at
 ```
 
 运行：`./gradlew dumpModuleGraph && git diff --stat patra-infra/cd/module-graph.json`
-预期：`module-graph.json` 里多出五个 `unit` 为 `identity` 的模块；boot、infra 的 `tasks` 含 `integrationTest`；被 identity 依赖的公共模块，`impacts` 里多出 `identity`。
+预期：`module-graph.json` 里多出五个 `unit` 为 `identity` 的模块，其中只有 boot 的 `tasks` 含 `integrationTest`（infra、adapter 的 `src/integrationTest` 在任务 10、17 才建，到时各自重新生成）；`linqibin-spring-boot-starter-web`、`linqibin-spring-boot-starter-test` 因任务 4、6 新建了 `src/integrationTest`，`tasks` 也多出 `integrationTest`；被 identity 依赖的公共模块，`impacts` 里多出 `identity`。
 
 运行：`bash patra-infra/cd/detect-changes.test.sh`
 预期：全部 ✓。如果有场景因为扇出多了 `identity` 而失败，按 `module-graph.json` 的实际扇出改那条期望值（见「与 spec 的出入」第 9 条），不要改脚本逻辑。
 
-CI 的后端矩阵直接从 `module-graph.json` 的单元生成，不用改 CI；CD 的 `services.json` 由 PAP-66 加 identity 的条目。
+CI 的后端矩阵取自 `patra-infra/cd/detect-changes.sh` 的输出。局部运行按 `module-graph.json` 算受影响的单元，只改 identity 的文件时得到 `identity`；全量运行（本任务改的 `settings.gradle.kts`、根 `build.gradle.kts`、`patra-infra/cd/*` 都会触发）用的是脚本里写死的 `ALL_UNITS`，里面没有 `identity`，`module-graph.json` 的 `units` 不被任何脚本读取。`ALL_UNITS` 加 `identity` 要和 CD 的 `services.json` 加 identity 条目一起做，都由 PAP-66 负责：只加 `ALL_UNITS`、没有 `services.json` 条目，CD 部署 identity 时取不到配置。本任务不改 CI、CD 脚本；PAP-66 落地之前，全量 CI 不跑 identity 的测试，由本地的 `check` 和 `integrationTest` 兜底。
 
 - [ ] **步骤 7：提交**
 
@@ -2177,7 +2206,7 @@ git commit -m "feat(identity): 新建 identity 服务骨架与建表脚本 (PAP-
   - `final class UserFieldViolations`：常量 `EMAIL`、`PASSWORD`、`REQUIRED`、`TOO_LONG`、`INVALID_FORMAT`、`TOO_SHORT`、`TOO_COMMON`、`INVALID_CHARACTER`；工厂方法 `emailRequired()`、`emailTooLong()`、`emailInvalidFormat()`、`passwordRequired()`、`passwordInvalidCharacter()`、`passwordTooShort()`、`passwordTooLong()`、`passwordTooCommon()`，都返回 `FieldViolation`。
   - `record EmailAddress(String value)`：`static Optional<FieldViolation> validate(String raw)`、`static EmailAddress of(String raw)`（不合法抛 `InvalidUserFieldsException`），`MAX_LENGTH = 254`。规范构造器只接受已规范化的合法值，用于从库里恢复。
   - `final class PlainPassword`：`static Optional<FieldViolation> validate(String raw)`（只查 `REQUIRED`、`INVALID_CHARACTER`）、`static PlainPassword of(String raw)`、`String value()`、`int length()`（码点数）、`String normalized()`（NFKC）、`static String comparisonKeyOf(String raw)`（NFKC → 小写 → `strip()`），`toString()` 返回 `***`。
-  - `record PasswordHash(String value)`：`static PasswordHash of(String value)`，`toString()` 不含哈希。
+  - `record PasswordHash(String value)`：`static PasswordHash of(String value)`，`toString()` 返回 `***`（spec 第 6.1 节）。
   - 七个异常，全部 `final`，消息和特征见 Global Constraints 的表。`InvalidUserFieldsException(List<FieldViolation>)` 实现 `HasFieldViolations`；`LoginTemporarilyLockedException(Duration retryAfter)` 实现 `HasRetryAfter`；`TemporarilyUnavailableException` 有无参和 `(Throwable cause)` 两个构造器；其余都是无参构造器。
 
 - [ ] **步骤 1：写 `EmailAddress` 的失败测试**
@@ -2418,11 +2447,11 @@ import org.junit.jupiter.api.Test;
 class PasswordHashTest {
 
   @Test
-  @DisplayName("toString 不输出哈希")
+  @DisplayName("toString 不输出哈希，只输出 ***")
   void should_hide_hash_in_to_string() {
     PasswordHash hash = PasswordHash.of("$argon2id$v=19$m=19456,t=2,p=1$c2FsdA$aGFzaA");
 
-    assertThat(hash.toString()).doesNotContain("argon2id").doesNotContain("aGFzaA");
+    assertThat(hash.toString()).isEqualTo("***");
   }
 
   @Test
@@ -2565,7 +2594,7 @@ class DomainExceptionTraitsTest {
 - [ ] **步骤 4：运行，确认失败**
 
 运行：`./gradlew :patra-api:patra-identity:patra-identity-domain:test`
-预期：编译失败，找不到 `EmailAddress` 等类。
+预期：编译失败，只报一条：`EmailAddressTest` 的 import 找不到 `InvalidUserFieldsException`。javac 先报 import 和字段、方法签名里缺的类型，`EmailAddress` 等只出现在方法体里，要等这些补上才会报。
 
 - [ ] **步骤 5：实现字段错误工厂和三个值对象**
 
@@ -2875,10 +2904,10 @@ public record PasswordHash(String value) {
 
   /// 不输出哈希。
   ///
-  /// @return 固定文本
+  /// @return 固定文本 `***`
   @Override
   public String toString() {
-    return "PasswordHash[***]";
+    return "***";
   }
 }
 ```
@@ -3045,7 +3074,7 @@ public final class TemporarilyUnavailableException extends DomainException {
 
 - [ ] **步骤 7：运行，确认通过**
 
-运行：`./gradlew :patra-api:patra-identity:patra-identity-domain:check`
+运行：`./gradlew spotlessApply && ./gradlew :patra-api:patra-identity:patra-identity-domain:check`
 预期：`BUILD SUCCESSFUL`，包括 `enforceDomainPurity` 和 SpotBugs。如果 SpotBugs 对 `InvalidUserFieldsException.fieldViolations` 报 `SE_BAD_FIELD`，把该字段声明为 `transient`，不要扩大排除清单。
 
 - [ ] **步骤 8：提交**
@@ -3356,7 +3385,7 @@ class LoginThrottlePolicyTest {
 - [ ] **步骤 3：运行，确认失败**
 
 运行：`./gradlew :patra-api:patra-identity:patra-identity-domain:test`
-预期：编译失败，找不到 `User`、`PasswordPolicy` 等。
+预期：编译失败，首批报两条：`UserTest` 的 import 报包 `dev.linqibin.patra.identity.domain.model.enums` 不存在（`UserStatus`）；`PasswordPolicyTest` 报找不到 `PasswordPolicy`。javac 先报 import 和字段、方法签名里缺的类型，`User` 等只出现在方法体里，要等这些补上才会报。
 
 - [ ] **步骤 4：实现聚合**
 
@@ -3854,7 +3883,7 @@ public interface LoginThrottlePort {
 
 - [ ] **步骤 7：运行，确认通过**
 
-运行：`./gradlew :patra-api:patra-identity:patra-identity-domain:check`
+运行：`./gradlew spotlessApply && ./gradlew :patra-api:patra-identity:patra-identity-domain:check`
 预期：`BUILD SUCCESSFUL`。
 
 - [ ] **步骤 8：提交**
@@ -3880,6 +3909,7 @@ git commit -m "feat(identity): 新增用户与密码凭据聚合、密码规则�
 - Test（`patra-identity-infra/src/integrationTest/java/dev/linqibin/patra/identity/infra/` 下）：
   - `IdentityITBootstrap.java`、`config/IdentityITPostgreSQLContainerInitializer.java`
   - `adapter/persistence/UserRepositoryAdapterIT.java`、`adapter/persistence/UserPasswordCredentialRepositoryAdapterIT.java`、`adapter/persistence/IdentitySchemaConstraintsIT.java`
+- Modify: `patra-infra/cd/module-graph.json`（重新生成：infra 有了 `src/integrationTest`）
 
 **Interfaces:**
 
@@ -4560,14 +4590,21 @@ public class UserPasswordCredentialRepositoryAdapter implements UserPasswordCred
 
 - [ ] **步骤 5：运行，确认通过**
 
-运行：`docker info > /dev/null && ./gradlew :patra-api:patra-identity:patra-identity-infra:check :patra-api:patra-identity:patra-identity-infra:integrationTest`
+运行：`docker info > /dev/null && ./gradlew spotlessApply && ./gradlew :patra-api:patra-identity:patra-identity-infra:check :patra-api:patra-identity:patra-identity-infra:integrationTest`
 预期：`BUILD SUCCESSFUL`。如果唯一约束的转换没生效（`violation.getConstraintName()` 拿到的名字带引号、带 schema 前缀或为空），看异常链里的实际值调整比较方式，不要改成「凡是数据完整性异常都转成邮箱已注册」。
 
-- [ ] **步骤 6：提交**
+- [ ] **步骤 6：重新生成模块图**
+
+`dumpModuleGraph` 按 `src/integrationTest` 目录是否存在决定模块的 `tasks`。infra 这次有了集成测试，不重新生成的话，CI 的 `Verify module-graph.json up to date` 和任务 18 的「没有变化」检查都会失败。
+
+运行：`./gradlew dumpModuleGraph && git diff patra-infra/cd/module-graph.json`
+预期：只有 `patra-identity-infra` 的 `tasks` 多出 `integrationTest`，别的没有变化。
+
+- [ ] **步骤 7：提交**
 
 ```bash
 ./gradlew spotlessApply
-git add patra-api/patra-identity/patra-identity-infra
+git add patra-api/patra-identity/patra-identity-infra patra-infra/cd/module-graph.json
 git diff --cached --stat
 git commit -m "feat(identity): 新增用户与密码凭据的持久化 (PAP-63)"
 ```
@@ -4592,12 +4629,15 @@ git commit -m "feat(identity): 新增用户与密码凭据的持久化 (PAP-63)"
 package dev.linqibin.patra.identity.infra.adapter.hashing;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.linqibin.patra.identity.domain.exception.TemporarilyUnavailableException;
 import dev.linqibin.patra.identity.domain.model.vo.PasswordHash;
 import dev.linqibin.patra.identity.domain.model.vo.PlainPassword;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -4639,9 +4679,14 @@ class PasswordHashingAdapterTest {
   }
 
   @Test
-  @DisplayName("假哈希校验能正常完成")
+  @DisplayName("假哈希校验确实做一次校验，用的是 NFKC 之后的密码")
   void should_complete_dummy_verification() {
-    argon2.verifyAgainstDummy(PlainPassword.of("whatever-password"));
+    RecordingPasswordEncoder encoder = new RecordingPasswordEncoder();
+    PasswordHashingAdapter adapter = new PasswordHashingAdapter(encoder, 1, Duration.ofSeconds(1));
+
+    adapter.verifyAgainstDummy(PlainPassword.of("ｗｈａｔｅｖｅｒ－ｐａｓｓ"));
+
+    assertThat(encoder.matchedPasswords()).containsExactly("whatever-pass");
   }
 
   @Test
@@ -4674,7 +4719,9 @@ class PasswordHashingAdapterTest {
             Duration.ofMillis(100));
 
     adapter.hash(PlainPassword.of("first-call"));
-    adapter.hash(PlainPassword.of("second-call"));
+
+    assertThatCode(() -> adapter.hash(PlainPassword.of("second-call")))
+        .doesNotThrowAnyException();
   }
 
   @Test
@@ -4722,6 +4769,39 @@ class PasswordHashingAdapterTest {
         Thread.currentThread().interrupt();
         return false;
       }
+    }
+  }
+
+  /// 记下 `matches` 收到的明文的假编码器。
+  private static final class RecordingPasswordEncoder implements PasswordEncoder {
+
+    private final List<String> matchedPasswords = new ArrayList<>();
+
+    /// 返回一个假的编码串。
+    ///
+    /// @param rawPassword 明文
+    /// @return 假编码串
+    @Override
+    public String encode(CharSequence rawPassword) {
+      return "{fake}" + rawPassword;
+    }
+
+    /// 记下明文，返回 `false`。
+    ///
+    /// @param rawPassword 明文
+    /// @param encodedPassword 编码串
+    /// @return `false`
+    @Override
+    public boolean matches(CharSequence rawPassword, String encodedPassword) {
+      matchedPasswords.add(rawPassword.toString());
+      return false;
+    }
+
+    /// 返回 `matches` 收到的明文，按调用顺序。
+    ///
+    /// @return 明文列表
+    List<String> matchedPasswords() {
+      return List.copyOf(matchedPasswords);
     }
   }
 }
@@ -4849,7 +4929,7 @@ public final class PasswordHashingAdapter implements PasswordHashingPort {
 - [ ] **步骤 4：运行，确认通过**
 
 运行：`./gradlew :patra-api:patra-identity:patra-identity-infra:test --tests '*PasswordHashingAdapterTest'`
-预期：全部通过。记下测试报告（`build/reports/tests/test/index.html`）里 `should_produce_argon2id_hash_with_owasp_parameters` 的耗时，任务 18 写回 spec 第 14 节第 1 条。
+预期：全部通过。记下测试报告（`build/reports/tests/test/index.html`）里 `should_produce_argon2id_hash_with_owasp_parameters` 的耗时，任务 18 写回 spec 第 14 节第 1 条。这是开发机上的耗时；mini 上还没有部署 identity，mini 上的耗时等 PAP-66 部署之后再测，任务 18 把这件事写进 spec 第 16 节交给 PAP-66。
 
 - [ ] **步骤 5：提交**
 
@@ -4893,9 +4973,10 @@ ls -l "$DIR"
 shasum -a 256 "$DIR/common-passwords.txt.gz"
 gzip -dc "$DIR/common-passwords.txt.gz" | wc -l
 gzip -dc "$DIR/common-passwords.txt.gz" | head -5
+gzip -dc "$DIR/common-passwords.txt.gz" | grep -cx 'password123'
 ```
 
-预期：`.gz` 约 80 KB；解压后约 2 万行，每行一个小写密码。记下 SHA-256 和行数，任务 18 写进 README。
+预期：`.gz` 约 80 KB；解压后约 2 万行，每行一个小写密码。记下 SHA-256 和行数，任务 18 写进 README。最后一条输出 `1`：任务 18 的 `AccountFlowIT` 用 `password123` 注册，期待 422 `TOO_COMMON`。如果输出 `0`，从名单里挑一个 8 到 64 个字符的词记下来，任务 18 把测试里的 `password123` 换成它。
 
 - [ ] **步骤 2：生成测试用的小名单**
 
@@ -5411,6 +5492,7 @@ class LoginThrottleAdapterIT {
     assertThat(during).isPresent();
     await()
         .atMost(Duration.ofSeconds(5))
+        .ignoreException(LoginTemporarilyLockedException.class)
         .untilAsserted(() -> adapter.cancel(adapter.begin(AccountType.USER, email)));
     failTimes(adapter, email, 4);
     assertThat(adapter.begin(AccountType.USER, email)).isNotNull();
@@ -5431,6 +5513,7 @@ class LoginThrottleAdapterIT {
         .isInstanceOf(LoginTemporarilyLockedException.class);
     await()
         .atMost(Duration.ofSeconds(5))
+        .ignoreException(LoginTemporarilyLockedException.class)
         .untilAsserted(() -> assertThat(adapter.begin(AccountType.USER, email)).isNotNull());
   }
 
@@ -5664,7 +5747,7 @@ public final class LoginThrottleAdapter implements LoginThrottlePort {
 
 - [ ] **步骤 5：运行，确认通过**
 
-运行：`docker info > /dev/null && ./gradlew :patra-api:patra-identity:patra-identity-infra:check :patra-api:patra-identity:patra-identity-infra:integrationTest`
+运行：`docker info > /dev/null && ./gradlew spotlessApply && ./gradlew :patra-api:patra-identity:patra-identity-infra:check :patra-api:patra-identity:patra-identity-infra:integrationTest`
 预期：`BUILD SUCCESSFUL`。实测点 3、4 的结果记下来，任务 18 写回 spec。任何一个交错场景的结果和断言不符：停下来报告，不要改断言迁就脚本。
 
 - [ ] **步骤 6：接进 boot：写配置的失败测试**
@@ -6473,6 +6556,21 @@ class AuthenticateUserHandlerTest {
                     AuthenticateUserCommand.of("chen.yu@example.com", "x".repeat(1_000_000))))
         .isInstanceOf(InvalidCredentialsException.class);
   }
+
+  @Test
+  @DisplayName("1 MB 的邮箱：按字段校验报 TOO_LONG，不进失败限制")
+  void should_reject_huge_email_by_field_validation() {
+    String hugeEmail = "a".repeat(1_000_000) + "@example.com";
+
+    assertThatThrownBy(() -> handler.handle(AuthenticateUserCommand.of(hugeEmail, "any")))
+        .isInstanceOf(InvalidUserFieldsException.class)
+        .satisfies(
+            e ->
+                assertThat(((InvalidUserFieldsException) e).getFieldViolations())
+                    .extracting(v -> v.field() + ":" + v.code())
+                    .containsExactly("email:TOO_LONG"));
+    verifyNoInteractions(loginThrottle);
+  }
 }
 ```
 
@@ -6963,8 +7061,8 @@ public class UnbanUserHandler implements CommandHandler<UnbanUserCommand, Void> 
 
 - [ ] **步骤 4：运行，确认通过**
 
-运行：`./gradlew :patra-api:patra-identity:patra-identity-app:check`
-预期：`BUILD SUCCESSFUL`，三个处理器的测试全部通过。
+运行：`./gradlew spotlessApply && ./gradlew :patra-api:patra-identity:patra-identity-app:check`
+预期：`BUILD SUCCESSFUL`，四个处理器的测试全部通过。
 
 顺带确认应用还能启动（新组件都接上了依赖）：`docker info > /dev/null && ./gradlew :patra-api:patra-identity:patra-identity-boot:integrationTest --tests '*PatraIdentityApplicationIT'`，预期 `BUILD SUCCESSFUL`。
 
@@ -6991,6 +7089,7 @@ git commit -m "feat(identity): 新增封禁与解封用例 (PAP-63)"
   - `java/dev/linqibin/patra/identity/adapter/rest/auth/AuthControllerIT.java`
   - `java/dev/linqibin/patra/identity/adapter/rest/admin/AdminUserControllerIT.java`
   - `resources/application.yml`
+- Modify: `patra-infra/cd/module-graph.json`（重新生成：adapter 有了 `src/integrationTest`）
 
 **Interfaces:**
 
@@ -7100,7 +7199,9 @@ class AuthControllerIT {
         .isCreated()
         .expectBody()
         .jsonPath("$.userId")
-        .isEqualTo("352303128713027974")
+        .value(
+            userId ->
+                assertThat(userId).isInstanceOf(String.class).isEqualTo("352303128713027974"))
         .jsonPath("$.email")
         .isEqualTo("chen.yu@example.com");
 
@@ -7111,7 +7212,7 @@ class AuthControllerIT {
   }
 
   @Test
-  @DisplayName("登录成功返回 200")
+  @DisplayName("登录成功返回 200，userId 是字符串")
   void should_login_and_return_200() {
     when(commandBus.handle(any(AuthenticateUserCommand.class)))
         .thenReturn(AuthenticateUserResult.of(42L, "chen.yu@example.com"));
@@ -7126,7 +7227,7 @@ class AuthControllerIT {
         .isOk()
         .expectBody()
         .jsonPath("$.userId")
-        .isEqualTo("42");
+        .value(userId -> assertThat(userId).isInstanceOf(String.class).isEqualTo("42"));
   }
 
   @Test
@@ -7247,7 +7348,7 @@ class AuthControllerIT {
         .jsonPath("$.code")
         .isEqualTo("IDN-0429")
         .jsonPath("$.retryAfterSeconds")
-        .isEqualTo(900);
+        .value(retryAfterSeconds -> assertThat(retryAfterSeconds).isEqualTo(900));
   }
 
   @Test
@@ -7538,16 +7639,23 @@ public class AdminUserController {
 
 - [ ] **步骤 3：运行，确认通过**
 
-运行：`./gradlew :patra-api:patra-identity:patra-identity-adapter:check :patra-api:patra-identity:patra-identity-adapter:integrationTest`
+运行：`./gradlew spotlessApply && ./gradlew :patra-api:patra-identity:patra-identity-adapter:check :patra-api:patra-identity:patra-identity-adapter:integrationTest`
 预期：`BUILD SUCCESSFUL`。实测点 5：记下 `rejectedValue` 在 JSON 里是 `null` 还是没有这个键，任务 18 写回 spec。
 
 顺带确认应用还能启动（新组件都接上了依赖）：`docker info > /dev/null && ./gradlew :patra-api:patra-identity:patra-identity-boot:integrationTest --tests '*PatraIdentityApplicationIT'`，预期 `BUILD SUCCESSFUL`。
 
-- [ ] **步骤 4：提交**
+- [ ] **步骤 4：重新生成模块图**
+
+adapter 这次有了 `src/integrationTest`，`dumpModuleGraph` 给它的 `tasks` 会多出 `integrationTest`。不重新生成的话，CI 的 `Verify module-graph.json up to date` 和任务 18 的「没有变化」检查都会失败。
+
+运行：`./gradlew dumpModuleGraph && git diff patra-infra/cd/module-graph.json`
+预期：只有 `patra-identity-adapter` 的 `tasks` 多出 `integrationTest`，别的没有变化。
+
+- [ ] **步骤 5：提交**
 
 ```bash
 ./gradlew spotlessApply
-git add patra-api/patra-identity/patra-identity-adapter
+git add patra-api/patra-identity/patra-identity-adapter patra-infra/cd/module-graph.json
 git diff --cached --stat
 git commit -m "feat(identity): 新增注册、登录和封禁解封接口 (PAP-63)"
 ```
@@ -7700,8 +7808,9 @@ class AccountFlowIT {
     EntityExchangeResult<String> fifth = login("locked@example.com", "Wrong-5");
     assertThat(fifth.getStatus().value()).isEqualTo(429);
     assertThat(fifth.getResponseHeaders().getFirst(HttpHeaders.RETRY_AFTER)).isEqualTo("2");
-    assertThat(JSON.readTree(fifth.getResponseBody()).get("retryAfterSeconds").asLong())
-        .isEqualTo(2);
+    JsonNode retryAfterSeconds = JSON.readTree(fifth.getResponseBody()).get("retryAfterSeconds");
+    assertThat(retryAfterSeconds.isNumber()).isTrue();
+    assertThat(retryAfterSeconds.asLong()).isEqualTo(2);
     assertThat(login("locked@example.com", "Locked-Pass-07").getStatus().value()).isEqualTo(429);
 
     await()
@@ -7816,6 +7925,8 @@ class AccountFlowIT {
   }
 }
 ```
+
+`should_never_store_or_echo_plain_password` 里的 `password123` 必须在常见密码名单里，注册才会因 `TOO_COMMON` 返回 422。任务 12 步骤 1 核对过；如果那一步的结果是不在、记下了名单里的另一个词，这里换成那个词。
 
 `RedisUnavailableIT.java`：
 
@@ -7998,7 +8109,7 @@ patra:
 - 测试全部用 Testcontainers（PostgreSQL 17、Redis 7.0.15），本机要有 Docker：
 
 ```bash
-./gradlew :patra-api:patra-identity:patra-identity-boot:check :patra-api:patra-identity:patra-identity-boot:integrationTest
+./gradlew spotlessApply && ./gradlew :patra-api:patra-identity:patra-identity-boot:check :patra-api:patra-identity:patra-identity-boot:integrationTest
 ```
 
 `check` 不包含集成测试，两个任务都要写。
@@ -8009,9 +8120,15 @@ patra:
 `docs/patra/specs/2026-10-05-identity-account-design.md`：
 
 1. 开头的 `> **状态**：待评审` 改为 `> **状态**：已实现`。
-2. 第 7.2 节第 3、4 条之间补一句：「哈希在事务外做：事务开始时就会占住数据库连接，而哈希可能排队几秒；只有两次保存在事务里。」
-3. 第 8.2 节表格「阈值」那一行末尾补：「在途登记的过期时间也可配置：`in-flight-ttl`，默认 30 秒。」
-4. 第 14 节标题改为「## 14. 实测结果」，表格改成四列（# / 结论 / 结果 / 对应测试），按实际结果填「成立」或现象。第 1 条附上任务 11 记下的耗时；第 5 条写明 `rejectedValue` 实际是 `null` 还是没有这个键。
+2. 第 5 节「模块图」那一条（以「两者在同一个后端 PR 里。」结尾）末尾补：「CI 全量运行的单元列表是 `patra-infra/cd/detect-changes.sh` 里写死的 `ALL_UNITS`，identity 和 `services.json` 的条目一起由 PAP-66 加。」
+3. 第 7.2 节第 3、4 条之间补一句：「哈希在事务外做：事务开始时就会占住数据库连接，而哈希可能排队几秒；只有两次保存在事务里。」
+4. 第 8.2 节表格「阈值」那一行末尾补：「在途登记的过期时间也可配置：`in-flight-ttl`，默认 30 秒。」
+5. 第 13 节「端到端」那一条的「Redis 停掉后登录返回 503」改为「Redis 连不上时登录返回 503」（测试把 Redis 指向没人监听的端口，不停共享的容器）。
+6. 第 14 节标题改为「## 14. 实测结果」，表格改成四列（# / 结论 / 结果 / 对应测试），按实际结果填「成立」或现象。
+   - 第 1 条：结果写任务 11 记下的开发机耗时，注明 mini 上的耗时待 PAP-66 部署 identity 后补测；「对应测试」改为 `PasswordHashingAdapterTest`（mini 上的手测见第 16 节）。
+   - 第 3 条：「对应测试」改为 `LoginThrottleAdapterIT` 的连接失败用例（`should_translate_connection_failure`）加 `RedisUnavailableIT`（Redis 指向没人监听的端口）。
+   - 第 5 条：写明 `rejectedValue` 实际是 `null` 还是没有这个键。
+7. 第 16 节交给 PAP-66 的那一行，约束末尾补：「`detect-changes.sh` 的 `ALL_UNITS` 加 identity，和 `services.json` 的条目一起加；部署后在 mini 上测一次单次哈希耗时，写回第 14 节第 1 条」。
 
 - [ ] **步骤 5：全量回归**
 
@@ -8021,7 +8138,7 @@ patra:
 docker info > /dev/null
 LOG_DIR=.superpowers/sdd/2026-10-06-identity-account
 mkdir -p "$LOG_DIR"
-./gradlew check --continue > "$LOG_DIR/check.log" 2>&1; tail -30 "$LOG_DIR/check.log"
+./gradlew spotlessApply && ./gradlew check --continue > "$LOG_DIR/check.log" 2>&1; tail -30 "$LOG_DIR/check.log"
 ./gradlew integrationTest --continue > "$LOG_DIR/integration-test.log" 2>&1; tail -30 "$LOG_DIR/integration-test.log"
 ./gradlew dumpModuleGraph && git diff --exit-code patra-infra/cd/module-graph.json
 bash patra-infra/cd/detect-changes.test.sh
