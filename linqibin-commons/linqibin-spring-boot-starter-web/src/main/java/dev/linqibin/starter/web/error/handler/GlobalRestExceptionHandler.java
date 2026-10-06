@@ -28,6 +28,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 ///   - 使用 {@link ProblemDetailAdapter} 将异常转换为 {@link ProblemDetail}
 ///   - 处理验证异常({@link MethodArgumentNotValidException}),附加验证错误列表
 ///   - 掩码敏感字段(通过 {@link ValidationErrorsFormatter})
+///   - 4xx 记 WARN、不带堆栈，5xx 记 ERROR、带堆栈；参数校验失败不记字段原始值
 ///   - 返回符合 RFC 7807 标准的 JSON 响应(Content-Type: application/problem+json)
 ///
 /// **响应格式示例:**
@@ -58,6 +59,9 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
 
   /// 附加到问题详情载荷的验证错误的最大数量。
   private static final int MAX_VALIDATION_ERRORS = 100;
+
+  /// 参数校验失败时返回给客户端的固定文案。异常自身的消息里带着字段原始值，不能外泄。
+  private static final String VALIDATION_FAILED_DETAIL = "请求参数不合法";
 
   private final ProblemDetailAdapter problemDetailAdapter;
   private final ValidationErrorsFormatter validationErrorsFormatter;
@@ -97,6 +101,8 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
 
   /// 处理验证失败并将清理后的字段错误附加到响应载荷。
   ///
+  /// `detail` 固定为「请求参数不合法」：异常消息里带着字段原始值（`rejected value [...]`），现有掩码拦不住。
+  ///
   /// @param ex 验证异常
   /// @param headers HTTP 响应头
   /// @param status HTTP 状态码
@@ -113,9 +119,10 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
     ProblemDetailResponse response = problemDetailAdapter.adapt(ex, servletRequest);
 
     List<ValidationError> errors = formatAndTruncateValidationErrors(ex);
+    response.problemDetail().setDetail(VALIDATION_FAILED_DETAIL);
     response.problemDetail().setProperty(ErrorKeys.ERRORS, errors);
 
-    logValidationExceptionHandled(response, errors, ex);
+    logValidationExceptionHandled(response, errors);
 
     return ResponseEntity.status(response.httpStatus())
         .contentType(MediaType.APPLICATION_PROBLEM_JSON)
@@ -152,37 +159,48 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
     return errors;
   }
 
-  /// 记录通用异常处理，包括错误代码、状态、请求路径和完整堆栈跟踪。
+  /// 记录通用异常处理。4xx 是调用方的问题，记 WARN、不带堆栈；5xx 记 ERROR、带堆栈。
   ///
   /// @param response 包含错误元数据的问题详情响应
   /// @param ex 被处理的异常
   private void logExceptionHandled(ProblemDetailResponse response, Exception ex) {
     Object path = extractPathFromProblemDetail(response.problemDetail());
-    log.error(
-        "Exception handled: error code [{}], HTTP status {}, request path [{}], exception={}",
-        response.errorResolution().errorCode().code(),
-        response.httpStatus().value(),
+    String code = response.errorResolution().errorCode().code();
+    int status = response.httpStatus().value();
+    if (response.httpStatus().is5xxServerError()) {
+      log.error(
+          "Exception handled: error code [{}], HTTP status {}, request path [{}], exception={}",
+          code,
+          status,
+          path,
+          ex.getClass().getSimpleName(),
+          ex);
+      return;
+    }
+    log.warn(
+        "Exception handled: error code [{}], HTTP status {}, request path [{}], exception={}: {}",
+        code,
+        status,
         path,
         ex.getClass().getSimpleName(),
-        ex);
+        ex.getMessage());
   }
 
-  /// 记录验证异常处理，包括验证错误计数、元数据和堆栈跟踪。
+  /// 记录参数校验失败。只记字段名和原因码，不记异常消息和堆栈：异常消息里带着字段原始值。
   ///
   /// @param response 问题详情响应
   /// @param errors 响应中包含的验证错误
-  /// @param ex 被处理的验证异常
   private void logValidationExceptionHandled(
-      ProblemDetailResponse response, List<ValidationError> errors, Exception ex) {
+      ProblemDetailResponse response, List<ValidationError> errors) {
     Object path = extractPathFromProblemDetail(response.problemDetail());
-    log.error(
-        "Validation exception handled: error code [{}], {} validation errors, "
-            + "HTTP status {}, request path [{}]",
+    List<String> fieldCodes =
+        errors.stream().map(error -> error.field() + ":" + error.code()).toList();
+    log.warn(
+        "参数校验失败: error code [{}], HTTP status {}, request path [{}], errors={}",
         response.errorResolution().errorCode().code(),
-        errors.size(),
         response.httpStatus().value(),
         path,
-        ex);
+        fieldCodes);
   }
 
   /// 安全地从问题详情中提取路径属性。

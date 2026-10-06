@@ -202,7 +202,8 @@
                 "registry"
             ],
             "tasks": [
-                "check"
+                "check",
+                "integrationTest"
             ]
         },
         {

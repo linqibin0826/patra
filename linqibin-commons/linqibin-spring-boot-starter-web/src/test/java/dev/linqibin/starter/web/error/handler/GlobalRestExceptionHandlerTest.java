@@ -7,6 +7,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import dev.linqibin.commons.error.codes.ErrorCodeLike;
 import dev.linqibin.commons.error.problem.ErrorKeys;
 import dev.linqibin.starter.core.error.model.ErrorResolution;
@@ -16,14 +20,18 @@ import dev.linqibin.starter.web.error.adapter.model.ProblemDetailResponse;
 import dev.linqibin.starter.web.error.model.ValidationError;
 import dev.linqibin.starter.web.error.spi.ValidationErrorsFormatter;
 import jakarta.servlet.http.HttpServletRequest;
+import java.lang.reflect.Method;
 import java.time.Duration;
 import java.util.List;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.LoggerFactory;
+import org.springframework.core.MethodParameter;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.core.annotation.Order;
@@ -46,10 +54,22 @@ class GlobalRestExceptionHandlerTest {
   @Mock private ValidationErrorsFormatter validationErrorsFormatter;
 
   private GlobalRestExceptionHandler handler;
+  private Logger handlerLogger;
+  private ListAppender<ILoggingEvent> logAppender;
 
   @BeforeEach
   void setUp() {
     handler = new GlobalRestExceptionHandler(problemDetailAdapter, validationErrorsFormatter);
+    handlerLogger = (Logger) LoggerFactory.getLogger(GlobalRestExceptionHandler.class);
+    logAppender = new ListAppender<>();
+    logAppender.start();
+    handlerLogger.addAppender(logAppender);
+  }
+
+  /// 摘掉日志收集器，避免影响别的测试。
+  @AfterEach
+  void detachLogAppender() {
+    handlerLogger.detachAppender(logAppender);
   }
 
   @Test
@@ -372,5 +392,78 @@ class GlobalRestExceptionHandlerTest {
     ErrorResolution errorResolution = mock(ErrorResolution.class);
     when(errorResolution.errorCode()).thenReturn(errorCode);
     return new ProblemDetailResponse(ProblemDetail.forStatus(status), status, errorResolution);
+  }
+
+  @Test
+  @DisplayName("4xx 记 WARN，不带堆栈")
+  void should_log_client_error_at_warn_without_stack_trace() {
+    Exception exception = new IllegalStateException("邮箱或密码错误");
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    ProblemDetailResponse unauthorized = response(HttpStatus.UNAUTHORIZED, "TEST-0401");
+    when(problemDetailAdapter.adapt(exception, request)).thenReturn(unauthorized);
+
+    handler.handleException(exception, request);
+
+    assertThat(logAppender.list)
+        .singleElement()
+        .satisfies(
+            event -> {
+              assertThat(event.getLevel()).isEqualTo(Level.WARN);
+              assertThat(event.getThrowableProxy()).isNull();
+              assertThat(event.getFormattedMessage()).contains("TEST-0401").contains("邮箱或密码错误");
+            });
+  }
+
+  @Test
+  @DisplayName("5xx 记 ERROR，带堆栈")
+  void should_log_server_error_at_error_with_stack_trace() {
+    Exception exception = new IllegalStateException("连接池耗尽");
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    ProblemDetailResponse serverError = response(HttpStatus.INTERNAL_SERVER_ERROR, "TEST-0500");
+    when(problemDetailAdapter.adapt(exception, request)).thenReturn(serverError);
+
+    handler.handleException(exception, request);
+
+    assertThat(logAppender.list)
+        .singleElement()
+        .satisfies(
+            event -> {
+              assertThat(event.getLevel()).isEqualTo(Level.ERROR);
+              assertThat(event.getThrowableProxy()).isNotNull();
+            });
+  }
+
+  @Test
+  @DisplayName("参数校验失败：detail 用固定文案，日志只记字段名和原因码")
+  void should_hide_rejected_values_when_validation_fails() throws Exception {
+    BindingResult bindingResult = mock(BindingResult.class);
+    Method method = getClass().getDeclaredMethod("dummyMethod", String.class);
+    MethodArgumentNotValidException exception =
+        new MethodArgumentNotValidException(new MethodParameter(method, 0), bindingResult);
+    ServletWebRequest webRequest = new ServletWebRequest(mock(HttpServletRequest.class));
+    ProblemDetailResponse response = response(HttpStatus.valueOf(422), "TEST-0422");
+    response.problemDetail().setDetail("rejected value [Leaky-Secret-123]");
+    when(problemDetailAdapter.adapt(eq(exception), any(HttpServletRequest.class)))
+        .thenReturn(response);
+    when(validationErrorsFormatter.formatWithMasking(bindingResult))
+        .thenReturn(List.of(new ValidationError("password", "SIZE", "***", "长度不对")));
+
+    ResponseEntity<Object> result =
+        handler.handleMethodArgumentNotValid(exception, null, HttpStatus.valueOf(422), webRequest);
+
+    ProblemDetail body = (ProblemDetail) result.getBody();
+    assertThat(body).isNotNull();
+    assertThat(body.getDetail()).isEqualTo("请求参数不合法");
+    assertThat(logAppender.list)
+        .singleElement()
+        .satisfies(
+            event -> {
+              assertThat(event.getLevel()).isEqualTo(Level.WARN);
+              assertThat(event.getThrowableProxy()).isNull();
+              assertThat(event.getFormattedMessage())
+                  .contains("参数校验失败")
+                  .contains("password:SIZE")
+                  .doesNotContain("Leaky-Secret-123");
+            });
   }
 }
