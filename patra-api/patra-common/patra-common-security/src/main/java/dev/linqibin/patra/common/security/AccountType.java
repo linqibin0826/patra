@@ -6,12 +6,12 @@ import lombok.RequiredArgsConstructor;
 
 /// 账号类型。
 ///
-/// 本版只有门户用户。后台账号在做 admin 时加入。
+/// 本版只有前台用户。后台账号（`STAFF`）在做后台时加入。
 @Getter
 @RequiredArgsConstructor
 public enum AccountType {
-  /// 门户用户。
-  PORTAL("portal");
+  /// 前台用户：自己注册的外部用户，门户 Web、App、小程序共用这一类账号。
+  USER("user");
 
   /// 写进请求头和会话里的字符串形式。
   private final String code;

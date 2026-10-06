@@ -37,7 +37,7 @@ class GatewayHeaderAuthenticationIT {
         .expectHeader()
         .doesNotExist(HttpHeaders.LOCATION)
         .expectBody(String.class)
-        .isEqualTo("1001:2001:portal:web");
+        .isEqualTo("1001:2001:user:web");
   }
 
   @Test

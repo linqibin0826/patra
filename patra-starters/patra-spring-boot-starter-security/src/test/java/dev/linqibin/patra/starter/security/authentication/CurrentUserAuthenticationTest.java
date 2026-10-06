@@ -16,7 +16,7 @@ import org.springframework.security.core.authority.AuthorityUtils;
 class CurrentUserAuthenticationTest {
 
   private static final CurrentUser USER =
-      CurrentUser.of(1001L, 2001L, AccountType.PORTAL, ClientType.WEB);
+      CurrentUser.of(1001L, 2001L, AccountType.USER, ClientType.WEB);
 
   @Test
   @DisplayName("构造出来就是已认证状态，主体是当前用户，没有凭据和权限")

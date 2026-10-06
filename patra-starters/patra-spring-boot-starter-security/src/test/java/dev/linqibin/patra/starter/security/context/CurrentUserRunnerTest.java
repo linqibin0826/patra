@@ -22,9 +22,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 class CurrentUserRunnerTest {
 
   private static final CurrentUser ALICE =
-      CurrentUser.of(1001L, 2001L, AccountType.PORTAL, ClientType.WEB);
+      CurrentUser.of(1001L, 2001L, AccountType.USER, ClientType.WEB);
   private static final CurrentUser BOB =
-      CurrentUser.of(1002L, 2002L, AccountType.PORTAL, ClientType.WEB);
+      CurrentUser.of(1002L, 2002L, AccountType.USER, ClientType.WEB);
 
   private final CurrentUserPort currentUserPort = new SecurityContextCurrentUserAdapter();
 

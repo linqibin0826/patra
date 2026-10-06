@@ -27,7 +27,7 @@ public final class TestIdentity {
 
   /// 默认用户。
   ///
-  /// @return 用户 ID 为 `USER_ID`、会话 ID 为 `SESSION_ID` 的门户网页端用户
+  /// @return 用户 ID 为 `USER_ID`、会话 ID 为 `SESSION_ID` 的前台网页端用户
   public static CurrentUser user() {
     return user(USER_ID);
   }
@@ -37,7 +37,7 @@ public final class TestIdentity {
   /// @param userId 用户 ID
   /// @return 用户
   public static CurrentUser user(long userId) {
-    return CurrentUser.of(userId, SESSION_ID, AccountType.PORTAL, ClientType.WEB);
+    return CurrentUser.of(userId, SESSION_ID, AccountType.USER, ClientType.WEB);
   }
 
   /// 默认用户的请求头。

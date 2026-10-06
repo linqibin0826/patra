@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 class CurrentUserPortTest {
 
   private static final CurrentUser USER =
-      CurrentUser.of(1001L, 2001L, AccountType.PORTAL, ClientType.WEB);
+      CurrentUser.of(1001L, 2001L, AccountType.USER, ClientType.WEB);
 
   @Test
   @DisplayName("有当前用户时 require 返回它")

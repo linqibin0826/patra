@@ -25,7 +25,7 @@ class TestIdentityTest {
     assertThat(IdentityHeaders.parse(headers))
         .isEqualTo(
             IdentityParseResult.identified(
-                CurrentUser.of(1001L, 2001L, AccountType.PORTAL, ClientType.WEB)));
+                CurrentUser.of(1001L, 2001L, AccountType.USER, ClientType.WEB)));
   }
 
   @Test
@@ -34,13 +34,13 @@ class TestIdentityTest {
     assertThat(IdentityHeaders.parse(TestIdentity.headers(42L)))
         .isEqualTo(
             IdentityParseResult.identified(
-                CurrentUser.of(42L, 2001L, AccountType.PORTAL, ClientType.WEB)));
+                CurrentUser.of(42L, 2001L, AccountType.USER, ClientType.WEB)));
   }
 
   @Test
   @DisplayName("可以指定整个用户")
   void should_use_given_user() {
-    CurrentUser user = CurrentUser.of(7L, 8L, AccountType.PORTAL, ClientType.WEB);
+    CurrentUser user = CurrentUser.of(7L, 8L, AccountType.USER, ClientType.WEB);
 
     assertThat(IdentityHeaders.parse(TestIdentity.headers(user)))
         .isEqualTo(IdentityParseResult.identified(user));

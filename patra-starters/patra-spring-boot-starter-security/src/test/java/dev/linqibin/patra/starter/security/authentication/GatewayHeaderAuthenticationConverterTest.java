@@ -22,7 +22,7 @@ class GatewayHeaderAuthenticationConverterTest {
 
   private static final String TOKEN = "test-gateway-token";
   private static final CurrentUser USER =
-      CurrentUser.of(1001L, 2001L, AccountType.PORTAL, ClientType.WEB);
+      CurrentUser.of(1001L, 2001L, AccountType.USER, ClientType.WEB);
 
   private final GatewayHeaderAuthenticationConverter converter =
       new GatewayHeaderAuthenticationConverter(TOKEN);
@@ -34,7 +34,7 @@ class GatewayHeaderAuthenticationConverterTest {
   private static void addIdentityHeaders(MockHttpServletRequest request) {
     request.addHeader(IdentityHeaders.USER_ID, "1001");
     request.addHeader(IdentityHeaders.SESSION_ID, "2001");
-    request.addHeader(IdentityHeaders.ACCOUNT_TYPE, "portal");
+    request.addHeader(IdentityHeaders.ACCOUNT_TYPE, "user");
     request.addHeader(IdentityHeaders.CLIENT_TYPE, "web");
   }
 
@@ -127,7 +127,7 @@ class GatewayHeaderAuthenticationConverterTest {
     request.addHeader(IdentityHeaders.GATEWAY_TOKEN, TOKEN);
     request.addHeader(IdentityHeaders.USER_ID, "not-a-number");
     request.addHeader(IdentityHeaders.SESSION_ID, "2001");
-    request.addHeader(IdentityHeaders.ACCOUNT_TYPE, "portal");
+    request.addHeader(IdentityHeaders.ACCOUNT_TYPE, "user");
     request.addHeader(IdentityHeaders.CLIENT_TYPE, "web");
 
     assertThatThrownBy(() -> converter.convert(request))
@@ -143,7 +143,7 @@ class GatewayHeaderAuthenticationConverterTest {
     request.addHeader("x-patra-gateway-token", TOKEN);
     request.addHeader("x-patra-user-id", "1001");
     request.addHeader("x-patra-session-id", "2001");
-    request.addHeader("x-patra-account-type", "portal");
+    request.addHeader("x-patra-account-type", "user");
     request.addHeader("x-patra-client-type", "web");
 
     Authentication authentication = converter.convert(request);

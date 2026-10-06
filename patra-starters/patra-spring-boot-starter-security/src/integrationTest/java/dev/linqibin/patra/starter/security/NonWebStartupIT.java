@@ -52,7 +52,7 @@ class NonWebStartupIT {
   @Test
   @DisplayName("以某个用户的身份执行时，写入的记录带上他的用户 ID")
   void should_fill_auditor_columns_when_write_runs_as_user() {
-    CurrentUser user = CurrentUser.of(4343L, 9001L, AccountType.PORTAL, ClientType.WEB);
+    CurrentUser user = CurrentUser.of(4343L, 9001L, AccountType.USER, ClientType.WEB);
 
     Long noteId = CurrentUserRunner.callAs(user, () -> noteDao.save(newNote()).getId());
 

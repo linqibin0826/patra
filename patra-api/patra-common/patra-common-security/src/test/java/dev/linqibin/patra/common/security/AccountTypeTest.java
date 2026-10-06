@@ -13,15 +13,15 @@ import org.junit.jupiter.params.provider.ValueSource;
 class AccountTypeTest {
 
   @Test
-  @DisplayName("portal 对应门户用户")
-  void should_return_portal_when_code_is_portal() {
-    assertThat(AccountType.fromCode("portal")).contains(AccountType.PORTAL);
-    assertThat(AccountType.PORTAL.getCode()).isEqualTo("portal");
+  @DisplayName("user 对应前台用户")
+  void should_return_user_when_code_is_user() {
+    assertThat(AccountType.fromCode("user")).contains(AccountType.USER);
+    assertThat(AccountType.USER.getCode()).isEqualTo("user");
   }
 
   @ParameterizedTest
   @NullSource
-  @ValueSource(strings = {"", "PORTAL", "admin", " portal"})
+  @ValueSource(strings = {"", "USER", "portal", "staff", " user"})
   @DisplayName("不认识的字符串返回空")
   void should_return_empty_when_code_is_unknown(String code) {
     assertThat(AccountType.fromCode(code)).isEmpty();

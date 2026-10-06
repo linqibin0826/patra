@@ -43,7 +43,7 @@ v0.8 引入账号与登录。网关按会话令牌查 Redis 会话，通过后�
 | 全仓库只有 servlet 一套，网关切到 Spring Cloud Gateway 的 WebMVC 版 | release spec 决策 H，PAP-69 |
 | 模块是 Patra 的身份约定，放 `patra-starters`，不进通用库 linqibin-commons | 设计过程 |
 | linqibin-commons 已与 super-nb 分离，只为 Patra 服务，可以直接改 | main 上的 `6d538cf83` |
-| 用户 ID 是雪花 Long；账号分门户用户和后台账号两类 | release spec 决策 A、D |
+| 用户 ID 是雪花 Long；账号分前台用户和后台账号两类 | release spec 决策 A、D |
 | 身份头没有签名，安全性依赖服务不对外暴露和内部令牌不泄露 | release spec 决策 C 的已知代价 |
 
 版本：Spring Boot 4.0.8、Spring Security 7.0.7、Spring Cloud Gateway 5.0.3。下文的类名和默认行为都对着这几个版本的源码核对过；没有实际运行验证的点单列在第 14 节。
@@ -81,7 +81,7 @@ v0.8 引入账号与登录。网关按会话令牌查 Redis 会话，通过后�
 
 | 类型 | 内容 |
 |---|---|
-| `AccountType` | 枚举。本版只有 `PORTAL`，字符串 `portal`。`fromCode(String)` 对不认识的值返回空结果 |
+| `AccountType` | 枚举。本版只有 `USER`（前台用户），字符串 `user`。`fromCode(String)` 对不认识的值返回空结果 |
 | `ClientType` | 枚举。本版只有 `WEB`，字符串 `web`。同样有 `fromCode` |
 | `CurrentUser` | 记录类型：`userId`（long）、`sessionId`（long）、`accountType`、`clientType`。静态工厂 `of(...)`；紧凑构造器校验两个 ID 为正数、两个枚举非空 |
 | `CurrentUserPort` | `Optional<CurrentUser> current()`；`default CurrentUser require()`，没有当前用户时抛 `AuthenticationRequiredException` |

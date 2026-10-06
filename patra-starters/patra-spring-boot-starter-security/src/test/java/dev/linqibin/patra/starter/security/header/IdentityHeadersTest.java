@@ -16,7 +16,7 @@ import org.springframework.http.HttpHeaders;
 class IdentityHeadersTest {
 
   private static final CurrentUser USER =
-      CurrentUser.of(1001L, 2001L, AccountType.PORTAL, ClientType.WEB);
+      CurrentUser.of(1001L, 2001L, AccountType.USER, ClientType.WEB);
 
   private static HttpHeaders validHeaders() {
     HttpHeaders headers = new HttpHeaders();
@@ -33,7 +33,7 @@ class IdentityHeadersTest {
 
     assertThat(headers.getFirst(IdentityHeaders.USER_ID)).isEqualTo("1001");
     assertThat(headers.getFirst(IdentityHeaders.SESSION_ID)).isEqualTo("2001");
-    assertThat(headers.getFirst(IdentityHeaders.ACCOUNT_TYPE)).isEqualTo("portal");
+    assertThat(headers.getFirst(IdentityHeaders.ACCOUNT_TYPE)).isEqualTo("user");
     assertThat(headers.getFirst(IdentityHeaders.CLIENT_TYPE)).isEqualTo("web");
     assertThat(IdentityHeaders.parse(headers)).isEqualTo(IdentityParseResult.identified(USER));
   }
@@ -130,11 +130,11 @@ class IdentityHeadersTest {
     assertThat(IdentityHeaders.parse(headers))
         .isEqualTo(
             IdentityParseResult.identified(
-                CurrentUser.of(Long.MAX_VALUE, 2001L, AccountType.PORTAL, ClientType.WEB)));
+                CurrentUser.of(Long.MAX_VALUE, 2001L, AccountType.USER, ClientType.WEB)));
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {"", "PORTAL", "admin"})
+  @ValueSource(strings = {"", "USER", "portal", "admin"})
   @DisplayName("账号类型不认识时不合法")
   void should_be_malformed_when_account_type_unknown(String accountType) {
     HttpHeaders headers = validHeaders();

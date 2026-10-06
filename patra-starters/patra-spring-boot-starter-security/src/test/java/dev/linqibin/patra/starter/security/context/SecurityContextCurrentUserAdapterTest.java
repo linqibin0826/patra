@@ -19,7 +19,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 class SecurityContextCurrentUserAdapterTest {
 
   private static final CurrentUser USER =
-      CurrentUser.of(1001L, 2001L, AccountType.PORTAL, ClientType.WEB);
+      CurrentUser.of(1001L, 2001L, AccountType.USER, ClientType.WEB);
 
   private final SecurityContextCurrentUserAdapter adapter = new SecurityContextCurrentUserAdapter();
 
