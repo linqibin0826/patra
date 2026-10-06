@@ -4,7 +4,7 @@
 > **版本**：[v0.8 Accounts](../release-specs/v0.8-accounts.md)
 > **产品输入**：设计简报 `patra-portal/docs/design-briefs/v0.8/accounts.md` 附录 A
 > **日期**：2026-10-05
-> **状态**：待评审
+> **状态**：已实现
 
 ## 1. 要解决的问题
 
@@ -117,7 +117,7 @@ identity 介于两者之间：密码从用户表移出去，但不用「通用�
 
 - `spring-security-crypto` 不依赖 Spring Security 的过滤器链和自动配置，加进来不会触发 Boot 的默认登录规则，和 PAP-62「Spring Security 只经安全 starter 进入 classpath」不冲突。
 - 构建接入：`settings.gradle.kts` 加五条 `includeAt` 和 `mapParent(":patra-api:patra-identity", ...)`。
-- 模块图：`dumpModuleGraph` 加 `identity` 单元（`patra-api/patra-identity` 下的模块都归它），重新生成 `module-graph.json`。CD 按 `services.json` 的服务名部署，identity 的条目由 PAP-66 加；两者在同一个后端 PR 里。
+- 模块图：`dumpModuleGraph` 加 `identity` 单元（`patra-api/patra-identity` 下的模块都归它），重新生成 `module-graph.json`。CD 按 `services.json` 的服务名部署，identity 的条目由 PAP-66 加；两者在同一个后端 PR 里。CI 全量运行的单元列表是 `patra-infra/cd/detect-changes.sh` 里写死的 `ALL_UNITS`，identity 和 `services.json` 的条目一起由 PAP-66 加。
 
 ## 6. 领域模型
 
@@ -183,7 +183,7 @@ identity 介于两者之间：密码从用户表移出去，但不用「通用�
 
 1. 两个字段各自校验，错误合并后一次返回 422。
 2. 查邮箱是否已注册，已注册返回 409。
-3. 哈希密码。
+3. 哈希密码。哈希在事务外做：事务开始时就会占住数据库连接，而哈希可能排队几秒；只有两次保存在事务里。
 4. 同一个事务里先存用户、拿到 ID，再存凭据。并发注册同一个邮箱时，后到的撞上唯一约束，同样返回 409，响应里不带数据库的报错信息。
 
 先校验字段再查重：字段不合法时不查库，也不做哈希。
@@ -245,7 +245,7 @@ identity 介于两者之间：密码从用户表移出去，但不用「通用�
 |---|---|
 | 计数单位 | 账号类型 + 规范化后的邮箱，不管邮箱有没有注册 |
 | Redis 键 | 每个计数单位三个键：失败计数 `idn:login-failures:{账号类型}:{哈希}`、正在校验的尝试 `idn:login-inflight:{账号类型}:{哈希}`、锁 `idn:login-lock:{账号类型}:{哈希}`。哈希是邮箱的 SHA-256 十六进制，键里不放明文邮箱 |
-| 阈值 | 计数窗口 15 分钟（从窗口内第一次失败算起），失败 5 次就锁定 15 分钟。中间成功一次就清零。三个数可配置：`patra.identity.login-throttle.max-failures`、`window`、`lock-duration` |
+| 阈值 | 计数窗口 15 分钟（从窗口内第一次失败算起），失败 5 次就锁定 15 分钟。中间成功一次就清零。三个数可配置：`patra.identity.login-throttle.max-failures`、`window`、`lock-duration`。在途登记的过期时间也可配置：`in-flight-ttl`，默认 30 秒。 |
 | 锁定期间 | 一律返回 429，不论密码对不对、邮箱有没有注册；这期间的尝试不计数，也不延长锁定 |
 | Redis 不可用 | 返回 503，不在没有限制的情况下放行 |
 
@@ -438,7 +438,7 @@ PAP-62 已经在本分支提交、还没推送，改动范围小：
   - 「邮箱不存在」和「密码错」的响应体除 `timestamp` 外完全相同。
   - 429 带 `Retry-After` 和 `retryAfterSeconds`。
   - 401、403、404、409、204。
-- 端到端（`@SpringBootTest`，PG 和 Redis 容器）：注册 → 登录 → 连续失败到锁定 → 封禁后 403 → 解封后成功；日志和响应里找不到明文密码；Redis 停掉后登录返回 503。
+- 端到端（`@SpringBootTest`，PG 和 Redis 容器）：注册 → 登录 → 连续失败到锁定 → 封禁后 403 → 解封后成功；日志和响应里找不到明文密码；Redis 连不上时登录返回 503（测试把 Redis 指向没人监听的端口，不停共享的容器）。
 - 测试 starter 新增 `RedisContainerInitializer`，镜像用和 mini 一致的 `redis:7.0.15`，补上 `ContainerType.REDIS` 一直没有的实现。PAP-64、PAP-65 也会用到。
 
 回归：
@@ -447,17 +447,17 @@ PAP-62 已经在本分支提交、还没推送，改动范围小：
 - `./gradlew check integrationTest` 通过。`check` 不包含集成测试：`integrationTest` 测试套件只设了 `shouldRunAfter(test)`，没有挂到 `check` 上，所以两个任务都要写上。本 Issue 的端到端用例放在 boot 模块的 `integrationTest` 源集里，不用 `e2eTest`。
 - `./gradlew dumpModuleGraph` 后模块图与构建一致；CD 的 `detect-changes.test.sh` 通过。
 
-## 14. 待实测点
+## 14. 实测结果
 
-以下结论来自阅读源码或文档，实现时用测试逐个确认，结果写回本节。
+以下结论原本来自阅读源码或文档，实现时用测试逐个确认，结果如下（2026-10-06）。
 
-| # | 结论 | 对应测试 |
-|---|---|---|
-| 1 | `Argon2PasswordEncoder(16, 32, 1, 19456, 2)` 输出 Argon2id 编码串，单次哈希在开发机和 mini 上都在几十毫秒量级 | 哈希的集成测试，另在 mini 上手测一次 |
-| 2 | 后端照抄的正则和 Zod 4.6.5 默认的 `z.email()` 对同一组用例结论相同 | `EmailAddress` 的单元测试 |
-| 3 | Redis 连不上和命令超时时，Spring Data Redis 抛的是第 10.1 节列出的两类异常，适配器能把它们转成 `TemporarilyUnavailableException` | 端到端测试里停掉 Redis 容器 |
-| 4 | 「开始」和「结算」两段 Lua 脚本在 `redis:7.0.15` 上按第 8.2 节工作，脚本里用 `TIME` 取时间 | 失败限制的集成测试 |
-| 5 | `ValidationError` 的 `rejectedValue` 为空时在 JSON 里输出为 `null`，不影响前端解析 | Controller 切片测试 |
+| # | 结论 | 结果 | 对应测试 |
+|---|---|---|---|
+| 1 | `Argon2PasswordEncoder(16, 32, 1, 19456, 2)` 输出 Argon2id 编码串，单次哈希在开发机和 mini 上都在几十毫秒量级 | 开发机成立：编码串前缀是 `$argon2id$v=19$m=19456,t=2,p=1$`，单次约 20 毫秒（MacBook）。mini 上的耗时待 PAP-66 部署 identity 后补测 | `PasswordHashingAdapterTest`（mini 上的手测见第 16 节） |
+| 2 | 后端照抄的正则和 Zod 4.6.5 默认的 `z.email()` 对同一组用例结论相同 | 成立：28 条用例的结论和 Zod 4.6.5 实际运行的结果一致 | `EmailAddress` 的单元测试 |
+| 3 | Redis 连不上和命令超时时，Spring Data Redis 抛的是第 10.1 节列出的两类异常，适配器能把它们转成 `TemporarilyUnavailableException` | 连不上时成立：适配器转成 `TemporarilyUnavailableException`，登录返回 503 `IDN-0503`，注册不受影响。命令超时没有单独构造场景，仍按源码判断 | `LoginThrottleAdapterIT` 的 `should_translate_connection_failure`，加上 `RedisUnavailableIT`（Redis 指向没人监听的端口） |
+| 4 | 「开始」和「结算」两段 Lua 脚本在 `redis:7.0.15` 上按第 8.2 节工作，脚本里用 `TIME` 取时间 | 成立：10 个交错场景全部通过（并发 20 个只放行 5 个、其余 1 秒的 429，正确密码不上锁，取消释放名额，迟到的失败只计 1 次，锁定期的失败不计，在途登记和计数窗口按时过期） | 失败限制的集成测试 `LoginThrottleAdapterIT` |
+| 5 | `ValidationError` 的 `rejectedValue` 为空时在 JSON 里输出为 `null`，不影响前端解析 | 成立：`errors[]` 每项都有 `rejectedValue` 这个键，值为 `null` | Controller 切片测试 `AuthControllerIT` |
 
 ## 15. README
 
@@ -484,7 +484,7 @@ PAP-62 已经在本分支提交、还没推送，改动范围小：
 | 会话契约如果放在 identity，建 `patra-identity-api` 模块 | PAP-64 |
 | 路由 `/patra-identity/**`；`/auth/register`、`/auth/login`、`/auth/logout` 公开，`/auth/me` 需要登录 | PAP-65 |
 | 拒绝外部访问 `/*/admin/**`，和 `/*/_internal/**`、actuator 一样处理：匿名和已登录得到同一个结果 | PAP-65 |
-| 建库 `patra_identity`；compose 服务（端口 6400）；数据库和 Redis（带密码）的环境变量；`services.json` 加 identity；网关 OpenAPI 聚合加 identity | PAP-66 |
+| 建库 `patra_identity`；compose 服务（端口 6400）；数据库和 Redis（带密码）的环境变量；`services.json` 加 identity；网关 OpenAPI 聚合加 identity；`detect-changes.sh` 的 `ALL_UNITS` 加 identity，和 `services.json` 的条目一起加；部署后在 mini 上测一次单次哈希耗时，写回第 14 节第 1 条 | PAP-66 |
 | 前端校验：邮箱去掉首尾空格后用 Zod 默认 `z.email()` 加 `.max(254)`；密码长度按码点（`[...password].length`） | PAP-67、PAP-68 |
 | 前端按原因码选文案：`REQUIRED`、`TOO_LONG`、`INVALID_FORMAT`、`TOO_SHORT`、`TOO_COMMON`、`INVALID_CHARACTER`；不认识的原因码显示该字段的通用错误 | PAP-67、PAP-68 |
 | 429 用 `retryAfterSeconds`；`userId` 是字符串 | PAP-67、PAP-68 |
