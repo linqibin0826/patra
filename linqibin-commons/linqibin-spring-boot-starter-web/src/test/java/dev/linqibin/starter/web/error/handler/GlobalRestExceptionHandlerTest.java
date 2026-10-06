@@ -14,6 +14,7 @@ import ch.qos.logback.core.read.ListAppender;
 import dev.linqibin.commons.error.codes.ErrorCodeLike;
 import dev.linqibin.commons.error.problem.ErrorKeys;
 import dev.linqibin.starter.core.error.model.ErrorResolution;
+import dev.linqibin.starter.core.error.model.ResolutionStrategy;
 import dev.linqibin.starter.web.error.RetryAfterException;
 import dev.linqibin.starter.web.error.adapter.ProblemDetailAdapter;
 import dev.linqibin.starter.web.error.adapter.model.ProblemDetailResponse;
@@ -28,6 +29,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
@@ -465,5 +468,41 @@ class GlobalRestExceptionHandlerTest {
                   .contains("password:SIZE")
                   .doesNotContain("Leaky-Secret-123");
             });
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = ResolutionStrategy.class,
+      names = {"FALLBACK", "CAUSE"})
+  @DisplayName("按类名兜底分类出来的 4xx 可能是服务端缺陷：记 WARN，但保留堆栈")
+  void should_keep_stack_trace_for_inferred_client_error(ResolutionStrategy strategy) {
+    Exception exception = new IllegalStateException("不变量被破坏");
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    ProblemDetailResponse inferred =
+        response(HttpStatus.UNPROCESSABLE_CONTENT, "TEST-0422", strategy);
+    when(problemDetailAdapter.adapt(exception, request)).thenReturn(inferred);
+
+    handler.handleException(exception, request);
+
+    assertThat(logAppender.list)
+        .singleElement()
+        .satisfies(
+            event -> {
+              assertThat(event.getLevel()).isEqualTo(Level.WARN);
+              assertThat(event.getThrowableProxy()).isNotNull();
+            });
+  }
+
+  /// 构造一个指定状态、错误码和解析策略的适配结果。
+  ///
+  /// @param status HTTP 状态
+  /// @param code 错误码
+  /// @param strategy 解析策略
+  /// @return 适配结果
+  private static ProblemDetailResponse response(
+      HttpStatus status, String code, ResolutionStrategy strategy) {
+    ProblemDetailResponse response = response(status, code);
+    when(response.errorResolution().strategy()).thenReturn(strategy);
+    return response;
   }
 }

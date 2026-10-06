@@ -358,7 +358,7 @@ PAP-64 要在封禁时删掉这个用户的全部会话，并把对应的登录�
 
 ### 10.3 commons 改动 2：日志分级
 
-- `GlobalRestExceptionHandler`：4xx 记 WARN，一行，包括错误码、状态、路径、异常类名和消息，不带堆栈；5xx 不变，记 ERROR 加堆栈。
+- `GlobalRestExceptionHandler`：4xx 记 WARN，一行，包括错误码、状态、路径、异常类名和消息，不带堆栈；5xx 不变，记 ERROR 加堆栈。例外：错误解析引擎按类名关键字或原因链兜底分类出来的 4xx（解析策略为 `FALLBACK`、`CAUSE`，比如 `IllegalStateException` 被归为 422）可能是服务端缺陷，仍记 WARN，但保留堆栈。
 - 参数校验失败（`MethodArgumentNotValidException`）单独处理。它的 `getMessage()` 带着每个字段的原始值（`rejected value [...]`），现有的掩码只认 `password=…` 和 `"password": "…"` 两种写法，拦不住。现状下这些原始值会进 ERROR 日志，也会原样出现在响应的 `detail` 里。改为：
   - 日志只记固定文案「参数校验失败」，加上每个错误的字段名和原因码；不记异常消息，不带堆栈。
   - 响应的 `detail` 用固定文案「请求参数不合法」，不再取异常消息。
