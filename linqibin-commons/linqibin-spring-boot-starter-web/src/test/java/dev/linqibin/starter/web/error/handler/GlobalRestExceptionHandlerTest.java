@@ -470,6 +470,19 @@ class GlobalRestExceptionHandlerTest {
             });
   }
 
+  @Test
+  @DisplayName("剩余等待时间为 null 时不加 Retry-After 响应头，也不出错")
+  void should_skip_retry_after_header_when_value_is_null() {
+    Exception exception = new RetryAfterException(null);
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    ProblemDetailResponse tooMany = response(HttpStatus.TOO_MANY_REQUESTS, "TEST-0429");
+    when(problemDetailAdapter.adapt(exception, request)).thenReturn(tooMany);
+
+    ResponseEntity<ProblemDetail> result = handler.handleException(exception, request);
+
+    assertThat(result.getHeaders().getFirst(HttpHeaders.RETRY_AFTER)).isNull();
+  }
+
   @ParameterizedTest
   @EnumSource(
       value = ResolutionStrategy.class,

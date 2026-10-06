@@ -80,7 +80,7 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
 
   /// 后备处理器，将任何未捕获的异常转换为问题详情文档。
   ///
-  /// 异常实现 {@link HasRetryAfter} 时加上 `Retry-After` 响应头。
+  /// 异常实现 {@link HasRetryAfter} 且剩余等待时间不为 `null` 时，加上 `Retry-After` 响应头。
   ///
   /// @param ex 未捕获的异常
   /// @param request HTTP 请求上下文
@@ -94,7 +94,7 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
     ResponseEntity.BodyBuilder builder =
         ResponseEntity.status(response.httpStatus())
             .contentType(MediaType.APPLICATION_PROBLEM_JSON);
-    if (ex instanceof HasRetryAfter hasRetryAfter) {
+    if (ex instanceof HasRetryAfter hasRetryAfter && hasRetryAfter.getRetryAfter() != null) {
       builder.header(HttpHeaders.RETRY_AFTER, String.valueOf(hasRetryAfter.getRetryAfterSeconds()));
     }
     return builder.body(response.problemDetail());

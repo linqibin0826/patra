@@ -10,7 +10,6 @@ import static org.mockito.Mockito.when;
 
 import dev.linqibin.commons.error.codes.ErrorCodeLike;
 import dev.linqibin.commons.error.field.FieldViolation;
-import dev.linqibin.commons.error.field.HasFieldViolations;
 import dev.linqibin.commons.error.problem.ErrorKeys;
 import dev.linqibin.commons.error.trait.ErrorTrait;
 import dev.linqibin.commons.error.trait.HasErrorTraits;
@@ -19,6 +18,7 @@ import dev.linqibin.starter.core.error.config.ErrorProperties;
 import dev.linqibin.starter.core.error.model.ErrorResolution;
 import dev.linqibin.starter.core.error.spi.ProblemFieldContributor;
 import dev.linqibin.starter.core.error.spi.TraceProvider;
+import dev.linqibin.starter.web.error.FieldViolationsException;
 import dev.linqibin.starter.web.error.RetryAfterException;
 import dev.linqibin.starter.web.error.config.WebErrorProperties;
 import dev.linqibin.starter.web.error.model.ValidationError;
@@ -492,26 +492,19 @@ class ProblemDetailBuilderTest {
     return resolution;
   }
 
-  /// 带字段错误的测试异常。
-  private static final class FieldViolationsException extends RuntimeException
-      implements HasFieldViolations {
+  @Test
+  @DisplayName("字段错误和剩余等待时间为 null 时不输出对应字段，也不出错")
+  void should_skip_extension_fields_when_values_are_null() {
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    when(request.getRequestURI()).thenReturn("/x");
+    when(traceProvider.getCurrentTraceId()).thenReturn(Optional.empty());
 
-    private final List<FieldViolation> violations;
+    ProblemDetail withoutViolations =
+        builder.build(resolution("TEST-0422", 422), new FieldViolationsException(null), request);
+    ProblemDetail withoutRetryAfter =
+        builder.build(resolution("TEST-0429", 429), new RetryAfterException(null), request);
 
-    /// 创建测试异常。
-    ///
-    /// @param violations 字段错误
-    FieldViolationsException(List<FieldViolation> violations) {
-      super("字段不合法");
-      this.violations = List.copyOf(violations);
-    }
-
-    /// 返回字段错误。
-    ///
-    /// @return 字段错误
-    @Override
-    public List<FieldViolation> getFieldViolations() {
-      return violations;
-    }
+    assertThat(withoutViolations.getProperties()).doesNotContainKey(ErrorKeys.ERRORS);
+    assertThat(withoutRetryAfter.getProperties()).doesNotContainKey(ErrorKeys.RETRY_AFTER_SECONDS);
   }
 }

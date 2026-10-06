@@ -153,14 +153,17 @@ public class ProblemDetailBuilder {
     }
   }
 
-  /// 异常带字段错误时，输出 `errors[]`。领域层报的错误不回显用户填的值。
+  /// 异常带字段错误时，输出 `errors[]`。领域层报的错误不回显用户填的值；字段错误为 `null` 时不输出。
   ///
   /// @param problemDetail 目标问题详情实例
   /// @param exception 源异常
   private void addFieldViolationsIfPresent(ProblemDetail problemDetail, Throwable exception) {
     if (exception instanceof HasFieldViolations hasViolations) {
-      List<ValidationError> errors =
-          hasViolations.getFieldViolations().stream().map(this::toValidationError).toList();
+      List<FieldViolation> violations = hasViolations.getFieldViolations();
+      if (violations == null) {
+        return;
+      }
+      List<ValidationError> errors = violations.stream().map(this::toValidationError).toList();
       problemDetail.setProperty(ErrorKeys.ERRORS, errors);
     }
   }
@@ -173,7 +176,7 @@ public class ProblemDetailBuilder {
     return new ValidationError(violation.field(), violation.code(), null, violation.message());
   }
 
-  /// 异常带剩余等待时间时，输出 `retryAfterSeconds`。
+  /// 异常带剩余等待时间时，输出 `retryAfterSeconds`；剩余等待时间为 `null` 时不输出。
   ///
   /// 存成 `Integer`：starter-core 的 Jackson 配置把 `Long` 一律序列化成字符串（防雪花 ID 丢精度），
   /// 这个字段要以 JSON 数字输出。超过 `Integer.MAX_VALUE` 秒时取上限。
@@ -181,7 +184,7 @@ public class ProblemDetailBuilder {
   /// @param problemDetail 目标问题详情实例
   /// @param exception 源异常
   private void addRetryAfterIfPresent(ProblemDetail problemDetail, Throwable exception) {
-    if (exception instanceof HasRetryAfter hasRetryAfter) {
+    if (exception instanceof HasRetryAfter hasRetryAfter && hasRetryAfter.getRetryAfter() != null) {
       long seconds = hasRetryAfter.getRetryAfterSeconds();
       problemDetail.setProperty(
           ErrorKeys.RETRY_AFTER_SECONDS, (int) Math.min(seconds, Integer.MAX_VALUE));
