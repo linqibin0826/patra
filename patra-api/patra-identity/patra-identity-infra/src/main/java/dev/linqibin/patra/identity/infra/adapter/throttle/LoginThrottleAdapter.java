@@ -60,7 +60,7 @@ public final class LoginThrottleAdapter implements LoginThrottlePort {
   @Override
   public LoginAttempt begin(AccountType accountType, EmailAddress email) {
     String ticketId = UUID.randomUUID().toString();
-    long result =
+    Long result =
         execute(
             () ->
                 redis.execute(
@@ -69,6 +69,10 @@ public final class LoginThrottleAdapter implements LoginThrottlePort {
                     String.valueOf(policy.maxFailures()),
                     ticketId,
                     String.valueOf(policy.inFlightTtl().toMillis())));
+    if (result == null) {
+      // 脚本没有真正执行（比如模板开了事务或流水线）：失败限制默认拒绝，不放行
+      throw new TemporarilyUnavailableException();
+    }
     if (result > 0) {
       throw new LoginTemporarilyLockedException(Duration.ofMillis(result));
     }
@@ -110,16 +114,18 @@ public final class LoginThrottleAdapter implements LoginThrottlePort {
   /// @param outcome 结果
   /// @return 锁的剩余毫秒，没有锁时为 0
   private long settle(LoginAttempt attempt, String outcome) {
-    return execute(
-        () ->
-            redis.execute(
-                SETTLE_SCRIPT,
-                keys(attempt.accountType(), attempt.email()),
-                attempt.ticketId(),
-                outcome,
-                String.valueOf(policy.maxFailures()),
-                String.valueOf(policy.window().toMillis()),
-                String.valueOf(policy.lockDuration().toMillis())));
+    Long result =
+        execute(
+            () ->
+                redis.execute(
+                    SETTLE_SCRIPT,
+                    keys(attempt.accountType(), attempt.email()),
+                    attempt.ticketId(),
+                    outcome,
+                    String.valueOf(policy.maxFailures()),
+                    String.valueOf(policy.window().toMillis()),
+                    String.valueOf(policy.lockDuration().toMillis())));
+    return result == null ? 0 : result;
   }
 
   /// 三个键：失败计数、在途登记、锁。
@@ -149,11 +155,10 @@ public final class LoginThrottleAdapter implements LoginThrottlePort {
   /// 执行 Redis 调用，把连不上和超时转成 503。
   ///
   /// @param call 调用
-  /// @return 脚本返回值，`null` 按 0 处理
-  private static long execute(Supplier<Long> call) {
+  /// @return 脚本返回值；脚本没有真正执行时为 `null`，由调用方决定怎么处理
+  private static Long execute(Supplier<Long> call) {
     try {
-      Long result = call.get();
-      return result == null ? 0 : result;
+      return call.get();
     } catch (DataAccessResourceFailureException | QueryTimeoutException e) {
       throw new TemporarilyUnavailableException(e);
     }

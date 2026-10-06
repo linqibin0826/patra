@@ -1,15 +1,21 @@
 package dev.linqibin.patra.identity.infra.adapter.throttle;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 
 import dev.linqibin.patra.common.security.AccountType;
+import dev.linqibin.patra.identity.domain.exception.TemporarilyUnavailableException;
 import dev.linqibin.patra.identity.domain.model.vo.EmailAddress;
+import dev.linqibin.patra.identity.domain.policy.LoginThrottlePolicy;
+import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
-/// LoginThrottleAdapter 单元测试：只测键名。
-@DisplayName("LoginThrottleAdapter 键名")
+/// LoginThrottleAdapter 单元测试：键名，以及脚本没有真正执行时的处理。
+@DisplayName("LoginThrottleAdapter 单元测试")
 class LoginThrottleAdapterTest {
 
   @Test
@@ -33,6 +39,20 @@ class LoginThrottleAdapterTest {
 
     assertThat(suffix(a.get(0))).isEqualTo(suffix(a.get(2)));
     assertThat(suffix(a.get(0))).isNotEqualTo(suffix(b.get(0)));
+  }
+
+  @Test
+  @DisplayName("开始脚本返回 null（脚本没有真正执行）时拒绝放行，按依赖不可用处理")
+  void should_reject_when_begin_script_returns_null() {
+    StringRedisTemplate redis = mock(StringRedisTemplate.class);
+    LoginThrottleAdapter adapter =
+        new LoginThrottleAdapter(
+            redis,
+            LoginThrottlePolicy.of(
+                5, Duration.ofMinutes(15), Duration.ofMinutes(15), Duration.ofSeconds(30)));
+
+    assertThatThrownBy(() -> adapter.begin(AccountType.USER, EmailAddress.of("a@example.com")))
+        .isInstanceOf(TemporarilyUnavailableException.class);
   }
 
   /// 取键名最后一段。
