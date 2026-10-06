@@ -403,7 +403,8 @@
                 "identity"
             ],
             "tasks": [
-                "check"
+                "check",
+                "integrationTest"
             ]
         },
         {
