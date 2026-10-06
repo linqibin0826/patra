@@ -26,6 +26,9 @@ public final class ErrorKeys {
   /// 错误语义特征列表字段键（用于服务间错误传播）
   public static final String TRAITS = "traits";
 
+  /// 剩余等待秒数字段键（429 时输出）
+  public static final String RETRY_AFTER_SECONDS = "retryAfterSeconds";
+
   private ErrorKeys() {
     // 工具类 - 防止实例化
   }
