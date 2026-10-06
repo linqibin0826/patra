@@ -38,14 +38,15 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 /// ```java
 /// {
 ///   "type": "about:blank",
-///   "title": "Bad Request",
-///   "status": 400,
-///   "detail": "Validation failed for object='userRequest'",
+///   "title": "ERR_VALIDATION_FAILED",
+///   "status": 422,
+///   "detail": "请求参数不合法",
 ///   "instance": "/api/users",
-///   "errorCode": "ERR_VALIDATION_FAILED",
+///   "code": "ERR_VALIDATION_FAILED",
 ///   "path": "/api/users",
 ///   "errors": [
-///     { "field": "email", "code": "Email", "message": "must be a valid email"
+///     { "field": "email", "code": "EMAIL", "rejectedValue": "invalid",
+///       "message": "must be a valid email" }
 ///   ]
 /// ```
 ///

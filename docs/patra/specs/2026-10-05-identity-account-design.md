@@ -330,6 +330,8 @@ PAP-64 要在封禁时删掉这个用户的全部会话，并把对应的登录�
 - 并发注册撞唯一约束：仓储转成 `EmailAlreadyRegisteredException`，和普通的「邮箱已注册」完全一样。
 - Redis 不可用：`LoginThrottleAdapter` 捕获 Spring 的 `DataAccessResourceFailureException`（含 `RedisConnectionFailureException`）和 `QueryTimeoutException`，转成 `TemporarilyUnavailableException`。不转的话它们会落到 500，`detail` 里还会带出原始异常消息。其他 Redis 异常（比如脚本写错）是程序缺陷，照常返回 500。
 - 简报附录 A.4 第 1 条：同一个接口里，每种失败的状态码都不同，前端只看状态码就能区分。
+- 请求本身格式不对时由 Spring 直接处理，返回默认格式的 ProblemDetail，没有 `code`：请求体不是 JSON 对象或字段类型不对 400，`Content-Type` 不是 JSON 415，方法不对 405，路径里的 `userId` 不是数字或溢出 400（负数和 0 按用户不存在返回 404）。
+- 封禁、解封并发冲突：乐观锁冲突经 starter-jpa 映射成 409（`IDN-0409`），目前 `detail` 是 Hibernate 的异常消息，见第 16 节交给 PAP-64 的约束。
 
 ### 10.2 commons 改动 1：字段错误带原因码
 
@@ -482,6 +484,8 @@ PAP-62 已经在本分支提交、还没推送，改动范围小：
 | 建议路径：`POST /auth/logout`、`GET /auth/me` | PAP-64 |
 | identity 接入安全 starter；dev 配置里内部令牌的给法 | PAP-64 |
 | 会话契约如果放在 identity，建 `patra-identity-api` 模块 | PAP-64 |
+| 封禁、解封的乐观锁冲突转成文案固定、带 `CONFLICT` 特征的领域异常（现在 409 的 `detail` 是 Hibernate 的异常消息，带实体类全名和 ID），补接口层测试 | PAP-64 |
+| Redis 处于 `LOADING`、`READONLY`、`MASTERDOWN`、`BUSY` 等暂时不可用的状态时，登录返回 503 而不是 500（`LoginThrottleAdapter` 目前只转换连不上和超时） | PAP-64 |
 | 路由 `/patra-identity/**`；`/auth/register`、`/auth/login`、`/auth/logout` 公开，`/auth/me` 需要登录 | PAP-65 |
 | 拒绝外部访问 `/*/admin/**`，和 `/*/_internal/**`、actuator 一样处理：匿名和已登录得到同一个结果 | PAP-65 |
 | 建库 `patra_identity`；compose 服务（端口 6400）；数据库和 Redis（带密码）的环境变量；`services.json` 加 identity；网关 OpenAPI 聚合加 identity；合并前 `services.json` 必须有 identity 条目（`ALL_UNITS` 已含 identity，没有条目时 main 上的 CD 会被 `deploy.sh` 以未知服务拒绝）；部署后在 mini 上测一次单次哈希耗时，写回第 14 节第 1 条 | PAP-66 |

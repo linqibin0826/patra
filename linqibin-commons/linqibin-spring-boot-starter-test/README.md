@@ -96,6 +96,7 @@ class CatalogArchitectureTest {
 | `PostgreSQLContainerInitializer` | PostgreSQL 容器初始化器基类，支持 Flyway 迁移 |
 | `RocketMQContainerInitializer` | RocketMQ 容器初始化器基类，支持 Topic 自动创建 |
 | `MinIOContainerInitializer` | MinIO 容器初始化器基类，支持存储桶自动创建 |
+| `RedisContainerInitializer` | Redis 容器初始化器（`redis:7.0.15`），同一个 JVM 里只启动一个；写入 `spring.data.redis` 的 host、port、url，`getRedisContainer()` 可在不起 Spring 上下文的测试里直接取容器 |
 | `ContainerRegistry` | JVM 级别容器注册中心，确保单例 |
 | `ContainerType` | 支持的容器类型枚举 |
 

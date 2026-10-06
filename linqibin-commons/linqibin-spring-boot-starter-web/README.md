@@ -49,6 +49,22 @@ ProblemDetailAdapter 转换
 | `ValidationErrorsFormatter` | 自定义验证错误格式化逻辑 |
 | `WebProblemFieldContributor` | 向 ProblemDetail 贡献 Web 特定扩展字段 |
 
+### 异常可以携带的信息
+
+异常实现 commons-core 的下面两个接口，响应里就会多出对应内容；接口方法返回 `null` 时不输出。
+
+| 接口 | 响应里多出的内容 |
+|------|------|
+| `HasFieldViolations` | `errors[]`，每项 `field`、`code`（原因码）、`rejectedValue`（固定为 `null`，不回显用户输入）、`message` |
+| `HasRetryAfter` | 响应头 `Retry-After` 和字段 `retryAfterSeconds`，两者同值：秒数向上取整、最小为 1，`retryAfterSeconds` 以 JSON 数字输出 |
+
+### 日志分级
+
+- 4xx 记 WARN，一行，不带堆栈；异常带字段错误时附「字段:原因码」，不记字段值。
+- 错误解析引擎按类名或原因链兜底归成 4xx 的异常（解析策略 `FALLBACK`、`CAUSE`，比如 `IllegalStateException` 被归为 422）可能是服务端缺陷，仍记 WARN，但带堆栈。
+- 5xx 记 ERROR，带堆栈。
+- Bean Validation 失败：`detail` 固定为「请求参数不合法」，日志只记「参数校验失败」和「字段:原因码」。异常自身的消息里带着字段原始值，不能外泄。
+
 ## 快速开始
 
 ### 1. 添加依赖
@@ -95,8 +111,8 @@ linqibin:
 {
   "type": "https://errors.example.com/err_validation_failed",
   "title": "ERR_VALIDATION_FAILED",
-  "status": 400,
-  "detail": "Validation failed for object='userRequest'",
+  "status": 422,
+  "detail": "请求参数不合法",
   "code": "ERR_VALIDATION_FAILED",
   "path": "/api/users",
   "timestamp": "2024-01-15T10:30:00.000Z",
