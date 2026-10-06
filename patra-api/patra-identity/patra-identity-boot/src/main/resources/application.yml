@@ -45,3 +45,14 @@ management:
     web:
       exposure:
         include: health,info,metrics
+
+patra:
+  identity:
+    login-throttle:
+      max-failures: 5
+      window: 15m
+      lock-duration: 15m
+      in-flight-ttl: 30s
+    password-hashing:
+      max-concurrent: 4
+      wait-timeout: 3s
