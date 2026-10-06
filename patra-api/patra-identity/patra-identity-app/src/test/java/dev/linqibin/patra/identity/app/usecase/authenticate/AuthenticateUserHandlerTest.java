@@ -254,4 +254,11 @@ class AuthenticateUserHandlerTest {
                     .containsExactly("email:TOO_LONG"));
     verifyNoInteractions(loginThrottle);
   }
+
+  @Test
+  @DisplayName("命令的 toString 不输出密码")
+  void should_hide_password_in_command_to_string() {
+    assertThat(AuthenticateUserCommand.of("chen.yu@example.com", "Secret-Value-1").toString())
+        .doesNotContain("Secret-Value-1");
+  }
 }
