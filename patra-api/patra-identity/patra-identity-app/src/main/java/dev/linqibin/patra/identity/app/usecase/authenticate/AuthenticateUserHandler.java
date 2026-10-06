@@ -11,6 +11,7 @@ import dev.linqibin.patra.identity.domain.model.aggregate.User;
 import dev.linqibin.patra.identity.domain.model.aggregate.UserPasswordCredential;
 import dev.linqibin.patra.identity.domain.model.vo.EmailAddress;
 import dev.linqibin.patra.identity.domain.model.vo.PlainPassword;
+import dev.linqibin.patra.identity.domain.policy.PasswordPolicy;
 import dev.linqibin.patra.identity.domain.port.hashing.PasswordHashingPort;
 import dev.linqibin.patra.identity.domain.port.repository.UserPasswordCredentialRepository;
 import dev.linqibin.patra.identity.domain.port.repository.UserRepository;
@@ -27,7 +28,8 @@ import org.springframework.stereotype.Component;
 /// 校验前台用户的登录凭据。
 ///
 /// 1. 校验字段：邮箱用注册时的规则，密码只查非空和 Unicode 合法。
-/// 2. 开始一次尝试：锁定期内或在途已满直接 429，不查库、不做哈希。
+/// 2. 开始一次尝试：锁定期内或在途已满直接 429，不查库、不做哈希。密码超过登录长度上限时
+///    也不查库、不做哈希，直接按失败结算。
 /// 3. 查用户和凭据。查不到时拿假哈希做一次校验，耗时和「密码错」一样。
 /// 4. 密码错按失败结算（可能触发 429）；密码对按成功结算，封禁的账号返回 403。
 /// 5. 中途出错按取消结算，不计失败，原来的错误照常抛出。
@@ -58,6 +60,10 @@ public class AuthenticateUserHandler
     PlainPassword password = PlainPassword.of(command.password());
 
     LoginAttempt attempt = loginThrottle.begin(AccountType.USER, email);
+    if (password.length() > PasswordPolicy.MAX_LOGIN_LENGTH) {
+      // 不可能是合法密码：不查库、不做哈希，按密码错误结算
+      throw failure(attempt);
+    }
     Optional<User> user;
     boolean matches;
     try {
@@ -68,11 +74,7 @@ public class AuthenticateUserHandler
       throw e;
     }
     if (!matches) {
-      Optional<Duration> lock = loginThrottle.recordFailure(attempt);
-      if (lock.isPresent()) {
-        throw new LoginTemporarilyLockedException(lock.get());
-      }
-      throw new InvalidCredentialsException();
+      throw failure(attempt);
     }
     loginThrottle.recordSuccess(attempt);
     User verified = user.orElseThrow();
@@ -95,6 +97,18 @@ public class AuthenticateUserHandler
       return false;
     }
     return passwordHashing.matches(password, credential.get().getPasswordHash());
+  }
+
+  /// 按失败结算。这次失败让账号处于锁定期时是 429 的异常，否则是 401 的异常。
+  ///
+  /// @param attempt 尝试
+  /// @return 要抛出的异常
+  private RuntimeException failure(LoginAttempt attempt) {
+    Optional<Duration> lock = loginThrottle.recordFailure(attempt);
+    if (lock.isPresent()) {
+      return new LoginTemporarilyLockedException(lock.get());
+    }
+    return new InvalidCredentialsException();
   }
 
   /// 按取消结算。取消失败只记日志：在途登记会自动过期，不能盖掉原来的错误。

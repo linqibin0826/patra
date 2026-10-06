@@ -9,7 +9,8 @@ import java.util.Optional;
 
 /// 注册时的密码规则：不为空、Unicode 合法、8 到 64 个码点、不在常见密码名单里。
 ///
-/// 登录不用它：登录只要求非空，密码规则以后调整时旧密码不该被拦住。
+/// 登录不用注册规则：密码规则以后调整时旧密码不该被拦住。登录只设一个宽松的长度上限
+/// {@link #MAX_LOGIN_LENGTH}，拦下不可能是合法密码的超长输入。
 public final class PasswordPolicy {
 
   /// 最短 8 个码点。
@@ -17,6 +18,9 @@ public final class PasswordPolicy {
 
   /// 最长 64 个码点。
   public static final int MAX_LENGTH = 64;
+
+  /// 登录时密码最长 1024 个码点。远大于注册上限，超过的不可能是合法密码，不必再做哈希。
+  public static final int MAX_LOGIN_LENGTH = 1024;
 
   private final CommonPasswordPort commonPasswords;
 

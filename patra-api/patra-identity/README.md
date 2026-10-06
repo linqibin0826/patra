@@ -36,7 +36,7 @@
 
 ## 4. 密码
 
-- 规则：8 到 64 个码点，不去空格，不能在常见密码名单里。登录只要求非空。
+- 规则：8 到 64 个码点，不去空格，不能在常见密码名单里。登录只要求非空、不含孤立代理项；超过 1024 个码点的密码直接按密码错误处理，不做哈希。
 - 哈希：Argon2id，`m=19456 KiB, t=2, p=1`，盐 16 字节、输出 32 字节；哈希和校验前都做 NFKC。开发机上单次约 20 毫秒（mini 上的耗时等 PAP-66 部署后实测）。
 - 并发：同时进行的哈希计算最多 4 个，排队超过 3 秒返回 503。
 - 常见密码名单：`infra/src/main/resources/password/common-passwords.txt.gz`，取自 Django 6.0 的 `django/contrib/auth/common-passwords.txt.gz`（Royce Williams 整理，19640 行），SHA-256 `3c1baed62596de36860824eb3f436d5932d37ca8b06e59df78f5a44ec175afe4`。许可证见同目录的 `common-passwords.LICENSE`（BSD 3-Clause）。比较时对密码做 NFKC、转小写、去掉首尾空白。

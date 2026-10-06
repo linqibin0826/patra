@@ -21,6 +21,7 @@ import dev.linqibin.patra.identity.domain.model.aggregate.UserPasswordCredential
 import dev.linqibin.patra.identity.domain.model.enums.UserStatus;
 import dev.linqibin.patra.identity.domain.model.vo.EmailAddress;
 import dev.linqibin.patra.identity.domain.model.vo.PasswordHash;
+import dev.linqibin.patra.identity.domain.policy.PasswordPolicy;
 import dev.linqibin.patra.identity.domain.port.hashing.PasswordHashingPort;
 import dev.linqibin.patra.identity.domain.port.repository.UserPasswordCredentialRepository;
 import dev.linqibin.patra.identity.domain.port.repository.UserRepository;
@@ -205,18 +206,38 @@ class AuthenticateUserHandlerTest {
   }
 
   @Test
-  @DisplayName("登录不查密码长度：短密码、1 MB 的密码都按凭据错误处理")
-  void should_not_check_password_length_on_login() {
+  @DisplayName("登录不按注册规则查长度：比注册下限还短的密码照常校验，错了按凭据错误处理")
+  void should_not_apply_registration_length_rules_on_login() {
     when(passwordHashing.matches(any(), any())).thenReturn(false);
 
     assertThatThrownBy(
             () -> handler.handle(AuthenticateUserCommand.of("chen.yu@example.com", "abc")))
         .isInstanceOf(InvalidCredentialsException.class);
+    verify(passwordHashing).matches(any(), any());
+  }
+
+  @Test
+  @DisplayName("超过登录长度上限的密码：不查库、不做哈希，按失败结算，返回 401")
+  void should_reject_overlong_password_without_hashing() {
+    String overlong = "x".repeat(PasswordPolicy.MAX_LOGIN_LENGTH + 1);
+
     assertThatThrownBy(
-            () ->
-                handler.handle(
-                    AuthenticateUserCommand.of("chen.yu@example.com", "x".repeat(1_000_000))))
+            () -> handler.handle(AuthenticateUserCommand.of("chen.yu@example.com", overlong)))
         .isInstanceOf(InvalidCredentialsException.class);
+    verify(loginThrottle).recordFailure(ATTEMPT);
+    verifyNoInteractions(users, credentials, passwordHashing);
+  }
+
+  @Test
+  @DisplayName("长度正好在登录上限（按码点算）的密码照常校验")
+  void should_verify_password_at_login_length_limit() {
+    when(passwordHashing.matches(any(), any())).thenReturn(true);
+
+    handler.handle(
+        AuthenticateUserCommand.of(
+            "chen.yu@example.com", "😀".repeat(PasswordPolicy.MAX_LOGIN_LENGTH)));
+
+    verify(passwordHashing).matches(any(), any());
   }
 
   @Test
