@@ -1,6 +1,7 @@
 package dev.linqibin.starter.web.error.handler;
 
 import dev.linqibin.commons.error.problem.ErrorKeys;
+import dev.linqibin.commons.error.retry.HasRetryAfter;
 import dev.linqibin.starter.web.error.adapter.ProblemDetailAdapter;
 import dev.linqibin.starter.web.error.adapter.model.ProblemDetailResponse;
 import dev.linqibin.starter.web.error.model.ValidationError;
@@ -10,6 +11,7 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -73,6 +75,8 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
 
   /// 后备处理器，将任何未捕获的异常转换为问题详情文档。
   ///
+  /// 异常实现 {@link HasRetryAfter} 时加上 `Retry-After` 响应头。
+  ///
   /// @param ex 未捕获的异常
   /// @param request HTTP 请求上下文
   /// @return 包含问题详情的响应实体
@@ -82,9 +86,13 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
 
     logExceptionHandled(response, ex);
 
-    return ResponseEntity.status(response.httpStatus())
-        .contentType(MediaType.APPLICATION_PROBLEM_JSON)
-        .body(response.problemDetail());
+    ResponseEntity.BodyBuilder builder =
+        ResponseEntity.status(response.httpStatus())
+            .contentType(MediaType.APPLICATION_PROBLEM_JSON);
+    if (ex instanceof HasRetryAfter hasRetryAfter) {
+      builder.header(HttpHeaders.RETRY_AFTER, String.valueOf(hasRetryAfter.getRetryAfterSeconds()));
+    }
+    return builder.body(response.problemDetail());
   }
 
   /// 处理验证失败并将清理后的字段错误附加到响应载荷。

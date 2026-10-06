@@ -9,6 +9,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import dev.linqibin.commons.error.codes.ErrorCodeLike;
+import dev.linqibin.commons.error.field.FieldViolation;
+import dev.linqibin.commons.error.field.HasFieldViolations;
 import dev.linqibin.commons.error.problem.ErrorKeys;
 import dev.linqibin.commons.error.trait.ErrorTrait;
 import dev.linqibin.commons.error.trait.HasErrorTraits;
@@ -17,9 +19,12 @@ import dev.linqibin.starter.core.error.config.ErrorProperties;
 import dev.linqibin.starter.core.error.model.ErrorResolution;
 import dev.linqibin.starter.core.error.spi.ProblemFieldContributor;
 import dev.linqibin.starter.core.error.spi.TraceProvider;
+import dev.linqibin.starter.web.error.RetryAfterException;
 import dev.linqibin.starter.web.error.config.WebErrorProperties;
+import dev.linqibin.starter.web.error.model.ValidationError;
 import dev.linqibin.starter.web.error.spi.WebProblemFieldContributor;
 import jakarta.servlet.http.HttpServletRequest;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -424,6 +429,89 @@ class ProblemDetailBuilderTest {
     @Override
     public Set<ErrorTrait> getErrorTraits() {
       return traits;
+    }
+  }
+
+  @Test
+  @DisplayName("异常带字段错误时输出 errors，且不回显原始值")
+  void should_add_errors_when_exception_has_field_violations() {
+    ErrorResolution resolution = resolution("TEST-0422", 422);
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    when(request.getRequestURI()).thenReturn("/auth/register");
+    when(traceProvider.getCurrentTraceId()).thenReturn(Optional.empty());
+    Throwable exception =
+        new FieldViolationsException(List.of(FieldViolation.of("password", "TOO_COMMON", "密码太常见")));
+
+    ProblemDetail result = builder.build(resolution, exception, request);
+
+    assertThat(result.getProperties())
+        .containsEntry(
+            ErrorKeys.ERRORS,
+            List.of(new ValidationError("password", "TOO_COMMON", null, "密码太常见")));
+  }
+
+  @Test
+  @DisplayName("异常带剩余等待时间时输出 retryAfterSeconds")
+  void should_add_retry_after_seconds_when_exception_has_retry_after() {
+    ErrorResolution resolution = resolution("TEST-0429", 429);
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    when(request.getRequestURI()).thenReturn("/auth/login");
+    when(traceProvider.getCurrentTraceId()).thenReturn(Optional.empty());
+    Throwable exception = new RetryAfterException(Duration.ofSeconds(899).plusMillis(1));
+
+    ProblemDetail result = builder.build(resolution, exception, request);
+
+    assertThat(result.getProperties()).containsEntry(ErrorKeys.RETRY_AFTER_SECONDS, 900);
+  }
+
+  @Test
+  @DisplayName("普通异常不输出 errors 和 retryAfterSeconds")
+  void should_not_add_extension_fields_for_plain_exception() {
+    ErrorResolution resolution = resolution("TEST-0500", 500);
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    when(request.getRequestURI()).thenReturn("/x");
+    when(traceProvider.getCurrentTraceId()).thenReturn(Optional.empty());
+
+    ProblemDetail result = builder.build(resolution, new RuntimeException("x"), request);
+
+    assertThat(result.getProperties())
+        .doesNotContainKeys(ErrorKeys.ERRORS, ErrorKeys.RETRY_AFTER_SECONDS);
+  }
+
+  /// 构造一个指定错误码和状态的解析结果。
+  ///
+  /// @param code 错误码
+  /// @param status HTTP 状态
+  /// @return 解析结果
+  private static ErrorResolution resolution(String code, int status) {
+    ErrorCodeLike errorCode = mock(ErrorCodeLike.class);
+    when(errorCode.code()).thenReturn(code);
+    ErrorResolution resolution = mock(ErrorResolution.class);
+    when(resolution.errorCode()).thenReturn(errorCode);
+    when(resolution.httpStatus()).thenReturn(status);
+    return resolution;
+  }
+
+  /// 带字段错误的测试异常。
+  private static final class FieldViolationsException extends RuntimeException
+      implements HasFieldViolations {
+
+    private final List<FieldViolation> violations;
+
+    /// 创建测试异常。
+    ///
+    /// @param violations 字段错误
+    FieldViolationsException(List<FieldViolation> violations) {
+      super("字段不合法");
+      this.violations = List.copyOf(violations);
+    }
+
+    /// 返回字段错误。
+    ///
+    /// @return 字段错误
+    @Override
+    public List<FieldViolation> getFieldViolations() {
+      return violations;
     }
   }
 }

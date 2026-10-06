@@ -101,8 +101,8 @@ linqibin:
   "path": "/api/users",
   "timestamp": "2024-01-15T10:30:00.000Z",
   "errors": [
-    { "field": "email", "rejectedValue": "invalid", "message": "must be a valid email" },
-    { "field": "password", "rejectedValue": "***", "message": "size must be between 8 and 32" }
+    { "field": "email", "code": "EMAIL", "rejectedValue": "invalid", "message": "must be a valid email" },
+    { "field": "password", "code": "SIZE", "rejectedValue": "***", "message": "size must be between 8 and 32" }
   ]
 }
 ```
@@ -167,6 +167,7 @@ public class CustomValidationErrorsFormatter implements ValidationErrorsFormatte
         return bindingResult.getFieldErrors().stream()
             .map(error -> new ValidationError(
                 error.getField(),
+                error.getCode(), // 约束名，如 Size；默认格式化器会转成大写下划线 SIZE
                 maskValue(error.getField(), error.getRejectedValue()),
                 error.getDefaultMessage()
             ))

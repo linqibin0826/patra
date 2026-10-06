@@ -236,4 +236,70 @@ class DefaultValidationErrorsFormatterTest {
     assertThat(result).hasSize(9);
     assertThat(result).allMatch(error -> "***".equals(error.rejectedValue()));
   }
+
+  @Test
+  @DisplayName("原因码取约束名，转成大写下划线")
+  void should_use_constraint_name_in_constant_case_as_code() {
+    BindingResult bindingResult = mock(BindingResult.class);
+    FieldError fieldError =
+        new FieldError(
+            "userRequest",
+            "email",
+            "",
+            false,
+            new String[] {
+              "NotBlank.userRequest.email",
+              "NotBlank.email",
+              "NotBlank.java.lang.String",
+              "NotBlank"
+            },
+            null,
+            "不能为空");
+    when(bindingResult.getAllErrors()).thenReturn(List.of(fieldError));
+    when(bindingResult.getErrorCount()).thenReturn(1);
+
+    List<ValidationError> result = formatter.formatWithMasking(bindingResult);
+
+    assertThat(result.get(0).code()).isEqualTo("NOT_BLANK");
+  }
+
+  @Test
+  @DisplayName("类型转换失败的原因码是 TYPE_MISMATCH")
+  void should_convert_type_mismatch_code() {
+    BindingResult bindingResult = mock(BindingResult.class);
+    FieldError fieldError =
+        new FieldError(
+            "userRequest",
+            "age",
+            "abc",
+            true,
+            new String[] {
+              "typeMismatch.userRequest.age",
+              "typeMismatch.age",
+              "typeMismatch.java.lang.Integer",
+              "typeMismatch"
+            },
+            null,
+            "类型不对");
+    when(bindingResult.getAllErrors()).thenReturn(List.of(fieldError));
+    when(bindingResult.getErrorCount()).thenReturn(1);
+
+    List<ValidationError> result = formatter.formatWithMasking(bindingResult);
+
+    assertThat(result.get(0).code()).isEqualTo("TYPE_MISMATCH");
+  }
+
+  @Test
+  @DisplayName("没有错误码时原因码为 null")
+  void should_leave_code_null_when_error_has_no_codes() {
+    BindingResult bindingResult = mock(BindingResult.class);
+    FieldError fieldError =
+        new FieldError("userRequest", "email", "x", false, null, null, "必须是有效的邮箱");
+    when(bindingResult.getAllErrors()).thenReturn(List.of(fieldError));
+    when(bindingResult.getErrorCount()).thenReturn(1);
+
+    List<ValidationError> result = formatter.formatWithMasking(bindingResult);
+
+    assertThat(result.get(0).code()).isNull();
+  }
 }

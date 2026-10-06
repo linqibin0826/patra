@@ -1,7 +1,10 @@
 package dev.linqibin.starter.web.error.builder;
 
 import dev.linqibin.commons.error.codes.ErrorCodeLike;
+import dev.linqibin.commons.error.field.FieldViolation;
+import dev.linqibin.commons.error.field.HasFieldViolations;
 import dev.linqibin.commons.error.problem.ErrorKeys;
+import dev.linqibin.commons.error.retry.HasRetryAfter;
 import dev.linqibin.commons.error.trait.ErrorTrait;
 import dev.linqibin.commons.error.trait.HasErrorTraits;
 import dev.linqibin.starter.core.error.config.ErrorProperties;
@@ -9,6 +12,7 @@ import dev.linqibin.starter.core.error.model.ErrorResolution;
 import dev.linqibin.starter.core.error.spi.ProblemFieldContributor;
 import dev.linqibin.starter.core.error.spi.TraceProvider;
 import dev.linqibin.starter.web.error.config.WebErrorProperties;
+import dev.linqibin.starter.web.error.model.ValidationError;
 import dev.linqibin.starter.web.error.spi.WebProblemFieldContributor;
 import dev.linqibin.starter.web.error.util.HttpStatusConverter;
 import jakarta.servlet.http.HttpServletRequest;
@@ -91,6 +95,8 @@ public class ProblemDetailBuilder {
     ProblemDetail problemDetail = ProblemDetail.forStatus(httpStatus);
 
     setupStandardFields(problemDetail, resolution, exception, request);
+    addFieldViolationsIfPresent(problemDetail, exception);
+    addRetryAfterIfPresent(problemDetail, exception);
     addTraceIdIfAvailable(problemDetail);
     contributeCoreProblemFields(problemDetail, exception);
     contributeWebProblemFields(problemDetail, exception, request);
@@ -144,6 +150,41 @@ public class ProblemDetailBuilder {
         problemDetail.setProperty(ErrorKeys.TRAITS, traitNames);
         log.debug("已将错误特征 {} 添加到 ProblemDetail", traitNames);
       }
+    }
+  }
+
+  /// 异常带字段错误时，输出 `errors[]`。领域层报的错误不回显用户填的值。
+  ///
+  /// @param problemDetail 目标问题详情实例
+  /// @param exception 源异常
+  private void addFieldViolationsIfPresent(ProblemDetail problemDetail, Throwable exception) {
+    if (exception instanceof HasFieldViolations hasViolations) {
+      List<ValidationError> errors =
+          hasViolations.getFieldViolations().stream().map(this::toValidationError).toList();
+      problemDetail.setProperty(ErrorKeys.ERRORS, errors);
+    }
+  }
+
+  /// 把领域层的字段错误转成响应里的验证错误条目。
+  ///
+  /// @param violation 字段错误
+  /// @return 验证错误条目，`rejectedValue` 为 `null`
+  private ValidationError toValidationError(FieldViolation violation) {
+    return new ValidationError(violation.field(), violation.code(), null, violation.message());
+  }
+
+  /// 异常带剩余等待时间时，输出 `retryAfterSeconds`。
+  ///
+  /// 存成 `Integer`：starter-core 的 Jackson 配置把 `Long` 一律序列化成字符串（防雪花 ID 丢精度），
+  /// 这个字段要以 JSON 数字输出。超过 `Integer.MAX_VALUE` 秒时取上限。
+  ///
+  /// @param problemDetail 目标问题详情实例
+  /// @param exception 源异常
+  private void addRetryAfterIfPresent(ProblemDetail problemDetail, Throwable exception) {
+    if (exception instanceof HasRetryAfter hasRetryAfter) {
+      long seconds = hasRetryAfter.getRetryAfterSeconds();
+      problemDetail.setProperty(
+          ErrorKeys.RETRY_AFTER_SECONDS, (int) Math.min(seconds, Integer.MAX_VALUE));
     }
   }
 

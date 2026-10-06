@@ -7,13 +7,16 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import dev.linqibin.commons.error.codes.ErrorCodeLike;
 import dev.linqibin.commons.error.problem.ErrorKeys;
 import dev.linqibin.starter.core.error.model.ErrorResolution;
+import dev.linqibin.starter.web.error.RetryAfterException;
 import dev.linqibin.starter.web.error.adapter.ProblemDetailAdapter;
 import dev.linqibin.starter.web.error.adapter.model.ProblemDetailResponse;
 import dev.linqibin.starter.web.error.model.ValidationError;
 import dev.linqibin.starter.web.error.spi.ValidationErrorsFormatter;
 import jakarta.servlet.http.HttpServletRequest;
+import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -24,6 +27,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
@@ -120,7 +124,7 @@ class GlobalRestExceptionHandlerTest {
         new ProblemDetailResponse(problemDetail, HttpStatus.BAD_REQUEST, errorResolution);
 
     List<ValidationError> validationErrors =
-        List.of(new ValidationError("email", "invalid", "必须是有效的邮箱"));
+        List.of(new ValidationError("email", "EMAIL", "invalid", "必须是有效的邮箱"));
 
     when(problemDetailAdapter.adapt(eq(exception), any(HttpServletRequest.class)))
         .thenReturn(response);
@@ -175,7 +179,7 @@ class GlobalRestExceptionHandlerTest {
     // 创建 101 个验证错误（超过 MAX_VALIDATION_ERRORS = 100）
     List<ValidationError> allErrors =
         java.util.stream.IntStream.range(0, 101)
-            .mapToObj(i -> new ValidationError("field" + i, "value" + i, "message" + i))
+            .mapToObj(i -> new ValidationError("field" + i, "SIZE", "value" + i, "message" + i))
             .toList();
 
     when(problemDetailAdapter.adapt(eq(exception), any(HttpServletRequest.class)))
@@ -225,7 +229,7 @@ class GlobalRestExceptionHandlerTest {
         new ProblemDetailResponse(problemDetail, HttpStatus.BAD_REQUEST, errorResolution);
 
     List<ValidationError> validationErrors =
-        List.of(new ValidationError("field", "value", "message"));
+        List.of(new ValidationError("field", "SIZE", "value", "message"));
 
     when(problemDetailAdapter.adapt(eq(exception), any())).thenReturn(response);
     when(validationErrorsFormatter.formatWithMasking(bindingResult)).thenReturn(validationErrors);
@@ -329,5 +333,44 @@ class GlobalRestExceptionHandlerTest {
   @SuppressWarnings("unused")
   private void dummyMethod(String param) {
     // 仅用于创建 MethodParameter
+  }
+
+  @Test
+  @DisplayName("异常带剩余等待时间时加上 Retry-After 响应头")
+  void should_add_retry_after_header_when_exception_has_retry_after() {
+    Exception exception = new RetryAfterException(Duration.ofMinutes(15));
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    ProblemDetailResponse tooMany = response(HttpStatus.TOO_MANY_REQUESTS, "TEST-0429");
+    when(problemDetailAdapter.adapt(exception, request)).thenReturn(tooMany);
+
+    ResponseEntity<ProblemDetail> result = handler.handleException(exception, request);
+
+    assertThat(result.getHeaders().getFirst(HttpHeaders.RETRY_AFTER)).isEqualTo("900");
+  }
+
+  @Test
+  @DisplayName("普通异常不加 Retry-After 响应头")
+  void should_not_add_retry_after_header_for_plain_exception() {
+    Exception exception = new IllegalStateException("x");
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    ProblemDetailResponse conflict = response(HttpStatus.CONFLICT, "TEST-0409");
+    when(problemDetailAdapter.adapt(exception, request)).thenReturn(conflict);
+
+    ResponseEntity<ProblemDetail> result = handler.handleException(exception, request);
+
+    assertThat(result.getHeaders().getFirst(HttpHeaders.RETRY_AFTER)).isNull();
+  }
+
+  /// 构造一个指定状态和错误码的适配结果。
+  ///
+  /// @param status HTTP 状态
+  /// @param code 错误码
+  /// @return 适配结果
+  private static ProblemDetailResponse response(HttpStatus status, String code) {
+    ErrorCodeLike errorCode = mock(ErrorCodeLike.class);
+    when(errorCode.code()).thenReturn(code);
+    ErrorResolution errorResolution = mock(ErrorResolution.class);
+    when(errorResolution.errorCode()).thenReturn(errorCode);
+    return new ProblemDetailResponse(ProblemDetail.forStatus(status), status, errorResolution);
   }
 }

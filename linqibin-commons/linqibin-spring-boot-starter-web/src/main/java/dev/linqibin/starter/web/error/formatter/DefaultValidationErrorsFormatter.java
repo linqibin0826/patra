@@ -5,6 +5,7 @@ import dev.linqibin.starter.web.error.spi.ValidationErrorsFormatter;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.validation.BindingResult;
@@ -37,6 +38,9 @@ public class DefaultValidationErrorsFormatter implements ValidationErrorsFormatt
           "card",
           "account");
 
+  /// 驼峰边界：小写字母或数字后面紧跟大写字母的位置。
+  private static final Pattern CAMEL_BOUNDARY = Pattern.compile("([a-z0-9])([A-Z])");
+
   /// 格式化验证错误并掩码敏感字段值。
   ///
   /// @param bindingResult Spring 验证绑定结果
@@ -66,16 +70,28 @@ public class DefaultValidationErrorsFormatter implements ValidationErrorsFormatt
   /// @param error Spring 验证报告的绑定错误
   /// @return 清理后的验证错误
   private ValidationError mapToValidationError(ObjectError error) {
+    String code = toConstantCase(error.getCode());
     if (error instanceof FieldError fieldError) {
       String fieldName = fieldError.getField();
       Object rejectedValue = maskSensitiveValue(fieldName, fieldError.getRejectedValue());
       String message = fieldError.getDefaultMessage();
 
-      return new ValidationError(fieldName, rejectedValue, message);
+      return new ValidationError(fieldName, code, rejectedValue, message);
     } else {
       // 全局错误（非字段特定）
-      return new ValidationError(error.getObjectName(), null, error.getDefaultMessage());
+      return new ValidationError(error.getObjectName(), code, null, error.getDefaultMessage());
     }
+  }
+
+  /// 把 Spring 的错误码（约束名，如 `NotBlank`）转成大写下划线（`NOT_BLANK`）。
+  ///
+  /// @param code Spring 给的错误码，可以为 `null`
+  /// @return 大写下划线形式；输入为 `null` 时返回 `null`
+  static String toConstantCase(String code) {
+    if (code == null) {
+      return null;
+    }
+    return CAMEL_BOUNDARY.matcher(code).replaceAll("$1_$2").toUpperCase(Locale.ROOT);
   }
 
   /// 基于配置的名称模式掩盖敏感的字段值。
