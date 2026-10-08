@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.linqibin.patra.common.security.CurrentUserPort;
 import dev.linqibin.patra.starter.security.config.SecurityCoreAutoConfiguration;
 import dev.linqibin.patra.starter.security.config.SecurityServletAutoConfiguration;
-import dev.linqibin.patra.starter.security.header.IdentityHeaders;
+import dev.linqibin.patra.starter.security.support.SecurityITAssertions;
 import dev.linqibin.patra.starter.security.test.TestIdentity;
 import dev.linqibin.starter.core.error.config.CoreErrorAutoConfiguration;
 import dev.linqibin.starter.core.json.autoconfig.JacksonAutoConfiguration;
@@ -83,16 +83,29 @@ class SecurityWebMvcSliceIT {
   }
 
   @Test
-  @DisplayName("身份头残缺：500，由安全过滤器输出")
-  void should_return_500_problem_when_identity_headers_partial() {
+  @DisplayName("断言无效：401，由安全过滤器输出")
+  void should_return_401_problem_when_assertion_invalid() {
     restClient
         .get()
         .uri("/slice/whoami")
-        .headers(
-            headers -> {
-              headers.addAll(TestIdentity.headers());
-              headers.remove(IdentityHeaders.SESSION_ID);
-            })
+        .headers(headers -> headers.setBearerAuth(SecurityITAssertions.garbage()))
+        .exchange()
+        .expectStatus()
+        .isUnauthorized()
+        .expectBody()
+        .jsonPath("$.code")
+        .isEqualTo("TEST-0401")
+        .jsonPath("$.instance")
+        .isEqualTo("/slice/whoami");
+  }
+
+  @Test
+  @DisplayName("断言内容不合法：500，由安全过滤器输出")
+  void should_return_500_problem_when_assertion_malformed() {
+    restClient
+        .get()
+        .uri("/slice/whoami")
+        .headers(headers -> headers.setBearerAuth(SecurityITAssertions.malformed()))
         .exchange()
         .expectStatus()
         .isEqualTo(500)
@@ -124,16 +137,12 @@ class SecurityWebMvcSliceIT {
   }
 
   @Test
-  @DisplayName("同一线程上，身份头不合法的请求之后，匿名请求仍是匿名")
+  @DisplayName("同一线程上，断言内容不合法的请求之后，匿名请求仍是匿名")
   void should_stay_anonymous_after_malformed_request_on_same_thread() {
     restClient
         .get()
         .uri("/slice/whoami")
-        .headers(
-            headers -> {
-              headers.addAll(TestIdentity.headers());
-              headers.set(IdentityHeaders.USER_ID, "abc");
-            })
+        .headers(headers -> headers.setBearerAuth(SecurityITAssertions.malformed()))
         .exchange()
         .expectStatus()
         .isEqualTo(500);

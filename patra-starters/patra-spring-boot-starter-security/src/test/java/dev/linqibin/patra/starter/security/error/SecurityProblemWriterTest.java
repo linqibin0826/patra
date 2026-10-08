@@ -109,8 +109,7 @@ class SecurityProblemWriterTest {
   @Test
   @DisplayName("身份头不合法：500，detail 是 HTTP 状态的标准短语，不泄露头名")
   void should_write_500_problem_when_identity_malformed() throws Exception {
-    writer.onAuthenticationFailure(
-        request, response, new MalformedIdentityException("X-Patra-User-Id 不是正整数"));
+    writer.onAuthenticationFailure(request, response, new MalformedIdentityException("sub 不是正整数"));
 
     assertThat(response.getStatus()).isEqualTo(500);
     assertThat(body())
@@ -118,7 +117,7 @@ class SecurityProblemWriterTest {
         .containsEntry("code", "TEST-0500")
         .containsEntry("detail", "Internal Server Error")
         .containsEntry("instance", "/probe/me");
-    assertThat(rawBody()).doesNotContain("X-Patra-User-Id");
+    assertThat(rawBody()).doesNotContain("sub 不是正整数");
   }
 
   @Test

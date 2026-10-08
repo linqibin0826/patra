@@ -2,7 +2,7 @@ package dev.linqibin.patra.starter.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.linqibin.patra.starter.security.header.IdentityHeaders;
+import dev.linqibin.patra.starter.security.support.SecurityITAssertions;
 import dev.linqibin.patra.starter.security.support.SecurityITSessionCounter;
 import dev.linqibin.patra.starter.security.test.TestIdentity;
 import dev.linqibin.starter.test.container.initializer.PostgreSQLContainerInitializer;
@@ -42,18 +42,16 @@ class StatelessSessionIT {
   }
 
   @Test
-  @DisplayName("匿名、已登录、401、403、500 的请求都不创建会话，也不下发 Cookie")
+  @DisplayName("匿名、已登录、401、403、断言无效、断言内容不合法的请求都不创建会话，也不下发 Cookie")
   void should_never_create_session_or_set_cookie() {
     getWithoutCookie("/probe/whoami", headers -> {});
     getWithoutCookie("/probe/whoami", headers -> headers.addAll(TestIdentity.headers()));
     getWithoutCookie("/probe/me", headers -> {});
     getWithoutCookie("/probe/access-denied", headers -> headers.addAll(TestIdentity.headers()));
     getWithoutCookie(
-        "/probe/whoami",
-        headers -> {
-          headers.addAll(TestIdentity.headers());
-          headers.remove(IdentityHeaders.SESSION_ID);
-        });
+        "/probe/whoami", headers -> headers.setBearerAuth(SecurityITAssertions.garbage()));
+    getWithoutCookie(
+        "/probe/whoami", headers -> headers.setBearerAuth(SecurityITAssertions.malformed()));
 
     assertThat(sessionCounter.createdCount()).isZero();
   }

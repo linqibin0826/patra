@@ -2,7 +2,7 @@ package dev.linqibin.patra.starter.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.linqibin.patra.starter.security.header.IdentityHeaders;
+import dev.linqibin.patra.starter.security.support.SecurityITAssertions;
 import dev.linqibin.patra.starter.security.test.TestIdentity;
 import dev.linqibin.starter.test.container.initializer.PostgreSQLContainerInitializer;
 import java.util.Map;
@@ -163,11 +163,7 @@ class SecurityErrorResponseIT {
         restClient
             .get()
             .uri("/probe/whoami")
-            .headers(
-                headers -> {
-                  headers.addAll(TestIdentity.headers());
-                  headers.remove(IdentityHeaders.SESSION_ID);
-                })
+            .headers(headers -> headers.setBearerAuth(SecurityITAssertions.malformed()))
             .exchange()
             .expectStatus()
             .isEqualTo(500)
