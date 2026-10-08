@@ -45,3 +45,11 @@ dependencies {
     "integrationTestImplementation"(project(":linqibin-commons:linqibin-spring-boot-starter-jpa"))
     "integrationTestImplementation"(project(":linqibin-commons:linqibin-spring-boot-starter-http-interface"))
 }
+
+// 生成一对身份断言的签名密钥：私钥给网关，公钥给每个下游（PAP-66 的 runbook 调用）
+tasks.register<JavaExec>("generateIdentityAssertionKey") {
+    group = "patra"
+    description = "生成一对身份断言的签名密钥（JWK JSON）：私钥给网关，公钥给下游"
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass = "dev.linqibin.patra.starter.security.assertion.IdentityAssertionKeyGenerator"
+}
