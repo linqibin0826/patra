@@ -1,36 +1,87 @@
 package dev.linqibin.patra.starter.security.config;
 
-import java.util.regex.Pattern;
+import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.ECKey;
+import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.JWKSet;
+import java.text.ParseException;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /// 安全 starter 的配置属性，前缀 `patra.security`。
 ///
-/// 只在 servlet 应用里绑定，因为只有从请求头建立认证时才用到内部令牌。
+/// 只在 servlet 应用里绑定，因为只有验签时才用到公钥。
 ///
-/// @param gatewayToken 网关与下游共享的内部令牌，由部署时的 secret 注入
+/// @param identityAssertion 身份断言相关的配置
 @ConfigurationProperties(prefix = "patra.security")
-public record PatraSecurityProperties(String gatewayToken) {
+public record PatraSecurityProperties(IdentityAssertion identityAssertion) {
 
-  /// 可见 ASCII 字符（不含空格）。令牌要放进 HTTP 头里传输，首尾空白会被去掉。
-  private static final Pattern VISIBLE_ASCII = Pattern.compile("[\\x21-\\x7E]+");
-
-  /// 校验内部令牌。不合法时应用启动失败，错误信息指明配置项。
+  /// 校验：没配 `identity-assertion` 这一段时应用启动失败，错误信息指明配置项。
   public PatraSecurityProperties {
-    if (gatewayToken == null || gatewayToken.isBlank()) {
-      throw new IllegalArgumentException("配置项 patra.security.gateway-token 不能为空：它是网关与下游共享的内部令牌");
-    }
-    if (!VISIBLE_ASCII.matcher(gatewayToken).matches()) {
-      throw new IllegalArgumentException(
-          "配置项 patra.security.gateway-token 只能包含可见 ASCII 字符，不能带空白或换行："
-              + "它要放进 HTTP 头里传输，首尾空白会被去掉，两边永远比不上");
+    if (identityAssertion == null) {
+      throw new IllegalArgumentException(IdentityAssertion.missingMessage());
     }
   }
 
-  /// 不输出令牌的值，避免它经由日志泄露。
+  /// 身份断言的配置。
   ///
-  /// @return 掩码后的字符串
-  @Override
-  public String toString() {
-    return "PatraSecurityProperties[gatewayToken=***]";
+  /// @param publicKeys 网关的公钥，JWK Set JSON，只含公钥，可以多把
+  public record IdentityAssertion(String publicKeys) {
+
+    /// 公钥配置项的全名，用在错误信息里。
+    public static final String PUBLIC_KEYS_PROPERTY =
+        "patra.security.identity-assertion.public-keys";
+
+    /// 校验公钥集合。不合法时应用启动失败，错误信息指明配置项和原因。
+    public IdentityAssertion {
+      parsePublicKeys(publicKeys);
+    }
+
+    /// 解析成公钥集合。启动时已经校验过，这里不会失败。
+    ///
+    /// @return 公钥集合
+    public JWKSet publicKeySet() {
+      return parsePublicKeys(publicKeys);
+    }
+
+    /// 「没配」的错误信息。
+    ///
+    /// @return 错误信息
+    static String missingMessage() {
+      return "配置项 " + PUBLIC_KEYS_PROPERTY + " 不能为空：它是网关签身份断言的公钥（JWK Set JSON）";
+    }
+
+    /// 解析并校验：是 JWK Set、至少一把、都是不含私钥的 EC P-256 公钥、都带 kid。
+    ///
+    /// @param json 配置的值
+    /// @return 公钥集合
+    /// @throws IllegalArgumentException 任何一项不满足时
+    private static JWKSet parsePublicKeys(String json) {
+      if (json == null || json.isBlank()) {
+        throw new IllegalArgumentException(missingMessage());
+      }
+      JWKSet set;
+      try {
+        set = JWKSet.parse(json);
+      } catch (ParseException e) {
+        throw new IllegalArgumentException(
+            "配置项 " + PUBLIC_KEYS_PROPERTY + " 不是合法的 JWK Set JSON", e);
+      }
+      if (set.getKeys().isEmpty()) {
+        throw new IllegalArgumentException("配置项 " + PUBLIC_KEYS_PROPERTY + " 至少要有一把公钥");
+      }
+      for (JWK key : set.getKeys()) {
+        if (key.isPrivate()) {
+          throw new IllegalArgumentException(
+              "配置项 " + PUBLIC_KEYS_PROPERTY + " 含有私钥：下游只能配公钥，私钥只能在网关");
+        }
+        if (!(key instanceof ECKey ecKey) || !Curve.P_256.equals(ecKey.getCurve())) {
+          throw new IllegalArgumentException("配置项 " + PUBLIC_KEYS_PROPERTY + " 只能是 EC P-256 公钥");
+        }
+        if (key.getKeyID() == null || key.getKeyID().isBlank()) {
+          throw new IllegalArgumentException("配置项 " + PUBLIC_KEYS_PROPERTY + " 里每把公钥都要有 kid");
+        }
+      }
+      return set;
+    }
   }
 }

@@ -1,12 +1,15 @@
 package dev.linqibin.patra.starter.security.config;
 
 import dev.linqibin.commons.error.codes.HttpStdErrors;
-import dev.linqibin.patra.starter.security.authentication.GatewayHeaderAuthenticationConverter;
+import dev.linqibin.patra.starter.security.assertion.IdentityAssertionDecoders;
+import dev.linqibin.patra.starter.security.authentication.IdentityAssertionAuthenticationConverter;
 import dev.linqibin.patra.starter.security.error.SecurityErrorMappingContributor;
 import dev.linqibin.patra.starter.security.error.SecurityExceptionRethrowAdvice;
 import dev.linqibin.patra.starter.security.error.SecurityProblemWriter;
 import dev.linqibin.starter.web.error.adapter.ProblemDetailAdapter;
 import jakarta.servlet.DispatcherType;
+import java.time.Clock;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -20,12 +23,13 @@ import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.ProviderNotFoundException;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.authentication.AuthenticationFilter;
 import tools.jackson.databind.json.JsonMapper;
 
-/// 安全 starter 的 servlet 自动配置：过滤器链、错误输出、内部令牌。
+/// 安全 starter 的 servlet 自动配置：验签器、过滤器链、错误输出。
 ///
 /// 排在 Spring Boot 的默认用户和默认过滤器链之前，它们检测到这里的 Bean 后会让位。
 @AutoConfiguration(
@@ -87,34 +91,47 @@ public class SecurityServletAutoConfiguration {
     };
   }
 
-  /// 下游的默认过滤器链：无会话，从网关请求头建立认证，所有路径放行。
+  /// 用配置里的公钥建验签器。容器里有 `Clock` 就用它，没有用系统 UTC 时钟。
+  ///
+  /// @param properties 配置属性
+  /// @param clock 容器里的时钟，可能没有
+  /// @return 验签器
+  @Bean
+  @ConditionalOnMissingBean(JwtDecoder.class)
+  public JwtDecoder identityAssertionDecoder(
+      PatraSecurityProperties properties, ObjectProvider<Clock> clock) {
+    return IdentityAssertionDecoders.forPublicKeys(
+        properties.identityAssertion().publicKeySet(), clock.getIfAvailable(Clock::systemUTC));
+  }
+
+  /// 下游的默认过滤器链：无会话，从 `Authorization: Bearer` 里的断言建立认证，所有路径放行。
   ///
   /// 下游不做路径级拦截，路由规则归网关。需要登录的接口由业务代码调
   /// `CurrentUserPort.require()` 来保证，这样服务之间直连的 `/_internal/**` 不受影响。
   ///
   /// @param http Spring Security 的构建器
   /// @param problemWriter 统一的错误写出器
-  /// @param properties 配置属性
+  /// @param identityAssertionDecoder 验签器
   /// @return 过滤器链
   @Bean
   @ConditionalOnMissingBean(SecurityFilterChain.class)
   public SecurityFilterChain patraSecurityFilterChain(
-      HttpSecurity http, SecurityProblemWriter problemWriter, PatraSecurityProperties properties) {
+      HttpSecurity http, SecurityProblemWriter problemWriter, JwtDecoder identityAssertionDecoder) {
     StatelessSecurityDefaults.apply(http, problemWriter);
 
-    // 转换器给出的已经是认证完成的对象，原样返回。
+    // 转换器给出的已经是认证完成的对象，原样返回；不经过 ProviderManager，凭据不会被擦掉。
     // 必须用显式类型：AuthenticationFilter 的两个构造器对 lambda 有二义性。
     AuthenticationManager passThrough = authentication -> authentication;
     // 不声明成 Bean：否则 Boot 会把它再注册成全局 servlet 过滤器。
-    AuthenticationFilter gatewayHeaderFilter =
+    AuthenticationFilter assertionFilter =
         new AuthenticationFilter(
-            passThrough, new GatewayHeaderAuthenticationConverter(properties.gatewayToken()));
+            passThrough, new IdentityAssertionAuthenticationConverter(identityAssertionDecoder));
     // 默认的成功处理器会回 302 再继续执行过滤器链，换成什么都不做。
-    gatewayHeaderFilter.setSuccessHandler((request, response, authentication) -> {});
+    assertionFilter.setSuccessHandler((request, response, authentication) -> {});
     // 默认的失败处理器遇到服务类异常会原样抛出，换成统一的写出器。
-    gatewayHeaderFilter.setFailureHandler(problemWriter);
+    assertionFilter.setFailureHandler(problemWriter);
 
-    http.addFilterBefore(gatewayHeaderFilter, AnonymousAuthenticationFilter.class)
+    http.addFilterBefore(assertionFilter, AnonymousAuthenticationFilter.class)
         .authorizeHttpRequests(
             authorize ->
                 authorize
