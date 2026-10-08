@@ -46,10 +46,18 @@ dependencies {
     "integrationTestImplementation"(project(":linqibin-commons:linqibin-spring-boot-starter-http-interface"))
 }
 
-// 生成一对身份断言的签名密钥：私钥给网关，公钥给每个下游（PAP-66 的 runbook 调用）
+// 生成一对身份断言的签名密钥：私钥写进 -PkeyOut 指定的文件（0600），公钥打到标准输出
+// （PAP-66 的 runbook 调用）。私钥不打到标准输出：Gradle 会把它记进 daemon 日志。
 tasks.register<JavaExec>("generateIdentityAssertionKey") {
     group = "patra"
-    description = "生成一对身份断言的签名密钥（JWK JSON）：私钥给网关，公钥给下游"
+    description = "生成一对身份断言的签名密钥：私钥写进 -PkeyOut=<路径>，公钥打到标准输出"
     classpath = sourceSets.main.get().runtimeClasspath
     mainClass = "dev.linqibin.patra.starter.security.assertion.IdentityAssertionKeyGenerator"
+    val keyOut = providers.gradleProperty("keyOut")
+    doFirst {
+        if (!keyOut.isPresent) {
+            throw GradleException("要指定私钥写到哪里：-PkeyOut=<路径>（文件不能已存在）")
+        }
+    }
+    argumentProviders.add(CommandLineArgumentProvider { listOf(keyOut.orNull ?: "") })
 }
