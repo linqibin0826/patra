@@ -24,15 +24,24 @@ dependencies {
     // Spring Security（版本由 Spring Boot BOM 管理）
     api("org.springframework.boot:spring-boot-starter-security")
 
+    // JWT 的签名与验签（JwtDecoder、校验器，内含 Nimbus JOSE + JWT）
+    api("org.springframework.security:spring-security-oauth2-jose")
+
     // 审计人接入：classpath 上有 starter-jpa 时才生效
     compileOnly(project(":linqibin-commons:linqibin-spring-boot-starter-jpa"))
+
+    // 内部客户端转发断言：classpath 上有 http-interface starter 时才生效
+    compileOnly(project(":linqibin-commons:linqibin-spring-boot-starter-http-interface"))
 
     // 测试支持（testFixtures）：没有它，使用方的 @WebMvcTest 里没有安全过滤器
     "testFixturesApi"("org.springframework.boot:spring-boot-security-test")
 
     // 测试依赖
     testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
+    // 转发拦截器的单元测试要能看到 InternalCallInterceptor
+    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-http-interface"))
 
-    // 集成测试要测审计列，需要 starter-jpa；单元测试的 classpath 故意不带它
+    // 集成测试要测审计列和转发，需要 starter-jpa 与 http-interface starter
     "integrationTestImplementation"(project(":linqibin-commons:linqibin-spring-boot-starter-jpa"))
+    "integrationTestImplementation"(project(":linqibin-commons:linqibin-spring-boot-starter-http-interface"))
 }
