@@ -52,4 +52,24 @@ class CurrentUserAuthenticationTest {
     assertThatThrownBy(() -> new CurrentUserAuthentication(null))
         .isInstanceOf(NullPointerException.class);
   }
+
+  @Test
+  @DisplayName("带断言构造时，凭据就是那个断言")
+  void should_carry_assertion_as_credentials() {
+    CurrentUserAuthentication authentication =
+        new CurrentUserAuthentication(USER, "header.payload.signature");
+
+    assertThat(authentication.isAuthenticated()).isTrue();
+    assertThat(authentication.getPrincipal()).isEqualTo(USER);
+    assertThat(authentication.getCredentials()).isEqualTo("header.payload.signature");
+  }
+
+  @Test
+  @DisplayName("toString 不输出断言")
+  void should_not_print_assertion_in_to_string() {
+    CurrentUserAuthentication authentication =
+        new CurrentUserAuthentication(USER, "header.payload.signature");
+
+    assertThat(authentication.toString()).doesNotContain("header.payload.signature");
+  }
 }

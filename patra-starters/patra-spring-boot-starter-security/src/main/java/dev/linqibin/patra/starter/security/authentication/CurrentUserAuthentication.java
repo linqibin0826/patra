@@ -10,38 +10,59 @@ import org.springframework.security.core.authority.AuthorityUtils;
 
 /// 主体是 `CurrentUser` 的认证对象，构造出来就是已认证状态。
 ///
-/// 网关查到会话后构造它，下游从请求头解析后构造它，两边用同一个类型。
+/// 下游验签后构造它，凭据是原始断言，内部客户端替用户调用时原样转发；网关查到会话后
+/// 和 `CurrentUserRunner` 构造它时没有断言，凭据为 `null`。
 /// 本版没有角色，权限列表为空；做 admin 时由建立认证的一方把角色传进来。
 public final class CurrentUserAuthentication extends AbstractAuthenticationToken {
 
   @Serial private static final long serialVersionUID = 1L;
 
   private final CurrentUser principal;
+  private final String assertion;
 
-  /// 创建没有任何权限的认证对象。
+  /// 创建没有凭据、没有权限的认证对象。
   ///
   /// @param principal 当前用户
   public CurrentUserAuthentication(CurrentUser principal) {
-    this(principal, AuthorityUtils.NO_AUTHORITIES);
+    this(principal, null, AuthorityUtils.NO_AUTHORITIES);
   }
 
-  /// 创建带权限列表的认证对象。
+  /// 创建带原始断言的认证对象。
+  ///
+  /// @param principal 当前用户
+  /// @param assertion 验签通过的断言，紧凑序列化
+  public CurrentUserAuthentication(CurrentUser principal, String assertion) {
+    this(principal, assertion, AuthorityUtils.NO_AUTHORITIES);
+  }
+
+  /// 创建带权限列表、没有凭据的认证对象。
   ///
   /// @param principal 当前用户
   /// @param authorities 权限列表
   public CurrentUserAuthentication(
       CurrentUser principal, Collection<? extends GrantedAuthority> authorities) {
+    this(principal, null, authorities);
+  }
+
+  /// 创建认证对象。
+  ///
+  /// @param principal 当前用户
+  /// @param assertion 原始断言，可以为 `null`
+  /// @param authorities 权限列表
+  private CurrentUserAuthentication(
+      CurrentUser principal, String assertion, Collection<? extends GrantedAuthority> authorities) {
     super(authorities);
     this.principal = Objects.requireNonNull(principal, "principal 不能为 null");
+    this.assertion = assertion;
     super.setAuthenticated(true);
   }
 
-  /// 没有凭据：身份已经由网关验证过。
+  /// 原始断言；没有断言时为 `null`。父类的 `toString()` 把它打成 `[PROTECTED]`。
   ///
-  /// @return 始终为 `null`
+  /// @return 紧凑序列化的断言或 `null`
   @Override
-  public Object getCredentials() {
-    return null;
+  public String getCredentials() {
+    return assertion;
   }
 
   /// 返回当前用户。
