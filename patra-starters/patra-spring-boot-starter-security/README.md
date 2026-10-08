@@ -36,10 +36,10 @@ patra:
 生成一对密钥：
 
 ```bash
-./gradlew -q :patra-starters:patra-spring-boot-starter-security:generateIdentityAssertionKey
+./gradlew -q :patra-starters:patra-spring-boot-starter-security:generateIdentityAssertionKey -PkeyOut=/path/to/private.jwk
 ```
 
-输出两行 JSON：含私钥的 JWK 只给网关，由 secret 注入；只含公钥的 JWK Set 给每个下游。换密钥时先把新公钥加进各下游的 `keys` 并重启，再给网关换私钥，最后删掉旧公钥。
+含私钥的 JWK 只写进 `-PkeyOut` 指定的文件（权限 0600，文件不能已存在），只给网关，由 secret 注入，用完删掉文件；标准输出只有只含公钥的 JWK Set，给每个下游。私钥不打到标准输出：Gradle 会把标准输出记进 daemon 日志。换密钥时先把新公钥加进各下游的 `keys` 并重启，再给网关换私钥，最后删掉旧公钥。
 
 ## 3. 业务代码怎么取当前用户
 
@@ -129,7 +129,7 @@ public class IdentityAdapterITWebMvcConfig {}
 
 ## 给网关用的部分
 
-网关（PAP-65）声明自己的过滤器链，本 starter 的默认链随之让位。网关复用这几样：
+网关（PAP-65）声明自己的过滤器链，本 starter 的默认链随之让位。网关也是 servlet 应用，第 2 节的公钥配置对它同样必填（配自己那把公钥）；不要为了绕过它排除本 starter 的自动配置，那会连错误映射和重抛处理器一起丢掉。网关复用这几样：
 
 | 类 | 用途 |
 |---|---|

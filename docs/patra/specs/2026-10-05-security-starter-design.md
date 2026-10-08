@@ -146,8 +146,8 @@ JWS 紧凑序列化，三段。
 静态工厂 `JwtDecoder forPublicKeys(JWKSet publicKeys, Clock clock)`，返回 Spring Security 的 `NimbusJwtDecoder`：
 
 - `NimbusJwtDecoder.withJwkSource(new ImmutableJWKSet<>(publicKeys))`，算法只允许 `ES256`。Nimbus 按头里的 `kid` 在集合里选公钥。
-- `jwtProcessorCustomizer`：把 Nimbus 的 `JWSTypeVerifier` 设成只接受 `patra-identity+jwt`。Nimbus 自己也查 `typ`，不放行自定义值就到不了 Spring 的校验器。
-- 校验器用 `DelegatingOAuth2TokenValidator` 串起来：`JwtTypeValidator(TYPE)`、`JwtIssuerValidator(ISSUER)`、`JwtAudienceValidator(AUDIENCE)`、`JwtTimestampValidator`（容差 30 秒，注入 `Clock`）。
+- 不设 Nimbus 自己的 `typ` 校验（Spring 的构建器默认不查）：所有声明的校验都放在验签之后，验签之前不读未签名的内容，错误信息里也就不会带上它。
+- 校验器用 `DelegatingOAuth2TokenValidator` 串起来：`JwtTypeValidator(TYPE)`、`JwtIssuerValidator(ISSUER)`、`JwtAudienceValidator(AUDIENCE)`、`JwtTimestampValidator`（容差 30 秒，注入 `Clock`，不允许缺 `exp`），再加一个校验器要求有 `iat` 且 `exp` 减 `iat` 不超过 60 秒。有效期的长度在验签这边也钉死，签名方签出长命断言同样被拒。Spring 默认的声明转换器会把缺失的 `iat` 补成 `exp` 减一秒，这里换成不补的。
 - 任何一项不过，`decode` 抛 `JwtException`，原因在异常消息里。
 
 ### 6.4 密钥
@@ -161,7 +161,7 @@ JWS 紧凑序列化，三段。
 
 `kid` 是公钥的 JWK 指纹（RFC 7638），生成时算好写进 JWK。签名器和验签器都只认 JWK 里的 `kid`，不需要另外配。
 
-**生成**：starter 的 Gradle 任务 `generateIdentityAssertionKey`（`JavaExec`，跑 starter 里的 `IdentityAssertionKeyGenerator`）。它用 Nimbus 的 `ECKeyGenerator(Curve.P_256)` 生成一对密钥，输出两行：含私钥的 JWK（给网关），只含公钥的 JWK Set（给每个下游）。
+**生成**：starter 的 Gradle 任务 `generateIdentityAssertionKey -PkeyOut=<路径>`（`JavaExec`，跑 starter 里的 `IdentityAssertionKeyGenerator`）。它用 Nimbus 的 `ECKeyGenerator(Curve.P_256)` 生成一对密钥：含私钥的 JWK 只写进 `-PkeyOut` 指定的文件（权限 0600，文件不能已存在），标准输出只有只含公钥的 JWK Set。私钥不打到标准输出：Gradle 会把标准输出记进 daemon 日志。
 
 **换密钥**：先把新公钥加进各下游的 `keys` 并重启，再给网关换私钥，最后从下游删掉旧公钥。因为按 `kid` 选钥，两把公钥并存期间新旧断言都能验。
 
@@ -214,7 +214,7 @@ starter 提供一条默认的 `SecurityFilterChain`（服务自己声明了就�
 
 `Bearer` 的比较不区分大小写（RFC 6750）。取出的断言去掉首尾空白。
 
-第三行返回 401 而不是当匿名：断言只可能来自网关，无效说明配置错了或有人伪造，静默当成未登录会把换密钥配错这类问题藏起来。日志记 WARN 一行，写原因（过期、签名不对、受众不对），不写断言内容。
+第三行返回 401 而不是当匿名：断言只可能来自网关，无效说明配置错了或有人伪造，静默当成未登录会把换密钥配错这类问题藏起来。日志记 WARN 一行，写原因（过期、签名不对、受众不对），不写断言内容；原因先去掉控制字符并截短，解码器的异常消息里可能有未签名的内容，不能让它伪造出日志行。
 
 第四行只可能是网关自己的缺陷，所以按服务端错误处理并记错误日志，不伪装成 401。
 
@@ -353,7 +353,7 @@ starter 提供一条默认的 `SecurityFilterChain`（服务自己声明了就�
 | `SecurityCoreAutoConfiguration` | 无 | `CurrentUserPort` 的实现 |
 | `SecurityForwardingAutoConfiguration` | classpath 上有 `InternalCallInterceptor`（按类名判断）；排在核心配置之后 | `IdentityAssertionForwardingInterceptor` |
 | `SecurityAuditingAutoConfiguration` | classpath 上有 `CurrentAuditorProvider`；排在上一个之后 | `CurrentAuditorProvider` 的实现 |
-| `SecurityServletAutoConfiguration` | servlet 应用 | 配置属性、`JwtDecoder`（6.3 节，Bean 名 `identityAssertionDecoder`，容器里没有时）、`SecurityProblemWriter`、`SecurityErrorMappingContributor`、安全异常重抛处理器、默认的 `SecurityFilterChain`（容器里没有时） |
+| `SecurityServletAutoConfiguration` | servlet 应用 | 配置属性、`JwtDecoder`（6.3 节，Bean 名 `identityAssertionDecoder`，容器里没有同名 Bean 时；过滤器链按名字注入它，应用里别的 `JwtDecoder` 顶不掉这套校验）、`SecurityProblemWriter`、`SecurityErrorMappingContributor`、安全异常重抛处理器、默认的 `SecurityFilterChain`（容器里没有时） |
 
 前三个不带 Web 条件：安全上下文和 `CurrentUserRunner` 在没有 Web 环境的应用里同样可用，比如只跑定时任务的进程或以非 Web 方式启动的测试。这样审计配置依赖的 `CurrentUserPort` 在任何环境下都存在。
 
@@ -439,7 +439,7 @@ Boot 在检测不到任何认证相关的 Bean 时，会生成一个带随机密
 | 3 | 拒绝所有请求的 `AuthenticationManager` Bean 足以让 Boot 不生成随机密码用户 | 成立（首版） | `SecurityServletAutoConfigurationTest`、`StatelessSessionIT` |
 | 4 | `STATELESS` 加自定义认证过滤器在 `@WebMvcTest` 加 `RestTestClient` 的切片测试里正常工作 | 成立（首版） | `SecurityWebMvcSliceIT` |
 | 5 | `GlobalRestExceptionHandler` 降优先级后，对网关代理失败的异常表现 | 本 Issue 无法实测：网关还是 WebFlux 版，classpath 上没有 starter-web。移交 PAP-69，见第 17 节 | 无 |
-| 6 | Nimbus 的 `DefaultJWTProcessor` 默认只接受 `typ` 为 `JWT` 或缺省，自定义 `typ` 要换 `JWSTypeVerifier` 才到得了 Spring 的校验器 | 成立（PAP-70）；换成只认 `patra-identity+jwt` 的校验器后，缺省 `typ` 也被拒 | `IdentityAssertionDecodersTest` |
+| 6 | Nimbus 的 `DefaultJWTProcessor` 默认只接受 `typ` 为 `JWT` 或缺省，自定义 `typ` 要换 `JWSTypeVerifier` 才到得了 Spring 的校验器 | 不成立（评审实测）：Spring 的 `JwkSourceJwtDecoderBuilder` 默认不查 `typ`，自定义值直接到 `JwtTypeValidator`。因此不设 Nimbus 的 `typ` 校验，`typ` 在验签之后才查，缺省 `typ` 同样被拒 | `IdentityAssertionDecodersTest` |
 | 7 | `NimbusJwtDecoder.withJwkSource` 配 ES256 时按头里的 `kid` 在集合里选钥，`kid` 对不上时拒绝 | 成立（PAP-70） | `IdentityAssertionDecodersTest` |
 | 8 | 转换器抛出的 `BadCredentialsException` 和 `MalformedIdentityException` 都经 `AuthenticationFilter` 的失败处理器到达 `SecurityProblemWriter` | 成立（PAP-70）：401 带 `WWW-Authenticate: Bearer`，500 的字段集合与控制器路径一致 | `IdentityAssertionAuthenticationIT`、`SecurityErrorResponseIT` |
 | 9 | 只引 `spring-security-oauth2-jose`、不引 resource server 时，Boot 不会注册任何 OAuth2 相关的过滤器链或自动配置 | 成立（PAP-70）：容器里只有 `patraSecurityFilterChain` 一条链 | `SecurityServletAutoConfigurationTest` |
@@ -468,10 +468,11 @@ Boot 在检测不到任何认证相关的 Bean 时，会生成一个带随机密
 | 网关的路径规则看到的是剥前缀之前的路径，要带服务前缀，如 `/*/_internal/**`。各服务的 actuator 现在也经网关对外转发，一并拦掉 | PAP-65 |
 | 匿名请求和已登录请求撞上「全部拒绝」的规则时，框架分别给 401 和 403。`/_internal/**` 要对任何人返回同一个结果，需要单独处理 | PAP-65 |
 | 转发前剥掉外部自带的 `Authorization` 头；已登录时用 `IdentityAssertionSigner.sign(user)` 签一个断言，`setBearerAuth` 写入；未登录不写 | PAP-65 |
-| 网关自己的配置项放私钥（含私钥的 JWK JSON，建议 `patra.gateway.identity-assertion.private-key`），由 secret 注入；用它和容器里的 `Clock` 构造签名器 Bean；没配时启动失败 | PAP-65 |
+| 网关自己的配置项放私钥（含私钥的 JWK JSON，建议 `patra.gateway.identity-assertion.private-key`），由 secret 注入；按字符串绑定，构造签名器时再解析（转换失败时 Boot 的失败报告会打印配置值）；用它和容器里的 `Clock` 构造签名器 Bean；没配时启动失败 | PAP-65 |
+| 网关也是 servlet 应用，`SecurityServletAutoConfiguration` 照样生效：网关同样要配 `patra.security.identity-assertion.public-keys`（自己那把公钥），不要为了绕过它排除这个自动配置，那会连错误映射和重抛处理器一起丢掉。建议启动时自签一条断言、用 `identityAssertionDecoder` 验一次，提前发现密钥配对或 `kid` 写错 | PAP-65 |
 | 会话 ID 是正的 Long | PAP-64 |
 | identity 的需登录接口用 `require()` 取当前用户，不自己查会话；dev 配置里给公钥 | PAP-64 |
 | 登出在网关上是公开路由，identity 用 `current()`：有当前用户就删会话，没有就直接返回成功 | PAP-64、PAP-65 |
 | 密码哈希只需要 `spring-security-crypto`。算法必须支持设计简报定下的整个密码范围（8 到 64 个 Unicode 码点），不能为了迁就算法去缩小范围。BCrypt 对超过 72 字节的输入会抛异常，64 个码点的密码可能超过这个长度，所以直接用它不满足要求。具体选型由 PAP-63 决定 | PAP-63 |
-| 用 `generateIdentityAssertionKey` 生成一对密钥；私钥注入网关的 `.env.*.secret`，公钥注入 identity 的配置；换密钥按 6.4 节的顺序，写进 runbook | PAP-66 |
+| 用 `generateIdentityAssertionKey -PkeyOut=<路径>` 生成一对密钥；私钥文件的内容注入网关的 `.env.*.secret`，用完删掉文件；标准输出的公钥注入 identity 的配置；换密钥按 6.4 节的顺序，写进 runbook | PAP-66 |
 | 网关切到 WebMVC 版并引入 starter-web 之后，实测全局异常处理器（已降一级优先级）对代理失败异常的表现（原第 15 节第 5 条） | PAP-69 |
