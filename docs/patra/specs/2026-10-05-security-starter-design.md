@@ -3,7 +3,7 @@
 > **Issue**：[PAP-62](https://linear.app/papertrace/issue/PAP-62)（首版）、[PAP-70](https://linear.app/papertrace/issue/PAP-70)（改版：签名身份断言）
 > **版本**：[v0.8 Accounts](../release-specs/v0.8-accounts.md)
 > **日期**：2026-10-05；2026-10-08 改写
-> **状态**：首版已实现；改版待实现（PAP-70）
+> **状态**：首版与改版都已实现
 
 **改版记录**（2026-10-08，PAP-70）：网关向下游传递身份的方式从「五个明文身份头 + 共享内部令牌」改成「网关签名的身份断言」，对应 release spec 决策 C 的改定。本文按改版后的最终形态写，第 6、7、8.2、8.3、10、13、14、15、16、17 节是这次改写的；身份头方案的原文见本文在 PAP-70 之前的 git 历史。
 
@@ -311,7 +311,7 @@ starter 提供一条默认的 `SecurityFilterChain`（服务自己声明了就�
 - 是 `CurrentUserAuthentication` 且凭据是字符串时，`setBearerAuth(断言)`。
 - 其余情况不动请求：匿名线程、`CurrentUserRunner` 放进去的用户（凭据为 null）、没有安全上下文的线程。
 
-只在 classpath 上有 `RestClientFactory` 时注册（`@ConditionalOnClass`），放在 `SecurityCoreAutoConfiguration` 里：它不依赖 Web 环境，但只有请求线程里才有断言。
+只在 classpath 上有 `InternalCallInterceptor` 时注册（类名字符串的 `@ConditionalOnClass`），由独立的 `SecurityForwardingAutoConfiguration` 注册：它不依赖 Web 环境，但只有请求线程里才有断言。
 
 ### 10.3 边界
 
@@ -350,11 +350,14 @@ starter 提供一条默认的 `SecurityFilterChain`（服务自己声明了就�
 
 | 类 | 条件 | 注册的东西 |
 |---|---|---|
-| `SecurityCoreAutoConfiguration` | 无 | `CurrentUserPort` 的实现；classpath 上有 `RestClientFactory` 时再注册 `IdentityAssertionForwardingInterceptor` |
+| `SecurityCoreAutoConfiguration` | 无 | `CurrentUserPort` 的实现 |
+| `SecurityForwardingAutoConfiguration` | classpath 上有 `InternalCallInterceptor`（按类名判断）；排在核心配置之后 | `IdentityAssertionForwardingInterceptor` |
 | `SecurityAuditingAutoConfiguration` | classpath 上有 `CurrentAuditorProvider`；排在上一个之后 | `CurrentAuditorProvider` 的实现 |
 | `SecurityServletAutoConfiguration` | servlet 应用 | 配置属性、`JwtDecoder`（6.3 节，Bean 名 `identityAssertionDecoder`，容器里没有时）、`SecurityProblemWriter`、`SecurityErrorMappingContributor`、安全异常重抛处理器、默认的 `SecurityFilterChain`（容器里没有时） |
 
-前两个不带 Web 条件：安全上下文和 `CurrentUserRunner` 在没有 Web 环境的应用里同样可用，比如只跑定时任务的进程或以非 Web 方式启动的测试。这样审计配置依赖的 `CurrentUserPort` 在任何环境下都存在。
+前三个不带 Web 条件：安全上下文和 `CurrentUserRunner` 在没有 Web 环境的应用里同样可用，比如只跑定时任务的进程或以非 Web 方式启动的测试。这样审计配置依赖的 `CurrentUserPort` 在任何环境下都存在。
+
+转发拦截器单独一个自动配置类：它实现了 http-interface starter 的接口，没有那个 starter 时连类都加载不了，只有类级别的条件能在加载前挡住。
 
 配置属性类 `PatraSecurityProperties`，前缀 `patra.security`，只有 `identity-assertion.public-keys` 一项（8.3 节）。原来的 `gateway-token` 删除。
 
@@ -436,11 +439,11 @@ Boot 在检测不到任何认证相关的 Bean 时，会生成一个带随机密
 | 3 | 拒绝所有请求的 `AuthenticationManager` Bean 足以让 Boot 不生成随机密码用户 | 成立（首版） | `SecurityServletAutoConfigurationTest`、`StatelessSessionIT` |
 | 4 | `STATELESS` 加自定义认证过滤器在 `@WebMvcTest` 加 `RestTestClient` 的切片测试里正常工作 | 成立（首版） | `SecurityWebMvcSliceIT` |
 | 5 | `GlobalRestExceptionHandler` 降优先级后，对网关代理失败的异常表现 | 本 Issue 无法实测：网关还是 WebFlux 版，classpath 上没有 starter-web。移交 PAP-69，见第 17 节 | 无 |
-| 6 | Nimbus 的 `DefaultJWTProcessor` 默认只接受 `typ` 为 `JWT` 或缺省，自定义 `typ` 要换 `JWSTypeVerifier` 才到得了 Spring 的校验器 | 待实测（PAP-70） | 验签器单元测试 |
-| 7 | `NimbusJwtDecoder.withJwkSource` 配 ES256 时按头里的 `kid` 在集合里选钥，`kid` 对不上时拒绝 | 待实测（PAP-70） | 验签器单元测试 |
-| 8 | 转换器抛出的 `BadCredentialsException` 和 `MalformedIdentityException` 都经 `AuthenticationFilter` 的失败处理器到达 `SecurityProblemWriter` | 待实测（PAP-70） | `IdentityAssertionAuthenticationIT` |
-| 9 | 只引 `spring-security-oauth2-jose`、不引 resource server 时，Boot 不会注册任何 OAuth2 相关的过滤器链或自动配置 | 待实测（PAP-70） | `StatelessSessionIT`（断言过滤器链只有一条） |
-| 10 | `RestClientFactory` 挂上的拦截器只出现在它创建的客户端上，`httpInterfaceRestClientBuilder` 建的客户端没有 | 待实测（PAP-70） | 转发集成测试 |
+| 6 | Nimbus 的 `DefaultJWTProcessor` 默认只接受 `typ` 为 `JWT` 或缺省，自定义 `typ` 要换 `JWSTypeVerifier` 才到得了 Spring 的校验器 | 成立（PAP-70）；换成只认 `patra-identity+jwt` 的校验器后，缺省 `typ` 也被拒 | `IdentityAssertionDecodersTest` |
+| 7 | `NimbusJwtDecoder.withJwkSource` 配 ES256 时按头里的 `kid` 在集合里选钥，`kid` 对不上时拒绝 | 成立（PAP-70） | `IdentityAssertionDecodersTest` |
+| 8 | 转换器抛出的 `BadCredentialsException` 和 `MalformedIdentityException` 都经 `AuthenticationFilter` 的失败处理器到达 `SecurityProblemWriter` | 成立（PAP-70）：401 带 `WWW-Authenticate: Bearer`，500 的字段集合与控制器路径一致 | `IdentityAssertionAuthenticationIT`、`SecurityErrorResponseIT` |
+| 9 | 只引 `spring-security-oauth2-jose`、不引 resource server 时，Boot 不会注册任何 OAuth2 相关的过滤器链或自动配置 | 成立（PAP-70）：容器里只有 `patraSecurityFilterChain` 一条链 | `SecurityServletAutoConfigurationTest` |
+| 10 | `RestClientFactory` 挂上的拦截器只出现在它创建的客户端上，`httpInterfaceRestClientBuilder` 建的客户端没有 | 成立（PAP-70） | `IdentityAssertionForwardingIT`、`RestClientFactoryTest` |
 
 ## 16. README
 
