@@ -27,9 +27,11 @@ public final class IdentityAssertionForwardingInterceptor implements InternalCal
       HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
     Authentication authentication =
         SecurityContextHolder.getContextHolderStrategy().getContext().getAuthentication();
-    if (authentication instanceof CurrentUserAuthentication user
-        && user.getCredentials() instanceof String assertion) {
-      request.getHeaders().setBearerAuth(assertion);
+    if (authentication instanceof CurrentUserAuthentication user) {
+      String assertion = user.getCredentials();
+      if (assertion != null) {
+        request.getHeaders().setBearerAuth(assertion);
+      }
     }
     return execution.execute(request, body);
   }
