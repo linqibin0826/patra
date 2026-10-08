@@ -169,6 +169,20 @@ class SecurityServletAutoConfigurationTest {
             });
   }
 
+  @Test
+  @DisplayName("应用里另有别的 JwtDecoder 时，身份断言的验签器照常注册，两者并存")
+  void should_keep_assertion_decoder_when_another_jwt_decoder_exists() {
+    contextRunner
+        .withPropertyValues(PUBLIC_KEYS_PROPERTY)
+        .withUserConfiguration(OtherJwtDecoderConfig.class)
+        .run(
+            context -> {
+              assertThat(context).hasNotFailed();
+              assertThat(context.getBeansOfType(JwtDecoder.class))
+                  .containsKeys("identityAssertionDecoder", "otherJwtDecoder");
+            });
+  }
+
   /// 本测试类用的临时公钥，JWK Set JSON。
   private static String publicJwkSet() {
     try {
@@ -193,6 +207,21 @@ class SecurityServletAutoConfigurationTest {
       StatelessSecurityDefaults.apply(http, problemWriter);
       http.authorizeHttpRequests(authorize -> authorize.anyRequest().denyAll());
       return http.build();
+    }
+  }
+
+  /// 模拟以后引入别的 JWT 解码器的应用。
+  @Configuration(proxyBeanMethods = false)
+  static class OtherJwtDecoderConfig {
+
+    /// 另一个解码器。
+    ///
+    /// @return 永远抛异常的解码器
+    @Bean
+    JwtDecoder otherJwtDecoder() {
+      return token -> {
+        throw new UnsupportedOperationException("other decoder");
+      };
     }
   }
 

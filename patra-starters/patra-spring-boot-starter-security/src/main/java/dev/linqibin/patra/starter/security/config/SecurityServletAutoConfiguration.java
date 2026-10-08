@@ -10,6 +10,7 @@ import dev.linqibin.starter.web.error.adapter.ProblemDetailAdapter;
 import jakarta.servlet.DispatcherType;
 import java.time.Clock;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -93,11 +94,14 @@ public class SecurityServletAutoConfiguration {
 
   /// 用配置里的公钥建验签器。容器里有 `Clock` 就用它，没有用系统 UTC 时钟。
   ///
+  /// 按名字判断是否让位、按名字注入：应用里以后要是出现别的 `JwtDecoder`（比如引了
+  /// resource server），不能悄悄顶掉身份断言这一套校验。
+  ///
   /// @param properties 配置属性
   /// @param clock 容器里的时钟，可能没有
   /// @return 验签器
   @Bean
-  @ConditionalOnMissingBean(JwtDecoder.class)
+  @ConditionalOnMissingBean(name = "identityAssertionDecoder")
   public JwtDecoder identityAssertionDecoder(
       PatraSecurityProperties properties, ObjectProvider<Clock> clock) {
     return IdentityAssertionDecoders.forPublicKeys(
@@ -116,7 +120,9 @@ public class SecurityServletAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean(SecurityFilterChain.class)
   public SecurityFilterChain patraSecurityFilterChain(
-      HttpSecurity http, SecurityProblemWriter problemWriter, JwtDecoder identityAssertionDecoder) {
+      HttpSecurity http,
+      SecurityProblemWriter problemWriter,
+      @Qualifier("identityAssertionDecoder") JwtDecoder identityAssertionDecoder) {
     StatelessSecurityDefaults.apply(http, problemWriter);
 
     // 转换器给出的已经是认证完成的对象，原样返回；不经过 ProviderManager，凭据不会被擦掉。

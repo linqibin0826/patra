@@ -112,6 +112,25 @@ class IdentityAssertionAuthenticationConverterTest {
   }
 
   @Test
+  @DisplayName("typ 里带换行的伪造断言：401，日志里不出现换行和伪造的行")
+  void should_not_let_unverified_header_forge_log_lines(CapturedOutput output)
+      throws JOSEException {
+    ECKey attacker = generate();
+    SignedJWT forged =
+        new SignedJWT(
+            new JWSHeader.Builder(JWSAlgorithm.ES256)
+                .type(new JOSEObjectType("x\n2026-10-08 ERROR 伪造的一行"))
+                .keyID(KEY.getKeyID())
+                .build(),
+            claims().build());
+    forged.sign(new ECDSASigner(attacker));
+
+    assertThatThrownBy(() -> converter.convert(request("Bearer " + forged.serialize())))
+        .isInstanceOf(BadCredentialsException.class);
+    assertThat(output).contains("拒绝身份断言").doesNotContain("\n2026-10-08 ERROR 伪造的一行");
+  }
+
+  @Test
   @DisplayName("签名正确但 sub 不是正整数：500")
   void should_fail_with_malformed_identity_when_claims_invalid() throws JOSEException {
     String malformed = signed(claims().subject("abc").build());

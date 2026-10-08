@@ -23,6 +23,9 @@ public final class IdentityAssertionAuthenticationConverter implements Authentic
 
   private static final String BEARER_PREFIX = "Bearer ";
 
+  /// 写进日志的原因最多这么长。
+  private static final int MAX_REASON_LENGTH = 200;
+
   private final JwtDecoder decoder;
 
   /// 创建转换器。
@@ -63,11 +66,29 @@ public final class IdentityAssertionAuthenticationConverter implements Authentic
 
   /// 记一行警告并构造 401 对应的异常。日志里只有原因，没有断言的内容。
   ///
+  /// 原因可能来自解码器的异常消息，先去掉控制字符并截短：断言还没验签时，消息里的内容
+  /// 可能是攻击者写的，不能让它伪造出日志行。
+  ///
   /// @param request 当前请求
   /// @param reason 拒绝的原因
   /// @return 给调用方抛出的异常
   private static BadCredentialsException reject(HttpServletRequest request, String reason) {
-    log.warn("拒绝身份断言: {} {}，原因: {}", request.getMethod(), request.getRequestURI(), reason);
+    log.warn(
+        "拒绝身份断言: {} {}，原因: {}", request.getMethod(), request.getRequestURI(), sanitize(reason));
     return new BadCredentialsException("身份断言无效");
+  }
+
+  /// 去掉控制字符，截到 200 个字符以内。
+  ///
+  /// @param reason 原始的原因，可能为 `null`
+  /// @return 可以安全写进一行日志的文本
+  private static String sanitize(String reason) {
+    if (reason == null) {
+      return "";
+    }
+    String oneLine = reason.replaceAll("\\p{Cntrl}+", " ");
+    return oneLine.length() <= MAX_REASON_LENGTH
+        ? oneLine
+        : oneLine.substring(0, MAX_REASON_LENGTH) + "…";
   }
 }

@@ -128,6 +128,37 @@ class IdentityAssertionDecodersTest {
         .isInstanceOf(JwtException.class);
   }
 
+  @Test
+  @DisplayName("没有 exp 的断言：拒绝，不管签名对不对")
+  void should_reject_assertion_without_expiry() throws JOSEException {
+    String withoutExp = signed(KEY_A, header(KEY_A).build(), claims().expirationTime(null).build());
+
+    assertThatThrownBy(() -> decoder(PUBLIC_A, NOW).decode(withoutExp))
+        .isInstanceOf(JwtException.class);
+  }
+
+  @Test
+  @DisplayName("有效期超过 60 秒的断言：拒绝")
+  void should_reject_assertion_with_lifetime_over_limit() throws JOSEException {
+    String tooLong =
+        signed(
+            KEY_A,
+            header(KEY_A).build(),
+            claims().expirationTime(Date.from(NOW.plusSeconds(120))).build());
+
+    assertThatThrownBy(() -> decoder(PUBLIC_A, NOW).decode(tooLong))
+        .isInstanceOf(JwtException.class);
+  }
+
+  @Test
+  @DisplayName("没有 iat 的断言：拒绝")
+  void should_reject_assertion_without_issue_time() throws JOSEException {
+    String withoutIat = signed(KEY_A, header(KEY_A).build(), claims().issueTime(null).build());
+
+    assertThatThrownBy(() -> decoder(PUBLIC_A, NOW).decode(withoutIat))
+        .isInstanceOf(JwtException.class);
+  }
+
   /// 固定时钟的解码器。
   private static JwtDecoder decoder(JWKSet keys, Instant now) {
     return IdentityAssertionDecoders.forPublicKeys(keys, Clock.fixed(now, ZoneOffset.UTC));
