@@ -482,7 +482,7 @@ PAP-62 已经在本分支提交、还没推送，改动范围小：
 | 封禁处理器在留出的位置删掉该用户的全部会话，并结束对应的登录记录 | PAP-64 |
 | 会话相关的 Redis 键带账号类型，比如 `idn:session:user:…` | PAP-64 |
 | 建议路径：`POST /auth/logout`、`GET /auth/me` | PAP-64 |
-| identity 接入安全 starter；dev 配置里内部令牌的给法 | PAP-64 |
+| identity 接入安全 starter；dev 配置里网关公钥的给法（`patra.security.identity-assertion.public-keys`，格式见 PAP-70 改写后的安全 starter 工程设计） | PAP-64 |
 | 会话契约如果放在 identity，建 `patra-identity-api` 模块 | PAP-64 |
 | 封禁、解封的乐观锁冲突转成文案固定、带 `CONFLICT` 特征的领域异常（现在 409 的 `detail` 是 Hibernate 的异常消息，带实体类全名和 ID），补接口层测试 | PAP-64 |
 | Redis 处于 `LOADING`、`READONLY`、`MASTERDOWN`、`BUSY` 等暂时不可用的状态时，登录返回 503 而不是 500（`LoginThrottleAdapter` 目前只转换连不上和超时） | PAP-64 |
