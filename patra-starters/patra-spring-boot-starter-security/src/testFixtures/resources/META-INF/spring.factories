@@ -1,2 +1,2 @@
 org.springframework.boot.EnvironmentPostProcessor=\
-dev.linqibin.patra.starter.security.test.TestGatewayTokenEnvironmentPostProcessor
+dev.linqibin.patra.starter.security.test.TestIdentityAssertionEnvironmentPostProcessor
