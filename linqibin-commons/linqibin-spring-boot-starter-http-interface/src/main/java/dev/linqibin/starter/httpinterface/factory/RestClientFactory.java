@@ -3,6 +3,7 @@ package dev.linqibin.starter.httpinterface.factory;
 import dev.linqibin.starter.httpinterface.config.HttpInterfaceProperties;
 import dev.linqibin.starter.httpinterface.config.HttpInterfaceProperties.ConnectionPoolProperties;
 import dev.linqibin.starter.httpinterface.config.HttpInterfaceProperties.ServiceGroupProperties;
+import dev.linqibin.starter.httpinterface.interceptor.InternalCallInterceptor;
 import java.time.Duration;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hc.client5.http.classic.HttpClient;
@@ -42,8 +43,9 @@ import org.springframework.web.service.invoker.HttpServiceProxyFactory;
 ///   @Bean
 ///   public RestClientFactory restClientFactory(
 ///       ObjectProvider<RestClientCustomizer> customizers,
+///       ObjectProvider<InternalCallInterceptor> interceptors,
 ///       HttpInterfaceProperties properties) {
-///     return new RestClientFactory(customizers, properties);
+///     return new RestClientFactory(customizers, interceptors, properties);
 ///   }
 ///
 ///   @Bean
@@ -68,15 +70,20 @@ import org.springframework.web.service.invoker.HttpServiceProxyFactory;
 public class RestClientFactory {
 
   private final ObjectProvider<RestClientCustomizer> customizers;
+  private final ObjectProvider<InternalCallInterceptor> internalCallInterceptors;
   private final HttpInterfaceProperties properties;
 
   /// 构造 RestClient 工厂
   ///
   /// @param customizers RestClient 自定义器提供者
+  /// @param internalCallInterceptors 只挂到内部客户端上的拦截器提供者
   /// @param properties HTTP Interface 配置属性
   public RestClientFactory(
-      ObjectProvider<RestClientCustomizer> customizers, HttpInterfaceProperties properties) {
+      ObjectProvider<RestClientCustomizer> customizers,
+      ObjectProvider<InternalCallInterceptor> internalCallInterceptors,
+      HttpInterfaceProperties properties) {
     this.customizers = customizers;
+    this.internalCallInterceptors = internalCallInterceptors;
     this.properties = properties;
   }
 
@@ -112,6 +119,10 @@ public class RestClientFactory {
 
     // 应用所有 RestClientCustomizer（错误处理器、TraceId 拦截器等）
     customizers.orderedStream().forEach(customizer -> customizer.customize(clientBuilder));
+
+    // 只给内部客户端挂的拦截器（比如转发身份断言）。
+    // RestClientCustomizer 也会作用到外部数据源的客户端上，这些拦截器不会。
+    internalCallInterceptors.orderedStream().forEach(clientBuilder::requestInterceptor);
 
     return clientBuilder.build();
   }

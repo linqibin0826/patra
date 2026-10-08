@@ -5,9 +5,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import dev.linqibin.starter.httpinterface.config.HttpInterfaceProperties;
 import dev.linqibin.starter.httpinterface.config.HttpInterfaceProperties.ServiceGroupProperties;
+import dev.linqibin.starter.httpinterface.interceptor.InternalCallInterceptor;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -17,6 +21,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.restclient.RestClientCustomizer;
+import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.service.annotation.GetExchange;
 import org.springframework.web.service.annotation.HttpExchange;
@@ -35,12 +40,14 @@ import org.springframework.web.service.annotation.HttpExchange;
 @DisplayName("RestClientFactory 单元测试")
 class RestClientFactoryTest {
 
-  /// 创建带有空 customizers 的工厂
+  /// 创建带有空 customizers 和空拦截器的工厂
+  @SuppressWarnings("unchecked")
   private RestClientFactory createFactory(HttpInterfaceProperties properties) {
-    @SuppressWarnings("unchecked")
     ObjectProvider<RestClientCustomizer> customizers = mock(ObjectProvider.class);
     when(customizers.orderedStream()).thenReturn(Stream.empty());
-    return new RestClientFactory(customizers, properties);
+    ObjectProvider<InternalCallInterceptor> interceptors = mock(ObjectProvider.class);
+    when(interceptors.orderedStream()).thenReturn(Stream.empty());
+    return new RestClientFactory(customizers, interceptors, properties);
   }
 
   @Nested
@@ -117,8 +124,10 @@ class RestClientFactoryTest {
       RestClientCustomizer customizer = mock(RestClientCustomizer.class);
       ObjectProvider<RestClientCustomizer> customizers = mock(ObjectProvider.class);
       when(customizers.orderedStream()).thenReturn(Stream.of(customizer));
+      ObjectProvider<InternalCallInterceptor> interceptors = mock(ObjectProvider.class);
+      when(interceptors.orderedStream()).thenReturn(Stream.empty());
 
-      RestClientFactory factory = new RestClientFactory(customizers, properties);
+      RestClientFactory factory = new RestClientFactory(customizers, interceptors, properties);
       RestClient.Builder builder = RestClient.builder();
 
       // When
@@ -145,6 +154,43 @@ class RestClientFactoryTest {
 
       // Then
       assertThat(restClient).isNotNull();
+    }
+  }
+
+  @Nested
+  @DisplayName("InternalCallInterceptor 测试")
+  class InternalCallInterceptorTests {
+
+    @Test
+    @DisplayName("容器里的 InternalCallInterceptor 被挂到创建的客户端上，请求真的经过它")
+    @SuppressWarnings("unchecked")
+    void shouldApplyInternalCallInterceptors() {
+      // Given
+      HttpInterfaceProperties properties = new HttpInterfaceProperties();
+      ObjectProvider<RestClientCustomizer> customizers = mock(ObjectProvider.class);
+      when(customizers.orderedStream()).thenReturn(Stream.empty());
+      InternalCallInterceptor marker =
+          (request, body, execution) -> {
+            request.getHeaders().set("X-Internal-Call", "yes");
+            return execution.execute(request, body);
+          };
+      ObjectProvider<InternalCallInterceptor> interceptors = mock(ObjectProvider.class);
+      when(interceptors.orderedStream()).thenReturn(Stream.of(marker));
+      RestClient.Builder builder = RestClient.builder();
+      MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+      server
+          .expect(requestTo("http://localhost:8080/ping"))
+          .andExpect(header("X-Internal-Call", "yes"))
+          .andRespond(withSuccess());
+
+      // When
+      RestClient restClient =
+          new RestClientFactory(customizers, interceptors, properties)
+              .createRestClient(builder, "self", "http://localhost:8080");
+      restClient.get().uri("/ping").retrieve().toBodilessEntity();
+
+      // Then
+      server.verify();
     }
   }
 

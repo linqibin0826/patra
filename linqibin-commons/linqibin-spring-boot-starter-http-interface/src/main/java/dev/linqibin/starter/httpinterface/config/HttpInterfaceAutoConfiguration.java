@@ -3,6 +3,7 @@ package dev.linqibin.starter.httpinterface.config;
 import dev.linqibin.starter.httpinterface.config.HttpInterfaceProperties.ConnectionPoolProperties;
 import dev.linqibin.starter.httpinterface.error.ProblemDetailErrorHandler;
 import dev.linqibin.starter.httpinterface.factory.RestClientFactory;
+import dev.linqibin.starter.httpinterface.interceptor.InternalCallInterceptor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hc.client5.http.classic.HttpClient;
 import org.apache.hc.client5.http.config.RequestConfig;
@@ -213,16 +214,19 @@ public class HttpInterfaceAutoConfiguration {
   /// 注册 RestClient 工厂
   ///
   /// 提供通用的 RestClient 创建逻辑，简化各服务的 HTTP Interface 配置。
-  /// 自动应用分组级别的超时配置和错误处理器。
+  /// 自动应用分组级别的超时配置、错误处理器，以及只给内部客户端的拦截器。
   ///
   /// @param customizers RestClient 自定义器提供者
+  /// @param internalCallInterceptors 只挂到内部客户端上的拦截器提供者
   /// @param properties HTTP Interface 配置属性
   /// @return RestClient 工厂实例
   @Bean
   @ConditionalOnMissingBean
   public RestClientFactory restClientFactory(
-      ObjectProvider<RestClientCustomizer> customizers, HttpInterfaceProperties properties) {
+      ObjectProvider<RestClientCustomizer> customizers,
+      ObjectProvider<InternalCallInterceptor> internalCallInterceptors,
+      HttpInterfaceProperties properties) {
     log.info("注册 RestClientFactory");
-    return new RestClientFactory(customizers, properties);
+    return new RestClientFactory(customizers, internalCallInterceptors, properties);
   }
 }
