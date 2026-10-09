@@ -1,4 +1,27 @@
 {
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/ship-gate.py\""
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|mcp__ccd_pr__set_auto_merge",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/ship-gate.py\""
+          }
+        ]
+      }
+    ]
+  },
   "enabledPlugins": {
     "frontend-design@claude-plugins-official": true,
     "superpowers@claude-plugins-official": true
