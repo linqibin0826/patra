@@ -1,10 +1,14 @@
 package dev.linqibin.patra.identity.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.linqibin.patra.common.security.AccountType;
 import dev.linqibin.patra.common.security.ClientType;
 import dev.linqibin.starter.test.container.initializer.RedisContainerInitializer;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.net.ServerSocket;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
@@ -23,6 +27,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
+import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -273,6 +278,97 @@ class RedisSessionStoreIT {
     assertThat(third.replacedSessionIds()).containsExactly(eighteenDigits);
     assertThat(store.findAndTouch(older)).isEmpty();
     assertThat(store.findAndTouch(newer)).isPresent();
+  }
+
+  @Test
+  @DisplayName("按用户 ID 和会话 ID 删：返回 true，键和索引条目都没了")
+  void should_delete_session_by_user_and_session_id() {
+    SessionToken token = store.create(newSession(42L, 7001L).build()).token();
+
+    assertThat(store.delete(AccountType.USER, 42L, 7001L)).isTrue();
+
+    assertThat(redis.hasKey("idn:session:user:" + token.hash())).isFalse();
+    assertThat(redis.opsForHash().hasKey("idn:user-sessions:user:42", "7001")).isFalse();
+    assertThat(store.findAndTouch(token)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("拿别的用户 ID 配真实的会话 ID 删：返回 false，会话还在")
+  void should_not_delete_session_of_another_user() {
+    SessionToken token = store.create(newSession(42L, 7001L).build()).token();
+
+    assertThat(store.delete(AccountType.USER, 43L, 7001L)).isFalse();
+
+    assertThat(store.findAndTouch(token)).isPresent();
+  }
+
+  @Test
+  @DisplayName("会话已经没了再删：返回 false")
+  void should_return_false_when_session_is_already_gone() {
+    SessionToken token = store.create(newSession(42L, 7001L).build()).token();
+    redis.delete("idn:session:user:" + token.hash());
+
+    assertThat(store.delete(AccountType.USER, 42L, 7001L)).isFalse();
+    assertThat(store.delete(AccountType.USER, 42L, 7999L)).isFalse();
+    assertThat(redis.opsForHash().hasKey("idn:user-sessions:user:42", "7001")).isFalse();
+  }
+
+  @Test
+  @DisplayName("删全部：只返回真正删掉的会话 ID，索引键整个没了")
+  void should_delete_all_sessions_of_user_and_report_only_existing() {
+    SessionToken first = store.create(newSession(42L, 7001L).build()).token();
+    store.create(newSession(42L, 7002L).build());
+    store.create(newSession(42L, 7003L).build());
+    SessionToken other = store.create(newSession(43L, 7004L).build()).token();
+    redis.delete("idn:session:user:" + first.hash());
+
+    List<Long> deleted = store.deleteAll(AccountType.USER, 42L);
+
+    assertThat(deleted).containsExactlyInAnyOrder(7002L, 7003L);
+    assertThat(redis.hasKey("idn:user-sessions:user:42")).isFalse();
+    assertThat(redis.keys("idn:session:user:*"))
+        .containsExactly("idn:session:user:" + other.hash());
+    assertThat(store.deleteAll(AccountType.USER, 42L)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("Redis 连不上：四个操作都抛 SessionStoreUnavailableException")
+  void should_translate_connection_failure_to_unavailable() {
+    LettuceConnectionFactory unreachable =
+        new LettuceConnectionFactory(
+            new RedisStandaloneConfiguration("127.0.0.1", closedPort()),
+            LettuceClientConfiguration.builder()
+                .commandTimeout(Duration.ofMillis(500))
+                .shutdownTimeout(Duration.ZERO)
+                .build());
+    unreachable.afterPropertiesSet();
+    unreachable.start();
+    try {
+      RedisSessionStore broken = new RedisSessionStore(new StringRedisTemplate(unreachable), clock);
+      SessionToken token = SessionToken.generate(AccountType.USER, new SecureRandom());
+
+      assertThatThrownBy(() -> broken.create(newSession(42L, 7001L).build()))
+          .isInstanceOf(SessionStoreUnavailableException.class);
+      assertThatThrownBy(() -> broken.findAndTouch(token))
+          .isInstanceOf(SessionStoreUnavailableException.class);
+      assertThatThrownBy(() -> broken.delete(AccountType.USER, 42L, 7001L))
+          .isInstanceOf(SessionStoreUnavailableException.class);
+      assertThatThrownBy(() -> broken.deleteAll(AccountType.USER, 42L))
+          .isInstanceOf(SessionStoreUnavailableException.class);
+    } finally {
+      unreachable.destroy();
+    }
+  }
+
+  /// 找一个当前没人监听的端口。
+  ///
+  /// @return 端口号
+  static int closedPort() {
+    try (ServerSocket socket = new ServerSocket(0)) {
+      return socket.getLocalPort();
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
   }
 
   /// 一个合法会话的建造器，用当前时钟算时间。

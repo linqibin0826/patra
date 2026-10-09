@@ -39,6 +39,13 @@ public final class RedisSessionStore {
   private static final RedisScript<List> TOUCH_SCRIPT =
       RedisScript.of(new ClassPathResource("redis/session-touch.lua"), List.class);
 
+  private static final RedisScript<Long> DELETE_SCRIPT =
+      RedisScript.of(new ClassPathResource("redis/session-delete.lua"), Long.class);
+
+  @SuppressWarnings("rawtypes")
+  private static final RedisScript<List> DELETE_ALL_SCRIPT =
+      RedisScript.of(new ClassPathResource("redis/session-delete-all.lua"), List.class);
+
   private final StringRedisTemplate redis;
   private final Clock clock;
   private final SecureRandom random = new SecureRandom();
@@ -101,6 +108,44 @@ public final class RedisSessionStore {
       return Optional.empty();
     }
     return Optional.of(toStoredSession(fields));
+  }
+
+  /// 按用户 ID 和会话 ID 删一条会话。登出用：identity 手里只有断言里的 `sub` 和 `sid`。
+  ///
+  /// @param accountType 账号类型
+  /// @param userId 用户 ID
+  /// @param sessionId 会话 ID
+  /// @return 会话键真正删掉了返回 `true`；会话已经不在或不属于这个用户返回 `false`
+  /// @throws SessionStoreUnavailableException Redis 暂时不可用时
+  public boolean delete(AccountType accountType, long userId, long sessionId) {
+    Objects.requireNonNull(accountType, "accountType 不能为 null");
+    Long deleted =
+        execute(
+            () ->
+                redis.execute(
+                    DELETE_SCRIPT,
+                    List.of(indexKey(accountType, userId)),
+                    sessionKeyPrefix(accountType),
+                    Long.toString(sessionId)));
+    return deleted != null && deleted == 1;
+  }
+
+  /// 删掉一个用户的全部会话。封禁用。
+  ///
+  /// @param accountType 账号类型
+  /// @param userId 用户 ID
+  /// @return 会话键真正删掉了的会话 ID，调用方据此结束登录记录
+  /// @throws SessionStoreUnavailableException Redis 暂时不可用时
+  public List<Long> deleteAll(AccountType accountType, long userId) {
+    Objects.requireNonNull(accountType, "accountType 不能为 null");
+    List<?> deleted =
+        execute(
+            () ->
+                redis.execute(
+                    DELETE_ALL_SCRIPT,
+                    List.of(indexKey(accountType, userId)),
+                    sessionKeyPrefix(accountType)));
+    return toSessionIds(deleted);
   }
 
   /// 某账号类型的会话键前缀。
