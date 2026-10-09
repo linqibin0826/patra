@@ -77,6 +77,7 @@
             "impacts": [
                 "catalog",
                 "foundation",
+                "gateway",
                 "identity",
                 "ingest"
             ],
@@ -92,6 +93,7 @@
             "impacts": [
                 "catalog",
                 "foundation",
+                "gateway",
                 "identity",
                 "ingest",
                 "object-storage",
@@ -324,6 +326,7 @@
             "unit": "foundation",
             "impacts": [
                 "foundation",
+                "gateway",
                 "identity"
             ],
             "tasks": [
@@ -417,6 +420,7 @@
             "project": ":patra-api:patra-identity:patra-identity-session",
             "unit": "identity",
             "impacts": [
+                "gateway",
                 "identity"
             ],
             "tasks": [
@@ -660,6 +664,7 @@
             "unit": "foundation",
             "impacts": [
                 "foundation",
+                "gateway",
                 "identity"
             ],
             "tasks": [
