@@ -5,7 +5,7 @@
 > **前置设计**：[安全 starter（PAP-62 / PAP-70）](2026-10-05-security-starter-design.md) 第 17 节
 > **后续 Issue**：[PAP-65](https://linear.app/papertrace/issue/PAP-65) 在本设计之上加鉴权
 > **日期**：2026-10-09
-> **状态**：设计已评审，待实施（分支 `feat/v0.8-accounts-api`）
+> **状态**：已实施（2026-10-09，分支 `feat/v0.8-accounts-api`）
 
 ## 1. 要解决的问题
 
@@ -114,7 +114,7 @@ linqibin:
 | `Forwarded` | 照旧写入 |
 | 逐跳头 | `Connection`、`Transfer-Encoding` 等逐跳头照旧剥掉；`Authorization` 不是逐跳头，原样到达下游 |
 | 流式响应 | `text/event-stream` 等流式类型照旧边收边转（WebMVC 版默认的 `streaming-media-types` 含 SSE），但整个响应受 60 秒总时长限制（第 6 节），这是与迁移前唯一的有意差别 |
-| 网关自己的端点 | `/actuator/**`、`/scalar.html` 由网关自己响应，不走路由 |
+| 网关自己的端点 | `/actuator/**`、`/scalar` 由网关自己响应，不走路由 |
 | 未匹配路由 | 404（响应体格式见第 8 节） |
 
 ## 8. 错误输出与失败状态码
@@ -169,7 +169,7 @@ Scalar 换成 springdoc 的 webmvc 版 starter，`scalar.sources` 不变：三�
   10. 容器里网关持有的 `ClientHttpRequestFactory` 是 `JdkClientHttpRequestFactory`。
   11. 请求处理线程是虚拟线程：测试配置里挂一个过滤器记录 `Thread.currentThread().isVirtual()`。
   12. 应用以 servlet 启动；classpath 上没有 WebFlux 版网关的自动配置类。
-  13. `/scalar.html` 返回 200。
+  13. `/scalar` 返回 200。
   14. 读超时是总时长：WireMock 分块慢速发送一个超过 1 秒的响应体，客户端收到 200 后响应被切断；钉住第 6 节接受的限制，框架行为变了能立刻知道。
 
 回归门控：`./gradlew :patra-api:patra-gateway-boot:check`、`:integrationTest`；全仓库 `./gradlew check`；`./gradlew dumpModuleGraph` 后模块图与构建一致（网关新增 starter-web 依赖，`patra-infra/cd/module-graph.json` 会变）。
@@ -180,23 +180,49 @@ Scalar 换成 springdoc 的 webmvc 版 starter，`scalar.sources` 不变：三�
 
 - 门户用到的 catalog 读接口；
 - 三个服务的 `/v3/api-docs`，重点看 servers 地址是否仍指向网关；
-- `/scalar.html`、一个不存在的路径、`/actuator/health`。
+- `/scalar`、一个不存在的路径、`/actuator/health`。
 
 门户本机起、网关地址指本机，跑现有的 Playwright e2e；再手工过首页、`/papers`、`/papers/[id]`、`/journals`、`/journals/[id]`。对照结果写进第 12 节。
 
 ## 12. 实施时要实测的点
 
-结果写回本节。
+结果写回本节（2026-10-09 实施时实测；对照 mini 的两条见文末说明）。
 
-1. 找不到实例：评审已据 5.0.3 源码确认过滤器抛 `HttpServerErrorException(503)`、现状落到 500 `GW-0500`；实施时验证 contributor 映射后的响应。
-2. JDK 客户端下连接被拒和读超时各抛什么：`ResourceAccessException` 的原因链里是哪几个类；第 8 节的分类按实测修正。
-3. starter-web 的全局处理器对代理失败异常的表现，写回安全 starter 设计第 14 节。
-4. `X-Forwarded-Prefix` 的值与 WebFlux 版一致；下游 springdoc 的 servers 地址正确。
-5. Boot 的重定向默认值在网关这条链路上是否真的会跟随；`dont-follow` 生效后下游 302 原样到客户端。
-9. 读超时切断流式响应时客户端看到什么（截断的分块、连接关闭），网关日志里是什么异常。
-6. 下游收到的 `Host` 头是什么。
-7. 虚拟线程下 Nacos 客户端、OTel agent、Micrometer 是否正常。
-8. Apache HttpClient 5 是否在网关 classpath 上、谁带进来的；`factory: jdk` 之后它只是闲置依赖。
+1. 找不到实例。实测（`GatewayFailureIT`）：到达处理器的是 `HttpServerErrorException`，经 contributor 映射后响应 503、`application/problem+json`、`GW-0503`。
+2. JDK 客户端下连接被拒与读超时的原因链。实测：连接被拒是 `ResourceAccessException → java.net.ConnectException`（503）；响应头到达前超时是 `ResourceAccessException → java.net.http.HttpTimeoutException("Request cancelled")`（504）。第 8 节的分类不用改。另外 `ResourceAccessException` 的构造只收 `IOException` 原因，`UnresolvedAddressException` 不可能直接挂在它下面，真实形态是包在 `ConnectException` 里，contributor 先判 `ConnectException` 已覆盖。
+3. 全局处理器对代理失败的表现。实测：代理失败以异常到达 `GlobalRestExceptionHandler`，经错误引擎解析；没有 contributor 时判成 500 `GW-0500`。已写回安全 starter 设计第 14 节。
+4. `X-Forwarded-Prefix` 与下游 springdoc 的 servers。实测（`GatewayRoutingIT`）：下游收到 `X-Forwarded-Host` / `Port` / `Proto` 和 `X-Forwarded-Prefix: /patra-catalog`，`Forwarded` 照旧写入。与 mini 上 WebFlux 版的对照见文末。
+5. 重定向。没有单测 Boot 的默认值；`dont-follow` 下下游的 302 与 `Location` 原样到客户端，下游没有收到对 `/new` 的请求。注意测试客户端 `RestTestClient` 自己会跟随 302，看到的会是它跟去 `/new` 后网关给的 404，这条用例要用不跟随重定向的 JDK `HttpClient` 打网关。
+6. 下游收到的 `Host`。实测：`Host: localhost:<下游端口>`，即下游自己的地址，网关不保留客户端的 Host。WireMock 3 默认开 h2c，JDK 客户端会升级到 HTTP/2、Host 变成看不见的 `:authority`，测试里 `http2PlainDisabled(true)`；Tomcat 默认不开 h2c，真实下游不受影响。
+7. 虚拟线程下的运行。实测：本机以 dev profile 启动，Tomcat 1.4 秒起来，`PatraGatewayApplicationIT` 证实请求跑在虚拟线程上；Nacos 与 OTel 的联通对照见文末。
+8. Apache HttpClient 5。实测：`httpclient5 5.6.4` 在运行时 classpath 上，由 `com.alibaba.nacos:nacos-client:3.1.1` 带入；Boot 的自动探测会选到它，`factory: jdk` 之后它只是闲置依赖，`PatraGatewayApplicationIT` 断言容器里的 `ClientHttpRequestFactory` 是 `JdkClientHttpRequestFactory`。
+9. 读超时切断流式响应。实测（`GatewayFailureIT`）：响应体转发到一半被切断时，网关侧抛 `IOException`（`closed`、`chunked transfer encoding, state: READING_DATA`、`subscription cancelled`），此时响应已提交，全局处理器仍按 500 `GW-0500` 走了一遍并打了 ERROR 日志，但状态码改不了；客户端拿到半截响应体或连接异常。
+
+实施时另外发现的三点：
+
+- 文档聚合页的路径是 `/scalar`，不是 README 原来写的 `/scalar.html`：springdoc 3.0.1 的 webmvc Scalar 控制器映射在 `${scalar.path:/scalar}`。第 7 节与 README 已改。
+- Boot 4.0.8 的 `ImperativeHttpClientAutoConfiguration` 会用 builder 加 `spring.http.clients.*` 的设置装出一个 `ClientHttpRequestFactory` Bean，WebMVC 版网关的 RestClient 优先用它。所以「不声明 `ClientHttpRequestFactory` Bean」仍成立，但容器里有 Boot 装的那个，测试直接断言它的类型。
+- 项目的测试 starter 带着 `spring-boot-starter-data-jpa-test` / `jdbc-test` / `flyway-test`，`hexagonal-boot` 插件给每个 boot 模块都加了它；网关没有数据库，测试上下文会因为建不出 `DataSource` 起不来。网关在 `configurations.testImplementation` 上把这几个模块排除掉。
+
+**对照 mini**（第 11 节，2026-10-09 实测）。本机以 dev profile 起迁移后的网关，经 mini 上的 Nacos 发现服务（实例地址是 mini 的局域网 IP `192.168.97.x`，本机同网段直连）；同一批 URL 分别打 mini 上迁移前的 WebFlux 网关和本机网关：
+
+| 路径 | 迁移前 | 迁移后 | 结论 |
+|---|---|---|---|
+| 门户用到的 7 个 catalog 读接口（文献流 `tab=recent`、检索、检索 facets、文献详情、期刊列表、期刊 facets、期刊详情） | 200 | 200 | `Content-Type` 与响应体逐字节一致（忽略 `traceId`、`timestamp`） |
+| `publications?tab=latest`（下游校验失败） | 422 ProblemDetail `CAT-0422` | 同 | 下游错误原样透传 |
+| `/patra-catalog/v3/api-docs` | 200，`servers[0].url=http://100.103.73.27:9528/patra-catalog` | 200，`servers[0].url=http://localhost:9528/patra-catalog` | 各指向自己的网关地址，`X-Forwarded-*` 生效 |
+| `/patra-registry/v3/api-docs`、`/patra-ingest/v3/api-docs` | 404 ProblemDetail（两个服务没开 springdoc） | 同 | 一致 |
+| `/scalar` | 200 | 200 | HTML 只差基地址；mini 上 `/scalar.html` 同样是 404，README 原来的路径早已过时 |
+| `/nowhere` | 404，Spring 默认 JSON | 404，`application/problem+json`，`GW-0404` | Issue 要的变化 |
+| `/actuator/health` | 200 | 200 | 一致 |
+
+唯一的响应头差别是状态行：Netty 写 `HTTP/1.1 200 OK`，Tomcat 写 `HTTP/1.1 200 `（不带原因短语），客户端不关心。
+
+门户 e2e（`pnpm test:e2e`，门户指向本机网关）：`--workers=1` 串行 14 个用例全过；指向 mini 旧网关同样 14 个全过。默认并行跑时两边都会有 3 到 4 个「点卡片后 5 秒内没跳转」的超时失败，对 mini 更多，是 dev server 并行编译加 tailscale 时延的抖动，与网关无关。
+
+第 7 条补充：虚拟线程下 Nacos 发现正常（实例列表、订阅都拿到），OTel agent 向 mini 的 collector 导出正常，日志里没有导出失败。
+
+本机对照时踩到的两个环境坑，与网关无关但值得记：macOS 的 JVM 会自动把系统代理（Shadowrocket 的 127.0.0.1:7890）装进 `http.proxyHost`，而系统例外列表里的 CIDR（`100.64.0.0/10`、`192.168.0.0/16`）Java 的 `nonProxyHosts` 不认，于是网关的 RestClient 和 Nacos 的 gRPC 客户端（grpc-java 也看 `ProxySelector`）都被送进了代理，拿到的是代理回的空 503 加 `Proxy-Connection: close`；本机跑时要带 `JAVA_TOOL_OPTIONS="-Dhttp.nonProxyHosts=localhost|127.*|100.*|192.168.*|172.*|10.*"`（https、socks 同样设）。另外 mini 的 Nacos 开着鉴权，本机起网关要带 `.env.common` 里的 `NACOS_USERNAME` / `NACOS_PASSWORD`。
 
 ## 13. 交给其他 Issue 的约束
 
