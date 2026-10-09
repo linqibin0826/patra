@@ -8,7 +8,14 @@ import dev.linqibin.starter.test.container.initializer.RedisContainerInitializer
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -183,6 +190,89 @@ class RedisSessionStoreIT {
     SessionToken unknown = SessionToken.generate(AccountType.USER, new SecureRandom());
 
     assertThat(store.findAndTouch(unknown)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("第 11 次登录挤掉最老的一条：返回它的 ID，它的键和索引条目都没了")
+  void should_evict_oldest_session_when_over_cap() {
+    List<SessionToken> tokens = new ArrayList<>();
+    for (int i = 0; i < 10; i++) {
+      tokens.add(store.create(newSession(42L, 7001L + i).build()).token());
+    }
+
+    IssuedSession eleventh = store.create(newSession(42L, 7011L).build());
+
+    assertThat(eleventh.replacedSessionIds()).containsExactly(7001L);
+    assertThat(redis.hasKey("idn:session:user:" + tokens.get(0).hash())).isFalse();
+    assertThat(redis.hasKey("idn:session:user:" + tokens.get(1).hash())).isTrue();
+    assertThat(redis.opsForHash().keys("idn:user-sessions:user:42"))
+        .hasSize(10)
+        .doesNotContain("7001")
+        .contains("7002", "7011");
+    assertThat(store.findAndTouch(tokens.get(0))).isEmpty();
+  }
+
+  @Test
+  @DisplayName("建会话时清掉指向不存在会话的悬空条目")
+  void should_prune_dangling_index_entries_on_create() {
+    SessionToken first = store.create(newSession(42L, 7001L).build()).token();
+    store.create(newSession(42L, 7002L).build());
+    redis.delete("idn:session:user:" + first.hash());
+
+    IssuedSession third = store.create(newSession(42L, 7003L).build());
+
+    assertThat(third.replacedSessionIds()).isEmpty();
+    assertThat(redis.opsForHash().keys("idn:user-sessions:user:42"))
+        .containsExactlyInAnyOrder("7002", "7003");
+  }
+
+  @Test
+  @DisplayName("同一用户并发登录 20 次，索引里仍然只有 10 条、Redis 里只有 10 个会话键")
+  void should_keep_cap_under_concurrent_logins() throws Exception {
+    int logins = 20;
+    ExecutorService pool = Executors.newFixedThreadPool(logins);
+    CountDownLatch go = new CountDownLatch(1);
+    List<Future<IssuedSession>> futures = new ArrayList<>();
+    try {
+      for (int i = 0; i < logins; i++) {
+        long sessionId = 8001L + i;
+        futures.add(
+            pool.submit(
+                () -> {
+                  go.await();
+                  return store.create(newSession(42L, sessionId).build());
+                }));
+      }
+      go.countDown();
+      int evicted = 0;
+      for (Future<IssuedSession> future : futures) {
+        evicted += future.get().replacedSessionIds().size();
+      }
+      assertThat(evicted).isEqualTo(10);
+    } finally {
+      pool.shutdownNow();
+    }
+
+    assertThat(redis.opsForHash().size("idn:user-sessions:user:42")).isEqualTo(10);
+    Set<String> sessionKeys = redis.keys("idn:session:user:*");
+    assertThat(sessionKeys).hasSize(10);
+  }
+
+  @Test
+  @DisplayName("会话 ID 先比位数再比字典序：18 位的比 19 位的老，先被挤掉")
+  void should_order_sessions_by_id_length_then_lexicographically() {
+    long nineteenDigits = 1_000_000_000_000_000_000L;
+    long eighteenDigits = 999_999_999_999_999_999L;
+    SessionToken newer =
+        store.create(newSession(42L, nineteenDigits).maxSessionsPerUser(2).build()).token();
+    SessionToken older =
+        store.create(newSession(42L, eighteenDigits).maxSessionsPerUser(2).build()).token();
+
+    IssuedSession third = store.create(newSession(42L, 7003L).maxSessionsPerUser(2).build());
+
+    assertThat(third.replacedSessionIds()).containsExactly(eighteenDigits);
+    assertThat(store.findAndTouch(older)).isEmpty();
+    assertThat(store.findAndTouch(newer)).isPresent();
   }
 
   /// 一个合法会话的建造器，用当前时钟算时间。
