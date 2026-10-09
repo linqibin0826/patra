@@ -64,6 +64,7 @@ v0.8 的身份体系里，网关是唯一的鉴权入口：浏览器只拿着不
 - `XForwardedRequestHeadersFilter` 和 `ForwardedRequestHeadersFilter` 的 order 都是 0；来源可信时保留已有的值再追加，不可信时整个剥掉、也不追加；没有「剥掉客户端的、只写自己的」这一档。`RemoveHopByHopRequestHeadersFilter` 的 order 是最大值减一。
 - `AuthenticationFilter`：转换器返回 `null` 时直接继续过滤器链、不建认证；转换器抛 `AuthenticationException` 时调失败处理器、不再继续；成功时把认证放进上下文和 `RequestAttributeSecurityContextRepository`，再交给成功处理器（它的默认实现调完三参版本后继续过滤器链）。
 - Spring Data Redis 的 `LettuceExceptionConverter`：`RedisConnectionException` → `RedisConnectionFailureException`；`RedisCommandTimeoutException` → `QueryTimeoutException`；`RedisCommandExecutionException` 及其子类 → `RedisSystemException("Error in execution")`；其余 `RedisException` → `RedisSystemException("Redis exception")`。
+- springdoc-openapi-starter-webmvc-scalar 3.0.1 的 `ScalarConfiguration` 无条件（`@ConditionalOnMissingBean`）注册一个 `FilterRegistrationBean<ForwardedHeaderFilter>`，它会「应用」入站的转发头：`X-Forwarded-Prefix` 变成上下文路径。实施时实测：客户端带 `X-Forwarded-Prefix: /evil` 时 `StripPrefix` 剥掉的是 `evil`，下游收到未剥前缀的路径（2026-10-09，Task 6 探针）。
 - Lettuce 6.8.2 里直接继承 `RedisException` 的有 `RedisCommandExecutionException`（服务端的错误回复，`LOADING` / `READONLY` / `BUSY` / `NOSCRIPT` 是它的子类）、`RedisConnectionException`、`RedisCommandTimeoutException`、`RedisCommandInterruptedException`。
 
 ## 4. 方案比较
@@ -87,7 +88,7 @@ v0.8 的身份体系里，网关是唯一的鉴权入口：浏览器只拿着不
 | `SessionLookupFailedException` | 继承 `AuthenticationServiceException`：查会话时的非暂时失败（配置错、数据坏），输出 500 |
 | `GatewaySecurityErrorMappingContributor` | 继承 starter 的 `SecurityErrorMappingContributor`，先判 `SessionLookupFailedException` → `INTERNAL_ERROR`，其余交给父类；声明成 Bean 后 starter 那个 `@ConditionalOnMissingBean` 的让位 |
 | `IdentityAssertionRequestHeadersFilter` | `RequestHttpHeadersFilter`：剥外部 `Authorization`，已登录则写入现签的断言 |
-| `ExternalForwardedHeadersFilter` | `RequestHttpHeadersFilter`：剥外部自带的 `X-Forwarded-*` 和 `Forwarded`，排在框架追加自己值的过滤器之前 |
+| `forwardedHeaderFilter`（`GatewaySecurityConfiguration` 里的 `FilterRegistrationBean<ForwardedHeaderFilter>`） | servlet 层剥掉入站的 `Forwarded` / `X-Forwarded-*`（`removeOnly`），最高优先级；顶掉 springdoc Scalar starter 注册的那个会「应用」转发头的同类 Bean |
 | `GatewayIdentityAssertionProperties` | `patra.gateway.identity-assertion.private-key`，只按字符串绑定（第 9 节） |
 
 依赖（`build.gradle.kts`）：
@@ -179,17 +180,28 @@ Redis 重启瞬间在途命令的 `Connection closed` 是 Lettuce 的 `RedisExce
 
 ## 8. 出站请求头
 
-两个 `RequestHttpHeadersFilter` Bean，都排在框架的 X-Forwarded / Forwarded 过滤器（order 0）之前：
+### 8.1 入站转发头：servlet 层剥掉
 
-| Bean | order | 做什么 |
-|---|---|---|
-| `ExternalForwardedHeadersFilter` | -200 | 复制一份头，去掉名字以 `x-forwarded-` 开头的和 `forwarded`（不分大小写）。随后框架的过滤器在干净的头上追加网关自己的值，下游拿到的转发头只可能是网关写的。`trusted-proxies: ".*"` 保留，它只负责让追加生效 |
-| `IdentityAssertionRequestHeadersFilter` | -100 | 复制一份头，去掉 `Authorization`；从 `SecurityContextHolder.getContextHolderStrategy()` 取当前认证对象，是 `CurrentUserAuthentication` 就 `setBearerAuth(signer.sign(user))`，匿名什么都不写。和 starter 的 `IdentityAssertionForwardingInterceptor` 取上下文的方式相同 |
+网关前面没有任何反向代理，外部自带的 `Forwarded` / `X-Forwarded-*` 一律不合法。剥除放在 servlet 层而不是网关的头过滤器里：
+springdoc 的 Scalar starter 给网关注册了一个会「应用」入站转发头的 `ForwardedHeaderFilter`（第 3 节），
+客户端带 `X-Forwarded-Prefix` 就能改写网关看到的路径，让路由层的 `StripPrefix` 剥错段；在出站的头过滤器里剥已经晚了。
 
-- 返回的都是新建的可变 `HttpHeaders`：传进来的那份是 `ServerRequest` 的只读视图，框架随后还要在最终结果上删 `Host`。
-- `ProxyExchangeHandlerFunction` 在 `DispatcherServlet` 里、请求线程上调用这些过滤器，安全过滤器链放进线程上下文的认证对象此时还在。
+`GatewaySecurityConfiguration.forwardedHeaderFilter()` 声明同类型的 `FilterRegistrationBean<ForwardedHeaderFilter>`，
+springdoc 那个 `@ConditionalOnMissingBean` 的让位；过滤器开 `removeOnly`（只删不解释），`REQUEST` / `ASYNC` / `ERROR` 三种
+转发类型，order 最高优先级，先于 Security 和路由。于是路径规则、路由、随后框架追加的 `X-Forwarded-*` 都按真实请求算，
+下游拿到的转发头只可能是网关写的。`trusted-proxies: ".*"` 保留，它只负责让追加生效。
+
+### 8.2 出站 `Authorization`：`IdentityAssertionRequestHeadersFilter`
+
+一个 `RequestHttpHeadersFilter` Bean，order -100，排在框架的 X-Forwarded / Forwarded 过滤器（order 0）之前：
+复制一份头，去掉 `Authorization`；从 `SecurityContextHolder.getContextHolderStrategy()` 取当前认证对象，
+是 `CurrentUserAuthentication` 就 `setBearerAuth(signer.sign(user))`，匿名什么都不写。和 starter 的
+`IdentityAssertionForwardingInterceptor` 取上下文的方式相同。
+
+- 返回新建的可变 `HttpHeaders`：传进来的那份是 `ServerRequest` 的只读视图，框架随后还要在最终结果上删 `Host`。
+- `ProxyExchangeHandlerFunction` 在 `DispatcherServlet` 里、请求线程上调用头过滤器，安全过滤器链放进线程上下文的认证对象此时还在。
 - 断言每个请求现签、不缓存，有效期 60 秒由 starter 的常量决定；登出和封禁删掉会话后，下一个请求就签不出断言。
-- 将来网关前面真放了反向代理：删掉 `ExternalForwardedHeadersFilter`，把 `trusted-proxies` 改成代理的地址。README 写明。
+- 将来网关前面真放了反向代理：去掉 `removeOnly`，把 `trusted-proxies` 改成代理的地址。README 写明。
 
 ## 9. 签名器与密钥
 
@@ -265,9 +277,9 @@ PAP-69 的 404 / 503 / 504 表不变。identity 自己的 `IDN-0401` 仍会出�
 |---|---|
 | `SessionTokenAuthenticationConverterTest` | 第 7.1 节表格逐行：没头、多头、非 Bearer、非令牌格式、查不到都返回 `null`；查到时主体字段、凭据为 `null`、已认证；`SessionStoreUnavailableException` → `AuthenticationServiceException` 且保留原因；其他运行时异常 → `SessionLookupFailedException`；两种异常的消息里没有令牌 |
 | `IdentityAssertionRequestHeadersFilterTest` | 匿名时剥掉一个或多个 `Authorization`，其他头原样；已登录时写入断言，用测试公钥能验出同一个用户；返回的是新的可变实例 |
-| `ExternalForwardedHeadersFilterTest` | 大小写混写的 `X-Forwarded-*` 和 `Forwarded` 都去掉，其他头保留；order 小于 0 |
 | `GatewaySecurityErrorMappingContributorTest` | `SessionLookupFailedException` → `INTERNAL_ERROR`；父类的 503 / 401 / 403 映射仍在 |
 | `GatewaySecurityConfigurationTest`（`createSigner`） | 没配、不是 JWK、只有公钥、和验签器不配对四种启动失败，消息点名配置项且不含密钥内容；配对时签出的断言能被验签器解出 |
+| `GatewaySecurityConfigurationTest`（`forwardedHeaderFilter`） | 入站 `X-Forwarded-Prefix` / `X-Forwarded-Host` / `Forwarded` 被剥掉且不改写请求的路径、上下文路径和主机名；注册在最高优先级 |
 | 会话模块 `TransientRedisFailuresTest` 补用例 | `RedisException("Connection closed")`、`RedisCommandInterruptedException` → 暂时；`RedisCommandExecutionException("NOAUTH …")`、`WRONGTYPE` → 不是 |
 
 ### 13.2 集成测试（`src/integrationTest`，真实端口）

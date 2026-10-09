@@ -13,14 +13,20 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
+import com.github.tomakehurst.wiremock.verification.LoggedRequest;
 import dev.linqibin.patra.common.security.AccountType;
+import dev.linqibin.patra.common.security.ClientType;
+import dev.linqibin.patra.common.security.CurrentUser;
 import dev.linqibin.patra.identity.session.NewSession;
 import dev.linqibin.patra.identity.session.RedisSessionStore;
 import dev.linqibin.patra.identity.session.SessionToken;
+import dev.linqibin.patra.starter.security.assertion.IdentityAssertionClaims;
+import dev.linqibin.patra.starter.security.test.TestIdentity;
 import dev.linqibin.starter.test.container.initializer.RedisContainerInitializer;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,6 +38,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
@@ -242,5 +249,119 @@ class GatewayAuthenticationIT {
     identity.verify(1, postRequestedFor(urlPathEqualTo("/auth/login")));
     identity.verify(1, postRequestedFor(urlPathEqualTo("/auth/logout")));
     identity.verify(1, getRequestedFor(urlPathEqualTo("/v3/api-docs")));
+  }
+
+  @Test
+  void should_hand_identity_a_signed_assertion_for_the_session_user() {
+    String token = GatewayITSessions.issue(sessions, 4211L, 9211L);
+    identity.stubFor(get(urlPathEqualTo("/auth/me")).willReturn(okJson("{}")));
+
+    restClient
+        .get()
+        .uri("/patra-identity/auth/me")
+        .header(HttpHeaders.AUTHORIZATION, BEARER + token)
+        .exchange()
+        .expectStatus()
+        .isOk();
+
+    List<LoggedRequest> received = identity.findAll(getRequestedFor(urlPathEqualTo("/auth/me")));
+    assertThat(received).hasSize(1);
+    String authorization = received.getFirst().getHeader(HttpHeaders.AUTHORIZATION);
+    assertThat(authorization).startsWith(BEARER).doesNotContain(token);
+    Jwt jwt = decoder.decode(authorization.substring(BEARER.length()));
+    assertThat(IdentityAssertionClaims.toCurrentUser(jwt))
+        .isEqualTo(CurrentUser.of(4211L, 9211L, AccountType.USER, ClientType.WEB));
+  }
+
+  /// `Basic`、随手写的 Bearer、甚至一条用网关公钥能验的断言（泄露后被重放），都到不了下游：
+  /// 网关只认会话令牌，其余一律剥掉、当匿名。
+  @Test
+  void should_strip_external_authorization_that_is_not_a_session_token() {
+    catalog.stubFor(get(urlPathEqualTo("/portal/publications")).willReturn(okJson("{}")));
+    List<String> external =
+        List.of(
+            "Basic dXNlcjpwYXNz",
+            BEARER + "not-a-session-token",
+            BEARER + TestIdentity.assertion());
+
+    for (String value : external) {
+      restClient
+          .get()
+          .uri("/patra-catalog/portal/publications")
+          .header(HttpHeaders.AUTHORIZATION, value)
+          .exchange()
+          .expectStatus()
+          .isOk();
+    }
+
+    List<LoggedRequest> received =
+        catalog.findAll(getRequestedFor(urlPathEqualTo("/portal/publications")));
+    assertThat(received)
+        .hasSize(3)
+        .allSatisfy(request -> assertThat(request.getHeader(HttpHeaders.AUTHORIZATION)).isNull());
+  }
+
+  @Test
+  void should_treat_multiple_authorization_headers_as_anonymous_and_strip_them_all() {
+    String token = GatewayITSessions.issue(sessions, 4212L, 9212L);
+    identity.stubFor(post(urlPathEqualTo("/auth/logout")).willReturn(aResponse().withStatus(204)));
+
+    restClient
+        .post()
+        .uri("/patra-identity/auth/logout")
+        .header(HttpHeaders.AUTHORIZATION, BEARER + token)
+        .header(HttpHeaders.AUTHORIZATION, BEARER + token)
+        .exchange()
+        .expectStatus()
+        .isNoContent();
+
+    identity.verify(
+        postRequestedFor(urlPathEqualTo("/auth/logout")).withoutHeader(HttpHeaders.AUTHORIZATION));
+  }
+
+  /// 会话已失效时拿旧令牌登出：以匿名身份到达 identity，不带任何 `Authorization`，identity 回 204。
+  @Test
+  void should_let_logout_with_a_dead_token_reach_identity_anonymously() {
+    String token = GatewayITSessions.issue(sessions, 4213L, 9213L);
+    sessions.delete(AccountType.USER, 4213L, 9213L);
+    identity.stubFor(post(urlPathEqualTo("/auth/logout")).willReturn(aResponse().withStatus(204)));
+
+    restClient
+        .post()
+        .uri("/patra-identity/auth/logout")
+        .header(HttpHeaders.AUTHORIZATION, BEARER + token)
+        .exchange()
+        .expectStatus()
+        .isNoContent();
+
+    identity.verify(
+        postRequestedFor(urlPathEqualTo("/auth/logout")).withoutHeader(HttpHeaders.AUTHORIZATION));
+  }
+
+  @Test
+  void should_replace_client_supplied_forwarded_headers_with_gateway_values() {
+    catalog.stubFor(get(urlPathEqualTo("/portal/venues")).willReturn(okJson("{}")));
+
+    restClient
+        .get()
+        .uri("/patra-catalog/portal/venues")
+        .header("X-Forwarded-Host", "evil.example")
+        .header("X-Forwarded-Prefix", "/evil")
+        .header("X-Forwarded-For", "203.0.113.9")
+        .header("X-Forwarded-Proto", "https")
+        .header("Forwarded", "for=203.0.113.9;host=evil.example;proto=https")
+        .exchange()
+        .expectStatus()
+        .isOk();
+
+    LoggedRequest received =
+        catalog.findAll(getRequestedFor(urlPathEqualTo("/portal/venues"))).getFirst();
+    assertThat(received.getHeader("X-Forwarded-Host")).matches("localhost(:\\d+)?");
+    assertThat(received.getHeader("X-Forwarded-Prefix")).isEqualTo("/patra-catalog");
+    assertThat(received.getHeader("X-Forwarded-Proto")).isEqualTo("http");
+    assertThat(received.getHeader("X-Forwarded-For")).doesNotContain("203.0.113.9");
+    assertThat(received.getHeader("Forwarded"))
+        .doesNotContain("evil")
+        .doesNotContain("203.0.113.9");
   }
 }

@@ -15,13 +15,20 @@ import dev.linqibin.patra.starter.security.assertion.IdentityAssertionClaims;
 import dev.linqibin.patra.starter.security.assertion.IdentityAssertionDecoders;
 import dev.linqibin.patra.starter.security.assertion.IdentityAssertionSigner;
 import dev.linqibin.patra.starter.security.test.TestSigningKey;
+import jakarta.servlet.http.HttpServletRequest;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Arrays;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.core.Ordered;
+import org.springframework.mock.web.MockFilterChain;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.web.filter.ForwardedHeaderFilter;
 
 /// `createSigner`：四种启动失败和一种成功；错误信息点名配置项、不带密钥内容。
 class GatewaySecurityConfigurationTest {
@@ -84,5 +91,30 @@ class GatewaySecurityConfigurationTest {
 
     assertThat(IdentityAssertionClaims.toCurrentUser(jwt)).isEqualTo(USER);
     assertThat(jwt.getHeaders()).containsEntry("kid", KEY.getKeyID());
+  }
+
+  /// 网关前面没有反向代理：入站的 `Forwarded` / `X-Forwarded-*` 在 servlet 层直接剥掉、不解释，
+  /// 路径和主机都按真实请求算；注册得先于 Security 和路由。
+  @Test
+  void should_strip_inbound_forwarded_headers_without_applying_them() throws Exception {
+    FilterRegistrationBean<ForwardedHeaderFilter> registration =
+        new GatewaySecurityConfiguration().forwardedHeaderFilter();
+    MockHttpServletRequest request =
+        new MockHttpServletRequest("GET", "/patra-catalog/portal/venues");
+    request.addHeader("X-Forwarded-Prefix", "/evil");
+    request.addHeader("X-Forwarded-Host", "evil.example");
+    request.addHeader("Forwarded", "for=203.0.113.9;host=evil.example;proto=https");
+    MockFilterChain chain = new MockFilterChain();
+
+    registration.getFilter().doFilter(request, new MockHttpServletResponse(), chain);
+
+    HttpServletRequest downstream = (HttpServletRequest) chain.getRequest();
+    assertThat(downstream.getRequestURI()).isEqualTo("/patra-catalog/portal/venues");
+    assertThat(downstream.getContextPath()).isEmpty();
+    assertThat(downstream.getServerName()).isEqualTo("localhost");
+    assertThat(downstream.getHeader("X-Forwarded-Prefix")).isNull();
+    assertThat(downstream.getHeader("X-Forwarded-Host")).isNull();
+    assertThat(downstream.getHeader("Forwarded")).isNull();
+    assertThat(registration.getOrder()).isEqualTo(Ordered.HIGHEST_PRECEDENCE);
   }
 }

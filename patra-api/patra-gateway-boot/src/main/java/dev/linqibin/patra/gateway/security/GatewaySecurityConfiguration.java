@@ -15,8 +15,10 @@ import java.time.Clock;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.access.AccessDeniedException;
@@ -27,8 +29,9 @@ import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.authentication.AuthenticationFilter;
+import org.springframework.web.filter.ForwardedHeaderFilter;
 
-/// 网关鉴权的装配：会话存储、签名器、两条过滤器链、出站头过滤器。
+/// 网关鉴权的装配：会话存储、签名器、两条过滤器链、入站转发头的剥除、出站头过滤器。
 ///
 /// 两条过滤器链：第一条只匹配拒绝名单、对所有人 403；第二条查会话、identity 默认需登录、其余放行。
 /// starter 的默认过滤器链因为这里声明了而让位，它的写出器、错误映射、验签器照常生效。
@@ -126,6 +129,37 @@ public class GatewaySecurityConfiguration {
                     .anyRequest()
                     .permitAll());
     return http.build();
+  }
+
+  /// 入站的 `Forwarded` / `X-Forwarded-*` 在 servlet 层直接剥掉、不解释（`removeOnly`）。
+  ///
+  /// 网关前面没有任何反向代理，这些头从外面进来一律不合法。springdoc 的 Scalar starter 会无条件注册一个
+  /// 「应用」入站转发头的 `ForwardedHeaderFilter`：客户端带 `X-Forwarded-Prefix` 就能改写网关看到的路径，
+  /// 让 `StripPrefix` 剥错段。这里声明同类型的 Bean 让它让位。注册在最高优先级，先于 Security 和路由，
+  /// 所以路径规则、路由、出站的 `X-Forwarded-*` 都按真实请求算。
+  /// 将来网关前面放了反向代理：去掉 `removeOnly`，把 `trusted-proxies` 改成代理的地址。
+  ///
+  /// @return 过滤器注册
+  @Bean
+  public FilterRegistrationBean<ForwardedHeaderFilter> forwardedHeaderFilter() {
+    ForwardedHeaderFilter filter = new ForwardedHeaderFilter();
+    filter.setRemoveOnly(true);
+    FilterRegistrationBean<ForwardedHeaderFilter> registration =
+        new FilterRegistrationBean<>(filter);
+    registration.setDispatcherTypes(
+        DispatcherType.REQUEST, DispatcherType.ASYNC, DispatcherType.ERROR);
+    registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
+    return registration;
+  }
+
+  /// 出站：剥外部 `Authorization`，已登录写入现签的断言。
+  ///
+  /// @param signer 签名器
+  /// @return 过滤器
+  @Bean
+  public IdentityAssertionRequestHeadersFilter identityAssertionRequestHeadersFilter(
+      IdentityAssertionSigner signer) {
+    return new IdentityAssertionRequestHeadersFilter(signer);
   }
 
   /// 安全异常到错误码的映射：starter 的表加一行查会话失败 → 0500。starter 的同类 Bean 随之让位。
