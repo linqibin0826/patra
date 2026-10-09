@@ -300,13 +300,21 @@ PAP-69 的 404 / 503 / 504 表不变。identity 自己的 `IDN-0401` 仍会出�
 
 ## 14. 实施时要实测的点
 
-实施后本地做，结果写回本节：
+实施后本地做，结果写回本节（2026-10-09 实测，网关为本分支 Task 7 之后的构建；基础设施都在 Mac mini 上，本机用两个一次性容器
+`redis:7.0.15`、`postgres:17`，密钥对现生成在 scratchpad、用完删除）：
 
-1. 本地 compose 的 Redis 和 PostgreSQL + 生成的一对密钥，起 identity 和网关，经网关注册、查当前用户、登出、再查，看四个状态码；顺带看一眼网关日志里没有令牌、没有密钥。
+1. 本地起 identity 和网关（都关 Nacos，网关用 simple discovery 指到本机 identity），经网关注册、查当前用户、登出、再查，看状态码；顺带看网关日志里没有令牌、没有密钥。
+   - 实测：匿名 `GET /patra-identity/auth/me` 401 → `POST /auth/register` 201（响应字段 `email`、`sessionToken`、`userId`，令牌 `patra_user_` 开头、54 个字符）→ 带令牌 `/auth/me` 200（`userId`、`email`、`accountType: user`）→ `POST /auth/logout` 204 → 同一令牌 `/auth/me` 401（`GW-0401` 的 ProblemDetail：`detail`、`instance`、`status`、`title`、`type`、`code`、`path`、`timestamp`）→ `POST /patra-identity/admin/users/1/ban` 403（`GW-0403`，`Access denied`）→ `/patra-identity/actuator/health` 403 → 网关自己的 `/actuator/health` 200 → 拿失效令牌再登出 204（幂等）。网关和 identity 的标准输出与日志目录里搜不到 `patra_user_`，也搜不到私钥 JWK 的 `"d":` 字段。
 2. 门户 Playwright 指向本地网关跑一遍（`--workers=1`），证明门户读接口和改动前一致。
+   - 实测：本地网关连 mini 的 Nacos 做发现、Redis 用本机容器，`PATRA_GATEWAY_BASE_URL=http://localhost:9528 pnpm test:e2e --workers=1`：13 个用例 11 个通过，2 个文献检索用例失败；失败原因是网关到 mini 上 catalog 实例（`192.168.97.5:6300`）的连接超时（`GW-0503`，日志 `HTTP connect timed out`），同一时刻对 mini 旧网关和本地新网关直接发同一个检索请求都是 200，是 tailnet 子网路由到容器网段的间歇抖动，和鉴权改动无关。单独重跑 `papers-search.spec.ts`：5 个用例全部通过。门户读接口的行为与改动前一致。
 3. 循环打带令牌的请求，期间停掉再起 Redis 容器，确认是 503 不是 500，记下实际的异常类和消息，核对第 7.3 节的判定。
+   - 实测：70 个请求、间隔 200 毫秒，Redis 停 3.1 秒再起。结果 68 个 200、2 个 503、0 个 500。两个 503 的异常链都是 `AuthenticationServiceException("会话存储暂时不可用")` ← `SessionStoreUnavailableException` ← `QueryTimeoutException` ← `RedisCommandTimeoutException`：Lettuce 在断线期间把命令排队等重连，等满 2 秒命令超时的那两个请求变成 503，其余排队的请求在 Redis 回来后正常 200。本次没有出现 `RedisException("Connection closed")` 那种形状，第 7.3 节的新规则是为它兜底，判定不用改。
 4. 用错误的私钥启动一次，看启动失败的提示里有没有把密钥打出来。
+   - 实测：网关的公钥换成另一对密钥的、私钥不变，启动失败，`BeanCreationException` 的原因链末端是 `IllegalStateException`：「配置项 patra.gateway.identity-assertion.private-key 的私钥与 patra.security.identity-assertion.public-keys 里的公钥不配对或 kid 不一致（kid=…）」。标准输出和日志目录里 `"d":` 出现 0 次，私钥 JWK 的 `d` 值也搜不到。
 5. `//`、`%2F` 这类路径确实被防火墙以 400 拒绝（第 6.3 节最后一行按框架默认写，IT 里钉住）。
+   - 实测：`GatewayBlockedPathsIT.should_let_the_firewall_reject_abnormal_paths` 对 `/patra-catalog//_internal/x` 和 `/patra-catalog/%2e%2e/_internal/x` 都拿到 400，下游零请求；Tomcat 没有先把 `//` 合并。
+6. （实施中新增）客户端带转发头时下游看到什么。
+   - 实测：探针发现 springdoc Scalar starter 注册的 `ForwardedHeaderFilter` 会把入站 `X-Forwarded-Prefix: /evil` 当上下文路径，`StripPrefix` 剥掉的是 `evil`，下游收到 `/patra-catalog/portal/venues` 和 `X-Forwarded-Prefix: /evil`；按第 8.1 节改成 servlet 层 `removeOnly` 后，`GatewayAuthenticationIT.should_replace_client_supplied_forwarded_headers_with_gateway_values` 钉住下游只看到网关写的值。
 
 ## 15. 交给其他 Issue 的约束
 
