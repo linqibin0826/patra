@@ -170,14 +170,14 @@ patra:
 | 类型 | 内容 |
 |---|---|
 | `SessionToken` | 记录，只有 `value`。`generate(AccountType, SecureRandom)`；`parse(String) → Optional<SessionToken>`；`accountType()` 按前缀；`hash()` 十六进制；`toString()` 遮掩 |
-| `NewSession` | `@Builder` 记录：`userId`、`sessionId`、`accountType`、`clientType`、`deviceId`（可空）、`idleTimeout`、`absoluteLifetime`、`maxSessionsPerUser` |
+| `NewSession` | `@Builder` 记录：`userId`、`sessionId`、`accountType`、`clientType`、`deviceId`（可空）、`createdAt`、`expiresAt`、`idleTimeout`、`maxSessionsPerUser`。`createdAt` 和 `expiresAt` 由调用方按同一个 `now` 算出，Redis 和登录记录的过期时间才一致 |
 | `IssuedSession` | `of(SessionToken token, List<Long> replacedSessionIds)`，列表防御性拷贝 |
 | `StoredSession` | `@Builder` 记录：`userId`、`sessionId`、`accountType`、`clientType`、`deviceId`（可空）、`createdAt`、`lastActiveAt`、`expiresAt`；`toCurrentUser()` 给网关建认证对象 |
 | `RedisSessionStore` | 构造参数 `StringRedisTemplate`、`Clock`。`IssuedSession create(NewSession)`；`Optional<StoredSession> findAndTouch(SessionToken)`；`boolean delete(AccountType, long userId, long sessionId)`；`List<Long> deleteAll(AccountType, long userId)` |
 | `SessionStoreUnavailableException` | `DomainException`，特征 `DEP_UNAVAILABLE`，文案「服务暂时不可用」，两边的错误引擎都映射成 503 |
 | `TransientRedisFailures` | `static boolean isTransient(RuntimeException)`：连不上（`RedisConnectionFailureException` 等 `DataAccessResourceFailureException`）、超时（`QueryTimeoutException`）、Lettuce 的 `RedisLoadingException` / `RedisReadOnlyException` / `RedisBusyException`、消息以 `MASTERDOWN` 开头的命令错误。其余（脚本写错、`WRONGTYPE`、`NOAUTH`）是缺陷或配置错，不算暂时 |
 
-`RedisSessionStore` 的每个方法都把暂时失败转成 `SessionStoreUnavailableException`，其余异常原样抛出。`create` 对 `maxSessionsPerUser < 1`、`idleTimeout > absoluteLifetime` 抛 `IllegalArgumentException`，这是调用方的缺陷。
+`RedisSessionStore` 的每个方法都把暂时失败转成 `SessionStoreUnavailableException`，其余异常原样抛出。`NewSession` 的构造对 `maxSessionsPerUser < 1`、`expiresAt` 不晚于 `createdAt`、`idleTimeout` 不是正数抛 `IllegalArgumentException`，这是调用方的缺陷。
 
 消费方各自声明 Bean：identity 在 `IdentityConfiguration`，网关在自己的配置类；都用容器里的 `Clock`。
 
@@ -193,7 +193,7 @@ patra:
 | `LoginClient` | 值对象 | `ClientType` + 可空 `DeviceId`。`validate(rawClientType, rawDeviceId) → List<FieldViolation>`：类型为空按 `web`，不认识给 `INVALID_FORMAT`；`of(...)` |
 | `SessionLifetime` | 值对象 | `idle`、`absolute`，构造时校验正数且 `idle ≤ absolute` |
 | `SessionLifetimePolicy` | 值对象 | `Map<ClientType, SessionLifetime>` + `maxSessionsPerUser`；`lifetimeFor(ClientType)` 缺行时抛 `IllegalStateException`（启动校验保证本版不会） |
-| `NewUserSession` | 记录 | domain 自己的签发输入：用户 ID、会话 ID、`LoginClient`、`now`、`SessionLifetime`、上限 |
+| `NewUserSession` | 记录 | domain 自己的签发输入：用户 ID、会话 ID、账号类型、`LoginClient`、`now`、`SessionLifetime`、上限 |
 | `IssuedUserSession` | 记录 | `token`（字符串）、`replacedSessionIds` |
 
 domain 不依赖会话模块的类型，所以 `NewUserSession` / `IssuedUserSession` 和模块的 `NewSession` / `IssuedSession` 是两套，由 infra 的适配器转换。多两个小记录，换 domain 纯净检查不用开口子。
