@@ -25,10 +25,10 @@ Domain + Infrastructure
 
 | 组件 | 位置 | 说明 |
 |------|------|------|
-| `Command<R>` | patra-common-core | 命令标记接口，泛型 R 为返回类型 |
-| `CommandHandler<C,R>` | patra-common-core | 命令处理器接口 |
-| `CommandBus` | patra-common-core | 命令总线接口 |
-| `SimpleCommandBus` | patra-spring-boot-starter-core | Spring 实现 |
+| `Command<R>` | linqibin-commons-core | 命令标记接口，泛型 R 为返回类型 |
+| `CommandHandler<C,R>` | linqibin-commons-core | 命令处理器接口 |
+| `CommandBus` | linqibin-commons-core | 命令总线接口 |
+| `SimpleCommandBus` | linqibin-spring-boot-starter-core | Spring 实现 |
 
 ## 命名约定
 

@@ -20,7 +20,7 @@ paths: patra-*/*-infra/**/src/integrationTest/**/*IT.java, patra-*/*-adapter/**/
 ## 注意事项
 
 1. 使用 `@MockitoBean` 进行 Mock 注入（`@MockBean` 已在 Spring Boot 4.0 中移除）
-2. 统一使用 `patra-spring-boot-starter-test` 提供的测试自动配置
+2. 统一使用 `linqibin-spring-boot-starter-test` 提供的测试自动配置
 3. 使用 TestContainers 模拟真实中间件，避免使用内存数据库
 4. `@DataJpaTest` 中使用 `TestEntityManager` 或 `JpaRepository` 进行数据准备
 
