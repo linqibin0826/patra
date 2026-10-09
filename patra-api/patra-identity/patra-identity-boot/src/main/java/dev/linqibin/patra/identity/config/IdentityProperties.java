@@ -40,7 +40,13 @@ public record IdentityProperties(
   /// @param maxSessionsPerUser 每用户的会话上限，所有账号类型一个数
   /// @param lifetime 有效期，两层键分别是账号类型和客户端类型的 `code`，比如 `user.web`
   public record Session(
-      @DefaultValue("10") int maxSessionsPerUser, Map<String, Map<String, Lifetime>> lifetime) {}
+      @DefaultValue("10") int maxSessionsPerUser, Map<String, Map<String, Lifetime>> lifetime) {
+
+    /// 拷贝有效期表；没配时是空表。
+    public Session {
+      lifetime = lifetime == null ? Map.of() : Map.copyOf(lifetime);
+    }
+  }
 
   /// 一种客户端的会话有效期。
   ///

@@ -66,8 +66,7 @@ public class IdentityConfiguration {
   @Bean
   public SessionLifetimePolicy sessionLifetimePolicy(IdentityProperties properties) {
     IdentityProperties.Session session = properties.session();
-    Map<String, Map<String, IdentityProperties.Lifetime>> configured =
-        session.lifetime() == null ? Map.of() : session.lifetime();
+    Map<String, Map<String, IdentityProperties.Lifetime>> configured = session.lifetime();
     Map<ClientType, SessionLifetime> lifetimes = new EnumMap<>(ClientType.class);
     for (Map.Entry<String, Map<String, IdentityProperties.Lifetime>> byAccount :
         configured.entrySet()) {
