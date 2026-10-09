@@ -11,6 +11,12 @@ public final class UserFieldViolations {
   /// 密码字段名，和请求体一致。
   public static final String PASSWORD = "password";
 
+  /// 客户端类型字段名，和请求体一致。
+  public static final String CLIENT_TYPE = "clientType";
+
+  /// 设备标识字段名，和请求体一致。
+  public static final String DEVICE_ID = "deviceId";
+
   /// 为空。
   public static final String REQUIRED = "REQUIRED";
 
@@ -86,5 +92,19 @@ public final class UserFieldViolations {
   /// @return 字段错误
   public static FieldViolation passwordTooCommon() {
     return FieldViolation.of(PASSWORD, TOO_COMMON, "这个密码太常见，容易被猜到，请换一个");
+  }
+
+  /// 客户端类型不认识。
+  ///
+  /// @return 字段错误
+  public static FieldViolation clientTypeInvalidFormat() {
+    return FieldViolation.of(CLIENT_TYPE, INVALID_FORMAT, "不支持的客户端类型");
+  }
+
+  /// 设备标识太长。
+  ///
+  /// @return 字段错误
+  public static FieldViolation deviceIdTooLong() {
+    return FieldViolation.of(DEVICE_ID, TOO_LONG, "设备标识最长 128 个字符");
   }
 }
