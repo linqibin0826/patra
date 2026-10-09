@@ -8,15 +8,23 @@ import dev.linqibin.patra.common.security.AccountType;
 import dev.linqibin.patra.identity.domain.exception.TemporarilyUnavailableException;
 import dev.linqibin.patra.identity.domain.model.vo.EmailAddress;
 import dev.linqibin.patra.identity.domain.policy.LoginThrottlePolicy;
+import io.lettuce.core.RedisLoadingException;
+import io.lettuce.core.RedisNoScriptException;
 import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.redis.RedisSystemException;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.RedisScript;
 
 /// LoginThrottleAdapter 单元测试：键名，以及脚本没有真正执行时的处理。
 @DisplayName("LoginThrottleAdapter 单元测试")
 class LoginThrottleAdapterTest {
+
+  private static final LoginThrottlePolicy POLICY =
+      LoginThrottlePolicy.of(
+          5, Duration.ofMinutes(15), Duration.ofMinutes(15), Duration.ofSeconds(30));
 
   @Test
   @DisplayName("三个键带账号类型和邮箱的 SHA-256，不含明文邮箱")
@@ -53,6 +61,49 @@ class LoginThrottleAdapterTest {
 
     assertThatThrownBy(() -> adapter.begin(AccountType.USER, EmailAddress.of("a@example.com")))
         .isInstanceOf(TemporarilyUnavailableException.class);
+  }
+
+  @Test
+  @DisplayName("Redis 正在加载数据（LOADING）：按依赖不可用处理，返回 503")
+  void should_treat_loading_as_unavailable() {
+    LoginThrottleAdapter adapter =
+        new LoginThrottleAdapter(
+            failingWith(
+                new RedisSystemException(
+                    "Error in execution",
+                    new RedisLoadingException("LOADING Redis is loading the dataset in memory"))),
+            POLICY);
+
+    assertThatThrownBy(() -> adapter.begin(AccountType.USER, EmailAddress.of("a@example.com")))
+        .isInstanceOf(TemporarilyUnavailableException.class);
+  }
+
+  @Test
+  @DisplayName("脚本本身出错（NOSCRIPT）：是缺陷，原样抛出")
+  void should_rethrow_script_defects() {
+    LoginThrottleAdapter adapter =
+        new LoginThrottleAdapter(
+            failingWith(
+                new RedisSystemException(
+                    "Error in execution",
+                    new RedisNoScriptException("NOSCRIPT No matching script."))),
+            POLICY);
+
+    assertThatThrownBy(() -> adapter.begin(AccountType.USER, EmailAddress.of("a@example.com")))
+        .isInstanceOf(RedisSystemException.class);
+  }
+
+  /// 一个执行脚本就抛指定异常的模板。不 mock 可变参数的方法，直接覆盖。
+  ///
+  /// @param failure 要抛的异常
+  /// @return 模板
+  private static StringRedisTemplate failingWith(RuntimeException failure) {
+    return new StringRedisTemplate() {
+      @Override
+      public <T> T execute(RedisScript<T> script, List<String> keys, Object... args) {
+        throw failure;
+      }
+    };
   }
 
   /// 取键名最后一段。

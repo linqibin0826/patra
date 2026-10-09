@@ -7,6 +7,7 @@ import dev.linqibin.patra.identity.domain.model.vo.EmailAddress;
 import dev.linqibin.patra.identity.domain.policy.LoginThrottlePolicy;
 import dev.linqibin.patra.identity.domain.port.throttle.LoginAttempt;
 import dev.linqibin.patra.identity.domain.port.throttle.LoginThrottlePort;
+import dev.linqibin.patra.identity.session.TransientRedisFailures;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -18,8 +19,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.dao.DataAccessResourceFailureException;
-import org.springframework.dao.QueryTimeoutException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Component;
@@ -27,8 +26,9 @@ import org.springframework.stereotype.Component;
 /// 登录失败限制的 Redis 实现。
 ///
 /// 失败次数、在途登记、锁分三个键，键名带账号类型和邮箱的 SHA-256，不放明文邮箱。
-/// 「开始」和「结算」各是一段 Lua 脚本，原子执行。Redis 连不上或超时，转成
-/// {@link TemporarilyUnavailableException}；其他 Redis 异常（比如脚本写错）是程序缺陷，原样抛出。
+/// 「开始」和「结算」各是一段 Lua 脚本，原子执行。Redis 暂时不可用（连不上、超时、`LOADING` 等，
+/// 由会话模块的 `TransientRedisFailures` 判定）转成 {@link TemporarilyUnavailableException}；
+/// 其他 Redis 异常（比如脚本写错）是程序缺陷，原样抛出。
 @Component
 public final class LoginThrottleAdapter implements LoginThrottlePort {
 
@@ -152,15 +152,18 @@ public final class LoginThrottleAdapter implements LoginThrottlePort {
     }
   }
 
-  /// 执行 Redis 调用，把连不上和超时转成 503。
+  /// 执行 Redis 调用，把暂时失败转成 503。
   ///
   /// @param call 调用
   /// @return 脚本返回值；脚本没有真正执行时为 `null`，由调用方决定怎么处理
   private static Long execute(Supplier<Long> call) {
     try {
       return call.get();
-    } catch (DataAccessResourceFailureException | QueryTimeoutException e) {
-      throw new TemporarilyUnavailableException(e);
+    } catch (RuntimeException e) {
+      if (TransientRedisFailures.isTransient(e)) {
+        throw new TemporarilyUnavailableException(e);
+      }
+      throw e;
     }
   }
 }

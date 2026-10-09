@@ -17,6 +17,9 @@ dependencies {
     // 登录失败限制存在 Redis
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
 
+    // identity 与网关共用的会话存储
+    implementation(project(":patra-api:patra-identity:patra-identity-session"))
+
     // Argon2 只需要 crypto 模块：不带 Spring Security 的过滤器链和自动配置
     implementation("org.springframework.security:spring-security-crypto")
     runtimeOnly("org.bouncycastle:bcprov-jdk18on")
