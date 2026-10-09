@@ -1,8 +1,8 @@
-package dev.linqibin.patra.identity.app.usecase.register;
+package dev.linqibin.patra.identity.app.usecase.login;
 
 import dev.linqibin.commons.cqrs.Command;
 
-/// 注册前台用户，成功后直接建会话（注册即登录）。
+/// 前台用户登录：校验凭据并建会话。
 ///
 /// `clientType` 和 `deviceId` 允许为 `null`：处理器里客户端类型回退到 `web`，设备标识按没有。
 ///
@@ -10,8 +10,8 @@ import dev.linqibin.commons.cqrs.Command;
 /// @param password 密码，原始输入
 /// @param clientType 客户端类型，原始输入，可以为 `null`
 /// @param deviceId 设备标识，原始输入，可以为 `null`
-public record RegisterUserCommand(String email, String password, String clientType, String deviceId)
-    implements Command<RegisterUserResult> {
+public record LoginUserCommand(String email, String password, String clientType, String deviceId)
+    implements Command<LoginUserResult> {
 
   /// 创建命令。
   ///
@@ -20,9 +20,9 @@ public record RegisterUserCommand(String email, String password, String clientTy
   /// @param clientType 客户端类型，可以为 `null`
   /// @param deviceId 设备标识，可以为 `null`
   /// @return 命令
-  public static RegisterUserCommand of(
+  public static LoginUserCommand of(
       String email, String password, String clientType, String deviceId) {
-    return new RegisterUserCommand(email, password, clientType, deviceId);
+    return new LoginUserCommand(email, password, clientType, deviceId);
   }
 
   /// 不输出密码。
@@ -30,7 +30,7 @@ public record RegisterUserCommand(String email, String password, String clientTy
   /// @return 描述
   @Override
   public String toString() {
-    return "RegisterUserCommand[email="
+    return "LoginUserCommand[email="
         + email
         + ", password=***, clientType="
         + clientType

@@ -3,6 +3,8 @@ package dev.linqibin.patra.identity.app.usecase.register;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -14,12 +16,17 @@ import dev.linqibin.patra.identity.domain.exception.InvalidUserFieldsException;
 import dev.linqibin.patra.identity.domain.model.aggregate.User;
 import dev.linqibin.patra.identity.domain.model.aggregate.UserPasswordCredential;
 import dev.linqibin.patra.identity.domain.model.enums.UserStatus;
+import dev.linqibin.patra.identity.domain.model.vo.DeviceId;
 import dev.linqibin.patra.identity.domain.model.vo.EmailAddress;
+import dev.linqibin.patra.identity.domain.model.vo.LoginClient;
 import dev.linqibin.patra.identity.domain.model.vo.PasswordHash;
 import dev.linqibin.patra.identity.domain.policy.PasswordPolicy;
 import dev.linqibin.patra.identity.domain.port.hashing.PasswordHashingPort;
 import dev.linqibin.patra.identity.domain.port.repository.UserPasswordCredentialRepository;
 import dev.linqibin.patra.identity.domain.port.repository.UserRepository;
+import dev.linqibin.patra.identity.domain.port.session.IssuedUserSession;
+import dev.linqibin.patra.identity.domain.service.SessionIssuer;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.DisplayName;
@@ -45,12 +52,14 @@ class RegisterUserHandlerTest {
       mock(UserPasswordCredentialRepository.class);
   private final PasswordHashingPort passwordHashing = mock(PasswordHashingPort.class);
   private final PasswordPolicy passwordPolicy = new PasswordPolicy(Set.of("password123")::contains);
+  private final SessionIssuer sessionIssuer = mock(SessionIssuer.class);
   private final RegisterUserHandler handler =
       new RegisterUserHandler(
           users,
           credentials,
           passwordHashing,
           passwordPolicy,
+          sessionIssuer,
           TransactionOperations.withoutTransaction());
 
   @Test
@@ -59,12 +68,16 @@ class RegisterUserHandlerTest {
     when(passwordHashing.hash(any())).thenReturn(HASH);
     when(users.save(any())).thenReturn(SAVED_USER);
     when(credentials.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+    when(sessionIssuer.issue(anyLong(), any()))
+        .thenReturn(IssuedUserSession.of("patra_user_x", List.of()));
 
     RegisterUserResult result =
-        handler.handle(RegisterUserCommand.of(" Chen.Yu@Example.com ", "correct horse battery"));
+        handler.handle(
+            RegisterUserCommand.of(" Chen.Yu@Example.com ", "correct horse battery", null, null));
 
     assertThat(result.userId()).isEqualTo(42L);
     assertThat(result.email()).isEqualTo("chen.yu@example.com");
+    assertThat(result.sessionToken()).isEqualTo("patra_user_x");
     verify(users).existsByEmail(EMAIL);
     ArgumentCaptor<UserPasswordCredential> credential =
         ArgumentCaptor.forClass(UserPasswordCredential.class);
@@ -76,7 +89,7 @@ class RegisterUserHandlerTest {
   @Test
   @DisplayName("两个字段的错误一次报全，不查库也不做哈希")
   void should_report_all_field_violations_at_once() {
-    assertThatThrownBy(() -> handler.handle(RegisterUserCommand.of("", "short")))
+    assertThatThrownBy(() -> handler.handle(RegisterUserCommand.of("", "short", null, null)))
         .isInstanceOf(InvalidUserFieldsException.class)
         .satisfies(
             e ->
@@ -89,7 +102,7 @@ class RegisterUserHandlerTest {
   @Test
   @DisplayName("字段为 null 时按 REQUIRED 处理，不出空指针")
   void should_treat_null_fields_as_required() {
-    assertThatThrownBy(() -> handler.handle(RegisterUserCommand.of(null, null)))
+    assertThatThrownBy(() -> handler.handle(RegisterUserCommand.of(null, null, null, null)))
         .isInstanceOf(InvalidUserFieldsException.class)
         .satisfies(
             e ->
@@ -102,7 +115,9 @@ class RegisterUserHandlerTest {
   @DisplayName("常见密码报 TOO_COMMON")
   void should_reject_common_password() {
     assertThatThrownBy(
-            () -> handler.handle(RegisterUserCommand.of("chen.yu@example.com", "Password123")))
+            () ->
+                handler.handle(
+                    RegisterUserCommand.of("chen.yu@example.com", "Password123", null, null)))
         .isInstanceOf(InvalidUserFieldsException.class)
         .satisfies(
             e ->
@@ -117,7 +132,8 @@ class RegisterUserHandlerTest {
     String hugeEmail = "a".repeat(1_000_000) + "@example.com";
     String hugePassword = "b".repeat(1_000_000);
 
-    assertThatThrownBy(() -> handler.handle(RegisterUserCommand.of(hugeEmail, hugePassword)))
+    assertThatThrownBy(
+            () -> handler.handle(RegisterUserCommand.of(hugeEmail, hugePassword, null, null)))
         .isInstanceOf(InvalidUserFieldsException.class)
         .satisfies(
             e ->
@@ -135,14 +151,15 @@ class RegisterUserHandlerTest {
     assertThatThrownBy(
             () ->
                 handler.handle(
-                    RegisterUserCommand.of("CHEN.YU@example.com", "correct horse battery")))
+                    RegisterUserCommand.of(
+                        "CHEN.YU@example.com", "correct horse battery", null, null)))
         .isInstanceOf(EmailAlreadyRegisteredException.class);
     verifyNoInteractions(passwordHashing);
     verify(users, never()).save(any());
   }
 
   @Test
-  @DisplayName("哈希在事务外做，两次保存在同一个事务里")
+  @DisplayName("哈希在事务外做，两次保存和建会话在同一个事务里")
   void should_hash_outside_transaction_and_save_inside() {
     AtomicBoolean inTransaction = new AtomicBoolean(false);
     TransactionOperations recording =
@@ -163,7 +180,8 @@ class RegisterUserHandlerTest {
           }
         };
     RegisterUserHandler transactional =
-        new RegisterUserHandler(users, credentials, passwordHashing, passwordPolicy, recording);
+        new RegisterUserHandler(
+            users, credentials, passwordHashing, passwordPolicy, sessionIssuer, recording);
     when(passwordHashing.hash(any()))
         .thenAnswer(
             invocation -> {
@@ -182,10 +200,18 @@ class RegisterUserHandlerTest {
               assertThat(inTransaction).isTrue();
               return invocation.getArgument(0);
             });
+    when(sessionIssuer.issue(anyLong(), any()))
+        .thenAnswer(
+            invocation -> {
+              assertThat(inTransaction).isTrue();
+              return IssuedUserSession.of("patra_user_x", List.of());
+            });
 
-    transactional.handle(RegisterUserCommand.of("chen.yu@example.com", "correct horse battery"));
+    transactional.handle(
+        RegisterUserCommand.of("chen.yu@example.com", "correct horse battery", null, null));
 
     verify(credentials).save(any());
+    verify(sessionIssuer).issue(eq(42L), any());
   }
 
   @Test
@@ -197,7 +223,8 @@ class RegisterUserHandlerTest {
     assertThatThrownBy(
             () ->
                 handler.handle(
-                    RegisterUserCommand.of("chen.yu@example.com", "correct horse battery")))
+                    RegisterUserCommand.of(
+                        "chen.yu@example.com", "correct horse battery", null, null)))
         .isInstanceOf(EmailAlreadyRegisteredException.class);
     verify(credentials, never()).save(any());
   }
@@ -205,7 +232,45 @@ class RegisterUserHandlerTest {
   @Test
   @DisplayName("命令的 toString 不输出密码")
   void should_hide_password_in_command_to_string() {
-    assertThat(RegisterUserCommand.of("chen.yu@example.com", "Secret-Value-1").toString())
+    assertThat(
+            RegisterUserCommand.of("chen.yu@example.com", "Secret-Value-1", null, null).toString())
         .doesNotContain("Secret-Value-1");
+  }
+
+  @Test
+  @DisplayName("注册成功后以新用户的 ID 和客户端信息建会话")
+  void should_issue_session_for_new_user() {
+    when(passwordHashing.hash(any())).thenReturn(HASH);
+    when(users.save(any())).thenReturn(SAVED_USER);
+    when(credentials.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+    when(sessionIssuer.issue(anyLong(), any()))
+        .thenReturn(IssuedUserSession.of("patra_user_x", List.of()));
+
+    RegisterUserResult result =
+        handler.handle(
+            RegisterUserCommand.of("chen.yu@example.com", "correct horse battery", "web", "mac"));
+
+    assertThat(result.sessionToken()).isEqualTo("patra_user_x");
+    ArgumentCaptor<LoginClient> client = ArgumentCaptor.forClass(LoginClient.class);
+    verify(sessionIssuer).issue(eq(42L), client.capture());
+    assertThat(client.getValue().device()).map(DeviceId::value).contains("mac");
+  }
+
+  @Test
+  @DisplayName("邮箱已注册或字段不合法：不建会话")
+  void should_not_issue_session_when_registration_is_rejected() {
+    when(users.existsByEmail(EMAIL)).thenReturn(true);
+    assertThatThrownBy(
+            () ->
+                handler.handle(
+                    RegisterUserCommand.of(
+                        "chen.yu@example.com", "correct horse battery", null, null)))
+        .isInstanceOf(EmailAlreadyRegisteredException.class);
+    assertThatThrownBy(
+            () ->
+                handler.handle(RegisterUserCommand.of("chen.yu@example.com", "short", "app", null)))
+        .isInstanceOf(InvalidUserFieldsException.class);
+
+    verifyNoInteractions(sessionIssuer);
   }
 }

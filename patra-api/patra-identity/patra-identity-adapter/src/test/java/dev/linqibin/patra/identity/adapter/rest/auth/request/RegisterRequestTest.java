@@ -12,8 +12,9 @@ class RegisterRequestTest {
   @Test
   @DisplayName("toString 不输出密码")
   void should_hide_password_in_to_string() {
-    assertThat(new RegisterRequest("chen.yu@example.com", "Secret-Value-1").toString())
+    assertThat(new RegisterRequest("chen.yu@example.com", "Secret-Value-1", null, null).toString())
         .contains("chen.yu@example.com")
+        .contains("clientType=")
         .doesNotContain("Secret-Value-1");
   }
 }

@@ -6,8 +6,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import dev.linqibin.commons.cqrs.CommandBus;
-import dev.linqibin.patra.identity.app.usecase.authenticate.AuthenticateUserCommand;
-import dev.linqibin.patra.identity.app.usecase.authenticate.AuthenticateUserResult;
+import dev.linqibin.patra.identity.app.usecase.login.LoginUserCommand;
+import dev.linqibin.patra.identity.app.usecase.login.LoginUserResult;
 import dev.linqibin.patra.identity.app.usecase.register.RegisterUserCommand;
 import dev.linqibin.patra.identity.app.usecase.register.RegisterUserResult;
 import dev.linqibin.patra.identity.domain.exception.EmailAlreadyRegisteredException;
@@ -48,10 +48,11 @@ class AuthControllerIT {
   @MockitoBean private CommandBus commandBus;
 
   @Test
-  @DisplayName("注册成功返回 201，userId 是字符串；原始输入原样交给命令")
+  @DisplayName("注册成功返回 201，带会话令牌，userId 是字符串；原始输入原样交给命令")
   void should_register_and_return_201() {
     when(commandBus.handle(any(RegisterUserCommand.class)))
-        .thenReturn(RegisterUserResult.of(352303128713027974L, "chen.yu@example.com"));
+        .thenReturn(
+            RegisterUserResult.of("patra_user_x", 352303128713027974L, "chen.yu@example.com"));
 
     restClient
         .post()
@@ -62,6 +63,8 @@ class AuthControllerIT {
         .expectStatus()
         .isCreated()
         .expectBody()
+        .jsonPath("$.sessionToken")
+        .isEqualTo("patra_user_x")
         .jsonPath("$.userId")
         .value(
             userId -> assertThat(userId).isInstanceOf(String.class).isEqualTo("352303128713027974"))
@@ -73,25 +76,41 @@ class AuthControllerIT {
     verify(commandBus).handle(command.capture());
     assertThat(command.getValue().email()).isEqualTo(" Chen.Yu@Example.com ");
     assertThat(command.getValue().password()).isEqualTo("correct horse battery");
+    assertThat(command.getValue().clientType()).isNull();
+    assertThat(command.getValue().deviceId()).isNull();
   }
 
   @Test
-  @DisplayName("登录成功返回 200，userId 是字符串")
+  @DisplayName("登录成功返回 200，带会话令牌；clientType 和 deviceId 原样交给命令")
   void should_login_and_return_200() {
-    when(commandBus.handle(any(AuthenticateUserCommand.class)))
-        .thenReturn(AuthenticateUserResult.of(42L, "chen.yu@example.com"));
+    when(commandBus.handle(any(LoginUserCommand.class)))
+        .thenReturn(LoginUserResult.of("patra_user_x", 42L, "chen.yu@example.com"));
 
     restClient
         .post()
         .uri("/auth/login")
         .contentType(MediaType.APPLICATION_JSON)
-        .body(Map.of("email", "chen.yu@example.com", "password", "correct horse battery"))
+        .body(
+            Map.of(
+                "email", "chen.yu@example.com",
+                "password", "correct horse battery",
+                "clientType", "web",
+                "deviceId", "mac-safari"))
         .exchange()
         .expectStatus()
         .isOk()
         .expectBody()
+        .jsonPath("$.sessionToken")
+        .isEqualTo("patra_user_x")
         .jsonPath("$.userId")
-        .value(userId -> assertThat(userId).isInstanceOf(String.class).isEqualTo("42"));
+        .isEqualTo("42")
+        .jsonPath("$.email")
+        .isEqualTo("chen.yu@example.com");
+
+    ArgumentCaptor<LoginUserCommand> command = ArgumentCaptor.forClass(LoginUserCommand.class);
+    verify(commandBus).handle(command.capture());
+    assertThat(command.getValue().clientType()).isEqualTo("web");
+    assertThat(command.getValue().deviceId()).isEqualTo("mac-safari");
   }
 
   @Test
@@ -176,7 +195,7 @@ class AuthControllerIT {
   @Test
   @DisplayName("邮箱或密码错误：401")
   void should_render_unauthorized() {
-    when(commandBus.handle(any(AuthenticateUserCommand.class)))
+    when(commandBus.handle(any(LoginUserCommand.class)))
         .thenThrow(new InvalidCredentialsException());
 
     restClient
@@ -197,7 +216,7 @@ class AuthControllerIT {
   @Test
   @DisplayName("被暂时限制：429，带 Retry-After 响应头和 retryAfterSeconds")
   void should_render_too_many_requests() {
-    when(commandBus.handle(any(AuthenticateUserCommand.class)))
+    when(commandBus.handle(any(LoginUserCommand.class)))
         .thenThrow(new LoginTemporarilyLockedException(Duration.ofMinutes(15)));
 
     restClient
@@ -220,8 +239,7 @@ class AuthControllerIT {
   @Test
   @DisplayName("账号已被封禁：403")
   void should_render_forbidden() {
-    when(commandBus.handle(any(AuthenticateUserCommand.class)))
-        .thenThrow(new UserBannedException());
+    when(commandBus.handle(any(LoginUserCommand.class))).thenThrow(new UserBannedException());
 
     restClient
         .post()
@@ -241,7 +259,7 @@ class AuthControllerIT {
   @Test
   @DisplayName("依赖暂时不可用：503")
   void should_render_service_unavailable() {
-    when(commandBus.handle(any(AuthenticateUserCommand.class)))
+    when(commandBus.handle(any(LoginUserCommand.class)))
         .thenThrow(new TemporarilyUnavailableException());
 
     restClient

@@ -1,15 +1,19 @@
-package dev.linqibin.patra.identity.app.usecase.authenticate;
+package dev.linqibin.patra.identity.app.usecase.login;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import dev.linqibin.commons.error.field.FieldViolation;
 import dev.linqibin.patra.common.security.AccountType;
 import dev.linqibin.patra.identity.domain.exception.InvalidCredentialsException;
 import dev.linqibin.patra.identity.domain.exception.InvalidUserFieldsException;
@@ -19,24 +23,31 @@ import dev.linqibin.patra.identity.domain.exception.UserBannedException;
 import dev.linqibin.patra.identity.domain.model.aggregate.User;
 import dev.linqibin.patra.identity.domain.model.aggregate.UserPasswordCredential;
 import dev.linqibin.patra.identity.domain.model.enums.UserStatus;
+import dev.linqibin.patra.identity.domain.model.vo.DeviceId;
 import dev.linqibin.patra.identity.domain.model.vo.EmailAddress;
+import dev.linqibin.patra.identity.domain.model.vo.LoginClient;
 import dev.linqibin.patra.identity.domain.model.vo.PasswordHash;
 import dev.linqibin.patra.identity.domain.policy.PasswordPolicy;
 import dev.linqibin.patra.identity.domain.port.hashing.PasswordHashingPort;
 import dev.linqibin.patra.identity.domain.port.repository.UserPasswordCredentialRepository;
 import dev.linqibin.patra.identity.domain.port.repository.UserRepository;
+import dev.linqibin.patra.identity.domain.port.session.IssuedUserSession;
 import dev.linqibin.patra.identity.domain.port.throttle.LoginAttempt;
 import dev.linqibin.patra.identity.domain.port.throttle.LoginThrottlePort;
+import dev.linqibin.patra.identity.domain.service.SessionIssuer;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.transaction.support.TransactionOperations;
 
-/// AuthenticateUserHandler 单元测试。
-@DisplayName("AuthenticateUserHandler 单元测试")
-class AuthenticateUserHandlerTest {
+/// LoginUserHandler 单元测试。
+@DisplayName("LoginUserHandler 单元测试")
+class LoginUserHandlerTest {
 
   private static final EmailAddress EMAIL = EmailAddress.of("chen.yu@example.com");
   private static final PasswordHash HASH =
@@ -55,8 +66,15 @@ class AuthenticateUserHandlerTest {
       mock(UserPasswordCredentialRepository.class);
   private final PasswordHashingPort passwordHashing = mock(PasswordHashingPort.class);
   private final LoginThrottlePort loginThrottle = mock(LoginThrottlePort.class);
-  private final AuthenticateUserHandler handler =
-      new AuthenticateUserHandler(users, credentials, passwordHashing, loginThrottle);
+  private final SessionIssuer sessionIssuer = mock(SessionIssuer.class);
+  private final LoginUserHandler handler =
+      new LoginUserHandler(
+          users,
+          credentials,
+          passwordHashing,
+          loginThrottle,
+          sessionIssuer,
+          TransactionOperations.withoutTransaction());
 
   /// 默认放行，用户和凭据都存在。
   @BeforeEach
@@ -65,6 +83,8 @@ class AuthenticateUserHandlerTest {
     when(users.findByEmail(EMAIL)).thenReturn(Optional.of(ACTIVE_USER));
     when(credentials.findByUserId(42L)).thenReturn(Optional.of(CREDENTIAL));
     when(loginThrottle.recordFailure(ATTEMPT)).thenReturn(Optional.empty());
+    when(sessionIssuer.issue(anyLong(), any()))
+        .thenReturn(IssuedUserSession.of("patra_user_x", List.of()));
   }
 
   @Test
@@ -72,11 +92,12 @@ class AuthenticateUserHandlerTest {
   void should_authenticate_with_correct_password() {
     when(passwordHashing.matches(any(), any())).thenReturn(true);
 
-    AuthenticateUserResult result =
-        handler.handle(AuthenticateUserCommand.of("Chen.Yu@Example.com", "correct horse"));
+    LoginUserResult result =
+        handler.handle(LoginUserCommand.of("Chen.Yu@Example.com", "correct horse", null, null));
 
     assertThat(result.userId()).isEqualTo(42L);
     assertThat(result.email()).isEqualTo("chen.yu@example.com");
+    assertThat(result.sessionToken()).isEqualTo("patra_user_x");
     verify(loginThrottle).recordSuccess(ATTEMPT);
     verify(loginThrottle, never()).recordFailure(any());
     verify(loginThrottle, never()).cancel(any());
@@ -88,7 +109,7 @@ class AuthenticateUserHandlerTest {
     when(passwordHashing.matches(any(), any())).thenReturn(false);
 
     assertThatThrownBy(
-            () -> handler.handle(AuthenticateUserCommand.of("chen.yu@example.com", "wrong")))
+            () -> handler.handle(LoginUserCommand.of("chen.yu@example.com", "wrong", null, null)))
         .isInstanceOf(InvalidCredentialsException.class);
     verify(loginThrottle).recordFailure(ATTEMPT);
   }
@@ -100,7 +121,7 @@ class AuthenticateUserHandlerTest {
     when(loginThrottle.recordFailure(ATTEMPT)).thenReturn(Optional.of(Duration.ofMinutes(15)));
 
     assertThatThrownBy(
-            () -> handler.handle(AuthenticateUserCommand.of("chen.yu@example.com", "wrong")))
+            () -> handler.handle(LoginUserCommand.of("chen.yu@example.com", "wrong", null, null)))
         .isInstanceOf(LoginTemporarilyLockedException.class)
         .satisfies(
             e ->
@@ -114,7 +135,7 @@ class AuthenticateUserHandlerTest {
     when(users.findByEmail(EMAIL)).thenReturn(Optional.empty());
 
     assertThatThrownBy(
-            () -> handler.handle(AuthenticateUserCommand.of("chen.yu@example.com", "any")))
+            () -> handler.handle(LoginUserCommand.of("chen.yu@example.com", "any", null, null)))
         .isInstanceOf(InvalidCredentialsException.class);
     verify(passwordHashing).verifyAgainstDummy(any());
     verify(passwordHashing, never()).matches(any(), any());
@@ -127,7 +148,7 @@ class AuthenticateUserHandlerTest {
     when(credentials.findByUserId(42L)).thenReturn(Optional.empty());
 
     assertThatThrownBy(
-            () -> handler.handle(AuthenticateUserCommand.of("chen.yu@example.com", "any")))
+            () -> handler.handle(LoginUserCommand.of("chen.yu@example.com", "any", null, null)))
         .isInstanceOf(InvalidCredentialsException.class);
     verify(passwordHashing).verifyAgainstDummy(any());
   }
@@ -139,7 +160,7 @@ class AuthenticateUserHandlerTest {
         .thenThrow(new LoginTemporarilyLockedException(Duration.ofMinutes(10)));
 
     assertThatThrownBy(
-            () -> handler.handle(AuthenticateUserCommand.of("chen.yu@example.com", "any")))
+            () -> handler.handle(LoginUserCommand.of("chen.yu@example.com", "any", null, null)))
         .isInstanceOf(LoginTemporarilyLockedException.class);
     verifyNoInteractions(users, credentials, passwordHashing);
   }
@@ -151,7 +172,7 @@ class AuthenticateUserHandlerTest {
     when(passwordHashing.matches(any(), any())).thenReturn(true);
 
     assertThatThrownBy(
-            () -> handler.handle(AuthenticateUserCommand.of("chen.yu@example.com", "right")))
+            () -> handler.handle(LoginUserCommand.of("chen.yu@example.com", "right", null, null)))
         .isInstanceOf(UserBannedException.class);
     verify(loginThrottle).recordSuccess(ATTEMPT);
   }
@@ -163,7 +184,7 @@ class AuthenticateUserHandlerTest {
     when(passwordHashing.matches(any(), any())).thenReturn(false);
 
     assertThatThrownBy(
-            () -> handler.handle(AuthenticateUserCommand.of("chen.yu@example.com", "wrong")))
+            () -> handler.handle(LoginUserCommand.of("chen.yu@example.com", "wrong", null, null)))
         .isInstanceOf(InvalidCredentialsException.class);
   }
 
@@ -174,7 +195,7 @@ class AuthenticateUserHandlerTest {
     when(passwordHashing.matches(any(), any())).thenThrow(busy);
 
     assertThatThrownBy(
-            () -> handler.handle(AuthenticateUserCommand.of("chen.yu@example.com", "any")))
+            () -> handler.handle(LoginUserCommand.of("chen.yu@example.com", "any", null, null)))
         .isSameAs(busy);
     verify(loginThrottle).cancel(ATTEMPT);
     verify(loginThrottle, never()).recordFailure(any());
@@ -188,14 +209,14 @@ class AuthenticateUserHandlerTest {
     doThrow(new TemporarilyUnavailableException()).when(loginThrottle).cancel(ATTEMPT);
 
     assertThatThrownBy(
-            () -> handler.handle(AuthenticateUserCommand.of("chen.yu@example.com", "any")))
+            () -> handler.handle(LoginUserCommand.of("chen.yu@example.com", "any", null, null)))
         .isSameAs(busy);
   }
 
   @Test
   @DisplayName("字段为 null 时报 REQUIRED，不进失败限制")
   void should_validate_fields_before_throttling() {
-    assertThatThrownBy(() -> handler.handle(AuthenticateUserCommand.of(null, null)))
+    assertThatThrownBy(() -> handler.handle(LoginUserCommand.of(null, null, null, null)))
         .isInstanceOf(InvalidUserFieldsException.class)
         .satisfies(
             e ->
@@ -211,7 +232,7 @@ class AuthenticateUserHandlerTest {
     when(passwordHashing.matches(any(), any())).thenReturn(false);
 
     assertThatThrownBy(
-            () -> handler.handle(AuthenticateUserCommand.of("chen.yu@example.com", "abc")))
+            () -> handler.handle(LoginUserCommand.of("chen.yu@example.com", "abc", null, null)))
         .isInstanceOf(InvalidCredentialsException.class);
     verify(passwordHashing).matches(any(), any());
   }
@@ -222,7 +243,7 @@ class AuthenticateUserHandlerTest {
     String overlong = "x".repeat(PasswordPolicy.MAX_LOGIN_LENGTH + 1);
 
     assertThatThrownBy(
-            () -> handler.handle(AuthenticateUserCommand.of("chen.yu@example.com", overlong)))
+            () -> handler.handle(LoginUserCommand.of("chen.yu@example.com", overlong, null, null)))
         .isInstanceOf(InvalidCredentialsException.class);
     verify(loginThrottle).recordFailure(ATTEMPT);
     verifyNoInteractions(users, credentials, passwordHashing);
@@ -234,8 +255,8 @@ class AuthenticateUserHandlerTest {
     when(passwordHashing.matches(any(), any())).thenReturn(true);
 
     handler.handle(
-        AuthenticateUserCommand.of(
-            "chen.yu@example.com", "😀".repeat(PasswordPolicy.MAX_LOGIN_LENGTH)));
+        LoginUserCommand.of(
+            "chen.yu@example.com", "😀".repeat(PasswordPolicy.MAX_LOGIN_LENGTH), null, null));
 
     verify(passwordHashing).matches(any(), any());
   }
@@ -245,7 +266,7 @@ class AuthenticateUserHandlerTest {
   void should_reject_huge_email_by_field_validation() {
     String hugeEmail = "a".repeat(1_000_000) + "@example.com";
 
-    assertThatThrownBy(() -> handler.handle(AuthenticateUserCommand.of(hugeEmail, "any")))
+    assertThatThrownBy(() -> handler.handle(LoginUserCommand.of(hugeEmail, "any", null, null)))
         .isInstanceOf(InvalidUserFieldsException.class)
         .satisfies(
             e ->
@@ -258,7 +279,65 @@ class AuthenticateUserHandlerTest {
   @Test
   @DisplayName("命令的 toString 不输出密码")
   void should_hide_password_in_command_to_string() {
-    assertThat(AuthenticateUserCommand.of("chen.yu@example.com", "Secret-Value-1").toString())
+    assertThat(LoginUserCommand.of("chen.yu@example.com", "Secret-Value-1", null, null).toString())
         .doesNotContain("Secret-Value-1");
+  }
+
+  @Test
+  @DisplayName("凭据正确：在结算成功之后、以已校验的用户 ID 和客户端信息建会话")
+  void should_issue_session_after_successful_authentication() {
+    when(passwordHashing.matches(any(), any())).thenReturn(true);
+
+    LoginUserResult result =
+        handler.handle(LoginUserCommand.of("chen.yu@example.com", "correct horse", "web", " mac "));
+
+    assertThat(result.sessionToken()).isEqualTo("patra_user_x");
+    ArgumentCaptor<LoginClient> client = ArgumentCaptor.forClass(LoginClient.class);
+    verify(sessionIssuer).issue(eq(42L), client.capture());
+    assertThat(client.getValue().device()).map(DeviceId::value).contains("mac");
+    var order = inOrder(loginThrottle, sessionIssuer);
+    order.verify(loginThrottle).recordSuccess(ATTEMPT);
+    order.verify(sessionIssuer).issue(anyLong(), any());
+  }
+
+  @Test
+  @DisplayName("密码错误、账号被封禁：都不建会话")
+  void should_not_issue_session_when_rejected() {
+    when(passwordHashing.matches(any(), any())).thenReturn(false);
+    assertThatThrownBy(
+            () -> handler.handle(LoginUserCommand.of("chen.yu@example.com", "wrong", null, null)))
+        .isInstanceOf(InvalidCredentialsException.class);
+
+    when(passwordHashing.matches(any(), any())).thenReturn(true);
+    when(users.findByEmail(EMAIL)).thenReturn(Optional.of(BANNED_USER));
+    assertThatThrownBy(
+            () -> handler.handle(LoginUserCommand.of("chen.yu@example.com", "correct", null, null)))
+        .isInstanceOf(UserBannedException.class);
+
+    verifyNoInteractions(sessionIssuer);
+  }
+
+  @Test
+  @DisplayName("客户端类型和设备标识的错误和邮箱、密码一起报，不碰限流")
+  void should_report_client_violations_with_other_fields() {
+    assertThatThrownBy(() -> handler.handle(LoginUserCommand.of("", "", "app", "x".repeat(129))))
+        .isInstanceOf(InvalidUserFieldsException.class)
+        .satisfies(
+            e ->
+                assertThat(((InvalidUserFieldsException) e).getFieldViolations())
+                    .extracting(FieldViolation::field)
+                    .containsExactly("email", "password", "clientType", "deviceId"));
+    verifyNoInteractions(loginThrottle, sessionIssuer);
+  }
+
+  @Test
+  @DisplayName("命令的 toString 不带密码")
+  void should_mask_password_in_command() {
+    assertThat(LoginUserCommand.of("a@example.com", "secret", "web", null).toString())
+        .doesNotContain("secret")
+        .contains("a@example.com");
+    assertThat(LoginUserResult.of("patra_user_x", 42L, "a@example.com").toString())
+        .doesNotContain("patra_user_x")
+        .contains("42");
   }
 }
