@@ -50,4 +50,25 @@ class DeviceIdTest {
     assertThatThrownBy(() -> new DeviceId(" x")).isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(() -> new DeviceId("")).isInstanceOf(IllegalArgumentException.class);
   }
+
+  @Test
+  @DisplayName("含控制字符（换行、制表、ANSI 转义、NUL）报 INVALID_FORMAT，直接构造也拒绝")
+  void should_reject_control_characters() {
+    assertThat(DeviceId.validate("mac\nsafari"))
+        .get()
+        .satisfies(
+            violation -> {
+              assertThat(violation.field()).isEqualTo("deviceId");
+              assertThat(violation.code()).isEqualTo("INVALID_FORMAT");
+            });
+    assertThat(DeviceId.validate("mac\tsafari")).isPresent();
+    assertThat(DeviceId.validate("mac\u001b[31msafari")).isPresent();
+    assertThatThrownBy(() -> DeviceId.of("mac\u0000safari"))
+        .isInstanceOf(InvalidUserFieldsException.class);
+    assertThatThrownBy(() -> new DeviceId("mac\nsafari"))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThat(DeviceId.of("Mac Safari 17 (中文)"))
+        .map(DeviceId::value)
+        .contains("Mac Safari 17 (中文)");
+  }
 }

@@ -81,7 +81,7 @@ patra:
 
 请求本身格式不对时由 Spring 直接处理，返回默认格式的 ProblemDetail，没有 `code`：请求体不是 JSON 对象（`[]`、`"x"`、空请求体、坏 JSON）或字段类型不对返回 400；`Content-Type` 不是 JSON 返回 415；方法不对（比如 GET）返回 405；路径里的 `userId` 不是数字或溢出返回 400，负数和 0 按用户不存在返回 404 `IDN-0404`。
 
-原因码：邮箱 `REQUIRED`、`TOO_LONG`、`INVALID_FORMAT`；密码 `REQUIRED`、`INVALID_CHARACTER`、`TOO_SHORT`、`TOO_LONG`、`TOO_COMMON`；客户端类型 `INVALID_FORMAT`；设备标识 `TOO_LONG`。
+原因码：邮箱 `REQUIRED`、`TOO_LONG`、`INVALID_FORMAT`；密码 `REQUIRED`、`INVALID_CHARACTER`、`TOO_SHORT`、`TOO_LONG`、`TOO_COMMON`；客户端类型 `INVALID_FORMAT`；设备标识 `TOO_LONG`、`INVALID_FORMAT`（含控制字符）。
 
 ## 7. 本地运行和测试
 

@@ -107,4 +107,11 @@ public final class UserFieldViolations {
   public static FieldViolation deviceIdTooLong() {
     return FieldViolation.of(DEVICE_ID, TOO_LONG, "设备标识最长 128 个字符");
   }
+
+  /// 设备标识含控制字符。
+  ///
+  /// @return 字段错误
+  public static FieldViolation deviceIdInvalidFormat() {
+    return FieldViolation.of(DEVICE_ID, INVALID_FORMAT, "设备标识不能包含控制字符");
+  }
 }

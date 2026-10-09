@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-/// 客户端自报的设备标识，去掉首尾空白后最多 128 个字符（按码点数）。
+/// 客户端自报的设备标识，去掉首尾空白后最多 128 个字符（按码点数），不含控制字符。
 ///
 /// @param value 规范化之后的值
 public record DeviceId(String value) {
@@ -17,8 +17,11 @@ public record DeviceId(String value) {
   /// 只接受规范化之后的合法值。
   public DeviceId {
     Objects.requireNonNull(value, "value 不能为 null");
-    if (value.isEmpty() || !value.equals(value.strip()) || codePoints(value) > MAX_LENGTH) {
-      throw new IllegalArgumentException("设备标识必须是去掉首尾空白、不超过 128 个字符的非空值");
+    if (value.isEmpty()
+        || !value.equals(value.strip())
+        || codePoints(value) > MAX_LENGTH
+        || hasControlCharacter(value)) {
+      throw new IllegalArgumentException("设备标识必须是去掉首尾空白、不含控制字符、不超过 128 个字符的非空值");
     }
   }
 
@@ -30,8 +33,12 @@ public record DeviceId(String value) {
     if (raw == null || raw.isBlank()) {
       return Optional.empty();
     }
-    if (codePoints(raw.strip()) > MAX_LENGTH) {
+    String stripped = raw.strip();
+    if (codePoints(stripped) > MAX_LENGTH) {
       return Optional.of(UserFieldViolations.deviceIdTooLong());
+    }
+    if (hasControlCharacter(stripped)) {
+      return Optional.of(UserFieldViolations.deviceIdInvalidFormat());
     }
     return Optional.empty();
   }
@@ -50,6 +57,14 @@ public record DeviceId(String value) {
       throw new InvalidUserFieldsException(List.of(violation.get()));
     }
     return Optional.of(new DeviceId(raw.strip()));
+  }
+
+  /// 是否含控制字符（换行、制表、ANSI 转义、NUL 等）：存进库和 Redis 后会在后台展示，不收。
+  ///
+  /// @param value 字符串
+  /// @return 含控制字符时为 `true`
+  private static boolean hasControlCharacter(String value) {
+    return value.codePoints().anyMatch(Character::isISOControl);
   }
 
   /// 码点数。

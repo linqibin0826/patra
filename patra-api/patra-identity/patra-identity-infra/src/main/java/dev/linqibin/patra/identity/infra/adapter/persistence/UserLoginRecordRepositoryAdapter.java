@@ -1,5 +1,6 @@
 package dev.linqibin.patra.identity.infra.adapter.persistence;
 
+import dev.linqibin.patra.identity.domain.exception.UserModifiedConcurrentlyException;
 import dev.linqibin.patra.identity.domain.model.aggregate.UserLoginRecord;
 import dev.linqibin.patra.identity.domain.port.repository.UserLoginRecordRepository;
 import dev.linqibin.patra.identity.infra.adapter.persistence.converter.mapper.UserLoginRecordJpaMapper;
@@ -8,9 +9,12 @@ import dev.linqibin.patra.identity.infra.adapter.persistence.entity.UserLoginRec
 import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Repository;
 
-/// 登录记录仓储的 JPA 实现。保存用 `saveAndFlush`，乐观锁冲突在这里就抛出来。
+/// 登录记录仓储的 JPA 实现。保存用 `saveAndFlush`，乐观锁冲突在这里就抛出来，
+/// 转成 {@link UserModifiedConcurrentlyException}（同一条记录同时被登出和被挤掉 / 封禁时），
+/// 不把实体名和 ID 带进响应。
 @Repository
 @RequiredArgsConstructor
 public class UserLoginRecordRepositoryAdapter implements UserLoginRecordRepository {
@@ -28,7 +32,11 @@ public class UserLoginRecordRepositoryAdapter implements UserLoginRecordReposito
     if (entity.getId() == null) {
       entity.setId(SnowflakeIdGenerator.getId());
     }
-    return mapper.toAggregate(dao.saveAndFlush(entity));
+    try {
+      return mapper.toAggregate(dao.saveAndFlush(entity));
+    } catch (OptimisticLockingFailureException ex) {
+      throw new UserModifiedConcurrentlyException();
+    }
   }
 
   /// 按 ID 查记录。

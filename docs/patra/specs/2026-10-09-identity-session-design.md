@@ -189,7 +189,7 @@ patra:
 |---|---|---|
 | `UserLoginRecord` | 聚合根 | ID（= 会话 ID）、用户 ID、`ClientType`、`DeviceId`（可空）、绝对过期时间、结束时间、结束原因、版本、审计时间。`start(userId, LoginClient, expiresAt)` 新建未结束的记录；`end(LoginEndReason, now)` 已结束时什么都不做，保留第一次的时间和原因；`isEnded()` |
 | `LoginEndReason` | 枚举 | `LOGOUT`、`BANNED`、`REPLACED` |
-| `DeviceId` | 值对象 | 去首尾空格，最多 128 个字符；`validate(raw) → Optional<FieldViolation>`（`TOO_LONG`）；空白按没有 |
+| `DeviceId` | 值对象 | 去首尾空格，最多 128 个字符，不含控制字符；`validate(raw) → Optional<FieldViolation>`（`TOO_LONG`、`INVALID_FORMAT`）；空白按没有 |
 | `LoginClient` | 值对象 | `ClientType` + 可空 `DeviceId`。`validate(rawClientType, rawDeviceId) → List<FieldViolation>`：类型为空按 `web`，不认识给 `INVALID_FORMAT`；`of(...)` |
 | `SessionLifetime` | 值对象 | `idle`、`absolute`，构造时校验正数且 `idle ≤ absolute` |
 | `SessionLifetimePolicy` | 值对象 | `Map<ClientType, SessionLifetime>` + `maxSessionsPerUser`；`lifetimeFor(ClientType)` 缺行时抛 `IllegalStateException`（启动校验保证本版不会） |
@@ -240,7 +240,7 @@ Flyway `V2__add_user_login_record.sql`，表 `idn_user_login_record`，审计列
 |---|---|---|
 | 登录 `LoginUserHandler` | PAP-63 的七步不变（事务外，哈希要排队）→ 校验通过后 `transactions.execute`：`users.findByIdForUpdate(userId)` 加行锁重读、复核封禁（封禁抛 403）→ `sessionIssuer.issue(...)` → 返回令牌、用户 ID、邮箱 | Redis 写在事务里，失败回滚记录，返回 503 |
 | 注册 `RegisterUserHandler` | 现有事务里存完用户和凭据 → `sessionIssuer.issue(...)` → 返回带令牌的结果 | 同上；Redis 挂了整个注册回滚，用户重试不会撞 409 |
-| 登出 `LogoutUserHandler` | `currentUserPort.current()` 为空直接返回 → `store.revoke(USER, userId, sid)` → 返回 `true` 时 `transactions.execute`：`findById(sid)` 有就 `end(LOGOUT, now)` 并保存 | 只有 DB 一段事务。先删 Redis 是因为那才是登出的实质；DB 失败时用户已经登出，记录留空 |
+| 登出 `LogoutUserHandler` | `currentUserPort.current()` 为空直接返回 → `store.revoke(USER, userId, sid)` → 返回 `true` 时 `transactions.execute`：`findById(sid)` 有就 `end(LOGOUT, now)` 并保存 | 只有 DB 一段事务。先删 Redis 是因为那才是登出的实质；DB 失败时用户已经登出，记录留空：处理器只记 WARN，照样 204 |
 | 封禁 `BanUserHandler` | 现有事务里 `user.ban`、保存 → `store.revokeAll(USER, userId)` → 返回的每个 ID `end(BANNED, now)` 并保存 | Redis 失败回滚封禁，返回 503，管理员重试 |
 
 - Redis 放在事务里而不是提交后：提交后再写 Redis，失败时记录已经落库、会话却没建成，审计里多出一次没发生过的登录。放在事务里只剩一种坏情况：Redis 写成功、提交失败，会话存在但没记录。这种会话的主人确实通过了密码校验，安全上没事，只是审计少一行；登出时按 ID 找不到记录就记一条 INFO 放过。
@@ -277,7 +277,7 @@ CurrentUserResponse        { "userId": "…", "email": "…", "accountType": "us
 | 场景 | 异常 | 特征 | 状态 | 错误码 | detail |
 |---|---|---|---|---|---|
 | 需要登录但没有当前用户；会话指向的用户不存在或已封禁 | `AuthenticationRequiredException`（`patra-common-security`） | `UNAUTHORIZED` | 401 | `IDN-0401` | Authentication required |
-| 封禁、解封撞上乐观锁 | `UserModifiedConcurrentlyException`（新） | `CONFLICT` | 409 | `IDN-0409` | 用户正被其他操作修改，请重试 |
+| 封禁、解封撞上乐观锁；登录记录同时被登出和被挤掉 / 封禁 | `UserModifiedConcurrentlyException`（新） | `CONFLICT` | 409 | `IDN-0409` | 用户正被其他操作修改，请重试 |
 | 会话存储暂时不可用 | `SessionStoreUnavailableException`（会话模块） | `DEP_UNAVAILABLE` | 503 | `IDN-0503` | 服务暂时不可用 |
 | 哈希排队超时、登录限流的 Redis 不可用（改动） | `TemporarilyUnavailableException` | `DEP_UNAVAILABLE` | 503 | `IDN-0503` | 服务暂时不可用。`LoginThrottleAdapter` 的判定改用 `TransientRedisFailures.isTransient`，`LOADING` 等状态也归 503 |
 

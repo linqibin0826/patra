@@ -1,6 +1,7 @@
 package dev.linqibin.patra.identity.app.usecase.logout;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -22,6 +23,7 @@ import java.time.ZoneOffset;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.transaction.support.TransactionOperations;
 
 /// LogoutUserHandler 单元测试。
@@ -91,5 +93,20 @@ class LogoutUserHandlerTest {
     handler.handle(LogoutUserCommand.of());
 
     verify(records, never()).save(any());
+  }
+
+  @Test
+  @DisplayName("会话删掉了但结束记录时数据库出错：只记日志，仍正常返回（用户已经登出）")
+  void should_return_normally_when_ending_record_fails() {
+    when(currentUserPort.current()).thenReturn(Optional.of(USER));
+    when(sessions.revoke(AccountType.USER, 42L, 7001L)).thenReturn(true);
+    UserLoginRecord login =
+        UserLoginRecord.restore(
+            7001L, 42L, ClientType.WEB, null, NOW.plusSeconds(1), null, null, 0L, NOW, NOW);
+    when(records.findById(7001L)).thenReturn(Optional.of(login));
+    when(records.save(any())).thenThrow(new DataAccessResourceFailureException("db down"));
+
+    assertThatCode(() -> handler.handle(LogoutUserCommand.of())).doesNotThrowAnyException();
+    verify(sessions).revoke(AccountType.USER, 42L, 7001L);
   }
 }

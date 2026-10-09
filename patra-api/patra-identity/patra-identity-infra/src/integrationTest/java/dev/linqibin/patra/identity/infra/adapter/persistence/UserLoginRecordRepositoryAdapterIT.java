@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.linqibin.patra.common.security.ClientType;
+import dev.linqibin.patra.identity.domain.exception.UserModifiedConcurrentlyException;
 import dev.linqibin.patra.identity.domain.model.aggregate.User;
 import dev.linqibin.patra.identity.domain.model.aggregate.UserLoginRecord;
 import dev.linqibin.patra.identity.domain.model.enums.LoginEndReason;
@@ -139,5 +140,22 @@ class UserLoginRecordRepositoryAdapterIT {
         Timestamp.from(EXPIRES_AT),
         endedAt == null ? null : Timestamp.from(endedAt),
         endReason);
+  }
+
+  @Test
+  @DisplayName("用过期的版本保存时转成 UserModifiedConcurrentlyException，文案不带实体名")
+  void should_translate_stale_version_to_conflict() {
+    User user = users.save(User.register(EmailAddress.of("stale.record@example.com")));
+    UserLoginRecord saved =
+        records.save(UserLoginRecord.start(user.getId(), LoginClient.web(), EXPIRES_AT));
+    UserLoginRecord stale = records.findById(saved.getId()).orElseThrow();
+    saved.end(LoginEndReason.REPLACED, Instant.parse("2026-10-09T09:00:00Z"));
+    records.save(saved);
+
+    stale.end(LoginEndReason.LOGOUT, Instant.parse("2026-10-09T09:00:01Z"));
+
+    assertThatThrownBy(() -> records.save(stale))
+        .isInstanceOf(UserModifiedConcurrentlyException.class)
+        .hasMessage("用户正被其他操作修改，请重试");
   }
 }
