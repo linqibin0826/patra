@@ -23,6 +23,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
+import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.client.RestTestClient;
@@ -78,6 +79,13 @@ class PatraGatewayApplicationIT {
   @Test
   void should_have_the_assertion_signer_ready() {
     assertThat(context.getBean(IdentityAssertionSigner.class)).isNotNull();
+  }
+
+  @Test
+  void should_declare_exactly_two_security_filter_chains() {
+    assertThat(context.getBeansOfType(SecurityFilterChain.class)).hasSize(2);
+    // starter 的默认链让位
+    assertThat(context.containsBean("patraSecurityFilterChain")).isFalse();
   }
 
   @Test
