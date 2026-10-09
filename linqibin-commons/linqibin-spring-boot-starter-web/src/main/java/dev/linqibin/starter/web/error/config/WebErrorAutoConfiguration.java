@@ -106,13 +106,10 @@ public class WebErrorAutoConfiguration {
     return new DefaultProblemDetailAdapter(pipeline, problemDetailBuilder);
   }
 
-  /// 创建全局 REST 异常处理器,统一处理所有 REST API 异常。
+  /// Spring MVC 自带异常的错误映射：未匹配路径的 404 也带上错误码。
   ///
-  /// 使用 `@RestControllerAdvice` 拦截异常并返回 RFC 7807 ProblemDetail 响应。
-  ///
-  /// @param problemDetailAdapter 问题详情适配器
-  /// @param validationErrorsFormatter 验证错误格式化器
-  /// @return 全局异常处理器
+  /// @param http 按服务前缀生成错误码的组
+  /// @return contributor
   @Bean
   @ConditionalOnMissingBean
   public WebMvcErrorMappingContributor webMvcErrorMappingContributor(HttpStdErrors.Group http) {
@@ -120,6 +117,13 @@ public class WebErrorAutoConfiguration {
     return new WebMvcErrorMappingContributor(http);
   }
 
+  /// 创建全局 REST 异常处理器,统一处理所有 REST API 异常。
+  ///
+  /// 使用 `@RestControllerAdvice` 拦截异常并返回 RFC 7807 ProblemDetail 响应。
+  ///
+  /// @param problemDetailAdapter 问题详情适配器
+  /// @param validationErrorsFormatter 验证错误格式化器
+  /// @return 全局异常处理器
   @Bean
   @ConditionalOnMissingBean
   public GlobalRestExceptionHandler globalRestExceptionHandler(

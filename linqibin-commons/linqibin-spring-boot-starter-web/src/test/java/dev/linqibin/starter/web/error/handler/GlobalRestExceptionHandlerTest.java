@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import ch.qos.logback.classic.Level;
@@ -23,6 +24,7 @@ import dev.linqibin.starter.web.error.adapter.model.ProblemDetailResponse;
 import dev.linqibin.starter.web.error.model.ValidationError;
 import dev.linqibin.starter.web.error.spi.ValidationErrorsFormatter;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.lang.reflect.Method;
 import java.time.Duration;
 import java.util.List;
@@ -62,12 +64,14 @@ class GlobalRestExceptionHandlerTest {
   @Mock private ValidationErrorsFormatter validationErrorsFormatter;
 
   private GlobalRestExceptionHandler handler;
+  private HttpServletResponse servletResponse;
   private Logger handlerLogger;
   private ListAppender<ILoggingEvent> logAppender;
 
   @BeforeEach
   void setUp() {
     handler = new GlobalRestExceptionHandler(problemDetailAdapter, validationErrorsFormatter);
+    servletResponse = mock(HttpServletResponse.class);
     handlerLogger = (Logger) LoggerFactory.getLogger(GlobalRestExceptionHandler.class);
     logAppender = new ListAppender<>();
     logAppender.start();
@@ -111,7 +115,8 @@ class GlobalRestExceptionHandlerTest {
     when(problemDetailAdapter.adapt(exception, request)).thenReturn(response);
 
     // When: 处理异常
-    ResponseEntity<ProblemDetail> result = handler.handleException(exception, request);
+    ResponseEntity<ProblemDetail> result =
+        handler.handleException(exception, request, servletResponse);
 
     // Then: 验证响应
     assertThat(result).isNotNull();
@@ -294,7 +299,8 @@ class GlobalRestExceptionHandlerTest {
     when(problemDetailAdapter.adapt(exception, request)).thenReturn(response);
 
     // When: 处理异常
-    ResponseEntity<ProblemDetail> result = handler.handleException(exception, request);
+    ResponseEntity<ProblemDetail> result =
+        handler.handleException(exception, request, servletResponse);
 
     // Then: 验证不抛出异常
     assertThat(result).isNotNull();
@@ -323,7 +329,8 @@ class GlobalRestExceptionHandlerTest {
     when(problemDetailAdapter.adapt(exception, request)).thenReturn(response);
 
     // When: 处理异常
-    ResponseEntity<ProblemDetail> result = handler.handleException(exception, request);
+    ResponseEntity<ProblemDetail> result =
+        handler.handleException(exception, request, servletResponse);
 
     // Then: 验证 Content-Type
     assertThat(result.getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_PROBLEM_JSON);
@@ -351,7 +358,8 @@ class GlobalRestExceptionHandlerTest {
     when(problemDetailAdapter.adapt(exception, request)).thenReturn(response);
 
     // When: 处理异常
-    ResponseEntity<ProblemDetail> result = handler.handleException(exception, request);
+    ResponseEntity<ProblemDetail> result =
+        handler.handleException(exception, request, servletResponse);
 
     // Then: 验证状态码
     assertThat(result.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
@@ -371,7 +379,8 @@ class GlobalRestExceptionHandlerTest {
     ProblemDetailResponse tooMany = response(HttpStatus.TOO_MANY_REQUESTS, "TEST-0429");
     when(problemDetailAdapter.adapt(exception, request)).thenReturn(tooMany);
 
-    ResponseEntity<ProblemDetail> result = handler.handleException(exception, request);
+    ResponseEntity<ProblemDetail> result =
+        handler.handleException(exception, request, servletResponse);
 
     assertThat(result.getHeaders().getFirst(HttpHeaders.RETRY_AFTER)).isEqualTo("900");
   }
@@ -384,7 +393,8 @@ class GlobalRestExceptionHandlerTest {
     ProblemDetailResponse conflict = response(HttpStatus.CONFLICT, "TEST-0409");
     when(problemDetailAdapter.adapt(exception, request)).thenReturn(conflict);
 
-    ResponseEntity<ProblemDetail> result = handler.handleException(exception, request);
+    ResponseEntity<ProblemDetail> result =
+        handler.handleException(exception, request, servletResponse);
 
     assertThat(result.getHeaders().getFirst(HttpHeaders.RETRY_AFTER)).isNull();
   }
@@ -410,7 +420,7 @@ class GlobalRestExceptionHandlerTest {
     ProblemDetailResponse unauthorized = response(HttpStatus.UNAUTHORIZED, "TEST-0401");
     when(problemDetailAdapter.adapt(exception, request)).thenReturn(unauthorized);
 
-    handler.handleException(exception, request);
+    handler.handleException(exception, request, servletResponse);
 
     assertThat(logAppender.list)
         .singleElement()
@@ -430,7 +440,7 @@ class GlobalRestExceptionHandlerTest {
     ProblemDetailResponse serverError = response(HttpStatus.INTERNAL_SERVER_ERROR, "TEST-0500");
     when(problemDetailAdapter.adapt(exception, request)).thenReturn(serverError);
 
-    handler.handleException(exception, request);
+    handler.handleException(exception, request, servletResponse);
 
     assertThat(logAppender.list)
         .singleElement()
@@ -483,7 +493,8 @@ class GlobalRestExceptionHandlerTest {
     ProblemDetailResponse tooMany = response(HttpStatus.TOO_MANY_REQUESTS, "TEST-0429");
     when(problemDetailAdapter.adapt(exception, request)).thenReturn(tooMany);
 
-    ResponseEntity<ProblemDetail> result = handler.handleException(exception, request);
+    ResponseEntity<ProblemDetail> result =
+        handler.handleException(exception, request, servletResponse);
 
     assertThat(result.getHeaders().getFirst(HttpHeaders.RETRY_AFTER)).isNull();
   }
@@ -498,7 +509,7 @@ class GlobalRestExceptionHandlerTest {
     ProblemDetailResponse invalid = response(HttpStatus.UNPROCESSABLE_CONTENT, "TEST-0422");
     when(problemDetailAdapter.adapt(exception, request)).thenReturn(invalid);
 
-    handler.handleException(exception, request);
+    handler.handleException(exception, request, servletResponse);
 
     assertThat(logAppender.list)
         .singleElement()
@@ -522,7 +533,7 @@ class GlobalRestExceptionHandlerTest {
         response(HttpStatus.UNPROCESSABLE_CONTENT, "TEST-0422", strategy);
     when(problemDetailAdapter.adapt(exception, request)).thenReturn(inferred);
 
-    handler.handleException(exception, request);
+    handler.handleException(exception, request, servletResponse);
 
     assertThat(logAppender.list)
         .singleElement()
@@ -594,5 +605,58 @@ class GlobalRestExceptionHandlerTest {
 
     assertThat(result.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     assertThat(result.getBody()).isSameAs(problemDetail);
+  }
+
+  @Test
+  @DisplayName("响应已提交时不再渲染 ProblemDetail，返回 null 交给容器收尾")
+  void shouldSkipRenderingWhenResponseIsCommitted() {
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    HttpServletResponse committed = mock(HttpServletResponse.class);
+    when(committed.isCommitted()).thenReturn(true);
+
+    ResponseEntity<ProblemDetail> result =
+        handler.handleException(new RuntimeException("下游中断"), request, committed);
+
+    assertThat(result).isNull();
+    verifyNoInteractions(problemDetailAdapter);
+  }
+
+  @Test
+  @DisplayName("渲染 ProblemDetail 前先清掉已写入的响应体，不和半截响应拼在一起")
+  void shouldResetBufferBeforeRenderingProblemDetail() {
+    Exception exception = new RuntimeException("下游中断");
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
+    ErrorResolution errorResolution = mock(ErrorResolution.class);
+    dev.linqibin.commons.error.codes.ErrorCodeLike errorCode =
+        mock(dev.linqibin.commons.error.codes.ErrorCodeLike.class);
+    when(errorCode.code()).thenReturn("T-0500");
+    when(errorResolution.errorCode()).thenReturn(errorCode);
+    when(problemDetailAdapter.adapt(exception, request))
+        .thenReturn(
+            new ProblemDetailResponse(
+                problemDetail, HttpStatus.INTERNAL_SERVER_ERROR, errorResolution));
+
+    handler.handleException(exception, request, servletResponse);
+
+    verify(servletResponse).resetBuffer();
+  }
+
+  @Test
+  @DisplayName("父类接住的 404 在响应已提交时同样不再渲染")
+  void shouldSkipNoResourceFoundRenderingWhenResponseIsCommitted() {
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    HttpServletResponse committed = mock(HttpServletResponse.class);
+    when(committed.isCommitted()).thenReturn(true);
+
+    ResponseEntity<Object> result =
+        handler.handleNoResourceFoundException(
+            new NoResourceFoundException(HttpMethod.GET, "/nowhere", "No static resource nowhere."),
+            new HttpHeaders(),
+            HttpStatus.NOT_FOUND,
+            new ServletWebRequest(request, committed));
+
+    assertThat(result).isNull();
+    verifyNoInteractions(problemDetailAdapter);
   }
 }

@@ -9,6 +9,7 @@ import dev.linqibin.starter.web.error.adapter.model.ProblemDetailResponse;
 import dev.linqibin.starter.web.error.model.ValidationError;
 import dev.linqibin.starter.web.error.spi.ValidationErrorsFormatter;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
@@ -21,6 +22,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
@@ -87,23 +89,30 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
   /// 后备处理器，将任何未捕获的异常转换为问题详情文档。
   ///
   /// 异常实现 {@link HasRetryAfter} 且剩余等待时间不为 `null` 时，加上 `Retry-After` 响应头。
+  /// 响应已提交（状态码和响应头已经发出，例如代理转发到一半下游断了）时无法再改写，返回 `null`
+  /// 交给容器收尾；未提交时先清掉已写入的响应体，ProblemDetail 不会和半截响应拼在一起。
   ///
   /// @param ex 未捕获的异常
   /// @param request HTTP 请求上下文
-  /// @return 包含问题详情的响应实体
+  /// @param response HTTP 响应
+  /// @return 包含问题详情的响应实体；响应已提交时为 `null`
   @ExceptionHandler(Exception.class)
-  public ResponseEntity<ProblemDetail> handleException(Exception ex, HttpServletRequest request) {
-    ProblemDetailResponse response = problemDetailAdapter.adapt(ex, request);
+  public ResponseEntity<ProblemDetail> handleException(
+      Exception ex, HttpServletRequest request, HttpServletResponse response) {
+    if (!prepareForProblemDetail(response)) {
+      logResponseAlreadyCommitted(request, ex);
+      return null;
+    }
+    ProblemDetailResponse problem = problemDetailAdapter.adapt(ex, request);
 
-    logExceptionHandled(response, ex);
+    logExceptionHandled(problem, ex);
 
     ResponseEntity.BodyBuilder builder =
-        ResponseEntity.status(response.httpStatus())
-            .contentType(MediaType.APPLICATION_PROBLEM_JSON);
+        ResponseEntity.status(problem.httpStatus()).contentType(MediaType.APPLICATION_PROBLEM_JSON);
     if (ex instanceof HasRetryAfter hasRetryAfter && hasRetryAfter.getRetryAfter() != null) {
       builder.header(HttpHeaders.RETRY_AFTER, String.valueOf(hasRetryAfter.getRetryAfterSeconds()));
     }
-    return builder.body(response.problemDetail());
+    return builder.body(problem.problemDetail());
   }
 
   /// 处理验证失败并将清理后的字段错误附加到响应载荷。
@@ -120,7 +129,7 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
       MethodArgumentNotValidException ex,
       org.springframework.http.HttpHeaders headers,
       org.springframework.http.HttpStatusCode status,
-      org.springframework.web.context.request.WebRequest request) {
+      WebRequest request) {
 
     HttpServletRequest servletRequest = extractServletRequest(request);
     ProblemDetailResponse response = problemDetailAdapter.adapt(ex, servletRequest);
@@ -136,11 +145,13 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
         .body(response.problemDetail());
   }
 
-  /// 从 Spring 的 WebRequest 包装器中提取 HttpServletRequest。
-  ///
-  /// @param request web 请求包装器
-  /// @return servlet 请求或 null（如果不可用）
   /// 未匹配路径：不用父类的渲染，走适配器，让 ProblemDetail 带错误码。
+  ///
+  /// @param ex 未匹配路径异常
+  /// @param headers HTTP 响应头
+  /// @param status HTTP 状态码
+  /// @param request Web 请求上下文
+  /// @return ProblemDetail 响应；响应已提交时为 `null`
   @Override
   protected ResponseEntity<Object> handleNoResourceFoundException(
       NoResourceFoundException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
@@ -148,30 +159,83 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
   }
 
   /// 没有处理器：同上。
+  ///
+  /// @param ex 没有处理器异常
+  /// @param headers HTTP 响应头
+  /// @param status HTTP 状态码
+  /// @param request Web 请求上下文
+  /// @return ProblemDetail 响应；响应已提交时为 `null`
   @Override
   protected ResponseEntity<Object> handleNoHandlerFoundException(
       NoHandlerFoundException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
     return renderThroughAdapter(ex, request);
   }
 
-  /// 把父类接住的 Spring MVC 异常交回适配器渲染。
+  /// 把父类接住的 Spring MVC 异常交回适配器渲染，同样受「响应已提交」的保护。
   ///
   /// @param ex 异常
   /// @param request 请求
-  /// @return ProblemDetail 响应
+  /// @return ProblemDetail 响应；响应已提交时为 `null`
   private ResponseEntity<Object> renderThroughAdapter(Exception ex, WebRequest request) {
-    ProblemDetailResponse response = problemDetailAdapter.adapt(ex, extractServletRequest(request));
-    logExceptionHandled(response, ex);
-    return ResponseEntity.status(response.httpStatus())
+    HttpServletRequest servletRequest = extractServletRequest(request);
+    if (!prepareForProblemDetail(extractServletResponse(request))) {
+      logResponseAlreadyCommitted(servletRequest, ex);
+      return null;
+    }
+    ProblemDetailResponse problem = problemDetailAdapter.adapt(ex, servletRequest);
+    logExceptionHandled(problem, ex);
+    return ResponseEntity.status(problem.httpStatus())
         .contentType(MediaType.APPLICATION_PROBLEM_JSON)
-        .body(response.problemDetail());
+        .body(problem.problemDetail());
   }
 
-  private HttpServletRequest extractServletRequest(
-      org.springframework.web.context.request.WebRequest request) {
-    if (request
-        instanceof org.springframework.web.context.request.ServletWebRequest servletWebRequest) {
+  /// 渲染 ProblemDetail 前的准备：响应已提交就放弃；未提交则清掉已写入的响应体，并清掉可能残留的
+  /// `Content-Length`（代理转发时下游的长度已经写进响应，ProblemDetail 的长度不是它）。
+  ///
+  /// @param response HTTP 响应，非 servlet 环境下可能为 null
+  /// @return 能否渲染
+  private static boolean prepareForProblemDetail(HttpServletResponse response) {
+    if (response == null) {
+      return true;
+    }
+    if (response.isCommitted()) {
+      return false;
+    }
+    response.resetBuffer();
+    response.setContentLengthLong(-1);
+    return true;
+  }
+
+  /// 记录「响应已提交、放弃渲染」。
+  ///
+  /// @param request HTTP 请求，可能为 null
+  /// @param ex 异常
+  private static void logResponseAlreadyCommitted(HttpServletRequest request, Exception ex) {
+    log.warn(
+        "响应已提交，无法再写 ProblemDetail: request path [{}], exception={}: {}",
+        request == null ? null : request.getRequestURI(),
+        ex.getClass().getSimpleName(),
+        ex.getMessage());
+  }
+
+  /// 从 Spring 的 WebRequest 包装器中提取 HttpServletRequest。
+  ///
+  /// @param request web 请求包装器
+  /// @return servlet 请求或 null（如果不可用）
+  private HttpServletRequest extractServletRequest(WebRequest request) {
+    if (request instanceof ServletWebRequest servletWebRequest) {
       return servletWebRequest.getRequest();
+    }
+    return null;
+  }
+
+  /// 从 Spring 的 WebRequest 包装器中提取 HttpServletResponse。
+  ///
+  /// @param request web 请求包装器
+  /// @return servlet 响应或 null（如果不可用）
+  private HttpServletResponse extractServletResponse(WebRequest request) {
+    if (request instanceof ServletWebRequest servletWebRequest) {
+      return servletWebRequest.getResponse();
     }
     return null;
   }
