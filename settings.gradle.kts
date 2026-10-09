@@ -118,6 +118,7 @@ includeAt(":patra-api:patra-identity:patra-identity-app", "patra-api/patra-ident
 includeAt(":patra-api:patra-identity:patra-identity-infra", "patra-api/patra-identity/patra-identity-infra")
 includeAt(":patra-api:patra-identity:patra-identity-adapter", "patra-api/patra-identity/patra-identity-adapter")
 includeAt(":patra-api:patra-identity:patra-identity-boot", "patra-api/patra-identity/patra-identity-boot")
+includeAt(":patra-api:patra-identity:patra-identity-session", "patra-api/patra-identity/patra-identity-session")
 mapParent(":patra-api:patra-identity", "patra-api/patra-identity")
 
 // ==================== patra-api / Gateway ====================

@@ -410,6 +410,17 @@
             ]
         },
         {
+            "dir": "patra-api/patra-identity/patra-identity-session",
+            "project": ":patra-api:patra-identity:patra-identity-session",
+            "unit": "identity",
+            "impacts": [
+                "identity"
+            ],
+            "tasks": [
+                "check"
+            ]
+        },
+        {
             "dir": "patra-api/patra-ingest/patra-ingest-adapter",
             "project": ":patra-api:patra-ingest:patra-ingest-adapter",
             "unit": "ingest",
