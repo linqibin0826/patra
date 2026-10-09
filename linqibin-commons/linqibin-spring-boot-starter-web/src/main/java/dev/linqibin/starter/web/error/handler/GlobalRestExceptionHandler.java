@@ -14,13 +14,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /// 全局 REST 异常处理器,使用共享平台错误解析管道呈现 RFC 7807 {@link ProblemDetail} 文档。
 ///
@@ -136,6 +140,33 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
   ///
   /// @param request web 请求包装器
   /// @return servlet 请求或 null（如果不可用）
+  /// 未匹配路径：不用父类的渲染，走适配器，让 ProblemDetail 带错误码。
+  @Override
+  protected ResponseEntity<Object> handleNoResourceFoundException(
+      NoResourceFoundException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+    return renderThroughAdapter(ex, request);
+  }
+
+  /// 没有处理器：同上。
+  @Override
+  protected ResponseEntity<Object> handleNoHandlerFoundException(
+      NoHandlerFoundException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+    return renderThroughAdapter(ex, request);
+  }
+
+  /// 把父类接住的 Spring MVC 异常交回适配器渲染。
+  ///
+  /// @param ex 异常
+  /// @param request 请求
+  /// @return ProblemDetail 响应
+  private ResponseEntity<Object> renderThroughAdapter(Exception ex, WebRequest request) {
+    ProblemDetailResponse response = problemDetailAdapter.adapt(ex, extractServletRequest(request));
+    logExceptionHandled(response, ex);
+    return ResponseEntity.status(response.httpStatus())
+        .contentType(MediaType.APPLICATION_PROBLEM_JSON)
+        .body(response.problemDetail());
+  }
+
   private HttpServletRequest extractServletRequest(
       org.springframework.web.context.request.WebRequest request) {
     if (request

@@ -41,6 +41,7 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
@@ -48,6 +49,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.context.request.ServletWebRequest;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /// GlobalRestExceptionHandler 单元测试。
 @ExtendWith(MockitoExtension.class)
@@ -541,5 +544,55 @@ class GlobalRestExceptionHandlerTest {
     ProblemDetailResponse response = response(status, code);
     when(response.errorResolution().strategy()).thenReturn(strategy);
     return response;
+  }
+
+  @Test
+  @DisplayName("未匹配路径的 NoResourceFoundException 应经适配器渲染，带错误码")
+  void shouldRenderNoResourceFoundThroughAdapter() {
+    NoResourceFoundException exception =
+        new NoResourceFoundException(HttpMethod.GET, "/nowhere", "No static resource /nowhere.");
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
+    problemDetail.setProperty("code", "T-0404");
+    ErrorResolution errorResolution = mock(ErrorResolution.class);
+    dev.linqibin.commons.error.codes.ErrorCodeLike errorCode =
+        mock(dev.linqibin.commons.error.codes.ErrorCodeLike.class);
+    when(errorCode.code()).thenReturn("T-0404");
+    when(errorResolution.errorCode()).thenReturn(errorCode);
+    ProblemDetailResponse response =
+        new ProblemDetailResponse(problemDetail, HttpStatus.NOT_FOUND, errorResolution);
+    when(problemDetailAdapter.adapt(exception, request)).thenReturn(response);
+
+    ResponseEntity<Object> result =
+        handler.handleNoResourceFoundException(
+            exception, new HttpHeaders(), HttpStatus.NOT_FOUND, new ServletWebRequest(request));
+
+    assertThat(result.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    assertThat(result.getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_PROBLEM_JSON);
+    assertThat(result.getBody()).isSameAs(problemDetail);
+  }
+
+  @Test
+  @DisplayName("NoHandlerFoundException 应经适配器渲染，带错误码")
+  void shouldRenderNoHandlerFoundThroughAdapter() {
+    NoHandlerFoundException exception =
+        new NoHandlerFoundException("GET", "/nowhere", new HttpHeaders());
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
+    ErrorResolution errorResolution = mock(ErrorResolution.class);
+    dev.linqibin.commons.error.codes.ErrorCodeLike errorCode =
+        mock(dev.linqibin.commons.error.codes.ErrorCodeLike.class);
+    when(errorCode.code()).thenReturn("T-0404");
+    when(errorResolution.errorCode()).thenReturn(errorCode);
+    ProblemDetailResponse response =
+        new ProblemDetailResponse(problemDetail, HttpStatus.NOT_FOUND, errorResolution);
+    when(problemDetailAdapter.adapt(exception, request)).thenReturn(response);
+
+    ResponseEntity<Object> result =
+        handler.handleNoHandlerFoundException(
+            exception, new HttpHeaders(), HttpStatus.NOT_FOUND, new ServletWebRequest(request));
+
+    assertThat(result.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    assertThat(result.getBody()).isSameAs(problemDetail);
   }
 }

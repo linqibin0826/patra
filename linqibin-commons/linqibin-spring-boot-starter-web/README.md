@@ -33,6 +33,8 @@ ProblemDetailAdapter 转换
 返回 application/problem+json 响应
 ```
 
+Spring MVC 自带的未匹配路径异常（`NoResourceFoundException` / `NoHandlerFoundException`）同样经错误引擎渲染，响应带 `code`（`{前缀}-0404`）；其余由 `ResponseEntityExceptionHandler` 接住的框架异常（405、415 等）仍是 Spring 默认的 ProblemDetail。
+
 ### 组件说明
 
 | 组件 | 职责 |

@@ -1,5 +1,6 @@
 package dev.linqibin.starter.web.error.config;
 
+import dev.linqibin.commons.error.codes.HttpStdErrors;
 import dev.linqibin.starter.core.error.config.ErrorProperties;
 import dev.linqibin.starter.core.error.pipeline.ErrorResolutionPipeline;
 import dev.linqibin.starter.core.error.spi.ProblemFieldContributor;
@@ -9,6 +10,7 @@ import dev.linqibin.starter.web.error.adapter.ProblemDetailAdapter;
 import dev.linqibin.starter.web.error.builder.ProblemDetailBuilder;
 import dev.linqibin.starter.web.error.formatter.DefaultValidationErrorsFormatter;
 import dev.linqibin.starter.web.error.handler.GlobalRestExceptionHandler;
+import dev.linqibin.starter.web.error.handler.WebMvcErrorMappingContributor;
 import dev.linqibin.starter.web.error.spi.ValidationErrorsFormatter;
 import dev.linqibin.starter.web.error.spi.WebProblemFieldContributor;
 import java.util.List;
@@ -111,6 +113,13 @@ public class WebErrorAutoConfiguration {
   /// @param problemDetailAdapter 问题详情适配器
   /// @param validationErrorsFormatter 验证错误格式化器
   /// @return 全局异常处理器
+  @Bean
+  @ConditionalOnMissingBean
+  public WebMvcErrorMappingContributor webMvcErrorMappingContributor(HttpStdErrors.Group http) {
+    log.debug("正在注册 Spring MVC 自带异常的错误映射(WebMvcErrorMappingContributor)：未匹配路径 -> 404");
+    return new WebMvcErrorMappingContributor(http);
+  }
+
   @Bean
   @ConditionalOnMissingBean
   public GlobalRestExceptionHandler globalRestExceptionHandler(
