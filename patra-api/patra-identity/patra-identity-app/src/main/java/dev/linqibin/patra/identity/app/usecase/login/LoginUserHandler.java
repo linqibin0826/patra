@@ -38,8 +38,10 @@ import org.springframework.transaction.support.TransactionOperations;
 /// 3. 查用户和凭据。查不到时拿假哈希做一次校验，耗时和「密码错」一样。
 /// 4. 密码错按失败结算（可能触发 429）；密码对按成功结算，封禁的账号返回 403。
 /// 5. 中途出错按取消结算，不计失败，原来的错误照常抛出。
-/// 6. 校验通过后在一个事务里建会话：存登录记录、写 Redis、收尾被挤掉的记录。哈希在事务外，
-///    事务不占着连接等排队。Redis 写失败回滚记录，返回 503。
+/// 6. 校验通过后在一个事务里先对用户行加锁重读、复核封禁，再建会话：存登录记录、写 Redis、
+///    收尾被挤掉的记录。封禁对同一行的更新和这把锁互斥：封禁先提交，这里返回 403；登录先提交，
+///    封禁随后的「删全部会话」会把这条新会话一起删掉。哈希在事务外，事务不占着连接等排队。
+///    Redis 写失败回滚记录，返回 503。
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -93,7 +95,17 @@ public class LoginUserHandler implements CommandHandler<LoginUserCommand, LoginU
     }
     IssuedUserSession session =
         Objects.requireNonNull(
-            transactions.execute(status -> sessionIssuer.issue(verified.getId(), client)));
+            transactions.execute(
+                status -> {
+                  User locked =
+                      users
+                          .findByIdForUpdate(verified.getId())
+                          .orElseThrow(InvalidCredentialsException::new);
+                  if (locked.isBanned()) {
+                    throw new UserBannedException();
+                  }
+                  return sessionIssuer.issue(locked.getId(), client);
+                }));
     log.info(
         "前台用户已登录: userId={}, replacedSessions={}",
         verified.getId(),

@@ -39,10 +39,14 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.transaction.TransactionException;
+import org.springframework.transaction.support.SimpleTransactionStatus;
+import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionOperations;
 
 /// LoginUserHandler 单元测试。
@@ -82,6 +86,7 @@ class LoginUserHandlerTest {
     when(loginThrottle.begin(AccountType.USER, EMAIL)).thenReturn(ATTEMPT);
     when(users.findByEmail(EMAIL)).thenReturn(Optional.of(ACTIVE_USER));
     when(credentials.findByUserId(42L)).thenReturn(Optional.of(CREDENTIAL));
+    when(users.findByIdForUpdate(42L)).thenReturn(Optional.of(ACTIVE_USER));
     when(loginThrottle.recordFailure(ATTEMPT)).thenReturn(Optional.empty());
     when(sessionIssuer.issue(anyLong(), any()))
         .thenReturn(IssuedUserSession.of("patra_user_x", List.of()));
@@ -339,5 +344,83 @@ class LoginUserHandlerTest {
     assertThat(LoginUserResult.of("patra_user_x", 42L, "a@example.com").toString())
         .doesNotContain("patra_user_x")
         .contains("42");
+  }
+
+  @Test
+  @DisplayName("密码对但建会话前用户已被封禁（事务内加锁重读到 BANNED）：403，不建会话")
+  void should_reject_when_user_was_banned_before_session_is_issued() {
+    when(passwordHashing.matches(any(), any())).thenReturn(true);
+    when(users.findByIdForUpdate(42L)).thenReturn(Optional.of(BANNED_USER));
+
+    assertThatThrownBy(
+            () ->
+                handler.handle(
+                    LoginUserCommand.of("chen.yu@example.com", "correct horse", null, null)))
+        .isInstanceOf(UserBannedException.class);
+    verify(loginThrottle).recordSuccess(ATTEMPT);
+    verify(sessionIssuer, never()).issue(anyLong(), any());
+  }
+
+  @Test
+  @DisplayName("建会话前用户已不存在：按凭据错误处理，不建会话")
+  void should_reject_when_user_vanished_before_session_is_issued() {
+    when(passwordHashing.matches(any(), any())).thenReturn(true);
+    when(users.findByIdForUpdate(42L)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(
+            () ->
+                handler.handle(
+                    LoginUserCommand.of("chen.yu@example.com", "correct horse", null, null)))
+        .isInstanceOf(InvalidCredentialsException.class);
+    verify(sessionIssuer, never()).issue(anyLong(), any());
+  }
+
+  @Test
+  @DisplayName("加锁重读和建会话在同一个事务里，哈希在事务外")
+  void should_recheck_ban_with_lock_inside_the_same_transaction_as_issuing() {
+    AtomicBoolean inTransaction = new AtomicBoolean(false);
+    TransactionOperations recording =
+        new TransactionOperations() {
+          /// 标记事务边界后执行回调。
+          ///
+          /// @param action 回调
+          /// @param <T> 结果类型
+          /// @return 回调结果
+          @Override
+          public <T> T execute(TransactionCallback<T> action) throws TransactionException {
+            inTransaction.set(true);
+            try {
+              return action.doInTransaction(new SimpleTransactionStatus());
+            } finally {
+              inTransaction.set(false);
+            }
+          }
+        };
+    LoginUserHandler transactional =
+        new LoginUserHandler(
+            users, credentials, passwordHashing, loginThrottle, sessionIssuer, recording);
+    when(passwordHashing.matches(any(), any()))
+        .thenAnswer(
+            invocation -> {
+              assertThat(inTransaction).isFalse();
+              return true;
+            });
+    when(users.findByIdForUpdate(42L))
+        .thenAnswer(
+            invocation -> {
+              assertThat(inTransaction).isTrue();
+              return Optional.of(ACTIVE_USER);
+            });
+    when(sessionIssuer.issue(anyLong(), any()))
+        .thenAnswer(
+            invocation -> {
+              assertThat(inTransaction).isTrue();
+              return IssuedUserSession.of("patra_user_x", List.of());
+            });
+
+    transactional.handle(LoginUserCommand.of("chen.yu@example.com", "correct horse", null, null));
+
+    verify(users).findByIdForUpdate(42L);
+    verify(sessionIssuer).issue(eq(42L), any());
   }
 }

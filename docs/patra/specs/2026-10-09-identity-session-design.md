@@ -4,7 +4,7 @@
 > **版本**：[v0.8 Accounts](../release-specs/v0.8-accounts.md)
 > **前置设计**：[identity 账号（PAP-63）](2026-10-05-identity-account-design.md)、[安全 starter（PAP-62 / PAP-70）](2026-10-05-security-starter-design.md)
 > **日期**：2026-10-09
-> **状态**：待评审
+> **状态**：已实施（2026-10-09，分支 `feat/v0.8-accounts-api`）
 
 ## 1. 要解决的问题
 
@@ -238,7 +238,7 @@ Flyway `V2__add_user_login_record.sql`，表 `idn_user_login_record`，审计列
 
 | 流程 | 顺序 | 事务 |
 |---|---|---|
-| 登录 `LoginUserHandler` | PAP-63 的七步不变（事务外，哈希要排队）→ 校验通过后 `transactions.execute`：`sessionIssuer.issue(...)` → 返回令牌、用户 ID、邮箱 | Redis 写在事务里，失败回滚记录，返回 503 |
+| 登录 `LoginUserHandler` | PAP-63 的七步不变（事务外，哈希要排队）→ 校验通过后 `transactions.execute`：`users.findByIdForUpdate(userId)` 加行锁重读、复核封禁（封禁抛 403）→ `sessionIssuer.issue(...)` → 返回令牌、用户 ID、邮箱 | Redis 写在事务里，失败回滚记录，返回 503 |
 | 注册 `RegisterUserHandler` | 现有事务里存完用户和凭据 → `sessionIssuer.issue(...)` → 返回带令牌的结果 | 同上；Redis 挂了整个注册回滚，用户重试不会撞 409 |
 | 登出 `LogoutUserHandler` | `currentUserPort.current()` 为空直接返回 → `store.revoke(USER, userId, sid)` → 返回 `true` 时 `transactions.execute`：`findById(sid)` 有就 `end(LOGOUT, now)` 并保存 | 只有 DB 一段事务。先删 Redis 是因为那才是登出的实质；DB 失败时用户已经登出，记录留空 |
 | 封禁 `BanUserHandler` | 现有事务里 `user.ban`、保存 → `store.revokeAll(USER, userId)` → 返回的每个 ID `end(BANNED, now)` 并保存 | Redis 失败回滚封禁，返回 503，管理员重试 |
@@ -246,6 +246,7 @@ Flyway `V2__add_user_login_record.sql`，表 `idn_user_login_record`，审计列
 - Redis 放在事务里而不是提交后：提交后再写 Redis，失败时记录已经落库、会话却没建成，审计里多出一次没发生过的登录。放在事务里只剩一种坏情况：Redis 写成功、提交失败，会话存在但没记录。这种会话的主人确实通过了密码校验，安全上没事，只是审计少一行；登出时按 ID 找不到记录就记一条 INFO 放过。
 - 登出时 `revoke` 返回 `false`（会话已经没了：过期、被封禁、被挤掉）不动记录：记录的结束原因以先发生的为准。
 - 登录的 `recordSuccess` 在建会话之前，建会话失败不影响失败计数清零。
+- 封禁与登录并发：登录在事务外判完封禁、事务内才建会话，封禁恰好在中间提交时 `revokeAll` 删不到还没建的会话，被封用户会持有一条有效会话。所以登录事务里先 `SELECT … FOR UPDATE` 重读用户行再复核封禁：封禁的 `UPDATE idn_user` 与这把锁互斥，封禁先提交则登录读到封禁返回 403，登录先提交则封禁随后的 `revokeAll` 删掉这条新会话（Redis 写在提交之前）。登录记录的外键只取 `KEY SHARE` 锁，挡不住这个竞态，所以要显式加锁（整条分支评审时发现）。
 - `LoginUserCommand(email, password, clientType, deviceId)`、`LoginUserResult(sessionToken, userId, email)`；`RegisterUserCommand` 加同样两个字段、`RegisterUserResult` 加 `sessionToken`；`LogoutUserCommand` 没有字段（处理器用 `CurrentUserPort`）。四个字段的校验在处理器里一次报全：邮箱、密码照旧，客户端用 `LoginClient.validate`。
 - `/auth/me` 走 `UserQueryService.currentAccount()`：`currentUserPort.require()` → `userReadPort.findAccount(userId)`；查不到或状态是 `BANNED` 抛 `AuthenticationRequiredException` 并记 WARN。
 

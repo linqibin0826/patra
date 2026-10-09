@@ -14,6 +14,15 @@ public interface UserRepository {
   /// @return 用户；不存在时为空
   Optional<User> findById(long id);
 
+  /// 按 ID 加行锁查用户，只能在事务里调。
+  ///
+  /// 登录建会话前用它复核封禁状态：封禁对同一行的更新和这把锁互斥，两种先后都对——封禁先提交，
+  /// 这里读到的就是封禁；登录先提交，封禁随后的「删全部会话」会把这条新会话一起删掉。
+  ///
+  /// @param id 用户 ID
+  /// @return 用户；不存在时为空
+  Optional<User> findByIdForUpdate(long id);
+
   /// 按规范化之后的邮箱查用户。
   ///
   /// @param email 邮箱

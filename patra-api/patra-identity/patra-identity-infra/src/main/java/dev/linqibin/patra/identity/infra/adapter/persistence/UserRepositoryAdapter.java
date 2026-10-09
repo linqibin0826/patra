@@ -40,6 +40,15 @@ public class UserRepositoryAdapter implements UserRepository {
     return dao.findById(id).map(mapper::toAggregate);
   }
 
+  /// 按 ID 加行锁查用户。
+  ///
+  /// @param id 用户 ID
+  /// @return 用户
+  @Override
+  public Optional<User> findByIdForUpdate(long id) {
+    return dao.findByIdForUpdate(id).map(mapper::toAggregate);
+  }
+
   /// 按邮箱查用户。
   ///
   /// @param email 邮箱

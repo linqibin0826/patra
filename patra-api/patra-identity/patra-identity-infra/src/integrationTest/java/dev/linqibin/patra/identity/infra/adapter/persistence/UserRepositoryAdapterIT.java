@@ -12,6 +12,12 @@ import dev.linqibin.patra.identity.infra.config.IdentityITPostgreSQLContainerIni
 import dev.linqibin.starter.jpa.autoconfig.HibernatePropertiesCustomizer;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
 import java.time.Instant;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +29,10 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /// UserRepositoryAdapter 集成测试。
 @DataJpaTest
@@ -37,6 +47,7 @@ import org.springframework.test.context.ContextConfiguration;
 class UserRepositoryAdapterIT {
 
   @Autowired private UserRepositoryAdapter repository;
+  @Autowired private PlatformTransactionManager transactionManager;
 
   @Test
   @DisplayName("保存新用户时分配雪花 ID，能按邮箱和 ID 查回")
@@ -93,5 +104,66 @@ class UserRepositoryAdapterIT {
 
     assertThatThrownBy(() -> repository.save(stale))
         .isInstanceOf(UserModifiedConcurrentlyException.class);
+  }
+
+  @Test
+  @DisplayName("加锁读用户后，另一个事务的封禁保存要等到这个事务提交才完成")
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
+  void should_block_concurrent_ban_until_locking_transaction_commits() throws Exception {
+    TransactionTemplate transactions = new TransactionTemplate(transactionManager);
+    long userId =
+        transactions.execute(
+            status ->
+                repository.save(User.register(EmailAddress.of("lock.me@example.com"))).getId());
+    CountDownLatch locked = new CountDownLatch(1);
+    AtomicBoolean lockerCommitted = new AtomicBoolean(false);
+    ExecutorService pool = Executors.newFixedThreadPool(2);
+    try {
+      Future<?> locker =
+          pool.submit(
+              () -> {
+                transactions.executeWithoutResult(
+                    status -> {
+                      assertThat(repository.findByIdForUpdate(userId)).isPresent();
+                      locked.countDown();
+                      sleepQuietly(500);
+                    });
+                lockerCommitted.set(true);
+              });
+      assertThat(locked.await(10, TimeUnit.SECONDS)).isTrue();
+      long started = System.nanoTime();
+      Future<Boolean> banner =
+          pool.submit(
+              () ->
+                  transactions.execute(
+                      status -> {
+                        User user = repository.findById(userId).orElseThrow();
+                        user.ban(Instant.parse("2026-10-09T08:00:00Z"));
+                        repository.save(user);
+                        return lockerCommitted.get();
+                      }));
+
+      boolean lockerHadCommitted = banner.get(10, TimeUnit.SECONDS);
+      long elapsedMillis = (System.nanoTime() - started) / 1_000_000;
+      locker.get(10, TimeUnit.SECONDS);
+
+      assertThat(lockerHadCommitted).isTrue();
+      assertThat(elapsedMillis).isGreaterThanOrEqualTo(400);
+      assertThat(repository.findById(userId).orElseThrow().getStatus())
+          .isEqualTo(UserStatus.BANNED);
+    } finally {
+      pool.shutdownNow();
+    }
+  }
+
+  /// 睡一会儿，中断就提前结束。
+  ///
+  /// @param millis 毫秒
+  private static void sleepQuietly(long millis) {
+    try {
+      Thread.sleep(millis);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
   }
 }
