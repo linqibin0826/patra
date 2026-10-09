@@ -6,16 +6,21 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import dev.linqibin.commons.cqrs.CommandBus;
+import dev.linqibin.patra.common.security.AuthenticationRequiredException;
 import dev.linqibin.patra.identity.app.usecase.login.LoginUserCommand;
 import dev.linqibin.patra.identity.app.usecase.login.LoginUserResult;
+import dev.linqibin.patra.identity.app.usecase.logout.LogoutUserCommand;
 import dev.linqibin.patra.identity.app.usecase.register.RegisterUserCommand;
 import dev.linqibin.patra.identity.app.usecase.register.RegisterUserResult;
+import dev.linqibin.patra.identity.app.usecase.user.query.UserQueryService;
 import dev.linqibin.patra.identity.domain.exception.EmailAlreadyRegisteredException;
 import dev.linqibin.patra.identity.domain.exception.InvalidCredentialsException;
 import dev.linqibin.patra.identity.domain.exception.InvalidUserFieldsException;
 import dev.linqibin.patra.identity.domain.exception.LoginTemporarilyLockedException;
 import dev.linqibin.patra.identity.domain.exception.TemporarilyUnavailableException;
 import dev.linqibin.patra.identity.domain.exception.UserBannedException;
+import dev.linqibin.patra.identity.domain.model.enums.UserStatus;
+import dev.linqibin.patra.identity.domain.model.read.UserAccountReadModel;
 import dev.linqibin.patra.identity.domain.model.vo.UserFieldViolations;
 import java.time.Duration;
 import java.util.List;
@@ -46,6 +51,8 @@ class AuthControllerIT {
   @Autowired private RestTestClient restClient;
 
   @MockitoBean private CommandBus commandBus;
+
+  @MockitoBean private UserQueryService userQueryService;
 
   @Test
   @DisplayName("注册成功返回 201，带会话令牌，userId 是字符串；原始输入原样交给命令")
@@ -275,5 +282,50 @@ class AuthControllerIT {
         .isEqualTo("IDN-0503")
         .jsonPath("$.detail")
         .isEqualTo("服务暂时不可用");
+  }
+
+  @Test
+  @DisplayName("登出返回 204，没有响应体；命令没有字段")
+  void should_logout_and_return_204() {
+    restClient.post().uri("/auth/logout").exchange().expectStatus().isNoContent();
+
+    verify(commandBus).handle(LogoutUserCommand.of());
+  }
+
+  @Test
+  @DisplayName("当前用户：200，带 ID、邮箱、账号类型")
+  void should_return_current_user() {
+    when(userQueryService.currentAccount())
+        .thenReturn(UserAccountReadModel.of(42L, "chen.yu@example.com", UserStatus.ACTIVE));
+
+    restClient
+        .get()
+        .uri("/auth/me")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .jsonPath("$.userId")
+        .isEqualTo("42")
+        .jsonPath("$.email")
+        .isEqualTo("chen.yu@example.com")
+        .jsonPath("$.accountType")
+        .isEqualTo("user");
+  }
+
+  @Test
+  @DisplayName("没有当前用户：401，IDN-0401")
+  void should_return_401_without_current_user() {
+    when(userQueryService.currentAccount()).thenThrow(new AuthenticationRequiredException());
+
+    restClient
+        .get()
+        .uri("/auth/me")
+        .exchange()
+        .expectStatus()
+        .isUnauthorized()
+        .expectBody()
+        .jsonPath("$.code")
+        .isEqualTo("IDN-0401");
   }
 }
