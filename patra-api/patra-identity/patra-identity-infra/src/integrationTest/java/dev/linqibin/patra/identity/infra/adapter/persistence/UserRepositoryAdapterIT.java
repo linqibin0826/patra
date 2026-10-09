@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.linqibin.patra.identity.domain.exception.EmailAlreadyRegisteredException;
+import dev.linqibin.patra.identity.domain.exception.UserModifiedConcurrentlyException;
 import dev.linqibin.patra.identity.domain.model.aggregate.User;
 import dev.linqibin.patra.identity.domain.model.enums.UserStatus;
 import dev.linqibin.patra.identity.domain.model.vo.EmailAddress;
@@ -20,7 +21,6 @@ import org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
-import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
@@ -92,6 +92,6 @@ class UserRepositoryAdapterIT {
     stale.ban(Instant.parse("2026-10-06T09:00:00Z"));
 
     assertThatThrownBy(() -> repository.save(stale))
-        .isInstanceOf(OptimisticLockingFailureException.class);
+        .isInstanceOf(UserModifiedConcurrentlyException.class);
   }
 }

@@ -1,6 +1,7 @@
 package dev.linqibin.patra.identity.infra.adapter.persistence;
 
 import dev.linqibin.patra.identity.domain.exception.EmailAlreadyRegisteredException;
+import dev.linqibin.patra.identity.domain.exception.UserModifiedConcurrentlyException;
 import dev.linqibin.patra.identity.domain.model.aggregate.User;
 import dev.linqibin.patra.identity.domain.model.vo.EmailAddress;
 import dev.linqibin.patra.identity.domain.port.repository.UserRepository;
@@ -12,12 +13,14 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Repository;
 
 /// 前台用户仓储的 JPA 实现。
 ///
 /// 保存用 `saveAndFlush`：唯一约束和乐观锁的冲突在这里就抛出来，
 /// 邮箱唯一约束转成 {@link EmailAlreadyRegisteredException}，不把数据库的报错带进响应。
+/// 乐观锁冲突转成 {@link UserModifiedConcurrentlyException}，`detail` 是固定文案，不带实体类名和 ID。
 @Repository
 @RequiredArgsConstructor
 public class UserRepositoryAdapter implements UserRepository {
@@ -72,6 +75,8 @@ public class UserRepositoryAdapter implements UserRepository {
         throw new EmailAlreadyRegisteredException();
       }
       throw ex;
+    } catch (OptimisticLockingFailureException ex) {
+      throw new UserModifiedConcurrentlyException();
     }
   }
 

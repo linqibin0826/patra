@@ -17,7 +17,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 @DisplayName("identity 领域异常的文案和特征")
 class DomainExceptionTraitsTest {
 
-  /// 七个异常及其预期的文案和特征。
+  /// 八个异常及其预期的文案和特征。
   ///
   /// @return 异常、文案、特征
   static Stream<Arguments> exceptions() {
@@ -35,6 +35,8 @@ class DomainExceptionTraitsTest {
             StandardErrorTrait.QUOTA_EXCEEDED),
         Arguments.of(new UserBannedException(), "该账号已被封禁", StandardErrorTrait.FORBIDDEN),
         Arguments.of(new UserNotFoundException(), "用户不存在", StandardErrorTrait.NOT_FOUND),
+        Arguments.of(
+            new UserModifiedConcurrentlyException(), "用户正被其他操作修改，请重试", StandardErrorTrait.CONFLICT),
         Arguments.of(
             new TemporarilyUnavailableException(), "服务暂时不可用", StandardErrorTrait.DEP_UNAVAILABLE));
   }
