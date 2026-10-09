@@ -1,6 +1,7 @@
 package dev.linqibin.patra.gateway.security;
 
 import com.nimbusds.jose.jwk.ECKey;
+import dev.linqibin.commons.error.codes.HttpStdErrors;
 import dev.linqibin.patra.common.security.AccountType;
 import dev.linqibin.patra.common.security.ClientType;
 import dev.linqibin.patra.common.security.CurrentUser;
@@ -33,6 +34,16 @@ public class GatewaySecurityConfiguration {
   @Bean
   public RedisSessionStore redisSessionStore(StringRedisTemplate redis, Clock clock) {
     return new RedisSessionStore(redis, clock);
+  }
+
+  /// 安全异常到错误码的映射：starter 的表加一行查会话失败 → 0500。starter 的同类 Bean 随之让位。
+  ///
+  /// @param http 按网关前缀生成错误码的组
+  /// @return 映射
+  @Bean
+  public GatewaySecurityErrorMappingContributor gatewaySecurityErrorMappingContributor(
+      HttpStdErrors.Group http) {
+    return new GatewaySecurityErrorMappingContributor(http);
   }
 
   /// 身份断言的签名器：解析私钥并自签自验一次，密钥配错在启动时就暴露。
