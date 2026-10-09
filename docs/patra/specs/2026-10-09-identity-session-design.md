@@ -325,13 +325,18 @@ CurrentUserResponse        { "userId": "…", "email": "…", "accountType": "us
 
 ## 15. 实施时要实测的点
 
-结果写回本节。
+结果写回本节（2026-10-09 实施时实测）。
 
-1. Spring Data Redis 4.x 的 `LettuceExceptionConverter` 把 Lettuce 的 `RedisLoadingException` / `RedisReadOnlyException` / `RedisBusyException` 包成什么：预期是 `RedisSystemException`，原因是 Lettuce 异常本身；`MASTERDOWN` 没有专门的类，按消息前缀。
-2. `StringRedisTemplate.execute(RedisScript<List>, …)` 对 Lua 返回的扁平数组和嵌套数组各给什么 Java 类型；`touch` 返回空时 Java 侧拿到的是 `null` 还是空列表。
-3. 雪花 ID 当前的位数（预期 18），脚本里的长度优先比较用位数不同的 ID 测一次。
-4. `transactions.execute` 里抛 `SessionStoreUnavailableException` 时记录被回滚；注册的回滚要连用户和凭据一起。
-5. 安全 starter 接入 identity 后，PAP-63 的切片测试和端到端测试要不要补公钥配置才能启动。
+1. `LettuceExceptionConverter` 包成什么。实测（Spring Data Redis 4.0.7 源码，加 `RedisSessionStoreIT` 连不上的用例）：`RedisCommandExecutionException` 及其子类（`RedisLoadingException` / `RedisReadOnlyException` / `RedisBusyException` / `RedisNoScriptException`）包成 `RedisSystemException("Error in execution", ex)`，原因就是 Lettuce 异常本身；连不上是 `RedisConnectionFailureException`（`DataAccessResourceFailureException` 的子类），超时是 `QueryTimeoutException`；`MASTERDOWN` 没有专门的类，按消息前缀判。四个操作在 Redis 端口没人监听时都抛 `SessionStoreUnavailableException`。
+2. `StringRedisTemplate.execute(RedisScript<List>, …)` 给什么。实测：Lua 的扁平数组回来是 `List`，元素是 `String`（`StringRedisTemplate` 的值序列化器）；脚本 `return false` 时 Java 拿到的既不是 `null` 也不是空列表，而是含一个 `null` 元素的列表，直接解析会抛 `NumberFormatException`。所以四段脚本「没有结果」一律 `return {}`（空表 → 空列表），Java 侧仍保留 `null` / 空判断。嵌套数组本设计没用到，没测。
+3. 雪花 ID 的位数。实测：当前 18 位（集成测试里生成的 ID 形如 `366799953612546049`）；`RedisSessionStoreIT.should_order_sessions_by_id_length_then_lexicographically` 用 18 位和 19 位的 ID 验证了「先比长度再比字典序」，19 位的不会被当成更老。
+4. 事务回滚。实测（`RedisUnavailableIT`）：Redis 连不上时注册返回 503 `IDN-0503`，`idn_user` 里没有那个邮箱；凭据表外键指向用户、登录记录和会话在同一个事务里，一起回滚；登录在失败限制处返回 503，不放行。
+5. PAP-63 的测试要不要补公钥。实测：不用。安全 starter 的 testFixtures 经 `spring.factories` 注册 `TestIdentityAssertionEnvironmentPostProcessor`，自动把 `patra.security.identity-assertion.public-keys` 设成测试公钥，`@WebMvcTest` 切片和 `@SpringBootTest` 端到端测试都不用改配置；切片测试只需为 `AuthController` 新增的 `UserQueryService` 依赖加 `@MockitoBean`。
+
+实施时另外发现的两点：
+
+- MOCK 环境的 `@SpringBootTest` 配 `RestTestClient` 走 MockMvc，不经过安全过滤器链，带断言的请求被当成匿名。要验断言的端到端测试必须用 `webEnvironment = RANDOM_PORT`（`SessionFlowIT`，和安全 starter 自己的集成测试一致）。
+- Redis 的 TTL 走真实时间，测试里拨注入的时钟不会让 TTL 变。验证「60 秒内不续期」要用较短的绝对过期（1 小时）建会话，让「续期后 TTL 重算」和「没续期」在 TTL 上可区分，再加 Redis 里 `last_active_at` 没变的断言。
 
 ## 16. 交给其他 Issue 的约束
 

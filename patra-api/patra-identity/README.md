@@ -1,28 +1,32 @@
 # patra-identity
 
-前台用户的账号服务：注册、登录时的凭据校验、登录失败限制、封禁与解封。会话令牌、登录记录、登出、「当前用户」接口在 PAP-64。
+前台用户的账号服务：注册、登录、会话、登出、「当前用户」、登录失败限制、封禁与解封。
 
-工程设计：`docs/patra/specs/2026-10-05-identity-account-design.md`。
+工程设计：`docs/patra/specs/2026-10-05-identity-account-design.md`（账号）、`docs/patra/specs/2026-10-09-identity-session-design.md`（会话）。
 
 ## 1. 模块
 
 | 模块 | 内容 |
 |---|---|
-| `patra-identity-domain` | `User`、`UserPasswordCredential` 两个聚合，邮箱、密码值对象，密码规则、失败限制规则，端口，领域异常 |
-| `patra-identity-app` | 注册、登录校验、封禁、解封四个处理器，走 CommandBus |
-| `patra-identity-infra` | JPA 持久化、Argon2id 哈希、常见密码名单、Redis 失败限制、Flyway 脚本 |
+| `patra-identity-domain` | `User`、`UserPasswordCredential`、`UserLoginRecord` 三个聚合，邮箱、密码、客户端信息值对象，密码规则、失败限制规则、会话策略，端口，`SessionIssuer` 领域服务，领域异常 |
+| `patra-identity-app` | 注册、登录、登出、封禁、解封五个处理器，走 CommandBus；「当前用户」走 `UserQueryService` |
+| `patra-identity-infra` | JPA 持久化、Argon2id 哈希、常见密码名单、Redis 失败限制、会话存储适配器、Flyway 脚本 |
 | `patra-identity-adapter` | 前台的 `AuthController`，后台的 `AdminUserController` |
-| `patra-identity-boot` | 启动类、配置 |
+| `patra-identity-boot` | 启动类、配置、安全 starter 接入 |
+| `patra-identity-session` | 与网关共用的会话存储契约（令牌、Redis 键、Lua、`RedisSessionStore`），见它自己的 README |
 
 ## 2. 接口
 
 | 路径 | 成功 | 网关规则（PAP-65） |
 |---|---|---|
-| `POST /auth/register` | 201 `{ userId, email }` | 公开 |
-| `POST /auth/login` | 200 `{ userId, email }` | 公开 |
+| `POST /auth/register` | 201 `{ sessionToken, userId, email }` | 公开 |
+| `POST /auth/login` | 200 `{ sessionToken, userId, email }` | 公开 |
+| `POST /auth/logout` | 204，有当前用户就删会话，没有也 204 | 公开 |
+| `GET /auth/me` | 200 `{ userId, email, accountType }` | 需要登录 |
 | `POST /admin/users/{userId}/ban` | 204 | 拒绝外部访问 |
 | `POST /admin/users/{userId}/unban` | 204 | 拒绝外部访问 |
 
+注册和登录的请求体除 `email`、`password` 外可带 `clientType`（不传按 `web`）和 `deviceId`（最长 128 个字符）。
 `/admin/**` 本版没有身份校验，只能在内网直连调用。
 
 ## 3. 账号模型
@@ -67,15 +71,17 @@ patra:
 |---|---|---|
 | 字段不合法（`errors[]` 带字段名和原因码） | 422 | `IDN-0422` |
 | 邮箱已注册 | 409 | `IDN-0409` |
+| 封禁、解封撞上乐观锁（文案「用户正被其他操作修改，请重试」） | 409 | `IDN-0409` |
 | 邮箱或密码错误 | 401 | `IDN-0401` |
+| `/auth/me` 没有当前用户、用户不存在或已封禁（文案 `Authentication required`） | 401 | `IDN-0401` |
 | 被暂时限制（`Retry-After`、`retryAfterSeconds`） | 429 | `IDN-0429` |
 | 账号已被封禁 | 403 | `IDN-0403` |
 | 用户不存在（后台接口） | 404 | `IDN-0404` |
-| Redis 不可用、哈希排队超时 | 503 | `IDN-0503` |
+| Redis 不可用（登录限流、会话存储）、哈希排队超时 | 503 | `IDN-0503` |
 
 请求本身格式不对时由 Spring 直接处理，返回默认格式的 ProblemDetail，没有 `code`：请求体不是 JSON 对象（`[]`、`"x"`、空请求体、坏 JSON）或字段类型不对返回 400；`Content-Type` 不是 JSON 返回 415；方法不对（比如 GET）返回 405；路径里的 `userId` 不是数字或溢出返回 400，负数和 0 按用户不存在返回 404 `IDN-0404`。
 
-原因码：邮箱 `REQUIRED`、`TOO_LONG`、`INVALID_FORMAT`；密码 `REQUIRED`、`INVALID_CHARACTER`、`TOO_SHORT`、`TOO_LONG`、`TOO_COMMON`。
+原因码：邮箱 `REQUIRED`、`TOO_LONG`、`INVALID_FORMAT`；密码 `REQUIRED`、`INVALID_CHARACTER`、`TOO_SHORT`、`TOO_LONG`、`TOO_COMMON`；客户端类型 `INVALID_FORMAT`；设备标识 `TOO_LONG`。
 
 ## 7. 本地运行和测试
 
@@ -87,3 +93,36 @@ patra:
 ```
 
 `check` 不包含集成测试，两个任务都要写。
+
+identity 从网关签的身份断言取当前用户，启动时必须配网关的公钥：
+
+```bash
+./gradlew :patra-starters:patra-spring-boot-starter-security:generateIdentityAssertionKey -PkeyOut=/tmp/identity-assertion-private.jwk
+```
+
+标准输出的公钥 JWK Set 设进环境变量 `PATRA_IDENTITY_ASSERTION_PUBLIC_KEYS`（`application-dev.yml` 没有默认值），
+私钥文件交给本地网关后删掉。集成测试不需要这一步：安全 starter 的测试支持会自动注入测试公钥。
+
+## 8. 会话
+
+登录、注册成功后签发不透明令牌，会话写进 Redis，登录记录写进 `idn_user_login_record`（ID 就是会话 ID）。
+令牌、键和脚本见 `patra-identity-session/README.md`。
+
+策略只在这里配，网关不配：
+
+```yaml
+patra:
+  identity:
+    session:
+      max-sessions-per-user: 10      # 超过挤掉最老的，记录标 REPLACED
+      lifetime:
+        user:
+          web:
+            idle: 30d                # 不活跃过期；网关每个请求续期，60 秒内只读不写
+            absolute: 180d           # 绝对过期
+```
+
+缺 `user.web` 这一行、键不认识、`idle` 长于 `absolute`，应用启动失败。
+
+登出删会话并把记录标成 `LOGOUT`；封禁删该用户全部会话并把记录标成 `BANNED`。会话过期不回写记录：
+记录里 `ended_at` 为空而 Redis 里没有会话，就是过期了。
