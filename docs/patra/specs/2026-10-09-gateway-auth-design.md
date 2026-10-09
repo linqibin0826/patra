@@ -83,7 +83,7 @@ v0.8 的身份体系里，网关是唯一的鉴权入口：浏览器只拿着不
 
 | 组件 | 职责 |
 |---|---|
-| `GatewaySecurityConfiguration` | 两条 `SecurityFilterChain`、`RedisSessionStore`、`IdentityAssertionSigner`（含启动自检）、错误码映射 Bean、两个出站头过滤器 Bean |
+| `GatewaySecurityConfiguration` | 两条 `SecurityFilterChain`、`RedisSessionStore`、`IdentityAssertionSigner`（含启动自检）、错误码映射 Bean、出站头过滤器 Bean、入站转发头的 `removeOnly` 注册 |
 | `SessionTokenAuthenticationConverter` | 实现 `AuthenticationConverter`：取令牌、查会话、建 `CurrentUserAuthentication`；暂时失败和缺陷分别包成两种异常（第 7 节） |
 | `SessionLookupFailedException` | 继承 `AuthenticationServiceException`：查会话时的非暂时失败（配置错、数据坏），输出 500 |
 | `GatewaySecurityErrorMappingContributor` | 继承 starter 的 `SecurityErrorMappingContributor`，先判 `SessionLookupFailedException` → `INTERNAL_ERROR`，其余交给父类；声明成 Bean 后 starter 那个 `@ConditionalOnMissingBean` 的让位 |
@@ -127,6 +127,7 @@ v0.8 的身份体系里，网关是唯一的鉴权入口：浏览器只拿着不
   | 4 | `anyRequest()` | 放行：catalog、registry、ingest 三条路由、网关自己的 `/actuator/**` 和 `/scalar`、没匹配路由的路径（继续往下走，由路由层给 404 `GW-0404`） |
 
 - 规则只看路径不看方法：`GET /auth/login` 这类由下游回 405，网关不替它判断。
+- 第二条链关掉 Spring Security 默认的响应头写出器（`headers().disable()`）：它会给缺少的响应补 `Cache-Control: no-store`、`X-Content-Type-Options` 等，代理透传的响应要保持下游原样（PAP-69 设计第 7 节的契约）；第一条链只输出网关自己的 403，保留默认。
 - 公开名单是配置类里的常量 `IDENTITY_PUBLIC_PATHS`，README 列同一份。
 
 ### 6.3 各种请求的结果
@@ -220,7 +221,7 @@ springdoc 那个 `@ConditionalOnMissingBean` 的让位；过滤器开 `removeOnl
 
 校验和解析都放在 `GatewaySecurityConfiguration` 的包级静态方法 `createSigner(String privateKey, Clock clock, JwtDecoder decoder)` 里，Bean 方法调它，参数里的 `JwtDecoder` 按名字 `identityAssertionDecoder` 注入：
 
-1. 没配或空白 → `IllegalStateException`，消息点名 `patra.gateway.identity-assertion.private-key`。
+1. 没配或空白 → `IllegalStateException`，消息点名 `patra.gateway.identity-assertion.private-key`。环境变量没设时 Boot 把解析不了的 `${…}` 占位符按字面量放过，实际走的是下一条「不是合法的 JWK」分支；两种消息都点名配置项、都不含密钥。
 2. `ECKey.parse` 失败 → 「不是合法的 JWK」。
 3. `new IdentityAssertionSigner(key, clock)`：含私钥、带 `kid`、P-256 由它的构造器现成检查。
 4. **自检**：签一条探针断言，用 `identityAssertionDecoder`（它用的是网关配的公钥）验一次；`JwtException` → 「私钥与 `patra.security.identity-assertion.public-keys` 不配对或 `kid` 不一致」。密钥换错、公私钥不成对在启动时就暴露，不等到第一个登录用户拿到 401。
@@ -287,7 +288,7 @@ PAP-69 的 404 / 503 / 504 表不变。identity 自己的 `IDN-0401` 仍会出�
 所有网关 IT 从此都要 Redis 和密钥才能起上下文：
 
 - 新增 `GatewayITSigningKeyInitializer`（`ApplicationContextInitializer`）把 `TestSigningKey` 的私钥 JWK 写进 `patra.gateway.identity-assertion.private-key`；公钥由 starter 测试支持的 `TestIdentityAssertionEnvironmentPostProcessor` 自动注入。
-- 现有 `PatraGatewayApplicationIT`、`GatewayRoutingIT`、`GatewayFailureIT` 挂上 `RedisContainerInitializer`（starter-test）和它。`GatewayRoutingIT` 里「`Authorization` 原样透传」的用例删掉，由下面的用例取代。
+- 现有 `PatraGatewayApplicationIT`、`GatewayRoutingIT`、`GatewayFailureIT` 挂上 `RedisContainerInitializer`（starter-test）和它。`GatewayRoutingIT` 里「`Authorization` 原样透传」的用例删掉，由下面的用例取代；加 `should_not_add_cache_or_security_headers_to_proxied_responses` 钉住代理透传的响应不被补头。
 - 下游用 WireMock 顶替 identity 和 catalog，`lb://patra-identity`、`lb://patra-catalog` 经 `spring.cloud.discovery.client.simple.instances.*` 指到它。
 - 会话用注入的 `RedisSessionStore.create` 直接写进测试容器，`createdAt` 和 `expiresAt` 由测试给，不需要可调时钟。
 
@@ -323,7 +324,7 @@ PAP-69 的 404 / 503 / 504 表不变。identity 自己的 `IDN-0401` 仍会出�
 | 网关启动必须有三样东西：`PATRA_GATEWAY_IDENTITY_ASSERTION_PRIVATE_KEY`（含私钥的 JWK JSON，secret 注入）、`PATRA_IDENTITY_ASSERTION_PUBLIC_KEYS`（网关也要配自己那把公钥）、`GATEWAY_REDIS_URL`（带密码）。**顺序**：mini 上先把这三样放进网关的环境，再部署带本设计的网关镜像；否则 CD 推上去的网关容器起不来，mini 上的门户随之不可用 | PAP-66 |
 | identity 的 compose 条目、`services.json`、建库；网关 Scalar 聚合已在本设计里加 | PAP-66 |
 | 网关的 401 是 `GW-0401`，identity 的是 `IDN-0401`，门户按「任何 401 都清 Cookie」处理；门户不会打到 403 的拒绝名单 | PAP-67 |
-| 网关前面放反向代理时：删掉 `ExternalForwardedHeadersFilter`，`trusted-proxies` 改成代理地址 | 引入反向代理的 Issue |
+| 网关前面放反向代理时：`forwardedHeaderFilter()` 去掉 `removeOnly`，`trusted-proxies` 改成代理地址 | 引入反向代理的 Issue |
 | 后台账号上线时：`SessionToken` 的前缀映射加 `STAFF`；`/*/admin/**` 从拒绝名单改成按账号类型和角色判断 | 后台账号的 Issue |
 | 防火墙的 400 要不要也输出 ProblemDetail | 需要时再立 |
 

@@ -95,7 +95,7 @@ spring:
               filters:
                 - StripPrefix=1
 
-# 网关自身错误的错误码前缀：GW-0404 / GW-0503 / GW-0504
+# 网关自身错误的错误码前缀：GW-0401 / 0403 / 0404 / 0500 / 0503 / 0504
 linqibin:
   starter:
     core:

@@ -10,7 +10,7 @@ Patra 的 API 网关：所有外部请求的统一入口，按路径前缀路由
 - **鉴权**：`Authorization: Bearer <会话令牌>` → 查 Redis 会话（顺手续期）→ 建认证对象；令牌不是「恰好一个 Bearer 头 + 会话令牌格式 + Redis 里有」的一律按匿名，是否放行由下面的路径规则决定。
 - **入站转发头**：外部自带的 `Forwarded` / `X-Forwarded-*` 在 servlet 层直接剥掉、不解释（`ForwardedHeaderFilter` 的 `removeOnly`），路径规则、路由和下面的出站头都按真实请求算。
 - **出站请求头**：剥掉外部自带的 `Authorization`；已登录时写入网关现签的 60 秒身份断言（`Authorization: Bearer <JWT>`），匿名不写；再由框架追加网关自己的 `X-Forwarded-*` / `Forwarded`，剥逐跳头。下游收到的 `Authorization` 只可能是网关签的断言，或者没有。
-- **透传**：下游的状态码、响应头、响应体原样回客户端，包括 4xx / 5xx / 3xx；不跟随重定向，不替任何一方谈压缩。
+- **透传**：下游的状态码、响应头、响应体原样回客户端，包括 4xx / 5xx / 3xx；不跟随重定向，不替任何一方谈压缩；代理链上关掉了 Spring Security 默认补的响应头（`Cache-Control: no-store`、`X-Content-Type-Options` 等），下游没给的头网关也不补。
 - **文档聚合**：`/scalar` 聚合四个服务的 OpenAPI 文档。
 - **可观测性**：OTel Agent + Micrometer，actuator 暴露 `health` / `info` / `metrics`。
 

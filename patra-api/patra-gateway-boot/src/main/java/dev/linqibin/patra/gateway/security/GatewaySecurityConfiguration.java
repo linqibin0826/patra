@@ -24,6 +24,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.web.SecurityFilterChain;
@@ -95,6 +96,10 @@ public class GatewaySecurityConfiguration {
   /// 第二条链：其余全部。从 `Authorization: Bearer` 里的会话令牌建立认证，identity 默认需登录，
   /// 公开名单和其他路由全放行。
   ///
+  /// 关掉 Spring Security 默认的响应头写出器：它会给缺少的响应补 `Cache-Control: no-store`、
+  /// `X-Content-Type-Options` 等，而代理透传的响应要保持下游原样（PAP-69 的契约）。
+  /// 第一条链只输出网关自己的 403，保留默认。
+  ///
   /// @param http Spring Security 的构建器
   /// @param problemWriter 统一的错误写出器
   /// @param sessions 会话存储
@@ -104,6 +109,7 @@ public class GatewaySecurityConfiguration {
   public SecurityFilterChain gatewayFilterChain(
       HttpSecurity http, SecurityProblemWriter problemWriter, RedisSessionStore sessions) {
     StatelessSecurityDefaults.apply(http, problemWriter);
+    http.headers(AbstractHttpConfigurer::disable);
 
     // 转换器给出的已经是认证完成的对象，原样返回；不经过 ProviderManager。
     // 必须用显式类型：AuthenticationFilter 的两个构造器对 lambda 有二义性。

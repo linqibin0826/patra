@@ -170,6 +170,32 @@ class GatewayRoutingIT {
             .withHeader("Host", equalTo("localhost:" + catalog.getPort())));
   }
 
+  /// 代理透传不替下游补头：Spring Security 默认的响应头写出器在代理链上关掉了，
+  /// 下游没给 `Cache-Control`、`X-Content-Type-Options` 这类头，网关也不补。
+  @Test
+  void should_not_add_cache_or_security_headers_to_proxied_responses() {
+    catalog.stubFor(get(urlPathEqualTo("/venues/plain")).willReturn(okJson("{}")));
+
+    restClient
+        .get()
+        .uri("/patra-catalog/venues/plain")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectHeader()
+        .doesNotExist(HttpHeaders.CACHE_CONTROL)
+        .expectHeader()
+        .doesNotExist(HttpHeaders.PRAGMA)
+        .expectHeader()
+        .doesNotExist(HttpHeaders.EXPIRES)
+        .expectHeader()
+        .doesNotExist("X-Content-Type-Options")
+        .expectHeader()
+        .doesNotExist("X-Frame-Options")
+        .expectHeader()
+        .doesNotExist("X-XSS-Protection");
+  }
+
   @Test
   void should_pass_downstream_problem_detail_through() {
     String body = "{\"type\":\"about:blank\",\"status\":422,\"code\":\"CATALOG-0422\"}";
