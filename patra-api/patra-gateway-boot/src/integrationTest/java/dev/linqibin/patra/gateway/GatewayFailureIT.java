@@ -8,7 +8,6 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
-import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -40,7 +39,7 @@ class GatewayFailureIT {
   @RegisterExtension
   static final WireMockExtension catalog =
       WireMockExtension.newInstance()
-          .options(wireMockConfig().dynamicPort().http2PlainDisabled(true))
+          .options(wireMockConfig().dynamicPort().http2PlainDisabled(true).gzipDisabled(true))
           .build();
 
   @Autowired private RestTestClient restClient;
@@ -84,7 +83,9 @@ class GatewayFailureIT {
         .contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
         .expectBody()
         .jsonPath("$.code")
-        .isEqualTo("GW-0503");
+        .isEqualTo("GW-0503")
+        .jsonPath("$.detail")
+        .isEqualTo("下游服务暂时不可用");
   }
 
   @Test
@@ -99,7 +100,9 @@ class GatewayFailureIT {
         .contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
         .expectBody()
         .jsonPath("$.code")
-        .isEqualTo("GW-0503");
+        .isEqualTo("GW-0503")
+        .jsonPath("$.detail")
+        .isEqualTo("下游服务暂时不可用");
   }
 
   @Test
@@ -116,15 +119,42 @@ class GatewayFailureIT {
         .contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
         .expectBody()
         .jsonPath("$.code")
-        .isEqualTo("GW-0504");
+        .isEqualTo("GW-0504")
+        .jsonPath("$.detail")
+        .isEqualTo("下游服务响应超时");
   }
 
-  /// 钉住接受的限制：读超时从请求发出起算、持续有数据也不重置，响应体超过 1 秒还没发完就被切断。
-  /// 此时状态码已经发出，客户端拿到的是半截响应或连接异常，不会是 504。框架行为变了这条会先知道。
+  /// 钉住接受的限制之一：流式响应（逐块 flush，已提交）在读超时时被切断。此时状态码已经发出，
+  /// 网关不再往后拼任何东西，Tomcat 干净地结束分块传输：客户端拿到 200 和一段只含已到字节的半截响应体。
   @Test
-  void should_cut_streaming_response_at_read_timeout() throws Exception {
+  void should_end_committed_streaming_response_cleanly_at_read_timeout() throws Exception {
     catalog.stubFor(
         get(urlPathEqualTo("/stream"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "text/event-stream")
+                    .withBody("x".repeat(STREAM_BODY_LENGTH))
+                    .withChunkedDribbleDelay(10, 3_000)));
+
+    HttpResponse<String> response;
+    try (HttpClient client = HttpClient.newHttpClient()) {
+      response =
+          client.send(
+              HttpRequest.newBuilder(URI.create(gatewayUrl("/patra-catalog/stream"))).build(),
+              HttpResponse.BodyHandlers.ofString());
+    }
+
+    assertThat(response.statusCode()).isEqualTo(200);
+    assertThat(response.body()).isNotEmpty().hasSizeLessThan(STREAM_BODY_LENGTH).matches("x+");
+  }
+
+  /// 钉住接受的限制之二：非流式响应在读超时时还没提交（Tomcat 缓冲没满），网关清掉半截响应体，
+  /// 回一份完整的 ProblemDetail；原因链里没有超时异常，按 500 走。
+  @Test
+  void should_answer_500_problem_detail_when_body_read_times_out_before_commit() {
+    catalog.stubFor(
+        get(urlPathEqualTo("/slow-body"))
             .willReturn(
                 aResponse()
                     .withStatus(200)
@@ -132,22 +162,22 @@ class GatewayFailureIT {
                     .withBody("x".repeat(STREAM_BODY_LENGTH))
                     .withChunkedDribbleDelay(10, 3_000)));
 
-    HttpRequest request =
-        HttpRequest.newBuilder(
-                URI.create(
-                    "http://localhost:"
-                        + environment.getRequiredProperty("local.server.port")
-                        + "/patra-catalog/stream"))
-            .build();
-    int received;
-    try (HttpClient client = HttpClient.newHttpClient()) {
-      received = client.send(request, HttpResponse.BodyHandlers.ofString()).body().length();
-    } catch (IOException truncated) {
-      received = -1;
-    }
+    restClient
+        .get()
+        .uri("/patra-catalog/slow-body")
+        .exchange()
+        .expectStatus()
+        .isEqualTo(500)
+        .expectHeader()
+        .contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
+        .expectBody()
+        .jsonPath("$.code")
+        .isEqualTo("GW-0500")
+        .jsonPath("$.status")
+        .isEqualTo(500);
+  }
 
-    assertThat(received)
-        .as("响应体应被读超时切断：要么读到一半抛 IOException，要么长度不足 %d", STREAM_BODY_LENGTH)
-        .isLessThan(STREAM_BODY_LENGTH);
+  private String gatewayUrl(String path) {
+    return "http://localhost:" + environment.getRequiredProperty("local.server.port") + path;
   }
 }

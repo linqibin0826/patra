@@ -15,10 +15,14 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.util.zip.GZIPOutputStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,7 +47,7 @@ class GatewayRoutingIT {
   @RegisterExtension
   static final WireMockExtension catalog =
       WireMockExtension.newInstance()
-          .options(wireMockConfig().dynamicPort().http2PlainDisabled(true))
+          .options(wireMockConfig().dynamicPort().http2PlainDisabled(true).gzipDisabled(true))
           .build();
 
   @Autowired private RestTestClient restClient;
@@ -234,6 +238,64 @@ class GatewayRoutingIT {
         .isOk()
         .expectHeader()
         .contentTypeCompatibleWith(MediaType.TEXT_HTML);
+  }
+
+  /// 网关是代理，不替客户端向下游索要压缩：客户端没发 `Accept-Encoding`，下游就不该收到。
+  /// 测试客户端用裸 JDK HttpClient，它自己不会加这个头。
+  @Test
+  void should_not_negotiate_compression_for_the_client() throws Exception {
+    catalog.stubFor(get(urlPathEqualTo("/venues")).willReturn(okJson("{}")));
+
+    HttpResponse<Void> response;
+    try (HttpClient client = HttpClient.newHttpClient()) {
+      response =
+          client.send(
+              HttpRequest.newBuilder(URI.create(gatewayUrl("/patra-catalog/venues"))).build(),
+              HttpResponse.BodyHandlers.discarding());
+    }
+
+    assertThat(response.statusCode()).isEqualTo(200);
+    catalog.verify(
+        getRequestedFor(urlPathEqualTo("/venues")).withoutHeader(HttpHeaders.ACCEPT_ENCODING));
+  }
+
+  /// 客户端自己要 gzip 时，`Accept-Encoding` 原样到下游，下游的 gzip 响应连头带字节原样回客户端，网关不解压。
+  @Test
+  void should_pass_gzip_response_through_untouched() throws Exception {
+    byte[] gzipped = gzip("{\"items\":[]}");
+    catalog.stubFor(
+        get(urlPathEqualTo("/venues"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+                    .withHeader(HttpHeaders.CONTENT_ENCODING, "gzip")
+                    .withBody(gzipped)));
+
+    HttpResponse<byte[]> response;
+    try (HttpClient client = HttpClient.newHttpClient()) {
+      response =
+          client.send(
+              HttpRequest.newBuilder(URI.create(gatewayUrl("/patra-catalog/venues")))
+                  .header(HttpHeaders.ACCEPT_ENCODING, "gzip")
+                  .build(),
+              HttpResponse.BodyHandlers.ofByteArray());
+    }
+
+    assertThat(response.statusCode()).isEqualTo(200);
+    assertThat(response.headers().firstValue(HttpHeaders.CONTENT_ENCODING)).contains("gzip");
+    assertThat(response.body()).isEqualTo(gzipped);
+    catalog.verify(
+        getRequestedFor(urlPathEqualTo("/venues"))
+            .withHeader(HttpHeaders.ACCEPT_ENCODING, equalTo("gzip")));
+  }
+
+  private static byte[] gzip(String text) throws IOException {
+    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+    try (GZIPOutputStream out = new GZIPOutputStream(bytes)) {
+      out.write(text.getBytes(StandardCharsets.UTF_8));
+    }
+    return bytes.toByteArray();
   }
 
   private String gatewayPort() {

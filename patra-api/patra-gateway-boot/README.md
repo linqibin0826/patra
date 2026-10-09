@@ -8,7 +8,7 @@ Patra 的 API 网关：所有外部请求的统一入口，按路径前缀把请
 
 - **路由**：`/patra-catalog/**`、`/patra-registry/**`、`/patra-ingest/**` 剥掉第一段后转给对应服务，经 Nacos 发现、Spring Cloud LoadBalancer 选实例。
 - **转发头**：给下游加 `X-Forwarded-Host` / `Port` / `Proto` / `Prefix` 和 `Forwarded`，下游 springdoc 据此把 servers 还原成网关地址。逐跳头剥掉，`Authorization` 等其余请求头原样到达下游；下游收到的 `Host` 是它自己的地址。
-- **透传**：下游的状态码、响应头、响应体原样回客户端，包括 4xx / 5xx / 3xx；网关不跟随重定向。
+- **透传**：下游的状态码、响应头、响应体原样回客户端，包括 4xx / 5xx / 3xx；网关不跟随重定向，也不替任何一方谈压缩：`Accept-Encoding` 原样到下游，`Content-Encoding` 和压缩字节原样回客户端。
 - **文档聚合**：`/scalar` 聚合三个服务的 OpenAPI 文档。
 - **可观测性**：OTel Agent + Micrometer，actuator 暴露 `health` / `info` / `metrics`。
 
@@ -18,8 +18,12 @@ Patra 的 API 网关：所有外部请求的统一入口，按路径前缀把请
 patra-gateway-boot/
 ├── src/main/java/dev/linqibin/patra/gateway/
 │   ├── PatraGatewayApplication.java              # 启动类
-│   ├── config/GatewayConfiguration.java          # 网关自己的装配（错误映射）
-│   └── error/GatewayErrorMappingContributor.java # 到不了下游 / 无实例 → 503 / 504
+│   ├── config/GatewayConfiguration.java          # 网关自己的装配（HTTP 客户端不谈压缩）
+│   └── error/                                    # 代理失败 → 网关自己的应用异常（503 / 504，固定文案）
+│       ├── GatewayProxyFailureAdvice.java        # 排在全局处理器前，先包装再交给它渲染
+│       ├── ProxyFailureClassifier.java           # 到不了 → Unavailable，等不到 → Timeout
+│       ├── DownstreamUnavailableException.java
+│       └── DownstreamTimeoutException.java
 ├── src/main/resources/
 │   ├── application.yml                           # 路由、HTTP 客户端、超时、虚拟线程、错误前缀
 │   ├── application-dev.yml                       # dev：Nacos 用 TAILSCALE_IP 注册，DEBUG 日志
@@ -58,6 +62,7 @@ spring:
 | 连接超时 | 5 秒 | `spring.http.clients.connect-timeout` |
 | 读超时 | 60 秒 | `spring.http.clients.read-timeout`。**从请求发出起算的总时长**，持续收到数据也不重置：任何响应（含流式）要在 60 秒内读完，超过则正在转发的响应体被切断 |
 | 重定向 | 不跟随 | `spring.http.clients.redirects: dont-follow` |
+| 压缩 | 关 | JDK 客户端默认会替请求补 `Accept-Encoding: gzip, deflate` 并解压响应、抹掉 `Content-Encoding`；网关在 `GatewayConfiguration` 里关掉它 |
 | 线程 | 虚拟线程 | `spring.threads.virtual.enabled: true`，每个请求一个虚拟线程 |
 
 WebMVC 版网关自己不带 HTTP 客户端实现，代理走 Boot 的 `RestClient`；Boot 按上面这组键装出 `ClientHttpRequestFactory`，网关的 RestClient 用的就是它。
@@ -72,8 +77,10 @@ WebMVC 版网关自己不带 HTTP 客户端实现，代理走 Boot 的 `RestClie
 | `lb://` 找不到实例 | 503 | `GW-0503` |
 | 连接被拒、连接超时、域名解析失败 | 503 | `GW-0503` |
 | 响应头到达前读超时 | 504 | `GW-0504` |
+| 响应头已到、响应体读超时，响应还没提交 | 500 | `GW-0500` |
+| 同上，响应已提交（流式类型或已写出超过 Tomcat 缓冲） | 200，半截响应体 | 无 |
 
-映射逻辑在 `GatewayErrorMappingContributor`；响应体已开始转发后再出错，状态码无法再改。
+503 / 504 的 `detail` 分别固定为「下游服务暂时不可用」「下游服务响应超时」：`GatewayProxyFailureAdvice` 先把代理失败包成网关自己的应用异常再交给 starter-web 渲染，原始异常消息（带下游实例地址）只留在日志里。响应已提交后再出错，状态码无法再改，网关不再追加任何内容。
 
 ## API 文档聚合
 

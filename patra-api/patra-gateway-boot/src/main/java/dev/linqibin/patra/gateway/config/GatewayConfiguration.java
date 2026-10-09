@@ -1,20 +1,22 @@
 package dev.linqibin.patra.gateway.config;
 
-import dev.linqibin.commons.error.codes.HttpStdErrors;
-import dev.linqibin.patra.gateway.error.GatewayErrorMappingContributor;
+import org.springframework.boot.http.client.JdkClientHttpRequestFactoryBuilder;
+import org.springframework.boot.http.client.autoconfigure.ClientHttpRequestFactoryBuilderCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/// 网关自己的装配：目前只有错误映射。
+/// 网关自己的装配。错误映射在 `error` 包的 `GatewayProxyFailureAdvice` 里，这里只剩 HTTP 客户端的定制。
 @Configuration(proxyBeanMethods = false)
 public class GatewayConfiguration {
 
-  /// 到不了下游与无实例的错误映射，由 starter-core 的错误引擎收集。
+  /// 网关是代理，不替客户端谈压缩：JDK 客户端默认会在请求没带 `Accept-Encoding` 时补上 gzip，并把
+  /// 下游的 gzip 响应解压、抹掉 `Content-Encoding` 和 `Content-Length`。关掉之后，客户端带什么
+  /// `Accept-Encoding`、下游回什么 `Content-Encoding`，都原样经过。
   ///
-  /// @param http 按 `linqibin.starter.core.error.context-prefix` 生成错误码的组
-  /// @return contributor
+  /// @return 作用在 Boot 按 `spring.http.clients.*` 装出的 JDK builder 上的定制
   @Bean
-  public GatewayErrorMappingContributor gatewayErrorMappingContributor(HttpStdErrors.Group http) {
-    return new GatewayErrorMappingContributor(http);
+  public ClientHttpRequestFactoryBuilderCustomizer<JdkClientHttpRequestFactoryBuilder>
+      gatewayHttpClientCustomizer() {
+    return builder -> builder.withCustomizer(factory -> factory.enableCompression(false));
   }
 }
