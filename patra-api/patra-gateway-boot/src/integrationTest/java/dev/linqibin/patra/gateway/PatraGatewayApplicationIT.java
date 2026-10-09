@@ -3,6 +3,7 @@ package dev.linqibin.patra.gateway;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.linqibin.patra.identity.session.RedisSessionStore;
+import dev.linqibin.patra.starter.security.assertion.IdentityAssertionSigner;
 import dev.linqibin.starter.test.container.initializer.RedisContainerInitializer;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -72,6 +73,11 @@ class PatraGatewayApplicationIT {
   void should_have_the_session_store_ready() {
     assertThat(context.getBean(RedisSessionStore.class)).isNotNull();
     assertThat(redis.getRequiredConnectionFactory().getConnection().ping()).isEqualTo("PONG");
+  }
+
+  @Test
+  void should_have_the_assertion_signer_ready() {
+    assertThat(context.getBean(IdentityAssertionSigner.class)).isNotNull();
   }
 
   @Test
