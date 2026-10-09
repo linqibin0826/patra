@@ -20,3 +20,9 @@ logging:
     path: ${PATRA_LOG_DIR:./logs}/patra-identity
   level:
     dev.linqibin.patra.identity: INFO
+
+patra:
+  security:
+    identity-assertion:
+      # 网关的公钥（JWK Set JSON）。本地先用 generateIdentityAssertionKey 生成，见 README
+      public-keys: ${PATRA_IDENTITY_ASSERTION_PUBLIC_KEYS}

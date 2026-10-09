@@ -10,3 +10,9 @@ spring:
   data:
     redis:
       url: ${IDENTITY_REDIS_URL}
+
+patra:
+  security:
+    identity-assertion:
+      # 网关的公钥（JWK Set JSON），由 PAP-66 注入
+      public-keys: ${PATRA_IDENTITY_ASSERTION_PUBLIC_KEYS}

@@ -65,3 +65,10 @@ patra:
     password-hashing:
       max-concurrent: 4
       wait-timeout: 3s
+    session:
+      max-sessions-per-user: 10
+      lifetime:
+        user:
+          web:
+            idle: 30d
+            absolute: 180d
