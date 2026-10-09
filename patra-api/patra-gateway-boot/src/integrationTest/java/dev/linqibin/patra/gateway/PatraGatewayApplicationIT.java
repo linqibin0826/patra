@@ -2,6 +2,8 @@ package dev.linqibin.patra.gateway;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.linqibin.patra.identity.session.RedisSessionStore;
+import dev.linqibin.starter.test.container.initializer.RedisContainerInitializer;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,9 +19,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.client.RestTestClient;
 import org.springframework.util.ClassUtils;
 import org.springframework.web.context.WebApplicationContext;
@@ -31,11 +35,14 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @AutoConfigureRestTestClient
+@ContextConfiguration(
+    initializers = {RedisContainerInitializer.class, GatewayITSigningKeyInitializer.class})
 class PatraGatewayApplicationIT {
 
   @Autowired private ApplicationContext context;
   @Autowired private RestTestClient restClient;
   @Autowired private RequestThreadProbe probe;
+  @Autowired private StringRedisTemplate redis;
 
   @Test
   void should_start_as_servlet_application_without_webflux_gateway() {
@@ -59,6 +66,12 @@ class PatraGatewayApplicationIT {
     // 网关的 RestClient 会优先拿容器里的这个 Bean：它必须是 JDK 那一个
     assertThat(context.getBean(ClientHttpRequestFactory.class))
         .isInstanceOf(JdkClientHttpRequestFactory.class);
+  }
+
+  @Test
+  void should_have_the_session_store_ready() {
+    assertThat(context.getBean(RedisSessionStore.class)).isNotNull();
+    assertThat(redis.getRequiredConnectionFactory().getConnection().ping()).isEqualTo("PONG");
   }
 
   @Test

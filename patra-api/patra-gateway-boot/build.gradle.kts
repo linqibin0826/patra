@@ -1,7 +1,7 @@
 /**
  * Patra API Gateway Boot
  *
- * API 网关 - Spring Cloud Gateway（WebMVC 版，servlet 栈）
+ * API 网关 - Spring Cloud Gateway（WebMVC 版，servlet 栈）+ Spring Security 鉴权
  */
 
 plugins {
@@ -28,8 +28,17 @@ dependencies {
     // API 文档聚合（WebMVC 版 Scalar UI）
     implementation(libs.springdoc.openapi.scalar)
 
+    // 鉴权：Spring Security、无状态默认配置、ProblemDetail 写出器、验签器、签名器、认证对象
+    implementation(project(":patra-starters:patra-spring-boot-starter-security"))
+
+    // 会话存储契约（RedisSessionStore、SessionToken）；它用 api 带进 spring-boot-starter-data-redis
+    implementation(project(":patra-api:patra-identity:patra-identity-session"))
+
     // 测试依赖（含 RestTestClient 与 WireMock）
     testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
+
+    // 测试里的签名密钥、自动注入测试公钥的环境后处理器、spring-boot-security-test
+    testImplementation(testFixtures(project(":patra-starters:patra-spring-boot-starter-security")))
 }
 
 // 网关没有数据库：测试 starter（hexagonal-boot 插件也会加它）带着 JPA / JDBC / Flyway 的测试模块，

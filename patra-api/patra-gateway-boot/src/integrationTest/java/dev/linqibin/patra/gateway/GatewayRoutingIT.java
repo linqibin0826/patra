@@ -15,6 +15,7 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
+import dev.linqibin.starter.test.container.initializer.RedisContainerInitializer;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
@@ -32,16 +33,19 @@ import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.client.RestTestClient;
 
 /// 迁移前后必须一致的转发行为（设计第 7 节）：剥前缀、查询串、方法与请求体、响应原样、转发头、
-/// `Authorization` 透传、不跟随重定向。下游用 WireMock 顶替，`lb://patra-catalog` 经
+/// 不跟随重定向。下游用 WireMock 顶替，`lb://patra-catalog` 经
 /// SimpleDiscoveryClient 指到它，LoadBalancer 这条路真的走到。
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @AutoConfigureRestTestClient
+@ContextConfiguration(
+    initializers = {RedisContainerInitializer.class, GatewayITSigningKeyInitializer.class})
 class GatewayRoutingIT {
 
   @RegisterExtension
@@ -164,23 +168,6 @@ class GatewayRoutingIT {
     catalog.verify(
         getRequestedFor(urlPathEqualTo("/venues"))
             .withHeader("Host", equalTo("localhost:" + catalog.getPort())));
-  }
-
-  @Test
-  void should_forward_authorization_header_unchanged() {
-    catalog.stubFor(get(urlPathEqualTo("/auth/me")).willReturn(okJson("{}")));
-
-    restClient
-        .get()
-        .uri("/patra-catalog/auth/me")
-        .header(HttpHeaders.AUTHORIZATION, "Bearer patra_user_opaque")
-        .exchange()
-        .expectStatus()
-        .isOk();
-
-    catalog.verify(
-        getRequestedFor(urlPathEqualTo("/auth/me"))
-            .withHeader(HttpHeaders.AUTHORIZATION, equalTo("Bearer patra_user_opaque")));
   }
 
   @Test

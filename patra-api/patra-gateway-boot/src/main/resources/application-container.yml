@@ -1,16 +1,21 @@
 # ============================================================================
-# Patra API Gateway - Production Environment Configuration
+# Patra API Gateway - Container Deployment Configuration
 # ============================================================================
-# Production-specific settings override main configuration as needed.
-# Most production configurations should be managed securely in production.
+# 容器部署：Redis 地址和两把密钥都从环境变量读，没有默认值。变量名由 PAP-66 定稿。
 # ============================================================================
 
 spring:
   config:
     activate:
       on-profile: container
+  data:
+    redis:
+      url: ${GATEWAY_REDIS_URL}
 
-# ----------------------------------------------------------------------------
-# Production Configuration
-# ----------------------------------------------------------------------------
-# Additional production settings can be added here
+patra:
+  gateway:
+    identity-assertion:
+      private-key: ${PATRA_GATEWAY_IDENTITY_ASSERTION_PRIVATE_KEY}
+  security:
+    identity-assertion:
+      public-keys: ${PATRA_IDENTITY_ASSERTION_PUBLIC_KEYS}

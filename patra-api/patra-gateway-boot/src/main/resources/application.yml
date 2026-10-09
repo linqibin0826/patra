@@ -4,6 +4,7 @@
 # 统一入口：按路径前缀把请求路由到各微服务（Nacos 发现 + LoadBalancer）。
 # Spring Cloud Gateway 的 WebMVC 版（servlet 栈），代理走 Boot 的 RestClient。
 # 设计：docs/patra/specs/2026-10-09-gateway-webmvc-design.md
+# 鉴权：docs/patra/specs/2026-10-09-gateway-auth-design.md
 # ============================================================================
 
 server:
@@ -30,6 +31,13 @@ spring:
       read-timeout: 60s
       # 网关不替客户端跟随下游的 3xx
       redirects: dont-follow
+
+  # 会话存储：地址按 profile 给（dev 默认本机 16379，container 由环境变量注入）。
+  # 命令超时 2 秒：带令牌的请求每个都要等这一跳，Redis 卡住时几秒内变成 503；建连耗时另计。
+  data:
+    redis:
+      connect-timeout: 5s
+      timeout: 2s
 
   cloud:
     # Nacos Service Discovery
@@ -78,6 +86,15 @@ spring:
               filters:
                 - StripPrefix=1
 
+            # Identity Service Route（注册、登录、登出、当前用户）
+            # Example: /patra-identity/auth/me -> lb://patra-identity/auth/me
+            - id: patra-identity
+              uri: lb://patra-identity
+              predicates:
+                - Path=/patra-identity/**
+              filters:
+                - StripPrefix=1
+
 # 网关自身错误的错误码前缀：GW-0404 / GW-0503 / GW-0504
 linqibin:
   starter:
@@ -100,6 +117,9 @@ scalar:
     - url: /patra-ingest/v3/api-docs
       title: Ingest Service
       slug: ingest
+    - url: /patra-identity/v3/api-docs
+      title: Identity Service
+      slug: identity
 
 # ----------------------------------------------------------------------------
 # Logging Configuration

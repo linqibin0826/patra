@@ -14,6 +14,9 @@ spring:
     nacos:
       discovery:
         ip: ${TAILSCALE_IP:}
+  data:
+    redis:
+      url: ${GATEWAY_REDIS_URL:redis://${PATRA_INFRA_HOST:127.0.0.1}:16379}
 
 # ----------------------------------------------------------------------------
 # Development Logging Configuration
@@ -23,3 +26,13 @@ logging:
   level:
     org.springframework.cloud.gateway: DEBUG
     org.springframework.cloud.loadbalancer: DEBUG
+
+patra:
+  gateway:
+    identity-assertion:
+      # 含私钥的 EC P-256 JWK JSON，带 kid。本地先用 generateIdentityAssertionKey 生成，见 README；没配启动失败
+      private-key: ${PATRA_GATEWAY_IDENTITY_ASSERTION_PRIVATE_KEY}
+  security:
+    identity-assertion:
+      # 网关自己那把公钥（JWK Set JSON）：安全 starter 的验签器和启动自检用
+      public-keys: ${PATRA_IDENTITY_ASSERTION_PUBLIC_KEYS}
