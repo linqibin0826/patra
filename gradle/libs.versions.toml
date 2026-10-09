@@ -117,13 +117,12 @@ spring-boot-starter-batch = { module = "org.springframework.boot:spring-boot-sta
 
 # Spring Cloud
 spring-cloud-starter-alibaba-nacos-discovery = { module = "com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery" }
-spring-cloud-starter-gateway = { module = "org.springframework.cloud:spring-cloud-starter-gateway-server-webflux" }
+spring-cloud-starter-gateway = { module = "org.springframework.cloud:spring-cloud-starter-gateway-server-webmvc" }
 spring-cloud-starter-loadbalancer = { module = "org.springframework.cloud:spring-cloud-starter-loadbalancer" }
 
 # API Documentation
 swagger-annotations-jakarta = { module = "io.swagger.core.v3:swagger-annotations-jakarta", version.ref = "swagger-annotations" }
 springdoc-openapi-scalar = { module = "org.springdoc:springdoc-openapi-starter-webmvc-scalar", version.ref = "springdoc" }
-springdoc-openapi-webflux-scalar = { module = "org.springdoc:springdoc-openapi-starter-webflux-scalar", version.ref = "springdoc" }
 therapi-javadoc = { module = "com.github.therapi:therapi-runtime-javadoc", version.ref = "therapi-javadoc" }
 therapi-javadoc-scribe = { module = "com.github.therapi:therapi-runtime-javadoc-scribe", version.ref = "therapi-javadoc" }
 

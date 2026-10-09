@@ -1,26 +1,36 @@
 # ============================================================================
 # Patra API Gateway - Main Configuration
 # ============================================================================
-# This gateway serves as the unified entry point for all Patra services.
-# Routes are configured below with Nacos-based service discovery.
+# 统一入口：按路径前缀把请求路由到各微服务（Nacos 发现 + LoadBalancer）。
+# Spring Cloud Gateway 的 WebMVC 版（servlet 栈），代理走 Boot 的 RestClient。
+# 设计：docs/patra/specs/2026-10-09-gateway-webmvc-design.md
 # ============================================================================
 
-# ----------------------------------------------------------------------------
-# Server Configuration
-# ----------------------------------------------------------------------------
 server:
   port: 9528
 
-# ----------------------------------------------------------------------------
-# Spring Boot & Cloud Configuration
-# ----------------------------------------------------------------------------
 spring:
   application:
     name: patra-gateway
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
 
-  # Cloud Configuration
+  # 每个请求一个虚拟线程：等下游的时间不占平台线程
+  threads:
+    virtual:
+      enabled: true
+
+  # 网关唯一的 HTTP 客户端：显式用 JDK HttpClient，不靠 classpath 自动探测。
+  # 读超时是从请求发出起算的总时长，流式响应同样受限（设计第 6 节）。
+  http:
+    clients:
+      imperative:
+        factory: jdk
+      connect-timeout: 5s
+      read-timeout: 60s
+      # 网关不替客户端跟随下游的 3xx
+      redirects: dont-follow
+
   cloud:
     # Nacos Service Discovery
     nacos:
@@ -33,14 +43,12 @@ spring:
         # 同步 register 的 -401 Client-not-connected 直接 abort 整个应用启动
         fail-fast: false
 
-    # Gateway Route Configuration
-    # Routes requests to downstream microservices using load balancing
+    # Gateway Route Configuration（WebMVC 版）
     gateway:
       server:
-        webflux:
-          # 激活 XForwardedHeadersFilter 自动注入 X-Forwarded-Host/Port/Proto（host/port/proto-enabled 默认 true）。
-          # SCG 5.x 默认关闭该 filter，须设 trusted-proxies 才激活；缺它则下游 springdoc 的 servers
-          # host 还原失败、停在实例地址。patra 仅 tailscale 内网暴露，dev 信任所有上游。
+        webmvc:
+          # 设了 trusted-proxies 才激活 X-Forwarded-* 头（Host/Port/Proto/Prefix）；
+          # 缺它则下游 springdoc 的 servers 还原失败、停在实例地址。patra 仅 tailscale 内网暴露，dev 信任所有上游。
           trusted-proxies: ".*"
           routes:
             # Ingest Service Route
@@ -70,11 +78,17 @@ spring:
               filters:
                 - StripPrefix=1
 
+# 网关自身错误的错误码前缀：GW-0404 / GW-0503 / GW-0504
+linqibin:
+  starter:
+    core:
+      error:
+        context-prefix: GW
+
 # ----------------------------------------------------------------------------
 # API Documentation Aggregation
 # ----------------------------------------------------------------------------
-# 通过 Gateway 聚合各微服务的 OpenAPI 文档
-# 各服务的 /v3/api-docs 请求通过已有路由代理到下游
+# 通过 Gateway 聚合各微服务的 OpenAPI 文档；各服务的 /v3/api-docs 经已有路由代理到下游
 scalar:
   sources:
     - url: /patra-catalog/v3/api-docs

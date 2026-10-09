@@ -1,0 +1,14 @@
+# 集成测试：不连 Nacos，但不要关 spring.cloud.discovery.enabled——
+# LoadBalancerClientConfiguration 整个挂在它下面，关了 lb:// 就没有实例来源（测试用 SimpleDiscoveryClient 给实例）。
+spring:
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+    service-registry:
+      auto-registration:
+        enabled: false
+  http:
+    clients:
+      # 把读超时压短，Task 5 的超时与截断用例才跑得快
+      read-timeout: 1s

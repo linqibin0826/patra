@@ -3,21 +3,17 @@ package dev.linqibin.patra.gateway;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-/// Patra API网关主入口。
+/// Patra API 网关主入口。
 ///
-/// Spring Cloud Gateway 服务，为所有 Patra 微服务提供统一的路由和服务发现。
-/// 处理请求路由、通过 Nacos 服务发现进行负载均衡，并作为外部客户端的单一入口点。
+/// Spring Cloud Gateway 的 WebMVC 版（servlet 栈），为所有 Patra 微服务提供统一入口：
 ///
-/// 核心职责:
+/// - 按路径前缀把请求路由到下游微服务（patra-catalog、patra-registry、patra-ingest），经 Nacos 发现、LoadBalancer 选实例
+/// - 代理走 Boot 的 `RestClient`（JDK HttpClient），每个请求一个虚拟线程
+/// - 网关自身的错误输出 ProblemDetail（前缀 `GW`）；下游的响应原样透传
+/// - 聚合各服务的 OpenAPI 文档（Scalar UI）
 ///
-/// - 将请求路由到下游微服务（patra-registry、patra-ingest 等）
-/// - 通过 Nacos 进行服务发现和负载均衡
-/// - 请求/响应日志记录与分布式追踪
-/// - CORS 处理和全局过滤器
-///
-/// 默认端口: 9528
-///
-/// @see org.springframework.cloud.gateway.route.RouteDefinition
+/// 默认端口 9528。路由与客户端配置见 `application.yml`，设计见
+/// `docs/patra/specs/2026-10-09-gateway-webmvc-design.md`。
 @SpringBootApplication(scanBasePackages = "dev.linqibin")
 public class PatraGatewayApplication {
 
