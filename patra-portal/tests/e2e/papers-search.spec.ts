@@ -49,7 +49,7 @@ test.describe("/papers 桌面冒烟", () => {
   test("首页搜关键词 → /papers；搜真实 PMID → 直达详情", async ({ page, request }) => {
     await page.goto("/");
     await page.getByRole("textbox").fill("GLP-1");
-    await page.getByRole("button", { name: /搜索/ }).click();
+    await page.getByRole("button", { name: "搜索", exact: true }).click();
     await expect(page).toHaveURL(/\/papers\?q=GLP-1/);
     test.skip(!(await waitForList(page)), "catalog 不可达：跳过 PMID 直跳");
 
@@ -62,7 +62,7 @@ test.describe("/papers 桌面冒烟", () => {
     await page.goto("/");
     await page.getByRole("tab", { name: "PMID" }).click();
     await page.getByRole("textbox").fill(pmid ?? "");
-    await page.getByRole("button", { name: /搜索/ }).click();
+    await page.getByRole("button", { name: "搜索", exact: true }).click();
     await expect(page).toHaveURL(/\/papers\/\d+$/);
   });
 
