@@ -1,64 +1,45 @@
 # patra-gateway-boot
 
-## 概述
+Patra 的 API 网关：所有外部请求的统一入口，按路径前缀把请求路由到各微服务。Spring Cloud Gateway 的 **WebMVC 版**（servlet 栈），和仓库里其他服务同一套 Web 栈。
 
-**patra-gateway-boot** 是 Patra 医学出版物数据平台的 API 网关服务,基于 Spring Cloud Gateway 构建。作为系统的统一入口,负责接收所有外部请求并将其路由到相应的后端微服务。
+设计：[gateway 切换到 WebMVC 版工程设计（PAP-69）](../../docs/patra/specs/2026-10-09-gateway-webmvc-design.md)。鉴权在 PAP-65 加。
 
-本网关提供服务发现、负载均衡、请求转发等核心功能,确保客户端可以通过单一入口访问整个 Patra 微服务生态系统。
+## 职责
 
-## 核心职责
-
-- **请求路由**: 根据请求路径将流量分发到正确的微服务(patra-registry、patra-ingest 等)
-- **服务发现**: 通过 Nacos 自动发现和注册后端服务实例
-- **负载均衡**: 使用 Spring Cloud LoadBalancer 在多个服务实例间分配请求
-- **统一入口**: 为所有 Patra API 提供单一访问点,简化客户端配置
-- **请求日志**: 集成分布式追踪,记录请求和响应以便问题诊断
+- **路由**：`/patra-catalog/**`、`/patra-registry/**`、`/patra-ingest/**` 剥掉第一段后转给对应服务，经 Nacos 发现、Spring Cloud LoadBalancer 选实例。
+- **转发头**：给下游加 `X-Forwarded-Host` / `Port` / `Proto` / `Prefix` 和 `Forwarded`，下游 springdoc 据此把 servers 还原成网关地址。逐跳头剥掉，`Authorization` 等其余请求头原样到达下游；下游收到的 `Host` 是它自己的地址。
+- **透传**：下游的状态码、响应头、响应体原样回客户端，包括 4xx / 5xx / 3xx；网关不跟随重定向。
+- **文档聚合**：`/scalar` 聚合三个服务的 OpenAPI 文档。
+- **可观测性**：OTel Agent + Micrometer，actuator 暴露 `health` / `info` / `metrics`。
 
 ## 模块结构
 
 ```
 patra-gateway-boot/
-├── src/main/java/com/patra/gateway/
-│   └── PatraGatewayApplication.java    # Spring Boot 启动类
+├── src/main/java/dev/linqibin/patra/gateway/
+│   ├── PatraGatewayApplication.java              # 启动类
+│   ├── config/GatewayConfiguration.java          # 网关自己的装配（错误映射）
+│   └── error/GatewayErrorMappingContributor.java # 到不了下游 / 无实例 → 503 / 504
 ├── src/main/resources/
-│   ├── application.yml                 # 主配置文件(路由、Nacos)
-│   ├── application-dev.yml             # 开发环境配置(DEBUG 日志)
-│   └── application-container.yml        # 容器部署配置(环境变量注入)
-└── build.gradle.kts                    # Gradle 依赖定义
+│   ├── application.yml                           # 路由、HTTP 客户端、超时、虚拟线程、错误前缀
+│   ├── application-dev.yml                       # dev：Nacos 用 TAILSCALE_IP 注册，DEBUG 日志
+│   └── application-container.yml                 # 容器部署
+└── src/integrationTest/java/dev/linqibin/patra/gateway/
+    ├── PatraGatewayApplicationIT.java            # servlet 启动、JDK 客户端、虚拟线程
+    ├── GatewayRoutingIT.java                     # 转发行为（WireMock 顶替下游）
+    └── GatewayFailureIT.java                     # 失败状态码
 ```
 
-## 主要组件
-
-### PatraGatewayApplication
-Spring Boot 应用启动类,使用 `@SpringBootApplication` 注解启动 Spring Cloud Gateway 服务。
-
-### 路由配置
-在 `application.yml` 中定义所有微服务路由规则:
+## 路由
 
 ```yaml
 spring:
   cloud:
     gateway:
       server:
-        webflux:
+        webmvc:
+          trusted-proxies: ".*"      # 激活 X-Forwarded-* 头；patra 仅 tailscale 内网暴露
           routes:
-            # Ingest 服务路由
-            - id: patra-ingest
-              uri: lb://patra-ingest
-              predicates:
-                - Path=/patra-ingest/**
-              filters:
-                - StripPrefix=1
-
-            # Registry 服务路由
-            - id: patra-registry
-              uri: lb://patra-registry
-              predicates:
-                - Path=/patra-registry/**
-              filters:
-                - StripPrefix=1
-
-            # Catalog 服务路由
             - id: patra-catalog
               uri: lb://patra-catalog
               predicates:
@@ -67,149 +48,66 @@ spring:
                 - StripPrefix=1
 ```
 
-**路由说明**:
-- `id`: 路由唯一标识符
-- `uri`: 目标服务地址,`lb://` 前缀表示使用负载均衡
-- `predicates`: 匹配条件,这里按路径前缀匹配
-- `filters`: 请求处理过滤器,`StripPrefix=1` 会移除路径的第一段
+三条路由同形。例：`GET /patra-catalog/venues?page=0` → `GET http://<catalog 实例>/venues?page=0`，下游另收到 `X-Forwarded-Prefix: /patra-catalog`。
 
-### Nacos 集成
-通过 Spring Cloud Alibaba Nacos 实现服务发现:
+## HTTP 客户端、超时与线程
 
-```yaml
-spring:
-  cloud:
-    nacos:
-      username: ${NACOS_USERNAME:nacos}
-      password: ${NACOS_PASSWORD:nacos}
-      discovery:
-        server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:127.0.0.1}}:${NACOS_PORT:8848}
-        service: ${spring.application.name}
-        fail-fast: true
-```
+| 项 | 值 | 说明 |
+|---|---|---|
+| 客户端 | JDK HttpClient | `spring.http.clients.imperative.factory: jdk`，显式指定，不靠 classpath 自动探测（classpath 上有 Nacos 客户端带来的 Apache HttpClient 5，自动探测会选到它） |
+| 连接超时 | 5 秒 | `spring.http.clients.connect-timeout` |
+| 读超时 | 60 秒 | `spring.http.clients.read-timeout`。**从请求发出起算的总时长**，持续收到数据也不重置：任何响应（含流式）要在 60 秒内读完，超过则正在转发的响应体被切断 |
+| 重定向 | 不跟随 | `spring.http.clients.redirects: dont-follow` |
+| 线程 | 虚拟线程 | `spring.threads.virtual.enabled: true`，每个请求一个虚拟线程 |
 
-## 路由示例
+WebMVC 版网关自己不带 HTTP 客户端实现，代理走 Boot 的 `RestClient`；Boot 按上面这组键装出 `ClientHttpRequestFactory`，网关的 RestClient 用的就是它。
 
-### Ingest 服务
-```bash
-# 客户端请求
-GET http://gateway:9528/patra-ingest/plans
+## 错误
 
-# 网关转发到
-GET http://patra-ingest:8082/plans
-```
+网关自身产生的错误走 starter-web 的全局处理器，`application/problem+json`，错误码前缀 `GW`（`linqibin.starter.core.error.context-prefix`）。下游自己的错误原样透传、不改写。
 
-### Registry 服务
-```bash
-# 客户端请求
-GET http://gateway:9528/patra-registry/provenance/pubmed
+| 场景 | 状态码 | 错误码 |
+|---|---|---|
+| 未匹配任何路由 | 404 | `GW-0404` |
+| `lb://` 找不到实例 | 503 | `GW-0503` |
+| 连接被拒、连接超时、域名解析失败 | 503 | `GW-0503` |
+| 响应头到达前读超时 | 504 | `GW-0504` |
 
-# 网关转发到
-GET http://patra-registry:8081/provenance/pubmed
-```
+映射逻辑在 `GatewayErrorMappingContributor`；响应体已开始转发后再出错，状态码无法再改。
 
-### Catalog 服务
-```bash
-# 客户端请求
-GET http://gateway:9528/patra-catalog/venues?page=0&size=20
+## API 文档聚合
 
-# 网关转发到
-GET http://patra-catalog:8083/venues?page=0&size=20
-```
+`http://<gateway>:9528/scalar`（springdoc 3.0 的 webmvc Scalar 控制器映射在 `${scalar.path:/scalar}`）。`scalar.sources` 列出三个服务的 `/v3/api-docs`，经各自路由代理到下游；各服务需引入 `linqibin-spring-boot-starter-openapi`。
 
-## API 文档聚合（Scalar UI）
+## 配置
 
-网关通过 Scalar UI 聚合各微服务的 OpenAPI 文档,提供统一的 API 文档入口。
-
-### 访问方式
-
-打开浏览器访问 `http://gateway:9528/scalar.html` 即可查看所有服务的 API 文档。
-
-### 配置
-
-```yaml
-scalar:
-  sources:
-    - url: /patra-catalog/v3/api-docs
-      title: Catalog Service
-      slug: catalog
-    - url: /patra-registry/v3/api-docs
-      title: Registry Service
-      slug: registry
-    - url: /patra-ingest/v3/api-docs
-      title: Ingest Service
-      slug: ingest
-```
-
-各服务的 `/v3/api-docs` 请求通过已有路由代理到下游服务,无需额外配置。每个后端服务需引入 `patra-spring-boot-starter-openapi` 以暴露 OpenAPI 文档端点。
-
-## 配置说明
-
-### 环境变量
-
-| 变量名 | 说明 | 默认值 |
-|--------|------|--------|
-| `SPRING_PROFILES_ACTIVE` | 激活的配置文件 | `dev` |
-| `NACOS_HOST` | Nacos 服务器地址 | 跟随 `PATRA_INFRA_HOST`（再缺省为 `127.0.0.1`） |
+| 环境变量 | 说明 | 默认值 |
+|---|---|---|
+| `SPRING_PROFILES_ACTIVE` | profile | `dev` |
+| `NACOS_HOST` | Nacos 地址 | 跟随 `PATRA_INFRA_HOST`，再缺省为 `127.0.0.1` |
 | `NACOS_PORT` | Nacos 端口 | `8848` |
-| `NACOS_USERNAME` | Nacos 认证用户名 | `nacos` |
-| `NACOS_PASSWORD` | Nacos 认证密码 | `nacos` |
+| `NACOS_USERNAME` / `NACOS_PASSWORD` | Nacos 凭据 | `nacos` / `nacos` |
+| `TAILSCALE_IP` | dev 下向 Nacos 注册的 IP | 空 |
+| `PATRA_LOG_DIR` | 日志目录 | `logs` |
 
-### 端口配置
-- **默认端口**: 9528
-- **Nacos 端口**: 8848
+端口 9528。超时与虚拟线程在 `application.yml` 里有值，不需要环境变量。
 
-### 日志配置
-开发环境下启用 DEBUG 级别日志以便调试路由和负载均衡:
+## 测试
 
-```yaml
-logging:
-  level:
-    org.springframework.cloud.gateway: DEBUG
-    org.springframework.cloud.loadbalancer: DEBUG
+```bash
+./gradlew :patra-api:patra-gateway-boot:test              # 单元测试
+./gradlew :patra-api:patra-gateway-boot:integrationTest   # 集成测试（WireMock 顶替下游，不连 Nacos）
 ```
 
-### Actuator 监控配置
-
-网关集成了 Spring Boot Actuator 提供健康检查和指标监控：
-
-```yaml
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics
-  endpoint:
-    health:
-      show-details: when-authorized
-  metrics:
-    tags:
-      application: ${spring.application.name}
-```
-
-**端点说明**：
-
-| 端点 | URL | 说明 |
-|------|-----|------|
-| Health | `/actuator/health` | 健康检查（认证后显示详情） |
-| Info | `/actuator/info` | 应用信息 |
-| Metrics | `/actuator/metrics` | 性能指标 |
-
-**Metrics 导出**：通过 OTel Agent + Micrometer Bridge 导出到 OTel Collector，无需额外配置。
+集成测试的 `test` profile 只关掉 Nacos 的发现与注册，`spring.cloud.discovery.enabled` 保持开启，`lb://` 经 `spring.cloud.discovery.client.simple.instances.*` 拿到 WireMock 的地址。网关没有数据库，`build.gradle.kts` 在 `configurations.testImplementation` 上排除了测试 starter 带来的 JPA / JDBC / Flyway 测试模块；WireMock 关掉 h2c（`http2PlainDisabled`），JDK 客户端才会像对 Tomcat 一样走 HTTP/1.1。
 
 ## 技术栈
 
-| 组件 | 版本/说明 |
-|------|----------|
-| **Spring Boot** | 4.0.6 |
-| **Spring Cloud Gateway** | 2025.1.0 |
-| **Spring Cloud LoadBalancer** | 用于客户端负载均衡 |
-| **Nacos Discovery** | 服务发现和注册 |
-| **patra-spring-boot-starter-core** | Patra 核心 starter |
-| **Scalar UI** | API 文档聚合展示 |
-| **SpringDoc OpenAPI (WebFlux)** | OpenAPI 文档生成（WebFlux 版） |
-
----
-
-**最后更新**: 2026-02-15
-**版本**: 0.1.0-SNAPSHOT
+| 组件 | 版本 |
+|---|---|
+| Spring Boot | 4.0.8 |
+| Spring Cloud | 2025.1.3（gateway-server-webmvc 5.0.3） |
+| Spring Cloud LoadBalancer | 随 Spring Cloud |
+| Nacos Discovery | spring-cloud-alibaba 2025.1.0.0 |
+| springdoc（webmvc Scalar） | 3.0.1 |
+| Java | 25 |

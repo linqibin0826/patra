@@ -197,6 +197,7 @@
             "impacts": [
                 "catalog",
                 "foundation",
+                "gateway",
                 "identity",
                 "ingest",
                 "object-storage",
@@ -349,7 +350,8 @@
                 "gateway"
             ],
             "tasks": [
-                "check"
+                "check",
+                "integrationTest"
             ]
         },
         {
