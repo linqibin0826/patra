@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.linqibin.commons.error.trait.StandardErrorTrait;
 import io.lettuce.core.RedisBusyException;
 import io.lettuce.core.RedisCommandExecutionException;
+import io.lettuce.core.RedisCommandInterruptedException;
+import io.lettuce.core.RedisException;
 import io.lettuce.core.RedisLoadingException;
 import io.lettuce.core.RedisNoScriptException;
 import io.lettuce.core.RedisReadOnlyException;
@@ -51,6 +53,22 @@ class TransientRedisFailuresTest {
         .isFalse();
     assertThat(TransientRedisFailures.isTransient(new RedisSystemException("x", null))).isFalse();
     assertThat(TransientRedisFailures.isTransient(new IllegalStateException("x"))).isFalse();
+  }
+
+  @Test
+  @DisplayName("连接层的 RedisException（连接关闭、命令被中断）是暂时失败")
+  void should_treat_connection_level_redis_exceptions_as_transient() {
+    assertThat(
+            TransientRedisFailures.isTransient(
+                new RedisSystemException(
+                    "Redis exception", new RedisException("Connection closed"))))
+        .isTrue();
+    assertThat(
+            TransientRedisFailures.isTransient(
+                new RedisSystemException(
+                    "Redis command interrupted",
+                    new RedisCommandInterruptedException(new InterruptedException()))))
+        .isTrue();
   }
 
   @Test

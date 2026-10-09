@@ -51,9 +51,11 @@ RedisSessionStore redisSessionStore(StringRedisTemplate redis, Clock clock) {
 
 ## 错误
 
-Redis 连不上、超时、`LOADING` / `READONLY` / `BUSY` / `MASTERDOWN` 转成
+Redis 连不上、超时、`LOADING` / `READONLY` / `BUSY` / `MASTERDOWN`，以及连接层的 `RedisException`
+（Redis 重启瞬间在途命令的「Connection closed」、命令被中断）转成
 `SessionStoreUnavailableException`（`DEP_UNAVAILABLE`，503）。判定在 `TransientRedisFailures`，
-identity 的登录限流也用它。其他 Redis 异常（脚本写错、`WRONGTYPE`、`NOAUTH`）是缺陷或配置错，原样抛出。
+identity 的登录限流和网关的查会话都用它。其他服务端错误回复（脚本写错、`WRONGTYPE`、`NOAUTH`）
+是缺陷或配置错，原样抛出。
 
 ## 限制
 
