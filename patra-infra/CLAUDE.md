@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 这个目录是什么
 
-`patra-infra` 是 Patra 的**基建配置目录**，不是应用代码。它只包含：Docker Compose 编排（`docker/`）+ CD 路由与部署逻辑（`cd/`）+ macOS 运维脚本（`scripts/`）。这里没有构建系统、没有 lint —— 改动通过 `docker compose` 重启容器或 `launchctl` 重载 agent 来"生效"。仅有的可执行测试是 `cd/detect-changes.test.sh` 与 `cd/deploy.test.sh`（纯 bash stub 单测，直接 `bash` 运行，改对应脚本时必须跑）。
+`patra-infra` 是 Patra 的**基建配置目录**，不是应用代码。它只包含：Docker Compose 编排（`docker/`）+ CD 路由与部署逻辑（`cd/`）+ macOS 运维脚本（`scripts/`）。这里没有构建系统、没有 lint —— 改动通过 `docker compose` 重启容器或 `launchctl` 重载 agent 来"生效"。仅有的可执行测试是 `cd/detect-changes.test.sh`、`cd/deploy.test.sh` 与 `scripts/install-github-runner.test.sh`（纯 bash stub 单测，直接 `bash` 运行，改对应脚本时必须跑）。
 
 完整的部署手册、服务 URL、凭据、故障排查在 `docker/README.md`，本文件只补充架构大图景和容易踩的非显性约束。MacBook ↔ Mac mini 的连接 / 地址 / 路由类问题（含 tailscale、Shadowrocket、各组件 IP 注册）单独记在 `docs/mac-mini-connectivity.md`。
 
@@ -66,7 +66,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **构建环境（mini）**：与 MacBook 同套——Homebrew + brew 装 mise + `java@zulu-25.30.17.0` 全局钉版（升级时两台一起升）；`JAVA_HOME` 固化在 `~/actions-runner/.env`（连同 Clash 代理变量，launchd 不继承 shell 环境）；docker PATH 靠 `~/actions-runner/.path` 补 `/usr/local/bin` 与 `/opt/homebrew/bin`；Gradle/镜像层缓存常驻本机。
 - **失败通知**：走 GitHub 原生（失败 run 推 App/邮件给触发者），不设自建通知通道——单人 dev 环境，自己 push 自己看结果（2026-08-28 决策，曾配过 ntfy 后拆除）。
 - **runner 看门狗**：`runner-watchdog.yml` 每日 API 查在线 + mini canary（docker/磁盘/unhealthy 容器）。防「离线 30 天被 GitHub 注销」（2026-08 实际发生）。需 secrets `RUNNER_ADMIN_TOKEN`（fine-grained PAT，仅本仓库 Administration:Read）。
-- **运维红线**：派发任务期间严禁重启 runner（杀 Worker）；runner 自更新已禁用（`--disableupdate`），升级=闲时重跑 `install-github-runner.sh`。
+- **运维红线**：派发任务期间严禁重启 runner（杀 Worker）；runner 自更新已禁用（`--disableupdate`），升级=闲时不带参数重跑 `install-github-runner.sh`（已注册时跳过 config.sh，registration 不动）。
 - **容器内 Nacos 走服务名**：应用容器和 nacos 同在 `patra-net`，gRPC 走 Docker bridge 不经 tailscale，直接 `NACOS_HOST=nacos`。
 - **环境文件三层，密钥在仓库外**：`env_file` 顺序叠加 `.env.common`（共享基建坐标：patra-net 服务名、内网 dev 默认、Redis 地址、身份断言公钥）→ `.env.<svc>`（服务专属 DB/bucket/日志路径）→ `${HOME}/.patra/secrets/` 下的密钥文件（`redis.env` 给 catalog/identity/gateway、`gateway.env` 给 gateway，两者必需；`<svc>.env` 可选；后者覆盖同名）。**Redis 密码、网关私钥、外部数据源 API key（Scopus / 青果 proxy / RocketMQ ACL 等）一律只进 `~/.patra/secrets/`**，committed 文件只放内网 dev 默认值和公钥。必需文件缺一个，compose 对整个 apps 项目的命令都会失败（portal 也部署不了）。
 
@@ -75,6 +75,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | 脚本 | 跑在哪 | 作用 |
 |---|---|---|
 | `init-volumes.sh` | Mac mini | 首次部署建数据卷目录骨架和密钥目录 ~/.patra/secrets（幂等，不生成密钥） |
-| `install-github-runner.sh <token>` | Mac mini | 安装 GitHub self-hosted runner 为 launchd 常驻服务（CD deploy job 在此执行） |
+| `install-github-runner.sh [token]` | Mac mini | 安装或升级 GitHub self-hosted runner（launchd 常驻服务，CD deploy job 在此执行）：首次安装带 registration token，已注册时不带参数即升级 |
 | `install-tailscale-route-guard.sh` + `tailscale-route-guard.sh` | macOS（root LaunchDaemon） | 守护 tailnet 路由：Shadowrocket 等代理拨断重连时清除被抢占的克隆主机路由并 `tailscale down/up` 重协商 |
 | `dev.patra.tailscale-route-guard.plist` | — | 上述路由守护 LaunchDaemon 的模板 |
