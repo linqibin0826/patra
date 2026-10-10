@@ -4,7 +4,7 @@
 > **版本**：[v0.8 Accounts](../release-specs/v0.8-accounts.md)（决策 A、C、G；Done 判定 D7、D10）
 > **前置设计**：[identity 账号（PAP-63）](2026-10-05-identity-account-design.md) 第 16 节、[gateway 鉴权（PAP-65）](2026-10-09-gateway-auth-design.md) 第 15 节
 > **日期**：2026-10-10
-> **状态**：设计中，待评审
+> **状态**：已实施，已上线（2026-10-10）
 
 ## 1. 要解决的问题
 
@@ -404,6 +404,17 @@ PAP-65 的签名器在启动时用私钥签一个探针断言，再用配置的�
 4. Redis 重启后会话保留。
 5. Argon2 在 mini 上的单次耗时。
 6. 门户 Playwright 指向 mini 网关的结果。
+
+实测结果（2026-10-10）：
+
+| # | 结果 | 怎么测的 |
+|---|---|---|
+| 1 | 成立：导入会被处理，`${user.home}` 会展开，`[.properties]` 能读 `.env` 文件，导入的值能用在占位符里。文件缺失时启动失败，报 `Config data resource 'file [...]' via location 'file:...[.properties]' does not exist`。同一组 import 从后往前加载：gateway 两个文件都缺时先报 `gateway.env`，只放 `gateway.env` 时报 `redis.env` | 写计划时用 identity 启动包实测；Task 5 在空的 `user.home` 下起 gateway、identity 的启动包 |
+| 2 | 成立：Lettuce（本机 identity、gateway，dev profile）在无密码的 mini Redis 上完成注册、取当前用户、登出；Redisson（catalog 新镜像）在无密码的 Redis 上通过健康检查，部署日志里没有自动回滚。加密码后三个服务照常工作，日志里没有 `NOAUTH` / `WRONGPASS` | Lettuce：本机冒烟 401/201/200/204/401；Redisson：CD run 38032078855；加密码后查 `docker logs` |
+| 3 | 三个服务自动恢复，0 个 503：切换期间每 0.5 秒带令牌请求一次 `/auth/me`，160 次全部 200。identity 的 Lettuce 在 redis 重建时打出两条 `Cannot reconnect ... Connection refused` 告警后自行重连；重连后的客户端为 catalog 25、gateway 2、identity 2，都以 `default` 认证 | 在 mini 上执行 `compose-all.sh up core` 时并行请求；`CLIENT LIST` |
+| 4 | 成立：重启前登录的会话，重启后 `/auth/me` 仍为 200；redis 约 12 秒恢复 healthy | runbook 6.5（`docker restart patra-redis`） |
+| 5 | Argon2id m=19456 t=2 p=1：中位数 19.8 毫秒，最快 16.8 毫秒，最慢 30.5 毫秒（20 次，预热 5 次） | 在 mini 的 identity 容器里用镜像自带的 JRE 跑一次性计时类，参数与 `PasswordHashingAdapter` 一致 |
+| 6 | 14 个用例全部通过，真实数据用例没有被跳过 | `PATRA_GATEWAY_BASE_URL=http://100.103.73.27:9528` 跑 `patra-portal` 的 `tests/e2e/` |
 
 ## 14. 文档
 

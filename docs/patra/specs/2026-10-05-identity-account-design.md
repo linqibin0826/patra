@@ -455,7 +455,7 @@ PAP-62 已经在本分支提交、还没推送，改动范围小：
 
 | # | 结论 | 结果 | 对应测试 |
 |---|---|---|---|
-| 1 | `Argon2PasswordEncoder(16, 32, 1, 19456, 2)` 输出 Argon2id 编码串，单次哈希在开发机和 mini 上都在几十毫秒量级 | 开发机成立：编码串前缀是 `$argon2id$v=19$m=19456,t=2,p=1$`，单次约 20 毫秒（MacBook）。mini 上的耗时待 PAP-66 部署 identity 后补测 | `PasswordHashingAdapterTest`（mini 上的手测见第 16 节） |
+| 1 | `Argon2PasswordEncoder(16, 32, 1, 19456, 2)` 输出 Argon2id 编码串，单次哈希在开发机和 mini 上都在几十毫秒量级 | 开发机成立：编码串前缀是 `$argon2id$v=19$m=19456,t=2,p=1$`，单次约 20 毫秒（MacBook）。mini 上中位数 19.8 毫秒（20 次，预热后，2026-10-10，PAP-66） | `PasswordHashingAdapterTest`（mini 上的手测见第 16 节） |
 | 2 | 后端照抄的正则和 Zod 4.6.5 默认的 `z.email()` 对同一组用例结论相同 | 成立：28 条用例的结论和 Zod 4.6.5 实际运行的结果一致 | `EmailAddress` 的单元测试 |
 | 3 | Redis 连不上和命令超时时，Spring Data Redis 抛的是第 10.1 节列出的两类异常，适配器能把它们转成 `TemporarilyUnavailableException` | 连不上时成立：适配器转成 `TemporarilyUnavailableException`，登录返回 503 `IDN-0503`，注册不受影响。命令超时没有单独构造场景，仍按源码判断 | `LoginThrottleAdapterIT` 的 `should_translate_connection_failure`，加上 `RedisUnavailableIT`（Redis 指向没人监听的端口） |
 | 4 | 「开始」和「结算」两段 Lua 脚本在 `redis:7.0.15` 上按第 8.2 节工作，脚本里用 `TIME` 取时间 | 成立：10 个交错场景全部通过（并发 20 个只放行 5 个、其余 1 秒的 429，正确密码不上锁，取消释放名额，迟到的失败只计 1 次，锁定期的失败不计，在途登记和计数窗口按时过期） | 失败限制的集成测试 `LoginThrottleAdapterIT` |
