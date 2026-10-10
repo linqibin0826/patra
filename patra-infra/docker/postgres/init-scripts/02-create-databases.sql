@@ -5,4 +5,5 @@ CREATE DATABASE patra_registry;
 CREATE DATABASE patra_ingest;
 CREATE DATABASE patra_catalog;
 CREATE DATABASE patra_storage;
+CREATE DATABASE patra_identity;
 CREATE DATABASE patra_batch;

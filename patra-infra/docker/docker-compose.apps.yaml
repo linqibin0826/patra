@@ -4,12 +4,17 @@ name: patra-apps
 # 镜像由 CD（.github/workflows/cd.yml）构建推送到 GHCR，本文件只负责在 Mac mini 上编排运行。
 # 镜像 tag 由 deploy job 通过 {SVC}_IMAGE_TAG 注入；手动 compose-all.sh up apps 时回退 latest。
 #
-# env_file 三层叠加（后者覆盖同名）：
-#   .env.common         共享基建坐标（Nacos/MinIO/RocketMQ/xxl-job，patra-net 服务名 + dev 默认）
-#   .env.<svc>          服务专属（DB/Redis/bucket/日志路径，dev 默认）
-#   .env.<svc>.secret   真敏感密钥（gitignore，缺失时跳过）
+# env_file 按「共享坐标、服务专属、密钥」叠加（后者覆盖同名）：
+#   .env.common   共享基建坐标（Nacos / MinIO / RocketMQ / xxl-job / Redis 地址）和身份断言公钥，dev 默认
+#   .env.<svc>    服务专属（DB / bucket / 日志路径，dev 默认）
+#   ${HOME}/.patra/secrets/*.env   密钥，放在仓库外（见 README「密钥」）：
+#     redis.env     Redis 密码。catalog、identity、gateway 必需
+#     gateway.env   网关签身份断言的私钥。gateway 必需
+#     <svc>.env     外部数据源密钥等。可选，缺失时跳过
+# 必需文件缺一个，compose 对本项目的任何命令都会失败（portal 也部署不了），报错里有完整路径。
+# 密钥不放在 compose 目录：CD 每次运行前的 git clean 会删掉 runner 工作区里被忽略的文件。
 #
-# 服务清单 SSOT 见 patra-infra/cd/services.json（端口/镜像/构建上下文）。
+# 服务清单 SSOT 见 patra-infra/cd/services.json（端口/镜像/构建上下文/部署顺序）。
 
 x-app-healthcheck: &app-healthcheck
   interval: 10s
@@ -26,7 +31,7 @@ services:
     env_file:
       - .env.common
       - .env.registry
-      - path: .env.registry.secret
+      - path: ${HOME}/.patra/secrets/registry.env
         required: false
     healthcheck:
       test: [ "CMD", "curl", "-fs", "http://localhost:6000/actuator/health" ]
@@ -40,7 +45,7 @@ services:
     env_file:
       - .env.common
       - .env.object-storage
-      - path: .env.object-storage.secret
+      - path: ${HOME}/.patra/secrets/object-storage.env
         required: false
     healthcheck:
       test: [ "CMD", "curl", "-fs", "http://localhost:6200/actuator/health" ]
@@ -54,7 +59,9 @@ services:
     env_file:
       - .env.common
       - .env.catalog
-      - path: .env.catalog.secret
+      - path: ${HOME}/.patra/secrets/redis.env
+        required: true
+      - path: ${HOME}/.patra/secrets/catalog.env
         required: false
     healthcheck:
       test: [ "CMD", "curl", "-fs", "http://localhost:6300/actuator/health" ]
@@ -68,10 +75,26 @@ services:
     env_file:
       - .env.common
       - .env.ingest
-      - path: .env.ingest.secret
+      - path: ${HOME}/.patra/secrets/ingest.env
         required: false
     healthcheck:
       test: [ "CMD", "curl", "-fs", "http://localhost:6100/actuator/health" ]
+      <<: *app-healthcheck
+
+  identity:
+    image: ghcr.io/linqibin0826/patra-identity:${IDENTITY_IMAGE_TAG:-latest}
+    container_name: patra-identity
+    restart: unless-stopped
+    ports: [ "6400:6400" ]
+    env_file:
+      - .env.common
+      - .env.identity
+      - path: ${HOME}/.patra/secrets/redis.env
+        required: true
+      - path: ${HOME}/.patra/secrets/identity.env
+        required: false
+    healthcheck:
+      test: [ "CMD", "curl", "-fs", "http://localhost:6400/actuator/health" ]
       <<: *app-healthcheck
 
   gateway:
@@ -82,8 +105,10 @@ services:
     env_file:
       - .env.common
       - .env.gateway
-      - path: .env.gateway.secret
-        required: false
+      - path: ${HOME}/.patra/secrets/redis.env
+        required: true
+      - path: ${HOME}/.patra/secrets/gateway.env
+        required: true
     healthcheck:
       test: [ "CMD", "curl", "-fs", "http://localhost:9528/actuator/health" ]
       <<: *app-healthcheck
@@ -96,7 +121,7 @@ services:
     # portal 是 BFF（Next.js Node server），不读 .env.common（那是 Spring/Nacos/MinIO，portal 用不到）
     env_file:
       - .env.portal
-      - path: .env.portal.secret
+      - path: ${HOME}/.patra/secrets/portal.env
         required: false
     healthcheck:
       # busybox wget（node:alpine 自带，免装 curl）；/api/health 不依赖 gateway
