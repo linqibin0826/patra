@@ -31,12 +31,17 @@ services:
     container_name: patra-redis
     restart: unless-stopped
     ports: [ "16379:6379" ]
-    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
+    env_file:
+      - path: ${HOME}/.patra/secrets/redis.env
+        required: true
+    # 密码只来自 redis.env。为空时拒绝启动：--requirepass "" 会让 default 回到 nopass
+    command: [ "sh", "-c", "[ -n \"$$REDIS_PASSWORD\" ] || { echo 'REDIS_PASSWORD 为空，拒绝无密码启动' >&2; exit 1; }; exec redis-server /usr/local/etc/redis/redis.conf --requirepass \"$$REDIS_PASSWORD\"" ]
     volumes:
       - ${HOME}/.patra/docker/redis/data:/data
       - ${HOME}/.patra/docker/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      # redis-cli 被拒时退出码也是 0，所以要核对输出是 PONG
+      test: [ "CMD-SHELL", "REDISCLI_AUTH=\"$$REDIS_PASSWORD\" redis-cli ping | grep -q PONG" ]
       interval: 10s
       timeout: 5s
       retries: 10
