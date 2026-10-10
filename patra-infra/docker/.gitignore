@@ -1,7 +1,12 @@
 # 真实敏感密钥：只存在于运行容器的机器上，绝不提交到公开仓库
-# 模板见 .env.secret.example
+
+# tailscale 网关的 TS_AUTHKEY（模板见 .env.secret.example）
 .env.secret
 
-# 应用容器的真敏感密钥（模板见 .env.apps.secret.example）
-# 用通配覆盖未来所有 .env.<app>.secret，从源头杜绝真 key 进公开仓库
+# 应用和 Redis 的密钥放在仓库外的 ~/.patra/secrets/（见 README「密钥」）。
+# secrets/ 下只放模板；其余文件一律忽略，防止有人把真文件放进工作区
+secrets/*
+!secrets/*.example
+
+# 兜底：旧做法的 .env.<服务>.secret 已不再使用，误放进来也不会被提交
 .env.*.secret
