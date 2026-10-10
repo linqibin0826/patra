@@ -5,7 +5,7 @@
 > **前置设计**：[identity 账号（PAP-63）](2026-10-05-identity-account-design.md) 第 10、16 节、[identity 会话（PAP-64）](2026-10-09-identity-session-design.md) 第 6、10、16 节、[gateway 鉴权（PAP-65）](2026-10-09-gateway-auth-design.md) 第 6.3、11、15 节；设计简报 [accounts.md](../../../patra-portal/docs/design-briefs/v0.8/accounts.md) §4 与附录 A
 > **后续 Issue**：[PAP-68](https://linear.app/papertrace/issue/PAP-68) 登录页、注册页、导航栏的登录入口与用户菜单
 > **日期**：2026-10-10
-> **状态**：设计中，待评审
+> **状态**：已实施（2026-10-10，分支 `feat/v0.8-accounts-fe`）
 
 ## 1. 要解决的问题
 
@@ -343,14 +343,22 @@ export async function logout(): Promise<void>;
 
 ## 14. 实施时要实测的点
 
-PAP-67 本身没有页面，所以先用 curl 请求 `/api/auth/me` 验证 Cookie 这条链路。本机门户指向 mini 的网关（`http://100.103.73.27:9528`）。令牌只存在 shell 变量里，输出时遮掉；测试账号用一次性邮箱，dev 数据可以丢弃。
+PAP-67 本身没有页面，所以先用 curl 请求 `/api/auth/me` 验证 Cookie 这条链路。本机门户指向 mini 的网关（`http://100.103.73.27:9528`）。令牌只存在 shell 变量里，输出时遮掉；测试账号用一次性邮箱，dev 数据可以丢弃。实施后本地做，结果写回本节（2026-10-10 实测，门户是本分支 Task 9 之后的代码，网关和 identity 是 mini 上在跑的版本）。
 
 1. 直接调网关的注册接口建一个一次性账号，拿到令牌。
+   - 实测：两种开关取值各注册一个账号，都回 201，令牌 54 个字符，前缀 `patra_user_`。
 2. 带上 Cookie 请求 `/api/auth/me`：应返回 200 和用户；`Set-Cookie` 的名字是 `patra_session`，带 `Max-Age=2592000`、`HttpOnly`、`SameSite=lax`、`Path=/`，没有 `Secure`。
+   - 实测（开关为 `false`）：200，响应体 `{"user":{"userId":"…","email":"pap67-…@example.com"}}`，`Cache-Control: private, no-store`，`Set-Cookie: patra_session=<令牌>; Path=/; Expires=…; Max-Age=2592000; HttpOnly; SameSite=lax`。
 3. 不设开关重启门户，用 `__Host-patra_session` 再请求一次：`Set-Cookie` 的名字是 `__Host-patra_session`，并带上 `Secure`。
+   - 实测（启动配置里显式写 `PATRA_SESSION_COOKIE_SECURE=true`，见计划「与 spec 的出入」）：200 和用户，`Set-Cookie: __Host-patra_session=<令牌>; Path=/; Expires=…; Max-Age=2592000; Secure; HttpOnly; SameSite=lax`。
 4. 直接调网关登出，再用同一个 Cookie 请求：应返回 200 `{ user: null }`，`Set-Cookie` 是 `Max-Age=0`，并带着和写入时相同的属性。
+   - 实测：网关登出回 204；之后门户回 200 `{"user":null}`。开关为 `false` 时 `Set-Cookie: patra_session=; Path=/; Max-Age=0; HttpOnly; SameSite=lax`，为 `true` 时 `Set-Cookie: __Host-patra_session=; Path=/; Max-Age=0; Secure; HttpOnly; SameSite=lax`。
 5. 不带 Cookie 请求：应返回 200 `{ user: null }`，没有 `Set-Cookie`。
+   - 实测：两种取值下都是 200 `{"user":null}`、`Cache-Control: private, no-store`，没有 `Set-Cookie`。
 6. 匿名页面：Playwright 指向 mini 的网关跑一遍 `tests/e2e/`，用例要全部通过。
+   - 实测：`PATRA_GATEWAY_BASE_URL=http://100.103.73.27:9528 pnpm test:e2e --workers=1`，复用开关为 `false` 的 `portal-dev`，14 个用例全部通过，没有跳过。
+7. （Review Focus）Cookie 值是坏的：网关按匿名处理，`/auth/me` 回 401，门户回 200 `{ user: null }` 并清除 Cookie。
+   - 实测：Cookie 值用 `patra_user_broken`，两种取值下都回 200 `{"user":null}`，并带和第 4 条相同的清除 `Set-Cookie`。
 
 Server Action 本身，以及浏览器里「页面脚本读不到令牌」这一条，要等 PAP-68 的页面做好后验收：跑 Playwright 登录冒烟，再用浏览器开发者工具看一遍。
 
