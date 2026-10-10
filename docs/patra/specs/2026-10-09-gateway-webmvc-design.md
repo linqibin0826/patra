@@ -196,8 +196,8 @@ Scalar 换成 springdoc 的 webmvc 版 starter，`scalar.sources` 不变：三�
 
 结果写回本节（2026-10-09 实施时实测；对照 mini 的两条见文末说明）。
 
-1. 找不到实例。实测（`GatewayFailureIT`）：到达处理器的是 `HttpServerErrorException`，经 contributor 映射后响应 503、`application/problem+json`、`GW-0503`。
-2. JDK 客户端下连接被拒与读超时的原因链。实测：连接被拒是 `ResourceAccessException → java.net.ConnectException`（503）；响应头到达前超时是 `ResourceAccessException → java.net.http.HttpTimeoutException("Request cancelled")`（504）。第 8 节的分类不用改。另外 `ResourceAccessException` 的构造只收 `IOException` 原因，`UnresolvedAddressException` 不可能直接挂在它下面，真实形态是包在 `ConnectException` 里，contributor 先判 `ConnectException` 已覆盖。
+1. 找不到实例。实测（`GatewayFailureIT`）：到达处理器的是 `HttpServerErrorException`，经 `GatewayProxyFailureAdvice` 包成 `DownstreamUnavailableException` 后响应 503、`application/problem+json`、`GW-0503`。
+2. JDK 客户端下连接被拒与读超时的原因链。实测：连接被拒是 `ResourceAccessException → java.net.ConnectException`（503）；响应头到达前超时是 `ResourceAccessException → java.net.http.HttpTimeoutException("Request cancelled")`（504）。第 8 节的分类不用改。另外 `ResourceAccessException` 的构造只收 `IOException` 原因，`UnresolvedAddressException` 不可能直接挂在它下面，真实形态是包在 `ConnectException` 里，`ProxyFailureClassifier` 先判 `ConnectException` 已覆盖。
 3. 全局处理器对代理失败的表现。实测：代理失败以异常到达 `GlobalRestExceptionHandler`，经错误引擎解析；没有专门处理时判成 500 `GW-0500`，且 `detail` 原样回显异常消息（含下游实例地址）。网关因此用 `GatewayProxyFailureAdvice` 把它们包成固定文案的应用异常。已写回安全 starter 设计第 14 节。
 4. `X-Forwarded-Prefix` 与下游 springdoc 的 servers。实测（`GatewayRoutingIT`）：下游收到 `X-Forwarded-Host` / `Port` / `Proto` 和 `X-Forwarded-Prefix: /patra-catalog`，`Forwarded` 照旧写入。与 mini 上 WebFlux 版的对照见文末。
 5. 重定向。没有单测 Boot 的默认值；`dont-follow` 下下游的 302 与 `Location` 原样到客户端，下游没有收到对 `/new` 的请求。注意测试客户端 `RestTestClient` 自己会跟随 302，看到的会是它跟去 `/new` 后网关给的 404，这条用例要用不跟随重定向的 JDK `HttpClient` 打网关。

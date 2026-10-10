@@ -428,7 +428,7 @@ Boot 在检测不到任何认证相关的 Bean 时，会生成一个带随机密
 - `patra-common-security` 的依赖里只有 `linqibin-commons-core`。
 - `./gradlew dumpModuleGraph` 后 `module-graph.json` 与构建一致。
 
-**网关切到 WebMVC 版后对全局异常处理器的实测（2026-10-09，PAP-69）**：网关引入 starter-web 后，代理失败（`RestClient` 的 `ResourceAccessException`、LoadBalancer 无实例的 `HttpServerErrorException(503)`）都以异常形式到达 `GlobalRestExceptionHandler`，经错误引擎解析；引擎没有专门规则时判成 500，网关用 `GatewayErrorMappingContributor` 映射成 503 / 504。另发现 `ResponseEntityExceptionHandler` 会先接住 Spring MVC 自带的异常、绕过引擎，未匹配路径的 404 原本没有错误码，已在 starter-web 里覆写两个 404 处理方法改走适配器并映射为 `NOT_FOUND`。响应体已经开始转发后再出错（读超时切断响应体）时，处理器原本会把 ProblemDetail 直接追加在半截响应体后面；现在 `handleException` 和两个 404 覆写在渲染前检查 `isCommitted()`：已提交就记一条 WARN 并返回 `null` 交给容器收尾，未提交则先 `resetBuffer()` 再渲染。另外 ProblemDetail 的 `detail` 原样回显异常消息，网关这种对外边缘要自己把代理失败包成固定文案的应用异常，否则下游实例地址会泄露。
+**网关切到 WebMVC 版后对全局异常处理器的实测（2026-10-09，PAP-69）**：网关引入 starter-web 后，代理失败（`RestClient` 的 `ResourceAccessException`、LoadBalancer 无实例的 `HttpServerErrorException(503)`）都以异常形式到达 `GlobalRestExceptionHandler`，经错误引擎解析；引擎没有专门规则时判成 500，网关用 `GatewayProxyFailureAdvice` 分类后映射成 503 / 504。另发现 `ResponseEntityExceptionHandler` 会先接住 Spring MVC 自带的异常、绕过引擎，未匹配路径的 404 原本没有错误码，已在 starter-web 里覆写两个 404 处理方法改走适配器并映射为 `NOT_FOUND`。响应体已经开始转发后再出错（读超时切断响应体）时，处理器原本会把 ProblemDetail 直接追加在半截响应体后面；现在 `handleException` 和两个 404 覆写在渲染前检查 `isCommitted()`：已提交就记一条 WARN 并返回 `null` 交给容器收尾，未提交则先 `resetBuffer()` 再渲染。另外 ProblemDetail 的 `detail` 原样回显异常消息，网关这种对外边缘要自己把代理失败包成固定文案的应用异常，否则下游实例地址会泄露。
 
 ## 15. 实测结果
 
