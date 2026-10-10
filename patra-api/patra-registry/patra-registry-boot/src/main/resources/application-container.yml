@@ -14,8 +14,3 @@ spring:
     url: ${REGISTRY_DB_URL}
     username: ${REGISTRY_DB_USERNAME}
     password: ${REGISTRY_DB_PASSWORD}
-
-  # Production Redis (URL from environment)
-  data:
-    redis:
-      url: ${REGISTRY_REDIS_URL}

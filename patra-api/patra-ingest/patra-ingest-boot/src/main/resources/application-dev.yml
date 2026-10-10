@@ -8,9 +8,6 @@ spring:
     url: jdbc:postgresql://${PATRA_INFRA_HOST:127.0.0.1}:15432/patra_ingest
     username: postgres
     password: 123456
-  data:
-    redis:
-      url: redis://${PATRA_INFRA_HOST:127.0.0.1}:16379
 
   # dev 场景：用 TAILSCALE_IP 注册，确保跨主机服务发现拿到的 IP 可达。
   cloud:

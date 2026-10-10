@@ -8,6 +8,10 @@ spring:
   config:
     activate:
       on-profile: dev
+    # Redis 密码与 mini 容器是同一个文件，放在仓库外（patra-infra/docker/README.md「密钥」）。
+    # 不加 optional：缺文件时启动失败并报出路径
+    import:
+      - file:${user.home}/.patra/secrets/redis.env[.properties]
 
   # 禁用 Batch Job 自动启动（通过 XXL-Job 手动触发）
   batch:
@@ -20,10 +24,14 @@ spring:
     username: postgres
     password: 123456  # Development only - secure in production
 
-  # Development Redis (Mac mini docker)
+  # Development Redis (Mac mini docker)。本机和 mini 容器共用这个 Redis 的 0 号库；
+  # 带用户名 default：Redis 加密码前后都能认证
   data:
     redis:
-      url: redis://${PATRA_INFRA_HOST:127.0.0.1}:16379
+      host: ${PATRA_INFRA_HOST:127.0.0.1}
+      port: 16379
+      username: default
+      password: ${REDIS_PASSWORD}
       # 宿主机 DarkWake/短暂抖动时降低误超时概率
       connect-timeout: 10s
       timeout: 30s

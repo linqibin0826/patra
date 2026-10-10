@@ -6,9 +6,6 @@ spring:
     url: ${INGEST_DB_URL}
     username: ${INGEST_DB_USERNAME}
     password: ${INGEST_DB_PASSWORD}
-  data:
-    redis:
-      url: ${INGEST_REDIS_URL}
 
 patra:
   starter:

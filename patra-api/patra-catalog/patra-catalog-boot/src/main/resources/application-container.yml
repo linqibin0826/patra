@@ -21,10 +21,13 @@ spring:
     username: ${CATALOG_DB_USERNAME}
     password: ${CATALOG_DB_PASSWORD}
 
-  # Production Redis (environment variables)
+  # Redis：地址来自 .env.common，密码来自 ~/.patra/secrets/redis.env（compose env_file）
   data:
     redis:
-      url: ${CATALOG_REDIS_URL}
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      username: default
+      password: ${REDIS_PASSWORD}
 
 # Production logging configuration
 logging:

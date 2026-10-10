@@ -1,4 +1,5 @@
-# 容器部署：所有连接信息都从环境变量读，没有默认值。变量名由 PAP-66 定稿。
+# 容器部署：所有连接信息都从环境变量读，没有默认值。库来自 .env.identity；Redis 地址和公钥来自
+# .env.common；Redis 密码来自 ~/.patra/secrets/redis.env（compose env_file）。
 spring:
   config:
     activate:
@@ -9,10 +10,13 @@ spring:
     password: ${IDENTITY_DB_PASSWORD}
   data:
     redis:
-      url: ${IDENTITY_REDIS_URL}
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      username: default
+      password: ${REDIS_PASSWORD}
 
 patra:
   security:
     identity-assertion:
-      # 网关的公钥（JWK Set JSON），由 PAP-66 注入
+      # 网关的公钥（JWK Set JSON），来自 .env.common
       public-keys: ${PATRA_IDENTITY_ASSERTION_PUBLIC_KEYS}

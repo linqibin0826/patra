@@ -72,7 +72,7 @@ patra:
       download-url: https://zenodo.org/records/17953395/files/v2.0-2025-12-16-ror-data.zip?download=1
     scopus:
       # 外部数据源凭据：不留硬编码默认值（公开仓库安全红线）。空默认；真 key 经环境变量
-      # SCOPUS_API_KEY 注入（容器部署走 .env.catalog.secret，已 gitignore）。
+      # SCOPUS_API_KEY 注入（容器部署走仓库外的 ~/.patra/secrets/catalog.env）。
       # 注意：原默认值是一枚已泄露的真实 key，须在 Scopus 控制台轮换作废。
       api-key: ${SCOPUS_API_KEY:}
 

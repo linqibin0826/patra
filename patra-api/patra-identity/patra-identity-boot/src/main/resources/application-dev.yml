@@ -2,6 +2,10 @@ spring:
   config:
     activate:
       on-profile: dev
+    # Redis 密码与 mini 容器是同一个文件，放在仓库外（patra-infra/docker/README.md「密钥」）。
+    # 不加 optional：缺文件时启动失败并报出路径
+    import:
+      - file:${user.home}/.patra/secrets/redis.env[.properties]
   # dev 场景：用 TAILSCALE_IP 注册，确保跨主机服务发现拿到的 IP 可达。
   cloud:
     nacos:
@@ -13,7 +17,11 @@ spring:
     password: ${IDENTITY_DB_PASSWORD:123456}
   data:
     redis:
-      url: ${IDENTITY_REDIS_URL:redis://${PATRA_INFRA_HOST:127.0.0.1}:16379}
+      # 本机和 mini 容器共用这个 Redis 的 0 号库。带用户名 default：Redis 加密码前后都能认证
+      host: ${PATRA_INFRA_HOST:127.0.0.1}
+      port: 16379
+      username: default
+      password: ${REDIS_PASSWORD}
 
 logging:
   file:
@@ -24,5 +32,6 @@ logging:
 patra:
   security:
     identity-assertion:
-      # 网关的公钥（JWK Set JSON）。本地先用 generateIdentityAssertionKey 生成，见 README
-      public-keys: ${PATRA_IDENTITY_ASSERTION_PUBLIC_KEYS}
+      # 网关的公钥（JWK Set JSON）。与 .env.common 的 PATRA_IDENTITY_ASSERTION_PUBLIC_KEYS、
+      # gateway 的 application-dev.yml 同值，换密钥时三处一起改（patra-infra/docker/README.md「密钥」）
+      public-keys: '{"keys":[{"kty":"EC","crv":"P-256","kid":"8q4oW5O78zImMpqUwOfEXz3miOfVc2XPS9F_vMPsczk","x":"A-1wOkD67cIDybmSkE_9iQSgw3Rk4U189p6TsFZZFA4","y":"eYzvHkiL_bApKcLXgDq2fQmQ43zYOqqtzlt2ThbDMh8"}]}'

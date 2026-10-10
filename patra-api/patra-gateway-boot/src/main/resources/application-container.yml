@@ -1,7 +1,8 @@
 # ============================================================================
 # Patra API Gateway - Container Deployment Configuration
 # ============================================================================
-# 容器部署：Redis 地址和两把密钥都从环境变量读，没有默认值。变量名由 PAP-66 定稿。
+# 容器部署：全部从环境变量读，没有默认值。Redis 地址和公钥来自 .env.common，
+# Redis 密码和私钥来自 ~/.patra/secrets/ 下的 redis.env、gateway.env（compose env_file）。
 # ============================================================================
 
 spring:
@@ -10,7 +11,10 @@ spring:
       on-profile: container
   data:
     redis:
-      url: ${GATEWAY_REDIS_URL}
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      username: default
+      password: ${REDIS_PASSWORD}
 
 patra:
   gateway:
