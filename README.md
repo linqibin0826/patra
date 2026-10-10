@@ -165,5 +165,5 @@ PAP-24 提速版，5 个 job 拆分 + 容器预拉取 + 全套 Gradle cache：
 
 各微服务的架构与启动方式参见各自的 README：
 
-- [`patra-api/README.md`](patra-api/README.md) —— 后端微服务总览（registry / ingest / catalog / object-storage / gateway）
+- [`patra-api/README.md`](patra-api/README.md) —— 后端微服务总览（registry / ingest / catalog / object-storage / identity / gateway）
 - [`patra-portal/README.md`](patra-portal/README.md) —— 前端门户（开发中）

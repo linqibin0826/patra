@@ -14,6 +14,7 @@
 - `patra-ingest` - 数据采集服务 (Plan → Task → 外部 API 调用)
 - `patra-catalog` - 目录服务 (文献、期刊数据索引)
 - `patra-object-storage` - 对象存储元数据服务 (记录上传到 MinIO/S3 的文件元数据，仅对内提供 HTTP Interface)
+- `patra-identity` - 身份服务 (前台用户的注册、登录、会话、封禁)
 - `patra-gateway-boot` - API 网关 (路由、认证、限流)
 
 ## 模块结构

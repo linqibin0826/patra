@@ -29,7 +29,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `patra-observability` | otel-collector / prometheus / loki / tempo / grafana / alertmanager |
 | `patra-tailnet` | tailscale-gw（共享出向网关 + 发布 `patra-net` 网段 `192.168.97.0/24` 的子网路由，见 `docs/mac-mini-connectivity.md` §7） |
 | `patra-jobs` | mysql-ops / xxl-job-admin / xxl-job-tailnet-route / rocketmq(namesrv+broker+dashboard) |
-| `patra-apps` | registry / object-storage / catalog / ingest / gateway / portal / learn（应用容器，由 CD 自动部署） |
+| `patra-apps` | registry / object-storage / catalog / ingest / identity / gateway / portal / learn（应用容器，由 CD 自动部署） |
 
 - **多 project 编排入口是 `scripts/compose-all.sh`**（取代已删除的 `docker-compose.dev.yaml`）。compose 的 `include:` 会把所有子栈合并进同一个 project 无法分组，多 project 只能逐个 `up`，故用脚本编排：`compose-all.sh up [stack...]` / `down` / `ps`。
 - **网络 `patra-net` 声明为 `external: true`**，须先于任何子栈存在；`compose-all.sh up` 会幂等创建，网段写死为 `192.168.97.0/24`（子网路由依赖它，改网段须同步 `docker-compose.tailnet.yaml` 的 `TS_ROUTES`）。各 project 在共享网络上靠容器/服务名 DNS 互通（跨 project 同样生效，因 DNS 是网络作用域而非 project 作用域）。
@@ -50,29 +50,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 4. **`.env` / `.env.dev` 含真实 dev 凭据且随仓库提交。** 这是有意为之 —— Mac mini 靠 `git pull` 同步这些配置（PG/MinIO/MySQL 密码、`NACOS_AUTH_TOKEN`/`IDENTITY` 等）。这些是 dev 默认值、对应服务仅在 tailscale 内网暴露，公网打不到端口。新增密钥时沿用此约定（`.env.example` 是模板，Nacos token 用 `openssl rand -base64 32` 生成）；如未来引入真正敏感的生产密钥，须改走外部 secret 注入、不要提交。
 
+5. **CD 在 runner 工作区里执行，被 git 忽略的文件每次都会被清掉。** `actions/checkout` 默认 `clean: true`，每次运行前执行 `git clean -ffdx`，放在 compose 目录里的密钥文件活不过下一次部署。所以密钥放在仓库外的 `~/.patra/secrets/`，compose 按 `${HOME}` 绝对路径加载（runner 进程的 `HOME` 就是用户主目录），见 README「密钥」。
+
 ## Self-hosted Runner 与 CD（多服务，Mac mini 原生构建）
 
-5 个后端应用 + portal + learn 由 GitHub Actions CD 自动部署，链路见 `.github/workflows/cd.yml` / `portal-cd.yml` / `learn-cd.yml`，设计见 `docs/patra/specs/2026-06-08-backend-multiservice-cd-design.html`（单服务首版见 `2026-06-07-cd-macmini-design.html`）。**2026-08-27 架构修订：构建从 ubuntu(QEMU 交叉编译) 搬回 Mac mini 原生 arm64**——部署不再经翻墙代理从 GHCR 拉大镜像（曾致 EOF/20 分钟超时），amd64 架构错配事故结构性消除；GHCR 降级为「归档/回滚备源」，推送 best-effort 失败不阻塞部署。
+6 个后端应用 + portal + learn 由 GitHub Actions CD 自动部署，链路见 `.github/workflows/cd.yml` / `portal-cd.yml` / `learn-cd.yml`，设计见 `docs/patra/specs/2026-06-08-backend-multiservice-cd-design.html`（单服务首版见 `2026-06-07-cd-macmini-design.html`）。**2026-08-27 架构修订：构建从 ubuntu(QEMU 交叉编译) 搬回 Mac mini 原生 arm64**——部署不再经翻墙代理从 GHCR 拉大镜像（曾致 EOF/20 分钟超时），amd64 架构错配事故结构性消除；GHCR 降级为「归档/回滚备源」，推送 best-effort 失败不阻塞部署。
 
-- **服务 SSOT**：`patra-infra/cd/services.json`（`name / gradleTask / context / port / image / healthPath / healthMatch`）。**加新服务 = 加一个条目**（再在 compose 加 service 块 + 建 `.env.<svc>`），workflow 逻辑不变。portal / learn 条目为 deploy-only（构建在 portal-cd.yml / learn-cd.yml 的 docker build 内）。
+- **服务 SSOT**：`patra-infra/cd/services.json`（`name / gradleTask / context / port / image / healthPath / healthMatch`）。**加新服务 = 加一个条目**（再在 compose 加 service 块 + 建 `.env.<svc>`），workflow 逻辑不变。条目顺序就是 `deploy.sh` 的部署顺序。portal / learn 条目为 deploy-only（构建在 portal-cd.yml / learn-cd.yml 的 docker build 内）。
 - **learn（学习站）**：端口 4001，健康检查 `/api/health`（无 healthMatch，HTTP 成功即算健康），专属 workflow `learn-cd.yml`（pnpm 构建全在 `patra-learn/Dockerfile` 内），compose 服务名 `learn` / 容器 `patra-learn`，环境文件 `.env.learn`（纯静态站，不读 `.env.common`）。首次部署需等 learn-cd 首跑产出镜像，期间整栈 `compose-all.sh up` 报缺 learn 镜像属预期。
-- **选择性构建**：`patra-infra/cd/detect-changes.sh` 按 git diff 做受影响单元路由，只构建/部署改动的服务。**改公共面**（`patra-api/patra-common*` / `linqibin-commons/*` / `patra-starters/*` / `build-logic` / `gradle` / 根构建脚本 / `service.Dockerfile` / `docker-compose.apps.yaml` / `cd.yml` / `patra-infra/cd/*`）→ **重建全部 5 个**（正确性优先，宁可多建不可漏建）；docs / markdown 与**纯基建路径**（`patra-infra/scripts/*`、apps 以外的 `docker-compose.*.yaml` 及其配置目录、基建栈 `.env` / `.env.dev` / `*.example`、`otel-agent/`）不触发后端构建（它们靠 mini 上 `compose-all.sh` 手动生效）；应用容器的 `.env.common` / `.env.<svc>` 仍判全量（改了需重部署才生效）。注意 `patra-infra/cd/*` **整体**视为 CD 关键输入（含 `deploy.sh`——部署逻辑变更也应触发全量重建+重部署以立即得到验证，属有意设计而非误伤）。
+- **选择性构建**：`patra-infra/cd/detect-changes.sh` 按 git diff 做受影响单元路由，只构建/部署改动的服务。**改公共面**（`patra-api/patra-common*` / `linqibin-commons/*` / `patra-starters/*` / `build-logic` / `gradle` / 根构建脚本 / `service.Dockerfile` / `docker-compose.apps.yaml` / `cd.yml` / `patra-infra/cd/*`）→ **重建全部 6 个**（正确性优先，宁可多建不可漏建）；docs / markdown 与**纯基建路径**（`patra-infra/scripts/*`、apps 以外的 `docker-compose.*.yaml` 及其配置目录、基建栈 `.env` / `.env.dev` / `*.example`、`otel-agent/`）不触发后端构建（它们靠 mini 上 `compose-all.sh` 手动生效）；应用容器的 `.env.common` / `.env.<svc>` 仍判全量（改了需重部署才生效）。注意 `patra-infra/cd/*` **整体**视为 CD 关键输入（含 `deploy.sh`——部署逻辑变更也应触发全量重建+重部署以立即得到验证，属有意设计而非误伤）。
 - **两段 job**：`detect-changes`（ubuntu，受影响单元路由）→ `build-deploy`（macmini：`gradlew bootJar` → 原生 `docker build` → `deploy.sh` → GHCR 归档推送 best-effort）。
-- **deploy.sh**（`patra-infra/cd/deploy.sh`，有单测 `deploy.test.sh`）：镜像就位（本地优先，缺失才回源 GHCR）→ arm64 断言 → 依赖顺序 up（**object-storage 优先**）→ 健康检查（127.0.0.1，不用 localhost——IPv6 误报实际踩坑）→ 部署后验证（运行容器 tag == 期望）→ 不健康自动回滚到 last-good（记录在 mini `~/.patra/cd/last-good-<svc>`，服务级）。
-- **共享分层 Dockerfile**：`patra-infra/docker/service.Dockerfile` 一份供 5 服务共用（`--build-arg APP_PORT` 区分端口）；5 服务都用 `linqibin.hexagonal-boot` 打 fat jar，Spring Boot 4 `jarmode=tools` 分层结构通用，依赖层在本机 daemon 长期缓存。
+- **deploy.sh**（`patra-infra/cd/deploy.sh`，有单测 `deploy.test.sh`）：镜像就位（本地优先，缺失才回源 GHCR）→ arm64 断言 → 按 services.json 的条目顺序 up（**object-storage 最先**，identity 先于 gateway）→ 健康检查（127.0.0.1，不用 localhost——IPv6 误报实际踩坑）→ 部署后验证（运行容器 tag == 期望）→ 不健康自动回滚到 last-good（记录在 mini `~/.patra/cd/last-good-<svc>`，服务级）。
+- **共享分层 Dockerfile**：`patra-infra/docker/service.Dockerfile` 一份供 6 服务共用（`--build-arg APP_PORT` 区分端口）；6 服务都用 `linqibin.hexagonal-boot` 打 fat jar，Spring Boot 4 `jarmode=tools` 分层结构通用，依赖层在本机 daemon 长期缓存。
 - **触发与回滚**：push main 命中相关 paths 自动跑；`workflow_dispatch` 填 `service`（单服务名）+ `image_tag`（旧 sha）即回滚（跳过构建，本地镜像缓存优先、缺失才拉 GHCR）。健康检查失败时 deploy.sh 也会自动回滚。安全：不监听 `pull_request`，self-hosted runner 绝不跑 fork PR 代码；对 GitHub 出向长轮询、无入站端口。
 - **构建环境（mini）**：与 MacBook 同套——Homebrew + brew 装 mise + `java@zulu-25.30.17.0` 全局钉版（升级时两台一起升）；`JAVA_HOME` 固化在 `~/actions-runner/.env`（连同 Clash 代理变量，launchd 不继承 shell 环境）；docker PATH 靠 `~/actions-runner/.path` 补 `/usr/local/bin` 与 `/opt/homebrew/bin`；Gradle/镜像层缓存常驻本机。
 - **失败通知**：走 GitHub 原生（失败 run 推 App/邮件给触发者），不设自建通知通道——单人 dev 环境，自己 push 自己看结果（2026-08-28 决策，曾配过 ntfy 后拆除）。
 - **runner 看门狗**：`runner-watchdog.yml` 每日 API 查在线 + mini canary（docker/磁盘/unhealthy 容器）。防「离线 30 天被 GitHub 注销」（2026-08 实际发生）。需 secrets `RUNNER_ADMIN_TOKEN`（fine-grained PAT，仅本仓库 Administration:Read）。
 - **运维红线**：派发任务期间严禁重启 runner（杀 Worker）；runner 自更新已禁用（`--disableupdate`），升级=闲时重跑 `install-github-runner.sh`。
 - **容器内 Nacos 走服务名**：应用容器和 nacos 同在 `patra-net`，gRPC 走 Docker bridge 不经 tailscale，直接 `NACOS_HOST=nacos`。
-- **env 三层 + 密钥二分**：`env_file` 顺序叠加 `.env.common`（共享基建坐标，patra-net 服务名 + 内网 dev 默认）→ `.env.<svc>`（服务专属 DB/Redis/bucket/日志路径）→ `.env.<svc>.secret`（真敏感密钥，被 `.gitignore` 的 `.env.*.secret` 挡住，绝不进仓库，缺失时跳过，后者覆盖同名）。**外部数据源 API key（Scopus / 青果 proxy / RocketMQ ACL 等）一律只进 `.secret`**，committed 文件只放内网 dev 默认值。
+- **环境文件三层，密钥在仓库外**：`env_file` 顺序叠加 `.env.common`（共享基建坐标：patra-net 服务名、内网 dev 默认、Redis 地址、身份断言公钥）→ `.env.<svc>`（服务专属 DB/bucket/日志路径）→ `${HOME}/.patra/secrets/` 下的密钥文件（`redis.env` 给 catalog/identity/gateway、`gateway.env` 给 gateway，两者必需；`<svc>.env` 可选；后者覆盖同名）。**Redis 密码、网关私钥、外部数据源 API key（Scopus / 青果 proxy / RocketMQ ACL 等）一律只进 `~/.patra/secrets/`**，committed 文件只放内网 dev 默认值和公钥。必需文件缺一个，compose 对整个 apps 项目的命令都会失败（portal 也部署不了）。
 
 ## scripts 一览
 
 | 脚本 | 跑在哪 | 作用 |
 |---|---|---|
-| `init-volumes.sh` | Mac mini | 首次部署建数据卷目录骨架（幂等） |
+| `init-volumes.sh` | Mac mini | 首次部署建数据卷目录骨架和密钥目录 ~/.patra/secrets（幂等，不生成密钥） |
 | `install-github-runner.sh <token>` | Mac mini | 安装 GitHub self-hosted runner 为 launchd 常驻服务（CD deploy job 在此执行） |
 | `install-tailscale-route-guard.sh` + `tailscale-route-guard.sh` | macOS（root LaunchDaemon） | 守护 tailnet 路由：Shadowrocket 等代理拨断重连时清除被抢占的克隆主机路由并 `tailscale down/up` 重协商 |
 | `dev.patra.tailscale-route-guard.plist` | — | 上述路由守护 LaunchDaemon 的模板 |

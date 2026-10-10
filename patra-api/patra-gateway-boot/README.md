@@ -106,20 +106,17 @@ identity 自己的 `IDN-0401` 仍会出现：带有效断言但用户已封禁�
 | `SPRING_PROFILES_ACTIVE` | profile | `dev` |
 | `NACOS_HOST` / `NACOS_PORT` / `NACOS_USERNAME` / `NACOS_PASSWORD` | Nacos | 跟随 `PATRA_INFRA_HOST`、`8848`、`nacos` / `nacos` |
 | `TAILSCALE_IP` | dev 下向 Nacos 注册的 IP | 空 |
-| `GATEWAY_REDIS_URL` | 会话所在的 Redis | dev：`redis://${PATRA_INFRA_HOST:127.0.0.1}:16379`；container 无默认值 |
-| `PATRA_GATEWAY_IDENTITY_ASSERTION_PRIVATE_KEY` | 签断言的私钥，含私钥的 EC P-256 JWK JSON，带 `kid` | 无，缺了启动失败 |
-| `PATRA_IDENTITY_ASSERTION_PUBLIC_KEYS` | 网关自己那把公钥，JWK Set JSON | 无，缺了启动失败 |
+| `REDIS_HOST` / `REDIS_PORT` | 会话所在的 Redis（container） | 无，来自 `.env.common`；dev 固定为 `${PATRA_INFRA_HOST:127.0.0.1}` / `16379` |
+| `REDIS_PASSWORD` | Redis 密码，用户 `default` | 无，来自 `~/.patra/secrets/redis.env` |
+| `PATRA_GATEWAY_IDENTITY_ASSERTION_PRIVATE_KEY` | 签断言的私钥，含私钥的 EC P-256 JWK JSON，带 `kid` | 无，来自 `~/.patra/secrets/gateway.env`；缺了启动失败 |
+| `PATRA_IDENTITY_ASSERTION_PUBLIC_KEYS` | 网关自己那把公钥，JWK Set JSON | container 来自 `.env.common`；dev 直接写在 `application-dev.yml` |
 | `PATRA_LOG_DIR` | 日志目录 | `logs` |
 
-端口 9528。容器里的变量名由 PAP-66 定稿并注入；**带本版本的网关镜像没有上面三样就起不来**，部署前先把它们放进网关的环境。
+端口 9528。
 
-本地跑网关前生成一对密钥（私钥给网关，公钥给网关和 identity；任务的标准输出前两行是提示、最后一行才是公钥 JSON；用完删掉文件，不要 `cat` 到终端或粘进任何文档）：
-
-```bash
-./gradlew -q :patra-starters:patra-spring-boot-starter-security:generateIdentityAssertionKey -PkeyOut=/tmp/gateway-private.jwk | tail -1 > /tmp/gateway-public.jwks
-export PATRA_GATEWAY_IDENTITY_ASSERTION_PRIVATE_KEY="$(cat /tmp/gateway-private.jwk)"
-export PATRA_IDENTITY_ASSERTION_PUBLIC_KEYS="$(cat /tmp/gateway-public.jwks)"
-```
+- 容器：`REDIS_PASSWORD` 和私钥由 compose 从 `~/.patra/secrets/` 加载。
+- 本地以 dev profile 启动：`application-dev.yml` 用 `spring.config.import` 读同一批文件，不用设环境变量；缺文件时启动失败并报出路径。
+- 密钥的生成、复制和换密钥的顺序，见 `patra-infra/docker/README.md`「密钥」。
 
 ## 测试
 

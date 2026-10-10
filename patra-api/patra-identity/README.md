@@ -85,7 +85,7 @@ patra:
 
 ## 7. 本地运行和测试
 
-- dev 配置连 mini 上的 `patra_identity` 库和 Redis（`PATRA_INFRA_HOST`）。库由 PAP-66 建，建好之前本地起不来。
+- dev 配置连 mini 上的 `patra_identity` 库和 Redis（`PATRA_INFRA_HOST`），和 mini 上的容器共用同一个 Redis 0 号库。Redis 密码从 `~/.patra/secrets/redis.env` 读（`application-dev.yml` 的 `spring.config.import`），缺了启动失败并报出路径；生成和复制见 `patra-infra/docker/README.md`「密钥」。
 - 测试全部用 Testcontainers（PostgreSQL 17、Redis 7.0.15），本机要有 Docker：
 
 ```bash
@@ -94,14 +94,12 @@ patra:
 
 `check` 不包含集成测试，两个任务都要写。
 
-identity 从网关签的身份断言取当前用户，启动时必须配网关的公钥：
+identity 从网关签的身份断言取当前用户，要配网关的公钥：dev 直接写在 `application-dev.yml` 里，容器从
+`.env.common` 的 `PATRA_IDENTITY_ASSERTION_PUBLIC_KEYS` 读，两处同值，换密钥时一起改。集成测试不读这些：
+安全 starter 的测试支持会自动注入测试公钥。
 
-```bash
-./gradlew :patra-starters:patra-spring-boot-starter-security:generateIdentityAssertionKey -PkeyOut=/tmp/identity-assertion-private.jwk
-```
-
-标准输出的公钥 JWK Set 设进环境变量 `PATRA_IDENTITY_ASSERTION_PUBLIC_KEYS`（`application-dev.yml` 没有默认值），
-私钥文件交给本地网关后删掉。集成测试不需要这一步：安全 starter 的测试支持会自动注入测试公钥。
+容器里的其余变量：库连接来自 `.env.identity`，`REDIS_HOST`、`REDIS_PORT` 来自 `.env.common`，
+`REDIS_PASSWORD` 来自 `~/.patra/secrets/redis.env`。
 
 ## 8. 会话
 

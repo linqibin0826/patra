@@ -321,7 +321,7 @@ PAP-69 的 404 / 503 / 504 表不变。identity 自己的 `IDN-0401` 仍会出�
 
 | 约束 | 交给 |
 |---|---|
-| 网关启动必须有三样东西：`PATRA_GATEWAY_IDENTITY_ASSERTION_PRIVATE_KEY`（含私钥的 JWK JSON，secret 注入）、`PATRA_IDENTITY_ASSERTION_PUBLIC_KEYS`（网关也要配自己那把公钥）、`GATEWAY_REDIS_URL`（带密码）。**顺序**：mini 上先把这三样放进网关的环境，再部署带本设计的网关镜像；否则 CD 推上去的网关容器起不来，mini 上的门户随之不可用 | PAP-66 |
+| 网关启动必须有三样东西：`PATRA_GATEWAY_IDENTITY_ASSERTION_PRIVATE_KEY`（含私钥的 JWK JSON，secret 注入）、`PATRA_IDENTITY_ASSERTION_PUBLIC_KEYS`（网关也要配自己那把公钥）、Redis 的地址和密码（变量由 PAP-66 定稿，见 `2026-10-10-identity-deploy-design.md` 第 6.2 节）。**顺序**：mini 上先把这三样放进网关的环境，再部署带本设计的网关镜像；否则 CD 推上去的网关容器起不来，mini 上的门户随之不可用 | PAP-66 |
 | identity 的 compose 条目、`services.json`、建库；网关 Scalar 聚合已在本设计里加 | PAP-66 |
 | 网关的 401 是 `GW-0401`，identity 的是 `IDN-0401`，门户按「任何 401 都清 Cookie」处理；门户不会打到 403 的拒绝名单 | PAP-67 |
 | 网关前面放反向代理时：`forwardedHeaderFilter()` 去掉 `removeOnly`，`trusted-proxies` 改成代理地址 | 引入反向代理的 Issue |

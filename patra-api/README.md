@@ -58,6 +58,9 @@ Patra 是一个**医学出版物数据平台**,旨在:
 |--------|---------|-------------|
 | [**patra-registry**](./patra-registry/README.md) | Provenance 配置、表达式、字典的 SSOT | `patra-registry-boot` |
 | [**patra-ingest**](./patra-ingest/README.md) | 编排采集计划,管理任务生命周期 | `patra-ingest-boot` |
+| [**patra-catalog**](./patra-catalog/README.md) | 文献、期刊、主题词等目录数据 | `patra-catalog-boot` |
+| [**patra-object-storage**](./patra-object-storage/README.md) | 上传到 MinIO/S3 的文件元数据，只对内 | `patra-object-storage-boot` |
+| [**patra-identity**](./patra-identity/README.md) | 前台用户的账号：注册、登录、会话、封禁 | `patra-identity-boot` |
 | [**patra-gateway-boot**](./patra-gateway-boot/README.md) | API 网关 (入口),包含路由和认证 | `patra-gateway-boot` |
 
 

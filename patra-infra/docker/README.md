@@ -18,6 +18,7 @@ docker/
 ├── docker-compose.tailnet.yaml      # project patra-tailnet：tailscale 共享网关
 ├── .env                              # BROKER_IP1 等环境变量
 ├── .env.secret                       # TS_AUTHKEY 等真实密钥（gitignore，不入库）
+├── secrets/                          # 密钥模板（*.example）；真文件在仓库外的 ~/.patra/secrets/
 └── README.md                         # 本文件
 ```
 
@@ -77,6 +78,10 @@ bash patra-infra/scripts/init-volumes.sh
 cp patra-infra/docker/.env.secret.example patra-infra/docker/.env.secret
 # 编辑 .env.secret，把 TS_AUTHKEY 填成真实值（tskey-auth-...）
 
+# 4c. (MacBook) 把密钥文件复制到 Mac mini：与 MacBook 上的是同一份，生成方法见下文「密钥」。
+#     目录由第 4 步建好；缺了这两个文件，core 栈的 redis 和整个 apps 栈都起不来
+scp -p ~/.patra/secrets/redis.env ~/.patra/secrets/gateway.env linqibin@linqibins-mac-mini:.patra/secrets/
+
 # 5. (Mac mini) 启动全栈（含 tailscale 网关；镜像走 ghcr.io，docker.io 在国内常 502）
 #    脚本会先幂等创建共享网络 patra-net，再按依赖顺序逐个子栈 up
 bash patra-infra/scripts/compose-all.sh up
@@ -134,6 +139,80 @@ ssh linqibin@linqibins-mac-mini 'docker restart patra-rocketmq-broker'  # 只重
 > 不先拆旧 project 会因重名启动失败（安全失败，非数据丢失）。**git pull 前**先用旧文件拆掉旧栈：
 > `docker compose -p patra down`，再 pull、再 `compose-all.sh up`。数据是 bind mount，不受影响。
 
+## 密钥
+
+密钥放在仓库外的 `~/.patra/secrets/`（目录 0700，文件 0600），MacBook 和 Mac mini 各放一份，内容相同。
+
+- 两边放同一份，是因为本机开发和 mini 是同一个环境，共用 mini 的 Redis 和同一对签名密钥。
+- 不放在 compose 目录，是因为 CD 每次运行前的 `git clean` 会删掉 runner 工作区里被忽略的文件。
+
+| 文件 | 内容 | 谁加载 | 缺失时 |
+|---|---|---|---|
+| `redis.env` | `REDIS_PASSWORD`，64 位十六进制 | core 栈的 redis；catalog、identity、gateway 的容器；这三个服务在本机以 dev profile 起的进程 | compose 报出路径并拒绝执行；本机进程启动失败并报出路径 |
+| `gateway.env` | `PATRA_GATEWAY_IDENTITY_ASSERTION_PRIVATE_KEY`，含私钥的 EC P-256 JWK JSON，一行 | gateway 的容器和本机进程 | 同上 |
+| `<服务>.env` | 该服务的外部数据源密钥，例如 catalog 的 `SCOPUS_API_KEY` | 对应服务的容器 | 跳过 |
+
+两种进程怎么读到这些文件：
+
+- 模板在 `secrets/*.example`。
+- 容器：由 `docker-compose.apps.yaml`、`docker-compose.core.yaml` 的 `env_file` 按 `${HOME}/.patra/secrets/...` 加载。
+- 本机进程：由各服务 `application-dev.yml` 的 `spring.config.import` 读同一批文件，IDEA 和 shell 都不用设这些变量。
+
+### 生成
+
+在 MacBook 的仓库根目录执行。全程只写文件，不要把密钥打印到终端或粘进任何地方。
+
+```bash
+umask 077 && mkdir -p ~/.patra/secrets
+printf 'REDIS_PASSWORD=%s\n' "$(openssl rand -hex 32)" > ~/.patra/secrets/redis.env
+
+K="$(mktemp -u ~/.patra/secrets/key.XXXXXX)"   # 任务要求私钥文件事先不存在
+./gradlew -q :patra-starters:patra-spring-boot-starter-security:generateIdentityAssertionKey -PkeyOut="$K" \
+  | tail -1 > /tmp/patra-identity-assertion-public.jwks   # 前两行是提示，最后一行是公钥 JWK Set
+{ printf 'PATRA_GATEWAY_IDENTITY_ASSERTION_PRIVATE_KEY='; cat "$K"; } > ~/.patra/secrets/gateway.env
+rm -f "$K"
+```
+
+公钥不是机密，提交在三处：
+
+- `.env.common` 的 `PATRA_IDENTITY_ASSERTION_PUBLIC_KEYS`；
+- identity 的 `application-dev.yml`；
+- gateway 的 `application-dev.yml`。
+
+两份 YAML 里的值要用单引号包住。
+
+### 复制到 Mac mini
+
+```bash
+ssh linqibin@linqibins-mac-mini 'umask 077 && mkdir -p ~/.patra/secrets && chmod 700 ~/.patra/secrets'
+scp -p ~/.patra/secrets/redis.env ~/.patra/secrets/gateway.env linqibin@linqibins-mac-mini:.patra/secrets/
+```
+
+### 改了密钥文件之后
+
+容器只在创建时读环境文件，`docker restart` 不会重新读，要用 `--force-recreate` 重建对应容器。
+
+apps 栈的服务要在 runner 工作区的 compose 目录里重建，不要在 CD 运行期间执行。以 gateway 为例：
+
+```bash
+cd ~/actions-runner/_work/patra/patra/patra-infra/docker
+GATEWAY_IMAGE_TAG="$(cat ~/.patra/cd/last-good-gateway)" docker compose -f docker-compose.apps.yaml up -d --force-recreate gateway
+```
+
+本机以 dev profile 起的进程重启一次即可。
+
+### 换签名密钥
+
+1. 按上面的方法生成一对新密钥。新私钥先存成别的文件名，不要覆盖 `gateway.env`。
+2. 把新公钥加进三处的 `keys` 数组，旧公钥保留。提交、推送，让 CD 部署 identity 和 gateway。
+
+   此时新旧两把公钥都被信任，网关仍用旧私钥签。
+3. 两台机器上都把 `gateway.env` 换成新私钥。
+   - mini：按「改了密钥文件之后」重建 gateway。
+   - 本机：网关重启一次。
+4. 等至少 60 秒。断言有效期是 60 秒，等完旧私钥签出的断言就全部过期了。
+5. 从三处删掉旧公钥，提交、推送。
+
 ---
 
 ## 应用侧配置（patra-api，本仓库范围外）
@@ -180,7 +259,7 @@ rocketmq:
 
 ### 核心服务
 - **PostgreSQL**: `linqibins-mac-mini:15432` (postgres/123456)
-- **Redis**: `linqibins-mac-mini:16379`
+- **Redis**: `linqibins-mac-mini:16379`（要密码：用户 `default`，密码在 `~/.patra/secrets/redis.env`）
 - **Nacos 控制台**: http://linqibins-mac-mini:8080
 
 ### 存储服务
