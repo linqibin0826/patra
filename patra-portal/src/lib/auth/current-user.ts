@@ -3,7 +3,7 @@ import { z } from "zod";
 import { logRequestError, logUnexpectedResponse, readJson } from "@/lib/auth/gateway-response";
 import { readSessionToken } from "@/lib/auth/session-cookie";
 import type { CurrentUser } from "@/lib/auth/types";
-import { gatewayFetch } from "@/lib/gateway";
+import { canSendToken, gatewayFetch } from "@/lib/gateway";
 
 const ME_ENDPOINT = "/patra-identity/auth/me";
 
@@ -19,6 +19,7 @@ const currentUserSchema = z.object({ userId: z.string().min(1), email: z.string(
 
 /// 带着会话令牌问网关当前用户是谁。不抛异常，也不写 Cookie。
 /// - 没有 Cookie：`anonymous`，不请求网关
+/// - Cookie 值放不进请求头（被改坏了）：`rejected`，不请求网关
 /// - 200 且字段齐全：`authenticated`
 /// - 401（`GW-0401` 或 `IDN-0401`）：`rejected`
 /// - 其他状态码、请求抛错、响应体格式不对、读 Cookie 抛错：`unavailable`
@@ -27,6 +28,9 @@ export async function lookupSession(): Promise<SessionLookup> {
     const token = await readSessionToken();
     if (!token) {
       return { status: "anonymous" };
+    }
+    if (!canSendToken(token)) {
+      return { status: "rejected" };
     }
     const res = await gatewayFetch(ME_ENDPOINT, { token });
     if (res.status === 401) {

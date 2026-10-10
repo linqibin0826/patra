@@ -311,4 +311,12 @@ describe("logout", () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(jar.written).toEqual([CLEARED]);
   });
+
+  it("Cookie 值放不进请求头（被改坏了）：不请求网关，不记日志，照样清除 Cookie", async () => {
+    const jar = resetCookieJar({ patra_session: `${TOKEN}\nX` });
+    await expect(logout()).resolves.toBeUndefined();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(console.error).not.toHaveBeenCalled();
+    expect(jar.written).toEqual([CLEARED]);
+  });
 });

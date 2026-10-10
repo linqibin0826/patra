@@ -60,6 +60,17 @@ describe("lookupSession", () => {
     await expect(lookupSession()).resolves.toEqual({ status: "rejected" });
   });
 
+  // Cookie 被改坏：Next 读 Cookie 时做 URL 解码，%0A、%E4%B8%AD 读出来就是换行和「中」
+  it.each([`${TOKEN}\nX`, `${TOKEN}中`])(
+    "Cookie 值放不进请求头（%j）时是 rejected，不请求网关，也不记日志",
+    async (value) => {
+      resetCookieJar({ patra_session: value });
+      await expect(lookupSession()).resolves.toEqual({ status: "rejected" });
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(console.error).not.toHaveBeenCalled();
+    },
+  );
+
   it.each([
     ["503 GW-0503", () => problem(503, "GW-0503")],
     ["500 GW-0500", () => problem(500, "GW-0500")],

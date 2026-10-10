@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { gatewayFetch } from "@/lib/gateway";
+import { canSendToken, gatewayFetch } from "@/lib/gateway";
 
 const fetchMock = vi.fn<typeof fetch>();
 
@@ -80,5 +80,23 @@ describe("gatewayFetch", () => {
   it("网络错误照常抛出", async () => {
     fetchMock.mockRejectedValue(new TypeError("fetch failed"));
     await expect(gatewayFetch("/x")).rejects.toThrow("fetch failed");
+  });
+});
+
+describe("canSendToken", () => {
+  // false 的几种，Node 的 fetch 都在发出请求之前报错：换行、回车、NUL 在构造请求头时，
+  // 其他控制字符和 DEL 在发送前，0xFF 以上的字符在转成字节串时
+  it.each([
+    ["patra_user_abc", true],
+    ["a b\tc", true],
+    ["café", true],
+    ["a\nb", false],
+    ["a\rb", false],
+    ["a\u0000b", false],
+    ["a\u0001b", false],
+    ["a\u007fb", false],
+    ["中", false],
+  ])("%j 能不能放进请求头：%s", (token, expected) => {
+    expect(canSendToken(token)).toBe(expected);
   });
 });

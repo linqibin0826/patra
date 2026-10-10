@@ -3,6 +3,9 @@ import "server-only";
 /// 默认超时：慢后端不应无限阻塞服务端渲染
 const DEFAULT_TIMEOUT_MS = 10_000;
 
+/// HTTP 头的值里允许出现的字符（RFC 9110 的 field-value）：制表符、空格、可见 ASCII、0x80–0xFF
+const HEADER_VALUE_CHARS = /^[\t\x20-\x7e\x80-\xff]*$/;
+
 export interface GatewayRequestInit {
   /// 默认 GET
   method?: "GET" | "HEAD" | "POST";
@@ -36,4 +39,11 @@ export async function gatewayFetch(path: string, init: GatewayRequestInit = {}):
     signal: AbortSignal.timeout(init.timeoutMs ?? DEFAULT_TIMEOUT_MS),
     ...(init.json === undefined ? {} : { body: JSON.stringify(init.json) }),
   });
+}
+
+/// 令牌能不能放进 `Authorization` 头。Cookie 被改坏时，读出来的值可能含有换行、控制字符或
+/// 0xFF 以上的字符：带着它请求，fetch 在发出之前就会抛错，错误消息里还可能带着这个值。
+/// 这样的值不可能是有效令牌，调用方不要拿它请求网关。
+export function canSendToken(token: string): boolean {
+  return HEADER_VALUE_CHARS.test(token);
 }

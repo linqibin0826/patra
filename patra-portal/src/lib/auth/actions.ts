@@ -19,7 +19,7 @@ import type {
   LoginResult,
   RegisterResult,
 } from "@/lib/auth/types";
-import { gatewayFetch } from "@/lib/gateway";
+import { canSendToken, gatewayFetch } from "@/lib/gateway";
 
 const REGISTER_ENDPOINT = "/patra-identity/auth/register";
 const LOGIN_ENDPOINT = "/patra-identity/auth/login";
@@ -158,12 +158,12 @@ export async function login(input: Credentials): Promise<LoginResult> {
   return UNAVAILABLE;
 }
 
-/// 登出：有令牌时带着它请求网关删除会话，非 204 的响应和抛出的错误只记日志、不往外抛；
-/// 不论结果如何，最后都清除 Cookie，所以登出在用户看来总是成功的。
+/// 登出：有令牌、且令牌放得进请求头时，带着它请求网关删除会话，非 204 的响应和抛出的错误只记日志、
+/// 不往外抛；不论结果如何，最后都清除 Cookie，所以登出在用户看来总是成功的。
 export async function logout(): Promise<void> {
   try {
     const token = await readSessionToken();
-    if (token) {
+    if (token && canSendToken(token)) {
       const res = await gatewayFetch(LOGOUT_ENDPOINT, {
         method: "POST",
         token,

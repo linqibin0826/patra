@@ -58,7 +58,7 @@
 | 「保持登录」的说法 | D3 和 PAP-67 验收改成「30 天内有过访问就保持登录；从登录算起最长 180 天，到期要重新登录」，简报 §0 同样补上 180 天的上限（第 16 节），行为不变 | 去掉 180 天的绝对过期：它用来防 Cookie 被偷、密码被改之后旧会话一直有效（PAP-64 设计第 6 节）。文档不改：承诺和行为不一致 |
 | Cookie 名称 | `Secure` 开时叫 `__Host-patra_session`，关时叫 `patra_session` | 固定一个不带前缀的名字：同一域名下的其他子站点可以种入或覆盖会话 Cookie |
 | `SameSite` | `Lax` | `Strict`：比 `Lax` 多拦的只有从别的站点点链接进来的 GET 请求，而门户没有会改数据的 GET |
-| 门户是否校验令牌格式 | 不校验。值坏了的话，网关按匿名处理，随后 Cookie 被清掉 | 按后端的格式校验：后端一改格式，门户就会把所有人当成未登录 |
+| 门户是否校验令牌格式 | 不校验。值坏了的话，网关按匿名处理，随后 Cookie 被清掉。例外是放不进 HTTP 请求头的值：请求根本发不出去，门户直接按 401 处理（第 6、8.1 节）。这只看 HTTP 允许的字符，和令牌格式无关 | 按后端的格式校验：后端一改格式，门户就会把所有人当成未登录 |
 | 重新登录时的旧会话 | 不作废 | 登录成功后拿旧令牌调一次登出：多一次网关调用，换来的只是一条闲置会话提前消失，它不活跃 30 天后本来就会过期 |
 
 版本：Next.js 16.3.8、React 19.3.0、TanStack Query 5.103.2、Zod 4.6.5、Vitest 4.1.11。下面用到的框架行为，都对照 16.3.8 的源码或随包文档核实过：
@@ -82,7 +82,7 @@
 
 | 文件 | 职责 |
 |---|---|
-| `src/lib/gateway.ts` | 统一网关客户端 `gatewayFetch`。全仓库只有这里读 `PATRA_GATEWAY_BASE_URL`、向网关发 `fetch`（`server-only`） |
+| `src/lib/gateway.ts` | 统一网关客户端 `gatewayFetch`，以及判断令牌能不能放进请求头的 `canSendToken`。全仓库只有这里读 `PATRA_GATEWAY_BASE_URL`、向网关发 `fetch`（`server-only`） |
 | `src/lib/auth/session-cookie.ts` | 会话 Cookie 的名称、属性、`Secure` 开关和读写。全仓库只有这里调用 `cookies()`（`server-only`） |
 | `src/lib/auth/current-user.ts` | `lookupSession()`、`getCurrentUser()`（`server-only`） |
 | `src/lib/auth/actions.ts` | `register`、`login`、`logout`（`"use server"`） |
@@ -116,6 +116,7 @@ export async function gatewayFetch(path: string, init?: GatewayRequestInit): Pro
 - 固定使用 `cache: "no-store"` 和 `signal: AbortSignal.timeout(timeoutMs)`。
 - 只负责把请求发出去：返回原始的 `Response`，不解读状态码；网络错误和超时照常抛出。
 - 没有 `token` 就不写 `Authorization`；没有 `json` 就不写请求体和 `Content-Type`。
+- `canSendToken(token: string): boolean`：令牌能不能放进 `Authorization` 头，只看 RFC 9110 允许的字符（制表符、空格、可见 ASCII、0x80–0xFF）。Cookie 被改坏时，Next 读出的值经过 URL 解码，可能含有换行、控制字符或 0xFF 以上的字符；带着这样的值请求，fetch 在发出之前就会抛错，换行、回车、NUL 时错误消息里还带着整个请求头的值。`lookupSession()` 和 `logout` 先用它判断，放不进的值不拿去请求网关。
 
 **调用点迁移**：10 处直接 `fetch` 换成 `gatewayFetch(path)`，各处读地址、判空的代码一起删掉，其余逻辑原样保留，包括各 fetcher 的状态码处理（详情遇到 404 / 400 / 422 返回 null、非 2xx 抛错、格式不对时降级）、报错文字和 React `cache()` 包装。三个 fetcher 文件里的 `FETCH_TIMEOUT_MS` 和 `publication-search.ts` 里的 `gatewayBaseUrl()` 删掉。现有 fetcher 测试断言的是完整 URL 和 `objectContaining({ cache: "no-store", signal })`，不用改。
 
@@ -178,6 +179,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null>;
 | 情况 | 结果 |
 |---|---|
 | 没有 Cookie | `anonymous`，不请求网关 |
+| Cookie 值放不进请求头（`canSendToken` 为假，见第 6 节） | `rejected`，不请求网关 |
 | 200，且 Zod 校验通过：`userId` 和 `email` 都是非空字符串（`accountType` 不读） | `authenticated` |
 | 401（`GW-0401` 或 `IDN-0401`） | `rejected` |
 | 其他状态码；请求抛出的错误（超时、网络错误、缺网关地址）；200 但响应体格式不对；读 Cookie 时抛错（比如开关的值写错） | `unavailable`，记一条错误日志（第 12 节） |
@@ -272,7 +274,7 @@ export type LoginResult =
 export async function logout(): Promise<void>;
 ```
 
-- 读出令牌。有令牌时，带着它请求 `gatewayFetch("/patra-identity/auth/logout", { method: "POST", token, timeoutMs: 5_000 })`；没有就不请求网关。读令牌和请求网关都放在 `try` 里：非 204 的响应和抛出的错误只记日志，不往外抛。
+- 读出令牌。有令牌、且 `canSendToken(token)` 为真时，带着它请求 `gatewayFetch("/patra-identity/auth/logout", { method: "POST", token, timeoutMs: 5_000 })`；没有令牌或放不进请求头时不请求网关。读令牌和请求网关都放在 `try` 里：非 204 的响应和抛出的错误只记日志，不往外抛。
 - 不论结果是 204、503、超时还是网络错误，最后都在 `finally` 里调用 `clearSessionCookie()`，所以登出在用户看来总是成功的。
 - 超时设 5 秒，比默认的 10 秒短：删后端会话只是尽力而为，没必要让用户多等。
 
@@ -320,11 +322,11 @@ export async function logout(): Promise<void>;
 | 测试文件 | 验证什么 |
 |---|---|
 | `tests/lib/gateway-boundary.test.ts` | 守护测试，规则见下表 |
-| `tests/lib/gateway.test.ts` | 地址拼接；`cache: "no-store"`；超时默认 10 秒、可以覆盖（spy `AbortSignal.timeout`，看传入的值）；JSON 请求体和 `Content-Type`；有令牌时带 `Authorization: Bearer`，没有令牌时不带；缺地址时报错；网络错误照常抛出 |
+| `tests/lib/gateway.test.ts` | 地址拼接；`cache: "no-store"`；超时默认 10 秒、可以覆盖（spy `AbortSignal.timeout`，看传入的值）；JSON 请求体和 `Content-Type`；有令牌时带 `Authorization: Bearer`，没有令牌时不带；缺地址时报错；网络错误照常抛出；`canSendToken` 的字符边界（制表符、空格、0x80–0xFF 能放，换行、回车、NUL、其他控制字符、DEL、0xFF 以上的字符不能放） |
 | `tests/lib/auth/session-cookie.test.ts` | 两种名字和全部属性；开关的三种取值；`refreshSessionCookie` 用原值重写、没有 Cookie 时什么也不做；`clearSessionCookie` 的属性和写入时相同，并且 `Max-Age=0` |
 | `tests/lib/auth/current-user.test.ts` | 第 8.1 节表格逐行覆盖，`GW-0401` 和 `IDN-0401` 都归为 `rejected`；请求带 `Authorization: Bearer`；`getCurrentUser()` 的映射；日志里没有令牌 |
 | `tests/app/api/auth-me.test.ts` | 第 8.2 节表格逐行覆盖，包括 `Cache-Control`；同一个令牌并发请求两次，两次都返回 200、都只刷新不清除；先 503 后 200 时不清除 |
-| `tests/lib/auth/actions.test.ts` | 第 9.3 节表格逐行覆盖；请求体只有 `email` 和 `password`；注册、登录不带 `Authorization`（即使已有 Cookie）；入参形状不对时返回 `unavailable`、不请求网关；只有成功时写 Cookie；登出在 204、503、超时、网络错误、没有 Cookie 这几种情况下都清 Cookie，没有 Cookie 时不请求网关；日志里没有密码和令牌 |
+| `tests/lib/auth/actions.test.ts` | 第 9.3 节表格逐行覆盖；请求体只有 `email` 和 `password`；注册、登录不带 `Authorization`（即使已有 Cookie）；入参形状不对时返回 `unavailable`、不请求网关；只有成功时写 Cookie；登出在 204、503、超时、网络错误、没有 Cookie、Cookie 值放不进请求头这几种情况下都清 Cookie，后两种不请求网关；日志里没有密码和令牌 |
 | `tests/lib/auth/current-user-query.test.tsx` | `pending`、`anonymous`、`authenticated` 三种状态；503 时归为 `anonymous`；请求的是同源的 `/api/auth/me` |
 
 守护测试复用 `tests/design-system/source-scan.ts` 的扫描方式，扫 `src/` 下全部 `.ts` / `.tsx`：
@@ -357,8 +359,9 @@ PAP-67 本身没有页面，所以先用 curl 请求 `/api/auth/me` 验证 Cooki
    - 实测：两种取值下都是 200 `{"user":null}`、`Cache-Control: private, no-store`，没有 `Set-Cookie`。
 6. 匿名页面：Playwright 指向 mini 的网关跑一遍 `tests/e2e/`，用例要全部通过。
    - 实测：`PATRA_GATEWAY_BASE_URL=http://100.103.73.27:9528 pnpm test:e2e --workers=1`，复用开关为 `false` 的 `portal-dev`，14 个用例全部通过，没有跳过。
-7. （Review Focus）Cookie 值是坏的：网关按匿名处理，`/auth/me` 回 401，门户回 200 `{ user: null }` 并清除 Cookie。
+7. （Review Focus）Cookie 值是坏的：网关按匿名处理，`/auth/me` 回 401，门户回 200 `{ user: null }` 并清除 Cookie。值放不进请求头时，门户不请求网关，直接这样处理。
    - 实测：Cookie 值用 `patra_user_broken`，两种取值下都回 200 `{"user":null}`，并带和第 4 条相同的清除 `Set-Cookie`。
+   - 实测（最终评审后补，开关为 `false`）：Cookie 值用 `patra_user_abc%0AX`、`patra_user_abc%E4%B8%AD`、`patra_user_abc%01X`（解码后含换行、「中」、控制字符），都回 200 `{"user":null}`，并带和第 4 条相同的清除 `Set-Cookie`；门户没有请求网关，服务端日志里没有 `[auth]` 行。修复前，fetch 对这类值在发出之前就抛错，`/api/auth/me` 每次都回 503，换行时错误消息里带着整个请求头的值。
 
 Server Action 本身，以及浏览器里「页面脚本读不到令牌」这一条，要等 PAP-68 的页面做好后验收：跑 Playwright 登录冒烟，再用浏览器开发者工具看一遍。
 
