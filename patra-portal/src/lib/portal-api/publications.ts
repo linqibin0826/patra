@@ -1,8 +1,6 @@
 import "server-only";
+import { gatewayFetch } from "@/lib/gateway";
 import type { FeedTab, PageResult, Paper, PaperDetail } from "@/types/portal";
-
-/** 服务端 fetch 超时（ms）：慢后端（如 DB 锁等待）不应无限阻塞 RSC 渲染线程 */
-const FETCH_TIMEOUT_MS = 10_000;
 
 /**
  * 在服务端拉取 portal 文献流。仅 RSC / Route Handler 调用（server-only）。
@@ -12,15 +10,9 @@ const FETCH_TIMEOUT_MS = 10_000;
  * TODO(contract-validation)：API 契约稳定后可用 zod safeParse 替换以防后端字段漂移。
  */
 export async function fetchFeed(tab: FeedTab, page = 1, pageSize = 14): Promise<PageResult<Paper>> {
-  const baseUrl = process.env.PATRA_GATEWAY_BASE_URL;
-  if (!baseUrl) {
-    throw new Error("PATRA_GATEWAY_BASE_URL 未配置");
-  }
-  const url = `${baseUrl}/patra-catalog/portal/publications?tab=${tab}&page=${page}&pageSize=${pageSize}`;
-  const res = await fetch(url, {
-    cache: "no-store",
-    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-  });
+  const res = await gatewayFetch(
+    `/patra-catalog/portal/publications?tab=${tab}&page=${page}&pageSize=${pageSize}`,
+  );
   if (!res.ok) {
     throw new Error(`文献流加载失败：${res.status}`);
   }
@@ -40,15 +32,7 @@ export async function fetchPublicationDetail(id: string): Promise<PaperDetail | 
   if (!/^[1-9]\d*$/.test(id)) {
     return null;
   }
-  const baseUrl = process.env.PATRA_GATEWAY_BASE_URL;
-  if (!baseUrl) {
-    throw new Error("PATRA_GATEWAY_BASE_URL 未配置");
-  }
-  const url = `${baseUrl}/patra-catalog/portal/publications/${id}`;
-  const res = await fetch(url, {
-    cache: "no-store",
-    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-  });
+  const res = await gatewayFetch(`/patra-catalog/portal/publications/${id}`);
   // 404 不存在；400 / 422 是 BE 拒绝了 id（如超出范围），对读者同样是「没有这一页」
   if (res.status === 404 || res.status === 400 || res.status === 422) {
     return null;
