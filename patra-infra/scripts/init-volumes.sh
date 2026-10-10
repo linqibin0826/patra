@@ -2,7 +2,7 @@
 # Patra 基础设施 - 宿主机数据卷与配置初始化脚本
 # ==============================================================
 # 一次性运行，幂等（目录已存在则跳过，配置文件已存在则跳过）。
-# 运行位置：git clone 后的 patra-api 仓库根目录。
+# 运行位置：patra 仓库根目录（Mac mini 上是 ~/Projects/patra）。
 #
 # 用法：
 #   bash patra-infra/scripts/init-volumes.sh

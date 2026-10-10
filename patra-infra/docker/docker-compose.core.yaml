@@ -1,5 +1,3 @@
-version: "3.9"
-
 name: patra-core
 
 # Core infrastructure services required for application runtime

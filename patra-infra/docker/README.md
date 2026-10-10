@@ -158,6 +158,12 @@ ssh linqibin@linqibins-mac-mini 'docker restart patra-rocketmq-broker'  # 只重
 - 容器：由 `docker-compose.apps.yaml`、`docker-compose.core.yaml` 的 `env_file` 按 `${HOME}/.patra/secrets/...` 加载。
 - 本机进程：由各服务 `application-dev.yml` 的 `spring.config.import` 读同一批文件，IDEA 和 shell 都不用设这些变量。
 
+排查时注意：`docker compose config` 会展开环境文件，`docker inspect <容器>` 会列出容器的全部环境变量，两者都会把 Redis 密码和网关私钥原样打到终端。只想校验 compose 配置，用 `docker compose config --quiet`；想知道容器里有哪些变量，只打变量名：
+
+```bash
+docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' patra-gateway | cut -d= -f1
+```
+
 ### 生成
 
 在 MacBook 的仓库根目录执行。全程只写文件，不要把密钥打印到终端或粘进任何地方。

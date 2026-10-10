@@ -1,5 +1,3 @@
-version: "3.9"
-
 name: patra-jobs
 
 # Job scheduling and message queue services

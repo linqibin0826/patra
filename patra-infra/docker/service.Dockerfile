@@ -1,5 +1,5 @@
 # patra 后端服务通用运行镜像（Spring Boot 4 分层 jar）
-# 5 个服务（registry / object-storage / catalog / ingest / gateway）共用这一份——它们都用同一
+# 6 个服务（registry / object-storage / catalog / ingest / identity / gateway）共用这一份——它们都用同一
 # linqibin.hexagonal-boot 约定插件打包成 fat jar（archiveClassifier="" + 禁 plain jar），
 # 故 COPY build/libs/*.jar 与服务无关，逐字节通用。唯一参数化点是 EXPOSE 端口（仅文档性）。
 #

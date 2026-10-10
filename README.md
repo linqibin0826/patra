@@ -158,7 +158,7 @@ PAP-24 提速版，5 个 job 拆分 + 容器预拉取 + 全套 Gradle cache：
 
 - 设计规格：`docs/patra/specs/`
 - 实现计划：`docs/patra/plans/`
-- Release Spec：`docs/patra/release-specs/`（v0.3 Dev-Ready 已完成 / v0.4 Portal Foundation 进行中）
+- Release Spec：`docs/patra/release-specs/`
 - 文档样式：`docs/patra/styles/spec-theme.css` + `plan-extras.css`
 
 ## 服务说明

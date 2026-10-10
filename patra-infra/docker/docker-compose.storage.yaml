@@ -1,5 +1,3 @@
-version: "3.9"
-
 name: patra-storage
 
 # Storage services for object storage and file management
