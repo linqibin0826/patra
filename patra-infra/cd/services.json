@@ -1,6 +1,16 @@
 {
-  "_comment": "后端服务 CD 单一事实源（SSOT）。cd.yml 的 detect-changes / build / deploy 与 deploy.sh 都从这里按 name 查询（绝不枚举）。加新服务=加一个条目，不改 workflow 逻辑。healthPath/healthMatch 供 deploy.sh 健康检查（healthMatch 缺省=仅要求 HTTP 成功）。portal / learn 条目为 deploy-only（gradleTask=null，构建在 portal-cd.yml / learn-cd.yml 的 docker build 内完成，勿在 cd.yml dispatch 填 portal/learn）。srcPrefix 保留供人工查阅路径归属；context 是 docker build 上下文（boot 模块，build/libs 所在）。",
+  "_comment": "后端服务 CD 单一事实源（SSOT）。cd.yml 的 detect-changes / build / deploy 与 deploy.sh 都从这里按 name 查询，代码里不写死服务清单。加新服务=加一个条目，不改 workflow 逻辑。条目顺序就是 deploy.sh 的部署顺序（object-storage 最先：catalog / ingest 运行时依赖它；identity 先于 gateway）。healthPath/healthMatch 供 deploy.sh 健康检查（healthMatch 缺省=仅要求 HTTP 成功）。portal / learn 条目为 deploy-only（gradleTask=null，构建在 portal-cd.yml / learn-cd.yml 的 docker build 内完成，勿在 cd.yml dispatch 填 portal/learn）。srcPrefix 保留供人工查阅路径归属；context 是 docker build 上下文（boot 模块，build/libs 所在）。",
   "services": [
+    {
+      "name": "object-storage",
+      "gradleTask": ":patra-api:patra-object-storage:patra-object-storage-boot:bootJar",
+      "context": "patra-api/patra-object-storage/patra-object-storage-boot",
+      "srcPrefix": "patra-api/patra-object-storage/",
+      "port": 6200,
+      "image": "ghcr.io/linqibin0826/patra-object-storage",
+      "healthPath": "/actuator/health",
+      "healthMatch": "\"status\":\"UP\""
+    },
     {
       "name": "registry",
       "gradleTask": ":patra-api:patra-registry:patra-registry-boot:bootJar",
@@ -12,12 +22,22 @@
       "healthMatch": "\"status\":\"UP\""
     },
     {
-      "name": "object-storage",
-      "gradleTask": ":patra-api:patra-object-storage:patra-object-storage-boot:bootJar",
-      "context": "patra-api/patra-object-storage/patra-object-storage-boot",
-      "srcPrefix": "patra-api/patra-object-storage/",
-      "port": 6200,
-      "image": "ghcr.io/linqibin0826/patra-object-storage",
+      "name": "identity",
+      "gradleTask": ":patra-api:patra-identity:patra-identity-boot:bootJar",
+      "context": "patra-api/patra-identity/patra-identity-boot",
+      "srcPrefix": "patra-api/patra-identity/",
+      "port": 6400,
+      "image": "ghcr.io/linqibin0826/patra-identity",
+      "healthPath": "/actuator/health",
+      "healthMatch": "\"status\":\"UP\""
+    },
+    {
+      "name": "gateway",
+      "gradleTask": ":patra-api:patra-gateway-boot:bootJar",
+      "context": "patra-api/patra-gateway-boot",
+      "srcPrefix": "patra-api/patra-gateway-boot/",
+      "port": 9528,
+      "image": "ghcr.io/linqibin0826/patra-gateway",
       "healthPath": "/actuator/health",
       "healthMatch": "\"status\":\"UP\""
     },
@@ -38,16 +58,6 @@
       "srcPrefix": "patra-api/patra-ingest/",
       "port": 6100,
       "image": "ghcr.io/linqibin0826/patra-ingest",
-      "healthPath": "/actuator/health",
-      "healthMatch": "\"status\":\"UP\""
-    },
-    {
-      "name": "gateway",
-      "gradleTask": ":patra-api:patra-gateway-boot:bootJar",
-      "context": "patra-api/patra-gateway-boot",
-      "srcPrefix": "patra-api/patra-gateway-boot/",
-      "port": 9528,
-      "image": "ghcr.io/linqibin0826/patra-gateway",
       "healthPath": "/actuator/health",
       "healthMatch": "\"status\":\"UP\""
     },

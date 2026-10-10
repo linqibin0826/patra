@@ -9,7 +9,7 @@
 #   1. 镜像就位：本地缺失才从 GHCR 拉（指数退避 30/60/120s）。正常部署时镜像
 #      已由本机原生构建、天然命中；仅回滚且本地缓存被清时回源 GHCR。
 #   2. 架构断言：必须 arm64（防止历史 amd64 归档被回滚拉回；2026-08 事故复盘）
-#   3. 按依赖顺序 compose up（object-storage 优先，catalog/ingest 运行时依赖它）
+#   3. 按 services.json 的条目顺序 compose up（object-storage 最先：catalog/ingest 运行时依赖它）
 #   4. 健康检查：轮询 127.0.0.1:<port><healthPath>（127.0.0.1 而非 localhost——
 #      后者可解析到 ::1 导致误报，portal healthcheck 实际踩坑）
 #   5. 部署后验证：运行容器镜像 == 期望 tag（防 up 静默落到旧镜像）
@@ -104,7 +104,9 @@ done
 
 # ---- 主流程 ----
 mkdir -p "$LAST_GOOD_DIR"
-ORDER='object-storage registry gateway catalog ingest portal learn'
+# 部署顺序只取 services.json 的条目顺序：请求部署的服务只要在 services.json 里就一定会部署，
+# 不会因为漏改另一份清单而被静默跳过（不在 services.json 里的服务已被上面的入参校验拒绝）
+ORDER="$(jq -r '.services[].name' "$SERVICES_FILE")"
 fail=0
 deployed=""
 for svc in $ORDER; do

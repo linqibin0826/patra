@@ -6,6 +6,7 @@
 #   场景3 镜像架构为 amd64：拦截，不执行 compose up，exit 1
 #   场景4 未知服务名：入参校验拒绝，exit 2（防 dispatch 手滑打错服务名后"假成功"）
 #   场景5 非法 SERVICES_JSON：入参校验拒绝，exit 2
+#   场景6 按 services.json 的条目顺序部署：请求的服务一个不漏，identity 先于 gateway
 # 运行：bash patra-infra/cd/deploy.test.sh
 # ============================================================================
 # shellcheck disable=SC2016  # 断言用单引号是有意的：延迟到 check() 内 eval 时才展开
@@ -119,6 +120,19 @@ setup
 bash "$SCRIPT_DIR/deploy.sh" newsha 'not-json' > "$TMP/out" 2>&1; rc=$?
 check "场景5 非法 JSON 拒绝" 2 "$rc" \
   '! grep -q "up -d" "$STUB_LOG"'
+
+# ---- 场景6：按 services.json 的条目顺序部署，请求的服务一个不漏 ----
+setup
+for s in gateway identity object-storage; do
+  echo "ghcr.io/linqibin0826/patra-$s:newsha" >> "$STUB_IMAGES"
+done
+echo newsha >> "$STUB_HEALTHY"
+bash "$SCRIPT_DIR/deploy.sh" newsha '["gateway","identity","object-storage"]' > "$TMP/out" 2>&1; rc=$?
+check "场景6 按 services.json 顺序部署" 0 "$rc" \
+  '[ "$(sed -n "s/.* up -d //p" "$STUB_LOG" | xargs)" = "object-storage identity gateway" ]' \
+  '[ "$(cat "$LAST_GOOD_DIR/last-good-object-storage")" = newsha ]' \
+  '[ "$(cat "$LAST_GOOD_DIR/last-good-identity")" = newsha ]' \
+  '[ "$(cat "$LAST_GOOD_DIR/last-good-gateway")" = newsha ]'
 
 echo "----"
 echo "PASS=$PASS FAIL=$FAIL"
