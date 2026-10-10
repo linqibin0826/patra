@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { resetCookieJar } from "@tests/stubs/cookie-jar";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { login, register } from "@/lib/auth/actions";
+import { login, logout, register } from "@/lib/auth/actions";
 import type { Credentials } from "@/lib/auth/types";
 
 vi.mock("next/headers", () => import("@tests/stubs/cookie-jar"));
@@ -14,6 +14,8 @@ const SIGNED_IN = { sessionToken: TOKEN, ...USER };
 /// 写入：令牌原文，有效期 30 天
 const WRITTEN =
   /^patra_session=patra_user_abc; Path=\/; Expires=[^;]+; Max-Age=2592000; HttpOnly; SameSite=lax$/;
+/// 清除：空值，属性和写入时相同，Max-Age=0
+const CLEARED = "patra_session=; Path=/; Max-Age=0; HttpOnly; SameSite=lax";
 const UNAVAILABLE = { ok: false, reason: "unavailable" };
 const fetchMock = vi.fn<typeof fetch>();
 
@@ -272,5 +274,41 @@ describe("login", () => {
     const input = { email: "reader@example.com" } as unknown as Credentials;
     await expect(login(input)).resolves.toEqual(UNAVAILABLE);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("logout", () => {
+  it("有 Cookie：带令牌请求网关登出，超时 5 秒，然后清除 Cookie", async () => {
+    respondWith(204);
+    const timeoutSpy = vi.spyOn(AbortSignal, "timeout");
+    const jar = resetCookieJar({ patra_session: TOKEN });
+    await expect(logout()).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://gw.test:9528/patra-identity/auth/logout",
+      expect.objectContaining({ method: "POST", headers: { Authorization: `Bearer ${TOKEN}` } }),
+    );
+    expect(sent()).not.toHaveProperty("body");
+    expect(timeoutSpy).toHaveBeenCalledWith(5_000);
+    expect(jar.written).toEqual([CLEARED]);
+    expect(console.error).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["网关回 503", () => respondWith(503, problem(503))],
+    ["超时", timeout],
+    ["网络错误", networkError],
+  ])("%s：不抛错，记一条日志，照样清除 Cookie", async (_label, arrange) => {
+    arrange();
+    const jar = resetCookieJar({ patra_session: TOKEN });
+    await expect(logout()).resolves.toBeUndefined();
+    expect(jar.written).toEqual([CLEARED]);
+    expect(console.error).toHaveBeenCalledTimes(1);
+  });
+
+  it("没有 Cookie：不请求网关，照样清除 Cookie", async () => {
+    const jar = resetCookieJar();
+    await expect(logout()).resolves.toBeUndefined();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(jar.written).toEqual([CLEARED]);
   });
 });

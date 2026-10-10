@@ -7,7 +7,11 @@ import {
   logUnexpectedResponse,
   readJson,
 } from "@/lib/auth/gateway-response";
-import { writeSessionCookie } from "@/lib/auth/session-cookie";
+import {
+  clearSessionCookie,
+  readSessionToken,
+  writeSessionCookie,
+} from "@/lib/auth/session-cookie";
 import type {
   Credentials,
   CurrentUser,
@@ -19,6 +23,10 @@ import { gatewayFetch } from "@/lib/gateway";
 
 const REGISTER_ENDPOINT = "/patra-identity/auth/register";
 const LOGIN_ENDPOINT = "/patra-identity/auth/login";
+const LOGOUT_ENDPOINT = "/patra-identity/auth/logout";
+
+/// 登出的超时：删后端会话只是尽力而为，不必让用户等满默认的 10 秒
+const LOGOUT_TIMEOUT_MS = 5_000;
 
 /// 入参只校验形状，多余的字段被剥掉；长度和格式由后端校验，失败时回 422 并带原因码
 const credentialsSchema = z.object({ email: z.string(), password: z.string() });
@@ -148,4 +156,26 @@ export async function login(input: Credentials): Promise<LoginResult> {
   }
   logUnexpectedResponse(LOGIN_ENDPOINT, status, reply.body);
   return UNAVAILABLE;
+}
+
+/// 登出：有令牌时带着它请求网关删除会话，非 204 的响应和抛出的错误只记日志、不往外抛；
+/// 不论结果如何，最后都清除 Cookie，所以登出在用户看来总是成功的。
+export async function logout(): Promise<void> {
+  try {
+    const token = await readSessionToken();
+    if (token) {
+      const res = await gatewayFetch(LOGOUT_ENDPOINT, {
+        method: "POST",
+        token,
+        timeoutMs: LOGOUT_TIMEOUT_MS,
+      });
+      if (res.status !== 204) {
+        logUnexpectedResponse(LOGOUT_ENDPOINT, res.status, await readJson(res));
+      }
+    }
+  } catch (error) {
+    logRequestError(LOGOUT_ENDPOINT, error);
+  } finally {
+    await clearSessionCookie();
+  }
 }
