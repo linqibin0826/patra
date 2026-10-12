@@ -1,5 +1,6 @@
 import "server-only";
 import { cache } from "react";
+import { gatewayFetch } from "@/lib/gateway";
 import {
   buildVenuesFacetsApiQuery,
   buildVenuesPageApiQuery,
@@ -16,9 +17,6 @@ import type {
   VenueSuggestion,
 } from "@/types/portal";
 
-/** 服务端 fetch 超时（ms）：慢后端不应无限阻塞 RSC 渲染线程 */
-const FETCH_TIMEOUT_MS = 10_000;
-
 /**
  * 在服务端拉取 portal 期刊榜（按影响因子降序，取前 pageSize 条）。
  * 仅 RSC / Route Handler 调用（server-only）。
@@ -30,15 +28,9 @@ const FETCH_TIMEOUT_MS = 10_000;
  * 响应做最小运行时校验：若 payload 缺少 `items` 数组则降级返回空列表，避免调用方 `.length` 抛错。
  */
 export async function fetchVenues(pageSize = 6): Promise<VenueBrowse[]> {
-  const baseUrl = process.env.PATRA_GATEWAY_BASE_URL;
-  if (!baseUrl) {
-    throw new Error("PATRA_GATEWAY_BASE_URL 未配置");
-  }
-  const url = `${baseUrl}/patra-catalog/portal/venues?sort=impactFactor&pageSize=${pageSize}`;
-  const res = await fetch(url, {
-    cache: "no-store",
-    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-  });
+  const res = await gatewayFetch(
+    `/patra-catalog/portal/venues?sort=impactFactor&pageSize=${pageSize}`,
+  );
   if (!res.ok) {
     throw new Error(`期刊榜加载失败：${res.status}`);
   }
@@ -69,15 +61,7 @@ interface VenueFacetsApiResponse {
  * 列表恒 200（空集也是 200），非 2xx 直接 throw 冒泡到 error.tsx。
  */
 export async function fetchVenuesPage(query: VenueBrowseQuery): Promise<VenueBrowsePage> {
-  const baseUrl = process.env.PATRA_GATEWAY_BASE_URL;
-  if (!baseUrl) {
-    throw new Error("PATRA_GATEWAY_BASE_URL 未配置");
-  }
-  const url = `${baseUrl}/patra-catalog/portal/venues?${buildVenuesPageApiQuery(query)}`;
-  const res = await fetch(url, {
-    cache: "no-store",
-    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-  });
+  const res = await gatewayFetch(`/patra-catalog/portal/venues?${buildVenuesPageApiQuery(query)}`);
   if (!res.ok) {
     throw new Error(`期刊列表加载失败：${res.status}`);
   }
@@ -98,15 +82,9 @@ export async function fetchVenuesPage(query: VenueBrowseQuery): Promise<VenueBro
  * 非 2xx 直接 throw 冒泡到 error.tsx。
  */
 export async function fetchVenuesFacets(filters: VenueBrowseFilters): Promise<VenueBrowseFacets> {
-  const baseUrl = process.env.PATRA_GATEWAY_BASE_URL;
-  if (!baseUrl) {
-    throw new Error("PATRA_GATEWAY_BASE_URL 未配置");
-  }
-  const url = `${baseUrl}/patra-catalog/portal/venues/facets?${buildVenuesFacetsApiQuery(filters)}`;
-  const res = await fetch(url, {
-    cache: "no-store",
-    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-  });
+  const res = await gatewayFetch(
+    `/patra-catalog/portal/venues/facets?${buildVenuesFacetsApiQuery(filters)}`,
+  );
   if (!res.ok) {
     throw new Error(`期刊 facet 加载失败：${res.status}`);
   }
@@ -139,15 +117,7 @@ export async function fetchVenueDetail(id: string): Promise<VenueDetail | null> 
   if (!/^[1-9]\d*$/.test(id)) {
     return null;
   }
-  const baseUrl = process.env.PATRA_GATEWAY_BASE_URL;
-  if (!baseUrl) {
-    throw new Error("PATRA_GATEWAY_BASE_URL 未配置");
-  }
-  const url = `${baseUrl}/patra-catalog/portal/venues/${id}`;
-  const res = await fetch(url, {
-    cache: "no-store",
-    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-  });
+  const res = await gatewayFetch(`/patra-catalog/portal/venues/${id}`);
   if (res.status === 404 || res.status === 400 || res.status === 422) {
     return null;
   }
@@ -162,15 +132,8 @@ export async function fetchVenueDetail(id: string): Promise<VenueDetail | null> 
  * 端点：`GET /portal/venues?q=&pageSize=8`，按影响因子默认排序；非 2xx throw。
  */
 export async function fetchVenueSuggestions(q: string): Promise<VenueSuggestion[]> {
-  const baseUrl = process.env.PATRA_GATEWAY_BASE_URL;
-  if (!baseUrl) {
-    throw new Error("PATRA_GATEWAY_BASE_URL 未配置");
-  }
   const params = new URLSearchParams({ q, pageSize: "8" });
-  const res = await fetch(`${baseUrl}/patra-catalog/portal/venues?${params}`, {
-    cache: "no-store",
-    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-  });
+  const res = await gatewayFetch(`/patra-catalog/portal/venues?${params}`);
   if (!res.ok) {
     throw new Error(`期刊候选加载失败：${res.status}`);
   }

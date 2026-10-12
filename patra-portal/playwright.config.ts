@@ -16,6 +16,8 @@ export default defineConfig({
     port: 4000,
     timeout: 120_000,
     reuseExistingServer: !process.env.CI,
+    // 本机走 HTTP，会话 Cookie 不能带 Secure（见 .env.example）
+    env: { PATRA_SESSION_COOKIE_SECURE: "false" },
   },
   projects: [
     {

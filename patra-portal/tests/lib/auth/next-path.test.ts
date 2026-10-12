@@ -1,0 +1,58 @@
+// @vitest-environment node
+import { describe, expect, it } from "vitest";
+import { authPageHref, safeNextPath } from "@/lib/auth/next-path";
+
+describe("safeNextPath", () => {
+  it.each([
+    ["/papers?q=GLP-1", "/papers?q=GLP-1"],
+    ["/journals/7", "/journals/7"],
+    ["/", "/"],
+    ["/papers?q=GLP-1#results", "/papers?q=GLP-1"],
+  ])("站内地址 %j 返回 %j，# 之后的部分去掉", (raw, expected) => {
+    expect(safeNextPath(raw)).toBe(expected);
+  });
+
+  it("返回解析后的路径：点号段已经合并", () => {
+    expect(safeNextPath("/papers/../journals?page=2")).toBe("/journals?page=2");
+  });
+
+  it.each([
+    "//evil.com",
+    "/\\evil.com",
+    "/\t/evil.com",
+    "/\n/evil.com",
+    "https://evil.com",
+    "javascript:alert(1)",
+    "papers",
+  ])("站外或不以单个 / 开头的 %j 回到 /", (raw) => {
+    expect(safeNextPath(raw)).toBe("/");
+  });
+
+  it.each(["/login", "/login/", "/register?x=1", "/papers/../login", "/register//"])(
+    "登录页、注册页本身 %j 回到 /",
+    (raw) => {
+      expect(safeNextPath(raw)).toBe("/");
+    },
+  );
+
+  it.each(["", null, undefined])("%j 回到 /", (raw) => {
+    expect(safeNextPath(raw)).toBe("/");
+  });
+
+  // 编码过的斜杠和反斜杠解析后仍是本站的一个路径（打开是 404 页），不会变成站外地址
+  it.each(["/%2F/evil.com", "/%5Cevil.com"])("编码过的 %j 仍是站内路径", (raw) => {
+    expect(safeNextPath(raw)).toBe(raw);
+  });
+});
+
+describe("authPageHref", () => {
+  it("next 是站内地址时编码后放进查询串", () => {
+    expect(authPageHref("/login", "/papers?q=GLP-1")).toBe("/login?next=%2Fpapers%3Fq%3DGLP-1");
+    expect(authPageHref("/register", "/journals/7")).toBe("/register?next=%2Fjournals%2F7");
+  });
+
+  it.each(["/", "//evil.com", "/login"])("next 校验后是 / 时（%j）不带参数", (next) => {
+    expect(authPageHref("/login", next)).toBe("/login");
+    expect(authPageHref("/register", next)).toBe("/register");
+  });
+});

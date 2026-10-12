@@ -50,7 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div id="top" aria-hidden />
         <QueryProvider>
           {children}
-          <Toaster richColors position="bottom-right" />
+          <Toaster position="bottom-right" />
         </QueryProvider>
       </body>
     </html>

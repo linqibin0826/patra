@@ -1,5 +1,6 @@
 import "server-only";
 import { cache } from "react";
+import { gatewayFetch } from "@/lib/gateway";
 import {
   buildFacetsApiQuery,
   buildSearchApiQuery,
@@ -13,27 +14,14 @@ import type {
   PublicationFacets,
 } from "@/types/portal";
 
-/** 服务端 fetch 超时（ms）：慢后端不应无限阻塞 RSC 渲染 */
-const FETCH_TIMEOUT_MS = 10_000;
-
-function gatewayBaseUrl(): string {
-  const baseUrl = process.env.PATRA_GATEWAY_BASE_URL;
-  if (!baseUrl) {
-    throw new Error("PATRA_GATEWAY_BASE_URL 未配置");
-  }
-  return baseUrl;
-}
-
 /**
  * 服务端检索文献（`GET /portal/publications/search`）。仅 RSC 调用（server-only）。
  * 非 2xx 直接 throw 冒泡到全局 error.tsx；响应缺关键字段时降级为空页。
  */
 export async function fetchPublicationSearch(query: PaperSearchQuery): Promise<PageResult<Paper>> {
-  const url = `${gatewayBaseUrl()}/patra-catalog/portal/publications/search?${buildSearchApiQuery(query)}`;
-  const res = await fetch(url, {
-    cache: "no-store",
-    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-  });
+  const res = await gatewayFetch(
+    `/patra-catalog/portal/publications/search?${buildSearchApiQuery(query)}`,
+  );
   if (!res.ok) {
     throw new Error(`文献检索失败：${res.status}`);
   }
@@ -51,11 +39,9 @@ const safeNumber = (value: unknown): number => (typeof value === "number" ? valu
 
 /** 以 facets querystring 为缓存键：同一次渲染里信息行与筛选栏共用一次请求。 */
 const facetsByQueryString = cache(async (qs: string): Promise<PublicationFacets> => {
-  const url = `${gatewayBaseUrl()}/patra-catalog/portal/publications/search/facets${qs ? `?${qs}` : ""}`;
-  const res = await fetch(url, {
-    cache: "no-store",
-    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-  });
+  const res = await gatewayFetch(
+    `/patra-catalog/portal/publications/search/facets${qs ? `?${qs}` : ""}`,
+  );
   if (!res.ok) {
     throw new Error(`文献 facet 加载失败：${res.status}`);
   }

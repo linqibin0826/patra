@@ -10,6 +10,7 @@ Patra C 端前端 —— 医学出版物发现与浏览门户。
 
 ```bash
 pnpm install
+cp .env.example .env.local   # 网关地址、会话 Cookie 的 Secure 开关，按需修改
 pnpm dev          # http://localhost:4000
 ```
 
@@ -38,16 +39,21 @@ src/
 │   ├── papers/[id]/            # /papers/:id 文献详情
 │   ├── journals/(list)/        # /journals 期刊浏览
 │   ├── journals/[id]/          # /journals/:id 期刊详情
+│   ├── login/                  # /login 登录页
+│   ├── register/               # /register 注册页
 │   ├── missing/                # 详情不存在时由 proxy 改写到这里，返回真正的 404
-│   ├── api/                    # health、期刊联想
+│   ├── api/                    # health、期刊联想、auth/me（当前用户）
 │   ├── error.tsx               # 路由错误边界
 │   ├── not-found.tsx           # 全局 404
 │   └── globals.css             # Tailwind v4 @theme 映射
-├── proxy.ts                    # 请求拦截层：直接打开详情页时先向后端确认记录存在
+├── proxy.ts                    # 请求拦截层：直接打开详情页时先向后端确认记录存在；已登录的人打开登录页、注册页时送回 next
 ├── components/
+│   ├── auth/                   # 登录页、注册页的外壳和表单
 │   ├── portal/                 # 业务组件（按页面 / 功能分目录）
 │   └── ui/                     # shadcn/ui 原语
 ├── lib/
+│   ├── gateway.ts              # 统一网关客户端：全仓库只有这里读网关地址、向网关发请求
+│   ├── auth/                   # 会话 Cookie、当前用户、注册 / 登录 / 登出的 Server Action，next 参数、表单校验与文案
 │   ├── portal-api/             # 服务端向网关取数、解析检索参数
 │   └── …                       # 工具函数、TanStack Query 工厂与 queryKey
 ├── data/                       # 静态内容（示例检索、主题等）

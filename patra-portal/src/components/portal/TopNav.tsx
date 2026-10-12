@@ -4,8 +4,10 @@ import { ArrowUpRight, Menu, Search } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { BrandMark } from "@/components/portal/BrandMark";
+import { MobileAccount, MobileAccountPlaceholder } from "@/components/portal/MobileAccount";
+import { NavAccount, NavAccountPlaceholder } from "@/components/portal/NavAccount";
 import { Venation } from "@/components/portal/Venation";
 import { buttonVariants } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -27,8 +29,14 @@ const NAV_ITEMS = [
   { label: "期刊", href: "/journals" },
 ] as const;
 
-/// 移动菜单逐项入场的错峰（静态类名，Tailwind 才能生成）
-const STAGGER = ["[--delay:60ms]", "[--delay:120ms]", "[--delay:180ms]", "[--delay:240ms]"];
+/// 移动菜单逐项入场的错峰（静态类名，Tailwind 才能生成）；最后一档给底部的账号块
+const STAGGER = [
+  "[--delay:60ms]",
+  "[--delay:120ms]",
+  "[--delay:180ms]",
+  "[--delay:240ms]",
+  "[--delay:300ms]",
+];
 
 /// 当前路径是否命中导航项。首页要求精确匹配，其余按前缀匹配以覆盖 `/papers/[id]`、`/journals/[id]` 等子路由。
 function isNavActive(pathname: string, href: string): boolean {
@@ -38,6 +46,8 @@ function isNavActive(pathname: string, href: string): boolean {
 
 /// 吸顶导航：内容区恒高 56px，另有 1px 下边框（详情页面包屑 / 侧栏的吸顶偏移依赖它），滚动离开顶部后才出现纸色毛玻璃与发丝线。
 /// ⌘K / Ctrl+K 与「快速检索」按钮在任何页面唤起检索对话框。
+/// 账号区：桌面在「关于」右边，移动端在全屏菜单最底部。两处都读查询串拼 `next`，各包一层 Suspense，
+/// 否则静态渲染的页面在构建时报错；fallback 就是登录状态未定时的占位。
 export function TopNav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -139,6 +149,9 @@ export function TopNav() {
           >
             <span className="link-draw pb-px">关于</span>
           </a>
+          <Suspense fallback={<NavAccountPlaceholder />}>
+            <NavAccount />
+          </Suspense>
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
             <SheetTrigger
               aria-label="打开菜单"
@@ -205,6 +218,11 @@ export function TopNav() {
                     GitHub <ArrowUpRight className="size-3.5" strokeWidth={1.5} aria-hidden />
                   </a>
                 </div>
+              </div>
+              <div className={cn("anim-rise mt-auto", STAGGER[4])}>
+                <Suspense fallback={<MobileAccountPlaceholder />}>
+                  <MobileAccount onClose={() => setMenuOpen(false)} />
+                </Suspense>
               </div>
             </SheetContent>
           </Sheet>

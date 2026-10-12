@@ -1,11 +1,12 @@
 /// 详情页 / 状态屏共用的暖纸按钮 class 串（.btn-primary=clay / .btn-sec）。
 /// 末尾图标（箭头 / 外链，标 `data-icon="trailing"`）hover 时向前微移，按下时整体下沉 1px；
-/// 前置图标不动。禁用态不响应 hover / 按下。
+/// 前置图标不动。禁用态不响应 hover / 按下。`aria-disabled="true"` 的按钮（比如提交中的提交按钮，
+/// 不用 `disabled` 以免丢焦点）同样不响应，并显示不可点的光标、55% 不透明度。
 const BTN_BASE =
-  "inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full border px-5 py-2.5 font-sans text-base font-semibold no-underline outline-none transition duration-200 ease-out-expo disabled:cursor-not-allowed motion-safe:[&>svg]:transition-transform [&>svg]:duration-300 [&>svg]:ease-out-expo motion-safe:not-disabled:hover:[&>svg[data-icon=trailing]]:translate-x-0.5 motion-safe:not-disabled:active:translate-y-px";
+  "inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full border px-5 py-2.5 font-sans text-base font-semibold no-underline outline-none transition duration-200 ease-out-expo disabled:cursor-not-allowed aria-disabled:cursor-not-allowed aria-disabled:opacity-55 motion-safe:[&>svg]:transition-transform [&>svg]:duration-300 [&>svg]:ease-out-expo motion-safe:not-disabled:not-aria-disabled:hover:[&>svg[data-icon=trailing]]:translate-x-0.5 motion-safe:not-disabled:not-aria-disabled:active:translate-y-px";
 
-export const btnPrimary = `${BTN_BASE} border-action-primary bg-action-primary text-fg-on-clay not-disabled:hover:border-action-primary-hover not-disabled:hover:bg-action-primary-hover not-disabled:active:bg-action-primary-press`;
-export const btnSecondary = `${BTN_BASE} border-border-default bg-paper-50 text-fg-1 not-disabled:hover:border-border-hover not-disabled:hover:bg-paper-200`;
+export const btnPrimary = `${BTN_BASE} border-action-primary bg-action-primary text-fg-on-clay not-disabled:not-aria-disabled:hover:border-action-primary-hover not-disabled:not-aria-disabled:hover:bg-action-primary-hover not-disabled:not-aria-disabled:active:bg-action-primary-press`;
+export const btnSecondary = `${BTN_BASE} border-border-default bg-paper-50 text-fg-1 not-disabled:not-aria-disabled:hover:border-border-hover not-disabled:not-aria-disabled:hover:bg-paper-200`;
 export const btnBlock = "w-full px-4 py-3";
 
 /// 自绘复选框：纸面方框，选中为 action-primary 填充 + 纸色勾线描出（见 CHECK_MARK；焦点环走全局规则）。
