@@ -45,16 +45,33 @@ services:
       retries: 10
 
   nacos:
-    image: nacos/nacos-server:v3.0.2
+    image: nacos/nacos-server:v3.2.4
     container_name: patra-nacos
+    # 固定 hostname：容器重建后 hostname 一变，jraft 身份对不上，会选不出 leader
+    hostname: patra-nacos
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      # token 签名密钥与 identity，放在仓库外（见 README「密钥」）。缺失时 compose 拒绝执行。
+      # 三项鉴权变量不要再写进下面的 environment：environment 优先于 env_file，插值出的空值会盖掉文件里的值
+      - path: ${HOME}/.patra/secrets/nacos-server.env
+        required: true
     environment:
       - MODE=standalone
       - PREFER_HOST_MODE=hostname
       - NACOS_AUTH_ENABLE=true
-      - NACOS_AUTH_TOKEN=${NACOS_AUTH_TOKEN}
-      - NACOS_AUTH_IDENTITY_KEY=${NACOS_AUTH_IDENTITY_KEY}
-      - NACOS_AUTH_IDENTITY_VALUE=${NACOS_AUTH_IDENTITY_VALUE}
+      # 存储：业务 PG 里的 patra_nacos 库（官方 PG 插件，镜像自带）。建表见 postgres/init-scripts/03-nacos-schema.sh
+      - SPRING_DATASOURCE_PLATFORM=postgresql
+      - DB_URL_0=jdbc:postgresql://postgres:5432/patra_nacos?currentSchema=public&ApplicationName=nacos&connectTimeout=5&socketTimeout=30&tcpKeepAlive=true&sslmode=disable
+      - DB_USER_0=postgres
+      - DB_PASSWORD_0=${POSTGRES_PASSWORD:-123456}
+      # 不显式指定时回落到 MySQL 驱动，启动失败
+      - DB_POOL_CONFIG_DRIVERCLASSNAME=org.postgresql.Driver
+      - DB_POOL_CONFIG_MAXIMUMPOOLSIZE=5
+      - DB_POOL_CONFIG_MINIMUMIDLE=1
+      - DB_POOL_CONNECTION_TIMEOUT=5000
       - JVM_XMS=256m
       - JVM_XMX=256m
       - TZ=Asia/Shanghai
