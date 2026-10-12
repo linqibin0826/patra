@@ -128,22 +128,26 @@ PAP-68 补上界面，走通简报 §0 的闭环：任一页面点导航栏「�
 | 文件 | 职责 |
 |---|---|
 | `src/lib/auth/next-path.ts`（新） | `safeNextPath(raw)`：校验 `next`。`authPageHref(page, next)`：拼登录页、注册页的链接。纯函数，浏览器和服务端共用 |
-| `src/lib/auth/messages.ts`（新） | 全部文案，以及原因码 → 字段文案、失败结果 → 提示条文案、限流分钟数的映射 |
+| `src/lib/auth/messages.ts`（新） | 提示类文案（字段下方的错误、提示条、成功提示），以及原因码 → 字段文案、失败结果 → 提示条文案、限流分钟数的映射。标题、按钮这类界面文字写在各组件里 |
 | `src/lib/auth/form-schemas.ts`（新） | 登录、注册表单的 Zod schema，错误文案取自 `messages.ts` |
 | `src/lib/auth/logout-mutation.ts`（新） | `useLogout()`：包装 `logout()` 的 `useMutation`，桌面和移动端共用 |
+| `src/lib/auth/use-auth-page-href.ts`（新） | `useAuthPageHref(page)`：导航栏里登录页、注册页的链接，带上当前地址作 `next`。用了 `useSearchParams`，调用它的组件包在 Suspense 里 |
 | `src/lib/auth/session-cookie.ts`（改） | 加 `readRequestSessionToken(req)` |
 | `src/lib/auth/current-user.ts`（改） | 拆出 `lookupSessionByToken(token, timeoutMs?)`，`lookupSession()` 改为调用它；删掉 `getCurrentUser()` |
 | `src/proxy.ts`（改） | matcher 加 `/login`、`/register`，做规则 6 |
 | `src/app/login/page.tsx`、`src/app/register/page.tsx`（新） | 服务端组件：读 `next`，渲染外壳和表单；标题、`noindex` |
 | `src/components/auth/AuthShell.tsx`（新） | 专注布局外壳（服务端组件） |
 | `src/components/auth/FormField.tsx`、`PasswordInput.tsx`、`FormAlert.tsx`（新） | 表单组件 |
+| `src/components/auth/AuthLink.tsx`（新） | 登录、注册相关的文字链接（「注册」「登录」「去登录」，移动端账号块里的「注册」）：悬停和键盘聚焦时下划线自左画出，移动端加大点按区 |
 | `src/components/auth/LoginForm.tsx`、`RegisterForm.tsx`（新） | 两张表单（客户端组件） |
 | `src/components/auth/use-auth-submit.ts`（新） | 两张表单共用的提交流程：防重复提交、预取、调用 action、成功后写缓存、弹提示、跳转 |
+| `src/components/auth/use-blur-validation.ts`（新） | 离开字段时的校验（第 9.3 节），两张表单共用 |
 | `src/components/ui/dropdown-menu.tsx`（新） | shadcn 原语 |
 | `src/components/portal/NavAccount.tsx`、`UserMenu.tsx`、`MobileAccount.tsx`（新） | 桌面账号区、用户菜单、移动端账号块 |
 | `src/components/portal/TopNav.tsx`（改） | 放进账号区和账号块，各包一层 Suspense |
 | `src/lib/portal-ui.ts`（改） | 按钮样式支持 `aria-disabled` |
 | `src/components/ui/sonner.tsx`、`src/app/layout.tsx`（改） | 成功提示的外观；去掉 `richColors` |
+| `src/app/globals.css`（改） | 浏览器自动填充后保持输入框的底色（第 9.7 节），提交中只读时跟着换成凹陷色 |
 | `next.config.ts`（改） | `logging.serverFunctions: false`：开发时终端不打印 Server Action 的参数 |
 
 依赖方向：表单依赖 actions、next-path、form-schemas、messages 和 query-keys；导航栏组件依赖 current-user-query、logout-mutation 和 next-path；proxy 依赖 next-path、session-cookie 和 current-user。next-path、messages、form-schemas 不带 `server-only`，客户端组件也能引用。
@@ -201,7 +205,7 @@ matcher 改为 `["/papers/:id", "/journals/:id", "/login", "/register"]`。`prox
 - 左上角品牌标识：`BrandMark` 加「Patra」，桌面另带「医学文献门户」，移动端不带；链接到 `/`，读屏名称「Patra 首页」。
 - 「返回」链接：带向左的箭头，指向 `next`。
 - 表单区。
-- 桌面右侧的墨色品牌面板：`Venation` 叶脉图形、图注「图 1 · 叶脉」、定位语「十个来源，汇入同一根主脉。」。宽度 ≤ 880px 时不显示。
+- 桌面右侧的墨色品牌面板：`Venation` 叶脉图形、图注「图 1　叶脉」、定位语「十个来源，汇入同一根主脉。」。宽度 ≤ 880px 时不显示。
 - 桌面端一屏内完成，不出现滚动（简报 §3.1）。
 
 进入页面时焦点在邮箱框（简报 §6），邮箱框用 `autoFocus`。
