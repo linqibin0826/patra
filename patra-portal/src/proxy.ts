@@ -51,7 +51,11 @@ export async function proxy(req: NextRequest) {
   if (req.headers.get("sec-fetch-dest") === "empty") {
     return NextResponse.next();
   }
-  const [, section, id = ""] = req.nextUrl.pathname.split("/");
+  const [, section = "", id = ""] = req.nextUrl.pathname.split("/");
+  // matcher 按解码后的路径匹配，pathname 却保留编码（`/%70apers/1`、`/%6Cogin` 也会进来）：认不出的放行
+  if (!Object.hasOwn(DETAIL, section)) {
+    return NextResponse.next();
+  }
   const { kind, endpoint } = DETAIL[section as keyof typeof DETAIL];
   if (!/^[1-9]\d*$/.test(id)) {
     return NextResponse.rewrite(new URL(`/missing/${kind}`, req.url));

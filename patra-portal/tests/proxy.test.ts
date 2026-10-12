@@ -74,6 +74,18 @@ describe("详情页直接打开时先确认存在", () => {
   });
 });
 
+describe("matcher 按解码后的路径放进来的编码地址", () => {
+  // pathname 保留编码，这里认不出是详情页还是登录页、注册页：放行，不能抛错变成 500
+  it.each(["/%6Cogin", "/%72egister", "/login%2F", "/%70apers/42"])(
+    "GET %s 放行，不请求网关",
+    async (path) => {
+      const res = await proxy(request(path));
+      expect(res.headers.get("x-middleware-next")).toBe("1");
+      expect(fetchMock).not.toHaveBeenCalled();
+    },
+  );
+});
+
 describe("已登录的人打开登录页、注册页时直接跳走", () => {
   const TOKEN = "patra_user_abc";
   const USER = { userId: "319041872872550658", email: "reader@example.com" };
