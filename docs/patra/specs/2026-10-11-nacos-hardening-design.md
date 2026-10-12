@@ -2,7 +2,7 @@
 
 > **Issue**：[PAP-71](https://linear.app/papertrace/issue/PAP-71)
 > **版本**：[v0.9 Config Center](../release-specs/v0.9-config-center.md)（决策 E、G；Done 判定 D6、D9）
-> **日期**：2026-10-11
+> **日期**：2026-10-11（2026-10-12 修订：密钥从 `PATRA_SECRETS` 分组改放独立 namespace `dev-secrets`，见 5.1）
 > **状态**：设计已确认，待实施
 
 ## 1. 要解决的问题
@@ -29,7 +29,7 @@ v0.9 要把全部配置和密钥放进 Nacos（release spec 决策 E）。但 mi
 - 存储从内嵌 Derby 改为业务 PG 里的 `patra_nacos` 库。
 - 重新生成 token 签名密钥和 identity，移到仓库外。
 - 管理员改用强密码；新建应用账号 `patra-app` 和推送账号 `patra-push`，配好角色和权限。
-- 建 `dev` namespace，密钥分组定为 `PATRA_SECRETS`。
+- 建 `dev`、`dev-secrets` 两个 namespace：非敏感配置放 `dev`，密钥放 `dev-secrets`。
 - 两个脚本：幂等的初始化脚本 `nacos-init.sh`、验收脚本 `nacos-verify.sh`。
 - 6 个服务改用 `patra-app` 连接：容器和本机进程都改。
 - 文档：patra-infra 的 CLAUDE.md 和 README，根 CLAUDE.md 安全红线。
@@ -57,8 +57,8 @@ v0.9 要把全部配置和密钥放进 Nacos（release spec 决策 E）。但 mi
 1. **服务端升到 3.2.4**，取代原定的 3.1.x。原因：3.1 线已停止维护，3.1.2 按 id 操作配置时不检查 namespace。release spec 决策 G 已改定。
 2. **账号模型**：
    - 应用账号只给服务注册读写和配置只读；
-   - 推送账号只能写 `DEFAULT_GROUP`；
-   - 密钥放进单独的 `PATRA_SECRETS` 分组，只有管理员能改。
+   - 推送账号只能写 `dev` 的 `DEFAULT_GROUP`；
+   - 密钥放进单独的 namespace `dev-secrets`：应用账号只读，推送账号没有任何权限，只有管理员能改。原定的「单独分组 `PATRA_SECRETS`」挡不住推送账号（第 5.1 节），2026-10-12 改定。
 3. **存储改为 PostgreSQL**，用现有业务 PG，新建 `patra_nacos` 库。
 4. **Nacos 用 `postgres` 超级用户连 PG**，和其他服务一样；**PG 超级用户密码本版不换**。代价是密钥进入 Nacos 以后，在 tailnet 内可以用公开的 PG 密码绕过 Nacos 鉴权直接读到。这一条已写进 release spec 决策 E 的已知代价。
 5. **不做备份**。
@@ -77,12 +77,35 @@ v0.9 要把全部配置和密钥放进 Nacos（release spec 决策 E）。但 mi
 | 已有管理员时再调初始化接口 | 响应体是 `{"code":409,...}`，但 **HTTP 状态码是 200**；管理员密码不受影响 |
 | 应用账号，走 nacos-client 3.1.1 的 gRPC | 在 public 注册和查询服务成功；读 dev 配置成功（含 `PATRA_SECRETS`）；`publishConfig` 返回 `false`；在 dev 注册返回 403 |
 | 应用账号，走 HTTP | 发布 dev 或 public 配置都返回 403 |
-| 推送账号 | 能发布 `DEFAULT_GROUP`；改写、删除 `PATRA_SECRETS` 返回 403；不带 group 发布返回 403；写 public 返回 403；按 id 批量删除返回 403（带不带 namespace 都一样）；能读 `PATRA_SECRETS` |
+| 推送账号 | 能发布 `DEFAULT_GROUP`；改写、删除 `PATRA_SECRETS` 返回 403；不带 group 发布返回 403；写 public 返回 403；按 id 批量删除返回 403（带不带 namespace 都一样）；能读 `PATRA_SECRETS`。以上请求都没带 `groupName`；导入和批量删除带上它就能绕过分组限制，见 5.1 |
 | 启动脚本的 `set -x` | token 签名密钥出现在 `docker logs` 里 |
 
 由此定下两条脚本约定：
 - 返回 `Result` 的接口，判断成败看响应体的 `code`，HTTP 状态码不可靠；登录接口例外，没有 `code`，看 HTTP 200 且 `accessToken` 非空（见 11.1）。
 - 推送时必须显式带 `groupName`。
+
+### 5.1 补充实测：分组挡不住推送账号，namespace 能挡住（2026-10-12）
+
+最终评审发现、本机 3.2.4 实测确认：Nacos 鉴权取的是请求参数里的 namespace 和 `groupName`，而下面两个接口实际操作的分组不来自这个参数。推送账号只要在 `dev` 有 `DEFAULT_GROUP` 的写权限，带上 `groupName=DEFAULT_GROUP` 就能动 `dev` 里任何分组：
+
+| 推送账号的请求 | 结果 |
+|---|---|
+| `POST /v3/admin/cs/config/import`，`namespaceId=dev`、`groupName=DEFAULT_GROUP`，zip 里放 `PATRA_SECRETS/patra-secrets.yaml`，覆盖模式 | HTTP 200，密钥被改写（不带 `groupName` 时 403） |
+| `DELETE /v3/admin/cs/config/batch`，`namespaceId=dev`、`groupName=DEFAULT_GROUP`，`ids` 为密钥的 id | HTTP 200，密钥被删除（不带 `groupName` 时 403） |
+
+所以密钥改放独立的 namespace `dev-secrets`。这几个接口按 namespace 做鉴权，也按 namespace 取数据或写入，namespace 级的隔离是可靠的。按第 7 节的权限实测，密钥放在 `dev-secrets / DEFAULT_GROUP / patra-secrets.yaml`：
+
+| 请求 | 结果 |
+|---|---|
+| 应用账号读密钥 | 成功 |
+| 应用账号写密钥；从 `dev-secrets` 克隆到 `dev` | 403 |
+| 推送账号对 `dev-secrets` 的读、写、删、列表、导出、按 namespace 查历史 | 403 |
+| 推送账号导入，`namespaceId=dev-secrets` 带 `groupName` | 403 |
+| 推送账号导入，`namespaceId=dev` 带 `groupName` | 200，只写进 `dev`，`dev-secrets` 不变 |
+| 推送账号批量删除，`namespaceId=dev` 带 `groupName`、`ids` 为密钥的 id | 200，按 namespace 过滤后什么也没删 |
+| 推送账号克隆，源 `dev-secrets`、目标 `dev` | 403（克隆会检查源 namespace 的读权限） |
+| 推送账号导出，`namespaceId=dev`、`ids` 为密钥的 id | 200，zip 里没有密钥 |
+| 推送账号按 `nid` 查密钥的历史版本，`namespaceId=dev` | 403 |
 
 ## 6. 服务端
 
@@ -173,13 +196,13 @@ docker exec patra-postgres bash /docker-entrypoint-initdb.d/03-nacos-schema.sh
 | 账号 | 角色 | 权限（resource / action） | 用途 |
 |---|---|---|---|
 | `nacos` | `ROLE_ADMIN` | 全部 | 初始化脚本、应急控制台；写入和修改密钥 |
-| `patra-app` | `PATRA_APP` | `public:*:naming/*` / `rw`<br>`dev:*:config/*` / `r` | 6 个服务注册与发现、读配置（含密钥） |
-| `patra-push` | `PATRA_PUSH` | `dev:DEFAULT_GROUP:config/*` / `rw`<br>`dev:*:config/*` / `r` | PAP-75 的推送；只读权限用来读回校验 |
+| `patra-app` | `PATRA_APP` | `public:*:naming/*` / `rw`<br>`dev:*:config/*` / `r`<br>`dev-secrets:*:config/*` / `r` | 6 个服务注册与发现、读配置、读密钥 |
+| `patra-push` | `PATRA_PUSH` | `dev:DEFAULT_GROUP:config/*` / `rw`<br>`dev:*:config/*` / `r` | PAP-75 的推送；只读权限用来读回校验。在 `dev-secrets` 没有任何权限 |
 
 - 3.x 的管理员用户名固定为 `nacos`，只能改密码。
 - 资源串按 `{namespace}:{group}:{config|naming}/{name}` 做正则匹配。`public:*:naming/*` 这类写法只能通过 API 写入，控制台的权限页可能显示不正常，但不影响生效（第 5 节）。
-- **namespace**：`dev`，ID 和名称都是 `dev`。服务发现留在 `public`（release spec 范围边界 G）。
-- **分组约定**：非敏感配置放 `DEFAULT_GROUP`；密钥只有一份 `patra-secrets.yaml`，放 `PATRA_SECRETS` 分组。
+- **namespace**：`dev` 放非敏感配置，`dev-secrets` 放密钥，ID 和名称相同。namespace 按「环境 × 敏感度」划分。服务发现留在 `public`（release spec 范围边界 G）。
+- **分组约定**：两个 namespace 都只用 `DEFAULT_GROUP`；密钥只有一份 `patra-secrets.yaml`。不要给推送账号或以后的任何非管理员账号在 `dev-secrets` 里加写权限：分组级的限制挡不住导入和批量删除（第 5.1 节）。
 - 改密码或删用户，不会作废已经签出的令牌，令牌在过期前一直有效（默认 18000 秒）。要立刻撤销，只能换 token 签名密钥后重建容器。
 
 ## 8. 密钥文件
@@ -263,7 +286,7 @@ spring:
   1. 等待就绪：探测控制台端口的 readiness，超时报错退出。控制台端口由 `NACOS_CONSOLE_ADDR` 指定，默认 `http://127.0.0.1:8080`。
   2. 初始化管理员：调 `POST /nacos/v3/auth/user/admin`。返回 `code` 为 0 表示初始化成功，409 表示已经有管理员，其他值报错。
   3. 用管理员登录，拿到令牌。
-  4. 建 `dev` namespace，已存在则跳过。
+  4. 建 `dev`、`dev-secrets` 两个 namespace，已存在则跳过。
   5. 建两个账号。已存在时先用文件里的密码登录，登录不了才用 `PUT /nacos/v3/auth/user` 把密码重置为文件里的值，这样以后换密码只需要改文件、再跑一遍脚本。先试登录是因为 3.0.2 上这个接口对管理员也返回 403（见第 12 节第 2 条），密码没变时跳过重置，脚本在旧版上也能重跑。
   6. 绑定角色，已绑定则跳过。
   7. 同步权限：两个角色的权限以第 7 节为准，缺的补上，多的删掉。
@@ -287,16 +310,17 @@ spring:
 | 1 | 状态接口（不需要鉴权） | `version=3.2.4`、`datasource_platform=postgresql`、`auth_enabled=true` |
 | 2 | 管理员用默认密码登录 | 失败 |
 | 3 | 管理员用文件里的密码登录 | 成功 |
-| 4 | namespace 列表 | 包含 `dev` |
-| 5 | `patra-app` 读 `dev/DEFAULT_GROUP` 里的一份探针配置 | 成功 |
-| 6 | `patra-app` 发布 dev 配置、发布 public 配置 | 都被拒绝 |
+| 4 | namespace 列表 | 包含 `dev`、`dev-secrets` |
+| 5 | `patra-app` 读 `dev`、`dev-secrets` 里各一份探针配置 | 成功 |
+| 6 | `patra-app` 发布 `dev`、`dev-secrets`、`public` 的配置 | 都被拒绝 |
 | 7 | `patra-app` 在 public 注册、再注销一个探针实例 | 成功 |
 | 8 | `patra-app` 在 dev 注册探针实例 | 被拒绝 |
 | 9 | `patra-push` 发布、再删除 `DEFAULT_GROUP` 里的探针配置 | 成功 |
-| 10 | `patra-push` 写入、删除 `PATRA_SECRETS` 里的配置 | 都被拒绝 |
+| 10 | `patra-push` 读、写、删 `dev-secrets` 里的探针；带 `groupName=DEFAULT_GROUP` 导入到 `dev-secrets`；在 `dev` 批量删除探针的 id；把探针从 `dev-secrets` 克隆到 `dev` | 都被拒绝或无效，探针内容不变、`dev` 里没有它的副本 |
 | 11 | 可选参数 `--expect-services`：public 下的服务列表 | 包含 6 个 patra 服务 |
 
-- 探针配置名为 `nacos-verify-probe.yaml`，探针服务名为 `nacos-verify-probe`。第 5 项需要的探针配置由脚本先用管理员发布，最后删除。
+- 探针配置名为 `nacos-verify-probe.yaml`，探针服务名为 `nacos-verify-probe`。第 5、10 项需要的探针配置由脚本先用管理员发布，最后删除。
+- 第 10 项覆盖第 5.1 节发现的绕过路径。导出、查历史两条路径在第 5.1 节实测过，不放进验收。
 - 第 7、8 项走 HTTP 管理接口。gRPC 路径已在第 5 节用真实客户端实测，切换后再由 6 个服务实际注册来确认。
 
 ### 11.3 测试方式
@@ -326,8 +350,8 @@ spring:
 |---|---|
 | mini 上 Nacos 是 3.2.4，6 个服务注册与发现正常 | `nacos-verify.sh --expect-services` 第 1、11 项；门户能走通 |
 | 仓库里没有 token 签名密钥和 identity；旧密钥签出的令牌被拒绝 | `git grep NACOS_AUTH_TOKEN=` 只剩模板里的空值；第 10 节第 7 步的旧令牌检查 |
-| 默认管理员密码登录不了；应用账号发布配置被拒；推送账号能发布 `DEFAULT_GROUP`、写 `PATRA_SECRETS` 被拒 | 第 2、6、9、10 项 |
-| `dev` namespace 存在；数据在 PG 的 `patra_nacos` 库里 | 第 1、4 项；`psql -d patra_nacos -c 'select count(*) from users'` 返回 3 |
+| 默认管理员密码登录不了；应用账号发布配置被拒；推送账号能发布 `DEFAULT_GROUP`、动不了 `dev-secrets` | 第 2、6、9、10 项 |
+| `dev`、`dev-secrets` 两个 namespace 存在；数据在 PG 的 `patra_nacos` 库里 | 第 1、4 项；`psql -d patra_nacos -c 'select count(*) from users'` 返回 3 |
 
 ## 12. 实施时要实测的点
 
@@ -368,14 +392,14 @@ spring:
 
 - **PAP-74（starter）**：
   - 连接凭据来自 `NACOS_USERNAME`、`NACOS_PASSWORD`：容器经 `nacos.env` 注入，本机经 dev profile 导入。PAP-76、PAP-77 去掉 dev profile 后，本机的导入方式由 PAP-74 决定。
-  - 配置的 namespace ID 是 `dev`；密钥的导入写成 `patra-secrets.yaml`，分组 `PATRA_SECRETS`，其余导入用 `DEFAULT_GROUP`。
+  - 非敏感配置从 namespace `dev` 导入，密钥 `patra-secrets.yaml` 从 namespace `dev-secrets` 导入，分组都是 `DEFAULT_GROUP`。starter 要支持按导入项指定 namespace。
   - 应用账号写不了配置，starter 不能依赖任何写操作。
 - **PAP-75（推送）**：
   - 用 `nacos-push.env` 里的 `NACOS_PUSH_USERNAME`、`NACOS_PUSH_PASSWORD`；
   - 每次发布都显式带 `groupName=DEFAULT_GROUP`；
-  - 删除按 dataId 和 group 逐个删，批量删除会被拒；
+  - 删除按 dataId 和 group 逐个删，不用批量删除和导入：这两个接口的鉴权不看实际分组（第 5.1 节）；
   - 判断成败看响应体的 `code`，登录接口例外，看 HTTP 200 且 `accessToken` 非空；
   - 令牌放请求头，密码和配置正文放表单请求体，GET 查询条件放 URL（同 11.1）。
 - **PAP-76、PAP-77（迁移）**：
-  - 密钥由管理员写进 `dev / PATRA_SECRETS / patra-secrets.yaml`。
+  - 密钥由管理员写进 `dev-secrets / DEFAULT_GROUP / patra-secrets.yaml`。
   - 清理 `~/.patra/secrets` 时保留 4 个 `nacos-*.env`，它们是 Nacos 自己的凭据，正是 release spec D6 说的例外。

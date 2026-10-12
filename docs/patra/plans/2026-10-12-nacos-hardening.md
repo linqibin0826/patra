@@ -34,6 +34,7 @@
   | `patra-push` | `PATRA_PUSH` | `dev:DEFAULT_GROUP:config/*` / `rw`；`dev:*:config/*` / `r` |
 
   namespace ID 和名称都是 `dev`；密钥分组 `PATRA_SECRETS`。
+  **2026-10-12 修订**：最终评审发现分组挡不住推送账号，密钥改放独立 namespace `dev-secrets`，`patra-app` 增加 `dev-secrets:*:config/*` / `r`，`patra-push` 在其中没有权限（spec 5.1）。Part 1 各任务正文保留原样，以修复提交为准；Part 2 的预期已按新设计更新。
 - **密钥文件**（spec 第 8 节）：
 
   | 文件 | 变量 | 放在哪 |
@@ -1884,8 +1885,8 @@ NACOS_ADDR="http://$PATRA_INFRA_HOST:8848" NACOS_CONSOLE_ADDR="http://$PATRA_INF
 ```
 
 Expected：
-- 初始化输出与 Task 5 第 2 步相同。
-- 验收只有第 1、2 项 FAIL，`通过 8 / 失败 2`。
+- 初始化输出与 Task 5 第 2 步相同，另有一行 `namespace dev-secrets 已创建`。
+- 验收只有第 1、2、10 项 FAIL，`通过 7 / 失败 3`。第 10 项在旧服务端上本就该失败：3.0.2 的批量删除不检查 namespace，推送账号能删掉 `dev-secrets` 里的探针，3.2.3 才修复。
 
 - [ ] **Step 3: 记下旧管理员令牌**
 
@@ -1977,7 +1978,7 @@ NACOS_ADDR="http://$PATRA_INFRA_HOST:8848" NACOS_CONSOLE_ADDR="http://$PATRA_INF
 
 Expected：
 - CD 成功，6 个后端容器的镜像 tag 是本次推送的提交 sha，状态 `healthy`。
-- 验收只有第 1、2 项 FAIL，第 11 项 PASS（6 个服务都用 `patra-app` 注册到了旧服务端），`通过 9 / 失败 2`。
+- 验收只有第 1、2、10 项 FAIL，第 11 项 PASS（6 个服务都用 `patra-app` 注册到了旧服务端），`通过 8 / 失败 3`。
 
 CD 失败或服务没注册上：deploy.sh 会自动回滚失败的服务。停下来报告用户，不要进入上线 5。
 
@@ -2040,7 +2041,7 @@ Expected：`patra-nacos: healthy`。
 ssh linqibin@linqibins-mac-mini 'cd ~/Projects/patra && bash patra-infra/scripts/nacos-init.sh'
 ```
 
-Expected：`管理员 nacos 已初始化`、`namespace dev 已创建`，其余与 Task 4 第 2 步相同，最后是 `完成`。
+Expected：`管理员 nacos 已初始化`、`namespace dev 已创建`、`namespace dev-secrets 已创建`，其余与 Task 4 第 2 步相同，最后是 `完成`。
 
 - [ ] **Step 2: 重启 6 个应用容器**
 
