@@ -1,4 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { lookupSessionByToken } from "@/lib/auth/current-user";
+import { safeNextPath } from "@/lib/auth/next-path";
+import { readRequestSessionToken } from "@/lib/auth/session-cookie";
 import { gatewayFetch } from "@/lib/gateway";
 
 /// 详情页 404 状态码。详情页有 loading.tsx，服务器先回 200 把骨架流出去，等页面发现文献不存在时
@@ -11,7 +14,36 @@ const DETAIL = {
 
 const CHECK_TIMEOUT_MS = 3_000;
 
+const AUTH_PAGES = ["/login", "/register"];
+
+/// 跳转规则 6：已登录的人打开登录页、注册页时，直接 307 到 `next`。只拦 GET：Server Action 是发到
+/// 当前页的 POST，放行。站内点链接、预取也要拦，所以不看 `sec-fetch-dest`。没有 Cookie 时不请求网关；
+/// 读 Cookie 抛错、令牌失效、网关出错或超时都放行，显示表单。这里不写 Cookie。
+async function leaveAuthPage(req: NextRequest): Promise<NextResponse> {
+  if (req.method !== "GET") {
+    return NextResponse.next();
+  }
+  let token: string | null;
+  try {
+    token = readRequestSessionToken(req);
+  } catch {
+    return NextResponse.next();
+  }
+  if (!token) {
+    return NextResponse.next();
+  }
+  const session = await lookupSessionByToken(token, CHECK_TIMEOUT_MS);
+  if (session.status !== "authenticated") {
+    return NextResponse.next();
+  }
+  const next = safeNextPath(req.nextUrl.searchParams.get("next"));
+  return NextResponse.redirect(new URL(next, req.url), 307);
+}
+
 export async function proxy(req: NextRequest) {
+  if (AUTH_PAGES.includes(req.nextUrl.pathname)) {
+    return leaveAuthPage(req);
+  }
   // 站内跳转与预取是页面里发起的 fetch，本来就不看 HTTP 状态码，直接放行。
   // 认它们靠浏览器自带的 Sec-Fetch-Dest（fetch 是 empty，地址栏打开是 document）：
   // Next 交给这里之前会剥掉 rsc 等内部请求头，在这里读不到。
@@ -40,5 +72,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/papers/:id", "/journals/:id"],
+  matcher: ["/papers/:id", "/journals/:id", "/login", "/register"],
 };

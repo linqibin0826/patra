@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { proxy } from "@/proxy";
+import { config, proxy } from "@/proxy";
 
 const fetchMock = vi.fn<typeof fetch>();
 
@@ -69,6 +69,110 @@ describe("详情页直接打开时先确认存在", () => {
 
   it("站内跳转 / 预取（页面里发起的 fetch）不问后端，照常流式出骨架", async () => {
     const res = await proxy(request("/papers/not-a-real-id", { "sec-fetch-dest": "empty" }));
+    expect(res.headers.get("x-middleware-next")).toBe("1");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("已登录的人打开登录页、注册页时直接跳走", () => {
+  const TOKEN = "patra_user_abc";
+  const USER = { userId: "319041872872550658", email: "reader@example.com" };
+
+  beforeEach(() => {
+    vi.stubEnv("PATRA_SESSION_COOKIE_SECURE", "false");
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /// 带着会话 Cookie 的请求，默认是地址栏直接打开
+  const signedIn = (path: string, headers: Record<string, string> = {}) =>
+    request(path, { "sec-fetch-dest": "document", cookie: `patra_session=${TOKEN}`, ...headers });
+  const json = (status: number, body: unknown) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { "Content-Type": "application/json" },
+    });
+  const problem = (status: number, code: string) =>
+    new Response(JSON.stringify({ status, code, title: "x" }), {
+      status,
+      headers: { "Content-Type": "application/problem+json" },
+    });
+
+  it("matcher 包含登录页和注册页，详情页的两项不变", () => {
+    expect(config.matcher).toEqual(["/papers/:id", "/journals/:id", "/login", "/register"]);
+  });
+
+  it.each(["/login", "/register"])("已登录时 GET %s 回 307，跳到 next", async (page) => {
+    fetchMock.mockResolvedValue(json(200, USER));
+    const res = await proxy(signedIn(`${page}?next=%2Fpapers%3Fq%3DGLP-1`));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe("http://portal.test/papers?q=GLP-1");
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    expect(url).toBe("http://gw.test/patra-identity/auth/me");
+    expect(init?.headers).toEqual({ Authorization: `Bearer ${TOKEN}` });
+  });
+
+  it.each([
+    ["没有 next", "/login"],
+    ["next 是站外地址", "/login?next=%2F%2Fevil.com"],
+    ["next 是登录页自己", "/register?next=%2Flogin"],
+  ])("%s，跳到首页", async (_label, path) => {
+    fetchMock.mockResolvedValue(json(200, USER));
+    const res = await proxy(signedIn(path));
+    expect(res.headers.get("location")).toBe("http://portal.test/");
+  });
+
+  it("next 出现多次时取第一个", async () => {
+    fetchMock.mockResolvedValue(json(200, USER));
+    const res = await proxy(signedIn("/login?next=%2Fjournals&next=%2Fpapers"));
+    expect(res.headers.get("location")).toBe("http://portal.test/journals");
+  });
+
+  it("站内点链接、预取（sec-fetch-dest: empty）同样会跳走", async () => {
+    fetchMock.mockResolvedValue(json(200, USER));
+    const res = await proxy(signedIn("/login?next=%2Fjournals", { "sec-fetch-dest": "empty" }));
+    expect(res.headers.get("location")).toBe("http://portal.test/journals");
+  });
+
+  it("没有 Cookie 时放行，不请求网关", async () => {
+    const res = await proxy(request("/login?next=%2Fjournals"));
+    expect(res.headers.get("x-middleware-next")).toBe("1");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["令牌失效", () => problem(401, "GW-0401")],
+    ["网关出错", () => problem(503, "GW-0503")],
+  ])("%s时放行，显示表单", async (_label, response) => {
+    fetchMock.mockResolvedValue(response());
+    const res = await proxy(signedIn("/login"));
+    expect(res.headers.get("x-middleware-next")).toBe("1");
+  });
+
+  it("网关超时放行；问网关的超时是 3 秒", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    fetchMock.mockRejectedValue(new DOMException("timed out", "TimeoutError"));
+    const res = await proxy(signedIn("/register"));
+    expect(res.headers.get("x-middleware-next")).toBe("1");
+    expect(timeout).toHaveBeenCalledWith(3_000);
+  });
+
+  it("POST（Server Action 发到当前页）直接放行，不请求网关", async () => {
+    const req = new NextRequest("http://portal.test/login", {
+      method: "POST",
+      headers: { cookie: `patra_session=${TOKEN}` },
+    });
+    const res = await proxy(req);
+    expect(res.headers.get("x-middleware-next")).toBe("1");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("Secure 开关写错、读不了 Cookie 时放行，不请求网关", async () => {
+    vi.stubEnv("PATRA_SESSION_COOKIE_SECURE", "yes");
+    const res = await proxy(signedIn("/login"));
     expect(res.headers.get("x-middleware-next")).toBe("1");
     expect(fetchMock).not.toHaveBeenCalled();
   });
