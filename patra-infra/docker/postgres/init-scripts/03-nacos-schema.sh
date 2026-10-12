@@ -19,8 +19,16 @@ nacos_schema_main() {
   local dir file db=patra_nacos user="${POSTGRES_USER:-postgres}" tables total in_list present
   dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   file="${NACOS_SCHEMA_FILE:-$dir/nacos/pg-schema-3.2.4.sql}"
+  if [ ! -r "$file" ]; then
+    echo "[nacos-schema] 错误：读不到 schema 文件 $file" >&2
+    return 1
+  fi
   tables="$(sed -n -E 's/^CREATE TABLE "([a-z_]+)".*/\1/p' "$file")"
   total="$(printf '%s\n' "$tables" | grep -c .)"
+  if [ "$total" -eq 0 ]; then
+    echo "[nacos-schema] 错误：$file 里没有 CREATE TABLE 语句" >&2
+    return 1
+  fi
   # shellcheck disable=SC2086 # 有意不加引号：按表名分词，逐个套上引号
   in_list="$(printf "'%s'," $tables)"
   in_list="${in_list%,}"
