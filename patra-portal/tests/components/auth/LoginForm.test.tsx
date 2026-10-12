@@ -93,6 +93,29 @@ describe("LoginForm · 校验时机", () => {
     expect(email).toHaveAttribute("aria-invalid", "true");
   });
 
+  it("空着离开字段不提示，提交之后也是；「请输入…」只在提交时出现", async () => {
+    const { user, email, password, submit } = renderLogin();
+    // 进入时焦点就在邮箱框，空着离开
+    await user.tab();
+    expect(email).toHaveAttribute("aria-invalid", "false");
+    await user.type(password, "correct horse");
+    await user.click(submit);
+    expect(email).toHaveAccessibleDescription("请输入邮箱");
+    await user.clear(password);
+    await user.tab();
+    expect(password).toHaveAttribute("aria-invalid", "false");
+  });
+
+  it("按着指针离开字段时，松开之后才校验：按下和松开之间不插入错误行，下方的链接、按钮不会被挤走", async () => {
+    const { user, email, password } = renderLogin();
+    await user.type(email, "reader");
+    await user.pointer({ keys: "[MouseLeft>]", target: password });
+    expect(password).toHaveFocus();
+    expect(email).toHaveAttribute("aria-invalid", "false");
+    await user.pointer({ keys: "[/MouseLeft]", target: password });
+    await waitFor(() => expect(email).toHaveAccessibleDescription("邮箱格式不正确"));
+  });
+
   it("显示错误之后随输入重新校验，改对了错误立即消失", async () => {
     const { user, email } = renderLogin();
     await user.type(email, "reader");

@@ -8,6 +8,7 @@ import { FormAlert } from "@/components/auth/FormAlert";
 import { FormField } from "@/components/auth/FormField";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { useAuthSubmit, useServerFieldErrors } from "@/components/auth/use-auth-submit";
+import { useBlurValidation } from "@/components/auth/use-blur-validation";
 import { register as registerAccount } from "@/lib/auth/actions";
 import { registerSchema } from "@/lib/auth/form-schemas";
 import { FIELD_MESSAGES, REGISTER_UNAVAILABLE_MESSAGE, TOAST_MESSAGES } from "@/lib/auth/messages";
@@ -31,10 +32,12 @@ export function RegisterForm({ next }: { next: string }) {
     watch,
   } = useForm({
     resolver: zodResolver(registerSchema),
-    mode: "onBlur",
-    reValidateMode: "onBlur",
+    // RHF 只在提交时校验；离开字段、输入时的校验由下面的 onBlur、onChange 触发
+    mode: "onSubmit",
+    reValidateMode: "onSubmit",
     defaultValues: { email: "", password: "", confirmPassword: "" },
   });
+  const validateOnBlur = useBlurValidation(trigger);
   const loginHref = authPageHref("/login", next);
   const { submitting, submit } = useAuthSubmit({
     next,
@@ -102,7 +105,10 @@ export function RegisterForm({ next }: { next: string }) {
           {(control) => (
             <input
               {...control}
-              {...register("email", { onChange: () => revalidate("email") })}
+              {...register("email", {
+                onBlur: validateOnBlur("email"),
+                onChange: () => revalidate("email"),
+              })}
               type="email"
               autoComplete="email"
               spellCheck={false}
@@ -118,6 +124,7 @@ export function RegisterForm({ next }: { next: string }) {
             <PasswordInput
               {...control}
               {...register("password", {
+                onBlur: validateOnBlur("password"),
                 onChange: () => {
                   revalidate("password");
                   // 确认密码不为空时，密码每次改动都重新比对确认密码
@@ -140,7 +147,10 @@ export function RegisterForm({ next }: { next: string }) {
           {(control) => (
             <PasswordInput
               {...control}
-              {...register("confirmPassword", { onChange: () => revalidate("confirmPassword") })}
+              {...register("confirmPassword", {
+                onBlur: validateOnBlur("confirmPassword"),
+                onChange: () => revalidate("confirmPassword"),
+              })}
               autoComplete="new-password"
               spellCheck={false}
               readOnly={submitting}

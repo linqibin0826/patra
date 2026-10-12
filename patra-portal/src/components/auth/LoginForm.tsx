@@ -8,6 +8,7 @@ import { FormAlert } from "@/components/auth/FormAlert";
 import { FormField } from "@/components/auth/FormField";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { useAuthSubmit, useServerFieldErrors } from "@/components/auth/use-auth-submit";
+import { useBlurValidation } from "@/components/auth/use-blur-validation";
 import { login } from "@/lib/auth/actions";
 import { loginSchema } from "@/lib/auth/form-schemas";
 import { loginAlertMessage, TOAST_MESSAGES } from "@/lib/auth/messages";
@@ -30,10 +31,13 @@ export function LoginForm({ next }: { next: string }) {
     watch,
   } = useForm({
     resolver: zodResolver(loginSchema),
-    mode: "onBlur",
-    reValidateMode: "onBlur",
+    // RHF 只在提交时校验；离开字段、输入时的校验由下面的 onBlur、onChange 触发。密码只查非空，
+    // 空着离开又不校验，离开密码框时没有可查的，所以密码框不接 onBlur
+    mode: "onSubmit",
+    reValidateMode: "onSubmit",
     defaultValues: { email: "", password: "" },
   });
+  const validateOnBlur = useBlurValidation(trigger);
   const { submitting, submit } = useAuthSubmit({
     next,
     action: login,
@@ -91,7 +95,10 @@ export function LoginForm({ next }: { next: string }) {
           {(control) => (
             <input
               {...control}
-              {...register("email", revalidateOnChange("email"))}
+              {...register("email", {
+                onBlur: validateOnBlur("email"),
+                ...revalidateOnChange("email"),
+              })}
               type="email"
               autoComplete="username"
               spellCheck={false}

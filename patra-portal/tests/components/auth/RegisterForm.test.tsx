@@ -110,6 +110,36 @@ describe("RegisterForm · 输入框", () => {
   });
 });
 
+describe("RegisterForm · 校验时机", () => {
+  it("填了内容的字段，离开时校验它", async () => {
+    const { user, email, password, confirm } = renderRegister();
+    await user.type(email, "reader");
+    await user.tab();
+    expect(email).toHaveAccessibleDescription("邮箱格式不正确");
+    await user.type(password, PASSWORD);
+    await user.type(confirm, "correct horsf");
+    await user.tab();
+    expect(confirm).toHaveAccessibleDescription("两次输入的密码不一致");
+  });
+
+  it("空着离开字段不提示，提交之后也是；「请输入…」只在提交时出现", async () => {
+    const { user, email, password, confirm, submit } = renderRegister();
+    await user.click(password);
+    await user.click(confirm);
+    await user.click(email);
+    for (const input of [email, password, confirm]) {
+      expect(input).toHaveAttribute("aria-invalid", "false");
+    }
+    await user.type(password, PASSWORD);
+    await user.type(confirm, PASSWORD);
+    await user.click(submit);
+    expect(email).toHaveAccessibleDescription("请输入邮箱");
+    await user.clear(confirm);
+    await user.tab();
+    expect(confirm).toHaveAttribute("aria-invalid", "false");
+  });
+});
+
 describe("RegisterForm · 确认密码", () => {
   it("为空时提示再输入一次，和密码不同时提示不一致", async () => {
     const { user, password, confirm, submit } = renderRegister();
