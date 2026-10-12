@@ -5,7 +5,7 @@
 > **前置设计**：[安全 starter（PAP-62 / PAP-70）](2026-10-05-security-starter-design.md) 第 17 节、[identity 会话（PAP-64）](2026-10-09-identity-session-design.md) 第 16 节、[gateway 切换到 WebMVC 版（PAP-69）](2026-10-09-gateway-webmvc-design.md) 第 13 节
 > **后续 Issue**：[PAP-66](https://linear.app/papertrace/issue/PAP-66) 注入密钥与 Redis 密码；[PAP-67](https://linear.app/papertrace/issue/PAP-67) 门户按本设计的 401 处理 Cookie
 > **日期**：2026-10-09
-> **状态**：设计中，待评审
+> **状态**：已实施（2026-10-09，分支 `feat/v0.8-accounts-api`）
 
 ## 1. 要解决的问题
 
