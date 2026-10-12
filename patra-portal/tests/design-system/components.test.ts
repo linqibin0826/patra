@@ -101,4 +101,8 @@ describe("组件对齐设计系统", () => {
   it("本版不做暗色：sonner 不依赖 next-themes", () => {
     expect(comp("ui/sonner.tsx")).not.toMatch(/next-themes/);
   });
+
+  it("提示不用 richColors：它把成功提示染成绿底绿字，高保真稿是浅底加 moss 色图标", () => {
+    expect(readSrc("app/layout.tsx")).not.toMatch(/richColors/);
+  });
 });
