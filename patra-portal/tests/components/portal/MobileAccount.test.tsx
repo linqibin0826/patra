@@ -1,0 +1,139 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import "@testing-library/jest-dom/vitest";
+import { MobileAccount } from "@/components/portal/MobileAccount";
+import { logout } from "@/lib/auth/actions";
+import type { CurrentUser } from "@/lib/auth/types";
+import { queryKeys } from "@/lib/query-keys";
+
+// 覆写 usePathname / useSearchParams，保留 next/navigation 其余导出
+vi.mock("next/navigation", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("next/navigation")>();
+  return {
+    ...actual,
+    usePathname: () => "/papers",
+    useSearchParams: () => new actual.ReadonlyURLSearchParams("q=GLP-1"),
+  };
+});
+vi.mock("@/lib/auth/actions", () => ({ login: vi.fn(), logout: vi.fn(), register: vi.fn() }));
+vi.mock("sonner", () => ({ toast: { success: vi.fn() } }));
+
+import { toast } from "sonner";
+
+const USER: CurrentUser = { userId: "319041872872550658", email: "chen.yu@example.com" };
+const LONG_EMAIL =
+  "postdoctoral.researcher.zhang@cardiovascular-research.university-hospital.example.org";
+
+/// 一个还没回来的请求，`answer` 让它在测试想要的时候回来
+function deferred<T>() {
+  let answer: (value: T) => void = () => {};
+  const promise = new Promise<T>((resolve) => {
+    answer = resolve;
+  });
+  return { promise, answer };
+}
+
+/// 当前用户：`undefined` 表示还没有数据（`/api/auth/me` 一直不回来），`null` 表示未登录
+function renderAccount(user: CurrentUser | null | undefined) {
+  // 和 createQueryClient 一样，数据 60 秒内不过期：挂载时不会因为数据过期而重新请求
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: 60_000 } },
+  });
+  if (user === undefined) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise(() => {})),
+    );
+  } else {
+    client.setQueryData(queryKeys.currentUser, user);
+  }
+  const onClose = vi.fn();
+  render(
+    <QueryClientProvider client={client}>
+      <MobileAccount onClose={onClose} />
+    </QueryClientProvider>,
+  );
+  return { onClose, user: userEvent.setup() };
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.clearAllMocks();
+});
+
+describe("MobileAccount · 三种形态", () => {
+  it("登录状态未定：中性占位，读屏名称「正在确认登录状态」，不先出现「登录」", () => {
+    renderAccount(undefined);
+    expect(screen.getByRole("status", { name: "正在确认登录状态" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "登录" })).not.toBeInTheDocument();
+  });
+
+  it("未登录：「登录」按钮，下面一行「还没有账号？注册」，两个链接都带当前地址作 next", () => {
+    renderAccount(null);
+    expect(screen.getByRole("link", { name: "登录" })).toHaveAttribute(
+      "href",
+      "/login?next=%2Fpapers%3Fq%3DGLP-1",
+    );
+    expect(screen.getByText("还没有账号？")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "注册" })).toHaveAttribute(
+      "href",
+      "/register?next=%2Fpapers%3Fq%3DGLP-1",
+    );
+  });
+
+  it.each(["登录", "注册"])("未登录：点「%s」先关闭菜单", async (name) => {
+    const { user, onClose } = renderAccount(null);
+    await user.click(screen.getByRole("link", { name }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("已登录：「当前账号」和邮箱，过长时截断、悬停看全；下面是「退出登录」", () => {
+    renderAccount({ ...USER, email: LONG_EMAIL });
+    expect(screen.getByText("当前账号")).toBeInTheDocument();
+    const email = screen.getByText(LONG_EMAIL);
+    expect(email).toHaveAttribute("title", LONG_EMAIL);
+    expect(email).toHaveClass("truncate");
+    expect(screen.getByRole("button", { name: "退出登录" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "登录" })).not.toBeInTheDocument();
+  });
+});
+
+describe("MobileAccount · 退出登录", () => {
+  it("进行中：「退出登录」禁用并说明原因，菜单不关；再点不会再发一次", async () => {
+    const pending = deferred<void>();
+    vi.mocked(logout).mockReturnValue(pending.promise);
+    const { user, onClose } = renderAccount(USER);
+    const button = screen.getByRole("button", { name: "退出登录" });
+    await user.click(button);
+    await waitFor(() => expect(button).toHaveAttribute("aria-disabled", "true"));
+    expect(button).toHaveAttribute("title", "正在退出登录");
+    await user.click(button);
+    expect(logout).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
+    pending.answer();
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+  });
+
+  it("成功：关闭菜单，提示「已退出登录」", async () => {
+    vi.mocked(logout).mockResolvedValue(undefined);
+    const { user, onClose } = renderAccount(USER);
+    await user.click(screen.getByRole("button", { name: "退出登录" }));
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    expect(toast.success).toHaveBeenCalledWith("已退出登录");
+  });
+
+  it("promise 被拒绝：重新请求当前用户，菜单不关，「退出登录」恢复可点", async () => {
+    vi.mocked(logout).mockRejectedValue(new Error("network"));
+    const { user, onClose } = renderAccount(USER);
+    const fetchMock = vi.fn(async () => Response.json({ user: USER }));
+    vi.stubGlobal("fetch", fetchMock);
+    const button = screen.getByRole("button", { name: "退出登录" });
+    await user.click(button);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/auth/me"));
+    await waitFor(() => expect(button).not.toHaveAttribute("aria-disabled"));
+    expect(onClose).not.toHaveBeenCalled();
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+});
