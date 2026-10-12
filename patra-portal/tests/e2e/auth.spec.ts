@@ -43,3 +43,35 @@ test.describe("登录页、注册页：离开字段时冒出的错误不让下�
     });
   });
 });
+
+/// 脚本还没加载完、页面还没接管表单时就提交（网慢、设备慢、密码管理器自动提交），浏览器按表单自己的
+/// 属性提交。禁用脚本来模拟这段时间：提交必须是 POST，地址里只有原来的 next；Next 对不带 action 的
+/// POST 照常渲染这一页，表单清空，可以再提交一次
+test.describe("页面接管表单之前就提交：邮箱、密码不进地址栏", () => {
+  test.use({ javaScriptEnabled: false });
+
+  test("登录页", async ({ page }) => {
+    await page.goto("/login?next=%2Fjournals%2F7");
+    await page.getByLabel("邮箱").fill("reader@example.org");
+    await page.getByLabel("密码", { exact: true }).fill("correct horse");
+    const submitted = page.waitForRequest((request) => request.isNavigationRequest());
+    await page.getByRole("button", { name: "登录" }).click();
+    const request = await submitted;
+    expect(request.method()).toBe("POST");
+    expect(new URL(request.url()).search).toBe("?next=%2Fjournals%2F7");
+    await expect(page.getByRole("heading", { level: 1, name: "登录" })).toBeVisible();
+  });
+
+  test("注册页", async ({ page }) => {
+    await page.goto("/register?next=%2Fjournals%2F7");
+    await page.getByLabel("邮箱").fill("reader@example.org");
+    await page.getByLabel("密码", { exact: true }).fill("correct horse");
+    await page.getByLabel("确认密码").fill("correct horse");
+    const submitted = page.waitForRequest((request) => request.isNavigationRequest());
+    await page.getByRole("button", { name: "注册" }).click();
+    const request = await submitted;
+    expect(request.method()).toBe("POST");
+    expect(new URL(request.url()).search).toBe("?next=%2Fjournals%2F7");
+    await expect(page.getByRole("heading", { level: 1, name: "注册" })).toBeVisible();
+  });
+});

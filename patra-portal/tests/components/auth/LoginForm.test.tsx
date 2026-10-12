@@ -74,6 +74,11 @@ describe("LoginForm · 输入框", () => {
     expect(password).toHaveAttribute("spellcheck", "false");
   });
 
+  it("页面还没接管表单就提交时，浏览器用 POST：邮箱、密码不进地址栏", () => {
+    const { email } = renderLogin();
+    expect(email.form).toHaveAttribute("method", "post");
+  });
+
   it("去注册的链接带上 next", () => {
     renderLogin();
     expect(screen.getByRole("link", { name: "注册" })).toHaveAttribute(

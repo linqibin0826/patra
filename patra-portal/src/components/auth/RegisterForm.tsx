@@ -96,6 +96,8 @@ export function RegisterForm({ next }: { next: string }) {
     <>
       {/* 副文案到表单 32px；有提示条时，副文案到提示条 24px，提示条到第一个字段 20px */}
       <form
+        // 页面还没接管表单就提交时（脚本没加载完），浏览器按这里的 method 提交：用 POST，邮箱、密码不进地址栏
+        method="post"
         noValidate
         onSubmit={onSubmit}
         className={cn("flex flex-col gap-5", alert ? "mt-6" : "mt-8")}

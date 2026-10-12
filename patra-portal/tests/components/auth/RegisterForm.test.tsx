@@ -101,6 +101,11 @@ describe("RegisterForm · 输入框", () => {
     expect(confirm).toHaveAttribute("type", "password");
   });
 
+  it("页面还没接管表单就提交时，浏览器用 POST：邮箱、密码不进地址栏", () => {
+    const { email } = renderRegister();
+    expect(email.form).toHaveAttribute("method", "post");
+  });
+
   it("去登录的链接带上 next", () => {
     renderRegister();
     expect(screen.getByRole("link", { name: "登录" })).toHaveAttribute(
