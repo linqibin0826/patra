@@ -4,7 +4,7 @@
 > **版本**：[v0.8 Accounts](../release-specs/v0.8-accounts.md)（决策 E，Done 判定 D2 ~ D5、D8）
 > **前置设计**：[门户认证基础设施（PAP-67）](2026-10-10-portal-auth-design.md) 第 3、9、15 节，[identity 账号（PAP-63）](2026-10-05-identity-account-design.md) 第 16 节，设计简报 [accounts.md](../../../patra-portal/docs/design-briefs/v0.8/accounts.md)，高保真稿快照 [`2026-10-04-accounts-hifi.zip`](../design/snapshots/2026-10-04-accounts-hifi.zip)（[PAP-61](https://linear.app/papertrace/issue/PAP-61)，持久画布 https://claude.ai/artifact/8jupGAB2phFjwVEBVgQHHX）
 > **日期**：2026-10-12
-> **状态**：待评审
+> **状态**：已实施（2026-10-12，分支 `feat/v0.8-accounts-fe`）
 
 ## 1. 要解决的问题
 
@@ -414,13 +414,27 @@ matcher 改为 `["/papers/:id", "/journals/:id", "/login", "/register"]`。`prox
 ## 15. 实施时要实测的点
 
 1. 输入框错误态的描边压得过 `focus-within:border-border-focus`（Tailwind 变体的先后顺序）；错误态聚焦时的 `ring-rust-500/15` 能通过 focus 守护测试。
+   - 实测：Tailwind 4.3 把 `focus-within:` 生成在 `hover:` 之前，悬停加聚焦时描边是悬停色，三种状态都改成了 `has-[…]`（第 9.1 节）；错误态聚焦时的 `ring-rust-500/15` 通过 focus 守护测试；视觉对照里 `Login-EmailFormat`、`Register-Invalid` 等错误态的描边和高保真稿一致。
 2. sonner 的阴影能改成 `--shadow-lg`，成功图标是 moss 色；移动端的位置和高保真稿一致。
+   - 实测：原来写在类名里的 `--normal-*` 变量没有生效，改写在 `Toaster` 的行内样式上，阴影用 `shadow-lg!`（第 11 节）；成功图标是 moss 色；`Nav-LoggedIn`、`Nav-M-Toast` 两组对照和高保真稿一致，移动端的位置也一致。
 3. 点提交时的 `router.prefetch(next)` 不影响 action 的请求和结果。
+   - 实测：开发模式不预取。生产构建下，登录页的「返回」链接一加载就预取了 `/papers`，点登录时 `router.prefetch(next)` 不再发请求；之后是 `POST /login`（action）和一次 `GET /papers`。e2e 在生产构建上 20 条全部通过。
 4. 站内点「登录」进入登录页后，焦点在邮箱框：App Router 导航后会对新页面做焦点处理，要确认它不会把焦点抢走。
+   - 实测：站内点「登录」进入登录页后，焦点在邮箱框。
 5. 浏览器后退到登录页时，是否经过 proxy（第 12 节第 4 条）。
+   - 实测：已登录后用浏览器后退回到登录页，停在 `/login`，显示表单，没有请求 `/login`，不经过 proxy（开发模式），即第 12 节第 4 条的情况。
 6. 本地服务端日志里，登录成功后目标页渲染一到两次、登出时当前页重新渲染一次，和第 12 节一致。
+   - 实测：登录成功后只有一次 `GET /papers`，开发模式和生产构建都是；退出登录只有 action 那一次 `POST /papers`，之后没有别的请求，和第 12 节一致。开发时终端里只有请求行，没有 Server Action 的参数（第 13 节）。
 
-实施后把结果写回本节。
+实施后本地做，结果写回本节（2026-10-12 实测，门户是本分支 Task 18 之后的代码，网关和 identity 是 mini 上在跑的版本）。
+
+验收时另外记下的几处：
+
+- 视觉对照两个尺寸共 45 组，用户逐组看过。除下一条外，差异只来自随机生成的值、输入框的焦点和滚动位置，以及导航栏几组的页面主体用了真实数据。
+- 提交中只读输入框的字色是 `--fg-2`，照 `patra.css` 的只读规则。高保真稿四张「提交中」画板给每个输入框写了行内的 `--ink-900`，盖掉了这条规则；用户确认保持 `--fg-2`。
+- 浏览器自动填充（第 9.7 节）：用户在系统 Chrome 里注册并保存密码，退出后用自动填充登录。没有冒出错误，底色保持纸色，登录后回到 `/papers`。
+- 用户菜单的菜单项在键盘聚焦时显示全局焦点环，高保真稿只画了高亮底色；用户接受，组件不去掉焦点环。
+- 开发模式下全量 e2e 第一次 19 条通过、1 条失败：`detail-rail-sticky.spec.ts` 的「期刊详情」点期刊卡时，`/journals/[id]` 第一次编译，页面整页重载回首页。单独重跑这个文件通过；生产构建上 20 条全部通过。
 
 ## 16. 评审时要重点看的输入
 
