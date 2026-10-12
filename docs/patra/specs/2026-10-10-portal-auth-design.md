@@ -84,7 +84,7 @@
 |---|---|
 | `src/lib/gateway.ts` | 统一网关客户端 `gatewayFetch`，以及判断令牌能不能放进请求头的 `canSendToken`。全仓库只有这里读 `PATRA_GATEWAY_BASE_URL`、向网关发 `fetch`（`server-only`） |
 | `src/lib/auth/session-cookie.ts` | 会话 Cookie 的名称、属性、`Secure` 开关和读写。全仓库只有这里调用 `cookies()`（`server-only`） |
-| `src/lib/auth/current-user.ts` | `lookupSession()`、`getCurrentUser()`（`server-only`） |
+| `src/lib/auth/current-user.ts` | `lookupSession()`、`lookupSessionByToken()`（`server-only`） |
 | `src/lib/auth/actions.ts` | `register`、`login`、`logout`（`"use server"`） |
 | `src/lib/auth/types.ts` | 浏览器和服务端共用的类型：`CurrentUser`、`FieldError`、`RegisterResult`、`LoginResult` |
 | `src/app/api/auth/me/route.ts` | `GET /api/auth/me` |
@@ -171,10 +171,13 @@ export type SessionLookup =
   | { status: "unavailable" };
 
 export async function lookupSession(): Promise<SessionLookup>;
-export async function getCurrentUser(): Promise<CurrentUser | null>;
+export async function lookupSessionByToken(
+  token: string | null,
+  timeoutMs?: number,
+): Promise<SessionLookup>;
 ```
 
-`lookupSession()` 读 Cookie，再用 `gatewayFetch("/patra-identity/auth/me", { token })` 请求网关：
+`lookupSession()` 读 Cookie，交给 `lookupSessionByToken(token)`，后者用 `gatewayFetch("/patra-identity/auth/me", { token, timeoutMs })` 请求网关：
 
 | 情况 | 结果 |
 |---|---|
@@ -185,7 +188,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null>;
 | 其他状态码；请求抛出的错误（超时、网络错误、缺网关地址）；200 但响应体格式不对；读 Cookie 时抛错（比如开关的值写错） | `unavailable`，记一条错误日志（第 12 节） |
 
 - `lookupSession()` 不抛异常。
-- `getCurrentUser()` 在 `authenticated` 时返回用户，其余情况返回 null，不碰 Cookie。它给服务端渲染的页面用，比如 PAP-68 的登录页、注册页判断「已登录就跳走」。渲染时不能写 Cookie，所以遇到 401 只返回 null，过期的 Cookie 留到下一次 `/api/auth/me` 时清，或者登录时被新值覆盖。
+- `lookupSessionByToken()` 不读 Cookie，令牌由调用方给出；`timeoutMs` 不传时用 `gatewayFetch` 默认的 10 秒。proxy 用它判断打开登录页、注册页的人是否已登录（规则 6，超时 3 秒，见 PAP-68 设计第 7 节）。proxy 不写 Cookie，所以遇到 401 只是放行，过期的 Cookie 留到下一次 `/api/auth/me` 时清，或者登录时被新值覆盖。
 
 ### 8.2 `GET /api/auth/me`
 
@@ -283,7 +286,7 @@ export async function logout(): Promise<void>;
 `register`、`login`、`logout` 都会写 Cookie，所以 Next 会在同一次响应里把当前页在服务端重新渲染一遍（第 3 节）。
 
 - 在正文页登出时，这一页的正文会再请求一次。正文不依赖 Cookie，所以渲染结果不变。万一这时 catalog 正好挂了，这次重新渲染会像平时切换页面一样报错，但 Cookie 已经清掉了。这个结果可以接受：catalog 挂了时，切换到任何页面都一样会报错。
-- 在登录页、注册页提交成功后，这一页也会带着新 Cookie 重新渲染一遍。PAP-68 如果在渲染时就把已登录的人跳走，这次重新渲染本身就会触发跳转（第 15 节）。
+- 在登录页、注册页提交成功后，这一页也会带着新 Cookie 重新渲染一遍。规则 6（已登录的人打开这两页时跳走）在 proxy 里做，只拦 GET，这次重新渲染照常完成，见 PAP-68 设计第 7 节。
 - Server Action 只返回结果，自己不跳转；跳转、`next` 参数的校验和成功提示都归 PAP-68。
 
 ### 9.6 已登录时再次登录
@@ -293,7 +296,7 @@ export async function logout(): Promise<void>;
 ## 10. 401、503 和并发
 
 - 除了登出，只有 401 会清 Cookie（`/api/auth/me` 的 `rejected`），不区分 `GW-0401` 和 `IDN-0401`。503、超时、网络错误一律不清。
-- 用户态请求失败时不进错误页：`/api/auth/me` 由浏览器查询，失败时按未登录显示；`lookupSession()` 和 `getCurrentUser()` 不抛异常；Server Action 把失败都归成 `unavailable`。
+- 用户态请求失败时不进错误页：`/api/auth/me` 由浏览器查询，失败时按未登录显示；`lookupSession()` 和 `lookupSessionByToken()` 不抛异常；Server Action 把失败都归成 `unavailable`。
 - 令牌在整个会话期间不变，没有轮换，所以同一个令牌并发多少请求，都只会刷新 Cookie。PAP-67 的验收「同时发起多个带令牌的请求，不会把用户登出」靠这个结构满足。
 - 有两种窗口极短的竞争，本设计接受：
   1. 在 A 标签页点登出的同时，B 标签页有一个更早发出的 `/api/auth/me` 晚一步回来，结果是 200，于是把已经作废的令牌重新写回 Cookie。影响只是 B 标签页的导航栏晚一点回到未登录：下一次查询会收到 401，并把这个 Cookie 清掉。
@@ -311,7 +314,7 @@ export async function logout(): Promise<void>;
 
 ## 12. 日志
 
-- 令牌和密码不进日志，也不进抛出的错误消息。
+- 令牌和密码不进日志，也不进抛出的错误消息。开发时终端里的日志也算：Next 开发时默认打印每次 Server Action 调用的参数，登录、注册的参数里有明文密码，所以 `next.config.ts` 设了 `logging.serverFunctions: false`（PAP-68 写计划时发现；生产构建本来就不打印）。
 - 网关返回意外的状态码、或者请求失败时，`console.error` 记下接口、状态码，以及 ProblemDetail 的 `code`（有的话），不记响应体。
 - 测试断言 `console.*` 的参数里不出现令牌和密码。
 
@@ -324,7 +327,7 @@ export async function logout(): Promise<void>;
 | `tests/lib/gateway-boundary.test.ts` | 守护测试，规则见下表 |
 | `tests/lib/gateway.test.ts` | 地址拼接；`cache: "no-store"`；超时默认 10 秒、可以覆盖（spy `AbortSignal.timeout`，看传入的值）；JSON 请求体和 `Content-Type`；有令牌时带 `Authorization: Bearer`，没有令牌时不带；缺地址时报错；网络错误照常抛出；`canSendToken` 的字符边界（制表符、空格、0x80–0xFF 能放，换行、回车、NUL、其他控制字符、DEL、0xFF 以上的字符不能放） |
 | `tests/lib/auth/session-cookie.test.ts` | 两种名字和全部属性；开关的三种取值；`refreshSessionCookie` 用原值重写、没有 Cookie 时什么也不做；`clearSessionCookie` 的属性和写入时相同，并且 `Max-Age=0` |
-| `tests/lib/auth/current-user.test.ts` | 第 8.1 节表格逐行覆盖，`GW-0401` 和 `IDN-0401` 都归为 `rejected`；请求带 `Authorization: Bearer`；`getCurrentUser()` 的映射；日志里没有令牌 |
+| `tests/lib/auth/current-user.test.ts` | 第 8.1 节表格逐行覆盖，`GW-0401` 和 `IDN-0401` 都归为 `rejected`；请求带 `Authorization: Bearer`；`lookupSessionByToken` 把 `timeoutMs` 传给 `gatewayFetch`；日志里没有令牌 |
 | `tests/app/api/auth-me.test.ts` | 第 8.2 节表格逐行覆盖，包括 `Cache-Control`；同一个令牌并发请求两次，两次都返回 200、都只刷新不清除；先 503 后 200 时不清除 |
 | `tests/lib/auth/actions.test.ts` | 第 9.3 节表格逐行覆盖；请求体只有 `email` 和 `password`；注册、登录不带 `Authorization`（即使已有 Cookie）；入参形状不对时返回 `unavailable`、不请求网关；只有成功时写 Cookie；登出在 204、503、超时、网络错误、没有 Cookie、Cookie 值放不进请求头这几种情况下都清 Cookie，后两种不请求网关；日志里没有密码和令牌 |
 | `tests/lib/auth/current-user-query.test.tsx` | `pending`、`anonymous`、`authenticated` 三种状态；503 时归为 `anonymous`；请求的是同源的 `/api/auth/me` |
@@ -373,8 +376,8 @@ Server Action 本身，以及浏览器里「页面脚本读不到令牌」这一
 | 注册、登录成功后，用 `queryClient.setQueryData(queryKeys.currentUser, user)` 写入用户；登出完成后写入 null | PAP-68 |
 | 按 `reason` 和字段的 `code` 选简报 §4 的文案；不认识或为 null 的原因码，显示该字段的通用错误；`retryAfterSeconds` 按分钟向上取整，不足 1 分钟按 1 分钟算，为 null 时显示「尝试次数过多，请稍后再试」 | PAP-68 |
 | `register`、`login` 的 promise 被拒绝（比如浏览器没连上门户）时，按 `unavailable` 处理。`logout` 的 promise 被拒绝时，Cookie 可能还在，不要直接把用户写成 null，而是让 `queryKeys.currentUser` 重新请求一次，以门户的回答为准；界面照旧没有登出失败态（简报 §4.3） | PAP-68 |
-| 写 Cookie 的 Server Action 会让当前页在同一次响应里重新渲染。登录页、注册页如果在渲染时把已登录的人跳走，这次重新渲染就会触发跳转，成功提示和跳转流程要按这一点设计 | PAP-68 |
-| 服务端判断是否已登录用 `getCurrentUser()`，它不清除过期的 Cookie | PAP-68 |
+| 写 Cookie 的 Server Action 会让当前页在同一次响应里重新渲染，成功提示和跳转流程要按这一点设计 | PAP-68 |
+| 规则 6（已登录的人打开登录页、注册页时跳走）在 proxy 里做，见 PAP-68 设计第 7 节；判断时不清除过期的 Cookie | PAP-68 |
 | 登录流程的 Playwright 冒烟：`playwright.config.ts` 的 `webServer.env` 已经关掉 `Secure` | PAP-68 |
 | 门户前面加反向代理或上 HTTPS 时：配 `serverActions.allowedOrigins`；删掉 `.env.portal` 里的 `PATRA_SESSION_COOKIE_SECURE=false`。切换后 Cookie 改名，旧的 `patra_session` 不再被读取，已登录的人要重新登录一次 | 引入反向代理或 HTTPS 的 Issue |
 

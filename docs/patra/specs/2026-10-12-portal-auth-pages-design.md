@@ -26,14 +26,14 @@ PAP-68 补上界面，走通简报 §0 的闭环：任一页面点导航栏「�
 - 新增原语 `dropdown-menu`：shadcn 的 base-nova 风格，底层是 base-ui 的 Menu，即简报里说的 `menu`。
 - 成功提示的外观：`Toaster` 去掉 `richColors`，照高保真稿改。
 - PAP-67 代码的三处小改：`session-cookie.ts` 加一个从请求对象读令牌的函数；`current-user.ts` 拆出接收令牌和超时的查询函数；删掉没有调用方的 `getCurrentUser()`。
-- 单元测试、组件测试、登录流程的 Playwright 冒烟、两个尺寸的视觉验收。
+- 单元测试、组件测试、Playwright 端到端测试（登录流程的冒烟，以及两组只有真实浏览器测得出的行为，第 14 节）、两个尺寸的视觉验收。
 
 不做：
 
 - 后端接口。PAP-67 三个 Server Action、`/api/auth/me` 和 `useCurrentUser()` 的行为也都不改。
 - 简报 §7「本版边界」里的入口：邮箱验证、找回密码、修改密码、第三方登录、个人资料、验证码、「记住我」、服务条款勾选、收藏。
 - 在登录页和注册页之间切换时带上已填的邮箱。
-- 不开 JavaScript 时提交表单（第 4.1 节方案 2）。
+- 不开 JavaScript 时提交表单（第 4.1 节方案 2）。表单写了 `method="post"`，页面接管表单之前提交时，邮箱和密码不进地址栏，但这时仍然登录不了（第 13 节）。
 - 会话失效的专门提示。简报 §4.3 规定下次打开页面时静默回到未登录态，PAP-67 已经做到。
 - 暗色模式。
 
@@ -74,9 +74,18 @@ PAP-68 补上界面，走通简报 §0 的闭环：任一页面点导航栏「�
 | 邮箱的通用错误 | 不认识的原因码、原因码为 null，也显示「邮箱格式不正确」 | 和 `TOO_LONG` 的处理一致。邮箱字段只剩「请输入邮箱」「邮箱格式不正确」两种说法 |
 | 登录页、注册页里的站内链接用 replace | 互跳、「去登录」、「返回」都替换当前这条历史记录 | 成功后的历史记录里不留登录页、注册页。否则按后退会回到登录页：要么被 proxy 弹走，要么看到客户端缓存里的表单（第 12 节第 4 条） |
 | 写入当前用户前先取消进行中的请求 | 登录、注册成功和登出成功时，先 `cancelQueries` 再 `setQueryData` | 成功前发出、成功后才回来的 `/api/auth/me` 会覆盖刚写入的值，导航栏又变回原样 |
-| 提交后的重新校验 | `reValidateMode` 也设成 `onBlur`；边输入边校验只用于已经报错的字段 | RHF 默认在提交后对所有字段边输入边校验，输入到一半就会报错，和简报 §6 不一致 |
+| 提交后的重新校验 | `mode`、`reValidateMode` 都设成 `onSubmit`，离开字段时的校验另外做（第 9.3 节）；边输入边校验只用于已经报错的字段 | RHF 默认在提交后对所有字段边输入边校验，输入到一半就会报错，和简报 §6 不一致 |
 | 提交时连后端字段错误一起清 | 和提示条一起清掉，再校验、请求 | 再次提交得到的是新结果，旧的错误不该留着 |
 | `next` 出现多次 | 页面和 proxy 都取第一个 | 两处的结果一致 |
+
+写实施计划时补的决定（计划评审时确认）：
+
+| 决定 | 内容 | 理由 |
+|---|---|---|
+| 空着离开字段不校验 | 「请输入…」只在提交时出现（第 9.3 节） | 进入页面时焦点就在邮箱框，点一下页面别处就会冒出「请输入邮箱」 |
+| 离开字段时的校验晚一步 | 按着指针离开时，等松开再校验；没按着时，排到下一个宏任务（第 9.3 节） | 错误行插进来会把下方的链接、按钮往下挤，用户正在点的那一下会落空 |
+| 表单写 `method="post"` | 两张表单都写（第 13 节） | 页面接管表单之前提交时，浏览器默认用 GET，邮箱和密码会进地址栏 |
+| 开发时不打印 Server Action 的参数 | `next.config.ts` 设 `logging.serverFunctions: false`（第 13 节） | Next 开发时默认在终端打印每次调用的参数，登录、注册的参数里有明文密码 |
 
 版本：Next.js 16.3.8、React 19.3、TanStack Query 5.103.2、React Hook Form 7.88、Zod 4.6.5、base-ui 1.8、sonner 2.0.8。下面用到的框架行为，都对照源码、随包文档或实测核实过：
 
@@ -135,6 +144,7 @@ PAP-68 补上界面，走通简报 §0 的闭环：任一页面点导航栏「�
 | `src/components/portal/TopNav.tsx`（改） | 放进账号区和账号块，各包一层 Suspense |
 | `src/lib/portal-ui.ts`（改） | 按钮样式支持 `aria-disabled` |
 | `src/components/ui/sonner.tsx`、`src/app/layout.tsx`（改） | 成功提示的外观；去掉 `richColors` |
+| `next.config.ts`（改） | `logging.serverFunctions: false`：开发时终端不打印 Server Action 的参数 |
 
 依赖方向：表单依赖 actions、next-path、form-schemas、messages 和 query-keys；导航栏组件依赖 current-user-query、logout-mutation 和 next-path；proxy 依赖 next-path、session-cookie 和 current-user。next-path、messages、form-schemas 不带 `server-only`，客户端组件也能引用。
 
@@ -207,9 +217,10 @@ matcher 改为 `["/papers/:id", "/journals/:id", "/login", "/register"]`。`prox
 
 视觉照 `Spec-Form` 和 `patra.css`：
 
-- 聚焦：`focus-within:border-border-focus focus-within:ring-4 ring-clay-500/15`。
-- 错误：`has-[[aria-invalid=true]]:border-status-danger`；错误态下聚焦，光晕换成 `ring-rust-500/15`。
-- 提交中只读：底色换成 `--bg-sunken`，去掉内阴影。选择器要写 `has-[input:read-only]`，不能照抄注释里的 `has-[:read-only]`：按钮、图标这类不可编辑的元素也匹配 `:read-only`，输入框会一直显示成只读。
+- 聚焦：`has-[input:focus]:border-border-focus has-[input:focus]:ring-4 ring-clay-500/15`。只看输入框本身：密码框的显示 / 隐藏切换聚焦时，外框不亮（`Spec-Form` 02）。
+- 错误：`has-[input[aria-invalid=true]]:border-status-danger`；错误态下聚焦，光晕换成 `ring-rust-500/15`。
+- 提交中只读：`has-[input[readonly]]` 时底色换成 `--bg-sunken`，去掉内阴影和光晕。不能照抄注释里的 `has-[:read-only]`：按钮、图标这类不可编辑的元素也匹配 `:read-only`，输入框会一直显示成只读。
+- 三种状态都写成 `has-[…]`，不用 `focus-within:`：Tailwind 4.3 把 `focus-within:` 生成在 `hover:` 之前，悬停加聚焦时描边会是悬停色；`has-[…]` 生成在 `hover:` 之后，彼此按方括号里的字母序排，正好是只读压过出错、出错压过聚焦。
 
 ### 9.2 校验
 
@@ -224,7 +235,10 @@ matcher 改为 `["/papers/:id", "/journals/:id", "/login", "/register"]`。`prox
 
 ### 9.3 校验时机（简报 §6）
 
-- RHF 配 `mode: "onBlur"`、`reValidateMode: "onBlur"`：离开一个字段时校验它。
+- RHF 配 `mode: "onSubmit"`、`reValidateMode: "onSubmit"`，离开字段时的校验交给 `src/components/auth/use-blur-validation.ts`：
+  - 离开一个填了内容的字段时校验它。空着离开不校验，「请输入…」留到提交时：进入页面时焦点就在邮箱框，点一下页面别处不该冒出错误。
+  - 按着指针离开时，等松开再校验；没按着时（键盘离开、手机轻触），排到下一个宏任务再校验。离开字段时冒出的错误行会把下方的链接、按钮往下挤，立即校验的话，用户正在点的那一下就落空了：鼠标的按下和松开落在不同元素上；Chrome 里的手机轻触先派发 `pointerup`，再移交焦点、派发 `click`。
+  - 登录页的密码框不接：它只查非空，空着离开又不校验。
 - 点提交或在输入框里回车时，校验全部字段，焦点移到第一个出错的字段（RHF 的 `shouldFocusError`）。
 - 字段显示错误之后，每次输入都重新校验它，改对了错误立即消失。RHF 没有「只在报错后边输入边校验」的模式，所以在字段的 `onChange` 里补一段：这个字段当前有错误时，调用 `trigger(字段)`。
 - 注册页：确认密码不为空时，密码每次改动都重新比对确认密码。
@@ -338,7 +352,8 @@ matcher 改为 `["/papers/:id", "/journals/:id", "/login", "/register"]`。`prox
 ## 11. 成功提示
 
 - 沿用根布局右下角的 `Toaster`，去掉 `richColors`：它会把 `toast.success` 渲染成绿底，和高保真稿的「浅底 + moss 色图标」不一致。现有的普通 `toast()` 不受影响。
-- 成功图标用 moss 色（`text-status-success`），阴影用 `--shadow-lg`，底色、文字、边框、圆角沿用 `sonner.tsx` 现有的 token。
+- 成功图标用 moss 色（`text-status-success`），阴影用 `shadow-lg!`：sonner 在提示上写死了阴影，带 important 才压得过。
+- 底色、文字、边框、圆角用 `sonner.tsx` 原有的 token，但改写在 `Toaster` 的行内样式上：sonner 往 `<head>` 插入的样式不分层，原来写在类名里的变量压不过它，其实没有生效。
 - 移动端照高保真稿 `Nav-M-Toast`：距左右和底边各 16px。
 - 三条文案：「已登录」「注册成功，已登录」「已退出登录」。
 
@@ -353,7 +368,8 @@ matcher 改为 `["/papers/:id", "/journals/:id", "/login", "/register"]`。`prox
 ## 13. 安全
 
 - 开放重定向：`next` 只接受站内地址（第 6 节）。proxy 的 307 和表单的 `router.replace` 都只用 `safeNextPath` 的结果。
-- 密码只在表单的内存里：不进 URL、不进日志、不进查询缓存。邮箱也不放进 URL。
+- 密码只在表单的内存里：不进 URL、不进日志、不进查询缓存。邮箱也不放进 URL。开发时终端里的日志也算：Next 开发时默认打印每次 Server Action 调用的参数，`next.config.ts` 设 `logging.serverFunctions: false` 关掉。
+- 两张表单写 `method="post"`。脚本还没加载完、页面还没接管表单时就提交（网慢、设备慢、密码管理器自动提交），浏览器按表单自己的属性提交；默认的 GET 会把邮箱和密码放进地址栏、历史记录和服务器日志。改成 POST 后，Next 对不带 action ID 的 POST 照常渲染这一页，表单清空，可以再提交一次。
 - 令牌仍只在 HttpOnly Cookie 里，页面脚本读不到；导航栏只拿到 `userId` 和 `email`。
 - CSRF 防护沿用 PAP-67 设计第 11 节，本设计不新增会改数据的 GET。
 
@@ -374,14 +390,17 @@ matcher 改为 `["/papers/:id", "/journals/:id", "/login", "/register"]`。`prox
 | `tests/components/portal/NavAccount.test.tsx`、`MobileAccount.test.tsx` | jsdom | 三种形态，占位阶段不出现「登录」；链接里的 `next`；三个样例邮箱的首字符 C、P、2；退出进行中禁用，成功后桌面焦点落到「登录」、移动端关闭菜单，失败时重新请求当前用户 |
 | `tests/lib/auth/logout-mutation.test.tsx` | jsdom | 成功时写 null 并提示；进行中的 `/api/auth/me` 晚回来，不会把 null 覆盖掉；失败时重新请求、不提示 |
 | `tests/components/portal/TopNav.test.tsx`、`tests/app/loading-busy.test.tsx`（改） | jsdom | 补上 QueryClientProvider 和 `/api/auth/me` 的桩，原有断言不变 |
+| `tests/next-config.test.ts` | node | `logging.serverFunctions` 是 `false`（第 13 节） |
 
 端到端冒烟（Playwright，`tests/e2e/auth.spec.ts`）：
 
-- 没有设置 `PATRA_GATEWAY_BASE_URL` 时跳过。CI 里没有网关，会跳过；本地内联指向 mini 的网关跑。每跑一次，mini 上多一个一次性账号，dev 数据可以丢弃。
+- 账号流程在没有设置 `PATRA_GATEWAY_BASE_URL` 时跳过。CI 里没有网关，会跳过；本地内联指向 mini 的网关跑，用 `--workers=1`：`next dev` 下几个 worker 同时冷编译几个路由，Fast Refresh 重建会让页内跳转退化成整页加载，测试会点到页面还没接管的表单。每跑一次，mini 上多一个一次性账号，dev 数据可以丢弃。
 - 主流程按简报 §2 的文字流：在 `/papers?q=GLP-1` 点「登录」，再点去注册 → 注册后回到 `/papers?q=GLP-1`，看到「注册成功，已登录」和圆形标识 → 退出登录 → 再登录一次 → 再退出一次。邮箱每次随机生成，密码在运行时生成，不写进仓库。
 - 注册成功后按后退，不会回到登录页或注册页。
 - 登录后 `document.cookie` 里没有会话 Cookie（页面脚本读不到令牌，PAP-67 设计第 14 节留到这里验收的一条）。
 - 规则 6：已登录时直接打开 `/login?next=%2Fjournals`，最后停在 `/journals`。
+- 离开字段时冒出的错误不让点击落空（第 9.3 节）：登录页焦点在空的邮箱框里，直接点「注册」；注册页邮箱填了一半，直接点「登录」。鼠标用按住 100 毫秒的点击（Playwright 默认的 `click()` 按下就松开，测不出来），另用手机尺寸的轻触点一次。不连网关。
+- 页面接管表单之前提交（第 13 节）：禁用脚本后在两页各提交一次，请求是 POST，地址栏里没有邮箱和密码。不连网关。
 
 视觉验收：在 1440×900 和 375×812 两个尺寸下截图，和高保真稿的对应画板逐项比对。范围是登录页、注册页的默认态、几个错误态和提交中，导航栏的未登录态和菜单展开，以及移动端账号块。差异整理成一张对照页，交给用户验收。
 
@@ -413,8 +432,8 @@ matcher 改为 `["/papers/:id", "/journals/:id", "/login", "/register"]`。`prox
 
 ## 17. 要同步改的文档和 Issue
 
-- PAP-67 设计（`2026-10-10-portal-auth-design.md`）：第 5、8.1、10、13 节里的 `getCurrentUser()` 删掉；第 9.5 节和第 15 节里「登录页、注册页在渲染时把已登录的人跳走」「服务端判断是否已登录用 `getCurrentUser()`」两处，改为「规则 6 在 proxy 里做，见 PAP-68 设计第 7 节」。
-- 设计简报 §4.1、§4.2：补上两条通用错误（邮箱的其他问题显示「邮箱格式不正确」，密码的其他问题显示「密码不符合要求」），以及字段名对不上时用提示条。
+- PAP-67 设计（`2026-10-10-portal-auth-design.md`）：第 5、8.1、10、13 节里的 `getCurrentUser()` 删掉；第 9.5 节和第 15 节里「登录页、注册页在渲染时把已登录的人跳走」「服务端判断是否已登录用 `getCurrentUser()`」两处，改为「规则 6 在 proxy 里做，见 PAP-68 设计第 7 节」；第 12 节补上开发时终端里的日志（本设计第 13 节）。
+- 设计简报 §4.1、§4.2：补上两条通用错误（邮箱的其他问题显示「邮箱格式不正确」，密码的其他问题显示「密码不符合要求」），以及字段名对不上时用提示条；§6 的校验时机：空着离开字段不提示（第 9.3 节）。
 - `patra-portal/README.md`：目录结构加上 `app/login/`、`app/register/`、`components/auth/`；`proxy.ts` 的说明加上「已登录的人打开登录页、注册页时跳走」。
 - release spec 顶部的状态行：开 PR 时更新前端的进度。
 - Linear PAP-68：To-Do 加上 Tech Design，指向本设计；其余 To-Do 和 AC 随实施和验收勾掉。
