@@ -1,5 +1,6 @@
 import "server-only";
 import { cookies } from "next/headers";
+import type { NextRequest } from "next/server";
 
 /// 有效期 30 天，和会话的不活跃过期时间一致
 const MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
@@ -34,6 +35,12 @@ function sessionCookie() {
 /// 读会话令牌；没有 Cookie 或值为空时返回 null。
 export async function readSessionToken(): Promise<string | null> {
   const value = (await cookies()).get(sessionCookie().name)?.value;
+  return value ? value : null;
+}
+
+/// proxy 里用：从请求对象读会话令牌，规则和 `readSessionToken` 相同。
+export function readRequestSessionToken(req: NextRequest): string | null {
+  const value = req.cookies.get(sessionCookie().name)?.value;
   return value ? value : null;
 }
 

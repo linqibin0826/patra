@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { resetCookieJar } from "@tests/stubs/cookie-jar";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getCurrentUser, lookupSession } from "@/lib/auth/current-user";
+import { lookupSession, lookupSessionByToken } from "@/lib/auth/current-user";
 
 vi.mock("next/headers", () => import("@tests/stubs/cookie-jar"));
 
@@ -112,24 +112,61 @@ describe("lookupSession", () => {
   });
 });
 
-describe("getCurrentUser", () => {
-  it("已登录时返回用户", async () => {
-    fetchMock.mockResolvedValue(json(200, USER));
-    await expect(getCurrentUser()).resolves.toEqual(USER);
+describe("lookupSessionByToken", () => {
+  it.each([null, ""])("没有令牌（%j）时是 anonymous，不请求网关", async (token) => {
+    await expect(lookupSessionByToken(token)).resolves.toEqual({ status: "anonymous" });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("401 时返回 null，不清 Cookie", async () => {
-    fetchMock.mockResolvedValue(problem(401, "GW-0401"));
-    const jar = resetCookieJar({ patra_session: TOKEN });
-    await expect(getCurrentUser()).resolves.toBeNull();
-    expect(jar.written).toEqual([]);
+  it("带着传入的令牌请求网关的 /auth/me，不读 Cookie", async () => {
+    // 读 Cookie 会因为开关写错而抛错；不读 Cookie 才能照常拿到用户
+    vi.stubEnv("PATRA_SESSION_COOKIE_SECURE", "yes");
+    fetchMock.mockResolvedValue(json(200, { ...USER, accountType: "user" }));
+    await expect(lookupSessionByToken("patra_user_other")).resolves.toEqual({
+      status: "authenticated",
+      user: USER,
+    });
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    expect(url).toBe("http://gw.test:9528/patra-identity/auth/me");
+    expect(init?.headers).toEqual({ Authorization: "Bearer patra_user_other" });
   });
 
-  it("没有 Cookie 或网关不可用时返回 null", async () => {
-    resetCookieJar();
-    await expect(getCurrentUser()).resolves.toBeNull();
-    resetCookieJar({ patra_session: TOKEN });
-    fetchMock.mockResolvedValue(problem(503, "GW-0503"));
-    await expect(getCurrentUser()).resolves.toBeNull();
+  it.each(["GW-0401", "IDN-0401"])("401 %s 都是 rejected", async (code) => {
+    fetchMock.mockResolvedValue(problem(401, code));
+    await expect(lookupSessionByToken(TOKEN)).resolves.toEqual({ status: "rejected" });
+  });
+
+  it.each([`${TOKEN}\nX`, `${TOKEN}中`])(
+    "令牌放不进请求头（%j）时是 rejected，不请求网关，也不记日志",
+    async (token) => {
+      await expect(lookupSessionByToken(token)).resolves.toEqual({ status: "rejected" });
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(console.error).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ["503 GW-0503", () => problem(503, "GW-0503")],
+    ["200 但缺 email", () => json(200, { userId: USER.userId })],
+    ["200 但响应体不是 JSON", () => new Response("<html></html>", { status: 200 })],
+  ])("%s 时是 unavailable", async (_label, response) => {
+    fetchMock.mockResolvedValue(response());
+    await expect(lookupSessionByToken(TOKEN)).resolves.toEqual({ status: "unavailable" });
+  });
+
+  it.each([
+    ["超时", new DOMException("The operation was aborted due to timeout", "TimeoutError")],
+    ["网络错误", new TypeError("fetch failed")],
+  ])("%s时是 unavailable", async (_label, error) => {
+    fetchMock.mockRejectedValue(error);
+    await expect(lookupSessionByToken(TOKEN)).resolves.toEqual({ status: "unavailable" });
+  });
+
+  it("超时按传入的毫秒数，不传时是 10 秒", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    fetchMock.mockImplementation(async () => json(200, USER));
+    await lookupSessionByToken(TOKEN, 3_000);
+    await lookupSessionByToken(TOKEN);
+    expect(timeout.mock.calls).toEqual([[3_000], [10_000]]);
   });
 });

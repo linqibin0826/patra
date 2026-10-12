@@ -17,22 +17,26 @@ export type SessionLookup =
 /// `/auth/me` 的 200 响应里门户要用的字段，`accountType` 不读
 const currentUserSchema = z.object({ userId: z.string().min(1), email: z.string().min(1) });
 
-/// 带着会话令牌问网关当前用户是谁。不抛异常，也不写 Cookie。
-/// - 没有 Cookie：`anonymous`，不请求网关
-/// - Cookie 值放不进请求头（被改坏了）：`rejected`，不请求网关
+/// 带着会话令牌问网关当前用户是谁。不读也不写 Cookie，不抛异常。
+/// - 没有令牌：`anonymous`，不请求网关
+/// - 令牌放不进请求头（Cookie 被改坏了）：`rejected`，不请求网关
 /// - 200 且字段齐全：`authenticated`
 /// - 401（`GW-0401` 或 `IDN-0401`）：`rejected`
-/// - 其他状态码、请求抛错、响应体格式不对、读 Cookie 抛错：`unavailable`
-export async function lookupSession(): Promise<SessionLookup> {
+/// - 其他状态码、请求抛错、响应体格式不对：`unavailable`
+///
+/// `timeoutMs` 不传时用 `gatewayFetch` 默认的 10 秒。proxy 传 3 秒。
+export async function lookupSessionByToken(
+  token: string | null,
+  timeoutMs?: number,
+): Promise<SessionLookup> {
+  if (!token) {
+    return { status: "anonymous" };
+  }
+  if (!canSendToken(token)) {
+    return { status: "rejected" };
+  }
   try {
-    const token = await readSessionToken();
-    if (!token) {
-      return { status: "anonymous" };
-    }
-    if (!canSendToken(token)) {
-      return { status: "rejected" };
-    }
-    const res = await gatewayFetch(ME_ENDPOINT, { token });
+    const res = await gatewayFetch(ME_ENDPOINT, { token, timeoutMs });
     if (res.status === 401) {
       return { status: "rejected" };
     }
@@ -49,9 +53,14 @@ export async function lookupSession(): Promise<SessionLookup> {
   }
 }
 
-/// 服务端渲染的页面判断是否已登录时用（比如登录页「已登录就跳走」）。渲染时不能写 Cookie，
-/// 所以收到 401 也只返回 null，过期的 Cookie 留给下一次 `/api/auth/me` 清除。
-export async function getCurrentUser(): Promise<CurrentUser | null> {
-  const session = await lookupSession();
-  return session.status === "authenticated" ? session.user : null;
+/// 读出 Cookie 里的令牌，再按 `lookupSessionByToken` 的规则判断。读 Cookie 抛错时是 `unavailable`。
+export async function lookupSession(): Promise<SessionLookup> {
+  let token: string | null;
+  try {
+    token = await readSessionToken();
+  } catch (error) {
+    logRequestError(ME_ENDPOINT, error);
+    return { status: "unavailable" };
+  }
+  return lookupSessionByToken(token);
 }

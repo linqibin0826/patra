@@ -1,8 +1,10 @@
 // @vitest-environment node
 import { resetCookieJar } from "@tests/stubs/cookie-jar";
+import { NextRequest } from "next/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   clearSessionCookie,
+  readRequestSessionToken,
   readSessionToken,
   refreshSessionCookie,
   writeSessionCookie,
@@ -77,6 +79,37 @@ describe("readSessionToken", () => {
     await expect(readSessionToken()).resolves.toBeNull();
     resetCookieJar({ patra_session: "" });
     await expect(readSessionToken()).resolves.toBeNull();
+  });
+});
+
+describe("readRequestSessionToken", () => {
+  /// proxy 收到的请求，`cookie` 是请求头 Cookie 的原文
+  const request = (cookie: string) =>
+    new NextRequest("http://portal.test/login", { headers: { cookie } });
+
+  it("Secure 关时读 patra_session", () => {
+    vi.stubEnv("PATRA_SESSION_COOKIE_SECURE", "false");
+    const req = request(`patra_session=${TOKEN}; __Host-patra_session=other`);
+    expect(readRequestSessionToken(req)).toBe(TOKEN);
+  });
+
+  it("Secure 开时读 __Host-patra_session", () => {
+    vi.stubEnv("PATRA_SESSION_COOKIE_SECURE", undefined);
+    const req = request(`patra_session=other; __Host-patra_session=${TOKEN}`);
+    expect(readRequestSessionToken(req)).toBe(TOKEN);
+  });
+
+  it("没有 Cookie 或值为空时返回 null", () => {
+    vi.stubEnv("PATRA_SESSION_COOKIE_SECURE", "false");
+    expect(readRequestSessionToken(request(""))).toBeNull();
+    expect(readRequestSessionToken(request("patra_session="))).toBeNull();
+  });
+
+  it("开关写错时报错", () => {
+    vi.stubEnv("PATRA_SESSION_COOKIE_SECURE", "yes");
+    expect(() => readRequestSessionToken(request(`patra_session=${TOKEN}`))).toThrow(
+      "PATRA_SESSION_COOKIE_SECURE 只能是 true 或 false",
+    );
   });
 });
 
