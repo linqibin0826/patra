@@ -1852,7 +1852,7 @@ ssh linqibin@linqibins-mac-mini 'umask 077 && mkdir -p ~/.patra/secrets &&
 for h in local mini; do
   if [ "$h" = local ]; then run() { bash -c "$1"; }; else run() { ssh linqibin@linqibins-mac-mini "$1"; }; fi
   echo "== $h"; run 'cd ~/.patra/secrets && for f in nacos*.env; do printf "%s %s " "$f" "$(stat -f %Lp "$f")";
-    awk -F= "{printf \"%s:%d \", \$1, length(\$2)}" "$f"; echo; done'
+    awk "{i = index(\$0, \"=\"); printf \"%s:%d \", substr(\$0, 1, i - 1), length(\$0) - i}" "$f"; echo; done'
 done
 ```
 
