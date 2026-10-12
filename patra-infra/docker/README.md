@@ -79,8 +79,11 @@ cp patra-infra/docker/.env.secret.example patra-infra/docker/.env.secret
 # 编辑 .env.secret，把 TS_AUTHKEY 填成真实值（tskey-auth-...）
 
 # 4c. (MacBook) 把密钥文件复制到 Mac mini：与 MacBook 上的是同一份，生成方法见下文「密钥」。
-#     目录由第 4 步建好；缺了这两个文件，core 栈的 redis 和整个 apps 栈都起不来
-scp -p ~/.patra/secrets/redis.env ~/.patra/secrets/gateway.env linqibin@linqibins-mac-mini:.patra/secrets/
+#     目录由第 4 步建好；缺了这几个文件，core 栈的 redis、nacos 和整个 apps 栈都起不来
+scp -p ~/.patra/secrets/redis.env ~/.patra/secrets/gateway.env ~/.patra/secrets/nacos.env \
+  ~/.patra/secrets/nacos-push.env linqibin@linqibins-mac-mini:.patra/secrets/
+# 4d. (Mac mini) 生成只放 mini 的 nacos-server.env、nacos-admin.env，命令见 secrets/ 下对应的 *.example。
+#     管理员密码另存一份到密码管理器
 
 # 5. (Mac mini) 启动全栈（含 tailscale 网关；镜像走 ghcr.io，docker.io 在国内常 502）
 #    脚本会先幂等创建共享网络 patra-net，再按依赖顺序逐个子栈 up
@@ -89,15 +92,14 @@ bash patra-infra/scripts/compose-all.sh up
 # 6. (Mac mini) 验证全部 healthy
 bash patra-infra/scripts/compose-all.sh ps
 
-# 7. (Mac mini) 首次初始化 Nacos 3.x admin 用户（一次性，nacos 容器 healthy 后执行）
-#    Nacos 3.x 鉴权开启后默认无 admin 用户；首次调用后该 API 失效，密码可设强密码
-curl -X POST 'http://localhost:8848/nacos/v3/auth/user/admin' -d 'password=nacos'
-# 预期：{"code":0,"message":"success","data":{"username":"nacos","password":"nacos"}}
+# 7. (Mac mini) 初始化 Nacos（nacos 容器 healthy 后执行，幂等）：管理员、dev namespace、账号、角色和权限
+bash patra-infra/scripts/nacos-init.sh
+bash patra-infra/scripts/nacos-verify.sh    # 预期 通过 10 / 失败 0
 ```
 
 ### MacBook 应用访问 Nacos
 
-MacBook 上的应用直连 Mac mini 的 Nacos（HTTP 8848 + gRPC 9848），**无需 ssh tunnel、无需额外环境变量**：各服务 yml 的 `NACOS_HOST` 缺省跟随 `PATRA_INFRA_HOST`。Nacos 控制台同样直连：`http://$PATRA_INFRA_HOST:8080`。
+MacBook 上的应用直连 Mac mini 的 Nacos（HTTP 8848 + gRPC 9848），**无需 ssh tunnel**：各服务 yml 的 `NACOS_HOST` 缺省跟随 `PATRA_INFRA_HOST`。账号 `patra-app` 来自 `~/.patra/secrets/nacos.env`，由 dev profile 导入，缺文件时启动失败。Nacos 控制台同样直连：`http://$PATRA_INFRA_HOST:8080`，用管理员登录。
 
 > 曾因 tailscale MTU 丢 gRPC HTTP/2 帧而必须经 ssh tunnel 转发，现已拆除。直连卡 STARTING 时的排查见 `../docs/mac-mini-connectivity.md` §2。
 
@@ -141,7 +143,7 @@ ssh linqibin@linqibins-mac-mini 'docker restart patra-rocketmq-broker'  # 只重
 
 ## 密钥
 
-密钥放在仓库外的 `~/.patra/secrets/`（目录 0700，文件 0600），MacBook 和 Mac mini 各放一份，内容相同。
+密钥放在仓库外的 `~/.patra/secrets/`（目录 0700，文件 0600）。除了只放 mini 的 `nacos-server.env`、`nacos-admin.env`，MacBook 和 Mac mini 各放一份，内容相同。
 
 - 两边放同一份，是因为本机开发和 mini 是同一个环境，共用 mini 的 Redis 和同一对签名密钥。
 - 不放在 compose 目录，是因为 CD 每次运行前的 `git clean` 会删掉 runner 工作区里被忽略的文件。
@@ -150,6 +152,10 @@ ssh linqibin@linqibins-mac-mini 'docker restart patra-rocketmq-broker'  # 只重
 |---|---|---|---|
 | `redis.env` | `REDIS_PASSWORD`，64 位十六进制 | core 栈的 redis；catalog、identity、gateway 的容器；这三个服务在本机以 dev profile 起的进程 | compose 报出路径并拒绝执行；本机进程启动失败并报出路径 |
 | `gateway.env` | `PATRA_GATEWAY_IDENTITY_ASSERTION_PRIVATE_KEY`，含私钥的 EC P-256 JWK JSON，一行 | gateway 的容器和本机进程 | 同上 |
+| `nacos-server.env` | Nacos 的 `NACOS_AUTH_TOKEN`、`NACOS_AUTH_IDENTITY_KEY`、`NACOS_AUTH_IDENTITY_VALUE`。**只放 mini** | core 栈的 nacos | compose 报出路径并拒绝执行 |
+| `nacos-admin.env` | Nacos 管理员密码 `NACOS_ADMIN_PASSWORD`。**只放 mini**，另存密码管理器 | `nacos-init.sh`、`nacos-verify.sh` | 脚本说明缺哪个变量并退出 |
+| `nacos.env` | 应用账号 `NACOS_USERNAME=patra-app`、`NACOS_PASSWORD` | 6 个后端服务的容器和本机进程；两个 Nacos 脚本 | 同 `redis.env` |
+| `nacos-push.env` | 推送账号 `NACOS_PUSH_USERNAME=patra-push`、`NACOS_PUSH_PASSWORD` | 两个 Nacos 脚本；PAP-75 的推送 | 脚本说明缺哪个变量并退出 |
 | `<服务>.env` | 该服务的外部数据源密钥，例如 catalog 的 `SCOPUS_API_KEY` | 对应服务的容器 | 跳过 |
 
 两种进程怎么读到这些文件：
@@ -177,7 +183,11 @@ K="$(mktemp -u ~/.patra/secrets/key.XXXXXX)"   # 任务要求私钥文件事先�
   | tail -1 > /tmp/patra-identity-assertion-public.jwks   # 前两行是提示，最后一行是公钥 JWK Set
 { printf 'PATRA_GATEWAY_IDENTITY_ASSERTION_PRIVATE_KEY='; cat "$K"; } > ~/.patra/secrets/gateway.env
 rm -f "$K"
+printf 'NACOS_USERNAME=patra-app\nNACOS_PASSWORD=%s\n' "$(openssl rand -hex 24)" > ~/.patra/secrets/nacos.env
+printf 'NACOS_PUSH_USERNAME=patra-push\nNACOS_PUSH_PASSWORD=%s\n' "$(openssl rand -hex 24)" > ~/.patra/secrets/nacos-push.env
 ```
+
+`nacos-server.env`、`nacos-admin.env` 在 mini 上生成，命令见 `secrets/` 下对应的模板。
 
 公钥不是机密，提交在三处：
 
@@ -191,7 +201,8 @@ rm -f "$K"
 
 ```bash
 ssh linqibin@linqibins-mac-mini 'umask 077 && mkdir -p ~/.patra/secrets && chmod 700 ~/.patra/secrets'
-scp -p ~/.patra/secrets/redis.env ~/.patra/secrets/gateway.env linqibin@linqibins-mac-mini:.patra/secrets/
+scp -p ~/.patra/secrets/redis.env ~/.patra/secrets/gateway.env ~/.patra/secrets/nacos.env \
+  ~/.patra/secrets/nacos-push.env linqibin@linqibins-mac-mini:.patra/secrets/
 ```
 
 ### 改了密钥文件之后
@@ -218,6 +229,31 @@ GATEWAY_IMAGE_TAG="$(cat ~/.patra/cd/last-good-gateway)" docker compose -f docke
    - 本机：网关重启一次。
 4. 等至少 60 秒。断言有效期是 60 秒，等完旧私钥签出的断言就全部过期了。
 5. 从三处删掉旧公钥，提交、推送。
+
+## Nacos
+
+- 3.2.4，开着鉴权。存储在业务 PG 的 `patra_nacos` 库（官方 PG 插件，镜像自带）；`data/` 卷只剩服务发现的持久化数据和 jraft 元数据。
+- 账号：管理员 `nacos`；应用账号 `patra-app`（public 服务注册读写、dev 配置只读）；推送账号 `patra-push`（只能写 dev 的 `DEFAULT_GROUP`）。密钥放 dev 的 `PATRA_SECRETS` 分组，只有管理员能改。
+- 账号、角色、权限由 `scripts/nacos-init.sh` 按脚本里的清单同步，不要在控制台手改：下次执行会被改回。验收用 `scripts/nacos-verify.sh`（加 `--expect-services` 时另查 6 个服务都已注册）。
+- 改应用或推送账号的密码：两台机器都改密钥文件，mini 上跑 `nacos-init.sh`，再按「改了密钥文件之后」重建 6 个应用容器、重启本机进程。
+- 换 token 签名密钥：改 mini 上的 `nacos-server.env`，执行 `docker compose -f docker-compose.core.yaml up -d --force-recreate nacos`。已签出的令牌全部失效，客户端会自动重新登录。改密码或删用户**不会**作废已签出的令牌（默认 18000 秒有效），要立刻撤销只能换签名密钥。
+- 镜像启动脚本开着 `set -x`，token 签名密钥和 identity 会出现在 `docker logs patra-nacos` 里（3.3 起改掉）。排查时不要把这段日志贴到任何地方。
+
+### 建表
+
+全新部署时，PG 的 init 脚本会自动执行 `postgres/init-scripts/03-nacos-schema.sh`。已有数据的 PG（如 mini）手动执行：
+
+```bash
+docker exec patra-postgres psql -U postgres -c 'CREATE DATABASE patra_nacos;'
+docker exec patra-postgres bash /docker-entrypoint-initdb.d/03-nacos-schema.sh
+```
+
+脚本先判断库的状态：空库才建表，表齐了就跳过，只有一部分时报错、不动库。建表在一个事务里，失败会回滚到空库。官方 schema 每张表都先 DROP 再建，不要绕过 03 直接执行 `pg-schema-*.sql`。
+
+### 升级
+
+- 对比新旧两个 tag 的 `pg-schema.sql`，手动执行差异部分；把新文件放进 `postgres/init-scripts/nacos/`，并改 03 里的默认路径。
+- 升到 3.3 时，compose 里数据库相关的环境变量要改名为 `NACOS_PLUGIN_DATASOURCE_DB_*`：3.3 镜像的配置文件改用新键，新键优先于旧的 `db.*`。
 
 ---
 
@@ -266,7 +302,7 @@ rocketmq:
 ### 核心服务
 - **PostgreSQL**: `linqibins-mac-mini:15432` (postgres/123456)
 - **Redis**: `linqibins-mac-mini:16379`（要密码：用户 `default`，密码在 `~/.patra/secrets/redis.env`）
-- **Nacos 控制台**: http://linqibins-mac-mini:8080
+- **Nacos 控制台**: http://linqibins-mac-mini:8080（用管理员 `nacos` 登录，密码在 mini 的 `~/.patra/secrets/nacos-admin.env`）
 
 ### 存储服务
 - **MinIO API**: `linqibins-mac-mini:19000` (minioadmin/minioadmin123)

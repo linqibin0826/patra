@@ -307,8 +307,7 @@ export DB_USERNAME=root
 export DB_PASSWORD=your_password
 export NACOS_HOST=$PATRA_INFRA_HOST  # 缺省即跟随 PATRA_INFRA_HOST，通常无需设置
 export NACOS_PORT=8848
-export NACOS_USERNAME=nacos
-export NACOS_PASSWORD=nacos  # 生产必须改密
+# Nacos 账号来自 ~/.patra/secrets/nacos.env，dev profile 自动导入，不用设
 ```
 
 3. **编译并启动**:

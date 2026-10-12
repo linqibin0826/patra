@@ -38,8 +38,8 @@
 - **现状**：2026-09-23 在当前拓扑（mini 改用官方 tailscale GUI、节点重建后）实测 MacBook 直连 `$PATRA_INFRA_HOST:9848` 的 HTTP/2 握手、服务注册与心跳均正常，大响应/大请求体跨 tailscale 双向也无丢包，tunnel 已拆除。应用 yml 的 `NACOS_HOST` 缺省跟随 `PATRA_INFRA_HOST`。
 - **若复发**：对比 HTTP 与 gRPC 端口，区分是不是 MTU——
   ```sh
-  # HTTP 端口：正常回 JSON
-  curl -s -m 8 "http://$PATRA_INFRA_HOST:8848/nacos/v1/ns/instance/list?serviceName=patra-gateway&username=nacos&password=nacos"
+  # HTTP 端口：正常回 JSON（状态接口不要鉴权）
+  curl -s -m 8 "http://$PATRA_INFRA_HOST:8848/nacos/v3/admin/core/state"
   # gRPC 端口：纯 h2 请求回 415 即说明 HTTP/2 握手通了
   curl -s -m 8 -o /dev/null -w '%{http_code}\n' --http2-prior-knowledge http://$PATRA_INFRA_HOST:9848/
   ```

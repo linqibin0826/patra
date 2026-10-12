@@ -104,7 +104,8 @@ identity 自己的 `IDN-0401` 仍会出现：带有效断言但用户已封禁�
 | 环境变量 | 说明 | 默认值 |
 |---|---|---|
 | `SPRING_PROFILES_ACTIVE` | profile | `dev` |
-| `NACOS_HOST` / `NACOS_PORT` / `NACOS_USERNAME` / `NACOS_PASSWORD` | Nacos | 跟随 `PATRA_INFRA_HOST`、`8848`、`nacos` / `nacos` |
+| `NACOS_HOST` / `NACOS_PORT` | Nacos | 跟随 `PATRA_INFRA_HOST`、`8848` |
+| `NACOS_USERNAME` / `NACOS_PASSWORD` | Nacos 应用账号 `patra-app` | 无，来自 `~/.patra/secrets/nacos.env`（容器经 `env_file`，dev 经 `spring.config.import`） |
 | `TAILSCALE_IP` | dev 下向 Nacos 注册的 IP | 空 |
 | `REDIS_HOST` / `REDIS_PORT` | 会话所在的 Redis（container） | 无，来自 `.env.common`；dev 固定为 `${PATRA_INFRA_HOST:127.0.0.1}` / `16379` |
 | `REDIS_PASSWORD` | Redis 密码，用户 `default` | 无，来自 `~/.patra/secrets/redis.env` |
