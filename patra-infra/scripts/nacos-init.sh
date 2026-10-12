@@ -6,7 +6,7 @@
 #   NACOS_ADDR、NACOS_CONSOLE_ADDR、NACOS_SECRETS_DIR（见 nacos-lib.sh）
 #   凭据：nacos-admin.env、nacos.env、nacos-push.env；环境变量里已有同名变量时优先，对应文件可以不存在
 # 账号的权限以下面的 APP_PERMS、PUSH_PERMS 为准：缺的补上，多的删掉。不要在控制台手改权限，下次执行会被改回。
-# 改账号密码：改文件后重跑本脚本，已有账号的密码会被重置成文件里的值。
+# 改账号密码：改文件后重跑本脚本，已有账号的密码会被重置成文件里的值（文件里的密码能登录时不动）。
 # 管理员密码只在服务端还没有管理员时生效；之后要改，先在控制台改，再同步改 nacos-admin.env。
 set -eo pipefail
 # shellcheck source=nacos-lib.sh source-path=SCRIPTDIR
@@ -30,13 +30,18 @@ nacos_load NACOS_PASSWORD nacos.env || exit 1
 nacos_load NACOS_PUSH_USERNAME nacos-push.env || exit 1
 nacos_load NACOS_PUSH_PASSWORD nacos-push.env || exit 1
 
-# ensure_user USERNAME PASSWORD：不存在就创建；存在就把密码重置成文件里的值
+# ensure_user USERNAME PASSWORD：不存在就创建；存在时先用文件里的密码登录，登录不了才重置成文件里的值。
+# 先试登录：3.0.x 的 PUT /v3/auth/user 对管理员令牌也返回 403（3.2.4 已修），密码没变时不必重置，脚本就能在旧版上重跑
 ensure_user() {
   nacos_api GET /v3/auth/user/list "$AT" pageNo=1 pageSize=100 "username=$1" search=accurate
   nacos_ok || die "查询用户 $1：$(detail)"
   if jq -e --arg u "$1" '.data.pageItems[]? | select(.username == $u)' <<<"$NACOS_BODY" >/dev/null; then
+    if nacos_login "$1" "$2"; then
+      log "用户 $1 已存在，密码与文件一致"
+      return 0
+    fi
     nacos_api PUT /v3/auth/user "$AT" "username=$1" "newPassword=$2"
-    nacos_ok || die "重置 $1 的密码：$(detail)"
+    nacos_ok || die "重置 $1 的密码：$(detail)。3.0.x 上管理员改不了别人的密码（3.2.4 已修），升级后再改"
     log "用户 $1 已存在，密码已按文件重置"
   else
     nacos_api POST /v3/auth/user "$AT" "username=$1" "password=$2"
