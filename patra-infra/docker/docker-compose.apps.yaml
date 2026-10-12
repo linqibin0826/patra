@@ -10,6 +10,7 @@ name: patra-apps
 #   ${HOME}/.patra/secrets/*.env   密钥，放在仓库外（见 README「密钥」）：
 #     redis.env     Redis 密码。catalog、identity、gateway 必需
 #     gateway.env   网关签身份断言的私钥。gateway 必需
+#     nacos.env     Nacos 应用账号 patra-app。6 个后端服务必需
 #     <svc>.env     外部数据源密钥等。可选，缺失时跳过
 # 必需文件缺一个，compose 对本项目的任何命令都会失败（portal 也部署不了），报错里有完整路径。
 # 密钥不放在 compose 目录：CD 每次运行前的 git clean 会删掉 runner 工作区里被忽略的文件。
@@ -31,6 +32,8 @@ services:
     env_file:
       - .env.common
       - .env.registry
+      - path: ${HOME}/.patra/secrets/nacos.env
+        required: true
       - path: ${HOME}/.patra/secrets/registry.env
         required: false
     healthcheck:
@@ -45,6 +48,8 @@ services:
     env_file:
       - .env.common
       - .env.object-storage
+      - path: ${HOME}/.patra/secrets/nacos.env
+        required: true
       - path: ${HOME}/.patra/secrets/object-storage.env
         required: false
     healthcheck:
@@ -59,6 +64,8 @@ services:
     env_file:
       - .env.common
       - .env.catalog
+      - path: ${HOME}/.patra/secrets/nacos.env
+        required: true
       - path: ${HOME}/.patra/secrets/redis.env
         required: true
       - path: ${HOME}/.patra/secrets/catalog.env
@@ -75,6 +82,8 @@ services:
     env_file:
       - .env.common
       - .env.ingest
+      - path: ${HOME}/.patra/secrets/nacos.env
+        required: true
       - path: ${HOME}/.patra/secrets/ingest.env
         required: false
     healthcheck:
@@ -89,6 +98,8 @@ services:
     env_file:
       - .env.common
       - .env.identity
+      - path: ${HOME}/.patra/secrets/nacos.env
+        required: true
       - path: ${HOME}/.patra/secrets/redis.env
         required: true
       - path: ${HOME}/.patra/secrets/identity.env
@@ -105,6 +116,8 @@ services:
     env_file:
       - .env.common
       - .env.gateway
+      - path: ${HOME}/.patra/secrets/nacos.env
+        required: true
       - path: ${HOME}/.patra/secrets/redis.env
         required: true
       - path: ${HOME}/.patra/secrets/gateway.env

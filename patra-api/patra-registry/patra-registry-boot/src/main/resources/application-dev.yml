@@ -8,6 +8,10 @@ spring:
   config:
     activate:
       on-profile: dev
+    # Nacos 账号与 mini 容器是同一个文件，放在仓库外（patra-infra/docker/README.md「密钥」）。
+    # 不加 optional：缺文件时启动失败并报出路径
+    import:
+      - file:${user.home}/.patra/secrets/nacos.env[.properties]
 
   # Development database (Mac mini docker, host from $PATRA_INFRA_HOST in zsh env)
   datasource:

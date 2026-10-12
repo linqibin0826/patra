@@ -2,10 +2,11 @@ spring:
   config:
     activate:
       on-profile: dev
-    # Redis 密码与 mini 容器是同一个文件，放在仓库外（patra-infra/docker/README.md「密钥」）。
+    # Redis 密码和 Nacos 账号与 mini 容器是同一批文件，放在仓库外（patra-infra/docker/README.md「密钥」）。
     # 不加 optional：缺文件时启动失败并报出路径
     import:
       - file:${user.home}/.patra/secrets/redis.env[.properties]
+      - file:${user.home}/.patra/secrets/nacos.env[.properties]
   # dev 场景：用 TAILSCALE_IP 注册，确保跨主机服务发现拿到的 IP 可达。
   cloud:
     nacos:

@@ -13,6 +13,7 @@ spring:
     import:
       - file:${user.home}/.patra/secrets/redis.env[.properties]
       - file:${user.home}/.patra/secrets/gateway.env[.properties]
+      - file:${user.home}/.patra/secrets/nacos.env[.properties]
 
   # dev 场景：用 TAILSCALE_IP 注册，确保跨主机服务发现拿到的 IP 可达。
   cloud:
