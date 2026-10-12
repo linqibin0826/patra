@@ -1,4 +1,4 @@
-import type { LoginResult } from "@/lib/auth/types";
+import type { FieldError, LoginResult } from "@/lib/auth/types";
 
 /// 字段下方的错误文案（简报 §4.1、§4.2）。前端校验和后端的原因码共用。
 export const FIELD_MESSAGES = {
@@ -44,6 +44,20 @@ export function fieldErrorMessage(field: "email" | "password", code: string | nu
     default:
       return FIELD_MESSAGES.passwordInvalid;
   }
+}
+
+/// `invalid-fields` 里的字段错误 → 各字段下方的文案。同一字段只取第一条；`email`、`password`
+/// 以外的字段丢掉，一条都对不上时返回空对象。
+export function fieldErrorMessages(
+  fieldErrors: FieldError[],
+): Partial<Record<"email" | "password", string>> {
+  const messages: Partial<Record<"email" | "password", string>> = {};
+  for (const { field, code } of fieldErrors) {
+    if ((field === "email" || field === "password") && messages[field] === undefined) {
+      messages[field] = fieldErrorMessage(field, code);
+    }
+  }
+  return messages;
 }
 
 /// 登录失败时用提示条显示的结果。`invalid-fields` 显示在字段下方，不在这里。

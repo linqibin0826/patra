@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   FIELD_MESSAGES,
   fieldErrorMessage,
+  fieldErrorMessages,
   loginAlertMessage,
   REGISTER_UNAVAILABLE_MESSAGE,
   TOAST_MESSAGES,
@@ -34,6 +35,23 @@ describe("fieldErrorMessage", () => {
   // 普通对象按原因码查表时，`constructor` 这类名字会查到对象原型上的属性
   it("原因码和对象原型上的属性同名时，仍是该字段的通用错误", () => {
     expect(fieldErrorMessage("password", "constructor")).toBe("密码不符合要求");
+  });
+});
+
+describe("fieldErrorMessages", () => {
+  it("同一字段只取第一条，email、password 以外的字段丢掉", () => {
+    expect(
+      fieldErrorMessages([
+        { field: "deviceId", code: "REQUIRED" },
+        { field: "password", code: "TOO_SHORT" },
+        { field: "password", code: "REQUIRED" },
+        { field: "email", code: null },
+      ]),
+    ).toEqual({ password: "密码至少 8 位", email: "邮箱格式不正确" });
+  });
+
+  it("一条都对不上 email、password 时返回空对象", () => {
+    expect(fieldErrorMessages([{ field: "deviceId", code: "REQUIRED" }])).toEqual({});
   });
 });
 
