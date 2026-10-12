@@ -22,6 +22,22 @@ describe("按钮类串", () => {
     }
   });
 
+  it.each([
+    ["btnPrimary", btnPrimary],
+    ["btnSecondary", btnSecondary],
+  ])("%s 的 hover / 按下反馈同样不作用于 aria-disabled 的按钮", (_, cls) => {
+    const stateful = tokens(cls).filter((t) => /(?:^|:)(?:hover|active):/.test(t));
+    for (const t of stateful) {
+      expect(t, t).toMatch(/(?:^|:)not-aria-disabled:/);
+    }
+  });
+
+  it("aria-disabled 的按钮显示不可点的光标、55% 不透明度（提交中的按钮用它，不用 disabled）", () => {
+    expect(tokens(btnPrimary)).toEqual(
+      expect.arrayContaining(["aria-disabled:cursor-not-allowed", "aria-disabled:opacity-55"]),
+    );
+  });
+
   it("hover 前移只作用于标了 data-icon=trailing 的末尾图标（前置图标不动）", () => {
     expect(btnPrimary).toMatch(/\[&>svg\[data-icon=trailing\]\]:translate-x-0\.5/);
     expect(btnPrimary).not.toMatch(/svg:last-child/);

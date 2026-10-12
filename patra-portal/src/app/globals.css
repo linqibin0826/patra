@@ -225,6 +225,17 @@
   input[type="search"]::-webkit-search-cancel-button {
     appearance: none;
   }
+  /* 浏览器自动填充后保持输入框的底色，不出现浏览器自带的黄 / 蓝底（照高保真稿 patra.css）。
+     登录、注册提交中输入框只读，外框换成凹陷色，自动填充过的输入框跟着换 */
+  input:-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 1000px var(--bg-elevated) inset;
+    -webkit-text-fill-color: var(--ink-900);
+    caret-color: var(--ink-900);
+  }
+  input:-webkit-autofill:read-only {
+    -webkit-box-shadow: 0 0 0 1000px var(--bg-sunken) inset;
+    -webkit-text-fill-color: var(--fg-2);
+  }
 }
 
 /* ============================================================

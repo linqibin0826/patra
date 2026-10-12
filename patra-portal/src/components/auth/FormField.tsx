@@ -1,0 +1,70 @@
+import { CircleAlert } from "lucide-react";
+import type { ReactNode } from "react";
+
+/// 交给输入框的属性：`id` 和标签关联，`aria-describedby` 指向下方当前显示的那一行
+export interface FieldControl {
+  id: string;
+  className: string;
+  "aria-invalid": boolean;
+  "aria-describedby"?: string;
+}
+
+interface FormFieldProps {
+  id: string;
+  label: string;
+  /// 常驻提示，比如注册页密码的「至少 8 位」。有错误时被错误文案替换
+  hint?: ReactNode;
+  /// 错误文案，可以带链接（「该邮箱已注册，去登录」）
+  error?: ReactNode;
+  children: (control: FieldControl) => ReactNode;
+}
+
+/// 输入框本身透明、无描边，描边和聚焦光晕画在外框上（全局焦点环不管文本框）。移动端字号 17px，
+/// iOS 聚焦时不放大页面。自动填充后的底色由 globals.css 的 `input:-webkit-autofill` 规则处理。
+const INPUT =
+  "h-full min-w-0 flex-1 bg-transparent p-0 text-md leading-6 text-ink-900 outline-none placeholder:text-fg-4 read-only:text-fg-2 max-[880px]:text-lg";
+
+/// 外框：内凹的输入井。悬停加深描边；输入框聚焦时换描边、加光晕；出错时描边变红，聚焦光晕也换成
+/// 红色；提交中只读时换凹陷底色，去掉内阴影和光晕。三种状态都按输入框判断：切换按钮聚焦时外框不亮
+/// （高保真稿 Spec-Form 02）。不用 `focus-within:`：它生成在 `hover:` 之前，悬停加聚焦时描边会是
+/// 悬停色；`has-[…]` 生成在 `hover:` 之后，彼此按方括号里的字母序，只读 > 出错 > 聚焦。
+/// 里面有切换按钮时右边距收窄，移动端按钮 44px，收得更窄。
+const BOX =
+  "flex h-12 items-center gap-1 rounded-xl border border-border-strong bg-bg-elevated px-4 shadow-inset ring-clay-500/15 transition-[border-color,box-shadow,background-color] duration-200 hover:border-ink-500 has-[button]:pr-2 max-[880px]:has-[button]:pr-0.5 has-[input:focus]:border-border-focus has-[input:focus]:ring-4 has-[input[aria-invalid=true]]:border-status-danger has-[input[aria-invalid=true]]:ring-rust-500/15 has-[input[readonly]]:border-border-default has-[input[readonly]]:bg-bg-sunken has-[input[readonly]]:shadow-none has-[input[readonly]]:ring-0";
+
+/// 表单字段：标签、输入框，下面一行是常驻提示或错误文案，错误替换提示，两者不同时出现。
+/// 输入框由 `children` 渲染，拿到 `id`、`aria-invalid`、`aria-describedby` 和样式。
+/// 错误行出现时淡入下落，参数和折叠区相同，直接用 `.disclosure-body`（高保真稿 Spec-Form 07）。
+/// 错误行和提示行的 `key` 不同：错误替换提示时节点重新插入，入场过渡才会触发。
+export function FormField({ id, label, hint, error, children }: FormFieldProps) {
+  const messageId = error ? `${id}-error` : hint ? `${id}-hint` : undefined;
+  return (
+    <div className="flex min-w-0 flex-col gap-2">
+      <label htmlFor={id} className="font-medium text-fg-1 text-sm leading-5">
+        {label}
+      </label>
+      <div className={BOX}>
+        {children({
+          id,
+          className: INPUT,
+          "aria-invalid": Boolean(error),
+          "aria-describedby": messageId,
+        })}
+      </div>
+      {error ? (
+        <p
+          key="error"
+          id={messageId}
+          className="disclosure-body flex items-start gap-1.5 text-sm text-status-danger leading-5"
+        >
+          <CircleAlert className="mt-0.75 size-3.5 shrink-0" aria-hidden="true" />
+          <span>{error}</span>
+        </p>
+      ) : hint ? (
+        <p key="hint" id={messageId} className="text-fg-3 text-sm leading-5">
+          {hint}
+        </p>
+      ) : null}
+    </div>
+  );
+}
