@@ -87,7 +87,6 @@ spring:
       host: ${PATRA_INFRA_HOST:127.0.0.1}
       port: 16379
       username: default
-      password: ${REDIS_PASSWORD}
 
 patra:
   security:
@@ -104,11 +103,17 @@ spring:
     url: jdbc:postgresql://${PATRA_INFRA_HOST:127.0.0.1}:15432/patra_registry
 ```
 
-- `patra-object-storage.yaml`、`patra-identity.yaml` 写法与 registry 相同，库名分别是 `patra_storage`、`patra_identity`。
+- `patra-object-storage.yaml` 写法与 registry 相同，库名是 `patra_storage`。
+- `patra-identity.yaml` 写法与 registry 相同，库名是 `patra_identity`，另加 `spring.data.redis.password: ${REDIS_PASSWORD}`。
 - `patra-gateway.yaml`：
 
   ```yaml
   patra.config-source.service: patra-gateway.yaml
+
+  spring:
+    data:
+      redis:
+        password: ${REDIS_PASSWORD}
 
   patra:
     gateway:
@@ -121,6 +126,7 @@ spring:
 - 用不到的键不影响服务：registry、object-storage 没有 Redis，gateway 没有数据源，对应的属性不会被绑定。
 - 主机默认值 `127.0.0.1` 与 starter 的 Nacos 地址写法一致；两种运行方式都会设 `PATRA_INFRA_HOST`，默认值只作应急。
 - 两个真正的密钥只写引用：本机由 starter 从 `~/.patra/secrets/` 读取，容器由 compose 的 `env_file` 注入，来源不变。
+- 密钥引用只写在用到它的服务文件里，公共配置里不写没有默认值的引用。starter 的签到检查会解析 Nacos 配置里的每个值，引用的变量没有值就启动失败并报出变量名；registry、object-storage 的容器不加载 `redis.env`，`${REDIS_PASSWORD}` 放在公共配置里会让它们启动不了。
 - 容器里原来的 `REGISTRY_DB_*`、`STORAGE_DB_*`、`IDENTITY_DB_*` 不再使用。
 - 文件内容须通过 PAP-75 的 `NacosConfigFilesTest`。
 
@@ -175,9 +181,7 @@ spring:
 
 ## 10. 交给 PAP-77 的约束
 
-- ingest、catalog 迁移后会读到公共配置里的 Redis 和数据库账号。要确认：
-  - 没有 Redis 的服务不会被 `${REDIS_PASSWORD}` 卡住；
-  - 它们的库账号确实是 `postgres`。
+- ingest、catalog 迁移后会读到公共配置里的 Redis 坐标和数据库账号。要确认它们的库账号确实是 `postgres`。用到 Redis 的服务在自己的文件里写 `spring.data.redis.password: ${REDIS_PASSWORD}`（第 5 节）。
 - `ApplicationConfigTest` 照抄到 ingest、catalog 的 boot 模块。
 - 收尾时清理 `.env.common` 的 `SPRING_PROFILES_ACTIVE`、Redis 坐标、MinIO 坐标。
 - 如果第 6 节决定改共享的 `service.Dockerfile`，ingest、catalog 直接沿用。

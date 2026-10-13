@@ -9,7 +9,6 @@ spring:
       host: ${PATRA_INFRA_HOST:127.0.0.1}
       port: 16379
       username: default
-      password: ${REDIS_PASSWORD}
 
 patra:
   security:
