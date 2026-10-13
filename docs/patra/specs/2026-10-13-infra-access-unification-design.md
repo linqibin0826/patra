@@ -291,6 +291,7 @@ env 文件里写死主机名，而不引用 `PATRA_INFRA_HOST`：compose 的 env
 - 小查询每次往返多约 0.1 ms（4.4）。
 - 跨机调用依赖 tailscale：tailscale 断开时，MacBook 和 mini 之间互相调不到，mini 容器之间不受影响。
 - MacBook 上起了同名服务后，mini 的网关会在容器实例和本机实例之间轮询，门户的部分请求会打到 MacBook。
+- RocketMQ 同理：切换后容器里的 ingest 真正连上了 broker，与本机 ingest 同在 `ingest-task-consumer-group` 集群消费组里，消息按队列分给两边。本机调试时会有一部分任务被 mini 消费掉。需要独占时，本机改用别的消费组。切换前已核对 `ing_outbox_message` 为空，xxl 上也没有给 `ingestOutboxRelayJob` 配调度，不会有积压消息在切换后集中发出。
 - 若 patra-net 的网关地址或 OrbStack 的宿主机网关机制变化，判据里的 `192.168.97.1` 和 0.250.250.254 要按实际调整。
 
 ## 12. 文档

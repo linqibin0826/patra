@@ -105,6 +105,7 @@
   docker exec patra-ingest bash -c 'exec 3<>/dev/tcp/linqibins-mac-mini/15432 && echo OK'
   ```
 - **新增连基础设施的容器**：同样加 `extra_hosts`（apps compose 里引用 `*infra-hosts` 锚点）。
+- **副作用**：容器里的 ingest 从此能连上 broker，与本机 ingest 同在一个集群消费组，消息会分给两边（与网关在容器实例和本机实例之间轮询同理）。本机调试需要独占消息时，改用别的消费组。
 
 ---
 
