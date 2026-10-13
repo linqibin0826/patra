@@ -3,12 +3,12 @@
 这个目录就是 Nacos `dev` namespace、`DEFAULT_GROUP` 分组的全部配置，以 git 为准。
 
 - **文件名即 dataId**：`patra-common.yaml` 是公共配置；`{spring.application.name}.yaml` 是各服务的配置。
-- **合入 main 后自动推送**：CD 的 `nacos-push` job 在部署前把整个目录同步到 Nacos。内容不同的发布，相同的跳过，Nacos 里有、目录里没有的删除。推送失败时本次不部署。
+- **合入 main 后自动推送**：每次 push main 触发的 CD 都会先跑 `nacos-push` job，在部署前把整个目录同步到 Nacos（不只是改了配置的那次）。内容不同的发布，相同的跳过，Nacos 里有、目录里没有的删除。推送失败时本次不部署。
 - **控制台只在应急时用**：在控制台改的内容，下次推送会被覆盖。回滚配置就 git revert 再合入。
 
 ## 每份文件的规则
 
-CI 里的 `NacosConfigFilesTest` 会检查这些规则，不通过的合不进 main：
+`NacosConfigFilesTest` 会检查这些规则：CI 里不通过的合不进 main；CD 推送前在 mini 上再跑一次，不通过就不推送（直推 main 时也挡得住）：
 
 1. 第一行写签到，必须是一行扁平键，值为文件名：
    - `patra-common.yaml` 写 `patra.config-source.common: patra-common.yaml`

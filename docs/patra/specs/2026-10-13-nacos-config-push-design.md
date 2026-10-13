@@ -160,18 +160,23 @@ Nacos 3.2.4 实测（2026-10-13，临时容器），由第 7.2 节集成测试�
   nacos-push:
     name: nacos-push
     needs: detect-changes
-    if: needs.detect-changes.outputs.nacos_changed == 'true'
+    if: github.event_name == 'push' || needs.detect-changes.outputs.nacos_changed == 'true'
     runs-on: [self-hosted, macmini]
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: 检查配置文件
+        run: ./gradlew :patra-starters:patra-spring-boot-starter-nacos:test --tests '*NacosConfigFilesTest'
       - name: 推送 Nacos 配置
         run: bash patra-infra/scripts/nacos-push.sh
   ```
 
   凭据从 runner 用户 HOME 下的 `nacos-push.env` 读取，不经 GitHub secrets。
+
+  - **push 事件每次都推送，不看 `nacos_changed`**（最终审查后改定）：排队中的运行会被更新的一次替换，被替换那次的 yaml 改动不在新运行的 diff 里，只按 `nacos_changed` 判断会漏推，Nacos 与 git 静默不一致。脚本跳过未变化的文件，多跑一次只花几秒。代价是只改代码的部署也会被推送失败挡住；PAP-74 之后服务启动本来就依赖 Nacos，可以接受。`workflow_dispatch` 仍按 `nacos_changed`：dispatch all 推送，回滚单服务不推送。
+  - **推送前先跑配置检查**（最终审查后改定）：CD 不等 CI，直推 main 时 CI 的检查可能还没跑完；在 mini 上先跑 `NacosConfigFilesTest`，不通过就不推送，坏配置不进 Nacos。
 
 - `build-deploy`：
 
