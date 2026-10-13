@@ -5,7 +5,7 @@ name: patra-apps
 # 镜像 tag 由 deploy job 通过 {SVC}_IMAGE_TAG 注入；手动 compose-all.sh up apps 时回退 latest。
 #
 # env_file 按「共享坐标、服务专属、密钥」叠加（后者覆盖同名）：
-#   .env.common   共享基建坐标（Nacos / MinIO / RocketMQ / xxl-job / Redis 地址）和身份断言公钥，dev 默认
+#   .env.common   共享基建坐标（mini 主机名 + 宿主机映射端口，与 IDE 一致）和身份断言公钥，dev 默认
 #   .env.<svc>    服务专属（DB / bucket / 日志路径，dev 默认）
 #   ${HOME}/.patra/secrets/*.env   密钥，放在仓库外（见 README「密钥」）：
 #     redis.env     Redis 密码。catalog、identity、gateway 必需
@@ -16,6 +16,11 @@ name: patra-apps
 # 密钥不放在 compose 目录：CD 每次运行前的 git clean 会删掉 runner 工作区里被忽略的文件。
 #
 # 服务清单 SSOT 见 patra-infra/cd/services.json（端口/镜像/构建上下文/部署顺序）。
+
+# 容器里把 mini 的主机名指向 OrbStack 宿主机网关：应用与 IDE 同用「主机名 + 宿主机映射端口」
+# 访问基础设施，且不经过 tailscale（见 docs/patra/specs/2026-10-13-infra-access-unification-design.md）。
+x-infra-hosts: &infra-hosts
+  - "linqibins-mac-mini:host-gateway"
 
 x-app-healthcheck: &app-healthcheck
   interval: 10s
@@ -29,6 +34,7 @@ services:
     container_name: patra-registry
     restart: unless-stopped
     ports: [ "6000:6000" ]
+    extra_hosts: *infra-hosts
     env_file:
       - .env.common
       - .env.registry
@@ -45,6 +51,7 @@ services:
     container_name: patra-object-storage
     restart: unless-stopped
     ports: [ "6200:6200" ]
+    extra_hosts: *infra-hosts
     env_file:
       - .env.common
       - .env.object-storage
@@ -61,6 +68,7 @@ services:
     container_name: patra-catalog
     restart: unless-stopped
     ports: [ "6300:6300" ]
+    extra_hosts: *infra-hosts
     env_file:
       - .env.common
       - .env.catalog
@@ -79,6 +87,7 @@ services:
     container_name: patra-ingest
     restart: unless-stopped
     ports: [ "6100:6100" ]
+    extra_hosts: *infra-hosts
     env_file:
       - .env.common
       - .env.ingest
@@ -95,6 +104,7 @@ services:
     container_name: patra-identity
     restart: unless-stopped
     ports: [ "6400:6400" ]
+    extra_hosts: *infra-hosts
     env_file:
       - .env.common
       - .env.identity
@@ -113,6 +123,7 @@ services:
     container_name: patra-gateway
     restart: unless-stopped
     ports: [ "9528:9528" ]
+    extra_hosts: *infra-hosts
     env_file:
       - .env.common
       - .env.gateway

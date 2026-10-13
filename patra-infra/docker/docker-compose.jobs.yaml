@@ -162,6 +162,9 @@ services:
       JAVA_OPTS: "-Drocketmq.namesrv.addr=rocketmq-namesrv:9876"
     ports:
       - "4002:8082"           # Dashboard UI
+    # broker 以 mini 主机名注册（BROKER_IP1），容器里要能解析它才能取 broker 统计
+    extra_hosts:
+      - "linqibins-mac-mini:host-gateway"
     depends_on:
       rocketmq-namesrv:
         condition: service_started

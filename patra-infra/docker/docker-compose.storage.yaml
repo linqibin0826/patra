@@ -43,11 +43,11 @@ services:
       echo 'Configuring MinIO client...';
       mc alias set patra http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin123};
 
-      echo 'Creating default bucket for development environment...';
-      mc mb --ignore-existing patra/dev-ingest;
+      echo 'Creating ingest cache bucket...';
+      mc mb --ignore-existing patra/patra-ingest-cache;
 
       echo 'Setting bucket policy to private (authenticated access only)...';
-      mc anonymous set none patra/dev-ingest;
+      mc anonymous set none patra/patra-ingest-cache;
 
       echo 'MinIO initialization completed successfully!';
       echo 'Available buckets:';
@@ -56,7 +56,7 @@ services:
       echo '';
       echo '==================================================';
       echo 'MinIO is ready for patra-ingest service';
-      echo 'Bucket: dev-ingest';
+      echo 'Bucket: patra-ingest-cache';
       echo 'Access: Private (authenticated only)';
       echo '==================================================';
       echo '';
