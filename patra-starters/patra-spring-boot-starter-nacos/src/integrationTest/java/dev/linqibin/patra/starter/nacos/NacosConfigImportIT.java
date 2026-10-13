@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -52,6 +53,12 @@ class NacosConfigImportIT {
     nacos.close();
   }
 
+  /// 本服务配置引用了 `${PATRA_IT_SECRET}`，先给它一个值，应用才能启动。
+  @BeforeEach
+  void provideSecret() {
+    System.setProperty("PATRA_IT_SECRET", "secret-for-test");
+  }
+
   @AfterEach
   void restore() {
     System.clearProperty("patra.it.shared");
@@ -84,12 +91,23 @@ class NacosConfigImportIT {
   @Test
   @DisplayName("Nacos 配置里的 ${变量} 能解析到进程里的值")
   void should_resolve_placeholder_in_nacos_config() {
-    System.setProperty("PATRA_IT_SECRET", "secret-for-test");
-
     try (ConfigurableApplicationContext context = nacos.launch(SERVICE)) {
       assertThat(context.getEnvironment().getProperty("patra.it.secret"))
           .isEqualTo("secret-for-test");
     }
+  }
+
+  @Test
+  @DisplayName("Nacos 配置引用的变量没有值：启动失败，报出文件、键和变量名")
+  void should_fail_naming_variable_when_nacos_reference_unresolved() {
+    System.clearProperty("PATRA_IT_SECRET");
+
+    assertThatThrownBy(() -> nacos.launch(SERVICE))
+        .satisfies(
+            failure ->
+                assertThat(causeChain(failure))
+                    .contains(
+                        "Nacos 配置 patra-it-app.yaml 的 patra.it.secret 引用的变量 PATRA_IT_SECRET 没有值"));
   }
 
   @Test

@@ -4,15 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.alibaba.cloud.nacos.client.NacosPropertySource;
-import java.util.Date;
-import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.context.config.ConfigDataEnvironmentPostProcessor;
-import org.springframework.core.env.MapPropertySource;
+import org.springframework.boot.env.OriginTrackedMapPropertySource;
 import org.springframework.mock.env.MockEnvironment;
 
 /// ConfigSourceCheckPostProcessor 单元测试：两份 Nacos 配置的签到检查。
@@ -123,7 +120,14 @@ class ConfigSourceCheckPostProcessorTest {
   @Test
   @DisplayName("只查 Nacos 配置：jar 里的配置引用了没值的变量不归这里管")
   void should_ignore_unresolved_references_outside_nacos() {
-    MockEnvironment environment = signedEnvironment().withProperty("some.key", "${NOT_SET}");
+    MockEnvironment environment = signedEnvironment();
+    environment
+        .getPropertySources()
+        .addLast(
+            new OriginTrackedMapPropertySource(
+                "Config resource 'class path resource [application.yml]' via location"
+                    + " 'optional:classpath:/'",
+                Map.of("some.key", "${NOT_SET}")));
 
     assertThatCode(() -> check(environment)).doesNotThrowAnyException();
   }
@@ -144,13 +148,14 @@ class ConfigSourceCheckPostProcessorTest {
         .withProperty("patra.config-source.service", "patra-ingest.yaml");
   }
 
-  private static NacosPropertySource nacosSource(String dataId, Map<String, Object> properties) {
-    return new NacosPropertySource(
-        List.of(new MapPropertySource(dataId, properties)),
-        "DEFAULT_GROUP",
-        dataId,
-        new Date(),
-        false);
+  /// 按 SCA 的 `NacosConfigDataLoader` 放进环境的样子造一份 Nacos 配置：名字是 `分组@dataId`。
+  ///
+  /// @param dataId 配置的 dataId
+  /// @param properties 配置内容
+  /// @return 属性源
+  private static OriginTrackedMapPropertySource nacosSource(
+      String dataId, Map<String, Object> properties) {
+    return new OriginTrackedMapPropertySource("DEFAULT_GROUP@" + dataId, properties);
   }
 
   private static MockEnvironment requiredEnvironment() {

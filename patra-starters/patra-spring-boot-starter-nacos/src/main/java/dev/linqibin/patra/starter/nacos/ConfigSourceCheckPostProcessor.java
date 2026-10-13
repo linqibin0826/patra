@@ -1,13 +1,15 @@
 package dev.linqibin.patra.starter.nacos;
 
-import com.alibaba.cloud.nacos.client.NacosPropertySource;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.springframework.boot.EnvironmentPostProcessor;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.context.config.ConfigDataEnvironmentPostProcessor;
 import org.springframework.core.Ordered;
 import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.env.EnumerablePropertySource;
 import org.springframework.core.env.PropertySource;
 import org.springframework.util.PlaceholderResolutionException;
 import org.springframework.util.StringUtils;
@@ -44,6 +46,11 @@ public class ConfigSourceCheckPostProcessor implements EnvironmentPostProcessor,
 
   private static final String CAUSE = "Nacos 不可达且本地没有快照，或该文件不存在";
 
+  /// SCA 的 `NacosConfigDataLoader` 给导入的 Nacos 配置起的名字：`分组@dataId`。分组和 dataId
+  /// 只能用字母、数字和 `-_.:`，所以 jar 里配置文件的属性源（名字带空格和引号）不会被认错。
+  /// SCA 自己的 `NacosPropertySource` 只登记在 `NacosPropertySourceRepository`，不进环境。
+  private static final Pattern NACOS_SOURCE_NAME = Pattern.compile("[\\w.:-]+@([\\w.:-]+)");
+
   /// 开启了签到检查时，确认两个签到字段都有值；缺了就抛异常，启动中止。
   ///
   /// @param environment 已加载完配置的环境
@@ -76,7 +83,8 @@ public class ConfigSourceCheckPostProcessor implements EnvironmentPostProcessor,
   private static List<String> unresolvedReferences(ConfigurableEnvironment environment) {
     List<String> problems = new ArrayList<>();
     for (PropertySource<?> source : environment.getPropertySources()) {
-      if (!(source instanceof NacosPropertySource nacosSource)) {
+      Matcher nacosName = NACOS_SOURCE_NAME.matcher(source.getName());
+      if (!nacosName.matches() || !(source instanceof EnumerablePropertySource<?> nacosSource)) {
         continue;
       }
       for (String name : nacosSource.getPropertyNames()) {
@@ -89,7 +97,7 @@ public class ConfigSourceCheckPostProcessor implements EnvironmentPostProcessor,
         } catch (PlaceholderResolutionException e) {
           problems.add(
               "Nacos 配置 "
-                  + nacosSource.getDataId()
+                  + nacosName.group(1)
                   + " 的 "
                   + name
                   + " 引用的变量 "
