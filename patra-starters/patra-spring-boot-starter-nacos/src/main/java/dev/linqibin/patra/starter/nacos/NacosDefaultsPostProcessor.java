@@ -1,8 +1,16 @@
 package dev.linqibin.patra.starter.nacos;
 
+import java.io.IOException;
+import java.io.Reader;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
+import java.util.stream.Stream;
 import org.springframework.boot.EnvironmentPostProcessor;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.context.config.ConfigDataEnvironmentPostProcessor;
@@ -12,7 +20,9 @@ import org.springframework.boot.env.DefaultPropertiesPropertySource;
 import org.springframework.core.Ordered;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MutablePropertySources;
+import org.springframework.core.env.PropertiesPropertySource;
 import org.springframework.core.env.PropertySource;
+import org.springframework.core.env.StandardEnvironment;
 
 /// 在 Spring Boot 加载配置之前，给环境补上 Nacos 的连接和服务发现设置。
 ///
@@ -25,6 +35,7 @@ import org.springframework.core.env.PropertySource;
 ///   检查会因为 `spring.config.import` 里没有 `nacos:` 让应用启动失败。这里只看得到已在环境里的
 ///   导入（启动器、启动参数、系统属性、环境变量）；写在 `application.yml` 里的导入这时还没加载，
 ///   按约定也不应该写在那里。
+/// - `${user.home}/.patra/secrets/*.env` 读成一组属性，放在系统环境变量之后，见 [#addLocalSecrets]。
 public class NacosDefaultsPostProcessor implements EnvironmentPostProcessor, Ordered {
 
   /// 排在 Spring Boot 加载配置之前：SCA 解析 `nacos:` 导入时要读到这里注入的连接设置。
@@ -32,6 +43,9 @@ public class NacosDefaultsPostProcessor implements EnvironmentPostProcessor, Ord
 
   /// Nacos 配置中心的总开关。
   static final String CONFIG_ENABLED_PROPERTY = "spring.cloud.nacos.config.enabled";
+
+  /// 本机密钥文件的属性源名。
+  static final String LOCAL_SECRETS_SOURCE_NAME = "patraLocalSecrets";
 
   private static final String IMPORT_PROPERTY = "spring.config.import";
   private static final String OPTIONAL_PREFIX = "optional:";
@@ -55,7 +69,7 @@ public class NacosDefaultsPostProcessor implements EnvironmentPostProcessor, Ord
           "spring.cloud.nacos.discovery.fail-fast",
           "false");
 
-  /// 补上默认值，并在没有 `nacos:` 导入时关闭配置中心。
+  /// 补上默认值和本机密钥，并在没有 `nacos:` 导入时关闭配置中心。
   ///
   /// @param environment 要补充的环境
   /// @param application 正在启动的应用
@@ -67,6 +81,7 @@ public class NacosDefaultsPostProcessor implements EnvironmentPostProcessor, Ord
       defaults.put(CONFIG_ENABLED_PROPERTY, "false");
     }
     addDefaults(environment.getPropertySources(), defaults);
+    addLocalSecrets(environment);
   }
 
   /// 排序值，见 [#ORDER]。
@@ -94,6 +109,49 @@ public class NacosDefaultsPostProcessor implements EnvironmentPostProcessor, Ord
                     ? location.substring(OPTIONAL_PREFIX.length())
                     : location)
         .anyMatch(location -> location.startsWith(NACOS_PREFIX));
+  }
+
+  /// 把 `${user.home}/.patra/secrets/` 下的 `*.env` 读成一组属性，放在系统环境变量之后。
+  ///
+  /// 文件格式是 `KEY=value`（与 compose 的 env_file 共用同一批文件），按 properties 解析；
+  /// 按文件名排序后读，同名变量以后读的为准。目录不存在时跳过：容器里没有这个目录，
+  /// 值来自 env_file 注入的环境变量。
+  ///
+  /// @param environment 要补充的环境
+  private static void addLocalSecrets(ConfigurableEnvironment environment) {
+    Path directory = Path.of(environment.getRequiredProperty("user.home"), ".patra", "secrets");
+    if (!Files.isDirectory(directory)) {
+      return;
+    }
+    Properties secrets = new Properties();
+    for (Path file : listEnvFiles(directory)) {
+      try (Reader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
+        secrets.load(reader);
+      } catch (IOException e) {
+        throw new UncheckedIOException("读取本机密钥文件失败：" + file, e);
+      }
+    }
+    environment
+        .getPropertySources()
+        .addAfter(
+            StandardEnvironment.SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME,
+            new PropertiesPropertySource(LOCAL_SECRETS_SOURCE_NAME, secrets));
+  }
+
+  /// 列出目录下以 `.env` 结尾的普通文件，按文件名排序。
+  ///
+  /// @param directory 密钥目录
+  /// @return 排好序的文件
+  private static List<Path> listEnvFiles(Path directory) {
+    try (Stream<Path> files = Files.list(directory)) {
+      return files
+          .filter(Files::isRegularFile)
+          .filter(file -> file.toString().endsWith(".env"))
+          .sorted()
+          .toList();
+    } catch (IOException e) {
+      throw new UncheckedIOException("列出本机密钥目录失败：" + directory, e);
+    }
   }
 
   /// 把默认值并入 default properties；已有的同名键（启动器放的）不覆盖。

@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.core.env.StandardEnvironment.SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
@@ -12,6 +14,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.context.config.ConfigDataEnvironmentPostProcessor;
 import org.springframework.boot.env.DefaultPropertiesPropertySource;
+import org.springframework.core.env.EnumerablePropertySource;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.MutablePropertySources;
 import org.springframework.core.env.StandardEnvironment;
@@ -197,6 +200,90 @@ class NacosDefaultsPostProcessorTest {
     assertThat(postProcessor.getOrder()).isLessThan(ConfigDataEnvironmentPostProcessor.ORDER);
   }
 
+  @Test
+  @DisplayName("密钥目录不存在时跳过，不报错")
+  void should_skip_local_secrets_when_directory_missing() {
+    StandardEnvironment environment = process(environment(Map.of()));
+
+    assertThat(
+            environment
+                .getPropertySources()
+                .contains(NacosDefaultsPostProcessor.LOCAL_SECRETS_SOURCE_NAME))
+        .isFalse();
+  }
+
+  @Test
+  @DisplayName("读取密钥目录下所有 .env 文件")
+  void should_read_all_env_files_in_secrets_directory() throws IOException {
+    writeSecret("redis.env", "PATRA_TEST_A=1\n");
+    writeSecret("gateway.env", "PATRA_TEST_B=2\n");
+
+    StandardEnvironment environment = process(environment(Map.of()));
+
+    assertThat(environment.getProperty("PATRA_TEST_A")).isEqualTo("1");
+    assertThat(environment.getProperty("PATRA_TEST_B")).isEqualTo("2");
+  }
+
+  @Test
+  @DisplayName("不是 .env 结尾的文件被忽略")
+  void should_ignore_files_not_ending_with_env() throws IOException {
+    writeSecret("notes.txt", "PATRA_TEST_TXT=1\n");
+    writeSecret("nacos-server.env.example", "PATRA_TEST_EXAMPLE=1\n");
+
+    StandardEnvironment environment = process(environment(Map.of()));
+
+    assertThat(environment.getProperty("PATRA_TEST_TXT")).isNull();
+    assertThat(environment.getProperty("PATRA_TEST_EXAMPLE")).isNull();
+  }
+
+  @Test
+  @DisplayName("环境变量覆盖密钥文件里的同名值")
+  void should_let_environment_variables_override_secret_files() throws IOException {
+    writeSecret("redis.env", "PATRA_TEST_A=from-file\n");
+
+    StandardEnvironment environment = process(environment(Map.of("PATRA_TEST_A", "from-env")));
+
+    assertThat(environment.getProperty("PATRA_TEST_A")).isEqualTo("from-env");
+  }
+
+  @Test
+  @DisplayName("密钥文件紧跟在系统环境变量之后")
+  void should_place_secrets_right_after_system_environment() throws IOException {
+    writeSecret("redis.env", "PATRA_TEST_A=1\n");
+
+    MutablePropertySources sources = process(environment(Map.of())).getPropertySources();
+
+    assertThat(
+            sources.precedenceOf(sources.get(NacosDefaultsPostProcessor.LOCAL_SECRETS_SOURCE_NAME)))
+        .isEqualTo(sources.precedenceOf(sources.get(SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME)) + 1);
+  }
+
+  @Test
+  @DisplayName("两个文件有同名变量时，按文件名排序后读，后读的为准")
+  void should_let_later_file_win_when_key_duplicated() throws IOException {
+    writeSecret("b.env", "PATRA_TEST_DUP=from-b\n");
+    writeSecret("a.env", "PATRA_TEST_DUP=from-a\n");
+
+    StandardEnvironment environment = process(environment(Map.of()));
+
+    assertThat(environment.getProperty("PATRA_TEST_DUP")).isEqualTo("from-b");
+  }
+
+  @Test
+  @DisplayName("注释行和空行不会变成属性")
+  void should_skip_comments_and_blank_lines() throws IOException {
+    writeSecret("redis.env", "# Redis 密码\n\nPATRA_TEST_A=1\n");
+
+    StandardEnvironment environment = process(environment(Map.of()));
+
+    EnumerablePropertySource<?> secrets =
+        (EnumerablePropertySource<?>)
+            environment
+                .getPropertySources()
+                .get(NacosDefaultsPostProcessor.LOCAL_SECRETS_SOURCE_NAME);
+    assertThat(secrets.getPropertyNames()).containsExactly("PATRA_TEST_A");
+  }
+
   private StandardEnvironment environment(Map<String, Object> systemEnvironment) {
     StandardEnvironment environment = new StandardEnvironment();
     MutablePropertySources sources = environment.getPropertySources();
@@ -211,5 +298,10 @@ class NacosDefaultsPostProcessorTest {
   private StandardEnvironment process(StandardEnvironment environment) {
     postProcessor.postProcessEnvironment(environment, new SpringApplication());
     return environment;
+  }
+
+  private void writeSecret(String fileName, String content) throws IOException {
+    Path directory = Files.createDirectories(home.resolve(".patra/secrets"));
+    Files.writeString(directory.resolve(fileName), content);
   }
 }
