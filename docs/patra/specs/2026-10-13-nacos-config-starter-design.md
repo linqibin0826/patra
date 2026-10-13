@@ -193,7 +193,7 @@ starter 的第二个 `EnvironmentPostProcessor`（`ConfigSourceCheckPostProcesso
 | Nacos 不可达，没有快照（容器总是这样） | 签到检查失败，启动中止 |
 | 某份配置在 Nacos 里不存在 | 签到检查失败，启动中止（客户端会删掉本地的旧快照） |
 | 服务没用启动器启动 | 不导入 Nacos 配置、不做签到检查，按 jar 里的配置启动（5.3） |
-| `NACOS_USERNAME` / `NACOS_PASSWORD` 没设 | 解析不了占位符，启动失败 |
+| `NACOS_USERNAME` / `NACOS_PASSWORD` 没设 | 有 `nacos:` 导入时，`NacosDefaultsPostProcessor` 读完本机密钥后检查账号密码，解析不了就启动失败，报出缺的变量名。终审时发现：SCA 绑定账号密码时不严格解析占位符，不提前检查的话会拿字面量去登录，只报配置资源不存在，和密码错误分不开 |
 | 账号或密码错（403） | 启动失败。实测（无快照）：Spring Boot 报 `Config data resource … not found`，提示检查 `nacos:{服务名}.yaml`，报错里看不出是账号问题；排查时先核对账号密码 |
 | 本地密钥变量没设（如 `REDIS_PASSWORD`） | 用到它的服务启动失败，报出缺的变量名 |
 

@@ -94,7 +94,7 @@ bash patra-infra/scripts/compose-all.sh ps
 
 # 7. (Mac mini) 初始化 Nacos（nacos 容器 healthy 后执行，幂等）：管理员、dev namespace、账号、角色和权限
 bash patra-infra/scripts/nacos-init.sh
-bash patra-infra/scripts/nacos-verify.sh    # 预期 通过 10 / 失败 0
+bash patra-infra/scripts/nacos-verify.sh    # 预期 通过 9 / 失败 0
 ```
 
 ### MacBook 应用访问 Nacos

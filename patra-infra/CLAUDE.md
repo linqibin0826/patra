@@ -79,5 +79,5 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `install-tailscale-route-guard.sh` + `tailscale-route-guard.sh` | macOS（root LaunchDaemon） | 守护 tailnet 路由：Shadowrocket 等代理拨断重连时清除被抢占的克隆主机路由并 `tailscale down/up` 重协商 |
 | `dev.patra.tailscale-route-guard.plist` | — | 上述路由守护 LaunchDaemon 的模板 |
 | `nacos-init.sh` | Mac mini | Nacos 初始化：管理员、`dev` namespace、`patra-app` / `patra-push` 账号、角色和权限。幂等；权限以脚本里的清单为准，多的会被删掉 |
-| `nacos-verify.sh [--expect-services]` | Mac mini | Nacos 加固验收，11 项 PASS / FAIL；只读写探针 |
+| `nacos-verify.sh [--expect-services]` | Mac mini | Nacos 加固验收，9 项 PASS / FAIL（加 `--expect-services` 为 10 项）；只读写探针 |
 | `nacos-lib.sh` | — | 上面两个脚本共用的函数，只供 source |

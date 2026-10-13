@@ -29,6 +29,10 @@ class NacosDefaultsPostProcessorTest {
 
   private final NacosDefaultsPostProcessor postProcessor = new NacosDefaultsPostProcessor();
 
+  /// 有 `nacos:` 导入时必须能解析的 Nacos 账号密码。
+  private static final Map<String, Object> CREDENTIALS =
+      Map.of("NACOS_USERNAME", "patra-app", "NACOS_PASSWORD", "pw");
+
   @TempDir private Path home;
 
   @Test
@@ -157,7 +161,7 @@ class NacosDefaultsPostProcessorTest {
   @Test
   @DisplayName("启动器加了 nacos: 导入时，不关闭配置中心")
   void should_keep_config_center_when_launcher_adds_nacos_import() {
-    StandardEnvironment environment = environment(Map.of());
+    StandardEnvironment environment = environment(CREDENTIALS);
     environment
         .getPropertySources()
         .addLast(
@@ -174,7 +178,12 @@ class NacosDefaultsPostProcessorTest {
   @DisplayName("optional:nacos: 导入也算 nacos: 导入")
   void should_keep_config_center_when_import_is_optional_nacos() {
     StandardEnvironment environment =
-        process(environment(Map.of("SPRING_CONFIG_IMPORT", "optional:nacos:patra-common.yaml")));
+        process(
+            environment(
+                Map.of(
+                    "SPRING_CONFIG_IMPORT", "optional:nacos:patra-common.yaml",
+                    "NACOS_USERNAME", "patra-app",
+                    "NACOS_PASSWORD", "pw")));
 
     assertThat(environment.getProperty("spring.cloud.nacos.config.enabled")).isNull();
   }
@@ -282,6 +291,30 @@ class NacosDefaultsPostProcessorTest {
                 .getPropertySources()
                 .get(NacosDefaultsPostProcessor.LOCAL_SECRETS_SOURCE_NAME);
     assertThat(secrets.getPropertyNames()).containsExactly("PATRA_TEST_A");
+  }
+
+  @Test
+  @DisplayName("有 nacos: 导入但没设 Nacos 密码时，启动失败并说出缺的变量")
+  void should_fail_with_variable_name_when_nacos_import_present_and_password_missing() {
+    StandardEnvironment environment =
+        environment(
+            Map.of(
+                "SPRING_CONFIG_IMPORT", "nacos:patra-common.yaml", "NACOS_USERNAME", "patra-app"));
+
+    assertThatThrownBy(() -> process(environment))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("NACOS_PASSWORD");
+  }
+
+  @Test
+  @DisplayName("Nacos 账号密码来自本机密钥文件时，检查通过")
+  void should_accept_credentials_from_local_secret_files() throws IOException {
+    writeSecret("nacos.env", "NACOS_USERNAME=patra-app\nNACOS_PASSWORD=pw\n");
+
+    StandardEnvironment environment =
+        process(environment(Map.of("SPRING_CONFIG_IMPORT", "nacos:patra-common.yaml")));
+
+    assertThat(environment.getProperty("spring.cloud.nacos.password")).isEqualTo("pw");
   }
 
   private StandardEnvironment environment(Map<String, Object> systemEnvironment) {

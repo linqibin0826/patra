@@ -52,6 +52,7 @@ public static void main(String[] args) {
 
 它还做两件事：
 - 环境里没有 `nacos:` 导入时（测试、没用启动器的应用），设 `spring.cloud.nacos.config.enabled=false`，不连配置中心。
+- 有 `nacos:` 导入时，读完本机密钥后检查 Nacos 账号密码能否解析，解析不了就启动失败并报出缺的变量名。SCA 自己不严格解析，会拿字面量 `${NACOS_PASSWORD}` 去登录，报错和密码错误分不开。
 - 把 `~/.patra/secrets/*.env` 读成一组属性，放在系统环境变量之后。
   - 文件按文件名排序后读，同名变量以后读的为准。
   - 目录不存在时跳过。容器里就是这种情况，值来自 compose env_file 注入的环境变量。

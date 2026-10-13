@@ -36,6 +36,7 @@ import org.springframework.core.env.StandardEnvironment;
 ///   导入（启动器、启动参数、系统属性、环境变量）；写在 `application.yml` 里的导入这时还没加载，
 ///   按约定也不应该写在那里。
 /// - `${user.home}/.patra/secrets/*.env` 读成一组属性，放在系统环境变量之后，见 [#addLocalSecrets]。
+/// - 有 `nacos:` 导入时检查 Nacos 账号密码能否解析，见 [#requireCredentials]。
 public class NacosDefaultsPostProcessor implements EnvironmentPostProcessor, Ordered {
 
   /// 排在 Spring Boot 加载配置之前：SCA 解析 `nacos:` 导入时要读到这里注入的连接设置。
@@ -46,6 +47,9 @@ public class NacosDefaultsPostProcessor implements EnvironmentPostProcessor, Ord
 
   /// 本机密钥文件的属性源名。
   static final String LOCAL_SECRETS_SOURCE_NAME = "patraLocalSecrets";
+
+  private static final List<String> CREDENTIAL_PROPERTIES =
+      List.of("spring.cloud.nacos.username", "spring.cloud.nacos.password");
 
   private static final String IMPORT_PROPERTY = "spring.config.import";
   private static final String OPTIONAL_PREFIX = "optional:";
@@ -69,7 +73,7 @@ public class NacosDefaultsPostProcessor implements EnvironmentPostProcessor, Ord
           "spring.cloud.nacos.discovery.fail-fast",
           "false");
 
-  /// 补上默认值和本机密钥，并在没有 `nacos:` 导入时关闭配置中心。
+  /// 补上默认值和本机密钥；没有 `nacos:` 导入时关闭配置中心，有时检查账号密码。
   ///
   /// @param environment 要补充的环境
   /// @param application 正在启动的应用
@@ -77,11 +81,36 @@ public class NacosDefaultsPostProcessor implements EnvironmentPostProcessor, Ord
   public void postProcessEnvironment(
       ConfigurableEnvironment environment, SpringApplication application) {
     Map<String, Object> defaults = new LinkedHashMap<>(DEFAULTS);
-    if (!hasNacosImport(environment)) {
+    boolean nacosImport = hasNacosImport(environment);
+    if (!nacosImport) {
       defaults.put(CONFIG_ENABLED_PROPERTY, "false");
     }
     addDefaults(environment.getPropertySources(), defaults);
     addLocalSecrets(environment);
+    if (nacosImport) {
+      requireCredentials(environment);
+    }
+  }
+
+  /// 确认连 Nacos 配置中心的账号密码都能解析。
+  ///
+  /// SCA 绑定账号密码时不严格解析占位符：变量没设时会拿字面量 `${NACOS_PASSWORD}` 去登录，
+  /// 被拒后只报配置资源不存在，和密码错误分不开。这里提前失败，报出缺的变量名。
+  ///
+  /// @param environment 已补上默认值和本机密钥的环境
+  /// @throws IllegalStateException 账号或密码解析不了时
+  private static void requireCredentials(ConfigurableEnvironment environment) {
+    for (String property : CREDENTIAL_PROPERTIES) {
+      try {
+        environment.getProperty(property);
+      } catch (IllegalArgumentException e) {
+        throw new IllegalStateException(
+            "连接 Nacos 配置中心的账号密码不全："
+                + e.getMessage()
+                + "。本机放在 ~/.patra/secrets/nacos.env，容器经 env_file 注入",
+            e);
+      }
+    }
   }
 
   /// 排序值，见 [#ORDER]。
