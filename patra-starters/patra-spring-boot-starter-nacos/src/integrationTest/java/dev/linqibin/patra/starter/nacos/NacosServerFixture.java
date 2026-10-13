@@ -1,5 +1,8 @@
 package dev.linqibin.patra.starter.nacos;
 
+import static org.awaitility.Awaitility.await;
+
+import com.jayway.jsonpath.JsonPath;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
@@ -15,6 +18,7 @@ import java.time.Duration;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -33,6 +37,13 @@ final class NacosServerFixture implements AutoCloseable {
 
   /// 管理员账号。
   static final String ADMIN = "nacos";
+
+  /// 推送账号名，权限与 mini 上的 `patra-push` 相同。
+  static final String PUSH_USER = "patra-push-it";
+
+  private static final String PUSH_ROLE = "ROLE_PATRA_PUSH_IT";
+  private static final String NAMESPACE = PatraApplication.NAMESPACE;
+  private static final String GROUP = "DEFAULT_GROUP";
 
   private static final DockerImageName IMAGE = DockerImageName.parse("nacos/nacos-server:v3.2.4");
   private static final int HTTP_PORT = 8848;
@@ -126,13 +137,130 @@ final class NacosServerFixture implements AutoCloseable {
   /// @param dataId 文件名
   /// @param content 配置正文
   void publish(String dataId, String content) {
+    publish(GROUP, dataId, content);
+  }
+
+  /// 在 `dev` 的指定分组下发布（或覆盖）一份 yaml 配置。
+  ///
+  /// @param group 分组
+  /// @param dataId 文件名
+  /// @param content 配置正文
+  void publish(String group, String dataId, String content) {
     Map<String, String> form = new LinkedHashMap<>();
-    form.put("namespaceId", PatraApplication.NAMESPACE);
-    form.put("groupName", "DEFAULT_GROUP");
+    form.put("namespaceId", NAMESPACE);
+    form.put("groupName", group);
     form.put("dataId", dataId);
     form.put("content", content);
     form.put("type", "yaml");
     postExpectingOk("/v3/admin/cs/config", form);
+  }
+
+  /// 建一个与 mini 上 `patra-push` 同款权限的账号（`dev:DEFAULT_GROUP:config/*` 读写，
+  /// `dev:*:config/*` 只读），等权限生效后返回密码。
+  ///
+  /// @return 随机生成的密码
+  String createPushAccount() {
+    String password = HexFormat.of().formatHex(randomBytes(12));
+    postExpectingOk("/v3/auth/user", Map.of("username", PUSH_USER, "password", password));
+    postExpectingOk("/v3/auth/role", Map.of("role", PUSH_ROLE, "username", PUSH_USER));
+    postExpectingOk(
+        "/v3/auth/permission",
+        Map.of("role", PUSH_ROLE, "resource", "dev:DEFAULT_GROUP:config/*", "action", "rw"));
+    postExpectingOk(
+        "/v3/auth/permission",
+        Map.of("role", PUSH_ROLE, "resource", "dev:*:config/*", "action", "r"));
+    // 权限有缓存，新建的不会立刻生效：等推送账号能列出配置为止
+    await()
+        .atMost(Duration.ofSeconds(30))
+        .pollInterval(Duration.ofSeconds(1))
+        .until(() -> pushAccountCanList(password));
+    return password;
+  }
+
+  /// 读 `dev` / `DEFAULT_GROUP` 下一份配置的正文。
+  ///
+  /// @param dataId 文件名
+  /// @return 正文；不存在时为 `null`
+  String content(String dataId) {
+    return content(GROUP, dataId);
+  }
+
+  /// 读 `dev` 下指定分组里一份配置的正文。
+  ///
+  /// @param group 分组
+  /// @param dataId 文件名
+  /// @return 正文；不存在时为 `null`
+  String content(String group, String dataId) {
+    String path = "/v3/admin/cs/config";
+    HttpResponse<String> response =
+        get(path, Map.of("namespaceId", NAMESPACE, "groupName", group, "dataId", dataId), token);
+    if (response.statusCode() == 404) {
+      return null;
+    }
+    requireOk(response, path);
+    return JsonPath.read(response.body(), "$.data.content");
+  }
+
+  /// `dev` / `DEFAULT_GROUP` 下一份配置的历史条数。
+  ///
+  /// @param dataId 文件名
+  /// @return 历史条数
+  int historyCount(String dataId) {
+    String path = "/v3/admin/cs/history/list";
+    HttpResponse<String> response =
+        get(
+            path,
+            Map.of(
+                "namespaceId",
+                NAMESPACE,
+                "groupName",
+                GROUP,
+                "dataId",
+                dataId,
+                "pageNo",
+                "1",
+                "pageSize",
+                "100"),
+            token);
+    requireOk(response, path);
+    return JsonPath.read(response.body(), "$.data.totalCount");
+  }
+
+  /// `dev` / `DEFAULT_GROUP` 下全部 dataId，按名字排序。
+  ///
+  /// @return dataId 列表
+  List<String> dataIds() {
+    String path = "/v3/admin/cs/config/list";
+    HttpResponse<String> response =
+        get(
+            path,
+            Map.of(
+                "namespaceId",
+                NAMESPACE,
+                "groupName",
+                GROUP,
+                "dataId",
+                "",
+                "pageNo",
+                "1",
+                "pageSize",
+                "500",
+                "search",
+                "accurate"),
+            token);
+    requireOk(response, path);
+    List<String> ids = JsonPath.read(response.body(), "$.data.pageItems[*].dataId");
+    return ids.stream().sorted().toList();
+  }
+
+  /// 删掉 `dev` / `DEFAULT_GROUP` 下全部配置，其他分组不动。
+  void clear() {
+    String path = "/v3/admin/cs/config";
+    for (String dataId : dataIds()) {
+      requireOk(
+          delete(path, Map.of("namespaceId", NAMESPACE, "groupName", GROUP, "dataId", dataId)),
+          path);
+    }
   }
 
   /// 用管理员账号经启动器启动测试应用。
@@ -179,8 +307,8 @@ final class NacosServerFixture implements AutoCloseable {
     postExpectingOk(
         "/v3/admin/core/namespace",
         Map.of(
-            "namespaceId", PatraApplication.NAMESPACE,
-            "namespaceName", PatraApplication.NAMESPACE));
+            "namespaceId", NAMESPACE,
+            "namespaceName", NAMESPACE));
   }
 
   /// 发 POST 表单请求，要求 HTTP 200 且响应 `code` 为 0。失败时只报路径和状态码，不报响应体。
@@ -188,33 +316,114 @@ final class NacosServerFixture implements AutoCloseable {
   /// @param path 不含 `/nacos` 前缀的路径
   /// @param form 表单字段
   private void postExpectingOk(String path, Map<String, String> form) {
-    HttpResponse<String> response = post(path, form);
+    requireOk(post(path, form), path);
+  }
+
+  /// 要求 HTTP 200 且响应 `code` 为 0。失败时只报路径和状态码，不报响应体。
+  ///
+  /// @param response 响应
+  /// @param path 请求路径，用于报错
+  private static void requireOk(HttpResponse<String> response, String path) {
     if (response.statusCode() != 200 || !CODE_OK.matcher(response.body()).find()) {
       throw new IllegalStateException("Nacos 接口失败：" + path + " HTTP " + response.statusCode());
     }
   }
 
-  /// 发 POST 表单请求，带上已有的令牌。
+  /// 推送账号能否登录并列出 `dev` / `DEFAULT_GROUP` 的配置。
+  ///
+  /// @param password 推送账号密码
+  /// @return 能时为 `true`
+  private boolean pushAccountCanList(String password) {
+    HttpResponse<String> login =
+        post("/v3/auth/user/login", Map.of("username", PUSH_USER, "password", password));
+    Matcher matcher = ACCESS_TOKEN.matcher(login.body());
+    if (login.statusCode() != 200 || !matcher.find()) {
+      return false;
+    }
+    HttpResponse<String> list =
+        get(
+            "/v3/admin/cs/config/list",
+            Map.of(
+                "namespaceId",
+                NAMESPACE,
+                "groupName",
+                GROUP,
+                "dataId",
+                "",
+                "pageNo",
+                "1",
+                "pageSize",
+                "1",
+                "search",
+                "accurate"),
+            matcher.group(1));
+    return list.statusCode() == 200 && CODE_OK.matcher(list.body()).find();
+  }
+
+  /// 发 POST 表单请求，带上管理员令牌。
   ///
   /// @param path 不含 `/nacos` 前缀的路径
   /// @param form 表单字段
   /// @return 响应
   private HttpResponse<String> post(String path, Map<String, String> form) {
-    String body =
-        form.entrySet().stream()
-            .map(
-                entry ->
-                    URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8)
-                        + "="
-                        + URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8))
-            .collect(Collectors.joining("&"));
     HttpRequest.Builder request =
         HttpRequest.newBuilder(URI.create("http://" + serverAddr() + "/nacos" + path))
-            .timeout(Duration.ofSeconds(15))
             .header("Content-Type", "application/x-www-form-urlencoded")
-            .POST(HttpRequest.BodyPublishers.ofString(body));
-    if (!token.isEmpty()) {
-      request.header("Authorization", "Bearer " + token);
+            .POST(HttpRequest.BodyPublishers.ofString(encode(form)));
+    return send(request, token);
+  }
+
+  /// 发 GET 请求，查询条件放 URL 上。
+  ///
+  /// @param path 不含 `/nacos` 前缀的路径
+  /// @param query 查询条件
+  /// @param bearer 令牌，空串表示不带
+  /// @return 响应
+  private HttpResponse<String> get(String path, Map<String, String> query, String bearer) {
+    return send(HttpRequest.newBuilder(uri(path, query)).GET(), bearer);
+  }
+
+  /// 用管理员令牌发 DELETE 请求，条件放 URL 上。
+  ///
+  /// @param path 不含 `/nacos` 前缀的路径
+  /// @param query 条件
+  /// @return 响应
+  private HttpResponse<String> delete(String path, Map<String, String> query) {
+    return send(HttpRequest.newBuilder(uri(path, query)).DELETE(), token);
+  }
+
+  /// 拼出带查询串的地址。
+  ///
+  /// @param path 不含 `/nacos` 前缀的路径
+  /// @param query 查询条件
+  /// @return 地址
+  private URI uri(String path, Map<String, String> query) {
+    return URI.create("http://" + serverAddr() + "/nacos" + path + "?" + encode(query));
+  }
+
+  /// 把键值对编码成 `application/x-www-form-urlencoded` 格式（表单和查询串通用）。
+  ///
+  /// @param form 键值对
+  /// @return 编码后的字符串
+  private static String encode(Map<String, String> form) {
+    return form.entrySet().stream()
+        .map(
+            entry ->
+                URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8)
+                    + "="
+                    + URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8))
+        .collect(Collectors.joining("&"));
+  }
+
+  /// 发送请求：设 15 秒超时，`bearer` 非空时带上令牌。
+  ///
+  /// @param request 请求
+  /// @param bearer 令牌，空串表示不带
+  /// @return 响应
+  private HttpResponse<String> send(HttpRequest.Builder request, String bearer) {
+    request.timeout(Duration.ofSeconds(15));
+    if (!bearer.isEmpty()) {
+      request.header("Authorization", "Bearer " + bearer);
     }
     try {
       return http.send(request.build(), HttpResponse.BodyHandlers.ofString());

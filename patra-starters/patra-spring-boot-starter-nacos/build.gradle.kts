@@ -32,17 +32,26 @@ dependencies {
     "integrationTestImplementation"("org.springframework.boot:spring-boot-web-server")
 }
 
+// 测试读仓库里的配置目录和推送脚本（PAP-75）：都声明为输入，只改它们时测试不会命中构建缓存。
+// 仓库根用相对路径传入（测试的工作目录是本模块），不进缓存键的机器差异。
+val nacosConfigDir = rootProject.layout.projectDirectory.dir("patra-infra/nacos/dev")
+val repoRootRelative = projectDir.toPath().relativize(rootDir.toPath()).toString()
+
 // SCA 的 NacosConfigManager 在进程里是静态单例：连哪个地址、用哪个账号，由进程里第一个启动的
 // 应用决定；nacos-client 的快照目录也在类加载时固定。地址或账号不同的集成测试类各用一个 JVM。
 tasks.named<Test>("integrationTest") {
     forkEvery = 1
+    // NacosPushScriptIT 运行仓库里的推送脚本
+    inputs
+        .files(
+            rootProject.layout.projectDirectory.file("patra-infra/scripts/nacos-push.sh"),
+            rootProject.layout.projectDirectory.file("patra-infra/scripts/nacos-lib.sh"),
+        ).withPathSensitivity(PathSensitivity.RELATIVE)
+        .withPropertyName("nacosPushScripts")
+    systemProperty("patra.repo-root", repoRootRelative)
 }
 
-// NacosConfigFilesTest 检查仓库里要推送到 Nacos 的配置文件（PAP-75）。目录声明为输入：只改 yaml 时
-// 测试不会命中构建缓存。仓库根用相对路径传入（测试的工作目录是本模块），不进缓存键的机器差异。
-val nacosConfigDir = rootProject.layout.projectDirectory.dir("patra-infra/nacos/dev")
-val repoRootRelative = projectDir.toPath().relativize(rootDir.toPath()).toString()
-
+// NacosConfigFilesTest 检查仓库里要推送到 Nacos 的配置文件
 tasks.named<Test>("test") {
     inputs
         .dir(nacosConfigDir)
