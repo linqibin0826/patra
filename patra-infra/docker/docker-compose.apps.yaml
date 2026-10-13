@@ -5,8 +5,9 @@ name: patra-apps
 # 镜像 tag 由 deploy job 通过 {SVC}_IMAGE_TAG 注入；手动 compose-all.sh up apps 时回退 latest。
 #
 # env_file 按「共享坐标、服务专属、密钥」叠加（后者覆盖同名）：
-#   .env.common   共享基建坐标（mini 主机名 + 宿主机映射端口，与 IDE 一致）和身份断言公钥，dev 默认
-#   .env.<svc>    服务专属（DB / bucket / 日志路径，dev 默认）
+#   .env.common   共享基建坐标（mini 主机名 + 宿主机映射端口，与 IDE 一致），dev 默认
+#   .env.<svc>    服务专属（DB / bucket / 日志路径，dev 默认）。只剩 catalog、ingest；
+#                 registry、object-storage、identity、gateway 的配置在 Nacos（patra-infra/nacos/dev/）
 #   ${HOME}/.patra/secrets/*.env   密钥，放在仓库外（见 README「密钥」）：
 #     redis.env     Redis 密码。catalog、identity、gateway 必需
 #     gateway.env   网关签身份断言的私钥。gateway 必需
@@ -37,7 +38,6 @@ services:
     extra_hosts: *infra-hosts
     env_file:
       - .env.common
-      - .env.registry
       - path: ${HOME}/.patra/secrets/nacos.env
         required: true
       - path: ${HOME}/.patra/secrets/registry.env
@@ -54,7 +54,6 @@ services:
     extra_hosts: *infra-hosts
     env_file:
       - .env.common
-      - .env.object-storage
       - path: ${HOME}/.patra/secrets/nacos.env
         required: true
       - path: ${HOME}/.patra/secrets/object-storage.env
@@ -107,7 +106,6 @@ services:
     extra_hosts: *infra-hosts
     env_file:
       - .env.common
-      - .env.identity
       - path: ${HOME}/.patra/secrets/nacos.env
         required: true
       - path: ${HOME}/.patra/secrets/redis.env
@@ -126,7 +124,6 @@ services:
     extra_hosts: *infra-hosts
     env_file:
       - .env.common
-      - .env.gateway
       - path: ${HOME}/.patra/secrets/nacos.env
         required: true
       - path: ${HOME}/.patra/secrets/redis.env
