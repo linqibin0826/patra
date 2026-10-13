@@ -3,7 +3,7 @@
 > **Issue**：[PAP-72](https://linear.app/papertrace/issue/PAP-72)
 > **版本**：[v0.9 Config Center](../release-specs/v0.9-config-center.md)（决策 A；Done 判定中"除 PAP-72 选定的本地变量外读到的配置没有差别"一条）
 > **日期**：2026-10-13
-> **状态**：设计已确认，待实施
+> **状态**：已上线（2026-10-13）
 
 ## 1. 要解决的问题
 
@@ -227,7 +227,7 @@ env 文件里写死主机名，而不引用 `PATRA_INFRA_HOST`：compose 的 env
 3. 经用户当轮明确授权后，把改动推到 main。env 文件改动会让 CD 判定为全量，6 个服务全部重建重部署。
 4. 经用户确认后，在 mini 上 `git pull`，再跑 `compose-all.sh up storage jobs`（minio-init、rocketmq-dashboard）。
 5. 逐项做 9.2 的验证。
-6. 问用户是否删除空的 `dev-ingest` bucket。
+6. 问用户是否删除空的 `dev-ingest` bucket。实际：用户同意，确认 0 个对象后已删除。
 
 第 3、4 步的顺序可以互换：新镜像配旧 env 文件、旧镜像配新 env 文件都能跑（第 10 节）。
 
@@ -246,11 +246,11 @@ env 文件里写死主机名，而不引用 `PATRA_INFRA_HOST`：compose 的 env
 | 检查项 | 判据 |
 |---|---|
 | 6 个服务健康 | deploy.sh 健康检查通过；`docker ps` 里没有 unhealthy |
-| 走了新路径 | `pg_stat_activity` 的 `client_addr` 里不再出现 6 个应用容器的 IP，应用连接来自 `192.168.97.1` |
+| 走了新路径 | `pg_stat_activity` 的 `client_addr` 里不再出现 6 个应用容器的 IP，应用连接来自 `192.168.97.1`。实际：6 个业务库连接全部来自 `192.168.97.1`，只有 Nacos 自己按容器名连 `patra_nacos` |
 | 主机名解析 | 应用容器里 `getent ahostsv4 linqibins-mac-mini` 返回 0.250.250.254 |
-| Nacos 注册稳定 | 容器实例仍注册为 192.168.97.x；10 分钟后再查，实例都在且健康（gRPC 长连接现在经 OrbStack 端口转发） |
+| Nacos 注册稳定 | 容器实例仍注册为 192.168.97.x；10 分钟后再查，实例都在且健康（gRPC 长连接现在经 OrbStack 端口转发）。实际：切换后与 10 分钟后两次 `nacos-verify.sh --expect-services` 均为通过 11 / 失败 0 |
 | xxl 回调 | 容器执行器注册为容器 IP，admin 执行器列表显示在线 |
-| broker | `mqadmin consumerConnection -g ingest-task-consumer-group` 能看到 ingest 容器的客户端（切换前看不到） |
+| broker | `mqadmin consumerConnection -g ingest-task-consumer-group` 能看到 ingest 容器的客户端（切换前看不到）。实际：判据不成立——`INGEST_TASK` topic 尚不存在，消费者拿不到路由，不向任何 broker 发心跳。改用 ingest 容器按主机名连 `linqibins-mac-mini:10911` 成功、namesrv 地址为 `linqibins-mac-mini:9876`、dashboard 按主机名取到 broker-a 统计；消费链路端到端留到 topic 首次发送时 |
 | dashboard | rocketmq-dashboard 能显示 broker 统计 |
 | 容器里没有旧变量 | 应用容器的环境变量里不再有 `NACOS_HOST`、`ROCKETMQ_NAMESRV`、`XXL_JOB_ADMIN_ADDRESSES`、`XXL_JOB_EXECUTOR_LOG_PATH` |
 
