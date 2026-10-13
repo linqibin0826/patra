@@ -3,7 +3,7 @@
 > **Issue**：[PAP-71](https://linear.app/papertrace/issue/PAP-71)
 > **版本**：[v0.9 Config Center](../release-specs/v0.9-config-center.md)（决策 E、G；Done 判定 D6、D9）
 > **日期**：2026-10-11（2026-10-12 修订：密钥从 `PATRA_SECRETS` 分组改放独立 namespace `dev-secrets`，见 5.1）
-> **状态**：设计已确认，待实施
+> **状态**：已上线（2026-10-13）
 
 ## 1. 要解决的问题
 
@@ -355,12 +355,13 @@ spring:
 
 ## 12. 实施时要实测的点
 
-第 1～3 条已在本机临时容器上实测（PAP-71 实施，2026-10-12），第 4 条在上线时观察。
+第 1～3 条已在本机临时容器上实测（PAP-71 实施，2026-10-12），第 4 条在上线时观察（2026-10-13）。
 
-1. 3.0.2 上 `nacos-init.sh` 可用：管理员初始化接口在已有管理员时返回 409；namespace、用户、角色、权限接口与 3.2.4 一致。登录成功时返回的字段相同（`accessToken`、`globalAdmin`、`tokenTtl`、`username`）；密码错误时 3.0.2 返回 HTTP 500，3.2.4 返回 HTTP 403。脚本只认「HTTP 200 且 `accessToken` 非空」，两种都判为失败。按第 10 节第 2 步的方式（本机只有 `nacos.env`、`nacos-push.env`，管理员密码用默认值）执行后，`nacos-verify.sh` 只有第 1、2 项失败（版本、默认密码），这两项在旧服务端上本就该失败。
+1. 3.0.2 上 `nacos-init.sh` 可用：管理员初始化接口在已有管理员时返回 409；namespace、用户、角色、权限接口与 3.2.4 一致。登录成功时返回的字段相同（`accessToken`、`globalAdmin`、`tokenTtl`、`username`）；密码错误时 3.0.2 返回 HTTP 500，3.2.4 返回 HTTP 403。脚本只认「HTTP 200 且 `accessToken` 非空」，两种都判为失败。按第 10 节第 2 步的方式（本机只有 `nacos.env`、`nacos-push.env`，管理员密码用默认值）执行后，`nacos-verify.sh` 只有第 1、2 项失败（版本、默认密码），这两项在旧服务端上本就该失败。密钥改放 `dev-secrets` 后（第 5.1 节），第 10 项在 3.0.2 上也失败：3.0.2 的批量删除不检查 namespace，推送账号能删掉 `dev-secrets` 里的探针。2026-10-13 在 mini 的 3.0.2 上执行，结果 7 通过 / 3 失败，与此一致。
 2. 不依赖「重复建用户」的返回：脚本先查用户列表，已存在的账号先用文件里的密码登录，登录不了才用 `PUT /v3/auth/user`（`username`、`newPassword`）重置。3.2.4 上实测：PUT 的表单请求体会被解析，新密码生效、旧密码失效。3.0.2 上这个 PUT 对管理员令牌也返回 403：`hasPermission` 在上下文里已有用户时不调用 `hasGlobalAdminRole`，全局管理员标记一直是 false，3.2.4 已修。所以在 3.0.2 上脚本可以重跑（密码没变），但改不了密码，改密码要等升级之后。
 3. `DELETE /v3/auth/permission` 的参数是 `role`、`resource`、`action`，与源码一致。3.2.4 上实测删除多余权限成功。
-4. 切换后，SCA 的服务发现健康指示器会不会让应用的 actuator health 变成 DOWN，进而触发 CD 回滚。按第 10 节的顺序，CD 部署时连的是已建好账号的旧服务端，理论上不会出现这种情况。
+4. 切换后，SCA 的服务发现健康指示器会不会让应用的 actuator health 变成 DOWN，进而触发 CD 回滚。结论：不会。CD 部署时连的是已建好账号的旧服务端，6 个容器全部 healthy，没有回滚；切换到 3.2.4、初始化并 `docker restart` 后，6 个服务的 actuator health 都是 `UP`，`nacos-verify.sh --expect-services` 11 项全部通过。服务发现从停掉旧服务端到应用恢复中断约 3 分钟。
+   - 另见：mini 从 Docker Hub 拉 `nacos-server:v3.2.4` 时，compose 预演第一次 i/o timeout，单独 `docker pull` 一次即成功，属间歇性超时。
 
 ## 13. 已知风险（接受）
 
