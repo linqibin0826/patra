@@ -56,6 +56,25 @@ class NacosConfigFilesTest {
   }
 
   @Test
+  @DisplayName("同一个键扁平、嵌套各写一次时不通过，被覆盖的字面量敏感值也报出")
+  void should_reject_same_key_in_flat_and_nested_form() throws IOException {
+    write(
+        "patra-common.yaml",
+        """
+        patra.config-source.common: patra-common.yaml
+        spring:
+          datasource:
+            password: hunter2
+        spring.datasource.password: ${DB_PASSWORD}
+        """);
+
+    assertThat(NacosConfigFileChecker.check(directory))
+        .containsExactlyInAnyOrder(
+            "patra-common.yaml：重复键 spring.datasource.password（扁平与嵌套写法指向同一个属性）",
+            "patra-common.yaml：敏感键 spring.datasource.password 只能写成 ${变量} 或 ${变量:默认值}");
+  }
+
+  @Test
   @DisplayName("顶层不是 map 时不通过")
   void should_reject_non_map_root() throws IOException {
     write("patra-common.yaml", "- a\n- b\n");

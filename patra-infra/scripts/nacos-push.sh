@@ -26,12 +26,26 @@ GROUP=DEFAULT_GROUP
 COMMON=patra-common.yaml
 PAGE_SIZE=100
 
+# usage_error MSG：报参数错误和用法，以退出码 1 结束。
+usage_error() {
+  echo "$1" >&2
+  echo "用法：nacos-push.sh [--check] [目录]" >&2
+  exit 1
+}
+
 CHECK=false
-if [ "${1:-}" = "--check" ]; then
-  CHECK=true
-  shift
-fi
-DIR="${1:-$SCRIPT_DIR/../nacos/dev}"
+DIR=""
+for arg in "$@"; do
+  case "$arg" in
+    --check) CHECK=true ;;
+    -*) usage_error "不认识的参数：${arg}" ;;
+    *)
+      [ -z "$DIR" ] || usage_error "只能给一个目录：${DIR}、${arg}"
+      DIR="$arg"
+      ;;
+  esac
+done
+DIR="${DIR:-$SCRIPT_DIR/../nacos/dev}"
 
 # nacos_load 用间接展开读变量，set -u 下变量必须先存在
 NACOS_PUSH_USERNAME="${NACOS_PUSH_USERNAME:-}"
@@ -86,8 +100,11 @@ login() {
   nacos_load NACOS_PUSH_USERNAME nacos-push.env || exit 1
   nacos_load NACOS_PUSH_PASSWORD nacos-push.env || exit 1
   if ! nacos_login "$NACOS_PUSH_USERNAME" "$NACOS_PUSH_PASSWORD"; then
-    [ "$NACOS_HTTP" = 000 ] && die "连不上 Nacos：${NACOS_ADDR}"
-    die "登录被拒：账号 ${NACOS_PUSH_USERNAME}（HTTP ${NACOS_HTTP}）"
+    case "$NACOS_HTTP" in
+      000) die "连不上 Nacos：${NACOS_ADDR}" ;;
+      401 | 403) die "登录被拒：账号 ${NACOS_PUSH_USERNAME}（HTTP ${NACOS_HTTP}）" ;;
+      *) die "Nacos 地址不对或不是 Nacos 接口：${NACOS_ADDR}（HTTP ${NACOS_HTTP}）" ;;
+    esac
   fi
 }
 

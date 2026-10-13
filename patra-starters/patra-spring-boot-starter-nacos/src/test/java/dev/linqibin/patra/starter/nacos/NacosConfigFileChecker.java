@@ -75,9 +75,17 @@ final class NacosConfigFileChecker {
     if (!(root instanceof Map<?, ?> map)) {
       return List.of(name + "：顶层必须是键值对（map）");
     }
-    Map<String, Object> flat = new LinkedHashMap<>();
-    flatten("", map, flat);
+    List<Leaf> leaves = new ArrayList<>();
+    flatten("", map, leaves);
     List<String> violations = new ArrayList<>();
+    Map<String, Object> flat = new LinkedHashMap<>();
+    for (Leaf leaf : leaves) {
+      // `a.b: 1` 与 `a: {b: 2}` 是两个 YAML 键，SnakeYAML 不报重复，Spring 却当成同一个属性
+      if (flat.containsKey(leaf.path())) {
+        violations.add(name + "：重复键 " + leaf.path() + "（扁平与嵌套写法指向同一个属性）");
+      }
+      flat.put(leaf.path(), leaf.value());
+    }
     String property = signatureProperty(name);
     if (!name.equals(flat.get(property))) {
       violations.add(name + "：签到 " + property + " 的值必须是 " + name);
@@ -86,13 +94,13 @@ final class NacosConfigFileChecker {
     if (text.lines().noneMatch(line::equals)) {
       violations.add(name + "：签到必须写成一行扁平键「" + line + "」");
     }
-    flat.forEach(
-        (key, value) -> {
-          if (isSensitive(key) && !isReference(value)) {
-            violations.add(name + "：敏感键 " + key + " 只能写成 ${变量} 或 ${变量:默认值}");
-          }
-        });
-    return violations;
+    // 逐个叶子检查，不看覆盖后的结果：被覆盖的字面量照样会进仓库
+    for (Leaf leaf : leaves) {
+      if (isSensitive(leaf.path()) && !isReference(leaf.value())) {
+        violations.add(name + "：敏感键 " + leaf.path() + " 只能写成 ${变量} 或 ${变量:默认值}");
+      }
+    }
+    return violations.stream().distinct().toList();
   }
 
   /// 键路径最后一段（去掉 `[n]`、`-`、`_` 并转小写后）是否以敏感词结尾。
@@ -128,12 +136,14 @@ final class NacosConfigFileChecker {
         : ConfigSourceCheckPostProcessor.SERVICE_PROPERTY;
   }
 
-  /// 把嵌套的 map 和 list 压平成点分路径到叶子值的映射，列表元素写成 `key[i]`。
+  /// 把嵌套的 map 和 list 压平成点分路径与叶子值，列表元素写成 `key[i]`。
+  ///
+  /// 按出现顺序保留全部叶子，路径相同的也不合并，供重复键与敏感值检查使用。
   ///
   /// @param prefix 当前路径，顶层为空串
   /// @param node 当前节点
   /// @param out 收集结果
-  private static void flatten(String prefix, Object node, Map<String, Object> out) {
+  private static void flatten(String prefix, Object node, List<Leaf> out) {
     if (node instanceof Map<?, ?> map) {
       map.forEach(
           (key, value) ->
@@ -143,7 +153,23 @@ final class NacosConfigFileChecker {
         flatten(prefix + "[" + i + "]", list.get(i), out);
       }
     } else {
-      out.put(prefix, node);
+      out.add(Leaf.of(prefix, node));
+    }
+  }
+
+  /// 压平后的一个叶子。
+  ///
+  /// @param path 点分路径
+  /// @param value 叶子值，可能为 `null`
+  private record Leaf(String path, Object value) {
+
+    /// 创建叶子。
+    ///
+    /// @param path 点分路径
+    /// @param value 叶子值，可能为 `null`
+    /// @return 叶子
+    static Leaf of(String path, Object value) {
+      return new Leaf(path, value);
     }
   }
 

@@ -73,7 +73,7 @@ patra-infra/nacos/
 
 对目录下每个 `*.yaml` 检查：
 
-1. 能被 SnakeYAML 解析，且顶层是 map。拒绝重复键（SnakeYAML `setAllowDuplicateKeys(false)`）：Spring 读到重复键时会静默取后一个，写错了很难发现。
+1. 能被 SnakeYAML 解析，且顶层是 map。拒绝重复键（SnakeYAML `setAllowDuplicateKeys(false)`）：Spring 读到重复键时会静默取后一个，写错了很难发现。扁平写法与嵌套写法指向同一个属性（如 `a.b: 1` 与 `a: {b: 2}`）时 SnakeYAML 不报重复，检查在压平后另行拒绝；敏感值逐个叶子检查，被覆盖的字面量也报出。
 2. 签到：属性名引用 `ConfigSourceCheckPostProcessor.COMMON_PROPERTY`（`patra-common.yaml`）或 `SERVICE_PROPERTY`（其他文件），解析出的值等于文件名；文件原文里有完全匹配的一行 `<属性名>: <文件名>`（与脚本预检同一标准）。
 3. 敏感键：把 map 压平成点分路径，最后一段去掉 `[n]`、`-`、`_` 并转小写后，以 `password`、`passwd`、`secret`、`token`、`credential`、`credentials`、`privatekey`、`apikey`、`accesskey`、`secretkey` 之一**结尾**时，值必须是以 `${` 开头、以 `}` 结尾的字符串；值为 `null` 或空串也通过（没有泄露任何东西）。数字、布尔等字面量不通过。按「结尾」而不是「包含」判定，`token-ttl`、`max-token-length` 这类普通键才不会被误判。
 4. 目录里有 `patra-common.yaml`。
@@ -89,7 +89,7 @@ patra-infra/nacos/
 nacos-push.sh [--check] [目录]
 ```
 
-- **目录**：默认 `<脚本目录>/../nacos/dev`；namespace 取目录名。
+- **目录**：默认 `<脚本目录>/../nacos/dev`；namespace 取目录名。`--check` 与目录的先后顺序不限；不认识的参数或多于一个目录时报用法并以退出码 1 结束。
 - **地址**：`NACOS_ADDR`，默认 `http://127.0.0.1:8848`（mini 上的 runner 用默认值）；本机推 mini 时内联 `NACOS_ADDR=http://100.103.73.27:8848`。
 - **账号**：`nacos_load NACOS_PUSH_USERNAME nacos-push.env`、`nacos_load NACOS_PUSH_PASSWORD nacos-push.env`，环境变量优先。
 - **依赖**：`nacos-lib.sh`、curl、jq；兼容 bash 3.2。
@@ -99,7 +99,7 @@ nacos-push.sh [--check] [目录]
 任何一步失败都立即退出，退出码 1。
 
 1. **本地预检**（不联网）：目录存在；有 `patra-common.yaml`；每个 `*.yaml` 都有一行完全匹配 `^patra\.config-source\.(common|service): <文件名>$` 的签到行，且 `patra-common.yaml` 用 `common`、其他文件用 `service`。不通过时不登录、不推送任何内容，并列出所有不通过的文件。
-2. **登录**：`nacos_login`。连不上时报地址；被拒时报账号名。
+2. **登录**：`nacos_login`。连不上（HTTP 000）时报地址；401 / 403 时报「登录被拒」和账号名；其他状态（如地址里路径写错得到 404）报「Nacos 地址不对或不是 Nacos 接口」。
 3. **发布**：按文件名排序逐个处理。
    - `GET /v3/admin/cs/config`（`namespaceId`、`groupName=DEFAULT_GROUP`、`dataId`）读取现有内容，用 `jq --rawfile` 与本地文件逐字节比较（不经 shell 变量，命令替换会吞掉末尾换行）。
    - 相同：记为「未变化」。不存在或不同：`POST /v3/admin/cs/config`，表单带 `namespaceId`、`groupName=DEFAULT_GROUP`、`dataId`、`content`、`type=yaml`，记为「新增」或「更新」。

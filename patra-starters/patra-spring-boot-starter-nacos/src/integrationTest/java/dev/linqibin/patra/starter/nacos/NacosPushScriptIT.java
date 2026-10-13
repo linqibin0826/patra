@@ -161,6 +161,20 @@ class NacosPushScriptIT {
   }
 
   @Test
+  @DisplayName("地址通但不是 Nacos 接口（路径写错）：报地址不对，不误报登录被拒")
+  void should_report_wrong_address_when_endpoint_is_not_nacos() throws Exception {
+    writeConfig("patra-common.yaml", "a: 1\n");
+    String wrongAddr = "http://" + nacos.serverAddr() + "/nacos";
+
+    ScriptResult result = run(wrongAddr, pushPassword);
+
+    assertThat(result.exitCode()).isEqualTo(1);
+    assertThat(result.output())
+        .contains("Nacos 地址不对或不是 Nacos 接口：" + wrongAddr + "（HTTP 404）")
+        .doesNotContain("登录被拒");
+  }
+
+  @Test
   @DisplayName("删一个本地文件：Nacos 里对应的配置被删，其他分组不受影响")
   void should_delete_configs_missing_from_directory() throws Exception {
     writeConfig("patra-common.yaml", "a: 1\n");
@@ -230,6 +244,33 @@ class NacosPushScriptIT {
     assertThat(nacos.content("stale.yaml")).isEqualTo("k: 1\n");
   }
 
+  @Test
+  @DisplayName("--check 写在目录后面也生效，Nacos 不被写入")
+  void check_should_work_after_directory_argument() throws Exception {
+    writeConfig("patra-common.yaml", "a: 1\n");
+
+    ScriptResult result = execute(dev.toString(), "--check");
+
+    assertThat(result.exitCode()).as(result.output()).isEqualTo(2);
+    assertThat(result.output()).contains("只对比，不写入（--check）", "新增 patra-common.yaml");
+    assertThat(nacos.dataIds()).isEmpty();
+  }
+
+  @Test
+  @DisplayName("参数写错或给了两个目录：报用法，退出码 1，Nacos 不被写入")
+  void should_reject_unknown_or_extra_arguments() throws Exception {
+    writeConfig("patra-common.yaml", "a: 1\n");
+
+    ScriptResult typo = execute("--chek", dev.toString());
+    ScriptResult twoDirs = execute(dev.toString(), dev.toString());
+
+    assertThat(typo.exitCode()).as(typo.output()).isEqualTo(1);
+    assertThat(typo.output()).contains("不认识的参数：--chek", "用法：nacos-push.sh [--check] [目录]");
+    assertThat(twoDirs.exitCode()).as(twoDirs.output()).isEqualTo(1);
+    assertThat(twoDirs.output()).contains("只能给一个目录", "用法：nacos-push.sh [--check] [目录]");
+    assertThat(nacos.dataIds()).isEmpty();
+  }
+
   /// 在 `dev` 目录写一份配置：第一行是签到，后面接正文。
   ///
   /// @param dataId 文件名
@@ -272,9 +313,33 @@ class NacosPushScriptIT {
   /// @throws InterruptedException 等待时被中断
   private ScriptResult run(String addr, String password, String... args)
       throws IOException, InterruptedException {
+    List<String> arguments = new ArrayList<>(List.of(args));
+    arguments.add(dev.toString());
+    return execute(addr, password, arguments);
+  }
+
+  /// 用推送账号对测试 Nacos 运行脚本，参数原样传入（不自动加目录）。
+  ///
+  /// @param args 脚本参数
+  /// @return 退出码和合并后的输出
+  /// @throws IOException 启动进程失败时
+  /// @throws InterruptedException 等待时被中断
+  private ScriptResult execute(String... args) throws IOException, InterruptedException {
+    return execute("http://" + nacos.serverAddr(), pushPassword, List.of(args));
+  }
+
+  /// 运行脚本，参数原样传入。
+  ///
+  /// @param addr `NACOS_ADDR`
+  /// @param password 推送账号密码
+  /// @param args 脚本参数
+  /// @return 退出码和合并后的输出
+  /// @throws IOException 启动进程失败时
+  /// @throws InterruptedException 等待时被中断
+  private ScriptResult execute(String addr, String password, List<String> args)
+      throws IOException, InterruptedException {
     List<String> command = new ArrayList<>(List.of("bash", SCRIPT.toString()));
-    command.addAll(List.of(args));
-    command.add(dev.toString());
+    command.addAll(args);
     ProcessBuilder builder = new ProcessBuilder(command).redirectErrorStream(true);
     Map<String, String> environment = builder.environment();
     environment.put("NACOS_ADDR", addr);
