@@ -1,6 +1,6 @@
 package dev.linqibin.patra.gateway;
 
-import org.springframework.boot.SpringApplication;
+import dev.linqibin.patra.starter.nacos.PatraApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /// Patra API 网关主入口。
@@ -14,16 +14,16 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 /// - 网关自身的错误输出 ProblemDetail（前缀 `GW`）；下游的响应原样透传
 /// - 聚合各服务的 OpenAPI 文档（Scalar UI）
 ///
-/// 默认端口 9528。路由与客户端配置见 `application.yml`，设计见
-/// `docs/patra/specs/2026-10-09-gateway-webmvc-design.md` 与
+/// 默认端口 9528。路由与客户端配置见 `application.yml`，随环境变的值在 Nacos（`patra-common.yaml`、
+/// `patra-gateway.yaml`），设计见 `docs/patra/specs/2026-10-09-gateway-webmvc-design.md` 与
 /// `docs/patra/specs/2026-10-09-gateway-auth-design.md`。
 @SpringBootApplication(scanBasePackages = "dev.linqibin")
 public class PatraGatewayApplication {
 
-  /// 启动Spring Boot应用。
+  /// 经启动器启动应用，服务名 `patra-gateway`。
   ///
   /// @param args 传递给应用的命令行参数
   public static void main(String[] args) {
-    SpringApplication.run(PatraGatewayApplication.class, args);
+    PatraApplication.run("patra-gateway", PatraGatewayApplication.class, args);
   }
 }
