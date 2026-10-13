@@ -47,6 +47,9 @@ spring:
       discovery:
         server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:127.0.0.1}}:${NACOS_PORT:8848}
         service: ${spring.application.name}
+        # 本实例通告给 Nacos 的地址。IDE 里是 MacBook 的 tailscale IP（env.zsh），容器里不设：
+        # 留空时自动探测，容器拿到的是 patra-net 上的 IP。
+        ip: ${PATRA_ADVERTISE_IP:}
         # 显式 false：SCA 2025.1.0.0 默认 true 会让 nacos 3.x gRPC 异步握手未完成时
         # 同步 register 的 -401 Client-not-connected 直接 abort 整个应用启动
         fail-fast: false

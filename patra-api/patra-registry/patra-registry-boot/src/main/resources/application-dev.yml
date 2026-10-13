@@ -19,12 +19,6 @@ spring:
     username: postgres
     password: 123456  # Development only - secure in production
 
-  # dev 场景：用 TAILSCALE_IP 注册，确保跨主机服务发现拿到的 IP 可达。
-  cloud:
-    nacos:
-      discovery:
-        ip: ${TAILSCALE_IP:}
-
 # 可观测性：开箱即用（零配置）
 # - Tracing/Logging: OTel Agent 自动处理
 # - Metrics: applicationName 自动取 spring.application.name，environment 自动取 spring.profiles.active

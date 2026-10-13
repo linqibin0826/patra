@@ -4,11 +4,6 @@ spring:
     # 不加 optional：缺文件时启动失败并报出路径
     import:
       - file:${user.home}/.patra/secrets/nacos.env[.properties]
-  # dev 场景：用 TAILSCALE_IP 注册，确保跨主机服务发现拿到的 IP 可达。
-  cloud:
-    nacos:
-      discovery:
-        ip: ${TAILSCALE_IP:}
   datasource:
     url: ${STORAGE_DB_URL:jdbc:postgresql://${PATRA_INFRA_HOST:127.0.0.1}:15432/patra_storage}
     username: ${STORAGE_DB_USERNAME:postgres}

@@ -15,11 +15,6 @@ spring:
       - file:${user.home}/.patra/secrets/gateway.env[.properties]
       - file:${user.home}/.patra/secrets/nacos.env[.properties]
 
-  # dev 场景：用 TAILSCALE_IP 注册，确保跨主机服务发现拿到的 IP 可达。
-  cloud:
-    nacos:
-      discovery:
-        ip: ${TAILSCALE_IP:}
   data:
     redis:
       # 本机和 mini 容器共用这个 Redis 的 0 号库。带用户名 default：Redis 加密码前后都能认证

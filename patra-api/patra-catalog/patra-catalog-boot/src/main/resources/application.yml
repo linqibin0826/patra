@@ -36,6 +36,9 @@ spring:
       discovery:
         server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:127.0.0.1}}:${NACOS_PORT:8848}
         service: ${spring.application.name}
+        # 本实例通告给 Nacos 的地址。IDE 里是 MacBook 的 tailscale IP（env.zsh），容器里不设：
+        # 留空时自动探测，容器拿到的是 patra-net 上的 IP。
+        ip: ${PATRA_ADVERTISE_IP:}
         # 显式 false：SCA 2025.1.0.0 默认 true 会让 nacos 3.x gRPC 异步握手未完成时
         # 同步 register 的 -401 Client-not-connected 直接 abort 整个应用启动
         fail-fast: false
@@ -114,10 +117,8 @@ xxl:
       # 默认 127.0.0.1 仅用于在 MacBook 本地起容器调试的应急 fallback（统一用 127.0.0.1 避免 hosts/IPv6 解析歧义）。
       addresses: ${XXL_JOB_ADMIN_ADDRESSES:http://${PATRA_INFRA_HOST:127.0.0.1}:7070/xxl-job-admin}
     executor:
-      # executor 回调地址：admin（Mac mini 容器）需主动回调本 executor（MacBook 进程）触发任务。
-      # 跨主机部署下无合理通用默认（每台 MacBook 的 tailscale IP 不同），必须显式注入。
-      # 取值示例：MacBook 的 tailscale IP（`tailscale ip -4`）。
-      ip: ${XXL_JOB_EXECUTOR_IP:}
+      # 回调地址：admin 按它回调本执行器。与 Nacos 注册地址同一个变量；容器里不设，自动探测 patra-net 上的 IP。
+      ip: ${PATRA_ADVERTISE_IP:}
       # Log directory in centralized logs folder
       logpath: ${XXL_JOB_EXECUTOR_LOG_PATH:${PATRA_LOG_DIR:logs}/xxl-job/patra-catalog}
       logretentiondays: ${XXL_JOB_LOG_RETENTION_DAYS:30}
