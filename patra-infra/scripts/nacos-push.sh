@@ -24,6 +24,7 @@ source "$SCRIPT_DIR/nacos-lib.sh"
 
 GROUP=DEFAULT_GROUP
 COMMON=patra-common.yaml
+PAGE_SIZE=100
 
 CHECK=false
 if [ "${1:-}" = "--check" ]; then
@@ -40,6 +41,9 @@ ADDED=0
 UPDATED=0
 DELETED=0
 SAME=0
+
+LISTING="$(mktemp)"
+trap 'rm -f "$LISTING"' EXIT
 
 # die MSG：报错并以退出码 1 结束。
 die() {
@@ -113,6 +117,40 @@ publish_files() {
   done
 }
 
+# remote_data_ids：把 NAMESPACE / GROUP 下的全部 dataId 逐行写到 stdout，分页取完。
+# 调用方用重定向（不用命令替换），出错时 die 才能结束整个脚本。
+remote_data_ids() {
+  local page=1 pages
+  while :; do
+    nacos_api GET /v3/admin/cs/config/list "$NACOS_TOKEN" "namespaceId=${NAMESPACE}" \
+      "groupName=${GROUP}" dataId= "pageNo=${page}" "pageSize=${PAGE_SIZE}" search=accurate
+    nacos_ok || die "列出 ${NAMESPACE} / ${GROUP} 的配置失败：HTTP ${NACOS_HTTP}，code $(nacos_code)"
+    jq -r '.data.pageItems[].dataId' <<<"$NACOS_BODY"
+    pages="$(jq -r '.data.pagesAvailable' <<<"$NACOS_BODY")"
+    [ "$page" -ge "$pages" ] && return 0
+    page=$((page + 1))
+  done
+}
+
+# prune：删除 Nacos 里有、目录里没有的配置。先列完再删，避免边删边翻页漏掉。
+prune() {
+  local id file names=""
+  for file in ${FILES[@]+"${FILES[@]}"}; do
+    names="${names}$(basename "$file")"$'\n'
+  done
+  remote_data_ids >"$LISTING"
+  while IFS= read -r id; do
+    [ -z "$id" ] && continue
+    # 用 here-string 不用管道：pipefail 下 grep -q 提前退出可能让 printf 收到 SIGPIPE，
+    # 整条管道判为失败，本地有的配置会被当成没有而误删
+    grep -qxF -- "$id" <<<"$names" && continue
+    nacos_api DELETE /v3/admin/cs/config "$NACOS_TOKEN" "namespaceId=${NAMESPACE}" \
+      "groupName=${GROUP}" "dataId=${id}"
+    nacos_ok || die "删除 ${id} 失败：HTTP ${NACOS_HTTP}，code $(nacos_code)"
+    report 删除 "$id"
+  done <"$LISTING"
+}
+
 [ -d "$DIR" ] || die "配置目录不存在：${DIR}"
 DIR="$(cd "$DIR" && pwd)"
 NAMESPACE="$(basename "$DIR")"
@@ -123,5 +161,6 @@ shopt -u nullglob
 preflight
 login
 publish_files
+prune
 echo "新增 ${ADDED}，更新 ${UPDATED}，删除 ${DELETED}，未变化 ${SAME}"
 exit 0

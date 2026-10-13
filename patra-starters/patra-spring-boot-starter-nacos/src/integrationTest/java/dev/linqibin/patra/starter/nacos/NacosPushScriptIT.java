@@ -160,6 +160,38 @@ class NacosPushScriptIT {
     assertThat(result.output()).contains("连不上 Nacos：http://127.0.0.1:1");
   }
 
+  @Test
+  @DisplayName("删一个本地文件：Nacos 里对应的配置被删，其他分组不受影响")
+  void should_delete_configs_missing_from_directory() throws Exception {
+    writeConfig("patra-common.yaml", "a: 1\n");
+    writeConfig("patra-ingest.yaml", "b: 1\n");
+    assertThat(push().exitCode()).isZero();
+    nacos.publish("OTHER", "keep.yaml", "k: 1\n");
+    Files.delete(dev.resolve("patra-ingest.yaml"));
+
+    ScriptResult result = push();
+
+    assertThat(result.exitCode()).as(result.output()).isZero();
+    assertThat(result.output()).contains("删除 patra-ingest.yaml", "新增 0，更新 0，删除 1，未变化 1");
+    assertThat(nacos.dataIds()).containsExactly("patra-common.yaml");
+    assertThat(nacos.content("OTHER", "keep.yaml")).isEqualTo("k: 1\n");
+  }
+
+  @Test
+  @DisplayName("远端超过一页：多余的配置全部删干净")
+  void should_delete_across_pages() throws Exception {
+    for (int i = 0; i < 105; i++) {
+      nacos.publish("DEFAULT_GROUP", "extra-%03d.yaml".formatted(i), "k: " + i + "\n");
+    }
+    writeConfig("patra-common.yaml", "a: 1\n");
+
+    ScriptResult result = push();
+
+    assertThat(result.exitCode()).as(result.output()).isZero();
+    assertThat(result.output()).contains("新增 1，更新 0，删除 105，未变化 0");
+    assertThat(nacos.dataIds()).containsExactly("patra-common.yaml");
+  }
+
   /// 在 `dev` 目录写一份配置：第一行是签到，后面接正文。
   ///
   /// @param dataId 文件名
