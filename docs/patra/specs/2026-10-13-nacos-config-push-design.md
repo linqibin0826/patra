@@ -1,6 +1,6 @@
 # Nacos 配置文件目录与推送设计（PAP-75）
 
-> **状态**：设计已确认（2026-10-13），待实现
+> **状态**：已实现（2026-10-13）
 > **Issue**：PAP-75 [Infra] 配置文件目录与推送
 > **版本**：v0.9 配置中心（`docs/patra/release-specs/v0.9-config-center.md` 决策 B、E）
 > **前置**：PAP-71（Nacos 加固，`patra-push` 账号与 `nacos-push.env`）、PAP-74（starter 与签到检查，`docs/patra/specs/2026-10-13-nacos-config-starter-design.md`）
@@ -73,14 +73,15 @@ patra-infra/nacos/
 
 对目录下每个 `*.yaml` 检查：
 
-1. 能被 SnakeYAML 解析，且顶层是 map。
+1. 能被 SnakeYAML 解析，且顶层是 map。拒绝重复键（SnakeYAML `setAllowDuplicateKeys(false)`）：Spring 读到重复键时会静默取后一个，写错了很难发现。
 2. 签到：属性名引用 `ConfigSourceCheckPostProcessor.COMMON_PROPERTY`（`patra-common.yaml`）或 `SERVICE_PROPERTY`（其他文件），解析出的值等于文件名；文件原文里有完全匹配的一行 `<属性名>: <文件名>`（与脚本预检同一标准）。
-3. 敏感键：把 map 压平成点分路径，最后一段去掉 `-`、`_` 并转小写后包含 `password`、`secret`、`token`、`credential`、`privatekey`、`apikey`、`accesskey` 之一时，值必须是以 `${` 开头、以 `}` 结尾的字符串。
+3. 敏感键：把 map 压平成点分路径，最后一段去掉 `[n]`、`-`、`_` 并转小写后，以 `password`、`passwd`、`secret`、`token`、`credential`、`credentials`、`privatekey`、`apikey`、`accesskey`、`secretkey` 之一**结尾**时，值必须是以 `${` 开头、以 `}` 结尾的字符串；值为 `null` 或空串也通过（没有泄露任何东西）。数字、布尔等字面量不通过。按「结尾」而不是「包含」判定，`token-ttl`、`max-token-length` 这类普通键才不会被误判。
 4. 目录里有 `patra-common.yaml`。
+5. 换行符必须是 LF：脚本用 `grep -x` 匹配签到行，行尾的 `\r` 会让匹配失败，而 Java 的 `String.lines()` 不会；两边标准要一致，所以直接拒绝含 `\r` 的文件。
 
 失败信息写明文件名、路径和违反的规则，不打印敏感键的值。
 
-**读到仓库文件且不被缓存跳过**：starter 的 `build.gradle.kts` 给 `test` 任务声明 `inputs.dir(<仓库根>/patra-infra/nacos/dev)`（相对路径敏感），并以系统属性 `patra.nacos.config-dir` 传入绝对路径。CI 开着 `--build-cache`，不声明输入时只改 yaml 会命中缓存，检查等于没跑。
+**读到仓库文件且不被缓存跳过**：starter 的 `build.gradle.kts` 给 `test` 任务声明 `inputs.dir(<仓库根>/patra-infra/nacos/dev)`（相对路径敏感），并以系统属性 `patra.repo-root` 传入仓库根，值是相对路径 `../..`（相对于模块目录，也就是 Gradle 测试的工作目录）。不传绝对路径：绝对路径会进构建缓存键，换台机器缓存就失效；相对路径在哪台机器上都一样。`test` 与 `integrationTest` 共用这个属性。CI 开着 `--build-cache`，不声明输入时只改 yaml 会命中缓存，检查等于没跑；`integrationTest` 同样把 `nacos-push.sh`、`nacos-lib.sh` 声明为输入。
 
 ## 5. 推送脚本：`patra-infra/scripts/nacos-push.sh`
 
@@ -102,7 +103,7 @@ nacos-push.sh [--check] [目录]
 3. **发布**：按文件名排序逐个处理。
    - `GET /v3/admin/cs/config`（`namespaceId`、`groupName=DEFAULT_GROUP`、`dataId`）读取现有内容，用 `jq --rawfile` 与本地文件逐字节比较（不经 shell 变量，命令替换会吞掉末尾换行）。
    - 相同：记为「未变化」。不存在或不同：`POST /v3/admin/cs/config`，表单带 `namespaceId`、`groupName=DEFAULT_GROUP`、`dataId`、`content`、`type=yaml`，记为「新增」或「更新」。
-   - 「不存在」对应的响应（HTTP 状态与 `code`）由集成测试实测确定；其他非成功响应一律视为失败。
+   - 「不存在」实测为 HTTP 404 加 `code` 20004；其他非成功响应一律视为失败。
 4. **删除**：分页调用 `GET /v3/admin/cs/config/list`（`namespaceId`、`groupName=DEFAULT_GROUP`、`pageNo`、`pageSize`、精确匹配），收集全部 dataId，仓库里没有的逐个 `DELETE /v3/admin/cs/config`（`namespaceId`、`groupName=DEFAULT_GROUP`、`dataId`）。删除在全部发布之后执行。
 5. **汇总**：最后一行 `新增 a，更新 b，删除 c，未变化 d`。
 
@@ -116,7 +117,18 @@ nacos-push.sh [--check] [目录]
 
 ### 5.3 接口参数
 
-v3 admin 接口参数名（`groupName`、`pageNo`、`pageSize` 等）以 Nacos 3.2.4 实测为准，由第 7.2 节集成测试固定；GET 的条件放 URL 查询串（PAP-71 spec 11.1：Spring 不解析 GET 的表单请求体）。
+Nacos 3.2.4 实测（2026-10-13，临时容器），由第 7.2 节集成测试固定；GET 的条件放 URL 查询串（PAP-71 spec 11.1：Spring 不解析 GET 的表单请求体）。
+
+| 调用 | 结果 |
+|------|------|
+| `GET /v3/admin/cs/config`，配置不存在 | HTTP 404，`code` 20004 |
+| `GET /v3/admin/cs/config`，存在 | HTTP 200，`code` 0，正文在 `.data.content` |
+| `POST /v3/admin/cs/config`，表单 `content@文件`（curl `--data-urlencode name@file`） | 读回与文件逐字节一致（中文、`${X:1}`、末尾换行都保留） |
+| `GET /v3/admin/cs/config/list`，`namespaceId=dev`、`groupName=DEFAULT_GROUP`、`dataId=`、`pageNo`、`pageSize`、`search=accurate` | `.data.pageItems[].dataId`、`.data.pagesAvailable`；不同分组不会混进来 |
+| `GET /v3/admin/cs/history/list`，`namespaceId`、`groupName`、`dataId`、`pageNo`、`pageSize` | `.data.totalCount` 是历史条数 |
+| `DELETE /v3/admin/cs/config`，存在或不存在 | 都是 HTTP 200，`code` 0 |
+| 推送同款权限（`dev:DEFAULT_GROUP:config/*` rw + `dev:*:config/*` r） | 读、列、写、删、历史都通过；写 `OTHER` 分组 HTTP 403 |
+| 登录密码错误 | HTTP 403，无 `code`；地址不通时 `nacos_api` 给 HTTP 000 |
 
 ## 6. 路由与 CD
 
@@ -185,12 +197,17 @@ v3 admin 接口参数名（`groupName`、`pageNo`、`pageSize` 等）以 Nacos 3
 规则用例用 `@TempDir` 造目录，每条一个用例：
 
 - 解析失败 → 不通过
+- 重复键 → 不通过
 - 顶层不是 map → 不通过
+- 含 CR（CRLF 换行）→ 不通过
 - 签到值与文件名不一致 → 不通过
 - 签到写成嵌套形式（解析值正确但没有扁平行）→ 不通过
 - `patra-common.yaml` 用了 `service` 属性 → 不通过
 - 敏感键写字面量 → 不通过
 - 敏感键写 `${VAR:默认值}` → 通过
+- 敏感键写数字字面量 → 不通过
+- 敏感键为空值 → 通过
+- `token-ttl` 这类不以敏感词结尾的键 → 不算敏感键
 - 嵌套路径下的敏感键（如 `spring.datasource.password`）写字面量 → 不通过
 - 缺 `patra-common.yaml` → 不通过
 - 仓库真实目录 `patra-infra/nacos/dev` → 通过（CI 里挡住坏配置的那一道）
@@ -210,6 +227,7 @@ v3 admin 接口参数名（`groupName`、`pageNo`、`pageSize` 等）以 Nacos 3
 7. 缺 `patra-common.yaml`：退出码非 0，没有写入。
 8. `--check`：一致时退出码 0；有差异时退出码 2 且没有写入。
 9. 密码错误：退出码非 0，输出里没有密码和令牌。
+10. 地址连不上：报「连不上 Nacos：<地址>」，退出码 1，不误报「登录被拒」。
 
 ### 7.3 `detect-changes.test.sh`
 

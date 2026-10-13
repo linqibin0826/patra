@@ -1,5 +1,5 @@
 #!/bin/bash
-# nacos-init.sh、nacos-verify.sh 共用的函数。只供 source，不单独执行。
+# nacos-init.sh、nacos-verify.sh、nacos-push.sh 共用的函数。只供 source，不单独执行。
 #
 # 输入（环境变量，都有默认值）：
 #   NACOS_ADDR          Nacos HTTP 地址，默认 http://127.0.0.1:8848（不用 localhost：容器和本机都可能先解析到 ::1）

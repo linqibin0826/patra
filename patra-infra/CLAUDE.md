@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 这个目录是什么
 
-`patra-infra` 是 Patra 的**基建配置目录**，不是应用代码。它只包含：Docker Compose 编排（`docker/`）+ CD 路由与部署逻辑（`cd/`）+ macOS 运维脚本（`scripts/`）。这里没有构建系统、没有 lint —— 改动通过 `docker compose` 重启容器或 `launchctl` 重载 agent 来"生效"。仅有的可执行测试是 `cd/detect-changes.test.sh`、`cd/deploy.test.sh` 与 `scripts/install-github-runner.test.sh`（纯 bash stub 单测，直接 `bash` 运行，改对应脚本时必须跑）。
+`patra-infra` 是 Patra 的**基建配置目录**，不是应用代码。它只包含：Docker Compose 编排（`docker/`）+ CD 路由与部署逻辑（`cd/`）+ macOS 运维脚本（`scripts/`）+ Nacos 配置文件（`nacos/`）。这里没有构建系统、没有 lint —— 改动通过 `docker compose` 重启容器或 `launchctl` 重载 agent 来"生效"。仅有的可执行测试是 `cd/detect-changes.test.sh`、`cd/deploy.test.sh` 与 `scripts/install-github-runner.test.sh`（纯 bash stub 单测，直接 `bash` 运行，改对应脚本时必须跑）；`scripts/nacos-push.sh` 由 starter 的 `NacosPushScriptIT` 对真实 Nacos 测试（`./gradlew :patra-starters:patra-spring-boot-starter-nacos:integrationTest`）。
 
 完整的部署手册、服务 URL、凭据、故障排查在 `docker/README.md`，本文件只补充架构大图景和容易踩的非显性约束。MacBook ↔ Mac mini 的连接 / 地址 / 路由类问题（含 tailscale、Shadowrocket、各组件 IP 注册）单独记在 `docs/mac-mini-connectivity.md`。
 
@@ -58,8 +58,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **服务 SSOT**：`patra-infra/cd/services.json`（`name / gradleTask / context / port / image / healthPath / healthMatch`）。**加新服务 = 加一个条目**（再在 compose 加 service 块 + 建 `.env.<svc>`），workflow 逻辑不变。条目顺序就是 `deploy.sh` 的部署顺序。portal / learn 条目为 deploy-only（构建在 portal-cd.yml / learn-cd.yml 的 docker build 内）。
 - **learn（学习站）**：端口 4001，健康检查 `/api/health`（无 healthMatch，HTTP 成功即算健康），专属 workflow `learn-cd.yml`（pnpm 构建全在 `patra-learn/Dockerfile` 内），compose 服务名 `learn` / 容器 `patra-learn`，环境文件 `.env.learn`（纯静态站，不读 `.env.common`）。首次部署需等 learn-cd 首跑产出镜像，期间整栈 `compose-all.sh up` 报缺 learn 镜像属预期。
-- **选择性构建**：`patra-infra/cd/detect-changes.sh` 按 git diff 做受影响单元路由，只构建/部署改动的服务。**改公共面**（`patra-api/patra-common*` / `linqibin-commons/*` / `patra-starters/*` / `build-logic` / `gradle` / 根构建脚本 / `service.Dockerfile` / `docker-compose.apps.yaml` / `cd.yml` / `patra-infra/cd/*`）→ **重建全部 6 个**（正确性优先，宁可多建不可漏建）；docs / markdown 与**纯基建路径**（`patra-infra/scripts/*`、apps 以外的 `docker-compose.*.yaml` 及其配置目录、基建栈 `.env` / `.env.dev` / `*.example`、`otel-agent/`）不触发后端构建（它们靠 mini 上 `compose-all.sh` 手动生效）；应用容器的 `.env.common` / `.env.<svc>` 仍判全量（改了需重部署才生效）。注意 `patra-infra/cd/*` **整体**视为 CD 关键输入（含 `deploy.sh`——部署逻辑变更也应触发全量重建+重部署以立即得到验证，属有意设计而非误伤）。
-- **两段 job**：`detect-changes`（ubuntu，受影响单元路由）→ `build-deploy`（macmini：`gradlew bootJar` → 原生 `docker build` → `deploy.sh` → GHCR 归档推送 best-effort）。
+- **选择性构建**：`patra-infra/cd/detect-changes.sh` 按 git diff 做受影响单元路由，只构建/部署改动的服务。**改公共面**（`patra-api/patra-common*` / `linqibin-commons/*` / `patra-starters/*` / `build-logic` / `gradle` / 根构建脚本 / `service.Dockerfile` / `docker-compose.apps.yaml` / `cd.yml` / `patra-infra/cd/*`）→ **重建全部 6 个**（正确性优先，宁可多建不可漏建）；docs / markdown 与**纯基建路径**（`patra-infra/scripts/*`、apps 以外的 `docker-compose.*.yaml` 及其配置目录、基建栈 `.env` / `.env.dev` / `*.example`、`otel-agent/`）不触发后端构建（它们靠 mini 上 `compose-all.sh` 手动生效）；应用容器的 `.env.common` / `.env.<svc>` 仍判全量（改了需重部署才生效）。`patra-infra/nacos/*/*.yaml` 与推送脚本（`nacos-push.sh`、`nacos-lib.sh`）只路由到 `foundation`（CI 跑配置检查和推送集成测试）并置 `nacos_changed`，不重建服务。注意 `patra-infra/cd/*` **整体**视为 CD 关键输入（含 `deploy.sh`——部署逻辑变更也应触发全量重建+重部署以立即得到验证，属有意设计而非误伤）。
+- **三段 job**：`detect-changes`（ubuntu，受影响单元路由）→ `nacos-push`（macmini，仅 `nacos_changed`：把 `nacos/dev` 同步到 Nacos；失败则不部署）→ `build-deploy`（macmini：`gradlew bootJar` → 原生 `docker build` → `deploy.sh` → GHCR 归档推送 best-effort）。
 - **deploy.sh**（`patra-infra/cd/deploy.sh`，有单测 `deploy.test.sh`）：镜像就位（本地优先，缺失才回源 GHCR）→ arm64 断言 → 按 services.json 的条目顺序 up（**object-storage 最先**，identity 先于 gateway）→ 健康检查（127.0.0.1，不用 localhost——IPv6 误报实际踩坑）→ 部署后验证（运行容器 tag == 期望）→ 不健康自动回滚到 last-good（记录在 mini `~/.patra/cd/last-good-<svc>`，服务级）。
 - **共享分层 Dockerfile**：`patra-infra/docker/service.Dockerfile` 一份供 6 服务共用（`--build-arg APP_PORT` 区分端口）；6 服务都用 `linqibin.hexagonal-boot` 打 fat jar，Spring Boot 4 `jarmode=tools` 分层结构通用，依赖层在本机 daemon 长期缓存。
 - **触发与回滚**：push main 命中相关 paths 自动跑；`workflow_dispatch` 填 `service`（单服务名）+ `image_tag`（旧 sha）即回滚（跳过构建，本地镜像缓存优先、缺失才拉 GHCR）。健康检查失败时 deploy.sh 也会自动回滚。回滚用的是当前检出的 compose 和环境文件：删掉或改名旧镜像要读的已提交环境变量，就放弃了对那些旧镜像的直接回滚。例：PAP-66 删了 `CATALOG_REDIS_URL`，回滚到 10/05 那版 catalog 前要先在 `~/.patra/secrets/catalog.env` 补回这一行，且只在 Redis 加密码之前有效（见 v0.8 上线 runbook 第 4 节）。安全：不监听 `pull_request`，self-hosted runner 绝不跑 fork PR 代码；对 GitHub 出向长轮询、无入站端口。
@@ -80,4 +80,5 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `dev.patra.tailscale-route-guard.plist` | — | 上述路由守护 LaunchDaemon 的模板 |
 | `nacos-init.sh` | Mac mini | Nacos 初始化：管理员、`dev` namespace、`patra-app` / `patra-push` 账号、角色和权限。幂等；权限以脚本里的清单为准，多的会被删掉 |
 | `nacos-verify.sh [--expect-services]` | Mac mini | Nacos 加固验收，9 项 PASS / FAIL（加 `--expect-services` 为 10 项）；只读写探针 |
-| `nacos-lib.sh` | — | 上面两个脚本共用的函数，只供 source |
+| `nacos-push.sh [--check] [目录]` | Mac mini（CD）/ MacBook | 把 nacos/dev 同步到 Nacos dev / DEFAULT_GROUP：发布、跳过未变化、删除多余；--check 只对比（0 一致 / 2 有差异 / 1 出错） |
+| `nacos-lib.sh` | — | nacos-init、nacos-verify、nacos-push 共用的函数，只供 source |
