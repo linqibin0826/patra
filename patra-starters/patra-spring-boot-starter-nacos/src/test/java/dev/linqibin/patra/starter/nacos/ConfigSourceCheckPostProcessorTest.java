@@ -4,10 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.alibaba.cloud.nacos.client.NacosPropertySource;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.context.config.ConfigDataEnvironmentPostProcessor;
+import org.springframework.core.env.MapPropertySource;
 import org.springframework.mock.env.MockEnvironment;
 
 /// ConfigSourceCheckPostProcessor 单元测试：两份 Nacos 配置的签到检查。
@@ -82,6 +87,48 @@ class ConfigSourceCheckPostProcessorTest {
   }
 
   @Test
+  @DisplayName("Nacos 配置引用的变量没有值：启动失败，报出文件、键和变量名")
+  void should_fail_when_nacos_property_references_missing_variable() {
+    MockEnvironment environment = signedEnvironment();
+    environment
+        .getPropertySources()
+        .addLast(
+            nacosSource(
+                "patra-common.yaml", Map.of("spring.data.redis.password", "${REDIS_PASSWORD}")));
+
+    assertThatThrownBy(() -> check(environment))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessage(
+            "Nacos 配置 patra-common.yaml 的 spring.data.redis.password 引用的变量 REDIS_PASSWORD 没有值："
+                + "本机放在 ~/.patra/secrets/ 下的 .env 文件里，容器经 env_file 注入");
+  }
+
+  @Test
+  @DisplayName("引用的变量有值、或写了默认值时通过")
+  void should_pass_when_references_resolve_or_have_default() {
+    MockEnvironment environment = signedEnvironment().withProperty("REDIS_PASSWORD", "x");
+    environment
+        .getPropertySources()
+        .addLast(
+            nacosSource(
+                "patra-common.yaml",
+                Map.of(
+                    "spring.data.redis.password", "${REDIS_PASSWORD}",
+                    "spring.datasource.password", "${PATRA_DB_PASSWORD:123456}",
+                    "spring.data.redis.port", 16379)));
+
+    assertThatCode(() -> check(environment)).doesNotThrowAnyException();
+  }
+
+  @Test
+  @DisplayName("只查 Nacos 配置：jar 里的配置引用了没值的变量不归这里管")
+  void should_ignore_unresolved_references_outside_nacos() {
+    MockEnvironment environment = signedEnvironment().withProperty("some.key", "${NOT_SET}");
+
+    assertThatCode(() -> check(environment)).doesNotThrowAnyException();
+  }
+
+  @Test
   @DisplayName("排在 Spring Boot 加载配置之后")
   void should_run_after_config_data_loading() {
     assertThat(postProcessor.getOrder()).isGreaterThan(ConfigDataEnvironmentPostProcessor.ORDER);
@@ -89,6 +136,21 @@ class ConfigSourceCheckPostProcessorTest {
 
   private void check(MockEnvironment environment) {
     postProcessor.postProcessEnvironment(environment, new SpringApplication());
+  }
+
+  private static MockEnvironment signedEnvironment() {
+    return requiredEnvironment()
+        .withProperty("patra.config-source.common", "patra-common.yaml")
+        .withProperty("patra.config-source.service", "patra-ingest.yaml");
+  }
+
+  private static NacosPropertySource nacosSource(String dataId, Map<String, Object> properties) {
+    return new NacosPropertySource(
+        List.of(new MapPropertySource(dataId, properties)),
+        "DEFAULT_GROUP",
+        dataId,
+        new Date(),
+        false);
   }
 
   private static MockEnvironment requiredEnvironment() {

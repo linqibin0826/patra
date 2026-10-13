@@ -1,5 +1,6 @@
 package dev.linqibin.patra.starter.nacos;
 
+import com.alibaba.cloud.nacos.client.NacosPropertySource;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.boot.EnvironmentPostProcessor;
@@ -7,6 +8,8 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.context.config.ConfigDataEnvironmentPostProcessor;
 import org.springframework.core.Ordered;
 import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.env.PropertySource;
+import org.springframework.util.PlaceholderResolutionException;
 import org.springframework.util.StringUtils;
 
 /// 签到检查：确认两份 Nacos 配置都到了，没到就让启动失败。
@@ -15,6 +18,10 @@ import org.springframework.util.StringUtils;
 /// `patra.config-source.common`，`{服务名}.yaml` 写 `patra.config-source.service`。jar 里永远
 /// 不写，所以签到在，就说明对应的文件确实从 Nacos（或本地快照）读到了。SCA 拿不到配置时只打
 /// warn、返回空配置，靠这一步兜底。
+///
+/// 签到之后再查 Nacos 配置里引用的变量：没有默认值、又解析不了的 `${变量}` 让启动失败。Spring 绑定
+/// 配置时不严格解析占位符，不查的话会拿字面量 `${REDIS_PASSWORD}` 当密码，服务照常启动、用到时才报
+/// 认证失败。所以 `patra-common.yaml` 里不写没有默认值的引用：没用到的服务也会被它挡住。
 ///
 /// - 只在 `patra.config-source.required=true`（启动器设置）时检查；测试不经过启动器，不检查。
 /// - 排在 Spring Boot 加载完配置之后，比任何 Bean 创建都早：Nacos 没到时，不会先冒出数据源、
@@ -56,9 +63,42 @@ public class ConfigSourceCheckPostProcessor implements EnvironmentPostProcessor,
       String dataId = environment.getProperty("spring.application.name") + ".yaml";
       missing.add("没拿到本服务的 Nacos 配置 " + dataId + "：" + CAUSE);
     }
+    missing.addAll(unresolvedReferences(environment));
     if (!missing.isEmpty()) {
       throw new IllegalStateException(String.join("\n", missing));
     }
+  }
+
+  /// 找出 Nacos 配置里解析不了的变量引用，每个属性报一行（只报它第一个解析不了的变量）。
+  ///
+  /// @param environment 已加载完配置的环境
+  /// @return 报错行，没有问题时为空
+  private static List<String> unresolvedReferences(ConfigurableEnvironment environment) {
+    List<String> problems = new ArrayList<>();
+    for (PropertySource<?> source : environment.getPropertySources()) {
+      if (!(source instanceof NacosPropertySource nacosSource)) {
+        continue;
+      }
+      for (String name : nacosSource.getPropertyNames()) {
+        Object value = nacosSource.getProperty(name);
+        if (value == null) {
+          continue;
+        }
+        try {
+          environment.resolveRequiredPlaceholders(value.toString());
+        } catch (PlaceholderResolutionException e) {
+          problems.add(
+              "Nacos 配置 "
+                  + nacosSource.getDataId()
+                  + " 的 "
+                  + name
+                  + " 引用的变量 "
+                  + e.getPlaceholder()
+                  + " 没有值：本机放在 ~/.patra/secrets/ 下的 .env 文件里，容器经 env_file 注入");
+        }
+      }
+    }
+    return problems;
   }
 
   /// 排序值，见 [#ORDER]。
