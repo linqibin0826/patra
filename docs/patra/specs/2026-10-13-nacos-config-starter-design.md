@@ -3,7 +3,7 @@
 > **Issue**：[PAP-74](https://linear.app/papertrace/issue/PAP-74)
 > **版本**：[v0.9 Config Center](../release-specs/v0.9-config-center.md)（决策 A、C、E、F；Done 判定 D2、D6、D7、D8）
 > **日期**：2026-10-13
-> **状态**：设计已确认，待实施
+> **状态**：已实现（2026-10-13），mini 已撤销 `dev-secrets`
 
 ## 1. 要解决的问题
 

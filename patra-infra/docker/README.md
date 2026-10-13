@@ -92,7 +92,7 @@ bash patra-infra/scripts/compose-all.sh up
 # 6. (Mac mini) 验证全部 healthy
 bash patra-infra/scripts/compose-all.sh ps
 
-# 7. (Mac mini) 初始化 Nacos（nacos 容器 healthy 后执行，幂等）：管理员、dev 与 dev-secrets 两个 namespace、账号、角色和权限
+# 7. (Mac mini) 初始化 Nacos（nacos 容器 healthy 后执行，幂等）：管理员、dev namespace、账号、角色和权限
 bash patra-infra/scripts/nacos-init.sh
 bash patra-infra/scripts/nacos-verify.sh    # 预期 通过 10 / 失败 0
 ```
@@ -233,9 +233,8 @@ GATEWAY_IMAGE_TAG="$(cat ~/.patra/cd/last-good-gateway)" docker compose -f docke
 ## Nacos
 
 - 3.2.4，开着鉴权。存储在业务 PG 的 `patra_nacos` 库（官方 PG 插件，镜像自带）；`data/` 卷只剩服务发现的持久化数据和 jraft 元数据。
-- namespace：非敏感配置放 `dev`，密钥放 `dev-secrets`（`DEFAULT_GROUP / patra-secrets.yaml`），服务发现留在 `public`。
-- 账号：管理员 `nacos`；应用账号 `patra-app`（public 服务注册读写、`dev` 和 `dev-secrets` 的配置只读）；推送账号 `patra-push`（只能写 `dev` 的 `DEFAULT_GROUP`，在 `dev-secrets` 没有任何权限）。密钥只有管理员能改。
-- 不要给推送账号或其他非管理员账号加 `dev-secrets` 的写权限，按分组限制也不行：导入和批量删除接口按请求参数里的分组鉴权，不看实际操作的分组，分组级的限制能被绕过。
+- namespace：配置只有 `dev` 一个 namespace，服务发现留在 `public`。密钥不进 Nacos：配置里写 `${变量}`，值在 `~/.patra/secrets/`（PAP-74 撤销了 `dev-secrets`，见 `docs/patra/specs/2026-10-13-nacos-config-starter-design.md` 第 4 节）。
+- 账号：管理员 `nacos`；应用账号 `patra-app`（public 服务注册读写、`dev` 的配置只读）；推送账号 `patra-push`（只能写 `dev` 的 `DEFAULT_GROUP`）。
 - 账号、角色、权限由 `scripts/nacos-init.sh` 按脚本里的清单同步，不要在控制台手改：下次执行会被改回。验收用 `scripts/nacos-verify.sh`（加 `--expect-services` 时另查 6 个服务都已注册）。
 - 改应用或推送账号的密码：两台机器都改密钥文件，mini 上跑 `nacos-init.sh`，再按「改了密钥文件之后」重建 6 个应用容器、重启本机进程。
 - 换 token 签名密钥：改 mini 上的 `nacos-server.env`，执行 `docker compose -f docker-compose.core.yaml up -d --force-recreate nacos`。已签出的令牌全部失效，客户端会自动重新登录。改密码或删用户**不会**作废已签出的令牌（默认 18000 秒有效），要立刻撤销只能换签名密钥。

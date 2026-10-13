@@ -43,6 +43,7 @@ patra-{service}/
 **Patra 专属 Starter 与内核**:
 - `patra-starters/patra-spring-boot-starter-provenance`
 - `patra-starters/patra-spring-boot-starter-expr`
+- `patra-starters/patra-spring-boot-starter-nacos` - Nacos 接入：连接与服务发现注入、启动器 `PatraApplication`、签到检查
 - `patra-api/patra-expr-kernel` - 框架无关的表达式引擎（查询 AST → 各数据源查询语法）
 
 **构建逻辑** (仓库根 `build-logic/`):
