@@ -1,1 +1,17 @@
 patra.config-source.common: patra-common.yaml
+
+spring:
+  datasource:
+    username: postgres
+    password: ${PATRA_DB_PASSWORD:123456}
+  data:
+    redis:
+      host: ${PATRA_INFRA_HOST:127.0.0.1}
+      port: 16379
+      username: default
+      password: ${REDIS_PASSWORD}
+
+patra:
+  security:
+    identity-assertion:
+      public-keys: '{"keys":[{"kty":"EC","crv":"P-256","kid":"8q4oW5O78zImMpqUwOfEXz3miOfVc2XPS9F_vMPsczk","x":"A-1wOkD67cIDybmSkE_9iQSgw3Rk4U189p6TsFZZFA4","y":"eYzvHkiL_bApKcLXgDq2fQmQ43zYOqqtzlt2ThbDMh8"}]}'

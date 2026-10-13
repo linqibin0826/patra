@@ -1,1 +1,6 @@
 patra.config-source.service: patra-gateway.yaml
+
+patra:
+  gateway:
+    identity-assertion:
+      private-key: ${PATRA_GATEWAY_IDENTITY_ASSERTION_PRIVATE_KEY}
