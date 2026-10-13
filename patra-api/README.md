@@ -143,10 +143,11 @@ curl http://localhost:8082/actuator/health   # Ingest
 
 ## 🔧 环境配置文件
 
-- Spring profiles: `dev` (默认) 用于本地 IDE 开发(基建地址走 `PATRA_INFRA_HOST` 加映射端口，注册地址读 `PATRA_ADVERTISE_IP`),`container` 用于 Mac mini 容器化部署(全配置走环境变量注入,由 CD 部署，基建地址同样是 `PATRA_INFRA_HOST` 加映射端口);`prod` 预留给未来真正的云生产。基础配置将 `SPRING_PROFILES_ACTIVE` 默认设置为 `dev`;容器部署由 `.env.common` 导出 `SPRING_PROFILES_ACTIVE=container`。
-- 每个 `*-boot` 模块现在使用 `application.yml` + `application-{profile}.yml`。将共享设置 (端口、starters、Jackson) 放在基础文件中,在 profile 文件中覆盖环境特定配置 (数据源、redis、日志)。
+- **registry、object-storage、identity、gateway**：配置从 Nacos 读（`patra-common.yaml` 加 `{服务名}.yaml`，源文件在 `patra-infra/nacos/dev/`），启动类用 `PatraApplication.run(服务名, …)`。jar 里只有 `application.yml`，放端口、连接池、超时等随代码变的默认值；库地址、Redis、公钥、密钥引用等随环境变的值在 Nacos。IDE 与容器读同一份配置，只差 `PATRA_INFRA_HOST`、`PATRA_ADVERTISE_IP`、`PATRA_LOG_DIR` 三个本地变量。设计见 `docs/patra/specs/2026-10-13-config-migration-batch1-design.md`。
+- ingest、catalog（迁移前）的 Spring profiles: `dev` (默认) 用于本地 IDE 开发(基建地址走 `PATRA_INFRA_HOST` 加映射端口，注册地址读 `PATRA_ADVERTISE_IP`),`container` 用于 Mac mini 容器化部署(全配置走环境变量注入,由 CD 部署，基建地址同样是 `PATRA_INFRA_HOST` 加映射端口);`prod` 预留给未来真正的云生产。基础配置将 `SPRING_PROFILES_ACTIVE` 默认设置为 `dev`;容器部署由 `.env.common` 导出 `SPRING_PROFILES_ACTIVE=container`。
+- ingest、catalog 的 `*-boot` 模块使用 `application.yml` + `application-{profile}.yml`。将共享设置 (端口、starters、Jackson) 放在基础文件中,在 profile 文件中覆盖环境特定配置 (数据源、redis、日志)。
 - 服务注册中心 (Nacos) 在端口 8848 运行，提供服务发现和健康检查功能。
-- 敏感值 (DB/Redis 凭证、API 密钥) 存放在环境变量中,在 `application-container.yml` 中使用 (例如: `REGISTRY_DB_URL`, `INGEST_DB_URL`)。仅提交本地引导的默认开发配置。
+- 敏感值 (DB/Redis 凭证、API 密钥) 存放在环境变量中,在 `application-container.yml` 中使用 (例如: `INGEST_DB_URL`, `CATALOG_DB_URL`)。仅提交本地引导的默认开发配置。
 
 ---
 

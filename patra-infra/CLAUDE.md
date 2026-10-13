@@ -42,7 +42,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 非显性约束（改之前必须知道）
 
-1. **MacBook 应用直连 Mac mini 的 Nacos，不经 ssh tunnel。** 各服务 yml 为 `${NACOS_HOST:${PATRA_INFRA_HOST:127.0.0.1}}`，与其它基建同一个开关；容器里同样跟随 `PATRA_INFRA_HOST`（`.env.common` 设为 `linqibins-mac-mini`）。曾因 MTU 丢 gRPC HTTP/2 帧而必须走 ssh tunnel，2026-09-23 在当前拓扑（mini 官方 tailscale GUI）实测直连注册与心跳均正常，tunnel 已拆除（见 `docs/mac-mini-connectivity.md` §2）。若直连再次卡 STARTING，先按 §2 复核，别直接恢复 tunnel。
+1. **MacBook 应用直连 Mac mini 的 Nacos，不经 ssh tunnel。** 地址缺省为 `${PATRA_INFRA_HOST:127.0.0.1}:8848`，与其它基建同一个开关：registry、object-storage、identity、gateway 由 Nacos starter 注入（`PATRA_NACOS_ADDR` 可整体覆盖），ingest、catalog 迁移前仍写在 yml 里（`${NACOS_HOST:${PATRA_INFRA_HOST:127.0.0.1}}`）；容器里同样跟随 `PATRA_INFRA_HOST`（`.env.common` 设为 `linqibins-mac-mini`）。曾因 MTU 丢 gRPC HTTP/2 帧而必须走 ssh tunnel，2026-09-23 在当前拓扑（mini 官方 tailscale GUI）实测直连注册与心跳均正常，tunnel 已拆除（见 `docs/mac-mini-connectivity.md` §2）。若直连再次卡 STARTING，先按 §2 复核，别直接恢复 tunnel。
 
 2. **Mac mini 非交互 ssh 找不到 docker。** 非登录 shell 不加载完整 profile，OrbStack 的 docker 路径需写进 `~/.zshenv`：`echo 'export PATH=/usr/local/bin:$PATH' >> ~/.zshenv`。否则远程 `ssh ... docker ...` 报 command not found。
 
@@ -56,7 +56,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 6 个后端应用 + portal + learn 由 GitHub Actions CD 自动部署，链路见 `.github/workflows/cd.yml` / `portal-cd.yml` / `learn-cd.yml`，设计见 `docs/patra/specs/2026-06-08-backend-multiservice-cd-design.html`（单服务首版见 `2026-06-07-cd-macmini-design.html`）。**2026-08-27 架构修订：构建从 ubuntu(QEMU 交叉编译) 搬回 Mac mini 原生 arm64**——部署不再经翻墙代理从 GHCR 拉大镜像（曾致 EOF/20 分钟超时），amd64 架构错配事故结构性消除；GHCR 降级为「归档/回滚备源」，推送 best-effort 失败不阻塞部署。
 
-- **服务 SSOT**：`patra-infra/cd/services.json`（`name / gradleTask / context / port / image / healthPath / healthMatch`）。**加新服务 = 加一个条目**（再在 compose 加 service 块 + 建 `.env.<svc>`），workflow 逻辑不变。条目顺序就是 `deploy.sh` 的部署顺序。portal / learn 条目为 deploy-only（构建在 portal-cd.yml / learn-cd.yml 的 docker build 内）。
+- **服务 SSOT**：`patra-infra/cd/services.json`（`name / gradleTask / context / port / image / healthPath / healthMatch`）。**加新服务 = 加一个条目**（再在 compose 加 service 块、在 `patra-infra/nacos/dev/` 加 `<服务名>.yaml`），workflow 逻辑不变。条目顺序就是 `deploy.sh` 的部署顺序。portal / learn 条目为 deploy-only（构建在 portal-cd.yml / learn-cd.yml 的 docker build 内）。
 - **learn（学习站）**：端口 4001，健康检查 `/api/health`（无 healthMatch，HTTP 成功即算健康），专属 workflow `learn-cd.yml`（pnpm 构建全在 `patra-learn/Dockerfile` 内），compose 服务名 `learn` / 容器 `patra-learn`，环境文件 `.env.learn`（纯静态站，不读 `.env.common`）。首次部署需等 learn-cd 首跑产出镜像，期间整栈 `compose-all.sh up` 报缺 learn 镜像属预期。
 - **选择性构建**：`patra-infra/cd/detect-changes.sh` 按 git diff 做受影响单元路由，只构建/部署改动的服务。**改公共面**（`patra-api/patra-common*` / `linqibin-commons/*` / `patra-starters/*` / `build-logic` / `gradle` / 根构建脚本 / `service.Dockerfile` / `docker-compose.apps.yaml` / `cd.yml` / `patra-infra/cd/*`）→ **重建全部 6 个**（正确性优先，宁可多建不可漏建）；docs / markdown 与**纯基建路径**（`patra-infra/scripts/*`、apps 以外的 `docker-compose.*.yaml` 及其配置目录、基建栈 `.env` / `.env.dev` / `*.example`、`otel-agent/`）不触发后端构建（它们靠 mini 上 `compose-all.sh` 手动生效）；应用容器的 `.env.common` / `.env.<svc>` 仍判全量（改了需重部署才生效）。`patra-infra/nacos/*/*.yaml` 与推送脚本（`nacos-push.sh`、`nacos-lib.sh`）只路由到 `foundation`（CI 跑配置检查和推送集成测试）并置 `nacos_changed`，不重建服务。注意 `patra-infra/cd/*` **整体**视为 CD 关键输入（含 `deploy.sh`——部署逻辑变更也应触发全量重建+重部署以立即得到验证，属有意设计而非误伤）。
 - **三段 job**：`detect-changes`（ubuntu，受影响单元路由）→ `nacos-push`（macmini；push 事件每次都跑，dispatch 只在 `nacos_changed` 时跑、回滚单服务不跑：先跑 `NacosConfigFilesTest`，再把 `nacos/dev` 同步到 Nacos；失败则不部署）→ `build-deploy`（macmini：`gradlew bootJar` → 原生 `docker build` → `deploy.sh` → GHCR 归档推送 best-effort）。
@@ -68,7 +68,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **runner 看门狗**：`runner-watchdog.yml` 每日 API 查在线 + mini canary（docker/磁盘/unhealthy 容器）。防「离线 30 天被 GitHub 注销」（2026-08 实际发生）。需 secrets `RUNNER_ADMIN_TOKEN`（fine-grained PAT，仅本仓库 Administration:Read）。
 - **运维红线**：派发任务期间严禁重启 runner（杀 Worker）；runner 自更新已禁用（`--disableupdate`），升级=闲时不带参数重跑 `install-github-runner.sh`（已注册时跳过 config.sh，registration 不动）。
 - **容器经宿主机网关访问基础设施**：应用容器和 rocketmq-dashboard 加 `extra_hosts: linqibins-mac-mini:host-gateway`，PG、Redis、Nacos（含 gRPC 9848）、MinIO、namesrv、broker、xxl admin 都走映射端口，不经 tailscale。新增连基础设施的容器要同样加。
-- **环境文件三层，密钥在仓库外**：`env_file` 顺序叠加 `.env.common`（共享基建坐标：mini 主机名加映射端口、内网 dev 默认、Redis 地址、身份断言公钥）→ `.env.<svc>`（服务专属 DB/bucket/日志路径）→ `${HOME}/.patra/secrets/` 下的密钥文件（`redis.env` 给 catalog/identity/gateway、`gateway.env` 给 gateway、`nacos.env` 给 6 个后端服务，三者必需；`<svc>.env` 可选；后者覆盖同名）。**Redis 密码、网关私钥、外部数据源 API key（Scopus / 青果 proxy / RocketMQ ACL 等）一律只进 `~/.patra/secrets/`**，committed 文件只放内网 dev 默认值和公钥。必需文件缺一个，compose 对整个 apps 项目的命令都会失败（portal 也部署不了）。
+- **环境文件，密钥在仓库外**：`env_file` 顺序叠加 `.env.common`（共享基建坐标：mini 主机名加映射端口、内网 dev 默认、Redis 地址）→ `.env.<svc>`（只剩 catalog、ingest 的服务专属 DB/bucket/日志路径；registry、object-storage、identity、gateway 的配置在 Nacos，源文件在 `nacos/dev/`，身份断言公钥也在那里的 `patra-common.yaml`）→ `${HOME}/.patra/secrets/` 下的密钥文件（`redis.env` 给 catalog/identity/gateway、`gateway.env` 给 gateway、`nacos.env` 给 6 个后端服务，三者必需；`<svc>.env` 可选；后者覆盖同名）。**Redis 密码、网关私钥、外部数据源 API key（Scopus / 青果 proxy / RocketMQ ACL 等）一律只进 `~/.patra/secrets/`**，committed 文件只放内网 dev 默认值和公钥，Nacos 配置里只写 `${变量}`。必需文件缺一个，compose 对整个 apps 项目的命令都会失败（portal 也部署不了）。
 
 ## scripts 一览
 

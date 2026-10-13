@@ -85,7 +85,7 @@ patra:
 
 ## 7. 本地运行和测试
 
-- dev 配置连 mini 上的 `patra_identity` 库和 Redis（`PATRA_INFRA_HOST`），和 mini 上的容器共用同一个 Redis 0 号库。Redis 密码从 `~/.patra/secrets/redis.env` 读（`application-dev.yml` 的 `spring.config.import`），缺了启动失败并报出路径；生成和复制见 `patra-infra/docker/README.md`「密钥」。
+- 配置从 mini 的 Nacos 读（`patra-common.yaml`、`patra-identity.yaml`，源文件在 `patra-infra/nacos/dev/`）：连 mini 上的 `patra_identity` 库和 Redis（`PATRA_INFRA_HOST`），和 mini 上的容器共用同一个 Redis 0 号库。Redis 密码在 Nacos 里写成 `${REDIS_PASSWORD}`，本机由 Nacos starter 从 `~/.patra/secrets/redis.env` 读；生成和复制见 `patra-infra/docker/README.md`「密钥」。
 - 测试全部用 Testcontainers（PostgreSQL 17、Redis 7.0.15），本机要有 Docker：
 
 ```bash
@@ -94,12 +94,9 @@ patra:
 
 `check` 不包含集成测试，两个任务都要写。
 
-identity 从网关签的身份断言取当前用户，要配网关的公钥：dev 直接写在 `application-dev.yml` 里，容器从
-`.env.common` 的 `PATRA_IDENTITY_ASSERTION_PUBLIC_KEYS` 读，两处同值，换密钥时一起改。集成测试不读这些：
-安全 starter 的测试支持会自动注入测试公钥。
+identity 从网关签的身份断言取当前用户，要配网关的公钥：写在 Nacos 公共配置 `patra-common.yaml` 里，和网关共用一份，换密钥时改这一处。集成测试不读这些：安全 starter 的测试支持会自动注入测试公钥。
 
-容器里的其余变量：库连接来自 `.env.identity`，`REDIS_HOST`、`REDIS_PORT` 来自 `.env.common`，
-`REDIS_PASSWORD` 来自 `~/.patra/secrets/redis.env`。
+容器和本机读同一份 Nacos 配置，只差 `PATRA_INFRA_HOST` 等本地变量；容器里的 `REDIS_PASSWORD` 来自 compose 加载的 `~/.patra/secrets/redis.env`。
 
 ## 8. 会话
 

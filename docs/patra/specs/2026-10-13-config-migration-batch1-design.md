@@ -181,6 +181,7 @@ spring:
 - `ApplicationConfigTest` 照抄到 ingest、catalog 的 boot 模块。
 - 收尾时清理 `.env.common` 的 `SPRING_PROFILES_ACTIVE`、Redis 坐标、MinIO 坐标。
 - 如果第 6 节决定改共享的 `service.Dockerfile`，ingest、catalog 直接沿用。
+- `.claude/skills/patra-backend/skills/patra-hexagonal/resources/configuration.md` 仍按 dev / container 两个 profile 描述配置，ingest、catalog 迁完后改为 Nacos 的写法。
 
 ## 11. 不做的事
 

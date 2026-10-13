@@ -43,9 +43,7 @@ patra-gateway-boot/
 │       ├── GatewaySecurityErrorMappingContributor.java # starter 的映射表加一行
 │       └── IdentityAssertionRequestHeadersFilter.java  # 出站：剥外部 Authorization，已登录写入断言
 ├── src/main/resources/
-│   ├── application.yml                           # 路由、HTTP 客户端、超时、虚拟线程、Redis 超时、错误前缀
-│   ├── application-dev.yml                       # dev：Redis 地址、两把密钥的环境变量、DEBUG 日志
-│   └── application-container.yml                 # 容器：同一组环境变量，无默认值
+│   └── application.yml                           # 路由、HTTP 客户端、超时、虚拟线程、Redis 超时、错误前缀；随环境变的值在 Nacos
 └── src/integrationTest/java/dev/linqibin/patra/gateway/
     ├── PatraGatewayApplicationIT.java            # servlet 启动、JDK 客户端、虚拟线程、两条链、签名器
     ├── GatewayRoutingIT.java                     # 转发行为（WireMock 顶替下游）
@@ -103,20 +101,20 @@ identity 自己的 `IDN-0401` 仍会出现：带有效断言但用户已封禁�
 
 | 环境变量 | 说明 | 默认值 |
 |---|---|---|
-| `SPRING_PROFILES_ACTIVE` | profile | `dev` |
-| `NACOS_HOST` / `NACOS_PORT` | Nacos | 跟随 `PATRA_INFRA_HOST`、`8848` |
-| `NACOS_USERNAME` / `NACOS_PASSWORD` | Nacos 应用账号 `patra-app` | 无，来自 `~/.patra/secrets/nacos.env`（容器经 `env_file`，dev 经 `spring.config.import`） |
+| `PATRA_NACOS_ADDR` | Nacos 地址 | `${PATRA_INFRA_HOST:127.0.0.1}:8848`，由 Nacos starter 注入 |
+| `NACOS_USERNAME` / `NACOS_PASSWORD` | Nacos 应用账号 `patra-app` | 无，来自 `~/.patra/secrets/nacos.env`（容器经 `env_file`，本机由 Nacos starter 读） |
 | `PATRA_ADVERTISE_IP` | 向 Nacos 注册的地址 | 空，自动探测；IDE 设为本机 tailscale IP |
-| `REDIS_HOST` / `REDIS_PORT` | 会话所在的 Redis（container） | 无，来自 `.env.common`；dev 固定为 `${PATRA_INFRA_HOST:127.0.0.1}` / `16379` |
 | `REDIS_PASSWORD` | Redis 密码，用户 `default` | 无，来自 `~/.patra/secrets/redis.env` |
 | `PATRA_GATEWAY_IDENTITY_ASSERTION_PRIVATE_KEY` | 签断言的私钥，含私钥的 EC P-256 JWK JSON，带 `kid` | 无，来自 `~/.patra/secrets/gateway.env`；缺了启动失败 |
-| `PATRA_IDENTITY_ASSERTION_PUBLIC_KEYS` | 网关自己那把公钥，JWK Set JSON | container 来自 `.env.common`；dev 直接写在 `application-dev.yml` |
 | `PATRA_LOG_DIR` | 日志目录 | `logs` |
 
 端口 9528。
 
+随环境变的值在 Nacos：Redis 地址和账号、身份断言公钥在 `patra-common.yaml`，私钥引用在 `patra-gateway.yaml`（源文件在 `patra-infra/nacos/dev/`）。其余默认值在 `application.yml`。
+
 - 容器：`REDIS_PASSWORD` 和私钥由 compose 从 `~/.patra/secrets/` 加载。
-- 本地以 dev profile 启动：`application-dev.yml` 用 `spring.config.import` 读同一批文件，不用设环境变量；缺文件时启动失败并报出路径。
+- 本机：Nacos starter 读同一批文件，不用设环境变量。
+- 要看路由和负载均衡的 DEBUG 日志：在 Nacos 的 `patra-gateway.yaml` 里临时加 `logging.level.org.springframework.cloud.gateway: DEBUG`，重启网关生效，看完删掉。
 - 密钥的生成、复制和换密钥的顺序，见 `patra-infra/docker/README.md`「密钥」。
 
 ## 测试
