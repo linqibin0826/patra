@@ -2,8 +2,9 @@
 # ============================================================================
 # 受影响单元路由 SSOT —— ci.yml 与 cd.yml 共用。输出一个 JSON 对象到 stdout：
 #   { "backend_units":[...], "portal_changed":bool, "learn_changed":bool,
-#     "docs_only":bool, "full_run":bool, "coverage_mode":"none|flags|full" }
+#     "nacos_changed":bool, "docs_only":bool, "full_run":bool, "coverage_mode":"none|flags|full" }
 #   backend_units ⊆ [registry,object-storage,catalog,ingest,identity,gateway,foundation]
+#   nacos_changed：patra-infra/nacos/*/*.yaml 或推送脚本有改动、或全量时为 true；CD 据此在部署前推送 Nacos 配置
 #
 # 模式：
 #   detect-changes.sh pr <BASE_SHA> <HEAD_SHA>    # pull_request：merge-base..head
@@ -20,13 +21,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GRAPH="$SCRIPT_DIR/module-graph.json"
 ALL_UNITS='["registry","object-storage","catalog","ingest","identity","gateway","foundation"]'
 LEARN_CHANGED=false   # 全局初始化：防环境注入假阳性 / 非布尔值炸 --argjson
+NACOS_CHANGED=false   # 同上：全局初始化
 
-emit() { # $1=units_json $2=portal $3=docs_only $4=full_run $5=coverage_mode（learn 走全局 LEARN_CHANGED）
-  local learn="${LEARN_CHANGED:-false}"
-  jq -cn --argjson u "$1" --argjson p "$2" --argjson le "$learn" --argjson d "$3" --argjson f "$4" --arg c "$5" \
-    '{backend_units:$u, portal_changed:$p, learn_changed:$le, docs_only:$d, full_run:$f, coverage_mode:$c}'
+emit() { # $1=units_json $2=portal $3=docs_only $4=full_run $5=coverage_mode（learn / nacos 走全局变量）
+  local learn="${LEARN_CHANGED:-false}" nacos="${NACOS_CHANGED:-false}"
+  jq -cn --argjson u "$1" --argjson p "$2" --argjson le "$learn" --argjson n "$nacos" --argjson d "$3" --argjson f "$4" --arg c "$5" \
+    '{backend_units:$u, portal_changed:$p, learn_changed:$le, nacos_changed:$n, docs_only:$d, full_run:$f, coverage_mode:$c}'
 }
-emit_full() { emit "$ALL_UNITS" "${1:-false}" false true full; }
+emit_full() { NACOS_CHANGED=true; emit "$ALL_UNITS" "${1:-false}" false true full; }
 
 # 把 stdin 的变更文件清单分类，输出 JSON 对象。
 classify() {
@@ -43,6 +45,12 @@ classify() {
       build-logic/*|gradle/*|gradlew|gradlew.bat|build.gradle.kts|settings.gradle.kts|gradle.properties) full=true; docs_all=false; continue;;
       patra-infra/docker/service.Dockerfile|patra-infra/docker/docker-compose.apps.yaml) full=true; docs_all=false; continue;;
       patra-infra/cd/*) full=true; docs_all=false; continue;;
+    esac
+    # Nacos 配置与推送脚本：CI 跑 starter（foundation）里的配置检查和推送集成测试，
+    # CD 在部署前推送（nacos-push job）。foundation 不可部署，不会触发任何服务重建。
+    case "$f" in
+      patra-infra/nacos/*/*.yaml|patra-infra/scripts/nacos-push.sh|patra-infra/scripts/nacos-lib.sh)
+        NACOS_CHANGED=true; docs_all=false; echo foundation >> "$units_file"; continue;;
     esac
     # 纯基建路径：应用以外的 compose 栈及其配置、基建栈 .env、运维脚本、本地 OTel agent 配置。
     # 不进应用镜像也不影响应用容器，由 mini 上 compose-all.sh 手动生效 → 不触发任何后端单元。
@@ -69,7 +77,7 @@ classify() {
   done
 
   if [ "$saw_any" = false ]; then emit '[]' false false false none; return; fi
-  if [ "$full" = true ]; then emit "$ALL_UNITS" "$portal" false true full; return; fi
+  if [ "$full" = true ]; then NACOS_CHANGED=true; emit "$ALL_UNITS" "$portal" false true full; return; fi
   local units_json; units_json="$(sort -u "$units_file" | jq -cRs 'split("\n") | map(select(length > 0))')"
   if [ "$units_json" = '[]' ]; then
     if [ "$portal" = true ]; then emit '[]' true false false none

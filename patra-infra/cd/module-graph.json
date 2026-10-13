@@ -654,7 +654,8 @@
                 "foundation"
             ],
             "tasks": [
-                "check"
+                "check",
+                "integrationTest"
             ]
         },
         {

@@ -92,6 +92,28 @@ F="patra-api/patra-identity/patra-identity-app/src/main/java/X.java"
 assert_field "$F" '.backend_units' '["identity"]' "identity 私有只跑 identity"
 assert_field "settings.gradle.kts" '.backend_units | index("identity") != null' 'true' "全量运行包含 identity"
 
+echo "== 场景 14：Nacos 配置与推送脚本 → foundation（CI 检查）+ nacos_changed（CD 推送）=="
+F="patra-infra/nacos/dev/patra-ingest.yaml"
+assert_field "$F" '.nacos_changed' 'true' "nacos yaml 触发推送"
+assert_field "$F" '.backend_units' '["foundation"]' "nacos yaml 只跑 foundation"
+assert_field "$F" '.full_run' 'false' "nacos yaml 非全量"
+assert_field "patra-infra/nacos/dev/README.md" '.nacos_changed' 'false' "nacos README 不触发推送"
+assert_field "patra-infra/nacos/dev/README.md" '.docs_only' 'true' "nacos README 算 docs_only"
+assert_field "patra-infra/scripts/nacos-push.sh" '.nacos_changed' 'true' "推送脚本触发推送"
+assert_field "patra-infra/scripts/nacos-push.sh" '.backend_units' '["foundation"]' "推送脚本跑 foundation（IT）"
+assert_field "patra-infra/scripts/nacos-lib.sh" '.nacos_changed' 'true' "推送脚本依赖的函数库触发推送"
+assert_field "patra-infra/scripts/nacos-init.sh" '.nacos_changed' 'false' "nacos-init 不触发推送"
+assert_field "patra-infra/scripts/nacos-init.sh" '.backend_units' '[]' "nacos-init 仍是纯基建"
+F="$(printf 'patra-infra/nacos/dev/patra-ingest.yaml\npatra-api/patra-catalog/patra-catalog-infra/src/main/java/X.java')"
+assert_field "$F" '.nacos_changed' 'true' "yaml + catalog 混合仍推送"
+assert_field "$F" '.backend_units' '["catalog","foundation"]' "yaml + catalog 混合两个单元都跑"
+assert_field "settings.gradle.kts" '.nacos_changed' 'true' "全量运行也推送"
+assert_field "patra-api/patra-catalog/patra-catalog-infra/src/main/java/X.java" '.nacos_changed' 'false' "纯服务代码不推送"
+got="$(bash "$DETECT" dispatch catalog | jq -c '.nacos_changed')"
+if [ "$got" = "false" ]; then PASS=$((PASS+1)); echo "  ✓ dispatch 单服务（回滚）不推送"; else FAIL=$((FAIL+1)); echo "  ✗ dispatch 单服务 nacos_changed 实得 $got"; fi
+got="$(bash "$DETECT" dispatch all | jq -c '.nacos_changed')"
+if [ "$got" = "true" ]; then PASS=$((PASS+1)); echo "  ✓ dispatch all 推送"; else FAIL=$((FAIL+1)); echo "  ✗ dispatch all nacos_changed 实得 $got"; fi
+
 echo
 echo "通过 $PASS / 失败 $FAIL"
 [ "$FAIL" -eq 0 ]
