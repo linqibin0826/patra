@@ -12,7 +12,7 @@
 | `utun*`（tailscale） | `100.x.x.x` (CGNAT) | tailscale 隧道，本机对 Mac mini 的正确路径 |
 | `utun*`（Shadowrocket TUN） | `198.18.0.1` / `192.17.194.4` 等 | 代理 fake-ip / TUN 网段 |
 
-任何"让进程或组件自动探测本机 IP / 自动选路由"的逻辑，都可能挑中错误的代理网卡，导致对端（Mac mini）路由不到。**通用原则：凡是要对外注册自身地址的组件，一律显式指定 tailscale IP，不要依赖自动探测。** 本机 tailscale IP 见 `env.zsh` 的 `$TAILSCALE_IP`（`tailscale ip -4 | head -1`）。
+任何"让进程或组件自动探测本机 IP / 自动选路由"的逻辑，都可能挑中错误的代理网卡，导致对端（Mac mini）路由不到。**通用原则：凡是要对外注册自身地址的组件，一律显式指定 tailscale IP，不要依赖自动探测。** 应用读的是按用途命名的 `PATRA_ADVERTISE_IP`，本机在 `env.zsh` 里把它设成 tailscale IP（`export PATRA_ADVERTISE_IP="$TAILSCALE_IP"`）。
 
 ---
 
@@ -21,12 +21,12 @@
 ### 1. XXL-Job 执行器注册到错误的代理网卡 IP
 
 - **症状**：xxl-job-admin 手动触发任务 → `code:500`，`xxl-job remoting error(Read timed out), for url : http://192.17.194.4:6301/run`。执行器地址列表里是一个 admin 路由不到的地址（如 `192.17.194.4`）。
-- **根因**：未注入 `XXL_JOB_EXECUTOR_IP` 时，XXL-Job 自动探测本机 IP，挑中了 Shadowrocket TUN 网卡（如 `utun9` 的 `192.17.194.4`）。admin 容器在 Mac mini，需主动回调本机执行器，但路由不到该地址 → 超时。
-- **解决**：显式注入本机 tailscale IP。已在 `env.zsh` 配置（复用 `$TAILSCALE_IP`）：
+- **根因**：未注入 `PATRA_ADVERTISE_IP` 时，XXL-Job 自动探测本机 IP，挑中了 Shadowrocket TUN 网卡（如 `utun9` 的 `192.17.194.4`）。admin 容器在 Mac mini，需主动回调本机执行器，但路由不到该地址 → 超时。
+- **解决**：显式注入本机 tailscale IP。已在 `env.zsh` 配置：
   ```sh
-  export XXL_JOB_EXECUTOR_IP="$TAILSCALE_IP"
+  export PATRA_ADVERTISE_IP="$TAILSCALE_IP"
   ```
-  对应应用配置 `xxl.job.executor.ip: ${XXL_JOB_EXECUTOR_IP:}`（catalog/ingest 各 boot 的 `application.yml`）。
+  对应应用配置 `xxl.job.executor.ip: ${PATRA_ADVERTISE_IP:}`（catalog/ingest 的 `application.yml`），Nacos 注册地址 `spring.cloud.nacos.discovery.ip` 读同一个变量。
 - **验证**：重启服务后，xxl-job-admin「执行器管理」注册地址应为 `http://100.x.x.x:<port>/`（catalog 执行器端口 6301）；手动触发返回 `Success`。
 - **坑**：macOS GUI（Dock/Spotlight）启动的 IntelliJ **不继承** `env.zsh` 的环境变量。需从终端 `bootRun`，或在 IDEA 运行配置的 Environment variables 里手填。
 - **注意**：设对 IP 后若仍 `Connect timed out`，是 admin 容器自身到不了 tailnet，见 §6。
@@ -50,6 +50,7 @@
 - **症状**：NameServer 拿到 broker 地址后客户端解析/连接失败。
 - **根因**：broker 对外注册地址由 `docker/.env` 的 `BROKER_IP1` 决定，注册成客户端不可达的字符串即失败。
 - **解决**：`BROKER_IP1=linqibins-mac-mini`（MagicDNS 短名，家内/离家自动解析）；回退用 FQDN `linqibins-mac-mini.taild06182.ts.net`。详见 `../docker/README.md` §故障排查。
+- **容器侧**：容器里解析不了 MagicDNS 名。应用容器和 rocketmq-dashboard 靠 compose 的 `extra_hosts: linqibins-mac-mini:host-gateway` 把这个名字指向宿主机网关，见 §8。2026-10-13 之前容器里的 ingest 一直连不上 broker。
 
 ### 4. JDK HttpClient 把 tailscale 100.x 流量误走代理
 
@@ -70,7 +71,7 @@
 - **解决**：`patra-net` 上跑**一个**共享 tailscale 网关容器（`docker-compose.tailnet.yaml`）：`tailscale-gw` 自身加入 tailnet + `ip_forward` + 对 `100.64.0.0/10` MASQUERADE；业务容器用路由注入边车（共享其网络命名空间）加 `100.64.0.0/10 via tailscale-gw`。任意容器由此可达任意 tailnet 机器的任意端口，新增容器复用同一网关、无需改它。
 - **前置**：tailscale auth key 放 `docker/.env.secret`（gitignore，不进公开仓库，模板见 `.env.secret.example`）。镜像走 ghcr.io（docker.io 在国内常 502）。
 - **验证**：`docker exec patra-tailscale-gw tailscale ip -4` 出现 `100.x`；业务容器命名空间内 `nc -zv <MacBook tailscale IP> <port>` 由 `timed out` 变 `succeeded`（或 `refused`=通了只是没人监听）。
-- **现状（2026-09-23 实测）**：mini 改用官方 tailscale GUI 后，**未挂路由边车的普通应用容器**（`patra-gateway`、`patra-catalog`）也能直接访问 MacBook 的 `100.x` 与 mini 自身的 tailscale IP——容器内无 `100.64/10` 路由，流量由 OrbStack 交给 mini 的 macOS 宿主发出。本节的网关 + 边车方案是否仍必要待评估，评估前保持原样。
+- **现状（2026-09-23 实测）**：mini 改用官方 tailscale GUI 后，**未挂路由边车的普通应用容器**（`patra-gateway`、`patra-catalog`）也能直接访问 MacBook 的 `100.x` 与 mini 自身的 tailscale IP——容器内无 `100.64/10` 路由，流量由 OrbStack 交给 mini 的 macOS 宿主发出。本节的网关 + 边车方案是否仍必要待评估，评估前保持原样。2026-10-13 起应用容器访问 mini 自己的基础设施改走宿主机网关（§8），不再经 100.x。
 - **排查注意**：经 OrbStack 宿主转发时，目标端口无人监听表现为 curl `Empty reply`（exit 52）而非 `Connection refused`；判断连通性应在目标端临时起监听（如 `python3 -m http.server <port> --bind <tailscale IP>`）再探测。
 
 ### 7. MacBook 本地服务经 Nacos 调不到 mini 容器服务
@@ -91,6 +92,19 @@
   route -n get 192.168.97.10 | grep interface     # 应为 tailscale 的 utun
   curl -s -o /dev/null -w '%{http_code}\n' http://192.168.97.10:6300/actuator/health   # 容器 IP 以 Nacos 实际注册为准
   ```
+
+### 8. 容器经主机名访问基础设施（2026-10-13，PAP-72）
+
+- **做法**：应用容器与 IDE 同用 `PATRA_INFRA_HOST` 加宿主机映射端口。容器里 `PATRA_INFRA_HOST=linqibins-mac-mini`，由 compose 的 `extra_hosts: linqibins-mac-mini:host-gateway` 解析到 OrbStack 宿主机网关（0.250.250.254）；IDE 里是 `100.103.73.27`。
+- **为什么不直接用主机名**：容器的 DNS 经 OrbStack 转发，查不到 MagicDNS 名，短名和 `*.ts.net` 都不行。
+- **为什么不用 tailscale IP**：100.x 只在 tailscale 在线时存在。宿主机网关这条路不经过 tailscale 网卡，tailscale 断了也不影响容器访问基础设施。
+- **实测代价**：大批量传输（`\copy` 114 MB、MinIO 512 MB）与直连容器名没有差别；PG 小查询每次往返多 0.07～0.2 ms（OrbStack 端口转发）。PG 看到的来源地址是 patra-net 网关 `192.168.97.1`。
+- **验证**：
+  ```sh
+  docker exec patra-ingest getent ahostsv4 linqibins-mac-mini   # 应为 0.250.250.254
+  docker exec patra-ingest bash -c 'exec 3<>/dev/tcp/linqibins-mac-mini/15432 && echo OK'
+  ```
+- **新增连基础设施的容器**：同样加 `extra_hosts`（apps compose 里引用 `*infra-hosts` 锚点）。
 
 ---
 

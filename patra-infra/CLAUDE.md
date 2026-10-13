@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 基础设施容器**不在本机（MacBook）跑**，而是全部部署在一台 **Mac mini**（tailscale MagicDNS 短名 `linqibins-mac-mini`，容器引擎 OrbStack）。MacBook 只跑 patra-api 应用进程，跨网络访问 Mac mini 上的容器。
 
 - **网络无感切换**：在家同 LAN → MagicDNS 解析为 `192.168.1.11` 直连；离家 → 解析为 `100.103.73.27` 走 tailscale 隧道。无需任何切换配置。
-- **应用侧单一开关**：所有微服务用一个环境变量 `PATRA_INFRA_HOST=linqibins-mac-mini` 指向容器；yml 默认值 `127.0.0.1` 仅作本地应急 fallback。改基建地址范式时要同步 patra-api 各 boot 模块的 yml（本目录范围外）。
+- **应用侧单一开关**：所有微服务用 `PATRA_INFRA_HOST` 加宿主机映射端口访问基础设施。IDE 里是 mini 的 tailscale IP，容器里是 `linqibins-mac-mini`（compose 的 `extra_hosts` 指向宿主机网关，见 `docs/mac-mini-connectivity.md` §8）。yml 默认值 `127.0.0.1` 仅作本地应急 fallback。服务对外通告的地址统一读 `PATRA_ADVERTISE_IP`。改基建地址范式时要同步 patra-api 各 boot 模块的 yml（本目录范围外）。
 
 因此**改 compose / .env 不能只在本机改**，要让 Mac mini 上的仓库副本 `git pull` 后重启容器。Mac mini 的部署 SSOT 是 **monorepo 的 sparse-checkout**（`~/Projects/patra`，仅 patra-infra）。日常迭代命令见 README "日常迭代"节，本质是 `ssh linqibin@linqibins-mac-mini 'cd ~/Projects/patra && git pull && bash patra-infra/scripts/compose-all.sh up'`。
 
@@ -42,7 +42,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 非显性约束（改之前必须知道）
 
-1. **MacBook 应用直连 Mac mini 的 Nacos，不经 ssh tunnel。** 各服务 yml 为 `${NACOS_HOST:${PATRA_INFRA_HOST:127.0.0.1}}`，与其它基建同一个开关；容器内由 `.env.common` 显式覆盖为 `NACOS_HOST=nacos`。曾因 MTU 丢 gRPC HTTP/2 帧而必须走 ssh tunnel，2026-09-23 在当前拓扑（mini 官方 tailscale GUI）实测直连注册与心跳均正常，tunnel 已拆除（见 `docs/mac-mini-connectivity.md` §2）。若直连再次卡 STARTING，先按 §2 复核，别直接恢复 tunnel。
+1. **MacBook 应用直连 Mac mini 的 Nacos，不经 ssh tunnel。** 各服务 yml 为 `${NACOS_HOST:${PATRA_INFRA_HOST:127.0.0.1}}`，与其它基建同一个开关；容器里同样跟随 `PATRA_INFRA_HOST`（`.env.common` 设为 `linqibins-mac-mini`）。曾因 MTU 丢 gRPC HTTP/2 帧而必须走 ssh tunnel，2026-09-23 在当前拓扑（mini 官方 tailscale GUI）实测直连注册与心跳均正常，tunnel 已拆除（见 `docs/mac-mini-connectivity.md` §2）。若直连再次卡 STARTING，先按 §2 复核，别直接恢复 tunnel。
 
 2. **Mac mini 非交互 ssh 找不到 docker。** 非登录 shell 不加载完整 profile，OrbStack 的 docker 路径需写进 `~/.zshenv`：`echo 'export PATH=/usr/local/bin:$PATH' >> ~/.zshenv`。否则远程 `ssh ... docker ...` 报 command not found。
 
@@ -67,8 +67,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **失败通知**：走 GitHub 原生（失败 run 推 App/邮件给触发者），不设自建通知通道——单人 dev 环境，自己 push 自己看结果（2026-08-28 决策，曾配过 ntfy 后拆除）。
 - **runner 看门狗**：`runner-watchdog.yml` 每日 API 查在线 + mini canary（docker/磁盘/unhealthy 容器）。防「离线 30 天被 GitHub 注销」（2026-08 实际发生）。需 secrets `RUNNER_ADMIN_TOKEN`（fine-grained PAT，仅本仓库 Administration:Read）。
 - **运维红线**：派发任务期间严禁重启 runner（杀 Worker）；runner 自更新已禁用（`--disableupdate`），升级=闲时不带参数重跑 `install-github-runner.sh`（已注册时跳过 config.sh，registration 不动）。
-- **容器内 Nacos 走服务名**：应用容器和 nacos 同在 `patra-net`，gRPC 走 Docker bridge 不经 tailscale，直接 `NACOS_HOST=nacos`。
-- **环境文件三层，密钥在仓库外**：`env_file` 顺序叠加 `.env.common`（共享基建坐标：patra-net 服务名、内网 dev 默认、Redis 地址、身份断言公钥）→ `.env.<svc>`（服务专属 DB/bucket/日志路径）→ `${HOME}/.patra/secrets/` 下的密钥文件（`redis.env` 给 catalog/identity/gateway、`gateway.env` 给 gateway、`nacos.env` 给 6 个后端服务，三者必需；`<svc>.env` 可选；后者覆盖同名）。**Redis 密码、网关私钥、外部数据源 API key（Scopus / 青果 proxy / RocketMQ ACL 等）一律只进 `~/.patra/secrets/`**，committed 文件只放内网 dev 默认值和公钥。必需文件缺一个，compose 对整个 apps 项目的命令都会失败（portal 也部署不了）。
+- **容器经宿主机网关访问基础设施**：应用容器和 rocketmq-dashboard 加 `extra_hosts: linqibins-mac-mini:host-gateway`，PG、Redis、Nacos（含 gRPC 9848）、MinIO、namesrv、broker、xxl admin 都走映射端口，不经 tailscale。新增连基础设施的容器要同样加。
+- **环境文件三层，密钥在仓库外**：`env_file` 顺序叠加 `.env.common`（共享基建坐标：mini 主机名加映射端口、内网 dev 默认、Redis 地址、身份断言公钥）→ `.env.<svc>`（服务专属 DB/bucket/日志路径）→ `${HOME}/.patra/secrets/` 下的密钥文件（`redis.env` 给 catalog/identity/gateway、`gateway.env` 给 gateway、`nacos.env` 给 6 个后端服务，三者必需；`<svc>.env` 可选；后者覆盖同名）。**Redis 密码、网关私钥、外部数据源 API key（Scopus / 青果 proxy / RocketMQ ACL 等）一律只进 `~/.patra/secrets/`**，committed 文件只放内网 dev 默认值和公钥。必需文件缺一个，compose 对整个 apps 项目的命令都会失败（portal 也部署不了）。
 
 ## scripts 一览
 

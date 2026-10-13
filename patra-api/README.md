@@ -143,7 +143,7 @@ curl http://localhost:8082/actuator/health   # Ingest
 
 ## 🔧 环境配置文件
 
-- Spring profiles: `dev` (默认) 用于本地 IDE 开发(基建地址走 `PATRA_INFRA_HOST` / `TAILSCALE_IP` 注册),`container` 用于 Mac mini 容器化部署(全配置走环境变量注入,由 CD 部署);`prod` 预留给未来真正的云生产。基础配置将 `SPRING_PROFILES_ACTIVE` 默认设置为 `dev`;容器部署由 `.env.common` 导出 `SPRING_PROFILES_ACTIVE=container`。
+- Spring profiles: `dev` (默认) 用于本地 IDE 开发(基建地址走 `PATRA_INFRA_HOST` 加映射端口，注册地址读 `PATRA_ADVERTISE_IP`),`container` 用于 Mac mini 容器化部署(全配置走环境变量注入,由 CD 部署，基建地址同样是 `PATRA_INFRA_HOST` 加映射端口);`prod` 预留给未来真正的云生产。基础配置将 `SPRING_PROFILES_ACTIVE` 默认设置为 `dev`;容器部署由 `.env.common` 导出 `SPRING_PROFILES_ACTIVE=container`。
 - 每个 `*-boot` 模块现在使用 `application.yml` + `application-{profile}.yml`。将共享设置 (端口、starters、Jackson) 放在基础文件中,在 profile 文件中覆盖环境特定配置 (数据源、redis、日志)。
 - 服务注册中心 (Nacos) 在端口 8848 运行，提供服务发现和健康检查功能。
 - 敏感值 (DB/Redis 凭证、API 密钥) 存放在环境变量中,在 `application-container.yml` 中使用 (例如: `REGISTRY_DB_URL`, `INGEST_DB_URL`)。仅提交本地引导的默认开发配置。

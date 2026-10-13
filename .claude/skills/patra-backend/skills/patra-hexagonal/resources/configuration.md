@@ -11,6 +11,18 @@ patra-{service}-boot/src/main/resources/
 └── application-container.yaml      # 容器化部署(环境变量注入)
 ```
 
+### 本地变量约定（PAP-72）
+
+IDE 与容器的差异只放在 Nacos 之外的本地变量里，变量按用途命名，不按来源命名：
+
+| 变量 | 含义 | IDE | 容器 |
+|---|---|---|---|
+| `PATRA_INFRA_HOST` | dev 环境里基础设施所在的主机，配合宿主机映射端口使用 | mini 的 tailscale IP | `linqibins-mac-mini`（`extra_hosts` 指向宿主机网关） |
+| `PATRA_ADVERTISE_IP` | 通告给 Nacos 和 xxl 的地址，留空自动探测 | 本机 tailscale IP | 不设 |
+| `PATRA_LOG_DIR` | 日志目录 | 不设 | `/app/logs` |
+
+详见 `docs/patra/specs/2026-10-13-infra-access-unification-design.md`。
+
 ## 配置优先级（由高到低）
 
 1. 命令行参数 `--spring.datasource.url=...`

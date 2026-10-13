@@ -264,7 +264,7 @@ docker exec patra-postgres bash /docker-entrypoint-initdb.d/03-nacos-schema.sh
 各微服务通过单一环境变量切换基础设施地址：
 
 ```bash
-export PATRA_INFRA_HOST=linqibins-mac-mini
+export PATRA_INFRA_HOST=100.103.73.27   # IDE；容器里由 .env.common 设为 linqibins-mac-mini
 ```
 
 `application.yml` 引用方式示例：
@@ -285,6 +285,7 @@ spring:
       discovery:
         server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:127.0.0.1}}:${NACOS_PORT:8848}
         service: ${spring.application.name}
+        ip: ${PATRA_ADVERTISE_IP:}
         fail-fast: true
 patra:
   object-storage:
@@ -296,6 +297,8 @@ rocketmq:
 ```
 
 默认值 `127.0.0.1` 仅用于应急 fallback（如临时在 MacBook 上本地起容器调试）。统一用 `127.0.0.1` 而非 `localhost`，避免 hosts/IPv6 解析歧义。
+
+容器与 IDE 用同一种写法：容器里 `linqibins-mac-mini` 由 compose 的 `extra_hosts` 解析到宿主机网关，端口同样是映射端口（原理与实测见 `../docs/mac-mini-connectivity.md` §8）。服务对外通告的地址读 `PATRA_ADVERTISE_IP`，IDE 设为本机 tailscale IP，容器不设。
 
 ---
 
@@ -409,6 +412,8 @@ tailscale status | grep linqibins-mac-mini
 ### RocketMQ 客户端连不上 broker
 
 最常见原因：`BROKER_IP1` 注册的字符串客户端解析失败。
+
+若只有容器里的客户端连不上：检查该容器是否带 `extra_hosts: linqibins-mac-mini:host-gateway`，`docker exec <容器> getent ahostsv4 linqibins-mac-mini` 应返回 0.250.250.254。
 
 ```bash
 # 查看 broker 启动日志，确认 brokerIP1 写入正确
