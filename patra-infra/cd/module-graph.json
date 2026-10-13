@@ -651,7 +651,13 @@
             "project": ":patra-starters:patra-spring-boot-starter-nacos",
             "unit": "foundation",
             "impacts": [
-                "foundation"
+                "catalog",
+                "foundation",
+                "gateway",
+                "identity",
+                "ingest",
+                "object-storage",
+                "registry"
             ],
             "tasks": [
                 "check",
