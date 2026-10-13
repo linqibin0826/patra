@@ -28,6 +28,8 @@ dependencies {
     // 集成测试：Testcontainers 起 Nacos；Awaitility 等配置刷新
     "integrationTestImplementation"(libs.bundles.testcontainers)
     "integrationTestImplementation"(libs.awaitility)
+    // Spring Cloud 的服务注册引用 WebServerInitializedEvent；Patra 的服务都带 web，测试应用没有
+    "integrationTestImplementation"("org.springframework.boot:spring-boot-web-server")
 }
 
 // SCA 的 NacosConfigManager 在进程里是静态单例：连哪个地址、用哪个账号，由进程里第一个启动的

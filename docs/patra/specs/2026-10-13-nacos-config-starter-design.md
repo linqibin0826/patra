@@ -170,7 +170,7 @@ starter 的第二个 `EnvironmentPostProcessor`（`ConfigSourceCheckPostProcesso
 
 ### 5.7 优先级
 
-按 Spring Boot 的规则推断，从高到低：
+从高到低：
 
 1. 启动参数、系统属性、环境变量
 2. 本机密钥文件（5.4）
@@ -178,7 +178,11 @@ starter 的第二个 `EnvironmentPostProcessor`（`ConfigSourceCheckPostProcesso
 4. jar 里的 `application.yml`
 5. 启动器的 default properties、starter 注入的默认值
 
-集成测试实测 1 > 3 > 4，结果写回本节（Issue 待办「实测并记录进程级覆盖与 Nacos 的优先级」）。
+2026-10-13 集成测试（`NacosConfigImportIT`）实测：
+- 系统属性覆盖 Nacos，Nacos 覆盖 jar 的 `application.yml`；
+- 本服务配置覆盖公共配置；
+- Nacos 配置里的 `${变量}` 能解析到进程里的值；
+- 刷新时少了签到行的变更被拒绝，应用保留旧值。nacos-client 把这次通知当作失败，每 5 秒重试一次，每次打一条 ERROR（`[notify-error]`），直到 Nacos 里的配置改好。
 
 ## 6. 故障时的表现
 
@@ -190,7 +194,7 @@ starter 的第二个 `EnvironmentPostProcessor`（`ConfigSourceCheckPostProcesso
 | 某份配置在 Nacos 里不存在 | 签到检查失败，启动中止（客户端会删掉本地的旧快照） |
 | 服务没用启动器启动 | 不导入 Nacos 配置、不做签到检查，按 jar 里的配置启动（5.3） |
 | `NACOS_USERNAME` / `NACOS_PASSWORD` 没设 | 解析不了占位符，启动失败 |
-| 账号或密码错（403） | SCA 抛异常，启动失败，不读快照 |
+| 账号或密码错（403） | 启动失败。实测（无快照）：Spring Boot 报 `Config data resource … not found`，提示检查 `nacos:{服务名}.yaml`，报错里看不出是账号问题；排查时先核对账号密码 |
 | 本地密钥变量没设（如 `REDIS_PASSWORD`） | 用到它的服务启动失败，报出缺的变量名 |
 
 ## 7. Nacos 脚本
@@ -237,11 +241,11 @@ starter 的第二个 `EnvironmentPostProcessor`（`ConfigSourceCheckPostProcesso
 
 ## 9. 实施时要实测的点
 
-1. **gRPC 端口偏移**：nacos-client 用「HTTP 端口 + 1000」连 gRPC。Testcontainers 随机映射端口时两者不满足这个关系，需要用 nacos-client 的端口偏移设置（如系统属性 `nacos.server.grpc.port.offset`）或固定端口解决，以实测为准。
-2. **注入的属性能否被 SCA 的导入解析读到**：SCA 解析 `nacos:` 导入时绑定 `spring.cloud.nacos.*`。启动器的 default properties、starter 注入的属性和密钥文件的属性需要在那时已经在环境里，集成测试第 1 条会覆盖这一点。
-2a. **`spring.cloud.nacos.config.enabled` 的判断时机**：5.2 的 `EnvironmentPostProcessor` 要在 SCA 的导入检查之前看到启动器放进 default properties 的导入列表。
-3. **5.7 的优先级**：尤其是 Nacos 和 jar `application.yml` 都写了同一个键时，`preference=remote` 是否让 Nacos 胜出。
-4. **Nacos 配置里的 `${变量}`**：Nacos 文件里写 `${REDIS_PASSWORD}`，能否解析到环境变量或本机密钥文件里的值。在集成测试里加一个这样的键。
+1. **gRPC 端口偏移**：nacos-client 用「HTTP 端口 + 1000」连 gRPC。Testcontainers 随机映射端口时两者不满足这个关系，需要用 nacos-client 的端口偏移设置（如系统属性 `nacos.server.grpc.port.offset`）或固定端口解决，以实测为准。实测：用系统属性 `nacos.server.grpc.port.offset` 解决，设为两个映射端口的差值。
+2. **注入的属性能否被 SCA 的导入解析读到**：SCA 解析 `nacos:` 导入时绑定 `spring.cloud.nacos.*`。启动器的 default properties、starter 注入的属性和密钥文件的属性需要在那时已经在环境里，集成测试第 1 条会覆盖这一点。实测：能读到，集成测试经启动器连上了带鉴权的 Nacos，两份配置都导入成功。
+2a. **`spring.cloud.nacos.config.enabled` 的判断时机**：5.2 的 `EnvironmentPostProcessor` 要在 SCA 的导入检查之前看到启动器放进 default properties 的导入列表。实测：`NacosDefaultsPostProcessor` 在 `ConfigDataEnvironmentPostProcessor` 之前运行，能看到启动器放进 default properties 的导入。
+3. **5.7 的优先级**：尤其是 Nacos 和 jar `application.yml` 都写了同一个键时，`preference=remote` 是否让 Nacos 胜出。实测：Nacos 胜出；系统属性又胜过 Nacos，见 5.7。
+4. **Nacos 配置里的 `${变量}`**：Nacos 文件里写 `${REDIS_PASSWORD}`，能否解析到环境变量或本机密钥文件里的值。在集成测试里加一个这样的键。实测：能解析，集成测试里 Nacos 文件的 `${PATRA_IT_SECRET}` 取到了进程里的值（测试用系统属性提供）。
 5. **容器里写不了快照时的日志**：nacos-client 往不可写的目录存快照时，会不会每次都打错误日志。PAP-74 里不接入服务，这一条在 PAP-76 第一个服务上 mini 时观察；真会刷屏，再决定是否在 Dockerfile 里给快照一个可写目录。
 
 ## 10. 已知限制（接受）
