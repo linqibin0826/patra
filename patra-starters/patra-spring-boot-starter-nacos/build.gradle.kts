@@ -37,3 +37,16 @@ dependencies {
 tasks.named<Test>("integrationTest") {
     forkEvery = 1
 }
+
+// NacosConfigFilesTest 检查仓库里要推送到 Nacos 的配置文件（PAP-75）。目录声明为输入：只改 yaml 时
+// 测试不会命中构建缓存。仓库根用相对路径传入（测试的工作目录是本模块），不进缓存键的机器差异。
+val nacosConfigDir = rootProject.layout.projectDirectory.dir("patra-infra/nacos/dev")
+val repoRootRelative = projectDir.toPath().relativize(rootDir.toPath()).toString()
+
+tasks.named<Test>("test") {
+    inputs
+        .dir(nacosConfigDir)
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+        .withPropertyName("nacosConfigFiles")
+    systemProperty("patra.repo-root", repoRootRelative)
+}
