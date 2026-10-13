@@ -192,6 +192,44 @@ class NacosPushScriptIT {
     assertThat(nacos.dataIds()).containsExactly("patra-common.yaml");
   }
 
+  @Test
+  @DisplayName("--check：与仓库一致时退出码 0")
+  void check_should_exit_zero_when_in_sync() throws Exception {
+    writeConfig("patra-common.yaml", "a: 1\n");
+    assertThat(push().exitCode()).isZero();
+
+    ScriptResult result = push("--check");
+
+    assertThat(result.exitCode()).as(result.output()).isZero();
+    assertThat(result.output())
+        .contains("只对比，不写入（--check）", "未变化 patra-common.yaml", "新增 0，更新 0，删除 0，未变化 1");
+  }
+
+  @Test
+  @DisplayName("--check：有差异时退出码 2，Nacos 一个字节都不变")
+  void check_should_report_differences_without_writing() throws Exception {
+    writeConfig("patra-common.yaml", "a: 1\n");
+    writeConfig("patra-ingest.yaml", "b: 1\n");
+    assertThat(push().exitCode()).isZero();
+    nacos.publish("DEFAULT_GROUP", "stale.yaml", "k: 1\n");
+    String ingestBefore = nacos.content("patra-ingest.yaml");
+    writeConfig("patra-ingest.yaml", "b: 2\n");
+    writeConfig("patra-identity.yaml", "c: 1\n");
+
+    ScriptResult result = push("--check");
+
+    assertThat(result.exitCode()).as(result.output()).isEqualTo(2);
+    assertThat(result.output())
+        .contains(
+            "更新 patra-ingest.yaml",
+            "新增 patra-identity.yaml",
+            "删除 stale.yaml",
+            "新增 1，更新 1，删除 1，未变化 1");
+    assertThat(nacos.content("patra-ingest.yaml")).isEqualTo(ingestBefore);
+    assertThat(nacos.content("patra-identity.yaml")).isNull();
+    assertThat(nacos.content("stale.yaml")).isEqualTo("k: 1\n");
+  }
+
   /// 在 `dev` 目录写一份配置：第一行是签到，后面接正文。
   ///
   /// @param dataId 文件名

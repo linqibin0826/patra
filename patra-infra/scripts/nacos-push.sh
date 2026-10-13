@@ -110,9 +110,11 @@ publish_files() {
     else
       die "读取 ${name} 失败：HTTP ${NACOS_HTTP}，code $(nacos_code)"
     fi
-    nacos_api POST /v3/admin/cs/config "$NACOS_TOKEN" "namespaceId=${NAMESPACE}" \
-      "groupName=${GROUP}" "dataId=${name}" type=yaml "content@${file}"
-    nacos_ok || die "发布 ${name} 失败：HTTP ${NACOS_HTTP}，code $(nacos_code)"
+    if [ "$CHECK" = false ]; then
+      nacos_api POST /v3/admin/cs/config "$NACOS_TOKEN" "namespaceId=${NAMESPACE}" \
+        "groupName=${GROUP}" "dataId=${name}" type=yaml "content@${file}"
+      nacos_ok || die "发布 ${name} 失败：HTTP ${NACOS_HTTP}，code $(nacos_code)"
+    fi
     report "$action" "$name"
   done
 }
@@ -144,9 +146,11 @@ prune() {
     # 用 here-string 不用管道：pipefail 下 grep -q 提前退出可能让 printf 收到 SIGPIPE，
     # 整条管道判为失败，本地有的配置会被当成没有而误删
     grep -qxF -- "$id" <<<"$names" && continue
-    nacos_api DELETE /v3/admin/cs/config "$NACOS_TOKEN" "namespaceId=${NAMESPACE}" \
-      "groupName=${GROUP}" "dataId=${id}"
-    nacos_ok || die "删除 ${id} 失败：HTTP ${NACOS_HTTP}，code $(nacos_code)"
+    if [ "$CHECK" = false ]; then
+      nacos_api DELETE /v3/admin/cs/config "$NACOS_TOKEN" "namespaceId=${NAMESPACE}" \
+        "groupName=${GROUP}" "dataId=${id}"
+      nacos_ok || die "删除 ${id} 失败：HTTP ${NACOS_HTTP}，code $(nacos_code)"
+    fi
     report 删除 "$id"
   done <"$LISTING"
 }
@@ -160,7 +164,13 @@ shopt -u nullglob
 
 preflight
 login
+if [ "$CHECK" = true ]; then
+  echo "只对比，不写入（--check）"
+fi
 publish_files
 prune
 echo "新增 ${ADDED}，更新 ${UPDATED}，删除 ${DELETED}，未变化 ${SAME}"
+if [ "$CHECK" = true ] && [ $((ADDED + UPDATED + DELETED)) -gt 0 ]; then
+  exit 2
+fi
 exit 0
