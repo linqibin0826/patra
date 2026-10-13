@@ -150,11 +150,11 @@ ssh linqibin@linqibins-mac-mini 'docker restart patra-rocketmq-broker'  # 只重
 
 | 文件 | 内容 | 谁加载 | 缺失时 |
 |---|---|---|---|
-| `redis.env` | `REDIS_PASSWORD`，64 位十六进制 | core 栈的 redis；catalog、identity、gateway 的容器和本机进程 | compose 报出路径并拒绝执行；本机进程启动失败，报出缺的文件路径或变量名 |
-| `gateway.env` | `PATRA_GATEWAY_IDENTITY_ASSERTION_PRIVATE_KEY`，含私钥的 EC P-256 JWK JSON，一行 | gateway 的容器和本机进程 | 同上 |
+| `redis.env` | `REDIS_PASSWORD`，64 位十六进制 | core 栈的 redis；catalog、identity、gateway 的容器和本机进程 | compose 报出路径并拒绝执行。本机：catalog 启动失败并报出路径；identity、gateway **照常启动**，拿字面量 `${REDIS_PASSWORD}` 去认证，日志里是 `WRONGPASS`，health 为 DOWN |
+| `gateway.env` | `PATRA_GATEWAY_IDENTITY_ASSERTION_PRIVATE_KEY`，含私钥的 EC P-256 JWK JSON，一行 | gateway 的容器和本机进程 | compose 报出路径并拒绝执行；本机网关启动失败，报「`patra.gateway.identity-assertion.private-key` 不是合法的 EC JWK JSON」 |
 | `nacos-server.env` | Nacos 的 `NACOS_AUTH_TOKEN`、`NACOS_AUTH_IDENTITY_KEY`、`NACOS_AUTH_IDENTITY_VALUE`。**只放 mini** | core 栈的 nacos | compose 报出路径并拒绝执行 |
 | `nacos-admin.env` | Nacos 管理员密码 `NACOS_ADMIN_PASSWORD`。**只放 mini**，另存密码管理器 | `nacos-init.sh`、`nacos-verify.sh` | 脚本说明缺哪个变量并退出 |
-| `nacos.env` | 应用账号 `NACOS_USERNAME=patra-app`、`NACOS_PASSWORD` | 6 个后端服务的容器和本机进程；两个 Nacos 脚本 | 同 `redis.env` |
+| `nacos.env` | 应用账号 `NACOS_USERNAME=patra-app`、`NACOS_PASSWORD` | 6 个后端服务的容器和本机进程；两个 Nacos 脚本 | compose 报出路径并拒绝执行；本机进程启动失败，报出缺的文件路径或变量名 |
 | `nacos-push.env` | 推送账号 `NACOS_PUSH_USERNAME=patra-push`、`NACOS_PUSH_PASSWORD` | 两个 Nacos 脚本；PAP-75 的推送 | 脚本说明缺哪个变量并退出 |
 | `<服务>.env` | 该服务的外部数据源密钥，例如 catalog 的 `SCOPUS_API_KEY` | 对应服务的容器 | 跳过 |
 
