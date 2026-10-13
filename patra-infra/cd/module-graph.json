@@ -647,6 +647,17 @@
             ]
         },
         {
+            "dir": "patra-starters/patra-spring-boot-starter-nacos",
+            "project": ":patra-starters:patra-spring-boot-starter-nacos",
+            "unit": "foundation",
+            "impacts": [
+                "foundation"
+            ],
+            "tasks": [
+                "check"
+            ]
+        },
+        {
             "dir": "patra-starters/patra-spring-boot-starter-provenance",
             "project": ":patra-starters:patra-spring-boot-starter-provenance",
             "unit": "foundation",
