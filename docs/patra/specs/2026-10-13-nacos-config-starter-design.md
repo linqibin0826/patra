@@ -156,7 +156,9 @@ starter 的第二个 `EnvironmentPostProcessor`（`ConfigSourceCheckPostProcesso
 - 报错里能带上实际的服务名；
 - 不依赖 Bean Validation 的实现。
 
-配置刷新时，spring-cloud-context 会重跑所有 `EnvironmentPostProcessor`。少了签到行的那次变更会被拒绝，应用继续用旧配置。
+签到之后再查 Nacos 配置里引用的变量（PAP-76 验收时补上）：没有默认值、又解析不了的 `${变量}` 让启动失败，报出 dataId、键和变量名。Spring 绑定配置时不严格解析占位符，不查的话会拿字面量当值静默启动。Nacos 配置按 SCA 导入后的属性源名字 `分组@dataId` 识别；因此 `patra-common.yaml` 里不写没有默认值的引用，密钥引用写在用到它的服务文件里。
+
+配置刷新时，spring-cloud-context 会重跑所有 `EnvironmentPostProcessor`。少了签到行、或引用的变量解析不了的那次变更会被拒绝，应用继续用旧配置。
 
 边界：
 

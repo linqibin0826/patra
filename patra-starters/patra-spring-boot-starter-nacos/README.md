@@ -81,7 +81,15 @@ SCA 拿不到配置时只打 warn、返回空配置，不会让启动失败。�
 没拿到本服务的 Nacos 配置 patra-ingest.yaml：Nacos 不可达且本地没有快照，或该文件不存在
 ```
 
-配置刷新时也会检查：少了签到行的那次变更被拒绝，应用继续用旧配置。
+签到之后再查 Nacos 配置里引用的变量：没有默认值、又解析不了的 `${变量}` 让启动失败。Spring 绑定配置时不严格解析占位符，不查的话会拿字面量 `${REDIS_PASSWORD}` 当密码，服务照常启动、用到时才报认证失败。报错例如：
+
+```text
+Nacos 配置 patra-identity.yaml 的 spring.data.redis.password 引用的变量 REDIS_PASSWORD 没有值：本机放在 ~/.patra/secrets/ 下的 .env 文件里，容器经 env_file 注入
+```
+
+Nacos 配置按 SCA 导入后的属性源名字 `分组@dataId` 识别；jar 里配置文件引用的变量不归这里查。
+
+配置刷新时也会检查：少了签到行、或引用的变量解析不了的那次变更被拒绝，应用继续用旧配置。
 
 ## 5. 优先级（从高到低）
 
@@ -95,6 +103,7 @@ SCA 拿不到配置时只打 warn、返回空配置，不会让启动失败。�
 
 - 公开的 dev 默认值（PG、MinIO、xxl-job 的账号密码）：Nacos 配置里直接写，或写成 `${变量:默认值}`。
 - 真正的密钥（Redis 密码、网关私钥、外部数据源 API key）：Nacos 配置里只写 `${变量}`，不给默认值。值留在两台机器的 `~/.patra/secrets/`：本机由本 starter 读取，容器经 compose 的 env_file 注入。
+- 密钥引用写在用到它的服务文件里，`patra-common.yaml` 里不写没有默认值的引用：每个服务都读公共配置，没加载对应 `.env` 的服务会因为解析不了而启动失败（见第 4 节）。
 
 ## 7. 测试
 

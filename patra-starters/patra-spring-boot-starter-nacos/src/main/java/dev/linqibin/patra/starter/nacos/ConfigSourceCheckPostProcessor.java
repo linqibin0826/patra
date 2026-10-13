@@ -28,8 +28,8 @@ import org.springframework.util.StringUtils;
 /// - 只在 `patra.config-source.required=true`（启动器设置）时检查；测试不经过启动器，不检查。
 /// - 排在 Spring Boot 加载完配置之后，比任何 Bean 创建都早：Nacos 没到时，不会先冒出数据源、
 ///   Redis 之类不相关的报错。
-/// - 配置刷新时 spring-cloud-context 会重跑所有 `EnvironmentPostProcessor`：少了签到行的那次
-///   变更会被拒绝，应用继续用旧配置。
+/// - 配置刷新时 spring-cloud-context 会重跑所有 `EnvironmentPostProcessor`：少了签到行、或引用的
+///   变量解析不了的那次变更会被拒绝，应用继续用旧配置。
 public class ConfigSourceCheckPostProcessor implements EnvironmentPostProcessor, Ordered {
 
   /// 签到检查开关，由启动器设为 `true`。
@@ -51,11 +51,12 @@ public class ConfigSourceCheckPostProcessor implements EnvironmentPostProcessor,
   /// SCA 自己的 `NacosPropertySource` 只登记在 `NacosPropertySourceRepository`，不进环境。
   private static final Pattern NACOS_SOURCE_NAME = Pattern.compile("[\\w.:-]+@([\\w.:-]+)");
 
-  /// 开启了签到检查时，确认两个签到字段都有值；缺了就抛异常，启动中止。
+  /// 开启了签到检查时，确认两个签到字段都有值、Nacos 配置引用的变量都能解析；有问题就抛异常，
+  /// 启动中止。
   ///
   /// @param environment 已加载完配置的环境
   /// @param application 正在启动的应用
-  /// @throws IllegalStateException 缺签到时，每缺一个写一行原因
+  /// @throws IllegalStateException 缺签到或有解析不了的变量引用时，每个问题写一行原因
   @Override
   public void postProcessEnvironment(
       ConfigurableEnvironment environment, SpringApplication application) {
