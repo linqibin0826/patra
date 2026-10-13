@@ -72,15 +72,15 @@ SCA 2025.1.0.0（`spring-alibaba-nacos-config`）、nacos-client 3.1.1、Spring 
 
 `patra-starters/patra-spring-boot-starter-nacos`，插件 `linqibin.module-patra` + `linqibin.spring-boot-starter`，放在 Patra 专属 starter 下：两份配置的文件名和签到字段都是 Patra 的约定。依赖（`api`）：
 
+- `spring-boot-starter`：`EnvironmentPostProcessor`、`SpringApplication` 等；SCA 的两个 starter 不把 Spring Boot 传到编译 classpath（实施时补）；
 - `spring-cloud-starter-alibaba-nacos-config`（不引入 bootstrap）；
-- `spring-cloud-starter-alibaba-nacos-discovery`；
-- `spring-boot-starter-validation`：签到检查依赖 Bean Validation 的实现，classpath 上没有实现时 Spring Boot 会跳过校验，检查就静默失效。
+- `spring-cloud-starter-alibaba-nacos-discovery`。
 
 包名 `dev.linqibin.patra.starter.nacos`。
 
 ### 5.2 启动时注入的默认配置（所有启动方式都生效）
 
-一个 `EnvironmentPostProcessor`（在 `META-INF/spring.factories` 里登记），在 Spring Boot 的配置加载之前，往环境里加一组属性。这组属性放在**最后**（优先级最低），服务的 `application.yml`、Nacos 配置、环境变量都能覆盖它。测试经过它，所以这里只放测试也需要的连接和服务发现设置。
+一个 `EnvironmentPostProcessor`（`NacosDefaultsPostProcessor`，在 `META-INF/spring.factories` 里登记），在 Spring Boot 的配置加载之前，往环境里加一组属性。这组属性放在**最后**（优先级最低），服务的 `application.yml`、Nacos 配置、环境变量都能覆盖它。测试经过它，所以这里只放测试也需要的连接和服务发现设置。
 
 | 内容 | 值 |
 |---|---|
@@ -144,12 +144,19 @@ patra:
     service: patra-ingest.yaml
 ```
 
-starter 里有一个带 `@Validated` 的 `@ConfigurationProperties("patra.config-source")` record，两个签到字段都是 `@NotBlank`，报错信息写明原因：
+starter 的第二个 `EnvironmentPostProcessor`（`ConfigSourceCheckPostProcessor`）在 Spring Boot 加载完配置（含 Nacos 导入）之后，立即检查这两个签到字段，缺了或为空白就抛异常、启动中止。报错写明原因，两个都缺时两条都报：
 
 - 缺 `common`：「没拿到 Nacos 配置 patra-common.yaml：Nacos 不可达且本地没有快照，或该文件不存在」
 - 缺 `service`：「没拿到本服务的 Nacos 配置 {服务名}.yaml：……」（原因同上）
 
-签到字段只写在 Nacos 的文件里，jar 里永远不写，jar 默认值没法冒充。这个配置 Bean 由 starter 的自动配置注册，只在 `patra.config-source.required=true`（启动器设置）时生效；应用启动时就会创建并校验，不依赖有人注入它。测试不经过启动器，不做这项检查。
+签到字段只写在 Nacos 的文件里，jar 里永远不写，jar 默认值没法冒充。检查只在 `patra.config-source.required=true`（启动器设置）时进行，测试不经过启动器，不做这项检查。
+
+放在配置加载阶段而不用 Bean 校验（写实施计划时改定）：
+- 比任何 Bean 创建都早，Nacos 没到时不会先冒出数据源、Redis 等不相关的报错；
+- 报错里能带上实际的服务名；
+- 不依赖 Bean Validation 的实现。
+
+配置刷新时，spring-cloud-context 会重跑所有 `EnvironmentPostProcessor`。少了签到行的那次变更会被拒绝，应用继续用旧配置。
 
 边界：
 

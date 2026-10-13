@@ -1,2 +1,3 @@
 org.springframework.boot.EnvironmentPostProcessor=\
-dev.linqibin.patra.starter.nacos.NacosDefaultsPostProcessor
+dev.linqibin.patra.starter.nacos.NacosDefaultsPostProcessor,\
+dev.linqibin.patra.starter.nacos.ConfigSourceCheckPostProcessor
