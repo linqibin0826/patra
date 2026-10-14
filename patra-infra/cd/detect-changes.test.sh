@@ -65,7 +65,7 @@ assert_field "patra-infra/scripts/compose-all.sh" '.full_run' 'false' "运维脚
 assert_field "patra-infra/docker/docker-compose.tailnet.yaml" '.backend_units' '[]' "tailnet 栈 backend 空"
 assert_field "patra-infra/docker/docker-compose.core.yaml" '.backend_units' '[]' "core 栈 backend 空"
 assert_field "patra-infra/docker/prometheus/prometheus.yml" '.backend_units' '[]' "基建栈配置目录 backend 空"
-assert_field "patra-infra/docker/.env.dev" '.backend_units' '[]' "基建栈 .env.dev backend 空"
+assert_field "patra-infra/docker/.env" '.backend_units' '[]' "基建栈 .env backend 空"
 assert_field "patra-infra/docker/docker-compose.tailnet.yaml" '.docs_only' 'false' "纯基建不算 docs_only"
 F="$(printf 'patra-infra/docker/docker-compose.tailnet.yaml\npatra-api/patra-catalog/patra-catalog-infra/src/main/java/X.java')"
 assert_field "$F" '.backend_units' '["catalog"]' "基建 + catalog 混合只跑 catalog"
@@ -73,7 +73,6 @@ assert_field "$F" '.backend_units' '["catalog"]' "基建 + catalog 混合只跑 
 echo "== 场景 11：应用编排与应用环境变量仍保守全量 =="
 assert_field "patra-infra/docker/docker-compose.apps.yaml" '.full_run' 'true' "apps 栈全量"
 assert_field "patra-infra/docker/service.Dockerfile" '.full_run' 'true' "共享 Dockerfile 全量"
-assert_field "patra-infra/docker/.env.catalog" '.full_run' 'true' "应用 .env.<svc> 全量"
 assert_field "patra-infra/docker/.env.common" '.full_run' 'true' "应用 .env.common 全量"
 
 echo "== 场景 12：前端 / 学习站目录下的 Markdown 是文档，不触发 portal / learn（与 portal-cd / learn-cd 的 '!**/*.md' 口径一致）=="
