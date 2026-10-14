@@ -213,7 +213,7 @@ PlanMetadata metadata = searchPort.preparePlanMetadata(
 
 - ✅ **始终使用 compiledParams**,不再手动构建查询字符串
 - ✅ **MULTI std_keys 默认使用 JOIN 转换**,避免重复参数
-- ✅ **生产环境启用 STRICT 模式**(`expr.strict=true`),早期捕获配置错误
+- ✅ **启用 STRICT 模式**(`patra.starter.expr.mode.strict=true`，jar 默认，IDE 与容器一致),早期捕获配置错误
 
 ---
 
@@ -247,6 +247,8 @@ docker-compose -f docker/docker-compose.yml up -d
 cd patra-ingest/patra-ingest-boot
 ../../gradlew :patra-ingest:patra-ingest-boot:bootRun
 ```
+
+配置从 Nacos 读（`patra-common.yaml`、`patra-ingest.yaml`，源文件在 `patra-infra/nacos/dev/`）。本机运行只需要设 `PATRA_INFRA_HOST`、`PATRA_ADVERTISE_IP`，并在 `~/.patra/secrets/` 放好 `nacos.env`；RocketMQ 启用 ACL 时，在 `~/.patra/secrets/ingest.env` 放 `ROCKETMQ_AK`、`ROCKETMQ_SK`。
 
 **默认端口**: 8082
 

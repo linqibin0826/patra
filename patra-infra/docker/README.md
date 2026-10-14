@@ -99,7 +99,7 @@ bash patra-infra/scripts/nacos-verify.sh    # 预期 通过 9 / 失败 0
 
 ### MacBook 应用访问 Nacos
 
-MacBook 上的应用直连 Mac mini 的 Nacos（HTTP 8848 + gRPC 9848），**无需 ssh tunnel**：Nacos 地址缺省跟随 `PATRA_INFRA_HOST`：registry、object-storage、identity、gateway 由 Nacos starter 注入，ingest、catalog 迁移前仍写在 yml 里。账号 `patra-app` 来自 `~/.patra/secrets/nacos.env`：前 4 个服务由 starter 读取，ingest、catalog 由 dev profile 导入；缺了启动失败。Nacos 控制台同样直连：`http://$PATRA_INFRA_HOST:8080`，用管理员登录。
+MacBook 上的应用直连 Mac mini 的 Nacos（HTTP 8848 + gRPC 9848），**无需 ssh tunnel**：Nacos 地址缺省跟随 `PATRA_INFRA_HOST`，由 Nacos starter 注入。账号 `patra-app` 来自 `~/.patra/secrets/nacos.env`，由 starter 读取，缺了启动失败。Nacos 控制台同样直连：`http://$PATRA_INFRA_HOST:8080`，用管理员登录。
 
 > 曾因 tailscale MTU 丢 gRPC HTTP/2 帧而必须经 ssh tunnel 转发，现已拆除。直连卡 STARTING 时的排查见 `../docs/mac-mini-connectivity.md` §2。
 
@@ -156,13 +156,13 @@ ssh linqibin@linqibins-mac-mini 'docker restart patra-rocketmq-broker'  # 只重
 | `nacos-admin.env` | Nacos 管理员密码 `NACOS_ADMIN_PASSWORD`。**只放 mini**，另存密码管理器 | `nacos-init.sh`、`nacos-verify.sh` | 脚本说明缺哪个变量并退出 |
 | `nacos.env` | 应用账号 `NACOS_USERNAME=patra-app`、`NACOS_PASSWORD` | 6 个后端服务的容器和本机进程；两个 Nacos 脚本 | 同 `redis.env` |
 | `nacos-push.env` | 推送账号 `NACOS_PUSH_USERNAME=patra-push`、`NACOS_PUSH_PASSWORD` | 两个 Nacos 脚本；PAP-75 的推送 | 脚本说明缺哪个变量并退出 |
-| `<服务>.env` | 该服务的外部数据源密钥，例如 catalog 的 `SCOPUS_API_KEY` | 对应服务的容器 | 跳过 |
+| `<服务>.env` | 该服务的外部数据源密钥，例如 catalog 的 `SCOPUS_API_KEY`、`PROXY_AUTH_KEY`、`PROXY_AUTH_PWD`，ingest 的 `ROCKETMQ_AK`、`ROCKETMQ_SK` | 对应服务的容器和本机进程 | 跳过 |
 
 两种进程怎么读到这些文件：
 
 - 模板在 `secrets/*.example`。
 - 容器：由 `docker-compose.apps.yaml`、`docker-compose.core.yaml` 的 `env_file` 按 `${HOME}/.patra/secrets/...` 加载。
-- 本机进程：Nacos starter 把 `~/.patra/secrets/` 下的全部 `*.env` 读进来（ingest、catalog 迁移前仍由 `application-dev.yml` 的 `spring.config.import` 读），IDEA 和 shell 都不用设这些变量。
+- 本机进程：Nacos starter 把 `~/.patra/secrets/` 下的全部 `*.env` 读进来，IDEA 和 shell 都不用设这些变量。
 
 排查时注意：`docker compose config` 会展开环境文件，`docker inspect <容器>` 会列出容器的全部环境变量，两者都会把 Redis 密码和网关私钥原样打到终端。只想校验 compose 配置，用 `docker compose config --quiet`；想知道容器里有哪些变量，只打变量名：
 
@@ -280,7 +280,7 @@ rocketmq:
   name-server: ${PATRA_INFRA_HOST:127.0.0.1}:9876
 ```
 
-Nacos 的地址、账号和服务发现设置由 `patra-spring-boot-starter-nacos` 注入，服务的配置里不写（ingest、catalog 迁移前仍写在各自的 yml 里）。
+Nacos 的地址、账号和服务发现设置由 `patra-spring-boot-starter-nacos` 注入，服务的配置里不写。
 
 默认值 `127.0.0.1` 仅用于应急 fallback（如临时在 MacBook 上本地起容器调试）。统一用 `127.0.0.1` 而非 `localhost`，避免 hosts/IPv6 解析歧义。
 
@@ -310,7 +310,7 @@ Nacos 的地址、账号和服务发现设置由 `patra-spring-boot-starter-naco
 - **AlertManager**: http://linqibins-mac-mini:9093
 
 ### 任务服务
-- **mysql-ops**: 不暴露宿主机端口；容器内 `mysql-ops:3306`，仅供 xxl-job-admin 使用，凭据见 `.env.dev` 的 `MYSQL_OPS_*`
+- **mysql-ops**: 不暴露宿主机端口；容器内 `mysql-ops:3306`，仅供 xxl-job-admin 使用，凭据见 `.env` 的 `MYSQL_OPS_*`
 - **XXL-Job Admin**: http://linqibins-mac-mini:7070/xxl-job-admin (admin/123456)
 - **RocketMQ NameServer**: `linqibins-mac-mini:9876`
 - **RocketMQ Dashboard**: http://linqibins-mac-mini:4002
