@@ -14,3 +14,17 @@ patra:
   security:
     identity-assertion:
       public-keys: '{"keys":[{"kty":"EC","crv":"P-256","kid":"8q4oW5O78zImMpqUwOfEXz3miOfVc2XPS9F_vMPsczk","x":"A-1wOkD67cIDybmSkE_9iQSgw3Rk4U189p6TsFZZFA4","y":"eYzvHkiL_bApKcLXgDq2fQmQ43zYOqqtzlt2ThbDMh8"}]}'
+
+linqibin:
+  starter:
+    object-storage:
+      providers:
+        minio:
+          endpoint: http://${PATRA_INFRA_HOST:127.0.0.1}:19000
+          access-key: ${MINIO_ACCESS_KEY:minioadmin}
+          secret-key: ${MINIO_SECRET_KEY:minioadmin123}
+
+xxl:
+  job:
+    admin:
+      addresses: http://${PATRA_INFRA_HOST:127.0.0.1}:7070/xxl-job-admin

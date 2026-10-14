@@ -1,1 +1,31 @@
 patra.config-source.service: patra-catalog.yaml
+
+spring:
+  datasource:
+    url: jdbc:postgresql://${PATRA_INFRA_HOST:127.0.0.1}:15432/patra_catalog
+  data:
+    redis:
+      password: ${REDIS_PASSWORD}
+
+patra:
+  catalog:
+    scopus:
+      api-key: ${SCOPUS_API_KEY:}
+
+linqibin:
+  starter:
+    batch:
+      datasource:
+        url: jdbc:postgresql://${PATRA_INFRA_HOST:127.0.0.1}:15432/patra_batch
+        username: postgres
+        password: ${PATRA_DB_PASSWORD:123456}
+    object-storage:
+      providers:
+        minio:
+          bucket: patra-catalog-cache
+    rest-client:
+      proxy:
+        tunnel:
+          enabled: false
+          auth-key: ${PROXY_AUTH_KEY:}
+          auth-pwd: ${PROXY_AUTH_PWD:}

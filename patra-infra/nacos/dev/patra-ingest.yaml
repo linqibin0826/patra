@@ -1,1 +1,17 @@
 patra.config-source.service: patra-ingest.yaml
+
+spring:
+  datasource:
+    url: jdbc:postgresql://${PATRA_INFRA_HOST:127.0.0.1}:15432/patra_ingest
+
+linqibin:
+  starter:
+    object-storage:
+      providers:
+        minio:
+          bucket: patra-ingest-cache
+
+rocketmq:
+  name-server: ${PATRA_INFRA_HOST:127.0.0.1}:9876
+  access-key: ${ROCKETMQ_AK:}
+  secret-key: ${ROCKETMQ_SK:}
