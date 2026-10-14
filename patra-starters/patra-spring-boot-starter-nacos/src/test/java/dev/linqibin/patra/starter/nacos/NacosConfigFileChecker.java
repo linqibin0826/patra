@@ -29,12 +29,14 @@ final class NacosConfigFileChecker {
       List.of(
           "password",
           "passwd",
+          "pwd",
           "secret",
           "token",
           "credential",
           "credentials",
           "privatekey",
           "apikey",
+          "authkey",
           "accesskey",
           "secretkey");
 

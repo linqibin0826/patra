@@ -163,6 +163,24 @@ class NacosConfigFilesTest {
   }
 
   @Test
+  @DisplayName("代理密码 auth-pwd 写字面量时不通过")
+  void should_reject_literal_auth_pwd() throws IOException {
+    write("patra-common.yaml", "patra.config-source.common: patra-common.yaml\nauth-pwd: x\n");
+
+    assertThat(NacosConfigFileChecker.check(directory))
+        .containsExactly("patra-common.yaml：敏感键 auth-pwd 只能写成 ${变量} 或 ${变量:默认值}");
+  }
+
+  @Test
+  @DisplayName("代理账号密钥 auth-key 写字面量时不通过")
+  void should_reject_literal_auth_key() throws IOException {
+    write("patra-common.yaml", "patra.config-source.common: patra-common.yaml\nauth-key: x\n");
+
+    assertThat(NacosConfigFileChecker.check(directory))
+        .containsExactly("patra-common.yaml：敏感键 auth-key 只能写成 ${变量} 或 ${变量:默认值}");
+  }
+
+  @Test
   @DisplayName("token-ttl 这类不以敏感词结尾的键不算敏感键")
   void should_not_treat_token_ttl_as_sensitive() throws IOException {
     write(
