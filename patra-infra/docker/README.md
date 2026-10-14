@@ -215,7 +215,7 @@ GATEWAY_IMAGE_TAG="$(cat ~/.patra/cd/last-good-gateway)" docker compose -f docke
 ### 换签名密钥
 
 1. 按上面的方法生成一对新密钥。新私钥先存成别的文件名，不要覆盖 `gateway.env`。
-2. 把新公钥加进 `patra-common.yaml` 的 `keys` 数组，旧公钥保留。提交、推送：CD 只把配置推到 Nacos，不重新部署服务，配置也不会自动生效。再按「改了密钥文件之后」的命令重建 identity 和 gateway 容器，本机进程各重启一次。
+2. 把新公钥加进 `patra-common.yaml` 的 `keys` 数组，旧公钥保留。提交、推送：CD 把配置推到 Nacos 后重新部署全部 6 个服务，容器读到新公钥；本机进程各重启一次。
 
    此时新旧两把公钥都被信任，网关仍用旧私钥签。
 3. 两台机器上都把 `gateway.env` 换成新私钥。

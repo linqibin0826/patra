@@ -34,7 +34,7 @@ emit_full() { NACOS_CHANGED=true; emit "$ALL_UNITS" "${1:-false}" false true ful
 classify() {
   local full=false portal=false docs_all=true
   local units_file; units_file="$(mktemp)"; trap 'rm -f "$units_file"' RETURN
-  local saw_any=false f hit
+  local saw_any=false f hit svc
   while IFS= read -r f; do
     [ -z "$f" ] && continue
     saw_any=true
@@ -46,10 +46,21 @@ classify() {
       patra-infra/docker/service.Dockerfile|patra-infra/docker/docker-compose.apps.yaml) full=true; docs_all=false; continue;;
       patra-infra/cd/*) full=true; docs_all=false; continue;;
     esac
-    # Nacos 配置与推送脚本：CI 跑 starter（foundation）里的配置检查和推送集成测试，
-    # CD 在部署前推送（nacos-push job）。foundation 不可部署，不会触发任何服务重建。
+    # Nacos 配置：CI 跑 starter（foundation）里的配置检查；CD 推送（nacos-push job）后重部署用到它的
+    # 服务——库地址、MinIO 这类启动时读取的配置只有重启才生效。公共配置对应全部服务，
+    # patra-<服务名>.yaml 对应该服务，对不上服务名的只跑 foundation。
+    # 推送脚本：CI 跑推送集成测试（foundation），不重部署服务。
     case "$f" in
-      patra-infra/nacos/*/*.yaml|patra-infra/scripts/nacos-push.sh|patra-infra/scripts/nacos-lib.sh)
+      patra-infra/nacos/*/patra-common.yaml)
+        NACOS_CHANGED=true; docs_all=false; jq -r '.[]' <<< "$ALL_UNITS" >> "$units_file"; continue;;
+      patra-infra/nacos/*/*.yaml)
+        NACOS_CHANGED=true; docs_all=false; echo foundation >> "$units_file"
+        svc="${f##*/patra-}"; svc="${svc%.yaml}"
+        if [ "$svc" != foundation ] && jq -e --arg s "$svc" 'index($s) != null' <<< "$ALL_UNITS" > /dev/null; then
+          echo "$svc" >> "$units_file"
+        fi
+        continue;;
+      patra-infra/scripts/nacos-push.sh|patra-infra/scripts/nacos-lib.sh)
         NACOS_CHANGED=true; docs_all=false; echo foundation >> "$units_file"; continue;;
     esac
     # 纯基建路径：应用以外的 compose 栈及其配置、基建栈 .env、运维脚本、本地 OTel agent 配置。
