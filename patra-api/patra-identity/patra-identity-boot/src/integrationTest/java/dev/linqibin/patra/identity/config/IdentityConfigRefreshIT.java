@@ -17,6 +17,9 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.health.contributor.Status;
+import org.springframework.boot.logging.LogLevel;
+import org.springframework.boot.logging.LoggerConfiguration;
+import org.springframework.boot.logging.LoggingSystem;
 import org.springframework.boot.test.context.assertj.AssertableApplicationContext;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.cloud.autoconfigure.ConfigurationPropertiesRebinderAutoConfiguration;
@@ -84,19 +87,25 @@ class IdentityConfigRefreshIT {
   }
 
   @Test
-  @DisplayName("日志级别改成 DEBUG：不重启即生效")
+  @DisplayName("日志级别从 INFO 改成 DEBUG：不重启即生效")
   void should_apply_logging_level_without_restart() {
-    runner.run(
-        context -> {
-          assertThat(LoggerFactory.getLogger(IDENTITY_LOGGER).isDebugEnabled()).isFalse();
-          try {
+    // 日志级别是进程级状态，起始值取决于前面的测试和运行环境：先显式推一次 INFO，结束时还原
+    LoggingSystem logging = LoggingSystem.get(getClass().getClassLoader());
+    LoggerConfiguration before = logging.getLoggerConfiguration(IDENTITY_LOGGER);
+    LogLevel original = before == null ? null : before.getConfiguredLevel();
+    try {
+      runner.run(
+          context -> {
+            change(context, Map.of("logging.level." + IDENTITY_LOGGER, "INFO"));
+            assertThat(LoggerFactory.getLogger(IDENTITY_LOGGER).isDebugEnabled()).isFalse();
+
             change(context, Map.of("logging.level." + IDENTITY_LOGGER, "DEBUG"));
 
             assertThat(LoggerFactory.getLogger(IDENTITY_LOGGER).isDebugEnabled()).isTrue();
-          } finally {
-            change(context, Map.of("logging.level." + IDENTITY_LOGGER, "INFO"));
-          }
-        });
+          });
+    } finally {
+      logging.setLogLevel(IDENTITY_LOGGER, original);
+    }
   }
 
   /// 模拟一次 Nacos 推送：把新值放到最高优先级，再发布配置变更事件。
