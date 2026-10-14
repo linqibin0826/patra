@@ -22,6 +22,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -64,7 +65,7 @@ class LoginThrottleAdapterIT {
   @Test
   @DisplayName("连续失败 5 次，第 5 次上锁并返回锁定时长，之后的尝试被拒")
   void should_lock_on_fifth_failure() {
-    LoginThrottleAdapter adapter = new LoginThrottleAdapter(redis, DEFAULT_POLICY);
+    LoginThrottleAdapter adapter = new LoginThrottleAdapter(redis, () -> DEFAULT_POLICY);
     EmailAddress email = uniqueEmail();
 
     for (int i = 0; i < 4; i++) {
@@ -83,9 +84,24 @@ class LoginThrottleAdapterIT {
   }
 
   @Test
+  @DisplayName("运行中把失败上限从 5 改成 2：不用重建适配器，下一次失败就按新上限上锁")
+  void should_apply_latest_policy_on_each_attempt() {
+    AtomicReference<LoginThrottlePolicy> current = new AtomicReference<>(DEFAULT_POLICY);
+    LoginThrottleAdapter adapter = new LoginThrottleAdapter(redis, current::get);
+    EmailAddress email = uniqueEmail();
+    assertThat(adapter.recordFailure(adapter.begin(AccountType.USER, email))).isEmpty();
+
+    current.set(
+        LoginThrottlePolicy.of(2, FIFTEEN_MINUTES, FIFTEEN_MINUTES, Duration.ofSeconds(30)));
+
+    assertThat(adapter.recordFailure(adapter.begin(AccountType.USER, email)))
+        .contains(FIFTEEN_MINUTES);
+  }
+
+  @Test
   @DisplayName("中间成功一次，失败计数清零")
   void should_reset_failures_on_success() {
-    LoginThrottleAdapter adapter = new LoginThrottleAdapter(redis, DEFAULT_POLICY);
+    LoginThrottleAdapter adapter = new LoginThrottleAdapter(redis, () -> DEFAULT_POLICY);
     EmailAddress email = uniqueEmail();
     failTimes(adapter, email, 4);
 
@@ -98,7 +114,7 @@ class LoginThrottleAdapterIT {
   @Test
   @DisplayName("并发 20 个错误尝试：只放行 5 个，其余拿到 1 秒的 429；5 个都失败后上锁")
   void should_admit_at_most_five_concurrent_attempts() throws Exception {
-    LoginThrottleAdapter adapter = new LoginThrottleAdapter(redis, DEFAULT_POLICY);
+    LoginThrottleAdapter adapter = new LoginThrottleAdapter(redis, () -> DEFAULT_POLICY);
     EmailAddress email = uniqueEmail();
     CountDownLatch start = new CountDownLatch(1);
     List<Future<Object>> results = new ArrayList<>();
@@ -141,7 +157,7 @@ class LoginThrottleAdapterIT {
   @Test
   @DisplayName("同时提交 6 次正确密码：至多一次拿到 429，不上锁")
   void should_not_lock_on_concurrent_successful_attempts() {
-    LoginThrottleAdapter adapter = new LoginThrottleAdapter(redis, DEFAULT_POLICY);
+    LoginThrottleAdapter adapter = new LoginThrottleAdapter(redis, () -> DEFAULT_POLICY);
     EmailAddress email = uniqueEmail();
     List<LoginAttempt> inFlight = new ArrayList<>();
     for (int i = 0; i < 5; i++) {
@@ -158,7 +174,7 @@ class LoginThrottleAdapterIT {
   @Test
   @DisplayName("5 次取消之后，下一次尝试照常放行")
   void should_release_slots_on_cancel() {
-    LoginThrottleAdapter adapter = new LoginThrottleAdapter(redis, DEFAULT_POLICY);
+    LoginThrottleAdapter adapter = new LoginThrottleAdapter(redis, () -> DEFAULT_POLICY);
     EmailAddress email = uniqueEmail();
     List<LoginAttempt> inFlight = new ArrayList<>();
     for (int i = 0; i < 5; i++) {
@@ -176,7 +192,7 @@ class LoginThrottleAdapterIT {
   @Test
   @DisplayName("先放行 A，B 成功之后 A 才按失败结算：只计 1 次，不凭旧计数上锁")
   void should_count_late_failure_in_current_window() {
-    LoginThrottleAdapter adapter = new LoginThrottleAdapter(redis, DEFAULT_POLICY);
+    LoginThrottleAdapter adapter = new LoginThrottleAdapter(redis, () -> DEFAULT_POLICY);
     EmailAddress email = uniqueEmail();
     failTimes(adapter, email, 3);
     LoginAttempt late = adapter.begin(AccountType.USER, email);
@@ -194,7 +210,7 @@ class LoginThrottleAdapterIT {
   void should_not_count_failure_settled_during_lock() {
     LoginThrottlePolicy shortLock =
         LoginThrottlePolicy.of(5, FIFTEEN_MINUTES, Duration.ofSeconds(1), Duration.ofSeconds(30));
-    LoginThrottleAdapter adapter = new LoginThrottleAdapter(redis, shortLock);
+    LoginThrottleAdapter adapter = new LoginThrottleAdapter(redis, () -> shortLock);
     EmailAddress email = uniqueEmail();
     failTimes(adapter, email, 5);
 
@@ -215,7 +231,7 @@ class LoginThrottleAdapterIT {
   void should_expire_in_flight_registrations() {
     LoginThrottlePolicy shortTtl =
         LoginThrottlePolicy.of(5, FIFTEEN_MINUTES, FIFTEEN_MINUTES, Duration.ofMillis(300));
-    LoginThrottleAdapter adapter = new LoginThrottleAdapter(redis, shortTtl);
+    LoginThrottleAdapter adapter = new LoginThrottleAdapter(redis, () -> shortTtl);
     EmailAddress email = uniqueEmail();
     for (int i = 0; i < 5; i++) {
       adapter.begin(AccountType.USER, email);
@@ -234,7 +250,7 @@ class LoginThrottleAdapterIT {
   void should_expire_failure_window() {
     LoginThrottlePolicy shortWindow =
         LoginThrottlePolicy.of(5, Duration.ofMillis(500), FIFTEEN_MINUTES, Duration.ofSeconds(30));
-    LoginThrottleAdapter adapter = new LoginThrottleAdapter(redis, shortWindow);
+    LoginThrottleAdapter adapter = new LoginThrottleAdapter(redis, () -> shortWindow);
     EmailAddress email = uniqueEmail();
     failTimes(adapter, email, 4);
 
@@ -259,7 +275,7 @@ class LoginThrottleAdapterIT {
     deadFactory.start();
     try {
       LoginThrottleAdapter adapter =
-          new LoginThrottleAdapter(new StringRedisTemplate(deadFactory), DEFAULT_POLICY);
+          new LoginThrottleAdapter(new StringRedisTemplate(deadFactory), () -> DEFAULT_POLICY);
 
       assertThatThrownBy(() -> adapter.begin(AccountType.USER, uniqueEmail()))
           .isInstanceOf(TemporarilyUnavailableException.class);

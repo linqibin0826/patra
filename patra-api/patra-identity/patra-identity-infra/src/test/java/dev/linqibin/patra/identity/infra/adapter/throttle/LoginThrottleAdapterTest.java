@@ -56,8 +56,9 @@ class LoginThrottleAdapterTest {
     LoginThrottleAdapter adapter =
         new LoginThrottleAdapter(
             redis,
-            LoginThrottlePolicy.of(
-                5, Duration.ofMinutes(15), Duration.ofMinutes(15), Duration.ofSeconds(30)));
+            () ->
+                LoginThrottlePolicy.of(
+                    5, Duration.ofMinutes(15), Duration.ofMinutes(15), Duration.ofSeconds(30)));
 
     assertThatThrownBy(() -> adapter.begin(AccountType.USER, EmailAddress.of("a@example.com")))
         .isInstanceOf(TemporarilyUnavailableException.class);
@@ -72,7 +73,7 @@ class LoginThrottleAdapterTest {
                 new RedisSystemException(
                     "Error in execution",
                     new RedisLoadingException("LOADING Redis is loading the dataset in memory"))),
-            POLICY);
+            () -> POLICY);
 
     assertThatThrownBy(() -> adapter.begin(AccountType.USER, EmailAddress.of("a@example.com")))
         .isInstanceOf(TemporarilyUnavailableException.class);
@@ -87,7 +88,7 @@ class LoginThrottleAdapterTest {
                 new RedisSystemException(
                     "Error in execution",
                     new RedisNoScriptException("NOSCRIPT No matching script."))),
-            POLICY);
+            () -> POLICY);
 
     assertThatThrownBy(() -> adapter.begin(AccountType.USER, EmailAddress.of("a@example.com")))
         .isInstanceOf(RedisSystemException.class);

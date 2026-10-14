@@ -5,28 +5,14 @@ import java.util.Map;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
-/// identity 的配置项，前缀 `patra.identity`。
+/// identity 的配置项，前缀 `patra.identity`。启动后不变；可在线刷新的登录失败限制见
+/// [LoginThrottleProperties]。
 ///
-/// @param loginThrottle 登录失败限制
 /// @param passwordHashing 密码哈希
 /// @param session 会话策略
 @ConfigurationProperties(prefix = "patra.identity")
 public record IdentityProperties(
-    @DefaultValue LoginThrottle loginThrottle,
-    @DefaultValue PasswordHashing passwordHashing,
-    @DefaultValue Session session) {
-
-  /// 登录失败限制。
-  ///
-  /// @param maxFailures 计数窗口内允许的失败次数
-  /// @param window 计数窗口
-  /// @param lockDuration 锁定时长
-  /// @param inFlightTtl 在途登记的过期时间
-  public record LoginThrottle(
-      @DefaultValue("5") int maxFailures,
-      @DefaultValue("15m") Duration window,
-      @DefaultValue("15m") Duration lockDuration,
-      @DefaultValue("30s") Duration inFlightTtl) {}
+    @DefaultValue PasswordHashing passwordHashing, @DefaultValue Session session) {
 
   /// 密码哈希。
   ///
