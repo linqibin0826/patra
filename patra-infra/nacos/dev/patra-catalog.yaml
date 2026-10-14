@@ -19,10 +19,6 @@ linqibin:
         url: jdbc:postgresql://${PATRA_INFRA_HOST:127.0.0.1}:15432/patra_batch
         username: postgres
         password: ${PATRA_DB_PASSWORD:123456}
-    object-storage:
-      providers:
-        minio:
-          bucket: patra-catalog-cache
     rest-client:
       proxy:
         tunnel:
