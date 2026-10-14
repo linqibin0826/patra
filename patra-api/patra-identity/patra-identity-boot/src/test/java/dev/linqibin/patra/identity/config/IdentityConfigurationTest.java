@@ -17,16 +17,23 @@ import dev.linqibin.patra.identity.domain.service.SessionIssuer;
 import dev.linqibin.patra.identity.session.RedisSessionStore;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.springframework.boot.test.context.assertj.AssertableApplicationContext;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.core.ResolvableType;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 /// IdentityConfiguration 单元测试。
+///
+/// 每次启动上下文都会构造密码哈希适配器，构造时算一次 Argon2（19 MiB、2 轮）。全类第一条用例赶上 JIT
+/// 未预热，CI 两核机器又在并行编译和起容器时，两次冷启动的 Argon2 会超过单元测试默认的 15 秒，
+/// 所以本类放宽到 60 秒；这里验证的是装配，不是哈希速度。
 @DisplayName("IdentityConfiguration 单元测试")
+@Timeout(value = 60, unit = TimeUnit.SECONDS)
 class IdentityConfigurationTest {
 
   private static final String[] WEB_LIFETIME = {
