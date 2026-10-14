@@ -50,9 +50,6 @@ public class ObjectStorageProperties {
 
     /// 秘密密钥
     private String secretKey;
-
-    /// 存储桶名称
-    private String bucket;
   }
 
   /// 重试配置类。
