@@ -34,7 +34,7 @@ IDE 与容器的差异只放在 Nacos 之外的本地变量里，变量按用途
 3. Nacos 配置（`{服务名}.yaml` 高于 `patra-common.yaml`）
 4. `application.yml`
 
-同一个键不在 jar 和 Nacos 两处写：每个 boot 模块的 `ApplicationConfigTest` 检查。
+同一个键不在 jar 和 Nacos 两处写：starter-nacos 的 `JarConfigOverlapCheckerTest` 拿 `patra-infra/nacos/dev/` 与 6 个 boot 模块 `src/main/resources` 下的全部 yml 比对。
 
 ## Nacos 接入
 

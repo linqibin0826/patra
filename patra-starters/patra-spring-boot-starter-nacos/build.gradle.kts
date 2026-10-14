@@ -51,11 +51,29 @@ tasks.named<Test>("integrationTest") {
     systemProperty("patra.repo-root", repoRootRelative)
 }
 
-// NacosConfigFilesTest 检查仓库里要推送到 Nacos 的配置文件
+// 每份服务配置对应的 boot 模块配置目录，找法与 JarConfigOverlapChecker 一致：先找
+// {服务名}/{服务名}-boot，再找 {服务名}-boot（如网关）。只声明 src/main/resources，不罩住 build 输出。
+val bootConfigFiles =
+    nacosConfigDir.asFile
+        .listFiles { file -> file.name.endsWith(".yaml") && file.name != "patra-common.yaml" }
+        .orEmpty()
+        .map { it.name.removeSuffix(".yaml") }
+        .flatMap { service ->
+            listOf("$service/$service-boot", "$service-boot").map {
+                rootProject.layout.projectDirectory.dir("patra-api/$it/src/main/resources")
+            }
+        }.map { dir -> fileTree(dir) { include("*.yml", "*.yaml") } }
+
+// NacosConfigFilesTest 检查仓库里要推送到 Nacos 的配置文件；JarConfigOverlapCheckerTest 再拿它们
+// 和 6 个 boot 模块的 jar 配置比对
 tasks.named<Test>("test") {
     inputs
         .dir(nacosConfigDir)
         .withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName("nacosConfigFiles")
+    inputs
+        .files(bootConfigFiles)
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+        .withPropertyName("bootConfigFiles")
     systemProperty("patra.repo-root", repoRootRelative)
 }

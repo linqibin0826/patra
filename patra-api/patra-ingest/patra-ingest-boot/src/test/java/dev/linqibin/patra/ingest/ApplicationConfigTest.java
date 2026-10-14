@@ -3,7 +3,6 @@ package dev.linqibin.patra.ingest;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -13,7 +12,8 @@ import org.springframework.core.env.EnumerablePropertySource;
 import org.springframework.core.io.ClassPathResource;
 
 /// jar 里配置文件的约束（PAP-77）：随环境变的值在 Nacos，jar 里没有 profile 文件，
-/// 服务名由启动器传入，Nacos 接入由 starter 注入，Nacos 接管的键不在 jar 里重复写。
+/// 服务名由启动器传入，Nacos 接入由 starter 注入。jar 与 Nacos 不重复写同一个键由 starter-nacos 的
+/// `JarConfigOverlapCheckerTest` 统一检查。
 @DisplayName("jar 内配置文件约束")
 class ApplicationConfigTest {
 
@@ -33,20 +33,6 @@ class ApplicationConfigTest {
                 name.startsWith("spring.application.name")
                     || name.startsWith("spring.profiles.active")
                     || name.startsWith("spring.cloud.nacos"));
-  }
-
-  @Test
-  @DisplayName("Nacos 接管的键不在 jar 里重复写")
-  void should_leave_nacos_owned_keys_to_nacos() throws IOException {
-    List<String> names = new ArrayList<>(propertyNames("application.yml"));
-    names.addAll(propertyNames("ingest-rocketmq.yaml"));
-
-    assertThat(names)
-        .doesNotContain(
-            "xxl.job.admin.addresses",
-            "rocketmq.name-server",
-            "rocketmq.access-key",
-            "rocketmq.secret-key");
   }
 
   /// 读出 classpath 上一份 YAML 的全部属性名，多文档合在一起。
