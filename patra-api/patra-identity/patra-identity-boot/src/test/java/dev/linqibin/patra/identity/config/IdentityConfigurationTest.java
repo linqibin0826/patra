@@ -17,13 +17,23 @@ import dev.linqibin.patra.identity.domain.service.SessionIssuer;
 import dev.linqibin.patra.identity.session.RedisSessionStore;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.springframework.boot.test.context.assertj.AssertableApplicationContext;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.core.ResolvableType;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 /// IdentityConfiguration 单元测试。
+///
+/// 每次启动上下文都会构造密码哈希适配器，构造时算一次 Argon2（19 MiB、2 轮）。全类第一条用例赶上 JIT
+/// 未预热，CI 两核机器又在并行编译和起容器时，两次冷启动的 Argon2 会超过单元测试默认的 15 秒，
+/// 所以本类放宽到 60 秒；这里验证的是装配，不是哈希速度。
 @DisplayName("IdentityConfiguration 单元测试")
+@Timeout(value = 60, unit = TimeUnit.SECONDS)
 class IdentityConfigurationTest {
 
   private static final String[] WEB_LIFETIME = {
@@ -52,7 +62,7 @@ class IdentityConfigurationTest {
   void should_use_defaults() {
     runner.run(
         context -> {
-          assertThat(context.getBean(LoginThrottlePolicy.class))
+          assertThat(throttlePolicy(context))
               .isEqualTo(
                   LoginThrottlePolicy.of(
                       5, Duration.ofMinutes(15), Duration.ofMinutes(15), Duration.ofSeconds(30)));
@@ -78,13 +88,28 @@ class IdentityConfigurationTest {
             "patra.identity.session.lifetime.user.web.idle=7d")
         .run(
             context -> {
-              LoginThrottlePolicy throttle = context.getBean(LoginThrottlePolicy.class);
+              LoginThrottlePolicy throttle = throttlePolicy(context);
               assertThat(throttle.maxFailures()).isEqualTo(3);
               assertThat(throttle.lockDuration()).isEqualTo(Duration.ofSeconds(2));
               SessionLifetimePolicy session = context.getBean(SessionLifetimePolicy.class);
               assertThat(session.maxSessionsPerUser()).isEqualTo(3);
               assertThat(session.lifetimeFor(ClientType.WEB).idle()).isEqualTo(Duration.ofDays(7));
             });
+  }
+
+  @Test
+  @DisplayName("限流配置对象被重新绑定后，下一次取到的参数就是新值（配置刷新走的就是这条路）")
+  void should_follow_throttle_property_changes() {
+    runner.run(
+        context -> {
+          LoginThrottleProperties properties = context.getBean(LoginThrottleProperties.class);
+          properties.setMaxFailures(3);
+          properties.setLockDuration(Duration.ofMinutes(1));
+
+          LoginThrottlePolicy throttle = throttlePolicy(context);
+          assertThat(throttle.maxFailures()).isEqualTo(3);
+          assertThat(throttle.lockDuration()).isEqualTo(Duration.ofMinutes(1));
+        });
   }
 
   @Test
@@ -128,5 +153,16 @@ class IdentityConfigurationTest {
     runner
         .withPropertyValues("patra.identity.session.max-sessions-per-user=0")
         .run(context -> assertThat(context).hasFailed());
+  }
+
+  /// 当前的登录失败限制参数。
+  ///
+  /// @param context 应用上下文
+  /// @return 参数
+  private static LoginThrottlePolicy throttlePolicy(AssertableApplicationContext context) {
+    ResolvableType type =
+        ResolvableType.forClassWithGenerics(Supplier.class, LoginThrottlePolicy.class);
+    Supplier<?> supplier = (Supplier<?>) context.getBeanProvider(type).getObject();
+    return (LoginThrottlePolicy) supplier.get();
   }
 }

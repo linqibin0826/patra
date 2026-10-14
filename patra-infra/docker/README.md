@@ -92,14 +92,14 @@ bash patra-infra/scripts/compose-all.sh up
 # 6. (Mac mini) 验证全部 healthy
 bash patra-infra/scripts/compose-all.sh ps
 
-# 7. (Mac mini) 初始化 Nacos（nacos 容器 healthy 后执行，幂等）：管理员、dev 与 dev-secrets 两个 namespace、账号、角色和权限
+# 7. (Mac mini) 初始化 Nacos（nacos 容器 healthy 后执行，幂等）：管理员、dev namespace、账号、角色和权限
 bash patra-infra/scripts/nacos-init.sh
-bash patra-infra/scripts/nacos-verify.sh    # 预期 通过 10 / 失败 0
+bash patra-infra/scripts/nacos-verify.sh    # 预期 通过 9 / 失败 0
 ```
 
 ### MacBook 应用访问 Nacos
 
-MacBook 上的应用直连 Mac mini 的 Nacos（HTTP 8848 + gRPC 9848），**无需 ssh tunnel**：各服务 yml 的 `NACOS_HOST` 缺省跟随 `PATRA_INFRA_HOST`。账号 `patra-app` 来自 `~/.patra/secrets/nacos.env`，由 dev profile 导入，缺文件时启动失败。Nacos 控制台同样直连：`http://$PATRA_INFRA_HOST:8080`，用管理员登录。
+MacBook 上的应用直连 Mac mini 的 Nacos（HTTP 8848 + gRPC 9848），**无需 ssh tunnel**：Nacos 地址缺省跟随 `PATRA_INFRA_HOST`，由 Nacos starter 注入。账号 `patra-app` 来自 `~/.patra/secrets/nacos.env`，由 starter 读取，缺了启动失败。Nacos 控制台同样直连：`http://$PATRA_INFRA_HOST:8080`，用管理员登录。
 
 > 曾因 tailscale MTU 丢 gRPC HTTP/2 帧而必须经 ssh tunnel 转发，现已拆除。直连卡 STARTING 时的排查见 `../docs/mac-mini-connectivity.md` §2。
 
@@ -150,19 +150,19 @@ ssh linqibin@linqibins-mac-mini 'docker restart patra-rocketmq-broker'  # 只重
 
 | 文件 | 内容 | 谁加载 | 缺失时 |
 |---|---|---|---|
-| `redis.env` | `REDIS_PASSWORD`，64 位十六进制 | core 栈的 redis；catalog、identity、gateway 的容器；这三个服务在本机以 dev profile 起的进程 | compose 报出路径并拒绝执行；本机进程启动失败并报出路径 |
+| `redis.env` | `REDIS_PASSWORD`，64 位十六进制 | core 栈的 redis；catalog、identity、gateway 的容器和本机进程 | compose 报出路径并拒绝执行；本机进程启动失败，报出缺的文件路径或变量名 |
 | `gateway.env` | `PATRA_GATEWAY_IDENTITY_ASSERTION_PRIVATE_KEY`，含私钥的 EC P-256 JWK JSON，一行 | gateway 的容器和本机进程 | 同上 |
 | `nacos-server.env` | Nacos 的 `NACOS_AUTH_TOKEN`、`NACOS_AUTH_IDENTITY_KEY`、`NACOS_AUTH_IDENTITY_VALUE`。**只放 mini** | core 栈的 nacos | compose 报出路径并拒绝执行 |
 | `nacos-admin.env` | Nacos 管理员密码 `NACOS_ADMIN_PASSWORD`。**只放 mini**，另存密码管理器 | `nacos-init.sh`、`nacos-verify.sh` | 脚本说明缺哪个变量并退出 |
 | `nacos.env` | 应用账号 `NACOS_USERNAME=patra-app`、`NACOS_PASSWORD` | 6 个后端服务的容器和本机进程；两个 Nacos 脚本 | 同 `redis.env` |
 | `nacos-push.env` | 推送账号 `NACOS_PUSH_USERNAME=patra-push`、`NACOS_PUSH_PASSWORD` | 两个 Nacos 脚本；PAP-75 的推送 | 脚本说明缺哪个变量并退出 |
-| `<服务>.env` | 该服务的外部数据源密钥，例如 catalog 的 `SCOPUS_API_KEY` | 对应服务的容器 | 跳过 |
+| `<服务>.env` | 该服务的外部数据源密钥，例如 catalog 的 `SCOPUS_API_KEY`、`PROXY_AUTH_KEY`、`PROXY_AUTH_PWD`，ingest 的 `ROCKETMQ_AK`、`ROCKETMQ_SK` | 对应服务的容器和本机进程 | 跳过 |
 
 两种进程怎么读到这些文件：
 
 - 模板在 `secrets/*.example`。
 - 容器：由 `docker-compose.apps.yaml`、`docker-compose.core.yaml` 的 `env_file` 按 `${HOME}/.patra/secrets/...` 加载。
-- 本机进程：由各服务 `application-dev.yml` 的 `spring.config.import` 读同一批文件，IDEA 和 shell 都不用设这些变量。
+- 本机进程：Nacos starter 把 `~/.patra/secrets/` 下的全部 `*.env` 读进来，IDEA 和 shell 都不用设这些变量。
 
 排查时注意：`docker compose config` 会展开环境文件，`docker inspect <容器>` 会列出容器的全部环境变量，两者都会把 Redis 密码和网关私钥原样打到终端。只想校验 compose 配置，用 `docker compose config --quiet`；想知道容器里有哪些变量，只打变量名：
 
@@ -189,13 +189,7 @@ printf 'NACOS_PUSH_USERNAME=patra-push\nNACOS_PUSH_PASSWORD=%s\n' "$(openssl ran
 
 `nacos-server.env`、`nacos-admin.env` 在 mini 上生成，命令见 `secrets/` 下对应的模板。
 
-公钥不是机密，提交在三处：
-
-- `.env.common` 的 `PATRA_IDENTITY_ASSERTION_PUBLIC_KEYS`；
-- identity 的 `application-dev.yml`；
-- gateway 的 `application-dev.yml`。
-
-两份 YAML 里的值要用单引号包住。
+公钥不是机密，只有一处：Nacos 公共配置 `patra-infra/nacos/dev/patra-common.yaml` 的 `patra.security.identity-assertion.public-keys`，值用单引号包住。identity 和 gateway 都从这里读。
 
 ### 复制到 Mac mini
 
@@ -216,26 +210,25 @@ cd ~/actions-runner/_work/patra/patra/patra-infra/docker
 GATEWAY_IMAGE_TAG="$(cat ~/.patra/cd/last-good-gateway)" docker compose -f docker-compose.apps.yaml up -d --force-recreate gateway
 ```
 
-本机以 dev profile 起的进程重启一次即可。
+本机进程重启一次即可。
 
 ### 换签名密钥
 
 1. 按上面的方法生成一对新密钥。新私钥先存成别的文件名，不要覆盖 `gateway.env`。
-2. 把新公钥加进三处的 `keys` 数组，旧公钥保留。提交、推送，让 CD 部署 identity 和 gateway。
+2. 把新公钥加进 `patra-common.yaml` 的 `keys` 数组，旧公钥保留。提交、推送：CD 把配置推到 Nacos 后重新部署全部 6 个服务，容器读到新公钥；本机进程各重启一次。
 
    此时新旧两把公钥都被信任，网关仍用旧私钥签。
 3. 两台机器上都把 `gateway.env` 换成新私钥。
    - mini：按「改了密钥文件之后」重建 gateway。
    - 本机：网关重启一次。
 4. 等至少 60 秒。断言有效期是 60 秒，等完旧私钥签出的断言就全部过期了。
-5. 从三处删掉旧公钥，提交、推送。
+5. 从 `patra-common.yaml` 删掉旧公钥，提交、推送，再同样重建 identity 和 gateway 容器、重启本机进程。
 
 ## Nacos
 
 - 3.2.4，开着鉴权。存储在业务 PG 的 `patra_nacos` 库（官方 PG 插件，镜像自带）；`data/` 卷只剩服务发现的持久化数据和 jraft 元数据。
-- namespace：非敏感配置放 `dev`，密钥放 `dev-secrets`（`DEFAULT_GROUP / patra-secrets.yaml`），服务发现留在 `public`。
-- 账号：管理员 `nacos`；应用账号 `patra-app`（public 服务注册读写、`dev` 和 `dev-secrets` 的配置只读）；推送账号 `patra-push`（只能写 `dev` 的 `DEFAULT_GROUP`，在 `dev-secrets` 没有任何权限）。密钥只有管理员能改。
-- 不要给推送账号或其他非管理员账号加 `dev-secrets` 的写权限，按分组限制也不行：导入和批量删除接口按请求参数里的分组鉴权，不看实际操作的分组，分组级的限制能被绕过。
+- namespace：配置只有 `dev` 一个 namespace，服务发现留在 `public`。密钥不进 Nacos：配置里写 `${变量}`，值在 `~/.patra/secrets/`（PAP-74 撤销了 `dev-secrets`，见 `docs/patra/specs/2026-10-13-nacos-config-starter-design.md` 第 4 节）。
+- 账号：管理员 `nacos`；应用账号 `patra-app`（public 服务注册读写、`dev` 的配置只读）；推送账号 `patra-push`（只能写 `dev` 的 `DEFAULT_GROUP`）。
 - 账号、角色、权限由 `scripts/nacos-init.sh` 按脚本里的清单同步，不要在控制台手改：下次执行会被改回。验收用 `scripts/nacos-verify.sh`（加 `--expect-services` 时另查 6 个服务都已注册）。
 - 改应用或推送账号的密码：两台机器都改密钥文件，mini 上跑 `nacos-init.sh`，再按「改了密钥文件之后」重建 6 个应用容器、重启本机进程。
 - 换 token 签名密钥：改 mini 上的 `nacos-server.env`，执行 `docker compose -f docker-compose.core.yaml up -d --force-recreate nacos`。已签出的令牌全部失效，客户端会自动重新登录。改密码或删用户**不会**作废已签出的令牌（默认 18000 秒有效），要立刻撤销只能换签名密钥。
@@ -267,7 +260,7 @@ docker exec patra-postgres bash /docker-entrypoint-initdb.d/03-nacos-schema.sh
 export PATRA_INFRA_HOST=100.103.73.27   # IDE；容器里由 .env.common 设为 linqibins-mac-mini
 ```
 
-`application.yml` 引用方式示例：
+配置（Nacos 里的文件或 `application.yml`）的引用方式示例：
 
 > 注意：以下示例使用 Spring 的 `${VAR:default}` 语法（与 docker-compose 的 `${VAR:-default}` 略有不同，Spring 没有连字符）。
 
@@ -278,15 +271,6 @@ spring:
   data:
     redis:
       host: ${PATRA_INFRA_HOST:127.0.0.1}
-  cloud:
-    nacos:
-      username: ${NACOS_USERNAME:nacos}
-      password: ${NACOS_PASSWORD:nacos}
-      discovery:
-        server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:127.0.0.1}}:${NACOS_PORT:8848}
-        service: ${spring.application.name}
-        ip: ${PATRA_ADVERTISE_IP:}
-        fail-fast: true
 patra:
   object-storage:
     providers:
@@ -295,6 +279,8 @@ patra:
 rocketmq:
   name-server: ${PATRA_INFRA_HOST:127.0.0.1}:9876
 ```
+
+Nacos 的地址、账号和服务发现设置由 `patra-spring-boot-starter-nacos` 注入，服务的配置里不写。
 
 默认值 `127.0.0.1` 仅用于应急 fallback（如临时在 MacBook 上本地起容器调试）。统一用 `127.0.0.1` 而非 `localhost`，避免 hosts/IPv6 解析歧义。
 
@@ -324,7 +310,7 @@ rocketmq:
 - **AlertManager**: http://linqibins-mac-mini:9093
 
 ### 任务服务
-- **mysql-ops**: 不暴露宿主机端口；容器内 `mysql-ops:3306`，仅供 xxl-job-admin 使用，凭据见 `.env.dev` 的 `MYSQL_OPS_*`
+- **mysql-ops**: 不暴露宿主机端口；容器内 `mysql-ops:3306`，仅供 xxl-job-admin 使用，凭据见 `.env` 的 `MYSQL_OPS_*`
 - **XXL-Job Admin**: http://linqibins-mac-mini:7070/xxl-job-admin (admin/123456)
 - **RocketMQ NameServer**: `linqibins-mac-mini:9876`
 - **RocketMQ Dashboard**: http://linqibins-mac-mini:4002

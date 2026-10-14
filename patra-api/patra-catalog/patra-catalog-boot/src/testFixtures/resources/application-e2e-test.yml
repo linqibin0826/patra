@@ -47,6 +47,12 @@ spring:
     job:
       enabled: false  # 禁止启动时自动运行 Job
 
+# 外部凭据（正式运行时在 Nacos 的 patra-catalog.yaml）：E2E 测试不连 Scopus，给空值让上下文能起来
+patra:
+  catalog:
+    scopus:
+      api-key: ""
+
 # XXL-Job 配置（测试环境禁用）
 xxl:
   job:

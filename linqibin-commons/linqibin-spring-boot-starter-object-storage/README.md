@@ -153,13 +153,13 @@ linqibin:
           endpoint: http://localhost:9000           # MinIO 端点
           access-key: minioadmin                    # 访问密钥
           secret-key: minioadmin                    # 密钥
-          bucket: default-bucket                    # 默认 Bucket(可选)
         s3:
           region: us-east-1                         # AWS S3 区域
           access-key: ${AWS_ACCESS_KEY_ID}
           secret-key: ${AWS_SECRET_ACCESS_KEY}
-          bucket: my-s3-bucket
 ```
+
+Bucket 不在配置里指定:由 `StorageLocationResolver` 按 `{environment}-{service}` 拼出(见上文)。
 
 ## 使用方式
 

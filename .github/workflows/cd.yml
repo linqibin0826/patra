@@ -1,7 +1,10 @@
 name: CD
 
 # 持续部署（多服务，Mac mini 原生构建）：merge 到 main（或手动触发）
-#   → detect-changes（ubuntu）算出改动服务（含「改公共面→重建全部」规则）
+#   → detect-changes（ubuntu）算出改动服务（含「改公共面→重建全部」规则）与是否推送 Nacos 配置
+#   → nacos-push（Mac mini runner；push 事件每次都跑，dispatch 只在 nacos_changed 时跑，回滚单服务不跑）：
+#     先跑配置检查（NacosConfigFilesTest），再把 patra-infra/nacos/dev 同步到 Nacos；
+#     失败则不部署（新代码可能依赖新配置）；脚本见 patra-infra/scripts/nacos-push.sh
 #   → build-deploy（Mac mini runner）：gradlew bootJar → 原生 arm64 docker build
 #     → deploy.sh（部署+健康检查+部署后验证+自动回滚）→ GHCR 归档推送（best-effort）
 # 失败通知走 GitHub 原生（App/邮件推给触发者），不设自建通知通道（单人 dev 环境，2026-08-28 决策）。
@@ -29,6 +32,9 @@ on:
       - 'gradle.properties'
       - 'patra-infra/docker/**'
       - 'patra-infra/cd/**'
+      - 'patra-infra/nacos/**'
+      - 'patra-infra/scripts/nacos-push.sh'
+      - 'patra-infra/scripts/nacos-lib.sh'
       - '.github/workflows/cd.yml'
       - '!**/*.md'
   workflow_dispatch:
@@ -54,6 +60,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       services: ${{ steps.detect.outputs.services }}
+      nacos_changed: ${{ steps.detect.outputs.nacos_changed }}
     steps:
       - name: 📥 Checkout（全历史，detect 需 git diff）
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -77,14 +84,40 @@ jobs:
           fi
           SERVICES=$(echo "$R" | jq -c '[.backend_units[] | select(. != "foundation")]')
           echo "services=$SERVICES" >> "$GITHUB_OUTPUT"
+          echo "nacos_changed=$(echo "$R" | jq -r '.nacos_changed')" >> "$GITHUB_OUTPUT"
           echo "受影响单元: $R"
           echo "本次构建/部署服务: $SERVICES"
 
-  # ---- 2) Mac mini 上原生构建 + 部署（单 job；回滚时跳过构建步骤）----
+  # ---- 2) Mac mini 上推送 Nacos 配置 ----
+  # push 事件每次都跑，不看本次 diff：排队中的运行会被更新的一次替换，被替换那次的 yaml 改动
+  # 不在新运行的 diff 里，只按 nacos_changed 判断会漏推。脚本跳过未变化的文件，多跑一次只花几秒。
+  # dispatch 时按 nacos_changed：dispatch all 推送，回滚单服务不推送。
+  nacos-push:
+    name: nacos-push
+    needs: detect-changes
+    if: github.event_name == 'push' || needs.detect-changes.outputs.nacos_changed == 'true'
+    runs-on: [self-hosted, macmini]
+    timeout-minutes: 15   # 配置检查要起 Gradle；热缓存约 1min
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # CD 不等 CI：直推 main 时 CI 的检查可能还没跑完，推送前在这里再查一次，坏配置不进 Nacos
+      - name: 🔎 检查配置文件（NacosConfigFilesTest）
+        run: ./gradlew :patra-starters:patra-spring-boot-starter-nacos:test --tests '*NacosConfigFilesTest'
+      - name: 🧩 推送 Nacos 配置（全量同步；账号从 runner 用户的 ~/.patra/secrets/nacos-push.env 读）
+        run: bash patra-infra/scripts/nacos-push.sh
+
+  # ---- 3) Mac mini 上原生构建 + 部署（单 job；回滚时跳过构建步骤）----
   build-deploy:
     name: build-deploy
-    needs: detect-changes
-    if: needs.detect-changes.outputs.services != '[]'
+    needs: [detect-changes, nacos-push]
+    # 依赖的 job 被跳过时 GitHub 默认也跳过下游，所以要 !cancelled()；推送失败则不部署
+    if: >-
+      !cancelled() && needs.detect-changes.result == 'success'
+      && needs.detect-changes.outputs.services != '[]'
+      && (needs.nacos-push.result == 'success' || needs.nacos-push.result == 'skipped')
     runs-on: [self-hosted, macmini]
     timeout-minutes: 40   # 冷 Gradle 缓存全量约 30min；热缓存单服务 ~5-10min
     permissions:

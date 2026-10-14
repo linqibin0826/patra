@@ -162,7 +162,7 @@ patra:
 ### 数据库配置
 
 主要配置项包括:
-- 数据源连接信息（通过 application-{profile}.yml 配置）
+- 数据源连接信息（Nacos 配置 `patra-common.yaml` 与 `patra-registry.yaml`，源文件在 `patra-infra/nacos/dev/`）
 - JPA/Hibernate 配置
 - 日志级别
 

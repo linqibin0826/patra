@@ -41,13 +41,13 @@ public final class LoginThrottleAdapter implements LoginThrottlePort {
   private static final Duration BUSY_RETRY_AFTER = Duration.ofSeconds(1);
 
   private final StringRedisTemplate redis;
-  private final LoginThrottlePolicy policy;
+  private final Supplier<LoginThrottlePolicy> policy;
 
   /// 创建适配器。
   ///
   /// @param redis Redis 模板
-  /// @param policy 失败限制的参数
-  public LoginThrottleAdapter(StringRedisTemplate redis, LoginThrottlePolicy policy) {
+  /// @param policy 失败限制参数的来源：每次开始或结算时取一次，配置刷新后下一次调用即用上新值
+  public LoginThrottleAdapter(StringRedisTemplate redis, Supplier<LoginThrottlePolicy> policy) {
     this.redis = Objects.requireNonNull(redis, "redis 不能为 null");
     this.policy = Objects.requireNonNull(policy, "policy 不能为 null");
   }
@@ -60,15 +60,16 @@ public final class LoginThrottleAdapter implements LoginThrottlePort {
   @Override
   public LoginAttempt begin(AccountType accountType, EmailAddress email) {
     String ticketId = UUID.randomUUID().toString();
+    LoginThrottlePolicy current = policy.get();
     Long result =
         execute(
             () ->
                 redis.execute(
                     BEGIN_SCRIPT,
                     keys(accountType, email),
-                    String.valueOf(policy.maxFailures()),
+                    String.valueOf(current.maxFailures()),
                     ticketId,
-                    String.valueOf(policy.inFlightTtl().toMillis())));
+                    String.valueOf(current.inFlightTtl().toMillis())));
     if (result == null) {
       // 脚本没有真正执行（比如模板开了事务或流水线）：失败限制默认拒绝，不放行
       throw new TemporarilyUnavailableException();
@@ -114,6 +115,7 @@ public final class LoginThrottleAdapter implements LoginThrottlePort {
   /// @param outcome 结果
   /// @return 锁的剩余毫秒，没有锁时为 0
   private long settle(LoginAttempt attempt, String outcome) {
+    LoginThrottlePolicy current = policy.get();
     Long result =
         execute(
             () ->
@@ -122,9 +124,9 @@ public final class LoginThrottleAdapter implements LoginThrottlePort {
                     keys(attempt.accountType(), attempt.email()),
                     attempt.ticketId(),
                     outcome,
-                    String.valueOf(policy.maxFailures()),
-                    String.valueOf(policy.window().toMillis()),
-                    String.valueOf(policy.lockDuration().toMillis())));
+                    String.valueOf(current.maxFailures()),
+                    String.valueOf(current.window().toMillis()),
+                    String.valueOf(current.lockDuration().toMillis())));
     return result == null ? 0 : result;
   }
 

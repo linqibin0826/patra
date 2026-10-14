@@ -16,6 +16,7 @@ import dev.linqibin.patra.identity.session.RedisSessionStore;
 import java.time.Clock;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.function.Supplier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,18 +24,21 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 
 /// identity 的装配：把配置项变成领域层的规则对象，创建密码哈希适配器、会话策略、Redis 会话存储、签发领域服务。
 @Configuration(proxyBeanMethods = false)
-@EnableConfigurationProperties(IdentityProperties.class)
+@EnableConfigurationProperties({IdentityProperties.class, LoginThrottleProperties.class})
 public class IdentityConfiguration {
 
-  /// 登录失败限制的参数。
+  /// 登录失败限制的参数来源：每次调用都按配置的当前值构造，配置刷新后下一次登录即用上新值。
   ///
-  /// @param properties 配置
-  /// @return 参数
+  /// @param properties 可在线刷新的配置
+  /// @return 参数来源
   @Bean
-  public LoginThrottlePolicy loginThrottlePolicy(IdentityProperties properties) {
-    IdentityProperties.LoginThrottle throttle = properties.loginThrottle();
-    return LoginThrottlePolicy.of(
-        throttle.maxFailures(), throttle.window(), throttle.lockDuration(), throttle.inFlightTtl());
+  public Supplier<LoginThrottlePolicy> loginThrottlePolicy(LoginThrottleProperties properties) {
+    return () ->
+        LoginThrottlePolicy.of(
+            properties.getMaxFailures(),
+            properties.getWindow(),
+            properties.getLockDuration(),
+            properties.getInFlightTtl());
   }
 
   /// 密码哈希：Argon2id。

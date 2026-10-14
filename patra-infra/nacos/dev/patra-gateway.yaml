@@ -1,0 +1,11 @@
+patra.config-source.service: patra-gateway.yaml
+
+spring:
+  data:
+    redis:
+      password: ${REDIS_PASSWORD}
+
+patra:
+  gateway:
+    identity-assertion:
+      private-key: ${PATRA_GATEWAY_IDENTITY_ASSERTION_PRIVATE_KEY}

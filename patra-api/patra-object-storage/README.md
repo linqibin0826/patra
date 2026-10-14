@@ -240,36 +240,12 @@ public class FileUploadService {
 
 ## 配置说明
 
-### application.yml 示例
+配置分两处，不用 Spring profile：
 
-```yaml
-spring:
-  application:
-    name: patra-object-storage
+- **Nacos**（源文件在 `patra-infra/nacos/dev/`）：`patra-common.yaml` 放各服务共用的数据库账号等，`patra-object-storage.yaml` 放本服务的库地址 `patra_storage`。启动类用 `PatraApplication.run("patra-object-storage", …)` 导入这两份。
+- **jar 里的 `application.yml`**：端口 6200、连接池、Flyway、日志目录、actuator 暴露等随代码变的默认值。
 
-  datasource:
-    url: jdbc:postgresql://localhost:15432/patra_storage
-    username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:password}
-
-  cloud:
-    nacos:
-      username: ${NACOS_USERNAME:nacos}
-      password: ${NACOS_PASSWORD:nacos}
-      discovery:
-        server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:127.0.0.1}}:${NACOS_PORT:8848}
-        service: ${spring.application.name}
-        fail-fast: true
-
-spring:
-  jpa:
-    hibernate:
-      ddl-auto: validate
-    properties:
-      hibernate:
-        jdbc:
-          batch_size: 50
-```
+Nacos 的地址、账号和服务发现设置由 `patra-spring-boot-starter-nacos` 注入，配置里不写 `spring.cloud.nacos`。
 
 ## 技术栈
 
@@ -280,7 +256,7 @@ spring:
 | Spring Cloud | 2025.1.0 | 微服务框架 |
 | Spring Data JPA | (Spring Boot 管理) | ORM 框架 |
 | MapStruct | 1.6.5+ | 对象映射 |
-| Nacos | 3.0+ | 服务注册中心 |
+| Nacos | 3.0+ | 配置中心与服务注册中心 |
 | PostgreSQL | 17 | 数据库 |
 | Flyway | 10.30.0+ | 数据库迁移工具 |
 | Hutool | 5.8.36+ | 工具库 |
@@ -292,7 +268,7 @@ spring:
 - **JDK 25+**: 确保安装 Java 25 或更高版本
 - **Gradle 8.x+**: 用于构建和依赖管理（已内置 Wrapper）
 - **PostgreSQL 17**: 数据库服务
-- **Nacos**: 服务注册中心(开发环境可选)
+- **Nacos**: 配置中心与服务注册中心（必需，配置从这里读）
 
 ### 本地启动
 
@@ -301,13 +277,11 @@ spring:
 psql -h 127.0.0.1 -p 15432 -U postgres -c "CREATE DATABASE patra_storage;"
 ```
 
-2. **配置环境变量** (可选):
+2. **配置本地变量**:
 ```bash
-export DB_USERNAME=root
-export DB_PASSWORD=your_password
-export NACOS_HOST=$PATRA_INFRA_HOST  # 缺省即跟随 PATRA_INFRA_HOST，通常无需设置
-export NACOS_PORT=8848
-# Nacos 账号来自 ~/.patra/secrets/nacos.env，dev profile 自动导入，不用设
+export PATRA_INFRA_HOST=<mini 的 tailscale IP>   # Nacos 和 Nacos 配置里的库地址都跟随它
+export PATRA_ADVERTISE_IP=<本机 tailscale IP>    # 注册到 Nacos 的地址，留空自动探测
+# Nacos 账号来自 ~/.patra/secrets/nacos.env，由 patra-spring-boot-starter-nacos 读取，不用设
 ```
 
 3. **编译并启动**:

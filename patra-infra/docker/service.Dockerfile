@@ -51,4 +51,7 @@ EXPOSE ${APP_PORT}
 
 # 启动瘦 jar（非 uber jar）：仅含应用代码 + 对 lib/ 下已提取依赖的引用，CDS/AOT 友好。
 # 容器感知内存（temurin 25 默认开启 container support；显式给上限更稳）。
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
+# appuser 没有 home 目录（useradd -r），nacos-client 默认把日志写到 ${user.home}/logs/nacos、
+# 快照写到 ${user.home}/nacos/config：建不了日志目录时 Spring Boot 把 logback 报错当作启动失败。
+# 两者都指到 appuser 拥有的 /app 下。
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-DJM.LOG.PATH=/app/logs/nacos", "-DJM.SNAPSHOT.PATH=/app", "-jar", "app.jar"]

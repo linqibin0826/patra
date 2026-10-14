@@ -2,14 +2,18 @@
 
 ## 环境配置
 
-Patra 使用两个 profile：**dev（本地 IDE 开发）** 和 **container（容器化部署）**（`prod` 预留给未来真正的云生产）
+6 个后端服务的配置分两处，不用 Spring profile：
 
 ```
 patra-{service}-boot/src/main/resources/
-├── application.yaml           # 基础配置
-├── application-dev.yaml       # 本地 IDE 开发
-└── application-container.yaml      # 容器化部署(环境变量注入)
+└── application.yml            # 随代码变的默认值：端口、连接池、超时、路由等
+
+patra-infra/nacos/dev/          # 随环境变的值，推送到 Nacos（git 为准）
+├── patra-common.yaml           # 各服务共用：数据库账号、Redis、MinIO、xxl-job、身份断言公钥
+└── {服务名}.yaml               # 本服务：库地址、密钥引用等
 ```
+
+启动类用 `PatraApplication.run("patra-xxx", XxxApplication.class, args)`，由启动器导入两份 Nacos 配置并检查签到。密钥在 Nacos 里只写 `${变量}`，值放在 `~/.patra/secrets/*.env`。设计见 `docs/patra/specs/2026-10-13-config-migration-batch1-design.md`。
 
 ### 本地变量约定（PAP-72）
 
@@ -26,27 +30,18 @@ IDE 与容器的差异只放在 Nacos 之外的本地变量里，变量按用途
 ## 配置优先级（由高到低）
 
 1. 命令行参数 `--spring.datasource.url=...`
-2. 环境变量 `SPRING_DATASOURCE_URL`
-3. `application-{profile}.yaml`
-4. `application.yaml`
+2. JVM 系统属性 `-Dspring.datasource.url=...`
+3. 环境变量 `SPRING_DATASOURCE_URL`
+4. `~/.patra/secrets/*.env`（仅本机进程，由 starter-nacos 读入，排在系统环境变量之后；容器经 compose 的 `env_file` 注入，属于上一层）
+5. Nacos 配置（`{服务名}.yaml` 高于 `patra-common.yaml`）
+6. `application.yml`
+7. default properties：启动器 `PatraApplication` 放的服务名、Nacos 导入、签到开关，以及 starter-nacos 补的 Nacos 连接与服务发现默认值
 
-## Nacos 服务发现配置
+同一个键不在 jar 和 Nacos 两处写：starter-nacos 的 `JarConfigOverlapCheckerTest` 拿 `patra-infra/nacos/dev/` 与 6 个 boot 模块 `src/main/resources` 下的全部 yml 比对。
 
-```yaml
-spring:
-  application:
-    name: patra-catalog
-  cloud:
-    nacos:
-      username: ${NACOS_USERNAME:nacos}
-      password: ${NACOS_PASSWORD:nacos}
-      discovery:
-        server-addr: ${NACOS_HOST:${PATRA_INFRA_HOST:127.0.0.1}}:${NACOS_PORT:8848}
-        service: ${spring.application.name}
-        fail-fast: true
-```
+## Nacos 接入
 
-Nacos 仅用于服务发现，不用于配置管理。
+Nacos 的地址、账号、服务发现设置由 `patra-spring-boot-starter-nacos` 注入，服务的配置里不写 `spring.cloud.nacos`。Nacos 同时用于服务发现和配置管理。
 
 ## 配置类模式
 
@@ -77,7 +72,7 @@ app:
 
 ## 规范
 
-- 生产环境敏感信息通过环境变量注入（`${DB_PASSWORD}`）
+- 密钥在 Nacos 配置里写成 `${变量}` 引用，值放在 `~/.patra/secrets/`
 - 所有配置属性必须提供默认值
 - 禁止硬编码敏感信息
 - 禁止使用 `@Profile("test")`

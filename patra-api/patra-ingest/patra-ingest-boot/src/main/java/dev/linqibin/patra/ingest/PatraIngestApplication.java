@@ -1,6 +1,6 @@
 package dev.linqibin.patra.ingest;
 
-import org.springframework.boot.SpringApplication;
+import dev.linqibin.patra.starter.nacos.PatraApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /// Patra 采集服务 Spring Boot 启动类。
@@ -23,22 +23,17 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 /// - XXL-Job - 分布式任务调度
 /// - Spring Data JPA - 数据持久化
 ///
-/// 启动配置: 未指定 profile 时默认使用 'dev' 环境配置。
+/// 配置从 Nacos 读（`patra-common.yaml`、`patra-ingest.yaml`），由启动器导入。
 ///
 /// @author linqibin
 /// @since 0.1.0
 @SpringBootApplication(scanBasePackages = "dev.linqibin")
 public class PatraIngestApplication {
 
-  /// 应用程序入口点,启动 Spring Boot 应用。
+  /// 应用程序入口点：经启动器启动，服务名 `patra-ingest`。
   ///
   /// @param args 命令行参数
   static void main(String[] args) {
-    // 当未配置显式配置文件时,默认使用 'dev' 配置
-    if (System.getProperty("spring.profiles.active") == null
-        && System.getenv("SPRING_PROFILES_ACTIVE") == null) {
-      System.setProperty("spring.profiles.active", "dev");
-    }
-    SpringApplication.run(PatraIngestApplication.class, args);
+    PatraApplication.run("patra-ingest", PatraIngestApplication.class, args);
   }
 }

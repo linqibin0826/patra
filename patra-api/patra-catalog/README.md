@@ -138,6 +138,8 @@ patra-catalog 是 Patra 医学文献数据平台的目录管理微服务，负�
 
 ## ⚙️ 配置说明
 
+配置从 Nacos 读（`patra-common.yaml`、`patra-catalog.yaml`，源文件在 `patra-infra/nacos/dev/`）：库地址、批处理库、Redis 密码引用、青果代理开关（dev 关闭）和外部凭据引用都在那里。外部凭据（`SCOPUS_API_KEY`、`PROXY_AUTH_KEY`、`PROXY_AUTH_PWD`）的值放在 `~/.patra/secrets/catalog.env`，没配时服务照常启动，用到对应数据源时才失败。下面各数据源的 URL 等随代码变的默认值在 jar 的 `application.yml`。
+
 ### MeSH 数据源配置
 
 ```yaml

@@ -1,0 +1,5 @@
+# 集成测试应用的 jar 默认值。故意不写任何 Nacos 配置：连接由 starter 注入，导入由启动器加。
+patra:
+  it:
+    jar-vs-nacos: from-jar
+    jar-only: from-jar

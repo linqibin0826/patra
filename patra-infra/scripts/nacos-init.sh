@@ -1,5 +1,5 @@
 #!/bin/bash
-# Nacos 初始化：管理员、dev 与 dev-secrets 两个 namespace、两个账号、角色和权限。幂等，可以反复执行。
+# Nacos 初始化：管理员、dev namespace、两个账号、角色和权限。幂等，可以反复执行。
 # 用法（mini 上，仓库根目录，nacos 容器 healthy 之后）：
 #   bash patra-infra/scripts/nacos-init.sh
 # 输入：
@@ -15,10 +15,9 @@ set -eo pipefail
 APP_ROLE=PATRA_APP
 PUSH_ROLE=PATRA_PUSH
 # 每行一条权限：resource|action。资源串按 {namespace}:{group}:{config|naming}/{name} 做正则匹配
-# 密钥放 dev-secrets：patra-push 在那里不能有任何权限。导入、批量删除按请求参数里的分组鉴权，分组级限制挡不住（spec 5.1）
+# 只有 dev 一个 namespace：PAP-74 撤销了 dev-secrets，密钥不进 Nacos。脚本只确保 namespace 存在，不删除
 APP_PERMS='public:*:naming/*|rw
-dev:*:config/*|r
-dev-secrets:*:config/*|r'
+dev:*:config/*|r'
 PUSH_PERMS='dev:DEFAULT_GROUP:config/*|rw
 dev:*:config/*|r'
 
@@ -120,7 +119,6 @@ ensure_namespace() {
 }
 
 ensure_namespace dev "Patra dev 环境"
-ensure_namespace dev-secrets "Patra dev 环境的密钥，只有管理员能改"
 
 ensure_user "$NACOS_USERNAME" "$NACOS_PASSWORD"
 ensure_user "$NACOS_PUSH_USERNAME" "$NACOS_PUSH_PASSWORD"

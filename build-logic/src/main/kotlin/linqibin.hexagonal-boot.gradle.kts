@@ -69,8 +69,8 @@ tasks.bootRun {
 }
 
 dependencies {
-    // 服务发现
-    implementation(libs.findLibrary("spring-cloud-starter-alibaba-nacos-discovery").get())
+    // Nacos 接入：服务发现、配置中心、启动器 PatraApplication（starter 里统一注入连接设置）
+    implementation(project(":patra-starters:patra-spring-boot-starter-nacos"))
 
     // 测试依赖
     testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))

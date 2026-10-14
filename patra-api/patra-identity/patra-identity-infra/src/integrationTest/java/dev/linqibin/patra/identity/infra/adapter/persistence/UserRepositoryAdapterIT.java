@@ -116,7 +116,9 @@ class UserRepositoryAdapterIT {
             status ->
                 repository.save(User.register(EmailAddress.of("lock.me@example.com"))).getId());
     CountDownLatch locked = new CountDownLatch(1);
-    AtomicBoolean lockerCommitted = new AtomicBoolean(false);
+    // 加锁事务即将提交时置位：放在回调里而不是 execute 返回之后，否则提交与置位之间有空档，
+    // 被放行的封禁事务可能先读到 false
+    AtomicBoolean lockerCommitting = new AtomicBoolean(false);
     ExecutorService pool = Executors.newFixedThreadPool(2);
     try {
       Future<?> locker =
@@ -127,8 +129,8 @@ class UserRepositoryAdapterIT {
                       assertThat(repository.findByIdForUpdate(userId)).isPresent();
                       locked.countDown();
                       sleepQuietly(500);
+                      lockerCommitting.set(true);
                     });
-                lockerCommitted.set(true);
               });
       assertThat(locked.await(10, TimeUnit.SECONDS)).isTrue();
       long started = System.nanoTime();
@@ -140,14 +142,14 @@ class UserRepositoryAdapterIT {
                         User user = repository.findById(userId).orElseThrow();
                         user.ban(Instant.parse("2026-10-09T08:00:00Z"));
                         repository.save(user);
-                        return lockerCommitted.get();
+                        return lockerCommitting.get();
                       }));
 
-      boolean lockerHadCommitted = banner.get(10, TimeUnit.SECONDS);
+      boolean lockerWasCommitting = banner.get(10, TimeUnit.SECONDS);
       long elapsedMillis = (System.nanoTime() - started) / 1_000_000;
       locker.get(10, TimeUnit.SECONDS);
 
-      assertThat(lockerHadCommitted).isTrue();
+      assertThat(lockerWasCommitting).isTrue();
       assertThat(elapsedMillis).isGreaterThanOrEqualTo(400);
       assertThat(repository.findById(userId).orElseThrow().getStatus())
           .isEqualTo(UserStatus.BANNED);

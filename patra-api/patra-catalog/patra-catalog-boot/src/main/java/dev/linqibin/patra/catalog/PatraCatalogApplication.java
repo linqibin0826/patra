@@ -1,6 +1,6 @@
 package dev.linqibin.patra.catalog;
 
-import org.springframework.boot.SpringApplication;
+import dev.linqibin.patra.starter.nacos.PatraApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.data.redis.autoconfigure.DataRedisRepositoriesAutoConfiguration;
 
@@ -26,7 +26,7 @@ import org.springframework.boot.data.redis.autoconfigure.DataRedisRepositoriesAu
 /// - Spring Data JPA + Hibernate - 数据持久化
 /// - RocketMQ - 消息队列（事件发布）
 ///
-/// 启动配置: 未指定 profile 时默认使用 'dev' 环境配置。
+/// 配置从 Nacos 读（`patra-common.yaml`、`patra-catalog.yaml`），由启动器导入。
 ///
 /// @author linqibin
 /// @since 0.2.0
@@ -43,15 +43,10 @@ import org.springframework.boot.data.redis.autoconfigure.DataRedisRepositoriesAu
     exclude = DataRedisRepositoriesAutoConfiguration.class)
 public class PatraCatalogApplication {
 
-  /// 应用程序入口点,启动 Spring Boot 应用。
+  /// 应用程序入口点：经启动器启动，服务名 `patra-catalog`。
   ///
   /// @param args 命令行参数
   public static void main(String[] args) {
-    // 当未配置显式配置文件时,默认使用 'dev' 配置
-    if (System.getProperty("spring.profiles.active") == null
-        && System.getenv("SPRING_PROFILES_ACTIVE") == null) {
-      System.setProperty("spring.profiles.active", "dev");
-    }
-    SpringApplication.run(PatraCatalogApplication.class, args);
+    PatraApplication.run("patra-catalog", PatraCatalogApplication.class, args);
   }
 }

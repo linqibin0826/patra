@@ -35,7 +35,7 @@
 
 1. 禁止提交真正敏感的密钥：外部数据源 API key（PubMed / EPMC / Crossref 等）、个人访问令牌、生产数据库/对象存储凭据、私钥证书。这类密钥一律走环境变量或外部 secret 注入，绝不进仓库。
 2. 一旦发现敏感密钥被提交，立即轮换作废，再清理跟踪——"反正服务连不上"不是不轮换的理由。
-3. **已知例外**：`patra-infra/docker/.env`、`.env.dev` 含 dev 默认凭据且有意随仓库提交（Mac mini 靠 git pull 同步），对应服务仅在 tailscale 内网暴露，公网打不到端口。详见 `patra-infra/CLAUDE.md`。
+3. **已知例外**：`patra-infra/docker/.env` 含 dev 默认凭据且有意随仓库提交（Mac mini 靠 git pull 同步），对应服务仅在 tailscale 内网暴露，公网打不到端口。详见 `patra-infra/CLAUDE.md`。
 4. 写文档、注释、commit message、Issue/PR 时不要粘贴真实凭据、内网 IP 以外的隐私信息。
 
 ## TDD 开发模式（强制）
@@ -89,7 +89,7 @@
 ### 公开仓库密钥
 
 - 本仓库公开，提交外部数据源 API key、个人访问令牌、生产数据库 / 对象存储凭据、私钥证书一律 P0。
-  例外：`patra-infra/docker/.env`、`.env.dev` 中的 dev 默认凭据是有意提交的（服务仅在 tailscale 内网暴露），不要报。
+  例外：`patra-infra/docker/.env` 中的 dev 默认凭据是有意提交的（服务仅在 tailscale 内网暴露），不要报。
 
 ### 异常传播
 

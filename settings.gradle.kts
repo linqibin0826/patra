@@ -75,6 +75,7 @@ mapParent(":linqibin-commons", "linqibin-commons")
 includeAt(":patra-starters:patra-spring-boot-starter-provenance", "patra-starters/patra-spring-boot-starter-provenance")
 includeAt(":patra-starters:patra-spring-boot-starter-expr", "patra-starters/patra-spring-boot-starter-expr")
 includeAt(":patra-starters:patra-spring-boot-starter-security", "patra-starters/patra-spring-boot-starter-security")
+includeAt(":patra-starters:patra-spring-boot-starter-nacos", "patra-starters/patra-spring-boot-starter-nacos")
 mapParent(":patra-starters", "patra-starters")
 
 // ==================== patra-api / Expression Kernel ====================

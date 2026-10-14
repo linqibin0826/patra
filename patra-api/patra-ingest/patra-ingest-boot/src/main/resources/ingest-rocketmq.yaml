@@ -3,8 +3,7 @@
 # 使用 RocketMQ 官方 Spring Boot Starter 提供直接的 API 访问和高性能消息传递
 
 rocketmq:
-  # RocketMQ NameServer 地址
-  name-server: ${ROCKETMQ_NAMESRV:${PATRA_INFRA_HOST:127.0.0.1}:9876}
+  # NameServer 地址和 ACL 凭据随环境变，在 Nacos 的 patra-ingest.yaml
 
   producer:
     # 生产者组名称
@@ -19,10 +18,6 @@ rocketmq:
     retry-times-when-send-async-failed: 2
     # 发送失败时是否尝试其他 Broker
     retry-next-server: true
-
-  # 访问控制 (可选) - 如果 RocketMQ 启用了 ACL
-  access-key: ${ROCKETMQ_AK:}
-  secret-key: ${ROCKETMQ_SK:}
 
 # Patra Outbox 发布器配置
 patra:

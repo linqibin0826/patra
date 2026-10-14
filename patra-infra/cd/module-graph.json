@@ -469,7 +469,8 @@
                 "ingest"
             ],
             "tasks": [
-                "check"
+                "check",
+                "integrationTest"
             ]
         },
         {
@@ -644,6 +645,24 @@
             ],
             "tasks": [
                 "check"
+            ]
+        },
+        {
+            "dir": "patra-starters/patra-spring-boot-starter-nacos",
+            "project": ":patra-starters:patra-spring-boot-starter-nacos",
+            "unit": "foundation",
+            "impacts": [
+                "catalog",
+                "foundation",
+                "gateway",
+                "identity",
+                "ingest",
+                "object-storage",
+                "registry"
+            ],
+            "tasks": [
+                "check",
+                "integrationTest"
             ]
         },
         {

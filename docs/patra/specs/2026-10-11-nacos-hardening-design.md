@@ -5,6 +5,8 @@
 > **日期**：2026-10-11（2026-10-12 修订：密钥从 `PATRA_SECRETS` 分组改放独立 namespace `dev-secrets`，见 5.1）
 > **状态**：已上线（2026-10-13）
 
+> **2026-10-13 更新**：`dev-secrets` namespace 已在 PAP-74 撤销，密钥不再进 Nacos，见 [Nacos 配置接入 starter 设计](2026-10-13-nacos-config-starter-design.md) 第 4 节。下文关于 `dev-secrets`、`patra-secrets.yaml` 的内容只作历史记录。
+
 ## 1. 要解决的问题
 
 v0.9 要把全部配置和密钥放进 Nacos（release spec 决策 E）。但 mini 上的 Nacos 现在不具备存放密钥的条件：

@@ -78,7 +78,6 @@ linqibin:
           endpoint: http://localhost:9000
           access-key: minioadmin
           secret-key: minioadmin
-          bucket: patra-test
 
 # Task 配置
 task:
