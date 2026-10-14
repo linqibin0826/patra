@@ -35,6 +35,13 @@ class ApplicationConfigTest {
                     || name.startsWith("spring.cloud.nacos"));
   }
 
+  @Test
+  @DisplayName("可在线刷新的 outbox 中继参数不写在 jar 里：默认值在配置类，要调就在 Nacos 里加键")
+  void should_leave_refreshable_settings_to_nacos() throws IOException {
+    assertThat(propertyNames("application.yml"))
+        .noneMatch(name -> name.startsWith("patra.ingest.outbox-relay."));
+  }
+
   /// 读出 classpath 上一份 YAML 的全部属性名，多文档合在一起。
   ///
   /// @param resource classpath 上的文件名

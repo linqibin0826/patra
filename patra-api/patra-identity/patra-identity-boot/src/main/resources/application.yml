@@ -45,11 +45,7 @@ management:
 
 patra:
   identity:
-    login-throttle:
-      max-failures: 5
-      window: 15m
-      lock-duration: 15m
-      in-flight-ttl: 30s
+    # 登录失败限制可在线刷新：默认值在 LoginThrottleProperties，要调就在 Nacos 的 patra-identity.yaml 里加键
     password-hashing:
       max-concurrent: 4
       wait-timeout: 3s

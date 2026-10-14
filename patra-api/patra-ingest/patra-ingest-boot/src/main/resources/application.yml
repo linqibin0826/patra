@@ -57,12 +57,7 @@ patra:
       lease-ttl-seconds: ${INGEST_LEASE_TTL:60}
       # Heartbeat interval to maintain lease
       heartbeat-interval-seconds: ${INGEST_HEARTBEAT_INTERVAL:20}
-    outbox-relay:
-      enabled: true
-      # Number of outbox records to process per batch
-      batch-size: 200
-      # Duration to hold relay execution lease (ISO-8601 format)
-      lease-duration: PT30S
+    # outbox 中继参数可在线刷新：默认值在 OutboxRelayProperties，要调就在 Nacos 的 patra-ingest.yaml 里加键
 
 xxl:
   job:
