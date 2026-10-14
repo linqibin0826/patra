@@ -44,7 +44,7 @@ PAP-76 的决定 1（Nacos 只放随环境变化的值）、3（数据库密码�
 | 2 | dev 与 container 不一致的 6 处取哪个值（2026-10-14 用户确认） | 见下表 | 两种运行方式只差本地变量 |
 | 3 | 可选的外部凭据怎么写 | Nacos 里写成带空默认值的引用：`${PROXY_AUTH_KEY:}`、`${PROXY_AUTH_PWD:}`、`${SCOPUS_API_KEY:}`、`${ROCKETMQ_AK:}`、`${ROCKETMQ_SK:}` | 两台机器都没配，空默认值让 PAP-76 加的变量检查放行；要用时在 `~/.patra/secrets/<svc>.env` 放值 |
 | 4 | 青果代理开关 | Nacos 的 `patra-catalog.yaml` 写 `false`；代理主机、端口留在 jar | 开关取决于这台机器有没有凭据，随环境变；主机和端口和代码一起变 |
-| 5 | 不再使用的环境变量入口 | jar 里删掉 `XXL_JOB_ADMIN_ADDRESSES`、`ROCKETMQ_NAMESRV`、`PROXY_TUNNEL_ENABLED` 三个入口，以及 `SCOPUS_API_KEY`、`PROXY_AUTH_*`、`ROCKETMQ_AK/SK` 的引用（改写在 Nacos）；container 文件里的 `OBJECT_STORAGE_PROVIDER`、`MINIO_BUCKET`、`MAX_FILE_SIZE` 随文件删除，搬进 jar 时写成字面量。与环境无关的入口（`INGEST_LEASE_TTL`、`TOPIC_PREFIX`、`XXL_JOB_LOG_RETENTION_DAYS` 等）不动 | 只清理本次搬走的值，避免 jar 和 Nacos 两处都能改同一个值 |
+| 5 | 不再使用的环境变量入口 | jar 里删掉 `XXL_JOB_ADMIN_ADDRESSES`、`ROCKETMQ_NAMESRV`、`PROXY_TUNNEL_ENABLED` 三个入口，以及 `SCOPUS_API_KEY`、`PROXY_AUTH_*`、`ROCKETMQ_AK/SK` 的引用（改写在 Nacos）；container 文件里的 `OBJECT_STORAGE_PROVIDER`、`MINIO_BUCKET`、`MAX_FILE_SIZE` 随文件删除，值按第 3 节末尾写进 jar 或 Nacos。与环境无关的入口（`INGEST_LEASE_TTL`、`TOPIC_PREFIX`、`XXL_JOB_LOG_RETENTION_DAYS` 等）不动 | 只清理本次搬走的值，避免 jar 和 Nacos 两处都能改同一个值 |
 | 6 | `.env.dev` | 删除，并删除所有提及；安全红线的「已知例外」只剩 `.env` | 不被加载，留着会误导 |
 
 决定 2 的取值：
@@ -60,8 +60,8 @@ PAP-76 的决定 1（Nacos 只放随环境变化的值）、3（数据库密码�
 
 两份 profile 里相同、与环境无关的值搬进 jar 的 `application.yml`：
 
-- ingest：表达式编译的其余参数（`multi.repeat-enabled: false`、`compiler.enabled`、`query-param-bridge.enabled`）；对象存储 `active-provider: minio`、重试 `max-attempts: 3`、`wait-duration: 1000`。
-- catalog：`spring.batch.job.enabled: false`；对象存储 `active-provider: minio`、`max-file-size: 5368709120`。
+- ingest：只写决定 2 的严格模式和三个上限。表达式编译的其余参数（`multi.repeat-enabled: false`、`compiler.enabled: true`、`query-param-bridge.enabled: true`）和对象存储的 `active-provider: minio`、重试 `max-attempts: 3`、`wait-duration: 1000` 与 starter 的默认值相同，不写。
+- catalog：`spring.batch.job.enabled: false`；对象存储 `max-file-size: 5368709120`（starter 默认 100MB）。`active-provider: minio` 是默认值，不写。
 
 ## 4. 每个服务的改动
 
@@ -185,7 +185,9 @@ linqibin:
    - 两个服务各启动一次，启动日志里要看到：两份配置都已导入、签到通过、数据库已连上、xxl-job 执行器已注册；catalog 还要看到 Redis 与批处理库已连上；
    - Nacos 控制台能看到两个服务的实例。
 3. **mini 部署**：在本分支手动触发 `cd.yml`（service 留空）。验收标准：6 个容器都健康。
-4. **Job 能运行**：经 xxl-job 管理端 API 各手动触发一个 Job，ingest 选一个采集任务、catalog 选一个导入任务，选数据量最小的，具体任务在计划里定。Job 日志显示执行成功。
+4. **Job 能运行**：
+   - catalog：经 xxl-job 管理端 API 手动触发一个导入 Job（`meshQualifierImportJob`，文件最小），Job 日志显示执行成功。下载 NLM 文件本身时好时坏（与配置无关），失败原因是下载网络时改触发 `rorOrganizationImportJob`。
+   - ingest：调度中心里没有 ingest 的执行器分组和 Job（2026-10-14 查 mini 的 xxl-job 库确认），没有可触发的采集任务。验收改为：新容器的执行器在调度中心注册上（`xxl_job_registry` 里 `patra-ingest` 的地址是新容器的 IP、更新时间在部署之后）。建分组和 Job 不在本次范围。
 5. **两种运行方式一致**：只列变量名（`docker inspect … | cut -d= -f1`），6 个容器只剩本地变量、Nacos 账号、各自用到的密钥和镜像自带变量；不再有 `SPRING_PROFILES_ACTIVE`、`REDIS_HOST`、`REDIS_PORT`、`MINIO_*`、`*_DB_*`。
 6. **D2 核对**：`git ls-files` 里没有 `application-dev.yml`、`application-container.yml`、`.env.dev`；`patra-infra/nacos/dev/` 里没有真正的密钥。
 
@@ -195,6 +197,7 @@ linqibin:
 - **本机 IDE 里 ingest 的日志变少**：不再默认打 DEBUG。
 - **本机 IDE 里 catalog 会完整导入**：不再限 50 万条，导入大文件时耗时更长。
 - **ingest 的表达式编译在 IDE 里变严格**：超长查询会在本机直接报错，而不是只在 mini 上报。
+- **本机 IDE 调 mini 上服务的首个请求可能超时**：调内部服务的连接超时从 10s 回到 2s。`patra-infra/docs/mac-mini-connectivity.md` §7 记录过 tailscale 通道空闲回收后首个请求建连要 3~5s，撞上时这个请求失败，重试即可。
 
 ## 9. 文档
 
@@ -205,6 +208,8 @@ linqibin:
 - `.claude/skills/patra-backend/skills/patra-hexagonal/resources/configuration.md`：从 dev / container 两个 profile 的写法改为 Nacos 的写法（PAP-76 第 10 节交来）。
 - `patra-infra/nacos/dev/README.md`：公共配置里放什么，补上 MinIO 与 xxl-job。
 - `patra-infra/cd/detect-changes.sh` 与其测试：去掉 `.env.dev` 的路由分支与用例。
+- `patra-infra/docs/mac-mini-connectivity.md` §7：「应对」一条改为已取消、两种运行方式都用 2s。
+- `LetPubConfiguration`（catalog-boot）的注释和告警文字里「设 `PROXY_TUNNEL_ENABLED=true`」改为在 Nacos 的 `patra-catalog.yaml` 打开代理开关。
 
 ## 10. 不做的事
 
