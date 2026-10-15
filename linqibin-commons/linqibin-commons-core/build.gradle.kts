@@ -5,7 +5,7 @@
  * - CQRS 基类
  * - DDD 基类 (AggregateRoot, DomainEvent)
  * - 错误处理框架 (DomainException, ErrorTrait)
- * - JSON 工具 (JsonMapperHolder, JsonNormalizer)
+ * - JSON 工具 (JsonNormalizer)
  * - 分页、消息、类型、工具
  */
 

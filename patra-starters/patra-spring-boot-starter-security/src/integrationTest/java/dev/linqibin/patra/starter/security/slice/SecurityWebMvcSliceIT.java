@@ -8,8 +8,8 @@ import dev.linqibin.patra.starter.security.config.SecurityServletAutoConfigurati
 import dev.linqibin.patra.starter.security.support.SecurityITAssertions;
 import dev.linqibin.patra.starter.security.test.TestIdentity;
 import dev.linqibin.starter.core.error.config.CoreErrorAutoConfiguration;
-import dev.linqibin.starter.core.json.autoconfig.JacksonAutoConfiguration;
 import dev.linqibin.starter.web.error.config.WebErrorAutoConfiguration;
+import dev.linqibin.starter.web.json.config.WebJsonAutoConfiguration;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -162,7 +162,7 @@ class SecurityWebMvcSliceIT {
   @ImportAutoConfiguration({
     CoreErrorAutoConfiguration.class,
     WebErrorAutoConfiguration.class,
-    JacksonAutoConfiguration.class,
+    WebJsonAutoConfiguration.class,
     SecurityCoreAutoConfiguration.class,
     SecurityServletAutoConfiguration.class
   })

@@ -22,7 +22,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 import tools.jackson.core.JacksonException;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.dataformat.xml.XmlMapper;
 
 /// PubMed 客户端实现（使用 Spring RestClient）
@@ -47,19 +47,19 @@ public class PubMedClientAdapter implements PubMedClient {
 
   private final RestClient restClient;
   private final DefaultConfigProvider configProvider;
-  private final ObjectMapper objectMapper;
+  private final JsonMapper jsonMapper;
   private final XmlMapper xmlMapper;
   private final ProvenanceMetrics metrics;
 
   public PubMedClientAdapter(
       RestClient restClient,
       DefaultConfigProvider configProvider,
-      ObjectMapper objectMapper,
+      JsonMapper jsonMapper,
       XmlMapper xmlMapper,
       ProvenanceMetrics metrics) {
     this.restClient = restClient;
     this.configProvider = configProvider;
-    this.objectMapper = objectMapper;
+    this.jsonMapper = jsonMapper;
     this.xmlMapper = xmlMapper;
     this.metrics = metrics;
   }
@@ -96,7 +96,7 @@ public class PubMedClientAdapter implements PubMedClient {
     String body = restClient.get().uri(uriBuilder.build().toUri()).retrieve().body(String.class);
 
     try {
-      return objectMapper.readValue(body, ESearchResponse.class);
+      return jsonMapper.readValue(body, ESearchResponse.class);
     } catch (Exception ex) {
       throw new ProvenanceClientException(
           PROVENANCE.getCode(),

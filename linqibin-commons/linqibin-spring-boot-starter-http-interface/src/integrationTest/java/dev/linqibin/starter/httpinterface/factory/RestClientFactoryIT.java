@@ -21,7 +21,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.web.client.RestClient;
-import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
 /// RestClientFactory 集成测试。
@@ -184,9 +183,9 @@ class RestClientFactoryIT {
   @ImportAutoConfiguration(HttpInterfaceAutoConfiguration.class)
   static class ITSpringConfig {
 
-    /// 提供 ObjectMapper Bean（HTTP Interface 自动配置依赖）
+    /// 提供 JsonMapper Bean（HTTP Interface 自动配置依赖）
     @org.springframework.context.annotation.Bean
-    public ObjectMapper objectMapper() {
+    public JsonMapper jsonMapper() {
       return JsonMapper.builder().build();
     }
   }

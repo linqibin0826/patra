@@ -17,7 +17,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// OpenAlex Sources API 查询客户端。
 ///
@@ -60,7 +60,7 @@ public class OpenAlexSourcesClient {
           + "is_oa,is_in_doaj,apc_usd,apc_prices";
 
   private final RestClient restClient;
-  private final ObjectMapper objectMapper;
+  private final JsonMapper objectMapper;
 
   /// 批量查询 ISSN-L 对应的 OpenAlex 富化数据。
   ///

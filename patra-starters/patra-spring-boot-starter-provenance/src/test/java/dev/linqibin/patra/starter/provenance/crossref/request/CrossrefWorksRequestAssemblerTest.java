@@ -6,7 +6,6 @@ import dev.linqibin.patra.starter.provenance.crossref.model.request.CrossrefWork
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
@@ -17,19 +16,19 @@ import tools.jackson.databind.node.ObjectNode;
 class CrossrefWorksRequestAssemblerTest {
 
   private CrossrefWorksRequestAssembler assembler;
-  private ObjectMapper objectMapper;
+  private JsonMapper jsonMapper;
 
   @BeforeEach
   void setUp() {
     assembler = new CrossrefWorksRequestAssembler();
-    objectMapper = JsonMapper.builder().build();
+    jsonMapper = JsonMapper.builder().build();
   }
 
   @Test
   @DisplayName("build - 完整参数构建请求")
   void build_shouldBuildCompleteRequest_withAllParams() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
     params.put("query", "cancer research");
     params.put("filter", "type:journal-article");
     params.put("rows", 100);
@@ -60,7 +59,7 @@ class CrossrefWorksRequestAssemblerTest {
   @DisplayName("build - 仅必填参数构建请求")
   void build_shouldBuildRequest_withOnlyQuery() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
     params.put("query", "diabetes");
 
     // Act
@@ -83,7 +82,7 @@ class CrossrefWorksRequestAssemblerTest {
   @DisplayName("build - 空JsonNode返回全null请求")
   void build_shouldBuildRequestWithNullFields_whenParamsIsEmpty() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
     params.put("query", "test"); // 至少需要提供 query 或 filter
 
     // Act
@@ -112,7 +111,7 @@ class CrossrefWorksRequestAssemblerTest {
   @DisplayName("build - 整数参数正确解析")
   void build_shouldParseIntegerParams_correctly() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
     params.put("query", "test"); // 至少需要提供 query 或 filter
     params.put("rows", 25);
     params.put("offset", 100);
@@ -129,7 +128,7 @@ class CrossrefWorksRequestAssemblerTest {
   @DisplayName("build - 字符串形式的整数正确解析")
   void build_shouldParseStringInteger_correctly() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
     params.put("query", "test"); // 至少需要提供 query 或 filter
     params.put("rows", "50");
     params.put("offset", "200");
@@ -146,7 +145,7 @@ class CrossrefWorksRequestAssemblerTest {
   @DisplayName("build - 长整型转换为整型")
   void build_shouldConvertLongToInteger() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
     params.put("query", "test"); // 至少需要提供 query 或 filter
     params.put("rows", 100L);
 
@@ -161,7 +160,7 @@ class CrossrefWorksRequestAssemblerTest {
   @DisplayName("build - 超出整数范围的长整型抛出异常")
   void build_shouldThrowException_whenLongExceedsIntegerRange() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
     params.put("rows", Long.MAX_VALUE);
 
     // Act & Assert
@@ -174,7 +173,7 @@ class CrossrefWorksRequestAssemblerTest {
   @DisplayName("build - 无效的整数字符串抛出异常")
   void build_shouldThrowException_whenIntegerStringIsInvalid() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
     params.put("rows", "not-a-number");
 
     // Act & Assert
@@ -187,7 +186,7 @@ class CrossrefWorksRequestAssemblerTest {
   @DisplayName("build - 空白字符串被视为null并抛出异常")
   void build_shouldTreatBlankStringAsNull() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
     params.put("query", "   ");
     params.put("filter", "");
 
@@ -201,7 +200,7 @@ class CrossrefWorksRequestAssemblerTest {
   @DisplayName("build - null值正确处理")
   void build_shouldHandleNullValues() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
     params.put("query", "test");
     params.putNull("filter");
     params.putNull("rows");
@@ -219,7 +218,7 @@ class CrossrefWorksRequestAssemblerTest {
   @DisplayName("build - 包含特殊字符的查询正确解析")
   void build_shouldParseQueryWithSpecialCharacters() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
     params.put("query", "cancer AND therapy OR \"breast cancer\"");
     params.put("filter", "from-pub-date:2020-01,until-pub-date:2023-12");
 
@@ -235,7 +234,7 @@ class CrossrefWorksRequestAssemblerTest {
   @DisplayName("build - 零值整数应抛出异常")
   void build_shouldHandleZeroIntegerValues() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
     params.put("query", "test"); // 至少需要提供 query 或 filter
     params.put("rows", 0);
     params.put("offset", 0);
@@ -250,7 +249,7 @@ class CrossrefWorksRequestAssemblerTest {
   @DisplayName("build - 负数整数应抛出异常")
   void build_shouldHandleNegativeIntegerValues() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
     params.put("query", "test"); // 至少需要提供 query 或 filter
     params.put("rows", -10);
     params.put("offset", -5);
@@ -265,7 +264,7 @@ class CrossrefWorksRequestAssemblerTest {
   @DisplayName("build - 混合类型参数正确处理")
   void build_shouldHandleMixedTypeParams() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
     params.put("query", "test");
     params.put("rows", 10);
     params.put("offset", "20");

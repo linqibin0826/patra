@@ -39,7 +39,7 @@ paths: patra-*/*-infra/**/src/integrationTest/**/*IT.java, patra-*/*-adapter/**/
 @ImportAutoConfiguration({
     CoreErrorAutoConfiguration.class,
     WebErrorAutoConfiguration.class,
-    JacksonAutoConfiguration.class
+    WebJsonAutoConfiguration.class
 })
 public class CatalogAdapterITWebMvcConfig {
     // 空配置类，提供 @SpringBootConfiguration 标记
@@ -49,7 +49,7 @@ public class CatalogAdapterITWebMvcConfig {
 > **重要**: 必须使用 `@ImportAutoConfiguration` 显式导入以下配置，
 > 因为 `@WebMvcTest` 只加载 MVC 相关的自动配置切片：
 > - **错误处理配置**：不会自动加载全局异常处理器
-> - **Jackson 自动配置**：确保 Long → String 序列化模块生效（防止前端 JS 精度丢失）
+> - **`WebJsonAutoConfiguration`**（starter-web）：MVC 响应里 Long → String（防止前端 JS 精度丢失）；容器 `JsonMapper` 本身不做这项转换，切片里不导入它响应就会输出数字
 
 ### 测试类注解
 

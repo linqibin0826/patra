@@ -22,7 +22,7 @@ Spring Data JPA Starter，提供基于 Hibernate 7.1 的数据持久化支持，
 |--------|------|------|
 | `PatraJpaAutoConfiguration` | 主配置类，导入审计和 Hibernate 优化配置 | JpaRepository 类存在 |
 | `JpaAuditingConfig` | 启用 JPA 审计，配置 AuditorAware 和 DateTimeProvider | 由主配置导入 |
-| `HibernatePropertiesCustomizer` | Hibernate 7.1 批量写入和性能优化配置 | 由主配置导入 |
+| `HibernatePropertiesCustomizer` | Hibernate 7.1 批量写入、性能优化与 JSON 列序列化配置（构造注入容器 `JsonMapper`） | 由主配置导入 |
 
 ### 组件说明
 
@@ -35,7 +35,8 @@ Spring Data JPA Starter，提供基于 Hibernate 7.1 的数据持久化支持，
 | `JpaErrorMappingContributor` | JPA/Hibernate/SQL 异常到标准错误码的映射 |
 | `JpaAuditingConfig` | Spring Data JPA 审计配置 |
 | `CurrentAuditorProvider` | 当前操作人提供者接口，审计列的操作人 ID 从它来 |
-| `HibernatePropertiesCustomizer` | Hibernate 属性定制器 |
+| `HibernatePropertiesCustomizer` | Hibernate 属性定制器，用注入的容器 `JsonMapper` 创建 JSON 列的 FormatMapper |
+| `Jackson3JsonFormatMapper` | Hibernate JSON 列的 Jackson 3 FormatMapper，只接受外部传入的 `JsonMapper`，不自建 |
 
 ## BaseJpaEntity 实体基类
 
@@ -210,6 +211,10 @@ public Clock clock() {
 | `hibernate.jdbc.batch_versioned_data` | true | 支持带版本号实体的批量更新 |
 | `hibernate.cache.use_second_level_cache` | false | 禁用二级缓存（批量场景优化） |
 | `hibernate.cache.use_query_cache` | false | 禁用查询缓存 |
+| `hibernate.type.json_format_mapper` | `Jackson3JsonFormatMapper(容器 JsonMapper)` | JSON 列与应用共用同一份 Jackson 配置 |
+
+`HibernatePropertiesCustomizer` 构造注入容器里的 `JsonMapper`。`@DataJpaTest` 切片不含 Jackson 自动配置，
+`@Import(HibernatePropertiesCustomizer.class)` 时要同时导入 Boot 的 `JacksonAutoConfiguration`。
 
 ### 覆盖配置
 

@@ -1,9 +1,6 @@
 package dev.linqibin.patra.catalog.infra.persistence.converter.mapper;
 
 import cn.hutool.core.util.StrUtil;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.linqibin.patra.catalog.domain.model.aggregate.PublicationAggregate;
 import dev.linqibin.patra.catalog.domain.model.enums.AbstractType;
 import dev.linqibin.patra.catalog.domain.model.enums.DatePrecision;
@@ -45,8 +42,6 @@ import java.util.List;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /// 文献出版物 JPA 实体转换器。
 ///
@@ -246,9 +241,6 @@ public abstract class PublicationJpaMapper {
 
   // ========== 标识符转换 ==========
 
-  private static final Logger log = LoggerFactory.getLogger(PublicationJpaMapper.class);
-  private static final ObjectMapper objectMapper = new ObjectMapper();
-
   /// 将标识符值对象转换为 JPA 实体。
   ///
   /// @param identifier 标识符值对象
@@ -395,8 +387,8 @@ public abstract class PublicationJpaMapper {
     entity.setReviewStatus(metadata.reviewStatus() != null ? metadata.reviewStatus().name() : null);
     entity.setReviewDate(metadata.reviewDate());
     entity.setReviewer(metadata.reviewer());
-    entity.setValidationErrors(listToJson(metadata.validationErrors()));
-    entity.setProcessingNotes(listToJson(metadata.processingNotes()));
+    entity.setValidationErrors(emptyToNull(metadata.validationErrors()));
+    entity.setProcessingNotes(emptyToNull(metadata.processingNotes()));
     return entity;
   }
 
@@ -424,8 +416,8 @@ public abstract class PublicationJpaMapper {
         .reviewStatus(stringToReviewStatus(entity.getReviewStatus()))
         .reviewDate(entity.getReviewDate())
         .reviewer(entity.getReviewer())
-        .validationErrors(jsonToList(entity.getValidationErrors()))
-        .processingNotes(jsonToList(entity.getProcessingNotes()))
+        .validationErrors(entity.getValidationErrors())
+        .processingNotes(entity.getProcessingNotes())
         .build();
   }
 
@@ -671,31 +663,12 @@ public abstract class PublicationJpaMapper {
     return StrUtil.isNotBlank(type) ? VersionType.fromCode(type) : null;
   }
 
-  // ========== JSON 转换辅助方法 ==========
+  // ========== 列表转换辅助方法 ==========
 
-  /// 将 List 转换为 JSON 字符串。
-  private String listToJson(List<String> list) {
-    if (list == null || list.isEmpty()) {
-      return null;
-    }
-    try {
-      return objectMapper.writeValueAsString(list);
-    } catch (JsonProcessingException e) {
-      log.warn("List 转 JSON 失败: {}", e.getMessage());
-      return null;
-    }
-  }
-
-  /// 将 JSON 字符串转换为 List。
-  private List<String> jsonToList(String json) {
-    if (StrUtil.isBlank(json)) {
-      return List.of();
-    }
-    try {
-      return objectMapper.readValue(json, new TypeReference<>() {});
-    } catch (JsonProcessingException e) {
-      log.warn("JSON 转 List 失败: {}", e.getMessage());
-      return List.of();
-    }
+  /// 空列表落 `null`（SQL NULL），非空列表原样落库。
+  ///
+  /// JSON 序列化由 Hibernate 的 `JSON_FORMAT_MAPPER` 单点完成。
+  private List<String> emptyToNull(List<String> list) {
+    return list == null || list.isEmpty() ? null : list;
   }
 }

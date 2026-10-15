@@ -16,7 +16,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
 /// TechnicalRetryAdapter 单元测试
@@ -39,7 +38,7 @@ class TechnicalRetryAdapterTest {
 
   @BeforeEach
   void setup() {
-    ObjectMapper objectMapper = JsonMapper.builder().build();
+    JsonMapper objectMapper = JsonMapper.builder().build();
     adapter = new TechnicalRetryAdapter(repository, objectMapper);
   }
 

@@ -26,20 +26,29 @@ import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.starter.jpa.autoconfig.HibernatePropertiesCustomizer;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
 import dev.linqibin.starter.jpa.json.Jackson3JsonFormatMapper;
+import dev.linqibin.starter.jpa.json.JsonColumnCodec;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
+import org.springframework.boot.jackson.autoconfigure.JsonMapperBuilderCustomizer;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.databind.SerializationContext;
+import tools.jackson.databind.module.SimpleModule;
+import tools.jackson.databind.ser.std.StdSerializer;
 
 /// 摘要写读闭环集成测试（真实写路径 → 库内 jsonb 形态 → 双读路径恢复）。
 ///
@@ -72,7 +81,8 @@ import org.springframework.test.context.ContextConfiguration;
   PublicationDetailReadAdapter.class,
   HibernatePropertiesCustomizer.class,
   JpaAuditingConfig.class,
-  JacksonAutoConfiguration.class
+  JacksonAutoConfiguration.class,
+  JsonColumnCodec.class
 })
 @ComponentScan(basePackages = "dev.linqibin.patra.catalog.infra.persistence.converter")
 @ActiveProfiles("test")
@@ -95,6 +105,22 @@ class PublicationAbstractRoundTripIT {
                 .getSessionFactoryOptions()
                 .getJsonFormatMapper())
         .isInstanceOf(Jackson3JsonFormatMapper.class);
+  }
+
+  @Test
+  @DisplayName("前置：Hibernate 写 jsonb 用的是容器 JsonMapper（容器里注册的序列化器会生效）")
+  void formatMapper_usesContainerJsonMapper() {
+    CountingSectionSerializer.CALLS.set(0);
+    PublicationAggregate agg = buildAggregateWithVenue("91000009", "10.9100/abs-9");
+    agg.attachAbstract(
+        PublicationAbstract.ofBoth(
+            "BACKGROUND: bg.", List.of(PublicationAbstractSection.of("BACKGROUND", "bg.")), "© X"));
+
+    adapter.insertAllWithAssociations(List.of(PublicationCompleteData.ofPublication(agg)));
+    em.flush();
+
+    // 序列化器只登记在容器的 JsonMapper 上：被调用即证明 FormatMapper 持有的就是容器 bean
+    assertThat(CountingSectionSerializer.CALLS.get()).isPositive();
   }
 
   @Test
@@ -295,5 +321,46 @@ class PublicationAbstractRoundTripIT {
                 "SELECT structured_sections IS NULL FROM " + table + " WHERE publication_id = :id")
             .setParameter("id", publicationId)
             .getSingleResult();
+  }
+
+  /// 给容器 `JsonMapper` 登记一个计数序列化器，用来证明 Hibernate 的 FormatMapper 用的就是容器 bean。
+  @TestConfiguration
+  static class ContainerMapperProbeConfig {
+
+    /// 登记 `PublicationAbstractSection` 的计数序列化器，输出与默认序列化完全一致。
+    ///
+    /// @return 容器 `JsonMapper` 的构建定制器
+    @Bean
+    JsonMapperBuilderCustomizer countingSectionSerializerCustomizer() {
+      return builder ->
+          builder.addModule(new SimpleModule().addSerializer(new CountingSectionSerializer()));
+    }
+  }
+
+  /// 输出与默认序列化一致（`label`、`text` 两个键）并记录调用次数的序列化器。
+  static class CountingSectionSerializer extends StdSerializer<PublicationAbstractSection> {
+
+    /// 序列化调用次数。
+    static final AtomicInteger CALLS = new AtomicInteger();
+
+    /// 创建序列化器。
+    CountingSectionSerializer() {
+      super(PublicationAbstractSection.class);
+    }
+
+    /// 写出 `label`、`text` 并计数。
+    ///
+    /// @param value 段落
+    /// @param gen JSON 生成器
+    /// @param ctxt 序列化上下文
+    @Override
+    public void serialize(
+        PublicationAbstractSection value, JsonGenerator gen, SerializationContext ctxt) {
+      CALLS.incrementAndGet();
+      gen.writeStartObject();
+      gen.writeStringProperty("label", value.label());
+      gen.writeStringProperty("text", value.text());
+      gen.writeEndObject();
+    }
   }
 }

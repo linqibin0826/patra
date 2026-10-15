@@ -4,13 +4,12 @@ import dev.linqibin.patra.catalog.domain.model.aggregate.VenueInstanceAggregate;
 import dev.linqibin.patra.catalog.domain.model.vo.venue.VenueId;
 import dev.linqibin.patra.catalog.domain.model.vo.venue.VenueInstanceId;
 import dev.linqibin.patra.catalog.infra.persistence.entity.VenueInstanceEntity;
+import dev.linqibin.starter.jpa.json.JsonColumnCodec;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 import org.springframework.beans.factory.annotation.Autowired;
-import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
 
 /// 载体实例 JPA 实体转换器。
 ///
@@ -25,7 +24,7 @@ import tools.jackson.databind.ObjectMapper;
 @Mapper(componentModel = "spring")
 public abstract class VenueInstanceJpaMapper {
 
-  @Autowired protected ObjectMapper objectMapper;
+  @Autowired protected JsonColumnCodec codec;
 
   /// 将聚合根转换为 JPA 实体。
   ///
@@ -112,25 +111,11 @@ public abstract class VenueInstanceJpaMapper {
   /// 将 String 转换为 JsonNode。
   @Named("stringToJsonNode")
   JsonNode stringToJsonNode(String json) {
-    if (json == null || json.isBlank()) {
-      return null;
-    }
-    try {
-      return objectMapper.readTree(json);
-    } catch (JacksonException e) {
-      throw new IllegalArgumentException("Invalid JSON: " + json, e);
-    }
+    return codec.read(json);
   }
 
   /// 将 JsonNode 转换为 String。
   String jsonNodeToString(JsonNode node) {
-    if (node == null || node.isNull()) {
-      return null;
-    }
-    try {
-      return objectMapper.writeValueAsString(node);
-    } catch (JacksonException e) {
-      throw new IllegalArgumentException("Failed to serialize JsonNode", e);
-    }
+    return node == null || node.isNull() ? null : codec.write(node);
   }
 }

@@ -4,7 +4,6 @@ import java.lang.reflect.Type;
 import org.hibernate.type.descriptor.WrapperOptions;
 import org.hibernate.type.descriptor.java.JavaType;
 import org.hibernate.type.format.FormatMapper;
-import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
 /// Jackson 3.x JSON 格式映射器。
@@ -18,10 +17,12 @@ import tools.jackson.databind.json.JsonMapper;
 ///
 /// ### 配置方式
 ///
-/// 通过 `HibernatePropertiesCustomizer` 自动注册到 Hibernate 配置：
+/// 由 `HibernatePropertiesCustomizer` 用注入的容器 `JsonMapper` 创建并注册到 Hibernate 配置，
+/// JSON 列与应用其他部分共用同一份 Jackson 配置：
 ///
 /// ```java
-/// hibernateProperties.put(AvailableSettings.JSON_FORMAT_MAPPER, new Jackson3JsonFormatMapper());
+/// hibernateProperties.put(
+///     AvailableSettings.JSON_FORMAT_MAPPER, new Jackson3JsonFormatMapper(jsonMapper));
 /// ```
 ///
 /// ### 参考资料
@@ -35,18 +36,13 @@ import tools.jackson.databind.json.JsonMapper;
 /// @see FormatMapper
 public class Jackson3JsonFormatMapper implements FormatMapper {
 
-  /// Jackson 3.x ObjectMapper 实例。
-  private final ObjectMapper objectMapper;
+  /// Jackson 3.x JsonMapper 实例（容器注入）。
+  private final JsonMapper objectMapper;
 
-  /// 使用默认配置创建 Jackson3JsonFormatMapper。
-  public Jackson3JsonFormatMapper() {
-    this.objectMapper = JsonMapper.builder().build();
-  }
-
-  /// 使用自定义 ObjectMapper 创建 Jackson3JsonFormatMapper。
+  /// 使用给定 JsonMapper 创建 Jackson3JsonFormatMapper。
   ///
-  /// @param objectMapper 自定义的 Jackson ObjectMapper
-  public Jackson3JsonFormatMapper(ObjectMapper objectMapper) {
+  /// @param objectMapper 容器里的 Jackson JsonMapper
+  public Jackson3JsonFormatMapper(JsonMapper objectMapper) {
     this.objectMapper = objectMapper;
   }
 

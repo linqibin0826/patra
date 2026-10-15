@@ -37,7 +37,7 @@ import org.mockito.quality.Strictness;
 import org.springframework.messaging.Message;
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.type.TypeReference;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// RocketMqOutboxPublisher 单元测试。
 ///
@@ -65,7 +65,7 @@ class RocketMqOutboxPublisherTest {
 
   @Mock private RocketMqChannelMapper channelMapper;
 
-  @Mock private ObjectMapper objectMapper;
+  @Mock private JsonMapper objectMapper;
 
   @Mock private OutboxMqProperties properties;
 

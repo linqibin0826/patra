@@ -26,7 +26,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.http.converter.json.ProblemDetailJacksonMixin;
-import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
 /// ProblemDetailErrorHandler 单元测试
@@ -39,7 +38,7 @@ import tools.jackson.databind.json.JsonMapper;
 @DisplayName("ProblemDetailErrorHandler 单元测试")
 class ProblemDetailErrorHandlerTest {
 
-  private ObjectMapper objectMapper;
+  private JsonMapper jsonMapper;
 
   @Mock private HttpRequest mockRequest;
 
@@ -48,7 +47,7 @@ class ProblemDetailErrorHandlerTest {
   @BeforeEach
   void setUp() {
     // 模拟 Spring Boot 4 JacksonAutoConfiguration 的行为：自动注册 ProblemDetailJacksonMixin
-    objectMapper =
+    jsonMapper =
         JsonMapper.builder().addMixIn(ProblemDetail.class, ProblemDetailJacksonMixin.class).build();
 
     // 设置默认请求 mock
@@ -497,7 +496,7 @@ class ProblemDetailErrorHandlerTest {
     errorHandling.setTolerant(tolerant);
     errorHandling.setProblemDetailEnabled(true);
     errorHandling.setMaxErrorBodySize(10240);
-    return new ProblemDetailErrorHandler(objectMapper, errorHandling);
+    return new ProblemDetailErrorHandler(jsonMapper, errorHandling);
   }
 
   private void setupMockResponse(int status, MediaType contentType, String body)

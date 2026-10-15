@@ -7,8 +7,10 @@ import dev.linqibin.patra.catalog.domain.model.read.portal.PublicationDetailRead
 import dev.linqibin.patra.catalog.domain.model.vo.publication.PublicationAbstract;
 import dev.linqibin.patra.catalog.domain.model.vo.publication.PublicationAbstractSection;
 import dev.linqibin.patra.catalog.domain.model.vo.publication.PublicationAlternativeAbstract;
+import dev.linqibin.patra.catalog.domain.model.vo.publication.PublicationMetadata;
 import dev.linqibin.patra.catalog.infra.persistence.entity.PublicationAbstractEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.PublicationAlternativeAbstractEntity;
+import dev.linqibin.patra.catalog.infra.persistence.entity.PublicationMetadataEntity;
 import dev.linqibin.starter.jpa.json.Jackson3JsonFormatMapper;
 import java.util.List;
 import org.hibernate.type.descriptor.java.JavaType;
@@ -18,7 +20,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import tools.jackson.core.type.TypeReference;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// PublicationJpaMapper 摘要映射单元测试。
 ///
@@ -172,11 +174,53 @@ class PublicationJpaMapperTest {
   }
 
   @Nested
+  @DisplayName("元数据列表字段映射")
+  class MetadataListMapping {
+
+    @Test
+    @DisplayName("toMetadataEntity 应将验证错误与处理注释原样落到 Entity（不做 JSON 序列化）")
+    void shouldKeepListsOnEntity() {
+      PublicationMetadata metadata =
+          PublicationMetadata.builder()
+              .validationErrors(List.of("缺少标题", "年份无效"))
+              .processingNotes(List.of("已回填"))
+              .build();
+
+      PublicationMetadataEntity entity = mapper.toMetadataEntity(metadata, 100L);
+
+      assertThat(entity.getValidationErrors()).containsExactly("缺少标题", "年份无效");
+      assertThat(entity.getProcessingNotes()).containsExactly("已回填");
+    }
+
+    @Test
+    @DisplayName("toMetadataEntity 在列表为空时应落 null（SQL NULL）")
+    void shouldWriteNullWhenListsEmpty() {
+      PublicationMetadataEntity entity = mapper.toMetadataEntity(PublicationMetadata.empty(), 100L);
+
+      assertThat(entity.getValidationErrors()).isNull();
+      assertThat(entity.getProcessingNotes()).isNull();
+    }
+
+    @Test
+    @DisplayName("toMetadata 应原样还原列表，列为 NULL 时得到空列表")
+    void shouldRestoreListsAndDefaultToEmpty() {
+      PublicationMetadataEntity entity = new PublicationMetadataEntity();
+      entity.setValidationErrors(List.of("缺少标题"));
+
+      PublicationMetadata metadata = mapper.toMetadata(entity);
+
+      assertThat(metadata.validationErrors()).containsExactly("缺少标题");
+      assertThat(metadata.processingNotes()).isEmpty();
+    }
+  }
+
+  @Nested
   @DisplayName("jsonb wire format 回归锚")
   class WireFormat {
 
     /// 生产同款：`JpaAutoConfiguration` 把该实例注册为 Hibernate 的 `JSON_FORMAT_MAPPER`。
-    private final FormatMapper formatMapper = new Jackson3JsonFormatMapper();
+    private final FormatMapper formatMapper =
+        new Jackson3JsonFormatMapper(JsonMapper.builder().build());
 
     /// `toString` 仅用 javaType 判定 String/Object 透传特例，段落列表走正常 Jackson 序列化。
     private final JavaType<List> listJavaType = new JavaTypeBasicAdaptor<>(List.class);
@@ -209,7 +253,7 @@ class PublicationJpaMapperTest {
 
       // 读端 PublicationDetailReadAdapter 用 Spring 托管的 Jackson 3 mapper（宽松，未知属性被忽略），
       // 此处同款构造，只验证 label/text 能正确还原；派生属性泄漏由上面的 key 集合断言拦截。
-      ObjectMapper readSideMapper = new ObjectMapper();
+      JsonMapper readSideMapper = JsonMapper.builder().build();
 
       List<AbstractSectionView> views =
           readSideMapper.readValue(json, new TypeReference<List<AbstractSectionView>>() {});

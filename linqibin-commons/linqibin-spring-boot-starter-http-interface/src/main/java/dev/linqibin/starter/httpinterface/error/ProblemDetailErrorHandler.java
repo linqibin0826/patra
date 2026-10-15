@@ -17,7 +17,7 @@ import org.springframework.http.HttpRequest;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.web.client.RestClient;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// RestClient 错误处理器，解析 RFC 7807 ProblemDetail 响应并转换为 {@link RemoteCallException}
 ///
@@ -40,16 +40,16 @@ import tools.jackson.databind.ObjectMapper;
 @Slf4j
 public class ProblemDetailErrorHandler implements RestClient.ResponseSpec.ErrorHandler {
 
-  private final ObjectMapper objectMapper;
+  private final JsonMapper jsonMapper;
   private final HttpInterfaceProperties.ErrorHandlingProperties properties;
 
   /// 构造 ProblemDetail 错误处理器
   ///
-  /// @param objectMapper JSON 序列化器
+  /// @param jsonMapper 容器里的 `JsonMapper`
   /// @param properties 错误处理配置属性
   public ProblemDetailErrorHandler(
-      ObjectMapper objectMapper, HttpInterfaceProperties.ErrorHandlingProperties properties) {
-    this.objectMapper = objectMapper;
+      JsonMapper jsonMapper, HttpInterfaceProperties.ErrorHandlingProperties properties) {
+    this.jsonMapper = jsonMapper;
     this.properties = properties;
   }
 
@@ -132,7 +132,7 @@ public class ProblemDetailErrorHandler implements RestClient.ResponseSpec.ErrorH
     }
 
     long start = System.nanoTime();
-    ProblemDetail problemDetail = objectMapper.readValue(bodyBytes, ProblemDetail.class);
+    ProblemDetail problemDetail = jsonMapper.readValue(bodyBytes, ProblemDetail.class);
     long durationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
 
     log.debug("ProblemDetail 解析成功: status={} duration={}ms", problemDetail.getStatus(), durationMs);

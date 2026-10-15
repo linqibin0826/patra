@@ -1,6 +1,5 @@
 package dev.linqibin.patra.ingest.infra.adapter.persistence.converter.mapper;
 
-import dev.linqibin.commons.json.JsonNodeMappings;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.ingest.domain.exception.InfrastructureException;
 import dev.linqibin.patra.ingest.domain.model.aggregate.ScheduleInstanceAggregate;
@@ -9,17 +8,22 @@ import dev.linqibin.patra.ingest.domain.model.enums.Scheduler;
 import dev.linqibin.patra.ingest.domain.model.enums.TriggerType;
 import dev.linqibin.patra.ingest.domain.model.vo.schedule.ScheduleInstanceId;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.ScheduleInstanceEntity;
+import dev.linqibin.starter.jpa.json.JsonColumnCodec;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /// 调度实例 JPA 实体转换器，负责领域对象与 JPA 实体转换。
 ///
 /// @author linqibin
 /// @since 0.1.0
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
-public interface ScheduleInstanceJpaMapper {
+public abstract class ScheduleInstanceJpaMapper {
+
+  /// JSON 列转换器，由容器注入。
+  @Autowired protected JsonColumnCodec codec;
 
   @Mapping(target = "id", source = "id", qualifiedByName = "scheduleInstanceIdToLong")
   @Mapping(target = "schedulerCode", source = "scheduler", qualifiedByName = "schedulerToCode")
@@ -29,15 +33,14 @@ public interface ScheduleInstanceJpaMapper {
       qualifiedByName = "triggerTypeToCode")
   @Mapping(
       target = "triggerParams",
-      expression =
-          "java(dev.linqibin.commons.json.JsonNodeMappings.mapToJsonNode(aggregate.getTriggerParams()))")
-  ScheduleInstanceEntity toEntity(ScheduleInstanceAggregate aggregate);
+      expression = "java(codec.fromMap(aggregate.getTriggerParams()))")
+  public abstract ScheduleInstanceEntity toEntity(ScheduleInstanceAggregate aggregate);
 
-  default ScheduleInstanceAggregate toAggregate(ScheduleInstanceEntity entity) {
+  public ScheduleInstanceAggregate toAggregate(ScheduleInstanceEntity entity) {
     return toScheduleInstance(entity);
   }
 
-  static ScheduleInstanceAggregate toScheduleInstance(ScheduleInstanceEntity entity) {
+  public ScheduleInstanceAggregate toScheduleInstance(ScheduleInstanceEntity entity) {
     if (entity == null) {
       return null;
     }
@@ -49,41 +52,41 @@ public interface ScheduleInstanceJpaMapper {
         entity.getSchedulerLogId(),
         triggerTypeFromCode(entity.getTriggerTypeCode()),
         entity.getTriggeredAt(),
-        JsonNodeMappings.jsonNodeToMap(entity.getTriggerParams()),
+        codec.toMap(entity.getTriggerParams()),
         ProvenanceCode.parse(entity.getProvenanceCode()),
         0L);
   }
 
   @Named("scheduleInstanceIdToLong")
-  static Long scheduleInstanceIdToLong(ScheduleInstanceId id) {
+  public static Long scheduleInstanceIdToLong(ScheduleInstanceId id) {
     return id != null ? id.value() : null;
   }
 
   @Named("schedulerToCode")
-  static String schedulerToCode(Scheduler scheduler) {
+  public static String schedulerToCode(Scheduler scheduler) {
     return scheduler == null ? null : scheduler.getCode();
   }
 
-  static Scheduler schedulerFromCode(String code) {
+  public static Scheduler schedulerFromCode(String code) {
     return code == null ? null : Scheduler.fromCode(code);
   }
 
   @Named("triggerTypeToCode")
-  static String triggerTypeToCode(TriggerType triggerType) {
+  public static String triggerTypeToCode(TriggerType triggerType) {
     return triggerType == null ? null : triggerType.getCode();
   }
 
-  static TriggerType triggerTypeFromCode(String code) {
+  public static TriggerType triggerTypeFromCode(String code) {
     return code == null ? null : TriggerType.fromCode(code);
   }
 
   // ========== 枚举转换方法 ==========
 
-  default String map(ProvenanceCode code) {
+  public String map(ProvenanceCode code) {
     return code == null ? null : code.getCode();
   }
 
-  default ProvenanceCode mapProvenanceCode(String code) {
+  public ProvenanceCode mapProvenanceCode(String code) {
     if (code == null || code.isBlank()) {
       return null;
     }
@@ -94,11 +97,11 @@ public interface ScheduleInstanceJpaMapper {
     }
   }
 
-  default String map(OperationCode code) {
+  public String map(OperationCode code) {
     return code == null ? null : code.getCode();
   }
 
-  default OperationCode mapOperationCode(String code) {
+  public OperationCode mapOperationCode(String code) {
     if (code == null || code.isBlank()) {
       return null;
     }

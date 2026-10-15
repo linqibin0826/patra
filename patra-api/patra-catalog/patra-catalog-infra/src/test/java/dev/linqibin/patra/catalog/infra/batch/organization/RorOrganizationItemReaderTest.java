@@ -26,6 +26,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.batch.infrastructure.item.ExecutionContext;
 import org.springframework.batch.infrastructure.item.ItemStreamException;
+import tools.jackson.databind.json.JsonMapper;
 
 /// RorOrganizationItemReader 单元测试。
 ///
@@ -99,7 +100,7 @@ class RorOrganizationItemReaderTest {
 
   @BeforeEach
   void setUp() {
-    parser = new RorOrganizationParser();
+    parser = new RorOrganizationParser(JsonMapper.builder().build());
     executionContext = new ExecutionContext();
   }
 

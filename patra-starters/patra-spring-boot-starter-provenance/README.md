@@ -37,7 +37,7 @@
 |-----------|------|------|
 | `pubMedClient` | `PubMedClient` | PubMed E-utilities 客户端（使用 defaultRestClient） |
 | `epmcClient` | `EPMCClient` | Europe PMC 搜索客户端（使用 defaultRestClient） |
-| `provenanceXmlMapper` | `XmlMapper` | PubMed XML 响应映射器 |
+| `provenanceXmlMapperBuilderCustomizer` | `XmlMapperBuilderCustomizer` | PubMed XML 宽松解析定制（`XmlMapper` 由 Boot 装配，本 starter 只注册定制器） |
 | `pubmedArticleConverter` | `PubmedPublicationConverter` | **PubMed 医学出版物转换器（核心组件）** |
 | `defaultConfigProvider` | `DefaultConfigProvider` | 配置提供器 |
 | `providerRegistry` | `ProviderRegistry` | 数据源提供者注册表 |
@@ -641,24 +641,18 @@ public class CustomProvenanceConfig {
     public PubMedClient customPubMedClient(
         RestClient defaultRestClient,  // 使用统一的 defaultRestClient
         DefaultConfigProvider configProvider,
-        ObjectMapper objectMapper,
-        XmlMapper xmlMapper
+        JsonMapper jsonMapper,  // Boot 装配的 JsonMapper
+        XmlMapper xmlMapper     // Boot 装配的 XmlMapper；禁用自动配置后本 starter 的
+                                // XmlMapperBuilderCustomizer 不再注册，宽松解析需自行声明定制器
     ) {
         // 自定义配置提供者（覆盖 baseUrl 等）
         return new PubMedClientAdapter(
             defaultRestClient,
             configProvider,
-            objectMapper,
+            jsonMapper,
             xmlMapper,
             null
         );
-    }
-
-    private XmlMapper xmlMapper() {
-        return XmlMapper.builder()
-            .findAndAddModules()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-            .build();
     }
 }
 ```
@@ -828,7 +822,7 @@ private RestClient defaultRestClient;  // 使用统一的 RestClient
 PubMedClient client = new PubMedClientAdapter(
     defaultRestClient,  // ✅ 使用 defaultRestClient
     configProvider,
-    objectMapper,
+    jsonMapper,
     xmlMapper,
     null
 );

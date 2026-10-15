@@ -21,7 +21,7 @@ import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// Outbox 消息中继定时任务。
 ///
@@ -45,7 +45,7 @@ import tools.jackson.databind.ObjectMapper;
 @RequiredArgsConstructor
 public class OutboxRelayJob {
 
-  private final ObjectMapper objectMapper;
+  private final JsonMapper objectMapper;
   private final CommandBus commandBus;
   private final OutboxRelayProperties relayProperties;
   private final Clock clock;

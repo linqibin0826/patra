@@ -22,11 +22,12 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.jackson.autoconfigure.XmlMapperBuilderCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.MapperFeature;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.dataformat.xml.XmlMapper;
 
 /// Provenance Starter 自动配置类
@@ -86,22 +87,21 @@ public class ProvenanceAutoConfiguration {
     return new ProviderRegistry(providers);
   }
 
-  /// 创建用于解析 PubMed XML 响应的 XML 映射器
+  /// 定制 Boot 装配的 XML 映射器，使用宽松的解析选项处理 PubMed 的 XML 格式
   ///
-  /// 配置为使用宽松的解析选项处理 PubMed 的 XML 格式。
+  /// `XmlMapper` 由 Boot 的 Jackson 自动配置创建，本 starter 只贡献定制器。这组配置只作用于
+  /// `XmlMapper`，不放进 `spring.jackson.*`，避免同时改到容器里的 `JsonMapper`。
   ///
-  /// @return 配置好的 XML 映射器
+  /// @return XML 映射器构建器定制器
   @Bean
-  @ConditionalOnMissingBean
-  public XmlMapper provenanceXmlMapper() {
-    return XmlMapper.builder()
-        .findAndAddModules()
-        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-        .configure(DeserializationFeature.ACCEPT_EMPTY_STRING_AS_NULL_OBJECT, true)
-        .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)
-        .configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true)
-        .defaultUseWrapper(false)
-        .build();
+  public XmlMapperBuilderCustomizer provenanceXmlMapperBuilderCustomizer() {
+    return builder ->
+        builder
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            .configure(DeserializationFeature.ACCEPT_EMPTY_STRING_AS_NULL_OBJECT, true)
+            .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)
+            .configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true)
+            .defaultUseWrapper(false);
   }
 
   /// 创建 PubMed 文章转换器,用于将 PubMed 响应转换为 CanonicalPublication
@@ -119,8 +119,8 @@ public class ProvenanceAutoConfiguration {
   ///
   /// @param defaultRestClient 统一的 RestClient（来自 rest-client starter）
   /// @param configProvider PubMed 设置的配置提供者
-  /// @param xmlMapper 用于解析 PubMed XML 响应的 XML 映射器
-  /// @param objectMapper 用于解析 PubMed JSON 响应的 JSON 映射器
+  /// @param xmlMapper 用于解析 PubMed XML 响应的 XML 映射器（Boot 装配）
+  /// @param jsonMapper 用于解析 PubMed JSON 响应的 JSON 映射器
   /// @param metrics 可选的指标记录器
   /// @return PubMed 客户端实现
   @Bean
@@ -129,11 +129,11 @@ public class ProvenanceAutoConfiguration {
       RestClient defaultRestClient,
       DefaultConfigProvider configProvider,
       XmlMapper xmlMapper,
-      ObjectMapper objectMapper,
+      JsonMapper jsonMapper,
       Optional<ProvenanceMetrics> metrics) {
     log.info("自动配置 PubMed 客户端,用于访问 E-utilities API (使用 defaultRestClient)");
     return new PubMedClientAdapter(
-        defaultRestClient, configProvider, objectMapper, xmlMapper, metrics.orElse(null));
+        defaultRestClient, configProvider, jsonMapper, xmlMapper, metrics.orElse(null));
   }
 
   /// 创建用于直接 HTTP 访问 EPMC API 的 Europe PMC 客户端
@@ -142,7 +142,7 @@ public class ProvenanceAutoConfiguration {
   ///
   /// @param defaultRestClient 统一的 RestClient（来自 rest-client starter）
   /// @param configProvider EPMC 设置的配置提供者
-  /// @param objectMapper 用于解析 EPMC 响应的 JSON 映射器
+  /// @param jsonMapper 用于解析 EPMC 响应的 JSON 映射器
   /// @param metrics 可选的指标记录器
   /// @return Europe PMC 客户端实现
   @Bean
@@ -150,11 +150,11 @@ public class ProvenanceAutoConfiguration {
   public EPMCClient epmcClient(
       RestClient defaultRestClient,
       DefaultConfigProvider configProvider,
-      ObjectMapper objectMapper,
+      JsonMapper jsonMapper,
       Optional<ProvenanceMetrics> metrics) {
     log.info("自动配置 Europe PMC 客户端,用于访问 EPMC API (使用 defaultRestClient)");
     return new EpmcClientAdapter(
-        defaultRestClient, configProvider, objectMapper, metrics.orElse(null));
+        defaultRestClient, configProvider, jsonMapper, metrics.orElse(null));
   }
 
   /// 创建 PubMed ESearch 请求组装器

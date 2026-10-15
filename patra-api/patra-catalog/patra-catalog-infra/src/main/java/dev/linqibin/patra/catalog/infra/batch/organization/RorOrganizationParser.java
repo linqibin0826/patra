@@ -39,7 +39,6 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.core.JsonParser;
 import tools.jackson.core.JsonToken;
 import tools.jackson.databind.DeserializationFeature;
-import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.PropertyNamingStrategies;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -76,12 +75,17 @@ import tools.jackson.databind.json.JsonMapper;
 @Component
 public class RorOrganizationParser {
 
-  private final ObjectMapper objectMapper;
+  private final JsonMapper jsonMapper;
 
   /// 创建解析器实例。
-  public RorOrganizationParser() {
-    this.objectMapper =
-        JsonMapper.builder()
+  ///
+  /// 从容器里的 `JsonMapper` 派生出 ROR 专用配置：蛇形命名，容忍未知字段与尾随内容。
+  ///
+  /// @param jsonMapper 容器里的 `JsonMapper`
+  public RorOrganizationParser(JsonMapper jsonMapper) {
+    this.jsonMapper =
+        jsonMapper
+            .rebuild()
             .propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
             .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
             .disable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
@@ -96,7 +100,7 @@ public class RorOrganizationParser {
   /// @return OrganizationAggregate 流
   /// @throws IOException 读取或解析失败时
   public Stream<OrganizationAggregate> parse(InputStream inputStream) throws IOException {
-    JsonParser jsonParser = objectMapper.createParser(inputStream);
+    JsonParser jsonParser = jsonMapper.createParser(inputStream);
 
     // 移动到数组开始位置
     if (jsonParser.nextToken() != JsonToken.START_ARRAY) {
@@ -166,7 +170,7 @@ public class RorOrganizationParser {
         // 读取并转换记录
         if (token == JsonToken.START_OBJECT) {
           RorOrganizationRecord record =
-              objectMapper.readValue(jsonParser, RorOrganizationRecord.class);
+              jsonMapper.readValue(jsonParser, RorOrganizationRecord.class);
           nextRecord = toAggregate(record);
         } else {
           log.warn("跳过非对象 token：{}", token);

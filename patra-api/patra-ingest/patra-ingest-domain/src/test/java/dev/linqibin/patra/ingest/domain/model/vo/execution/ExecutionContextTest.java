@@ -11,14 +11,13 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
 @DisplayName("ExecutionContext 值对象单元测试")
 class ExecutionContextTest {
 
-  private static final ObjectMapper OBJECT_MAPPER = JsonMapper.builder().build();
+  private static final JsonMapper OBJECT_MAPPER = JsonMapper.builder().build();
 
   private static final Long TASK_ID = 1001L;
   private static final Long RUN_ID = 2001L;

@@ -8,7 +8,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
@@ -34,7 +33,7 @@ import tools.jackson.databind.node.ObjectNode;
 /// @since 0.1.0
 public class PubMedAuthorFixture {
 
-  private static final ObjectMapper OBJECT_MAPPER = JsonMapper.builder().build();
+  private static final JsonMapper OBJECT_MAPPER = JsonMapper.builder().build();
   private static final Random RANDOM = new Random(42); // 固定种子确保可重复
 
   // 常见姓氏

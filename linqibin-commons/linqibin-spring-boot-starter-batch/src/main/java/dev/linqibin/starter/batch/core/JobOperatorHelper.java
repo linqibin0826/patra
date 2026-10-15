@@ -1,6 +1,5 @@
 package dev.linqibin.starter.batch.core;
 
-import dev.linqibin.commons.json.JsonMapperHolder;
 import dev.linqibin.starter.batch.exception.BatchJobExecutionException;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -17,7 +16,7 @@ import org.springframework.batch.core.job.parameters.JobParametersBuilder;
 import org.springframework.batch.core.launch.JobOperator;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.StepExecution;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// Job 启动辅助类。
 ///
@@ -63,6 +62,8 @@ public class JobOperatorHelper {
   private final JobOperator jobOperator;
   /// Spring Batch 6.0: JobRepository 继承 JobExplorer，提供统一的查询和持久化接口。
   private final JobRepository jobRepository;
+  /// 容器里的 `JsonMapper`，用于把 `JobParams` 转成参数 Map。
+  private final JsonMapper jsonMapper;
 
   /// 启动 Job（默认添加 timestamp，每次创建新实例）。
   ///
@@ -171,14 +172,13 @@ public class JobOperatorHelper {
 
   /// 将 JobParams 转换为 Map。
   ///
-  /// 使用 Jackson ObjectMapper 进行转换，null 字段会被自动跳过。
+  /// 使用注入的 `JsonMapper` 进行转换，null 字段会被自动跳过。
   ///
   /// @param params Job 参数对象
   /// @return 参数 Map
   @SuppressWarnings("unchecked")
   private Map<String, Object> convertToMap(JobParams params) {
-    ObjectMapper objectMapper = JsonMapperHolder.getObjectMapper();
-    return objectMapper.convertValue(params, Map.class);
+    return jsonMapper.convertValue(params, Map.class);
   }
 
   /// 构建 JobParameters。

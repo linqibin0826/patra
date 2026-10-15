@@ -2,7 +2,6 @@ package dev.linqibin.patra.ingest.infra.integration.provenance;
 
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.date.TimeInterval;
-import dev.linqibin.commons.json.JsonMapperHolder;
 import dev.linqibin.commons.type.TypeReference;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.common.model.DataType;
@@ -38,7 +37,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// 数据源适配器
 ///
@@ -77,6 +76,7 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
   private final ProviderRegistry providerRegistry;
   private final QuerySessionTranslator querySessionTranslator;
   private final ProviderParameterMapperRegistry parameterMapperRegistry;
+  private final JsonMapper jsonMapper;
 
   /// 准备查询会话
   ///
@@ -201,8 +201,9 @@ public class ProvenanceDataAdapter implements ProvenanceDataPort {
     }
 
     try {
-      ObjectMapper mapper = JsonMapperHolder.getObjectMapper();
-      return mapper.readValue(headersJson, new tools.jackson.core.type.TypeReference<>() {});
+      return jsonMapper.readValue(
+          headersJson,
+          jsonMapper.getTypeFactory().constructMapType(Map.class, String.class, String.class));
     } catch (Exception ex) {
       log.warn("解析Headers JSON失败: {}", headersJson, ex);
       return Map.of();
