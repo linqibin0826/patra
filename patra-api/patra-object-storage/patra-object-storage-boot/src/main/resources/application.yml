@@ -17,6 +17,7 @@ spring:
     locations: classpath:db/migration
 
 logging:
+  config: classpath:dev/patra/tool/observability/logback-patra.xml
   file:
     # Centralized log directory in project root
     path: ${PATRA_LOG_DIR:logs}

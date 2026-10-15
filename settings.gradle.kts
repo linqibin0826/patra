@@ -56,6 +56,7 @@ mapParent(":patra-api:patra-common", "patra-api/patra-common")
 
 // ==================== patra-tool ====================
 includeAt(":patra-tool:patra-tool-core", "patra-tool/patra-tool-core")
+includeAt(":patra-tool:patra-tool-cqrs", "patra-tool/patra-tool-cqrs")
 includeAt(":patra-tool:patra-tool-web", "patra-tool/patra-tool-web")
 includeAt(":patra-tool:patra-tool-jpa", "patra-tool/patra-tool-jpa")
 includeAt(":patra-tool:patra-tool-batch", "patra-tool/patra-tool-batch")
@@ -71,7 +72,6 @@ mapParent(":patra-tool", "patra-tool")
 // ==================== linqibin-commons ====================
 // 决策 E：嵌套 path 与物理目录一一对应
 includeAt(":linqibin-commons:linqibin-commons-storage", "linqibin-commons/linqibin-commons-storage")
-includeAt(":linqibin-commons:linqibin-spring-boot-starter-core", "linqibin-commons/linqibin-spring-boot-starter-core")
 includeAt(":linqibin-commons:linqibin-spring-boot-starter-http-interface", "linqibin-commons/linqibin-spring-boot-starter-http-interface")
 includeAt(":linqibin-commons:linqibin-spring-boot-starter-redisson", "linqibin-commons/linqibin-spring-boot-starter-redisson")
 mapParent(":linqibin-commons", "linqibin-commons")

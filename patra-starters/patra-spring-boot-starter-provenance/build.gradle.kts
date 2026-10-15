@@ -21,6 +21,7 @@ dependencies {
 
     // Spring Boot AutoConfiguration
     api("org.springframework.boot:spring-boot-autoconfigure")
+    api("org.springframework.boot:spring-boot-jackson")
 
     // Configuration metadata
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")

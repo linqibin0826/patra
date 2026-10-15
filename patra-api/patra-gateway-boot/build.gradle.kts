@@ -14,7 +14,6 @@ springBoot {
 
 dependencies {
     // Patra Starter：错误引擎、ProblemDetail 全局处理器、可观测性
-    implementation(project(":linqibin-commons:linqibin-spring-boot-starter-core"))
     implementation(project(":patra-tool:patra-tool-web"))
     implementation(project(":patra-tool:patra-tool-observability"))
 

@@ -17,7 +17,6 @@ dependencies {
     api(project(":patra-tool:patra-tool-http-client"))
     api(project(":linqibin-commons:linqibin-spring-boot-starter-http-interface"))
     api(project(":patra-api:patra-registry:patra-registry-api"))
-    api(project(":linqibin-commons:linqibin-spring-boot-starter-core"))
 
     // 对象存储：VenueCoverImageDownloadAdapter 依赖此 starter 上传封面图到 MinIO/S3
     api(project(":patra-tool:patra-tool-object-storage"))

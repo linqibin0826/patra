@@ -13,7 +13,7 @@ dependencies {
     api(project(":patra-api:patra-object-storage:patra-object-storage-domain"))
     api(project(":patra-api:patra-common:patra-common-enums"))
     api(project(":patra-tool:patra-tool-core"))
-    api(project(":linqibin-commons:linqibin-spring-boot-starter-core"))
+    api(project(":patra-tool:patra-tool-cqrs"))
 
     // Spring 依赖
     api("org.springframework:spring-tx")

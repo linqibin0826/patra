@@ -1,6 +1,0 @@
-dev.patra.tool.launch.autoconfigure.CoreAutoConfiguration
-dev.patra.tool.core.async.AsyncAutoConfiguration
-dev.patra.tool.web.error.config.CoreErrorAutoConfiguration
-dev.patra.tool.web.error.config.CircuitBreakerErrorAutoConfiguration
-dev.patra.tool.cqrs.CommandBusAutoConfiguration
-dev.patra.tool.cqrs.interceptor.CommandInterceptorAutoConfiguration

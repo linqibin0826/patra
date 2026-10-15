@@ -11,7 +11,6 @@ plugins {
 dependencies {
     api(project(":patra-api:patra-identity:patra-identity-domain"))
     api(project(":patra-tool:patra-tool-jpa"))
-    api(project(":linqibin-commons:linqibin-spring-boot-starter-core"))
 
     // 登录失败限制存在 Redis
     implementation("org.springframework.boot:spring-boot-starter-data-redis")

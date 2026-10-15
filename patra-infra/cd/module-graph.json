@@ -24,23 +24,6 @@
             ]
         },
         {
-            "dir": "linqibin-commons/linqibin-spring-boot-starter-core",
-            "project": ":linqibin-commons:linqibin-spring-boot-starter-core",
-            "unit": "foundation",
-            "impacts": [
-                "catalog",
-                "foundation",
-                "gateway",
-                "identity",
-                "ingest",
-                "object-storage",
-                "registry"
-            ],
-            "tasks": [
-                "check"
-            ]
-        },
-        {
             "dir": "linqibin-commons/linqibin-spring-boot-starter-http-interface",
             "project": ":linqibin-commons:linqibin-spring-boot-starter-http-interface",
             "unit": "foundation",
@@ -543,6 +526,21 @@
                 "ingest",
                 "object-storage",
                 "registry"
+            ],
+            "tasks": [
+                "check"
+            ]
+        },
+        {
+            "dir": "patra-tool/patra-tool-cqrs",
+            "project": ":patra-tool:patra-tool-cqrs",
+            "unit": "foundation",
+            "impacts": [
+                "catalog",
+                "foundation",
+                "identity",
+                "ingest",
+                "object-storage"
             ],
             "tasks": [
                 "check"

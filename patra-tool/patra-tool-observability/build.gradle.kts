@@ -15,7 +15,7 @@ plugins {
 dependencies {
     // Patra 内部依赖
     api(project(":patra-tool:patra-tool-core"))
-    api(project(":linqibin-commons:linqibin-spring-boot-starter-core"))
+    compileOnly(project(":patra-tool:patra-tool-web"))
 
     // Foundation for custom AutoConfiguration
     api("org.springframework.boot:spring-boot-autoconfigure")

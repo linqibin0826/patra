@@ -15,7 +15,6 @@ plugins {
 dependencies {
     // Patra 内部依赖
     api(project(":patra-tool:patra-tool-core"))
-    api(project(":linqibin-commons:linqibin-spring-boot-starter-core"))
     api(project(":linqibin-commons:linqibin-spring-boot-starter-redisson"))
 
     // Spring Batch 核心

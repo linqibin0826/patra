@@ -34,6 +34,7 @@ linqibin:
         context-prefix: IDN
 
 logging:
+  config: classpath:dev/patra/tool/observability/logback-patra.xml
   file:
     path: ${PATRA_LOG_DIR:logs}
 

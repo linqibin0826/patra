@@ -14,7 +14,6 @@ plugins {
 dependencies {
     // Patra 内部依赖
     api(project(":patra-tool:patra-tool-core"))
-    api(project(":linqibin-commons:linqibin-spring-boot-starter-core"))
 
     // Redisson 官方 Starter
     api(libs.redisson.spring.boot)
