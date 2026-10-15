@@ -179,7 +179,7 @@ umask 077 && mkdir -p ~/.patra/secrets
 printf 'REDIS_PASSWORD=%s\n' "$(openssl rand -hex 32)" > ~/.patra/secrets/redis.env
 
 K="$(mktemp -u ~/.patra/secrets/key.XXXXXX)"   # 任务要求私钥文件事先不存在
-./gradlew -q :patra-starters:patra-spring-boot-starter-security:generateIdentityAssertionKey -PkeyOut="$K" \
+./gradlew -q :patra-tool:patra-tool-security:generateIdentityAssertionKey -PkeyOut="$K" \
   | tail -1 > /tmp/patra-identity-assertion-public.jwks   # 前两行是提示，最后一行是公钥 JWK Set
 { printf 'PATRA_GATEWAY_IDENTITY_ASSERTION_PRIVATE_KEY='; cat "$K"; } > ~/.patra/secrets/gateway.env
 rm -f "$K"
