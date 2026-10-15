@@ -1,4 +1,4 @@
-package dev.patra.tool.objectstorage;
+package dev.patra.tool.objectstorage.provider;
 
 /// 支持的对象存储提供商。
 public enum ProviderType {

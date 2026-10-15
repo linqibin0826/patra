@@ -5,6 +5,7 @@ import dev.patra.tool.objectstorage.domain.ObjectInfo;
 import dev.patra.tool.objectstorage.domain.ObjectMetadata;
 import dev.patra.tool.objectstorage.domain.ObjectNotFoundException;
 import dev.patra.tool.objectstorage.domain.UploadResult;
+import dev.patra.tool.objectstorage.provider.ObjectStorageProvider;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.Optional;

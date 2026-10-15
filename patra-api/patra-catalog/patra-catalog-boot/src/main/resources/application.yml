@@ -45,6 +45,9 @@ spring:
 # Patra Configuration
 # ----------------------------------------------------------------------------
 patra:
+  object-storage:
+    # MeSH 描述符文件约 400MB，默认上限 100MB 不够
+    max-file-size: 5368709120  # 5GB
   http-client:
     proxy:
       tunnel:
@@ -76,12 +79,6 @@ patra:
       # 最新版本下载地址：https://ror.readme.io/docs/data-dump
       download-url: https://zenodo.org/records/17953395/files/v2.0-2025-12-16-ror-data.zip?download=1
     # Scopus API key 随环境变，在 Nacos 的 patra-catalog.yaml（引用 ${SCOPUS_API_KEY:}，值放 ~/.patra/secrets/catalog.env）
-
-linqibin:
-  starter:
-    object-storage:
-      # MeSH 描述符文件约 400MB，starter 默认上限 100MB 不够
-      max-file-size: 5368709120  # 5GB
 
 # ----------------------------------------------------------------------------
 # XXL-Job Distributed Task Scheduler

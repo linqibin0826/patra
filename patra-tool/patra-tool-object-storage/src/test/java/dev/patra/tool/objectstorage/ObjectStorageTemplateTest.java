@@ -15,6 +15,8 @@ import dev.patra.tool.objectstorage.domain.ObjectNotFoundException;
 import dev.patra.tool.objectstorage.domain.UploadFailedException;
 import dev.patra.tool.objectstorage.domain.UploadResult;
 import dev.patra.tool.objectstorage.metrics.ObjectStorageMetrics;
+import dev.patra.tool.objectstorage.provider.ObjectStorageProvider;
+import dev.patra.tool.objectstorage.provider.ProviderType;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;

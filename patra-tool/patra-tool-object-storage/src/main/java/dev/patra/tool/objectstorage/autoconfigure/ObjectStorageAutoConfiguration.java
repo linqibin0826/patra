@@ -1,7 +1,12 @@
-package dev.patra.tool.objectstorage;
+package dev.patra.tool.objectstorage.autoconfigure;
 
+import dev.patra.tool.objectstorage.ObjectStorageOperations;
+import dev.patra.tool.objectstorage.ObjectStorageTemplate;
+import dev.patra.tool.objectstorage.StorageLocationResolver;
 import dev.patra.tool.objectstorage.key.ObjectKeyGenerator;
 import dev.patra.tool.objectstorage.metrics.ObjectStorageMetrics;
+import dev.patra.tool.objectstorage.provider.MinioStorageProvider;
+import dev.patra.tool.objectstorage.provider.ObjectStorageProvider;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.minio.MinioClient;
 import java.io.IOException;
@@ -46,8 +51,13 @@ import org.springframework.retry.support.RetryTemplate;
 ///         secret-key: minioadmin
 /// ```
 @AutoConfiguration
+@ConditionalOnProperty(
+    prefix = "patra.object-storage",
+    name = "enabled",
+    havingValue = "true",
+    matchIfMissing = true)
 @EnableConfigurationProperties(ObjectStorageProperties.class)
-public class ObjectStorageAutoConfiguration {
+public final class ObjectStorageAutoConfiguration {
 
   /// 创建对象存储指标收集器,用于监控上传/下载操作的性能和成功率。
   ///
@@ -80,9 +90,9 @@ public class ObjectStorageAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean
   public RetryTemplate objectStorageRetryTemplate(ObjectStorageProperties properties) {
-    var retry = properties.getRetry();
-    int maxAttempts = Math.max(1, retry.getMaxAttempts());
-    long baseDelay = Math.max(100L, retry.getWaitDuration());
+    var retry = properties.retry();
+    int maxAttempts = Math.max(1, retry.maxAttempts());
+    long baseDelay = Math.max(100L, retry.waitDuration());
     long maxDelay = Math.max(baseDelay, Math.min(baseDelay * 8, 30_000L));
     return RetryTemplate.builder()
         .maxAttempts(maxAttempts)
@@ -107,17 +117,16 @@ public class ObjectStorageAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean(MinioClient.class)
   @ConditionalOnProperty(
-      prefix = "linqibin.starter.object-storage",
+      prefix = "patra.object-storage",
       name = "active-provider",
       havingValue = "minio",
       matchIfMissing = true)
   public MinioClient minioClient(ObjectStorageProperties properties) {
     var config = resolveConfig(properties, "minio");
     return MinioClient.builder()
-        .endpoint(require(config.getEndpoint(), "endpoint"))
+        .endpoint(require(config.endpoint(), "endpoint"))
         .credentials(
-            require(config.getAccessKey(), "access-key"),
-            require(config.getSecretKey(), "secret-key"))
+            require(config.accessKey(), "access-key"), require(config.secretKey(), "secret-key"))
         .build();
   }
 
@@ -133,7 +142,7 @@ public class ObjectStorageAutoConfiguration {
   @ConditionalOnBean(MinioClient.class)
   public ObjectStorageProvider minioObjectStorageProvider(
       MinioClient minioClient, ObjectStorageProperties properties) {
-    return new MinioStorageProvider(minioClient, properties.getMaxFileSize());
+    return new MinioStorageProvider(minioClient, properties.maxFileSize());
   }
 
   /// 创建对象存储模板 Bean,作为对象存储操作的统一入口。
@@ -177,9 +186,9 @@ public class ObjectStorageAutoConfiguration {
   /// @param providerKey 提供者键(minio 或 s3)
   /// @return 提供者配置
   /// @throws IllegalStateException 如果找不到指定提供者的配置
-  private ObjectStorageProperties.ProviderConfig resolveConfig(
+  private ObjectStorageProperties.Provider resolveConfig(
       ObjectStorageProperties properties, String providerKey) {
-    return properties.getProviders().entrySet().stream()
+    return properties.providers().entrySet().stream()
         .filter(entry -> entry.getKey() != null && entry.getKey().equalsIgnoreCase(providerKey))
         .map(Map.Entry::getValue)
         .findFirst()

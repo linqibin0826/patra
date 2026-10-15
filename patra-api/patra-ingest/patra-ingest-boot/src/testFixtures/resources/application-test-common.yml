@@ -44,6 +44,14 @@ xxl:
 
 # Patra Ingest 配置
 patra:
+  # 对象存储配置（测试环境使用虚拟配置）
+  object-storage:
+    active-provider: minio
+    providers:
+      minio:
+        endpoint: http://localhost:9000
+        access-key: minioadmin
+        secret-key: minioadmin
   ingest:
     exec:
       lease-ttl-seconds: 60
@@ -67,17 +75,6 @@ patra:
         task-ready: ${TOPIC_PREFIX:}INGEST_TASK
       # consumer-groups 在各自的 profile 中配置
     # listener 开关在各自的 profile 中配置
-linqibin:
-  starter:
-    # 对象存储配置（测试环境使用虚拟配置）
-    object-storage:
-      active-provider: minio
-      providers:
-        minio:
-          endpoint: http://localhost:9000
-          access-key: minioadmin
-          secret-key: minioadmin
-
 # Task 配置
 task:
   execution:

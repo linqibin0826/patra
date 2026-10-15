@@ -11,8 +11,8 @@ spring:
   autoconfigure:
     exclude:
       # 排除对象存储配置（E2E 测试不需要 MinIO）
-      - dev.patra.tool.objectstorage.ObjectStorageAutoConfiguration
-      - dev.patra.tool.objectstorage.S3StorageAutoConfiguration
+      - dev.patra.tool.objectstorage.autoconfigure.ObjectStorageAutoConfiguration
+      - dev.patra.tool.objectstorage.autoconfigure.ObjectStorageS3AutoConfiguration
   cloud:
     nacos:
       discovery:

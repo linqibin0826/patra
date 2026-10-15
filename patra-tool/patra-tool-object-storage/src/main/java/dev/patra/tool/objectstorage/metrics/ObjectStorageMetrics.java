@@ -1,6 +1,6 @@
 package dev.patra.tool.objectstorage.metrics;
 
-import dev.patra.tool.objectstorage.ProviderType;
+import dev.patra.tool.objectstorage.provider.ProviderType;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;

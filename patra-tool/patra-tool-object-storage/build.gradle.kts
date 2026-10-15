@@ -30,4 +30,6 @@ dependencies {
 
     // 测试依赖
     testImplementation(project(":patra-tool:patra-tool-test"))
+    // S3 契约测试要能看到 S3Client
+    testImplementation(libs.aws.sdk.s3)
 }

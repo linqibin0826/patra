@@ -7,7 +7,7 @@ import dev.patra.objectstorage.api.dto.RecordUploadResponse;
 import dev.patra.objectstorage.api.dto.UploadRecordRequest;
 import dev.patra.objectstorage.api.endpoint.StorageEndpoint;
 import dev.patra.tool.core.error.remote.RemoteCallException;
-import dev.patra.tool.objectstorage.ObjectStorageProperties;
+import dev.patra.tool.objectstorage.autoconfigure.ObjectStorageProperties;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -61,7 +61,7 @@ public class StorageMetadataAdapter implements StorageMetadataPort {
 
   /// 构建映射上下文，包含基础设施层特定的默认值。
   private MappingContext buildMappingContext() {
-    String providerType = objectStorageProperties.getActiveProvider();
+    String providerType = objectStorageProperties.activeProvider();
     String normalizedProvider =
         (providerType != null && !providerType.isBlank())
             ? providerType.toUpperCase(Locale.ROOT)

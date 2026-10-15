@@ -1,4 +1,4 @@
-package dev.patra.tool.objectstorage;
+package dev.patra.tool.objectstorage.provider;
 
 import dev.patra.tool.objectstorage.domain.DownloadFailedException;
 import dev.patra.tool.objectstorage.domain.DownloadResult;

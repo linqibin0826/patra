@@ -1,5 +1,7 @@
-package dev.patra.tool.objectstorage;
+package dev.patra.tool.objectstorage.autoconfigure;
 
+import dev.patra.tool.objectstorage.provider.ObjectStorageProvider;
+import dev.patra.tool.objectstorage.provider.S3StorageProvider;
 import java.net.URI;
 import java.util.Map;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -41,10 +43,17 @@ import software.amazon.awssdk.services.s3.S3ClientBuilder;
 ///         secret-key: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
 ///         endpoint: https://s3.amazonaws.com  # 可选,用于自定义端点
 /// ```
-@AutoConfiguration(after = ObjectStorageAutoConfiguration.class)
+/// 排在主自动配置之前：主配置里的 `objectStorageTemplate` 用 `@ConditionalOnBean(ObjectStorageProvider)`，
+/// S3 provider 必须先注册，否则 `active-provider=s3` 时没有 `ObjectStorageOperations`。
+@AutoConfiguration(before = ObjectStorageAutoConfiguration.class)
 @ConditionalOnClass(S3Client.class)
+@ConditionalOnProperty(
+    prefix = "patra.object-storage",
+    name = "enabled",
+    havingValue = "true",
+    matchIfMissing = true)
 @EnableConfigurationProperties(ObjectStorageProperties.class)
-public class S3StorageAutoConfiguration {
+public final class ObjectStorageS3AutoConfiguration {
 
   /// 创建 AWS S3 客户端 Bean。
   ///
@@ -61,21 +70,21 @@ public class S3StorageAutoConfiguration {
   @Bean(destroyMethod = "close")
   @ConditionalOnMissingBean(S3Client.class)
   @ConditionalOnProperty(
-      prefix = "linqibin.starter.object-storage",
+      prefix = "patra.object-storage",
       name = "active-provider",
       havingValue = "s3")
   public S3Client s3Client(ObjectStorageProperties properties) {
     var config = resolveConfig(properties, "s3");
     S3ClientBuilder builder =
         S3Client.builder()
-            .region(Region.of(require(config.getRegion(), "region")))
+            .region(Region.of(require(config.region(), "region")))
             .credentialsProvider(
                 StaticCredentialsProvider.create(
                     AwsBasicCredentials.create(
-                        require(config.getAccessKey(), "access-key"),
-                        require(config.getSecretKey(), "secret-key"))));
-    if (hasText(config.getEndpoint())) {
-      builder.endpointOverride(URI.create(config.getEndpoint()));
+                        require(config.accessKey(), "access-key"),
+                        require(config.secretKey(), "secret-key"))));
+    if (hasText(config.endpoint())) {
+      builder.endpointOverride(URI.create(config.endpoint()));
     }
     return builder.build();
   }
@@ -92,7 +101,7 @@ public class S3StorageAutoConfiguration {
   @ConditionalOnBean(S3Client.class)
   public ObjectStorageProvider s3ObjectStorageProvider(
       S3Client s3Client, ObjectStorageProperties properties) {
-    return new S3StorageProvider(s3Client, properties.getMaxFileSize());
+    return new S3StorageProvider(s3Client, properties.maxFileSize());
   }
 
   /// 解析指定提供者的配置。
@@ -101,9 +110,9 @@ public class S3StorageAutoConfiguration {
   /// @param providerKey 提供者键(minio 或 s3)
   /// @return 提供者配置
   /// @throws IllegalStateException 如果找不到指定提供者的配置
-  private ObjectStorageProperties.ProviderConfig resolveConfig(
+  private ObjectStorageProperties.Provider resolveConfig(
       ObjectStorageProperties properties, String providerKey) {
-    return properties.getProviders().entrySet().stream()
+    return properties.providers().entrySet().stream()
         .filter(entry -> entry.getKey() != null && entry.getKey().equalsIgnoreCase(providerKey))
         .map(Map.Entry::getValue)
         .findFirst()
