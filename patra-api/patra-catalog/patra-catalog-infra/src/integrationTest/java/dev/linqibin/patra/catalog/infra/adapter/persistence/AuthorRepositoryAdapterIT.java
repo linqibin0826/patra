@@ -9,6 +9,7 @@ import dev.linqibin.patra.catalog.infra.config.CatalogITPostgreSQLContainerIniti
 import dev.linqibin.patra.catalog.infra.persistence.dao.AuthorDao;
 import dev.linqibin.patra.catalog.infra.persistence.entity.AuthorEntity;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
+import dev.linqibin.starter.jpa.json.JsonColumnCodec;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -47,7 +48,12 @@ import org.springframework.test.context.ContextConfiguration;
 @DataJpaTest
 @ContextConfiguration(initializers = CatalogITPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({AuthorRepositoryAdapter.class, JpaAuditingConfig.class, JacksonAutoConfiguration.class})
+@Import({
+  AuthorRepositoryAdapter.class,
+  JpaAuditingConfig.class,
+  JacksonAutoConfiguration.class,
+  JsonColumnCodec.class
+})
 @ComponentScan(basePackages = "dev.linqibin.patra.catalog.infra.persistence.converter")
 @ActiveProfiles("test")
 @DisplayName("AuthorRepositoryAdapter 集成测试（JPA）")

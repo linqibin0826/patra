@@ -1,7 +1,5 @@
 package dev.linqibin.patra.ingest.infra.adapter.persistence.converter.mapper;
 
-import dev.linqibin.commons.json.JsonMapperHolder;
-import dev.linqibin.commons.json.JsonNodeMappings;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.ingest.domain.exception.InfrastructureException;
 import dev.linqibin.patra.ingest.domain.model.aggregate.PlanAggregate;
@@ -11,14 +9,15 @@ import dev.linqibin.patra.ingest.domain.model.vo.plan.PlanId;
 import dev.linqibin.patra.ingest.domain.model.vo.plan.WindowSpec;
 import dev.linqibin.patra.ingest.domain.model.vo.schedule.ScheduleInstanceId;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.PlanEntity;
-import java.util.Map;
+import dev.linqibin.starter.jpa.json.JsonColumnCodec;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
-import tools.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import tools.jackson.databind.JsonNode;
 
 /// 采集计划 JPA 实体转换器，负责领域对象与 JPA 实体转换。
 ///
@@ -28,7 +27,10 @@ import tools.jackson.databind.ObjectMapper;
 /// @author linqibin
 /// @since 0.1.0
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
-public interface PlanJpaMapper {
+public abstract class PlanJpaMapper {
+
+  /// JSON 列转换器，由容器注入。
+  @Autowired protected JsonColumnCodec codec;
 
   @Mapping(target = "id", source = "id", qualifiedByName = "planIdToLong")
   @Mapping(
@@ -37,16 +39,11 @@ public interface PlanJpaMapper {
       qualifiedByName = "scheduleInstanceIdToLong")
   @Mapping(
       target = "exprProtoSnapshot",
-      expression =
-          "java(dev.linqibin.commons.json.JsonNodeMappings.jsonStringToNode(aggregate.getExprProtoSnapshotJson()))")
+      expression = "java(codec.read(aggregate.getExprProtoSnapshotJson()))")
   @Mapping(
       target = "provenanceConfigSnapshot",
-      expression =
-          "java(dev.linqibin.commons.json.JsonNodeMappings.jsonStringToNode(aggregate.getProvenanceConfigSnapshotJson()))")
-  @Mapping(
-      target = "sliceParams",
-      expression =
-          "java(dev.linqibin.commons.json.JsonNodeMappings.jsonStringToNode(aggregate.getSliceParamsJson()))")
+      expression = "java(codec.read(aggregate.getProvenanceConfigSnapshotJson()))")
+  @Mapping(target = "sliceParams", expression = "java(codec.read(aggregate.getSliceParamsJson()))")
   @Mapping(target = "statusCode", source = "status", qualifiedByName = "planStatusToCode")
   @Mapping(target = "windowSpec", source = "windowSpec", qualifiedByName = "windowSpecToJson")
   // 审计字段由 JPA 管理
@@ -59,11 +56,11 @@ public interface PlanJpaMapper {
   @Mapping(target = "updatedByName", ignore = true)
   @Mapping(target = "ipAddress", ignore = true)
   @Mapping(target = "recordRemarks", ignore = true)
-  PlanEntity toEntity(PlanAggregate aggregate);
+  public abstract PlanEntity toEntity(PlanAggregate aggregate);
 
   /// 后处理钩子：为 TIME 策略填充反规范化时间戳字段。
   @AfterMapping
-  default void populateDenormalizedTimestamps(
+  public void populateDenormalizedTimestamps(
       PlanAggregate aggregate, @MappingTarget PlanEntity entity) {
     WindowSpec windowSpec = aggregate.getWindowSpec();
     if (windowSpec instanceof WindowSpec.Time timeWindow) {
@@ -75,11 +72,11 @@ public interface PlanJpaMapper {
     }
   }
 
-  default PlanAggregate toAggregate(PlanEntity entity) {
+  public PlanAggregate toAggregate(PlanEntity entity) {
     return toPlanAggregate(entity);
   }
 
-  static PlanAggregate toPlanAggregate(PlanEntity entity) {
+  public PlanAggregate toPlanAggregate(PlanEntity entity) {
     if (entity == null) {
       return null;
     }
@@ -93,61 +90,57 @@ public interface PlanJpaMapper {
         ProvenanceCode.parse(entity.getProvenanceCode()),
         entity.getOperationCode(),
         entity.getExprProtoHash(),
-        JsonNodeMappings.jsonNodeToString(entity.getExprProtoSnapshot()),
-        JsonNodeMappings.jsonNodeToString(entity.getProvenanceConfigSnapshot()),
+        codec.write(entity.getExprProtoSnapshot()),
+        codec.write(entity.getProvenanceConfigSnapshot()),
         entity.getProvenanceConfigHash(),
         windowSpec,
         entity.getSliceStrategyCode(),
-        JsonNodeMappings.jsonNodeToString(entity.getSliceParams()),
+        codec.write(entity.getSliceParams()),
         status,
         version);
   }
 
   @Named("planIdToLong")
-  static Long planIdToLong(PlanId id) {
+  public static Long planIdToLong(PlanId id) {
     return id != null ? id.value() : null;
   }
 
   @Named("scheduleInstanceIdToLong")
-  static Long scheduleInstanceIdToLong(ScheduleInstanceId id) {
+  public static Long scheduleInstanceIdToLong(ScheduleInstanceId id) {
     return id != null ? id.value() : null;
   }
 
   @Named("planStatusToCode")
-  static String planStatusToCode(PlanStatus status) {
+  public static String planStatusToCode(PlanStatus status) {
     return status == null ? null : status.getCode();
   }
 
-  static PlanStatus planStatusFromCode(String code) {
+  public static PlanStatus planStatusFromCode(String code) {
     return code == null ? PlanStatus.DRAFT : PlanStatus.fromCode(code);
   }
 
   @Named("windowSpecToJson")
-  static tools.jackson.databind.JsonNode windowSpecToJson(WindowSpec spec) {
+  public JsonNode windowSpecToJson(WindowSpec spec) {
     if (spec == null) {
       return null;
     }
-    ObjectMapper mapper = JsonMapperHolder.getObjectMapper();
-    return mapper.valueToTree(spec.toMap());
+    return codec.fromMap(spec.toMap());
   }
 
-  static WindowSpec jsonToWindowSpec(tools.jackson.databind.JsonNode json) {
+  public WindowSpec jsonToWindowSpec(JsonNode json) {
     if (json == null || json.isNull()) {
       return null;
     }
-    ObjectMapper mapper = JsonMapperHolder.getObjectMapper();
-    @SuppressWarnings("unchecked")
-    Map<String, Object> map = mapper.convertValue(json, Map.class);
-    return WindowSpec.fromMap(map);
+    return WindowSpec.fromMap(codec.toMap(json));
   }
 
   // ========== 枚举转换方法 ==========
 
-  default String map(ProvenanceCode code) {
+  public String map(ProvenanceCode code) {
     return code == null ? null : code.getCode();
   }
 
-  default ProvenanceCode mapProvenanceCode(String code) {
+  public ProvenanceCode mapProvenanceCode(String code) {
     if (code == null || code.isBlank()) {
       return null;
     }
@@ -158,11 +151,11 @@ public interface PlanJpaMapper {
     }
   }
 
-  default String map(OperationCode code) {
+  public String map(OperationCode code) {
     return code == null ? null : code.getCode();
   }
 
-  default OperationCode mapOperationCode(String code) {
+  public OperationCode mapOperationCode(String code) {
     if (code == null || code.isBlank()) {
       return null;
     }

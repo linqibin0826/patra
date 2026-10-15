@@ -1,6 +1,5 @@
 package dev.linqibin.patra.ingest.infra.adapter.persistence.converter.mapper;
 
-import dev.linqibin.commons.json.JsonMapperHolder;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.ingest.domain.exception.InfrastructureException;
 import dev.linqibin.patra.ingest.domain.model.entity.TaskRunBatch;
@@ -14,6 +13,7 @@ import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
 /// 任务执行批次 JPA 实体转换器，负责领域对象与 JPA 实体转换。
@@ -93,7 +93,7 @@ public interface TaskRunBatchJpaMapper {
     if (stats == null) {
       return null;
     }
-    ObjectNode node = JsonMapperHolder.getObjectMapper().createObjectNode();
+    ObjectNode node = JsonNodeFactory.instance.objectNode();
     node.put("recordCount", stats.recordCount());
     return node;
   }

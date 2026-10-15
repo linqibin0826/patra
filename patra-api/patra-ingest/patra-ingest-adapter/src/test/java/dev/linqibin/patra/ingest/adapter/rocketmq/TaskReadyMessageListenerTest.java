@@ -19,7 +19,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// TaskReadyMessageListener 单元测试。
 ///
@@ -38,7 +38,7 @@ class TaskReadyMessageListenerTest {
 
   @Mock private CommandBus commandBus;
 
-  @Mock private ObjectMapper objectMapper;
+  @Mock private JsonMapper objectMapper;
 
   @Captor private ArgumentCaptor<TaskReadyCommand> commandCaptor;
 
@@ -184,7 +184,7 @@ class TaskReadyMessageListenerTest {
       MessageExt message =
           createMessageExt("INGEST_TASK_READY", "TASK_READY", "key-888", payloadJson);
 
-      // Mock ObjectMapper 返回一个会在 validate() 时失败的 Payload
+      // Mock JsonMapper 返回一个会在 validate() 时失败的 Payload
       TaskReadyPayload invalidPayload = new TaskReadyPayload();
       invalidPayload.setTaskId(888L);
       invalidPayload.setIdempotentKey(null);

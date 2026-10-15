@@ -26,7 +26,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// 出版物发布编排器单元测试
 ///
@@ -37,7 +37,7 @@ import tools.jackson.databind.ObjectMapper;
 ///   - 测试元数据记录失败场景和重试委托
 ///   - 覆盖 StorageMetadataException 异常处理
 ///
-/// **注意**：Jackson 3 的 ObjectMapper 无法被 Mockito mock，因此使用真实实例。
+/// **注意**：JsonMapper 使用真实实例。
 ///
 @ExtendWith(MockitoExtension.class)
 @DisplayName("出版物发布编排器测试")
@@ -49,8 +49,8 @@ class PublicationPublisherTest {
 
   @Mock private TechnicalRetryPort technicalRetryPort;
 
-  /// Jackson 3 的 ObjectMapper 无法被 Mockito mock，使用真实实例
-  private final ObjectMapper objectMapper = new ObjectMapper();
+  /// 使用真实实例
+  private final JsonMapper objectMapper = JsonMapper.builder().build();
 
   private PublicationPublisher publisher;
 

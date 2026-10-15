@@ -33,6 +33,8 @@ import java.util.Locale;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 /// Plan 组装器实现类
 ///
@@ -76,8 +78,11 @@ public class PlanAssemblerImpl implements PlanAssembler {
 
   private final SlicePlannerRegistry slicePlannerRegistry;
 
-  public PlanAssemblerImpl(SlicePlannerRegistry slicePlannerRegistry) {
+  private final JsonMapper jsonMapper;
+
+  public PlanAssemblerImpl(SlicePlannerRegistry slicePlannerRegistry, JsonMapper jsonMapper) {
     this.slicePlannerRegistry = slicePlannerRegistry;
+    this.jsonMapper = jsonMapper;
   }
 
   /// Assembly entrypoint.
@@ -333,9 +338,8 @@ public class PlanAssemblerImpl implements PlanAssembler {
   /// Extracts window.from from windowSpecJson when present.
   private Instant extractWindowFrom(String windowSpecJson) {
     try {
-      tools.jackson.databind.ObjectMapper mapper = new tools.jackson.databind.ObjectMapper();
-      tools.jackson.databind.JsonNode root = mapper.readTree(windowSpecJson);
-      tools.jackson.databind.JsonNode window = root.get("window");
+      JsonNode root = jsonMapper.readTree(windowSpecJson);
+      JsonNode window = root.get("window");
       if (window != null && window.has("from")) {
         String fromStr = window.get("from").asText();
         return Instant.parse(fromStr);

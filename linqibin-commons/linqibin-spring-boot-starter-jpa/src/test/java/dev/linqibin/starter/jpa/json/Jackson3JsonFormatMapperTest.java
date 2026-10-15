@@ -10,6 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 
 /// {@link Jackson3JsonFormatMapper} 单元测试。
 ///
@@ -31,7 +32,8 @@ import tools.jackson.core.JacksonException;
 @DisplayName("Jackson3JsonFormatMapper JSON 格式映射器单元测试")
 class Jackson3JsonFormatMapperTest {
 
-  private final Jackson3JsonFormatMapper mapper = new Jackson3JsonFormatMapper();
+  private final Jackson3JsonFormatMapper mapper =
+      new Jackson3JsonFormatMapper(JsonMapper.builder().build());
 
   @Nested
   @DisplayName("String 透传测试")

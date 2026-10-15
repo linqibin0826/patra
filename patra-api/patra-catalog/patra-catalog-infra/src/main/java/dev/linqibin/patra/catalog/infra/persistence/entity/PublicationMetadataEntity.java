@@ -8,6 +8,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -116,10 +117,10 @@ public class PublicationMetadataEntity extends ValueObjectJpaEntity {
   /// 验证错误（JSON 数组）
   @JdbcTypeCode(SqlTypes.JSON)
   @Column(name = "validation_errors", columnDefinition = "JSON")
-  private String validationErrors;
+  private List<String> validationErrors;
 
   /// 处理注释（JSON 数组）
   @JdbcTypeCode(SqlTypes.JSON)
   @Column(name = "processing_notes", columnDefinition = "JSON")
-  private String processingNotes;
+  private List<String> processingNotes;
 }

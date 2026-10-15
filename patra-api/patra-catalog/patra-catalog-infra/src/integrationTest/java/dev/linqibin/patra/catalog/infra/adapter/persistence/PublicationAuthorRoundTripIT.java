@@ -15,6 +15,7 @@ import dev.linqibin.patra.catalog.domain.model.vo.venue.VenueInstanceId;
 import dev.linqibin.patra.catalog.infra.config.CatalogITPostgreSQLContainerInitializer;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
+import dev.linqibin.starter.jpa.json.JsonColumnCodec;
 import jakarta.persistence.EntityManager;
 import java.util.List;
 import java.util.Map;
@@ -47,7 +48,8 @@ import org.springframework.test.context.ContextConfiguration;
 @Import({
   PublicationRepositoryAdapter.class,
   JpaAuditingConfig.class,
-  JacksonAutoConfiguration.class
+  JacksonAutoConfiguration.class,
+  JsonColumnCodec.class
 })
 @ComponentScan(basePackages = "dev.linqibin.patra.catalog.infra.persistence.converter")
 @ActiveProfiles("test")

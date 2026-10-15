@@ -13,6 +13,7 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestClient;
+import tools.jackson.databind.json.JsonMapper;
 
 /// HttpInterfaceAutoConfiguration 自动配置测试
 ///
@@ -180,11 +181,10 @@ class HttpInterfaceAutoConfigurationTest {
   static class CustomBeansConfiguration {
 
     @Bean
-    public ProblemDetailErrorHandler customErrorHandler(
-        tools.jackson.databind.ObjectMapper objectMapper) {
+    public ProblemDetailErrorHandler customErrorHandler(JsonMapper jsonMapper) {
       var properties = new HttpInterfaceProperties.ErrorHandlingProperties();
       properties.setTolerant(true);
-      return new ProblemDetailErrorHandler(objectMapper, properties);
+      return new ProblemDetailErrorHandler(jsonMapper, properties);
     }
   }
 }

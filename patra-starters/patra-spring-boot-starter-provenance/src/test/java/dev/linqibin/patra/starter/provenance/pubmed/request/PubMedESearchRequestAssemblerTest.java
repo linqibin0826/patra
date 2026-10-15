@@ -6,7 +6,6 @@ import dev.linqibin.patra.starter.provenance.pubmed.model.request.ESearchRequest
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
@@ -17,12 +16,12 @@ import tools.jackson.databind.node.ObjectNode;
 class PubMedESearchRequestAssemblerTest {
 
   private PubMedESearchRequestAssembler assembler;
-  private ObjectMapper objectMapper;
+  private JsonMapper jsonMapper;
 
   @BeforeEach
   void setUp() {
     assembler = new PubMedESearchRequestAssembler();
-    objectMapper = JsonMapper.builder().build();
+    jsonMapper = JsonMapper.builder().build();
   }
 
   // ========== buildCount 测试 ==========
@@ -31,7 +30,7 @@ class PubMedESearchRequestAssemblerTest {
   @DisplayName("buildCount - 完整参数构建计数请求")
   void buildCount_shouldBuildCompleteCountRequest_withAllParams() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
     params.put("term", "cancer");
     params.put("datetype", "pdat");
     params.put("mindate", "2020");
@@ -76,7 +75,7 @@ class PubMedESearchRequestAssemblerTest {
   @DisplayName("buildCount - 仅term参数构建计数请求")
   void buildCount_shouldBuildCountRequest_withOnlyTerm() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
     params.put("term", "diabetes");
 
     // Act
@@ -100,7 +99,7 @@ class PubMedESearchRequestAssemblerTest {
   @DisplayName("buildCount - 无term但有日期过滤器")
   void buildCount_shouldBuildCountRequest_withDateFiltersButNoTerm() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
     params.put("datetype", "pdat");
     params.put("mindate", "2022/01/01");
     params.put("maxdate", "2022/12/31");
@@ -122,7 +121,7 @@ class PubMedESearchRequestAssemblerTest {
   @DisplayName("buildCount - 空JsonNode构建基本计数请求")
   void buildCount_shouldBuildBasicCountRequest_whenParamsIsEmpty() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
 
     // Act
     ESearchRequest result = assembler.buildCount(params);
@@ -152,7 +151,7 @@ class PubMedESearchRequestAssemblerTest {
   @DisplayName("buildCount - 自定义retmode")
   void buildCount_shouldUseCustomRetmode() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
     params.put("retmode", "xml");
 
     // Act
@@ -168,7 +167,7 @@ class PubMedESearchRequestAssemblerTest {
   @DisplayName("buildList - 完整参数构建列表请求")
   void buildList_shouldBuildCompleteListRequest_withAllParams() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
     params.put("term", "therapy");
     params.put("retstart", 0);
     params.put("retmax", 100);
@@ -216,7 +215,7 @@ class PubMedESearchRequestAssemblerTest {
   @DisplayName("buildList - 仅分页参数构建列表请求")
   void buildList_shouldBuildListRequest_withOnlyPagination() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
     params.put("retstart", 50);
     params.put("retmax", 20);
 
@@ -236,7 +235,7 @@ class PubMedESearchRequestAssemblerTest {
   @DisplayName("buildList - 空JsonNode构建基本列表请求")
   void buildList_shouldBuildBasicListRequest_whenParamsIsEmpty() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
 
     // Act
     ESearchRequest result = assembler.buildList(params);
@@ -265,7 +264,7 @@ class PubMedESearchRequestAssemblerTest {
   @DisplayName("buildList - 无term但有日期过滤器")
   void buildList_shouldBuildListRequest_withDateFiltersButNoTerm() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
     params.put("datetype", "mdat");
     params.put("mindate", "2023/06/01");
     params.put("maxdate", "2023/12/31");
@@ -287,7 +286,7 @@ class PubMedESearchRequestAssemblerTest {
   @DisplayName("extract - 整数参数正确解析")
   void extract_shouldParseIntegerParams_correctly() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
     params.put("retstart", 10);
     params.put("retmax", 50);
 
@@ -303,7 +302,7 @@ class PubMedESearchRequestAssemblerTest {
   @DisplayName("extract - 字符串形式的整数正确解析")
   void extract_shouldParseStringInteger_correctly() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
     params.put("retstart", "25");
     params.put("retmax", "75");
 
@@ -319,7 +318,7 @@ class PubMedESearchRequestAssemblerTest {
   @DisplayName("extract - 无效整数字符串返回null")
   void extract_shouldReturnNull_whenIntegerStringIsInvalid() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
     params.put("retstart", "invalid");
 
     // Act
@@ -333,10 +332,10 @@ class PubMedESearchRequestAssemblerTest {
   @DisplayName("extract - 支持WebEnv和webenv两种键")
   void extract_shouldSupportBothWebEnvCases() {
     // Arrange
-    ObjectNode params1 = objectMapper.createObjectNode();
+    ObjectNode params1 = jsonMapper.createObjectNode();
     params1.put("WebEnv", "ENV_PRIMARY");
 
-    ObjectNode params2 = objectMapper.createObjectNode();
+    ObjectNode params2 = jsonMapper.createObjectNode();
     params2.put("webenv", "ENV_FALLBACK");
 
     // Act
@@ -352,7 +351,7 @@ class PubMedESearchRequestAssemblerTest {
   @DisplayName("extract - WebEnv优先于webenv")
   void extract_shouldPreferWebEnv_overWebenv() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
     params.put("WebEnv", "ENV_PRIMARY");
     params.put("webenv", "ENV_FALLBACK");
 
@@ -367,10 +366,10 @@ class PubMedESearchRequestAssemblerTest {
   @DisplayName("extract - 支持usehistory和usehistory两种键")
   void extract_shouldSupportBothUsehistoryCases() {
     // Arrange
-    ObjectNode params1 = objectMapper.createObjectNode();
+    ObjectNode params1 = jsonMapper.createObjectNode();
     params1.put("usehistory", "y");
 
-    ObjectNode params2 = objectMapper.createObjectNode();
+    ObjectNode params2 = jsonMapper.createObjectNode();
     params2.put("usehistory", "n");
 
     // Act
@@ -386,10 +385,10 @@ class PubMedESearchRequestAssemblerTest {
   @DisplayName("extract - 支持query_key和queryKey两种键")
   void extract_shouldSupportBothQueryKeyCases() {
     // Arrange
-    ObjectNode params1 = objectMapper.createObjectNode();
+    ObjectNode params1 = jsonMapper.createObjectNode();
     params1.put("query_key", "key1");
 
-    ObjectNode params2 = objectMapper.createObjectNode();
+    ObjectNode params2 = jsonMapper.createObjectNode();
     params2.put("queryKey", "key2");
 
     // Act
@@ -405,10 +404,10 @@ class PubMedESearchRequestAssemblerTest {
   @DisplayName("extract - 支持api_key和apiKey两种键")
   void extract_shouldSupportBothApiKeyCases() {
     // Arrange
-    ObjectNode params1 = objectMapper.createObjectNode();
+    ObjectNode params1 = jsonMapper.createObjectNode();
     params1.put("api_key", "key_primary");
 
-    ObjectNode params2 = objectMapper.createObjectNode();
+    ObjectNode params2 = jsonMapper.createObjectNode();
     params2.put("apiKey", "key_fallback");
 
     // Act
@@ -424,7 +423,7 @@ class PubMedESearchRequestAssemblerTest {
   @DisplayName("extract - null值参数正确处理")
   void extract_shouldHandleNullValues() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
     params.put("term", "test");
     params.putNull("sort");
     params.putNull("retstart");
@@ -442,7 +441,7 @@ class PubMedESearchRequestAssemblerTest {
   @DisplayName("extract - 零值整数正确处理")
   void extract_shouldHandleZeroIntegerValues() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
     params.put("retstart", 0);
     params.put("retmax", 0);
 
@@ -458,7 +457,7 @@ class PubMedESearchRequestAssemblerTest {
   @DisplayName("extract - 负数整数正确处理")
   void extract_shouldHandleNegativeIntegerValues() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
     params.put("retstart", -10);
 
     // Act
@@ -472,7 +471,7 @@ class PubMedESearchRequestAssemblerTest {
   @DisplayName("extract - 所有字符串参数正确提取")
   void extract_shouldExtractAllStringParams() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
     params.put("term", "query text");
     params.put("retmode", "xml");
     params.put("rettype", "count");
@@ -506,7 +505,7 @@ class PubMedESearchRequestAssemblerTest {
   @DisplayName("extract - 包含特殊字符的查询正确解析")
   void extract_shouldParseQueryWithSpecialCharacters() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
     params.put("term", "cancer AND (therapy OR treatment) NOT \"old therapy\"");
 
     // Act
@@ -520,7 +519,7 @@ class PubMedESearchRequestAssemblerTest {
   @DisplayName("buildList - retmode默认为json")
   void buildList_shouldDefaultToJsonRetmode() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
     // 不设置retmode
 
     // Act
@@ -534,7 +533,7 @@ class PubMedESearchRequestAssemblerTest {
   @DisplayName("buildCount - retmode为null时默认为json")
   void buildCount_shouldDefaultToJsonRetmode_whenRepmodeIsNull() {
     // Arrange
-    ObjectNode params = objectMapper.createObjectNode();
+    ObjectNode params = jsonMapper.createObjectNode();
     params.putNull("retmode");
 
     // Act

@@ -25,7 +25,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// HTTP Interface 自动配置：注册错误处理器和 RestClient 自定义器
 ///
@@ -65,15 +65,15 @@ public class HttpInterfaceAutoConfiguration {
   ///
   /// 创建支持 RFC 7807 ProblemDetail 格式的错误处理器，配置容错模式。
   ///
-  /// @param objectMapper JSON 序列化器
+  /// @param jsonMapper 容器里的 `JsonMapper`
   /// @param properties HTTP Interface 配置属性
   /// @return 错误处理器实例
   @Bean
   @ConditionalOnMissingBean
   public ProblemDetailErrorHandler problemDetailErrorHandler(
-      ObjectMapper objectMapper, HttpInterfaceProperties properties) {
+      JsonMapper jsonMapper, HttpInterfaceProperties properties) {
     log.info("配置 ProblemDetailErrorHandler (容错模式: {})", properties.getErrorHandling().isTolerant());
-    return new ProblemDetailErrorHandler(objectMapper, properties.getErrorHandling());
+    return new ProblemDetailErrorHandler(jsonMapper, properties.getErrorHandling());
   }
 
   /// 注册 RestClient 自定义器

@@ -32,7 +32,6 @@ import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.support.RestClientAdapter;
 import org.springframework.web.service.invoker.HttpServiceProxyFactory;
-import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
 /// DictionaryResolverAdapter WireMock 集成测试。
@@ -68,8 +67,8 @@ class DictionaryResolverAdapterIT {
 
   @BeforeEach
   void setUp(WireMockRuntimeInfo wmRuntimeInfo) {
-    // 构建测试用的 ObjectMapper 和错误处理配置
-    ObjectMapper objectMapper = JsonMapper.builder().build();
+    // 构建测试用的 JsonMapper 和错误处理配置
+    JsonMapper objectMapper = JsonMapper.builder().build();
     HttpInterfaceProperties.ErrorHandlingProperties errorProps =
         new HttpInterfaceProperties.ErrorHandlingProperties();
     errorProps.setTolerant(true); // 启用容错模式

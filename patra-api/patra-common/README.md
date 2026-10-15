@@ -57,7 +57,7 @@ patra-common/                         (Gradle 聚合项目 - 无代码)
 - **domain**: `AggregateRoot`、`DomainEvent`、`ReadOnlyAggregate`
 - **error**: `DomainException`、`ApplicationException`、`ErrorCodeLike`、`ErrorTrait`、`RemoteCallException`、`RemoteErrorHelper`
 - **enums**: `ProvenanceCode`、`Priority`、`IngestDateType`、`RegistryConfigScope`
-- **json**: `JsonMapperHolder`、`JsonNormalizer`、`JsonNormalizerConfig`
+- **json**: 已迁至 `linqibin-commons-core` 的 `dev.linqibin.commons.json`（`JsonNormalizer`、`JsonNormalizerConfig`），不在 patra-common 内
 - **messaging**: `ChannelKey`
 - **util**: `HashUtils`
 
@@ -147,7 +147,7 @@ String key = ObjectKeyTemplate.generateDailyKey(
 ### 使用 JSON 标准化工具
 
 ```java
-import dev.linqibin.patra.common.json.JsonNormalizer;
+import dev.linqibin.commons.json.JsonNormalizer;  // 位于 linqibin-commons-core
 
 JsonNormalizerResult result = JsonNormalizer.normalizeDefault(payload);
 String canonicalJson = result.getCanonicalJson();

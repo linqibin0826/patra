@@ -13,7 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// 出版物发布器。
 ///
@@ -42,7 +42,7 @@ public class PublicationPublisher {
   private final PublicationStoragePort publicationStoragePort;
   private final StorageMetadataPort storageMetadataPort;
   private final TechnicalRetryPort technicalRetryPort;
-  private final ObjectMapper objectMapper;
+  private final JsonMapper objectMapper;
 
   /// 发布标准化出版物
   ///

@@ -1,6 +1,5 @@
 package dev.linqibin.patra.ingest.infra.adapter.persistence.converter.mapper;
 
-import dev.linqibin.commons.json.JsonNodeMappings;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.ingest.domain.exception.InfrastructureException;
 import dev.linqibin.patra.ingest.domain.model.aggregate.TaskAggregate;
@@ -14,10 +13,12 @@ import dev.linqibin.patra.ingest.domain.model.vo.shared.LeaseInfo;
 import dev.linqibin.patra.ingest.domain.model.vo.slice.PlanSliceId;
 import dev.linqibin.patra.ingest.domain.model.vo.task.TaskId;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.TaskEntity;
+import dev.linqibin.starter.jpa.json.JsonColumnCodec;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /// 任务 JPA 实体转换器，负责领域对象与 JPA 实体转换。
 ///
@@ -26,7 +27,10 @@ import org.mapstruct.ReportingPolicy;
 /// @author linqibin
 /// @since 0.1.0
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
-public interface TaskJpaMapper {
+public abstract class TaskJpaMapper {
+
+  /// JSON 列转换器，由容器注入。
+  @Autowired protected JsonColumnCodec codec;
 
   @Mapping(target = "id", source = "id", qualifiedByName = "taskIdToLong")
   @Mapping(
@@ -35,10 +39,7 @@ public interface TaskJpaMapper {
       qualifiedByName = "scheduleInstanceIdToLong")
   @Mapping(target = "planId", source = "planId", qualifiedByName = "planIdToLong")
   @Mapping(target = "sliceId", source = "sliceId", qualifiedByName = "planSliceIdToLong")
-  @Mapping(
-      target = "params",
-      expression =
-          "java(dev.linqibin.commons.json.JsonNodeMappings.jsonStringToNode(aggregate.getParamsJson()))")
+  @Mapping(target = "params", expression = "java(codec.read(aggregate.getParamsJson()))")
   @Mapping(target = "statusCode", source = "status", qualifiedByName = "taskStatusToCode")
   @Mapping(target = "leaseOwner", source = "leaseInfo.owner")
   @Mapping(target = "leasedUntil", source = "leaseInfo.leasedUntil")
@@ -56,19 +57,19 @@ public interface TaskJpaMapper {
   @Mapping(target = "updatedByName", ignore = true)
   @Mapping(target = "ipAddress", ignore = true)
   @Mapping(target = "recordRemarks", ignore = true)
-  TaskEntity toEntity(TaskAggregate aggregate);
+  public abstract TaskEntity toEntity(TaskAggregate aggregate);
 
-  default TaskAggregate toAggregate(TaskEntity entity) {
+  public TaskAggregate toAggregate(TaskEntity entity) {
     return toTaskAggregate(entity);
   }
 
-  static TaskAggregate toTaskAggregate(TaskEntity entity) {
+  public TaskAggregate toTaskAggregate(TaskEntity entity) {
     if (entity == null) {
       return null;
     }
     TaskStatus status = taskStatusFromCode(entity.getStatusCode());
     long version = entity.getVersion() == null ? 0L : entity.getVersion();
-    String paramsJson = JsonNodeMappings.jsonNodeToString(entity.getParams());
+    String paramsJson = codec.write(entity.getParams());
     LeaseInfo leaseInfo =
         LeaseInfo.snapshotOf(
             entity.getLeaseOwner(), entity.getLeasedUntil(), entity.getLeaseCount());
@@ -105,41 +106,41 @@ public interface TaskJpaMapper {
   }
 
   @Named("taskIdToLong")
-  static Long taskIdToLong(TaskId id) {
+  public static Long taskIdToLong(TaskId id) {
     return id != null ? id.value() : null;
   }
 
   @Named("scheduleInstanceIdToLong")
-  static Long scheduleInstanceIdToLong(ScheduleInstanceId id) {
+  public static Long scheduleInstanceIdToLong(ScheduleInstanceId id) {
     return id != null ? id.value() : null;
   }
 
   @Named("planIdToLong")
-  static Long planIdToLong(PlanId id) {
+  public static Long planIdToLong(PlanId id) {
     return id != null ? id.value() : null;
   }
 
   @Named("planSliceIdToLong")
-  static Long planSliceIdToLong(PlanSliceId id) {
+  public static Long planSliceIdToLong(PlanSliceId id) {
     return id != null ? id.value() : null;
   }
 
   @Named("taskStatusToCode")
-  static String taskStatusToCode(TaskStatus status) {
+  public static String taskStatusToCode(TaskStatus status) {
     return status == null ? null : status.getCode();
   }
 
-  static TaskStatus taskStatusFromCode(String code) {
+  public static TaskStatus taskStatusFromCode(String code) {
     return code == null ? TaskStatus.QUEUED : TaskStatus.fromCode(code);
   }
 
   // ========== 枚举转换方法 ==========
 
-  default String map(ProvenanceCode code) {
+  public String map(ProvenanceCode code) {
     return code == null ? null : code.getCode();
   }
 
-  default ProvenanceCode mapProvenanceCode(String code) {
+  public ProvenanceCode mapProvenanceCode(String code) {
     if (code == null || code.isBlank()) {
       return null;
     }
@@ -150,11 +151,11 @@ public interface TaskJpaMapper {
     }
   }
 
-  default String map(OperationCode code) {
+  public String map(OperationCode code) {
     return code == null ? null : code.getCode();
   }
 
-  default OperationCode mapOperationCode(String code) {
+  public OperationCode mapOperationCode(String code) {
     if (code == null || code.isBlank()) {
       return null;
     }

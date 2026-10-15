@@ -20,7 +20,7 @@ import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import tools.jackson.core.type.TypeReference;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// 数据来源调度任务抽象基类。
 ///
@@ -57,7 +57,7 @@ public abstract class AbstractProvenanceScheduleJob {
   @Autowired private CommandBus commandBus;
 
   /// JSON 对象映射器。
-  @Autowired private ObjectMapper objectMapper;
+  @Autowired private JsonMapper objectMapper;
 
   /// 返回此任务的来源代码(每个子类固定)。
   ///

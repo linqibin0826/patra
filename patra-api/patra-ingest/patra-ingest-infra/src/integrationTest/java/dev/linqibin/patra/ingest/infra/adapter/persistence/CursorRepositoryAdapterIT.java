@@ -10,6 +10,7 @@ import dev.linqibin.patra.ingest.infra.config.IngestITPostgreSQLContainerInitial
 import dev.linqibin.starter.jpa.autoconfig.HibernatePropertiesCustomizer;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
 import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
+import dev.linqibin.starter.jpa.json.JsonColumnCodec;
 import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,7 +47,8 @@ import org.springframework.test.context.ContextConfiguration;
   CursorRepositoryAdapter.class,
   JacksonAutoConfiguration.class,
   JpaAuditingConfig.class,
-  HibernatePropertiesCustomizer.class
+  HibernatePropertiesCustomizer.class,
+  JsonColumnCodec.class
 })
 @ComponentScan(
     basePackages = "dev.linqibin.patra.ingest.infra.adapter.persistence.converter.mapper")

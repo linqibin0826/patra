@@ -8,6 +8,7 @@ import dev.linqibin.patra.catalog.infra.config.CatalogITPostgreSQLContainerIniti
 import dev.linqibin.patra.catalog.infra.persistence.dao.AuthorDao;
 import dev.linqibin.patra.catalog.infra.persistence.entity.AuthorEntity;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
+import dev.linqibin.starter.jpa.json.JsonColumnCodec;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -25,7 +26,7 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// AuthorItemWriter 集成测试。
 ///
@@ -50,7 +51,8 @@ import tools.jackson.databind.ObjectMapper;
   AuthorItemWriter.class,
   AuthorRepositoryAdapter.class,
   JpaAuditingConfig.class,
-  JacksonAutoConfiguration.class
+  JacksonAutoConfiguration.class,
+  JsonColumnCodec.class
 })
 @ComponentScan(basePackages = "dev.linqibin.patra.catalog.infra.persistence.converter")
 @ActiveProfiles("test")
@@ -61,7 +63,7 @@ class AuthorItemWriterIT {
 
   @Autowired private AuthorDao authorDao;
 
-  @Autowired private ObjectMapper objectMapper;
+  @Autowired private JsonMapper objectMapper;
 
   private PubMedComputedAuthorParser parser;
 

@@ -28,7 +28,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
-import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
 /// GenericBatchExecutor 单元测试
@@ -59,7 +58,7 @@ class GenericBatchExecutorTest {
 
   private ExecutionContext context;
   private Batch batch;
-  private ObjectMapper objectMapper = JsonMapper.builder().build();
+  private JsonMapper objectMapper = JsonMapper.builder().build();
   private QuerySession querySession;
 
   @BeforeEach

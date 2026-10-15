@@ -19,9 +19,9 @@ import java.util.regex.Pattern;
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.StreamWriteFeature;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.ObjectWriter;
 import tools.jackson.databind.SerializationFeature;
+import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.NullNode;
 import tools.jackson.databind.node.ObjectNode;
@@ -42,10 +42,12 @@ import tools.jackson.databind.node.POJONode;
 ///       tools.jackson.core.JsonGenerator.Feature#WRITE_BIGDECIMAL_AS_PLAIN} 的 {@link
 ///       ObjectWriter} 编写规范 JSON。
 ///
-/// ### Spring 集成
+/// ### 内置固定 mapper
 ///
-/// 不依赖 Spring。使用 {@link JsonMapperHolder} 访问 {@link ObjectMapper}。在 Spring 应用中,启动器注册容器映射器;在
-/// Spring 之外,创建默认映射器。在业务代码中优先使用依赖注入;仅在不可用时使用静态工厂。
+/// 不依赖 Spring,也刻意不使用容器里的 {@link JsonMapper}:规范化输出用于签名、去重和哈希,必须与应用的
+/// `spring.jackson.*` 配置及类路径上的 Jackson 模块无关,否则配置一变哈希就漂移。因此静态工厂统一使用类内一个按
+/// Jackson 默认值构建、不自动发现模块的 {@link JsonMapper};{@link #withMapper(JsonMapper, JsonNormalizerConfig)}
+/// 仅供确有需要的调用方显式传入。
 ///
 /// ### 使用场景
 ///
@@ -55,12 +57,12 @@ import tools.jackson.databind.node.POJONode;
 ///
 /// ### 线程安全
 ///
-/// 不可变。{@link JsonMapperHolder} 确保安全的 {@link ObjectMapper} 发布。
+/// 不可变。内置 {@link JsonMapper} 为静态常量,构建后不再修改。
 ///
 /// ### 示例
 ///
 /// ```java
-/// // 使用全局 ObjectMapper 和默认配置快速规范化
+/// // 使用内置 mapper 和默认配置快速规范化
 /// JsonNormalizerResult r = JsonNormalizer.normalizeDefault(input);
 /// String canonical = r.getCanonicalJson();
 /// byte[] material = r.getHashMaterial();
@@ -79,11 +81,14 @@ public final class JsonNormalizer {
 
   private static final Pattern SPACE_PATTERN = Pattern.compile("\\s+");
 
-  private final ObjectMapper objectMapper;
+  /// 内置固定配置的 mapper,不随应用 Jackson 配置变化(原因见类说明)。
+  private static final JsonMapper DEFAULT_MAPPER = JsonMapper.builder().build();
+
+  private final JsonMapper objectMapper;
   private final JsonNormalizerConfig config;
   private final ObjectWriter canonicalWriter;
 
-  private JsonNormalizer(ObjectMapper objectMapper, JsonNormalizerConfig config) {
+  private JsonNormalizer(JsonMapper objectMapper, JsonNormalizerConfig config) {
     this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper");
     this.config = Objects.requireNonNull(config, "config");
     this.canonicalWriter =
@@ -93,28 +98,26 @@ public final class JsonNormalizer {
             .with(StreamWriteFeature.WRITE_BIGDECIMAL_AS_PLAIN);
   }
 
-  /// 使用由 {@link JsonMapperHolder} 提供的全局 {@link ObjectMapper}(从 Spring 桥接,如果可用)和默认的 {@link
-  /// JsonNormalizerConfig} 规范化给定输入。
+  /// 使用内置固定 {@link JsonMapper} 和默认的 {@link JsonNormalizerConfig} 规范化给定输入。
   public static JsonNormalizerResult normalizeDefault(Object input) {
     return usingDefault().normalize(input);
   }
 
-  /// 创建由全局 {@link ObjectMapper} 和默认 {@link JsonNormalizerConfig} 支持的可重用规范化器。当多个输入共享相同设置时非常理想。
+  /// 创建由内置固定 {@link JsonMapper} 和默认 {@link JsonNormalizerConfig} 支持的可重用规范化器。当多个输入共享相同设置时非常理想。
   public static JsonNormalizer usingDefault() {
-    return new JsonNormalizer(
-        JsonMapperHolder.getObjectMapper(), JsonNormalizerConfig.builder().build());
+    return new JsonNormalizer(DEFAULT_MAPPER, JsonNormalizerConfig.builder().build());
   }
 
-  /// 创建由全局 {@link ObjectMapper} 和提供的 {@link JsonNormalizerConfig} 支持的规范化器。使用 {@link
-  /// #withMapper(ObjectMapper, JsonNormalizerConfig)} 提供自定义映射器。
+  /// 创建由内置固定 {@link JsonMapper} 和提供的 {@link JsonNormalizerConfig} 支持的规范化器。使用 {@link
+  /// #withMapper(JsonMapper, JsonNormalizerConfig)} 提供自定义映射器。
   public static JsonNormalizer withConfig(JsonNormalizerConfig config) {
-    return new JsonNormalizer(JsonMapperHolder.getObjectMapper(), config);
+    return new JsonNormalizer(DEFAULT_MAPPER, config);
   }
 
-  /// 使用提供的 {@link ObjectMapper} 和配置构建规范化器。
+  /// 使用提供的 {@link JsonMapper} 和配置构建规范化器。
   ///
-  /// 优先将映射器注入到服务层并在那里组合此工具,而不是将其视为服务定位器。
-  public static JsonNormalizer withMapper(ObjectMapper objectMapper, JsonNormalizerConfig config) {
+  /// 传入的 mapper 决定 POJO 到 JSON 树的转换方式,与内置 mapper 配置不同时规范化输出(及其哈希)可能不同。
+  public static JsonNormalizer withMapper(JsonMapper objectMapper, JsonNormalizerConfig config) {
     return new JsonNormalizer(objectMapper, config);
   }
 

@@ -2,14 +2,14 @@
 
 ## 概述
 
-核心基础设施 Starter,为所有 Patra 微服务提供统一的 JSON/XML 序列化、错误处理框架、可观测性和弹性支持的自动配置。遵循"约定优于配置"原则,开箱即用提供合理的默认值。
+核心基础设施 Starter,为所有 Patra 微服务提供 CQRS 命令总线、错误处理框架、可观测性和弹性支持的自动配置。遵循"约定优于配置"原则,开箱即用提供合理的默认值。
 
 本 Starter 是所有业务模块的基石,提供统一的基础设施能力,确保跨服务的一致性和可观测性。
 
 ## 核心功能
 
 - **CommandBus 命令总线**: CQRS 命令分发基础设施,自动发现 Handler,支持拦截器链
-- **JSON/XML 序列化**: 基于 Jackson 的标准化序列化配置(日期格式、空值处理等)
+- **JSON/XML 序列化**: 不自建任何 mapper,`JsonMapper`/`XmlMapper` 均由 Spring Boot 的 Jackson 自动配置装配(`spring-boot-starter-json` 传递引入),业务代码注入 `JsonMapper` 使用;MVC 响应的 Long → String 由 `linqibin-spring-boot-starter-web` 的 `WebJsonAutoConfiguration` 负责
 - **错误处理框架**: 可扩展的错误解析管道,通过 ResolutionInterceptor 扩展点支持自定义拦截器
 - **统一时间源**: 提供全局 UTC Clock,支持可测试性和时间戳一致性
 - **异步线程池管理**: 命名线程池注册表,支持配置驱动创建和 Micrometer 指标集成
@@ -31,14 +31,6 @@ CQRS 命令总线自动配置:
 ### CoreAutoConfiguration
 提供核心基础设施 Bean:
 - `Clock`: 系统 UTC 时钟,用于统一的时间戳生成
-
-### JacksonAutoConfiguration
-配置 Spring 管理的 Jackson ObjectMapper:
-- `ObjectMapperProvider`: 桥接 Spring 管理的 ObjectMapper 到非 Spring 代码路径
-
-### XmlAutoConfiguration (可选)
-当 `jackson-dataformat-xml` 在 classpath 中时自动激活:
-- `XmlMapper`: 共享 Jackson 全局配置的 XML 映射器
 
 ### CoreErrorAutoConfiguration
 统一错误处理管道,包含以下 Bean:

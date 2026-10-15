@@ -15,7 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 import tools.jackson.core.type.TypeReference;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// 文献详情 CQRS 读适配器。
 ///
@@ -34,11 +34,11 @@ public class PublicationDetailReadAdapter implements PublicationDetailReadPort {
 
   private final PublicationDetailDao publicationDetailDao;
 
-  /// Spring 托管的 Jackson 3 ObjectMapper。
+  /// Spring 托管的 Jackson 3 JsonMapper。
   ///
   /// 写端 FormatMapper 是 starter-jpa 内的独立 Jackson 3 实例，二者配置不共享——
   /// 段落 wire format 由 `PublicationJpaMapperTest` 的 key 集合断言钉死。
-  private final ObjectMapper objectMapper;
+  private final JsonMapper objectMapper;
 
   @Override
   public Optional<PublicationDetailReadModel> findById(long id) {

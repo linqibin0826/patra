@@ -1,6 +1,5 @@
 package dev.linqibin.patra.ingest.infra.adapter.persistence.converter.mapper;
 
-import dev.linqibin.commons.json.JsonMapperHolder;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.ingest.domain.exception.InfrastructureException;
 import dev.linqibin.patra.ingest.domain.exception.TaskCheckpointException;
@@ -11,11 +10,14 @@ import dev.linqibin.patra.ingest.domain.model.vo.execution.RunContext;
 import dev.linqibin.patra.ingest.domain.model.vo.execution.RunStats;
 import dev.linqibin.patra.ingest.domain.model.vo.execution.TaskRunCheckpoint;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.TaskRunEntity;
+import dev.linqibin.starter.jpa.json.JsonColumnCodec;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
+import org.springframework.beans.factory.annotation.Autowired;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
 /// 任务执行记录 JPA 实体转换器，负责领域对象与 JPA 实体转换。
@@ -23,7 +25,10 @@ import tools.jackson.databind.node.ObjectNode;
 /// @author linqibin
 /// @since 0.1.0
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
-public interface TaskRunJpaMapper {
+public abstract class TaskRunJpaMapper {
+
+  /// JSON 列转换器，由容器注入。
+  @Autowired protected JsonColumnCodec codec;
 
   @Mapping(target = "statusCode", source = "status", qualifiedByName = "taskRunStatusToCode")
   @Mapping(target = "stats", source = "stats", qualifiedByName = "runStatsToJson")
@@ -33,13 +38,13 @@ public interface TaskRunJpaMapper {
   @Mapping(target = "version", ignore = true)
   @Mapping(target = "createdAt", ignore = true)
   @Mapping(target = "updatedAt", ignore = true)
-  TaskRunEntity toEntity(TaskRun source);
+  public abstract TaskRunEntity toEntity(TaskRun source);
 
-  default TaskRun toAggregate(TaskRunEntity entity) {
+  public TaskRun toAggregate(TaskRunEntity entity) {
     return toTaskRun(entity);
   }
 
-  static TaskRun toTaskRun(TaskRunEntity entity) {
+  public TaskRun toTaskRun(TaskRunEntity entity) {
     if (entity == null) {
       return null;
     }
@@ -65,20 +70,20 @@ public interface TaskRunJpaMapper {
   }
 
   @Named("taskRunStatusToCode")
-  static String taskRunStatusToCode(TaskRunStatus status) {
+  public static String taskRunStatusToCode(TaskRunStatus status) {
     return status == null ? null : status.getCode();
   }
 
-  static TaskRunStatus taskRunStatusFromCode(String code) {
+  public static TaskRunStatus taskRunStatusFromCode(String code) {
     return code == null ? TaskRunStatus.PENDING : TaskRunStatus.fromCode(code);
   }
 
   @Named("runStatsToJson")
-  static JsonNode runStatsToJson(RunStats stats) {
+  public static JsonNode runStatsToJson(RunStats stats) {
     if (stats == null) {
       return null;
     }
-    ObjectNode node = JsonMapperHolder.getObjectMapper().createObjectNode();
+    ObjectNode node = JsonNodeFactory.instance.objectNode();
     node.put("fetched", stats.fetched());
     node.put("upserted", stats.upserted());
     node.put("failed", stats.failed());
@@ -87,19 +92,19 @@ public interface TaskRunJpaMapper {
   }
 
   @Named("checkpointToJson")
-  static JsonNode checkpointToJson(TaskRunCheckpoint checkpoint) {
+  public JsonNode checkpointToJson(TaskRunCheckpoint checkpoint) {
     if (checkpoint == null || !checkpoint.isPresent()) {
       return null;
     }
     try {
-      return JsonMapperHolder.getObjectMapper().readTree(checkpoint.raw());
+      return codec.read(checkpoint.raw());
     } catch (Exception ex) {
       throw new TaskCheckpointException(
           TaskCheckpointException.Type.PARSE, "Failed to parse checkpoint JSON", ex);
     }
   }
 
-  static RunStats deriveStats(JsonNode statsNode) {
+  public static RunStats deriveStats(JsonNode statsNode) {
     if (statsNode == null || statsNode.isNull()) {
       return RunStats.empty();
     }
@@ -110,12 +115,12 @@ public interface TaskRunJpaMapper {
     return new RunStats(fetched, upserted, failed, pages);
   }
 
-  static TaskRunCheckpoint checkpointFromNode(JsonNode node) {
+  public TaskRunCheckpoint checkpointFromNode(JsonNode node) {
     if (node == null || node.isNull()) {
       return TaskRunCheckpoint.empty();
     }
     try {
-      String raw = JsonMapperHolder.getObjectMapper().writeValueAsString(node);
+      String raw = codec.write(node);
       return new TaskRunCheckpoint(raw);
     } catch (Exception ex) {
       throw new TaskCheckpointException(
@@ -125,11 +130,11 @@ public interface TaskRunJpaMapper {
 
   // ========== 枚举转换方法 ==========
 
-  default String map(ProvenanceCode code) {
+  public String map(ProvenanceCode code) {
     return code == null ? null : code.getCode();
   }
 
-  default ProvenanceCode mapProvenanceCode(String code) {
+  public ProvenanceCode mapProvenanceCode(String code) {
     if (code == null || code.isBlank()) {
       return null;
     }
@@ -140,11 +145,11 @@ public interface TaskRunJpaMapper {
     }
   }
 
-  default String map(OperationCode code) {
+  public String map(OperationCode code) {
     return code == null ? null : code.getCode();
   }
 
-  default OperationCode mapOperationCode(String code) {
+  public OperationCode mapOperationCode(String code) {
     if (code == null || code.isBlank()) {
       return null;
     }

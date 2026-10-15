@@ -8,6 +8,7 @@ import dev.linqibin.patra.catalog.infra.config.CatalogITPostgreSQLContainerIniti
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshQualifierDao;
 import dev.linqibin.patra.catalog.infra.persistence.entity.MeshQualifierEntity;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
+import dev.linqibin.starter.jpa.json.JsonColumnCodec;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -49,7 +50,8 @@ import org.springframework.test.context.ContextConfiguration;
 @Import({
   MeshQualifierRepositoryAdapter.class,
   JpaAuditingConfig.class,
-  JacksonAutoConfiguration.class
+  JacksonAutoConfiguration.class,
+  JsonColumnCodec.class
 })
 @ComponentScan(basePackages = "dev.linqibin.patra.catalog.infra.persistence.converter")
 @ActiveProfiles("test")

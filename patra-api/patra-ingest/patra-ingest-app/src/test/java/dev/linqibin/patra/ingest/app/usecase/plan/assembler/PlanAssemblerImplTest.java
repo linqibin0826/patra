@@ -26,9 +26,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tools.jackson.databind.json.JsonMapper;
 
 /// PlanAssemblerImpl 单元测试
 ///
@@ -39,7 +39,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class PlanAssemblerImplTest {
 
   @Mock private SlicePlannerRegistry slicePlannerRegistry;
-  @InjectMocks private PlanAssemblerImpl planAssembler;
+  private PlanAssemblerImpl planAssembler;
 
   private PlanTriggerNorm harvestTriggerNorm;
   private PlannerWindow plannerWindow;
@@ -47,6 +47,8 @@ class PlanAssemblerImplTest {
 
   @BeforeEach
   void setUp() {
+    planAssembler = new PlanAssemblerImpl(slicePlannerRegistry, JsonMapper.builder().build());
+
     harvestTriggerNorm =
         new PlanTriggerNorm(
             123L,
@@ -96,6 +98,33 @@ class PlanAssemblerImplTest {
     assertThat(result.plan()).isNotNull();
     assertThat(result.slices()).hasSize(1);
     assertThat(result.tasks()).hasSize(1);
+  }
+
+  @Test
+  @DisplayName("应该用注入的 JsonMapper 从 windowSpecJson 解析 Task 计划时间")
+  void shouldDeriveTaskScheduledAtFromWindowSpecJson() {
+    SlicePlanner mockPlanner = mock(SlicePlanner.class);
+    when(slicePlannerRegistry.get(SliceStrategy.DATE)).thenReturn(mockPlanner);
+    SlicePlan slicePlan =
+        new SlicePlan(
+            1,
+            "seed1",
+            "{\"window\":{\"from\":\"2024-01-01T08:00:00Z\",\"to\":\"2024-01-01T12:00:00Z\"}}",
+            Const.TRUE);
+    when(mockPlanner.slice(any())).thenReturn(List.of(slicePlan));
+
+    PlanAssemblyRequest request =
+        new PlanAssemblyRequest(
+            harvestTriggerNorm,
+            plannerWindow,
+            mock(ProvenanceConfigSnapshot.class),
+            planExpression);
+
+    PlanAssemblyResult result = planAssembler.assemble(request);
+
+    assertThat(result.tasks()).hasSize(1);
+    assertThat(result.tasks().get(0).getScheduledAt())
+        .isEqualTo(Instant.parse("2024-01-01T08:00:00Z"));
   }
 
   @Test

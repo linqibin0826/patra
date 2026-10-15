@@ -19,6 +19,7 @@ import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.jdbc.support.JdbcTransactionManager;
 import org.springframework.transaction.PlatformTransactionManager;
+import tools.jackson.databind.json.JsonMapper;
 
 /// Spring Batch 自动配置。
 ///
@@ -140,9 +141,11 @@ public class BatchAutoConfiguration extends JdbcDefaultBatchConfiguration {
   ///
   /// @param jobOperator Job 启动和运维操作接口
   /// @param jobRepository Job 元数据仓库（同时提供 JobExplorer 功能）
+  /// @param jsonMapper 容器里的 `JsonMapper`，用于把强类型参数转成 Map
   /// @return JobOperatorHelper 实例
   @Bean
-  public JobOperatorHelper jobOperatorHelper(JobOperator jobOperator, JobRepository jobRepository) {
-    return new JobOperatorHelper(jobOperator, jobRepository);
+  public JobOperatorHelper jobOperatorHelper(
+      JobOperator jobOperator, JobRepository jobRepository, JsonMapper jsonMapper) {
+    return new JobOperatorHelper(jobOperator, jobRepository, jsonMapper);
   }
 }

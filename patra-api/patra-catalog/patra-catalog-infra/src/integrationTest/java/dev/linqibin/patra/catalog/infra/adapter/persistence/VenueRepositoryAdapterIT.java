@@ -17,6 +17,7 @@ import dev.linqibin.patra.catalog.infra.persistence.dao.VenueDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.VenueIdentifierDao;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
+import dev.linqibin.starter.jpa.json.JsonColumnCodec;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -50,7 +51,12 @@ import org.springframework.test.context.ContextConfiguration;
 @DataJpaTest
 @ContextConfiguration(initializers = CatalogITPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({VenueRepositoryAdapter.class, JpaAuditingConfig.class, JacksonAutoConfiguration.class})
+@Import({
+  VenueRepositoryAdapter.class,
+  JpaAuditingConfig.class,
+  JacksonAutoConfiguration.class,
+  JsonColumnCodec.class
+})
 @ComponentScan(basePackages = "dev.linqibin.patra.catalog.infra.persistence.converter")
 @ActiveProfiles("test")
 @DisplayName("VenueRepositoryAdapter 集成测试（JPA）")

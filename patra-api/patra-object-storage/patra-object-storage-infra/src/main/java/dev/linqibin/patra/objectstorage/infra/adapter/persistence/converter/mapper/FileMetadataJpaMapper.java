@@ -1,6 +1,5 @@
 package dev.linqibin.patra.objectstorage.infra.adapter.persistence.converter.mapper;
 
-import dev.linqibin.commons.json.JsonMapperHolder;
 import dev.linqibin.patra.objectstorage.domain.model.aggregate.FileMetadata;
 import dev.linqibin.patra.objectstorage.domain.model.enums.FileStatus;
 import dev.linqibin.patra.objectstorage.domain.model.enums.StorageProvider;
@@ -9,13 +8,14 @@ import dev.linqibin.patra.objectstorage.domain.model.vo.FileChecksum;
 import dev.linqibin.patra.objectstorage.domain.model.vo.FileSize;
 import dev.linqibin.patra.objectstorage.domain.model.vo.StorageKey;
 import dev.linqibin.patra.objectstorage.infra.adapter.persistence.entity.FileMetadataEntity;
+import dev.linqibin.starter.jpa.json.JsonColumnCodec;
 import java.util.Locale;
 import java.util.Map;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import tools.jackson.core.type.TypeReference;
+import org.springframework.beans.factory.annotation.Autowired;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.JsonNodeFactory;
 
 /// 文件元数据 JPA 转换器。
 ///
@@ -28,10 +28,9 @@ import tools.jackson.databind.ObjectMapper;
 /// - 领域枚举转换为 Entity 的字符串字段
 /// - Map 类型的关联数据序列化为 JsonNode 以适配 JPA 的 JSON 类型处理
 @Mapper(componentModel = "spring")
-public interface FileMetadataJpaMapper {
+public abstract class FileMetadataJpaMapper {
 
-  ObjectMapper OBJECT_MAPPER = JsonMapperHolder.getObjectMapper();
-  TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
+  @Autowired protected JsonColumnCodec codec;
 
   /// 将领域聚合根映射到其持久化表示。
   ///
@@ -64,7 +63,7 @@ public interface FileMetadataJpaMapper {
   @Mapping(target = "updatedByName", ignore = true)
   @Mapping(target = "recordRemarks", ignore = true)
   @Mapping(target = "ipAddress", ignore = true)
-  FileMetadataEntity toEntity(FileMetadata aggregate);
+  public abstract FileMetadataEntity toEntity(FileMetadata aggregate);
 
   /// 将 JPA 实体映射回领域聚合根。
   ///
@@ -73,7 +72,7 @@ public interface FileMetadataJpaMapper {
   ///
   /// @param entity JPA 实体
   /// @return 领域聚合根
-  default FileMetadata toAggregate(FileMetadataEntity entity) {
+  public FileMetadata toAggregate(FileMetadataEntity entity) {
     if (entity == null) {
       return null;
     }
@@ -115,12 +114,14 @@ public interface FileMetadataJpaMapper {
   /// 将关联元数据从 Map 形式序列化为 JSON。
   ///
   /// 用于将领域模型中的 Map 类型关联数据转换为 JsonNode，
-  /// 适配 JPA 的 JSON 字段持久化。
+  /// 适配 JPA 的 JSON 字段持久化。`null` 或空 Map 都得到空对象 `{}`。
   ///
   /// @param source 源 Map 对象
   /// @return JSON 节点表示
-  default JsonNode mapCorrelationData(Map<String, Object> source) {
-    return OBJECT_MAPPER.valueToTree(source == null ? Map.of() : source);
+  public JsonNode mapCorrelationData(Map<String, Object> source) {
+    return source == null || source.isEmpty()
+        ? JsonNodeFactory.instance.objectNode()
+        : codec.fromMap(source);
   }
 
   /// 将 JSON 节点转换回 Map 形式。
@@ -130,9 +131,6 @@ public interface FileMetadataJpaMapper {
   /// @param node JSON 节点
   /// @return Map 表示
   private Map<String, Object> toCorrelationMap(JsonNode node) {
-    if (node == null || node.isNull() || node.isMissingNode()) {
-      return Map.of();
-    }
-    return OBJECT_MAPPER.convertValue(node, MAP_TYPE);
+    return codec.toMap(node);
   }
 }

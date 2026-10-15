@@ -34,13 +34,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration;
+import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
 /// ExprRepositoryAdapter 集成测试。
@@ -68,7 +68,7 @@ import tools.jackson.databind.json.JsonMapper;
 @DataJpaTest
 @ContextConfiguration(initializers = RegistryITPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@ImportAutoConfiguration(FlywayAutoConfiguration.class)
+@ImportAutoConfiguration({FlywayAutoConfiguration.class, JacksonAutoConfiguration.class})
 @Import({ExprRepositoryAdapter.class, JpaAuditingConfig.class, HibernatePropertiesCustomizer.class})
 @ComponentScan(
     basePackages = "dev.linqibin.patra.registry.infra.adapter.persistence.converter.mapper")
@@ -89,7 +89,7 @@ class ExprRepositoryAdapterIT {
   private static final String TEST_ENDPOINT_NAME = "ESEARCH";
   private static final Instant TEST_TIMESTAMP = Instant.parse("2025-01-15T00:00:00Z");
   private static final Instant EFFECTIVE_FROM = Instant.parse("2025-01-01T00:00:00Z");
-  private static final ObjectMapper OBJECT_MAPPER = JsonMapper.builder().build();
+  private static final JsonMapper OBJECT_MAPPER = JsonMapper.builder().build();
 
   private Long testProvenanceId;
 

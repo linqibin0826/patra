@@ -19,6 +19,7 @@ import dev.linqibin.patra.catalog.infra.persistence.dao.MeshScrIndexingInfoDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshScrPharmacologicalActionDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshScrSourceDao;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
+import dev.linqibin.starter.jpa.json.JsonColumnCodec;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -50,7 +51,12 @@ import org.springframework.test.context.ContextConfiguration;
 @DataJpaTest
 @ContextConfiguration(initializers = CatalogITPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({MeshScrRepositoryAdapter.class, JpaAuditingConfig.class, JacksonAutoConfiguration.class})
+@Import({
+  MeshScrRepositoryAdapter.class,
+  JpaAuditingConfig.class,
+  JacksonAutoConfiguration.class,
+  JsonColumnCodec.class
+})
 @ComponentScan(basePackages = "dev.linqibin.patra.catalog.infra.persistence.converter")
 @ActiveProfiles("test")
 @DisplayName("MeshScrRepositoryAdapter 集成测试（JPA）")

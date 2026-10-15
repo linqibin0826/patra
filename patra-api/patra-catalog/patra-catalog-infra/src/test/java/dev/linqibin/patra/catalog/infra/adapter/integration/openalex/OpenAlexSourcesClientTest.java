@@ -10,7 +10,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
 /// OpenAlexSourcesClient 单元测试。
@@ -28,7 +27,7 @@ import tools.jackson.databind.json.JsonMapper;
 @DisplayName("OpenAlexSourcesClient 单元测试")
 class OpenAlexSourcesClientTest {
 
-  private final ObjectMapper objectMapper = JsonMapper.builder().build();
+  private final JsonMapper objectMapper = JsonMapper.builder().build();
   private OpenAlexSourcesClient client;
 
   @BeforeEach

@@ -19,7 +19,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import tools.jackson.core.JacksonException;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// 将注册表 DTO 转换为启动器的不可变 {@link ProvenanceSnapshot} 模型。
 ///
@@ -28,13 +28,13 @@ import tools.jackson.databind.ObjectMapper;
 @SuppressWarnings("unused")
 public class SnapshotAssembler {
 
-  private final ObjectMapper objectMapper;
+  private final JsonMapper jsonMapper;
 
   /// 构造快照组装器。
   ///
-  /// @param objectMapper JSON 对象映射器（必需，用于解析 JSON 字段）
-  public SnapshotAssembler(ObjectMapper objectMapper) {
-    this.objectMapper = objectMapper;
+  /// @param jsonMapper 容器里的 `JsonMapper`（必需，用于解析 JSON 字段）
+  public SnapshotAssembler(JsonMapper jsonMapper) {
+    this.jsonMapper = jsonMapper;
   }
 
   /// 组装 Provenance 快照。
@@ -195,7 +195,7 @@ public class SnapshotAssembler {
     }
     try {
       @SuppressWarnings("unchecked")
-      Map<String, String> map = objectMapper.readValue(paramsJson, Map.class);
+      Map<String, String> map = jsonMapper.readValue(paramsJson, Map.class);
       return Map.copyOf(map);
     } catch (JacksonException e) {
       throw new IllegalStateException("解析渲染规则参数失败", e);
@@ -212,7 +212,7 @@ public class SnapshotAssembler {
     }
     try {
       @SuppressWarnings("unchecked")
-      List<String> list = objectMapper.readValue(json, List.class);
+      List<String> list = jsonMapper.readValue(json, List.class);
       return new HashSet<>(list);
     } catch (JacksonException e) {
       throw new IllegalStateException("解析 JSON 数组失败: " + json, e);

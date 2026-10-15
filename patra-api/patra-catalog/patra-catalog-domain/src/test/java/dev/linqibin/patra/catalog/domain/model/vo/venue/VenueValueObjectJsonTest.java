@@ -9,7 +9,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
 /// Venue 值对象 JSON 序列化/反序列化兼容性测试。
@@ -19,7 +18,7 @@ import tools.jackson.databind.json.JsonMapper;
 @DisplayName("Venue 值对象 JSON 兼容性")
 class VenueValueObjectJsonTest {
 
-  private final ObjectMapper objectMapper = JsonMapper.builder().build();
+  private final JsonMapper objectMapper = JsonMapper.builder().build();
 
   @Nested
   @DisplayName("OpenAccessInfo")

@@ -15,7 +15,6 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.ObjectWriter;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.JsonNodeFactory;
@@ -37,16 +36,9 @@ import tools.jackson.databind.node.ObjectNode;
 /// @author linqibin
 /// @since 0.1.0
 public final class ExprCanonicalizer {
-  private static final ObjectMapper OBJECT_MAPPER;
-  private static final JsonNodeFactory NODE_FACTORY;
-  private static final ObjectWriter CANONICAL_WRITER;
+  private static final JsonNodeFactory NODE_FACTORY = JsonNodeFactory.instance;
+  private static final ObjectWriter CANONICAL_WRITER = ExprJsonCodec.writer();
   private static final Pattern SPACE_PATTERN = Pattern.compile("\\s+");
-
-  static {
-    OBJECT_MAPPER = ExprJsonCodec.mapper();
-    NODE_FACTORY = OBJECT_MAPPER.getNodeFactory();
-    CANONICAL_WRITER = OBJECT_MAPPER.writer();
-  }
 
   /// 私有构造函数,防止实例化工具类。
   private ExprCanonicalizer() {}
@@ -59,7 +51,7 @@ public final class ExprCanonicalizer {
   public static ExprCanonicalSnapshot canonicalize(Expr expr) {
     Objects.requireNonNull(expr, "expr must not be null");
     try {
-      JsonNode raw = OBJECT_MAPPER.readTree(Exprs.toJson(expr));
+      JsonNode raw = ExprJsonCodec.readTree(Exprs.toJson(expr));
       JsonNode canonical = canonicalizeNode(raw);
       String canonicalJson = CANONICAL_WRITER.writeValueAsString(canonical);
       String hash = HashUtils.sha256Hex(canonicalJson.getBytes(StandardCharsets.UTF_8));

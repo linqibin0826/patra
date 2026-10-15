@@ -47,6 +47,7 @@ import dev.linqibin.patra.catalog.infra.persistence.dao.PublicationSupplMeshDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.PublicationTypeDao;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
+import dev.linqibin.starter.jpa.json.JsonColumnCodec;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -84,7 +85,8 @@ import org.springframework.test.context.ContextConfiguration;
 @Import({
   PublicationRepositoryAdapter.class,
   JpaAuditingConfig.class,
-  JacksonAutoConfiguration.class
+  JacksonAutoConfiguration.class,
+  JsonColumnCodec.class
 })
 @ComponentScan(basePackages = "dev.linqibin.patra.catalog.infra.persistence.converter")
 @ActiveProfiles("test")

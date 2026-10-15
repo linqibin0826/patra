@@ -2,6 +2,7 @@ package dev.linqibin.starter.jpa.autoconfig;
 
 import dev.linqibin.commons.error.codes.HttpStdErrors;
 import dev.linqibin.starter.jpa.error.contributor.JpaErrorMappingContributor;
+import dev.linqibin.starter.jpa.json.JsonColumnCodec;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -9,6 +10,7 @@ import org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfigur
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.jpa.repository.JpaRepository;
+import tools.jackson.databind.json.JsonMapper;
 
 /// JPA 自动配置类。
 ///
@@ -38,5 +40,17 @@ public class JpaAutoConfiguration {
   @ConditionalOnMissingBean
   public JpaErrorMappingContributor jpaErrorMappingContributor(HttpStdErrors.Group http) {
     return new JpaErrorMappingContributor(http);
+  }
+
+  /// 注册 JSON 列转换器，供 JPA 映射器注入。
+  ///
+  /// `@DataJpaTest` 切片不加载本配置，需要它的切片测试显式 `@Import(JsonColumnCodec.class)`。
+  ///
+  /// @param jsonMapper 容器里的 `JsonMapper`
+  /// @return JSON 列转换器
+  @Bean
+  @ConditionalOnMissingBean
+  public JsonColumnCodec jsonColumnCodec(JsonMapper jsonMapper) {
+    return new JsonColumnCodec(jsonMapper);
   }
 }
