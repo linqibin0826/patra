@@ -20,7 +20,7 @@ paths: patra-*/*-infra/**/src/integrationTest/**/*IT.java, patra-*/*-adapter/**/
 ## 注意事项
 
 1. 使用 `@MockitoBean` 进行 Mock 注入（`@MockBean` 已在 Spring Boot 4.0 中移除）
-2. 统一使用 `linqibin-spring-boot-starter-test` 提供的测试自动配置
+2. 统一使用 `patra-tool-test` 提供的测试自动配置
 3. 使用 TestContainers 模拟真实中间件，避免使用内存数据库
 4. `@DataJpaTest` 中使用 `TestEntityManager` 或 `JpaRepository` 进行数据准备
 
@@ -36,20 +36,14 @@ paths: patra-*/*-infra/**/src/integrationTest/**/*IT.java, patra-*/*-adapter/**/
 // 例：catalog-adapter 的 CatalogAdapterITWebMvcConfig
 @SpringBootConfiguration
 @EnableAutoConfiguration
-@ImportAutoConfiguration({
-    CoreErrorAutoConfiguration.class,
-    WebErrorAutoConfiguration.class,
-    WebJsonAutoConfiguration.class
-})
 public class CatalogAdapterITWebMvcConfig {
     // 空配置类，提供 @SpringBootConfiguration 标记
 }
 ```
 
-> **重要**: 必须使用 `@ImportAutoConfiguration` 显式导入以下配置，
-> 因为 `@WebMvcTest` 只加载 MVC 相关的自动配置切片：
-> - **错误处理配置**：不会自动加载全局异常处理器
-> - **`WebJsonAutoConfiguration`**（starter-web）：MVC 响应里 Long → String（防止前端 JS 精度丢失）；容器 `JsonMapper` 本身不做这项转换，切片里不导入它响应就会输出数字
+> `patra-tool-web` 已把错误处理与 Long → String 登记进 `@WebMvcTest` 切片
+> （`META-INF/spring/org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureWebMvc.imports`），
+> 切片根只需 `@SpringBootConfiguration` + `@EnableAutoConfiguration`，不要再手写 `@ImportAutoConfiguration`。
 
 ### 测试类注解
 

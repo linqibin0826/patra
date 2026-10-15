@@ -42,4 +42,4 @@ adapter/rest/{entity}/
 
 ## Starter 依赖
 
-- Web 层：`starter-web`
+- Web 层：`patra-tool-web`

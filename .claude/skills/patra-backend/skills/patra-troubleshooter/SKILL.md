@@ -27,22 +27,22 @@ description: |
 从用户提供的堆栈中提取：
 - **异常类型**：`NullPointerException`、`IllegalStateException`、自定义 `DomainException` 等
 - **根因位置**：`Caused by` 链中最底层的异常
-- **业务代码位置**：`dev.linqibin.*` 包下的调用栈行号
+- **业务代码位置**：`dev.patra.*` 包下的调用栈行号
 
 ### 2. 提取链路信息
 
 从日志中提取 `[traceId/spanId]`，用于跨服务追踪：
 ```bash
-grep "traceId值" /Users/linqibin/Desktop/Patra/patra-api/logs/*.log
+grep "traceId值" ~/Projects/Products/patra/patra-api/*/*-boot/logs/*.log
 ```
 
 ### 3. 查看应用日志
 
-日志目录：`/Users/linqibin/Desktop/Patra/patra-api/logs/`
+日志目录：启动工作目录下的 `logs/`（IDEA / bootRun 即 boot 模块目录，`PATRA_LOG_DIR` 可改），例如 `~/Projects/Products/patra/patra-api/patra-catalog/patra-catalog-boot/logs/`
 
 **时间范围过滤**（使用 Read 工具或 grep）：
 ```bash
-grep "2025-12-18 11:30" /Users/linqibin/Desktop/Patra/patra-api/logs/patra-catalog.log
+grep "2025-12-18 11:30" ~/Projects/Products/patra/patra-api/patra-catalog/patra-catalog-boot/logs/patra-catalog.log
 ```
 
 ### 4. 定位源码
@@ -63,10 +63,10 @@ grep "2025-12-18 11:30" /Users/linqibin/Desktop/Patra/patra-api/logs/patra-catal
 
 | 场景 | 操作 | 配置位置 |
 |------|------|----------|
-| 排查 dev.linqibin 问题 | 默认 DEBUG 已开启 | - |
-| 排查 Spring 问题 | 临时开启 `org.springframework` DEBUG | logback-spring.xml |
-| 排查 JPA/Hibernate 问题 | 临时开启 `org.hibernate` DEBUG | logback-spring.xml |
-| 排查 HTTP Interface/RestClient 问题 | 临时开启 `org.springframework.web.client` DEBUG | logback-spring.xml |
+| 排查 dev.patra 问题 | 默认 DEBUG 已开启 | - |
+| 排查 Spring 问题 | 临时开启 `org.springframework` DEBUG | logback-patra.xml |
+| 排查 JPA/Hibernate 问题 | 临时开启 `org.hibernate` DEBUG | logback-patra.xml |
+| 排查 HTTP Interface/RestClient 问题 | 临时开启 `org.springframework.web.client` DEBUG | logback-patra.xml |
 | 业务逻辑缺日志 | 在代码中添加 log.debug() | 对应 Java 文件 |
 
 **重要**：修复后必须关闭临时 DEBUG 日志！

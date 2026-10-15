@@ -9,13 +9,13 @@
 ## 各层异常处理规范
 
 1. 领域层（Domain）：继承 `DomainException`，携带 `StandardErrorTrait` 语义特征，禁止依赖框架异常
-2. 应用层（Application）：领域异常（`DomainException`）携带语义特征应**直接传播**，由 `DefaultErrorResolutionEngine` 自动映射为 HTTP 状态码；仅对**意外异常**（`RuntimeException`、`Exception`）使用 `ApplicationException` 包装，携带明确的 `ErrorCodeLike` 业务错误码
-3. Boot 层（Composition Root）：通过 `ErrorMappingContributor` SPI 映射服务级异常（领域异常 → HTTP 错误码）；通用数据层异常由 `JpaErrorMappingContributor`（starter-jpa）统一处理
+2. 应用层（Application）：领域异常（`DomainException`）携带语义特征应**直接传播**，由 `DefaultErrorResolutionEngine`（`patra-tool-web`）自动映射为 HTTP 状态码；仅对**意外异常**（`RuntimeException`、`Exception`）使用 `ApplicationException` 包装，携带明确的 `ErrorCodeLike` 业务错误码
+3. Boot 层（Composition Root）：通过 `ErrorMappingContributor` SPI（`patra-tool-web`）映射服务级异常（领域异常 → HTTP 错误码）；通用数据层异常由 `JpaErrorMappingContributor`（`patra-tool-jpa`）统一处理
 4. 适配器层（Adapter）：捕获 `RemoteCallException`，基于 `ErrorTrait` 语义特征转换为领域异常
 
 ## 错误码格式
 
-格式：`{SERVICE}-{0xxx}`，SERVICE 为服务前缀（如 INGEST、REG、CATALOG），0xxx 映射到 HTTP 状态码
+格式：`{SERVICE}-{0xxx}`，SERVICE 为服务前缀（如 INGEST、REG、CATALOG，由 `patra.web.error.context-prefix` 配置），0xxx 映射到 HTTP 状态码
 常用映射：0404（Not Found）、0409（Conflict）、0422（Unprocessable Entity）、0500（Internal Error）
 
 ## HTTP Interface 错误处理

@@ -49,7 +49,7 @@ color: yellow
 
 ## 测试基础设施
 
-所有 Spring 模块（除 domain 层、api 层和 `patra-common-*`）必须使用 `patra-spring-boot-starter-test`：
+所有 Spring 模块（除 domain 层、api 层和 `patra-common`）必须使用 `patra-tool-test`：
 - **容器初始化器**：`PostgreSQLContainerInitializer`、`RocketMQContainerInitializer` 基类
 - **ArchUnit 规则**：`HexagonalArchitectureRules`、`TestingRules`
 - **传递依赖**：JUnit 5、AssertJ、Mockito、TestContainers、ArchUnit、Awaitility、WireMock
@@ -62,7 +62,7 @@ color: yellow
 3. 使用 TestContainers 模拟真实中间件，避免使用内存数据库
 4. 切片测试仅测试 Adapter 层，禁止跨层调用
 5. E2E 测试覆盖核心业务流程，避免冗余测试场景
-6. 使用 `patra-spring-boot-starter-test` 提供的测试基础设施，禁止重复实现
+6. 使用 `patra-tool-test` 提供的测试基础设施，禁止重复实现
 
 ## 输出格式
 
