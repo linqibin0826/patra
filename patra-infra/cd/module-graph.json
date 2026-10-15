@@ -109,30 +109,6 @@
             ]
         },
         {
-            "dir": "patra-api/patra-common/patra-common-provenance-api",
-            "project": ":patra-api:patra-common:patra-common-provenance-api",
-            "unit": "foundation",
-            "impacts": [
-                "foundation",
-                "ingest"
-            ],
-            "tasks": [
-                "check"
-            ]
-        },
-        {
-            "dir": "patra-api/patra-expr-kernel",
-            "project": ":patra-api:patra-expr-kernel",
-            "unit": "foundation",
-            "impacts": [
-                "foundation",
-                "ingest"
-            ],
-            "tasks": [
-                "check"
-            ]
-        },
-        {
             "dir": "patra-api/patra-gateway-boot",
             "project": ":patra-api:patra-gateway-boot",
             "unit": "gateway",
@@ -272,6 +248,17 @@
             ]
         },
         {
+            "dir": "patra-api/patra-ingest/patra-ingest-expr",
+            "project": ":patra-api:patra-ingest:patra-ingest-expr",
+            "unit": "ingest",
+            "impacts": [
+                "ingest"
+            ],
+            "tasks": [
+                "check"
+            ]
+        },
+        {
             "dir": "patra-api/patra-ingest/patra-ingest-infra",
             "project": ":patra-api:patra-ingest:patra-ingest-infra",
             "unit": "ingest",
@@ -281,6 +268,17 @@
             "tasks": [
                 "check",
                 "integrationTest"
+            ]
+        },
+        {
+            "dir": "patra-api/patra-ingest/patra-ingest-provenance",
+            "project": ":patra-api:patra-ingest:patra-ingest-provenance",
+            "unit": "ingest",
+            "impacts": [
+                "ingest"
+            ],
+            "tasks": [
+                "check"
             ]
         },
         {
@@ -369,7 +367,6 @@
             "unit": "registry",
             "impacts": [
                 "catalog",
-                "foundation",
                 "ingest",
                 "registry"
             ],
@@ -420,30 +417,6 @@
             "tasks": [
                 "check",
                 "integrationTest"
-            ]
-        },
-        {
-            "dir": "patra-starters/patra-spring-boot-starter-expr",
-            "project": ":patra-starters:patra-spring-boot-starter-expr",
-            "unit": "foundation",
-            "impacts": [
-                "foundation",
-                "ingest"
-            ],
-            "tasks": [
-                "check"
-            ]
-        },
-        {
-            "dir": "patra-starters/patra-spring-boot-starter-provenance",
-            "project": ":patra-starters:patra-spring-boot-starter-provenance",
-            "unit": "foundation",
-            "impacts": [
-                "foundation",
-                "ingest"
-            ],
-            "tasks": [
-                "check"
             ]
         },
         {

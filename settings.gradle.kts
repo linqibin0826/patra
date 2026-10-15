@@ -48,7 +48,6 @@ fun mapParent(path: String, dir: String) {
 }
 
 // ==================== patra-api / patra-common ====================
-includeAt(":patra-api:patra-common:patra-common-provenance-api", "patra-api/patra-common/patra-common-provenance-api")
 includeAt(":patra-api:patra-common", "patra-api/patra-common")
 
 // ==================== patra-tool ====================
@@ -71,14 +70,6 @@ mapParent(":patra-tool", "patra-tool")
 includeAt(":linqibin-commons:linqibin-spring-boot-starter-redisson", "linqibin-commons/linqibin-spring-boot-starter-redisson")
 mapParent(":linqibin-commons", "linqibin-commons")
 
-// ==================== patra-starters ====================
-includeAt(":patra-starters:patra-spring-boot-starter-provenance", "patra-starters/patra-spring-boot-starter-provenance")
-includeAt(":patra-starters:patra-spring-boot-starter-expr", "patra-starters/patra-spring-boot-starter-expr")
-mapParent(":patra-starters", "patra-starters")
-
-// ==================== patra-api / Expression Kernel ====================
-includeAt(":patra-api:patra-expr-kernel", "patra-api/patra-expr-kernel")
-
 // ==================== patra-api / Microservices ====================
 includeAt(":patra-api:patra-registry:patra-registry-domain", "patra-api/patra-registry/patra-registry-domain")
 includeAt(":patra-api:patra-registry:patra-registry-api", "patra-api/patra-registry/patra-registry-api")
@@ -94,6 +85,8 @@ includeAt(":patra-api:patra-ingest:patra-ingest-app", "patra-api/patra-ingest/pa
 includeAt(":patra-api:patra-ingest:patra-ingest-infra", "patra-api/patra-ingest/patra-ingest-infra")
 includeAt(":patra-api:patra-ingest:patra-ingest-adapter", "patra-api/patra-ingest/patra-ingest-adapter")
 includeAt(":patra-api:patra-ingest:patra-ingest-boot", "patra-api/patra-ingest/patra-ingest-boot")
+includeAt(":patra-api:patra-ingest:patra-ingest-provenance", "patra-api/patra-ingest/patra-ingest-provenance")
+includeAt(":patra-api:patra-ingest:patra-ingest-expr", "patra-api/patra-ingest/patra-ingest-expr")
 mapParent(":patra-api:patra-ingest", "patra-api/patra-ingest")
 
 includeAt(":patra-api:patra-catalog:patra-catalog-domain", "patra-api/patra-catalog/patra-catalog-domain")

@@ -16,6 +16,7 @@ dependencies {
     // 六边形架构各层
     implementation(project(":patra-api:patra-ingest:patra-ingest-adapter"))
     implementation(project(":patra-api:patra-ingest:patra-ingest-infra"))
+    implementation(project(":patra-api:patra-ingest:patra-ingest-api"))
 
     // Web Starter
     implementation(project(":patra-tool:patra-tool-web"))
