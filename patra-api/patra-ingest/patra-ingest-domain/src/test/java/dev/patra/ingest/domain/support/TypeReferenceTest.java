@@ -1,4 +1,4 @@
-package dev.patra.tool.core.type;
+package dev.patra.ingest.domain.support;
 
 import static org.assertj.core.api.Assertions.*;
 

@@ -9,6 +9,7 @@ plugins {
 }
 
 dependencies {
+    implementation(libs.hutool.core)
     // 内部模块
     api(project(":patra-api:patra-object-storage:patra-object-storage-domain"))
     api(project(":patra-api:patra-common"))

@@ -1,7 +1,7 @@
 package dev.patra.ingest.app.usecase.relay.command;
 
 import dev.patra.ingest.app.usecase.relay.dto.RelayReport;
-import dev.patra.tool.core.messaging.ChannelKey;
+import dev.patra.ingest.domain.messaging.ChannelKey;
 import dev.patra.tool.cqrs.Command;
 import java.time.Duration;
 import java.time.Instant;

@@ -1,4 +1,4 @@
-package dev.patra.tool.core.type;
+package dev.patra.ingest.domain.support;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;

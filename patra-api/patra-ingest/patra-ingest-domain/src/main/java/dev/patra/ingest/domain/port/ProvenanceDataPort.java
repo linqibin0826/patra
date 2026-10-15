@@ -5,7 +5,7 @@ import dev.patra.common.ProvenanceCode;
 import dev.patra.ingest.domain.model.vo.batch.Batch;
 import dev.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import dev.patra.ingest.domain.model.vo.query.QuerySession;
-import dev.patra.tool.core.type.TypeReference;
+import dev.patra.ingest.domain.support.TypeReference;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -59,7 +59,7 @@ import lombok.Builder;
 /// @see dev.patra.ingest.domain.model.vo.batch.Batch 批次定义
 /// @see dev.patra.ingest.domain.model.vo.execution.ExecutionContext 执行上下文
 /// @see dev.patra.common.DataType 数据类型枚举
-/// @see dev.patra.tool.core.type.TypeReference 类型引用工具
+/// @see dev.patra.ingest.domain.support.TypeReference 类型引用工具
 /// @author linqibin
 /// @since 0.1.0
 public interface ProvenanceDataPort {

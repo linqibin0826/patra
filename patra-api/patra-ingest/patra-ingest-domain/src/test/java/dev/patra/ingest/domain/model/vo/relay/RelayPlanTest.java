@@ -2,7 +2,7 @@ package dev.patra.ingest.domain.model.vo.relay;
 
 import static org.assertj.core.api.Assertions.*;
 
-import dev.patra.tool.core.messaging.ChannelKey;
+import dev.patra.ingest.domain.messaging.ChannelKey;
 import java.time.Duration;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;

@@ -4,13 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.common.ProvenanceCode;
 import dev.patra.ingest.domain.model.enums.OperationCode;
+import dev.patra.ingest.domain.model.enums.Priority;
 import dev.patra.ingest.domain.model.enums.Scheduler;
 import dev.patra.ingest.domain.model.enums.TriggerType;
 import dev.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import dev.patra.ingest.domain.model.vo.plan.PlanTriggerNorm;
 import dev.patra.ingest.expr.And;
 import dev.patra.ingest.expr.Const;
-import dev.patra.tool.core.enums.Priority;
 import java.time.Instant;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;

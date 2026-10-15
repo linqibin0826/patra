@@ -1,12 +1,12 @@
 package dev.patra.ingest.app.usecase.plan.slicer;
 
+import dev.patra.ingest.app.usecase.plan.json.JsonNormalizer;
+import dev.patra.ingest.app.usecase.plan.json.JsonNormalizerResult;
 import dev.patra.ingest.app.usecase.plan.slicer.model.SlicePlan;
 import dev.patra.ingest.app.usecase.plan.slicer.model.SlicePlanningContext;
 import dev.patra.ingest.domain.model.enums.SliceStrategy;
+import dev.patra.ingest.domain.support.HashUtils;
 import dev.patra.ingest.expr.Expr;
-import dev.patra.tool.core.json.JsonNormalizer;
-import dev.patra.tool.core.json.JsonNormalizerResult;
-import dev.patra.tool.core.util.HashUtils;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;

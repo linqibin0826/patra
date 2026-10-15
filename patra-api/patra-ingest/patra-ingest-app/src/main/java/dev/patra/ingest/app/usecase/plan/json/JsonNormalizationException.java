@@ -1,4 +1,4 @@
-package dev.patra.tool.core.json;
+package dev.patra.ingest.app.usecase.plan.json;
 
 /// JSON 规范化失败时抛出的异常。
 ///

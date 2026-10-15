@@ -1,4 +1,4 @@
-package dev.patra.tool.core.json;
+package dev.patra.ingest.app.usecase.plan.json;
 
 import java.time.Instant;
 import java.time.LocalDate;

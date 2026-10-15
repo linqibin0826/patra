@@ -5,9 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.patra.common.ProvenanceCode;
 import dev.patra.ingest.domain.model.enums.OperationCode;
+import dev.patra.ingest.domain.model.enums.Priority;
 import dev.patra.ingest.domain.model.enums.Scheduler;
 import dev.patra.ingest.domain.model.enums.TriggerType;
-import dev.patra.tool.core.enums.Priority;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;

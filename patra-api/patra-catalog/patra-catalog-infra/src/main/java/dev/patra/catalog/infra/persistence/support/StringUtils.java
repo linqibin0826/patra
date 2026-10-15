@@ -1,4 +1,4 @@
-package dev.patra.tool.core.util;
+package dev.patra.catalog.infra.persistence.support;
 
 /// 字符串工具类，提供通用的字符串处理方法。
 ///

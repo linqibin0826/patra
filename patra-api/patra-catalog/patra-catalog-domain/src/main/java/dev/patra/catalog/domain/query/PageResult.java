@@ -1,4 +1,4 @@
-package dev.patra.tool.core.query;
+package dev.patra.catalog.domain.query;
 
 import cn.hutool.core.lang.Assert;
 import java.util.List;

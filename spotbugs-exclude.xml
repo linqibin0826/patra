@@ -324,7 +324,7 @@
 
   <!-- TypeReference 构造时反射获取类型参数可能抛异常，是标准泛型工具做法 -->
   <Match>
-    <Class name="dev.patra.tool.core.type.TypeReference"/>
+    <Class name="dev.patra.ingest.domain.support.TypeReference"/>
     <Bug pattern="CT_CONSTRUCTOR_THROW"/>
   </Match>
 

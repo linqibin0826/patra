@@ -1,4 +1,4 @@
-package dev.patra.tool.core.enums;
+package dev.patra.ingest.domain.model.enums;
 
 /// 任务优先级级别枚举,包含用于调度的关联队列值。
 ///

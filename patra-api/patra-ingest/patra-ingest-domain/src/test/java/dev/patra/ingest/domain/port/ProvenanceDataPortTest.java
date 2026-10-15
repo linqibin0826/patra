@@ -10,7 +10,7 @@ import dev.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import dev.patra.ingest.domain.model.vo.query.QuerySession;
 import dev.patra.ingest.domain.port.ProvenanceDataPort.DataFetchResult;
 import dev.patra.ingest.domain.port.ProvenanceDataPort.DataFetchResult.ErrorType;
-import dev.patra.tool.core.type.TypeReference;
+import dev.patra.ingest.domain.support.TypeReference;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;

@@ -3,8 +3,8 @@ package dev.patra.catalog.domain.port.read;
 import dev.patra.catalog.domain.model.read.portal.PortalPaperReadModel;
 import dev.patra.catalog.domain.model.read.portal.PublicationSearchFacets;
 import dev.patra.catalog.domain.model.read.portal.PublicationSearchFilter;
-import dev.patra.tool.core.query.PageResult;
-import dev.patra.tool.core.query.PagingParams;
+import dev.patra.catalog.domain.query.PageResult;
+import dev.patra.catalog.domain.query.PagingParams;
 
 /// 文献检索 CQRS 读端口，首页 feed 与 `/portal/publications/search` 共用。
 ///

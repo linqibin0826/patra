@@ -19,6 +19,7 @@ dependencies {
 
     // Spring Batch 核心
     api("org.springframework.boot:spring-boot-starter-batch")
+    api("tools.jackson.core:jackson-databind")
 
     // Spring Boot 自动配置
     api("org.springframework.boot:spring-boot-autoconfigure")

@@ -3,8 +3,8 @@ package dev.patra.catalog.domain.port.read;
 import dev.patra.catalog.domain.model.read.portal.VenueBrowseFacets;
 import dev.patra.catalog.domain.model.read.portal.VenueBrowseFilter;
 import dev.patra.catalog.domain.model.read.portal.VenueBrowseReadModel;
-import dev.patra.tool.core.query.PageResult;
-import dev.patra.tool.core.query.PagingParams;
+import dev.patra.catalog.domain.query.PageResult;
+import dev.patra.catalog.domain.query.PagingParams;
 
 /// 期刊浏览检索 CQRS 读端口。
 ///

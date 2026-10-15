@@ -15,7 +15,7 @@ import dev.patra.catalog.domain.model.read.portal.VenueBrowseFacets;
 import dev.patra.catalog.domain.model.read.portal.VenueBrowseFilter;
 import dev.patra.catalog.domain.model.read.portal.VenueBrowseReadModel;
 import dev.patra.catalog.domain.model.read.portal.VenueBrowseSort;
-import dev.patra.tool.core.query.PageResult;
+import dev.patra.catalog.domain.query.PageResult;
 import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;

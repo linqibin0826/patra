@@ -1,6 +1,6 @@
 package dev.patra.ingest.domain.model.vo.relay;
 
-import dev.patra.tool.core.messaging.ChannelKey;
+import dev.patra.ingest.domain.messaging.ChannelKey;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;

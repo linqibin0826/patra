@@ -1,4 +1,4 @@
-package dev.patra.tool.core.query;
+package dev.patra.catalog.domain.query;
 
 import static org.assertj.core.api.Assertions.*;
 

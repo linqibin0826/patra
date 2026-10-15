@@ -7,7 +7,7 @@ import dev.patra.ingest.domain.model.vo.batch.BatchResult;
 import dev.patra.ingest.domain.model.vo.batch.BatchStats;
 import dev.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import dev.patra.ingest.domain.model.vo.shared.IdempotentKey;
-import dev.patra.tool.core.util.HashUtils;
+import dev.patra.ingest.domain.support.HashUtils;
 import java.time.Instant;
 import lombok.Getter;
 

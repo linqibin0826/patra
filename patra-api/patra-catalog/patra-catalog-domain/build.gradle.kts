@@ -12,4 +12,6 @@ plugins {
 // patra-common-core 由 patra.hexagonal-domain 插件提供
 dependencies {
     api(project(":patra-api:patra-common"))
+    // Hutool 工具库（原经 patra-tool-core 传递，core 去第三方依赖后由领域层自己声明）
+    api(libs.hutool.core)
 }

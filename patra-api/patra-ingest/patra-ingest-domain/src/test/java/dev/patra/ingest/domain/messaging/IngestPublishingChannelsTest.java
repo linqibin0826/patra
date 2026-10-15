@@ -366,7 +366,7 @@ class IngestPublishingChannelsTest {
       IngestPublishingChannels channel = IngestPublishingChannels.TASK;
 
       // Then
-      assertThat(channel).isInstanceOf(dev.patra.tool.core.messaging.ChannelKey.class);
+      assertThat(channel).isInstanceOf(dev.patra.ingest.domain.messaging.ChannelKey.class);
     }
 
     @Test

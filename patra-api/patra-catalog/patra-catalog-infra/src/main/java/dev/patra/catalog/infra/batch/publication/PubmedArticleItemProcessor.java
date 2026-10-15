@@ -1,6 +1,6 @@
 package dev.patra.catalog.infra.batch.publication;
 
-import static dev.patra.tool.core.util.StringUtils.trimToNull;
+import static dev.patra.catalog.infra.persistence.support.StringUtils.trimToNull;
 
 import dev.patra.catalog.domain.model.aggregate.PublicationAggregate;
 import dev.patra.catalog.domain.model.aggregate.VenueInstanceAggregate;

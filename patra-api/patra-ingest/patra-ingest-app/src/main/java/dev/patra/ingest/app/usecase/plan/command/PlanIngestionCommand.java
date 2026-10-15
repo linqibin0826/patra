@@ -3,9 +3,9 @@ package dev.patra.ingest.app.usecase.plan.command;
 import dev.patra.common.ProvenanceCode;
 import dev.patra.ingest.app.usecase.plan.dto.PlanIngestionResult;
 import dev.patra.ingest.domain.model.enums.OperationCode;
+import dev.patra.ingest.domain.model.enums.Priority;
 import dev.patra.ingest.domain.model.enums.Scheduler;
 import dev.patra.ingest.domain.model.enums.TriggerType;
-import dev.patra.tool.core.enums.Priority;
 import dev.patra.tool.cqrs.Command;
 import java.time.Instant;
 import java.util.Map;
@@ -23,7 +23,7 @@ import java.util.Objects;
 ///   - **windowFrom/windowTo**: half-open interval [from, to); both may be null for resolver to
 ///       infer.
 ///   - **priority**: scheduling priority; defaults to {@link
-///       dev.patra.tool.core.enums.Priority#NORMAL}.
+///       dev.patra.ingest.domain.model.enums.Priority#NORMAL}.
 ///   - **triggeredAt**: trigger time; defaults to now when null.
 ///   - **scheduler/schedulerJobId/schedulerLogId**: scheduler context for tracking; log id may
 ///       be null.

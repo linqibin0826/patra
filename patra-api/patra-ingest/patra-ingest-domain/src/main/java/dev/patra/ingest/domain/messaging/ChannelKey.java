@@ -1,4 +1,4 @@
-package dev.patra.tool.core.messaging;
+package dev.patra.ingest.domain.messaging;
 
 import java.util.Locale;
 

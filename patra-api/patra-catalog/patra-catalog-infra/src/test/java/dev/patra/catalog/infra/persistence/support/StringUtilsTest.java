@@ -1,4 +1,4 @@
-package dev.patra.tool.core.util;
+package dev.patra.catalog.infra.persistence.support;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
