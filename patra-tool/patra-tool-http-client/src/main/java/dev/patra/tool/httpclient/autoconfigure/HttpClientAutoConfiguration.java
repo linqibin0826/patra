@@ -1,8 +1,9 @@
-package dev.patra.tool.httpclient.config;
+package dev.patra.tool.httpclient.autoconfigure;
 
 import dev.patra.tool.core.PatraOrders;
 import dev.patra.tool.httpclient.interceptor.LoggingInterceptor;
 import java.net.http.HttpClient;
+import java.util.Map;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -42,13 +43,17 @@ import org.springframework.web.client.RestClient;
 /// @author linqibin
 /// @since 0.1.0
 @AutoConfiguration
-@EnableConfigurationProperties(RestClientProperties.class)
+@EnableConfigurationProperties(HttpClientProperties.class)
 @ConditionalOnProperty(
-    prefix = "linqibin.starter.rest-client",
+    prefix = "patra.http-client",
     name = "enabled",
     havingValue = "true",
     matchIfMissing = true)
-public class RestClientAutoConfiguration {
+public final class HttpClientAutoConfiguration {
+
+  /// 没配 `default` 客户端时用的空配置。
+  private static final HttpClientProperties.Rest.Client DEFAULT_CLIENT =
+      new HttpClientProperties.Rest.Client(true, null, Map.of(), null);
 
   /// 创建默认的 RestClient Bean。
   ///
@@ -64,19 +69,18 @@ public class RestClientAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean(name = "defaultRestClient")
   public RestClient defaultRestClient(
-      RestClientProperties properties,
+      HttpClientProperties properties,
       ObjectProvider<ClientHttpRequestInterceptor> interceptorsProvider) {
 
-    var clientConfig =
-        properties.getClients().getOrDefault("default", new RestClientProperties.ClientConfig());
+    var clientConfig = properties.rest().clients().getOrDefault("default", DEFAULT_CLIENT);
 
     // 直接创建 Factory，不通过 Bean 注入，避免被 LoadBalancer 包装
     var factory = createHttpRequestFactory(properties);
     var builder = RestClient.builder().requestFactory(factory);
 
     // 应用默认 Headers
-    if (clientConfig.getDefaultHeaders() != null && !clientConfig.getDefaultHeaders().isEmpty()) {
-      builder.defaultHeaders(headers -> clientConfig.getDefaultHeaders().forEach(headers::add));
+    if (clientConfig.defaultHeaders() != null && !clientConfig.defaultHeaders().isEmpty()) {
+      builder.defaultHeaders(headers -> clientConfig.defaultHeaders().forEach(headers::add));
     }
 
     // 注入拦截器（按 @Order 排序），过滤掉 LoadBalancer 拦截器
@@ -109,8 +113,8 @@ public class RestClientAutoConfiguration {
   ///
   /// @param properties 配置属性
   /// @return JDK HTTP 请求工厂
-  private JdkClientHttpRequestFactory createHttpRequestFactory(RestClientProperties properties) {
-    var timeout = properties.getTimeout();
+  private JdkClientHttpRequestFactory createHttpRequestFactory(HttpClientProperties properties) {
+    var timeout = properties.rest().timeout();
 
     // 创建 JDK HttpClient（支持 HTTP/2）
     var httpClient = HttpClient.newBuilder().connectTimeout(timeout.connect()).build();
@@ -128,7 +132,7 @@ public class RestClientAutoConfiguration {
   ///
   /// **使用方式**：通过 `@Qualifier("longRunningRestClient")` 注入。
   ///
-  /// **禁用方式**：设置 `linqibin.starter.rest-client.clients.long-running.enabled=false`。
+  /// **禁用方式**：设置 `patra.http-client.rest.clients.long-running.enabled=false`。
   ///
   /// @param properties 配置属性
   /// @param interceptorsProvider Spring 标准拦截器提供者
@@ -137,15 +141,15 @@ public class RestClientAutoConfiguration {
   @ConditionalOnMissingBean(name = "longRunningRestClient")
   @Conditional(LongRunningClientEnabledCondition.class)
   public RestClient longRunningRestClient(
-      RestClientProperties properties,
+      HttpClientProperties properties,
       ObjectProvider<ClientHttpRequestInterceptor> interceptorsProvider) {
 
-    var clientConfig = properties.getClients().get("long-running");
+    var clientConfig = properties.rest().clients().get("long-running");
 
     // 使用配置的超时或默认值
     var timeout =
-        (clientConfig != null && clientConfig.getTimeout() != null)
-            ? clientConfig.getTimeout()
+        (clientConfig != null && clientConfig.timeout() != null)
+            ? clientConfig.timeout()
             : defaultLongRunningTimeout();
 
     // 创建专用 Factory（长超时）
@@ -170,8 +174,8 @@ public class RestClientAutoConfiguration {
   /// 创建长时间运行客户端的默认超时配置。
   ///
   /// @return 默认超时配置（connect=30s, read=600s, write=30s）
-  private RestClientProperties.TimeoutConfig defaultLongRunningTimeout() {
-    return new RestClientProperties.TimeoutConfig(
+  private HttpClientProperties.Rest.Timeout defaultLongRunningTimeout() {
+    return new HttpClientProperties.Rest.Timeout(
         java.time.Duration.ofSeconds(30),
         java.time.Duration.ofSeconds(600),
         java.time.Duration.ofSeconds(30));
@@ -186,14 +190,13 @@ public class RestClientAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean
   @ConditionalOnProperty(
-      prefix = "linqibin.starter.rest-client.interceptors.logging",
+      prefix = "patra.http-client.rest.logging",
       name = "enabled",
       havingValue = "true",
       matchIfMissing = true)
   @Order(PatraOrders.HTTP_CLIENT_LOGGING_INTERCEPTOR)
-  public LoggingInterceptor loggingInterceptor(RestClientProperties properties) {
-    var config = properties.getInterceptors().getLogging();
-    return new LoggingInterceptor(
-        config.isLogHeaders(), config.isLogBody(), config.getMaxBodyLogLength());
+  public LoggingInterceptor loggingInterceptor(HttpClientProperties properties) {
+    var config = properties.rest().logging();
+    return new LoggingInterceptor(config.logHeaders(), config.logBody(), config.maxBodyLogLength());
   }
 }

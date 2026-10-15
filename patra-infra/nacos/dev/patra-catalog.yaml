@@ -5,6 +5,12 @@ spring:
     url: jdbc:postgresql://${PATRA_INFRA_HOST:127.0.0.1}:15432/patra_catalog
 
 patra:
+  http-client:
+    proxy:
+      tunnel:
+        enabled: false
+        auth-key: ${PROXY_AUTH_KEY:}
+        auth-pwd: ${PROXY_AUTH_PWD:}
   batch:
     datasource:
       url: jdbc:postgresql://${PATRA_INFRA_HOST:127.0.0.1}:15432/patra_batch
@@ -13,12 +19,3 @@ patra:
   catalog:
     scopus:
       api-key: ${SCOPUS_API_KEY:}
-
-linqibin:
-  starter:
-    rest-client:
-      proxy:
-        tunnel:
-          enabled: false
-          auth-key: ${PROXY_AUTH_KEY:}
-          auth-pwd: ${PROXY_AUTH_PWD:}

@@ -3,7 +3,7 @@ package dev.patra.tool.httpclient.error;
 import dev.patra.tool.core.error.problem.ErrorKeys;
 import dev.patra.tool.core.error.remote.RemoteCallException;
 import dev.patra.tool.core.error.trait.ErrorTrait;
-import dev.patra.tool.httpclient.config.HttpInterfaceProperties;
+import dev.patra.tool.httpclient.autoconfigure.HttpClientProperties;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -41,14 +41,14 @@ import tools.jackson.databind.json.JsonMapper;
 public class ProblemDetailErrorHandler implements RestClient.ResponseSpec.ErrorHandler {
 
   private final JsonMapper jsonMapper;
-  private final HttpInterfaceProperties.ErrorHandlingProperties properties;
+  private final HttpClientProperties.HttpInterface.ErrorHandling properties;
 
   /// 构造 ProblemDetail 错误处理器
   ///
   /// @param jsonMapper 容器里的 `JsonMapper`
   /// @param properties 错误处理配置属性
   public ProblemDetailErrorHandler(
-      JsonMapper jsonMapper, HttpInterfaceProperties.ErrorHandlingProperties properties) {
+      JsonMapper jsonMapper, HttpClientProperties.HttpInterface.ErrorHandling properties) {
     this.jsonMapper = jsonMapper;
     this.properties = properties;
   }
@@ -103,7 +103,7 @@ public class ProblemDetailErrorHandler implements RestClient.ResponseSpec.ErrorH
   private RemoteCallException handleNonProblemDetailResponse(
       String methodKey, ClientHttpResponse response, byte[] bodyBytes) throws IOException {
     // 宽容模式：包装非 ProblemDetail 响应
-    if (properties.isTolerant()) {
+    if (properties.tolerant()) {
       return handleTolerantMode(methodKey, response, bodyBytes);
     }
 
@@ -199,7 +199,7 @@ public class ProblemDetailErrorHandler implements RestClient.ResponseSpec.ErrorH
     if (body == null) {
       return new byte[0];
     }
-    int maxSize = properties.getMaxErrorBodySize();
+    int maxSize = properties.maxErrorBodySize();
     return body.readNBytes(maxSize);
   }
 

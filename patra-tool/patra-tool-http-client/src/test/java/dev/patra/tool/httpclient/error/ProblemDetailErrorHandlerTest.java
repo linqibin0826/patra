@@ -6,7 +6,7 @@ import static org.mockito.Mockito.when;
 
 import dev.patra.tool.core.error.remote.RemoteCallException;
 import dev.patra.tool.core.error.trait.StandardErrorTrait;
-import dev.patra.tool.httpclient.config.HttpInterfaceProperties;
+import dev.patra.tool.httpclient.autoconfigure.HttpClientProperties;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
@@ -492,10 +492,7 @@ class ProblemDetailErrorHandlerTest {
   // ===== 辅助方法 =====
 
   private ProblemDetailErrorHandler createHandler(boolean tolerant) {
-    var errorHandling = new HttpInterfaceProperties.ErrorHandlingProperties();
-    errorHandling.setTolerant(tolerant);
-    errorHandling.setProblemDetailEnabled(true);
-    errorHandling.setMaxErrorBodySize(10240);
+    var errorHandling = new HttpClientProperties.HttpInterface.ErrorHandling(true, tolerant, 10240);
     return new ProblemDetailErrorHandler(jsonMapper, errorHandling);
   }
 

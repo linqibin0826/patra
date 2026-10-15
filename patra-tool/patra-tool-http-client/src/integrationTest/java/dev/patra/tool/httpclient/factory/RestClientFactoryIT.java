@@ -10,7 +10,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import dev.patra.tool.core.error.remote.RemoteCallException;
-import dev.patra.tool.httpclient.config.HttpInterfaceAutoConfiguration;
+import dev.patra.tool.httpclient.autoconfigure.HttpClientInterfaceAutoConfiguration;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -41,10 +41,10 @@ import tools.jackson.databind.json.JsonMapper;
 @WireMockTest
 @TestPropertySource(
     properties = {
-      "linqibin.starter.http-interface.connect-timeout=5s",
-      "linqibin.starter.http-interface.read-timeout=10s",
-      "linqibin.starter.http-interface.error-handling.tolerant=true",
-      "linqibin.starter.http-interface.error-handling.problem-detail-enabled=true"
+      "patra.http-client.http-interface.connect-timeout=5s",
+      "patra.http-client.http-interface.read-timeout=10s",
+      "patra.http-client.http-interface.error-handling.tolerant=true",
+      "patra.http-client.http-interface.error-handling.problem-detail-enabled=true"
     })
 @DisplayName("RestClientFactory 集成测试")
 class RestClientFactoryIT {
@@ -180,7 +180,7 @@ class RestClientFactoryIT {
         org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration.class,
         org.springframework.cloud.loadbalancer.config.LoadBalancerAutoConfiguration.class
       })
-  @ImportAutoConfiguration(HttpInterfaceAutoConfiguration.class)
+  @ImportAutoConfiguration(HttpClientInterfaceAutoConfiguration.class)
   static class ITSpringConfig {
 
     /// 提供 JsonMapper Bean（HTTP Interface 自动配置依赖）

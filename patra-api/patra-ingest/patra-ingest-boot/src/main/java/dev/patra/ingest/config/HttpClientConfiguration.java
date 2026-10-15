@@ -41,7 +41,7 @@ import org.springframework.web.client.RestClient;
 @Slf4j
 @Configuration
 @ConditionalOnProperty(
-    prefix = "linqibin.starter.http-interface",
+    prefix = "patra.http-client.http-interface",
     name = "enabled",
     havingValue = "true",
     matchIfMissing = true)

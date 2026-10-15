@@ -41,6 +41,11 @@ spring:
 
 # 外部凭据（正式运行时在 Nacos 的 patra-catalog.yaml）：E2E 测试不连 Scopus，给空值让上下文能起来
 patra:
+  # 禁用隧道代理（E2E 测试使用 Mock FileDownloadPort，无需真实代理）
+  http-client:
+    proxy:
+      tunnel:
+        enabled: false
   # Spring Batch 配置
   batch:
     enabled: true
@@ -52,14 +57,6 @@ patra:
 xxl:
   job:
     enabled: false
-
-linqibin:
-  starter:
-    # 禁用隧道代理（E2E 测试使用 Mock FileDownloadPort，无需真实代理）
-    rest-client:
-      proxy:
-        tunnel:
-          enabled: false
 
 # Management & Monitoring (禁用测试环境不需要的)
 management:

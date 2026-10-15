@@ -1,4 +1,4 @@
-package dev.patra.tool.httpclient.config;
+package dev.patra.tool.httpclient.autoconfigure;
 
 import dev.patra.tool.httpclient.proxy.TunnelProxyConfigurer;
 import lombok.extern.slf4j.Slf4j;
@@ -10,7 +10,7 @@ import org.springframework.util.Assert;
 
 /// 隧道代理自动配置。
 ///
-/// 当 {@code linqibin.starter.rest-client.proxy.tunnel.enabled=true} 时，
+/// 当 {@code patra.http-client.proxy.tunnel.enabled=true} 时，
 /// 创建 {@link TunnelProxyConfigurer} Bean。
 ///
 /// ## 使用方式
@@ -31,13 +31,18 @@ import org.springframework.util.Assert;
 /// @author linqibin
 /// @since 0.1.0
 @Slf4j
-@AutoConfiguration
-@EnableConfigurationProperties(RestClientProperties.class)
+@AutoConfiguration(after = HttpClientAutoConfiguration.class)
+@EnableConfigurationProperties(HttpClientProperties.class)
 @ConditionalOnProperty(
-    prefix = "linqibin.starter.rest-client.proxy.tunnel",
+    prefix = "patra.http-client",
+    name = "enabled",
+    havingValue = "true",
+    matchIfMissing = true)
+@ConditionalOnProperty(
+    prefix = "patra.http-client.proxy.tunnel",
     name = "enabled",
     havingValue = "true")
-public class TunnelProxyAutoConfiguration {
+public final class HttpClientProxyAutoConfiguration {
 
   /// 创建隧道代理配置器。
   ///
@@ -45,16 +50,16 @@ public class TunnelProxyAutoConfiguration {
   /// @return 隧道代理配置器
   /// @throws IllegalArgumentException 如果必填配置项缺失
   @Bean
-  public TunnelProxyConfigurer tunnelProxyConfigurer(RestClientProperties properties) {
-    var tunnel = properties.getProxy().getTunnel();
+  public TunnelProxyConfigurer tunnelProxyConfigurer(HttpClientProperties properties) {
+    var tunnel = properties.proxy().tunnel();
 
-    Assert.hasText(tunnel.getHost(), "linqibin.starter.rest-client.proxy.tunnel.host 未配置");
-    Assert.isTrue(tunnel.getPort() > 0, "linqibin.starter.rest-client.proxy.tunnel.port 必须大于 0");
-    Assert.hasText(tunnel.getAuthKey(), "linqibin.starter.rest-client.proxy.tunnel.auth-key 未配置");
-    Assert.hasText(tunnel.getAuthPwd(), "linqibin.starter.rest-client.proxy.tunnel.auth-pwd 未配置");
+    Assert.hasText(tunnel.host(), "patra.http-client.proxy.tunnel.host 未配置");
+    Assert.isTrue(tunnel.port() > 0, "patra.http-client.proxy.tunnel.port 必须大于 0");
+    Assert.hasText(tunnel.authKey(), "patra.http-client.proxy.tunnel.auth-key 未配置");
+    Assert.hasText(tunnel.authPwd(), "patra.http-client.proxy.tunnel.auth-pwd 未配置");
 
-    log.info("隧道代理已启用: {}:{}", tunnel.getHost(), tunnel.getPort());
+    log.info("隧道代理已启用: {}:{}", tunnel.host(), tunnel.port());
     return new TunnelProxyConfigurer(
-        tunnel.getHost(), tunnel.getPort(), tunnel.getAuthKey(), tunnel.getAuthPwd());
+        tunnel.host(), tunnel.port(), tunnel.authKey(), tunnel.authPwd());
   }
 }

@@ -1,8 +1,6 @@
 package dev.patra.tool.httpclient.factory;
 
-import dev.patra.tool.httpclient.config.HttpInterfaceProperties;
-import dev.patra.tool.httpclient.config.HttpInterfaceProperties.ConnectionPoolProperties;
-import dev.patra.tool.httpclient.config.HttpInterfaceProperties.ServiceGroupProperties;
+import dev.patra.tool.httpclient.autoconfigure.HttpClientProperties;
 import dev.patra.tool.httpclient.interceptor.InternalCallInterceptor;
 import java.time.Duration;
 import lombok.extern.slf4j.Slf4j;
@@ -44,7 +42,7 @@ import org.springframework.web.service.invoker.HttpServiceProxyFactory;
 ///   public RestClientFactory restClientFactory(
 ///       ObjectProvider<RestClientCustomizer> customizers,
 ///       ObjectProvider<InternalCallInterceptor> interceptors,
-///       HttpInterfaceProperties properties) {
+///       HttpClientProperties.HttpInterface properties) {
 ///     return new RestClientFactory(customizers, interceptors, properties);
 ///   }
 ///
@@ -71,7 +69,7 @@ public class RestClientFactory {
 
   private final ObjectProvider<RestClientCustomizer> customizers;
   private final ObjectProvider<InternalCallInterceptor> internalCallInterceptors;
-  private final HttpInterfaceProperties properties;
+  private final HttpClientProperties.HttpInterface properties;
 
   /// 构造 RestClient 工厂
   ///
@@ -81,7 +79,7 @@ public class RestClientFactory {
   public RestClientFactory(
       ObjectProvider<RestClientCustomizer> customizers,
       ObjectProvider<InternalCallInterceptor> internalCallInterceptors,
-      HttpInterfaceProperties properties) {
+      HttpClientProperties.HttpInterface properties) {
     this.customizers = customizers;
     this.internalCallInterceptors = internalCallInterceptors;
     this.properties = properties;
@@ -92,18 +90,18 @@ public class RestClientFactory {
   /// 根据分组名从配置中获取 baseUrl 和超时设置，自动应用所有 RestClientCustomizer。
   ///
   /// @param builder RestClient.Builder（建议使用 httpInterfaceLoadBalancedRestClientBuilder）
-  /// @param groupName 服务分组名称（对应 `linqibin.starter.http-interface.groups.{groupName}`）
+  /// @param groupName 服务分组名称（对应 `patra.http-client.http-interface.groups.{groupName}`）
   /// @param defaultBaseUrl 默认基础 URL（当配置中未指定时使用）
   /// @return 配置好的 RestClient
   public RestClient createRestClient(
       RestClient.Builder builder, String groupName, String defaultBaseUrl) {
 
-    ServiceGroupProperties groupProps = properties.getGroups().get(groupName);
+    HttpClientProperties.HttpInterface.Group groupProps = properties.groups().get(groupName);
 
     // 确定 baseUrl
     String baseUrl =
-        (groupProps != null && groupProps.getBaseUrl() != null)
-            ? groupProps.getBaseUrl()
+        (groupProps != null && groupProps.baseUrl() != null)
+            ? groupProps.baseUrl()
             : defaultBaseUrl;
 
     log.info("创建 {} RestClient，baseUrl={}", groupName, baseUrl);
@@ -150,7 +148,8 @@ public class RestClientFactory {
   ///
   /// @param groupProps 分组配置（可为 null）
   /// @return 配置好的 RequestFactory，如果无需自定义超时则返回 null
-  private ClientHttpRequestFactory createRequestFactory(ServiceGroupProperties groupProps) {
+  private ClientHttpRequestFactory createRequestFactory(
+      HttpClientProperties.HttpInterface.Group groupProps) {
     // 确定连接超时
     Duration connectTimeout = resolveConnectTimeout(groupProps);
 
@@ -158,20 +157,20 @@ public class RestClientFactory {
     Duration readTimeout = resolveReadTimeout(groupProps);
 
     // 如果超时配置与全局配置相同，不创建自定义 RequestFactory
-    if (connectTimeout.equals(properties.getConnectTimeout())
-        && readTimeout.equals(properties.getReadTimeout())) {
+    if (connectTimeout.equals(properties.connectTimeout())
+        && readTimeout.equals(properties.readTimeout())) {
       return null;
     }
 
     // 创建独立的 Apache HttpClient（使用分组超时配置）
-    ConnectionPoolProperties poolProps = properties.getConnectionPool();
+    HttpClientProperties.HttpInterface.ConnectionPool poolProps = properties.connectionPool();
 
     PoolingHttpClientConnectionManager connManager =
         PoolingHttpClientConnectionManagerBuilder.create()
-            .setMaxConnTotal(poolProps.getMaxConnTotal())
-            .setMaxConnPerRoute(poolProps.getMaxConnPerRoute())
+            .setMaxConnTotal(poolProps.maxConnTotal())
+            .setMaxConnPerRoute(poolProps.maxConnPerRoute())
             .setValidateAfterInactivity(
-                TimeValue.ofSeconds(poolProps.getValidateAfterInactivity().toSeconds()))
+                TimeValue.ofSeconds(poolProps.validateAfterInactivity().toSeconds()))
             .build();
 
     RequestConfig requestConfig =
@@ -185,7 +184,7 @@ public class RestClientFactory {
             .setConnectionManager(connManager)
             .setDefaultRequestConfig(requestConfig)
             .evictIdleConnections(
-                TimeValue.ofSeconds(poolProps.getEvictIdleConnectionsAfter().toSeconds()))
+                TimeValue.ofSeconds(poolProps.evictIdleConnectionsAfter().toSeconds()))
             .evictExpiredConnections()
             .build();
 
@@ -200,18 +199,18 @@ public class RestClientFactory {
   /// 解析连接超时配置
   ///
   /// 优先使用分组配置，其次使用全局配置。
-  private Duration resolveConnectTimeout(ServiceGroupProperties groupProps) {
-    return (groupProps != null && groupProps.getConnectTimeout() != null)
-        ? groupProps.getConnectTimeout()
-        : properties.getConnectTimeout();
+  private Duration resolveConnectTimeout(HttpClientProperties.HttpInterface.Group groupProps) {
+    return (groupProps != null && groupProps.connectTimeout() != null)
+        ? groupProps.connectTimeout()
+        : properties.connectTimeout();
   }
 
   /// 解析读取超时配置
   ///
   /// 优先使用分组配置，其次使用全局配置。
-  private Duration resolveReadTimeout(ServiceGroupProperties groupProps) {
-    return (groupProps != null && groupProps.getReadTimeout() != null)
-        ? groupProps.getReadTimeout()
-        : properties.getReadTimeout();
+  private Duration resolveReadTimeout(HttpClientProperties.HttpInterface.Group groupProps) {
+    return (groupProps != null && groupProps.readTimeout() != null)
+        ? groupProps.readTimeout()
+        : properties.readTimeout();
   }
 }

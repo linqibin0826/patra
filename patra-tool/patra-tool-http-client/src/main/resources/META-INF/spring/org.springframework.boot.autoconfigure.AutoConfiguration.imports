@@ -1,5 +1,5 @@
-dev.patra.tool.httpclient.config.RestClientAutoConfiguration
-dev.patra.tool.httpclient.config.TunnelProxyAutoConfiguration
-dev.patra.tool.httpclient.config.DownloadClientAutoConfiguration
-dev.patra.tool.httpclient.config.StreamingWebClientAutoConfiguration
-dev.patra.tool.httpclient.config.HttpInterfaceAutoConfiguration
+dev.patra.tool.httpclient.autoconfigure.HttpClientAutoConfiguration
+dev.patra.tool.httpclient.autoconfigure.HttpClientProxyAutoConfiguration
+dev.patra.tool.httpclient.autoconfigure.HttpClientStreamingAutoConfiguration
+dev.patra.tool.httpclient.autoconfigure.HttpClientDownloadAutoConfiguration
+dev.patra.tool.httpclient.autoconfigure.HttpClientInterfaceAutoConfiguration

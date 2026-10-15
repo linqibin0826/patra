@@ -9,8 +9,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
-import dev.patra.tool.httpclient.config.HttpInterfaceProperties;
-import dev.patra.tool.httpclient.config.HttpInterfaceProperties.ServiceGroupProperties;
+import dev.patra.tool.httpclient.autoconfigure.HttpClientProperties;
 import dev.patra.tool.httpclient.interceptor.InternalCallInterceptor;
 import java.time.Duration;
 import java.util.HashMap;
@@ -42,12 +41,45 @@ class RestClientFactoryTest {
 
   /// 创建带有空 customizers 和空拦截器的工厂
   @SuppressWarnings("unchecked")
-  private RestClientFactory createFactory(HttpInterfaceProperties properties) {
+  /// 测试用的可变装配器，最后 build 成不可变的 record。
+  private static final class PropsBuilder {
+    Duration connect = Duration.ofSeconds(5);
+    Duration read = Duration.ofSeconds(30);
+    int maxConnTotal = 100;
+    int maxConnPerRoute = 20;
+    Duration validateAfterInactivity = Duration.ofSeconds(5);
+    Duration evictIdleConnectionsAfter = Duration.ofSeconds(30);
+    final Map<String, HttpClientProperties.HttpInterface.Group> groups = new HashMap<>();
+
+    HttpClientProperties.HttpInterface build() {
+      return new HttpClientProperties.HttpInterface(
+          true,
+          connect,
+          read,
+          new HttpClientProperties.HttpInterface.ConnectionPool(
+              maxConnTotal, maxConnPerRoute, validateAfterInactivity, evictIdleConnectionsAfter),
+          new HttpClientProperties.HttpInterface.ErrorHandling(true, true, 65536),
+          groups);
+    }
+  }
+
+  /// 测试用的分组装配器。
+  private static final class GroupBuilder {
+    String baseUrl;
+    Duration connectTimeout;
+    Duration readTimeout;
+
+    HttpClientProperties.HttpInterface.Group build() {
+      return new HttpClientProperties.HttpInterface.Group(baseUrl, connectTimeout, readTimeout);
+    }
+  }
+
+  private RestClientFactory createFactory(PropsBuilder properties) {
     ObjectProvider<RestClientCustomizer> customizers = mock(ObjectProvider.class);
     when(customizers.orderedStream()).thenReturn(Stream.empty());
     ObjectProvider<InternalCallInterceptor> interceptors = mock(ObjectProvider.class);
     when(interceptors.orderedStream()).thenReturn(Stream.empty());
-    return new RestClientFactory(customizers, interceptors, properties);
+    return new RestClientFactory(customizers, interceptors, properties.build());
   }
 
   @Nested
@@ -58,7 +90,7 @@ class RestClientFactoryTest {
     @DisplayName("使用默认 baseUrl")
     void shouldUseDefaultBaseUrl() {
       // Given
-      HttpInterfaceProperties properties = new HttpInterfaceProperties();
+      PropsBuilder properties = new PropsBuilder();
       RestClientFactory factory = createFactory(properties);
       RestClient.Builder builder = RestClient.builder();
 
@@ -73,13 +105,11 @@ class RestClientFactoryTest {
     @DisplayName("从分组配置获取 baseUrl")
     void shouldUseGroupBaseUrl() {
       // Given
-      HttpInterfaceProperties properties = new HttpInterfaceProperties();
-      ServiceGroupProperties groupProps = new ServiceGroupProperties();
-      groupProps.setBaseUrl("http://localhost:8080");
+      PropsBuilder properties = new PropsBuilder();
+      GroupBuilder groupProps = new GroupBuilder();
+      groupProps.baseUrl = "http://localhost:8080";
 
-      Map<String, ServiceGroupProperties> groups = new HashMap<>();
-      groups.put("registry", groupProps);
-      properties.setGroups(groups);
+      properties.groups.put("registry", groupProps.build());
 
       RestClientFactory factory = createFactory(properties);
       RestClient.Builder builder = RestClient.builder();
@@ -95,15 +125,13 @@ class RestClientFactoryTest {
     @DisplayName("应用分组级别超时配置")
     void shouldApplyGroupTimeoutSettings() {
       // Given
-      HttpInterfaceProperties properties = new HttpInterfaceProperties();
-      ServiceGroupProperties groupProps = new ServiceGroupProperties();
-      groupProps.setBaseUrl("http://localhost:8080");
-      groupProps.setConnectTimeout(Duration.ofSeconds(10));
-      groupProps.setReadTimeout(Duration.ofSeconds(60));
+      PropsBuilder properties = new PropsBuilder();
+      GroupBuilder groupProps = new GroupBuilder();
+      groupProps.baseUrl = "http://localhost:8080";
+      groupProps.connectTimeout = Duration.ofSeconds(10);
+      groupProps.readTimeout = Duration.ofSeconds(60);
 
-      Map<String, ServiceGroupProperties> groups = new HashMap<>();
-      groups.put("registry", groupProps);
-      properties.setGroups(groups);
+      properties.groups.put("registry", groupProps.build());
 
       RestClientFactory factory = createFactory(properties);
       RestClient.Builder builder = RestClient.builder();
@@ -120,14 +148,15 @@ class RestClientFactoryTest {
     @SuppressWarnings("unchecked")
     void shouldApplyCustomizers() {
       // Given
-      HttpInterfaceProperties properties = new HttpInterfaceProperties();
+      PropsBuilder properties = new PropsBuilder();
       RestClientCustomizer customizer = mock(RestClientCustomizer.class);
       ObjectProvider<RestClientCustomizer> customizers = mock(ObjectProvider.class);
       when(customizers.orderedStream()).thenReturn(Stream.of(customizer));
       ObjectProvider<InternalCallInterceptor> interceptors = mock(ObjectProvider.class);
       when(interceptors.orderedStream()).thenReturn(Stream.empty());
 
-      RestClientFactory factory = new RestClientFactory(customizers, interceptors, properties);
+      RestClientFactory factory =
+          new RestClientFactory(customizers, interceptors, properties.build());
       RestClient.Builder builder = RestClient.builder();
 
       // When
@@ -141,9 +170,9 @@ class RestClientFactoryTest {
     @DisplayName("分组配置为 null 时使用全局配置")
     void shouldUseGlobalConfigWhenGroupIsNull() {
       // Given
-      HttpInterfaceProperties properties = new HttpInterfaceProperties();
-      properties.setConnectTimeout(Duration.ofSeconds(15));
-      properties.setReadTimeout(Duration.ofSeconds(45));
+      PropsBuilder properties = new PropsBuilder();
+      properties.connect = Duration.ofSeconds(15);
+      properties.read = Duration.ofSeconds(45);
 
       RestClientFactory factory = createFactory(properties);
       RestClient.Builder builder = RestClient.builder();
@@ -166,7 +195,7 @@ class RestClientFactoryTest {
     @SuppressWarnings("unchecked")
     void shouldApplyInternalCallInterceptors() {
       // Given
-      HttpInterfaceProperties properties = new HttpInterfaceProperties();
+      PropsBuilder properties = new PropsBuilder();
       ObjectProvider<RestClientCustomizer> customizers = mock(ObjectProvider.class);
       when(customizers.orderedStream()).thenReturn(Stream.empty());
       InternalCallInterceptor marker =
@@ -185,7 +214,7 @@ class RestClientFactoryTest {
 
       // When
       RestClient restClient =
-          new RestClientFactory(customizers, interceptors, properties)
+          new RestClientFactory(customizers, interceptors, properties.build())
               .createRestClient(builder, "self", "http://localhost:8080");
       restClient.get().uri("/ping").retrieve().toBodilessEntity();
 
@@ -202,7 +231,7 @@ class RestClientFactoryTest {
     @DisplayName("创建 HTTP Interface 代理")
     void shouldCreateProxy() {
       // Given
-      HttpInterfaceProperties properties = new HttpInterfaceProperties();
+      PropsBuilder properties = new PropsBuilder();
       RestClientFactory factory = createFactory(properties);
       RestClient restClient = RestClient.builder().baseUrl("http://localhost:8080").build();
 
@@ -222,18 +251,16 @@ class RestClientFactoryTest {
     @DisplayName("分组超时覆盖全局超时")
     void groupTimeoutShouldOverrideGlobalTimeout() {
       // Given
-      HttpInterfaceProperties properties = new HttpInterfaceProperties();
-      properties.setConnectTimeout(Duration.ofSeconds(5));
-      properties.setReadTimeout(Duration.ofSeconds(30));
+      PropsBuilder properties = new PropsBuilder();
+      properties.connect = Duration.ofSeconds(5);
+      properties.read = Duration.ofSeconds(30);
 
-      ServiceGroupProperties groupProps = new ServiceGroupProperties();
-      groupProps.setBaseUrl("http://localhost:8080");
-      groupProps.setConnectTimeout(Duration.ofSeconds(10)); // 覆盖全局
+      GroupBuilder groupProps = new GroupBuilder();
+      groupProps.baseUrl = "http://localhost:8080";
+      groupProps.connectTimeout = Duration.ofSeconds(10); // 覆盖全局
       // readTimeout 不设置，应使用全局值
 
-      Map<String, ServiceGroupProperties> groups = new HashMap<>();
-      groups.put("registry", groupProps);
-      properties.setGroups(groups);
+      properties.groups.put("registry", groupProps.build());
 
       RestClientFactory factory = createFactory(properties);
       RestClient.Builder builder = RestClient.builder();
@@ -249,9 +276,9 @@ class RestClientFactoryTest {
     @DisplayName("使用默认超时时不创建自定义 RequestFactory")
     void shouldNotCreateRequestFactoryForDefaultTimeout() {
       // Given
-      HttpInterfaceProperties properties = new HttpInterfaceProperties();
-      properties.setConnectTimeout(Duration.ofSeconds(5)); // 默认值
-      properties.setReadTimeout(Duration.ofSeconds(30)); // 默认值
+      PropsBuilder properties = new PropsBuilder();
+      properties.connect = Duration.ofSeconds(5); // 默认值
+      properties.read = Duration.ofSeconds(30); // 默认值
 
       RestClientFactory factory = createFactory(properties);
       RestClient.Builder builder = RestClient.builder();
@@ -272,19 +299,17 @@ class RestClientFactoryTest {
     @DisplayName("应用自定义连接池配置")
     void shouldApplyCustomConnectionPoolSettings() {
       // Given
-      HttpInterfaceProperties properties = new HttpInterfaceProperties();
-      properties.getConnectionPool().setMaxConnTotal(200);
-      properties.getConnectionPool().setMaxConnPerRoute(50);
-      properties.getConnectionPool().setValidateAfterInactivity(Duration.ofSeconds(10));
-      properties.getConnectionPool().setEvictIdleConnectionsAfter(Duration.ofSeconds(60));
+      PropsBuilder properties = new PropsBuilder();
+      properties.maxConnTotal = 200;
+      properties.maxConnPerRoute = 50;
+      properties.validateAfterInactivity = Duration.ofSeconds(10);
+      properties.evictIdleConnectionsAfter = Duration.ofSeconds(60);
 
-      ServiceGroupProperties groupProps = new ServiceGroupProperties();
-      groupProps.setBaseUrl("http://localhost:8080");
-      groupProps.setConnectTimeout(Duration.ofSeconds(10)); // 触发自定义 RequestFactory 创建
+      GroupBuilder groupProps = new GroupBuilder();
+      groupProps.baseUrl = "http://localhost:8080";
+      groupProps.connectTimeout = Duration.ofSeconds(10); // 触发自定义 RequestFactory 创建
 
-      Map<String, ServiceGroupProperties> groups = new HashMap<>();
-      groups.put("registry", groupProps);
-      properties.setGroups(groups);
+      properties.groups.put("registry", groupProps.build());
 
       RestClientFactory factory = createFactory(properties);
       RestClient.Builder builder = RestClient.builder();

@@ -1,7 +1,7 @@
 package dev.patra.tool.httpclient.download.strategy;
 
 import dev.patra.tool.core.error.trait.StandardErrorTrait;
-import dev.patra.tool.httpclient.config.DownloadProperties;
+import dev.patra.tool.httpclient.autoconfigure.HttpClientProperties;
 import dev.patra.tool.httpclient.download.DownloadException;
 import dev.patra.tool.httpclient.download.DownloadOptions;
 import dev.patra.tool.httpclient.download.StreamingDownloadResponse;
@@ -40,13 +40,13 @@ import reactor.util.retry.Retry;
 public class HttpStreamingDownloader implements StreamingDownloader {
 
   private final WebClient webClient;
-  private final DownloadProperties properties;
+  private final HttpClientProperties.Download properties;
 
   /// 创建 HTTP/HTTPS 流式下载策略。
   ///
   /// @param webClient WebClient 实例（建议使用 streamingWebClient）
   /// @param properties 下载配置
-  public HttpStreamingDownloader(WebClient webClient, DownloadProperties properties) {
+  public HttpStreamingDownloader(WebClient webClient, HttpClientProperties.Download properties) {
     this.webClient = webClient;
     this.properties = properties;
   }
@@ -65,18 +65,18 @@ public class HttpStreamingDownloader implements StreamingDownloader {
     Objects.requireNonNull(url, "下载 URL 不能为 null");
     log.info("开始 HTTP 下载：{}", url);
 
-    var retryConfig = properties.getRetry();
+    var retryConfig = properties.retry();
     AtomicInteger attemptCount = new AtomicInteger(0);
 
     try {
       Mono<org.springframework.http.ResponseEntity<Flux<DataBuffer>>> mono =
           createDownloadMono(url);
 
-      if (retryConfig.isEnabled()) {
+      if (retryConfig.enabled()) {
         mono =
             mono.retryWhen(
-                Retry.backoff(retryConfig.getMaxAttempts(), retryConfig.getInitialBackoff())
-                    .maxBackoff(retryConfig.getMaxBackoff())
+                Retry.backoff(retryConfig.maxAttempts(), retryConfig.initialBackoff())
+                    .maxBackoff(retryConfig.maxBackoff())
                     .filter(this::isRetryableError)
                     .doBeforeRetry(
                         signal -> {
@@ -109,7 +109,7 @@ public class HttpStreamingDownloader implements StreamingDownloader {
       int bufferSize =
           options != null && options.bufferSize() != null
               ? options.bufferSize()
-              : properties.getBufferSize();
+              : properties.bufferSize();
       InputStream inputStream = fluxToInputStream(bodyFlux, url, bufferSize);
 
       return new StreamingDownloadResponse(

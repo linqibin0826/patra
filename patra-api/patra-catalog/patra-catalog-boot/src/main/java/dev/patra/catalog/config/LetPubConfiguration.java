@@ -88,7 +88,7 @@ public class LetPubConfiguration {
     } else {
       // 警告：JDK HttpClient 会默认读取 JVM 系统属性 https.proxyHost/Port，
       // 但其 HTTPS CONNECT 代理认证实现不完整，使用青果等隧道代理时会随机 503。
-      // 如需代理，在 Nacos 的 patra-catalog.yaml 打开 linqibin.starter.rest-client.proxy.tunnel.enabled，
+      // 如需代理，在 Nacos 的 patra-catalog.yaml 打开 patra.http-client.proxy.tunnel.enabled，
       // 并在 ~/.patra/secrets/catalog.env 提供 PROXY_AUTH_KEY、PROXY_AUTH_PWD，
       // 使 TunnelProxyConfigurer Bean 生效（走 Apache HttpClient 5）。
       String jvmProxyHost = System.getProperty("https.proxyHost");

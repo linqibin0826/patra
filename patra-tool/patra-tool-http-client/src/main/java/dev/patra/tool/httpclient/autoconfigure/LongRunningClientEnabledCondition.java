@@ -1,4 +1,4 @@
-package dev.patra.tool.httpclient.config;
+package dev.patra.tool.httpclient.autoconfigure;
 
 import org.springframework.boot.autoconfigure.condition.ConditionOutcome;
 import org.springframework.boot.autoconfigure.condition.SpringBootCondition;
@@ -7,7 +7,7 @@ import org.springframework.core.type.AnnotatedTypeMetadata;
 
 /// 长时间运行客户端启用条件。
 ///
-/// 当 `linqibin.starter.rest-client.clients.long-running.enabled` 为 `true` 或未配置时，
+/// 当 `patra.http-client.rest.clients.long-running.enabled` 为 `true` 或未配置时，
 /// 条件匹配；当显式配置为 `false` 时，条件不匹配。
 ///
 /// @author linqibin
@@ -15,7 +15,7 @@ import org.springframework.core.type.AnnotatedTypeMetadata;
 class LongRunningClientEnabledCondition extends SpringBootCondition {
 
   private static final String ENABLED_PROPERTY =
-      "linqibin.starter.rest-client.clients.long-running.enabled";
+      "patra.http-client.rest.clients.long-running.enabled";
 
   @Override
   public ConditionOutcome getMatchOutcome(

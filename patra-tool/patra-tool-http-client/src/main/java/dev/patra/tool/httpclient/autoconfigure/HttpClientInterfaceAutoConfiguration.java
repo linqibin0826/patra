@@ -1,6 +1,5 @@
-package dev.patra.tool.httpclient.config;
+package dev.patra.tool.httpclient.autoconfigure;
 
-import dev.patra.tool.httpclient.config.HttpInterfaceProperties.ConnectionPoolProperties;
 import dev.patra.tool.httpclient.error.ProblemDetailErrorHandler;
 import dev.patra.tool.httpclient.factory.RestClientFactory;
 import dev.patra.tool.httpclient.interceptor.InternalCallInterceptor;
@@ -32,7 +31,7 @@ import tools.jackson.databind.json.JsonMapper;
 /// 此配置在以下条件下激活：
 ///
 /// - 类路径存在 `RestClient` 和 `ProblemDetail`
-/// - 配置属性 `linqibin.starter.http-interface.enabled` 为 `true`（默认）
+/// - 配置属性 `patra.http-client.http-interface.enabled` 为 `true`（默认）
 ///
 /// **使用 Apache HttpClient 5.x 替代 JDK HttpClient**
 ///
@@ -50,16 +49,21 @@ import tools.jackson.databind.json.JsonMapper;
 /// @author linqibin
 /// @since 0.1.0
 @Slf4j
-@AutoConfiguration
-@EnableConfigurationProperties(HttpInterfaceProperties.class)
+@AutoConfiguration(after = HttpClientAutoConfiguration.class)
+@EnableConfigurationProperties(HttpClientProperties.class)
 @ConditionalOnClass(
     name = {"org.springframework.web.client.RestClient", "org.springframework.http.ProblemDetail"})
 @ConditionalOnProperty(
-    prefix = "linqibin.starter.http-interface",
+    prefix = "patra.http-client",
     name = "enabled",
     havingValue = "true",
     matchIfMissing = true)
-public class HttpInterfaceAutoConfiguration {
+@ConditionalOnProperty(
+    prefix = "patra.http-client.http-interface",
+    name = "enabled",
+    havingValue = "true",
+    matchIfMissing = true)
+public final class HttpClientInterfaceAutoConfiguration {
 
   /// 注册 ProblemDetail 错误处理器 Bean
   ///
@@ -71,9 +75,11 @@ public class HttpInterfaceAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean
   public ProblemDetailErrorHandler problemDetailErrorHandler(
-      JsonMapper jsonMapper, HttpInterfaceProperties properties) {
-    log.info("配置 ProblemDetailErrorHandler (容错模式: {})", properties.getErrorHandling().isTolerant());
-    return new ProblemDetailErrorHandler(jsonMapper, properties.getErrorHandling());
+      JsonMapper jsonMapper, HttpClientProperties properties) {
+    log.info(
+        "配置 ProblemDetailErrorHandler (容错模式: {})",
+        properties.httpInterface().errorHandling().tolerant());
+    return new ProblemDetailErrorHandler(jsonMapper, properties.httpInterface().errorHandling());
   }
 
   /// 注册 RestClient 自定义器
@@ -89,11 +95,12 @@ public class HttpInterfaceAutoConfiguration {
   @ConditionalOnMissingBean(name = "httpInterfaceRestClientCustomizer")
   public RestClientCustomizer httpInterfaceRestClientCustomizer(
       ObjectProvider<ProblemDetailErrorHandler> errorHandlerProvider,
-      HttpInterfaceProperties properties) {
+      HttpClientProperties properties) {
 
     return builder -> {
       ProblemDetailErrorHandler errorHandler = errorHandlerProvider.getIfAvailable();
-      if (errorHandler != null && properties.getErrorHandling().isProblemDetailEnabled()) {
+      if (errorHandler != null
+          && properties.httpInterface().errorHandling().problemDetailEnabled()) {
         builder.defaultStatusHandler(HttpStatusCode::isError, errorHandler);
         log.debug("已将 ProblemDetailErrorHandler 添加到 RestClient.Builder");
       }
@@ -115,7 +122,7 @@ public class HttpInterfaceAutoConfiguration {
   @Primary
   @ConditionalOnMissingBean(name = "httpInterfaceRestClientBuilder")
   public RestClient.Builder httpInterfaceRestClientBuilder(
-      ObjectProvider<RestClientCustomizer> customizers, HttpInterfaceProperties properties) {
+      ObjectProvider<RestClientCustomizer> customizers, HttpClientProperties properties) {
     RestClient.Builder builder =
         RestClient.builder().requestFactory(createDefaultRequestFactory(properties));
 
@@ -125,12 +132,12 @@ public class HttpInterfaceAutoConfiguration {
     log.info(
         "创建 httpInterfaceRestClientBuilder (connectTimeout={}, readTimeout={}, "
             + "maxConnTotal={}, maxConnPerRoute={}, validateAfterInactivity={}, evictIdleAfter={})",
-        properties.getConnectTimeout(),
-        properties.getReadTimeout(),
-        properties.getConnectionPool().getMaxConnTotal(),
-        properties.getConnectionPool().getMaxConnPerRoute(),
-        properties.getConnectionPool().getValidateAfterInactivity(),
-        properties.getConnectionPool().getEvictIdleConnectionsAfter());
+        properties.httpInterface().connectTimeout(),
+        properties.httpInterface().readTimeout(),
+        properties.httpInterface().connectionPool().maxConnTotal(),
+        properties.httpInterface().connectionPool().maxConnPerRoute(),
+        properties.httpInterface().connectionPool().validateAfterInactivity(),
+        properties.httpInterface().connectionPool().evictIdleConnectionsAfter());
 
     return builder;
   }
@@ -146,11 +153,11 @@ public class HttpInterfaceAutoConfiguration {
   @LoadBalanced
   @ConditionalOnMissingBean(name = "httpInterfaceLoadBalancedRestClientBuilder")
   public RestClient.Builder httpInterfaceLoadBalancedRestClientBuilder(
-      HttpInterfaceProperties properties) {
+      HttpClientProperties properties) {
     log.info(
         "创建 httpInterfaceLoadBalancedRestClientBuilder (connectTimeout={}, readTimeout={})",
-        properties.getConnectTimeout(),
-        properties.getReadTimeout());
+        properties.httpInterface().connectTimeout(),
+        properties.httpInterface().readTimeout());
     return RestClient.builder().requestFactory(createDefaultRequestFactory(properties));
   }
 
@@ -170,24 +177,25 @@ public class HttpInterfaceAutoConfiguration {
   /// - "EOF reached while reading" 错误
   /// - stale connection 检测不可靠导致连续重试都失败
   private HttpComponentsClientHttpRequestFactory createDefaultRequestFactory(
-      HttpInterfaceProperties properties) {
+      HttpClientProperties properties) {
 
-    ConnectionPoolProperties poolProps = properties.getConnectionPool();
+    HttpClientProperties.HttpInterface.ConnectionPool poolProps =
+        properties.httpInterface().connectionPool();
 
     // 创建连接池管理器
     PoolingHttpClientConnectionManager connManager =
         PoolingHttpClientConnectionManagerBuilder.create()
-            .setMaxConnTotal(poolProps.getMaxConnTotal())
-            .setMaxConnPerRoute(poolProps.getMaxConnPerRoute())
+            .setMaxConnTotal(poolProps.maxConnTotal())
+            .setMaxConnPerRoute(poolProps.maxConnPerRoute())
             .setValidateAfterInactivity(
-                TimeValue.ofSeconds(poolProps.getValidateAfterInactivity().toSeconds()))
+                TimeValue.ofSeconds(poolProps.validateAfterInactivity().toSeconds()))
             .build();
 
     // 创建请求配置
     RequestConfig requestConfig =
         RequestConfig.custom()
-            .setConnectTimeout(Timeout.of(properties.getConnectTimeout()))
-            .setResponseTimeout(Timeout.of(properties.getReadTimeout()))
+            .setConnectTimeout(Timeout.of(properties.httpInterface().connectTimeout()))
+            .setResponseTimeout(Timeout.of(properties.httpInterface().readTimeout()))
             .build();
 
     // 创建 HttpClient
@@ -196,17 +204,17 @@ public class HttpInterfaceAutoConfiguration {
             .setConnectionManager(connManager)
             .setDefaultRequestConfig(requestConfig)
             .evictIdleConnections(
-                TimeValue.ofSeconds(poolProps.getEvictIdleConnectionsAfter().toSeconds()))
+                TimeValue.ofSeconds(poolProps.evictIdleConnectionsAfter().toSeconds()))
             .evictExpiredConnections()
             .build();
 
     log.debug(
         "创建 Apache HttpClient 连接池: maxConnTotal={}, maxConnPerRoute={}, "
             + "validateAfterInactivity={}s, evictIdleAfter={}s",
-        poolProps.getMaxConnTotal(),
-        poolProps.getMaxConnPerRoute(),
-        poolProps.getValidateAfterInactivity().toSeconds(),
-        poolProps.getEvictIdleConnectionsAfter().toSeconds());
+        poolProps.maxConnTotal(),
+        poolProps.maxConnPerRoute(),
+        poolProps.validateAfterInactivity().toSeconds(),
+        poolProps.evictIdleConnectionsAfter().toSeconds());
 
     return new HttpComponentsClientHttpRequestFactory(httpClient);
   }
@@ -225,8 +233,8 @@ public class HttpInterfaceAutoConfiguration {
   public RestClientFactory restClientFactory(
       ObjectProvider<RestClientCustomizer> customizers,
       ObjectProvider<InternalCallInterceptor> internalCallInterceptors,
-      HttpInterfaceProperties properties) {
+      HttpClientProperties properties) {
     log.info("注册 RestClientFactory");
-    return new RestClientFactory(customizers, internalCallInterceptors, properties);
+    return new RestClientFactory(customizers, internalCallInterceptors, properties.httpInterface());
   }
 }

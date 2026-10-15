@@ -1,7 +1,7 @@
 package dev.patra.tool.httpclient.download.strategy;
 
 import dev.patra.tool.core.error.trait.StandardErrorTrait;
-import dev.patra.tool.httpclient.config.DownloadProperties;
+import dev.patra.tool.httpclient.autoconfigure.HttpClientProperties;
 import dev.patra.tool.httpclient.download.DownloadException;
 import dev.patra.tool.httpclient.download.DownloadOptions;
 import dev.patra.tool.httpclient.download.FtpCredentials;
@@ -24,14 +24,14 @@ import org.apache.commons.net.ftp.FTPReply;
 @Slf4j
 public class FtpStreamingDownloader implements StreamingDownloader {
 
-  private final DownloadProperties properties;
+  private final HttpClientProperties.Download properties;
   // FTP 文件不存在的响应码（RFC 959）
   private static final int FTP_FILE_UNAVAILABLE = 550;
 
   /// 创建 FTP 流式下载策略。
   ///
   /// @param properties 下载配置
-  public FtpStreamingDownloader(DownloadProperties properties) {
+  public FtpStreamingDownloader(HttpClientProperties.Download properties) {
     this.properties = properties;
   }
 
@@ -48,10 +48,10 @@ public class FtpStreamingDownloader implements StreamingDownloader {
     Objects.requireNonNull(url, "下载 URL 不能为 null");
     log.info("开始 FTP 下载：{}", url);
 
-    var ftpConfig = properties.getFtp();
+    var ftpConfig = properties.ftp();
     FTPClient ftpClient = new FTPClient();
-    ftpClient.setConnectTimeout((int) ftpConfig.getConnectTimeout().toMillis());
-    ftpClient.setDataTimeout(ftpConfig.getDataTimeout());
+    ftpClient.setConnectTimeout((int) ftpConfig.connectTimeout().toMillis());
+    ftpClient.setDataTimeout(ftpConfig.dataTimeout());
 
     try {
       String host = url.getHost();
@@ -69,7 +69,7 @@ public class FtpStreamingDownloader implements StreamingDownloader {
         throw new DownloadException("FTP 登录失败", StandardErrorTrait.DEP_UNAVAILABLE);
       }
 
-      if (ftpConfig.isPassiveMode()) {
+      if (ftpConfig.passiveMode()) {
         ftpClient.enterLocalPassiveMode();
       }
       ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
@@ -92,8 +92,7 @@ public class FtpStreamingDownloader implements StreamingDownloader {
       }
 
       InputStream wrappedStream = new FtpInputStreamWrapper(ftpInputStream, ftpClient);
-      return new StreamingDownloadResponse(
-          wrappedStream, fileSize, ftpConfig.getDefaultContentType());
+      return new StreamingDownloadResponse(wrappedStream, fileSize, ftpConfig.defaultContentType());
 
     } catch (DownloadException e) {
       disconnectFtpQuietly(ftpClient);
@@ -112,17 +111,17 @@ public class FtpStreamingDownloader implements StreamingDownloader {
   }
 
   private FtpCredentials resolveCredentials(
-      DownloadOptions options, DownloadProperties.FtpConfig ftpConfig) {
+      DownloadOptions options, HttpClientProperties.Download.Ftp ftpConfig) {
     FtpCredentials credentials = options != null ? options.ftpCredentials() : null;
     if (credentials == null) {
-      credentials = new FtpCredentials(ftpConfig.getUsername(), ftpConfig.getPassword());
+      credentials = new FtpCredentials(ftpConfig.username(), ftpConfig.password());
     }
     if (credentials.username() == null
         || credentials.username().isBlank()
         || credentials.password() == null
         || credentials.password().isBlank()) {
       throw new DownloadException(
-          "FTP 账号密码未配置，请在 linqibin.starter.rest-client.download.ftp.* 或 DownloadOptions 中提供",
+          "FTP 账号密码未配置，请在 patra.http-client.download.ftp.* 或 DownloadOptions 中提供",
           StandardErrorTrait.RULE_VIOLATION);
     }
     return credentials;

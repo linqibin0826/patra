@@ -8,11 +8,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
-import dev.patra.tool.httpclient.config.DownloadProperties;
+import dev.patra.tool.httpclient.autoconfigure.HttpClientProperties;
 import dev.patra.tool.httpclient.download.strategy.HttpStreamingDownloader;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,9 +43,25 @@ class DownloadClientIT {
             .baseUrl(wmRuntimeInfo.getHttpBaseUrl())
             .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(-1))
             .build();
-    DownloadProperties properties = new DownloadProperties();
-    properties.setBaseDir(tempDir);
-    properties.setTempDir(tempDir);
+    HttpClientProperties.Download properties =
+        new HttpClientProperties.Download(
+            true,
+            tempDir,
+            tempDir,
+            WriteStrategy.OVERWRITE,
+            true,
+            true,
+            65536,
+            new HttpClientProperties.Download.Retry(
+                true, 3, Duration.ofSeconds(2), Duration.ofSeconds(30)),
+            new HttpClientProperties.Download.Ftp(
+                true,
+                null,
+                null,
+                Duration.ofSeconds(30),
+                Duration.ofMinutes(30),
+                true,
+                "application/xml"));
     downloadClient =
         new DefaultDownloadClient(
             List.of(new HttpStreamingDownloader(webClient, properties)), properties);

@@ -22,16 +22,12 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
-# HTTP Interface 客户端配置（替代 Feign）
-linqibin:
-  starter:
+patra:
+  # HTTP Interface 客户端（服务间调用，替代 Feign）
+  http-client:
     http-interface:
-      enabled: true
       connect-timeout: 2s
       read-timeout: 5s
-      error-handling:
-        problem-detail-enabled: true
-        tolerant: true
       groups:
         registry:
           base-url: lb://patra-registry
@@ -39,8 +35,6 @@ linqibin:
         storage:
           base-url: lb://patra-object-storage
           read-timeout: 60s
-
-patra:
   web:
     error:
       context-prefix: ING

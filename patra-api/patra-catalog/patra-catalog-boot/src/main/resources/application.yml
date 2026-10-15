@@ -45,6 +45,23 @@ spring:
 # Patra Configuration
 # ----------------------------------------------------------------------------
 patra:
+  http-client:
+    proxy:
+      tunnel:
+        # 青果隧道代理：LetPub 等外部爬取经 Apache HttpClient 5 走它。
+        # 开关和凭据随环境变，在 Nacos 的 patra-catalog.yaml（dev 关闭）；凭据引用 ${PROXY_AUTH_KEY:}、
+        # ${PROXY_AUTH_PWD:}，值放 ~/.patra/secrets/catalog.env。打开后缺凭据，启动期 Assert 会报错。
+        # 使用 IP 而非域名，避免 Clash fake-ip DNS 劫持
+        # 域名 tun-afbngw.qg.net 对应 IP，可通过 nslookup tun-afbngw.qg.net 8.8.8.8 验证
+        host: 112.49.20.234
+        port: 15057
+    http-interface:
+      connect-timeout: 2s
+      read-timeout: 5s
+      groups:
+        registry:
+          base-url: lb://patra-registry
+          read-timeout: 10s
   web:
     error:
       context-prefix: CAT
@@ -62,30 +79,9 @@ patra:
 
 linqibin:
   starter:
-    rest-client:
-      proxy:
-        tunnel:
-          # 青果隧道代理：LetPub 等外部爬取经 Apache HttpClient 5 走它。
-          # 开关和凭据随环境变，在 Nacos 的 patra-catalog.yaml（dev 关闭）；凭据引用 ${PROXY_AUTH_KEY:}、
-          # ${PROXY_AUTH_PWD:}，值放 ~/.patra/secrets/catalog.env。打开后缺凭据，启动期 Assert 会报错。
-          # 使用 IP 而非域名，避免 Clash fake-ip DNS 劫持
-          # 域名 tun-afbngw.qg.net 对应 IP，可通过 nslookup tun-afbngw.qg.net 8.8.8.8 验证
-          host: 112.49.20.234
-          port: 15057
     object-storage:
       # MeSH 描述符文件约 400MB，starter 默认上限 100MB 不够
       max-file-size: 5368709120  # 5GB
-    http-interface:
-      enabled: true
-      connect-timeout: 2s
-      read-timeout: 5s
-      error-handling:
-        problem-detail-enabled: true
-        tolerant: true
-      groups:
-        registry:
-          base-url: lb://patra-registry
-          read-timeout: 10s
 
 # ----------------------------------------------------------------------------
 # XXL-Job Distributed Task Scheduler

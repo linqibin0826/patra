@@ -1,4 +1,4 @@
-package dev.patra.tool.httpclient.config;
+package dev.patra.tool.httpclient.autoconfigure;
 
 import dev.patra.tool.httpclient.download.CompositeProgressListener;
 import dev.patra.tool.httpclient.download.DefaultDownloadClient;
@@ -38,14 +38,19 @@ import org.springframework.context.annotation.Configuration;
 /// @author linqibin
 /// @since 0.1.0
 @AutoConfiguration(
-    after = {RestClientAutoConfiguration.class, StreamingWebClientAutoConfiguration.class})
+    after = {HttpClientAutoConfiguration.class, HttpClientStreamingAutoConfiguration.class})
 @ConditionalOnProperty(
-    prefix = "linqibin.starter.rest-client.download",
+    prefix = "patra.http-client",
     name = "enabled",
     havingValue = "true",
     matchIfMissing = true)
-@EnableConfigurationProperties(DownloadProperties.class)
-public class DownloadClientAutoConfiguration {
+@ConditionalOnProperty(
+    prefix = "patra.http-client.download",
+    name = "enabled",
+    havingValue = "true",
+    matchIfMissing = true)
+@EnableConfigurationProperties(HttpClientProperties.class)
+public final class HttpClientDownloadAutoConfiguration {
 
   /// 默认日志输出间隔（每 10% 输出一次）
   private static final int DEFAULT_LOG_INTERVAL_PERCENT = 10;
@@ -69,8 +74,9 @@ public class DownloadClientAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean
   public DownloadClient downloadClient(
-      DownloadProperties properties, ObjectProvider<StreamingDownloader> downloadersProvider) {
-    return new DefaultDownloadClient(downloadersProvider.orderedStream().toList(), properties);
+      HttpClientProperties properties, ObjectProvider<StreamingDownloader> downloadersProvider) {
+    return new DefaultDownloadClient(
+        downloadersProvider.orderedStream().toList(), properties.download());
   }
 
   /// 创建默认进度监听器。
@@ -100,12 +106,12 @@ public class DownloadClientAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean(FtpStreamingDownloader.class)
   @ConditionalOnProperty(
-      prefix = "linqibin.starter.rest-client.download.ftp",
+      prefix = "patra.http-client.download.ftp",
       name = "enabled",
       havingValue = "true",
       matchIfMissing = true)
-  public StreamingDownloader ftpStreamingDownloader(DownloadProperties properties) {
-    return new FtpStreamingDownloader(properties);
+  public StreamingDownloader ftpStreamingDownloader(HttpClientProperties properties) {
+    return new FtpStreamingDownloader(properties.download());
   }
 
   /// HTTP/HTTPS 流式下载策略配置。
@@ -113,13 +119,13 @@ public class DownloadClientAutoConfiguration {
   /// 移除了原 `@ConditionalOnBean(name = "streamingWebClient")` —— 该守卫受
   /// `OnBeanCondition` 评估时序约束（解析阶段评估，跨类依赖目标 BeanDefinition
   /// 已注册），存在不可靠风险。本类的进入条件（`@ConditionalOnClass(WebClient)`
-  /// + `streaming.enabled`）与 `StreamingWebClientAutoConfiguration` 完全一致，
+  /// + `streaming.enabled`）与 `HttpClientStreamingAutoConfiguration` 完全一致，
   /// 前者满足则 `streamingWebClient` bean 一定存在，守卫冗余。若用户手动排除
-  /// `StreamingWebClientAutoConfiguration`，`@Qualifier` 注入会失败并给出清晰报错。
-  @Configuration
+  /// `HttpClientStreamingAutoConfiguration`，`@Qualifier` 注入会失败并给出清晰报错。
+  @Configuration(proxyBeanMethods = false)
   @ConditionalOnClass(name = "org.springframework.web.reactive.function.client.WebClient")
   @ConditionalOnProperty(
-      prefix = "linqibin.starter.rest-client.streaming",
+      prefix = "patra.http-client.rest.streaming",
       name = "enabled",
       havingValue = "true",
       matchIfMissing = true)
@@ -135,8 +141,8 @@ public class DownloadClientAutoConfiguration {
     public StreamingDownloader httpStreamingDownloader(
         @Qualifier("streamingWebClient")
             org.springframework.web.reactive.function.client.WebClient webClient,
-        DownloadProperties properties) {
-      return new HttpStreamingDownloader(webClient, properties);
+        HttpClientProperties properties) {
+      return new HttpStreamingDownloader(webClient, properties.download());
     }
   }
 }

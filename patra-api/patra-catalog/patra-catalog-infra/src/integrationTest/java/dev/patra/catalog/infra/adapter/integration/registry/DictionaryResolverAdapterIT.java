@@ -17,7 +17,7 @@ import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import dev.patra.catalog.domain.model.enums.DictionaryType;
 import dev.patra.catalog.domain.model.vo.common.SourceStandard;
 import dev.patra.registry.api.endpoint.DictionaryEndpoint;
-import dev.patra.tool.httpclient.config.HttpInterfaceProperties;
+import dev.patra.tool.httpclient.autoconfigure.HttpClientProperties;
 import dev.patra.tool.httpclient.error.ProblemDetailErrorHandler;
 import java.net.http.HttpClient;
 import java.time.Duration;
@@ -69,9 +69,8 @@ class DictionaryResolverAdapterIT {
   void setUp(WireMockRuntimeInfo wmRuntimeInfo) {
     // 构建测试用的 JsonMapper 和错误处理配置
     JsonMapper objectMapper = JsonMapper.builder().build();
-    HttpInterfaceProperties.ErrorHandlingProperties errorProps =
-        new HttpInterfaceProperties.ErrorHandlingProperties();
-    errorProps.setTolerant(true); // 启用容错模式
+    HttpClientProperties.HttpInterface.ErrorHandling errorProps =
+        new HttpClientProperties.HttpInterface.ErrorHandling(true, true, 65536); // 容错模式
 
     // 显式配置超时的 HttpClient（使用 JDK HttpClient）
     // 注意：必须使用 HTTP/1.1，因为 WireMock 默认不支持 HTTP/2

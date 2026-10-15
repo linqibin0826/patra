@@ -1,7 +1,7 @@
 package dev.patra.tool.httpclient.download;
 
 import dev.patra.tool.core.error.trait.StandardErrorTrait;
-import dev.patra.tool.httpclient.config.DownloadProperties;
+import dev.patra.tool.httpclient.autoconfigure.HttpClientProperties;
 import dev.patra.tool.httpclient.download.strategy.StreamingDownloader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -35,14 +35,14 @@ public class DefaultDownloadClient implements DownloadClient {
   private static final String TEMP_FILE_SUFFIX = ".tmp";
 
   private final List<StreamingDownloader> streamingDownloaders;
-  private final DownloadProperties properties;
+  private final HttpClientProperties.Download properties;
 
   /// 创建下载客户端。
   ///
   /// @param streamingDownloaders 流式下载策略列表
   /// @param properties 下载配置
   public DefaultDownloadClient(
-      List<StreamingDownloader> streamingDownloaders, DownloadProperties properties) {
+      List<StreamingDownloader> streamingDownloaders, HttpClientProperties.Download properties) {
     this.streamingDownloaders =
         Objects.requireNonNull(streamingDownloaders, "streamingDownloaders 不能为 null");
     this.properties = Objects.requireNonNull(properties, "properties 不能为 null");
@@ -118,7 +118,7 @@ public class DefaultDownloadClient implements DownloadClient {
   public DownloadResult downloadToTemp(URI url, @Nullable DownloadOptions options) {
     Objects.requireNonNull(url, "下载 URL 不能为 null");
 
-    Path tempDir = properties.getTempDir();
+    Path tempDir = properties.tempDir();
     if (tempDir == null) {
       tempDir = Path.of(System.getProperty("java.io.tmpdir"));
     }
@@ -202,19 +202,19 @@ public class DefaultDownloadClient implements DownloadClient {
     WriteStrategy writeStrategy =
         options != null && options.writeStrategy() != null
             ? options.writeStrategy()
-            : properties.getWriteStrategy();
+            : properties.writeStrategy();
     boolean createDirs =
         options != null && options.createDirs() != null
             ? options.createDirs()
-            : properties.isCreateDirs();
+            : properties.createDirs();
     boolean cleanupOnFailure =
         options != null && options.cleanupOnFailure() != null
             ? options.cleanupOnFailure()
-            : properties.isCleanupOnFailure();
+            : properties.cleanupOnFailure();
     int bufferSize =
         options != null && options.bufferSize() != null
             ? options.bufferSize()
-            : properties.getBufferSize();
+            : properties.bufferSize();
     if (bufferSize <= 0) {
       throw new DownloadException("bufferSize 必须大于 0", StandardErrorTrait.RULE_VIOLATION);
     }
@@ -229,7 +229,7 @@ public class DefaultDownloadClient implements DownloadClient {
     if (targetPath != null) {
       return targetPath;
     }
-    Path baseDir = properties.getBaseDir();
+    Path baseDir = properties.baseDir();
     if (baseDir == null) {
       throw DownloadException.targetPathMissing();
     }

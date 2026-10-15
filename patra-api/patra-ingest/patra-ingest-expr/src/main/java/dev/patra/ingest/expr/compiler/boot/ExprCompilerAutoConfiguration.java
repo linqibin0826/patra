@@ -43,7 +43,7 @@ import tools.jackson.databind.json.JsonMapper;
 ///
 /// ### 条件装配
 ///
-/// - 依赖 `HttpInterfaceAutoConfiguration` 和 {@link ExprFunctionAutoConfiguration} 先完成
+/// - 依赖 `HttpClientInterfaceAutoConfiguration` 和 {@link ExprFunctionAutoConfiguration} 先完成
 ///   - Registry API 集成可通过 `patra.starter.expr.compiler.registry-api.enabled=false` 禁用
 ///   - 编译器整体可通过 `patra.starter.expr.compiler.enabled=false` 禁用
 ///
@@ -57,7 +57,7 @@ import tools.jackson.databind.json.JsonMapper;
 /// @see ExprCompiler
 @AutoConfiguration(
     after = ExprFunctionAutoConfiguration.class,
-    afterName = "dev.patra.tool.httpclient.config.HttpInterfaceAutoConfiguration")
+    afterName = "dev.patra.tool.httpclient.autoconfigure.HttpClientInterfaceAutoConfiguration")
 @EnableConfigurationProperties({CompilerProperties.class, ExprModeProperties.class})
 public class ExprCompilerAutoConfiguration {
 

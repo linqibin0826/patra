@@ -1,4 +1,4 @@
-package dev.patra.tool.httpclient.config;
+package dev.patra.tool.httpclient.autoconfigure;
 
 import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;
@@ -35,7 +35,7 @@ import reactor.netty.http.client.HttpClient;
 ///
 /// ## 配置说明
 ///
-/// - 默认启用：`linqibin.starter.rest-client.streaming.enabled=true`
+/// - 默认启用：`patra.http-client.rest.streaming.enabled=true`
 /// - 连接超时：30 秒
 /// - 响应超时：10 分钟（与 longRunningRestClient 一致，适合大文件下载）
 /// - 内存限制：-1（不限制，使用流式处理，不缓存到内存）
@@ -55,17 +55,22 @@ import reactor.netty.http.client.HttpClient;
 ///
 /// @author linqibin
 /// @since 0.1.0
-/// @see RestClientAutoConfiguration
+/// @see HttpClientAutoConfiguration
 @Slf4j
-@AutoConfiguration
+@AutoConfiguration(after = HttpClientAutoConfiguration.class)
 @ConditionalOnClass(WebClient.class)
-@EnableConfigurationProperties(RestClientProperties.class)
+@EnableConfigurationProperties(HttpClientProperties.class)
 @ConditionalOnProperty(
-    prefix = "linqibin.starter.rest-client.streaming",
+    prefix = "patra.http-client",
     name = "enabled",
     havingValue = "true",
     matchIfMissing = true)
-public class StreamingWebClientAutoConfiguration {
+@ConditionalOnProperty(
+    prefix = "patra.http-client.rest.streaming",
+    name = "enabled",
+    havingValue = "true",
+    matchIfMissing = true)
+public final class HttpClientStreamingAutoConfiguration {
 
   /// 默认连接超时（30 秒）。
   private static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(30);
@@ -89,15 +94,15 @@ public class StreamingWebClientAutoConfiguration {
   /// @return 配置完成的 WebClient
   @Bean
   @ConditionalOnMissingBean(name = "streamingWebClient")
-  public WebClient streamingWebClient(RestClientProperties properties) {
+  public WebClient streamingWebClient(HttpClientProperties properties) {
     Duration connectTimeout = DEFAULT_CONNECT_TIMEOUT;
     Duration responseTimeout = DEFAULT_RESPONSE_TIMEOUT;
     Duration readTimeout = DEFAULT_READ_TIMEOUT;
 
     // 如果配置了 long-running 客户端的超时，使用相同配置
-    var longRunningConfig = properties.getClients().get("long-running");
-    if (longRunningConfig != null && longRunningConfig.getTimeout() != null) {
-      var timeout = longRunningConfig.getTimeout();
+    var longRunningConfig = properties.rest().clients().get("long-running");
+    if (longRunningConfig != null && longRunningConfig.timeout() != null) {
+      var timeout = longRunningConfig.timeout();
       if (timeout.connect() != null) {
         connectTimeout = timeout.connect();
       }
