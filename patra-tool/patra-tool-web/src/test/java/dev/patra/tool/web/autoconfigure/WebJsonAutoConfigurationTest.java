@@ -1,4 +1,4 @@
-package dev.patra.tool.web.json.config;
+package dev.patra.tool.web.autoconfigure;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

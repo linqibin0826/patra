@@ -9,11 +9,12 @@ import dev.patra.tool.core.error.codes.ErrorCodeLike;
 import dev.patra.tool.core.error.trait.ErrorTrait;
 import dev.patra.tool.core.error.trait.HasErrorTraits;
 import dev.patra.tool.core.error.trait.StandardErrorTrait;
-import dev.patra.tool.web.error.config.ErrorProperties;
+import dev.patra.tool.web.autoconfigure.WebProperties;
 import dev.patra.tool.web.error.model.ErrorResolution;
 import dev.patra.tool.web.error.model.ResolutionStrategy;
 import dev.patra.tool.web.error.spi.ErrorMappingContributor;
 import java.util.*;
+import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -49,19 +50,37 @@ class DefaultErrorResolutionEngineTest {
 
   @Mock private ErrorMappingContributor mockContributor;
 
-  private ErrorProperties errorProperties;
+  private String contextPrefix;
+  private int maxCauseDepth;
+  private boolean traitMapping;
+  private boolean namingHeuristic;
   private DefaultErrorResolutionEngine engine;
 
   @BeforeEach
   void setUp() {
-    errorProperties = new ErrorProperties();
-    errorProperties.setContextPrefix("TEST");
-    errorProperties.setEngine(new ErrorProperties.EngineProperties());
-    errorProperties.getEngine().setMaxCauseDepth(10);
-    errorProperties.getEngine().setEnableTraitMapping(true);
-    errorProperties.getEngine().setEnableNamingHeuristic(true);
+    contextPrefix = "TEST";
+    maxCauseDepth = 10;
+    traitMapping = true;
+    namingHeuristic = true;
+    engine = new DefaultErrorResolutionEngine(error(), List.of(mockContributor));
+  }
 
-    engine = new DefaultErrorResolutionEngine(errorProperties, List.of(mockContributor));
+  /// 按当前字段拼一份错误配置。
+  private WebProperties.Error error() {
+    return errorOf(contextPrefix, maxCauseDepth, traitMapping, namingHeuristic);
+  }
+
+  /// 用给定参数拼一份错误配置，其余取默认值。
+  private static WebProperties.Error errorOf(
+      String contextPrefix, int maxCauseDepth, boolean traitMapping, boolean namingHeuristic) {
+    return new WebProperties.Error(
+        true,
+        contextPrefix,
+        "https://errors.example.com/",
+        false,
+        new WebProperties.Error.Engine(maxCauseDepth, traitMapping, namingHeuristic),
+        new WebProperties.Error.Observation(true, 200L, true),
+        new WebProperties.Error.Trace(List.of("traceId", "X-B3-TraceId", "traceparent")));
   }
 
   @Nested
@@ -209,8 +228,8 @@ class DefaultErrorResolutionEngineTest {
     @DisplayName("ErrorTrait 映射禁用时应该跳过")
     void shouldSkipTraitMappingWhenDisabled() {
       // Given
-      errorProperties.getEngine().setEnableTraitMapping(false);
-      engine = new DefaultErrorResolutionEngine(errorProperties, List.of(mockContributor));
+      traitMapping = false;
+      engine = new DefaultErrorResolutionEngine(error(), List.of(mockContributor));
 
       when(mockContributor.mapException(any())).thenReturn(Optional.empty());
 
@@ -292,8 +311,8 @@ class DefaultErrorResolutionEngineTest {
     @DisplayName("命名启发式禁用时应该跳过")
     void shouldSkipNamingHeuristicWhenDisabled() {
       // Given
-      errorProperties.getEngine().setEnableNamingHeuristic(false);
-      engine = new DefaultErrorResolutionEngine(errorProperties, List.of(mockContributor));
+      namingHeuristic = false;
+      engine = new DefaultErrorResolutionEngine(error(), List.of(mockContributor));
 
       when(mockContributor.mapException(any())).thenReturn(Optional.empty());
 
@@ -376,8 +395,8 @@ class DefaultErrorResolutionEngineTest {
     @DisplayName("超过最大深度时应该返回 500 服务器错误")
     void shouldReturnServerErrorWhenExceedingMaxDepth() {
       // Given
-      errorProperties.getEngine().setMaxCauseDepth(2);
-      engine = new DefaultErrorResolutionEngine(errorProperties, List.of(mockContributor));
+      maxCauseDepth = 2;
+      engine = new DefaultErrorResolutionEngine(error(), List.of(mockContributor));
 
       when(mockContributor.mapException(any())).thenReturn(Optional.empty());
 
@@ -443,8 +462,8 @@ class DefaultErrorResolutionEngineTest {
       when(mockContributor.mapException(any())).thenReturn(Optional.empty());
 
       // 禁用命名启发式，确保使用回退策略
-      errorProperties.getEngine().setEnableNamingHeuristic(false);
-      engine = new DefaultErrorResolutionEngine(errorProperties, List.of(mockContributor));
+      namingHeuristic = false;
+      engine = new DefaultErrorResolutionEngine(error(), List.of(mockContributor));
 
       Throwable exception = createExceptionWithSimpleClassName(className);
 
@@ -524,8 +543,8 @@ class DefaultErrorResolutionEngineTest {
     @DisplayName("应该使用配置的上下文前缀")
     void shouldUseConfiguredContextPrefix() {
       // Given
-      errorProperties.setContextPrefix("CUSTOM");
-      engine = new DefaultErrorResolutionEngine(errorProperties, List.of(mockContributor));
+      contextPrefix = "CUSTOM";
+      engine = new DefaultErrorResolutionEngine(error(), List.of(mockContributor));
 
       when(mockContributor.mapException(any())).thenReturn(Optional.empty());
       Throwable exception = new RuntimeException("test");
@@ -542,8 +561,8 @@ class DefaultErrorResolutionEngineTest {
     @DisplayName("空白上下文前缀应该回退到 UNKNOWN")
     void shouldFallbackToUnknownForBlankContextPrefix() {
       // Given
-      errorProperties.setContextPrefix("   ");
-      engine = new DefaultErrorResolutionEngine(errorProperties, List.of(mockContributor));
+      contextPrefix = "   ";
+      engine = new DefaultErrorResolutionEngine(error(), List.of(mockContributor));
 
       when(mockContributor.mapException(any())).thenReturn(Optional.empty());
       Throwable exception = new RuntimeException("test");
@@ -560,8 +579,8 @@ class DefaultErrorResolutionEngineTest {
     @DisplayName("null 上下文前缀应该回退到 UNKNOWN")
     void shouldFallbackToUnknownForNullContextPrefix() {
       // Given
-      errorProperties.setContextPrefix(null);
-      engine = new DefaultErrorResolutionEngine(errorProperties, List.of(mockContributor));
+      contextPrefix = null;
+      engine = new DefaultErrorResolutionEngine(error(), List.of(mockContributor));
 
       when(mockContributor.mapException(any())).thenReturn(Optional.empty());
       Throwable exception = new RuntimeException("test");
@@ -578,7 +597,7 @@ class DefaultErrorResolutionEngineTest {
     @DisplayName("应该支持空的 ErrorMappingContributor 列表")
     void shouldSupportEmptyContributorList() {
       // Given
-      engine = new DefaultErrorResolutionEngine(errorProperties, Collections.emptyList());
+      engine = new DefaultErrorResolutionEngine(error(), Collections.emptyList());
       Throwable exception = new RuntimeException("test");
 
       // When
@@ -603,8 +622,7 @@ class DefaultErrorResolutionEngineTest {
       when(errorCode.httpStatus()).thenReturn(400);
       when(contributor2.mapException(any())).thenReturn(Optional.of(errorCode));
 
-      engine =
-          new DefaultErrorResolutionEngine(errorProperties, List.of(contributor1, contributor2));
+      engine = new DefaultErrorResolutionEngine(error(), List.of(contributor1, contributor2));
       Throwable exception = new RuntimeException("test");
 
       // When

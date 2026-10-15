@@ -1,9 +1,10 @@
-package dev.patra.tool.web.json.config;
+package dev.patra.tool.web.autoconfigure;
 
 import dev.patra.tool.web.json.LongToStringHttpMessageConvertersCustomizer;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.http.converter.autoconfigure.HttpMessageConvertersAutoConfiguration;
 import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
@@ -21,7 +22,12 @@ import tools.jackson.databind.json.JsonMapper;
     after = {JacksonAutoConfiguration.class, HttpMessageConvertersAutoConfiguration.class})
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @ConditionalOnBean(JsonMapper.class)
-public class WebJsonAutoConfiguration {
+@ConditionalOnProperty(
+    prefix = "patra.web",
+    name = "enabled",
+    havingValue = "true",
+    matchIfMissing = true)
+public final class WebJsonAutoConfiguration {
 
   /// 注册把 MVC 响应里的 `Long` 写成字符串的转换器定制器。
   ///

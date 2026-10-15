@@ -7,8 +7,7 @@ spring:
   # Nacos 的 patra-common.yaml、patra-ingest.yaml 由启动器 PatraApplication 导入，这里不写
   config:
     import:
-      # Local configuration files (error handling and message queue)
-      - "classpath:ingest-error-config.yaml"
+      # 本地消息队列配置
       - "classpath:ingest-rocketmq.yaml"
   # 地址随环境变，在 Nacos 的 patra-ingest.yaml；账号、密码在 patra-common.yaml（源文件在 patra-infra/nacos/dev/）
   datasource:
@@ -42,6 +41,9 @@ linqibin:
           read-timeout: 60s
 
 patra:
+  web:
+    error:
+      context-prefix: ING
   starter:
     # 表达式编译：两种运行方式都用严格模式和长度、参数数上限，其余参数用 starter 默认值
     expr:
@@ -103,3 +105,19 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
+
+ingest:
+  error-catalog:
+    registry-config-not-found: ING-1201
+    registry-config-invalid: ING-1202
+    registry-config-degraded: ING-1203
+    outbox-write-failed: ING-1301
+    outbox-update-conflict: ING-1302
+    outbox-mark-dead-failed: ING-1303
+    schedule-param-invalid: ING-1401
+    relay-execution-failed: ING-1402
+    plan-validation-failed: ING-1403
+    checkpoint-parse-failed: ING-1501
+    checkpoint-serialize-failed: ING-1502
+    plan-persistence-failed: ING-1503
+    plan-assembly-failed: ING-1601

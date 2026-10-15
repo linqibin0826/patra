@@ -25,7 +25,7 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 @Import({PortalVenueController.class, PortalApiConverter.class})
 @AutoConfigureRestTestClient
 @org.springframework.test.context.TestPropertySource(
-    properties = "linqibin.starter.core.error.context-prefix=CATALOG")
+    properties = "patra.web.error.context-prefix=CATALOG")
 @DisplayName("PortalVenueController 期刊详情 REST 切片测试")
 class PortalVenueDetailControllerIT {
 

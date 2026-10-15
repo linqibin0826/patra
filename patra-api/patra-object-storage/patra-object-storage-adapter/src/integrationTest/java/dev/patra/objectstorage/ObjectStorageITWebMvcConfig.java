@@ -1,10 +1,7 @@
 package dev.patra.objectstorage;
 
-import dev.patra.tool.web.error.config.CoreErrorAutoConfiguration;
-import dev.patra.tool.web.error.config.WebErrorAutoConfiguration;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 
 /// WebMvcTest 切片测试配置类。
 ///
@@ -28,7 +25,6 @@ import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 /// @since 0.1.0
 @SpringBootConfiguration
 @EnableAutoConfiguration
-@ImportAutoConfiguration({CoreErrorAutoConfiguration.class, WebErrorAutoConfiguration.class})
 public class ObjectStorageITWebMvcConfig {
   // 空配置类，仅提供 @SpringBootConfiguration 标记
 }

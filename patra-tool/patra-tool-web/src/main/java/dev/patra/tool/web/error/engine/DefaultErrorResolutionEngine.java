@@ -6,7 +6,7 @@ import dev.patra.tool.core.error.codes.ErrorCodeLike;
 import dev.patra.tool.core.error.trait.ErrorTrait;
 import dev.patra.tool.core.error.trait.HasErrorTraits;
 import dev.patra.tool.core.error.trait.StandardErrorTrait;
-import dev.patra.tool.web.error.config.ErrorProperties;
+import dev.patra.tool.web.autoconfigure.WebProperties;
 import dev.patra.tool.web.error.model.ErrorResolution;
 import dev.patra.tool.web.error.model.ResolutionStrategy;
 import dev.patra.tool.web.error.model.SimpleErrorCode;
@@ -134,8 +134,8 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
   /// @param mappingContributors 错误映射贡献者列表（将被排序）
 
   public DefaultErrorResolutionEngine(
-      ErrorProperties errorProperties, List<ErrorMappingContributor> mappingContributors) {
-    String prefix = errorProperties.getContextPrefix();
+      WebProperties.Error errorProperties, List<ErrorMappingContributor> mappingContributors) {
+    String prefix = errorProperties.contextPrefix();
     this.contextPrefix = (prefix == null || prefix.isBlank()) ? DEFAULT_CONTEXT : prefix;
 
     // 按优先级排序 Contributors（方案 4）
@@ -143,11 +143,11 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
     AnnotationAwareOrderComparator.sort(sorted);
     this.mappingContributors = List.copyOf(sorted);
 
-    this.maxCauseDepth = errorProperties.getEngine().getMaxCauseDepth();
-    this.traitMappingEnabled = errorProperties.getEngine().isEnableTraitMapping();
-    this.namingHeuristicEnabled = errorProperties.getEngine().isEnableNamingHeuristic();
-    this.slowThresholdMs = errorProperties.getObservation().getSlowThresholdMs();
-    this.logSlowResolutionEnabled = errorProperties.getObservation().isLogSlowResolution();
+    this.maxCauseDepth = errorProperties.engine().maxCauseDepth();
+    this.traitMappingEnabled = errorProperties.engine().enableTraitMapping();
+    this.namingHeuristicEnabled = errorProperties.engine().enableNamingHeuristic();
+    this.slowThresholdMs = errorProperties.observation().slowThresholdMs();
+    this.logSlowResolutionEnabled = errorProperties.observation().logSlowResolution();
 
     log.info(
         "初始化 ErrorResolutionEngine: contextPrefix={}, contributors={}, maxCauseDepth={}, "

@@ -1,5 +1,4 @@
-linqibin:
-  starter:
-    core:
-      error:
-        context-prefix: TEST
+patra:
+  web:
+    error:
+      context-prefix: TEST

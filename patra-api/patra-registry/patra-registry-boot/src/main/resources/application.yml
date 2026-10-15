@@ -21,12 +21,7 @@ server:
 # Spring Application Configuration
 # ========================================
 spring:
-  # Configuration imports (order matters: later configs override earlier ones)
   # Nacos 的 patra-common.yaml、patra-registry.yaml 由启动器 PatraApplication 导入，这里不写
-  config:
-    import:
-      # Local error-handling configuration
-      - "classpath:registry-error-config.yaml"
 
   # ========================================
   # JSON Serialization Configuration
@@ -80,3 +75,22 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
+
+patra:
+  web:
+    error:
+      context-prefix: REG
+      type-base-url: https://errors.patra.com
+
+registry:
+  error-catalog:
+    dictionary-type-not-found: REG-1401
+    dictionary-item-not-found: REG-1402
+    dictionary-item-disabled: REG-1403
+    dictionary-type-already-exists: REG-1404
+    dictionary-item-already-exists: REG-1405
+    dictionary-type-disabled: REG-1406
+    dictionary-validation-failed: REG-1407
+    dictionary-default-missing: REG-1408
+    dictionary-repository-error: REG-1409
+    quota-exceeded: REG-1501

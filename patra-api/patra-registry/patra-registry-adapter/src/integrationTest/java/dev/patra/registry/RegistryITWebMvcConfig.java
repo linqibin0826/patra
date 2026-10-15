@@ -1,11 +1,7 @@
 package dev.patra.registry;
 
-import dev.patra.tool.web.error.config.CoreErrorAutoConfiguration;
-import dev.patra.tool.web.error.config.WebErrorAutoConfiguration;
-import dev.patra.tool.web.json.config.WebJsonAutoConfiguration;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 
 /// WebMvcTest 切片测试配置类。
 ///
@@ -31,11 +27,6 @@ import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 /// @since 0.1.0
 @SpringBootConfiguration
 @EnableAutoConfiguration
-@ImportAutoConfiguration({
-  CoreErrorAutoConfiguration.class,
-  WebErrorAutoConfiguration.class,
-  WebJsonAutoConfiguration.class
-})
 public class RegistryITWebMvcConfig {
   // 空配置类，仅提供 @SpringBootConfiguration 标记
 }

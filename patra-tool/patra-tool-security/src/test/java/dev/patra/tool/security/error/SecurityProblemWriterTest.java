@@ -4,11 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.tool.core.error.codes.HttpStdErrors;
 import dev.patra.tool.security.authentication.MalformedIdentityException;
+import dev.patra.tool.web.autoconfigure.WebProperties;
 import dev.patra.tool.web.error.adapter.DefaultProblemDetailAdapter;
 import dev.patra.tool.web.error.adapter.ProblemDetailAdapter;
 import dev.patra.tool.web.error.builder.ProblemDetailBuilder;
-import dev.patra.tool.web.error.config.ErrorProperties;
-import dev.patra.tool.web.error.config.WebErrorProperties;
 import dev.patra.tool.web.error.engine.DefaultErrorResolutionEngine;
 import dev.patra.tool.web.error.pipeline.ErrorResolutionPipeline;
 import java.nio.charset.StandardCharsets;
@@ -45,15 +44,21 @@ class SecurityProblemWriterTest {
 
   @BeforeEach
   void setUp() {
-    ErrorProperties errorProperties = new ErrorProperties();
-    errorProperties.setContextPrefix("TEST");
+    WebProperties.Error errorProperties =
+        new WebProperties.Error(
+            true,
+            "TEST",
+            "https://errors.example.com/",
+            false,
+            new WebProperties.Error.Engine(10, true, true),
+            new WebProperties.Error.Observation(true, 200L, true),
+            new WebProperties.Error.Trace(List.of("traceId")));
     DefaultErrorResolutionEngine engine =
         new DefaultErrorResolutionEngine(
             errorProperties,
             List.of(new SecurityErrorMappingContributor(HttpStdErrors.of("TEST"))));
     ProblemDetailBuilder builder =
-        new ProblemDetailBuilder(
-            errorProperties, new WebErrorProperties(), Optional::empty, List.of(), List.of());
+        new ProblemDetailBuilder(errorProperties, Optional::empty, List.of(), List.of());
     ProblemDetailAdapter adapter =
         new DefaultProblemDetailAdapter(new ErrorResolutionPipeline(engine, List.of()), builder);
     writer = new SecurityProblemWriter(adapter, jsonMapper);

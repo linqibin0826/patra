@@ -14,10 +14,9 @@ import dev.patra.tool.core.error.problem.ErrorKeys;
 import dev.patra.tool.core.error.trait.ErrorTrait;
 import dev.patra.tool.core.error.trait.HasErrorTraits;
 import dev.patra.tool.core.error.trait.StandardErrorTrait;
+import dev.patra.tool.web.autoconfigure.WebProperties;
 import dev.patra.tool.web.error.FieldViolationsException;
 import dev.patra.tool.web.error.RetryAfterException;
-import dev.patra.tool.web.error.config.ErrorProperties;
-import dev.patra.tool.web.error.config.WebErrorProperties;
 import dev.patra.tool.web.error.model.ErrorResolution;
 import dev.patra.tool.web.error.model.ValidationError;
 import dev.patra.tool.web.error.spi.ProblemFieldContributor;
@@ -42,10 +41,6 @@ import org.springframework.http.ProblemDetail;
 @DisplayName("ProblemDetailBuilder 单元测试")
 class ProblemDetailBuilderTest {
 
-  @Mock private ErrorProperties errorProperties;
-
-  @Mock private WebErrorProperties webProperties;
-
   @Mock private TraceProvider traceProvider;
 
   @Mock private ProblemFieldContributor coreFieldContributor;
@@ -54,14 +49,24 @@ class ProblemDetailBuilderTest {
 
   private ProblemDetailBuilder builder;
 
+  /// 用给定 type 基址拼一份错误配置，其余取默认值。
+  private static WebProperties.Error errorOf(String typeBaseUrl) {
+    return new WebProperties.Error(
+        true,
+        "TEST",
+        typeBaseUrl,
+        false,
+        new WebProperties.Error.Engine(10, true, true),
+        new WebProperties.Error.Observation(true, 200L, true),
+        new WebProperties.Error.Trace(List.of("traceId", "X-B3-TraceId", "traceparent")));
+  }
+
   @BeforeEach
   void setUp() {
-    when(webProperties.getTypeBaseUrl()).thenReturn("https://api.patra.com/errors");
 
     builder =
         new ProblemDetailBuilder(
-            errorProperties,
-            webProperties,
+            errorOf("https://api.patra.com/errors"),
             traceProvider,
             List.of(coreFieldContributor),
             List.of(webFieldContributor));

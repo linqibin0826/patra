@@ -9,7 +9,6 @@ spring:
   # 覆盖 config.import，仅加载本地测试配置
   config:
     import:
-      - "classpath:ingest-error-config.yaml"
       - "classpath:ingest-rocketmq.yaml"
   cloud:
     nacos:

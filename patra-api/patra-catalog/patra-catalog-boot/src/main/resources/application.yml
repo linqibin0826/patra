@@ -17,12 +17,7 @@ server:
 # Spring Boot & Cloud Configuration
 # ----------------------------------------------------------------------------
 spring:
-  # Configuration imports (order matters: later configs override earlier ones)
   # Nacos 的 patra-common.yaml、patra-catalog.yaml 由启动器 PatraApplication 导入，这里不写
-  config:
-    import:
-      # Local error-handling configuration
-      - "classpath:catalog-error-config.yaml"
 
   # Batch Job 不在启动时自动执行（catalog 有多个 Job，由 XXL-Job 手动触发）。
   # 缺此项时多 Job 场景启动期报「Job name must be specified in case of multiple jobs」。
@@ -50,6 +45,9 @@ spring:
 # Patra Configuration
 # ----------------------------------------------------------------------------
 patra:
+  web:
+    error:
+      context-prefix: CAT
   catalog:
     mesh:
       # MeSH Descriptor（主题词）XML 文件 URL - 版本号从文件名自动推断
@@ -126,3 +124,10 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
+
+catalog:
+  error-catalog:
+    # Repository Errors (1300-1399)
+    repository-persistence-failed: CAT-1301
+    repository-update-conflict: CAT-1302
+    repository-entity-not-found: CAT-1303

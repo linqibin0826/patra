@@ -1,5 +1,4 @@
-linqibin:
-  starter:
-    core:
-      error:
-        context-prefix: IDN
+patra:
+  web:
+    error:
+      context-prefix: IDN

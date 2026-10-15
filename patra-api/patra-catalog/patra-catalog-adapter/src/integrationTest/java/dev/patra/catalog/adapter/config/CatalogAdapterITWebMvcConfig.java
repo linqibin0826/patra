@@ -1,11 +1,7 @@
 package dev.patra.catalog.adapter.config;
 
-import dev.patra.tool.web.error.config.CoreErrorAutoConfiguration;
-import dev.patra.tool.web.error.config.WebErrorAutoConfiguration;
-import dev.patra.tool.web.json.config.WebJsonAutoConfiguration;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.web.bind.annotation.RestController;
@@ -28,11 +24,6 @@ import org.springframework.web.bind.annotation.RestController;
 /// @since 0.1.0
 @SpringBootConfiguration
 @EnableAutoConfiguration
-@ImportAutoConfiguration({
-  CoreErrorAutoConfiguration.class,
-  WebErrorAutoConfiguration.class,
-  WebJsonAutoConfiguration.class
-})
 @ComponentScan(
     basePackages = "dev.patra.catalog.adapter.rest",
     excludeFilters =

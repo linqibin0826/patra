@@ -4,6 +4,7 @@ import dev.patra.tool.core.error.codes.HttpStdErrors;
 import dev.patra.tool.jpa.error.contributor.JpaErrorMappingContributor;
 import dev.patra.tool.jpa.json.JsonColumnCodec;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration;
@@ -28,14 +29,18 @@ import tools.jackson.databind.json.JsonMapper;
 ///
 /// @author linqibin
 /// @since 0.1.0
-@AutoConfiguration(after = HibernateJpaAutoConfiguration.class)
+@AutoConfiguration(
+    after = HibernateJpaAutoConfiguration.class,
+    afterName = "dev.patra.tool.web.autoconfigure.WebErrorAutoConfiguration")
 @ConditionalOnClass({JpaRepository.class})
 @Import({JpaAuditingConfig.class, HibernatePropertiesCustomizer.class})
 public class JpaAutoConfiguration {
 
-  /// JPA / Hibernate / SQL 异常到错误码的映射，只在类路径上有 patra-tool-web 时注册。
+  /// JPA / Hibernate / SQL 异常到错误码的映射，只在类路径上有 patra-tool-web、且 web 的错误引擎已注册错误码组时注册
+  /// （非 Web 应用里 web 的自动配置不生效，这里也跟着不注册）。
   @Configuration(proxyBeanMethods = false)
   @ConditionalOnClass(name = "dev.patra.tool.web.error.spi.ErrorMappingContributor")
+  @ConditionalOnBean(HttpStdErrors.Group.class)
   static class JpaErrorMappingConfiguration {
 
     /// 注册映射贡献者；顺序由类上的 `@Order` 决定，先于服务自己的贡献者。

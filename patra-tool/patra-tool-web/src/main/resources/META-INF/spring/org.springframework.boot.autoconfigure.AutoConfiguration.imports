@@ -1,3 +1,2 @@
-dev.patra.tool.web.error.config.CoreErrorAutoConfiguration
-dev.patra.tool.web.error.config.WebErrorAutoConfiguration
-dev.patra.tool.web.json.config.WebJsonAutoConfiguration
+dev.patra.tool.web.autoconfigure.WebErrorAutoConfiguration
+dev.patra.tool.web.autoconfigure.WebJsonAutoConfiguration

@@ -58,7 +58,7 @@
 ```
 dev.linqibin.starter.core.error
 ├── config/                    # 配置与自动装配
-│   ├── ErrorProperties        # 配置属性（linqibin.starter.core.error.*）
+│   ├── WebProperties.Error    # 配置（patra.web.error.*，在 autoconfigure 包）
 │   ├── CoreErrorAutoConfiguration      # 核心自动配置
 │   └── CircuitBreakerErrorAutoConfiguration  # 熔断器自动配置
 ├── engine/                    # 错误解析引擎

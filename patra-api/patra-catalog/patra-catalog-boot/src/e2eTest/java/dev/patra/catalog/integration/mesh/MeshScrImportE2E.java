@@ -67,7 +67,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 @SpringBootTest(
     properties = {
       "spring.cloud.nacos.discovery.enabled=false",
-      "spring.config.import=classpath:catalog-error-config.yaml",
       "linqibin.starter.batch.chunk.default-size=2"
     })
 @ContextConfiguration(initializers = CatalogE2EPostgreSQLContainerInitializer.class)

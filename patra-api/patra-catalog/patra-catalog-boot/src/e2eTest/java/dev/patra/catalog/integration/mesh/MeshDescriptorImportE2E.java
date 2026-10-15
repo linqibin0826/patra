@@ -62,11 +62,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 ///
 /// @author linqibin
 /// @since 0.1.0
-@SpringBootTest(
-    properties = {
-      "spring.cloud.nacos.discovery.enabled=false",
-      "spring.config.import=classpath:catalog-error-config.yaml"
-    })
+@SpringBootTest(properties = {"spring.cloud.nacos.discovery.enabled=false"})
 @ContextConfiguration(initializers = CatalogE2EPostgreSQLContainerInitializer.class)
 @ActiveProfiles("e2e-test")
 @TestClassOrder(ClassOrderer.OrderAnnotation.class)

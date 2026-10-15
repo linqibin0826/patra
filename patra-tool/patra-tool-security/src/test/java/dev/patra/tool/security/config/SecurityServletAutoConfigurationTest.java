@@ -11,8 +11,7 @@ import dev.patra.tool.core.security.CurrentUserPort;
 import dev.patra.tool.security.error.SecurityErrorMappingContributor;
 import dev.patra.tool.security.error.SecurityExceptionRethrowAdvice;
 import dev.patra.tool.security.error.SecurityProblemWriter;
-import dev.patra.tool.web.error.config.CoreErrorAutoConfiguration;
-import dev.patra.tool.web.error.config.WebErrorAutoConfiguration;
+import dev.patra.tool.web.autoconfigure.WebErrorAutoConfiguration;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -50,14 +49,13 @@ class SecurityServletAutoConfigurationTest {
           .withConfiguration(
               AutoConfigurations.of(
                   JacksonAutoConfiguration.class,
-                  CoreErrorAutoConfiguration.class,
                   WebErrorAutoConfiguration.class,
                   SecurityAutoConfiguration.class,
                   UserDetailsServiceAutoConfiguration.class,
                   ServletWebSecurityAutoConfiguration.class,
                   SecurityCoreAutoConfiguration.class,
                   SecurityServletAutoConfiguration.class))
-          .withPropertyValues("linqibin.starter.core.error.context-prefix=TEST");
+          .withPropertyValues("patra.web.error.context-prefix=TEST");
 
   @Test
   @DisplayName("没配公钥时启动失败，错误信息指明配置项")

@@ -7,9 +7,6 @@ import dev.patra.tool.security.config.SecurityCoreAutoConfiguration;
 import dev.patra.tool.security.config.SecurityServletAutoConfiguration;
 import dev.patra.tool.security.support.SecurityITAssertions;
 import dev.patra.tool.security.test.TestIdentity;
-import dev.patra.tool.web.error.config.CoreErrorAutoConfiguration;
-import dev.patra.tool.web.error.config.WebErrorAutoConfiguration;
-import dev.patra.tool.web.json.config.WebJsonAutoConfiguration;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -156,13 +153,10 @@ class SecurityWebMvcSliceIT {
     assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
   }
 
-  /// 切片测试的配置根类：在现有的三个自动配置之外，多导入两个安全自动配置。
+  /// 切片测试的配置根类：web 的自动配置由切片 imports 文件自动登记，这里只多导入两个安全自动配置。
   @SpringBootConfiguration
   @EnableAutoConfiguration
   @ImportAutoConfiguration({
-    CoreErrorAutoConfiguration.class,
-    WebErrorAutoConfiguration.class,
-    WebJsonAutoConfiguration.class,
     SecurityCoreAutoConfiguration.class,
     SecurityServletAutoConfiguration.class
   })

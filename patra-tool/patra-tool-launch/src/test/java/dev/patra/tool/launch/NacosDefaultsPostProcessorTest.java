@@ -196,7 +196,7 @@ class NacosDefaultsPostProcessorTest {
         .getPropertySources()
         .addFirst(
             new MapPropertySource(
-                "args", Map.of("spring.config.import", "classpath:registry-error-config.yaml")));
+                "args", Map.of("spring.config.import", "classpath:extra-config.yaml")));
 
     process(environment);
 

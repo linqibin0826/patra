@@ -7,8 +7,7 @@ import dev.patra.tool.core.error.problem.ErrorKeys;
 import dev.patra.tool.core.error.retry.HasRetryAfter;
 import dev.patra.tool.core.error.trait.ErrorTrait;
 import dev.patra.tool.core.error.trait.HasErrorTraits;
-import dev.patra.tool.web.error.config.ErrorProperties;
-import dev.patra.tool.web.error.config.WebErrorProperties;
+import dev.patra.tool.web.autoconfigure.WebProperties;
 import dev.patra.tool.web.error.model.ErrorResolution;
 import dev.patra.tool.web.error.model.ValidationError;
 import dev.patra.tool.web.error.spi.ProblemFieldContributor;
@@ -41,15 +40,12 @@ import org.springframework.http.ProblemDetail;
  *
  * @author linqibin
  * @since 0.1.0
- * @see dev.patra.tool.web.error.config.WebErrorAutoConfiguration
+ * @see dev.patra.tool.web.autoconfigure.WebErrorAutoConfiguration
  */
 @Slf4j
 public class ProblemDetailBuilder {
 
-  @SuppressWarnings("unused")
-  private final ErrorProperties errorProperties;
-
-  private final WebErrorProperties webProperties;
+  private final WebProperties.Error errorProperties;
   private final TraceProvider traceProvider;
   private final List<ProblemFieldContributor> coreFieldContributors;
   private final List<WebProblemFieldContributor> webFieldContributors;
@@ -57,20 +53,17 @@ public class ProblemDetailBuilder {
   /**
    * 构造函数,初始化 ProblemDetail 构建器。
    *
-   * @param errorProperties 错误配置属性
-   * @param webProperties Web 错误配置属性
+   * @param errorProperties 错误配置
    * @param traceProvider 跟踪 ID 提供者
    * @param coreFieldContributors 核心字段贡献器列表
    * @param webFieldContributors Web 字段贡献器列表
    */
   public ProblemDetailBuilder(
-      ErrorProperties errorProperties,
-      WebErrorProperties webProperties,
+      WebProperties.Error errorProperties,
       TraceProvider traceProvider,
       List<ProblemFieldContributor> coreFieldContributors,
       List<WebProblemFieldContributor> webFieldContributors) {
     this.errorProperties = errorProperties;
-    this.webProperties = webProperties;
     this.traceProvider = traceProvider;
     this.coreFieldContributors = coreFieldContributors;
     this.webFieldContributors = webFieldContributors;
@@ -320,7 +313,7 @@ public class ProblemDetailBuilder {
    * @return 完全限定的类型 URI
    */
   private URI buildTypeUri(ErrorCodeLike errorCode) {
-    String baseUrl = webProperties.getTypeBaseUrl();
+    String baseUrl = errorProperties.typeBaseUrl();
     if (!baseUrl.endsWith("/")) {
       baseUrl += "/";
     }

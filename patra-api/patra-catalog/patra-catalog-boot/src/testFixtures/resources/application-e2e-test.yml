@@ -13,10 +13,6 @@ spring:
       # 排除对象存储配置（E2E 测试不需要 MinIO）
       - dev.patra.tool.objectstorage.ObjectStorageAutoConfiguration
       - dev.patra.tool.objectstorage.S3StorageAutoConfiguration
-  # 导入错误配置
-  config:
-    import:
-      - "classpath:catalog-error-config.yaml"
   cloud:
     nacos:
       discovery:

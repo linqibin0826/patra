@@ -2,7 +2,6 @@ package dev.patra.tool.web.error.trace;
 
 import static org.assertj.core.api.Assertions.*;
 
-import dev.patra.tool.web.error.config.TracingProperties;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
@@ -32,12 +31,12 @@ import org.slf4j.MDC;
 @ExtendWith(MockitoExtension.class)
 class HeaderBasedTraceProviderTest {
 
-  private TracingProperties tracingProperties;
+  private List<String> tracingProperties;
   private HeaderBasedTraceProvider traceProvider;
 
   @BeforeEach
   void setUp() {
-    tracingProperties = new TracingProperties();
+    tracingProperties = List.of("traceId", "X-B3-TraceId", "traceparent");
     traceProvider = new HeaderBasedTraceProvider(tracingProperties);
   }
 
@@ -163,8 +162,7 @@ class HeaderBasedTraceProviderTest {
     @DisplayName("应该支持自定义 Header 顺序")
     void shouldSupportCustomHeaderOrder() {
       // Given
-      TracingProperties customProperties = new TracingProperties();
-      customProperties.setHeaderNames(List.of("custom-trace-id", "another-trace-header"));
+      List<String> customProperties = List.of("custom-trace-id", "another-trace-header");
       HeaderBasedTraceProvider customProvider = new HeaderBasedTraceProvider(customProperties);
 
       String expectedTraceId = "custom-trace-123";
@@ -182,8 +180,7 @@ class HeaderBasedTraceProviderTest {
     @DisplayName("应该支持单个 Header 配置")
     void shouldSupportSingleHeaderConfiguration() {
       // Given
-      TracingProperties singleHeaderProps = new TracingProperties();
-      singleHeaderProps.setHeaderNames(List.of("my-trace-id"));
+      List<String> singleHeaderProps = List.of("my-trace-id");
       HeaderBasedTraceProvider singleHeaderProvider =
           new HeaderBasedTraceProvider(singleHeaderProps);
 
@@ -257,8 +254,7 @@ class HeaderBasedTraceProviderTest {
     @DisplayName("应该处理空的 Header 名称列表")
     void shouldHandleEmptyHeaderNamesList() {
       // Given
-      TracingProperties emptyHeadersProps = new TracingProperties();
-      emptyHeadersProps.setHeaderNames(List.of());
+      List<String> emptyHeadersProps = List.of();
       HeaderBasedTraceProvider emptyHeadersProvider =
           new HeaderBasedTraceProvider(emptyHeadersProps);
 
@@ -275,12 +271,12 @@ class HeaderBasedTraceProviderTest {
     @DisplayName("应该处理包含 null 元素的 Header 名称列表")
     void shouldHandleNullElementsInHeaderNamesList() {
       // Given
-      TracingProperties propsWithNull = new TracingProperties();
+      List<String> propsWithNull = List.of("traceId", "X-B3-TraceId", "traceparent");
       List<String> headersWithNull = new java.util.ArrayList<>();
       headersWithNull.add("valid-header");
       headersWithNull.add(null);
       headersWithNull.add("another-header");
-      propsWithNull.setHeaderNames(headersWithNull);
+      propsWithNull = headersWithNull;
       HeaderBasedTraceProvider providerWithNull = new HeaderBasedTraceProvider(propsWithNull);
 
       String expectedTraceId = "valid-trace";
@@ -433,8 +429,7 @@ class HeaderBasedTraceProviderTest {
     @DisplayName("应该支持自定义追踪系统集成场景")
     void shouldSupportCustomTracingSystemIntegration() {
       // Given
-      TracingProperties customTracingProps = new TracingProperties();
-      customTracingProps.setHeaderNames(List.of("X-Custom-Request-Id", "X-Request-Id"));
+      List<String> customTracingProps = List.of("X-Custom-Request-Id", "X-Request-Id");
       HeaderBasedTraceProvider customTracingProvider =
           new HeaderBasedTraceProvider(customTracingProps);
 
