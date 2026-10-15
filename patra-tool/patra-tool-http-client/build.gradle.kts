@@ -2,7 +2,7 @@
  * patra-tool-http-client：RestClient、流式下载、隧道代理（原 rest-client）与 HTTP Interface 客户端（原 http-interface）。
  */
 plugins {
-    id("patra.boundary-check")
+    id("patra.tool-module")
     id("patra.spring-starter")
 }
 

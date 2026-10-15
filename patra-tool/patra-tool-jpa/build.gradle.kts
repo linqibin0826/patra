@@ -10,7 +10,7 @@
  */
 
 plugins {
-    id("patra.boundary-check")
+    id("patra.tool-module")
     id("patra.spring-starter")
 }
 

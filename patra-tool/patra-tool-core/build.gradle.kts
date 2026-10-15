@@ -2,7 +2,7 @@
  * patra-tool-core：纯 Java 的 DDD 基类、错误类型、当前用户抽象与顺序常量，零 Spring 依赖。
  */
 plugins {
-    id("patra.boundary-check")
+    id("patra.tool-module")
     id("patra.java-library")
 }
 

@@ -11,6 +11,7 @@
  */
 
 plugins {
+    id("patra.tool-module")
     id("patra.spring-starter")
 }
 
