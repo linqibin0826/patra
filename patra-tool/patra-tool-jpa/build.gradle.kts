@@ -18,6 +18,8 @@ dependencies {
     // Patra 内部依赖
     api(project(":patra-tool:patra-tool-core"))
     compileOnly(project(":patra-tool:patra-tool-web"))
+    // 集成测试用 @SpringBootApplication 扫到 JpaErrorMappingContributor，运行期要能加载 web 的 SPI（Task 20 改成 @ConditionalOnClass）
+    "integrationTestRuntimeOnly"(project(":patra-tool:patra-tool-web"))
 
     // Spring Data JPA (包含 Hibernate)
     api("org.springframework.boot:spring-boot-starter-data-jpa")
