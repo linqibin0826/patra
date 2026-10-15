@@ -48,7 +48,11 @@ import tools.jackson.databind.json.JsonMapper;
     havingValue = "true",
     matchIfMissing = true)
 @AutoConfiguration(
-    after = {DataSourceAutoConfiguration.class, BatchDataSourceAutoConfiguration.class})
+    after = {DataSourceAutoConfiguration.class, BatchDataSourceAutoConfiguration.class},
+    // ObservationRegistry bean 由 Boot 的 ObservationAutoConfiguration 建，排在它之后 @ConditionalOnBean
+    // 才判得准
+    afterName =
+        "org.springframework.boot.micrometer.observation.autoconfigure.ObservationAutoConfiguration")
 @EnableConfigurationProperties(BatchProperties.class)
 public final class BatchAutoConfiguration extends JdbcDefaultBatchConfiguration {
 

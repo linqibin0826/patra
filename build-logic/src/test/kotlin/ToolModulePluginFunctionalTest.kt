@@ -15,10 +15,12 @@ class ToolModulePluginFunctionalTest {
     private fun project(): File {
         write("settings.gradle.kts", """
             rootProject.name = "fixture"
-            include(":patra-tool:patra-tool-core", ":patra-tool:patra-tool-demo", ":patra-api:patra-fake")
+            include(":patra-tool:patra-tool-core", ":patra-tool:patra-tool-demo", ":patra-tool:patra-tool-other", ":patra-api:patra-fake")
         """)
         write("patra-tool/patra-tool-core/build.gradle.kts", """plugins { id("java-library") }""")
         write("patra-tool/patra-tool-core/src/main/java/dev/patra/tool/core/Core.java", "package dev.patra.tool.core; public class Core {}")
+        write("patra-tool/patra-tool-other/build.gradle.kts", """plugins { id("java-library") }""")
+        write("patra-tool/patra-tool-other/src/main/java/dev/patra/tool/other/Other.java", "package dev.patra.tool.other; public class Other {}")
         write("patra-api/patra-fake/build.gradle.kts", """plugins { id("java-library") }""")
         write("patra-api/patra-fake/src/main/java/dev/patra/fake/Fake.java", "package dev.patra.fake; public class Fake {}")
         return root
@@ -53,6 +55,29 @@ class ToolModulePluginFunctionalTest {
         val result = GradleRunner.create().withProjectDir(root).withPluginClasspath()
             .withArguments(":patra-tool:patra-tool-demo:check").build()
         assertThat(result.output).doesNotContain("违规")
+    }
+
+    @Test
+    fun check_fails_with_r2_when_tool_hard_depends_on_a_tool_other_than_core() {
+        project()
+        write("patra-tool/patra-tool-demo/build.gradle.kts", """
+            plugins { id("java-library"); id("patra.tool-module") }
+            dependencies { api(project(":patra-tool:patra-tool-other")) }
+        """)
+        demoUses("dev.patra.tool.other.Other")
+        val result = GradleRunner.create().withProjectDir(root).withPluginClasspath()
+            .withArguments(":patra-tool:patra-tool-demo:checkToolDependencies").buildAndFail()
+        assertThat(result.output).contains("R2 违规：:patra-tool:patra-tool-demo", ":patra-tool:patra-tool-other")
+    }
+
+    @Test
+    fun check_fails_with_r4_when_tool_main_code_uses_a_stereotype() {
+        project()
+        write("patra-tool/patra-tool-demo/build.gradle.kts", """plugins { id("java-library"); id("patra.tool-module") }""")
+        write("patra-tool/patra-tool-demo/src/main/java/dev/patra/tool/demo/Demo.java", "package dev.patra.tool.demo;\n\nimport org.springframework.stereotype.Component;\n\n@Component\npublic class Demo {}\n")
+        val result = GradleRunner.create().withProjectDir(root).withPluginClasspath()
+            .withArguments(":patra-tool:patra-tool-demo:checkAutoConfiguration").buildAndFail()
+        assertThat(result.output).contains("R4 违规：:patra-tool:patra-tool-demo", "@Component")
     }
 
     @Test

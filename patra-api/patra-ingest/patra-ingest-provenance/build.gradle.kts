@@ -18,4 +18,5 @@ dependencies {
     // 自动配置里的 PubMedClient / EPMCClient 注入 http-client 出的 defaultRestClient bean，编译期不引用它的类
     runtimeOnly(project(":patra-tool:patra-tool-http-client"))
     testImplementation(project(":patra-tool:patra-tool-test"))
+    testImplementation("org.springframework.boot:spring-boot-micrometer-metrics")
 }

@@ -213,7 +213,7 @@ PlanMetadata metadata = searchPort.preparePlanMetadata(
 
 - ✅ **始终使用 compiledParams**,不再手动构建查询字符串
 - ✅ **MULTI std_keys 默认使用 JOIN 转换**,避免重复参数
-- ✅ **启用 STRICT 模式**(`patra.starter.expr.mode.strict=true`，jar 默认，IDE 与容器一致),早期捕获配置错误
+- ✅ **启用 STRICT 模式**(`patra.ingest.expr.mode.strict=true`，jar 默认，IDE 与容器一致),早期捕获配置错误
 
 ---
 

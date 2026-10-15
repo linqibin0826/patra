@@ -2,12 +2,16 @@ package dev.patra.ingest.provenance.autoconfigure;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.patra.ingest.provenance.common.metrics.ProvenanceMetrics;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
 import org.springframework.boot.jackson.autoconfigure.XmlMapperBuilderCustomizer;
+import org.springframework.boot.micrometer.metrics.autoconfigure.CompositeMeterRegistryAutoConfiguration;
+import org.springframework.boot.micrometer.metrics.autoconfigure.MetricsAutoConfiguration;
+import org.springframework.boot.micrometer.metrics.autoconfigure.export.simple.SimpleMetricsExportAutoConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.DeserializationFeature;
@@ -30,6 +34,21 @@ class ProvenanceAutoConfigurationTest {
   ///
   /// @param item 重复出现的子元素文本
   record UnwrappedItems(List<String> item) {}
+
+  @Test
+  @DisplayName("Boot 建好 MeterRegistry 后指标记录器装上")
+  void should_register_metrics_when_boot_builds_the_meter_registry() {
+    new ApplicationContextRunner()
+        .withConfiguration(
+            AutoConfigurations.of(
+                JacksonAutoConfiguration.class,
+                ProvenanceAutoConfiguration.class,
+                MetricsAutoConfiguration.class,
+                CompositeMeterRegistryAutoConfiguration.class,
+                SimpleMetricsExportAutoConfiguration.class))
+        .withBean(RestClient.class, RestClient::create)
+        .run(context -> assertThat(context).hasSingleBean(ProvenanceMetrics.class));
+  }
 
   @Test
   @DisplayName("容器里只有 Boot 装配的一个 XmlMapper，本 starter 只注册定制器")

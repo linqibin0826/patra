@@ -50,8 +50,12 @@ import org.springframework.context.annotation.Bean;
 @Slf4j
 @AutoConfiguration(
     after = BatchAutoConfiguration.class,
-    afterName =
-        "dev.patra.tool.observability.autoconfigure.ObservabilityMicrometerAutoConfiguration")
+    afterName = {
+      // MeterRegistry bean 由 CompositeMeterRegistryAutoConfiguration 建，排在它之后 @ConditionalOnBean
+      // 才判得准
+      "org.springframework.boot.micrometer.metrics.autoconfigure.CompositeMeterRegistryAutoConfiguration",
+      "dev.patra.tool.observability.autoconfigure.ObservabilityMicrometerAutoConfiguration"
+    })
 @ConditionalOnClass({MeterRegistry.class, JobRegistry.class})
 @ConditionalOnBean(MeterRegistry.class)
 @ConditionalOnProperty(

@@ -43,7 +43,10 @@ import tools.jackson.dataformat.xml.XmlMapper;
 /// @author linqibin
 /// @since 0.1.0
 @Slf4j
-@AutoConfiguration
+// MeterRegistry bean 由 CompositeMeterRegistryAutoConfiguration 建，排在它之后 @ConditionalOnBean 才判得准
+@AutoConfiguration(
+    afterName =
+        "org.springframework.boot.micrometer.metrics.autoconfigure.CompositeMeterRegistryAutoConfiguration")
 @EnableConfigurationProperties(ProvenanceProperties.class)
 @ConditionalOnProperty(
     prefix = "patra.ingest.provenance",

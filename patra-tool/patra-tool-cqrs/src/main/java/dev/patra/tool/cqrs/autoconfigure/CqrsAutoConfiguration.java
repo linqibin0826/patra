@@ -17,6 +17,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.task.TaskExecutionAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -29,8 +30,8 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 /// `CompositeMeterRegistryAutoConfiguration` 建（它本身排在 `MetricsAutoConfiguration` 之后），只排在后者之后
 /// 评估 `@ConditionalOnBean(MeterRegistry)` 时还没有 bean。
 @AutoConfiguration(
+    after = TaskExecutionAutoConfiguration.class,
     afterName = {
-      "org.springframework.boot.task.autoconfigure.TaskExecutionAutoConfiguration",
       "org.springframework.boot.micrometer.observation.autoconfigure.ObservationAutoConfiguration",
       "org.springframework.boot.micrometer.metrics.autoconfigure.MetricsAutoConfiguration",
       "org.springframework.boot.micrometer.metrics.autoconfigure.CompositeMeterRegistryAutoConfiguration",

@@ -11,6 +11,7 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
+import org.springframework.boot.micrometer.observation.autoconfigure.ObservationAutoConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 class BatchAutoConfigurationTest {
@@ -45,6 +46,19 @@ class BatchAutoConfigurationTest {
           assertThat(props.datasource().configured()).isFalse();
           assertThat(props.importLimit().hasLimit()).isFalse();
         });
+  }
+
+  @Test
+  void should_register_observability_post_processor_when_boot_builds_the_observation_registry() {
+    new ApplicationContextRunner()
+        .withConfiguration(
+            AutoConfigurations.of(
+                JacksonAutoConfiguration.class,
+                BatchAutoConfiguration.class,
+                ObservationAutoConfiguration.class))
+        .withBean(
+            "dataSource", DataSource.class, BatchAutoConfigurationTest::postgresLikeDataSource)
+        .run(ctx -> assertThat(ctx).hasBean("batchObservabilityBeanPostProcessor"));
   }
 
   @Test

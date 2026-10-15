@@ -28,14 +28,8 @@ dependencies {
     // Micrometer Core (Metrics)
     api("io.micrometer:micrometer-core")
 
-    // Caffeine Cache: 用于状态管理，避免内存泄漏
-    api("com.github.ben-manes.caffeine:caffeine")
-
-    // Jakarta Validation API: 用于配置属性验证
-    api("jakarta.validation:jakarta.validation-api")
-
-    // Jakarta Servlet API (可选): 用于 HTTP 可观测性 Filter 配置
-    compileOnly("jakarta.servlet:jakarta.servlet-api")
+    // TraceIdConverter / SpanIdConverter 直接继承 logback 的转换器
+    implementation("ch.qos.logback:logback-classic")
 
     // Spring Boot Actuator: 提供 WebMvcObservationAutoConfiguration 等观测相关自动配置
     api("org.springframework.boot:spring-boot-starter-actuator")

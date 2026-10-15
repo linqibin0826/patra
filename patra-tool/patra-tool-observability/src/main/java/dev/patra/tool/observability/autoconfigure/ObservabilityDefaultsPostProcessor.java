@@ -14,6 +14,9 @@ import org.springframework.core.env.PropertySource;
 ///
 /// 每个键只能有一个归属模块出默认值，本模块出的键见 `DEFAULTS`；`logging.*` 必须在这里给，
 /// `@PropertySource` 加入得太晚，日志系统初始化时读不到。
+///
+/// 类路径上有 `logback-test.xml` 时不出 `logging.config`：Boot 一旦读到该键就不再按约定找
+/// `logback-test.xml`，测试里自己的日志配置会被本模块的顶掉。
 public final class ObservabilityDefaultsPostProcessor implements EnvironmentPostProcessor, Ordered {
 
   /// 本模块出的默认键。
@@ -26,7 +29,11 @@ public final class ObservabilityDefaultsPostProcessor implements EnvironmentPost
           "management.endpoint.health.show-details", "when-authorized",
           "management.metrics.tags.application", "${spring.application.name}");
 
-  /// 并入默认值；`defaultProperties` 里已有的键不动（`addOrMerge` 会用新值覆盖旧值，所以先剔除）。
+  /// 测试日志配置的约定文件名，存在时让位。
+  static final String TEST_LOGBACK = "logback-test.xml";
+
+  /// 并入默认值；`defaultProperties` 里已有的键不动（`addOrMerge` 会用新值覆盖旧值，所以先剔除）；
+  /// 类路径上有 `logback-test.xml` 时不出 `logging.config`。
   ///
   /// @param environment 当前环境
   /// @param application 正在启动的应用
@@ -34,6 +41,9 @@ public final class ObservabilityDefaultsPostProcessor implements EnvironmentPost
   public void postProcessEnvironment(
       ConfigurableEnvironment environment, SpringApplication application) {
     Map<String, Object> defaults = new LinkedHashMap<>(DEFAULTS);
+    if (application.getClassLoader().getResource(TEST_LOGBACK) != null) {
+      defaults.remove("logging.config");
+    }
     PropertySource<?> existing =
         environment.getPropertySources().get(DefaultPropertiesPropertySource.NAME);
     if (existing != null) {

@@ -2,12 +2,18 @@ package dev.patra.tool.observability.autoconfigure;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.File;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.nio.file.Files;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.env.DefaultPropertiesPropertySource;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.StandardEnvironment;
+import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.mock.env.MockEnvironment;
 
 class ObservabilityDefaultsPostProcessorTest {
@@ -27,6 +33,19 @@ class ObservabilityDefaultsPostProcessorTest {
     assertThat(env.getProperty("management.endpoint.health.show-details"))
         .isEqualTo("when-authorized");
     assertThat(env.getPropertySources().get(DefaultPropertiesPropertySource.NAME)).isNotNull();
+  }
+
+  @Test
+  void should_not_set_logging_config_when_logback_test_xml_is_on_classpath(@TempDir File dir)
+      throws Exception {
+    Files.writeString(new File(dir, "logback-test.xml").toPath(), "<configuration/>");
+    SpringApplication application = new SpringApplication();
+    application.setResourceLoader(
+        new DefaultResourceLoader(new URLClassLoader(new URL[] {dir.toURI().toURL()}, null)));
+    StandardEnvironment env = new StandardEnvironment();
+    processor.postProcessEnvironment(env, application);
+    assertThat(env.getProperty("logging.config")).isNull();
+    assertThat(env.getProperty("logging.level.dev.patra")).isEqualTo("DEBUG");
   }
 
   @Test

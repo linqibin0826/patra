@@ -38,8 +38,8 @@ patra:
   web:
     error:
       context-prefix: ING
-  starter:
-    # 表达式编译：两种运行方式都用严格模式和长度、参数数上限，其余参数用 starter 默认值
+  ingest:
+    # 表达式编译：两种运行方式都用严格模式和长度、参数数上限，其余参数用模块默认值
     expr:
       mode:
         strict: true
@@ -47,7 +47,6 @@ patra:
         max-query-length: 5000
         warn-param-count: 50
         max-param-count: 100
-  ingest:
     exec:
       # Lease time-to-live in seconds for execution lock
       lease-ttl-seconds: ${INGEST_LEASE_TTL:60}

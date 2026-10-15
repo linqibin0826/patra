@@ -41,6 +41,8 @@ dependencies {
     // 测试依赖
     testImplementation(project(":patra-tool:patra-tool-test"))
     testImplementation("org.springframework.batch:spring-batch-test")
+    testImplementation("org.springframework.boot:spring-boot-micrometer-metrics")
+    testImplementation("org.springframework.boot:spring-boot-micrometer-observation")
 }
 
 // 覆盖率要求 75%

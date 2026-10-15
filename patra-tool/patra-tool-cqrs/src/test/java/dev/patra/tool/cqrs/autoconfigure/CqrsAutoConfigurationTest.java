@@ -12,6 +12,7 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.observation.ObservationRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.autoconfigure.task.TaskExecutionAutoConfiguration;
 import org.springframework.boot.micrometer.metrics.autoconfigure.CompositeMeterRegistryAutoConfiguration;
 import org.springframework.boot.micrometer.metrics.autoconfigure.MetricsAutoConfiguration;
 import org.springframework.boot.micrometer.metrics.autoconfigure.export.simple.SimpleMetricsExportAutoConfiguration;
@@ -72,6 +73,19 @@ class CqrsAutoConfigurationTest {
                 CompositeMeterRegistryAutoConfiguration.class,
                 SimpleMetricsExportAutoConfiguration.class))
         .run(ctx -> assertThat(ctx).hasSingleBean(MetricsCommandInterceptor.class));
+  }
+
+  @Test
+  void should_keep_boot_application_task_executor_when_boot_builds_it() {
+    new ApplicationContextRunner()
+        .withConfiguration(
+            AutoConfigurations.of(
+                CqrsAutoConfiguration.class, TaskExecutionAutoConfiguration.class))
+        .run(
+            ctx ->
+                assertThat(ctx)
+                    .hasBean("applicationTaskExecutor")
+                    .hasBean("commandBusAsyncExecutor"));
   }
 
   @Test
