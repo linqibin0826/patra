@@ -31,3 +31,6 @@ dependencies {
     // 测试依赖
     testImplementation(project(":patra-tool:patra-tool-test"))
 }
+
+// ==================== R5：声明的 project 依赖必须被使用 ====================
+registerDeclaredDependencyCheck(exempt = emptySet())

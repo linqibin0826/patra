@@ -99,3 +99,6 @@ pluginManager.withPlugin("java-base") {
         dependsOn("checkAutoConfiguration")
     }
 }
+
+// ==================== R5：声明的 project 依赖必须被使用 ====================
+registerDeclaredDependencyCheck(exempt = emptySet())

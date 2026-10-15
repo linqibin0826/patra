@@ -521,7 +521,16 @@ Execution failed for task ':patra-tool:patra-tool-web:checkAutoConfiguration' (r
 
 **R4 挂 `check` 前后的余量**：Task 16 实现规则时全仓 121 条违规（规则 a 75 / b 1 / c 3 / d 5 / e 4 / g 33，11 个模块各有、core 零）；PAP-81 逐模块重写后降到 1 条（`OpenApiAutoConfiguration` 与模块名推出的前缀 `Openapi` 只差大小写），规则 a 的前缀比较改为忽略大小写后为 0，随后 `checkAutoConfiguration` 挂上 `check`。
 
-**R5**：见 Task 28 回填。
+**R5**：主方案 DAGP 探针不通过退回条件（结果见第 6.4 节），按本节 4.6 的退回方案自写 `checkDeclaredDependencies`。挂上 `check` 前全仓扫描 8 条违规（5 个模块）：
+
+```
+> R5 违规：:patra-api:patra-registry:patra-registry-app
+    api -> :patra-api:patra-registry:patra-registry-api（src/main/java 没有 import 它的任何包）
+    api -> :patra-tool:patra-tool-core（src/main/java 没有 import 它的任何包）
+  主代码没用到的 project 依赖请删掉；只在测试里用的改成测试配置；目标靠自动配置生效的改 runtimeOnly。
+```
+
+其余 6 条：catalog-adapter → catalog-api（只有测试在用，改 `testImplementation`）、catalog-app → patra-common、object-storage-app → patra-common / patra-tool-core、registry-infra → patra-tool-core（都删）。处理后全仓 `checkDeclaredDependencies` 与 `check` 通过；规则单测 `DeclaredDependencyRulesTest`（6 条）与 TestKit 用例 `check_fails_with_r5_when_declared_project_dependency_is_never_imported` 覆盖正反例。
 
 ## 5. PAP-81 starter 模板与默认配置
 
@@ -770,7 +779,7 @@ launch 两个 EPP 的顺序是相对 Boot `ConfigDataEnvironmentPostProcessor.OR
 
 28 处"显式声明与约定插件重复"的 `api(C:enums)` / `api(commons-core)` / `testImplementation(starter-test)` 一并删掉。6 处 `api(starter-web)` / `api(starter-http-interface)` / `implementation(starter-object-storage)` 只有测试在用（G5 1.2(b)），由 R5 探针决定降级为测试配置还是保留（它们提供自动配置，运行时确实需要——按 DAGP 建议改 `runtimeOnly` + `testImplementation`）。
 
-R5 探针结果：（实施阶段回填，见第 4.6 节。）
+R5 探针结果（Task 28）：DAGP 3.19.2 以 `severity("warn")` 跑 `buildHealth`，覆盖 40 个 library 模块（boot 模块不参与：它们关了 plain jar，DAGP 分析测试类路径要 plain jar，而 `service.Dockerfile` 的 `COPY build/libs/*.jar` 只容一个 jar），advice 计数：undeclared（用了传递依赖建议显式声明）2207、unused 575（含注解处理器 278；其中 junit-jupiter 121、mockito 45、patra-tool-test 20、spring-boot-starter-test 14、mapstruct 13，其余是各 starter 空聚合包）、misDeclared（api / implementation 升降级）36、建议 runtimeOnly 10。starter 与 `patra-tool-test` 这类空聚合模块必被判 unused，undeclared 两千余条也不是本版要改的事，压到可接受的噪音远超 10 条规则——触发第 4.6 节的退回条件，R5 改为自写 `checkDeclaredDependencies`（`build-logic/src/main/kotlin/DeclaredDependencyRules.kt` + `DeclaredDependencyCheck.kt`，注册在 `patra.tool-module` 与 `patra.hexagonal-{domain,api,app,infra,adapter}`，boot 同样不参与）。约定插件按层统一给的 `patra-common` / `patra-tool-core`（domain、api 层）作为豁免集传入，不要求模块逐个 import。上表 A4 / A5 / A11 / A14 由该检查复现并处理（A5 对应的目标现为 patra-tool-core）；上段"6 处只有测试在用的 starter 依赖"在 PAP-81 模块重组后已不复存在（相关 starter 已合并或删除），无需降级。探针原始报告留在实施工作区，不入库。
 
 ### 6.5 CI/CD、文档、规则、skill
 
