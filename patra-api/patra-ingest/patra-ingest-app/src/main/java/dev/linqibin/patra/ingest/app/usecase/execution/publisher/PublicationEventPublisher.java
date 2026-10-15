@@ -13,7 +13,7 @@ import dev.linqibin.patra.ingest.domain.messaging.OperationType;
 import dev.linqibin.patra.ingest.domain.port.OutboxMessageRepository;
 import java.util.List;
 import org.springframework.stereotype.Component;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// 出版物事件发布器
 ///
@@ -29,7 +29,7 @@ public class PublicationEventPublisher
       OutboxMessageRepository repository,
       OutboxMetrics metrics,
       OutboxPublisherProperties properties,
-      ObjectMapper objectMapper) {
+      JsonMapper objectMapper) {
     super(repository, metrics, properties, objectMapper);
   }
 

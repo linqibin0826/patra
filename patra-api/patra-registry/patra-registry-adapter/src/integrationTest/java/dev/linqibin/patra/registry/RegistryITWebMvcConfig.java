@@ -1,8 +1,8 @@
 package dev.linqibin.patra.registry;
 
 import dev.linqibin.starter.core.error.config.CoreErrorAutoConfiguration;
-import dev.linqibin.starter.core.json.autoconfig.JacksonAutoConfiguration;
 import dev.linqibin.starter.web.error.config.WebErrorAutoConfiguration;
+import dev.linqibin.starter.web.json.config.WebJsonAutoConfiguration;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
@@ -18,7 +18,7 @@ import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 /// - 提供 @SpringBootConfiguration，使 @WebMvcTest 能够加载 Spring 上下文
 /// - 通过 @EnableAutoConfiguration 加载通用自动配置
 /// - 显式导入错误处理自动配置（@WebMvcTest 默认不加载）
-/// - 显式导入 Jackson 自动配置，确保 Long → String 序列化模块在切片测试中生效
+/// - 显式导入 `WebJsonAutoConfiguration`，确保 MVC 响应里 Long → String 在切片测试中生效
 ///
 /// 异常处理说明：
 ///
@@ -34,7 +34,7 @@ import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 @ImportAutoConfiguration({
   CoreErrorAutoConfiguration.class,
   WebErrorAutoConfiguration.class,
-  JacksonAutoConfiguration.class
+  WebJsonAutoConfiguration.class
 })
 public class RegistryITWebMvcConfig {
   // 空配置类，仅提供 @SpringBootConfiguration 标记

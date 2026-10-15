@@ -17,8 +17,7 @@ import java.util.Objects;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import tools.jackson.databind.DeserializationFeature;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// PubMed Computed Authors JSON Lines 解析器。
 ///
@@ -68,19 +67,15 @@ public class PubMedComputedAuthorParser {
     UNICODE_CI_COLLATOR.freeze();
   }
 
-  private final ObjectMapper objectMapper;
+  private final JsonMapper jsonMapper;
 
   /// 创建解析器实例。
   ///
-  /// **ObjectMapper 配置**：
+  /// Jackson 3 默认已关闭 `FAIL_ON_UNKNOWN_PROPERTIES`，容器里的 `JsonMapper` 可直接容忍未知字段。
   ///
-  /// 使用 `rebuild()` 创建派生配置，
-  /// 并禁用 `FAIL_ON_UNKNOWN_PROPERTIES` 以容忍未知字段。
-  ///
-  /// @param objectMapper Jackson ObjectMapper（由 Spring 自动注入）
-  public PubMedComputedAuthorParser(ObjectMapper objectMapper) {
-    this.objectMapper =
-        objectMapper.rebuild().disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES).build();
+  /// @param jsonMapper 容器里的 `JsonMapper`
+  public PubMedComputedAuthorParser(JsonMapper jsonMapper) {
+    this.jsonMapper = jsonMapper;
   }
 
   /// 解析 JSON Lines 输入流。
@@ -116,7 +111,7 @@ public class PubMedComputedAuthorParser {
   /// @return AuthorAggregate 或 null（解析失败时）
   private AuthorAggregate parseLine(String line) {
     try {
-      PubMedComputedAuthorDto dto = objectMapper.readValue(line, PubMedComputedAuthorDto.class);
+      PubMedComputedAuthorDto dto = jsonMapper.readValue(line, PubMedComputedAuthorDto.class);
       return toAggregate(dto);
     } catch (Exception e) {
       log.warn(

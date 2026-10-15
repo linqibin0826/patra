@@ -26,6 +26,7 @@ import dev.linqibin.patra.catalog.infra.persistence.entity.MeshEntryCombinationE
 import dev.linqibin.patra.catalog.infra.persistence.entity.MeshEntryTermEntity;
 import dev.linqibin.patra.catalog.infra.persistence.entity.MeshTreeNumberEntity;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
+import dev.linqibin.starter.jpa.json.JsonColumnCodec;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -65,7 +66,8 @@ import org.springframework.test.context.ContextConfiguration;
   MeshDescriptorItemWriter.class,
   MeshDescriptorRepositoryAdapter.class,
   JpaAuditingConfig.class,
-  JacksonAutoConfiguration.class
+  JacksonAutoConfiguration.class,
+  JsonColumnCodec.class
 })
 @ComponentScan(basePackages = "dev.linqibin.patra.catalog.infra.persistence.converter")
 @ActiveProfiles("test")

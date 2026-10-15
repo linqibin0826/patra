@@ -29,12 +29,12 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// OutboxRelayJob 单元测试。
 ///
 /// 测试策略：
-/// - Mock 所有依赖（ObjectMapper, CommandBus, OutboxRelayProperties, Clock）
+/// - Mock 所有依赖（JsonMapper, CommandBus, OutboxRelayProperties, Clock）
 /// - Mock 静态方法 XxlJobHelper, NetUtil, IdUtil
 /// - 测试参数解析、命令构建、成功/失败场景
 /// - 验证异常处理和日志记录
@@ -44,7 +44,7 @@ import tools.jackson.databind.ObjectMapper;
 @DisplayName("OutboxRelayJob 单元测试")
 class OutboxRelayJobTest {
 
-  @Mock private ObjectMapper objectMapper;
+  @Mock private JsonMapper objectMapper;
   @Mock private CommandBus commandBus;
   @Mock private OutboxRelayProperties relayProperties;
   @Mock private Clock clock;

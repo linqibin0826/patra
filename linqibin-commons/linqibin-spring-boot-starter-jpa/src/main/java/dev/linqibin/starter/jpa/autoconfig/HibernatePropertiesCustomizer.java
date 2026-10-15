@@ -2,8 +2,10 @@ package dev.linqibin.starter.jpa.autoconfig;
 
 import dev.linqibin.starter.jpa.json.Jackson3JsonFormatMapper;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
 import org.hibernate.cfg.AvailableSettings;
 import org.springframework.context.annotation.Configuration;
+import tools.jackson.databind.json.JsonMapper;
 
 /// Hibernate 属性定制器，配置批量写入、性能优化和 JSON 序列化。
 ///
@@ -35,7 +37,9 @@ import org.springframework.context.annotation.Configuration;
 /// **Jackson 3.x JSON 序列化配置**：
 ///
 /// Hibernate 7.1 无法自动检测 Jackson 3.x（因为包名从 `com.fasterxml.jackson`
-/// 改为 `tools.jackson`），需要手动配置 `Jackson3JsonFormatMapper`。
+/// 改为 `tools.jackson`），需要手动配置 `Jackson3JsonFormatMapper`。它使用构造注入的容器
+/// `JsonMapper`，JSON 列与应用其他部分共用同一份 Jackson 配置。`@DataJpaTest` 切片导入本类时，
+/// 还需导入 Boot 的 `JacksonAutoConfiguration` 提供 `JsonMapper`。
 ///
 /// **注意**：
 ///
@@ -45,11 +49,15 @@ import org.springframework.context.annotation.Configuration;
 /// @since 0.1.0
 /// @see Jackson3JsonFormatMapper
 @Configuration
+@RequiredArgsConstructor
 public class HibernatePropertiesCustomizer
     implements org.springframework.boot.hibernate.autoconfigure.HibernatePropertiesCustomizer {
 
   /// 默认批量大小。
   private static final int DEFAULT_BATCH_SIZE = 500;
+
+  /// 容器里的 JsonMapper，供 JSON 列的 FormatMapper 使用。
+  private final JsonMapper jsonMapper;
 
   @Override
   public void customize(Map<String, Object> hibernateProperties) {
@@ -78,6 +86,6 @@ public class HibernatePropertiesCustomizer
     // 参见:
     // https://discourse.hibernate.org/t/missing-formatmapper-for-json-format-with-jackson-3-x-hibernate-7-x/11819
     hibernateProperties.putIfAbsent(
-        AvailableSettings.JSON_FORMAT_MAPPER, new Jackson3JsonFormatMapper());
+        AvailableSettings.JSON_FORMAT_MAPPER, new Jackson3JsonFormatMapper(jsonMapper));
   }
 }

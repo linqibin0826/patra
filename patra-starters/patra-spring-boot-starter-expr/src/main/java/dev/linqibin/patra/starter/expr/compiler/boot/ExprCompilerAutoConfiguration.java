@@ -27,7 +27,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// 表达式编译器自动配置
 ///
@@ -64,7 +64,7 @@ public class ExprCompilerAutoConfiguration {
 
   /// 创建快照组装器 Bean。
   ///
-  /// @param objectMapper Jackson ObjectMapper 实例
+  /// @param jsonMapper 容器里的 `JsonMapper`
   /// @return 快照组装器实例
   @Bean
   @ConditionalOnMissingBean(RuleSnapshotLoader.class)
@@ -73,8 +73,8 @@ public class ExprCompilerAutoConfiguration {
       name = "enabled",
       havingValue = "true",
       matchIfMissing = true)
-  public SnapshotAssembler exprSnapshotAssembler(ObjectMapper objectMapper) {
-    return new SnapshotAssembler(objectMapper);
+  public SnapshotAssembler exprSnapshotAssembler(JsonMapper jsonMapper) {
+    return new SnapshotAssembler(jsonMapper);
   }
 
   /// 创建基于 Registry 的规则快照加载器 Bean。

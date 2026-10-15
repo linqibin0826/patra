@@ -2,7 +2,7 @@
  * Patra Spring Boot Starter - Core
  *
  * 核心 Starter，提供：
- * - JSON 序列化配置
+ * - CQRS 命令总线
  * - 错误处理管道
  * - 异步执行器配置
  */
@@ -22,9 +22,6 @@ dependencies {
 
     // Official Boot JSON starter (jackson-databind + common modules)
     api("org.springframework.boot:spring-boot-starter-json")
-
-    // Jackson 3 XML (optional): enables XmlMapper auto-config when present
-    compileOnly("tools.jackson.dataformat:jackson-dataformat-xml")
 
     // Resilience4j circuit breaker (optional: only needed if error-pipeline circuit breaker is enabled)
     compileOnly("io.github.resilience4j:resilience4j-circuitbreaker")

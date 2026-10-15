@@ -19,6 +19,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.json.JsonMapper;
 
 /// RorOrganizationParser 单元测试。
 ///
@@ -44,7 +45,7 @@ class RorOrganizationParserTest {
 
   @BeforeEach
   void setUp() {
-    parser = new RorOrganizationParser();
+    parser = new RorOrganizationParser(JsonMapper.builder().build());
   }
 
   @Nested

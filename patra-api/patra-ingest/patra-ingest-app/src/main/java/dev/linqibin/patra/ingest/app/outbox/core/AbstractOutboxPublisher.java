@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// Outbox 消息发布的抽象基类。
 ///
@@ -83,13 +83,13 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
   protected final OutboxMessageRepository repository;
   protected final OutboxMetrics metrics;
   protected final OutboxPublisherProperties properties;
-  protected final ObjectMapper objectMapper;
+  protected final JsonMapper objectMapper;
 
   protected AbstractOutboxPublisher(
       OutboxMessageRepository repository,
       OutboxMetrics metrics,
       OutboxPublisherProperties properties,
-      ObjectMapper objectMapper) {
+      JsonMapper objectMapper) {
     this.repository = repository;
     this.metrics = metrics;
     this.properties = properties;

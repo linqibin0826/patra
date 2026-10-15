@@ -11,7 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 import tools.jackson.core.JacksonException;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// 技术重试适配器（Infrastructure 层实现）
 ///
@@ -40,7 +40,7 @@ import tools.jackson.databind.ObjectMapper;
 public class TechnicalRetryAdapter implements TechnicalRetryPort {
 
   private final OutboxMessageRepository repository;
-  private final ObjectMapper objectMapper;
+  private final JsonMapper objectMapper;
 
   private static final HexFormat HEX_FORMAT = HexFormat.of();
 

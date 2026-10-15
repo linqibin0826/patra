@@ -18,7 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// 执行上下文加载器实现。
 ///
@@ -52,7 +52,7 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
   private final PlanSliceRepository sliceRepository;
   private final PlanRepository planRepository;
   private final ExpressionCompilerPort expressionCompiler;
-  private final ObjectMapper objectMapper;
+  private final JsonMapper objectMapper;
 
   /// 加载执行上下文(配置恢复 + 表达式编译)。
   ///

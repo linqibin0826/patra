@@ -1,6 +1,5 @@
 package dev.linqibin.patra.ingest.infra.mapper.impl;
 
-import dev.linqibin.commons.json.JsonMapperHolder;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.common.provenance.api.params.DoajParamKeys;
 import dev.linqibin.patra.ingest.domain.model.vo.batch.Batch;
@@ -9,7 +8,7 @@ import dev.linqibin.patra.ingest.infra.mapper.ProviderParameterMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
 /// DOAJ 参数映射器。
@@ -43,13 +42,11 @@ public class DoajParameterMapper implements ProviderParameterMapper {
 
   @Override
   public JsonNode mapParameters(Batch batch, JsonNode baseParams, QuerySession session) {
-    ObjectMapper mapper = JsonMapperHolder.getObjectMapper();
-
     // 1. 复制基础参数或创建新的 ObjectNode
     ObjectNode params =
         baseParams != null && baseParams.isObject()
             ? ((ObjectNode) baseParams).deepCopy()
-            : mapper.createObjectNode();
+            : JsonNodeFactory.instance.objectNode();
 
     // 2. 计算页码（从 offset 和 limit 计算）
     // DOAJ page 从 1 开始，offset=0 → page=1, offset=100 → page=2 (如果 limit=100)

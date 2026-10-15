@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.type.TypeReference;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// RocketMQ 发件箱发布器实现。
 ///
@@ -57,13 +57,13 @@ public class RocketMqOutboxPublisher implements OutboxPublisherPort {
 
   private final RocketMQTemplate rocketMQTemplate;
   private final RocketMqChannelMapper channelMapper;
-  private final ObjectMapper objectMapper;
+  private final JsonMapper objectMapper;
   private final OutboxMqProperties properties;
 
   public RocketMqOutboxPublisher(
       RocketMQTemplate rocketMQTemplate,
       RocketMqChannelMapper channelMapper,
-      ObjectMapper objectMapper,
+      JsonMapper objectMapper,
       OutboxMqProperties properties) {
     this.rocketMQTemplate = rocketMQTemplate;
     this.channelMapper = channelMapper;

@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// Scopus 集成配置。
 ///
@@ -55,10 +55,10 @@ public class ScopusConfiguration {
   /// 创建 ScopusApiClient Bean。
   ///
   /// @param scopusRestClient Scopus 专用 RestClient
-  /// @param objectMapper Jackson ObjectMapper（Spring Boot 自动配置）
+  /// @param objectMapper Jackson JsonMapper（Spring Boot 自动配置）
   /// @return ScopusApiClient 实例
   @Bean
-  public ScopusApiClient scopusApiClient(RestClient scopusRestClient, ObjectMapper objectMapper) {
+  public ScopusApiClient scopusApiClient(RestClient scopusRestClient, JsonMapper objectMapper) {
     return new ScopusApiClient(scopusRestClient, objectMapper);
   }
 }

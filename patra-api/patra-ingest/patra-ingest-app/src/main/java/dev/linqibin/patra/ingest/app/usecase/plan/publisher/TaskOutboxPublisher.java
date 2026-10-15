@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// Task Outbox 发布器
 ///
@@ -50,13 +50,13 @@ import tools.jackson.databind.ObjectMapper;
 public class TaskOutboxPublisher
     extends AbstractOutboxPublisher<TaskQueuedEvent, TaskPayload, TaskHeaders> {
 
-  private final ObjectMapper objectMapper;
+  private final JsonMapper objectMapper;
 
   public TaskOutboxPublisher(
       OutboxMessageRepository repository,
       OutboxMetrics metrics,
       OutboxPublisherProperties properties,
-      ObjectMapper objectMapper) {
+      JsonMapper objectMapper) {
     super(repository, metrics, properties, objectMapper);
     this.objectMapper = objectMapper;
   }

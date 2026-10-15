@@ -13,7 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// Europe PMC 客户端实现（使用 Spring RestClient）
 ///
@@ -34,17 +34,17 @@ public class EpmcClientAdapter implements EPMCClient {
 
   private final RestClient restClient;
   private final DefaultConfigProvider configProvider;
-  private final ObjectMapper objectMapper;
+  private final JsonMapper jsonMapper;
   private final ProvenanceMetrics metrics;
 
   public EpmcClientAdapter(
       RestClient restClient,
       DefaultConfigProvider configProvider,
-      ObjectMapper objectMapper,
+      JsonMapper jsonMapper,
       ProvenanceMetrics metrics) {
     this.restClient = restClient;
     this.configProvider = configProvider;
-    this.objectMapper = objectMapper;
+    this.jsonMapper = jsonMapper;
     this.metrics = metrics;
   }
 
@@ -80,7 +80,7 @@ public class EpmcClientAdapter implements EPMCClient {
     String body = restClient.get().uri(uriBuilder.build().toUri()).retrieve().body(String.class);
 
     try {
-      JsonNode root = objectMapper.readTree(body);
+      JsonNode root = jsonMapper.readTree(body);
       return SearchResponse.from(root);
     } catch (Exception ex) {
       throw new ProvenanceClientException(

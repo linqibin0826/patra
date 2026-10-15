@@ -15,8 +15,8 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.ObjectWriter;
+import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.NullNode;
@@ -37,7 +37,7 @@ import tools.jackson.databind.node.ObjectNode;
 /// @author linqibin
 /// @since 0.1.0
 public final class ExprCanonicalizer {
-  private static final ObjectMapper OBJECT_MAPPER;
+  private static final JsonMapper OBJECT_MAPPER;
   private static final JsonNodeFactory NODE_FACTORY;
   private static final ObjectWriter CANONICAL_WRITER;
   private static final Pattern SPACE_PATTERN = Pattern.compile("\\s+");

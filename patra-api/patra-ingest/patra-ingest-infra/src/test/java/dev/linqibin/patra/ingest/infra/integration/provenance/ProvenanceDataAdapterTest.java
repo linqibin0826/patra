@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tools.jackson.databind.json.JsonMapper;
 
 /// ProvenanceDataAdapter 单元测试。
 ///
@@ -44,7 +45,9 @@ class ProvenanceDataAdapterTest {
     // 注意: 此测试类仅测试 convertToProvenanceConfig 私有方法(HTTP配置转换)
     // 该方法不使用 QuerySessionTranslator 和 ProviderParameterMapperRegistry，因此传入真实实例和 Mock 即可
     QuerySessionTranslator translator = new QuerySessionTranslator();
-    adapter = new ProvenanceDataAdapter(providerRegistry, translator, mapperRegistry);
+    adapter =
+        new ProvenanceDataAdapter(
+            providerRegistry, translator, mapperRegistry, JsonMapper.builder().build());
   }
 
   // ========== convertToProvenanceConfig() 完整转换测试 ==========

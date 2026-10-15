@@ -16,7 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// 表达式编译器端口实现。
 ///
@@ -41,7 +41,7 @@ import tools.jackson.databind.ObjectMapper;
 public class ExpressionCompilerAdapter implements ExpressionCompilerPort {
 
   private final ExprCompiler exprCompiler;
-  private final ObjectMapper objectMapper;
+  private final JsonMapper objectMapper;
 
   /// 从领域请求编译表达式。
   ///

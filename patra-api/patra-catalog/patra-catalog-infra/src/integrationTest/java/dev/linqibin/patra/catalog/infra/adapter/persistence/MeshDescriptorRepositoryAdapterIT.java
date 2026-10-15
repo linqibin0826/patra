@@ -18,6 +18,7 @@ import dev.linqibin.patra.catalog.infra.persistence.dao.MeshEntryCombinationDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshEntryTermDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.MeshTreeNumberDao;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
+import dev.linqibin.starter.jpa.json.JsonColumnCodec;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -52,7 +53,8 @@ import org.springframework.test.context.ContextConfiguration;
 @Import({
   MeshDescriptorRepositoryAdapter.class,
   JpaAuditingConfig.class,
-  JacksonAutoConfiguration.class
+  JacksonAutoConfiguration.class,
+  JsonColumnCodec.class
 })
 @ComponentScan(basePackages = "dev.linqibin.patra.catalog.infra.persistence.converter")
 @ActiveProfiles("test")

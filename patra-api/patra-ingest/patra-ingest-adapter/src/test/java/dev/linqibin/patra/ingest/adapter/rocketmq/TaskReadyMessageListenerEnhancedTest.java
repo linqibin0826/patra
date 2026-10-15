@@ -23,7 +23,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// TaskReadyMessageListener 增强测试套件。
 ///
@@ -44,7 +44,7 @@ import tools.jackson.databind.ObjectMapper;
 class TaskReadyMessageListenerEnhancedTest {
 
   @Mock private CommandBus commandBus;
-  @Mock private ObjectMapper objectMapper;
+  @Mock private JsonMapper objectMapper;
 
   @Captor private ArgumentCaptor<TaskReadyCommand> commandCaptor;
 

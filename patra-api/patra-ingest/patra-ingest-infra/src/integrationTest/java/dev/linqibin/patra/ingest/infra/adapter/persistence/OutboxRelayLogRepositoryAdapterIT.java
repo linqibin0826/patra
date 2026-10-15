@@ -13,6 +13,7 @@ import dev.linqibin.patra.ingest.infra.config.IngestITPostgreSQLContainerInitial
 import dev.linqibin.starter.jpa.autoconfig.HibernatePropertiesCustomizer;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
 import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
+import dev.linqibin.starter.jpa.json.JsonColumnCodec;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -28,7 +29,7 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
 /// OutboxRelayLogRepositoryAdapter 集成测试。
@@ -53,7 +54,8 @@ import tools.jackson.databind.node.ObjectNode;
   OutboxRelayLogRepositoryAdapter.class,
   JacksonAutoConfiguration.class,
   JpaAuditingConfig.class,
-  HibernatePropertiesCustomizer.class
+  HibernatePropertiesCustomizer.class,
+  JsonColumnCodec.class
 })
 @ComponentScan(
     basePackages = "dev.linqibin.patra.ingest.infra.adapter.persistence.converter.mapper")
@@ -65,7 +67,7 @@ class OutboxRelayLogRepositoryAdapterIT {
 
   @Autowired private OutboxRelayLogDao logDao;
   @Autowired private OutboxMessageDao messageDao;
-  @Autowired private ObjectMapper objectMapper;
+  @Autowired private JsonMapper objectMapper;
 
   private static final String TEST_CHANNEL = "INGEST_TASK";
   private static final String TEST_PARTITION_KEY = "PUBMED:HARVEST";

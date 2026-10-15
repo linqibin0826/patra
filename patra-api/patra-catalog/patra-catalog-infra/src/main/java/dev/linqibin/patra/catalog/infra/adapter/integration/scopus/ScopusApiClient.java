@@ -10,7 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /// Scopus Serial Title API 查询客户端。
 ///
@@ -50,7 +50,7 @@ public class ScopusApiClient {
   private static final Pattern ISSN_PATTERN = Pattern.compile("^\\d{4}-\\d{3}[\\dXx]$");
 
   private final RestClient restClient;
-  private final ObjectMapper objectMapper;
+  private final JsonMapper objectMapper;
 
   /// 通过 ISSN 查询 Scopus 期刊数据。
   ///

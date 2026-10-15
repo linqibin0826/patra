@@ -24,6 +24,7 @@ import dev.linqibin.patra.catalog.infra.persistence.dao.OrganizationNameDao;
 import dev.linqibin.patra.catalog.infra.persistence.dao.OrganizationRelationDao;
 import dev.linqibin.patra.catalog.infra.persistence.entity.OrganizationExternalIdEntity;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
+import dev.linqibin.starter.jpa.json.JsonColumnCodec;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -53,7 +54,8 @@ import org.springframework.test.context.ContextConfiguration;
 @Import({
   OrganizationRepositoryAdapter.class,
   JpaAuditingConfig.class,
-  JacksonAutoConfiguration.class
+  JacksonAutoConfiguration.class,
+  JsonColumnCodec.class
 })
 @ComponentScan(basePackages = "dev.linqibin.patra.catalog.infra.persistence.converter")
 @ActiveProfiles("test")

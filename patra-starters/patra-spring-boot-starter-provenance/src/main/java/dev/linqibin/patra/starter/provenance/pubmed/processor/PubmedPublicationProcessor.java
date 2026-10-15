@@ -2,7 +2,6 @@ package dev.linqibin.patra.starter.provenance.pubmed.processor;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
-import dev.linqibin.commons.json.JsonMapperHolder;
 import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.common.model.CanonicalPublication;
 import dev.linqibin.patra.common.model.DataType;
@@ -39,6 +38,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
 /// PubMed 出版物数据处理器
@@ -275,7 +275,7 @@ public class PubmedPublicationProcessor implements DataProcessor<CanonicalPublic
     if (params != null && params.isObject()) {
       node = ((ObjectNode) params).deepCopy();
     } else {
-      node = JsonMapperHolder.getObjectMapper().createObjectNode();
+      node = JsonNodeFactory.instance.objectNode();
     }
     node.put(PubMedParamKeys.TERM, query);
     return node;

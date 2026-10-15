@@ -24,6 +24,12 @@ import tools.jackson.databind.module.SimpleModule;
 ///   - 保持内核不依赖框架注解
 ///   - 通过忽略未知属性保持向前兼容
 ///
+/// ### 为什么自带 mapper
+///
+/// 这是刻意的"固定格式 codec":表达式 JSON 会被规范化后算哈希、持久化成快照,格式必须与应用的
+/// `spring.jackson.*` 配置及容器里的 `JsonMapper` 无关,否则配置一变快照与哈希就漂移;内核也不依赖 Spring。
+/// 因此类内只缓存一个固定配置的 {@link JsonMapper}(注册表达式模块、忽略未知属性),所有编解码共用它。
+///
 /// 示例 JSON 格式:
 ///
 /// ```
@@ -38,32 +44,50 @@ import tools.jackson.databind.module.SimpleModule;
 /// @author linqibin
 /// @since 0.1.0
 public final class ExprJsonCodec {
+  /// 固定配置的缓存 mapper。`module()` 只新建序列化器/反序列化器实例、不读本字段,不会形成静态初始化循环。
+  private static final JsonMapper MAPPER =
+      JsonMapper.builder()
+          .addModule(module())
+          .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+          .build();
+
   /// 私有构造函数,防止实例化工具类。
   private ExprJsonCodec() {}
 
   /// 创建一个模块,注册 {@link Expr} 的序列化器和反序列化器。
   ///
   /// @return 模块实例
-  public static tools.jackson.databind.JacksonModule module() {
+  public static JacksonModule module() {
     SimpleModule m = new SimpleModule("expr-json-module");
     m.addSerializer(Expr.class, new ExprSerializer());
     m.addDeserializer(Expr.class, new ExprDeserializer());
     return m;
   }
 
-  /// 构建预配置表达式模块的 {@link ObjectMapper}。
+  /// 返回预配置表达式模块的缓存 {@link JsonMapper},每次调用都是同一实例。
   ///
   /// @return 配置好的 mapper
-  public static ObjectMapper mapper() {
-    return JsonMapper.builder()
-        .addModule(ExprJsonCodec.module())
-        .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-        .build();
+  public static JsonMapper mapper() {
+    return MAPPER;
   }
 
   // ================= 序列化器 =================
   static class ExprSerializer extends ValueSerializer<Expr> implements ExprVisitor<Void> {
-    private JsonGenerator gen;
+    /// 当前写入的生成器。注册到 mapper 的实例为 `null`,每次序列化另建持有生成器的实例,
+    /// 避免共享 mapper 被并发使用时互相覆盖。
+    private final JsonGenerator gen;
+
+    /// 创建注册到模块的序列化器。
+    ExprSerializer() {
+      this(null);
+    }
+
+    /// 创建绑定到某次序列化生成器的访问者。
+    ///
+    /// @param gen JSON 生成器
+    private ExprSerializer(JsonGenerator gen) {
+      this.gen = gen;
+    }
 
     /// 序列化表达式为 JSON。
     ///
@@ -72,8 +96,7 @@ public final class ExprJsonCodec {
     /// @param serializers 序列化上下文
     @Override
     public void serialize(Expr value, JsonGenerator gen, SerializationContext serializers) {
-      this.gen = gen;
-      value.accept(this);
+      value.accept(new ExprSerializer(gen));
     }
 
     /// {@inheritDoc}
@@ -299,10 +322,9 @@ public final class ExprJsonCodec {
     @Override
     public Expr deserialize(JsonParser p, DeserializationContext ctxt) {
       validateParserState(p, ctxt);
-      ObjectMapper mapper = mapper();
-      JsonNode root = mapper.readTree(p);
+      JsonNode root = MAPPER.readTree(p);
       String type = getText(root, "type");
-      return parseExprByType(root, type, mapper, ctxt);
+      return parseExprByType(root, type, ctxt);
     }
 
     /// 验证解析器状态是否有效。
@@ -322,16 +344,14 @@ public final class ExprJsonCodec {
     ///
     /// @param root JSON 根节点
     /// @param type 表达式类型
-    /// @param mapper ObjectMapper
     /// @param ctxt 反序列化上下文
     /// @return 表达式
     /// @throws IllegalArgumentException 如果类型未知
-    private Expr parseExprByType(
-        JsonNode root, String type, ObjectMapper mapper, DeserializationContext ctxt) {
+    private Expr parseExprByType(JsonNode root, String type, DeserializationContext ctxt) {
       return switch (type) {
         case "AND" -> parseAndExpression(root);
         case "OR" -> parseOrExpression(root);
-        case "NOT" -> parseNotExpression(root, mapper, ctxt);
+        case "NOT" -> parseNotExpression(root, ctxt);
         case "CONST" -> parseConstExpression(root);
         case "ATOM" -> parseAtomExpression(root, ctxt);
         default -> throw new IllegalArgumentException("Unknown type: " + type);
@@ -361,16 +381,14 @@ public final class ExprJsonCodec {
     /// 解析 NOT 表达式。
     ///
     /// @param root JSON 根节点
-    /// @param mapper ObjectMapper
     /// @param ctxt 反序列化上下文
     /// @return NOT 表达式
-    private Expr parseNotExpression(
-        JsonNode root, ObjectMapper mapper, DeserializationContext ctxt) {
+    private Expr parseNotExpression(JsonNode root, DeserializationContext ctxt) {
       JsonNode c = root.get("child");
       if (c == null) {
         ctxt.reportInputMismatch(Expr.class, "NOT missing child");
       }
-      Expr child = mapper.treeToValue(c, Expr.class);
+      Expr child = MAPPER.treeToValue(c, Expr.class);
       return new Not(child);
     }
 
@@ -408,7 +426,7 @@ public final class ExprJsonCodec {
       List<Expr> list = new ArrayList<>();
       if (arr != null && arr.isArray()) {
         for (JsonNode n : arr) {
-          list.add(mapper().treeToValue(n, Expr.class));
+          list.add(MAPPER.treeToValue(n, Expr.class));
         }
       }
       return list;
@@ -564,7 +582,7 @@ public final class ExprJsonCodec {
   /// @return JSON 字符串表示
   /// @throws JacksonException 如果序列化失败
   public static String toJson(Expr expr) {
-    return mapper().writeValueAsString(expr);
+    return MAPPER.writeValueAsString(expr);
   }
 
   /// 将 JSON 反序列化为表达式树。
@@ -574,6 +592,6 @@ public final class ExprJsonCodec {
   /// @throws JacksonException 如果反序列化失败
   public static Expr fromJson(String json) {
     Objects.requireNonNull(json, "json");
-    return mapper().readValue(json, Expr.class);
+    return MAPPER.readValue(json, Expr.class);
   }
 }

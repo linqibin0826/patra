@@ -2,7 +2,10 @@ package dev.linqibin.patra.ingest.infra.adapter.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.linqibin.patra.common.enums.ProvenanceCode;
 import dev.linqibin.patra.ingest.domain.model.aggregate.PlanAggregate;
+import dev.linqibin.patra.ingest.domain.model.vo.plan.WindowSpec;
+import dev.linqibin.patra.ingest.domain.model.vo.schedule.ScheduleInstanceId;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.dao.PlanDao;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.dao.ScheduleInstanceDao;
 import dev.linqibin.patra.ingest.infra.adapter.persistence.entity.PlanEntity;
@@ -11,6 +14,8 @@ import dev.linqibin.patra.ingest.infra.config.IngestITPostgreSQLContainerInitial
 import dev.linqibin.starter.jpa.autoconfig.HibernatePropertiesCustomizer;
 import dev.linqibin.starter.jpa.autoconfig.JpaAuditingConfig;
 import dev.linqibin.starter.jpa.id.SnowflakeIdGenerator;
+import dev.linqibin.starter.jpa.json.JsonColumnCodec;
+import jakarta.persistence.EntityManager;
 import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,7 +30,7 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
 /// PlanRepositoryAdapter 集成测试。
@@ -49,7 +54,8 @@ import tools.jackson.databind.node.ObjectNode;
   PlanRepositoryAdapter.class,
   JacksonAutoConfiguration.class,
   JpaAuditingConfig.class,
-  HibernatePropertiesCustomizer.class
+  HibernatePropertiesCustomizer.class,
+  JsonColumnCodec.class
 })
 @ComponentScan(
     basePackages = "dev.linqibin.patra.ingest.infra.adapter.persistence.converter.mapper")
@@ -61,7 +67,8 @@ class PlanRepositoryAdapterIT {
 
   @Autowired private PlanDao planDao;
   @Autowired private ScheduleInstanceDao scheduleInstanceDao;
-  @Autowired private ObjectMapper objectMapper;
+  @Autowired private JsonMapper objectMapper;
+  @Autowired private EntityManager entityManager;
 
   private static final String TEST_PLAN_KEY = "PUBMED-HARVEST-2025-01-01";
   private static final String TEST_PROVENANCE_CODE = "PUBMED";
@@ -115,6 +122,37 @@ class PlanRepositoryAdapterIT {
       PlanEntity fromDb = planDao.findById(result.get().getId().value()).orElse(null);
       assertThat(fromDb).isNotNull();
       assertThat(fromDb.getStatusCode()).isEqualTo("SLICING");
+    }
+
+    @Test
+    @DisplayName("应在 ID_RANGE 窗口写入后读回等值，from/to 保持为 Long")
+    void shouldRoundTripIdRangeWindowWithLongBounds() {
+      // Given: ID_RANGE 窗口的 from/to 是 Long，写进 JSON 列时必须是数字而不是字符串
+      WindowSpec window = WindowSpec.ofIdRange(1_000_000L, 2_000_000L);
+      PlanAggregate plan =
+          PlanAggregate.create(
+              ScheduleInstanceId.of(testScheduleInstanceId),
+              TEST_PLAN_KEY,
+              ProvenanceCode.PUBMED,
+              TEST_OPERATION_CODE,
+              "test-expr-hash-001",
+              null,
+              null,
+              null,
+              window,
+              "ID_RANGE",
+              null);
+
+      // When: 保存后清空持久化上下文，强制从数据库重新读取
+      PlanAggregate saved = repository.save(plan);
+      entityManager.flush();
+      entityManager.clear();
+      Optional<PlanAggregate> reloaded = repository.findById(saved.getId().value());
+
+      // Then
+      assertThat(saved.getWindowSpec()).isEqualTo(window);
+      assertThat(reloaded).isPresent();
+      assertThat(reloaded.get().getWindowSpec()).isEqualTo(window);
     }
   }
 
