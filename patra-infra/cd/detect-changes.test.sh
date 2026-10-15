@@ -31,7 +31,7 @@ assert_field "$F" '.coverage_mode' '"flags"' "catalog coverage=flags"
 
 echo "== 场景 4：registry-api 契约扇出 =="
 F="patra-api/patra-registry/patra-registry-api/src/main/java/X.java"
-assert_field "$F" '.backend_units' '["catalog","foundation","ingest","registry"]' "registry-api 扇出 consumers"
+assert_field "$F" '.backend_units' '["catalog","ingest","registry"]' "registry-api 扇出 consumers"
 assert_field "$F" '.full_run' 'false' "registry-api 非全量"
 
 echo "== 场景 5：object-storage-api 契约扇出 =="
