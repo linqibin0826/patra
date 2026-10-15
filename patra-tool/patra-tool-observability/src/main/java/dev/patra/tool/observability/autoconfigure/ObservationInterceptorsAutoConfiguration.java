@@ -29,6 +29,7 @@ import org.springframework.context.annotation.Bean;
     name = "enabled",
     havingValue = "true",
     matchIfMissing = true)
+@ConditionalOnClass(name = "dev.patra.tool.web.error.pipeline.ResolutionInterceptor")
 public class ObservationInterceptorsAutoConfiguration {
 
   private static final Logger log =
@@ -41,12 +42,11 @@ public class ObservationInterceptorsAutoConfiguration {
 
   /// 注册错误解析可观测性拦截器。
   ///
-  /// 仅在 patra-spring-boot-starter-core 存在时生效。
+  /// 类级 `@ConditionalOnClass` 保证只在类路径上有 patra-tool-web 时才加载本配置。
   ///
   /// @param observationRegistry Micrometer Observation 注册表
   /// @return 错误解析拦截器实例
   @Bean
-  @ConditionalOnClass(name = "dev.patra.tool.web.error.pipeline.ResolutionInterceptor")
   public ObservationResolutionInterceptor observationResolutionInterceptor(
       ObservationRegistry observationRegistry) {
     log.debug("注册错误解析可观测性拦截器");

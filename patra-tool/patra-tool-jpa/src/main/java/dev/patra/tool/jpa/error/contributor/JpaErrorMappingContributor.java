@@ -24,7 +24,6 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.orm.jpa.JpaSystemException;
-import org.springframework.stereotype.Component;
 
 /// 将 JPA/Hibernate 数据访问层异常转换为标准化平台错误码的 {@link ErrorMappingContributor}。
 ///
@@ -52,7 +51,6 @@ import org.springframework.stereotype.Component;
 /// @author linqibin
 /// @since 0.1.0
 @Slf4j
-@Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class JpaErrorMappingContributor implements ErrorMappingContributor {
 

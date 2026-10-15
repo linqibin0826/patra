@@ -8,6 +8,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.jpa.repository.JpaRepository;
 import tools.jackson.databind.json.JsonMapper;
@@ -32,14 +33,20 @@ import tools.jackson.databind.json.JsonMapper;
 @Import({JpaAuditingConfig.class, HibernatePropertiesCustomizer.class})
 public class JpaAutoConfiguration {
 
-  /// 注册 JPA 异常映射贡献器。
-  ///
-  /// @param http 标准 HTTP 错误定义组
-  /// @return JPA 异常映射贡献器
-  @Bean
-  @ConditionalOnMissingBean
-  public JpaErrorMappingContributor jpaErrorMappingContributor(HttpStdErrors.Group http) {
-    return new JpaErrorMappingContributor(http);
+  /// JPA / Hibernate / SQL 异常到错误码的映射，只在类路径上有 patra-tool-web 时注册。
+  @Configuration(proxyBeanMethods = false)
+  @ConditionalOnClass(name = "dev.patra.tool.web.error.spi.ErrorMappingContributor")
+  static class JpaErrorMappingConfiguration {
+
+    /// 注册映射贡献者；顺序由类上的 `@Order` 决定，先于服务自己的贡献者。
+    ///
+    /// @param http 标准 HTTP 错误定义组
+    /// @return JPA 异常映射贡献者
+    @Bean
+    @ConditionalOnMissingBean
+    JpaErrorMappingContributor jpaErrorMappingContributor(HttpStdErrors.Group http) {
+      return new JpaErrorMappingContributor(http);
+    }
   }
 
   /// 注册 JSON 列转换器，供 JPA 映射器注入。

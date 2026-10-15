@@ -22,7 +22,22 @@ object ToolDependencyRules {
         declared.filter { it.target.startsWith(":patra-api") }.map { "${it.configuration} -> ${it.target}" }
 
     /// R2：工具间硬依赖只允许指向 core（白名单例外）；compileOnly 任意；测试配置可用 core、test 与主代码已 compileOnly 的模块。
-    fun r2Violations(project: String, declared: List<Declared>): List<String> = emptyList()
+    fun r2Violations(project: String, declared: List<Declared>): List<String> {
+        val compileOnlyTargets = declared.filter { it.configuration == "compileOnly" }.map { it.target }.toSet()
+        val whitelist = HARD_WHITELIST[project].orEmpty()
+        return declared
+            .filter { it.target.startsWith(":patra-tool:") && it.target != project }
+            .filterNot { dependency ->
+                val target = dependency.target
+                when {
+                    dependency.configuration == "compileOnly" -> true
+                    dependency.configuration in HARD_CONFIGURATIONS -> target == CORE || target in whitelist
+                    isTestConfiguration(dependency.configuration) -> target == CORE || target == TEST || target in compileOnlyTargets
+                    else -> true
+                }
+            }
+            .map { "${it.configuration} -> ${it.target}" }
+    }
 
     /// 测试类配置：test*（不含 testFixtures*）、integrationTest*、e2eTest*。
     fun isTestConfiguration(name: String): Boolean =

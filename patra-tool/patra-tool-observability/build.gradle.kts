@@ -16,6 +16,8 @@ dependencies {
     // Patra 内部依赖
     api(project(":patra-tool:patra-tool-core"))
     compileOnly(project(":patra-tool:patra-tool-web"))
+    // 契约测试要能看到 web 的 ResolutionInterceptor
+    testImplementation(project(":patra-tool:patra-tool-web"))
 
     // Foundation for custom AutoConfiguration
     api("org.springframework.boot:spring-boot-autoconfigure")
