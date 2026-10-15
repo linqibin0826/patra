@@ -50,3 +50,48 @@ pluginManager.withPlugin("java-base") {
         dependsOn("checkToolBoundary", "checkToolDependencies")
     }
 }
+
+// ==================== R4：自动配置写法 ====================
+abstract class AutoConfigurationCheck : DefaultTask() {
+    @get:Input abstract val modulePath: Property<String>
+    @get:Input abstract val packageSegment: Property<String>
+    @get:Input abstract val classPrefix: Property<String>
+    @get:Input abstract val configPrefix: Property<String>
+    @get:InputFiles @get:PathSensitive(PathSensitivity.RELATIVE) abstract val sourceFiles: ConfigurableFileCollection
+    @get:Internal abstract val mainJava: DirectoryProperty
+    @get:Internal abstract val importsFile: RegularFileProperty
+    @get:Internal abstract val testJava: DirectoryProperty
+
+    @TaskAction
+    fun check() {
+        val problems = AutoConfigurationRules.check(
+            AutoConfigurationRules.Input(
+                mainJava.asFile.orNull, importsFile.asFile.orNull, testJava.asFile.orNull,
+                packageSegment.get(), classPrefix.get(), configPrefix.get(),
+            ),
+        )
+        if (problems.isNotEmpty()) {
+            throw GradleException(
+                "R4 违规：${modulePath.get()}\n" + problems.joinToString("\n") { "  $it" } +
+                    "\n工具模块的 bean 一律由 autoconfigure 包里的自动配置注册，每个自动配置类配同名 ApplicationContextRunner 测试。",
+            )
+        }
+    }
+}
+
+val capability = project.name.removePrefix("patra-tool-")
+val importsPath = "src/main/resources/META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports"
+
+tasks.register<AutoConfigurationCheck>("checkAutoConfiguration") {
+    group = "verification"
+    description = "R4：自动配置写法（包位置、public final、imports 双向一致、契约测试、无构造型注解）"
+    modulePath.set(project.path)
+    packageSegment.set(capability.replace("-", ""))
+    classPrefix.set(capability.split("-").joinToString("") { it.replaceFirstChar(Char::uppercase) })
+    configPrefix.set("patra.$capability")
+    mainJava.set(layout.projectDirectory.dir("src/main/java"))
+    importsFile.set(layout.projectDirectory.file(importsPath))
+    testJava.set(layout.projectDirectory.dir("src/test/java"))
+    sourceFiles.from(fileTree("src/main/java"), fileTree("src/test/java"), layout.projectDirectory.file(importsPath))
+}
+// tasks.named("check") { dependsOn("checkAutoConfiguration") } 在 Task 27 挂上
