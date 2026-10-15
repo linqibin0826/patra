@@ -64,11 +64,22 @@ public final class ExprJsonCodec {
     return m;
   }
 
-  /// 返回预配置表达式模块的缓存 {@link JsonMapper},每次调用都是同一实例。
+  /// 用缓存的 mapper 把 JSON 文本解析成节点树。
   ///
-  /// @return 配置好的 mapper
-  public static JsonMapper mapper() {
-    return MAPPER;
+  /// @param json JSON 文本
+  /// @return 节点树
+  /// @throws JacksonException 如果解析失败
+  public static JsonNode readTree(String json) {
+    return MAPPER.readTree(json);
+  }
+
+  /// 返回由缓存 mapper 派生的写出器,供规范化等场景写节点树。
+  ///
+  /// 不直接暴露 mapper 本身,调用方拿不到可配置的内部状态。
+  ///
+  /// @return 写出器
+  public static ObjectWriter writer() {
+    return MAPPER.writer();
   }
 
   // ================= 序列化器 =================

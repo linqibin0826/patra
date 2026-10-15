@@ -49,9 +49,12 @@ class ExprJsonCodecTest {
   }
 
   @Test
-  @DisplayName("mapper 每次返回同一个缓存实例")
-  void should_return_cached_mapper_instance() {
-    assertThat(ExprJsonCodec.mapper()).isSameAs(ExprJsonCodec.mapper());
+  @DisplayName("readTree 与 writer 用同一份固定配置,节点树往返文本不变")
+  void should_round_trip_tree_through_reader_and_writer() {
+    String json = "{\"type\":\"CONST\",\"value\":true}";
+
+    assertThat(ExprJsonCodec.writer().writeValueAsString(ExprJsonCodec.readTree(json)))
+        .isEqualTo(json);
   }
 
   @Test
