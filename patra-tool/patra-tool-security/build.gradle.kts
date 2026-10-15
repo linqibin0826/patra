@@ -15,7 +15,6 @@ plugins {
 
 dependencies {
     // 当前用户的抽象
-    api(project(":patra-api:patra-common:patra-common-security"))
 
     // 统一错误格式（ProblemDetailAdapter、GlobalRestExceptionHandler）
     api(project(":patra-tool:patra-tool-web"))

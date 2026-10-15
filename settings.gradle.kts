@@ -48,11 +48,8 @@ fun mapParent(path: String, dir: String) {
 }
 
 // ==================== patra-api / patra-common ====================
-includeAt(":patra-api:patra-common:patra-common-model", "patra-api/patra-common/patra-common-model")
 includeAt(":patra-api:patra-common:patra-common-provenance-api", "patra-api/patra-common/patra-common-provenance-api")
-includeAt(":patra-api:patra-common:patra-common-enums", "patra-api/patra-common/patra-common-enums")
-includeAt(":patra-api:patra-common:patra-common-security", "patra-api/patra-common/patra-common-security")
-mapParent(":patra-api:patra-common", "patra-api/patra-common")
+includeAt(":patra-api:patra-common", "patra-api/patra-common")
 
 // ==================== patra-tool ====================
 includeAt(":patra-tool:patra-tool-core", "patra-tool/patra-tool-core")

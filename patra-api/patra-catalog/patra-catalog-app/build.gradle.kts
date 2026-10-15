@@ -10,7 +10,7 @@ plugins {
 
 dependencies {
     // 内部模块
-    api(project(":patra-api:patra-common:patra-common-enums"))
+    api(project(":patra-api:patra-common"))
     api(project(":patra-tool:patra-tool-core"))
     api(project(":patra-tool:patra-tool-cqrs"))
     api(project(":patra-api:patra-catalog:patra-catalog-domain"))

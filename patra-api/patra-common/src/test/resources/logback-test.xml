@@ -2,7 +2,7 @@
 <configuration>
 
     <!-- Property for application name -->
-    <property name="appName" value="patra-common-model"/>
+    <property name="appName" value="patra-common"/>
 
     <!-- Console Appender: 测试专用配置,使用 %nopex 抑制堆栈跟踪 -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">

@@ -11,7 +11,6 @@ plugins {
 
 dependencies {
     // AccountType / ClientType / CurrentUser
-    api(project(":patra-api:patra-common:patra-common-security"))
 
     // DomainException / StandardErrorTrait
     api(project(":patra-tool:patra-tool-core"))

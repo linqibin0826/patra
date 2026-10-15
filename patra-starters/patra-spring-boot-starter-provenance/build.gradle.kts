@@ -13,10 +13,9 @@ plugins {
 
 dependencies {
     // Patra 内部依赖
-    api(project(":patra-api:patra-common:patra-common-enums"))
+    api(project(":patra-api:patra-common"))
     api(project(":patra-tool:patra-tool-core"))
     api(project(":patra-tool:patra-tool-http-client"))
-    api(project(":patra-api:patra-common:patra-common-model"))
     api(project(":patra-api:patra-common:patra-common-provenance-api"))
 
     // Spring Boot AutoConfiguration

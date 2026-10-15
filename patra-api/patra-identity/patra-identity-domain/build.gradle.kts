@@ -11,5 +11,4 @@ plugins {
 
 dependencies {
     // 账号类型 AccountType（纯 Java）
-    api(project(":patra-api:patra-common:patra-common-security"))
 }

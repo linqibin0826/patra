@@ -1,4 +1,4 @@
-package dev.patra.common;
+package dev.patra.ingest.expr.compiler.snapshot;
 
 import java.util.Locale;
 

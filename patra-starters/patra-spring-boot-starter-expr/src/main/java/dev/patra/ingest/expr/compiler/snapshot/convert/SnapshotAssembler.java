@@ -1,8 +1,8 @@
 package dev.patra.ingest.expr.compiler.snapshot.convert;
 
-import dev.patra.common.RegistryConfigScope;
 import dev.patra.ingest.expr.Atom;
 import dev.patra.ingest.expr.compiler.snapshot.ProvenanceSnapshot;
+import dev.patra.ingest.expr.compiler.snapshot.RegistryConfigScope;
 import dev.patra.registry.api.dto.expr.ApiParamMappingResp;
 import dev.patra.registry.api.dto.expr.ExprCapabilityResp;
 import dev.patra.registry.api.dto.expr.ExprFieldResp;

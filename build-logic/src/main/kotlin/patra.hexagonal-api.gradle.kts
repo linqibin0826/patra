@@ -16,7 +16,7 @@ plugins {
 
 dependencies {
     // API 层核心依赖
-    api(project(":patra-api:patra-common:patra-common-enums"))
+    api(project(":patra-api:patra-common"))
     api(project(":patra-tool:patra-tool-core"))
 
     // Jakarta Validation (仅用于 DTO 校验注解)

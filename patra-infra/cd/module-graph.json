@@ -93,8 +93,8 @@
             ]
         },
         {
-            "dir": "patra-api/patra-common/patra-common-enums",
-            "project": ":patra-api:patra-common:patra-common-enums",
+            "dir": "patra-api/patra-common",
+            "project": ":patra-api:patra-common",
             "unit": "foundation",
             "impacts": [
                 "catalog",
@@ -109,38 +109,12 @@
             ]
         },
         {
-            "dir": "patra-api/patra-common/patra-common-model",
-            "project": ":patra-api:patra-common:patra-common-model",
-            "unit": "foundation",
-            "impacts": [
-                "catalog",
-                "foundation",
-                "ingest"
-            ],
-            "tasks": [
-                "check"
-            ]
-        },
-        {
             "dir": "patra-api/patra-common/patra-common-provenance-api",
             "project": ":patra-api:patra-common:patra-common-provenance-api",
             "unit": "foundation",
             "impacts": [
                 "foundation",
                 "ingest"
-            ],
-            "tasks": [
-                "check"
-            ]
-        },
-        {
-            "dir": "patra-api/patra-common/patra-common-security",
-            "project": ":patra-api:patra-common:patra-common-security",
-            "unit": "foundation",
-            "impacts": [
-                "foundation",
-                "gateway",
-                "identity"
             ],
             "tasks": [
                 "check"

@@ -9,8 +9,6 @@ plugins {
 }
 
 dependencies {
-    api(project(":patra-api:patra-common:patra-common-enums"))
-    api(project(":patra-tool:patra-tool-core"))
 
     // DTO 验证注解
     api("jakarta.validation:jakarta.validation-api")
