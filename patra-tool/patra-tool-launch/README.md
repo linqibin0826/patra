@@ -1,112 +1,43 @@
-# patra-spring-boot-starter-nacos
+# patra-tool-launch
 
-Patra 服务接入 Nacos 的 starter。它统一注入 Nacos 的连接和服务发现设置，经启动器从配置中心读取 `patra-common.yaml` 和 `{服务名}.yaml`，拿不到配置时启动失败。
+## 能力
 
-工程设计：`docs/patra/specs/2026-10-13-nacos-config-starter-design.md`。
+服务的启动器模块。`PatraApplication` 是统一的 `main` 入口：启动前把服务名、Nacos 的 `patra-common.yaml` 与本服务 `{服务名}.yaml` 的导入放进 default properties，服务自己的配置文件里因此不写任何 Nacos 配置。`NacosDefaultsPostProcessor` 在 Spring Boot 加载配置之前注入 Nacos 连接与服务发现的默认值，并读取 `~/.patra/secrets/*.env` 作为本机密钥；`ConfigSourceCheckPostProcessor` 在启动期检查两份 Nacos 配置真的拿到了（靠配置里的签到行）、且其中引用的变量都能解析，不满足就让启动失败。
 
-## 1. 怎么引入
+自动配置 `LaunchAutoConfiguration` 注册系统 UTC `Clock` bean，服务自定义了 `Clock` 时让位。测试不经过启动器，不导入 Nacos 配置，也不做签到检查。
 
-boot 模块依赖本 starter，它带上 SCA 的 nacos-config 和 nacos-discovery：
+## 配置（前缀 `patra.launch`）
 
-```kotlin
-implementation(project(":patra-starters:patra-spring-boot-starter-nacos"))
-```
+| 键 | 类型 | 默认值 | 说明 |
+|---|---|---|---|
+| `enabled` | boolean | `true` | 总开关 |
 
-启动类改用启动器，服务名只写在这里：
-
-```java
-public static void main(String[] args) {
-  PatraApplication.run("patra-registry", PatraRegistryApplication.class, args);
-}
-```
-
-服务的 `application.yml` 里不写 `spring.application.name`，也不写任何 Nacos 配置。
-
-## 2. 启动器做了什么
-
-`PatraApplication.run` 在启动 Spring Boot 之前，把下面 5 项放进 default properties。它们优先级最低，环境变量、配置文件、Nacos 都能覆盖：
-
-| 键 | 值 |
-|---|---|
-| `spring.application.name` | 传入的服务名 |
-| `spring.config.import` | `nacos:patra-common.yaml,nacos:{服务名}.yaml`：后者覆盖前者，都不标 `optional:` |
-| `spring.cloud.nacos.config.namespace` | `dev` |
-| `spring.cloud.nacos.config.preference` | `remote`：Nacos 的值覆盖 jar 里的默认值 |
-| `patra.config-source.required` | `true`：开启签到检查 |
-
-导入不写在配置文件里，原因有两个：
-- 初始导入里的服务名占位符解析不了；
-- 写在 `application.yml` 里的导入，测试关不掉。
-
-## 3. 所有启动方式都会注入的设置
-
-`NacosDefaultsPostProcessor` 在 Spring Boot 加载配置之前运行，测试也会经过它。默认值并入 default properties，服务的配置能覆盖：
-
-| 键 | 值 |
-|---|---|
-| `spring.cloud.nacos.server-addr` | `${PATRA_NACOS_ADDR:${PATRA_INFRA_HOST:127.0.0.1}:8848}` |
-| `spring.cloud.nacos.username` / `password` | `${NACOS_USERNAME}` / `${NACOS_PASSWORD}`，不给默认值 |
-| `spring.cloud.nacos.discovery.service` | `${spring.application.name}` |
-| `spring.cloud.nacos.discovery.ip` | `${PATRA_ADVERTISE_IP:}`，留空时自动探测 |
-| `spring.cloud.nacos.discovery.fail-fast` | `false`：nacos 3.x gRPC 握手未完成时，同步注册会让应用启动失败 |
-
-它还做两件事：
-- 环境里没有 `nacos:` 导入时（测试、没用启动器的应用），设 `spring.cloud.nacos.config.enabled=false`，不连配置中心。
-- 有 `nacos:` 导入时，读完本机密钥后检查 Nacos 账号密码能否解析，解析不了就启动失败并报出缺的变量名。SCA 自己不严格解析，会拿字面量 `${NACOS_PASSWORD}` 去登录，报错和密码错误分不开。
-- 把 `~/.patra/secrets/*.env` 读成一组属性，放在系统环境变量之后。
-  - 文件按文件名排序后读，同名变量以后读的为准。
-  - 目录不存在时跳过。容器里就是这种情况，值来自 compose env_file 注入的环境变量。
-
-## 4. 签到检查
-
-每份 Nacos 配置写一行签到，值为文件名，只写在 Nacos 里：
+## 怎么覆盖
 
 ```yaml
-# patra-common.yaml
 patra:
-  config-source:
-    common: patra-common.yaml
+  launch:
+    enabled: false
 ```
 
-```yaml
-# patra-ingest.yaml
-patra:
-  config-source:
-    service: patra-ingest.yaml
-```
+启动器放的默认值都在 default properties 里，优先级最低，环境变量、服务配置文件、Nacos 都能覆盖，例如用环境变量 `PATRA_NACOS_ADDR` 指定 Nacos 地址。
 
-SCA 拿不到配置时只打 warn、返回空配置，不会让启动失败。所以 `ConfigSourceCheckPostProcessor` 在配置加载完之后检查这两个字段，缺了就让启动失败，例如：
+## 出哪些默认值
 
-```text
-没拿到本服务的 Nacos 配置 patra-ingest.yaml：Nacos 不可达且本地没有快照，或该文件不存在
-```
+`NacosDefaultsPostProcessor` 出（同名键已存在时不覆盖）：
 
-签到之后再查 Nacos 配置里引用的变量：没有默认值、又解析不了的 `${变量}` 让启动失败。Spring 绑定配置时不严格解析占位符，不查的话会拿字面量 `${REDIS_PASSWORD}` 当密码，服务照常启动、用到时才报认证失败。报错例如：
+- `spring.cloud.nacos.server-addr`：`${PATRA_NACOS_ADDR:${PATRA_INFRA_HOST:127.0.0.1}:8848}`
+- `spring.cloud.nacos.username`：`${NACOS_USERNAME}`
+- `spring.cloud.nacos.password`：`${NACOS_PASSWORD}`
+- `spring.cloud.nacos.discovery.service`：`${spring.application.name}`
+- `spring.cloud.nacos.discovery.ip`：`${PATRA_ADVERTISE_IP:}`
+- `spring.cloud.nacos.discovery.fail-fast`：`false`
+- `spring.cloud.nacos.config.enabled`：`false`，仅当环境里没有 `nacos:` 导入时
 
-```text
-Nacos 配置 patra-identity.yaml 的 spring.data.redis.password 引用的变量 REDIS_PASSWORD 没有值：本机放在 ~/.patra/secrets/ 下的 .env 文件里，容器经 env_file 注入
-```
+`PatraApplication` 以 default properties 出：
 
-Nacos 配置按 SCA 导入后的属性源名字 `分组@dataId` 识别；jar 里配置文件引用的变量不归这里查。
-
-配置刷新时也会检查：少了签到行、或引用的变量解析不了的那次变更被拒绝，应用继续用旧配置。
-
-## 5. 优先级（从高到低）
-
-1. 启动参数、系统属性、环境变量
-2. 本机密钥文件 `~/.patra/secrets/*.env`
-3. Nacos 配置（本服务的覆盖公共的）
-4. jar 里的 `application.yml`
-5. 启动器的 default properties、starter 注入的默认值
-
-## 6. 密钥怎么写
-
-- 公开的 dev 默认值（PG、MinIO、xxl-job 的账号密码）：Nacos 配置里直接写，或写成 `${变量:默认值}`。
-- 真正的密钥（Redis 密码、网关私钥、外部数据源 API key）：Nacos 配置里只写 `${变量}`，不给默认值。值留在两台机器的 `~/.patra/secrets/`：本机由本 starter 读取，容器经 compose 的 env_file 注入。
-- 密钥引用写在用到它的服务文件里，`patra-common.yaml` 里不写没有默认值的引用：每个服务都读公共配置，没加载对应 `.env` 的服务会因为解析不了而启动失败（见第 4 节）。
-
-## 7. 测试
-
-- 测试不经过启动器，不导入 Nacos 配置，也不做签到检查。
-- 需要服务名的测试，在测试 profile 里设 `spring.application.name`。
-- 服务发现照旧在测试 profile 里关掉。
+- `spring.application.name`：启动时传入的服务名
+- `spring.config.import`：`nacos:patra-common.yaml,nacos:{服务名}.yaml`
+- `spring.cloud.nacos.config.namespace`：`dev`
+- `spring.cloud.nacos.config.preference`：`remote`
+- `patra.config-source.required`：`true`

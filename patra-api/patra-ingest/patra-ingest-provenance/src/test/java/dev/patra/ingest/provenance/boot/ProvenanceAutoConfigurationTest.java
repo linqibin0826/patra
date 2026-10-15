@@ -1,4 +1,4 @@
-package dev.patra.ingest.provenance.boot;
+package dev.patra.ingest.provenance.autoconfigure;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

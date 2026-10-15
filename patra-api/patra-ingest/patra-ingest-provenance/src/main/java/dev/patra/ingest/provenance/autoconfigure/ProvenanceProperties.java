@@ -1,4 +1,4 @@
-package dev.patra.ingest.provenance.boot;
+package dev.patra.ingest.provenance.autoconfigure;
 
 import dev.patra.common.ProvenanceCode;
 import dev.patra.ingest.provenance.common.config.BatchingConfig;
@@ -17,14 +17,14 @@ import org.springframework.util.StringUtils;
 
 /// Provenance Starter 配置属性
 ///
-/// 支持通过 `sources` 映射设置全局默认值和数据源特定覆盖配置。 可以通过在 `patra.starter.provenance.sources`
+/// 支持通过 `sources` 映射设置全局默认值和数据源特定覆盖配置。 可以通过在 `patra.ingest.provenance.sources`
 /// 下定义新条目来添加额外的数据源,无需修改代码。
 ///
 /// 配置优先级(从高到低):
 ///
 ///
 @Data
-@ConfigurationProperties(prefix = "patra.starter.provenance")
+@ConfigurationProperties(prefix = "patra.ingest.provenance")
 public class ProvenanceProperties {
 
   /// 是否启用 Provenance 客户端(默认为 true)

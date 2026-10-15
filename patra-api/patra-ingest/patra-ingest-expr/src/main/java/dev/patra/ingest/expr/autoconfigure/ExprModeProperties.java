@@ -1,4 +1,4 @@
-package dev.patra.ingest.expr.compiler.boot;
+package dev.patra.ingest.expr.autoconfigure;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -25,7 +25,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /// §3.8
 ///
 /// @since 0.1.0
-@ConfigurationProperties(prefix = "patra.starter.expr.mode")
+@ConfigurationProperties(prefix = "patra.ingest.expr.mode")
 public class ExprModeProperties {
 
   private boolean strict = false;

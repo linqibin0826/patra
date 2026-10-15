@@ -68,13 +68,12 @@ Patra 是一个**医学出版物数据平台**,旨在:
 
 | 模块 | 用途 |
 |--------|---------|
-| **patra-common** | 基础类 (AggregateRoot, DomainEvent)、错误码、枚举 |
-| **patra-expr-kernel** | 表达式引擎,用于动态 API 参数映射 |
-| **patra-spring-boot-starter-core** | 核心自动配置 (Jackson, 错误处理) |
-| **patra-spring-boot-starter-web** | Web 自动配置 (REST, 追踪) |
-| **patra-spring-boot-starter-jpa** | Spring Data JPA 自动配置 |
-| **patra-spring-boot-starter-provenance** | Provenance 配置集成 |
-| **patra-spring-boot-starter-http-interface** | HTTP Interface 客户端（错误处理） |
+| [**patra-common**](./patra-common/README.md) | 跨服务共用的业务词汇（Shared Kernel）：`ProvenanceCode`、`DataType` 等 |
+| [**patra-ingest-provenance**](./patra-ingest/patra-ingest-provenance/README.md) | ingest 对 PubMed / EPMC / Crossref 的客户端、处理器与 API 常量 |
+| [**patra-ingest-expr**](./patra-ingest/patra-ingest-expr/README.md) | ingest 的表达式 AST 与编译器 |
+
+技术能力（JSON、错误处理、JPA、批处理、HTTP 客户端、对象存储、可观测性、安全、OpenAPI、启动器、测试支持）
+在仓库根的 [`patra-tool/`](../patra-tool/) 下，一个能力一个模块、一个 `patra.<能力>` 配置前缀，各模块 README 列了配置键与默认值。
 
 ### 构建基础设施
 

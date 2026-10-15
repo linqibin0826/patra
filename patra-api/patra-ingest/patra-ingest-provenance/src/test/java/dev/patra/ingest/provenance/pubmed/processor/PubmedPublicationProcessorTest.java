@@ -8,7 +8,7 @@ import static org.mockito.Mockito.withSettings;
 import dev.patra.common.CanonicalPublication;
 import dev.patra.common.DataType;
 import dev.patra.common.PublicationIdentifierType;
-import dev.patra.ingest.provenance.boot.ProvenanceProperties;
+import dev.patra.ingest.provenance.autoconfigure.ProvenanceProperties;
 import dev.patra.ingest.provenance.common.config.BatchingConfig;
 import dev.patra.ingest.provenance.common.config.ProvenanceConfig;
 import dev.patra.ingest.provenance.common.exception.ProvenanceClientException;

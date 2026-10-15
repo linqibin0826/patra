@@ -1,4 +1,4 @@
-package dev.patra.ingest.expr.compiler.boot;
+package dev.patra.ingest.expr.autoconfigure;
 
 import dev.patra.ingest.expr.compiler.function.DefaultFunctionRegistry;
 import dev.patra.ingest.expr.compiler.function.FunctionRegistry;

@@ -10,7 +10,7 @@ import dev.patra.ingest.provenance.api.constants.PubMedOperation;
 import dev.patra.ingest.provenance.api.params.PubMedParamKeys;
 import dev.patra.ingest.provenance.api.values.pubmed.RetMode;
 import dev.patra.ingest.provenance.api.values.pubmed.RetType;
-import dev.patra.ingest.provenance.boot.ProvenanceProperties;
+import dev.patra.ingest.provenance.autoconfigure.ProvenanceProperties;
 import dev.patra.ingest.provenance.common.config.BatchingConfig;
 import dev.patra.ingest.provenance.common.config.ProvenanceConfig;
 import dev.patra.ingest.provenance.common.exception.ProvenanceClientException;
@@ -65,7 +65,7 @@ import tools.jackson.databind.node.ObjectNode;
 ///
 /// ```
 ///
-/// **注意**：此类通过 {@link dev.patra.ingest.provenance.boot.ProvenanceAutoConfiguration}
+/// **注意**：此类通过 {@link dev.patra.ingest.provenance.autoconfigure.ProvenanceAutoConfiguration}
 /// 自动配置注册为 Spring Bean，不使用 `@Component` 注解。
 ///
 /// @author linqibin

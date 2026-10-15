@@ -1,4 +1,4 @@
-package dev.patra.ingest.expr.compiler.boot;
+package dev.patra.ingest.expr.autoconfigure;
 
 import dev.patra.ingest.expr.compiler.DefaultExprCompiler;
 import dev.patra.ingest.expr.compiler.ExprCompiler;
@@ -44,8 +44,8 @@ import tools.jackson.databind.json.JsonMapper;
 /// ### 条件装配
 ///
 /// - 依赖 `HttpClientInterfaceAutoConfiguration` 和 {@link ExprFunctionAutoConfiguration} 先完成
-///   - Registry API 集成可通过 `patra.starter.expr.compiler.registry-api.enabled=false` 禁用
-///   - 编译器整体可通过 `patra.starter.expr.compiler.enabled=false` 禁用
+///   - Registry API 集成可通过 `patra.ingest.expr.compiler.registry-api.enabled=false` 禁用
+///   - 编译器整体可通过 `patra.ingest.expr.compiler.enabled=false` 禁用
 ///
 /// ### 配置属性
 ///
@@ -68,7 +68,7 @@ public class ExprCompilerAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean(RuleSnapshotLoader.class)
   @ConditionalOnProperty(
-      prefix = "patra.starter.expr.compiler.registry-api",
+      prefix = "patra.ingest.expr.compiler.registry-api",
       name = "enabled",
       havingValue = "true",
       matchIfMissing = true)
@@ -90,7 +90,7 @@ public class ExprCompilerAutoConfiguration {
         "dev.patra.registry.api.endpoint.ExprEndpoint"
       })
   @ConditionalOnProperty(
-      prefix = "patra.starter.expr.compiler.registry-api",
+      prefix = "patra.ingest.expr.compiler.registry-api",
       name = "enabled",
       havingValue = "true",
       matchIfMissing = true)
@@ -163,7 +163,7 @@ public class ExprCompilerAutoConfiguration {
     TransformRegistry.class
   })
   @ConditionalOnProperty(
-      prefix = "patra.starter.expr.compiler",
+      prefix = "patra.ingest.expr.compiler",
       name = "enabled",
       havingValue = "true",
       matchIfMissing = true)

@@ -1,8 +1,8 @@
 package dev.patra.ingest.provenance.common.config;
 
 import dev.patra.common.ProvenanceCode;
-import dev.patra.ingest.provenance.boot.ProvenanceProperties;
-import dev.patra.ingest.provenance.boot.ProvenanceProperties.SourceProperties;
+import dev.patra.ingest.provenance.autoconfigure.ProvenanceProperties;
+import dev.patra.ingest.provenance.autoconfigure.ProvenanceProperties.SourceProperties;
 import java.util.Objects;
 
 /// 默认配置提供者

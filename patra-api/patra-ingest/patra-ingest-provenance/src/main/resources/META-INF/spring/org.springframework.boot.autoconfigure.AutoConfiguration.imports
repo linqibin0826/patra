@@ -1,2 +1,2 @@
-dev.patra.ingest.provenance.boot.ProvenanceAutoConfiguration
-dev.patra.ingest.provenance.autoconfig.ProvenanceCodeConverterAutoConfiguration
+dev.patra.ingest.provenance.autoconfigure.ProvenanceAutoConfiguration
+dev.patra.ingest.provenance.autoconfigure.ProvenanceCodeConverterAutoConfiguration

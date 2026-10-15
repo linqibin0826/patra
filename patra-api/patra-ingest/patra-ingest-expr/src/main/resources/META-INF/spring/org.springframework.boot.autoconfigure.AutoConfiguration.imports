@@ -1,2 +1,2 @@
-dev.patra.ingest.expr.compiler.boot.ExprCompilerAutoConfiguration
-dev.patra.ingest.expr.compiler.boot.ExprFunctionAutoConfiguration
+dev.patra.ingest.expr.autoconfigure.ExprCompilerAutoConfiguration
+dev.patra.ingest.expr.autoconfigure.ExprFunctionAutoConfiguration

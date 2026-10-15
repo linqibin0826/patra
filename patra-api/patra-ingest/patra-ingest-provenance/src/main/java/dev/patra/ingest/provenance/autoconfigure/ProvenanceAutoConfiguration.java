@@ -1,4 +1,4 @@
-package dev.patra.ingest.provenance.boot;
+package dev.patra.ingest.provenance.autoconfigure;
 
 import dev.patra.ingest.provenance.common.config.DefaultConfigProvider;
 import dev.patra.ingest.provenance.common.metrics.ProvenanceMetrics;
@@ -36,7 +36,7 @@ import tools.jackson.dataformat.xml.XmlMapper;
 ///
 /// 配置说明:
 ///
-/// - 使用 `patra.starter.provenance.enabled=false` 可禁用此自动配置
+/// - 使用 `patra.ingest.provenance.enabled=false` 可禁用此自动配置
 ///   - 默认启用,自动注册 PubMed 和 EPMC 数据源提供者
 ///   - 集成 Micrometer 进行指标监控(如果可用)
 ///
@@ -46,7 +46,7 @@ import tools.jackson.dataformat.xml.XmlMapper;
 @AutoConfiguration
 @EnableConfigurationProperties(ProvenanceProperties.class)
 @ConditionalOnProperty(
-    prefix = "patra.starter.provenance",
+    prefix = "patra.ingest.provenance",
     name = "enabled",
     havingValue = "true",
     matchIfMissing = true)

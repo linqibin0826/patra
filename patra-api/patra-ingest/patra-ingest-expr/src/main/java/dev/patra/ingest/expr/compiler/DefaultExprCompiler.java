@@ -1,8 +1,8 @@
 package dev.patra.ingest.expr.compiler;
 
 import dev.patra.ingest.expr.Expr;
-import dev.patra.ingest.expr.compiler.boot.CompilerProperties;
-import dev.patra.ingest.expr.compiler.boot.ExprModeProperties;
+import dev.patra.ingest.expr.autoconfigure.CompilerProperties;
+import dev.patra.ingest.expr.autoconfigure.ExprModeProperties;
 import dev.patra.ingest.expr.compiler.check.CapabilityChecker;
 import dev.patra.ingest.expr.compiler.metrics.ExprMetrics;
 import dev.patra.ingest.expr.compiler.model.CompileRequest;

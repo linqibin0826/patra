@@ -1,4 +1,4 @@
-package dev.patra.ingest.provenance.autoconfig;
+package dev.patra.ingest.provenance.autoconfigure;
 
 import dev.patra.common.ProvenanceCode;
 import lombok.extern.slf4j.Slf4j;
