@@ -17,7 +17,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 /// 默认端口 9528。路由与客户端配置见 `application.yml`，随环境变的值在 Nacos（`patra-common.yaml`、
 /// `patra-gateway.yaml`），设计见 `docs/patra/specs/2026-10-09-gateway-webmvc-design.md` 与
 /// `docs/patra/specs/2026-10-09-gateway-auth-design.md`。
-@SpringBootApplication(scanBasePackages = "dev.patra")
+@SpringBootApplication
 public class PatraGatewayApplication {
 
   /// 经启动器启动应用，服务名 `patra-gateway`。

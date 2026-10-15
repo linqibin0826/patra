@@ -27,7 +27,7 @@ import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 /// ## 线程安全
 ///
 /// 本类是线程安全的，Handler 注册表使用 ConcurrentHashMap。
-public class SimpleCommandBus implements CommandBus {
+public final class SimpleCommandBus implements CommandBus {
 
   private static final Logger log = LoggerFactory.getLogger(SimpleCommandBus.class);
 
@@ -56,13 +56,15 @@ public class SimpleCommandBus implements CommandBus {
     for (CommandHandler<?, ?> handler : handlerBeans) {
       Class<?> commandType = extractCommandType(handler.getClass());
       if (commandType != null) {
-        CommandHandler<?, ?> existing = handlers.put(commandType, handler);
+        CommandHandler<?, ?> existing = handlers.putIfAbsent(commandType, handler);
         if (existing != null) {
-          log.warn(
-              "Command {} 存在重复的 Handler: {} 被 {} 覆盖",
-              commandType.getSimpleName(),
-              existing.getClass().getSimpleName(),
-              handler.getClass().getSimpleName());
+          throw new IllegalStateException(
+              "命令 "
+                  + commandType.getName()
+                  + " 注册了两个 Handler："
+                  + existing.getClass().getName()
+                  + " 与 "
+                  + handler.getClass().getName());
         }
         log.debug(
             "注册 Handler: {} -> {}",

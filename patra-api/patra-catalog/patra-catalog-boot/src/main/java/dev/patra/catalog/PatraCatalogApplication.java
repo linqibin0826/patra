@@ -29,7 +29,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 ///
 /// @author linqibin
 /// @since 0.2.0
-@SpringBootApplication(scanBasePackages = "dev.patra")
+@SpringBootApplication
 public class PatraCatalogApplication {
 
   /// 应用程序入口点：经启动器启动，服务名 `patra-catalog`。

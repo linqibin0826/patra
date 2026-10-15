@@ -12,6 +12,9 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.observation.ObservationRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.micrometer.metrics.autoconfigure.CompositeMeterRegistryAutoConfiguration;
+import org.springframework.boot.micrometer.metrics.autoconfigure.MetricsAutoConfiguration;
+import org.springframework.boot.micrometer.metrics.autoconfigure.export.simple.SimpleMetricsExportAutoConfiguration;
 import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
@@ -57,6 +60,18 @@ class CqrsAutoConfigurationTest {
                 assertThat(ctx)
                     .hasSingleBean(TracingCommandInterceptor.class)
                     .hasSingleBean(MetricsCommandInterceptor.class));
+  }
+
+  @Test
+  void should_add_metrics_interceptor_when_boot_builds_the_meter_registry() {
+    new ApplicationContextRunner()
+        .withConfiguration(
+            AutoConfigurations.of(
+                CqrsAutoConfiguration.class,
+                MetricsAutoConfiguration.class,
+                CompositeMeterRegistryAutoConfiguration.class,
+                SimpleMetricsExportAutoConfiguration.class))
+        .run(ctx -> assertThat(ctx).hasSingleBean(MetricsCommandInterceptor.class));
   }
 
   @Test

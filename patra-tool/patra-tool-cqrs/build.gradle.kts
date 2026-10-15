@@ -13,4 +13,5 @@ dependencies {
     compileOnly("io.micrometer:micrometer-core")
     compileOnly("io.micrometer:micrometer-observation")
     testImplementation(project(":patra-tool:patra-tool-test"))
+    testImplementation("org.springframework.boot:spring-boot-micrometer-metrics")
 }

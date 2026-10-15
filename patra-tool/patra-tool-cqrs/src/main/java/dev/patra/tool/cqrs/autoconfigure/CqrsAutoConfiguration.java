@@ -25,12 +25,15 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 /// 命令总线自动配置：`SimpleCommandBus`、异步执行器与三个内置拦截器。
 ///
 /// 排在 Boot 的任务执行器之后，否则这里的 `Executor` bean 会让 `applicationTaskExecutor` 退让；
-/// 排在可观测性之后，`ObservationRegistry` / `MeterRegistry` 存在与否才判得准。
+/// 排在可观测性之后，`ObservationRegistry` / `MeterRegistry` 存在与否才判得准：`MeterRegistry` bean 由
+/// `CompositeMeterRegistryAutoConfiguration` 建（它本身排在 `MetricsAutoConfiguration` 之后），只排在后者之后
+/// 评估 `@ConditionalOnBean(MeterRegistry)` 时还没有 bean。
 @AutoConfiguration(
     afterName = {
       "org.springframework.boot.task.autoconfigure.TaskExecutionAutoConfiguration",
       "org.springframework.boot.micrometer.observation.autoconfigure.ObservationAutoConfiguration",
       "org.springframework.boot.micrometer.metrics.autoconfigure.MetricsAutoConfiguration",
+      "org.springframework.boot.micrometer.metrics.autoconfigure.CompositeMeterRegistryAutoConfiguration",
       "dev.patra.tool.observability.autoconfigure.ObservabilityAutoConfiguration"
     })
 @ConditionalOnProperty(

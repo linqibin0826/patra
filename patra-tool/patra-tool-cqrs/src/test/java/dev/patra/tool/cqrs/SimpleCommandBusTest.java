@@ -119,6 +119,20 @@ class SimpleCommandBusTest {
     }
 
     @Test
+    @DisplayName("两个 Handler 处理同一命令时构造即失败")
+    void should_fail_when_two_handlers_claim_same_command() {
+      assertThatThrownBy(
+              () ->
+                  new SimpleCommandBus(
+                      List.of(new TestCommandHandler(), new FailingHandler()),
+                      List.of(),
+                      Runnable::run))
+          .isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining(TestCommand.class.getName())
+          .hasMessageContaining("两个 Handler");
+    }
+
+    @Test
     @DisplayName("当命令为 null 时应该抛出 IllegalArgumentException")
     void shouldThrowWhenCommandIsNull() {
       // given
