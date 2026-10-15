@@ -1,4 +1,4 @@
-package dev.patra.tool.security.config;
+package dev.patra.tool.security.autoconfigure;
 
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
@@ -6,17 +6,20 @@ import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSet;
 import java.text.ParseException;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.DefaultValue;
 
 /// 安全 starter 的配置属性，前缀 `patra.security`。
 ///
 /// 只在 servlet 应用里绑定，因为只有验签时才用到公钥。
 ///
+/// @param enabled 总开关，关掉后本模块不注册任何 bean
 /// @param identityAssertion 身份断言相关的配置
 @ConfigurationProperties(prefix = "patra.security")
-public record PatraSecurityProperties(IdentityAssertion identityAssertion) {
+public record SecurityProperties(
+    @DefaultValue("true") boolean enabled, IdentityAssertion identityAssertion) {
 
   /// 校验：没配 `identity-assertion` 这一段时应用启动失败，错误信息指明配置项。
-  public PatraSecurityProperties {
+  public SecurityProperties {
     if (identityAssertion == null) {
       throw new IllegalArgumentException(IdentityAssertion.missingMessage());
     }

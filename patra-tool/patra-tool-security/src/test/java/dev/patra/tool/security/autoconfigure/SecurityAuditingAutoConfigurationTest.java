@@ -1,4 +1,4 @@
-package dev.patra.tool.security.config;
+package dev.patra.tool.security.autoconfigure;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -20,10 +20,10 @@ import org.springframework.util.ClassUtils;
 /// 单元测试的 classpath 上没有 starter-jpa（它在主代码里是 compileOnly），正好是要验证的环境。
 /// 审计自动配置必须按名字导入：真实应用从 imports 文件按名字加载它，那条路径不会加载类。
 @DisplayName("没有 starter-jpa 时的自动配置测试")
-class SecurityAuditingWithoutJpaTest {
+class SecurityAuditingAutoConfigurationTest {
 
   private static final String AUDITING_AUTO_CONFIGURATION =
-      "dev.patra.tool.security.config.SecurityAuditingAutoConfiguration";
+      "dev.patra.tool.security.autoconfigure.SecurityAuditingAutoConfiguration";
 
   @Test
   @DisplayName("审计自动配置登记在 imports 文件里")
@@ -44,7 +44,7 @@ class SecurityAuditingWithoutJpaTest {
         .isFalse();
 
     new ApplicationContextRunner()
-        .withConfiguration(AutoConfigurations.of(SecurityCoreAutoConfiguration.class))
+        .withConfiguration(AutoConfigurations.of(SecurityAutoConfiguration.class))
         .withUserConfiguration(ImportAuditingByName.class)
         .run(
             context -> {

@@ -1,4 +1,4 @@
-dev.patra.tool.security.config.SecurityCoreAutoConfiguration
-dev.patra.tool.security.config.SecurityForwardingAutoConfiguration
-dev.patra.tool.security.config.SecurityAuditingAutoConfiguration
-dev.patra.tool.security.config.SecurityServletAutoConfiguration
+dev.patra.tool.security.autoconfigure.SecurityAutoConfiguration
+dev.patra.tool.security.autoconfigure.SecurityForwardingAutoConfiguration
+dev.patra.tool.security.autoconfigure.SecurityAuditingAutoConfiguration
+dev.patra.tool.security.autoconfigure.SecurityServletAutoConfiguration

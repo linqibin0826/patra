@@ -3,6 +3,8 @@ package dev.patra.tool.launch.autoconfigure;
 import java.time.Clock;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
 /// 核心基础设施 Bean 自动配置类。
@@ -20,7 +22,13 @@ import org.springframework.context.annotation.Bean;
 /// @author linqibin
 /// @since 0.1.0
 @AutoConfiguration
-public class LaunchAutoConfiguration {
+@ConditionalOnProperty(
+    prefix = "patra.launch",
+    name = "enabled",
+    havingValue = "true",
+    matchIfMissing = true)
+@EnableConfigurationProperties(LaunchProperties.class)
+public final class LaunchAutoConfiguration {
 
   /// 提供系统 UTC 时钟 Bean,用于生成时间戳。
   ///
@@ -47,7 +55,7 @@ public class LaunchAutoConfiguration {
   /// @return 使用系统默认时区 (UTC) 的 Clock 实例
   @Bean
   @ConditionalOnMissingBean
-  public Clock clock() {
+  Clock clock() {
     return Clock.systemUTC();
   }
 }

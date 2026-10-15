@@ -1,4 +1,4 @@
-package dev.patra.tool.security.config;
+package dev.patra.tool.security.autoconfigure;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -20,7 +20,7 @@ class SecurityForwardingAutoConfigurationTest {
       new ApplicationContextRunner()
           .withConfiguration(
               AutoConfigurations.of(
-                  SecurityCoreAutoConfiguration.class, SecurityForwardingAutoConfiguration.class));
+                  SecurityAutoConfiguration.class, SecurityForwardingAutoConfiguration.class));
 
   @Test
   @DisplayName("classpath 上有 http-interface starter：注册转发拦截器，它是一个 InternalCallInterceptor")
@@ -50,6 +50,6 @@ class SecurityForwardingAutoConfigurationTest {
     assertThat(
             ImportCandidates.load(AutoConfiguration.class, getClass().getClassLoader())
                 .getCandidates())
-        .contains("dev.patra.tool.security.config.SecurityForwardingAutoConfiguration");
+        .contains("dev.patra.tool.security.autoconfigure.SecurityForwardingAutoConfiguration");
   }
 }

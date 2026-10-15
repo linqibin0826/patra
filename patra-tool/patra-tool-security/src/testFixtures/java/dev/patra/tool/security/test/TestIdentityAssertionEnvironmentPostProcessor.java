@@ -1,6 +1,6 @@
 package dev.patra.tool.security.test;
 
-import dev.patra.tool.security.config.PatraSecurityProperties.IdentityAssertion;
+import dev.patra.tool.security.autoconfigure.SecurityProperties.IdentityAssertion;
 import java.util.Map;
 import org.springframework.boot.EnvironmentPostProcessor;
 import org.springframework.boot.SpringApplication;

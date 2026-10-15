@@ -1,4 +1,4 @@
-package dev.patra.tool.security.config;
+package dev.patra.tool.security.autoconfigure;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -19,7 +19,6 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.context.annotation.ImportCandidates;
 import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
-import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
 import org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration;
 import org.springframework.boot.security.autoconfigure.web.servlet.ServletWebSecurityAutoConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -50,10 +49,10 @@ class SecurityServletAutoConfigurationTest {
               AutoConfigurations.of(
                   JacksonAutoConfiguration.class,
                   WebErrorAutoConfiguration.class,
-                  SecurityAutoConfiguration.class,
+                  org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration.class,
                   UserDetailsServiceAutoConfiguration.class,
                   ServletWebSecurityAutoConfiguration.class,
-                  SecurityCoreAutoConfiguration.class,
+                  SecurityAutoConfiguration.class,
                   SecurityServletAutoConfiguration.class))
           .withPropertyValues("patra.web.error.context-prefix=TEST");
 
@@ -121,13 +120,13 @@ class SecurityServletAutoConfigurationTest {
     new ApplicationContextRunner()
         .withConfiguration(
             AutoConfigurations.of(
-                SecurityCoreAutoConfiguration.class, SecurityServletAutoConfiguration.class))
+                SecurityAutoConfiguration.class, SecurityServletAutoConfiguration.class))
         .run(
             context -> {
               assertThat(context).hasNotFailed();
               assertThat(context).hasSingleBean(CurrentUserPort.class);
               assertThat(context).doesNotHaveBean(SecurityFilterChain.class);
-              assertThat(context).doesNotHaveBean(PatraSecurityProperties.class);
+              assertThat(context).doesNotHaveBean(SecurityProperties.class);
             });
   }
 
@@ -137,7 +136,7 @@ class SecurityServletAutoConfigurationTest {
     assertThat(
             ImportCandidates.load(AutoConfiguration.class, getClass().getClassLoader())
                 .getCandidates())
-        .contains("dev.patra.tool.security.config.SecurityServletAutoConfiguration");
+        .contains("dev.patra.tool.security.autoconfigure.SecurityServletAutoConfiguration");
   }
 
   @Test

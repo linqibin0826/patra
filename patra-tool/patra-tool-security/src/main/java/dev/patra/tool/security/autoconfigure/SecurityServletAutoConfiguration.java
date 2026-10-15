@@ -1,4 +1,4 @@
-package dev.patra.tool.security.config;
+package dev.patra.tool.security.autoconfigure;
 
 import dev.patra.tool.core.error.codes.HttpStdErrors;
 import dev.patra.tool.security.assertion.IdentityAssertionDecoders;
@@ -13,6 +13,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration;
@@ -36,8 +37,13 @@ import tools.jackson.databind.json.JsonMapper;
 @AutoConfiguration(
     before = {UserDetailsServiceAutoConfiguration.class, ServletWebSecurityAutoConfiguration.class})
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-@EnableConfigurationProperties(PatraSecurityProperties.class)
-public class SecurityServletAutoConfiguration {
+@EnableConfigurationProperties(SecurityProperties.class)
+@ConditionalOnProperty(
+    prefix = "patra.security",
+    name = "enabled",
+    havingValue = "true",
+    matchIfMissing = true)
+public final class SecurityServletAutoConfiguration {
 
   /// 注册统一的错误写出器。
   ///
@@ -103,7 +109,7 @@ public class SecurityServletAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean(name = "identityAssertionDecoder")
   public JwtDecoder identityAssertionDecoder(
-      PatraSecurityProperties properties, ObjectProvider<Clock> clock) {
+      SecurityProperties properties, ObjectProvider<Clock> clock) {
     return IdentityAssertionDecoders.forPublicKeys(
         properties.identityAssertion().publicKeySet(), clock.getIfAvailable(Clock::systemUTC));
   }

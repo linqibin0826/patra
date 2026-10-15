@@ -1,34 +1,39 @@
 package dev.patra.tool.test.autoconfigure;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.context.annotation.Import;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 
-/// 测试基础设施自动配置入口。
-///
-/// 作为 `patra-spring-boot-starter-test` 的自动配置入口，
-/// 导入所有测试相关的自动配置类。
-///
-/// ### 包含的配置
-///
-/// - {@link TestMeterRegistryAutoConfiguration} - SimpleMeterRegistry 自动配置
-///
-/// ### 使用方式
-///
-/// 引入 `patra-spring-boot-starter-test` 依赖后自动生效，无需手动配置：
-///
-/// ```xml
-/// <dependency>
-///     <groupId>dev.patra</groupId>
-///     <artifactId>patra-spring-boot-starter-test</artifactId>
-///     <scope>test</scope>
-/// </dependency>
-/// ```
-///
-/// @author linqibin
-/// @since 0.1.0
-/// @see TestMeterRegistryAutoConfiguration
+/// 测试支持自动配置：测试上下文里缺什么基础设施 bean 就补什么。
 @AutoConfiguration
-@Import({TestMeterRegistryAutoConfiguration.class})
-public class TestAutoConfiguration {
-  // 入口配置类，通过 @Import 导入其他配置
+@ConditionalOnProperty(
+    prefix = "patra.test",
+    name = "enabled",
+    havingValue = "true",
+    matchIfMissing = true)
+@EnableConfigurationProperties(TestProperties.class)
+public final class TestAutoConfiguration {
+
+  /// 类路径上有 Micrometer 时给一个内存 `MeterRegistry`，让带指标的 bean 能装配。
+  @Configuration(proxyBeanMethods = false)
+  @ConditionalOnClass(MeterRegistry.class)
+  static class TestMeterRegistryConfiguration {
+
+    /// 内存指标注册表。
+    ///
+    /// @return `SimpleMeterRegistry`
+    @Bean
+    @Primary
+    @ConditionalOnMissingBean(MeterRegistry.class)
+    MeterRegistry testMeterRegistry() {
+      return new SimpleMeterRegistry();
+    }
+  }
 }

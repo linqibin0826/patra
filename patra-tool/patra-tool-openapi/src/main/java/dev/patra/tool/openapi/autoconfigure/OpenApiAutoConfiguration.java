@@ -1,6 +1,5 @@
 package dev.patra.tool.openapi.autoconfigure;
 
-import dev.patra.tool.openapi.config.OpenApiProperties;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import org.slf4j.Logger;
@@ -19,18 +18,22 @@ import org.springframework.context.annotation.Bean;
 /// 提供基于 SpringDoc + Scalar UI 的 API 文档自动配置：
 ///
 /// - 根据 `spring.application.name` 自动推导文档标题
-/// - 支持通过 `linqibin.starter.openapi.*` 属性自定义标题、版本、描述
+/// - 支持通过 `patra.openapi.*` 属性自定义标题、版本、描述
 /// - 用户可通过自定义 `OpenAPI` bean 完全覆盖默认配置
-/// - 通过 `linqibin.starter.openapi.enabled=false` 完全禁用
+/// - 通过 `patra.openapi.enabled=false` 完全禁用
 ///
 /// @author linqibin
 /// @since 0.1.0
 @AutoConfiguration
 @ConditionalOnClass(OpenAPI.class)
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-@ConditionalOnProperty(prefix = "linqibin.starter.openapi", name = "enabled", matchIfMissing = true)
+@ConditionalOnProperty(
+    prefix = "patra.openapi",
+    name = "enabled",
+    havingValue = "true",
+    matchIfMissing = true)
 @EnableConfigurationProperties(OpenApiProperties.class)
-public class OpenApiAutoConfiguration {
+public final class OpenApiAutoConfiguration {
 
   private static final Logger log = LoggerFactory.getLogger(OpenApiAutoConfiguration.class);
 
@@ -38,7 +41,7 @@ public class OpenApiAutoConfiguration {
 
   /// 创建默认的 OpenAPI 配置 bean。
   ///
-  /// 标题优先级：`linqibin.starter.openapi.title` > `spring.application.name` > `"Patra API"`
+  /// 标题优先级：`patra.openapi.title` > `spring.application.name` > `"Patra API"`
   ///
   /// @param properties OpenAPI 配置属性
   /// @param applicationName Spring 应用名称（来自 `spring.application.name`）
@@ -47,12 +50,12 @@ public class OpenApiAutoConfiguration {
   @ConditionalOnMissingBean
   public OpenAPI patraOpenApi(
       OpenApiProperties properties, @Value("${spring.application.name:}") String applicationName) {
-    var title = resolveTitle(properties.getTitle(), applicationName);
-    log.info("初始化 Patra OpenAPI 文档 [标题: {}, 版本: {}]", title, properties.getVersion());
+    var title = resolveTitle(properties.title(), applicationName);
+    log.info("初始化 Patra OpenAPI 文档 [标题: {}, 版本: {}]", title, properties.version());
 
-    var info = new Info().title(title).version(properties.getVersion());
-    if (properties.getDescription() != null) {
-      info.description(properties.getDescription());
+    var info = new Info().title(title).version(properties.version());
+    if (properties.description() != null) {
+      info.description(properties.description());
     }
     return new OpenAPI().info(info);
   }

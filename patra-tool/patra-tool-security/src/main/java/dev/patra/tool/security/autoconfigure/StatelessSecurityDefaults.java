@@ -1,4 +1,4 @@
-package dev.patra.tool.security.config;
+package dev.patra.tool.security.autoconfigure;
 
 import dev.patra.tool.security.error.SecurityProblemWriter;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;

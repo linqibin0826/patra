@@ -3,8 +3,8 @@ package dev.patra.tool.security.slice;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.tool.core.security.CurrentUserPort;
-import dev.patra.tool.security.config.SecurityCoreAutoConfiguration;
-import dev.patra.tool.security.config.SecurityServletAutoConfiguration;
+import dev.patra.tool.security.autoconfigure.SecurityAutoConfiguration;
+import dev.patra.tool.security.autoconfigure.SecurityServletAutoConfiguration;
 import dev.patra.tool.security.support.SecurityITAssertions;
 import dev.patra.tool.security.test.TestIdentity;
 import org.junit.jupiter.api.DisplayName;
@@ -157,7 +157,7 @@ class SecurityWebMvcSliceIT {
   @SpringBootConfiguration
   @EnableAutoConfiguration
   @ImportAutoConfiguration({
-    SecurityCoreAutoConfiguration.class,
+    SecurityAutoConfiguration.class,
     SecurityServletAutoConfiguration.class
   })
   static class SliceConfig {}

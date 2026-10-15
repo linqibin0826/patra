@@ -81,8 +81,7 @@ class OpenApiAutoConfigurationTest {
     void shouldOverrideTitleWithProperty() {
       contextRunner
           .withPropertyValues(
-              "spring.application.name=patra-catalog",
-              "linqibin.starter.openapi.title=Catalog Service API")
+              "spring.application.name=patra-catalog", "patra.openapi.title=Catalog Service API")
           .run(
               context -> {
                 OpenAPI openAPI = context.getBean(OpenAPI.class);
@@ -94,7 +93,7 @@ class OpenApiAutoConfigurationTest {
     @DisplayName("自定义 version 覆盖默认版本号")
     void shouldOverrideVersionWithProperty() {
       contextRunner
-          .withPropertyValues("linqibin.starter.openapi.version=1.0.0")
+          .withPropertyValues("patra.openapi.version=1.0.0")
           .run(
               context -> {
                 OpenAPI openAPI = context.getBean(OpenAPI.class);
@@ -106,8 +105,7 @@ class OpenApiAutoConfigurationTest {
     @DisplayName("自定义 description 设置描述")
     void shouldSetDescription() {
       contextRunner
-          .withPropertyValues(
-              "linqibin.starter.openapi.description=Catalog service API documentation")
+          .withPropertyValues("patra.openapi.description=Catalog service API documentation")
           .run(
               context -> {
                 OpenAPI openAPI = context.getBean(OpenAPI.class);
@@ -125,7 +123,7 @@ class OpenApiAutoConfigurationTest {
     @DisplayName("禁用配置时 - 不注册任何 Bean")
     void shouldNotRegisterBeansWhenDisabled() {
       contextRunner
-          .withPropertyValues("linqibin.starter.openapi.enabled=false")
+          .withPropertyValues("patra.openapi.enabled=false")
           .run(context -> assertThat(context).doesNotHaveBean(OpenAPI.class));
     }
 

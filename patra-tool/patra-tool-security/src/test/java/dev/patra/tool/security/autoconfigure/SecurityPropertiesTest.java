@@ -1,4 +1,4 @@
-package dev.patra.tool.security.config;
+package dev.patra.tool.security.autoconfigure;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -11,7 +11,7 @@ import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
-import dev.patra.tool.security.config.PatraSecurityProperties.IdentityAssertion;
+import dev.patra.tool.security.autoconfigure.SecurityProperties.IdentityAssertion;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,9 +19,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-/// PatraSecurityProperties 单元测试。
-@DisplayName("PatraSecurityProperties 单元测试")
-class PatraSecurityPropertiesTest {
+/// SecurityProperties 单元测试。
+@DisplayName("SecurityProperties 单元测试")
+class SecurityPropertiesTest {
 
   private static final String PROPERTY = "patra.security.identity-assertion.public-keys";
 
@@ -33,7 +33,7 @@ class PatraSecurityPropertiesTest {
     IdentityAssertion assertion = new IdentityAssertion(publicSet(key.toPublicJWK()));
 
     assertThat(assertion.publicKeySet().getKeyByKeyId(key.getKeyID())).isNotNull();
-    assertThat(new PatraSecurityProperties(assertion).identityAssertion()).isSameAs(assertion);
+    assertThat(new SecurityProperties(true, assertion).identityAssertion()).isSameAs(assertion);
   }
 
   @Test
@@ -51,7 +51,7 @@ class PatraSecurityPropertiesTest {
   @Test
   @DisplayName("没配 identity-assertion 这一段：拒绝，并指明配置项")
   void should_reject_missing_section() {
-    assertThatThrownBy(() -> new PatraSecurityProperties(null))
+    assertThatThrownBy(() -> new SecurityProperties(true, null))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining(PROPERTY);
   }

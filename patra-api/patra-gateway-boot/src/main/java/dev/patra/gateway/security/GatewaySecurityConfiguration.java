@@ -7,7 +7,7 @@ import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.ClientType;
 import dev.patra.tool.core.security.CurrentUser;
 import dev.patra.tool.security.assertion.IdentityAssertionSigner;
-import dev.patra.tool.security.config.StatelessSecurityDefaults;
+import dev.patra.tool.security.autoconfigure.StatelessSecurityDefaults;
 import dev.patra.tool.security.error.SecurityProblemWriter;
 import jakarta.servlet.DispatcherType;
 import java.text.ParseException;
