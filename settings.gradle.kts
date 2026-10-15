@@ -65,10 +65,6 @@ includeAt(":patra-tool:patra-tool-security", "patra-tool/patra-tool-security")
 includeAt(":patra-tool:patra-tool-launch", "patra-tool/patra-tool-launch")
 mapParent(":patra-tool", "patra-tool")
 
-// ==================== linqibin-commons ====================
-// 决策 E：嵌套 path 与物理目录一一对应
-includeAt(":linqibin-commons:linqibin-spring-boot-starter-redisson", "linqibin-commons/linqibin-spring-boot-starter-redisson")
-mapParent(":linqibin-commons", "linqibin-commons")
 
 // ==================== patra-api / Microservices ====================
 includeAt(":patra-api:patra-registry:patra-registry-domain", "patra-api/patra-registry/patra-registry-domain")

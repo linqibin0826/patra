@@ -2,7 +2,6 @@ package dev.patra.catalog;
 
 import dev.patra.tool.launch.PatraApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.data.redis.autoconfigure.DataRedisRepositoriesAutoConfiguration;
 
 /// Patra 目录管理服务启动类。
 ///
@@ -30,17 +29,7 @@ import org.springframework.boot.data.redis.autoconfigure.DataRedisRepositoriesAu
 ///
 /// @author linqibin
 /// @since 0.2.0
-/// `exclude = DataRedisRepositoriesAutoConfiguration.class`：Redisson starter 强依赖
-/// `spring-data-redis`，触发 Spring Data 多模块共存的 strict mode 扫描，每个 JPA Dao
-/// 接口都被 Redis 模块尝试认领一次并打 INFO。本服务只用 Redisson 的分布式锁，
-/// 不使用 `@RedisHash` Repository，关闭其 Repository 自动扫描以消除噪音。
-///
-/// 注：Spring Boot 4.0 将 data 模块的 auto-configuration 拆分到独立 artifact，
-/// 包名由 `org.springframework.boot.autoconfigure.data.redis` 改为
-/// `org.springframework.boot.data.redis.autoconfigure`。
-@SpringBootApplication(
-    scanBasePackages = "dev.patra",
-    exclude = DataRedisRepositoriesAutoConfiguration.class)
+@SpringBootApplication(scanBasePackages = "dev.patra")
 public class PatraCatalogApplication {
 
   /// 应用程序入口点：经启动器启动，服务名 `patra-catalog`。

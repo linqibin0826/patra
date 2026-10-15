@@ -10,10 +10,6 @@ spring:
   # 禁用不需要的自动配置
   autoconfigure:
     exclude:
-      - org.redisson.spring.starter.RedissonAutoConfigurationV2
-      - org.redisson.spring.starter.RedissonAutoConfigurationV4
-      - org.springframework.boot.data.redis.autoconfigure.DataRedisAutoConfiguration
-      # DataRedisRepositoriesAutoConfiguration 已在 PatraCatalogApplication @SpringBootApplication.exclude 中排除
       # 排除对象存储配置（E2E 测试不需要 MinIO）
       - dev.patra.tool.objectstorage.ObjectStorageAutoConfiguration
       - dev.patra.tool.objectstorage.S3StorageAutoConfiguration
@@ -63,9 +59,6 @@ linqibin:
   starter:
     batch:
       enabled: true
-    # 禁用 Redisson（E2E 测试不需要 Redis）
-    redisson:
-      enabled: false
     # 禁用隧道代理（E2E 测试使用 Mock FileDownloadPort，无需真实代理）
     rest-client:
       proxy:

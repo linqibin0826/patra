@@ -311,7 +311,6 @@
   <Match>
     <Or>
       <Class name="dev.patra.tool.test.archunit.HexagonalArchitectureRules"/>
-      <Class name="dev.patra.tool.test.container.rocketmq.RocketMQContainerSupport"/>
     </Or>
     <Bug pattern="CT_CONSTRUCTOR_THROW"/>
   </Match>
@@ -459,7 +458,6 @@
   <!-- MS_EXPOSE_REP: 静态工厂单例暴露是设计意图 -->
   <Match>
     <Or>
-      <Class name="dev.patra.tool.test.container.initializer.RocketMQContainerInitializer"/>
       <Class name="dev.patra.catalog.infra.parser.support.SecureXmlInputFactory"/>
     </Or>
     <Bug pattern="MS_EXPOSE_REP"/>

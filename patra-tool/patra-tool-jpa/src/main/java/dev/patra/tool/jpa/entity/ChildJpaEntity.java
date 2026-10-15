@@ -58,7 +58,6 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 /// @see BaseJpaEntity
 /// @see ValueObjectJpaEntity
 /// @see SoftDeletableJpaEntity
-/// @see SoftDeletableChildJpaEntity
 @Data
 @SuperBuilder
 @NoArgsConstructor

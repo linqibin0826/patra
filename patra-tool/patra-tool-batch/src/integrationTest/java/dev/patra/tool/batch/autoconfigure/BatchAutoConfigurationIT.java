@@ -27,9 +27,7 @@ import org.springframework.test.context.ContextConfiguration;
     properties = {
       "spring.batch.jdbc.initialize-schema=always",
       "spring.batch.job.enabled=false",
-      "spring.autoconfigure.exclude=org.redisson.spring.starter.RedissonAutoConfigurationV2,org.redisson.spring.starter.RedissonAutoConfigurationV4",
-      "linqibin.starter.batch.enabled=true",
-      "linqibin.starter.redisson.observability.metrics-enabled=false"
+      "linqibin.starter.batch.enabled=true"
     })
 @ContextConfiguration(initializers = PostgreSQLContainerInitializer.class)
 class BatchAutoConfigurationIT {

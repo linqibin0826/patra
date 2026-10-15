@@ -11,19 +11,6 @@
     ],
     "modules": [
         {
-            "dir": "linqibin-commons/linqibin-spring-boot-starter-redisson",
-            "project": ":linqibin-commons:linqibin-spring-boot-starter-redisson",
-            "unit": "foundation",
-            "impacts": [
-                "catalog",
-                "foundation"
-            ],
-            "tasks": [
-                "check",
-                "integrationTest"
-            ]
-        },
-        {
             "dir": "patra-api/patra-catalog/patra-catalog-adapter",
             "project": ":patra-api:patra-catalog:patra-catalog-adapter",
             "unit": "catalog",

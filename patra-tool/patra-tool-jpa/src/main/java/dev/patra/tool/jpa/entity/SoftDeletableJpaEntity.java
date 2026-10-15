@@ -61,7 +61,6 @@ import org.hibernate.annotations.SoftDeleteType;
 /// @author linqibin
 /// @since 0.1.0
 /// @see BaseJpaEntity
-/// @see SoftDeletableChildJpaEntity
 @Data
 @SuperBuilder
 @NoArgsConstructor

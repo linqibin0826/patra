@@ -3,9 +3,6 @@ patra.config-source.service: patra-catalog.yaml
 spring:
   datasource:
     url: jdbc:postgresql://${PATRA_INFRA_HOST:127.0.0.1}:15432/patra_catalog
-  data:
-    redis:
-      password: ${REDIS_PASSWORD}
 
 patra:
   catalog:

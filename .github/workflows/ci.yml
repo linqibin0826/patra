@@ -84,7 +84,6 @@ jobs:
             FAIL=1
           fi
           for COMPOSE in \
-            "patra-tool/patra-tool-test/src/main/resources/docker-compose-rocketmq.yml" \
             "patra-api/patra-ingest/patra-ingest-boot/src/test/resources/docker-compose-rocketmq.yml"; do
             COUNT=$(grep -F -c "image: $ROCKETMQ_IMAGE" "$COMPOSE" || true)
             if [ "$COUNT" -ne 2 ]; then

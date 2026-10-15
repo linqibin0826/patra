@@ -35,9 +35,6 @@ import org.springframework.test.context.ActiveProfiles;
       // Patra 配置
       "linqibin.starter.batch.enabled=true",
       "linqibin.starter.batch.table-prefix=BATCH_",
-      // 禁用 Redisson（测试环境）
-      "spring.autoconfigure.exclude=org.redisson.spring.starter.RedissonAutoConfigurationV2,org.redisson.spring.starter.RedissonAutoConfigurationV4",
-      "linqibin.starter.redisson.observability.metrics-enabled=false",
       // 覆盖主数据源为简单的 Testcontainers PostgreSQL URL（不依赖类路径资源）
       "spring.datasource.url=jdbc:tc:postgresql:17:///test_batch",
       "spring.datasource.username=test",

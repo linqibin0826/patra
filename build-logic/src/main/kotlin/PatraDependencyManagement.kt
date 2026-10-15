@@ -30,7 +30,7 @@ import org.gradle.kotlin.dsl.configure
 /// 应用 Patra 统一的依赖管理配置
 ///
 /// 包括：
-/// - Spring Boot / Cloud / Cloud Alibaba / Resilience4j / Testcontainers BOM
+/// - Spring Boot / Cloud / Cloud Alibaba / Testcontainers BOM
 /// - 强制版本约束（解决依赖冲突）
 /// - 安全版本覆盖（上游 BOM / 传递依赖尚未跟进漏洞修复的构件）
 ///
@@ -42,7 +42,6 @@ fun Project.applyPatraDependencyManagement(libs: VersionCatalog) {
     val springBootVersion = libs.findVersion("spring-boot").get().requiredVersion
     val springCloudVersion = libs.findVersion("spring-cloud").get().requiredVersion
     val springCloudAlibabaVersion = libs.findVersion("spring-cloud-alibaba").get().requiredVersion
-    val resilience4jVersion = libs.findVersion("resilience4j").get().requiredVersion
     val testcontainersVersion = libs.findVersion("testcontainers").get().requiredVersion
     // 强制版本约束
     val commonsCompressVersion = libs.findVersion("commons-compress").get().requiredVersion
@@ -67,7 +66,6 @@ fun Project.applyPatraDependencyManagement(libs: VersionCatalog) {
                 bomProperty("log4j-core.version", log4jVersion)
                 bomProperty("log4j-slf4j2-impl.version", log4jVersion)
             }
-            mavenBom("io.github.resilience4j:resilience4j-bom:$resilience4jVersion")
             mavenBom("org.testcontainers:testcontainers-bom:$testcontainersVersion")
             // rocketmq-common 5.3.1 传递引入的 grpc 1.53 / protobuf 3.20 有漏洞；BOM 保证同族构件版本一致
             mavenBom("io.grpc:grpc-bom:${version("grpc")}")
