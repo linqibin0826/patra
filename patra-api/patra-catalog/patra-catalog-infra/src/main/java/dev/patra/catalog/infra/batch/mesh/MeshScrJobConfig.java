@@ -3,7 +3,7 @@ package dev.patra.catalog.infra.batch.mesh;
 import dev.patra.catalog.domain.model.aggregate.MeshScrAggregate;
 import dev.patra.catalog.domain.port.parser.MeshScrParserPort;
 import dev.patra.catalog.domain.port.source.FileDownloadPort;
-import dev.patra.tool.batch.config.BatchProperties;
+import dev.patra.tool.batch.autoconfigure.BatchProperties;
 import dev.patra.tool.batch.metrics.BatchProgressMetricsListener;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
@@ -140,8 +140,8 @@ public class MeshScrJobConfig {
   ///
   /// @return chunk size
   private int getChunkSize() {
-    if (batchProperties != null && batchProperties.getChunk() != null) {
-      int configuredSize = batchProperties.getChunk().getDefaultSize();
+    if (batchProperties != null && batchProperties.chunk() != null) {
+      int configuredSize = batchProperties.chunk().defaultSize();
       if (configuredSize > 0) {
         return configuredSize;
       }

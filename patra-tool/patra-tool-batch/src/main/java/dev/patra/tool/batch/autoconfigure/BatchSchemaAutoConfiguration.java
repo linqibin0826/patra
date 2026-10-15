@@ -1,6 +1,5 @@
 package dev.patra.tool.batch.autoconfigure;
 
-import dev.patra.tool.batch.config.BatchProperties;
 import dev.patra.tool.batch.schema.BatchSchemaInitializer;
 import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,7 +11,7 @@ import org.springframework.context.annotation.Bean;
 
 /// Spring Batch Schema 初始化自动配置。
 ///
-/// 当 `linqibin.starter.batch.schema.initialize=true`（默认）时，自动创建 `BatchSchemaInitializer` Bean，
+/// 当 `patra.batch.schema.initialize=true`（默认）时，自动创建 `BatchSchemaInitializer` Bean，
 /// 在 `BatchAutoConfiguration` 构造时触发 Schema 初始化。
 ///
 /// ## 配置选项
@@ -33,21 +32,26 @@ import org.springframework.context.annotation.Bean;
 ///
 /// ## 加载顺序
 ///
-/// 此配置类在 `BatchDataSourceConfiguration` 之后、`BatchAutoConfiguration` 之前加载，
+/// 此配置类在 `BatchDataSourceAutoConfiguration` 之后、`BatchAutoConfiguration` 之前加载，
 /// 确保数据源就绪后再初始化 Schema。
 ///
 /// @author Patra Team
 /// @since 0.1.0
 @ConditionalOnProperty(
-    prefix = "linqibin.starter.batch.schema",
+    prefix = "patra.batch",
+    name = "enabled",
+    havingValue = "true",
+    matchIfMissing = true)
+@ConditionalOnProperty(
+    prefix = "patra.batch.schema",
     name = "initialize",
     havingValue = "true",
     matchIfMissing = true)
 @AutoConfiguration(
-    after = BatchDataSourceConfiguration.class,
+    after = BatchDataSourceAutoConfiguration.class,
     before = BatchAutoConfiguration.class)
 @EnableConfigurationProperties(BatchProperties.class)
-public class BatchSchemaInitializerConfiguration {
+public final class BatchSchemaAutoConfiguration {
 
   /// 创建 Schema 初始化器 Bean。
   ///
@@ -66,6 +70,6 @@ public class BatchSchemaInitializerConfiguration {
     // 选择数据源：优先使用独立数据源
     DataSource targetDataSource = (batchDataSource != null) ? batchDataSource : primaryDataSource;
 
-    return new BatchSchemaInitializer(targetDataSource, properties.getTablePrefix());
+    return new BatchSchemaInitializer(targetDataSource, properties.tablePrefix());
   }
 }

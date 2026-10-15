@@ -16,7 +16,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-/// {@link BatchDataSourceConfiguration} 集成测试。
+/// {@link BatchDataSourceAutoConfiguration} 集成测试。
 ///
 /// 验证 Batch 独立数据源的条件装配逻辑。
 /// 使用 PostgreSQL TestContainers 确保与生产环境一致。
@@ -44,7 +44,7 @@ class BatchDataSourceConfigurationIT {
 
   private final ApplicationContextRunner contextRunner =
       new ApplicationContextRunner()
-          .withConfiguration(AutoConfigurations.of(BatchDataSourceConfiguration.class));
+          .withConfiguration(AutoConfigurations.of(BatchDataSourceAutoConfiguration.class));
 
   @Test
   @DisplayName("未配置 datasource.url 时：不应创建 batchDataSource Bean")
@@ -64,9 +64,9 @@ class BatchDataSourceConfigurationIT {
     // When: 配置了 datasource.url（使用 PostgreSQL TestContainers）
     contextRunner
         .withPropertyValues(
-            "linqibin.starter.batch.datasource.url=" + jdbcUrl,
-            "linqibin.starter.batch.datasource.username=" + username,
-            "linqibin.starter.batch.datasource.password=" + password)
+            "patra.batch.datasource.url=" + jdbcUrl,
+            "patra.batch.datasource.username=" + username,
+            "patra.batch.datasource.password=" + password)
         .run(
             context -> {
               // Then: 应创建 batchDataSource 和 batchTransactionManager Bean
@@ -90,9 +90,9 @@ class BatchDataSourceConfigurationIT {
     // When: 只配置 URL，不配置 Hikari 参数（使用 PostgreSQL TestContainers）
     contextRunner
         .withPropertyValues(
-            "linqibin.starter.batch.datasource.url=" + jdbcUrl,
-            "linqibin.starter.batch.datasource.username=" + username,
-            "linqibin.starter.batch.datasource.password=" + password)
+            "patra.batch.datasource.url=" + jdbcUrl,
+            "patra.batch.datasource.username=" + username,
+            "patra.batch.datasource.password=" + password)
         .run(
             context -> {
               HikariDataSource dataSource =
@@ -113,13 +113,13 @@ class BatchDataSourceConfigurationIT {
     // When: 配置了自定义 Hikari 参数（使用 PostgreSQL TestContainers）
     contextRunner
         .withPropertyValues(
-            "linqibin.starter.batch.datasource.url=" + jdbcUrl,
-            "linqibin.starter.batch.datasource.username=" + username,
-            "linqibin.starter.batch.datasource.password=" + password,
-            "linqibin.starter.batch.datasource.hikari.maximum-pool-size=10",
-            "linqibin.starter.batch.datasource.hikari.minimum-idle=3",
-            "linqibin.starter.batch.datasource.hikari.connection-timeout=60000",
-            "linqibin.starter.batch.datasource.hikari.idle-timeout=300000")
+            "patra.batch.datasource.url=" + jdbcUrl,
+            "patra.batch.datasource.username=" + username,
+            "patra.batch.datasource.password=" + password,
+            "patra.batch.datasource.hikari.maximum-pool-size=10",
+            "patra.batch.datasource.hikari.minimum-idle=3",
+            "patra.batch.datasource.hikari.connection-timeout=60000",
+            "patra.batch.datasource.hikari.idle-timeout=300000")
         .run(
             context -> {
               HikariDataSource dataSource =
@@ -139,9 +139,9 @@ class BatchDataSourceConfigurationIT {
     // Given: 用户自定义了 batchDataSource Bean（使用 PostgreSQL TestContainers）
     contextRunner
         .withPropertyValues(
-            "linqibin.starter.batch.datasource.url=" + jdbcUrl,
-            "linqibin.starter.batch.datasource.username=" + username,
-            "linqibin.starter.batch.datasource.password=" + password)
+            "patra.batch.datasource.url=" + jdbcUrl,
+            "patra.batch.datasource.username=" + username,
+            "patra.batch.datasource.password=" + password)
         .withBean(
             "batchDataSource",
             DataSource.class,

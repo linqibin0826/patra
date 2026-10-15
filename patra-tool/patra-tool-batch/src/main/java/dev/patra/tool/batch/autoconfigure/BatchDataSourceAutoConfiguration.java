@@ -2,7 +2,6 @@ package dev.patra.tool.batch.autoconfigure;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-import dev.patra.tool.batch.config.BatchProperties;
 import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -18,12 +17,12 @@ import org.springframework.util.StringUtils;
 
 /// Batch 独立数据源自动配置。
 ///
-/// 当配置了 `linqibin.starter.batch.datasource.url` 时，创建独立的数据源和事务管理器，
+/// 当配置了 `patra.batch.datasource.url` 时，创建独立的数据源和事务管理器，
 /// 用于存储 Spring Batch 元数据（JobRepository、JobExplorer 等）。
 ///
 /// ## 激活条件
 ///
-/// - `linqibin.starter.batch.datasource.url` 配置了有效值
+/// - `patra.batch.datasource.url` 配置了有效值
 ///
 /// ## 创建的 Bean
 ///
@@ -45,13 +44,18 @@ import org.springframework.util.StringUtils;
 // Access</a>
 @AutoConfiguration(after = DataSourceAutoConfiguration.class)
 @ConditionalOnClass(HikariDataSource.class)
-@ConditionalOnProperty(prefix = "linqibin.starter.batch.datasource", name = "url")
+@ConditionalOnProperty(
+    prefix = "patra.batch",
+    name = "enabled",
+    havingValue = "true",
+    matchIfMissing = true)
+@ConditionalOnProperty(prefix = "patra.batch.datasource", name = "url")
 @EnableConfigurationProperties(BatchProperties.class)
-public class BatchDataSourceConfiguration {
+public final class BatchDataSourceAutoConfiguration {
 
   /// 创建 Batch 专用数据源。
   ///
-  /// 使用 HikariCP 连接池，配置来自 `linqibin.starter.batch.datasource.*`。
+  /// 使用 HikariCP 连接池，配置来自 `patra.batch.datasource.*`。
   ///
   /// **注意**：`defaultCandidate = false` 确保此数据源不参与自动装配候选，
   /// 避免干扰 JPA 的 `@ConditionalOnSingleCandidate(DataSource.class)` 检查。
@@ -61,23 +65,23 @@ public class BatchDataSourceConfiguration {
   @Bean(defaultCandidate = false)
   @ConditionalOnMissingBean(name = "batchDataSource")
   public DataSource batchDataSource(BatchProperties properties) {
-    var dsProps = properties.getDatasource();
-    var hikariProps = dsProps.getHikari();
+    var dsProps = properties.datasource();
+    var hikariProps = dsProps.hikari();
 
     var config = new HikariConfig();
-    config.setJdbcUrl(dsProps.getUrl());
-    config.setUsername(dsProps.getUsername());
-    config.setPassword(dsProps.getPassword());
+    config.setJdbcUrl(dsProps.url());
+    config.setUsername(dsProps.username());
+    config.setPassword(dsProps.password());
 
-    if (StringUtils.hasText(dsProps.getDriverClassName())) {
-      config.setDriverClassName(dsProps.getDriverClassName());
+    if (StringUtils.hasText(dsProps.driverClassName())) {
+      config.setDriverClassName(dsProps.driverClassName());
     }
 
-    config.setMaximumPoolSize(hikariProps.getMaximumPoolSize());
-    config.setMinimumIdle(hikariProps.getMinimumIdle());
-    config.setConnectionTimeout(hikariProps.getConnectionTimeout());
-    config.setIdleTimeout(hikariProps.getIdleTimeout());
-    config.setMaxLifetime(hikariProps.getMaxLifetime());
+    config.setMaximumPoolSize(hikariProps.maximumPoolSize());
+    config.setMinimumIdle(hikariProps.minimumIdle());
+    config.setConnectionTimeout(hikariProps.connectionTimeout());
+    config.setIdleTimeout(hikariProps.idleTimeout());
+    config.setMaxLifetime(hikariProps.maxLifetime());
     config.setPoolName("batch-hikari-pool");
 
     return new HikariDataSource(config);

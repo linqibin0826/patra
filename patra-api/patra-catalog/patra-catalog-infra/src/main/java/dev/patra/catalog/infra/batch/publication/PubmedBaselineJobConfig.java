@@ -8,7 +8,7 @@ import dev.patra.catalog.domain.port.parser.PubmedXmlParserPort;
 import dev.patra.catalog.domain.port.repository.PublicationRepository;
 import dev.patra.catalog.domain.port.source.FileDownloadPort;
 import dev.patra.common.CanonicalPublication;
-import dev.patra.tool.batch.config.BatchProperties;
+import dev.patra.tool.batch.autoconfigure.BatchProperties;
 import dev.patra.tool.batch.metrics.BatchProgressMetricsListener;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
@@ -211,8 +211,8 @@ public class PubmedBaselineJobConfig {
   /// @return chunk size
   /// @throws IllegalArgumentException 当配置的 chunk size 超过 MAX_CHUNK_SIZE 时
   private int getChunkSize() {
-    if (batchProperties != null && batchProperties.getChunk() != null) {
-      int configuredSize = batchProperties.getChunk().getDefaultSize();
+    if (batchProperties != null && batchProperties.chunk() != null) {
+      int configuredSize = batchProperties.chunk().defaultSize();
       if (configuredSize > MAX_CHUNK_SIZE) {
         throw new IllegalArgumentException(
             "chunk.default-size [%d] 超过上限 %d：一个 chunk 的文献 ID 会整体作为 deleteByPublicationIdIn 的 IN 参数，"

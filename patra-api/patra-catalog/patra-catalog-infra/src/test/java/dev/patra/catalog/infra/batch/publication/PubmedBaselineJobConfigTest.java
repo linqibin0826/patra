@@ -2,7 +2,6 @@ package dev.patra.catalog.infra.batch.publication;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.when;
 
 import dev.patra.catalog.domain.port.gateway.VenueInstanceGateway;
 import dev.patra.catalog.domain.port.lookup.FunderLookupPort;
@@ -11,7 +10,7 @@ import dev.patra.catalog.domain.port.lookup.VenueLookupPort;
 import dev.patra.catalog.domain.port.parser.PubmedXmlParserPort;
 import dev.patra.catalog.domain.port.repository.PublicationRepository;
 import dev.patra.catalog.domain.port.source.FileDownloadPort;
-import dev.patra.tool.batch.config.BatchProperties;
+import dev.patra.tool.batch.autoconfigure.BatchProperties;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -48,10 +47,27 @@ class PubmedBaselineJobConfigTest {
   @Mock private LanguageLookupPort languageLookupPort;
   @Mock private FunderLookupPort funderLookupPort;
   @Mock private VenueInstanceGateway venueInstanceGateway;
-  @Mock private BatchProperties batchProperties;
+  private final BatchProperties batchProperties = batchPropertiesWithChunk(5000);
   @Mock private PublicationImportResultMapper resultMapper;
 
   private PubmedBaselineJobConfig jobConfig;
+
+  /// 只关心 chunk 的批处理配置，其余取默认值。
+  private static BatchProperties batchPropertiesWithChunk(int defaultSize) {
+    return new BatchProperties(
+        true,
+        "BATCH_",
+        new BatchProperties.Chunk(defaultSize, 10_000),
+        new BatchProperties.Datasource(
+            null,
+            null,
+            null,
+            null,
+            new BatchProperties.Datasource.Hikari(5, 2, 30000L, 600000L, 1800000L)),
+        new BatchProperties.Schema(true),
+        new BatchProperties.ImportLimit(-1),
+        new BatchProperties.Metrics(true));
+  }
 
   @BeforeEach
   void setUp() {
@@ -124,9 +140,16 @@ class PubmedBaselineJobConfigTest {
     @DisplayName("配置的 chunk size 超过上限时应该拒绝构建 Step")
     void should_reject_chunk_size_above_upper_bound() {
       // given - chunk 过大会让关联表清理的 IN 绑定参数超出 PostgreSQL 65535 上限
-      BatchProperties.ChunkProperties chunk = new BatchProperties.ChunkProperties();
-      chunk.setDefaultSize(10_001);
-      when(batchProperties.getChunk()).thenReturn(chunk);
+      PubmedBaselineJobConfig jobConfig =
+          new PubmedBaselineJobConfig(
+              jobRepository,
+              transactionManager,
+              fileDownloadPort,
+              pubmedXmlParserPort,
+              publicationRepository,
+              venueInstanceGateway,
+              batchPropertiesWithChunk(10_001),
+              Optional.empty());
 
       PubmedArticleItemReader reader =
           jobConfig.pubmedArticleItemReader("https://example.com/test.xml.gz");

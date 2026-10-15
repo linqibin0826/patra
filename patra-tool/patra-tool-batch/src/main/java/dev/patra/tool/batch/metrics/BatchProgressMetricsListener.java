@@ -34,7 +34,7 @@ import org.springframework.batch.core.step.StepExecution;
 ///
 /// **使用方式**：
 ///
-/// 通过 `BatchProgressMetricsAutoConfiguration` 自动注册为全局 Listener。
+/// 通过 `BatchMetricsAutoConfiguration` 自动注册为全局 Listener。
 ///
 /// @author linqibin
 /// @since 0.1.0

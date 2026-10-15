@@ -1,4 +1,4 @@
-dev.patra.tool.batch.autoconfigure.BatchDataSourceConfiguration
-dev.patra.tool.batch.autoconfigure.BatchSchemaInitializerConfiguration
+dev.patra.tool.batch.autoconfigure.BatchDataSourceAutoConfiguration
+dev.patra.tool.batch.autoconfigure.BatchSchemaAutoConfiguration
 dev.patra.tool.batch.autoconfigure.BatchAutoConfiguration
-dev.patra.tool.batch.autoconfigure.BatchProgressMetricsAutoConfiguration
+dev.patra.tool.batch.autoconfigure.BatchMetricsAutoConfiguration

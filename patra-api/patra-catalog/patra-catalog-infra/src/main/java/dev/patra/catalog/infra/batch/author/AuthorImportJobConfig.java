@@ -2,7 +2,7 @@ package dev.patra.catalog.infra.batch.author;
 
 import dev.patra.catalog.domain.model.aggregate.AuthorAggregate;
 import dev.patra.catalog.domain.port.source.FileDownloadPort;
-import dev.patra.tool.batch.config.BatchProperties;
+import dev.patra.tool.batch.autoconfigure.BatchProperties;
 import dev.patra.tool.batch.metrics.BatchProgressMetricsListener;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
@@ -140,9 +140,9 @@ public class AuthorImportJobConfig {
   /// @return 最大记录数，如果未配置或不限制则返回 null
   private Long getMaxRecords() {
     if (batchProperties != null
-        && batchProperties.getImportLimit() != null
-        && batchProperties.getImportLimit().hasLimit()) {
-      return batchProperties.getImportLimit().getMaxRecords();
+        && batchProperties.importLimit() != null
+        && batchProperties.importLimit().hasLimit()) {
+      return batchProperties.importLimit().maxRecords();
     }
     return null;
   }
@@ -154,8 +154,8 @@ public class AuthorImportJobConfig {
   ///
   /// @return chunk size
   private int getChunkSize() {
-    if (batchProperties != null && batchProperties.getChunk() != null) {
-      int configuredSize = batchProperties.getChunk().getDefaultSize();
+    if (batchProperties != null && batchProperties.chunk() != null) {
+      int configuredSize = batchProperties.chunk().defaultSize();
       if (configuredSize > DEFAULT_CHUNK_SIZE) {
         return configuredSize;
       }

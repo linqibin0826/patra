@@ -65,10 +65,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 /// @author linqibin
 /// @since 0.1.0
 @SpringBootTest(
-    properties = {
-      "spring.cloud.nacos.discovery.enabled=false",
-      "linqibin.starter.batch.chunk.default-size=2"
-    })
+    properties = {"spring.cloud.nacos.discovery.enabled=false", "patra.batch.chunk.default-size=2"})
 @ContextConfiguration(initializers = CatalogE2EPostgreSQLContainerInitializer.class)
 @ActiveProfiles("e2e-test")
 @TestClassOrder(ClassOrderer.OrderAnnotation.class)

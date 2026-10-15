@@ -16,25 +16,25 @@ import org.springframework.test.context.ActiveProfiles;
 
 /// 双数据源集成测试。
 ///
-/// 验证配置了 `linqibin.starter.batch.datasource.*` 后，Spring Batch 使用独立数据源。
+/// 验证配置了 `patra.batch.datasource.*` 后，Spring Batch 使用独立数据源。
 ///
 /// 注意：此测试只验证 batchDataSource 的创建和配置。
 /// 主数据源由 Spring Boot DataSourceAutoConfiguration 管理，不在此测试范围内。
 @SpringBootTest(
     properties = {
       // Batch 独立数据源（元数据）：使用 Testcontainers PostgreSQL
-      "linqibin.starter.batch.datasource.url=jdbc:tc:postgresql:17:///batch_meta_db",
-      "linqibin.starter.batch.datasource.username=test",
-      "linqibin.starter.batch.datasource.password=test",
-      "linqibin.starter.batch.datasource.driver-class-name=org.testcontainers.jdbc.ContainerDatabaseDriver",
-      "linqibin.starter.batch.datasource.hikari.maximum-pool-size=3",
-      "linqibin.starter.batch.datasource.hikari.minimum-idle=1",
+      "patra.batch.datasource.url=jdbc:tc:postgresql:17:///batch_meta_db",
+      "patra.batch.datasource.username=test",
+      "patra.batch.datasource.password=test",
+      "patra.batch.datasource.driver-class-name=org.testcontainers.jdbc.ContainerDatabaseDriver",
+      "patra.batch.datasource.hikari.maximum-pool-size=3",
+      "patra.batch.datasource.hikari.minimum-idle=1",
       // Spring Batch 配置
       "spring.batch.jdbc.initialize-schema=always",
       "spring.batch.job.enabled=false",
       // Patra 配置
-      "linqibin.starter.batch.enabled=true",
-      "linqibin.starter.batch.table-prefix=BATCH_",
+      "patra.batch.enabled=true",
+      "patra.batch.table-prefix=BATCH_",
       // 覆盖主数据源为简单的 Testcontainers PostgreSQL URL（不依赖类路径资源）
       "spring.datasource.url=jdbc:tc:postgresql:17:///test_batch",
       "spring.datasource.username=test",

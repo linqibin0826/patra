@@ -1,6 +1,5 @@
 package dev.patra.tool.batch.autoconfigure;
 
-import dev.patra.tool.batch.config.BatchProperties;
 import dev.patra.tool.batch.core.JobOperatorHelper;
 import dev.patra.tool.batch.schema.BatchSchemaInitializer;
 import io.micrometer.observation.ObservationRegistry;
@@ -36,21 +35,22 @@ import tools.jackson.databind.json.JsonMapper;
 /// 支持独立数据源配置，优先级如下：
 ///
 /// 1. 用户自定义 `batchDataSource` Bean（最高）
-/// 2. `linqibin.starter.batch.datasource.*` 配置创建的数据源
+/// 2. `patra.batch.datasource.*` 配置创建的数据源
 /// 3. 主数据源 `@Primary DataSource`（默认回退）
 ///
-/// 条件激活：`linqibin.starter.batch.enabled=true`（默认启用）
+/// 条件激活：`patra.batch.enabled=true`（默认启用）
 ///
 /// @author Patra Team
 /// @since 0.1.0
 @ConditionalOnProperty(
-    prefix = "linqibin.starter.batch",
+    prefix = "patra.batch",
     name = "enabled",
     havingValue = "true",
     matchIfMissing = true)
-@AutoConfiguration(after = {DataSourceAutoConfiguration.class, BatchDataSourceConfiguration.class})
+@AutoConfiguration(
+    after = {DataSourceAutoConfiguration.class, BatchDataSourceAutoConfiguration.class})
 @EnableConfigurationProperties(BatchProperties.class)
-public class BatchAutoConfiguration extends JdbcDefaultBatchConfiguration {
+public final class BatchAutoConfiguration extends JdbcDefaultBatchConfiguration {
 
   private final BatchProperties properties;
   private final DataSource batchDataSource;
@@ -63,9 +63,9 @@ public class BatchAutoConfiguration extends JdbcDefaultBatchConfiguration {
   ///
   /// @param properties Batch 配置属性
   /// @param primaryDataSource 主数据源（Spring Boot 自动配置，使用 `dataSource` 名称注入）
-  /// @param batchDataSource 独立 Batch 数据源（可选，由 BatchDataSourceConfiguration 创建）
+  /// @param batchDataSource 独立 Batch 数据源（可选，由 BatchDataSourceAutoConfiguration 创建）
   /// @param batchTransactionManager 独立 Batch 事务管理器（可选）
-  /// @param schemaInitializer Schema 初始化器（可选，由 BatchSchemaInitializerConfiguration 创建）
+  /// @param schemaInitializer Schema 初始化器（可选，由 BatchSchemaAutoConfiguration 创建）
   public BatchAutoConfiguration(
       BatchProperties properties,
       @Qualifier("dataSource") DataSource primaryDataSource,
@@ -109,7 +109,7 @@ public class BatchAutoConfiguration extends JdbcDefaultBatchConfiguration {
   /// 从配置属性读取，默认为 `BATCH_`。
   @Override
   protected String getTablePrefix() {
-    return properties.getTablePrefix();
+    return properties.tablePrefix();
   }
 
   /// 注册 Spring Batch 原生可观测性支持。

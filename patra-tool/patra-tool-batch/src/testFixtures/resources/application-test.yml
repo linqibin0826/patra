@@ -11,10 +11,9 @@ spring:
     job:
       enabled: false  # 禁止启动时自动运行 Job
 
-linqibin:
-  starter:
-    batch:
-      enabled: true
-      chunk:
-        default-size: 1000
-        max-size: 10000
+patra:
+  batch:
+    enabled: true
+    chunk:
+      default-size: 1000
+      max-size: 10000
