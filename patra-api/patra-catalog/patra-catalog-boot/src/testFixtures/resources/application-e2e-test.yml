@@ -15,8 +15,8 @@ spring:
       - org.springframework.boot.data.redis.autoconfigure.DataRedisAutoConfiguration
       # DataRedisRepositoriesAutoConfiguration 已在 PatraCatalogApplication @SpringBootApplication.exclude 中排除
       # 排除对象存储配置（E2E 测试不需要 MinIO）
-      - dev.linqibin.starter.objectstorage.ObjectStorageAutoConfiguration
-      - dev.linqibin.starter.objectstorage.S3StorageAutoConfiguration
+      - dev.patra.tool.objectstorage.ObjectStorageAutoConfiguration
+      - dev.patra.tool.objectstorage.S3StorageAutoConfiguration
   # 导入错误配置
   config:
     import:
@@ -86,7 +86,7 @@ management:
 # 日志配置
 logging:
   level:
-    dev.linqibin: INFO
+    dev.patra: INFO
     org.springframework.batch: DEBUG
     org.testcontainers: INFO
     com.alibaba.nacos.client: WARN

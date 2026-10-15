@@ -9,7 +9,7 @@ plugins {
 }
 
 springBoot {
-    mainClass = "dev.linqibin.patra.objectstorage.PatraObjectStorageApplication"
+    mainClass = "dev.patra.objectstorage.PatraObjectStorageApplication"
 }
 
 dependencies {

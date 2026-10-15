@@ -1,2 +1,2 @@
-dev.linqibin.starter.web.error.config.WebErrorAutoConfiguration
-dev.linqibin.starter.web.json.config.WebJsonAutoConfiguration
+dev.patra.tool.web.error.config.WebErrorAutoConfiguration
+dev.patra.tool.web.json.config.WebJsonAutoConfiguration

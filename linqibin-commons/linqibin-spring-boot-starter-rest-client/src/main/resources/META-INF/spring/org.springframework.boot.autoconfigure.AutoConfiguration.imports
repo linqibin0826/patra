@@ -1,4 +1,4 @@
-dev.linqibin.starter.restclient.config.RestClientAutoConfiguration
-dev.linqibin.starter.restclient.config.TunnelProxyAutoConfiguration
-dev.linqibin.starter.restclient.config.DownloadClientAutoConfiguration
-dev.linqibin.starter.restclient.config.StreamingWebClientAutoConfiguration
+dev.patra.tool.httpclient.config.RestClientAutoConfiguration
+dev.patra.tool.httpclient.config.TunnelProxyAutoConfiguration
+dev.patra.tool.httpclient.config.DownloadClientAutoConfiguration
+dev.patra.tool.httpclient.config.StreamingWebClientAutoConfiguration

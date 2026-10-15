@@ -1,2 +1,2 @@
-dev.linqibin.patra.starter.provenance.boot.ProvenanceAutoConfiguration
-dev.linqibin.patra.starter.provenance.autoconfig.ProvenanceCodeConverterAutoConfiguration
+dev.patra.ingest.provenance.boot.ProvenanceAutoConfiguration
+dev.patra.ingest.provenance.autoconfig.ProvenanceCodeConverterAutoConfiguration

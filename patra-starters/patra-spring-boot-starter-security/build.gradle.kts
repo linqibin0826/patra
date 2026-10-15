@@ -51,7 +51,7 @@ tasks.register<JavaExec>("generateIdentityAssertionKey") {
     group = "patra"
     description = "生成一对身份断言的签名密钥：私钥写进 -PkeyOut=<路径>，公钥打到标准输出"
     classpath = sourceSets.main.get().runtimeClasspath
-    mainClass = "dev.linqibin.patra.starter.security.assertion.IdentityAssertionKeyGenerator"
+    mainClass = "dev.patra.tool.security.assertion.IdentityAssertionKeyGenerator"
     val keyOut = providers.gradleProperty("keyOut")
     doFirst {
         if (!keyOut.isPresent) {

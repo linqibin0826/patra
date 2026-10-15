@@ -1,2 +1,2 @@
-dev.linqibin.patra.starter.expr.compiler.boot.ExprCompilerAutoConfiguration
-dev.linqibin.patra.starter.expr.compiler.boot.ExprFunctionAutoConfiguration
+dev.patra.ingest.expr.compiler.boot.ExprCompilerAutoConfiguration
+dev.patra.ingest.expr.compiler.boot.ExprFunctionAutoConfiguration

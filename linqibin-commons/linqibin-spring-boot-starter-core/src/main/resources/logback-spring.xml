@@ -14,9 +14,9 @@
     <!-- Register custom OTel converters for trace context -->
     <!-- Note: Logback 1.5+ uses 'class' instead of deprecated 'converterClass' -->
     <conversionRule conversionWord="traceId"
-                    class="dev.linqibin.starter.core.logging.TraceIdConverter"/>
+                    class="dev.patra.tool.observability.logging.TraceIdConverter"/>
     <conversionRule conversionWord="spanId"
-                    class="dev.linqibin.starter.core.logging.SpanIdConverter"/>
+                    class="dev.patra.tool.observability.logging.SpanIdConverter"/>
 
     <!-- Console Appender with colors and trace context -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
@@ -58,8 +58,8 @@
         <appender-ref ref="FILE"/>
     </root>
 
-    <!-- Application Logger: DEBUG level (only for dev.linqibin.* classes) -->
-    <logger name="dev.linqibin" level="DEBUG" additivity="false">
+    <!-- Application Logger: DEBUG level (only for dev.patra.* classes) -->
+    <logger name="dev.patra" level="DEBUG" additivity="false">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE"/>
     </logger>

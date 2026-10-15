@@ -9,7 +9,7 @@ plugins {
 }
 
 springBoot {
-    mainClass = "dev.linqibin.patra.ingest.PatraIngestApplication"
+    mainClass = "dev.patra.ingest.PatraIngestApplication"
 }
 
 dependencies {

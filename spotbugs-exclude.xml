@@ -277,8 +277,8 @@
   <Match>
     <Or>
       <Class name="~.*Exception$"/>
-      <Class name="dev.linqibin.commons.error.ApplicationException"/>
-      <Class name="dev.linqibin.commons.error.DomainException"/>
+      <Class name="dev.patra.tool.core.error.ApplicationException"/>
+      <Class name="dev.patra.tool.core.error.DomainException"/>
     </Or>
     <Bug pattern="CT_CONSTRUCTOR_THROW"/>
   </Match>
@@ -310,36 +310,36 @@
   <!-- 架构规则、容器支持等基础设施类在构造时初始化是合理设计 -->
   <Match>
     <Or>
-      <Class name="dev.linqibin.starter.test.archunit.HexagonalArchitectureRules"/>
-      <Class name="dev.linqibin.starter.test.container.rocketmq.RocketMQContainerSupport"/>
+      <Class name="dev.patra.tool.test.archunit.HexagonalArchitectureRules"/>
+      <Class name="dev.patra.tool.test.container.rocketmq.RocketMQContainerSupport"/>
     </Or>
     <Bug pattern="CT_CONSTRUCTOR_THROW"/>
   </Match>
 
   <!-- LoggingProgressListener 构造时验证参数是合理设计 -->
   <Match>
-    <Class name="dev.linqibin.starter.restclient.download.LoggingProgressListener"/>
+    <Class name="dev.patra.tool.httpclient.download.LoggingProgressListener"/>
     <Bug pattern="CT_CONSTRUCTOR_THROW"/>
   </Match>
 
   <!-- TypeReference 构造时反射获取类型参数可能抛异常，是标准泛型工具做法 -->
   <Match>
-    <Class name="dev.linqibin.commons.type.TypeReference"/>
+    <Class name="dev.patra.tool.core.type.TypeReference"/>
     <Bug pattern="CT_CONSTRUCTOR_THROW"/>
   </Match>
 
   <!-- DataType 内部枚举/常量类构造器做类型检查 -->
   <Match>
-    <Class name="~dev\.linqibin\.patra\.common\.model\.DataType\$.*"/>
+    <Class name="~dev\.patra\.common\.DataType\$.*"/>
     <Bug pattern="CT_CONSTRUCTOR_THROW"/>
   </Match>
 
   <!-- 基础设施批处理迭代器构造时初始化 JSON 流是合理设计 -->
   <Match>
     <Or>
-      <Class name="dev.linqibin.patra.catalog.infra.batch.organization.RorOrganizationParser$RorRecordIterator"/>
-      <Class name="dev.linqibin.patra.ingest.app.usecase.execution.strategy.builder.BatchScheduleBuilder"/>
-      <Class name="dev.linqibin.patra.ingest.infra.mapper.ProviderParameterMapperRegistry"/>
+      <Class name="dev.patra.catalog.infra.batch.organization.RorOrganizationParser$RorRecordIterator"/>
+      <Class name="dev.patra.ingest.app.usecase.execution.strategy.builder.BatchScheduleBuilder"/>
+      <Class name="dev.patra.ingest.infra.mapper.ProviderParameterMapperRegistry"/>
     </Or>
     <Bug pattern="CT_CONSTRUCTOR_THROW"/>
   </Match>
@@ -350,7 +350,7 @@
 
   <!-- Provenance starter 处理结果/适配器类：内部可变数据是设计意图 -->
   <Match>
-    <Package name="~dev\.linqibin\.patra\.starter\.provenance\..*"/>
+    <Package name="~dev\.patra\.ingest\.provenance\..*"/>
     <Or>
       <Bug pattern="EI_EXPOSE_REP"/>
       <Bug pattern="EI_EXPOSE_REP2"/>
@@ -359,7 +359,7 @@
 
   <!-- Expr 编译器内部类：内部状态暴露是设计意图 -->
   <Match>
-    <Package name="~dev\.linqibin\.patra\.starter\.expr\..*"/>
+    <Package name="~dev\.patra\.ingest\.expr\..*"/>
     <Or>
       <Bug pattern="EI_EXPOSE_REP"/>
       <Bug pattern="EI_EXPOSE_REP2"/>
@@ -368,7 +368,7 @@
 
   <!-- Security starter 基础设施类：持有注入的依赖是设计意图 -->
   <Match>
-    <Package name="~dev\.linqibin\.patra\.starter\.security(\..*)?"/>
+    <Package name="~dev\.patra\.tool\.security(\..*)?"/>
     <Or>
       <Bug pattern="EI_EXPOSE_REP"/>
       <Bug pattern="EI_EXPOSE_REP2"/>
@@ -377,7 +377,7 @@
 
   <!-- Gateway 代理失败处理：Advice 持有注入的全局处理器是设计意图 -->
   <Match>
-    <Package name="~dev\.linqibin\.patra\.gateway\.error(\..*)?"/>
+    <Package name="~dev\.patra\.gateway\.error(\..*)?"/>
     <Or>
       <Bug pattern="EI_EXPOSE_REP"/>
       <Bug pattern="EI_EXPOSE_REP2"/>
@@ -386,25 +386,16 @@
 
   <!-- Gateway 鉴权：配置类、转换器、头过滤器持有注入的会话存储、签名器、错误码组是设计意图 -->
   <Match>
-    <Package name="~dev\.linqibin\.patra\.gateway\.security(\..*)?"/>
+    <Package name="~dev\.patra\.gateway\.security(\..*)?"/>
     <Or>
       <Bug pattern="EI_EXPOSE_REP"/>
       <Bug pattern="EI_EXPOSE_REP2"/>
     </Or>
   </Match>
 
-  <!-- Commons 工具类：ObjectKeyContext、StorageLocation 等暴露集合是设计意图 -->
+  <!-- 工具层（patra-tool/*）：ObjectKeyContext、StorageLocation 等暴露集合、基础设施类持有注入依赖是设计意图 -->
   <Match>
-    <Package name="~dev\.linqibin\.commons\..*"/>
-    <Or>
-      <Bug pattern="EI_EXPOSE_REP"/>
-      <Bug pattern="EI_EXPOSE_REP2"/>
-    </Or>
-  </Match>
-
-  <!-- Starter 基础设施类暴露依赖是设计意图 -->
-  <Match>
-    <Package name="~dev\.linqibin\.starter\..*"/>
+    <Package name="~dev\.patra\.tool\..*"/>
     <Or>
       <Bug pattern="EI_EXPOSE_REP"/>
       <Bug pattern="EI_EXPOSE_REP2"/>
@@ -413,7 +404,7 @@
 
   <!-- Registry 查询/命令/结果 DTO：暴露可变集合是设计意图 -->
   <Match>
-    <Package name="~dev\.linqibin\.patra\.registry\..*"/>
+    <Package name="~dev\.patra\.registry\..*"/>
     <Or>
       <Bug pattern="EI_EXPOSE_REP"/>
       <Bug pattern="EI_EXPOSE_REP2"/>
@@ -422,7 +413,7 @@
 
   <!-- Catalog infra 批处理/集成类：内部可变数据是设计意图 -->
   <Match>
-    <Package name="~dev\.linqibin\.patra\.catalog\.infra\..*"/>
+    <Package name="~dev\.patra\.catalog\.infra\..*"/>
     <Or>
       <Bug pattern="EI_EXPOSE_REP"/>
       <Bug pattern="EI_EXPOSE_REP2"/>
@@ -431,7 +422,7 @@
 
   <!-- Ingest app 命令/结果/DTO 类：内部可变数据是设计意图 -->
   <Match>
-    <Package name="~dev\.linqibin\.patra\.ingest\.app\..*"/>
+    <Package name="~dev\.patra\.ingest\.app\..*"/>
     <Or>
       <Bug pattern="EI_EXPOSE_REP"/>
       <Bug pattern="EI_EXPOSE_REP2"/>
@@ -440,7 +431,7 @@
 
   <!-- Ingest domain port 内部类：MetadataRequest/RetryContext 暴露数组是设计意图 -->
   <Match>
-    <Package name="~dev\.linqibin\.patra\.ingest\.domain\..*"/>
+    <Package name="~dev\.patra\.ingest\.domain\..*"/>
     <Or>
       <Bug pattern="EI_EXPOSE_REP"/>
       <Bug pattern="EI_EXPOSE_REP2"/>
@@ -449,7 +440,7 @@
 
   <!-- Ingest infra 消息发布器：暴露依赖是设计意图 -->
   <Match>
-    <Package name="~dev\.linqibin\.patra\.ingest\.infra\..*"/>
+    <Package name="~dev\.patra\.ingest\.infra\..*"/>
     <Or>
       <Bug pattern="EI_EXPOSE_REP"/>
       <Bug pattern="EI_EXPOSE_REP2"/>
@@ -458,7 +449,7 @@
 
   <!-- ObjectStorage app 命令类 Builder 暴露字节数组是设计意图 -->
   <Match>
-    <Package name="~dev\.linqibin\.patra\.objectstorage\..*"/>
+    <Package name="~dev\.patra\.objectstorage\..*"/>
     <Or>
       <Bug pattern="EI_EXPOSE_REP"/>
       <Bug pattern="EI_EXPOSE_REP2"/>
@@ -468,8 +459,8 @@
   <!-- MS_EXPOSE_REP: 静态工厂单例暴露是设计意图 -->
   <Match>
     <Or>
-      <Class name="dev.linqibin.starter.test.container.initializer.RocketMQContainerInitializer"/>
-      <Class name="dev.linqibin.patra.catalog.infra.parser.support.SecureXmlInputFactory"/>
+      <Class name="dev.patra.tool.test.container.initializer.RocketMQContainerInitializer"/>
+      <Class name="dev.patra.catalog.infra.parser.support.SecureXmlInputFactory"/>
     </Or>
     <Bug pattern="MS_EXPOSE_REP"/>
   </Match>
@@ -570,8 +561,8 @@
 
   <Match>
     <Or>
-      <Class name="dev.linqibin.patra.starter.expr.compiler.DefaultExprCompiler"/>
-      <Class name="dev.linqibin.patra.ingest.infra.outbox.TechnicalRetryAdapter"/>
+      <Class name="dev.patra.ingest.expr.compiler.DefaultExprCompiler"/>
+      <Class name="dev.patra.ingest.infra.outbox.TechnicalRetryAdapter"/>
     </Or>
     <Bug pattern="DM_DEFAULT_ENCODING"/>
   </Match>
@@ -581,7 +572,7 @@
        ======================================================================== -->
 
   <Match>
-    <Package name="~dev\.linqibin\.patra\.ingest\.infra\.mapper\..*"/>
+    <Package name="~dev\.patra\.ingest\.infra\.mapper\..*"/>
     <Bug pattern="BC_UNCONFIRMED_CAST"/>
   </Match>
 
@@ -591,7 +582,7 @@
 
   <!-- AggregateRoot 的 transient 字段（领域事件列表等）在反序列化后由框架重新初始化 -->
   <Match>
-    <Class name="dev.linqibin.commons.domain.AggregateRoot"/>
+    <Class name="dev.patra.tool.core.domain.AggregateRoot"/>
     <Bug pattern="SE_TRANSIENT_FIELD_NOT_RESTORED"/>
   </Match>
 
@@ -602,7 +593,7 @@
   <!-- VenueRepositoryAdapter.computeIdentifierDiff: 遍历 Set 通过 Map.get() 查值
        是正确的用法，SpotBugs 将其误判为低效 Map 迭代 -->
   <Match>
-    <Class name="dev.linqibin.patra.catalog.infra.adapter.persistence.VenueRepositoryAdapter"/>
+    <Class name="dev.patra.catalog.infra.adapter.persistence.VenueRepositoryAdapter"/>
     <Bug pattern="WMI_WRONG_MAP_ITERATOR"/>
   </Match>
 
@@ -612,7 +603,7 @@
 
   <!-- SnowflakeIdGenerator: 时钟回拨时 wait() 一次等待时钟对齐，之后重新检查 -->
   <Match>
-    <Class name="dev.linqibin.starter.jpa.id.SnowflakeIdGenerator"/>
+    <Class name="dev.patra.tool.jpa.id.SnowflakeIdGenerator"/>
     <Bug pattern="WA_NOT_IN_LOOP"/>
   </Match>
 
@@ -623,7 +614,7 @@
   <!-- DefaultDownloadClient.writeStreamToFile: DownloadProgress[] 是 lambda 中
        修改外部变量的标准惯用法（规避 effectively final 限制），非无用对象 -->
   <Match>
-    <Class name="dev.linqibin.starter.restclient.download.DefaultDownloadClient"/>
+    <Class name="dev.patra.tool.httpclient.download.DefaultDownloadClient"/>
     <Bug pattern="UC_USELESS_OBJECT"/>
   </Match>
 
@@ -634,7 +625,7 @@
   <!-- PubmedPublicationProcessor.formatErrorMessage: 看似冗余的条件是
        防御性编程，确保逻辑意图明确 -->
   <Match>
-    <Class name="dev.linqibin.patra.starter.provenance.pubmed.processor.PubmedPublicationProcessor"/>
+    <Class name="dev.patra.ingest.provenance.pubmed.processor.PubmedPublicationProcessor"/>
     <Bug pattern="UC_USELESS_CONDITION"/>
   </Match>
 
@@ -643,7 +634,7 @@
        ======================================================================== -->
 
   <Match>
-    <Class name="dev.linqibin.patra.ingest.app.usecase.plan.window.PlanningWindowResolverImpl"/>
+    <Class name="dev.patra.ingest.app.usecase.plan.window.PlanningWindowResolverImpl"/>
     <Bug pattern="RpC_REPEATED_CONDITIONAL_TEST"/>
   </Match>
 
@@ -653,13 +644,13 @@
 
   <!-- StorageEndpointImpl.resolveIp: null 表示"解析失败"，语义上区别于"无 IP" -->
   <Match>
-    <Class name="dev.linqibin.patra.objectstorage.adapter.rest.internal.StorageEndpointImpl"/>
+    <Class name="dev.patra.objectstorage.adapter.rest.internal.StorageEndpointImpl"/>
     <Bug pattern="PZLA_PREFER_ZERO_LENGTH_ARRAYS"/>
   </Match>
 
   <!-- VenueBrowseReadAdapter.toArray: null 表示"不过滤"，语义上区别于"空过滤数组" -->
   <Match>
-    <Class name="dev.linqibin.patra.catalog.infra.adapter.read.VenueBrowseReadAdapter"/>
+    <Class name="dev.patra.catalog.infra.adapter.read.VenueBrowseReadAdapter"/>
     <Bug pattern="PZLA_PREFER_ZERO_LENGTH_ARRAYS"/>
   </Match>
 
@@ -670,7 +661,7 @@
   <!-- ExprJsonCodec.ExprDeserializer: reportInputMismatch 不保证抛出异常，
        SpotBugs 误判 valueNode 在此后可能为 null -->
   <Match>
-    <Class name="dev.linqibin.patra.expr.json.ExprJsonCodec$ExprDeserializer"/>
+    <Class name="dev.patra.ingest.expr.json.ExprJsonCodec$ExprDeserializer"/>
     <Bug pattern="NP_NULL_PARAM_DEREF"/>
   </Match>
 
@@ -680,7 +671,7 @@
 
   <!-- StorageMetadataRequestConverterImpl 是 MapStruct 生成的，不应手动修改 -->
   <Match>
-    <Class name="dev.linqibin.patra.ingest.infra.integration.storage.converter.StorageMetadataRequestConverterImpl"/>
+    <Class name="dev.patra.ingest.infra.integration.storage.converter.StorageMetadataRequestConverterImpl"/>
     <Bug pattern="NP_LOAD_OF_KNOWN_NULL_VALUE"/>
   </Match>
 
@@ -689,7 +680,7 @@
        ======================================================================== -->
 
   <Match>
-    <Class name="dev.linqibin.starter.jpa.autoconfig.HibernatePropertiesCustomizer"/>
+    <Class name="dev.patra.tool.jpa.autoconfig.HibernatePropertiesCustomizer"/>
     <Bug pattern="NM_SAME_SIMPLE_NAME_AS_INTERFACE"/>
   </Match>
 
@@ -699,7 +690,7 @@
 
   <!-- RorRecordIterator.next() 由 advance() 驱动，hasNext() 已确保非空 -->
   <Match>
-    <Class name="dev.linqibin.patra.catalog.infra.batch.organization.RorOrganizationParser$RorRecordIterator"/>
+    <Class name="dev.patra.catalog.infra.batch.organization.RorOrganizationParser$RorRecordIterator"/>
     <Bug pattern="IT_NO_SUCH_ELEMENT"/>
   </Match>
 
@@ -708,7 +699,7 @@
        ======================================================================== -->
 
   <Match>
-    <Class name="dev.linqibin.patra.catalog.domain.model.aggregate.PublicationAggregate"/>
+    <Class name="dev.patra.catalog.domain.model.aggregate.PublicationAggregate"/>
     <Bug pattern="DLS_DEAD_LOCAL_STORE"/>
   </Match>
 
@@ -719,7 +710,7 @@
   <!-- FtpStreamingDownloader.FtpInputStreamWrapper.close: FTP 断线后
        ftpClient 可能为 null，catch NPE 是必要的资源清理防御 -->
   <Match>
-    <Class name="dev.linqibin.starter.restclient.download.strategy.FtpStreamingDownloader$FtpInputStreamWrapper"/>
+    <Class name="dev.patra.tool.httpclient.download.strategy.FtpStreamingDownloader$FtpInputStreamWrapper"/>
     <Bug pattern="DCN_NULLPOINTER_EXCEPTION"/>
   </Match>
 
@@ -730,7 +721,7 @@
   <!-- PlanningWindowSupport.alignFloor: HOUR case 与 default 返回相同结果
        是有意设计——未知单位回退到 HOUR 对齐是正确的兜底逻辑 -->
   <Match>
-    <Class name="dev.linqibin.patra.ingest.app.usecase.plan.window.PlanningWindowSupport"/>
+    <Class name="dev.patra.ingest.app.usecase.plan.window.PlanningWindowSupport"/>
     <Bug pattern="DB_DUPLICATE_SWITCH_CLAUSES"/>
   </Match>
 
@@ -740,8 +731,8 @@
 
   <Match>
     <Or>
-      <Class name="dev.linqibin.patra.starter.expr.compiler.render.DefaultExprRenderer"/>
-      <Class name="dev.linqibin.patra.ingest.app.usecase.execution.session.ExecutionContextLoaderImpl"/>
+      <Class name="dev.patra.ingest.expr.compiler.render.DefaultExprRenderer"/>
+      <Class name="dev.patra.ingest.app.usecase.execution.session.ExecutionContextLoaderImpl"/>
     </Or>
     <Bug pattern="UPM_UNCALLED_PRIVATE_METHOD"/>
   </Match>
@@ -749,27 +740,5 @@
   <!-- ========================================================================
        CUSTOM EXCLUSIONS (Add project-specific exclusions below)
        ======================================================================== -->
-
-  <!-- ApplicationException: Constructor throws by design (exception class) -->
-  <Match>
-    <Class name="dev.linqibin.patra.common.error.ApplicationException"/>
-    <Bug pattern="CT_CONSTRUCTOR_THROW"/>
-  </Match>
-
-  <!-- JsonNormalizerResult: Internal result class, exposing hash material is intentional -->
-  <Match>
-    <Class name="dev.linqibin.patra.common.json.JsonNormalizer$Result"/>
-    <Method name="getHashMaterial"/>
-    <Bug pattern="EI_EXPOSE_REP"/>
-  </Match>
-
-  <!-- ObjectMapperProvider: Singleton pattern with static field by design -->
-  <Match>
-    <Class name="dev.linqibin.starter.core.json.ObjectMapperProvider"/>
-    <Or>
-      <Bug pattern="MS_EXPOSE_REP"/>
-      <Bug pattern="ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"/>
-    </Or>
-  </Match>
 
 </FindBugsFilter>

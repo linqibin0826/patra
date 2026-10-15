@@ -7,10 +7,10 @@
 #   Logging: 由 Agent 自动注入 trace_id/span_id 到 MDC
 
 # 主配置：可观测性核心配置和属性绑定
-dev.linqibin.starter.observability.autoconfigure.ObservabilityAutoConfiguration
+dev.patra.tool.observability.autoconfigure.ObservabilityAutoConfiguration
 
 # Micrometer 配置：MeterFilter + OTel Bridge
-dev.linqibin.starter.observability.autoconfigure.MicrometerAutoConfiguration
+dev.patra.tool.observability.autoconfigure.MicrometerAutoConfiguration
 
 # 拦截器配置：插件式架构
-dev.linqibin.starter.observability.autoconfigure.ObservationInterceptorsAutoConfiguration
+dev.patra.tool.observability.autoconfigure.ObservationInterceptorsAutoConfiguration
