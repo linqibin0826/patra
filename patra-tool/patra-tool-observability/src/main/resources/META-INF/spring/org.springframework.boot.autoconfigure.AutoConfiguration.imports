@@ -1,16 +1,3 @@
-# Patra Observability Auto-Configuration
-# 自动配置类列表（按加载顺序排列）
-#
-# 架构说明：
-#   Tracing: 由 OTel Java Agent 通过 -javaagent 参数自动处理（零代码侵入）
-#   Metrics: 由 OTel Agent + Micrometer Bridge 导出到 OTel Collector
-#   Logging: 由 Agent 自动注入 trace_id/span_id 到 MDC
-
-# 主配置：可观测性核心配置和属性绑定
 dev.patra.tool.observability.autoconfigure.ObservabilityAutoConfiguration
-
-# Micrometer 配置：MeterFilter + OTel Bridge
-dev.patra.tool.observability.autoconfigure.MicrometerAutoConfiguration
-
-# 拦截器配置：插件式架构
-dev.patra.tool.observability.autoconfigure.ObservationInterceptorsAutoConfiguration
+dev.patra.tool.observability.autoconfigure.ObservabilityMicrometerAutoConfiguration
+dev.patra.tool.observability.autoconfigure.ObservabilityErrorAutoConfiguration

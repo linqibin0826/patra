@@ -25,18 +25,18 @@ import org.springframework.context.annotation.Bean;
 /// @see dev.patra.tool.web.error.pipeline.ResolutionInterceptor
 @AutoConfiguration(after = ObservabilityAutoConfiguration.class)
 @ConditionalOnProperty(
-    prefix = "linqibin.starter.observability",
+    prefix = "patra.observability",
     name = "enabled",
     havingValue = "true",
     matchIfMissing = true)
 @ConditionalOnClass(name = "dev.patra.tool.web.error.pipeline.ResolutionInterceptor")
-public class ObservationInterceptorsAutoConfiguration {
+public final class ObservabilityErrorAutoConfiguration {
 
   private static final Logger log =
-      LoggerFactory.getLogger(ObservationInterceptorsAutoConfiguration.class);
+      LoggerFactory.getLogger(ObservabilityErrorAutoConfiguration.class);
 
   /// 构造函数。
-  public ObservationInterceptorsAutoConfiguration() {
+  public ObservabilityErrorAutoConfiguration() {
     log.info("初始化可观测性拦截器自动配置");
   }
 

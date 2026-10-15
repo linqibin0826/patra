@@ -27,17 +27,6 @@ spring:
       connect-timeout: 10s
       timeout: 5s
 
-logging:
-  config: classpath:dev/patra/tool/observability/logback-patra.xml
-  file:
-    path: ${PATRA_LOG_DIR:logs}
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics
-
 patra:
   web:
     error:

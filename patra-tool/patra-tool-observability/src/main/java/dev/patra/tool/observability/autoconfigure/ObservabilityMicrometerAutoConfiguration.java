@@ -1,7 +1,6 @@
 package dev.patra.tool.observability.autoconfigure;
 
 import dev.patra.tool.core.PatraOrders;
-import dev.patra.tool.observability.config.ObservabilityProperties;
 import dev.patra.tool.observability.filter.CommonTagsMeterFilter;
 import dev.patra.tool.observability.filter.HighCardinalityMeterFilter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -44,16 +43,17 @@ import org.springframework.core.annotation.Order;
 @ConditionalOnClass({MeterRegistry.class, ObservationRegistry.class})
 @EnableConfigurationProperties(ObservabilityProperties.class)
 @ConditionalOnProperty(
-    prefix = "linqibin.starter.observability.metrics",
+    prefix = "patra.observability.metrics",
     name = "enabled",
     havingValue = "true",
     matchIfMissing = true)
-public class MicrometerAutoConfiguration {
+public final class ObservabilityMicrometerAutoConfiguration {
 
-  private static final Logger log = LoggerFactory.getLogger(MicrometerAutoConfiguration.class);
+  private static final Logger log =
+      LoggerFactory.getLogger(ObservabilityMicrometerAutoConfiguration.class);
 
   /// 构造函数。
-  public MicrometerAutoConfiguration() {
+  public ObservabilityMicrometerAutoConfiguration() {
     log.info("初始化 Micrometer 自动配置");
   }
 
@@ -134,9 +134,9 @@ public class MicrometerAutoConfiguration {
   ///
   /// 自动获取优先级：
   ///
-  /// - applicationName：`linqibin.starter.observability.application-name` >
+  /// - applicationName：`patra.observability.application-name` >
   // `spring.application.name`
-  /// - environment：`linqibin.starter.observability.environment` >
+  /// - environment：`patra.observability.environment` >
   // `spring.profiles.active`（"default" 映射为
   // "dev"）
   ///
@@ -151,20 +151,20 @@ public class MicrometerAutoConfiguration {
       @Value("${spring.application.name:}") String springAppName,
       @Value("${spring.profiles.active:default}") String springActiveProfile) {
     // applicationName 优先级：显式配置 > spring.application.name
-    String applicationName = properties.getApplicationName();
+    String applicationName = properties.applicationName();
     if (applicationName == null || applicationName.isEmpty()) {
       applicationName = springAppName;
     }
     // environment 优先级：显式配置 > spring.profiles.active（"default" 映射为 "dev"）
-    String environment = properties.getEnvironment();
+    String environment = properties.environment();
     if (environment == null || environment.isEmpty()) {
       environment = "default".equals(springActiveProfile) ? "dev" : springActiveProfile;
     }
     return new CommonTagsMeterFilter(
         applicationName,
         environment,
-        properties.getRegion(),
-        properties.getCluster(),
-        properties.getMetrics().getCommonTags());
+        properties.region(),
+        properties.cluster(),
+        properties.metrics().commonTags());
   }
 }

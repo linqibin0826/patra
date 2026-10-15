@@ -54,28 +54,6 @@ spring:
 # ========================================
 # Logging Configuration
 # ========================================
-logging:
-  config: classpath:dev/patra/tool/observability/logback-patra.xml
-  file:
-    # Centralized log directory in project root
-    path: ${PATRA_LOG_DIR:logs}
-
-# ========================================
-# Actuator & Management Endpoints
-# ========================================
-# 注意：Metrics 通过 OTel Agent + Micrometer Bridge 导出到 OTel Collector
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics
-  endpoint:
-    health:
-      show-details: when-authorized
-  metrics:
-    tags:
-      application: ${spring.application.name}
-
 patra:
   web:
     error:

@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
 
 /// OTel MeterRegistry Bridge 单元测试。
 ///
-/// 测试 `MicrometerAutoConfiguration.otelMeterRegistryBridge()` 方法的核心逻辑：
+/// 测试 `ObservabilityMicrometerAutoConfiguration.otelMeterRegistryBridge()` 方法的核心逻辑：
 ///
 /// - 从 `Metrics.globalRegistry` 提取 OpenTelemetryMeterRegistry
 /// - 从 globalRegistry 移除以避免重复计数

@@ -1,6 +1,5 @@
 package dev.patra.tool.observability.autoconfigure;
 
-import dev.patra.tool.observability.config.ObservabilityProperties;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.observation.ObservationRegistry;
 import io.micrometer.observation.aop.ObservedAspect;
@@ -29,11 +28,11 @@ import org.springframework.context.annotation.Configuration;
 @ConditionalOnClass({ObservationRegistry.class, MeterRegistry.class})
 @EnableConfigurationProperties(ObservabilityProperties.class)
 @ConditionalOnProperty(
-    prefix = "linqibin.starter.observability",
+    prefix = "patra.observability",
     name = "enabled",
     havingValue = "true",
     matchIfMissing = true)
-public class ObservabilityAutoConfiguration {
+public final class ObservabilityAutoConfiguration {
 
   private static final Logger log = LoggerFactory.getLogger(ObservabilityAutoConfiguration.class);
 
@@ -43,8 +42,8 @@ public class ObservabilityAutoConfiguration {
   public ObservabilityAutoConfiguration(ObservabilityProperties properties) {
     log.info(
         "初始化 Patra 可观测性自动配置 [环境: {}, 应用: {}]",
-        properties.getEnvironment(),
-        properties.getApplicationName() != null ? properties.getApplicationName() : "未配置");
+        properties.environment(),
+        properties.applicationName() != null ? properties.applicationName() : "未配置");
   }
 
   /// 创建或注入 ObservationRegistry。

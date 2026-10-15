@@ -78,28 +78,6 @@ task:
     # When true, fail immediately on first error instead of continuing
     fail-fast: ${TASK_EXECUTION_FAIL_FAST:false}
 
-logging:
-  config: classpath:dev/patra/tool/observability/logback-patra.xml
-  file:
-    # Centralized log directory in project root
-    path: ${PATRA_LOG_DIR:logs}
-
-# ----------------------------------------------------------------------------
-# Actuator & Monitoring Configuration
-# ----------------------------------------------------------------------------
-# 注意：Metrics 通过 OTel Agent + Micrometer Bridge 导出到 OTel Collector
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics
-  endpoint:
-    health:
-      show-details: when-authorized
-  metrics:
-    tags:
-      application: ${spring.application.name}
-
 ingest:
   error-catalog:
     registry-config-not-found: ING-1201

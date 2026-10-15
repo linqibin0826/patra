@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- 由 ObservabilityDefaultsPostProcessor 以 logging.config 默认属性指向；服务 yml 配 logging.config 即可整体换掉 -->
 <configuration>
     <!-- Include Spring Boot's logback extensions for %clr and %wEx support -->
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
@@ -57,11 +58,5 @@
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE"/>
     </root>
-
-    <!-- Application Logger: DEBUG level (only for dev.patra.* classes) -->
-    <logger name="dev.patra" level="DEBUG" additivity="false">
-        <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="FILE"/>
-    </logger>
 
 </configuration>
