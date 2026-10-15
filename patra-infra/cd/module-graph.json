@@ -11,19 +11,6 @@
     ],
     "modules": [
         {
-            "dir": "linqibin-commons/linqibin-commons-storage",
-            "project": ":linqibin-commons:linqibin-commons-storage",
-            "unit": "foundation",
-            "impacts": [
-                "catalog",
-                "foundation",
-                "ingest"
-            ],
-            "tasks": [
-                "check"
-            ]
-        },
-        {
             "dir": "linqibin-commons/linqibin-spring-boot-starter-redisson",
             "project": ":linqibin-commons:linqibin-spring-boot-starter-redisson",
             "unit": "foundation",
