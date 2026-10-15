@@ -6,10 +6,7 @@ import dev.patra.tool.cqrs.CommandInterceptor;
 import dev.patra.tool.cqrs.CommandInterceptor.CommandExecutor;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
-import org.springframework.stereotype.Component;
 
 /// 指标采集拦截器。
 ///
@@ -28,15 +25,8 @@ import org.springframework.stereotype.Component;
 /// ## 条件装配
 ///
 /// - 仅当容器中存在 `MeterRegistry` Bean 时启用
-/// - 通过配置 `linqibin.starter.core.command-bus.interceptors.metrics=false` 禁用
-@Component
+/// - 通过配置 `patra.cqrs.interceptors.metrics=false` 禁用
 @Order(PatraOrders.CQRS_INTERCEPTOR_METRICS)
-@ConditionalOnBean(MeterRegistry.class)
-@ConditionalOnProperty(
-    prefix = "linqibin.starter.core.command-bus.interceptors",
-    name = "metrics",
-    havingValue = "true",
-    matchIfMissing = true)
 public class MetricsCommandInterceptor implements CommandInterceptor {
 
   private static final String METRIC_NAME = "command.execution";

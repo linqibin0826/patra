@@ -6,11 +6,7 @@ import dev.patra.tool.cqrs.CommandInterceptor;
 import dev.patra.tool.cqrs.CommandInterceptor.CommandExecutor;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationRegistry;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
-import org.springframework.stereotype.Component;
 
 /// 追踪拦截器。
 ///
@@ -30,21 +26,13 @@ import org.springframework.stereotype.Component;
 ///
 /// - 仅当类路径中存在 `ObservationRegistry` 时启用
 /// - 仅当容器中存在 `ObservationRegistry` Bean 时启用
-/// - 通过配置 `linqibin.starter.core.command-bus.interceptors.tracing=false` 禁用
+/// - 通过配置 `patra.cqrs.interceptors.tracing=false` 禁用
 ///
 /// ## Order 说明
 ///
 /// Order=50 确保追踪拦截器在最外层，使 Span 覆盖整个命令执行周期，
 /// 包括日志和指标采集。
-@Component
 @Order(PatraOrders.CQRS_INTERCEPTOR_TRACING)
-@ConditionalOnClass(ObservationRegistry.class)
-@ConditionalOnBean(ObservationRegistry.class)
-@ConditionalOnProperty(
-    prefix = "linqibin.starter.core.command-bus.interceptors",
-    name = "tracing",
-    havingValue = "true",
-    matchIfMissing = true)
 public class TracingCommandInterceptor implements CommandInterceptor {
 
   private static final String OBSERVATION_NAME = "command";

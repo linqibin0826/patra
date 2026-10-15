@@ -7,9 +7,7 @@ import dev.patra.tool.cqrs.CommandInterceptor;
 import dev.patra.tool.cqrs.CommandInterceptor.CommandExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
-import org.springframework.stereotype.Component;
 
 /// 日志记录拦截器。
 ///
@@ -26,14 +24,8 @@ import org.springframework.stereotype.Component;
 ///
 /// ## 启用/禁用
 ///
-/// 通过配置 `linqibin.starter.core.command-bus.interceptors.logging=false` 禁用。
-@Component
+/// 通过配置 `patra.cqrs.interceptors.logging=false` 禁用。
 @Order(PatraOrders.CQRS_INTERCEPTOR_LOGGING)
-@ConditionalOnProperty(
-    prefix = "linqibin.starter.core.command-bus.interceptors",
-    name = "logging",
-    havingValue = "true",
-    matchIfMissing = true)
 public class LoggingCommandInterceptor implements CommandInterceptor {
 
   private static final Logger log = LoggerFactory.getLogger(LoggingCommandInterceptor.class);

@@ -1,2 +1,1 @@
-dev.patra.tool.cqrs.CommandBusAutoConfiguration
-dev.patra.tool.cqrs.interceptor.CommandInterceptorAutoConfiguration
+dev.patra.tool.cqrs.autoconfigure.CqrsAutoConfiguration
