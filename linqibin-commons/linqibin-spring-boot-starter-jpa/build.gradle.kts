@@ -10,9 +10,8 @@
  */
 
 plugins {
-    id("linqibin.module-commons")
-    id("linqibin.boundary-check")
-    id("linqibin.spring-boot-starter")
+    id("patra.boundary-check")
+    id("patra.spring-starter")
 }
 
 dependencies {

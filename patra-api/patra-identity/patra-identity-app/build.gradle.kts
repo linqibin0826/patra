@@ -5,8 +5,7 @@
  */
 
 plugins {
-    id("linqibin.module-patra")
-    id("linqibin.hexagonal-app")
+    id("patra.hexagonal-app")
 }
 
 dependencies {

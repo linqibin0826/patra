@@ -15,10 +15,13 @@ plugins {
     java
     jacoco
     `java-test-fixtures`
-    id("linqibin.spotless")
-    id("linqibin.spotbugs")
-    id("linqibin.dependency-management")
+    id("patra.spotless")
+    id("patra.spotbugs")
+    id("patra.dependency-management")
 }
+
+// 全仓统一 group：patra-tool/*、patra-api/** 都是 dev.patra（决策 B）
+group = "dev.patra"
 
 // ==================== Version Catalog 访问 ====================
 val libs = the<org.gradle.api.artifacts.VersionCatalogsExtension>().named("libs")
@@ -37,9 +40,9 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 // ==================== Spotless / SpotBugs ====================
-// 已抽出为独立 convention plugins：linqibin.spotless / linqibin.spotbugs
-// 见 build-logic/src/main/kotlin/linqibin.{spotless,spotbugs}.gradle.kts
-// 由本文件 plugins 块通过 id("linqibin.spotless") / id("linqibin.spotbugs") 引入。
+// 已抽出为独立 convention plugins：patra.spotless / patra.spotbugs
+// 见 build-logic/src/main/kotlin/patra.{spotless,spotbugs}.gradle.kts
+// 由本文件 plugins 块通过 id("patra.spotless") / id("patra.spotbugs") 引入。
 
 // ==================== JaCoCo ====================
 jacoco {

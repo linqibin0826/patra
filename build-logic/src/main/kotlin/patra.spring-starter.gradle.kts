@@ -6,7 +6,7 @@
  */
 
 plugins {
-    id("linqibin.spring-library")
+    id("patra.spring-library")
 }
 
 dependencies {

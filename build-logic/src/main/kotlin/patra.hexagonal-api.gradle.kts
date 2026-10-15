@@ -11,7 +11,7 @@
  */
 
 plugins {
-    id("linqibin.java-library")
+    id("patra.java-library")
 }
 
 dependencies {

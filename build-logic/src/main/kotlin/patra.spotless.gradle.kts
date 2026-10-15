@@ -1,5 +1,5 @@
 // Spotless Convention Plugin
-// 应用于所有 Java 模块（通过 linqibin.java-base 间接 apply）。
+// 应用于所有 Java 模块（通过 patra.java-base 间接 apply）。
 // Java：googleJavaFormat 1.29.0（默认 2 空格缩进，与 .editorconfig 对齐）+ importOrder +
 //   removeUnusedImports + trimTrailingWhitespace + endWithNewline；
 //   targetExclude build/ + generated/ 不参与格式化（MapStruct / annotation processor 产物）。
