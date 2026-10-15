@@ -24,22 +24,6 @@
             ]
         },
         {
-            "dir": "linqibin-commons/linqibin-spring-boot-starter-http-interface",
-            "project": ":linqibin-commons:linqibin-spring-boot-starter-http-interface",
-            "unit": "foundation",
-            "impacts": [
-                "catalog",
-                "foundation",
-                "gateway",
-                "identity",
-                "ingest"
-            ],
-            "tasks": [
-                "check",
-                "integrationTest"
-            ]
-        },
-        {
             "dir": "linqibin-commons/linqibin-spring-boot-starter-redisson",
             "project": ":linqibin-commons:linqibin-spring-boot-starter-redisson",
             "unit": "foundation",
@@ -553,6 +537,8 @@
             "impacts": [
                 "catalog",
                 "foundation",
+                "gateway",
+                "identity",
                 "ingest"
             ],
             "tasks": [

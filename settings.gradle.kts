@@ -72,7 +72,6 @@ mapParent(":patra-tool", "patra-tool")
 // ==================== linqibin-commons ====================
 // 决策 E：嵌套 path 与物理目录一一对应
 includeAt(":linqibin-commons:linqibin-commons-storage", "linqibin-commons/linqibin-commons-storage")
-includeAt(":linqibin-commons:linqibin-spring-boot-starter-http-interface", "linqibin-commons/linqibin-spring-boot-starter-http-interface")
 includeAt(":linqibin-commons:linqibin-spring-boot-starter-redisson", "linqibin-commons/linqibin-spring-boot-starter-redisson")
 mapParent(":linqibin-commons", "linqibin-commons")
 

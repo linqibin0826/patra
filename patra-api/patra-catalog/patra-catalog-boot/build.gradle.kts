@@ -21,7 +21,7 @@ dependencies {
     implementation(project(":patra-tool:patra-tool-web"))
 
     // HTTP Interface 客户端
-    implementation(project(":linqibin-commons:linqibin-spring-boot-starter-http-interface"))
+    implementation(project(":patra-tool:patra-tool-http-client"))
 
     // Actuator
     implementation("org.springframework.boot:spring-boot-starter-actuator")

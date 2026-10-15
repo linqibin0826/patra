@@ -16,11 +16,9 @@ import dev.patra.ingest.expr.compiler.snapshot.convert.SnapshotAssembler;
 import dev.patra.ingest.expr.compiler.transform.TransformRegistry;
 import dev.patra.registry.api.endpoint.ExprEndpoint;
 import dev.patra.registry.api.endpoint.ProvenanceEndpoint;
-import dev.patra.tool.httpclient.config.HttpInterfaceAutoConfiguration;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -45,7 +43,7 @@ import tools.jackson.databind.json.JsonMapper;
 ///
 /// ### 条件装配
 ///
-/// - 依赖 {@link HttpInterfaceAutoConfiguration} 和 {@link ExprFunctionAutoConfiguration} 先完成
+/// - 依赖 `HttpInterfaceAutoConfiguration` 和 {@link ExprFunctionAutoConfiguration} 先完成
 ///   - Registry API 集成可通过 `patra.starter.expr.compiler.registry-api.enabled=false` 禁用
 ///   - 编译器整体可通过 `patra.starter.expr.compiler.enabled=false` 禁用
 ///
@@ -57,8 +55,9 @@ import tools.jackson.databind.json.JsonMapper;
 /// @see CompilerProperties
 /// @see ExprModeProperties
 /// @see ExprCompiler
-@AutoConfiguration
-@AutoConfigureAfter({HttpInterfaceAutoConfiguration.class, ExprFunctionAutoConfiguration.class})
+@AutoConfiguration(
+    after = ExprFunctionAutoConfiguration.class,
+    afterName = "dev.patra.tool.httpclient.config.HttpInterfaceAutoConfiguration")
 @EnableConfigurationProperties({CompilerProperties.class, ExprModeProperties.class})
 public class ExprCompilerAutoConfiguration {
 

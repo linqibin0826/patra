@@ -15,8 +15,8 @@ dependencies {
     api(project(":patra-tool:patra-tool-core"))
     api(project(":patra-api:patra-registry:patra-registry-api"))
 
-    // HTTP Interface（可选）
-    compileOnly(project(":linqibin-commons:linqibin-spring-boot-starter-http-interface"))
+    // Spring Boot 自动配置与日志（原先经 http-interface 的 compileOnly 间接拿到）
+    api("org.springframework.boot:spring-boot-starter")
 
     // Micrometer（可选）
     compileOnly("io.micrometer:micrometer-core")

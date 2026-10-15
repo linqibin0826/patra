@@ -15,7 +15,7 @@ dependencies {
     api(project(":patra-tool:patra-tool-jpa"))
     api(project(":patra-api:patra-expr-kernel"))
     api(project(":patra-starters:patra-spring-boot-starter-expr"))
-    api(project(":linqibin-commons:linqibin-spring-boot-starter-http-interface"))
+    api(project(":patra-tool:patra-tool-http-client"))
     api(project(":patra-starters:patra-spring-boot-starter-provenance"))
     api(project(":patra-api:patra-registry:patra-registry-api"))
     api(project(":patra-tool:patra-tool-object-storage"))

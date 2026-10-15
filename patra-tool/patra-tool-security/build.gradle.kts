@@ -29,20 +29,19 @@ dependencies {
     // 审计人接入：classpath 上有 starter-jpa 时才生效
     compileOnly(project(":patra-tool:patra-tool-jpa"))
 
-    // 内部客户端转发断言：classpath 上有 http-interface starter 时才生效
-    compileOnly(project(":linqibin-commons:linqibin-spring-boot-starter-http-interface"))
+    // 内部客户端转发断言：classpath 上有 patra-tool-http-client 时才生效
+    compileOnly(project(":patra-tool:patra-tool-http-client"))
 
     // 测试支持（testFixtures）：没有它，使用方的 @WebMvcTest 里没有安全过滤器
     "testFixturesApi"("org.springframework.boot:spring-boot-security-test")
 
     // 测试依赖
     testImplementation(project(":patra-tool:patra-tool-test"))
-    // 转发拦截器的单元测试要能看到 InternalCallInterceptor
-    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-http-interface"))
+    // 转发拦截器的单元测试与集成测试要能看到 InternalCallInterceptor
+    testImplementation(project(":patra-tool:patra-tool-http-client"))
 
-    // 集成测试要测审计列和转发，需要 starter-jpa 与 http-interface starter
+    // 集成测试要测审计列，需要 starter-jpa
     "integrationTestImplementation"(project(":patra-tool:patra-tool-jpa"))
-    "integrationTestImplementation"(project(":linqibin-commons:linqibin-spring-boot-starter-http-interface"))
 }
 
 // 生成一对身份断言的签名密钥：私钥写进 -PkeyOut 指定的文件（0600），公钥打到标准输出
