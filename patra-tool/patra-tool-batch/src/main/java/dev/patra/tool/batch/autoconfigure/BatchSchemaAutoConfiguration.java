@@ -17,11 +17,10 @@ import org.springframework.context.annotation.Bean;
 /// ## 配置选项
 ///
 /// ```yaml
-/// linqibin:
-///   starter:
-///     batch:
-///       schema:
-///         initialize: true  # 默认启用
+/// patra:
+///   batch:
+///     schema:
+///       initialize: true  # 默认启用
 /// ```
 ///
 /// ## 禁用场景

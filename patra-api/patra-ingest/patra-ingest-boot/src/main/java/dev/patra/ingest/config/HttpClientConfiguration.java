@@ -26,8 +26,8 @@ import org.springframework.web.client.RestClient;
 /// 需要在 `application.yml` 中配置服务分组：
 ///
 /// ```yaml
-/// linqibin:
-///   starter:
+/// patra:
+///   http-client:
 ///     http-interface:
 ///       groups:
 ///         registry:
