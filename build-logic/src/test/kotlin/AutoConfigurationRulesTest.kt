@@ -129,4 +129,26 @@ class AutoConfigurationRulesTest {
         """)
         assertThat(check()).isEmpty()
     }
+
+    @Test
+    fun class_prefix_match_ignores_case() {
+        src("$pkgDir/autoconfigure/OpenApiAutoConfiguration.java", """
+            package dev.patra.tool.demo.autoconfigure;
+            @AutoConfiguration
+            public final class OpenApiAutoConfiguration {}
+        """)
+        imports("dev.patra.tool.demo.autoconfigure.OpenApiAutoConfiguration")
+        test("$pkgDir/autoconfigure/OpenApiAutoConfigurationTest.java")
+        val problems = AutoConfigurationRules.check(
+            AutoConfigurationRules.Input(
+                mainJava = File(module, "src/main/java"),
+                importsFile = File(module, "src/main/resources/META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports"),
+                testJava = File(module, "src/test/java"),
+                packageSegment = "demo",
+                classPrefix = "Openapi",
+                configPrefix = "patra.demo",
+            ),
+        )
+        assertThat(problems).isEmpty()
+    }
 }

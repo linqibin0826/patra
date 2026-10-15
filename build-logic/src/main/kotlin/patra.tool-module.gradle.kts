@@ -94,4 +94,8 @@ tasks.register<AutoConfigurationCheck>("checkAutoConfiguration") {
     testJava.set(layout.projectDirectory.dir("src/test/java"))
     sourceFiles.from(fileTree("src/main/java"), fileTree("src/test/java"), layout.projectDirectory.file(importsPath))
 }
-// tasks.named("check") { dependsOn("checkAutoConfiguration") } 在 Task 27 挂上
+pluginManager.withPlugin("java-base") {
+    tasks.named("check") {
+        dependsOn("checkAutoConfiguration")
+    }
+}

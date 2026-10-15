@@ -25,7 +25,7 @@ object AutoConfigurationRules {
     private val TOP_LEVEL_TYPE = Regex("""^(?:public\s+)?(?:final\s+|abstract\s+)*(?:class|interface|enum|record)\s+(\w+)""", RegexOption.MULTILINE)
     private val RECORD = Regex("""\brecord\s+\w+\s*\(""")
 
-    /// 返回违规描述列表，空表示通过。
+    /// 返回违规描述列表，空表示通过。类名前缀按模块名推出，比较时忽略大小写（`OpenApi` 对 `openapi`）。
     fun check(input: Input): List<String> {
         val problems = mutableListOf<String>()
         val autoConfigurePackage = "dev.patra.tool.${input.packageSegment}.autoconfigure"
@@ -60,7 +60,7 @@ object AutoConfigurationRules {
                 declared += fqn
                 if (!inAutoConfigure) problems += "$rel 自动配置类必须在 $autoConfigurePackage（规则 a）"
                 if (PUBLIC_FINAL_CLASS.find(code)?.groupValues?.get(1) != name) problems += "$rel 自动配置类必须声明为 public final class（规则 a）"
-                if (!Regex("^${input.classPrefix}\\w*AutoConfiguration$").matches(name)) problems += "$rel 自动配置类名必须形如 ${input.classPrefix}<Aspect>AutoConfiguration（规则 a）"
+                if (!Regex("^(?i:${Regex.escape(input.classPrefix)})\\w*AutoConfiguration$").matches(name)) problems += "$rel 自动配置类名必须形如 ${input.classPrefix}<Aspect>AutoConfiguration（规则 a）"
                 if (fqn !in imports) problems += "$rel 没有登记在 AutoConfiguration.imports（规则 a）"
                 val testPath = "${pkg.replace('.', '/')}/${name}Test.java"
                 if (input.testJava?.resolve(testPath)?.isFile != true) problems += "$rel 缺少契约测试 src/test/java/$testPath（规则 a）"

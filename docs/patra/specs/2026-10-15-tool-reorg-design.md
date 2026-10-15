@@ -443,7 +443,85 @@ R4 违规：:patra-tool:patra-tool-jpa
 
 ### 4.9 实测记录
 
-（实施阶段回填：四条规则 + 删测试的失败信息原文、R5 探针条数与处理；PAP-80 的 AC 要求记进工程 spec。）
+2026-10-15 在主检出实测，每条都是「改 → 对应的 check 子任务失败 → 贴首段失败信息 → `git checkout --` 撤销 → 同一任务通过」。跑的是 `check` 直接依赖的那个子任务（`checkToolBoundary` / `checkToolDependencies` / `checkDomainPurity` / `checkAutoConfiguration`），结论与跑整个 `check` 相同。
+
+**R1 工具不依赖业务**（改动：`patra-tool-web/build.gradle.kts` 加 `implementation(project(":patra-api:patra-catalog:patra-catalog-api"))`）
+
+`./gradlew :patra-tool:patra-tool-web:checkToolBoundary` 失败，首段信息原文：
+
+```
+Execution failed for task ':patra-tool:patra-tool-web:checkToolBoundary' (registered by plugin 'patra.tool-module').
+> R1 违规：:patra-tool:patra-tool-web
+    implementation -> :patra-api:patra-catalog:patra-catalog-api
+  工具模块不得依赖 patra-api/* 下的任何模块；业务契约放回对应服务。
+```
+
+撤销后同一任务通过。
+
+**R2 工具间只指向 core**（改动：`patra-tool-jpa/build.gradle.kts` 把 `compileOnly(project(":patra-tool:patra-tool-web"))` 改成 `api(...)`）
+
+`./gradlew :patra-tool:patra-tool-jpa:checkToolDependencies` 失败，首段信息原文：
+
+```
+Execution failed for task ':patra-tool:patra-tool-jpa:checkToolDependencies' (registered by plugin 'patra.tool-module').
+> R2 违规：:patra-tool:patra-tool-jpa
+    api -> :patra-tool:patra-tool-web
+    testImplementation -> :patra-tool:patra-tool-web
+  工具间硬依赖只允许指向 :patra-tool:patra-tool-core（白名单：security -> web）。要协作改成 compileOnly，并在自动配置类上加 @ConditionalOnClass。
+```
+
+撤销后同一任务通过。
+
+**R3 domain 编译类路径白名单**（改动：`patra-catalog-domain/build.gradle.kts` 加 `implementation("org.springframework:spring-context")`）
+
+`./gradlew :patra-api:patra-catalog:patra-catalog-domain:checkDomainPurity` 失败，首段信息原文：
+
+```
+Execution failed for task ':patra-api:patra-catalog:patra-catalog-domain:checkDomainPurity' (registered by plugin 'patra.hexagonal-domain').
+> R3 违规：:patra-api:patra-catalog:patra-catalog-domain
+    compileClasspath 含 commons-logging:commons-logging
+    compileClasspath 含 io.micrometer:micrometer-commons
+    compileClasspath 含 io.micrometer:micrometer-observation
+    compileClasspath 含 org.jspecify:jspecify
+    compileClasspath 含 org.springframework:spring-aop
+    compileClasspath 含 org.springframework:spring-beans
+    compileClasspath 含 org.springframework:spring-context
+    compileClasspath 含 org.springframework:spring-core
+    compileClasspath 含 org.springframework:spring-expression
+  domain 编译类路径只允许：dev.patra:patra-tool-core, dev.patra:patra-common, org.projectlombok:lombok, com.fasterxml.jackson.core:jackson-annotations, tools.jackson.core:jackson-core, tools.jackson.core:jackson-databind, cn.hutool:hutool-core, org.mapstruct:mapstruct
+```
+
+撤销后同一任务通过。
+
+**R4 自动配置写法**（改动：`patra-tool-cqrs` 的 `LoggingCommandInterceptor` 加 `@Component`）
+
+`./gradlew :patra-tool:patra-tool-cqrs:checkAutoConfiguration` 失败，首段信息原文：
+
+```
+Execution failed for task ':patra-tool:patra-tool-cqrs:checkAutoConfiguration' (registered by plugin 'patra.tool-module').
+> R4 违规：:patra-tool:patra-tool-cqrs
+    dev/patra/tool/cqrs/interceptor/LoggingCommandInterceptor.java:29 类上有 @Component（规则 c：工具模块不用构造型注解）
+  工具模块的 bean 一律由 autoconfigure 包里的自动配置注册，每个自动配置类配同名 ApplicationContextRunner 测试。
+```
+
+撤销后同一任务通过。
+
+**删掉契约测试**（改动：`git rm patra-tool/patra-tool-web/src/test/java/dev/patra/tool/web/autoconfigure/WebJsonAutoConfigurationTest.java`）
+
+`./gradlew :patra-tool:patra-tool-web:checkAutoConfiguration` 失败，首段信息原文：
+
+```
+Execution failed for task ':patra-tool:patra-tool-web:checkAutoConfiguration' (registered by plugin 'patra.tool-module').
+> R4 违规：:patra-tool:patra-tool-web
+    dev/patra/tool/web/autoconfigure/WebJsonAutoConfiguration.java 缺少契约测试 src/test/java/dev/patra/tool/web/autoconfigure/WebJsonAutoConfigurationTest.java（规则 a）
+  工具模块的 bean 一律由 autoconfigure 包里的自动配置注册，每个自动配置类配同名 ApplicationContextRunner 测试。
+```
+
+撤销后同一任务通过。
+
+**R4 挂 `check` 前后的余量**：Task 16 实现规则时全仓 121 条违规（规则 a 75 / b 1 / c 3 / d 5 / e 4 / g 33，11 个模块各有、core 零）；PAP-81 逐模块重写后降到 1 条（`OpenApiAutoConfiguration` 与模块名推出的前缀 `Openapi` 只差大小写），规则 a 的前缀比较改为忽略大小写后为 0，随后 `checkAutoConfiguration` 挂上 `check`。
+
+**R5**：见 Task 28 回填。
 
 ## 5. PAP-81 starter 模板与默认配置
 
