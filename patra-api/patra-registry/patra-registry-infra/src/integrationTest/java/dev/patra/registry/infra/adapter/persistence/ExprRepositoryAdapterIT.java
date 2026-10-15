@@ -21,8 +21,8 @@ import dev.patra.registry.infra.adapter.persistence.entity.expr.ProvExprCapabili
 import dev.patra.registry.infra.adapter.persistence.entity.expr.ProvExprRenderRuleEntity;
 import dev.patra.registry.infra.adapter.persistence.entity.provenance.ProvenanceEntity;
 import dev.patra.registry.infra.config.RegistryITPostgreSQLContainerInitializer;
-import dev.patra.tool.jpa.autoconfig.HibernatePropertiesCustomizer;
-import dev.patra.tool.jpa.autoconfig.JpaAuditingConfig;
+import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
+import dev.patra.tool.jpa.autoconfigure.PatraHibernatePropertiesCustomizer;
 import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -69,7 +69,11 @@ import tools.jackson.databind.json.JsonMapper;
 @ContextConfiguration(initializers = RegistryITPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ImportAutoConfiguration({FlywayAutoConfiguration.class, JacksonAutoConfiguration.class})
-@Import({ExprRepositoryAdapter.class, JpaAuditingConfig.class, HibernatePropertiesCustomizer.class})
+@Import({
+  ExprRepositoryAdapter.class,
+  JpaAuditingConfiguration.class,
+  PatraHibernatePropertiesCustomizer.class
+})
 @ComponentScan(basePackages = "dev.patra.registry.infra.adapter.persistence.converter.mapper")
 @ActiveProfiles("test")
 @DisplayName("ExprRepositoryAdapter 集成测试")

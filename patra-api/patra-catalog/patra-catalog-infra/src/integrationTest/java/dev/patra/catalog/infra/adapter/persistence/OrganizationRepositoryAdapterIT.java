@@ -23,7 +23,7 @@ import dev.patra.catalog.infra.persistence.dao.OrganizationLocationDao;
 import dev.patra.catalog.infra.persistence.dao.OrganizationNameDao;
 import dev.patra.catalog.infra.persistence.dao.OrganizationRelationDao;
 import dev.patra.catalog.infra.persistence.entity.OrganizationExternalIdEntity;
-import dev.patra.tool.jpa.autoconfig.JpaAuditingConfig;
+import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.json.JsonColumnCodec;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
@@ -53,7 +53,7 @@ import org.springframework.test.context.ContextConfiguration;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
   OrganizationRepositoryAdapter.class,
-  JpaAuditingConfig.class,
+  JpaAuditingConfiguration.class,
   JacksonAutoConfiguration.class,
   JsonColumnCodec.class
 })

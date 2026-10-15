@@ -11,7 +11,7 @@ import dev.patra.catalog.infra.persistence.entity.JcrRatingEntity;
 import dev.patra.catalog.infra.persistence.entity.ScopusRatingEntity;
 import dev.patra.catalog.infra.persistence.entity.VenueEntity;
 import dev.patra.common.ProvenanceCode;
-import dev.patra.tool.jpa.autoconfig.JpaAuditingConfig;
+import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import dev.patra.tool.jpa.json.JsonColumnCodec;
 import java.util.List;
@@ -44,7 +44,7 @@ import org.springframework.test.context.ContextConfiguration;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
   VenueEnrichmentReadAdapter.class,
-  JpaAuditingConfig.class,
+  JpaAuditingConfiguration.class,
   JacksonAutoConfiguration.class,
   JsonColumnCodec.class
 })

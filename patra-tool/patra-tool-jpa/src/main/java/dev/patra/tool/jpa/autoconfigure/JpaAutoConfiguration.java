@@ -1,4 +1,4 @@
-package dev.patra.tool.jpa.autoconfig;
+package dev.patra.tool.jpa.autoconfigure;
 
 import dev.patra.tool.core.error.codes.HttpStdErrors;
 import dev.patra.tool.jpa.error.contributor.JpaErrorMappingContributor;
@@ -7,6 +7,8 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,8 +35,14 @@ import tools.jackson.databind.json.JsonMapper;
     after = HibernateJpaAutoConfiguration.class,
     afterName = "dev.patra.tool.web.autoconfigure.WebErrorAutoConfiguration")
 @ConditionalOnClass({JpaRepository.class})
-@Import({JpaAuditingConfig.class, HibernatePropertiesCustomizer.class})
-public class JpaAutoConfiguration {
+@ConditionalOnProperty(
+    prefix = "patra.jpa",
+    name = "enabled",
+    havingValue = "true",
+    matchIfMissing = true)
+@EnableConfigurationProperties(JpaProperties.class)
+@Import({JpaAuditingConfiguration.class, PatraHibernatePropertiesCustomizer.class})
+public final class JpaAutoConfiguration {
 
   /// JPA / Hibernate / SQL 异常到错误码的映射，只在类路径上有 patra-tool-web、且 web 的错误引擎已注册错误码组时注册
   /// （非 Web 应用里 web 的自动配置不生效，这里也跟着不注册）。
@@ -62,7 +70,7 @@ public class JpaAutoConfiguration {
   /// @return JSON 列转换器
   @Bean
   @ConditionalOnMissingBean
-  public JsonColumnCodec jsonColumnCodec(JsonMapper jsonMapper) {
+  JsonColumnCodec jsonColumnCodec(JsonMapper jsonMapper) {
     return new JsonColumnCodec(jsonMapper);
   }
 }

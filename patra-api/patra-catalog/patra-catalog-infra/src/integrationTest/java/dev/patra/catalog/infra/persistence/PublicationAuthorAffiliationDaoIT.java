@@ -7,7 +7,7 @@ import dev.patra.catalog.domain.model.enums.DisambiguationStatus;
 import dev.patra.catalog.infra.config.CatalogITPostgreSQLContainerInitializer;
 import dev.patra.catalog.infra.persistence.dao.PublicationAuthorAffiliationDao;
 import dev.patra.catalog.infra.persistence.entity.PublicationAuthorAffiliationEntity;
-import dev.patra.tool.jpa.autoconfig.JpaAuditingConfig;
+import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -47,7 +47,7 @@ import org.springframework.test.context.ContextConfiguration;
 @DataJpaTest
 @ContextConfiguration(initializers = CatalogITPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(JpaAuditingConfig.class)
+@Import(JpaAuditingConfiguration.class)
 @ActiveProfiles("test")
 @DisplayName("PublicationAuthorAffiliationDao 集成测试")
 class PublicationAuthorAffiliationDaoIT {

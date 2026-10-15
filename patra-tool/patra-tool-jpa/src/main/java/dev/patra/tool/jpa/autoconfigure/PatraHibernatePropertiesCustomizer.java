@@ -1,9 +1,10 @@
-package dev.patra.tool.jpa.autoconfig;
+package dev.patra.tool.jpa.autoconfigure;
 
 import dev.patra.tool.jpa.json.Jackson3JsonFormatMapper;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.cfg.AvailableSettings;
+import org.springframework.boot.hibernate.autoconfigure.HibernatePropertiesCustomizer;
 import org.springframework.context.annotation.Configuration;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -50,8 +51,7 @@ import tools.jackson.databind.json.JsonMapper;
 /// @see Jackson3JsonFormatMapper
 @Configuration
 @RequiredArgsConstructor
-public class HibernatePropertiesCustomizer
-    implements org.springframework.boot.hibernate.autoconfigure.HibernatePropertiesCustomizer {
+public class PatraHibernatePropertiesCustomizer implements HibernatePropertiesCustomizer {
 
   /// 默认批量大小。
   private static final int DEFAULT_BATCH_SIZE = 500;

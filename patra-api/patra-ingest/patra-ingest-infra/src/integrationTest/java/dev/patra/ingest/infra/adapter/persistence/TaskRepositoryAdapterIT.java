@@ -13,8 +13,8 @@ import dev.patra.ingest.infra.adapter.persistence.entity.PlanSliceEntity;
 import dev.patra.ingest.infra.adapter.persistence.entity.ScheduleInstanceEntity;
 import dev.patra.ingest.infra.adapter.persistence.entity.TaskEntity;
 import dev.patra.ingest.infra.config.IngestITPostgreSQLContainerInitializer;
-import dev.patra.tool.jpa.autoconfig.HibernatePropertiesCustomizer;
-import dev.patra.tool.jpa.autoconfig.JpaAuditingConfig;
+import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
+import dev.patra.tool.jpa.autoconfigure.PatraHibernatePropertiesCustomizer;
 import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import dev.patra.tool.jpa.json.JsonColumnCodec;
 import java.time.Instant;
@@ -55,8 +55,8 @@ import tools.jackson.databind.node.ObjectNode;
 @Import({
   TaskRepositoryAdapter.class,
   JacksonAutoConfiguration.class,
-  JpaAuditingConfig.class,
-  HibernatePropertiesCustomizer.class,
+  JpaAuditingConfiguration.class,
+  PatraHibernatePropertiesCustomizer.class,
   JsonColumnCodec.class
 })
 @ComponentScan(basePackages = "dev.patra.ingest.infra.adapter.persistence.converter.mapper")

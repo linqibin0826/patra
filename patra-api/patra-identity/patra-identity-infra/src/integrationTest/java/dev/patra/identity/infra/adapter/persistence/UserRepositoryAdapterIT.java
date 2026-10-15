@@ -9,8 +9,8 @@ import dev.patra.identity.domain.model.aggregate.User;
 import dev.patra.identity.domain.model.enums.UserStatus;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.infra.config.IdentityITPostgreSQLContainerInitializer;
-import dev.patra.tool.jpa.autoconfig.HibernatePropertiesCustomizer;
-import dev.patra.tool.jpa.autoconfig.JpaAuditingConfig;
+import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
+import dev.patra.tool.jpa.autoconfigure.PatraHibernatePropertiesCustomizer;
 import java.time.Instant;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -40,7 +40,11 @@ import org.springframework.transaction.support.TransactionTemplate;
 @ContextConfiguration(initializers = IdentityITPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ImportAutoConfiguration({FlywayAutoConfiguration.class, JacksonAutoConfiguration.class})
-@Import({UserRepositoryAdapter.class, JpaAuditingConfig.class, HibernatePropertiesCustomizer.class})
+@Import({
+  UserRepositoryAdapter.class,
+  JpaAuditingConfiguration.class,
+  PatraHibernatePropertiesCustomizer.class
+})
 @ComponentScan(basePackages = "dev.patra.identity.infra.adapter.persistence.converter.mapper")
 @ActiveProfiles("test")
 @DisplayName("UserRepositoryAdapter 集成测试")

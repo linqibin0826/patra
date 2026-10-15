@@ -6,8 +6,8 @@ import dev.patra.registry.domain.model.vo.reference.ReferenceStandard;
 import dev.patra.registry.infra.adapter.persistence.dao.reference.ReferenceStandardDao;
 import dev.patra.registry.infra.adapter.persistence.entity.reference.ReferenceStandardEntity;
 import dev.patra.registry.infra.config.RegistryITPostgreSQLContainerInitializer;
-import dev.patra.tool.jpa.autoconfig.HibernatePropertiesCustomizer;
-import dev.patra.tool.jpa.autoconfig.JpaAuditingConfig;
+import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
+import dev.patra.tool.jpa.autoconfigure.PatraHibernatePropertiesCustomizer;
 import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,8 +37,8 @@ import org.springframework.test.context.ContextConfiguration;
 @ImportAutoConfiguration({FlywayAutoConfiguration.class, JacksonAutoConfiguration.class})
 @Import({
   ReferenceStandardRepositoryAdapter.class,
-  JpaAuditingConfig.class,
-  HibernatePropertiesCustomizer.class
+  JpaAuditingConfiguration.class,
+  PatraHibernatePropertiesCustomizer.class
 })
 @ComponentScan(basePackages = "dev.patra.registry.infra.adapter.persistence.converter.mapper")
 @ActiveProfiles("test")

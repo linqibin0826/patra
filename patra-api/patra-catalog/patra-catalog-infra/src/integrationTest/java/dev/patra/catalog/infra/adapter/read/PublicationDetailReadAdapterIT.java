@@ -19,7 +19,7 @@ import dev.patra.catalog.infra.persistence.entity.PublicationMetadataEntity;
 import dev.patra.catalog.infra.persistence.entity.PublicationTypeEntity;
 import dev.patra.catalog.infra.persistence.entity.VenueEntity;
 import dev.patra.common.PublicationIdentifierType;
-import dev.patra.tool.jpa.autoconfig.JpaAuditingConfig;
+import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import java.util.List;
 import java.util.Optional;
@@ -39,7 +39,7 @@ import org.springframework.test.context.ContextConfiguration;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
   PublicationDetailReadAdapter.class,
-  JpaAuditingConfig.class,
+  JpaAuditingConfiguration.class,
   JacksonAutoConfiguration.class
 })
 @ActiveProfiles("test")

@@ -12,8 +12,8 @@ import dev.patra.registry.infra.adapter.persistence.entity.dictionary.SysDictIte
 import dev.patra.registry.infra.adapter.persistence.entity.dictionary.SysDictItemEntity;
 import dev.patra.registry.infra.adapter.persistence.entity.dictionary.SysDictTypeEntity;
 import dev.patra.registry.infra.config.RegistryITPostgreSQLContainerInitializer;
-import dev.patra.tool.jpa.autoconfig.HibernatePropertiesCustomizer;
-import dev.patra.tool.jpa.autoconfig.JpaAuditingConfig;
+import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
+import dev.patra.tool.jpa.autoconfigure.PatraHibernatePropertiesCustomizer;
 import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import jakarta.persistence.EntityManager;
 import java.util.List;
@@ -47,8 +47,8 @@ import org.springframework.test.context.ContextConfiguration;
 @ImportAutoConfiguration({FlywayAutoConfiguration.class, JacksonAutoConfiguration.class})
 @Import({
   DictionaryRepositoryAdapter.class,
-  JpaAuditingConfig.class,
-  HibernatePropertiesCustomizer.class
+  JpaAuditingConfiguration.class,
+  PatraHibernatePropertiesCustomizer.class
 })
 @ComponentScan(basePackages = "dev.patra.registry.infra.adapter.persistence.converter.mapper")
 @ActiveProfiles("test")

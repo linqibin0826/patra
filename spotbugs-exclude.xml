@@ -674,15 +674,6 @@
   </Match>
 
   <!-- ========================================================================
-       NM_SAME_SIMPLE_NAME_AS_INTERFACE: Spring 标准"同名实现类"命名模式
-       ======================================================================== -->
-
-  <Match>
-    <Class name="dev.patra.tool.jpa.autoconfig.HibernatePropertiesCustomizer"/>
-    <Bug pattern="NM_SAME_SIMPLE_NAME_AS_INTERFACE"/>
-  </Match>
-
-  <!-- ========================================================================
        IT_NO_SUCH_ELEMENT: 调用 next() 前已通过 hasNext() 保证 nextRecord != null
        ======================================================================== -->
 

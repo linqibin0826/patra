@@ -1,4 +1,4 @@
-package dev.patra.tool.jpa.autoconfig;
+package dev.patra.tool.jpa.autoconfigure;
 
 import dev.patra.tool.jpa.audit.CurrentAuditorProvider;
 import java.time.Clock;
@@ -30,7 +30,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 /// @since 0.1.0
 @Configuration
 @EnableJpaAuditing(auditorAwareRef = "auditorAware", dateTimeProviderRef = "dateTimeProvider")
-public class JpaAuditingConfig {
+public class JpaAuditingConfiguration {
 
   /// 默认的审计用户提供者。
   ///
@@ -55,22 +55,11 @@ public class JpaAuditingConfig {
   /// 使用注入的 `Clock` 实例获取当前时间，便于测试时控制时间。
   /// 如果未配置 Clock Bean，则使用系统默认时钟。
   ///
-  /// @param clock 时钟实例（可选）
+  /// @param clock 容器里的时钟（launch 提供）；没有就用系统 UTC 时钟
   /// @return 日期时间提供者
   @Bean
   @ConditionalOnMissingBean
-  public DateTimeProvider dateTimeProvider(Optional<Clock> clock) {
-    return () -> Optional.of(Instant.now(clock.orElse(Clock.systemDefaultZone())));
-  }
-
-  /// 默认时钟 Bean。
-  ///
-  /// 应用可以覆盖此 Bean 提供固定时钟用于测试。
-  ///
-  /// @return 系统默认时钟
-  @Bean
-  @ConditionalOnMissingBean
-  public Clock clock() {
-    return Clock.systemDefaultZone();
+  public DateTimeProvider dateTimeProvider(ObjectProvider<Clock> clock) {
+    return () -> Optional.of(Instant.now(clock.getIfAvailable(Clock::systemUTC)));
   }
 }

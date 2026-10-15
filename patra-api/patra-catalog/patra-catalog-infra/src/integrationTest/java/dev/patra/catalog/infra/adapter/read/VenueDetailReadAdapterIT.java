@@ -7,7 +7,7 @@ import dev.patra.catalog.domain.model.read.portal.VenueDetailReadModel.JcrRating
 import dev.patra.catalog.infra.config.CatalogITPostgreSQLContainerInitializer;
 import dev.patra.catalog.infra.persistence.entity.JcrRatingEntity;
 import dev.patra.catalog.infra.persistence.entity.VenueEntity;
-import dev.patra.tool.jpa.autoconfig.JpaAuditingConfig;
+import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -24,7 +24,7 @@ import org.springframework.test.context.ContextConfiguration;
 @DataJpaTest
 @ContextConfiguration(initializers = CatalogITPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({VenueDetailReadAdapter.class, JpaAuditingConfig.class})
+@Import({VenueDetailReadAdapter.class, JpaAuditingConfiguration.class})
 @ActiveProfiles("test")
 @DisplayName("VenueDetailReadAdapter 期刊详情查询集成测试")
 class VenueDetailReadAdapterIT {

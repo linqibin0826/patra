@@ -17,7 +17,7 @@ import org.springframework.test.context.ContextConfiguration;
 
 /// JPA 审计集成测试：容器里有操作人提供者时的行为。
 ///
-/// 测试应用会像真实服务一样把 `JpaAuditingConfig` 提前扫描进来，
+/// 测试应用会像真实服务一样把 `JpaAuditingConfiguration` 提前扫描进来，
 /// 这里验证后注册的提供者仍然生效。
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ContextConfiguration(initializers = PostgreSQLContainerInitializer.class)

@@ -26,8 +26,8 @@ import dev.patra.registry.infra.adapter.persistence.entity.provenance.ProvRetryC
 import dev.patra.registry.infra.adapter.persistence.entity.provenance.ProvWindowOffsetCfgEntity;
 import dev.patra.registry.infra.adapter.persistence.entity.provenance.ProvenanceEntity;
 import dev.patra.registry.infra.config.RegistryITPostgreSQLContainerInitializer;
-import dev.patra.tool.jpa.autoconfig.HibernatePropertiesCustomizer;
-import dev.patra.tool.jpa.autoconfig.JpaAuditingConfig;
+import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
+import dev.patra.tool.jpa.autoconfigure.PatraHibernatePropertiesCustomizer;
 import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -76,8 +76,8 @@ import org.springframework.test.context.ContextConfiguration;
 @ImportAutoConfiguration({FlywayAutoConfiguration.class, JacksonAutoConfiguration.class})
 @Import({
   ProvenanceConfigRepositoryAdapter.class,
-  JpaAuditingConfig.class,
-  HibernatePropertiesCustomizer.class
+  JpaAuditingConfiguration.class,
+  PatraHibernatePropertiesCustomizer.class
 })
 @ComponentScan(basePackages = "dev.patra.registry.infra.adapter.persistence.converter.mapper")
 @ActiveProfiles("test")

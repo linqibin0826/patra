@@ -25,7 +25,7 @@ import dev.patra.catalog.infra.persistence.entity.MeshDescriptorEntity;
 import dev.patra.catalog.infra.persistence.entity.MeshEntryCombinationEntity;
 import dev.patra.catalog.infra.persistence.entity.MeshEntryTermEntity;
 import dev.patra.catalog.infra.persistence.entity.MeshTreeNumberEntity;
-import dev.patra.tool.jpa.autoconfig.JpaAuditingConfig;
+import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.json.JsonColumnCodec;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -65,7 +65,7 @@ import org.springframework.test.context.ContextConfiguration;
 @Import({
   MeshDescriptorItemWriter.class,
   MeshDescriptorRepositoryAdapter.class,
-  JpaAuditingConfig.class,
+  JpaAuditingConfiguration.class,
   JacksonAutoConfiguration.class,
   JsonColumnCodec.class
 })

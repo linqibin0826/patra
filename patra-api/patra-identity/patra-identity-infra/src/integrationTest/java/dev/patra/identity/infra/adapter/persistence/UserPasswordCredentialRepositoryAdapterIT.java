@@ -8,8 +8,8 @@ import dev.patra.identity.domain.model.aggregate.UserPasswordCredential;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.PasswordHash;
 import dev.patra.identity.infra.config.IdentityITPostgreSQLContainerInitializer;
-import dev.patra.tool.jpa.autoconfig.HibernatePropertiesCustomizer;
-import dev.patra.tool.jpa.autoconfig.JpaAuditingConfig;
+import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
+import dev.patra.tool.jpa.autoconfigure.PatraHibernatePropertiesCustomizer;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,8 +32,8 @@ import org.springframework.test.context.ContextConfiguration;
 @Import({
   UserRepositoryAdapter.class,
   UserPasswordCredentialRepositoryAdapter.class,
-  JpaAuditingConfig.class,
-  HibernatePropertiesCustomizer.class
+  JpaAuditingConfiguration.class,
+  PatraHibernatePropertiesCustomizer.class
 })
 @ComponentScan(basePackages = "dev.patra.identity.infra.adapter.persistence.converter.mapper")
 @ActiveProfiles("test")

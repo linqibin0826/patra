@@ -23,8 +23,8 @@ import dev.patra.catalog.infra.persistence.dao.PublicationAlternativeAbstractDao
 import dev.patra.catalog.infra.persistence.entity.PublicationAbstractEntity;
 import dev.patra.catalog.infra.persistence.entity.PublicationAlternativeAbstractEntity;
 import dev.patra.common.ProvenanceCode;
-import dev.patra.tool.jpa.autoconfig.HibernatePropertiesCustomizer;
-import dev.patra.tool.jpa.autoconfig.JpaAuditingConfig;
+import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
+import dev.patra.tool.jpa.autoconfigure.PatraHibernatePropertiesCustomizer;
 import dev.patra.tool.jpa.json.Jackson3JsonFormatMapper;
 import dev.patra.tool.jpa.json.JsonColumnCodec;
 import jakarta.persistence.EntityManager;
@@ -60,7 +60,7 @@ import tools.jackson.databind.ser.std.StdSerializer;
 /// - 读路径两条都要证：Entity → Domain（Hibernate FormatMapper 反序列化）
 ///   与 `structured_sections::text` → `PublicationDetailReadAdapter`（Jackson 3 ObjectMapper）
 ///
-/// **为什么显式 `@Import(HibernatePropertiesCustomizer.class)`**：
+/// **为什么显式 `@Import(PatraHibernatePropertiesCustomizer.class)`**：
 ///
 /// `@DataJpaTest` 只加载白名单内的自动配置，starter-jpa 的 `JpaAutoConfiguration`
 /// 不在其中——实测默认切片下 Hibernate 挑的是内置的
@@ -79,8 +79,8 @@ import tools.jackson.databind.ser.std.StdSerializer;
 @Import({
   PublicationRepositoryAdapter.class,
   PublicationDetailReadAdapter.class,
-  HibernatePropertiesCustomizer.class,
-  JpaAuditingConfig.class,
+  PatraHibernatePropertiesCustomizer.class,
+  JpaAuditingConfiguration.class,
   JacksonAutoConfiguration.class,
   JsonColumnCodec.class
 })

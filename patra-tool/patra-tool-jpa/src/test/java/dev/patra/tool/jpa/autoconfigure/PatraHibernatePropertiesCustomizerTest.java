@@ -1,4 +1,4 @@
-package dev.patra.tool.jpa.autoconfig;
+package dev.patra.tool.jpa.autoconfigure;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -17,8 +17,8 @@ import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.module.SimpleModule;
 
 /// HibernatePropertiesCustomizer 单元测试：JSON 列的 FormatMapper 使用注入的容器 `JsonMapper`。
-@DisplayName("HibernatePropertiesCustomizer 单元测试")
-class HibernatePropertiesCustomizerTest {
+@DisplayName("PatraHibernatePropertiesCustomizer 单元测试")
+class PatraHibernatePropertiesCustomizerTest {
 
   /// 只有测试模块知道怎么序列化的类型。
   record Tagged(String name) {}
@@ -46,7 +46,7 @@ class HibernatePropertiesCustomizerTest {
   /// @return Hibernate 属性里的 JSON FormatMapper
   private static FormatMapper customizeAndGetFormatMapper(JsonMapper jsonMapper) {
     Map<String, Object> properties = new HashMap<>();
-    new HibernatePropertiesCustomizer(jsonMapper).customize(properties);
+    new PatraHibernatePropertiesCustomizer(jsonMapper).customize(properties);
     Object formatMapper = properties.get(AvailableSettings.JSON_FORMAT_MAPPER);
     assertThat(formatMapper).isInstanceOf(Jackson3JsonFormatMapper.class);
     return (FormatMapper) formatMapper;

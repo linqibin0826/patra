@@ -1,4 +1,4 @@
-package dev.patra.tool.jpa.autoconfig;
+package dev.patra.tool.jpa.autoconfigure;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -10,11 +10,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.data.domain.AuditorAware;
 
-/// JpaAuditingConfig 单元测试：默认审计人怎么接入 CurrentAuditorProvider。
-@DisplayName("JpaAuditingConfig 单元测试")
-class JpaAuditingConfigTest {
+/// JpaAuditingConfiguration 单元测试：默认审计人怎么接入 CurrentAuditorProvider。
+@DisplayName("JpaAuditingConfiguration 单元测试")
+class JpaAuditingConfigurationTest {
 
-  private final JpaAuditingConfig config = new JpaAuditingConfig();
+  private final JpaAuditingConfiguration config = new JpaAuditingConfiguration();
   private final DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
 
   @Test

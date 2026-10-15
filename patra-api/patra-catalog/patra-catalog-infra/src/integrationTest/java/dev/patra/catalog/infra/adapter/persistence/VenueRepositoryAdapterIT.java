@@ -16,7 +16,7 @@ import dev.patra.catalog.infra.config.CatalogITPostgreSQLContainerInitializer;
 import dev.patra.catalog.infra.persistence.dao.VenueDao;
 import dev.patra.catalog.infra.persistence.dao.VenueIdentifierDao;
 import dev.patra.common.ProvenanceCode;
-import dev.patra.tool.jpa.autoconfig.JpaAuditingConfig;
+import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.json.JsonColumnCodec;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -53,7 +53,7 @@ import org.springframework.test.context.ContextConfiguration;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
   VenueRepositoryAdapter.class,
-  JpaAuditingConfig.class,
+  JpaAuditingConfiguration.class,
   JacksonAutoConfiguration.class,
   JsonColumnCodec.class
 })

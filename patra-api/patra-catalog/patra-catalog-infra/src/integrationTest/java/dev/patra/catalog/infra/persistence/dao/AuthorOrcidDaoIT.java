@@ -3,7 +3,7 @@ package dev.patra.catalog.infra.persistence.dao;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.catalog.infra.config.CatalogITPostgreSQLContainerInitializer;
-import dev.patra.tool.jpa.autoconfig.JpaAuditingConfig;
+import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -31,7 +31,7 @@ import org.springframework.test.context.ContextConfiguration;
 @DataJpaTest
 @ContextConfiguration(initializers = CatalogITPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(JpaAuditingConfig.class)
+@Import(JpaAuditingConfiguration.class)
 @ActiveProfiles("test")
 @DisplayName("AuthorOrcidDao#findAuthorIdsByOrcidIn 集成测试")
 class AuthorOrcidDaoIT {

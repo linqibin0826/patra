@@ -16,7 +16,7 @@ import dev.patra.catalog.infra.persistence.entity.PublicationAuthorEntity;
 import dev.patra.catalog.infra.persistence.entity.PublicationEntity;
 import dev.patra.catalog.infra.persistence.entity.PublicationTypeEntity;
 import dev.patra.catalog.infra.persistence.entity.VenueEntity;
-import dev.patra.tool.jpa.autoconfig.JpaAuditingConfig;
+import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
 import java.util.List;
@@ -37,7 +37,7 @@ import org.springframework.test.context.ContextConfiguration;
 @DataJpaTest
 @ContextConfiguration(initializers = CatalogITPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({PublicationSearchReadAdapter.class, JpaAuditingConfig.class})
+@Import({PublicationSearchReadAdapter.class, JpaAuditingConfiguration.class})
 @ActiveProfiles("test")
 @DisplayName("PublicationSearchReadAdapter 文献检索集成测试")
 class PublicationSearchReadAdapterIT {

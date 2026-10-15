@@ -7,7 +7,7 @@ import dev.patra.catalog.domain.model.vo.mesh.MeshUI;
 import dev.patra.catalog.infra.config.CatalogITPostgreSQLContainerInitializer;
 import dev.patra.catalog.infra.persistence.dao.MeshQualifierDao;
 import dev.patra.catalog.infra.persistence.entity.MeshQualifierEntity;
-import dev.patra.tool.jpa.autoconfig.JpaAuditingConfig;
+import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.json.JsonColumnCodec;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -49,7 +49,7 @@ import org.springframework.test.context.ContextConfiguration;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
   MeshQualifierRepositoryAdapter.class,
-  JpaAuditingConfig.class,
+  JpaAuditingConfiguration.class,
   JacksonAutoConfiguration.class,
   JsonColumnCodec.class
 })

@@ -17,7 +17,7 @@ import dev.patra.catalog.infra.persistence.dao.MeshDescriptorDao;
 import dev.patra.catalog.infra.persistence.dao.MeshEntryCombinationDao;
 import dev.patra.catalog.infra.persistence.dao.MeshEntryTermDao;
 import dev.patra.catalog.infra.persistence.dao.MeshTreeNumberDao;
-import dev.patra.tool.jpa.autoconfig.JpaAuditingConfig;
+import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.json.JsonColumnCodec;
 import java.util.List;
 import java.util.Map;
@@ -52,7 +52,7 @@ import org.springframework.test.context.ContextConfiguration;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
   MeshDescriptorRepositoryAdapter.class,
-  JpaAuditingConfig.class,
+  JpaAuditingConfiguration.class,
   JacksonAutoConfiguration.class,
   JsonColumnCodec.class
 })

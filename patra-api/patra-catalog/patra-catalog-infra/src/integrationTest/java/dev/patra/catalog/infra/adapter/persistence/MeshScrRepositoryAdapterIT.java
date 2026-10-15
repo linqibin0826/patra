@@ -18,7 +18,7 @@ import dev.patra.catalog.infra.persistence.dao.MeshScrHeadingMappedToDao;
 import dev.patra.catalog.infra.persistence.dao.MeshScrIndexingInfoDao;
 import dev.patra.catalog.infra.persistence.dao.MeshScrPharmacologicalActionDao;
 import dev.patra.catalog.infra.persistence.dao.MeshScrSourceDao;
-import dev.patra.tool.jpa.autoconfig.JpaAuditingConfig;
+import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.json.JsonColumnCodec;
 import java.util.List;
 import java.util.Map;
@@ -53,7 +53,7 @@ import org.springframework.test.context.ContextConfiguration;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
   MeshScrRepositoryAdapter.class,
-  JpaAuditingConfig.class,
+  JpaAuditingConfiguration.class,
   JacksonAutoConfiguration.class,
   JsonColumnCodec.class
 })
