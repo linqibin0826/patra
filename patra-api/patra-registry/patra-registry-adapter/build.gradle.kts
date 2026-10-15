@@ -11,11 +11,11 @@ plugins {
 dependencies {
     api(project(":patra-api:patra-registry:patra-registry-app"))
     api(project(":patra-api:patra-registry:patra-registry-api"))
-    api(project(":linqibin-commons:linqibin-spring-boot-starter-web"))
+    api(project(":patra-tool:patra-tool-web"))
 
     // MapStruct 由 patra.hexagonal-adapter 插件提供
     // annotationProcessor 由 patra.java-base 插件提供
 
     // 测试依赖
-    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
+    testImplementation(project(":patra-tool:patra-tool-test"))
 }

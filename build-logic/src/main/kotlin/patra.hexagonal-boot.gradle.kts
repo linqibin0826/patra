@@ -70,9 +70,9 @@ tasks.bootRun {
 
 dependencies {
     // Nacos 接入：服务发现、配置中心、启动器 PatraApplication（starter 里统一注入连接设置）
-    implementation(project(":patra-starters:patra-spring-boot-starter-nacos"))
+    implementation(project(":patra-tool:patra-tool-launch"))
 
     // 测试依赖
-    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
+    testImplementation(project(":patra-tool:patra-tool-test"))
     testImplementation(libs.findLibrary("testcontainers-jdbc").get())
 }

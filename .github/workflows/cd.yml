@@ -23,8 +23,7 @@ on:
     branches: [main]
     paths:
       - 'patra-api/**'
-      - 'linqibin-commons/**'
-      - 'patra-starters/**'
+      - 'patra-tool/**'
       - 'build-logic/**'
       - 'gradle/**'
       - 'settings.gradle.kts'
@@ -105,7 +104,7 @@ jobs:
           persist-credentials: false
       # CD 不等 CI：直推 main 时 CI 的检查可能还没跑完，推送前在这里再查一次，坏配置不进 Nacos
       - name: 🔎 检查配置文件（NacosConfigFilesTest）
-        run: ./gradlew :patra-starters:patra-spring-boot-starter-nacos:test --tests '*NacosConfigFilesTest'
+        run: ./gradlew :patra-tool:patra-tool-launch:test --tests '*NacosConfigFilesTest'
       - name: 🧩 推送 Nacos 配置（全量同步；账号从 runner 用户的 ~/.patra/secrets/nacos-push.env 读）
         run: bash patra-infra/scripts/nacos-push.sh
 

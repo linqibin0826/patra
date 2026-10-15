@@ -19,5 +19,5 @@ dependencies {
     // Hibernate Validator 由 patra.hexagonal-app 插件提供
 
     // 测试依赖
-    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
+    testImplementation(project(":patra-tool:patra-tool-test"))
 }

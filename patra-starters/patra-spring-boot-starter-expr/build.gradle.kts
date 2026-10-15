@@ -12,7 +12,7 @@ dependencies {
     // 内部模块
     api(project(":patra-api:patra-expr-kernel"))
     api(project(":patra-api:patra-common:patra-common-enums"))
-    api(project(":linqibin-commons:linqibin-commons-core"))
+    api(project(":patra-tool:patra-tool-core"))
     api(project(":linqibin-commons:linqibin-spring-boot-starter-core"))
     api(project(":patra-api:patra-registry:patra-registry-api"))
 
@@ -23,5 +23,5 @@ dependencies {
     compileOnly("io.micrometer:micrometer-core")
 
     // 测试依赖
-    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
+    testImplementation(project(":patra-tool:patra-tool-test"))
 }

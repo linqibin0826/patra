@@ -73,18 +73,18 @@ jobs:
         run: |
           set -e
           FAIL=0
-          PG_FILE="linqibin-commons/linqibin-spring-boot-starter-test/src/main/java/dev/patra/tool/test/container/initializer/PostgreSQLContainerInitializer.java"
+          PG_FILE="patra-tool/patra-tool-test/src/main/java/dev/patra/tool/test/container/initializer/PostgreSQLContainerInitializer.java"
           if ! grep -Fq "private static final String POSTGRESQL_IMAGE = \"$POSTGRES_IMAGE\";" "$PG_FILE"; then
             echo "::error file=$PG_FILE::POSTGRESQL_IMAGE 常量与 workflow env POSTGRES_IMAGE=$POSTGRES_IMAGE 不一致"
             FAIL=1
           fi
-          REDIS_FILE="linqibin-commons/linqibin-spring-boot-starter-test/src/main/java/dev/patra/tool/test/container/initializer/RedisContainerInitializer.java"
+          REDIS_FILE="patra-tool/patra-tool-test/src/main/java/dev/patra/tool/test/container/initializer/RedisContainerInitializer.java"
           if ! grep -Fq "private static final String REDIS_IMAGE = \"$REDIS_IMAGE\";" "$REDIS_FILE"; then
             echo "::error file=$REDIS_FILE::REDIS_IMAGE 常量与 workflow env REDIS_IMAGE=$REDIS_IMAGE 不一致"
             FAIL=1
           fi
           for COMPOSE in \
-            "linqibin-commons/linqibin-spring-boot-starter-test/src/main/resources/docker-compose-rocketmq.yml" \
+            "patra-tool/patra-tool-test/src/main/resources/docker-compose-rocketmq.yml" \
             "patra-api/patra-ingest/patra-ingest-boot/src/test/resources/docker-compose-rocketmq.yml"; do
             COUNT=$(grep -F -c "image: $ROCKETMQ_IMAGE" "$COMPOSE" || true)
             if [ "$COUNT" -ne 2 ]; then

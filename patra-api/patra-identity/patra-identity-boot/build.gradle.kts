@@ -17,19 +17,19 @@ dependencies {
     implementation(project(":patra-api:patra-identity:patra-identity-adapter"))
     implementation(project(":patra-api:patra-identity:patra-identity-infra"))
 
-    implementation(project(":linqibin-commons:linqibin-spring-boot-starter-web"))
+    implementation(project(":patra-tool:patra-tool-web"))
     implementation("org.springframework.boot:spring-boot-starter-actuator")
-    implementation(project(":linqibin-commons:linqibin-spring-boot-starter-observability"))
-    implementation(project(":linqibin-commons:linqibin-spring-boot-starter-openapi"))
+    implementation(project(":patra-tool:patra-tool-observability"))
+    implementation(project(":patra-tool:patra-tool-openapi"))
 
     // 从网关签的断言取当前用户：过滤器链、CurrentUserPort、401 / 403 输出、JPA 审计人
-    implementation(project(":patra-starters:patra-spring-boot-starter-security"))
+    implementation(project(":patra-tool:patra-tool-security"))
 
     // 装配 RedisSessionStore
     implementation(project(":patra-api:patra-identity:patra-identity-session"))
 
-    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
+    testImplementation(project(":patra-tool:patra-tool-test"))
 
     // 测试里自动注入测试公钥，并能签出带身份的请求头
-    testImplementation(testFixtures(project(":patra-starters:patra-spring-boot-starter-security")))
+    testImplementation(testFixtures(project(":patra-tool:patra-tool-security")))
 }

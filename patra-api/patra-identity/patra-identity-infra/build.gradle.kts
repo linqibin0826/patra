@@ -10,7 +10,7 @@ plugins {
 
 dependencies {
     api(project(":patra-api:patra-identity:patra-identity-domain"))
-    api(project(":linqibin-commons:linqibin-spring-boot-starter-jpa"))
+    api(project(":patra-tool:patra-tool-jpa"))
     api(project(":linqibin-commons:linqibin-spring-boot-starter-core"))
 
     // 登录失败限制存在 Redis
@@ -23,5 +23,5 @@ dependencies {
     implementation("org.springframework.security:spring-security-crypto")
     runtimeOnly("org.bouncycastle:bcprov-jdk18on")
 
-    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
+    testImplementation(project(":patra-tool:patra-tool-test"))
 }

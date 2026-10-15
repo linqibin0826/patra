@@ -18,7 +18,7 @@ dependencies {
     api(project(":patra-api:patra-common:patra-common-security"))
 
     // 统一错误格式（ProblemDetailAdapter、GlobalRestExceptionHandler）
-    api(project(":linqibin-commons:linqibin-spring-boot-starter-web"))
+    api(project(":patra-tool:patra-tool-web"))
 
     // Spring Security（版本由 Spring Boot BOM 管理）
     api("org.springframework.boot:spring-boot-starter-security")
@@ -27,7 +27,7 @@ dependencies {
     api("org.springframework.security:spring-security-oauth2-jose")
 
     // 审计人接入：classpath 上有 starter-jpa 时才生效
-    compileOnly(project(":linqibin-commons:linqibin-spring-boot-starter-jpa"))
+    compileOnly(project(":patra-tool:patra-tool-jpa"))
 
     // 内部客户端转发断言：classpath 上有 http-interface starter 时才生效
     compileOnly(project(":linqibin-commons:linqibin-spring-boot-starter-http-interface"))
@@ -36,12 +36,12 @@ dependencies {
     "testFixturesApi"("org.springframework.boot:spring-boot-security-test")
 
     // 测试依赖
-    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
+    testImplementation(project(":patra-tool:patra-tool-test"))
     // 转发拦截器的单元测试要能看到 InternalCallInterceptor
     testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-http-interface"))
 
     // 集成测试要测审计列和转发，需要 starter-jpa 与 http-interface starter
-    "integrationTestImplementation"(project(":linqibin-commons:linqibin-spring-boot-starter-jpa"))
+    "integrationTestImplementation"(project(":patra-tool:patra-tool-jpa"))
     "integrationTestImplementation"(project(":linqibin-commons:linqibin-spring-boot-starter-http-interface"))
 }
 

@@ -101,7 +101,7 @@ tasks.named("check") {
 dependencies {
     // 领域层核心依赖
     api(project(":patra-api:patra-common:patra-common-enums"))
-    api(project(":linqibin-commons:linqibin-commons-core"))
+    api(project(":patra-tool:patra-tool-core"))
 
     // Hutool 工具库
     implementation(libs.findLibrary("hutool-core").get())

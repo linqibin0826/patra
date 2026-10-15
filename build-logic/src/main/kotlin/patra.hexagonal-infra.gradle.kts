@@ -26,5 +26,5 @@ dependencies {
     // 如: spring-data-jpa, http-interface 等
 
     // 测试依赖
-    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
+    testImplementation(project(":patra-tool:patra-tool-test"))
 }

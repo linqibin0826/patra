@@ -12,11 +12,11 @@ dependencies {
     // 内部模块
     api(project(":patra-api:patra-object-storage:patra-object-storage-app"))
     api(project(":patra-api:patra-object-storage:patra-object-storage-api"))
-    api(project(":linqibin-commons:linqibin-spring-boot-starter-web"))
+    api(project(":patra-tool:patra-tool-web"))
 
     // Spring DAO exception hierarchy
     api("org.springframework:spring-tx")
 
     // 测试依赖
-    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
+    testImplementation(project(":patra-tool:patra-tool-test"))
 }

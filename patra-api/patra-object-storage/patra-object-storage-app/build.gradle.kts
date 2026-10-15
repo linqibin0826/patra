@@ -12,7 +12,7 @@ dependencies {
     // 内部模块
     api(project(":patra-api:patra-object-storage:patra-object-storage-domain"))
     api(project(":patra-api:patra-common:patra-common-enums"))
-    api(project(":linqibin-commons:linqibin-commons-core"))
+    api(project(":patra-tool:patra-tool-core"))
     api(project(":linqibin-commons:linqibin-spring-boot-starter-core"))
 
     // Spring 依赖
@@ -20,6 +20,6 @@ dependencies {
     api("org.springframework.boot:spring-boot-starter-aspectj")
 
     // 测试依赖
-    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
+    testImplementation(project(":patra-tool:patra-tool-test"))
     testImplementation(testFixtures(project(":patra-api:patra-object-storage:patra-object-storage-domain")))
 }

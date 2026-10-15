@@ -11,7 +11,7 @@ plugins {
 dependencies {
     // 内部模块
     api(project(":patra-api:patra-object-storage:patra-object-storage-domain"))
-    api(project(":linqibin-commons:linqibin-spring-boot-starter-jpa"))
+    api(project(":patra-tool:patra-tool-jpa"))
     api(project(":linqibin-commons:linqibin-spring-boot-starter-core"))
 
     // Spring Boot Starter
@@ -21,5 +21,5 @@ dependencies {
     // annotationProcessor 由 patra.java-base 插件提供
 
     // 测试依赖
-    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
+    testImplementation(project(":patra-tool:patra-tool-test"))
 }

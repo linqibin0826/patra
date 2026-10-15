@@ -13,7 +13,7 @@ plugins {
 
 dependencies {
     // 只依赖 commons-core（DomainException / StandardErrorTrait）
-    api(project(":linqibin-commons:linqibin-commons-core"))
+    api(project(":patra-tool:patra-tool-core"))
 }
 
 // 覆盖率要求 75%

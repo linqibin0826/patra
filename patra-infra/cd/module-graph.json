@@ -11,23 +11,6 @@
     ],
     "modules": [
         {
-            "dir": "linqibin-commons/linqibin-commons-core",
-            "project": ":linqibin-commons:linqibin-commons-core",
-            "unit": "foundation",
-            "impacts": [
-                "catalog",
-                "foundation",
-                "gateway",
-                "identity",
-                "ingest",
-                "object-storage",
-                "registry"
-            ],
-            "tasks": [
-                "check"
-            ]
-        },
-        {
             "dir": "linqibin-commons/linqibin-commons-storage",
             "project": ":linqibin-commons:linqibin-commons-storage",
             "unit": "foundation",
@@ -38,19 +21,6 @@
             ],
             "tasks": [
                 "check"
-            ]
-        },
-        {
-            "dir": "linqibin-commons/linqibin-spring-boot-starter-batch",
-            "project": ":linqibin-commons:linqibin-spring-boot-starter-batch",
-            "unit": "foundation",
-            "impacts": [
-                "catalog",
-                "foundation"
-            ],
-            "tasks": [
-                "check",
-                "integrationTest"
             ]
         },
         {
@@ -87,123 +57,12 @@
             ]
         },
         {
-            "dir": "linqibin-commons/linqibin-spring-boot-starter-jpa",
-            "project": ":linqibin-commons:linqibin-spring-boot-starter-jpa",
-            "unit": "foundation",
-            "impacts": [
-                "catalog",
-                "foundation",
-                "gateway",
-                "identity",
-                "ingest",
-                "object-storage",
-                "registry"
-            ],
-            "tasks": [
-                "check",
-                "integrationTest"
-            ]
-        },
-        {
-            "dir": "linqibin-commons/linqibin-spring-boot-starter-object-storage",
-            "project": ":linqibin-commons:linqibin-spring-boot-starter-object-storage",
-            "unit": "foundation",
-            "impacts": [
-                "catalog",
-                "foundation",
-                "ingest"
-            ],
-            "tasks": [
-                "check"
-            ]
-        },
-        {
-            "dir": "linqibin-commons/linqibin-spring-boot-starter-observability",
-            "project": ":linqibin-commons:linqibin-spring-boot-starter-observability",
-            "unit": "foundation",
-            "impacts": [
-                "catalog",
-                "foundation",
-                "gateway",
-                "identity",
-                "ingest",
-                "object-storage",
-                "registry"
-            ],
-            "tasks": [
-                "check"
-            ]
-        },
-        {
-            "dir": "linqibin-commons/linqibin-spring-boot-starter-openapi",
-            "project": ":linqibin-commons:linqibin-spring-boot-starter-openapi",
-            "unit": "foundation",
-            "impacts": [
-                "catalog",
-                "foundation",
-                "identity"
-            ],
-            "tasks": [
-                "check"
-            ]
-        },
-        {
             "dir": "linqibin-commons/linqibin-spring-boot-starter-redisson",
             "project": ":linqibin-commons:linqibin-spring-boot-starter-redisson",
             "unit": "foundation",
             "impacts": [
                 "catalog",
                 "foundation"
-            ],
-            "tasks": [
-                "check",
-                "integrationTest"
-            ]
-        },
-        {
-            "dir": "linqibin-commons/linqibin-spring-boot-starter-rest-client",
-            "project": ":linqibin-commons:linqibin-spring-boot-starter-rest-client",
-            "unit": "foundation",
-            "impacts": [
-                "catalog",
-                "foundation",
-                "ingest"
-            ],
-            "tasks": [
-                "check",
-                "integrationTest"
-            ]
-        },
-        {
-            "dir": "linqibin-commons/linqibin-spring-boot-starter-test",
-            "project": ":linqibin-commons:linqibin-spring-boot-starter-test",
-            "unit": "foundation",
-            "impacts": [
-                "catalog",
-                "foundation",
-                "gateway",
-                "identity",
-                "ingest",
-                "object-storage",
-                "registry"
-            ],
-            "tasks": [
-                "check",
-                "integrationTest"
-            ]
-        },
-        {
-            "dir": "linqibin-commons/linqibin-spring-boot-starter-web",
-            "project": ":linqibin-commons:linqibin-spring-boot-starter-web",
-            "unit": "foundation",
-            "impacts": [
-                "catalog",
-                "foundation",
-                "gateway",
-                "identity",
-                "ingest",
-                "object-storage",
-                "registry"
             ],
             "tasks": [
                 "check",
@@ -648,8 +507,64 @@
             ]
         },
         {
-            "dir": "patra-starters/patra-spring-boot-starter-nacos",
-            "project": ":patra-starters:patra-spring-boot-starter-nacos",
+            "dir": "patra-starters/patra-spring-boot-starter-provenance",
+            "project": ":patra-starters:patra-spring-boot-starter-provenance",
+            "unit": "foundation",
+            "impacts": [
+                "foundation",
+                "ingest"
+            ],
+            "tasks": [
+                "check"
+            ]
+        },
+        {
+            "dir": "patra-tool/patra-tool-batch",
+            "project": ":patra-tool:patra-tool-batch",
+            "unit": "foundation",
+            "impacts": [
+                "catalog",
+                "foundation"
+            ],
+            "tasks": [
+                "check",
+                "integrationTest"
+            ]
+        },
+        {
+            "dir": "patra-tool/patra-tool-core",
+            "project": ":patra-tool:patra-tool-core",
+            "unit": "foundation",
+            "impacts": [
+                "catalog",
+                "foundation",
+                "gateway",
+                "identity",
+                "ingest",
+                "object-storage",
+                "registry"
+            ],
+            "tasks": [
+                "check"
+            ]
+        },
+        {
+            "dir": "patra-tool/patra-tool-http-client",
+            "project": ":patra-tool:patra-tool-http-client",
+            "unit": "foundation",
+            "impacts": [
+                "catalog",
+                "foundation",
+                "ingest"
+            ],
+            "tasks": [
+                "check",
+                "integrationTest"
+            ]
+        },
+        {
+            "dir": "patra-tool/patra-tool-jpa",
+            "project": ":patra-tool:patra-tool-jpa",
             "unit": "foundation",
             "impacts": [
                 "catalog",
@@ -666,10 +581,29 @@
             ]
         },
         {
-            "dir": "patra-starters/patra-spring-boot-starter-provenance",
-            "project": ":patra-starters:patra-spring-boot-starter-provenance",
+            "dir": "patra-tool/patra-tool-launch",
+            "project": ":patra-tool:patra-tool-launch",
             "unit": "foundation",
             "impacts": [
+                "catalog",
+                "foundation",
+                "gateway",
+                "identity",
+                "ingest",
+                "object-storage",
+                "registry"
+            ],
+            "tasks": [
+                "check",
+                "integrationTest"
+            ]
+        },
+        {
+            "dir": "patra-tool/patra-tool-object-storage",
+            "project": ":patra-tool:patra-tool-object-storage",
+            "unit": "foundation",
+            "impacts": [
+                "catalog",
                 "foundation",
                 "ingest"
             ],
@@ -678,13 +612,79 @@
             ]
         },
         {
-            "dir": "patra-starters/patra-spring-boot-starter-security",
-            "project": ":patra-starters:patra-spring-boot-starter-security",
+            "dir": "patra-tool/patra-tool-observability",
+            "project": ":patra-tool:patra-tool-observability",
+            "unit": "foundation",
+            "impacts": [
+                "catalog",
+                "foundation",
+                "gateway",
+                "identity",
+                "ingest",
+                "object-storage",
+                "registry"
+            ],
+            "tasks": [
+                "check"
+            ]
+        },
+        {
+            "dir": "patra-tool/patra-tool-openapi",
+            "project": ":patra-tool:patra-tool-openapi",
+            "unit": "foundation",
+            "impacts": [
+                "catalog",
+                "foundation",
+                "identity"
+            ],
+            "tasks": [
+                "check"
+            ]
+        },
+        {
+            "dir": "patra-tool/patra-tool-security",
+            "project": ":patra-tool:patra-tool-security",
             "unit": "foundation",
             "impacts": [
                 "foundation",
                 "gateway",
                 "identity"
+            ],
+            "tasks": [
+                "check",
+                "integrationTest"
+            ]
+        },
+        {
+            "dir": "patra-tool/patra-tool-test",
+            "project": ":patra-tool:patra-tool-test",
+            "unit": "foundation",
+            "impacts": [
+                "catalog",
+                "foundation",
+                "gateway",
+                "identity",
+                "ingest",
+                "object-storage",
+                "registry"
+            ],
+            "tasks": [
+                "check",
+                "integrationTest"
+            ]
+        },
+        {
+            "dir": "patra-tool/patra-tool-web",
+            "project": ":patra-tool:patra-tool-web",
+            "unit": "foundation",
+            "impacts": [
+                "catalog",
+                "foundation",
+                "gateway",
+                "identity",
+                "ingest",
+                "object-storage",
+                "registry"
             ],
             "tasks": [
                 "check",

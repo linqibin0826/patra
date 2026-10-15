@@ -54,28 +54,31 @@ includeAt(":patra-api:patra-common:patra-common-enums", "patra-api/patra-common/
 includeAt(":patra-api:patra-common:patra-common-security", "patra-api/patra-common/patra-common-security")
 mapParent(":patra-api:patra-common", "patra-api/patra-common")
 
+// ==================== patra-tool ====================
+includeAt(":patra-tool:patra-tool-core", "patra-tool/patra-tool-core")
+includeAt(":patra-tool:patra-tool-web", "patra-tool/patra-tool-web")
+includeAt(":patra-tool:patra-tool-jpa", "patra-tool/patra-tool-jpa")
+includeAt(":patra-tool:patra-tool-batch", "patra-tool/patra-tool-batch")
+includeAt(":patra-tool:patra-tool-object-storage", "patra-tool/patra-tool-object-storage")
+includeAt(":patra-tool:patra-tool-observability", "patra-tool/patra-tool-observability")
+includeAt(":patra-tool:patra-tool-openapi", "patra-tool/patra-tool-openapi")
+includeAt(":patra-tool:patra-tool-test", "patra-tool/patra-tool-test")
+includeAt(":patra-tool:patra-tool-http-client", "patra-tool/patra-tool-http-client")
+includeAt(":patra-tool:patra-tool-security", "patra-tool/patra-tool-security")
+includeAt(":patra-tool:patra-tool-launch", "patra-tool/patra-tool-launch")
+mapParent(":patra-tool", "patra-tool")
+
 // ==================== linqibin-commons ====================
 // 决策 E：嵌套 path 与物理目录一一对应
-includeAt(":linqibin-commons:linqibin-commons-core", "linqibin-commons/linqibin-commons-core")
 includeAt(":linqibin-commons:linqibin-commons-storage", "linqibin-commons/linqibin-commons-storage")
 includeAt(":linqibin-commons:linqibin-spring-boot-starter-core", "linqibin-commons/linqibin-spring-boot-starter-core")
-includeAt(":linqibin-commons:linqibin-spring-boot-starter-web", "linqibin-commons/linqibin-spring-boot-starter-web")
-includeAt(":linqibin-commons:linqibin-spring-boot-starter-jpa", "linqibin-commons/linqibin-spring-boot-starter-jpa")
-includeAt(":linqibin-commons:linqibin-spring-boot-starter-batch", "linqibin-commons/linqibin-spring-boot-starter-batch")
-includeAt(":linqibin-commons:linqibin-spring-boot-starter-rest-client", "linqibin-commons/linqibin-spring-boot-starter-rest-client")
 includeAt(":linqibin-commons:linqibin-spring-boot-starter-http-interface", "linqibin-commons/linqibin-spring-boot-starter-http-interface")
-includeAt(":linqibin-commons:linqibin-spring-boot-starter-observability", "linqibin-commons/linqibin-spring-boot-starter-observability")
 includeAt(":linqibin-commons:linqibin-spring-boot-starter-redisson", "linqibin-commons/linqibin-spring-boot-starter-redisson")
-includeAt(":linqibin-commons:linqibin-spring-boot-starter-object-storage", "linqibin-commons/linqibin-spring-boot-starter-object-storage")
-includeAt(":linqibin-commons:linqibin-spring-boot-starter-test", "linqibin-commons/linqibin-spring-boot-starter-test")
-includeAt(":linqibin-commons:linqibin-spring-boot-starter-openapi", "linqibin-commons/linqibin-spring-boot-starter-openapi")
 mapParent(":linqibin-commons", "linqibin-commons")
 
 // ==================== patra-starters ====================
 includeAt(":patra-starters:patra-spring-boot-starter-provenance", "patra-starters/patra-spring-boot-starter-provenance")
 includeAt(":patra-starters:patra-spring-boot-starter-expr", "patra-starters/patra-spring-boot-starter-expr")
-includeAt(":patra-starters:patra-spring-boot-starter-security", "patra-starters/patra-spring-boot-starter-security")
-includeAt(":patra-starters:patra-spring-boot-starter-nacos", "patra-starters/patra-spring-boot-starter-nacos")
 mapParent(":patra-starters", "patra-starters")
 
 // ==================== patra-api / Expression Kernel ====================

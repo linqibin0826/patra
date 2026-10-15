@@ -14,7 +14,7 @@ plugins {
 
 dependencies {
     // Patra 内部依赖
-    api(project(":linqibin-commons:linqibin-commons-core"))
+    api(project(":patra-tool:patra-tool-core"))
     api(project(":linqibin-commons:linqibin-spring-boot-starter-core"))
 
     // Spring Boot Web MVC
@@ -27,5 +27,5 @@ dependencies {
     api("org.springframework.boot:spring-boot-starter-validation")
 
     // 测试依赖
-    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
+    testImplementation(project(":patra-tool:patra-tool-test"))
 }
