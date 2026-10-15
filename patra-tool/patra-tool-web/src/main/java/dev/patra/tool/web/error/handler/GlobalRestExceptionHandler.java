@@ -1,5 +1,6 @@
 package dev.patra.tool.web.error.handler;
 
+import dev.patra.tool.core.PatraOrders;
 import dev.patra.tool.core.error.field.HasFieldViolations;
 import dev.patra.tool.core.error.problem.ErrorKeys;
 import dev.patra.tool.core.error.retry.HasRetryAfter;
@@ -12,7 +13,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
@@ -63,7 +63,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 /// @see ValidationErrorsFormatter
 @Slf4j
 @RestControllerAdvice
-@Order(Ordered.HIGHEST_PRECEDENCE + 1)
+@Order(PatraOrders.ERROR_ADVICE_GLOBAL)
 public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
 
   /// 附加到问题详情载荷的验证错误的最大数量。

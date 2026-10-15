@@ -1,6 +1,6 @@
 package dev.patra.tool.security.error;
 
-import org.springframework.core.Ordered;
+import dev.patra.tool.core.PatraOrders;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 /// 会兜住所有异常，所以这个类以最高优先级抢在它前面，只接安全异常并原样抛出。
 /// 原样抛出的异常 Spring MVC 当作没处理，会回到安全过滤器，由 `SecurityProblemWriter` 输出。
 @RestControllerAdvice
-@Order(Ordered.HIGHEST_PRECEDENCE)
+@Order(PatraOrders.ERROR_ADVICE_SECURITY_RETHROW)
 public class SecurityExceptionRethrowAdvice {
 
   /// 原样抛出拒绝访问异常。

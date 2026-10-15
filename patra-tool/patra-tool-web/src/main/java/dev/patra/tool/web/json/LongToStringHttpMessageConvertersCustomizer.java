@@ -1,5 +1,6 @@
 package dev.patra.tool.web.json;
 
+import dev.patra.tool.core.PatraOrders;
 import org.springframework.boot.http.converter.autoconfigure.ServerHttpMessageConvertersCustomizer;
 import org.springframework.core.Ordered;
 import org.springframework.http.converter.HttpMessageConverters;
@@ -18,9 +19,6 @@ import tools.jackson.databind.ser.std.ToStringSerializer;
 /// 原始类型 `long` 不受影响。
 public final class LongToStringHttpMessageConvertersCustomizer
     implements ServerHttpMessageConvertersCustomizer, Ordered {
-
-  /// Boot 自带的 Jackson 转换器定制器是 0，本定制器排在它之后才能替换掉它注册的 JSON 转换器。
-  public static final int ORDER = 100;
 
   private final JacksonJsonHttpMessageConverter jsonConverter;
 
@@ -42,11 +40,11 @@ public final class LongToStringHttpMessageConvertersCustomizer
     builder.withJsonConverter(jsonConverter);
   }
 
-  /// 排序值，见 [#ORDER]。
+  /// 排序值，见 `PatraOrders.WEB_JSON_LONG_TO_STRING`。
   ///
   /// @return 排序值
   @Override
   public int getOrder() {
-    return ORDER;
+    return PatraOrders.WEB_JSON_LONG_TO_STRING;
   }
 }

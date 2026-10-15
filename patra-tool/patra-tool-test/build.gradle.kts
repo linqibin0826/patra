@@ -50,9 +50,6 @@ dependencies {
     // Spring Transaction（ArchUnit 规则需要 @Transactional 注解）
     api("org.springframework:spring-tx")
 
-    // Configuration Processor（IDE 提示支持）
-    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
-
     // ==================== TestContainers ====================
 
     api(libs.testcontainers.core)

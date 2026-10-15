@@ -41,9 +41,6 @@ dependencies {
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
 
-    // IDE 配置元数据生成
-    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
-
     // 测试依赖
     testImplementation(project(":patra-tool:patra-tool-test"))
 }

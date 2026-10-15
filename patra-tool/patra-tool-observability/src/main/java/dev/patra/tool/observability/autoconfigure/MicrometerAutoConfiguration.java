@@ -1,5 +1,6 @@
 package dev.patra.tool.observability.autoconfigure;
 
+import dev.patra.tool.core.PatraOrders;
 import dev.patra.tool.observability.config.ObservabilityProperties;
 import dev.patra.tool.observability.filter.CommonTagsMeterFilter;
 import dev.patra.tool.observability.filter.HighCardinalityMeterFilter;
@@ -15,7 +16,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
-import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 
 /// Micrometer 自动配置。
@@ -116,7 +116,7 @@ public class MicrometerAutoConfiguration {
   ///
   /// @return HighCardinalityMeterFilter 实例
   @Bean
-  @Order(Ordered.HIGHEST_PRECEDENCE) // 最先执行
+  @Order(PatraOrders.METER_FILTER_HIGH_CARDINALITY)
   public HighCardinalityMeterFilter highCardinalityMeterFilter() {
     // Spring Boot 会自动将 MeterFilter Bean 应用到 MeterRegistry
     return new HighCardinalityMeterFilter();
@@ -145,7 +145,7 @@ public class MicrometerAutoConfiguration {
   /// @param springActiveProfile Spring 激活的 profile（自动 fallback）
   /// @return CommonTagsMeterFilter 实例
   @Bean
-  @Order(Ordered.LOWEST_PRECEDENCE) // 最后执行
+  @Order(PatraOrders.METER_FILTER_COMMON_TAGS)
   public CommonTagsMeterFilter commonTagsMeterFilter(
       ObservabilityProperties properties,
       @Value("${spring.application.name:}") String springAppName,

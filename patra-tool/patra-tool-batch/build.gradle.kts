@@ -38,9 +38,6 @@ dependencies {
     // Micrometer Core（可选，用于 BatchProgressMetricsListener）
     compileOnly("io.micrometer:micrometer-core")
 
-    // 配置元数据
-    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
-
     // 测试依赖
     testImplementation(project(":patra-tool:patra-tool-test"))
     testImplementation("org.springframework.batch:spring-batch-test")

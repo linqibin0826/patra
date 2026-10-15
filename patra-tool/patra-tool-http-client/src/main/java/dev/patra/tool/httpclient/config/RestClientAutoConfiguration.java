@@ -1,5 +1,6 @@
 package dev.patra.tool.httpclient.config;
 
+import dev.patra.tool.core.PatraOrders;
 import dev.patra.tool.httpclient.interceptor.LoggingInterceptor;
 import java.net.http.HttpClient;
 import org.springframework.beans.factory.ObjectProvider;
@@ -189,7 +190,7 @@ public class RestClientAutoConfiguration {
       name = "enabled",
       havingValue = "true",
       matchIfMissing = true)
-  @Order(100)
+  @Order(PatraOrders.HTTP_CLIENT_LOGGING_INTERCEPTOR)
   public LoggingInterceptor loggingInterceptor(RestClientProperties properties) {
     var config = properties.getInterceptors().getLogging();
     return new LoggingInterceptor(

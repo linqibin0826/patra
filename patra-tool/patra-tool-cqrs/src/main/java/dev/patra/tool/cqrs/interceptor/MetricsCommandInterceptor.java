@@ -1,5 +1,6 @@
 package dev.patra.tool.cqrs.interceptor;
 
+import dev.patra.tool.core.PatraOrders;
 import dev.patra.tool.cqrs.Command;
 import dev.patra.tool.cqrs.CommandInterceptor;
 import dev.patra.tool.cqrs.CommandInterceptor.CommandExecutor;
@@ -29,7 +30,7 @@ import org.springframework.stereotype.Component;
 /// - 仅当容器中存在 `MeterRegistry` Bean 时启用
 /// - 通过配置 `linqibin.starter.core.command-bus.interceptors.metrics=false` 禁用
 @Component
-@Order(200)
+@Order(PatraOrders.CQRS_INTERCEPTOR_METRICS)
 @ConditionalOnBean(MeterRegistry.class)
 @ConditionalOnProperty(
     prefix = "linqibin.starter.core.command-bus.interceptors",

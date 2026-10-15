@@ -10,10 +10,11 @@ plugins {
 }
 
 dependencies {
-    // Configuration Processor 生成 IDE 元数据
+    // 配置元数据与自动配置元数据（Boot 官方要求 autoconfigure 模块都加）
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
-
-    // 测试依赖
+    annotationProcessor("org.springframework.boot:spring-boot-autoconfigure-processor")
+    // record 配置类上的 @Validated / @Min 等；运行时没有校验器就当没写
+    compileOnly("jakarta.validation:jakarta.validation-api")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 }
 

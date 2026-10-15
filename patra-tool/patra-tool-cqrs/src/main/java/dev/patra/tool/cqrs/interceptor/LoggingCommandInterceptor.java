@@ -1,5 +1,6 @@
 package dev.patra.tool.cqrs.interceptor;
 
+import dev.patra.tool.core.PatraOrders;
 import dev.patra.tool.core.error.DomainException;
 import dev.patra.tool.cqrs.Command;
 import dev.patra.tool.cqrs.CommandInterceptor;
@@ -27,7 +28,7 @@ import org.springframework.stereotype.Component;
 ///
 /// 通过配置 `linqibin.starter.core.command-bus.interceptors.logging=false` 禁用。
 @Component
-@Order(100)
+@Order(PatraOrders.CQRS_INTERCEPTOR_LOGGING)
 @ConditionalOnProperty(
     prefix = "linqibin.starter.core.command-bus.interceptors",
     name = "logging",

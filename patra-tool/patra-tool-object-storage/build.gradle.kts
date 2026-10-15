@@ -28,10 +28,6 @@ dependencies {
     // Micrometer
     api("io.micrometer:micrometer-core")
 
-    // Configuration metadata
-    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
-    annotationProcessor("org.springframework.boot:spring-boot-autoconfigure-processor")
-
     // 测试依赖
     testImplementation(project(":patra-tool:patra-tool-test"))
 }

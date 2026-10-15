@@ -1,5 +1,6 @@
 package dev.patra.tool.cqrs.interceptor;
 
+import dev.patra.tool.core.PatraOrders;
 import dev.patra.tool.cqrs.Command;
 import dev.patra.tool.cqrs.CommandInterceptor;
 import dev.patra.tool.cqrs.CommandInterceptor.CommandExecutor;
@@ -36,7 +37,7 @@ import org.springframework.stereotype.Component;
 /// Order=50 确保追踪拦截器在最外层，使 Span 覆盖整个命令执行周期，
 /// 包括日志和指标采集。
 @Component
-@Order(50)
+@Order(PatraOrders.CQRS_INTERCEPTOR_TRACING)
 @ConditionalOnClass(ObservationRegistry.class)
 @ConditionalOnBean(ObservationRegistry.class)
 @ConditionalOnProperty(

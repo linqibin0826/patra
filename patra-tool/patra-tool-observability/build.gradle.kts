@@ -40,9 +40,6 @@ dependencies {
     // Spring Boot Actuator: 提供 WebMvcObservationAutoConfiguration 等观测相关自动配置
     api("org.springframework.boot:spring-boot-starter-actuator")
 
-    // Configuration metadata
-    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
-
     // 测试依赖
     testImplementation(project(":patra-tool:patra-tool-test"))
     testImplementation("org.springframework.boot:spring-boot-starter-data-redis")

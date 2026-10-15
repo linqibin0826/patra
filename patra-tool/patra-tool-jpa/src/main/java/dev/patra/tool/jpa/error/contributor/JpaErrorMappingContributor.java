@@ -1,5 +1,6 @@
 package dev.patra.tool.jpa.error.contributor;
 
+import dev.patra.tool.core.PatraOrders;
 import dev.patra.tool.core.error.codes.ErrorCodeLike;
 import dev.patra.tool.core.error.codes.HttpStdErrors;
 import dev.patra.tool.web.error.spi.ErrorMappingContributor;
@@ -18,7 +19,6 @@ import org.hibernate.StaleObjectStateException;
 import org.hibernate.exception.ConstraintViolationException;
 import org.hibernate.exception.JDBCConnectionException;
 import org.hibernate.exception.LockAcquisitionException;
-import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -51,7 +51,7 @@ import org.springframework.orm.jpa.JpaSystemException;
 /// @author linqibin
 /// @since 0.1.0
 @Slf4j
-@Order(Ordered.HIGHEST_PRECEDENCE)
+@Order(PatraOrders.ERROR_MAPPING_JPA)
 public class JpaErrorMappingContributor implements ErrorMappingContributor {
 
   private final HttpStdErrors.Group http;
