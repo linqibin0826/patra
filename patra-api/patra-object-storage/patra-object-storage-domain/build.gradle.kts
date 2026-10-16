@@ -6,8 +6,7 @@
  */
 
 plugins {
-    id("linqibin.module-patra")
-    id("linqibin.hexagonal-domain")
+    id("patra.hexagonal-domain")
 }
 
 // 所有依赖由 patra.hexagonal-domain 插件提供:
@@ -16,5 +15,5 @@ plugins {
 // - 测试依赖
 //
 // 跨模块共享 fixture 通过 src/testFixtures/ source set 暴露
-// （linqibin.java-base 已 apply java-test-fixtures plugin）。
+// （patra.java-base 已 apply java-test-fixtures plugin）。
 // 消费方用 testImplementation(testFixtures(project(":..."))) 引用。

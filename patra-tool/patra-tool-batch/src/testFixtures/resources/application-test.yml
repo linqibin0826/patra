@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+    url: jdbc:tc:postgresql:17:///test_batch
+    username: test
+    password: test
+
+  batch:
+    jdbc:
+      initialize-schema: always
+    job:
+      enabled: false  # 禁止启动时自动运行 Job
+
+patra:
+  batch:
+    enabled: true
+    chunk:
+      default-size: 1000
+      max-size: 10000

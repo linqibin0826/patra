@@ -17,12 +17,7 @@ server:
 # Spring Boot & Cloud Configuration
 # ----------------------------------------------------------------------------
 spring:
-  # Configuration imports (order matters: later configs override earlier ones)
   # Nacos 的 patra-common.yaml、patra-catalog.yaml 由启动器 PatraApplication 导入，这里不写
-  config:
-    import:
-      # Local error-handling configuration
-      - "classpath:catalog-error-config.yaml"
 
   # Batch Job 不在启动时自动执行（catalog 有多个 Job，由 XXL-Job 手动触发）。
   # 缺此项时多 Job 场景启动期报「Job name must be specified in case of multiple jobs」。
@@ -50,6 +45,29 @@ spring:
 # Patra Configuration
 # ----------------------------------------------------------------------------
 patra:
+  object-storage:
+    # MeSH 描述符文件约 400MB，默认上限 100MB 不够
+    max-file-size: 5368709120  # 5GB
+  http-client:
+    proxy:
+      tunnel:
+        # 青果隧道代理：LetPub 等外部爬取经 Apache HttpClient 5 走它。
+        # 开关和凭据随环境变，在 Nacos 的 patra-catalog.yaml（dev 关闭）；凭据引用 ${PROXY_AUTH_KEY:}、
+        # ${PROXY_AUTH_PWD:}，值放 ~/.patra/secrets/catalog.env。打开后缺凭据，启动期 Assert 会报错。
+        # 使用 IP 而非域名，避免 Clash fake-ip DNS 劫持
+        # 域名 tun-afbngw.qg.net 对应 IP，可通过 nslookup tun-afbngw.qg.net 8.8.8.8 验证
+        host: 112.49.20.234
+        port: 15057
+    http-interface:
+      connect-timeout: 2s
+      read-timeout: 5s
+      groups:
+        registry:
+          base-url: lb://patra-registry
+          read-timeout: 10s
+  web:
+    error:
+      context-prefix: CAT
   catalog:
     mesh:
       # MeSH Descriptor（主题词）XML 文件 URL - 版本号从文件名自动推断
@@ -61,33 +79,6 @@ patra:
       # 最新版本下载地址：https://ror.readme.io/docs/data-dump
       download-url: https://zenodo.org/records/17953395/files/v2.0-2025-12-16-ror-data.zip?download=1
     # Scopus API key 随环境变，在 Nacos 的 patra-catalog.yaml（引用 ${SCOPUS_API_KEY:}，值放 ~/.patra/secrets/catalog.env）
-
-linqibin:
-  starter:
-    rest-client:
-      proxy:
-        tunnel:
-          # 青果隧道代理：LetPub 等外部爬取经 Apache HttpClient 5 走它。
-          # 开关和凭据随环境变，在 Nacos 的 patra-catalog.yaml（dev 关闭）；凭据引用 ${PROXY_AUTH_KEY:}、
-          # ${PROXY_AUTH_PWD:}，值放 ~/.patra/secrets/catalog.env。打开后缺凭据，启动期 Assert 会报错。
-          # 使用 IP 而非域名，避免 Clash fake-ip DNS 劫持
-          # 域名 tun-afbngw.qg.net 对应 IP，可通过 nslookup tun-afbngw.qg.net 8.8.8.8 验证
-          host: 112.49.20.234
-          port: 15057
-    object-storage:
-      # MeSH 描述符文件约 400MB，starter 默认上限 100MB 不够
-      max-file-size: 5368709120  # 5GB
-    http-interface:
-      enabled: true
-      connect-timeout: 2s
-      read-timeout: 5s
-      error-handling:
-        problem-detail-enabled: true
-        tolerant: true
-      groups:
-        registry:
-          base-url: lb://patra-registry
-          read-timeout: 10s
 
 # ----------------------------------------------------------------------------
 # XXL-Job Distributed Task Scheduler
@@ -105,23 +96,9 @@ xxl:
 # ----------------------------------------------------------------------------
 # Logging Configuration
 # ----------------------------------------------------------------------------
-logging:
-  file:
-    # Centralized log directory in project root
-    path: ${PATRA_LOG_DIR:logs}
-
-# ----------------------------------------------------------------------------
-# Actuator & Monitoring Configuration
-# ----------------------------------------------------------------------------
-# 注意：Metrics 通过 OTel Agent + Micrometer Bridge 导出到 OTel Collector
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics
-  endpoint:
-    health:
-      show-details: when-authorized
-  metrics:
-    tags:
-      application: ${spring.application.name}
+catalog:
+  error-catalog:
+    # Repository Errors (1300-1399)
+    repository-persistence-failed: CAT-1301
+    repository-update-conflict: CAT-1302
+    repository-entity-not-found: CAT-1303

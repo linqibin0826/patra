@@ -1,0 +1,2 @@
+dev.patra.tool.objectstorage.autoconfigure.ObjectStorageAutoConfiguration
+dev.patra.tool.objectstorage.autoconfigure.ObjectStorageS3AutoConfiguration

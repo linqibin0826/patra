@@ -6,11 +6,9 @@
  */
 
 plugins {
-    id("linqibin.module-patra")
-    id("linqibin.hexagonal-domain")
+    id("patra.hexagonal-domain")
 }
 
 dependencies {
     // 账号类型 AccountType（纯 Java）
-    api(project(":patra-api:patra-common:patra-common-security"))
 }

@@ -78,7 +78,7 @@ patra-object-storage/
 
 **架构约束**:
 - **domain 层**: 禁止依赖 Spring/JPA 等框架,仅允许 `patra-common-core` + Lombok/Hutool
-- **Gradle 架构检查**: 通过 `enforceDomainPurity` 任务强制检查 domain 层纯净性
+- **Gradle 架构检查**: 通过 `checkDomainPurity` 任务强制检查 domain 层纯净性
 - **依赖方向**: 所有模块均指向 domain,确保业务逻辑独立于框架
 
 ## 领域模型
@@ -305,7 +305,7 @@ curl "http://${PATRA_INFRA_HOST}:8848/nacos/v1/ns/catalog/services?pageNo=1&page
 遵循项目统一的代码规范:
 - **Google Java Style Guide**: 所有 Java 代码遵循 Google 风格
 - **中文注释**: 所有注释、文档、提交信息使用简体中文
-- **领域层纯净性**: domain 模块禁止引入框架依赖,由 Gradle `enforceDomainPurity` 任务强制检查
+- **领域层纯净性**: domain 模块禁止引入框架依赖,由 Gradle `checkDomainPurity` 任务强制检查
 - **依赖方向**: 严格遵守六边形架构的依赖方向规则
 
 ## 故障排查

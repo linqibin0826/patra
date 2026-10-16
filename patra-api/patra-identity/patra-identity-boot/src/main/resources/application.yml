@@ -27,23 +27,10 @@ spring:
       connect-timeout: 10s
       timeout: 5s
 
-linqibin:
-  starter:
-    core:
-      error:
-        context-prefix: IDN
-
-logging:
-  file:
-    path: ${PATRA_LOG_DIR:logs}
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics
-
 patra:
+  web:
+    error:
+      context-prefix: IDN
   identity:
     # 登录失败限制可在线刷新：默认值在 LoginThrottleProperties，要调就在 Nacos 的 patra-identity.yaml 里加键
     password-hashing:

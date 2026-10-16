@@ -5,22 +5,20 @@
  */
 
 plugins {
-    id("linqibin.module-patra")
-    id("linqibin.hexagonal-app")
+    id("patra.hexagonal-app")
 }
 
 dependencies {
+    implementation(libs.hutool.core)
     // 内部模块
     api(project(":patra-api:patra-object-storage:patra-object-storage-domain"))
-    api(project(":patra-api:patra-common:patra-common-enums"))
-    api(project(":linqibin-commons:linqibin-commons-core"))
-    api(project(":linqibin-commons:linqibin-spring-boot-starter-core"))
+    api(project(":patra-tool:patra-tool-cqrs"))
 
     // Spring 依赖
     api("org.springframework:spring-tx")
     api("org.springframework.boot:spring-boot-starter-aspectj")
 
     // 测试依赖
-    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
+    testImplementation(project(":patra-tool:patra-tool-test"))
     testImplementation(testFixtures(project(":patra-api:patra-object-storage:patra-object-storage-domain")))
 }

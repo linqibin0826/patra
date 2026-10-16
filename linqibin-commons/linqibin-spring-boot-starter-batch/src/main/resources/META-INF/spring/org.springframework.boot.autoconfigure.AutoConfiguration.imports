@@ -1,4 +1,0 @@
-dev.linqibin.starter.batch.autoconfigure.BatchDataSourceConfiguration
-dev.linqibin.starter.batch.autoconfigure.BatchSchemaInitializerConfiguration
-dev.linqibin.starter.batch.autoconfigure.BatchAutoConfiguration
-dev.linqibin.starter.batch.autoconfigure.BatchProgressMetricsAutoConfiguration

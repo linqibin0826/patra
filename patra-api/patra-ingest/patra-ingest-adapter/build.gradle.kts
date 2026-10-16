@@ -5,15 +5,13 @@
  */
 
 plugins {
-    id("linqibin.module-patra")
-    id("linqibin.hexagonal-adapter")
+    id("patra.hexagonal-adapter")
 }
 
 dependencies {
     // 内部模块
     api(project(":patra-api:patra-ingest:patra-ingest-app"))
-    api(project(":patra-api:patra-ingest:patra-ingest-api"))
-    api(project(":linqibin-commons:linqibin-spring-boot-starter-web"))
+    api(project(":patra-tool:patra-tool-web"))
 
     // RocketMQ
     api(libs.rocketmq.spring.boot)
@@ -25,5 +23,5 @@ dependencies {
     api(libs.xxl.job)
 
     // 测试依赖
-    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
+    testImplementation(project(":patra-tool:patra-tool-test"))
 }

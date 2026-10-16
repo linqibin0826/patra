@@ -1,0 +1,4 @@
+patra:
+  web:
+    error:
+      context-prefix: TEST

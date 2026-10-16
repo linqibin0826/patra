@@ -5,13 +5,12 @@
  */
 
 plugins {
-    id("linqibin.module-patra")
-    id("linqibin.hexagonal-adapter")
+    id("patra.hexagonal-adapter")
 }
 
 dependencies {
     api(project(":patra-api:patra-identity:patra-identity-app"))
-    api(project(":linqibin-commons:linqibin-spring-boot-starter-web"))
+    api(project(":patra-tool:patra-tool-web"))
 
-    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
+    testImplementation(project(":patra-tool:patra-tool-test"))
 }

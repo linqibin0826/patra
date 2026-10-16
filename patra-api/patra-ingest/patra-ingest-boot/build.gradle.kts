@@ -5,30 +5,30 @@
  */
 
 plugins {
-    id("linqibin.module-patra")
-    id("linqibin.hexagonal-boot")
+    id("patra.hexagonal-boot")
 }
 
 springBoot {
-    mainClass = "dev.linqibin.patra.ingest.PatraIngestApplication"
+    mainClass = "dev.patra.ingest.PatraIngestApplication"
 }
 
 dependencies {
     // 六边形架构各层
     implementation(project(":patra-api:patra-ingest:patra-ingest-adapter"))
     implementation(project(":patra-api:patra-ingest:patra-ingest-infra"))
+    implementation(project(":patra-api:patra-ingest:patra-ingest-api"))
 
     // Web Starter
-    implementation(project(":linqibin-commons:linqibin-spring-boot-starter-web"))
+    implementation(project(":patra-tool:patra-tool-web"))
 
     // HTTP Interface 客户端
-    implementation(project(":linqibin-commons:linqibin-spring-boot-starter-http-interface"))
+    implementation(project(":patra-tool:patra-tool-http-client"))
 
     // 可观测性
-    implementation(project(":linqibin-commons:linqibin-spring-boot-starter-observability"))
+    implementation(project(":patra-tool:patra-tool-observability"))
 
     // Object Storage
-    implementation(project(":linqibin-commons:linqibin-spring-boot-starter-object-storage"))
+    implementation(project(":patra-tool:patra-tool-object-storage"))
     implementation(project(":patra-api:patra-object-storage:patra-object-storage-api"))
 
     // RocketMQ
@@ -37,7 +37,7 @@ dependencies {
     }
 
     // 测试依赖
-    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
+    testImplementation(project(":patra-tool:patra-tool-test"))
 
     // JMH for performance benchmarks
     testImplementation(libs.jmh.core)

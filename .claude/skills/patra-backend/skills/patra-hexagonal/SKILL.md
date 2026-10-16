@@ -94,14 +94,13 @@ allowed-tools: Read, Edit, Write, Grep, Glob, Bash
 
 ```
 判断模块类型：
-├── adapter 层 → patra-spring-boot-starter-web
+├── adapter 层 → patra-tool-web
+├── app 层 → 需要命令总线 → patra-tool-cqrs
 ├── infra 层
-│   ├── 需要数据库 → patra-spring-boot-starter-jpa
-│   ├── 需要调用内部服务 → patra-spring-boot-starter-http-interface
-│   ├── 需要调用外部 REST API → patra-spring-boot-starter-rest-client
-│   ├── 需要对象存储 → patra-spring-boot-starter-object-storage
-│   └── 需要分布式锁 → patra-spring-boot-starter-redisson
-├── domain 层 → 不能添加任何 Starter
+│   ├── 需要数据库 → patra-tool-jpa
+│   ├── 需要调用内部服务或外部 REST API → patra-tool-http-client
+│   └── 需要对象存储 → patra-tool-object-storage
+├── domain 层 → 不能添加任何工具模块（core、patra-common 由插件给）
 └── 详细指南 → [patra-starters.md](resources/patra-starters.md)
 ```
 

@@ -10,17 +10,9 @@ spring:
   # 禁用不需要的自动配置
   autoconfigure:
     exclude:
-      - org.redisson.spring.starter.RedissonAutoConfigurationV2
-      - org.redisson.spring.starter.RedissonAutoConfigurationV4
-      - org.springframework.boot.data.redis.autoconfigure.DataRedisAutoConfiguration
-      # DataRedisRepositoriesAutoConfiguration 已在 PatraCatalogApplication @SpringBootApplication.exclude 中排除
       # 排除对象存储配置（E2E 测试不需要 MinIO）
-      - dev.linqibin.starter.objectstorage.ObjectStorageAutoConfiguration
-      - dev.linqibin.starter.objectstorage.S3StorageAutoConfiguration
-  # 导入错误配置
-  config:
-    import:
-      - "classpath:catalog-error-config.yaml"
+      - dev.patra.tool.objectstorage.autoconfigure.ObjectStorageAutoConfiguration
+      - dev.patra.tool.objectstorage.autoconfigure.ObjectStorageS3AutoConfiguration
   cloud:
     nacos:
       discovery:
@@ -49,6 +41,14 @@ spring:
 
 # 外部凭据（正式运行时在 Nacos 的 patra-catalog.yaml）：E2E 测试不连 Scopus，给空值让上下文能起来
 patra:
+  # 禁用隧道代理（E2E 测试使用 Mock FileDownloadPort，无需真实代理）
+  http-client:
+    proxy:
+      tunnel:
+        enabled: false
+  # Spring Batch 配置
+  batch:
+    enabled: true
   catalog:
     scopus:
       api-key: ""
@@ -57,20 +57,6 @@ patra:
 xxl:
   job:
     enabled: false
-
-# Spring Batch 配置
-linqibin:
-  starter:
-    batch:
-      enabled: true
-    # 禁用 Redisson（E2E 测试不需要 Redis）
-    redisson:
-      enabled: false
-    # 禁用隧道代理（E2E 测试使用 Mock FileDownloadPort，无需真实代理）
-    rest-client:
-      proxy:
-        tunnel:
-          enabled: false
 
 # Management & Monitoring (禁用测试环境不需要的)
 management:
@@ -86,7 +72,7 @@ management:
 # 日志配置
 logging:
   level:
-    dev.linqibin: INFO
+    dev.patra: INFO
     org.springframework.batch: DEBUG
     org.testcontainers: INFO
     com.alibaba.nacos.client: WARN

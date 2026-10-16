@@ -21,12 +21,7 @@ server:
 # Spring Application Configuration
 # ========================================
 spring:
-  # Configuration imports (order matters: later configs override earlier ones)
   # Nacos 的 patra-common.yaml、patra-registry.yaml 由启动器 PatraApplication 导入，这里不写
-  config:
-    import:
-      # Local error-handling configuration
-      - "classpath:registry-error-config.yaml"
 
   # ========================================
   # JSON Serialization Configuration
@@ -59,23 +54,21 @@ spring:
 # ========================================
 # Logging Configuration
 # ========================================
-logging:
-  file:
-    # Centralized log directory in project root
-    path: ${PATRA_LOG_DIR:logs}
+patra:
+  web:
+    error:
+      context-prefix: REG
+      type-base-url: https://errors.patra.com
 
-# ========================================
-# Actuator & Management Endpoints
-# ========================================
-# 注意：Metrics 通过 OTel Agent + Micrometer Bridge 导出到 OTel Collector
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics
-  endpoint:
-    health:
-      show-details: when-authorized
-  metrics:
-    tags:
-      application: ${spring.application.name}
+registry:
+  error-catalog:
+    dictionary-type-not-found: REG-1401
+    dictionary-item-not-found: REG-1402
+    dictionary-item-disabled: REG-1403
+    dictionary-type-already-exists: REG-1404
+    dictionary-item-already-exists: REG-1405
+    dictionary-type-disabled: REG-1406
+    dictionary-validation-failed: REG-1407
+    dictionary-default-missing: REG-1408
+    dictionary-repository-error: REG-1409
+    quota-exceeded: REG-1501

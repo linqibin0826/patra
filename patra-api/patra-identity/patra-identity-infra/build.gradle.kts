@@ -5,14 +5,12 @@
  */
 
 plugins {
-    id("linqibin.module-patra")
-    id("linqibin.hexagonal-infra")
+    id("patra.hexagonal-infra")
 }
 
 dependencies {
     api(project(":patra-api:patra-identity:patra-identity-domain"))
-    api(project(":linqibin-commons:linqibin-spring-boot-starter-jpa"))
-    api(project(":linqibin-commons:linqibin-spring-boot-starter-core"))
+    api(project(":patra-tool:patra-tool-jpa"))
 
     // 登录失败限制存在 Redis
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
@@ -24,5 +22,5 @@ dependencies {
     implementation("org.springframework.security:spring-security-crypto")
     runtimeOnly("org.bouncycastle:bcprov-jdk18on")
 
-    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
+    testImplementation(project(":patra-tool:patra-tool-test"))
 }

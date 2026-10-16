@@ -5,13 +5,12 @@
  */
 
 plugins {
-    id("linqibin.module-patra")
-    id("linqibin.hexagonal-app")
+    id("patra.hexagonal-app")
 }
 
 dependencies {
     api(project(":patra-api:patra-identity:patra-identity-domain"))
-    api(project(":linqibin-commons:linqibin-commons-core"))
-    api(project(":linqibin-commons:linqibin-spring-boot-starter-core"))
+    api(project(":patra-tool:patra-tool-core"))
+    api(project(":patra-tool:patra-tool-cqrs"))
     api("org.springframework:spring-tx")
 }

@@ -6,8 +6,7 @@
 
 | 顶层目录 | 职责 | 技术栈 |
 |---|---|---|
-| **linqibin-commons/** | 个人通用 Spring Boot 基建（commons + 11 starter） | Java 25 / Spring Boot 4 / Gradle |
-| **patra-starters/** | Patra 项目专属 starter（expr / provenance） | Java 25 / Spring Boot 4 |
+| **patra-tool/** | 12 个按技术能力划分的工具模块（core 纯 Java，其余 Spring Boot starter） | Java 25 / Spring Boot 4 / Gradle |
 | **patra-api/** | 后端业务服务（微服务 + 六边形 + DDD） | Java 25 / Spring Boot 4 |
 | **patra-portal/** | 前端管理控制台（工程基建在 v0.4 启动，见 [v0.4 Portal Foundation](docs/patra/release-specs/)） | Next.js 16 / React 19 / TypeScript 5 / Tailwind v4 |
 | **patra-infra/** | 本地基建配置（Docker Compose、launchd） | Docker Compose / Bash / launchd |
@@ -24,16 +23,15 @@
 
 | 子树 | group |
 |---|---|
-| linqibin-commons/* | `dev.linqibin.commons` |
-| patra-starters/* + patra-api/* | `dev.linqibin.patra` |
+| 全部 | `dev.patra` |
 
-**边界约束**：`linqibin-commons/*` 由 `linqibin.boundary-check` convention plugin 强制禁止依赖任何 `:patra-*` 模块（保留未来抽离独立 repo 的通路）。验证方式：`./gradlew :<commons-module>:checkBoundary`。
+**边界约束**（全部挂在 `./gradlew check`，过不了就合不了）：`patra-tool/*` 由 `patra.tool-module` convention plugin 施加 R1（不依赖 `patra-api`）、R2（工具间只指向 `patra-tool-core`，security → web 是唯一白名单）、R4（自动配置写法）与 R5（`api` / `implementation` 声明的 project 依赖必须被主代码 import）；`*-domain` 由 `patra.hexagonal-domain` 施加 R3 编译类路径白名单；R5 同样由 `patra.hexagonal-{domain,api,app,infra,adapter}` 施加到业务模块。单独跑：`./gradlew :<module>:checkToolBoundary` / `checkToolDependencies` / `checkDomainPurity` / `checkAutoConfiguration` / `checkDeclaredDependencies`。
 
 ## 新增模块规则（决策 E）
 
 Gradle path `:parent:child` 必须与物理目录 `parent/child/` **一一对应**：
 
-- ✅ `:linqibin-commons:linqibin-spring-boot-starter-core` → `linqibin-commons/linqibin-spring-boot-starter-core/`
+- ✅ `:patra-tool:patra-tool-web` → `patra-tool/patra-tool-web/`
 - ✅ `:patra-api:patra-registry:patra-registry-domain` → `patra-api/patra-registry/patra-registry-domain/`
 - ❌ 禁止扁平 path + `projectDir` 重映射的拼装（即不要再用以前的 `includeAt` 副作用让 Gradle path 与物理目录分离）
 
@@ -75,14 +73,14 @@ Gradle path `:parent:child` 必须与物理目录 `parent/child/` **一一对应
 
 ### Spotless（格式化）
 
-- 由 `linqibin.spotless` convention plugin 应用到所有 Java module
+- 由 `patra.spotless` convention plugin 应用到所有 Java module
 - 规则：缩进 2 空格 / import 顺序 / 行尾 LF / EOF 换行 / 去尾空白（与 `.editorconfig` 一致）
 - 本地修：`./gradlew spotlessApply`
 - CI 校验：`./gradlew spotlessCheck`，失败**阻断 PR**（决策 C）
 
 ### SpotBugs（静态分析）
 
-- 由 `linqibin.spotbugs` convention plugin 应用到所有 Java module
+- 由 `patra.spotbugs` convention plugin 应用到所有 Java module
 - 配置：`effort = MAX` / `reportLevel = LOW` / `ignoreFailures = false` / **不分析 test 代码**
 - 报告输出：`build/reports/spotbugs/main.html` + `.xml`
 - CI 校验：包含在 `./gradlew check` 中，失败**阻断 PR**（决策 C）
@@ -123,7 +121,7 @@ PR squash-merge 时 GitHub 会用 PR title 作为 commit message，所以 **PR �
 
 ### 测试体系（PAP-19 基线）
 
-- **测试类型 → JVM Test Suite**：`test`（unit）/ `integrationTest` / `e2eTest`，由 `linqibin.java-base` convention plugin 统一定义
+- **测试类型 → JVM Test Suite**：`test`（unit）/ `integrationTest` / `e2eTest`，由 `patra.java-base` convention plugin 统一定义
 - **跨 sourceSet 共享**：`src/testFixtures/`（`java-test-fixtures` plugin），不再用 `sourceSet.output` 链式 hack
 - **命名规范**：见 `.claude/rules/` 与 `patra-backend:test-checker` agent
 - **跑测试**：

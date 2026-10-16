@@ -1,0 +1,3 @@
+org.springframework.boot.EnvironmentPostProcessor=\
+dev.patra.tool.launch.NacosDefaultsPostProcessor,\
+dev.patra.tool.launch.ConfigSourceCheckPostProcessor

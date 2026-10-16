@@ -30,24 +30,25 @@ patra-{service}/
 └── patra-{service}-boot     # 启动入口 (@SpringBootApplication)
 ```
 
-**通用库** (`linqibin-commons/`，有仓库外下游，改动前见根 CLAUDE.md「下游消费者」):
-- `linqibin-commons-core` - DDD 基类、CQRS、异常体系、工具类
-- `linqibin-commons-storage` - 对象存储键生成模板
-- `linqibin-spring-boot-starter-core/web/jpa/batch/rest-client/http-interface/object-storage/observability/redisson/openapi/test`
+**工具模块**（`patra-tool/`，12 个，包 `dev.patra.tool.<能力>`，配置前缀 `patra.<能力>`，R1–R5 由 `./gradlew check` 守）:
+- `patra-tool-core` - 纯 Java：DDD 基类、错误类型、当前用户、`PatraOrders`
+- `patra-tool-cqrs` - 命令总线、`SimpleCommandBus`、内置拦截器
+- `patra-tool-web` - MVC 错误解析引擎、ProblemDetail、Long → String
+- `patra-tool-jpa` / `patra-tool-batch` / `patra-tool-http-client` / `patra-tool-object-storage`
+- `patra-tool-observability` - 出日志与 actuator 默认值、logback
+- `patra-tool-security` / `patra-tool-openapi`
+- `patra-tool-launch` - `PatraApplication`、Nacos 默认值、`Clock`
+- `patra-tool-test` - 测试自动配置与 Testcontainers 基座
 
-**Patra 共享模块** (`patra-api/patra-common/`):
-- `patra-common-model` - Shared Kernel 数据模型
-- `patra-common-enums` - 共享枚举
-- `patra-common-provenance-api` - Provenance 服务契约
+**Patra 共享模块** (`patra-api/patra-common/`，一个模块): Shared Kernel 数据模型、共享枚举、Provenance 服务契约
 
-**Patra 专属 Starter 与内核**:
-- `patra-starters/patra-spring-boot-starter-provenance`
-- `patra-starters/patra-spring-boot-starter-expr`
-- `patra-starters/patra-spring-boot-starter-nacos` - Nacos 接入：连接与服务发现注入、启动器 `PatraApplication`、签到检查
-- `patra-api/patra-expr-kernel` - 框架无关的表达式引擎（查询 AST → 各数据源查询语法）
+**ingest 专属子模块** (`patra-api/patra-ingest/`):
+- `patra-ingest-provenance` - Provenance 配置接入
+- `patra-ingest-expr` - 表达式引擎（查询 AST → 各数据源查询语法）与其 Spring 接入
 
 **构建逻辑** (仓库根 `build-logic/`):
-- Convention Plugins 定义六边形架构各层的构建约束
-- `linqibin.hexagonal-domain` - 领域层纯净性检查（禁止框架依赖）
-- `linqibin.hexagonal-app/infra/adapter/api/boot` - 各层依赖配置
-- `LinqibinDependencyManagement.kt` - 统一 BOM 和版本管理
+- Convention Plugins 定义六边形架构各层与工具模块的构建约束
+- `patra.tool-module` - 工具模块通用：group、R1 / R2 / R4 / R5 检查
+- `patra.hexagonal-domain` - 领域层编译类路径白名单（R3）
+- `patra.hexagonal-app/infra/adapter/api/boot` - 各层依赖配置（R5 挂在 domain / api / app / infra / adapter）
+- `PatraDependencyManagement.kt` - 统一 BOM 和版本管理

@@ -32,4 +32,14 @@ dependencies {
         implementation("org.apache.httpcomponents.core5:httpcore5:${libs.versions.httpcore5.get()}")
         implementation("org.apache.httpcomponents.core5:httpcore5-h2:${libs.versions.httpcore5.get()}")
     }
+
+    // build-logic 自己的测试：规则是纯函数用 JUnit 测，插件挂载用 TestKit 冒烟
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.assertj.core)
+    testImplementation(gradleTestKit())
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+tasks.test {
+    useJUnitPlatform()
 }

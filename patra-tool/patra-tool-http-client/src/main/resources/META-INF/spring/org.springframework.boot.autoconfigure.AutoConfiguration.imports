@@ -1,0 +1,5 @@
+dev.patra.tool.httpclient.autoconfigure.HttpClientAutoConfiguration
+dev.patra.tool.httpclient.autoconfigure.HttpClientProxyAutoConfiguration
+dev.patra.tool.httpclient.autoconfigure.HttpClientStreamingAutoConfiguration
+dev.patra.tool.httpclient.autoconfigure.HttpClientDownloadAutoConfiguration
+dev.patra.tool.httpclient.autoconfigure.HttpClientInterfaceAutoConfiguration

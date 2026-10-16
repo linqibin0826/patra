@@ -5,15 +5,13 @@
  */
 
 plugins {
-    id("linqibin.module-patra")
-    id("linqibin.hexagonal-infra")
+    id("patra.hexagonal-infra")
 }
 
 dependencies {
     // 内部模块
     api(project(":patra-api:patra-object-storage:patra-object-storage-domain"))
-    api(project(":linqibin-commons:linqibin-spring-boot-starter-jpa"))
-    api(project(":linqibin-commons:linqibin-spring-boot-starter-core"))
+    api(project(":patra-tool:patra-tool-jpa"))
 
     // Spring Boot Starter
     api("org.springframework.boot:spring-boot-starter")
@@ -22,5 +20,5 @@ dependencies {
     // annotationProcessor 由 patra.java-base 插件提供
 
     // 测试依赖
-    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
+    testImplementation(project(":patra-tool:patra-tool-test"))
 }

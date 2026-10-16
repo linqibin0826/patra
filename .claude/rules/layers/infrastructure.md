@@ -30,9 +30,8 @@ paths: patra-*/*-infra/**/*.java
 2. 备选：使用 `RemoteErrorHelper` 工具类
 3. 禁止直接捕获 `RestClientException`
 
-## Starter 依赖
+## 工具模块依赖
 
-- 数据库：`starter-jpa`
-- 对象存储：`starter-object-storage`
-- REST 调用：`starter-rest-client`
-- HTTP Interface 调用：`starter-http-interface`
+- 数据库：`patra-tool-jpa`
+- 对象存储：`patra-tool-object-storage`
+- 外部 REST 调用与内部 HTTP Interface 调用：`patra-tool-http-client`

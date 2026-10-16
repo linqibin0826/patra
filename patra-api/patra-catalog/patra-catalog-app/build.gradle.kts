@@ -5,18 +5,16 @@
  */
 
 plugins {
-    id("linqibin.module-patra")
-    id("linqibin.hexagonal-app")
+    id("patra.hexagonal-app")
 }
 
 dependencies {
     // 内部模块
-    api(project(":patra-api:patra-common:patra-common-enums"))
-    api(project(":linqibin-commons:linqibin-commons-core"))
+    api(project(":patra-tool:patra-tool-core"))
+    api(project(":patra-tool:patra-tool-cqrs"))
     api(project(":patra-api:patra-catalog:patra-catalog-domain"))
     api(project(":patra-api:patra-catalog:patra-catalog-api"))
-    api(project(":linqibin-commons:linqibin-spring-boot-starter-core"))
-    api(project(":linqibin-commons:linqibin-spring-boot-starter-batch"))
+    api(project(":patra-tool:patra-tool-batch"))
 
     // Spring 依赖
     api("org.springframework:spring-tx")
@@ -26,5 +24,5 @@ dependencies {
     api("io.micrometer:micrometer-core")
 
     // 测试依赖
-    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
+    testImplementation(project(":patra-tool:patra-tool-test"))
 }

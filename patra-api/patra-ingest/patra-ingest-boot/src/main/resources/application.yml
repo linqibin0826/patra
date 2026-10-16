@@ -7,8 +7,7 @@ spring:
   # Nacos 的 patra-common.yaml、patra-ingest.yaml 由启动器 PatraApplication 导入，这里不写
   config:
     import:
-      # Local configuration files (error handling and message queue)
-      - "classpath:ingest-error-config.yaml"
+      # 本地消息队列配置
       - "classpath:ingest-rocketmq.yaml"
   # 地址随环境变，在 Nacos 的 patra-ingest.yaml；账号、密码在 patra-common.yaml（源文件在 patra-infra/nacos/dev/）
   datasource:
@@ -23,16 +22,12 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
-# HTTP Interface 客户端配置（替代 Feign）
-linqibin:
-  starter:
+patra:
+  # HTTP Interface 客户端（服务间调用，替代 Feign）
+  http-client:
     http-interface:
-      enabled: true
       connect-timeout: 2s
       read-timeout: 5s
-      error-handling:
-        problem-detail-enabled: true
-        tolerant: true
       groups:
         registry:
           base-url: lb://patra-registry
@@ -40,10 +35,11 @@ linqibin:
         storage:
           base-url: lb://patra-object-storage
           read-timeout: 60s
-
-patra:
-  starter:
-    # 表达式编译：两种运行方式都用严格模式和长度、参数数上限，其余参数用 starter 默认值
+  web:
+    error:
+      context-prefix: ING
+  ingest:
+    # 表达式编译：两种运行方式都用严格模式和长度、参数数上限，其余参数用模块默认值
     expr:
       mode:
         strict: true
@@ -51,7 +47,6 @@ patra:
         max-query-length: 5000
         warn-param-count: 50
         max-param-count: 100
-  ingest:
     exec:
       # Lease time-to-live in seconds for execution lock
       lease-ttl-seconds: ${INGEST_LEASE_TTL:60}
@@ -82,23 +77,18 @@ task:
     # When true, fail immediately on first error instead of continuing
     fail-fast: ${TASK_EXECUTION_FAIL_FAST:false}
 
-logging:
-  file:
-    # Centralized log directory in project root
-    path: ${PATRA_LOG_DIR:logs}
-
-# ----------------------------------------------------------------------------
-# Actuator & Monitoring Configuration
-# ----------------------------------------------------------------------------
-# 注意：Metrics 通过 OTel Agent + Micrometer Bridge 导出到 OTel Collector
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics
-  endpoint:
-    health:
-      show-details: when-authorized
-  metrics:
-    tags:
-      application: ${spring.application.name}
+ingest:
+  error-catalog:
+    registry-config-not-found: ING-1201
+    registry-config-invalid: ING-1202
+    registry-config-degraded: ING-1203
+    outbox-write-failed: ING-1301
+    outbox-update-conflict: ING-1302
+    outbox-mark-dead-failed: ING-1303
+    schedule-param-invalid: ING-1401
+    relay-execution-failed: ING-1402
+    plan-validation-failed: ING-1403
+    checkpoint-parse-failed: ING-1501
+    checkpoint-serialize-failed: ING-1502
+    plan-persistence-failed: ING-1503
+    plan-assembly-failed: ING-1601

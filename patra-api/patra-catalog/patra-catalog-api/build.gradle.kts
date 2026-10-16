@@ -5,13 +5,10 @@
  */
 
 plugins {
-    id("linqibin.module-patra")
-    id("linqibin.hexagonal-api")
+    id("patra.hexagonal-api")
 }
 
 dependencies {
-    api(project(":patra-api:patra-common:patra-common-enums"))
-    api(project(":linqibin-commons:linqibin-commons-core"))
 
     // DTO 验证注解
     api("jakarta.validation:jakarta.validation-api")
@@ -21,5 +18,5 @@ dependencies {
     annotationProcessor("org.projectlombok:lombok")
 
     // 测试依赖
-    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
+    testImplementation(project(":patra-tool:patra-tool-test"))
 }

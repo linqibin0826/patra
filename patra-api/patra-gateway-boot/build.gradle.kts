@@ -5,19 +5,17 @@
  */
 
 plugins {
-    id("linqibin.module-patra")
-    id("linqibin.hexagonal-boot")
+    id("patra.hexagonal-boot")
 }
 
 springBoot {
-    mainClass = "dev.linqibin.patra.gateway.PatraGatewayApplication"
+    mainClass = "dev.patra.gateway.PatraGatewayApplication"
 }
 
 dependencies {
     // Patra Starter：错误引擎、ProblemDetail 全局处理器、可观测性
-    implementation(project(":linqibin-commons:linqibin-spring-boot-starter-core"))
-    implementation(project(":linqibin-commons:linqibin-spring-boot-starter-web"))
-    implementation(project(":linqibin-commons:linqibin-spring-boot-starter-observability"))
+    implementation(project(":patra-tool:patra-tool-web"))
+    implementation(project(":patra-tool:patra-tool-observability"))
 
     // Spring Cloud Gateway（WebMVC 版）：代理走 Boot 的 RestClient，HTTP 客户端由 spring.http.clients.* 决定
     implementation(libs.spring.cloud.starter.gateway)
@@ -29,16 +27,16 @@ dependencies {
     implementation(libs.springdoc.openapi.scalar)
 
     // 鉴权：Spring Security、无状态默认配置、ProblemDetail 写出器、验签器、签名器、认证对象
-    implementation(project(":patra-starters:patra-spring-boot-starter-security"))
+    implementation(project(":patra-tool:patra-tool-security"))
 
     // 会话存储契约（RedisSessionStore、SessionToken）；它用 api 带进 spring-boot-starter-data-redis
     implementation(project(":patra-api:patra-identity:patra-identity-session"))
 
     // 测试依赖（含 RestTestClient 与 WireMock）
-    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
+    testImplementation(project(":patra-tool:patra-tool-test"))
 
     // 测试里的签名密钥、自动注入测试公钥的环境后处理器、spring-boot-security-test
-    testImplementation(testFixtures(project(":patra-starters:patra-spring-boot-starter-security")))
+    testImplementation(testFixtures(project(":patra-tool:patra-tool-security")))
 }
 
 // 网关没有数据库：测试 starter（hexagonal-boot 插件也会加它）带着 JPA / JDBC / Flyway 的测试模块，

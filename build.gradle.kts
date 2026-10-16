@@ -22,11 +22,11 @@ plugins {
     base
     `jacoco-report-aggregation`
     // jacoco-report-aggregation 解析全部子项目运行时依赖，须与子项目共用同一套依赖管理规则
-    id("linqibin.dependency-management")
+    id("patra.dependency-management")
 }
 
 // ==================== Project Info ====================
-// group 由 build-logic 中的身份 convention plugin 显式设置（linqibin.module-commons / linqibin.module-patra）。
+// group 由 patra.java-base 统一设置为 dev.patra。
 allprojects {
     version = property("patraVersion") as String
 }

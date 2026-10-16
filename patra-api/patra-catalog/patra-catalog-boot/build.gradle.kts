@@ -5,12 +5,11 @@
  */
 
 plugins {
-    id("linqibin.module-patra")
-    id("linqibin.hexagonal-boot")
+    id("patra.hexagonal-boot")
 }
 
 springBoot {
-    mainClass = "dev.linqibin.patra.catalog.PatraCatalogApplication"
+    mainClass = "dev.patra.catalog.PatraCatalogApplication"
 }
 
 dependencies {
@@ -19,23 +18,23 @@ dependencies {
     implementation(project(":patra-api:patra-catalog:patra-catalog-infra"))
 
     // Web Starter
-    implementation(project(":linqibin-commons:linqibin-spring-boot-starter-web"))
+    implementation(project(":patra-tool:patra-tool-web"))
 
     // HTTP Interface 客户端
-    implementation(project(":linqibin-commons:linqibin-spring-boot-starter-http-interface"))
+    implementation(project(":patra-tool:patra-tool-http-client"))
 
     // Actuator
     implementation("org.springframework.boot:spring-boot-starter-actuator")
 
     // 可观测性
-    implementation(project(":linqibin-commons:linqibin-spring-boot-starter-observability"))
+    implementation(project(":patra-tool:patra-tool-observability"))
 
     // 对象存储
-    implementation(project(":linqibin-commons:linqibin-spring-boot-starter-object-storage"))
+    implementation(project(":patra-tool:patra-tool-object-storage"))
 
     // API 文档
-    implementation(project(":linqibin-commons:linqibin-spring-boot-starter-openapi"))
+    implementation(project(":patra-tool:patra-tool-openapi"))
 
     // 测试依赖
-    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
+    testImplementation(project(":patra-tool:patra-tool-test"))
 }

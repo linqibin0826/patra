@@ -6,22 +6,20 @@
  */
 
 plugins {
-    id("linqibin.module-patra")
-    id("linqibin.java-library")
+    id("patra.java-library")
 }
 
 dependencies {
     // AccountType / ClientType / CurrentUser
-    api(project(":patra-api:patra-common:patra-common-security"))
 
     // DomainException / StandardErrorTrait
-    api(project(":linqibin-commons:linqibin-commons-core"))
+    api(project(":patra-tool:patra-tool-core"))
 
     // StringRedisTemplate、RedisScript、Lettuce；版本由 Boot BOM 管理
     api("org.springframework.boot:spring-boot-starter-data-redis")
 
     // 集成测试的 Redis 容器（integrationTest 继承 test 的依赖）
-    testImplementation(project(":linqibin-commons:linqibin-spring-boot-starter-test"))
+    testImplementation(project(":patra-tool:patra-tool-test"))
 }
 
 // 覆盖率要求 75%

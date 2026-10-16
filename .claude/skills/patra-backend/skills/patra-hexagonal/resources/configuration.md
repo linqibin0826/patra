@@ -32,16 +32,16 @@ IDE 与容器的差异只放在 Nacos 之外的本地变量里，变量按用途
 1. 命令行参数 `--spring.datasource.url=...`
 2. JVM 系统属性 `-Dspring.datasource.url=...`
 3. 环境变量 `SPRING_DATASOURCE_URL`
-4. `~/.patra/secrets/*.env`（仅本机进程，由 starter-nacos 读入，排在系统环境变量之后；容器经 compose 的 `env_file` 注入，属于上一层）
+4. `~/.patra/secrets/*.env`（仅本机进程，由 patra-tool-launch 读入，排在系统环境变量之后；容器经 compose 的 `env_file` 注入，属于上一层）
 5. Nacos 配置（`{服务名}.yaml` 高于 `patra-common.yaml`）
 6. `application.yml`
-7. default properties：启动器 `PatraApplication` 放的服务名、Nacos 导入、签到开关，以及 starter-nacos 补的 Nacos 连接与服务发现默认值
+7. default properties：启动器 `PatraApplication` 放的服务名、Nacos 导入、签到开关，以及 patra-tool-launch 补的 Nacos 连接与服务发现默认值
 
-同一个键不在 jar 和 Nacos 两处写：starter-nacos 的 `JarConfigOverlapCheckerTest` 拿 `patra-infra/nacos/dev/` 与 6 个 boot 模块 `src/main/resources` 下的全部 yml 比对。
+同一个键不在 jar 和 Nacos 两处写：patra-tool-launch 的 `JarConfigOverlapCheckerTest` 拿 `patra-infra/nacos/dev/` 与 6 个 boot 模块 `src/main/resources` 下的全部 yml 比对。
 
 ## Nacos 接入
 
-Nacos 的地址、账号、服务发现设置由 `patra-spring-boot-starter-nacos` 注入，服务的配置里不写 `spring.cloud.nacos`。Nacos 同时用于服务发现和配置管理。
+Nacos 的地址、账号、服务发现设置由 `patra-tool-launch` 注入，服务的配置里不写 `spring.cloud.nacos`。Nacos 同时用于服务发现和配置管理。
 
 ## 配置类模式
 
