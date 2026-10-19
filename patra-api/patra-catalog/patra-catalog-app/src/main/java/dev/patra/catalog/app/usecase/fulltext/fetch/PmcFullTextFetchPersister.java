@@ -13,6 +13,7 @@ import dev.patra.catalog.domain.port.storage.FullTextObjectStoragePort;
 import dev.patra.catalog.domain.service.fulltext.FullTextRetrySchedule;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
@@ -73,6 +74,8 @@ public class PmcFullTextFetchPersister {
 
   /// 记录不可用；可再查的原因按次数或放开日期算下次再查时间，撤稿等终态不再查。
   ///
+  /// 不可用意味着不再允许分发：清空已抓取的内容信息，`has_full_text` 置回 false。
+  ///
   /// @param c 候选
   /// @param reason 原因
   @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
@@ -90,14 +93,31 @@ public class PmcFullTextFetchPersister {
                     ? retrySchedule.afterUnavailable(attempts, c.pmcReleaseDate())
                     : null)
             .build());
+    fullTextRepository.setHasFullText(c.publicationId(), false);
   }
 
   /// 记录抓取失败，按次数退避。
+  ///
+  /// 已有抓取内容的记录（手动重抓、PMCID 变更重抓）失败时保留原状态与内容，只记错误、次数与下次时间——
+  /// 一次 5xx 不能让已能阅读的全文和 PDF 消失。没有内容的记录记为 `FETCH_FAILED`。
   ///
   /// @param c 候选
   /// @param error 失败原因
   @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
   public void recordFailure(FetchCandidate c, Exception error) {
+    String message = truncate(error.getClass().getSimpleName() + ": " + error.getMessage());
+    Optional<PublicationFullText> current =
+        fullTextRepository.findByPublicationId(c.publicationId());
+    if (current.isPresent() && current.get().objectPrefix() != null) {
+      int attempts = current.get().lastError() != null ? current.get().attemptCount() + 1 : 1;
+      fullTextRepository.save(
+          current.get().toBuilder()
+              .attemptCount(attempts)
+              .lastError(message)
+              .nextAttemptAt(retrySchedule.afterFetchFailure(attempts))
+              .build());
+      return;
+    }
     int attempts = nextAttemptCount(c, FullTextStatus.FETCH_FAILED);
     fullTextRepository.save(
         PublicationFullText.builder()
@@ -105,7 +125,7 @@ public class PmcFullTextFetchPersister {
             .pmcid(c.pmcid())
             .status(FullTextStatus.FETCH_FAILED)
             .attemptCount(attempts)
-            .lastError(truncate(error.getClass().getSimpleName() + ": " + error.getMessage()))
+            .lastError(message)
             .nextAttemptAt(retrySchedule.afterFetchFailure(attempts))
             .build());
   }

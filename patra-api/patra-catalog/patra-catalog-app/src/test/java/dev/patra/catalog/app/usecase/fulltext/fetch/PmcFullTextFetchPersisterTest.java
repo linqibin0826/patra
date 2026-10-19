@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import dev.patra.catalog.domain.model.enums.FullTextStatus;
 import dev.patra.catalog.domain.model.enums.FullTextUnavailableReason;
@@ -24,6 +25,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -136,6 +138,45 @@ class PmcFullTextFetchPersisterTest {
 
     verify(fullTextRepository).save(savedCaptor.capture());
     assertThat(savedCaptor.getValue().lastError()).hasSize(2000);
+  }
+
+  @Test
+  @DisplayName("已有可读全文的记录重抓失败时保留状态与内容，只记错误与下次时间")
+  void should_keep_content_and_status_when_refetch_of_parsed_record_fails() {
+    PublicationFullText parsed =
+        PublicationFullText.builder()
+            .publicationId(7L)
+            .pmcid("PMC1")
+            .pmcVersion("PMC1.2")
+            .status(FullTextStatus.PARSED)
+            .objectPrefix("pmc/PMC1/PMC1.2/")
+            .pdfObjectKey("pmc/PMC1/PMC1.2/PMC1.2.pdf")
+            .parserVersion(1)
+            .wordCount(500)
+            .build();
+    when(fullTextRepository.findByPublicationId(7L)).thenReturn(Optional.of(parsed));
+
+    persister.recordFailure(candidate(FullTextStatus.PARSED, 0), new IllegalStateException("503"));
+
+    verify(fullTextRepository).save(savedCaptor.capture());
+    PublicationFullText saved = savedCaptor.getValue();
+    assertThat(saved.status()).isEqualTo(FullTextStatus.PARSED);
+    assertThat(saved.objectPrefix()).isEqualTo("pmc/PMC1/PMC1.2/");
+    assertThat(saved.pdfObjectKey()).isEqualTo("pmc/PMC1/PMC1.2/PMC1.2.pdf");
+    assertThat(saved.wordCount()).isEqualTo(500);
+    assertThat(saved.attemptCount()).isEqualTo(1);
+    assertThat(saved.lastError()).isEqualTo("IllegalStateException: 503");
+    assertThat(saved.nextAttemptAt()).isEqualTo(NOW.plus(Duration.ofHours(1)));
+  }
+
+  @Test
+  @DisplayName("变成不可用时 has_full_text 置回 false")
+  void should_clear_has_full_text_when_becoming_unavailable() {
+    persister.recordUnavailable(
+        candidate(FullTextStatus.PARSED, 0), FullTextUnavailableReason.NOT_OPEN_ACCESS);
+
+    verify(publicationRepository, never()).markPmcOpenAccess(anyLong(), any());
+    verify(fullTextRepository).setHasFullText(7L, false);
   }
 
   private static FetchCandidate candidate(FullTextStatus status, int attempts) {
