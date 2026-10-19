@@ -3,11 +3,13 @@ package dev.patra.catalog.adapter.rest.portal;
 import dev.patra.catalog.adapter.rest.portal.request.PortalPublicationListRequest;
 import dev.patra.catalog.adapter.rest.portal.request.PortalPublicationSearchRequest;
 import dev.patra.catalog.adapter.rest.portal.request.RepeatedParamListEditor;
+import dev.patra.catalog.adapter.rest.portal.response.PortalFullTextResponse;
 import dev.patra.catalog.adapter.rest.portal.response.PortalPaperResponse;
 import dev.patra.catalog.adapter.rest.portal.response.PortalPublicationDetailResponse;
 import dev.patra.catalog.adapter.rest.portal.response.PortalPublicationFacetsResponse;
 import dev.patra.catalog.app.usecase.portal.query.PortalFeedQueryService;
 import dev.patra.catalog.app.usecase.portal.query.PortalPublicationDetailQueryService;
+import dev.patra.catalog.app.usecase.portal.query.PortalPublicationFullTextQueryService;
 import dev.patra.catalog.app.usecase.portal.query.PortalPublicationSearchQueryService;
 import dev.patra.catalog.app.usecase.portal.query.dto.PortalFeedQuery;
 import dev.patra.catalog.domain.model.read.portal.PublicationSearchFilter;
@@ -49,6 +51,7 @@ public class PortalPublicationController {
   private final PortalFeedQueryService portalFeedQueryService;
   private final PortalPublicationDetailQueryService portalPublicationDetailQueryService;
   private final PortalPublicationSearchQueryService portalPublicationSearchQueryService;
+  private final PortalPublicationFullTextQueryService portalPublicationFullTextQueryService;
   private final PortalApiConverter portalApiConverter;
 
   /// 本控制器的 `List` 参数全部按重复参数绑定、不拆逗号（类型值含逗号，见 [RepeatedParamListEditor]）。
@@ -101,6 +104,16 @@ public class PortalPublicationController {
   public PortalPublicationDetailResponse getDetail(@PathVariable @Positive long id) {
     return portalApiConverter.toPublicationDetailResponse(
         portalPublicationDetailQueryService.getById(id));
+  }
+
+  /// 查询文献全文（正文结构、许可与署名）。只有 PDF 可下载时返回 200、正文为空；都不满足时 404。
+  ///
+  /// @param id 文献 ID（必须为正整数）
+  /// @return 全文
+  @GetMapping("/{id}/fulltext")
+  public PortalFullTextResponse getFullText(@PathVariable @Positive long id) {
+    return portalApiConverter.toFullTextResponse(
+        portalPublicationFullTextQueryService.getForPortal(id));
   }
 
   /// 请求 DTO → 领域过滤参数。LIKE 转义与 DOI 归一化在读适配器做。

@@ -1,0 +1,1625 @@
+
+<!DOCTYPE article
+  PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Archiving and Interchange DTD with MathML3 v1.4 20241031//EN" "JATS-archivearticle1-4-mathml3.dtd">
+<article xml:lang="en" article-type="research-article" dtd-version="1.4"><processing-meta base-tagset="archiving" mathml-version="3.0" table-model="xhtml" tagset-family="jats"><restricted-by>pmc</restricted-by></processing-meta><front><journal-meta><journal-id journal-id-type="nlm-ta">NAR Genom Bioinform</journal-id><journal-id journal-id-type="iso-abbrev">NAR Genom Bioinform</journal-id><journal-id journal-id-type="pmc-domain-id">3944</journal-id><journal-id journal-id-type="pmc-domain">nargab</journal-id><journal-id journal-id-type="nlm-id">101756213</journal-id><journal-id journal-id-type="publisher-id">nargab</journal-id><journal-title-group><journal-title>NAR Genomics and Bioinformatics</journal-title></journal-title-group><issn pub-type="epub">2631-9268</issn><publisher><publisher-name>Oxford University Press</publisher-name></publisher></journal-meta><article-meta><article-id pub-id-type="pmcid">PMC12754789</article-id><article-id pub-id-type="pmcid-ver">PMC12754789.1</article-id><article-id pub-id-type="pmcaid">12754789</article-id><article-id pub-id-type="pmcaiid">12754789</article-id><article-id pub-id-type="pmid">41480589</article-id><article-id pub-id-type="doi">10.1093/nargab/lqaf203</article-id><article-id pub-id-type="publisher-id">lqaf203</article-id><article-version article-version-type="pmc-version">1</article-version><article-categories><subj-group subj-group-type="heading"><subject>Computational Methods for Transcriptome Analysis</subject></subj-group><subj-group subj-group-type="category-taxonomy-collection"><subject>AcademicSubjects/SCI00030</subject><subject>AcademicSubjects/SCI00980</subject><subject>AcademicSubjects/SCI01060</subject><subject>AcademicSubjects/SCI01140</subject><subject>AcademicSubjects/SCI01180</subject></subj-group><subj-group subj-group-type="category-oup-series"><subject>Editor's Choice</subject></subj-group></article-categories><title-group><article-title>A supervised Bayesian method for time (re)annotation of transcriptomics data</article-title></title-group><contrib-group><contrib contrib-type="author"><contrib-id contrib-id-type="orcid" authenticated="false">https://orcid.org/0000-0002-0591-0324</contrib-id><name name-style="western"><surname>Nushi</surname><given-names initials="E">Elio</given-names></name><aff>
+<institution>Department of Computer Science, Faculty of Science, University of Helsinki</institution>, <addr-line>00560, Helsinki</addr-line>, <country country="FI">Finland</country></aff></contrib><contrib contrib-type="author"><contrib-id contrib-id-type="orcid" authenticated="false">https://orcid.org/0000-0001-7201-6907</contrib-id><name name-style="western"><surname>Douillard</surname><given-names initials="FP">François P</given-names></name><aff>
+<institution>Department of Food Hygiene and Environmental Health, Faculty of Veterinary Medicine, University of Helsinki</institution>, <addr-line>00790, Helsinki</addr-line>, <country country="FI">Finland</country></aff></contrib><contrib contrib-type="author"><name name-style="western"><surname>Selby</surname><given-names initials="K">Katja</given-names></name><aff>
+<institution>Department of Food Hygiene and Environmental Health, Faculty of Veterinary Medicine, University of Helsinki</institution>, <addr-line>00790, Helsinki</addr-line>, <country country="FI">Finland</country></aff></contrib><contrib contrib-type="author"><contrib-id contrib-id-type="orcid" authenticated="false">https://orcid.org/0000-0003-3910-4782</contrib-id><name name-style="western"><surname>Blount</surname><given-names initials="BA">Benjamin A</given-names></name><aff>
+<institution>School of Life Sciences, University of Nottingham</institution>, <addr-line>NG7 2RD, Nottingham</addr-line>, <country country="GB">United Kingdom</country></aff></contrib><contrib contrib-type="author"><name name-style="western"><surname>Pennington</surname><given-names initials="OJ">Oliver J</given-names></name><aff>
+<institution>BBSRC/EPSRC Synthetic Biology Research Centre (SBRC), University of Nottingham</institution>, <addr-line>NG7 2RD, Nottingham</addr-line>, <country country="GB">United Kingdom</country></aff></contrib><contrib contrib-type="author"><contrib-id contrib-id-type="orcid" authenticated="false">https://orcid.org/0000-0002-9277-1261</contrib-id><name name-style="western"><surname>Minton</surname><given-names initials="NP">Nigel P</given-names></name><aff>
+<institution>BBSRC/EPSRC Synthetic Biology Research Centre (SBRC), University of Nottingham</institution>, <addr-line>NG7 2RD, Nottingham</addr-line>, <country country="GB">United Kingdom</country></aff></contrib><contrib contrib-type="author"><contrib-id contrib-id-type="orcid" authenticated="false">https://orcid.org/0000-0002-0421-7595</contrib-id><name name-style="western"><surname>Lindström</surname><given-names initials="M">Miia</given-names></name><aff>
+<institution>Department of Food Hygiene and Environmental Health, Faculty of Veterinary Medicine, University of Helsinki</institution>, <addr-line>00790, Helsinki</addr-line>, <country country="FI">Finland</country></aff></contrib><contrib contrib-type="author" corresp="yes"><contrib-id contrib-id-type="orcid" authenticated="false">https://orcid.org/0000-0001-9193-8093</contrib-id><name name-style="western"><surname>Honkela</surname><given-names initials="A">Antti</given-names></name><aff>
+<institution>Department of Computer Science, Faculty of Science, University of Helsinki</institution>, <addr-line>00560, Helsinki</addr-line>, <country country="FI">Finland</country></aff><xref rid="COR1" ref-type="corresp"/></contrib></contrib-group><author-notes><corresp id="COR1">To whom correspondence should be addressed. Email: <email>antti.honkela@helsinki.fi</email></corresp></author-notes><pub-date pub-type="collection"><month>12</month><year>2025</year></pub-date><pub-date pub-type="epub" iso-8601-date="2025-12-31"><day>31</day><month>12</month><year>2025</year></pub-date><volume>7</volume><issue>4</issue><issue-id pub-id-type="pmc-issue-id">498458</issue-id><elocation-id>lqaf203</elocation-id><history><date date-type="received"><day>27</day><month>4</month><year>2024</year></date><date date-type="rev-recd"><day>14</day><month>11</month><year>2025</year></date><date date-type="accepted"><day>24</day><month>11</month><year>2025</year></date></history><pub-history><event event-type="pmc-release"><date><day>31</day><month>12</month><year>2025</year></date></event><event event-type="pmc-live"><date><day>01</day><month>01</month><year>2026</year></date></event><event event-type="pmc-last-change"><date iso-8601-date="2026-01-02 11:25:13.197"><day>02</day><month>01</month><year>2026</year></date></event></pub-history><permissions><copyright-statement>© The Author(s) 2025. Published by Oxford University Press.</copyright-statement><copyright-year>2025</copyright-year><license><ali:license_ref xmlns:ali="http://www.niso.org/schemas/ali/1.0/" specific-use="textmining" content-type="ccbylicense">https://creativecommons.org/licenses/by/4.0/</ali:license_ref><license-p>This is an Open Access article distributed under the terms of the Creative Commons Attribution License (<ext-link xmlns:xlink="http://www.w3.org/1999/xlink" ext-link-type="uri" xlink:href="https://creativecommons.org/licenses/by/4.0/">https://creativecommons.org/licenses/by/4.0/</ext-link>), which permits unrestricted reuse, distribution, and reproduction in any medium, provided the original work is properly cited.</license-p></license></permissions><self-uri xmlns:xlink="http://www.w3.org/1999/xlink" content-type="pmc-pdf" xlink:href="lqaf203.pdf"/><self-uri xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="lqaf203.pdf"/><abstract><title>Abstract</title><p>Transcriptomics experiments are often conducted to capture changes in gene expression over time. However, time annotations may be missing, imprecise, or not reflect the same physiological state of the bacterial culture between different experiments. Assigning accurate time points to these experiments using a reference time course is therefore crucial for identifying differentially expressed genes, and understanding gene regulatory networks for elucidating the studied organism’s physiology and life cycle. This important task, which could enhance the biological interpretation of the transcriptomics experiments, has not been previously addressed. In this work, we propose a novel method to solve the challenge of realigning transcriptomics experiments based on a reference time course. Our method is based on a Bayesian approach that uses Gaussian process regression modeling. We show a use case of applying our method for assigning time annotations in legacy microarray samples of the bacterium <italic toggle="yes">Clostridium botulinum</italic>, which were solely annotated based on the growth phase at the time when the culture aliquots were sampled, utilizing recently collected RNA-Seq time series data comprising multiple replicates as a reference. The method significantly improved the description of the growth phases of the microarray data compared to the original annotations by clearly delineating the microarray samples belonging to different growth phases, as demonstrated by principal component analysis. Consequently, a larger number of differentially expressed genes was detected when comparing experiments belonging to successive growth phases. We compare this innovative approach with a baseline method that uses k-nearest neighbor algorithm and show that our method offers a higher resolution in the description of the data by exposing smaller time changes between samples. We also test the performance of the method on sparse RNA-Seq time series (i.e. sampled every second hour). All the predictions for the samples were within a 30-min margin of their true time.</p></abstract><funding-group><award-group award-type="grant"><funding-source>
+<institution-wrap><institution>Horizon 2020</institution><institution-id institution-id-type="DOI">10.13039/100010661</institution-id></institution-wrap>
+</funding-source><award-id>683099</award-id></award-group><award-group award-type="grant"><funding-source>
+<institution-wrap><institution>University of Helsinki</institution><institution-id institution-id-type="DOI">10.13039/100007797</institution-id></institution-wrap>
+</funding-source></award-group></funding-group><counts><page-count count="14"/></counts><custom-meta-group><custom-meta><meta-name>pmc-status-qastatus</meta-name><meta-value>0</meta-value></custom-meta><custom-meta><meta-name>pmc-status-live</meta-name><meta-value>yes</meta-value></custom-meta><custom-meta><meta-name>pmc-status-embargo</meta-name><meta-value>no</meta-value></custom-meta><custom-meta><meta-name>pmc-status-released</meta-name><meta-value>yes</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-open-access</meta-name><meta-value>yes</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-olf</meta-name><meta-value>no</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-manuscript</meta-name><meta-value>no</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-legally-suppressed</meta-name><meta-value>no</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-has-pdf</meta-name><meta-value>yes</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-has-supplement</meta-name><meta-value>yes</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-pdf-only</meta-name><meta-value>no</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-suppress-copyright</meta-name><meta-value>no</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-is-real-version</meta-name><meta-value>no</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-is-scanned-article</meta-name><meta-value>no</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-preprint</meta-name><meta-value>no</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-in-epmc</meta-name><meta-value>yes</meta-value></custom-meta><custom-meta><meta-name>pmc-license-ref</meta-name><meta-value>CC BY</meta-value></custom-meta></custom-meta-group></article-meta></front><body><sec sec-type="intro" id="SEC1"><title>Introduction</title><p>Time-course transcriptomics experiments have been widely used to explore essential biological processes that exhibit dynamic characteristics such as the cell cycle [<xref rid="B1" ref-type="bibr">1</xref>], circadian rhythms [<xref rid="B2" ref-type="bibr">2</xref>], and developmental processes [<xref rid="B3" ref-type="bibr">3</xref>]. However, collecting time series of high-quality RNA measurements is a financially and time-expensive process. On the other hand, there is a large number of historical transcriptomics experiments (i.e. microarray samples) that have already been performed [<xref rid="B4" ref-type="bibr">4</xref>], but their sampling time cannot be directly aligned for reasons such as the differing of lag phase length and changes in inoculum size, for instance. Thus, their use for different comparison analyses is nontrivial. Being able to enrich these experiments with biologically consistent time annotations would increase the number of available transcriptomics time series without additional costs. They can then be used together to complement each other as well as to ensure a stronger statistical significance of the results obtained as compared to using only RNA-Seq data [<xref rid="B5" ref-type="bibr">5</xref>]. In a realm where transcriptomics experiments abound, the pressing challenge of inferring precise time points in the absence of established annotations has remained largely uncharted. This crucial task, essential for unraveling differentially expressed genes and comprehending intricate gene regulatory networks, has, until now, eluded comprehensive solutions.</p><p>Here, we present a statistical method based on a Bayesian approach to address the time annotation challenge. It can be used to assign time annotations to target omics experiments that are represented as sets of genome-wide values by using reference omics experiments in the form of genome-wide time series. The method can be utilized to annotate historical data archived in repositories, helping to gain a better understanding of the organism under study by uncovering biological pathways, for example, through differential gene expression analysis. Additionally, our approach offers a measure of uncertainty associated with each time annotation assignment.</p><p>In order to make time point predictions for the target experiments, we use Gaussian processes (GPs) to model the behavior of each gene with respect to the time line determined by the reference data. We build the GP models on the basis of the reference data and combine them together through the independence assumption. Then, we model the uncertainty that corresponds to the likelihood that a given target experiment could have been sampled at any chosen time point within the time interval when measurements in the reference time series took place, even at those time points for which no training data exist. Figure <xref rid="F1" ref-type="fig">1</xref> gives a general overview of the process that describes our method.</p><fig position="float" id="F1" orientation="portrait"><label>Figure 1.</label><caption><p>A generic overview of the time annotating method that ends in time annotation. Annotating target omics experiments (e.g. microarray samples) using reference time series (e.g. RNA-Seq samples), process diagram.</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="float" orientation="portrait" xlink:href="lqaf203fig1.jpg"/></fig><sec sec-type="materials|methods" id="SEC1-1"><title>Related methods</title><p>Time-annotated transcriptomics data can provide useful information to understand the dynamic regulation and function of cells [<xref rid="B6" ref-type="bibr">6</xref>], and many studies have been performed to reconstruct their temporal structure [<xref rid="B7" ref-type="bibr">7</xref>–<xref rid="B10" ref-type="bibr">10</xref>]. Magwene <italic toggle="yes">et al.</italic> [<xref rid="B7" ref-type="bibr">7</xref>] devised an unsupervised method for ordering bulk microarray samples by knowing the first or the last sample. Trapnell <italic toggle="yes">et al.</italic> [<xref rid="B8" ref-type="bibr">8</xref>] extended the former method to accommodate for single-cell variation and to allow for multiple cell fates deriving from a single progenitor cell type. Their unsupervised algorithm is able to reconstruct the sequence of transcriptional changes experienced by cells as they differentiate. Thus, it orders a heterogeneous and unsynchronized group of cells based on their advancement through the acquired knowledge of the differentiation process. Reid and Wernisch [<xref rid="B9" ref-type="bibr">9</xref>] presented a principled probabilistic model with an unsupervised Bayesian inference scheme for assigning pseudotime to single-cell time series. In the study, the authors defined pseudotime as a latent dimension that measures the cells’ progress through transitions from state to state. Unlike the previously mentioned methods that estimate orderings of RNA-Seq samples, it explicitly estimates pseudotimes that are on the same scale as the capture time of the experiments, given a set of transcriptomics samples (e.g. single cell RNA-seq). In another study, Campbell and Yau [<xref rid="B10" ref-type="bibr">10</xref>] introduced a statistical framework for uncovering pseudotemporal trajectories for both single cell and bulk expression data. Their method accepts gene expression data representing different transcriptomics experiments and maps them to a series of one-dimensional quantities that they call pseudotimes.</p><p>Our method differs from the previous works because it uses reference transcriptomics time series to learn the temporal structure of every gene. Given a new experiment, it makes predictions about the actual laboratory time when the experiment was sampled relative to the reference, by providing sensible uncertainties for the predictions. By leveraging a reference time series, our method can more accurately capture the temporal dynamics of the transcriptomics data. The reference time series provides a structured framework that guides the learning process, allowing the model to make more precise predictions about the timing of events in the target data. Additionally, it improves the interpretability of the results by anchoring the analysis to a known temporal structure, making time annotations easier to understand within existing biological knowledge. Thus, it can be used to improve the time annotations of older omics datasets or correct inaccuracies associated with growth phase assignment in the case of transcriptomics data, for instance.</p></sec><sec id="SEC1-2"><title>Contributions</title><p>We make four main contributions:</p><list list-type="order"><list-item><p>
+<bold>A Bayesian time annotation algorithm</bold> that fits GPs to reference transcriptomics time series and transfers the learned temporal structure to un-timed target data (the “Materials and methods” section).</p></list-item><list-item><p>
+<bold>An integrated Python pipeline</bold> publicly available as described in the “Data availability” section.</p></list-item><list-item><p>
+<bold>A thorough empirical validation</bold> on three scenarios: (i) a hold-out RNA-seq test set mimicking sparse sampling (the “Sparse RNA-Seq hold-out” section), (ii) synthetic noisy data (the “Sensitivity to noise” section), and (iii) a case study re-annotating 80 legacy microarrays from bacterial growth experiments (the “Time re-annotation of microarray samples: a case study” section).</p></list-item><list-item><p>
+<bold>Biological insights</bold> gained after temporal recalibration—e.g. increased detection of differentially expressed genes (the “Sensitivity to noise” section).</p></list-item></list><sec id="SEC1-2-1"><title>Road-map</title><p>The “Materials and methods” section details the modeling and implementation; the “Data” section introduces all datasets and their pre/post-processing; the “Validation” section validates the method on held-out and synthetic data; the “Time re-annotation of microarray samples: a case study” section presents the microarray case study; and the “Discussion” section discusses results and limitations.</p></sec></sec></sec><sec sec-type="materials|methods" id="SEC2"><title>Materials and methods</title><p>Our time annotation method consists of three procedures. First, raw expression profiles are filtered and normalized (the “Filtering and normalization of transcriptomics data” section). Second, each gene is modeled as a GP whose kernel captures temporal dynamics and provides a mechanism for performing time annotation (the “Gaussian process analysis” section). Third, genes whose data are poorly explained by any GP are discarded (the “Model selection and quality control” section). We implement the three steps in an end-to-end Python pipeline described in the “Data availability” section.</p><sec id="SEC2-3"><title>Filtering and normalization of transcriptomics data</title><p>Transcriptomics technologies measure the quantity of mRNA and use it to estimate the level of gene expression. However, there is no unique way of quantifying the level of gene expression, and plain comparison between gene expression values coming from different experiments could yield incorrect results. There is often no explicit method for transforming gene expression values to make them comparable, especially when they come from different RNA measurement technologies such as RNA-Seq and DNA microarray. Furthermore, many comparative studies have shown that they can be inconsistent for individual genes [<xref rid="B11" ref-type="bibr">11</xref>].</p><p>In this work, we took a simple approach to filter and normalize the data in order to increase their comparability. We focused our analysis on those genes that have a maximum value above a certain threshold. The value of the threshold depends on the specifics of the data that we work with. The purpose of this kind of filtering is to remove those genes whose signal-to-noise ratio is very small, because they are likely to contribute more noise than signal in the analysis. Then we log-transformed the data to reduce the difference between extreme values. Subsequently, we apply median-polish normalization [<xref rid="B12" ref-type="bibr">12</xref>]. Median polish procedure consists on first finding and then subtracting the median from each experiment and then repeating the same procedure for every gene across different experiments. This procedure is repeated until the proportional reduction in the sum of absolute residuals is less than a value (<inline-formula><tex-math id="TM0001" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\epsilon &gt;0$\end{document}</tex-math></inline-formula>). This helps to bring the data on the same scale. Below, we define formally the normalization procedure described previously:</p><p>Let <inline-formula><tex-math id="TM0002" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$G \in \mathbb {R}^{N \times K}$\end{document}</tex-math></inline-formula> be a matrix representing the transcriptomics data consisting of <inline-formula><tex-math id="TM0003" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$N$\end{document}</tex-math></inline-formula> genes and <inline-formula><tex-math id="TM0004" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$K$\end{document}</tex-math></inline-formula> different measurements for those genes, the procedure is summarized in <xref rid="alg1" ref-type="table">Algorithm 1</xref>.</p><table-wrap position="float" id="alg1" orientation="portrait"><label>Algorithm 1</label><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="float" orientation="portrait" xlink:href="zcaf053alg1.jpg"/></table-wrap><p>This approach not only standardizes the data values to a uniform scale but at the same time preserves their original structure as shown in Fig. <xref rid="F2" ref-type="fig">2</xref>. Thus, it makes them suitable to use for the purpose of our method.</p><fig position="float" id="F2" orientation="portrait"><label>Figure 2.</label><caption><p>Distribution of transcriptomics values before and after the median normalization.</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="float" orientation="portrait" xlink:href="lqaf203fig2.jpg"/></fig></sec><sec id="SEC2-4"><title>Gaussian process analysis</title><p>GPs are nonparametric methods that are used for building probabilistic models of functional data [<xref rid="B13" ref-type="bibr">13</xref>]. In many previous studies, GPs have been widely recognized and adopted for modeling transcriptomics data [<xref rid="B6" ref-type="bibr">6</xref>, <xref rid="B9" ref-type="bibr">9</xref>, <xref rid="B14" ref-type="bibr">14</xref>–<xref rid="B19" ref-type="bibr">19</xref>]. Below, we are giving the formal definition of a GP:</p><statement content-type="definition" id="DEF-ST1"><label>Definition 1.</label><p>A GP is a collection of random variables, any finite number of which have a joint Gaussian distribution.</p></statement><p>A GP <inline-formula><tex-math id="TM0006" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$f(t)$\end{document}</tex-math></inline-formula> is completely characterized by a mean function that we write as <inline-formula><tex-math id="TM0007" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$m(t)$\end{document}</tex-math></inline-formula> and a covariance function <inline-formula><tex-math id="TM0008" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$k(t,t^{\prime })$\end{document}</tex-math></inline-formula> that is often referred to as the kernel of the GP. We formally write it as follows:</p><disp-formula id="M1">
+<label>(1)</label>
+<tex-math id="TM0009" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+\begin{eqnarray*}
+f(t) \sim \mathcal {GP}(m(t), k(t,t^{\prime })).
+\end{eqnarray*}\end{document}</tex-math>
+</disp-formula><p>The mean function is assumed to be zero for simplification purposes, thus causing the GP to depend only on the choice of the kernel function. Choosing the kernel function is an important step in the process of modeling with GPs as it determines our assumptions about the function that we want our model to be represented by. The most widely used kernel function for modeling with GPs that we also use in our analysis is the exponentiated quadratic function [<xref rid="B13" ref-type="bibr">13</xref>], which is defined as follows:</p><disp-formula id="M2">
+<label>(2)</label>
+<tex-math id="TM0010" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+\begin{eqnarray*}
+K_{EQ}(t,t^{\prime }) = \sigma _{f}^{2} ~ \exp \left(- \frac{ \left\Vert t-t^{\prime } \right\Vert ^{2} }{ 2l^{2} }\right).
+\end{eqnarray*}\end{document}</tex-math>
+</disp-formula><p>As we can see, the kernel function depends on two parameters: the length-scale <inline-formula><tex-math id="TM0011" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$l$\end{document}</tex-math></inline-formula> and the variance <inline-formula><tex-math id="TM0012" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\sigma _{f}^{2}$\end{document}</tex-math></inline-formula>. We will also consider a third parameter <inline-formula><tex-math id="TM0013" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\sigma _n^2$\end{document}</tex-math></inline-formula> , which is the Gaussian noise and represents the observation noise in our data. Given a set of inputs <inline-formula><tex-math id="TM0014" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\mathbf {t}$\end{document}</tex-math></inline-formula> and a set of outputs <inline-formula><tex-math id="TM0015" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\mathbf {y}$\end{document}</tex-math></inline-formula>, when modeling with a GP, we try to select the optimal triple <inline-formula><tex-math id="TM0016" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$(l,\sigma _f^2,\sigma _n^2)$\end{document}</tex-math></inline-formula> that maximizes the marginal likelihood <inline-formula><tex-math id="TM0017" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$P(\mathbf {y}|\mathbf {t},l,\sigma _f^2,\sigma _n^2)$\end{document}</tex-math></inline-formula> or equivalently maximizes the log marginal likelihood:</p><disp-formula id="M3">
+<label>(3)</label>
+<tex-math id="TM0018" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+\begin{eqnarray*}
+\log P(\mathbf {y}|\mathbf {t}) &amp;=&amp; -\frac{1}{2}(\mathbf {y} - m(\mathbf {t}))^T(K(\mathbf {t},\mathbf {t})+\sigma ^2_n I)^{-1}(\mathbf {y} - m(\mathbf {t})) \\&amp;&amp;- \frac{1}{2}\log |K(\mathbf {t},\mathbf {t})+\sigma ^2_n I|-\frac{n}{2}\log 2\pi .
+\end{eqnarray*}\end{document}</tex-math>
+</disp-formula><p>We can then estimate the likelihood of <inline-formula><tex-math id="TM0019" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$y_*$\end{document}</tex-math></inline-formula> at a point <inline-formula><tex-math id="TM0020" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$t_*$\end{document}</tex-math></inline-formula> in the following way:</p><disp-formula id="M4">
+<label>(4)</label>
+<tex-math id="TM0021" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+\begin{eqnarray*}
+P(y_*|t_*)=\frac{1}{\sigma _*\sqrt{2\pi }}\exp \left( -\frac{1}{2}\left(\frac{y_*-\mu _*}{\sigma _*}\right)^{\!2}\, \right),
+\end{eqnarray*}\end{document}</tex-math>
+</disp-formula><p>where <inline-formula><tex-math id="TM0022" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\mu _*$\end{document}</tex-math></inline-formula> and <inline-formula><tex-math id="TM0023" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\sigma _*$\end{document}</tex-math></inline-formula> are the posterior mean and posterior variance at <inline-formula><tex-math id="TM0024" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$t_*$\end{document}</tex-math></inline-formula> given by</p><disp-formula id="M5">
+<label>(5)</label>
+<tex-math id="TM0025" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+\begin{eqnarray*}
+\mu _*= m(t_*) + K(t_*,\mathbf {t})(K(\mathbf {t},\mathbf {t}) + \sigma _n^2I)^{-1}(\mathbf {y} - m(\mathbf {t})),
+\end{eqnarray*}\end{document}</tex-math>
+</disp-formula><p>and</p><disp-formula id="M6">
+<label>(6)</label>
+<tex-math id="TM0026" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+\begin{eqnarray*}
+\sigma _*^2=K(t_*,t_*)-K(t_*,\mathbf {t})(K(\mathbf {t},\mathbf {t}) +\sigma _n^2I)^{-1}K(t_*,\mathbf {t})^{T}.
+\end{eqnarray*}\end{document}</tex-math>
+</disp-formula><sec id="SEC2-2-1"><title>Modeling multiple replicates</title><p>Gene expression time series can be collected in multiple replicates to take in consideration the biological variation and measurement errors [<xref rid="B14" ref-type="bibr">14</xref>]. In the case of a dataset consisting of <inline-formula><tex-math id="TM0027" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$N$\end{document}</tex-math></inline-formula> genes and <inline-formula><tex-math id="TM0028" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$R$\end{document}</tex-math></inline-formula> replicates for each of the genes, which are observed at different time points, the data will be in the form</p><disp-formula>
+<tex-math id="TM0029" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+\begin{eqnarray*}
+({t_{j}^{}}, g_{ij}^{(r)}), \: r \in \lbrace 1,\dots ,R\rbrace , \: i \in \lbrace 1,\dots ,N\rbrace , \: {\rm and} \: j \in \lbrace 1,\dots ,T\rbrace ,
+\end{eqnarray*}\end{document}</tex-math>
+</disp-formula><p>where <inline-formula><tex-math id="TM0030" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$T$\end{document}</tex-math></inline-formula> is the number of observations for each gene replicate, <inline-formula><tex-math id="TM0031" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$t_j$\end{document}</tex-math></inline-formula> is a time point for which an observation about a gene replicate exists, and <inline-formula><tex-math id="TM0032" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$g_{ij}^{(r)}$\end{document}</tex-math></inline-formula> is the corresponding gene expression value. However, the data do not need to be complete (i.e. not all replicates of a gene must be fully observed at all time points), as the GP can easily handle missing entries. We denote by <inline-formula><tex-math id="TM0033" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$f_i(t)$\end{document}</tex-math></inline-formula> the latent function that models the gene expression values of gene <inline-formula><tex-math id="TM0034" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$g_i$\end{document}</tex-math></inline-formula> at every observed time point <inline-formula><tex-math id="TM0035" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$t_j$\end{document}</tex-math></inline-formula> and replicate <inline-formula><tex-math id="TM0036" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$r$\end{document}</tex-math></inline-formula>. We can thus define a regression problem over functions <inline-formula><tex-math id="TM0037" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$f_{i}: {t} \mapsto f_{i}({t})$\end{document}</tex-math></inline-formula>, the values of which can be samples from the following model:</p><disp-formula id="M7">
+<label>(7)</label>
+<tex-math id="TM0038" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+\begin{eqnarray*}
+f_{i}(t) \sim \mathcal {GP}(\mathbf {0}, k_{EQ}(t,t^{\prime })).
+\end{eqnarray*}\end{document}</tex-math>
+</disp-formula><p>We denote by <inline-formula><tex-math id="TM0039" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\mu _i=[f_i(t_j)]_{j=1}^{T}$\end{document}</tex-math></inline-formula> the vector of values of <inline-formula><tex-math id="TM0040" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$f_i(t)$\end{document}</tex-math></inline-formula> at the observed time points and let <inline-formula><tex-math id="TM0041" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$g_i^{(r)}=[g_{ij}^{(r)}]_{j=1}^{T}$\end{document}</tex-math></inline-formula> be the vector of the observed values of <inline-formula><tex-math id="TM0042" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$g_i$\end{document}</tex-math></inline-formula> in replicate <inline-formula><tex-math id="TM0043" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$r$\end{document}</tex-math></inline-formula> at the respective time points. We can define the values of <inline-formula><tex-math id="TM0044" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$g_i$\end{document}</tex-math></inline-formula> as noisy observations of <inline-formula><tex-math id="TM0045" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$f_i(t)$\end{document}</tex-math></inline-formula> and sample them from the following conditional distribution:</p><disp-formula id="M8">
+<label>(8)</label>
+<tex-math id="TM0046" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+\begin{eqnarray*}
+g_{i}^{(r)} | f_{i}(t) \sim N(\mu _{i}, \sigma _{n_i}^{2}\mathbb {I}),
+\end{eqnarray*}\end{document}</tex-math>
+</disp-formula><p>where <inline-formula><tex-math id="TM0047" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\sigma _{n_{i}}^{2}$\end{document}</tex-math></inline-formula> represents the noise variance between the replicates of gene <inline-formula><tex-math id="TM0048" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$g_i$\end{document}</tex-math></inline-formula>.</p><p>We can marginalize out <inline-formula><tex-math id="TM0049" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$f_{i}(t)$\end{document}</tex-math></inline-formula> and write the model conditioned on the mean of the GP in Equation (<xref rid="M7" ref-type="disp-formula">7</xref>). In the marginalized model, the covariance between two observations <inline-formula><tex-math id="TM0050" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$g_{ij}^{(r)}$\end{document}</tex-math></inline-formula> and <inline-formula><tex-math id="TM0051" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$g_{ij^{\prime }}^{(r^{\prime })}$\end{document}</tex-math></inline-formula> will be</p><disp-formula id="M9">
+<label>(9)</label>
+<tex-math id="TM0052" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+\begin{eqnarray*}
+\mathrm{Cov}[g_{ij}^{(r)},g_{ij^{\prime }}^{(r^{\prime })}]= K_{EQ}(t_j,t_{j^{\prime }}) + \sigma _{n_i}^{2}\delta (t_j=t_{j^{\prime }})\delta (r=r^{\prime }),
+\end{eqnarray*}\end{document}</tex-math>
+</disp-formula><p>where <inline-formula><tex-math id="TM0053" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\delta$\end{document}</tex-math></inline-formula> is the Kronecker delta. If we denote by <inline-formula><tex-math id="TM0054" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\mathbf {t}$\end{document}</tex-math></inline-formula> the concatenation of the observed time points in all replicates, we can generalize the generative model of the observations of gene <inline-formula><tex-math id="TM0055" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$g_i$\end{document}</tex-math></inline-formula> on any replicate <inline-formula><tex-math id="TM0056" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$r$\end{document}</tex-math></inline-formula> and write it as</p><disp-formula id="M10">
+<label>(10)</label>
+<tex-math id="TM0057" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+\begin{eqnarray*}
+{\begin{bmatrix}g_{i}^{(1)}\\\vdots \\g_{i}^{(R)} \end{bmatrix}} | \theta \sim \mathcal {N}\left(\mathbf {0}, K\right),
+\end{eqnarray*}\end{document}</tex-math>
+</disp-formula><p>where <inline-formula><tex-math id="TM0058" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\theta$\end{document}</tex-math></inline-formula> is the set of GP hyperparameters in Equation (<xref rid="M7" ref-type="disp-formula">7</xref>) and <inline-formula><tex-math id="TM0059" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$K$\end{document}</tex-math></inline-formula> is the covariance matrix obtained by applying the covariance function in Equation (<xref rid="M9" ref-type="disp-formula">9</xref>) on the grid <inline-formula><tex-math id="TM0060" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\mathbf {t}$\end{document}</tex-math></inline-formula>.</p></sec><sec id="SEC2-2-2"><title>Inferring the time of an experiment</title><p>Let <inline-formula><tex-math id="TM0061" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\lbrace g_{1,E},g_{2,E},\dots ,g_{N,E}\rbrace$\end{document}</tex-math></inline-formula> be gene expression values at a new experiment <inline-formula><tex-math id="TM0062" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$E$\end{document}</tex-math></inline-formula>, and <inline-formula><tex-math id="TM0063" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$M_1,M_2,\dots ,M_{N}$\end{document}</tex-math></inline-formula> be their GP fitted models fitted on reference time series. In order to select the most probable time point of <inline-formula><tex-math id="TM0064" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$E$\end{document}</tex-math></inline-formula>, for every gene value <inline-formula><tex-math id="TM0065" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$g_{i,E}$\end{document}</tex-math></inline-formula> we derive a likelihood function over time using its respective GP posterior</p><disp-formula id="M11">
+<label>(11)</label>
+<tex-math id="TM0066" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+\begin{eqnarray*}
+\mathcal {L}_{i}(t) = P(g_{i,E}|t,M_i), i \in \lbrace 1,\dots ,N\rbrace .
+\end{eqnarray*}\end{document}</tex-math>
+</disp-formula><p>The likelihood of <inline-formula><tex-math id="TM0067" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$E$\end{document}</tex-math></inline-formula> over time will then be given by</p><disp-formula id="M12">
+<label>(12)</label>
+<tex-math id="TM0068" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+\begin{eqnarray*}
+\prod _{i=1}^{N} \mathcal {L}_{i}(t),
+\end{eqnarray*}\end{document}</tex-math>
+</disp-formula><p>and we assign the most probable time to <inline-formula><tex-math id="TM0069" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$E$\end{document}</tex-math></inline-formula> by solving the following optimization problem, which maximizes the likelihood of <inline-formula><tex-math id="TM0070" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$E$\end{document}</tex-math></inline-formula> over <inline-formula><tex-math id="TM0071" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$t$\end{document}</tex-math></inline-formula>:</p><disp-formula id="M13">
+<label>(13)</label>
+<tex-math id="TM0072" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+\begin{eqnarray*}
+\max \limits _{t} \prod _{i=1}^{N} \mathcal {L}_{i}(t).
+\end{eqnarray*}\end{document}</tex-math>
+</disp-formula><p>To solve the problem in practice, we restrict the optimization to a discrete grid <inline-formula><tex-math id="TM0073" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\lbrace t_1,t_2,\dots ,t_T\rbrace$\end{document}</tex-math></inline-formula>. First, we calculate the log-likelihoods</p><disp-formula id="M14">
+<label>(14)</label>
+<tex-math id="TM0074" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+\begin{eqnarray*}
+&amp;&amp;\log P(g_{1,E},\dots , g_{N,E}|t_j,M_1,\dots ,M_N)\\&amp;=&amp; \sum _{i=1}^{N} \log P(g_{i,E}|t_j,M_i), j \in \lbrace 1,\dots ,T\rbrace .
+\end{eqnarray*}\end{document}</tex-math>
+</disp-formula><p>Then, we assign the most probable time point by solving</p><disp-formula id="M15">
+<label>(15)</label>
+<tex-math id="TM0075" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+\begin{eqnarray*}
+\mathrm{argmax}_{j=1}^{T} \left\lbrace \sum _{i=1}^{N} \log P(g_{i,E} |t_j, M_i)\right \rbrace .
+\end{eqnarray*}\end{document}</tex-math>
+</disp-formula></sec><sec id="SEC2-2-3"><title>Implementation of GP models</title><p>We used the Python library GPy [<xref rid="B20" ref-type="bibr">20</xref>] to build a separate GP model for every gene by following the model described in Equations (<xref rid="M7" ref-type="disp-formula">7</xref>)–(<xref rid="M10" ref-type="disp-formula">10</xref>). Figure <xref rid="F3" ref-type="fig">3</xref> gives a visual representation of the GP model for one of the genes.</p><fig position="float" id="F3" orientation="portrait"><label>Figure 3.</label><caption><p>GP plot obtained by fitting the RNA-Seq time series data corresponding to gene <italic toggle="yes">serS</italic>, the blue line is the posterior mean and the light blue region represents the 95% confidence region based on the posterior variance and Gaussian noise. Crosses correspond to the normalized values of the gene for each replicate on different time points.</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="float" orientation="portrait" xlink:href="lqaf203fig3.jpg"/></fig><p>We used the GP models to generate log-probability distributions <inline-formula><tex-math id="TM0076" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\log P(g_{i,E}|t_j,M_i)$\end{document}</tex-math></inline-formula> corresponding to the log-likelihood that the gene <inline-formula><tex-math id="TM0077" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$g_i$\end{document}</tex-math></inline-formula> , which follows the model <inline-formula><tex-math id="TM0078" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$M_i$\end{document}</tex-math></inline-formula> can have value <inline-formula><tex-math id="TM0079" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$g_{i,E}$\end{document}</tex-math></inline-formula> during time <inline-formula><tex-math id="TM0080" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$t_j$\end{document}</tex-math></inline-formula> as in Equation (<xref rid="M14" ref-type="disp-formula">14</xref>). We calculated the log-likelihoods at equally spaced consecutive time points within the time interval of the training data. After applying this procedure for all the genes in a microarray sample, the most probable time point of the sample was deduced by choosing the one that has the maximum sum of log-likelihoods over all the gene expression values belonging to that sample as shown in Equation (<xref rid="M15" ref-type="disp-formula">15</xref>).</p><p>Figure <xref rid="F4" ref-type="fig">4</xref> illustrates the log-likelihood curve for one microarray sample, which has its maximum sum over the log-likelihoods of all the gene values at 5.5 h.</p><fig position="float" id="F4" orientation="portrait"><label>Figure 4.</label><caption><p>Log-likelihood curve of microarray sample 30 (whose legacy growth phase annotation is mid-exponential phase) for selected time points. The maximum is reached at 5.75 h (marked with cross).</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="float" orientation="portrait" xlink:href="lqaf203fig4.jpg"/></fig></sec></sec><sec id="SEC2-5"><title>Model selection and quality control</title><p>GPs are powerful but sensitive models whose flexibility can lead to issues such as overfitting, underfitting, or spurious extrapolation, particularly in high-dimensional biological data [<xref rid="B21" ref-type="bibr">21</xref>]. To ensure reliable time annotations and guard against misleading conclusions, we systematically address potential failure modes of the model through a combination of in-distribution and out-of-distribution quality checks. Below, we enumerate key risks and how our pipeline mitigates them.</p><sec id="SEC2-3-1"><title>Quality evaluation in reference data</title><p>To avoid overfitting of the GP models in the reference time series, we considered the heuristics of building robust GPs as described in [<xref rid="B21" ref-type="bibr">21</xref>] by putting bounding constraints on the length-scale such that <inline-formula><tex-math id="TM0081" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\Delta t_{\min } \le l \le \Delta t_{\max }$\end{document}</tex-math></inline-formula>, where <inline-formula><tex-math id="TM0082" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\Delta t_{min} = \min (t_i - t_{i-1})$\end{document}</tex-math></inline-formula> and <inline-formula><tex-math id="TM0083" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\Delta t_{max} = \max (t_i - t_{j})$\end{document}</tex-math></inline-formula>.</p><p>We address underfitting by performing model comparison against a time-invariant model, similarly to [<xref rid="B22" ref-type="bibr">22</xref>]. This is performed by comparing the GP marginal likelihoods with the likelihood obtained from the following time-invariant model:</p><disp-formula id="M16">
+<label>(16)</label>
+<tex-math id="TM0084" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+\begin{eqnarray*}
+g_{ij}^{(r)} \sim \mathcal {N}(\mu _i, \sigma _i^{2}), \: r \in \lbrace 1,\dots ,R\rbrace , \: \: j \in \lbrace 1,\dots ,T\rbrace ,
+\end{eqnarray*}\end{document}</tex-math>
+</disp-formula><p>where <inline-formula><tex-math id="TM0085" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\mu _i$\end{document}</tex-math></inline-formula>, <inline-formula><tex-math id="TM0086" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\sigma _i^{2}$\end{document}</tex-math></inline-formula> are the mean and variance over all the observations for gene <inline-formula><tex-math id="TM0087" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$i$\end{document}</tex-math></inline-formula> coming from the reference data. We then set a filter to ignore those gene models whose GP marginal likelihood on the reference data is considerably smaller compared to the invariant model. The rule for filtering the model based on the reference data fits can thus be written as follows:</p><disp-formula id="M17">
+<label>(17)</label>
+<tex-math id="TM0088" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+\begin{eqnarray*}
+\log P([g_i^{(r)}]_{r=1}^{R} | t, M_i)+\epsilon &lt;\sum _t\sum _r \log P(g_{i,t}^{(r)} | \mu _i, \sigma _i),
+\end{eqnarray*}\end{document}</tex-math>
+</disp-formula><p>where <inline-formula><tex-math id="TM0089" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\epsilon$\end{document}</tex-math></inline-formula> is a tolerable difference between the log-likelihoods of the two models.</p><p>The removal of the genes for which the flat model substantially outperforms the GP model in terms of marginal likelihood is primarily for computational simplification, as a flat model does not contribute anything to the analysis because it assigns the same likelihood at every time point.</p><p>To assess the quality of the GP fits, we performed a leave-one-out cross-validation, which is a standard method for measuring the predictive accuracy after fitting a Bayesian model [<xref rid="B23" ref-type="bibr">23</xref>]. This was done by refitting each GP multiple times with the RNA-Seq time series while removing all the observations corresponding to the same time point each time. For a single gene, we denote by <inline-formula><tex-math id="TM0090" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$y_{-j}$\end{document}</tex-math></inline-formula> the set of all gene expression values, except for those observed at time <inline-formula><tex-math id="TM0091" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$t_j$\end{document}</tex-math></inline-formula>, which we denote by <inline-formula><tex-math id="TM0092" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$y_j$\end{document}</tex-math></inline-formula>. At each iteration, we calculated the log-likelihood of the model <inline-formula><tex-math id="TM0093" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\log P(y_j | t_j, y_{-j})$\end{document}</tex-math></inline-formula> to predict the observed gene expression values at the time point that was removed. Then, for each model, we calculate the leave-one-out Bayesian cross-validation estimate <inline-formula><tex-math id="TM0094" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\mathrm{LOO}=\frac{1}{T}\sum _{j=i}^{T}\log P(y_j | t_j, y_{-j})$\end{document}</tex-math></inline-formula> (where <inline-formula><tex-math id="TM0095" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$T$\end{document}</tex-math></inline-formula> is the number of time points) as described in [<xref rid="B23" ref-type="bibr">23</xref>]. We applied the same leave-one-out cross-validation procedure in GP models without length-scale regularization.</p><p>Figure <xref rid="F5" ref-type="fig">5</xref> shows the GP plot and its respective LOO of the models (with and without length-scale regularization) that performed worst in the leave-one-out cross-validation. We can clearly see that putting constraints on the length-scale prevents overfitting of the GP model. We include more information about the leave-one-out cross-validation in the <xref rid="sup1" ref-type="supplementary-material">Supplementary data</xref> (see <xref rid="sup1" ref-type="supplementary-material">Section S.6</xref>, <xref rid="sup1" ref-type="supplementary-material">Supplementary Figs S7 and</xref>  <xref rid="sup1" ref-type="supplementary-material"> S8</xref>, and Supplementary LOO plots).</p><fig position="float" id="F5" orientation="portrait"><label>Figure 5.</label><caption><p>The plots show the GP models that performed worst according to LOO considering both groups (with and without length-scale regularization). The plots indicate that having no boundary constraints on the length-scale results in a smaller length-scale during optimization that leads to overfitting and a worse performance in the leave-one-out cross-validation.</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="float" orientation="portrait" xlink:href="lqaf203fig5.jpg"/></fig><fig position="float" id="F6" orientation="portrait"><label>Figure 6.</label><caption><p>The growth curves monitored during the bacterial growth experiments where the reference RNA-Seq samples were assessed. Each growth curve represents the amount of bacteria at each time point for each experimental replicate. The horizontal bar (at the top of the figure) represents the different growth phases. Each color represents a different growth phase whose length extends within its corresponding time interval.</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="float" orientation="portrait" xlink:href="lqaf203fig6.jpg"/></fig><fig position="float" id="F7" orientation="portrait"><label>Figure 7.</label><caption><p>Comparing the compatibility of the microarray data to the fitted GP models versus the compatibility to a time-invariant model, for every gene. To measure the compatibility of the microarray values of a gene to a GP model, we determine the maximum log-likelihood over each time point for each gene value and evaluate their sum. For the time-invariant model, we evaluate the sum of the log-likelihoods of each microarray value of a gene in the model in Equation (<xref rid="M18" ref-type="disp-formula">18</xref>).</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="float" orientation="portrait" xlink:href="lqaf203fig7.jpg"/></fig><fig position="float" id="F8" orientation="portrait"><label>Figure 8.</label><caption><p>Log-likelihood curves of the RNA-Seq experiments sampled during the odd time points (i.e. 3, 5, 7, 9, and 11 h). The results were obtained by using the even time point RNA-Seq experiments as training data for our method. The maximum likelihood point is found by querying selected time points (e.g. every 15 min within the time interval covered by the training data).</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="float" orientation="portrait" xlink:href="lqaf203fig8.jpg"/></fig></sec><sec id="SEC2-3-2"><title>Quality evaluation in target data</title><p>A gene’s expression values in the target data may lie outside the range observed in the reference time series, resulting in extrapolation where GP predictions are less reliable. To undermine the effect of this discrepancy, we applied the median normalization explained in the “Filtering and normalization of transcriptomicsdata” section.</p><p>Furthermore, we evaluate how well the GP models fitted to reference data can fit the target data by comparing the maximum likelihood of each gene’s target value in the corresponding fitted GP model to the baseline time-invariant model in Equation (<xref rid="M16" ref-type="disp-formula">16</xref>) as follows:</p><disp-formula id="M18">
+<label>(18)</label>
+<tex-math id="TM0096" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+\begin{eqnarray*}
+g_{i,E}\sim \mathcal {N}(\mu _i, \sigma _i^{2}),
+\end{eqnarray*}\end{document}</tex-math>
+</disp-formula><p>where <inline-formula><tex-math id="TM0097" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$g_{i,E}$\end{document}</tex-math></inline-formula> is the target value of gene <inline-formula><tex-math id="TM0098" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$i$\end{document}</tex-math></inline-formula> in experiment <inline-formula><tex-math id="TM0099" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$E$\end{document}</tex-math></inline-formula>. We calculate the sum over the target values’ maximum log-likelihoods over each time point in the corresponding fitted GP model, and the sum over the target values’ log-likelihoods evaluated in the time-invariant model. Finally, we filter out from the time annotations method those gene models whose target values fit better in the time-invariant model. The rule for filtering the models based on the compatibility of the target data with the fitted GP models can thus be written as follows:</p><disp-formula id="M19">
+<label>(19)</label>
+<tex-math id="TM0100" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+\begin{eqnarray*}
+\sum _j \max _t (\log P(g_{i,E_j}| t, M_i) ) &lt; \sum _j \log P(g_{i,E_j} | \mu _i, \sigma _i),
+\end{eqnarray*}\end{document}</tex-math>
+</disp-formula><p>where the log-likelihood in the LHS is based on the posterior distribution of the gene-specific GP model, and the RHS is based on the distribution of the time-independent model defined in Equation (<xref rid="M18" ref-type="disp-formula">18</xref>).</p><p>The genes for which target gene expression values were predicted better by a time-invariant model were either those characterized by flat expression dynamics or genes whose target values were significantly different from the reference values (see <xref rid="sup1" ref-type="supplementary-material">Section S.4</xref> and <xref rid="sup1" ref-type="supplementary-material">Supplementary Fig. S4</xref>). Genes whose target values fit better in the time-invariant model are excluded from the annotation method. This step addresses the out-of-distribution generalization problem and ensures that only compatible gene signals are used for annotating target samples.</p></sec></sec></sec><sec sec-type="results" id="SEC3"><title>Results</title><p>The proposed methodology was validated in three complementary settings: a withheld subset of RNA-seq measurements that simulates sparsely sampled data, synthetic data with added noise to test noise sensitivity, and a practical application in which time point annotation is performed for 80 microarray samples. We first describe the datasets and transformations that underpin all empirical work.</p><sec id="SEC3-6"><title>Data</title><p>We utilize two types of transcriptomics data from <italic toggle="yes">Clostridium botulinum</italic>. The first type consist of longitudinal RNA-Seq samples, which we use as reference data. The second type consist of legacy microarrays [<xref rid="B24" ref-type="bibr">24</xref>] collected at different stages of growth of the bacteria, which are the target data that we want to time annotate. The sources for accessing the data are in the “Data availability” section. A more detailed description of the data can be found in the <xref rid="sup1" ref-type="supplementary-material">Supplementary data</xref> (see Section <xref rid="sup1" ref-type="supplementary-material">S.1</xref>).</p><p>Terminology: To avoid confusion, we distinguish three related concepts that appear throughout the paper: (i) <italic toggle="yes">legacy growth phase</italic> (LGP) (sometimes also referred to as original annotations)—the categorical phase label (early-exponential, mid-exponential, late-exponential, transition, stationary) assigned by the original microarray samples at the moment of sampling; (ii) <italic toggle="yes">reference time point</italic> (RTP)—the quantitative sampling time (in hours) in the RNA-Seq reference experiment that best matches each microarray sample after recalibration; and (iii) <italic toggle="yes">reference growth phase</italic> (RGP)—the phase implied by that RTP, using the growth curves of the RNA-Seq experiments as reference.</p><sec id="SEC3-1-1"><title>Reference data</title><p>The reference experiments that we used to fit our method consisted of RNA-Seq samples collected uniformly at different time points (2–12 h) from three replicate cultures of <italic toggle="yes">C. botulinum</italic> strain ATCC 19397 growth in routine laboratory conditions. In parallel with RNA sampling, growth was monitored by optical density measurements as shown in Fig. <xref rid="F6" ref-type="fig">6</xref>. The RNA samples were collected on the same time points relative to the corresponding growth experiment replicate. The samples were analyzed using paired-end sequencing with Ilumina NextSeq 550 technology. Finally, the RNA-Seq data analysis pipeline ProkSeq [<xref rid="B25" ref-type="bibr">25</xref>] was used to perform the respective alignments to the genome, and the gene expression values for every time point were obtained. The gene expression values are expressed in transcripts per million (TPM) units. The final RNA-Seq data accommodate 3491 different genes and their corresponding gene expression values for each time point.</p></sec><sec id="SEC3-1-2"><title>Target data</title><p>Our target data comprise gene expression values on a logarithmic scale determined during the growth of the <italic toggle="yes">C. botulinum</italic> Group I wild-type strain ATCC 3502, a strain closely related to ATCC 19397 [<xref rid="B26" ref-type="bibr">26</xref>], under optimal conditions using microarrays as described [<xref rid="B24" ref-type="bibr">24</xref>, <xref rid="B27" ref-type="bibr">27</xref>].</p><p>Altogether, 80 microarray samples collected in the past were included in this study. Each sample measured the expression of 3664 genes and was annotated according to the bacterial growth phase at the time it was sampled (i.e. LGP), but not the precise time at which the sample was taken.</p><p>The LGP was determined by the original experimenters using a growth curve based on real-time optical density measurements of the culture, which reflect bacterial growth.</p><p>Determining the growth phase of a culture by visually interpreting its optical density curve is partly subjective; thus, certain samples might have been assigned to phases that do not truly match the cells’ biological state. One goal of the time annotation is to perform a temporal recalibration of the samples to correct such errors.</p><p>Before fitting our statistical models, the data were preprocessed as described in the following section.</p></sec><sec id="SEC3-1-3"><title>Data preprocessing</title><p>In the data preprocessing, we considered the specific nature of transcriptomics data from bacteria. Of note, different considerations may apply when working with eukaryotic data. In order to simplify the data, we conducted an <italic toggle="yes">operon</italic> identification analysis of the RNA-Seq data using <italic toggle="yes">Rockhopper</italic> software [<xref rid="B28" ref-type="bibr">28</xref>]. <italic toggle="yes">Operons</italic> are clusters of co-regulated genes with related functions [<xref rid="B29" ref-type="bibr">29</xref>], are usually found in contiguous locations of the DNA, and are commonly co-activated. Assuming that genes within an operon are usually expressed similarly or in a related manner, they were considered to be redundant and to cause bias in the analysis of gene expression over time by putting more weight on the genes that are in large operons. Identifying the operons allowed us to keep only one gene per operon, thus reducing the number of genes considered in the analysis. This simplified the analysis and helped obtain better results.</p><p>In order to use the data for our objective goal, we then removed obvious incompatibilities between the microarray and RNA-Seq samples. The following steps summarize the initial preprocessing of the data:</p><list list-type="bullet"><list-item><p>Remove from the RNA-Seq data all the genes that belong to the same operon except for the one that has the highest median over the set of expression values at each time point to simplify the genes’ set.</p></list-item><list-item><p>Remove all genes from the RNA-Seq data whose maximum expression value over time is &lt;10 TPM because they introduce unnecessary noise to the data. This is because for small gene expression values the signal to noise ratio is very small [<xref rid="B30" ref-type="bibr">30</xref>], thus they are likely to contribute more noise than signal in our analysis</p></list-item><list-item><p>Consider only the common genes between RNA-Seq and microarrays.</p></list-item><list-item><p>Log-transform the RNA-seq data (i.e. <inline-formula><tex-math id="TM0101" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$G \rightarrow \log (G+\epsilon )$\end{document}</tex-math></inline-formula>) to bring them to the same order of magnitude as the microarray data (add a small quantity <inline-formula><tex-math id="TM0102" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\epsilon =0.1$\end{document}</tex-math></inline-formula>TPM to avoid undefined values for logarithm).</p></list-item><list-item><p>Perform median polish normalization as described in Algorithm 1 to the RNA-Seq and microarray samples respectively. Choose a sensible convergence tolerance <inline-formula><tex-math id="TM0103" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\epsilon$\end{document}</tex-math></inline-formula>. In the analysis, we set <inline-formula><tex-math id="TM0104" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\epsilon =10^{-5}$\end{document}</tex-math></inline-formula> as we observed that in the consecutive iterations, the differences of the residuals were quite negligible and almost 0. This transformation brings the gene expression values from the different datasets on the same scale.</p></list-item></list></sec><sec id="SEC3-1-4"><title>Data postprocessing</title><sec id="SEC3-1-4-1"><title>
+<italic toggle="yes">Evaluating the quality of fitting the GP models to the RNA-Seq data</italic>.</title><p>After fitting the GP models with the RNA-Seq data, we evaluated the quality of fitting the models. We compared how well the GPs model the RNA-Seq data, as compared to a time-invariant model. Our analysis showed that GP models are superior to the time-invariant models in terms of representing the RNA-Seq data with the exception of some borderline cases. Thus, we did not filter-out any gene from the time annotation method based on these results. In the <xref rid="sup1" ref-type="supplementary-material">Supplementary data</xref> (see <xref rid="sup1" ref-type="supplementary-material">Section S.3</xref> and <xref rid="sup1" ref-type="supplementary-material">Supplementary Fig. S3</xref>), we have included a plot that shows the log-likelihood of each gene RNA-Seq time series according to the respective GP model (i.e. log marginal likelihood of the GP), and the sum of the log-likelihoods that they come from the time-invariant models in Equation (<xref rid="M16" ref-type="disp-formula">16</xref>).</p></sec><sec id="SEC3-1-4-2"><title>
+<italic toggle="yes">Evaluating the compatibility of the microarray values to the fitted GP models</italic>.</title><p>Figure <xref rid="F7" ref-type="fig">7</xref> shows the quality of the fits of the microarray data between the two models; it shows that a small subset of the genes (i.e. 95 genes from 1780) did not fit better in our model as compared to the time-invariant model, so we ignored those genes when computing the GP time annotation analysis (i.e. following Equation (<xref rid="M19" ref-type="disp-formula">19</xref>)). The issue occurs in those genes where some of the microarray observations are significantly outside the range of the RNA-seq observations, even after normalization. We provide an analysis for the source of incompatibility of those genes’ microarray values with the corresponding fitted GP model in the <xref rid="sup1" ref-type="supplementary-material">Supplementary data</xref> (see <xref rid="sup1" ref-type="supplementary-material">Section S.4</xref> and <xref rid="sup1" ref-type="supplementary-material">Supplementary Fig. S4</xref>).</p></sec></sec></sec><sec id="SEC3-7"><title>Validation</title><sec id="SEC3-2-1"><title>Sparse RNA-Seq hold-out</title><p>We tested the efficacy of our method on the RNA-Seq data by fitting the model with the RNA-Seq samples taken at the even time points (i.e. 2, 4, 6, 8, 10, 12 h) and checked how accurately the model would annotate the RNA-Seq samples measured at the odd time points (i.e. 3, 5, 7, 9, 11 h) for all replicates.</p><p>Figure <xref rid="F8" ref-type="fig">8</xref> shows the log-likelihood curves that our model generated for each test data, which were the basis for assigning the time annotations. Figure <xref rid="F9" ref-type="fig">9</xref> shows the accuracy of the predictions <inline-formula><tex-math id="TM0105" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\mathrm{ACC} =\frac{\mathrm{correct\, predictions}}{\mathrm{total\, predictions}}$\end{document}</tex-math></inline-formula> for different time interval tolerances. All the annotations are within a distance of 30 min from the actual time of the measurement.</p><fig position="float" id="F9" orientation="portrait"><label>Figure 9.</label><caption><p>Accuracy of the annotations (i.e. <inline-formula><tex-math id="TM0106" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\mathrm{ACC} =\frac{\mathrm{correct\, predictions}}{\mathrm{total\, predictions}}$\end{document}</tex-math></inline-formula>) assigned to the odd time point RNA-Seq experiments for different time tolerance intervals. Every annotation is within 0.5 h distance from the true time point of the corresponding experiment.</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="float" orientation="portrait" xlink:href="lqaf203fig9.jpg"/></fig><p>We obtained similar accuracy results when training our method on the RNA-Seq time series using two experimental replicates and making predictions for the experiments of the left out replicate. The results of the former analysis can be found in the <xref rid="sup1" ref-type="supplementary-material">Supplementary data</xref> (see <xref rid="sup1" ref-type="supplementary-material">Section S.2 and</xref>  <xref rid="sup1" ref-type="supplementary-material">Supplementary Figs S1</xref> and <xref rid="sup1" ref-type="supplementary-material">S2</xref>)</p></sec><sec id="SEC3-2-2"><title>Sensitivity to noise</title><p>To prove the robustness of our method toward different levels of noise in the data, we simulated five transcriptomics experiments every 15 min in the closed interval (2 and 12 h), by sampling values <inline-formula><tex-math id="TM0107" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$g_{i,t_{j}} \sim N(\mu _{g_i, t_{j}},\sigma _{g_i,t_{j}})$\end{document}</tex-math></inline-formula>, where <inline-formula><tex-math id="TM0108" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$g_{i,t_{j}}$\end{document}</tex-math></inline-formula> is the value of gene <inline-formula><tex-math id="TM0109" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$g_i$\end{document}</tex-math></inline-formula> at time <inline-formula><tex-math id="TM0110" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$t_j$\end{document}</tex-math></inline-formula>, and <inline-formula><tex-math id="TM0111" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\mu _{g_i, t_j}, \sigma _{g_i, t_j}$\end{document}</tex-math></inline-formula> are the posterior mean, and posterior variance at time <inline-formula><tex-math id="TM0112" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$t_j$\end{document}</tex-math></inline-formula> of the corresponding GP model. Then, in order to introduce noise in the data, we repeated the procedure by randomly selecting different subsets of genes and sampling their values for each time point from a normal distribution <inline-formula><tex-math id="TM0113" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$g_{i,t_{j}} \sim N(\mu _i, \sigma _i)$\end{document}</tex-math></inline-formula> , where <inline-formula><tex-math id="TM0114" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\mu _i$\end{document}</tex-math></inline-formula> and <inline-formula><tex-math id="TM0115" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\sigma _i$\end{document}</tex-math></inline-formula> are the mean and standard deviation of gene <inline-formula><tex-math id="TM0116" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$g_i$\end{document}</tex-math></inline-formula> over all time points.</p><p>Figure <xref rid="F10" ref-type="fig">10</xref> shows the accuracy of the annotations on simulated transcriptomics experiments with different amounts of noise for 0-, 0.25-, 0.5-, 0.75-, and 1-h time interval tolerances. Even in the case when, we perturbed 30% of the genes, 97% of the annotations were no &gt;0.5 h away from the true time of the experiment. In the case where we did not introduce any noise at all, all the predictions corresponded to the true time of the samples.</p><fig position="float" id="F10" orientation="portrait"><label>Figure 10.</label><caption><p>Accuracy of the time annotations (i.e. <inline-formula><tex-math id="TM0117" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\mathrm{ACC} =\frac{\mathrm{correct\, predictions}}{\mathrm{total\, predictions}}$\end{document}</tex-math></inline-formula>) on simulated transcriptomics experiments with different amounts of noise for different time tolerance intervals. The noise was introduced by randomly selecting different amounts of genes (i.e. 0%, 20%, 30%) and changing their generative models for every time point, when sampling the values for simulating the experiments. Even when 30% of the genes were noisy, 97% of the time annotations were within 0.5 h distance from the true time point of the corresponding experiment.</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="float" orientation="portrait" xlink:href="lqaf203fig10.jpg"/></fig></sec></sec><sec id="SEC3-8"><title>Time re-annotation of microarray samples: a case study</title><p>We describe here the procedure for performing RGP annotation for each of the 80 microarray samples. First, we use the RNA-Seq data to fit the GP models, and assign a RTP to each microarray sample. Then, we use the RTP and the information provided by the growth curves of the reference RNA-Seq experiments to assign a RGP to each microarray sample. Figure <xref rid="F11" ref-type="fig">11</xref> represents the steps followed for the re-annotation of the legacy microarray samples.</p><fig position="float" id="F11" orientation="portrait"><label>Figure 11.</label><caption><p>Diagram describing the application of the GP annotation method for the re-annotation of legacy microarray samples. Inside each rectangle it is indicated the relevant section of the paper where the respective process is described.</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="float" orientation="portrait" xlink:href="lqaf203fig11.jpg"/></fig><p>In a batch culture of bacteria, optical density measurements over time describe a sigmoidal growth curve whose segments (early-, mid-, and late-exponential, transition, and stationary) represent successive physiological states rather than mere clock time. Under constant conditions, replicate cultures advance through these states in a reproducible order, and each state is marked by a characteristic transcriptional programme. This coupling between growth phase and gene-expression profile is the basis of the recalibration performed below: by aligning legacy microarray profiles to the RNA-seq reference time-course, we can assign biologically meaningful timestamps even where the original sampling left temporal gaps.</p><sec id="SEC3-3-1"><title>Re-assigning growth phases to the microarray samples</title><p>After each microarray sample was matched to its RTP, we used the growth curve that was monitored while collecting the RNA-Seq samples, as shown in Fig. <xref rid="F6" ref-type="fig">6</xref>, to map that timestamp into an RGP. Based on the shape of this curve, the time intervals were equated with growth phases as follows:</p><list list-type="bullet"><list-item><p>Early-exponential phase: (2 h, 4 h),</p></list-item><list-item><p>Mid-exponential phase: (4 h, 6 h),</p></list-item><list-item><p>Late exponential phase: (6 h, 7 h),</p></list-item><list-item><p>Transition phase: (7 h, 8 h),</p></list-item><list-item><p>Stationary phase: (8 h, 12 h).</p></list-item></list><p>Figure <xref rid="F12" ref-type="fig">12</xref> shows the distribution of the RTP for the microarray samples according to our method. By assigning the RGP to the microarray samples based on the RTP, using information provided by the growth curves of the RNA-Seq experiments, we significantly enhanced the description of the microarray data.</p><fig position="float" id="F12" orientation="portrait"><label>Figure 12.</label><caption><p>The number of microarray samples for each queried time point. The horizontal bar (at the top of the figure) represents the RGP to which the microarray samples were assigned based on their RTP. Each color represents a different growth phase, whose length extends within its corresponding time interval. The colors of the vertical bars represent the LGP of the microarray samples assigned at the respective time point (notice the hatching to differentiate between the LGP and RGP).</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="float" orientation="portrait" xlink:href="lqaf203fig12.jpg"/></fig><p>A high quality temporal calibration should assign samples with similar expression patterns to the same time point. To assess whether this was achieved, a principal component analysis (PCA) of the expression levels in all microarray samples was performed. The consistency of the grouping of samples from the same time point/growth phase is presented visually and assessed quantitatively. To assess the effectiveness of the GP method, the microarray samples were also aligned with the RNA-Seq timeline using a <italic toggle="yes">k</italic>-nearest neighbors (kNN) classifier. We chose kNN (<inline-formula><tex-math id="TM0118" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$k=1$\end{document}</tex-math></inline-formula> as it yields the highest accuracy when performing cross validation using the RNA-Seq samples) as a baseline method because it is a very simple method and it works similarly to our method—that is, using the reference time series, it assigns time annotations to our target data. A detailed description of how kNN was used to assign time points to the microarray samples can be found in the <xref rid="sup1" ref-type="supplementary-material">Supplementary data</xref> (see <xref rid="sup1" ref-type="supplementary-material">Section S.5</xref>, <xref rid="sup1" ref-type="supplementary-material">Supplementary Figs S5</xref> and <xref rid="sup1" ref-type="supplementary-material">S6</xref>).</p><p>The improved annotation allowed for clear separation of microarray samples belonging to different growth phases, as demonstrated by the PCA in Fig. <xref rid="F13" ref-type="fig">13</xref>. Consequently, we successfully identified microarray samples whose LGPs were miss-assigned, as some of the microarray samples appeared likely to have been assigned to incorrect growth phases in the original annotation.</p><fig position="float" id="F13" orientation="portrait"><label>Figure 13.</label><caption><p>PCA plots of the microarray samples annotated according to their LGP annotations (left), time annotation as assigned by kNN (center), and time annotation as assigned by our method (right). Growth phases are represented by colors. In the case of kNN and GP time annotations, the growth phases of the experiments are determined based on the RGP as defined in the “Re-assigning growth phases to the microarray samples” section.</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="float" orientation="portrait" xlink:href="lqaf203fig13.jpg"/></fig><p>Both methods (kNN- and GP-based) resulted in an improvement compared to the original annotations (i.e. LGP), as shown in Fig. <xref rid="F13" ref-type="fig">13</xref>. However, our method is considered to be qualitatively better, as it sets a clearer separation between samples belonging to different growth phases. It also filled the sampling gaps: the method interpolated intermediate time points that were never measured experimentally, giving the final annotation a finer-grained temporal resolution.</p><p>In order to quantitatively compare the annotations generated by kNN and our method, we measured the correlation between the distances of the samples in the PCA and their time annotation distances as assigned by each of the methods. Figure <xref rid="F14" ref-type="fig">14</xref> shows the PCA distances between every pair of microarray samples and their corresponding time annotation distances as assigned by kNN- and GP-based methods. The Pearson correlation coefficient is higher in the case of the GP annotations, which indicates that the microarray samples that appear to be close to each other in the PCA are assigned time annotations that are closer.</p><fig position="float" id="F14" orientation="portrait"><label>Figure 14.</label><caption><p>Correlation between the PCA distances of all pairs of microarray samples and their corresponding time annotations distances as assigned by kNN and our GP time annotation method. The Pearson correlation coefficient <inline-formula><tex-math id="TM0119" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\rho$\end{document}</tex-math></inline-formula> is higher in the case of our method, which indicates that the microarray samples that appear to be close to each other in the PCA are assigned time annotations that are closer.</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="float" orientation="portrait" xlink:href="lqaf203fig14.jpg"/></fig></sec><sec sec-type="discussion" id="SEC3-3-2"><title>Temporal recalibration improves biological interpretation</title><p>In order to show the impact of the GP-based time annotations on the downstream analysis, we performed a gene differential expression analysis with LIMMA [<xref rid="B31" ref-type="bibr">31</xref>] by comparing the microarray samples assigned to consecutive growth phases (i.e. early-exp. and mid-exp., mid-exp. and late-exp., late-exp. and transition, transition and stationary).</p><p>Because gene expression shifts with the growth phase, samples from the same phase should look alike, whereas samples from different phases should diverge. Therefore, a differential-expression test that cleanly contrasts early- versus mid-exponential samples, for instance, should yield more DE genes than a test in which each group contains samples from a mixture of phases.</p><p>Figure <xref rid="F15" ref-type="fig">15</xref> shows the total number of differentially expressed genes (FDR corrected <inline-formula><tex-math id="TM0120" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$P$\end{document}</tex-math></inline-formula>-value &lt;.05) detected after performing gene differential expression analysis between every pair of consecutive growth phases as annotated by our GP method (RGP), kNN method, and the original LGP annotations.</p><fig position="float" id="F15" orientation="portrait"><label>Figure 15.</label><caption><p>Total number of differentially expressed genes (FDR corrected <inline-formula><tex-math id="TM0121" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$P\text{-value} \, {&lt;.05}$\end{document}</tex-math></inline-formula>) detected by performing DE analysis between all pairs of consecutive growth phases (i.e. early-exp. versus mid-exp., mid-exp. versus late-exp., late-exp. versus transition, transition versus stationary) as a function of the absolute value of <inline-formula><tex-math id="TM0122" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\log _2$\end{document}</tex-math></inline-formula>-fold change (<inline-formula><tex-math id="TM0123" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$|\log$\end{document}</tex-math></inline-formula>FC<inline-formula><tex-math id="TM0124" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$|$\end{document}</tex-math></inline-formula>) for each of the three different annotations. The plot on the right shows the total number of differentially expressed genes that have <inline-formula><tex-math id="TM0125" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$|\log$\end{document}</tex-math></inline-formula>FC<inline-formula><tex-math id="TM0126" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$|\ge 1$\end{document}</tex-math></inline-formula> corresponding to a two-fold change in expression.</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="float" orientation="portrait" xlink:href="lqaf203fig15.jpg"/></fig><p>Comparative analysis of the three time-annotation approaches applied to the <italic toggle="yes">C. botulinum</italic> microarray samples revealed significant differences when investigating differentially expressed (DE) genes between growth phases. Here, we specifically compared DE genes between the early logarithmic phase and mid-logarithmic phase using two filtering methods: genes with an adjusted <inline-formula><tex-math id="TM0127" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$P$\end{document}</tex-math></inline-formula>-value (FDR-corrected) of &lt;.05 and/or an absolute logarithmic fold-change (<inline-formula><tex-math id="TM0128" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\log _2$\end{document}</tex-math></inline-formula>FC) greater than 1.0. As shown in Figs <xref rid="F16" ref-type="fig">16</xref> and <xref rid="F17" ref-type="fig">17</xref>, although all approaches identified a similar set of DE genes, the kNN- and GP-based approaches clearly outperformed the samples with the original annotation. Specifically, when both filtering criteria were applied, the three time annotation approaches did indeed identify DE genes of biological relevance for <italic toggle="yes">C. botulinum</italic> physiology, such as genes encoding components of the botulinum neurotoxin (<italic toggle="yes">BoNT</italic>) protein complex. However, the kNN- and GP-based time annotation approaches further identified 66 DE genes involved in central bacterial processes, such as the sporulation cascade, i.e. genes encoding the sporulation transcription factor <italic toggle="yes">Spo0A</italic>, the anti-sigma F factor, and the stage V sporulation protein, and genes encoding chaperones, i.e. the <italic toggle="yes">Hsp33</italic> family molecular chaperones and <italic toggle="yes">GroEL</italic>. The GP-based time annotation yielded another 63 DE genes with an adjusted (FDR-corrected) <inline-formula><tex-math id="TM0129" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$P$\end{document}</tex-math></inline-formula>-value of &lt;.05, illustrating that the model performed better than the kNN method in this particular example and was able to annotate the samples more accurately, thereby reducing the noise from the whole dataset. We provide the list of all DE genes (early-exp. versus mid-exp.) identified for each growth phase annotation example (FDR-corrected <inline-formula><tex-math id="TM0130" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$P\text{-value}&lt;0.05$\end{document}</tex-math></inline-formula> and <inline-formula><tex-math id="TM0131" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$|\log \text{FC}|\ge 1$\end{document}</tex-math></inline-formula>) in the <xref rid="sup1" ref-type="supplementary-material">Supplementary data</xref> (see <xref rid="sup1" ref-type="supplementary-material">Supplementary Table DE</xref> Genes List).</p><fig position="float" id="F16" orientation="portrait"><label>Figure 16.</label><caption><p>Number of DE genes (FDR-corrected <inline-formula><tex-math id="TM0132" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$P\text{-value}&lt;.05$\end{document}</tex-math></inline-formula>) detected by performing differential expression analysis between early-exp. and mid-exp. microarray samples as a function of the absolute value of <inline-formula><tex-math id="TM0133" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$\log _2$\end{document}</tex-math></inline-formula>-fold change (<inline-formula><tex-math id="TM0134" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$|\log \text{FC}|$\end{document}</tex-math></inline-formula>) for each of the three different annotations. The plot on the right shows the number of DE genes that have <inline-formula><tex-math id="TM0135" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$|\log$\end{document}</tex-math></inline-formula>FC<inline-formula><tex-math id="TM0136" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$|\ge 1$\end{document}</tex-math></inline-formula> corresponding to a two-fold change in expression.</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="float" orientation="portrait" xlink:href="lqaf203fig16.jpg"/></fig><fig position="float" id="F17" orientation="portrait"><label>Figure 17.</label><caption><p>Venn diagrams expressing the number of DE genes (FDR-corrected <inline-formula><tex-math id="TM0137" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$P \text{-value}&lt;.05$\end{document}</tex-math></inline-formula>) detected by performing differential expression analysis between early-exp. and mid-exp. microarray samples for each growth phase annotations (i.e. original annotations, kNN-annotations and GP-annotations) (left). The plot on the right shows the number of DE genes with <inline-formula><tex-math id="TM0138" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$|\log$\end{document}</tex-math></inline-formula>FC<inline-formula><tex-math id="TM0139" notation="LaTeX">\documentclass[12pt]{minimal}
+\usepackage{amsmath}
+\usepackage{wasysym}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{upgreek}
+\usepackage{mathrsfs}
+\setlength{\oddsidemargin}{-69pt}
+\begin{document}
+$|\ge 1$\end{document}</tex-math></inline-formula> corresponding to a two-fold change in expression.</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="float" orientation="portrait" xlink:href="lqaf203fig17.jpg"/></fig><p>The fact that the number of DE genes is higher in the case of GP annotation suggests that it does a better job of grouping the experiments into well defined states by fixing the mislabeled samples in the legacy data. In the <xref rid="sup1" ref-type="supplementary-material">Supplementary data</xref> (see <xref rid="sup1" ref-type="supplementary-material">Section S.7</xref> and <xref rid="sup1" ref-type="supplementary-material">Supplementary Fig. S9</xref>), we provide a more elaborate analysis of how miss-labeling microarray samples affects the number of DE genes.</p></sec></sec></sec><sec sec-type="discussion" id="SEC4"><title>Discussion</title><p>GPs provide an ideal method for modeling time-course data without making explicit assumptions about the type of function that can best describe them. They can be successfully used to assign time points to target omics experiments by employing a reference time series of experiments from the same level of the omics stack.</p><p>We demonstrate this by applying our method for the purpose of assigning time annotations to microarray samples using RNA-Seq time series sampled every hour as training data. The new time annotations not only provided an accurate description of the data from the perspective of growth phases but also indicated samples that appeared likely to have been originally assigned to incorrect growth phases.</p><p>We also demonstrate that the method can be successfully applied with sparse time series by inferring predictions for the odd time point RNA-seq samples using the subseries of even RNA-seq samples as a reference. Our method proved to be robust toward noisy data. We show that by generating transcriptomics experiments at different time points using the GP models fit on the RNA-Seq data by altering the values of randomly selected genes. Even in the case where as many as 30% of the genes were altered, 97% of the predicted time annotations were within a 30-min distance from their true time. Our approach can also be applied for proteomics data, metabolomics data, or in general for any data that consists of measurements represented as a set of genome-wide values when a reference time series is provided.</p><p>Similar applications of GPs for making exact time annotation on omics experiments have not been explored to the best of our knowledge. We think that there is great potential in applying GPs for solving related problems for determining the time of experiments because of their high modeling flexibility and the possibility that they offer to predict in-between time points, which are left uncovered by the training data.</p><p>This method can be used to annotate historical data available in repositories (e.g. GEO) for the sake of improving the biological interpretability of those data. This information can be used to better understand the studied organism by uncovering biological pathways through differential gene expression analysis, for instance. However, in order to perform the annotation, a reference transcriptomics time series of the organisms is needed. Historical data that have time annotation can either be used as reference time series or their correctness can be checked when we have better quality reference measurements.</p><p>Our use case of time annotating <italic toggle="yes">C. botulinum</italic> ATCC 3502 microarray samples using <italic toggle="yes">C. botulinum</italic> ATCC 19397 RNA-Seq data suggests that our method is platform agnostic (i.e. it does not discriminate the transcriptomics data based on the technology that was used to generate them: DNA microarrays or RNA-Seq), and it works even in the case when different bacterial strains are used.</p><sec id="SEC4-9"><title>Summary of requirements and assumptions</title><p>Certain requirements should be considered when performing time annotation with our GP method:</p><p>
+<bold>General assumptions</bold>: Many genes follow a shared, smoothly evolving temporal pattern, and time is the main driver of variation in gene expression.</p><p>
+<bold>Reference time series</bold>: Enough representative genes should pass the model compatibility filter Equation (<xref rid="M17" ref-type="disp-formula">17</xref>); one experimental replicate time series can be enough, but more replicates are preferable; GPs have been used for modeling short time series of gene expression data [<xref rid="B21" ref-type="bibr">21</xref>, <xref rid="B32" ref-type="bibr">32</xref>]. In the “Sparse RNA-Seq hold-out” section, we demonstrate that six time points are enough for making predictions that are no &gt;30 min away from their true time in the holdout observations, provided they are evenly distributed and span the full timeline over which we want to make predictions. However, we need sufficiently dense sampling to have a higher resolution on what is happening in the system.</p><p>
+<bold>Target data</bold>: Ideally, the same organism or closely related organisms having the same physiology as the reference data; same modality as the reference data (e.g. RNA-Seq) or cross-modal (e.g. microarrays) (median-polish normalization should work to reduce platform offset without distorting the overall shape). Enough genes should pass the compatibility filter Equation (<xref rid="M19" ref-type="disp-formula">19</xref>); the method tolerates genes for which the signal is distorted to the extent that, even in cases when 30% of the genes have distorted signals, we obtain predictions for the experiments that are within 1 h of their true time in the synthetic data, as we show in the “Sensitivity to noise” section.</p></sec></sec><sec sec-type="supplementary-material"><title>Supplementary Material</title><supplementary-material id="sup1" position="float" content-type="local-data" orientation="portrait"><label>lqaf203_Supplemental_Files</label><media xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="lqaf203_supplemental_files.zip" position="float" orientation="portrait"/></supplementary-material></sec></body><back><ack id="ack1"><title>Acknowledgements</title><p>We thank the Biomedicum Functional Genomics Unit at the Helsinki Institute of Life Science and Biocenter Finland at the University of Helsinki for performing the sequencing of the samples analyzed in this work. We are grateful to Hanna Korpunen for her excellent technical work in the laboratory.</p><p>
+<italic toggle="yes">Author contributions</italic>: E.N. (Conceptualization [equal], Data curation [equal], Formal analysis [lead], Methodology [lead], Software [lead], Visualization [lead], Writing – original draft [lead], Writing – review &amp; editing [equal]), F.P.D. (Conceptualization [supporting], Data curation [equal], Investigation [equal], Writing – review &amp; editing[supporting]), K.S. (Conceptualization [supporting], Data curation [supporting], Investigation [equal], Writing – review &amp; editing[supporting]), B.A.B. (Investigation [supporting], Writing – review &amp; editing [supporting]), O.J.P. (Investigation [supporting], Writing – review &amp; editing [supporting]), N.P.M. (Investigation [supporting], Supervision [supporting], Writing – review &amp; editing [supporting]), M.L. (Conceptualization [equal], Funding acquisition [equal], Investigation [supporting], Supervision [supporting],Writing – review &amp; editing[supporting]), and A.H. (Conceptualization [equal], Formal analysis [supporting], Funding acquisition [equal], Methodology [equal], Project administration [lead], Supervision [lead], Writing – review &amp; editing [lead])</p></ack><sec sec-type="supplementary-material" id="SEC6"><title>Supplementary data</title><p>
+<xref rid="sup1" ref-type="supplementary-material">Supplementary data</xref> is available at NAR Genomics &amp; Bioinformatics online.</p></sec><sec sec-type="COI-statement" id="SEC7"><title>Conflict of interest</title><p>None declared.</p></sec><sec id="SEC8"><title>Funding</title><p>The present study was supported by the European Research Council (ERC) under the European Union’s Horizon 2020 research and innovation programme (ERC-CoG whyBOTher, grant 683099), the HiLife Fellows Program, and by the University of Helsinki. Open access funded by Helsinki University Library.</p></sec><sec sec-type="data-availability" id="SEC9"><title>Data availability</title><p>The RNA-Seq data were deposited in NCBI SRA under GEO project number <ext-link xmlns:xlink="http://www.w3.org/1999/xlink" ext-link-type="pmc:entrez-geo" xlink:href="GSE248529">GSE248529</ext-link>. The DNA microarray data were deposited in GEO under project number <ext-link xmlns:xlink="http://www.w3.org/1999/xlink" ext-link-type="pmc:entrez-geo" xlink:href="GSE261398">GSE261398</ext-link>.</p><p>The Python implementation of the time annotation method can be accessed through the following DOI link: <ext-link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="https://doi.org/10.5281/zenodo.11076487" ext-link-type="uri">https://doi.org/10.5281/zenodo.11076487</ext-link>. It can also be accessed on GitHub through the following link: <ext-link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="https://github.com/PROBIC/omics-time-annotation" ext-link-type="uri">https://github.com/PROBIC/omics-time-annotation</ext-link>.</p></sec><ref-list id="REF1"><title>References</title><ref id="B1"><label>1.</label><mixed-citation publication-type="journal">
+<person-group person-group-type="author">
+<string-name name-style="western">
+<surname>Spellman</surname>  <given-names>PT</given-names></string-name>, <string-name name-style="western"><surname>Sherlock</surname>  <given-names>G</given-names></string-name>, <string-name name-style="western"><surname>Zhang</surname>  <given-names>MQ</given-names></string-name>  <etal>et al.</etal></person-group>  <article-title>Comprehensive identification of cell cycle-regulated genes of the yeast <italic toggle="yes">Saccharomyces cerevisiae</italic> by microarray hybridization</article-title>. <source>Mol biol cell</source>. <year>1998</year>;<volume>9</volume>:<fpage>3273</fpage>–<lpage>97</lpage>. <pub-id pub-id-type="doi">10.1091/mbc.9.12.3273</pub-id>.<pub-id pub-id-type="pmid">9843569</pub-id>
+<pub-id pub-id-type="pmcid">PMC25624</pub-id></mixed-citation></ref><ref id="B2"><label>2.</label><mixed-citation publication-type="journal">
+<person-group person-group-type="author">
+<string-name name-style="western">
+<surname>Straume</surname>  <given-names>M</given-names></string-name>
+</person-group>. <article-title>DNA microarray time series analysis: automated statistical assessment of circadian rhythms in gene expression patterning</article-title>. <source>Methods Enzymol</source>. <year>2004</year>;<volume>383</volume>:<fpage>149</fpage>–<lpage>166</lpage>. <pub-id pub-id-type="doi">10.1016/S0076-6879(04)83007-6</pub-id>.<pub-id pub-id-type="pmid">15063650</pub-id>
+</mixed-citation></ref><ref id="B3"><label>3.</label><mixed-citation publication-type="journal">
+<person-group person-group-type="author">
+<string-name name-style="western">
+<surname>Tomancak</surname>  <given-names>P</given-names></string-name>, <string-name name-style="western"><surname>Beaton</surname>  <given-names>A</given-names></string-name>, <string-name name-style="western"><surname>Weiszmann</surname>  <given-names>R</given-names></string-name>  <etal>et al.</etal></person-group>  <article-title>Systematic determination of patterns of gene expression during <italic toggle="yes">Drosophila</italic> embryogenesis</article-title>. <source>Genome Biol</source>. <year>2002</year>;<volume>3</volume>:<fpage>1</fpage>–<lpage>14</lpage>. <pub-id pub-id-type="doi">10.1186/gb-2002-3-12-research0088</pub-id>.<pub-id pub-id-type="pmcid">PMC151190</pub-id><pub-id pub-id-type="pmid">12537577</pub-id></mixed-citation></ref><ref id="B4"><label>4.</label><mixed-citation publication-type="journal">
+<person-group person-group-type="author">
+<string-name name-style="western">
+<surname>Thompson</surname>  <given-names>JA</given-names></string-name>, <string-name name-style="western"><surname>Tan</surname>  <given-names>J</given-names></string-name>, <string-name name-style="western"><surname>Greene</surname>  <given-names>CS</given-names></string-name></person-group>. <article-title>Cross-platform normalization of microarray and RNA-Seq data for machine learning applications</article-title>. <source>PeerJ</source>. <year>2016</year>;<volume>4</volume>:<fpage>e1621</fpage>. <pub-id pub-id-type="doi">10.7717/peerj.1621</pub-id>.<pub-id pub-id-type="pmid">26844019</pub-id>
+<pub-id pub-id-type="pmcid">PMC4736986</pub-id></mixed-citation></ref><ref id="B5"><label>5.</label><mixed-citation publication-type="journal">
+<person-group person-group-type="author">
+<string-name name-style="western">
+<surname>Castillo</surname>  <given-names>D</given-names></string-name>, <string-name name-style="western"><surname>Gálvez</surname>  <given-names>JM</given-names></string-name>, <string-name name-style="western"><surname>Herrera</surname>  <given-names>LJ</given-names></string-name>  <etal>et al.</etal></person-group>  <article-title>Integration of RNA-Seq data with heterogeneous microarray data for breast cancer profiling</article-title>. <source>BMC Bioinform</source>. <year>2017</year>;<volume>18</volume>:<fpage>1</fpage>–<lpage>15</lpage>. <pub-id pub-id-type="doi">10.1186/s12859-017-1925-0</pub-id>.<pub-id pub-id-type="pmcid">PMC5697344</pub-id><pub-id pub-id-type="pmid">29157215</pub-id></mixed-citation></ref><ref id="B6"><label>6.</label><mixed-citation publication-type="journal">
+<person-group person-group-type="author">
+<string-name name-style="western">
+<surname>Heinonen</surname>  <given-names>M</given-names></string-name>, <string-name name-style="western"><surname>Guipaud</surname>  <given-names>O</given-names></string-name>, <string-name name-style="western"><surname>Milliat</surname>  <given-names>F</given-names></string-name>  <etal>et al.</etal></person-group>  <article-title>Detecting time periods of differential gene expression using Gaussian processes: an application to endothelial cells exposed to radiotherapy dose fraction</article-title>. <source>Bioinformatics</source>. <year>2014</year>;<volume>31</volume>:<fpage>728</fpage>–<lpage>35</lpage>. <pub-id pub-id-type="doi">10.1093/bioinformatics/btu699</pub-id>.<pub-id pub-id-type="pmid">25355790</pub-id>
+</mixed-citation></ref><ref id="B7"><label>7.</label><mixed-citation publication-type="journal">
+<person-group person-group-type="author">
+<string-name name-style="western">
+<surname>Magwene</surname>  <given-names>PM</given-names></string-name>, <string-name name-style="western"><surname>Lizardi</surname>  <given-names>P</given-names></string-name>, <string-name name-style="western"><surname>Kim</surname>  <given-names>J</given-names></string-name></person-group>. <article-title>Reconstructing the temporal ordering of biological samples using microarray data</article-title>. <source>Bioinformatics</source>. <year>2003</year>;<volume>19</volume>:<fpage>842</fpage>–<lpage>50</lpage>. <pub-id pub-id-type="doi">10.1093/bioinformatics/btg081</pub-id>.<pub-id pub-id-type="pmid">12724294</pub-id>
+</mixed-citation></ref><ref id="B8"><label>8.</label><mixed-citation publication-type="journal">
+<person-group person-group-type="author">
+<string-name name-style="western">
+<surname>Trapnell</surname>  <given-names>C</given-names></string-name>, <string-name name-style="western"><surname>Cacchiarelli</surname>  <given-names>D</given-names></string-name>, <string-name name-style="western"><surname>Grimsby</surname>  <given-names>J</given-names></string-name>  <etal>et al.</etal></person-group>  <article-title>The dynamics and regulators of cell fate decisions are revealed by pseudotemporal ordering of single cells</article-title>. <source>Nature Biotechnol</source>. <year>2014</year>;<volume>32</volume>:<fpage>381</fpage>–<lpage>6</lpage>. <pub-id pub-id-type="doi">10.1038/nbt.2859</pub-id>.<pub-id pub-id-type="pmid">24658644</pub-id>
+<pub-id pub-id-type="pmcid">PMC4122333</pub-id></mixed-citation></ref><ref id="B9"><label>9.</label><mixed-citation publication-type="journal">
+<person-group person-group-type="author">
+<string-name name-style="western">
+<surname>Reid</surname>  <given-names>JE</given-names></string-name>, <string-name name-style="western"><surname>Wernisch</surname>  <given-names>L</given-names></string-name></person-group>. <article-title>Pseudotime estimation: deconfounding single cell time series</article-title>. <source>Bioinformatics</source>. <year>2016</year>;<volume>32</volume>:<fpage>2973</fpage>–<lpage>80</lpage>. <pub-id pub-id-type="doi">10.1093/bioinformatics/btw372</pub-id>.<pub-id pub-id-type="pmid">27318198</pub-id>
+<pub-id pub-id-type="pmcid">PMC5039927</pub-id></mixed-citation></ref><ref id="B10"><label>10.</label><mixed-citation publication-type="journal">
+<person-group person-group-type="author">
+<string-name name-style="western">
+<surname>Campbell</surname>  <given-names>KR</given-names></string-name>, <string-name name-style="western"><surname>Yau</surname>  <given-names>C</given-names></string-name></person-group>. <article-title>Uncovering pseudotemporal trajectories with covariates from single cell and bulk expression data</article-title>. <source>Nat Commun</source>. <year>2018</year>;<volume>9</volume>:<fpage>2442</fpage>. <pub-id pub-id-type="doi">10.1038/s41467-018-04696-6</pub-id>.<pub-id pub-id-type="pmid">29934517</pub-id>
+<pub-id pub-id-type="pmcid">PMC6015076</pub-id></mixed-citation></ref><ref id="B11"><label>11.</label><mixed-citation publication-type="journal">
+<person-group person-group-type="author">
+<string-name name-style="western">
+<surname>van der Kloet</surname>  <given-names>FM</given-names></string-name>, <string-name name-style="western"><surname>Buurmans</surname>  <given-names>J</given-names></string-name>, <string-name name-style="western"><surname>Jonker</surname>  <given-names>MJ</given-names></string-name>  <etal>et al.</etal></person-group>  <article-title>Increased comparability between RNA-Seq and microarray data by utilization of gene sets</article-title>. <source>PLoS</source>. <year>2020</year>;<volume>16</volume>:<fpage>e1008295</fpage>. <pub-id pub-id-type="doi">10.1371/journal.pcbi.1008295</pub-id>.<pub-id pub-id-type="pmcid">PMC7549825</pub-id><pub-id pub-id-type="pmid">32997685</pub-id></mixed-citation></ref><ref id="B12"><label>12.</label><mixed-citation publication-type="book">
+<person-group person-group-type="author">
+<string-name name-style="western">
+<surname>Tukey</surname>  <given-names>J</given-names></string-name>
+</person-group>. <article-title>Exploratory data analysis</article-title>, <publisher-loc>Reading, MA, USA</publisher-loc>: <publisher-name>Addison-Wesley Publishing Company</publisher-name>, <year>1977</year>.</mixed-citation></ref><ref id="B13"><label>13.</label><mixed-citation publication-type="book">
+<person-group person-group-type="author">
+<string-name name-style="western">
+<surname>Rasmussen</surname>  <given-names>C</given-names></string-name>, <string-name name-style="western"><surname>Williams</surname>  <given-names>C</given-names></string-name></person-group>. <article-title>Gaussian processes for machine learning</article-title>, <source><italic toggle="yes">Adaptive Computation and Machine Learning</italic></source>. <publisher-loc>Cambridge, USA</publisher-loc>: <publisher-name>MIT Press</publisher-name>, <year>2006</year>.</mixed-citation></ref><ref id="B14"><label>14.</label><mixed-citation publication-type="journal">
+<person-group person-group-type="author">
+<string-name name-style="western">
+<surname>Hensman</surname>  <given-names>J</given-names></string-name>, <string-name name-style="western"><surname>Lawrence</surname>  <given-names>ND</given-names></string-name>, <string-name name-style="western"><surname>Rattray</surname>  <given-names>M</given-names></string-name></person-group>. <article-title>Hierarchical Bayesian modelling of gene expression time series across irregularly sampled replicates and clusters</article-title>. <source>BMC Bioinform</source>. <year>2013</year>;<volume>14</volume>:<fpage>1</fpage>–<lpage>12</lpage>. <pub-id pub-id-type="doi">10.1186/1471-2105-14-252</pub-id>.<pub-id pub-id-type="pmcid">PMC3766667</pub-id><pub-id pub-id-type="pmid">23962281</pub-id></mixed-citation></ref><ref id="B15"><label>15.</label><mixed-citation publication-type="journal">
+<person-group person-group-type="author">
+<string-name name-style="western">
+<surname>McDowell</surname>  <given-names>IC</given-names></string-name>, <string-name name-style="western"><surname>Manandhar</surname>  <given-names>D</given-names></string-name>, <string-name name-style="western"><surname>Vockley</surname>  <given-names>CM</given-names></string-name>  <etal>et al.</etal></person-group>  <article-title>Clustering gene expression time series data using an infinite Gaussian process mixture model</article-title>. <source>PLoS Comput Biol</source>. <year>2018</year>;<volume>14</volume>:<fpage>e1005896</fpage>. <pub-id pub-id-type="doi">10.1371/journal.pcbi.1005896</pub-id>.<pub-id pub-id-type="pmid">29337990</pub-id>
+<pub-id pub-id-type="pmcid">PMC5786324</pub-id></mixed-citation></ref><ref id="B16"><label>16.</label><mixed-citation publication-type="book">
+<person-group person-group-type="author">
+<string-name name-style="western">
+<surname>Lawrence</surname>  <given-names>N</given-names></string-name>, <string-name name-style="western"><surname>Sanguinetti</surname>  <given-names>G</given-names></string-name>, <string-name name-style="western"><surname>Rattray</surname>  <given-names>M</given-names></string-name></person-group>. <article-title>Modelling transcriptional regulation using Gaussian processes</article-title>. In: <person-group person-group-type="editor"><string-name name-style="western"><surname>Schölkopf</surname>  <given-names>B</given-names></string-name>, <string-name name-style="western"><surname>Platt</surname>  <given-names>J</given-names></string-name>, <string-name name-style="western"><surname>Hoffman</surname>  <given-names>T</given-names></string-name></person-group>. (eds.), <source>Advances in Neural Information Processing Systems</source>, Vol. <volume>19</volume>. <publisher-loc>Cambridge, MA, USA</publisher-loc>: <publisher-name>MIT Press</publisher-name>, <year>2006</year>, <fpage>785</fpage>–<lpage>92</lpage>.</mixed-citation></ref><ref id="B17"><label>17.</label><mixed-citation publication-type="journal">
+<person-group person-group-type="author">
+<string-name name-style="western">
+<surname>Honkela</surname>  <given-names>A</given-names></string-name>, <string-name name-style="western"><surname>Girardot</surname>  <given-names>C</given-names></string-name>, <string-name name-style="western"><surname>Gustafson</surname>  <given-names>E</given-names></string-name>  <etal>et al.</etal></person-group>  <article-title>Model-based method for transcription factor target identification with limited data</article-title>. <source>Proc Nat Acad Sci USA</source>. <year>2010</year>;<volume>107</volume>:<fpage>7793</fpage>–<lpage>8</lpage>. <pub-id pub-id-type="doi">10.1073/pnas.0914285107</pub-id>.<pub-id pub-id-type="pmid">20385836</pub-id>
+<pub-id pub-id-type="pmcid">PMC2867914</pub-id></mixed-citation></ref><ref id="B18"><label>18.</label><mixed-citation publication-type="journal">
+<person-group person-group-type="author">
+<string-name name-style="western">
+<surname>Jo</surname>  <given-names>K</given-names></string-name>, <string-name name-style="western"><surname>Sung</surname>  <given-names>I</given-names></string-name>, <string-name name-style="western"><surname>Lee</surname>  <given-names>D</given-names></string-name>  <etal>et al.</etal></person-group>  <article-title>Inferring transcriptomic cell states and transitions only from time series transcriptome data</article-title>. <source>Sci Rep</source>. <year>2021</year>;<volume>11</volume>:<fpage>12566</fpage>. <pub-id pub-id-type="doi">10.1038/s41598-021-91752-9</pub-id>.<pub-id pub-id-type="pmid">34131182</pub-id>
+<pub-id pub-id-type="pmcid">PMC8206345</pub-id></mixed-citation></ref><ref id="B19"><label>19.</label><mixed-citation publication-type="journal">
+<person-group person-group-type="author">
+<string-name name-style="western">
+<surname>Gao</surname>  <given-names>P</given-names></string-name>, <string-name name-style="western"><surname>Honkela</surname>  <given-names>A</given-names></string-name>, <string-name name-style="western"><surname>Rattray</surname>  <given-names>M</given-names></string-name>  <etal>et al.</etal></person-group>  <article-title>Gaussian process modelling of latent chemical species: applications to inferring transcription factor activities</article-title>. <source>Bioinformatics</source>. <year>2008</year>;<volume>24</volume>:<fpage>i70</fpage>–<lpage>5</lpage>. <pub-id pub-id-type="doi">10.1093/bioinformatics/btn278</pub-id>.<pub-id pub-id-type="pmid">18689843</pub-id>
+</mixed-citation></ref><ref id="B20"><label>20.</label><mixed-citation publication-type="other">
+<person-group person-group-type="author">
+<collab>GPy</collab>
+</person-group>. <article-title>GPy: a Gaussian process framework in Python</article-title>. <ext-link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="http://github.com/SheffieldML/GPy" ext-link-type="uri">http://github.com/SheffieldML/GPy</ext-link>  <comment>(3 August 2025, date last accessed)</comment>.</mixed-citation></ref><ref id="B21"><label>21.</label><mixed-citation publication-type="book">
+<person-group person-group-type="author">
+<string-name name-style="western">
+<surname>Topa</surname>  <given-names>H</given-names></string-name>, <string-name name-style="western"><surname>Honkela</surname>  <given-names>A</given-names></string-name></person-group>. <article-title>Gaussian process modelling of multiple short time series</article-title>. <source>Proceedings of the 23rd European Symposium on Artificial Neural Networks, Computational Intelligence and Machine Learning</source>. <publisher-loc>Bruges, Belgium</publisher-loc>, <year>2015</year>, <fpage>83</fpage>–<lpage>88</lpage>.</mixed-citation></ref><ref id="B22"><label>22.</label><mixed-citation publication-type="journal">
+<person-group person-group-type="author">
+<string-name name-style="western">
+<surname>Topa</surname>  <given-names>H</given-names></string-name>, <string-name name-style="western"><surname>Jónás</surname>  <given-names>Á</given-names></string-name>, <string-name name-style="western"><surname>Kofler</surname>  <given-names>R</given-names></string-name>  <etal>et al.</etal></person-group>  <article-title>Gaussian process test for high-throughput sequencing time series: application to experimental evolution</article-title>. <source>Bioinformatics</source>. <year>2015</year>;<volume>31</volume>:<fpage>1762</fpage>–<lpage>70</lpage>. <pub-id pub-id-type="doi">10.1093/bioinformatics/btv014</pub-id>.<pub-id pub-id-type="pmid">25614471</pub-id>
+<pub-id pub-id-type="pmcid">PMC4443671</pub-id></mixed-citation></ref><ref id="B23"><label>23.</label><mixed-citation publication-type="journal">
+<person-group person-group-type="author">
+<string-name name-style="western">
+<surname>Vehtari</surname>  <given-names>A</given-names></string-name>, <string-name name-style="western"><surname>Mononen</surname>  <given-names>T</given-names></string-name>, <string-name name-style="western"><surname>Tolvanen</surname>  <given-names>V</given-names></string-name>  <etal>et al.</etal></person-group>  <article-title>Bayesian leave-one-out cross-validation approximations for Gaussian latent variable models</article-title>. <source>Machine Learning Res</source>. <year>2016</year>;<volume>17</volume>:<fpage>1</fpage>–<lpage>38</lpage>.</mixed-citation></ref><ref id="B24"><label>24.</label><mixed-citation publication-type="journal">
+<person-group person-group-type="author">
+<string-name name-style="western">
+<surname>Dahlsten</surname>  <given-names>E</given-names></string-name>, <string-name name-style="western"><surname>Zhang</surname>  <given-names>Z</given-names></string-name>, <string-name name-style="western"><surname>Somervuo</surname>  <given-names>P</given-names></string-name>  <etal>et al.</etal></person-group>  <article-title>The cold-induced two-component system CBO0366/CBO0365 regulates metabolic pathways with novel roles in Group I <italic toggle="yes">Clostridium botulinum</italic> ATCC 3502 cold tolerance</article-title>. <source>Appl Environ Microbiol</source>. <year>2014</year>;<volume>80</volume>:<fpage>306</fpage>–<lpage>19</lpage>. <pub-id pub-id-type="doi">10.1128/AEM.03173-13</pub-id>.<pub-id pub-id-type="pmid">24162575</pub-id>
+<pub-id pub-id-type="pmcid">PMC3910985</pub-id></mixed-citation></ref><ref id="B25"><label>25.</label><mixed-citation publication-type="journal">
+<person-group person-group-type="author">
+<string-name name-style="western">
+<surname>Mahmud</surname>  <given-names>AKMF</given-names></string-name>, <string-name name-style="western"><surname>Delhomme</surname>  <given-names>N</given-names></string-name>, <string-name name-style="western"><surname>Nandi</surname>  <given-names>S</given-names></string-name>  <etal>et al.</etal></person-group>  <article-title>ProkSeq for complete analysis of RNA-Seq data from prokaryotes</article-title>. <source>Bioinformatics</source>. <year>2020</year>;<volume>37</volume>:<fpage>126</fpage>–<lpage>8</lpage>. <pub-id pub-id-type="doi">10.1093/bioinformatics/btaa1063</pub-id>.<pub-id pub-id-type="pmcid">PMC8034529</pub-id><pub-id pub-id-type="pmid">33367516</pub-id></mixed-citation></ref><ref id="B26"><label>26.</label><mixed-citation publication-type="journal">
+<person-group person-group-type="author">
+<string-name name-style="western">
+<surname>Ng</surname>  <given-names>V</given-names></string-name>, <string-name name-style="western"><surname>Lin</surname>  <given-names>W-J</given-names></string-name></person-group>. <article-title>Comparison of assembled <italic toggle="yes">Clostridium botulinum</italic> A1 genomes revealed their evolutionary relationship</article-title>. <source>Genomics</source>. <year>2014</year>;<volume>103</volume>:<fpage>94</fpage>–<lpage>106</lpage>. <pub-id pub-id-type="doi">10.1016/j.ygeno.2013.12.003</pub-id>.<pub-id pub-id-type="pmid">24369123</pub-id>
+<pub-id pub-id-type="pmcid">PMC3959226</pub-id></mixed-citation></ref><ref id="B27"><label>27.</label><mixed-citation publication-type="journal">
+<person-group person-group-type="author">
+<string-name name-style="western">
+<surname>Selby</surname>  <given-names>K</given-names></string-name>, <string-name name-style="western"><surname>Mascher</surname>  <given-names>G</given-names></string-name>, <string-name name-style="western"><surname>Somervuo</surname>  <given-names>P</given-names></string-name>  <etal>et al.</etal></person-group>  <article-title>Heat shock and prolonged heat stress attenuate neurotoxin and sporulation gene expression in Group I <italic toggle="yes">Clostridium botulinum</italic> strain ATCC 3502</article-title>. <source>PLoS One</source>. <year>2017</year>;<volume>12</volume>:<fpage>e0176944</fpage>. <pub-id pub-id-type="doi">10.1371/journal.pone.0176944</pub-id>.<pub-id pub-id-type="pmid">28464023</pub-id>
+<pub-id pub-id-type="pmcid">PMC5413062</pub-id></mixed-citation></ref><ref id="B28"><label>28.</label><mixed-citation publication-type="journal">
+<person-group person-group-type="author">
+<string-name name-style="western">
+<surname>Tjaden</surname>  <given-names>B</given-names></string-name>
+</person-group>. <article-title>A computational system for identifying operons based on RNA-Seq data</article-title>. <source>Methods</source>. <year>2020</year>;<volume>176</volume>:<fpage>62</fpage>–<lpage>70</lpage>. <pub-id pub-id-type="doi">10.1016/j.ymeth.2019.03.026</pub-id>.<pub-id pub-id-type="pmid">30953757</pub-id>
+<pub-id pub-id-type="pmcid">PMC6776731</pub-id></mixed-citation></ref><ref id="B29"><label>29.</label><mixed-citation publication-type="journal">
+<person-group person-group-type="author">
+<string-name name-style="western">
+<surname>Osbourn</surname>  <given-names>AE</given-names></string-name>, <string-name name-style="western"><surname>Field</surname>  <given-names>B</given-names></string-name></person-group>. <article-title>Operons</article-title>. <source>Cell. Mol. Life Sci.</source>  <year>2009</year>;<volume>66</volume>:<fpage>3755</fpage>–<lpage>75</lpage>. <pub-id pub-id-type="doi">10.1007/s00018-009-0114-3</pub-id>.<pub-id pub-id-type="pmid">19662496</pub-id>
+<pub-id pub-id-type="pmcid">PMC2776167</pub-id></mixed-citation></ref><ref id="B30"><label>30.</label><mixed-citation publication-type="book">
+<person-group person-group-type="author">
+<string-name name-style="western">
+<surname>Sha</surname>  <given-names>Y</given-names></string-name>, <string-name name-style="western"><surname>Phan</surname>  <given-names>JH</given-names></string-name>, <string-name name-style="western"><surname>Wang</surname>  <given-names>MD</given-names></string-name></person-group>. <article-title>Effect of low-expression gene filtering on detection of differentially expressed genes in RNA-Seq data</article-title>. In: <source><italic toggle="yes">2015 37th Annual International Conference of the IEEE Engineering in Medicine and Biology Society (EMBC)</italic></source>. <publisher-name>Piscataway, NJ, USA: IEEE</publisher-name>, <year>2015</year>, <fpage>6461</fpage>–<lpage>4</lpage>.<pub-id pub-id-type="doi" assigning-authority="pmc">10.1109/EMBC.2015.7319872</pub-id><pub-id pub-id-type="pmcid">PMC4983442</pub-id><pub-id pub-id-type="pmid">26737772</pub-id></mixed-citation></ref><ref id="B31"><label>31.</label><mixed-citation publication-type="journal">
+<person-group person-group-type="author">
+<string-name name-style="western">
+<surname>Ritchie</surname>  <given-names>ME</given-names></string-name>, <string-name name-style="western"><surname>Phipson</surname>  <given-names>B</given-names></string-name>, <string-name name-style="western"><surname>Wu</surname>  <given-names>D</given-names></string-name>  <etal>et al.</etal></person-group>  <article-title>limma powers differential expression analyses for RNA-sequencing and microarray studies</article-title>. <source>Nucleic Acids Res</source>. <year>2015</year>;<volume>43</volume>:<fpage>e47</fpage>  <pub-id pub-id-type="doi">10.1093/nar/gkv007</pub-id>.<pub-id pub-id-type="pmid">25605792</pub-id>
+<pub-id pub-id-type="pmcid">PMC4402510</pub-id></mixed-citation></ref><ref id="B32"><label>32.</label><mixed-citation publication-type="journal">
+<person-group person-group-type="author">
+<string-name name-style="western">
+<surname>Liu</surname>  <given-names>Q</given-names></string-name>, <string-name name-style="western"><surname>Lin</surname>  <given-names>KK</given-names></string-name>, <string-name name-style="western"><surname>Andersen</surname>  <given-names>B</given-names></string-name>  <etal>et al.</etal></person-group>  <article-title>Estimating replicate time shifts using Gaussian process regression</article-title>. <source>Bioinformatics</source>. <year>2010</year>;<volume>26</volume>:<fpage>770</fpage>–<lpage>6</lpage>. <pub-id pub-id-type="doi">10.1093/bioinformatics/btq022</pub-id>.<pub-id pub-id-type="pmid">20147305</pub-id>
+<pub-id pub-id-type="pmcid">PMC2832819</pub-id></mixed-citation></ref></ref-list></back></article>

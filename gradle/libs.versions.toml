@@ -22,6 +22,7 @@ guava = "31.1-jre"
 okio = "3.6.0"
 icu4j = "76.1"
 jsoup = "1.23.2"
+twelvemonkeys = "3.15.2"
 commons-net = "3.11.1"
 commons-compress = "1.28.0"
 bouncycastle = "1.86"
@@ -146,6 +147,7 @@ commons-compress = { module = "org.apache.commons:commons-compress", version.ref
 commons-net = { module = "commons-net:commons-net", version.ref = "commons-net" }
 icu4j = { module = "com.ibm.icu:icu4j", version.ref = "icu4j" }
 jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
+twelvemonkeys-imageio-webp = { module = "com.twelvemonkeys.imageio:imageio-webp", version.ref = "twelvemonkeys" }
 
 # Messaging
 rocketmq-spring-boot = { module = "org.apache.rocketmq:rocketmq-spring-boot-starter", version.ref = "rocketmq-spring-boot" }

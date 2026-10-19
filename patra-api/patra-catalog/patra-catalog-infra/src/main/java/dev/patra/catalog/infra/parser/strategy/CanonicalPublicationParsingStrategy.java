@@ -20,6 +20,7 @@ import dev.patra.common.CanonicalPublication.PublicationType;
 import dev.patra.common.CanonicalPublication.QualifierName;
 import dev.patra.common.CanonicalPublication.SupplMeshName;
 import dev.patra.common.PublicationIdentifierType;
+import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -349,12 +350,70 @@ public final class CanonicalPublicationParsingStrategy
               fields.publicationStatus =
                   XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
           case PubmedXmlElements.Identifier.ARTICLE_ID_LIST -> parseArticleIdList(reader, fields);
+          case PubmedXmlElements.Date.HISTORY -> parseHistory(reader, fields);
           default -> XmlParsingHelper.skipElement(reader, localName);
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
           && PubmedXmlElements.Container.PUBMED_DATA.equals(reader.getLocalName())) {
         break;
       }
+    }
+  }
+
+  /// 解析 History 元素，只取 `PubStatus="pmc-release"` 的 PMC 放开日期。
+  ///
+  /// 其余 `PubStatus` 的日期不在本解析器的范围内，直接跳过。
+  private void parseHistory(XMLStreamReader reader, ParsedFields fields) throws XMLStreamException {
+    while (reader.hasNext()) {
+      int event = reader.next();
+
+      if (event == XMLStreamConstants.START_ELEMENT) {
+        String localName = reader.getLocalName();
+        String pubStatus = reader.getAttributeValue(null, PubmedXmlElements.Attribute.PUB_STATUS);
+        if (PubmedXmlElements.Date.PUBMED_PUB_DATE.equals(localName)
+            && PubmedXmlElements.Attribute.PUB_STATUS_PMC_RELEASE.equals(pubStatus)) {
+          fields.pmcRelease = parsePubMedPubDate(reader);
+        } else {
+          XmlParsingHelper.skipElement(reader, localName);
+        }
+      } else if (event == XMLStreamConstants.END_ELEMENT
+          && PubmedXmlElements.Date.HISTORY.equals(reader.getLocalName())) {
+        break;
+      }
+    }
+  }
+
+  /// 解析一个 PubMedPubDate 元素为日期，月、日缺省补 1；年份缺失或不合法时返回 `null`。
+  private LocalDate parsePubMedPubDate(XMLStreamReader reader) throws XMLStreamException {
+    Integer year = null;
+    Integer month = null;
+    Integer day = null;
+    while (reader.hasNext()) {
+      int event = reader.next();
+
+      if (event == XMLStreamConstants.START_ELEMENT) {
+        String localName = reader.getLocalName();
+        switch (localName) {
+          case PubmedXmlElements.Date.YEAR ->
+              year = parseIntSafe(XmlParsingHelper.getElementTextWithMixedContent(reader).trim());
+          case PubmedXmlElements.Date.MONTH ->
+              month = parseMonth(XmlParsingHelper.getElementTextWithMixedContent(reader).trim());
+          case PubmedXmlElements.Date.DAY ->
+              day = parseIntSafe(XmlParsingHelper.getElementTextWithMixedContent(reader).trim());
+          default -> XmlParsingHelper.skipElement(reader, localName);
+        }
+      } else if (event == XMLStreamConstants.END_ELEMENT
+          && PubmedXmlElements.Date.PUBMED_PUB_DATE.equals(reader.getLocalName())) {
+        break;
+      }
+    }
+    if (year == null) {
+      return null;
+    }
+    try {
+      return LocalDate.of(year, month != null ? month : 1, day != null ? day : 1);
+    } catch (DateTimeException e) {
+      return null;
     }
   }
 
@@ -890,7 +949,10 @@ public final class CanonicalPublicationParsingStrategy
       publishedDate = LocalDate.of(fields.pubYear, month, day);
     }
 
-    return PublicationDates.builder().published(publishedDate).build();
+    return PublicationDates.builder()
+        .published(publishedDate)
+        .pmcRelease(fields.pmcRelease)
+        .build();
   }
 
   /// 构建作者列表。
@@ -1144,6 +1206,7 @@ public final class CanonicalPublicationParsingStrategy
     Integer pubMonth;
     Integer pubDay;
     String medlineDate;
+    LocalDate pmcRelease;
 
     // 元数据
     List<String> languages = new ArrayList<>();

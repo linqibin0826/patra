@@ -6,6 +6,7 @@ import com.ibm.icu.text.Collator;
 import com.ibm.icu.util.ULocale;
 import dev.patra.catalog.domain.model.aggregate.PublicationAggregate;
 import dev.patra.catalog.domain.model.enums.DisambiguationStatus;
+import dev.patra.catalog.domain.model.enums.OaLocationType;
 import dev.patra.catalog.domain.model.vo.publication.ExistingPublicationKeys;
 import dev.patra.catalog.domain.model.vo.publication.MeshQualifier;
 import dev.patra.catalog.domain.model.vo.publication.PublicationAbstract;
@@ -390,24 +391,34 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
 
       // 2. 写入关联数据
       writeMetadataAssociations(data);
-      writeMeshAssociations(data);
-      writeKeywordAssociations(data);
-      writeFundingAssociations(data);
-      writePublicationTypeAssociations(data);
-      writeSupplMeshAssociations(data);
-      writeAlternativeAbstractAssociations(data);
-      writeDateAssociations(data);
-      writeIdentifierAssociations(data);
-      writeAbstractAssociations(data);
-      writeInvestigatorAssociations(data);
-      writePersonalNameSubjectAssociations(data);
-      writeAuthorAssociations(data);
+      writeImportOwnedAssociations(data);
 
       log.info("批量写入 {} 条 Publication（含关联数据）完成", data.size());
     } catch (RuntimeException ex) {
       entityManager.clear();
       throw ex;
     }
+  }
+
+  /// 写入导入流程拥有的子表数据（元数据除外）。
+  ///
+  /// 前置条件：每条 `data` 的文献都已有 ID。新插入时由 `insertAllWithAssociations` 调用；
+  /// 增量同步覆盖更新时，由 `PublicationSyncRepositoryAdapter` 在先删旧子表行之后调用。
+  ///
+  /// @param data 文献完整数据
+  public void writeImportOwnedAssociations(List<PublicationCompleteData> data) {
+    writeMeshAssociations(data);
+    writeKeywordAssociations(data);
+    writeFundingAssociations(data);
+    writePublicationTypeAssociations(data);
+    writeSupplMeshAssociations(data);
+    writeAlternativeAbstractAssociations(data);
+    writeDateAssociations(data);
+    writeIdentifierAssociations(data);
+    writeAbstractAssociations(data);
+    writeInvestigatorAssociations(data);
+    writePersonalNameSubjectAssociations(data);
+    writeAuthorAssociations(data);
   }
 
   // ========== insertAllWithAssociations 辅助方法 ==========
@@ -1310,6 +1321,25 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
       batchSaveWithFlush(entities, alternativeAbstractDao);
       log.debug("批量插入翻译摘要 {} 条", entities.size());
     }
+  }
+
+  /// 标记 PMC 开放获取：置 `is_oa`，只替换 PMC 那一条 OA 位置，其他来源的位置保留。
+  ///
+  /// @param publicationId 文献 ID
+  /// @param pmcLocation PMC 位置
+  @Override
+  public void markPmcOpenAccess(long publicationId, PublicationOaLocation pmcLocation) {
+    oaLocationDao.deleteByPublicationIdAndLocationType(
+        publicationId, OaLocationType.PUBMED_CENTRAL.getCode());
+    entityManager.flush();
+
+    PublicationOaLocationEntity entity =
+        jpaConverter.toOaLocationEntity(pmcLocation, publicationId);
+    entity.setId(SnowflakeIdGenerator.getId());
+    oaLocationDao.save(entity);
+    entityManager.flush();
+
+    jpaRepository.markOpenAccess(publicationId);
   }
 
   @Override

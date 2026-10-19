@@ -51,4 +51,29 @@ public interface PublicationDetailRow {
 
   /// 出版类型列表，以 U+001F（\x1f）分隔，按 type_order ASC、id ASC 排序。
   String getPublicationTypesAgg();
+
+  /// 全文记录状态（枚举名），没有全文记录时为空。
+  ///
+  /// @return 状态
+  String getFullTextStatus();
+
+  /// 是否有 PDF 对象。
+  ///
+  /// @return 是否
+  Boolean getHasPdfObject();
+
+  /// PDF 字节数。
+  ///
+  /// @return 字节数
+  Long getPdfSize();
+
+  /// 正文字数。
+  ///
+  /// @return 字数
+  Integer getWordCount();
+
+  /// 是否撤稿文献（发表类型含 `D016441`）。
+  ///
+  /// @return 是否
+  Boolean getRetracted();
 }

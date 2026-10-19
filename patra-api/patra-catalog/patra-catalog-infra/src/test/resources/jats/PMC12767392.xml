@@ -1,0 +1,1054 @@
+
+<!DOCTYPE article
+  PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Archiving and Interchange DTD with MathML3 v1.4 20241031//EN" "JATS-archivearticle1-4-mathml3.dtd">
+<article id="mi9937505" xml:lang="en" article-type="research-article" dtd-version="1.4"><processing-meta base-tagset="archiving" mathml-version="3.0" table-model="xhtml" tagset-family="jats"><restricted-by>pmc</restricted-by></processing-meta><front><journal-meta><journal-id journal-id-type="nlm-ta">Mediators Inflamm</journal-id><journal-id journal-id-type="iso-abbrev">Mediators Inflamm</journal-id><journal-id journal-id-type="pmc-domain-id">324</journal-id><journal-id journal-id-type="pmc-domain">moi</journal-id><journal-id journal-id-type="nlm-id">9209001</journal-id><journal-id journal-id-type="publisher-id">MI</journal-id><journal-title-group><journal-title>Mediators of Inflammation</journal-title></journal-title-group><issn pub-type="ppub">0962-9351</issn><issn pub-type="epub">1466-1861</issn><publisher><publisher-name>Wiley</publisher-name></publisher></journal-meta><article-meta><article-id pub-id-type="pmcid">PMC12767392</article-id><article-id pub-id-type="pmcid-ver">PMC12767392.1</article-id><article-id pub-id-type="pmcaid">12767392</article-id><article-id pub-id-type="pmcaiid">12767392</article-id><article-id pub-id-type="pmid">41498023</article-id><article-id pub-id-type="doi">10.1155/mi/9937505</article-id><article-id pub-id-type="publisher-id">MI9937505</article-id><article-version article-version-type="pmc-version">1</article-version><article-categories><subj-group subj-group-type="overline"><subject>Research Article</subject></subj-group><subj-group subj-group-type="heading"><subject>Article</subject></subj-group></article-categories><title-group><article-title>Single‐Cell Transcriptomics Reveal Microenvironment Alterations in Canine Peri‐Implantitis</article-title></title-group><contrib-group><contrib id="cr-0001" contrib-type="author"><name name-style="western"><surname>Wang</surname><given-names initials="M">Ming</given-names></name><contrib-id contrib-id-type="orcid" authenticated="false">https://orcid.org/0000-0002-0782-688X</contrib-id><xref rid="aff-0001" ref-type="aff">
+<sup>1</sup>
+</xref></contrib><contrib id="cr-0002" contrib-type="author"><name name-style="western"><surname>Zhang</surname><given-names initials="D">Dong</given-names></name><contrib-id contrib-id-type="orcid" authenticated="false">https://orcid.org/0009-0003-5051-8860</contrib-id><xref rid="aff-0002" ref-type="aff">
+<sup>2</sup>
+</xref></contrib><contrib id="cr-0003" contrib-type="author"><name name-style="western"><surname>Liao</surname><given-names initials="C">Chunhui</given-names></name><contrib-id contrib-id-type="orcid" authenticated="false">https://orcid.org/0000-0002-6159-4514</contrib-id><xref rid="aff-0003" ref-type="aff">
+<sup>3</sup>
+</xref></contrib><contrib id="cr-0004" contrib-type="author"><name name-style="western"><surname>Wu</surname><given-names initials="D">Daner</given-names></name><contrib-id contrib-id-type="orcid" authenticated="false">https://orcid.org/0009-0003-0431-7494</contrib-id><xref rid="aff-0001" ref-type="aff">
+<sup>1</sup>
+</xref></contrib><contrib id="cr-0005" contrib-type="author"><name name-style="western"><surname>Geng</surname><given-names initials="N">Ningbo</given-names></name><contrib-id contrib-id-type="orcid" authenticated="false">https://orcid.org/0000-0002-5753-4877</contrib-id><xref rid="aff-0001" ref-type="aff">
+<sup>1</sup>
+</xref></contrib><contrib id="cr-0006" contrib-type="author"><name name-style="western"><surname>Xia</surname><given-names initials="Y">Yixin</given-names></name><contrib-id contrib-id-type="orcid" authenticated="false">https://orcid.org/0009-0006-6729-1801</contrib-id><xref rid="aff-0003" ref-type="aff">
+<sup>3</sup>
+</xref></contrib><contrib id="cr-0007" contrib-type="author"><name name-style="western"><surname>Chen</surname><given-names initials="Y">Yu</given-names></name><contrib-id contrib-id-type="orcid" authenticated="false">https://orcid.org/0009-0005-1617-806X</contrib-id><xref rid="aff-0001" ref-type="aff">
+<sup>1</sup>
+</xref></contrib><contrib id="cr-0008" contrib-type="author" corresp="yes"><name name-style="western"><surname>Chen</surname><given-names initials="S">Songling</given-names></name><contrib-id contrib-id-type="orcid" authenticated="false">https://orcid.org/0000-0001-5528-2453</contrib-id><xref rid="aff-0001" ref-type="aff">
+<sup>1</sup>
+</xref><address><email>songlingchen123@163.com</email></address></contrib><contrib id="cr-0009" contrib-type="author" corresp="yes"><name name-style="western"><surname>Peng</surname><given-names initials="W">Wei</given-names></name><contrib-id contrib-id-type="orcid" authenticated="false">https://orcid.org/0009-0005-2934-707X</contrib-id><xref rid="aff-0001" ref-type="aff">
+<sup>1</sup>
+</xref><address><email>pengw7@mail.sysu.edu.cn</email></address></contrib></contrib-group><contrib-group><contrib id="cr-0010" contrib-type="editor"><name name-style="western"><surname>Arora (RSS)</surname><given-names initials="J">Jasbir</given-names></name><address><email>jarora@wiley.com</email></address></contrib></contrib-group><aff id="aff-0001">
+<label>
+<sup>1</sup>
+</label>
+<named-content content-type="organisation-division">Department of Stomatology</named-content>, <institution>The First Affiliated Hospital of Sun Yat-sen University</institution>, <city>Guangzhou</city>, <postal-code>510080</postal-code>, <named-content content-type="country-part">Guangdong Province</named-content>, <country>China</country>, <ext-link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="http://sysu.edu.cn" ext-link-type="uri">sysu.edu.cn</ext-link>
+</aff><aff id="aff-0002">
+<label>
+<sup>2</sup>
+</label>
+<named-content content-type="organisation-division">Department of Oncology</named-content>, <institution>The First Affiliated Hospital Sun Yat-sen University</institution>, <city>Guangzhou</city>, <postal-code>510080</postal-code>, <named-content content-type="country-part">Guangdong Province</named-content>, <country>China</country>, <ext-link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="http://sysu.edu.cn" ext-link-type="uri">sysu.edu.cn</ext-link>
+</aff><aff id="aff-0003">
+<label>
+<sup>3</sup>
+</label>
+<named-content content-type="organisation-division">Department of Orthodontics</named-content>, <named-content content-type="organisation-division">Guangzhou Women and Children’s Medical Center</named-content>, <institution>Guangzhou Medical University</institution>, <city>Guangzhou</city>, <postal-code>510080</postal-code>, <named-content content-type="country-part">Guangdong Province</named-content>, <country>China</country>, <ext-link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="http://gzhmc.edu.cn" ext-link-type="uri">gzhmc.edu.cn</ext-link>
+</aff><pub-date pub-type="epub"><day>31</day><month>12</month><year>2025</year></pub-date><pub-date pub-type="collection"><year>2025</year></pub-date><volume>2025</volume><issue-id pub-id-type="pmc-issue-id">479585</issue-id><elocation-id>9937505</elocation-id><history><date date-type="rev-recd"><day>27</day><month>10</month><year>2025</year></date><date date-type="received"><day>06</day><month>11</month><year>2024</year></date><date date-type="accepted"><day>24</day><month>11</month><year>2025</year></date></history><pub-history><event event-type="pmc-release"><date><day>31</day><month>12</month><year>2025</year></date></event><event event-type="pmc-live"><date><day>06</day><month>01</month><year>2026</year></date></event><event event-type="pmc-last-change"><date iso-8601-date="2026-09-25 22:53:36.967"><day>25</day><month>09</month><year>2026</year></date></event></pub-history><permissions><copyright-statement content-type="article-copyright">Copyright © 2025 Ming Wang et al. Mediators of Inflammation published by John Wiley &amp; Sons Ltd.</copyright-statement><copyright-year>2025</copyright-year><license><ali:license_ref xmlns:ali="http://www.niso.org/schemas/ali/1.0/" specific-use="textmining" content-type="ccbylicense">https://creativecommons.org/licenses/by/4.0/</ali:license_ref><license-p>This is an open access article under the terms of the <ext-link xmlns:xlink="http://www.w3.org/1999/xlink" ext-link-type="uri" xlink:href="https://creativecommons.org/licenses/by/4.0/">http://creativecommons.org/licenses/by/4.0/</ext-link>, which permits use, distribution and reproduction in any medium, provided the original work is properly cited.</license-p></license></permissions><self-uri xmlns:xlink="http://www.w3.org/1999/xlink" content-type="pmc-pdf" xlink:href="MI-2025-9937505.pdf"/><self-uri xmlns:xlink="http://www.w3.org/1999/xlink" content-type="pdf" xlink:href="file:MI-2025-9937505.pdf"/><abstract><sec id="sec-0001"><title>Background</title><p>Peri‐implantitis, a major contributor to dental implant failure, lacks comprehensive insights into tissue‐specific heterogeneity as current researches predominantly focus on the whole peri‐implant tissue rather than distinct molecular and cellular dynamics in gingiva and alveolar bone microenvironments. Furthermore, ethical challenges hinder the acquisition of healthy peri‐implant tissues, limiting our understanding of peri‐implantitis progression and the development of targeted therapies.</p></sec><sec id="sec-0002"><title>Methods</title><p>We established a controlled peri‐implantitis model in beagle dogs, enabling ethical collection of healthy control tissues. Single‐cell RNA sequencing (scRNA‐seq) transcriptomics profiling was conducted on gingiva and alveolar bone tissues from diseased and healthy controls. Additionally, flow cytometry was utilized to further verify the identified subclusters and their involvement in peri‐implantitis.</p></sec><sec id="sec-0003"><title>Results</title><p>Single‐cell transcriptomic profiling unveiled a pronounced expansion of inflammation‐associated cellular subsets in both gingival and alveolar bone microenvironments during peri‐implantitis. Gingival tissues exhibited marked expansions in IL6<sup>+</sup>/IL18BP<sup>+</sup> endothelial cell and CXCL8<sup>+</sup> fibroblast, whereas APOD<sup>+</sup> fibroblast dominated in peri‐implantitis bone tissues. Gene‐level profiling further identified upregulated pro‐inflammatory chemokines (<italic toggle="yes">CXCL8</italic>, <italic toggle="yes">CXCL17</italic>, <italic toggle="yes">CCL24</italic>) within gingiva IL18BP<sup>+</sup> endothelial cells. Notably, we discovered a unique ligand–receptor interaction C3 (APOD<sup>+</sup> fibroblast)–C3AR1 (monocyte/macrophage) in alveolar bone tissue, implicating complement‐dependent signaling in immune crosstalk.</p></sec><sec id="sec-0004"><title>Conclusions</title><p>Our study provides the first comparative atlas of soft/hard tissue remodeling in peri‐implantitis at single‐cell resolution. The expansion of IL6<sup>+</sup>/IL18BP<sup>+</sup> endothelial cell and CXCL8<sup>+</sup> fibroblast in gingiva, alongside APOD<sup>+</sup> fibroblast‐driven C3–C3AR1 signaling in alveolar bone, highlights distinct microenvironmental reprogramming between soft and hard tissues. These findings not only identify potential therapeutic targets but also validate the translational relevance of the canine model for peri‐implantitis research.</p></sec></abstract><kwd-group><title>Keywords</title><kwd id="kwd-0001">canine disease model</kwd><kwd id="kwd-0002">peri-implantitis</kwd><kwd id="kwd-0003">single-cell RNA sequencing</kwd><kwd id="kwd-0004">tissue-specific microenvironment</kwd></kwd-group><funding-group><award-group id="funding-0001"><funding-source>
+<institution-wrap><institution>Natural Science Foundation of Guangdong Province</institution><institution-id institution-id-type="doi">10.13039/501100003453</institution-id></institution-wrap>
+</funding-source><award-id>2021A1515010806</award-id><award-id>2022A1515010809</award-id></award-group><award-group id="funding-0002"><funding-source>
+<institution-wrap><institution>Guangzhou Municipal Health Technology Project, China</institution></institution-wrap>
+</funding-source><award-id>205151017014</award-id></award-group></funding-group><counts><fig-count count="35"/><table-count count="0"/><ref-count count="63"/><page-count count="20"/><word-count count="6425"/></counts><custom-meta-group><custom-meta><meta-name>pmc-status-qastatus</meta-name><meta-value>0</meta-value></custom-meta><custom-meta><meta-name>pmc-status-live</meta-name><meta-value>yes</meta-value></custom-meta><custom-meta><meta-name>pmc-status-embargo</meta-name><meta-value>no</meta-value></custom-meta><custom-meta><meta-name>pmc-status-released</meta-name><meta-value>yes</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-open-access</meta-name><meta-value>yes</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-olf</meta-name><meta-value>no</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-manuscript</meta-name><meta-value>no</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-legally-suppressed</meta-name><meta-value>no</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-has-pdf</meta-name><meta-value>yes</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-has-supplement</meta-name><meta-value>yes</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-pdf-only</meta-name><meta-value>no</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-suppress-copyright</meta-name><meta-value>no</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-is-real-version</meta-name><meta-value>no</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-is-scanned-article</meta-name><meta-value>no</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-preprint</meta-name><meta-value>no</meta-value></custom-meta><custom-meta><meta-name>pmc-prop-in-epmc</meta-name><meta-value>yes</meta-value></custom-meta><custom-meta><meta-name>pmc-license-ref</meta-name><meta-value>CC BY</meta-value></custom-meta><custom-meta><meta-name>source-schema-version-number</meta-name><meta-value>2.0</meta-value></custom-meta><custom-meta><meta-name>cover-date</meta-name><meta-value>2025</meta-value></custom-meta><custom-meta><meta-name>details-of-publishers-convertor</meta-name><meta-value>Converter:WILEY_ML3GV2_TO_JATSPMC version:6.6.6 mode:remove_FC converted:31.12.2025</meta-value></custom-meta></custom-meta-group></article-meta><notes><p content-type="self-citation">
+<mixed-citation publication-type="journal" id="mi9937505-cit-2001">
+<string-name name-style="western">
+<surname>Wang</surname>, <given-names>Ming</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Zhang</surname>, <given-names>Dong</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Liao</surname>, <given-names>Chunhui</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Wu</surname>, <given-names>Daner</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Geng</surname>, <given-names>Ningbo</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Xia</surname>, <given-names>Yixin</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Chen</surname>, <given-names>Yu</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Chen</surname>, <given-names>Songling</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Peng</surname>, <given-names>Wei</given-names>
+</string-name>,
+<article-title>Single‐Cell Transcriptomics Reveal Microenvironment Alterations in Canine Peri‐Implantitis</article-title>,
+<source>Mediators of Inflammation</source>, <volume>2025</volume>, <elocation-id>9937505</elocation-id>, 20 pages, <year>2025</year>.
+<pub-id pub-id-type="doi">10.1155/mi/9937505</pub-id>
+<pub-id pub-id-type="pmcid">PMC12767392</pub-id><pub-id pub-id-type="pmid">41498023</pub-id></mixed-citation>
+</p><fn-group><fn id="note-0001"><p>
+<bold>Academic Editor:</bold> Jasbir Arora (RSS)</p></fn></fn-group></notes></front><body><sec id="sec-0005"><title>1. Introduction</title><p>Peri‐implantitis is a common complication characterized by chronic inflammation of the peri‐implant tissue. This disease features irreversible and progressive degradation of gingival and alveolar bone, ultimately leading to tooth loss [<xref rid="bib-0001" ref-type="bibr">1</xref>, <xref rid="bib-0002" ref-type="bibr">2</xref>]. A systematic review reported a weighted mean prevalence of 22%, highlighting peri‐implantitis as the leading cause of tooth‐implant surgery failure [<xref rid="bib-0002" ref-type="bibr">2</xref>]. However, on the basis of the current understanding, the treatment for this disease remains limited to removing the biofilm, which usually results in unsatisfactory outcomes [<xref rid="bib-0003" ref-type="bibr">3</xref>–<xref rid="bib-0005" ref-type="bibr">5</xref>]. A better understanding of the underlying cellular and molecular dynamics of the gingiva and alveolar bone during peri‐implantitis has broad implications for both biological understanding and therapeutic targeting of the pathological peri‐implantitis.</p><p>In order to overcome the challenges, studies have highlighted the significant roles of both immune and nonimmune cells in tissue destruction [<xref rid="bib-0006" ref-type="bibr">6</xref>, <xref rid="bib-0007" ref-type="bibr">7</xref>]. T cells are crucial for disease progression, and the present studies have revealed increased expression of <italic toggle="yes">RORγT</italic> and <italic toggle="yes">FOXP3</italic> in affected tissues [<xref rid="bib-0008" ref-type="bibr">8</xref>], indicating a role for TH17 and Treg cells in peri‐implantitis. Additionally, nonimmune cells such as fibroblasts have been shown to promote inflammation in peri‐implantitis through interactions with neutrophils [<xref rid="bib-0009" ref-type="bibr">9</xref>]. Moreover, endothelial cells can regulate angiogenesis and vasculogenesis via vascular endothelial growth factors (VEGFs) to influence immune cell migration [<xref rid="bib-0010" ref-type="bibr">10</xref>]. However, most current studies were based on entire peri‐implant tissue, limiting a thorough understanding of the heterogeneity of gingival and alveolar bone tissues as well as the development of targeted host therapy for peri‐implantitis.</p><p>To date, the pathogenic molecular and cellular mechanisms involved in peri‐implantitis remain incompletely understood. The advent of single‐cell RNA sequencing (scRNA‐seq) has provided insight into the transcriptome of individual cell in tissues [<xref rid="bib-0007" ref-type="bibr">7</xref>]. However, current researches predominantly focus on the whole peri‐implant tissue rather than distinct molecular and cellular dynamics in the gingiva and alveolar bone microenvironments separately. Furthermore, ethical challenges hinder the acquisition of healthy peri‐implant tissues, limiting our understanding of peri‐implantitis progression and the development of targeted therapies. Herein, we utilized single‐cell RNA sequencing to investigate inflammation‐associated cells in gingival and alveolar bone tissues separately obtained from beagle dogs. Additionally, all protocols of our study complied with the Animal Research: Reporting of In Vivo Experiments (ARRIVE) guidelines [<xref rid="bib-0011" ref-type="bibr">11</xref>].</p></sec><sec id="sec-0006"><title>2. Materials and Methods</title><sec id="sec-0007"><title>2.1. Animals</title><p>The study involved four healthy, 1‐year‐old male beagle dogs. The surgical procedures involved bilateral extraction of the mandibular second, third, and fourth premolars simultaneously under general anesthesia. Following a 12‐week healing period, 24 dental implants (φ3.6 mm, H7 mm, Dentium, Seoul, South Korea) were placed into the edentulous sites. Each implant had a placement torque of at least 35 N·cm. After 1 week, cover screws (φ3.4 mm, H0 mm, Dentium, South Korea) were attached to the implants. Abutments (φ4.5 mm, H3.5 mm, Dentium, South Korea) were connected 8 weeks postimplantation [<xref rid="bib-0012" ref-type="bibr">12</xref>]. All methods and protocols were authorized by the Institutional Animal Care and Use Committee at Sun Yat‐sen University (Approval No. SYSU‐IACUC‐2022‐‐000486).</p></sec><sec id="sec-0008"><title>2.2. Induction of Peri‐Implantitis and Sample Collection</title><p>After installation of the healing abutment, 3–0 silk ligatures were placed below the healing abutment of the left‐side implants of each beagle dog to induce inflammation through plaque accumulation, whereas the right side did not receive ligatures. The control side underwent daily oral hygiene with 0.12% chlorhexidine gluconate. Ligature retention and implant stability were manually assessed every 48 h. After an 8‐week observation period, the animals were sacrificed via intracardiac injection of 10% potassium chloride (0.5 mL/kg). Mandibles were surgically excised, and gingival tissues and alveolar bone samples were collected separately for downstream analyses. One mandible was collected for micro‐CT analysis to confirm the success of the model construction. The other mandibles were used to obtain the peri‐implant tissues including gingival and alveolar bone tissues from the location of third and fourth premolars of canines for single‐cell suspensions and the remaining peri‐implants tissues were harvested for the further flow cytometry. Peri‐implantitis samples were selected based on clinically evident inflammation (bleeding on probing positive, probing depth &gt;5 mm). Gingival tissues were harvested by elevating full‐thickness flaps and collecting 4 mm‐wide circumferential biopsies from the implant–gingiva interface. Alveolar bone tissues were obtained from a cylindrical area with a 1‐mm radius around the implant surface and extending 4 mm in length from the top of the bone level with a caries scoop following complete removal of the gingival.</p></sec><sec id="sec-0009"><title>2.3. Computed Tomography Analysis</title><p>Micro Computed Tomography (Inveon, Siemens, Germany; 80 kV, 500 μA, 1500 ms exposure time) was used to image the surrounding tissues of the implants in both sides. alveolar bone loss was quantified via three‐dimensional reconstruction. The alveolar bone height was measured in the lingual and palatal regions, and the four regions measured yielded an average amount of bone loss [<xref rid="bib-0012" ref-type="bibr">12</xref>].</p></sec><sec id="sec-0010"><title>2.4. Single‐Cell RNA Sequencing and Analysis</title><sec id="sec-0011"><title>2.4.1. Sample Preparation</title><p>To prepare single‐cell suspensions, alveolar bone was cut into small pieces (&lt;1 mm<sup>3</sup>), and gingival tissue was minced and digested separately with collagenase type I (Gibco) and dispase II (Sigma) as previously described [<xref rid="bib-0013" ref-type="bibr">13</xref>]. Red blood cells were subjected to lysis using 1 mL of Red Cell Lysis Solution (Biosharp, China). The cells were subsequently centrifuged and resuspended in 1% BSA solution. Following resuspension, the cells were passed through a 40‐μm filter (Biosharp), washed, and counted with a Countess 3 Automatic cell counter (Thermo Fisher, USA).</p></sec><sec id="sec-0012"><title>2.4.2. 10 × Genomics Library Construction</title><p>Single‐cell RNA sequencing libraries were prepared via the Chromium Single‐Cell 3ʹ Reagent Kit v3 (10× Genomics) according to the manufacturer’s instructions. Briefly, ~35,000 cells/FACS‐sorted cells were washed and resuspended to a concentration of 700–1200 cells/µL (viability ≥ 85%) as described in a previous study [<xref rid="bib-0014" ref-type="bibr">14</xref>]. After the reverse transcription step, barcoded cDNA was purified with Dynabeads, followed by PCR amplification. For gene expression library construction, 50 ng of amplified cDNA was fragmented and end‐repaired, double‐sized with SPRIselect beads, and sequenced on a NovaSeq platform (Illumina) to generate 150 bp paired‐end reads.</p></sec><sec id="sec-0013"><title>2.4.3. Mapping and QC Filtering</title><p>Raw sequencing reads were first demultiplexed and mapped to the reference genome using Cell Ranger (v3.0.0). Subsequent analyses were performed in R (v4.2.2) with the Seurat package (v4.3.0). For quality control, cells with &gt;20% mitochondrial gene expression were discarded. We also excluded cells with insufficient transcript detection (&lt;350 genes for healthy samples or &lt;250 genes for diseased samples) as well as those with unusually high gene counts (&gt;6500 for healthy and periodontitis samples or &gt;6000 for peri‐implantitis) as described in a previous study [<xref rid="bib-0009" ref-type="bibr">9</xref>].</p></sec><sec id="sec-0014"><title>2.4.4. Dimension Reduction and Unsupervised Clustering</title><p>To mitigate the effects of cell cycle heterogeneity on cell clustering, G2M and S phase scores were calculated via the function CellCycleScoring [<xref rid="bib-0015" ref-type="bibr">15</xref>]. G2M and S phase scores were used to “regress out” heterogeneity due to the cell cycle via ScaleData. We conducted the principal component analysis (PCA) on highly variable genes (HVGs) to reduce the dimensionality of the data. The top 40 principal components were selected for unsupervised clustering of single cells. Nonlinear dimensional reduction (uniform manifold approximation and projection [UMAP]) was then used to visualize the clustering results (resolution = 0.6).</p></sec><sec id="sec-0015"><title>2.4.5. Differential Gene Expression Analysis</title><p>To identify differentially expressed genes (DEGs) in each cluster, FindAllMarkers with the Wilcoxon rank‐sum test algorithm and Benjamini–Hochberg correction were performed to reduce the bias caused by multiple tests with the following thresholds: |log<sub>2</sub> (fold change) | &gt;2.0 and adjusted <italic toggle="yes">p</italic> value &lt;0.05. The following configurations were set as previous study [<xref rid="bib-0009" ref-type="bibr">9</xref>]. We used the EnhancedVolcano R package to visualize the DEGs between peri‐implantitis canines and healthy controls.</p></sec><sec id="sec-0016"><title>2.4.6. Enriching Pathway Analysis</title><p>GO and KEGG enrichment analyses of the DEG sets were performed using the GO‐seq R and KOBAS packages, respectively. GO and KEGG terms with adjusted <italic toggle="yes">p</italic> values &lt; 0.05 were considered statistically significant.</p></sec><sec id="sec-0017"><title>2.4.7. Cell Communication Analysis</title><p>We applied via the CellPhoneDB, a public repository of ligands and receptors and their interactions. Membrane‐secreted and peripheral proteins of the cluster at different time points are annotated. Significant interaction means and cell communication significance (adjusted <italic toggle="yes">p</italic> value &lt; 0.05) were calculated on the basis of the interaction and the normalized cell matrix achieved by Seurat normalization.</p></sec></sec><sec id="sec-0018"><title>2.5. Flow Cytometry</title><p>Single‐cell suspensions were washed twice with the ice‐cold flow cytometry (FACS) buffer (2% FBS + 1 mM EDTA in PBS) and incubated with blocking buffer (1:100, 564765, BD Bioscience) for 15 min at 4°C. For cell surface antigen staining, single‐cell suspensions were stained with CD45 (553081, BD Bioscience) and CD11b (101236, BioLegend) in the dark for 1 h on ice and then washed two to three times with FACS buffer. For intracellular cytokine detection, the cells were fixed and permeabilized with fixation/permeabilization buffer (BD Bioscience) according to the manufacturer’s protocol. Cells were then stained with CD3 (553066, BD Bioscience), B220 (561881, BD Biosciences), and Ly6G (551461, BD Bioscience) antibodies. Data analysis was performed by using FlowJo software (Tree Star, Ashland, OR, USA).</p></sec><sec id="sec-0019"><title>2.6. Statistical Analysis</title><p>Data analysis and visualization were performed with Prism (GraphPad). The <italic toggle="yes">p</italic> values were calculated using the unpaired two‐tailed student’s <italic toggle="yes">t</italic> test or one‐way ANOVA followed by Tukey–Kramer multiple‐comparisons test. <italic toggle="yes">p</italic> values &lt; 0.05 were considered statistically significant and are displayed as follows: ns, no significant, <italic toggle="yes">p</italic>  &gt; 0.05:  <sup>∗</sup>
+<italic toggle="yes">p</italic>  &lt; 0.05;  <sup>∗∗</sup>
+<italic toggle="yes">p</italic>  &lt; 0.01:  <sup>∗∗∗</sup>
+<italic toggle="yes">p</italic>  &lt; 0.001 and  <sup>∗∗∗∗</sup>
+<italic toggle="yes">p</italic>  &lt; 0.0001. Data were expressed as mean ± SEM.</p></sec></sec><sec id="sec-0020"><title>3. Results</title><sec id="sec-0021"><title>3.1. Single‐Cell RNA Sequencing Performed Separately on Gingival and Alveolar Bone Tissues From Both Healthy Samples and Those With Peri‐Implantitis</title><p>To observe the heterogeneity between alveolar bone and gingival tissues under peri‐implantitis versus healthy samples, we performed scRNA‐seq on these tissues (Figure <xref rid="fig-0001" ref-type="fig">1</xref>a). After standard data processing and quality filtering (Supporting Information <xref rid="sec-0034" ref-type="sec">1</xref>: Figure <xref rid="sec-0034" ref-type="sec">S1</xref>a), we obtained single‐cell transcriptomes from a total of 35,039 single cells. UMAP clustering identified 13 distinct cellular compartments, annotated through canonical marker gene expression (Figure <xref rid="fig-0001" ref-type="fig">1</xref>b,d and Supporting Information <xref rid="sec-0034" ref-type="sec">1</xref>: Figure <xref rid="sec-0034" ref-type="sec">S1</xref>b).</p><fig-group position="float" id="fig-0001" content-type="Figure" orientation="portrait"><label>Figure 1</label><caption><p>Overview of the 35,039 single cells from bone and gingiva tissues in peri‐implantitis and healthy control separately. (a) Study overview: cell suspension was prepared from peri‐implantitis groups (imflamed) and healthy controls (healthy) of beagle dogs. The picture shows the position of the biopsies we obtained. Next, we performed the single‐cell RNA sequencing and verified by flow cytometry. (b) Uniform Manifold Approximation and Projection (UMAP) of the 35039 cells, colored by cell‐type annotation from left to right: healthy bone (HB), peri‐implantitis bone (PB), healthy gingiva (HG) peri‐implantitis gingiva (PG). Epi, epithelial cells; Endo, endothelial cells; Fib, fibroblast cells; Neu, neutrophils; LEC, lymphatic endothelial cells; Mon/mac, monocytes/macrophages; SMC, smooth muscle cells. (c) Proportion of each cluster of HB, PB, HG, PG. (d) Dot plot depicting the expression of cluster‐defining genes and percentage of cells expressing each gene for the 13 clusters, respectively. Expression values are normalized and scaled averages. avg.exp, average expression; %.exp, percentage expression. (e) The upper panels depict a representative flow‐cytometry scatterplots of alveolar bone tissue, while the lower depict the flow‐cytometry scatterplots of the gingival tissue. Cells were gated from single/live and stained with CD45 (<italic toggle="yes">n</italic> = 3/group, error bars represent SEM,  <sup>∗</sup>
+<italic toggle="yes">p</italic>  &lt; 0.05 as determined by unpaired two‐tailed Student’s <italic toggle="yes">t</italic> test).</p></caption><fig position="anchor" fig-type="Figure" id="figpt-0001" orientation="portrait"><caption><p>(a)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-1" orientation="portrait" xlink:href="MI-2025-9937505-g031.jpg"/></fig><fig position="anchor" fig-type="Figure" id="figpt-0002" orientation="portrait"><caption><p>(b)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-3" orientation="portrait" xlink:href="MI-2025-9937505-g032.jpg"/></fig><fig position="anchor" fig-type="Figure" id="figpt-0003" orientation="portrait"><caption><p>(c)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-5" orientation="portrait" xlink:href="MI-2025-9937505-g033.jpg"/></fig><fig position="anchor" fig-type="Figure" id="figpt-0004" orientation="portrait"><caption><p>(d)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-7" orientation="portrait" xlink:href="MI-2025-9937505-g034.jpg"/></fig><fig position="anchor" fig-type="Figure" id="figpt-0005" orientation="portrait"><caption><p>(e)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-9" orientation="portrait" xlink:href="MI-2025-9937505-g035.jpg"/></fig></fig-group><p>We next compared the proportion and quantity across tissue types (Figure <xref rid="fig-0001" ref-type="fig">1</xref>c and Supporting Information <xref rid="sec-0034" ref-type="sec">1</xref>: Figure <xref rid="sec-0034" ref-type="sec">S1</xref>c), revealing part of parallel inflammatory dynamics in both tissues during peri‐implantitis. Immune cells, such as plasma cells, monocyte/macrophage (Mon/Mac) and cycling B cell were significantly increased in both peri‐implantitis bone (PB) and peri‐implantitis gingival (PG) tissues, with plasma cell showing the most substantial increase. Conversely, B cell and lymphatic endothelial cell (LEC) decreased in the PB and PG, consistent with previously reported [<xref rid="bib-0007" ref-type="bibr">7</xref>, <xref rid="bib-0016" ref-type="bibr">16</xref>]. As for nonimmune cells, we observed an increase of fibroblast (Fib) in both tissues. In contrast, the proportions of neutrophil (Neu), mast cell and endothelial cell (Endo) decreased in alveolar bone tissues but increased in gingiva, whereas the proportions of T cell increased in alveolar bone tissue but decreased in gingival tissue (Supporting Information <xref rid="sec-0034" ref-type="sec">1</xref>: Figure <xref rid="sec-0034" ref-type="sec">S1</xref>d).</p><p>In general, both tissue types exhibited severe inflammatory responses verified by flow cytometry (Figure <xref rid="fig-0001" ref-type="fig">1</xref>e), whereas the immune activation patterns diverged significantly between bone and gingival microenvironments. Alveolar bone tissues presented a more pronounced increase in nonimmune cells, particularly fibroblast, whereas gingival tissue exhibited a more pronounced increase in immune cells, particularly neutrophil and plasma cell (Supporting Information <xref rid="sec-0034" ref-type="sec">1</xref>: Figure <xref rid="sec-0034" ref-type="sec">S1</xref>e).</p></sec><sec id="sec-0022"><title>3.2. The Diverse Functions of Fibroblasts Have Been Revealed and Are Particularly Associated With Inflammation</title><p>Given the dramatic expansion of fibroblast in both tissues under inflammatory conditions, we next focused on the functional heterogeneity of the subclusters (Figure <xref rid="fig-0002" ref-type="fig">2</xref>a).</p><fig-group position="float" id="fig-0002" content-type="Figure" orientation="portrait"><label>Figure 2</label><caption><p>Distinct subclusters of the fibroblast. (a) UMAP of fibroblast cells as in Figure <xref rid="fig-0001" ref-type="fig">1</xref>a, annotated and colored by the sample type of origin (HB, PB, HG, PG) and subclustering. (b) Proportion of each cluster in HB, PB, HG, PG. (c) Dot plot depicting the expression of cluster‐defining genes and percentage of cells expressing each gene for the five subclusters of fibroblast respectively. Expression values are normalized and scaled averages. (d) Gene enrichment analysis of CXCL8<sup>+</sup> Fib associated with genes upregulated between HG versus PG. (e) Gene enrichment analysis of APOD<sup>+</sup> Fib associated with genes upregulated between HB versus PB. (f) Gene enrichment analysis of SFN<sup>+</sup> Fib associated with genes upregulated between HB + HG versus PB + PG. (g) Volcano plot depicting the increased expression of <italic toggle="yes">SFN</italic> and <italic toggle="yes">GPX2</italic> in PG. Red points represent the genes with FDR &lt; 0.1, log<sub>2</sub> (fold change) &gt; 2.0 and adjusted <italic toggle="yes">p</italic> value &lt; 0.05 in PG.</p></caption><fig position="anchor" fig-type="Figure" id="figpt-0006" orientation="portrait"><caption><p>(a)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-11" orientation="portrait" xlink:href="MI-2025-9937505-g001.jpg"/></fig><fig position="anchor" fig-type="Figure" id="figpt-0007" orientation="portrait"><caption><p>(b)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-13" orientation="portrait" xlink:href="MI-2025-9937505-g002.jpg"/></fig><fig position="anchor" fig-type="Figure" id="figpt-0008" orientation="portrait"><caption><p>(c)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-15" orientation="portrait" xlink:href="MI-2025-9937505-g003.jpg"/></fig><fig position="anchor" fig-type="Figure" id="figpt-0009" orientation="portrait"><caption><p>(d)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-17" orientation="portrait" xlink:href="MI-2025-9937505-g004.jpg"/></fig><fig position="anchor" fig-type="Figure" id="figpt-0010" orientation="portrait"><caption><p>(e)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-19" orientation="portrait" xlink:href="MI-2025-9937505-g005.jpg"/></fig><fig position="anchor" fig-type="Figure" id="figpt-0011" orientation="portrait"><caption><p>(f)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-21" orientation="portrait" xlink:href="MI-2025-9937505-g006.jpg"/></fig><fig position="anchor" fig-type="Figure" id="figpt-0012" orientation="portrait"><caption><p>(g)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-23" orientation="portrait" xlink:href="MI-2025-9937505-g030.jpg"/></fig></fig-group><p>Five distinct subclusters were identified, exhibiting tissue‐specific distribution patterns yet consistent activation trends from health to disease state (Figure <xref rid="fig-0002" ref-type="fig">2</xref>b,c and Supporting Information <xref rid="sec-0034" ref-type="sec">2</xref>: Figure <xref rid="sec-0034" ref-type="sec">S2</xref>a).</p><p>APOD<sup>+</sup> fibroblasts were highly enriched in PB and characterized by features of skeletal system development and cell differentiation (Figure <xref rid="fig-0002" ref-type="fig">2</xref>e). Further DEG analysis revealed that the expression of osteogenesis‐related genes was upregulated in PB [<xref rid="bib-0017" ref-type="bibr">17</xref>–<xref rid="bib-0021" ref-type="bibr">21</xref>] (Supporting Information <xref rid="sec-0034" ref-type="sec">2</xref>: Figure <xref rid="sec-0034" ref-type="sec">S2</xref>b), suggesting a potential role in mediating the imbalance between bone formation and resorption during severe peri‐implantitis. Moreover, it also demonstrated B cell activation in PB, explaining the significant increase of the subcluster under peri‐implantitis.</p><p>PG were dominated by CXCL8<sup>+</sup> fibroblasts, which exhibited enhanced immune response signatures and endothelial interaction potential (Figure <xref rid="fig-0002" ref-type="fig">2</xref>d), while they were virtually undetectable in alveolar bone. Known for recruiting immune cells [<xref rid="bib-0022" ref-type="bibr">22</xref>, <xref rid="bib-0023" ref-type="bibr">23</xref>], CXCL8 has been linked not only to immune activity but also to angiogenesis in some deseases [<xref rid="bib-0024" ref-type="bibr">24</xref>–<xref rid="bib-0026" ref-type="bibr">26</xref>], suggesting a key role for CXCL8<sup>+</sup> fibroblast in mediating inflammation and vascular growth specifically in disease‐affected gingival tissue.</p><p>Notably, a shared feature of both tissues was the abundance of SFN<sup>+</sup> fibroblast. Interestingly, this subcluster co‐expressed classical fibroblast markers and epithelial markers (<italic toggle="yes">KRT16</italic>, <italic toggle="yes">KRT4</italic>) (Supporting Information <xref rid="sec-0034" ref-type="sec">2</xref>: Figure <xref rid="sec-0034" ref-type="sec">S2</xref>c), potentially representing a transitional cell type during epithelial mesenchymal transition (EMT) in peri‐implantitis. Further DEG analysis supported this hypothesis, with elevated expression of EMT markers (<italic toggle="yes">SFN</italic>, <italic toggle="yes">GPX2</italic>) &amp; nbsp [<xref rid="bib-0027" ref-type="bibr">27</xref>, <xref rid="bib-0028" ref-type="bibr">28</xref>], and enrichment of cell–cell adhesion and EMT‐related pathways (Figure <xref rid="fig-0002" ref-type="fig">2</xref>g,f).</p><p>Periodontal ligament fibroblast (PLF), identified by extracellular matrix marker <italic toggle="yes">ASPN</italic> [<xref rid="bib-0029" ref-type="bibr">29</xref>], were notably reduced in diseased tissues. PLF has been suggested to be a source of osteoblast for the remodeling of alveolar bone [<xref rid="bib-0030" ref-type="bibr">30</xref>]. This decline suggests an imbalance in osteogenic function during inflammation, which aligns with the pathogenesis of peri‐implantitis.</p><p>Overall, our data reveal a complex landscape of fibroblast diversity between gingival and alveolar bone tissues, highlighting inflammation responses, osteogenesis, and vasculature development.</p></sec><sec id="sec-0023"><title>3.3. Endothelial Cells Exhibit a Close Relationship With Both Innate and Adaptive Immunity</title><p>Recent studies have confirmed the important roles of endothelial cells in coordinating inflammatory responses [<xref rid="bib-0010" ref-type="bibr">10</xref>, <xref rid="bib-0031" ref-type="bibr">31</xref>]. Considering their potential role in shaping the local inflammatory microenvironment, we further investigated the endothelial cell compartment. (Figure <xref rid="fig-0003" ref-type="fig">3</xref>a–c and Supporting Information <xref rid="sec-0034" ref-type="sec">3</xref>: Figure <xref rid="sec-0034" ref-type="sec">S3</xref>a,c).</p><fig-group position="float" id="fig-0003" content-type="Figure" orientation="portrait"><label>Figure 3</label><caption><p>Distinct subclusters of the endothelial cell. (a) UMAP of 2790 endothelial cells as in Figure <xref rid="fig-0001" ref-type="fig">1</xref>a, annotated and colored by the sample type of origin (HG, PG) and subclustering. Endo：Endothelial. (b) Proportion of each cluster in HB, PB, HG, PG. (c) Dot plot depicting the expression of cluster‐defining genes and percentage of cells expressing each gene for the six subclusters of endothelial cells, respectively. Expression values are normalized and scaled averages. (d) Gene enrichment analysis of IL18BP<sup>+</sup> endothelial associated with genes upregulated between HG versus PG. (e) Gene enrichment analysis of IL6<sup>+</sup> endothelial associated with genes upregulated between HG versus PG. (f) Gene enrichment analysis of SEMAG3<sup>+</sup> endothelial associated with genes upregulated between HG versus PG. (g) Violin plot showing the expression of <italic toggle="yes">CXCL12</italic> in each subcluster. Differentially expressed gene criteria included FDR &lt; 0.1 and adjusted <italic toggle="yes">p</italic> value &lt; 0.05. (h) Volcano plot depicting DEGs of IL6<sup>+</sup> Endothelial between HG and PG. Red points represent genes with FDR &lt; 0.1, log<sub>2</sub> (fold change) &gt; 2.0 and adjusted <italic toggle="yes">p</italic> value &lt; 0.05 in PG.</p></caption><fig position="anchor" fig-type="Figure" id="figpt-0013" orientation="portrait"><caption><p>(a)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-25" orientation="portrait" xlink:href="MI-2025-9937505-g024.jpg"/></fig><fig position="anchor" fig-type="Figure" id="figpt-0014" orientation="portrait"><caption><p>(b)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-27" orientation="portrait" xlink:href="MI-2025-9937505-g025.jpg"/></fig><fig position="anchor" fig-type="Figure" id="figpt-0015" orientation="portrait"><caption><p>(c)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-29" orientation="portrait" xlink:href="MI-2025-9937505-g026.jpg"/></fig><fig position="anchor" fig-type="Figure" id="figpt-0016" orientation="portrait"><caption><p>(d)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-31" orientation="portrait" xlink:href="MI-2025-9937505-g027.jpg"/></fig><fig position="anchor" fig-type="Figure" id="figpt-0017" orientation="portrait"><caption><p>(e)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-33" orientation="portrait" xlink:href="MI-2025-9937505-g028.jpg"/></fig><fig position="anchor" fig-type="Figure" id="figpt-0018" orientation="portrait"><caption><p>(f)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-35" orientation="portrait" xlink:href="MI-2025-9937505-g029.jpg"/></fig><fig position="anchor" fig-type="Figure" id="figpt-0019" orientation="portrait"><caption><p>(g)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-37" orientation="portrait" xlink:href="MI-2025-9937505-g012.jpg"/></fig><fig position="anchor" fig-type="Figure" id="figpt-0020" orientation="portrait"><caption><p>(h)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-39" orientation="portrait" xlink:href="MI-2025-9937505-g013.jpg"/></fig></fig-group><p>Among the endothelial subclusters, SERPINE1<sup>+</sup> endothelial cells were significantly expanded in PG. These cells are characterized by high expression of SERPINE1, a plasminogen activator inhibitor known to regulate inflammation and angiogenesis [<xref rid="bib-0032" ref-type="bibr">32</xref>]. Prior studies indicated that endothelial cells in other tissues can express <italic toggle="yes">SERPINE1</italic> in response to endotoxins, contributing to a prothrombotic state by reducing fibrin degradation [<xref rid="bib-0033" ref-type="bibr">33</xref>, <xref rid="bib-0034" ref-type="bibr">34</xref>]. Therefore, we speculate that the upregulation of this subcluster may leads to local microthrombosis and necrosis in the gingival, ultimately exacerbating the inflammatory response.</p><p>IL18BP<sup>+</sup> endothelial cells were also increased in the PG. Gene enrichment analysis revealed their role in promoting chemotaxis and the migration of immune cells, especially those involved in the innate immune response (Figure <xref rid="fig-0003" ref-type="fig">3</xref>d). Several DEGs, including <italic toggle="yes">CXCL8</italic>, <italic toggle="yes">CXCL17</italic>, <italic toggle="yes">CCL24</italic>, <italic toggle="yes">CCL20</italic>, <italic toggle="yes">CCR1</italic>, and <italic toggle="yes">CCR10</italic>, were also increased in the PG, consistent with the immune‐recruiting function. (Supporting Information <xref rid="sec-0034" ref-type="sec">3</xref>: Figure <xref rid="sec-0034" ref-type="sec">S3</xref>b).</p><p>GO analysis revealed that IL6<sup>+</sup> endothelial cells were also linked to immune functions, with a gene signature of response to lipopolysaccharide and regulation of the adaptive immune response. Although the proportion of IL6<sup>+</sup> endothelial cell decreased in the inflammatory state, we found that the expression of inflammation‐associated genes were upregulated in the PG (Figure <xref rid="fig-0003" ref-type="fig">3</xref>h), consisting with GO analysis [<xref rid="bib-0035" ref-type="bibr">35</xref>–<xref rid="bib-0037" ref-type="bibr">37</xref>] (Figure <xref rid="fig-0003" ref-type="fig">3</xref>e).</p><p>Additionally, SEMAG3<sup>+</sup> endothelial cells displayed a gene signature consistent with the function of mesenchymal stem cells, including blood vessel morphogenesis and endothelial cell differentiation (Figure <xref rid="fig-0003" ref-type="fig">3</xref>f). This subcluster also expressed high level of <italic toggle="yes">CXCL12</italic> (Figure <xref rid="fig-0003" ref-type="fig">3</xref>g), a marker for perivascular mesenchymal stem cells [<xref rid="bib-0038" ref-type="bibr">38</xref>]. Given that vascularization and vasodilatation increasing during inflammation [<xref rid="bib-0039" ref-type="bibr">39</xref>], the modest increase in SEMAG3<sup>+</sup> endothelial cells observed in peri‐implantitis suggests their involvement in inflammation‐driven vascular remodeling.</p><p>Overall, the gene expression profile of endothelial cells involves not only the matrix organization but also immune processes through direct chemotaxis and the recruitment of immune cells, as well as indirectly through angiogenesis, including endothelial cell migration and proliferation.</p></sec><sec id="sec-0024"><title>3.4. The Immune Landscapes of Alveolar Bone and Gingival Tissues From Peri‐Implantitis Canines Showed Heterogeneity</title><p>Peri‐implant inflammation is a common complication after implantation, mainly manifested as chronic inflammation of the peri‐implant tissue [<xref rid="bib-0040" ref-type="bibr">40</xref>, <xref rid="bib-0041" ref-type="bibr">41</xref>]. To better understand the immune dynamics underlying this condition, we next aimed to characterize immune cells in both tissues at the single‐cell level. While the same immune cell subclusters were identified in both tissues, their proportions varied significantly.</p><p>In the gingiva, T cell predominated in the HG but did not increase in the PG, possibly due to a sharp increase in myeloid cells (Supporting Information <xref rid="sec-0034" ref-type="sec">4</xref>: Figure <xref rid="sec-0034" ref-type="sec">S4</xref>a). In contrast, alveolar bone tissues exhibited an increase trend, as confirmed by flow cytometry. (Figure <xref rid="fig-0004" ref-type="fig">4</xref>a,d). Myeloid cell populations were most abundant in HB, with expansion in gingival tissues but a decrease in alveolar bone tissue (Supporting Information <xref rid="sec-0034" ref-type="sec">4</xref>: Figure <xref rid="sec-0034" ref-type="sec">S4</xref>a). However, flow cytometry revealed an increase in both tissues (Figure <xref rid="fig-0004" ref-type="fig">4</xref>c,f), reflecting a potential limitation of this method in capturing myeloid transcriptomes [<xref rid="bib-0007" ref-type="bibr">7</xref>]. Notably, B and plasma cells, particularly the latter, were significantly expanded in peri‐implantitis across both tissues, which was consistent with previous studies and corroborated by the flow cytometry results [<xref rid="bib-0042" ref-type="bibr">42</xref>] (Supporting Information <xref rid="sec-0034" ref-type="sec">4</xref>: Figure <xref rid="sec-0034" ref-type="sec">S4</xref>a and Figure <xref rid="fig-0004" ref-type="fig">4</xref>b,e).</p><fig-group position="float" id="fig-0004" content-type="Figure" orientation="portrait"><label>Figure 4</label><caption><p>Flow cytometry was used to verify the changes in immune cells. (a–c) Representative flow‐cytometry scatter plots from an independent HG, PG, HB, PB cohort. Cells were gated from single/live and stained with CD45/CD3 (a), CD45/B220 (b), and CD11 b/Ly6G (c). (d–f) Bar graphs demonstrate percentage of expression of CD45<sup>+</sup>CD3<sup>+</sup>(d), CD45<sup>+</sup>B220<sup>+</sup>(e), and CD11b<sup>+</sup>Ly6G<sup>+</sup>(f) (<italic toggle="yes">n</italic> = 3/group, error bars represent SEM,  <sup>∗</sup>
+<italic toggle="yes">p</italic>  &lt; 0.05,  <sup>∗∗</sup>
+<italic toggle="yes">p</italic>  &lt; 0.01,  <sup>∗∗∗</sup>
+<italic toggle="yes">p</italic>  &lt; 0.001,  <sup>∗∗∗∗</sup>
+<italic toggle="yes">p</italic>  &lt; 0.0001 as determined by unpaired two‐tailed student’s <italic toggle="yes">t</italic> test).</p></caption><fig position="anchor" fig-type="Figure" id="figpt-0021" orientation="portrait"><caption><p>(a)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-41" orientation="portrait" xlink:href="MI-2025-9937505-g014.jpg"/></fig><fig position="anchor" fig-type="Figure" id="figpt-0022" orientation="portrait"><caption><p>(b)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-43" orientation="portrait" xlink:href="MI-2025-9937505-g015.jpg"/></fig><fig position="anchor" fig-type="Figure" id="figpt-0023" orientation="portrait"><caption><p>(c)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-45" orientation="portrait" xlink:href="MI-2025-9937505-g016.jpg"/></fig><fig position="anchor" fig-type="Figure" id="figpt-0024" orientation="portrait"><caption><p>(d)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-47" orientation="portrait" xlink:href="MI-2025-9937505-g017.jpg"/></fig><fig position="anchor" fig-type="Figure" id="figpt-0025" orientation="portrait"><caption><p>(e)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-49" orientation="portrait" xlink:href="MI-2025-9937505-g018.jpg"/></fig><fig position="anchor" fig-type="Figure" id="figpt-0026" orientation="portrait"><caption><p>(f)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-51" orientation="portrait" xlink:href="MI-2025-9937505-g019.jpg"/></fig></fig-group><p>Given the central role of T and B cells in chronic inflammation [<xref rid="bib-0043" ref-type="bibr">43</xref>–<xref rid="bib-0045" ref-type="bibr">45</xref>], we next characterized the T cell populations and identified 10 subclusters (Figure <xref rid="fig-0005" ref-type="fig">5</xref>a,b). T_naive declined in both the PG and PB, indicating a T cell‐activated state. However, T cell subclusters displayed different trends within alveolar bone and gingival tissues. In alveolar bone tissue, almost all the T cell subclusters presented a proportional increase, mainly in T_IL2 and T_FOS, in addition to T_cyto, Th17, ILC2, and NK cells, which indicated a state of T cell activation and tissue destruction. Moreover, although the number of Treg increased, the Th17/Treg ratio still increased in the inflammatory state. In gingival tissue, T_SLPI showed a predominant increase, along with Th17, NK, and ILC2s. In contrast, Tfh cells were decreased (Figure <xref rid="fig-0005" ref-type="fig">5</xref>c).</p><fig-group position="float" id="fig-0005" content-type="Figure" orientation="portrait"><label>Figure 5</label><caption><p>Distinct subclusters of the immune cell clusters. (a) UMAP of T cells shown in Figure <xref rid="fig-0001" ref-type="fig">1</xref>a, annotated and colored by the sample type of origin (HB, PB, HG, PG) and subclustering. (b) Dot plots depicting the expression of cluster‐defining genes and the percentage of cells expressing each gene among the subclusters of T cells. The expression values are normalized and scaled average. (c) Proportion of each T cell subcluster in the HB, PB, HG, and PG. (d) UMAP of B cells as in Figure <xref rid="fig-0001" ref-type="fig">1</xref>a, annotated and colored by the sample type of origin (HB, PB, HG, PG) and subclustering. (e) Violin plots showing the expression of the markers of B cell subclusters. Differentially expressed gene criteria included FDR &lt; 0.1, adjusted <italic toggle="yes">p</italic> value &lt; 0.05 and Log<sub>2</sub> fold change &gt; 2. (f) Heatmap showing the pathways enriched in all the T cell subclusters in both tissues under peri‐implantitis.</p></caption><fig position="anchor" fig-type="Figure" id="figpt-0027" orientation="portrait"><caption><p>(a)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-53" orientation="portrait" xlink:href="MI-2025-9937505-g020.jpg"/></fig><fig position="anchor" fig-type="Figure" id="figpt-0028" orientation="portrait"><caption><p>(b)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-55" orientation="portrait" xlink:href="MI-2025-9937505-g021.jpg"/></fig><fig position="anchor" fig-type="Figure" id="figpt-0029" orientation="portrait"><caption><p>(c)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-57" orientation="portrait" xlink:href="MI-2025-9937505-g022.jpg"/></fig><fig position="anchor" fig-type="Figure" id="figpt-0030" orientation="portrait"><caption><p>(d)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-59" orientation="portrait" xlink:href="MI-2025-9937505-g023.jpg"/></fig><fig position="anchor" fig-type="Figure" id="figpt-0031" orientation="portrait"><caption><p>(e)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-61" orientation="portrait" xlink:href="MI-2025-9937505-g007.jpg"/></fig><fig position="anchor" fig-type="Figure" id="figpt-0032" orientation="portrait"><caption><p>(f)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-63" orientation="portrait" xlink:href="MI-2025-9937505-g008.jpg"/></fig></fig-group><p>The alterations in the proportions of T cell subclusters reflected an inflammatory state in both alveolar bone and gingival tissues, and gene enrichment analysis confirmed this phenomenon. Various signaling pathways, including cytokine signaling in the immune system, neutrophil degranulation, the IL‐17 signaling pathway, the MAPK signaling pathway, and the NOD‐like receptor signaling pathway were were upregulated in the inflamed groups across most T cell subclusters (Figure <xref rid="fig-0005" ref-type="fig">5</xref>f and Supporting Information <xref rid="sec-0034" ref-type="sec">4</xref>: Figure <xref rid="sec-0034" ref-type="sec">S4</xref>d). These findings underscore the pivotal role of T cells in driving peri‐implantitis through diverse inflammatory pathways.</p><p>Finally, we identified two B cell subclusters, activated B cell and naive B cell (Figure <xref rid="fig-0005" ref-type="fig">5</xref>d,e). A general decline in B cell numbers was observed, likely due to their differentiation into plasma cells, which were markedly increased under peri‐implantitis in both tissues (Figure <xref rid="fig-0001" ref-type="fig">1</xref>c). The plasma cell‐based state suggests that the activation of B cells in peri‐implantitis is quite intense, which is consistent with previous studies [<xref rid="bib-0042" ref-type="bibr">42</xref>]. Further differential expression analysis of B cells revealed an enrichment of the metal ion response pathway in activated B cells in alveolar bone tissue, suggesting that metal ions impact disease via activated B cells (Supporting Information <xref rid="sec-0034" ref-type="sec">4</xref>: Figure <xref rid="sec-0034" ref-type="sec">S4</xref>c). The extreme condition of the oral environment makes even a stable titanium (Ti) implant undergo corrosion and release metal particles into the surrounding microenvironments, compromising tissue integrity and impairing osseointegration. Previous studies showed that the release of Ti particles commences immediately following dental implant insertion [<xref rid="bib-0046" ref-type="bibr">46</xref>], with high levels of Ti particles negatively impacting osteoblastogenesis while promoting osteoclast and inflammatory cell activation [<xref rid="bib-0047" ref-type="bibr">47</xref>–<xref rid="bib-0049" ref-type="bibr">49</xref>]. Our findings reveal that activated B cells in bone tissues upregulate metal ion‐responsive pathways, potentially linking Ti particle exposure to osteoclast dysfunction through the stimulation of osteoblast precursors by NF‐κB ligand (RANKL), a cytokine essential for osteoclast differentiation.</p></sec><sec id="sec-0025"><title>3.5. Cell‒Cell Communication in Peri‐Implantitis Canines and Healthy Controls in the Microenvironments of Alveolar Bone and Gingival Tissues</title><p>On the basis of the above results, we conclude that peri‐implantitis involves different complex interactions between immune and nonimmune cells in both tissues. To further investigate these interactions, we employed CellPhoneDB to profile cell communication, with a focus on potential immune–nonimmune interactions.</p><p>In both alveolar bone and gingival tissues, the cell‒cell interaction landscape was dominated by endothelial cells and fibroblasts (Figure <xref rid="fig-0006" ref-type="fig">6</xref>a). On the basis of the subclusters related to inflammation that we observed, we further calculated the interaction strengths of ligand‒receptor (L‒R) pairs in our scRNA‐seq dataset and identified interaction pairs displaying significant cell population specificity between nonimmune cells and immune cells.</p><fig-group position="float" id="fig-0006" content-type="Figure" orientation="portrait"><label>Figure 6</label><caption><p>Cell‒cell communication of the subclusters within the HG, PG, HB, and PB. (a) Overview of the cell‒cell interaction heatmaps of HB, PB, HG, and PG. (b) Dot plot showing the interactions between endothelial cells and immune cells in gingival tissue. (c) Dot plot showing the interactions between fibroblasts and immune cells in gingival tissue.</p></caption><fig position="anchor" fig-type="Figure" id="figpt-0033" orientation="portrait"><caption><p>(a)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-65" orientation="portrait" xlink:href="MI-2025-9937505-g009.jpg"/></fig><fig position="anchor" fig-type="Figure" id="figpt-0034" orientation="portrait"><caption><p>(b)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-67" orientation="portrait" xlink:href="MI-2025-9937505-g010.jpg"/></fig><fig position="anchor" fig-type="Figure" id="figpt-0035" orientation="portrait"><caption><p>(c)</p></caption><graphic xmlns:xlink="http://www.w3.org/1999/xlink" position="anchor" id="jats-graphic-69" orientation="portrait" xlink:href="MI-2025-9937505-g011.jpg"/></fig></fig-group><p>In the PG group, the endothelial cells presented notably elevated levels of NOTCH ligands, with corresponding receptors expressed by immune cells (Figure <xref rid="fig-0006" ref-type="fig">6</xref>b and Supporting Information <xref rid="sec-0034" ref-type="sec">5</xref>: Figure <xref rid="sec-0034" ref-type="sec">S5</xref>b). In addition to the expression of certain chemokines, the WNT signaling pathway is upregulated in fibroblasts during inflammatory states (Figure <xref rid="fig-0006" ref-type="fig">6</xref>c and Supporting Information <xref rid="sec-0034" ref-type="sec">5</xref>: Figure <xref rid="sec-0034" ref-type="sec">S5</xref>c). In alveolar bone tissues, we have focused mainly on the interactions between fibroblasts and immune cells. More L–R pairs associated with monocyte and macrophage adhesion and chemotaxis were observed in the inflammatory state, indicating that innate immunity plays a pivotal role in alveolar bone tissue (Supporting Information <xref rid="sec-0034" ref-type="sec">5</xref>: Figure <xref rid="sec-0034" ref-type="sec">S5</xref>a). This upregulation implies the critical involvement of these pathways in the deterioration of peri‐implantitis, highlighting the importance of understanding their interplay in the pathogenesis of different tissues.</p><p>Moreover, we identified a unique fibroblast–myeloid L–R pair: C3–C3AR1. Violin plots revealed that C3 was specifically expressed in APOD<sup>+</sup> fibroblast, while C3AR1 was predominantly expressed in Mon/Mac (Supporting Information <xref rid="sec-0034" ref-type="sec">5</xref>: Figure <xref rid="sec-0034" ref-type="sec">S5</xref>d), indicating that the fibroblast–Mon/Mac interaction through C3–C3AR1 signaling is highly related to pathology. Previous studies showed that the cleavage product C3a of complement component C3 supports the recruitment of macrophages [<xref rid="bib-0050" ref-type="bibr">50</xref>, <xref rid="bib-0051" ref-type="bibr">51</xref>]. Therefore, we hypothesize that the APOD<sup>+</sup> fibroblast subcluster may recruit macrophages through the C3–C3AR1 L–R pair under inflammatory conditions, thereby modulating the inflammatory process.</p></sec></sec><sec id="sec-0026"><title>4. Discussion</title><p>In our study, we provided an unbiased transcriptome‐wide perspective profiling of a total of 35039 single cells from canine gingival and alveolar bone tissues via scRNA‐seq, focusing on the changes of cell types, gene expression, and ligand‐receptor pairs in different tissues during the inflammatory process. These findings advance our understanding of the inflammatory process of peri‐implantitis, enabling the development of specific targeted therapeutic strategies against abnormally expressed key genes, functionally aberrant cell subsets and L–R pairs.</p><p>Here, we initially obtained samples from beagle dogs, aiming to acquire healthy controls from authentic peri‐implant tissue instead of nonimplant sites. The differences between the implants used in small animal models and those used in clinical make large animals a better option for studying peri‐implant diseases [<xref rid="bib-0052" ref-type="bibr">52</xref>, <xref rid="bib-0053" ref-type="bibr">53</xref>]. Compared with other species, the canine model is a preferred large‐animal model for studying peri‐implant disease, given its higher incidence of natural periodontal disease and similarities to human periodontitis lesions [<xref rid="bib-0054" ref-type="bibr">54</xref>].</p><p>Our findings demonstrated that among the fibroblast populations, CXCL8<sup>+</sup> fibroblasts, SFN<sup>+</sup> fibroblasts and APOD<sup>+</sup> fibroblasts were more common in peri‐implantitis canines than in healthy controls. These fibroblasts exhibited immune‐related functions. CXCL8 is a strong chemokine for neutrophil, lymphocyte, and monocyte recruitment [<xref rid="bib-0022" ref-type="bibr">22</xref>, <xref rid="bib-0023" ref-type="bibr">23</xref>], and a high concentration of CXCL8 was reported to be associated with strong angiogenesis [<xref rid="bib-0024" ref-type="bibr">24</xref>]. Our study revealed that angiogenesis and the response to chronic inflammation may be mediated by CXCL8<sup>+</sup> fibroblasts, which are specific to gingival tissue in peri‐implantitis. Additionally, SFN<sup>+</sup> Fib subcluster was found to be highly expressed in inflammatory state and to be actively involved in cell‒cell adhesion and EMT in both gingival and alveolar bone tissues, as indicated by GO analysis. Type 2 EMT is linked with tissue repair responses such as fibrosis, and the involvement of numerous molecules and cells in EMT during wound healing highlights the complexity of tissue repair mechanisms [<xref rid="bib-0055" ref-type="bibr">55</xref>]. These findings raise new possibilities for the disease progression of peri‐implantitis.</p><p>For the endothelial population, we identified two subclusters highly associated with inflammation, including IL18BP<sup>+</sup> endothelial cells and IL6<sup>+</sup> endothelial cells. IL18BP<sup>+</sup> endothelial cells exhibited stronger chemotactic properties, likely enhancing immune cell migration, particularly in humoral immunity. In contrast, IL6<sup>+</sup> endothelial cells presented gene patterns related to the lipopolysaccharide response and adaptive immunity regulation. Researches have indicated that endothelial cells have various immune functions, such as cytokine secretion and immune modulation, indicating that they are integral immune players [<xref rid="bib-0056" ref-type="bibr">56</xref>–<xref rid="bib-0058" ref-type="bibr">58</xref>]. Our findings support the view that IL18BP<sup>+</sup> endothelial and IL6<sup>+</sup> endothelial cells may significantly contribute to immune system function.</p><p>Immune cells were observed with a particular focus on T cells and B cells. The increase of the proportion of these lymphocytes showed a character of adaptive immune response in peri‐implantitis. Interestingly, GO analysis revealed that the response to metal ions was particularly enriched in activated B cells in alveolar bone tissue, which suggests that the influence on peri‐implantitis via metal ions was induced by activated B cells. Multiple studies have focused on the influence of metal on the deterioration of peri‐implantitis [<xref rid="bib-0047" ref-type="bibr">47</xref>, <xref rid="bib-0059" ref-type="bibr">59</xref>, <xref rid="bib-0060" ref-type="bibr">60</xref>], and our study further support the hypothesis that metal ions may have an impact on the immune system and ultimately lead to alveolar bone loss.</p><p>Cell–cell communication further revealed strong interactions between nonimmune and immune cells. Tissue‐specific heterogeneity was evident, with endothelial and immune cells active in the NOTCH pathway in the gingival, whereas fibroblasts dominated the WNT pathway, which is typical of inflammation [<xref rid="bib-0061" ref-type="bibr">61</xref>–<xref rid="bib-0063" ref-type="bibr">63</xref>]. In alveolar bone, innate immune cells such as monocytes and macrophages have a significant impact. This highlights the importance of cell communication in understanding peri‐implant inflammation and points to potential targeted therapies for peri‐implantitis. In addition, we also found a unique L‒R pair in alveolar bone tissue: C3 (APOD<sup>+</sup> fibroblasts)–C3AR1 (monocytes/macrophages). These results further substantiate our hypothesis that there could be an increased interaction between inflammation‐promoting fibroblasts and the monocytes/macrophages subtype in peri‐implantitis.</p><p>Despite the notable advantages of using canines as the animal model in this study, it is important to acknowledge the inherent limitations relative to human peri‐implantitis. Specifically, the experimental model of peri‐implantitis in our study was only induced by mechanical stimulation, in the absence of the causative pathogens present in naturally occurring human peri‐implantitis.</p><p>In our study, we discovered an increase in inflammation‐associated subclusters in both gingival and alveolar bone tissues affected by peri‐implantitis, indicating an intense inflammatory reaction. This study highlighted the roles of IL18BP<sup>+</sup> endothelial, IL6<sup>+</sup> endothelial, CXCL8<sup>+</sup> fibroblast, APOD<sup>+</sup> fibroblast and SFN<sup>+</sup> fibroblasts, as well as their interactions with immune cells. These distinct cell types and communications in gingival and alveolar bone tissues in peri‐implantitis were illuminated, providing novel insights into tissue‐specific differences. Further research is needed to clarify the specific functions of these cells and the key pathways involved in disease progression and treatment in human peri‐implantitis tissues.</p></sec><sec id="sec-0027"><title>5. Conclusions</title><p>Our study delineates tissue‐specific inflammatory landscapes of canine peri‐implantitis at single‐cell resolution. The expansion of IL6<sup>+</sup>/IL18BP<sup>+</sup> endothelial cells and CXCL8<sup>+</sup> fibroblasts in gingiva, alongside APOD<sup>+</sup> fibroblast‐driven C3–C3AR1 signaling in alveolar bone, highlights distinct microenvironmental reprogramming between soft and hard tissues. These findings not only identify potential therapeutic targets but also validate the translational relevance of the canine model for peri‐implantitis research.</p></sec><sec id="sec-0030"><title>Disclosure</title><p>All authors gave final approval and agreed to be accountable for the submitted version.</p></sec><sec sec-type="COI-statement" id="sec-0031"><title>Conflicts of Interest</title><p>The authors declare no conflicts of interest.</p></sec><sec id="sec-0032"><title>Author Contributions</title><p>All the authors have made substantial contributions to the conception and design of the study. Ming Wang and Daner Wu conceived the idea; they also critically revised the manuscript with Chunhui Liao. Dong Zhang conducted additional revisions to the entire manuscript and prepared the response letter during the re‐submission process. Yixin Xia and Ningbo Geng constructed the canine peri‐implantitis models and collected the samples. Yu Chen prepared the samples and performed the scRNA‐seq. Ming Wang, Daner Wu, and Chunhui Liao analyzed the data. Songling Chen and Wei Peng carried out the statistical analysis and critically revised the manuscript. Ming Wang, Dong Zhang, Chunhui Liao, and Daner Wu contributed equally to this work.</p></sec><sec id="sec-0033"><title>Funding</title><p>This research was financed by the Natural Science Foundation of Guangdong Province,China (Nos. 2021A1515010806 and 2022A1515010809) and the Guangzhou Municipal Health Technology Project, China (No. 205151017014).</p></sec><sec id="sec-0034"><title>Supporting Information</title><p>Additional supporting information can be found online in the Supporting Information section.</p></sec><sec sec-type="supplementary-material"><title>Supporting information</title><supplementary-material id="link-0001" position="float" content-type="local-data" orientation="portrait"><caption><p>
+<bold>Supporting Information 1</bold> Figure S1 related to Figure <xref rid="fig-0001" ref-type="fig">1</xref>. (a) Violin plots showing the number of features, RNA counts and percentage of mitochondrial transcripts found in HB, PB, HG, PG samples prior to quality control. (b) UMAPs are the same as those in Figure <xref rid="fig-0001" ref-type="fig">1</xref>b but are colored according to the expression of key cell‐type markers. Log<sub>2</sub> Exp: Log<sub>2</sub> expression. (c) Absolute proportions of the clusters of HB, PB, HG, and PG. (c) The proportion changes in each cluster from the healthy state to the inflammatory state. (d) Left: Proportion of each cluster of HB, PB. Right: Proportion of each cluster of HG, PG. (e) Left: The UMAPs as in Figure <xref rid="fig-0001" ref-type="fig">1</xref>b but colored by immune cells and nonimmune cells. Right: The proportion of immune cells and nonimmune cells in HG, PG, HB, and PB.</p></caption><media xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="MI-2025-9937505-s001.png" position="float" orientation="portrait"/></supplementary-material><supplementary-material id="link-0002" position="float" content-type="local-data" orientation="portrait"><caption><p>
+<bold>Supporting Information 2</bold> Figure S2 related to Figure <xref rid="fig-0002" ref-type="fig">2</xref>. (a) Absolute proportions of the clusters of HB, PB, HG, and PG in the fibroblast population. (b) Volcano plot depicting the increased expression of osteogenesis‐related genes in the PB of APOD<sup>+</sup>Fib. Red points represent genes with FDR &lt; 0.1, log<sub>2</sub> (fold change) &gt; 2.0 and adjusted <italic toggle="yes">p</italic> value &lt; 0.05 in PB. Blue points represent genes with FDR &lt; 0.1, log<sub>2</sub> (fold change) &lt; −2.0 and adjusted <italic toggle="yes">p</italic> value &lt; 0.05 in PB. (c) Violin plot showing the genes highly expressed in SFN<sup>+</sup>Fib.</p></caption><media xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="MI-2025-9937505-s002.png" position="float" orientation="portrait"/></supplementary-material><supplementary-material id="link-0003" position="float" content-type="local-data" orientation="portrait"><caption><p>
+<bold>Supporting Information 3</bold> Figure S3 related to Figure <xref rid="fig-0003" ref-type="fig">3</xref>. (a) UMAP of endothelial cells as in Figure <xref rid="fig-0001" ref-type="fig">1</xref>a, annotated and colored by the sample type of origin (HB, PB) and subclustering. (b) Volcano plot depicting the increased expression of cytokine genes in the PG of IL18BP<sup>+</sup> endothelial cells. Red points represent genes with log<sub>2</sub> (fold change) &gt; 2.0 and adjusted <italic toggle="yes">p</italic> value &lt;0.05 in the PG. (c) Absolute proportion of the clusters of HB, PB, HG, and PG in the endothelial population.</p></caption><media xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="MI-2025-9937505-s005.png" position="float" orientation="portrait"/></supplementary-material><supplementary-material id="link-0004" position="float" content-type="local-data" orientation="portrait"><caption><p>
+<bold>Supporting Information 4</bold> Figure S4 related to Figure <xref rid="fig-0005" ref-type="fig">5</xref>. (a) Proportion of T cells, B cells/plasma and myeloid cells in the HB, PB, HG, and PG. (b) Upper panel: Proportion of the subclusters of B cells. Lower panel: Absolute proportion of the subclusters of B cells. (c) Enrichment gene analysis of activated B cells in HB versus PB. (d) Heatmap showing the pathways downregulated in all the T cell subclusters in both tissues.</p></caption><media xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="MI-2025-9937505-s003.png" position="float" orientation="portrait"/></supplementary-material><supplementary-material id="link-0005" position="float" content-type="local-data" orientation="portrait"><caption><p>
+<bold>Supporting Information 5</bold> Figure S5 related to Figure <xref rid="fig-0006" ref-type="fig">6</xref>. (a) Dot plot showing the interactions between fibroblasts and immune cells in bone tissue. (b) Dot plot showing the interactions between endothelial cells and immune cells in gingival tissue. (c) Dot plots showing the interactions between fibroblasts and immune cells in gingival tissue. (d) Violin plots showing the expression of C3 and C3AR1 in fibroblasts and immune cells.</p></caption><media xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="MI-2025-9937505-s004.png" position="float" orientation="portrait"/></supplementary-material></sec></body><back><sec sec-type="data-availability" id="sec-0029"><title>Data Availability Statement</title><p>The raw sequencing data that support the findings of this study are available in the GEO datasets (<ext-link xmlns:xlink="http://www.w3.org/1999/xlink" ext-link-type="pmc:entrez-geo" xlink:href="GSE281266">GSE281266</ext-link>). The authors declare that all other data supporting the findings of this study are available within the article and its supporting information files or are available from the corresponding author upon request.</p></sec><ref-list><ref id="bib-0001"><label>1</label><mixed-citation publication-type="journal" id="cit-0001">
+<string-name name-style="western">
+<surname>Smeets</surname>
+<given-names>R.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Henningsen</surname>
+<given-names>A.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Jung</surname>
+<given-names>O.</given-names>
+</string-name>, et al.<article-title>Definition, Etiology, Prevention and Treatment of Peri-Implantitis—A Review</article-title>, <source>Head &amp; Face Medicine</source>. (<year>2014</year>) <volume>10</volume>, no. 1, <pub-id pub-id-type="doi">10.1186/1746-160X-10-34</pub-id>, 2-s2.0-84907406817, <elocation-id>34</elocation-id>.<pub-id pub-id-type="pmid">25185675</pub-id>
+<pub-id pub-id-type="pmcid">PMC4164121</pub-id></mixed-citation></ref><ref id="bib-0002"><label>2</label><mixed-citation publication-type="journal" id="cit-0002">
+<string-name name-style="western">
+<surname>Salvi</surname>
+<given-names>G. E.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Cosgarea</surname>
+<given-names>R.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Sculean</surname>
+<given-names>A.</given-names>
+</string-name>, <article-title>Prevalence and Mechanisms of Peri-Implant Diseases</article-title>, <source>Journal of Dental Research</source>. (<year>2017</year>) <volume>96</volume>, no. 1, <fpage>31</fpage>–<lpage>37</lpage>, <pub-id pub-id-type="doi">10.1177/0022034516667484</pub-id>, 2-s2.0-85007202544.<pub-id pub-id-type="pmid">27680028</pub-id>
+</mixed-citation></ref><ref id="bib-0003"><label>3</label><mixed-citation publication-type="journal" id="cit-0003">
+<string-name name-style="western">
+<surname>Schwarz</surname>
+<given-names>F.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Jepsen</surname>
+<given-names>S.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Obreja</surname>
+<given-names>K.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Galarraga-Vinueza</surname>
+<given-names>M. E.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Ramanauskaite</surname>
+<given-names>A.</given-names>
+</string-name>, <article-title>Surgical Therapy of Peri-Implantitis</article-title>, <source>Periodontology 2000</source>. (<year>2022</year>) <volume>88</volume>, no. 1, <fpage>145</fpage>–<lpage>181</lpage>, <pub-id pub-id-type="doi">10.1111/prd.12417</pub-id>.<pub-id pub-id-type="pmid">35103328</pub-id>
+</mixed-citation></ref><ref id="bib-0004"><label>4</label><mixed-citation publication-type="journal" id="cit-0004">
+<string-name name-style="western">
+<surname>Figuero</surname>
+<given-names>E.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Graziani</surname>
+<given-names>F.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Sanz</surname>
+<given-names>I.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Herrera</surname>
+<given-names>D.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Sanz</surname>
+<given-names>M.</given-names>
+</string-name>, <article-title>Management of Peri-Implant Mucositis and Peri-Implantitis</article-title>, <source>Periodontology 2000</source>. (<year>2014</year>) <volume>66</volume>, no. 1, <fpage>255</fpage>–<lpage>273</lpage>, <pub-id pub-id-type="doi">10.1111/prd.12049</pub-id>, 2-s2.0-84906057257.<pub-id pub-id-type="pmid">25123773</pub-id>
+</mixed-citation></ref><ref id="bib-0005"><label>5</label><mixed-citation publication-type="journal" id="cit-0005">
+<string-name name-style="western">
+<surname>Heitz-Mayfield</surname>
+<given-names>L. J.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Aaboe</surname>
+<given-names>M.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Araujo</surname>
+<given-names>M.</given-names>
+</string-name>, et al.<article-title>Group 4 ITI Consensus Report: Risks and Biologic Complications Associated With Implant Dentistry</article-title>, <source>Clinical Oral Implants Research</source>. (<year>2018</year>) <volume>29</volume>, no. S16, <fpage>351</fpage>–<lpage>358</lpage>, <pub-id pub-id-type="doi">10.1111/clr.13307</pub-id>, 2-s2.0-85055023401.<pub-id pub-id-type="pmid">30328181</pub-id>
+</mixed-citation></ref><ref id="bib-0006"><label>6</label><mixed-citation publication-type="journal" id="cit-0006">
+<string-name name-style="western">
+<surname>Li</surname>
+<given-names>J.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Ye</surname>
+<given-names>L. J.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Dai</surname>
+<given-names>Y. W.</given-names>
+</string-name>, et al.<article-title>Single-Cell Analysis Reveals a Unique Microenvironment in Peri-Implantitis</article-title>, <source>Journal of Clinical Periodontology</source>. (<year>2024</year>) <volume>51</volume>, no. 12, <fpage>1665</fpage>–<lpage>1676</lpage>, <pub-id pub-id-type="doi">10.1111/jcpe.13982</pub-id>.<pub-id pub-id-type="pmid">38566468</pub-id>
+<pub-id pub-id-type="pmcid">PMC11651718</pub-id></mixed-citation></ref><ref id="bib-0007"><label>7</label><mixed-citation publication-type="journal" id="cit-0007">
+<string-name name-style="western">
+<surname>Williams</surname>
+<given-names>D. W.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Greenwell-Wild</surname>
+<given-names>T.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Brenchley</surname>
+<given-names>L.</given-names>
+</string-name>, et al.<article-title>Human Oral Mucosa Cell Atlas Reveals a Stromal-Neutrophil Axis Regulating Tissue Immunity</article-title>, <source>Cell</source>. (<year>2021</year>) <volume>184</volume>, no. 15, <fpage>4090</fpage>–<lpage>4104</lpage>, <pub-id pub-id-type="doi">10.1016/j.cell.2021.05.013</pub-id>.<pub-id pub-id-type="pmid">34129837</pub-id>
+<pub-id pub-id-type="pmcid">PMC8359928</pub-id></mixed-citation></ref><ref id="bib-0008"><label>8</label><mixed-citation publication-type="journal" id="cit-0008">
+<string-name name-style="western">
+<surname>Giro</surname>
+<given-names>G.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Tebar</surname>
+<given-names>A.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Franco</surname>
+<given-names>L.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Racy</surname>
+<given-names>D.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Bastos</surname>
+<given-names>M. F.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Shibli</surname>
+<given-names>J. A.</given-names>
+</string-name>, <article-title>Treg and TH17 Link to Immune Response in Individuals With Peri-Implantitis: A Preliminary Report</article-title>, <source>Clinical Oral Investigations</source>. (<year>2021</year>) <volume>25</volume>, no. 3, <fpage>1291</fpage>–<lpage>1297</lpage>, <pub-id pub-id-type="doi">10.1007/s00784-020-03435-w</pub-id>.<pub-id pub-id-type="pmid">32594309</pub-id>
+</mixed-citation></ref><ref id="bib-0009"><label>9</label><mixed-citation publication-type="journal" id="cit-0009">
+<string-name name-style="western">
+<surname>Mo</surname>
+<given-names>J.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Lai</surname>
+<given-names>Y.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Huang</surname>
+<given-names>Q.</given-names>
+</string-name>, et al.<article-title>Single-Cell Sequencing Identifies Inflammation-Promoting Fibroblast-Neutrophil Interaction in Peri-Implantitis</article-title>, <source>Journal of Clinical Periodontology</source>. (<year>2024</year>) <volume>51</volume>, no. 2, <fpage>196–</fpage>–<lpage>208</lpage>, <pub-id pub-id-type="doi">10.1111/jcpe.13912</pub-id>.<pub-id pub-id-type="pmid">38088448</pub-id>
+</mixed-citation></ref><ref id="bib-0010"><label>10</label><mixed-citation publication-type="journal" id="cit-0010">
+<string-name name-style="western">
+<surname>Niklander</surname>
+<given-names>S.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Bordagaray</surname>
+<given-names>M. J.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Fernández</surname>
+<given-names>A.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Hernández</surname>
+<given-names>M.</given-names>
+</string-name>, <article-title>Vascular Endothelial Growth Factor: A Translational View in Oral Non-Communicable Diseases</article-title>, <source>Biomolecules</source>. (<year>2021</year>) <volume>11</volume>, no. 1, <pub-id pub-id-type="doi">10.3390/biom11010085</pub-id>, <elocation-id>85</elocation-id>.<pub-id pub-id-type="pmid">33445558</pub-id>
+<pub-id pub-id-type="pmcid">PMC7826734</pub-id></mixed-citation></ref><ref id="bib-0011"><label>11</label><mixed-citation publication-type="journal" id="cit-0011">
+<string-name name-style="western">
+<surname>du Sert</surname>
+<given-names>N. P.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Ahluwalia</surname>
+<given-names>A.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Alam</surname>
+<given-names>S.</given-names>
+</string-name>, et al.<article-title>Reporting Animal Research: Explanation and Elaboration for the ARRIVE Guidelines 2.0</article-title>, <source>PLOS Biology</source>. (<year>2020</year>) <volume>18</volume>, no. 7, <pub-id pub-id-type="doi">10.1371/journal.pbio.3000411</pub-id>.<pub-id pub-id-type="pmcid">PMC7360025</pub-id><pub-id pub-id-type="pmid">32663221</pub-id></mixed-citation></ref><ref id="bib-0012"><label>12</label><mixed-citation publication-type="journal" id="cit-0012">
+<string-name name-style="western">
+<surname>Xia</surname>
+<given-names>Y.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Geng</surname>
+<given-names>N.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Ren</surname>
+<given-names>J.</given-names>
+</string-name>, et al.<article-title>Regulation of Endothelial Cells on the Osteogenic Ability of Bone Marrow Mesenchymal Stem Cells in Peri-Implantitis</article-title>, <source>Tissue and Cell</source>. (<year>2023</year>) <volume>81</volume>, <pub-id pub-id-type="doi">10.1016/j.tice.2023.102042</pub-id>, <elocation-id>102042</elocation-id>.<pub-id pub-id-type="pmid">36812664</pub-id>
+</mixed-citation></ref><ref id="bib-0013"><label>13</label><mixed-citation publication-type="journal" id="cit-0013">
+<string-name name-style="western">
+<surname>Dudziak</surname>
+<given-names>D.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Heger</surname>
+<given-names>L.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Agace</surname>
+<given-names>W. W.</given-names>
+</string-name>, et al.<article-title>Guidelines for Preparation and Flow Cytometry Analysis of Human Nonlymphoid Tissue DC</article-title>, <source>European Journal of Immunology</source>. (<year>2025</year>) <volume>55</volume>, no. 1, <pub-id pub-id-type="doi">10.1002/eji.202250325</pub-id>.<pub-id pub-id-type="pmcid">PMC11739683</pub-id><pub-id pub-id-type="pmid">39668411</pub-id></mixed-citation></ref><ref id="bib-0014"><label>14</label><mixed-citation publication-type="journal" id="cit-0014">
+<string-name name-style="western">
+<surname>Zhu</surname>
+<given-names>G. Q.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Tang</surname>
+<given-names>Z.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Huang</surname>
+<given-names>R.</given-names>
+</string-name>, et al.<article-title>CD36<sup>+</sup> Cancer-Associated Fibroblasts Provide Immunosuppressive Microenvironment for Hepatocellular Carcinoma via Secretion of Macrophage Migration Inhibitory Factor</article-title>, <source>Cell Discovery</source>. (<year>2023</year>) <volume>9</volume>.<pub-id pub-id-type="doi" assigning-authority="pmc">10.1038/s41421-023-00529-z</pub-id><pub-id pub-id-type="pmcid">PMC9988869</pub-id><pub-id pub-id-type="pmid">36878933</pub-id></mixed-citation></ref><ref id="bib-0015"><label>15</label><mixed-citation publication-type="journal" id="cit-0015">
+<string-name name-style="western">
+<surname>Tirosh</surname>
+<given-names>I.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Izar</surname>
+<given-names>B.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Prakadan</surname>
+<given-names>S. M.</given-names>
+</string-name>, et al.<article-title>Dissecting the Multicellular Ecosystem of Metastatic Melanoma by Single-Cell RNA-Seq</article-title>, <source>Science</source>. (<year>2016</year>) <volume>352</volume>, no. 6282, <fpage>189</fpage>–<lpage>196</lpage>, <pub-id pub-id-type="doi">10.1126/science.aad0501</pub-id>, 2-s2.0-84963614956.<pub-id pub-id-type="pmid">27124452</pub-id>
+<pub-id pub-id-type="pmcid">PMC4944528</pub-id></mixed-citation></ref><ref id="bib-0016"><label>16</label><mixed-citation publication-type="journal" id="cit-0016">
+<string-name name-style="western">
+<surname>Liu</surname>
+<given-names>L.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Chen</surname>
+<given-names>Y.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Wang</surname>
+<given-names>L.</given-names>
+</string-name>, et al.<article-title>Dissecting B/Plasma Cells in Periodontitis at Single-Cell/Bulk Resolution</article-title>, <source>Journal of Dental Research</source>. (<year>2022</year>) <volume>101</volume>, no. 11, <fpage>1388</fpage>–<lpage>1397</lpage>, <pub-id pub-id-type="doi">10.1177/00220345221099442</pub-id>.<pub-id pub-id-type="pmid">35620808</pub-id>
+</mixed-citation></ref><ref id="bib-0017"><label>17</label><mixed-citation publication-type="journal" id="cit-0017">
+<string-name name-style="western">
+<surname>Muruganandan</surname>
+<given-names>S.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Govindarajan</surname>
+<given-names>R.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>McMullen</surname>
+<given-names>N. M.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Sinal</surname>
+<given-names>C. J.</given-names>
+</string-name>, <article-title>Chemokine-Like Receptor 1 Is a Novel Wnt Target Gene That Regulates Mesenchymal Stem Cell Differentiation</article-title>, <source>Stem Cells</source>. (<year>2017</year>) <volume>35</volume>, no. 3, <fpage>711</fpage>–<lpage>724</lpage>, <pub-id pub-id-type="doi">10.1002/stem.2520</pub-id>, 2-s2.0-85001638728.<pub-id pub-id-type="pmid">27733019</pub-id>
+</mixed-citation></ref><ref id="bib-0018"><label>18</label><mixed-citation publication-type="journal" id="cit-0018">
+<string-name name-style="western">
+<surname>Yukata</surname>
+<given-names>K.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Shukunami</surname>
+<given-names>C.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Matsui</surname>
+<given-names>Y.</given-names>
+</string-name>, et al.<article-title>Chondromodulin is Necessary for Cartilage Callus Distraction in Mice</article-title>, <source>PLoS ONE</source>. (<year>2023</year>) <volume>18</volume>, no. 2, <pub-id pub-id-type="doi">10.1371/journal.pone.0280634</pub-id>.<pub-id pub-id-type="pmcid">PMC9934371</pub-id><pub-id pub-id-type="pmid">36795722</pub-id></mixed-citation></ref><ref id="bib-0019"><label>19</label><mixed-citation publication-type="journal" id="cit-0019">
+<string-name name-style="western">
+<surname>Hsieh</surname>
+<given-names>J.-Y.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Fu</surname>
+<given-names>Y.-S.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Chang</surname>
+<given-names>S.-J.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Tsuang</surname>
+<given-names>Y.-H.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Wang</surname>
+<given-names>H.-W.</given-names>
+</string-name>, <article-title>Functional Module Analysis Reveals Differential Osteogenic and Stemness Potentials in Human Mesenchymal Stem Cells From Bone Marrow and Wharton’s Jelly of Umbilical Cord</article-title>, <source>Stem Cells and Development</source>. (<year>2010</year>) <volume>19</volume>, no. 12, <fpage>1895</fpage>–<lpage>1910</lpage>, <pub-id pub-id-type="doi">10.1089/scd.2009.0485</pub-id>, 2-s2.0-78149396432.<pub-id pub-id-type="pmid">20367285</pub-id>
+</mixed-citation></ref><ref id="bib-0020"><label>20</label><mixed-citation publication-type="journal" id="cit-0020">
+<string-name name-style="western">
+<surname>Park</surname>
+<given-names>S.-J.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Bae</surname>
+<given-names>H.-S.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Park</surname>
+<given-names>J.-C.</given-names>
+</string-name>, <article-title>Osteogenic Differentiation and Gene Expression Profile of Human Dental Follicle Cells Induced by Human Dental Pulp Cells</article-title>, <source>Journal of Molecular Histology</source>. (<year>2015</year>) <volume>46</volume>, no. 1, <fpage>93</fpage>–<lpage>106</lpage>, <pub-id pub-id-type="doi">10.1007/s10735-014-9604-1</pub-id>, 2-s2.0-84925488311.<pub-id pub-id-type="pmid">25520056</pub-id>
+</mixed-citation></ref><ref id="bib-0021"><label>21</label><mixed-citation publication-type="journal" id="cit-0021">
+<string-name name-style="western">
+<surname>Knight</surname>
+<given-names>M. N.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Karuppaiah</surname>
+<given-names>K.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Lowe</surname>
+<given-names>M.</given-names>
+</string-name>, et al.<article-title>R-Spondin-2 Is a Wnt Agonist That Regulates Osteoblast Activity and Bone Mass</article-title>, <source>Bone Research</source>. (<year>2018</year>) <volume>6</volume>, no. 1, <pub-id pub-id-type="doi">10.1038/s41413-018-0026-7</pub-id>, 2-s2.0-85051497037, <elocation-id>24</elocation-id>.<pub-id pub-id-type="pmid">30131881</pub-id>
+<pub-id pub-id-type="pmcid">PMC6089978</pub-id></mixed-citation></ref><ref id="bib-0022"><label>22</label><mixed-citation publication-type="journal" id="cit-0022">
+<string-name name-style="western">
+<surname>Cambier</surname>
+<given-names>S.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Gouwy</surname>
+<given-names>M.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Proost</surname>
+<given-names>P.</given-names>
+</string-name>, <article-title>The Chemokines CXCL8 and CXCL12: Molecular and Functional Properties, Role in Disease and Efforts Towards Pharmacological Intervention</article-title>, <source>Cellular &amp; Molecular Immunology</source>. (<year>2023</year>) <volume>20</volume>, no. 3, <fpage>217</fpage>–<lpage>251</lpage>, <pub-id pub-id-type="doi">10.1038/s41423-023-00974-6</pub-id>.<pub-id pub-id-type="pmid">36725964</pub-id>
+<pub-id pub-id-type="pmcid">PMC9890491</pub-id></mixed-citation></ref><ref id="bib-0023"><label>23</label><mixed-citation publication-type="journal" id="cit-0023">
+<string-name name-style="western">
+<surname>Palm</surname>
+<given-names>E.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Demirel</surname>
+<given-names>I.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Bengtsson</surname>
+<given-names>T.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Khalaf</surname>
+<given-names>H.</given-names>
+</string-name>, <article-title>The Role of Toll-Like and Protease-Activated Receptors in the Expression of Cytokines by Gingival Fibroblasts Stimulated With the Periodontal Pathogen <italic toggle="yes">Porphyromonas gingivalis</italic>
+</article-title>, <source>Cytokine</source>. (<year>2015</year>) <volume>76</volume>, no. 2, <fpage>424</fpage>–<lpage>432</lpage>, <pub-id pub-id-type="doi">10.1016/j.cyto.2015.08.263</pub-id>, 2-s2.0-84943819518.<pub-id pub-id-type="pmid">26318255</pub-id>
+</mixed-citation></ref><ref id="bib-0024"><label>24</label><mixed-citation publication-type="journal" id="cit-0024">
+<string-name name-style="western">
+<surname>Rosenkilde</surname>
+<given-names>M. M.</given-names>
+</string-name> and
+<string-name name-style="western">
+<surname>Schwartz</surname>
+<given-names>T. W.</given-names>
+</string-name>, <article-title>The Chemokine System—A Major Regulator of Angiogenesis in Health and Disease</article-title>, <source>APMIS</source>. (<year>2004</year>) <volume>112</volume>, no. 7-8, <fpage>481</fpage>–<lpage>495</lpage>, <pub-id pub-id-type="doi">10.1111/j.1600-0463.2004.apm11207-0808.x</pub-id>, 2-s2.0-10344262597.<pub-id pub-id-type="pmid">15563311</pub-id>
+</mixed-citation></ref><ref id="bib-0025"><label>25</label><mixed-citation publication-type="journal" id="cit-0025">
+<string-name name-style="western">
+<surname>Schminke</surname>
+<given-names>B.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Vom Orde</surname>
+<given-names>F.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Gruber</surname>
+<given-names>R.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Schliephake</surname>
+<given-names>H.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Bürgers</surname>
+<given-names>R.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Miosge</surname>
+<given-names>N.</given-names>
+</string-name>, <article-title>The Pathology of Bone Tissue During Peri-Implantitis</article-title>, <source>Journal of Dental Research</source>. (<year>2015</year>) <volume>94</volume>, no. 2, <fpage>354</fpage>–<lpage>361</lpage>, <pub-id pub-id-type="doi">10.1177/0022034514559128</pub-id>, 2-s2.0-84921329844.<pub-id pub-id-type="pmid">25406169</pub-id>
+<pub-id pub-id-type="pmcid">PMC4438728</pub-id></mixed-citation></ref><ref id="bib-0026"><label>26</label><mixed-citation publication-type="journal" id="cit-0026">
+<string-name name-style="western">
+<surname>Ha</surname>
+<given-names>H.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Debnath</surname>
+<given-names>B.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Neamati</surname>
+<given-names>N.</given-names>
+</string-name>, <article-title>Role of the CXCL8-CXCR1/2 Axis in Cancer and Inflammatory Diseases</article-title>, <source>Theranostics</source>. (<year>2017</year>) <volume>7</volume>, no. 6, <fpage>1543</fpage>–<lpage>1588</lpage>, <pub-id pub-id-type="doi">10.7150/thno.15625</pub-id>, 2-s2.0-85018481620.<pub-id pub-id-type="pmid">28529637</pub-id>
+<pub-id pub-id-type="pmcid">PMC5436513</pub-id></mixed-citation></ref><ref id="bib-0027"><label>27</label><mixed-citation publication-type="journal" id="cit-0027">
+<string-name name-style="western">
+<surname>Ye</surname>
+<given-names>S.-P.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Yu</surname>
+<given-names>H.-X.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Lu</surname>
+<given-names>W.-J.</given-names>
+</string-name>, et al.<article-title>Stratifin Promotes Hepatocellular Carcinoma Progression by Modulating the Wnt/<italic toggle="yes">β</italic>-Catenin Pathway</article-title>, <source>International Journal of Genomics</source>. (<year>2023</year>) <volume>2023</volume>, no. 1, <pub-id pub-id-type="doi">10.1155/2023/9731675</pub-id>, <elocation-id>9731675</elocation-id>.<pub-id pub-id-type="pmid">37587914</pub-id>
+<pub-id pub-id-type="pmcid">PMC10427227</pub-id></mixed-citation></ref><ref id="bib-0028"><label>28</label><mixed-citation publication-type="journal" id="cit-0028">
+<string-name name-style="western">
+<surname>Peng</surname>
+<given-names>F.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Xu</surname>
+<given-names>Q.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Jing</surname>
+<given-names>X.</given-names>
+</string-name>, et al.<article-title>Promotes EMT and Metastasis in Non-Small Cell Lung Cancer by Activating PI3K/AKT/mTOR/Snail Signaling Axis</article-title>, <source>FASEB BioAdvances</source>. (<year>2023</year>) <volume>5</volume>, no. 6, <fpage>233</fpage>–<lpage>250</lpage>, <pub-id pub-id-type="doi">10.1096/fba.2022-00045</pub-id>.<pub-id pub-id-type="pmid">37287867</pub-id>
+<pub-id pub-id-type="pmcid">PMC10242197</pub-id></mixed-citation></ref><ref id="bib-0029"><label>29</label><mixed-citation publication-type="journal" id="cit-0029">
+<string-name name-style="western">
+<surname>Lu</surname>
+<given-names>E. M.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Hobbs</surname>
+<given-names>C.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Dyer</surname>
+<given-names>C.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Ghuman</surname>
+<given-names>M.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Hughes</surname>
+<given-names>F. J.</given-names>
+</string-name>, <article-title>Differential Regulation of Epithelial Growth by Gingival and Periodontal Fibroblasts <italic toggle="yes">In Vitro</italic>
+</article-title>, <source>Journal of Periodontal Research</source>. (<year>2020</year>) <volume>55</volume>, no. 6, <fpage>859</fpage>–<lpage>867</lpage>, <pub-id pub-id-type="doi">10.1111/jre.12778</pub-id>.<pub-id pub-id-type="pmid">32885443</pub-id>
+</mixed-citation></ref><ref id="bib-0030"><label>30</label><mixed-citation publication-type="journal" id="cit-0030">
+<string-name name-style="western">
+<surname>Nomura</surname>
+<given-names>Y.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Ishikawa</surname>
+<given-names>M.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Yashiro</surname>
+<given-names>Y.</given-names>
+</string-name>, et al.<article-title>Human Periodontal Ligament Fibroblasts are the Optimal Cell Source for Induced Pluripotent Stem Cells</article-title>, <source>Histochemistry and Cell Biology</source>. (<year>2012</year>) <volume>137</volume>, no. 6, <fpage>719</fpage>–<lpage>732</lpage>, <pub-id pub-id-type="doi">10.1007/s00418-012-0923-6</pub-id>, 2-s2.0-84865114978.<pub-id pub-id-type="pmid">22327794</pub-id>
+</mixed-citation></ref><ref id="bib-0031"><label>31</label><mixed-citation publication-type="journal" id="cit-0031">
+<string-name name-style="western">
+<surname>Majolée</surname>
+<given-names>J.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Kovačević</surname>
+<given-names>I.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Hordijk</surname>
+<given-names>P. L.</given-names>
+</string-name>, <article-title>Ubiquitin-Based Modifications in Endothelial Cell-Cell Contact and Inflammation</article-title>, <source>Journal of Cell Science</source>. (<year>2019</year>) <volume>132</volume>, no. 17, <pub-id pub-id-type="doi">10.1242/jcs.227728</pub-id>, 2-s2.0-85071777253.<pub-id pub-id-type="pmid">31488505</pub-id></mixed-citation></ref><ref id="bib-0032"><label>32</label><mixed-citation publication-type="journal" id="cit-0032">
+<string-name name-style="western">
+<surname>Li</surname>
+<given-names>L.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Li</surname>
+<given-names>F.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Xu</surname>
+<given-names>Z.</given-names>
+</string-name>, et al.<article-title>Identification and Validation of SERPINE1 as a Prognostic and Immunological Biomarker in Pan-Cancer and in ccRCC</article-title>, <source>Frontiers in Pharmacology</source>. (<year>2023</year>) <volume>14</volume>, <pub-id pub-id-type="doi">10.3389/fphar.2023.1213891</pub-id>, <elocation-id>1213891</elocation-id>.<pub-id pub-id-type="pmid">37680718</pub-id>
+<pub-id pub-id-type="pmcid">PMC10482042</pub-id></mixed-citation></ref><ref id="bib-0033"><label>33</label><mixed-citation publication-type="journal" id="cit-0033">
+<string-name name-style="western">
+<surname>Paulus</surname>
+<given-names>P.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Jennewein</surname>
+<given-names>C.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Zacharowski</surname>
+<given-names>K.</given-names>
+</string-name>, <article-title>Biomarkers of Endothelial Dysfunction: Can They Help us Deciphering Systemic Inflammation and Sepsis?</article-title>, <source>Biomarkers</source>. (<year>2011</year>) <volume>16</volume>, no. 1, <fpage>S11</fpage>–<lpage>S21</lpage>, <pub-id pub-id-type="doi">10.3109/1354750X.2011.587893</pub-id>, 2-s2.0-79959854675.<pub-id pub-id-type="pmid">21707440</pub-id>
+</mixed-citation></ref><ref id="bib-0034"><label>34</label><mixed-citation publication-type="journal" id="cit-0034">
+<string-name name-style="western">
+<surname>Morrow</surname>
+<given-names>G. B.</given-names>
+</string-name> and
+<string-name name-style="western">
+<surname>Mutch</surname>
+<given-names>N. J.</given-names>
+</string-name>, <article-title>Present, and Future Perspectives of Plasminogen Activator Inhibitor 1 (PAI-1)</article-title>, <source>Seminars in Thrombosis and Hemostasis</source>. (<year>2023</year>) <volume>49</volume>, no. 3, <fpage>305</fpage>–<lpage>313</lpage>, <pub-id pub-id-type="doi">10.1055/s-0042-1758791</pub-id>.<pub-id pub-id-type="pmid">36522166</pub-id>
+</mixed-citation></ref><ref id="bib-0035"><label>35</label><mixed-citation publication-type="journal" id="cit-0035">
+<string-name name-style="western">
+<surname>Garcia-Bonilla</surname>
+<given-names>L.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Racchumi</surname>
+<given-names>G.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Murphy</surname>
+<given-names>M.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Anrather</surname>
+<given-names>J.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Iadecola</surname>
+<given-names>C.</given-names>
+</string-name>, <article-title>Endothelial CD36 Contributes to Postischemic Brain Injury by Promoting Neutrophil Activation via CSF3</article-title>, <source>The Journal of Neuroscience</source>. (<year>2015</year>) <volume>35</volume>, no. 44, <fpage>14783</fpage>–<lpage>14793</lpage>, <pub-id pub-id-type="doi">10.1523/JNEUROSCI.2980-15.2015</pub-id>, 2-s2.0-84946430617.<pub-id pub-id-type="pmid">26538649</pub-id>
+<pub-id pub-id-type="pmcid">PMC4635129</pub-id></mixed-citation></ref><ref id="bib-0036"><label>36</label><mixed-citation publication-type="journal" id="cit-0036">
+<string-name name-style="western">
+<surname>Kirkby</surname>
+<given-names>M.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Enosi Tuipulotu</surname>
+<given-names>D.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Feng</surname>
+<given-names>S.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Lo Pilato</surname>
+<given-names>J.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Man</surname>
+<given-names>S. M.</given-names>
+</string-name>, <article-title>Guanylate-Binding Proteins: Mechanisms of Pattern Recognition and Antimicrobial Functions</article-title>, <source>Trends in Biochemical Sciences</source>. (<year>2023</year>) <volume>48</volume>, no. 10, <fpage>883</fpage>–<lpage>893</lpage>, <pub-id pub-id-type="doi">10.1016/j.tibs.2023.07.002</pub-id>.<pub-id pub-id-type="pmid">37567806</pub-id>
+</mixed-citation></ref><ref id="bib-0037"><label>37</label><mixed-citation publication-type="journal" id="cit-0037">
+<string-name name-style="western">
+<surname>Lumbikananda</surname>
+<given-names>S.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Srithanyarat</surname>
+<given-names>S. S.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Mattheos</surname>
+<given-names>N.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Osathanon</surname>
+<given-names>T.</given-names>
+</string-name>, <article-title>Oral Fluid Biomarkers for Peri-Implantitis: A Scoping Review</article-title>, <source>International Dental Journal</source>. (<year>2024</year>) <volume>74</volume>, no. 3, <fpage>387</fpage>–<lpage>402</lpage>, <pub-id pub-id-type="doi">10.1016/j.identj.2023.11.005</pub-id>.<pub-id pub-id-type="pmid">38065782</pub-id>
+<pub-id pub-id-type="pmcid">PMC11123564</pub-id></mixed-citation></ref><ref id="bib-0038"><label>38</label><mixed-citation publication-type="journal" id="cit-0038">
+<string-name name-style="western">
+<surname>Hsu</surname>
+<given-names>Y.-M. S.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Greenbaum</surname>
+<given-names>A.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Schuettpelz</surname>
+<given-names>L. G.</given-names>
+</string-name>, et al.<article-title>CXCL12 Production by Early Mesenchymal Progenitors is Required for Hematopoietic Stem Cell Maintenance</article-title>, <source>Blood</source>. (<year>2012</year>) <volume>120</volume>, no. 21, <fpage>510</fpage>–<lpage>510</lpage>, <pub-id pub-id-type="doi">10.1182/blood.V120.21.510.510</pub-id>.</mixed-citation></ref><ref id="bib-0039"><label>39</label><mixed-citation publication-type="journal" id="cit-0039">
+<string-name name-style="western">
+<surname>Sakallıoğlu</surname>
+<given-names>E. E.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Ayas</surname>
+<given-names>B.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Sakallıoğlu</surname>
+<given-names>U.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Açıkgöz</surname>
+<given-names>G.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Çağlayan</surname>
+<given-names>F.</given-names>
+</string-name>, <article-title>Osmotic Pressure and Vasculature of Gingiva in Periodontal Disease: An Experimental Study in Rats</article-title>, <source>Archives of Oral Biology</source>. (<year>2006</year>) <volume>51</volume>, no. 6, <fpage>505</fpage>–<lpage>511</lpage>, <pub-id pub-id-type="doi">10.1016/j.archoralbio.2005.11.004</pub-id>, 2-s2.0-33747794368.<pub-id pub-id-type="pmid">16376292</pub-id>
+</mixed-citation></ref><ref id="bib-0040"><label>40</label><mixed-citation publication-type="journal" id="cit-0040">
+<string-name name-style="western">
+<surname>Belibasakis</surname>
+<given-names>G. N.</given-names>
+</string-name> and
+<string-name name-style="western">
+<surname>Manoil</surname>
+<given-names>D.</given-names>
+</string-name>, <article-title>Microbial Community-Driven Etiopathogenesis of Peri-Implantitis</article-title>, <source>Journal of Dental Research</source>. (<year>2021</year>) <volume>100</volume>, no. 1, <fpage>21</fpage>–<lpage>28</lpage>, <pub-id pub-id-type="doi">10.1177/0022034520949851</pub-id>.<pub-id pub-id-type="pmid">32783779</pub-id>
+<pub-id pub-id-type="pmcid">PMC7754824</pub-id></mixed-citation></ref><ref id="bib-0041"><label>41</label><mixed-citation publication-type="journal" id="cit-0041">
+<string-name name-style="western">
+<surname>Albrektsson</surname>
+<given-names>T.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Jemt</surname>
+<given-names>T.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Mölne</surname>
+<given-names>J.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Tengvall</surname>
+<given-names>P.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Wennerberg</surname>
+<given-names>A.</given-names>
+</string-name>, <article-title>On Inflammation-Immunological Balance Theory—A Critical Apprehension of Disease Concepts around Implants: Mucositis and Marginal Bone Loss May Represent Normal Conditions and Not Necessarily a State of Disease</article-title>, <source>Clinical Implant Dentistry and Related Research</source>. (<year>2019</year>) <volume>21</volume>, no. 1, <fpage>183</fpage>–<lpage>189</lpage>, <pub-id pub-id-type="doi">10.1111/cid.12711</pub-id>, 2-s2.0-85059275265.<pub-id pub-id-type="pmid">30592373</pub-id>
+</mixed-citation></ref><ref id="bib-0042"><label>42</label><mixed-citation publication-type="journal" id="cit-0042">
+<string-name name-style="western">
+<surname>Kulakov</surname>
+<given-names>A. A.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Kogan</surname>
+<given-names>E. A.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Brailovskaya</surname>
+<given-names>T. V.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Vedyaeva</surname>
+<given-names>A. P.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Zharkov</surname>
+<given-names>N. V.</given-names>
+</string-name>, <article-title>Morphological and Molecular-Biological Features of Inflammatory and Regeneratory Processes in Peridont Tissues With Periimplantitis and Periodontitis</article-title>, <source>Doklady Biochemistry and Biophysics</source>. (<year>2020</year>) <volume>492</volume>, no. 1, <fpage>142</fpage>–<lpage>146</lpage>, <pub-id pub-id-type="doi">10.1134/S1607672920030060</pub-id>.<pub-id pub-id-type="pmid">32632592</pub-id>
+</mixed-citation></ref><ref id="bib-0043"><label>43</label><mixed-citation publication-type="journal" id="cit-0043">
+<string-name name-style="western">
+<surname>Li</surname>
+<given-names>Y.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Ling</surname>
+<given-names>J.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Jiang</surname>
+<given-names>Q.</given-names>
+</string-name>, <article-title>Inflammasomes in Alveolar Bone Loss</article-title>, <source>Frontiers in Immunology</source>. (<year>2021</year>) <volume>12</volume>, <pub-id pub-id-type="doi">10.3389/fimmu.2021.691013</pub-id>, <elocation-id>691013</elocation-id>.<pub-id pub-id-type="pmid">34177950</pub-id>
+<pub-id pub-id-type="pmcid">PMC8221428</pub-id></mixed-citation></ref><ref id="bib-0044"><label>44</label><mixed-citation publication-type="journal" id="cit-0044">
+<string-name name-style="western">
+<surname>Konieczny</surname>
+<given-names>J.</given-names>
+</string-name> and
+<string-name name-style="western">
+<surname>Arranz</surname>
+<given-names>L.</given-names>
+</string-name>, <article-title>Updates on Old and Weary Haematopoiesis</article-title>, <source>International Journal of Molecular Sciences</source>. (<year>2018</year>) <volume>19</volume>, no. 9, <pub-id pub-id-type="doi">10.3390/ijms19092567</pub-id>, 2-s2.0-85052646822, <elocation-id>2567</elocation-id>.<pub-id pub-id-type="pmid">30158459</pub-id>
+<pub-id pub-id-type="pmcid">PMC6163425</pub-id></mixed-citation></ref><ref id="bib-0045"><label>45</label><mixed-citation publication-type="journal" id="cit-0045">
+<string-name name-style="western">
+<surname>Gruber</surname>
+<given-names>R.</given-names>
+</string-name>, <article-title>Osteoimmunology: Inflammatory Osteolysis and Regeneration of the Alveolar Bone</article-title>, <source>Journal of Clinical Periodontology</source>. (<year>2019</year>) <volume>46</volume>, <fpage>52</fpage>–<lpage>69</lpage>, <pub-id pub-id-type="doi">10.1111/jcpe.13056</pub-id>, 2-s2.0-85067562492.<pub-id pub-id-type="pmid">30623453</pub-id>
+</mixed-citation></ref><ref id="bib-0046"><label>46</label><mixed-citation publication-type="journal" id="cit-0046">
+<string-name name-style="western">
+<surname>Silva</surname>
+<given-names>G. A. F.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Faot</surname>
+<given-names>F.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Possebon</surname>
+<given-names>A. P. R.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Da Silva</surname>
+<given-names>W. J.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Del Bel Cury</surname>
+<given-names>A. A.</given-names>
+</string-name>, <article-title>Effect of Macrogeometry and Bone Type on Insertion Torque, Primary Stability, Surface Topography Damage and Titanium Release of Dental Implants During Surgical Insertion Into Artificial Bone</article-title>, <source>Journal of the Mechanical Behavior of Biomedical Materials</source>. (<year>2021</year>) <volume>119</volume>, <pub-id pub-id-type="doi">10.1016/j.jmbbm.2021.104515</pub-id>, <elocation-id>104515</elocation-id>.<pub-id pub-id-type="pmid">33932754</pub-id>
+</mixed-citation></ref><ref id="bib-0047"><label>47</label><mixed-citation publication-type="journal" id="cit-0047">
+<string-name name-style="western">
+<surname>Asa’ad</surname>
+<given-names>F.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Thomsen</surname>
+<given-names>P.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Kunrath</surname>
+<given-names>M. F.</given-names>
+</string-name>, <article-title>The Role of Titanium Particles and Ions in the Pathogenesis of Peri-Implantitis</article-title>, <source>Journal of Bone Metabolism</source>. (<year>2022</year>) <volume>29</volume>, no. 3, <fpage>145</fpage>–<lpage>154</lpage>, <pub-id pub-id-type="doi">10.11005/jbm.2022.29.3.145</pub-id>.<pub-id pub-id-type="pmid">36153850</pub-id>
+<pub-id pub-id-type="pmcid">PMC9511127</pub-id></mixed-citation></ref><ref id="bib-0048"><label>48</label><mixed-citation publication-type="journal" id="cit-0048">
+<string-name name-style="western">
+<surname>Pettersson</surname>
+<given-names>M.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Pettersson</surname>
+<given-names>J.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Molin Thorén</surname>
+<given-names>M.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Johansson</surname>
+<given-names>A.</given-names>
+</string-name>, <article-title>Release of Titanium After Insertion of Dental Implants With Different Surface Characteristics—An Ex Vivo Animal Study</article-title>, <source>Acta Biomaterialia Odontologica Scandinavica</source>. (<year>2017</year>) <volume>3</volume>, no. 1, <fpage>63</fpage>–<lpage>73</lpage>, <pub-id pub-id-type="doi">10.1080/23337931.2017.1399270</pub-id>.<pub-id pub-id-type="pmid">29242814</pub-id>
+<pub-id pub-id-type="pmcid">PMC5724801</pub-id></mixed-citation></ref><ref id="bib-0049"><label>49</label><mixed-citation publication-type="journal" id="cit-0049">
+<string-name name-style="western">
+<surname>Wachi</surname>
+<given-names>T.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Shuto</surname>
+<given-names>T.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Shinohara</surname>
+<given-names>Y.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Matono</surname>
+<given-names>Y.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Makihira</surname>
+<given-names>S.</given-names>
+</string-name>, <article-title>Release of Titanium Ions From an Implant Surface and Their Effect on Cytokine Production Related to Alveolar Bone Resorption</article-title>, <source>Toxicology</source>. (<year>2015</year>) <volume>327</volume>, <fpage>1</fpage>–<lpage>9</lpage>, <pub-id pub-id-type="doi">10.1016/j.tox.2014.10.016</pub-id>, 2-s2.0-84910014981.<pub-id pub-id-type="pmid">25446332</pub-id>
+</mixed-citation></ref><ref id="bib-0050"><label>50</label><mixed-citation publication-type="journal" id="cit-0050">
+<string-name name-style="western">
+<surname>Davidson</surname>
+<given-names>S.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Efremova</surname>
+<given-names>M.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Riedel</surname>
+<given-names>A.</given-names>
+</string-name>, et al.<article-title>Single-Cell RNA Sequencing Reveals a Dynamic Stromal Niche That Supports Tumor Growth</article-title>, <source>Cell Reports</source>. (<year>2020</year>) <volume>31</volume>, no. 7, <pub-id pub-id-type="doi">10.1016/j.celrep.2020.107628</pub-id>, <elocation-id>107628</elocation-id>.<pub-id pub-id-type="pmid">32433953</pub-id>
+<pub-id pub-id-type="pmcid">PMC7242909</pub-id></mixed-citation></ref><ref id="bib-0051"><label>51</label><mixed-citation publication-type="journal" id="cit-0051">
+<string-name name-style="western">
+<surname>Dick</surname>
+<given-names>J.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Gan</surname>
+<given-names>P.-Y.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Kitching</surname>
+<given-names>A. R.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Holdsworth</surname>
+<given-names>S. R.</given-names>
+</string-name>, <article-title>The C3aR Promotes Macrophage Infiltration and Regulates ANCA Production but Does Not Affect Glomerular Injury in Experimental Anti-Myeloperoxidase Glomerulonephritis</article-title>, <source>PLoS ONE</source>. (<year>2018</year>) <volume>13</volume>, no. 1, <pub-id pub-id-type="doi">10.1371/journal.pone.0190655</pub-id>, 2-s2.0-85040338972.<pub-id pub-id-type="pmcid">PMC5760037</pub-id><pub-id pub-id-type="pmid">29315316</pub-id></mixed-citation></ref><ref id="bib-0052"><label>52</label><mixed-citation publication-type="journal" id="cit-0052">
+<string-name name-style="western">
+<surname>Hiyari</surname>
+<given-names>S.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Wong</surname>
+<given-names>R.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Yaghsezian</surname>
+<given-names>A.</given-names>
+</string-name>, et al.<article-title>Ligature-Induced Peri-Implantitis and Periodontitis in Mice</article-title>, <source>Journal of Clinical Periodontology</source>. (<year>2018</year>) <volume>45</volume>, no. 1, <fpage>89</fpage>–<lpage>99</lpage>, <pub-id pub-id-type="doi">10.1111/jcpe.12817</pub-id>, 2-s2.0-85034263600.<pub-id pub-id-type="pmid">28921659</pub-id>
+<pub-id pub-id-type="pmcid">PMC5774657</pub-id></mixed-citation></ref><ref id="bib-0053"><label>53</label><mixed-citation publication-type="journal" id="cit-0053">
+<string-name name-style="western">
+<surname>Sun</surname>
+<given-names>J.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Eberhard</surname>
+<given-names>J.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Glage</surname>
+<given-names>S.</given-names>
+</string-name>, et al.<article-title>Development of a Peri-Implantitis Model in the Rat</article-title>, <source>Clinical Oral Implants Research</source>. (<year>2020</year>) <volume>31</volume>, no. 3, <fpage>203</fpage>–<lpage>214</lpage>, <pub-id pub-id-type="doi">10.1111/clr.13556</pub-id>.<pub-id pub-id-type="pmid">31701561</pub-id>
+</mixed-citation></ref><ref id="bib-0054"><label>54</label><mixed-citation publication-type="journal" id="cit-0054">
+<string-name name-style="western">
+<surname>Schwarz</surname>
+<given-names>F.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Sculean</surname>
+<given-names>A.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Engebretson</surname>
+<given-names>S. P.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Becker</surname>
+<given-names>J.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Sager</surname>
+<given-names>M.</given-names>
+</string-name>, <article-title>Animal Models for Peri-Implant Mucositis and Peri-Implantitis</article-title>, <source>Periodontology 2000</source>. (<year>2015</year>) <volume>68</volume>, no. 1, <fpage>168</fpage>–<lpage>181</lpage>, <pub-id pub-id-type="doi">10.1111/prd.12064</pub-id>, 2-s2.0-84927127483.<pub-id pub-id-type="pmid">25867986</pub-id>
+</mixed-citation></ref><ref id="bib-0055"><label>55</label><mixed-citation publication-type="journal" id="cit-0055">
+<string-name name-style="western">
+<surname>Marconi</surname>
+<given-names>G. D.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Fonticoli</surname>
+<given-names>L.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Rajan</surname>
+<given-names>T. S.</given-names>
+</string-name>, et al.<article-title>Epithelial-Mesenchymal Transition (EMT): The Type-2 EMT in Wound Healing, Tissue Regeneration and Organ Fibrosis</article-title>, <source>Cells</source>. (<year>2021</year>) <volume>10</volume>, no. 7, <pub-id pub-id-type="doi">10.3390/cells10071587</pub-id>, <elocation-id>1587</elocation-id>.<pub-id pub-id-type="pmid">34201858</pub-id>
+<pub-id pub-id-type="pmcid">PMC8307661</pub-id></mixed-citation></ref><ref id="bib-0056"><label>56</label><mixed-citation publication-type="journal" id="cit-0056">
+<string-name name-style="western">
+<surname>Mai</surname>
+<given-names>J.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Virtue</surname>
+<given-names>A.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Shen</surname>
+<given-names>J.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Wang</surname>
+<given-names>H.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Yang</surname>
+<given-names>X.-F.</given-names>
+</string-name>, <article-title>An Evolving New Paradigm: Endothelial Cells—Conditional Innate Immune Cells</article-title>, <source>Journal of Hematology &amp; Oncology</source>. (<year>2013</year>) <volume>6</volume>, no. 1, <pub-id pub-id-type="doi">10.1186/1756-8722-6-61</pub-id>, 2-s2.0-84882329201, <elocation-id>61</elocation-id>.<pub-id pub-id-type="pmid">23965413</pub-id>
+<pub-id pub-id-type="pmcid">PMC3765446</pub-id></mixed-citation></ref><ref id="bib-0057"><label>57</label><mixed-citation publication-type="journal" id="cit-0057">
+<string-name name-style="western">
+<surname>Higuchi</surname>
+<given-names>H.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Kurose</surname>
+<given-names>I.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Fukumura</surname>
+<given-names>D.</given-names>
+</string-name>, et al.<article-title>Active Oxidants Mediate IFN-Alpha-Induced Microvascular Alterations in Rat Mesentery</article-title>, <source>The Journal of Immunology</source>. (<year>1997</year>) <volume>158</volume>, no. 10, <fpage>4893</fpage>–<lpage>4900</lpage>, <pub-id pub-id-type="doi">10.4049/jimmunol.158.10.4893</pub-id>.<pub-id pub-id-type="pmid">9144506</pub-id>
+</mixed-citation></ref><ref id="bib-0058"><label>58</label><mixed-citation publication-type="journal" id="cit-0058">
+<string-name name-style="western">
+<surname>Li</surname>
+<given-names>Q.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Zhu</surname>
+<given-names>Z.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Wang</surname>
+<given-names>L.</given-names>
+</string-name>, et al.<article-title>Single-Cell Transcriptome Profiling Reveals Vascular Endothelial Cell Heterogeneity in Human Skin</article-title>, <source>Theranostics</source>. (<year>2021</year>) <volume>11</volume>, no. 13, <fpage>6461</fpage>–<lpage>6476</lpage>, <pub-id pub-id-type="doi">10.7150/thno.54917</pub-id>.<pub-id pub-id-type="pmid">33995668</pub-id>
+<pub-id pub-id-type="pmcid">PMC8120211</pub-id></mixed-citation></ref><ref id="bib-0059"><label>59</label><mixed-citation publication-type="journal" id="cit-0059">
+<string-name name-style="western">
+<surname>Suárez-López Del Amo</surname>
+<given-names>F.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Garaicoa-Pazmiño</surname>
+<given-names>C.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Fretwurst</surname>
+<given-names>T.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Castilho</surname>
+<given-names>R. M.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Squarize</surname>
+<given-names>C. H.</given-names>
+</string-name>, <article-title>Dental Implants-Associated Release of Titanium Particles: A Systematic Review</article-title>, <source>Clinical Oral Implants Research</source>. (<year>2018</year>) <volume>29</volume>, no. 11, <fpage>1085</fpage>–<lpage>1100</lpage>, <pub-id pub-id-type="doi">10.1111/clr.13372</pub-id>, 2-s2.0-85054335706.<pub-id pub-id-type="pmid">30280418</pub-id>
+</mixed-citation></ref><ref id="bib-0060"><label>60</label><mixed-citation publication-type="journal" id="cit-0060">
+<string-name name-style="western">
+<surname>Alhamad</surname>
+<given-names>M.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Ricardo Barao</surname>
+<given-names>V. A.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Sukotjo</surname>
+<given-names>C.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Yerokhin</surname>
+<given-names>A.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Mathew</surname>
+<given-names>M. T.</given-names>
+</string-name>, <article-title>Unpredictable Electrochemical Processes in Ti Dental Implants: The Role of Ti Ions and Inflammatory Products</article-title>, <source>ACS Applied Bio Materials</source>. (<year>2023</year>) <volume>6</volume>, no. 9, <fpage>3661</fpage>–<lpage>3673</lpage>, <pub-id pub-id-type="doi">10.1021/acsabm.3c00235</pub-id>.<pub-id pub-id-type="pmid">37602778</pub-id></mixed-citation></ref><ref id="bib-0061"><label>61</label><mixed-citation publication-type="journal" id="cit-0061">
+<string-name name-style="western">
+<surname>Djinic Krasavcevic</surname>
+<given-names>A.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Nikolic</surname>
+<given-names>N.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Milinkovic</surname>
+<given-names>I.</given-names>
+</string-name>, et al.<article-title>Notch Signalling Cascade and Proinflammatory Mediators in Peri-Implant Lesions With Different RANKL/OPG Ratios—An Observational Study</article-title>, <source>Journal of Periodontal Research</source>. (<year>2023</year>) <volume>58</volume>, no. 2, <fpage>360</fpage>–<lpage>368</lpage>, <pub-id pub-id-type="doi">10.1111/jre.13096</pub-id>.<pub-id pub-id-type="pmid">36617525</pub-id>
+</mixed-citation></ref><ref id="bib-0062"><label>62</label><mixed-citation publication-type="journal" id="cit-0062">
+<string-name name-style="western">
+<surname>Milinkovic</surname>
+<given-names>I.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Djinic Krasavcevic</surname>
+<given-names>A.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Nikolic</surname>
+<given-names>N.</given-names>
+</string-name>, et al.<article-title>Notch Down-Regulation and Inflammatory Cytokines and RANKL Overexpression Involvement in Peri-Implant Mucositis and Peri-Implantitis: A Cross-Sectional Study</article-title>, <source>Clinical Oral Implants Research</source>. (<year>2021</year>) <volume>32</volume>, no. 12, <fpage>1496</fpage>–<lpage>1505</lpage>, <pub-id pub-id-type="doi">10.1111/clr.13850</pub-id>.<pub-id pub-id-type="pmid">34546593</pub-id>
+</mixed-citation></ref><ref id="bib-0063"><label>63</label><mixed-citation publication-type="journal" id="cit-0063">
+<string-name name-style="western">
+<surname>Zhang</surname>
+<given-names>Q.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Liu</surname>
+<given-names>J.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Ma</surname>
+<given-names>L.</given-names>
+</string-name>,
+<string-name name-style="western">
+<surname>Bai</surname>
+<given-names>N.</given-names>
+</string-name>, and
+<string-name name-style="western">
+<surname>Xu</surname>
+<given-names>H.</given-names>
+</string-name>, <article-title>Wnt5a is Involved in LOX-1 and TLR4 Induced Host Inflammatory Response in Peri-Implantitis</article-title>, <source>Journal of Periodontal Research</source>. (<year>2020</year>) <volume>55</volume>, no. 2, <fpage>199</fpage>–<lpage>208</lpage>, <pub-id pub-id-type="doi">10.1111/jre.12702</pub-id>, 2-s2.0-85073949587.<pub-id pub-id-type="pmid">31593304</pub-id>
+</mixed-citation></ref></ref-list></back></article>

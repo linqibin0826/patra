@@ -963,6 +963,13 @@ public class PubmedArticleItemProcessor
               PublicationDateType.ENTREZ_DATE.getCode(), dates.getCreated(), order++));
     }
 
+    // pmcRelease → PMC_RELEASE（PMC 放开日期，全文抓取据此安排再查时间）
+    if (dates.getPmcRelease() != null) {
+      result.add(
+          PublicationDateData.fromLocalDate(
+              PublicationDateType.PMC_RELEASE.getCode(), dates.getPmcRelease(), order++));
+    }
+
     // completed → OTHER
     if (dates.getCompleted() != null) {
       result.add(

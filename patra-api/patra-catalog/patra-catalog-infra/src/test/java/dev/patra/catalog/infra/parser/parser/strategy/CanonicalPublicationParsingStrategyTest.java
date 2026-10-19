@@ -546,6 +546,78 @@ class CanonicalPublicationParsingStrategyTest {
     }
   }
 
+  @Nested
+  @DisplayName("PMC 放开日期解析")
+  class PmcReleaseDateParsing {
+
+    @Test
+    @DisplayName("应从 History 的 pmc-release 解析 PMC 放开日期")
+    void should_parse_pmc_release_date_from_history() throws Exception {
+      var xml =
+          """
+          <PubmedArticle>
+            <MedlineCitation>
+              <PMID>1</PMID>
+              <Article>
+                <ArticleTitle>T</ArticleTitle>
+              </Article>
+              <MedlineJournalInfo>
+                <NlmUniqueID>N</NlmUniqueID>
+              </MedlineJournalInfo>
+            </MedlineCitation>
+            <PubmedData>
+              <History>
+                <PubMedPubDate PubStatus="pubmed">
+                  <Year>2026</Year><Month>1</Month><Day>2</Day>
+                </PubMedPubDate>
+                <PubMedPubDate PubStatus="pmc-release">
+                  <Year>2027</Year><Month>01</Month><Day>15</Day>
+                </PubMedPubDate>
+              </History>
+              <PublicationStatus>ppublish</PublicationStatus>
+            </PubmedData>
+          </PubmedArticle>
+          """;
+      var reader = createReaderAtStartElement(xml);
+
+      CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
+
+      assertThat(result.getDates().getPmcRelease()).isEqualTo(LocalDate.of(2027, 1, 15));
+      assertThat(result.getPublicationStatus()).isEqualTo("ppublish");
+    }
+
+    @Test
+    @DisplayName("没有 pmc-release 时 PMC 放开日期为空")
+    void should_leave_pmc_release_null_when_absent() throws Exception {
+      var xml =
+          """
+          <PubmedArticle>
+            <MedlineCitation>
+              <PMID>1</PMID>
+              <Article>
+                <ArticleTitle>T</ArticleTitle>
+              </Article>
+              <MedlineJournalInfo>
+                <NlmUniqueID>N</NlmUniqueID>
+              </MedlineJournalInfo>
+            </MedlineCitation>
+            <PubmedData>
+              <History>
+                <PubMedPubDate PubStatus="pubmed">
+                  <Year>2026</Year><Month>1</Month><Day>2</Day>
+                </PubMedPubDate>
+              </History>
+            </PubmedData>
+          </PubmedArticle>
+          """;
+      var reader = createReaderAtStartElement(xml);
+
+      CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
+
+      assertThat(result.getDates().getPmcRelease()).isNull();
+    }
+  }
+
   // ========== 语言解析测试 ==========
 
   @Nested

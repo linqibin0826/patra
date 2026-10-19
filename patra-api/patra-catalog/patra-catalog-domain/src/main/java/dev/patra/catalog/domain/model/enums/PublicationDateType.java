@@ -18,6 +18,7 @@ import lombok.Getter;
 /// - **PPUBLISH** - 纸质版发表日期
 /// - **RETRACTED** - 撤稿日期
 /// - **ENTREZ_DATE** - 进入 PubMed 数据库日期
+/// - **PMC_RELEASE** - PMC 放开日期（禁发期结束、PMC 全文可公开）
 /// - **OTHER** - 其他日期类型
 ///
 /// @author linqibin
@@ -48,6 +49,9 @@ public enum PublicationDateType {
 
   /// 进入 PubMed 数据库日期
   ENTREZ_DATE("entrezdate", "Entrez Date"),
+
+  /// PMC 放开日期
+  PMC_RELEASE("pmcrelease", "PMC Release Date"),
 
   /// 其他日期类型
   OTHER("other", "Other Date");

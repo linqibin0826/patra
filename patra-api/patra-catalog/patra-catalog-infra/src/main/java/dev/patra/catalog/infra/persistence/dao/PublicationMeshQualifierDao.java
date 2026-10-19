@@ -1,6 +1,7 @@
 package dev.patra.catalog.infra.persistence.dao;
 
 import dev.patra.catalog.infra.persistence.entity.PublicationMeshQualifierEntity;
+import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -43,4 +44,18 @@ public interface PublicationMeshQualifierDao
   @Query(
       "DELETE FROM PublicationMeshQualifierEntity e WHERE e.publicationMeshHeadingId IN :headingIds")
   void deleteByPublicationMeshHeadingIdIn(@Param("headingIds") List<Long> headingIds);
+
+  /// 按文献 ID 批量删除这些文献的 MeSH 标引下的全部限定词。
+  ///
+  /// 限定词表只关联标引 ID，需经 `cat_publication_mesh_heading` 找到文献，必须先于标引删除。
+  ///
+  /// @param publicationIds 文献 ID
+  /// @return 删除行数
+  @Modifying
+  @Query(
+      value =
+          "DELETE FROM cat_publication_mesh_qualifier q USING cat_publication_mesh_heading h"
+              + " WHERE q.publication_mesh_heading_id = h.id AND h.publication_id IN (:publicationIds)",
+      nativeQuery = true)
+  int deleteByPublicationIdIn(@Param("publicationIds") Collection<Long> publicationIds);
 }

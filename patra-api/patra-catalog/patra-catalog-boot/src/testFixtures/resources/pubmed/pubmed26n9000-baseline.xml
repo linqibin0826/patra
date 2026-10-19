@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 增量同步 E2E 合成夹具（非真实文献）：baseline 4 条原始记录 -->
+<PubmedArticleSet>
+  <PubmedArticle>
+    <MedlineCitation Status="MEDLINE" Owner="NLM">
+      <PMID Version="1">90009001</PMID>
+      <Article PubModel="Print">
+        <Journal>
+          <ISSN IssnType="Print">9000-0001</ISSN>
+          <JournalIssue CitedMedium="Print">
+            <Volume>1</Volume>
+            <Issue>1</Issue>
+            <PubDate><Year>2025</Year><Month>Jan</Month></PubDate>
+          </JournalIssue>
+          <Title>Journal of Sync Fixtures</Title>
+        </Journal>
+        <ArticleTitle>Original title 1</ArticleTitle>
+        <Language>eng</Language>
+      </Article>
+      <MedlineJournalInfo>
+        <NlmUniqueID>NLM9000001</NlmUniqueID>
+      </MedlineJournalInfo>
+    </MedlineCitation>
+    <PubmedData>
+      <PublicationStatus>ppublish</PublicationStatus>
+      <ArticleIdList>
+        <ArticleId IdType="pubmed">90009001</ArticleId>
+        <ArticleId IdType="doi">10.9000/sync-1</ArticleId>
+      </ArticleIdList>
+    </PubmedData>
+  </PubmedArticle>
+  <PubmedArticle>
+    <MedlineCitation Status="MEDLINE" Owner="NLM">
+      <PMID Version="1">90009002</PMID>
+      <Article PubModel="Print">
+        <Journal>
+          <ISSN IssnType="Print">9000-0001</ISSN>
+          <JournalIssue CitedMedium="Print">
+            <Volume>1</Volume>
+            <Issue>1</Issue>
+            <PubDate><Year>2025</Year><Month>Jan</Month></PubDate>
+          </JournalIssue>
+          <Title>Journal of Sync Fixtures</Title>
+        </Journal>
+        <ArticleTitle>Original title 2</ArticleTitle>
+        <Language>eng</Language>
+      </Article>
+      <MedlineJournalInfo>
+        <NlmUniqueID>NLM9000001</NlmUniqueID>
+      </MedlineJournalInfo>
+    </MedlineCitation>
+    <PubmedData>
+      <PublicationStatus>ppublish</PublicationStatus>
+      <ArticleIdList>
+        <ArticleId IdType="pubmed">90009002</ArticleId>
+        <ArticleId IdType="doi">10.9000/sync-2</ArticleId>
+      </ArticleIdList>
+    </PubmedData>
+  </PubmedArticle>
+  <PubmedArticle>
+    <MedlineCitation Status="MEDLINE" Owner="NLM">
+      <PMID Version="1">90009003</PMID>
+      <Article PubModel="Print">
+        <Journal>
+          <ISSN IssnType="Print">9000-0001</ISSN>
+          <JournalIssue CitedMedium="Print">
+            <Volume>1</Volume>
+            <Issue>1</Issue>
+            <PubDate><Year>2025</Year><Month>Jan</Month></PubDate>
+          </JournalIssue>
+          <Title>Journal of Sync Fixtures</Title>
+        </Journal>
+        <ArticleTitle>Original title 3</ArticleTitle>
+        <Language>eng</Language>
+      </Article>
+      <MedlineJournalInfo>
+        <NlmUniqueID>NLM9000001</NlmUniqueID>
+      </MedlineJournalInfo>
+    </MedlineCitation>
+    <PubmedData>
+      <PublicationStatus>ppublish</PublicationStatus>
+      <ArticleIdList>
+        <ArticleId IdType="pubmed">90009003</ArticleId>
+        <ArticleId IdType="doi">10.9000/sync-3</ArticleId>
+      </ArticleIdList>
+    </PubmedData>
+  </PubmedArticle>
+  <PubmedArticle>
+    <MedlineCitation Status="MEDLINE" Owner="NLM">
+      <PMID Version="1">90009004</PMID>
+      <Article PubModel="Print">
+        <Journal>
+          <ISSN IssnType="Print">9000-0001</ISSN>
+          <JournalIssue CitedMedium="Print">
+            <Volume>1</Volume>
+            <Issue>1</Issue>
+            <PubDate><Year>2025</Year><Month>Jan</Month></PubDate>
+          </JournalIssue>
+          <Title>Journal of Sync Fixtures</Title>
+        </Journal>
+        <ArticleTitle>To be deleted</ArticleTitle>
+        <Language>eng</Language>
+      </Article>
+      <MedlineJournalInfo>
+        <NlmUniqueID>NLM9000001</NlmUniqueID>
+      </MedlineJournalInfo>
+    </MedlineCitation>
+    <PubmedData>
+      <PublicationStatus>ppublish</PublicationStatus>
+      <ArticleIdList>
+        <ArticleId IdType="pubmed">90009004</ArticleId>
+        <ArticleId IdType="doi">10.9000/sync-4</ArticleId>
+      </ArticleIdList>
+    </PubmedData>
+  </PubmedArticle>
+</PubmedArticleSet>

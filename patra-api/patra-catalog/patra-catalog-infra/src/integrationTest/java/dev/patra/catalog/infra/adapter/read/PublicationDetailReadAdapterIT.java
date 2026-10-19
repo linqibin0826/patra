@@ -3,6 +3,7 @@ package dev.patra.catalog.infra.adapter.read;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.catalog.domain.model.enums.DisambiguationStatus;
+import dev.patra.catalog.domain.model.enums.FullTextStatus;
 import dev.patra.catalog.domain.model.read.portal.PublicationDetailReadModel;
 import dev.patra.catalog.domain.model.vo.publication.EvidenceLevel;
 import dev.patra.catalog.domain.model.vo.publication.PublicationAbstractSection;
@@ -13,6 +14,7 @@ import dev.patra.catalog.infra.persistence.entity.PublicationAbstractEntity;
 import dev.patra.catalog.infra.persistence.entity.PublicationAuthorAffiliationEntity;
 import dev.patra.catalog.infra.persistence.entity.PublicationAuthorEntity;
 import dev.patra.catalog.infra.persistence.entity.PublicationEntity;
+import dev.patra.catalog.infra.persistence.entity.PublicationFullTextEntity;
 import dev.patra.catalog.infra.persistence.entity.PublicationIdentifierEntity;
 import dev.patra.catalog.infra.persistence.entity.PublicationMeshHeadingEntity;
 import dev.patra.catalog.infra.persistence.entity.PublicationMetadataEntity;
@@ -207,6 +209,73 @@ class PublicationDetailReadAdapterIT {
   }
 
   // ===== 测试数据构建助手 =====
+
+  @Test
+  @DisplayName("有全文记录时给出可读、可下载、PDF 大小与字数")
+  void should_expose_full_text_flags_and_word_count() {
+    Long venueId = saveVenue("J");
+    Long pubId = savePublication(venueId, "T", "10.1/ft", "70000001");
+    saveFullText(pubId, FullTextStatus.PARSED, "pmc/PMC1/PMC1.1/PMC1.1.pdf", 2_621_440L, 5230);
+    em.flush();
+    em.clear();
+
+    PublicationDetailReadModel model = adapter.findById(pubId).orElseThrow();
+
+    assertThat(model.hasFullText()).isTrue();
+    assertThat(model.hasPdf()).isTrue();
+    assertThat(model.pdfSizeBytes()).isEqualTo(2_621_440L);
+    assertThat(model.wordCount()).isEqualTo(5230);
+  }
+
+  @Test
+  @DisplayName("撤稿文献（D016441）不可读、不可下载")
+  void should_hide_full_text_when_retracted() {
+    Long venueId = saveVenue("J");
+    Long pubId = savePublication(venueId, "T", "10.1/rt", "70000002");
+    saveFullText(pubId, FullTextStatus.PARSED, "k.pdf", 10L, 100);
+    saveType(pubId, "D016441", "Retracted Publication", 1);
+    em.flush();
+    em.clear();
+
+    PublicationDetailReadModel model = adapter.findById(pubId).orElseThrow();
+
+    assertThat(model.hasFullText()).isFalse();
+    assertThat(model.hasPdf()).isFalse();
+    assertThat(model.pdfSizeBytes()).isNull();
+  }
+
+  @Test
+  @DisplayName("没有全文记录时两项都为 false")
+  void should_report_no_full_text_without_record() {
+    Long venueId = saveVenue("J");
+    Long pubId = savePublication(venueId, "T", "10.1/nf", "70000003");
+    em.flush();
+    em.clear();
+
+    PublicationDetailReadModel model = adapter.findById(pubId).orElseThrow();
+
+    assertThat(model.hasFullText()).isFalse();
+    assertThat(model.hasPdf()).isFalse();
+  }
+
+  private void saveFullText(
+      Long pubId, FullTextStatus status, String pdfKey, Long pdfSize, Integer wordCount) {
+    PublicationFullTextEntity f = new PublicationFullTextEntity();
+    f.setId(SnowflakeIdGenerator.getId());
+    f.setPublicationId(pubId);
+    f.setPmcid("PMC1");
+    f.setStatus(status);
+    f.setPdfObjectKey(pdfKey);
+    f.setPdfSize(pdfSize);
+    f.setWordCount(wordCount);
+    em.persist(f);
+  }
+
+  private void saveType(Long pubId, String typeId, String typeValue, int typeOrder) {
+    PublicationTypeEntity t = PublicationTypeEntity.of(pubId, typeId, typeValue, "MeSH", typeOrder);
+    t.setId(SnowflakeIdGenerator.getId());
+    em.persist(t);
+  }
 
   private Long saveVenue(String title) {
     VenueEntity v = new VenueEntity();

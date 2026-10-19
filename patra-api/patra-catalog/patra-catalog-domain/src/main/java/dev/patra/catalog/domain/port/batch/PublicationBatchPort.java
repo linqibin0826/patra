@@ -1,6 +1,8 @@
 package dev.patra.catalog.domain.port.batch;
 
 import dev.patra.catalog.domain.model.vo.publication.PublicationImportParams;
+import dev.patra.catalog.domain.model.vo.publication.PubmedUpdateFileCounts;
+import dev.patra.catalog.domain.model.vo.publication.PubmedUpdateImportParams;
 
 /// Publication 批量导入端口接口（领域层定义，基础设施层实现）。
 ///
@@ -45,4 +47,13 @@ public interface PublicationBatchPort {
   /// @return 批处理执行标识符（Spring Batch Job Execution ID）
   /// @see PublicationImportParams
   Long launchBaselineImport(PublicationImportParams params);
+
+  /// 同步执行一个 updatefiles 文件的导入作业。
+  ///
+  /// 同参数的作业实例失败后再调用会从断点续传；已完成的不再启动，直接返回它的计数。
+  ///
+  /// @param params 参数
+  /// @return 处理计数
+  /// @throws IllegalStateException 作业执行失败时抛出
+  PubmedUpdateFileCounts launchUpdateImport(PubmedUpdateImportParams params);
 }

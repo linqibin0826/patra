@@ -1,5 +1,7 @@
 package dev.patra.catalog.config;
 
+import dev.patra.catalog.app.usecase.fulltext.FullTextJobProperties;
+import dev.patra.catalog.infra.adapter.integration.pmc.FullTextSourceProperties;
 import dev.patra.catalog.infra.adapter.storage.VenueCoverImageProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
@@ -12,5 +14,9 @@ import org.springframework.context.annotation.Configuration;
 /// @author linqibin
 /// @since 0.1.0
 @Configuration
-@EnableConfigurationProperties(VenueCoverImageProperties.class)
+@EnableConfigurationProperties({
+  VenueCoverImageProperties.class,
+  FullTextSourceProperties.class,
+  FullTextJobProperties.class
+})
 public class CatalogStorageConfiguration {}

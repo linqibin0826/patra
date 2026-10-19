@@ -10,6 +10,7 @@ import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.testcontainers.containers.MinIOContainer;
+import org.testcontainers.utility.DockerImageName;
 
 /// MinIO 容器初始化器（配置化版本）。
 ///
@@ -69,8 +70,13 @@ public class MinIOContainerInitializer
 
   private static final Logger log = LoggerFactory.getLogger(MinIOContainerInitializer.class);
 
-  /// MinIO 镜像版本。
-  private static final String MINIO_IMAGE = "minio/minio:RELEASE.2024-01-18T22-51-28Z";
+  /// MinIO 镜像。
+  ///
+  /// MinIO 官方已不再在 Docker Hub 公开发布镜像（`minio/minio` 拉取被拒），改用社区重建版
+  /// `pgsty/minio`，并声明为 `minio/minio` 的兼容替代，供 Testcontainers 的 `MinIOContainer` 使用。
+  private static final DockerImageName MINIO_IMAGE =
+      DockerImageName.parse("pgsty/minio:RELEASE.2026-08-04T00-00-00Z")
+          .asCompatibleSubstituteFor("minio/minio");
 
   /// 初始化状态标志。
   private static volatile boolean initialized = false;

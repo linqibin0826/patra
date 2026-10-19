@@ -520,7 +520,8 @@ class PublicationImportResultMapperTest {
       "received, RECEIVED",
       "accepted, ACCEPTED",
       "revised, REVISED",
-      "epublish, EPUBLISH"
+      "epublish, EPUBLISH",
+      "pmcrelease, PMC_RELEASE"
     })
     @DisplayName("已知日期类型应该正确映射")
     void should_map_known_date_types(String dateType, PublicationDateType expected) {

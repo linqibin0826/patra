@@ -3,9 +3,11 @@ package dev.patra.catalog.infra.parser;
 import dev.patra.catalog.domain.exception.XmlParseException;
 import dev.patra.catalog.domain.port.parser.PubmedXmlParserPort;
 import dev.patra.catalog.infra.parser.strategy.CanonicalPublicationParsingStrategy;
+import dev.patra.catalog.infra.parser.strategy.PubmedUpdateParsingStrategy;
 import dev.patra.catalog.infra.parser.support.AbstractStaxParserAdapter;
 import dev.patra.common.CanonicalPublication;
 import java.io.InputStream;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 import org.springframework.stereotype.Component;
 
@@ -42,6 +44,22 @@ public class PubmedXmlParserAdapter extends AbstractStaxParserAdapter<CanonicalP
         inputStream,
         CanonicalPublicationParsingStrategy.INSTANCE,
         "开始解析 PubMed Baseline XML",
+        XmlParseException::new);
+  }
+
+  /// 解析 PubMed updatefiles 输入流：文章照常流出，`DeleteCitation` 里的 PMID 交给回调。
+  ///
+  /// @param inputStream XML 输入流（调用方负责关闭）
+  /// @param deletedPmidSink 每遇到一个被删除的 PMID 调用一次
+  /// @return 文献记录流（惰性求值，回调在消费流的过程中被调用）
+  /// @throws XmlParseException 解析失败时抛出
+  @Override
+  public Stream<CanonicalPublication> parseUpdateFile(
+      InputStream inputStream, Consumer<String> deletedPmidSink) {
+    return doParse(
+        inputStream,
+        new PubmedUpdateParsingStrategy(deletedPmidSink),
+        "开始解析 PubMed updatefiles XML",
         XmlParseException::new);
   }
 }

@@ -2,6 +2,7 @@ package dev.patra.catalog.adapter.rest.portal;
 
 import dev.patra.catalog.adapter.rest.portal.response.EvidenceLevelView;
 import dev.patra.catalog.adapter.rest.portal.response.FacetCountResponse;
+import dev.patra.catalog.adapter.rest.portal.response.PortalFullTextResponse;
 import dev.patra.catalog.adapter.rest.portal.response.PortalPaperResponse;
 import dev.patra.catalog.adapter.rest.portal.response.PortalPublicationDetailResponse;
 import dev.patra.catalog.adapter.rest.portal.response.PortalPublicationFacetsResponse;
@@ -9,6 +10,7 @@ import dev.patra.catalog.adapter.rest.portal.response.PortalVenueBrowseResponse;
 import dev.patra.catalog.adapter.rest.portal.response.PortalVenueDetailResponse;
 import dev.patra.catalog.adapter.rest.portal.response.PortalVenueFacetsResponse;
 import dev.patra.catalog.domain.model.read.portal.FacetCount;
+import dev.patra.catalog.domain.model.read.portal.FullTextReadModel;
 import dev.patra.catalog.domain.model.read.portal.PortalPaperReadModel;
 import dev.patra.catalog.domain.model.read.portal.PublicationDetailReadModel;
 import dev.patra.catalog.domain.model.read.portal.PublicationSearchFacets;
@@ -27,6 +29,9 @@ import org.springframework.stereotype.Component;
 /// @since 0.1.0
 @Component
 public class PortalApiConverter {
+
+  /// 全文的数据来源署名（PMC 条款要求标注 NLM 为来源，不使用 PMC 标志）。
+  static final String FULL_TEXT_SOURCE = "数据来源：美国国家医学图书馆（NLM）PubMed Central";
 
   /// 将读模型转为响应 DTO。
   ///
@@ -281,7 +286,10 @@ public class PortalApiConverter {
         .source(toSource(model.provenanceCode()))
         .fullTextUrl(model.fullTextUrl())
         .bookmarks(0) // 无用户系统，恒为 0
-        .estimatedReadMin(null) // TODO(read-time)：接入原文采集/字数后估算阅读时长
+        .estimatedReadMin(estimatedReadMin(model.hasFullText(), model.wordCount()))
+        .hasFullText(model.hasFullText())
+        .hasPdf(model.hasPdf())
+        .pdfSizeBytes(model.pdfSizeBytes())
         .build();
   }
 
@@ -292,5 +300,40 @@ public class PortalApiConverter {
     // 钳到 0：lastSyncedAt 若晚于当前时间（时钟偏移等），避免负分钟透传到响应
     long minutes = Duration.between(lastSyncedAt, Instant.now()).toMinutes();
     return (int) Math.max(0L, minutes);
+  }
+
+  /// 阅读时长 `ceil(字数 / 230)`，不可读全文或字数未知时为 null。
+  ///
+  /// @param readable 是否可读全文
+  /// @param wordCount 字数
+  /// @return 分钟数
+  static Integer estimatedReadMin(boolean readable, Integer wordCount) {
+    if (!readable || wordCount == null) {
+      return null;
+    }
+    return (int) Math.ceil(wordCount / 230.0);
+  }
+
+  /// 全文读模型 → 响应。许可链接只认常见 CC 许可；数据来源为 PMC 条款要求的固定署名。
+  ///
+  /// @param model 读模型
+  /// @return 响应
+  public PortalFullTextResponse toFullTextResponse(FullTextReadModel model) {
+    PortalFullTextResponse.License license =
+        CcLicenseLinks.urlOf(model.licenseCode())
+            .map(url -> PortalFullTextResponse.License.of(model.licenseCode(), url))
+            .orElse(null);
+    return PortalFullTextResponse.builder()
+        .publicationId(String.valueOf(model.publicationId()))
+        .pmcid(model.pmcid())
+        .pmcUrl("https://pmc.ncbi.nlm.nih.gov/articles/" + model.pmcid() + "/")
+        .license(license)
+        .source(FULL_TEXT_SOURCE)
+        .fetchedAt(model.fetchedAt())
+        .wordCount(model.wordCount())
+        .estimatedReadMin(estimatedReadMin(model.body() != null, model.wordCount()))
+        .isManuscript(model.manuscript())
+        .body(model.body())
+        .build();
   }
 }

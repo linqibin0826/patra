@@ -63,6 +63,7 @@ public final class PubmedXmlElements {
     public static final String CITATION_SUBSET = "CitationSubset";
     public static final String ARTICLE = "Article";
     public static final String PUBMED_DATA = "PubmedData";
+    public static final String DELETE_CITATION = "DeleteCitation";
 
     private Container() {}
   }
@@ -165,6 +166,8 @@ public final class PubmedXmlElements {
     public static final String MONTH = "Month";
     public static final String DAY = "Day";
     public static final String MEDLINE_DATE = "MedlineDate";
+    public static final String HISTORY = "History";
+    public static final String PUBMED_PUB_DATE = "PubMedPubDate";
 
     private Date() {}
   }
@@ -185,6 +188,10 @@ public final class PubmedXmlElements {
     public static final String LANGUAGE = "Language";
     public static final String STATUS = "Status";
     public static final String INDEXING_METHOD = "IndexingMethod";
+    public static final String PUB_STATUS = "PubStatus";
+
+    // PubMedPubDate PubStatus 属性值
+    public static final String PUB_STATUS_PMC_RELEASE = "pmc-release";
 
     // ISSN Type 属性值
     public static final String ISSN_TYPE_PRINT = "Print";

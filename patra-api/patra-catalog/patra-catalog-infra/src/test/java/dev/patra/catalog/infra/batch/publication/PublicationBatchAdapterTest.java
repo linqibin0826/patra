@@ -5,10 +5,16 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import dev.patra.catalog.domain.model.enums.PubmedUpdateScope;
 import dev.patra.catalog.domain.model.vo.publication.PublicationImportParams;
+import dev.patra.catalog.domain.model.vo.publication.PubmedUpdateFileCounts;
+import dev.patra.catalog.domain.model.vo.publication.PubmedUpdateFileRef;
+import dev.patra.catalog.domain.model.vo.publication.PubmedUpdateImportParams;
+import dev.patra.catalog.infra.batch.publication.update.PubmedUpdateContextKeys;
 import dev.patra.tool.batch.core.JobOperatorHelper;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,6 +29,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.JobExecution;
+import org.springframework.batch.core.job.parameters.JobParameters;
+import org.springframework.batch.core.launch.JobOperator;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.infrastructure.item.ExecutionContext;
 
 /// PublicationBatchAdapter 单元测试。
 ///
@@ -34,8 +44,12 @@ class PublicationBatchAdapterTest {
 
   @Mock private JobOperatorHelper jobOperatorHelper;
   @Mock private Job pubmedBaselineImportJob;
+  @Mock private Job pubmedUpdateImportJob;
+  @Mock private JobRepository jobRepository;
+  @Mock private JobOperator jobOperator;
 
   @Captor private ArgumentCaptor<PublicationImportJobParams> jobParamsCaptor;
+  @Captor private ArgumentCaptor<PubmedUpdateImportJobParams> updateParamsCaptor;
 
   private PublicationBatchAdapter adapter;
 
@@ -45,7 +59,13 @@ class PublicationBatchAdapterTest {
 
   @BeforeEach
   void setUp() {
-    adapter = new PublicationBatchAdapter(jobOperatorHelper, pubmedBaselineImportJob);
+    adapter =
+        new PublicationBatchAdapter(
+            jobOperatorHelper,
+            jobOperator,
+            jobRepository,
+            pubmedBaselineImportJob,
+            pubmedUpdateImportJob);
   }
 
   @Nested
@@ -212,6 +232,107 @@ class PublicationBatchAdapterTest {
       // then
       assertThat(executionId).isEqualTo(EXPECTED_EXECUTION_ID);
       verify(jobOperatorHelper).findJobExecution(EXPECTED_EXECUTION_ID);
+    }
+  }
+
+  @Nested
+  @DisplayName("launchUpdateImport()")
+  class LaunchUpdateImportTest {
+
+    private final PubmedUpdateImportParams params =
+        PubmedUpdateImportParams.of(
+            PubmedUpdateFileRef.of("pubmed26n", 1335),
+            "https://ftp.ncbi.nlm.nih.gov/pubmed/updatefiles/",
+            PubmedUpdateScope.EXISTING_ONLY,
+            null);
+
+    @Test
+    @DisplayName("以不带时间戳的标识参数启动更新 Job，并从上下文读回计数")
+    void should_launch_update_job_with_identifying_params() {
+      when(pubmedUpdateImportJob.getName()).thenReturn("pubmedUpdateImportJob");
+      when(jobRepository.getLastJobExecution(eq("pubmedUpdateImportJob"), any(JobParameters.class)))
+          .thenReturn(null);
+      when(jobOperatorHelper.launch(
+              eq(pubmedUpdateImportJob), updateParamsCaptor.capture(), eq(false)))
+          .thenReturn(EXPECTED_EXECUTION_ID);
+      JobExecution execution = completedExecution(countsContext(3, 2));
+      when(jobOperatorHelper.findJobExecution(EXPECTED_EXECUTION_ID))
+          .thenReturn(Optional.of(execution));
+
+      PubmedUpdateFileCounts counts = adapter.launchUpdateImport(params);
+
+      PubmedUpdateImportJobParams sent = updateParamsCaptor.getValue();
+      assertThat(sent.getDownloadUrl())
+          .isEqualTo("https://ftp.ncbi.nlm.nih.gov/pubmed/updatefiles/pubmed26n1335.xml.gz");
+      assertThat(sent.getImportBatch()).isEqualTo("update-pubmed26n1335");
+      assertThat(sent.getScope()).isEqualTo("EXISTING_ONLY");
+      assertThat(sent.getGeneration()).isNull();
+      assertThat(counts.updated()).isEqualTo(3);
+      assertThat(counts.deleted()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("同参数的作业已经完成时不再启动，直接读它的计数")
+    void should_return_counts_of_completed_execution_without_relaunch() {
+      when(pubmedUpdateImportJob.getName()).thenReturn("pubmedUpdateImportJob");
+      JobExecution execution = completedExecution(countsContext(5, 1));
+      when(jobRepository.getLastJobExecution(eq("pubmedUpdateImportJob"), any(JobParameters.class)))
+          .thenReturn(execution);
+
+      PubmedUpdateFileCounts counts = adapter.launchUpdateImport(params);
+
+      verify(jobOperatorHelper, never()).launch(any(), any(), eq(false));
+      assertThat(counts.updated()).isEqualTo(5);
+      assertThat(counts.deleted()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("上次执行残留在 STARTED（进程被杀）时先 recover 再续跑")
+    void should_recover_stale_running_execution_before_relaunch() {
+      when(pubmedUpdateImportJob.getName()).thenReturn("pubmedUpdateImportJob");
+      JobExecution stale = mock(JobExecution.class);
+      when(stale.getStatus()).thenReturn(BatchStatus.STARTED);
+      when(jobRepository.getLastJobExecution(eq("pubmedUpdateImportJob"), any(JobParameters.class)))
+          .thenReturn(stale);
+      when(jobOperatorHelper.launch(eq(pubmedUpdateImportJob), any(), eq(false)))
+          .thenReturn(EXPECTED_EXECUTION_ID);
+      JobExecution execution = completedExecution(countsContext(1, 0));
+      when(jobOperatorHelper.findJobExecution(EXPECTED_EXECUTION_ID))
+          .thenReturn(Optional.of(execution));
+
+      PubmedUpdateFileCounts counts = adapter.launchUpdateImport(params);
+
+      verify(jobOperator).recover(stale);
+      assertThat(counts.updated()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("作业失败时抛异常")
+    void should_throw_when_update_job_failed() {
+      when(pubmedUpdateImportJob.getName()).thenReturn("pubmedUpdateImportJob");
+      when(jobOperatorHelper.launch(eq(pubmedUpdateImportJob), any(), eq(false)))
+          .thenReturn(EXPECTED_EXECUTION_ID);
+      JobExecution execution = mock(JobExecution.class);
+      when(execution.getStatus()).thenReturn(BatchStatus.FAILED);
+      when(jobOperatorHelper.findJobExecution(EXPECTED_EXECUTION_ID))
+          .thenReturn(Optional.of(execution));
+
+      assertThatThrownBy(() -> adapter.launchUpdateImport(params))
+          .isInstanceOf(IllegalStateException.class);
+    }
+
+    private ExecutionContext countsContext(int updated, int deleted) {
+      ExecutionContext ctx = new ExecutionContext();
+      ctx.putInt(PubmedUpdateContextKeys.COUNT_UPDATED, updated);
+      ctx.putInt(PubmedUpdateContextKeys.COUNT_DELETED, deleted);
+      return ctx;
+    }
+
+    private JobExecution completedExecution(ExecutionContext ctx) {
+      JobExecution execution = mock(JobExecution.class);
+      when(execution.getStatus()).thenReturn(BatchStatus.COMPLETED);
+      when(execution.getExecutionContext()).thenReturn(ctx);
+      return execution;
     }
   }
 }

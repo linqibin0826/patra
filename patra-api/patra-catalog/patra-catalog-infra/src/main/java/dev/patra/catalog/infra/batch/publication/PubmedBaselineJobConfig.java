@@ -57,12 +57,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 @Configuration
 public class PubmedBaselineJobConfig {
 
-  private static final int DEFAULT_CHUNK_SIZE = 500;
-
-  /// chunk size 上限：一个 chunk 的文献 ID 会整体作为关联表清理 `IN` 的绑定参数，
-  /// 需为 PostgreSQL 单语句 65535 个绑定参数留足余量。
-  private static final int MAX_CHUNK_SIZE = 10_000;
-
   private static final int DEFAULT_SKIP_LIMIT = 1000;
 
   private final JobRepository jobRepository;
@@ -127,7 +121,7 @@ public class PubmedBaselineJobConfig {
       PubmedArticleItemReader reader,
       PubmedArticleItemProcessor processor,
       PublicationItemWriter writer) {
-    int chunkSize = getChunkSize();
+    int chunkSize = PubmedChunkSize.resolve(batchProperties);
     log.info("配置 pubmedArticleProcessingStep，chunk size: {}", chunkSize);
 
     var stepBuilder =
@@ -199,30 +193,5 @@ public class PubmedBaselineJobConfig {
       PublicationImportResultMapper resultMapper,
       @Value("#{jobParameters['importBatch']}") String importBatch) {
     return new PublicationItemWriter(publicationRepository, resultMapper, importBatch);
-  }
-
-  /// 获取 chunk size。
-  ///
-  /// 配置值必须落在 `(0, MAX_CHUNK_SIZE]`：非正值视为未配置，回退默认值；
-  /// 超过上限则直接拒绝启动 —— 一个 chunk 的文献 ID 会整体进入
-  /// `PublicationRepositoryAdapter` 关联表清理的 `deleteByPublicationIdIn`，
-  /// chunk 过大会让 `IN` 的绑定参数触碰 PostgreSQL 单语句 65535 的上限。
-  ///
-  /// @return chunk size
-  /// @throws IllegalArgumentException 当配置的 chunk size 超过 MAX_CHUNK_SIZE 时
-  private int getChunkSize() {
-    if (batchProperties != null && batchProperties.chunk() != null) {
-      int configuredSize = batchProperties.chunk().defaultSize();
-      if (configuredSize > MAX_CHUNK_SIZE) {
-        throw new IllegalArgumentException(
-            "chunk.default-size [%d] 超过上限 %d：一个 chunk 的文献 ID 会整体作为 deleteByPublicationIdIn 的 IN 参数，"
-                    .formatted(configuredSize, MAX_CHUNK_SIZE)
-                + "过大会超出 PostgreSQL 单语句 65535 个绑定参数的限制");
-      }
-      if (configuredSize > 0) {
-        return configuredSize;
-      }
-    }
-    return DEFAULT_CHUNK_SIZE;
   }
 }

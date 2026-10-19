@@ -65,4 +65,16 @@ public interface PublicationOaLocationDao extends JpaRepository<PublicationOaLoc
   @Modifying
   @Query("DELETE FROM PublicationOaLocationEntity e WHERE e.publicationId IN :publicationIds")
   int deleteByPublicationIdIn(@Param("publicationIds") Collection<Long> publicationIds);
+
+  /// 按文献与位置类型批量删除（JPQL 批量语句立即执行，不像派生删除那样在 flush 时排到插入之后）。
+  ///
+  /// @param publicationId 文献 ID
+  /// @param locationType 位置类型的存储代码，如 `pubmed_central`
+  /// @return 删除行数
+  @Modifying
+  @Query(
+      "DELETE FROM PublicationOaLocationEntity e"
+          + " WHERE e.publicationId = :publicationId AND e.locationType = :locationType")
+  int deleteByPublicationIdAndLocationType(
+      @Param("publicationId") Long publicationId, @Param("locationType") String locationType);
 }

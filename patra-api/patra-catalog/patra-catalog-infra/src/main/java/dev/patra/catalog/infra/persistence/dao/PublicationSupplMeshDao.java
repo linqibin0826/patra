@@ -1,6 +1,7 @@
 package dev.patra.catalog.infra.persistence.dao;
 
 import dev.patra.catalog.infra.persistence.entity.PublicationSupplMeshEntity;
+import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -39,4 +40,12 @@ public interface PublicationSupplMeshDao extends JpaRepository<PublicationSupplM
   /// @param publicationId 出版物 ID
   /// @return 如果存在返回 true
   boolean existsByPublicationId(Long publicationId);
+
+  /// 按文献 ID 批量删除（增量同步覆盖更新时整批替换）。
+  ///
+  /// @param publicationIds 文献 ID
+  /// @return 删除行数
+  @Modifying
+  @Query("DELETE FROM PublicationSupplMeshEntity e WHERE e.publicationId IN :publicationIds")
+  int deleteByPublicationIdIn(@Param("publicationIds") Collection<Long> publicationIds);
 }

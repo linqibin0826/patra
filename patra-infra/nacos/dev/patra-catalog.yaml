@@ -17,5 +17,8 @@ patra:
       username: postgres
       password: ${PATRA_DB_PASSWORD:123456}
   catalog:
+    pubmed:
+      # 开发环境只更新库里已有的文献，不导入新文献（v0.11 增量同步）
+      update-scope: EXISTING_ONLY
     scopus:
       api-key: ${SCOPUS_API_KEY:}

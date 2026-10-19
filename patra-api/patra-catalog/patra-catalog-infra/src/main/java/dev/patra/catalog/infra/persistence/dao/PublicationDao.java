@@ -237,4 +237,12 @@ public interface PublicationDao extends JpaRepository<PublicationEntity, Long> {
       nativeQuery = true)
   List<PublicationEntity> findTopByVenue(
       @Param("venueId") Long venueId, @Param("since") Integer since, @Param("limit") int limit);
+
+  /// 把文献标为开放获取（只会置为 `true`），并清掉持久化上下文里的旧值。
+  ///
+  /// @param id 文献 ID
+  /// @return 更新行数
+  @Modifying(clearAutomatically = true)
+  @Query("UPDATE PublicationEntity p SET p.isOa = true WHERE p.id = :id")
+  int markOpenAccess(@Param("id") Long id);
 }
