@@ -1,5 +1,8 @@
 package dev.patra.catalog.domain.model.vo.fulltext;
 
+import java.io.Serial;
+import java.io.Serializable;
+
 /// 已下载的一张正文图片。
 ///
 /// @param name 文件名（与 PMC 桶内一致，如 `bmjopen-16-9-g001.webp`）
@@ -7,7 +10,9 @@ package dev.patra.catalog.domain.model.vo.fulltext;
 /// @param height 像素高，读不出为 `null`
 /// @author linqibin
 /// @since 0.11.0
-public record FullTextMedia(String name, Integer width, Integer height) {
+public record FullTextMedia(String name, Integer width, Integer height) implements Serializable {
+
+  @Serial private static final long serialVersionUID = 1L;
 
   /// 创建图片记录。
   ///
