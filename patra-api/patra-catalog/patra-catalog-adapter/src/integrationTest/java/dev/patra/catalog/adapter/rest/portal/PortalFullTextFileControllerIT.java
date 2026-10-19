@@ -83,6 +83,30 @@ class PortalFullTextFileControllerIT {
   }
 
   @Test
+  @DisplayName("PMC 没给 md5 时照常下发，不带 ETag、不做条件请求")
+  void should_stream_pdf_without_etag_when_md5_missing() {
+    FullTextFileRef noMd5 =
+        FullTextFileRef.builder()
+            .objectKey(PDF_REF.objectKey())
+            .fileName("PMC1.pdf")
+            .contentType("application/pdf")
+            .size(PDF.length)
+            .build();
+    when(queryService.getPdf(9L)).thenReturn(noMd5);
+    when(queryService.open(noMd5)).thenReturn(stored(PDF, "application/pdf"));
+
+    restClient
+        .get()
+        .uri("/portal/publications/9/fulltext/pdf")
+        .header(HttpHeaders.IF_NONE_MATCH, "\"anything\"")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectHeader()
+        .doesNotExist(HttpHeaders.ETAG);
+  }
+
+  @Test
   @DisplayName("If-None-Match 命中时返回 304、不打开对象")
   void should_return_304_when_etag_matches() {
     when(queryService.getPdf(7L)).thenReturn(PDF_REF);

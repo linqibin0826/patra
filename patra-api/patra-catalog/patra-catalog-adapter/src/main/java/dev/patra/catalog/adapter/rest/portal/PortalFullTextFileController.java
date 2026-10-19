@@ -54,7 +54,7 @@ public class PortalFullTextFileController {
   @GetMapping("/{id}/fulltext/pdf")
   public ResponseEntity<Resource> getPdf(@PathVariable @Positive long id, WebRequest request) {
     FullTextFileRef ref = queryService.getPdf(id);
-    if (request.checkNotModified(quoted(ref.etag()))) {
+    if (notModified(ref, request)) {
       return null;
     }
     return respond(
@@ -80,7 +80,7 @@ public class PortalFullTextFileController {
       throw new FullTextNotAvailableException(id);
     }
     FullTextFileRef ref = queryService.getFigure(id, fileName);
-    if (request.checkNotModified(quoted(ref.etag()))) {
+    if (notModified(ref, request)) {
       return null;
     }
     return respond(ref, MediaType.parseMediaType(ref.contentType()), FIGURE_CACHE, null);
@@ -94,12 +94,19 @@ public class PortalFullTextFileController {
         ResponseEntity.ok()
             .contentType(type)
             .contentLength(file.info() != null ? file.info().size() : ref.size())
-            .eTag(quoted(ref.etag()))
             .cacheControl(cache);
+    if (ref.etag() != null) {
+      builder.eTag(quoted(ref.etag()));
+    }
     if (disposition != null) {
       builder.header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString());
     }
     return builder.body(new InputStreamResource(file.content()));
+  }
+
+  /// 条件请求：有 ETag 时按 `If-None-Match` 判断（命中返回 304）；PMC 没给 md5 时不做条件请求。
+  private static boolean notModified(FullTextFileRef ref, WebRequest request) {
+    return ref.etag() != null && request.checkNotModified(quoted(ref.etag()));
   }
 
   /// ETag 加引号（存储与数据库里都不带引号）。
