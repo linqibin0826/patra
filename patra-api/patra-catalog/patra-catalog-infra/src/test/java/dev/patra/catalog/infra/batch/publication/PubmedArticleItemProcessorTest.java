@@ -539,6 +539,45 @@ class PubmedArticleItemProcessorTest {
     }
 
     @Test
+    @DisplayName("缺少 UI 的限定词应该被过滤，其余限定词连续编号")
+    void should_skip_qualifier_without_ui_and_number_rest_continuously() throws Exception {
+      // given
+      CanonicalPublication publication =
+          createPublicationWithQualifiers(
+              qualifier(null, true), qualifier("Q000031", false), qualifier("Q000627", false));
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result.meshHeadings().getFirst().qualifiers())
+          .containsExactly(
+              QualifierData.of("Q000031", false, 1), QualifierData.of("Q000627", false, 2));
+    }
+
+    @Test
+    @DisplayName("全部限定词都缺少 UI 时，标引的限定词应该为空")
+    void should_return_empty_qualifiers_when_all_qualifiers_lack_ui() throws Exception {
+      // given
+      CanonicalPublication publication =
+          createPublicationWithQualifiers(qualifier(null, false), qualifier(null, true));
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result.meshHeadings().getFirst().qualifiers()).isEmpty();
+    }
+
+    @Test
     @DisplayName("无 MeSH 数据时 meshHeadings 应该为空列表")
     void should_return_empty_mesh_headings_when_no_mesh_data() throws Exception {
       // given
