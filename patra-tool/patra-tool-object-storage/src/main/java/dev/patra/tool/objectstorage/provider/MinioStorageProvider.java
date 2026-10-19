@@ -40,6 +40,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class MinioStorageProvider extends AbstractObjectStorageProvider {
 
+  /// 建桶时桶已存在且归当前账号所有的 S3 错误码。
+  private static final String BUCKET_ALREADY_OWNED_BY_YOU = "BucketAlreadyOwnedByYou";
+
   private final MinioClient minioClient;
 
   /// 已知存储桶的本地缓存,避免冗余的存在性检查。
@@ -126,6 +129,8 @@ public class MinioStorageProvider extends AbstractObjectStorageProvider {
   ///
   /// 此方法使用本地缓存避免对频繁访问的存储桶进行冗余网络调用。 首次访问时,它会检查 MinIO 并缓存结果。
   ///
+  /// 并发首次上传会同时走到建桶，落后的一方收到 `BucketAlreadyOwnedByYou`，按建桶成功处理。
+  ///
   /// @param bucket 要检查/创建的存储桶名称
   /// @throws Exception 如果存储桶检查或创建失败
   private void ensureBucketExists(String bucket) throws Exception {
@@ -137,8 +142,15 @@ public class MinioStorageProvider extends AbstractObjectStorageProvider {
     // 缓存未命中 - 检查 MinIO
     boolean exists = minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucket).build());
     if (!exists) {
-      minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucket).build());
-      log.info("已创建 MinIO 存储桶: {}", bucket);
+      try {
+        minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucket).build());
+        log.info("已创建 MinIO 存储桶: {}", bucket);
+      } catch (ErrorResponseException ex) {
+        // 并发上传时别的线程（或实例）可能在查桶与建桶之间抢先建好，桶已归自己所有即视为成功
+        if (!BUCKET_ALREADY_OWNED_BY_YOU.equals(ex.errorResponse().code())) {
+          throw ex;
+        }
+      }
     }
 
     // 为未来的上传添加到缓存
