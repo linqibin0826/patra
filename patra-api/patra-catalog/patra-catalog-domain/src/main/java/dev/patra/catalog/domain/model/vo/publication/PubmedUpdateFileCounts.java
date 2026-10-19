@@ -29,4 +29,19 @@ public record PubmedUpdateFileCounts(
   public static PubmedUpdateFileCounts empty() {
     return new PubmedUpdateFileCounts(0, 0, 0, 0, 0, 0, 0);
   }
+
+  /// 逐项相加。
+  ///
+  /// @param other 另一份计数
+  /// @return 和
+  public PubmedUpdateFileCounts plus(PubmedUpdateFileCounts other) {
+    return new PubmedUpdateFileCounts(
+        created + other.created,
+        updated + other.updated,
+        deleted + other.deleted,
+        skippedAbsent + other.skippedAbsent,
+        skippedInvalid + other.skippedInvalid,
+        doiConflicts + other.doiConflicts,
+        skipErrors + other.skipErrors);
+  }
 }
