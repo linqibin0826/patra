@@ -34,23 +34,31 @@ public class FullTextCandidateReadAdapter implements FullTextCandidateReadPort {
       """
       (SELECT COALESCE(d.date_value, make_date(d.year, COALESCE(d.month, 1), COALESCE(d.day, 1)))
          FROM cat_publication_date d
-        WHERE d.publication_id = %s AND d.date_type = 'pmcrelease'
+        WHERE d.publication_id = {publicationId} AND d.date_type = 'pmcrelease'
         ORDER BY d.order_num NULLS LAST LIMIT 1)
       """;
 
   /// 从全文记录出发、带当前第一条 pmc 标识符的查询头。
   private static final String FROM_FULLTEXT =
       """
-      SELECT f.publication_id, pi.identifier_value, f.status, f.attempt_count, %s
+      SELECT f.publication_id, pi.identifier_value, f.status, f.attempt_count, {releaseDate}
         FROM cat_publication_fulltext f
         JOIN cat_publication p ON p.id = f.publication_id AND p.deleted_at IS NULL
         JOIN LATERAL (SELECT i.identifier_value FROM cat_publication_identifier i
                        WHERE i.publication_id = f.publication_id AND i.type = 'pmc'
                        ORDER BY i.id LIMIT 1) pi ON true
       """
-          .formatted(RELEASE_DATE.formatted("f.publication_id"));
+          .replace("{releaseDate}", releaseDate("f.publication_id"));
 
   @PersistenceContext private EntityManager em;
+
+  /// 按文献 ID 列生成放开日期子查询（SQL 文本块含换行，不用 `formatted`）。
+  ///
+  /// @param publicationIdColumn 文献 ID 列
+  /// @return 子查询
+  private static String releaseDate(String publicationIdColumn) {
+    return RELEASE_DATE.replace("{publicationId}", publicationIdColumn);
+  }
 
   /// 新文献候选。
   ///
@@ -63,7 +71,7 @@ public class FullTextCandidateReadAdapter implements FullTextCandidateReadPort {
         em.createNativeQuery(
                 """
                 SELECT DISTINCT ON (i.publication_id)
-                       i.publication_id, i.identifier_value, NULL, 0, %s
+                       i.publication_id, i.identifier_value, NULL, 0, {releaseDate}
                   FROM cat_publication_identifier i
                   JOIN cat_publication p ON p.id = i.publication_id AND p.deleted_at IS NULL
                  WHERE i.type = 'pmc' AND i.publication_id > :lastId
@@ -72,7 +80,7 @@ public class FullTextCandidateReadAdapter implements FullTextCandidateReadPort {
                  ORDER BY i.publication_id, i.id
                  LIMIT :limit
                 """
-                    .formatted(RELEASE_DATE.formatted("i.publication_id")))
+                    .replace("{releaseDate}", releaseDate("i.publication_id")))
             .setParameter("lastId", lastPublicationId)
             .setParameter("limit", limit)
             .getResultList();
@@ -145,14 +153,14 @@ public class FullTextCandidateReadAdapter implements FullTextCandidateReadPort {
         em.createNativeQuery(
                 """
                 SELECT DISTINCT ON (i.publication_id)
-                       i.publication_id, i.identifier_value, f.status, COALESCE(f.attempt_count, 0), %s
+                       i.publication_id, i.identifier_value, f.status, COALESCE(f.attempt_count, 0), {releaseDate}
                   FROM cat_publication_identifier i
                   JOIN cat_publication p ON p.id = i.publication_id AND p.deleted_at IS NULL
                   LEFT JOIN cat_publication_fulltext f ON f.publication_id = i.publication_id
                  WHERE i.type = 'pmc' AND i.publication_id IN (:ids)
                  ORDER BY i.publication_id, i.id
                 """
-                    .formatted(RELEASE_DATE.formatted("i.publication_id")))
+                    .replace("{releaseDate}", releaseDate("i.publication_id")))
             .setParameter("ids", publicationIds)
             .getResultList();
     return rows.stream().map(FullTextCandidateReadAdapter::toCandidate).toList();
