@@ -1,6 +1,9 @@
 package dev.patra.catalog.adapter.scheduler.config;
 
+import dev.patra.catalog.domain.model.enums.PubmedUpdateScope;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -8,7 +11,7 @@ import org.springframework.validation.annotation.Validated;
 
 /// PubMed 数据源配置属性。
 ///
-/// 配置 PubMed Baseline 和 Update 文件的下载 URL。
+/// 配置 PubMed Baseline 和 Update 文件的下载 URL、文件名前缀与增量同步的范围。
 ///
 /// **配置示例**：
 ///
@@ -18,6 +21,9 @@ import org.springframework.validation.annotation.Validated;
 ///     pubmed:
 ///       baseline-url: https://ftp.ncbi.nlm.nih.gov/pubmed/baseline/
 ///       update-url: https://ftp.ncbi.nlm.nih.gov/pubmed/updatefiles/
+///       file-prefix: pubmed26n
+///       update-scope: EXISTING_ONLY
+///       update-start-seq: 1335
 /// ```
 ///
 /// **数据源说明**：
@@ -43,7 +49,19 @@ public class PubmedDataSourceProperties {
 
   /// PubMed Update 基础 URL。
   ///
-  /// 指向 NCBI FTP 服务器的 updatefiles 目录。
-  /// 用于增量更新（当前版本暂不支持）。
+  /// 指向 NCBI FTP 服务器的 updatefiles 目录，增量同步从这里读目录索引与下载文件。
+  @NotBlank(message = "patra.catalog.pubmed.update-url 不能为空")
   private String updateUrl = "https://ftp.ncbi.nlm.nih.gov/pubmed/updatefiles/";
+
+  /// 文件名前缀，baseline 与 updatefiles 共用（如 `pubmed26n`，随年份变化）。
+  @NotBlank(message = "patra.catalog.pubmed.file-prefix 不能为空")
+  private String filePrefix = "pubmed26n";
+
+  /// 增量同步的导入范围：`ALL` 新文献也导入，`EXISTING_ONLY` 只更新库里已有的。
+  @NotNull(message = "patra.catalog.pubmed.update-scope 不能为空")
+  private PubmedUpdateScope updateScope = PubmedUpdateScope.ALL;
+
+  /// 进度表为空时增量同步的起始文件号（2026 年 updatefiles 的第一个文件是 1335）。
+  @Min(value = 1, message = "patra.catalog.pubmed.update-start-seq 必须不小于 1")
+  private int updateStartSeq = 1335;
 }
