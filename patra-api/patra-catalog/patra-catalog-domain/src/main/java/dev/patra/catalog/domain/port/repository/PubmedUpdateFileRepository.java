@@ -19,6 +19,13 @@ public interface PubmedUpdateFileRepository {
   /// @return 文件号，没有成功文件时为空
   OptionalInt findLastCompletedSeq();
 
+  /// 返回最小的未完成（失败或中断）文件的文件号。
+  ///
+  /// 手动 `fromFile` 处理了更后面的文件时，最大成功文件号会越过失败的文件，续跑要从这里开始。
+  ///
+  /// @return 文件号，没有未完成文件时为空
+  OptionalInt findFirstUnfinishedSeq();
+
   /// 按文件名查记录。
   ///
   /// @param fileName 文件名

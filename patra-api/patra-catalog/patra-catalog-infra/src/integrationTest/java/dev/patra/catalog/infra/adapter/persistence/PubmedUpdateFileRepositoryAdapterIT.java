@@ -58,6 +58,28 @@ class PubmedUpdateFileRepositoryAdapterIT {
   }
 
   @Test
+  @DisplayName("返回最小的未完成文件号：失败与中断都算，越过它完成的后续文件不影响")
+  void should_return_first_unfinished_seq() {
+    complete(1335);
+    PubmedUpdateFileRef failed = ref(1336);
+    adapter.markRunning(failed, PubmedUpdateScope.EXISTING_ONLY, null, T0);
+    adapter.markFailed(failed.fileName(), "boom", T0);
+    complete(1337);
+    adapter.markRunning(ref(1338), PubmedUpdateScope.EXISTING_ONLY, null, T0);
+
+    assertThat(adapter.findFirstUnfinishedSeq()).hasValue(1336);
+    assertThat(adapter.findLastCompletedSeq()).hasValue(1337);
+  }
+
+  @Test
+  @DisplayName("全部完成时没有未完成文件")
+  void should_return_empty_when_all_completed() {
+    complete(1335);
+
+    assertThat(adapter.findFirstUnfinishedSeq()).isEmpty();
+  }
+
+  @Test
   @DisplayName("没有成功文件时返回空")
   void should_return_empty_when_no_completed_file() {
     assertThat(adapter.findLastCompletedSeq()).isEmpty();

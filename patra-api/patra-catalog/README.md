@@ -116,7 +116,7 @@ patra-catalog 是 Patra 医学文献数据平台的目录管理微服务，负�
    - XXL-Job 调度入口（`pubmedBaselineImportJob`，参数：`fileIndex=1~1334`）
 
 11. **PubMed updatefiles 增量同步**（Spring Batch 实现）
-   - 从进度表 `cat_pubmed_update_file` 最后一个成功文件的下一个开始，按文件号处理到最新，失败即停、下次续传
+   - 从进度表 `cat_pubmed_update_file` 最小的未完成文件（没有则最后一个成功文件的下一个）开始，按文件号处理到最新，跳过已成功的文件；失败即停、下次续跑同一个作业实例
    - **覆盖更新**：内部 ID 不变；PubMed 管的列与子表全部替换；`is_oa`、`citation_count`、`has_full_text`、非 PubMed 标识符、OA 位置、全文记录等别的流程写入的数据保留
    - **分流在委托之前**：`EXISTING_ONLY`（开发环境）下库里没有的记录不进 baseline 处理器，不留期刊实例
    - `DeleteCitation` 软删除；软删除的文献再出现时复活；新 DOI 属于别的文献时保留旧 DOI

@@ -52,7 +52,7 @@ PMC Cloud Service ─────────► [PAP-85 全文抓取] ──►
 
 | XXL-Job handler | 触发 | 子任务 | 每次运行做什么 |
 |---|---|---|---|
-| `pubmedUpdateSyncJob` | cron 每天 05:00（Asia/Shanghai） | `pmcFullTextFetchJob` | 从进度表最后一个成功文件的下一个开始，按文件号依次处理到最新；遇到失败的文件停止 |
+| `pubmedUpdateSyncJob` | cron 每天 05:00（Asia/Shanghai） | `pmcFullTextFetchJob` | 从进度表最小的未完成文件（没有则最后一个成功文件的下一个）开始，按文件号依次处理到最新，跳过已成功的文件；遇到失败的文件停止 |
 | `pmcFullTextFetchJob` | 父任务成功后；另有一条每小时的兜底任务 | `jatsFullTextParseJob` | 按批处理所有到期候选（第 5.2 节）直到取不到为止，批量大小可配 |
 | `jatsFullTextParseJob` | 父任务成功后；另有一条每小时的兜底任务 | — | 按批处理所有待解析（第 6.4 节）直到取不到为止 |
 
@@ -105,6 +105,7 @@ PMC Cloud Service ─────────► [PAP-85 全文抓取] ──►
 | `doi_conflict_count` | INT | 见第 4.4 节 |
 | `started_at` / `finished_at` | TIMESTAMPTZ | |
 | `last_error` | VARCHAR(2000) | |
+| `job_generation` | VARCHAR(64) | 这次处理所用的作业 generation（首次为空，重放为 `replay-<毫秒>`）；失败后重试沿用它，续跑失败的那个 JobInstance |
 
 文件处理的断点续传仍交给 Spring Batch（一个文件一个 JobInstance）；这张表是业务层面的"跑到第几个、每个文件改了多少"，也是 runbook 里查进度的地方。
 
@@ -252,7 +253,7 @@ PMC Cloud Service ─────────► [PAP-85 全文抓取] ──►
 `pubmedUpdateSyncJob`（adapter 层）：
 
 - 无参数：从进度表最后一个 `COMPLETED` 的文件号 +1 开始，依次处理到目录里的最新文件；一个文件失败就停，`handleFail`。
-- `fromFile=1335`：从指定文件号开始重放（已 `COMPLETED` 的文件用新的 `generation` 重新跑）。用途：导入了一个较早的 baseline 文件后，让那批文献也追上修订。覆盖是幂等的（后到为准），重放不会出错。
+- `fromFile=1335`：从指定文件号开始重放（已 `COMPLETED` 的文件用新的 `generation` 重新跑；未完成的文件沿用进度表 `job_generation` 记下的上次 generation 续跑）。用途：导入了一个较早的 baseline 文件后，让那批文献也追上修订。覆盖是幂等的（后到为准），重放不会出错。
 - `maxFiles=N`：本次最多处理 N 个文件（首次追赶 353 个文件时分批跑）。
 - `scope=EXISTING_ONLY|ALL`：覆盖配置，仅本次生效。
 

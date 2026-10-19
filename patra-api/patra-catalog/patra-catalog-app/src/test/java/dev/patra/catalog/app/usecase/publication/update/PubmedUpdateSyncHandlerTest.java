@@ -92,6 +92,25 @@ class PubmedUpdateSyncHandlerTest {
   }
 
   @Test
+  @DisplayName("有未完成的文件时从最小的那个开始，跳过其后已完成的文件")
+  void should_resume_from_first_unfinished_file_and_skip_completed_ones() {
+    when(progressRepository.findFirstUnfinishedSeq()).thenReturn(OptionalInt.of(1336));
+    when(progressRepository.findLastCompletedSeq()).thenReturn(OptionalInt.of(1338));
+    when(listingPort.findLatestSeq(URL, "pubmed26n")).thenReturn(1338);
+    when(progressRepository.findByFileName("pubmed26n1337.xml.gz"))
+        .thenReturn(Optional.of(record(PubmedUpdateFileStatus.COMPLETED, null)));
+    when(progressRepository.findByFileName("pubmed26n1338.xml.gz"))
+        .thenReturn(Optional.of(record(PubmedUpdateFileStatus.COMPLETED, null)));
+
+    PubmedUpdateSyncResult result = handler.handle(command(null, null));
+
+    verify(batchPort).launchUpdateImport(paramsCaptor.capture());
+    assertThat(paramsCaptor.getValue().file()).isEqualTo(PubmedUpdateFileRef.of("pubmed26n", 1336));
+    assertThat(result.filesProcessed()).isEqualTo(1);
+    assertThat(result.lastSeq()).isEqualTo(1336);
+  }
+
+  @Test
   @DisplayName("进度表为空时从配置的起点开始")
   void should_start_from_configured_seq_when_no_progress() {
     when(progressRepository.findLastCompletedSeq()).thenReturn(OptionalInt.empty());

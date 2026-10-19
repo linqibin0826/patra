@@ -25,4 +25,11 @@ public interface PubmedUpdateFileDao extends JpaRepository<PubmedUpdateFileEntit
   /// @return 最大文件号，没有记录时为 `null`
   @Query("SELECT MAX(e.fileSeq) FROM PubmedUpdateFileEntity e WHERE e.status = :status")
   Integer findMaxSeqByStatus(@Param("status") PubmedUpdateFileStatus status);
+
+  /// 返回不处于某状态的最小文件号。
+  ///
+  /// @param status 状态
+  /// @return 最小文件号，没有记录时为 `null`
+  @Query("SELECT MIN(e.fileSeq) FROM PubmedUpdateFileEntity e WHERE e.status <> :status")
+  Integer findMinSeqByStatusNot(@Param("status") PubmedUpdateFileStatus status);
 }

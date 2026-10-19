@@ -40,6 +40,16 @@ public class PubmedUpdateFileRepositoryAdapter implements PubmedUpdateFileReposi
     return max == null ? OptionalInt.empty() : OptionalInt.of(max);
   }
 
+  /// 返回最小的未完成（失败或中断）文件的文件号。
+  ///
+  /// @return 文件号，没有未完成文件时为空
+  @Override
+  @Transactional(readOnly = true)
+  public OptionalInt findFirstUnfinishedSeq() {
+    Integer min = dao.findMinSeqByStatusNot(PubmedUpdateFileStatus.COMPLETED);
+    return min == null ? OptionalInt.empty() : OptionalInt.of(min);
+  }
+
   /// 按文件名查记录。
   ///
   /// @param fileName 文件名
