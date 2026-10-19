@@ -8,6 +8,7 @@ import dev.patra.common.PublicationIdentifierType;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -260,6 +261,61 @@ class PubmedXmlParserAdapterIT {
       assertThat(publications).hasSize(2);
       assertEquals("1", extractPmid(publications.get(0)));
       assertEquals("2", extractPmid(publications.get(1)));
+    }
+  }
+
+  @Nested
+  @DisplayName("parseUpdateFile() 更新文件解析")
+  class ParseUpdateFileTest {
+
+    private static final String UPDATE_XML =
+        """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <PubmedArticleSet>
+          <PubmedArticle>
+            <MedlineCitation Status="MEDLINE">
+              <PMID Version="1">100</PMID>
+              <Article><ArticleTitle>A</ArticleTitle></Article>
+              <MedlineJournalInfo><NlmUniqueID>N1</NlmUniqueID></MedlineJournalInfo>
+            </MedlineCitation>
+          </PubmedArticle>
+          <PubmedArticle>
+            <MedlineCitation Status="MEDLINE">
+              <PMID Version="1">200</PMID>
+              <Article><ArticleTitle>B</ArticleTitle></Article>
+              <MedlineJournalInfo><NlmUniqueID>N1</NlmUniqueID></MedlineJournalInfo>
+            </MedlineCitation>
+          </PubmedArticle>
+          <DeleteCitation>
+            <PMID Version="1">111</PMID>
+            <PMID Version="1">222</PMID>
+          </DeleteCitation>
+        </PubmedArticleSet>
+        """;
+
+    @Test
+    @DisplayName("应流出文章并把 DeleteCitation 里的 PMID 交给回调")
+    void should_stream_articles_and_report_deleted_pmids() {
+      List<String> deleted = new ArrayList<>();
+
+      List<CanonicalPublication> publications;
+      try (var stream = adapter.parseUpdateFile(toInputStream(UPDATE_XML), deleted::add)) {
+        publications = stream.toList();
+      }
+
+      assertThat(publications).extracting(p -> extractPmid(p)).containsExactly("100", "200");
+      assertThat(deleted).containsExactly("111", "222");
+    }
+
+    @Test
+    @DisplayName("parse() 对同一份更新文件只流出文章、不受 DeleteCitation 影响")
+    void should_ignore_delete_citation_in_plain_parse() {
+      List<CanonicalPublication> publications;
+      try (var stream = adapter.parse(toInputStream(UPDATE_XML))) {
+        publications = stream.toList();
+      }
+
+      assertThat(publications).extracting(p -> extractPmid(p)).containsExactly("100", "200");
     }
   }
 

@@ -2,6 +2,7 @@ package dev.patra.catalog.domain.port.parser;
 
 import dev.patra.common.CanonicalPublication;
 import java.io.InputStream;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 /// PubMed 文献 XML 解析端口（领域层定义，基础设施层实现）。
@@ -57,4 +58,16 @@ public interface PubmedXmlParserPort {
   /// @return 文献记录流（调用方负责关闭）
   /// @throws dev.patra.catalog.domain.exception.XmlParseException 解析失败时抛出
   Stream<CanonicalPublication> parse(InputStream inputStream);
+
+  /// 解析 PubMed updatefiles 输入流。
+  ///
+  /// 与 `parse` 一样流出 `<PubmedArticle>`；另外每遇到 `<DeleteCitation>` 下的一个 `PMID`，
+  /// 就调用一次 `deletedPmidSink`。回调发生在消费流的过程中，流读完后删除列表才完整。
+  ///
+  /// @param inputStream XML 输入流（调用方负责关闭）
+  /// @param deletedPmidSink 被删除 PMID 的回调
+  /// @return 文献记录流（调用方负责关闭）
+  /// @throws dev.patra.catalog.domain.exception.XmlParseException 解析失败时抛出
+  Stream<CanonicalPublication> parseUpdateFile(
+      InputStream inputStream, Consumer<String> deletedPmidSink);
 }

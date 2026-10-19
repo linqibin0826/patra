@@ -63,6 +63,7 @@ public final class PubmedXmlElements {
     public static final String CITATION_SUBSET = "CitationSubset";
     public static final String ARTICLE = "Article";
     public static final String PUBMED_DATA = "PubmedData";
+    public static final String DELETE_CITATION = "DeleteCitation";
 
     private Container() {}
   }
