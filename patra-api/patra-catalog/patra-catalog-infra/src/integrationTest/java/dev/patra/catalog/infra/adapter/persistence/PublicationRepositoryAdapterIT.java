@@ -48,6 +48,7 @@ import dev.patra.catalog.infra.persistence.dao.PublicationTypeDao;
 import dev.patra.common.ProvenanceCode;
 import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.json.JsonColumnCodec;
+import jakarta.persistence.EntityManager;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -112,6 +113,7 @@ class PublicationRepositoryAdapterIT {
   @Autowired private PublicationIdentifierDao identifierDao;
   @Autowired private PublicationAbstractDao abstractDao;
   @Autowired private PublicationOaLocationDao oaLocationDao;
+  @Autowired private EntityManager entityManager;
 
   // ========== 工厂方法 ==========
 
@@ -1408,7 +1410,7 @@ class PublicationRepositoryAdapterIT {
       // Given
       Long pubId = insertPublication("86868681", "10.8686/a");
 
-      var initial = List.of(PublicationOaLocation.ofPmc("PMC1000001", true));
+      var initial = List.of(PublicationOaLocation.ofPmc("PMC1000001", "CC BY", false));
       repository.replaceOaLocationsBatch(Map.of(pubId, initial));
       assertThat(oaLocationDao.findByPublicationId(pubId)).hasSize(1);
 
@@ -1416,7 +1418,9 @@ class PublicationRepositoryAdapterIT {
       var updated =
           List.of(
               PublicationOaLocation.ofPublisher("https://example.com/article", "CC-BY-4.0"),
-              PublicationOaLocation.ofPmc("PMC1000002", false));
+              PublicationOaLocation.ofPmc("PMC1000002", "CC BY", false).toBuilder()
+                  .isBest(false)
+                  .build());
       repository.replaceOaLocationsBatch(Map.of(pubId, updated));
 
       // Then
@@ -1433,10 +1437,10 @@ class PublicationRepositoryAdapterIT {
       // When - 同时替换两篇文献的 OA 位置
       repository.replaceOaLocationsBatch(
           Map.of(
-              pubId1, List.of(PublicationOaLocation.ofPmc("PMC2000001", true)),
+              pubId1, List.of(PublicationOaLocation.ofPmc("PMC2000001", "CC BY", false)),
               pubId2,
                   List.of(
-                      PublicationOaLocation.ofPmc("PMC2000002", true),
+                      PublicationOaLocation.ofPmc("PMC2000002", "CC BY", false),
                       PublicationOaLocation.ofPublisher("https://example2.com", "CC-BY-NC-4.0"))));
 
       // Then
@@ -1448,6 +1452,46 @@ class PublicationRepositoryAdapterIT {
     @DisplayName("空 Map 应该不执行任何操作")
     void should_do_nothing_for_empty_map() {
       repository.replaceOaLocationsBatch(Map.of());
+    }
+  }
+
+  @Nested
+  @DisplayName("markPmcOpenAccess 测试")
+  class MarkPmcOpenAccessTests {
+
+    @Test
+    @DisplayName("只替换 PMC 位置（同 URL 不撞唯一约束），出版商位置保留，is_oa 置 true")
+    void should_replace_only_pmc_location_and_set_is_oa() {
+      Long pubId = insertPublication("86868690", "10.8686/pmc");
+      repository.replaceOaLocationsBatch(
+          Map.of(
+              pubId,
+              List.of(
+                  PublicationOaLocation.ofPublisher("https://example.com/pmc", "CC-BY-4.0"),
+                  PublicationOaLocation.ofPmc("PMC3000001", "CC BY-NC", true).toBuilder()
+                      .isBest(false)
+                      .build())));
+      entityManager.flush();
+      entityManager.clear();
+
+      repository.markPmcOpenAccess(
+          pubId, PublicationOaLocation.ofPmc("PMC3000001", "CC BY", false));
+      entityManager.flush();
+      entityManager.clear();
+
+      var locations = oaLocationDao.findByPublicationId(pubId);
+      assertThat(locations).hasSize(2);
+      assertThat(locations)
+          .filteredOn(l -> "pubmed_central".equals(l.getLocationType()))
+          .singleElement()
+          .satisfies(
+              l -> {
+                assertThat(l.getLicense()).isEqualTo("CC BY");
+                assertThat(l.getVersionType()).isEqualTo("publishedversion");
+                assertThat(l.getUrl())
+                    .isEqualTo("https://pmc.ncbi.nlm.nih.gov/articles/PMC3000001/");
+              });
+      assertThat(jpaRepository.findById(pubId).orElseThrow().getIsOa()).isTrue();
     }
   }
 }

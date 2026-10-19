@@ -230,4 +230,12 @@ public interface PublicationRepository {
   ///
   /// @param locationsByPublicationId Map，key 为 publicationId，value 为要设置的 OA 位置列表
   void replaceOaLocationsBatch(Map<Long, List<PublicationOaLocation>> locationsByPublicationId);
+
+  /// 记录 PMC 开放获取：只替换该文献的 PMC 位置，并把文献标为开放获取。
+  ///
+  /// 其他来源的 OA 位置保留（不用会整篇清空的 `replaceOaLocationsBatch`）；`is_oa` 只会置为 `true`。
+  ///
+  /// @param publicationId 文献 ID
+  /// @param pmcLocation 新的 PMC 位置
+  void markPmcOpenAccess(long publicationId, PublicationOaLocation pmcLocation);
 }

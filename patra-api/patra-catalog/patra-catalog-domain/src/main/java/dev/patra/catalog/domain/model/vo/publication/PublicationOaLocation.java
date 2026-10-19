@@ -46,7 +46,7 @@ import lombok.Builder;
 ///     .build();
 ///
 /// // 创建 PMC 绿色 OA 位置
-/// PublicationOaLocation pmc = PublicationOaLocation.ofPmc("PMC1234567", true);
+/// PublicationOaLocation pmc = PublicationOaLocation.ofPmc("PMC1234567", "CC BY", false);
 /// ```
 ///
 /// @param oaStatus OA 状态
@@ -98,20 +98,25 @@ public record PublicationOaLocation(
 
   /// 创建 PMC 位置（绿色 OA）。
   ///
+  /// 位置级 OA 状态按 Unpaywall 口径是绿色（PMC 是仓储副本）；手稿为 `ACCEPTED`，否则 `PUBLISHED`。
+  ///
   /// @param pmcid PMC ID（如 "PMC1234567"）
-  /// @param isBest 是否最佳位置
-  /// @return PMC OA 位置
-  public static PublicationOaLocation ofPmc(String pmcid, boolean isBest) {
+  /// @param license PMC 元数据里的许可原值（如 "CC BY"），可空
+  /// @param manuscript 是否作者手稿
+  /// @return PMC OA 位置（最佳位置）
+  public static PublicationOaLocation ofPmc(String pmcid, String license, boolean manuscript) {
     return PublicationOaLocation.builder()
         .oaStatus(OaStatus.GREEN)
         .locationType(OaLocationType.PUBMED_CENTRAL)
         .repositoryName("PubMed Central")
         .repositoryId(pmcid)
         .pmcid(pmcid)
-        .url("https://www.ncbi.nlm.nih.gov/pmc/articles/" + pmcid)
-        .hostDomain("ncbi.nlm.nih.gov")
-        .versionType(VersionType.ACCEPTED)
-        .isBest(isBest)
+        .url("https://pmc.ncbi.nlm.nih.gov/articles/" + pmcid + "/")
+        .hostDomain("pmc.ncbi.nlm.nih.gov")
+        .versionType(manuscript ? VersionType.ACCEPTED : VersionType.PUBLISHED)
+        .license(license)
+        .evidenceSource("PMC")
+        .isBest(true)
         .isActive(true)
         .build();
   }

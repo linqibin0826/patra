@@ -6,6 +6,7 @@ import com.ibm.icu.text.Collator;
 import com.ibm.icu.util.ULocale;
 import dev.patra.catalog.domain.model.aggregate.PublicationAggregate;
 import dev.patra.catalog.domain.model.enums.DisambiguationStatus;
+import dev.patra.catalog.domain.model.enums.OaLocationType;
 import dev.patra.catalog.domain.model.vo.publication.ExistingPublicationKeys;
 import dev.patra.catalog.domain.model.vo.publication.MeshQualifier;
 import dev.patra.catalog.domain.model.vo.publication.PublicationAbstract;
@@ -1320,6 +1321,21 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
       batchSaveWithFlush(entities, alternativeAbstractDao);
       log.debug("批量插入翻译摘要 {} 条", entities.size());
     }
+  }
+
+  @Override
+  public void markPmcOpenAccess(long publicationId, PublicationOaLocation pmcLocation) {
+    oaLocationDao.deleteByPublicationIdAndLocationType(
+        publicationId, OaLocationType.PUBMED_CENTRAL.getCode());
+    entityManager.flush();
+
+    PublicationOaLocationEntity entity =
+        jpaConverter.toOaLocationEntity(pmcLocation, publicationId);
+    entity.setId(SnowflakeIdGenerator.getId());
+    oaLocationDao.save(entity);
+    entityManager.flush();
+
+    jpaRepository.markOpenAccess(publicationId);
   }
 
   @Override
