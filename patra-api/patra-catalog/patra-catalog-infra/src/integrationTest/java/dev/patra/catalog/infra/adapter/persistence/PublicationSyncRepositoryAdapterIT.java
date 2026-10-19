@@ -1,6 +1,7 @@
 package dev.patra.catalog.infra.adapter.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.patra.catalog.domain.model.aggregate.PublicationAggregate;
 import dev.patra.catalog.domain.model.enums.PublicationMedium;
@@ -29,11 +30,14 @@ import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.boot.persistence.autoconfigure.PersistenceExceptionTranslationAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
@@ -41,6 +45,7 @@ import org.springframework.test.context.ContextConfiguration;
 /// `PublicationSyncRepositoryAdapter` 集成测试：覆盖更新保留别的流程写入的数据。
 ///
 /// 插入后与每次 native SQL 改数之后都 `flush` + `clear`，避免托管实体掩盖或冲掉 native 写入。
+/// 导入生产同款的持久化异常转换（切片默认没有），验证 `@Repository` 把唯一约束冲突转成 Spring 异常。
 @DataJpaTest
 @ContextConfiguration(initializers = CatalogITPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -52,6 +57,7 @@ import org.springframework.test.context.ContextConfiguration;
   JsonColumnCodec.class
 })
 @ComponentScan(basePackages = "dev.patra.catalog.infra.persistence.converter")
+@ImportAutoConfiguration(PersistenceExceptionTranslationAutoConfiguration.class)
 @ActiveProfiles("test")
 @DisplayName("PublicationSyncRepositoryAdapter 集成测试")
 class PublicationSyncRepositoryAdapterIT {
@@ -261,6 +267,26 @@ class PublicationSyncRepositoryAdapterIT {
 
     assertThat(string("SELECT doi FROM cat_publication WHERE id = ?", id)).isEqualTo("10.9100/old");
     assertThat(string("SELECT title FROM cat_publication WHERE id = ?", id)).isEqualTo("T2");
+  }
+
+  @Test
+  @DisplayName("覆盖时撞 uk_doi 抛 DataIntegrityViolationException（作业的跳过策略认得）")
+  void should_translate_unique_violation_to_data_integrity_exception() {
+    PublicationAggregate a = aggregate("91000008", "10.9100/dup", "A");
+    PublicationAggregate b = aggregate("91000009", "10.9100/other", "B");
+    publicationRepository.insertAllWithAssociations(
+        List.of(
+            PublicationCompleteData.ofPublication(a), PublicationCompleteData.ofPublication(b)));
+    flushAndClear();
+
+    PublicationAggregate revisedB = aggregate("91000009", "10.9100/dup", "B2");
+    revisedB.assignId(PublicationId.of(b.getId().value()));
+
+    assertThatThrownBy(
+            () ->
+                adapter.overwriteAllWithAssociations(
+                    List.of(PublicationCompleteData.ofPublication(revisedB)), Map.of(), SYNCED_AT))
+        .isInstanceOf(DataIntegrityViolationException.class);
   }
 
   private PublicationCompleteData completeData(

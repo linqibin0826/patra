@@ -110,6 +110,23 @@ class PublicationSyncItemWriterTest {
   }
 
   @Test
+  @DisplayName("同一 chunk 里两篇要改成同一个新 DOI 时，只给第一篇，第二篇保留旧 DOI")
+  void should_keep_old_doi_when_two_items_in_chunk_claim_same_new_doi() throws Exception {
+    PublicationSyncTarget first = PublicationSyncTarget.of(7L, "1", "10.1/a", false);
+    PublicationSyncTarget second = PublicationSyncTarget.of(8L, "2", "10.1/b", false);
+
+    writer.write(
+        new Chunk<>(
+            PublicationSyncItem.of(result("1", "10.1/new", "T1"), first),
+            PublicationSyncItem.of(result("2", "10.1/new", "T2"), second)));
+
+    verify(syncRepository)
+        .overwriteAllWithAssociations(anyList(), overridesCaptor.capture(), eq(NOW));
+    assertThat(overridesCaptor.getValue()).containsExactly(Map.entry(8L, "10.1/b"));
+    assertThat(counters.snapshot(0).doiConflicts()).isEqualTo(1);
+  }
+
+  @Test
   @DisplayName("覆盖前把已有 ID 分配给聚合")
   void should_assign_existing_id_before_overwrite() throws Exception {
     PublicationSyncTarget target = PublicationSyncTarget.of(7L, "1", null, false);

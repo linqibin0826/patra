@@ -32,7 +32,7 @@ import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 
 /// `PublicationSyncRepository` 的 JPA 实现（PubMed 增量同步覆盖更新）。
 ///
@@ -45,12 +45,13 @@ import org.springframework.stereotype.Component;
 ///    抓取 / 解析任务在这期间写入的 `is_oa`、`has_full_text`；
 /// 4. `clear` 后复用 `PublicationRepositoryAdapter#writeImportOwnedAssociations` 重建子表。
 ///
-/// `IN` 参数按 5000 一批分片（PostgreSQL 绑定参数上限 65535）。
+/// `IN` 参数按 5000 一批分片（PostgreSQL 绑定参数上限 65535）。标为 `@Repository` 以启用持久化异常转换：
+/// 直接经 `EntityManager` 执行的语句撞唯一约束时转成 `DataIntegrityViolationException`，作业的跳过策略才认得。
 ///
 /// @author linqibin
 /// @since 0.11.0
 @Slf4j
-@Component
+@Repository
 @RequiredArgsConstructor
 public class PublicationSyncRepositoryAdapter implements PublicationSyncRepository {
 

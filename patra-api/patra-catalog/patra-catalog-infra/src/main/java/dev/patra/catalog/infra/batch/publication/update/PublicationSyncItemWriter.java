@@ -10,6 +10,7 @@ import dev.patra.catalog.infra.batch.publication.PublicationItemWriter;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -105,10 +106,13 @@ public class PublicationSyncItemWriter implements ItemWriter<PublicationSyncItem
     counters.addDoiConflicts(conflicts);
   }
 
-  /// 找出新 DOI 已属于别的文献的项，返回文献 ID → 旧 DOI。
+  /// 找出 DOI 冲突的项，返回文献 ID → 旧 DOI。
+  ///
+  /// 两种冲突都保留旧 DOI：新 DOI 在库里已属于别的文献；同一 chunk 里已有排在前面的项认领了同一个新 DOI
+  /// （否则第二条 UPDATE 撞 `uk_doi`，整个 chunk 失败且重跑仍会撞上）。
   private Map<Long, String> resolveDoiConflicts(
       List<PublicationCompleteData> overwrites, Map<Long, String> currentDois) {
-    Map<Long, String> newDois = new HashMap<>();
+    Map<Long, String> newDois = new LinkedHashMap<>();
     for (PublicationCompleteData data : overwrites) {
       String doi = data.publication().getDoi();
       if (doi != null && !doi.isBlank()) {
@@ -122,13 +126,15 @@ public class PublicationSyncItemWriter implements ItemWriter<PublicationSyncItem
     Map<String, Long> owners =
         syncRepository.findPublicationIdsByDois(Set.copyOf(newDois.values()));
     Map<Long, String> overrides = new HashMap<>();
+    Set<String> claimed = new HashSet<>();
     newDois.forEach(
         (publicationId, doi) -> {
           Long owner = owners.get(doi);
-          if (owner != null && !owner.equals(publicationId)) {
+          boolean ownedByOther = owner != null && !owner.equals(publicationId);
+          if (ownedByOther || !claimed.add(doi)) {
             String oldDoi = currentDois.get(publicationId);
             log.warn(
-                "新 DOI 已属于另一篇文献，保留旧 DOI：publicationId={}, newDoi={}, owner={}, oldDoi={}",
+                "新 DOI 已属于另一篇文献或被同批记录认领，保留旧 DOI：publicationId={}, newDoi={}, owner={}, oldDoi={}",
                 publicationId,
                 doi,
                 owner,
