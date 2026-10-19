@@ -51,7 +51,7 @@ class PubmedUpdateFileRepositoryAdapterIT {
     complete(1335);
     complete(1336);
     PubmedUpdateFileRef failed = ref(1337);
-    adapter.markRunning(failed, PubmedUpdateScope.EXISTING_ONLY, T0);
+    adapter.markRunning(failed, PubmedUpdateScope.EXISTING_ONLY, null, T0);
     adapter.markFailed(failed.fileName(), "boom", T0);
 
     assertThat(adapter.findLastCompletedSeq()).hasValue(1336);
@@ -67,7 +67,7 @@ class PubmedUpdateFileRepositoryAdapterIT {
   @DisplayName("失败的文件重跑时清空计数与错误、状态回到 RUNNING")
   void should_reset_counts_when_rerunning_failed_file() {
     PubmedUpdateFileRef file = ref(1337);
-    adapter.markRunning(file, PubmedUpdateScope.EXISTING_ONLY, T0);
+    adapter.markRunning(file, PubmedUpdateScope.EXISTING_ONLY, null, T0);
     adapter.markCompleted(
         file.fileName(),
         PubmedUpdateFileCounts.builder().updated(9).deleted(2).build(),
@@ -78,7 +78,7 @@ class PubmedUpdateFileRepositoryAdapterIT {
     assertThat(failed.status()).isEqualTo(PubmedUpdateFileStatus.FAILED);
     assertThat(failed.lastError()).hasSize(2000);
 
-    adapter.markRunning(file, PubmedUpdateScope.ALL, T0.plusSeconds(180));
+    adapter.markRunning(file, PubmedUpdateScope.ALL, null, T0.plusSeconds(180));
 
     PubmedUpdateFileRecord rerun = adapter.findByFileName(file.fileName()).orElseThrow();
     assertThat(rerun.status()).isEqualTo(PubmedUpdateFileStatus.RUNNING);
@@ -93,7 +93,7 @@ class PubmedUpdateFileRepositoryAdapterIT {
   @DisplayName("完成时写入全部计数")
   void should_store_counts_when_completed() {
     PubmedUpdateFileRef file = ref(1340);
-    adapter.markRunning(file, PubmedUpdateScope.EXISTING_ONLY, T0);
+    adapter.markRunning(file, PubmedUpdateScope.EXISTING_ONLY, null, T0);
     PubmedUpdateFileCounts counts = new PubmedUpdateFileCounts(1, 2, 3, 4, 5, 6, 7);
     adapter.markCompleted(file.fileName(), counts, T0.plusSeconds(30));
 
@@ -105,9 +105,20 @@ class PubmedUpdateFileRepositoryAdapterIT {
     assertThat(record.finishedAt()).isEqualTo(T0.plusSeconds(30));
   }
 
+  @Test
+  @DisplayName("记下这次处理所用的 generation，失败后仍可读回")
+  void should_keep_generation_after_failure() {
+    PubmedUpdateFileRef file = ref(1341);
+    adapter.markRunning(file, PubmedUpdateScope.EXISTING_ONLY, "replay-1", T0);
+    adapter.markFailed(file.fileName(), "boom", T0.plusSeconds(10));
+
+    assertThat(adapter.findByFileName(file.fileName()).orElseThrow().generation())
+        .isEqualTo("replay-1");
+  }
+
   private void complete(int seq) {
     PubmedUpdateFileRef file = ref(seq);
-    adapter.markRunning(file, PubmedUpdateScope.EXISTING_ONLY, T0);
+    adapter.markRunning(file, PubmedUpdateScope.EXISTING_ONLY, null, T0);
     adapter.markCompleted(file.fileName(), PubmedUpdateFileCounts.empty(), T0);
   }
 

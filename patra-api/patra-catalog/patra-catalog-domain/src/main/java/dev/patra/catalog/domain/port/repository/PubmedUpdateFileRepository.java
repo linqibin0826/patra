@@ -29,8 +29,10 @@ public interface PubmedUpdateFileRepository {
   ///
   /// @param ref 文件
   /// @param scope 导入范围
+  /// @param generation 这次所用的作业 generation，可空
   /// @param startedAt 开始时间
-  void markRunning(PubmedUpdateFileRef ref, PubmedUpdateScope scope, Instant startedAt);
+  void markRunning(
+      PubmedUpdateFileRef ref, PubmedUpdateScope scope, String generation, Instant startedAt);
 
   /// 标记文件处理成功并写入计数。
   ///

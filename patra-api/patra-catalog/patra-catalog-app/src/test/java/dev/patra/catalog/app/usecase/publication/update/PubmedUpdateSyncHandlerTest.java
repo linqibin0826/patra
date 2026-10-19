@@ -115,7 +115,7 @@ class PubmedUpdateSyncHandlerTest {
 
     verify(progressRepository).markFailed(eq("pubmed26n1336.xml.gz"), anyString(), eq(NOW));
     verify(progressRepository, never())
-        .markRunning(eq(PubmedUpdateFileRef.of("pubmed26n", 1337)), any(), any());
+        .markRunning(eq(PubmedUpdateFileRef.of("pubmed26n", 1337)), any(), any(), any());
   }
 
   @Test
@@ -123,12 +123,31 @@ class PubmedUpdateSyncHandlerTest {
   void should_replay_with_new_generation_when_from_file_already_completed() {
     when(listingPort.findLatestSeq(URL, "pubmed26n")).thenReturn(1340);
     when(progressRepository.findByFileName("pubmed26n1340.xml.gz"))
-        .thenReturn(Optional.of(record(PubmedUpdateFileStatus.COMPLETED)));
+        .thenReturn(Optional.of(record(PubmedUpdateFileStatus.COMPLETED, null)));
 
     handler.handle(command(1340, null));
 
     verify(batchPort).launchUpdateImport(paramsCaptor.capture());
     assertThat(paramsCaptor.getValue().generation()).isEqualTo("replay-" + NOW.toEpochMilli());
+  }
+
+  @Test
+  @DisplayName("重试失败的重放时沿用它记下的 generation，不回落到已完成的原作业实例")
+  void should_reuse_stored_generation_when_retrying_failed_replay() {
+    when(listingPort.findLatestSeq(URL, "pubmed26n")).thenReturn(1340);
+    when(progressRepository.findByFileName("pubmed26n1340.xml.gz"))
+        .thenReturn(Optional.of(record(PubmedUpdateFileStatus.FAILED, "replay-1")));
+
+    handler.handle(command(1340, null));
+
+    verify(batchPort).launchUpdateImport(paramsCaptor.capture());
+    assertThat(paramsCaptor.getValue().generation()).isEqualTo("replay-1");
+    verify(progressRepository)
+        .markRunning(
+            PubmedUpdateFileRef.of("pubmed26n", 1340),
+            PubmedUpdateScope.EXISTING_ONLY,
+            "replay-1",
+            NOW);
   }
 
   @Test
@@ -183,13 +202,14 @@ class PubmedUpdateSyncHandlerTest {
     return PubmedUpdateFileCounts.builder().updated(updated).build();
   }
 
-  private static PubmedUpdateFileRecord record(PubmedUpdateFileStatus status) {
+  private static PubmedUpdateFileRecord record(PubmedUpdateFileStatus status, String generation) {
     return PubmedUpdateFileRecord.builder()
         .fileName("pubmed26n1340.xml.gz")
         .fileSeq(1340)
         .status(status)
         .scope(PubmedUpdateScope.EXISTING_ONLY)
         .counts(PubmedUpdateFileCounts.empty())
+        .generation(generation)
         .build();
   }
 }

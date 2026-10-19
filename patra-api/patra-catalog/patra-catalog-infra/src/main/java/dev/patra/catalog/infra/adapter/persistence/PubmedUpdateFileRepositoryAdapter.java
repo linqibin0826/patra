@@ -54,10 +54,12 @@ public class PubmedUpdateFileRepositoryAdapter implements PubmedUpdateFileReposi
   ///
   /// @param ref 文件
   /// @param scope 导入范围
+  /// @param generation 这次所用的作业 generation，可空
   /// @param startedAt 开始时间
   @Override
   @Transactional
-  public void markRunning(PubmedUpdateFileRef ref, PubmedUpdateScope scope, Instant startedAt) {
+  public void markRunning(
+      PubmedUpdateFileRef ref, PubmedUpdateScope scope, String generation, Instant startedAt) {
     PubmedUpdateFileEntity entity =
         dao.findByFileName(ref.fileName()).orElseGet(PubmedUpdateFileRepositoryAdapter::newEntity);
     entity.setFileName(ref.fileName());
@@ -68,6 +70,7 @@ public class PubmedUpdateFileRepositoryAdapter implements PubmedUpdateFileReposi
     entity.setStartedAt(startedAt);
     entity.setFinishedAt(null);
     entity.setLastError(null);
+    entity.setJobGeneration(generation);
     dao.save(entity);
   }
 
@@ -151,6 +154,7 @@ public class PubmedUpdateFileRepositoryAdapter implements PubmedUpdateFileReposi
         .startedAt(e.getStartedAt())
         .finishedAt(e.getFinishedAt())
         .lastError(e.getLastError())
+        .generation(e.getJobGeneration())
         .build();
   }
 }

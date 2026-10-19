@@ -67,4 +67,7 @@ public class PubmedUpdateFileEntity extends ValueObjectJpaEntity {
 
   @Column(name = "last_error", length = 2000)
   private String lastError;
+
+  @Column(name = "job_generation", length = 64)
+  private String jobGeneration;
 }

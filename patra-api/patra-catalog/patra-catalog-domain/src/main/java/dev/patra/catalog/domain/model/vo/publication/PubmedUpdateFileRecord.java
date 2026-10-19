@@ -15,6 +15,7 @@ import lombok.Builder;
 /// @param startedAt 开始时间
 /// @param finishedAt 结束时间，未结束为空
 /// @param lastError 失败原因，未失败为空
+/// @param generation 这次处理所用的作业 generation，首次处理为空；失败后重试沿用它
 /// @author linqibin
 /// @since 0.11.0
 @Builder
@@ -26,4 +27,5 @@ public record PubmedUpdateFileRecord(
     PubmedUpdateFileCounts counts,
     Instant startedAt,
     Instant finishedAt,
-    String lastError) {}
+    String lastError,
+    String generation) {}

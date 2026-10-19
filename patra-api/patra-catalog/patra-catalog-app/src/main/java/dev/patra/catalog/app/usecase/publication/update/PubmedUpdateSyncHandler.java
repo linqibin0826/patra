@@ -86,7 +86,7 @@ public class PubmedUpdateSyncHandler
   private PubmedUpdateFileCounts processFile(
       PubmedUpdateSyncCommand command, PubmedUpdateFileRef file) {
     String generation = replayGeneration(command, file);
-    progressRepository.markRunning(file, command.scope(), clock.instant());
+    progressRepository.markRunning(file, command.scope(), generation, clock.instant());
     try {
       PubmedUpdateFileCounts counts =
           publicationBatchPort.launchUpdateImport(
@@ -103,16 +103,23 @@ public class PubmedUpdateSyncHandler
     }
   }
 
-  /// `fromFile` 重放已完成的文件时换新的 generation，生成新的作业实例；其余为 `null`。
+  /// 决定这次处理所用的作业 generation。
+  ///
+  /// `fromFile` 重放已完成的文件时换新的 generation，生成新的作业实例；未完成的文件沿用上次
+  /// 记下的 generation，续跑真正失败的那个实例（否则失败的重放会回落到已完成的原实例而被跳过）；
+  /// 从未处理过的文件为 `null`。
+  ///
+  /// @param command 命令
+  /// @param file 文件
+  /// @return generation，可空
   private String replayGeneration(PubmedUpdateSyncCommand command, PubmedUpdateFileRef file) {
-    if (command.fromFile() == null) {
-      return null;
-    }
-    boolean completed =
-        progressRepository
-            .findByFileName(file.fileName())
-            .map(r -> r.status() == PubmedUpdateFileStatus.COMPLETED)
-            .orElse(false);
-    return completed ? "replay-" + clock.millis() : null;
+    return progressRepository
+        .findByFileName(file.fileName())
+        .map(
+            r ->
+                command.fromFile() != null && r.status() == PubmedUpdateFileStatus.COMPLETED
+                    ? "replay-" + clock.millis()
+                    : r.generation())
+        .orElse(null);
   }
 }

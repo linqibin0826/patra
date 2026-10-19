@@ -23,6 +23,7 @@ CREATE TABLE cat_pubmed_update_file (
     started_at            TIMESTAMPTZ(6)  NULL,
     finished_at           TIMESTAMPTZ(6)  NULL,
     last_error            VARCHAR(2000)   NULL,
+    job_generation        VARCHAR(64)     NULL,
     record_remarks        JSONB           NULL,
     version               BIGINT          NOT NULL DEFAULT 0,
     ip_address            BYTEA           NULL,
