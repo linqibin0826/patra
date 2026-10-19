@@ -38,7 +38,10 @@ import lombok.Builder;
 /// @param source 数据来源（人类可读，如 "PubMed"；来自 provenance_code）
 /// @param fullTextUrl 原文链接（cat_publication_metadata.full_text_url，可为 null）
 /// @param bookmarks 收藏数（无用户系统，恒为 0）
-/// @param estimatedReadMin 预估阅读分钟数（无全文/字数数据，当前恒为 null）
+/// @param estimatedReadMin 预估阅读分钟数 `ceil(字数 / 230)`，不可读全文时为 null
+/// @param hasFullText 是否可读全文（全文接口 `/fulltext` 有正文）
+/// @param hasPdf PDF 是否可下载
+/// @param pdfSizeBytes PDF 字节数（Long 经全局转换输出为字符串），不可下载时为 null
 /// @author linqibin
 /// @since 0.1.0
 @Builder
@@ -73,7 +76,10 @@ public record PortalPublicationDetailResponse(
     String source,
     String fullTextUrl,
     Integer bookmarks,
-    Integer estimatedReadMin) {
+    Integer estimatedReadMin,
+    Boolean hasFullText,
+    Boolean hasPdf,
+    Long pdfSizeBytes) {
 
   public PortalPublicationDetailResponse {
     abstractSections = abstractSections != null ? List.copyOf(abstractSections) : List.of();

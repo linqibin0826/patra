@@ -42,11 +42,16 @@ public interface PublicationDetailDao extends JpaRepository<PublicationEntity, L
         p.conflict_of_interest AS "conflictOfInterest", p.is_oa AS "isOa", p.oa_status AS "oaStatus",
         p.provenance_code AS "provenanceCode", m.full_text_url AS "fullTextUrl",
         (SELECT string_agg(pt.type_value, E'\\x1f' ORDER BY pt.type_order ASC NULLS LAST, pt.id ASC)
-           FROM cat_publication_type pt WHERE pt.publication_id = p.id) AS "publicationTypesAgg"
+           FROM cat_publication_type pt WHERE pt.publication_id = p.id) AS "publicationTypesAgg",
+        f.status AS "fullTextStatus", (f.pdf_object_key IS NOT NULL) AS "hasPdfObject",
+        f.pdf_size AS "pdfSize", f.word_count AS "wordCount",
+        EXISTS (SELECT 1 FROM cat_publication_type rt
+                 WHERE rt.publication_id = p.id AND rt.type_id = 'D016441') AS "retracted"
       FROM cat_publication p
       LEFT JOIN cat_venue v ON v.id = p.venue_id
       LEFT JOIN cat_publication_abstract a ON a.publication_id = p.id
       LEFT JOIN cat_publication_metadata m ON m.publication_id = p.id
+      LEFT JOIN cat_publication_fulltext f ON f.publication_id = p.id
       WHERE p.id = :id AND p.deleted_at IS NULL
       """,
       nativeQuery = true)

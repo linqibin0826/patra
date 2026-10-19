@@ -1,5 +1,7 @@
 package dev.patra.catalog.infra.adapter.read;
 
+import dev.patra.catalog.domain.model.enums.FullTextStatus;
+import dev.patra.catalog.domain.model.read.portal.FullTextAvailability;
 import dev.patra.catalog.domain.model.read.portal.PublicationDetailReadModel;
 import dev.patra.catalog.domain.model.read.portal.PublicationDetailReadModel.AbstractSectionView;
 import dev.patra.catalog.domain.model.read.portal.PublicationDetailReadModel.AuthorView;
@@ -49,6 +51,13 @@ public class PublicationDetailReadAdapter implements PublicationDetailReadPort {
               List<String> types = splitTypes(main.getPublicationTypesAgg());
               EvidenceLevel evidenceLevel = EvidenceLevel.classify(types);
               String primaryType = types.isEmpty() ? null : types.get(0);
+              FullTextAvailability availability =
+                  FullTextAvailability.of(
+                      main.getFullTextStatus() == null
+                          ? null
+                          : FullTextStatus.valueOf(main.getFullTextStatus()),
+                      Boolean.TRUE.equals(main.getHasPdfObject()),
+                      Boolean.TRUE.equals(main.getRetracted()));
 
               return PublicationDetailReadModel.builder()
                   .id(main.getId())
@@ -75,6 +84,10 @@ public class PublicationDetailReadAdapter implements PublicationDetailReadPort {
                   .oaStatus(main.getOaStatus())
                   .provenanceCode(main.getProvenanceCode())
                   .fullTextUrl(main.getFullTextUrl())
+                  .hasFullText(availability.readable())
+                  .hasPdf(availability.pdfDownloadable())
+                  .pdfSizeBytes(availability.pdfDownloadable() ? main.getPdfSize() : null)
+                  .wordCount(main.getWordCount())
                   .authors(mapAuthors(publicationDetailDao.findAuthorsByPublicationId(id)))
                   .meshHeadings(
                       mapMeshHeadings(publicationDetailDao.findMeshHeadingsByPublicationId(id)))

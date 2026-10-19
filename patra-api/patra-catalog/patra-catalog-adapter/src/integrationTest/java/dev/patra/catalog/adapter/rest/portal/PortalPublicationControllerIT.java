@@ -207,8 +207,47 @@ class PortalPublicationControllerIT {
         .isEqualTo(0)
         .jsonPath("$.estimatedReadMin")
         .isEmpty()
+        .jsonPath("$.hasFullText")
+        .isEqualTo(false)
+        .jsonPath("$.hasPdf")
+        .isEqualTo(false)
+        .jsonPath("$.pdfSizeBytes")
+        .isEmpty()
         .jsonPath("$.pmcid")
         .isEqualTo("PMC123456");
+  }
+
+  @Test
+  @DisplayName("可读全文时给出阅读时长 ceil(字数 / 230)、可读与 PDF 标志和 PDF 大小")
+  void should_return_estimated_read_min_when_full_text_readable() {
+    PublicationDetailReadModel model =
+        PublicationDetailReadModel.builder()
+            .id(1L)
+            .title("T")
+            .evidenceLevel(EvidenceLevel.RANDOMIZED_CONTROLLED_TRIAL)
+            .provenanceCode("PUBMED")
+            .hasFullText(true)
+            .hasPdf(true)
+            .pdfSizeBytes(2_621_440L)
+            .wordCount(5230)
+            .build();
+    when(portalPublicationDetailQueryService.getById(1L)).thenReturn(model);
+
+    restClient
+        .get()
+        .uri("/portal/publications/1")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .jsonPath("$.estimatedReadMin")
+        .isEqualTo(23)
+        .jsonPath("$.hasFullText")
+        .isEqualTo(true)
+        .jsonPath("$.hasPdf")
+        .isEqualTo(true)
+        .jsonPath("$.pdfSizeBytes")
+        .isEqualTo("2621440");
   }
 
   @Test

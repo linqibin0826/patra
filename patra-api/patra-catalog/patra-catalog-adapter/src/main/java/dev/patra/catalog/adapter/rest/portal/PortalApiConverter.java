@@ -281,7 +281,10 @@ public class PortalApiConverter {
         .source(toSource(model.provenanceCode()))
         .fullTextUrl(model.fullTextUrl())
         .bookmarks(0) // 无用户系统，恒为 0
-        .estimatedReadMin(null) // TODO(read-time)：接入原文采集/字数后估算阅读时长
+        .estimatedReadMin(estimatedReadMin(model.hasFullText(), model.wordCount()))
+        .hasFullText(model.hasFullText())
+        .hasPdf(model.hasPdf())
+        .pdfSizeBytes(model.pdfSizeBytes())
         .build();
   }
 
@@ -292,5 +295,17 @@ public class PortalApiConverter {
     // 钳到 0：lastSyncedAt 若晚于当前时间（时钟偏移等），避免负分钟透传到响应
     long minutes = Duration.between(lastSyncedAt, Instant.now()).toMinutes();
     return (int) Math.max(0L, minutes);
+  }
+
+  /// 阅读时长 `ceil(字数 / 230)`，不可读全文或字数未知时为 null。
+  ///
+  /// @param readable 是否可读全文
+  /// @param wordCount 字数
+  /// @return 分钟数
+  static Integer estimatedReadMin(boolean readable, Integer wordCount) {
+    if (!readable || wordCount == null) {
+      return null;
+    }
+    return (int) Math.ceil(wordCount / 230.0);
   }
 }
