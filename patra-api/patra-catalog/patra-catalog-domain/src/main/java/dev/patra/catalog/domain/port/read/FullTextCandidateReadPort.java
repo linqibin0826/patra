@@ -1,6 +1,7 @@
 package dev.patra.catalog.domain.port.read;
 
 import dev.patra.catalog.domain.model.read.fulltext.FetchCandidate;
+import dev.patra.catalog.domain.model.read.fulltext.ParseCandidate;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -29,4 +30,15 @@ public interface FullTextCandidateReadPort {
   /// @param publicationIds 文献 ID
   /// @return 候选
   List<FetchCandidate> findByPublicationIds(Collection<Long> publicationIds);
+
+  /// 一批解析候选，按 `publication_id` 升序 keyset。
+  ///
+  /// 候选：`FETCHED`；或 `PARSED` / `PARSE_FAILED` / `UNAVAILABLE(NO_BODY)` 且解析器版本低于当前版本。
+  /// 已软删除的文献排除。
+  ///
+  /// @param parserVersion 当前解析器版本
+  /// @param lastPublicationId keyset 游标
+  /// @param limit 批量大小
+  /// @return 候选
+  List<ParseCandidate> findParseCandidates(int parserVersion, long lastPublicationId, int limit);
 }

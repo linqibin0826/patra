@@ -1,8 +1,11 @@
 package dev.patra.catalog.infra.adapter.read;
 
 import dev.patra.catalog.domain.model.enums.FullTextStatus;
+import dev.patra.catalog.domain.model.enums.FullTextUnavailableReason;
 import dev.patra.catalog.domain.model.read.fulltext.FetchCandidate;
+import dev.patra.catalog.domain.model.read.fulltext.ParseCandidate;
 import dev.patra.catalog.domain.port.read.FullTextCandidateReadPort;
+import dev.patra.catalog.infra.persistence.entity.PublicationFullTextEntity;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.sql.Date;
@@ -114,5 +117,49 @@ public class FullTextCandidateReadAdapter implements FullTextCandidateReadPort {
       case Date date -> date.toLocalDate();
       default -> LocalDate.parse(value.toString());
     };
+  }
+
+  /// 一批解析候选（JPQL 取实体，`media` 由 JSONB 映射；`@SoftDelete` 自动排除已删除的文献）。
+  ///
+  /// @param parserVersion 当前解析器版本
+  /// @param lastPublicationId keyset 游标
+  /// @param limit 批量大小
+  /// @return 候选
+  @Override
+  public List<ParseCandidate> findParseCandidates(
+      int parserVersion, long lastPublicationId, int limit) {
+    return em
+        .createQuery(
+            """
+            SELECT f FROM PublicationFullTextEntity f
+            WHERE f.publicationId > :lastId
+              AND EXISTS (SELECT 1 FROM PublicationEntity p WHERE p.id = f.publicationId)
+              AND (f.status = :fetched
+                   OR (f.status IN (:parsed, :parseFailed) AND f.parserVersion < :version)
+                   OR (f.status = :unavailable AND f.unavailableReason = :noBody
+                       AND f.parserVersion < :version))
+            ORDER BY f.publicationId ASC
+            """,
+            PublicationFullTextEntity.class)
+        .setParameter("lastId", lastPublicationId)
+        .setParameter("fetched", FullTextStatus.FETCHED)
+        .setParameter("parsed", FullTextStatus.PARSED)
+        .setParameter("parseFailed", FullTextStatus.PARSE_FAILED)
+        .setParameter("unavailable", FullTextStatus.UNAVAILABLE)
+        .setParameter("noBody", FullTextUnavailableReason.NO_BODY)
+        .setParameter("version", parserVersion)
+        .setMaxResults(limit)
+        .getResultList()
+        .stream()
+        .map(
+            f ->
+                ParseCandidate.builder()
+                    .publicationId(f.getPublicationId())
+                    .pmcid(f.getPmcid())
+                    .pmcVersion(f.getPmcVersion())
+                    .objectPrefix(f.getObjectPrefix())
+                    .media(f.getMedia())
+                    .build())
+        .toList();
   }
 }

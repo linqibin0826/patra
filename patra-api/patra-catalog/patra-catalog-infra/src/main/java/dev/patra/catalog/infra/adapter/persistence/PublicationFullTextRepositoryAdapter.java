@@ -1,14 +1,17 @@
 package dev.patra.catalog.infra.adapter.persistence;
 
 import dev.patra.catalog.domain.model.vo.fulltext.PublicationFullText;
+import dev.patra.catalog.domain.model.vo.fulltext.body.FullTextBody;
 import dev.patra.catalog.domain.port.repository.PublicationFullTextRepository;
 import dev.patra.catalog.infra.persistence.dao.PublicationFullTextDao;
 import dev.patra.catalog.infra.persistence.entity.PublicationFullTextEntity;
 import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
+import jakarta.persistence.EntityManager;
 import java.util.ArrayList;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.json.JsonMapper;
 
 /// `PublicationFullTextRepository` 的 JPA 实现。
 ///
@@ -22,6 +25,8 @@ import org.springframework.stereotype.Component;
 public class PublicationFullTextRepositoryAdapter implements PublicationFullTextRepository {
 
   private final PublicationFullTextDao dao;
+  private final EntityManager entityManager;
+  private final JsonMapper jsonMapper;
 
   /// 按文献 ID 查全文记录。
   ///
@@ -93,5 +98,42 @@ public class PublicationFullTextRepositoryAdapter implements PublicationFullText
         .lastError(e.getLastError())
         .nextAttemptAt(e.getNextAttemptAt())
         .build();
+  }
+
+  /// 正文表没有实体：用 native `INSERT … ON CONFLICT (publication_id) DO UPDATE` 写入，
+  /// 正文以注入的 `JsonMapper` 序列化。
+  ///
+  /// @param publicationId 文献 ID
+  /// @param body 正文
+  /// @param parserVersion 解析器版本
+  @Override
+  public void saveBody(long publicationId, FullTextBody body, int parserVersion) {
+    entityManager
+        .createNativeQuery(
+            """
+            INSERT INTO cat_publication_fulltext_body (publication_id, body, parser_version)
+            VALUES (:id, CAST(:body AS jsonb), :version)
+            ON CONFLICT (publication_id) DO UPDATE
+               SET body = EXCLUDED.body, parser_version = EXCLUDED.parser_version, updated_at = now()
+            """)
+        .setParameter("id", publicationId)
+        .setParameter("body", jsonMapper.writeValueAsString(body))
+        .setParameter("version", parserVersion)
+        .executeUpdate();
+  }
+
+  /// 更新 `has_full_text`；没有 metadata 行时什么也不做。
+  ///
+  /// @param publicationId 文献 ID
+  /// @param value 是否有全文
+  @Override
+  public void setHasFullText(long publicationId, boolean value) {
+    entityManager
+        .createQuery(
+            "UPDATE PublicationMetadataEntity m SET m.hasFullText = :value"
+                + " WHERE m.publicationId = :id")
+        .setParameter("value", value)
+        .setParameter("id", publicationId)
+        .executeUpdate();
   }
 }

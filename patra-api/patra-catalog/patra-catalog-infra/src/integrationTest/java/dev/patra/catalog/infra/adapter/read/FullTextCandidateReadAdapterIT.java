@@ -4,8 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.catalog.domain.model.enums.FullTextStatus;
 import dev.patra.catalog.domain.model.read.fulltext.FetchCandidate;
+import dev.patra.catalog.domain.model.read.fulltext.ParseCandidate;
+import dev.patra.catalog.domain.model.vo.fulltext.FullTextMedia;
 import dev.patra.catalog.infra.config.CatalogITPostgreSQLContainerInitializer;
 import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
+import dev.patra.tool.jpa.autoconfigure.PatraHibernatePropertiesCustomizer;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -15,6 +18,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -25,7 +29,12 @@ import org.springframework.test.context.ContextConfiguration;
 @DataJpaTest
 @ContextConfiguration(initializers = CatalogITPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({FullTextCandidateReadAdapter.class, JpaAuditingConfiguration.class})
+@Import({
+  FullTextCandidateReadAdapter.class,
+  JpaAuditingConfiguration.class,
+  PatraHibernatePropertiesCustomizer.class,
+  JacksonAutoConfiguration.class
+})
 @ActiveProfiles("test")
 @DisplayName("FullTextCandidateReadAdapter 集成测试")
 class FullTextCandidateReadAdapterIT {
@@ -125,6 +134,50 @@ class FullTextCandidateReadAdapterIT {
               assertThat(c.pmcid()).isEqualTo("PMC31");
               assertThat(c.currentStatus()).isEqualTo(FullTextStatus.PARSED);
             });
+  }
+
+  @Test
+  @DisplayName("解析候选：FETCHED，以及解析器版本落后的 PARSED、PARSE_FAILED、NO_BODY")
+  void should_include_outdated_parsed_failed_and_no_body() {
+    long fetched = publication("PMC41", false);
+    fullText(fetched, "PMC41", "FETCHED", null, 0, null);
+    long parsedOld = publication("PMC42", false);
+    fullText(parsedOld, "PMC42", "PARSED", null, 0, null);
+    parserVersion(parsedOld, 1);
+    long parsedCurrent = publication("PMC43", false);
+    fullText(parsedCurrent, "PMC43", "PARSED", null, 0, null);
+    parserVersion(parsedCurrent, 2);
+    long failedOld = publication("PMC44", false);
+    fullText(failedOld, "PMC44", "PARSE_FAILED", null, 0, null);
+    parserVersion(failedOld, 1);
+    long noBodyOld = publication("PMC45", false);
+    fullText(noBodyOld, "PMC45", "UNAVAILABLE", "NO_BODY", 0, null);
+    parserVersion(noBodyOld, 1);
+    long notInBucket = publication("PMC46", false);
+    fullText(notInBucket, "PMC46", "UNAVAILABLE", "NOT_IN_BUCKET", 1, PAST);
+    long deletedFetched = publication("PMC47", true);
+    fullText(deletedFetched, "PMC47", "FETCHED", null, 0, null);
+    jdbc.update(
+        "UPDATE cat_publication_fulltext SET pmc_version = 'PMC41.2', object_prefix = 'pmc/PMC41/PMC41.2/',"
+            + " media = '[{\"name\":\"g1.webp\",\"width\":3,\"height\":2}]'::jsonb WHERE publication_id = ?",
+        fetched);
+
+    List<ParseCandidate> candidates = adapter.findParseCandidates(2, 0L, 100);
+
+    assertThat(candidates)
+        .extracting(ParseCandidate::publicationId)
+        .containsExactly(fetched, parsedOld, failedOld, noBodyOld);
+    ParseCandidate first = candidates.getFirst();
+    assertThat(first.pmcVersion()).isEqualTo("PMC41.2");
+    assertThat(first.objectPrefix()).isEqualTo("pmc/PMC41/PMC41.2/");
+    assertThat(first.media()).containsExactly(FullTextMedia.of("g1.webp", 3, 2));
+  }
+
+  private void parserVersion(long publicationId, int version) {
+    jdbc.update(
+        "UPDATE cat_publication_fulltext SET parser_version = ? WHERE publication_id = ?",
+        version,
+        publicationId);
   }
 
   private long publication(String pmcid, boolean deleted) {
