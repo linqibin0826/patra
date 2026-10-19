@@ -941,6 +941,47 @@ class PubmedArticleItemProcessorTest {
     }
 
     @Test
+    @DisplayName("PMC 放开日期应映射为 pmcrelease 类型的非主日期")
+    void should_map_pmc_release_to_date_type_pmc_release() throws Exception {
+      // given
+      CanonicalPublication publication =
+          CanonicalPublication.builder()
+              .identifiers(
+                  List.of(
+                      Identifier.builder()
+                          .type(PublicationIdentifierType.PMID)
+                          .value(PMID)
+                          .build()))
+              .title("Test Article with PMC release")
+              .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
+              .dates(
+                  PublicationDates.builder()
+                      .published(LocalDate.of(2026, 1, 1))
+                      .pmcRelease(LocalDate.of(2027, 1, 15))
+                      .build())
+              .build();
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result.dates())
+          .filteredOn(d -> "pmcrelease".equals(d.dateType()))
+          .singleElement()
+          .satisfies(
+              d -> {
+                assertThat(d.year()).isEqualTo(2027);
+                assertThat(d.month()).isEqualTo(1);
+                assertThat(d.day()).isEqualTo(15);
+                assertThat(d.isPrimary()).isFalse();
+              });
+    }
+
+    @Test
     @DisplayName("无日期数据时 dates 应该为空列表")
     void should_return_empty_dates_when_no_date_data() throws Exception {
       // given - 创建不带日期的文献

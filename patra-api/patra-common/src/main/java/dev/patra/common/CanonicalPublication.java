@@ -479,6 +479,9 @@ public class CanonicalPublication {
     /// 接受日期（录用日期）。
     LocalDate accepted;
 
+    /// PMC 放开日期（PubMed `History` 里 `PubStatus="pmc-release"`，禁发期结束、PMC 全文可公开的日期）。
+    LocalDate pmcRelease;
+
     /// Jackson 3.x Builder 配置。
     @JsonPOJOBuilder(withPrefix = "")
     public static class PublicationDatesBuilder {}
