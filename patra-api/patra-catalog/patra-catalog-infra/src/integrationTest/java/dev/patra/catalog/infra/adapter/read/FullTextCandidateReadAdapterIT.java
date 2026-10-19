@@ -54,69 +54,91 @@ class FullTextCandidateReadAdapterIT {
   }
 
   @Test
-  @DisplayName("取出四类候选并排除不该抓的，按 publication_id 升序")
-  void should_select_four_candidate_classes_and_exclude_others() {
+  @DisplayName("新文献：有 PMCID、没有全文记录、未删除，按 publication_id keyset")
+  void should_find_new_candidates_without_record() {
     long noRecord = publication("PMC1", false);
-    long failedDue = publication("PMC2", false);
-    fullText(failedDue, "PMC2", "FETCH_FAILED", null, 2, PAST);
-    long failedExhausted = publication("PMC3", false);
-    fullText(failedExhausted, "PMC3", "FETCH_FAILED", null, 8, PAST);
-    long failedNotDue = publication("PMC4", false);
-    fullText(failedNotDue, "PMC4", "FETCH_FAILED", null, 1, FUTURE);
-    long notOpenDue = publication("PMC5", false);
-    fullText(notOpenDue, "PMC5", "UNAVAILABLE", "NOT_OPEN_ACCESS", 3, PAST);
-    long retracted = publication("PMC6", false);
-    fullText(retracted, "PMC6", "UNAVAILABLE", "RETRACTED", 1, null);
-    long pmcidChanged = publication("PMC7NEW", false);
-    fullText(pmcidChanged, "PMC7OLD", "PARSED", null, 0, null);
-    long deleted = publication("PMC8", true);
-    long parsed = publication("PMC9", false);
-    fullText(parsed, "PMC9", "PARSED", null, 0, null);
+    long withRecord = publication("PMC2", false);
+    fullText(withRecord, "PMC2", "PARSED", null, 0, null);
+    long deleted = publication("PMC3", true);
+    long second = publication("PMC4", false);
+
+    assertThat(adapter.findNewFetchCandidates(0L, 1))
+        .extracting(FetchCandidate::publicationId)
+        .containsExactly(noRecord);
+    assertThat(adapter.findNewFetchCandidates(noRecord, 10))
+        .extracting(FetchCandidate::publicationId)
+        .containsExactly(second)
+        .doesNotContain(withRecord, deleted);
+    assertThat(adapter.findNewFetchCandidates(0L, 10).getFirst().currentStatus()).isNull();
+  }
+
+  @Test
+  @DisplayName("到期：抓取失败未超上限、暂不可用到期，带当前状态、次数与放开日期")
+  void should_find_due_candidates() {
+    long failedDue = publication("PMC11", false);
+    fullText(failedDue, "PMC11", "FETCH_FAILED", null, 2, PAST);
+    long failedExhausted = publication("PMC12", false);
+    fullText(failedExhausted, "PMC12", "FETCH_FAILED", null, 8, PAST);
+    long failedNotDue = publication("PMC13", false);
+    fullText(failedNotDue, "PMC13", "FETCH_FAILED", null, 1, FUTURE);
+    long notOpenDue = publication("PMC14", false);
+    fullText(notOpenDue, "PMC14", "UNAVAILABLE", "NOT_OPEN_ACCESS", 3, PAST);
+    long retracted = publication("PMC15", false);
+    fullText(retracted, "PMC15", "UNAVAILABLE", "RETRACTED", 1, null);
+    long deleted = publication("PMC16", true);
+    fullText(deleted, "PMC16", "FETCH_FAILED", null, 1, PAST);
     jdbc.update(
         "INSERT INTO cat_publication_date (id, publication_id, date_type, date_value, year, month, day)"
             + " VALUES (?, ?, 'pmcrelease', '2027-01-15', 2027, 1, 15)",
         ++idSeq,
         notOpenDue);
 
-    List<FetchCandidate> candidates = adapter.findFetchCandidates(NOW, 8, 0L, 100);
+    List<FetchCandidate> due = adapter.findDueFetchCandidates(NOW, 8, 100);
 
-    assertThat(candidates)
+    assertThat(due)
         .extracting(FetchCandidate::publicationId)
-        .containsExactly(noRecord, failedDue, notOpenDue, pmcidChanged)
-        .doesNotContain(failedExhausted, failedNotDue, retracted, deleted, parsed);
-    assertThat(candidates.get(0).currentStatus()).isNull();
-    assertThat(candidates.get(1).currentStatus()).isEqualTo(FullTextStatus.FETCH_FAILED);
-    assertThat(candidates.get(1).attemptCount()).isEqualTo(2);
-    assertThat(candidates.get(2).pmcReleaseDate()).isEqualTo(LocalDate.of(2027, 1, 15));
-    assertThat(candidates.get(3).pmcid()).isEqualTo("PMC7NEW");
+        .containsExactlyInAnyOrder(failedDue, notOpenDue);
+    FetchCandidate failed =
+        due.stream().filter(c -> c.publicationId() == failedDue).findFirst().orElseThrow();
+    assertThat(failed.currentStatus()).isEqualTo(FullTextStatus.FETCH_FAILED);
+    assertThat(failed.attemptCount()).isEqualTo(2);
+    FetchCandidate notOpen =
+        due.stream().filter(c -> c.publicationId() == notOpenDue).findFirst().orElseThrow();
+    assertThat(notOpen.pmcReleaseDate()).isEqualTo(LocalDate.of(2027, 1, 15));
   }
 
   @Test
-  @DisplayName("keyset 游标与批量大小")
-  void should_page_by_last_publication_id() {
-    long first = publication("PMC11", false);
-    long second = publication("PMC12", false);
-    long third = publication("PMC13", false);
+  @DisplayName("PMCID 变了：与第一条 pmc 标识符比较，未到下次时间的不取")
+  void should_find_pmcid_changed_candidates() {
+    long changed = publication("PMC21NEW", false);
+    fullText(changed, "PMC21OLD", "PARSED", null, 0, null);
+    long changedNotDue = publication("PMC22NEW", false);
+    fullText(changedNotDue, "PMC22OLD", "PARSED", null, 1, FUTURE);
+    long twoIdentifiers = publication("PMC23", false);
+    fullText(twoIdentifiers, "PMC23", "PARSED", null, 0, null);
+    jdbc.update(
+        "INSERT INTO cat_publication_identifier (id, publication_id, type, identifier_value, source)"
+            + " VALUES (?, ?, 'pmc', 'PMC23OTHER', 'Crossref')",
+        ++idSeq,
+        twoIdentifiers);
 
-    assertThat(adapter.findFetchCandidates(NOW, 8, first, 1))
-        .extracting(FetchCandidate::publicationId)
-        .containsExactly(second);
-    assertThat(adapter.findFetchCandidates(NOW, 8, second, 10))
-        .extracting(FetchCandidate::publicationId)
-        .containsExactly(third);
+    List<FetchCandidate> candidates = adapter.findPmcidChangedCandidates(NOW, 0L, 100);
+
+    assertThat(candidates).extracting(FetchCandidate::publicationId).containsExactly(changed);
+    assertThat(candidates.getFirst().pmcid()).isEqualTo("PMC21NEW");
   }
 
   @Test
   @DisplayName("同一篇有两条 pmc 标识符时只出现一次")
   void should_deduplicate_publication_with_two_pmc_identifiers() {
-    long id = publication("PMC21", false);
+    long id = publication("PMC31", false);
     jdbc.update(
         "INSERT INTO cat_publication_identifier (id, publication_id, type, identifier_value, source)"
-            + " VALUES (?, ?, 'pmc', 'PMC21', 'Crossref')",
+            + " VALUES (?, ?, 'pmc', 'PMC31', 'Crossref')",
         ++idSeq,
         id);
 
-    assertThat(adapter.findFetchCandidates(NOW, 8, 0L, 10))
+    assertThat(adapter.findNewFetchCandidates(0L, 10))
         .extracting(FetchCandidate::publicationId)
         .containsExactly(id);
   }
