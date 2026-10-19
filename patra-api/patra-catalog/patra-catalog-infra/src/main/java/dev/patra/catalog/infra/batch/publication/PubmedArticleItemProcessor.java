@@ -55,8 +55,10 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -638,23 +640,30 @@ public class PubmedArticleItemProcessor
 
   /// 构建限定词数据。
   ///
+  /// PubMed 偶尔在同一标引下把同一限定词列两次（如 PMID 41601277 的 Glycine/Q000031，
+  /// 第二次带 `AutoHM="Y"`），这里按 UI 合并：任一次为主要主题即为主要主题，
+  /// 顺序取首次出现的位置。
+  ///
   /// @param qualifierNames 限定词列表
-  /// @return 限定词数据列表（保留原始顺序）
+  /// @return 限定词数据列表（按 UI 去重，保留首次出现的顺序）
   private List<QualifierData> buildQualifierData(List<QualifierName> qualifierNames) {
     if (qualifierNames == null || qualifierNames.isEmpty()) {
       return List.of();
     }
 
-    List<QualifierData> result = new ArrayList<>();
-    int order = 1;
+    Map<String, Boolean> majorTopicByUi = new LinkedHashMap<>();
     for (QualifierName qualifier : qualifierNames) {
       if (qualifier == null || qualifier.getUi() == null) {
         continue;
       }
+      majorTopicByUi.merge(
+          qualifier.getUi(), Boolean.TRUE.equals(qualifier.getMajorTopic()), Boolean::logicalOr);
+    }
 
-      result.add(
-          QualifierData.of(
-              qualifier.getUi(), Boolean.TRUE.equals(qualifier.getMajorTopic()), order++));
+    List<QualifierData> result = new ArrayList<>();
+    int order = 1;
+    for (Map.Entry<String, Boolean> entry : majorTopicByUi.entrySet()) {
+      result.add(QualifierData.of(entry.getKey(), entry.getValue(), order++));
     }
 
     return result;

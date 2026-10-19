@@ -23,6 +23,7 @@ import dev.patra.catalog.domain.port.gateway.VenueInstanceGateway;
 import dev.patra.catalog.domain.port.lookup.FunderLookupPort;
 import dev.patra.catalog.domain.port.lookup.LanguageLookupPort;
 import dev.patra.catalog.domain.port.lookup.VenueLookupPort;
+import dev.patra.catalog.infra.batch.publication.PublicationImportResult.QualifierData;
 import dev.patra.common.CanonicalPublication;
 import dev.patra.common.CanonicalPublication.Abstract;
 import dev.patra.common.CanonicalPublication.AbstractSection;
@@ -491,6 +492,50 @@ class PubmedArticleItemProcessorTest {
       assertThat(heading.hasQualifiers()).isTrue();
       assertThat(heading.qualifiers()).hasSize(1);
       assertThat(heading.qualifiers().getFirst().qualifierUi()).isEqualTo("Q000379");
+    }
+
+    @Test
+    @DisplayName("同一标引下重复的限定词应该按 UI 去重并保留首次出现的顺序")
+    void should_deduplicate_qualifiers_by_ui_when_same_qualifier_listed_twice() throws Exception {
+      // given：PMID 41601277 的 Glycine 标引把 Q000031 列了两次（第二次带 AutoHM="Y"）
+      CanonicalPublication publication =
+          createPublicationWithQualifiers(
+              qualifier("Q000031", false),
+              qualifier("Q000627", false),
+              qualifier("Q000031", false));
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result.meshHeadings().getFirst().qualifiers())
+          .containsExactly(
+              QualifierData.of("Q000031", false, 1), QualifierData.of("Q000627", false, 2));
+    }
+
+    @Test
+    @DisplayName("重复限定词任一次标为主要主题时，去重后应该标为主要主题")
+    void should_mark_deduplicated_qualifier_major_when_any_occurrence_is_major() throws Exception {
+      // given
+      CanonicalPublication publication =
+          createPublicationWithQualifiers(
+              qualifier("Q000031", false), qualifier("Q000627", false), qualifier("Q000031", true));
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+
+      // when
+      PublicationImportResult result = processor.process(publication);
+
+      // then
+      assertThat(result.meshHeadings().getFirst().qualifiers())
+          .containsExactly(
+              QualifierData.of("Q000031", true, 1), QualifierData.of("Q000627", false, 2));
     }
 
     @Test
@@ -1907,6 +1952,33 @@ class PubmedArticleItemProcessorTest {
                                 .build()))
                     .build()))
         .build();
+  }
+
+  /// 创建只有一个标引、带指定限定词的测试文献。
+  private CanonicalPublication createPublicationWithQualifiers(QualifierName... qualifiers) {
+    return CanonicalPublication.builder()
+        .identifiers(
+            List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build()))
+        .title("Test Article with Qualifiers")
+        .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
+        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .meshHeadings(
+            List.of(
+                MeshHeading.builder()
+                    .descriptorName(
+                        DescriptorName.builder()
+                            .ui("D005998")
+                            .term("Glycine")
+                            .majorTopic(false)
+                            .build())
+                    .qualifierNames(List.of(qualifiers))
+                    .build()))
+        .build();
+  }
+
+  /// 创建限定词。
+  private QualifierName qualifier(String ui, boolean majorTopic) {
+    return QualifierName.builder().ui(ui).term(ui).majorTopic(majorTopic).build();
   }
 
   /// 创建包含关键词的测试文献。
