@@ -33,7 +33,7 @@ Patra 的 API 网关：所有外部请求的统一入口，按路径前缀路由
 patra-gateway-boot/
 ├── src/main/java/dev/linqibin/patra/gateway/
 │   ├── PatraGatewayApplication.java              # 启动类
-│   ├── config/GatewayConfiguration.java          # HTTP 客户端不谈压缩
+│   ├── config/GatewayConfiguration.java          # HTTP 客户端不谈压缩（Reactor Netty 关 compress）
 │   ├── error/                                    # 代理失败 → 网关自己的应用异常（503 / 504，固定文案）
 │   └── security/
 │       ├── GatewaySecurityConfiguration.java     # 会话存储、签名器（启动自检）、两条过滤器链、入站转发头剥除、出站头过滤器、错误映射
@@ -45,9 +45,10 @@ patra-gateway-boot/
 ├── src/main/resources/
 │   └── application.yml                           # 路由、HTTP 客户端、超时、虚拟线程、Redis 超时、错误前缀；随环境变的值在 Nacos
 └── src/integrationTest/java/dev/linqibin/patra/gateway/
-    ├── PatraGatewayApplicationIT.java            # servlet 启动、JDK 客户端、虚拟线程、两条链、签名器
+    ├── PatraGatewayApplicationIT.java            # servlet 启动、Reactor Netty 客户端、虚拟线程、两条链、签名器
     ├── GatewayRoutingIT.java                     # 转发行为（WireMock 顶替下游）
-    ├── GatewayFailureIT.java                     # 代理失败的状态码
+    ├── GatewayFailureIT.java                     # 代理失败的状态码；读超时是空闲超时（长流、慢速大文件下载）
+    ├── GatewayStalledDownstreamIT.java           # 下游停住：响应体中途停住被切断；不读请求体时写超时 504
     ├── GatewayAuthenticationIT.java              # 认证、规则、断言、出站头
     ├── GatewayBlockedPathsIT.java                # 拒绝名单
     └── GatewayRedisUnavailableIT.java            # Redis 不可用 → 503
@@ -70,11 +71,12 @@ springdoc 的 Scalar starter 会给应用无条件注册一个「应用」入站
 
 | 项 | 值 | 说明 |
 |---|---|---|
-| 客户端 | JDK HttpClient | `spring.http.clients.imperative.factory: jdk`，显式指定 |
+| 客户端 | Reactor Netty | `spring.http.clients.imperative.factory: REACTOR`，显式指定 |
 | 连接超时 | 5 秒 | `spring.http.clients.connect-timeout` |
-| 读超时 | 60 秒 | `spring.http.clients.read-timeout`，从请求发出起算的总时长，流式响应同样受限 |
+| 读超时 | 60 秒 | `spring.http.clients.read-timeout`，空闲超时：连续 60 秒收不到下游任何字节才断，不限总时长；大文件慢速下载、长流不受影响 |
+| 写超时 | 60 秒 | 取同一个 `read-timeout`，`GatewayConfiguration` 给每个请求挂 Netty 的 `WriteTimeoutHandler`：下游不读请求体、单次写停住超过 60 秒就断开 |
 | 重定向 | 不跟随 | `spring.http.clients.redirects: dont-follow` |
-| 压缩 | 关 | `GatewayConfiguration` 关掉 JDK 客户端的透明压缩 |
+| 压缩 | 关 | `GatewayConfiguration` 关掉 Boot 给 Reactor Netty 默认开的压缩 |
 | 线程 | 虚拟线程 | `spring.threads.virtual.enabled: true` |
 | Redis | 连接 5 秒、命令 2 秒 | `spring.data.redis.connect-timeout` / `timeout`。命令超时是单条命令的上限，建连耗时另计；Redis 断线期间 Lettuce 把命令排队等重连，等满 2 秒的请求变成 503 |
 
@@ -90,8 +92,9 @@ springdoc 的 Scalar starter 会给应用无条件注册一个「应用」入站
 | 带会话令牌且查会话遇到非暂时失败（`NOAUTH`、键被写坏） | 500 | `GW-0500` | Internal Server Error |
 | 未匹配任何路由 | 404 | `GW-0404` | |
 | `lb://` 找不到实例；连接被拒、连接超时、域名解析失败 | 503 | `GW-0503` | 下游服务暂时不可用 |
-| 响应头到达前读超时 | 504 | `GW-0504` | 下游服务响应超时 |
-| 响应头已到、响应体读超时，响应还没提交 | 500 | `GW-0500` | |
+| 响应头到达前读超时（下游 60 秒没回） | 504 | `GW-0504` | 下游服务响应超时 |
+| 下游不读请求体超过 60 秒（写超时） | 504 | `GW-0504` | 下游服务响应超时 |
+| 响应头已到、下游中途停住超过读超时，响应还没提交 | 500 | `GW-0500` | |
 | 同上，响应已提交 | 200，半截响应体 | 无 | |
 | 防火墙拒绝的畸形路径 | 400 | 无 | 框架默认 |
 

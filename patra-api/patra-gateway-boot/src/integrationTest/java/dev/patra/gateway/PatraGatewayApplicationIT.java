@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.http.client.ClientHttpRequestFactoryBuilder;
-import org.springframework.boot.http.client.JdkClientHttpRequestFactoryBuilder;
+import org.springframework.boot.http.client.ReactorClientHttpRequestFactoryBuilder;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -22,7 +22,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.client.ClientHttpRequestFactory;
-import org.springframework.http.client.JdkClientHttpRequestFactory;
+import org.springframework.http.client.ReactorClientHttpRequestFactory;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
@@ -61,13 +61,13 @@ class PatraGatewayApplicationIT {
   }
 
   @Test
-  void should_use_explicitly_configured_jdk_http_client() {
+  void should_use_explicitly_configured_reactor_netty_http_client() {
     assertThat(context.getBean(ClientHttpRequestFactoryBuilder.class))
-        .isInstanceOf(JdkClientHttpRequestFactoryBuilder.class);
+        .isInstanceOf(ReactorClientHttpRequestFactoryBuilder.class);
     // Boot 4 用这个 builder 加 spring.http.clients.* 的设置装出一个 ClientHttpRequestFactory Bean，
-    // 网关的 RestClient 会优先拿容器里的这个 Bean：它必须是 JDK 那一个
+    // 网关的 RestClient 会优先拿容器里的这个 Bean：它必须是 Reactor Netty 那一个
     assertThat(context.getBean(ClientHttpRequestFactory.class))
-        .isInstanceOf(JdkClientHttpRequestFactory.class);
+        .isInstanceOf(ReactorClientHttpRequestFactory.class);
   }
 
   @Test

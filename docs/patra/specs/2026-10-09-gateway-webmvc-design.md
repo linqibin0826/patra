@@ -5,7 +5,7 @@
 > **前置设计**：[安全 starter（PAP-62 / PAP-70）](2026-10-05-security-starter-design.md) 第 17 节
 > **后续 Issue**：[PAP-65](https://linear.app/papertrace/issue/PAP-65) 在本设计之上加鉴权
 > **日期**：2026-10-09
-> **状态**：已实施（2026-10-09，分支 `feat/v0.8-accounts-api`）
+> **状态**：已实施（2026-10-09，分支 `feat/v0.8-accounts-api`）；2026-10-19 客户端改为 Reactor Netty、读超时改为空闲超时（第 6 节）
 
 ## 1. 要解决的问题
 
@@ -20,7 +20,7 @@
 做：
 
 - 依赖、配置键、API 文档聚合换成 WebMVC 版；版本目录里指向 WebFlux 的别名清掉。
-- HTTP 客户端显式指定为 JDK HttpClient，连接超时 5 秒、读超时 60 秒，不跟随重定向。
+- HTTP 客户端显式指定（2026-10-19 起为 Reactor Netty，见第 6 节），连接超时 5 秒、读超时 60 秒，不跟随重定向。
 - 网关开虚拟线程。
 - 网关自身产生的错误接 starter-web，输出 ProblemDetail，错误码前缀 `GW`。
 - starter-web 的全局处理器补上 Spring MVC 自带异常（未匹配路径等）的错误码渲染，所有服务受益。
@@ -98,11 +98,14 @@ linqibin:
 
 ## 6. HTTP 客户端、超时与线程模型
 
-- **客户端**：JDK HttpClient，由 `spring.http.clients.imperative.factory: jdk` 显式指定，不靠 Boot 的 classpath 自动探测（探测会选到 Apache HttpClient 5，它在上游返回 304 时有未修复的连接泄漏）。网关是这个进程里唯一的 HTTP 客户端，这几个键就是它唯一的来源。
+- **客户端**：Reactor Netty，由 `spring.http.clients.imperative.factory: REACTOR` 显式指定，不靠 Boot 的 classpath 自动探测（探测会选到 Apache HttpClient 5，它在上游返回 304 时有未修复的连接泄漏）。网关是这个进程里唯一的 HTTP 客户端，这几个键就是它唯一的来源。最初用的是 JDK HttpClient，2026-10-19 因读超时语义换掉（见下一条）。
 - **超时**：连接 5 秒，读 60 秒。今天的 WebFlux 网关没有响应超时，下游一直不回请求就一直挂着；换成每请求一线程的模型后必须有上限。60 秒照顾 catalog 偶尔慢的检索接口。响应头到达前超时返回 504（第 8 节）。
-- **读超时是总时长**：JDK 客户端的计时器从请求发出起算，响应体流关闭才取消，持续收到数据也不重置。后果是任何响应（包括流式）从发出到读完都不能超过 60 秒，超过时正在转发的响应体被切断：响应已提交（流式类型逐块 flush，或已写出的字节超过 Tomcat 缓冲）时状态码无法再改，客户端拿到 200 加半截响应体；还没提交时网关清掉半截响应体，回 500 的 ProblemDetail（原因链里没有超时异常，分不出是超时还是下游断连，接受 500）。Patra 目前没有 SSE 接口，门户的读接口都是短响应，所以本版接受这个限制并用测试钉住；将来引入 SSE 的 Issue 要给流式路由单独的客户端或不设读超时（第 13 节）。
-- **压缩**：关掉 JDK 客户端的透明压缩。它默认会在请求没带 `Accept-Encoding` 时替客户端补上 `gzip, deflate`，并把下游的 gzip 响应解压、抹掉 `Content-Encoding` 和 `Content-Length`，与「原样转发」相悖。关掉后客户端带什么 `Accept-Encoding`、下游回什么 `Content-Encoding`，都原样经过（`GatewayConfiguration` 里一个 `ClientHttpRequestFactoryBuilderCustomizer`）。
-- **重定向**：`dont-follow`。网关不能替客户端跟随下游的 3xx，Reactor Netty 默认也不跟随；Boot 的默认值是「能跟就跟」，所以要显式关掉。
+- **读超时是空闲超时**：Reactor Netty 的 `responseTimeout`（Boot 把 `read-timeout` 映射到它）是「两次读之间的最长间隔」，每收到一段数据就重新计时，不限总时长；nginx 的 `proxy_read_timeout`、WebFlux 版网关的 `response-timeout` 都是这个语义。对普通接口，响应头 60 秒内不到照样 504；对大文件下载、长流，只要下游还在发数据就不断。客户端慢时网关跟着它的节奏读下游，两次读之间的间隔是写一块给客户端的时间，远小于 60 秒。下游发了响应头后中途停住超过 60 秒时响应体被切断：响应已提交（流式类型逐块 flush，或已写出的字节超过 Tomcat 缓冲）时状态码无法再改，客户端拿到 200 加半截响应体；还没提交时网关清掉半截响应体，回 500 的 ProblemDetail。
+- **写也有上限**：`responseTimeout` 在请求发完之后才开始计时，下游收下请求头却迟迟不读请求体时，网关写请求体会卡在缓冲已满之后、一直等下去（JDK 客户端的总时长定时器从请求发出就开始，原来覆盖了这一段）。`GatewayConfiguration` 给每个请求挂一个 Netty 的 `WriteTimeoutHandler`，时长取同一个 `read-timeout`：单次写停住超过 60 秒就断开，回 504；和读一样按空闲计时，慢而持续的上传不受影响。挂在请求上（`doOnRequest`）而不是连接上，因为 Reactor Netty 在连接归还连接池时会移除这类处理器。CodeRabbit 在 PR #249 评审中指出。
+- **连接池**：用 Reactor Netty 的全局默认池，每个下游地址最多 500 条连接（`TcpResources` 取 `max(核数相关的默认值, 500)`），一个长下载占一条，不会让普通接口排队等连接。
+- **为什么不是 JDK HttpClient**：JDK 客户端没有空闲读超时（JDK-8208693），Spring 的 `JdkClientHttpRequest` 用一个从请求发出起算的定时器代替，到点关闭响应体流，持续收到数据也不重置，于是读超时成了总时长。v0.11 的原版 PDF 有几十 MB，2026-10-19 在 mini 上以 200 KB/s 下载 43 MB 的 PDF，网关在请求发出约 62 秒时切断（日志 `IOException: closed`），客户端靠中间缓冲又收了约 60 秒、共 25 MB 后断开，直连 catalog 则 214 秒完整收到。WebMVC 版网关没有按路由的超时（route metadata 的 `response-timeout` 只有 WebFlux 版认），超时只来自 Boot 的全局 `spring.http.clients.*`，所以选择换成空闲语义的客户端，而不是给下载路由单独配客户端。Apache HttpClient 5 的 socket 超时也是空闲语义，但有上面说的 304 连接泄漏，不选。
+- **压缩**：关掉客户端的透明压缩。Boot 给 Reactor Netty 默认开了 `compress(true)`（和 Spring 的默认一致），会在请求没带 `Accept-Encoding` 时替客户端补上 gzip，并把下游的 gzip 响应解压、抹掉 `Content-Encoding`，与「原样转发」相悖。关掉后客户端带什么 `Accept-Encoding`、下游回什么 `Content-Encoding`，都原样经过（`GatewayConfiguration` 里一个 `ClientHttpRequestFactoryBuilderCustomizer`，对 HttpClient 调 `compress(false)`）。
+- **重定向**：`DONT_FOLLOW`。网关不能替客户端跟随下游的 3xx；Boot 的默认值是「能跟就跟」，所以要显式关掉。
 - **虚拟线程**：只给网关开。Tomcat 给每个请求一个虚拟线程，等下游的那段时间不占平台线程；Java 25 没有 synchronized 钉住载体线程的问题。其他服务的瓶颈在数据库连接池，本版不开。虚拟线程让等待变便宜，超时让等待有限，两者都要。
 
 ## 7. 转发行为：迁移前后必须一致的事
@@ -115,7 +118,7 @@ linqibin:
 | `Forwarded` | 照旧写入 |
 | 逐跳头 | `Connection`、`Transfer-Encoding` 等逐跳头照旧剥掉；`Authorization` 不是逐跳头，原样到达下游 |
 | 压缩协商 | 客户端的 `Accept-Encoding` 原样到下游，下游的 `Content-Encoding` 和压缩字节原样回客户端；网关不替任何一方压缩或解压 |
-| 流式响应 | `text/event-stream` 等流式类型照旧边收边转（WebMVC 版默认的 `streaming-media-types` 含 SSE），但整个响应受 60 秒总时长限制（第 6 节），这是与迁移前唯一的有意差别 |
+| 流式响应 | `text/event-stream` 等流式类型照旧边收边转（WebMVC 版默认的 `streaming-media-types` 含 SSE）；下游停住超过 60 秒不发数据时被切断（第 6 节），这是与迁移前唯一的有意差别 |
 | 网关自己的端点 | `/actuator/**`、`/scalar` 由网关自己响应，不走路由 |
 | 未匹配路由 | 404（响应体格式见第 8 节） |
 
@@ -129,14 +132,15 @@ linqibin:
 | `lb://` 找不到实例 | 503 | ProblemDetail，`GW-0503`，`detail` 固定「下游服务暂时不可用」 | LoadBalancer 过滤器抛 `HttpServerErrorException(503)`，`GatewayProxyFailureAdvice` 包成 `DownstreamUnavailableException` |
 | 连接被拒、连接超时、域名解析失败 | 503 | ProblemDetail，`GW-0503`，`detail` 固定「下游服务暂时不可用」 | `ResourceAccessException` → `DownstreamUnavailableException` |
 | 响应头到达前读超时 | 504 | ProblemDetail，`GW-0504`，`detail` 固定「下游服务响应超时」 | `ResourceAccessException` → `DownstreamTimeoutException` |
-| 响应头已到、响应体读超时，响应还没提交 | 500 | ProblemDetail，`GW-0500` | 转发中的 `IOException`；starter-web 先清掉半截响应体再渲染 |
+| 下游不读请求体超过读超时（写超时） | 504 | ProblemDetail，`GW-0504`，`detail` 固定「下游服务响应超时」 | `ResourceAccessException` → `DownstreamTimeoutException`。客户端此时多半还在上传，剩余请求体超过 Tomcat 的 `max-swallow-size`（2 MB）时 Tomcat 回完就关连接，客户端可能只看到连接被重置 |
+| 响应头已到、下游中途停住超过读超时，响应还没提交 | 500 | ProblemDetail，`GW-0500` | 转发中的 `IOException`；starter-web 先清掉半截响应体再渲染 |
 | 同上，响应已提交（流式类型，或已写出超过 Tomcat 缓冲） | 200，半截响应体 | 无 | 状态码已发出，starter-web 不再追加任何内容，分块传输干净结束 |
 | 下游 4xx / 5xx / 3xx | 原样 | 原样 | 透传，网关不改写 |
 
 代理失败先经网关自己的一层：`GatewayProxyFailureAdvice`（`@RestControllerAdvice`，排在 starter-web 的全局处理器之前）接住 `ResourceAccessException` 和 `HttpServerErrorException`，交给 `ProxyFailureClassifier` 分类，包成网关的应用异常后再交给全局处理器渲染：
 
 - `HttpServerErrorException` 且状态码 503 → `DownstreamUnavailableException`（`UNAVAILABLE()`，503）；其他状态码不认，原样交给全局处理器。
-- `ResourceAccessException` 沿原因链分类：`HttpConnectTimeoutException`、`ConnectException`、`UnknownHostException`、`UnresolvedAddressException` → `DownstreamUnavailableException`（`HttpConnectTimeoutException` 是 `HttpTimeoutException` 的子类，必须先判）；其余 `HttpTimeoutException`、`SocketTimeoutException` → `DownstreamTimeoutException`（`GATEWAY_TIMEOUT()`，504）；原因链里没有上面任何一种 → `DownstreamUnavailableException`：到不了下游就是不可用。
+- `ResourceAccessException` 沿原因链分类：`ConnectException`（含 Netty 的连接超时 `ConnectTimeoutException` 和连接被拒 `AnnotatedConnectException`，都是它的子类）、`UnknownHostException`、`UnresolvedAddressException` → `DownstreamUnavailableException`；Netty 的 `TimeoutException`（`responseTimeout` 到点时的 `ReadTimeoutException`、写超时的 `WriteTimeoutException`，Spring 把它们包进 `IOException`）→ `DownstreamTimeoutException`（`GATEWAY_TIMEOUT()`，504）；原因链里没有上面任何一种 → `DownstreamUnavailableException`：到不了下游就是不可用。
 
 两个应用异常都继承 commons-core 的 `ApplicationException`，错误码来自 `HttpStdErrors.Group`，文案固定，原始异常只留在原因链里。这样做而不是只写一个 `ErrorMappingContributor`，是因为 ProblemDetail 的 `detail` 原样回显异常消息，而 `RestClient` 的消息是 `I/O error on GET request for "http://192.168.97.5:6300/venues…"`：下游实例的内网地址、端口和剥前缀后的内部路径会随 503 / 504 回给调用方。网关是对外边缘，隐藏下游拓扑是基本职责。
 
@@ -152,7 +156,7 @@ Scalar 换成 springdoc 的 webmvc 版 starter，`scalar.sources` 不变：三�
 
 单元测试：
 
-- `ProxyFailureClassifier`：`HttpServerErrorException(503)` → `DownstreamUnavailableException`（`GW-0503`、固定文案、原因保留）；连接类原因 → 503，读超时类 → 504，`HttpConnectTimeoutException` 不被当成读超时，没原因的 `ResourceAccessException` → 503，其他异常 → 空。`GatewayProxyFailureAdvice`：交给全局处理器的是包装后的异常、消息里没有 URL；分不出类别的原样交过去。
+- `ProxyFailureClassifier`：`HttpServerErrorException(503)` → `DownstreamUnavailableException`（`GW-0503`、固定文案、原因保留）；连接类原因 → 503，包在 `IOException` 里的 `ReadTimeoutException`、`WriteTimeoutException` → 504，Netty 的 `ConnectTimeoutException` 不被当成读超时，没原因的 `ResourceAccessException` → 503，其他异常 → 空。`GatewayProxyFailureAdvice`：交给全局处理器的是包装后的异常、消息里没有 URL；分不出类别的原样交过去。
 - starter-web：`NoResourceFoundException` / `NoHandlerFoundException` 渲染出的 ProblemDetail 带 `code`，状态仍是 404；响应已提交时 `handleException` 与两个 404 覆写都返回 `null`、不再调用适配器；未提交时渲染前先 `resetBuffer()`。现有的参数校验用例不变。
 
 集成测试（`src/integrationTest`，`@SpringBootTest` 用真实端口加 `RestTestClient`，`test` profile 关掉 Nacos）：
@@ -170,14 +174,17 @@ Scalar 换成 springdoc 的 webmvc 版 starter，`scalar.sources` 不变：三�
   7. 找不到实例：`lb://patra-ingest` 不配实例，503，`application/problem+json`，`GW-0503`。
   8. 连接被拒：实例指向没人监听的端口，503，`GW-0503`。
   9. 读超时：WireMock 固定延迟超过 1 秒，504，`GW-0504`。
-  10. 容器里网关持有的 `ClientHttpRequestFactory` 是 `JdkClientHttpRequestFactory`。
+  10. 容器里网关持有的 `ClientHttpRequestFactory` 是 `ReactorClientHttpRequestFactory`。
   11. 请求处理线程是虚拟线程：测试配置里挂一个过滤器记录 `Thread.currentThread().isVirtual()`。
   12. 应用以 servlet 启动；classpath 上没有 WebFlux 版网关的自动配置类。
   13. `/scalar` 返回 200。
-  14. 读超时是总时长，流式响应（`text/event-stream`，逐块 flush、已提交）被切断：客户端收到 200，响应体是只含已到字节的半截、全是 `x`、没有 `{`。
-  15. 读超时是总时长，非流式响应（`text/plain`，还没提交）被切断：客户端收到 500 的 `application/problem+json`，`GW-0500`，响应体是可解析的完整 ProblemDetail。
+  14. 下游发完响应头和半截体后停住超过读超时，流式响应（`text/event-stream`，逐块 flush、已提交）被切断：客户端收到 200，响应体是只含已到字节的半截、全是 `x`。WireMock 的分块延迟在第一块之前就开始等、响应头要随第一块一起发，模拟不出「头已到、体停住」，这条和下一条用 JDK 自带的 `HttpServer` 当下游（`GatewayStalledDownstreamIT`）。
+  15. 同上，非流式响应（`text/plain`，还没提交）被切断：客户端收到 500 的 `application/problem+json`，`GW-0500`，响应体是可解析的完整 ProblemDetail。
   16. 客户端没发 `Accept-Encoding` 时下游也收不到；客户端发 `Accept-Encoding: gzip` 时原样到下游。
   17. 下游回 `Content-Encoding: gzip` 和 gzip 字节时，客户端收到同样的头和逐字节相同的内容。
+  18. 读超时是空闲超时：读超时 1 秒时，总时长 3 秒、块间隔 0.3 秒的流式响应客户端完整收到。
+  19. 慢速客户端下载大文件：下游一次给出 24 MB，客户端每 10 毫秒读 64 KB，总时长远超读超时，客户端收到的字节数与 MD5 都和下游一致。换客户端前这条在约 5.7 MB 处被切断。
+  20. 下游收下请求头后挂住 8 秒不读请求体，客户端上传 32 MB：网关约 1 秒放弃（写超时），交换在下游挂住期间就结束；能读到响应时是 504。去掉写超时时这条要等满 9 秒多。
   另：503 / 504 的 `detail` 分别是「下游服务暂时不可用」「下游服务响应超时」，不含下游地址。
 
 回归门控：`./gradlew :patra-api:patra-gateway-boot:check`、`:integrationTest`；全仓库 `./gradlew check`；`./gradlew dumpModuleGraph` 后模块图与构建一致（网关新增 starter-web 依赖，`patra-infra/cd/module-graph.json` 会变）。
@@ -242,7 +249,7 @@ Scalar 换成 springdoc 的 webmvc 版 starter，`scalar.sources` 不变：三�
 | 查会话是同步 Redis 调用，在虚拟线程上阻塞无妨；不要为它引入响应式客户端 | PAP-65 |
 | 路径规则看到的是剥前缀之前的路径（安全 starter 设计第 17 节已写），WebMVC 版不改变这一点 | PAP-65 |
 | 没有新增环境变量；CD 推送后会重建网关镜像并重启，compose 不用改 | PAP-66 |
-| 读超时是总时长：流式路由要单独的 `RestClient`（不设读超时）或改用按空闲计时的客户端，加 SSE 前先解决。注意流式响应被切断时 Tomcat 是干净终止，客户端不会收到连接异常，不能寄望客户端靠出错重试 | 引入 SSE 的 Issue |
+| 读超时是 60 秒空闲超时：SSE 连接要在 60 秒内至少发一次数据（心跳），否则被切断。注意流式响应被切断时 Tomcat 是干净终止，客户端不会收到连接异常，不能寄望客户端靠出错重试 | 引入 SSE 的 Issue |
 
 ## 14. 要同步改的文档和 Issue
 
