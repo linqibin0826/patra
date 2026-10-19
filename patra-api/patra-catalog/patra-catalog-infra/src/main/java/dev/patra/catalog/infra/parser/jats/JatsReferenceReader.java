@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 
 /// JATS 参考文献 `<ref-list>` → `Reference`。
 ///
@@ -90,7 +91,8 @@ final class JatsReferenceReader {
                         JatsDom.child(person, "given-names").map(JatsDom::text).orElse("");
                     authors.add((surname + " " + given).strip());
                   }
-                  case "collab", "string-name" -> authors.add(JatsDom.text(person));
+                  case "collab" -> authors.add(JatsDom.text(person));
+                  case "string-name" -> authors.add(stringName(person));
                   case "etal" -> authors.add("et al");
                   default -> {
                     // 忽略
@@ -133,6 +135,18 @@ final class JatsReferenceReader {
             .reduce((a, b) -> a + " " + b)
             .orElse("");
     return text.isEmpty() ? List.of() : List.of(new Inline.Text(text));
+  }
+
+  /// `string-name` 的文本：相邻两个子元素之间没有文本时补一个空格。
+  private static String stringName(Element name) {
+    StringBuilder sb = new StringBuilder();
+    for (Node n = name.getFirstChild(); n != null; n = n.getNextSibling()) {
+      if (JatsDom.isElementRightAfterElement(n)) {
+        sb.append(' ');
+      }
+      sb.append(n.getTextContent());
+    }
+    return sb.toString().replaceAll("\\s+", " ").strip();
   }
 
   /// 先在选用的 citation 里找 `pub-id`，再到其他 citation 里找。

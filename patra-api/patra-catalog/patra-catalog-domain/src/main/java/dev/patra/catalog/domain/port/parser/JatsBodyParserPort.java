@@ -12,7 +12,7 @@ import java.util.List;
 public interface JatsBodyParserPort {
 
   /// 解析器版本。改动解析规则时 +1，解析任务据此重新解析旧结果（全程不访问 PMC）。
-  int PARSER_VERSION = 1;
+  int PARSER_VERSION = 2;
 
   /// 解析一篇文章。
   ///
