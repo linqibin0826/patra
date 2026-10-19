@@ -104,7 +104,7 @@ final class JatsInlineReader {
       case "xref" -> readXref(e);
       case "ext-link", "uri" -> readLink(e);
       case "break" -> List.of(new Inline.Break());
-      case "inline-formula" -> List.of(math.inlineFormula(e, this));
+      case "inline-formula", "alternatives" -> List.of(math.inlineFormula(e, this));
       case "inline-graphic" -> {
         ctx.warn();
         yield List.of();

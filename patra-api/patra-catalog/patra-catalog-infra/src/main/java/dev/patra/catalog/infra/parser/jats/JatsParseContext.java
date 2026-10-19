@@ -77,7 +77,8 @@ final class JatsParseContext {
     return generated;
   }
 
-  /// 按 href 匹配图片：先全名，再按"两边都去扩展名后同名"。
+  /// 按 href 匹配图片：先全名；再把 href 当作不带扩展名的名字（如 PLOS 的 `pcbi.e001`）；
+  /// 最后两边都去扩展名后同名。
   ///
   /// @param href `<graphic xlink:href>`
   /// @return 匹配到的图片
@@ -85,10 +86,9 @@ final class JatsParseContext {
     if (href == null) {
       return Optional.empty();
     }
-    FullTextMedia exact = mediaByName.get(href);
-    return exact != null
-        ? Optional.of(exact)
-        : Optional.ofNullable(mediaByBaseName.get(baseName(href)));
+    return Optional.ofNullable(mediaByName.get(href))
+        .or(() -> Optional.ofNullable(mediaByBaseName.get(href)))
+        .or(() -> Optional.ofNullable(mediaByBaseName.get(baseName(href))));
   }
 
   /// 去掉最后一个扩展名。

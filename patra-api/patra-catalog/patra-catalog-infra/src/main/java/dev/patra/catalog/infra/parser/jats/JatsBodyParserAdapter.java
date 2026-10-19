@@ -5,6 +5,7 @@ import dev.patra.catalog.domain.model.vo.fulltext.FullTextMedia;
 import dev.patra.catalog.domain.model.vo.fulltext.JatsParseResult;
 import dev.patra.catalog.domain.model.vo.fulltext.body.Block;
 import dev.patra.catalog.domain.model.vo.fulltext.body.FullTextBody;
+import dev.patra.catalog.domain.model.vo.fulltext.body.Reference;
 import dev.patra.catalog.domain.model.vo.fulltext.body.Section;
 import dev.patra.catalog.domain.port.parser.JatsBodyParserPort;
 import java.io.IOException;
@@ -40,9 +41,9 @@ import org.xml.sax.SAXParseException;
 @Component
 public class JatsBodyParserAdapter implements JatsBodyParserPort {
 
-  /// 会出现在结果里、可以被交叉引用的元素。
+  /// 会出现在结果里、可以被交叉引用的元素（`disp-formula` 另判：只有 TeX 时输出为不带 id 的代码块）。
   private static final Set<String> TARGETS =
-      Set.of("sec", "fig", "table-wrap", "disp-formula", "boxed-text", "ref", "app");
+      Set.of("sec", "fig", "table-wrap", "boxed-text", "ref", "app");
 
   /// 解析一篇文章。
   ///
@@ -69,15 +70,19 @@ public class JatsBodyParserAdapter implements JatsBodyParserPort {
     List<Block> topBlocks = new ArrayList<>();
     List<Section> sections = new ArrayList<>();
     readBody(body.get(), ctx, blocks, topBlocks, sections);
+    List<Section> backSections = new ArrayList<>();
+    List<Reference> references = new ArrayList<>();
+    back.ifPresent(
+        b -> readBack(b, ctx, blocks, new JatsReferenceReader(inline), backSections, references));
 
     FullTextBody result =
         FullTextBody.builder()
             .schemaVersion(FullTextBody.SCHEMA_VERSION)
             .blocks(topBlocks)
             .sections(sections)
-            .back(List.of())
-            .references(List.of())
-            .wordCount(0)
+            .back(backSections)
+            .references(references)
+            .wordCount(JatsWordCounter.count(topBlocks, sections, backSections))
             .build();
     if (ctx.warningCount() > 0) {
       log.debug("JATS 解析警告 {} 条", ctx.warningCount());
@@ -106,6 +111,36 @@ public class JatsBodyParserAdapter implements JatsBodyParserPort {
     flushTrailing(ctx, trailing, sections);
   }
 
+  /// `<back>`：致谢、脚注组、附录、注释与 `<sec>` 进 back 章节，`ref-list` 进参考文献，其余按未知块处理。
+  private static void readBack(
+      Element back,
+      JatsParseContext ctx,
+      JatsBlockReader reader,
+      JatsReferenceReader referenceReader,
+      List<Section> backSections,
+      List<Reference> references) {
+    List<Block> unknown = new ArrayList<>();
+    for (Element child : JatsDom.children(back)) {
+      switch (JatsDom.name(child)) {
+        case "ack", "notes", "sec", "app" -> reader.readSection(child).ifPresent(backSections::add);
+        case "app-group" -> {
+          for (Element app : JatsDom.children(child)) {
+            if ("app".equals(JatsDom.name(app))) {
+              reader.readSection(app).ifPresent(backSections::add);
+            }
+          }
+        }
+        case "fn-group" -> reader.readFootnoteGroup(child).ifPresent(backSections::add);
+        case "ref-list" -> referenceReader.read(child, references);
+        case "title", "label" -> {
+          // back 本身的标题不输出
+        }
+        default -> reader.readBlock(child, unknown);
+      }
+    }
+    flushTrailing(ctx, unknown, backSections);
+  }
+
   /// 把积攒的直接内容收成一个无标题章节。
   private static void flushTrailing(
       JatsParseContext ctx, List<Block> trailing, List<Section> sections) {
@@ -127,7 +162,11 @@ public class JatsBodyParserAdapter implements JatsBodyParserPort {
       if ("supplementary-material".equals(name) || "sub-article".equals(name)) {
         continue;
       }
-      if (TARGETS.contains(name) || (inBack && "fn".equals(name) && !insideTableFoot(child))) {
+      boolean target =
+          "disp-formula".equals(name)
+              ? JatsMathReader.rendersAsFormula(child)
+              : TARGETS.contains(name) || (inBack && "fn".equals(name) && !insideTableFoot(child));
+      if (target) {
         ctx.registerTarget(JatsDom.attr(child, "id"));
       }
       registerTargets(child, ctx, inBack);

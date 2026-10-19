@@ -8,6 +8,7 @@ import dev.patra.catalog.domain.model.vo.fulltext.FullTextMedia;
 import dev.patra.catalog.domain.model.vo.fulltext.JatsParseResult;
 import dev.patra.catalog.domain.model.vo.fulltext.body.Block;
 import dev.patra.catalog.domain.model.vo.fulltext.body.Inline;
+import dev.patra.catalog.domain.model.vo.fulltext.body.Reference;
 import dev.patra.catalog.domain.model.vo.fulltext.body.Section;
 import dev.patra.catalog.domain.model.vo.fulltext.body.TableCell;
 import java.io.ByteArrayInputStream;
@@ -308,6 +309,218 @@ class JatsBodyParserAdapterTest {
         .isInstanceOf(XmlParseException.class);
   }
 
+  // ========== 公式 ==========
+
+  @Test
+  @DisplayName("行间公式输出去掉命名空间前缀的 MathML，保留属性")
+  void should_emit_mathml_without_namespace_prefix() {
+    String xml =
+        article(
+            """
+            <sec id="s1"><title>T</title><disp-formula id="e1"><label>(1)</label>
+              <mml:math id="m1" display="block"><mml:mtable columnalign="left"><mml:mtr><mml:mtd><mml:mi>x</mml:mi><mml:mo>&lt;</mml:mo><mml:mn>1</mml:mn></mml:mtd></mml:mtr></mml:mtable></mml:math>
+            </disp-formula></sec>
+            """);
+
+    Block.Formula formula = (Block.Formula) firstBlock(parser.parse(stream(xml), List.of()));
+
+    assertThat(formula.id()).isEqualTo("e1");
+    assertThat(formula.label()).isEqualTo("(1)");
+    assertThat(formula.mathml())
+        .startsWith("<math")
+        .doesNotContain("mml:")
+        .doesNotContain("xmlns")
+        .contains("display=\"block\"")
+        .contains("columnalign=\"left\"")
+        .contains("<mo>&lt;</mo>");
+    assertThat(formula.image()).isNull();
+  }
+
+  @Test
+  @DisplayName("只有 TeX 的行间公式输出 code 块并计警告")
+  void should_fallback_to_code_when_only_tex() {
+    String xml =
+        article(
+            "<sec id=\"s1\"><title>T</title><disp-formula id=\"e1\"><tex-math>x_1</tex-math></disp-formula></sec>");
+
+    JatsParseResult result = parser.parse(stream(xml), List.of());
+
+    assertThat(firstBlock(result)).isEqualTo(new Block.Code("x_1"));
+    assertThat(result.warningCount()).isEqualTo(1);
+  }
+
+  @Test
+  @DisplayName("TeX 去掉 documentclass 外壳与外层 $$")
+  void should_strip_documentclass_wrapper_from_tex() {
+    String xml =
+        article(
+            """
+            <sec id="s1"><title>T</title><disp-formula id="e1"><tex-math id="t1"><![CDATA[\\documentclass[12pt]{minimal}
+            \\usepackage{amsmath}
+            \\begin{document}$$a^2+b^2$$\\end{document}]]></tex-math></disp-formula></sec>
+            """);
+
+    assertThat(firstBlock(parser.parse(stream(xml), List.of())))
+        .isEqualTo(new Block.Code("a^2+b^2"));
+  }
+
+  @Test
+  @DisplayName("段落与单元格里直接写的 MathML 都输出为行内公式")
+  void should_emit_math_inline_for_bare_mathml_in_paragraph_and_cell() {
+    String xml =
+        article(
+            """
+            <sec id="s1"><title>T</title>
+              <p>let <mml:math><mml:mi>y</mml:mi></mml:math> be</p>
+              <table-wrap id="t1"><table><tbody><tr><td><mml:math><mml:mn>2</mml:mn></mml:math></td></tr></tbody></table></table-wrap>
+            </sec>
+            """);
+
+    List<Block> blocks = parser.parse(stream(xml), List.of()).body().sections().getFirst().blocks();
+
+    assertThat(((Block.Paragraph) blocks.get(0)).content())
+        .contains(new Inline.MathInline("<math><mi>y</mi></math>"));
+    assertThat(((Block.Table) blocks.get(1)).body().getFirst().getFirst().content())
+        .containsExactly(new Inline.MathInline("<math><mn>2</mn></math>"));
+  }
+
+  @Test
+  @DisplayName("alternatives 里优先取 MathML，其次 TeX，最后公式图片")
+  void should_prefer_mathml_inside_alternatives() {
+    String xml =
+        article(
+            """
+            <sec id="s1"><title>T</title>
+              <disp-formula id="e1"><alternatives><tex-math>x</tex-math><mml:math><mml:mi>x</mml:mi></mml:math><graphic xlink:href="e1.gif"/></alternatives></disp-formula>
+              <p>in <inline-formula><alternatives><tex-math>z</tex-math><mml:math><mml:mi>z</mml:mi></mml:math></alternatives></inline-formula></p>
+            </sec>
+            """);
+
+    List<Block> blocks = parser.parse(stream(xml), List.of()).body().sections().getFirst().blocks();
+
+    assertThat(((Block.Formula) blocks.get(0)).mathml()).isEqualTo("<math><mi>x</mi></math>");
+    assertThat(((Block.Paragraph) blocks.get(1)).content())
+        .contains(new Inline.MathInline("<math><mi>z</mi></math>"));
+  }
+
+  @Test
+  @DisplayName("只有公式图片时输出带图片的公式块并计警告")
+  void should_use_formula_image_when_only_graphic() {
+    String xml =
+        article(
+            "<sec id=\"s1\"><title>T</title><disp-formula id=\"e1\"><graphic xlink:href=\"pcbi.e001\"/></disp-formula></sec>");
+
+    JatsParseResult result =
+        parser.parse(stream(xml), List.of(FullTextMedia.of("pcbi.e001.jpg", 120, 30)));
+
+    assertThat(firstBlock(result))
+        .isEqualTo(
+            Block.Formula.builder().id("e1").image("pcbi.e001.jpg").width(120).height(30).build());
+    assertThat(result.warningCount()).isEqualTo(1);
+  }
+
+  // ========== 参考文献与 back ==========
+
+  @Test
+  @DisplayName("mixed-citation 原样转换，element-citation 按作者、标题、期刊、年卷页拼接，取 PMID 与 DOI")
+  void should_parse_mixed_and_element_citations_with_pmid_doi() {
+    String xml =
+        article(
+            """
+            <sec id="s1"><title>T</title><p>x</p></sec>
+            <back><ref-list>
+              <ref id="B1"><label>1</label><mixed-citation publication-type="journal">Smith J. <italic>Title one</italic>. Nature. 2020;1:2. <pub-id pub-id-type="pmid">111</pub-id></mixed-citation></ref>
+              <ref id="B2"><element-citation publication-type="journal">
+                <person-group person-group-type="author"><name><surname>Doe</surname><given-names>JA</given-names></name><name><surname>Roe</surname><given-names>B</given-names></name><etal/></person-group>
+                <article-title>Title two</article-title><source>Cell</source><year>2021</year><volume>5</volume><fpage>10</fpage><lpage>20</lpage>
+                <pub-id pub-id-type="doi">10.1/two</pub-id></element-citation></ref>
+            </ref-list></back>
+            """);
+
+    List<Reference> refs = parser.parse(stream(xml), List.of()).body().references();
+
+    assertThat(refs).hasSize(2);
+    assertThat(refs.get(0).id()).isEqualTo("B1");
+    assertThat(refs.get(0).label()).isEqualTo("1");
+    assertThat(refs.get(0).pmid()).isEqualTo("111");
+    assertThat(refs.get(0).content())
+        .contains(new Inline.Styled("italic", List.of(new Inline.Text("Title one"))));
+    assertThat(text(refs.get(1).content()))
+        .isEqualTo("Doe JA, Roe B, et al. Title two. Cell. 2021;5:10-20.");
+    assertThat(refs.get(1).doi()).isEqualTo("10.1/two");
+  }
+
+  @Test
+  @DisplayName("citation-alternatives 优先取 mixed-citation，PMID / DOI 从另一种里补")
+  void should_read_citation_alternatives() {
+    String xml =
+        article(
+            """
+            <sec id="s1"><title>T</title><p>x</p></sec>
+            <back><ref-list><ref id="R1"><citation-alternatives>
+              <element-citation><article-title>E</article-title><pub-id pub-id-type="doi">10.9/alt</pub-id></element-citation>
+              <mixed-citation>Mixed text.</mixed-citation>
+            </citation-alternatives></ref></ref-list></back>
+            """);
+
+    Reference ref = parser.parse(stream(xml), List.of()).body().references().getFirst();
+
+    assertThat(text(ref.content())).isEqualTo("Mixed text.");
+    assertThat(ref.doi()).isEqualTo("10.9/alt");
+  }
+
+  @Test
+  @DisplayName("致谢、脚注组、数据可用性节进 back，脚注带 id")
+  void should_put_ack_and_footnotes_into_back() {
+    String xml =
+        article(
+            """
+            <sec id="s1"><title>T</title><p>see<xref ref-type="fn" rid="fn1">a</xref></p></sec>
+            <back>
+              <ack><title>Acknowledgements</title><p>Thanks.</p></ack>
+              <fn-group><fn id="fn1"><label>a</label><p>Note.</p></fn></fn-group>
+              <sec id="das"><title>Data availability</title><p>Open.</p></sec>
+              <ref-list/>
+            </back>
+            """);
+
+    JatsParseResult result = parser.parse(stream(xml), List.of());
+
+    List<Section> back = result.body().back();
+    assertThat(back)
+        .extracting(s -> text(s.title()))
+        .containsExactly("Acknowledgements", "", "Data availability");
+    assertThat(back.get(1).sections())
+        .singleElement()
+        .satisfies(
+            fn -> {
+              assertThat(fn.id()).isEqualTo("fn1");
+              assertThat(text(fn.title())).isEqualTo("a");
+            });
+    assertThat(paragraph(result, 0).content()).anyMatch(i -> i instanceof Inline.Xref);
+  }
+
+  // ========== 字数 ==========
+
+  @Test
+  @DisplayName("字数计章节标题、段落、表题，不计参考文献、公式、表格单元格与代码")
+  void should_count_words_excluding_references_math_table_cells_and_code() {
+    String xml =
+        article(
+            """
+            <sec id="s1"><title>Methods</title>
+              <p>one two three</p>
+              <disp-formula id="e1"><mml:math><mml:mi>alpha</mml:mi></mml:math></disp-formula>
+              <p><mml:math><mml:mi>beta</mml:mi></mml:math></p>
+              <table-wrap id="t1"><caption><title>Cap two</title></caption><table><tbody><tr><td>a b c d e</td><td>f g h i j</td></tr></tbody></table></table-wrap>
+              <preformat>code words here</preformat>
+            </sec>
+            <back><ref-list><ref id="R1"><mixed-citation>one two three four five six seven eight nine ten</mixed-citation></ref></ref-list></back>
+            """);
+
+    assertThat(parser.parse(stream(xml), List.of()).body().wordCount()).isEqualTo(6);
+  }
+
   // ========== 辅助方法 ==========
 
   private static String article(String bodyAndBack) {
@@ -332,6 +545,10 @@ class JatsBodyParserAdapterTest {
 
   private static InputStream stream(String xml) {
     return new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8));
+  }
+
+  private static Block firstBlock(JatsParseResult result) {
+    return result.body().sections().getFirst().blocks().getFirst();
   }
 
   private static Block.Paragraph paragraph(JatsParseResult result, int index) {

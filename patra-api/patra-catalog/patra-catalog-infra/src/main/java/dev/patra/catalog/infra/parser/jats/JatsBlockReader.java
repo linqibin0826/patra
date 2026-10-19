@@ -86,6 +86,42 @@ final class JatsBlockReader {
     return Optional.of(Section.of(id, title(sec), subsections, blocks));
   }
 
+  /// 读 back 里的 `<fn-group>`：每条脚注一个子章节（id 为脚注 id、标题为脚注标签），供脚注引用定位。
+  ///
+  /// @param group 元素
+  /// @return 章节，没有脚注时为空
+  Optional<Section> readFootnoteGroup(Element group) {
+    List<Section> footnotes = new ArrayList<>();
+    List<Block> loose = new ArrayList<>();
+    for (Element child : JatsDom.children(group)) {
+      if ("fn".equals(JatsDom.name(child))) {
+        List<Block> blocks = readBlocks(child);
+        if (!blocks.isEmpty()) {
+          List<Inline> title =
+              JatsDom.child(child, "label")
+                  .map(JatsDom::text)
+                  .filter(s -> !s.isEmpty())
+                  .<List<Inline>>map(l -> List.of(new Inline.Text(l)))
+                  .orElse(List.of());
+          footnotes.add(
+              Section.of(
+                  ctx.idOrGenerate(JatsDom.attr(child, "id"), "fn"), title, List.of(), blocks));
+        }
+      } else {
+        readBlock(child, loose);
+      }
+    }
+    if (footnotes.isEmpty() && loose.isEmpty()) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        Section.of(
+            ctx.idOrGenerate(JatsDom.attr(group, "id"), "fn-group"),
+            title(group),
+            footnotes,
+            loose));
+  }
+
   /// 读一个容器的全部块（容器里的 `<sec>` 展平为加粗标题段落加内容）。
   ///
   /// @param container 元素
@@ -119,7 +155,7 @@ final class JatsBlockReader {
         }
         out.addAll(readBlocks(e));
       }
-      case "fig" -> out.add(figure(e));
+      case "fig" -> figureWithSupplements(e, out);
       case "fig-group", "table-wrap-group", "disp-formula-group", "fn-group", "fn" ->
           out.addAll(readBlocks(e));
       case "table-wrap" -> out.add(table(e));
@@ -180,10 +216,33 @@ final class JatsBlockReader {
     return JatsInlineReader.trim(withLabel);
   }
 
-  /// 图。
-  private Block figure(Element fig) {
-    String href = JatsDom.descendant(fig, "graphic").map(JatsDom::href).orElse(null);
-    return figureOf(JatsDom.attr(fig, "id"), label(fig), caption(fig), href);
+  /// 图，以及嵌在图里的子图（eLife 的 figure supplement 写成 `<fig>` 里 `<p>` 下的 `<fig>`），
+  /// 子图依次输出为独立的图块。
+  private void figureWithSupplements(Element fig, List<Block> out) {
+    String href = ownGraphic(fig).map(JatsDom::href).orElse(null);
+    out.add(figureOf(JatsDom.attr(fig, "id"), label(fig), caption(fig), href));
+    for (Element child : JatsDom.children(fig)) {
+      if (!"caption".equals(JatsDom.name(child))) {
+        nestedFigures(child, out);
+      }
+    }
+  }
+
+  /// 收集一个子树里的嵌套图。
+  private void nestedFigures(Element e, List<Block> out) {
+    if ("fig".equals(JatsDom.name(e))) {
+      figureWithSupplements(e, out);
+      return;
+    }
+    for (Element child : JatsDom.children(e)) {
+      nestedFigures(child, out);
+    }
+  }
+
+  /// 图自己的图片：直接子元素或 `<alternatives>` 里的 `<graphic>`，不进嵌套的子图。
+  private static Optional<Element> ownGraphic(Element fig) {
+    return JatsDom.child(fig, "graphic")
+        .or(() -> JatsDom.child(fig, "alternatives").flatMap(a -> JatsDom.child(a, "graphic")));
   }
 
   /// 按清单匹配图片后生成图块；匹配不上时图片与宽高为空并计警告。
