@@ -6,6 +6,7 @@ import dev.patra.catalog.domain.model.vo.fulltext.ImageDimensions;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import javax.imageio.ImageIO;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -23,6 +24,14 @@ class ImageIoDimensionAdapterTest {
   @DisplayName("读出 jpg、png、webp 的像素宽高")
   void should_read_dimensions_of_jpg_png_and_webp(String fileName) throws Exception {
     assertThat(adapter.read(resource(fileName))).contains(ImageDimensions.of(3, 2));
+  }
+
+  @Test
+  @DisplayName("创建后 ImageIO 能找到 WebP 的 reader")
+  void should_register_webp_reader_after_construction() {
+    new ImageIoDimensionAdapter();
+
+    assertThat(ImageIO.getImageReadersByFormatName("webp").hasNext()).isTrue();
   }
 
   @Test

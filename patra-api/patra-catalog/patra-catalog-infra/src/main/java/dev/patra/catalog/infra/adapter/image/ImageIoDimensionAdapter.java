@@ -14,13 +14,22 @@ import org.springframework.stereotype.Component;
 
 /// 用 ImageIO 读图片宽高，只读文件头。
 ///
-/// JDK 自带 jpg / png / gif 的 reader；WebP 由运行时依赖 TwelveMonkeys `imageio-webp` 经 SPI 注册。
+/// JDK 自带 jpg / png / gif 的 reader；WebP 由运行时依赖 TwelveMonkeys `imageio-webp` 经 SPI 注册（构造时重新扫描）。
 ///
 /// @author linqibin
 /// @since 0.11.0
 @Slf4j
 @Component
 public class ImageIoDimensionAdapter implements ImageDimensionPort {
+
+  /// 创建适配器并重新扫描 ImageIO 插件。
+  ///
+  /// ImageIO 的插件注册表在首次使用时按当前线程的类加载器扫描；Spring Boot 可执行 jar 里插件在嵌套 jar 中，
+  /// 首次使用若发生在类加载器不对的线程上，WebP 插件就注册不上（宽高静默变空）。在 Spring 创建 bean 时
+  /// 主动扫描一次（TwelveMonkeys 文档的推荐做法）。
+  public ImageIoDimensionAdapter() {
+    ImageIO.scanForPlugins();
+  }
 
   /// 读取图片宽高。
   ///
