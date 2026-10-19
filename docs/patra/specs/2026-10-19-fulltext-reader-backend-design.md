@@ -43,7 +43,7 @@ PMC Cloud Service ─────────► [PAP-85 全文抓取] ──►
                              [PAP-86 JATS 解析] ──► cat_publication_fulltext_body（JSONB）
                                                      状态 PARSED、字数、has_full_text
                                                           ▼
-门户 ◄── Route Handler ◄── 网关 ◄── [PAP-87 读端点] 详情三字段 / 全文 / PDF / 图片
+门户 ◄── Route Handler ◄── 网关 ◄── [PAP-87 读端点] 详情四字段 / 全文 / PDF / 图片
 ```
 
 ### 2.2 任务编排
@@ -53,8 +53,8 @@ PMC Cloud Service ─────────► [PAP-85 全文抓取] ──►
 | XXL-Job handler | 触发 | 子任务 | 每次运行做什么 |
 |---|---|---|---|
 | `pubmedUpdateSyncJob` | cron 每天 05:00（Asia/Shanghai） | `pmcFullTextFetchJob` | 从进度表最后一个成功文件的下一个开始，按文件号依次处理到最新；遇到失败的文件停止 |
-| `pmcFullTextFetchJob` | 父任务成功后；另有一条每小时的兜底任务 | `jatsFullTextParseJob` | 处理一批候选（第 5.2 节），批量大小可配 |
-| `jatsFullTextParseJob` | 父任务成功后；另有一条每小时的兜底任务 | — | 处理一批待解析（第 6.4 节） |
+| `pmcFullTextFetchJob` | 父任务成功后；另有一条每小时的兜底任务 | `jatsFullTextParseJob` | 按批处理所有到期候选（第 5.2 节）直到取不到为止，批量大小可配 |
+| `jatsFullTextParseJob` | 父任务成功后；另有一条每小时的兜底任务 | — | 按批处理所有待解析（第 6.4 节）直到取不到为止 |
 
 - NLM 的 updatefiles 在美东时间 14:00 前后发布（n1686 为 `2026-10-17 14:03`），即北京时间次日 02:00 ~ 03:00；05:00 的 cron 留出余量。
 - XXL-Job 的任务目前都在控制台手工建，没有 cron 与子任务的先例。本版照旧手工建，建任务的步骤（handler 名、cron、子任务 ID、参数）写进 `docs/patra/runbooks/v0.11-fulltext-runbook.md`。是否补种子 SQL 不在本版范围（`mysql-ops` 的 init 脚本只在新建卷时执行，补了也不影响现有环境）。
@@ -79,7 +79,7 @@ PMC Cloud Service ─────────► [PAP-85 全文抓取] ──►
 | app | `usecase/portal/` | `PortalPublicationFullTextQueryService` |
 | infra | `batch/publication/` | 增量同步 Job（与 baseline 共用 Reader / Processor） |
 | infra | `adapter/integration/pmc/` | PMC S3 客户端 |
-| infra | `adapter/parse/jats/` | JATS 解析器 |
+| infra | `parser/jats/` | JATS 解析器（与现有 PubMed 解析器同在 `infra/parser/`） |
 | infra | `adapter/persistence/`、`adapter/read/`、`adapter/storage/` | 仓储、读端、文件存取实现 |
 | adapter | `scheduler/job/` | 三个 XXL-Job 入口 |
 | adapter | `rest/portal/` | 全文、PDF、图片端点 |
@@ -119,13 +119,15 @@ PMC Cloud Service ─────────► [PAP-85 全文抓取] ──►
 | `pmcid` | VARCHAR(20) | 抓取时用的 PMCID（`PMC1234567`） |
 | `pmc_version` | VARCHAR(30) | 选中的版本前缀（`PMC1234567.2`） |
 | `status` | VARCHAR(20) | 见第 3.4 节 |
-| `unavailable_reason` | VARCHAR(30) | `NOT_IN_BUCKET` / `NOT_OPEN_ACCESS` / `RETRACTED` / `NO_BODY`，仅 `UNAVAILABLE` 时有值 || `license_code` | VARCHAR(30) | PMC 元数据原值，可为空 |
+| `unavailable_reason` | VARCHAR(30) | `NOT_IN_BUCKET` / `NOT_OPEN_ACCESS` / `RETRACTED` / `NO_BODY`，仅 `UNAVAILABLE` 时有值 |
+| `license_code` | VARCHAR(30) | PMC 元数据原值，可为空 |
 | `is_manuscript` | BOOLEAN | |
 | `object_prefix` | VARCHAR(200) | MinIO 前缀，见第 5.4 节 |
 | `xml_md5` | CHAR(32) | |
 | `pdf_object_key` | VARCHAR(300) | 无 PDF 时为空 |
 | `pdf_size` | BIGINT | |
 | `pdf_md5` | CHAR(32) | 用作 PDF 的 ETag |
+| `media` | JSONB | 已下载的正文图片清单 `[{ "name", "width", "height" }]`，宽高为像素，读不出时为 `null`；无图片时为 `[]`。解析器据此匹配图片、写图块宽高，图片接口据此判断文件是否属于该篇（第 5.3、6.3、7.5 节） |
 | `fetched_at` | TIMESTAMPTZ | 页面显示的"抓取日期" |
 | `parser_version` | INT | 解析成功时的解析器版本 |
 | `parsed_at` | TIMESTAMPTZ | |
@@ -281,7 +283,8 @@ PMC Cloud Service ─────────► [PAP-85 全文抓取] ──►
 - **选版本**：候选为 `is_pmc_openaccess = true` 的版本；有多个时优先非手稿，再取版本号最大的。版本号不代表新旧（PMC FAQ），这里只作同等条件下的平局规则。
   - 没有候选 → `NOT_OPEN_ACCESS`（作者手稿的许可为 `TDM`，`is_pmc_openaccess = false`，在此排除）。
   - 选中版本 `is_retracted = true` → `RETRACTED`。
-- **下载**：XML 必下；`pdf_url` 存在则下 PDF；`media_urls` 里扩展名为图片（jpg / jpeg / png / gif）的下载，其余（补充材料、视频、tif）不下（release spec 边界 E）。用 md5 校验每个文件。
+- **下载**：XML 必下；`pdf_url` 存在则下 PDF；`media_urls` 里扩展名为图片（jpg / jpeg / png / gif / webp）的下载，其余（补充材料、视频、tif）不下（release spec 边界 E）。用 md5 校验每个文件。2026-10-19 实测 BMJ Open、JAMA Netw Open 的正文图片都是 `.webp`（如 `PMC13583816.1/bmjopen-16-9-g001.webp`），XML 里的 `xlink:href` 与文件名一致。
+- **图片尺寸**：下载后读一次图片头取像素宽高，写入全文记录的 `media`（第 3.2 节）。JDK 的 ImageIO 不认 WebP，引入 TwelveMonkeys 的 `com.twelvemonkeys.imageio:imageio-webp:3.15.2` 插件（版本登记在 `PatraDependencyManagement.kt`，只加到 catalog infra；SPI 自动注册，只读文件头，不解码整张图）；读不出时宽高为 `null`，不算抓取失败。
 - **HTTP 客户端**：在 catalog 按 OpenAlex 客户端的写法新建专用 `RestClient`（连接 5 秒、读取 60 秒、User-Agent 标明 Patra）。不走隧道代理。客户端要区分"404 不存在"与"出错"，不能像现有客户端那样吞掉异常返回空。大文件（PDF）复用 `DownloadClient.downloadToTemp`（自带重试与退避）。
 - **并发与限流**：Worker 并发数可配（默认 4），请求间隔可配（默认 0）。PMC 未公布限流，出现 429 / 503 时按抓取失败退避。
 - **署名**：PMC 条款要求标注 NLM 为来源、不得使用 PMC 标志或暗示 NIH 背书。读端点返回的 `source` 字段固定文案见第 7.3 节。
@@ -303,7 +306,7 @@ pmc 标识符的值以 `cat_publication_identifier.type = 'pmc'` 为准（PubMed
 
 1. 列版本、读元数据、选版本 → 不可用则 Persister 写 `UNAVAILABLE` + 原因，结束。
 2. 下载 XML、PDF、图片，校验 md5，写 MinIO。
-3. Persister 一个事务内：全文记录 `FETCHED`（含 `pmc_version`、许可、对象前缀、PDF 信息、`fetched_at`）；`is_oa = true`；替换 PMC OA 位置。
+3. Persister 一个事务内：全文记录 `FETCHED`（含 `pmc_version`、许可、对象前缀、PDF 信息、图片清单 `media`、`fetched_at`）；`is_oa = true`；替换 PMC OA 位置。
 4. 任何一步出错 → `FETCH_FAILED`，`attempt_count + 1`，算 `next_attempt_at`；已写入 MinIO 的文件不清理（下次覆盖写）。
 
 一篇失败不影响同批其他篇。返回统计：处理数、`FETCHED` 数、各不可用原因数、失败数。
@@ -316,7 +319,7 @@ pmc 标识符的值以 `cat_publication_identifier.type = 'pmc'` 为准（PubMed
 
 ### 5.5 测试与验收
 
-- 单元：选版本规则（OA / 手稿 / 撤稿 / 多版本平局）；退避与再查时间计算（含有放开日期的情况）；候选四类的判定；改写后的 `ofPmc`。
+- 单元：选版本规则（OA / 手稿 / 撤稿 / 多版本平局）；退避与再查时间计算（含有放开日期的情况）；候选四类的判定；改写后的 `ofPmc`；图片尺寸读取（jpg / png / webp 各一张，坏文件返回 `null`）。
 - 集成：WireMock 模拟 S3 列表、JSON、文件；MinIO 用现成的 `CatalogITMinIOContainerInitializer`；PG 用 Testcontainers。覆盖：正常抓取写入 MinIO 与三张表；`NOT_IN_BUCKET` / `NOT_OPEN_ACCESS` 到期再查后成功；`RETRACTED` 不再查；下载失败退避；PMCID 变化重抓；手动重抓参数；两个任务实例同时运行时第二个直接返回（advisory lock）。
 - mini 跑完后记录：可读全文篇数（等解析）、有 PDF 篇数、各不可用原因篇数、`is_oa = true` 篇数（release spec D3）。
 
@@ -335,6 +338,7 @@ pmc 标识符的值以 `cat_publication_identifier.type = 'pmc'` 为准（PubMed
 ```json
 {
   "schemaVersion": 1,
+  "blocks": [ Block ],
   "sections": [ Section ],
   "back": [ Section ],
   "references": [ Reference ],
@@ -342,23 +346,24 @@ pmc 标识符的值以 `cat_publication_identifier.type = 'pmc'` 为准（PubMed
 }
 ```
 
+- **顶层 `blocks`**：`<body>` 里第一个 `<sec>` 之前的直接内容（如 BMJ Open 开头的 "Strengths and limitations" 框）。`<sec>` 之后又出现的直接内容归入一个无标题的 Section。只取 `<article>` 的直接子元素 `<body>` / `<back>`，`<sub-article>`（审稿意见等）里的不取。
 - **Section**：`{ "id", "title": [Inline], "sections": [Section], "blocks": [Block] }`。`id` 取 JATS 的 `id` 属性，没有则生成（供目录锚点）。`back` 收致谢、脚注组、附录等 `<back>` 下除参考文献以外的内容。
 - **Block**（`kind` 区分）：
 
 | kind | 字段 | 来源 |
 |---|---|---|
-| `paragraph` | `content: [Inline]` | `<p>` |
-| `figure` | `id`、`label`、`caption: [Block]`、`image`（MinIO 里的文件名） | `<fig>` + `<graphic xlink:href>` |
+| `paragraph` | `content: [Inline]` | `<p>`；`<p>` 里嵌着块级元素（`disp-formula`、`fig`、`table-wrap`、`list` 等，Wiley 与 BMC 常见）时在块的两侧切开，块单独输出 |
+| `figure` | `id`、`label`、`caption: [Block]`、`image`（MinIO 里的文件名）、`width` / `height`（像素，取自 `media`，未知为 `null`） | `<fig>` + `<graphic xlink:href>` |
 | `table` | `id`、`label`、`caption: [Block]`、`head` / `body: [[Cell]]`、`footnotes: [Block]`；Cell = `{ content: [Inline], colspan, rowspan, header }` | `<table-wrap>` 内的 XHTML 表格模型 |
-| `formula` | `id`、`label`、`mathml`（字符串） | `<disp-formula>` 里的 `<mml:math>`，去掉命名空间前缀 |
+| `formula` | `id`、`label`、`mathml`（字符串）；只有公式图片时改为 `image`、`width`、`height` | `<disp-formula>`：取值顺序 MathML（含 `<alternatives>` 里的）→ `tex-math`（输出 `code`）→ `graphic`；MathML 去掉命名空间前缀 |
 | `list` | `ordered`、`items: [[Block]]` | `<list>` |
 | `quote` | `blocks: [Block]` | `<disp-quote>` |
-| `box` | `title: [Inline]`、`blocks: [Block]` | `<boxed-text>` |
+| `box` | `id`、`title: [Inline]`、`blocks: [Block]` | `<boxed-text>` |
 | `code` | `text` | `<preformat>`、`<code>` |
 
-- **Inline**（`kind` 区分）：`text`（`text`）、`style`（`style` ∈ italic / bold / sup / sub / underline / smallcaps / monospace，`children`）、`xref`（`refType` ∈ bibr / fig / table / disp-formula / sec / fn，`targets: [id]`，`children`）、`link`（`href`，`children`；只保留 http / https / doi）、`math`（`mathml` 字符串，来自 `<inline-formula>`）、`break`。
-- **Reference**：`{ "id", "label", "content": [Inline], "pmid", "doi" }`。`content` 由 `<mixed-citation>` 原样转换，或由 `<element-citation>` 按"作者. 标题. 期刊. 年;卷:页."拼出；`pmid` / `doi` 从 `<pub-id>` 取（门户只做外链，不做站内跳转，release spec 边界 G）。
-- **公式**：只用 MathML。PMC 桶里没有 XML 引用的公式图片，只有 `<tex-math>` 没有 MathML 的公式，输出 `code` 块放 TeX 原文并计一条解析警告。
+- **Inline**（`kind` 区分）：`text`（`text`）、`style`（`style` ∈ italic / bold / sup / sub / underline / smallcaps / monospace，`children`）、`xref`（`refType` ∈ bibr / fig / table / disp-formula / sec / fn / boxed-text，`targets: [id]`，`children`；其他类型或目标在本篇找不到时不生成 `xref`，只输出子节点并计警告）、`link`（`href`，`children`；只保留 http / https / doi）、`math`（`mathml` 字符串；**任何位置**的 MathML `math` 元素都输出为它，不只 `<inline-formula>` 里的——Wiley PMC12670376 的 941 个 MathML 里 882 个直接挂在 `p` / `td` / `th` / `title` 下）、`break`。
+- **Reference**：`{ "id", "label", "content": [Inline], "pmid", "doi" }`。`<ref>` 下可能是 `citation-alternatives` 包着两种写法（BMC、Nat Commun 几乎全是）；`content` 优先由 `<mixed-citation>` 原样转换，没有时由 `<element-citation>` 按"作者. 标题. 期刊. 年;卷:页."拼出；`pmid` / `doi` 从 `<pub-id>` 取（门户只做外链，不做站内跳转，release spec 边界 G）。
+- **公式**：优先 MathML。2026-10-19 预检实测纠正了原先"桶里没有公式图片"的判断：PLOS 的公式是 `alternatives(graphic | mml:math)`，个别（PMC12779161 有 5 个）只有 `graphic`，图片在桶里（该篇 `media_urls` 有 259 个文件，多数是公式图）。只有图片的公式输出 `formula` 的 `image` 并计警告；只有 `<tex-math>` 没有 MathML 的公式，输出 `code` 块放 TeX 并计一条解析警告。BMC 与 Sci Rep 的 `<tex-math>` 是整段 `\documentclass{minimal}…\begin{document}$$…$$\end{document}`（样本 PMC12632047.1）：有 `\begin{document}` 时只取它与 `\end{document}` 之间的内容，再去掉外层的 `$$…$$` 或 `$…$`，两端去空白；没有外壳的原样输出。
 - **门户渲染约定**：行内节点与门户摘要的 `RichInlineText` 白名单渲染对齐；MathML 字符串由门户的 MathML 白名单解析。前端类型与 zod 校验以本节为准（PAP-88）。
 - **MathML 白名单要扩充**（我定的，落在 PAP-88）：门户现有 `MATH_TAGS`（`rich-inline-text.ts:41-59`）没有 `mtable`、`mtr`、`mtd`、`mroot`、`mfenced`、`menclose`、`mpadded`、`mphantom`、`mmultiscripts` 等行间公式常用标签，会被剥掉；`FORMATTING_TAGS`（第 38 行）也没有 smallcaps / monospace（这两种在本结构里是 `style` 节点，不走字符串标签）。后端只做命名空间前缀去除，不做 MathML 规范化或裁剪——白名单是安全边界，放在渲染端统一维护。PAP-86 的夹具里收集到的 MathML 标签全集，整理成清单交给 PAP-88。
 
@@ -367,14 +372,15 @@ pmc 标识符的值以 `cat_publication_identifier.type = 'pmc'` 为准（PubMed
 - 不认识的块级元素：取其纯文本作为 `paragraph`，记一条解析警告（警告数写日志，不入库）。不认识的行内元素：保留其子内容。
 - `<supplementary-material>`、`<media>` 跳过（release spec 边界 E）。
 - 没有 `<body>` 或 `<body>` 为空（部分 OA 记录只有扫描 PDF）：`UNAVAILABLE` + `NO_BODY`，PDF 照常可下载。
-- XML 不合法或解析抛异常：`PARSE_FAILED` + `last_error`。
-- 图片：`<graphic xlink:href>` 一般与桶内文件名一致（含扩展名）；少数没有扩展名的，按"去扩展名后同名"在该篇已下载的图片里匹配，找不到则该图 `image` 为空并计警告。
+- XML 不合法或解析抛异常：`PARSE_FAILED` + `last_error`。读 MinIO 出错不算解析失败：保持 `FETCHED`，下次运行再试。
+- `NO_BODY` 也记 `parser_version`，解析器版本提升后同样重新解析（防止误判无正文后救不回来）。
+- 图片：在全文记录的 `media` 清单里匹配 `<graphic xlink:href>`：先按全名，找不到再按"去扩展名后同名"（少数 href 不带扩展名）；匹配上则写 `image` 与宽高，找不到则该图 `image` 为空并计警告。解析不访问 MinIO 判断文件是否存在。
 
 ### 6.4 解析任务
 
 - 候选：`status = FETCHED`，或 `status ∈ (PARSED, PARSE_FAILED)` 且 `parser_version < PARSER_VERSION`。keyset 分批。
 - 一篇：从 MinIO 读 XML（`object_prefix` + `{PMCID}.{v}.xml`）→ 解析 → Persister 一个事务内写 `cat_publication_fulltext_body`（upsert）、全文记录 `PARSED` / `UNAVAILABLE(NO_BODY)` / `PARSE_FAILED`、`word_count`、`parser_version`、`parsed_at`、`metadata.has_full_text`。
-- 字数：正文与 `back` 里所有文本按空白切分计数（参考文献不计）。
+- 字数：顶层 `blocks`、正文与 `back` 里的文本按空白切分计数，章节标题、图题、表题、表注照计。不计：参考文献、公式（`formula` 块与 `math` 行内节点）、表格单元格（`head` / `body`，表题与表注照计）、`code` 块。口径来自设计简报附录 A.4：PMC12670376 把 MathML 记号算进去是 19,335 词、约 85 分钟，按此口径约 11,000 词、49 分钟。
 - 全量重新解析 = 把 `PARSER_VERSION` +1 后跑解析任务，全程不访问 PMC。
 
 ### 6.5 测试与验收
@@ -388,13 +394,13 @@ pmc 标识符的值以 `cat_publication_identifier.type = 'pmc'` 为准（PubMed
 
 ### 7.1 可读判定
 
-一篇文献"可读全文"当且仅当：文献未删除，全文记录 `status = PARSED`，且文献不是撤稿文献（`cat_publication_type` 不含 `Retracted Publication`）。PDF 可下载当且仅当：文献未删除、不是撤稿文献、全文记录有 `pdf_object_key`（不要求 `PARSED`，`NO_BODY` 的文章也能下 PDF）。图片可取当且仅当可读全文。
+一篇文献"可读全文"当且仅当：文献未删除，全文记录 `status = PARSED`，且文献不是撤稿文献（`cat_publication_type` 不含 `Retracted Publication`）。PDF 可下载当且仅当：文献未删除、不是撤稿文献、全文记录有 `pdf_object_key`（不要求 `PARSED`，`NO_BODY` 的文章也能下 PDF）。图片可取当且仅当可读全文。全文接口（第 7.3 节）在可读全文或 PDF 可下载时返回 200。
 
 撤稿判定放在读端，而不是只看抓取时 PMC 的 `is_retracted`：增量同步会把 PubMed 的撤稿标记带进来，读端判定能让已抓取的全文在文献被撤稿后自动停止展示。
 
 ### 7.2 详情接口
 
-`GET /portal/publications/{id}` 的 `PortalPublicationDetailResponse` 新增 `hasFullText`、`hasPdf`；已有的 `estimatedReadMin` 从恒为空改为 `ceil(word_count / 230)`（可读全文时，否则为空；`PortalApiConverter.java:284` 的 `TODO(read-time)` 随之删除）。详情接口不返回正文。
+`GET /portal/publications/{id}` 的 `PortalPublicationDetailResponse` 新增 `hasFullText`、`hasPdf`、`pdfSizeBytes`（PDF 可下载时为 `pdf_size`，否则为空；下载按钮旁显示文件大小）；已有的 `estimatedReadMin` 从恒为空改为 `ceil(word_count / 230)`（可读全文时，否则为空；`PortalApiConverter.java:284` 的 `TODO(read-time)` 随之删除）。详情接口不返回正文。
 
 列表卡片 `PortalPaperResponse` 也有一个恒为空的 `estimatedReadMin`（`PortalApiConverter.java:49` 的 `TODO(read-time)`）。本版不做（我定的）：release spec 只要求详情页速览栏显示阅读时长，列表接口加关联查询会影响 `/papers` 的检索性能，留着 TODO 不动。
 
@@ -419,13 +425,15 @@ pmc 标识符的值以 `cat_publication_identifier.type = 'pmc'` 为准（PubMed
 
 - `license.url`：常见 CC 许可（BY、BY-NC、BY-NC-ND、BY-ND、BY-SA、BY-NC-SA、CC0）映射到 CC 4.0 / 1.0 的官方链接；`license_code` 为空或不认识时 `license` 为 `null`，门户显示"许可见原文"。
 - 图片在 `body` 里只存文件名，门户拼成自己的转发地址（第 7.5 节）。
-- 不可读 → 404（新增 `FullTextNotAvailableException`，`StandardErrorTrait.NOT_FOUND`，由现有错误解析引擎映射）。
+- **有 PDF 无正文**（不可读全文但 PDF 可下载，典型是 `NO_BODY`）→ 200，`body`、`wordCount`、`estimatedReadMin` 为 `null`，署名字段（`pmcid`、`pmcUrl`、`license`、`source`、`fetchedAt`、`isManuscript`）照常返回：页面在分发 PDF，同样要署名（release spec 决策 D，设计简报附录 A.1）。
+- 既不可读也不能下 PDF → 404（新增 `FullTextNotAvailableException`，`StandardErrorTrait.NOT_FOUND`，由现有错误解析引擎映射）。
 
 ### 7.4 PDF 接口
 
 `GET /portal/publications/{id}/fulltext/pdf`
 
-- 从 MinIO 流式读出（`ObjectStorageOperations.download` 返回的流），用 `StreamingResponseBody`（或 `InputStreamResource`）写回，不整篇读进内存。全仓库没有二进制响应的先例，这是第一个。
+- 从 MinIO 流式读出（`ObjectStorageOperations.download` 返回的流），用 `InputStreamResource` 同步写回，不整篇读进内存。不用 `StreamingResponseBody`：它走异步分派，受 Tomcat 默认 30 秒异步超时限制（网关是 60 秒），`RestTestClient` 也读不到它的响应体。打开对象放在返回响应之前，对象缺失时仍能返回 404。全仓库没有二进制响应的先例，这是第一个。
+- catalog 关闭 OSIV（`spring.jpa.open-in-view: false`）：默认开着时，下载请求从查库起一直占着 JDBC 连接直到写完，连接池只有 20 条。
 - 响应头：`Content-Type: application/pdf`、`Content-Length`、`ETag: "<pdf_md5>"`、`Cache-Control: public, max-age=86400`、`Content-Disposition: attachment; filename="<PMCID>.pdf"`。支持 `If-None-Match` 返回 304。
 - 网关不补缓存头（安全链 `headers().disable()`），这些头由 catalog 设置；网关读超时为 60 秒总时长（含流式），由 release spec D6 实测最大 PDF 兜底。
 - 二进制端点不经 `PortalApiConverter`，错误仍走现有错误解析（不可下载 → 404）。
@@ -434,14 +442,14 @@ pmc 标识符的值以 `cat_publication_identifier.type = 'pmc'` 为准（PubMed
 
 `GET /portal/publications/{id}/fulltext/figures/{fileName}`
 
-- `fileName` 只允许 `[A-Za-z0-9._-]+`（防路径穿越），且必须属于该篇已下载的图片（MinIO `statObject` 存在）；否则 404。
+- `fileName` 只允许 `[A-Za-z0-9._-]+`（防路径穿越），且必须在该篇全文记录的 `media` 清单里；否则 404。
 - `Content-Type` 按扩展名；`Cache-Control: public, max-age=604800, immutable`（同一版本的文件不会变）；`ETag` 用 MinIO 的 ETag。
 
 门户这侧（PAP-88）：浏览器访问不到网关，PDF 与图片经门户同源 Route Handler（如 `/api/papers/[id]/pdf`、`/api/papers/[id]/figures/[file]`）调 `gatewayFetch` 转发，透传上述响应头。
 
 ### 7.6 测试与验收
 
-- 集成（`@SpringBootTest` + Testcontainers PG + MinIO）：可读 / 不可读 / 撤稿 / `NO_BODY` 有 PDF 四种组合下三个端点的状态码；PDF 与图片响应头；`If-None-Match` 返回 304；非法文件名 404；详情接口三字段。
+- 集成（`@SpringBootTest` + Testcontainers PG + MinIO）：可读 / 不可读 / 撤稿 / `NO_BODY` 有 PDF 四种组合下三个端点的状态码（`NO_BODY` 有 PDF 时全文接口 200 且 `body` 为 `null`）；PDF 与图片响应头；`If-None-Match` 返回 304；非法文件名与不在 `media` 里的文件名 404；详情接口四个字段。
 - 详情接口响应体不含正文（断言字段集合）。
 - mini：经网关下载库内最大 PDF，md5 与 PMC 元数据一致（release spec D6）。
 
@@ -495,3 +503,5 @@ pmc 标识符的值以 `cat_publication_identifier.type = 'pmc'` 为准（PubMed
 ## 附录 B：审阅中已定的问题
 
 1. **`last_synced_at` 随覆盖更新**（2026-10-19 与用户讨论）：门户对它的用法是"最近更新"排序与"最近同步"日期，本来就是同步时间的含义；不更新则永远不动、名不副实。见第 4.3 节。
+2. **设计简报附录 A 的五条补充**（2026-10-19 用户同意收入）：详情接口加 `pdfSizeBytes`（第 7.2 节）；有 PDF 无正文时全文接口返回 200、`body` 为空，署名照常给（第 7.3 节）；图块带像素宽高，抓取时记入 `media` 清单，解析与图片接口都改为查清单（第 3.2、5.1、6.3、7.5 节）；只有 TeX 的公式去掉 `documentclass` 外壳（第 6.2 节）；字数不计公式、表格单元格与代码块（第 6.4 节）。核对时另发现正文图片多为 `.webp`，下载范围补上（第 5.1 节）。
+3. **开工前预检对真实 JATS 的修正**（2026-10-19，我定的）：`<p>` 内嵌块级元素时切开段落；任何位置的 MathML 都输出 `math`；`citation-alternatives`；公式取值顺序与公式图片；顶层 `blocks` 与 `sub-article` 排除；`xref` 类型白名单与降级；`box` 带 `id`。见第 6.2、6.3 节。PDF / 图片改为 `InputStreamResource` 并关闭 OSIV，见第 7.4 节。
