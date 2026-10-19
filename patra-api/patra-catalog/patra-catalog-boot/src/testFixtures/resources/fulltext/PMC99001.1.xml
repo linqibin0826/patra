@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 全文 E2E 合成夹具（非真实文章） -->
+<article xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:mml="http://www.w3.org/1998/Math/MathML" article-type="research-article">
+  <front><article-meta><article-id pub-id-type="pmc">PMC99001</article-id></article-meta></front>
+  <body>
+    <sec id="s1"><title>Introduction</title>
+      <p>Synthetic body text for the end to end test <xref ref-type="bibr" rid="R1">1</xref>.</p>
+      <fig id="F1"><label>Figure 1</label><caption><title>A tiny figure</title></caption><graphic xlink:href="fig1.webp"/></fig>
+    </sec>
+  </body>
+  <back><ref-list><ref id="R1"><mixed-citation>Doe J. Placeholder. J Synth. 2001;1:1-2.</mixed-citation></ref></ref-list></back>
+</article>
