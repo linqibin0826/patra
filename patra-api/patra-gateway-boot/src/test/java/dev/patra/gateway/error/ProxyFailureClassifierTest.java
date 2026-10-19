@@ -4,12 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.tool.core.error.ApplicationException;
 import dev.patra.tool.core.error.codes.HttpStdErrors;
+import io.netty.channel.ConnectTimeoutException;
+import io.netty.handler.timeout.ReadTimeoutException;
 import java.io.IOException;
 import java.net.ConnectException;
-import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
-import java.net.http.HttpConnectTimeoutException;
-import java.net.http.HttpTimeoutException;
 import java.nio.channels.UnresolvedAddressException;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -54,7 +53,7 @@ class ProxyFailureClassifierTest {
   void should_treat_connect_timeout_as_unavailable_not_timeout() {
     ResourceAccessException connectTimeout =
         new ResourceAccessException(
-            "I/O error", new HttpConnectTimeoutException("HTTP connect timed out"));
+            "I/O error", new ConnectTimeoutException("connection timed out: /10.0.0.1:6300"));
 
     assertThat(codeOf(ProxyFailureClassifier.wrap(connectTimeout, http))).isEqualTo("GW-0503");
   }
@@ -72,27 +71,18 @@ class ProxyFailureClassifierTest {
     assertThat(codeOf(ProxyFailureClassifier.wrap(unresolved, http))).isEqualTo("GW-0503");
   }
 
+  /// Reactor Netty 的读超时以 `ReadTimeoutException`（非受检异常）到达，Spring 把它包进
+  /// `IOException`，RestClient 再包成 `ResourceAccessException`。
   @Test
   void should_wrap_read_timeout_as_downstream_timeout() {
-    ResourceAccessException httpTimeout =
-        new ResourceAccessException("I/O error", new HttpTimeoutException("request timed out"));
-    ResourceAccessException socketTimeout =
-        new ResourceAccessException("I/O error", new SocketTimeoutException("Read timed out"));
+    ResourceAccessException readTimeout =
+        new ResourceAccessException(
+            "I/O error", new IOException("read timed out", ReadTimeoutException.INSTANCE));
 
-    ApplicationException wrapped = ProxyFailureClassifier.wrap(httpTimeout, http).orElseThrow();
+    ApplicationException wrapped = ProxyFailureClassifier.wrap(readTimeout, http).orElseThrow();
     assertThat(wrapped).isInstanceOf(DownstreamTimeoutException.class);
     assertThat(wrapped.getErrorCode().code()).isEqualTo("GW-0504");
     assertThat(wrapped.getMessage()).isEqualTo("下游服务响应超时");
-    assertThat(codeOf(ProxyFailureClassifier.wrap(socketTimeout, http))).isEqualTo("GW-0504");
-  }
-
-  @Test
-  void should_find_timeout_nested_in_cause_chain() {
-    ResourceAccessException nested =
-        new ResourceAccessException(
-            "I/O error", new IOException("wrapped", new HttpTimeoutException("timed out")));
-
-    assertThat(codeOf(ProxyFailureClassifier.wrap(nested, http))).isEqualTo("GW-0504");
   }
 
   @Test

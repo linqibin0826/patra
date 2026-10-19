@@ -20,6 +20,9 @@ dependencies {
     // Spring Cloud Gateway（WebMVC 版）：代理走 Boot 的 RestClient，HTTP 客户端由 spring.http.clients.* 决定
     implementation(libs.spring.cloud.starter.gateway)
 
+    // 代理用的 HTTP 客户端：Reactor Netty 的读超时是空闲超时（两次读之间的最长间隔），大文件慢速下载不被掐断
+    implementation(libs.reactor.netty.http)
+
     // LoadBalancer：lb:// 路由
     implementation(libs.spring.cloud.starter.loadbalancer)
 

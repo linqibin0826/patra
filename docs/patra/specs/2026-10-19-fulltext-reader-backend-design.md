@@ -436,7 +436,7 @@ pmc 标识符的值以 `cat_publication_identifier.type = 'pmc'` 为准（PubMed
 - 从 MinIO 流式读出（`ObjectStorageOperations.download` 返回的流），用 `InputStreamResource` 同步写回，不整篇读进内存。不用 `StreamingResponseBody`：它走异步分派，受 Tomcat 默认 30 秒异步超时限制（网关是 60 秒），`RestTestClient` 也读不到它的响应体。打开对象放在返回响应之前，对象缺失时仍能返回 404。全仓库没有二进制响应的先例，这是第一个。
 - catalog 关闭 OSIV（`spring.jpa.open-in-view: false`）：默认开着时，下载请求从查库起一直占着 JDBC 连接直到写完，连接池只有 20 条。
 - 响应头：`Content-Type: application/pdf`、`Content-Length`、`ETag: "<pdf_md5>"`、`Cache-Control: public, max-age=86400`、`Content-Disposition: attachment; filename="<PMCID>.pdf"`。支持 `If-None-Match` 返回 304。
-- 网关不补缓存头（安全链 `headers().disable()`），这些头由 catalog 设置；网关读超时为 60 秒总时长（含流式），由 release spec D6 实测最大 PDF 兜底。
+- 网关不补缓存头（安全链 `headers().disable()`），这些头由 catalog 设置；网关读超时是 60 秒空闲超时（下游持续发数据就不断，见网关设计第 6 节），由 release spec D6 实测最大 PDF 兜底。
 - 二进制端点不经 `PortalApiConverter`，错误仍走现有错误解析（不可下载 → 404）。
 
 ### 7.5 图片接口
