@@ -390,24 +390,34 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
 
       // 2. 写入关联数据
       writeMetadataAssociations(data);
-      writeMeshAssociations(data);
-      writeKeywordAssociations(data);
-      writeFundingAssociations(data);
-      writePublicationTypeAssociations(data);
-      writeSupplMeshAssociations(data);
-      writeAlternativeAbstractAssociations(data);
-      writeDateAssociations(data);
-      writeIdentifierAssociations(data);
-      writeAbstractAssociations(data);
-      writeInvestigatorAssociations(data);
-      writePersonalNameSubjectAssociations(data);
-      writeAuthorAssociations(data);
+      writeImportOwnedAssociations(data);
 
       log.info("批量写入 {} 条 Publication（含关联数据）完成", data.size());
     } catch (RuntimeException ex) {
       entityManager.clear();
       throw ex;
     }
+  }
+
+  /// 写入导入流程拥有的子表数据（元数据除外）。
+  ///
+  /// 前置条件：每条 `data` 的文献都已有 ID。新插入时由 `insertAllWithAssociations` 调用；
+  /// 增量同步覆盖更新时，由 `PublicationSyncRepositoryAdapter` 在先删旧子表行之后调用。
+  ///
+  /// @param data 文献完整数据
+  public void writeImportOwnedAssociations(List<PublicationCompleteData> data) {
+    writeMeshAssociations(data);
+    writeKeywordAssociations(data);
+    writeFundingAssociations(data);
+    writePublicationTypeAssociations(data);
+    writeSupplMeshAssociations(data);
+    writeAlternativeAbstractAssociations(data);
+    writeDateAssociations(data);
+    writeIdentifierAssociations(data);
+    writeAbstractAssociations(data);
+    writeInvestigatorAssociations(data);
+    writePersonalNameSubjectAssociations(data);
+    writeAuthorAssociations(data);
   }
 
   // ========== insertAllWithAssociations 辅助方法 ==========
