@@ -513,7 +513,8 @@
                 "ingest"
             ],
             "tasks": [
-                "check"
+                "check",
+                "integrationTest"
             ]
         },
         {
