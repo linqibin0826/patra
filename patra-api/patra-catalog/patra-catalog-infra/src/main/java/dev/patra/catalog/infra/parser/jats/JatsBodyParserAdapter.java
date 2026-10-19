@@ -208,14 +208,25 @@ public class JatsBodyParserAdapter implements JatsBodyParserPort {
   /// 致命错误与错误都抛出，警告忽略（不往标准错误打印）。
   private static final ErrorHandler STRICT =
       new ErrorHandler() {
+        /// 警告忽略。
+        ///
+        /// @param e 警告
         @Override
         public void warning(SAXParseException e) {}
 
+        /// 错误直接抛出。
+        ///
+        /// @param e 错误
+        /// @throws SAXException 原错误
         @Override
         public void error(SAXParseException e) throws SAXException {
           throw e;
         }
 
+        /// 致命错误直接抛出。
+        ///
+        /// @param e 致命错误
+        /// @throws SAXException 原错误
         @Override
         public void fatalError(SAXParseException e) throws SAXException {
           throw e;

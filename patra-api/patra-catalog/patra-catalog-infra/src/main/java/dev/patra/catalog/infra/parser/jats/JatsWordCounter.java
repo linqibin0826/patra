@@ -27,6 +27,10 @@ final class JatsWordCounter {
     return blocks(blocks) + sections(sections) + sections(back);
   }
 
+  /// 章节字数：标题、块与子章节递归累加。
+  ///
+  /// @param sections 章节
+  /// @return 字数
   private static int sections(List<Section> sections) {
     int total = 0;
     for (Section s : sections) {
@@ -35,6 +39,10 @@ final class JatsWordCounter {
     return total;
   }
 
+  /// 块字数：公式与代码块不计，表格只计表题与表注。
+  ///
+  /// @param blocks 块
+  /// @return 字数
   private static int blocks(List<Block> blocks) {
     int total = 0;
     for (Block block : blocks) {
@@ -53,6 +61,10 @@ final class JatsWordCounter {
     return total;
   }
 
+  /// 一个文本容器的字数：先拼成整段再按空白切分。
+  ///
+  /// @param inlines 行内节点
+  /// @return 字数
   private static int words(List<Inline> inlines) {
     StringBuilder sb = new StringBuilder();
     append(inlines, sb);
@@ -60,6 +72,10 @@ final class JatsWordCounter {
     return text.isEmpty() ? 0 : text.split("\\s+").length;
   }
 
+  /// 把行内节点的文本追加到缓冲区，公式与换行只留一个空格。
+  ///
+  /// @param inlines 行内节点
+  /// @param sb 缓冲区
   private static void append(List<Inline> inlines, StringBuilder sb) {
     for (Inline inline : inlines) {
       switch (inline) {

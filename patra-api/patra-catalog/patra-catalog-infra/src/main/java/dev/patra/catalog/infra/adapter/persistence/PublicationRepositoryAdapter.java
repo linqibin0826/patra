@@ -1323,6 +1323,10 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
     }
   }
 
+  /// 标记 PMC 开放获取：置 `is_oa`，只替换 PMC 那一条 OA 位置，其他来源的位置保留。
+  ///
+  /// @param publicationId 文献 ID
+  /// @param pmcLocation PMC 位置
   @Override
   public void markPmcOpenAccess(long publicationId, PublicationOaLocation pmcLocation) {
     oaLocationDao.deleteByPublicationIdAndLocationType(
