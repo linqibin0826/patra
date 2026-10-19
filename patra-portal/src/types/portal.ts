@@ -208,7 +208,7 @@ export interface PublicationDate {
 /**
  * 文献详情端点 `GET /portal/publications/{id}` 响应（PaperDetail）。
  * 对应后端 `PortalPublicationDetailResponse`——扁平 + 列表，零运行时映射。
- * source/fullTextUrl 为真实数据；bookmarks 恒 0、estimatedReadMin 恒 null（占位，无数据源）。
+ * source/fullTextUrl 为真实数据；bookmarks 恒 0（占位，无数据源）。
  */
 export interface PaperDetail {
   id: string;
@@ -241,7 +241,14 @@ export interface PaperDetail {
   source: string | null;
   fullTextUrl: string | null;
   bookmarks: number | null;
+  /** 可读全文时为 ceil(字数 / 230)，否则为 null */
   estimatedReadMin: number | null;
+  /** 可在页面上读正文（PMC 开放获取、已解析、未撤稿） */
+  hasFullText: boolean;
+  /** 可下载 PMC 提供的原版 PDF（有正文与否都可能有） */
+  hasPdf: boolean;
+  /** PDF 字节数，Long 按仓库规则序列化成字符串；不能下载时为 null */
+  pdfSizeBytes: string | null;
 }
 
 /**

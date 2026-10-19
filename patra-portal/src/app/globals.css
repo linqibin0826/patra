@@ -304,6 +304,86 @@
 }
 
 @layer components {
+  /* ---------- 全文阅读（v0.11）：正文表格、公式 ---------- */
+
+  /* 正文表格：表头 sunken 底、单元格 sans 13px 等宽数字；首列吸左，横滚时行名始终可见 */
+  .ft-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    line-height: 20px;
+    font-variant-numeric: tabular-nums;
+    color: var(--fg-1);
+  }
+  .ft-table th,
+  .ft-table td {
+    padding: 8px 12px;
+    text-align: left;
+    vertical-align: top;
+  }
+  .ft-table thead th {
+    background: var(--bg-sunken);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    color: var(--fg-2);
+    vertical-align: bottom;
+    border-bottom: 1px solid var(--border-default);
+  }
+  .ft-table tbody th {
+    font-weight: 600;
+  }
+  .ft-table tbody tr + tr > * {
+    border-top: 1px solid var(--border-subtle);
+  }
+  .ft-table tr > :first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    min-width: 140px;
+    max-width: 280px;
+    background: var(--paper-50);
+    border-right: 1px solid var(--border-default);
+  }
+  .ft-table thead tr > :first-child {
+    background: var(--bg-sunken);
+  }
+  /* 其余列给个最小宽度：窄屏上表格横滚，而不是把每列挤成一字一行 */
+  .ft-table tr > :not(:first-child) {
+    min-width: 7em;
+  }
+  @media (width < 540px) {
+    .ft-table tr > :first-child {
+      min-width: 112px;
+      max-width: 150px;
+    }
+  }
+
+  /* 数学字体；行内公式与正文同字号，行间公式 1.1em */
+  math {
+    font-family: "STIX Two Math", "Latin Modern Math", math;
+  }
+  .math-scroll math {
+    font-size: 1.1em;
+  }
+  /* MathML Core（Chrome）不认 mtable 的 columnalign，分段函数原文左对齐要靠 CSS */
+  mtable[columnalign^="left"] mtd {
+    text-align: left;
+  }
+  /* 行间公式横滚的边缘提示：经典 scroll shadow，内容滚到头时阴影消失 */
+  .math-scroll {
+    background:
+      linear-gradient(to right, var(--bg-canvas) 30%, transparent) left center / 32px 100% no-repeat
+      local,
+      linear-gradient(to left, var(--bg-canvas) 30%, transparent) right center / 32px 100% no-repeat
+      local,
+      linear-gradient(to right, rgb(28 25 23 / 0.14), transparent) left center / 12px 100% no-repeat
+      scroll,
+      linear-gradient(to left, rgb(28 25 23 / 0.14), transparent) right center / 12px 100% no-repeat
+      scroll;
+  }
+
   /* 阅读进度条默认不显示：不支持滚动驱动动画时宁可没有，也不显示一根误导的满格线 */
   .read-progress {
     scale: 0 1;

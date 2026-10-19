@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Fragment } from "react";
+import { Fragment, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 interface DetailCrumbsProps {
@@ -7,11 +7,13 @@ interface DetailCrumbsProps {
   trail: { label: string; href: string }[];
   /** 当前页 */
   current: string;
+  /** 右端操作（如文献详情的移动端「目录」按钮） */
+  action?: ReactNode;
 }
 
 /// 详情页吸顶面包屑：高 44px + 1px 底边（侧栏吸顶偏移 134px 依赖这一高度），底边叠一条 2px 陶土阅读进度线
 /// （scroll-driven，仅支持的浏览器且 motion-safe 时出现）。
-export function DetailCrumbs({ trail, current }: DetailCrumbsProps) {
+export function DetailCrumbs({ trail, current, action }: DetailCrumbsProps) {
   return (
     <nav
       aria-label="面包屑"
@@ -33,6 +35,7 @@ export function DetailCrumbs({ trail, current }: DetailCrumbsProps) {
         <li aria-current="page" className="truncate font-medium text-fg-1">
           {current}
         </li>
+        {action && <li className="ml-auto flex">{action}</li>}
       </ol>
       <div
         aria-hidden

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { canSendToken, gatewayFetch } from "@/lib/gateway";
+import { canSendToken, gatewayFetch, gatewayStream } from "@/lib/gateway";
 
 const fetchMock = vi.fn<typeof fetch>();
 
@@ -98,5 +98,55 @@ describe("canSendToken", () => {
     ["中", false],
   ])("%j 能不能放进请求头：%s", (token, expected) => {
     expect(canSendToken(token)).toBe(expected);
+  });
+});
+
+describe("gatewayStream", () => {
+  it("GET 网关地址 + 路径，不缓存；有 If-None-Match 时原样带上", async () => {
+    await gatewayStream("/patra-catalog/x/pdf", { ifNoneMatch: '"abc"' });
+    const [url, init] = call();
+    expect(url).toBe("http://gw.test:9528/patra-catalog/x/pdf");
+    expect(init).toMatchObject({ method: "GET", cache: "no-store" });
+    expect(new Headers(init?.headers).get("If-None-Match")).toBe('"abc"');
+  });
+
+  it("没有 If-None-Match 时不带请求头", async () => {
+    await gatewayStream("/x");
+    expect(new Headers(call()[1]?.headers).has("If-None-Match")).toBe(false);
+  });
+
+  it("超时只计到响应头到达：之后慢慢下载大文件不会被掐断", async () => {
+    vi.useFakeTimers();
+    try {
+      await gatewayStream("/x", { headerTimeoutMs: 1_000 });
+      vi.advanceTimersByTime(60_000);
+      expect(call()[1]?.signal?.aborted).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("响应头迟迟不到时超时中止", async () => {
+    vi.useFakeTimers();
+    try {
+      fetchMock.mockImplementation(
+        (_url, init) =>
+          new Promise((_resolve, reject) => {
+            init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+          }),
+      );
+      const pending = gatewayStream("/x", { headerTimeoutMs: 1_000 });
+      vi.advanceTimersByTime(1_000);
+      await expect(pending).rejects.toBeDefined();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("调用方的 signal 中止时（浏览器断开下载）一并取消上游请求", async () => {
+    const browser = new AbortController();
+    await gatewayStream("/x", { signal: browser.signal });
+    browser.abort();
+    expect(call()[1]?.signal?.aborted).toBe(true);
   });
 });

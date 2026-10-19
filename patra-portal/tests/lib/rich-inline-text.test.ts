@@ -218,6 +218,19 @@ describe("parseInlineMarkup · MathML 公式组", () => {
     expect(textOf(nodes)).toBe("growth with μ max   values of 0.37 h-1");
   });
 
+  it("与全文共用白名单：矩阵 mtable / mtr / mtd 与 mroot 在 math 内放行", () => {
+    expect(
+      parseInlineMarkup(
+        "<math><mtable><mtr><mtd><mroot><mi>x</mi><mn>3</mn></mroot></mtd></mtr></mtable></math>",
+      ),
+    ).toEqual([
+      el(
+        "math",
+        el("mtable", el("mtr", el("mtd", el("mroot", el("mi", text("x")), el("mn", text("3")))))),
+      ),
+    ]);
+  });
+
   it("带引号属性的自闭合 mspace 不吞后续内容", () => {
     expect(parseInlineMarkup('<math><mi>a</mi><mspace width="0.25em"/><mi>b</mi></math>')).toEqual([
       el("math", el("mi", text("a")), el("mspace"), el("mi", text("b"))),

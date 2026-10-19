@@ -1,17 +1,20 @@
-import { ExternalLink, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
+import { pmcArticleUrl } from "@/components/portal/fulltext/FullTextUnavailable";
 import { BookmarkButton } from "@/components/portal/paper-detail/BookmarkButton";
-import { deriveEvidence, deriveFullText } from "@/lib/portal-api/publication-derive";
-import { btnBlock, btnPrimary, btnSecondary } from "@/lib/portal-ui";
-import { cn } from "@/lib/utils";
+import { FullTextActions } from "@/components/portal/paper-detail/FullTextActions";
+import { deriveFullTextState } from "@/lib/portal-api/fulltext-derive";
+import { deriveEvidence } from "@/lib/portal-api/publication-derive";
 import type { PaperDetail } from "@/types/portal";
 
 const CARD = "rounded-xl border border-border-default bg-paper-50 p-5";
 const CARD_LABEL =
   "mb-4 flex items-center gap-2 font-mono text-2xs uppercase tracking-mono text-fg-3";
 
-/// 文献详情右侧栏：操作（去全文 / 收藏）→ AI 速读（尚未上线：后端 aiSummary 恒为 null）→ 速览数据。
+/// 文献详情右侧栏：操作（全文按钮 / 收藏 / 有 PMC 全文时的 PMC 原文链接）→ AI 速读（尚未上线：后端 aiSummary 恒为 null）→ 速览数据。
 export function PaperRail({ paper }: { paper: PaperDetail }) {
-  const fullText = deriveFullText(paper);
+  const state = deriveFullTextState(paper);
+  const pmcUrl =
+    (state === "full" || state === "pdf-only") && paper.pmcid ? pmcArticleUrl(paper.pmcid) : null;
   const ev = deriveEvidence(paper.evidenceLevel);
   const stats: { k: string; v: string }[] = [
     { k: "证据等级", v: ev.label },
@@ -27,21 +30,18 @@ export function PaperRail({ paper }: { paper: PaperDetail }) {
       <div className={`${CARD} max-[980px]:hidden`}>
         <div className={CARD_LABEL}>操作</div>
         <div className="flex flex-col gap-2.5">
-          {fullText.href ? (
+          <FullTextActions paper={paper} block />
+          <BookmarkButton paperId={paper.id} block />
+          {pmcUrl && (
             <a
-              className={cn(btnPrimary, btnBlock)}
-              href={fullText.href}
+              href={pmcUrl}
               target="_blank"
               rel="noopener noreferrer"
+              className="link-draw self-center pt-1 font-sans text-sm text-fg-2 hover:text-fg-1"
             >
-              {fullText.label} <ExternalLink size={14} data-icon="trailing" />
+              在 PMC 查看原文 ↗
             </a>
-          ) : (
-            <button className={cn(btnSecondary, btnBlock, "opacity-55")} type="button" disabled>
-              {fullText.label}
-            </button>
           )}
-          <BookmarkButton paperId={paper.id} block />
         </div>
       </div>
 

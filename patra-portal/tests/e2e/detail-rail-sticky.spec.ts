@@ -31,6 +31,9 @@ test("文献详情：滚动时右侧栏不移动", async ({ page }) => {
     .then(() => true)
     .catch(() => false);
   test.skip(!abstractVisible, "详情页无摘要区（catalog 不可达）");
+  // 有全文的文献侧栏不整体吸顶（目录卡单独吸顶，见 fulltext-reader.spec）
+  const hasFullText = (await page.getByRole("link", { name: /阅读全文/ }).count()) > 0;
+  test.skip(hasFullText, "首页第一篇有全文：侧栏按设计随页面滚动");
 
   await expectRailStaysPut(page);
 });
