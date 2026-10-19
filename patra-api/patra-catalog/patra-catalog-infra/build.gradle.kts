@@ -38,6 +38,8 @@ dependencies {
 
     // Jsoup（HTML 解析，LetPub 爬虫）
     implementation(libs.jsoup)
+    // WebP 图片尺寸读取（ImageIO SPI 插件，代码只用 javax.imageio）
+    runtimeOnly(libs.twelvemonkeys.imageio.webp)
 
     // Spring Boot Starter
     api("org.springframework.boot:spring-boot-starter")
