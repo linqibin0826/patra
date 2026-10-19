@@ -30,6 +30,7 @@ import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.job.parameters.JobParameters;
+import org.springframework.batch.core.launch.JobOperator;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.infrastructure.item.ExecutionContext;
 
@@ -45,6 +46,7 @@ class PublicationBatchAdapterTest {
   @Mock private Job pubmedBaselineImportJob;
   @Mock private Job pubmedUpdateImportJob;
   @Mock private JobRepository jobRepository;
+  @Mock private JobOperator jobOperator;
 
   @Captor private ArgumentCaptor<PublicationImportJobParams> jobParamsCaptor;
   @Captor private ArgumentCaptor<PubmedUpdateImportJobParams> updateParamsCaptor;
@@ -59,7 +61,11 @@ class PublicationBatchAdapterTest {
   void setUp() {
     adapter =
         new PublicationBatchAdapter(
-            jobOperatorHelper, jobRepository, pubmedBaselineImportJob, pubmedUpdateImportJob);
+            jobOperatorHelper,
+            jobOperator,
+            jobRepository,
+            pubmedBaselineImportJob,
+            pubmedUpdateImportJob);
   }
 
   @Nested
@@ -278,6 +284,26 @@ class PublicationBatchAdapterTest {
       verify(jobOperatorHelper, never()).launch(any(), any(), eq(false));
       assertThat(counts.updated()).isEqualTo(5);
       assertThat(counts.deleted()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("上次执行残留在 STARTED（进程被杀）时先 recover 再续跑")
+    void should_recover_stale_running_execution_before_relaunch() {
+      when(pubmedUpdateImportJob.getName()).thenReturn("pubmedUpdateImportJob");
+      JobExecution stale = mock(JobExecution.class);
+      when(stale.getStatus()).thenReturn(BatchStatus.STARTED);
+      when(jobRepository.getLastJobExecution(eq("pubmedUpdateImportJob"), any(JobParameters.class)))
+          .thenReturn(stale);
+      when(jobOperatorHelper.launch(eq(pubmedUpdateImportJob), any(), eq(false)))
+          .thenReturn(EXPECTED_EXECUTION_ID);
+      JobExecution execution = completedExecution(countsContext(1, 0));
+      when(jobOperatorHelper.findJobExecution(EXPECTED_EXECUTION_ID))
+          .thenReturn(Optional.of(execution));
+
+      PubmedUpdateFileCounts counts = adapter.launchUpdateImport(params);
+
+      verify(jobOperator).recover(stale);
+      assertThat(counts.updated()).isEqualTo(1);
     }
 
     @Test

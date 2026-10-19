@@ -12,6 +12,7 @@ import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.job.parameters.JobParameters;
 import org.springframework.batch.core.job.parameters.JobParametersBuilder;
+import org.springframework.batch.core.launch.JobOperator;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.infrastructure.item.ExecutionContext;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -54,6 +55,7 @@ import org.springframework.stereotype.Component;
 public class PublicationBatchAdapter implements PublicationBatchPort {
 
   private final JobOperatorHelper jobOperatorHelper;
+  private final JobOperator jobOperator;
   private final JobRepository jobRepository;
   private final Job pubmedBaselineImportJob;
   private final Job pubmedUpdateImportJob;
@@ -64,10 +66,12 @@ public class PublicationBatchAdapter implements PublicationBatchPort {
   /// @param pubmedBaselineImportJob PubMed Baseline 导入 Job
   public PublicationBatchAdapter(
       JobOperatorHelper jobOperatorHelper,
+      JobOperator jobOperator,
       JobRepository jobRepository,
       @Qualifier("pubmedBaselineImportJob") Job pubmedBaselineImportJob,
       @Qualifier("pubmedUpdateImportJob") Job pubmedUpdateImportJob) {
     this.jobOperatorHelper = jobOperatorHelper;
+    this.jobOperator = jobOperator;
     this.jobRepository = jobRepository;
     this.pubmedBaselineImportJob = pubmedBaselineImportJob;
     this.pubmedUpdateImportJob = pubmedUpdateImportJob;
@@ -102,7 +106,7 @@ public class PublicationBatchAdapter implements PublicationBatchPort {
 
   /// 同步执行一个 updatefiles 文件的导入作业。
   ///
-  /// 用不带时间戳的标识参数启动：同参数的作业实例失败后再跑从断点续传。启动前先查同参数的最后一次执行，
+  /// 用不带时间戳的标识参数启动：同参数的作业实例失败后再跑从断点续传；进程被杀后残留的运行中执行先 recover。启动前先查同参数的最后一次执行，
   /// 已 COMPLETED 则不再启动、直接读它的计数——覆盖"作业已完成、但进度表 `markCompleted`
   /// 之前进程中断"的情况，否则每次都会撞 `JobInstanceAlreadyCompleteException`。
   ///
@@ -121,12 +125,18 @@ public class PublicationBatchAdapter implements PublicationBatchPort {
             .generation(params.generation())
             .build();
 
-    JobExecution completed =
+    JobExecution last =
         jobRepository.getLastJobExecution(
             pubmedUpdateImportJob.getName(), toJobParameters(jobParams));
-    if (completed != null && completed.getStatus() == BatchStatus.COMPLETED) {
+    if (last != null && last.getStatus() == BatchStatus.COMPLETED) {
       log.info("增量同步作业已完成过，直接读取计数：importBatch={}", importBatch);
-      return readCounts(completed);
+      return readCounts(last);
+    }
+    if (last != null && last.getStatus() != null && last.getStatus().isRunning()) {
+      // 外层任务锁保证同一时刻只有一个实例，查到仍在运行的执行只能是进程被杀后的残留：
+      // 不处理的话每次启动都抛 JobExecutionAlreadyRunningException，同步永久卡在这个文件
+      log.warn("增量同步作业有残留的运行中执行，标记为失败后续跑：importBatch={}", importBatch);
+      jobOperator.recover(last);
     }
 
     log.info(
