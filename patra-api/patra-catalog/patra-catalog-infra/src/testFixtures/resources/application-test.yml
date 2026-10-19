@@ -7,3 +7,10 @@ spring:
     clean-disabled: false
     # 设置 baseline 跳过已存在的迁移历史检查
     baseline-on-migrate: true
+  datasource:
+    # 每个缓存的测试上下文各占一个连接池：默认 10 个常驻连接，几十个上下文会耗尽 PG 的 100 个连接
+    #（CI 核数少、fork 少，单个 JVM 缓存的上下文更多）。空闲连接 10 秒后释放，只留 1 个
+    hikari:
+      maximum-pool-size: 4
+      minimum-idle: 1
+      idle-timeout: 10000
