@@ -57,4 +57,16 @@ public interface PublicationIdentifierDao extends JpaRepository<PublicationIdent
   @Modifying
   @Query("DELETE FROM PublicationIdentifierEntity e WHERE e.publicationId IN :publicationIds")
   int deleteByPublicationIdIn(@Param("publicationIds") Collection<Long> publicationIds);
+
+  /// 按文献 ID 批量删除指定来源的标识符，其他来源（如 PMC、Crossref 写入的）保留。
+  ///
+  /// @param publicationIds 文献 ID
+  /// @param source 来源，如 `PubMed`
+  /// @return 删除行数
+  @Modifying
+  @Query(
+      "DELETE FROM PublicationIdentifierEntity e"
+          + " WHERE e.publicationId IN :publicationIds AND e.source = :source")
+  int deleteByPublicationIdInAndSource(
+      @Param("publicationIds") Collection<Long> publicationIds, @Param("source") String source);
 }
