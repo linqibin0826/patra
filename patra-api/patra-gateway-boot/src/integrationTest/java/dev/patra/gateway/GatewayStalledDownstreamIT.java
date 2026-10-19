@@ -14,6 +14,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.concurrent.Executors;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,7 +29,8 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.client.RestTestClient;
 
-/// 下游发完响应头和一部分响应体后停住，超过读超时（设计第 6、8 节）：网关切断响应体。
+/// 下游停住超过读超时（设计第 6、8 节）：发完响应头和一部分响应体后停住，网关切断响应体；
+/// 不读请求体，网关写不下去，回 504。
 ///
 /// WireMock 的分块延迟在第一块之前就开始等，响应头要等第一块一起发，模拟不出「头已到、体停住」，
 /// 所以这里用 JDK 自带的 `HttpServer` 当 catalog：先发头和半截体并 flush，再停 2 秒（`test` profile
@@ -42,6 +45,12 @@ class GatewayStalledDownstreamIT {
   private static final int HALF_BODY_LENGTH = 5_000;
 
   private static final long STALL_MILLIS = 2_000;
+
+  /// 上传 32 MB：远大于本机回环的 socket 缓冲，下游不读时网关的写一定会卡住
+  private static final int UPLOAD_LENGTH = 32 * 1024 * 1024;
+
+  /// 不读请求体的下游挂住的时长，远超 1 秒读超时
+  private static final long UNREAD_HOLD_MILLIS = 8_000;
 
   private static final HttpServer catalog = startStallingCatalog();
 
@@ -96,6 +105,38 @@ class GatewayStalledDownstreamIT {
         .isEqualTo(500);
   }
 
+  /// 下游收下请求头后迟迟不读请求体（比如处理器卡住），网关往下游写请求体会卡在缓冲已满之后。
+  /// 写也要有上限：停住超过读超时就放弃，回 504，而不是一直挂着等下游。
+  ///
+  /// 网关回 504 时客户端多半还在上传，剩下的请求体远超 Tomcat 愿意吞掉的量（`max-swallow-size`
+  /// 默认 2 MB），Tomcat 回完就关连接，客户端可能只看到连接被重置。所以这里断言网关在下游挂住期间
+  /// 就结束了这次交换；能读到响应时它必须是 504。写超时归 504 由 `ProxyFailureClassifierTest` 钉住。
+  @Test
+  void should_give_up_with_504_when_downstream_stops_reading_request_body() throws Exception {
+    byte[] upload = new byte[UPLOAD_LENGTH];
+    long start = System.nanoTime();
+
+    Integer status = null;
+    try (HttpClient client = HttpClient.newHttpClient()) {
+      status =
+          client
+              .send(
+                  HttpRequest.newBuilder(URI.create(gatewayUrl("/patra-catalog/unread-upload")))
+                      .POST(HttpRequest.BodyPublishers.ofByteArray(upload))
+                      .build(),
+                  HttpResponse.BodyHandlers.discarding())
+              .statusCode();
+    } catch (IOException resetWhileUploading) {
+      // 网关已回 504 并关闭连接，客户端还在上传：读不到响应，但交换已经结束
+    }
+    Duration elapsed = Duration.ofNanos(System.nanoTime() - start);
+
+    assertThat(elapsed).isLessThan(Duration.ofMillis(UNREAD_HOLD_MILLIS / 2));
+    if (status != null) {
+      assertThat(status).isEqualTo(504);
+    }
+  }
+
   /// 起一个会中途停住的 catalog：两个路径只差 `Content-Type`。
   ///
   /// @return 已启动的服务器
@@ -104,6 +145,9 @@ class GatewayStalledDownstreamIT {
       HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
       server.createContext("/stalled-stream", exchange -> stall(exchange, "text/event-stream"));
       server.createContext("/stalled-body", exchange -> stall(exchange, "text/plain"));
+      server.createContext("/unread-upload", GatewayStalledDownstreamIT::holdWithoutReading);
+      // 每个请求一个虚拟线程：不读请求体的那个处理器挂着时，不挡住别的用例
+      server.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
       server.start();
       return server;
     } catch (IOException e) {
@@ -127,6 +171,19 @@ class GatewayStalledDownstreamIT {
     } catch (IOException | InterruptedException cutByGateway) {
       // 网关已经断开：这正是要验证的行为
     }
+  }
+
+  /// 不读请求体，挂住远超读超时之后才回 200。网关若不设写超时，就会一直等到这里回应。
+  ///
+  /// @param exchange 当前请求
+  private static void holdWithoutReading(HttpExchange exchange) throws IOException {
+    try {
+      Thread.sleep(UNREAD_HOLD_MILLIS);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
+    exchange.sendResponseHeaders(200, -1);
+    exchange.close();
   }
 
   private String gatewayUrl(String path) {

@@ -6,6 +6,7 @@ import dev.patra.tool.core.error.ApplicationException;
 import dev.patra.tool.core.error.codes.HttpStdErrors;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.handler.timeout.ReadTimeoutException;
+import io.netty.handler.timeout.WriteTimeoutException;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.UnknownHostException;
@@ -83,6 +84,16 @@ class ProxyFailureClassifierTest {
     assertThat(wrapped).isInstanceOf(DownstreamTimeoutException.class);
     assertThat(wrapped.getErrorCode().code()).isEqualTo("GW-0504");
     assertThat(wrapped.getMessage()).isEqualTo("下游服务响应超时");
+  }
+
+  /// 下游不读请求体时网关的写超时同样是「等不到下游」，归 504。
+  @Test
+  void should_wrap_write_timeout_as_downstream_timeout() {
+    ResourceAccessException writeTimeout =
+        new ResourceAccessException(
+            "I/O error", new IOException("write timed out", WriteTimeoutException.INSTANCE));
+
+    assertThat(codeOf(ProxyFailureClassifier.wrap(writeTimeout, http))).isEqualTo("GW-0504");
   }
 
   @Test
