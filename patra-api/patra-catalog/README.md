@@ -9,13 +9,15 @@ patra-catalog 是 Patra 医学文献数据平台的目录管理微服务，负�
 - 维护期刊（Venue）目录和影响因子
 - 管理作者（Author）和机构（Organization）信息
 - 提供文献分类和标引服务
+- PubMed updatefiles 增量同步：让文献记录跟上 PubMed（PMCID、撤稿、勘误、删除）
+- PMC 开放获取全文的抓取、JATS 解析入库，以及门户的全文、PDF、图片读端点
 
 ## 🏗️ 架构位置
 
 在 Patra 微服务架构中的位置：
-- **上游服务**：patra-ingest（采集服务提供原始数据）
-- **下游服务**：patra-search（检索服务使用目录数据）、patra-analysis（分析服务使用分类体系）
-- **依赖服务**：patra-registry（获取 Provenance 配置和数据字典）
+- **外部数据源**：NLM（PubMed baseline / updatefiles、MeSH）、PMC Cloud Service（公开 S3 桶 `pmc-oa-opendata`）、OpenAlex、Scopus、LetPub
+- **调用方**：patra-gateway 转发的门户（patra-portal）读端点 `/portal/**`
+- **依赖服务**：patra-registry（获取 Provenance 配置和数据字典）；MinIO（期刊封面、全文 XML / PDF / 图片）
 
 ## 🔧 主要功能
 
@@ -112,6 +114,26 @@ patra-catalog 是 Patra 医学文献数据平台的目录管理微服务，负�
    - **幂等兜底**：数据库唯一索引（`uk_pmid`/`uk_doi`）作为最终一致性保障，回滚重试不依赖内存状态
    - 支持断点续传（Job 级别幂等执行）
    - XXL-Job 调度入口（`pubmedBaselineImportJob`，参数：`fileIndex=1~1334`）
+
+11. **PubMed updatefiles 增量同步**（Spring Batch 实现）
+   - 从进度表 `cat_pubmed_update_file` 最后一个成功文件的下一个开始，按文件号处理到最新，失败即停、下次续传
+   - **覆盖更新**：内部 ID 不变；PubMed 管的列与子表全部替换；`is_oa`、`citation_count`、`has_full_text`、非 PubMed 标识符、OA 位置、全文记录等别的流程写入的数据保留
+   - **分流在委托之前**：`EXISTING_ONLY`（开发环境）下库里没有的记录不进 baseline 处理器，不留期刊实例
+   - `DeleteCitation` 软删除；软删除的文献再出现时复活；新 DOI 属于别的文献时保留旧 DOI
+   - XXL-Job 调度入口（`pubmedUpdateSyncJob`，参数：`fromFile=N,maxFiles=M,scope=EXISTING_ONLY|ALL`）
+
+12. **PMC 全文抓取与 JATS 解析**（Runner / Worker / Persister）
+   - 抓取：从 PMC Cloud Service 选版本（开放获取、优先非手稿），下载 XML、PDF、正文图片（含 webp，读像素宽高）写入 MinIO；暂不可用的按放开日期或退避再查
+   - 解析：JDK DOM 解析 `<body>` / `<back>` 为 `FullTextBody`（JSONB），只做格式转换不改写内容；`PARSER_VERSION` 提升后全量重新解析，不访问 PMC
+   - 三个任务用父子任务串起来，PG advisory lock 防同类任务并发
+   - XXL-Job 调度入口（`pmcFullTextFetchJob`、`jatsFullTextParseJob`）
+
+13. **门户全文读端点**
+   - 详情接口的 `hasFullText`、`hasPdf`、`pdfSizeBytes`、`estimatedReadMin`
+   - `GET /portal/publications/{id}/fulltext`（正文、许可、署名）、`/fulltext/pdf`、`/fulltext/figures/{fileName}`
+   - 撤稿文献（发表类型 `D016441`）在读端自动下线全文
+
+运维步骤见 [v0.11 运维手册](../../docs/patra/runbooks/v0.11-fulltext-runbook.md)。
 
 ### 计划功能
 - MeSH 年度版本更新（需先手动清空旧数据）
