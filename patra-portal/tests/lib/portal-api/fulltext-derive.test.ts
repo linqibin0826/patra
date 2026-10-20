@@ -5,13 +5,16 @@ import {
   deriveFullTextState,
   deriveFullTextStats,
   deriveToc,
+  figureLabel,
+  figureLayout,
   formatFetchedDate,
   formatFileSize,
   inlineText,
   isSupplementarySection,
   licenseLabel,
+  numericColumns,
 } from "@/lib/portal-api/fulltext-derive";
-import type { FullTextBlock } from "@/types/fulltext";
+import type { FullTextBlock, FullTextTableCell } from "@/types/fulltext";
 
 describe("deriveFullTextState", () => {
   it("有正文 → full", () => {
@@ -191,5 +194,64 @@ describe("deriveFullTextStats", () => {
     });
 
     expect(deriveFullTextStats(body)).toEqual({ figures: 2, tables: 2, references: 2 });
+  });
+});
+
+describe("figureLayout", () => {
+  it("按宽高比分四类（PMID 41575322 的图 1、3、2、7）", () => {
+    expect(figureLayout(733, 558)).toBe("text");
+    expect(figureLayout(750, 420)).toBe("wide");
+    expect(figureLayout(750, 280)).toBe("wide-zoom");
+    expect(figureLayout(752, 952)).toBe("portrait");
+  });
+
+  it("区间左闭右开：0.8 → text，1.5 → wide，2.4 → wide，2.41 → wide-zoom", () => {
+    expect(figureLayout(80, 100)).toBe("text");
+    expect(figureLayout(150, 100)).toBe("wide");
+    expect(figureLayout(240, 100)).toBe("wide");
+    expect(figureLayout(241, 100)).toBe("wide-zoom");
+  });
+
+  it("宽或高缺失、为 0 → text 兜底", () => {
+    expect(figureLayout(null, 100)).toBe("text");
+    expect(figureLayout(100, null)).toBe("text");
+    expect(figureLayout(100, 0)).toBe("text");
+  });
+});
+
+describe("figureLabel", () => {
+  it("去掉原文标签末尾的句点，其余照原文", () => {
+    expect(figureLabel("Figure 1.")).toBe("Figure 1");
+    expect(figureLabel("Table 10")).toBe("Table 10");
+    expect(figureLabel(null)).toBeNull();
+  });
+});
+
+function cell(value: string, colspan = 1): FullTextTableCell {
+  return { content: [{ kind: "text", text: value }], colspan, rowspan: 1, header: false };
+}
+
+describe("numericColumns", () => {
+  it("一列里过半是数字才右对齐；作者列不算", () => {
+    const head = [[cell("Study"), cell("Accuracy"), cell("Precision")]];
+    const body = [
+      [cell("Tsai et al."), cell("91%"), cell("—")],
+      [cell("Nopour (2024)"), cell("93.43%"), cell("0.9239")],
+    ];
+    expect(numericColumns(head, body)).toEqual([false, true, true]);
+  });
+
+  it("均值 ± 标准差、带区间的比值、负号都算数字", () => {
+    const body = [[cell("12.3 ± 4.5")], [cell("0.82 (0.71–0.93)")], [cell("−1.2")]];
+    expect(numericColumns([], body)).toEqual([true]);
+  });
+
+  it("跨列单元格不参与判定", () => {
+    const body = [[cell("Subtotal", 2)], [cell("A"), cell("1.0")], [cell("B"), cell("2.0")]];
+    expect(numericColumns([], body)).toEqual([false, true]);
+  });
+
+  it("空表 → 空数组", () => {
+    expect(numericColumns([], [])).toEqual([]);
   });
 });

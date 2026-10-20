@@ -5,6 +5,7 @@ import type {
   FullTextInline,
   FullTextLicense,
   FullTextSectionNode,
+  FullTextTableCell,
 } from "@/types/fulltext";
 import type { PaperDetail } from "@/types/portal";
 
@@ -187,4 +188,54 @@ export function deriveFullTextStats(body: FullTextBody): FullTextStats {
     countInSections(body.sections, kind) +
     countInSections(body.back, kind);
   return { figures: count("figure"), tables: count("table"), references: body.references.length };
+}
+
+/** 插图的宽度分类（spec §5.8）：竖图 / 正文宽 / 加宽 / 加宽并常显「放大查看」。 */
+export type FigureLayout = "text" | "wide" | "wide-zoom" | "portrait";
+
+/** 按宽高比选插图宽度：< 0.8 竖图，[0.8, 1.5) 正文宽，[1.5, 2.4] 加宽，> 2.4 超宽；宽高缺失按正文宽。 */
+export function figureLayout(width: number | null, height: number | null): FigureLayout {
+  if (!width || !height) {
+    return "text";
+  }
+  const ratio = width / height;
+  if (ratio < 0.8) return "portrait";
+  if (ratio < 1.5) return "text";
+  if (ratio <= 2.4) return "wide";
+  return "wide-zoom";
+}
+
+/** 图、表标签放进标签栏时去掉原文末尾的句点（`Figure 1.` → `Figure 1`），其余照原文。 */
+export function figureLabel(label: string | null): string | null {
+  return label === null ? null : label.replace(/\.$/, "");
+}
+
+/** 数字格：数、百分数、`—`、均值 ± 标准差、带括号区间的比值。 */
+const NUMERIC_CELL = /^[−–-]?\d[\d.,]*\s?%?(\s?±\s?\d[\d.,]*%?)?(\s?\(.*\))?$|^[—–-]$/;
+
+/**
+ * 数据表哪些列右对齐：一列里（不含表头）超过一半的单元格是数字格就算数字列。
+ * 跨列的单元格不参与判定，也不占列位以外的计数；行内列位按 colspan 累加。
+ */
+export function numericColumns(
+  head: FullTextTableCell[][],
+  body: FullTextTableCell[][],
+): boolean[] {
+  const width = Math.max(
+    0,
+    ...[...head, ...body].map((row) => row.reduce((n, c) => n + c.colspan, 0)),
+  );
+  const numeric = Array.from({ length: width }, () => 0);
+  const total = Array.from({ length: width }, () => 0);
+  for (const row of body) {
+    let col = 0;
+    for (const c of row) {
+      if (c.colspan === 1) {
+        total[col] += 1;
+        if (NUMERIC_CELL.test(inlineText(c.content).trim())) numeric[col] += 1;
+      }
+      col += c.colspan;
+    }
+  }
+  return total.map((t, i) => t > 0 && numeric[i] * 2 > t);
 }
