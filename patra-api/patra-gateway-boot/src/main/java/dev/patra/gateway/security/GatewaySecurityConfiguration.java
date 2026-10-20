@@ -47,11 +47,13 @@ public class GatewaySecurityConfiguration {
   /// 这三组路径在各服务里都挂在根上。
   static final String[] BLOCKED_PATHS = {"/*/_internal/**", "/*/admin/**", "/*/actuator/**"};
 
-  /// identity 上匿名也能访问的路径：注册、登录、登出（幂等，会话已失效也要能到达）、OpenAPI 文档（Scalar 聚合要拉）。
+  /// identity 上匿名也能访问的路径：注册、登录、登出（幂等，会话已失效也要能到达）、
+  /// 公开身份卡与头像（`/users/**`，旧用户名的 301 原样透传）、OpenAPI 文档（Scalar 聚合要拉）。
   static final String[] IDENTITY_PUBLIC_PATHS = {
     "/patra-identity/auth/register",
     "/patra-identity/auth/login",
     "/patra-identity/auth/logout",
+    "/patra-identity/users/**",
     "/patra-identity/v3/api-docs",
     "/patra-identity/v3/api-docs/**"
   };

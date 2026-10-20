@@ -4,7 +4,10 @@ import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.any;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.matching;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
+import static com.github.tomakehurst.wiremock.client.WireMock.patch;
+import static com.github.tomakehurst.wiremock.client.WireMock.patchRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
@@ -23,6 +26,8 @@ import dev.patra.tool.core.security.CurrentUser;
 import dev.patra.tool.security.assertion.IdentityAssertionClaims;
 import dev.patra.tool.security.test.TestIdentity;
 import dev.patra.tool.test.container.initializer.RedisContainerInitializer;
+import java.net.http.HttpClient;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
@@ -35,9 +40,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.core.env.Environment;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.ActiveProfiles;
@@ -45,6 +52,7 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.client.RestTestClient;
+import org.springframework.web.client.RestClient;
 
 /// 会话认证与路径规则（设计第 6.2、6.3、7.1 节）、出站的断言与头（第 8 节）。
 /// identity 和 catalog 都由 WireMock 顶替；会话直接写进 Redis 测试容器。
@@ -71,6 +79,7 @@ class GatewayAuthenticationIT {
 
   @Autowired private RestTestClient restClient;
   @Autowired private RedisSessionStore sessions;
+  @Autowired private Environment environment;
   @Autowired private StringRedisTemplate redis;
 
   @Autowired
@@ -363,5 +372,85 @@ class GatewayAuthenticationIT {
     assertThat(received.getHeader("Forwarded"))
         .doesNotContain("evil")
         .doesNotContain("203.0.113.9");
+  }
+
+  @Test
+  void should_forward_public_user_page_anonymously() {
+    identity.stubFor(
+        get(urlPathEqualTo("/users/chen-yu")).willReturn(okJson("{\"username\":\"chen-yu\"}")));
+
+    restClient
+        .get()
+        .uri("/patra-identity/users/chen-yu")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .jsonPath("$.username")
+        .isEqualTo("chen-yu");
+
+    identity.verify(
+        getRequestedFor(urlPathEqualTo("/users/chen-yu")).withoutHeader(HttpHeaders.AUTHORIZATION));
+  }
+
+  @Test
+  void should_pass_through_301_from_identity_unchanged() {
+    identity.stubFor(
+        get(urlPathEqualTo("/users/old-name"))
+            .willReturn(
+                aResponse()
+                    .withStatus(301)
+                    .withHeader(HttpHeaders.LOCATION, "/users/new-name")
+                    .withHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+                    .withBody("{\"username\":\"new-name\"}")));
+
+    // RestTestClient 在真实端口上会跟着 301 走，这里用不跟随跳转的 JDK 客户端
+    RestClient raw =
+        RestClient.builder()
+            .baseUrl("http://localhost:" + environment.getRequiredProperty("local.server.port"))
+            .requestFactory(
+                new JdkClientHttpRequestFactory(
+                    HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER).build()))
+            .build();
+    String[] observed =
+        raw.get()
+            .uri("/patra-identity/users/old-name")
+            .exchange(
+                (request, response) ->
+                    new String[] {
+                      String.valueOf(response.getStatusCode().value()),
+                      response.getHeaders().getFirst(HttpHeaders.LOCATION),
+                      new String(response.getBody().readAllBytes(), StandardCharsets.UTF_8)
+                    });
+
+    assertThat(observed[0]).isEqualTo("301");
+    assertThat(observed[1]).isEqualTo("/users/new-name");
+    assertThat(observed[2]).contains("new-name");
+  }
+
+  @Test
+  void should_require_session_for_me_paths_and_forward_them_with_an_assertion() {
+    identity.stubFor(patch(urlPathEqualTo("/me/username")).willReturn(okJson("{}")));
+
+    restClient
+        .patch()
+        .uri("/patra-identity/me/username")
+        .exchange()
+        .expectStatus()
+        .isUnauthorized();
+    identity.verify(0, patchRequestedFor(urlPathEqualTo("/me/username")));
+
+    String token = GatewayITSessions.issue(sessions, 4221L, 9221L);
+    restClient
+        .patch()
+        .uri("/patra-identity/me/username")
+        .header(HttpHeaders.AUTHORIZATION, BEARER + token)
+        .exchange()
+        .expectStatus()
+        .isOk();
+    identity.verify(
+        1,
+        patchRequestedFor(urlPathEqualTo("/me/username"))
+            .withHeader(HttpHeaders.AUTHORIZATION, matching("Bearer .+")));
   }
 }
