@@ -29,3 +29,8 @@ export function RichInlineText({ text, highlight }: { text: string; highlight?: 
   const nodes = parseInlineMarkup(text);
   return <>{renderNodes(highlight ? highlightInlineNodes(nodes, highlight) : nodes)}</>;
 }
+
+/** 已解析好的内联节点树直接渲染（如标题拆分后的主标题 / 副标题），不再二次解析。 */
+export function RichInlineNodes({ nodes }: { nodes: InlineNode[] }) {
+  return <>{renderNodes(nodes)}</>;
+}

@@ -4,7 +4,7 @@ import { pmcArticleUrl } from "@/components/portal/fulltext/FullTextUnavailable"
 import { BookmarkButton } from "@/components/portal/paper-detail/BookmarkButton";
 import { FullTextActions } from "@/components/portal/paper-detail/FullTextActions";
 import { PaperFacts } from "@/components/portal/paper-detail/PaperFacts";
-import { RichInlineText } from "@/components/portal/RichInlineText";
+import { RichInlineNodes, RichInlineText } from "@/components/portal/RichInlineText";
 import { deriveFullTextState } from "@/lib/portal-api/fulltext-derive";
 import { deriveByline } from "@/lib/portal-api/publication-derive";
 import { splitTitle } from "@/lib/portal-api/title-derive";
@@ -70,11 +70,11 @@ export function PaperHeader({
           TITLE_CLASS[title.size],
         )}
       >
-        <RichInlineText text={title.main} />
+        <RichInlineNodes nodes={title.main} />
       </h1>
       {title.sub && (
         <p className="anim-rise m-0 mt-4 max-w-[34em] font-serif text-[clamp(19px,1rem+0.5vw,24px)] leading-[1.38] tracking-normal text-pretty text-fg-2">
-          <RichInlineText text={title.sub} />
+          <RichInlineNodes nodes={title.sub} />
         </p>
       )}
       {paper.originalTitle && (
