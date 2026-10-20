@@ -2,7 +2,7 @@ import { expect, type Page, test } from "@playwright/test";
 
 /// 文献详情排版（PAP-89）。依赖真实后端：内联 PATRA_GATEWAY_BASE_URL 指向 mini 跑。
 /// 样例是 PMID 41575322（长标题、11 图 10 表、56 条参考文献）；重导后 id 会变，可用环境变量覆盖。
-const LAYOUT_ID = process.env.PATRA_E2E_LAYOUT_ID ?? "352303012807630907";
+const LAYOUT_ID = process.env.PATRA_E2E_LAYOUT_ID ?? "370813037508972544";
 
 async function openPaper(page: Page) {
   await page.goto(`/papers/${LAYOUT_ID}`);
