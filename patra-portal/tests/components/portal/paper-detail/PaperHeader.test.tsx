@@ -110,3 +110,50 @@ describe("PaperHeader · 全文按钮", () => {
     expect(screen.getByRole("link", { name: /去全文/ })).toBeInTheDocument();
   });
 });
+
+const PMID_41575322 =
+  "Explainable machine learning for early diagnosis of esophageal cancer: A feature-enriched Light Gradient Boosting Machine framework with Shapley Additive Explanations and Local Interpretable Model-Agnostic Explanations interpretations.";
+
+describe("PaperHeader · 长标题与页头结构（PAP-89）", () => {
+  it("冒号处拆成主标题 h1 与副标题，都没有末尾句点", () => {
+    render(<PaperHeader paper={paper({ title: PMID_41575322 })} />);
+    const h1 = screen.getByRole("heading", { level: 1 });
+    expect(h1).toHaveTextContent(
+      /^Explainable machine learning for early diagnosis of esophageal cancer$/,
+    );
+    const sub = h1.nextElementSibling;
+    expect(sub?.tagName).toBe("P");
+    expect(sub).toHaveTextContent(/^A feature-enriched.*interpretations$/);
+  });
+
+  it("超过 120 字符、没有冒号的标题降到 md 档", () => {
+    render(<PaperHeader paper={paper({ title: `${"word ".repeat(25)}end` })} />);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveAttribute("data-size", "md");
+  });
+
+  it("根元素是 #masthead，不再渲染证据徽章（等级进了事实条）", () => {
+    const { container } = render(<PaperHeader paper={paper()} />);
+    expect(container.querySelector("section#masthead")).not.toBeNull();
+    expect(screen.queryByTitle(/证据等级/)).toBeNull();
+  });
+
+  it("操作行有阅读全文、下载 PDF、收藏，有 PMCID 时加「在 PMC 查看原文 ↗」", () => {
+    render(
+      <PaperHeader
+        paper={paper({ hasFullText: true, hasPdf: true, pdfSizeBytes: "1751924", pmcid: "PMC1" })}
+      />,
+    );
+    expect(screen.getByRole("link", { name: /阅读全文/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /下载 PDF/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /收藏/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "在 PMC 查看原文 ↗" })).toHaveAttribute(
+      "href",
+      "https://pmc.ncbi.nlm.nih.gov/articles/PMC1/",
+    );
+  });
+
+  it("事实条插槽渲染在作者行之后", () => {
+    render(<PaperHeader paper={paper()} fullTextFacts={<div>FACTS-SLOT</div>} />);
+    expect(screen.getByText("FACTS-SLOT")).toBeInTheDocument();
+  });
+});

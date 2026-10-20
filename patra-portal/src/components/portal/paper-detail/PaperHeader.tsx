@@ -1,20 +1,41 @@
 import Link from "next/link";
-import { EvidenceBadge } from "@/components/portal/EvidenceBadge";
+import type { ReactNode } from "react";
+import { pmcArticleUrl } from "@/components/portal/fulltext/FullTextUnavailable";
 import { BookmarkButton } from "@/components/portal/paper-detail/BookmarkButton";
 import { FullTextActions } from "@/components/portal/paper-detail/FullTextActions";
+import { PaperFacts } from "@/components/portal/paper-detail/PaperFacts";
 import { RichInlineText } from "@/components/portal/RichInlineText";
 import { deriveFullTextState } from "@/lib/portal-api/fulltext-derive";
 import { deriveByline } from "@/lib/portal-api/publication-derive";
+import { splitTitle } from "@/lib/portal-api/title-derive";
+import { cn } from "@/lib/utils";
 import type { PaperDetail } from "@/types/portal";
 
-/// 文献题录头：等宽刊头行（类型 · 开放获取）→ 显示级标题（入场上浮）→ 原文标题 → 作者 · 刊名 · 年份 → 证据徽章与操作。
-export function PaperHeader({ paper }: { paper: PaperDetail }) {
+const TITLE_CLASS = {
+  lg: "max-w-[20em] text-[clamp(30px,1.4rem+1.6vw,46px)] leading-[1.1]",
+  md: "max-w-[24em] text-[clamp(26px,1.2rem+1.2vw,36px)] leading-[1.15]",
+} as const;
+
+/// 文献页头（spec §5.1 – §5.3，整宽）：等宽刊头行 → 主标题与副标题 → 原文标题 → 作者 · 刊名 · 年份 →
+/// 事实条 → 全页唯一一组操作（阅读全文 / 下载 PDF / 收藏 / 在 PMC 查看原文）。
+export function PaperHeader({
+  paper,
+  fullTextFacts,
+}: {
+  paper: PaperDetail;
+  /** 事实条里来自全文接口的几格（Suspense 包好的节点） */
+  fullTextFacts?: ReactNode;
+}) {
   const { shown, extra } = deriveByline(paper.authors);
-  const retracted = deriveFullTextState(paper) === "retracted";
+  const state = deriveFullTextState(paper);
+  const retracted = state === "retracted";
   const types = paper.publicationTypes.slice(0, 2);
+  const title = splitTitle(paper.title);
+  const pmcUrl =
+    (state === "full" || state === "pdf-only") && paper.pmcid ? pmcArticleUrl(paper.pmcid) : null;
 
   return (
-    <header className="flex flex-col">
+    <section id="masthead" aria-label="题录" className="flex flex-col">
       {(types.length > 0 || paper.isOa || retracted) && (
         <div className="anim-fade mb-5 flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-2xs uppercase tracking-mono text-fg-3">
           {types.map((t, i) => (
@@ -42,9 +63,20 @@ export function PaperHeader({ paper }: { paper: PaperDetail }) {
         </div>
       )}
 
-      <h1 className="anim-rise m-0 font-serif text-display-3 leading-heading font-medium tracking-tight text-pretty text-fg-1">
-        <RichInlineText text={paper.title} />
+      <h1
+        data-size={title.size}
+        className={cn(
+          "anim-rise m-0 font-serif font-medium tracking-[-0.02em] text-balance text-fg-1",
+          TITLE_CLASS[title.size],
+        )}
+      >
+        <RichInlineText text={title.main} />
       </h1>
+      {title.sub && (
+        <p className="anim-rise m-0 mt-4 max-w-[34em] font-serif text-[clamp(19px,1rem+0.5vw,24px)] leading-[1.38] tracking-[-0.01em] text-pretty text-fg-2">
+          <RichInlineText text={title.sub} />
+        </p>
+      )}
       {paper.originalTitle && (
         <p className="m-0 mt-3 font-serif text-xl leading-snug text-fg-3 italic">
           <RichInlineText text={paper.originalTitle} />
@@ -83,13 +115,22 @@ export function PaperHeader({ paper }: { paper: PaperDetail }) {
         )}
       </div>
 
-      <div className="anim-rise mt-7 flex flex-wrap items-center gap-3 [--delay:200ms]">
-        <EvidenceBadge level={paper.evidenceLevel} />
-        <div className="flex flex-wrap gap-2.5">
-          <FullTextActions paper={paper} />
-          <BookmarkButton paperId={paper.id} />
-        </div>
+      <PaperFacts paper={paper} fullTextFacts={fullTextFacts} />
+
+      <div className="anim-rise mt-6 flex flex-wrap items-center gap-3 [--delay:200ms]">
+        <FullTextActions paper={paper} />
+        <BookmarkButton paperId={paper.id} />
+        {pmcUrl && (
+          <a
+            href={pmcUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="link-draw ml-2 font-sans text-sm font-medium text-fg-2 hover:text-fg-1"
+          >
+            在 PMC 查看原文 ↗
+          </a>
+        )}
       </div>
-    </header>
+    </section>
   );
 }
