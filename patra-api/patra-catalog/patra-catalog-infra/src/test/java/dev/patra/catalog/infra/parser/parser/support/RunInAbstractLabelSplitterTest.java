@@ -88,6 +88,27 @@ class RunInAbstractLabelSplitterTest {
   }
 
   @Test
+  @DisplayName("中间的多词标签整段切开（mini 实测：Intervention or Exposures、Main Outcome Measures）")
+  void should_split_multi_word_inner_labels() {
+    assertThat(
+            RunInAbstractLabelSplitter.split(
+                "DesignA cohort.Intervention or ExposuresEight patients.Main Outcome MeasuresScores"
+                    + " fell.Measures & AnalysisWe used t-tests."))
+        .extracting(LabeledText::label)
+        .containsExactly(
+            "DESIGN", "INTERVENTION OR EXPOSURES", "MAIN OUTCOME MEASURES", "MEASURES & ANALYSIS");
+  }
+
+  @Test
+  @DisplayName("标签后面紧跟数字也能切开（Participants266 adults）")
+  void should_split_label_followed_by_digit() {
+    assertThat(RunInAbstractLabelSplitter.split("SettingOne clinic.Participants266 adults."))
+        .containsExactly(
+            LabeledText.of("SETTING", "One clinic."),
+            LabeledText.of("PARTICIPANTS", "266 adults."));
+  }
+
+  @Test
   @DisplayName("空文本返回空列表")
   void should_return_empty_for_blank() {
     assertThat(RunInAbstractLabelSplitter.split(null)).isEmpty();

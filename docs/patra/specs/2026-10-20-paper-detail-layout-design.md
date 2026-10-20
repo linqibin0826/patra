@@ -271,15 +271,16 @@ Body（max-w-page，两栏：main + 340px aside）
 - **只在下面三个条件都满足时拆**：
   1. 这篇摘要只有一个 `AbstractText`，而且它没有 `Label`（有任何一段带 `Label` 时整篇不动）。
   2. 文本以标签词开头，标签词后面紧跟一个大写字母，中间没有空格或标点，比如 `ObjectiveEsophageal`。
-  3. 后面还能再找到至少一个标签：位置在句末标点（`. ! ? ) ]`）之后，同样紧跟一个大写字母，比如 `models.MethodsThe`。整篇至少要切出两段。
-- **标签词表**（来自 mini 上那 97 篇的实际统计）：Background、Objective(s)、Aim(s)、Purpose、Introduction、Importance、Context、Relevance、Design、Setting、Participants、Subjects、Sample、Intervention(s)、Method(s)、Methodology、Measures、Analysis、Results、Findings、Discussion、Conclusion(s)、Interpretation、Application。按最长匹配（`Objectives` 优先于 `Objective`）。
+  3. 后面还能再找到至少一个标签：位置在句末标点（`. ! ? ) ]`）之后，紧跟一个首字母大写的短语（最多 6 个词，可用 `and` / `or` / `of` / `&` / 逗号连接，如 `Main Outcome Measures`、`Intervention or Exposures`），短语末尾同样紧跟大写字母或数字，比如 `models.MethodsThe`、`clinic.Participants266`。整篇至少要切出两段。中间标签不限词表：正常行文的句末标点后总有空格，不会命中；只用词表的话，多词标签会漏切，那一段就只拆了一半（实测 97 篇里有 8 篇）。
+- **开头标签的词表**（来自 mini 上那 97 篇的实际统计）：Background、Objective(s)、Aim(s)、Purpose、Introduction、Importance、Context、Relevance、Design、Setting、Participants、Subjects、Sample、Intervention(s)、Method(s)、Methodology、Measures、Analysis、Results、Findings、Discussion、Conclusion(s)、Interpretation、Application。按最长匹配（`Objectives` 优先于 `Objective`），后面紧跟大写字母或数字。
+- **实测**：按此规则模拟这 97 篇，全部完整拆开，没有残留的粘连标签。
 - **切分结果**：
   - 每段的 `label` 是标签词的大写形式（`OBJECTIVE`、`CONCLUSIONS`），与 PubMed `Label` 属性的写法一致。
   - `content` 是标签后面到下一个标签之前的文本，去掉首尾空白，原文一个字不改。
   - 句末标点留在上一段末尾。
 - 拆出来的段落交给现有的 `buildAbstract`，下游 `PubmedArticleItemProcessor.buildPublicationAbstract` 看到带 `Label` 的段落，就自然判成 `STRUCTURED`。`plainText` 按现有规则拼成 `LABEL: text`，所以检索列表的摘要片段也随之变对。
 
-**数据**：dev 数据可丢弃（见记忆「dev 数据可丢弃」），合入后在 mini 上重跑 PubMed 导入 Job，让已入库的摘要按新规则重新解析。实施时要实测：重跑时已有记录会不会因为内容哈希没变而被跳过；如果会跳过，就按现有的强制重导方式重跑。
+**数据**：dev 数据可丢弃，合入后在 mini 上重跑 PubMed 导入 Job，让已入库的摘要按新规则重新解析。实施时要实测：重跑时已有记录会不会因为内容哈希没变而被跳过；如果会跳过，就按现有的强制重导方式重跑。
 
 **测试**：`RunInAbstractLabelSplitterTest` 覆盖本篇原文、单个标签不拆、开头不是标签不拆、标签后有空格不拆、`Objectives` 最长匹配、句末是 `)` 的情况。`CanonicalPublicationParsingStrategyTest` 加一条端到端用例：一段 `ObjectiveEsophageal…` 的 `AbstractText` 解析出 4 个带标签的段落。
 

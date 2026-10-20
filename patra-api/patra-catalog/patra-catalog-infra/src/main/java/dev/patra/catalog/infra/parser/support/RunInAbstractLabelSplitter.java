@@ -16,10 +16,13 @@ import java.util.stream.Stream;
 /// 本类识别这种写法，把整段切成带标签的段落；不满足拆分条件时返回空列表，调用方保持原样。
 ///
 /// 拆分条件（同时满足）：
-/// - 文本以标签词开头，标签词后紧跟一个大写字母
-/// - 后面至少还有一个标签词，位于句末标点（`. ! ? ) ]`）之后，同样紧跟一个大写字母
+/// - 文本以词表里的标签词开头，标签词后紧跟大写字母或数字
+/// - 后面至少还有一个标签：句末标点（`. ! ? ) ]`）之后紧跟一个首字母大写的短语（最多 6 个词，可用
+///   `and` / `or` / `of` / `&` / 逗号连接，如 `Main Outcome Measures`、`Intervention or Exposures`），
+///   短语末尾同样紧跟大写字母或数字。正常行文的句末标点后总有空格，不会命中
 ///
-/// 标签词表来自 2026-10 对已入库摘要的统计。段落内容照原文，只去首尾空白。
+/// 开头标签的词表与中间标签的写法来自 2026-10 对 mini 上 97 篇粘连摘要的实测（全部完整拆开）。
+/// 段落内容照原文，只去首尾空白。
 public final class RunInAbstractLabelSplitter {
 
   /// 已知标签词（按长度降序拼进正则，保证 `Objectives` 优先于 `Objective`）。
@@ -60,12 +63,15 @@ public final class RunInAbstractLabelSplitter {
           .sorted(Comparator.comparingInt(String::length).reversed())
           .collect(Collectors.joining("|", "(", ")"));
 
-  /// 开头的标签：文本起始处的标签词，后面紧跟大写字母。
-  private static final Pattern LEADING = Pattern.compile("^" + LABEL_GROUP + "(?=\\p{Lu})");
+  /// 开头的标签：文本起始处的标签词，后面紧跟大写字母或数字。
+  private static final Pattern LEADING =
+      Pattern.compile("^" + LABEL_GROUP + "(?=[\\p{Lu}\\p{Nd}])");
 
-  /// 中间的标签：句末标点之后的标签词，后面紧跟大写字母。
+  /// 中间的标签：句末标点之后、首字母大写的短语（最多 6 个词），后面紧跟大写字母或数字。
   private static final Pattern INNER =
-      Pattern.compile("(?<=[.!?)\\]])" + LABEL_GROUP + "(?=\\p{Lu})");
+      Pattern.compile(
+          "(?<=[.!?)\\]])(\\p{Lu}\\p{Ll}+(?:(?:,? (?:and|or|of|&) |, | & | )\\p{L}\\p{Ll}+){0,5})"
+              + "(?=[\\p{Lu}\\p{Nd}])");
 
   /// 工具类不可实例化。
   private RunInAbstractLabelSplitter() {}
