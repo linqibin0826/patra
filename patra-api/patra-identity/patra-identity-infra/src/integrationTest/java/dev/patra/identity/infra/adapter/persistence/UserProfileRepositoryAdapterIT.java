@@ -7,6 +7,7 @@ import dev.patra.identity.domain.model.aggregate.User;
 import dev.patra.identity.domain.model.aggregate.UserProfile;
 import dev.patra.identity.domain.model.vo.DisplayName;
 import dev.patra.identity.domain.model.vo.EmailAddress;
+import dev.patra.identity.domain.model.vo.Username;
 import dev.patra.identity.infra.config.IdentityITPostgreSQLContainerInitializer;
 import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.autoconfigure.PatraHibernatePropertiesCustomizer;
@@ -44,7 +45,8 @@ class UserProfileRepositoryAdapterIT {
 
   @Test
   void should_save_empty_profile_and_find_by_user_id() {
-    User user = users.save(User.register(EmailAddress.of("profile@example.com")));
+    User user =
+        users.save(User.register(EmailAddress.of("profile@example.com"), Username.of("u-profile")));
 
     UserProfile saved = profiles.save(UserProfile.create(user.getId()));
 
@@ -59,7 +61,8 @@ class UserProfileRepositoryAdapterIT {
 
   @Test
   void should_persist_rename() {
-    User user = users.save(User.register(EmailAddress.of("rename@example.com")));
+    User user =
+        users.save(User.register(EmailAddress.of("rename@example.com"), Username.of("u-rename")));
     UserProfile saved = profiles.save(UserProfile.create(user.getId()));
 
     saved.rename(new DisplayName("陈宇"));
@@ -73,7 +76,10 @@ class UserProfileRepositoryAdapterIT {
 
   @Test
   void should_reject_second_profile_for_same_user() {
-    User user = users.save(User.register(EmailAddress.of("twice-profile@example.com")));
+    User user =
+        users.save(
+            User.register(
+                EmailAddress.of("twice-profile@example.com"), Username.of("u-twice-profile")));
     profiles.save(UserProfile.create(user.getId()));
 
     assertThatThrownBy(() -> profiles.save(UserProfile.create(user.getId())))

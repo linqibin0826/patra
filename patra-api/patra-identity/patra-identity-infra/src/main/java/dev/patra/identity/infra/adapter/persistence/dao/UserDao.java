@@ -30,4 +30,16 @@ public interface UserDao extends JpaRepository<UserEntity, Long> {
   /// @param email 邮箱
   /// @return 存在时为 `true`
   boolean existsByEmail(String email);
+
+  /// 按规范化之后的用户名查，包括已注销的。
+  ///
+  /// @param username 用户名
+  /// @return 实体
+  Optional<UserEntity> findByUsername(String username);
+
+  /// 用户名是否存在，包括已注销的。
+  ///
+  /// @param username 用户名
+  /// @return 存在时为 `true`
+  boolean existsByUsername(String username);
 }

@@ -10,6 +10,7 @@ import dev.patra.identity.domain.model.enums.LoginEndReason;
 import dev.patra.identity.domain.model.vo.DeviceId;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.LoginClient;
+import dev.patra.identity.domain.model.vo.Username;
 import dev.patra.identity.infra.config.IdentityITPostgreSQLContainerInitializer;
 import dev.patra.tool.core.security.ClientType;
 import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
@@ -57,7 +58,10 @@ class UserLoginRecordRepositoryAdapterIT {
   @Test
   @DisplayName("保存时分配雪花 ID，能按 ID 查回，登录时间取审计列")
   void should_assign_id_and_find_saved_record() {
-    User user = users.save(User.register(EmailAddress.of("login.record@example.com")));
+    User user =
+        users.save(
+            User.register(
+                EmailAddress.of("login.record@example.com"), Username.of("u-login-record")));
 
     UserLoginRecord saved =
         records.save(
@@ -78,7 +82,9 @@ class UserLoginRecordRepositoryAdapterIT {
   @Test
   @DisplayName("结束后保存，查回来有结束时间和原因，版本加一")
   void should_persist_end() {
-    User user = users.save(User.register(EmailAddress.of("end.record@example.com")));
+    User user =
+        users.save(
+            User.register(EmailAddress.of("end.record@example.com"), Username.of("u-end-record")));
     UserLoginRecord saved =
         records.save(UserLoginRecord.start(user.getId(), LoginClient.web(), EXPIRES_AT));
     Instant endedAt = Instant.parse("2026-10-09T09:00:00Z");
@@ -97,7 +103,9 @@ class UserLoginRecordRepositoryAdapterIT {
   @Test
   @DisplayName("检查约束：客户端类型只能是 WEB")
   void should_reject_unknown_client_type() {
-    User user = users.save(User.register(EmailAddress.of("ck.client@example.com")));
+    User user =
+        users.save(
+            User.register(EmailAddress.of("ck.client@example.com"), Username.of("u-ck-client")));
 
     assertThatThrownBy(() -> insertRaw(user.getId(), "APP", null, null))
         .isInstanceOf(DataIntegrityViolationException.class)
@@ -107,7 +115,9 @@ class UserLoginRecordRepositoryAdapterIT {
   @Test
   @DisplayName("检查约束：结束原因只能是 LOGOUT、BANNED、REPLACED")
   void should_reject_unknown_end_reason() {
-    User user = users.save(User.register(EmailAddress.of("ck.reason@example.com")));
+    User user =
+        users.save(
+            User.register(EmailAddress.of("ck.reason@example.com"), Username.of("u-ck-reason")));
 
     assertThatThrownBy(() -> insertRaw(user.getId(), "WEB", EXPIRES_AT, "EXPIRED"))
         .isInstanceOf(DataIntegrityViolationException.class)
@@ -117,7 +127,8 @@ class UserLoginRecordRepositoryAdapterIT {
   @Test
   @DisplayName("检查约束：结束时间和结束原因要么都有要么都没有")
   void should_require_end_fields_together() {
-    User user = users.save(User.register(EmailAddress.of("ck.pair@example.com")));
+    User user =
+        users.save(User.register(EmailAddress.of("ck.pair@example.com"), Username.of("u-ck-pair")));
 
     assertThatThrownBy(() -> insertRaw(user.getId(), "WEB", EXPIRES_AT, null))
         .isInstanceOf(DataIntegrityViolationException.class)
@@ -145,7 +156,10 @@ class UserLoginRecordRepositoryAdapterIT {
   @Test
   @DisplayName("用过期的版本保存时转成 UserModifiedConcurrentlyException，文案不带实体名")
   void should_translate_stale_version_to_conflict() {
-    User user = users.save(User.register(EmailAddress.of("stale.record@example.com")));
+    User user =
+        users.save(
+            User.register(
+                EmailAddress.of("stale.record@example.com"), Username.of("u-stale-record")));
     UserLoginRecord saved =
         records.save(UserLoginRecord.start(user.getId(), LoginClient.web(), EXPIRES_AT));
     UserLoginRecord stale = records.findById(saved.getId()).orElseThrow();

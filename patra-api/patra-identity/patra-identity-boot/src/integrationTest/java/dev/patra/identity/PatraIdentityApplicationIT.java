@@ -29,7 +29,7 @@ class PatraIdentityApplicationIT {
   @Autowired private Environment environment;
 
   @Test
-  @DisplayName("启动时 Flyway 建好三张表")
+  @DisplayName("启动时 Flyway 用一份 V1 建好五张表")
   void should_create_identity_tables_on_startup() {
     List<String> tables =
         jdbcTemplate.queryForList(
@@ -39,7 +39,12 @@ class PatraIdentityApplicationIT {
             String.class);
 
     assertThat(tables)
-        .containsExactly("idn_user", "idn_user_login_record", "idn_user_password_credential");
+        .containsExactly(
+            "idn_user",
+            "idn_user_former_username",
+            "idn_user_login_record",
+            "idn_user_password_credential",
+            "idn_user_profile");
   }
 
   @Test

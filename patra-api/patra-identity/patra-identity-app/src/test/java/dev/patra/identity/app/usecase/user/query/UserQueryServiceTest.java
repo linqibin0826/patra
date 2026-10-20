@@ -71,4 +71,14 @@ class UserQueryServiceTest {
 
     assertThatThrownBy(service::currentAccount).isInstanceOf(AuthenticationRequiredException.class);
   }
+
+  @Test
+  @DisplayName("用户已注销但断言还没过期：401")
+  void should_reject_deleted_user_with_401() {
+    when(currentUserPort.require()).thenReturn(USER);
+    when(userReadPort.findAccount(42L))
+        .thenReturn(Optional.of(UserAccountReadModel.of(42L, null, UserStatus.DELETED)));
+
+    assertThatThrownBy(service::currentAccount).isInstanceOf(AuthenticationRequiredException.class);
+  }
 }

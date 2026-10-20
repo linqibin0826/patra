@@ -56,7 +56,11 @@ class RedisUnavailableIT {
             .post()
             .uri("/auth/register")
             .contentType(MediaType.APPLICATION_JSON)
-            .body(Map.of("email", "no-redis@example.com", "password", "No-Redis-Pass-13"))
+            .body(
+                Map.of(
+                    "email", "no-redis@example.com",
+                    "username", "u-no-redis",
+                    "password", "No-Redis-Pass-13"))
             .exchange()
             .expectBody(String.class)
             .returnResult();

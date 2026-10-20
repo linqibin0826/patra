@@ -3,14 +3,17 @@ package dev.patra.identity.infra.adapter.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import dev.patra.identity.domain.exception.EmailAlreadyRegisteredException;
+import dev.patra.identity.domain.exception.UserIdentifierTakenException;
 import dev.patra.identity.domain.exception.UserModifiedConcurrentlyException;
 import dev.patra.identity.domain.model.aggregate.User;
 import dev.patra.identity.domain.model.enums.UserStatus;
 import dev.patra.identity.domain.model.vo.EmailAddress;
+import dev.patra.identity.domain.model.vo.Username;
 import dev.patra.identity.infra.config.IdentityITPostgreSQLContainerInitializer;
+import dev.patra.tool.core.error.field.FieldViolation;
 import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.autoconfigure.PatraHibernatePropertiesCustomizer;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -54,38 +57,95 @@ class UserRepositoryAdapterIT {
   @Autowired private PlatformTransactionManager transactionManager;
 
   @Test
-  @DisplayName("保存新用户时分配雪花 ID，能按邮箱和 ID 查回")
+  @DisplayName("保存新用户时分配雪花 ID，能按邮箱、用户名和 ID 查回")
   void should_assign_id_and_find_saved_user() {
     EmailAddress email = EmailAddress.of("save.find@example.com");
+    Username username = Username.of("u-save-find");
 
-    User saved = repository.save(User.register(email));
+    User saved = repository.save(User.register(email, username));
 
     assertThat(saved.getId()).isPositive();
     assertThat(saved.getStatus()).isEqualTo(UserStatus.ACTIVE);
     assertThat(saved.getVersion()).isNotNull();
+    assertThat(saved.isEmailVerified()).isFalse();
     assertThat(repository.findByEmail(email))
+        .get()
+        .extracting(User::getId)
+        .isEqualTo(saved.getId());
+    assertThat(repository.findByUsername(username))
         .get()
         .extracting(User::getId)
         .isEqualTo(saved.getId());
     assertThat(repository.findById(saved.getId())).isPresent();
     assertThat(repository.existsByEmail(email)).isTrue();
     assertThat(repository.existsByEmail(EmailAddress.of("nobody@example.com"))).isFalse();
+    assertThat(repository.existsByUsername(username)).isTrue();
+    assertThat(repository.existsByUsername(Username.of("nobody"))).isFalse();
   }
 
   @Test
-  @DisplayName("邮箱撞上唯一约束时抛 EmailAlreadyRegisteredException")
+  @DisplayName("邮箱撞上唯一约束时抛 UserIdentifierTakenException，字段是 email")
   void should_translate_email_unique_violation() {
     EmailAddress email = EmailAddress.of("duplicate@example.com");
-    repository.save(User.register(email));
+    repository.save(User.register(email, Username.of("u-dup-1")));
 
-    assertThatThrownBy(() -> repository.save(User.register(email)))
-        .isInstanceOf(EmailAlreadyRegisteredException.class);
+    assertThatThrownBy(() -> repository.save(User.register(email, Username.of("u-dup-2"))))
+        .isInstanceOfSatisfying(
+            UserIdentifierTakenException.class,
+            e ->
+                assertThat(e.getFieldViolations())
+                    .singleElement()
+                    .satisfies(
+                        v -> {
+                          assertThat(v.field()).isEqualTo("email");
+                          assertThat(v.code()).isEqualTo("ALREADY_REGISTERED");
+                        }));
+  }
+
+  @Test
+  @DisplayName("用户名撞上唯一约束时抛 UserIdentifierTakenException，字段是 username")
+  void should_translate_username_unique_violation() {
+    Username username = Username.of("u-same-name");
+    repository.save(User.register(EmailAddress.of("same-1@example.com"), username));
+
+    assertThatThrownBy(
+            () -> repository.save(User.register(EmailAddress.of("same-2@example.com"), username)))
+        .isInstanceOfSatisfying(
+            UserIdentifierTakenException.class,
+            e ->
+                assertThat(e.getFieldViolations())
+                    .singleElement()
+                    .extracting(FieldViolation::code)
+                    .isEqualTo("ALREADY_TAKEN"));
+  }
+
+  @Test
+  @DisplayName("已注销的用户没有邮箱也能保存和查回；用户名仍被占用，邮箱已释放")
+  void should_persist_and_find_deleted_user_without_email() {
+    EmailAddress email = EmailAddress.of("gone@example.com");
+    Username username = Username.of("u-gone");
+    User saved = repository.save(User.register(email, username));
+    Instant now = Instant.parse("2026-10-20T08:00:00Z");
+    saved.requestDeletion(now, Duration.ofDays(15));
+    saved.completeDeletion(now.plus(Duration.ofDays(15)));
+
+    repository.save(saved);
+
+    User reloaded = repository.findByUsername(username).orElseThrow();
+    assertThat(reloaded.isDeleted()).isTrue();
+    assertThat(reloaded.getEmail()).isEmpty();
+    assertThat(reloaded.getDeletedAt()).isEqualTo(now.plus(Duration.ofDays(15)));
+    assertThat(repository.existsByUsername(username)).isTrue();
+    assertThat(repository.existsByEmail(email)).isFalse();
+    assertThat(repository.findByEmail(email)).isEmpty();
   }
 
   @Test
   @DisplayName("封禁后保存，查回来是封禁状态")
   void should_persist_ban() {
-    User saved = repository.save(User.register(EmailAddress.of("ban.me@example.com")));
+    User saved =
+        repository.save(
+            User.register(EmailAddress.of("ban.me@example.com"), Username.of("u-ban-me")));
     Instant now = Instant.parse("2026-10-06T08:00:00Z");
 
     saved.ban(now);
@@ -99,7 +159,9 @@ class UserRepositoryAdapterIT {
   @Test
   @DisplayName("用过期的版本保存时报乐观锁冲突")
   void should_reject_stale_version() {
-    User saved = repository.save(User.register(EmailAddress.of("stale@example.com")));
+    User saved =
+        repository.save(
+            User.register(EmailAddress.of("stale@example.com"), Username.of("u-stale")));
     User stale = repository.findById(saved.getId()).orElseThrow();
     saved.ban(Instant.parse("2026-10-06T08:00:00Z"));
     repository.save(saved);
@@ -118,7 +180,11 @@ class UserRepositoryAdapterIT {
     long userId =
         transactions.execute(
             status ->
-                repository.save(User.register(EmailAddress.of("lock.me@example.com"))).getId());
+                repository
+                    .save(
+                        User.register(
+                            EmailAddress.of("lock.me@example.com"), Username.of("u-lock-me")))
+                    .getId());
     CountDownLatch locked = new CountDownLatch(1);
     // 加锁事务即将提交时置位：放在回调里而不是 execute 返回之后，否则提交与置位之间有空档，
     // 被放行的封禁事务可能先读到 false

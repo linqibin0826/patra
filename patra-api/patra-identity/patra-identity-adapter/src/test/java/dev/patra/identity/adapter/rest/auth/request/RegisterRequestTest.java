@@ -10,10 +10,13 @@ import org.junit.jupiter.api.Test;
 class RegisterRequestTest {
 
   @Test
-  @DisplayName("toString 不输出密码")
+  @DisplayName("toString 输出邮箱和用户名，不输出密码")
   void should_hide_password_in_to_string() {
-    assertThat(new RegisterRequest("chen.yu@example.com", "Secret-Value-1", null, null).toString())
+    assertThat(
+            new RegisterRequest("chen.yu@example.com", "chen-yu", "Secret-Value-1", null, null)
+                .toString())
         .contains("chen.yu@example.com")
+        .contains("username=chen-yu")
         .contains("clientType=")
         .doesNotContain("Secret-Value-1");
   }

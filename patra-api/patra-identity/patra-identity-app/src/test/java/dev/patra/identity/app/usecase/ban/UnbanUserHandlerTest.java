@@ -11,6 +11,7 @@ import dev.patra.identity.domain.exception.UserNotFoundException;
 import dev.patra.identity.domain.model.aggregate.User;
 import dev.patra.identity.domain.model.enums.UserStatus;
 import dev.patra.identity.domain.model.vo.EmailAddress;
+import dev.patra.identity.domain.model.vo.Username;
 import dev.patra.identity.domain.port.repository.UserRepository;
 import java.time.Instant;
 import java.util.Optional;
@@ -33,14 +34,14 @@ class UnbanUserHandlerTest {
     when(users.findById(42L))
         .thenReturn(
             Optional.of(
-                User.restore(
-                    42L,
-                    EMAIL,
-                    UserStatus.BANNED,
-                    Instant.parse("2026-10-06T08:00:00Z"),
-                    1L,
-                    null,
-                    null)));
+                User.restore()
+                    .id(42L)
+                    .email(EMAIL)
+                    .username(Username.of("chen-yu"))
+                    .status(UserStatus.BANNED)
+                    .bannedAt(Instant.parse("2026-10-06T08:00:00Z"))
+                    .version(1L)
+                    .build()));
     when(users.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
     handler.handle(UnbanUserCommand.of(42L));

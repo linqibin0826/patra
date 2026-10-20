@@ -11,6 +11,7 @@ import dev.patra.tool.security.test.TestIdentity;
 import dev.patra.tool.test.container.initializer.RedisContainerInitializer;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -138,6 +139,8 @@ class SessionFlowIT {
             Map.of(
                 "email",
                 "flow.invalid2@example.com",
+                "username",
+                "u-flow-invalid2",
                 "password",
                 PASSWORD,
                 "deviceId",
@@ -249,7 +252,9 @@ class SessionFlowIT {
   /// @param email 邮箱
   /// @return 响应
   private EntityExchangeResult<String> register(String email) {
-    return post("/auth/register", Map.of("email", email, "password", PASSWORD));
+    return post(
+        "/auth/register",
+        Map.of("email", email, "username", usernameFor(email), "password", PASSWORD));
   }
 
   /// 登录，密码固定，不带客户端字段。
@@ -348,5 +353,14 @@ class SessionFlowIT {
   private String endReasonOf(long sessionId) {
     return jdbcTemplate.queryForObject(
         "SELECT end_reason FROM idn_user_login_record WHERE id = ?", String.class, sessionId);
+  }
+
+  /// 按邮箱派生一个合法的用户名：本地部分小写、`.` 换成 `-`，前面加 `u-`。
+  ///
+  /// @param email 邮箱
+  /// @return 用户名
+  private static String usernameFor(String email) {
+    String local = email.strip().toLowerCase(Locale.ROOT);
+    return "u-" + local.substring(0, local.indexOf('@')).replace('.', '-');
   }
 }

@@ -15,6 +15,7 @@ import dev.patra.identity.domain.model.aggregate.UserLoginRecord;
 import dev.patra.identity.domain.model.enums.LoginEndReason;
 import dev.patra.identity.domain.model.enums.UserStatus;
 import dev.patra.identity.domain.model.vo.EmailAddress;
+import dev.patra.identity.domain.model.vo.Username;
 import dev.patra.identity.domain.port.repository.UserLoginRecordRepository;
 import dev.patra.identity.domain.port.repository.UserRepository;
 import dev.patra.identity.domain.port.session.SessionStorePort;
@@ -46,7 +47,15 @@ class BanUserHandlerTest {
   @DisplayName("封禁正常用户：状态改为封禁，封禁时间取时钟")
   void should_ban_active_user() {
     when(users.findById(42L))
-        .thenReturn(Optional.of(User.restore(42L, EMAIL, UserStatus.ACTIVE, null, 0L, null, null)));
+        .thenReturn(
+            Optional.of(
+                User.restore()
+                    .id(42L)
+                    .email(EMAIL)
+                    .username(Username.of("chen-yu"))
+                    .status(UserStatus.ACTIVE)
+                    .version(0L)
+                    .build()));
     when(users.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
     handler.handle(BanUserCommand.of(42L));
@@ -63,7 +72,15 @@ class BanUserHandlerTest {
     Instant earlier = Instant.parse("2026-10-01T00:00:00Z");
     when(users.findById(42L))
         .thenReturn(
-            Optional.of(User.restore(42L, EMAIL, UserStatus.BANNED, earlier, 1L, null, null)));
+            Optional.of(
+                User.restore()
+                    .id(42L)
+                    .email(EMAIL)
+                    .username(Username.of("chen-yu"))
+                    .status(UserStatus.BANNED)
+                    .bannedAt(earlier)
+                    .version(1L)
+                    .build()));
     when(users.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
     handler.handle(BanUserCommand.of(42L));
@@ -77,7 +94,15 @@ class BanUserHandlerTest {
   @DisplayName("封禁后删掉该用户的全部会话，被删会话的记录标成 BANNED；找不到的记录跳过")
   void should_revoke_all_sessions_and_end_records() {
     when(users.findById(42L))
-        .thenReturn(Optional.of(User.restore(42L, EMAIL, UserStatus.ACTIVE, null, 0L, null, null)));
+        .thenReturn(
+            Optional.of(
+                User.restore()
+                    .id(42L)
+                    .email(EMAIL)
+                    .username(Username.of("chen-yu"))
+                    .status(UserStatus.ACTIVE)
+                    .version(0L)
+                    .build()));
     when(users.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     when(sessions.revokeAll(AccountType.USER, 42L)).thenReturn(List.of(7001L, 7002L));
     UserLoginRecord first =

@@ -11,12 +11,12 @@ import dev.patra.identity.app.usecase.logout.LogoutUserCommand;
 import dev.patra.identity.app.usecase.register.RegisterUserCommand;
 import dev.patra.identity.app.usecase.register.RegisterUserResult;
 import dev.patra.identity.app.usecase.user.query.UserQueryService;
-import dev.patra.identity.domain.exception.EmailAlreadyRegisteredException;
 import dev.patra.identity.domain.exception.InvalidCredentialsException;
 import dev.patra.identity.domain.exception.InvalidUserFieldsException;
 import dev.patra.identity.domain.exception.LoginTemporarilyLockedException;
 import dev.patra.identity.domain.exception.TemporarilyUnavailableException;
 import dev.patra.identity.domain.exception.UserBannedException;
+import dev.patra.identity.domain.exception.UserIdentifierTakenException;
 import dev.patra.identity.domain.model.enums.UserStatus;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.model.vo.UserFieldViolations;
@@ -65,7 +65,11 @@ class AuthControllerIT {
         .post()
         .uri("/auth/register")
         .contentType(MediaType.APPLICATION_JSON)
-        .body(Map.of("email", " Chen.Yu@Example.com ", "password", "correct horse battery"))
+        .body(
+            Map.of(
+                "email", " Chen.Yu@Example.com ",
+                "username", " Chen-Yu ",
+                "password", "correct horse battery"))
         .exchange()
         .expectStatus()
         .isCreated()
@@ -82,6 +86,7 @@ class AuthControllerIT {
         ArgumentCaptor.forClass(RegisterUserCommand.class);
     verify(commandBus).handle(command.capture());
     assertThat(command.getValue().email()).isEqualTo(" Chen.Yu@Example.com ");
+    assertThat(command.getValue().username()).isEqualTo(" Chen-Yu ");
     assertThat(command.getValue().password()).isEqualTo("correct horse battery");
     assertThat(command.getValue().clientType()).isNull();
     assertThat(command.getValue().deviceId()).isNull();
@@ -142,6 +147,7 @@ class AuthControllerIT {
         ArgumentCaptor.forClass(RegisterUserCommand.class);
     verify(commandBus).handle(command.capture());
     assertThat(command.getValue().email()).isNull();
+    assertThat(command.getValue().username()).isNull();
     assertThat(command.getValue().password()).isNull();
   }
 
@@ -179,24 +185,42 @@ class AuthControllerIT {
   }
 
   @Test
-  @DisplayName("邮箱已注册：409")
-  void should_render_conflict() {
+  @DisplayName("邮箱和用户名都被占用：409，errors 按字段给原因码，不回显原始值")
+  void should_return_409_with_field_errors_when_identifiers_taken() {
     when(commandBus.handle(any(RegisterUserCommand.class)))
-        .thenThrow(new EmailAlreadyRegisteredException());
+        .thenThrow(
+            new UserIdentifierTakenException(
+                List.of(
+                    UserFieldViolations.emailAlreadyRegistered(),
+                    UserFieldViolations.usernameAlreadyTaken())));
 
-    restClient
-        .post()
-        .uri("/auth/register")
-        .contentType(MediaType.APPLICATION_JSON)
-        .body(Map.of("email", "chen.yu@example.com", "password", "correct horse battery"))
-        .exchange()
-        .expectStatus()
-        .isEqualTo(409)
-        .expectBody()
-        .jsonPath("$.code")
-        .isEqualTo("IDN-0409")
-        .jsonPath("$.detail")
-        .isEqualTo("该邮箱已注册");
+    String body =
+        restClient
+            .post()
+            .uri("/auth/register")
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(
+                Map.of(
+                    "email", "chen.yu@example.com",
+                    "username", "chen-yu",
+                    "password", "correct horse battery"))
+            .exchange()
+            .expectStatus()
+            .isEqualTo(409)
+            .expectBody(String.class)
+            .returnResult()
+            .getResponseBody();
+
+    JsonNode json = JSON.readTree(body);
+    assertThat(json.get("code").asString()).isEqualTo("IDN-0409");
+    assertThat(json.get("detail").asString()).isEqualTo("邮箱或用户名已被使用");
+    assertThat(json.get("errors").size()).isEqualTo(2);
+    assertThat(json.get("errors").get(0).get("field").asString()).isEqualTo("email");
+    assertThat(json.get("errors").get(0).get("code").asString()).isEqualTo("ALREADY_REGISTERED");
+    assertThat(json.get("errors").get(1).get("field").asString()).isEqualTo("username");
+    assertThat(json.get("errors").get(1).get("code").asString()).isEqualTo("ALREADY_TAKEN");
+    assertThat(json.get("errors").get(1).get("rejectedValue").isNull()).isTrue();
+    assertThat(body).doesNotContain("chen.yu@example.com");
   }
 
   @Test

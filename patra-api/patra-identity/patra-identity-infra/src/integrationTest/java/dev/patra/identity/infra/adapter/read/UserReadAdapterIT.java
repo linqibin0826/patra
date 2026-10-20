@@ -6,6 +6,7 @@ import dev.patra.identity.domain.model.aggregate.User;
 import dev.patra.identity.domain.model.enums.UserStatus;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.model.vo.EmailAddress;
+import dev.patra.identity.domain.model.vo.Username;
 import dev.patra.identity.infra.adapter.persistence.UserRepositoryAdapter;
 import dev.patra.identity.infra.config.IdentityITPostgreSQLContainerInitializer;
 import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
@@ -46,7 +47,8 @@ class UserReadAdapterIT {
   @Test
   @DisplayName("按 ID 读账号：邮箱和状态；封禁后状态跟着变；不存在返回空")
   void should_read_account_by_id() {
-    User saved = users.save(User.register(EmailAddress.of("read.me@example.com")));
+    User saved =
+        users.save(User.register(EmailAddress.of("read.me@example.com"), Username.of("u-read-me")));
 
     assertThat(reader.findAccount(saved.getId()))
         .contains(UserAccountReadModel.of(saved.getId(), "read.me@example.com", UserStatus.ACTIVE));

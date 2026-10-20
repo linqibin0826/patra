@@ -21,7 +21,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 @DisplayName("identity 领域异常的文案和特征")
 class DomainExceptionTraitsTest {
 
-  /// 八个异常及其预期的文案和特征。
+  /// 各领域异常及其预期的文案和（唯一的）标准特征。
   ///
   /// @return 异常、文案、特征
   static Stream<Arguments> exceptions() {
@@ -31,7 +31,6 @@ class DomainExceptionTraitsTest {
                 List.of(FieldViolation.of("email", "REQUIRED", "请输入邮箱"))),
             "请求参数不合法",
             StandardErrorTrait.RULE_VIOLATION),
-        Arguments.of(new EmailAlreadyRegisteredException(), "该邮箱已注册", StandardErrorTrait.CONFLICT),
         Arguments.of(new InvalidCredentialsException(), "邮箱或密码错误", StandardErrorTrait.UNAUTHORIZED),
         Arguments.of(
             new LoginTemporarilyLockedException(Duration.ofMinutes(15)),

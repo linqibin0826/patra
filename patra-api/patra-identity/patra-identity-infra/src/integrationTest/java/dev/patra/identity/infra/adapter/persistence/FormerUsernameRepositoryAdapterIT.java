@@ -83,6 +83,11 @@ class FormerUsernameRepositoryAdapterIT {
   /// @param email 邮箱
   /// @return 用户 ID
   private long saveUser(String email) {
-    return users.save(User.register(EmailAddress.of(email))).getId();
+    return users
+        .save(
+            User.register(
+                EmailAddress.of(email),
+                Username.of("u-" + email.substring(0, email.indexOf('@')).replace('.', '-'))))
+        .getId();
   }
 }

@@ -6,13 +6,12 @@ import java.util.Objects;
 /// 「当前用户」接口要的账号信息。
 ///
 /// @param userId 用户 ID
-/// @param email 规范化之后的邮箱
+/// @param email 规范化之后的邮箱，已注销时为 `null`
 /// @param status 状态
 public record UserAccountReadModel(long userId, String email, UserStatus status) {
 
   /// 校验非空。
   public UserAccountReadModel {
-    Objects.requireNonNull(email, "email 不能为 null");
     Objects.requireNonNull(status, "status 不能为 null");
   }
 

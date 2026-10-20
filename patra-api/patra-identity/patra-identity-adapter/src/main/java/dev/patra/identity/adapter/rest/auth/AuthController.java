@@ -42,8 +42,13 @@ public class AuthController {
   public AuthenticatedUserResponse register(@RequestBody RegisterRequest request) {
     RegisterUserResult result =
         commandBus.handle(
-            RegisterUserCommand.of(
-                request.email(), request.password(), request.clientType(), request.deviceId()));
+            RegisterUserCommand.builder()
+                .email(request.email())
+                .username(request.username())
+                .password(request.password())
+                .clientType(request.clientType())
+                .deviceId(request.deviceId())
+                .build());
     return AuthenticatedUserResponse.of(result.sessionToken(), result.userId(), result.email());
   }
 

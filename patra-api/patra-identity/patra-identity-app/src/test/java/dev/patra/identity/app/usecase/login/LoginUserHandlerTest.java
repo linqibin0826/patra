@@ -25,6 +25,7 @@ import dev.patra.identity.domain.model.vo.DeviceId;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.LoginClient;
 import dev.patra.identity.domain.model.vo.PasswordHash;
+import dev.patra.identity.domain.model.vo.Username;
 import dev.patra.identity.domain.policy.PasswordPolicy;
 import dev.patra.identity.domain.port.hashing.PasswordHashingPort;
 import dev.patra.identity.domain.port.repository.UserPasswordCredentialRepository;
@@ -56,11 +57,41 @@ class LoginUserHandlerTest {
   private static final EmailAddress EMAIL = EmailAddress.of("chen.yu@example.com");
   private static final PasswordHash HASH =
       PasswordHash.of("$argon2id$v=19$m=19456,t=2,p=1$c2FsdA$aGFzaA");
+  private static final Username USERNAME = Username.of("chen-yu");
   private static final User ACTIVE_USER =
-      User.restore(42L, EMAIL, UserStatus.ACTIVE, null, 0L, null, null);
+      User.restore()
+          .id(42L)
+          .email(EMAIL)
+          .username(USERNAME)
+          .status(UserStatus.ACTIVE)
+          .version(0L)
+          .build();
   private static final User BANNED_USER =
-      User.restore(
-          42L, EMAIL, UserStatus.BANNED, Instant.parse("2026-10-06T08:00:00Z"), 1L, null, null);
+      User.restore()
+          .id(42L)
+          .email(EMAIL)
+          .username(USERNAME)
+          .status(UserStatus.BANNED)
+          .bannedAt(Instant.parse("2026-10-06T08:00:00Z"))
+          .version(1L)
+          .build();
+  private static final User PENDING_USER =
+      User.restore()
+          .id(42L)
+          .email(EMAIL)
+          .username(USERNAME)
+          .status(UserStatus.PENDING_DELETION)
+          .deletionDueAt(Instant.parse("2026-11-04T08:00:00Z"))
+          .version(1L)
+          .build();
+  private static final User DELETED_USER =
+      User.restore()
+          .id(42L)
+          .username(USERNAME)
+          .status(UserStatus.DELETED)
+          .deletedAt(Instant.parse("2026-11-04T08:00:00Z"))
+          .version(2L)
+          .build();
   private static final UserPasswordCredential CREDENTIAL =
       UserPasswordCredential.restore(7L, 42L, HASH, 0L);
   private static final LoginAttempt ATTEMPT = LoginAttempt.of(AccountType.USER, EMAIL, "ticket");
@@ -421,6 +452,37 @@ class LoginUserHandlerTest {
     transactional.handle(LoginUserCommand.of("chen.yu@example.com", "correct horse", null, null));
 
     verify(users).findByIdForUpdate(42L);
+    verify(sessionIssuer).issue(eq(42L), any());
+  }
+
+  @Test
+  @DisplayName("已注销的用户：密码匹配也按失败结算、401，不记成功、不建会话")
+  void should_settle_deleted_user_as_failure_without_recording_success() {
+    when(users.findByEmail(EMAIL)).thenReturn(Optional.of(DELETED_USER));
+    when(passwordHashing.matches(any(), any())).thenReturn(true);
+
+    assertThatThrownBy(
+            () ->
+                handler.handle(
+                    LoginUserCommand.of("chen.yu@example.com", "correct horse", null, null)))
+        .isInstanceOf(InvalidCredentialsException.class);
+    verify(loginThrottle).recordFailure(ATTEMPT);
+    verify(loginThrottle, never()).recordSuccess(any());
+    verifyNoInteractions(sessionIssuer);
+  }
+
+  @Test
+  @DisplayName("冷静期内的用户照常登录建会话")
+  void should_login_pending_deletion_user() {
+    when(users.findByEmail(EMAIL)).thenReturn(Optional.of(PENDING_USER));
+    when(users.findByIdForUpdate(42L)).thenReturn(Optional.of(PENDING_USER));
+    when(passwordHashing.matches(any(), any())).thenReturn(true);
+
+    LoginUserResult result =
+        handler.handle(LoginUserCommand.of("chen.yu@example.com", "correct horse", null, null));
+
+    assertThat(result.sessionToken()).isEqualTo("patra_user_x");
+    verify(loginThrottle).recordSuccess(ATTEMPT);
     verify(sessionIssuer).issue(eq(42L), any());
   }
 }

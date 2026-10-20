@@ -36,7 +36,8 @@ import org.springframework.transaction.support.TransactionOperations;
 /// 2. 开始一次尝试：锁定期内或在途已满直接 429，不查库、不做哈希。密码超过登录长度上限时
 ///    也不查库、不做哈希，直接按失败结算。
 /// 3. 查用户和凭据。查不到时拿假哈希做一次校验，耗时和「密码错」一样。
-/// 4. 密码错按失败结算（可能触发 429）；密码对按成功结算，封禁的账号返回 403。
+/// 4. 密码错按失败结算（可能触发 429）；密码对但账号已注销也按失败结算；密码对按成功结算，
+///    封禁的账号返回 403，冷静期内的账号照常登录（响应里带状态）。
 /// 5. 中途出错按取消结算，不计失败，原来的错误照常抛出。
 /// 6. 校验通过后在一个事务里先对用户行加锁重读、复核封禁，再建会话：存登录记录、写 Redis、
 ///    收尾被挤掉的记录。封禁对同一行的更新和这把锁互斥：封禁先提交，这里返回 403；登录先提交，
@@ -88,8 +89,12 @@ public class LoginUserHandler implements CommandHandler<LoginUserCommand, LoginU
     if (!matches) {
       throw failure(attempt);
     }
-    loginThrottle.recordSuccess(attempt);
     User verified = user.orElseThrow();
+    if (verified.isDeleted()) {
+      // 已注销的用户邮箱已释放、凭据已删，正常按邮箱查不到；真查到了也和密码错误一样处理
+      throw failure(attempt);
+    }
+    loginThrottle.recordSuccess(attempt);
     if (verified.isBanned()) {
       throw new UserBannedException();
     }
@@ -101,16 +106,21 @@ public class LoginUserHandler implements CommandHandler<LoginUserCommand, LoginU
                       users
                           .findByIdForUpdate(verified.getId())
                           .orElseThrow(InvalidCredentialsException::new);
+                  if (locked.isDeleted()) {
+                    throw new InvalidCredentialsException();
+                  }
                   if (locked.isBanned()) {
                     throw new UserBannedException();
                   }
                   return sessionIssuer.issue(locked.getId(), client);
                 }));
     log.info(
-        "前台用户已登录: userId={}, replacedSessions={}",
+        "前台用户已登录: userId={}, status={}, replacedSessions={}",
         verified.getId(),
+        verified.getStatus(),
         session.replacedSessionIds().size());
-    return LoginUserResult.of(session.token(), verified.getId(), verified.getEmail().value());
+    return LoginUserResult.of(
+        session.token(), verified.getId(), verified.getEmail().orElseThrow().value());
   }
 
   /// 校验密码。用户或凭据不存在时拿假哈希校验一次，然后返回 `false`。

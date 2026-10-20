@@ -8,6 +8,7 @@ import dev.patra.tool.test.container.initializer.RedisContainerInitializer;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -86,6 +87,7 @@ class AccountFlowIT {
             .body(
                 Map.of(
                     "email", "mass@example.com",
+                    "username", "mass-user",
                     "password", "Mass-Assign-03",
                     "id", 1,
                     "userId", "1",
@@ -237,7 +239,23 @@ class AccountFlowIT {
         .post()
         .uri(uri)
         .contentType(MediaType.APPLICATION_JSON)
-        .body(Map.of("email", email, "password", password))
+        .body(Map.of("email", email, "username", usernameFor(email), "password", password))
+        .exchange()
+        .expectBody(String.class)
+        .returnResult();
+  }
+
+  /// 发一个任意 JSON 体的 POST。
+  ///
+  /// @param uri 路径
+  /// @param body 请求体
+  /// @return 响应
+  private EntityExchangeResult<String> postJson(String uri, Map<String, ?> body) {
+    return restClient
+        .post()
+        .uri(uri)
+        .contentType(MediaType.APPLICATION_JSON)
+        .body(body)
         .exchange()
         .expectBody(String.class)
         .returnResult();
@@ -252,5 +270,88 @@ class AccountFlowIT {
     node.remove("timestamp");
     node.remove("traceId");
     return node;
+  }
+
+  /// 按邮箱派生一个合法的用户名：本地部分小写、`.` 换成 `-`，前面加 `u-`。
+  ///
+  /// @param email 邮箱
+  /// @return 用户名
+  private static String usernameFor(String email) {
+    String local = email.strip().toLowerCase(Locale.ROOT);
+    return "u-" + local.substring(0, local.indexOf('@')).replace('.', '-');
+  }
+
+  @Test
+  @DisplayName("不带用户名注册：422，errors 只有 username 一条、原因码 REQUIRED")
+  void should_return_422_with_reason_code_when_username_missing() {
+    EntityExchangeResult<String> result =
+        postJson(
+            "/auth/register",
+            Map.of("email", "no-name@example.com", "password", "Correct-Horse-01"));
+
+    assertThat(result.getStatus().value()).isEqualTo(422);
+    JsonNode errors = JSON.readTree(result.getResponseBody()).get("errors");
+    assertThat(errors.size()).isEqualTo(1);
+    assertThat(errors.get(0).get("field").asString()).isEqualTo("username");
+    assertThat(errors.get(0).get("code").asString()).isEqualTo("REQUIRED");
+  }
+
+  @Test
+  @DisplayName("重复用户名的 409 和重复邮箱的 409 分得开；都重复时两条都在；用户名不分大小写")
+  void should_distinguish_duplicate_username_from_duplicate_email() {
+    assertThat(registerWith("dup@example.com", "dup-user").getStatus().value()).isEqualTo(201);
+
+    JsonNode sameEmail =
+        JSON.readTree(registerWith("dup@example.com", "another").getResponseBody());
+    JsonNode sameName =
+        JSON.readTree(registerWith("other@example.com", "DUP-USER").getResponseBody());
+    JsonNode both = JSON.readTree(registerWith("dup@example.com", "dup-user").getResponseBody());
+
+    assertThat(sameEmail.get("code").asString()).isEqualTo("IDN-0409");
+    assertThat(sameEmail.get("errors").size()).isEqualTo(1);
+    assertThat(sameEmail.get("errors").get(0).get("field").asString()).isEqualTo("email");
+    assertThat(sameEmail.get("errors").get(0).get("code").asString())
+        .isEqualTo("ALREADY_REGISTERED");
+    assertThat(sameName.get("errors").size()).isEqualTo(1);
+    assertThat(sameName.get("errors").get(0).get("field").asString()).isEqualTo("username");
+    assertThat(sameName.get("errors").get(0).get("code").asString()).isEqualTo("ALREADY_TAKEN");
+    assertThat(both.get("errors").size()).isEqualTo(2);
+  }
+
+  @Test
+  @DisplayName("冷静期内的用户邮箱仍被占用；注销完成后邮箱可再注册，用户名仍不可用")
+  void should_reject_email_of_user_pending_deletion_but_accept_email_of_deleted_user() {
+    assertThat(registerWith("gone@example.com", "gone-user").getStatus().value()).isEqualTo(201);
+    jdbcTemplate.update(
+        "UPDATE idn_user SET status = 'PENDING_DELETION', "
+            + "deletion_due_at = now() + interval '15 days' WHERE username = ?",
+        "gone-user");
+
+    assertThat(registerWith("gone@example.com", "gone-again").getStatus().value()).isEqualTo(409);
+
+    jdbcTemplate.update(
+        "DELETE FROM idn_user_password_credential "
+            + "WHERE user_id = (SELECT id FROM idn_user WHERE username = ?)",
+        "gone-user");
+    jdbcTemplate.update(
+        "UPDATE idn_user SET status = 'DELETED', deleted_at = now(), deletion_due_at = NULL, "
+            + "email = NULL, email_verified_at = NULL WHERE username = ?",
+        "gone-user");
+
+    assertThat(registerWith("gone@example.com", "gone-again").getStatus().value()).isEqualTo(201);
+    JsonNode reused =
+        JSON.readTree(registerWith("third@example.com", "gone-user").getResponseBody());
+    assertThat(reused.get("errors").get(0).get("field").asString()).isEqualTo("username");
+  }
+
+  /// 用指定的用户名注册，密码固定。
+  ///
+  /// @param email 邮箱
+  /// @param username 用户名
+  /// @return 响应
+  private EntityExchangeResult<String> registerWith(String email, String username) {
+    return postJson(
+        "/auth/register",
+        Map.of("email", email, "username", username, "password", "Correct-Horse-01"));
   }
 }
