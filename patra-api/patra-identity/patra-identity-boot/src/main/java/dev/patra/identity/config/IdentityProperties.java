@@ -10,9 +10,20 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 ///
 /// @param passwordHashing 密码哈希
 /// @param session 会话策略
+/// @param username 改名规则
 @ConfigurationProperties(prefix = "patra.identity")
 public record IdentityProperties(
-    @DefaultValue PasswordHashing passwordHashing, @DefaultValue Session session) {
+    @DefaultValue PasswordHashing passwordHashing,
+    @DefaultValue Session session,
+    @DefaultValue Username username) {
+
+  /// 改名规则。
+  ///
+  /// @param changeCooldown 两次改名的最短间隔
+  /// @param reservationPeriod 旧名保留多久
+  public record Username(
+      @DefaultValue("30d") Duration changeCooldown,
+      @DefaultValue("90d") Duration reservationPeriod) {}
 
   /// 密码哈希。
   ///

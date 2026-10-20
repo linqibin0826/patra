@@ -3,10 +3,13 @@ package dev.patra.identity.config;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
+import dev.patra.identity.domain.policy.DisplayNamePolicy;
 import dev.patra.identity.domain.policy.LoginThrottlePolicy;
 import dev.patra.identity.domain.policy.PasswordPolicy;
 import dev.patra.identity.domain.policy.SessionLifetime;
 import dev.patra.identity.domain.policy.SessionLifetimePolicy;
+import dev.patra.identity.domain.policy.UsernameChangePolicy;
+import dev.patra.identity.domain.policy.UsernamePolicy;
 import dev.patra.identity.domain.port.hashing.PasswordHashingPort;
 import dev.patra.identity.domain.port.password.CommonPasswordPort;
 import dev.patra.identity.domain.port.repository.UserLoginRecordRepository;
@@ -141,6 +144,37 @@ class IdentityConfigurationTest {
         .withPropertyValues(
             "patra.identity.session.lifetime.staff.web.idle=1d",
             "patra.identity.session.lifetime.staff.web.absolute=2d")
+        .run(context -> assertThat(context).hasFailed());
+  }
+
+  @Test
+  @DisplayName("用户名规则、昵称规则、改名策略都是 Bean；改名策略默认 30 天冷却、90 天保留")
+  void should_provide_username_policies_with_defaults() {
+    runner.run(
+        context -> {
+          assertThat(context).hasSingleBean(UsernamePolicy.class);
+          assertThat(context).hasSingleBean(DisplayNamePolicy.class);
+          UsernameChangePolicy policy = context.getBean(UsernameChangePolicy.class);
+          assertThat(policy.cooldown()).isEqualTo(Duration.ofDays(30));
+          assertThat(policy.reservationPeriod()).isEqualTo(Duration.ofDays(90));
+        });
+  }
+
+  @Test
+  @DisplayName("改名策略能覆盖；冷却或保留期不是正数时启动失败")
+  void should_bind_and_validate_username_change_policy() {
+    runner
+        .withPropertyValues(
+            "patra.identity.username.change-cooldown=1m",
+            "patra.identity.username.reservation-period=2m")
+        .run(
+            context -> {
+              UsernameChangePolicy policy = context.getBean(UsernameChangePolicy.class);
+              assertThat(policy.cooldown()).isEqualTo(Duration.ofMinutes(1));
+              assertThat(policy.reservationPeriod()).isEqualTo(Duration.ofMinutes(2));
+            });
+    runner
+        .withPropertyValues("patra.identity.username.change-cooldown=0s")
         .run(context -> assertThat(context).hasFailed());
   }
 

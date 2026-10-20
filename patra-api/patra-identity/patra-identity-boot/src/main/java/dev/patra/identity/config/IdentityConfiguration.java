@@ -1,9 +1,12 @@
 package dev.patra.identity.config;
 
+import dev.patra.identity.domain.policy.DisplayNamePolicy;
 import dev.patra.identity.domain.policy.LoginThrottlePolicy;
 import dev.patra.identity.domain.policy.PasswordPolicy;
 import dev.patra.identity.domain.policy.SessionLifetime;
 import dev.patra.identity.domain.policy.SessionLifetimePolicy;
+import dev.patra.identity.domain.policy.UsernameChangePolicy;
+import dev.patra.identity.domain.policy.UsernamePolicy;
 import dev.patra.identity.domain.port.hashing.PasswordHashingPort;
 import dev.patra.identity.domain.port.password.CommonPasswordPort;
 import dev.patra.identity.domain.port.repository.UserLoginRecordRepository;
@@ -58,6 +61,32 @@ public class IdentityConfiguration {
   @Bean
   public PasswordPolicy passwordPolicy(CommonPasswordPort commonPasswordPort) {
     return new PasswordPolicy(commonPasswordPort);
+  }
+
+  /// 用户名规则：语法加保留字。
+  ///
+  /// @return 规则
+  @Bean
+  public UsernamePolicy usernamePolicy() {
+    return new UsernamePolicy();
+  }
+
+  /// 昵称规则。
+  ///
+  /// @return 规则
+  @Bean
+  public DisplayNamePolicy displayNamePolicy() {
+    return new DisplayNamePolicy();
+  }
+
+  /// 改名策略：冷却与旧名保留期。不是正数时在这里让启动失败。
+  ///
+  /// @param properties 配置
+  /// @return 策略
+  @Bean
+  public UsernameChangePolicy usernameChangePolicy(IdentityProperties properties) {
+    IdentityProperties.Username username = properties.username();
+    return UsernameChangePolicy.of(username.changeCooldown(), username.reservationPeriod());
   }
 
   /// 会话策略：把 `patra.identity.session.*` 变成领域的策略对象。

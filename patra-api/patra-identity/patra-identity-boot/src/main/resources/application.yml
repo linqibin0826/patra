@@ -36,6 +36,9 @@ patra:
     password-hashing:
       max-concurrent: 4
       wait-timeout: 3s
+    username:
+      change-cooldown: 30d       # 两次改名的最短间隔
+      reservation-period: 90d    # 旧名保留多久：期间只有原主能改回，/users/旧名 跳到新名
     session:
       max-sessions-per-user: 10
       lifetime:
