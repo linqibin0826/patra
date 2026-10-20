@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useRef, useState } from "react";
+import { type ReactNode, useId, useRef, useState } from "react";
 import { btnSecondary } from "@/lib/portal-ui";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { cn } from "@/lib/utils";
@@ -19,8 +19,6 @@ interface TableBlockProps {
   /** 原文标签，如 `Table 2` */
   label: string | null;
   title: ReactNode;
-  /** 表题纯文本：给读屏的 caption（title 里可能有带 id 的引用，不能渲染两遍） */
-  titleText: string;
   head: TableBlockRow[];
   body: TableBlockRow[];
   /** 表注（table-wrap-foot），没有时为 null */
@@ -61,20 +59,13 @@ function renderCell(cell: TableBlockCell, key: number, inHead: boolean): ReactNo
  * 正文表格：表题在上、表注在下；宽表盒内横滚、首列吸左、右缘渐隐；
  * 长表只显示前 10 行，「展开全部 N 行」/「收起」（收起时滚回表题）。不做页内纵向滚动。
  */
-export function TableBlock({
-  anchorId,
-  label,
-  title,
-  titleText,
-  head,
-  body,
-  footnotes,
-}: TableBlockProps) {
+export function TableBlock({ anchorId, label, title, head, body, footnotes }: TableBlockProps) {
   const collapsible = body.length > COLLAPSE_THRESHOLD;
   const [expanded, setExpanded] = useState(false);
   const collapsed = collapsible && !expanded;
   const blockRef = useRef<HTMLDivElement>(null);
   const scroll = useScrollFade<HTMLDivElement>();
+  const titleId = useId();
 
   const collapse = () => {
     setExpanded(false);
@@ -83,13 +74,15 @@ export function TableBlock({
 
   return (
     <div ref={blockRef} id={anchorId} className="my-8 scroll-mt-[45px]">
-      {/* 表题在表上方（期刊惯例）、不随宽表横滚；读屏从 caption 读到同样的内容 */}
-      <div aria-hidden className="mb-3 max-w-[40em]">
+      {/* 表题在表上方（期刊惯例）、不随宽表横滚；表格用 aria-labelledby 以它为名称，
+          表题里的引用链接只渲染一次，读屏与键盘都能用 */}
+      <div id={titleId} className="mb-3 max-w-[40em]">
         {label && (
           <span className="block font-mono text-2xs font-medium uppercase tracking-caps text-fg-3">
             {label}
           </span>
         )}
+        {/* 两个 span 都是块级，这个空格不显示，只让表格名称读成「Table 2 表题」 */}{" "}
         <span className="mt-1 block font-serif text-md leading-normal font-medium text-fg-1">
           {title}
         </span>
@@ -100,8 +93,7 @@ export function TableBlock({
           data-fade-end={scroll.fadeEnd || undefined}
           className="overflow-x-auto data-fade-end:[mask-image:linear-gradient(to_right,black_calc(100%-40px),transparent)]"
         >
-          <table className="ft-table">
-            <caption className="sr-only">{[label, titleText].filter(Boolean).join(" ")}</caption>
+          <table className="ft-table" aria-labelledby={titleId}>
             {head.length > 0 && (
               <thead>
                 {head.map((row, r) => (

@@ -22,7 +22,6 @@ function renderTable(rows: TableBlockRow[], footnotes: string | null = null) {
       anchorId="ft-t2"
       label="Table 2"
       title="Baseline characteristics"
-      titleText="Baseline characteristics"
       head={[[cell("Variable", { header: true }), cell("Value", { header: true })]]}
       body={rows}
       footnotes={footnotes ? <p>{footnotes}</p> : null}
@@ -44,7 +43,6 @@ describe("TableBlock", () => {
         anchorId={undefined}
         label={null}
         title="T"
-        titleText="T"
         head={[[cell("Group", { header: true, colspan: 2 })]]}
         body={[[cell("Age", { header: true, rowspan: 2 }), cell("40")]]}
         footnotes={null}
@@ -73,5 +71,24 @@ describe("TableBlock", () => {
     await user.click(screen.getByRole("button", { name: "收起" }));
     expect(screen.getAllByRole("row")).toHaveLength(11);
     expect(screen.queryByRole("cell", { name: "Row 11" })).toBeNull();
+  });
+
+  it("表题里的引用链接对读屏和键盘都可用，表格以可见表题为名称", () => {
+    render(
+      <TableBlock
+        anchorId="ft-t3"
+        label="Table 3"
+        title={
+          <>
+            Outcomes <a href="#ref-r12">12</a>
+          </>
+        }
+        head={[[cell("Outcome", { header: true })]]}
+        body={[[cell("Death")]]}
+        footnotes={null}
+      />,
+    );
+    expect(screen.getByRole("table", { name: /Table 3.*Outcomes 12/ })).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "12" })).toHaveLength(1);
   });
 });

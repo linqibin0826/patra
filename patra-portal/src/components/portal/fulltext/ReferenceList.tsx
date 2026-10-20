@@ -30,6 +30,15 @@ const HIGHLIGHT_MS = 1600;
 
 const LINK = "link-draw text-link hover:text-link-hover";
 
+/** 地址栏 hash 解码；畸形的百分号编码（如 `#%E0`）按原样返回，不让整个列表因 URIError 挂掉。 */
+function decodeHash(hash: string): string {
+  try {
+    return decodeURIComponent(hash);
+  } catch {
+    return hash;
+  }
+}
+
 /**
  * 参考文献：前 5 条 + 「展开全部 N 条」（展开后不再收起）。
  * 点正文引用时（事件委托，正文是服务端渲染的普通链接）：记下来源引用、需要时先展开，
@@ -49,7 +58,7 @@ export function ReferenceList({ items, firstCiteByRef }: ReferenceListProps) {
       (indexOfAnchor.get(anchorId) ?? -1) >= COLLAPSED_COUNT;
 
     // 直接打开 #ref-N 进来，而该条在收起部分
-    const opened = decodeURIComponent(window.location.hash.slice(1));
+    const opened = decodeHash(window.location.hash.slice(1));
     let frame: number | undefined;
     if (isCollapsedPart(opened)) {
       setExpanded(true);

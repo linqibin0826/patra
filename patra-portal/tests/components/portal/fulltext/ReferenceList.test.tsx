@@ -108,4 +108,13 @@ describe("ReferenceList", () => {
     renderList(items(40));
     expect(document.getElementById("ref-r30")).toBeVisible();
   });
+
+  it("地址栏 hash 是畸形的百分号编码时不报错，引用跳转照常可用", async () => {
+    const user = userEvent.setup();
+    window.history.replaceState(null, "", "/#%E0");
+    renderList(items(40), { r7: "cite-1" });
+
+    await user.click(screen.getByRole("link", { name: "7" }));
+    expect(document.getElementById("ref-r7")).toBeVisible();
+  });
 });

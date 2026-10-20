@@ -248,7 +248,6 @@ function renderBlock(block: FullTextBlock, ctx: RenderContext, tone: Tone): Reac
           anchorId={block.id ? bodyAnchor(block.id) : undefined}
           label={block.label}
           title={renderInlines(title, ctx)}
-          titleText={inlineText(title).trim()}
           head={tableRows(block.head, ctx)}
           body={tableRows(block.body, ctx)}
           footnotes={notes.length > 0 ? renderBlocks(notes, ctx, "note") : null}
