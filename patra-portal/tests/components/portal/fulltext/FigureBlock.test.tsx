@@ -98,6 +98,9 @@ describe("FigureBlock · 宽度分类（PAP-89）", () => {
     expect(img).toHaveAttribute("height", "280");
     expect(img.className).toContain("h-auto");
     expect(img.className).toContain("max-w-full");
+    // 不能写 w-auto：它会盖掉 width 属性给的宽度提示，图片加载前固有宽度为 0，按比例算出的占位高度也是 0，
+    // 长页面平滑滚动途中图片陆续加载、把目标往下推，目录跳转会停在半路（e2e 实测）
+    expect(img.className).not.toMatch(/(^|\s)w-auto(\s|$)/);
   });
 
   it("标签栏放原文标签（去掉末尾句点由调用方处理）；图题不加粗", () => {

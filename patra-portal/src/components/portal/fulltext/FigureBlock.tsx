@@ -85,7 +85,7 @@ export function FigureBlock({
                 decoding="async"
                 onLoad={() => setLoaded(true)}
                 className={cn(
-                  "block h-auto w-auto max-w-full object-contain transition-opacity duration-300 max-sm:max-h-[360px]",
+                  "block h-auto max-w-full object-contain transition-opacity duration-300 max-sm:max-h-[360px]",
                   layout === "portrait" && "max-h-[640px]",
                   loaded ? "opacity-100" : "opacity-0",
                 )}
