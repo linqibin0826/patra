@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, type ReactNode } from "react";
 import { DetailCrumbs } from "@/components/portal/DetailCrumbs";
 import { DisclosureSection } from "@/components/portal/DisclosureSection";
 import { IdentifierChip } from "@/components/portal/IdentifierChip";
@@ -8,6 +8,7 @@ import { AuthorList } from "@/components/portal/paper-detail/AuthorList";
 import { PaperHeader } from "@/components/portal/paper-detail/PaperHeader";
 import { PaperRail } from "@/components/portal/paper-detail/PaperRail";
 import { SectionEyebrow } from "@/components/portal/SectionEyebrow";
+import { cn } from "@/lib/utils";
 import type { PaperDetail } from "@/types/portal";
 
 const DL = "grid grid-cols-[max-content_1fr] gap-x-8 gap-y-3 max-[540px]:grid-cols-1";
@@ -22,8 +23,24 @@ const DATE_LABELS: Record<string, string> = {
   published: "正式出版",
 };
 
-/// 文献详情：吸顶面包屑（阅读进度）+ 主栏（题录头 → 摘要 → 关键标识 → 深度数据折叠区）+ 右侧吸顶栏。
-export function PublicationDetailView({ paper }: { paper: PaperDetail }) {
+interface PublicationDetailViewProps {
+  paper: PaperDetail;
+  /** 全文区块（页面在 Suspense 里流式给出；没有时不渲染） */
+  fullText?: ReactNode;
+  /** 桌面侧栏的目录卡，只在有全文时放进侧栏 */
+  tocCard?: ReactNode;
+  /** 面包屑右端的移动端「目录」按钮 */
+  tocButton?: ReactNode;
+}
+
+/// 文献详情：吸顶面包屑（阅读进度）+ 主栏（题录头 → 摘要 → 关键标识 → 深度数据折叠区 → 全文）+ 右侧栏。
+/// 没有全文时侧栏整体吸顶；有全文时侧栏三张卡随页面滚走，下面的目录卡单独吸顶、一直陪到页底。
+export function PublicationDetailView({
+  paper,
+  fullText,
+  tocCard,
+  tocButton,
+}: PublicationDetailViewProps) {
   const mesh = paper.meshHeadings;
   const funding = paper.funding;
   const hasOtherIds = Boolean(paper.pmcid || paper.pii);
@@ -37,6 +54,7 @@ export function PublicationDetailView({ paper }: { paper: PaperDetail }) {
           { label: "文献", href: "/papers" },
         ]}
         current={crumb}
+        action={tocButton}
       />
 
       <div className="mx-auto grid max-w-page grid-cols-[minmax(0,1fr)_340px] items-start gap-14 px-gutter pt-8 max-[1100px]:gap-10 max-[980px]:grid-cols-1 max-[980px]:gap-8 max-[980px]:pt-6">
@@ -61,6 +79,13 @@ export function PublicationDetailView({ paper }: { paper: PaperDetail }) {
                 value={paper.pmid}
                 href={paper.pmid ? `https://pubmed.ncbi.nlm.nih.gov/${paper.pmid}` : null}
               />
+              {paper.hasFullText && paper.pmcid && (
+                <IdentifierChip
+                  label="PMCID"
+                  value={paper.pmcid}
+                  href={`https://pmc.ncbi.nlm.nih.gov/articles/${paper.pmcid}/`}
+                />
+              )}
             </div>
           </section>
 
@@ -154,12 +179,22 @@ export function PublicationDetailView({ paper }: { paper: PaperDetail }) {
               </DisclosureSection>
             </div>
           </section>
+
+          {fullText}
         </div>
 
         {/* sticky top = 侧栏自然位置：TopNav 57px + 面包屑 45px（均含 1px 底边）+ 网格 pt-8 32px = 134px。
             两者不等时，开始滚动那一段侧栏会先随页面移动再吸住，看起来在晃 */}
-        <aside className="sticky top-[134px] flex flex-col gap-4 max-[980px]:static">
+        <aside
+          className={cn(
+            "flex flex-col gap-4",
+            paper.hasFullText ? "self-stretch" : "sticky top-[134px] max-[980px]:static",
+          )}
+        >
           <PaperRail paper={paper} />
+          {paper.hasFullText && tocCard && (
+            <div className="sticky top-[134px] max-[980px]:hidden">{tocCard}</div>
+          )}
         </aside>
       </div>
     </div>

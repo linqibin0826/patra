@@ -41,6 +41,43 @@ export async function gatewayFetch(path: string, init: GatewayRequestInit = {}):
   });
 }
 
+export interface GatewayStreamInit {
+  /// 浏览器带来的 `If-None-Match`，原样转给网关（命中时网关回 304）
+  ifNoneMatch?: string | null;
+  /// 调用方的中止信号：浏览器断开下载时，一并取消向网关的请求
+  signal?: AbortSignal;
+  /// 等响应头的超时毫秒数，默认 10_000
+  headerTimeoutMs?: number;
+}
+
+/// 取网关上的文件（PDF、正文图片），响应体原样流式交给调用方转发。
+/// 与 `gatewayFetch` 的区别在超时：只计到响应头到达为止。之后的下载可能持续几分钟（155 MB 的 PDF、
+/// 慢速网络），不能用总时长掐断；下载中途卡住由 fetch 自带的两次读之间的空闲超时兜底。
+export async function gatewayStream(path: string, init: GatewayStreamInit = {}): Promise<Response> {
+  const baseUrl = process.env.PATRA_GATEWAY_BASE_URL;
+  if (!baseUrl) {
+    throw new Error("PATRA_GATEWAY_BASE_URL 未配置");
+  }
+  const headerTimeout = new AbortController();
+  const timer = setTimeout(
+    () => headerTimeout.abort(new DOMException("网关响应头超时", "TimeoutError")),
+    init.headerTimeoutMs ?? DEFAULT_TIMEOUT_MS,
+  );
+  const signal = init.signal
+    ? AbortSignal.any([headerTimeout.signal, init.signal])
+    : headerTimeout.signal;
+  try {
+    return await fetch(`${baseUrl}${path}`, {
+      method: "GET",
+      headers: init.ifNoneMatch ? { "If-None-Match": init.ifNoneMatch } : {},
+      cache: "no-store",
+      signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /// 令牌能不能放进 `Authorization` 头。Cookie 被改坏时，读出来的值可能含有换行、控制字符或
 /// 0xFF 以上的字符：带着它请求，fetch 在发出之前就会抛错，错误消息里还可能带着这个值。
 /// 这样的值不可能是有效令牌，调用方不要拿它请求网关。

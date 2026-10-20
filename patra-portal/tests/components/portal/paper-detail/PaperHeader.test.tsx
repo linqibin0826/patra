@@ -42,6 +42,9 @@ function paper(overrides: Partial<PaperDetail> = {}): PaperDetail {
     fullTextUrl: "https://full",
     bookmarks: 0,
     estimatedReadMin: null,
+    hasFullText: false,
+    hasPdf: false,
+    pdfSizeBytes: null,
     ...overrides,
   };
 }
@@ -68,5 +71,45 @@ describe("PaperHeader", () => {
     );
     expect(container.querySelector("i")?.textContent).toBe("E. coli");
     expect(container.querySelector("sub")).not.toBeNull();
+  });
+});
+
+describe("PaperHeader · 全文按钮", () => {
+  it("有全文、有 PDF：「阅读全文」跳到页内全文区块，「下载 PDF」带文件大小，不再给外链主按钮", () => {
+    render(
+      <PaperHeader
+        paper={paper({ hasFullText: true, hasPdf: true, pdfSizeBytes: "2500000", pmcid: "PMC1" })}
+      />,
+    );
+    const read = screen.getByRole("link", { name: /阅读全文/ });
+    expect(read).toHaveAttribute("href", "#fulltext");
+    expect(read).not.toHaveAttribute("target");
+    expect(screen.getByRole("link", { name: /下载 PDF.*2\.5 MB/ })).toHaveAttribute(
+      "href",
+      "/api/papers/1/pdf",
+    );
+    expect(screen.queryByRole("link", { name: /去全文/ })).toBeNull();
+  });
+
+  it("有全文、没有 PDF：只有「阅读全文」，不显示下载按钮", () => {
+    render(<PaperHeader paper={paper({ hasFullText: true, pmcid: "PMC1" })} />);
+    expect(screen.getByRole("link", { name: /阅读全文/ })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /下载 PDF/ })).toBeNull();
+  });
+
+  it("只有 PDF：主按钮是「下载 PDF」", () => {
+    render(<PaperHeader paper={paper({ hasPdf: true, pdfSizeBytes: "334000", pmcid: "PMC1" })} />);
+    expect(screen.getByRole("link", { name: /下载 PDF.*334 KB/ })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /阅读全文|去全文/ })).toBeNull();
+  });
+
+  it("已撤稿：刊头行加「已撤稿」状态胶囊，按钮同无全文", () => {
+    render(
+      <PaperHeader
+        paper={paper({ publicationTypes: ["Journal Article", "Retracted Publication"] })}
+      />,
+    );
+    expect(screen.getByText("已撤稿")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /去全文/ })).toBeInTheDocument();
   });
 });

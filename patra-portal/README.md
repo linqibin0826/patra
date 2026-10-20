@@ -36,13 +36,13 @@ src/
 │   ├── layout.tsx              # 根布局：字体、Providers
 │   ├── page.tsx                # / 首页
 │   ├── papers/(list)/          # /papers 文献检索
-│   ├── papers/[id]/            # /papers/:id 文献详情
+│   ├── papers/[id]/            # /papers/:id 文献详情（含全文阅读：全文区块与目录在 Suspense 里后到）
 │   ├── journals/(list)/        # /journals 期刊浏览
 │   ├── journals/[id]/          # /journals/:id 期刊详情
 │   ├── login/                  # /login 登录页
 │   ├── register/               # /register 注册页
 │   ├── missing/                # 详情不存在时由 proxy 改写到这里，返回真正的 404
-│   ├── api/                    # health、期刊联想、auth/me（当前用户）
+│   ├── api/                    # health、期刊联想、auth/me（当前用户）、全文 PDF 与正文图片的流式转发
 │   ├── error.tsx               # 路由错误边界
 │   ├── not-found.tsx           # 全局 404
 │   └── globals.css             # Tailwind v4 @theme 映射
@@ -53,6 +53,7 @@ src/
 │   └── ui/                     # shadcn/ui 原语
 ├── lib/
 │   ├── gateway.ts              # 统一网关客户端：全仓库只有这里读网关地址、向网关发请求
+│   ├── mathml.ts               # 全文公式：MathML 白名单解析（mfenced 改写成 mrow + mo）
 │   ├── auth/                   # 会话 Cookie、当前用户、注册 / 登录 / 登出的 Server Action，next 参数、表单校验与文案
 │   ├── portal-api/             # 服务端向网关取数、解析检索参数
 │   └── …                       # 工具函数、TanStack Query 工厂与 queryKey

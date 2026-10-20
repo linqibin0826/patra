@@ -1,3 +1,5 @@
+import { MATH_ELEMENT_TAGS } from "@/lib/mathml-tags";
+
 /** 内联标记节点：文本（实体已解码）或白名单元素（属性已剥）。 */
 export type InlineNode =
   | { kind: "text"; value: string }
@@ -37,26 +39,9 @@ type ElementNode = Extract<InlineNode, { kind: "element" }>;
 /** 排版组白名单：任何位置放行。 */
 const FORMATTING_TAGS = new Set(["i", "b", "sub", "sup", "u"]);
 
-/** 公式组白名单：仅列只能出现在 <math> 子树内的标签（math 根标签在 isAllowed 单独放行）。 */
-const MATH_TAGS = new Set([
-  "mrow",
-  "mi",
-  "mo",
-  "mn",
-  "msub",
-  "msup",
-  "msubsup",
-  "mtext",
-  "mspace",
-  "mstyle",
-  "mover",
-  "munder",
-  "munderover",
-  "mfrac",
-  "msqrt",
-  "semantics",
-  "annotation",
-]);
+/** 公式组白名单：与全文正文共用的 MathML 元素白名单，外加摘要里要先认出、再整体丢弃的 annotation。
+ * 只能出现在 <math> 子树内（math 根标签在 isAllowed 单独放行）。 */
+const MATH_TAGS = new Set([...MATH_ELEMENT_TAGS, "annotation"]);
 
 /** 标签形态：`<` 后紧跟可选 `/` 与标签名（`<`、`</` 后跟空白按 HTML 规范视为文本）、可选属性段（不含尖括号）、可选自闭合 `/`、`>`。不支持连字符标签名（如 annotation-xml，按字面降级；生产库实查无此标签）。 */
 const TAG_RE = /^<(\/?)([a-zA-Z][a-zA-Z0-9]*)(?:\s[^<>]*)?\s*\/?\s*>/;

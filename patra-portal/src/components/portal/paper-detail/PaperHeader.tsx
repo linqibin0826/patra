@@ -1,21 +1,21 @@
-import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { EvidenceBadge } from "@/components/portal/EvidenceBadge";
 import { BookmarkButton } from "@/components/portal/paper-detail/BookmarkButton";
+import { FullTextActions } from "@/components/portal/paper-detail/FullTextActions";
 import { RichInlineText } from "@/components/portal/RichInlineText";
-import { deriveByline, deriveFullText } from "@/lib/portal-api/publication-derive";
-import { btnPrimary, btnSecondary } from "@/lib/portal-ui";
+import { deriveFullTextState } from "@/lib/portal-api/fulltext-derive";
+import { deriveByline } from "@/lib/portal-api/publication-derive";
 import type { PaperDetail } from "@/types/portal";
 
 /// 文献题录头：等宽刊头行（类型 · 开放获取）→ 显示级标题（入场上浮）→ 原文标题 → 作者 · 刊名 · 年份 → 证据徽章与操作。
 export function PaperHeader({ paper }: { paper: PaperDetail }) {
   const { shown, extra } = deriveByline(paper.authors);
-  const fullText = deriveFullText(paper);
+  const retracted = deriveFullTextState(paper) === "retracted";
   const types = paper.publicationTypes.slice(0, 2);
 
   return (
     <header className="flex flex-col">
-      {(types.length > 0 || paper.isOa) && (
+      {(types.length > 0 || paper.isOa || retracted) && (
         <div className="anim-fade mb-5 flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-2xs uppercase tracking-mono text-fg-3">
           {types.map((t, i) => (
             <span key={t} className="inline-flex items-center gap-3">
@@ -31,6 +31,12 @@ export function PaperHeader({ paper }: { paper: PaperDetail }) {
             <span className="inline-flex items-center gap-1.5 rounded-full border border-moss-500 bg-moss-50 px-2.5 py-0.5 text-status-success-ink">
               <span aria-hidden className="size-1.5 rounded-full bg-moss-500" />
               开放获取
+            </span>
+          )}
+          {retracted && (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-rust-500 bg-rust-50 px-2.5 py-0.5 text-fg-1">
+              <span aria-hidden className="size-1.5 rounded-full bg-status-danger" />
+              已撤稿
             </span>
           )}
         </div>
@@ -80,20 +86,7 @@ export function PaperHeader({ paper }: { paper: PaperDetail }) {
       <div className="anim-rise mt-7 flex flex-wrap items-center gap-3 [--delay:200ms]">
         <EvidenceBadge level={paper.evidenceLevel} />
         <div className="flex flex-wrap gap-2.5">
-          {fullText.href ? (
-            <a
-              className={btnPrimary}
-              href={fullText.href}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {fullText.label} <ExternalLink size={14} data-icon="trailing" />
-            </a>
-          ) : (
-            <button className={`${btnSecondary} opacity-55`} type="button" disabled>
-              {fullText.label}
-            </button>
-          )}
+          <FullTextActions paper={paper} />
           <BookmarkButton paperId={paper.id} />
         </div>
       </div>

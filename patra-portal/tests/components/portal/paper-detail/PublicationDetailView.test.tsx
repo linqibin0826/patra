@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { PublicationDetailView } from "@/components/portal/paper-detail/PublicationDetailView";
@@ -42,6 +42,9 @@ function paper(overrides: Partial<PaperDetail> = {}): PaperDetail {
     fullTextUrl: "https://full",
     bookmarks: 0,
     estimatedReadMin: null,
+    hasFullText: false,
+    hasPdf: false,
+    pdfSizeBytes: null,
     ...overrides,
   };
 }
@@ -65,5 +68,54 @@ describe("PublicationDetailView", () => {
     expect(screen.getByText("摘要")).toBeInTheDocument();
     expect(screen.getByText("关键标识")).toBeInTheDocument();
     expect(screen.getByText("bg")).toBeInTheDocument();
+  });
+});
+
+describe("PublicationDetailView · 全文", () => {
+  it("全文区块放在深度数据之后；面包屑右端放目录按钮", () => {
+    const { container } = render(
+      <PublicationDetailView
+        paper={paper({ hasFullText: true, pmcid: "PMC1" })}
+        fullText={<p>FULLTEXT-SLOT</p>}
+        tocCard={<p>TOC-CARD</p>}
+        tocButton={<button type="button">目录</button>}
+      />,
+    );
+    const html = container.innerHTML;
+    expect(html.indexOf("深度数据")).toBeLessThan(html.indexOf("FULLTEXT-SLOT"));
+    expect(
+      within(screen.getByRole("navigation", { name: "面包屑" })).getByRole("button", {
+        name: "目录",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("有全文：侧栏不整体吸顶，目录卡单独吸顶；关键标识补一枚 PMCID", () => {
+    render(
+      <PublicationDetailView
+        paper={paper({ hasFullText: true, pmcid: "PMC13583816" })}
+        fullText={null}
+        tocCard={<p>TOC-CARD</p>}
+        tocButton={null}
+      />,
+    );
+    const aside = screen.getByRole("complementary");
+    expect(aside.className).not.toMatch(/(^|\s)sticky(\s|$)/);
+    expect(screen.getByText("TOC-CARD").parentElement?.className).toMatch(/(^|\s)sticky(\s|$)/);
+    const ids = screen.getByRole("region", { name: "关键标识" });
+    expect(within(ids).getByText("PMC13583816")).toBeInTheDocument();
+  });
+
+  it("没有全文：侧栏照旧整体吸顶，不放目录卡", () => {
+    render(
+      <PublicationDetailView
+        paper={paper()}
+        fullText={null}
+        tocCard={<p>TOC-CARD</p>}
+        tocButton={null}
+      />,
+    );
+    expect(screen.getByRole("complementary").className).toMatch(/(^|\s)sticky(\s|$)/);
+    expect(screen.queryByText("TOC-CARD")).toBeNull();
   });
 });
