@@ -52,6 +52,17 @@ final class JatsDom {
     return result;
   }
 
+  /// 是否元素且紧跟在另一个元素后面（中间没有文本）。人名的子元素这样相邻时要补空格。
+  ///
+  /// @param node 节点
+  /// @return 是否
+  static boolean isElementRightAfterElement(Node node) {
+    Node previous = node.getPreviousSibling();
+    return node.getNodeType() == Node.ELEMENT_NODE
+        && previous != null
+        && previous.getNodeType() == Node.ELEMENT_NODE;
+  }
+
   /// 第一个指定本地名的直接子元素。
   ///
   /// @param parent 父元素

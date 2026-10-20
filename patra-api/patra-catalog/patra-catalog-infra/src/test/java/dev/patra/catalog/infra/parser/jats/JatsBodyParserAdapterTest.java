@@ -451,6 +451,24 @@ class JatsBodyParserAdapterTest {
   }
 
   @Test
+  @DisplayName("element-citation 的 string-name 子元素之间没有空白时补空格")
+  void should_separate_string_name_parts_in_element_citation() {
+    String xml =
+        article(
+            """
+            <sec id="s1"><title>T</title><p>x</p></sec>
+            <back><ref-list><ref id="R1"><element-citation>
+              <person-group><string-name><surname>Lee</surname><given-names>K</given-names></string-name></person-group>
+              <article-title>Title</article-title>
+            </element-citation></ref></ref-list></back>
+            """);
+
+    Reference ref = parser.parse(stream(xml), List.of()).body().references().getFirst();
+
+    assertThat(text(ref.content())).isEqualTo("Lee K. Title.");
+  }
+
+  @Test
   @DisplayName("citation-alternatives 优先取 mixed-citation，PMID / DOI 从另一种里补")
   void should_read_citation_alternatives() {
     String xml =

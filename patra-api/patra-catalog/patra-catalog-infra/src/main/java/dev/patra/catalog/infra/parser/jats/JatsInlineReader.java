@@ -31,6 +31,11 @@ final class JatsInlineReader {
   private static final Set<String> XREF_TYPES =
       Set.of("bibr", "fig", "table", "disp-formula", "sec", "fn", "boxed-text");
 
+  /// `person-group` 里算作一位作者的元素。
+  private static final Set<String> AUTHORS = Set.of("name", "string-name", "collab");
+
+  private static final Set<String> PMC_LINK_PUB_ID_TYPES = Set.of("pmid", "pmcid");
+
   private static final Set<String> SKIPPED = Set.of("fn", "inline-supplementary-material", "media");
 
   private final JatsParseContext ctx;
@@ -104,6 +109,9 @@ final class JatsInlineReader {
       case "xref" -> readXref(e);
       case "ext-link", "uri" -> readLink(e);
       case "break" -> List.of(new Inline.Break());
+      case "person-group" -> readPersonGroup(e);
+      case "name", "string-name" -> readName(e);
+      case "pub-id" -> isAddedByPmc(e) ? List.of() : readAll(e);
       case "inline-formula", "alternatives" -> List.of(math.inlineFormula(e, this));
       case "inline-graphic" -> {
         ctx.warn();
@@ -120,6 +128,52 @@ final class JatsInlineReader {
       out.addAll(readNode(n));
     }
     return out;
+  }
+
+  /// 作者组，按 PMC 原文页的显示：两个作者之间只有空白时补 ", "（Frontiers、SAGE 只用换行分隔）；空的 `<etal/>`
+  /// 显示为 "et al"，跟在作者后面时同样补 ", "；末尾的空白去掉。
+  private List<Inline> readPersonGroup(Element group) {
+    List<Inline> out = new ArrayList<>();
+    boolean afterAuthor = false;
+    boolean pendingSpace = false;
+    for (Node n = group.getFirstChild(); n != null; n = n.getNextSibling()) {
+      if (n.getNodeType() == Node.TEXT_NODE && n.getNodeValue().isBlank()) {
+        pendingSpace = true;
+        continue;
+      }
+      boolean author = n.getNodeType() == Node.ELEMENT_NODE && AUTHORS.contains(JatsDom.name(n));
+      boolean emptyEtal = "etal".equals(JatsDom.name(n)) && n.getTextContent().isBlank();
+      if (afterAuthor && (author || emptyEtal)) {
+        out.add(new Inline.Text(", "));
+      } else if (pendingSpace) {
+        out.add(new Inline.Text(" "));
+      }
+      out.addAll(emptyEtal ? List.of(new Inline.Text("et al")) : readNode(n));
+      afterAuthor = author;
+      pendingSpace = false;
+    }
+    return out;
+  }
+
+  /// 人名，按 PMC 原文页的显示：相邻两个子元素之间没有文本时补一个空格（PLOS 等写成
+  /// `<surname>Davis</surname><given-names>FG</given-names>`，显示为 "Davis FG"），`<suffix>` 前补 ", "
+  /// （"Cooney WP, III"）；首尾空白去掉（Wiley、Hindawi 的 `string-name` 内部换行，否则逗号前会留空格）。
+  private List<Inline> readName(Element name) {
+    List<Inline> out = new ArrayList<>();
+    for (Node n = name.getFirstChild(); n != null; n = n.getNextSibling()) {
+      if (JatsDom.isElementRightAfterElement(n)) {
+        out.add(new Inline.Text("suffix".equals(JatsDom.name(n)) ? ", " : " "));
+      }
+      out.addAll(readNode(n));
+    }
+    return trim(out);
+  }
+
+  /// `pub-id` 是否为 PMC 补上的标识（PMID、PMCID、`assigning-authority="pmc"` 的 DOI）。PMC 原文页不把它们
+  /// 显示成文本，只做成 [PubMed] / [PMC free article] / [DOI] 链接；出版方自己写进著录的 DOI 照原文保留。
+  private static boolean isAddedByPmc(Element pubId) {
+    return PMC_LINK_PUB_ID_TYPES.contains(JatsDom.attr(pubId, "pub-id-type"))
+        || "pmc".equals(JatsDom.attr(pubId, "assigning-authority"));
   }
 
   /// 交叉引用：类型在白名单内且所有目标都会出现在结果里时生成 `Xref`，否则只留子节点。
