@@ -401,6 +401,25 @@ class PublicationRepositoryAdapterIT {
     }
 
     @Test
+    @DisplayName("findExistingKeys - 软删除的文献也算已存在（唯一约束包含软删除行）")
+    void findExistingKeys_should_include_soft_deleted_publications() {
+      // Given
+      var publication =
+          createPublication("59999999", "10.5999/deleted", 1001L, 2001L, "Soft Deleted", 2024);
+      repository.save(publication);
+      repository.deleteById(publication.getId().value());
+      entityManager.flush();
+      entityManager.clear();
+
+      // When
+      var keys = repository.findExistingKeys(Set.of("59999999"), Set.of("10.5999/deleted"));
+
+      // Then
+      assertThat(keys.pmids()).containsExactly("59999999");
+      assertThat(keys.dois()).containsExactly("10.5999/deleted");
+    }
+
+    @Test
     @DisplayName("findExistingKeys - 空集合输入返回空结果")
     void findExistingKeys_shouldReturnEmpty_when_inputs_are_empty() {
       var keys = repository.findExistingKeys(Set.of(), Set.of());

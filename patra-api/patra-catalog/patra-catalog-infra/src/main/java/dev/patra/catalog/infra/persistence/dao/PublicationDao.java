@@ -58,31 +58,23 @@ public interface PublicationDao extends JpaRepository<PublicationEntity, Long> {
   /// @return true 如果存在
   boolean existsByDoi(String doi);
 
-  /// 按 PMID 集合批量查询文献。
+  /// 查出库里已占用的 PMID，包含已软删除的行。
   ///
-  /// @param pmids PMID 集合
-  /// @return 命中的文献实体列表
-  List<PublicationEntity> findByPmidIn(Collection<String> pmids);
+  /// `uk_pmid` 约束覆盖软删除行，用 native 查询绕开 `@SoftDelete` 过滤，才能与约束口径一致。
+  ///
+  /// @param pmids 待检查的 PMID 集合（不能为空集合）
+  /// @return 已占用的 PMID
+  @Query(value = "SELECT pmid FROM cat_publication WHERE pmid IN (:pmids)", nativeQuery = true)
+  List<String> findOccupiedPmids(@Param("pmids") Collection<String> pmids);
 
-  /// 按 DOI 集合批量查询文献。
+  /// 查出库里已占用的 DOI，包含已软删除的行。
   ///
-  /// @param dois DOI 集合
-  /// @return 命中的文献实体列表
-  List<PublicationEntity> findByDoiIn(Collection<String> dois);
-
-  /// 按 PMID/DOI 集合批量查询文献（任一匹配即可）。
+  /// `uk_doi` 约束覆盖软删除行，用 native 查询绕开 `@SoftDelete` 过滤，才能与约束口径一致。
   ///
-  /// @param pmids PMID 集合
-  /// @param dois DOI 集合
-  /// @return 命中的文献实体列表
-  @Query(
-      """
-      SELECT e FROM PublicationEntity e
-      WHERE e.pmid IN :pmids
-         OR e.doi IN :dois
-      """)
-  List<PublicationEntity> findByPmidInOrDoiIn(
-      @Param("pmids") Collection<String> pmids, @Param("dois") Collection<String> dois);
+  /// @param dois 待检查的 DOI 集合（不能为空集合）
+  /// @return 已占用的 DOI 原值
+  @Query(value = "SELECT doi FROM cat_publication WHERE doi IN (:dois)", nativeQuery = true)
+  List<String> findOccupiedDois(@Param("dois") Collection<String> dois);
 
   /// 根据载体实例 ID 查找文献列表。
   ///
