@@ -135,6 +135,15 @@ describe("renderFullTextBody · 引用号（PAP-89）", () => {
     expect(container.querySelector("p")?.textContent).toBe("smoking.8");
   });
 
+  it("空格写在上标里、引用号前面时也去掉（PMC 常见写法 <sup> 1</sup>）", () => {
+    const { container } = renderBody(
+      makeBody({
+        sections: [section("s1", "Intro", [para("(AC).", sup(text(" "), cite("r1", "1")))])],
+      }),
+    );
+    expect(container.querySelector("p")?.textContent).toBe("(AC).1");
+  });
+
   it("方括号写法照原文，不去空格", () => {
     const { container } = renderBody(
       makeBody({ sections: [section("s1", "Intro", [para("as shown [", cite("r1", "3"), "]")])] }),

@@ -122,6 +122,14 @@ const STYLE_TAGS = {
   underline: "u",
 } as const;
 
+/** 引用上标里打头的空白（`<sup> 1</sup>`）去掉，上标贴住前文。 */
+function trimLeadingSpace(nodes: FullTextInline[]): FullTextInline[] {
+  const [first, ...rest] = nodes;
+  if (first?.kind !== "text") return nodes;
+  const text = first.text.trimStart();
+  return text ? [{ kind: "text", text }, ...rest] : rest;
+}
+
 /** 渲染行内节点；紧挨在引用上标前的文本去掉末尾空白，让上标贴住前文（spec §5.7）。 */
 function renderInlines(nodes: FullTextInline[], ctx: RenderContext): ReactNode[] {
   return nodes.map((node, i) => {
@@ -143,7 +151,10 @@ function renderInline(node: FullTextInline, ctx: RenderContext): ReactNode {
     case "math":
       return <MathMl key={key} mathml={node.mathml} />;
     case "style": {
-      const children = renderInlines(node.children, ctx);
+      const children = renderInlines(
+        isCitationSup(node) ? trimLeadingSpace(node.children) : node.children,
+        ctx,
+      );
       if (node.style === "smallcaps") {
         return (
           <span key={key} className="[font-variant:small-caps]">
