@@ -12,12 +12,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import dev.patra.identity.app.usecase.auth.AuthenticatedUser;
 import dev.patra.identity.domain.exception.InvalidUserFieldsException;
 import dev.patra.identity.domain.exception.UserIdentifierTakenException;
 import dev.patra.identity.domain.model.aggregate.User;
 import dev.patra.identity.domain.model.aggregate.UserPasswordCredential;
 import dev.patra.identity.domain.model.aggregate.UserProfile;
 import dev.patra.identity.domain.model.enums.UserStatus;
+import dev.patra.identity.domain.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.model.vo.DeviceId;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.LoginClient;
@@ -27,6 +29,7 @@ import dev.patra.identity.domain.model.vo.Username;
 import dev.patra.identity.domain.policy.PasswordPolicy;
 import dev.patra.identity.domain.policy.UsernamePolicy;
 import dev.patra.identity.domain.port.hashing.PasswordHashingPort;
+import dev.patra.identity.domain.port.read.UserReadPort;
 import dev.patra.identity.domain.port.repository.FormerUsernameRepository;
 import dev.patra.identity.domain.port.repository.UserPasswordCredentialRepository;
 import dev.patra.identity.domain.port.repository.UserProfileRepository;
@@ -38,6 +41,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.DisplayName;
@@ -67,8 +71,19 @@ class RegisterUserHandlerTest {
           .version(0L)
           .build();
 
+  private static final UserAccountReadModel ACCOUNT =
+      UserAccountReadModel.builder()
+          .userId(42L)
+          .email("chen.yu@example.com")
+          .emailVerified(false)
+          .username("chen-yu")
+          .displayName("chen-yu")
+          .status(UserStatus.ACTIVE)
+          .build();
+
   private final UserRepository users = mock(UserRepository.class);
   private final UserProfileRepository profiles = mock(UserProfileRepository.class);
+  private final UserReadPort userReadPort = mock(UserReadPort.class);
   private final UserPasswordCredentialRepository credentials =
       mock(UserPasswordCredentialRepository.class);
   private final FormerUsernameRepository formerUsernames = mock(FormerUsernameRepository.class);
@@ -89,6 +104,7 @@ class RegisterUserHandlerTest {
         profiles,
         credentials,
         formerUsernames,
+        userReadPort,
         passwordHashing,
         passwordPolicy,
         usernamePolicy,
@@ -105,6 +121,7 @@ class RegisterUserHandlerTest {
     when(credentials.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     when(sessionIssuer.issue(anyLong(), any()))
         .thenReturn(IssuedUserSession.of("patra_user_x", List.of()));
+    when(userReadPort.findAccount(42L)).thenReturn(Optional.of(ACCOUNT));
   }
 
   /// 带邮箱、用户名、密码的命令。
@@ -122,11 +139,12 @@ class RegisterUserHandlerTest {
   void should_register_user_with_password_credential() {
     stubHappyPath();
 
-    RegisterUserResult result =
+    AuthenticatedUser result =
         handler.handle(command(" Chen.Yu@Example.com ", " Chen-Yu ", "correct horse battery"));
 
-    assertThat(result.userId()).isEqualTo(42L);
-    assertThat(result.email()).isEqualTo("chen.yu@example.com");
+    assertThat(result.account().userId()).isEqualTo(42L);
+    assertThat(result.account().email()).isEqualTo("chen.yu@example.com");
+    assertThat(result.account().username()).isEqualTo("chen-yu");
     assertThat(result.sessionToken()).isEqualTo("patra_user_x");
     verify(users).existsByEmail(EMAIL);
     verify(users).existsByUsername(USERNAME);
@@ -321,6 +339,7 @@ class RegisterUserHandlerTest {
               assertThat(inTransaction).isTrue();
               return IssuedUserSession.of("patra_user_x", List.of());
             });
+    when(userReadPort.findAccount(42L)).thenReturn(Optional.of(ACCOUNT));
 
     transactional.handle(command("chen.yu@example.com", "chen-yu", "correct horse battery"));
 
@@ -357,7 +376,7 @@ class RegisterUserHandlerTest {
   void should_issue_session_for_new_user() {
     stubHappyPath();
 
-    RegisterUserResult result =
+    AuthenticatedUser result =
         handler.handle(
             RegisterUserCommand.builder()
                 .email("chen.yu@example.com")

@@ -4,14 +4,11 @@ import dev.patra.identity.adapter.rest.auth.request.LoginRequest;
 import dev.patra.identity.adapter.rest.auth.request.RegisterRequest;
 import dev.patra.identity.adapter.rest.auth.response.AuthenticatedUserResponse;
 import dev.patra.identity.adapter.rest.auth.response.CurrentUserResponse;
+import dev.patra.identity.app.usecase.auth.AuthenticatedUser;
 import dev.patra.identity.app.usecase.login.LoginUserCommand;
-import dev.patra.identity.app.usecase.login.LoginUserResult;
 import dev.patra.identity.app.usecase.logout.LogoutUserCommand;
 import dev.patra.identity.app.usecase.register.RegisterUserCommand;
-import dev.patra.identity.app.usecase.register.RegisterUserResult;
 import dev.patra.identity.app.usecase.user.query.UserQueryService;
-import dev.patra.identity.domain.model.read.UserAccountReadModel;
-import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.cqrs.CommandBus;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -36,11 +33,11 @@ public class AuthController {
   /// 注册并登录。成功返回 201。
   ///
   /// @param request 请求体
-  /// @return 会话令牌、新用户的 ID 和邮箱
+  /// @return 会话令牌和新用户的账号信息
   @PostMapping("/register")
   @ResponseStatus(HttpStatus.CREATED)
   public AuthenticatedUserResponse register(@RequestBody RegisterRequest request) {
-    RegisterUserResult result =
+    AuthenticatedUser result =
         commandBus.handle(
             RegisterUserCommand.builder()
                 .email(request.email())
@@ -49,20 +46,20 @@ public class AuthController {
                 .clientType(request.clientType())
                 .deviceId(request.deviceId())
                 .build());
-    return AuthenticatedUserResponse.of(result.sessionToken(), result.userId(), result.email());
+    return toResponse(result);
   }
 
   /// 登录。成功返回 200。
   ///
   /// @param request 请求体
-  /// @return 会话令牌、用户 ID 和邮箱
+  /// @return 会话令牌和账号信息
   @PostMapping("/login")
   public AuthenticatedUserResponse login(@RequestBody LoginRequest request) {
-    LoginUserResult result =
+    AuthenticatedUser result =
         commandBus.handle(
             LoginUserCommand.of(
                 request.email(), request.password(), request.clientType(), request.deviceId()));
-    return AuthenticatedUserResponse.of(result.sessionToken(), result.userId(), result.email());
+    return toResponse(result);
   }
 
   /// 登出。有当前用户就删会话，没有也返回 204：这条路由在网关上是公开的。
@@ -72,12 +69,20 @@ public class AuthController {
     commandBus.handle(LogoutUserCommand.of());
   }
 
-  /// 当前登录用户。没有当前用户、用户不存在或已封禁都是 401。
+  /// 当前登录用户。没有当前用户、用户不存在、已封禁或已注销都是 401。
   ///
-  /// @return 用户 ID、邮箱、账号类型
+  /// @return 账号信息
   @GetMapping("/me")
   public CurrentUserResponse me() {
-    UserAccountReadModel account = userQueryService.currentAccount();
-    return CurrentUserResponse.of(account.userId(), account.email(), AccountType.USER.getCode());
+    return CurrentUserResponse.from(userQueryService.currentAccount());
+  }
+
+  /// 把登录或注册的结果转成响应。
+  ///
+  /// @param result 结果
+  /// @return 响应
+  private static AuthenticatedUserResponse toResponse(AuthenticatedUser result) {
+    return AuthenticatedUserResponse.of(
+        result.sessionToken(), CurrentUserResponse.from(result.account()));
   }
 }

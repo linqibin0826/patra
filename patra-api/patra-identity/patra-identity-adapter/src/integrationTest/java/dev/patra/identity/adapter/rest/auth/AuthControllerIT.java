@@ -5,11 +5,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import dev.patra.identity.app.usecase.auth.AuthenticatedUser;
 import dev.patra.identity.app.usecase.login.LoginUserCommand;
-import dev.patra.identity.app.usecase.login.LoginUserResult;
 import dev.patra.identity.app.usecase.logout.LogoutUserCommand;
 import dev.patra.identity.app.usecase.register.RegisterUserCommand;
-import dev.patra.identity.app.usecase.register.RegisterUserResult;
 import dev.patra.identity.app.usecase.user.query.UserQueryService;
 import dev.patra.identity.domain.exception.InvalidCredentialsException;
 import dev.patra.identity.domain.exception.InvalidUserFieldsException;
@@ -23,6 +22,7 @@ import dev.patra.identity.domain.model.vo.UserFieldViolations;
 import dev.patra.tool.core.security.AuthenticationRequiredException;
 import dev.patra.tool.cqrs.CommandBus;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
@@ -54,12 +54,26 @@ class AuthControllerIT {
 
   @MockitoBean private UserQueryService userQueryService;
 
+  /// 一个正常、未验证邮箱、没改过名的账号读模型。
+  ///
+  /// @param userId 用户 ID
+  /// @return 读模型
+  private static UserAccountReadModel account(long userId) {
+    return UserAccountReadModel.builder()
+        .userId(userId)
+        .email("chen.yu@example.com")
+        .emailVerified(false)
+        .username("chen-yu")
+        .displayName("chen-yu")
+        .status(UserStatus.ACTIVE)
+        .build();
+  }
+
   @Test
-  @DisplayName("注册成功返回 201，带会话令牌，userId 是字符串；原始输入原样交给命令")
+  @DisplayName("注册成功返回 201，带会话令牌和嵌套的 user，userId 是字符串；原始输入原样交给命令")
   void should_register_and_return_201() {
     when(commandBus.handle(any(RegisterUserCommand.class)))
-        .thenReturn(
-            RegisterUserResult.of("patra_user_x", 352303128713027974L, "chen.yu@example.com"));
+        .thenReturn(AuthenticatedUser.of("patra_user_x", account(352303128713027974L)));
 
     restClient
         .post()
@@ -76,11 +90,21 @@ class AuthControllerIT {
         .expectBody()
         .jsonPath("$.sessionToken")
         .isEqualTo("patra_user_x")
-        .jsonPath("$.userId")
+        .jsonPath("$.user.userId")
         .value(
             userId -> assertThat(userId).isInstanceOf(String.class).isEqualTo("352303128713027974"))
-        .jsonPath("$.email")
-        .isEqualTo("chen.yu@example.com");
+        .jsonPath("$.user.email")
+        .isEqualTo("chen.yu@example.com")
+        .jsonPath("$.user.username")
+        .isEqualTo("chen-yu")
+        .jsonPath("$.user.displayName")
+        .isEqualTo("chen-yu")
+        .jsonPath("$.user.emailVerified")
+        .isEqualTo(false)
+        .jsonPath("$.user.status")
+        .isEqualTo("ACTIVE")
+        .jsonPath("$.user.accountType")
+        .isEqualTo("user");
 
     ArgumentCaptor<RegisterUserCommand> command =
         ArgumentCaptor.forClass(RegisterUserCommand.class);
@@ -96,7 +120,7 @@ class AuthControllerIT {
   @DisplayName("登录成功返回 200，带会话令牌；clientType 和 deviceId 原样交给命令")
   void should_login_and_return_200() {
     when(commandBus.handle(any(LoginUserCommand.class)))
-        .thenReturn(LoginUserResult.of("patra_user_x", 42L, "chen.yu@example.com"));
+        .thenReturn(AuthenticatedUser.of("patra_user_x", account(42L)));
 
     restClient
         .post()
@@ -114,10 +138,12 @@ class AuthControllerIT {
         .expectBody()
         .jsonPath("$.sessionToken")
         .isEqualTo("patra_user_x")
-        .jsonPath("$.userId")
+        .jsonPath("$.user.userId")
         .isEqualTo("42")
-        .jsonPath("$.email")
-        .isEqualTo("chen.yu@example.com");
+        .jsonPath("$.user.email")
+        .isEqualTo("chen.yu@example.com")
+        .jsonPath("$.user.username")
+        .isEqualTo("chen-yu");
 
     ArgumentCaptor<LoginUserCommand> command = ArgumentCaptor.forClass(LoginUserCommand.class);
     verify(commandBus).handle(command.capture());
@@ -317,10 +343,50 @@ class AuthControllerIT {
   }
 
   @Test
-  @DisplayName("当前用户：200，带 ID、邮箱、账号类型")
+  @DisplayName("当前用户：200，带 ID、邮箱、验证状态、用户名、昵称、头像（恒 null）、状态、两个时间、账号类型")
   void should_return_current_user() {
     when(userQueryService.currentAccount())
-        .thenReturn(UserAccountReadModel.of(42L, "chen.yu@example.com", UserStatus.ACTIVE));
+        .thenReturn(
+            UserAccountReadModel.builder()
+                .userId(42L)
+                .email("chen.yu@example.com")
+                .emailVerified(true)
+                .username("chen-yu")
+                .displayName("陈宇")
+                .status(UserStatus.PENDING_DELETION)
+                .deletionDueAt(Instant.parse("2026-11-04T08:00:00Z"))
+                .nextUsernameChangeAt(Instant.parse("2026-11-19T08:00:00Z"))
+                .build());
+
+    String body =
+        restClient
+            .get()
+            .uri("/auth/me")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody(String.class)
+            .returnResult()
+            .getResponseBody();
+
+    JsonNode json = JSON.readTree(body);
+    assertThat(json.get("userId").asString()).isEqualTo("42");
+    assertThat(json.get("email").asString()).isEqualTo("chen.yu@example.com");
+    assertThat(json.get("emailVerified").asBoolean()).isTrue();
+    assertThat(json.get("username").asString()).isEqualTo("chen-yu");
+    assertThat(json.get("displayName").asString()).isEqualTo("陈宇");
+    assertThat(json.has("avatarUrl")).isTrue();
+    assertThat(json.get("avatarUrl").isNull()).isTrue();
+    assertThat(json.get("status").asString()).isEqualTo("PENDING_DELETION");
+    assertThat(json.get("deletionDueAt").asString()).isEqualTo("2026-11-04T08:00:00Z");
+    assertThat(json.get("nextUsernameChangeAt").asString()).isEqualTo("2026-11-19T08:00:00Z");
+    assertThat(json.get("accountType").asString()).isEqualTo("user");
+  }
+
+  @Test
+  @DisplayName("当前用户没改过名、不在冷静期：两个时间输出 null")
+  void should_output_null_times_for_plain_account() {
+    when(userQueryService.currentAccount()).thenReturn(account(42L));
 
     restClient
         .get()
@@ -329,12 +395,12 @@ class AuthControllerIT {
         .expectStatus()
         .isOk()
         .expectBody()
-        .jsonPath("$.userId")
-        .isEqualTo("42")
-        .jsonPath("$.email")
-        .isEqualTo("chen.yu@example.com")
-        .jsonPath("$.accountType")
-        .isEqualTo("user");
+        .jsonPath("$.deletionDueAt")
+        .value(due -> assertThat(due).isNull())
+        .jsonPath("$.nextUsernameChangeAt")
+        .value(next -> assertThat(next).isNull())
+        .jsonPath("$.status")
+        .isEqualTo("ACTIVE");
   }
 
   @Test

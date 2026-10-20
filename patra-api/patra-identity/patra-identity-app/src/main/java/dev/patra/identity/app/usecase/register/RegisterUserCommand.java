@@ -1,5 +1,6 @@
 package dev.patra.identity.app.usecase.register;
 
+import dev.patra.identity.app.usecase.auth.AuthenticatedUser;
 import dev.patra.tool.cqrs.Command;
 import lombok.Builder;
 
@@ -15,7 +16,7 @@ import lombok.Builder;
 @Builder
 public record RegisterUserCommand(
     String email, String username, String password, String clientType, String deviceId)
-    implements Command<RegisterUserResult> {
+    implements Command<AuthenticatedUser> {
 
   /// 不输出密码。
   ///

@@ -1,16 +1,19 @@
 package dev.patra.identity.app.usecase.login;
 
+import dev.patra.identity.app.usecase.auth.AuthenticatedUser;
 import dev.patra.identity.domain.exception.InvalidCredentialsException;
 import dev.patra.identity.domain.exception.InvalidUserFieldsException;
 import dev.patra.identity.domain.exception.LoginTemporarilyLockedException;
 import dev.patra.identity.domain.exception.UserBannedException;
 import dev.patra.identity.domain.model.aggregate.User;
 import dev.patra.identity.domain.model.aggregate.UserPasswordCredential;
+import dev.patra.identity.domain.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.LoginClient;
 import dev.patra.identity.domain.model.vo.PlainPassword;
 import dev.patra.identity.domain.policy.PasswordPolicy;
 import dev.patra.identity.domain.port.hashing.PasswordHashingPort;
+import dev.patra.identity.domain.port.read.UserReadPort;
 import dev.patra.identity.domain.port.repository.UserPasswordCredentialRepository;
 import dev.patra.identity.domain.port.repository.UserRepository;
 import dev.patra.identity.domain.port.session.IssuedUserSession;
@@ -46,10 +49,11 @@ import org.springframework.transaction.support.TransactionOperations;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class LoginUserHandler implements CommandHandler<LoginUserCommand, LoginUserResult> {
+public class LoginUserHandler implements CommandHandler<LoginUserCommand, AuthenticatedUser> {
 
   private final UserRepository users;
   private final UserPasswordCredentialRepository credentials;
+  private final UserReadPort userReadPort;
   private final PasswordHashingPort passwordHashing;
   private final LoginThrottlePort loginThrottle;
   private final SessionIssuer sessionIssuer;
@@ -58,9 +62,9 @@ public class LoginUserHandler implements CommandHandler<LoginUserCommand, LoginU
   /// 登录。
   ///
   /// @param command 命令
-  /// @return 会话令牌、用户 ID 和邮箱
+  /// @return 会话令牌和账号信息
   @Override
-  public LoginUserResult handle(LoginUserCommand command) {
+  public AuthenticatedUser handle(LoginUserCommand command) {
     List<FieldViolation> violations = new ArrayList<>();
     EmailAddress.validate(command.email()).ifPresent(violations::add);
     PlainPassword.validate(command.password()).ifPresent(violations::add);
@@ -98,7 +102,7 @@ public class LoginUserHandler implements CommandHandler<LoginUserCommand, LoginU
     if (verified.isBanned()) {
       throw new UserBannedException();
     }
-    IssuedUserSession session =
+    Login login =
         Objects.requireNonNull(
             transactions.execute(
                 status -> {
@@ -112,16 +116,26 @@ public class LoginUserHandler implements CommandHandler<LoginUserCommand, LoginU
                   if (locked.isBanned()) {
                     throw new UserBannedException();
                   }
-                  return sessionIssuer.issue(locked.getId(), client);
+                  IssuedUserSession session = sessionIssuer.issue(locked.getId(), client);
+                  UserAccountReadModel account =
+                      userReadPort
+                          .findAccount(locked.getId())
+                          .orElseThrow(InvalidCredentialsException::new);
+                  return new Login(session, account);
                 }));
     log.info(
         "前台用户已登录: userId={}, status={}, replacedSessions={}",
         verified.getId(),
         verified.getStatus(),
-        session.replacedSessionIds().size());
-    return LoginUserResult.of(
-        session.token(), verified.getId(), verified.getEmail().orElseThrow().value());
+        login.session().replacedSessionIds().size());
+    return AuthenticatedUser.of(login.session().token(), login.account());
   }
+
+  /// 事务里一起产出的会话和账号信息。
+  ///
+  /// @param session 新会话
+  /// @param account 账号信息
+  private record Login(IssuedUserSession session, UserAccountReadModel account) {}
 
   /// 校验密码。用户或凭据不存在时拿假哈希校验一次，然后返回 `false`。
   ///

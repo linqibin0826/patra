@@ -1,27 +1,35 @@
 package dev.patra.identity.domain.model.read;
 
 import dev.patra.identity.domain.model.enums.UserStatus;
+import java.time.Instant;
 import java.util.Objects;
+import lombok.Builder;
 
-/// 「当前用户」接口要的账号信息。
+/// 「当前用户」接口和登录、注册响应要的账号信息：用户表和资料表拼起来。
 ///
 /// @param userId 用户 ID
 /// @param email 规范化之后的邮箱，已注销时为 `null`
+/// @param emailVerified 邮箱是否已验证
+/// @param username 用户名
+/// @param displayName 昵称；资料里没设时已回退成用户名，永远非空
 /// @param status 状态
-public record UserAccountReadModel(long userId, String email, UserStatus status) {
+/// @param deletionDueAt 注销到期时间，不在冷静期时为 `null`
+/// @param nextUsernameChangeAt 下次可以改名的时间，没改过名时为 `null`
+@Builder
+public record UserAccountReadModel(
+    long userId,
+    String email,
+    boolean emailVerified,
+    String username,
+    String displayName,
+    UserStatus status,
+    Instant deletionDueAt,
+    Instant nextUsernameChangeAt) {
 
   /// 校验非空。
   public UserAccountReadModel {
+    Objects.requireNonNull(username, "username 不能为 null");
+    Objects.requireNonNull(displayName, "displayName 不能为 null");
     Objects.requireNonNull(status, "status 不能为 null");
-  }
-
-  /// 创建读模型。
-  ///
-  /// @param userId 用户 ID
-  /// @param email 邮箱
-  /// @param status 状态
-  /// @return 读模型
-  public static UserAccountReadModel of(long userId, String email, UserStatus status) {
-    return new UserAccountReadModel(userId, email, status);
   }
 }

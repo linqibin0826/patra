@@ -1,5 +1,6 @@
 package dev.patra.identity.app.usecase.login;
 
+import dev.patra.identity.app.usecase.auth.AuthenticatedUser;
 import dev.patra.tool.cqrs.Command;
 
 /// 前台用户登录：校验凭据并建会话。
@@ -11,7 +12,7 @@ import dev.patra.tool.cqrs.Command;
 /// @param clientType 客户端类型，原始输入，可以为 `null`
 /// @param deviceId 设备标识，原始输入，可以为 `null`
 public record LoginUserCommand(String email, String password, String clientType, String deviceId)
-    implements Command<LoginUserResult> {
+    implements Command<AuthenticatedUser> {
 
   /// 创建命令。
   ///

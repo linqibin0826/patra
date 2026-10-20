@@ -35,7 +35,15 @@ class UserQueryServiceTest {
     when(currentUserPort.require()).thenReturn(USER);
     when(userReadPort.findAccount(42L))
         .thenReturn(
-            Optional.of(UserAccountReadModel.of(42L, "chen.yu@example.com", UserStatus.ACTIVE)));
+            Optional.of(
+                UserAccountReadModel.builder()
+                    .userId(42L)
+                    .email("chen.yu@example.com")
+                    .emailVerified(false)
+                    .username("chen-yu")
+                    .displayName("chen-yu")
+                    .status(UserStatus.ACTIVE)
+                    .build()));
 
     UserAccountReadModel account = service.currentAccount();
 
@@ -67,7 +75,15 @@ class UserQueryServiceTest {
     when(currentUserPort.require()).thenReturn(USER);
     when(userReadPort.findAccount(42L))
         .thenReturn(
-            Optional.of(UserAccountReadModel.of(42L, "chen.yu@example.com", UserStatus.BANNED)));
+            Optional.of(
+                UserAccountReadModel.builder()
+                    .userId(42L)
+                    .email("chen.yu@example.com")
+                    .emailVerified(false)
+                    .username("chen-yu")
+                    .displayName("chen-yu")
+                    .status(UserStatus.BANNED)
+                    .build()));
 
     assertThatThrownBy(service::currentAccount).isInstanceOf(AuthenticationRequiredException.class);
   }
@@ -77,7 +93,16 @@ class UserQueryServiceTest {
   void should_reject_deleted_user_with_401() {
     when(currentUserPort.require()).thenReturn(USER);
     when(userReadPort.findAccount(42L))
-        .thenReturn(Optional.of(UserAccountReadModel.of(42L, null, UserStatus.DELETED)));
+        .thenReturn(
+            Optional.of(
+                UserAccountReadModel.builder()
+                    .userId(42L)
+                    .email(null)
+                    .emailVerified(false)
+                    .username("chen-yu")
+                    .displayName("chen-yu")
+                    .status(UserStatus.DELETED)
+                    .build()));
 
     assertThatThrownBy(service::currentAccount).isInstanceOf(AuthenticationRequiredException.class);
   }

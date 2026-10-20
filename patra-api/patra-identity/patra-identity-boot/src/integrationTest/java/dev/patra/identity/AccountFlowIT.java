@@ -55,8 +55,10 @@ class AccountFlowIT {
 
     assertThat(registered.getStatus().value()).isEqualTo(201);
     JsonNode body = JSON.readTree(registered.getResponseBody());
-    assertThat(body.get("email").asString()).isEqualTo("case.user@example.com");
-    assertThat(body.get("userId").isString()).isTrue();
+    assertThat(body.get("user").get("email").asString()).isEqualTo("case.user@example.com");
+    assertThat(body.get("user").get("userId").isString()).isTrue();
+    assertThat(body.get("user").get("username").asString()).isEqualTo("u-case-user");
+    assertThat(body.get("user").get("displayName").asString()).isEqualTo("u-case-user");
     assertThat(login("case.user@example.com", "Correct-Horse-01").getStatus().value())
         .isEqualTo(200);
     assertThat(login("CASE.USER@EXAMPLE.COM", "Correct-Horse-01").getStatus().value())
@@ -98,7 +100,8 @@ class AccountFlowIT {
             .returnResult();
 
     assertThat(result.getStatus().value()).isEqualTo(201);
-    assertThat(JSON.readTree(result.getResponseBody()).get("userId").asString()).isNotEqualTo("1");
+    assertThat(JSON.readTree(result.getResponseBody()).get("user").get("userId").asString())
+        .isNotEqualTo("1");
     assertThat(
             jdbcTemplate.queryForObject(
                 "SELECT status FROM idn_user WHERE email = ?", String.class, "mass@example.com"))
@@ -148,6 +151,7 @@ class AccountFlowIT {
   void should_ban_and_unban() {
     String userId =
         JSON.readTree(register("banned@example.com", "Banned-Pass-08").getResponseBody())
+            .get("user")
             .get("userId")
             .asString();
 

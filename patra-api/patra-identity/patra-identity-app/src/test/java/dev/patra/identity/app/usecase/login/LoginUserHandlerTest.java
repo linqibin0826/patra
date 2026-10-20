@@ -13,6 +13,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import dev.patra.identity.app.usecase.auth.AuthenticatedUser;
 import dev.patra.identity.domain.exception.InvalidCredentialsException;
 import dev.patra.identity.domain.exception.InvalidUserFieldsException;
 import dev.patra.identity.domain.exception.LoginTemporarilyLockedException;
@@ -21,6 +22,7 @@ import dev.patra.identity.domain.exception.UserBannedException;
 import dev.patra.identity.domain.model.aggregate.User;
 import dev.patra.identity.domain.model.aggregate.UserPasswordCredential;
 import dev.patra.identity.domain.model.enums.UserStatus;
+import dev.patra.identity.domain.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.model.vo.DeviceId;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.LoginClient;
@@ -28,6 +30,7 @@ import dev.patra.identity.domain.model.vo.PasswordHash;
 import dev.patra.identity.domain.model.vo.Username;
 import dev.patra.identity.domain.policy.PasswordPolicy;
 import dev.patra.identity.domain.port.hashing.PasswordHashingPort;
+import dev.patra.identity.domain.port.read.UserReadPort;
 import dev.patra.identity.domain.port.repository.UserPasswordCredentialRepository;
 import dev.patra.identity.domain.port.repository.UserRepository;
 import dev.patra.identity.domain.port.session.IssuedUserSession;
@@ -96,9 +99,20 @@ class LoginUserHandlerTest {
       UserPasswordCredential.restore(7L, 42L, HASH, 0L);
   private static final LoginAttempt ATTEMPT = LoginAttempt.of(AccountType.USER, EMAIL, "ticket");
 
+  private static final UserAccountReadModel ACCOUNT =
+      UserAccountReadModel.builder()
+          .userId(42L)
+          .email("chen.yu@example.com")
+          .emailVerified(false)
+          .username("chen-yu")
+          .displayName("chen-yu")
+          .status(UserStatus.ACTIVE)
+          .build();
+
   private final UserRepository users = mock(UserRepository.class);
   private final UserPasswordCredentialRepository credentials =
       mock(UserPasswordCredentialRepository.class);
+  private final UserReadPort userReadPort = mock(UserReadPort.class);
   private final PasswordHashingPort passwordHashing = mock(PasswordHashingPort.class);
   private final LoginThrottlePort loginThrottle = mock(LoginThrottlePort.class);
   private final SessionIssuer sessionIssuer = mock(SessionIssuer.class);
@@ -106,6 +120,7 @@ class LoginUserHandlerTest {
       new LoginUserHandler(
           users,
           credentials,
+          userReadPort,
           passwordHashing,
           loginThrottle,
           sessionIssuer,
@@ -121,6 +136,7 @@ class LoginUserHandlerTest {
     when(loginThrottle.recordFailure(ATTEMPT)).thenReturn(Optional.empty());
     when(sessionIssuer.issue(anyLong(), any()))
         .thenReturn(IssuedUserSession.of("patra_user_x", List.of()));
+    when(userReadPort.findAccount(42L)).thenReturn(Optional.of(ACCOUNT));
   }
 
   @Test
@@ -128,11 +144,11 @@ class LoginUserHandlerTest {
   void should_authenticate_with_correct_password() {
     when(passwordHashing.matches(any(), any())).thenReturn(true);
 
-    LoginUserResult result =
+    AuthenticatedUser result =
         handler.handle(LoginUserCommand.of("Chen.Yu@Example.com", "correct horse", null, null));
 
-    assertThat(result.userId()).isEqualTo(42L);
-    assertThat(result.email()).isEqualTo("chen.yu@example.com");
+    assertThat(result.account().userId()).isEqualTo(42L);
+    assertThat(result.account().email()).isEqualTo("chen.yu@example.com");
     assertThat(result.sessionToken()).isEqualTo("patra_user_x");
     verify(loginThrottle).recordSuccess(ATTEMPT);
     verify(loginThrottle, never()).recordFailure(any());
@@ -324,7 +340,7 @@ class LoginUserHandlerTest {
   void should_issue_session_after_successful_authentication() {
     when(passwordHashing.matches(any(), any())).thenReturn(true);
 
-    LoginUserResult result =
+    AuthenticatedUser result =
         handler.handle(LoginUserCommand.of("chen.yu@example.com", "correct horse", "web", " mac "));
 
     assertThat(result.sessionToken()).isEqualTo("patra_user_x");
@@ -372,7 +388,7 @@ class LoginUserHandlerTest {
     assertThat(LoginUserCommand.of("a@example.com", "secret", "web", null).toString())
         .doesNotContain("secret")
         .contains("a@example.com");
-    assertThat(LoginUserResult.of("patra_user_x", 42L, "a@example.com").toString())
+    assertThat(AuthenticatedUser.of("patra_user_x", ACCOUNT).toString())
         .doesNotContain("patra_user_x")
         .contains("42");
   }
@@ -429,7 +445,13 @@ class LoginUserHandlerTest {
         };
     LoginUserHandler transactional =
         new LoginUserHandler(
-            users, credentials, passwordHashing, loginThrottle, sessionIssuer, recording);
+            users,
+            credentials,
+            userReadPort,
+            passwordHashing,
+            loginThrottle,
+            sessionIssuer,
+            recording);
     when(passwordHashing.matches(any(), any()))
         .thenAnswer(
             invocation -> {
@@ -478,7 +500,7 @@ class LoginUserHandlerTest {
     when(users.findByIdForUpdate(42L)).thenReturn(Optional.of(PENDING_USER));
     when(passwordHashing.matches(any(), any())).thenReturn(true);
 
-    LoginUserResult result =
+    AuthenticatedUser result =
         handler.handle(LoginUserCommand.of("chen.yu@example.com", "correct horse", null, null));
 
     assertThat(result.sessionToken()).isEqualTo("patra_user_x");

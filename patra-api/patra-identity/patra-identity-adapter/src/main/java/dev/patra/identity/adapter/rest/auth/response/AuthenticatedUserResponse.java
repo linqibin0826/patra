@@ -1,20 +1,18 @@
 package dev.patra.identity.adapter.rest.auth.response;
 
-/// 注册、登录成功的响应体。`userId` 按全局 Jackson 设置输出成字符串。
+/// 注册、登录成功的响应体：会话令牌加上和「当前用户」接口同构的 `user`。
 ///
 /// @param sessionToken 会话令牌，客户端原样保存，之后放进 `Authorization: Bearer`
-/// @param userId 用户 ID
-/// @param email 规范化之后的邮箱
-public record AuthenticatedUserResponse(String sessionToken, Long userId, String email) {
+/// @param user 账号信息
+public record AuthenticatedUserResponse(String sessionToken, CurrentUserResponse user) {
 
   /// 创建响应。
   ///
   /// @param sessionToken 会话令牌
-  /// @param userId 用户 ID
-  /// @param email 邮箱
+  /// @param user 账号信息
   /// @return 响应
-  public static AuthenticatedUserResponse of(String sessionToken, long userId, String email) {
-    return new AuthenticatedUserResponse(sessionToken, userId, email);
+  public static AuthenticatedUserResponse of(String sessionToken, CurrentUserResponse user) {
+    return new AuthenticatedUserResponse(sessionToken, user);
   }
 
   /// 不输出令牌。
@@ -22,10 +20,6 @@ public record AuthenticatedUserResponse(String sessionToken, Long userId, String
   /// @return 描述
   @Override
   public String toString() {
-    return "AuthenticatedUserResponse[sessionToken=***, userId="
-        + userId
-        + ", email="
-        + email
-        + "]";
+    return "AuthenticatedUserResponse[sessionToken=***, user=" + user + "]";
   }
 }

@@ -332,7 +332,8 @@ class SessionFlowIT {
   /// @param result 注册或登录的响应
   /// @return 用户 ID
   private static long userIdOf(EntityExchangeResult<String> result) {
-    return Long.parseLong(JSON.readTree(result.getResponseBody()).get("userId").asString());
+    return Long.parseLong(
+        JSON.readTree(result.getResponseBody()).get("user").get("userId").asString());
   }
 
   /// 用户最新一条登录记录的 ID，也就是最新会话的 ID。

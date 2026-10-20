@@ -1,10 +1,12 @@
 package dev.patra.identity.app.usecase.register;
 
+import dev.patra.identity.app.usecase.auth.AuthenticatedUser;
 import dev.patra.identity.domain.exception.InvalidUserFieldsException;
 import dev.patra.identity.domain.exception.UserIdentifierTakenException;
 import dev.patra.identity.domain.model.aggregate.User;
 import dev.patra.identity.domain.model.aggregate.UserPasswordCredential;
 import dev.patra.identity.domain.model.aggregate.UserProfile;
+import dev.patra.identity.domain.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.LoginClient;
 import dev.patra.identity.domain.model.vo.PasswordHash;
@@ -14,6 +16,7 @@ import dev.patra.identity.domain.model.vo.Username;
 import dev.patra.identity.domain.policy.PasswordPolicy;
 import dev.patra.identity.domain.policy.UsernamePolicy;
 import dev.patra.identity.domain.port.hashing.PasswordHashingPort;
+import dev.patra.identity.domain.port.read.UserReadPort;
 import dev.patra.identity.domain.port.repository.FormerUsernameRepository;
 import dev.patra.identity.domain.port.repository.UserPasswordCredentialRepository;
 import dev.patra.identity.domain.port.repository.UserProfileRepository;
@@ -41,13 +44,13 @@ import org.springframework.transaction.support.TransactionOperations;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class RegisterUserHandler
-    implements CommandHandler<RegisterUserCommand, RegisterUserResult> {
+public class RegisterUserHandler implements CommandHandler<RegisterUserCommand, AuthenticatedUser> {
 
   private final UserRepository users;
   private final UserProfileRepository profiles;
   private final UserPasswordCredentialRepository credentials;
   private final FormerUsernameRepository formerUsernames;
+  private final UserReadPort userReadPort;
   private final PasswordHashingPort passwordHashing;
   private final PasswordPolicy passwordPolicy;
   private final UsernamePolicy usernamePolicy;
@@ -58,9 +61,9 @@ public class RegisterUserHandler
   /// 注册并登录。
   ///
   /// @param command 命令
-  /// @return 会话令牌、新用户的 ID 和邮箱
+  /// @return 会话令牌和新用户的账号信息
   @Override
-  public RegisterUserResult handle(RegisterUserCommand command) {
+  public AuthenticatedUser handle(RegisterUserCommand command) {
     List<FieldViolation> violations = new ArrayList<>();
     EmailAddress.validate(command.email()).ifPresent(violations::add);
     usernamePolicy.validate(command.username()).ifPresent(violations::add);
@@ -91,21 +94,25 @@ public class RegisterUserHandler
                   User saved = users.save(User.register(email, username));
                   profiles.save(UserProfile.create(saved.getId()));
                   credentials.save(UserPasswordCredential.create(saved.getId(), hash));
-                  return new Registration(saved, sessionIssuer.issue(saved.getId(), client));
+                  IssuedUserSession session = sessionIssuer.issue(saved.getId(), client);
+                  UserAccountReadModel account =
+                      userReadPort
+                          .findAccount(saved.getId())
+                          .orElseThrow(
+                              () -> new IllegalStateException("刚保存的用户读不回来: " + saved.getId()));
+                  return new Registration(saved, session, account);
                 }));
     log.info(
         "前台用户已注册并登录: userId={}, username={}",
         registration.user().getId(),
         registration.user().getUsername().value());
-    return RegisterUserResult.of(
-        registration.session().token(),
-        registration.user().getId(),
-        registration.user().getEmail().orElseThrow().value());
+    return AuthenticatedUser.of(registration.session().token(), registration.account());
   }
 
-  /// 事务里一起产出的用户和会话。
+  /// 事务里一起产出的用户、会话和账号信息。
   ///
   /// @param user 新用户
   /// @param session 新会话
-  private record Registration(User user, IssuedUserSession session) {}
+  /// @param account 账号信息
+  private record Registration(User user, IssuedUserSession session, UserAccountReadModel account) {}
 }
