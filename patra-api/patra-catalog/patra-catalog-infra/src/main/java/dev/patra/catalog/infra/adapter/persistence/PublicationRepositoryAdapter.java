@@ -259,32 +259,20 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
       return ExistingPublicationKeys.empty();
     }
 
-    List<PublicationEntity> matchedEntities;
-    if (!normalizedPmids.isEmpty() && !normalizedDois.isEmpty()) {
-      matchedEntities = jpaRepository.findByPmidInOrDoiIn(normalizedPmids, normalizedDois);
-    } else if (!normalizedPmids.isEmpty()) {
-      matchedEntities = jpaRepository.findByPmidIn(normalizedPmids);
-    } else {
-      matchedEntities = jpaRepository.findByDoiIn(normalizedDois);
-    }
-
-    Set<String> existingPmids = new HashSet<>();
-    Set<String> existingDois = new HashSet<>();
-    for (PublicationEntity entity : matchedEntities) {
-      if (!normalizedPmids.isEmpty()) {
-        String pmid = trimToNull(entity.getPmid());
-        if (pmid != null) {
-          existingPmids.add(pmid);
-        }
-      }
-
-      if (!normalizedDois.isEmpty()) {
-        String doi = normalizeDoi(entity.getDoi());
-        if (doi != null) {
-          existingDois.add(doi);
-        }
-      }
-    }
+    Set<String> existingPmids =
+        normalizedPmids.isEmpty()
+            ? Set.of()
+            : jpaRepository.findOccupiedPmids(normalizedPmids).stream()
+                .map(StringUtils::trimToNull)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+    Set<String> existingDois =
+        normalizedDois.isEmpty()
+            ? Set.of()
+            : jpaRepository.findOccupiedDois(normalizedDois).stream()
+                .map(this::normalizeDoi)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
 
     return ExistingPublicationKeys.of(existingPmids, existingDois);
   }

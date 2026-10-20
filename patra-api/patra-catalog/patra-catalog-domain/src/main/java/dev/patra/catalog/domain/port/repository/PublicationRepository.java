@@ -91,7 +91,8 @@ public interface PublicationRepository {
 
   /// 批量查询已存在的 PMID 与 DOI。
   ///
-  /// 用于导入写入阶段的批量去重，避免逐条查询数据库。
+  /// 用于导入写入阶段的批量去重，避免逐条查询数据库。已软删除的文献同样算已存在：
+  /// PMID/DOI 唯一约束覆盖软删除行，baseline 导入也不复活被删除的文献。
   ///
   /// @param pmids 待检查的 PMID 集合
   /// @param dois 待检查的 DOI 集合（建议传入标准化值）
