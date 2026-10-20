@@ -30,7 +30,7 @@ async function openFullText(page: Page, id: string) {
 test.describe("有全文 · 桌面", () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
-  test("阅读全文 → 目录跳转 → 引用跳参考文献 → 回到正文", async ({ page }) => {
+  test("阅读全文 → 目录跳转 → 引用号出卡片 → 跳到文末 → 回到正文", async ({ page }) => {
     await openFullText(page, FULLTEXT_ID);
     const article = page.getByRole("article", { name: "全文" });
 
@@ -50,16 +50,22 @@ test.describe("有全文 · 桌面", () => {
     // 当前章节展开二级标题后列表会变，按地址重新定位
     await expect(toc.locator(`a[href="${target}"]`)).toHaveAttribute("aria-current", "location");
 
-    const cite = article.locator("a[data-cite-ref]").first();
+    const cite = article.locator("[data-ft-body] a[data-cite-ref]").first();
     await cite.scrollIntoViewIfNeeded();
     const refHref = (await cite.getAttribute("href")) ?? "";
     await cite.click();
+    // PAP-89：点引用号先弹参考文献卡片，地址不变
+    const card = page.getByRole("dialog");
+    await expect(card).toBeVisible();
+    await expect(page).not.toHaveURL(endsWithHash(refHref));
+    await card.getByRole("link", { name: "跳到文末" }).first().click();
+    await expect(card).toBeHidden();
     const ref = byHash(page, refHref);
     await expect(ref).toBeInViewport();
     await expect(ref).toHaveAttribute("data-highlighted", "true");
     await expect(page).toHaveURL(endsWithHash(refHref));
 
-    await ref.getByRole("link", { name: /回到正文/ }).click();
+    await ref.getByRole("link", { name: /↩ 正文/ }).click();
     await expect(cite).toBeInViewport();
   });
 
