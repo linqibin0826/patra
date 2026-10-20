@@ -1,20 +1,31 @@
 package dev.patra.identity.app.usecase.user.query;
 
+import dev.patra.identity.domain.exception.UserNotFoundException;
+import dev.patra.identity.domain.model.aggregate.FormerUsername;
 import dev.patra.identity.domain.model.enums.UserStatus;
+import dev.patra.identity.domain.model.read.PublicUserLookup;
+import dev.patra.identity.domain.model.read.PublicUserReadModel;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
+import dev.patra.identity.domain.model.vo.Username;
 import dev.patra.identity.domain.port.read.UserReadPort;
+import dev.patra.identity.domain.port.repository.FormerUsernameRepository;
 import dev.patra.tool.core.security.AuthenticationRequiredException;
 import dev.patra.tool.core.security.CurrentUser;
 import dev.patra.tool.core.security.CurrentUserPort;
+import java.time.Clock;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-/// 「当前用户」的查询。只读，不经 CommandBus，没有事务。
+/// 「当前用户」和公开身份卡的查询。只读，不经 CommandBus，没有事务。
 ///
-/// 没有当前用户、会话指向的用户不存在、用户已封禁或已注销，这些情况都抛
+/// 当前用户：没有当前用户、会话指向的用户不存在、用户已封禁或已注销，这些情况都抛
 /// {@link AuthenticationRequiredException}（401）：对客户端来说都是「这个会话不再有效」。
 /// 冷静期内的用户照常返回，响应里带状态。
+///
+/// 公开身份卡：别人只能看到正常且邮箱已验证的用户；本人永远能看到自己；保留期内的旧名跳到当前用户名；
+/// 其余一律 {@link UserNotFoundException}（404），不区分不存在和不可见。
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -22,6 +33,8 @@ public class UserQueryService {
 
   private final CurrentUserPort currentUserPort;
   private final UserReadPort userReadPort;
+  private final FormerUsernameRepository formerUsernames;
+  private final Clock clock;
 
   /// 当前登录用户的账号信息。
   ///
@@ -47,5 +60,40 @@ public class UserQueryService {
       throw new AuthenticationRequiredException();
     }
     return account;
+  }
+
+  /// 按路径里的用户名查公开身份卡。请求者是当前用户（公开路由上网关照样翻译令牌），匿名时为空。
+  ///
+  /// 1. 语法不合法直接 404，不查库。
+  /// 2. 当前用户名查到：对请求者可见返回 `Found`，否则 404。
+  /// 3. 查不到：是保留期内的旧名，且原主对请求者可见，返回 `Moved`；否则 404。
+  ///
+  /// @param rawUsername 路径里的用户名，先规范化
+  /// @return 找到或跳转
+  /// @throws UserNotFoundException 不存在、不可见、旧名已过期
+  public PublicUserLookup publicIdentity(String rawUsername) {
+    if (Username.violation(rawUsername).isPresent()) {
+      throw new UserNotFoundException();
+    }
+    Username username = Username.of(rawUsername);
+    Optional<Long> requester = currentUserPort.current().map(CurrentUser::userId);
+    Optional<PublicUserReadModel> direct = userReadPort.findPublicIdentity(username);
+    if (direct.isPresent()) {
+      PublicUserReadModel user = direct.get();
+      if (!user.isVisibleTo(requester)) {
+        throw new UserNotFoundException();
+      }
+      return new PublicUserLookup.Found(user);
+    }
+    FormerUsername former =
+        formerUsernames
+            .findReserved(username, clock.instant())
+            .orElseThrow(UserNotFoundException::new);
+    PublicUserReadModel owner =
+        userReadPort
+            .findPublicIdentityByUserId(former.getUserId())
+            .filter(user -> user.isVisibleTo(requester))
+            .orElseThrow(UserNotFoundException::new);
+    return new PublicUserLookup.Moved(Username.of(owner.username()));
   }
 }

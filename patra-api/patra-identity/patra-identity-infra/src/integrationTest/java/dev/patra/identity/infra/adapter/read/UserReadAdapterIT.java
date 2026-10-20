@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import dev.patra.identity.domain.model.aggregate.User;
 import dev.patra.identity.domain.model.aggregate.UserProfile;
 import dev.patra.identity.domain.model.enums.UserStatus;
+import dev.patra.identity.domain.model.read.PublicUserReadModel;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.model.vo.DisplayName;
 import dev.patra.identity.domain.model.vo.EmailAddress;
@@ -112,5 +113,25 @@ class UserReadAdapterIT {
 
     assertThatThrownBy(() -> reader.findAccount(saved.getId()))
         .isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  void should_read_public_identity_by_username_and_by_id() {
+    User saved =
+        users.save(User.register(EmailAddress.of("pub@example.com"), Username.of("u-pub")));
+    profiles.save(UserProfile.create(saved.getId()));
+    PublicUserReadModel expected =
+        PublicUserReadModel.builder()
+            .userId(saved.getId())
+            .username("u-pub")
+            .displayName("u-pub")
+            .status(UserStatus.ACTIVE)
+            .emailVerified(false)
+            .build();
+
+    assertThat(reader.findPublicIdentity(Username.of("u-pub"))).contains(expected);
+    assertThat(reader.findPublicIdentityByUserId(saved.getId())).contains(expected);
+    assertThat(reader.findPublicIdentity(Username.of("nobody"))).isEmpty();
+    assertThat(reader.findPublicIdentityByUserId(1L)).isEmpty();
   }
 }
