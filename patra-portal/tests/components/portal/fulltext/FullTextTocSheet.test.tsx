@@ -5,8 +5,8 @@ import "@testing-library/jest-dom/vitest";
 import { FullTextTocSheet } from "@/components/portal/fulltext/FullTextTocSheet";
 
 const ENTRIES = [
-  { id: "ft-s1", label: "Introduction", children: [] },
-  { id: "ft-s2", label: "Methods", children: [] },
+  { id: "ft-s1", number: "01", label: "Introduction", children: [] },
+  { id: "ft-s2", number: "02", label: "Methods", children: [] },
 ];
 
 afterEach(() => {

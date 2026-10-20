@@ -120,6 +120,8 @@ export function isSupplementarySection(section: FullTextSectionNode): boolean {
 export interface TocEntry {
   /** 目标元素的 DOM id */
   id: string;
+  /** 标签栏与目录里的序号（`01`、`4.5`） */
+  number: string | null;
   label: string;
   children: TocEntry[];
 }
@@ -128,12 +130,71 @@ function titledSections(sections: FullTextSectionNode[]): FullTextSectionNode[] 
   return sections.filter((s) => s.title.length > 0 && !isSupplementarySection(s));
 }
 
-function tocEntry(section: FullTextSectionNode, children: TocEntry[]): TocEntry {
-  return { id: bodyAnchor(section.id), label: inlineText(section.title).trim(), children };
+/** 章节在标签栏里的序号，以及去掉原文序号后的标题。 */
+export interface SectionHeading {
+  label: string;
+  title: FullTextInline[];
+}
+
+const NUMBER_PREFIX = /^(\d+(?:\.\d+)*)\.?\s+/;
+
+/** 标题开头的原文序号（`1.`、`2.1`、`2.1.`），只看第一个文本节点。 */
+function leadingNumber(title: FullTextInline[]): { number: string; rest: FullTextInline[] } | null {
+  const [first, ...others] = title;
+  if (first?.kind !== "text") return null;
+  const match = NUMBER_PREFIX.exec(first.text);
+  if (!match) return null;
+  const remaining = first.text.slice(match[0].length);
+  return {
+    number: match[1] ?? "",
+    rest: remaining ? [{ kind: "text", text: remaining }, ...others] : others,
+  };
+}
+
+/** 一级序号补成两位（`1` → `01`）。 */
+function padTop(number: string): string {
+  return number.includes(".") ? number : number.padStart(2, "0");
 }
 
 /**
- * 目录：正文一级章节（带有标题的二级章节作为子项）+ 文末附加里有标题的章节。
+ * 正文一、二级章节的序号（spec §5.6）：这些章节全都以序号开头时用原文序号并从标题里拿掉，
+ * 否则全部按位置编号、标题不动。无标题章节与补充材料不编号、不占序号；三级及以下不编。
+ */
+export function numberSections(sections: FullTextSectionNode[]): Record<string, SectionHeading> {
+  const top = titledSections(sections);
+  const levels = top.flatMap((s) => [s, ...titledSections(s.sections)]);
+  const useOriginal = levels.length > 0 && levels.every((s) => leadingNumber(s.title) !== null);
+  const heading = (s: FullTextSectionNode, positional: string): SectionHeading => {
+    const own = useOriginal ? leadingNumber(s.title) : null;
+    return own ? { label: own.number, title: own.rest } : { label: positional, title: s.title };
+  };
+  const out: Record<string, SectionHeading> = {};
+  top.forEach((s, i) => {
+    const h = heading(s, String(i + 1));
+    out[s.id] = { ...h, label: padTop(h.label) };
+    titledSections(s.sections).forEach((c, j) => {
+      out[c.id] = heading(c, `${i + 1}.${j + 1}`);
+    });
+  });
+  return out;
+}
+
+function tocEntry(
+  section: FullTextSectionNode,
+  numbering: Record<string, SectionHeading>,
+  children: TocEntry[],
+): TocEntry {
+  const heading = numbering[section.id];
+  return {
+    id: bodyAnchor(section.id),
+    number: heading?.label ?? null,
+    label: inlineText(heading?.title ?? section.title).trim(),
+    children,
+  };
+}
+
+/**
+ * 目录：正文一级章节（带有标题的二级章节作为子项），带序号；文末附加不进目录，由目录尾项「声明与附注」代表。
  * 正文没有带标题的一级章节（述评类不分节）时返回空，页面不显示目录卡与目录按钮。
  */
 export function deriveToc(body: FullTextBody): TocEntry[] {
@@ -141,15 +202,56 @@ export function deriveToc(body: FullTextBody): TocEntry[] {
   if (top.length === 0) {
     return [];
   }
-  return [
-    ...top.map((s) =>
-      tocEntry(
-        s,
-        titledSections(s.sections).map((c) => tocEntry(c, [])),
-      ),
+  const numbering = numberSections(body.sections);
+  return top.map((s) =>
+    tocEntry(
+      s,
+      numbering,
+      titledSections(s.sections).map((c) => tocEntry(c, numbering, [])),
     ),
-    ...titledSections(body.back).map((s) => tocEntry(s, [])),
-  ];
+  );
+}
+
+/** 目录尾项的计数：「声明与附注 N 项」（有标题的文末节，含附录）与参考文献条数。 */
+export function deriveTocTail(body: FullTextBody): { declarations: number; references: number } {
+  return { declarations: titledSections(body.back).length, references: body.references.length };
+}
+
+const CITATION_GLUE = /^[\s,;–—−-]*$/;
+
+/** 是否是只装着参考文献引用的上标（`<sup>8</sup>`、`<sup>3–5, 9</sup>`）：它前面的空白要去掉。 */
+export function isCitationSup(node: FullTextInline): boolean {
+  if (node.kind !== "style" || node.style !== "sup") return false;
+  let cites = 0;
+  for (const child of node.children) {
+    if (child.kind === "xref" && child.refType === "bibr") cites += 1;
+    else if (!(child.kind === "text" && CITATION_GLUE.test(child.text))) return false;
+  }
+  return cites > 0;
+}
+
+function hasFigureOrTable(section: FullTextSectionNode): boolean {
+  return (
+    countBlocks(section.blocks, "figure") +
+      countBlocks(section.blocks, "table") +
+      countInSections(section.sections, "figure") +
+      countInSections(section.sections, "table") >
+    0
+  );
+}
+
+/** 文末附加的分组（spec §5.11）：有标题的进「声明与附注」，无标题的接在后面，含图表的按附录单独渲染。 */
+export function splitBack(back: FullTextSectionNode[]): {
+  declarations: FullTextSectionNode[];
+  untitled: FullTextSectionNode[];
+  appendices: FullTextSectionNode[];
+} {
+  const kept = back.filter((s) => !isSupplementarySection(s));
+  return {
+    declarations: kept.filter((s) => s.title.length > 0 && !hasFigureOrTable(s)),
+    untitled: kept.filter((s) => s.title.length === 0),
+    appendices: kept.filter((s) => s.title.length > 0 && hasFigureOrTable(s)),
+  };
 }
 
 export interface FullTextStats {
@@ -231,11 +333,11 @@ export function numericColumns(
     let col = 0;
     for (const c of row) {
       if (c.colspan === 1) {
-        total[col] += 1;
-        if (NUMERIC_CELL.test(inlineText(c.content).trim())) numeric[col] += 1;
+        total[col] = (total[col] ?? 0) + 1;
+        if (NUMERIC_CELL.test(inlineText(c.content).trim())) numeric[col] = (numeric[col] ?? 0) + 1;
       }
       col += c.colspan;
     }
   }
-  return total.map((t, i) => t > 0 && numeric[i] * 2 > t);
+  return total.map((t, i) => t > 0 && (numeric[i] ?? 0) * 2 > t);
 }

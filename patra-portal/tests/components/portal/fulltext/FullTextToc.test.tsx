@@ -5,13 +5,14 @@ import { FullTextToc } from "@/components/portal/fulltext/FullTextToc";
 import type { TocEntry } from "@/lib/portal-api/fulltext-derive";
 
 const ENTRIES: TocEntry[] = [
-  { id: "ft-s1", label: "Introduction", children: [] },
+  { id: "ft-s1", number: "01", label: "Introduction", children: [] },
   {
     id: "ft-s2",
+    number: "02",
     label: "Methods",
-    children: [{ id: "ft-s2-1", label: "Study design", children: [] }],
+    children: [{ id: "ft-s2-1", number: "2.1", label: "Study design", children: [] }],
   },
-  { id: "ft-s3", label: "Results", children: [] },
+  { id: "ft-s3", number: "03", label: "Results", children: [] },
 ];
 
 /** 在页面上放出各章节标题，并指定它们此刻距视口顶部的距离。 */
