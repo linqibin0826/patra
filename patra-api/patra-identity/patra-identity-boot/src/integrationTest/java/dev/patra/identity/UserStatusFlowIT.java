@@ -168,4 +168,57 @@ class UserStatusFlowIT {
     node.remove("traceId");
     return node;
   }
+
+  @Test
+  @DisplayName("写接口的状态守卫：冷静期内改名 409 且 traits 含 PENDING_DELETION")
+  void should_return_409_with_pending_deletion_trait() {
+    long userId = userIdOf(register("guard-pending@example.com", "guard-pending"));
+    jdbcTemplate.update(
+        "UPDATE idn_user SET status = 'PENDING_DELETION', "
+            + "deletion_due_at = now() + interval '15 days' WHERE id = ?",
+        userId);
+
+    EntityExchangeResult<String> result = changeUsername(userId, "guard-pending-2");
+
+    assertThat(result.getStatus().value()).isEqualTo(409);
+    JsonNode json = JSON.readTree(result.getResponseBody());
+    assertThat(json.get("code").asString()).isEqualTo("IDN-0409");
+    assertThat(json.get("traits"))
+        .extracting(JsonNode::asString)
+        .containsExactlyInAnyOrder("CONFLICT", "PENDING_DELETION");
+  }
+
+  @Test
+  @DisplayName("写接口的状态守卫：断言还在而用户已封禁或已注销，改名 401")
+  void should_return_401_when_user_is_banned_or_deleted() {
+    long userId = userIdOf(register("guard-gone@example.com", "guard-gone"));
+
+    jdbcTemplate.update(
+        "UPDATE idn_user SET status = 'BANNED', banned_at = now() WHERE id = ?", userId);
+    assertThat(changeUsername(userId, "guard-gone-2").getStatus().value()).isEqualTo(401);
+
+    jdbcTemplate.update("DELETE FROM idn_user_password_credential WHERE user_id = ?", userId);
+    jdbcTemplate.update(
+        "UPDATE idn_user SET status = 'DELETED', deleted_at = now(), banned_at = NULL, "
+            + "email = NULL, email_verified_at = NULL WHERE id = ?",
+        userId);
+    assertThat(changeUsername(userId, "guard-gone-2").getStatus().value()).isEqualTo(401);
+  }
+
+  /// 以某个用户的身份改名。
+  ///
+  /// @param userId 用户 ID
+  /// @param username 新用户名
+  /// @return 响应
+  private EntityExchangeResult<String> changeUsername(long userId, String username) {
+    return restClient
+        .patch()
+        .uri("/me/username")
+        .headers(h -> h.addAll(assertionFor(userId)))
+        .contentType(MediaType.APPLICATION_JSON)
+        .body(Map.of("username", username))
+        .exchange()
+        .expectBody(String.class)
+        .returnResult();
+  }
 }
