@@ -2,12 +2,17 @@ import type { ReactNode } from "react";
 import { FigureBlock } from "@/components/portal/fulltext/FigureBlock";
 import { MathMl } from "@/components/portal/fulltext/MathMl";
 import { TableBlock, type TableBlockRow } from "@/components/portal/fulltext/TableBlock";
+import { RailRow } from "@/components/portal/RailRow";
 import {
   bodyAnchor,
   figureSrc,
   inlineText,
+  isCitationSup,
   isSupplementarySection,
+  numberSections,
   referenceAnchor,
+  type SectionHeading,
+  splitBack,
 } from "@/lib/portal-api/fulltext-derive";
 import type {
   FullTextBlock,
@@ -25,15 +30,26 @@ interface RenderContext {
   referenceIds: ReadonlySet<string>;
   citeCount: number;
   firstCiteByRef: Record<string, string>;
+  /** 参考文献 id → 正文里被引用的次数（参考文献条目的「↩ 正文 N 处」） */
+  citeCountByRef: Record<string, number>;
+  /** 正文一、二级章节的序号与去掉原文序号后的标题 */
+  numbering: Record<string, SectionHeading>;
   keyCount: number;
 }
 
 export interface RenderedFullTextBody {
+  /** 正文（外层 `[data-ft-body]`，阅读进度按它量） */
   content: ReactNode;
+  /** 文末「声明与附注」区块 `#declarations`；没有文末附加时为 null */
+  declarations: ReactNode;
+  /** 含图表的附录，排在声明区之后；没有时为 null */
+  appendices: ReactNode;
   /** 每条参考文献的著录文本（与 body.references 一一对应） */
   references: ReactNode[];
   /** 参考文献 id → 正文里第一次引用它的锚点 id（「↩ 回到正文」的默认去处） */
   firstCiteByRef: Record<string, string>;
+  /** 参考文献 id → 被引用的次数 */
+  citeCountByRef: Record<string, number>;
 }
 
 /**
@@ -43,7 +59,7 @@ export interface RenderedFullTextBody {
 type Tone = "body" | "back" | "note";
 
 const TONE_CLASS: Record<Tone, string> = {
-  body: "mb-[1em] max-w-[36em] text-pretty font-serif text-lg leading-reading text-ink-800",
+  body: "mb-[1.1em] max-w-[36em] text-pretty font-serif text-lg leading-reading text-ink-800",
   back: "mb-[1em] max-w-[36em] text-pretty font-serif text-md leading-reading text-ink-800",
   note: "[&+p]:mt-1",
 };
@@ -103,8 +119,15 @@ const STYLE_TAGS = {
   underline: "u",
 } as const;
 
+/** 渲染行内节点；紧挨在引用上标前的文本去掉末尾空白，让上标贴住前文（spec §5.7）。 */
 function renderInlines(nodes: FullTextInline[], ctx: RenderContext): ReactNode[] {
-  return nodes.map((node) => renderInline(node, ctx));
+  return nodes.map((node, i) => {
+    const next = nodes[i + 1];
+    if (node.kind === "text" && next && isCitationSup(next)) {
+      return node.text.trimEnd();
+    }
+    return renderInline(node, ctx);
+  });
 }
 
 function renderInline(node: FullTextInline, ctx: RenderContext): ReactNode {
@@ -133,8 +156,14 @@ function renderInline(node: FullTextInline, ctx: RenderContext): ReactNode {
         );
       }
       const Tag = STYLE_TAGS[node.style];
+      const className =
+        node.style === "bold"
+          ? "font-semibold"
+          : isCitationSup(node)
+            ? "font-mono text-2xs font-medium"
+            : undefined;
       return (
-        <Tag key={key} className={node.style === "bold" ? "font-semibold" : undefined}>
+        <Tag key={key} className={className}>
           {children}
         </Tag>
       );
@@ -172,7 +201,11 @@ function renderXref(
   if (node.refType === "bibr" && target && ctx.referenceIds.has(target)) {
     ctx.citeCount += 1;
     const citeId = `cite-${ctx.citeCount}`;
-    ctx.firstCiteByRef[target] ??= citeId;
+    const targets = node.targets.filter((t) => ctx.referenceIds.has(t));
+    for (const t of targets) {
+      ctx.firstCiteByRef[t] ??= citeId;
+      ctx.citeCountByRef[t] = (ctx.citeCountByRef[t] ?? 0) + 1;
+    }
     return (
       <a
         key={key}
@@ -180,7 +213,8 @@ function renderXref(
         href={`#${referenceAnchor(target)}`}
         aria-label={`参考文献 ${inlineText(node.children).trim()}`}
         data-cite-ref={target}
-        className="link-draw scroll-mt-[68px] rounded-[2px] text-link hover:text-link-hover"
+        data-cite-refs={targets.join(" ")}
+        className="link-draw scroll-mt-[68px] rounded-[2px] text-clay-700 hover:text-link-hover"
       >
         {children}
       </a>
@@ -206,6 +240,33 @@ function renderBlocks(
   tone: Tone = "body",
 ): ReactNode[] {
   return blocks.map((block) => renderBlock(block, ctx, tone));
+}
+
+/** 自己挂标签栏的块（图、表）；其余块连续地放进同一个标签栏行。 */
+function ownsRail(block: FullTextBlock): boolean {
+  return block.kind === "figure" || block.kind === "table";
+}
+
+/** 章节里的块按标签栏排：连续的段落、列表、引文框等合成一行（标签格留空），图表各自成行。 */
+function renderRailBlocks(blocks: FullTextBlock[], ctx: RenderContext, tone: Tone): ReactNode[] {
+  const out: ReactNode[] = [];
+  let flow: ReactNode[] = [];
+  const flush = () => {
+    if (flow.length > 0) {
+      out.push(<RailRow key={nextKey(ctx)}>{flow}</RailRow>);
+      flow = [];
+    }
+  };
+  for (const block of blocks) {
+    if (ownsRail(block)) {
+      flush();
+      out.push(renderBlock(block, ctx, tone));
+    } else {
+      flow.push(renderBlock(block, ctx, tone));
+    }
+  }
+  flush();
+  return out;
 }
 
 function tableRows(rows: FullTextTableCell[][], ctx: RenderContext): TableBlockRow[] {
@@ -370,18 +431,31 @@ const TEX_SOURCE =
  * 参考文献条目（134px）与正文引用（140px）同理写 62px、68px。
  */
 
-/** 标题字级：一级 serif 24px、二级 serif 19px、三级及以下 sans 15px 600（简报 §3.4）。 */
+/** 标题字级（spec §5.6）：一级 serif 30px、二级 serif 24px、三级及以下 sans 15px 600。 */
 const HEADING_CLASS = [
-  "mt-12 mb-4 font-serif text-2xl leading-tight font-medium tracking-tight text-fg-1",
-  "mt-8 mb-3 font-serif text-xl leading-snug font-medium text-fg-1",
-  "mt-6 mb-2 font-sans text-md font-semibold text-fg-1",
+  "m-0 font-serif text-3xl leading-[1.12] font-medium tracking-tight text-fg-1",
+  "m-0 font-serif text-2xl leading-tight font-medium tracking-tight text-fg-1",
+  "m-0 font-sans text-md font-semibold text-fg-1",
+];
+/** 有标题章节的上间距：一级 96px（正文第一个 48px）、二级 48px、三级 24px。 */
+const SECTION_CLASS = ["mt-24 first:mt-12", "mt-12", "mt-6"];
+/** 标题与内容之间：20 / 16 / 8px。 */
+const HEADING_ROW_CLASS = ["mb-5 items-baseline", "mb-4 items-baseline", "mb-2 items-baseline"];
+const NUMBER_CLASS = [
+  "font-mono text-sm font-medium tabular-nums text-clay-700",
+  "font-mono text-xs tabular-nums text-fg-3",
 ];
 
+/**
+ * 按标签栏渲染章节：一、二级章节号放标签格（无编号表时标签格留空），标题在内容格。
+ * `numbered` 为 false 时（附录）不编号。
+ */
 function renderSections(
   sections: FullTextSectionNode[],
   depth: number,
   ctx: RenderContext,
   tone: Tone,
+  numbered = true,
 ): ReactNode[] {
   return sections
     .filter((s) => !isSupplementarySection(s))
@@ -389,21 +463,107 @@ function renderSections(
       const key = nextKey(ctx);
       const level = Math.min(depth + 1, 6);
       const Heading = `h${level}` as "h2" | "h3" | "h4" | "h5" | "h6";
+      const tier = Math.min(depth - 1, 2);
+      const heading = numbered ? ctx.numbering[s.id] : undefined;
       return (
-        <section key={key}>
+        <section key={key} className={s.title.length > 0 ? SECTION_CLASS[tier] : undefined}>
           {s.title.length > 0 && (
-            <Heading
-              id={bodyAnchor(s.id)}
-              className={`scroll-mt-[45px] text-balance ${HEADING_CLASS[Math.min(depth - 1, 2)]}`}
+            <RailRow
+              className={HEADING_ROW_CLASS[tier]}
+              label={
+                heading && <span className={NUMBER_CLASS[Math.min(tier, 1)]}>{heading.label}</span>
+              }
             >
-              {renderInlines(s.title, ctx)}
-            </Heading>
+              <Heading
+                id={bodyAnchor(s.id)}
+                className={`scroll-mt-[45px] text-balance ${HEADING_CLASS[tier]}`}
+              >
+                {renderInlines(heading?.title ?? s.title, ctx)}
+              </Heading>
+            </RailRow>
           )}
-          {renderBlocks(s.blocks, ctx, tone)}
-          {renderSections(s.sections, depth + 1, ctx, tone)}
+          {renderRailBlocks(s.blocks, ctx, tone)}
+          {renderSections(s.sections, depth + 1, ctx, tone, numbered)}
         </section>
       );
     });
+}
+
+/** 声明区里一节的内容（不挂标签栏）：块照常渲染，子节标题用 sans 小标题。 */
+function renderPlainSection(section: FullTextSectionNode, ctx: RenderContext): ReactNode[] {
+  return [
+    ...renderBlocks(section.blocks, ctx, "back"),
+    ...section.sections
+      .filter((c) => !isSupplementarySection(c))
+      .map((c) => (
+        <div key={nextKey(ctx)} className="mt-3">
+          {c.title.length > 0 && (
+            <p
+              id={bodyAnchor(c.id)}
+              className="m-0 mb-1 scroll-mt-[45px] font-sans text-sm font-semibold text-fg-1"
+            >
+              {renderInlines(c.title, ctx)}
+            </p>
+          )}
+          {renderPlainSection(c, ctx)}
+        </div>
+      )),
+  ];
+}
+
+/** 文末「声明与附注」（spec §5.11）：有标题的节合成一个 dl，无标题的节接在后面。 */
+function renderDeclarations(
+  declarations: FullTextSectionNode[],
+  untitled: FullTextSectionNode[],
+  count: number,
+  ctx: RenderContext,
+): ReactNode {
+  if (declarations.length === 0 && untitled.length === 0) {
+    return null;
+  }
+  return (
+    <section
+      id="declarations"
+      aria-labelledby="declarations-title"
+      className="mt-16 scroll-mt-[45px]"
+    >
+      <RailRow
+        className="items-baseline"
+        label={<span className="font-mono text-2xs tracking-caps text-fg-3">文末</span>}
+      >
+        <h2
+          id="declarations-title"
+          className="m-0 flex items-baseline gap-3 font-serif text-2xl font-medium tracking-tight text-fg-1"
+        >
+          声明与附注
+          <span className="font-mono text-xs tracking-mono text-fg-3 tabular-nums">{count} 项</span>
+        </h2>
+      </RailRow>
+      {declarations.length > 0 && (
+        <dl className="m-0 mt-6 border-t border-border-subtle">
+          {declarations.map((s) => (
+            <div
+              key={nextKey(ctx)}
+              className="grid grid-cols-[128px_minmax(0,1fr)] gap-x-8 gap-y-1 border-b border-border-subtle py-4 @max-[580px]/main:grid-cols-1"
+            >
+              <dt
+                id={bodyAnchor(s.id)}
+                className="scroll-mt-[45px] font-sans text-sm leading-snug font-semibold text-fg-1"
+              >
+                {renderInlines(s.title, ctx)}
+              </dt>
+              <dd className="m-0 min-w-0 [&>p:last-child]:mb-0">{renderPlainSection(s, ctx)}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      {untitled.map((s) => (
+        <RailRow key={nextKey(ctx)} className="mt-4">
+          {renderPlainSection(s, ctx)}
+        </RailRow>
+      ))}
+    </section>
+  );
 }
 
 /**
@@ -423,15 +583,34 @@ export function renderFullTextBody(
     referenceIds: new Set(body.references.flatMap((r) => (r.id ? [r.id] : []))),
     citeCount: 0,
     firstCiteByRef: {},
+    citeCountByRef: {},
+    numbering: numberSections(body.sections),
     keyCount: 0,
   };
   const content = (
-    <>
-      {renderBlocks(body.blocks, ctx)}
+    <div data-ft-body>
+      {renderRailBlocks(body.blocks, ctx, "body")}
       {renderSections(body.sections, 1, ctx, "body")}
-      {renderSections(body.back, 1, ctx, "back")}
-    </>
+    </div>
   );
+  const back = splitBack(body.back);
+  const declarations = renderDeclarations(
+    back.declarations,
+    back.untitled,
+    back.declarations.length + back.appendices.length,
+    ctx,
+  );
+  const appendices =
+    back.appendices.length > 0 ? (
+      <>{renderSections(back.appendices, 1, ctx, "back", false)}</>
+    ) : null;
   const references = body.references.map((r) => renderInlines(r.content, ctx));
-  return { content, references, firstCiteByRef: ctx.firstCiteByRef };
+  return {
+    content,
+    declarations,
+    appendices,
+    references,
+    firstCiteByRef: ctx.firstCiteByRef,
+    citeCountByRef: ctx.citeCountByRef,
+  };
 }

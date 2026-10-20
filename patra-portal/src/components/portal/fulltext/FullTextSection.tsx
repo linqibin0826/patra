@@ -108,7 +108,9 @@ function ReadableFullText({
         {statsLine(fullText, body)}
       </p>
       <AttributionBar fullText={fullText} />
-      <div className="pt-2 [&>section:first-child>h2]:mt-6">{rendered.content}</div>
+      <div className="pt-2">{rendered.content}</div>
+      {rendered.declarations}
+      {rendered.appendices}
       {body.references.length > 0 && (
         <ReferenceList
           firstCiteByRef={rendered.firstCiteByRef}
