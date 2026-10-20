@@ -5,6 +5,7 @@ import { KeywordRow } from "@/components/portal/paper-detail/KeywordRow";
 import { PaperHeader } from "@/components/portal/paper-detail/PaperHeader";
 import { PaperRail } from "@/components/portal/paper-detail/PaperRail";
 import { SectionEyebrow } from "@/components/portal/SectionEyebrow";
+import { deriveFullTextState } from "@/lib/portal-api/fulltext-derive";
 import { deriveKeywordItems } from "@/lib/portal-api/publication-derive";
 import { cn } from "@/lib/utils";
 import type { PaperDetail } from "@/types/portal";
@@ -35,6 +36,8 @@ export function PublicationDetailView({
   crumbStatus,
 }: PublicationDetailViewProps) {
   const crumb = paper.pmid ? `PMID ${paper.pmid}` : `#${paper.id}`;
+  // 与全文区块同一口径：已撤稿的文献即便后端标了有全文也不展示正文、不出目录卡
+  const readable = deriveFullTextState(paper) === "full";
 
   return (
     <div className="pb-6">
@@ -70,11 +73,11 @@ export function PublicationDetailView({
         <aside
           className={cn(
             "flex flex-col gap-4",
-            paper.hasFullText ? "self-stretch" : "sticky top-[134px] max-[980px]:static",
+            readable ? "self-stretch" : "sticky top-[134px] max-[980px]:static",
           )}
         >
           <PaperRail paper={paper} />
-          {paper.hasFullText && tocCard && (
+          {readable && tocCard && (
             <div className="sticky top-[134px] max-[980px]:hidden">{tocCard}</div>
           )}
         </aside>

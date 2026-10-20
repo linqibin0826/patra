@@ -52,7 +52,7 @@ export default async function PaperDetailPage({ params }: { params: Promise<{ id
             </Suspense>
           }
           tocButton={
-            paper.hasFullText && (
+            deriveFullTextState(paper) === "full" && (
               <Suspense fallback={null}>
                 <FullTextTocButton paper={paper} />
               </Suspense>

@@ -129,4 +129,17 @@ describe("PublicationDetailView · 全文", () => {
     expect(screen.getByRole("complementary").className).toMatch(/(^|\s)sticky(\s|$)/);
     expect(screen.queryByText("TOC-CARD")).toBeNull();
   });
+
+  it("已撤稿（即便标着有全文）：侧栏整体吸顶，不放目录卡", () => {
+    render(
+      <PublicationDetailView
+        paper={paper({ hasFullText: true, retracted: true, pmcid: "PMC1" })}
+        fullText={null}
+        tocCard={<p>TOC-CARD</p>}
+        tocButton={null}
+      />,
+    );
+    expect(screen.getByRole("complementary").className).toMatch(/(^|\s)sticky(\s|$)/);
+    expect(screen.queryByText("TOC-CARD")).toBeNull();
+  });
 });

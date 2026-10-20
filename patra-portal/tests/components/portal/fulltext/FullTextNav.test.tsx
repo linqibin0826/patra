@@ -46,4 +46,12 @@ describe("FullTextTocCard / FullTextTocButton", () => {
     fetchMock.mockRejectedValue(new Error("503"));
     expect(await FullTextTocCard({ paper: readable })).toBeNull();
   });
+
+  it("已撤稿（即便标着有全文）：不出目录卡与目录按钮，也不请求全文", async () => {
+    fetchMock.mockResolvedValue(makeFullText());
+    const retracted = makePaperDetail({ hasFullText: true, retracted: true });
+    expect(await FullTextTocCard({ paper: retracted })).toBeNull();
+    expect(await FullTextTocButton({ paper: retracted })).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });
