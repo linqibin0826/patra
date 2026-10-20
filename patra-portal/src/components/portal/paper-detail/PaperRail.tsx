@@ -10,7 +10,7 @@ const CARD_LABEL =
 export function PaperRail({ paper }: { paper: PaperDetail }) {
   return (
     <>
-      <IdentifierCard paper={paper} />
+      <IdentifierCard doi={paper.doi} pmid={paper.pmid} pmcid={paper.pmcid} />
 
       <div className="rounded-xl border border-clay-200 bg-clay-50 p-5">
         <div className={CARD_LABEL}>

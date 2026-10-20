@@ -3,20 +3,15 @@
 import { useState } from "react";
 import { Pill } from "@/components/portal/Pill";
 import { RailRow } from "@/components/portal/RailRow";
-import type { PaperDetail } from "@/types/portal";
+import type { KeywordItem } from "@/lib/portal-api/publication-derive";
 
 /** 默认显示的项数，其余收在「另 N 项」后面。 */
 const SHOWN = 8;
 
-/// MeSH · 关键词（spec §5.5）：摘要后一行，主要主题词带 ★ 排在最前，再是其余主题词与关键词；
-/// 默认 8 项，「另 N 项」点开后全部显示、不再收起。两类都为空时不渲染。
-export function KeywordRow({ paper }: { paper: PaperDetail }) {
+/// MeSH · 关键词（spec §5.5）：摘要后一行，主要主题词带 ★ 排在最前（顺序由服务端 `deriveKeywordItems` 排好）；
+/// 默认 8 项，「另 N 项」点开后全部显示、不再收起。没有任何项时不渲染。
+export function KeywordRow({ items }: { items: KeywordItem[] }) {
   const [expanded, setExpanded] = useState(false);
-  const mesh = [...paper.meshHeadings].sort((a, b) => Number(b.major) - Number(a.major));
-  const items = [
-    ...mesh.map((h) => ({ key: `m-${h.descriptorUi}`, text: h.term, major: h.major })),
-    ...paper.keywords.map((k) => ({ key: `k-${k}`, text: k, major: false })),
-  ];
   if (items.length === 0) {
     return null;
   }

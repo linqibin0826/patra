@@ -3,7 +3,6 @@
 import { Check, Copy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { pmcArticleUrl } from "@/components/portal/fulltext/FullTextUnavailable";
-import type { PaperDetail } from "@/types/portal";
 
 /** 复制成功后对勾停留的时长。 */
 const COPIED_MS = 1600;
@@ -14,26 +13,26 @@ interface IdRow {
   href: string;
 }
 
-function rowsOf(paper: PaperDetail): IdRow[] {
+interface IdentifierCardProps {
+  doi: string | null;
+  pmid: string | null;
+  pmcid: string | null;
+}
+
+function rowsOf({ doi, pmid, pmcid }: IdentifierCardProps): IdRow[] {
   const rows: IdRow[] = [];
-  if (paper.doi) rows.push({ type: "DOI", value: paper.doi, href: `https://doi.org/${paper.doi}` });
-  if (paper.pmid) {
-    rows.push({
-      type: "PMID",
-      value: paper.pmid,
-      href: `https://pubmed.ncbi.nlm.nih.gov/${paper.pmid}/`,
-    });
-  }
-  if (paper.pmcid) {
-    rows.push({ type: "PMCID", value: paper.pmcid, href: pmcArticleUrl(paper.pmcid) });
-  }
+  if (doi) rows.push({ type: "DOI", value: doi, href: `https://doi.org/${doi}` });
+  if (pmid)
+    rows.push({ type: "PMID", value: pmid, href: `https://pubmed.ncbi.nlm.nih.gov/${pmid}/` });
+  if (pmcid) rows.push({ type: "PMCID", value: pmcid, href: pmcArticleUrl(pmcid) });
   return rows;
 }
 
 /// 侧栏标识卡（spec §5.15）：DOI / PMID / PMCID 各一行，值链到 doi.org / PubMed / PMC，右侧 44×44 复制按钮；
 /// 复制成功后图标短暂换成对勾，并给读屏一句「已复制」。三个值都为空时不渲染。
-export function IdentifierCard({ paper }: { paper: PaperDetail }) {
-  const rows = rowsOf(paper);
+/// 只接收三个标识（客户端组件，不把整份详情放进 RSC payload）。
+export function IdentifierCard(props: IdentifierCardProps) {
+  const rows = rowsOf(props);
   const [copied, setCopied] = useState<IdRow["type"] | null>(null);
 
   useEffect(() => {

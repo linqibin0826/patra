@@ -5,6 +5,7 @@ import { KeywordRow } from "@/components/portal/paper-detail/KeywordRow";
 import { PaperHeader } from "@/components/portal/paper-detail/PaperHeader";
 import { PaperRail } from "@/components/portal/paper-detail/PaperRail";
 import { SectionEyebrow } from "@/components/portal/SectionEyebrow";
+import { deriveKeywordItems } from "@/lib/portal-api/publication-derive";
 import { cn } from "@/lib/utils";
 import type { PaperDetail } from "@/types/portal";
 
@@ -60,7 +61,7 @@ export function PublicationDetailView({
             <AbstractBlock paper={paper} />
           </section>
 
-          <KeywordRow paper={paper} />
+          <KeywordRow items={deriveKeywordItems(paper)} />
 
           {fullText}
         </div>
