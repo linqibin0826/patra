@@ -66,7 +66,7 @@ describe("PublicationDetailView", () => {
     const nav = screen.getByRole("navigation", { name: "面包屑" });
     expect(nav).toHaveTextContent("9");
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Semaglutide RCT");
-    expect(screen.getByRole("heading", { name: /摘要 · ABSTRACT/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /摘要 · Abstract/i })).toBeInTheDocument();
     expect(screen.getByText("bg")).toBeInTheDocument();
     expect(screen.queryByText("关键标识")).toBeNull();
     expect(screen.queryByText(/深度数据/)).toBeNull();

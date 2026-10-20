@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 import { DetailCrumbs } from "@/components/portal/DetailCrumbs";
 import { AbstractBlock } from "@/components/portal/paper-detail/AbstractBlock";
-import { DetailSectionTitle } from "@/components/portal/paper-detail/DetailSectionTitle";
 import { KeywordRow } from "@/components/portal/paper-detail/KeywordRow";
 import { PaperHeader } from "@/components/portal/paper-detail/PaperHeader";
 import { PaperRail } from "@/components/portal/paper-detail/PaperRail";
+import { SectionEyebrow } from "@/components/portal/SectionEyebrow";
 import { cn } from "@/lib/utils";
 import type { PaperDetail } from "@/types/portal";
 
@@ -53,7 +53,9 @@ export function PublicationDetailView({
       <div className="mx-auto grid max-w-page grid-cols-[minmax(0,1fr)_340px] items-start gap-14 px-gutter pt-16 max-[1100px]:gap-10 max-[980px]:grid-cols-1 max-[980px]:gap-8 max-[980px]:pt-10">
         <div className="@container/main flex min-w-0 flex-col gap-12 max-md:gap-10">
           <section aria-labelledby="abstract-title" className="flex flex-col gap-7">
-            <DetailSectionTitle id="abstract-title" zh="摘要" en="ABSTRACT" />
+            <SectionEyebrow as="h2" id="abstract-title" className="mb-0">
+              摘要 · Abstract
+            </SectionEyebrow>
             <AbstractBlock paper={paper} />
           </section>
 
