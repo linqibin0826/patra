@@ -1,20 +1,18 @@
 "use client";
 
 import { Bookmark } from "lucide-react";
-import { btnBlock, btnSecondary } from "@/lib/portal-ui";
+import { btnSecondary } from "@/lib/portal-ui";
 import { cn } from "@/lib/utils";
 import { useBookmarkStore } from "@/store/bookmarks";
 
 interface BookmarkButtonProps {
   paperId: string;
-  /** 撑满容器宽度（详情页侧栏） */
-  block?: boolean;
   /** 仅图标的圆形小按钮（首页文献条目） */
   compact?: boolean;
 }
 
 /// 收藏按钮——本版为 mock：无用户系统、无后端，状态存 Zustand（按 paperId 共享，同页多实例同步）。
-export function BookmarkButton({ paperId, block = false, compact = false }: BookmarkButtonProps) {
+export function BookmarkButton({ paperId, compact = false }: BookmarkButtonProps) {
   const bookmarked = useBookmarkStore((s) => s.ids.has(paperId));
   const toggle = useBookmarkStore((s) => s.toggle);
 
@@ -46,7 +44,7 @@ export function BookmarkButton({ paperId, block = false, compact = false }: Book
       type="button"
       aria-pressed={bookmarked}
       onClick={() => toggle(paperId)}
-      className={cn(btnSecondary, block && btnBlock)}
+      className={btnSecondary}
     >
       <Bookmark
         size={14}

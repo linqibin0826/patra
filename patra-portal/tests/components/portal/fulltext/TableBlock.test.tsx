@@ -92,3 +92,62 @@ describe("TableBlock", () => {
     expect(screen.getAllByRole("link", { name: "12" })).toHaveLength(1);
   });
 });
+
+describe("TableBlock · 三线表（PAP-89）", () => {
+  function renderNumeric() {
+    return render(
+      <TableBlock
+        anchorId="ft-t10"
+        label="Table 10"
+        title="Comparison with others"
+        head={[[cell("Study", { header: true }), cell("Accuracy", { header: true })]]}
+        body={[
+          [cell("Tsai et al."), cell("91%")],
+          [cell("Nopour (2024)"), cell("93.43%")],
+        ]}
+        numeric={[false, true]}
+        footnotes={null}
+      />,
+    );
+  }
+
+  it("数字列的列标题与单元格都带 data-numeric，文字列不带", () => {
+    renderNumeric();
+    expect(screen.getByRole("columnheader", { name: "Accuracy" })).toHaveAttribute("data-numeric");
+    expect(screen.getByRole("cell", { name: "91%" })).toHaveAttribute("data-numeric");
+    expect(screen.getByRole("columnheader", { name: "Study" })).not.toHaveAttribute("data-numeric");
+  });
+
+  it("表题挂在标签栏：标签格放原文标签，表题不加粗", () => {
+    renderNumeric();
+    const label = screen.getByText("Table 10");
+    expect(label.closest(".grid")?.firstElementChild).toContainElement(label);
+    expect(screen.getByText("Comparison with others").className).not.toContain("font-medium");
+  });
+
+  it("表格外层不再有圆角边框盒", () => {
+    renderNumeric();
+    const scroller = screen.getByRole("table").parentElement?.parentElement as HTMLElement;
+    expect(scroller.className).not.toContain("rounded-lg");
+    expect(scroller.className).not.toContain("border-border-default");
+  });
+
+  it("跨行单元格之后的行，数字对齐落在正确的列上", () => {
+    render(
+      <TableBlock
+        anchorId="ft-t3"
+        label="Table 3"
+        title="Grouped"
+        head={[]}
+        body={[
+          [cell("Group", { rowspan: 2 }), cell("A"), cell("12")],
+          [cell("B"), cell("56")],
+        ]}
+        numeric={[false, false, true]}
+        footnotes={null}
+      />,
+    );
+    expect(screen.getByRole("cell", { name: "56" })).toHaveAttribute("data-numeric");
+    expect(screen.getByRole("cell", { name: "B" })).not.toHaveAttribute("data-numeric");
+  });
+});

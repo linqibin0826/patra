@@ -15,6 +15,7 @@ function renderFigure(overrides: Partial<Parameters<typeof FigureBlock>[0]> = {}
       src="/api/papers/42/figures/g001.webp"
       width={1600}
       height={2159}
+      layout="portrait"
       {...overrides}
     />,
   );
@@ -66,5 +67,72 @@ describe("FigureBlock", () => {
     expect(screen.queryByRole("img")).toBeNull();
     expect(screen.queryByRole("button")).toBeNull();
     expect(screen.getByText("Figure 1")).toBeInTheDocument();
+  });
+});
+
+describe("FigureBlock · 宽度分类（PAP-89）", () => {
+  const frame = () => screen.getByRole("button", { name: /放大查看 Figure 1/ });
+
+  it("text：图框最宽 612px，与正文同宽", () => {
+    renderFigure({ layout: "text", width: 733, height: 558 });
+    expect(frame().closest("[data-layout]")).toHaveAttribute("data-layout", "text");
+    expect(frame().closest("[data-layout]")?.className).toContain("max-w-[612px]");
+  });
+
+  it("wide：图框横跨标签栏到正文右缘，最宽 772px", () => {
+    renderFigure({ layout: "wide", width: 750, height: 420 });
+    expect(frame().closest("[data-layout]")?.className).toContain("max-w-[772px]");
+  });
+
+  it("portrait：内容格内居中，图片最高 640px", () => {
+    renderFigure({ layout: "portrait" });
+    expect(screen.getByRole("img", { name: "Trial flow diagram" }).className).toContain(
+      "max-h-[640px]",
+    );
+  });
+
+  it("图片带原图宽高属性且 h-auto，加载前按比例占位、不跳；不超过原图宽", () => {
+    renderFigure({ layout: "wide-zoom", width: 750, height: 280 });
+    const img = screen.getByRole("img", { name: "Trial flow diagram" });
+    expect(img).toHaveAttribute("width", "750");
+    expect(img).toHaveAttribute("height", "280");
+    expect(img.className).toContain("h-auto");
+    expect(img.className).toContain("max-w-full");
+    // 不能写 w-auto：它会盖掉 width 属性给的宽度提示，图片加载前固有宽度为 0，按比例算出的占位高度也是 0，
+    // 长页面平滑滚动途中图片陆续加载、把目标往下推，目录跳转会停在半路（e2e 实测）
+    expect(img.className).not.toMatch(/(^|\s)w-auto(\s|$)/);
+  });
+
+  it("标签栏放原文标签（去掉末尾句点由调用方处理）；图题不加粗", () => {
+    renderFigure({ layout: "text", label: "Figure 2" });
+    const label = screen.getByText("Figure 2");
+    expect(label.closest(".grid")?.firstElementChild).toContainElement(label);
+    expect(screen.getAllByText("Trial flow diagram").at(-1)?.className).not.toContain(
+      "font-medium",
+    );
+  });
+
+  it("wide-zoom 常显「放大查看」，点它打开放大层；text 时它只在悬停或聚焦图框时出现", async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderFigure({ layout: "wide-zoom", width: 750, height: 280 });
+    const zoom = screen.getByRole("button", { name: "放大查看" });
+    expect(zoom.parentElement?.className).not.toContain("opacity-0");
+    await user.click(zoom);
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    unmount();
+
+    renderFigure({ layout: "text", width: 733, height: 558 });
+    expect(screen.getByRole("button", { name: "放大查看" }).parentElement?.className).toContain(
+      "opacity-0",
+    );
+  });
+
+  it("「原图 ↗」在新标签打开图片地址", () => {
+    renderFigure({ layout: "text" });
+    expect(screen.getByRole("link", { name: "原图 ↗" })).toHaveAttribute(
+      "href",
+      "/api/papers/42/figures/g001.webp",
+    );
+    expect(screen.getByRole("link", { name: "原图 ↗" })).toHaveAttribute("target", "_blank");
   });
 });

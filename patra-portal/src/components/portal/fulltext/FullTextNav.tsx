@@ -1,12 +1,19 @@
 import { FullTextToc, type FullTextTocProps } from "@/components/portal/fulltext/FullTextToc";
 import { FullTextTocSheet } from "@/components/portal/fulltext/FullTextTocSheet";
 import { fetchPublicationFullText } from "@/lib/portal-api/fulltext";
-import { deriveToc, formatFetchedDate, licenseLabel } from "@/lib/portal-api/fulltext-derive";
+import {
+  deriveFullTextState,
+  deriveToc,
+  deriveTocTail,
+  formatFetchedDate,
+  licenseLabel,
+} from "@/lib/portal-api/fulltext-derive";
 import type { PaperDetail } from "@/types/portal";
 
 /** 目录数据：只在有可读正文且有带标题的一级章节时给出；全文取不到时安静地没有目录（区块里会说明）。 */
 async function loadToc(paper: PaperDetail): Promise<FullTextTocProps | null> {
-  if (!paper.hasFullText) {
+  // 与全文区块同一口径：已撤稿的文献即便后端标了有全文也不展示正文，目录项会是死链
+  if (deriveFullTextState(paper) !== "full") {
     return null;
   }
   const fullText = await fetchPublicationFullText(paper.id).catch(() => null);
@@ -18,9 +25,11 @@ async function loadToc(paper: PaperDetail): Promise<FullTextTocProps | null> {
   if (entries.length === 0) {
     return null;
   }
+  const tail = deriveTocTail(body);
   return {
     entries,
-    hasReferences: body.references.length > 0,
+    declarationCount: tail.declarations,
+    referenceCount: tail.references,
     readMin: fullText.estimatedReadMin,
     paperId: paper.id,
     hasPdf: paper.hasPdf,

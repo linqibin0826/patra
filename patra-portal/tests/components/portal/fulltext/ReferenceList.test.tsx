@@ -12,6 +12,7 @@ function items(n: number, overrides: Partial<ReferenceListItem> = {}): Reference
     content: `Author ${i + 1}. Title ${i + 1}.`,
     doi: null,
     pmid: null,
+    citeCount: 1,
     ...overrides,
   }));
 }
@@ -46,7 +47,7 @@ describe("ReferenceList", () => {
     renderList(items(8));
     expect(screen.getByRole("heading", { level: 2, name: /参考文献\s*8/ })).toBeInTheDocument();
     expect(visibleItems()).toHaveLength(8);
-    expect(screen.queryByRole("button", { name: /展开全部/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /展开其余/ })).toBeNull();
   });
 
   it("超过 8 条默认只显示前 5 条；展开全部后不再收起", async () => {
@@ -54,9 +55,9 @@ describe("ReferenceList", () => {
     renderList(items(40));
     expect(visibleItems()).toHaveLength(5);
 
-    await user.click(screen.getByRole("button", { name: "展开全部 40 条" }));
+    await user.click(screen.getByRole("button", { name: "展开其余 35 条" }));
     expect(visibleItems()).toHaveLength(40);
-    expect(screen.queryByRole("button", { name: /展开全部|收起/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /展开其余|收起/ })).toBeNull();
   });
 
   it("有 DOI / PMID 时给外链，没有就不显示外链行", () => {
@@ -73,7 +74,7 @@ describe("ReferenceList", () => {
       "href",
       "https://pubmed.ncbi.nlm.nih.gov/123/",
     );
-    expect(within(second as HTMLElement).queryByRole("link")).toBeNull();
+    expect(within(second as HTMLElement).queryByRole("link", { name: /DOI|PubMed/ })).toBeNull();
   });
 
   it("点正文里的引用：收起的列表自动展开，目标条目亮起，地址栏更新为该条锚点", async () => {
@@ -90,10 +91,13 @@ describe("ReferenceList", () => {
 
   it("「回到正文」回到刚才点的那个引用；没点过时回到第一次被引用的位置；没被引用过不显示", async () => {
     const user = userEvent.setup();
-    renderList(items(8), { r7: "cite-1" });
+    renderList(
+      items(8).map((it) => (it.refId === "r7" ? it : { ...it, citeCount: 0 })),
+      { r7: "cite-1" },
+    );
     const backFrom = (n: number) =>
       within(document.getElementById(`ref-r${n}`) as HTMLElement).queryByRole("link", {
-        name: /回到正文/,
+        name: /↩ 正文/,
       });
 
     expect(backFrom(7)).toHaveAttribute("href", "#cite-1");
@@ -116,5 +120,62 @@ describe("ReferenceList", () => {
 
     await user.click(screen.getByRole("link", { name: "7" }));
     expect(document.getElementById("ref-r7")).toBeVisible();
+  });
+});
+
+describe("ReferenceList · 标签栏排版（PAP-89）", () => {
+  it("序号补成两位放在标签格；原文标签不是数字时照原文", () => {
+    renderList([...items(1), ...items(1, { anchorId: "ref-ra", refId: "ra", label: "a" })]);
+    const [first, second] = visibleItems();
+    expect((first as HTMLElement).firstElementChild).toHaveTextContent(/^01$/);
+    expect((second as HTMLElement).firstElementChild).toHaveTextContent(/^a$/);
+  });
+
+  it("「↩ 正文 N 处」：被引 2 次写次数，1 次只写「↩ 正文」，0 次不显示", () => {
+    renderList(
+      [
+        ...items(1, { citeCount: 2 }),
+        ...items(1, { anchorId: "ref-r2", refId: "r2", label: "2", citeCount: 1 }),
+        ...items(1, { anchorId: "ref-r3", refId: "r3", label: "3", citeCount: 0 }),
+      ],
+      { r1: "cite-1", r2: "cite-1", r3: "cite-1" },
+    );
+    const [a, b, c] = visibleItems() as HTMLElement[];
+    expect(within(a as HTMLElement).getByRole("link", { name: "↩ 正文 2 处" })).toBeInTheDocument();
+    expect(within(b as HTMLElement).getByRole("link", { name: "↩ 正文" })).toBeInTheDocument();
+    expect(within(c as HTMLElement).queryByRole("link", { name: /↩/ })).toBeNull();
+  });
+
+  it("PubMed 链接写出 PMID", () => {
+    renderList(items(1, { pmid: "34815628" }));
+    expect(screen.getByRole("link", { name: "PubMed 34815628 ↗" })).toBeInTheDocument();
+  });
+
+  it("被 preventDefault 的点击不展开、不高亮（引用卡片接管了这次点击）", () => {
+    renderList(items(40), { r7: "cite-1" });
+    const link = screen.getByRole("link", { name: "7" });
+    const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+    event.preventDefault();
+    link.dispatchEvent(event);
+    expect(document.getElementById("ref-r7")).not.toBeVisible();
+  });
+
+  it("带 data-cite-from 的链接被点后，「↩」回到它指明的引用", async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <a id="cite-7" href="#ref-r2" data-cite-ref="r2">
+          seven
+        </a>
+        <a href="#ref-r2" data-cite-ref="r2" data-cite-from="cite-7">
+          跳到文末
+        </a>
+        <ReferenceList items={items(3)} firstCiteByRef={{ r2: "cite-1" }} />
+      </>,
+    );
+    await user.click(screen.getByRole("link", { name: "跳到文末" }));
+    expect(
+      within(document.getElementById("ref-r2") as HTMLElement).getByRole("link", { name: /↩/ }),
+    ).toHaveAttribute("href", "#cite-7");
   });
 });

@@ -1,25 +1,41 @@
+import { RailRow } from "@/components/portal/RailRow";
 import { SectionEyebrow } from "@/components/portal/SectionEyebrow";
 import { cn } from "@/lib/utils";
 
-function Bar({ className }: { className?: string }) {
-  return <div className={cn("shimmer rounded-sm bg-paper-200", className)} />;
+function Bar({
+  className,
+  "aria-hidden": ariaHidden,
+}: {
+  className?: string;
+  "aria-hidden"?: boolean;
+}) {
+  return (
+    <div aria-hidden={ariaHidden} className={cn("shimmer rounded-sm bg-paper-200", className)} />
+  );
 }
 
-/** 全文加载中（简报 §3.6）：区块头（统计行占位）+ 三组「标题条 + 4 行段落条」。 */
+/** 全文加载中（简报 §3.6，PAP-89 起跟随标签栏版式）：区块头 + 三组「章节号 + 标题条 + 4 行段落条」。 */
 export function FullTextSkeleton() {
   return (
     <article id="fulltext" aria-label="全文" aria-busy="true" className="scroll-mt-[45px]">
-      <SectionEyebrow className="mb-5">全文</SectionEyebrow>
-      <div aria-hidden className="flex flex-col">
-        <Bar className="mb-4 h-3 w-72 max-w-full" />
-        <Bar className="h-11" />
+      <div className="mb-12 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 border-b border-ink-900 pb-4">
+        <SectionEyebrow className="mb-0">全文 · Full text</SectionEyebrow>
+        <Bar aria-hidden className="h-3 w-72 max-w-full" />
+      </div>
+      <div aria-hidden className="flex flex-col gap-12">
         {[0, 1, 2].map((group) => (
-          <div key={group} className="mt-10 flex max-w-[36em] flex-col gap-3">
-            <Bar className="mb-2 h-6 w-1/3" />
-            <Bar className="h-4" />
-            <Bar className="h-4" />
-            <Bar className="h-4" />
-            <Bar className="h-4 w-2/3" />
+          <div key={group} className="flex flex-col gap-5">
+            <RailRow label={<Bar className="h-4 w-6" />}>
+              <Bar className="h-7 w-1/3" />
+            </RailRow>
+            <RailRow>
+              <div className="flex max-w-[36em] flex-col gap-3">
+                <Bar className="h-4" />
+                <Bar className="h-4" />
+                <Bar className="h-4" />
+                <Bar className="h-4 w-2/3" />
+              </div>
+            </RailRow>
           </div>
         ))}
       </div>

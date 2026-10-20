@@ -5,6 +5,7 @@ import type {
   FullTextInline,
   FullTextLicense,
   FullTextSectionNode,
+  FullTextTableCell,
 } from "@/types/fulltext";
 import type { PaperDetail } from "@/types/portal";
 
@@ -119,6 +120,8 @@ export function isSupplementarySection(section: FullTextSectionNode): boolean {
 export interface TocEntry {
   /** 目标元素的 DOM id */
   id: string;
+  /** 标签栏与目录里的序号（`01`、`4.5`） */
+  number: string | null;
   label: string;
   children: TocEntry[];
 }
@@ -127,12 +130,71 @@ function titledSections(sections: FullTextSectionNode[]): FullTextSectionNode[] 
   return sections.filter((s) => s.title.length > 0 && !isSupplementarySection(s));
 }
 
-function tocEntry(section: FullTextSectionNode, children: TocEntry[]): TocEntry {
-  return { id: bodyAnchor(section.id), label: inlineText(section.title).trim(), children };
+/** 章节在标签栏里的序号，以及去掉原文序号后的标题。 */
+export interface SectionHeading {
+  label: string;
+  title: FullTextInline[];
+}
+
+const NUMBER_PREFIX = /^(\d+(?:\.\d+)*)\.?\s+/;
+
+/** 标题开头的原文序号（`1.`、`2.1`、`2.1.`），只看第一个文本节点。 */
+function leadingNumber(title: FullTextInline[]): { number: string; rest: FullTextInline[] } | null {
+  const [first, ...others] = title;
+  if (first?.kind !== "text") return null;
+  const match = NUMBER_PREFIX.exec(first.text);
+  if (!match) return null;
+  const remaining = first.text.slice(match[0].length);
+  return {
+    number: match[1] ?? "",
+    rest: remaining ? [{ kind: "text", text: remaining }, ...others] : others,
+  };
+}
+
+/** 一级序号补成两位（`1` → `01`）。 */
+function padTop(number: string): string {
+  return number.includes(".") ? number : number.padStart(2, "0");
 }
 
 /**
- * 目录：正文一级章节（带有标题的二级章节作为子项）+ 文末附加里有标题的章节。
+ * 正文一、二级章节的序号（spec §5.6）：这些章节全都以序号开头时用原文序号并从标题里拿掉，
+ * 否则全部按位置编号、标题不动。无标题章节与补充材料不编号、不占序号；三级及以下不编。
+ */
+export function numberSections(sections: FullTextSectionNode[]): Record<string, SectionHeading> {
+  const top = titledSections(sections);
+  const levels = top.flatMap((s) => [s, ...titledSections(s.sections)]);
+  const useOriginal = levels.length > 0 && levels.every((s) => leadingNumber(s.title) !== null);
+  const heading = (s: FullTextSectionNode, positional: string): SectionHeading => {
+    const own = useOriginal ? leadingNumber(s.title) : null;
+    return own ? { label: own.number, title: own.rest } : { label: positional, title: s.title };
+  };
+  const out: Record<string, SectionHeading> = {};
+  top.forEach((s, i) => {
+    const h = heading(s, String(i + 1));
+    out[s.id] = { ...h, label: padTop(h.label) };
+    titledSections(s.sections).forEach((c, j) => {
+      out[c.id] = heading(c, `${i + 1}.${j + 1}`);
+    });
+  });
+  return out;
+}
+
+function tocEntry(
+  section: FullTextSectionNode,
+  numbering: Record<string, SectionHeading>,
+  children: TocEntry[],
+): TocEntry {
+  const heading = numbering[section.id];
+  return {
+    id: bodyAnchor(section.id),
+    number: heading?.label ?? null,
+    label: inlineText(heading?.title ?? section.title).trim(),
+    children,
+  };
+}
+
+/**
+ * 目录：正文一级章节（带有标题的二级章节作为子项），带序号；文末附加不进目录，由目录尾项「声明与附注」代表。
  * 正文没有带标题的一级章节（述评类不分节）时返回空，页面不显示目录卡与目录按钮。
  */
 export function deriveToc(body: FullTextBody): TocEntry[] {
@@ -140,15 +202,64 @@ export function deriveToc(body: FullTextBody): TocEntry[] {
   if (top.length === 0) {
     return [];
   }
-  return [
-    ...top.map((s) =>
-      tocEntry(
-        s,
-        titledSections(s.sections).map((c) => tocEntry(c, [])),
-      ),
+  const numbering = numberSections(body.sections);
+  return top.map((s) =>
+    tocEntry(
+      s,
+      numbering,
+      titledSections(s.sections).map((c) => tocEntry(c, numbering, [])),
     ),
-    ...titledSections(body.back).map((s) => tocEntry(s, [])),
-  ];
+  );
+}
+
+/**
+ * 目录尾项的计数：「声明与附注 N 项」（有标题的文末节，含附录）与参考文献条数。
+ * 没有可进声明区的节（只有附录或只有无标题节）时页面上没有 `#declarations`，计为 0、不列。
+ */
+export function deriveTocTail(body: FullTextBody): { declarations: number; references: number } {
+  const back = splitBack(body.back);
+  return {
+    declarations:
+      back.declarations.length > 0 ? back.declarations.length + back.appendices.length : 0,
+    references: body.references.length,
+  };
+}
+
+const CITATION_GLUE = /^[\s,;–—−-]*$/;
+
+/** 是否是只装着参考文献引用的上标（`<sup>8</sup>`、`<sup>3–5, 9</sup>`）：它前面的空白要去掉。 */
+export function isCitationSup(node: FullTextInline): boolean {
+  if (node.kind !== "style" || node.style !== "sup") return false;
+  let cites = 0;
+  for (const child of node.children) {
+    if (child.kind === "xref" && child.refType === "bibr") cites += 1;
+    else if (!(child.kind === "text" && CITATION_GLUE.test(child.text))) return false;
+  }
+  return cites > 0;
+}
+
+function hasFigureOrTable(section: FullTextSectionNode): boolean {
+  return (
+    countBlocks(section.blocks, "figure") +
+      countBlocks(section.blocks, "table") +
+      countInSections(section.sections, "figure") +
+      countInSections(section.sections, "table") >
+    0
+  );
+}
+
+/** 文末附加的分组（spec §5.11）：有标题的进「声明与附注」，无标题的接在后面，含图表的按附录单独渲染。 */
+export function splitBack(back: FullTextSectionNode[]): {
+  declarations: FullTextSectionNode[];
+  untitled: FullTextSectionNode[];
+  appendices: FullTextSectionNode[];
+} {
+  const kept = back.filter((s) => !isSupplementarySection(s));
+  return {
+    declarations: kept.filter((s) => s.title.length > 0 && !hasFigureOrTable(s)),
+    untitled: kept.filter((s) => s.title.length === 0),
+    appendices: kept.filter((s) => s.title.length > 0 && hasFigureOrTable(s)),
+  };
 }
 
 export interface FullTextStats {
@@ -187,4 +298,78 @@ export function deriveFullTextStats(body: FullTextBody): FullTextStats {
     countInSections(body.sections, kind) +
     countInSections(body.back, kind);
   return { figures: count("figure"), tables: count("table"), references: body.references.length };
+}
+
+/** 插图的宽度分类（spec §5.8）：竖图 / 正文宽 / 加宽 / 加宽并常显「放大查看」。 */
+export type FigureLayout = "text" | "wide" | "wide-zoom" | "portrait";
+
+/** 按宽高比选插图宽度：< 0.8 竖图，[0.8, 1.5) 正文宽，[1.5, 2.4] 加宽，> 2.4 超宽；宽高缺失按正文宽。 */
+export function figureLayout(width: number | null, height: number | null): FigureLayout {
+  if (!width || !height) {
+    return "text";
+  }
+  const ratio = width / height;
+  if (ratio < 0.8) return "portrait";
+  if (ratio < 1.5) return "text";
+  if (ratio <= 2.4) return "wide";
+  return "wide-zoom";
+}
+
+/** 图、表标签放进标签栏时去掉原文末尾的句点（`Figure 1.` → `Figure 1`），其余照原文。 */
+export function figureLabel(label: string | null): string | null {
+  return label === null ? null : label.replace(/\.$/, "");
+}
+
+/** 数字格：数、百分数、`—`、均值 ± 标准差、带括号区间的比值。 */
+const NUMERIC_CELL = /^[−–-]?\d[\d.,]*\s?%?(\s?±\s?\d[\d.,]*%?)?(\s?\(.*\))?$|^[—–-]$/;
+
+/**
+ * 每个单元格的起始列位：同一行按 colspan 累加，并跳过上方行的 rowspan 还占着的列
+ * （浏览器的表格布局就是这样排的）。`numericColumns` 与 `TableBlock` 共用。
+ */
+export function resolveColumns(rows: { colspan: number; rowspan: number }[][]): number[][] {
+  let pending: number[] = [];
+  return rows.map((row) => {
+    const occupied = pending.map((n) => n > 0);
+    const next = pending.map((n) => Math.max(n - 1, 0));
+    let col = 0;
+    const starts = row.map((cell) => {
+      while (occupied[col]) col += 1;
+      const start = col;
+      for (let c = start; c < start + cell.colspan; c += 1) {
+        if (cell.rowspan > 1) next[c] = Math.max(next[c] ?? 0, cell.rowspan - 1);
+      }
+      col += cell.colspan;
+      return start;
+    });
+    pending = next;
+    return starts;
+  });
+}
+
+/**
+ * 数据表哪些列右对齐：一列里（不含表头）超过一半的单元格是数字格就算数字列。
+ * 跨列的单元格不参与判定；列位按 `resolveColumns`（含 rowspan 占位）计算。
+ */
+export function numericColumns(
+  head: FullTextTableCell[][],
+  body: FullTextTableCell[][],
+): boolean[] {
+  const columns = resolveColumns(body);
+  const width = Math.max(
+    0,
+    ...head.map((row) => row.reduce((n, c) => n + c.colspan, 0)),
+    ...columns.flatMap((starts, r) => starts.map((s, i) => s + (body[r]?.[i]?.colspan ?? 1))),
+  );
+  const numeric = Array.from({ length: width }, () => 0);
+  const total = Array.from({ length: width }, () => 0);
+  body.forEach((row, r) => {
+    row.forEach((c, i) => {
+      if (c.colspan !== 1) return;
+      const col = columns[r]?.[i] ?? 0;
+      total[col] = (total[col] ?? 0) + 1;
+      if (NUMERIC_CELL.test(inlineText(c.content).trim())) numeric[col] = (numeric[col] ?? 0) + 1;
+    });
+  });
+  return total.map((t, i) => t > 0 && (numeric[i] ?? 0) * 2 > t);
 }

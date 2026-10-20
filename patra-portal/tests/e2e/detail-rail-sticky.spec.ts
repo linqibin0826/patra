@@ -1,6 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 
-/// 详情页右侧栏的吸顶位置必须等于它的自然位置：否则开始滚动时侧栏会先随页面上移一段再吸住，
+/// 期刊详情页右侧栏的吸顶位置必须等于它的自然位置：否则开始滚动时侧栏会先随页面上移一段再吸住，
 /// 滚回顶部又落下去，而导航与面包屑不动，看起来就是右边在晃。
 async function expectRailStaysPut(page: Page) {
   const rail = page.locator("aside.sticky").filter({ visible: true });
@@ -17,25 +17,34 @@ async function expectRailStaysPut(page: Page) {
   }
 }
 
-test("文献详情：滚动时右侧栏不移动", async ({ page }) => {
+/// PAP-89 起文献详情的侧栏在整宽页头下方：先随页面上移，上缘到 134px（导航 + 面包屑 + 留白）后吸住不动。
+test("文献详情：侧栏随页头滚走后吸在 134px，不再移动", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
   const links = page.getByRole("link", { name: "详情" });
   // explore-feed 由 RSC 取自后端；无可达后端时渲染不出文献卡，跳过（同 paper-detail.spec）
   test.skip((await links.count()) === 0, "explore-feed 无文献卡（后端不可达）");
   await links.first().click();
   await expect(page).toHaveURL(/\/papers\/\d+/);
-  // catalog 不可达时详情页渲染的是全局 error 屏而非摘要区，同样跳过（同 paper-detail.spec）
   const abstractVisible = await page
     .getByRole("region", { name: "摘要" })
     .waitFor({ state: "visible", timeout: 5000 })
     .then(() => true)
     .catch(() => false);
   test.skip(!abstractVisible, "详情页无摘要区（catalog 不可达）");
-  // 有全文的文献侧栏不整体吸顶（目录卡单独吸顶，见 fulltext-reader.spec）
   const hasFullText = (await page.getByRole("link", { name: /阅读全文/ }).count()) > 0;
-  test.skip(hasFullText, "首页第一篇有全文：侧栏按设计随页面滚动");
+  test.skip(hasFullText, "首页第一篇有全文：侧栏按设计随页面滚动，目录卡单独吸顶");
 
-  await expectRailStaysPut(page);
+  const rail = page.locator("aside.sticky").filter({ visible: true });
+  await expect(rail).toHaveCount(1);
+  const topAt = async (y: number) => {
+    await page.evaluate((scrollY) => window.scrollTo({ top: scrollY, behavior: "instant" }), y);
+    return (await rail.boundingBox())?.y ?? 0;
+  };
+  const natural = await topAt(0);
+  expect(natural).toBeGreaterThan(134);
+  expect(await topAt(natural - 134 + 200)).toBe(134);
+  expect(await topAt(natural - 134 + 400)).toBe(134);
 });
 
 test("期刊详情：滚动时右侧栏不移动", async ({ page }) => {

@@ -22,7 +22,7 @@ const readable = makePaperDetail({
 });
 
 async function renderSection(paper = readable) {
-  return render(await FullTextSection({ paper }));
+  return render(await FullTextSection({ paper, record: <section id="record">RECORD</section> }));
 }
 
 afterEach(() => {
@@ -40,7 +40,7 @@ describe("FullTextSection · 有全文", () => {
     height: 10,
   };
 
-  it("全文区块：栏目小标、统计行、出处条、正文、参考文献、许可与出处", async () => {
+  it("全文区块：区块头（许可、来源、PMCID、抓取日期）、正文、参考文献、许可与出处；统计行已移到页头", async () => {
     fetchMock.mockResolvedValue(
       makeFullText({ body: makeBody({ sections: [section("s1", "Introduction", [figure])] }) }),
     );
@@ -48,9 +48,8 @@ describe("FullTextSection · 有全文", () => {
 
     const article = screen.getByRole("article", { name: "全文" });
     expect(article).toHaveAttribute("id", "fulltext");
-    expect(
-      within(article).getByText("5,701 词 · ≈ 25 分钟 · 1 图 · 2 篇参考文献"),
-    ).toBeInTheDocument();
+    expect(within(article).queryByText(/5,701 词/)).toBeNull();
+    expect(within(article).getByText(/全文 · Full text/i)).toBeInTheDocument();
     expect(within(article).getByText("CC BY 4.0")).toBeInTheDocument();
     expect(
       within(article).getByText(
@@ -91,6 +90,33 @@ describe("FullTextSection · 有全文", () => {
     fetchMock.mockResolvedValue(null);
     await renderSection();
     expect(screen.getByRole("heading", { name: "全文没能加载" })).toBeInTheDocument();
+  });
+});
+
+describe("FullTextSection · 区块顺序（PAP-89）", () => {
+  it("正文 → 声明与附注 → 参考文献 → 文献档案 → 许可与出处；挂上引用卡片", async () => {
+    fetchMock.mockResolvedValue(
+      makeFullText({
+        body: makeBody({
+          sections: [section("s1", "Introduction", [para("x")])],
+          back: [section("ack", "Acknowledgments", [para("Thanks.")])],
+        }),
+      }),
+    );
+    const { container } = await renderSection();
+    const ids = [
+      ...container.querySelectorAll(
+        "[data-ft-body], #declarations, #references, #record, #license",
+      ),
+    ].map((el) => el.id || "body");
+    expect(ids).toEqual(["body", "declarations", "references", "record", "license"]);
+  });
+
+  it("没有可读正文时：说明面板之后紧跟文献档案，没有声明区与参考文献", async () => {
+    const { container } = await renderSection(makePaperDetail());
+    expect(container.querySelector("#record")).not.toBeNull();
+    expect(container.querySelector("#declarations")).toBeNull();
+    expect(container.querySelector("#references")).toBeNull();
   });
 });
 

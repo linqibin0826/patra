@@ -1,50 +1,43 @@
-import { Fragment, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { DetailCrumbs } from "@/components/portal/DetailCrumbs";
-import { DisclosureSection } from "@/components/portal/DisclosureSection";
-import { IdentifierChip } from "@/components/portal/IdentifierChip";
-import { Pill } from "@/components/portal/Pill";
 import { AbstractBlock } from "@/components/portal/paper-detail/AbstractBlock";
-import { AuthorList } from "@/components/portal/paper-detail/AuthorList";
+import { KeywordRow } from "@/components/portal/paper-detail/KeywordRow";
 import { PaperHeader } from "@/components/portal/paper-detail/PaperHeader";
 import { PaperRail } from "@/components/portal/paper-detail/PaperRail";
 import { SectionEyebrow } from "@/components/portal/SectionEyebrow";
+import { deriveFullTextState } from "@/lib/portal-api/fulltext-derive";
+import { deriveKeywordItems } from "@/lib/portal-api/publication-derive";
 import { cn } from "@/lib/utils";
 import type { PaperDetail } from "@/types/portal";
 
-const DL = "grid grid-cols-[max-content_1fr] gap-x-8 gap-y-3 max-[540px]:grid-cols-1";
-const DT = "whitespace-nowrap font-mono text-2xs tracking-mono text-fg-3 pt-0.5";
-const DD = "m-0 font-sans text-md text-fg-1";
-const DD_MONO = "m-0 font-mono text-sm text-fg-1 tabular-nums";
-
-const DATE_LABELS: Record<string, string> = {
-  received: "投稿",
-  accepted: "接收",
-  epublished: "电子出版",
-  published: "正式出版",
-};
-
 interface PublicationDetailViewProps {
   paper: PaperDetail;
+  /** 事实条里来自全文接口的几格（页面在 Suspense 里流式给出） */
+  fullTextFacts?: ReactNode;
   /** 全文区块（页面在 Suspense 里流式给出；没有时不渲染） */
   fullText?: ReactNode;
   /** 桌面侧栏的目录卡，只在有全文时放进侧栏 */
   tocCard?: ReactNode;
   /** 面包屑右端的移动端「目录」按钮 */
   tocButton?: ReactNode;
+  /** 面包屑中段的短标题与阅读进度 */
+  crumbStatus?: ReactNode;
 }
 
-/// 文献详情：吸顶面包屑（阅读进度）+ 主栏（题录头 → 摘要 → 关键标识 → 深度数据折叠区 → 全文）+ 右侧栏。
-/// 没有全文时侧栏整体吸顶；有全文时侧栏三张卡随页面滚走，下面的目录卡单独吸顶、一直陪到页底。
+/// 文献详情（spec §4）：吸顶面包屑 → 整宽页头（标题、事实条、唯一一组操作）→ 两栏：
+/// 主栏（摘要 → MeSH · 关键词 → 全文区块（含文末的文献档案），统一挂在标签栏上）+ 右侧栏（标识卡、AI 速读、目录卡）。
+/// 没有全文时侧栏整体吸顶；有全文时侧栏卡片随页面滚走，下面的目录卡单独吸顶、一直陪到页底。
 export function PublicationDetailView({
   paper,
+  fullTextFacts,
   fullText,
   tocCard,
   tocButton,
+  crumbStatus,
 }: PublicationDetailViewProps) {
-  const mesh = paper.meshHeadings;
-  const funding = paper.funding;
-  const hasOtherIds = Boolean(paper.pmcid || paper.pii);
   const crumb = paper.pmid ? `PMID ${paper.pmid}` : `#${paper.id}`;
+  // 与全文区块同一口径：已撤稿的文献即便后端标了有全文也不展示正文、不出目录卡
+  const readable = deriveFullTextState(paper) === "full";
 
   return (
     <div className="pb-6">
@@ -54,145 +47,37 @@ export function PublicationDetailView({
           { label: "文献", href: "/papers" },
         ]}
         current={crumb}
+        status={crumbStatus}
         action={tocButton}
       />
 
-      <div className="mx-auto grid max-w-page grid-cols-[minmax(0,1fr)_340px] items-start gap-14 px-gutter pt-8 max-[1100px]:gap-10 max-[980px]:grid-cols-1 max-[980px]:gap-8 max-[980px]:pt-6">
-        <div className="flex min-w-0 flex-col gap-12 max-md:gap-10">
-          <PaperHeader paper={paper} />
+      <div className="mx-auto max-w-page px-gutter pt-14 max-[980px]:pt-8">
+        <PaperHeader paper={paper} fullTextFacts={fullTextFacts} />
+      </div>
 
-          <section aria-label="摘要">
-            <SectionEyebrow className="mb-5">摘要</SectionEyebrow>
+      <div className="mx-auto grid max-w-page grid-cols-[minmax(0,1fr)_340px] items-start gap-14 px-gutter pt-16 max-[1100px]:gap-10 max-[980px]:grid-cols-1 max-[980px]:gap-8 max-[980px]:pt-10">
+        <div className="@container/main flex min-w-0 flex-col gap-12 max-md:gap-10">
+          <section aria-labelledby="abstract-title" className="flex flex-col gap-7">
+            <SectionEyebrow as="h2" id="abstract-title" className="mb-0">
+              摘要 · Abstract
+            </SectionEyebrow>
             <AbstractBlock paper={paper} />
           </section>
 
-          <section aria-label="关键标识">
-            <SectionEyebrow className="mb-5">关键标识</SectionEyebrow>
-            <div className="flex flex-wrap gap-3">
-              <IdentifierChip
-                label="DOI"
-                value={paper.doi}
-                href={paper.doi ? `https://doi.org/${paper.doi}` : null}
-              />
-              <IdentifierChip
-                label="PMID"
-                value={paper.pmid}
-                href={paper.pmid ? `https://pubmed.ncbi.nlm.nih.gov/${paper.pmid}` : null}
-              />
-              {paper.hasFullText && paper.pmcid && (
-                <IdentifierChip
-                  label="PMCID"
-                  value={paper.pmcid}
-                  href={`https://pmc.ncbi.nlm.nih.gov/articles/${paper.pmcid}/`}
-                />
-              )}
-            </div>
-          </section>
-
-          <section aria-label="深度数据">
-            <SectionEyebrow className="mb-2">深度数据 · 按需展开</SectionEyebrow>
-            <div>
-              <DisclosureSection title="完整作者与机构" count={`${paper.authors.length} 位`}>
-                <AuthorList authors={paper.authors} />
-              </DisclosureSection>
-
-              {mesh.length > 0 && (
-                <DisclosureSection title="MeSH 主题词 / 关键词" count={`${mesh.length} 项`}>
-                  <div className="flex flex-wrap gap-2">
-                    {mesh.map((h) => (
-                      <Pill key={h.descriptorUi} tone={h.major ? "clay" : "neutral"}>
-                        {h.major && <span title="主要主题词">★</span>}
-                        {h.term}
-                      </Pill>
-                    ))}
-                  </div>
-                  {paper.keywords.length > 0 && (
-                    <div className="mt-4 flex flex-wrap gap-x-3 gap-y-1.5">
-                      {paper.keywords.map((k) => (
-                        <span key={k} className="font-mono text-xs text-fg-3">
-                          #{k}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </DisclosureSection>
-              )}
-
-              {funding.length > 0 && (
-                <DisclosureSection title="资助信息" count={`${funding.length} 项`}>
-                  <dl className={DL}>
-                    {funding.map((f, i) => (
-                      // biome-ignore lint/suspicious/noArrayIndexKey: 静态资助列表（无状态、不重排），funder+grantId 可能完全重复需 index 保唯一
-                      <Fragment key={`${f.funder ?? ""}-${f.grantId ?? ""}-${i}`}>
-                        <dt className={DT}>资助方</dt>
-                        <dd className={DD}>
-                          {f.funder ?? "—"}
-                          {f.grantId && (
-                            <span className="ml-2 font-mono text-sm text-fg-3">· {f.grantId}</span>
-                          )}
-                        </dd>
-                      </Fragment>
-                    ))}
-                  </dl>
-                </DisclosureSection>
-              )}
-
-              {hasOtherIds && (
-                <DisclosureSection title="其他标识符">
-                  <div className="flex flex-wrap gap-3">
-                    {paper.pmcid && (
-                      <IdentifierChip
-                        label="PMCID"
-                        value={paper.pmcid}
-                        href={`https://www.ncbi.nlm.nih.gov/pmc/articles/${paper.pmcid}/`}
-                      />
-                    )}
-                    {paper.pii && <IdentifierChip label="PII" value={paper.pii} />}
-                  </div>
-                </DisclosureSection>
-              )}
-
-              {paper.dates.length > 0 && (
-                <DisclosureSection title="各类日期">
-                  <dl className={DL}>
-                    {paper.dates.map((d) => (
-                      <Fragment key={`${d.type}-${d.date}`}>
-                        <dt className={DT}>{DATE_LABELS[d.type.toLowerCase()] ?? d.type}</dt>
-                        <dd className={DD_MONO}>{d.date}</dd>
-                      </Fragment>
-                    ))}
-                  </dl>
-                </DisclosureSection>
-              )}
-
-              <DisclosureSection title="参考文献与声明">
-                <dl className={DL}>
-                  <dt className={DT}>参考文献数</dt>
-                  <dd className={DD_MONO}>
-                    {paper.numberOfReferences != null
-                      ? paper.numberOfReferences.toLocaleString()
-                      : "—"}
-                  </dd>
-                  <dt className={DT}>利益冲突</dt>
-                  <dd className={DD}>{paper.conflictOfInterest || "未声明 / 暂无数据"}</dd>
-                </dl>
-              </DisclosureSection>
-            </div>
-          </section>
+          <KeywordRow items={deriveKeywordItems(paper)} />
 
           {fullText}
         </div>
 
-        {/* sticky top = 侧栏自然位置：TopNav 57px + 面包屑 45px（均含 1px 底边）+ 网格 pt-8 32px = 134px。
-            两者不等时，开始滚动那一段侧栏会先随页面移动再吸住，看起来在晃 */}
+        {/* sticky top = TopNav 57px + 面包屑 45px（均含 1px 底边）+ 32px 留白 = 134px */}
         <aside
           className={cn(
             "flex flex-col gap-4",
-            paper.hasFullText ? "self-stretch" : "sticky top-[134px] max-[980px]:static",
+            readable ? "self-stretch" : "sticky top-[134px] max-[980px]:static",
           )}
         >
           <PaperRail paper={paper} />
-          {paper.hasFullText && tocCard && (
+          {readable && tocCard && (
             <div className="sticky top-[134px] max-[980px]:hidden">{tocCard}</div>
           )}
         </aside>

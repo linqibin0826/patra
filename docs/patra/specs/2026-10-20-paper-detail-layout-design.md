@@ -4,13 +4,13 @@
 > **设计稿**：Design 画布「Patra 文献详情页重设计」https://claude.ai/artifact/PwmifxFVFZwrEmq1E5WUBJ ，5 张画板：01 首屏、02 正文、03 文末、04 长标题规则、05 插图宽度规则（2026-10-20 定稿）
 > **前置设计**：v0.11 设计简报 [fulltext-reader.md](../../../patra-portal/docs/design-briefs/v0.11/fulltext-reader.md)、[v0.11 门户 plan](../plans/2026-10-19-fulltext-reader-portal.md)
 > **日期**：2026-10-20
-> **状态**：草稿，待评审
+> **状态**：已实施（2026-10-20；后端随 PR #255 合入 main，前端分支 `feat/pap-89-paper-detail-portal`）
 
 **画板与本 spec 不一致时以本 spec 为准**。有意偏离画板的地方：图表标签照原文（§5.9）、许可与出处保留全部内容（§5.14）、不做「本文」行高亮与「在 Patra 打开」（§3.2）。
 
 ## 1. 要解决的问题
 
-v0.11 上线全文阅读后，在 PMID 41575322（线上 id `352303012807630907`）这类长标题、带全文的文献上，详情页有七个排版问题：
+v0.11 上线全文阅读后，在 PMID 41575322（mini 上 id `370813037508972544`，PAP-90 重导后的新 id）这类长标题、带全文的文献上，详情页有七个排版问题：
 
 1. 长标题占 7 行。标题里冒号后面那半句和主标题一样大，首屏几乎全是标题。
 2. 「阅读全文 / 下载 PDF / 收藏」在页头、侧栏操作卡、窄屏落下来的侧栏里各出现一次。
@@ -358,5 +358,5 @@ Body（max-w-page，两栏：main + 340px aside）
 ## 11. 要同步改的文档
 
 - `patra-portal/docs/design-briefs/v0.11/fulltext-reader.md`：§3.4 图、表、引用、参考文献的呈现规则，以及侧栏、目录的描述，改成本 spec 的规则；注明出处 PAP-89。
-- `docs/patra/design/snapshots/`：画布源文件存一份快照 `2026-10-20-paper-detail-layout-hifi`，README 补一行。
+- `docs/patra/design/snapshots/`：画布源文件存一份快照 `2026-10-20-paper-detail-layout-hifi.zip`，README 补一行。
 - `patra-portal/README.md` 中详情页结构的描述（如果有）。

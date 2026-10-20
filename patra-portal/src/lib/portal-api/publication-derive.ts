@@ -105,3 +105,20 @@ export function deriveByline(authors: Author[]): BylineView {
   const shown = authors.slice(0, 3);
   return { shown, extra: Math.max(0, authors.length - shown.length) };
 }
+
+/** MeSH · 关键词一行里的一项。 */
+export interface KeywordItem {
+  key: string;
+  text: string;
+  /** 主要主题词（带 ★） */
+  major: boolean;
+}
+
+/** MeSH · 关键词（spec §5.5）：主要主题词在前，再是其余主题词与关键词；重复的关键词只留一个。 */
+export function deriveKeywordItems(p: PaperDetail): KeywordItem[] {
+  const mesh = [...p.meshHeadings].sort((a, b) => Number(b.major) - Number(a.major));
+  return [
+    ...mesh.map((h) => ({ key: `m-${h.descriptorUi}`, text: h.term, major: h.major })),
+    ...[...new Set(p.keywords)].map((k) => ({ key: `k-${k}`, text: k, major: false })),
+  ];
+}

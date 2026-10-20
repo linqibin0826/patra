@@ -3,12 +3,14 @@
 import { Dialog } from "@base-ui/react/dialog";
 import { ExternalLink, X } from "lucide-react";
 import { type ReactNode, useState } from "react";
+import { RailRow } from "@/components/portal/RailRow";
+import type { FigureLayout } from "@/lib/portal-api/fulltext-derive";
 import { cn } from "@/lib/utils";
 
 interface FigureBlockProps {
   /** 图块的页内锚点（交叉引用 "see Figure 2" 跳到这里） */
   anchorId: string | undefined;
-  /** 原文标签，如 `Figure 1`（照原文，不翻译） */
+  /** 原文标签，如 `Figure 1`（照原文，不翻译；末尾句点由调用方去掉） */
   label: string | null;
   /** 图题纯文本：图片 alt 与放大层的可访问名称 */
   altText: string;
@@ -20,11 +22,21 @@ interface FigureBlockProps {
   src: string | null;
   width: number | null;
   height: number | null;
+  /** 按宽高比选出的宽度分类（`figureLayout`） */
+  layout: FigureLayout;
 }
 
+const FRAME_WIDTH: Record<FigureLayout, string> = {
+  text: "max-w-[612px]",
+  portrait: "max-w-[612px]",
+  wide: "max-w-[772px]",
+  "wide-zoom": "max-w-[772px]",
+};
+
 /**
- * 正文图块（简报 §3.4「图」）：主栏满宽的纸面托盘，图片限高 `min(70vh, 560px)` 按比例缩放；
- * 有宽高时按比例占位、到了再淡入。点图片打开放大层（焦点困在层内，Esc / 点遮罩关闭，关后焦点回到原图）。
+ * 正文图块（spec §5.8）：白底图框按宽高比取宽（正文宽 612 / 加宽 772，竖图在正文栏内居中、最高 640px），
+ * 图片带原图宽高属性按比例占位、到了再淡入，不放大超过原图。图注挂在标签栏：标签格放原文标签，
+ * 右侧「放大查看 · 原图 ↗」（超宽图常显，其余悬停或聚焦图框时出现）。点图片或「放大查看」打开放大层。
  */
 export function FigureBlock({
   anchorId,
@@ -35,56 +47,108 @@ export function FigureBlock({
   src,
   width,
   height,
+  layout,
 }: FigureBlockProps) {
   const [loaded, setLoaded] = useState(false);
   const name = label || altText || "图";
+  const wide = layout === "wide" || layout === "wide-zoom";
 
-  return (
-    <figure id={anchorId} className="mx-0 my-8 scroll-mt-[45px]">
+  const body = (
+    <>
       {src && (
-        <Dialog.Root>
-          <Dialog.Trigger
-            aria-label={`放大查看 ${name}`}
+        <RailRow wide={wide}>
+          <div
+            data-layout={layout}
             className={cn(
-              "flex w-full cursor-zoom-in justify-center rounded-lg border border-border-subtle bg-bg-paper p-4",
-              !loaded && "shimmer",
+              "w-full rounded-lg border border-border-subtle bg-paper-50 p-3",
+              FRAME_WIDTH[layout],
             )}
           >
-            {/* biome-ignore lint/performance/noImgElement: 同源 Route Handler 转发的原图，不走 next/image 的二次压缩 */}
-            <img
-              ref={(el) => {
-                // 服务端渲染的图片可能在水合之前就加载完了，onLoad 不会再触发
-                if (el?.complete) setLoaded(true);
-              }}
-              src={src}
-              alt={altText || name}
-              width={width ?? undefined}
-              height={height ?? undefined}
-              loading="lazy"
-              decoding="async"
-              onLoad={() => setLoaded(true)}
+            <Dialog.Trigger
+              aria-label={`放大查看 ${name}`}
               className={cn(
-                "block h-auto max-h-[min(70vh,560px)] max-w-full object-contain transition-opacity duration-300 max-sm:max-h-[360px]",
-                loaded ? "opacity-100" : "opacity-0",
+                "flex w-full cursor-zoom-in justify-center rounded-md",
+                !loaded && "shimmer",
               )}
-            />
-          </Dialog.Trigger>
+            >
+              {/* biome-ignore lint/performance/noImgElement: 同源 Route Handler 转发的原图，不走 next/image 的二次压缩 */}
+              <img
+                ref={(el) => {
+                  // 服务端渲染的图片可能在水合之前就加载完了，onLoad 不会再触发
+                  if (el?.complete) setLoaded(true);
+                }}
+                src={src}
+                alt={altText || name}
+                width={width ?? undefined}
+                height={height ?? undefined}
+                loading="lazy"
+                decoding="async"
+                onLoad={() => setLoaded(true)}
+                className={cn(
+                  "block h-auto max-w-full object-contain transition-opacity duration-300 max-sm:max-h-[360px]",
+                  layout === "portrait" && "max-h-[640px]",
+                  loaded ? "opacity-100" : "opacity-0",
+                )}
+              />
+            </Dialog.Trigger>
+          </div>
+        </RailRow>
+      )}
+      <figcaption className="mt-3.5">
+        <RailRow
+          label={
+            label && (
+              <span className="font-mono text-2xs font-medium tracking-mono text-clay-700">
+                {label}
+              </span>
+            )
+          }
+        >
+          <div className="flex max-w-[612px] flex-wrap items-baseline justify-between gap-x-4 gap-y-1.5">
+            <div className="min-w-0 flex-1">
+              <span className="block font-serif text-md leading-normal text-fg-2">{title}</span>
+              <div className="mt-1 font-sans text-sm leading-normal text-fg-2 [&_p]:m-0 [&_p+p]:mt-1">
+                {caption}
+              </div>
+            </div>
+            {src && (
+              <span
+                className={cn(
+                  "shrink-0 font-mono text-2xs tracking-mono text-fg-2 transition-opacity duration-200",
+                  layout !== "wide-zoom" &&
+                    "opacity-0 group-focus-within/fig:opacity-100 group-hover/fig:opacity-100",
+                )}
+              >
+                <Dialog.Trigger className="link-draw cursor-zoom-in hover:text-fg-1">
+                  放大查看
+                </Dialog.Trigger>
+                <span aria-hidden> · </span>
+                <a
+                  href={src}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="link-draw hover:text-fg-1"
+                >
+                  原图 ↗
+                </a>
+              </span>
+            )}
+          </div>
+        </RailRow>
+      </figcaption>
+    </>
+  );
+
+  return (
+    <figure id={anchorId} className="group/fig mx-0 my-10 scroll-mt-[45px]">
+      {src ? (
+        <Dialog.Root>
+          {body}
           <FigureLightbox name={name} src={src} altText={altText} title={title} />
         </Dialog.Root>
+      ) : (
+        body
       )}
-      <figcaption className="mt-3 max-w-[40em]">
-        {label && (
-          <span className="block font-mono text-2xs font-medium uppercase tracking-caps text-fg-3">
-            {label}
-          </span>
-        )}
-        <span className="mt-1 block font-serif text-md leading-normal font-medium text-fg-1">
-          {title}
-        </span>
-        <div className="mt-1 font-sans text-sm leading-normal text-fg-2 [&_p]:m-0 [&_p+p]:mt-1">
-          {caption}
-        </div>
-      </figcaption>
     </figure>
   );
 }

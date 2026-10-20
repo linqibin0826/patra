@@ -2,6 +2,7 @@
 
 import { type ReactNode, useEffect, useState } from "react";
 import { flushSync } from "react-dom";
+import { RailRow } from "@/components/portal/RailRow";
 import { cn } from "@/lib/utils";
 
 export interface ReferenceListItem {
@@ -14,6 +15,8 @@ export interface ReferenceListItem {
   content: ReactNode;
   doi: string | null;
   pmid: string | null;
+  /** 正文里被引用的次数（「↩ 正文 N 处」） */
+  citeCount: number;
 }
 
 interface ReferenceListProps {
@@ -30,6 +33,11 @@ const HIGHLIGHT_MS = 1600;
 
 const LINK = "link-draw text-link hover:text-link-hover";
 
+/** 标签栏里的序号：纯数字补成两位（`1` → `01`），其余照原文。 */
+function displayLabel(label: string): string {
+  return /^\d+$/.test(label) ? label.padStart(2, "0") : label;
+}
+
 /** 地址栏 hash 解码；畸形的百分号编码（如 `#%E0`）按原样返回，不让整个列表因 URIError 挂掉。 */
 function decodeHash(hash: string): string {
   try {
@@ -40,10 +48,11 @@ function decodeHash(hash: string): string {
 }
 
 /**
- * 参考文献：前 5 条 + 「展开全部 N 条」（展开后不再收起）。
- * 点正文引用时（事件委托，正文是服务端渲染的普通链接）：记下来源引用、需要时先展开，
+ * 参考文献（spec §5.12）：标签栏排版，序号在标签格；前 5 条 + 「展开其余 N 条」（展开后不再收起）。
+ * 点指向参考文献的链接时（事件委托，正文是服务端渲染的普通链接；引用卡片已接管、调用了
+ * preventDefault 的点击不处理）：记下来源引用（`data-cite-from`，没有就是链接自己）、需要时先展开，
  * 再交给浏览器的锚点跳转（平滑滚动由全站 `scroll-behavior` 决定），目标条目亮起。
- * 每条末尾「↩ 回到正文」回到刚才点的引用；没点过就回到第一次被引用的位置。
+ * 每条末尾「↩ 正文 N 处」回到刚才点的引用；没点过就回到第一次被引用的位置。
  */
 export function ReferenceList({ items, firstCiteByRef }: ReferenceListProps) {
   const collapsible = items.length > SHOW_ALL_UP_TO;
@@ -68,11 +77,13 @@ export function ReferenceList({ items, firstCiteByRef }: ReferenceListProps) {
 
     let timer: ReturnType<typeof setTimeout> | undefined;
     const onClick = (event: MouseEvent) => {
+      if (event.defaultPrevented) return;
       const link = (event.target as Element | null)?.closest?.("a[data-cite-ref]");
       if (!(link instanceof HTMLAnchorElement)) return;
       const refId = link.dataset.citeRef ?? "";
       const anchorId = link.hash.slice(1);
-      setLastCiteByRef((prev) => ({ ...prev, [refId]: link.id }));
+      const from = link.dataset.citeFrom ?? link.id;
+      setLastCiteByRef((prev) => ({ ...prev, [refId]: from }));
       if (isCollapsedPart(anchorId)) {
         // 同步提交：点击的默认动作（锚点跳转）紧接在监听器之后，那时目标条目必须已经显示
         flushSync(() => setExpanded(true));
@@ -92,81 +103,90 @@ export function ReferenceList({ items, firstCiteByRef }: ReferenceListProps) {
   }, [items]);
 
   return (
-    <section id="references" aria-labelledby="references-title" className="mt-14 scroll-mt-[45px]">
-      <h2
-        id="references-title"
-        className="m-0 mb-4 flex scroll-mt-[45px] items-baseline gap-3 font-serif text-2xl font-medium tracking-tight text-fg-1"
+    <section id="references" aria-labelledby="references-title" className="mt-16 scroll-mt-[45px]">
+      <RailRow
+        className="mb-4 items-baseline"
+        label={<span className="font-mono text-2xs tracking-caps text-fg-3">REFERENCES</span>}
       >
-        参考文献
-        <span className="font-mono text-xs tracking-mono text-fg-3 tabular-nums">
-          {items.length}
-        </span>
-      </h2>
+        <h2
+          id="references-title"
+          className="m-0 flex scroll-mt-[45px] items-baseline gap-3 font-serif text-2xl font-medium tracking-tight text-fg-1"
+        >
+          参考文献
+          <span className="font-mono text-xs tracking-mono text-fg-3 tabular-nums">
+            {items.length}
+          </span>
+        </h2>
+      </RailRow>
       <ol aria-label="参考文献" className="m-0 list-none border-t border-border-subtle p-0">
         {items.map((item, i) => {
-          const back = item.refId
-            ? (lastCiteByRef[item.refId] ?? firstCiteByRef[item.refId])
-            : undefined;
+          const back =
+            item.refId && item.citeCount > 0
+              ? (lastCiteByRef[item.refId] ?? firstCiteByRef[item.refId])
+              : undefined;
           return (
-            <li
+            <RailRow
+              as="li"
               key={item.anchorId}
               id={item.anchorId}
               hidden={collapsed && i >= COLLAPSED_COUNT}
               data-highlighted={highlighted === item.anchorId || undefined}
               className={cn(
-                "grid scroll-mt-[62px] grid-cols-[2.5em_1fr] gap-3 rounded-sm border-b border-border-subtle py-3 pr-2 transition-colors duration-600",
+                "scroll-mt-[62px] rounded-sm border-b border-border-subtle py-4 pr-2 transition-colors duration-600",
                 "data-highlighted:bg-accent-tint",
               )}
+              label={
+                <span className="block pt-[3px] font-mono text-xs text-fg-3 tabular-nums">
+                  {displayLabel(item.label)}
+                </span>
+              }
             >
-              <span className="pt-[3px] text-right font-mono text-xs text-fg-3 tabular-nums">
-                {item.label}
-              </span>
-              <div>
-                <p className="m-0 font-serif text-md leading-[1.55] break-words text-fg-2">
-                  {item.content}
+              <p className="m-0 font-serif text-md leading-[1.55] break-words text-fg-1">
+                {item.content}
+              </p>
+              {(item.doi || item.pmid || back) && (
+                <p className="m-0 mt-1.5 flex flex-wrap gap-x-3.5 gap-y-1 font-mono text-2xs tracking-mono">
+                  {item.doi && (
+                    <a
+                      className={LINK}
+                      href={`https://doi.org/${item.doi}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      DOI ↗
+                    </a>
+                  )}
+                  {item.pmid && (
+                    <a
+                      className={LINK}
+                      href={`https://pubmed.ncbi.nlm.nih.gov/${item.pmid}/`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      PubMed {item.pmid} ↗
+                    </a>
+                  )}
+                  {back && (
+                    <a className="link-draw text-fg-3 hover:text-fg-1" href={`#${back}`}>
+                      {item.citeCount > 1 ? `↩ 正文 ${item.citeCount} 处` : "↩ 正文"}
+                    </a>
+                  )}
                 </p>
-                {(item.doi || item.pmid || back) && (
-                  <p className="m-0 mt-1 flex flex-wrap gap-x-3.5 gap-y-1 font-mono text-2xs tracking-mono">
-                    {item.doi && (
-                      <a
-                        className={LINK}
-                        href={`https://doi.org/${item.doi}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        DOI ↗
-                      </a>
-                    )}
-                    {item.pmid && (
-                      <a
-                        className={LINK}
-                        href={`https://pubmed.ncbi.nlm.nih.gov/${item.pmid}/`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        PubMed ↗
-                      </a>
-                    )}
-                    {back && (
-                      <a className="link-draw text-fg-3 hover:text-fg-1" href={`#${back}`}>
-                        ↩ 回到正文
-                      </a>
-                    )}
-                  </p>
-                )}
-              </div>
-            </li>
+              )}
+            </RailRow>
           );
         })}
       </ol>
       {collapsed && (
-        <button
-          type="button"
-          onClick={() => setExpanded(true)}
-          className="mt-4 inline-flex items-center rounded-full border border-border-default bg-paper-50 px-4 py-1.5 font-sans text-sm font-semibold text-fg-1 hover:border-border-hover hover:bg-paper-200"
-        >
-          展开全部 {items.length} 条
-        </button>
+        <RailRow className="mt-4">
+          <button
+            type="button"
+            onClick={() => setExpanded(true)}
+            className="inline-flex items-center self-start rounded-full border border-border-default bg-paper-50 px-4 py-1.5 font-sans text-sm font-semibold text-fg-1 hover:border-border-hover hover:bg-paper-200"
+          >
+            展开其余 {items.length - COLLAPSED_COUNT} 条
+          </button>
+        </RailRow>
       )}
     </section>
   );

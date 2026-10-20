@@ -1,17 +1,25 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
+
+const progress = vi.hoisted(() => ({ body: 0, whole: 0, started: false }));
+vi.mock("@/lib/use-reading-progress", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/use-reading-progress")>()),
+  useReadingProgress: () => progress,
+}));
+
 import { FullTextToc } from "@/components/portal/fulltext/FullTextToc";
 import type { TocEntry } from "@/lib/portal-api/fulltext-derive";
 
 const ENTRIES: TocEntry[] = [
-  { id: "ft-s1", label: "Introduction", children: [] },
+  { id: "ft-s1", number: "01", label: "Introduction", children: [] },
   {
     id: "ft-s2",
+    number: "02",
     label: "Methods",
-    children: [{ id: "ft-s2-1", label: "Study design", children: [] }],
+    children: [{ id: "ft-s2-1", number: "2.1", label: "Study design", children: [] }],
   },
-  { id: "ft-s3", label: "Results", children: [] },
+  { id: "ft-s3", number: "03", label: "Results", children: [] },
 ];
 
 /** 在页面上放出各章节标题，并指定它们此刻距视口顶部的距离。 */
@@ -31,7 +39,8 @@ function renderToc(overrides: Partial<Parameters<typeof FullTextToc>[0]> = {}) {
   return render(
     <FullTextToc
       entries={ENTRIES}
-      hasReferences
+      declarationCount={8}
+      referenceCount={56}
       readMin={25}
       paperId="42"
       hasPdf
@@ -44,11 +53,12 @@ function renderToc(overrides: Partial<Parameters<typeof FullTextToc>[0]> = {}) {
 }
 
 afterEach(() => {
+  Object.assign(progress, { body: 0, whole: 0, started: false });
   for (const id of ["ft-s1", "ft-s2", "ft-s2-1", "ft-s3"]) document.getElementById(id)?.remove();
 });
 
 describe("FullTextToc", () => {
-  it("卡头是「目录」与阅读时长；列出一级章节，末尾固定参考文献、许可与出处", () => {
+  it("卡头是「目录」与阅读时长；列出一级章节，末尾固定声明与附注、参考文献、文献档案与许可", () => {
     renderToc();
     const nav = screen.getByRole("navigation", { name: "目录" });
     expect(within(nav).getByText("≈ 25 分钟")).toBeInTheDocument();
@@ -56,19 +66,40 @@ describe("FullTextToc", () => {
       "href",
       "#ft-s1",
     );
-    expect(within(nav).getByRole("link", { name: "参考文献" })).toHaveAttribute(
+    expect(within(nav).getByRole("link", { name: "声明与附注 8 项" })).toHaveAttribute(
+      "href",
+      "#declarations",
+    );
+    expect(within(nav).getByRole("link", { name: "参考文献 56" })).toHaveAttribute(
       "href",
       "#references",
     );
-    expect(within(nav).getByRole("link", { name: "许可与出处" })).toHaveAttribute(
+    expect(within(nav).getByRole("link", { name: "文献档案与许可 ↓" })).toHaveAttribute(
       "href",
-      "#license",
+      "#record",
     );
   });
 
-  it("没有参考文献时不列「参考文献」", () => {
-    renderToc({ hasReferences: false });
-    expect(screen.queryByRole("link", { name: "参考文献" })).toBeNull();
+  it("一级项前有序号（不进链接名称）", () => {
+    renderToc();
+    const link = screen.getByRole("link", { name: "Introduction" });
+    expect(link).toHaveTextContent("01Introduction");
+  });
+
+  it("没有声明、没有参考文献时不列这两项", () => {
+    renderToc({ declarationCount: 0, referenceCount: 0 });
+    expect(screen.queryByRole("link", { name: /声明与附注/ })).toBeNull();
+    expect(screen.queryByRole("link", { name: /^参考文献/ })).toBeNull();
+  });
+
+  it("读到正文后显示剩余分钟；正文读完显示「正文已读完」", () => {
+    Object.assign(progress, { body: 0.62, whole: 0.5, started: true });
+    const { unmount } = renderToc({ readMin: 34 });
+    expect(screen.getByText("剩 ≈ 13 分钟")).toBeInTheDocument();
+    unmount();
+    Object.assign(progress, { body: 1, whole: 0.9, started: true });
+    renderToc({ readMin: 34 });
+    expect(screen.getByText("正文已读完")).toBeInTheDocument();
   });
 
   it("标题越过吸顶线的最后一节是当前章节：高亮，并展开它的二级标题", () => {

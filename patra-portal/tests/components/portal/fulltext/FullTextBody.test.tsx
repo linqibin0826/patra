@@ -77,13 +77,178 @@ describe("renderFullTextBody · 章节", () => {
     expect(screen.queryByText("S1 Table.")).toBeNull();
   });
 
-  it("文末附加（致谢等）渲染在正文之后", () => {
-    const { container } = renderBody(
+  it("正文包在 [data-ft-body] 里；文末附加不在正文里，进声明区", () => {
+    const { container, result } = renderBody(
       makeBody({ sections: [section("s1", "Intro")], back: [section("ack", "Acknowledgements")] }),
     );
-    expect(screen.getByRole("heading", { level: 2, name: "Acknowledgements" })).toBeInTheDocument();
-    const html = container.innerHTML;
-    expect(html.indexOf("Intro")).toBeLessThan(html.indexOf("Acknowledgements"));
+    expect(container.querySelector("[data-ft-body]")).not.toBeNull();
+    expect(container).not.toHaveTextContent("Acknowledgements");
+    expect(result.declarations).not.toBeNull();
+  });
+});
+
+describe("renderFullTextBody · 标签栏与章节号（PAP-89）", () => {
+  it("一级章节号 01，二级 4.5 这样的序号放在标签格；三级不编号；标题名不含序号", () => {
+    const subs = [1, 2, 3, 4, 5].map((n) =>
+      section(`s4-${n}`, `Sub ${n}`, [], n === 5 ? [section("s4-5-1", "Deep")] : []),
+    );
+    renderBody(
+      makeBody({
+        sections: [
+          section("s1", "Intro"),
+          section("s2", "Related"),
+          section("s3", "Methods"),
+          section("s4", "Results", [], subs),
+        ],
+      }),
+    );
+    const h2 = screen.getByRole("heading", { level: 2, name: "Intro" });
+    expect(h2.closest(".grid")?.firstElementChild).toHaveTextContent("01");
+    const h3 = screen.getByRole("heading", { level: 3, name: "Sub 5" });
+    expect(h3.closest(".grid")?.firstElementChild).toHaveTextContent("4.5");
+    const h4 = screen.getByRole("heading", { level: 4, name: "Deep" });
+    expect(h4.closest(".grid")?.firstElementChild).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("连续的段落放在同一个标签栏行里", () => {
+    renderBody(
+      makeBody({ sections: [section("s1", "Intro", [para("A."), para("B."), para("C.")])] }),
+    );
+    const row = screen.getByText("A.").closest(".grid");
+    expect(row).toContainElement(screen.getByText("C."));
+  });
+});
+
+describe("renderFullTextBody · 引用号（PAP-89）", () => {
+  const sup = (...children: FullTextInline[]): FullTextInline => ({
+    kind: "style",
+    style: "sup",
+    children,
+  });
+
+  it("上标引用前的空格去掉，上标紧贴前文", () => {
+    const { container } = renderBody(
+      makeBody({
+        sections: [section("s1", "Intro", [para("smoking. ", sup(cite("r1", "8")))])],
+      }),
+    );
+    expect(container.querySelector("p")?.textContent).toBe("smoking.8");
+  });
+
+  it("空格写在上标里、引用号前面时也去掉（PMC 常见写法 <sup> 1</sup>）", () => {
+    const { container } = renderBody(
+      makeBody({
+        sections: [section("s1", "Intro", [para("(AC).", sup(text(" "), cite("r1", "1")))])],
+      }),
+    );
+    expect(container.querySelector("p")?.textContent).toBe("(AC).1");
+  });
+
+  it("方括号写法照原文，不去空格", () => {
+    const { container } = renderBody(
+      makeBody({ sections: [section("s1", "Intro", [para("as shown [", cite("r1", "3"), "]")])] }),
+    );
+    expect(container.querySelector("p")?.textContent).toBe("as shown [3]");
+  });
+
+  it("统计每条参考文献被引用的次数", () => {
+    const { result } = renderBody(
+      makeBody({
+        sections: [section("s1", "Intro", [para(cite("r1", "1"), " x ", cite("r1", "1"))])],
+      }),
+    );
+    expect(result.citeCountByRef.r1).toBe(2);
+    expect(result.citeCountByRef.r2).toBeUndefined();
+  });
+
+  it("一个引用指向多条参考文献时 data-cite-refs 列出全部", () => {
+    const multi: FullTextInline = {
+      kind: "xref",
+      refType: "bibr",
+      targets: ["r1", "r2", "r3"],
+      children: [text("1–3")],
+    };
+    renderBody(
+      makeBody({
+        sections: [section("s1", "Intro", [para(multi)])],
+        references: [reference("r1", "1"), reference("r2", "2"), reference("r3", "3")],
+      }),
+    );
+    const link = screen.getByRole("link", { name: "参考文献 1–3" });
+    expect(link).toHaveAttribute("data-cite-ref", "r1");
+    expect(link).toHaveAttribute("data-cite-refs", "r1 r2 r3");
+  });
+});
+
+describe("renderFullTextBody · 声明与附注（PAP-89）", () => {
+  const table = {
+    kind: "table" as const,
+    id: "ta1",
+    label: "Table A1",
+    caption: [para("Extra table.")],
+    head: [],
+    body: [],
+    footnotes: [],
+  };
+  const back = [
+    ...[
+      "Acknowledgments",
+      "Author contributions",
+      "Consent",
+      "Data",
+      "Declaration",
+      "Ethics",
+      "Funding",
+      "ORCID iD",
+    ].map((t, i) => section(`b${i}`, t, [para(`${t} text.`)])),
+    section("fn", "", [para("Untitled footnote.")]),
+    section("app", "Appendix", [table]),
+  ];
+
+  it("有标题的文末节合成 #declarations 里的 dl，dt 带原锚点；标题「声明与附注」+「9 项」", () => {
+    const { result } = renderBody(makeBody({ back }));
+    const { container } = render(<div>{result.declarations}</div>);
+    const block = container.querySelector("#declarations") as HTMLElement;
+    expect(block).not.toBeNull();
+    expect(within(block).getByRole("heading", { name: /声明与附注/ })).toHaveTextContent("9 项");
+    const terms = within(block).getAllByRole("term");
+    expect(terms).toHaveLength(8);
+    expect(terms[0]).toHaveAttribute("id", "ft-b0");
+    expect(terms[0]).toHaveTextContent("Acknowledgments");
+  });
+
+  it("无标题的文末节内容接在 dl 之后", () => {
+    const { result } = renderBody(makeBody({ back }));
+    const { container } = render(<div>{result.declarations}</div>);
+    const dl = container.querySelector("dl") as HTMLElement;
+    const note = screen.getByText("Untitled footnote.");
+    expect(dl.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("含表的附录单独渲染在 appendices，带自己的 h2", () => {
+    const { result } = renderBody(makeBody({ back }));
+    render(<div>{result.appendices}</div>);
+    const heading = screen.getByRole("heading", { level: 2, name: "Appendix" });
+    expect(heading).toHaveAttribute("id", "ft-app");
+    // spec §5.11：附录标题 serif 24px（不是正文一级章节的 30px）
+    expect(heading.className).toContain("text-2xl");
+    expect(heading.className).not.toContain("text-3xl");
+  });
+
+  it("只有无标题的文末节时：内容照常渲染，但没有「声明与附注」区块头与 #declarations", () => {
+    const { result } = renderBody(
+      makeBody({ back: [section("fn", "", [para("Only a footnote.")])] }),
+    );
+    const { container } = render(<div>{result.declarations}</div>);
+    expect(screen.getByText("Only a footnote.")).toBeInTheDocument();
+    expect(container.querySelector("#declarations")).toBeNull();
+    expect(screen.queryByText(/声明与附注/)).toBeNull();
+  });
+
+  it("没有文末附加时 declarations 与 appendices 为 null", () => {
+    const { result } = renderBody(makeBody());
+    expect(result.declarations).toBeNull();
+    expect(result.appendices).toBeNull();
   });
 });
 
@@ -143,6 +308,17 @@ describe("renderFullTextBody · 行内节点", () => {
       }),
     );
     expect(container.querySelector("p math mi")?.textContent).toBe("x");
+  });
+
+  it("正文段落允许在超长单词（蛇形变量名、长网址）里断行，不把窄屏页面撑宽（PAP-89）", () => {
+    const { container } = renderBody(
+      makeBody({
+        sections: [
+          section("s1", "R", [para("primary_pathology_days_to_initial_pathologic_diagnosis")]),
+        ],
+      }),
+    );
+    expect(container.querySelector("p")?.className).toContain("break-words");
   });
 });
 
