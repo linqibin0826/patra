@@ -32,8 +32,29 @@ public final class UserFieldViolations {
   /// 在常见密码名单里。
   public static final String TOO_COMMON = "TOO_COMMON";
 
-  /// 含不合法的 Unicode（孤立的代理项）。
+  /// 含不合法的 Unicode（孤立的代理项）或不允许的字符。
   public static final String INVALID_CHARACTER = "INVALID_CHARACTER";
+
+  /// 用户名字段名，和请求体一致。
+  public static final String USERNAME = "username";
+
+  /// 昵称字段名，和请求体一致。
+  public static final String DISPLAY_NAME = "displayName";
+
+  /// 全是数字。
+  public static final String DIGITS_ONLY = "DIGITS_ONLY";
+
+  /// 保留字或拒绝词。
+  public static final String RESERVED = "RESERVED";
+
+  /// 和当前值相同。
+  public static final String UNCHANGED = "UNCHANGED";
+
+  /// 已被别人使用。
+  public static final String ALREADY_TAKEN = "ALREADY_TAKEN";
+
+  /// 已注册。
+  public static final String ALREADY_REGISTERED = "ALREADY_REGISTERED";
 
   /// 只有静态方法。
   private UserFieldViolations() {}
@@ -113,5 +134,75 @@ public final class UserFieldViolations {
   /// @return 字段错误
   public static FieldViolation deviceIdInvalidFormat() {
     return FieldViolation.of(DEVICE_ID, INVALID_FORMAT, "设备标识不能包含控制字符");
+  }
+
+  /// 邮箱已注册。
+  ///
+  /// @return 字段错误
+  public static FieldViolation emailAlreadyRegistered() {
+    return FieldViolation.of(EMAIL, ALREADY_REGISTERED, "该邮箱已注册");
+  }
+
+  /// 用户名为空。
+  ///
+  /// @return 字段错误
+  public static FieldViolation usernameRequired() {
+    return FieldViolation.of(USERNAME, REQUIRED, "请输入用户名");
+  }
+
+  /// 用户名含不允许的字符。
+  ///
+  /// @return 字段错误
+  public static FieldViolation usernameInvalidCharacter() {
+    return FieldViolation.of(USERNAME, INVALID_CHARACTER, "用户名只能包含小写字母、数字、_ 和 -");
+  }
+
+  /// 用户名太短。
+  ///
+  /// @return 字段错误
+  public static FieldViolation usernameTooShort() {
+    return FieldViolation.of(USERNAME, TOO_SHORT, "用户名至少 3 个字符");
+  }
+
+  /// 用户名太长。
+  ///
+  /// @return 字段错误
+  public static FieldViolation usernameTooLong() {
+    return FieldViolation.of(USERNAME, TOO_LONG, "用户名最长 30 个字符");
+  }
+
+  /// 用户名首尾不是字母数字，或 `_`、`-` 连续出现。
+  ///
+  /// @return 字段错误
+  public static FieldViolation usernameInvalidFormat() {
+    return FieldViolation.of(USERNAME, INVALID_FORMAT, "用户名首尾须是字母或数字，_ 和 - 不能连续");
+  }
+
+  /// 用户名全是数字。
+  ///
+  /// @return 字段错误
+  public static FieldViolation usernameDigitsOnly() {
+    return FieldViolation.of(USERNAME, DIGITS_ONLY, "用户名不能全是数字");
+  }
+
+  /// 用户名命中保留字。
+  ///
+  /// @return 字段错误
+  public static FieldViolation usernameReserved() {
+    return FieldViolation.of(USERNAME, RESERVED, "这个用户名不能使用");
+  }
+
+  /// 新用户名与当前相同。
+  ///
+  /// @return 字段错误
+  public static FieldViolation usernameUnchanged() {
+    return FieldViolation.of(USERNAME, UNCHANGED, "新用户名与当前相同");
+  }
+
+  /// 用户名已被使用。
+  ///
+  /// @return 字段错误
+  public static FieldViolation usernameAlreadyTaken() {
+    return FieldViolation.of(USERNAME, ALREADY_TAKEN, "该用户名已被使用");
   }
 }
