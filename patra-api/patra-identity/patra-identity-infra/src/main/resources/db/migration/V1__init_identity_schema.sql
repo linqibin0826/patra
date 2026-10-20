@@ -134,3 +134,56 @@ COMMENT ON COLUMN idn_user_profile.updated_by_name IS 'Updater name';
 CREATE TRIGGER trg_idn_user_profile_updated_at
     BEFORE UPDATE ON idn_user_profile
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- ============================================================
+-- idn_user_former_username：改名留下的旧名。reserved_until 之前只有原主能改回、别人不能注册或改成它，
+-- /users/旧名 跳到新名；到期后行留作审计。不加唯一约束：同一个旧名可以在不同时期属于不同的人
+-- ============================================================
+CREATE TABLE idn_user_former_username
+(
+    id              BIGINT          NOT NULL,
+    user_id         BIGINT          NOT NULL,
+    username        VARCHAR(30)     NOT NULL,
+    replaced_at     timestamptz(6)  NOT NULL,
+    reserved_until  timestamptz(6)  NOT NULL,
+    record_remarks  jsonb           NULL,
+    version         BIGINT          NOT NULL DEFAULT 0,
+    ip_address      bytea           NULL,
+    created_at      timestamptz(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by      BIGINT          NULL,
+    created_by_name VARCHAR(100)    NULL,
+    updated_at      timestamptz(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by      BIGINT          NULL,
+    updated_by_name VARCHAR(100)    NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT fk_idn_user_former_username_user FOREIGN KEY (user_id) REFERENCES idn_user (id),
+    CONSTRAINT ck_idn_user_former_username_format CHECK (
+        username ~ '^[a-z0-9]([a-z0-9]|[_-][a-z0-9])*$'
+        AND char_length(username) BETWEEN 3 AND 30
+        AND username !~ '^[0-9]+$'),
+    CONSTRAINT ck_idn_user_former_username_period CHECK (reserved_until > replaced_at)
+);
+
+CREATE INDEX idx_idn_user_former_username_username
+    ON idn_user_former_username (username, reserved_until);
+CREATE INDEX idx_idn_user_former_username_user_id ON idn_user_former_username (user_id);
+
+COMMENT ON TABLE idn_user_former_username IS 'Former username left behind by a rename; reserved for its owner until reserved_until';
+COMMENT ON COLUMN idn_user_former_username.id IS 'PK (snowflake)';
+COMMENT ON COLUMN idn_user_former_username.user_id IS 'Former owner user ID';
+COMMENT ON COLUMN idn_user_former_username.username IS 'The former username (normalized, lower-case)';
+COMMENT ON COLUMN idn_user_former_username.replaced_at IS 'When the rename happened (UTC)';
+COMMENT ON COLUMN idn_user_former_username.reserved_until IS 'Reserved for the former owner until this time (UTC), exclusive';
+COMMENT ON COLUMN idn_user_former_username.record_remarks IS 'Audit remarks log';
+COMMENT ON COLUMN idn_user_former_username.version IS 'Optimistic lock version number';
+COMMENT ON COLUMN idn_user_former_username.ip_address IS 'Requester IP (IPv4/IPv6)';
+COMMENT ON COLUMN idn_user_former_username.created_at IS 'Creation time (UTC)';
+COMMENT ON COLUMN idn_user_former_username.created_by IS 'Creator ID';
+COMMENT ON COLUMN idn_user_former_username.created_by_name IS 'Creator name';
+COMMENT ON COLUMN idn_user_former_username.updated_at IS 'Last update time (UTC)';
+COMMENT ON COLUMN idn_user_former_username.updated_by IS 'Updater ID';
+COMMENT ON COLUMN idn_user_former_username.updated_by_name IS 'Updater name';
+
+CREATE TRIGGER trg_idn_user_former_username_updated_at
+    BEFORE UPDATE ON idn_user_former_username
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();

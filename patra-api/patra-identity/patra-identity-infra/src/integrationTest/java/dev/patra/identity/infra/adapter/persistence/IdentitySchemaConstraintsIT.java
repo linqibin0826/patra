@@ -32,6 +32,10 @@ class IdentitySchemaConstraintsIT {
   private static final String INSERT_PROFILE =
       "INSERT INTO idn_user_profile (id, user_id, display_name) VALUES (?, ?, ?)";
 
+  private static final String INSERT_FORMER =
+      "INSERT INTO idn_user_former_username (id, user_id, username, replaced_at, reserved_until) "
+          + "VALUES (?, ?, ?, ?, ?)";
+
   @Autowired private JdbcTemplate jdbcTemplate;
 
   @Test
@@ -112,5 +116,32 @@ class IdentitySchemaConstraintsIT {
     assertThatThrownBy(() -> jdbcTemplate.update(INSERT_PROFILE, 14L, 999_998L, "陈宇"))
         .isInstanceOf(DataIntegrityViolationException.class)
         .hasMessageContaining("fk_idn_user_profile_user");
+  }
+
+  @Test
+  @DisplayName("旧名的保留到期时间必须晚于改名时间")
+  void should_reject_former_username_with_reservation_not_after_replacement() {
+    jdbcTemplate.update(INSERT_USER, 20L, "former-period@example.com", "ACTIVE", null);
+    Timestamp at = Timestamp.valueOf("2026-10-20 08:00:00");
+    assertThatThrownBy(() -> jdbcTemplate.update(INSERT_FORMER, 21L, 20L, "old-name", at, at))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("ck_idn_user_former_username_period");
+  }
+
+  @Test
+  @DisplayName("旧名也要符合用户名的格式")
+  void should_reject_former_username_with_bad_format() {
+    jdbcTemplate.update(INSERT_USER, 22L, "former-format@example.com", "ACTIVE", null);
+    assertThatThrownBy(
+            () ->
+                jdbcTemplate.update(
+                    INSERT_FORMER,
+                    23L,
+                    22L,
+                    "Old-Name",
+                    Timestamp.valueOf("2026-10-20 08:00:00"),
+                    Timestamp.valueOf("2027-01-18 08:00:00")))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("ck_idn_user_former_username_format");
   }
 }
