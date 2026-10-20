@@ -108,6 +108,15 @@ describe("FullTextFacts", () => {
     expect(screen.queryByText("图表")).toBeNull();
   });
 
+  it("已撤稿（即便标着有全文）不显示正文的篇幅、图表、参考文献，也不请求全文", async () => {
+    fetchMock.mockResolvedValue(makeFullText());
+    const node = await FullTextFacts({
+      paper: makePaperDetail({ hasFullText: true, retracted: true }),
+    });
+    expect(node).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("全文请求失败时什么都不渲染", async () => {
     fetchMock.mockRejectedValue(new Error("boom"));
     const { container } = render(

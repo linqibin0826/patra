@@ -10,6 +10,7 @@ import { FactCellsSkeleton, FullTextFacts } from "@/components/portal/paper-deta
 import { PublicationDetailView } from "@/components/portal/paper-detail/PublicationDetailView";
 import { RecordSection } from "@/components/portal/paper-detail/RecordSection";
 import { TopNav } from "@/components/portal/TopNav";
+import { deriveFullTextState } from "@/lib/portal-api/fulltext-derive";
 import { fetchPublicationDetail } from "@/lib/portal-api/publications";
 import { shortTitle } from "@/lib/portal-api/title-derive";
 
@@ -34,7 +35,7 @@ export default async function PaperDetailPage({ params }: { params: Promise<{ id
             </Suspense>
           }
           fullTextFacts={
-            paper.hasFullText && (
+            deriveFullTextState(paper) === "full" && (
               <Suspense fallback={<FactCellsSkeleton />}>
                 <FullTextFacts paper={paper} />
               </Suspense>

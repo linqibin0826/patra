@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { fetchPublicationFullText } from "@/lib/portal-api/fulltext";
-import { deriveFullTextStats } from "@/lib/portal-api/fulltext-derive";
+import { deriveFullTextState, deriveFullTextStats } from "@/lib/portal-api/fulltext-derive";
 import { deriveEvidence } from "@/lib/portal-api/publication-derive";
 import type { PaperDetail } from "@/types/portal";
 
@@ -61,8 +61,12 @@ export function FactCellsSkeleton() {
   );
 }
 
-/** 事实条里来自全文接口的三格：篇幅、图表（为 0 的一项省掉）、参考文献；取不到全文时不渲染。 */
+/** 事实条里来自全文接口的三格：篇幅、图表（为 0 的一项省掉）、参考文献；没有可读正文或取不到全文时不渲染。 */
 export async function FullTextFacts({ paper }: { paper: PaperDetail }) {
+  // 只有页面真的渲染正文时才给（已撤稿的文献即便后端标了有全文也不展示）
+  if (deriveFullTextState(paper) !== "full") {
+    return null;
+  }
   const fullText = await fetchPublicationFullText(paper.id).catch(() => null);
   const body = fullText?.body;
   if (!fullText || !body) {
