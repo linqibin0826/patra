@@ -212,9 +212,17 @@ export function deriveToc(body: FullTextBody): TocEntry[] {
   );
 }
 
-/** 目录尾项的计数：「声明与附注 N 项」（有标题的文末节，含附录）与参考文献条数。 */
+/**
+ * 目录尾项的计数：「声明与附注 N 项」（有标题的文末节，含附录）与参考文献条数。
+ * 没有可进声明区的节（只有附录或只有无标题节）时页面上没有 `#declarations`，计为 0、不列。
+ */
 export function deriveTocTail(body: FullTextBody): { declarations: number; references: number } {
-  return { declarations: titledSections(body.back).length, references: body.references.length };
+  const back = splitBack(body.back);
+  return {
+    declarations:
+      back.declarations.length > 0 ? back.declarations.length + back.appendices.length : 0,
+    references: body.references.length,
+  };
 }
 
 const CITATION_GLUE = /^[\s,;–—−-]*$/;

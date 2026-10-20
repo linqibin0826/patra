@@ -234,6 +234,16 @@ describe("renderFullTextBody · 声明与附注（PAP-89）", () => {
     );
   });
 
+  it("只有无标题的文末节时：内容照常渲染，但没有「声明与附注」区块头与 #declarations", () => {
+    const { result } = renderBody(
+      makeBody({ back: [section("fn", "", [para("Only a footnote.")])] }),
+    );
+    const { container } = render(<div>{result.declarations}</div>);
+    expect(screen.getByText("Only a footnote.")).toBeInTheDocument();
+    expect(container.querySelector("#declarations")).toBeNull();
+    expect(screen.queryByText(/声明与附注/)).toBeNull();
+  });
+
   it("没有文末附加时 declarations 与 appendices 为 null", () => {
     const { result } = renderBody(makeBody());
     expect(result.declarations).toBeNull();

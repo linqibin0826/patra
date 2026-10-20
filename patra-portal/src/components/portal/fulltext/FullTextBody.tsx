@@ -527,15 +527,25 @@ function renderPlainSection(section: FullTextSectionNode, ctx: RenderContext): R
   ];
 }
 
-/** 文末「声明与附注」（spec §5.11）：有标题的节合成一个 dl，无标题的节接在后面。 */
+/**
+ * 文末「声明与附注」（spec §5.11）：有标题的节合成一个 dl，无标题的节接在后面。
+ * 没有有标题的节时不出区块头与 `#declarations`（目录尾项同样不列，见 `deriveTocTail`）。
+ */
 function renderDeclarations(
   declarations: FullTextSectionNode[],
   untitled: FullTextSectionNode[],
   count: number,
   ctx: RenderContext,
 ): ReactNode {
-  if (declarations.length === 0 && untitled.length === 0) {
-    return null;
+  if (declarations.length === 0) {
+    // 只有无标题节（脚注组等）：内容照常渲染，不出「声明与附注」区块头与锚点
+    return untitled.length > 0
+      ? untitled.map((s) => (
+          <RailRow key={nextKey(ctx)} className="mt-6">
+            {renderPlainSection(s, ctx)}
+          </RailRow>
+        ))
+      : null;
   }
   return (
     <section

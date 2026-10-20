@@ -265,6 +265,26 @@ describe("deriveTocTail", () => {
   });
 });
 
+describe("deriveTocTail · 声明区不存在时", () => {
+  it("只有附录或只有无标题节时，不列「声明与附注」（页面上没有 #declarations）", () => {
+    const table: FullTextBlock = {
+      kind: "table",
+      id: "t",
+      label: "Table A1",
+      caption: [],
+      head: [],
+      body: [],
+      footnotes: [],
+    };
+    expect(
+      deriveTocTail(makeBody({ back: [section("app", "Appendix", [table])] })).declarations,
+    ).toBe(0);
+    expect(deriveTocTail(makeBody({ back: [section("fn", "", [para("x")])] })).declarations).toBe(
+      0,
+    );
+  });
+});
+
 describe("isCitationSup", () => {
   const bibr = (t: string): FullTextInline => ({
     kind: "xref",
