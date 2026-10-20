@@ -121,6 +121,7 @@ function ReadableFullText({
             content: rendered.references[i],
             doi: ref.doi,
             pmid: ref.pmid,
+            citeCount: ref.id ? (rendered.citeCountByRef[ref.id] ?? 0) : 0,
           }))}
         />
       )}

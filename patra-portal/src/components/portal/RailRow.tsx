@@ -1,7 +1,7 @@
-import type { ReactNode } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-interface RailRowProps {
+interface RailRowProps extends Omit<HTMLAttributes<HTMLElement>, "className" | "children"> {
   /** 标签格内容（摘要标签、章节号、图表编号、参考文献序号）；没有时标签格留空占位 */
   label?: ReactNode;
   /** 内容从标签格左缘横跨到正文右缘（128 + 32 + 612 = 772px），不再有标签格 */
@@ -23,9 +23,11 @@ export function RailRow({
   className,
   labelClassName,
   children,
+  ...rest
 }: RailRowProps) {
   return (
     <Tag
+      {...rest}
       className={cn(
         "grid grid-cols-[128px_minmax(0,1fr)] gap-x-8 gap-y-2 @max-[580px]/main:grid-cols-1",
         className,

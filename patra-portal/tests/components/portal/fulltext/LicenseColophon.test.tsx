@@ -88,3 +88,13 @@ describe("LicenseColophon", () => {
     expect(row("版本")).toHaveTextContent("作者手稿");
   });
 });
+
+describe("LicenseColophon · 标签栏排版（PAP-89）", () => {
+  it("不再是卡片盒；每行 dt 在标签格、dd 在内容格", () => {
+    render(<LicenseColophon fullText={makeFullText()} paper={makePaperDetail()} />);
+    const region = screen.getByRole("region", { name: "许可与出处" });
+    expect(region.className).not.toContain("rounded-xl");
+    const dt = screen.getByText("许可", { selector: "dt" });
+    expect(dt.parentElement?.className).toContain("grid-cols-[128px_minmax(0,1fr)]");
+  });
+});
