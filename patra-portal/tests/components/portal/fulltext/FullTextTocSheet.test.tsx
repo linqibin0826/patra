@@ -18,7 +18,8 @@ function renderSheet() {
   return render(
     <FullTextTocSheet
       entries={ENTRIES}
-      hasReferences
+      declarationCount={2}
+      referenceCount={10}
       readMin={25}
       paperId="42"
       hasPdf

@@ -14,7 +14,8 @@ import { useActiveHeading } from "@/lib/use-active-heading";
  */
 export function FullTextTocSheet({
   entries,
-  hasReferences,
+  declarationCount,
+  referenceCount,
   readMin,
   paperId,
   hasPdf,
@@ -63,7 +64,8 @@ export function FullTextTocSheet({
         <TocList
           entries={entries}
           activeId={activeId}
-          hasReferences={hasReferences}
+          declarationCount={declarationCount}
+          referenceCount={referenceCount}
           large
           onNavigate={navigate}
         />

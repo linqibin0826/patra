@@ -30,10 +30,9 @@ export default async function PaperDetailPage({ params }: { params: Promise<{ id
               </Suspense>
             )
           }
-          record={<RecordSection paper={paper} />}
           fullText={
             <Suspense fallback={<FullTextSkeleton />}>
-              <FullTextSection paper={paper} />
+              <FullTextSection paper={paper} record={<RecordSection paper={paper} />} />
             </Suspense>
           }
           tocCard={

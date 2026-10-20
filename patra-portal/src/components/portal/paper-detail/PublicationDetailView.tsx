@@ -14,8 +14,6 @@ interface PublicationDetailViewProps {
   fullTextFacts?: ReactNode;
   /** 全文区块（页面在 Suspense 里流式给出；没有时不渲染） */
   fullText?: ReactNode;
-  /** 文献档案 */
-  record?: ReactNode;
   /** 桌面侧栏的目录卡，只在有全文时放进侧栏 */
   tocCard?: ReactNode;
   /** 面包屑右端的移动端「目录」按钮 */
@@ -23,13 +21,12 @@ interface PublicationDetailViewProps {
 }
 
 /// 文献详情（spec §4）：吸顶面包屑 → 整宽页头（标题、事实条、唯一一组操作）→ 两栏：
-/// 主栏（摘要 → MeSH · 关键词 → 全文 → 文献档案，统一挂在标签栏上）+ 右侧栏（标识卡、AI 速读、目录卡）。
+/// 主栏（摘要 → MeSH · 关键词 → 全文区块（含文末的文献档案），统一挂在标签栏上）+ 右侧栏（标识卡、AI 速读、目录卡）。
 /// 没有全文时侧栏整体吸顶；有全文时侧栏卡片随页面滚走，下面的目录卡单独吸顶、一直陪到页底。
 export function PublicationDetailView({
   paper,
   fullTextFacts,
   fullText,
-  record,
   tocCard,
   tocButton,
 }: PublicationDetailViewProps) {
@@ -62,7 +59,6 @@ export function PublicationDetailView({
           <KeywordRow paper={paper} />
 
           {fullText}
-          {record}
         </div>
 
         {/* sticky top = TopNav 57px + 面包屑 45px（均含 1px 底边）+ 32px 留白 = 134px */}

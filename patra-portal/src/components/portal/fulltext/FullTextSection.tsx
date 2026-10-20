@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+import { CitationPopover } from "@/components/portal/fulltext/CitationPopover";
 import { renderFullTextBody } from "@/components/portal/fulltext/FullTextBody";
 import { FullTextUnavailable } from "@/components/portal/fulltext/FullTextUnavailable";
 import { LicenseColophon } from "@/components/portal/fulltext/LicenseColophon";
@@ -7,7 +9,6 @@ import { SectionEyebrow } from "@/components/portal/SectionEyebrow";
 import { fetchPublicationFullText } from "@/lib/portal-api/fulltext";
 import {
   deriveFullTextState,
-  deriveFullTextStats,
   formatFetchedDate,
   licenseLabel,
   referenceAnchor,
@@ -24,24 +25,11 @@ async function loadFullText(id: string): Promise<FullText | null> {
   }
 }
 
-function statsLine(fullText: FullText, body: FullTextBody): string {
-  const stats = deriveFullTextStats(body);
-  return [
-    fullText.wordCount != null && `${fullText.wordCount.toLocaleString("en-US")} 词`,
-    fullText.estimatedReadMin != null && `≈ ${fullText.estimatedReadMin} 分钟`,
-    stats.figures > 0 && `${stats.figures} 图`,
-    stats.tables > 0 && `${stats.tables} 表`,
-    stats.references > 0 && `${stats.references} 篇参考文献`,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-}
-
-/** 正文开头的出处条：许可胶囊（作者手稿再加一枚）+ 数据来源 · PMCID · 抓取日期 + 跳到文末版权页。 */
-function AttributionBar({ fullText }: { fullText: FullText }) {
+/** 全文区块头右侧的出处行：许可胶囊（作者手稿再加一枚）+ 数据来源 · PMCID · 抓取日期 + 跳到许可与出处。 */
+function AttributionLine({ fullText }: { fullText: FullText }) {
   const fetched = formatFetchedDate(fullText.fetchedAt);
   return (
-    <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2 border-y border-border-default py-3 font-sans text-sm text-fg-2">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-2xs tracking-mono text-fg-3">
       <Pill tone="clay" size="sm" className="px-2.5 py-0.5 text-xs">
         {licenseLabel(fullText.license)}
       </Pill>
@@ -55,10 +43,7 @@ function AttributionBar({ fullText }: { fullText: FullText }) {
           .filter(Boolean)
           .join(" · ")}
       </span>
-      <a
-        href="#license"
-        className="link-draw ml-auto font-medium text-link hover:text-link-hover max-[540px]:ml-0"
-      >
+      <a href="#license" className="link-draw font-medium text-link hover:text-link-hover">
         许可与出处 ↓
       </a>
     </div>
@@ -66,11 +51,18 @@ function AttributionBar({ fullText }: { fullText: FullText }) {
 }
 
 /**
- * 全文区块 `#fulltext`（简报 §3.4 – §3.6），服务端组件：详情先出，本区块在 Suspense 里后到。
- * 有全文：区块头（统计行 + 出处条）→ 正文 → 参考文献 → 许可与出处；
- * 没有可读正文：说明面板（三种原因 / 只有 PDF / 加载失败）。
+ * 全文区块 `#fulltext`（简报 §3.4 – §3.6，PAP-89 spec §4），服务端组件：详情先出，本区块在 Suspense 里后到。
+ * 有全文：区块头（「全文 · Full text」+ 出处行）→ 正文 → 声明与附注 → 附录 → 参考文献 → 文献档案 → 许可与出处；
+ * 没有可读正文：说明面板（三种原因 / 只有 PDF / 加载失败）→ 文献档案。
+ * 文献档案由页面传入（`record`），因为它只用详情数据，却要排在参考文献与许可之间。
  */
-export async function FullTextSection({ paper }: { paper: PaperDetail }) {
+export async function FullTextSection({
+  paper,
+  record,
+}: {
+  paper: PaperDetail;
+  record: ReactNode;
+}) {
   const state = deriveFullTextState(paper);
   const needsFetch = state === "full" || state === "pdf-only";
   const fullText = needsFetch ? await loadFullText(paper.id) : null;
@@ -78,15 +70,21 @@ export async function FullTextSection({ paper }: { paper: PaperDetail }) {
 
   return (
     <article id="fulltext" aria-label="全文" className="scroll-mt-[45px]">
-      <SectionEyebrow className="mb-5">全文</SectionEyebrow>
+      <div className="mb-12 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 border-b border-ink-900 pb-4">
+        <SectionEyebrow className="mb-0">全文 · Full text</SectionEyebrow>
+        {fullText && body && <AttributionLine fullText={fullText} />}
+      </div>
       {fullText && body ? (
-        <ReadableFullText paper={paper} fullText={fullText} body={body} />
+        <ReadableFullText paper={paper} fullText={fullText} body={body} record={record} />
       ) : (
-        <FullTextUnavailable
-          kind={state === "full" ? "error" : state}
-          paper={paper}
-          fullText={fullText}
-        />
+        <>
+          <FullTextUnavailable
+            kind={state === "full" ? "error" : state}
+            paper={paper}
+            fullText={fullText}
+          />
+          {record}
+        </>
       )}
     </article>
   );
@@ -96,36 +94,32 @@ function ReadableFullText({
   paper,
   fullText,
   body,
+  record,
 }: {
   paper: PaperDetail;
   fullText: FullText;
   body: FullTextBody;
+  record: ReactNode;
 }) {
   const rendered = renderFullTextBody(body, paper.id);
+  const items = body.references.map((ref, i) => ({
+    anchorId: referenceAnchor(ref.id ?? `n${i + 1}`),
+    refId: ref.id,
+    label: ref.label ?? `${i + 1}`,
+    content: rendered.references[i],
+    doi: ref.doi,
+    pmid: ref.pmid,
+    citeCount: ref.id ? (rendered.citeCountByRef[ref.id] ?? 0) : 0,
+  }));
   return (
     <>
-      <p className="m-0 -mt-2 mb-4 font-mono text-2xs tracking-mono text-fg-3 tabular-nums">
-        {statsLine(fullText, body)}
-      </p>
-      <AttributionBar fullText={fullText} />
-      <div className="pt-2">{rendered.content}</div>
+      {rendered.content}
       {rendered.declarations}
       {rendered.appendices}
-      {body.references.length > 0 && (
-        <ReferenceList
-          firstCiteByRef={rendered.firstCiteByRef}
-          items={body.references.map((ref, i) => ({
-            anchorId: referenceAnchor(ref.id ?? `n${i + 1}`),
-            refId: ref.id,
-            label: ref.label ?? `${i + 1}`,
-            content: rendered.references[i],
-            doi: ref.doi,
-            pmid: ref.pmid,
-            citeCount: ref.id ? (rendered.citeCountByRef[ref.id] ?? 0) : 0,
-          }))}
-        />
-      )}
+      {items.length > 0 && <ReferenceList firstCiteByRef={rendered.firstCiteByRef} items={items} />}
+      {record}
       <LicenseColophon fullText={fullText} paper={paper} />
+      {items.length > 0 && <CitationPopover items={items} />}
     </>
   );
 }

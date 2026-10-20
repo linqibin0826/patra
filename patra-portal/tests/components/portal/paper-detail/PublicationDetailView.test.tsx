@@ -82,20 +82,18 @@ describe("PublicationDetailView", () => {
 });
 
 describe("PublicationDetailView · 全文", () => {
-  it("事实条插槽、全文区块、文献档案依次出现；面包屑右端放目录按钮", () => {
+  it("事实条插槽在全文区块之前；面包屑右端放目录按钮", () => {
     const { container } = render(
       <PublicationDetailView
         paper={paper({ hasFullText: true, pmcid: "PMC1" })}
         fullTextFacts={<div>FACTS-SLOT</div>}
         fullText={<p>FULLTEXT-SLOT</p>}
-        record={<p>RECORD-SLOT</p>}
         tocCard={<p>TOC-CARD</p>}
         tocButton={<button type="button">目录</button>}
       />,
     );
     const html = container.innerHTML;
     expect(html.indexOf("FACTS-SLOT")).toBeLessThan(html.indexOf("FULLTEXT-SLOT"));
-    expect(html.indexOf("FULLTEXT-SLOT")).toBeLessThan(html.indexOf("RECORD-SLOT"));
     expect(
       within(screen.getByRole("navigation", { name: "面包屑" })).getByRole("button", {
         name: "目录",
