@@ -129,9 +129,9 @@ patra-catalog 是 Patra 医学文献数据平台的目录管理微服务，负�
    - XXL-Job 调度入口（`pmcFullTextFetchJob`、`jatsFullTextParseJob`）
 
 13. **门户全文读端点**
-   - 详情接口的 `hasFullText`、`hasPdf`、`pdfSizeBytes`、`estimatedReadMin`
+   - 详情接口的 `retracted`、`hasFullText`、`hasPdf`、`pdfSizeBytes`、`estimatedReadMin`
    - `GET /portal/publications/{id}/fulltext`（正文、许可、署名）、`/fulltext/pdf`、`/fulltext/figures/{fileName}`
-   - 撤稿文献（发表类型 `D016441`）在读端自动下线全文
+   - 撤稿文献（发表类型 `D016441`，或抓取时 PMC 标为撤稿）在读端自动下线全文
 
 运维步骤见 [v0.11 运维手册](../../docs/patra/runbooks/v0.11-fulltext-runbook.md)。
 

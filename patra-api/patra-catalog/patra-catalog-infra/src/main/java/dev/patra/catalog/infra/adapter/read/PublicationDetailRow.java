@@ -72,7 +72,7 @@ public interface PublicationDetailRow {
   /// @return 字数
   Integer getWordCount();
 
-  /// 是否撤稿文献（发表类型含 `D016441`）。
+  /// 是否撤稿文献：PubMed 发表类型含 `D016441`，或抓取时 PMC 标为撤稿（全文不可用原因 `RETRACTED`）。
   ///
   /// @return 是否
   Boolean getRetracted();

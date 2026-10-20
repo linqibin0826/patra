@@ -287,6 +287,7 @@ public class PortalApiConverter {
         .fullTextUrl(model.fullTextUrl())
         .bookmarks(0) // 无用户系统，恒为 0
         .estimatedReadMin(estimatedReadMin(model.hasFullText(), model.wordCount()))
+        .retracted(model.retracted())
         .hasFullText(model.hasFullText())
         .hasPdf(model.hasPdf())
         .pdfSizeBytes(model.pdfSizeBytes())

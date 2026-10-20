@@ -405,6 +405,8 @@ pmc 标识符的值以 `cat_publication_identifier.type = 'pmc'` 为准（PubMed
 
 `GET /portal/publications/{id}` 的 `PortalPublicationDetailResponse` 新增 `hasFullText`、`hasPdf`、`pdfSizeBytes`（PDF 可下载时为 `pdf_size`，否则为空；下载按钮旁显示文件大小）；已有的 `estimatedReadMin` 从恒为空改为 `ceil(word_count / 230)`（可读全文时，否则为空；`PortalApiConverter.java:284` 的 `TODO(read-time)` 随之删除）。详情接口不返回正文。
 
+详情接口另给 `retracted`：PubMed 发表类型含 `D016441`，或全文记录的不可用原因是 `RETRACTED`（抓取时 PMC 已标撤稿，而 PubMed 记录还没跟上——2026-10-20 在 mini 上见到 3 篇）。可读、可下载两项也按这个合并后的判定算；门户据它显示撤稿说明和「已撤稿」胶囊，不再自己看文献类型。
+
 列表卡片 `PortalPaperResponse` 也有一个恒为空的 `estimatedReadMin`（`PortalApiConverter.java:49` 的 `TODO(read-time)`）。本版不做（我定的）：release spec 只要求详情页速览栏显示阅读时长，列表接口加关联查询会影响 `/papers` 的检索性能，留着 TODO 不动。
 
 ### 7.3 全文接口

@@ -243,6 +243,8 @@ export interface PaperDetail {
   bookmarks: number | null;
   /** 可读全文时为 ceil(字数 / 230)，否则为 null */
   estimatedReadMin: number | null;
+  /** 已撤稿：PubMed 文献类型标了撤稿，或抓取时 PMC 标为撤稿（后端合并两处判定） */
+  retracted: boolean;
   /** 可在页面上读正文（PMC 开放获取、已解析、未撤稿） */
   hasFullText: boolean;
   /** 可下载 PMC 提供的原版 PDF（有正文与否都可能有） */

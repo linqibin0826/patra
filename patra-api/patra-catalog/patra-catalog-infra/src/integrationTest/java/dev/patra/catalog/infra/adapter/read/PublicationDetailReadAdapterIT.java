@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.catalog.domain.model.enums.DisambiguationStatus;
 import dev.patra.catalog.domain.model.enums.FullTextStatus;
+import dev.patra.catalog.domain.model.enums.FullTextUnavailableReason;
 import dev.patra.catalog.domain.model.read.portal.PublicationDetailReadModel;
 import dev.patra.catalog.domain.model.vo.publication.EvidenceLevel;
 import dev.patra.catalog.domain.model.vo.publication.PublicationAbstractSection;
@@ -239,9 +240,40 @@ class PublicationDetailReadAdapterIT {
 
     PublicationDetailReadModel model = adapter.findById(pubId).orElseThrow();
 
+    assertThat(model.retracted()).isTrue();
     assertThat(model.hasFullText()).isFalse();
     assertThat(model.hasPdf()).isFalse();
     assertThat(model.pdfSizeBytes()).isNull();
+  }
+
+  @Test
+  @DisplayName("抓取时 PMC 标为撤稿（RETRACTED）也算撤稿，即使 PubMed 文献类型里还没有撤稿")
+  void should_report_retracted_when_pmc_marked_retracted() {
+    Long venueId = saveVenue("J");
+    Long pubId = savePublication(venueId, "T", "10.1/pmc-rt", "70000004");
+    saveUnavailableFullText(pubId, FullTextUnavailableReason.RETRACTED);
+    em.flush();
+    em.clear();
+
+    PublicationDetailReadModel model = adapter.findById(pubId).orElseThrow();
+
+    assertThat(model.retracted()).isTrue();
+    assertThat(model.hasFullText()).isFalse();
+    assertThat(model.hasPdf()).isFalse();
+  }
+
+  @Test
+  @DisplayName("非开放获取等其他不可用原因不算撤稿")
+  void should_not_report_retracted_when_not_open_access() {
+    Long venueId = saveVenue("J");
+    Long pubId = savePublication(venueId, "T", "10.1/noa", "70000005");
+    saveUnavailableFullText(pubId, FullTextUnavailableReason.NOT_OPEN_ACCESS);
+    em.flush();
+    em.clear();
+
+    PublicationDetailReadModel model = adapter.findById(pubId).orElseThrow();
+
+    assertThat(model.retracted()).isFalse();
   }
 
   @Test
@@ -254,8 +286,19 @@ class PublicationDetailReadAdapterIT {
 
     PublicationDetailReadModel model = adapter.findById(pubId).orElseThrow();
 
+    assertThat(model.retracted()).isFalse();
     assertThat(model.hasFullText()).isFalse();
     assertThat(model.hasPdf()).isFalse();
+  }
+
+  private void saveUnavailableFullText(Long pubId, FullTextUnavailableReason reason) {
+    PublicationFullTextEntity f = new PublicationFullTextEntity();
+    f.setId(SnowflakeIdGenerator.getId());
+    f.setPublicationId(pubId);
+    f.setPmcid("PMC1");
+    f.setStatus(FullTextStatus.UNAVAILABLE);
+    f.setUnavailableReason(reason);
+    em.persist(f);
   }
 
   private void saveFullText(

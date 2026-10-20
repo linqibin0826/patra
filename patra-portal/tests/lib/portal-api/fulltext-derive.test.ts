@@ -32,10 +32,11 @@ describe("deriveFullTextState", () => {
     expect(deriveFullTextState(makePaperDetail())).toBe("not-oa");
   });
 
-  it("文献类型含 Retracted Publication → retracted，优先于其他判断", () => {
+  it("后端标了撤稿 → retracted，优先于其他判断（PMC 标撤稿时文献类型里可能还没有撤稿）", () => {
     const paper = makePaperDetail({
-      pmcid: "PMC1",
-      publicationTypes: ["Journal Article", "Retracted Publication"],
+      pmcid: "PMC12829825",
+      publicationTypes: ["Journal Article"],
+      retracted: true,
     });
     expect(deriveFullTextState(paper)).toBe("retracted");
   });

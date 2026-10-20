@@ -45,8 +45,9 @@ public interface PublicationDetailDao extends JpaRepository<PublicationEntity, L
            FROM cat_publication_type pt WHERE pt.publication_id = p.id) AS "publicationTypesAgg",
         f.status AS "fullTextStatus", (f.pdf_object_key IS NOT NULL) AS "hasPdfObject",
         f.pdf_size AS "pdfSize", f.word_count AS "wordCount",
-        EXISTS (SELECT 1 FROM cat_publication_type rt
-                 WHERE rt.publication_id = p.id AND rt.type_id = 'D016441') AS "retracted"
+        (EXISTS (SELECT 1 FROM cat_publication_type rt
+                  WHERE rt.publication_id = p.id AND rt.type_id = 'D016441')
+         OR f.unavailable_reason IS NOT DISTINCT FROM 'RETRACTED') AS "retracted"
       FROM cat_publication p
       LEFT JOIN cat_venue v ON v.id = p.venue_id
       LEFT JOIN cat_publication_abstract a ON a.publication_id = p.id

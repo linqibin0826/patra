@@ -42,6 +42,7 @@ function paper(overrides: Partial<PaperDetail> = {}): PaperDetail {
     fullTextUrl: "https://full",
     bookmarks: 0,
     estimatedReadMin: null,
+    retracted: false,
     hasFullText: false,
     hasPdf: false,
     pdfSizeBytes: null,
@@ -104,11 +105,7 @@ describe("PaperHeader · 全文按钮", () => {
   });
 
   it("已撤稿：刊头行加「已撤稿」状态胶囊，按钮同无全文", () => {
-    render(
-      <PaperHeader
-        paper={paper({ publicationTypes: ["Journal Article", "Retracted Publication"] })}
-      />,
-    );
+    render(<PaperHeader paper={paper({ retracted: true })} />);
     expect(screen.getByText("已撤稿")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /去全文/ })).toBeInTheDocument();
   });
