@@ -205,4 +205,46 @@ public final class UserFieldViolations {
   public static FieldViolation usernameAlreadyTaken() {
     return FieldViolation.of(USERNAME, ALREADY_TAKEN, "该用户名已被使用");
   }
+
+  /// 昵称为空。
+  ///
+  /// @return 字段错误
+  public static FieldViolation displayNameRequired() {
+    return FieldViolation.of(DISPLAY_NAME, REQUIRED, "请输入昵称");
+  }
+
+  /// 昵称含不允许的字符。
+  ///
+  /// @return 字段错误
+  public static FieldViolation displayNameInvalidCharacter() {
+    return FieldViolation.of(DISPLAY_NAME, INVALID_CHARACTER, "昵称包含不允许的字符");
+  }
+
+  /// 昵称太短。
+  ///
+  /// @return 字段错误
+  public static FieldViolation displayNameTooShort() {
+    return FieldViolation.of(DISPLAY_NAME, TOO_SHORT, "昵称至少 2 个字");
+  }
+
+  /// 昵称太长。
+  ///
+  /// @return 字段错误
+  public static FieldViolation displayNameTooLong() {
+    return FieldViolation.of(DISPLAY_NAME, TOO_LONG, "昵称最长 30 个字");
+  }
+
+  /// 昵称像网址、邮箱、手机号或微信号。
+  ///
+  /// @return 字段错误
+  public static FieldViolation displayNameInvalidFormat() {
+    return FieldViolation.of(DISPLAY_NAME, INVALID_FORMAT, "昵称不能是网址、邮箱、手机号或微信号");
+  }
+
+  /// 昵称命中拒绝词。
+  ///
+  /// @return 字段错误
+  public static FieldViolation displayNameReserved() {
+    return FieldViolation.of(DISPLAY_NAME, RESERVED, "这个昵称不能使用");
+  }
 }
