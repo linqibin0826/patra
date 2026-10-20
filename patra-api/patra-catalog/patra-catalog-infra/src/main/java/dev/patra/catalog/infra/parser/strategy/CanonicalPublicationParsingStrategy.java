@@ -1,6 +1,8 @@
 package dev.patra.catalog.infra.parser.strategy;
 
 import dev.patra.catalog.infra.parser.PubmedXmlElements;
+import dev.patra.catalog.infra.parser.support.RunInAbstractLabelSplitter;
+import dev.patra.catalog.infra.parser.support.RunInAbstractLabelSplitter.LabeledText;
 import dev.patra.catalog.infra.parser.support.XmlParsingContext;
 import dev.patra.catalog.infra.parser.support.XmlParsingHelper;
 import dev.patra.common.CanonicalPublication;
@@ -1013,7 +1015,7 @@ public final class CanonicalPublicationParsingStrategy
     }
 
     List<AbstractSection> sections =
-        fields.abstractSections.stream()
+        splitRunInLabels(fields.abstractSections).stream()
             .map(
                 parsed ->
                     AbstractSection.builder().label(parsed.label).content(parsed.content).build())
@@ -1023,6 +1025,32 @@ public final class CanonicalPublicationParsingStrategy
         .sections(sections)
         .copyright(blankToNull(fields.abstractCopyright))
         .build();
+  }
+
+  /// 拆开粘在正文前的段落标签。
+  ///
+  /// 只处理"整篇只有一段、且没有 Label"的摘要（见 [RunInAbstractLabelSplitter]）；
+  /// 其余情况、或拆分条件不满足时原样返回。
+  ///
+  /// @param parsed 解析出的摘要段落
+  /// @return 拆分后的段落
+  private List<ParsedAbstractSection> splitRunInLabels(List<ParsedAbstractSection> parsed) {
+    if (parsed.size() != 1 || parsed.getFirst().label != null) {
+      return parsed;
+    }
+    List<LabeledText> split = RunInAbstractLabelSplitter.split(parsed.getFirst().content);
+    if (split.isEmpty()) {
+      return parsed;
+    }
+    return split.stream()
+        .map(
+            labeled -> {
+              ParsedAbstractSection section = new ParsedAbstractSection();
+              section.label = labeled.label();
+              section.content = labeled.content();
+              return section;
+            })
+        .toList();
   }
 
   /// 构建 MeSH 主题词列表。

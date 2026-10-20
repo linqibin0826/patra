@@ -10,6 +10,7 @@ import dev.patra.catalog.infra.parser.PubmedXmlElements;
 import dev.patra.catalog.infra.parser.support.SecureXmlInputFactory;
 import dev.patra.catalog.infra.parser.support.XmlParsingContext;
 import dev.patra.common.CanonicalPublication;
+import dev.patra.common.CanonicalPublication.AbstractSection;
 import dev.patra.common.CanonicalPublication.Author;
 import dev.patra.common.CanonicalPublication.Identifier;
 import dev.patra.common.CanonicalPublication.Journal;
@@ -1083,6 +1084,73 @@ class CanonicalPublicationParsingStrategyTest {
           "Background content here.",
           result.getAbstractContent().getSections().get(0).getContent());
       assertEquals("CONCLUSIONS", result.getAbstractContent().getSections().get(3).getLabel());
+    }
+
+    @Test
+    @DisplayName("唯一一段无 Label 的摘要里有粘连标签时，拆成带标签的段落")
+    void should_split_run_in_labels_of_single_unlabeled_abstract_text() throws Exception {
+      var result =
+          parseAbstractXml(
+              "<AbstractText>ObjectiveA rises.MethodsB was used.ResultsC won."
+                  + "ConclusionsD works.</AbstractText>");
+
+      var sections = result.getAbstractContent().getSections();
+      assertThat(sections)
+          .extracting(AbstractSection::getLabel)
+          .containsExactly("OBJECTIVE", "METHODS", "RESULTS", "CONCLUSIONS");
+      assertEquals("A rises.", sections.getFirst().getContent());
+    }
+
+    @Test
+    @DisplayName("已有 Label 的摘要不做粘连拆分")
+    void should_keep_labeled_abstract_untouched() throws Exception {
+      var result =
+          parseAbstractXml(
+              "<AbstractText Label=\"BACKGROUND\">Bg.</AbstractText>"
+                  + "<AbstractText>MethodsThe x.ResultsThe y.</AbstractText>");
+
+      var sections = result.getAbstractContent().getSections();
+      assertThat(sections)
+          .extracting(AbstractSection::getLabel)
+          .containsExactly("BACKGROUND", null);
+      assertEquals("MethodsThe x.ResultsThe y.", sections.get(1).getContent());
+    }
+
+    @Test
+    @DisplayName("多段无 Label 的摘要不做粘连拆分")
+    void should_keep_multiple_unlabeled_abstract_texts_untouched() throws Exception {
+      var result =
+          parseAbstractXml(
+              "<AbstractText>ObjectiveA.MethodsB.</AbstractText>"
+                  + "<AbstractText>Second paragraph.</AbstractText>");
+
+      var sections = result.getAbstractContent().getSections();
+      assertThat(sections).extracting(AbstractSection::getLabel).containsExactly(null, null);
+      assertEquals("ObjectiveA.MethodsB.", sections.getFirst().getContent());
+    }
+
+    /// 解析只含给定 `AbstractText` 片段的最小 PubmedArticle。
+    ///
+    /// @param abstractTexts `<Abstract>` 内部的 XML 片段
+    /// @return 解析结果
+    private CanonicalPublication parseAbstractXml(String abstractTexts) throws Exception {
+      var xml =
+          """
+          <PubmedArticle>
+            <MedlineCitation>
+              <PMID>1</PMID>
+              <Article>
+                <ArticleTitle>T</ArticleTitle>
+                <Abstract>%s</Abstract>
+              </Article>
+              <MedlineJournalInfo>
+                <NlmUniqueID>N</NlmUniqueID>
+              </MedlineJournalInfo>
+            </MedlineCitation>
+          </PubmedArticle>
+          """
+              .formatted(abstractTexts);
+      return strategy.parseRecord(createReaderAtStartElement(xml), XmlParsingContext.empty());
     }
 
     @Test
