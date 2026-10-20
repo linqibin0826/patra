@@ -61,29 +61,41 @@ describe("PublicationDetailView", () => {
     );
   });
 
-  it("渲染面包屑（pmid）+ 标题 + 摘要节 + 关键标识", () => {
+  it("渲染面包屑（pmid）+ 标题 + 摘要节；正文前不再有「关键标识」「深度数据」（PAP-89）", () => {
     render(<PublicationDetailView paper={paper()} />);
     const nav = screen.getByRole("navigation", { name: "面包屑" });
     expect(nav).toHaveTextContent("9");
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Semaglutide RCT");
-    expect(screen.getByText("摘要")).toBeInTheDocument();
-    expect(screen.getByText("关键标识")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /摘要 · ABSTRACT/ })).toBeInTheDocument();
     expect(screen.getByText("bg")).toBeInTheDocument();
+    expect(screen.queryByText("关键标识")).toBeNull();
+    expect(screen.queryByText(/深度数据/)).toBeNull();
+  });
+
+  it("整页只有一组全文操作；main 是标签栏的容器", () => {
+    const { container } = render(
+      <PublicationDetailView paper={paper({ hasFullText: true, pmcid: "PMC1" })} />,
+    );
+    expect(screen.getAllByRole("link", { name: /阅读全文/ })).toHaveLength(1);
+    expect(container.querySelector('[class~="@container/main"]')).not.toBeNull();
   });
 });
 
 describe("PublicationDetailView · 全文", () => {
-  it("全文区块放在深度数据之后；面包屑右端放目录按钮", () => {
+  it("事实条插槽、全文区块、文献档案依次出现；面包屑右端放目录按钮", () => {
     const { container } = render(
       <PublicationDetailView
         paper={paper({ hasFullText: true, pmcid: "PMC1" })}
+        fullTextFacts={<div>FACTS-SLOT</div>}
         fullText={<p>FULLTEXT-SLOT</p>}
+        record={<p>RECORD-SLOT</p>}
         tocCard={<p>TOC-CARD</p>}
         tocButton={<button type="button">目录</button>}
       />,
     );
     const html = container.innerHTML;
-    expect(html.indexOf("深度数据")).toBeLessThan(html.indexOf("FULLTEXT-SLOT"));
+    expect(html.indexOf("FACTS-SLOT")).toBeLessThan(html.indexOf("FULLTEXT-SLOT"));
+    expect(html.indexOf("FULLTEXT-SLOT")).toBeLessThan(html.indexOf("RECORD-SLOT"));
     expect(
       within(screen.getByRole("navigation", { name: "面包屑" })).getByRole("button", {
         name: "目录",
@@ -91,7 +103,7 @@ describe("PublicationDetailView · 全文", () => {
     ).toBeInTheDocument();
   });
 
-  it("有全文：侧栏不整体吸顶，目录卡单独吸顶；关键标识补一枚 PMCID", () => {
+  it("有全文：侧栏不整体吸顶，目录卡单独吸顶；标识卡里有 PMCID", () => {
     render(
       <PublicationDetailView
         paper={paper({ hasFullText: true, pmcid: "PMC13583816" })}
@@ -103,7 +115,7 @@ describe("PublicationDetailView · 全文", () => {
     const aside = screen.getByRole("complementary");
     expect(aside.className).not.toMatch(/(^|\s)sticky(\s|$)/);
     expect(screen.getByText("TOC-CARD").parentElement?.className).toMatch(/(^|\s)sticky(\s|$)/);
-    const ids = screen.getByRole("region", { name: "关键标识" });
+    const ids = screen.getByRole("region", { name: "标识" });
     expect(within(ids).getByText("PMC13583816")).toBeInTheDocument();
   });
 

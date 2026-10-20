@@ -66,14 +66,14 @@ export function PaperHeader({
       <h1
         data-size={title.size}
         className={cn(
-          "anim-rise m-0 font-serif font-medium tracking-[-0.02em] text-balance text-fg-1",
+          "anim-rise m-0 font-serif font-medium tracking-tight text-balance text-fg-1",
           TITLE_CLASS[title.size],
         )}
       >
         <RichInlineText text={title.main} />
       </h1>
       {title.sub && (
-        <p className="anim-rise m-0 mt-4 max-w-[34em] font-serif text-[clamp(19px,1rem+0.5vw,24px)] leading-[1.38] tracking-[-0.01em] text-pretty text-fg-2">
+        <p className="anim-rise m-0 mt-4 max-w-[34em] font-serif text-[clamp(19px,1rem+0.5vw,24px)] leading-[1.38] tracking-normal text-pretty text-fg-2">
           <RichInlineText text={title.sub} />
         </p>
       )}
