@@ -39,6 +39,7 @@ import lombok.Builder;
 /// @param fullTextUrl 原文链接（cat_publication_metadata.full_text_url，可为 null）
 /// @param bookmarks 收藏数（无用户系统，恒为 0）
 /// @param estimatedReadMin 预估阅读分钟数 `ceil(字数 / 230)`，不可读全文时为 null
+/// @param retracted 是否撤稿文献（PubMed 文献类型标了撤稿，或抓取时 PMC 标为撤稿）
 /// @param hasFullText 是否可读全文（全文接口 `/fulltext` 有正文）
 /// @param hasPdf PDF 是否可下载
 /// @param pdfSizeBytes PDF 字节数（Long 经全局转换输出为字符串），不可下载时为 null
@@ -77,6 +78,7 @@ public record PortalPublicationDetailResponse(
     String fullTextUrl,
     Integer bookmarks,
     Integer estimatedReadMin,
+    Boolean retracted,
     Boolean hasFullText,
     Boolean hasPdf,
     Long pdfSizeBytes) {

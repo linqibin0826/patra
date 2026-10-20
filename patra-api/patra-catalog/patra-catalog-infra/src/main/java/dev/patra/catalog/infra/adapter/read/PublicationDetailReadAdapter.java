@@ -51,13 +51,14 @@ public class PublicationDetailReadAdapter implements PublicationDetailReadPort {
               List<String> types = splitTypes(main.getPublicationTypesAgg());
               EvidenceLevel evidenceLevel = EvidenceLevel.classify(types);
               String primaryType = types.isEmpty() ? null : types.get(0);
+              boolean retracted = Boolean.TRUE.equals(main.getRetracted());
               FullTextAvailability availability =
                   FullTextAvailability.of(
                       main.getFullTextStatus() == null
                           ? null
                           : FullTextStatus.valueOf(main.getFullTextStatus()),
                       Boolean.TRUE.equals(main.getHasPdfObject()),
-                      Boolean.TRUE.equals(main.getRetracted()));
+                      retracted);
 
               return PublicationDetailReadModel.builder()
                   .id(main.getId())
@@ -84,6 +85,7 @@ public class PublicationDetailReadAdapter implements PublicationDetailReadPort {
                   .oaStatus(main.getOaStatus())
                   .provenanceCode(main.getProvenanceCode())
                   .fullTextUrl(main.getFullTextUrl())
+                  .retracted(retracted)
                   .hasFullText(availability.readable())
                   .hasPdf(availability.pdfDownloadable())
                   .pdfSizeBytes(availability.pdfDownloadable() ? main.getPdfSize() : null)

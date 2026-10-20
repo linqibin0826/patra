@@ -34,6 +34,7 @@ public record PublicationDetailReadModel(
     String oaStatus,
     String provenanceCode,
     String fullTextUrl,
+    boolean retracted,
     boolean hasFullText,
     boolean hasPdf,
     Long pdfSizeBytes,

@@ -215,6 +215,8 @@ class PortalPublicationControllerIT {
         .isEqualTo(0)
         .jsonPath("$.estimatedReadMin")
         .isEmpty()
+        .jsonPath("$.retracted")
+        .isEqualTo(false)
         .jsonPath("$.hasFullText")
         .isEqualTo(false)
         .jsonPath("$.hasPdf")
@@ -256,6 +258,30 @@ class PortalPublicationControllerIT {
         .isEqualTo(true)
         .jsonPath("$.pdfSizeBytes")
         .isEqualTo("2621440");
+  }
+
+  @Test
+  @DisplayName("撤稿文献的详情带 retracted = true")
+  void should_return_retracted_flag_when_retracted() {
+    PublicationDetailReadModel model =
+        PublicationDetailReadModel.builder()
+            .id(2L)
+            .title("T")
+            .evidenceLevel(EvidenceLevel.RANDOMIZED_CONTROLLED_TRIAL)
+            .provenanceCode("PUBMED")
+            .retracted(true)
+            .build();
+    when(portalPublicationDetailQueryService.getById(2L)).thenReturn(model);
+
+    restClient
+        .get()
+        .uri("/portal/publications/2")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .jsonPath("$.retracted")
+        .isEqualTo(true);
   }
 
   @Test
