@@ -298,6 +298,17 @@ describe("renderFullTextBody · 行内节点", () => {
     );
     expect(container.querySelector("p math mi")?.textContent).toBe("x");
   });
+
+  it("正文段落允许在超长单词（蛇形变量名、长网址）里断行，不把窄屏页面撑宽（PAP-89）", () => {
+    const { container } = renderBody(
+      makeBody({
+        sections: [
+          section("s1", "R", [para("primary_pathology_days_to_initial_pathologic_diagnosis")]),
+        ],
+      }),
+    );
+    expect(container.querySelector("p")?.className).toContain("break-words");
+  });
 });
 
 describe("renderFullTextBody · 交叉引用", () => {

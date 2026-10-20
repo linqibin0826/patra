@@ -62,8 +62,8 @@ export interface RenderedFullTextBody {
 type Tone = "body" | "back" | "note";
 
 const TONE_CLASS: Record<Tone, string> = {
-  body: "mb-[1.1em] max-w-[36em] text-pretty font-serif text-lg leading-reading text-ink-800",
-  back: "mb-[1em] max-w-[36em] text-pretty font-serif text-md leading-reading text-ink-800",
+  body: "mb-[1.1em] max-w-[36em] text-pretty break-words font-serif text-lg leading-reading text-ink-800",
+  back: "mb-[1em] max-w-[36em] text-pretty break-words font-serif text-md leading-reading text-ink-800",
   note: "[&+p]:mt-1",
 };
 
