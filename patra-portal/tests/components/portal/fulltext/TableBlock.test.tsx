@@ -131,4 +131,23 @@ describe("TableBlock · 三线表（PAP-89）", () => {
     expect(scroller.className).not.toContain("rounded-lg");
     expect(scroller.className).not.toContain("border-border-default");
   });
+
+  it("跨行单元格之后的行，数字对齐落在正确的列上", () => {
+    render(
+      <TableBlock
+        anchorId="ft-t3"
+        label="Table 3"
+        title="Grouped"
+        head={[]}
+        body={[
+          [cell("Group", { rowspan: 2 }), cell("A"), cell("12")],
+          [cell("B"), cell("56")],
+        ]}
+        numeric={[false, false, true]}
+        footnotes={null}
+      />,
+    );
+    expect(screen.getByRole("cell", { name: "56" })).toHaveAttribute("data-numeric");
+    expect(screen.getByRole("cell", { name: "B" })).not.toHaveAttribute("data-numeric");
+  });
 });

@@ -16,6 +16,7 @@ import {
   licenseLabel,
   numberSections,
   numericColumns,
+  resolveColumns,
   splitBack,
 } from "@/lib/portal-api/fulltext-derive";
 import type { FullTextBlock, FullTextInline, FullTextTableCell } from "@/types/fulltext";
@@ -398,6 +399,21 @@ describe("figureLayout", () => {
   });
 });
 
+describe("resolveColumns", () => {
+  it("按 colspan 累加列位，并跳过上方 rowspan 仍占着的列", () => {
+    const span = (colspan: number, rowspan: number) => ({ colspan, rowspan });
+    expect(
+      resolveColumns([
+        [span(1, 2), span(2, 1), span(1, 1)],
+        [span(1, 1), span(1, 1), span(1, 1)],
+      ]),
+    ).toEqual([
+      [0, 1, 3],
+      [1, 2, 3],
+    ]);
+  });
+});
+
 describe("figureLabel", () => {
   it("去掉原文标签末尾的句点，其余照原文", () => {
     expect(figureLabel("Figure 1.")).toBe("Figure 1");
@@ -432,5 +448,14 @@ describe("numericColumns", () => {
 
   it("空表 → 空数组", () => {
     expect(numericColumns([], [])).toEqual([]);
+  });
+
+  it("跨行单元格占住的列位不算到下一行：下一行的单元格向右顺延", () => {
+    const group = { ...cell("Group"), rowspan: 2 };
+    const body = [
+      [group, cell("A"), cell("12"), cell("34")],
+      [cell("B"), cell("56"), cell("78")],
+    ];
+    expect(numericColumns([], body)).toEqual([false, false, true, true]);
   });
 });

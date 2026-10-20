@@ -50,13 +50,18 @@ export function RecordSection({ paper }: { paper: PaperDetail }) {
       </RailRow>
 
       {paper.authors.length > 0 && (
-        <DisclosureSection title="完整作者与机构" count={`${paper.authors.length} 位`} defaultOpen>
+        <DisclosureSection
+          rail
+          title="完整作者与机构"
+          count={`${paper.authors.length} 位`}
+          defaultOpen
+        >
           <AuthorList authors={paper.authors} />
         </DisclosureSection>
       )}
 
       {ids.length > 0 && (
-        <DisclosureSection title="其他标识符" count="ID">
+        <DisclosureSection rail title="其他标识符" count="ID">
           <div className="flex flex-wrap gap-3">
             {ids.map((id) => (
               <IdentifierChip key={id.label} label={id.label} value={id.value} href={id.href} />
@@ -66,7 +71,7 @@ export function RecordSection({ paper }: { paper: PaperDetail }) {
       )}
 
       {paper.dates.length > 0 && (
-        <DisclosureSection title="各类日期" count="DATES">
+        <DisclosureSection rail title="各类日期" count="DATES">
           <dl className={DL}>
             {paper.dates.map((d) => (
               <Fragment key={`${d.type}-${d.date}`}>
@@ -79,7 +84,7 @@ export function RecordSection({ paper }: { paper: PaperDetail }) {
       )}
 
       {paper.funding.length > 0 && (
-        <DisclosureSection title="资助信息" count={`${paper.funding.length} 项`}>
+        <DisclosureSection rail title="资助信息" count={`${paper.funding.length} 项`}>
           <dl className={DL}>
             {paper.funding.map((f, i) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: 静态资助列表（无状态、不重排），funder+grantId 可能完全重复需 index 保唯一
@@ -98,7 +103,7 @@ export function RecordSection({ paper }: { paper: PaperDetail }) {
       )}
 
       {(paper.numberOfReferences != null || paper.conflictOfInterest) && (
-        <DisclosureSection title="参考文献与声明" count="NOTES">
+        <DisclosureSection rail title="参考文献与声明" count="NOTES">
           <dl className={DL}>
             <dt className={DT}>参考文献数</dt>
             <dd className={DD_MONO}>

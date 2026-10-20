@@ -324,28 +324,52 @@ export function figureLabel(label: string | null): string | null {
 const NUMERIC_CELL = /^[−–-]?\d[\d.,]*\s?%?(\s?±\s?\d[\d.,]*%?)?(\s?\(.*\))?$|^[—–-]$/;
 
 /**
+ * 每个单元格的起始列位：同一行按 colspan 累加，并跳过上方行的 rowspan 还占着的列
+ * （浏览器的表格布局就是这样排的）。`numericColumns` 与 `TableBlock` 共用。
+ */
+export function resolveColumns(rows: { colspan: number; rowspan: number }[][]): number[][] {
+  let pending: number[] = [];
+  return rows.map((row) => {
+    const occupied = pending.map((n) => n > 0);
+    const next = pending.map((n) => Math.max(n - 1, 0));
+    let col = 0;
+    const starts = row.map((cell) => {
+      while (occupied[col]) col += 1;
+      const start = col;
+      for (let c = start; c < start + cell.colspan; c += 1) {
+        if (cell.rowspan > 1) next[c] = Math.max(next[c] ?? 0, cell.rowspan - 1);
+      }
+      col += cell.colspan;
+      return start;
+    });
+    pending = next;
+    return starts;
+  });
+}
+
+/**
  * 数据表哪些列右对齐：一列里（不含表头）超过一半的单元格是数字格就算数字列。
- * 跨列的单元格不参与判定，也不占列位以外的计数；行内列位按 colspan 累加。
+ * 跨列的单元格不参与判定；列位按 `resolveColumns`（含 rowspan 占位）计算。
  */
 export function numericColumns(
   head: FullTextTableCell[][],
   body: FullTextTableCell[][],
 ): boolean[] {
+  const columns = resolveColumns(body);
   const width = Math.max(
     0,
-    ...[...head, ...body].map((row) => row.reduce((n, c) => n + c.colspan, 0)),
+    ...head.map((row) => row.reduce((n, c) => n + c.colspan, 0)),
+    ...columns.flatMap((starts, r) => starts.map((s, i) => s + (body[r]?.[i]?.colspan ?? 1))),
   );
   const numeric = Array.from({ length: width }, () => 0);
   const total = Array.from({ length: width }, () => 0);
-  for (const row of body) {
-    let col = 0;
-    for (const c of row) {
-      if (c.colspan === 1) {
-        total[col] = (total[col] ?? 0) + 1;
-        if (NUMERIC_CELL.test(inlineText(c.content).trim())) numeric[col] = (numeric[col] ?? 0) + 1;
-      }
-      col += c.colspan;
-    }
-  }
+  body.forEach((row, r) => {
+    row.forEach((c, i) => {
+      if (c.colspan !== 1) return;
+      const col = columns[r]?.[i] ?? 0;
+      total[col] = (total[col] ?? 0) + 1;
+      if (NUMERIC_CELL.test(inlineText(c.content).trim())) numeric[col] = (numeric[col] ?? 0) + 1;
+    });
+  });
   return total.map((t, i) => t > 0 && (numeric[i] ?? 0) * 2 > t);
 }

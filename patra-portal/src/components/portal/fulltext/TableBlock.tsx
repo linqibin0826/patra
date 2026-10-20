@@ -2,6 +2,7 @@
 
 import { type ReactNode, useId, useRef, useState } from "react";
 import { RailRow } from "@/components/portal/RailRow";
+import { resolveColumns } from "@/lib/portal-api/fulltext-derive";
 import { btnSecondary } from "@/lib/portal-ui";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { cn } from "@/lib/utils";
@@ -64,14 +65,12 @@ function renderCell(
   );
 }
 
-/** 一行单元格按列位渲染：列位按 colspan 累加，数字列的单元格带 `data-numeric`（右对齐）。 */
-function renderRow(row: TableBlockRow, inHead: boolean, numeric: boolean[]): ReactNode[] {
-  let col = 0;
-  return row.map((c, i) => {
-    const node = renderCell(c, i, inHead, numeric[col] ?? false);
-    col += c.colspan;
-    return node;
-  });
+/** 一组行按列位渲染：列位由 `resolveColumns` 算（含上方 rowspan 的占位），数字列的单元格带 `data-numeric`。 */
+function renderRows(rows: TableBlockRow[], inHead: boolean, numeric: boolean[]): ReactNode[][] {
+  const columns = resolveColumns(rows);
+  return rows.map((row, r) =>
+    row.map((c, i) => renderCell(c, i, inHead, numeric[columns[r]?.[i] ?? 0] ?? false)),
+  );
 }
 
 /**
@@ -132,17 +131,17 @@ export function TableBlock({
             <table className="ft-table" aria-labelledby={label ? `${labelId} ${titleId}` : titleId}>
               {head.length > 0 && (
                 <thead>
-                  {head.map((row, r) => (
+                  {renderRows(head, true, numeric).map((cells, r) => (
                     // biome-ignore lint/suspicious/noArrayIndexKey: 静态表格行（不增删不重排）
-                    <tr key={r}>{renderRow(row, true, numeric)}</tr>
+                    <tr key={r}>{cells}</tr>
                   ))}
                 </thead>
               )}
               <tbody>
-                {body.map((row, r) => (
+                {renderRows(body, false, numeric).map((cells, r) => (
                   // biome-ignore lint/suspicious/noArrayIndexKey: 静态表格行（不增删不重排）
                   <tr key={r} hidden={collapsed && r >= COLLAPSED_ROWS}>
-                    {renderRow(row, false, numeric)}
+                    {cells}
                   </tr>
                 ))}
               </tbody>
