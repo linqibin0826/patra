@@ -91,3 +91,46 @@ COMMENT ON COLUMN idn_user_password_credential.updated_by_name IS 'Updater name'
 CREATE TRIGGER trg_idn_user_password_credential_updated_at
     BEFORE UPDATE ON idn_user_password_credential
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- ============================================================
+-- idn_user_profile：前台用户的资料，与用户一对一（本 Issue 只有昵称，PAP-95 补其余列）
+-- ============================================================
+CREATE TABLE idn_user_profile
+(
+    id              BIGINT          NOT NULL,
+    user_id         BIGINT          NOT NULL,
+    display_name    VARCHAR(120)    NULL,
+    record_remarks  jsonb           NULL,
+    version         BIGINT          NOT NULL DEFAULT 0,
+    ip_address      bytea           NULL,
+    created_at      timestamptz(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by      BIGINT          NULL,
+    created_by_name VARCHAR(100)    NULL,
+    updated_at      timestamptz(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by      BIGINT          NULL,
+    updated_by_name VARCHAR(100)    NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_idn_user_profile_user UNIQUE (user_id),
+    CONSTRAINT fk_idn_user_profile_user FOREIGN KEY (user_id) REFERENCES idn_user (id),
+    CONSTRAINT ck_idn_user_profile_display_name CHECK (
+        display_name IS NULL
+        OR (octet_length(display_name) BETWEEN 2 AND 120 AND display_name = btrim(display_name)))
+);
+
+COMMENT ON TABLE idn_user_profile IS 'Profile of a front-end user, one row per user';
+COMMENT ON COLUMN idn_user_profile.id IS 'PK (snowflake)';
+COMMENT ON COLUMN idn_user_profile.user_id IS 'Owner user ID';
+COMMENT ON COLUMN idn_user_profile.display_name IS 'Display name (NFC, trimmed); null means follow the username';
+COMMENT ON COLUMN idn_user_profile.record_remarks IS 'Audit remarks log';
+COMMENT ON COLUMN idn_user_profile.version IS 'Optimistic lock version number';
+COMMENT ON COLUMN idn_user_profile.ip_address IS 'Requester IP (IPv4/IPv6)';
+COMMENT ON COLUMN idn_user_profile.created_at IS 'Creation time (UTC)';
+COMMENT ON COLUMN idn_user_profile.created_by IS 'Creator ID';
+COMMENT ON COLUMN idn_user_profile.created_by_name IS 'Creator name';
+COMMENT ON COLUMN idn_user_profile.updated_at IS 'Last update time (UTC)';
+COMMENT ON COLUMN idn_user_profile.updated_by IS 'Updater ID';
+COMMENT ON COLUMN idn_user_profile.updated_by_name IS 'Updater name';
+
+CREATE TRIGGER trg_idn_user_profile_updated_at
+    BEFORE UPDATE ON idn_user_profile
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();

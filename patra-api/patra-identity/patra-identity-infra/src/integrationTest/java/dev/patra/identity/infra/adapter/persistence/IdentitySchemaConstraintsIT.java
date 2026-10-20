@@ -1,5 +1,6 @@
 package dev.patra.identity.infra.adapter.persistence;
 
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.patra.identity.infra.config.IdentityITPostgreSQLContainerInitializer;
@@ -27,6 +28,9 @@ class IdentitySchemaConstraintsIT {
 
   private static final String INSERT_USER =
       "INSERT INTO idn_user (id, email, status, banned_at) VALUES (?, ?, ?, ?)";
+
+  private static final String INSERT_PROFILE =
+      "INSERT INTO idn_user_profile (id, user_id, display_name) VALUES (?, ?, ?)";
 
   @Autowired private JdbcTemplate jdbcTemplate;
 
@@ -83,5 +87,30 @@ class IdentitySchemaConstraintsIT {
                     "$argon2id$x"))
         .isInstanceOf(DataIntegrityViolationException.class)
         .hasMessageContaining("fk_idn_user_password_credential_user");
+  }
+
+  @Test
+  @DisplayName("资料的昵称最多 120 字节")
+  void should_reject_profile_display_name_over_120_bytes() {
+    jdbcTemplate.update(INSERT_USER, 10L, "profile-long@example.com", "ACTIVE", null);
+    assertThatThrownBy(() -> jdbcTemplate.update(INSERT_PROFILE, 11L, 10L, "汉".repeat(41)))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("ck_idn_user_profile_display_name");
+  }
+
+  @Test
+  @DisplayName("资料的昵称可以为空：空表示跟随用户名")
+  void should_accept_profile_without_display_name() {
+    jdbcTemplate.update(INSERT_USER, 12L, "profile-null@example.com", "ACTIVE", null);
+    assertThatCode(() -> jdbcTemplate.update(INSERT_PROFILE, 13L, 12L, null))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  @DisplayName("资料必须指向存在的用户")
+  void should_reject_profile_of_missing_user() {
+    assertThatThrownBy(() -> jdbcTemplate.update(INSERT_PROFILE, 14L, 999_998L, "陈宇"))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("fk_idn_user_profile_user");
   }
 }

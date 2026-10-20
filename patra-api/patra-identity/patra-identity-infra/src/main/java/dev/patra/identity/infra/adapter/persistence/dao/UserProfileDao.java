@@ -1,0 +1,15 @@
+package dev.patra.identity.infra.adapter.persistence.dao;
+
+import dev.patra.identity.infra.adapter.persistence.entity.UserProfileEntity;
+import java.util.Optional;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+/// `idn_user_profile` 的 Spring Data 仓库。
+public interface UserProfileDao extends JpaRepository<UserProfileEntity, Long> {
+
+  /// 按用户 ID 查。
+  ///
+  /// @param userId 用户 ID
+  /// @return 实体
+  Optional<UserProfileEntity> findByUserId(Long userId);
+}
