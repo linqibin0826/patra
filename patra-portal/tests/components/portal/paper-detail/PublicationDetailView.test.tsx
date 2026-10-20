@@ -42,6 +42,7 @@ function paper(overrides: Partial<PaperDetail> = {}): PaperDetail {
     fullTextUrl: "https://full",
     bookmarks: 0,
     estimatedReadMin: null,
+    retracted: false,
     hasFullText: false,
     hasPdf: false,
     pdfSizeBytes: null,

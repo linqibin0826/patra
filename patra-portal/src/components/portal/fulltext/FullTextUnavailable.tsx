@@ -91,6 +91,12 @@ export function FullTextUnavailable({
   fullText: FullText | null;
 }) {
   const publisher = deriveFullText(paper);
+  const toPmc = (primary: boolean) =>
+    paper.pmcid && (
+      <ExternalButton href={pmcArticleUrl(paper.pmcid)} primary={primary}>
+        去 PMC 查看
+      </ExternalButton>
+    );
   const toPublisher = (primary: boolean) =>
     publisher.href && (
       <ExternalButton href={publisher.href} primary={primary}>
@@ -113,19 +119,22 @@ export function FullTextUnavailable({
       text: "这篇文献收录在 PubMed Central，但没有开放许可或尚未开放——Patra 不能转载正文，可以去 PMC 查看。",
       actions: (
         <>
-          {paper.pmcid && (
-            <ExternalButton href={pmcArticleUrl(paper.pmcid)} primary>
-              去 PMC 查看
-            </ExternalButton>
-          )}
+          {toPmc(true)}
           {toPublisher(false)}
         </>
       ),
     },
     retracted: {
       title: "已撤稿",
-      text: "这篇文献已被撤稿，Patra 不展示其全文——撤稿说明见出版方页面。",
-      actions: toPublisher(false),
+      text: paper.pmcid
+        ? "这篇文献已撤稿，Patra 不展示正文——撤稿说明可以去 PMC 或出版方页面查看。"
+        : "这篇文献已撤稿，Patra 不展示正文——撤稿说明见出版方页面。",
+      actions: (
+        <>
+          {toPmc(false)}
+          {toPublisher(false)}
+        </>
+      ),
     },
     "pdf-only": {
       title: "只有 PDF 版本",

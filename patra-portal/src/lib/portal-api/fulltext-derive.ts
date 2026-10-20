@@ -18,11 +18,9 @@ import type { PaperDetail } from "@/types/portal";
  */
 export type FullTextState = "full" | "pdf-only" | "pmc-only" | "not-oa" | "retracted";
 
-const RETRACTED_TYPE = "Retracted Publication";
-
 /** 按详情字段判断全文状态；撤稿优先（后端读端同口径下线全文）。 */
 export function deriveFullTextState(paper: PaperDetail): FullTextState {
-  if (paper.publicationTypes.includes(RETRACTED_TYPE)) {
+  if (paper.retracted) {
     return "retracted";
   }
   if (paper.hasFullText) {

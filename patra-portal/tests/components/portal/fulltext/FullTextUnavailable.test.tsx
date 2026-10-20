@@ -49,10 +49,36 @@ describe("FullTextUnavailable", () => {
     expect(screen.getByRole("link", { name: /去全文 · DOI/ })).toBeInTheDocument();
   });
 
-  it("已撤稿：不展示全文，保留去出版方的出口", () => {
-    render(<FullTextUnavailable kind="retracted" paper={makePaperDetail()} fullText={null} />);
+  it("已撤稿且有 PMCID：说明撤稿，去 PMC 与去 DOI 都是次按钮", () => {
+    render(
+      <FullTextUnavailable
+        kind="retracted"
+        paper={makePaperDetail({ pmcid: "PMC12829825", retracted: true })}
+        fullText={null}
+      />,
+    );
     expect(screen.getByRole("heading", { name: "已撤稿" })).toBeInTheDocument();
-    expect(screen.getByText(/这篇文献已被撤稿，Patra 不展示其全文/)).toBeInTheDocument();
+    expect(
+      screen.getByText("这篇文献已撤稿，Patra 不展示正文——撤稿说明可以去 PMC 或出版方页面查看。"),
+    ).toBeInTheDocument();
+    const pmc = screen.getByRole("link", { name: /去 PMC 查看/ });
+    expect(pmc).toHaveAttribute("href", "https://pmc.ncbi.nlm.nih.gov/articles/PMC12829825/");
+    const doi = screen.getByRole("link", { name: /去全文 · DOI/ });
+    expect(pmc.className).toBe(doi.className);
+  });
+
+  it("已撤稿但没有 PMCID：撤稿说明指向出版方，只留去 DOI", () => {
+    render(
+      <FullTextUnavailable
+        kind="retracted"
+        paper={makePaperDetail({ retracted: true })}
+        fullText={null}
+      />,
+    );
+    expect(
+      screen.getByText("这篇文献已撤稿，Patra 不展示正文——撤稿说明见出版方页面。"),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /去 PMC 查看/ })).toBeNull();
     expect(screen.getByRole("link", { name: /去全文 · DOI/ })).toBeInTheDocument();
   });
 

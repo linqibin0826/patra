@@ -58,6 +58,7 @@ export function makePaperDetail(overrides: Partial<PaperDetail> = {}): PaperDeta
     fullTextUrl: null,
     bookmarks: null,
     estimatedReadMin: null,
+    retracted: false,
     hasFullText: false,
     hasPdf: false,
     pdfSizeBytes: null,
