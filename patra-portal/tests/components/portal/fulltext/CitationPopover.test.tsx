@@ -34,6 +34,16 @@ function renderPage() {
           </sup>
         </p>
       </div>
+      <section id="declarations">
+        <p>
+          Funding note
+          <sup>
+            <a id="cite-3" href="#ref-r4" data-cite-ref="r4" data-cite-refs="r4">
+              4
+            </a>
+          </sup>
+        </p>
+      </section>
       <ReferenceList items={items} firstCiteByRef={{ r7: "cite-1", r1: "cite-2" }} />
       <CitationPopover items={items} />
     </>,
@@ -99,5 +109,15 @@ describe("CitationPopover", () => {
     expect(target).toBeVisible();
     expect(window.location.hash).toBe("#ref-r7");
     expect(within(target).getByRole("link", { name: /↩/ })).toHaveAttribute("href", "#cite-1");
+    // 视口已到参考文献，焦点不该回到正文里的引用号（否则按 Tab 页面会跳回去）
+    expect(screen.getByRole("link", { name: "7" })).not.toHaveFocus();
+  });
+
+  it("声明区里的引用号同样弹卡片（spec §5.7：所有参考文献引用）", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(screen.getByRole("link", { name: "4" }));
+    const card = await screen.findByRole("dialog");
+    expect(within(card).getByText("参考文献 4")).toBeInTheDocument();
   });
 });

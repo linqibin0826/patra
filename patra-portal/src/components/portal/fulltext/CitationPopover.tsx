@@ -13,14 +13,18 @@ interface OpenCitation {
 
 /**
  * 引用卡片（spec §5.7）：点正文里的引用号，在引用号下方弹出参考文献卡片，不直接跳到文末。
- * 正文是服务端渲染的普通链接，这里在 document 上用捕获阶段委托：只接管 `[data-ft-body]` 里的
- * `a[data-cite-ref]`，调用 preventDefault，参考文献列表的委托看到后就不再处理这次点击。
- * 卡片里的「跳到文末」是普通的 `#ref-…` 链接，带 `data-cite-from`，交给参考文献列表展开、高亮、记来源。
- * Esc 或点外面关闭，焦点回到引用号；没有 JS 时引用号仍是指向文末条目的链接。
+ * 正文是服务端渲染的普通链接，这里在 document 上用捕获阶段委托：接管所有带 `id` 的 `a[data-cite-ref]`
+ * （正文、声明区、附录里的引用号；卡片自己的「跳到文末」带 `data-cite-from`、没有 id，不接管），
+ * 调用 preventDefault，参考文献列表的委托看到后就不再处理这次点击。
+ * 卡片里的「跳到文末」是普通的 `#ref-…` 链接，带 `data-cite-from`，交给参考文献列表展开、高亮、记来源；
+ * 从这里关闭时焦点不回引用号（视口已到参考文献）。Esc 或点外面关闭，焦点回到引用号；
+ * 没有 JS 时引用号仍是指向文末条目的链接。
  */
 export function CitationPopover({ items }: { items: ReferenceListItem[] }) {
   const [open, setOpen] = useState<OpenCitation | null>(null);
   const anchorRef = useRef<HTMLAnchorElement | null>(null);
+  /** 是否经「跳到文末」关闭：这时焦点留给跳转目标，不回引用号 */
+  const jumpedRef = useRef(false);
   const byRefId = useMemo(
     () => new Map(items.flatMap((item) => (item.refId ? [[item.refId, item] as const] : []))),
     [items],
@@ -28,7 +32,7 @@ export function CitationPopover({ items }: { items: ReferenceListItem[] }) {
 
   useEffect(() => {
     const onClick = (event: MouseEvent) => {
-      const link = (event.target as Element | null)?.closest?.("[data-ft-body] a[data-cite-ref]");
+      const link = (event.target as Element | null)?.closest?.("a[data-cite-ref][id]");
       if (!(link instanceof HTMLAnchorElement)) return;
       const refIds = (link.dataset.citeRefs || link.dataset.citeRef || "")
         .split(" ")
@@ -36,6 +40,7 @@ export function CitationPopover({ items }: { items: ReferenceListItem[] }) {
       if (refIds.length === 0) return;
       event.preventDefault();
       anchorRef.current = link;
+      jumpedRef.current = false;
       setOpen({ anchor: link, refIds });
     };
     document.addEventListener("click", onClick, true);
@@ -62,7 +67,7 @@ export function CitationPopover({ items }: { items: ReferenceListItem[] }) {
           className="z-50"
         >
           <Popover.Popup
-            finalFocus={anchorRef}
+            finalFocus={() => (jumpedRef.current ? false : anchorRef.current)}
             className="flex max-h-[min(60vh,420px)] w-[340px] max-w-[calc(100vw-32px)] flex-col gap-4 overflow-y-auto rounded-xl border border-border-default bg-bg-elevated p-4 shadow-lg outline-none"
           >
             <Popover.Title className="sr-only">参考文献</Popover.Title>
@@ -103,7 +108,10 @@ export function CitationPopover({ items }: { items: ReferenceListItem[] }) {
                     href={`#${item.anchorId}`}
                     data-cite-ref={item.refId ?? undefined}
                     data-cite-from={open?.anchor.id}
-                    onClick={close}
+                    onClick={() => {
+                      jumpedRef.current = true;
+                      close();
+                    }}
                   >
                     跳到文末
                   </a>
