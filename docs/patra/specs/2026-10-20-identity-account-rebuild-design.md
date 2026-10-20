@@ -4,7 +4,7 @@
 > **版本**：[v0.12 User Center](../release-specs/v0.12-user-center.md)
 > **前置设计**：[identity 账号（PAP-63）](2026-10-05-identity-account-design.md)、[identity 会话（PAP-64）](2026-10-09-identity-session-design.md)、[网关鉴权（PAP-65）](2026-10-09-gateway-auth-design.md)
 > **日期**：2026-10-20
-> **状态**：草案，待用户评审（本地 Codex 评审，不为评审开 PR）
+> **状态**：已实施（2026-10-20，分支 `feat/v0.12-user-center-api`）；实测结果见第 14 节
 
 ## 1. 要解决的问题
 
@@ -579,15 +579,27 @@ boot 端到端（PG + Redis 容器，`RANDOM_PORT`，`MutableClock`）：
 | 2 | 零宽、双向控制符、BOM、软连字的 `Character.getType` 都是 `FORMAT`（16）；ZWJ U+200D 也是 `FORMAT`，所以「拒绝 Cf」必须给 emoji 组合留例外 | 成立；`Character.isEmojiComponent(0x200D)` 为真，标签字符 U+E0067 也是组件，👨 `isExtendedPictographic` 为真，肤色 U+1F3FD 是 `isEmojiModifier` |
 | 3 | U+3000 全角空格 `isSpaceChar` 为真、`isWhitespace` 为真；U+00B7 `·` 是 `OTHER_PUNCTUATION`，不会被当空白折叠 | 成立 |
 
-实施时要实测、结果写回本节：
+实施时实测的结果（2026-10-20，Testcontainers PostgreSQL 17 / Redis 7.0.15）：
 
-4. PostgreSQL 17 的 `CHECK (username ~ '…')`：ARE 语法里 `[_-]`、`!~`、`char_length` 的行为，由 `IdentitySchemaConstraintsIT` 覆盖。
-5. 错误引擎对 `{CONFLICT, PENDING_DELETION}` 映射成 409、`traits` 两个都输出：切片测试覆盖。
-6. `RestTestClient` 对 301 的处理：`expectStatus().isEqualTo(301)` 能拿到 JSON 体，不自动跟随；网关侧 `redirects: DONT_FOLLOW` 下 301 原样透传：`GatewayAuthenticationIT` 覆盖。
-7. Lombok `@Builder(builderMethodName = "restore")` 放在私有构造器上，与类级 `@Getter` 和手写 `getEmail()` 共存，spotless 和 Error Prone 不报；MapStruct 对 `User` 的 `toEntity` 要显式映射 `email`（`Optional`）。
-8. `Duration` 配置 `30d` 的绑定（Spring Boot 的 `DurationStyle` 支持 `d` 后缀），`IdentityConfigurationTest` 覆盖。
-9. `@WebMvcTest` 切片对新 Controller 要 `@Import` 并 `@MockitoBean` 查询服务，照 `AuthControllerIT`。
-10. MOCK 环境的 `@SpringBootTest` 不经过安全过滤器链，带断言的端到端测试要 `RANDOM_PORT`（PAP-64 已踩过）。
+| # | 结论 | 结果 |
+|---|---|---|
+| 4 | PostgreSQL 17 的 `CHECK (username ~ '^[a-z0-9]([a-z0-9]\|[_-][a-z0-9])*$' AND char_length(username) BETWEEN 3 AND 30 AND username !~ '^[0-9]+$')` | 成立：大写、连续分隔符、首尾分隔符、纯数字、2 个字符都被约束拒绝；31 个字符先撞 `VARCHAR(30)`（`value too long for type character varying(30)`），到不了 CHECK。`IdentitySchemaConstraintsIT` 每个用例只做一条失败插入：`@DataJpaTest` 的事务在第一条失败语句后被 PG 置为中止（`25P02`），同一事务里的第二条不再执行 |
+| 5 | 错误引擎对 `{CONFLICT, PENDING_DELETION}` 映射成 409、`traits` 两个都输出 | 成立：`MeControllerIT` 拿到 `IDN-0409`、`traits: ["CONFLICT", "PENDING_DELETION"]` |
+| 6 | `RestTestClient` 对 301 的处理 | 切片成立、真端口不成立：`@WebMvcTest` 下它绑定 MockMvc，`expectStatus().isEqualTo(301)` 能拿到 `Location` 和 JSON 体（`PublicUserControllerIT`）；`RANDOM_PORT` 下它底层是 Apache HttpClient，会自动跟随 301，还会按 `Retry-After` 自动重试 429（冷却是 30 天，等于挂死）。真端口的用例改用 `RestClient` + `JdkClientHttpRequestFactory`、`HttpClient.Redirect.NEVER`（`UsernameChangeFlowIT`、`PublicIdentityFlowIT`、`GatewayAuthenticationIT`）。网关 `redirects: DONT_FOLLOW` 下 301 的状态、`Location`、体原样透传：成立 |
+| 7 | Lombok `@Builder(builderMethodName = "restore")` 与 `@Getter` / 手写 `getEmail()` 共存；MapStruct 对 `email` 的映射 | 成立：构建器放私有全参构造器上，类级 `@Getter` 加字段上的 `@Getter(AccessLevel.NONE)`、手写 `Optional<EmailAddress> getEmail()`，spotless / Error Prone / SpotBugs 都不报；`UserJpaMapper` 对 `email` 用 `expression`（`imports = EmailAddress.class`）显式映射，`toDomain` 走 `User.restore()` |
+| 8 | `Duration` 配置 `30d` / `90d` 的绑定 | 成立：`DurationStyle` 认 `d` 后缀，`IdentityConfigurationTest` 覆盖默认值、覆盖值与非正数启动失败 |
+| 9 | `@WebMvcTest` 切片对新 Controller | 成立：`@Import(Controller)` + `@MockitoBean`（`CommandBus` / `UserQueryService`），`MeControllerIT`、`PublicUserControllerIT` |
+| 10 | MOCK 环境不经过安全过滤器链 | 成立，且多一条：identity 验断言 `exp` 用的是容器里的 `Clock`，拨动 `MutableClock` 后用真实时间签的 60 秒断言全部「过期」，测试要用同一个时钟签（`new IdentityAssertionSigner(TestSigningKey.key(), clock)`，`UsernameChangeFlowIT`） |
+
+顺带踩到、后续 Issue 会再碰的：
+
+- Spring Security 的 `StrictHttpFirewall` 对路径里的 `%20`、`%25` 等百分号编码直接 400（不是 404）：「语法不合法 404」的用例只能用未编码的非法名（`/users/ab`）；门户侧 `/u/[username]` 转发前要先按用户名规则过滤。
+- google-java-format 会把源码里的反斜杠 u 转义改写成字面字符，U+2028 会被当成换行导致「unclosed string literal」；注释里出现反斜杠 u 也会被 javac 当成 unicode 转义报错。不可见字符用按码点构造的辅助方法，注释里不写反斜杠 u。
+- `UserReadAdapterIT` 用 JDBC 改行后 JPA 一级缓存仍返回旧对象，查前要 `entityManager.clear()`。
+- SpotBugs：字段只在非构造路径赋值报 UWF，返回内部集合报 MS_EXPOSE_REP；`FormerUsername` 用全参构造器，`ReservedUsernames.siteAndSourceNames()` 返回 `Set.copyOf`。
+- `ChangeUsernameHandlerTest` 的 `findByIdForUpdate` 桩要用 `thenAnswer` 每次给新实例：处理器会改聚合，共享实例会把第一次的改名带进第二个用例。
+
+库重建（13.3，AC 7）：本机 2026-10-20 用 README 第 8 节的两条 SQL 重建 `patra_identity` 后启动，Flyway 只应用 `V1`（`flyway_schema_history` 一行，五张表）；经本地网关走通注册（带 `username`）→ `/auth/me` → `PATCH /me/username`（200；立刻再改 429，`Retry-After: 2592000`）→ `GET /users/<旧名>`（本人 301；匿名未验证 404，验证后 301 + `Location` + 体）→ `GET /users/<新名>` 200。mini 的重建随后端 PR 部署执行（README 第 8 节的运行手册：先 `docker stop patra-identity`，重建后 `docker start`）。
 
 ## 15. README
 
