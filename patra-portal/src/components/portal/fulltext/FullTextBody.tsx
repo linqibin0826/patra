@@ -5,6 +5,8 @@ import { TableBlock, type TableBlockRow } from "@/components/portal/fulltext/Tab
 import { RailRow } from "@/components/portal/RailRow";
 import {
   bodyAnchor,
+  figureLabel,
+  figureLayout,
   figureSrc,
   inlineText,
   isCitationSup,
@@ -321,13 +323,14 @@ function renderBlock(block: FullTextBlock, ctx: RenderContext, tone: Tone): Reac
         <FigureBlock
           key={key}
           anchorId={block.id ? bodyAnchor(block.id) : undefined}
-          label={block.label}
+          label={figureLabel(block.label)}
           altText={inlineText(title).trim()}
           title={renderInlines(title, ctx)}
           caption={renderBlocks(rest, ctx, "note")}
           src={block.image ? figureSrc(ctx.publicationId, block.image) : null}
           width={block.width}
           height={block.height}
+          layout={figureLayout(block.width, block.height)}
         />
       );
     }
@@ -601,9 +604,7 @@ export function renderFullTextBody(
     ctx,
   );
   const appendices =
-    back.appendices.length > 0 ? (
-      <>{renderSections(back.appendices, 1, ctx, "back", false)}</>
-    ) : null;
+    back.appendices.length > 0 ? renderSections(back.appendices, 1, ctx, "back", false) : null;
   const references = body.references.map((r) => renderInlines(r.content, ctx));
   return {
     content,
