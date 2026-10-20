@@ -18,6 +18,8 @@ interface PublicationDetailViewProps {
   tocCard?: ReactNode;
   /** 面包屑右端的移动端「目录」按钮 */
   tocButton?: ReactNode;
+  /** 面包屑中段的短标题与阅读进度 */
+  crumbStatus?: ReactNode;
 }
 
 /// 文献详情（spec §4）：吸顶面包屑 → 整宽页头（标题、事实条、唯一一组操作）→ 两栏：
@@ -29,6 +31,7 @@ export function PublicationDetailView({
   fullText,
   tocCard,
   tocButton,
+  crumbStatus,
 }: PublicationDetailViewProps) {
   const crumb = paper.pmid ? `PMID ${paper.pmid}` : `#${paper.id}`;
 
@@ -40,6 +43,7 @@ export function PublicationDetailView({
           { label: "文献", href: "/papers" },
         ]}
         current={crumb}
+        status={crumbStatus}
         action={tocButton}
       />
 

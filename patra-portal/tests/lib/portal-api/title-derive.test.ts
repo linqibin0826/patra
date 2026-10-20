@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { splitTitle } from "@/lib/portal-api/title-derive";
+import { shortTitle, splitTitle } from "@/lib/portal-api/title-derive";
 
 const PMID_41575322 =
   "Explainable machine learning for early diagnosis of esophageal cancer: A feature-enriched Light Gradient Boosting Machine framework with Shapley Additive Explanations and Local Interpretable Model-Agnostic Explanations interpretations.";
@@ -54,5 +54,14 @@ describe("splitTitle", () => {
 
   it("冒号在标签里面时不拆", () => {
     expect(splitTitle("<i>Homo sapiens: a</i> genome study").sub).toBeNull();
+  });
+});
+
+describe("shortTitle", () => {
+  it("面包屑用的短标题：主标题去掉富文本标签", () => {
+    expect(shortTitle(PMID_41575322)).toBe(
+      "Explainable machine learning for early diagnosis of esophageal cancer",
+    );
+    expect(shortTitle("<i>BRCA1</i> carriers: a cohort")).toBe("BRCA1 carriers");
   });
 });

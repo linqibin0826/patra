@@ -7,13 +7,15 @@ interface DetailCrumbsProps {
   trail: { label: string; href: string }[];
   /** 当前页 */
   current: string;
+  /** 中段状态（如文献详情滚过页头后的短标题与阅读进度），放在当前页与右端操作之间 */
+  status?: ReactNode;
   /** 右端操作（如文献详情的移动端「目录」按钮） */
   action?: ReactNode;
 }
 
 /// 详情页吸顶面包屑：高 44px + 1px 底边（侧栏吸顶偏移 134px 依赖这一高度），底边叠一条 2px 陶土阅读进度线
 /// （scroll-driven，仅支持的浏览器且 motion-safe 时出现）。
-export function DetailCrumbs({ trail, current, action }: DetailCrumbsProps) {
+export function DetailCrumbs({ trail, current, status, action }: DetailCrumbsProps) {
   return (
     <nav
       aria-label="面包屑"
@@ -32,9 +34,10 @@ export function DetailCrumbs({ trail, current, action }: DetailCrumbsProps) {
             </li>
           </Fragment>
         ))}
-        <li aria-current="page" className="truncate font-medium text-fg-1">
+        <li aria-current="page" className="shrink-0 truncate font-medium text-fg-1">
           {current}
         </li>
+        {status && <li className="ml-4 flex min-w-0 flex-1">{status}</li>}
         {action && <li className="ml-auto flex">{action}</li>}
       </ol>
       <div

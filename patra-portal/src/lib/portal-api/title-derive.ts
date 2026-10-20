@@ -60,3 +60,8 @@ export function splitTitle(title: string): TitleParts {
     size: plainText(trimmed).length > LONG_TITLE ? "md" : "lg",
   };
 }
+
+/** 面包屑里的短标题：拆分后的主标题，去掉富文本标签。 */
+export function shortTitle(title: string): string {
+  return plainText(splitTitle(title).main).trim();
+}
