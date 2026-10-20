@@ -12,6 +12,7 @@ import {
   isCitationSup,
   isSupplementarySection,
   numberSections,
+  numericColumns,
   referenceAnchor,
   type SectionHeading,
   splitBack,
@@ -309,10 +310,11 @@ function renderBlock(block: FullTextBlock, ctx: RenderContext, tone: Tone): Reac
         <TableBlock
           key={key}
           anchorId={block.id ? bodyAnchor(block.id) : undefined}
-          label={block.label}
+          label={figureLabel(block.label)}
           title={renderInlines(title, ctx)}
           head={tableRows(block.head, ctx)}
           body={tableRows(block.body, ctx)}
+          numeric={numericColumns(block.head, block.body)}
           footnotes={notes.length > 0 ? renderBlocks(notes, ctx, "note") : null}
         />
       );

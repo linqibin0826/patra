@@ -306,11 +306,14 @@
 @layer components {
   /* ---------- 全文阅读（v0.11）：正文表格、公式 ---------- */
 
-  /* 正文表格：表头 sunken 底、单元格 sans 13px 等宽数字；首列吸左，横滚时行名始终可见 */
+  /* 正文表格（PAP-89 起三线表）：上下 ink 粗线、表头下一条 strong 线、行间 subtle 线；
+     表头等宽大写小字；数字列（data-numeric）右对齐；首列吸左，横滚时行名始终可见 */
   .ft-table {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
+    border-top: 1px solid var(--ink-900);
+    border-bottom: 1px solid var(--ink-900);
     font-family: var(--font-sans);
     font-size: var(--text-sm);
     line-height: 20px;
@@ -319,20 +322,28 @@
   }
   .ft-table th,
   .ft-table td {
-    padding: 8px 12px;
+    padding: 10px 12px;
     text-align: left;
     vertical-align: top;
   }
+  .ft-table tr > :first-child {
+    padding-left: 0;
+  }
+  .ft-table [data-numeric] {
+    text-align: right;
+  }
   .ft-table thead th {
-    background: var(--bg-sunken);
-    font-size: var(--text-xs);
-    font-weight: 600;
-    color: var(--fg-2);
+    font-family: var(--font-mono);
+    font-size: var(--text-3xs);
+    font-weight: 500;
+    letter-spacing: var(--tracking-mono);
+    text-transform: uppercase;
+    color: var(--fg-3);
     vertical-align: bottom;
-    border-bottom: 1px solid var(--border-default);
+    border-bottom: 1px solid var(--border-strong);
   }
   .ft-table tbody th {
-    font-weight: 600;
+    font-weight: 500;
   }
   .ft-table tbody tr + tr > * {
     border-top: 1px solid var(--border-subtle);
@@ -343,11 +354,7 @@
     z-index: 1;
     min-width: 140px;
     max-width: 280px;
-    background: var(--paper-50);
-    border-right: 1px solid var(--border-default);
-  }
-  .ft-table thead tr > :first-child {
-    background: var(--bg-sunken);
+    background: var(--bg-canvas);
   }
   /* 其余列给个最小宽度：窄屏上表格横滚，而不是把每列挤成一字一行 */
   .ft-table tr > :not(:first-child) {
