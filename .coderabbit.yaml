@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
 # Patra CodeRabbit 配置。原则：降 rate limit（关增量）+ 降噪 + 工具聚合 + TDD 约束 + Linear。
-# 分工：CodeRabbit=广度（行级 nitpick + lint/安全工具聚合 + AC），Codex=PR ready 时自动的补充评审，
+# 分工：CodeRabbit=广度（行级 nitpick + lint/安全工具聚合 + AC），
 # Claude=深度（六边形架构 + DDD 领域逻辑）。每个 PR 只做首评（Claude 手动 @ 触发），不复评：
 # 0 star 公开仓库的 OSS 额度仅每小时 1 次 PR 评审。
 language: zh-CN

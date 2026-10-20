@@ -105,7 +105,7 @@ PR squash-merge 时 GitHub 会用 PR title 作为 commit message，所以 **PR �
 
 ### CodeRabbit AI Review
 
-仓库另有 Codex（`chatgpt-codex-connector`）在 PR ready 时自动评审，与 CodeRabbit 同为正式 reviewer，流程见 `CLAUDE.md`「PR 与代码评审」。
+另一位正式 reviewer 是 Claude Action（`.github/workflows/claude-code-review.yml`），PR 转 ready 时自动评审；流程见 `CLAUDE.md`「PR 与代码评审」。
 
 `.coderabbit.yaml` 配置（PAP-22 深化版）：
 
