@@ -117,7 +117,7 @@ export function PaperHeader({
 
       <PaperFacts paper={paper} fullTextFacts={fullTextFacts} />
 
-      <div className="anim-rise mt-6 flex flex-wrap items-center gap-3 [--delay:200ms]">
+      <div className="anim-rise mt-6 flex flex-wrap items-center gap-3 [--delay:200ms] max-[540px]:flex-col max-[540px]:items-stretch">
         <FullTextActions paper={paper} />
         <BookmarkButton paperId={paper.id} />
         {pmcUrl && (
@@ -125,7 +125,7 @@ export function PaperHeader({
             href={pmcUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="link-draw ml-2 font-sans text-sm font-medium text-fg-2 hover:text-fg-1"
+            className="link-draw ml-2 font-sans text-sm font-medium text-fg-2 hover:text-fg-1 max-[540px]:ml-0 max-[540px]:self-start"
           >
             在 PMC 查看原文 ↗
           </a>

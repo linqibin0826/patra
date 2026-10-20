@@ -228,10 +228,11 @@ describe("renderFullTextBody · 声明与附注（PAP-89）", () => {
   it("含表的附录单独渲染在 appendices，带自己的 h2", () => {
     const { result } = renderBody(makeBody({ back }));
     render(<div>{result.appendices}</div>);
-    expect(screen.getByRole("heading", { level: 2, name: "Appendix" })).toHaveAttribute(
-      "id",
-      "ft-app",
-    );
+    const heading = screen.getByRole("heading", { level: 2, name: "Appendix" });
+    expect(heading).toHaveAttribute("id", "ft-app");
+    // spec §5.11：附录标题 serif 24px（不是正文一级章节的 30px）
+    expect(heading.className).toContain("text-2xl");
+    expect(heading.className).not.toContain("text-3xl");
   });
 
   it("只有无标题的文末节时：内容照常渲染，但没有「声明与附注」区块头与 #declarations", () => {

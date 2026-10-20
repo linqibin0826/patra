@@ -464,7 +464,7 @@ const NUMBER_CLASS = [
 
 /**
  * 按标签栏渲染章节：一、二级章节号放标签格（无编号表时标签格留空），标题在内容格。
- * `numbered` 为 false 时（附录）不编号。
+ * `numbered` 为 false 时（附录）不编号，字级降一档（附录标题 serif 24px，spec §5.11）。
  */
 function renderSections(
   sections: FullTextSectionNode[],
@@ -479,7 +479,7 @@ function renderSections(
       const key = nextKey(ctx);
       const level = Math.min(depth + 1, 6);
       const Heading = `h${level}` as "h2" | "h3" | "h4" | "h5" | "h6";
-      const tier = Math.min(depth - 1, 2);
+      const tier = Math.min(depth - (numbered ? 1 : 0), 2);
       const heading = numbered ? ctx.numbering[s.id] : undefined;
       return (
         <section key={key} className={s.title.length > 0 ? SECTION_CLASS[tier] : undefined}>

@@ -152,6 +152,13 @@ describe("PaperHeader · 长标题与页头结构（PAP-89）", () => {
     );
   });
 
+  it("540px 以下操作按钮各占一行、撑满宽度（spec §6）", () => {
+    render(<PaperHeader paper={paper({ hasFullText: true, hasPdf: true, pmcid: "PMC1" })} />);
+    const row = screen.getByRole("link", { name: /阅读全文/ }).parentElement as HTMLElement;
+    expect(row.className).toContain("max-[540px]:flex-col");
+    expect(row.className).toContain("max-[540px]:items-stretch");
+  });
+
   it("事实条插槽渲染在作者行之后", () => {
     render(<PaperHeader paper={paper()} fullTextFacts={<div>FACTS-SLOT</div>} />);
     expect(screen.getByText("FACTS-SLOT")).toBeInTheDocument();
