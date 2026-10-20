@@ -173,9 +173,9 @@ public final class ReservedUsernames {
 
   /// 站名与数据源名这一组（折叠后），昵称的拒绝词复用。
   ///
-  /// @return 不可变集合
+  /// @return 不可变集合的副本
   public static Set<String> siteAndSourceNames() {
-    return FOLDED_SITE_AND_SOURCE_NAMES;
+    return Set.copyOf(FOLDED_SITE_AND_SOURCE_NAMES);
   }
 
   /// 把清单逐条折叠成集合。
