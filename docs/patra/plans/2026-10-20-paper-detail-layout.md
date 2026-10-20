@@ -65,9 +65,11 @@ Expected: 编译失败，`RunInAbstractLabelSplitter` 不存在
 
 - [ ] **Step 3: Implement `split`**
 
-标签词表照 spec §5.17 抄成常量，按长度降序拼成一个交替组。两个正则：
-- 开头：`^(LABELS)(?=\p{Lu})`
-- 中间：`(?<=[.!?)\]])(LABELS)(?=\p{Lu})`
+开头标签的词表照 spec §5.17 抄成常量，按长度降序拼成一个交替组。两个正则（最终规则，见 spec §5.17）：
+- 开头：`^(LABELS)(?=[\p{Lu}\p{Nd}])`，标签后紧跟大写字母或数字
+- 中间：不限词表，句末标点后紧贴一个首字母大写的短语，最多 6 个词，可用 `and` / `or` / `of` / `&` / 逗号连接，短语后紧跟大写字母或数字：`(?<=[.!?)\]])(\p{Lu}\p{Ll}+(?:(?:,? (?:and|or|of|&) |, | & | )\p{L}\p{Ll}+){0,5})(?=[\p{Lu}\p{Nd}])`
+
+测试清单另加三条：多词中间标签（`Main Outcome MeasuresScores`、`Intervention or ExposuresEight`）、标签后紧跟数字（`Participants266`）、6 个词能切开而 7 个词不切。
 
 先匹配开头，不中就返回空。再从开头标签之后找中间标签，一个都找不到也返回空。按匹配位置切段，`label` 取 `toUpperCase(Locale.ROOT)`，`content` 取 `strip()`。
 

@@ -100,6 +100,20 @@ class RunInAbstractLabelSplitterTest {
   }
 
   @Test
+  @DisplayName("中间标签最多 6 个词：6 个词能切开，7 个词不认作标签")
+  void should_limit_inner_label_to_six_words() {
+    assertThat(
+            RunInAbstractLabelSplitter.split(
+                "DesignA cohort.Alpha Beta Gamma Delta Epsilon ZetaScores fell."))
+        .extracting(LabeledText::label)
+        .containsExactly("DESIGN", "ALPHA BETA GAMMA DELTA EPSILON ZETA");
+    assertThat(
+            RunInAbstractLabelSplitter.split(
+                "DesignA cohort.Alpha Beta Gamma Delta Epsilon Zeta EtaScores fell."))
+        .isEmpty();
+  }
+
+  @Test
   @DisplayName("标签后面紧跟数字也能切开（Participants266 adults）")
   void should_split_label_followed_by_digit() {
     assertThat(RunInAbstractLabelSplitter.split("SettingOne clinic.Participants266 adults."))

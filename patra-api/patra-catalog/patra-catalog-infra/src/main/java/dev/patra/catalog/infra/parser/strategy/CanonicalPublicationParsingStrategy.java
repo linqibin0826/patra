@@ -561,6 +561,9 @@ public final class CanonicalPublicationParsingStrategy
             ParsedAbstractSection section = new ParsedAbstractSection();
             section.label = reader.getAttributeValue(null, PubmedXmlElements.Attribute.LABEL);
             section.content = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
+            // 粘连标签拆分按原文判断：空白段落虽然丢弃，但它的段数与 Label 仍要算上
+            fields.rawAbstractTextCount++;
+            fields.rawAbstractHasLabel |= section.label != null;
             if (!section.content.isBlank()) {
               fields.abstractSections.add(section);
             }
@@ -1015,7 +1018,7 @@ public final class CanonicalPublicationParsingStrategy
     }
 
     List<AbstractSection> sections =
-        splitRunInLabels(fields.abstractSections).stream()
+        splitRunInLabels(fields).stream()
             .map(
                 parsed ->
                     AbstractSection.builder().label(parsed.label).content(parsed.content).build())
@@ -1029,13 +1032,15 @@ public final class CanonicalPublicationParsingStrategy
 
   /// 拆开粘在正文前的段落标签。
   ///
-  /// 只处理"整篇只有一段、且没有 Label"的摘要（见 [RunInAbstractLabelSplitter]）；
+  /// 只处理原文"整篇只有一段 `AbstractText`、且没有 Label"的摘要（见 [RunInAbstractLabelSplitter]）；
+  /// 原文有带 Label 的段落时，即使它因内容为空被丢弃，也整篇不动；
   /// 其余情况、或拆分条件不满足时原样返回。
   ///
-  /// @param parsed 解析出的摘要段落
+  /// @param fields 解析出的字段（摘要段落与原文段数、Label 状态）
   /// @return 拆分后的段落
-  private List<ParsedAbstractSection> splitRunInLabels(List<ParsedAbstractSection> parsed) {
-    if (parsed.size() != 1 || parsed.getFirst().label != null) {
+  private List<ParsedAbstractSection> splitRunInLabels(ParsedFields fields) {
+    List<ParsedAbstractSection> parsed = fields.abstractSections;
+    if (fields.rawAbstractTextCount != 1 || fields.rawAbstractHasLabel || parsed.size() != 1) {
       return parsed;
     }
     List<LabeledText> split = RunInAbstractLabelSplitter.split(parsed.getFirst().content);
@@ -1251,6 +1256,10 @@ public final class CanonicalPublicationParsingStrategy
     // 摘要
     List<ParsedAbstractSection> abstractSections = new ArrayList<>();
     String abstractCopyright;
+    /// 原文 `AbstractText` 段数（含内容为空被丢弃的）
+    int rawAbstractTextCount;
+    /// 原文是否有任何一段带 Label（含内容为空被丢弃的）
+    boolean rawAbstractHasLabel;
 
     // MeSH 主题词
     List<ParsedMeshHeading> meshHeadings = new ArrayList<>();

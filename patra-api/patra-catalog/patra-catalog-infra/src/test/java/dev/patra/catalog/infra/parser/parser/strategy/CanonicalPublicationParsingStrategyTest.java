@@ -1117,6 +1117,19 @@ class CanonicalPublicationParsingStrategyTest {
     }
 
     @Test
+    @DisplayName("原文有带 Label 的段落（即使内容为空被丢弃）时不做粘连拆分")
+    void should_not_split_when_blank_labeled_abstract_text_was_dropped() throws Exception {
+      var result =
+          parseAbstractXml(
+              "<AbstractText Label=\"BACKGROUND\"> </AbstractText>"
+                  + "<AbstractText>ObjectiveA.MethodsB.</AbstractText>");
+
+      var sections = result.getAbstractContent().getSections();
+      assertThat(sections).extracting(AbstractSection::getLabel).containsExactly((String) null);
+      assertEquals("ObjectiveA.MethodsB.", sections.getFirst().getContent());
+    }
+
+    @Test
     @DisplayName("多段无 Label 的摘要不做粘连拆分")
     void should_keep_multiple_unlabeled_abstract_texts_untouched() throws Exception {
       var result =
