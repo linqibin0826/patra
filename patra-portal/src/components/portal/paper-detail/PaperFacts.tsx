@@ -5,7 +5,7 @@ import { deriveEvidence } from "@/lib/portal-api/publication-derive";
 import type { PaperDetail } from "@/types/portal";
 
 const CELL =
-  "border-r border-border-subtle py-3.5 pr-4 pl-4 first:pl-0 last:border-r-0 max-[540px]:border-r-0";
+  "border-r border-border-subtle py-3.5 pr-4 pl-4 first:pl-0 last:border-r-0 max-[540px]:border-r-0 max-[540px]:pl-0";
 
 /** 事实条的一格：等宽小标 + 数值。 */
 export function FactCell({ term, children }: { term: string; children: ReactNode }) {

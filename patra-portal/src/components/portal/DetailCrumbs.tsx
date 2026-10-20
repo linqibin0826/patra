@@ -37,7 +37,7 @@ export function DetailCrumbs({ trail, current, status, action }: DetailCrumbsPro
         <li aria-current="page" className="shrink-0 truncate font-medium text-fg-1">
           {current}
         </li>
-        {status && <li className="ml-4 flex min-w-0 flex-1">{status}</li>}
+        {status && <li className="mr-3 ml-4 flex min-w-0 flex-1">{status}</li>}
         {action && <li className="ml-auto flex">{action}</li>}
       </ol>
       <div
