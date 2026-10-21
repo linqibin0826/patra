@@ -14,7 +14,6 @@ import dev.patra.identity.domain.exception.UsernameChangeCooldownException;
 import dev.patra.identity.domain.model.vo.UserFieldViolations;
 import dev.patra.tool.core.security.AuthenticationRequiredException;
 import dev.patra.tool.cqrs.CommandBus;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -132,10 +131,10 @@ class MeControllerIT {
   }
 
   @Test
-  @DisplayName("冷却期内：429，Retry-After 和 retryAfterSeconds 都是剩余秒数")
-  void should_render_cooldown_as_429() {
+  @DisplayName("冷却期内：409，traits 含 USERNAME_CHANGE_COOLDOWN，不带 Retry-After")
+  void should_render_cooldown_as_409_with_trait() {
     when(commandBus.handle(any(ChangeUsernameCommand.class)))
-        .thenThrow(new UsernameChangeCooldownException(Duration.ofDays(20)));
+        .thenThrow(new UsernameChangeCooldownException());
 
     restClient
         .patch()
@@ -144,14 +143,20 @@ class MeControllerIT {
         .body(Map.of("username", "chen-yu-2"))
         .exchange()
         .expectStatus()
-        .isEqualTo(429)
+        .isEqualTo(409)
         .expectHeader()
-        .valueEquals(HttpHeaders.RETRY_AFTER, "1728000")
+        .doesNotExist(HttpHeaders.RETRY_AFTER)
         .expectBody()
         .jsonPath("$.code")
-        .isEqualTo("IDN-0429")
+        .isEqualTo("IDN-0409")
+        .jsonPath("$.traits")
+        .value(
+            traits ->
+                assertThat(traits.toString())
+                    .contains("CONFLICT")
+                    .contains("USERNAME_CHANGE_COOLDOWN"))
         .jsonPath("$.retryAfterSeconds")
-        .isEqualTo(1728000);
+        .doesNotExist();
   }
 
   @Test

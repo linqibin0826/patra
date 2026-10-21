@@ -153,14 +153,12 @@ class ChangeUsernameHandlerTest {
   }
 
   @Test
-  @DisplayName("冷却期内 429、冷静期内 409：聚合抛的异常原样传出，不保存")
+  @DisplayName("冷却期内、冷静期内都是 409：聚合抛的异常原样传出，不保存")
   void should_propagate_cooldown_and_status_exceptions() {
     when(users.findByIdForUpdate(42L))
         .thenReturn(Optional.of(activeUser(NOW.minus(Duration.ofDays(10)))));
     assertThatThrownBy(() -> handler.handle(ChangeUsernameCommand.of("chen-yu-2")))
-        .isInstanceOfSatisfying(
-            UsernameChangeCooldownException.class,
-            e -> assertThat(e.getRetryAfter()).isEqualTo(Duration.ofDays(20)));
+        .isInstanceOf(UsernameChangeCooldownException.class);
 
     User pending = activeUser(null);
     pending.requestDeletion(NOW, Duration.ofDays(15));

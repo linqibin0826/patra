@@ -42,8 +42,7 @@ import tools.jackson.databind.json.JsonMapper;
 /// 改名的完整流程（AC 4）：冷却、旧名保留、别人不能占、原主能改回、旧名跳转、90 天后释放。
 ///
 /// 时钟是可拨动的 `MutableClock`；Redis 的 TTL 走真实时间，本用例不依赖会话过期。
-/// 改名和公开身份卡的请求走裸的 JDK HttpClient：`RestTestClient` 底层的 Apache 客户端会按 `Retry-After`
-/// 自动重试 429（冷却是 30 天）、会自动跟随 301。
+/// 改名和公开身份卡的请求走裸的 JDK HttpClient：`RestTestClient` 底层的 Apache 客户端会自动跟随 301。
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ContextConfiguration(
     initializers = {
@@ -65,7 +64,7 @@ class UsernameChangeFlowIT {
   @Autowired private Environment environment;
 
   @Test
-  @DisplayName("改名后 30 天内再改 429；旧名 90 天内别人不能注册或改成、原主能改回、/users/旧名 301；90 天后释放")
+  @DisplayName("改名后 30 天内再改 409；旧名 90 天内别人不能注册或改成、原主能改回、/users/旧名 301；90 天后释放")
   void should_enforce_cooldown_reservation_and_redirect() {
     clock.set(IdentityClockITSpringConfig.START);
     long alice = registerAndVerify("alice@example.com", "alice");
@@ -74,9 +73,9 @@ class UsernameChangeFlowIT {
     RawResponse first = changeUsername(alice, "alice-2");
     assertThat(first.status()).as(first.body()).isEqualTo(200);
     RawResponse tooSoon = changeUsername(alice, "alice-3");
-    assertThat(tooSoon.status()).isEqualTo(429);
-    assertThat(JSON.readTree(tooSoon.body()).get("retryAfterSeconds").asLong())
-        .isEqualTo(Duration.ofDays(30).toSeconds());
+    assertThat(tooSoon.status()).isEqualTo(409);
+    assertThat(JSON.readTree(tooSoon.body()).get("traits").toString())
+        .contains("USERNAME_CHANGE_COOLDOWN");
     JsonNode me = JSON.readTree(me(alice).getResponseBody());
     assertThat(me.get("nextUsernameChangeAt").asString()).isEqualTo("2026-11-19T08:00:00Z");
     assertThat(me.get("username").asString()).isEqualTo("alice-2");
@@ -144,7 +143,7 @@ class UsernameChangeFlowIT {
         .returnResult();
   }
 
-  /// 以某个用户的身份改名。走裸客户端：429 带 30 天的 `Retry-After`，Apache 客户端会等着重试。
+  /// 以某个用户的身份改名，走裸客户端。
   ///
   /// @param userId 用户 ID
   /// @param username 新用户名

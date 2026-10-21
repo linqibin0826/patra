@@ -7,5 +7,8 @@ import dev.patra.tool.core.error.trait.ErrorTrait;
 /// 状态码才不取决于集合的遍历顺序。
 public enum IdentityErrorTrait implements ErrorTrait {
   /// 账号正在注销冷静期，写操作被拒（409）。
-  PENDING_DELETION
+  PENDING_DELETION,
+
+  /// 距上次改名不足冷却期，改名被拒（409）。
+  USERNAME_CHANGE_COOLDOWN
 }

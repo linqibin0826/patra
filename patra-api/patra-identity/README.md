@@ -85,7 +85,7 @@
 
 ## 4. 用户名
 
-- 改名 `PATCH /me/username`：校验新名 → 加行锁读用户 → 状态守卫、与当前相同 422 `UNCHANGED`、冷却期内 429 → 查占用（`idn_user` 里有人用，或别人的旧名未到期）409 → 保存，旧名写进 `idn_user_former_username`。不做再认证，不撤销会话，不碰资料表。
+- 改名 `PATCH /me/username`：校验新名 → 加行锁读用户 → 状态守卫、与当前相同 422 `UNCHANGED`、冷却期内 409 → 查占用（`idn_user` 里有人用，或别人的旧名未到期）409 → 保存，旧名写进 `idn_user_former_username`。不做再认证，不撤销会话，不碰资料表。
 - 冷却：两次改名间隔不少于 30 天，改回旧名也算一次；从未改过名的第一次没有冷却。
 - 保留：旧名保留 90 天，期间别人不能注册或改成它，原主可以改回；`GET /users/<旧名>` 301 到新名。到期自动失效，不用任务清理（查询按 `reserved_until` 过滤）。
 - 配置：
@@ -139,7 +139,7 @@ patra:
 | 邮箱或密码错误（含已注销账号） | 401 | `IDN-0401` |
 | 需要登录：`/auth/me`、`/me/**` 没有当前用户、用户不存在、已封禁、已注销（文案 `Authentication required`） | 401 | `IDN-0401` |
 | 登录被暂时限制（`Retry-After`、`retryAfterSeconds`） | 429 | `IDN-0429` |
-| 改名冷却期内（`Retry-After`、`retryAfterSeconds` 是剩余秒数，文案「用户名修改过于频繁，请稍后再试」） | 429 | `IDN-0429` |
+| 改名冷却期内（`traits` 为 `CONFLICT` + `USERNAME_CHANGE_COOLDOWN`，不带 `Retry-After`，下次可改时间看 `/auth/me` 的 `nextUsernameChangeAt`；文案「用户名修改过于频繁，请稍后再试」） | 409 | `IDN-0409` |
 | 账号已被封禁 | 403 | `IDN-0403` |
 | 用户不存在：后台接口；公开身份卡不存在或对请求者不可见 | 404 | `IDN-0404` |
 | Redis 不可用（登录限流、会话存储）、哈希排队超时 | 503 | `IDN-0503` |

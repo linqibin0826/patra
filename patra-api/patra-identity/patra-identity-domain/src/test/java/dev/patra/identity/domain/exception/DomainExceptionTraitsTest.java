@@ -7,6 +7,7 @@ import dev.patra.identity.domain.model.enums.UserStatus;
 import dev.patra.identity.domain.model.vo.UserFieldViolations;
 import dev.patra.tool.core.error.DomainException;
 import dev.patra.tool.core.error.field.FieldViolation;
+import dev.patra.tool.core.error.retry.HasRetryAfter;
 import dev.patra.tool.core.error.trait.StandardErrorTrait;
 import java.time.Duration;
 import java.util.List;
@@ -47,10 +48,6 @@ class DomainExceptionTraitsTest {
             "邮箱或用户名已被使用",
             StandardErrorTrait.CONFLICT),
         Arguments.of(
-            new UsernameChangeCooldownException(Duration.ofDays(20)),
-            "用户名修改过于频繁，请稍后再试",
-            StandardErrorTrait.QUOTA_EXCEEDED),
-        Arguments.of(
             new InvalidUserStateTransitionException(UserStatus.DELETED, "unban"),
             "账号当前状态不允许此操作",
             StandardErrorTrait.CONFLICT));
@@ -78,8 +75,20 @@ class DomainExceptionTraitsTest {
   }
 
   @Test
-  @DisplayName("占用冲突带字段错误（至少一条），冷却异常带向上取整的秒数")
-  void should_expose_field_violations_and_retry_after() {
+  @DisplayName("改名冷却是 409：CONFLICT 之外带 USERNAME_CHANGE_COOLDOWN，不带 Retry-After")
+  void should_carry_cooldown_trait_beside_conflict_without_retry_after() {
+    UsernameChangeCooldownException exception = new UsernameChangeCooldownException();
+
+    assertThat(exception.getMessage()).isEqualTo("用户名修改过于频繁，请稍后再试");
+    assertThat(exception.getErrorTraits())
+        .containsExactlyInAnyOrder(
+            StandardErrorTrait.CONFLICT, IdentityErrorTrait.USERNAME_CHANGE_COOLDOWN);
+    assertThat(exception).isNotInstanceOf(HasRetryAfter.class);
+  }
+
+  @Test
+  @DisplayName("占用冲突带字段错误（至少一条）")
+  void should_expose_field_violations() {
     UserIdentifierTakenException taken =
         new UserIdentifierTakenException(
             List.of(
@@ -91,7 +100,5 @@ class DomainExceptionTraitsTest {
         .containsExactly("email", "username");
     assertThatThrownBy(() -> new UserIdentifierTakenException(List.of()))
         .isInstanceOf(IllegalArgumentException.class);
-    assertThat(new UsernameChangeCooldownException(Duration.ofMillis(1500)).getRetryAfterSeconds())
-        .isEqualTo(2);
   }
 }

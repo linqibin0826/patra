@@ -21,7 +21,7 @@ public class MeController {
 
   private final CommandBus commandBus;
 
-  /// 改用户名。成功返回 200；422 不合法或与当前相同，409 已被使用或账号注销中，429 冷却期内。
+  /// 改用户名。成功返回 200；422 不合法或与当前相同，409 已被使用、账号注销中或冷却期内。
   ///
   /// @param request 请求体
   /// @return 新用户名和下次可以改名的时间

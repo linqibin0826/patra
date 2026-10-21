@@ -198,9 +198,7 @@ class UserTest {
     user.changeUsername(Username.of("chen-yu-2"), T0, POLICY);
 
     assertThatThrownBy(() -> user.changeUsername(USERNAME, T0.plus(Duration.ofDays(10)), POLICY))
-        .isInstanceOfSatisfying(
-            UsernameChangeCooldownException.class,
-            e -> assertThat(e.getRetryAfter()).isEqualTo(Duration.ofDays(20)));
+        .isInstanceOf(UsernameChangeCooldownException.class);
     assertThat(user.getUsername().value()).isEqualTo("chen-yu-2");
 
     user.changeUsername(USERNAME, T0.plus(Duration.ofDays(30)), POLICY);

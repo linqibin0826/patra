@@ -261,7 +261,7 @@ v0.8 的账号只有邮箱、密码和 `ACTIVE / BANNED` 两个状态。v0.12 �
 
 1. `requireActive()`。
 2. `next` 等于当前用户名：抛 `InvalidUserFieldsException`，`username` / `UNCHANGED`（422）。大小写不同的输入在 `Username.of` 已折成小写，所以 `Alice → alice` 也是 `UNCHANGED`。
-3. `usernameChangedAt` 非空且 `now < usernameChangedAt + cooldown`：抛 `UsernameChangeCooldownException(剩余时长)`（429）。改回旧名同样受冷却约束：release spec 说「两次修改间隔 ≥ 30 天」，改回也是一次修改。
+3. `usernameChangedAt` 非空且 `now < usernameChangedAt + cooldown`：抛 `UsernameChangeCooldownException`（409，`traits` 含 `USERNAME_CHANGE_COOLDOWN`）。改回旧名同样受冷却约束：release spec 说「两次修改间隔 ≥ 30 天」，改回也是一次修改。
 4. 换名，`usernameChangedAt = now`，返回旧名。
 
 保留与占用由处理器判（第 8.4 节）：`idn_user` 里有人用、或别人的旧名未到期，都是 409 `username` / `ALREADY_TAKEN`；自己的旧名未到期可以改回。
@@ -350,7 +350,7 @@ v0.8 的账号只有邮箱、密码和 `ACTIVE / BANNED` 两个状态。v0.12 �
 1. `currentUserPort.require()`。
 2. `UsernamePolicy.validate` → 422。
 3. `users.findByIdForUpdate(userId)`，查不到抛 `AuthenticationRequiredException`。行锁让同一用户的两次并发改名串行。
-4. `user.changeUsername(next, now, policy)`：状态守卫（401 / 409）、`UNCHANGED`（422）、冷却（429）。
+4. `user.changeUsername(next, now, policy)`：状态守卫（401 / 409）、`UNCHANGED`（422）、冷却（409）。
 5. `users.existsByUsername(next)` 或 `formerUsernames.existsReservedByOther(next, userId, now)` → 409 `username` / `ALREADY_TAKEN`。
 6. `users.save(user)`（并发撞 `uk_idn_user_username` → 同一个 409）；`formerUsernames.save(FormerUsername.reserve(userId, 旧名, now, reservationPeriod))`。
 
@@ -414,7 +414,7 @@ Content-Type: application/json
 |---|---|---|---|---|---|---|
 | 字段不合法 | `InvalidUserFieldsException` | `RULE_VIOLATION` | 422 | `IDN-0422` | `errors[]` | 请求参数不合法 |
 | 邮箱已注册 / 用户名已被使用（含并发撞唯一约束、别人的旧名未到期） | `UserIdentifierTakenException`（新，实现 `HasFieldViolations`，替代 `EmailAlreadyRegisteredException`） | `CONFLICT` | 409 | `IDN-0409` | `errors[]`：`email` / `ALREADY_REGISTERED`、`username` / `ALREADY_TAKEN`，可同时两条 | 邮箱或用户名已被使用 |
-| 改名冷却期内 | `UsernameChangeCooldownException`（新，实现 `HasRetryAfter`） | `QUOTA_EXCEEDED` | 429 | `IDN-0429` | `Retry-After`、`retryAfterSeconds`（剩余时长向上取整到秒） | 用户名修改过于频繁，请稍后再试 |
+| 改名冷却期内 | `UsernameChangeCooldownException`（新） | `CONFLICT` + `IdentityErrorTrait.USERNAME_CHANGE_COOLDOWN` | 409 | `IDN-0409` | `traits` 含 `USERNAME_CHANGE_COOLDOWN`；不带 `Retry-After`，下次可改时间看 `/auth/me` 的 `nextUsernameChangeAt` | 用户名修改过于频繁，请稍后再试 |
 | 注销中不能做写操作 | `UserPendingDeletionException`（新） | `CONFLICT` + `IdentityErrorTrait.PENDING_DELETION` | 409 | `IDN-0409` | `traits` 含 `PENDING_DELETION` | 账号正在注销中，取消注销后再操作 |
 | 状态不允许的迁移（后台对 `DELETED` 用户封禁 / 解封等） | `InvalidUserStateTransitionException`（新） | `CONFLICT` | 409 | `IDN-0409` | — | 账号当前状态不允许此操作 |
 | 公开身份卡不存在或不可见 | `UserNotFoundException`（现有，不再只用于后台） | `NOT_FOUND` | 404 | `IDN-0404` | — | 用户不存在 |
@@ -551,13 +551,13 @@ infra（PG 容器）：
 adapter 切片（`@WebMvcTest`）：
 
 - `AuthControllerIT` 改：注册请求多传 `username`；登录、注册响应的嵌套结构；`/auth/me` 的全部字段与 `null` 的输出。
-- `MeControllerIT`（新）：`PATCH /me/username` 的 200、422（含 `UNCHANGED`）、409 的 `errors[]`、409 的 `traits` 含 `PENDING_DELETION`、429 的 `Retry-After`、401。
+- `MeControllerIT`（新）：`PATCH /me/username` 的 200、422（含 `UNCHANGED`）、409 的 `errors[]`、409 的 `traits` 含 `PENDING_DELETION`、冷却 409 的 `traits` 含 `USERNAME_CHANGE_COOLDOWN` 且无 `Retry-After`、401。
 - `PublicUserControllerIT`（新）：200 的字段、301 的 `Location` 与 JSON 体、404；路径带大写被折成小写后查询。
 
 boot 端到端（PG + Redis 容器，`RANDOM_PORT`，`MutableClock`）：
 
 - `AccountFlowIT` 改：不带用户名注册 422 并带原因码；重复用户名 409 与重复邮箱 409 的 `errors[]` 各不相同、同时重复时两条都在（AC 3）；大小写不同的用户名算同一个。
-- `UsernameChangeFlowIT`（新，AC 4）：注册 → 改名成功 → 立刻再改 429 且 `retryAfterSeconds` 约等于 30 天 → 拨 30 天后改回旧名成功 → 别人在 90 天内注册或改成该旧名 409 → `/users/旧名` 301 到新名 → 拨到 90 天后别人注册成功，`/users/旧名` 变成那个人的 200；期间 `/auth/me` 的 `nextUsernameChangeAt` 正确。
+- `UsernameChangeFlowIT`（新，AC 4）：注册 → 改名成功 → 立刻再改 409 且 `traits` 含 `USERNAME_CHANGE_COOLDOWN` → 拨 30 天后改回旧名成功 → 别人在 90 天内注册或改成该旧名 409 → `/users/旧名` 301 到新名 → 拨到 90 天后别人注册成功，`/users/旧名` 变成那个人的 200；期间 `/auth/me` 的 `nextUsernameChangeAt` 正确。
 - `UserStatusFlowIT`（新，AC 6）：用 SQL 把用户改成四种状态（`DELETED` 时同时置空邮箱、删凭据），分别登录：`ACTIVE` 200、`PENDING_DELETION` 200 且 `user.status` / `deletionDueAt` 正确、`BANNED` 403、`DELETED` 401 且响应体与密码错误一致；`/auth/me` 对 `PENDING_DELETION` 200、对另两种 401；`PATCH /me/username` 对 `PENDING_DELETION` 409 且 `traits` 含 `PENDING_DELETION`；封禁 `DELETED` 用户 409。
 - `PublicIdentityFlowIT`（新）：未验证邮箱时匿名 404、本人带断言 200 且 `audience` 为 `SELF` → SQL 写 `email_verified_at` 后匿名 200 且 `audience` 为 `PUBLIC` → 封禁后 404；改名后没设昵称的人 `displayName` 跟着变成新名。
 
@@ -585,7 +585,7 @@ boot 端到端（PG + Redis 容器，`RANDOM_PORT`，`MutableClock`）：
 |---|---|---|
 | 4 | PostgreSQL 17 的 `CHECK (username ~ '^[a-z0-9]([a-z0-9]\|[_-][a-z0-9])*$' AND char_length(username) BETWEEN 3 AND 30 AND username !~ '^[0-9]+$')` | 成立：大写、连续分隔符、首尾分隔符、纯数字、2 个字符都被约束拒绝；31 个字符先撞 `VARCHAR(30)`（`value too long for type character varying(30)`），到不了 CHECK。`IdentitySchemaConstraintsIT` 每个用例只做一条失败插入：`@DataJpaTest` 的事务在第一条失败语句后被 PG 置为中止（`25P02`），同一事务里的第二条不再执行 |
 | 5 | 错误引擎对 `{CONFLICT, PENDING_DELETION}` 映射成 409、`traits` 两个都输出 | 成立：`MeControllerIT` 拿到 `IDN-0409`、`traits: ["CONFLICT", "PENDING_DELETION"]` |
-| 6 | `RestTestClient` 对 301 的处理 | 切片成立、真端口不成立：`@WebMvcTest` 下它绑定 MockMvc，`expectStatus().isEqualTo(301)` 能拿到 `Location` 和 JSON 体（`PublicUserControllerIT`）；`RANDOM_PORT` 下它底层是 Apache HttpClient，会自动跟随 301，还会按 `Retry-After` 自动重试 429（冷却是 30 天，等于挂死）。真端口的用例改用 `RestClient` + `JdkClientHttpRequestFactory`、`HttpClient.Redirect.NEVER`（`UsernameChangeFlowIT`、`PublicIdentityFlowIT`、`GatewayAuthenticationIT`）。网关 `redirects: DONT_FOLLOW` 下 301 的状态、`Location`、体原样透传：成立 |
+| 6 | `RestTestClient` 对 301 的处理 | 切片成立、真端口不成立：`@WebMvcTest` 下它绑定 MockMvc，`expectStatus().isEqualTo(301)` 能拿到 `Location` 和 JSON 体（`PublicUserControllerIT`）；`RANDOM_PORT` 下它底层是 Apache HttpClient，会自动跟随 301，还会按 `Retry-After` 自动重试 429（冷却是 30 天，等于挂死）。这条也是冷却后来改成 409 的原因之一。真端口的用例改用 `RestClient` + `JdkClientHttpRequestFactory`、`HttpClient.Redirect.NEVER`（`UsernameChangeFlowIT`、`PublicIdentityFlowIT`、`GatewayAuthenticationIT`）。网关 `redirects: DONT_FOLLOW` 下 301 的状态、`Location`、体原样透传：成立 |
 | 7 | Lombok `@Builder(builderMethodName = "restore")` 与 `@Getter` / 手写 `getEmail()` 共存；MapStruct 对 `email` 的映射 | 成立：构建器放私有全参构造器上，类级 `@Getter` 加字段上的 `@Getter(AccessLevel.NONE)`、手写 `Optional<EmailAddress> getEmail()`，spotless / Error Prone / SpotBugs 都不报；`UserJpaMapper` 对 `email` 用 `expression`（`imports = EmailAddress.class`）显式映射，`toDomain` 走 `User.restore()` |
 | 8 | `Duration` 配置 `30d` / `90d` 的绑定 | 成立：`DurationStyle` 认 `d` 后缀，`IdentityConfigurationTest` 覆盖默认值、覆盖值与非正数启动失败 |
 | 9 | `@WebMvcTest` 切片对新 Controller | 成立：`@Import(Controller)` + `@MockitoBean`（`CommandBus` / `UserQueryService`），`MeControllerIT`、`PublicUserControllerIT` |
@@ -621,7 +621,7 @@ boot 端到端（PG + Redis 容器，`RANDOM_PORT`，`MutableClock`）：
 | `idn_user_login_record` 在 `V1` 上加列与 `REVOKED` | PAP-99 |
 | 聚合的 `requestDeletion` / `cancelDeletion` / `completeDeletion` 已实现并有单测；`deletion_due_at` / `deleted_at` 的检查约束已在表上；写接口对 `PENDING_DELETION` 的拒绝复用 `requireActive()`（409 + `traits` 含 `PENDING_DELETION`）；到期执行时 `completeDeletion` 已经把邮箱置空，处理器再删凭据、令牌、头像，资料行**置空不删行**（`display_name` 及 PAP-95 加的列设 NULL）：读模型要求资料行与用户一对一存在（`UserReadAdapter` 缺行即抛 `IllegalStateException`），删行会让 `GET /users/<已注销用户名>` 和断言窗口内的 `/auth/me` 500 而不是 404 / 401；`DELETED` 用户的旧名跳转自动变 404，不用处理；登录响应与 `/auth/me` 带 `status`、`deletionDueAt`，Redis 会话不加标记 | PAP-100 |
 | 注册请求加 `username`；登录、注册响应读 `user`；`/auth/me` 新字段进 `CurrentUser`：`emailVerified`、`username`、`displayName`、`avatarUrl`（`null` 用默认头像）、`status`、`deletionDueAt`、`nextUsernameChangeAt`；409 看 `errors[].field` 区分邮箱和用户名；用户名原因码 `REQUIRED`、`INVALID_CHARACTER`、`TOO_SHORT`、`TOO_LONG`、`INVALID_FORMAT`、`DIGITS_ONLY`、`RESERVED`、`ALREADY_TAKEN`；`/u/[username]` 请求 `GET /patra-identity/users/{username}` 时有会话令牌就带上（本人才能看到未验证时的主页），`fetch` 用 `redirect: "manual"`，301 时读体里的 `username` 做临时跳转 `redirect('/u/<新名>')`（307，不用 `permanentRedirect`：浏览器会缓存 308，原主改回旧名后缓存的跳转与新的跳转互指成环），404 原样；`audience` 为 `SELF` 时显示「目前只有你能看到」 | PAP-101 |
-| 账号页改用户名：`PATCH /me/username`，422（含 `UNCHANGED`）、409、429（`retryAfterSeconds` 换算成天显示）、`nextUsernameChangeAt` 做冷却提示；`status` 为 `PENDING_DELETION` 时进取消注销页 | PAP-102 |
+| 账号页改用户名：`PATCH /me/username`，422（含 `UNCHANGED`）、409（`errors[]` 是占用，`traits` 含 `USERNAME_CHANGE_COOLDOWN` 是冷却、含 `PENDING_DELETION` 是注销中）、`nextUsernameChangeAt` 做冷却提示；`status` 为 `PENDING_DELETION` 时进取消注销页 | PAP-102 |
 | 前端用户名校验与后端同一条规则：`^[a-z0-9]([a-z0-9]|[_-][a-z0-9])*$`、3 ~ 30、非纯数字、输入先转小写；保留字只在后端判 | PAP-101 |
 
 ## 17. 要同步改的文档和 Issue
@@ -658,7 +658,7 @@ boot 端到端（PG + Redis 容器，`RANDOM_PORT`，`MutableClock`）：
 1. 昵称存在 `idn_user_profile`（本 Issue 建骨架表）而不是 `idn_user` 加列；PAP-95 的两条 To-Do 因此提前完成。
 2. 登录、注册响应改成 `{ sessionToken, user }`，`user` 与 `/auth/me` 同构；门户要改读法。
 3. 「会话带状态」解读为「响应带状态」，Redis 会话不加字段；PAP-100 的 To-Do 随之改。
-4. 409 的原因码方式：唯一性冲突走 `errors[]`，状态冲突走 `traits[]`；改名冷却用 429 + `Retry-After`。
+4. 409 的原因码方式：唯一性冲突走 `errors[]`，状态冲突走 `traits[]`；改名冷却也走 409 + `traits`（2026-10-21 用户拍板，原为 429 + `Retry-After`：冷却按天计，HTTP 客户端普遍按 `Retry-After` 自动等待重试 429）。
 5. `/auth/me` 比 release spec 2.1.4 多两个字段：`nextUsernameChangeAt`（账号页的冷却提示）、`deletionDueAt`（取消注销页）。
 6. 旧名跳转契约：`301` + `Location` + JSON 体 `{ "username" }`，门户 `redirect: "manual"`。
 7. 保留字与拒绝词清单的内容（第 7.3、7.4 节的初稿）。

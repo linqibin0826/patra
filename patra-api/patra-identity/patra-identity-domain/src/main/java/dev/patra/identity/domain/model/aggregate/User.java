@@ -275,9 +275,8 @@ public final class User {
     if (next.equals(username)) {
       throw new InvalidUserFieldsException(List.of(UserFieldViolations.usernameUnchanged()));
     }
-    Optional<Duration> remaining = policy.remainingCooldown(usernameChangedAt, now);
-    if (remaining.isPresent()) {
-      throw new UsernameChangeCooldownException(remaining.get());
+    if (policy.remainingCooldown(usernameChangedAt, now).isPresent()) {
+      throw new UsernameChangeCooldownException();
     }
     Username previous = username;
     username = next;
