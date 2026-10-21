@@ -277,6 +277,18 @@ class OrganizationReadAdapterIT {
     assertThat(adapter.findByRorId("0aaaaaaa5").orElseThrow().zhName()).isEqualTo("北京安贞医院");
   }
 
+  @Test
+  @DisplayName("可重复迁移的种子文件已把别名灌进表里")
+  void should_load_alias_seed_from_repeatable_migration() {
+    Object count =
+        em.getEntityManager()
+            .createNativeQuery(
+                "SELECT count(*) FROM cat_organization_alias WHERE source IN ('SEED', 'WIKIDATA')")
+            .getSingleResult();
+
+    assertThat(((Number) count).longValue()).isGreaterThan(100L);
+  }
+
   // ===== 造数据 =====
 
   private Long saveChineseHospital(String rorId, String displayName, String zhLabel, String city) {
