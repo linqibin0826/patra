@@ -282,6 +282,62 @@ class GatewayAuthenticationIT {
         .isEqualTo(CurrentUser.of(4211L, 9211L, AccountType.USER, ClientType.WEB));
   }
 
+  /// 邮件链接谁点都能验证：匿名请求原样到达 identity（不带 `Authorization`）；带会话的请求照样换成断言，
+  /// identity 据此保留当前会话。
+  @Test
+  void should_forward_email_verify_anonymously_and_with_assertion_when_logged_in() {
+    identity.stubFor(post(urlPathEqualTo("/auth/email/verify")).willReturn(okJson("{}")));
+    String token = GatewayITSessions.issue(sessions, 4221L, 9221L);
+
+    restClient.post().uri("/patra-identity/auth/email/verify").exchange().expectStatus().isOk();
+    restClient
+        .post()
+        .uri("/patra-identity/auth/email/verify")
+        .header(HttpHeaders.AUTHORIZATION, BEARER + token)
+        .exchange()
+        .expectStatus()
+        .isOk();
+
+    List<LoggedRequest> received =
+        identity.findAll(postRequestedFor(urlPathEqualTo("/auth/email/verify")));
+    assertThat(received).hasSize(2);
+    assertThat(received.getFirst().getHeader(HttpHeaders.AUTHORIZATION)).isNull();
+    String authorization = received.getLast().getHeader(HttpHeaders.AUTHORIZATION);
+    assertThat(authorization).startsWith(BEARER).doesNotContain(token);
+    assertThat(
+            IdentityAssertionClaims.toCurrentUser(
+                decoder.decode(authorization.substring(BEARER.length()))))
+        .isEqualTo(CurrentUser.of(4221L, 9221L, AccountType.USER, ClientType.WEB));
+  }
+
+  /// 重发验证邮件是本人操作：匿名 401、不到下游；带会话才转发，且带断言。
+  @Test
+  void should_require_session_for_email_verification_resend() {
+    identity.stubFor(
+        post(urlPathEqualTo("/me/email/verification/resend")).willReturn(okJson("{}")));
+    String token = GatewayITSessions.issue(sessions, 4222L, 9222L);
+
+    restClient
+        .post()
+        .uri("/patra-identity/me/email/verification/resend")
+        .exchange()
+        .expectStatus()
+        .isUnauthorized();
+    identity.verify(0, postRequestedFor(urlPathEqualTo("/me/email/verification/resend")));
+
+    restClient
+        .post()
+        .uri("/patra-identity/me/email/verification/resend")
+        .header(HttpHeaders.AUTHORIZATION, BEARER + token)
+        .exchange()
+        .expectStatus()
+        .isOk();
+    identity.verify(
+        1,
+        postRequestedFor(urlPathEqualTo("/me/email/verification/resend"))
+            .withHeader(HttpHeaders.AUTHORIZATION, matching("Bearer .+")));
+  }
+
   /// `Basic`、随手写的 Bearer、甚至一条用网关公钥能验的断言（泄露后被重放），都到不了下游：
   /// 网关只认会话令牌，其余一律剥掉、当匿名。
   @Test
