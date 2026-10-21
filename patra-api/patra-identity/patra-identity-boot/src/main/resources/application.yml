@@ -64,3 +64,12 @@ patra:
         per-account-hourly: 5
         per-account-daily: 10
         per-ip-hourly: 30
+
+# XXL-Job 执行器：管理端地址随环境变，在 Nacos 公共配置 patra-common.yaml；执行器端口 = 服务端口 + 1 = 6401
+xxl:
+  job:
+    executor:
+      # 回调地址：admin 按它回调本执行器。与 Nacos 注册地址同一个变量；容器里不设，自动探测 patra-net 上的 IP
+      ip: ${PATRA_ADVERTISE_IP:}
+      logpath: ${XXL_JOB_EXECUTOR_LOG_PATH:${PATRA_LOG_DIR:logs}/xxl-job/patra-identity}
+      logretentiondays: ${XXL_JOB_LOG_RETENTION_DAYS:30}

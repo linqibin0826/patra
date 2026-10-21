@@ -9,3 +9,8 @@ spring:
     service-registry:
       auto-registration:
         enabled: false
+
+# 测试里不起 XXL-Job 执行器
+xxl:
+  job:
+    enabled: false

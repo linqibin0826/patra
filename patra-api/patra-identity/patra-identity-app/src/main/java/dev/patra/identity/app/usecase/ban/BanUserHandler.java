@@ -3,6 +3,7 @@ package dev.patra.identity.app.usecase.ban;
 import dev.patra.identity.domain.exception.UserNotFoundException;
 import dev.patra.identity.domain.model.aggregate.User;
 import dev.patra.identity.domain.model.enums.LoginEndReason;
+import dev.patra.identity.domain.port.repository.EmailTokenRepository;
 import dev.patra.identity.domain.port.repository.UserLoginRecordRepository;
 import dev.patra.identity.domain.port.repository.UserRepository;
 import dev.patra.identity.domain.port.session.SessionStorePort;
@@ -18,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /// 封禁前台用户。幂等：已经封禁时保留原来的封禁时间。
 ///
-/// 保存之后删掉该用户的全部会话，被删会话的登录记录标成 `BANNED`。Redis 失败整个事务回滚，
+/// 保存之后作废该用户的有效邮件令牌（改邮箱撤销令牌除外）、删掉全部会话，被删会话的登录记录标成 `BANNED`。Redis 失败整个事务回滚，
 /// 返回 503，管理员重试。
 @Slf4j
 @Component
@@ -28,6 +29,7 @@ public class BanUserHandler implements CommandHandler<BanUserCommand, Void> {
   private final UserRepository users;
   private final SessionStorePort sessions;
   private final UserLoginRecordRepository records;
+  private final EmailTokenRepository tokens;
   private final Clock clock;
 
   /// 封禁。
@@ -41,6 +43,7 @@ public class BanUserHandler implements CommandHandler<BanUserCommand, Void> {
     Instant now = clock.instant();
     user.ban(now);
     users.save(user);
+    tokens.revokeAllActive(command.userId(), now);
     List<Long> revoked = sessions.revokeAll(AccountType.USER, command.userId());
     for (Long sessionId : revoked) {
       records

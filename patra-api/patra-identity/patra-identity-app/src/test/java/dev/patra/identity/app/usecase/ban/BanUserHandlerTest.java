@@ -16,6 +16,7 @@ import dev.patra.identity.domain.model.enums.LoginEndReason;
 import dev.patra.identity.domain.model.enums.UserStatus;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.Username;
+import dev.patra.identity.domain.port.repository.EmailTokenRepository;
 import dev.patra.identity.domain.port.repository.UserLoginRecordRepository;
 import dev.patra.identity.domain.port.repository.UserRepository;
 import dev.patra.identity.domain.port.session.SessionStorePort;
@@ -29,6 +30,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 
 /// BanUserHandler 单元测试。
 @DisplayName("BanUserHandler 单元测试")
@@ -40,8 +42,9 @@ class BanUserHandlerTest {
   private final UserRepository users = mock(UserRepository.class);
   private final SessionStorePort sessions = mock(SessionStorePort.class);
   private final UserLoginRecordRepository records = mock(UserLoginRecordRepository.class);
+  private final EmailTokenRepository tokens = mock(EmailTokenRepository.class);
   private final BanUserHandler handler =
-      new BanUserHandler(users, sessions, records, Clock.fixed(NOW, ZoneOffset.UTC));
+      new BanUserHandler(users, sessions, records, tokens, Clock.fixed(NOW, ZoneOffset.UTC));
 
   @Test
   @DisplayName("封禁正常用户：状态改为封禁，封禁时间取时钟")
@@ -129,5 +132,27 @@ class BanUserHandlerTest {
     assertThatThrownBy(() -> handler.handle(BanUserCommand.of(42L)))
         .isInstanceOf(UserNotFoundException.class);
     verifyNoInteractions(sessions, records);
+  }
+
+  @Test
+  @DisplayName("封禁顺带作废该用户全部有效令牌（改邮箱撤销令牌除外，由仓储保证），在保存用户之后")
+  void should_revoke_all_email_tokens_when_banning() {
+    when(users.findById(42L))
+        .thenReturn(
+            Optional.of(
+                User.restore()
+                    .id(42L)
+                    .email(EMAIL)
+                    .username(Username.of("chen-yu"))
+                    .status(UserStatus.ACTIVE)
+                    .version(0L)
+                    .build()));
+    when(users.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+    handler.handle(BanUserCommand.of(42L));
+
+    InOrder order = inOrder(users, tokens);
+    order.verify(users).save(any());
+    order.verify(tokens).revokeAllActive(42L, NOW);
   }
 }
