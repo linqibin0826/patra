@@ -1,17 +1,17 @@
 # patra-identity
 
-前台用户的账号服务：注册、登录、会话、登出、「当前用户」、用户名与公开身份卡、登录失败限制、封禁与解封。
+前台用户的账号服务：注册、登录、会话、登出、「当前用户」、用户名与公开身份卡、邮箱验证与邮件、登录失败限制、封禁与解封。
 
-工程设计：`docs/patra/specs/2026-10-05-identity-account-design.md`（账号）、`docs/patra/specs/2026-10-09-identity-session-design.md`（会话）、`docs/patra/specs/2026-10-20-identity-account-rebuild-design.md`（账号重建：用户名、昵称、邮箱验证状态、四态状态机、`V1` 最终形态）。
+工程设计：`docs/patra/specs/2026-10-05-identity-account-design.md`（账号）、`docs/patra/specs/2026-10-09-identity-session-design.md`（会话）、`docs/patra/specs/2026-10-20-identity-account-rebuild-design.md`（账号重建：用户名、昵称、邮箱验证状态、四态状态机、`V1` 最终形态）、`docs/patra/specs/2026-10-21-identity-email-verification-design.md`（邮件发送与邮箱验证）。
 
 ## 1. 模块
 
 | 模块 | 内容 |
 |---|---|
-| `patra-identity-domain` | `User`、`UserProfile`、`FormerUsername`、`UserPasswordCredential`、`UserLoginRecord` 五个聚合，邮箱、用户名、昵称、密码、客户端信息值对象，用户名 / 昵称 / 改名 / 密码 / 失败限制规则、会话策略，端口，`SessionIssuer` 领域服务，领域异常 |
-| `patra-identity-app` | 注册、登录、登出、改用户名、封禁、解封六个处理器，走 CommandBus；「当前用户」和公开身份卡走 `UserQueryService` |
-| `patra-identity-infra` | JPA 持久化、Argon2id 哈希、常见密码名单、Redis 失败限制、会话存储适配器、Flyway 脚本（一份最终形态的 `V1`） |
-| `patra-identity-adapter` | 前台的 `AuthController`、`MeController`、`PublicUserController`，后台的 `AdminUserController` |
+| `patra-identity-domain` | `User`、`UserProfile`、`FormerUsername`、`UserPasswordCredential`、`UserLoginRecord`、`EmailToken` 六个聚合，邮箱、用户名、昵称、密码、客户端信息、令牌密文值对象，用户名 / 昵称 / 改名 / 密码 / 失败限制 / 重发限流 / 邮件链接规则、会话策略，端口（含邮件发送 `EmailDeliveryPort`、重发限流 `EmailResendThrottlePort`），`SessionIssuer`、`EmailVerificationIssuer` 领域服务，领域异常 |
+| `patra-identity-app` | 注册、登录、登出、改用户名、封禁、解封、重发验证邮件、验证邮箱、清理过期令牌九个处理器，走 CommandBus；「当前用户」和公开身份卡走 `UserQueryService` |
+| `patra-identity-infra` | JPA 持久化（含令牌表）、Argon2id 哈希、常见密码名单、Redis 失败限制与重发限流（Lua）、会话存储适配器、SMTP 发信适配器与 Thymeleaf 邮件模板、Flyway 脚本（一份最终形态的 `V1`） |
+| `patra-identity-adapter` | 前台的 `AuthController`、`EmailVerificationController`、`MeController`、`MeEmailController`、`PublicUserController`，后台的 `AdminUserController`，XXL-Job 任务 `EmailTokenCleanupScheduleJob` |
 | `patra-identity-boot` | 启动类、配置、安全 starter 接入 |
 | `patra-identity-session` | 与网关共用的会话存储契约（令牌、Redis 键、Lua、`RedisSessionStore`），见它自己的 README |
 
@@ -24,6 +24,8 @@
 | `POST /auth/logout` | 204，有当前用户就删会话，没有也 204 | 公开 |
 | `GET /auth/me` | 200 `user`（下面的结构） | 需要登录 |
 | `PATCH /me/username` | 200 `{ username, nextUsernameChangeAt }` | 需要登录（`/me/**` 整体） |
+| `POST /me/email/verification/resend` | 202 `{ email, nextResendAt }`，无请求体 | 需要登录 |
+| `POST /auth/email/verify` | 200 `{ email, emailVerifiedAt }`，请求体 `{ token }` | 公开（匿名设备点链接也能验证；带会话时网关照样翻译令牌） |
 | `GET /users/{username}` | 200 `{ username, displayName, avatarUrl, audience }`；保留期内的旧名 301，`Location: /users/<新名>`，体 `{ username: <新名> }` | 公开（`/users/**` 整体，网关照样翻译令牌） |
 | `POST /admin/users/{userId}/ban` | 204 | 拒绝外部访问 |
 | `POST /admin/users/{userId}/unban` | 204 | 拒绝外部访问 |
@@ -56,6 +58,7 @@
 | `idn_user_profile` | 用户 ID（唯一）、昵称（可空，空表示跟随用户名）。PAP-95 在这份骨架上加列 |
 | `idn_user_former_username` | 用户 ID、旧用户名、替换时间、保留到期时间 |
 | `idn_user_login_record` | 会话 ID、用户 ID、客户端信息、结束原因（第 9 节） |
+| `idn_email_token` | 用途、用户 ID、发往的邮箱、令牌哈希（SHA-256 十六进制，唯一）、过期 / 消费 / 撤销时间、申请方 IP。同一用户同一用途只留一个有效令牌，由部分唯一索引守住（改邮箱撤销令牌例外） |
 
 ### 状态机
 
@@ -139,6 +142,9 @@ patra:
 | 邮箱或密码错误（含已注销账号） | 401 | `IDN-0401` |
 | 需要登录：`/auth/me`、`/me/**` 没有当前用户、用户不存在、已封禁、已注销（文案 `Authentication required`） | 401 | `IDN-0401` |
 | 登录被暂时限制（`Retry-After`、`retryAfterSeconds`） | 429 | `IDN-0429` |
+| 重发验证邮件过于频繁（`traits` 为 `QUOTA_EXCEEDED`，`Retry-After`、`retryAfterSeconds` 是三层限流里最长的那个等待；文案「发送过于频繁，请稍后再试」） | 429 | `IDN-0429` |
+| 邮箱已经验证过了（`traits` 为 `CONFLICT` + `EMAIL_ALREADY_VERIFIED`，文案「邮箱已经验证过了」） | 409 | `IDN-0409` |
+| 验证令牌为空、格式不对、不存在、过期、已用或已作废（`errors[]`：`token` / `REQUIRED` 或 `INVALID`，文案「验证链接无效或已过期」；不区分原因） | 422 | `IDN-0422` |
 | 改名冷却期内（`traits` 为 `CONFLICT` + `USERNAME_CHANGE_COOLDOWN`，不带 `Retry-After`，下次可改时间看 `/auth/me` 的 `nextUsernameChangeAt`；文案「用户名修改过于频繁，请稍后再试」） | 409 | `IDN-0409` |
 | 账号已被封禁 | 403 | `IDN-0403` |
 | 用户不存在：后台接口；公开身份卡不存在或对请求者不可见 | 404 | `IDN-0404` |
@@ -158,6 +164,9 @@ docker exec patra-postgres psql -U postgres -c 'DROP DATABASE IF EXISTS patra_id
 ```
 
 mini 上先 `docker stop patra-identity`，重建后 `docker start patra-identity`。
+
+- 邮件：`spring.mail.host` 缺省跟随 `PATRA_INFRA_HOST`、端口 1025，即 mini core 栈的 Mailpit（UI `http://linqibins-mac-mini:8025`）；本机不用放 `mail.env`。验证链接的域名来自 `patra.identity.mail.links.base-url`（Nacos 里 `${PATRA_PORTAL_BASE_URL:http://linqibins-mac-mini:4000}`），本机起门户时设 `PATRA_PORTAL_BASE_URL=http://localhost:4000`，链接才指向本机门户。
+- XXL-Job 执行器端口 6401（服务端口 + 1），回调地址读 `PATRA_ADVERTISE_IP`；本机不想注册到 mini 的调度中心时设 `XXL_JOB_ENABLED=false`。
 
 - 测试全部用 Testcontainers（PostgreSQL 17、Redis 7.0.15），本机要有 Docker：
 
@@ -197,3 +206,15 @@ patra:
 
 登录建会话前在事务里对用户行加锁重读、复核封禁（`UserRepository.findByIdForUpdate`），封禁与登录并发时
 要么登录返回 403，要么封禁把这条新会话一起删掉；被封用户拿不到有效会话。
+
+## 10. 邮箱验证与邮件
+
+工程设计：`docs/patra/specs/2026-10-21-identity-email-verification-design.md`。
+
+- **令牌**：32 字节 CSPRNG、base64url 原文 43 个字符，库里只存 SHA-256 十六进制；四种用途共用 `idn_email_token`（`EMAIL_VERIFY` 24 小时、`PASSWORD_RESET` 1 小时、`EMAIL_CHANGE_CONFIRM` 1 小时、`EMAIL_CHANGE_REVERT` 7 天）。签发前在同一事务里作废同用户同用途的旧令牌；消费是一条带条件的 `UPDATE … RETURNING`，并发只有一个赢。封禁按用户批量作废（`EMAIL_CHANGE_REVERT` 例外，可并存、不被批量作废）。令牌原文只出现在邮件里，不进响应、不进日志。
+- **链接**：`<base-url><verify-email-path>#token=<原文>`，域名来自配置不来自请求的 Host 头；令牌在 URL 片段里，门户落地页读出后 POST `/auth/email/verify`，GET 预取不会把它用掉。
+- **注册与重发**：注册成功、事务提交后异步发首封并计入重发配额；重发先判状态（已验证 409、注销中 409）再限流：冷却 60 秒、每账号每小时 5 次、每天 10 次、每 IP 每小时 30 次（Redis Lua 原子判定，`Retry-After` 取最长的等待）。配置在 `patra.identity.mail.resend.*`。
+- **验证**：写 `email_verified_at`；带会话验证时保留当前会话、撤销其余（登录记录标 `REVOKED`），匿名验证撤销全部会话。
+- **邮件**：`EmailDeliveryPort.send(OutgoingMail)`，infra 的 `SmtpEmailDeliveryAdapter` 用 Spring Mail 发 multipart（文本 + HTML），虚拟线程异步、并发上限 4，失败只记日志（不含收件人与令牌）；带 `Auto-Submitted` / `X-Auto-Response-Suppress` 头。模板在 `infra/src/main/resources/mail/html/` 与 `mail/text/`，同名一对；新邮件 = 一个 `OutgoingMail` 实现 + 两份模板，公共抬头 / 页脚是片段，安全通知共用 `security-notice` 片段（`SecurityNotice`：时间、设备、IP 与属地、「不是我」该怎么办；PAP-99 之前设备与属地为「未知」）。
+- **配置**：服务商坐标 `spring.mail.*`、发件人 `patra.identity.mail.from`、门户地址 `patra.identity.mail.links.base-url` 在 Nacos 的 `patra-identity.yaml`，缺省指向 Mailpit；mini 接真实服务商（Resend）靠 `~/.patra/secrets/mail.env` 覆盖（模板 `patra-infra/docker/secrets/mail.env.example`）。时区 `patra.identity.mail.zone`、保留期 `patra.identity.mail.token-retention` 在 jar 里。SMTP 连通性不计入健康检查（`management.health.mail.enabled: false`）。
+- **清理**：XXL-Job 任务 `emailTokenCleanupJob`（执行器 `patra-identity`）删过期超过保留期（默认 30 天）的令牌，每批 1000 行、每批一个事务；mini 上每天 04:30 一次。

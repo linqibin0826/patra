@@ -4,7 +4,7 @@
 > **版本**：[v0.12 User Center](../release-specs/v0.12-user-center.md)（2.1.6 邮箱验证、2.1.7 一次性令牌、2.1.10 安全通知邮件、决策 C / D）
 > **前置设计**：[identity 账号重建（PAP-93）](2026-10-20-identity-account-rebuild-design.md)（表结构、`IdentityErrorTrait`、注册处理器、第 16 节交给本 Issue 的约束）、[identity 会话（PAP-64）](2026-10-09-identity-session-design.md)（会话存储、Lua 约定）、[网关鉴权（PAP-65）](2026-10-09-gateway-auth-design.md)（公开名单）
 > **日期**：2026-10-21
-> **状态**：已评审通过（2026-10-21）：服务商定为 Resend，待拍板 2 按建议选 (a)，3、4 按默认（第 20 节）；实施中（分支 `feat/v0.12-user-center-api`），实测结果见第 16 节
+> **状态**：已实施（2026-10-21，分支 `feat/v0.12-user-center-api`）：服务商定为 Resend，待拍板 2 按建议选 (a)，3、4 按默认（第 20 节）；实测结果见第 16 节，mini 上的一次性步骤（第 14.4 节）随后端 PR 部署时做
 
 ## 1. 要解决的问题
 
@@ -644,6 +644,8 @@ boot 端到端（PG + Redis 容器 + GreenMail，`RANDOM_PORT`，`MutableClock`�
 | 11 | `uk_idn_email_token_active` 部分唯一索引：`CREATE UNIQUE INDEX … WHERE …` 在 Flyway 脚本里与 `CREATE TABLE` 分开写 | — | 成立：`V1` 里 `CREATE UNIQUE INDEX … WHERE …` 与建表分开写，`IdentitySchemaConstraintsIT` 覆盖 |
 | 12 | 拨动 `MutableClock` 后 `IdentityAssertionSigner` 要用同一个时钟签（PAP-93 第 14 节第 10 条） | — | 成立：`EmailVerificationFlowIT` 用 `new IdentityAssertionSigner(TestSigningKey.key(), clock)` 签断言，拨到 24 小时后请求照样通过验签 |
 | 13 | `NacosConfigFilesTest` 对 `patra-identity.yaml` 的新键通过（`password` 键只写 `${PATRA_MAIL_PASSWORD:}`）、`JarConfigOverlapCheckerTest` 对 jar 与 Nacos 的键集通过 | — | 成立：`NacosConfigFilesTest`、`JarConfigOverlapCheckerTest`、`ApplicationConfigTest` 全绿 |
+
+本机手工验收（2026-10-21，Task 16）：本机起 PostgreSQL 17（15432）、Redis 7（16379）、Mailpit v1.31.6 三个容器，identity 与 gateway 用 jar 起在本机，配置仍从 mini 的 Nacos 读（`PATRA_INFRA_HOST=127.0.0.1`、`PATRA_NACOS_ADDR` 指 mini、`SPRING_MAIL_HOST` / `PORT` 指本机 Mailpit、注册到独立的 Nacos 分组以免 mini 的网关路由过来）。Flyway 对空库只跑一份 `V1`，六张表齐。经本机网关：注册 201 → 立刻重发 429 `Retry-After: 60`、`retryAfterSeconds: 60` → Mailpit 收到一封 `Patra <no-reply@patra.local>` 发给注册邮箱的「验证你的 Patra 邮箱」，带 `Auto-Submitted: auto-generated` 与 `X-Auto-Response-Suppress: All`，文本与 HTML 两部分链接一致、形如 `http://localhost:4000/verify-email#token=…`（来自配置，不来自请求）→ 带会话 POST `/auth/email/verify` 200 → `/auth/me` 的 `emailVerified` 为 `true`、会话仍有效 → 匿名再 POST 同一令牌 422 `token` / `INVALID`（网关公开路径生效）→ 重发 409 `EMAIL_ALREADY_VERIFIED`。库里 `idn_email_token` 一行：`token_hash` 64 位、已消费、`requested_ip` 为 `127.0.0.1`，按令牌原文查不到；identity 与网关日志里都没有令牌原文。未推送 Nacos、未动 mini 的库。
 
 ## 17. README
 

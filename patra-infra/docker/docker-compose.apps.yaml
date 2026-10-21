@@ -10,6 +10,7 @@ name: patra-apps
 #     redis.env     Redis 密码。catalog、identity、gateway 必需
 #     gateway.env   网关签身份断言的私钥。gateway 必需
 #     nacos.env     Nacos 应用账号 patra-app。6 个后端服务必需
+#     mail.env      真实邮件服务商（Resend）的 SMTP 凭据。identity 可选，缺失时邮件发往 core 栈的 Mailpit
 #     <svc>.env     外部数据源密钥等。可选，缺失时跳过
 # 必需文件缺一个，compose 对本项目的任何命令都会失败（portal 也部署不了），报错里有完整路径。
 # 密钥不放在 compose 目录：CD 每次运行前的 git clean 会删掉 runner 工作区里被忽略的文件。
@@ -107,6 +108,8 @@ services:
       - path: ${HOME}/.patra/secrets/redis.env
         required: true
       - path: ${HOME}/.patra/secrets/identity.env
+        required: false
+      - path: ${HOME}/.patra/secrets/mail.env
         required: false
     healthcheck:
       test: [ "CMD", "curl", "-fs", "http://localhost:6400/actuator/health" ]
