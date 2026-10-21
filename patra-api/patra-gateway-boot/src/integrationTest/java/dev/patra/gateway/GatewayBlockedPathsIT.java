@@ -71,6 +71,8 @@ class GatewayBlockedPathsIT {
     List<String> blocked =
         List.of(
             "/patra-registry/_internal/provenances",
+            "/patra-catalog/_internal/organizations/04jztag35",
+            "/patra-catalog/_internal/mesh/descriptors/D003920",
             "/patra-identity/admin/users/1/ban",
             "/patra-catalog/actuator/health",
             "/patra-identity/actuator/env");
