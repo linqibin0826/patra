@@ -50,5 +50,9 @@ patra-{service}/
 - Convention Plugins 定义六边形架构各层与工具模块的构建约束
 - `patra.tool-module` - 工具模块通用：group、R1 / R2 / R4 / R5 检查
 - `patra.hexagonal-domain` - 领域层编译类路径白名单（R3）
-- `patra.hexagonal-app/infra/adapter/api/boot` - 各层依赖配置（R5 挂在 domain / api / app / infra / adapter）
+- `patra.hexagonal-app/infra/adapter/api/boot` - 各层依赖配置（R5 挂在 domain / api / app / infra / adapter；R6 迁移脚本用户名列检查只挂 infra）
 - `PatraDependencyManagement.kt` - 统一 BOM 和版本管理
+
+## 用户名只存 identity
+
+用户名只存在 identity 的 `idn_user` 与 `idn_user_former_username` 两张表：新表不得有 `username` / `user_name` 列，其他表、搜索索引、读模型引用用户一律存 `user_id`，展示时按 ID 现读当前名；`@` 提及正文存用户 ID 标记，对象存储键按用户 ID 命名，只有 URL 路由用用户名。原因：改名只改 identity 一行，不用回刷任何冗余。由 `patra.hexagonal-infra` 的 `checkMigrationColumns`（R6）扫描 Flyway 脚本守住。
