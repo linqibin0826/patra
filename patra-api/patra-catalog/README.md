@@ -16,7 +16,7 @@ patra-catalog 是 Patra 医学文献数据平台的目录管理微服务，负�
 
 在 Patra 微服务架构中的位置：
 - **外部数据源**：NLM（PubMed baseline / updatefiles、MeSH）、PMC Cloud Service（公开 S3 桶 `pmc-oa-opendata`）、OpenAlex、Scopus、LetPub
-- **调用方**：patra-gateway 转发的门户（patra-portal）读端点 `/portal/**`
+- **调用方**：patra-gateway 转发的门户（patra-portal）读端点 `/portal/**`；patra-identity 经 HTTP Interface 直连（`lb://patra-catalog`）的内部接口 `/_internal/**`（保存资料时校验 ROR ID / MeSH UI 并取名称快照）
 - **依赖服务**：patra-registry（获取 Provenance 配置和数据字典）；MinIO（期刊封面、全文 XML / PDF / 图片）
 
 ## 🔧 主要功能
@@ -132,6 +132,14 @@ patra-catalog 是 Patra 医学文献数据平台的目录管理微服务，负�
    - 详情接口的 `retracted`、`hasFullText`、`hasPdf`、`pdfSizeBytes`、`estimatedReadMin`
    - `GET /portal/publications/{id}/fulltext`（正文、许可、署名）、`/fulltext/pdf`、`/fulltext/figures/{fileName}`
    - 撤稿文献（发表类型 `D016441`，或抓取时 PMC 标为撤稿）在读端自动下线全文
+
+14. **机构（ROR）与 MeSH 的建议接口 + 内部查询接口**（v0.12 用户中心，PAP-94）
+   - 门户：`GET /portal/organizations/suggest?q=&limit=`、`GET /portal/mesh/suggest?q=&limit=`，响应 `{ "items": [...] }`；`q` 归一（NFKC、去空白）后 2 ~ 100 字，`limit` 1 ~ 20 缺省 10，非法 422
+   - 机构按名称、中文名、别名、缩写搜：含中日韩文字走任意位置子串，拉丁文字只做前缀与词首；排序 = 命中方式（精确 > 前缀 > 词首 > 子串）→ 中国优先 → 医疗机构优先 → 名称类型 → 短名优先；只给 `active` 且未软删的机构；`zhName` 取 Patra 别名表的 LABEL > ROR `label` > ROR `alias`
+   - MeSH 按主题词名与非排列入口词搜（前缀 / 词首），精确命中排最前，经入口词命中的返回主题词并带 `matchedTerm`；只给主题类（class 1）且 active 的主题词；`treeNumbers` 主树号在前
+   - 内部（给 identity，网关对外 403）：`GET /_internal/organizations/{rorId}`、`GET /_internal/mesh/descriptors/{ui}`，契约在 `patra-catalog-api` 的 `OrganizationEndpoint` / `MeshEndpoint`（`@HttpExchange`），ID 格式不对、不存在、机构非 active 都 404
+   - Patra 自维护的机构别名表 `cat_organization_alias` 补 ROR 缺的中文名与简称，种子在可重复迁移 `R__cat_organization_alias_seed.sql`（手工三甲清单 + Wikidata zh 标签），改文件即改数据
+   - 设计：[机构与 MeSH 建议接口](../../docs/patra/specs/2026-10-21-catalog-org-mesh-suggest-design.md)
 
 运维步骤见 [v0.11 运维手册](../../docs/patra/runbooks/v0.11-fulltext-runbook.md)。
 
@@ -255,6 +263,9 @@ patra:
   - `VenueIndexingHistory`：载体索引历史（MEDLINE/PMC 索引收录变迁）
 
 - **读模型**（CQRS 读端查询投影）
+  - `OrganizationSummary` / `OrganizationSuggestion`：机构摘要（ROR ID、显示名、中文名、国家、城市、类型）与建议候选（摘要 + 命中的名称）
+  - `MeshDescriptorSummary` / `MeshDescriptorSuggestion`：MeSH 主题词摘要（UI、英文名、树号）与建议候选（摘要 + 命中的入口词）
+  - `SuggestQuery`（`domain/query/`）：归一化、已验证的建议查询（文本、`MatchMode`、limit）
   - `VenueSummaryReadModel`：期刊列表摘要读模型
   - `VenueDetailReadModel`：期刊详情读模型（`@Builder`，17 字段）
   - `VenueFilter`：期刊筛选条件（`@Builder`，支持 keyword/countryCode/issnL/nlmId 独立筛选）
@@ -393,6 +404,8 @@ patra:
   - `VenueReadModelMapper`：读模型映射器（MapStruct，Entity → ReadModel 转换）
   - `PublicationReadAdapter`：文献读适配器（实现 `PublicationReadPort`，支持多条件独立筛选分页查询和详情查询，含摘要/标识符/关键词/MeSH 标引关联数据组装）
   - `PublicationReadModelMapper`：文献读模型映射器（MapStruct，Entity → ReadModel 转换）
+  - `OrganizationReadAdapter`：机构建议与按 ROR ID 查询（实现 `OrganizationReadPort`；native SQL 在 `OrganizationSuggestSql`，名称表与别名表候选打分、截 500、每家机构只留最好的一条再排序）
+  - `MeshDescriptorReadAdapter`：MeSH 建议与按 UI 查询（实现 `MeshDescriptorReadPort`；native SQL 在 `MeshDescriptorSuggestSql`）
 
 - **LookupPort 实现**（装饰器模式，支持批处理缓存优化）
   - `DefaultVenueLookupAdapter` / `CachingVenueLookupDecorator` / `BatchVenueLookupAdapter`：Venue 查找（NLM ID + ISSN 双索引）
@@ -464,6 +477,8 @@ patra:
   - `cat_organization_external_id`：机构外部标识符表（GRID/ISNI/Wikidata/FundRef/Ringgold）
   - `cat_organization_relation`：机构关系表（层级关系：parent/child，关联关系：related，时序关系：successor/predecessor）
   - `cat_organization_location`：机构地理位置表（基于 GeoNames，含洲/国家/省/市/经纬度）
+  - `cat_organization_alias`：Patra 自维护的机构别名（按 `ror_id` 关联，ROR 重导不影响；`alias_type` LABEL / ALIAS，`source` SEED / WIKIDATA；种子在 `R__cat_organization_alias_seed.sql`）
+  - 建议接口的索引（`V9`，`pg_trgm`）：`cat_organization_name.name_value`、`cat_organization_alias.alias` 的 GIN trigram；MeSH 主题词名与入口词的局部 GIN trigram（谓词与建议查询的 WHERE 逐字相同）
 
 - **Funding（资助）相关表**
   - `cat_publication_funding`：文献-资助关联表（含资助机构 ID、项目编号、原始数据字段、数据来源追踪）
@@ -479,6 +494,8 @@ patra:
 | Boot | E2E 测试 | 核心流程 |
 
 ## 📝 变更日志
+
+- 2026-10-21（v0.12，PAP-94）：机构与 MeSH 建议接口、内部查询接口与 `patra-catalog-api` 契约；`V9` 加 `pg_trgm` 索引与 `cat_organization_alias`；别名种子第一版。
 
 ## 📖 相关文档
 
