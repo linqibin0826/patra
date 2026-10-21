@@ -50,7 +50,39 @@ class DomainExceptionTraitsTest {
         Arguments.of(
             new InvalidUserStateTransitionException(UserStatus.DELETED, "unban"),
             "账号当前状态不允许此操作",
-            StandardErrorTrait.CONFLICT));
+            StandardErrorTrait.CONFLICT),
+        Arguments.of(
+            new EmailResendLimitedException(Duration.ofSeconds(60)),
+            "发送过于频繁，请稍后再试",
+            StandardErrorTrait.QUOTA_EXCEEDED));
+  }
+
+  @Test
+  @DisplayName("邮箱已验证还重发是 409：CONFLICT 之外带 EMAIL_ALREADY_VERIFIED")
+  void should_carry_already_verified_trait_beside_conflict() {
+    EmailAlreadyVerifiedException exception = new EmailAlreadyVerifiedException();
+
+    assertThat(exception.getMessage()).isEqualTo("邮箱已经验证过了");
+    assertThat(exception.getErrorTraits())
+        .containsExactlyInAnyOrder(
+            StandardErrorTrait.CONFLICT, IdentityErrorTrait.EMAIL_ALREADY_VERIFIED);
+  }
+
+  @Test
+  @DisplayName("重发限流带 Retry-After（毫秒向上取整到秒）；令牌字段错误的字段名和原因码固定")
+  void should_expose_retry_after_and_token_field_codes() {
+    EmailResendLimitedException limited =
+        new EmailResendLimitedException(Duration.ofMillis(36_500));
+
+    assertThat(limited.getRetryAfter()).isEqualTo(Duration.ofMillis(36_500));
+    assertThat(limited.getRetryAfterSeconds()).isEqualTo(37);
+    assertThatThrownBy(() -> new EmailResendLimitedException(null))
+        .isInstanceOf(NullPointerException.class);
+    assertThat(UserFieldViolations.tokenRequired().field()).isEqualTo("token");
+    assertThat(UserFieldViolations.tokenRequired().code()).isEqualTo("REQUIRED");
+    assertThat(UserFieldViolations.tokenInvalid().field()).isEqualTo("token");
+    assertThat(UserFieldViolations.tokenInvalid().code()).isEqualTo("INVALID");
+    assertThat(UserFieldViolations.tokenInvalid().message()).isEqualTo("验证链接无效或已过期");
   }
 
   @ParameterizedTest(name = "{1}")

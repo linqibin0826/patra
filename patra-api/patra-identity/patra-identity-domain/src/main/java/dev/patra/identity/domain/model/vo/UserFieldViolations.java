@@ -56,6 +56,12 @@ public final class UserFieldViolations {
   /// 已注册。
   public static final String ALREADY_REGISTERED = "ALREADY_REGISTERED";
 
+  /// 一次性令牌字段名，和请求体一致。
+  public static final String TOKEN = "token";
+
+  /// 令牌不存在、已过期、已使用或已作废，不区分原因。
+  public static final String INVALID = "INVALID";
+
   /// 只有静态方法。
   private UserFieldViolations() {}
 
@@ -197,6 +203,20 @@ public final class UserFieldViolations {
   /// @return 字段错误
   public static FieldViolation usernameUnchanged() {
     return FieldViolation.of(USERNAME, UNCHANGED, "新用户名与当前相同");
+  }
+
+  /// 令牌为空。
+  ///
+  /// @return 字段错误
+  public static FieldViolation tokenRequired() {
+    return FieldViolation.of(TOKEN, REQUIRED, "请提供验证令牌");
+  }
+
+  /// 令牌不可用：格式不对、不存在、已过期、已使用或已作废。
+  ///
+  /// @return 字段错误
+  public static FieldViolation tokenInvalid() {
+    return FieldViolation.of(TOKEN, INVALID, "验证链接无效或已过期");
   }
 
   /// 用户名已被使用。

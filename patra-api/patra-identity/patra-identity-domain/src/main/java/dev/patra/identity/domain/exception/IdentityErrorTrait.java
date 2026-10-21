@@ -10,5 +10,8 @@ public enum IdentityErrorTrait implements ErrorTrait {
   PENDING_DELETION,
 
   /// 距上次改名不足冷却期，改名被拒（409）。
-  USERNAME_CHANGE_COOLDOWN
+  USERNAME_CHANGE_COOLDOWN,
+
+  /// 邮箱已经验证过了，重发验证邮件被拒（409）。
+  EMAIL_ALREADY_VERIFIED
 }
