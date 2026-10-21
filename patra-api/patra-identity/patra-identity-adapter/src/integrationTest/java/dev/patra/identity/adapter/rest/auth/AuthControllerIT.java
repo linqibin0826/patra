@@ -114,6 +114,8 @@ class AuthControllerIT {
     assertThat(command.getValue().password()).isEqualTo("correct horse battery");
     assertThat(command.getValue().clientType()).isNull();
     assertThat(command.getValue().deviceId()).isNull();
+    // MockMvc 的远端地址固定是回环地址；真实请求里是 getRemoteAddr()（网关转发头已按 framework 策略解析）
+    assertThat(command.getValue().clientIp()).isEqualTo("127.0.0.1");
   }
 
   @Test

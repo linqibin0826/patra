@@ -11,6 +11,7 @@ import dev.patra.identity.app.usecase.register.RegisterUserCommand;
 import dev.patra.identity.app.usecase.user.query.UserQueryService;
 import dev.patra.tool.cqrs.CommandBus;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,13 +31,16 @@ public class AuthController {
   private final CommandBus commandBus;
   private final UserQueryService userQueryService;
 
-  /// 注册并登录。成功返回 201。
+  /// 注册并登录。成功返回 201。客户端 IP 取 `getRemoteAddr()`：网关加的 `X-Forwarded-For` 已按
+  /// `forward-headers-strategy: framework` 解析；门户是 BFF，所以在受信转发链路接通前这是门户的地址。
   ///
   /// @param request 请求体
+  /// @param http 原始请求，取客户端 IP
   /// @return 会话令牌和新用户的账号信息
   @PostMapping("/register")
   @ResponseStatus(HttpStatus.CREATED)
-  public AuthenticatedUserResponse register(@RequestBody RegisterRequest request) {
+  public AuthenticatedUserResponse register(
+      @RequestBody RegisterRequest request, HttpServletRequest http) {
     AuthenticatedUser result =
         commandBus.handle(
             RegisterUserCommand.builder()
@@ -45,6 +49,7 @@ public class AuthController {
                 .password(request.password())
                 .clientType(request.clientType())
                 .deviceId(request.deviceId())
+                .clientIp(http.getRemoteAddr())
                 .build());
     return toResponse(result);
   }

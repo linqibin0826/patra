@@ -13,9 +13,15 @@ import lombok.Builder;
 /// @param password 密码，原始输入
 /// @param clientType 客户端类型，原始输入，可以为 `null`
 /// @param deviceId 设备标识，原始输入，可以为 `null`
+/// @param clientIp 客户端 IP，记进验证令牌的签发记录，可以为 `null`
 @Builder
 public record RegisterUserCommand(
-    String email, String username, String password, String clientType, String deviceId)
+    String email,
+    String username,
+    String password,
+    String clientType,
+    String deviceId,
+    String clientIp)
     implements Command<AuthenticatedUser> {
 
   /// 不输出密码。
@@ -31,6 +37,8 @@ public record RegisterUserCommand(
         + clientType
         + ", deviceId="
         + deviceId
+        + ", clientIp="
+        + clientIp
         + "]";
   }
 }

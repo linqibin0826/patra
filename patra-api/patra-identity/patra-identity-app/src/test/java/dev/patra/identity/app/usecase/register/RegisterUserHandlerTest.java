@@ -5,6 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -14,14 +17,18 @@ import static org.mockito.Mockito.when;
 
 import dev.patra.identity.app.usecase.auth.AuthenticatedUser;
 import dev.patra.identity.domain.exception.InvalidUserFieldsException;
+import dev.patra.identity.domain.exception.TemporarilyUnavailableException;
 import dev.patra.identity.domain.exception.UserIdentifierTakenException;
+import dev.patra.identity.domain.model.aggregate.EmailToken;
 import dev.patra.identity.domain.model.aggregate.User;
 import dev.patra.identity.domain.model.aggregate.UserPasswordCredential;
 import dev.patra.identity.domain.model.aggregate.UserProfile;
+import dev.patra.identity.domain.model.enums.EmailTokenPurpose;
 import dev.patra.identity.domain.model.enums.UserStatus;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.model.vo.DeviceId;
 import dev.patra.identity.domain.model.vo.EmailAddress;
+import dev.patra.identity.domain.model.vo.EmailTokenSecret;
 import dev.patra.identity.domain.model.vo.LoginClient;
 import dev.patra.identity.domain.model.vo.PasswordHash;
 import dev.patra.identity.domain.model.vo.UserFieldViolations;
@@ -29,15 +36,21 @@ import dev.patra.identity.domain.model.vo.Username;
 import dev.patra.identity.domain.policy.PasswordPolicy;
 import dev.patra.identity.domain.policy.UsernamePolicy;
 import dev.patra.identity.domain.port.hashing.PasswordHashingPort;
+import dev.patra.identity.domain.port.mail.EmailDeliveryPort;
+import dev.patra.identity.domain.port.mail.EmailVerificationMail;
 import dev.patra.identity.domain.port.read.UserReadPort;
 import dev.patra.identity.domain.port.repository.FormerUsernameRepository;
 import dev.patra.identity.domain.port.repository.UserPasswordCredentialRepository;
 import dev.patra.identity.domain.port.repository.UserProfileRepository;
 import dev.patra.identity.domain.port.repository.UserRepository;
 import dev.patra.identity.domain.port.session.IssuedUserSession;
+import dev.patra.identity.domain.port.throttle.EmailResendThrottlePort;
+import dev.patra.identity.domain.service.EmailVerificationIssuer;
+import dev.patra.identity.domain.service.PreparedVerificationMail;
 import dev.patra.identity.domain.service.SessionIssuer;
 import dev.patra.tool.core.error.field.FieldViolation;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -81,6 +94,16 @@ class RegisterUserHandlerTest {
           .status(UserStatus.ACTIVE)
           .build();
 
+  private static final EmailTokenSecret SECRET = new EmailTokenSecret("E".repeat(43));
+  private static final PreparedVerificationMail PREPARED =
+      PreparedVerificationMail.of(
+          EmailToken.issue(EmailTokenPurpose.EMAIL_VERIFY, 42L, EMAIL, SECRET, NOW, null),
+          EmailVerificationMail.of(
+              EMAIL,
+              "chen-yu",
+              "https://patra.example/verify-email#token=" + SECRET.value(),
+              NOW.plus(Duration.ofHours(24))));
+
   private final UserRepository users = mock(UserRepository.class);
   private final UserProfileRepository profiles = mock(UserProfileRepository.class);
   private final UserReadPort userReadPort = mock(UserReadPort.class);
@@ -91,6 +114,10 @@ class RegisterUserHandlerTest {
   private final PasswordPolicy passwordPolicy = new PasswordPolicy(Set.of("password123")::contains);
   private final UsernamePolicy usernamePolicy = new UsernamePolicy();
   private final SessionIssuer sessionIssuer = mock(SessionIssuer.class);
+  private final EmailVerificationIssuer emailVerificationIssuer =
+      mock(EmailVerificationIssuer.class);
+  private final EmailDeliveryPort emailDelivery = mock(EmailDeliveryPort.class);
+  private final EmailResendThrottlePort emailResendThrottle = mock(EmailResendThrottlePort.class);
   private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
   private final RegisterUserHandler handler = handler(TransactionOperations.withoutTransaction());
 
@@ -109,8 +136,34 @@ class RegisterUserHandlerTest {
         passwordPolicy,
         usernamePolicy,
         sessionIssuer,
+        emailVerificationIssuer,
+        emailDelivery,
+        emailResendThrottle,
         transactions,
         clock);
+  }
+
+  /// 执行回调期间把标记置真的事务操作，用来断言哪些调用在事务里、哪些在事务外。
+  ///
+  /// @param inTransaction 标记
+  /// @return 事务操作
+  private static TransactionOperations recording(AtomicBoolean inTransaction) {
+    return new TransactionOperations() {
+      /// 标记事务边界后执行回调。
+      ///
+      /// @param action 回调
+      /// @param <T> 结果类型
+      /// @return 回调结果
+      @Override
+      public <T> T execute(TransactionCallback<T> action) throws TransactionException {
+        inTransaction.set(true);
+        try {
+          return action.doInTransaction(new SimpleTransactionStatus());
+        } finally {
+          inTransaction.set(false);
+        }
+      }
+    };
   }
 
   /// 成功路径的桩。
@@ -122,6 +175,7 @@ class RegisterUserHandlerTest {
     when(sessionIssuer.issue(anyLong(), any()))
         .thenReturn(IssuedUserSession.of("patra_user_x", List.of()));
     when(userReadPort.findAccount(42L)).thenReturn(Optional.of(ACCOUNT));
+    when(emailVerificationIssuer.prepare(any(), any(), any())).thenReturn(PREPARED);
   }
 
   /// 带邮箱、用户名、密码的命令。
@@ -291,24 +345,8 @@ class RegisterUserHandlerTest {
   @DisplayName("哈希在事务外做，三次保存和建会话在同一个事务里")
   void should_hash_outside_transaction_and_save_inside() {
     AtomicBoolean inTransaction = new AtomicBoolean(false);
-    TransactionOperations recording =
-        new TransactionOperations() {
-          /// 标记事务边界后执行回调。
-          ///
-          /// @param action 回调
-          /// @param <T> 结果类型
-          /// @return 回调结果
-          @Override
-          public <T> T execute(TransactionCallback<T> action) throws TransactionException {
-            inTransaction.set(true);
-            try {
-              return action.doInTransaction(new SimpleTransactionStatus());
-            } finally {
-              inTransaction.set(false);
-            }
-          }
-        };
-    RegisterUserHandler transactional = handler(recording);
+    RegisterUserHandler transactional = handler(recording(inTransaction));
+    when(emailVerificationIssuer.prepare(any(), any(), any())).thenReturn(PREPARED);
     when(passwordHashing.hash(any()))
         .thenAnswer(
             invocation -> {
@@ -404,5 +442,74 @@ class RegisterUserHandlerTest {
         .isInstanceOf(InvalidUserFieldsException.class);
 
     verifyNoInteractions(sessionIssuer);
+  }
+
+  @Test
+  @DisplayName("注册成功：令牌在事务里签发，提交后先计数（不带 IP）再发信；IP 交给签发；发信端口收到签发返回的邮件")
+  void should_issue_verification_token_inside_transaction_and_send_after_commit() {
+    AtomicBoolean inTransaction = new AtomicBoolean(false);
+    RegisterUserHandler transactional = handler(recording(inTransaction));
+    stubHappyPath();
+    when(emailVerificationIssuer.prepare(any(), any(), any()))
+        .thenAnswer(
+            invocation -> {
+              assertThat(inTransaction).isTrue();
+              return PREPARED;
+            });
+    doAnswer(
+            invocation -> {
+              assertThat(inTransaction).isFalse();
+              return null;
+            })
+        .when(emailResendThrottle)
+        .markSent(anyLong(), any());
+    doAnswer(
+            invocation -> {
+              assertThat(inTransaction).isFalse();
+              return null;
+            })
+        .when(emailDelivery)
+        .send(any());
+
+    transactional.handle(
+        RegisterUserCommand.builder()
+            .email("chen.yu@example.com")
+            .username("chen-yu")
+            .password("correct horse battery")
+            .clientIp("203.0.113.9")
+            .build());
+
+    InOrder order =
+        inOrder(sessionIssuer, emailVerificationIssuer, emailResendThrottle, emailDelivery);
+    order.verify(sessionIssuer).issue(eq(42L), any());
+    order.verify(emailVerificationIssuer).prepare(any(), eq("chen-yu"), eq("203.0.113.9"));
+    order.verify(emailResendThrottle).markSent(42L, NOW);
+    order.verify(emailDelivery).send(PREPARED.mail());
+  }
+
+  @Test
+  @DisplayName("没有客户端 IP 也能注册：签发时 IP 为 null")
+  void should_issue_without_client_ip() {
+    stubHappyPath();
+
+    handler.handle(command("chen.yu@example.com", "chen-yu", "correct horse battery"));
+
+    verify(emailVerificationIssuer).prepare(any(), eq("chen-yu"), isNull());
+    verify(emailDelivery).send(PREPARED.mail());
+  }
+
+  @Test
+  @DisplayName("计数失败（Redis 不可用）不影响注册：照样 201、照样发信")
+  void should_still_register_and_send_when_throttle_marking_fails() {
+    stubHappyPath();
+    doThrow(new TemporarilyUnavailableException())
+        .when(emailResendThrottle)
+        .markSent(anyLong(), any());
+
+    AuthenticatedUser result =
+        handler.handle(command("chen.yu@example.com", "chen-yu", "correct horse battery"));
+
+    assertThat(result.sessionToken()).isEqualTo("patra_user_x");
+    verify(emailDelivery).send(PREPARED.mail());
   }
 }
