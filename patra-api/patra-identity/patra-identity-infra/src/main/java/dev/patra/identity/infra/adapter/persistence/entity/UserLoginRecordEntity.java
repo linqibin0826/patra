@@ -43,7 +43,7 @@ public class UserLoginRecordEntity extends BaseJpaEntity {
   @Column(name = "ended_at")
   private Instant endedAt;
 
-  /// 结束原因：LOGOUT / BANNED / REPLACED，未结束时为 null
+  /// 结束原因：LOGOUT / BANNED / REPLACED / REVOKED，未结束时为 null
   @Column(name = "end_reason", length = 16)
   private String endReason;
 }

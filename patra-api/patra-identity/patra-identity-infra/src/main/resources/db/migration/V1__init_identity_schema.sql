@@ -135,7 +135,7 @@ CREATE TABLE idn_user_login_record
     PRIMARY KEY (id),
     CONSTRAINT fk_idn_user_login_record_user FOREIGN KEY (user_id) REFERENCES idn_user (id),
     CONSTRAINT ck_idn_user_login_record_client_type CHECK (client_type IN ('WEB')),
-    CONSTRAINT ck_idn_user_login_record_end_reason CHECK (end_reason IN ('LOGOUT', 'BANNED', 'REPLACED')),
+    CONSTRAINT ck_idn_user_login_record_end_reason CHECK (end_reason IN ('LOGOUT', 'BANNED', 'REPLACED', 'REVOKED')),
     CONSTRAINT ck_idn_user_login_record_ended CHECK ((ended_at IS NULL) = (end_reason IS NULL))
 );
 
@@ -148,7 +148,7 @@ COMMENT ON COLUMN idn_user_login_record.client_type IS 'Client type: WEB';
 COMMENT ON COLUMN idn_user_login_record.device_id IS 'Client-reported device identifier, optional';
 COMMENT ON COLUMN idn_user_login_record.expires_at IS 'Absolute expiry of the session (UTC)';
 COMMENT ON COLUMN idn_user_login_record.ended_at IS 'When the session ended explicitly; null while open or after a silent expiry';
-COMMENT ON COLUMN idn_user_login_record.end_reason IS 'LOGOUT, BANNED or REPLACED';
+COMMENT ON COLUMN idn_user_login_record.end_reason IS 'LOGOUT, BANNED, REPLACED or REVOKED (revoked by the user''s own action: email verified, password changed, device kicked)';
 COMMENT ON COLUMN idn_user_login_record.record_remarks IS 'Audit remarks log';
 COMMENT ON COLUMN idn_user_login_record.version IS 'Optimistic lock version number';
 COMMENT ON COLUMN idn_user_login_record.ip_address IS 'Requester IP (IPv4/IPv6)';
@@ -257,4 +257,68 @@ COMMENT ON COLUMN idn_user_former_username.updated_by_name IS 'Updater name';
 
 CREATE TRIGGER trg_idn_user_former_username_updated_at
     BEFORE UPDATE ON idn_user_former_username
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- ============================================================
+-- idn_email_token：一次性邮件令牌（验证邮箱、找回密码、改邮箱确认与撤销共用）。库里只存原文的 SHA-256。
+-- 同一用户同一用途只留一个有效令牌由部分唯一索引兜底；改邮箱的撤销令牌（EMAIL_CHANGE_REVERT）豁免：
+-- 连续改两次邮箱时，两个旧邮箱里的「不是我」链接要各自活满 7 天
+-- ============================================================
+CREATE TABLE idn_email_token
+(
+    id              BIGINT          NOT NULL,
+    user_id         BIGINT          NOT NULL,
+    purpose         VARCHAR(32)     NOT NULL,
+    email           VARCHAR(254)    NOT NULL,
+    token_hash      CHAR(64)        NOT NULL,
+    expires_at      timestamptz(6)  NOT NULL,
+    consumed_at     timestamptz(6)  NULL,
+    revoked_at      timestamptz(6)  NULL,
+    requested_ip    VARCHAR(45)     NULL,
+    record_remarks  jsonb           NULL,
+    version         BIGINT          NOT NULL DEFAULT 0,
+    ip_address      bytea           NULL,
+    created_at      timestamptz(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by      BIGINT          NULL,
+    created_by_name VARCHAR(100)    NULL,
+    updated_at      timestamptz(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by      BIGINT          NULL,
+    updated_by_name VARCHAR(100)    NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT fk_idn_email_token_user FOREIGN KEY (user_id) REFERENCES idn_user (id),
+    CONSTRAINT uk_idn_email_token_hash UNIQUE (token_hash),
+    CONSTRAINT ck_idn_email_token_purpose CHECK (
+        purpose IN ('EMAIL_VERIFY', 'PASSWORD_RESET', 'EMAIL_CHANGE_CONFIRM', 'EMAIL_CHANGE_REVERT')),
+    CONSTRAINT ck_idn_email_token_email_lowercase CHECK (email = lower(email)),
+    CONSTRAINT ck_idn_email_token_hash_format CHECK (token_hash ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT ck_idn_email_token_settled_once CHECK (consumed_at IS NULL OR revoked_at IS NULL)
+);
+
+CREATE UNIQUE INDEX uk_idn_email_token_active ON idn_email_token (user_id, purpose)
+    WHERE consumed_at IS NULL AND revoked_at IS NULL AND purpose <> 'EMAIL_CHANGE_REVERT';
+CREATE INDEX idx_idn_email_token_user_id ON idn_email_token (user_id);
+CREATE INDEX idx_idn_email_token_expires_at ON idn_email_token (expires_at);
+
+COMMENT ON TABLE idn_email_token IS 'One-time email token (email verify, password reset, email change confirm / revert); only the SHA-256 of the secret is stored';
+COMMENT ON COLUMN idn_email_token.id IS 'PK (snowflake)';
+COMMENT ON COLUMN idn_email_token.user_id IS 'Owner user ID';
+COMMENT ON COLUMN idn_email_token.purpose IS 'EMAIL_VERIFY (24h), PASSWORD_RESET (1h), EMAIL_CHANGE_CONFIRM (1h) or EMAIL_CHANGE_REVERT (7d)';
+COMMENT ON COLUMN idn_email_token.email IS 'Address the token was sent to (lower-cased); the new address for EMAIL_CHANGE_CONFIRM, the address to restore for EMAIL_CHANGE_REVERT';
+COMMENT ON COLUMN idn_email_token.token_hash IS 'SHA-256 of the secret, lower-case hex; the secret itself is never stored';
+COMMENT ON COLUMN idn_email_token.expires_at IS 'Expiry (UTC), exclusive';
+COMMENT ON COLUMN idn_email_token.consumed_at IS 'When the token was consumed (UTC); null while unused';
+COMMENT ON COLUMN idn_email_token.revoked_at IS 'When the token was revoked (UTC); null unless revoked';
+COMMENT ON COLUMN idn_email_token.requested_ip IS 'Client IP of the request that issued the token, text form; null when unknown';
+COMMENT ON COLUMN idn_email_token.record_remarks IS 'Audit remarks log';
+COMMENT ON COLUMN idn_email_token.version IS 'Optimistic lock version number';
+COMMENT ON COLUMN idn_email_token.ip_address IS 'Requester IP (IPv4/IPv6)';
+COMMENT ON COLUMN idn_email_token.created_at IS 'Creation time (UTC), also the issue time';
+COMMENT ON COLUMN idn_email_token.created_by IS 'Creator ID';
+COMMENT ON COLUMN idn_email_token.created_by_name IS 'Creator name';
+COMMENT ON COLUMN idn_email_token.updated_at IS 'Last update time (UTC)';
+COMMENT ON COLUMN idn_email_token.updated_by IS 'Updater ID';
+COMMENT ON COLUMN idn_email_token.updated_by_name IS 'Updater name';
+
+CREATE TRIGGER trg_idn_email_token_updated_at
+    BEFORE UPDATE ON idn_email_token
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();

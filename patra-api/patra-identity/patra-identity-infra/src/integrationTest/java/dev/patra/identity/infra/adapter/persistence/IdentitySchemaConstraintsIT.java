@@ -43,6 +43,12 @@ class IdentitySchemaConstraintsIT {
 
   private static final Timestamp AT = Timestamp.valueOf("2026-10-20 08:00:00");
 
+  private static final String INSERT_TOKEN =
+      "INSERT INTO idn_email_token (id, user_id, purpose, email, token_hash, expires_at, "
+          + "consumed_at, revoked_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+
+  private static final String HASH = "a".repeat(64);
+
   @Autowired private JdbcTemplate jdbcTemplate;
 
   static Stream<String> malformedUsernames() {
@@ -244,6 +250,108 @@ class IdentitySchemaConstraintsIT {
                     Timestamp.valueOf("2027-01-18 08:00:00")))
         .isInstanceOf(DataIntegrityViolationException.class)
         .hasMessageContaining("ck_idn_user_former_username_format");
+  }
+
+  @Test
+  @DisplayName("令牌用途只能是四种之一")
+  void should_reject_unknown_token_purpose() {
+    insertActive(40L, "token-purpose@example.com", "token-purpose");
+    assertThatThrownBy(() -> insertToken(41L, 40L, "MAGIC_LINK", "token-purpose@example.com", HASH))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("ck_idn_email_token_purpose");
+  }
+
+  @Test
+  @DisplayName("令牌发往的邮箱必须是小写")
+  void should_reject_uppercase_token_email() {
+    insertActive(42L, "token-email@example.com", "token-email");
+    assertThatThrownBy(() -> insertToken(43L, 42L, "EMAIL_VERIFY", "Token-Email@example.com", HASH))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("ck_idn_email_token_email_lowercase");
+  }
+
+  @Test
+  @DisplayName("令牌哈希必须是 64 位小写十六进制")
+  void should_reject_malformed_token_hash() {
+    insertActive(44L, "token-hash@example.com", "token-hash");
+    assertThatThrownBy(
+            () -> insertToken(45L, 44L, "EMAIL_VERIFY", "token-hash@example.com", "A".repeat(64)))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("ck_idn_email_token_hash_format");
+  }
+
+  @Test
+  @DisplayName("令牌不能同时有消费时间和作废时间")
+  void should_reject_token_settled_twice() {
+    insertActive(46L, "token-settled@example.com", "token-settled");
+    assertThatThrownBy(
+            () ->
+                jdbcTemplate.update(
+                    INSERT_TOKEN,
+                    47L,
+                    46L,
+                    "EMAIL_VERIFY",
+                    "token-settled@example.com",
+                    HASH,
+                    Timestamp.valueOf("2026-10-21 08:00:00"),
+                    AT,
+                    AT))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("ck_idn_email_token_settled_once");
+  }
+
+  @Test
+  @DisplayName("令牌哈希唯一")
+  void should_reject_duplicate_token_hash() {
+    insertActive(48L, "token-dup@example.com", "token-dup");
+    insertToken(49L, 48L, "EMAIL_VERIFY", "token-dup@example.com", HASH);
+    assertThatThrownBy(() -> insertToken(50L, 48L, "PASSWORD_RESET", "token-dup@example.com", HASH))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("uk_idn_email_token_hash");
+  }
+
+  @Test
+  @DisplayName("令牌必须指向存在的用户")
+  void should_reject_token_of_missing_user() {
+    assertThatThrownBy(() -> insertToken(51L, 999_997L, "EMAIL_VERIFY", "x@example.com", HASH))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("fk_idn_email_token_user");
+  }
+
+  @Test
+  @DisplayName("登录记录的结束原因可以是 REVOKED")
+  void should_accept_revoked_login_end_reason() {
+    insertActive(52L, "revoked@example.com", "revoked-user");
+    assertThatCode(
+            () ->
+                jdbcTemplate.update(
+                    "INSERT INTO idn_user_login_record (id, user_id, client_type, expires_at, "
+                        + "ended_at, end_reason) VALUES (?, ?, 'WEB', ?, ?, 'REVOKED')",
+                    53L,
+                    52L,
+                    Timestamp.valueOf("2027-04-18 08:00:00"),
+                    AT))
+        .doesNotThrowAnyException();
+  }
+
+  /// 插一枚没消费、没作废、明天过期的令牌。
+  ///
+  /// @param id 令牌 ID
+  /// @param userId 用户 ID
+  /// @param purpose 用途
+  /// @param email 发往的邮箱
+  /// @param hash 令牌哈希
+  private void insertToken(long id, long userId, String purpose, String email, String hash) {
+    jdbcTemplate.update(
+        INSERT_TOKEN,
+        id,
+        userId,
+        purpose,
+        email,
+        hash,
+        Timestamp.valueOf("2026-10-21 08:00:00"),
+        null,
+        null);
   }
 
   /// 插一个正常状态的用户。

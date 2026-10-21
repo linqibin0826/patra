@@ -7,5 +7,7 @@ public enum LoginEndReason {
   /// 账号被封禁，会话被删。
   BANNED,
   /// 超过每用户的会话上限，被新登录挤掉。
-  REPLACED
+  REPLACED,
+  /// 被本人的另一次操作撤销：验证邮箱、改密码、踢设备。
+  REVOKED
 }
