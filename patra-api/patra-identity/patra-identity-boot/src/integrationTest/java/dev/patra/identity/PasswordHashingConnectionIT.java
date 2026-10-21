@@ -9,6 +9,7 @@ import com.zaxxer.hikari.HikariPoolMXBean;
 import dev.patra.identity.config.IdentityITPostgreSQLContainerInitializer;
 import dev.patra.identity.domain.port.hashing.PasswordHashingPort;
 import dev.patra.tool.test.container.initializer.RedisContainerInitializer;
+import dev.patra.tool.test.mail.GreenMailSmtpInitializer;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Locale;
@@ -32,7 +33,8 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 @ContextConfiguration(
     initializers = {
       IdentityITPostgreSQLContainerInitializer.class,
-      RedisContainerInitializer.class
+      RedisContainerInitializer.class,
+      GreenMailSmtpInitializer.class
     })
 @ActiveProfiles("test")
 @AutoConfigureRestTestClient

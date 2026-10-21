@@ -41,6 +41,35 @@ class ApplicationConfigTest {
         .noneMatch(name -> name.startsWith("patra.identity.login-throttle."));
   }
 
+  @Test
+  @DisplayName("邮件健康检查关掉；服务商坐标、发件人、门户地址这些随环境变的键不在 jar 里（在 Nacos）")
+  void should_disable_mail_health_indicator_and_keep_environment_keys_in_nacos()
+      throws IOException {
+    assertThat(property("application.yml", "management.health.mail.enabled")).isEqualTo("false");
+    assertThat(propertyNames("application.yml"))
+        .noneMatch(
+            name ->
+                name.startsWith("spring.mail.")
+                    || name.equals("patra.identity.mail.from")
+                    || name.equals("patra.identity.mail.links.base-url"));
+  }
+
+  /// 读出 classpath 上一份 YAML 里某个属性的值。
+  ///
+  /// @param resource classpath 上的文件名
+  /// @param name 属性名
+  /// @return 值的字符串形式；没有时为 `null`
+  /// @throws IOException 读取失败时
+  private static String property(String resource, String name) throws IOException {
+    return new YamlPropertySourceLoader()
+        .load(resource, new ClassPathResource(resource)).stream()
+            .map(source -> source.getProperty(name))
+            .filter(java.util.Objects::nonNull)
+            .map(String::valueOf)
+            .findFirst()
+            .orElse(null);
+  }
+
   /// 读出 classpath 上一份 YAML 的全部属性名，多文档合在一起。
   ///
   /// @param resource classpath 上的文件名

@@ -11,11 +11,49 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 /// @param passwordHashing 密码哈希
 /// @param session 会话策略
 /// @param username 改名规则
+/// @param mail 邮件：发件人、显示时区、令牌保留期、链接、重发限流
 @ConfigurationProperties(prefix = "patra.identity")
 public record IdentityProperties(
     @DefaultValue PasswordHashing passwordHashing,
     @DefaultValue Session session,
-    @DefaultValue Username username) {
+    @DefaultValue Username username,
+    @DefaultValue Mail mail) {
+
+  /// 邮件。
+  ///
+  /// @param from 发件人，形如 `Patra <no-reply@example.com>`；随服务商定，mini 由 `mail.env` 覆盖
+  /// @param zone 安全通知里时间的显示时区
+  /// @param tokenRetention 过期令牌保留多久后删行
+  /// @param links 邮件里站内链接的拼法
+  /// @param resend 重发验证邮件的限流
+  public record Mail(
+      @DefaultValue("Patra <no-reply@patra.local>") String from,
+      @DefaultValue("Asia/Shanghai") String zone,
+      @DefaultValue("30d") Duration tokenRetention,
+      @DefaultValue Links links,
+      @DefaultValue Resend resend) {}
+
+  /// 邮件里站内链接的拼法。
+  ///
+  /// @param baseUrl 门户的绝对地址
+  /// @param verifyEmailPath 验证邮箱落地页的路径
+  /// @param securitySettingsPath 安全设置页的路径
+  public record Links(
+      @DefaultValue("http://linqibins-mac-mini:4000") String baseUrl,
+      @DefaultValue("/verify-email") String verifyEmailPath,
+      @DefaultValue("/settings/security") String securitySettingsPath) {}
+
+  /// 重发验证邮件的限流。
+  ///
+  /// @param cooldown 两次发送的最短间隔
+  /// @param perAccountHourly 每账号每小时的上限
+  /// @param perAccountDaily 每账号每天的上限
+  /// @param perIpHourly 每 IP 每小时的上限
+  public record Resend(
+      @DefaultValue("60s") Duration cooldown,
+      @DefaultValue("5") int perAccountHourly,
+      @DefaultValue("10") int perAccountDaily,
+      @DefaultValue("30") int perIpHourly) {}
 
   /// 改名规则。
   ///

@@ -8,6 +8,7 @@ import dev.patra.tool.core.security.ClientType;
 import dev.patra.tool.core.security.CurrentUser;
 import dev.patra.tool.security.test.TestIdentity;
 import dev.patra.tool.test.container.initializer.RedisContainerInitializer;
+import dev.patra.tool.test.mail.GreenMailSmtpInitializer;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,7 +31,8 @@ import tools.jackson.databind.node.ObjectNode;
 @ContextConfiguration(
     initializers = {
       IdentityITPostgreSQLContainerInitializer.class,
-      RedisContainerInitializer.class
+      RedisContainerInitializer.class,
+      GreenMailSmtpInitializer.class
     })
 @ActiveProfiles("test")
 @AutoConfigureRestTestClient

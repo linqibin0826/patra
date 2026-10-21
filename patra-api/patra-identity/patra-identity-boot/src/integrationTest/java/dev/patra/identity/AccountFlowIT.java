@@ -5,6 +5,7 @@ import static org.awaitility.Awaitility.await;
 
 import dev.patra.identity.config.IdentityITPostgreSQLContainerInitializer;
 import dev.patra.tool.test.container.initializer.RedisContainerInitializer;
+import dev.patra.tool.test.mail.GreenMailSmtpInitializer;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,7 +35,8 @@ import tools.jackson.databind.node.ObjectNode;
 @ContextConfiguration(
     initializers = {
       IdentityITPostgreSQLContainerInitializer.class,
-      RedisContainerInitializer.class
+      RedisContainerInitializer.class,
+      GreenMailSmtpInitializer.class
     })
 @ActiveProfiles("test")
 @AutoConfigureRestTestClient

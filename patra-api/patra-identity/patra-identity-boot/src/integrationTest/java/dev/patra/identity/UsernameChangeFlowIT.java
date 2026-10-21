@@ -11,6 +11,7 @@ import dev.patra.tool.security.assertion.IdentityAssertionSigner;
 import dev.patra.tool.security.test.TestSigningKey;
 import dev.patra.tool.test.clock.MutableClock;
 import dev.patra.tool.test.container.initializer.RedisContainerInitializer;
+import dev.patra.tool.test.mail.GreenMailSmtpInitializer;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.http.HttpClient;
@@ -47,7 +48,8 @@ import tools.jackson.databind.json.JsonMapper;
 @ContextConfiguration(
     initializers = {
       IdentityITPostgreSQLContainerInitializer.class,
-      RedisContainerInitializer.class
+      RedisContainerInitializer.class,
+      GreenMailSmtpInitializer.class
     })
 @ActiveProfiles("test")
 @AutoConfigureRestTestClient

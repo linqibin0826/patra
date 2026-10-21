@@ -27,6 +27,12 @@ spring:
       connect-timeout: 10s
       timeout: 5s
 
+management:
+  health:
+    mail:
+      # 不拿 SMTP 连通性当健康：容器 healthcheck 每 10 秒一次会变成一天八千多次登录服务商，CD 也不该因此回滚
+      enabled: false
+
 patra:
   web:
     error:
@@ -46,3 +52,15 @@ patra:
           web:
             idle: 30d
             absolute: 180d
+    # 邮件：服务商坐标（spring.mail.*）、发件人、门户地址随环境变，在 Nacos 的 patra-identity.yaml
+    mail:
+      zone: Asia/Shanghai                 # 安全通知里时间的显示时区
+      token-retention: 30d                # 过期令牌保留多久后删行
+      links:
+        verify-email-path: /verify-email          # 门户的验证邮箱落地页
+        security-settings-path: /settings/security  # 门户的安全设置页
+      resend:
+        cooldown: 60s
+        per-account-hourly: 5
+        per-account-daily: 10
+        per-ip-hourly: 30

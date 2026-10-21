@@ -9,6 +9,7 @@ import dev.patra.tool.core.security.CurrentUser;
 import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import dev.patra.tool.security.test.TestIdentity;
 import dev.patra.tool.test.container.initializer.RedisContainerInitializer;
+import dev.patra.tool.test.mail.GreenMailSmtpInitializer;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
@@ -38,7 +39,8 @@ import tools.jackson.databind.json.JsonMapper;
 @ContextConfiguration(
     initializers = {
       IdentityITPostgreSQLContainerInitializer.class,
-      RedisContainerInitializer.class
+      RedisContainerInitializer.class,
+      GreenMailSmtpInitializer.class
     })
 @ActiveProfiles("test")
 @AutoConfigureRestTestClient

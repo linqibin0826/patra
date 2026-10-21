@@ -3,18 +3,26 @@ package dev.patra.identity.config;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
+import dev.patra.identity.domain.model.vo.EmailTokenSecret;
 import dev.patra.identity.domain.policy.DisplayNamePolicy;
+import dev.patra.identity.domain.policy.EmailResendPolicy;
 import dev.patra.identity.domain.policy.LoginThrottlePolicy;
+import dev.patra.identity.domain.policy.MailLinkPolicy;
 import dev.patra.identity.domain.policy.PasswordPolicy;
 import dev.patra.identity.domain.policy.SessionLifetime;
 import dev.patra.identity.domain.policy.SessionLifetimePolicy;
 import dev.patra.identity.domain.policy.UsernameChangePolicy;
 import dev.patra.identity.domain.policy.UsernamePolicy;
 import dev.patra.identity.domain.port.hashing.PasswordHashingPort;
+import dev.patra.identity.domain.port.mail.EmailDeliveryPort;
 import dev.patra.identity.domain.port.password.CommonPasswordPort;
+import dev.patra.identity.domain.port.repository.EmailTokenRepository;
 import dev.patra.identity.domain.port.repository.UserLoginRecordRepository;
 import dev.patra.identity.domain.port.session.SessionStorePort;
+import dev.patra.identity.domain.service.EmailVerificationIssuer;
 import dev.patra.identity.domain.service.SessionIssuer;
+import dev.patra.identity.infra.adapter.mail.SmtpEmailDeliveryAdapter;
+import dev.patra.identity.infra.adapter.mail.ThymeleafMailRenderer;
 import dev.patra.identity.session.RedisSessionStore;
 import dev.patra.tool.core.security.ClientType;
 import dev.patra.tool.core.security.CurrentUserPort;
@@ -29,6 +37,7 @@ import org.springframework.boot.test.context.assertj.AssertableApplicationContex
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.core.ResolvableType;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.mail.javamail.JavaMailSender;
 
 /// IdentityConfiguration 单元测试。
 ///
@@ -57,7 +66,9 @@ class IdentityConfigurationTest {
         .withBean(Clock.class, Clock::systemUTC)
         .withBean(UserLoginRecordRepository.class, () -> mock(UserLoginRecordRepository.class))
         .withBean(SessionStorePort.class, () -> mock(SessionStorePort.class))
-        .withBean(CurrentUserPort.class, () -> mock(CurrentUserPort.class));
+        .withBean(CurrentUserPort.class, () -> mock(CurrentUserPort.class))
+        .withBean(EmailTokenRepository.class, () -> mock(EmailTokenRepository.class))
+        .withBean(JavaMailSender.class, () -> mock(JavaMailSender.class));
   }
 
   @Test
@@ -186,6 +197,65 @@ class IdentityConfigurationTest {
         .run(context -> assertThat(context).hasFailed());
     runner
         .withPropertyValues("patra.identity.session.max-sessions-per-user=0")
+        .run(context -> assertThat(context).hasFailed());
+  }
+
+  @Test
+  @DisplayName("邮件相关的默认值：冷却 60 秒、5 / 10 / 30；链接指向默认门户地址；签发服务、渲染器、发信端口都是 Bean")
+  void should_bind_mail_defaults() {
+    runner.run(
+        context -> {
+          EmailResendPolicy resend = context.getBean(EmailResendPolicy.class);
+          assertThat(resend.cooldown()).isEqualTo(Duration.ofSeconds(60));
+          assertThat(resend.perAccountHourly()).isEqualTo(5);
+          assertThat(resend.perAccountDaily()).isEqualTo(10);
+          assertThat(resend.perIpHourly()).isEqualTo(30);
+          MailLinkPolicy links = context.getBean(MailLinkPolicy.class);
+          assertThat(links.verifyEmailUrl(new EmailTokenSecret("A".repeat(43))))
+              .startsWith("http://linqibins-mac-mini:4000/verify-email#token=");
+          assertThat(links.securitySettingsUrl())
+              .isEqualTo("http://linqibins-mac-mini:4000/settings/security");
+          assertThat(context).hasSingleBean(EmailVerificationIssuer.class);
+          assertThat(context).hasSingleBean(ThymeleafMailRenderer.class);
+          assertThat(context.getBean(EmailDeliveryPort.class))
+              .isInstanceOf(SmtpEmailDeliveryAdapter.class);
+        });
+  }
+
+  @Test
+  @DisplayName("邮件配置能覆盖")
+  void should_bind_mail_overrides() {
+    runner
+        .withPropertyValues(
+            "patra.identity.mail.resend.cooldown=5s",
+            "patra.identity.mail.resend.per-account-hourly=2",
+            "patra.identity.mail.links.base-url=https://patra.example/",
+            "patra.identity.mail.links.verify-email-path=/v")
+        .run(
+            context -> {
+              assertThat(context.getBean(EmailResendPolicy.class).cooldown())
+                  .isEqualTo(Duration.ofSeconds(5));
+              assertThat(context.getBean(EmailResendPolicy.class).perAccountHourly()).isEqualTo(2);
+              assertThat(context.getBean(MailLinkPolicy.class).baseUrl())
+                  .isEqualTo("https://patra.example");
+              assertThat(context.getBean(MailLinkPolicy.class).verifyEmailPath()).isEqualTo("/v");
+            });
+  }
+
+  @Test
+  @DisplayName("重发上限不是正数、门户地址不是绝对 http 地址、发件人不是地址：启动失败")
+  void should_fail_on_invalid_mail_configuration() {
+    runner
+        .withPropertyValues("patra.identity.mail.resend.per-account-hourly=0")
+        .run(context -> assertThat(context).hasFailed());
+    runner
+        .withPropertyValues("patra.identity.mail.resend.cooldown=0s")
+        .run(context -> assertThat(context).hasFailed());
+    runner
+        .withPropertyValues("patra.identity.mail.links.base-url=patra.example")
+        .run(context -> assertThat(context).hasFailed());
+    runner
+        .withPropertyValues("patra.identity.mail.from=nobody")
         .run(context -> assertThat(context).hasFailed());
   }
 
