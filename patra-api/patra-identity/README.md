@@ -42,7 +42,7 @@
 
 - `displayName` 永远非空：资料表里没设昵称就回退成当前用户名。`nextUsernameChangeAt` 是最近一次改名时间加冷却，没改过名为 `null`。`avatarUrl` 本版恒为 `null`（PAP-97 填）。
 - `status` 只会出现 `ACTIVE`、`PENDING_DELETION`。登录在密码正确之后分流：`ACTIVE`、`PENDING_DELETION` 都建会话（后者 `deletionDueAt` 有值，门户据此进取消注销页）；`BANNED` 403；`DELETED` 与密码错误完全一样，按失败结算、401。`/auth/me` 对已封禁、已注销用户的会话返回 401。
-- 公开身份卡：路径里的用户名先去空白、转小写，语法不合法直接 404。可见的条件是 `audience` 为 `PUBLIC`（`ACTIVE` 且邮箱已验证）或请求者就是本人（`SELF`，只要还能登录）；不可见一律 404，不区分原因。门户请求时带上会话令牌，本人才能看到自己。301 的 `Location` 是 identity 自己的相对路径，门户按体里的 `username` 跳转，`fetch` 要用 `redirect: "manual"`。
+- 公开身份卡：路径里的用户名先去空白、转小写，语法不合法直接 404。可见的条件是 `audience` 为 `PUBLIC`（`ACTIVE` 且邮箱已验证）或请求者就是本人（`SELF`，只要还能登录）；不可见一律 404，不区分原因。门户请求时带上会话令牌，本人才能看到自己。301 的 `Location` 是 identity 自己的相对路径，门户按体里的 `username` 做临时跳转（307，永久跳转会被浏览器缓存、原主改回旧名后成环），`fetch` 要用 `redirect: "manual"`；301 带 `Cache-Control: no-store`。
 - `/admin/**` 本版没有身份校验，只能在内网直连调用；对 `DELETED` 用户封禁、解封都返回 409。
 
 ## 3. 账号模型
@@ -69,7 +69,7 @@
 | `markEmailVerified(now)` | 记第一次 | 记第一次 | 记第一次 | 409 |
 | `changeUsername(...)` | 见第 4 节 | 401 | 409（`traits` 含 `PENDING_DELETION`） | 401 |
 
-表里的 409 是 `InvalidUserStateTransitionException`（「账号当前状态不允许此操作」）。进入 `DELETED` 时邮箱、邮箱验证时间、注销到期时间、封禁时间全部清空，用户名和 ID 留着，不能回退。`/me/**` 的写接口先 `requireActive()`：`PENDING_DELETION` 409，`BANNED`、`DELETED` 401。注销冷静期、到期执行是 PAP-100。
+表里的 409 是 `InvalidUserStateTransitionException`（「账号当前状态不允许此操作」）。进入 `DELETED` 时邮箱、邮箱验证时间、注销到期时间、封禁时间全部清空，用户名和 ID 留着，不能回退。`/me/**` 的写接口先 `requireActive()`：`PENDING_DELETION` 409，`BANNED`、`DELETED` 401。注销冷静期、到期执行是 PAP-100；到期时资料行置空不删行（读模型要求资料行与用户一对一存在，缺行是 500）。
 
 ### 用户名规则
 
@@ -79,7 +79,7 @@
 
 ### 昵称规则
 
-本版只有规则和单测（`DisplayNamePolicy`），改昵称的接口是 PAP-95。规范化：NFC、去首尾空白、连续空格类字符折叠成一个空格。校验依次：为空 `REQUIRED`；控制字符、行段分隔符、私用区、未分配码点、孤立代理项、格式字符（emoji 组合里的 ZWJ 和标签字符除外）、以组合用字符开头的字素簇 `INVALID_CHARACTER`；少于 2 个字素 `TOO_SHORT`；多于 30 个字素或超过 120 字节 `TOO_LONG`；网址、邮箱、手机号、微信号形态 `INVALID_FORMAT`；拒绝词 `RESERVED`（`domain/policy/RejectedDisplayNameWords`：中文词包含即命中、拉丁词整词命中，站名与数据源名复用保留字第三组）。字素按 `BreakIterator` 数，汉字、带变音符的字母、肤色 / ZWJ 组合的 emoji、国旗各计 1。
+本版只有规则和单测（`DisplayNamePolicy`），改昵称的接口是 PAP-95。规范化：NFC、连续空格类字符折叠成一个空格、再去首尾空白。校验依次：为空 `REQUIRED`；控制字符、行段分隔符、私用区、未分配码点、孤立代理项、格式字符（emoji 组合里的 ZWJ 和标签字符除外）、以组合用字符开头的字素簇 `INVALID_CHARACTER`；少于 2 个字素 `TOO_SHORT`；多于 30 个字素或超过 120 字节 `TOO_LONG`；网址、邮箱、手机号、微信号形态 `INVALID_FORMAT`；拒绝词 `RESERVED`（`domain/policy/RejectedDisplayNameWords`：中文词包含即命中、拉丁词整词命中，站名与数据源名复用保留字第三组）。字素按 `BreakIterator` 数，汉字、带变音符的字母、肤色 / ZWJ 组合的 emoji、国旗各计 1。
 
 资料表里不存默认昵称：空就跟随用户名，改名后没设过昵称的人昵称自动跟着变。
 

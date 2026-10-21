@@ -230,7 +230,7 @@ v0.8 的账号只有邮箱、密码和 `ACTIVE / BANNED` 两个状态。v0.12 �
 
 ### 7.4 昵称规则（`DisplayNamePolicy`）
 
-`normalize(raw)`：NFC → `String.strip()` 去首尾空白 → 把每一段连续的空格类字符（`Character.isSpaceChar`，含 U+3000 全角空格、U+00A0）折叠成一个 U+0020。规范化后的值才是存库和比较的值。
+`normalize(raw)`：NFC → 把每一段连续的空格类字符（`Character.isSpaceChar`，含 U+3000 全角空格、U+00A0）折叠成一个 U+0020 → `String.strip()` 去首尾空白。先折叠再 strip：U+00A0 的 `isWhitespace` 为假，先 strip 会把首尾的不换行空格留下来。规范化后的值才是存库和比较的值。
 
 `validate(normalized)` 依次查，只报第一条：
 
@@ -387,7 +387,7 @@ Content-Type: application/json
 ```
 
 - 404 一律是 `UserNotFoundException`（`IDN-0404`，「用户不存在」），对非本人的访客，匿名和已登录一样；不可见的原因不区分，不给出任何「这个名字存在但你看不到」的信号。
-- `301` 同时给 `Location`（HTTP 语义）和 JSON 体（门户要的新名）。`Location` 是 identity 自己的相对路径，经网关转发后对门户没有直接用处，门户按体里的 `username` 做 `permanentRedirect('/u/<新名>')`，并且请求时必须用 `redirect: "manual"`，否则 Node 的 `fetch` 会顺着 `Location` 去请求网关根路径（第 16 节）。网关配置 `redirects: DONT_FOLLOW` 已保证网关不替客户端跟随。
+- `301` 同时给 `Location`（HTTP 语义）和 JSON 体（门户要的新名）。`Location` 是 identity 自己的相对路径，经网关转发后对门户没有直接用处，门户按体里的 `username` 做**临时**跳转 `redirect('/u/<新名>')`（307），不用 `permanentRedirect`：308 会被浏览器缓存，原主 30 天后改回旧名时，缓存的 `/u/旧名 → /u/新名` 和服务端新的 `/u/新名 → /u/旧名` 互指成环。请求时必须用 `redirect: "manual"`，否则 Node 的 `fetch` 会顺着 `Location` 去请求网关根路径（第 16 节）。identity 的 301 带 `Cache-Control: no-store`，原因相同：跳转最多 90 天、随时可能反转，不能让中间缓存记住。网关配置 `redirects: DONT_FOLLOW` 已保证网关不替客户端跟随。
 - 响应不含邮箱、ID、状态、任何设置。PAP-95 在这个结构上加简介、链接、专业背景、关注领域、加入时间，并把可见性开关加进 `audience()` / `isVisibleTo`（「仅登录用户」对应新值 `SIGNED_IN`）。
 
 ### 8.6 后台接口
@@ -619,8 +619,8 @@ boot 端到端（PG + Redis 容器，`RANDOM_PORT`，`MutableClock`）：
 | `User.markEmailVerified(now)` 写 `email_verified_at`；注册成功后发验证邮件的钩子放在 `RegisterUserHandler` 事务提交之后 | PAP-96 |
 | `403 REAUTH_REQUIRED` 用 `FORBIDDEN` + `IdentityErrorTrait.REAUTH_REQUIRED`；`/me/**` 的写处理器先 `findByIdForUpdate` 再 `requireActive()`；登录响应的 `user` 结构不变，`/auth/reauth` 换令牌后也返回它 | PAP-98 |
 | `idn_user_login_record` 在 `V1` 上加列与 `REVOKED` | PAP-99 |
-| 聚合的 `requestDeletion` / `cancelDeletion` / `completeDeletion` 已实现并有单测；`deletion_due_at` / `deleted_at` 的检查约束已在表上；写接口对 `PENDING_DELETION` 的拒绝复用 `requireActive()`（409 + `traits` 含 `PENDING_DELETION`）；到期执行时 `completeDeletion` 已经把邮箱置空，处理器再删凭据、资料、令牌、头像；`DELETED` 用户的旧名跳转自动变 404，不用处理；登录响应与 `/auth/me` 带 `status`、`deletionDueAt`，Redis 会话不加标记 | PAP-100 |
-| 注册请求加 `username`；登录、注册响应读 `user`；`/auth/me` 新字段进 `CurrentUser`：`emailVerified`、`username`、`displayName`、`avatarUrl`（`null` 用默认头像）、`status`、`deletionDueAt`、`nextUsernameChangeAt`；409 看 `errors[].field` 区分邮箱和用户名；用户名原因码 `REQUIRED`、`INVALID_CHARACTER`、`TOO_SHORT`、`TOO_LONG`、`INVALID_FORMAT`、`DIGITS_ONLY`、`RESERVED`、`ALREADY_TAKEN`；`/u/[username]` 请求 `GET /patra-identity/users/{username}` 时有会话令牌就带上（本人才能看到未验证时的主页），`fetch` 用 `redirect: "manual"`，301 时读体里的 `username` 做 `permanentRedirect('/u/<新名>')`，404 原样；`audience` 为 `SELF` 时显示「目前只有你能看到」 | PAP-101 |
+| 聚合的 `requestDeletion` / `cancelDeletion` / `completeDeletion` 已实现并有单测；`deletion_due_at` / `deleted_at` 的检查约束已在表上；写接口对 `PENDING_DELETION` 的拒绝复用 `requireActive()`（409 + `traits` 含 `PENDING_DELETION`）；到期执行时 `completeDeletion` 已经把邮箱置空，处理器再删凭据、令牌、头像，资料行**置空不删行**（`display_name` 及 PAP-95 加的列设 NULL）：读模型要求资料行与用户一对一存在（`UserReadAdapter` 缺行即抛 `IllegalStateException`），删行会让 `GET /users/<已注销用户名>` 和断言窗口内的 `/auth/me` 500 而不是 404 / 401；`DELETED` 用户的旧名跳转自动变 404，不用处理；登录响应与 `/auth/me` 带 `status`、`deletionDueAt`，Redis 会话不加标记 | PAP-100 |
+| 注册请求加 `username`；登录、注册响应读 `user`；`/auth/me` 新字段进 `CurrentUser`：`emailVerified`、`username`、`displayName`、`avatarUrl`（`null` 用默认头像）、`status`、`deletionDueAt`、`nextUsernameChangeAt`；409 看 `errors[].field` 区分邮箱和用户名；用户名原因码 `REQUIRED`、`INVALID_CHARACTER`、`TOO_SHORT`、`TOO_LONG`、`INVALID_FORMAT`、`DIGITS_ONLY`、`RESERVED`、`ALREADY_TAKEN`；`/u/[username]` 请求 `GET /patra-identity/users/{username}` 时有会话令牌就带上（本人才能看到未验证时的主页），`fetch` 用 `redirect: "manual"`，301 时读体里的 `username` 做临时跳转 `redirect('/u/<新名>')`（307，不用 `permanentRedirect`：浏览器会缓存 308，原主改回旧名后缓存的跳转与新的跳转互指成环），404 原样；`audience` 为 `SELF` 时显示「目前只有你能看到」 | PAP-101 |
 | 账号页改用户名：`PATCH /me/username`，422（含 `UNCHANGED`）、409、429（`retryAfterSeconds` 换算成天显示）、`nextUsernameChangeAt` 做冷却提示；`status` 为 `PENDING_DELETION` 时进取消注销页 | PAP-102 |
 | 前端用户名校验与后端同一条规则：`^[a-z0-9]([a-z0-9]|[_-][a-z0-9])*$`、3 ~ 30、非纯数字、输入先转小写；保留字只在后端判 | PAP-101 |
 
