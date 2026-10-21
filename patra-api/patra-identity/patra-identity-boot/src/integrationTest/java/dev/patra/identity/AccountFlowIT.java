@@ -348,6 +348,36 @@ class AccountFlowIT {
     assertThat(reused.get("errors").get(0).get("field").asString()).isEqualTo("username");
   }
 
+  @Test
+  @DisplayName("后台对已注销用户封禁、解封都返回 409 IDN-0409")
+  void should_reject_ban_and_unban_of_deleted_user_with_409() {
+    long userId =
+        Long.parseLong(
+            JSON.readTree(registerWith("erased@example.com", "erased-user").getResponseBody())
+                .get("user")
+                .get("userId")
+                .asString());
+    jdbcTemplate.update("DELETE FROM idn_user_password_credential WHERE user_id = ?", userId);
+    jdbcTemplate.update(
+        "UPDATE idn_user SET status = 'DELETED', deleted_at = now(), deletion_due_at = NULL, "
+            + "email = NULL, email_verified_at = NULL WHERE id = ?",
+        userId);
+
+    for (String action : List.of("ban", "unban")) {
+      JsonNode json =
+          JSON.readTree(
+              restClient
+                  .post()
+                  .uri("/admin/users/" + userId + "/" + action)
+                  .exchange()
+                  .expectBody(String.class)
+                  .returnResult()
+                  .getResponseBody());
+      assertThat(json.get("status").asInt()).as(action).isEqualTo(409);
+      assertThat(json.get("code").asString()).as(action).isEqualTo("IDN-0409");
+    }
+  }
+
   /// 用指定的用户名注册，密码固定。
   ///
   /// @param email 邮箱

@@ -83,7 +83,7 @@ public class UserQueryService {
       if (!user.isVisibleTo(requester)) {
         throw new UserNotFoundException();
       }
-      return new PublicUserLookup.Found(user);
+      return PublicUserLookup.Found.of(user);
     }
     FormerUsername former =
         formerUsernames
@@ -94,6 +94,6 @@ public class UserQueryService {
             .findPublicIdentityByUserId(former.getUserId())
             .filter(user -> user.isVisibleTo(requester))
             .orElseThrow(UserNotFoundException::new);
-    return new PublicUserLookup.Moved(Username.of(owner.username()));
+    return PublicUserLookup.Moved.of(Username.of(owner.username()));
   }
 }

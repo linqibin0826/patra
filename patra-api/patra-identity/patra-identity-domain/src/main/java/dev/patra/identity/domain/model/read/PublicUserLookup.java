@@ -16,6 +16,14 @@ public sealed interface PublicUserLookup permits PublicUserLookup.Found, PublicU
     public Found {
       Objects.requireNonNull(user, "user 不能为 null");
     }
+
+    /// 工厂方法。
+    ///
+    /// @param user 身份卡
+    /// @return 结果
+    public static Found of(PublicUserReadModel user) {
+      return new Found(user);
+    }
   }
 
   /// 旧名，跳到原主的当前用户名。
@@ -26,6 +34,14 @@ public sealed interface PublicUserLookup permits PublicUserLookup.Found, PublicU
     /// 校验非空。
     public Moved {
       Objects.requireNonNull(current, "current 不能为 null");
+    }
+
+    /// 工厂方法。
+    ///
+    /// @param current 当前用户名
+    /// @return 结果
+    public static Moved of(Username current) {
+      return new Moved(current);
     }
   }
 }

@@ -39,7 +39,7 @@ class PublicUserControllerIT {
   void should_return_public_identity() {
     when(userQueryService.publicIdentity("chen-yu"))
         .thenReturn(
-            new PublicUserLookup.Found(
+            PublicUserLookup.Found.of(
                 PublicUserReadModel.builder()
                     .userId(42L)
                     .username("chen-yu")
@@ -71,10 +71,10 @@ class PublicUserControllerIT {
   }
 
   @Test
-  @DisplayName("旧名：301，Location 指向新名，JSON 体带新名")
+  @DisplayName("旧名：301，Location 指向新名，JSON 体带新名，不缓存")
   void should_redirect_former_username() {
     when(userQueryService.publicIdentity("old-name"))
-        .thenReturn(new PublicUserLookup.Moved(Username.of("new-name")));
+        .thenReturn(PublicUserLookup.Moved.of(Username.of("new-name")));
 
     restClient
         .get()
@@ -84,6 +84,8 @@ class PublicUserControllerIT {
         .isEqualTo(301)
         .expectHeader()
         .valueEquals(HttpHeaders.LOCATION, "/users/new-name")
+        .expectHeader()
+        .valueEquals(HttpHeaders.CACHE_CONTROL, "no-store")
         .expectBody()
         .jsonPath("$.username")
         .isEqualTo("new-name");
