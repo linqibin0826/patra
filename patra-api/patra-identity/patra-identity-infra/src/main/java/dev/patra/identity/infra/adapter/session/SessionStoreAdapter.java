@@ -63,4 +63,15 @@ public class SessionStoreAdapter implements SessionStorePort {
   public List<Long> revokeAll(AccountType accountType, long userId) {
     return store.deleteAll(accountType, userId);
   }
+
+  /// 删一个用户除指定一条之外的全部会话。
+  ///
+  /// @param accountType 账号类型
+  /// @param userId 用户 ID
+  /// @param keepSessionId 要保留的会话 ID
+  /// @return 真的删掉了的会话 ID
+  @Override
+  public List<Long> revokeAllExcept(AccountType accountType, long userId, long keepSessionId) {
+    return store.deleteAllExcept(accountType, userId, keepSessionId);
+  }
 }

@@ -46,6 +46,10 @@ public final class RedisSessionStore {
   private static final RedisScript<List> DELETE_ALL_SCRIPT =
       RedisScript.of(new ClassPathResource("redis/session-delete-all.lua"), List.class);
 
+  @SuppressWarnings("rawtypes")
+  private static final RedisScript<List> DELETE_OTHERS_SCRIPT =
+      RedisScript.of(new ClassPathResource("redis/session-delete-others.lua"), List.class);
+
   private final StringRedisTemplate redis;
   private final Clock clock;
   private final SecureRandom random = new SecureRandom();
@@ -145,6 +149,26 @@ public final class RedisSessionStore {
                     DELETE_ALL_SCRIPT,
                     List.of(indexKey(accountType, userId)),
                     sessionKeyPrefix(accountType)));
+    return toSessionIds(deleted);
+  }
+
+  /// 删掉一个用户除指定一条之外的全部会话。验证邮箱、改密码保留本机、踢其他设备用。
+  ///
+  /// @param accountType 账号类型
+  /// @param userId 用户 ID
+  /// @param keepSessionId 要保留的会话 ID；它不在索引里时等于删全部
+  /// @return 会话键真正删掉了的会话 ID，调用方据此结束登录记录
+  /// @throws SessionStoreUnavailableException Redis 暂时不可用时
+  public List<Long> deleteAllExcept(AccountType accountType, long userId, long keepSessionId) {
+    Objects.requireNonNull(accountType, "accountType 不能为 null");
+    List<?> deleted =
+        execute(
+            () ->
+                redis.execute(
+                    DELETE_OTHERS_SCRIPT,
+                    List.of(indexKey(accountType, userId)),
+                    sessionKeyPrefix(accountType),
+                    Long.toString(keepSessionId)));
     return toSessionIds(deleted);
   }
 

@@ -79,6 +79,26 @@ class RedisSessionStoreIT {
   }
 
   @Test
+  @DisplayName("deleteAllExcept：保留指定会话，删掉其余并返回它们的 ID；指定的会话不存在时等于全删")
+  void should_delete_all_sessions_except_the_kept_one() {
+    SessionToken first = store.create(newSession(52L, 8001L).build()).token();
+    SessionToken second = store.create(newSession(52L, 8002L).build()).token();
+    SessionToken third = store.create(newSession(52L, 8003L).build()).token();
+
+    List<Long> deleted = store.deleteAllExcept(AccountType.USER, 52L, 8002L);
+
+    assertThat(deleted).containsExactlyInAnyOrder(8001L, 8003L);
+    assertThat(redis.hasKey("idn:session:user:" + second.hash())).isTrue();
+    assertThat(redis.hasKey("idn:session:user:" + first.hash())).isFalse();
+    assertThat(redis.hasKey("idn:session:user:" + third.hash())).isFalse();
+    assertThat(redis.opsForHash().keys("idn:user-sessions:user:52")).containsExactly("8002");
+
+    assertThat(store.deleteAllExcept(AccountType.USER, 52L, 99L)).containsExactly(8002L);
+    assertThat(redis.hasKey("idn:user-sessions:user:52")).isFalse();
+    assertThat(store.deleteAllExcept(AccountType.USER, 52L, 8002L)).isEmpty();
+  }
+
+  @Test
   @DisplayName("建会话后能按令牌查到；Redis 里只有哈希，字段齐全，两个键的 TTL 各按规则")
   void should_create_session_and_find_it_by_token() {
     IssuedSession issued = store.create(newSession(42L, 7001L).build());

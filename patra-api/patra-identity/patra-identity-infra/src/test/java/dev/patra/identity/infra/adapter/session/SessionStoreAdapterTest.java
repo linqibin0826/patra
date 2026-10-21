@@ -76,4 +76,12 @@ class SessionStoreAdapterTest {
     assertThat(adapter.revoke(AccountType.USER, 42L, 7001L)).isTrue();
     assertThat(adapter.revokeAll(AccountType.USER, 42L)).containsExactly(7001L, 7002L);
   }
+
+  @Test
+  @DisplayName("撤销除当前外的全部会话：原样委托，返回真的删掉了的 ID")
+  void should_delegate_revoke_all_except() {
+    when(store.deleteAllExcept(AccountType.USER, 42L, 7L)).thenReturn(List.of(5L, 6L));
+
+    assertThat(adapter.revokeAllExcept(AccountType.USER, 42L, 7L)).containsExactly(5L, 6L);
+  }
 }
