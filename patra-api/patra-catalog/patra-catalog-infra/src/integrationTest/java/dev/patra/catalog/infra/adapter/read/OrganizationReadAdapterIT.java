@@ -1,6 +1,7 @@
 package dev.patra.catalog.infra.adapter.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.patra.catalog.domain.model.read.organization.OrganizationSuggestion;
 import dev.patra.catalog.domain.model.read.organization.OrganizationSummary;
@@ -11,6 +12,7 @@ import dev.patra.catalog.infra.persistence.entity.OrganizationLocationEntity;
 import dev.patra.catalog.infra.persistence.entity.OrganizationNameEntity;
 import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
+import jakarta.persistence.PersistenceException;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
@@ -20,6 +22,7 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
@@ -287,6 +290,15 @@ class OrganizationReadAdapterIT {
             .getSingleResult();
 
     assertThat(((Number) count).longValue()).isGreaterThan(100L);
+  }
+
+  @Test
+  @DisplayName("同一机构第二条中文 LABEL 别名被唯一索引拒绝（一家机构只有一个中文显示名）")
+  void should_reject_second_zh_label_alias_for_same_organization() {
+    saveAlias("0aaaaaaa6", "甲医院", "zh", "LABEL");
+
+    assertThatThrownBy(() -> saveAlias("0aaaaaaa6", "乙医院", "zh", "LABEL"))
+        .isInstanceOfAny(PersistenceException.class, DataIntegrityViolationException.class);
   }
 
   // ===== 造数据 =====

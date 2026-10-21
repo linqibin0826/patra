@@ -21,6 +21,10 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 public class OrganizationReadAdapter implements OrganizationReadPort {
 
+  /// 子串模式下不超过这个码点数的查询走短子串查询（`%协和%` 凑不出三元组，见
+  /// `OrganizationSuggestSql.NAME_SHORT_SUBSTRING`）。
+  static final int SHORT_SUBSTRING_MAX_CODE_POINTS = 2;
+
   private final OrganizationNameDao organizationNameDao;
   private final OrganizationDao organizationDao;
 
@@ -31,9 +35,7 @@ public class OrganizationReadAdapter implements OrganizationReadPort {
     String wordStart = LikePatterns.wordStart(text);
     List<OrganizationSuggestRow> rows =
         switch (query.mode()) {
-          case SUBSTRING ->
-              organizationNameDao.suggestBySubstring(
-                  text, LikePatterns.contains(text), prefix, wordStart, query.limit());
+          case SUBSTRING -> suggestBySubstring(query, prefix, wordStart);
           case WORD_PREFIX ->
               organizationNameDao.suggestByWordPrefix(text, prefix, wordStart, query.limit());
         };
@@ -45,6 +47,23 @@ public class OrganizationReadAdapter implements OrganizationReadPort {
   @Override
   public Optional<OrganizationSummary> findByRorId(String rorId) {
     return organizationDao.findSummaryByRorId(rorId).map(this::toSummary);
+  }
+
+  /// 子串模式：2 码点以内走短子串查询，其余走 trigram 索引能用的普通子串查询。
+  ///
+  /// @param query 查询
+  /// @param prefix 前缀模式
+  /// @param wordStart 词首模式
+  /// @return 候选投影
+  private List<OrganizationSuggestRow> suggestBySubstring(
+      SuggestQuery query, String prefix, String wordStart) {
+    String text = query.text();
+    String contains = LikePatterns.contains(text);
+    if (text.codePointCount(0, text.length()) <= SHORT_SUBSTRING_MAX_CODE_POINTS) {
+      return organizationNameDao.suggestByShortSubstring(
+          text, contains, prefix, wordStart, query.limit());
+    }
+    return organizationNameDao.suggestBySubstring(text, contains, prefix, wordStart, query.limit());
   }
 
   /// 投影 → 读模型。

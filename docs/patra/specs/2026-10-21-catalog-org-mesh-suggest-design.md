@@ -313,6 +313,10 @@ LIMIT :limit
 
 注意：Spring Data 的 native 查询里不能写 jsonb 的 `?` 操作符（会被当成位置参数），所以用 `jsonb_exists()`；`types` 以空格拼成一个字符串返回，读适配器再拆成列表（PG 数组到 `String[]` 的投影不稳）。`cat_organization.types` 的 DDL 是 JSONB，实体上的 `columnDefinition = "JSON"` 只是注解文字。
 
+**实施时加的第三条查询（评审修正）**：`SUBSTRING` 模式且归一后只有 2 个码点（「协和」「华西」）的查询走 `suggestByShortSubstring`，候选条件写成 `lower(n.name_value) LIKE lower(:contains) ESCAPE '!'`（别名表同样）。原因：`%协和%` 凑不出三元组，psql 里用字面量规划会选顺序扫描（30 ms），但 pgjdbc 默认第 5 次起改用服务端预编译语句，PG 之后可能改用通用计划，通用计划对参数化的 `ILIKE` 会选 trigram 索引，运行时变成扫完整个 22 MB 索引再对 259,560 行 recheck——mini 上 `PREPARE` + `plan_cache_mode = force_generic_plan` 实测 220 ~ 380 ms。列上套 `lower()` 后规划器用不了索引，两种计划都是顺序扫描（实测 34 ms）。3 个码点起的子串模式照旧用 `ILIKE`，有三元组时通用计划选索引是对的。
+
+别名表里 `alias_type = 'LABEL'` 的候选 `type_rank` 取 0（视同官方名），不是第 16 节原文的「视同 alias（1）」：LABEL 本来就是可作显示名的全名，排在 ROR 的 alias 前合理。
+
 ### 10.3 机构查询（`OrganizationDao`）
 
 同样的 `SELECT` 列（去掉 `matchedName`），`WHERE o.ror_id = :rorId AND o.status = 'active' AND o.deleted_at IS NULL`，走 `uk_ror_id`。
@@ -380,6 +384,7 @@ LIMIT :limit
 - Flyway 在 mini 的 `patra_catalog` 上应用 `V9`（三个 trigram GIN 索引 + `cat_organization_alias`）与别名种子，共 3.9 s。`EXPLAIN` 核实：`%北京大学%` 走 `idx_org_name_value_trgm`（0.17 ms）；MeSH 名与入口词走两个局部索引（0.24 ms / 2.5 ms）；别名表只有 600 多行，规划器选 Seq Scan（0.18 ms），合理。
 - 全量数据上的结果：「协和」→ 北京协和医院、武汉协和医院、福建医科大学附属协和医院（中文名来自种子）、山东协和学院、福建师范大学协和学院；「华西」→ 四川大学华西医院（经别名「华西」命中）、四川大学华西第二医院、四川大学华西医学中心；「Cancer」→ Neoplasms（经入口词 Cancer）、Cancer Pain、Cancer Vaccines；`/_internal/organizations/04jztag35` 与 `/_internal/mesh/descriptors/D003920` 返回摘要，`0zzzzzzz9` 404 + `CAT-0404`；`02h2j1586` 的 `zhName` 是种子压过的「北京安贞医院」。
 - HTTP 级（本机 → tailscale 隧道 → mini 的库，ping RTT 25 ms）：机构建议 20 条查询 × 10 次 p50 114 ms / p95 248 ms / max 365 ms；MeSH 18 条 × 10 次 p50 101 / p95 265 / max 697 ms；内部按 ID 查（单行主键查询）40 次 p50 92 / p95 254 ms；`/actuator/health` p50 107 ms。单行主键查询也要 90 ms，说明本机量到的是每个请求 3 ~ 4 次 JDBC 往返 × 25 ms 的网络开销，不是查询本身（SQL 级最差 35 ms）。**服务与库同在 mini 时这部分是亚毫秒级，所以 AC 4 的 HTTP 级数字要在部署到 mini 后经网关再量**（收尾待办）；查询本身的上限是上表的 35 ms。
+- 评审发现的通用计划问题（第 10.2 节）：原 `ILIKE :contains` 的 SQL 在 mini 上 `PREPARE` 后 `force_generic_plan` 执行，「协和」「医院」走 trigram 索引全扫 + 全表 recheck，220 ~ 380 ms（`force_custom_plan` 32 ~ 37 ms）；改成 `lower()` 条件的短子串查询后两种计划都是 Parallel Seq Scan，34 ms（首跑 62 ms）。部署后经网关量的时候，每条语句要先打 10 次以上让 pgjdbc 切到服务端预编译，并带上 2 字中文查询。
 
 ## 12. 测试策略
 
@@ -399,7 +404,7 @@ LIMIT :limit
   - 这两个 IT 同时证明 `V9` 的扩展与索引在干净库上能建（索引是否被选用在 mini 上用 `EXPLAIN` 看，第 11 节）。
 - adapter（`@WebMvcTest` + `CatalogAdapterITWebMvcConfig`，mock 查询服务）：
   - `PortalOrganizationControllerIT` / `PortalMeshControllerIT`：200 与 JSON 结构；缺省 `limit = 10`；`q` 缺失、1 字、101 字、`limit = 0` / `21` → 422 且不触达服务；`q` 前后空白被折叠后传给服务（`ArgumentCaptor`）。
-  - `OrganizationEndpointIT` / `MeshEndpointIT`：200 JSON；不存在 → 404 + `CATALOG-0404`；格式不对（`abc`、`D12`）→ 404 且不调服务。
+  - `OrganizationEndpointIT` / `MeshEndpointIT`：200 JSON；不存在 → 404 + `CATALOG-0404`。「格式不对（`abc`、`D12`）→ 404 且不查库」由两个查询服务的单测覆盖（切片里服务是 mock）。
 - gateway（`@SpringBootTest` + Redis 容器 + WireMock，已有基座）：第 9 节的三条。
 
 ### 12.3 门控
@@ -420,6 +425,7 @@ LIMIT :limit
 - 名称快照规则（待拍板 3，建议）：机构快照 = `zhName`，没有才用 `displayName`；MeSH 快照 = `name`。`rorId` 存裸 ID。
 - 关注领域最多 10 个，逐个调 `GET /_internal/mesh/descriptors/{ui}`。
 - 机构只在 `rorId` 与库里已存的不同（新选或改选）时才调 `GET /_internal/organizations/{rorId}` 校验，只改简介不重校验。ROR 重导后用户已选的机构可能变成 `inactive`，内部接口对它回 404，不能让它挡住与机构无关的保存；已存的快照照旧显示。
+- 调内部接口前先在本地按 `^0[a-z0-9]{8}$` / `^D\d{6}(\d{3})?$` 校验 ID，不合规直接回 422：URL 形式的 ROR ID（`https://ror.org/…`）作为路径段会被编码成 `%2F`，Tomcat 直接 400 且不是 ProblemDetail，到不了 catalog 的 404。
 
 **PAP-101（门户）**：
 
@@ -452,7 +458,9 @@ LIMIT :limit
 - `zhName`（建议接口与内部接口共用）的取值顺序改为：别名表里 `alias_type = 'LABEL'` 且 `lang = 'zh'` 的行 > ROR `label` > ROR `alias`，同级取最短。这样「华西」命中的华西医院主行与 identity 的快照都是中文；第 4 节那三条错的中文名也能被种子压过（给安贞医院一条 LABEL「北京安贞医院」即可）。
 - 别名表的 `alias_type` 只有 `LABEL`（可作显示名的中文全名）与 `ALIAS`（简称、别名、旧名，只参与匹配）；`source` 为 `SEED`（手工种子）或 `WIKIDATA`。
 - 交付程度：本 Issue 交付机制 + 种子第一版——Wikidata 能取到的 199 家自动生成，再加手工百家左右（从第 4 节那 18 家起，按常见三甲清单补），由 Claude 起草；用户审完种子文件是 PR 转 ready 前的一个阻塞点。
-- 第一版（2026-10-21，`R__cat_organization_alias_seed.sql`）：手工 374 行（305 条 LABEL + 69 条 ALIAS，覆盖三条压名与 300 多家缺中文名的医院）+ Wikidata 287 行（199 家里 107 家有 zh 标签；Wikidata 的 SPARQL 端点当天限流到每分钟 1 次，改用 `wbgetentities` 动作 API）。mini 上落库 622 行，39 行与手工重复被 `ON CONFLICT` 去掉。只有 `zh` 标签的机构可能是繁体，审阅时留意。
+- 第一版（2026-10-21，`R__cat_organization_alias_seed.sql`）：手工 374 行（305 条 LABEL + 69 条 ALIAS，覆盖三条压名与 300 多家缺中文名的医院）+ Wikidata 247 行（199 家里 107 家有 zh 标签；Wikidata 的 SPARQL 端点当天限流到每分钟 1 次，改用 `wbgetentities` 动作 API），共 621 行、374 条 LABEL。
+- **一家机构只能有一条 zh LABEL**（评审修正，`V10` 的局部唯一索引 `uk_org_alias_zh_label`）：`ON CONFLICT (ror_id, alias)` 只能去掉文字相同的重复，手工 LABEL 与 Wikidata LABEL 文字不同时两条都入库、最短者当 `zhName`，审过的名字会被压掉（第一版里有 7 家，如徐州医科大学附属医院被旧名「徐州医学院附属医院」压过）。所以种子生成规则：某机构已有手工 LABEL 时，Wikidata 的 LABEL 降为 ALIAS；三条繁体标签（微創醫療、鞍鋼股份、中國中材）只作 ALIAS；误标成 zh 的英文「Coolpad」删掉。`V10` 先删种子行再建索引，已应用过 `V9` 的库（mini）靠种子文件校验和变化重跑 `R__` 重新插入。
+- 审阅时留意：`042jtt364` 的 LABEL 是 2018 年前的旧名「空军总医院」，现名「空军特色医学中心」只作 ALIAS，快照该用哪个由用户定；手工 305 条 LABEL 与 ROR ID 是否逐条对应同一家机构，建议在 mini 上把 `cat_organization_alias` 与 `cat_organization` 按 `ror_id` 连起来导一张审阅表（英文名、城市、状态、LABEL、来源）核对。
 
 代价：一张表 + 一个 `UNION ALL` + 一份种子文件（本 Issue 多出约四分之一的工作量：建表、查询、IT 各加一组用例，种子起草半天）；之后每次有人报「搜不到」就改种子文件、随下一次部署生效，没有后台界面。不做的代价：这些医院的用户只能用英文名搜，或填自由文本（没有 ROR ID，公开主页上只是一段文字）。
 
@@ -476,6 +484,9 @@ LIMIT :limit
 10. `V9` 是追加迁移，不重写 `V4` / `V5`（catalog 库有 PubMed 全量数据，不重建）。
 11. 网关不改代码，只补测试。
 12. 用户已存的机构在 ROR 重导后变成 `inactive` 时，内部接口照样 404；由 PAP-95 只在 `rorId` 变化时才校验机构，避免只改简介也被挡（第 14 节）。不给 `OrganizationResp` 加 `status` 字段。
+13. 别名表 LABEL 的 `type_rank` 取 0（视同官方名），不是第 16 节原文的「视同 alias」（第 10.2 节）。
+14. 2 码点的子串查询走 `lower()` 条件的第三条查询，绕开预编译语句通用计划下的 trigram 全索引扫描（第 10.2 节）；不用全局的 `prepareThreshold=0` 或 `plan_cache_mode`，不碰别的查询。
+15. 一家机构只能有一条 zh LABEL，用 `V10` 的局部唯一索引守住，种子按此生成（第 16 节）。
 
 **已拍板（2026-10-21，用户按建议定）**：
 

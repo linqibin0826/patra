@@ -42,6 +42,15 @@ class OrganizationReadAdapterTest {
   }
 
   @Test
+  @DisplayName("2 码点的中日韩查询走短子串查询（规划器不能选 trigram 索引），不调普通子串查询")
+  void should_use_short_substring_query_for_two_code_point_cjk_query() {
+    adapter.suggest(SuggestQuery.of("协和", 10));
+
+    verify(nameDao).suggestByShortSubstring("协和", "%协和%", "协和%", "% 协和%", 10);
+    verify(nameDao, never()).suggestBySubstring(any(), any(), any(), any(), anyInt());
+  }
+
+  @Test
   @DisplayName("拉丁文字走词首模式，不调子串查询")
   void should_use_word_prefix_query_for_latin_text() {
     adapter.suggest(SuggestQuery.of("Mayo", 5));

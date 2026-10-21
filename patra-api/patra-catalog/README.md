@@ -477,7 +477,8 @@ patra:
   - `cat_organization_external_id`：机构外部标识符表（GRID/ISNI/Wikidata/FundRef/Ringgold）
   - `cat_organization_relation`：机构关系表（层级关系：parent/child，关联关系：related，时序关系：successor/predecessor）
   - `cat_organization_location`：机构地理位置表（基于 GeoNames，含洲/国家/省/市/经纬度）
-  - `cat_organization_alias`：Patra 自维护的机构别名（按 `ror_id` 关联，ROR 重导不影响；`alias_type` LABEL / ALIAS，`source` SEED / WIKIDATA；种子在 `R__cat_organization_alias_seed.sql`）
+  - `cat_organization_alias`：Patra 自维护的机构别名（按 `ror_id` 关联，ROR 重导不影响；`alias_type` LABEL / ALIAS，`source` SEED / WIKIDATA；种子在 `R__cat_organization_alias_seed.sql`；`V10` 起一家机构只能有一条 zh LABEL）
+  - 2 码点的中文子串查询走 `lower()` 条件稳定顺序扫描：`%协和%` 凑不出三元组，预编译语句的通用计划会把 trigram 索引用成全索引扫描
   - 建议接口的索引（`V9`，`pg_trgm`）：`cat_organization_name.name_value`、`cat_organization_alias.alias` 的 GIN trigram；MeSH 主题词名与入口词的局部 GIN trigram（谓词与建议查询的 WHERE 逐字相同）
 
 - **Funding（资助）相关表**

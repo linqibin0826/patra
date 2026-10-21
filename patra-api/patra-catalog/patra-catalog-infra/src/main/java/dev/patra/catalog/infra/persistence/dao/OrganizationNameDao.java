@@ -57,6 +57,23 @@ public interface OrganizationNameDao extends JpaRepository<OrganizationNameEntit
       @Param("wordStart") String wordStart,
       @Param("limit") int limit);
 
+  /// 只有 2 个码点的子串模式建议：条件写成 `lower(列) LIKE`，让规划器用不了 trigram 索引，
+  /// 稳定走顺序扫描（凑不出三元组的模式在通用计划下会扫完整个索引）。参数同 [#suggestBySubstring]。
+  ///
+  /// @param q 归一化后的查询原文（精确比较用）
+  /// @param contains 子串模式 `%q%`（已转义）
+  /// @param prefix 前缀模式 `q%`（已转义，打分用）
+  /// @param wordStart 词首模式 `% q%`（已转义，打分用）
+  /// @param limit 最多返回条数
+  /// @return 候选投影
+  @Query(value = OrganizationSuggestSql.SUGGEST_BY_SHORT_SUBSTRING, nativeQuery = true)
+  List<OrganizationSuggestRow> suggestByShortSubstring(
+      @Param("q") String q,
+      @Param("contains") String contains,
+      @Param("prefix") String prefix,
+      @Param("wordStart") String wordStart,
+      @Param("limit") int limit);
+
   /// 词首模式的机构建议（拉丁文字）：整串前缀或某个词的开头命中，不匹配词中间。
   ///
   /// @param q 归一化后的查询原文（精确比较用）

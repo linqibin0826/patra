@@ -44,6 +44,13 @@ final class OrganizationSuggestSql {
 
   static final String ALIAS_SUBSTRING = "a.alias ILIKE :contains ESCAPE '!'";
 
+  /// 只有 2 个码点的子串查询（「协和」「华西」）：`%协和%` 凑不出三元组，预编译语句的通用计划却会选
+  /// trigram 索引，变成扫完整个索引再对全表 recheck（mini 实测 220 ~ 380 ms）。列上套 `lower()` 后
+  /// 规划器用不了索引，稳定走顺序扫描（30 ms）。
+  static final String NAME_SHORT_SUBSTRING = "lower(n.name_value) LIKE lower(:contains) ESCAPE '!'";
+
+  static final String ALIAS_SHORT_SUBSTRING = "lower(a.alias) LIKE lower(:contains) ESCAPE '!'";
+
   /// 词首模式（拉丁文字）的候选条件：整串前缀或某个词的开头。
   static final String NAME_WORD_PREFIX =
       "(n.name_value ILIKE :prefix ESCAPE '!' OR n.name_value ILIKE :wordStart ESCAPE '!')";
@@ -116,6 +123,16 @@ final class OrganizationSuggestSql {
           + " UNION ALL "
           + ALIAS_CANDIDATES
           + ALIAS_SUBSTRING
+          + SUGGEST_TAIL;
+
+  /// 2 码点子串模式的完整建议查询。
+  static final String SUGGEST_BY_SHORT_SUBSTRING =
+      SUGGEST_HEAD
+          + NAME_CANDIDATES
+          + NAME_SHORT_SUBSTRING
+          + " UNION ALL "
+          + ALIAS_CANDIDATES
+          + ALIAS_SHORT_SUBSTRING
           + SUGGEST_TAIL;
 
   /// 词首模式的完整建议查询。
