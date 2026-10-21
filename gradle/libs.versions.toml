@@ -75,6 +75,7 @@ assertj = "3.27.7"
 testcontainers = "1.21.4"
 wiremock = "3.10.0"
 awaitility = "4.2.2"
+greenmail = "2.1.14"
 mockftpserver = "3.2.0"
 jmh = "1.37"
 archunit = "1.4.1"
@@ -166,6 +167,7 @@ mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter", version.
 assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
 archunit-junit5 = { module = "com.tngtech.archunit:archunit-junit5", version.ref = "archunit" }
 awaitility = { module = "org.awaitility:awaitility", version.ref = "awaitility" }
+greenmail = { module = "com.icegreen:greenmail", version.ref = "greenmail" }
 objenesis = { module = "org.objenesis:objenesis", version.ref = "objenesis" }
 mockftpserver = { module = "org.mockftpserver:MockFtpServer", version.ref = "mockftpserver" }
 jmh-core = { module = "org.openjdk.jmh:jmh-core", version.ref = "jmh" }

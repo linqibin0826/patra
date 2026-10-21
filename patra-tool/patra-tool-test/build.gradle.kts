@@ -76,6 +76,9 @@ dependencies {
     // Awaitility 异步测试工具
     api(libs.awaitility)
 
+    // GreenMail：JVM 内的 SMTP 收件桩（GreenMailSmtpInitializer）
+    api(libs.greenmail)
+
     // ==================== Micrometer（SimpleMeterRegistry 支持）====================
 
     api("io.micrometer:micrometer-core")
