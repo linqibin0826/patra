@@ -3,12 +3,17 @@ package dev.patra.catalog.adapter.rest.portal;
 import dev.patra.catalog.adapter.rest.portal.response.EvidenceLevelView;
 import dev.patra.catalog.adapter.rest.portal.response.FacetCountResponse;
 import dev.patra.catalog.adapter.rest.portal.response.PortalFullTextResponse;
+import dev.patra.catalog.adapter.rest.portal.response.PortalMeshSuggestionResponse;
+import dev.patra.catalog.adapter.rest.portal.response.PortalOrganizationSuggestionResponse;
 import dev.patra.catalog.adapter.rest.portal.response.PortalPaperResponse;
 import dev.patra.catalog.adapter.rest.portal.response.PortalPublicationDetailResponse;
 import dev.patra.catalog.adapter.rest.portal.response.PortalPublicationFacetsResponse;
 import dev.patra.catalog.adapter.rest.portal.response.PortalVenueBrowseResponse;
 import dev.patra.catalog.adapter.rest.portal.response.PortalVenueDetailResponse;
 import dev.patra.catalog.adapter.rest.portal.response.PortalVenueFacetsResponse;
+import dev.patra.catalog.domain.model.read.mesh.MeshDescriptorSuggestion;
+import dev.patra.catalog.domain.model.read.organization.OrganizationSuggestion;
+import dev.patra.catalog.domain.model.read.organization.OrganizationSummary;
 import dev.patra.catalog.domain.model.read.portal.FacetCount;
 import dev.patra.catalog.domain.model.read.portal.FullTextReadModel;
 import dev.patra.catalog.domain.model.read.portal.PortalPaperReadModel;
@@ -32,6 +37,37 @@ public class PortalApiConverter {
 
   /// 全文的数据来源署名（PMC 条款要求标注 NLM 为来源，不使用 PMC 标志）。
   static final String FULL_TEXT_SOURCE = "数据来源：美国国家医学图书馆（NLM）PubMed Central";
+
+  /// 将机构建议候选转为响应 DTO。
+  ///
+  /// @param suggestion 机构建议候选
+  /// @return 响应 DTO
+  public PortalOrganizationSuggestionResponse toOrganizationSuggestionResponse(
+      OrganizationSuggestion suggestion) {
+    OrganizationSummary organization = suggestion.organization();
+    return PortalOrganizationSuggestionResponse.builder()
+        .rorId(organization.rorId())
+        .displayName(organization.displayName())
+        .zhName(organization.zhName())
+        .matchedName(suggestion.matchedName())
+        .countryCode(organization.countryCode())
+        .cityName(organization.cityName())
+        .types(organization.types())
+        .build();
+  }
+
+  /// 将 MeSH 建议候选转为响应 DTO。
+  ///
+  /// @param suggestion MeSH 建议候选
+  /// @return 响应 DTO
+  public PortalMeshSuggestionResponse toMeshSuggestionResponse(
+      MeshDescriptorSuggestion suggestion) {
+    return PortalMeshSuggestionResponse.of(
+        suggestion.descriptor().ui(),
+        suggestion.descriptor().name(),
+        suggestion.matchedTerm(),
+        suggestion.descriptor().treeNumbers());
+  }
 
   /// 将读模型转为响应 DTO。
   ///
