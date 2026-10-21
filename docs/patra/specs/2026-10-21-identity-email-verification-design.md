@@ -632,18 +632,18 @@ boot 端到端（PG + Redis 容器 + GreenMail，`RANDOM_PORT`，`MutableClock`�
 
 实施时要实测、结果写回本节：
 
-| # | 要实测的 | 不成立时的替代 |
-|---|---|---|
-| 4 | `JdbcClient` 在 `@DataJpaTest` / 处理器事务里执行 `UPDATE … RETURNING`：与 JPA 同一个连接（`JpaTransactionManager` 暴露 JDBC 连接），能看到同事务里 `saveAndFlush` 的行，返回的是更新后的值 | 没有：这是设计选定的做法（不走 Spring Data 的 native `@Query`——结果会被一级缓存里的旧实例顶掉） |
-| 5 | Thymeleaf 两个 `ClassLoaderTemplateResolver` 按 `resolvablePatterns` 分流 HTML / TEXT 模式；TEXT 模式的片段 `[# th:fragment]` 与 `th:replace` | 退化为文本模板不用片段，公共部分放 Java 字符串 |
-| 6 | `MailSenderAutoConfiguration` 在 `spring.mail.username` 为空串时装配出可用的 `JavaMailSender`（Mailpit 无鉴权） | 用 `PATRA_MAIL_USERNAME` 缺省时不写该键的写法，或自己装配 `JavaMailSenderImpl` |
-| 7 | GreenMail 2.1.14 与 Angus Mail 2.0.5 在同一类路径下收发正常 | 换 GreenMail 2.1.x 其他小版本 |
-| 8 | `SimpleAsyncTaskExecutor` 虚拟线程 + 并发上限 + `taskTerminationTimeout` 在 Boot 4 可用 | `Executors.newThreadPerTaskExecutor` + 信号量 |
-| 9 | `@WebMvcTest` 切片不加载 adapter 包里的 `XxlJobConfig`（catalog 的切片测试没有关它，推测如此）；boot 的 `@SpringBootTest` 要靠 `xxl.job.enabled: false` | 切片测试配置里也加 `xxl.job.enabled: false` |
-| 10 | 控制器方法参数 `HttpServletRequest` 在 `@WebMvcTest` + `RestTestClient` 下 `getRemoteAddr()` 有值（MockMvc 默认 `127.0.0.1`） | 命令里 IP 允许为空 |
-| 11 | `uk_idn_email_token_active` 部分唯一索引：`CREATE UNIQUE INDEX … WHERE …` 在 Flyway 脚本里与 `CREATE TABLE` 分开写 | — |
-| 12 | 拨动 `MutableClock` 后 `IdentityAssertionSigner` 要用同一个时钟签（PAP-93 第 14 节第 10 条） | — |
-| 13 | `NacosConfigFilesTest` 对 `patra-identity.yaml` 的新键通过（`password` 键只写 `${PATRA_MAIL_PASSWORD:}`）、`JarConfigOverlapCheckerTest` 对 jar 与 Nacos 的键集通过 | — |
+| # | 要实测的 | 不成立时的替代 | 实施结果 |
+|---|---|---|---|
+| 4 | `JdbcClient` 在 `@DataJpaTest` / 处理器事务里执行 `UPDATE … RETURNING`：与 JPA 同一个连接（`JpaTransactionManager` 暴露 JDBC 连接），能看到同事务里 `saveAndFlush` 的行，返回的是更新后的值 | 没有：这是设计选定的做法（不走 Spring Data 的 native `@Query`——结果会被一级缓存里的旧实例顶掉） | 成立：`EmailTokenRepositoryAdapterIT` 在 `@DataJpaTest` 事务里 `UPDATE … RETURNING` 看得到同事务 `saveAndFlush` 的行并返回新值；一级缓存里的旧实例不会刷新，测试按 SQL 断言 |
+| 5 | Thymeleaf 两个 `ClassLoaderTemplateResolver` 按 `resolvablePatterns` 分流 HTML / TEXT 模式；TEXT 模式的片段 `[# th:fragment]` 与 `th:replace` | 退化为文本模板不用片段，公共部分放 Java 字符串 | 部分成立：HTML 模式片段正常；TEXT 模式不支持 `~{tpl :: fragment}` 片段选择器，文本片段改为整文件 `th:replace`，不放 Java 字符串 |
+| 6 | `MailSenderAutoConfiguration` 在 `spring.mail.username` 为空串时装配出可用的 `JavaMailSender`（Mailpit 无鉴权） | 用 `PATRA_MAIL_USERNAME` 缺省时不写该键的写法，或自己装配 `JavaMailSenderImpl` | 成立：boot 集成测试镜像 Nacos 缺省 `username: ""` / `password: ""` + `mail.smtp.auth=false`，`EmailVerificationFlowIT` 经 GreenMail 正常收发 |
+| 7 | GreenMail 2.1.14 与 Angus Mail 2.0.5 在同一类路径下收发正常 | 换 GreenMail 2.1.x 其他小版本 | 成立：`SmtpEmailDeliveryAdapterIT` 与 `EmailVerificationFlowIT` 收发正常（读正文要用 `part.getContent()`，`GreenMailUtil.getBody` 给的是 base64） |
+| 8 | `SimpleAsyncTaskExecutor` 虚拟线程 + 并发上限 + `taskTerminationTimeout` 在 Boot 4 可用 | `Executors.newThreadPerTaskExecutor` + 信号量 | 成立：`SmtpEmailDeliveryAdapter.async` 用 `SimpleAsyncTaskExecutor` 虚拟线程 + `concurrencyLimit` + `taskTerminationTimeout` |
+| 9 | `@WebMvcTest` 切片不加载 adapter 包里的 `XxlJobConfig`（catalog 的切片测试没有关它，推测如此）；boot 的 `@SpringBootTest` 要靠 `xxl.job.enabled: false` | 切片测试配置里也加 `xxl.job.enabled: false` | 成立：adapter 的 `@WebMvcTest` 切片没加载 `XxlJobConfig`；boot 的 `@SpringBootTest` 靠 `xxl.job.enabled: false` |
+| 10 | 控制器方法参数 `HttpServletRequest` 在 `@WebMvcTest` + `RestTestClient` 下 `getRemoteAddr()` 有值（MockMvc 默认 `127.0.0.1`） | 命令里 IP 允许为空 | 成立：`AuthControllerIT` 里 `getRemoteAddr()` 是 `127.0.0.1`，命令里的 IP 非空 |
+| 11 | `uk_idn_email_token_active` 部分唯一索引：`CREATE UNIQUE INDEX … WHERE …` 在 Flyway 脚本里与 `CREATE TABLE` 分开写 | — | 成立：`V1` 里 `CREATE UNIQUE INDEX … WHERE …` 与建表分开写，`IdentitySchemaConstraintsIT` 覆盖 |
+| 12 | 拨动 `MutableClock` 后 `IdentityAssertionSigner` 要用同一个时钟签（PAP-93 第 14 节第 10 条） | — | 成立：`EmailVerificationFlowIT` 用 `new IdentityAssertionSigner(TestSigningKey.key(), clock)` 签断言，拨到 24 小时后请求照样通过验签 |
+| 13 | `NacosConfigFilesTest` 对 `patra-identity.yaml` 的新键通过（`password` 键只写 `${PATRA_MAIL_PASSWORD:}`）、`JarConfigOverlapCheckerTest` 对 jar 与 Nacos 的键集通过 | — | 成立：`NacosConfigFilesTest`、`JarConfigOverlapCheckerTest`、`ApplicationConfigTest` 全绿 |
 
 ## 17. README
 

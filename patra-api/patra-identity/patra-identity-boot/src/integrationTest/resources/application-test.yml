@@ -14,3 +14,8 @@ spring:
 xxl:
   job:
     enabled: false
+
+# 镜像 Nacos 里的缺省：无鉴权收集器（Mailpit / GreenMail）时用户名、密码都是空串
+spring.mail:
+  username: ""
+  password: ""
