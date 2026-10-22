@@ -325,8 +325,9 @@ class IdentitySchemaConstraintsIT {
     assertThatCode(
             () ->
                 jdbcTemplate.update(
-                    "INSERT INTO idn_user_login_record (id, user_id, client_type, expires_at, "
-                        + "ended_at, end_reason) VALUES (?, ?, 'WEB', ?, ?, 'REVOKED')",
+                    "INSERT INTO idn_user_login_record (id, user_id, client_type, device_class, "
+                        + "expires_at, ended_at, end_reason) VALUES (?, ?, 'WEB', 'UNKNOWN', ?, ?,"
+                        + " 'REVOKED')",
                     53L,
                     52L,
                     Timestamp.valueOf("2027-04-18 08:00:00"),

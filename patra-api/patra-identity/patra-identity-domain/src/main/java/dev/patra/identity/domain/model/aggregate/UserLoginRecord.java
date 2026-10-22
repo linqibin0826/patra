@@ -1,6 +1,8 @@
 package dev.patra.identity.domain.model.aggregate;
 
+import dev.patra.identity.domain.model.enums.DeviceClass;
 import dev.patra.identity.domain.model.enums.LoginEndReason;
+import dev.patra.identity.domain.model.vo.ClientOrigin;
 import dev.patra.identity.domain.model.vo.DeviceId;
 import dev.patra.identity.domain.model.vo.LoginClient;
 import dev.patra.tool.core.security.ClientType;
@@ -8,10 +10,12 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 
 /// 一次登录的记录：ID 就是会话 ID。登录时间是审计列 `createdAt`。
 ///
+/// 设备、UA、IP 与属地是登录时的值（PAP-99），登录设备列表与新设备判定读它们。
 /// 只用于审计和查看登录设备，不在请求路径上。会话过期不回写这里。
 @Getter
 public final class UserLoginRecord {
@@ -23,6 +27,11 @@ public final class UserLoginRecord {
   @Getter(AccessLevel.NONE)
   private DeviceId deviceId;
 
+  private String userAgent;
+  private String deviceName;
+  private DeviceClass deviceClass;
+  private String clientIp;
+  private String ipRegion;
   private Instant expiresAt;
   private Instant endedAt;
   private LoginEndReason endReason;
@@ -37,24 +46,37 @@ public final class UserLoginRecord {
   ///
   /// @param userId 用户 ID
   /// @param client 客户端信息
+  /// @param origin 请求来源（UA、设备名、端、IP、属地）
   /// @param expiresAt 会话的绝对过期时间
   /// @return 未结束的记录
-  public static UserLoginRecord start(long userId, LoginClient client, Instant expiresAt) {
+  public static UserLoginRecord start(
+      long userId, LoginClient client, ClientOrigin origin, Instant expiresAt) {
     Objects.requireNonNull(client, "client 不能为 null");
+    Objects.requireNonNull(origin, "origin 不能为 null");
     UserLoginRecord login = new UserLoginRecord();
     login.userId = userId;
     login.clientType = client.clientType();
     login.deviceId = client.deviceId();
+    login.userAgent = origin.userAgent();
+    login.deviceName = origin.deviceName();
+    login.deviceClass = origin.deviceClass();
+    login.clientIp = origin.ip();
+    login.ipRegion = origin.ipRegion();
     login.expiresAt = Objects.requireNonNull(expiresAt, "expiresAt 不能为 null");
     return login;
   }
 
-  /// 从库里恢复。
+  /// 从库里恢复。用 `UserLoginRecord.restore()…build()` 调用。
   ///
   /// @param id 记录 ID
   /// @param userId 用户 ID
   /// @param clientType 客户端类型
   /// @param deviceId 设备标识，可以为 `null`
+  /// @param userAgent User-Agent，可以为 `null`
+  /// @param deviceName 设备名，可以为 `null`
+  /// @param deviceClass 端
+  /// @param clientIp 客户端 IP，可以为 `null`
+  /// @param ipRegion IP 属地，可以为 `null`
   /// @param expiresAt 绝对过期时间
   /// @param endedAt 结束时间，未结束时为 `null`
   /// @param endReason 结束原因，未结束时为 `null`
@@ -62,11 +84,17 @@ public final class UserLoginRecord {
   /// @param createdAt 创建时间，也是登录时间
   /// @param updatedAt 更新时间
   /// @return 记录
-  public static UserLoginRecord restore(
+  @Builder(builderMethodName = "restore")
+  private static UserLoginRecord restored(
       Long id,
       Long userId,
       ClientType clientType,
       DeviceId deviceId,
+      String userAgent,
+      String deviceName,
+      DeviceClass deviceClass,
+      String clientIp,
+      String ipRegion,
       Instant expiresAt,
       Instant endedAt,
       LoginEndReason endReason,
@@ -81,6 +109,11 @@ public final class UserLoginRecord {
     login.userId = Objects.requireNonNull(userId, "userId 不能为 null");
     login.clientType = Objects.requireNonNull(clientType, "clientType 不能为 null");
     login.deviceId = deviceId;
+    login.userAgent = userAgent;
+    login.deviceName = deviceName;
+    login.deviceClass = Objects.requireNonNull(deviceClass, "deviceClass 不能为 null");
+    login.clientIp = clientIp;
+    login.ipRegion = ipRegion;
     login.expiresAt = Objects.requireNonNull(expiresAt, "expiresAt 不能为 null");
     login.endedAt = endedAt;
     login.endReason = endReason;
@@ -118,7 +151,7 @@ public final class UserLoginRecord {
     return endedAt != null;
   }
 
-  /// 不输出设备标识。
+  /// 不输出设备标识、UA 与 IP。
   ///
   /// @return 描述
   @Override

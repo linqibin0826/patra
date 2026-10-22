@@ -1,6 +1,6 @@
 package dev.patra.identity.domain.model.enums;
 
-/// 登录记录的结束原因。过期不记：Redis 过期不通知 identity。
+/// 登录记录的结束原因：这台设备为什么下线了。过期不记：Redis 过期不通知 identity。
 public enum LoginEndReason {
   /// 用户自己登出。
   LOGOUT,
@@ -8,6 +8,14 @@ public enum LoginEndReason {
   BANNED,
   /// 超过每用户的会话上限，被新登录挤掉。
   REPLACED,
-  /// 被本人的另一次操作撤销：验证邮箱、改密码、踢设备。
-  REVOKED
+  /// 本人在登录设备列表里踢掉。新设备判定不把这样下线的设备算作「见过」。
+  REVOKED,
+  /// 验证邮箱后，其他会话被撤销。
+  EMAIL_VERIFIED,
+  /// 改密码后，其他会话被撤销。
+  PASSWORD_CHANGED,
+  /// 重设密码后，全部会话被撤销。
+  PASSWORD_RESET,
+  /// 撤销改邮箱后，全部会话被撤销。
+  EMAIL_REVERTED
 }

@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import dev.patra.identity.domain.exception.UserNotFoundException;
 import dev.patra.identity.domain.model.aggregate.User;
 import dev.patra.identity.domain.model.aggregate.UserLoginRecord;
+import dev.patra.identity.domain.model.enums.DeviceClass;
 import dev.patra.identity.domain.model.enums.LoginEndReason;
 import dev.patra.identity.domain.model.enums.UserStatus;
 import dev.patra.identity.domain.model.vo.EmailAddress;
@@ -109,8 +110,16 @@ class BanUserHandlerTest {
     when(users.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     when(sessions.revokeAll(AccountType.USER, 42L)).thenReturn(List.of(7001L, 7002L));
     UserLoginRecord first =
-        UserLoginRecord.restore(
-            7001L, 42L, ClientType.WEB, null, NOW.plusSeconds(1), null, null, 0L, NOW, NOW);
+        UserLoginRecord.restore()
+            .id(7001L)
+            .userId(42L)
+            .clientType(ClientType.WEB)
+            .deviceClass(DeviceClass.UNKNOWN)
+            .expiresAt(NOW.plusSeconds(1))
+            .version(0L)
+            .createdAt(NOW)
+            .updatedAt(NOW)
+            .build();
     when(records.findById(7001L)).thenReturn(Optional.of(first));
     when(records.findById(7002L)).thenReturn(Optional.empty());
 

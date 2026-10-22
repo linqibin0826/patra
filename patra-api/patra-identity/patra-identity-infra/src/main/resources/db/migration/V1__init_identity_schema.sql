@@ -119,10 +119,15 @@ CREATE TABLE idn_user_login_record
     id              BIGINT          NOT NULL,
     user_id         BIGINT          NOT NULL,
     client_type     VARCHAR(16)     NOT NULL,
-    device_id       VARCHAR(128)    NULL,
+    device_id       VARCHAR(43)     NULL,
+    user_agent      VARCHAR(512)    NULL,
+    device_name     VARCHAR(64)     NULL,
+    device_class    VARCHAR(16)     NOT NULL,
+    client_ip       VARCHAR(45)     NULL,
+    ip_region       VARCHAR(64)     NULL,
     expires_at      timestamptz(6)  NOT NULL,
     ended_at        timestamptz(6)  NULL,
-    end_reason      VARCHAR(16)     NULL,
+    end_reason      VARCHAR(32)     NULL,
     record_remarks  jsonb           NULL,
     version         BIGINT          NOT NULL DEFAULT 0,
     ip_address      bytea           NULL,
@@ -135,20 +140,29 @@ CREATE TABLE idn_user_login_record
     PRIMARY KEY (id),
     CONSTRAINT fk_idn_user_login_record_user FOREIGN KEY (user_id) REFERENCES idn_user (id),
     CONSTRAINT ck_idn_user_login_record_client_type CHECK (client_type IN ('WEB')),
-    CONSTRAINT ck_idn_user_login_record_end_reason CHECK (end_reason IN ('LOGOUT', 'BANNED', 'REPLACED', 'REVOKED')),
+    CONSTRAINT ck_idn_user_login_record_device_class CHECK (device_class IN ('DESKTOP', 'MOBILE', 'TABLET', 'UNKNOWN')),
+    CONSTRAINT ck_idn_user_login_record_end_reason CHECK (end_reason IN ('LOGOUT', 'BANNED', 'REPLACED', 'REVOKED',
+        'EMAIL_VERIFIED', 'PASSWORD_CHANGED', 'PASSWORD_RESET', 'EMAIL_REVERTED')),
     CONSTRAINT ck_idn_user_login_record_ended CHECK ((ended_at IS NULL) = (end_reason IS NULL))
 );
 
-CREATE INDEX idx_idn_user_login_record_user_id ON idn_user_login_record (user_id);
+-- 新设备判定按账号 + 设备查（前缀也覆盖按账号查）；清理任务按「结束或过期的时刻」删
+CREATE INDEX idx_idn_user_login_record_user_device ON idn_user_login_record (user_id, device_id);
+CREATE INDEX idx_idn_user_login_record_retire_at ON idn_user_login_record ((COALESCE(ended_at, expires_at)));
 
-COMMENT ON TABLE idn_user_login_record IS 'Login record of a front-end user; id equals the session id';
+COMMENT ON TABLE idn_user_login_record IS 'Login record of a front-end user; id equals the session id; device, user agent and IP are the values at login';
 COMMENT ON COLUMN idn_user_login_record.id IS 'PK (snowflake), same as the Redis session id';
 COMMENT ON COLUMN idn_user_login_record.user_id IS 'Owner user ID';
 COMMENT ON COLUMN idn_user_login_record.client_type IS 'Client type: WEB';
-COMMENT ON COLUMN idn_user_login_record.device_id IS 'Client-reported device identifier, optional';
+COMMENT ON COLUMN idn_user_login_record.device_id IS 'Device identifier from the portal cookie: 43 base64url characters, optional';
+COMMENT ON COLUMN idn_user_login_record.user_agent IS 'User-Agent at login, control characters removed, truncated to 512 code points';
+COMMENT ON COLUMN idn_user_login_record.device_name IS 'Browser major version and OS family parsed by Yauaa, e.g. Chrome 141 · macOS; null when unknown';
+COMMENT ON COLUMN idn_user_login_record.device_class IS 'DESKTOP, MOBILE, TABLET or UNKNOWN';
+COMMENT ON COLUMN idn_user_login_record.client_ip IS 'Client IP at login via the trusted forwarding chain; null when not a valid literal';
+COMMENT ON COLUMN idn_user_login_record.ip_region IS 'IP region from ip2region (country / province / city, country only abroad); null for private addresses or unknown';
 COMMENT ON COLUMN idn_user_login_record.expires_at IS 'Absolute expiry of the session (UTC)';
 COMMENT ON COLUMN idn_user_login_record.ended_at IS 'When the session ended explicitly; null while open or after a silent expiry';
-COMMENT ON COLUMN idn_user_login_record.end_reason IS 'LOGOUT, BANNED, REPLACED or REVOKED (revoked by the user''s own action: email verified, password changed, device kicked)';
+COMMENT ON COLUMN idn_user_login_record.end_reason IS 'LOGOUT, BANNED, REPLACED, REVOKED (kicked from the device list), EMAIL_VERIFIED, PASSWORD_CHANGED, PASSWORD_RESET or EMAIL_REVERTED';
 COMMENT ON COLUMN idn_user_login_record.record_remarks IS 'Audit remarks log';
 COMMENT ON COLUMN idn_user_login_record.version IS 'Optimistic lock version number';
 COMMENT ON COLUMN idn_user_login_record.ip_address IS 'Requester IP (IPv4/IPv6)';

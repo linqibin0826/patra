@@ -17,10 +17,12 @@ import dev.patra.identity.domain.model.aggregate.EmailToken;
 import dev.patra.identity.domain.model.aggregate.User;
 import dev.patra.identity.domain.model.aggregate.UserLoginRecord;
 import dev.patra.identity.domain.model.aggregate.UserPasswordCredential;
+import dev.patra.identity.domain.model.enums.DeviceClass;
 import dev.patra.identity.domain.model.enums.EmailTokenPurpose;
 import dev.patra.identity.domain.model.enums.LoginEndReason;
 import dev.patra.identity.domain.model.enums.UserStatus;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
+import dev.patra.identity.domain.model.vo.ClientOrigin;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.EmailTokenSecret;
 import dev.patra.identity.domain.model.vo.LoginClient;
@@ -122,7 +124,11 @@ class ResetPasswordHandlerTest {
     when(records.findById(7001L))
         .thenReturn(
             Optional.of(
-                UserLoginRecord.start(42L, LoginClient.of("web", null), NOW.plusSeconds(60))));
+                UserLoginRecord.start(
+                    42L,
+                    LoginClient.of("web", null),
+                    ClientOrigin.builder().deviceClass(DeviceClass.UNKNOWN).build(),
+                    NOW.plusSeconds(60))));
     when(userReadPort.findAccount(42L)).thenReturn(Optional.of(ACCOUNT));
   }
 

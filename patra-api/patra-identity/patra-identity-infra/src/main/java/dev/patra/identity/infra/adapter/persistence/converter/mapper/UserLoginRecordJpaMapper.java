@@ -1,6 +1,7 @@
 package dev.patra.identity.infra.adapter.persistence.converter.mapper;
 
 import dev.patra.identity.domain.model.aggregate.UserLoginRecord;
+import dev.patra.identity.domain.model.enums.DeviceClass;
 import dev.patra.identity.domain.model.enums.LoginEndReason;
 import dev.patra.identity.domain.model.vo.DeviceId;
 import dev.patra.identity.infra.adapter.persistence.entity.UserLoginRecordEntity;
@@ -23,6 +24,7 @@ public interface UserLoginRecordJpaMapper {
   @Mapping(
       target = "deviceId",
       expression = "java(login.getDeviceId().map(device -> device.value()).orElse(null))")
+  @Mapping(target = "deviceClass", expression = "java(login.getDeviceClass().name())")
   @Mapping(
       target = "endReason",
       expression = "java(login.getEndReason() == null ? null : login.getEndReason().name())")
@@ -42,16 +44,23 @@ public interface UserLoginRecordJpaMapper {
     if (entity == null) {
       return null;
     }
-    return UserLoginRecord.restore(
-        entity.getId(),
-        entity.getUserId(),
-        ClientType.valueOf(entity.getClientType()),
-        entity.getDeviceId() == null ? null : new DeviceId(entity.getDeviceId()),
-        entity.getExpiresAt(),
-        entity.getEndedAt(),
-        entity.getEndReason() == null ? null : LoginEndReason.valueOf(entity.getEndReason()),
-        entity.getVersion(),
-        entity.getCreatedAt(),
-        entity.getUpdatedAt());
+    return UserLoginRecord.restore()
+        .id(entity.getId())
+        .userId(entity.getUserId())
+        .clientType(ClientType.valueOf(entity.getClientType()))
+        .deviceId(entity.getDeviceId() == null ? null : new DeviceId(entity.getDeviceId()))
+        .userAgent(entity.getUserAgent())
+        .deviceName(entity.getDeviceName())
+        .deviceClass(DeviceClass.valueOf(entity.getDeviceClass()))
+        .clientIp(entity.getClientIp())
+        .ipRegion(entity.getIpRegion())
+        .expiresAt(entity.getExpiresAt())
+        .endedAt(entity.getEndedAt())
+        .endReason(
+            entity.getEndReason() == null ? null : LoginEndReason.valueOf(entity.getEndReason()))
+        .version(entity.getVersion())
+        .createdAt(entity.getCreatedAt())
+        .updatedAt(entity.getUpdatedAt())
+        .build();
   }
 }

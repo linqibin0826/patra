@@ -23,9 +23,11 @@ import dev.patra.identity.domain.exception.UserPendingDeletionException;
 import dev.patra.identity.domain.model.aggregate.User;
 import dev.patra.identity.domain.model.aggregate.UserLoginRecord;
 import dev.patra.identity.domain.model.aggregate.UserPasswordCredential;
+import dev.patra.identity.domain.model.enums.DeviceClass;
 import dev.patra.identity.domain.model.enums.LoginEndReason;
 import dev.patra.identity.domain.model.enums.UserStatus;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
+import dev.patra.identity.domain.model.vo.ClientOrigin;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.LoginClient;
 import dev.patra.identity.domain.model.vo.PasswordHash;
@@ -336,7 +338,11 @@ class ChangePasswordHandlerTest {
   ///
   /// @return 记录
   private static UserLoginRecord record() {
-    return UserLoginRecord.start(42L, LoginClient.of("web", null), NOW.plusSeconds(3600));
+    return UserLoginRecord.start(
+        42L,
+        LoginClient.of("web", null),
+        ClientOrigin.builder().deviceClass(DeviceClass.UNKNOWN).build(),
+        NOW.plusSeconds(3600));
   }
 
   /// 记录事务边界的事务操作：回调同步执行。

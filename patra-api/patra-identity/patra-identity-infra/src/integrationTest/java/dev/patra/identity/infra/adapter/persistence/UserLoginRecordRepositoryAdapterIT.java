@@ -6,7 +6,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import dev.patra.identity.domain.exception.UserModifiedConcurrentlyException;
 import dev.patra.identity.domain.model.aggregate.User;
 import dev.patra.identity.domain.model.aggregate.UserLoginRecord;
+import dev.patra.identity.domain.model.enums.DeviceClass;
 import dev.patra.identity.domain.model.enums.LoginEndReason;
+import dev.patra.identity.domain.model.vo.ClientOrigin;
 import dev.patra.identity.domain.model.vo.DeviceId;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.LoginClient;
@@ -18,6 +20,7 @@ import dev.patra.tool.jpa.autoconfigure.PatraHibernatePropertiesCustomizer;
 import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,6 +53,9 @@ import org.springframework.test.context.ContextConfiguration;
 class UserLoginRecordRepositoryAdapterIT {
 
   private static final Instant EXPIRES_AT = Instant.parse("2027-04-07T08:00:00Z");
+  private static final String DEVICE = "Kq3_z-0aB1cD2eF3gH4iJ5kL6mN7oP8qR9sT0uV1wXy";
+  private static final ClientOrigin UNKNOWN_ORIGIN =
+      ClientOrigin.builder().deviceClass(DeviceClass.UNKNOWN).build();
 
   @Autowired private UserRepositoryAdapter users;
   @Autowired private UserLoginRecordRepositoryAdapter records;
@@ -65,7 +71,8 @@ class UserLoginRecordRepositoryAdapterIT {
 
     UserLoginRecord saved =
         records.save(
-            UserLoginRecord.start(user.getId(), LoginClient.of("web", "mac-safari"), EXPIRES_AT));
+            UserLoginRecord.start(
+                user.getId(), LoginClient.of("web", DEVICE), UNKNOWN_ORIGIN, EXPIRES_AT));
 
     assertThat(saved.getId()).isPositive();
     assertThat(saved.getVersion()).isNotNull();
@@ -73,7 +80,7 @@ class UserLoginRecordRepositoryAdapterIT {
     UserLoginRecord reloaded = records.findById(saved.getId()).orElseThrow();
     assertThat(reloaded.getUserId()).isEqualTo(user.getId());
     assertThat(reloaded.getClientType()).isEqualTo(ClientType.WEB);
-    assertThat(reloaded.getDeviceId()).map(DeviceId::value).contains("mac-safari");
+    assertThat(reloaded.getDeviceId()).map(DeviceId::value).contains(DEVICE);
     assertThat(reloaded.getExpiresAt()).isEqualTo(EXPIRES_AT);
     assertThat(reloaded.isEnded()).isFalse();
     assertThat(records.findById(1L)).isEmpty();
@@ -86,7 +93,8 @@ class UserLoginRecordRepositoryAdapterIT {
         users.save(
             User.register(EmailAddress.of("end.record@example.com"), Username.of("u-end-record")));
     UserLoginRecord saved =
-        records.save(UserLoginRecord.start(user.getId(), LoginClient.web(), EXPIRES_AT));
+        records.save(
+            UserLoginRecord.start(user.getId(), LoginClient.web(), UNKNOWN_ORIGIN, EXPIRES_AT));
     Instant endedAt = Instant.parse("2026-10-09T09:00:00Z");
 
     saved.end(LoginEndReason.LOGOUT, endedAt);
@@ -113,7 +121,7 @@ class UserLoginRecordRepositoryAdapterIT {
   }
 
   @Test
-  @DisplayName("检查约束：结束原因只能是 LOGOUT、BANNED、REPLACED")
+  @DisplayName("检查约束：结束原因只能是第 9.2 节的八个取值")
   void should_reject_unknown_end_reason() {
     User user =
         users.save(
@@ -122,6 +130,27 @@ class UserLoginRecordRepositoryAdapterIT {
     assertThatThrownBy(() -> insertRaw(user.getId(), "WEB", EXPIRES_AT, "EXPIRED"))
         .isInstanceOf(DataIntegrityViolationException.class)
         .hasMessageContaining("ck_idn_user_login_record_end_reason");
+  }
+
+  @Test
+  @DisplayName("检查约束：第 9.2 节的八个结束原因都能写入")
+  void should_accept_all_end_reasons() {
+    User user =
+        users.save(
+            User.register(EmailAddress.of("ck.reasons@example.com"), Username.of("u-ck-reasons")));
+
+    for (String reason :
+        List.of(
+            "LOGOUT",
+            "BANNED",
+            "REPLACED",
+            "REVOKED",
+            "EMAIL_VERIFIED",
+            "PASSWORD_CHANGED",
+            "PASSWORD_RESET",
+            "EMAIL_REVERTED")) {
+      insertRaw(user.getId(), "WEB", EXPIRES_AT, reason);
+    }
   }
 
   @Test
@@ -135,6 +164,52 @@ class UserLoginRecordRepositoryAdapterIT {
         .hasMessageContaining("ck_idn_user_login_record_ended");
   }
 
+  @Test
+  @DisplayName("设备与来源的五列存进去、读出来一致")
+  void should_round_trip_device_and_origin_columns() {
+    User user =
+        users.save(
+            User.register(EmailAddress.of("origin.record@example.com"), Username.of("u-origin")));
+    ClientOrigin origin =
+        ClientOrigin.builder()
+            .ip("2001:4860:4860::8888")
+            .userAgent("Mozilla/5.0 (Macintosh) Chrome/141.0.0.0")
+            .deviceName("Chrome 141 · macOS")
+            .deviceClass(DeviceClass.DESKTOP)
+            .ipRegion("美国")
+            .build();
+
+    UserLoginRecord saved =
+        records.save(
+            UserLoginRecord.start(user.getId(), LoginClient.of("web", DEVICE), origin, EXPIRES_AT));
+
+    UserLoginRecord reloaded = records.findById(saved.getId()).orElseThrow();
+    assertThat(reloaded.getUserAgent()).isEqualTo("Mozilla/5.0 (Macintosh) Chrome/141.0.0.0");
+    assertThat(reloaded.getDeviceName()).isEqualTo("Chrome 141 · macOS");
+    assertThat(reloaded.getDeviceClass()).isEqualTo(DeviceClass.DESKTOP);
+    assertThat(reloaded.getClientIp()).isEqualTo("2001:4860:4860::8888");
+    assertThat(reloaded.getIpRegion()).isEqualTo("美国");
+  }
+
+  @Test
+  @DisplayName("检查约束：端只能是 DESKTOP、MOBILE、TABLET、UNKNOWN")
+  void should_reject_unknown_device_class() {
+    User user =
+        users.save(
+            User.register(EmailAddress.of("ck.class@example.com"), Username.of("u-ck-class")));
+
+    assertThatThrownBy(
+            () ->
+                jdbcTemplate.update(
+                    "INSERT INTO idn_user_login_record (id, user_id, client_type, device_class,"
+                        + " expires_at) VALUES (?, ?, 'WEB', 'PHONE', ?)",
+                    SnowflakeIdGenerator.getId(),
+                    user.getId(),
+                    Timestamp.from(EXPIRES_AT)))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("ck_idn_user_login_record_device_class");
+  }
+
   /// 绕过聚合直接插一行，用来触发检查约束。
   ///
   /// @param userId 用户 ID
@@ -143,8 +218,8 @@ class UserLoginRecordRepositoryAdapterIT {
   /// @param endReason 结束原因，可为 `null`
   private void insertRaw(long userId, String clientType, Instant endedAt, String endReason) {
     jdbcTemplate.update(
-        "INSERT INTO idn_user_login_record (id, user_id, client_type, expires_at, ended_at, end_reason)"
-            + " VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO idn_user_login_record (id, user_id, client_type, device_class, expires_at,"
+            + " ended_at, end_reason) VALUES (?, ?, ?, 'UNKNOWN', ?, ?, ?)",
         SnowflakeIdGenerator.getId(),
         userId,
         clientType,
@@ -161,7 +236,8 @@ class UserLoginRecordRepositoryAdapterIT {
             User.register(
                 EmailAddress.of("stale.record@example.com"), Username.of("u-stale-record")));
     UserLoginRecord saved =
-        records.save(UserLoginRecord.start(user.getId(), LoginClient.web(), EXPIRES_AT));
+        records.save(
+            UserLoginRecord.start(user.getId(), LoginClient.web(), UNKNOWN_ORIGIN, EXPIRES_AT));
     UserLoginRecord stale = records.findById(saved.getId()).orElseThrow();
     saved.end(LoginEndReason.REPLACED, Instant.parse("2026-10-09T09:00:00Z"));
     records.save(saved);

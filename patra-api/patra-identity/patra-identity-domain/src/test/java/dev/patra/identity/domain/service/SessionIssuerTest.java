@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import dev.patra.identity.domain.model.aggregate.UserLoginRecord;
+import dev.patra.identity.domain.model.enums.DeviceClass;
 import dev.patra.identity.domain.model.enums.LoginEndReason;
 import dev.patra.identity.domain.model.vo.LoginClient;
 import dev.patra.identity.domain.policy.SessionLifetime;
@@ -82,8 +83,16 @@ class SessionIssuerTest {
     when(sessions.issue(any()))
         .thenReturn(IssuedUserSession.of("patra_user_x", List.of(6001L, 6002L)));
     UserLoginRecord replaced =
-        UserLoginRecord.restore(
-            6001L, 42L, ClientType.WEB, null, NOW.plusSeconds(1), null, null, 0L, NOW, NOW);
+        UserLoginRecord.restore()
+            .id(6001L)
+            .userId(42L)
+            .clientType(ClientType.WEB)
+            .deviceClass(DeviceClass.UNKNOWN)
+            .expiresAt(NOW.plusSeconds(1))
+            .version(0L)
+            .createdAt(NOW)
+            .updatedAt(NOW)
+            .build();
     when(records.findById(6001L)).thenReturn(Optional.of(replaced));
     when(records.findById(6002L)).thenReturn(Optional.empty());
 
@@ -114,16 +123,22 @@ class SessionIssuerTest {
   /// @param id 分配的 ID
   /// @return 带 ID 的记录
   private static UserLoginRecord withId(UserLoginRecord login, long id) {
-    return UserLoginRecord.restore(
-        id,
-        login.getUserId(),
-        login.getClientType(),
-        login.getDeviceId().orElse(null),
-        login.getExpiresAt(),
-        login.getEndedAt(),
-        login.getEndReason(),
-        0L,
-        NOW,
-        NOW);
+    return UserLoginRecord.restore()
+        .id(id)
+        .userId(login.getUserId())
+        .clientType(login.getClientType())
+        .deviceId(login.getDeviceId().orElse(null))
+        .userAgent(login.getUserAgent())
+        .deviceName(login.getDeviceName())
+        .deviceClass(login.getDeviceClass())
+        .clientIp(login.getClientIp())
+        .ipRegion(login.getIpRegion())
+        .expiresAt(login.getExpiresAt())
+        .endedAt(login.getEndedAt())
+        .endReason(login.getEndReason())
+        .version(0L)
+        .createdAt(NOW)
+        .updatedAt(NOW)
+        .build();
   }
 }

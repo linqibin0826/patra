@@ -17,12 +17,12 @@ import dev.patra.identity.domain.exception.InvalidUserFieldsException;
 import dev.patra.identity.domain.model.aggregate.EmailToken;
 import dev.patra.identity.domain.model.aggregate.User;
 import dev.patra.identity.domain.model.aggregate.UserLoginRecord;
+import dev.patra.identity.domain.model.enums.DeviceClass;
 import dev.patra.identity.domain.model.enums.EmailTokenPurpose;
 import dev.patra.identity.domain.model.enums.LoginEndReason;
 import dev.patra.identity.domain.model.enums.UserStatus;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.EmailTokenSecret;
-import dev.patra.identity.domain.model.vo.LoginClient;
 import dev.patra.identity.domain.model.vo.Username;
 import dev.patra.identity.domain.port.repository.EmailTokenRepository;
 import dev.patra.identity.domain.port.repository.UserLoginRecordRepository;
@@ -289,16 +289,15 @@ class VerifyEmailHandlerTest {
   /// @param id 记录 ID
   /// @return 记录
   private static UserLoginRecord openLogin(long id) {
-    return UserLoginRecord.restore(
-        id,
-        42L,
-        ClientType.WEB,
-        LoginClient.of("web", null).deviceId(),
-        NOW.plus(Duration.ofDays(180)),
-        null,
-        null,
-        0L,
-        NOW,
-        NOW);
+    return UserLoginRecord.restore()
+        .id(id)
+        .userId(42L)
+        .clientType(ClientType.WEB)
+        .deviceClass(DeviceClass.UNKNOWN)
+        .expiresAt(NOW.plus(Duration.ofDays(180)))
+        .version(0L)
+        .createdAt(NOW)
+        .updatedAt(NOW)
+        .build();
   }
 }

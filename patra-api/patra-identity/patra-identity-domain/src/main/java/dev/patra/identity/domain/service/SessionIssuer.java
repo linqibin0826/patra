@@ -1,7 +1,9 @@
 package dev.patra.identity.domain.service;
 
 import dev.patra.identity.domain.model.aggregate.UserLoginRecord;
+import dev.patra.identity.domain.model.enums.DeviceClass;
 import dev.patra.identity.domain.model.enums.LoginEndReason;
+import dev.patra.identity.domain.model.vo.ClientOrigin;
 import dev.patra.identity.domain.model.vo.LoginClient;
 import dev.patra.identity.domain.policy.SessionLifetime;
 import dev.patra.identity.domain.policy.SessionLifetimePolicy;
@@ -54,7 +56,12 @@ public final class SessionIssuer {
     Instant now = clock.instant();
     SessionLifetime lifetime = policy.lifetimeFor(client.clientType());
     UserLoginRecord login =
-        records.save(UserLoginRecord.start(userId, client, now.plus(lifetime.absolute())));
+        records.save(
+            UserLoginRecord.start(
+                userId,
+                client,
+                ClientOrigin.builder().deviceClass(DeviceClass.UNKNOWN).build(),
+                now.plus(lifetime.absolute())));
     IssuedUserSession issued =
         sessions.issue(
             NewUserSession.builder()

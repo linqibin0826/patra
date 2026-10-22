@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import dev.patra.identity.domain.model.aggregate.UserLoginRecord;
+import dev.patra.identity.domain.model.enums.DeviceClass;
 import dev.patra.identity.domain.model.enums.LoginEndReason;
 import dev.patra.identity.domain.port.repository.UserLoginRecordRepository;
 import dev.patra.identity.domain.port.session.SessionStorePort;
@@ -61,8 +62,16 @@ class LogoutUserHandlerTest {
     when(currentUserPort.current()).thenReturn(Optional.of(USER));
     when(sessions.revoke(AccountType.USER, 42L, 7001L)).thenReturn(true);
     UserLoginRecord login =
-        UserLoginRecord.restore(
-            7001L, 42L, ClientType.WEB, null, NOW.plusSeconds(1), null, null, 0L, NOW, NOW);
+        UserLoginRecord.restore()
+            .id(7001L)
+            .userId(42L)
+            .clientType(ClientType.WEB)
+            .deviceClass(DeviceClass.UNKNOWN)
+            .expiresAt(NOW.plusSeconds(1))
+            .version(0L)
+            .createdAt(NOW)
+            .updatedAt(NOW)
+            .build();
     when(records.findById(7001L)).thenReturn(Optional.of(login));
 
     handler.handle(LogoutUserCommand.of());
@@ -101,8 +110,16 @@ class LogoutUserHandlerTest {
     when(currentUserPort.current()).thenReturn(Optional.of(USER));
     when(sessions.revoke(AccountType.USER, 42L, 7001L)).thenReturn(true);
     UserLoginRecord login =
-        UserLoginRecord.restore(
-            7001L, 42L, ClientType.WEB, null, NOW.plusSeconds(1), null, null, 0L, NOW, NOW);
+        UserLoginRecord.restore()
+            .id(7001L)
+            .userId(42L)
+            .clientType(ClientType.WEB)
+            .deviceClass(DeviceClass.UNKNOWN)
+            .expiresAt(NOW.plusSeconds(1))
+            .version(0L)
+            .createdAt(NOW)
+            .updatedAt(NOW)
+            .build();
     when(records.findById(7001L)).thenReturn(Optional.of(login));
     when(records.save(any())).thenThrow(new DataAccessResourceFailureException("db down"));
 
