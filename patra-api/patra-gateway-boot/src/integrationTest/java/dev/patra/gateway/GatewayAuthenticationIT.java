@@ -310,6 +310,54 @@ class GatewayAuthenticationIT {
         .isEqualTo(CurrentUser.of(4221L, 9221L, AccountType.USER, ClientType.WEB));
   }
 
+  /// 找回密码的申请与提交、改邮箱的确认与撤销都是邮件链接或匿名操作：匿名转发且不带 Authorization。
+  @Test
+  void should_forward_password_reset_and_email_change_links_anonymously() {
+    identity.stubFor(
+        post(urlPathMatching("/auth/(password|email/change)/.*")).willReturn(okJson("{}")));
+
+    for (String path :
+        List.of(
+            "/auth/password/forgot",
+            "/auth/password/reset",
+            "/auth/email/change/confirm",
+            "/auth/email/change/revert")) {
+      restClient.post().uri("/patra-identity" + path).exchange().expectStatus().isOk();
+      identity.verify(
+          1, postRequestedFor(urlPathEqualTo(path)).withoutHeader(HttpHeaders.AUTHORIZATION));
+    }
+  }
+
+  /// 再认证、改密码、改邮箱申请是本人操作：匿名 401、不到下游；带会话才转发，且带断言。
+  @Test
+  void should_require_session_for_reauth_password_change_and_email_change_request() {
+    identity.stubFor(any(urlPathMatching("/.*")).willReturn(okJson("{}")));
+
+    restClient.post().uri("/patra-identity/auth/reauth").exchange().expectStatus().isUnauthorized();
+    restClient.put().uri("/patra-identity/me/password").exchange().expectStatus().isUnauthorized();
+    restClient
+        .post()
+        .uri("/patra-identity/me/email/change")
+        .exchange()
+        .expectStatus()
+        .isUnauthorized();
+    identity.verify(0, postRequestedFor(urlPathEqualTo("/auth/reauth")));
+    identity.verify(0, postRequestedFor(urlPathEqualTo("/me/email/change")));
+
+    String token = GatewayITSessions.issue(sessions, 4231L, 9231L);
+    restClient
+        .post()
+        .uri("/patra-identity/auth/reauth")
+        .header(HttpHeaders.AUTHORIZATION, BEARER + token)
+        .exchange()
+        .expectStatus()
+        .isOk();
+    identity.verify(
+        1,
+        postRequestedFor(urlPathEqualTo("/auth/reauth"))
+            .withHeader(HttpHeaders.AUTHORIZATION, matching("Bearer .+")));
+  }
+
   /// 重发验证邮件是本人操作：匿名 401、不到下游；带会话才转发，且带断言。
   @Test
   void should_require_session_for_email_verification_resend() {
