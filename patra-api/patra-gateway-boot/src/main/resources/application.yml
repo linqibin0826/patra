@@ -13,11 +13,12 @@ server:
   # 客户端 IP 的受信转发（PAP-99）：只有 internal-proxies 里的地址（门户）发来的 X-Forwarded-For 被采用，
   # Tomcat RemoteIpValve 据此改写 remoteAddr；其他来源带的一律由 ForwardedHeaderFilter（removeOnly）剥掉。
   # 默认空串 = 谁都不信。不能留 Boot 的默认值：它含 100.64.0.0/10、192.168.0.0/16，tailnet 与
-  # OrbStack 端口转发进来的连接都会被当成代理。mini 在 Nacos 的 patra-gateway.yaml 里写门户的固定地址。
+  # OrbStack 端口转发进来的连接都会被当成代理。mini 的值在 docker-compose.apps.yaml 的 gateway 服务块
+  # （PATRA_GATEWAY_TRUSTED_PROXIES=门户的固定地址，与 portal 的 ipv4_address 同一个文件）。CIDR，逗号分隔
   forward-headers-strategy: native
   tomcat:
     remoteip:
-      internal-proxies: ""
+      internal-proxies: ${PATRA_GATEWAY_TRUSTED_PROXIES:}
 
 spring:
   # 每个请求一个虚拟线程：等下游的时间不占平台线程

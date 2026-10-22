@@ -1,12 +1,5 @@
 patra.config-source.service: patra-gateway.yaml
 
-# 客户端 IP 的受信转发（PAP-99）：只信任门户容器的固定地址（docker-compose.apps.yaml 的 portal.networks）。
-# 两边要一起改；Tomcat 启动时读，改了要重启网关（CD 推送后会自动重部署）
-server:
-  tomcat:
-    remoteip:
-      internal-proxies: 192.168.97.250/32
-
 spring:
   data:
     redis:

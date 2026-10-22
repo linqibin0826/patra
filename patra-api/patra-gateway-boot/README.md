@@ -67,7 +67,7 @@ patra-gateway-boot/
 
 两层，先后执行（PAP-99，设计 `docs/patra/specs/2026-10-22-identity-login-devices-design.md` 第 6 节）：
 
-1. **Tomcat `RemoteIpValve`**（`server.forward-headers-strategy: native`）：连接地址落在 `server.tomcat.remoteip.internal-proxies` 里时，取 `X-Forwarded-For` 最右边那个不是代理的值作为客户端地址并消费掉该头；别的连接什么都不做。默认值是空串：谁都不信。**不能留 Boot 的默认值**——它含 `100.64.0.0/10`、`192.168.0.0/16`，tailnet 上的任何机器、OrbStack 端口转发进来的连接（来源 `192.168.97.1`）都会被当成代理。mini 在 Nacos 的 `patra-gateway.yaml` 里写门户容器的固定地址 `192.168.97.250/32`（`docker-compose.apps.yaml` 里固定，两边一起改）。valve 对受信连接还会采用 `X-Forwarded-Proto` / `-Host` / `-Port`，门户按契约只发 `X-Forwarded-For` 与 `User-Agent`。
+1. **Tomcat `RemoteIpValve`**（`server.forward-headers-strategy: native`）：连接地址落在 `server.tomcat.remoteip.internal-proxies` 里时，取 `X-Forwarded-For` 最右边那个不是代理的值作为客户端地址并消费掉该头；别的连接什么都不做。默认值是空串：谁都不信。**不能留 Boot 的默认值**——它含 `100.64.0.0/10`、`192.168.0.0/16`，tailnet 上的任何机器、OrbStack 端口转发进来的连接（来源 `192.168.97.1`）都会被当成代理。值来自环境变量 `PATRA_GATEWAY_TRUSTED_PROXIES`：mini 在 `docker-compose.apps.yaml` 的 gateway 服务块里设成门户容器的固定地址 `192.168.97.250/32`（同一个文件里 portal 的 `ipv4_address`，两处一起改）。valve 对受信连接还会采用 `X-Forwarded-Proto` / `-Host` / `-Port`，门户按契约只发 `X-Forwarded-For` 与 `User-Agent`。
 2. **`ForwardedHeaderFilter`（`removeOnly`）**：剥掉剩下的一切 `Forwarded` / `X-Forwarded-*`，不改客户端地址。springdoc 的 Scalar starter 会给应用无条件注册一个「应用」入站转发头的 `ForwardedHeaderFilter`：客户端带 `X-Forwarded-Prefix` 就能改写网关看到的路径，让 `StripPrefix` 剥错段。网关在 `GatewaySecurityConfiguration.forwardedHeaderFilter()` 声明同类型的 Bean 让它让位，并开 `removeOnly`：只删不解释，最高优先级，先于 Security 和路由。
 
 出站：Gateway 按处理后的客户端地址写 `X-Forwarded-For` 与 `Forwarded: for=`，identity 的 `getRemoteAddr()` 就是它；`User-Agent` 原样转发。`spring.cloud.gateway.server.webmvc.trusted-proxies: ".*"` 只管出站头能不能写，不要收窄（收窄后非受信来源的请求出站一个转发头都没有，下游的 springdoc 地址还原就坏了）。valve 在 Tomcat 启动时读配置，改了要重启网关。
@@ -115,7 +115,7 @@ identity 自己的 `IDN-0401` 仍会出现：带有效断言但用户已封禁�
 | `REDIS_PASSWORD` | Redis 密码，用户 `default` | 无，来自 `~/.patra/secrets/redis.env` |
 | `PATRA_GATEWAY_IDENTITY_ASSERTION_PRIVATE_KEY` | 签断言的私钥，含私钥的 EC P-256 JWK JSON，带 `kid` | 无，来自 `~/.patra/secrets/gateway.env`；缺了启动失败 |
 | `PATRA_LOG_DIR` | 日志目录 | `logs` |
-| `SERVER_TOMCAT_REMOTEIP_INTERNAL_PROXIES` | 受信代理地址（CIDR，逗号分隔），只有它们发来的 `X-Forwarded-For` 被采用 | 空（谁都不信）；mini 在 Nacos 里写 `192.168.97.250/32` |
+| `PATRA_GATEWAY_TRUSTED_PROXIES` | 受信代理地址（CIDR，逗号分隔），只有它们发来的 `X-Forwarded-For` 被采用（`server.tomcat.remoteip.internal-proxies`） | 空（谁都不信）；mini 的 compose 里是 `192.168.97.250/32` |
 
 端口 9528。
 

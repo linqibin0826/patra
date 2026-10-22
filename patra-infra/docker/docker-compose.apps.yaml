@@ -134,6 +134,9 @@ services:
         required: true
       - path: ${HOME}/.patra/secrets/gateway.env
         required: true
+    # 受信代理（PAP-99）：只有门户（下面 portal 的固定地址）发来的 X-Forwarded-For 被采用，两处一起改
+    environment:
+      PATRA_GATEWAY_TRUSTED_PROXIES: 192.168.97.250/32
     healthcheck:
       test: [ "CMD", "curl", "-fs", "http://localhost:9528/actuator/health" ]
       <<: *app-healthcheck
@@ -143,8 +146,8 @@ services:
     container_name: patra-portal
     restart: unless-stopped
     ports: [ "4000:4000" ]
-    # 固定地址：网关只信任这个地址发来的 X-Forwarded-For（nacos/dev/patra-gateway.yaml 的
-    # server.tomcat.remoteip.internal-proxies），两边要一起改。选 .250 是避开 Docker 从 .2 起的顺序分配；
+    # 固定地址：网关只信任这个地址发来的 X-Forwarded-For（上面 gateway 的 PATRA_GATEWAY_TRUSTED_PROXIES），
+    # 两处要一起改。选 .250 是避开 Docker 从 .2 起的顺序分配；
     # .1 是 patra-net 网关，OrbStack 端口转发进来的连接都显示成它，不能当受信地址（PAP-99）
     networks:
       default:
