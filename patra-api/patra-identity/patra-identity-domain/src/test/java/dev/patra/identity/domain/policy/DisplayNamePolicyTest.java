@@ -103,7 +103,7 @@ class DisplayNamePolicyTest {
     assertThat(policy.validate(FAMILY.repeat(6))).isEmpty();
     assertThat(policy.validate(FAMILY + FAMILY)).isEmpty();
     assertThat(policy.validate(FLAG_ENGLAND + FLAG_ENGLAND)).isEmpty();
-    assertThat(DisplayNamePolicy.graphemeCount(FAMILY.repeat(6))).isEqualTo(6);
+    assertThat(ProfileTextRules.graphemeCount(FAMILY.repeat(6))).isEqualTo(6);
   }
 
   @Test

@@ -4,8 +4,6 @@ import dev.patra.identity.domain.exception.InvalidUserFieldsException;
 import dev.patra.identity.domain.model.vo.DisplayName;
 import dev.patra.identity.domain.model.vo.UserFieldViolations;
 import dev.patra.tool.core.error.field.FieldViolation;
-import java.nio.charset.StandardCharsets;
-import java.text.BreakIterator;
 import java.text.Normalizer;
 import java.util.List;
 import java.util.Locale;
@@ -15,9 +13,7 @@ import java.util.regex.Pattern;
 /// 昵称规则：2 ~ 30 个字素且 UTF-8 不超过 120 字节；拒绝控制、零宽、双向、换行等字符；
 /// 拒绝网址、邮箱、手机号、微信号的形态；拒绝官方 / 职业身份词和站名。
 ///
-/// 字素按 `BreakIterator` 的扩展字素簇数：汉字、带变音符的字母、ZWJ 组合的 emoji、国旗各计 1。
-/// 格式字符（Cf）只有一种例外：它是 emoji 组件（ZWJ、标签字符）且所在字素簇含有扩展象形字。
-/// 以组合用字符开头的字素簇也拒绝：只由组合字符拼成的昵称渲染出来是空白。
+/// 拒绝字符与字素计数见 {@link ProfileTextRules}（与资料文本共用）。
 public final class DisplayNamePolicy {
 
   /// 至少 2 个字素。
@@ -55,15 +51,14 @@ public final class DisplayNamePolicy {
     if (normalized.isEmpty()) {
       return Optional.of(UserFieldViolations.displayNameRequired());
     }
-    if (hasRejectedCharacter(normalized)) {
+    if (ProfileTextRules.hasRejectedCharacter(normalized, false)) {
       return Optional.of(UserFieldViolations.displayNameInvalidCharacter());
     }
-    int graphemes = graphemeCount(normalized);
+    int graphemes = ProfileTextRules.graphemeCount(normalized);
     if (graphemes < MIN_GRAPHEMES) {
       return Optional.of(UserFieldViolations.displayNameTooShort());
     }
-    if (graphemes > MAX_GRAPHEMES
-        || normalized.getBytes(StandardCharsets.UTF_8).length > MAX_BYTES) {
+    if (graphemes > MAX_GRAPHEMES || ProfileTextRules.utf8Length(normalized) > MAX_BYTES) {
       return Optional.of(UserFieldViolations.displayNameTooLong());
     }
     if (looksLikeContact(normalized)) {
@@ -86,78 +81,6 @@ public final class DisplayNamePolicy {
       throw new InvalidUserFieldsException(List.of(violation.get()));
     }
     return new DisplayName(DisplayName.normalize(raw));
-  }
-
-  /// 数扩展字素簇。
-  ///
-  /// @param normalized 规范化之后的昵称
-  /// @return 字素数
-  public static int graphemeCount(String normalized) {
-    BreakIterator clusters = BreakIterator.getCharacterInstance(Locale.ROOT);
-    clusters.setText(normalized);
-    int count = 0;
-    while (clusters.next() != BreakIterator.DONE) {
-      count++;
-    }
-    return count;
-  }
-
-  /// 逐个字素簇查拒绝字符。
-  ///
-  /// @param normalized 规范化之后的昵称
-  /// @return 含拒绝字符时为 `true`
-  private static boolean hasRejectedCharacter(String normalized) {
-    BreakIterator clusters = BreakIterator.getCharacterInstance(Locale.ROOT);
-    clusters.setText(normalized);
-    int start = clusters.first();
-    for (int end = clusters.next(); end != BreakIterator.DONE; start = end, end = clusters.next()) {
-      if (isRejectedCluster(normalized, start, end)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  /// 一个字素簇是否含拒绝字符：以组合用字符开头；含控制、行 / 段分隔、私用、未分配、孤立代理项；
-  /// 含格式字符而它不是 emoji 组件，或簇里没有扩展象形字。
-  ///
-  /// @param text 整个昵称
-  /// @param start 簇的起点
-  /// @param end 簇的终点（不含）
-  /// @return 要拒绝时为 `true`
-  private static boolean isRejectedCluster(String text, int start, int end) {
-    int firstType = Character.getType(text.codePointAt(start));
-    if (firstType == Character.NON_SPACING_MARK
-        || firstType == Character.ENCLOSING_MARK
-        || firstType == Character.COMBINING_SPACING_MARK) {
-      return true;
-    }
-    boolean format = false;
-    boolean pictographic = false;
-    int i = start;
-    while (i < end) {
-      int cp = text.codePointAt(i);
-      int type = Character.getType(cp);
-      if (type == Character.CONTROL
-          || type == Character.LINE_SEPARATOR
-          || type == Character.PARAGRAPH_SEPARATOR
-          || type == Character.PRIVATE_USE
-          || type == Character.UNASSIGNED
-          || type == Character.SURROGATE) {
-        return true;
-      }
-      if (type == Character.FORMAT) {
-        if (!Character.isEmojiComponent(cp)) {
-          return true;
-        }
-        format = true;
-      }
-      if (Character.isExtendedPictographic(cp)) {
-        pictographic = true;
-      }
-      i += Character.charCount(cp);
-    }
-    return format && !pictographic;
   }
 
   /// 是否像网址、邮箱、手机号或微信号。在 NFKC 小写副本上判，全角数字和冒号也算。
