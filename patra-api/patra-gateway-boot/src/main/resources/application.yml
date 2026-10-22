@@ -10,6 +10,14 @@
 
 server:
   port: 9528
+  # 客户端 IP 的受信转发（PAP-99）：只有 internal-proxies 里的地址（门户）发来的 X-Forwarded-For 被采用，
+  # Tomcat RemoteIpValve 据此改写 remoteAddr；其他来源带的一律由 ForwardedHeaderFilter（removeOnly）剥掉。
+  # 默认空串 = 谁都不信。不能留 Boot 的默认值：它含 100.64.0.0/10、192.168.0.0/16，tailnet 与
+  # OrbStack 端口转发进来的连接都会被当成代理。mini 在 Nacos 的 patra-gateway.yaml 里写门户的固定地址。
+  forward-headers-strategy: native
+  tomcat:
+    remoteip:
+      internal-proxies: ""
 
 spring:
   # 每个请求一个虚拟线程：等下游的时间不占平台线程
@@ -41,8 +49,9 @@ spring:
     gateway:
       server:
         webmvc:
-          # 设了 trusted-proxies 才激活 X-Forwarded-* 头（Host/Port/Proto/Prefix）；
-          # 缺它则下游 springdoc 的 servers 还原失败、停在实例地址。patra 仅 tailscale 内网暴露，dev 信任所有上游。
+          # 设了 trusted-proxies 才激活出站的 X-Forwarded-* 头（Host/Port/Proto/Prefix）；
+          # 缺它则下游 springdoc 的 servers 还原失败、停在实例地址。它只管出站：入站转发头由上面的
+          # server.tomcat.remoteip 与 ForwardedHeaderFilter 处理，出站的 X-Forwarded-For 用处理后的客户端地址。
           trusted-proxies: ".*"
           routes:
             # Ingest Service Route

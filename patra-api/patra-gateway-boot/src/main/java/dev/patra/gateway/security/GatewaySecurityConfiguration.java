@@ -147,11 +147,12 @@ public class GatewaySecurityConfiguration {
 
   /// 入站的 `Forwarded` / `X-Forwarded-*` 在 servlet 层直接剥掉、不解释（`removeOnly`）。
   ///
-  /// 网关前面没有任何反向代理，这些头从外面进来一律不合法。springdoc 的 Scalar starter 会无条件注册一个
-  /// 「应用」入站转发头的 `ForwardedHeaderFilter`：客户端带 `X-Forwarded-Prefix` 就能改写网关看到的路径，
-  /// 让 `StripPrefix` 剥错段。这里声明同类型的 Bean 让它让位。注册在最高优先级，先于 Security 和路由，
-  /// 所以路径规则、路由、出站的 `X-Forwarded-*` 都按真实请求算。
-  /// 将来网关前面放了反向代理：去掉 `removeOnly`，把 `trusted-proxies` 改成代理的地址。
+  /// 客户端 IP 在这之前已由 Tomcat 的 `RemoteIpValve` 处理：只有 `server.tomcat.remoteip.internal-proxies`
+  /// 里的地址（门户）发来的 `X-Forwarded-For` 被采用并改写 `remoteAddr`（PAP-99），本过滤器不改
+  /// `remoteAddr`，只剥掉其余一切转发头。springdoc 的 Scalar starter 会无条件注册一个「应用」入站转发头的
+  /// `ForwardedHeaderFilter`：客户端带 `X-Forwarded-Prefix` 就能改写网关看到的路径，让 `StripPrefix`
+  /// 剥错段。这里声明同类型的 Bean 让它让位。注册在最高优先级，先于 Security 和路由，所以路径规则、
+  /// 路由、出站的 `X-Forwarded-*` 都按真实请求算。
   ///
   /// @return 过滤器注册
   @Bean

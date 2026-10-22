@@ -8,7 +8,7 @@ Patra 的 API 网关：所有外部请求的统一入口，按路径前缀路由
 
 - **路由**：`/patra-catalog/**`、`/patra-registry/**`、`/patra-ingest/**`、`/patra-identity/**` 剥掉第一段后转给对应服务，经 Nacos 发现、Spring Cloud LoadBalancer 选实例。
 - **鉴权**：`Authorization: Bearer <会话令牌>` → 查 Redis 会话（顺手续期）→ 建认证对象；令牌不是「恰好一个 Bearer 头 + 会话令牌格式 + Redis 里有」的一律按匿名，是否放行由下面的路径规则决定。
-- **入站转发头**：外部自带的 `Forwarded` / `X-Forwarded-*` 在 servlet 层直接剥掉、不解释（`ForwardedHeaderFilter` 的 `removeOnly`），路径规则、路由和下面的出站头都按真实请求算。
+- **入站转发头**：只有受信代理（门户）发来的 `X-Forwarded-For` 被采用，Tomcat `RemoteIpValve` 据此改写客户端地址；其余一切 `Forwarded` / `X-Forwarded-*`（包括非受信来源的 `X-Forwarded-For`）在 servlet 层直接剥掉、不解释（`ForwardedHeaderFilter` 的 `removeOnly`），路径规则、路由和下面的出站头都按真实请求算。
 - **出站请求头**：剥掉外部自带的 `Authorization`；已登录时写入网关现签的 60 秒身份断言（`Authorization: Bearer <JWT>`），匿名不写；再由框架追加网关自己的 `X-Forwarded-*` / `Forwarded`，剥逐跳头。下游收到的 `Authorization` 只可能是网关签的断言，或者没有。
 - **透传**：下游的状态码、响应头、响应体原样回客户端，包括 4xx / 5xx / 3xx；不跟随重定向，不替任何一方谈压缩；代理链上关掉了 Spring Security 默认补的响应头（`Cache-Control: no-store`、`X-Content-Type-Options` 等），下游没给的头网关也不补。
 - **文档聚合**：`/scalar` 聚合四个服务的 OpenAPI 文档。
@@ -50,6 +50,8 @@ patra-gateway-boot/
     ├── GatewayFailureIT.java                     # 代理失败的状态码；读超时是空闲超时（长流、慢速大文件下载）
     ├── GatewayStalledDownstreamIT.java           # 下游停住：响应体中途停住被切断；不读请求体时写超时 504
     ├── GatewayAuthenticationIT.java              # 认证、规则、断言、出站头
+    ├── GatewayTrustedProxyIT.java                # 受信代理的 X-Forwarded-For 被采用
+    ├── GatewayUntrustedProxyIT.java              # 非受信来源的被剥掉；登录设备接口需登录
     ├── GatewayBlockedPathsIT.java                # 拒绝名单
     └── GatewayRedisUnavailableIT.java            # Redis 不可用 → 503
 ```
@@ -61,11 +63,14 @@ patra-gateway-boot/
 - 私钥按字符串绑定，建签名器时才解析；启动时用配置的公钥自签自验一次，公私钥不成对或 `kid` 不一致直接启动失败，错误信息只带 `kid`。
 - 网关也要配 `patra.security.identity-assertion.public-keys`（自己那把公钥）：安全 starter 的验签器和启动自检用它，不要为了绕过它排除 starter 的自动配置。
 
-## 入站转发头为什么在 servlet 层剥
+## 受信代理与入站转发头
 
-springdoc 的 Scalar starter 会给应用无条件注册一个「应用」入站转发头的 `ForwardedHeaderFilter`：客户端带 `X-Forwarded-Prefix` 就能改写网关看到的路径，让 `StripPrefix` 剥错段。网关在 `GatewaySecurityConfiguration.forwardedHeaderFilter()` 声明同类型的 Bean 让它让位，并开 `removeOnly`：只删不解释，最高优先级，先于 Security 和路由。
+两层，先后执行（PAP-99，设计 `docs/patra/specs/2026-10-22-identity-login-devices-design.md` 第 6 节）：
 
-将来网关前面真放了反向代理：去掉 `removeOnly`，把 `spring.cloud.gateway.server.webmvc.trusted-proxies` 从 `.*` 改成代理的地址。
+1. **Tomcat `RemoteIpValve`**（`server.forward-headers-strategy: native`）：连接地址落在 `server.tomcat.remoteip.internal-proxies` 里时，取 `X-Forwarded-For` 最右边那个不是代理的值作为客户端地址并消费掉该头；别的连接什么都不做。默认值是空串：谁都不信。**不能留 Boot 的默认值**——它含 `100.64.0.0/10`、`192.168.0.0/16`，tailnet 上的任何机器、OrbStack 端口转发进来的连接（来源 `192.168.97.1`）都会被当成代理。mini 在 Nacos 的 `patra-gateway.yaml` 里写门户容器的固定地址 `192.168.97.250/32`（`docker-compose.apps.yaml` 里固定，两边一起改）。valve 对受信连接还会采用 `X-Forwarded-Proto` / `-Host` / `-Port`，门户按契约只发 `X-Forwarded-For` 与 `User-Agent`。
+2. **`ForwardedHeaderFilter`（`removeOnly`）**：剥掉剩下的一切 `Forwarded` / `X-Forwarded-*`，不改客户端地址。springdoc 的 Scalar starter 会给应用无条件注册一个「应用」入站转发头的 `ForwardedHeaderFilter`：客户端带 `X-Forwarded-Prefix` 就能改写网关看到的路径，让 `StripPrefix` 剥错段。网关在 `GatewaySecurityConfiguration.forwardedHeaderFilter()` 声明同类型的 Bean 让它让位，并开 `removeOnly`：只删不解释，最高优先级，先于 Security 和路由。
+
+出站：Gateway 按处理后的客户端地址写 `X-Forwarded-For` 与 `Forwarded: for=`，identity 的 `getRemoteAddr()` 就是它；`User-Agent` 原样转发。`spring.cloud.gateway.server.webmvc.trusted-proxies: ".*"` 只管出站头能不能写，不要收窄（收窄后非受信来源的请求出站一个转发头都没有，下游的 springdoc 地址还原就坏了）。valve 在 Tomcat 启动时读配置，改了要重启网关。
 
 ## HTTP 客户端、超时与线程
 
@@ -110,6 +115,7 @@ identity 自己的 `IDN-0401` 仍会出现：带有效断言但用户已封禁�
 | `REDIS_PASSWORD` | Redis 密码，用户 `default` | 无，来自 `~/.patra/secrets/redis.env` |
 | `PATRA_GATEWAY_IDENTITY_ASSERTION_PRIVATE_KEY` | 签断言的私钥，含私钥的 EC P-256 JWK JSON，带 `kid` | 无，来自 `~/.patra/secrets/gateway.env`；缺了启动失败 |
 | `PATRA_LOG_DIR` | 日志目录 | `logs` |
+| `SERVER_TOMCAT_REMOTEIP_INTERNAL_PROXIES` | 受信代理地址（CIDR，逗号分隔），只有它们发来的 `X-Forwarded-For` 被采用 | 空（谁都不信）；mini 在 Nacos 里写 `192.168.97.250/32` |
 
 端口 9528。
 
