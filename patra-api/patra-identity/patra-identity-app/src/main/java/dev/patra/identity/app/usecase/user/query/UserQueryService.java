@@ -1,13 +1,16 @@
 package dev.patra.identity.app.usecase.user.query;
 
+import dev.patra.identity.app.usecase.emailchange.PendingEmailChange;
 import dev.patra.identity.domain.exception.UserNotFoundException;
 import dev.patra.identity.domain.model.aggregate.FormerUsername;
+import dev.patra.identity.domain.model.enums.EmailTokenPurpose;
 import dev.patra.identity.domain.model.enums.UserStatus;
 import dev.patra.identity.domain.model.read.PublicUserLookup;
 import dev.patra.identity.domain.model.read.PublicUserReadModel;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.model.vo.Username;
 import dev.patra.identity.domain.port.read.UserReadPort;
+import dev.patra.identity.domain.port.repository.EmailTokenRepository;
 import dev.patra.identity.domain.port.repository.FormerUsernameRepository;
 import dev.patra.tool.core.security.AuthenticationRequiredException;
 import dev.patra.tool.core.security.CurrentUser;
@@ -18,7 +21,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-/// 「当前用户」和公开身份卡的查询。只读，不经 CommandBus，没有事务。
+/// 「当前用户」、待确认的改邮箱和公开身份卡的查询。只读，不经 CommandBus，没有事务。
 ///
 /// 当前用户：没有当前用户、会话指向的用户不存在、用户已封禁或已注销，这些情况都抛
 /// {@link AuthenticationRequiredException}（401）：对客户端来说都是「这个会话不再有效」。
@@ -34,6 +37,7 @@ public class UserQueryService {
   private final CurrentUserPort currentUserPort;
   private final UserReadPort userReadPort;
   private final FormerUsernameRepository formerUsernames;
+  private final EmailTokenRepository tokens;
   private final Clock clock;
 
   /// 当前登录用户的账号信息。
@@ -60,6 +64,17 @@ public class UserQueryService {
       throw new AuthenticationRequiredException();
     }
     return account;
+  }
+
+  /// 当前用户待确认的改邮箱：一条未过期的 `EMAIL_CHANGE_CONFIRM` 令牌。
+  ///
+  /// @return 新邮箱与到期时间；没有待确认时为空
+  /// @throws AuthenticationRequiredException 没有当前用户
+  public Optional<PendingEmailChange> pendingEmailChange() {
+    CurrentUser current = currentUserPort.require();
+    return tokens
+        .findActive(current.userId(), EmailTokenPurpose.EMAIL_CHANGE_CONFIRM, clock.instant())
+        .map(token -> PendingEmailChange.of(token.getEmail().value(), token.getExpiresAt()));
   }
 
   /// 按路径里的用户名查公开身份卡。请求者是当前用户（公开路由上网关照样翻译令牌），匿名时为空。

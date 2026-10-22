@@ -7,15 +7,21 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import dev.patra.identity.app.usecase.emailchange.PendingEmailChange;
 import dev.patra.identity.domain.exception.UserNotFoundException;
+import dev.patra.identity.domain.model.aggregate.EmailToken;
 import dev.patra.identity.domain.model.aggregate.FormerUsername;
+import dev.patra.identity.domain.model.enums.EmailTokenPurpose;
 import dev.patra.identity.domain.model.enums.UserStatus;
 import dev.patra.identity.domain.model.read.PublicAudience;
 import dev.patra.identity.domain.model.read.PublicUserLookup;
 import dev.patra.identity.domain.model.read.PublicUserReadModel;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
+import dev.patra.identity.domain.model.vo.EmailAddress;
+import dev.patra.identity.domain.model.vo.EmailTokenSecret;
 import dev.patra.identity.domain.model.vo.Username;
 import dev.patra.identity.domain.port.read.UserReadPort;
+import dev.patra.identity.domain.port.repository.EmailTokenRepository;
 import dev.patra.identity.domain.port.repository.FormerUsernameRepository;
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.AuthenticationRequiredException;
@@ -44,9 +50,10 @@ class UserQueryServiceTest {
   private final CurrentUserPort currentUserPort = mock(CurrentUserPort.class);
   private final UserReadPort userReadPort = mock(UserReadPort.class);
   private final FormerUsernameRepository formerUsernames = mock(FormerUsernameRepository.class);
+  private final EmailTokenRepository tokens = mock(EmailTokenRepository.class);
   private final UserQueryService service =
       new UserQueryService(
-          currentUserPort, userReadPort, formerUsernames, Clock.fixed(NOW, ZoneOffset.UTC));
+          currentUserPort, userReadPort, formerUsernames, tokens, Clock.fixed(NOW, ZoneOffset.UTC));
 
   /// 一个账号读模型。
   ///
@@ -104,6 +111,27 @@ class UserQueryServiceTest {
 
     assertThat(account.status()).isEqualTo(UserStatus.PENDING_DELETION);
     assertThat(account.deletionDueAt()).isEqualTo(NOW.plus(Duration.ofDays(15)));
+  }
+
+  @Test
+  @DisplayName("待确认的改邮箱：有未过期的确认令牌就返回新邮箱与到期时间，没有为空")
+  void should_expose_pending_email_change_from_active_confirm_token() {
+    when(currentUserPort.require()).thenReturn(OWNER);
+    EmailToken token =
+        EmailToken.issue(
+            EmailTokenPurpose.EMAIL_CHANGE_CONFIRM,
+            42L,
+            EmailAddress.of("new@example.com"),
+            new EmailTokenSecret("Q".repeat(43)),
+            NOW,
+            null);
+    when(tokens.findActive(42L, EmailTokenPurpose.EMAIL_CHANGE_CONFIRM, NOW))
+        .thenReturn(Optional.of(token))
+        .thenReturn(Optional.empty());
+
+    assertThat(service.pendingEmailChange())
+        .contains(PendingEmailChange.of("new@example.com", token.getExpiresAt()));
+    assertThat(service.pendingEmailChange()).isEmpty();
   }
 
   @Test
