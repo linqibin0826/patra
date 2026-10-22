@@ -45,7 +45,14 @@ class SmtpEmailDeliveryAdapterTest {
   private final JavaMailSender mailSender = mock(JavaMailSender.class);
   private final ThymeleafMailRenderer renderer =
       new ThymeleafMailRenderer(
-          MailLinkPolicy.of("https://patra.example", "/verify-email", "/settings/security"),
+          MailLinkPolicy.builder()
+              .baseUrl("https://patra.example")
+              .verifyEmailPath("/verify-email")
+              .securitySettingsPath("/settings/security")
+              .resetPasswordPath("/reset-password")
+              .confirmEmailChangePath("/confirm-email-change")
+              .revertEmailChangePath("/revert-email-change")
+              .build(),
           ZoneId.of("Asia/Shanghai"));
   private final EmailVerificationMail mail =
       EmailVerificationMail.of(

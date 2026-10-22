@@ -76,7 +76,9 @@ public class RegisterUserHandler implements CommandHandler<RegisterUserCommand, 
     List<FieldViolation> violations = new ArrayList<>();
     EmailAddress.validate(command.email()).ifPresent(violations::add);
     usernamePolicy.validate(command.username()).ifPresent(violations::add);
-    passwordPolicy.validateForRegistration(command.password()).ifPresent(violations::add);
+    passwordPolicy
+        .validate(command.password(), UserFieldViolations.PASSWORD)
+        .ifPresent(violations::add);
     violations.addAll(LoginClient.validate(command.clientType(), command.deviceId()));
     if (!violations.isEmpty()) {
       throw new InvalidUserFieldsException(violations);

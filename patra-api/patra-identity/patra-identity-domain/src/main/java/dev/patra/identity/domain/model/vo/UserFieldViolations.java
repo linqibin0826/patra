@@ -2,7 +2,7 @@ package dev.patra.identity.domain.model.vo;
 
 import dev.patra.tool.core.error.field.FieldViolation;
 
-/// 前台用户注册、登录时会报的字段错误。前端按原因码选文案，`message` 只是默认文案。
+/// 前台用户注册、登录、改密码、找回密码、改邮箱时会报的字段错误。前端按原因码选文案，`message` 只是默认文案。
 public final class UserFieldViolations {
 
   /// 邮箱字段名，和请求体一致。
@@ -62,6 +62,15 @@ public final class UserFieldViolations {
   /// 令牌不存在、已过期、已使用或已作废，不区分原因。
   public static final String INVALID = "INVALID";
 
+  /// 当前密码字段名（改密码），和请求体一致。
+  public static final String CURRENT_PASSWORD = "currentPassword";
+
+  /// 新密码字段名（改密码、重设密码），和请求体一致。
+  public static final String NEW_PASSWORD = "newPassword";
+
+  /// 新邮箱字段名（改邮箱），和请求体一致。
+  public static final String NEW_EMAIL = "newEmail";
+
   /// 只有静态方法。
   private UserFieldViolations() {}
 
@@ -69,56 +78,120 @@ public final class UserFieldViolations {
   ///
   /// @return 字段错误
   public static FieldViolation emailRequired() {
-    return FieldViolation.of(EMAIL, REQUIRED, "请输入邮箱");
+    return emailRequired(EMAIL);
+  }
+
+  /// 邮箱为空，按指定的字段名报错。
+  ///
+  /// @param field 字段名
+  /// @return 字段错误
+  public static FieldViolation emailRequired(String field) {
+    return FieldViolation.of(field, REQUIRED, "请输入邮箱");
   }
 
   /// 邮箱太长。
   ///
   /// @return 字段错误
   public static FieldViolation emailTooLong() {
-    return FieldViolation.of(EMAIL, TOO_LONG, "邮箱最长 254 个字符");
+    return emailTooLong(EMAIL);
+  }
+
+  /// 邮箱太长，按指定的字段名报错。
+  ///
+  /// @param field 字段名
+  /// @return 字段错误
+  public static FieldViolation emailTooLong(String field) {
+    return FieldViolation.of(field, TOO_LONG, "邮箱最长 254 个字符");
   }
 
   /// 邮箱格式不对。
   ///
   /// @return 字段错误
   public static FieldViolation emailInvalidFormat() {
-    return FieldViolation.of(EMAIL, INVALID_FORMAT, "邮箱格式不正确");
+    return emailInvalidFormat(EMAIL);
+  }
+
+  /// 邮箱格式不对，按指定的字段名报错。
+  ///
+  /// @param field 字段名
+  /// @return 字段错误
+  public static FieldViolation emailInvalidFormat(String field) {
+    return FieldViolation.of(field, INVALID_FORMAT, "邮箱格式不正确");
   }
 
   /// 密码为空。
   ///
   /// @return 字段错误
   public static FieldViolation passwordRequired() {
-    return FieldViolation.of(PASSWORD, REQUIRED, "请输入密码");
+    return passwordRequired(PASSWORD);
+  }
+
+  /// 密码为空，按指定的字段名报错。
+  ///
+  /// @param field 字段名
+  /// @return 字段错误
+  public static FieldViolation passwordRequired(String field) {
+    return FieldViolation.of(field, REQUIRED, "请输入密码");
   }
 
   /// 密码含不合法的 Unicode。
   ///
   /// @return 字段错误
   public static FieldViolation passwordInvalidCharacter() {
-    return FieldViolation.of(PASSWORD, INVALID_CHARACTER, "密码包含无效字符");
+    return passwordInvalidCharacter(PASSWORD);
+  }
+
+  /// 密码含不合法的 Unicode，按指定的字段名报错。
+  ///
+  /// @param field 字段名
+  /// @return 字段错误
+  public static FieldViolation passwordInvalidCharacter(String field) {
+    return FieldViolation.of(field, INVALID_CHARACTER, "密码包含无效字符");
   }
 
   /// 密码太短。
   ///
   /// @return 字段错误
   public static FieldViolation passwordTooShort() {
-    return FieldViolation.of(PASSWORD, TOO_SHORT, "密码至少 8 位");
+    return passwordTooShort(PASSWORD);
+  }
+
+  /// 密码太短，按指定的字段名报错。
+  ///
+  /// @param field 字段名
+  /// @return 字段错误
+  public static FieldViolation passwordTooShort(String field) {
+    return FieldViolation.of(field, TOO_SHORT, "密码至少 8 位");
   }
 
   /// 密码太长。
   ///
   /// @return 字段错误
   public static FieldViolation passwordTooLong() {
-    return FieldViolation.of(PASSWORD, TOO_LONG, "密码最长 64 位");
+    return passwordTooLong(PASSWORD);
+  }
+
+  /// 密码太长，按指定的字段名报错。
+  ///
+  /// @param field 字段名
+  /// @return 字段错误
+  public static FieldViolation passwordTooLong(String field) {
+    return FieldViolation.of(field, TOO_LONG, "密码最长 64 位");
   }
 
   /// 密码太常见。
   ///
   /// @return 字段错误
   public static FieldViolation passwordTooCommon() {
-    return FieldViolation.of(PASSWORD, TOO_COMMON, "这个密码太常见，容易被猜到，请换一个");
+    return passwordTooCommon(PASSWORD);
+  }
+
+  /// 密码太常见，按指定的字段名报错。
+  ///
+  /// @param field 字段名
+  /// @return 字段错误
+  public static FieldViolation passwordTooCommon(String field) {
+    return FieldViolation.of(field, TOO_COMMON, "这个密码太常见，容易被猜到，请换一个");
   }
 
   /// 客户端类型不认识。
@@ -266,5 +339,19 @@ public final class UserFieldViolations {
   /// @return 字段错误
   public static FieldViolation displayNameReserved() {
     return FieldViolation.of(DISPLAY_NAME, RESERVED, "这个昵称不能使用");
+  }
+
+  /// 新密码与当前密码相同。
+  ///
+  /// @return 字段错误
+  public static FieldViolation newPasswordUnchanged() {
+    return FieldViolation.of(NEW_PASSWORD, UNCHANGED, "新密码不能与当前密码相同");
+  }
+
+  /// 新邮箱与当前邮箱相同。
+  ///
+  /// @return 字段错误
+  public static FieldViolation newEmailUnchanged() {
+    return FieldViolation.of(NEW_EMAIL, UNCHANGED, "新邮箱与当前邮箱相同");
   }
 }

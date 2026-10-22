@@ -33,7 +33,14 @@ class EmailVerificationIssuerTest {
 
   private static final Instant NOW = Instant.parse("2026-10-21T08:00:00Z");
   private static final MailLinkPolicy LINKS =
-      MailLinkPolicy.of("https://patra.example", "/verify-email", "/settings/security");
+      MailLinkPolicy.builder()
+          .baseUrl("https://patra.example")
+          .verifyEmailPath("/verify-email")
+          .securitySettingsPath("/settings/security")
+          .resetPasswordPath("/reset-password")
+          .confirmEmailChangePath("/confirm-email-change")
+          .revertEmailChangePath("/revert-email-change")
+          .build();
 
   private final EmailTokenRepository tokens = mock(EmailTokenRepository.class);
   private final EmailVerificationIssuer issuer =

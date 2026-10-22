@@ -176,15 +176,21 @@ public class IdentityConfiguration {
         resend.perIpHourly());
   }
 
-  /// 邮件里站内链接的拼法。门户地址不是绝对的 http(s) 地址、路径不以 `/` 开头时启动失败。
+  /// 邮件里站内链接的拼法。门户地址不是绝对的 http(s) 地址、五个路径不以 `/` 开头时启动失败。
   ///
   /// @param properties 配置
   /// @return 规则
   @Bean
   public MailLinkPolicy mailLinkPolicy(IdentityProperties properties) {
     IdentityProperties.Links links = properties.mail().links();
-    return MailLinkPolicy.of(
-        links.baseUrl(), links.verifyEmailPath(), links.securitySettingsPath());
+    return MailLinkPolicy.builder()
+        .baseUrl(links.baseUrl())
+        .verifyEmailPath(links.verifyEmailPath())
+        .securitySettingsPath(links.securitySettingsPath())
+        .resetPasswordPath(links.resetPasswordPath())
+        .confirmEmailChangePath(links.confirmEmailChangePath())
+        .revertEmailChangePath(links.revertEmailChangePath())
+        .build();
   }
 
   /// 签发验证邮箱令牌的领域服务。

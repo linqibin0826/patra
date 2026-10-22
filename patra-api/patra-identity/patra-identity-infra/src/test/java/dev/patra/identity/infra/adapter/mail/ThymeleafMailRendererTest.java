@@ -18,7 +18,14 @@ import org.junit.jupiter.api.Test;
 class ThymeleafMailRendererTest {
 
   private static final MailLinkPolicy LINKS =
-      MailLinkPolicy.of("https://patra.example", "/verify-email", "/settings/security");
+      MailLinkPolicy.builder()
+          .baseUrl("https://patra.example")
+          .verifyEmailPath("/verify-email")
+          .securitySettingsPath("/settings/security")
+          .resetPasswordPath("/reset-password")
+          .confirmEmailChangePath("/confirm-email-change")
+          .revertEmailChangePath("/revert-email-change")
+          .build();
   private static final String VERIFY_URL = "https://patra.example/verify-email#token=abc";
 
   private final ThymeleafMailRenderer renderer =

@@ -47,25 +47,42 @@ public record EmailAddress(String value) {
     return new EmailAddress(normalize(raw));
   }
 
-  /// 校验用户输入。先去掉首尾空白，再依次查空、长度、格式。
+  /// 校验用户输入，字段名是 `email`。
   ///
   /// @param raw 用户输入，可以为 `null`
   /// @return 第一条不满足的规则；合法时为空
   public static Optional<FieldViolation> validate(String raw) {
+    return validate(raw, UserFieldViolations.EMAIL);
+  }
+
+  /// 校验用户输入，按指定的字段名报错。先去掉首尾空白，再依次查空、长度、格式。
+  ///
+  /// @param raw 用户输入，可以为 `null`
+  /// @param field 报错时的字段名（`email` 或 `newEmail`）
+  /// @return 第一条不满足的规则；合法时为空
+  public static Optional<FieldViolation> validate(String raw, String field) {
     if (raw == null) {
-      return Optional.of(UserFieldViolations.emailRequired());
+      return Optional.of(UserFieldViolations.emailRequired(field));
     }
     String stripped = raw.strip();
     if (stripped.isEmpty()) {
-      return Optional.of(UserFieldViolations.emailRequired());
+      return Optional.of(UserFieldViolations.emailRequired(field));
     }
     if (stripped.length() > MAX_LENGTH) {
-      return Optional.of(UserFieldViolations.emailTooLong());
+      return Optional.of(UserFieldViolations.emailTooLong(field));
     }
     if (!FORMAT.matcher(stripped).matches()) {
-      return Optional.of(UserFieldViolations.emailInvalidFormat());
+      return Optional.of(UserFieldViolations.emailInvalidFormat(field));
     }
     return Optional.empty();
+  }
+
+  /// 遮掩后的形式：本地部分只留首字符，`c***@example.com`。通知旧邮箱时不把新地址完整写出来。
+  ///
+  /// @return 遮掩后的邮箱
+  public String masked() {
+    int at = value.indexOf('@');
+    return value.substring(0, 1) + "***" + value.substring(at);
   }
 
   /// 去掉首尾空白、转成小写。

@@ -245,6 +245,22 @@ public final class User {
     }
   }
 
+  /// 改邮箱：换地址并把验证时间记成现在——点确认链接或撤销链接的人证明了对这个地址的控制。
+  /// 其他状态不拦，调用方自己判。
+  ///
+  /// @param next 规范化之后的新邮箱
+  /// @param now 当前时间
+  /// @throws InvalidUserStateTransitionException 已注销
+  public void changeEmail(EmailAddress next, Instant now) {
+    Objects.requireNonNull(next, "next 不能为 null");
+    Objects.requireNonNull(now, "now 不能为 null");
+    if (status == UserStatus.DELETED) {
+      throw transition("changeEmail");
+    }
+    email = next;
+    emailVerifiedAt = now;
+  }
+
   /// `/me/**` 写接口的状态守卫：正常放行；冷静期内 409 并带 `PENDING_DELETION` 特征；
   /// 已封禁、已注销 401（这个会话不再有效，和「当前用户」接口一致）。
   ///

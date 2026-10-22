@@ -36,17 +36,26 @@ public final class PlainPassword {
     return new PlainPassword(raw);
   }
 
-  /// 校验用户输入：不能为空，不能含孤立的 UTF-16 代理项。
+  /// 校验用户输入，字段名是 `password`。
   ///
   /// @param raw 用户输入，可以为 `null`
   /// @return 第一条不满足的规则；合法时为空
   public static Optional<FieldViolation> validate(String raw) {
+    return validate(raw, UserFieldViolations.PASSWORD);
+  }
+
+  /// 校验用户输入，按指定的字段名报错：不能为空，不能含孤立的 UTF-16 代理项。
+  ///
+  /// @param raw 用户输入，可以为 `null`
+  /// @param field 报错时的字段名（`password`、`currentPassword` 或 `newPassword`）
+  /// @return 第一条不满足的规则；合法时为空
+  public static Optional<FieldViolation> validate(String raw, String field) {
     if (raw == null || raw.isEmpty()) {
-      return Optional.of(UserFieldViolations.passwordRequired());
+      return Optional.of(UserFieldViolations.passwordRequired(field));
     }
     // codePoints() 会把成对的代理项合成一个码点，孤立的代理项则原样给出，落在这个区间里
     if (raw.codePoints().anyMatch(codePoint -> codePoint >= 0xD800 && codePoint <= 0xDFFF)) {
-      return Optional.of(UserFieldViolations.passwordInvalidCharacter());
+      return Optional.of(UserFieldViolations.passwordInvalidCharacter(field));
     }
     return Optional.empty();
   }

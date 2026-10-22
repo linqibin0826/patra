@@ -30,4 +30,16 @@ class UserPasswordCredentialTest {
 
     assertThat(credential.toString()).doesNotContain("argon2id").contains("42");
   }
+
+  @Test
+  @DisplayName("换哈希：旧哈希不保留")
+  void should_rotate_hash() {
+    UserPasswordCredential credential = UserPasswordCredential.restore(7L, 42L, HASH, 0L);
+    PasswordHash next = PasswordHash.of("$argon2id$v=19$m=19456,t=2,p=1$c2FsdA$bmV3aGFzaA");
+
+    credential.rotate(next);
+
+    assertThat(credential.getPasswordHash()).isEqualTo(next);
+    assertThat(credential.getId()).isEqualTo(7L);
+  }
 }

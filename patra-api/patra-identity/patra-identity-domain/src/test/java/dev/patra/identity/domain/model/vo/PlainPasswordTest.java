@@ -73,4 +73,14 @@ class PlainPasswordTest {
         .isEqualTo("***")
         .doesNotContain("Secret");
   }
+
+  @Test
+  @DisplayName("按指定字段名报错：改密码用 currentPassword / newPassword")
+  void should_report_violation_under_given_field() {
+    assertThat(PlainPassword.validate("", "currentPassword").orElseThrow().field())
+        .isEqualTo("currentPassword");
+    assertThat(PlainPassword.validate("abc\uD800", "newPassword").orElseThrow().field())
+        .isEqualTo("newPassword");
+    assertThat(PlainPassword.validate("").orElseThrow().field()).isEqualTo("password");
+  }
 }

@@ -38,7 +38,14 @@ class SmtpEmailDeliveryAdapterIT {
     sender.setPort(GreenMailSmtpInitializer.getSmtpPort());
     ThymeleafMailRenderer renderer =
         new ThymeleafMailRenderer(
-            MailLinkPolicy.of("https://patra.example", "/verify-email", "/settings/security"),
+            MailLinkPolicy.builder()
+                .baseUrl("https://patra.example")
+                .verifyEmailPath("/verify-email")
+                .securitySettingsPath("/settings/security")
+                .resetPasswordPath("/reset-password")
+                .confirmEmailChangePath("/confirm-email-change")
+                .revertEmailChangePath("/revert-email-change")
+                .build(),
             ZoneId.of("Asia/Shanghai"));
     try (SmtpEmailDeliveryAdapter adapter =
         SmtpEmailDeliveryAdapter.async(sender, renderer, "Patra <no-reply@patra.local>", 2)) {

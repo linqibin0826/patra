@@ -292,4 +292,26 @@ class UserTest {
     user.completeDeletion(T0.plus(COOLING));
     return user;
   }
+
+  @Test
+  @DisplayName("改邮箱：换地址并把验证时间记成现在")
+  void should_change_email_and_mark_verified_now() {
+    User user = User.register(EMAIL, USERNAME);
+
+    user.changeEmail(EmailAddress.of("new@example.com"), T0);
+
+    assertThat(user.getEmail()).contains(EmailAddress.of("new@example.com"));
+    assertThat(user.getEmailVerifiedAt()).isEqualTo(T0);
+  }
+
+  @Test
+  @DisplayName("已注销的用户不能改邮箱")
+  void should_reject_change_email_when_deleted() {
+    User user = User.register(EMAIL, USERNAME);
+    user.requestDeletion(T0, COOLING);
+    user.completeDeletion(T0.plus(COOLING));
+
+    assertThatThrownBy(() -> user.changeEmail(EmailAddress.of("new@example.com"), T0))
+        .isInstanceOf(InvalidUserStateTransitionException.class);
+  }
 }

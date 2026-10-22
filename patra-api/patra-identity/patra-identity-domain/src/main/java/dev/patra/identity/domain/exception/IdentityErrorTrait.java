@@ -13,5 +13,14 @@ public enum IdentityErrorTrait implements ErrorTrait {
   USERNAME_CHANGE_COOLDOWN,
 
   /// 邮箱已经验证过了，重发验证邮件被拒（409）。
-  EMAIL_ALREADY_VERIFIED
+  EMAIL_ALREADY_VERIFIED,
+
+  /// 最近一次输密码已超过再认证窗口，敏感操作被拒（403）；门户弹密码框后重试。
+  REAUTH_REQUIRED,
+
+  /// 已有一个待确认的改邮箱申请（409）。
+  EMAIL_CHANGE_PENDING,
+
+  /// 再认证或改密码时当前密码不正确（401）；和「会话失效」的 401 区分开，门户不把它当登出。
+  PASSWORD_MISMATCH
 }

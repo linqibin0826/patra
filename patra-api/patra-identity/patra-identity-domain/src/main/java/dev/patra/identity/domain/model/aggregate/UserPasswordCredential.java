@@ -4,7 +4,7 @@ import dev.patra.identity.domain.model.vo.PasswordHash;
 import java.util.Objects;
 import lombok.Getter;
 
-/// 前台用户的密码凭据聚合根。只在注册和登录两条路径上加载。
+/// 前台用户的密码凭据聚合根。注册、登录、再认证、改密码、重设密码时加载。
 @Getter
 public final class UserPasswordCredential {
 
@@ -43,6 +43,13 @@ public final class UserPasswordCredential {
     credential.passwordHash = Objects.requireNonNull(passwordHash, "passwordHash 不能为 null");
     credential.version = version;
     return credential;
+  }
+
+  /// 换哈希。旧哈希不保留：不存历史密码。
+  ///
+  /// @param next 新密码的哈希
+  public void rotate(PasswordHash next) {
+    passwordHash = Objects.requireNonNull(next, "next 不能为 null");
   }
 
   /// 不输出哈希。

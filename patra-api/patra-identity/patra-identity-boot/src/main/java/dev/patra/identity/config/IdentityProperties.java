@@ -38,10 +38,16 @@ public record IdentityProperties(
   /// @param baseUrl 门户的绝对地址
   /// @param verifyEmailPath 验证邮箱落地页的路径
   /// @param securitySettingsPath 安全设置页的路径
+  /// @param resetPasswordPath 重设密码落地页的路径
+  /// @param confirmEmailChangePath 确认改邮箱落地页的路径
+  /// @param revertEmailChangePath 撤销改邮箱落地页的路径
   public record Links(
       @DefaultValue("http://linqibins-mac-mini:4000") String baseUrl,
       @DefaultValue("/verify-email") String verifyEmailPath,
-      @DefaultValue("/settings/security") String securitySettingsPath) {}
+      @DefaultValue("/settings/security") String securitySettingsPath,
+      @DefaultValue("/reset-password") String resetPasswordPath,
+      @DefaultValue("/confirm-email-change") String confirmEmailChangePath,
+      @DefaultValue("/revert-email-change") String revertEmailChangePath) {}
 
   /// 重发验证邮件的限流。
   ///

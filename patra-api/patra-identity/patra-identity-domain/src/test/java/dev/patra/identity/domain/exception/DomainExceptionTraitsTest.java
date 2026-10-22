@@ -54,6 +54,14 @@ class DomainExceptionTraitsTest {
         Arguments.of(
             new EmailResendLimitedException(Duration.ofSeconds(60)),
             "发送过于频繁，请稍后再试",
+            StandardErrorTrait.QUOTA_EXCEEDED),
+        Arguments.of(
+            new PasswordResetLimitedException(Duration.ofSeconds(7)),
+            "操作过于频繁，请稍后再试",
+            StandardErrorTrait.QUOTA_EXCEEDED),
+        Arguments.of(
+            new EmailChangeLimitedException(Duration.ofHours(6)),
+            "今天更改邮箱的次数已用完，请明天再试",
             StandardErrorTrait.QUOTA_EXCEEDED));
   }
 
@@ -132,5 +140,54 @@ class DomainExceptionTraitsTest {
         .containsExactly("email", "username");
     assertThatThrownBy(() -> new UserIdentifierTakenException(List.of()))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  @DisplayName("再认证超时是 403：FORBIDDEN 之外带 REAUTH_REQUIRED")
+  void should_carry_reauth_required_trait_beside_forbidden() {
+    ReauthenticationRequiredException exception = new ReauthenticationRequiredException();
+
+    assertThat(exception.getMessage()).isEqualTo("请重新输入密码以继续");
+    assertThat(exception.getErrorTraits())
+        .containsExactlyInAnyOrder(
+            StandardErrorTrait.FORBIDDEN, IdentityErrorTrait.REAUTH_REQUIRED);
+  }
+
+  @Test
+  @DisplayName("当前密码错误是 401：UNAUTHORIZED 之外带 PASSWORD_MISMATCH，门户不把它当登出")
+  void should_carry_password_mismatch_trait_beside_unauthorized() {
+    CurrentPasswordMismatchException exception = new CurrentPasswordMismatchException();
+
+    assertThat(exception.getMessage()).isEqualTo("密码不正确");
+    assertThat(exception.getErrorTraits())
+        .containsExactlyInAnyOrder(
+            StandardErrorTrait.UNAUTHORIZED, IdentityErrorTrait.PASSWORD_MISMATCH);
+  }
+
+  @Test
+  @DisplayName("已有待确认的改邮箱是 409：CONFLICT 之外带 EMAIL_CHANGE_PENDING")
+  void should_carry_email_change_pending_trait_beside_conflict() {
+    EmailChangePendingException exception = new EmailChangePendingException();
+
+    assertThat(exception.getMessage()).isEqualTo("已有一个待确认的邮箱更改，请先取消或等它过期");
+    assertThat(exception.getErrorTraits())
+        .containsExactlyInAnyOrder(
+            StandardErrorTrait.CONFLICT, IdentityErrorTrait.EMAIL_CHANGE_PENDING);
+  }
+
+  @Test
+  @DisplayName("找回密码与改邮箱的限流都带 Retry-After；新的字段错误码固定")
+  void should_expose_retry_after_for_new_limits_and_new_field_codes() {
+    assertThat(new PasswordResetLimitedException(Duration.ofSeconds(7)).getRetryAfter())
+        .isEqualTo(Duration.ofSeconds(7));
+    assertThat(new EmailChangeLimitedException(Duration.ofHours(6)).getRetryAfterSeconds())
+        .isEqualTo(21_600);
+    assertThat(UserFieldViolations.newPasswordUnchanged().field()).isEqualTo("newPassword");
+    assertThat(UserFieldViolations.newPasswordUnchanged().code()).isEqualTo("UNCHANGED");
+    assertThat(UserFieldViolations.newEmailUnchanged().field()).isEqualTo("newEmail");
+    assertThat(UserFieldViolations.newEmailUnchanged().code()).isEqualTo("UNCHANGED");
+    assertThat(UserFieldViolations.CURRENT_PASSWORD).isEqualTo("currentPassword");
+    assertThat(UserFieldViolations.passwordRequired(UserFieldViolations.CURRENT_PASSWORD).field())
+        .isEqualTo("currentPassword");
   }
 }
