@@ -5,6 +5,8 @@ import dev.patra.identity.domain.exception.UserModifiedConcurrentlyException;
 import dev.patra.identity.domain.model.aggregate.User;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.Username;
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 /// 前台用户仓储。
@@ -57,4 +59,21 @@ public interface UserRepository {
   /// @throws UserIdentifierTakenException 撞上邮箱或用户名的唯一约束（并发注册、并发改名）
   /// @throws UserModifiedConcurrentlyException 撞上乐观锁
   User save(User user);
+
+  /// 冷静期已到期（到期时间不晚于 `now`）的用户 ID，按 ID 升序，从游标之后取一批：注销到期执行任务用。
+  ///
+  /// @param now 当前时间
+  /// @param afterId 游标，只取比它大的 ID
+  /// @param limit 一批最多几个
+  /// @return 用户 ID
+  List<Long> findIdsDueForDeletion(Instant now, long afterId, int limit);
+
+  /// 该发到期前提醒的用户 ID：冷静期、没提醒过、`now < 到期时间 <= dueUntil`；按 ID 升序，从游标之后取一批。
+  ///
+  /// @param now 当前时间
+  /// @param dueUntil 到期时间的上界（含），即现在加提前量
+  /// @param afterId 游标，只取比它大的 ID
+  /// @param limit 一批最多几个
+  /// @return 用户 ID
+  List<Long> findIdsDueForDeletionReminder(Instant now, Instant dueUntil, long afterId, int limit);
 }

@@ -11,6 +11,7 @@ import dev.patra.identity.infra.adapter.persistence.converter.mapper.UserJpaMapp
 import dev.patra.identity.infra.adapter.persistence.dao.UserDao;
 import dev.patra.identity.infra.adapter.persistence.entity.UserEntity;
 import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -125,5 +126,29 @@ public class UserRepositoryAdapter implements UserRepository {
   private static boolean violates(DataIntegrityViolationException ex, String constraint) {
     return ex.getCause() instanceof ConstraintViolationException violation
         && constraint.equalsIgnoreCase(violation.getConstraintName());
+  }
+
+  /// 冷静期已到期的用户 ID。
+  ///
+  /// @param now 当前时间
+  /// @param afterId 游标
+  /// @param limit 一批最多几个
+  /// @return 用户 ID，按 ID 升序
+  @Override
+  public List<Long> findIdsDueForDeletion(Instant now, long afterId, int limit) {
+    return dao.findIdsDueForDeletion(now, afterId, limit);
+  }
+
+  /// 该发到期前提醒的用户 ID。
+  ///
+  /// @param now 当前时间
+  /// @param dueUntil 到期时间的上界（含）
+  /// @param afterId 游标
+  /// @param limit 一批最多几个
+  /// @return 用户 ID，按 ID 升序
+  @Override
+  public List<Long> findIdsDueForDeletionReminder(
+      Instant now, Instant dueUntil, long afterId, int limit) {
+    return dao.findIdsDueForDeletionReminder(now, dueUntil, afterId, limit);
   }
 }

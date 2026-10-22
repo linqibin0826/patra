@@ -21,6 +21,7 @@ CREATE TABLE idn_user
     status              VARCHAR(16)     NOT NULL,
     banned_at           timestamptz(6)  NULL,
     deletion_due_at     timestamptz(6)  NULL,
+    deletion_reminded_at timestamptz(6) NULL,
     deleted_at          timestamptz(6)  NULL,
     record_remarks      jsonb           NULL,
     version             BIGINT          NOT NULL DEFAULT 0,
@@ -44,6 +45,7 @@ CREATE TABLE idn_user
     CONSTRAINT ck_idn_user_status CHECK (status IN ('ACTIVE', 'BANNED', 'PENDING_DELETION', 'DELETED')),
     CONSTRAINT ck_idn_user_banned_at CHECK ((status = 'BANNED') = (banned_at IS NOT NULL)),
     CONSTRAINT ck_idn_user_deletion_due_at CHECK ((status = 'PENDING_DELETION') = (deletion_due_at IS NOT NULL)),
+    CONSTRAINT ck_idn_user_deletion_reminded_at CHECK (deletion_reminded_at IS NULL OR status = 'PENDING_DELETION'),
     CONSTRAINT ck_idn_user_deleted_at CHECK ((status = 'DELETED') = (deleted_at IS NOT NULL))
 );
 
@@ -56,6 +58,7 @@ COMMENT ON COLUMN idn_user.username_changed_at IS 'Last username change (UTC); n
 COMMENT ON COLUMN idn_user.status IS 'ACTIVE, BANNED, PENDING_DELETION or DELETED';
 COMMENT ON COLUMN idn_user.banned_at IS 'Set when BANNED, null otherwise';
 COMMENT ON COLUMN idn_user.deletion_due_at IS 'Set when PENDING_DELETION: when the deletion is executed (UTC)';
+COMMENT ON COLUMN idn_user.deletion_reminded_at IS 'Set when PENDING_DELETION and the pre-deletion reminder has been sent (UTC); cleared on cancel, ban and completion';
 COMMENT ON COLUMN idn_user.deleted_at IS 'Set when DELETED: when the deletion was executed (UTC)';
 COMMENT ON COLUMN idn_user.record_remarks IS 'Audit remarks log';
 COMMENT ON COLUMN idn_user.version IS 'Optimistic lock version number';
@@ -66,6 +69,8 @@ COMMENT ON COLUMN idn_user.created_by_name IS 'Creator name';
 COMMENT ON COLUMN idn_user.updated_at IS 'Last update time (UTC)';
 COMMENT ON COLUMN idn_user.updated_by IS 'Updater ID';
 COMMENT ON COLUMN idn_user.updated_by_name IS 'Updater name';
+
+CREATE INDEX idx_idn_user_deletion_due_at ON idn_user (deletion_due_at) WHERE status = 'PENDING_DELETION';
 
 CREATE TRIGGER trg_idn_user_updated_at
     BEFORE UPDATE ON idn_user

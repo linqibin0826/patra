@@ -49,6 +49,7 @@ public interface UserJpaMapper {
         .status(UserStatus.valueOf(entity.getStatus()))
         .bannedAt(entity.getBannedAt())
         .deletionDueAt(entity.getDeletionDueAt())
+        .deletionRemindedAt(entity.getDeletionRemindedAt())
         .deletedAt(entity.getDeletedAt())
         .version(entity.getVersion())
         .createdAt(entity.getCreatedAt())

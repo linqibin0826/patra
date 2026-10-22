@@ -49,6 +49,10 @@ public class UserEntity extends BaseJpaEntity {
   @Column(name = "deletion_due_at")
   private Instant deletionDueAt;
 
+  /// 到期前提醒的发送时间，只在冷静期内可能有值
+  @Column(name = "deletion_reminded_at")
+  private Instant deletionRemindedAt;
+
   /// 注销完成时间，未注销时为 null
   @Column(name = "deleted_at")
   private Instant deletedAt;

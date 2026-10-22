@@ -15,6 +15,7 @@ import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.autoconfigure.PatraHibernatePropertiesCustomizer;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -31,6 +32,8 @@ import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -55,6 +58,7 @@ class UserRepositoryAdapterIT {
 
   @Autowired private UserRepositoryAdapter repository;
   @Autowired private PlatformTransactionManager transactionManager;
+  @Autowired private JdbcTemplate jdbcTemplate;
 
   @Test
   @DisplayName("保存新用户时分配雪花 ID，能按邮箱、用户名和 ID 查回")
@@ -237,5 +241,102 @@ class UserRepositoryAdapterIT {
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }
+  }
+
+  /// 注销申请时刻。
+  private static final Instant REQUESTED = Instant.parse("2026-10-20T08:00:00Z");
+
+  /// 冷静期。
+  private static final Duration COOLING = Duration.ofDays(15);
+
+  /// 存一个在冷静期的用户，到期时间是申请时刻加冷静期。
+  ///
+  /// @param name 用户名，也拼进邮箱
+  /// @param requestedAt 申请时刻
+  /// @return 保存后的用户
+  private User savePending(String name, Instant requestedAt) {
+    User user =
+        repository.save(User.register(EmailAddress.of(name + "@example.com"), Username.of(name)));
+    user.requestDeletion(requestedAt, COOLING);
+    return repository.save(user);
+  }
+
+  @Test
+  @DisplayName("注销提醒标记能存能读，取消后读回为空")
+  void should_round_trip_deletion_reminded_at() {
+    User user = savePending("u-remind-trip", REQUESTED);
+    Instant remindedAt = REQUESTED.plus(Duration.ofDays(12));
+    user.markDeletionReminded(remindedAt);
+    repository.save(user);
+
+    User reloaded = repository.findById(user.getId()).orElseThrow();
+    assertThat(reloaded.getDeletionRemindedAt()).isEqualTo(remindedAt);
+
+    reloaded.cancelDeletion();
+    repository.save(reloaded);
+    assertThat(repository.findById(user.getId()).orElseThrow().getDeletionRemindedAt()).isNull();
+  }
+
+  @Test
+  @DisplayName("不在冷静期的行写注销提醒标记被约束拒绝")
+  void should_reject_reminded_at_outside_pending_deletion() {
+    User active =
+        repository.save(
+            User.register(
+                EmailAddress.of("remind.active@example.com"), Username.of("u-remind-act")));
+
+    assertThatThrownBy(
+            () ->
+                jdbcTemplate.update(
+                    "UPDATE idn_user SET deletion_reminded_at = now() WHERE id = ?",
+                    active.getId()))
+        .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  @DisplayName("到期扫描：只取冷静期且已到期的，按 ID 升序、从游标之后取、受上限约束")
+  void should_find_due_ids_in_id_order_after_cursor() {
+    User first = savePending("u-due-first", REQUESTED);
+    User second = savePending("u-due-second", REQUESTED);
+    User third = savePending("u-due-third", REQUESTED);
+    savePending("u-due-later", REQUESTED.plus(Duration.ofDays(1)));
+    repository.save(
+        User.register(EmailAddress.of("due.active@example.com"), Username.of("u-due-active")));
+    Instant now = REQUESTED.plus(COOLING);
+    long cursor = first.getId() - 1;
+
+    assertThat(repository.findIdsDueForDeletion(now, cursor, 2))
+        .containsExactly(first.getId(), second.getId());
+    assertThat(repository.findIdsDueForDeletion(now, second.getId(), 2))
+        .containsExactly(third.getId());
+  }
+
+  @Test
+  @DisplayName("提醒扫描：只取窗口内、未提醒的冷静期用户")
+  void should_find_reminder_ids_inside_window_only() {
+    Instant now = REQUESTED.plus(Duration.ofDays(12));
+    User inside = savePending("u-rem-inside", REQUESTED);
+    User reminded = savePending("u-rem-done", REQUESTED);
+    reminded.markDeletionReminded(now);
+    repository.save(reminded);
+    savePending("u-rem-outside", REQUESTED.plus(Duration.ofDays(1)));
+
+    List<Long> ids =
+        repository.findIdsDueForDeletionReminder(
+            now, now.plus(Duration.ofDays(3)), inside.getId() - 1, 100);
+
+    assertThat(ids).containsExactly(inside.getId());
+  }
+
+  @Test
+  @DisplayName("提醒扫描不取已经到期的用户：交给执行任务")
+  void should_not_pick_overdue_users_for_reminder() {
+    User overdue = savePending("u-rem-overdue", REQUESTED);
+    Instant now = REQUESTED.plus(COOLING).plusSeconds(1);
+
+    assertThat(
+            repository.findIdsDueForDeletionReminder(
+                now, now.plus(Duration.ofDays(3)), overdue.getId() - 1, 100))
+        .doesNotContain(overdue.getId());
   }
 }
