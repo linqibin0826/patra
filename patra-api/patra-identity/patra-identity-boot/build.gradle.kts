@@ -28,6 +28,10 @@ dependencies {
     // 装配 RedisSessionStore
     implementation(project(":patra-api:patra-identity:patra-identity-session"))
 
+    // 装配 catalog 内部接口的 HTTP Interface 代理（PAP-95）
+    implementation(project(":patra-api:patra-catalog:patra-catalog-api"))
+    implementation(project(":patra-tool:patra-tool-http-client"))
+
     testImplementation(project(":patra-tool:patra-tool-test"))
 
     // 测试里自动注入测试公钥，并能签出带身份的请求头

@@ -37,6 +37,14 @@ patra:
   web:
     error:
       context-prefix: IDN
+  http-client:
+    http-interface:
+      groups:
+        # 保存资料时调 catalog 的内部接口（主键查询，毫秒级）：超时压短，catalog 卡住时一次保存很快 503
+        catalog:
+          base-url: lb://patra-catalog
+          connect-timeout: 1s
+          read-timeout: 2s
   identity:
     # 登录失败限制可在线刷新：默认值在 LoginThrottleProperties，要调就在 Nacos 的 patra-identity.yaml 里加键
     password-hashing:

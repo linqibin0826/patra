@@ -44,6 +44,10 @@ class DomainExceptionTraitsTest {
         Arguments.of(
             new TemporarilyUnavailableException(), "服务暂时不可用", StandardErrorTrait.DEP_UNAVAILABLE),
         Arguments.of(
+            new CatalogUnavailableException(new IllegalStateException("down")),
+            "机构与关注领域暂时无法校验，请稍后再试",
+            StandardErrorTrait.DEP_UNAVAILABLE),
+        Arguments.of(
             new UserIdentifierTakenException(List.of(UserFieldViolations.emailAlreadyRegistered())),
             "邮箱或用户名已被使用",
             StandardErrorTrait.CONFLICT),

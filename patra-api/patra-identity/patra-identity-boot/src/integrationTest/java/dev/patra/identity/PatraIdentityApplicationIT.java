@@ -31,7 +31,7 @@ class PatraIdentityApplicationIT {
   @Autowired private Environment environment;
 
   @Test
-  @DisplayName("启动时 Flyway 用一份 V1 建好六张表")
+  @DisplayName("启动时 Flyway 用一份 V1 建好八张表")
   void should_create_identity_tables_on_startup() {
     List<String> tables =
         jdbcTemplate.queryForList(
@@ -47,7 +47,9 @@ class PatraIdentityApplicationIT {
             "idn_user_former_username",
             "idn_user_login_record",
             "idn_user_password_credential",
-            "idn_user_profile");
+            "idn_user_profile",
+            "idn_user_profile_link",
+            "idn_user_research_interest");
   }
 
   @Test
