@@ -11,6 +11,7 @@ import dev.patra.identity.domain.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.model.vo.DisplayName;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.Username;
+import dev.patra.identity.domain.model.vo.profile.ProfileContent;
 import dev.patra.identity.infra.adapter.persistence.UserProfileRepositoryAdapter;
 import dev.patra.identity.infra.adapter.persistence.UserRepositoryAdapter;
 import dev.patra.identity.infra.config.IdentityITPostgreSQLContainerInitializer;
@@ -84,7 +85,7 @@ class UserReadAdapterIT {
     User saved =
         users.save(User.register(EmailAddress.of("named@example.com"), Username.of("u-named")));
     UserProfile profile = profiles.save(UserProfile.create(saved.getId()));
-    profile.rename(new DisplayName("陈宇"));
+    profile.edit(ProfileContent.builder().displayName(new DisplayName("陈宇")).build());
     profiles.save(profile);
     saved.markEmailVerified(T0);
     saved.ban(T0);

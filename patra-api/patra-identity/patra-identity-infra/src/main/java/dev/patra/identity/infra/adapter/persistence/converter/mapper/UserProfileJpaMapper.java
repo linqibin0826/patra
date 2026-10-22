@@ -36,12 +36,14 @@ public interface UserProfileJpaMapper {
     if (entity == null) {
       return null;
     }
-    return UserProfile.restore(
-        entity.getId(),
-        entity.getUserId(),
-        entity.getDisplayName() == null ? null : new DisplayName(entity.getDisplayName()),
-        entity.getVersion(),
-        entity.getCreatedAt(),
-        entity.getUpdatedAt());
+    return UserProfile.restore()
+        .id(entity.getId())
+        .userId(entity.getUserId())
+        .displayName(
+            entity.getDisplayName() == null ? null : new DisplayName(entity.getDisplayName()))
+        .version(entity.getVersion())
+        .createdAt(entity.getCreatedAt())
+        .updatedAt(entity.getUpdatedAt())
+        .build();
   }
 }

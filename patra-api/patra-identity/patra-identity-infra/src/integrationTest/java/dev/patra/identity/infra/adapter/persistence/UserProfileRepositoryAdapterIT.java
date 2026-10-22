@@ -8,6 +8,7 @@ import dev.patra.identity.domain.model.aggregate.UserProfile;
 import dev.patra.identity.domain.model.vo.DisplayName;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.Username;
+import dev.patra.identity.domain.model.vo.profile.ProfileContent;
 import dev.patra.identity.infra.config.IdentityITPostgreSQLContainerInitializer;
 import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.autoconfigure.PatraHibernatePropertiesCustomizer;
@@ -65,7 +66,7 @@ class UserProfileRepositoryAdapterIT {
         users.save(User.register(EmailAddress.of("rename@example.com"), Username.of("u-rename")));
     UserProfile saved = profiles.save(UserProfile.create(user.getId()));
 
-    saved.rename(new DisplayName("陈宇"));
+    saved.edit(ProfileContent.builder().displayName(new DisplayName("陈宇")).build());
     profiles.save(saved);
 
     assertThat(profiles.findByUserId(user.getId()))
