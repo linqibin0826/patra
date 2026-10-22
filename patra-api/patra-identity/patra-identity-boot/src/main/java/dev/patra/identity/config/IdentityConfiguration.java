@@ -8,6 +8,7 @@ import dev.patra.identity.domain.policy.MailLinkPolicy;
 import dev.patra.identity.domain.policy.PasswordPolicy;
 import dev.patra.identity.domain.policy.PasswordResetPolicy;
 import dev.patra.identity.domain.policy.ProfileDisplayPolicy;
+import dev.patra.identity.domain.policy.ProfilePolicy;
 import dev.patra.identity.domain.policy.ReauthenticationPolicy;
 import dev.patra.identity.domain.policy.SessionLifetime;
 import dev.patra.identity.domain.policy.SessionLifetimePolicy;
@@ -96,6 +97,15 @@ public class IdentityConfiguration {
   @Bean
   public DisplayNamePolicy displayNamePolicy() {
     return new DisplayNamePolicy();
+  }
+
+  /// 资料与隐私设置的字段规则，昵称部分复用昵称规则。
+  ///
+  /// @param displayNamePolicy 昵称规则
+  /// @return 规则
+  @Bean
+  public ProfilePolicy profilePolicy(DisplayNamePolicy displayNamePolicy) {
+    return new ProfilePolicy(displayNamePolicy);
   }
 
   /// 公开主页的展示规则：加入时间按安全通知邮件的同一个展示时区换算到月。
