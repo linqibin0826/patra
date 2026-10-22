@@ -25,6 +25,7 @@ import lombok.Getter;
 /// 状态迁移：`ACTIVE ⇄ BANNED`（后台）；`ACTIVE → PENDING_DELETION → ACTIVE / DELETED`（本人申请、
 /// 取消、到期执行）；`BANNED → DELETED`（后台）；`PENDING_DELETION → BANNED` 作废注销申请；
 /// `DELETED` 不能回退。进入 `DELETED` 时邮箱、验证时间、到期时间、封禁时间全部清空，用户名和 ID 留着。
+/// 注销提醒标记（到期前提醒发过没有）只在冷静期有值，取消、封禁、完成注销都清掉它。
 @Getter
 public final class User {
 
@@ -39,6 +40,7 @@ public final class User {
   private UserStatus status;
   private Instant bannedAt;
   private Instant deletionDueAt;
+  private Instant deletionRemindedAt;
   private Instant deletedAt;
   private Long version;
   private Instant createdAt;
@@ -57,6 +59,7 @@ public final class User {
   /// @param status 状态
   /// @param bannedAt 封禁时间
   /// @param deletionDueAt 注销到期时间
+  /// @param deletionRemindedAt 到期前提醒的发送时间，没发过为 `null`
   /// @param deletedAt 注销完成时间
   /// @param version 乐观锁版本
   /// @param createdAt 创建时间
@@ -71,6 +74,7 @@ public final class User {
       UserStatus status,
       Instant bannedAt,
       Instant deletionDueAt,
+      Instant deletionRemindedAt,
       Instant deletedAt,
       Long version,
       Instant createdAt,
@@ -86,6 +90,7 @@ public final class User {
     this.usernameChangedAt = usernameChangedAt;
     this.bannedAt = bannedAt;
     this.deletionDueAt = deletionDueAt;
+    this.deletionRemindedAt = deletionRemindedAt;
     this.deletedAt = deletedAt;
     this.version = version;
     this.createdAt = createdAt;
@@ -147,7 +152,7 @@ public final class User {
     return status == UserStatus.DELETED;
   }
 
-  /// 封禁。已经封禁时什么都不做，保留原来的封禁时间；冷静期内被封禁，注销申请作废。
+  /// 封禁。已经封禁时什么都不做，保留原来的封禁时间；冷静期内被封禁，注销申请作废（连同提醒标记）。
   ///
   /// @param now 当前时间
   /// @throws InvalidUserStateTransitionException 已注销
@@ -160,6 +165,7 @@ public final class User {
         status = UserStatus.BANNED;
         bannedAt = now;
         deletionDueAt = null;
+        deletionRemindedAt = null;
       }
     }
   }
@@ -196,7 +202,7 @@ public final class User {
     }
   }
 
-  /// 取消注销：回到正常。本来就正常时什么都不做。
+  /// 取消注销：回到正常，清掉到期时间和提醒标记。本来就正常时什么都不做。
   ///
   /// @throws InvalidUserStateTransitionException 已封禁或已注销
   public void cancelDeletion() {
@@ -206,11 +212,12 @@ public final class User {
       case PENDING_DELETION -> {
         status = UserStatus.ACTIVE;
         deletionDueAt = null;
+        deletionRemindedAt = null;
       }
     }
   }
 
-  /// 完成注销：清掉邮箱、验证时间、到期时间、封禁时间，记下完成时间；用户名和 ID 留着。
+  /// 完成注销：清掉邮箱、验证时间、到期时间、提醒标记、封禁时间，记下完成时间；用户名和 ID 留着。
   /// 已注销时什么都不做（任务重跑幂等）。
   ///
   /// @param now 当前时间
@@ -225,10 +232,55 @@ public final class User {
         email = null;
         emailVerifiedAt = null;
         deletionDueAt = null;
+        deletionRemindedAt = null;
         bannedAt = null;
         deletedAt = now;
       }
     }
+  }
+
+  /// 记下到期前提醒已发出。已记过时什么都不做，保留第一次的时间。
+  ///
+  /// @param now 当前时间
+  /// @throws InvalidUserStateTransitionException 不在冷静期
+  public void markDeletionReminded(Instant now) {
+    Objects.requireNonNull(now, "now 不能为 null");
+    if (status != UserStatus.PENDING_DELETION) {
+      throw transition("markDeletionReminded");
+    }
+    if (deletionRemindedAt == null) {
+      deletionRemindedAt = now;
+    }
+  }
+
+  /// 清掉到期前提醒的标记，让下一次提醒任务重发（这封被发信执行器拒收时用）。不在冷静期时什么都不做。
+  public void clearDeletionReminder() {
+    if (status == UserStatus.PENDING_DELETION) {
+      deletionRemindedAt = null;
+    }
+  }
+
+  /// 注销是否已到期：冷静期内且到期时间不晚于现在（恰好等于也算）。
+  ///
+  /// @param now 当前时间
+  /// @return 到期时为 `true`
+  public boolean isDeletionDue(Instant now) {
+    Objects.requireNonNull(now, "now 不能为 null");
+    return status == UserStatus.PENDING_DELETION && !deletionDueAt.isAfter(now);
+  }
+
+  /// 是否该发到期前提醒：冷静期内、还没提醒过、还没到期，且到期时间落在「现在 + 提前量」之内。
+  ///
+  /// @param now 当前时间
+  /// @param lead 提前量
+  /// @return 该提醒时为 `true`
+  public boolean needsDeletionReminder(Instant now, Duration lead) {
+    Objects.requireNonNull(now, "now 不能为 null");
+    Objects.requireNonNull(lead, "lead 不能为 null");
+    return status == UserStatus.PENDING_DELETION
+        && deletionRemindedAt == null
+        && deletionDueAt.isAfter(now)
+        && !deletionDueAt.isAfter(now.plus(lead));
   }
 
   /// 记下邮箱已验证。已验证时什么都不做，保留第一次的时间。

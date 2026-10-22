@@ -314,4 +314,99 @@ class UserTest {
     assertThatThrownBy(() -> user.changeEmail(EmailAddress.of("new@example.com"), T0))
         .isInstanceOf(InvalidUserStateTransitionException.class);
   }
+
+  /// 冷静期内的用户，到期时间是 `T0 + 15 天`。
+  ///
+  /// @return PENDING_DELETION 状态的用户
+  private static User pendingUser() {
+    User user = User.register(EMAIL, USERNAME);
+    user.requestDeletion(T0, COOLING);
+    return user;
+  }
+
+  @Test
+  @DisplayName("注销提醒标记只记第一次")
+  void should_mark_reminder_once_and_keep_first_time() {
+    User user = pendingUser();
+
+    user.markDeletionReminded(T0.plus(Duration.ofDays(12)));
+    user.markDeletionReminded(T0.plus(Duration.ofDays(13)));
+
+    assertThat(user.getDeletionRemindedAt()).isEqualTo(T0.plus(Duration.ofDays(12)));
+  }
+
+  @Test
+  @DisplayName("不在冷静期不能记注销提醒")
+  void should_reject_reminder_mark_outside_pending_deletion() {
+    User active = User.register(EMAIL, USERNAME);
+    User banned = User.register(EMAIL, USERNAME);
+    banned.ban(T0);
+
+    assertThatThrownBy(() -> active.markDeletionReminded(T0))
+        .isInstanceOf(InvalidUserStateTransitionException.class);
+    assertThatThrownBy(() -> banned.markDeletionReminded(T0))
+        .isInstanceOf(InvalidUserStateTransitionException.class);
+    assertThatThrownBy(() -> deletedUser().markDeletionReminded(T0))
+        .isInstanceOf(InvalidUserStateTransitionException.class);
+  }
+
+  @Test
+  @DisplayName("取消、封禁、完成注销都清掉提醒标记")
+  void should_clear_reminder_on_cancel_ban_and_complete() {
+    User cancelled = pendingUser();
+    cancelled.markDeletionReminded(T0);
+    cancelled.cancelDeletion();
+
+    User banned = pendingUser();
+    banned.markDeletionReminded(T0);
+    banned.ban(T0);
+
+    User completed = pendingUser();
+    completed.markDeletionReminded(T0);
+    completed.completeDeletion(T0.plus(COOLING));
+
+    assertThat(cancelled.getDeletionRemindedAt()).isNull();
+    assertThat(banned.getDeletionRemindedAt()).isNull();
+    assertThat(completed.getDeletionRemindedAt()).isNull();
+  }
+
+  @Test
+  @DisplayName("显式清提醒标记：冷静期内清空，其他状态什么都不做")
+  void should_clear_reminder_explicitly_only_while_pending() {
+    User pending = pendingUser();
+    pending.markDeletionReminded(T0);
+    User active = User.register(EMAIL, USERNAME);
+
+    pending.clearDeletionReminder();
+
+    assertThat(pending.getDeletionRemindedAt()).isNull();
+    assertThatCode(active::clearDeletionReminder).doesNotThrowAnyException();
+    assertThat(active.getDeletionRemindedAt()).isNull();
+  }
+
+  @Test
+  @DisplayName("到期判定：恰好到期时刻就算到期，早一秒不算；正常状态永远不到期")
+  void should_be_due_exactly_at_due_time() {
+    User user = pendingUser();
+    Instant due = T0.plus(COOLING);
+
+    assertThat(user.isDeletionDue(due)).isTrue();
+    assertThat(user.isDeletionDue(due.minusSeconds(1))).isFalse();
+    assertThat(User.register(EMAIL, USERNAME).isDeletionDue(due)).isFalse();
+  }
+
+  @Test
+  @DisplayName("要不要提醒：到期前提前量之内、还没到期、没提醒过")
+  void should_need_reminder_only_inside_lead_window() {
+    User user = pendingUser();
+    Duration lead = Duration.ofDays(3);
+    Instant windowStart = T0.plus(Duration.ofDays(12));
+
+    assertThat(user.needsDeletionReminder(windowStart, lead)).isTrue();
+    assertThat(user.needsDeletionReminder(windowStart.minusSeconds(1), lead)).isFalse();
+    assertThat(user.needsDeletionReminder(T0.plus(COOLING), lead)).isFalse();
+    user.markDeletionReminded(windowStart);
+    assertThat(user.needsDeletionReminder(windowStart, lead)).isFalse();
+    assertThat(User.register(EMAIL, USERNAME).needsDeletionReminder(windowStart, lead)).isFalse();
+  }
 }
