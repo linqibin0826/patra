@@ -1,6 +1,6 @@
 # patra-identity-session
 
-identity 与网关共用的会话存储契约：令牌格式、Redis 键、七段 Lua 和 `RedisSessionStore`。
+identity 与网关共用的会话存储契约：令牌格式、Redis 键、八段 Lua 和 `RedisSessionStore`。
 只有这两个消费者；其他服务只认网关签的身份断言（`patra-spring-boot-starter-security`），不碰 Redis。
 
 设计：`docs/patra/specs/2026-10-09-identity-session-design.md` 第 6、7 节。
@@ -34,6 +34,7 @@ Redis 里只存 `SessionToken.hash()`：整个令牌 UTF-8 的 SHA-256，小写�
 | `rotate(accountType, userId, sessionId, grace)` | `session-rotate.lua` | 换令牌保留会话 ID（再认证、改密码）：其余字段不变，`auth_at` 与 `last_active_at` 刷新，旧令牌立即失效，索引指向新哈希；`auth_at` 距今不足 `grace` 时原子地判定不换、返回「没换」（并发再认证时先换出的令牌保持有效，`grace` 为零则每次都换）；会话不在或已过绝对期返回空 |
 | `find(accountType, userId, sessionId)` | `session-find.lua` | 按会话 ID 读，不续期（再认证守卫读 `auth_at`）；不在或已过绝对期返回空 |
 | `deleteAllExcept(accountType, userId, keepSessionId)` | `session-delete-others.lua` | 删该用户除指定一条外的全部会话（验证邮箱、改密码保留本机、踢其他设备）；指定的会话不存在时等于全删；返回真的删掉了的会话 ID |
+| `list(accountType, userId)` | `session-list.lua` | 按用户列出还活着的会话（登录设备列表，PAP-99）：不续期、不改 `last_active_at`；顺手清掉悬空条目和已过绝对期的会话；顺序不保证 |
 
 时间由 Java 按注入的 `Clock` 传进脚本，脚本不调 `TIME`。会话 ID 的大小按「字符串长度，再字典序」比，
 雪花 ID 转成 Lua 的 double 会丢精度。脚本「没有结果」时返回空表而不是 `false`：Lettuce 把 `false`

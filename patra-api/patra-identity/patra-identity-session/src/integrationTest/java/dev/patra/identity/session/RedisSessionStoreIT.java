@@ -497,6 +497,61 @@ class RedisSessionStoreIT {
   /// 找一个当前没人监听的端口。
   ///
   /// @return 端口号
+  @Test
+  @DisplayName("按用户列出：只返回这个用户还活着的会话")
+  void should_list_live_sessions_of_user() {
+    store.create(newSession(71L, 8701L).build());
+    store.create(newSession(71L, 8702L).build());
+    store.create(newSession(72L, 8711L).build());
+
+    List<StoredSession> listed = store.list(AccountType.USER, 71L);
+
+    assertThat(listed).extracting(StoredSession::sessionId).containsExactlyInAnyOrder(8701L, 8702L);
+  }
+
+  @Test
+  @DisplayName("按用户列出：顺手清掉悬空条目和已过绝对期的会话")
+  void should_prune_dangling_and_expired_entries_when_listing() {
+    SessionToken dangling = store.create(newSession(73L, 8801L).build()).token();
+    SessionToken expiring =
+        store
+            .create(newSession(73L, 8802L).expiresAt(START.plus(Duration.ofHours(1))).build())
+            .token();
+    store.create(newSession(73L, 8803L).build());
+    redis.delete("idn:session:user:" + dangling.hash());
+    clock.advance(Duration.ofHours(1));
+
+    List<StoredSession> listed = store.list(AccountType.USER, 73L);
+
+    assertThat(listed).extracting(StoredSession::sessionId).containsExactly(8803L);
+    assertThat(redis.opsForHash().keys("idn:user-sessions:user:73")).containsExactly("8803");
+    assertThat(redis.hasKey("idn:session:user:" + expiring.hash())).isFalse();
+  }
+
+  @Test
+  @DisplayName("按用户列出：不续期，不改最后活跃时间和 TTL")
+  void should_not_touch_sessions_when_listing() {
+    Duration oneHour = Duration.ofHours(1);
+    SessionToken token =
+        store.create(newSession(74L, 8901L).expiresAt(START.plus(oneHour)).build()).token();
+    String sessionKey = "idn:session:user:" + token.hash();
+    clock.advance(Duration.ofSeconds(120));
+
+    StoredSession listed = store.list(AccountType.USER, 74L).getFirst();
+
+    assertThat(listed.lastActiveAt()).isEqualTo(START);
+    assertThat(redis.opsForHash().get(sessionKey, "last_active_at"))
+        .isEqualTo(Long.toString(START.toEpochMilli()));
+    assertThat(ttl(sessionKey))
+        .isBetween(oneHour.toMillis() - TOLERANCE_MILLIS, oneHour.toMillis());
+  }
+
+  @Test
+  @DisplayName("按用户列出：没有会话时返回空列表")
+  void should_return_empty_list_for_user_without_sessions() {
+    assertThat(store.list(AccountType.USER, 75L)).isEmpty();
+  }
+
   static int closedPort() {
     try (ServerSocket socket = new ServerSocket(0)) {
       return socket.getLocalPort();

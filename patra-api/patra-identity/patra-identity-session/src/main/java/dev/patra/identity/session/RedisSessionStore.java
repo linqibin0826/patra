@@ -61,6 +61,10 @@ public final class RedisSessionStore {
   private static final RedisScript<List> FIND_SCRIPT =
       RedisScript.of(new ClassPathResource("redis/session-find.lua"), List.class);
 
+  @SuppressWarnings("rawtypes")
+  private static final RedisScript<List> LIST_SCRIPT =
+      RedisScript.of(new ClassPathResource("redis/session-list.lua"), List.class);
+
   private final StringRedisTemplate redis;
   private final Clock clock;
   private final SecureRandom random = new SecureRandom();
@@ -182,6 +186,28 @@ public final class RedisSessionStore {
       return Optional.empty();
     }
     return Optional.of(toStoredSession(fields));
+  }
+
+  /// 按用户列出还活着的会话，不续期：看设备列表不是活动。顺手清掉悬空条目和已过绝对期的会话。
+  ///
+  /// @param accountType 账号类型
+  /// @param userId 用户 ID
+  /// @return 会话，顺序不保证；没有时为空列表
+  /// @throws SessionStoreUnavailableException Redis 暂时不可用时
+  public List<StoredSession> list(AccountType accountType, long userId) {
+    Objects.requireNonNull(accountType, "accountType 不能为 null");
+    List<?> sessions =
+        execute(
+            () ->
+                redis.execute(
+                    LIST_SCRIPT,
+                    List.of(indexKey(accountType, userId)),
+                    sessionKeyPrefix(accountType),
+                    Long.toString(clock.millis())));
+    if (sessions == null) {
+      return List.of();
+    }
+    return sessions.stream().map(fields -> toStoredSession((List<?>) fields)).toList();
   }
 
   /// 按用户 ID 和会话 ID 删一条会话。登出用：identity 手里只有断言里的 `sub` 和 `sid`。
