@@ -3,14 +3,18 @@ package dev.patra.identity.app.usecase.email;
 import dev.patra.identity.domain.exception.EmailAlreadyVerifiedException;
 import dev.patra.identity.domain.exception.EmailResendLimitedException;
 import dev.patra.identity.domain.model.aggregate.User;
+import dev.patra.identity.domain.model.enums.EmailTokenPurpose;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
+import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.policy.EmailResendPolicy;
+import dev.patra.identity.domain.policy.MailLinkPolicy;
 import dev.patra.identity.domain.port.mail.EmailDeliveryPort;
+import dev.patra.identity.domain.port.mail.EmailVerificationMail;
 import dev.patra.identity.domain.port.read.UserReadPort;
 import dev.patra.identity.domain.port.repository.UserRepository;
 import dev.patra.identity.domain.port.throttle.EmailResendThrottlePort;
-import dev.patra.identity.domain.service.EmailVerificationIssuer;
-import dev.patra.identity.domain.service.PreparedVerificationMail;
+import dev.patra.identity.domain.service.EmailTokenIssuer;
+import dev.patra.identity.domain.service.IssuedEmailToken;
 import dev.patra.tool.core.security.AuthenticationRequiredException;
 import dev.patra.tool.core.security.CurrentUser;
 import dev.patra.tool.core.security.CurrentUserPort;
@@ -39,7 +43,8 @@ public class ResendEmailVerificationHandler
   private final UserReadPort userReadPort;
   private final EmailResendThrottlePort emailResendThrottle;
   private final EmailResendPolicy resendPolicy;
-  private final EmailVerificationIssuer emailVerificationIssuer;
+  private final EmailTokenIssuer emailTokenIssuer;
+  private final MailLinkPolicy links;
   private final EmailDeliveryPort emailDelivery;
   private final TransactionOperations transactions;
   private final Clock clock;
@@ -60,7 +65,7 @@ public class ResendEmailVerificationHandler
             wait -> {
               throw new EmailResendLimitedException(wait);
             });
-    PreparedVerificationMail prepared =
+    Prepared prepared =
         Objects.requireNonNull(
             transactions.execute(
                 status -> {
@@ -69,17 +74,33 @@ public class ResendEmailVerificationHandler
                           .findByIdForUpdate(userId)
                           .orElseThrow(AuthenticationRequiredException::new);
                   requireResendable(locked);
+                  EmailAddress email =
+                      locked.getEmail().orElseThrow(AuthenticationRequiredException::new);
                   UserAccountReadModel account =
                       userReadPort
                           .findAccount(userId)
                           .orElseThrow(AuthenticationRequiredException::new);
-                  return emailVerificationIssuer.prepare(
-                      locked, account.displayName(), command.clientIp());
+                  IssuedEmailToken issued =
+                      emailTokenIssuer.issue(
+                          EmailTokenPurpose.EMAIL_VERIFY, userId, email, command.clientIp());
+                  return new Prepared(
+                      issued,
+                      EmailVerificationMail.of(
+                          email,
+                          account.displayName(),
+                          links.verifyEmailUrl(issued.secret()),
+                          issued.token().getExpiresAt()));
                 }));
     emailDelivery.send(prepared.mail());
-    log.info("验证邮件已重发排队: userId={}, tokenId={}", userId, prepared.token().getId());
+    log.info("验证邮件已重发排队: userId={}, tokenId={}", userId, prepared.issued().token().getId());
     return EmailVerificationResent.of(prepared.mail().to().value(), resendPolicy.nextResendAt(now));
   }
+
+  /// 事务里签发好的令牌和邮件。
+  ///
+  /// @param issued 已保存的令牌与原文
+  /// @param mail 要发的邮件
+  private record Prepared(IssuedEmailToken issued, EmailVerificationMail mail) {}
 
   /// 能不能重发：正常状态且邮箱未验证。
   ///

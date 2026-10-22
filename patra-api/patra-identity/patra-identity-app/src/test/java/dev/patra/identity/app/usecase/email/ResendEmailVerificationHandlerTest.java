@@ -25,13 +25,14 @@ import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.EmailTokenSecret;
 import dev.patra.identity.domain.model.vo.Username;
 import dev.patra.identity.domain.policy.EmailResendPolicy;
+import dev.patra.identity.domain.policy.MailLinkPolicy;
 import dev.patra.identity.domain.port.mail.EmailDeliveryPort;
 import dev.patra.identity.domain.port.mail.EmailVerificationMail;
 import dev.patra.identity.domain.port.read.UserReadPort;
 import dev.patra.identity.domain.port.repository.UserRepository;
 import dev.patra.identity.domain.port.throttle.EmailResendThrottlePort;
-import dev.patra.identity.domain.service.EmailVerificationIssuer;
-import dev.patra.identity.domain.service.PreparedVerificationMail;
+import dev.patra.identity.domain.service.EmailTokenIssuer;
+import dev.patra.identity.domain.service.IssuedEmailToken;
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.AuthenticationRequiredException;
 import dev.patra.tool.core.security.ClientType;
@@ -63,14 +64,21 @@ class ResendEmailVerificationHandlerTest {
   private static final EmailResendPolicy POLICY =
       EmailResendPolicy.of(Duration.ofSeconds(60), 5, 10, 30);
   private static final EmailTokenSecret SECRET = new EmailTokenSecret("F".repeat(43));
-  private static final PreparedVerificationMail PREPARED =
-      PreparedVerificationMail.of(
-          EmailToken.issue(EmailTokenPurpose.EMAIL_VERIFY, 42L, EMAIL, SECRET, NOW, null),
-          EmailVerificationMail.of(
-              EMAIL,
-              "陈宇",
-              "https://patra.example/verify-email#token=" + SECRET.value(),
-              NOW.plus(Duration.ofHours(24))));
+  private static final IssuedEmailToken ISSUED =
+      IssuedEmailToken.of(
+          EmailToken.issue(EmailTokenPurpose.EMAIL_VERIFY, 42L, EMAIL, SECRET, NOW, null), SECRET);
+  private static final MailLinkPolicy LINKS =
+      MailLinkPolicy.builder()
+          .baseUrl("https://patra.example")
+          .verifyEmailPath("/verify-email")
+          .securitySettingsPath("/settings/security")
+          .resetPasswordPath("/reset-password")
+          .confirmEmailChangePath("/confirm-email-change")
+          .revertEmailChangePath("/revert-email-change")
+          .build();
+  private static final EmailVerificationMail EXPECTED_MAIL =
+      EmailVerificationMail.of(
+          EMAIL, "陈宇", LINKS.verifyEmailUrl(SECRET), NOW.plus(Duration.ofHours(24)));
   private static final UserAccountReadModel ACCOUNT =
       UserAccountReadModel.builder()
           .userId(42L)
@@ -85,8 +93,7 @@ class ResendEmailVerificationHandlerTest {
   private final UserRepository users = mock(UserRepository.class);
   private final UserReadPort userReadPort = mock(UserReadPort.class);
   private final EmailResendThrottlePort emailResendThrottle = mock(EmailResendThrottlePort.class);
-  private final EmailVerificationIssuer emailVerificationIssuer =
-      mock(EmailVerificationIssuer.class);
+  private final EmailTokenIssuer emailTokenIssuer = mock(EmailTokenIssuer.class);
   private final EmailDeliveryPort emailDelivery = mock(EmailDeliveryPort.class);
   private final AtomicBoolean inTransaction = new AtomicBoolean(false);
   private final ResendEmailVerificationHandler handler =
@@ -96,7 +103,8 @@ class ResendEmailVerificationHandlerTest {
           userReadPort,
           emailResendThrottle,
           POLICY,
-          emailVerificationIssuer,
+          emailTokenIssuer,
+          LINKS,
           emailDelivery,
           recording(inTransaction),
           Clock.fixed(NOW, ZoneOffset.UTC));
@@ -110,17 +118,17 @@ class ResendEmailVerificationHandlerTest {
         .thenAnswer(invocation -> Optional.of(user(UserStatus.ACTIVE, null)));
     when(userReadPort.findAccount(42L)).thenReturn(Optional.of(ACCOUNT));
     when(emailResendThrottle.acquire(anyLong(), any(), any())).thenReturn(Optional.empty());
-    when(emailVerificationIssuer.prepare(any(), any(), any())).thenReturn(PREPARED);
+    when(emailTokenIssuer.issue(any(), anyLong(), any(), any())).thenReturn(ISSUED);
   }
 
   @Test
   @DisplayName("顺序：预判状态 → 限流 → 加锁重读 → 签发（事务内）→ 发信（事务外）；返回邮箱和下次可重发时间")
   void should_resend_in_order_and_return_next_resend_at() {
-    when(emailVerificationIssuer.prepare(any(), any(), any()))
+    when(emailTokenIssuer.issue(any(), anyLong(), any(), any()))
         .thenAnswer(
             invocation -> {
               assertThat(inTransaction).isTrue();
-              return PREPARED;
+              return ISSUED;
             });
     doAnswer(
             invocation -> {
@@ -135,12 +143,14 @@ class ResendEmailVerificationHandlerTest {
 
     assertThat(result.email()).isEqualTo("chen.yu@example.com");
     assertThat(result.nextResendAt()).isEqualTo(NOW.plusSeconds(60));
-    InOrder order = inOrder(users, emailResendThrottle, emailVerificationIssuer, emailDelivery);
+    InOrder order = inOrder(users, emailResendThrottle, emailTokenIssuer, emailDelivery);
     order.verify(users).findById(42L);
     order.verify(emailResendThrottle).acquire(42L, "203.0.113.9", NOW);
     order.verify(users).findByIdForUpdate(42L);
-    order.verify(emailVerificationIssuer).prepare(any(), eq("陈宇"), eq("203.0.113.9"));
-    order.verify(emailDelivery).send(PREPARED.mail());
+    order
+        .verify(emailTokenIssuer)
+        .issue(eq(EmailTokenPurpose.EMAIL_VERIFY), eq(42L), eq(EMAIL), eq("203.0.113.9"));
+    order.verify(emailDelivery).send(EXPECTED_MAIL);
   }
 
   @Test
@@ -151,7 +161,7 @@ class ResendEmailVerificationHandlerTest {
 
     assertThatThrownBy(() -> handler.handle(ResendEmailVerificationCommand.of(null)))
         .isInstanceOf(EmailAlreadyVerifiedException.class);
-    verifyNoInteractions(emailResendThrottle, emailVerificationIssuer, emailDelivery);
+    verifyNoInteractions(emailResendThrottle, emailTokenIssuer, emailDelivery);
   }
 
   @Test
@@ -161,7 +171,7 @@ class ResendEmailVerificationHandlerTest {
 
     assertThatThrownBy(() -> handler.handle(ResendEmailVerificationCommand.of(null)))
         .isInstanceOf(UserPendingDeletionException.class);
-    verifyNoInteractions(emailResendThrottle, emailVerificationIssuer, emailDelivery);
+    verifyNoInteractions(emailResendThrottle, emailTokenIssuer, emailDelivery);
   }
 
   @Test
@@ -174,7 +184,7 @@ class ResendEmailVerificationHandlerTest {
     when(users.findById(42L)).thenReturn(Optional.empty());
     assertThatThrownBy(() -> handler.handle(ResendEmailVerificationCommand.of(null)))
         .isInstanceOf(AuthenticationRequiredException.class);
-    verifyNoInteractions(emailResendThrottle, emailVerificationIssuer, emailDelivery);
+    verifyNoInteractions(emailResendThrottle, emailTokenIssuer, emailDelivery);
   }
 
   @Test
@@ -188,7 +198,7 @@ class ResendEmailVerificationHandlerTest {
             EmailResendLimitedException.class,
             e -> assertThat(e.getRetryAfter()).isEqualTo(Duration.ofSeconds(37)));
     verify(users, never()).findByIdForUpdate(anyLong());
-    verifyNoInteractions(emailVerificationIssuer, emailDelivery);
+    verifyNoInteractions(emailTokenIssuer, emailDelivery);
   }
 
   @Test
@@ -200,7 +210,7 @@ class ResendEmailVerificationHandlerTest {
     assertThatThrownBy(() -> handler.handle(ResendEmailVerificationCommand.of(null)))
         .isInstanceOf(EmailAlreadyVerifiedException.class);
     verify(emailResendThrottle).acquire(42L, null, NOW);
-    verifyNoInteractions(emailVerificationIssuer, emailDelivery);
+    verifyNoInteractions(emailTokenIssuer, emailDelivery);
   }
 
   /// 一个用户。

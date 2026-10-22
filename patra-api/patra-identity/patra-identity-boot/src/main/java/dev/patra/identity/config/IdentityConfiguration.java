@@ -15,7 +15,7 @@ import dev.patra.identity.domain.port.password.CommonPasswordPort;
 import dev.patra.identity.domain.port.repository.EmailTokenRepository;
 import dev.patra.identity.domain.port.repository.UserLoginRecordRepository;
 import dev.patra.identity.domain.port.session.SessionStorePort;
-import dev.patra.identity.domain.service.EmailVerificationIssuer;
+import dev.patra.identity.domain.service.EmailTokenIssuer;
 import dev.patra.identity.domain.service.SessionIssuer;
 import dev.patra.identity.infra.adapter.hashing.PasswordHashingAdapter;
 import dev.patra.identity.infra.adapter.mail.SmtpEmailDeliveryAdapter;
@@ -193,16 +193,14 @@ public class IdentityConfiguration {
         .build();
   }
 
-  /// 签发验证邮箱令牌的领域服务。
+  /// 签发一次性邮件令牌的领域服务，四种用途共用。
   ///
   /// @param tokens 令牌仓储
-  /// @param links 链接规则
   /// @param clock 时钟
   /// @return 领域服务
   @Bean
-  public EmailVerificationIssuer emailVerificationIssuer(
-      EmailTokenRepository tokens, MailLinkPolicy links, Clock clock) {
-    return new EmailVerificationIssuer(tokens, links, clock, new SecureRandom());
+  public EmailTokenIssuer emailTokenIssuer(EmailTokenRepository tokens, Clock clock) {
+    return new EmailTokenIssuer(tokens, clock, new SecureRandom());
   }
 
   /// 邮件模板渲染器，按配置的时区显示安全通知里的时间。

@@ -19,7 +19,7 @@ import dev.patra.identity.domain.port.password.CommonPasswordPort;
 import dev.patra.identity.domain.port.repository.EmailTokenRepository;
 import dev.patra.identity.domain.port.repository.UserLoginRecordRepository;
 import dev.patra.identity.domain.port.session.SessionStorePort;
-import dev.patra.identity.domain.service.EmailVerificationIssuer;
+import dev.patra.identity.domain.service.EmailTokenIssuer;
 import dev.patra.identity.domain.service.SessionIssuer;
 import dev.patra.identity.infra.adapter.mail.SmtpEmailDeliveryAdapter;
 import dev.patra.identity.infra.adapter.mail.ThymeleafMailRenderer;
@@ -215,7 +215,7 @@ class IdentityConfigurationTest {
               .startsWith("http://linqibins-mac-mini:4000/verify-email#token=");
           assertThat(links.securitySettingsUrl())
               .isEqualTo("http://linqibins-mac-mini:4000/settings/security");
-          assertThat(context).hasSingleBean(EmailVerificationIssuer.class);
+          assertThat(context).hasSingleBean(EmailTokenIssuer.class);
           assertThat(context).hasSingleBean(ThymeleafMailRenderer.class);
           assertThat(context.getBean(EmailDeliveryPort.class))
               .isInstanceOf(SmtpEmailDeliveryAdapter.class);

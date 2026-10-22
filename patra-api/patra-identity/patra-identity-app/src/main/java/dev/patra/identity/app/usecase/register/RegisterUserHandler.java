@@ -3,9 +3,11 @@ package dev.patra.identity.app.usecase.register;
 import dev.patra.identity.app.usecase.auth.AuthenticatedUser;
 import dev.patra.identity.domain.exception.InvalidUserFieldsException;
 import dev.patra.identity.domain.exception.UserIdentifierTakenException;
+import dev.patra.identity.domain.model.aggregate.EmailToken;
 import dev.patra.identity.domain.model.aggregate.User;
 import dev.patra.identity.domain.model.aggregate.UserPasswordCredential;
 import dev.patra.identity.domain.model.aggregate.UserProfile;
+import dev.patra.identity.domain.model.enums.EmailTokenPurpose;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.LoginClient;
@@ -13,10 +15,12 @@ import dev.patra.identity.domain.model.vo.PasswordHash;
 import dev.patra.identity.domain.model.vo.PlainPassword;
 import dev.patra.identity.domain.model.vo.UserFieldViolations;
 import dev.patra.identity.domain.model.vo.Username;
+import dev.patra.identity.domain.policy.MailLinkPolicy;
 import dev.patra.identity.domain.policy.PasswordPolicy;
 import dev.patra.identity.domain.policy.UsernamePolicy;
 import dev.patra.identity.domain.port.hashing.PasswordHashingPort;
 import dev.patra.identity.domain.port.mail.EmailDeliveryPort;
+import dev.patra.identity.domain.port.mail.EmailVerificationMail;
 import dev.patra.identity.domain.port.read.UserReadPort;
 import dev.patra.identity.domain.port.repository.FormerUsernameRepository;
 import dev.patra.identity.domain.port.repository.UserPasswordCredentialRepository;
@@ -24,8 +28,8 @@ import dev.patra.identity.domain.port.repository.UserProfileRepository;
 import dev.patra.identity.domain.port.repository.UserRepository;
 import dev.patra.identity.domain.port.session.IssuedUserSession;
 import dev.patra.identity.domain.port.throttle.EmailResendThrottlePort;
-import dev.patra.identity.domain.service.EmailVerificationIssuer;
-import dev.patra.identity.domain.service.PreparedVerificationMail;
+import dev.patra.identity.domain.service.EmailTokenIssuer;
+import dev.patra.identity.domain.service.IssuedEmailToken;
 import dev.patra.identity.domain.service.SessionIssuer;
 import dev.patra.tool.core.error.field.FieldViolation;
 import dev.patra.tool.cqrs.CommandHandler;
@@ -61,7 +65,8 @@ public class RegisterUserHandler implements CommandHandler<RegisterUserCommand, 
   private final PasswordPolicy passwordPolicy;
   private final UsernamePolicy usernamePolicy;
   private final SessionIssuer sessionIssuer;
-  private final EmailVerificationIssuer emailVerificationIssuer;
+  private final EmailTokenIssuer emailTokenIssuer;
+  private final MailLinkPolicy links;
   private final EmailDeliveryPort emailDelivery;
   private final EmailResendThrottlePort emailResendThrottle;
   private final TransactionOperations transactions;
@@ -111,19 +116,25 @@ public class RegisterUserHandler implements CommandHandler<RegisterUserCommand, 
                           .findAccount(saved.getId())
                           .orElseThrow(
                               () -> new IllegalStateException("刚保存的用户读不回来: " + saved.getId()));
-                  PreparedVerificationMail verification =
-                      emailVerificationIssuer.prepare(
-                          saved, account.displayName(), command.clientIp());
-                  return new Registration(saved, session, account, verification);
+                  IssuedEmailToken issued =
+                      emailTokenIssuer.issue(
+                          EmailTokenPurpose.EMAIL_VERIFY, saved.getId(), email, command.clientIp());
+                  EmailVerificationMail mail =
+                      EmailVerificationMail.of(
+                          email,
+                          account.displayName(),
+                          links.verifyEmailUrl(issued.secret()),
+                          issued.token().getExpiresAt());
+                  return new Registration(saved, session, account, issued.token(), mail);
                 }));
     long userId = registration.user().getId();
     markSentQuietly(userId, now);
-    emailDelivery.send(registration.verification().mail());
+    emailDelivery.send(registration.mail());
     log.info(
         "前台用户已注册并登录，验证邮件已排队: userId={}, username={}, tokenId={}",
         userId,
         registration.user().getUsername().value(),
-        registration.verification().token().getId());
+        registration.token().getId());
     return AuthenticatedUser.of(registration.session().token(), registration.account());
   }
 
@@ -144,10 +155,12 @@ public class RegisterUserHandler implements CommandHandler<RegisterUserCommand, 
   /// @param user 新用户
   /// @param session 新会话
   /// @param account 账号信息
-  /// @param verification 签发好的验证令牌与邮件
+  /// @param token 签发好的验证令牌
+  /// @param mail 要发的验证邮件
   private record Registration(
       User user,
       IssuedUserSession session,
       UserAccountReadModel account,
-      PreparedVerificationMail verification) {}
+      EmailToken token,
+      EmailVerificationMail mail) {}
 }

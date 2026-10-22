@@ -33,6 +33,7 @@ import dev.patra.identity.domain.model.vo.LoginClient;
 import dev.patra.identity.domain.model.vo.PasswordHash;
 import dev.patra.identity.domain.model.vo.UserFieldViolations;
 import dev.patra.identity.domain.model.vo.Username;
+import dev.patra.identity.domain.policy.MailLinkPolicy;
 import dev.patra.identity.domain.policy.PasswordPolicy;
 import dev.patra.identity.domain.policy.UsernamePolicy;
 import dev.patra.identity.domain.port.hashing.PasswordHashingPort;
@@ -45,8 +46,8 @@ import dev.patra.identity.domain.port.repository.UserProfileRepository;
 import dev.patra.identity.domain.port.repository.UserRepository;
 import dev.patra.identity.domain.port.session.IssuedUserSession;
 import dev.patra.identity.domain.port.throttle.EmailResendThrottlePort;
-import dev.patra.identity.domain.service.EmailVerificationIssuer;
-import dev.patra.identity.domain.service.PreparedVerificationMail;
+import dev.patra.identity.domain.service.EmailTokenIssuer;
+import dev.patra.identity.domain.service.IssuedEmailToken;
 import dev.patra.identity.domain.service.SessionIssuer;
 import dev.patra.tool.core.error.field.FieldViolation;
 import java.time.Clock;
@@ -95,14 +96,21 @@ class RegisterUserHandlerTest {
           .build();
 
   private static final EmailTokenSecret SECRET = new EmailTokenSecret("E".repeat(43));
-  private static final PreparedVerificationMail PREPARED =
-      PreparedVerificationMail.of(
-          EmailToken.issue(EmailTokenPurpose.EMAIL_VERIFY, 42L, EMAIL, SECRET, NOW, null),
-          EmailVerificationMail.of(
-              EMAIL,
-              "chen-yu",
-              "https://patra.example/verify-email#token=" + SECRET.value(),
-              NOW.plus(Duration.ofHours(24))));
+  private static final IssuedEmailToken ISSUED =
+      IssuedEmailToken.of(
+          EmailToken.issue(EmailTokenPurpose.EMAIL_VERIFY, 42L, EMAIL, SECRET, NOW, null), SECRET);
+  private static final MailLinkPolicy LINKS =
+      MailLinkPolicy.builder()
+          .baseUrl("https://patra.example")
+          .verifyEmailPath("/verify-email")
+          .securitySettingsPath("/settings/security")
+          .resetPasswordPath("/reset-password")
+          .confirmEmailChangePath("/confirm-email-change")
+          .revertEmailChangePath("/revert-email-change")
+          .build();
+  private static final EmailVerificationMail EXPECTED_MAIL =
+      EmailVerificationMail.of(
+          EMAIL, "chen-yu", LINKS.verifyEmailUrl(SECRET), NOW.plus(Duration.ofHours(24)));
 
   private final UserRepository users = mock(UserRepository.class);
   private final UserProfileRepository profiles = mock(UserProfileRepository.class);
@@ -114,8 +122,7 @@ class RegisterUserHandlerTest {
   private final PasswordPolicy passwordPolicy = new PasswordPolicy(Set.of("password123")::contains);
   private final UsernamePolicy usernamePolicy = new UsernamePolicy();
   private final SessionIssuer sessionIssuer = mock(SessionIssuer.class);
-  private final EmailVerificationIssuer emailVerificationIssuer =
-      mock(EmailVerificationIssuer.class);
+  private final EmailTokenIssuer emailTokenIssuer = mock(EmailTokenIssuer.class);
   private final EmailDeliveryPort emailDelivery = mock(EmailDeliveryPort.class);
   private final EmailResendThrottlePort emailResendThrottle = mock(EmailResendThrottlePort.class);
   private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
@@ -136,7 +143,8 @@ class RegisterUserHandlerTest {
         passwordPolicy,
         usernamePolicy,
         sessionIssuer,
-        emailVerificationIssuer,
+        emailTokenIssuer,
+        LINKS,
         emailDelivery,
         emailResendThrottle,
         transactions,
@@ -175,7 +183,7 @@ class RegisterUserHandlerTest {
     when(sessionIssuer.issue(anyLong(), any()))
         .thenReturn(IssuedUserSession.of("patra_user_x", List.of()));
     when(userReadPort.findAccount(42L)).thenReturn(Optional.of(ACCOUNT));
-    when(emailVerificationIssuer.prepare(any(), any(), any())).thenReturn(PREPARED);
+    when(emailTokenIssuer.issue(any(), anyLong(), any(), any())).thenReturn(ISSUED);
   }
 
   /// 带邮箱、用户名、密码的命令。
@@ -346,7 +354,7 @@ class RegisterUserHandlerTest {
   void should_hash_outside_transaction_and_save_inside() {
     AtomicBoolean inTransaction = new AtomicBoolean(false);
     RegisterUserHandler transactional = handler(recording(inTransaction));
-    when(emailVerificationIssuer.prepare(any(), any(), any())).thenReturn(PREPARED);
+    when(emailTokenIssuer.issue(any(), anyLong(), any(), any())).thenReturn(ISSUED);
     when(passwordHashing.hash(any()))
         .thenAnswer(
             invocation -> {
@@ -450,11 +458,11 @@ class RegisterUserHandlerTest {
     AtomicBoolean inTransaction = new AtomicBoolean(false);
     RegisterUserHandler transactional = handler(recording(inTransaction));
     stubHappyPath();
-    when(emailVerificationIssuer.prepare(any(), any(), any()))
+    when(emailTokenIssuer.issue(any(), anyLong(), any(), any()))
         .thenAnswer(
             invocation -> {
               assertThat(inTransaction).isTrue();
-              return PREPARED;
+              return ISSUED;
             });
     doAnswer(
             invocation -> {
@@ -479,12 +487,13 @@ class RegisterUserHandlerTest {
             .clientIp("203.0.113.9")
             .build());
 
-    InOrder order =
-        inOrder(sessionIssuer, emailVerificationIssuer, emailResendThrottle, emailDelivery);
+    InOrder order = inOrder(sessionIssuer, emailTokenIssuer, emailResendThrottle, emailDelivery);
     order.verify(sessionIssuer).issue(eq(42L), any());
-    order.verify(emailVerificationIssuer).prepare(any(), eq("chen-yu"), eq("203.0.113.9"));
+    order
+        .verify(emailTokenIssuer)
+        .issue(eq(EmailTokenPurpose.EMAIL_VERIFY), eq(42L), eq(EMAIL), eq("203.0.113.9"));
     order.verify(emailResendThrottle).markSent(42L, NOW);
-    order.verify(emailDelivery).send(PREPARED.mail());
+    order.verify(emailDelivery).send(EXPECTED_MAIL);
   }
 
   @Test
@@ -494,8 +503,9 @@ class RegisterUserHandlerTest {
 
     handler.handle(command("chen.yu@example.com", "chen-yu", "correct horse battery"));
 
-    verify(emailVerificationIssuer).prepare(any(), eq("chen-yu"), isNull());
-    verify(emailDelivery).send(PREPARED.mail());
+    verify(emailTokenIssuer)
+        .issue(eq(EmailTokenPurpose.EMAIL_VERIFY), eq(42L), eq(EMAIL), isNull());
+    verify(emailDelivery).send(EXPECTED_MAIL);
   }
 
   @Test
@@ -510,6 +520,6 @@ class RegisterUserHandlerTest {
         handler.handle(command("chen.yu@example.com", "chen-yu", "correct horse battery"));
 
     assertThat(result.sessionToken()).isEqualTo("patra_user_x");
-    verify(emailDelivery).send(PREPARED.mail());
+    verify(emailDelivery).send(EXPECTED_MAIL);
   }
 }
