@@ -116,6 +116,9 @@ public final class UserFieldViolations {
   /// catalog 里没有这个标识。
   public static final String NOT_FOUND = "NOT_FOUND";
 
+  /// 原因码：输入与应有的值不一致（注销时确认的用户名）。
+  public static final String MISMATCH = "MISMATCH";
+
   /// 只有静态方法。
   private UserFieldViolations() {}
 
@@ -307,6 +310,13 @@ public final class UserFieldViolations {
   /// @return 字段错误
   public static FieldViolation usernameReserved() {
     return FieldViolation.of(USERNAME, RESERVED, "这个用户名不能使用");
+  }
+
+  /// 注销时输入的用户名与当前用户名不一致。
+  ///
+  /// @return 字段错误
+  public static FieldViolation usernameMismatch() {
+    return FieldViolation.of(USERNAME, MISMATCH, "和你的用户名不一致");
   }
 
   /// 新用户名与当前相同。
