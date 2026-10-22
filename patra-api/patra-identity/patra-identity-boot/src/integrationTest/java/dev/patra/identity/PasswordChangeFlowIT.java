@@ -78,8 +78,12 @@ class PasswordChangeFlowIT extends IdentityFlowITSupport {
     waitForMails(3);
     MimeMessage notice = mailFor(email, "你的 Patra 密码已修改");
     String text = partText(notice, "text/plain");
-    assertThat(text).contains("时间：").contains("设备：未知").contains("/settings/security");
-    assertThat(partText(notice, "text/html")).contains("href=\"");
+    assertThat(text)
+        .contains("时间：")
+        .contains("设备：未知")
+        .contains("忘记密码")
+        .doesNotContain("/settings/security");
+    assertThat(partText(notice, "text/html")).contains("忘记密码").doesNotContain("/settings/security");
 
     assertThat(login(email, "Another-Horse-03").status()).isEqualTo(200);
     assertThat(login(email, PASSWORD).status()).isEqualTo(401);

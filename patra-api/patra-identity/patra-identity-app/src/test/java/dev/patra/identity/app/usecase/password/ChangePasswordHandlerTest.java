@@ -39,6 +39,7 @@ import dev.patra.identity.domain.port.repository.EmailTokenRepository;
 import dev.patra.identity.domain.port.repository.UserLoginRecordRepository;
 import dev.patra.identity.domain.port.repository.UserPasswordCredentialRepository;
 import dev.patra.identity.domain.port.repository.UserRepository;
+import dev.patra.identity.domain.port.session.SessionRotation;
 import dev.patra.identity.domain.port.session.SessionStorePort;
 import dev.patra.identity.domain.port.throttle.LoginAttempt;
 import dev.patra.identity.domain.port.throttle.LoginThrottlePort;
@@ -48,6 +49,7 @@ import dev.patra.tool.core.security.ClientType;
 import dev.patra.tool.core.security.CurrentUser;
 import dev.patra.tool.core.security.CurrentUserPort;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -129,7 +131,8 @@ class ChangePasswordHandlerTest {
     when(loginThrottle.recordFailure(ATTEMPT)).thenReturn(Optional.empty());
     when(passwordHashing.matches(any(), any())).thenReturn(true);
     when(passwordHashing.hash(any())).thenReturn(NEW_HASH);
-    when(sessions.rotate(AccountType.USER, 42L, 7001L)).thenReturn(Optional.of(NEW_TOKEN));
+    when(sessions.rotate(AccountType.USER, 42L, 7001L, Duration.ZERO))
+        .thenReturn(Optional.of(SessionRotation.rotated(NEW_TOKEN)));
     when(sessions.revokeAllExcept(AccountType.USER, 42L, 7001L)).thenReturn(List.of(7002L, 7003L));
     when(records.findById(7002L)).thenReturn(Optional.of(record()));
     when(records.findById(7003L)).thenReturn(Optional.of(record()));
@@ -179,6 +182,25 @@ class ChangePasswordHandlerTest {
   }
 
   @Test
+  @DisplayName("并发改密码：锁住用户行后凭据已不是刚校验过的那一个，401 PASSWORD_MISMATCH 且不计失败、不换哈希、不换令牌、不发信")
+  void should_reject_when_credential_changed_between_verification_and_lock() {
+    PasswordHash concurrent = PasswordHash.of("$argon2id$v=19$m=19456,t=2,p=1$c2FsdA$b3RoZXI");
+    when(credentials.findByUserId(42L))
+        .thenReturn(Optional.of(UserPasswordCredential.restore(7L, 42L, OLD_HASH, 0L)))
+        .thenReturn(Optional.of(UserPasswordCredential.restore(7L, 42L, concurrent, 1L)));
+
+    assertThatThrownBy(
+            () ->
+                handler.handle(
+                    ChangePasswordCommand.of("Correct-Horse-02", "Another-Horse-03", "127.0.0.1")))
+        .isInstanceOf(CurrentPasswordMismatchException.class);
+    verify(loginThrottle, never()).recordFailure(any());
+    verify(credentials, never()).save(any());
+    verify(sessions, never()).rotate(any(), anyLong(), anyLong(), any());
+    verifyNoInteractions(emailDelivery);
+  }
+
+  @Test
   @DisplayName("新旧相同（含 NFKC 等价的全角形式）：422 newPassword/UNCHANGED，不做第二次哈希")
   void should_reject_unchanged_password_with_422_without_hashing() {
     assertThatThrownBy(
@@ -214,7 +236,7 @@ class ChangePasswordHandlerTest {
     order.verify(sessions).revokeAllExcept(AccountType.USER, 42L, 7001L);
     order.verify(records, times(2)).save(argThat(r -> r.getEndReason() == LoginEndReason.REVOKED));
     order.verify(userReadPort).findAccount(42L);
-    order.verify(sessions).rotate(AccountType.USER, 42L, 7001L);
+    order.verify(sessions).rotate(AccountType.USER, 42L, 7001L, Duration.ZERO);
     order
         .verify(emailDelivery)
         .send(
@@ -261,7 +283,7 @@ class ChangePasswordHandlerTest {
   @DisplayName("换令牌时 Redis 失败：异常从事务里抛出（回滚，密码没改成），不发信")
   void should_roll_back_password_when_session_rotation_fails() {
     TemporarilyUnavailableException down = new TemporarilyUnavailableException();
-    when(sessions.rotate(AccountType.USER, 42L, 7001L)).thenThrow(down);
+    when(sessions.rotate(AccountType.USER, 42L, 7001L, Duration.ZERO)).thenThrow(down);
 
     assertThatThrownBy(
             () ->
@@ -281,7 +303,7 @@ class ChangePasswordHandlerTest {
                 handler.handle(
                     ChangePasswordCommand.of("Correct-Horse-02", "Another-Horse-03", "127.0.0.1")))
         .isInstanceOf(dev.patra.tool.core.security.AuthenticationRequiredException.class);
-    verify(sessions, never()).rotate(any(), anyLong(), anyLong());
+    verify(sessions, never()).rotate(any(), anyLong(), anyLong(), any());
     verifyNoInteractions(emailDelivery);
   }
 

@@ -30,6 +30,8 @@ public final class RedisSessionStore {
   public static final Duration RENEW_INTERVAL = Duration.ofSeconds(60);
 
   static final String SESSION_KEY_PREFIX = "idn:session:";
+  /// `session-rotate.lua` 在宽限期内不换令牌时的返回值。
+  private static final String KEPT = "KEPT";
   static final String INDEX_KEY_PREFIX = "idn:user-sessions:";
 
   @SuppressWarnings("rawtypes")
@@ -125,14 +127,18 @@ public final class RedisSessionStore {
 
   /// 换令牌、保留会话 ID：再认证、改密码用。会话 ID、创建时间、绝对过期、设备都不变，
   /// `auth_at` 与最后活跃时间刷新成现在；旧令牌在返回的那一刻失效。
+  /// `auth_at` 距今不足 `grace` 时脚本里原子地判定不换，什么都不动，返回「没换」。
   ///
   /// @param accountType 账号类型
   /// @param userId 用户 ID
   /// @param sessionId 会话 ID
-  /// @return 新令牌；会话不在或已过绝对期时为空
+  /// @param grace 换令牌的宽限期；`Duration.ZERO` 表示每次都换
+  /// @return 换令牌的结果；会话不在或已过绝对期时为空
   /// @throws SessionStoreUnavailableException Redis 暂时不可用时
-  public Optional<SessionToken> rotate(AccountType accountType, long userId, long sessionId) {
+  public Optional<Rotation> rotate(
+      AccountType accountType, long userId, long sessionId, Duration grace) {
     Objects.requireNonNull(accountType, "accountType 不能为 null");
+    Objects.requireNonNull(grace, "grace 不能为 null");
     SessionToken token = SessionToken.generate(accountType, random);
     List<?> fields =
         execute(
@@ -143,11 +149,15 @@ public final class RedisSessionStore {
                     sessionKeyPrefix(accountType),
                     Long.toString(sessionId),
                     token.hash(),
-                    Long.toString(clock.millis())));
+                    Long.toString(clock.millis()),
+                    Long.toString(grace.toMillis())));
     if (fields == null || fields.isEmpty()) {
       return Optional.empty();
     }
-    return Optional.of(token);
+    if (fields.size() == 1 && KEPT.equals(String.valueOf(fields.getFirst()))) {
+      return Optional.of(Rotation.kept());
+    }
+    return Optional.of(Rotation.rotated(token));
   }
 
   /// 按用户 ID 和会话 ID 读一条会话，不续期。再认证守卫读 `auth_at` 用：守卫是读，不是活动。

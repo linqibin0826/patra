@@ -34,6 +34,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -41,7 +42,8 @@ import org.springframework.transaction.support.TransactionOperations;
 
 /// 找回密码的提交：用令牌设置新密码。
 ///
-/// 顺序：提交限流（对猜令牌的限制，格式不对也计）→ 字段（密码不合规时令牌不被消费）→ 哈希（事务外）→
+/// 顺序：提交限流（对猜令牌的限制，格式不对也计）→ 字段（令牌为空 / 格式不对与密码不合规一次报全，
+/// 令牌不被消费）→ 哈希（事务外）→
 /// 事务里：按哈希查令牌（用途不符 422）→ 锁用户行（不存在、封禁、注销 422）→ 条件消费 → 令牌邮箱
 /// 必须等于当前邮箱 → 换哈希（没有凭据行就新建）→ 批量作废令牌（待确认的改邮箱随之取消）→
 /// 写验证时间 → 撤销全部会话并记 `REVOKED` → 清零登录失败 → 事务后发「密码已重设」。不自动登录。
@@ -78,8 +80,14 @@ public class ResetPasswordHandler implements CommandHandler<ResetPasswordCommand
               throw new PasswordResetLimitedException(wait);
             });
     List<FieldViolation> violations = new ArrayList<>();
+    Optional<EmailTokenSecret> parsed = Optional.empty();
     if (command.token() == null || command.token().isBlank()) {
       violations.add(UserFieldViolations.tokenRequired());
+    } else {
+      parsed = EmailTokenSecret.parse(command.token());
+      if (parsed.isEmpty()) {
+        violations.add(UserFieldViolations.tokenInvalid());
+      }
     }
     passwordPolicy
         .validate(command.newPassword(), UserFieldViolations.NEW_PASSWORD)
@@ -87,7 +95,7 @@ public class ResetPasswordHandler implements CommandHandler<ResetPasswordCommand
     if (!violations.isEmpty()) {
       throw new InvalidUserFieldsException(violations);
     }
-    EmailTokenSecret secret = EmailTokenSecret.parse(command.token()).orElseThrow(() -> invalid());
+    EmailTokenSecret secret = parsed.orElseThrow();
     PasswordHash hash = passwordHashing.hash(PlainPassword.of(command.newPassword()));
     Done done =
         Objects.requireNonNull(

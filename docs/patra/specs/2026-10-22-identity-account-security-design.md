@@ -107,10 +107,11 @@
 
 ```
 KEYS[1] 索引  KEYS[2] 新会话键
-ARGV[1] 前缀  ARGV[2] 会话 ID  ARGV[3] 新令牌哈希  ARGV[4] now
+ARGV[1] 前缀  ARGV[2] 会话 ID  ARGV[3] 新令牌哈希  ARGV[4] now  ARGV[5] 宽限期毫秒（0 = 每次都换）
 hash = HGET index sid；没有 → return {}
 fields = HGETALL prefix..hash；空 → HDEL index sid；return {}
 now >= expires_at → DEL 旧键；HDEL index sid；return {}
+grace > 0 且 now − auth_at < grace → return {'KEPT'}（什么都不动）
 fields.auth_at = now；fields.last_active_at = now
 HSET 新键 fields…；PEXPIRE 新键 min(idle_timeout_ms, expires_at − now)
 DEL 旧键；HSET index sid 新哈希
@@ -121,7 +122,7 @@ return fields（HGETALL 形式）
 - 旧令牌在脚本返回的那一刻失效。网关没有缓存，下一个带旧令牌的请求是 401。
 - 新令牌由 Java 生成（`SessionToken.generate`），脚本只拿哈希。
 
-`RedisSessionStore.rotate(accountType, userId, sessionId) → Optional<IssuedSession>`：返回新令牌（`replacedSessionIds` 为空）；会话不在或已过期时为空。
+`RedisSessionStore.rotate(accountType, userId, sessionId, grace) → Optional<Rotation>`：换了带新令牌，宽限期内没换是 `Rotation.kept()`；会话不在或已过期时为空。宽限期是评审修正：两个标签页几乎同时再认证，第二次换令牌会让第一次响应里的令牌作废，先到的那页下一个请求 401；`auth_at` 距今不足宽限期（`patra.identity.reauth.rotation-grace`，10 秒）时脚本原子地判定不换，门户保持现有 Cookie——它最终是先换出的那个。改密码传零，每次都换。
 
 ### 6.3 `session-find.lua`：按会话 ID 读，不续期
 
@@ -236,17 +237,17 @@ return fields
 5. `credentials.findByUserId` + `passwordHashing.matches`：凭据不存在（撤销改邮箱后）→ `verifyAgainstDummy` 后按失败结算；不匹配 → `recordFailure` → 锁定则 429，否则 401 `CurrentPasswordMismatchException`（`UNAUTHORIZED` + `PASSWORD_MISMATCH`）。中途异常 → `cancel`。
 6. `recordSuccess`。
 7. `userReadPort.findAccount`（不存在 → 401）。
-8. `sessions.rotate(USER, userId, sessionId)`（最后一步）：空（会话这期间没了）→ 401 `AuthenticationRequiredException`。返回 `AuthenticatedUser(新令牌, account)`。
+8. `sessions.rotate(USER, userId, sessionId, policy.rotationGrace())`（最后一步）：空（会话这期间没了）→ 401 `AuthenticationRequiredException`；宽限期内「没换」→ 返回 `Reauthenticated(null, account)`；换了 → `Reauthenticated(新令牌, account)`。
 
 不开事务：没有数据库写。封禁并发：封禁的 `revokeAll` 和这里的 `rotate` 都是 Redis 原子脚本，谁后执行谁生效——封禁后执行的 `rotate` 找不到索引条目返回空（401）；`rotate` 后执行的封禁按索引里的新哈希删掉新会话。
 
-响应 `200`，和登录同构：
+响应 `200`，和登录同构，但 `sessionToken` 可能为 `null`：
 
 ```json
 { "sessionToken": "patra_user_…", "user": { "...": "同 /auth/me" } }
 ```
 
-门户收到后换 Cookie 里的令牌（PAP-102）。再认证失败不动会话：旧令牌照常可用。
+门户收到后换 Cookie 里的令牌；`sessionToken` 为 `null` 是宽限期内没换（第 6.2 节），保持现有 Cookie（PAP-102）。再认证失败不动会话：旧令牌照常可用。
 
 ### 8.2 改密码 `PUT /me/password`
 
@@ -255,10 +256,10 @@ return fields
 1. `currentUserPort.require()`。
 2. 两个字段一起校验、一次报全（422）：`currentPassword` 用 `PlainPassword.validate`；`newPassword` 用 `PasswordPolicy.validate(raw, NEW_PASSWORD)`（8 ~ 64、常见名单）。
 3. 不加锁读用户，`requireActive()`：`PENDING_DELETION` 409、`BANNED` / `DELETED` 401。
-4. 校验当前密码：同 8.1 第 4 ~ 6 步（共用登录失败限制，错是 401 + `PASSWORD_MISMATCH`，锁定 429）。
+4. 校验当前密码：同 8.1 第 4 ~ 6 步（共用登录失败限制，错是 401 + `PASSWORD_MISMATCH`，锁定 429）。`CurrentPasswordVerifier.verify` 返回匹配上的哈希，第 7 步在锁下拿它再比一次。
 5. 新旧相同 → 422 `newPassword` / `UNCHANGED`。比较的是 NFKC 规范化后的原文（哈希前做的同一个规范化），不做第二次 Argon2。
 6. `passwordHashing.hash(new)`（事务外）。
-7. 事务里：`users.findByIdForUpdate` → `requireActive()` → `credentials.findByUserId`（不存在 → 401，这期间被撤销改邮箱删掉了）→ `credential.rotate(hash)`、`save` → `tokens.revokeAllActive(userId, now)` → `sessions.revokeAllExcept(USER, userId, sessionId)`，被删会话的记录 `end(REVOKED, now)` → 读账号信息 → **最后** `sessions.rotate(USER, userId, sessionId)`（空 → 401；评审修正：换令牌放事务最后一步，之前任何一步失败都不碰旧令牌，用户还能在原会话里重试；只剩提交本身失败这一种情况会丢令牌）。Redis 失败整个事务回滚、503：密码没改成。
+7. 事务里：`users.findByIdForUpdate` → `requireActive()` → `credentials.findByUserId`（不存在 → 401，这期间被撤销改邮箱删掉了）→ 凭据哈希 ≠ 第 4 步匹配上的哈希 → 401 `PASSWORD_MISMATCH`、不计失败（评审修正：两次并发改密码都在锁外用旧密码通过校验，不比对的话后提交的会用过期的「当前密码」覆盖先提交的；比对后只有先到的生效）→ `credential.rotate(hash)`、`save` → `tokens.revokeAllActive(userId, now)` → `sessions.revokeAllExcept(USER, userId, sessionId)`，被删会话的记录 `end(REVOKED, now)` → 读账号信息 → **最后** `sessions.rotate(USER, userId, sessionId, Duration.ZERO)`（每次都换；空 → 401；评审修正：换令牌放事务最后一步，之前任何一步失败都不碰旧令牌，用户还能在原会话里重试；只剩提交本身失败这一种情况会丢令牌）。Redis 失败整个事务回滚、503：密码没改成。
 8. 事务提交后：`emailDelivery.send(PasswordChangedMail)`。
 
 响应 `200`，和登录同构（`sessionToken` 是新令牌）。
@@ -274,7 +275,7 @@ return fields
 1. `EmailAddress.validate` → 422 `email` / `REQUIRED` 等。格式错误不是枚举信号。
 2. `passwordResetThrottle.acquireRequest(email, clientIp, now)`：有值 → 429 `PasswordResetLimitedException`。**在查用户之前、对任何邮箱都计数**：只给已注册的计数，429 本身就成了「已注册」的信号。
 3. `users.findByEmail(email)`：
-   - 查到且 `ACTIVE` / `PENDING_DELETION`：事务里 `users.findByIdForUpdate` → `issuer.issue(PASSWORD_RESET, userId, email, clientIp)` → 读昵称；事务提交后 `send(PasswordResetMail)`。
+   - 查到且 `ACTIVE` / `PENDING_DELETION`：事务里 `users.findByIdForUpdate` → 锁下重判（这期间被删或被封禁 → 走下面的静默分支，不是 500；评审修正）→ `issuer.issue(PASSWORD_RESET, userId, email, clientIp)` → 读昵称；事务提交后 `send(PasswordResetMail)`。
    - 查不到（含 `DELETED`：邮箱为空查不到）或 `BANNED`：不发信。被封禁的账号重设了密码也登不进去，发信只是浪费配额；要不要告诉他「账号被封」是登录接口的事。为了耗时同量级，这条分支照样生成一次 `EmailTokenSecret` 并计算哈希，只是不写库、不发信。
 4. 返回 `PasswordResetRequested(email, nextRequestAt = now + cooldown)`。
 
@@ -293,7 +294,7 @@ return fields
 请求体 `{ "token", "newPassword" }`。网关：公开。`ResetPasswordHandler`：
 
 1. `passwordResetThrottle.acquireSubmit(clientIp, now)` → 429。先于一切：这是对猜令牌的限制，格式不对也计。
-2. 字段一起校验（422）：`token` 为空 `REQUIRED`、格式不对 `INVALID`（不查库）；`newPassword` 按 `PasswordPolicy.validate(raw, NEW_PASSWORD)`。密码不合规时令牌不被消费，用户换个密码再提交同一个链接。
+2. 字段一起校验、一次报全（422）：`token` 为空 `REQUIRED`、格式不对 `INVALID`（不查库）；`newPassword` 按 `PasswordPolicy.validate(raw, NEW_PASSWORD)`。令牌格式错和密码不合规同时存在时两条都在 `errors[]` 里（评审修正：原来先报令牌再报密码，门户要走两轮）。密码不合规时令牌不被消费，用户换个密码再提交同一个链接。
 3. `passwordHashing.hash(new)`（事务外）。
 4. 事务里：
    1. `tokens.findByTokenHash`：空或用途不是 `PASSWORD_RESET` → 422 `token` / `INVALID`。
@@ -365,7 +366,7 @@ return fields
 2. `tokens.findByTokenHash`：空或用途不是 `EMAIL_CHANGE_REVERT` → 422。
 3. `users.findByIdForUpdate`：不存在、`BANNED`、`DELETED` → 422；`ACTIVE`、`PENDING_DELETION` 继续——攻击者拿到账号后申请注销是很自然的事，原主必须能撤回邮箱；撤回不碰注销状态（第 20 节待拍板）。
 4. `tokens.consume(hash, EMAIL_CHANGE_REVERT, now)`：空 → 422。
-5. `restore = token.email`。`users.existsByEmail(restore)`（7 天内被别人注册了）→ 409 `email` / `ALREADY_REGISTERED`，事务回滚，令牌没被消费、链接还能用；用户只能找管理员。极端情况，本版不做更多。
+5. `restore = token.email`。当前邮箱已经是 `restore`（X → Y → X 之后点 R_X）不算占用（评审修正：`existsByEmail` 会查到自己）；否则 `users.existsByEmail(restore)`（7 天内被别人注册了）→ 409 `email` / `ALREADY_REGISTERED`，事务回滚，令牌没被消费、链接还能用；用户只能找管理员。极端情况，本版不做更多。
 6. `user.changeEmail(restore, now)`；`users.save`（撞唯一约束同上 409）。
 7. `tokens.revokeAllActive(userId, now)` + `tokens.revokeRevertTokensIssuedAfter(userId, consumed.id, now)`：只作废**比本条更晚签发**的撤销链接，更早的保留（评审修正：原来的「其余全废」让攻击者 X → Y → Z 后先点 Y 的链接就能废掉原主 X 的，7 天保护形同虚设）。越早的地址越可信：原主先点 X 的，Y 的随之作废；攻击者先点 Y 的，X 的仍然活着，原主随后点它照样胜出。
 8. `credentials.deleteByUserId(userId)`：作废密码。
@@ -424,6 +425,8 @@ PAP-96 第 9.4 节让 `security-notice` 片段固定追加「建议立即到安�
 
 `MailLinkPolicy` 加三个路径，默认值 `/reset-password`、`/confirm-email-change`、`/revert-email-change`，格式同验证邮件：`{base-url}{路径}#token=<43 字符>`。PAP-102 做三个落地页。
 
+评审修正的三处文案：「密码已修改」不再附「到安全设置改密码」一句（不是本人时旧密码已失效、登不进去，片段里的「忘记密码」指引就够）；「邮箱已更改」正文不再重复片段里的撤销指引，`EmailChangedNoticeMail.NOT_ME_ADVICE` 直接接动作；「已改回请重设密码」的「不是你本人的操作？」后面接「有人能看到这个邮箱里的邮件，先保护好邮箱」而不是「账号已锁定」。
+
 ## 10. 限流
 
 ### 10.1 维度与键
@@ -437,7 +440,7 @@ PAP-96 第 9.4 节让 `security-notice` 片段固定追加「建议立即到安�
 | 改邮箱：申请 | 窗口 | 同账号每天 ≤ 3 | `idn:email-change:day:user:{userId}` |
 | 重发验证邮件（PAP-96） | 不变 | 不变 | 不变 |
 
-`h(x)` = SHA-256 十六进制前 32 位（邮箱、IP 都哈希，PAP-96 第 10.1 节）。IP 未知时跳过 IP 维度。
+`h(x)` = SHA-256 十六进制前 32 位（邮箱、IP 都哈希，PAP-96 第 10.1 节）。IP 取不到时所有未知来源共用 `unknown` 一个桶（评审修正：提交只有 IP 这一维，跳过等于没有限制）。
 
 **PAP-99 之前的 IP 维度**：受信转发接通前 `getRemoteAddr()` 是门户容器的地址，找回密码的「同 IP 每小时 20 次」实际是全站每小时 20 次、提交的「每分钟 10 次」是全站每分钟 10 次。PAP-99 和本 Issue 在同一个版本、同一个 PR 里合入，上线时 IP 已经是真实地址；合入前的开发期只有一两个人在用，够。不为这段时间加开关、不调大阈值。
 
@@ -506,6 +509,7 @@ patra:
   identity:
     reauth:
       window: 10m                      # 再认证窗口：敏感操作要求这么久内输过密码
+      rotation-grace: 10s              # 再认证换令牌的宽限期：上次密码验证距今不足这么久就不换（并发再认证）
     password-reset:
       cooldown: 60s                    # 同邮箱两次申请的最短间隔
       per-email-daily: 5
@@ -520,7 +524,7 @@ patra:
         revert-email-change-path: /revert-email-change
 ```
 
-`IdentityProperties` 加 `Reauth(window)`、`PasswordReset(cooldown, perEmailDaily, perIpHourly, submitPerIpMinutely)`、`EmailChange(perAccountDaily)`，`Links` 加三个路径，都给默认值；`IdentityConfiguration` 把它们变成三个策略对象（非正数启动失败），装配 `EmailTokenIssuer`（替代 `emailVerificationIssuer` Bean）、`ReauthenticationGuard`。Nacos 不加键：这些都随代码变，不随环境变。
+`IdentityProperties` 加 `Reauth(window, rotationGrace)`、`PasswordReset(cooldown, perEmailDaily, perIpHourly, submitPerIpMinutely)`、`EmailChange(perAccountDaily)`，`Links` 加三个路径，都给默认值；`IdentityConfiguration` 把它们变成三个策略对象（非正数启动失败），装配 `EmailTokenIssuer`（替代 `emailVerificationIssuer` Bean）、`ReauthenticationGuard`。Nacos 不加键：这些都随代码变，不随环境变。
 
 ## 14. 决策 K：密码规则与 NIST SP 800-63B-4 的偏离（按 ASVS 7.1.1 记录）
 
@@ -651,7 +655,7 @@ boot 端到端（PG + Redis + GreenMail，`RANDOM_PORT`，`MutableClock`）：
 |---|---|
 | 踢设备（单个 / 其他全部）先 `reauthenticationGuard.requireRecent(current)`；`SecurityNotice` 的 `device` / `ipAddress` / `ipLocation` 由 Yauaa / ip2region 填后，本 Issue 的四封安全通知把 `null` 换成真实值（`ChangePasswordHandler`、`ResetPasswordHandler`、`ConfirmEmailChangeHandler`、`RevertEmailChangeHandler` 各一处） | PAP-99 |
 | 注销申请先过再认证守卫；撤销改邮箱对 `PENDING_DELETION` 用户放行且不碰注销状态（要不要顺带取消注销见第 20 节）；注销时 `revokeActive(EMAIL_CHANGE_REVERT)` 的约定不变 | PAP-100 |
-| 门户：403 且 `traits` 含 `REAUTH_REQUIRED` → 弹密码框 → `POST /auth/reauth` → 换 Cookie 里的令牌 → 重试原请求；`PUT /me/password` 200 同样换令牌；401 且 `traits` 含 `PASSWORD_MISMATCH` 是密码错、不是登出；三个落地页 `/reset-password`（`POST /auth/password/reset`，成功跳登录页预填 `email`）、`/confirm-email-change`（`POST /auth/email/change/confirm`，409 显示「地址已被注册」）、`/revert-email-change`（`POST /auth/email/change/revert`，成功提示「已改回，请查收重设密码邮件」）；安全设置页用 `GET /me/email/change` 显示待确认状态与「取消」；找回密码页 429 读 `retryAfterSeconds` | PAP-102 |
+| 门户：403 且 `traits` 含 `REAUTH_REQUIRED` → 弹密码框 → `POST /auth/reauth` → 换 Cookie 里的令牌（`sessionToken` 为 `null` 时保持现有 Cookie）→ 重试原请求；`PUT /me/password` 200 同样换令牌；401 且 `traits` 含 `PASSWORD_MISMATCH` 是密码错、不是登出；三个落地页 `/reset-password`（`POST /auth/password/reset`，成功跳登录页预填 `email`）、`/confirm-email-change`（`POST /auth/email/change/confirm`，409 显示「地址已被注册」）、`/revert-email-change`（`POST /auth/email/change/revert`，成功提示「已改回，请查收重设密码邮件」）；安全设置页用 `GET /me/email/change` 显示待确认状态与「取消」；找回密码页 429 读 `retryAfterSeconds` | PAP-102 |
 
 ## 19. 要同步改的文档和 Issue
 

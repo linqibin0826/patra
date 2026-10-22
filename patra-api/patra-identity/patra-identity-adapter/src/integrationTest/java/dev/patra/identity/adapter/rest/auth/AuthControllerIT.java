@@ -9,6 +9,7 @@ import dev.patra.identity.app.usecase.auth.AuthenticatedUser;
 import dev.patra.identity.app.usecase.login.LoginUserCommand;
 import dev.patra.identity.app.usecase.logout.LogoutUserCommand;
 import dev.patra.identity.app.usecase.reauth.ReauthenticateUserCommand;
+import dev.patra.identity.app.usecase.reauth.Reauthenticated;
 import dev.patra.identity.app.usecase.register.RegisterUserCommand;
 import dev.patra.identity.app.usecase.user.query.UserQueryService;
 import dev.patra.identity.domain.exception.CurrentPasswordMismatchException;
@@ -257,7 +258,7 @@ class AuthControllerIT {
   @DisplayName("再认证成功返回 200，和登录同构；密码原样交给命令")
   void should_reauth_with_200_and_new_token() {
     when(commandBus.handle(any(ReauthenticateUserCommand.class)))
-        .thenReturn(AuthenticatedUser.of("patra_user_rotated", account(42L)));
+        .thenReturn(Reauthenticated.of("patra_user_rotated", account(42L)));
 
     restClient
         .post()
@@ -277,6 +278,27 @@ class AuthControllerIT {
         ArgumentCaptor.forClass(ReauthenticateUserCommand.class);
     verify(commandBus).handle(command.capture());
     assertThat(command.getValue().password()).isEqualTo("Correct-Horse-02");
+  }
+
+  @Test
+  @DisplayName("宽限期内再认证没换令牌：200，sessionToken 为 null，user 照常")
+  void should_reauth_with_null_token_when_kept() {
+    when(commandBus.handle(any(ReauthenticateUserCommand.class)))
+        .thenReturn(Reauthenticated.of(null, account(42L)));
+
+    restClient
+        .post()
+        .uri("/auth/reauth")
+        .contentType(MediaType.APPLICATION_JSON)
+        .body(Map.of("password", "Correct-Horse-02"))
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .jsonPath("$.sessionToken")
+        .isEmpty()
+        .jsonPath("$.user.userId")
+        .isEqualTo("42");
   }
 
   @Test

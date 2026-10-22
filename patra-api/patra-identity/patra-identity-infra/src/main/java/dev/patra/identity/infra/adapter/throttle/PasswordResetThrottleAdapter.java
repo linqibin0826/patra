@@ -6,7 +6,6 @@ import dev.patra.identity.domain.policy.PasswordResetPolicy;
 import dev.patra.identity.domain.port.throttle.PasswordResetThrottlePort;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -15,7 +14,8 @@ import org.springframework.stereotype.Component;
 
 /// 找回密码限流的 Redis 实现：申请按邮箱冷却 + 邮箱天窗口 + IP 小时窗口；提交按 IP 分钟窗口。
 ///
-/// 邮箱、IP 都哈希后进键名；IP 未知时不带 IP 窗口（提交没有别的维度，直接放行）。
+/// 邮箱、IP 都哈希后进键名；IP 取不到时所有未知来源共用 `unknown` 一个桶，不放行：提交只有 IP 这一维，
+/// 跳过就等于没有限制。
 /// Redis 暂时不可用转成 {@link TemporarilyUnavailableException}（503）。
 @Component
 public final class PasswordResetThrottleAdapter implements PasswordResetThrottlePort {
@@ -41,28 +41,22 @@ public final class PasswordResetThrottleAdapter implements PasswordResetThrottle
   @Override
   public Optional<Duration> acquireRequest(EmailAddress email, String clientIp, Instant now) {
     List<String> keys = requestKeys(email, clientIp);
-    List<ActionThrottleScript.Window> windows = new ArrayList<>();
-    windows.add(
-        new ActionThrottleScript.Window(
-            keys.get(1), PasswordResetPolicy.DAY_WINDOW, policy.perEmailDaily()));
-    if (clientIp != null) {
-      windows.add(
-          new ActionThrottleScript.Window(
-              keys.get(2), PasswordResetPolicy.HOUR_WINDOW, policy.perIpHourly()));
-    }
+    List<ActionThrottleScript.Window> windows =
+        List.of(
+            new ActionThrottleScript.Window(
+                keys.get(1), PasswordResetPolicy.DAY_WINDOW, policy.perEmailDaily()),
+            new ActionThrottleScript.Window(
+                keys.get(2), PasswordResetPolicy.HOUR_WINDOW, policy.perIpHourly()));
     return toWait(script.run(keys.get(0), policy.cooldown(), windows, now, true));
   }
 
-  /// 提交一次：判 IP 分钟窗口并计数；IP 未知时没有可计的维度，直接放行。
+  /// 提交一次：判 IP 分钟窗口并计数；IP 未知时计进共用的 `unknown` 桶。
   ///
   /// @param clientIp 客户端 IP，可以为 `null`
   /// @param now 当前时间
   /// @return 放行时为空；被限时是还要等的时长
   @Override
   public Optional<Duration> acquireSubmit(String clientIp, Instant now) {
-    if (clientIp == null) {
-      return Optional.empty();
-    }
     return toWait(
         script.run(
             ActionThrottleScript.NO_COOLDOWN_KEY,
@@ -76,28 +70,33 @@ public final class PasswordResetThrottleAdapter implements PasswordResetThrottle
             true));
   }
 
-  /// 申请的键：邮箱冷却、邮箱天窗口，有 IP 时再加 IP 小时窗口。
+  /// 申请的键：邮箱冷却、邮箱天窗口、IP 小时窗口。
   ///
   /// @param email 邮箱
   /// @param clientIp 客户端 IP，可以为 `null`
-  /// @return 键名
+  /// @return 三个键名
   static List<String> requestKeys(EmailAddress email, String clientIp) {
     String emailHash = ActionThrottleScript.keyHash(email.value());
-    List<String> keys = new ArrayList<>();
-    keys.add("idn:pw-reset:cooldown:email:" + emailHash);
-    keys.add("idn:pw-reset:day:email:" + emailHash);
-    if (clientIp != null) {
-      keys.add("idn:pw-reset:hour:ip:" + ActionThrottleScript.keyHash(clientIp));
-    }
-    return List.copyOf(keys);
+    return List.of(
+        "idn:pw-reset:cooldown:email:" + emailHash,
+        "idn:pw-reset:day:email:" + emailHash,
+        "idn:pw-reset:hour:ip:" + ipSegment(clientIp));
   }
 
   /// 提交的键：IP 分钟窗口。
   ///
-  /// @param clientIp 客户端 IP
+  /// @param clientIp 客户端 IP，可以为 `null`
   /// @return 键名
   static String submitKey(String clientIp) {
-    return "idn:pw-reset-submit:minute:ip:" + ActionThrottleScript.keyHash(clientIp);
+    return "idn:pw-reset-submit:minute:ip:" + ipSegment(clientIp);
+  }
+
+  /// 键名里的 IP 段：哈希，取不到时是 `unknown`。
+  ///
+  /// @param clientIp 客户端 IP，可以为 `null`
+  /// @return 键名片段
+  private static String ipSegment(String clientIp) {
+    return clientIp == null ? "unknown" : ActionThrottleScript.keyHash(clientIp);
   }
 
   /// 脚本返回值转成等待时长。

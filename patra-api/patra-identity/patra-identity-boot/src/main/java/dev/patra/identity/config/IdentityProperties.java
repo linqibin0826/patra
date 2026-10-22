@@ -28,7 +28,9 @@ public record IdentityProperties(
   /// 再认证。
   ///
   /// @param window 敏感操作要求这么久内输过密码
-  public record Reauth(@DefaultValue("10m") Duration window) {}
+  /// @param rotationGrace 再认证换令牌的宽限期：上次密码验证距今不足这么久就不换（并发再认证）；零则每次都换
+  public record Reauth(
+      @DefaultValue("10m") Duration window, @DefaultValue("10s") Duration rotationGrace) {}
 
   /// 找回密码的限流。
   ///

@@ -396,7 +396,12 @@ class RedisSessionStoreIT {
     SessionToken old = store.create(newSession(62L, 8201L).deviceId("dev-1").build()).token();
     clock.advance(Duration.ofMinutes(3));
 
-    SessionToken fresh = store.rotate(AccountType.USER, 62L, 8201L).orElseThrow();
+    SessionToken fresh =
+        store
+            .rotate(AccountType.USER, 62L, 8201L, Duration.ZERO)
+            .orElseThrow()
+            .newToken()
+            .orElseThrow();
 
     assertThat(fresh).isNotEqualTo(old);
     assertThat(store.findAndTouch(old)).isEmpty();
@@ -416,12 +421,43 @@ class RedisSessionStoreIT {
   @Test
   @DisplayName("换令牌：会话不在或已过绝对期返回空并清掉索引条目")
   void should_return_empty_on_rotate_when_session_is_gone_or_expired() {
-    assertThat(store.rotate(AccountType.USER, 63L, 8301L)).isEmpty();
+    assertThat(store.rotate(AccountType.USER, 63L, 8301L, Duration.ZERO)).isEmpty();
     store.create(newSession(63L, 8302L).build());
     clock.advance(ABSOLUTE.plusSeconds(1));
 
-    assertThat(store.rotate(AccountType.USER, 63L, 8302L)).isEmpty();
+    assertThat(store.rotate(AccountType.USER, 63L, 8302L, Duration.ZERO)).isEmpty();
     assertThat(redis.opsForHash().hasKey("idn:user-sessions:user:63", "8302")).isFalse();
+  }
+
+  @Test
+  @DisplayName("换令牌的宽限期：auth_at 距今不足宽限期就不换——没有新令牌、原令牌与索引不动、auth_at 不动；满宽限期才换")
+  void should_keep_token_when_authenticated_within_grace() {
+    store.create(newSession(64L, 8401L).build());
+    clock.advance(Duration.ofMinutes(3));
+    SessionToken first =
+        store
+            .rotate(AccountType.USER, 64L, 8401L, Duration.ofSeconds(10))
+            .orElseThrow()
+            .newToken()
+            .orElseThrow();
+    clock.advance(Duration.ofSeconds(9));
+
+    Rotation kept =
+        store.rotate(AccountType.USER, 64L, 8401L, Duration.ofSeconds(10)).orElseThrow();
+
+    assertThat(kept.rotated()).isFalse();
+    assertThat(kept.newToken()).isEmpty();
+    assertThat(store.findAndTouch(first)).isPresent();
+    assertThat(redis.opsForHash().get("idn:user-sessions:user:64", "8401")).isEqualTo(first.hash());
+    assertThat(store.find(AccountType.USER, 64L, 8401L).orElseThrow().authenticatedAt())
+        .isEqualTo(START.plus(Duration.ofMinutes(3)));
+
+    clock.advance(Duration.ofSeconds(1));
+    Rotation rotated =
+        store.rotate(AccountType.USER, 64L, 8401L, Duration.ofSeconds(10)).orElseThrow();
+    assertThat(rotated.rotated()).isTrue();
+    assertThat(store.findAndTouch(first)).isEmpty();
+    assertThat(store.findAndTouch(rotated.newToken().orElseThrow())).isPresent();
   }
 
   @Test

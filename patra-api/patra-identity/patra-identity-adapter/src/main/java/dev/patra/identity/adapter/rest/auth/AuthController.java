@@ -5,10 +5,12 @@ import dev.patra.identity.adapter.rest.auth.request.ReauthRequest;
 import dev.patra.identity.adapter.rest.auth.request.RegisterRequest;
 import dev.patra.identity.adapter.rest.auth.response.AuthenticatedUserResponse;
 import dev.patra.identity.adapter.rest.auth.response.CurrentUserResponse;
+import dev.patra.identity.adapter.rest.auth.response.ReauthenticatedResponse;
 import dev.patra.identity.app.usecase.auth.AuthenticatedUser;
 import dev.patra.identity.app.usecase.login.LoginUserCommand;
 import dev.patra.identity.app.usecase.logout.LogoutUserCommand;
 import dev.patra.identity.app.usecase.reauth.ReauthenticateUserCommand;
+import dev.patra.identity.app.usecase.reauth.Reauthenticated;
 import dev.patra.identity.app.usecase.register.RegisterUserCommand;
 import dev.patra.identity.app.usecase.user.query.UserQueryService;
 import dev.patra.tool.cqrs.CommandBus;
@@ -69,14 +71,17 @@ public class AuthController {
     return toResponse(result);
   }
 
-  /// 再认证：重新输一次密码，通过后换新令牌（会话 ID 不变）并刷新再认证时间。成功 200，和登录同构；
+  /// 再认证：重新输一次密码，通过后换新令牌（会话 ID 不变）并刷新再认证时间。成功 200，和登录同构，
+  /// 但 `sessionToken` 为 `null` 时是宽限期内没换，客户端保持现有令牌；
   /// 密码错 401（`traits` 含 `PASSWORD_MISMATCH`），锁定 429，封禁 / 注销 401。
   ///
   /// @param request 请求体
-  /// @return 新令牌和账号信息
+  /// @return 账号信息和新令牌
   @PostMapping("/reauth")
-  public AuthenticatedUserResponse reauth(@RequestBody ReauthRequest request) {
-    return toResponse(commandBus.handle(ReauthenticateUserCommand.of(request.password())));
+  public ReauthenticatedResponse reauth(@RequestBody ReauthRequest request) {
+    Reauthenticated result = commandBus.handle(ReauthenticateUserCommand.of(request.password()));
+    return ReauthenticatedResponse.of(
+        result.sessionToken(), CurrentUserResponse.from(result.account()));
   }
 
   /// 登出。有当前用户就删会话，没有也返回 204：这条路由在网关上是公开的。

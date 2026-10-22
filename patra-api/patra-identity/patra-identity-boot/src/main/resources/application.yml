@@ -69,6 +69,7 @@ patra:
         per-ip-hourly: 30
     reauth:
       window: 10m                         # 再认证窗口：改邮箱、踢设备、注销等敏感操作要求这么久内输过密码
+      rotation-grace: 10s                 # 再认证换令牌的宽限期：上次密码验证距今不足这么久就不换（两个标签页并发再认证时先换出的令牌保持有效）
     password-reset:
       cooldown: 60s                       # 同邮箱两次申请的最短间隔
       per-email-daily: 5

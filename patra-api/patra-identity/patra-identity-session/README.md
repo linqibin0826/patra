@@ -31,7 +31,7 @@ Redis 里只存 `SessionToken.hash()`：整个令牌 UTF-8 的 SHA-256，小写�
 | `findAndTouch(SessionToken)` | `session-touch.lua` | 读会话；过了绝对过期返回空并删键；距上次写入满 60 秒（`RENEW_INTERVAL`）才写回 `last_active_at` 和 TTL |
 | `delete(accountType, userId, sessionId)` | `session-delete.lua` | 按索引找到哈希删会话；真的删掉了返回 `true` |
 | `deleteAll(accountType, userId)` | `session-delete-all.lua` | 删该用户全部会话和索引；返回真的删掉了的会话 ID |
-| `rotate(accountType, userId, sessionId)` | `session-rotate.lua` | 换令牌保留会话 ID（再认证、改密码）：其余字段不变，`auth_at` 与 `last_active_at` 刷新，旧令牌立即失效，索引指向新哈希；会话不在或已过绝对期返回空 |
+| `rotate(accountType, userId, sessionId, grace)` | `session-rotate.lua` | 换令牌保留会话 ID（再认证、改密码）：其余字段不变，`auth_at` 与 `last_active_at` 刷新，旧令牌立即失效，索引指向新哈希；`auth_at` 距今不足 `grace` 时原子地判定不换、返回「没换」（并发再认证时先换出的令牌保持有效，`grace` 为零则每次都换）；会话不在或已过绝对期返回空 |
 | `find(accountType, userId, sessionId)` | `session-find.lua` | 按会话 ID 读，不续期（再认证守卫读 `auth_at`）；不在或已过绝对期返回空 |
 | `deleteAllExcept(accountType, userId, keepSessionId)` | `session-delete-others.lua` | 删该用户除指定一条外的全部会话（验证邮箱、改密码保留本机、踢其他设备）；指定的会话不存在时等于全删；返回真的删掉了的会话 ID |
 

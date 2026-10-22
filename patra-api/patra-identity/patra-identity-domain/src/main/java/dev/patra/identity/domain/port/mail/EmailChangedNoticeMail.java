@@ -28,8 +28,9 @@ public record EmailChangedNoticeMail(
   /// 主题。
   public static final String SUBJECT = "你的 Patra 邮箱已更改";
 
-  /// 不是本人操作时该怎么办：「不是我」就是撤销链接。
-  public static final String NOT_ME_ADVICE = "如果不是你，请点下面的链接撤销：邮箱会改回本地址，所有设备下线，并给你发重设密码的链接";
+  /// 不是本人操作时该怎么办：「不是我」就是撤销链接。片段已经问了「不是你本人的操作？」，这里直接接动作，
+  /// 模板正文不再重复这句。
+  public static final String NOT_ME_ADVICE = "点下面的链接撤销：邮箱会改回本地址，所有设备下线，并给你发重设密码的链接";
 
   /// 字段都不能为 `null`。
   public EmailChangedNoticeMail {

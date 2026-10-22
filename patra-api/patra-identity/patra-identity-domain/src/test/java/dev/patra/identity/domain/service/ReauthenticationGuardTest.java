@@ -35,7 +35,7 @@ class ReauthenticationGuardTest {
   private final ReauthenticationGuard guard =
       new ReauthenticationGuard(
           sessions,
-          ReauthenticationPolicy.of(Duration.ofMinutes(10)),
+          ReauthenticationPolicy.of(Duration.ofMinutes(10), Duration.ofSeconds(10)),
           Clock.fixed(NOW, ZoneOffset.UTC));
 
   @Test

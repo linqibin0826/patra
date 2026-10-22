@@ -67,6 +67,35 @@ class ReauthenticationFlowIT extends IdentityFlowITSupport {
   }
 
   @Test
+  @DisplayName("宽限期内的第二次再认证不换令牌（sessionToken 为 null），第一次换出的令牌继续有效；满宽限期再换")
+  void should_keep_token_for_reauth_within_rotation_grace() {
+    RawResponse registered = register("flow.reauth.grace@example.com", "u-flow-reauth-grace");
+    long userId = userIdOf(registered);
+    long sessionId = latestSessionIdOf(userId);
+    HttpHeaders assertion = assertionFor(userId, sessionId);
+
+    clock.set(T0.plus(Duration.ofMinutes(1)));
+    RawResponse first = post("/auth/reauth", Map.of("password", PASSWORD), assertion);
+    assertThat(first.status()).as(first.body()).isEqualTo(200);
+    String firstToken = sessionTokenOf(first);
+
+    clock.set(T0.plus(Duration.ofMinutes(1)).plusSeconds(5));
+    RawResponse second = post("/auth/reauth", Map.of("password", PASSWORD), assertion);
+    assertThat(second.status()).as(second.body()).isEqualTo(200);
+    assertThat(json(second).get("sessionToken").isNull()).as(second.body()).isTrue();
+    assertThat(json(second).get("user").get("userId").asString()).isEqualTo(Long.toString(userId));
+    assertThat(redis.hasKey(sessionKey(firstToken))).as("第一次换出的令牌还在").isTrue();
+
+    clock.set(T0.plus(Duration.ofMinutes(1)).plusSeconds(10));
+    RawResponse third = post("/auth/reauth", Map.of("password", PASSWORD), assertion);
+    assertThat(third.status()).as(third.body()).isEqualTo(200);
+    String thirdToken = sessionTokenOf(third);
+    assertThat(thirdToken).isNotEqualTo(firstToken).startsWith("patra_user_");
+    assertThat(redis.hasKey(sessionKey(firstToken))).isFalse();
+    assertThat(redis.hasKey(sessionKey(thirdToken))).isTrue();
+  }
+
+  @Test
   @DisplayName("再认证的密码错误计入登录失败限制：连错到上限后登录也 429；解锁后正确密码 200")
   void should_share_login_failure_limit_with_reauth() {
     String email = "flow.reauth.lock@example.com";

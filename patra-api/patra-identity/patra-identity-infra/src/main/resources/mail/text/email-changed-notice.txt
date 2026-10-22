@@ -5,8 +5,7 @@
 
 [# th:replace="~{text/fragments/security-notice}" /]
 
-如果不是你，请打开下面的链接撤销：邮箱会改回本地址，所有设备下线，并给你发重设密码的链接。
-
+撤销链接：
 [(${revertUrl})]
 
 撤销链接 [(${validDays})] 天内有效。

@@ -17,7 +17,6 @@
             <p style="margin:0 0 12px 0;">你好，<span th:text="${displayName}">陈宇</span>：</p>
             <p style="margin:0 0 12px 0;">你的 Patra 账号邮箱已从本地址改为 <span th:text="${newEmailMasked}">c***@example.com</span>，本地址不再能登录。</p>
             <table th:replace="~{html/fragments/security-notice :: notice(${notice})}"></table>
-            <p style="margin:0 0 12px 0;font-size:13px;color:#57534e;">如果不是你，请点下面的按钮撤销：邮箱会改回本地址，所有设备下线，并给你发重设密码的链接。</p>
             <p style="margin:0 0 20px 0;">
               <a th:href="${revertUrl}" href="#"
                  style="display:inline-block;background:#b45309;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 24px;border-radius:6px;">不是我，撤销更改</a>

@@ -35,7 +35,7 @@ import org.springframework.transaction.support.TransactionOperations;
 ///
 /// 事务里：按哈希查令牌（用途不符 422）→ 锁用户行（封禁、注销 422；`PENDING_DELETION` 放行——攻击者
 /// 拿到账号后申请注销是很自然的事，原主必须能撤回，撤回不碰注销状态）→ 条件消费 → 旧地址 7 天内被别人
-/// 注册了 409 且事务回滚（令牌没被消费）→ 改回并写验证时间 → 作废全部令牌 + 只作废比本条更晚签发的
+/// 注册了 409 且事务回滚（令牌没被消费；当前邮箱已经是旧地址时不算占用）→ 改回并写验证时间 → 作废全部令牌 + 只作废比本条更晚签发的
 /// 撤销令牌（更早的保留：X → Y → Z 时攻击者先点 Y 的也废不掉原主 X 的）→ 删凭据
 /// （作废密码）→ 撤销全部会话并记 `REVOKED` → 签发重设令牌。事务后向改回的地址发含重设链接的通知。
 /// 不通知被踢掉的新地址。
@@ -90,7 +90,9 @@ public class RevertEmailChangeHandler
                           .consume(tokenHash, EmailTokenPurpose.EMAIL_CHANGE_REVERT, now)
                           .orElseThrow(ConfirmEmailChangeHandler::invalid);
                   EmailAddress restore = consumed.getEmail();
-                  if (users.existsByEmail(restore)) {
+                  // X → Y → X 之后点 R_X：当前邮箱已经是要改回的地址，existsByEmail 查到的是自己
+                  boolean alreadyRestored = user.getEmail().filter(restore::equals).isPresent();
+                  if (!alreadyRestored && users.existsByEmail(restore)) {
                     throw new UserIdentifierTakenException(
                         List.of(UserFieldViolations.emailAlreadyRegistered()));
                   }

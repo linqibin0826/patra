@@ -236,7 +236,8 @@ public class IdentityConfiguration {
   /// @return 规则
   @Bean
   public ReauthenticationPolicy reauthenticationPolicy(IdentityProperties properties) {
-    return ReauthenticationPolicy.of(properties.reauth().window());
+    return ReauthenticationPolicy.of(
+        properties.reauth().window(), properties.reauth().rotationGrace());
   }
 
   /// 找回密码的限流规则。不是正数时启动失败。

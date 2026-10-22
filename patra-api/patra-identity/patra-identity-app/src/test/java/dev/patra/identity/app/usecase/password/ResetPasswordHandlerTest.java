@@ -173,6 +173,21 @@ class ResetPasswordHandlerTest {
   }
 
   @Test
+  @DisplayName("令牌格式不对且新密码不合规：一次报全 token/INVALID + newPassword/TOO_SHORT，不查库、不哈希")
+  void should_report_malformed_token_and_invalid_password_together() {
+    assertThatThrownBy(() -> handler.handle(ResetPasswordCommand.of("abc", "short", "127.0.0.1")))
+        .isInstanceOf(InvalidUserFieldsException.class)
+        .satisfies(
+            e ->
+                assertThat(((InvalidUserFieldsException) e).getFieldViolations())
+                    .extracting(FieldViolation::field, FieldViolation::code)
+                    .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("token", "INVALID"),
+                        org.assertj.core.groups.Tuple.tuple("newPassword", "TOO_SHORT")));
+    verifyNoInteractions(tokens, passwordHashing);
+  }
+
+  @Test
   @DisplayName("令牌用途不符：422 token/INVALID")
   void should_reject_wrong_purpose_token() {
     when(tokens.findByTokenHash(SECRET.hash()))

@@ -169,6 +169,32 @@ class RevertEmailChangeHandlerTest {
   }
 
   @Test
+  @DisplayName("X → Y → X 之后点 R_X：当前邮箱已经是要改回的地址，不算被别人占用，照常撤销")
+  void should_not_treat_own_current_email_as_taken() {
+    when(users.findByIdForUpdate(42L))
+        .thenAnswer(
+            invocation ->
+                Optional.of(
+                    User.restore()
+                        .id(42L)
+                        .email(OLD)
+                        .emailVerifiedAt(NOW.minusSeconds(3600))
+                        .username(Username.of("chen-yu"))
+                        .status(UserStatus.ACTIVE)
+                        .version(0L)
+                        .build()));
+    when(users.existsByEmail(OLD)).thenReturn(true);
+
+    EmailChangeReverted result =
+        handler.handle(RevertEmailChangeCommand.of(SECRET.value(), "127.0.0.1"));
+
+    assertThat(result.email()).isEqualTo("chen.yu@example.com");
+    verify(users).save(argThat(u -> u.getEmail().orElseThrow().equals(OLD)));
+    verify(credentials).deleteByUserId(42L);
+    verify(emailDelivery).send(any());
+  }
+
+  @Test
   @DisplayName("成功：改回 → 作废全部 + 只作废比本条更晚签发的撤销令牌（更早的保留）→ 删凭据 → 撤销全部会话并记 REVOKED → 签发重设 → 发到改回的地址")
   void should_revert_in_order() {
     EmailChangeReverted result =

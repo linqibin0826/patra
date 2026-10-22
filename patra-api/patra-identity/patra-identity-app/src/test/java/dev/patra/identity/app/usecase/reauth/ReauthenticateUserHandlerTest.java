@@ -10,7 +10,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import dev.patra.identity.app.usecase.auth.AuthenticatedUser;
 import dev.patra.identity.app.usecase.auth.CurrentPasswordVerifier;
 import dev.patra.identity.domain.exception.CurrentPasswordMismatchException;
 import dev.patra.identity.domain.exception.InvalidUserFieldsException;
@@ -22,10 +21,12 @@ import dev.patra.identity.domain.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.PasswordHash;
 import dev.patra.identity.domain.model.vo.Username;
+import dev.patra.identity.domain.policy.ReauthenticationPolicy;
 import dev.patra.identity.domain.port.hashing.PasswordHashingPort;
 import dev.patra.identity.domain.port.read.UserReadPort;
 import dev.patra.identity.domain.port.repository.UserPasswordCredentialRepository;
 import dev.patra.identity.domain.port.repository.UserRepository;
+import dev.patra.identity.domain.port.session.SessionRotation;
 import dev.patra.identity.domain.port.session.SessionStorePort;
 import dev.patra.identity.domain.port.throttle.LoginAttempt;
 import dev.patra.identity.domain.port.throttle.LoginThrottlePort;
@@ -77,7 +78,8 @@ class ReauthenticateUserHandlerTest {
           users,
           userReadPort,
           new CurrentPasswordVerifier(credentials, passwordHashing, loginThrottle),
-          sessions);
+          sessions,
+          ReauthenticationPolicy.of(Duration.ofMinutes(10), Duration.ofSeconds(10)));
 
   @BeforeEach
   void stubHappyPath() {
@@ -88,7 +90,8 @@ class ReauthenticateUserHandlerTest {
     when(loginThrottle.begin(AccountType.USER, EMAIL)).thenReturn(ATTEMPT);
     when(loginThrottle.recordFailure(ATTEMPT)).thenReturn(Optional.empty());
     when(passwordHashing.matches(any(), any())).thenReturn(true);
-    when(sessions.rotate(AccountType.USER, 42L, 7001L)).thenReturn(Optional.of(NEW_TOKEN));
+    when(sessions.rotate(AccountType.USER, 42L, 7001L, Duration.ofSeconds(10)))
+        .thenReturn(Optional.of(SessionRotation.rotated(NEW_TOKEN)));
     when(userReadPort.findAccount(42L)).thenReturn(Optional.of(ACCOUNT));
   }
 
@@ -115,7 +118,7 @@ class ReauthenticateUserHandlerTest {
   void should_allow_pending_deletion_user() {
     when(users.findById(42L)).thenReturn(Optional.of(user(UserStatus.PENDING_DELETION)));
 
-    AuthenticatedUser result = handler.handle(ReauthenticateUserCommand.of("Correct-Horse-02"));
+    Reauthenticated result = handler.handle(ReauthenticateUserCommand.of("Correct-Horse-02"));
 
     assertThat(result.sessionToken()).isEqualTo(NEW_TOKEN);
   }
@@ -123,14 +126,14 @@ class ReauthenticateUserHandlerTest {
   @Test
   @DisplayName("密码正确：开始 → 校验 → 成功结算 → 换令牌，返回新令牌和账号信息")
   void should_rotate_session_and_return_new_token_after_success() {
-    AuthenticatedUser result = handler.handle(ReauthenticateUserCommand.of("Correct-Horse-02"));
+    Reauthenticated result = handler.handle(ReauthenticateUserCommand.of("Correct-Horse-02"));
 
     InOrder order = inOrder(loginThrottle, passwordHashing, userReadPort, sessions);
     order.verify(loginThrottle).begin(AccountType.USER, EMAIL);
     order.verify(passwordHashing).matches(any(), any());
     order.verify(loginThrottle).recordSuccess(ATTEMPT);
     order.verify(userReadPort).findAccount(42L);
-    order.verify(sessions).rotate(AccountType.USER, 42L, 7001L);
+    order.verify(sessions).rotate(AccountType.USER, 42L, 7001L, Duration.ofSeconds(10));
     assertThat(result.sessionToken()).isEqualTo(NEW_TOKEN);
     assertThat(result.account()).isEqualTo(ACCOUNT);
   }
@@ -180,9 +183,23 @@ class ReauthenticateUserHandlerTest {
   }
 
   @Test
+  @DisplayName("宽限期内再认证：不换令牌，结果里没有新令牌（门户保持现有 Cookie），账号信息照常")
+  void should_keep_token_when_authenticated_within_grace() {
+    when(sessions.rotate(AccountType.USER, 42L, 7001L, Duration.ofSeconds(10)))
+        .thenReturn(Optional.of(SessionRotation.kept()));
+
+    Reauthenticated result = handler.handle(ReauthenticateUserCommand.of("Correct-Horse-02"));
+
+    assertThat(result.sessionToken()).isNull();
+    assertThat(result.account()).isEqualTo(ACCOUNT);
+    verify(loginThrottle).recordSuccess(ATTEMPT);
+  }
+
+  @Test
   @DisplayName("换令牌时会话已不在：401")
   void should_require_login_when_session_vanished_during_rotation() {
-    when(sessions.rotate(AccountType.USER, 42L, 7001L)).thenReturn(Optional.empty());
+    when(sessions.rotate(AccountType.USER, 42L, 7001L, Duration.ofSeconds(10)))
+        .thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> handler.handle(ReauthenticateUserCommand.of("Correct-Horse-02")))
         .isInstanceOf(AuthenticationRequiredException.class);
@@ -208,7 +225,10 @@ class ReauthenticateUserHandlerTest {
         .isInstanceOf(AuthenticationRequiredException.class);
     verify(sessions, never())
         .rotate(
-            any(), org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyLong());
+            any(),
+            org.mockito.ArgumentMatchers.anyLong(),
+            org.mockito.ArgumentMatchers.anyLong(),
+            any());
   }
 
   @Test

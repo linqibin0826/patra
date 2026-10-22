@@ -1,14 +1,15 @@
 package dev.patra.identity.app.usecase.reauth;
 
-import dev.patra.identity.app.usecase.auth.AuthenticatedUser;
 import dev.patra.identity.app.usecase.auth.CurrentPasswordVerifier;
 import dev.patra.identity.domain.exception.InvalidUserFieldsException;
 import dev.patra.identity.domain.model.aggregate.User;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.PlainPassword;
+import dev.patra.identity.domain.policy.ReauthenticationPolicy;
 import dev.patra.identity.domain.port.read.UserReadPort;
 import dev.patra.identity.domain.port.repository.UserRepository;
+import dev.patra.identity.domain.port.session.SessionRotation;
 import dev.patra.identity.domain.port.session.SessionStorePort;
 import dev.patra.tool.core.security.AuthenticationRequiredException;
 import dev.patra.tool.core.security.CurrentUser;
@@ -24,24 +25,28 @@ import org.springframework.stereotype.Component;
 /// 密码校验和登录共用失败限制：错计失败、锁定期 429。`ACTIVE` 与 `PENDING_DELETION` 可再认证
 /// （冷静期内能登录就能再认证）；`BANNED` / `DELETED` 401。不开事务：没有数据库写，
 /// 封禁的 `revokeAll` 和这里的 `rotate` 都是 Redis 原子脚本，谁后执行谁生效。
+///
+/// 并发再认证：`auth_at` 距今不足宽限期（`ReauthenticationPolicy.rotationGrace`）时脚本原子地判定不换，
+/// 结果里没有新令牌，门户保持现有 Cookie——它最终是先换出的那个，两个标签页都不会被登出。
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class ReauthenticateUserHandler
-    implements CommandHandler<ReauthenticateUserCommand, AuthenticatedUser> {
+    implements CommandHandler<ReauthenticateUserCommand, Reauthenticated> {
 
   private final CurrentUserPort currentUserPort;
   private final UserRepository users;
   private final UserReadPort userReadPort;
   private final CurrentPasswordVerifier passwordVerifier;
   private final SessionStorePort sessions;
+  private final ReauthenticationPolicy policy;
 
   /// 再认证。
   ///
   /// @param command 命令
-  /// @return 新令牌和账号信息
+  /// @return 账号信息和新令牌（宽限期内没换时为 `null`）
   @Override
-  public AuthenticatedUser handle(ReauthenticateUserCommand command) {
+  public Reauthenticated handle(ReauthenticateUserCommand command) {
     CurrentUser current = currentUserPort.require();
     PlainPassword.validate(command.password())
         .ifPresent(
@@ -58,11 +63,15 @@ public class ReauthenticateUserHandler
     passwordVerifier.verify(email, userId, password);
     UserAccountReadModel account =
         userReadPort.findAccount(userId).orElseThrow(AuthenticationRequiredException::new);
-    String token =
+    SessionRotation rotation =
         sessions
-            .rotate(current.accountType(), userId, current.sessionId())
+            .rotate(current.accountType(), userId, current.sessionId(), policy.rotationGrace())
             .orElseThrow(AuthenticationRequiredException::new);
-    log.info("前台用户已再认证: userId={}, sessionId={}", userId, current.sessionId());
-    return AuthenticatedUser.of(token, account);
+    log.info(
+        "前台用户已再认证: userId={}, sessionId={}, rotated={}",
+        userId,
+        current.sessionId(),
+        rotation.rotated());
+    return Reauthenticated.of(rotation.newToken().orElse(null), account);
   }
 }

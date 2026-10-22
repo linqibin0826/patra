@@ -188,6 +188,21 @@ class RequestPasswordResetHandlerTest {
   }
 
   @Test
+  @DisplayName("查到用户后、锁行前用户被删或被封禁：和未注册一样静默 202，不签发、不发信")
+  void should_stay_silent_when_user_vanishes_or_gets_banned_before_lock() {
+    PasswordResetRequested expected =
+        PasswordResetRequested.of("chen.yu@example.com", NOW.plusSeconds(60));
+    when(users.findByIdForUpdate(42L)).thenReturn(Optional.empty());
+    assertThat(handler.handle(RequestPasswordResetCommand.of("chen.yu@example.com", "127.0.0.1")))
+        .isEqualTo(expected);
+
+    when(users.findByIdForUpdate(42L)).thenReturn(Optional.of(user(UserStatus.BANNED)));
+    assertThat(handler.handle(RequestPasswordResetCommand.of("chen.yu@example.com", "127.0.0.1")))
+        .isEqualTo(expected);
+    verifyNoInteractions(emailTokenIssuer, emailDelivery);
+  }
+
+  @Test
   @DisplayName("被封禁的账号：不发信，结果同上")
   void should_not_send_for_banned_user() {
     when(users.findByEmail(EMAIL)).thenReturn(Optional.of(user(UserStatus.BANNED)));

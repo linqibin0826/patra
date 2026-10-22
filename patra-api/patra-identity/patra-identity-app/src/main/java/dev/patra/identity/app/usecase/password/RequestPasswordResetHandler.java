@@ -29,8 +29,9 @@ import org.springframework.transaction.support.TransactionOperations;
 /// 找回密码的申请：一律 202、异步发信，未注册或已封禁的邮箱不发信。
 ///
 /// 顺序：格式（422）→ 限流（在查用户之前、对任何邮箱都计数：只给已注册的计数，429 本身就成了
-/// 「已注册」的信号）→ 查用户 → 正常 / 冷静期用户：事务里锁用户行、签发 `PASSWORD_RESET`，事务后发信；
-/// 未注册 / 已封禁：做同样的随机数与哈希计算后直接返回。不碰登录失败限制。
+/// 「已注册」的信号）→ 查用户 → 正常 / 冷静期用户：事务里锁用户行并重判状态、签发 `PASSWORD_RESET`，
+/// 事务后发信；未注册 / 已封禁（含锁行前刚被删或封禁的）：做同样的随机数与哈希计算后直接返回。
+/// 不碰登录失败限制。
 @Slf4j
 @Component
 public class RequestPasswordResetHandler
@@ -106,22 +107,32 @@ public class RequestPasswordResetHandler
       return PasswordResetRequested.of(email.value(), policy.nextRequestAt(now));
     }
     long userId = user.get().getId();
-    Prepared prepared =
+    Optional<Prepared> prepared =
         transactions.execute(
             status -> {
-              users.findByIdForUpdate(userId).orElseThrow(IllegalStateException::new);
+              // 锁下重判：查到用户和锁行之间被删或被封禁，走和未注册一样的静默分支
+              Optional<User> locked =
+                  users.findByIdForUpdate(userId).filter(found -> !found.isBanned());
+              if (locked.isEmpty()) {
+                return Optional.<Prepared>empty();
+              }
               UserAccountReadModel account =
                   userReadPort.findAccount(userId).orElseThrow(IllegalStateException::new);
               IssuedEmailToken issued =
                   emailTokenIssuer.issue(
                       EmailTokenPurpose.PASSWORD_RESET, userId, email, command.clientIp());
-              return new Prepared(
-                  issued,
-                  PasswordResetMail.of(
-                      email, account.displayName(), links.resetPasswordUrl(issued.secret())));
+              return Optional.of(
+                  new Prepared(
+                      issued,
+                      PasswordResetMail.of(
+                          email, account.displayName(), links.resetPasswordUrl(issued.secret()))));
             });
-    emailDelivery.send(prepared.mail());
-    log.info("重设密码邮件已排队: userId={}, tokenId={}", userId, prepared.issued().token().getId());
+    if (prepared == null || prepared.isEmpty()) {
+      log.info("找回密码申请的用户在锁行前已被删或被封禁，不发信");
+      return PasswordResetRequested.of(email.value(), policy.nextRequestAt(now));
+    }
+    emailDelivery.send(prepared.get().mail());
+    log.info("重设密码邮件已排队: userId={}, tokenId={}", userId, prepared.get().issued().token().getId());
     return PasswordResetRequested.of(email.value(), policy.nextRequestAt(now));
   }
 

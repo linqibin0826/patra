@@ -188,7 +188,63 @@ class ThymeleafMailRendererTest {
   }
 
   @Test
-  @DisplayName("安全通知四项都在；「到安全设置」一句只在需要它的模板里，「已改回请重设密码」那封没有")
+  @DisplayName("「密码已修改」不再建议到安全设置改密码：不是本人时旧密码已失效、登不进去，片段里的「忘记密码」指引就够了")
+  void should_not_point_password_changed_mail_to_security_settings() {
+    RenderedMail rendered =
+        renderer.render(
+            PasswordChangedMail.of(
+                TO,
+                "陈宇",
+                SecurityNotice.builder()
+                    .occurredAt(Instant.parse("2026-10-22T08:30:00Z"))
+                    .notMeAdvice(PasswordChangedMail.NOT_ME_ADVICE)
+                    .build()));
+
+    assertThat(rendered.text()).contains("忘记密码").doesNotContain("/settings/security");
+    assertThat(rendered.html()).contains("忘记密码").doesNotContain("/settings/security");
+  }
+
+  @Test
+  @DisplayName("旧邮箱的通知里「撤销」只说一遍：正文不再重复片段里的那句")
+  void should_say_revert_advice_once_in_old_address_notice() {
+    RenderedMail rendered =
+        renderer.render(
+            EmailChangedNoticeMail.builder()
+                .to(TO)
+                .displayName("陈宇")
+                .newEmailMasked("n***@example.com")
+                .revertUrl(REVERT_URL)
+                .notice(
+                    SecurityNotice.builder()
+                        .occurredAt(Instant.parse("2026-10-22T08:30:00Z"))
+                        .notMeAdvice(EmailChangedNoticeMail.NOT_ME_ADVICE)
+                        .build())
+                .build());
+
+    assertThat(rendered.text()).containsOnlyOnce("邮箱会改回本地址").doesNotContain("不是你本人的操作？如果不是你");
+    assertThat(rendered.html()).containsOnlyOnce("邮箱会改回本地址");
+  }
+
+  @Test
+  @DisplayName("「已改回请重设密码」那封的「不是你本人的操作？」后面接的是邮箱可能被人看到的提醒，不是「账号已锁定」")
+  void should_answer_not_me_in_reverted_mail_with_mailbox_advice() {
+    RenderedMail rendered =
+        renderer.render(
+            EmailChangeRevertedMail.of(
+                TO,
+                "陈宇",
+                RESET_URL,
+                SecurityNotice.builder()
+                    .occurredAt(Instant.parse("2026-10-22T08:30:00Z"))
+                    .notMeAdvice(EmailChangeRevertedMail.NOT_ME_ADVICE)
+                    .build()));
+
+    assertThat(EmailChangeRevertedMail.NOT_ME_ADVICE).doesNotContain("账号已锁定").contains("邮箱");
+    assertThat(rendered.text()).contains("不是你本人的操作？" + EmailChangeRevertedMail.NOT_ME_ADVICE);
+  }
+
+  @Test
+  @DisplayName("安全通知四项都在；「到安全设置」一句只在需要它的模板里，「已改回请重设密码」和「密码已修改」那两封没有")
   void should_render_notice_four_items_without_fixed_security_line_in_fragment() {
     RenderedMail reverted =
         renderer.render(EmailChangeRevertedMail.of(TO, "陈宇", RESET_URL, NOTICE));
@@ -201,10 +257,7 @@ class ThymeleafMailRendererTest {
     assertThat(reverted.html()).doesNotContain("/settings/security");
 
     for (OutgoingMail mail :
-        List.of(
-            PasswordChangedMail.of(TO, "陈宇", NOTICE),
-            SEVEN.get(4),
-            EmailChangedConfirmationMail.of(TO, "陈宇", NOTICE))) {
+        List.of(SEVEN.get(4), EmailChangedConfirmationMail.of(TO, "陈宇", NOTICE))) {
       RenderedMail rendered = renderer.render(mail);
       assertThat(rendered.text())
           .as(mail.template())

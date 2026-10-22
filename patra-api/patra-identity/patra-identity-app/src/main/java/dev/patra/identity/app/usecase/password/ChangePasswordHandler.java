@@ -2,6 +2,7 @@ package dev.patra.identity.app.usecase.password;
 
 import dev.patra.identity.app.usecase.auth.AuthenticatedUser;
 import dev.patra.identity.app.usecase.auth.CurrentPasswordVerifier;
+import dev.patra.identity.domain.exception.CurrentPasswordMismatchException;
 import dev.patra.identity.domain.exception.InvalidUserFieldsException;
 import dev.patra.identity.domain.model.aggregate.User;
 import dev.patra.identity.domain.model.aggregate.UserPasswordCredential;
@@ -21,6 +22,7 @@ import dev.patra.identity.domain.port.repository.EmailTokenRepository;
 import dev.patra.identity.domain.port.repository.UserLoginRecordRepository;
 import dev.patra.identity.domain.port.repository.UserPasswordCredentialRepository;
 import dev.patra.identity.domain.port.repository.UserRepository;
+import dev.patra.identity.domain.port.session.SessionRotation;
 import dev.patra.identity.domain.port.session.SessionStorePort;
 import dev.patra.tool.core.error.field.FieldViolation;
 import dev.patra.tool.core.security.AuthenticationRequiredException;
@@ -28,6 +30,7 @@ import dev.patra.tool.core.security.CurrentUser;
 import dev.patra.tool.core.security.CurrentUserPort;
 import dev.patra.tool.cqrs.CommandHandler;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,7 +44,8 @@ import org.springframework.transaction.support.TransactionOperations;
 /// 事务里换哈希、按用户批量作废令牌、撤销其余会话并记 `REVOKED`、最后本机换令牌（刷新 `auth_at`）；
 /// 事务提交后发「密码已修改」。
 ///
-/// 当前密码的校验和登录共用失败限制：错是 401 + `PASSWORD_MISMATCH`，锁定 429。
+/// 当前密码的校验和登录共用失败限制：错是 401 + `PASSWORD_MISMATCH`，锁定 429。校验在锁外（Argon2 不占行锁），
+/// 锁内再比一次凭据哈希还是不是校验过的那个：两次并发改密码只有先到的生效，后到的 401。
 /// 新旧相同比较的是 NFKC 规范化后的原文（哈希前做的同一个规范化），不做第二次 Argon2。
 /// Redis 失败整个事务回滚、503：密码没改成，用户重试。
 @Slf4j
@@ -86,7 +90,7 @@ public class ChangePasswordHandler
     User user = users.findById(userId).orElseThrow(AuthenticationRequiredException::new);
     user.requireActive();
     EmailAddress email = user.getEmail().orElseThrow(AuthenticationRequiredException::new);
-    passwordVerifier.verify(email, userId, currentPassword);
+    PasswordHash verified = passwordVerifier.verify(email, userId, currentPassword);
     if (currentPassword.normalized().equals(newPassword.normalized())) {
       throw new InvalidUserFieldsException(List.of(UserFieldViolations.newPasswordUnchanged()));
     }
@@ -105,6 +109,10 @@ public class ChangePasswordHandler
                       credentials
                           .findByUserId(userId)
                           .orElseThrow(AuthenticationRequiredException::new);
+                  if (!credential.getPasswordHash().equals(verified)) {
+                    // 校验和加锁之间密码已被另一次请求改掉：刚输的「当前密码」已经不对，不计失败
+                    throw new CurrentPasswordMismatchException();
+                  }
                   credential.rotate(hash);
                   credentials.save(credential);
                   tokens.revokeAllActive(userId, now);
@@ -124,9 +132,11 @@ public class ChangePasswordHandler
                           .findAccount(userId)
                           .orElseThrow(AuthenticationRequiredException::new);
                   // 换令牌放在事务最后一步：之前任何一步失败都不碰旧令牌，用户还能在原会话里重试
+                  // 改密码每次都换（宽限期为零）：输过当前密码就是一次再认证，旧令牌必须作废
                   String token =
                       sessions
-                          .rotate(current.accountType(), userId, current.sessionId())
+                          .rotate(current.accountType(), userId, current.sessionId(), Duration.ZERO)
+                          .flatMap(SessionRotation::newToken)
                           .orElseThrow(AuthenticationRequiredException::new);
                   return new Changed(token, account, revoked.size());
                 }));

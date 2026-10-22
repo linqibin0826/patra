@@ -77,22 +77,27 @@ class PasswordResetThrottleAdapterIT {
   }
 
   @Test
-  @DisplayName("同 IP 跨邮箱每小时第 21 次被拒，要等一小时；没有 IP 时跳过这一维")
-  void should_block_twenty_first_request_per_ip_per_hour_and_skip_unknown_ip() {
+  @DisplayName("同 IP 跨邮箱每小时第 21 次被拒，要等一小时；没有 IP 时所有未知 IP 共用一个桶，同样第 21 次被拒")
+  void should_block_twenty_first_request_per_ip_per_hour_and_share_bucket_for_unknown_ip() {
     String ip = uniqueIp();
     for (int i = 0; i < 20; i++) {
       assertThat(adapter.acquireRequest(uniqueEmail(), ip, T0)).isEmpty();
     }
 
     assertThat(adapter.acquireRequest(uniqueEmail(), ip, T0)).contains(Duration.ofHours(1));
-    for (int i = 0; i < 21; i++) {
-      assertThat(adapter.acquireRequest(uniqueEmail(), null, T0)).isEmpty();
+
+    redis.delete(PasswordResetThrottleAdapter.requestKeys(uniqueEmail(), null).get(2));
+    for (int i = 0; i < 20; i++) {
+      assertThat(adapter.acquireRequest(uniqueEmail(), null, T0))
+          .as("未知 IP 第 %d 次", i + 1)
+          .isEmpty();
     }
+    assertThat(adapter.acquireRequest(uniqueEmail(), null, T0)).contains(Duration.ofHours(1));
   }
 
   @Test
-  @DisplayName("提交：同 IP 每分钟第 11 次被拒，要等到最早那次满一分钟；没有 IP 一直放行")
-  void should_block_eleventh_submit_per_ip_per_minute() {
+  @DisplayName("提交：同 IP 每分钟第 11 次被拒，要等到最早那次满一分钟；没有 IP 时所有未知 IP 共用一个桶，不放行")
+  void should_block_eleventh_submit_per_ip_per_minute_and_for_unknown_ip() {
     String ip = uniqueIp();
     for (int i = 0; i < 10; i++) {
       assertThat(adapter.acquireSubmit(ip, T0.plusSeconds(i))).isEmpty();
@@ -100,9 +105,12 @@ class PasswordResetThrottleAdapterIT {
 
     assertThat(adapter.acquireSubmit(ip, T0.plusSeconds(30))).contains(Duration.ofSeconds(30));
     assertThat(adapter.acquireSubmit(ip, T0.plusSeconds(60))).isEmpty();
-    for (int i = 0; i < 12; i++) {
-      assertThat(adapter.acquireSubmit(null, T0)).isEmpty();
+
+    redis.delete(PasswordResetThrottleAdapter.submitKey(null));
+    for (int i = 0; i < 10; i++) {
+      assertThat(adapter.acquireSubmit(null, T0)).as("未知 IP 第 %d 次", i + 1).isEmpty();
     }
+    assertThat(adapter.acquireSubmit(null, T0.plusSeconds(15))).contains(Duration.ofSeconds(45));
   }
 
   @Test

@@ -1,12 +1,11 @@
 package dev.patra.identity.app.usecase.reauth;
 
-import dev.patra.identity.app.usecase.auth.AuthenticatedUser;
 import dev.patra.tool.cqrs.Command;
 
 /// 再认证：当前用户重新输一次密码，通过后换新令牌并刷新会话的再认证时间。
 ///
 /// @param password 密码，原始输入
-public record ReauthenticateUserCommand(String password) implements Command<AuthenticatedUser> {
+public record ReauthenticateUserCommand(String password) implements Command<Reauthenticated> {
 
   /// 创建命令。
   ///

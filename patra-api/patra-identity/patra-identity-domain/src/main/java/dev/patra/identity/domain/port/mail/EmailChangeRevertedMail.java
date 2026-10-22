@@ -21,8 +21,8 @@ public record EmailChangeRevertedMail(
   /// 主题。
   public static final String SUBJECT = "你的 Patra 邮箱已改回，请重设密码";
 
-  /// 不是本人操作时该怎么办。
-  public static final String NOT_ME_ADVICE = "账号已锁定：所有设备已下线，原密码已作废，请用下面的链接设置新密码";
+  /// 不是本人操作时该怎么办：撤销只能由能读到旧邮箱邮件的人点，不是本人就说明邮箱被人看到了。
+  public static final String NOT_ME_ADVICE = "说明有人能看到这个邮箱里的邮件：先保护好邮箱（改邮箱密码、检查收件转发），再用上面的链接设置新密码";
 
   /// 字段都不能为 `null`。
   public EmailChangeRevertedMail {

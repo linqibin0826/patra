@@ -1,6 +1,7 @@
 package dev.patra.identity.domain.port.session;
 
 import dev.patra.tool.core.security.AccountType;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -16,13 +17,16 @@ public interface SessionStorePort {
   /// @return 签发结果
   IssuedUserSession issue(NewUserSession session);
 
-  /// 换令牌、保留会话 ID：再认证、改密码用。`auth_at` 刷新成现在，旧令牌立即失效。
+  /// 换令牌、保留会话 ID：再认证、改密码用。`auth_at` 刷新成现在，旧令牌立即失效；
+  /// `auth_at` 距今不足 `grace` 时不换（原子判断），返回「没换」。
   ///
   /// @param accountType 账号类型
   /// @param userId 用户 ID
   /// @param sessionId 会话 ID
-  /// @return 新令牌原文；会话不在或已过期时为空
-  Optional<String> rotate(AccountType accountType, long userId, long sessionId);
+  /// @param grace 换令牌的宽限期；`Duration.ZERO` 表示每次都换
+  /// @return 换令牌的结果；会话不在或已过期时为空
+  Optional<SessionRotation> rotate(
+      AccountType accountType, long userId, long sessionId, Duration grace);
 
   /// 读一条会话最近一次用密码证明身份的时间，不续期。再认证守卫用。
   ///
