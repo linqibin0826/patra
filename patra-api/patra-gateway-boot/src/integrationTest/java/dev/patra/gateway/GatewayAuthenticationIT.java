@@ -2,6 +2,7 @@ package dev.patra.gateway;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.any;
+import static com.github.tomakehurst.wiremock.client.WireMock.anyRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.matching;
@@ -356,6 +357,21 @@ class GatewayAuthenticationIT {
         1,
         postRequestedFor(urlPathEqualTo("/auth/reauth"))
             .withHeader(HttpHeaders.AUTHORIZATION, matching("Bearer .+")));
+  }
+
+  /// 注销与取消注销是本人操作（PAP-100）：`/me/**` 默认需登录，匿名 401、不到下游。
+  @Test
+  void should_require_session_for_account_deletion() {
+    identity.stubFor(any(urlPathMatching("/.*")).willReturn(okJson("{}")));
+
+    restClient.post().uri("/patra-identity/me/deletion").exchange().expectStatus().isUnauthorized();
+    restClient
+        .delete()
+        .uri("/patra-identity/me/deletion")
+        .exchange()
+        .expectStatus()
+        .isUnauthorized();
+    identity.verify(0, anyRequestedFor(urlPathEqualTo("/me/deletion")));
   }
 
   /// 重发验证邮件是本人操作：匿名 401、不到下游；带会话才转发，且带断言。
