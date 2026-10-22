@@ -38,6 +38,7 @@ import dev.patra.identity.domain.service.ReauthenticationGuard;
 import dev.patra.identity.domain.service.SessionTerminator;
 import dev.patra.tool.core.error.field.FieldViolation;
 import dev.patra.tool.core.security.AccountType;
+import dev.patra.tool.core.security.AuthenticationRequiredException;
 import dev.patra.tool.core.security.ClientType;
 import dev.patra.tool.core.security.CurrentUser;
 import dev.patra.tool.core.security.CurrentUserPort;
@@ -158,6 +159,28 @@ class RequestAccountDeletionHandlerTest {
     assertThatThrownBy(() -> handler.handle(command("chen-yu")))
         .isInstanceOf(UserPendingDeletionException.class);
     verifyNoInteractions(reauthenticationGuard);
+  }
+
+  @Test
+  @DisplayName("已封禁（理论上没有会话，并发撞上时）：401，不弹再认证、什么都不改")
+  void should_require_authentication_for_banned_user() {
+    when(users.findById(42L))
+        .thenAnswer(
+            invocation ->
+                Optional.of(
+                    User.restore()
+                        .id(42L)
+                        .email(EMAIL)
+                        .username(Username.of("chen-yu"))
+                        .status(UserStatus.BANNED)
+                        .bannedAt(NOW)
+                        .version(0L)
+                        .build()));
+
+    assertThatThrownBy(() -> handler.handle(command("chen-yu")))
+        .isInstanceOf(AuthenticationRequiredException.class);
+    verify(users, never()).save(any());
+    verifyNoInteractions(reauthenticationGuard, sessionTerminator, tokens, emailDelivery);
   }
 
   @Test

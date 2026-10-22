@@ -29,7 +29,7 @@ import org.springframework.transaction.support.TransactionOperations;
 ///
 /// 单个用户失败只记日志、计数，接着处理下一个，它仍在冷静期，下次运行再试；按 ID 往后翻，不会反复撞上它。
 /// 锁内复核挡住「扫描之后刚取消」与并发的两次运行，重跑幂等。「已注销」被发信执行器拒收时邮箱已经置空，
-/// 没法重发，只记日志，注销本身照样算完成。PAP-97 的头像对象在加锁事务之前按前缀删（设计第 14 节）。
+/// 没法重发，只记日志，注销本身照样算完成。PAP-97 接入头像后，头像对象在加锁事务之前按前缀删（设计第 14 节）。
 @Slf4j
 @Component
 @RequiredArgsConstructor
