@@ -20,12 +20,11 @@ import dev.patra.identity.domain.port.mail.PasswordResetDoneMail;
 import dev.patra.identity.domain.port.mail.SecurityNotice;
 import dev.patra.identity.domain.port.read.UserReadPort;
 import dev.patra.identity.domain.port.repository.EmailTokenRepository;
-import dev.patra.identity.domain.port.repository.UserLoginRecordRepository;
 import dev.patra.identity.domain.port.repository.UserPasswordCredentialRepository;
 import dev.patra.identity.domain.port.repository.UserRepository;
-import dev.patra.identity.domain.port.session.SessionStorePort;
 import dev.patra.identity.domain.port.throttle.LoginThrottlePort;
 import dev.patra.identity.domain.port.throttle.PasswordResetThrottlePort;
+import dev.patra.identity.domain.service.SessionTerminator;
 import dev.patra.tool.core.error.field.FieldViolation;
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.cqrs.CommandHandler;
@@ -46,7 +45,7 @@ import org.springframework.transaction.support.TransactionOperations;
 /// 令牌不被消费）→ 哈希（事务外）→
 /// 事务里：按哈希查令牌（用途不符 422）→ 锁用户行（不存在、封禁、注销 422）→ 条件消费 → 令牌邮箱
 /// 必须等于当前邮箱 → 换哈希（没有凭据行就新建）→ 批量作废令牌（待确认的改邮箱随之取消）→
-/// 写验证时间 → 撤销全部会话并记 `REVOKED` → 清零登录失败 → 事务后发「密码已重设」。不自动登录。
+/// 写验证时间 → 撤销全部会话并记 `PASSWORD_RESET` → 清零登录失败 → 事务后发「密码已重设」。不自动登录。
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -59,8 +58,7 @@ public class ResetPasswordHandler implements CommandHandler<ResetPasswordCommand
   private final UserRepository users;
   private final UserPasswordCredentialRepository credentials;
   private final UserReadPort userReadPort;
-  private final SessionStorePort sessions;
-  private final UserLoginRecordRepository records;
+  private final SessionTerminator sessionTerminator;
   private final LoginThrottlePort loginThrottle;
   private final EmailDeliveryPort emailDelivery;
   private final TransactionOperations transactions;
@@ -132,16 +130,8 @@ public class ResetPasswordHandler implements CommandHandler<ResetPasswordCommand
                   tokens.revokeAllActive(userId, now);
                   user.markEmailVerified(now);
                   users.save(user);
-                  List<Long> revoked = sessions.revokeAll(AccountType.USER, userId);
-                  for (Long sessionId : revoked) {
-                    records
-                        .findById(sessionId)
-                        .ifPresent(
-                            login -> {
-                              login.end(LoginEndReason.REVOKED, now);
-                              records.save(login);
-                            });
-                  }
+                  List<Long> revoked =
+                      sessionTerminator.terminateAll(userId, LoginEndReason.PASSWORD_RESET, now);
                   loginThrottle.clear(AccountType.USER, email);
                   UserAccountReadModel account =
                       userReadPort.findAccount(userId).orElseThrow(() -> invalid());

@@ -42,7 +42,7 @@ class PasswordChangeFlowIT extends IdentityFlowITSupport {
   }
 
   @Test
-  @DisplayName("改密码：本机拿到新令牌且旧令牌失效、另一会话 401 并记 REVOKED、收到「密码已修改」、新密码能登录旧的不能、改密码前申请的重设令牌作废")
+  @DisplayName("改密码：本机拿到新令牌且旧令牌失效、另一会话 401 并记 PASSWORD_CHANGED、收到「密码已修改」、新密码能登录旧的不能、改密码前申请的重设令牌作废")
   void should_change_password_keep_current_session_revoke_others_and_send_mail() {
     String email = "flow.pwd.change@example.com";
     RawResponse registered = register(email, "u-flow-pwd-change");
@@ -71,7 +71,7 @@ class PasswordChangeFlowIT extends IdentityFlowITSupport {
     assertThat(redis.hasKey(sessionKey(tokenA))).isFalse();
     assertThat(redis.hasKey(sessionKey(rotated))).isTrue();
     assertThat(redis.hasKey(sessionKey(tokenB))).isFalse();
-    assertThat(endReasonOf(sessionB)).isEqualTo("REVOKED");
+    assertThat(endReasonOf(sessionB)).isEqualTo("PASSWORD_CHANGED");
     assertThat(endReasonOf(sessionA)).isNull();
     assertThat(get("/auth/me", assertionFor(userId, sessionA)).status()).isEqualTo(200);
 

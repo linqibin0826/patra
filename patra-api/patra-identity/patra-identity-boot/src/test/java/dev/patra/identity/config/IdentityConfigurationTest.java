@@ -25,6 +25,7 @@ import dev.patra.identity.domain.port.session.SessionStorePort;
 import dev.patra.identity.domain.service.EmailTokenIssuer;
 import dev.patra.identity.domain.service.ReauthenticationGuard;
 import dev.patra.identity.domain.service.SessionIssuer;
+import dev.patra.identity.domain.service.SessionTerminator;
 import dev.patra.identity.infra.adapter.mail.SmtpEmailDeliveryAdapter;
 import dev.patra.identity.infra.adapter.mail.ThymeleafMailRenderer;
 import dev.patra.identity.session.RedisSessionStore;
@@ -92,6 +93,7 @@ class IdentityConfigurationTest {
               .isEqualTo(SessionLifetime.of(Duration.ofDays(30), Duration.ofDays(180)));
           assertThat(context).hasSingleBean(RedisSessionStore.class);
           assertThat(context).hasSingleBean(SessionIssuer.class);
+          assertThat(context).hasSingleBean(SessionTerminator.class);
         });
   }
 

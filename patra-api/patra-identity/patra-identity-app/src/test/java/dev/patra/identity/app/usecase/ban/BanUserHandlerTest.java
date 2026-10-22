@@ -21,6 +21,7 @@ import dev.patra.identity.domain.port.repository.EmailTokenRepository;
 import dev.patra.identity.domain.port.repository.UserLoginRecordRepository;
 import dev.patra.identity.domain.port.repository.UserRepository;
 import dev.patra.identity.domain.port.session.SessionStorePort;
+import dev.patra.identity.domain.service.SessionTerminator;
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.ClientType;
 import java.time.Clock;
@@ -45,7 +46,11 @@ class BanUserHandlerTest {
   private final UserLoginRecordRepository records = mock(UserLoginRecordRepository.class);
   private final EmailTokenRepository tokens = mock(EmailTokenRepository.class);
   private final BanUserHandler handler =
-      new BanUserHandler(users, sessions, records, tokens, Clock.fixed(NOW, ZoneOffset.UTC));
+      new BanUserHandler(
+          users,
+          new SessionTerminator(sessions, records),
+          tokens,
+          Clock.fixed(NOW, ZoneOffset.UTC));
 
   @Test
   @DisplayName("封禁正常用户：状态改为封禁，封禁时间取时钟")

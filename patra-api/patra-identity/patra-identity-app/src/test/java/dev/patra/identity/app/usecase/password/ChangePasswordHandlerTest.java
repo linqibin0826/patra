@@ -45,6 +45,7 @@ import dev.patra.identity.domain.port.session.SessionRotation;
 import dev.patra.identity.domain.port.session.SessionStorePort;
 import dev.patra.identity.domain.port.throttle.LoginAttempt;
 import dev.patra.identity.domain.port.throttle.LoginThrottlePort;
+import dev.patra.identity.domain.service.SessionTerminator;
 import dev.patra.tool.core.error.field.FieldViolation;
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.ClientType;
@@ -114,7 +115,7 @@ class ChangePasswordHandlerTest {
           new CurrentPasswordVerifier(credentials, passwordHashing, loginThrottle),
           tokens,
           sessions,
-          records,
+          new SessionTerminator(sessions, records),
           emailDelivery,
           recording(inTransaction),
           Clock.fixed(NOW, ZoneOffset.UTC));
@@ -236,7 +237,9 @@ class ChangePasswordHandlerTest {
     order.verify(credentials).save(argThat(c -> c.getPasswordHash().equals(NEW_HASH)));
     order.verify(tokens).revokeAllActive(42L, NOW);
     order.verify(sessions).revokeAllExcept(AccountType.USER, 42L, 7001L);
-    order.verify(records, times(2)).save(argThat(r -> r.getEndReason() == LoginEndReason.REVOKED));
+    order
+        .verify(records, times(2))
+        .save(argThat(r -> r.getEndReason() == LoginEndReason.PASSWORD_CHANGED));
     order.verify(userReadPort).findAccount(42L);
     order.verify(sessions).rotate(AccountType.USER, 42L, 7001L, Duration.ZERO);
     order

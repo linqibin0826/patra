@@ -23,6 +23,7 @@ import dev.patra.identity.domain.port.session.SessionStorePort;
 import dev.patra.identity.domain.service.EmailTokenIssuer;
 import dev.patra.identity.domain.service.ReauthenticationGuard;
 import dev.patra.identity.domain.service.SessionIssuer;
+import dev.patra.identity.domain.service.SessionTerminator;
 import dev.patra.identity.infra.adapter.hashing.PasswordHashingAdapter;
 import dev.patra.identity.infra.adapter.mail.SmtpEmailDeliveryAdapter;
 import dev.patra.identity.infra.adapter.mail.ThymeleafMailRenderer;
@@ -306,5 +307,16 @@ public class IdentityConfiguration {
       SessionLifetimePolicy policy,
       Clock clock) {
     return new SessionIssuer(records, sessionStore, policy, clock);
+  }
+
+  /// 撤销会话并结束登录记录的领域服务（PAP-99）。
+  ///
+  /// @param sessionStore 会话存储端口
+  /// @param records 登录记录仓储
+  /// @return 领域服务
+  @Bean
+  public SessionTerminator sessionTerminator(
+      SessionStorePort sessionStore, UserLoginRecordRepository records) {
+    return new SessionTerminator(sessionStore, records);
   }
 }

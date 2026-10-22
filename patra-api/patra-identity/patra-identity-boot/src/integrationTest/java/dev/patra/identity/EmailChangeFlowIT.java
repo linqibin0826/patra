@@ -76,7 +76,7 @@ class EmailChangeFlowIT extends IdentityFlowITSupport {
   }
 
   @Test
-  @DisplayName("7 天内撤销：邮箱改回、全部会话 401 并记 REVOKED、旧密码不可用、改回的邮箱收到重设链接、重设后能登录；8 天后撤销链接 422")
+  @DisplayName("7 天内撤销：邮箱改回、全部会话 401 并记 EMAIL_REVERTED、旧密码不可用、改回的邮箱收到重设链接、重设后能登录；8 天后撤销链接 422")
   void should_revert_within_seven_days_lock_account_and_send_reset_link() {
     String old = "flow.revert.old@example.com";
     String fresh = "flow.revert.new@example.com";
@@ -96,8 +96,8 @@ class EmailChangeFlowIT extends IdentityFlowITSupport {
     assertThat(json(reverted).get("email").asString()).isEqualTo(old);
     assertThat(redis.hasKey(sessionKey(sessionToken))).isFalse();
     assertThat(redis.hasKey(sessionKey(freshSessionToken))).isFalse();
-    assertThat(endReasonOf(sessionId)).isEqualTo("REVOKED");
-    assertThat(endReasonOf(freshSessionId)).isEqualTo("REVOKED");
+    assertThat(endReasonOf(sessionId)).isEqualTo("EMAIL_REVERTED");
+    assertThat(endReasonOf(freshSessionId)).isEqualTo("EMAIL_REVERTED");
     assertThat(json(get("/auth/me", assertionFor(userId, sessionId))).get("email").asString())
         .isEqualTo(old);
     assertThat(login(old, PASSWORD).status()).as("凭据已删").isEqualTo(401);

@@ -4,10 +4,8 @@ import dev.patra.identity.domain.exception.UserNotFoundException;
 import dev.patra.identity.domain.model.aggregate.User;
 import dev.patra.identity.domain.model.enums.LoginEndReason;
 import dev.patra.identity.domain.port.repository.EmailTokenRepository;
-import dev.patra.identity.domain.port.repository.UserLoginRecordRepository;
 import dev.patra.identity.domain.port.repository.UserRepository;
-import dev.patra.identity.domain.port.session.SessionStorePort;
-import dev.patra.tool.core.security.AccountType;
+import dev.patra.identity.domain.service.SessionTerminator;
 import dev.patra.tool.cqrs.CommandHandler;
 import java.time.Clock;
 import java.time.Instant;
@@ -28,8 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class BanUserHandler implements CommandHandler<BanUserCommand, Void> {
 
   private final UserRepository users;
-  private final SessionStorePort sessions;
-  private final UserLoginRecordRepository records;
+  private final SessionTerminator sessionTerminator;
   private final EmailTokenRepository tokens;
   private final Clock clock;
 
@@ -45,16 +42,8 @@ public class BanUserHandler implements CommandHandler<BanUserCommand, Void> {
     user.ban(now);
     users.save(user);
     tokens.revokeAllActive(command.userId(), now);
-    List<Long> revoked = sessions.revokeAll(AccountType.USER, command.userId());
-    for (Long sessionId : revoked) {
-      records
-          .findById(sessionId)
-          .ifPresent(
-              login -> {
-                login.end(LoginEndReason.BANNED, now);
-                records.save(login);
-              });
-    }
+    List<Long> revoked =
+        sessionTerminator.terminateAll(command.userId(), LoginEndReason.BANNED, now);
     log.info("前台用户已封禁: userId={}, revokedSessions={}", command.userId(), revoked.size());
     return null;
   }

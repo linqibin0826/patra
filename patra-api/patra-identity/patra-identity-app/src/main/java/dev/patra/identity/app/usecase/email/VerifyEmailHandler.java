@@ -8,10 +8,8 @@ import dev.patra.identity.domain.model.enums.LoginEndReason;
 import dev.patra.identity.domain.model.vo.EmailTokenSecret;
 import dev.patra.identity.domain.model.vo.UserFieldViolations;
 import dev.patra.identity.domain.port.repository.EmailTokenRepository;
-import dev.patra.identity.domain.port.repository.UserLoginRecordRepository;
 import dev.patra.identity.domain.port.repository.UserRepository;
-import dev.patra.identity.domain.port.session.SessionStorePort;
-import dev.patra.tool.core.security.AccountType;
+import dev.patra.identity.domain.service.SessionTerminator;
 import dev.patra.tool.core.security.CurrentUser;
 import dev.patra.tool.core.security.CurrentUserPort;
 import dev.patra.tool.cqrs.CommandHandler;
@@ -31,7 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 /// → 令牌的邮箱必须等于用户当前邮箱 → 写验证时间 → 撤销会话。
 ///
 /// 验证的人证明了对邮箱的控制，验证前建立的会话一律不再信任：当前请求带着令牌所属用户自己的会话时
-/// 保留这一条，其余全删；匿名或登录成别人时删该用户的全部。被删会话的登录记录标 `REVOKED`。
+/// 保留这一条，其余全删；匿名或登录成别人时删该用户的全部。被删会话的登录记录标 `EMAIL_VERIFIED`。
 /// 这条路由在网关上是公开的，所以这里用 `current()` 不用 `require()`。
 /// 四种不可用一律同一个 422 `token` / `INVALID`，不给出任何能用来探测的信号。
 @Slf4j
@@ -42,8 +40,7 @@ public class VerifyEmailHandler implements CommandHandler<VerifyEmailCommand, Em
   private final CurrentUserPort currentUserPort;
   private final EmailTokenRepository tokens;
   private final UserRepository users;
-  private final SessionStorePort sessions;
-  private final UserLoginRecordRepository records;
+  private final SessionTerminator sessionTerminator;
   private final Clock clock;
 
   /// 验证。
@@ -77,17 +74,12 @@ public class VerifyEmailHandler implements CommandHandler<VerifyEmailCommand, Em
     List<Long> revoked =
         current
             .filter(requester -> requester.userId() == userId)
-            .map(self -> sessions.revokeAllExcept(AccountType.USER, userId, self.sessionId()))
-            .orElseGet(() -> sessions.revokeAll(AccountType.USER, userId));
-    for (Long sessionId : revoked) {
-      records
-          .findById(sessionId)
-          .ifPresent(
-              login -> {
-                login.end(LoginEndReason.REVOKED, now);
-                records.save(login);
-              });
-    }
+            .map(
+                self ->
+                    sessionTerminator.terminateAllExcept(
+                        userId, self.sessionId(), LoginEndReason.EMAIL_VERIFIED, now))
+            .orElseGet(
+                () -> sessionTerminator.terminateAll(userId, LoginEndReason.EMAIL_VERIFIED, now));
     log.info(
         "邮箱已验证: userId={}, tokenId={}, revokedSessions={}",
         userId,

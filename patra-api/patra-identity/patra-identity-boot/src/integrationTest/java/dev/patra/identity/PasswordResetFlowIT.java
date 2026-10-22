@@ -48,7 +48,7 @@ class PasswordResetFlowIT extends IdentityFlowITSupport {
 
   @Test
   @DisplayName(
-      "重设：全部会话 401 并记 REVOKED、全部令牌作废（含待确认的改邮箱）、失败计数清零、email_verified_at 已写、收到「密码已重设」、同一令牌再提交 422")
+      "重设：全部会话 401 并记 PASSWORD_RESET、全部令牌作废（含待确认的改邮箱）、失败计数清零、email_verified_at 已写、收到「密码已重设」、同一令牌再提交 422")
   void should_reset_password_revoke_everything_clear_failures_and_verify_email() {
     String email = "flow.reset@example.com";
     RawResponse registered = register(email, "u-flow-reset");
@@ -83,8 +83,8 @@ class PasswordResetFlowIT extends IdentityFlowITSupport {
     assertThat(reset.body()).doesNotContain("sessionToken");
     assertThat(redis.hasKey(sessionKey(tokenA))).isFalse();
     assertThat(redis.hasKey(sessionKey(tokenB))).isFalse();
-    assertThat(endReasonOf(sessionA)).isEqualTo("REVOKED");
-    assertThat(endReasonOf(sessionB)).isEqualTo("REVOKED");
+    assertThat(endReasonOf(sessionA)).isEqualTo("PASSWORD_RESET");
+    assertThat(endReasonOf(sessionB)).isEqualTo("PASSWORD_RESET");
     assertThat(activeTokenPurposesOf(userId)).isEmpty();
     assertThat(get("/me/email/change", assertionFor(userId, sessionA)).status())
         .as("待确认的改邮箱随重设作废")

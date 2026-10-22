@@ -14,13 +14,11 @@ import dev.patra.identity.domain.port.mail.EmailChangeRevertedMail;
 import dev.patra.identity.domain.port.mail.EmailDeliveryPort;
 import dev.patra.identity.domain.port.read.UserReadPort;
 import dev.patra.identity.domain.port.repository.EmailTokenRepository;
-import dev.patra.identity.domain.port.repository.UserLoginRecordRepository;
 import dev.patra.identity.domain.port.repository.UserPasswordCredentialRepository;
 import dev.patra.identity.domain.port.repository.UserRepository;
-import dev.patra.identity.domain.port.session.SessionStorePort;
 import dev.patra.identity.domain.service.EmailTokenIssuer;
 import dev.patra.identity.domain.service.IssuedEmailToken;
-import dev.patra.tool.core.security.AccountType;
+import dev.patra.identity.domain.service.SessionTerminator;
 import dev.patra.tool.cqrs.CommandHandler;
 import java.time.Clock;
 import java.time.Instant;
@@ -37,7 +35,7 @@ import org.springframework.transaction.support.TransactionOperations;
 /// 拿到账号后申请注销是很自然的事，原主必须能撤回，撤回不碰注销状态）→ 条件消费 → 旧地址 7 天内被别人
 /// 注册了 409 且事务回滚（令牌没被消费；当前邮箱已经是旧地址时不算占用）→ 改回并写验证时间 → 作废全部令牌 + 只作废比本条更晚签发的
 /// 撤销令牌（更早的保留：X → Y → Z 时攻击者先点 Y 的也废不掉原主 X 的）→ 删凭据
-/// （作废密码）→ 撤销全部会话并记 `REVOKED` → 签发重设令牌。事务后向改回的地址发含重设链接的通知。
+/// （作废密码）→ 撤销全部会话并记 `EMAIL_REVERTED` → 签发重设令牌。事务后向改回的地址发含重设链接的通知。
 /// 不通知被踢掉的新地址。
 @Slf4j
 @Component
@@ -49,8 +47,7 @@ public class RevertEmailChangeHandler
   private final UserRepository users;
   private final UserReadPort userReadPort;
   private final UserPasswordCredentialRepository credentials;
-  private final SessionStorePort sessions;
-  private final UserLoginRecordRepository records;
+  private final SessionTerminator sessionTerminator;
   private final EmailTokenIssuer emailTokenIssuer;
   private final MailLinkPolicy links;
   private final EmailDeliveryPort emailDelivery;
@@ -101,16 +98,8 @@ public class RevertEmailChangeHandler
                   tokens.revokeAllActive(userId, now);
                   tokens.revokeRevertTokensIssuedAfter(userId, consumed.getId(), now);
                   credentials.deleteByUserId(userId);
-                  List<Long> revoked = sessions.revokeAll(AccountType.USER, userId);
-                  for (Long sessionId : revoked) {
-                    records
-                        .findById(sessionId)
-                        .ifPresent(
-                            login -> {
-                              login.end(LoginEndReason.REVOKED, now);
-                              records.save(login);
-                            });
-                  }
+                  List<Long> revoked =
+                      sessionTerminator.terminateAll(userId, LoginEndReason.EMAIL_REVERTED, now);
                   IssuedEmailToken reset =
                       emailTokenIssuer.issue(
                           EmailTokenPurpose.PASSWORD_RESET, userId, restore, command.clientIp());

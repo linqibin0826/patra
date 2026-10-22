@@ -28,6 +28,7 @@ import dev.patra.identity.domain.port.repository.EmailTokenRepository;
 import dev.patra.identity.domain.port.repository.UserLoginRecordRepository;
 import dev.patra.identity.domain.port.repository.UserRepository;
 import dev.patra.identity.domain.port.session.SessionStorePort;
+import dev.patra.identity.domain.service.SessionTerminator;
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.ClientType;
 import dev.patra.tool.core.security.CurrentUser;
@@ -69,7 +70,11 @@ class VerifyEmailHandlerTest {
   private final UserLoginRecordRepository records = mock(UserLoginRecordRepository.class);
   private final VerifyEmailHandler handler =
       new VerifyEmailHandler(
-          currentUserPort, tokens, users, sessions, records, Clock.fixed(NOW, ZoneOffset.UTC));
+          currentUserPort,
+          tokens,
+          users,
+          new SessionTerminator(sessions, records),
+          Clock.fixed(NOW, ZoneOffset.UTC));
 
   /// 默认：令牌存在且可消费，用户 42 未验证，当前用户是 42 的会话 7。
   @BeforeEach
@@ -116,7 +121,8 @@ class VerifyEmailHandlerTest {
     verify(records, times(2)).save(ended.capture());
     assertThat(ended.getAllValues())
         .extracting(UserLoginRecord::getId, UserLoginRecord::getEndReason)
-        .containsExactly(tuple(5L, LoginEndReason.REVOKED), tuple(6L, LoginEndReason.REVOKED));
+        .containsExactly(
+            tuple(5L, LoginEndReason.EMAIL_VERIFIED), tuple(6L, LoginEndReason.EMAIL_VERIFIED));
   }
 
   @Test

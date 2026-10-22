@@ -40,6 +40,7 @@ import dev.patra.identity.domain.port.repository.UserRepository;
 import dev.patra.identity.domain.port.session.SessionStorePort;
 import dev.patra.identity.domain.port.throttle.LoginThrottlePort;
 import dev.patra.identity.domain.port.throttle.PasswordResetThrottlePort;
+import dev.patra.identity.domain.service.SessionTerminator;
 import dev.patra.tool.core.error.field.FieldViolation;
 import dev.patra.tool.core.security.AccountType;
 import java.time.Clock;
@@ -98,8 +99,7 @@ class ResetPasswordHandlerTest {
           users,
           credentials,
           userReadPort,
-          sessions,
-          records,
+          new SessionTerminator(sessions, records),
           loginThrottle,
           emailDelivery,
           RequestPasswordResetHandlerTest.recording(inTransaction),
@@ -257,7 +257,7 @@ class ResetPasswordHandlerTest {
     order.verify(tokens).revokeAllActive(42L, NOW);
     order.verify(users).save(argThat(User::isEmailVerified));
     order.verify(sessions).revokeAll(AccountType.USER, 42L);
-    order.verify(records).save(argThat(r -> r.getEndReason() == LoginEndReason.REVOKED));
+    order.verify(records).save(argThat(r -> r.getEndReason() == LoginEndReason.PASSWORD_RESET));
     order.verify(loginThrottle).clear(AccountType.USER, EMAIL);
     order
         .verify(emailDelivery)

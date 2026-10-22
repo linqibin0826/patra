@@ -38,6 +38,7 @@ import dev.patra.identity.domain.port.repository.UserRepository;
 import dev.patra.identity.domain.port.session.SessionStorePort;
 import dev.patra.identity.domain.service.EmailTokenIssuer;
 import dev.patra.identity.domain.service.IssuedEmailToken;
+import dev.patra.identity.domain.service.SessionTerminator;
 import dev.patra.tool.core.security.AccountType;
 import java.time.Clock;
 import java.time.Instant;
@@ -94,8 +95,7 @@ class RevertEmailChangeHandlerTest {
           users,
           userReadPort,
           credentials,
-          sessions,
-          records,
+          new SessionTerminator(sessions, records),
           emailTokenIssuer,
           LINKS,
           emailDelivery,
@@ -216,7 +216,7 @@ class RevertEmailChangeHandlerTest {
     order.verify(tokens).revokeRevertTokensIssuedAfter(42L, 500L, NOW);
     order.verify(credentials).deleteByUserId(42L);
     order.verify(sessions).revokeAll(AccountType.USER, 42L);
-    order.verify(records).save(argThat(r -> r.getEndReason() == LoginEndReason.REVOKED));
+    order.verify(records).save(argThat(r -> r.getEndReason() == LoginEndReason.EMAIL_REVERTED));
     order.verify(emailTokenIssuer).issue(EmailTokenPurpose.PASSWORD_RESET, 42L, OLD, "127.0.0.1");
     order
         .verify(emailDelivery)

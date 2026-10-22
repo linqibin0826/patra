@@ -136,7 +136,7 @@ class EmailVerificationFlowIT {
   }
 
   @Test
-  @DisplayName("本人带会话验证：写验证时间，保留当前会话、撤销另一条并记 REVOKED；同一令牌第二次 422")
+  @DisplayName("本人带会话验证：写验证时间，保留当前会话、撤销另一条并记 EMAIL_VERIFIED；同一令牌第二次 422")
   void should_verify_keep_current_session_and_revoke_the_other_then_reject_reuse() {
     RawResponse registered = register("flow.verify@example.com", "u-flow-verify");
     long userId = userIdOf(registered);
@@ -158,7 +158,7 @@ class EmailVerificationFlowIT {
     assertThat(me.get("emailVerified").asBoolean()).isTrue();
     assertThat(redis.hasKey(sessionKey(tokenA))).isTrue();
     assertThat(redis.hasKey(sessionKey(tokenB))).isFalse();
-    assertThat(endReasonOf(sessionB)).isEqualTo("REVOKED");
+    assertThat(endReasonOf(sessionB)).isEqualTo("EMAIL_VERIFIED");
     assertThat(endReasonOf(sessionA)).isNull();
 
     RawResponse again = post("/auth/email/verify", Map.of("token", token), new HttpHeaders());
@@ -221,7 +221,7 @@ class EmailVerificationFlowIT {
   }
 
   @Test
-  @DisplayName("匿名验证：该用户的全部会话被撤销、记录全标 REVOKED；别人的会话不受影响")
+  @DisplayName("匿名验证：该用户的全部会话被撤销、记录全标 EMAIL_VERIFIED；别人的会话不受影响")
   void should_revoke_all_sessions_when_verified_anonymously_and_leave_requester_alone() {
     RawResponse alice = register("flow.alice@example.com", "u-flow-alice");
     long aliceId = userIdOf(alice);
@@ -247,7 +247,7 @@ class EmailVerificationFlowIT {
         .allSatisfy(token -> assertThat(redis.hasKey(sessionKey(token))).isFalse());
     assertThat(aliceSessions)
         .hasSize(3)
-        .allSatisfy(id -> assertThat(endReasonOf(id)).isEqualTo("REVOKED"));
+        .allSatisfy(id -> assertThat(endReasonOf(id)).isEqualTo("EMAIL_VERIFIED"));
     assertThat(redis.hasKey(sessionKey(bobSession))).isTrue();
   }
 

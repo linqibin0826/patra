@@ -19,11 +19,11 @@ import dev.patra.identity.domain.port.mail.PasswordChangedMail;
 import dev.patra.identity.domain.port.mail.SecurityNotice;
 import dev.patra.identity.domain.port.read.UserReadPort;
 import dev.patra.identity.domain.port.repository.EmailTokenRepository;
-import dev.patra.identity.domain.port.repository.UserLoginRecordRepository;
 import dev.patra.identity.domain.port.repository.UserPasswordCredentialRepository;
 import dev.patra.identity.domain.port.repository.UserRepository;
 import dev.patra.identity.domain.port.session.SessionRotation;
 import dev.patra.identity.domain.port.session.SessionStorePort;
+import dev.patra.identity.domain.service.SessionTerminator;
 import dev.patra.tool.core.error.field.FieldViolation;
 import dev.patra.tool.core.security.AuthenticationRequiredException;
 import dev.patra.tool.core.security.CurrentUser;
@@ -41,7 +41,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionOperations;
 
 /// 改密码：每次都输当前密码（不走再认证窗口）；新密码按注册规则且不能与当前相同；
-/// 事务里换哈希、按用户批量作废令牌、撤销其余会话并记 `REVOKED`、最后本机换令牌（刷新 `auth_at`）；
+/// 事务里换哈希、按用户批量作废令牌、撤销其余会话并记 `PASSWORD_CHANGED`、最后本机换令牌（刷新 `auth_at`）；
 /// 事务提交后发「密码已修改」。
 ///
 /// 当前密码的校验和登录共用失败限制：错是 401 + `PASSWORD_MISMATCH`，锁定 429。校验在锁外（Argon2 不占行锁），
@@ -63,7 +63,7 @@ public class ChangePasswordHandler
   private final CurrentPasswordVerifier passwordVerifier;
   private final EmailTokenRepository tokens;
   private final SessionStorePort sessions;
-  private final UserLoginRecordRepository records;
+  private final SessionTerminator sessionTerminator;
   private final EmailDeliveryPort emailDelivery;
   private final TransactionOperations transactions;
   private final Clock clock;
@@ -117,16 +117,8 @@ public class ChangePasswordHandler
                   credentials.save(credential);
                   tokens.revokeAllActive(userId, now);
                   List<Long> revoked =
-                      sessions.revokeAllExcept(current.accountType(), userId, current.sessionId());
-                  for (Long sessionId : revoked) {
-                    records
-                        .findById(sessionId)
-                        .ifPresent(
-                            login -> {
-                              login.end(LoginEndReason.REVOKED, now);
-                              records.save(login);
-                            });
-                  }
+                      sessionTerminator.terminateAllExcept(
+                          userId, current.sessionId(), LoginEndReason.PASSWORD_CHANGED, now);
                   UserAccountReadModel account =
                       userReadPort
                           .findAccount(userId)
