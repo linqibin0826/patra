@@ -1,12 +1,14 @@
 package dev.patra.identity.adapter.rest.auth;
 
 import dev.patra.identity.adapter.rest.auth.request.LoginRequest;
+import dev.patra.identity.adapter.rest.auth.request.ReauthRequest;
 import dev.patra.identity.adapter.rest.auth.request.RegisterRequest;
 import dev.patra.identity.adapter.rest.auth.response.AuthenticatedUserResponse;
 import dev.patra.identity.adapter.rest.auth.response.CurrentUserResponse;
 import dev.patra.identity.app.usecase.auth.AuthenticatedUser;
 import dev.patra.identity.app.usecase.login.LoginUserCommand;
 import dev.patra.identity.app.usecase.logout.LogoutUserCommand;
+import dev.patra.identity.app.usecase.reauth.ReauthenticateUserCommand;
 import dev.patra.identity.app.usecase.register.RegisterUserCommand;
 import dev.patra.identity.app.usecase.user.query.UserQueryService;
 import dev.patra.tool.cqrs.CommandBus;
@@ -21,7 +23,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/// 前台用户的注册、登录、登出与当前用户。字段校验在应用层做，这里只把请求转成命令；读操作直接走查询服务。
+/// 前台用户的注册、登录、再认证、登出与当前用户。字段校验在应用层做，这里只把请求转成命令；读操作直接走查询服务。
 @Tag(name = "Auth", description = "前台用户的注册、登录、登出与当前用户")
 @RestController
 @RequestMapping("/auth")
@@ -65,6 +67,16 @@ public class AuthController {
             LoginUserCommand.of(
                 request.email(), request.password(), request.clientType(), request.deviceId()));
     return toResponse(result);
+  }
+
+  /// 再认证：重新输一次密码，通过后换新令牌（会话 ID 不变）并刷新再认证时间。成功 200，和登录同构；
+  /// 密码错 401（`traits` 含 `PASSWORD_MISMATCH`），锁定 429，封禁 / 注销 401。
+  ///
+  /// @param request 请求体
+  /// @return 新令牌和账号信息
+  @PostMapping("/reauth")
+  public AuthenticatedUserResponse reauth(@RequestBody ReauthRequest request) {
+    return toResponse(commandBus.handle(ReauthenticateUserCommand.of(request.password())));
   }
 
   /// 登出。有当前用户就删会话，没有也返回 204：这条路由在网关上是公开的。

@@ -8,8 +8,10 @@ import static org.mockito.Mockito.when;
 import dev.patra.identity.app.usecase.auth.AuthenticatedUser;
 import dev.patra.identity.app.usecase.login.LoginUserCommand;
 import dev.patra.identity.app.usecase.logout.LogoutUserCommand;
+import dev.patra.identity.app.usecase.reauth.ReauthenticateUserCommand;
 import dev.patra.identity.app.usecase.register.RegisterUserCommand;
 import dev.patra.identity.app.usecase.user.query.UserQueryService;
+import dev.patra.identity.domain.exception.CurrentPasswordMismatchException;
 import dev.patra.identity.domain.exception.InvalidCredentialsException;
 import dev.patra.identity.domain.exception.InvalidUserFieldsException;
 import dev.patra.identity.domain.exception.LoginTemporarilyLockedException;
@@ -249,6 +251,60 @@ class AuthControllerIT {
     assertThat(json.get("errors").get(1).get("code").asString()).isEqualTo("ALREADY_TAKEN");
     assertThat(json.get("errors").get(1).get("rejectedValue").isNull()).isTrue();
     assertThat(body).doesNotContain("chen.yu@example.com");
+  }
+
+  @Test
+  @DisplayName("再认证成功返回 200，和登录同构；密码原样交给命令")
+  void should_reauth_with_200_and_new_token() {
+    when(commandBus.handle(any(ReauthenticateUserCommand.class)))
+        .thenReturn(AuthenticatedUser.of("patra_user_rotated", account(42L)));
+
+    restClient
+        .post()
+        .uri("/auth/reauth")
+        .contentType(MediaType.APPLICATION_JSON)
+        .body(Map.of("password", "Correct-Horse-02"))
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .jsonPath("$.sessionToken")
+        .isEqualTo("patra_user_rotated")
+        .jsonPath("$.user.userId")
+        .isEqualTo("42");
+
+    ArgumentCaptor<ReauthenticateUserCommand> command =
+        ArgumentCaptor.forClass(ReauthenticateUserCommand.class);
+    verify(commandBus).handle(command.capture());
+    assertThat(command.getValue().password()).isEqualTo("Correct-Horse-02");
+  }
+
+  @Test
+  @DisplayName("再认证密码错误：401，traits 含 PASSWORD_MISMATCH，门户据此不当登出")
+  void should_render_password_mismatch_as_401_with_trait() {
+    when(commandBus.handle(any(ReauthenticateUserCommand.class)))
+        .thenThrow(new CurrentPasswordMismatchException());
+
+    String body =
+        restClient
+            .post()
+            .uri("/auth/reauth")
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(Map.of("password", "wrong"))
+            .exchange()
+            .expectStatus()
+            .isUnauthorized()
+            .expectBody(String.class)
+            .returnResult()
+            .getResponseBody();
+
+    JsonNode json = JSON.readTree(body);
+    assertThat(json.get("code").asString()).isEqualTo("IDN-0401");
+    assertThat(json.get("detail").asString()).isEqualTo("密码不正确");
+    assertThat(json.get("traits").toString())
+        .contains("PASSWORD_MISMATCH")
+        .contains("UNAUTHORIZED");
+    assertThat(body).doesNotContain("wrong");
   }
 
   @Test
