@@ -137,6 +137,13 @@ public final class UserProfile {
     return displayNameChanged;
   }
 
+  /// 注销到期时清空资料：内容全部清掉（昵称、简介、链接、专业背景、关注领域），隐私回默认；行本身保留，
+  /// 读模型要求资料行与用户一对一存在。PAP-97 的头像键在这里一起清。
+  public void erase() {
+    apply(ProfileContent.builder().build());
+    privacy = PrivacySettings.defaults();
+  }
+
   /// 替换隐私设置。
   ///
   /// @param privacy 新设置

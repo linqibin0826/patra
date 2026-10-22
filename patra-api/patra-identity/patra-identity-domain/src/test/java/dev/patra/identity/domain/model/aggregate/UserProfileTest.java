@@ -127,6 +127,27 @@ class UserProfileTest {
   }
 
   @Test
+  void should_erase_content_and_reset_privacy() {
+    UserProfile profile = UserProfile.create(7L);
+    profile.edit(fullContent());
+    profile.changePrivacy(
+        PrivacySettings.of(ProfileVisibility.SELF, ProfessionalVisibility.SELF, true));
+
+    profile.erase();
+
+    assertThat(profile.getUserId()).isEqualTo(7L);
+    assertThat(profile.getDisplayName()).isEmpty();
+    assertThat(profile.getBio()).isEmpty();
+    assertThat(profile.getLinks()).isEmpty();
+    assertThat(profile.getOccupation()).isEmpty();
+    assertThat(profile.getJobTitle()).isEmpty();
+    assertThat(profile.getAffiliation()).isEmpty();
+    assertThat(profile.getDepartment()).isEmpty();
+    assertThat(profile.getResearchInterests()).isEmpty();
+    assertThat(profile.getPrivacy()).isEqualTo(PrivacySettings.defaults());
+  }
+
+  @Test
   void should_change_privacy() {
     UserProfile profile = UserProfile.create(7L);
     PrivacySettings privacy =
