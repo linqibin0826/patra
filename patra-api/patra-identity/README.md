@@ -1,18 +1,18 @@
 # patra-identity
 
-前台用户的账号服务：注册、登录、会话、登出、「当前用户」、用户名与公开身份卡、邮箱验证与邮件、再认证、改密码、找回密码、改邮箱、登录失败限制、封禁与解封。
+前台用户的账号服务：注册、登录、会话、登出、「当前用户」、用户名、资料与隐私设置、公开主页、邮箱验证与邮件、再认证、改密码、找回密码、改邮箱、登录失败限制、封禁与解封。
 
-工程设计：`docs/patra/specs/2026-10-05-identity-account-design.md`（账号）、`docs/patra/specs/2026-10-09-identity-session-design.md`（会话）、`docs/patra/specs/2026-10-20-identity-account-rebuild-design.md`（账号重建：用户名、昵称、邮箱验证状态、四态状态机、`V1` 最终形态）、`docs/patra/specs/2026-10-21-identity-email-verification-design.md`（邮件发送与邮箱验证）、`docs/patra/specs/2026-10-22-identity-account-security-design.md`（账号安全：再认证、改密码、找回密码、改邮箱）。
+工程设计：`docs/patra/specs/2026-10-05-identity-account-design.md`（账号）、`docs/patra/specs/2026-10-09-identity-session-design.md`（会话）、`docs/patra/specs/2026-10-20-identity-account-rebuild-design.md`（账号重建：用户名、昵称、邮箱验证状态、四态状态机、`V1` 最终形态）、`docs/patra/specs/2026-10-21-identity-email-verification-design.md`（邮件发送与邮箱验证）、`docs/patra/specs/2026-10-22-identity-account-security-design.md`（账号安全：再认证、改密码、找回密码、改邮箱）、`docs/patra/specs/2026-10-22-identity-profile-design.md`（资料、隐私设置与公开主页）。
 
 ## 1. 模块
 
 | 模块 | 内容 |
 |---|---|
-| `patra-identity-domain` | `User`、`UserProfile`、`FormerUsername`、`UserPasswordCredential`、`UserLoginRecord`、`EmailToken` 六个聚合，邮箱、用户名、昵称、密码、客户端信息、令牌密文值对象，用户名 / 昵称 / 改名 / 密码 / 失败限制 / 重发限流 / 再认证 / 找回密码限流 / 改邮箱限流 / 邮件链接规则、会话策略，端口（含邮件发送 `EmailDeliveryPort`、三个限流端口），`SessionIssuer`、`EmailTokenIssuer`、`ReauthenticationGuard` 领域服务，七个 `OutgoingMail` 记录，领域异常 |
-| `patra-identity-app` | 注册、登录、登出、再认证、改用户名、改密码、找回密码（申请、重设）、改邮箱（申请、取消、确认、撤销）、封禁、解封、重发验证邮件、验证邮箱、清理过期令牌十七个处理器，走 CommandBus；`CurrentPasswordVerifier` 给再认证与改密码共用；「当前用户」、待确认的改邮箱和公开身份卡走 `UserQueryService` |
-| `patra-identity-infra` | JPA 持久化（含令牌表）、Argon2id 哈希、常见密码名单、Redis 失败限制与通用限流脚本 `action-throttle.lua`（重发、找回密码、改邮箱三个适配器共用）、会话存储适配器、SMTP 发信适配器与 Thymeleaf 邮件模板（八对）、Flyway 脚本（一份最终形态的 `V1`） |
-| `patra-identity-adapter` | 前台的 `AuthController`、`EmailVerificationController`、`PasswordResetController`、`EmailChangeController`、`MeController`、`MeEmailController`、`PublicUserController`，后台的 `AdminUserController`，XXL-Job 任务 `EmailTokenCleanupScheduleJob` |
-| `patra-identity-boot` | 启动类、配置、安全 starter 接入 |
+| `patra-identity-domain` | `User`、`UserProfile`、`FormerUsername`、`UserPasswordCredential`、`UserLoginRecord`、`EmailToken` 六个聚合，邮箱、用户名、昵称、密码、客户端信息、令牌密文值对象，资料值对象（`vo/profile/`：简介、链接、职称、科室、ROR ID、MeSH UI、机构、关注领域、隐私设置），用户名 / 昵称 / 资料字段（`ProfilePolicy`，拒绝字符与昵称共用 `ProfileTextRules`）/ 改名 / 密码 / 失败限制 / 重发限流 / 再认证 / 找回密码限流 / 改邮箱限流 / 邮件链接规则、会话策略，端口（含邮件发送 `EmailDeliveryPort`、三个限流端口、向 catalog 取名称快照的 `CatalogReferencePort`），公开主页读模型（`viewFor` 按请求者裁剪），`SessionIssuer`、`EmailTokenIssuer`、`ReauthenticationGuard` 领域服务，七个 `OutgoingMail` 记录，领域异常 |
+| `patra-identity-app` | 注册、登录、登出、再认证、改用户名、改密码、找回密码（申请、重设）、改邮箱（申请、取消、确认、撤销）、封禁、解封、重发验证邮件、验证邮箱、清理过期令牌、改资料、改隐私设置十九个处理器，走 CommandBus；`CurrentPasswordVerifier` 给再认证与改密码共用；「当前用户」、本人的资料与隐私设置、待确认的改邮箱和公开主页走 `UserQueryService` |
+| `patra-identity-infra` | JPA 持久化（含令牌表）、Argon2id 哈希、常见密码名单、Redis 失败限制与通用限流脚本 `action-throttle.lua`（重发、找回密码、改邮箱三个适配器共用）、会话存储适配器、SMTP 发信适配器与 Thymeleaf 邮件模板（八对）、Flyway 脚本（一份最终形态的 `V1`）、catalog 内部接口适配器 `CatalogReferenceAdapter`（依赖 `patra-catalog-api`） |
+| `patra-identity-adapter` | 前台的 `AuthController`、`EmailVerificationController`、`PasswordResetController`、`EmailChangeController`、`MeController`、`MeEmailController`、`MeProfileController`、`PublicUserController`，后台的 `AdminUserController`，XXL-Job 任务 `EmailTokenCleanupScheduleJob` |
+| `patra-identity-boot` | 启动类、配置、安全 starter 接入、catalog 两个 HTTP Interface 代理（`CatalogClientConfiguration`，`lb://patra-catalog`） |
 | `patra-identity-session` | 与网关共用的会话存储契约（令牌、Redis 键、Lua、`RedisSessionStore`），见它自己的 README |
 
 ## 2. 接口
@@ -35,7 +35,11 @@
 | `DELETE /me/email/change` | 204 | 需要登录 |
 | `POST /auth/email/change/confirm` | 200 `{ email, emailVerifiedAt }`，请求体 `{ token }` | 公开 |
 | `POST /auth/email/change/revert` | 200 `{ email }`，请求体 `{ token }` | 公开 |
-| `GET /users/{username}` | 200 `{ username, displayName, avatarUrl, audience }`；保留期内的旧名 301，`Location: /users/<新名>`，体 `{ username: <新名> }` | 公开（`/users/**` 整体，网关照样翻译令牌） |
+| `GET /me/profile` | 200 本人资料原值（第 12 节） | 需要登录 |
+| `PUT /me/profile` | 200 保存后的资料；整份替换，省略即清空 | 需要登录 |
+| `GET /me/privacy` | 200 `{ profileVisibility, professionalVisibility, searchIndexing }` | 需要登录 |
+| `PUT /me/privacy` | 200 同上，三项必填 | 需要登录 |
+| `GET /users/{username}` | 200 公开主页 `{ username, displayName, avatarUrl, audience, joinedAt, bio, links, professional, researchInterests, indexable }`，按请求者裁剪（第 12 节）；保留期内的旧名 301，`Location: /users/<新名>`，体 `{ username: <新名> }` | 公开（`/users/**` 整体，网关照样翻译令牌） |
 | `POST /admin/users/{userId}/ban` | 204 | 拒绝外部访问 |
 | `POST /admin/users/{userId}/unban` | 204 | 拒绝外部访问 |
 
@@ -64,7 +68,9 @@
 |---|---|
 | `idn_user` | ID、邮箱（唯一、只能小写，`DELETED` 时为空）、`email_verified_at`、用户名（唯一）、最近改名时间、状态、封禁时间、注销到期时间、注销时间。用户名格式、状态与各时间列的配对都由检查约束守在表上 |
 | `idn_user_password_credential` | 用户 ID（唯一）、Argon2id 编码串 |
-| `idn_user_profile` | 用户 ID（唯一）、昵称（可空，空表示跟随用户名）。PAP-95 在这份骨架上加列 |
+| `idn_user_profile` | 用户 ID（唯一）、昵称（可空，空表示跟随用户名）、简介、身份大类、职称、机构（ROR ID + catalog 名称快照，或无 ROR 的手填名称）、科室、三个隐私开关 |
+| `idn_user_profile_link` | 用户 ID、顺序（0 ~ 4）、标题（可空）、URL；`(user_id, lower(url))` 唯一 |
+| `idn_user_research_interest` | 用户 ID、顺序（0 ~ 9）、MeSH UI、英文名快照；`(user_id, mesh_ui)` 唯一，`mesh_ui` 上有索引 |
 | `idn_user_former_username` | 用户 ID、旧用户名、替换时间、保留到期时间 |
 | `idn_user_login_record` | 会话 ID、用户 ID、客户端信息、结束原因（第 9 节） |
 | `idn_email_token` | 用途、用户 ID、发往的邮箱、令牌哈希（SHA-256 十六进制，唯一）、过期 / 消费 / 撤销时间、申请方 IP。同一用户同一用途只留一个有效令牌，由部分唯一索引守住（改邮箱撤销令牌例外） |
@@ -93,7 +99,7 @@
 
 ### 昵称规则
 
-本版只有规则和单测（`DisplayNamePolicy`），改昵称的接口是 PAP-95。规范化：NFC、连续空格类字符折叠成一个空格、再去首尾空白。校验依次：为空 `REQUIRED`；控制字符、行段分隔符、私用区、未分配码点、孤立代理项、格式字符（emoji 组合里的 ZWJ 和标签字符除外）、以组合用字符开头的字素簇 `INVALID_CHARACTER`；少于 2 个字素 `TOO_SHORT`；多于 30 个字素或超过 120 字节 `TOO_LONG`；网址、邮箱、手机号、微信号形态 `INVALID_FORMAT`；拒绝词 `RESERVED`（`domain/policy/RejectedDisplayNameWords`：中文词包含即命中、拉丁词整词命中，站名与数据源名复用保留字第三组）。字素按 `BreakIterator` 数，汉字、带变音符的字母、肤色 / ZWJ 组合的 emoji、国旗各计 1。
+改昵称在 `PUT /me/profile` 里（传空即清空、回到跟随用户名），规则在 `DisplayNamePolicy`。规范化：NFC、连续空格类字符折叠成一个空格、再去首尾空白。校验依次：为空 `REQUIRED`；控制字符、行段分隔符、私用区、未分配码点、孤立代理项、格式字符（emoji 组合里的 ZWJ 和标签字符除外）、以组合用字符开头的字素簇 `INVALID_CHARACTER`；少于 2 个字素 `TOO_SHORT`；多于 30 个字素或超过 120 字节 `TOO_LONG`；网址、邮箱、手机号、微信号形态 `INVALID_FORMAT`；拒绝词 `RESERVED`（`domain/policy/RejectedDisplayNameWords`：中文词包含即命中、拉丁词整词命中，站名与数据源名复用保留字第三组）。字素按 `BreakIterator` 数，汉字、带变音符的字母、肤色 / ZWJ 组合的 emoji、国旗各计 1。
 
 资料表里不存默认昵称：空就跟随用户名，改名后没设过昵称的人昵称自动跟着变。
 
@@ -167,10 +173,11 @@ patra:
 | 账号已被封禁 | 403 | `IDN-0403` |
 | 用户不存在：后台接口；公开身份卡不存在或对请求者不可见 | 404 | `IDN-0404` |
 | Redis 不可用（登录限流、会话存储）、哈希排队超时 | 503 | `IDN-0503` |
+| 保存资料时 catalog 不可用（连不上、超时、没有实例、回了 404 以外的错误；`traits` 为 `DEP_UNAVAILABLE`，文案「机构与关注领域暂时无法校验，请稍后再试」；不保存） | 503 | `IDN-0503` |
 
 请求本身格式不对时由 Spring 直接处理，返回默认格式的 ProblemDetail，没有 `code`：请求体不是 JSON 对象（`[]`、`"x"`、空请求体、坏 JSON）或字段类型不对返回 400；`Content-Type` 不是 JSON 返回 415；方法不对（比如 GET）返回 405；路径里的 `userId` 不是数字或溢出返回 400，负数和 0 按用户不存在返回 404 `IDN-0404`；`/users/{username}` 路径里带 `%20`、`%25` 等百分号编码时被 Spring Security 的请求防火墙拒绝，返回 400。
 
-原因码：邮箱 `REQUIRED`、`TOO_LONG`、`INVALID_FORMAT`、`ALREADY_REGISTERED`（409）；用户名 `REQUIRED`、`INVALID_CHARACTER`、`TOO_SHORT`、`TOO_LONG`、`INVALID_FORMAT`、`DIGITS_ONLY`、`RESERVED`、`UNCHANGED`（改名）、`ALREADY_TAKEN`（409）；昵称 `REQUIRED`、`INVALID_CHARACTER`、`TOO_SHORT`、`TOO_LONG`、`INVALID_FORMAT`、`RESERVED`（PAP-95 的接口才会返回）；密码 `REQUIRED`、`INVALID_CHARACTER`、`TOO_SHORT`、`TOO_LONG`、`TOO_COMMON`（改密码、重设时字段名是 `currentPassword` / `newPassword`，改邮箱时新邮箱字段名是 `newEmail`）；客户端类型 `INVALID_FORMAT`；设备标识 `TOO_LONG`、`INVALID_FORMAT`（含控制字符）。
+原因码：邮箱 `REQUIRED`、`TOO_LONG`、`INVALID_FORMAT`、`ALREADY_REGISTERED`（409）；用户名 `REQUIRED`、`INVALID_CHARACTER`、`TOO_SHORT`、`TOO_LONG`、`INVALID_FORMAT`、`DIGITS_ONLY`、`RESERVED`、`UNCHANGED`（改名）、`ALREADY_TAKEN`（409）；昵称 `INVALID_CHARACTER`、`TOO_SHORT`、`TOO_LONG`、`INVALID_FORMAT`、`RESERVED`；资料与隐私见第 12 节；密码 `REQUIRED`、`INVALID_CHARACTER`、`TOO_SHORT`、`TOO_LONG`、`TOO_COMMON`（改密码、重设时字段名是 `currentPassword` / `newPassword`，改邮箱时新邮箱字段名是 `newEmail`）；客户端类型 `INVALID_FORMAT`；设备标识 `TOO_LONG`、`INVALID_FORMAT`（含控制字符）。
 
 ## 8. 本地运行和测试
 
@@ -260,3 +267,26 @@ patra:
 | 改邮箱：申请 / 取消 | 作废旧的确认令牌（再签发） | — | — | — |
 | 改邮箱：确认 | 批量作废，再签发撤销令牌 | 不动 | — | — |
 | 改邮箱：撤销 | 批量作废 + 更晚签发的撤销令牌 | 全部撤销 | 删凭据 | — |
+
+## 12. 资料、隐私设置与公开主页
+
+工程设计：`docs/patra/specs/2026-10-22-identity-profile-design.md`。
+
+- **字段**（release spec 2.1.2，规则在 `ProfilePolicy`，错误一次报全）：简介 ≤ 200 字素 / 800 字节 / 3 行；链接 ≤ 5 条，标题可空、≤ 30 字素，URL ≤ 300 码点、只收 `http` / `https`、有主机名、不带用户信息、不重复；身份大类 `PHYSICIAN` / `NURSE` / `PHARMACIST` / `TECHNICIAN` / `RESEARCHER` / `STUDENT` / `INDUSTRY` / `OTHER`；职称 ≤ 50；科室 ≤ 100；机构 `{ rorId }`（裸 9 位，大写折成小写）或 `{ name }`（手填 ≤ 200）；关注领域 ≤ 10 个 MeSH UI。字节上限都是字素上限 × 4，与昵称同比例；拒绝的字符同昵称（简介多放行换行）。和库里存的值规范化后相同的文本不重新校验，规则收紧不连累存量。
+- **原因码**：`REQUIRED`、`INVALID_CHARACTER`、`INVALID_FORMAT`、`TOO_LONG`、`TOO_MANY`（链接、关注领域）、`TOO_MANY_LINES`（简介）、`DUPLICATE`（链接 URL、关注领域）、`NOT_FOUND`（catalog 里没有）；字段路径 `bio`、`links[1].url`、`links[1].title`、`occupation`、`jobTitle`、`organization.rorId`、`organization.name`、`department`、`researchInterests[3]`，隐私是 `profileVisibility`、`professionalVisibility`、`searchIndexing`。
+- **名称快照**（决策 F）：带 ROR ID 时机构名来自 catalog（`zhName` 优先，没有用 `displayName`），请求里的名称被忽略；关注领域存 MeSH 英文名。只对新选的机构、新加的主题词调 catalog，已存的沿用库里的快照（机构在 catalog 里停用了也不挡只改简介的保存）。catalog 回 404 + `NOT_FOUND` → 422；其余失败 → 503，不保存。调用在事务外，之后加用户行锁复核状态再写库；快照不回刷。
+- **catalog 客户端**：`OrganizationEndpoint`、`MeshEndpoint` 经 `lb://patra-catalog` 直连 catalog 的 `/_internal/**`（不经网关），分组 `patra.http-client.http-interface.groups.catalog`，连接 1s / 读 2s。
+- **隐私**：主页可见性 `PUBLIC` / `SIGNED_IN` / `SELF`、专业背景可见性 `PUBLIC` / `SELF`、收录开关，默认公开 / 公开 / 关；邮箱永不展示。
+- **公开主页**（`PublicUserReadModel.viewFor`）：
+
+| 情况 | 匿名 | 已登录的别人 | 本人 |
+|---|---|---|---|
+| 正常、已验证、主页公开 | 200 `PUBLIC` | 200 `PUBLIC` | 200 `PUBLIC` |
+| 主页仅登录用户 | 404 | 200 `SIGNED_IN` | 200 `SIGNED_IN` |
+| 主页仅自己 | 404 | 404 | 200 `SELF` |
+| 邮箱未验证、注销冷静期 | 404 | 404 | 200 `SELF` |
+| 已封禁、已注销 | 404 | 404 | — |
+
+「已登录」是任何带有效会话的人（含邮箱未验证、冷静期中的账号）。专业背景在本人或其可见性为公开时给出，否则 `professional` 为 `null`（四项都没填也是 `null`）；链接只在邮箱已验证时给出（本人也一样）；`indexable` 只在谁都能看且用户允许收录时为真，门户据此输出 `noindex`；`joinedAt` 是 `YYYY-MM`（时区同 `patra.identity.mail.zone`）。响应不含邮箱、ID、状态、任何设置原值。旧名跳转的可见性看原主的当前主页。
+- **昵称修改**只打 INFO 日志（`昵称已修改`）；账号审计记录以后单独做成通用的账号事件表。
+- **注销（PAP-100）**：到期执行时资料行置空不删行、隐私回默认，两张子表按 `user_id` 删行。
