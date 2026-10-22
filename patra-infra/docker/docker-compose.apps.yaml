@@ -111,6 +111,11 @@ services:
         required: false
       - path: ${HOME}/.patra/secrets/mail.env
         required: false
+    # IP 属地的离线库（PAP-99）：两个 xdb 由 scripts/fetch-ip2region.sh 下载到宿主机，只读挂进来；缺文件 identity 起不来
+    volumes:
+      - ${HOME}/.patra/data/ip2region:/data/ip2region:ro
+    environment:
+      PATRA_IDENTITY_IP_GEOLOCATION_DIRECTORY: /data/ip2region
     healthcheck:
       test: [ "CMD", "curl", "-fs", "http://localhost:6400/actuator/health" ]
       <<: *app-healthcheck

@@ -85,6 +85,10 @@ patra:
       submit-per-ip-minutely: 10          # 提交重设令牌
     email-change:
       per-account-daily: 3
+    # IP 属地（PAP-99）：ip2region 两个 xdb 所在目录，由 patra-infra/scripts/fetch-ip2region.sh 下载；
+    # 容器里由 compose 设 PATRA_IDENTITY_IP_GEOLOCATION_DIRECTORY=/data/ip2region（只读挂载）。缺文件启动失败
+    ip-geolocation:
+      directory: ${user.home}/.patra/data/ip2region
 
 # XXL-Job 执行器：管理端地址随环境变，在 Nacos 公共配置 patra-common.yaml；执行器端口 = 服务端口 + 1 = 6401
 xxl:

@@ -1,3 +1,5 @@
+import java.util.Properties
+
 /**
  * Patra Identity Infrastructure
  *
@@ -36,5 +38,39 @@ dependencies {
     // Boot 的 log4j-to-slf4j 已带 log4j-api，日志进 logback；antlr / snakeyaml 等都 shade 在它自己的包里
     implementation(libs.yauaa)
 
+    // 登录设备（PAP-99）：ip2region 离线库查 IP 属地；数据文件不在 jar 里，见下面的 downloadIp2RegionData
+    implementation(libs.ip2region)
+
     testImplementation(project(":patra-tool:patra-tool-test"))
+}
+
+// ip2region 的数据文件（PAP-99）：不进 git、不进镜像。版本与校验和在 patra-infra/scripts/ip2region.properties
+// （mini 只检出 patra-infra，获取脚本要读得到它）；测试用这里按它下载的同一份数据，
+// 运行时由 patra-infra/scripts/fetch-ip2region.sh 下到 ~/.patra/data/ip2region/。
+val ip2region =
+    Properties().apply {
+        rootProject.file("patra-infra/scripts/ip2region.properties").inputStream().use { load(it) }
+    }
+val ip2regionDirectory = layout.buildDirectory.dir("ip2region")
+val ip2regionDownloads =
+    listOf("v4", "v6").map { version ->
+        tasks.register<VerifiedDownload>("downloadIp2Region${version.uppercase()}") {
+            url.set(
+                "https://raw.githubusercontent.com/lionsoul2014/ip2region/" +
+                    "${ip2region.getProperty("tag")}/data/ip2region_$version.xdb",
+            )
+            sha256.set(ip2region.getProperty("$version.sha256"))
+            destination.set(ip2regionDirectory.map { it.file("ip2region_$version.xdb") })
+        }
+    }
+val downloadIp2RegionData by tasks.registering {
+    description = "下载测试用的 ip2region 数据文件（版本见 ip2region.properties）"
+    dependsOn(ip2regionDownloads)
+}
+tasks.withType<Test>().configureEach {
+    dependsOn(downloadIp2RegionData)
+    systemProperty(
+        "patra.identity.ip-geolocation.directory",
+        ip2regionDirectory.get().asFile.absolutePath,
+    )
 }

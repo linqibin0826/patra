@@ -37,3 +37,14 @@ dependencies {
     // 测试里自动注入测试公钥，并能签出带身份的请求头
     testImplementation(testFixtures(project(":patra-tool:patra-tool-security")))
 }
+
+// 装配了 ip2region 适配器的测试上下文要有数据文件（PAP-99）：用 infra 按 ip2region.properties 下好的那份
+tasks.withType<Test>().configureEach {
+    dependsOn(":patra-api:patra-identity:patra-identity-infra:downloadIp2RegionData")
+    systemProperty(
+        "patra.identity.ip-geolocation.directory",
+        rootProject.layout.projectDirectory
+            .dir("patra-api/patra-identity/patra-identity-infra/build/ip2region")
+            .asFile.absolutePath,
+    )
+}
