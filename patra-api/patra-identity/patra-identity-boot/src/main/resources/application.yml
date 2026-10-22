@@ -85,6 +85,9 @@ patra:
       submit-per-ip-minutely: 10          # 提交重设令牌
     email-change:
       per-account-daily: 3
+    new-device-mail:
+      lookback: 180d                      # 这么久内用过的设备标识不算新设备（按那次登录结束或过期的时刻算）
+      cooldown: 24h                       # 同一账号同一设备两封新设备提醒的最短间隔
     # IP 属地（PAP-99）：ip2region 两个 xdb 所在目录，由 patra-infra/scripts/fetch-ip2region.sh 下载；
     # 容器里由 compose 设 PATRA_IDENTITY_IP_GEOLOCATION_DIRECTORY=/data/ip2region（只读挂载）。缺文件启动失败
     ip-geolocation:

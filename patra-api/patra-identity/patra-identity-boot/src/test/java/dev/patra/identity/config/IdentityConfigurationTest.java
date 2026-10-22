@@ -9,6 +9,7 @@ import dev.patra.identity.domain.policy.EmailChangePolicy;
 import dev.patra.identity.domain.policy.EmailResendPolicy;
 import dev.patra.identity.domain.policy.LoginThrottlePolicy;
 import dev.patra.identity.domain.policy.MailLinkPolicy;
+import dev.patra.identity.domain.policy.NewDeviceLoginPolicy;
 import dev.patra.identity.domain.policy.PasswordPolicy;
 import dev.patra.identity.domain.policy.PasswordResetPolicy;
 import dev.patra.identity.domain.policy.ReauthenticationPolicy;
@@ -294,6 +295,30 @@ class IdentityConfigurationTest {
               .startsWith("http://linqibins-mac-mini:4000/revert-email-change#token=");
           assertThat(context).hasSingleBean(ReauthenticationGuard.class);
         });
+  }
+
+  @Test
+  @DisplayName("新设备提醒：默认回看 180 天、冷却 24 小时，能覆盖；不是正数时启动失败")
+  void should_bind_new_device_mail_policy() {
+    runner.run(
+        context -> {
+          NewDeviceLoginPolicy policy = context.getBean(NewDeviceLoginPolicy.class);
+          assertThat(policy.lookback()).isEqualTo(Duration.ofDays(180));
+          assertThat(policy.cooldown()).isEqualTo(Duration.ofHours(24));
+        });
+    runner
+        .withPropertyValues(
+            "patra.identity.new-device-mail.lookback=30d",
+            "patra.identity.new-device-mail.cooldown=1h")
+        .run(
+            context -> {
+              NewDeviceLoginPolicy policy = context.getBean(NewDeviceLoginPolicy.class);
+              assertThat(policy.lookback()).isEqualTo(Duration.ofDays(30));
+              assertThat(policy.cooldown()).isEqualTo(Duration.ofHours(1));
+            });
+    runner
+        .withPropertyValues("patra.identity.new-device-mail.cooldown=0s")
+        .run(context -> assertThat(context).hasFailed());
   }
 
   @Test

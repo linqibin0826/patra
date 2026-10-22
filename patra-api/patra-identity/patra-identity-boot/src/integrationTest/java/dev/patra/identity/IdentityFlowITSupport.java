@@ -23,11 +23,13 @@ import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.BeforeEach;
@@ -205,16 +207,28 @@ abstract class IdentityFlowITSupport {
     assertThat(greenMail.waitForIncomingEmail(5_000, count)).as("等第 %d 封邮件", count).isTrue();
   }
 
-  /// 已收到的邮件里收件人与主题都匹配的那一封。
+  /// 收件人与主题都匹配的那一封，最多等 5 秒。发信是异步的，而登录会额外发新设备提醒（PAP-99）、
+  /// 上一个用例的邮件也可能晚到，按总封数等不可靠，所以按收件人与主题等。
   ///
   /// @param recipient 收件人
   /// @param subject 主题
   /// @return 邮件
   MimeMessage mailFor(String recipient, String subject) {
-    return Arrays.stream(greenMail.getReceivedMessages())
-        .filter(mail -> recipients(mail).contains(recipient) && subject.equals(subjectOf(mail)))
-        .findFirst()
-        .orElseThrow(() -> new AssertionError("没有发给 " + recipient + " 的「" + subject + "」"));
+    long deadline = System.nanoTime() + Duration.ofSeconds(5).toNanos();
+    while (true) {
+      Optional<MimeMessage> found =
+          Arrays.stream(greenMail.getReceivedMessages())
+              .filter(
+                  mail -> recipients(mail).contains(recipient) && subject.equals(subjectOf(mail)))
+              .findFirst();
+      if (found.isPresent()) {
+        return found.get();
+      }
+      if (System.nanoTime() >= deadline) {
+        throw new AssertionError("没有发给 " + recipient + " 的「" + subject + "」");
+      }
+      greenMail.waitForIncomingEmail(200, greenMail.getReceivedMessages().length + 1);
+    }
   }
 
   /// 邮件主题（已解码）。

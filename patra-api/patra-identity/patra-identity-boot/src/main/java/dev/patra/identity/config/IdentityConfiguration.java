@@ -5,6 +5,7 @@ import dev.patra.identity.domain.policy.EmailChangePolicy;
 import dev.patra.identity.domain.policy.EmailResendPolicy;
 import dev.patra.identity.domain.policy.LoginThrottlePolicy;
 import dev.patra.identity.domain.policy.MailLinkPolicy;
+import dev.patra.identity.domain.policy.NewDeviceLoginPolicy;
 import dev.patra.identity.domain.policy.PasswordPolicy;
 import dev.patra.identity.domain.policy.PasswordResetPolicy;
 import dev.patra.identity.domain.policy.ProfileDisplayPolicy;
@@ -282,6 +283,16 @@ public class IdentityConfiguration {
   @Bean
   public EmailChangePolicy emailChangePolicy(IdentityProperties properties) {
     return EmailChangePolicy.of(properties.emailChange().perAccountDaily());
+  }
+
+  /// 新设备登录提醒的规则（PAP-99）。不是正数时启动失败。
+  ///
+  /// @param properties 配置
+  /// @return 规则
+  @Bean
+  public NewDeviceLoginPolicy newDeviceLoginPolicy(IdentityProperties properties) {
+    return NewDeviceLoginPolicy.of(
+        properties.newDeviceMail().lookback(), properties.newDeviceMail().cooldown());
   }
 
   /// 再认证守卫：按断言里的会话 ID 读会话的 `auth_at`。

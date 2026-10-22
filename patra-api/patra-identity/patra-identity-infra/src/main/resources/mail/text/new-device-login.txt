@@ -1,0 +1,9 @@
+[# th:replace="~{text/fragments/header}" /]
+你好，[(${displayName})]：
+
+你的 [(${siteName})] 账号刚刚在一台新设备上登录。
+
+[# th:replace="~{text/fragments/security-notice}" /]
+建议到安全设置检查登录设备：[(${securityUrl})]
+
+[# th:replace="~{text/fragments/footer}" /]

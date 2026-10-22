@@ -15,6 +15,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 /// @param reauth 再认证
 /// @param passwordReset 找回密码的限流
 /// @param emailChange 改邮箱的限流
+/// @param newDeviceMail 新设备登录提醒
 @ConfigurationProperties(prefix = "patra.identity")
 public record IdentityProperties(
     @DefaultValue PasswordHashing passwordHashing,
@@ -23,7 +24,8 @@ public record IdentityProperties(
     @DefaultValue Mail mail,
     @DefaultValue Reauth reauth,
     @DefaultValue PasswordReset passwordReset,
-    @DefaultValue EmailChange emailChange) {
+    @DefaultValue EmailChange emailChange,
+    @DefaultValue NewDeviceMail newDeviceMail) {
 
   /// 再认证。
   ///
@@ -43,6 +45,13 @@ public record IdentityProperties(
       @DefaultValue("5") int perEmailDaily,
       @DefaultValue("20") int perIpHourly,
       @DefaultValue("10") int submitPerIpMinutely) {}
+
+  /// 新设备登录提醒（PAP-99）。
+  ///
+  /// @param lookback 这么久内用过的设备标识不算新设备
+  /// @param cooldown 同一账号同一设备两封提醒的最短间隔
+  public record NewDeviceMail(
+      @DefaultValue("180d") Duration lookback, @DefaultValue("24h") Duration cooldown) {}
 
   /// 改邮箱的限流。
   ///

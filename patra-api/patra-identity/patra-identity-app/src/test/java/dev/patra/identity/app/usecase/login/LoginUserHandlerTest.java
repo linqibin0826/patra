@@ -31,20 +31,28 @@ import dev.patra.identity.domain.model.vo.LoginClient;
 import dev.patra.identity.domain.model.vo.PasswordHash;
 import dev.patra.identity.domain.model.vo.RequestOrigin;
 import dev.patra.identity.domain.model.vo.Username;
+import dev.patra.identity.domain.policy.NewDeviceLoginPolicy;
 import dev.patra.identity.domain.policy.PasswordPolicy;
 import dev.patra.identity.domain.port.hashing.PasswordHashingPort;
+import dev.patra.identity.domain.port.mail.EmailDeliveryPort;
+import dev.patra.identity.domain.port.mail.NewDeviceLoginMail;
+import dev.patra.identity.domain.port.mail.OutgoingMail;
 import dev.patra.identity.domain.port.read.UserReadPort;
+import dev.patra.identity.domain.port.repository.UserLoginRecordRepository;
 import dev.patra.identity.domain.port.repository.UserPasswordCredentialRepository;
 import dev.patra.identity.domain.port.repository.UserRepository;
 import dev.patra.identity.domain.port.session.IssuedUserSession;
 import dev.patra.identity.domain.port.throttle.LoginAttempt;
 import dev.patra.identity.domain.port.throttle.LoginThrottlePort;
+import dev.patra.identity.domain.port.throttle.NewDeviceMailThrottlePort;
 import dev.patra.identity.domain.service.ClientOriginResolver;
 import dev.patra.identity.domain.service.SessionIssuer;
 import dev.patra.tool.core.error.field.FieldViolation;
 import dev.patra.tool.core.security.AccountType;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -102,6 +110,10 @@ class LoginUserHandlerTest {
           .build();
   private static final UserPasswordCredential CREDENTIAL =
       UserPasswordCredential.restore(7L, 42L, HASH, 0L);
+  private static final Instant NOW = Instant.parse("2026-10-22T08:00:00Z");
+  private static final String DEVICE = "Kq3_z-0aB1cD2eF3gH4iJ5kL6mN7oP8qR9sT0uV1wXy";
+  private static final NewDeviceLoginPolicy NEW_DEVICE_POLICY =
+      NewDeviceLoginPolicy.of(Duration.ofDays(180), Duration.ofHours(24));
   private static final String UA = "Mozilla/5.0 (Macintosh) Chrome/141.0.0.0";
   private static final ClientOrigin ORIGIN =
       ClientOrigin.builder()
@@ -131,6 +143,9 @@ class LoginUserHandlerTest {
   private final LoginThrottlePort loginThrottle = mock(LoginThrottlePort.class);
   private final SessionIssuer sessionIssuer = mock(SessionIssuer.class);
   private final ClientOriginResolver resolver = mock(ClientOriginResolver.class);
+  private final UserLoginRecordRepository records = mock(UserLoginRecordRepository.class);
+  private final NewDeviceMailThrottlePort newDeviceThrottle = mock(NewDeviceMailThrottlePort.class);
+  private final EmailDeliveryPort emailDelivery = mock(EmailDeliveryPort.class);
   private final LoginUserHandler handler =
       new LoginUserHandler(
           users,
@@ -140,7 +155,12 @@ class LoginUserHandlerTest {
           loginThrottle,
           sessionIssuer,
           resolver,
-          TransactionOperations.withoutTransaction());
+          records,
+          NEW_DEVICE_POLICY,
+          newDeviceThrottle,
+          emailDelivery,
+          TransactionOperations.withoutTransaction(),
+          Clock.fixed(NOW, ZoneOffset.UTC));
 
   /// 默认放行，用户和凭据都存在。
   @BeforeEach
@@ -458,7 +478,12 @@ class LoginUserHandlerTest {
             loginThrottle,
             sessionIssuer,
             resolver,
-            recording);
+            records,
+            NEW_DEVICE_POLICY,
+            newDeviceThrottle,
+            emailDelivery,
+            recording,
+            Clock.fixed(NOW, ZoneOffset.UTC));
     when(passwordHashing.matches(any(), any()))
         .thenAnswer(
             invocation -> {
@@ -530,6 +555,83 @@ class LoginUserHandlerTest {
     order.verify(resolver).resolve(RequestOrigin.of("203.0.113.9", UA));
     order.verify(users).findByIdForUpdate(42L);
     order.verify(sessionIssuer).issue(eq(42L), any(), eq(ORIGIN));
+  }
+
+  @Test
+  @DisplayName("没见过的设备：在事务里、建会话之前判定，提交后取限流并发新设备邮件")
+  void should_mail_when_device_not_seen() {
+    when(passwordHashing.matches(any(), any())).thenReturn(true);
+    when(records.existsTrustedDevice(eq(42L), any(), any())).thenReturn(false);
+    when(newDeviceThrottle.acquire(eq(42L), any(), any())).thenReturn(true);
+
+    handler.handle(command("chen.yu@example.com", "correct horse", "web", DEVICE));
+
+    InOrder order = inOrder(records, sessionIssuer, newDeviceThrottle, emailDelivery);
+    order
+        .verify(records)
+        .existsTrustedDevice(42L, new DeviceId(DEVICE), NOW.minus(Duration.ofDays(180)));
+    order.verify(sessionIssuer).issue(eq(42L), any(), any());
+    order.verify(newDeviceThrottle).acquire(42L, new DeviceId(DEVICE), NOW);
+    ArgumentCaptor<OutgoingMail> mail = ArgumentCaptor.forClass(OutgoingMail.class);
+    order.verify(emailDelivery).send(mail.capture());
+    assertThat(mail.getValue()).isInstanceOf(NewDeviceLoginMail.class);
+    NewDeviceLoginMail sent = (NewDeviceLoginMail) mail.getValue();
+    assertThat(sent.to()).isEqualTo(EMAIL);
+    assertThat(sent.notice().device()).isEqualTo("Chrome 141 · macOS");
+    assertThat(sent.notice().ipAddress()).isEqualTo("203.0.113.9");
+    assertThat(sent.notice().ipLocation()).isEqualTo("澳大利亚");
+    assertThat(sent.notice().occurredAt()).isEqualTo(NOW);
+    assertThat(sent.notice().notMeAdvice()).isEqualTo(NewDeviceLoginMail.NOT_ME_ADVICE);
+  }
+
+  @Test
+  @DisplayName("见过的设备：不取限流、不发信")
+  void should_not_mail_when_device_seen() {
+    when(passwordHashing.matches(any(), any())).thenReturn(true);
+    when(records.existsTrustedDevice(eq(42L), any(), any())).thenReturn(true);
+
+    handler.handle(command("chen.yu@example.com", "correct horse", "web", DEVICE));
+
+    verifyNoInteractions(newDeviceThrottle, emailDelivery);
+  }
+
+  @Test
+  @DisplayName("冷却期内：不发信")
+  void should_not_mail_when_throttled() {
+    when(passwordHashing.matches(any(), any())).thenReturn(true);
+    when(records.existsTrustedDevice(eq(42L), any(), any())).thenReturn(false);
+    when(newDeviceThrottle.acquire(eq(42L), any(), any())).thenReturn(false);
+
+    handler.handle(command("chen.yu@example.com", "correct horse", "web", DEVICE));
+
+    verifyNoInteractions(emailDelivery);
+  }
+
+  @Test
+  @DisplayName("没带设备标识：不查记录，按新设备走「无设备」限流桶")
+  void should_treat_missing_device_id_as_new() {
+    when(passwordHashing.matches(any(), any())).thenReturn(true);
+    when(newDeviceThrottle.acquire(eq(42L), any(), any())).thenReturn(true);
+
+    handler.handle(command("chen.yu@example.com", "correct horse", "web", null));
+
+    verify(records, never()).existsTrustedDevice(anyLong(), any(), any());
+    verify(newDeviceThrottle).acquire(42L, null, NOW);
+    verify(emailDelivery).send(any(NewDeviceLoginMail.class));
+  }
+
+  @Test
+  @DisplayName("限流的 Redis 不可用：登录照常成功，只是不发信")
+  void should_still_log_in_when_throttle_unavailable() {
+    when(passwordHashing.matches(any(), any())).thenReturn(true);
+    when(newDeviceThrottle.acquire(eq(42L), any(), any()))
+        .thenThrow(new TemporarilyUnavailableException());
+
+    AuthenticatedUser result =
+        handler.handle(command("chen.yu@example.com", "correct horse", "web", null));
+
+    assertThat(result.sessionToken()).isEqualTo("patra_user_x");
+    verifyNoInteractions(emailDelivery);
   }
 
   /// 只带四个基本字段的登录命令。

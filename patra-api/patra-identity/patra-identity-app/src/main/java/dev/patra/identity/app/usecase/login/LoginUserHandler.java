@@ -13,20 +13,27 @@ import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.LoginClient;
 import dev.patra.identity.domain.model.vo.PlainPassword;
 import dev.patra.identity.domain.model.vo.RequestOrigin;
+import dev.patra.identity.domain.policy.NewDeviceLoginPolicy;
 import dev.patra.identity.domain.policy.PasswordPolicy;
 import dev.patra.identity.domain.port.hashing.PasswordHashingPort;
+import dev.patra.identity.domain.port.mail.EmailDeliveryPort;
+import dev.patra.identity.domain.port.mail.NewDeviceLoginMail;
 import dev.patra.identity.domain.port.read.UserReadPort;
+import dev.patra.identity.domain.port.repository.UserLoginRecordRepository;
 import dev.patra.identity.domain.port.repository.UserPasswordCredentialRepository;
 import dev.patra.identity.domain.port.repository.UserRepository;
 import dev.patra.identity.domain.port.session.IssuedUserSession;
 import dev.patra.identity.domain.port.throttle.LoginAttempt;
 import dev.patra.identity.domain.port.throttle.LoginThrottlePort;
+import dev.patra.identity.domain.port.throttle.NewDeviceMailThrottlePort;
 import dev.patra.identity.domain.service.ClientOriginResolver;
 import dev.patra.identity.domain.service.SessionIssuer;
 import dev.patra.tool.core.error.field.FieldViolation;
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.cqrs.CommandHandler;
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -49,6 +56,8 @@ import org.springframework.transaction.support.TransactionOperations;
 ///    收尾被挤掉的记录。封禁对同一行的更新和这把锁互斥：封禁先提交，这里返回 403；登录先提交，
 ///    封禁随后的「删全部会话」会把这条新会话一起删掉。哈希在事务外，事务不占着连接等排队。
 ///    Redis 写失败回滚记录，返回 503。
+/// 7. 设备与属地（PAP-99）：校验通过后、事务之外解析 IP 与 UA，登录记录带上；事务里建会话之前判定
+///    这个账号是否见过这台设备，提交后对没见过的设备取 24 小时限流、放行才发新设备提醒。
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -61,7 +70,12 @@ public class LoginUserHandler implements CommandHandler<LoginUserCommand, Authen
   private final LoginThrottlePort loginThrottle;
   private final SessionIssuer sessionIssuer;
   private final ClientOriginResolver clientOriginResolver;
+  private final UserLoginRecordRepository records;
+  private final NewDeviceLoginPolicy newDevicePolicy;
+  private final NewDeviceMailThrottlePort newDeviceThrottle;
+  private final EmailDeliveryPort emailDelivery;
   private final TransactionOperations transactions;
+  private final Clock clock;
 
   /// 登录。
   ///
@@ -109,6 +123,7 @@ public class LoginUserHandler implements CommandHandler<LoginUserCommand, Authen
     // 解析 UA 与属地是纯计算：凭据校验通过之后、事务之外
     ClientOrigin origin =
         clientOriginResolver.resolve(RequestOrigin.of(command.clientIp(), command.userAgent()));
+    Instant now = clock.instant();
     Login login =
         Objects.requireNonNull(
             transactions.execute(
@@ -123,26 +138,72 @@ public class LoginUserHandler implements CommandHandler<LoginUserCommand, Authen
                   if (locked.isBanned()) {
                     throw new UserBannedException();
                   }
+                  // 建会话之前判：之后再查会查到刚建的这条记录
+                  boolean seen = seenBefore(locked.getId(), client, now);
                   IssuedUserSession session = sessionIssuer.issue(locked.getId(), client, origin);
                   UserAccountReadModel account =
                       userReadPort
                           .findAccount(locked.getId())
                           .orElseThrow(InvalidCredentialsException::new);
-                  return new Login(session, account);
+                  return new Login(session, account, !seen);
                 }));
     log.info(
         "前台用户已登录: userId={}, status={}, replacedSessions={}",
         verified.getId(),
         verified.getStatus(),
         login.session().replacedSessionIds().size());
+    if (login.newDevice()) {
+      notifyNewDevice(login.account(), client, origin, now);
+    }
     return AuthenticatedUser.of(login.session().token(), login.account());
   }
 
-  /// 事务里一起产出的会话和账号信息。
+  /// 事务里一起产出的会话、账号信息和新设备判定。
   ///
   /// @param session 新会话
   /// @param account 账号信息
-  private record Login(IssuedUserSession session, UserAccountReadModel account) {}
+  /// @param newDevice 是不是这个账号没见过的设备
+  private record Login(
+      IssuedUserSession session, UserAccountReadModel account, boolean newDevice) {}
+
+  /// 这个账号是否见过这台设备（PAP-99 设计第 12.2 节）。没带设备标识的一律算没见过。
+  ///
+  /// @param userId 用户 ID
+  /// @param client 客户端信息
+  /// @param now 当前时间
+  /// @return 见过时为 `true`
+  private boolean seenBefore(long userId, LoginClient client, Instant now) {
+    return client
+        .device()
+        .map(device -> records.existsTrustedDevice(userId, device, newDevicePolicy.since(now)))
+        .orElse(false);
+  }
+
+  /// 新设备登录：取 24 小时限流，放行才发提醒。限流的 Redis 不可用只记日志：提醒不能挡住登录。
+  ///
+  /// @param account 账号信息
+  /// @param client 客户端信息
+  /// @param origin 请求来源
+  /// @param now 当前时间
+  private void notifyNewDevice(
+      UserAccountReadModel account, LoginClient client, ClientOrigin origin, Instant now) {
+    boolean allowed;
+    try {
+      allowed = newDeviceThrottle.acquire(account.userId(), client.device().orElse(null), now);
+    } catch (RuntimeException e) {
+      log.warn("新设备提醒的限流不可用，本次不发信: userId={}, {}", account.userId(), e.getMessage());
+      return;
+    }
+    if (!allowed) {
+      return;
+    }
+    emailDelivery.send(
+        NewDeviceLoginMail.of(
+            EmailAddress.of(account.email()),
+            account.displayName(),
+            origin.toNotice(now, NewDeviceLoginMail.NOT_ME_ADVICE)));
+    log.info("已发新设备登录提醒: userId={}", account.userId());
+  }
 
   /// 校验密码。用户或凭据不存在时拿假哈希校验一次，然后返回 `false`。
   ///

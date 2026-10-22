@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.icegreen.greenmail.util.GreenMail;
 import dev.patra.identity.config.IdentityClockITSpringConfig;
 import dev.patra.identity.config.IdentityITPostgreSQLContainerInitializer;
+import dev.patra.identity.domain.port.mail.EmailVerificationMail;
 import dev.patra.identity.session.SessionToken;
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.ClientType;
@@ -15,6 +16,7 @@ import dev.patra.tool.test.clock.MutableClock;
 import dev.patra.tool.test.container.initializer.RedisContainerInitializer;
 import dev.patra.tool.test.mail.GreenMailSmtpInitializer;
 import jakarta.mail.BodyPart;
+import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import jakarta.mail.internet.MimeMultipart;
 import java.io.IOException;
@@ -402,13 +404,35 @@ class EmailVerificationFlowIT {
     return headers;
   }
 
-  /// 等 GreenMail 收到第 n 封，返回它。
+  /// 等收到第 n 封验证邮件，返回它。只数验证邮件：登录会额外发新设备提醒（PAP-99），按总封数取会取错。
   ///
-  /// @param count 累计封数
-  /// @return 第 n 封
+  /// @param count 第几封验证邮件
+  /// @return 那一封
   private MimeMessage waitForMail(int count) {
-    assertThat(greenMail.waitForIncomingEmail(5_000, count)).as("等第 %d 封邮件", count).isTrue();
-    return greenMail.getReceivedMessages()[count - 1];
+    long deadline = System.nanoTime() + Duration.ofSeconds(5).toNanos();
+    while (true) {
+      MimeMessage[] verifications =
+          Arrays.stream(greenMail.getReceivedMessages())
+              .filter(mail -> EmailVerificationMail.SUBJECT.equals(subjectOf(mail)))
+              .toArray(MimeMessage[]::new);
+      if (verifications.length >= count) {
+        return verifications[count - 1];
+      }
+      assertThat(System.nanoTime()).as("等第 %d 封验证邮件", count).isLessThan(deadline);
+      greenMail.waitForIncomingEmail(200, greenMail.getReceivedMessages().length + 1);
+    }
+  }
+
+  /// 邮件主题。
+  ///
+  /// @param mail 邮件
+  /// @return 主题
+  private static String subjectOf(MimeMessage mail) {
+    try {
+      return mail.getSubject();
+    } catch (MessagingException e) {
+      throw new IllegalStateException(e);
+    }
   }
 
   /// 邮件里某种类型的那一部分的正文。

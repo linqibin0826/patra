@@ -12,7 +12,11 @@ import org.springframework.stereotype.Component;
 /// 用 Yauaa 把 User-Agent 解析成「浏览器主版本 · 系统族」与端（PAP-99 设计第 8.2 节）。
 ///
 /// 只取四个字段、启动时就建好查找表（首个登录不用等）、丢掉内置测试用例。分析器线程安全，
-/// 命中缓存不加锁。不放静态字段：Yauaa 文档提醒静态持有会在热卸载时泄漏。
+/// 命中缓存不加锁。
+///
+/// 分析器常驻约 108 MB 堆（本机实测），整个 JVM 只建一个：放在懒加载的静态持有类里，构造器里触发初始化。
+/// 每个 Spring 上下文各建一个的话，集成测试缓存的几个上下文就会撑爆测试 JVM。Yauaa 文档反对静态持有，
+/// 针对的是 servlet 容器热卸载应用时的泄漏，可执行 jar 没有这个场景。
 @Component
 public class YauaaUserAgentParsingAdapter implements UserAgentParsingPort {
 
@@ -31,18 +35,12 @@ public class YauaaUserAgentParsingAdapter implements UserAgentParsingPort {
           "Windows 9x", "Windows",
           "Chrome OS", "ChromeOS");
 
-  private final UserAgentAnalyzer analyzer =
-      UserAgentAnalyzer.newBuilder()
-          .hideMatcherLoadStats()
-          .withFields(
-              UserAgent.DEVICE_CLASS,
-              UserAgent.AGENT_NAME,
-              UserAgent.AGENT_VERSION_MAJOR,
-              UserAgent.OPERATING_SYSTEM_NAME)
-          .withCache(10_000)
-          .immediateInitialization()
-          .dropTests()
-          .build();
+  private final UserAgentAnalyzer analyzer;
+
+  /// 创建适配器，触发（JVM 内只一次的）分析器初始化。
+  public YauaaUserAgentParsingAdapter() {
+    this.analyzer = AnalyzerHolder.ANALYZER;
+  }
 
   /// 解析。`null` 进则名字为空、端未知；Yauaa 判成攻击串（空串、注入）的名字也为空。
   ///
@@ -123,5 +121,26 @@ public class YauaaUserAgentParsingAdapter implements UserAgentParsingPort {
   /// @return 非空且不是未知占位值时为 `true`
   private static boolean isKnown(String value) {
     return value != null && !value.isBlank() && !UNKNOWN_VALUES.contains(value);
+  }
+
+  /// 分析器的懒加载持有类：第一次访问时建，JVM 内只建一次。
+  private static final class AnalyzerHolder {
+
+    /// 只取四个字段的分析器。
+    static final UserAgentAnalyzer ANALYZER =
+        UserAgentAnalyzer.newBuilder()
+            .hideMatcherLoadStats()
+            .withFields(
+                UserAgent.DEVICE_CLASS,
+                UserAgent.AGENT_NAME,
+                UserAgent.AGENT_VERSION_MAJOR,
+                UserAgent.OPERATING_SYSTEM_NAME)
+            .withCache(10_000)
+            .immediateInitialization()
+            .dropTests()
+            .build();
+
+    /// 只有静态字段。
+    private AnalyzerHolder() {}
   }
 }

@@ -9,6 +9,7 @@ import dev.patra.identity.domain.port.mail.EmailChangeRevertedMail;
 import dev.patra.identity.domain.port.mail.EmailChangedConfirmationMail;
 import dev.patra.identity.domain.port.mail.EmailChangedNoticeMail;
 import dev.patra.identity.domain.port.mail.EmailVerificationMail;
+import dev.patra.identity.domain.port.mail.NewDeviceLoginMail;
 import dev.patra.identity.domain.port.mail.OutgoingMail;
 import dev.patra.identity.domain.port.mail.PasswordChangedMail;
 import dev.patra.identity.domain.port.mail.PasswordResetDoneMail;
@@ -319,5 +320,36 @@ class ThymeleafMailRendererTest {
         return Map.of("notice", notice);
       }
     };
+  }
+
+  @Test
+  @DisplayName("新设备登录：文本与 HTML 都有设备、IP 与属地、「不是我」一句和安全设置链接")
+  void should_render_new_device_login_mail() {
+    RenderedMail rendered =
+        renderer.render(
+            NewDeviceLoginMail.of(
+                TO,
+                "陈宇",
+                SecurityNotice.builder()
+                    .occurredAt(Instant.parse("2026-10-22T08:30:00Z"))
+                    .device("Chrome 141 · macOS")
+                    .ipAddress("113.92.157.29")
+                    .ipLocation("中国 广东 深圳")
+                    .notMeAdvice(NewDeviceLoginMail.NOT_ME_ADVICE)
+                    .build()));
+
+    assertThat(rendered.subject()).isEqualTo("你的 Patra 账号在新设备上登录");
+    for (String part : new String[] {rendered.text(), rendered.html()}) {
+      assertThat(part)
+          .contains("陈宇")
+          .contains("新设备")
+          .contains("Chrome 141 · macOS")
+          .contains("113.92.157.29")
+          .contains("中国 广东 深圳")
+          .contains("修改密码")
+          .contains("/settings/security");
+    }
+    assertThat(rendered.text()).doesNotContain("[(").doesNotContain("<");
+    assertThat(rendered.html()).doesNotContainPattern("\\sth:[a-z]+=").doesNotContain("${");
   }
 }
