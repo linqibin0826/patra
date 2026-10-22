@@ -164,13 +164,23 @@ CREATE TRIGGER trg_idn_user_login_record_updated_at
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 -- ============================================================
--- idn_user_profile：前台用户的资料，与用户一对一（本 Issue 只有昵称，PAP-95 补其余列）
+-- idn_user_profile：前台用户的资料与隐私设置，与用户一对一。字节上限是字素上限 × 4（字素由代码守）；
+-- 机构名两种来源：有 ROR ID 时是 catalog 的快照（不受手填上限约束），没有时是手填的自由文本
 -- ============================================================
 CREATE TABLE idn_user_profile
 (
     id              BIGINT          NOT NULL,
     user_id         BIGINT          NOT NULL,
-    display_name    VARCHAR(120)    NULL,
+    display_name            VARCHAR(120)    NULL,
+    bio                     VARCHAR(800)    NULL,
+    occupation              VARCHAR(16)     NULL,
+    job_title               VARCHAR(200)    NULL,
+    organization_ror_id     VARCHAR(9)      NULL,
+    organization_name       VARCHAR(800)    NULL,
+    department              VARCHAR(400)    NULL,
+    profile_visibility      VARCHAR(16)     NOT NULL DEFAULT 'PUBLIC',
+    professional_visibility VARCHAR(16)     NOT NULL DEFAULT 'PUBLIC',
+    search_indexing         BOOLEAN         NOT NULL DEFAULT false,
     record_remarks  jsonb           NULL,
     version         BIGINT          NOT NULL DEFAULT 0,
     ip_address      bytea           NULL,
@@ -185,13 +195,47 @@ CREATE TABLE idn_user_profile
     CONSTRAINT fk_idn_user_profile_user FOREIGN KEY (user_id) REFERENCES idn_user (id),
     CONSTRAINT ck_idn_user_profile_display_name CHECK (
         display_name IS NULL
-        OR (octet_length(display_name) BETWEEN 2 AND 120 AND display_name = btrim(display_name)))
+        OR (octet_length(display_name) BETWEEN 2 AND 120 AND display_name = btrim(display_name))),
+    CONSTRAINT ck_idn_user_profile_bio CHECK (
+        bio IS NULL
+        OR (octet_length(bio) BETWEEN 1 AND 800 AND bio = btrim(bio) AND position(chr(13) IN bio) = 0)),
+    CONSTRAINT ck_idn_user_profile_occupation CHECK (
+        occupation IS NULL
+        OR occupation IN ('PHYSICIAN', 'NURSE', 'PHARMACIST', 'TECHNICIAN', 'RESEARCHER',
+                          'STUDENT', 'INDUSTRY', 'OTHER')),
+    CONSTRAINT ck_idn_user_profile_job_title CHECK (
+        job_title IS NULL
+        OR (octet_length(job_title) BETWEEN 1 AND 200 AND job_title = btrim(job_title))),
+    CONSTRAINT ck_idn_user_profile_ror_id CHECK (
+        organization_ror_id IS NULL OR organization_ror_id ~ '^0[a-z0-9]{8}$'),
+    CONSTRAINT ck_idn_user_profile_organization CHECK (
+        organization_ror_id IS NULL OR organization_name IS NOT NULL),
+    CONSTRAINT ck_idn_user_profile_organization_name CHECK (
+        organization_name IS NULL
+        OR (organization_name <> '' AND organization_name = btrim(organization_name)
+            AND (organization_ror_id IS NOT NULL OR octet_length(organization_name) <= 800))),
+    CONSTRAINT ck_idn_user_profile_department CHECK (
+        department IS NULL
+        OR (octet_length(department) BETWEEN 1 AND 400 AND department = btrim(department))),
+    CONSTRAINT ck_idn_user_profile_visibility CHECK (
+        profile_visibility IN ('PUBLIC', 'SIGNED_IN', 'SELF')),
+    CONSTRAINT ck_idn_user_profile_professional_visibility CHECK (
+        professional_visibility IN ('PUBLIC', 'SELF'))
 );
 
 COMMENT ON TABLE idn_user_profile IS 'Profile of a front-end user, one row per user';
 COMMENT ON COLUMN idn_user_profile.id IS 'PK (snowflake)';
 COMMENT ON COLUMN idn_user_profile.user_id IS 'Owner user ID';
 COMMENT ON COLUMN idn_user_profile.display_name IS 'Display name (NFC, trimmed); null means follow the username';
+COMMENT ON COLUMN idn_user_profile.bio IS 'Bio (plain text, NFC, at most 3 lines separated by LF)';
+COMMENT ON COLUMN idn_user_profile.occupation IS 'Self-declared occupation category; null means not set';
+COMMENT ON COLUMN idn_user_profile.job_title IS 'Self-declared job title (free text)';
+COMMENT ON COLUMN idn_user_profile.organization_ror_id IS 'Bare ROR ID of the affiliation; null for free text or none';
+COMMENT ON COLUMN idn_user_profile.organization_name IS 'Affiliation name: catalog snapshot when ror_id is set, otherwise free text';
+COMMENT ON COLUMN idn_user_profile.department IS 'Self-declared department (free text)';
+COMMENT ON COLUMN idn_user_profile.profile_visibility IS 'Who may see the public page: PUBLIC, SIGNED_IN or SELF';
+COMMENT ON COLUMN idn_user_profile.professional_visibility IS 'Who may see the professional block: PUBLIC or SELF';
+COMMENT ON COLUMN idn_user_profile.search_indexing IS 'Whether search engines may index the public page';
 COMMENT ON COLUMN idn_user_profile.record_remarks IS 'Audit remarks log';
 COMMENT ON COLUMN idn_user_profile.version IS 'Optimistic lock version number';
 COMMENT ON COLUMN idn_user_profile.ip_address IS 'Requester IP (IPv4/IPv6)';
@@ -204,6 +248,106 @@ COMMENT ON COLUMN idn_user_profile.updated_by_name IS 'Updater name';
 
 CREATE TRIGGER trg_idn_user_profile_updated_at
     BEFORE UPDATE ON idn_user_profile
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- ============================================================
+-- idn_user_profile_link：资料里的链接，按用户排好的顺序，最多 5 条（position 0 ~ 4），整组替换
+-- ============================================================
+CREATE TABLE idn_user_profile_link
+(
+    id              BIGINT          NOT NULL,
+    user_id         BIGINT          NOT NULL,
+    position        SMALLINT        NOT NULL,
+    title           VARCHAR(120)    NULL,
+    url             VARCHAR(300)    NOT NULL,
+    record_remarks  jsonb           NULL,
+    version         BIGINT          NOT NULL DEFAULT 0,
+    ip_address      bytea           NULL,
+    created_at      timestamptz(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by      BIGINT          NULL,
+    created_by_name VARCHAR(100)    NULL,
+    updated_at      timestamptz(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by      BIGINT          NULL,
+    updated_by_name VARCHAR(100)    NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_idn_user_profile_link_position UNIQUE (user_id, position),
+    CONSTRAINT fk_idn_user_profile_link_user FOREIGN KEY (user_id) REFERENCES idn_user (id),
+    CONSTRAINT ck_idn_user_profile_link_position CHECK (position BETWEEN 0 AND 4),
+    CONSTRAINT ck_idn_user_profile_link_title CHECK (
+        title IS NULL OR (octet_length(title) BETWEEN 1 AND 120 AND title = btrim(title))),
+    CONSTRAINT ck_idn_user_profile_link_url CHECK (url ~* '^https?://')
+);
+
+CREATE UNIQUE INDEX uk_idn_user_profile_link_url ON idn_user_profile_link (user_id, lower(url));
+
+COMMENT ON TABLE idn_user_profile_link IS 'Links on a user profile, ordered, at most 5';
+COMMENT ON COLUMN idn_user_profile_link.id IS 'PK (snowflake)';
+COMMENT ON COLUMN idn_user_profile_link.user_id IS 'Owner user ID';
+COMMENT ON COLUMN idn_user_profile_link.position IS 'Order chosen by the user (0-based)';
+COMMENT ON COLUMN idn_user_profile_link.title IS 'Link title; null means show the host';
+COMMENT ON COLUMN idn_user_profile_link.url IS 'http(s) URL as entered (trimmed)';
+COMMENT ON COLUMN idn_user_profile_link.record_remarks IS 'Audit remarks log';
+COMMENT ON COLUMN idn_user_profile_link.version IS 'Optimistic lock version number';
+COMMENT ON COLUMN idn_user_profile_link.ip_address IS 'Requester IP (IPv4/IPv6)';
+COMMENT ON COLUMN idn_user_profile_link.created_at IS 'Creation time (UTC)';
+COMMENT ON COLUMN idn_user_profile_link.created_by IS 'Creator ID';
+COMMENT ON COLUMN idn_user_profile_link.created_by_name IS 'Creator name';
+COMMENT ON COLUMN idn_user_profile_link.updated_at IS 'Last update time (UTC)';
+COMMENT ON COLUMN idn_user_profile_link.updated_by IS 'Updater ID';
+COMMENT ON COLUMN idn_user_profile_link.updated_by_name IS 'Updater name';
+
+CREATE TRIGGER trg_idn_user_profile_link_updated_at
+    BEFORE UPDATE ON idn_user_profile_link
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- ============================================================
+-- idn_user_research_interest：关注领域，MeSH 主题词 UI + 英文名快照，按用户排好的顺序，最多 10 个（position 0 ~ 9）
+-- ============================================================
+CREATE TABLE idn_user_research_interest
+(
+    id              BIGINT          NOT NULL,
+    user_id         BIGINT          NOT NULL,
+    position        SMALLINT        NOT NULL,
+    mesh_ui         VARCHAR(10)     NOT NULL,
+    mesh_name       VARCHAR(255)    NOT NULL,
+    record_remarks  jsonb           NULL,
+    version         BIGINT          NOT NULL DEFAULT 0,
+    ip_address      bytea           NULL,
+    created_at      timestamptz(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by      BIGINT          NULL,
+    created_by_name VARCHAR(100)    NULL,
+    updated_at      timestamptz(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by      BIGINT          NULL,
+    updated_by_name VARCHAR(100)    NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_idn_user_research_interest_position UNIQUE (user_id, position),
+    CONSTRAINT uk_idn_user_research_interest_mesh_ui UNIQUE (user_id, mesh_ui),
+    CONSTRAINT fk_idn_user_research_interest_user FOREIGN KEY (user_id) REFERENCES idn_user (id),
+    CONSTRAINT ck_idn_user_research_interest_position CHECK (position BETWEEN 0 AND 9),
+    CONSTRAINT ck_idn_user_research_interest_mesh_ui CHECK (mesh_ui ~ '^D[0-9]{6}([0-9]{3})?$')
+);
+
+-- 以后按主题找感兴趣的用户（推荐）
+CREATE INDEX idx_idn_user_research_interest_mesh_ui ON idn_user_research_interest (mesh_ui);
+
+COMMENT ON TABLE idn_user_research_interest IS 'Research interests of a user (MeSH descriptors), ordered, at most 10';
+COMMENT ON COLUMN idn_user_research_interest.id IS 'PK (snowflake)';
+COMMENT ON COLUMN idn_user_research_interest.user_id IS 'Owner user ID';
+COMMENT ON COLUMN idn_user_research_interest.position IS 'Order chosen by the user (0-based)';
+COMMENT ON COLUMN idn_user_research_interest.mesh_ui IS 'MeSH descriptor UI';
+COMMENT ON COLUMN idn_user_research_interest.mesh_name IS 'English descriptor name snapshot from catalog';
+COMMENT ON COLUMN idn_user_research_interest.record_remarks IS 'Audit remarks log';
+COMMENT ON COLUMN idn_user_research_interest.version IS 'Optimistic lock version number';
+COMMENT ON COLUMN idn_user_research_interest.ip_address IS 'Requester IP (IPv4/IPv6)';
+COMMENT ON COLUMN idn_user_research_interest.created_at IS 'Creation time (UTC)';
+COMMENT ON COLUMN idn_user_research_interest.created_by IS 'Creator ID';
+COMMENT ON COLUMN idn_user_research_interest.created_by_name IS 'Creator name';
+COMMENT ON COLUMN idn_user_research_interest.updated_at IS 'Last update time (UTC)';
+COMMENT ON COLUMN idn_user_research_interest.updated_by IS 'Updater ID';
+COMMENT ON COLUMN idn_user_research_interest.updated_by_name IS 'Updater name';
+
+CREATE TRIGGER trg_idn_user_research_interest_updated_at
+    BEFORE UPDATE ON idn_user_research_interest
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 -- ============================================================
