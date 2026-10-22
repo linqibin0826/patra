@@ -137,7 +137,7 @@
   - `User-Agent`：浏览器请求里的 `User-Agent` 原值；浏览器没带时不设（让 Node 用默认值）。
 - 不只登录、注册：改密码、找回密码、改邮箱确认 / 撤销都会发安全通知，通知里要写设备和 IP。全部请求都带最简单。
 - **不带**任何别的转发头（`X-Forwarded-Host` / `-Proto` / `-Port` / `-Prefix`、`Forwarded`）：网关信任门户的连接，valve 会按其中三个改写网关看到的主机与协议（第 6.3 节）。
-- **门户怎么认定浏览器 IP 是 PAP-101 的事**，但有一个坑要写在这里：Next.js 16 的 `base-server` 对入站请求做的是 `req.headers['x-forwarded-for'] ??= socket.remoteAddress`——浏览器自己带了 `X-Forwarded-For`，Next 就原样保留，所以在 Server Action 里读到的 `x-forwarded-for` 是浏览器可控的。门户要么在 Next 之前删掉入站的 `X-Forwarded-For`（standalone 的自定义入口，或门户前面放一层会覆盖该头的反向代理），要么接受「浏览器能谎报自己的 IP」（tailnet 内只有自己人，风险是自己骗自己）。选哪种由 PAP-101 定，本 Issue 的契约只要求「一个值」。
+- **门户必须丢掉浏览器带来的 `X-Forwarded-For`，只发自己从连接上取到、并校验过的 IP 字面量**（IPv4 点分或 IPv6，不带端口和方括号）。这是强制条款，不是可选项（整分支评审 I2）：Next.js 16 的 `base-server` 对入站请求做的是 `req.headers['x-forwarded-for'] ??= socket.remoteAddress`，浏览器自己带了这个头 Next 就原样保留；门户若照转，受信网关的 `RemoteIpValve`（CIDR 判定内部调 `InetAddress.getByName`）和 Gateway 的 `ForwardedRequestHeadersFilter` 会对浏览器给的任意域名做阻塞的 DNS 解析，按 IP 的限流也能靠每次换一个值绕过。做法由 PAP-101 定：在 Next 之前删掉入站的 `X-Forwarded-For`（standalone 的自定义入口），或门户前面放一层会覆盖该头的反向代理并只信任它。identity 这边仍对非 IP 字面量一律当空（`ClientIp.from` / `RequestOrigin`），兜底不出错，但不能替代这条。
 - **mini 上的现实**：浏览器经 tailnet 访问 `mini:4000`，OrbStack 的端口转发让容器看到的来源是 `patra-net` 网关 `192.168.97.1`（infra 文档里 PG 已实测过同样的现象）。所以 mini 上门户能报的浏览器 IP 大概率都是 `192.168.97.1` 或 tailnet 的 `100.x`，两者都是内网，设备列表显示「内网」、邮件里属地是「内网」。真实公网 IP 与属地要等公开上线、门户前面有反向代理时才看得到；本 Issue 用单元与集成测试证明解析正确（第 18 节），mini 上只验链路通（第 19 节）。
 
 ### 6.3 网关的信任判定
@@ -599,7 +599,7 @@ AC 2 的属地写法用空格分隔（「中国 广东 深圳」），与设计�
 
 | 约束 | 交给 |
 |---|---|
-| 每个代表浏览器的网关请求带 `X-Forwarded-For`（一个值，门户认定的浏览器 IP）与 `User-Agent`（浏览器原值）；Next 的入站 `x-forwarded-for` 是 `??=`、浏览器可控，门户要么在 Next 之前删掉它，要么接受谎报；设备标识 Cookie 按第 7 节（名字、43 字符 base64url、400 天、不随登出清除、格式不对就换新），登录与注册请求体带 `deviceId`；mini 上门户容器固定 `192.168.97.250`，改 compose 时不要动 | PAP-101 |
+| 每个代表浏览器的网关请求带 `X-Forwarded-For`（一个值：门户从连接上取到并校验过的浏览器 IP 字面量）与 `User-Agent`（浏览器原值）；**必须**丢掉浏览器带来的 `X-Forwarded-For`（Next 的入站 `x-forwarded-for` 是 `??=`、浏览器可控，照转会让网关对任意域名做 DNS 解析、按 IP 的限流可被绕过）；设备标识 Cookie 按第 7 节（名字、43 字符 base64url、400 天、不随登出清除、格式不对就换新），登录与注册请求体带 `deviceId`；mini 上门户容器固定 `192.168.97.250`，改 compose 时不要动 | PAP-101 |
 | 安全页的设备列表：`GET /me/sessions` 的形状（第 11.1 节）；`privateNetwork` → 「内网」、`ipRegion` 空且非内网 → 「属地未知」、`deviceName` 空 → 「未知设备」、`deviceClass` 决定图标；本机行的「退出登录」走 `POST /auth/logout`；`DELETE /me/sessions/{id}` 与 `DELETE /me/sessions/others` 回 `{ revokedSessions }`（toast「已退出其他 N 台设备」用它）、0 也当成功；403 `REAUTH_REQUIRED` 走再认证弹窗后重试；409 `CURRENT_SESSION` 不该出现（本机行不显示「退出」） | PAP-102 |
 | 发起注销撤销全部会话用 `sessionTerminator.terminateAll(userId, DELETION_REQUESTED, now)`，在 `LoginEndReason` 与 `V1` 的 `CHECK` 里加 `DELETION_REQUESTED`（列宽已是 32）；注销三封邮件的 `SecurityNotice` 用 `origin.toNotice(now, advice)`，命令带 `clientIp`、`userAgent`；登录记录不随注销删除（2.1.9），按 190 天规则清理 | PAP-100 |
 
@@ -662,6 +662,8 @@ AC 2 的属地写法用空格分隔（「中国 广东 深圳」），与设计�
 - `SessionTerminator` 在领域层不打日志（领域禁 slf4j），记录缺失静默跳过。
 - 来源解析放在凭据 / 字段校验通过之后、事务之前：失败的登录不做无用解析。
 - `RequestOrigin` 的 IPv6 保留原写法的小写，不展开成全零形式；IPv4 映射地址还原成 IPv4。
+
+**整分支评审（opus，2026-10-22）**：无 Critical。修了：I1 只有登录与注册的登录记录规范化了 IP，注册、找回密码、改邮箱等其余用例仍拿原始 `getRemoteAddr()` 入库与当限流键（超长值写 `requested_ip` 失败、伪造值绕过按 IP 限流）→ 适配器层统一 `ClientIp.from(request)`，`LoginDeviceFlowIT` 两条超长 XFF 用例 RED→GREEN；I2 PAP-101 的「丢掉入站 XFF」改为强制条款（第 6.2、21 节）；`ClientOriginResolver` 兜住端口的运行时异常（安全通知在提交之后才解析，抛出会让已生效的操作回 500）；`SessionStoreAdapter` 一处 Javadoc 错位。延后的 Minor 见交接笔记。
 - 登录现在会发新设备提醒：流程测试的 `mailFor` 与 `EmailVerificationFlowIT.waitForMail` 改为按收件人 / 主题等邮件，不按总封数。
 
 **回归**：`./gradlew spotlessApply && ./gradlew check` 全绿；集成测试 identity-session 28、identity-infra 142、identity-adapter 75、identity-boot 79、gateway-boot 60 全过；单元测试 identity-domain 437、identity-app 192、identity-infra 102、identity-boot 21、identity-session 25、identity-adapter 6、gateway-boot 35。`module-graph.json` 无变化。

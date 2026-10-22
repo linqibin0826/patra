@@ -1,5 +1,6 @@
 package dev.patra.identity.adapter.rest.auth;
 
+import dev.patra.identity.adapter.rest.ClientIp;
 import dev.patra.identity.adapter.rest.auth.request.ConfirmEmailChangeRequest;
 import dev.patra.identity.adapter.rest.auth.request.RevertEmailChangeRequest;
 import dev.patra.identity.adapter.rest.auth.response.EmailChangeRevertedResponse;
@@ -40,7 +41,7 @@ public class EmailChangeController {
       @RequestHeader(value = HttpHeaders.USER_AGENT, required = false) String userAgent) {
     return EmailChangedResponse.from(
         commandBus.handle(
-            ConfirmEmailChangeCommand.of(request.token(), http.getRemoteAddr(), userAgent)));
+            ConfirmEmailChangeCommand.of(request.token(), ClientIp.from(http), userAgent)));
   }
 
   /// 撤销（「不是我」）：成功 200，邮箱改回、全部会话下线、密码作废并发重设链接；令牌不可用 422；
@@ -57,6 +58,6 @@ public class EmailChangeController {
       @RequestHeader(value = HttpHeaders.USER_AGENT, required = false) String userAgent) {
     return EmailChangeRevertedResponse.from(
         commandBus.handle(
-            RevertEmailChangeCommand.of(request.token(), http.getRemoteAddr(), userAgent)));
+            RevertEmailChangeCommand.of(request.token(), ClientIp.from(http), userAgent)));
   }
 }

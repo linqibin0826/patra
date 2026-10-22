@@ -83,12 +83,6 @@ public class SessionStoreAdapter implements SessionStorePort {
     return store.find(accountType, userId, sessionId).map(StoredSession::authenticatedAt);
   }
 
-  /// 删一条会话。
-  ///
-  /// @param accountType 账号类型
-  /// @param userId 用户 ID
-  /// @param sessionId 会话 ID
-  /// @return 真的删掉了返回 `true`
   /// 列出活会话：只取会话 ID、创建时间、最后活跃。
   ///
   /// @param accountType 账号类型
@@ -104,6 +98,12 @@ public class SessionStoreAdapter implements SessionStorePort {
         .toList();
   }
 
+  /// 删一条会话。
+  ///
+  /// @param accountType 账号类型
+  /// @param userId 用户 ID
+  /// @param sessionId 会话 ID
+  /// @return 真的删掉了返回 `true`
   @Override
   public boolean revoke(AccountType accountType, long userId, long sessionId) {
     return store.delete(accountType, userId, sessionId);

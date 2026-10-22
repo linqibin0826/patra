@@ -69,4 +69,28 @@ class ClientOriginResolverTest {
     assertThat(origin.deviceClass()).isEqualTo(DeviceClass.UNKNOWN);
     verifyNoInteractions(geolocation);
   }
+
+  @Test
+  @DisplayName("UA 解析出错：按未知设备，不往外抛（安全通知在事务提交之后才解析，抛出会让已生效的操作回 500）")
+  void should_fall_back_to_unknown_device_when_parser_fails() {
+    when(parser.parse("broken")).thenThrow(new IllegalStateException("规则加载失败"));
+    when(geolocation.locate("113.92.157.29")).thenReturn(Optional.of("中国 广东 深圳"));
+
+    ClientOrigin origin = resolver.resolve(RequestOrigin.of("113.92.157.29", "broken"));
+
+    assertThat(origin.deviceName()).isNull();
+    assertThat(origin.deviceClass()).isEqualTo(DeviceClass.UNKNOWN);
+    assertThat(origin.ipRegion()).isEqualTo("中国 广东 深圳");
+  }
+
+  @Test
+  @DisplayName("属地查询出错：属地为空，不往外抛")
+  void should_fall_back_to_no_region_when_geolocation_fails() {
+    when(geolocation.locate("113.92.157.29")).thenThrow(new IllegalStateException("数据文件被换掉"));
+
+    ClientOrigin origin = resolver.resolve(RequestOrigin.of("113.92.157.29", UA));
+
+    assertThat(origin.ipRegion()).isNull();
+    assertThat(origin.deviceName()).isEqualTo("Chrome 141 · macOS");
+  }
 }

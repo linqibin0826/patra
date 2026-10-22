@@ -1,5 +1,6 @@
 package dev.patra.identity.adapter.rest.me;
 
+import dev.patra.identity.adapter.rest.ClientIp;
 import dev.patra.identity.adapter.rest.auth.response.AuthenticatedUserResponse;
 import dev.patra.identity.adapter.rest.auth.response.CurrentUserResponse;
 import dev.patra.identity.adapter.rest.me.request.ChangePasswordRequest;
@@ -55,7 +56,7 @@ public class MeController {
     AuthenticatedUser result =
         commandBus.handle(
             ChangePasswordCommand.of(
-                request.currentPassword(), request.newPassword(), http.getRemoteAddr(), userAgent));
+                request.currentPassword(), request.newPassword(), ClientIp.from(http), userAgent));
     return AuthenticatedUserResponse.of(
         result.sessionToken(), CurrentUserResponse.from(result.account()));
   }

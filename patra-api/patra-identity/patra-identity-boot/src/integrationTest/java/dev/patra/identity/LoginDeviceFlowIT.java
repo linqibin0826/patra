@@ -306,6 +306,46 @@ class LoginDeviceFlowIT extends IdentityFlowITSupport {
     throw new AssertionError("列表里没有会话 " + sessionId);
   }
 
+  @Test
+  @DisplayName("X-Forwarded-For 超长：注册照常 201，令牌表与登录记录里的 IP 为空")
+  void should_ignore_overlong_forwarded_for_on_register() {
+    String overlong = "x".repeat(60);
+
+    RawResponse registered =
+        post(
+            "/auth/register",
+            Map.of(
+                "email",
+                "overlong.ip@example.com",
+                "username",
+                "overlong-ip",
+                "password",
+                PASSWORD),
+            from(overlong));
+
+    assertThat(registered.status()).as(registered.body()).isEqualTo(201);
+    long userId = userIdOf(registered);
+    assertThat(recordOf(latestSessionIdOf(userId)).get("client_ip")).isNull();
+    assertThat(
+            jdbcTemplate.queryForList(
+                "SELECT requested_ip FROM idn_email_token WHERE user_id = ?", String.class, userId))
+        .containsOnlyNulls();
+  }
+
+  @Test
+  @DisplayName("X-Forwarded-For 超长：找回密码照常 202，不 500")
+  void should_ignore_overlong_forwarded_for_on_password_reset_request() {
+    register("overlong.forgot@example.com", "overlong-forgot");
+
+    RawResponse forgot =
+        post(
+            "/auth/password/forgot",
+            Map.of("email", "overlong.forgot@example.com"),
+            from("y".repeat(60)));
+
+    assertThat(forgot.status()).as(forgot.body()).isEqualTo(202);
+  }
+
   /// 带设备标识、从深圳的 IP 注册。
   ///
   /// @param email 邮箱

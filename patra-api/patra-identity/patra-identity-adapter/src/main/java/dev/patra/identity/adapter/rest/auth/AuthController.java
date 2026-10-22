@@ -1,5 +1,6 @@
 package dev.patra.identity.adapter.rest.auth;
 
+import dev.patra.identity.adapter.rest.ClientIp;
 import dev.patra.identity.adapter.rest.auth.request.LoginRequest;
 import dev.patra.identity.adapter.rest.auth.request.ReauthRequest;
 import dev.patra.identity.adapter.rest.auth.request.RegisterRequest;
@@ -37,7 +38,7 @@ public class AuthController {
   private final CommandBus commandBus;
   private final UserQueryService userQueryService;
 
-  /// 注册并登录。成功返回 201。客户端 IP 取 `getRemoteAddr()`：网关写的 `Forwarded` /
+  /// 注册并登录。成功返回 201。客户端 IP 取规范化之后的 `getRemoteAddr()`（{@link ClientIp}）：网关写的 `Forwarded` /
   /// `X-Forwarded-For` 已按 `forward-headers-strategy: framework` 解析，经受信转发链路（门户 → 网关）
   /// 是浏览器的 IP（PAP-99）；UA 取 `User-Agent` 头，门户转来的是浏览器的原值。
   ///
@@ -59,7 +60,7 @@ public class AuthController {
                 .password(request.password())
                 .clientType(request.clientType())
                 .deviceId(request.deviceId())
-                .clientIp(http.getRemoteAddr())
+                .clientIp(ClientIp.from(http))
                 .userAgent(userAgent)
                 .build());
     return toResponse(result);
@@ -83,7 +84,7 @@ public class AuthController {
                 .password(request.password())
                 .clientType(request.clientType())
                 .deviceId(request.deviceId())
-                .clientIp(http.getRemoteAddr())
+                .clientIp(ClientIp.from(http))
                 .userAgent(userAgent)
                 .build());
     return toResponse(result);

@@ -1,5 +1,6 @@
 package dev.patra.identity.adapter.rest.auth;
 
+import dev.patra.identity.adapter.rest.ClientIp;
 import dev.patra.identity.adapter.rest.auth.request.ForgotPasswordRequest;
 import dev.patra.identity.adapter.rest.auth.request.ResetPasswordRequest;
 import dev.patra.identity.adapter.rest.auth.response.PasswordResetRequestedResponse;
@@ -38,7 +39,7 @@ public class PasswordResetController {
   public PasswordResetRequestedResponse forgot(
       @RequestBody ForgotPasswordRequest request, HttpServletRequest http) {
     return PasswordResetRequestedResponse.from(
-        commandBus.handle(RequestPasswordResetCommand.of(request.email(), http.getRemoteAddr())));
+        commandBus.handle(RequestPasswordResetCommand.of(request.email(), ClientIp.from(http))));
   }
 
   /// 提交新密码：成功 200（不自动登录）；令牌不可用或密码不合规 422；429 过于频繁。
@@ -55,6 +56,6 @@ public class PasswordResetController {
     return PasswordResetResponse.from(
         commandBus.handle(
             ResetPasswordCommand.of(
-                request.token(), request.newPassword(), http.getRemoteAddr(), userAgent)));
+                request.token(), request.newPassword(), ClientIp.from(http), userAgent)));
   }
 }

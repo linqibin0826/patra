@@ -1,5 +1,6 @@
 package dev.patra.identity.adapter.rest.me;
 
+import dev.patra.identity.adapter.rest.ClientIp;
 import dev.patra.identity.adapter.rest.me.request.ChangeEmailRequest;
 import dev.patra.identity.adapter.rest.me.response.EmailChangeRequestedResponse;
 import dev.patra.identity.adapter.rest.me.response.PendingEmailChangeResponse;
@@ -40,7 +41,7 @@ public class MeEmailController {
   @ResponseStatus(HttpStatus.ACCEPTED)
   public ResendEmailVerificationResponse resendVerification(HttpServletRequest http) {
     return ResendEmailVerificationResponse.from(
-        commandBus.handle(ResendEmailVerificationCommand.of(http.getRemoteAddr())));
+        commandBus.handle(ResendEmailVerificationCommand.of(ClientIp.from(http))));
   }
 
   /// 申请改邮箱：向新邮箱发 1 小时有效的确认链接，202。422 字段错误或与当前相同；403 超过再认证窗口
@@ -55,7 +56,7 @@ public class MeEmailController {
   public EmailChangeRequestedResponse requestChange(
       @RequestBody ChangeEmailRequest request, HttpServletRequest http) {
     return EmailChangeRequestedResponse.from(
-        commandBus.handle(RequestEmailChangeCommand.of(request.newEmail(), http.getRemoteAddr())));
+        commandBus.handle(RequestEmailChangeCommand.of(request.newEmail(), ClientIp.from(http))));
   }
 
   /// 待确认的改邮箱：有 200，没有 204。
