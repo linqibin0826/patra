@@ -59,11 +59,23 @@ patra:
       links:
         verify-email-path: /verify-email          # 门户的验证邮箱落地页
         security-settings-path: /settings/security  # 门户的安全设置页
+        reset-password-path: /reset-password          # 门户的重设密码落地页
+        confirm-email-change-path: /confirm-email-change  # 门户的确认改邮箱落地页
+        revert-email-change-path: /revert-email-change    # 门户的撤销改邮箱落地页
       resend:
         cooldown: 60s
         per-account-hourly: 5
         per-account-daily: 10
         per-ip-hourly: 30
+    reauth:
+      window: 10m                         # 再认证窗口：改邮箱、踢设备、注销等敏感操作要求这么久内输过密码
+    password-reset:
+      cooldown: 60s                       # 同邮箱两次申请的最短间隔
+      per-email-daily: 5
+      per-ip-hourly: 20                   # 受信转发接通（PAP-99）前 IP 是门户地址，等于全站配额
+      submit-per-ip-minutely: 10          # 提交重设令牌
+    email-change:
+      per-account-daily: 3
 
 # XXL-Job 执行器：管理端地址随环境变，在 Nacos 公共配置 patra-common.yaml；执行器端口 = 服务端口 + 1 = 6401
 xxl:

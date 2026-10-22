@@ -5,10 +5,13 @@ import static org.mockito.Mockito.mock;
 
 import dev.patra.identity.domain.model.vo.EmailTokenSecret;
 import dev.patra.identity.domain.policy.DisplayNamePolicy;
+import dev.patra.identity.domain.policy.EmailChangePolicy;
 import dev.patra.identity.domain.policy.EmailResendPolicy;
 import dev.patra.identity.domain.policy.LoginThrottlePolicy;
 import dev.patra.identity.domain.policy.MailLinkPolicy;
 import dev.patra.identity.domain.policy.PasswordPolicy;
+import dev.patra.identity.domain.policy.PasswordResetPolicy;
+import dev.patra.identity.domain.policy.ReauthenticationPolicy;
 import dev.patra.identity.domain.policy.SessionLifetime;
 import dev.patra.identity.domain.policy.SessionLifetimePolicy;
 import dev.patra.identity.domain.policy.UsernameChangePolicy;
@@ -20,6 +23,7 @@ import dev.patra.identity.domain.port.repository.EmailTokenRepository;
 import dev.patra.identity.domain.port.repository.UserLoginRecordRepository;
 import dev.patra.identity.domain.port.session.SessionStorePort;
 import dev.patra.identity.domain.service.EmailTokenIssuer;
+import dev.patra.identity.domain.service.ReauthenticationGuard;
 import dev.patra.identity.domain.service.SessionIssuer;
 import dev.patra.identity.infra.adapter.mail.SmtpEmailDeliveryAdapter;
 import dev.patra.identity.infra.adapter.mail.ThymeleafMailRenderer;
@@ -256,6 +260,70 @@ class IdentityConfigurationTest {
         .run(context -> assertThat(context).hasFailed());
     runner
         .withPropertyValues("patra.identity.mail.from=nobody")
+        .run(context -> assertThat(context).hasFailed());
+  }
+
+  @Test
+  @DisplayName("账号安全的默认值：再认证窗口 10 分钟、找回密码 60s / 5 / 20 / 10、改邮箱每天 3、三个落地页路径")
+  void should_bind_security_defaults() {
+    runner.run(
+        context -> {
+          assertThat(context.getBean(ReauthenticationPolicy.class).window())
+              .isEqualTo(Duration.ofMinutes(10));
+          PasswordResetPolicy reset = context.getBean(PasswordResetPolicy.class);
+          assertThat(reset.cooldown()).isEqualTo(Duration.ofSeconds(60));
+          assertThat(reset.perEmailDaily()).isEqualTo(5);
+          assertThat(reset.perIpHourly()).isEqualTo(20);
+          assertThat(reset.submitPerIpMinutely()).isEqualTo(10);
+          assertThat(context.getBean(EmailChangePolicy.class).perAccountDaily()).isEqualTo(3);
+          MailLinkPolicy links = context.getBean(MailLinkPolicy.class);
+          EmailTokenSecret secret = new EmailTokenSecret("A".repeat(43));
+          assertThat(links.resetPasswordUrl(secret))
+              .startsWith("http://linqibins-mac-mini:4000/reset-password#token=");
+          assertThat(links.confirmEmailChangeUrl(secret))
+              .startsWith("http://linqibins-mac-mini:4000/confirm-email-change#token=");
+          assertThat(links.revertEmailChangeUrl(secret))
+              .startsWith("http://linqibins-mac-mini:4000/revert-email-change#token=");
+          assertThat(context).hasSingleBean(ReauthenticationGuard.class);
+        });
+  }
+
+  @Test
+  @DisplayName("账号安全的配置能覆盖")
+  void should_bind_security_overrides() {
+    runner
+        .withPropertyValues(
+            "patra.identity.reauth.window=30s",
+            "patra.identity.password-reset.per-email-daily=2",
+            "patra.identity.password-reset.submit-per-ip-minutely=3",
+            "patra.identity.email-change.per-account-daily=1",
+            "patra.identity.mail.links.reset-password-path=/r")
+        .run(
+            context -> {
+              assertThat(context.getBean(ReauthenticationPolicy.class).window())
+                  .isEqualTo(Duration.ofSeconds(30));
+              assertThat(context.getBean(PasswordResetPolicy.class).perEmailDaily()).isEqualTo(2);
+              assertThat(context.getBean(PasswordResetPolicy.class).submitPerIpMinutely())
+                  .isEqualTo(3);
+              assertThat(context.getBean(EmailChangePolicy.class).perAccountDaily()).isEqualTo(1);
+              assertThat(context.getBean(MailLinkPolicy.class).resetPasswordPath()).isEqualTo("/r");
+            });
+  }
+
+  @Test
+  @DisplayName("再认证窗口、找回密码上限、改邮箱上限不是正数，或新路径不以 / 开头：启动失败")
+  void should_fail_on_non_positive_security_values() {
+    runner
+        .withPropertyValues("patra.identity.reauth.window=0s")
+        .run(context -> assertThat(context).hasFailed());
+    runner
+        .withPropertyValues("patra.identity.password-reset.per-email-daily=0")
+        .run(context -> assertThat(context).hasFailed());
+    runner
+        .withPropertyValues("patra.identity.email-change.per-account-daily=0")
+        .run(context -> assertThat(context).hasFailed());
+    runner
+        .withPropertyValues("patra.identity.mail.links.revert-email-change-path=revert")
         .run(context -> assertThat(context).hasFailed());
   }
 

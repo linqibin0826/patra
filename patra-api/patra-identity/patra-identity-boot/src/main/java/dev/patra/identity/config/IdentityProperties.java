@@ -12,12 +12,40 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 /// @param session 会话策略
 /// @param username 改名规则
 /// @param mail 邮件：发件人、显示时区、令牌保留期、链接、重发限流
+/// @param reauth 再认证
+/// @param passwordReset 找回密码的限流
+/// @param emailChange 改邮箱的限流
 @ConfigurationProperties(prefix = "patra.identity")
 public record IdentityProperties(
     @DefaultValue PasswordHashing passwordHashing,
     @DefaultValue Session session,
     @DefaultValue Username username,
-    @DefaultValue Mail mail) {
+    @DefaultValue Mail mail,
+    @DefaultValue Reauth reauth,
+    @DefaultValue PasswordReset passwordReset,
+    @DefaultValue EmailChange emailChange) {
+
+  /// 再认证。
+  ///
+  /// @param window 敏感操作要求这么久内输过密码
+  public record Reauth(@DefaultValue("10m") Duration window) {}
+
+  /// 找回密码的限流。
+  ///
+  /// @param cooldown 同邮箱两次申请的最短间隔
+  /// @param perEmailDaily 同邮箱每天的申请上限
+  /// @param perIpHourly 同 IP 每小时的申请上限
+  /// @param submitPerIpMinutely 同 IP 每分钟的提交上限
+  public record PasswordReset(
+      @DefaultValue("60s") Duration cooldown,
+      @DefaultValue("5") int perEmailDaily,
+      @DefaultValue("20") int perIpHourly,
+      @DefaultValue("10") int submitPerIpMinutely) {}
+
+  /// 改邮箱的限流。
+  ///
+  /// @param perAccountDaily 每账号每天的申请上限
+  public record EmailChange(@DefaultValue("3") int perAccountDaily) {}
 
   /// 邮件。
   ///

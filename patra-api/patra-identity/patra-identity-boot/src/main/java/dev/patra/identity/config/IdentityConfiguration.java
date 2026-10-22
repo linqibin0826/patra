@@ -1,10 +1,13 @@
 package dev.patra.identity.config;
 
 import dev.patra.identity.domain.policy.DisplayNamePolicy;
+import dev.patra.identity.domain.policy.EmailChangePolicy;
 import dev.patra.identity.domain.policy.EmailResendPolicy;
 import dev.patra.identity.domain.policy.LoginThrottlePolicy;
 import dev.patra.identity.domain.policy.MailLinkPolicy;
 import dev.patra.identity.domain.policy.PasswordPolicy;
+import dev.patra.identity.domain.policy.PasswordResetPolicy;
+import dev.patra.identity.domain.policy.ReauthenticationPolicy;
 import dev.patra.identity.domain.policy.SessionLifetime;
 import dev.patra.identity.domain.policy.SessionLifetimePolicy;
 import dev.patra.identity.domain.policy.UsernameChangePolicy;
@@ -16,6 +19,7 @@ import dev.patra.identity.domain.port.repository.EmailTokenRepository;
 import dev.patra.identity.domain.port.repository.UserLoginRecordRepository;
 import dev.patra.identity.domain.port.session.SessionStorePort;
 import dev.patra.identity.domain.service.EmailTokenIssuer;
+import dev.patra.identity.domain.service.ReauthenticationGuard;
 import dev.patra.identity.domain.service.SessionIssuer;
 import dev.patra.identity.infra.adapter.hashing.PasswordHashingAdapter;
 import dev.patra.identity.infra.adapter.mail.SmtpEmailDeliveryAdapter;
@@ -36,7 +40,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.mail.javamail.JavaMailSender;
 
 /// identity 的装配：把配置项变成领域层的规则对象，创建密码哈希适配器、会话策略、Redis 会话存储、签发领域服务、
-/// 邮件链接规则、重发限流规则、令牌签发服务、模板渲染器与 SMTP 发信端口。
+/// 邮件链接规则、重发限流规则、令牌签发服务、模板渲染器与 SMTP 发信端口，以及再认证、找回密码、改邮箱的规则与守卫。
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties({IdentityProperties.class, LoginThrottleProperties.class})
 public class IdentityConfiguration {
@@ -224,6 +228,47 @@ public class IdentityConfiguration {
       JavaMailSender mailSender, ThymeleafMailRenderer renderer, IdentityProperties properties) {
     return SmtpEmailDeliveryAdapter.async(
         mailSender, renderer, properties.mail().from(), MAIL_MAX_CONCURRENCY);
+  }
+
+  /// 再认证规则：窗口不是正数时启动失败。
+  ///
+  /// @param properties 配置
+  /// @return 规则
+  @Bean
+  public ReauthenticationPolicy reauthenticationPolicy(IdentityProperties properties) {
+    return ReauthenticationPolicy.of(properties.reauth().window());
+  }
+
+  /// 找回密码的限流规则。不是正数时启动失败。
+  ///
+  /// @param properties 配置
+  /// @return 规则
+  @Bean
+  public PasswordResetPolicy passwordResetPolicy(IdentityProperties properties) {
+    IdentityProperties.PasswordReset reset = properties.passwordReset();
+    return PasswordResetPolicy.of(
+        reset.cooldown(), reset.perEmailDaily(), reset.perIpHourly(), reset.submitPerIpMinutely());
+  }
+
+  /// 改邮箱的限流规则。不是正数时启动失败。
+  ///
+  /// @param properties 配置
+  /// @return 规则
+  @Bean
+  public EmailChangePolicy emailChangePolicy(IdentityProperties properties) {
+    return EmailChangePolicy.of(properties.emailChange().perAccountDaily());
+  }
+
+  /// 再认证守卫：按断言里的会话 ID 读会话的 `auth_at`。
+  ///
+  /// @param sessions 会话存储端口
+  /// @param policy 再认证规则
+  /// @param clock 时钟
+  /// @return 守卫
+  @Bean
+  public ReauthenticationGuard reauthenticationGuard(
+      SessionStorePort sessions, ReauthenticationPolicy policy, Clock clock) {
+    return new ReauthenticationGuard(sessions, policy, clock);
   }
 
   /// 建会话的领域服务。

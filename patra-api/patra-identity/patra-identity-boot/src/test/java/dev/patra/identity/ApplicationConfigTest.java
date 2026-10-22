@@ -54,6 +54,26 @@ class ApplicationConfigTest {
                     || name.equals("patra.identity.mail.links.base-url"));
   }
 
+  @Test
+  @DisplayName("账号安全的参数在 jar 里：再认证窗口、找回密码与改邮箱的限流、三个落地页路径")
+  void should_keep_account_security_settings_in_jar() throws IOException {
+    assertThat(property("application.yml", "patra.identity.reauth.window")).isEqualTo("10m");
+    assertThat(property("application.yml", "patra.identity.password-reset.per-email-daily"))
+        .isEqualTo("5");
+    assertThat(property("application.yml", "patra.identity.password-reset.per-ip-hourly"))
+        .isEqualTo("20");
+    assertThat(property("application.yml", "patra.identity.password-reset.submit-per-ip-minutely"))
+        .isEqualTo("10");
+    assertThat(property("application.yml", "patra.identity.email-change.per-account-daily"))
+        .isEqualTo("3");
+    assertThat(property("application.yml", "patra.identity.mail.links.reset-password-path"))
+        .isEqualTo("/reset-password");
+    assertThat(property("application.yml", "patra.identity.mail.links.confirm-email-change-path"))
+        .isEqualTo("/confirm-email-change");
+    assertThat(property("application.yml", "patra.identity.mail.links.revert-email-change-path"))
+        .isEqualTo("/revert-email-change");
+  }
+
   /// 读出 classpath 上一份 YAML 里某个属性的值。
   ///
   /// @param resource classpath 上的文件名
