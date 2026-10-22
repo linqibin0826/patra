@@ -11,8 +11,9 @@ import org.springframework.stereotype.Component;
 
 /// 登录记录清理的 XXL-Job 入口（handler `loginRecordCleanupJob`），无任务参数（PAP-99 设计第 14 节）。
 ///
-/// 保留期从 `patra.identity.session.record-retention` 读（默认 190 天，《网络安全法》日志留存 ≥ 6 个月），
-/// 放进命令：app 层不依赖 boot 的配置类。mini 的 xxl-job-admin 里每天 04:40 调一次（令牌清理 04:30 之后）。
+/// 保留期从 `patra.identity.session.record-retention` 读（取值只写在 identity 的 `application.yml`，190 天，
+/// 《网络安全法》日志留存 ≥ 6 个月；缺这个配置启动失败），放进命令：app 层不依赖 boot 的配置类。mini 的 xxl-job-admin 里每天 04:40 调一次（令牌清理
+// 04:30 之后）。
 @Slf4j
 @Component
 public class LoginRecordCleanupScheduleJob {
@@ -26,7 +27,7 @@ public class LoginRecordCleanupScheduleJob {
   /// @param retention 登录记录结束或过期之后的保留期
   public LoginRecordCleanupScheduleJob(
       CommandBus commandBus,
-      @Value("${patra.identity.session.record-retention:190d}") Duration retention) {
+      @Value("${patra.identity.session.record-retention}") Duration retention) {
     this.commandBus = commandBus;
     this.retention = retention;
   }

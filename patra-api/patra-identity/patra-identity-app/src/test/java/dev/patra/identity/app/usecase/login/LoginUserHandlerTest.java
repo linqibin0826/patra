@@ -563,9 +563,11 @@ class LoginUserHandlerTest {
     when(passwordHashing.matches(any(), any())).thenReturn(true);
     when(records.existsTrustedDevice(eq(42L), any(), any())).thenReturn(false);
     when(newDeviceThrottle.acquire(eq(42L), any(), any())).thenReturn(true);
+    when(emailDelivery.send(any())).thenReturn(true);
 
     handler.handle(command("chen.yu@example.com", "correct horse", "web", DEVICE));
 
+    verify(newDeviceThrottle, never()).reset(anyLong(), any());
     InOrder order = inOrder(records, sessionIssuer, newDeviceThrottle, emailDelivery);
     order
         .verify(records)
@@ -582,6 +584,36 @@ class LoginUserHandlerTest {
     assertThat(sent.notice().ipLocation()).isEqualTo("澳大利亚");
     assertThat(sent.notice().occurredAt()).isEqualTo(NOW);
     assertThat(sent.notice().notMeAdvice()).isEqualTo(NewDeviceLoginMail.NOT_ME_ADVICE);
+  }
+
+  @Test
+  @DisplayName("发信被拒（队列满、已停机）：退还这台设备的冷却，下次登录还能提醒")
+  void should_release_cooldown_when_mail_rejected() {
+    when(passwordHashing.matches(any(), any())).thenReturn(true);
+    when(records.existsTrustedDevice(eq(42L), any(), any())).thenReturn(false);
+    when(newDeviceThrottle.acquire(eq(42L), any(), any())).thenReturn(true);
+    when(emailDelivery.send(any())).thenReturn(false);
+
+    handler.handle(command("chen.yu@example.com", "correct horse", "web", DEVICE));
+
+    InOrder order = inOrder(emailDelivery, newDeviceThrottle);
+    order.verify(emailDelivery).send(any(NewDeviceLoginMail.class));
+    order.verify(newDeviceThrottle).reset(42L, new DeviceId(DEVICE));
+  }
+
+  @Test
+  @DisplayName("发信被拒且退还冷却时 Redis 不可用：登录照常成功")
+  void should_still_log_in_when_cooldown_release_fails() {
+    when(passwordHashing.matches(any(), any())).thenReturn(true);
+    when(records.existsTrustedDevice(eq(42L), any(), any())).thenReturn(false);
+    when(newDeviceThrottle.acquire(eq(42L), any(), any())).thenReturn(true);
+    when(emailDelivery.send(any())).thenReturn(false);
+    doThrow(new TemporarilyUnavailableException()).when(newDeviceThrottle).reset(eq(42L), any());
+
+    AuthenticatedUser result =
+        handler.handle(command("chen.yu@example.com", "correct horse", "web", DEVICE));
+
+    assertThat(result.sessionToken()).isEqualTo("patra_user_x");
   }
 
   @Test

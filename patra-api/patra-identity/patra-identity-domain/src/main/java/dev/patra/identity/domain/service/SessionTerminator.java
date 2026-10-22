@@ -1,5 +1,6 @@
 package dev.patra.identity.domain.service;
 
+import dev.patra.identity.domain.model.aggregate.UserLoginRecord;
 import dev.patra.identity.domain.model.enums.LoginEndReason;
 import dev.patra.identity.domain.port.repository.UserLoginRecordRepository;
 import dev.patra.identity.domain.port.session.SessionStorePort;
@@ -67,21 +68,19 @@ public final class SessionTerminator {
     return revoked;
   }
 
-  /// 结束这些会话的登录记录。
+  /// 结束这些会话的登录记录：一次批量取出，逐条结束并保存。
   ///
   /// @param sessionIds 会话 ID
   /// @param reason 结束原因
   /// @param now 当前时间
   private void end(List<Long> sessionIds, LoginEndReason reason, Instant now) {
     Objects.requireNonNull(reason, "reason 不能为 null");
-    for (Long sessionId : sessionIds) {
-      records
-          .findById(sessionId)
-          .ifPresent(
-              login -> {
-                login.end(reason, now);
-                records.save(login);
-              });
+    if (sessionIds.isEmpty()) {
+      return;
+    }
+    for (UserLoginRecord login : records.findAllByIds(sessionIds)) {
+      login.end(reason, now);
+      records.save(login);
     }
   }
 }

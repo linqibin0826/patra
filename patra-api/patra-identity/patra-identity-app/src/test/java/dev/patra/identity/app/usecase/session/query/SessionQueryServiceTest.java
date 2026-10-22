@@ -1,4 +1,4 @@
-package dev.patra.identity.app.usecase.session;
+package dev.patra.identity.app.usecase.session.query;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

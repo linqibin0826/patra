@@ -266,7 +266,7 @@ ip2region 当前数据的每条结果是五段：`国家|省份|城市|ISP|ISO �
 - 版本与校验和写在一个文件里：`patra-infra/scripts/ip2region.properties`（`tag=v3.18.0`、两个文件的 SHA-256）。放在 patra-infra：mini 只稀疏检出这个目录，获取脚本要读得到它。
 - 获取脚本 `patra-infra/scripts/fetch-ip2region.sh`：按这个文件从 `raw.githubusercontent.com/lionsoul2014/ip2region/<tag>/data/` 下两个文件到 `~/.patra/data/ip2region/`，校验 SHA-256，原子替换。mini 与本机各跑一次。
 - compose：identity 挂 `${HOME}/.patra/data/ip2region:/data/ip2region:ro`；配置 `patra.identity.ip-geolocation.directory`，默认 `${user.home}/.patra/data/ip2region`（本机 bootRun 直接用），容器里设成 `/data/ip2region`（`.env.common` 或 compose 的 `environment`）。
-- 测试：identity-infra 的 Gradle 任务 `downloadIp2RegionData` 按同一个 properties 文件下载到 `build/ip2region/`（输入是 properties，输出目录做增量缓存，校验和不对失败），`test` / `integrationTest` 依赖它并用系统属性告诉测试目录。CI 在 GitHub 的 runner 上跑测试，取 GitHub 文件没问题；mini 上的 CD 只跑 `bootJar`，不触发下载。
+- 测试：identity-infra 的 Gradle 任务 `downloadIp2RegionData` 按同一个 properties 文件下载到 Gradle 用户目录的 `caches/patra/ip2region/<tag>/`（`clean`、换检出都不重下；文件已在且校验和对得上直接跳过；校验和不对失败；连接 30 秒、读取 60 秒超时），`test` / `integrationTest` 用系统属性告诉测试目录，目录登记为测试输入，下载任务自动排在前面。（2026-10-22 代码评审后由 `build/ip2region/` 改来。）CI 在 GitHub 的 runner 上跑测试，取 GitHub 文件没问题；mini 上的 CD 只跑 `bootJar`，不触发下载。
 - **更新**：改 properties 的 tag 与校验和 → 提交 → mini 上 `git pull` 后重跑脚本 → 重启 identity。不用发版。上游「不定期」更新，按季度看一次即可，写进 README。
 - 为什么不放进 jar / 镜像：两个文件 46 MB，放进 identity 自己的模块会落在每次部署都变的应用层，mini 每次拉镜像多 46 MB（经代理拉 GHCR 大层本来就会间歇出错）；放进 git 会让公开仓库每次更新数据都永久多 46 MB，而且数据的许可没写明，不宜在公开仓库里再分发。只用 IPv4 能省 36 MB，但国内移动网络大量走 IPv6，属地会大面积为空。
 
@@ -537,7 +537,7 @@ patra:
 
 ### 18.2 集成测试（Testcontainers：PG 17、Redis 7、GreenMail）
 
-identity-boot 的全部 `@SpringBootTest`（现有 17 个流程 IT 也在内）都会装配 ip2region 适配器，缺数据文件启动失败：boot 的 `integrationTest` 同样依赖 `downloadIp2RegionData`，测试配置把目录指向 `build/ip2region/`。
+identity-boot 的全部 `@SpringBootTest`（现有 17 个流程 IT 也在内）都会装配 ip2region 适配器，缺数据文件启动失败：boot 经 identity-infra 的 consumable configuration `ip2regionData` 取得同一个数据目录（不写死路径），测试任务同样用系统属性指过去。
 
 
 - `RedisSessionStoreIT`：`list` 返回活着的会话、清悬空与过期条目、不改 `last_active_at` 与 TTL；空索引返回空。
@@ -668,7 +668,7 @@ AC 2 的属地写法用空格分隔（「中国 广东 深圳」），与设计�
 - 新设备限流键复用 `ActionThrottleScript.keyHash`（32 位十六进制）。
 - `SessionTerminator` 在领域层不打日志（领域禁 slf4j），记录缺失静默跳过。
 - 来源解析放在凭据 / 字段校验通过之后、事务之前：失败的登录不做无用解析。
-- `RequestOrigin` 的 IPv6 保留原写法的小写，不展开成全零形式；IPv4 映射地址还原成 IPv4。
+- `RequestOrigin` 的 IPv6 规范成 RFC 5952 写法（去前导零、最长一段连续零压成 `::`），同一地址只有一种写法（代码评审后由「保留原写法的小写」改来：经网关转来的是展开形式）；IPv4 映射地址还原成 IPv4。
 
 **整分支评审（opus，2026-10-22）**：无 Critical。修了：I1 只有登录与注册的登录记录规范化了 IP，注册、找回密码、改邮箱等其余用例仍拿原始 `getRemoteAddr()` 入库与当限流键（超长值写 `requested_ip` 失败、伪造值绕过按 IP 限流）→ 适配器层统一 `ClientIp.from(request)`，`LoginDeviceFlowIT` 两条超长 XFF 用例 RED→GREEN；I2 PAP-101 的「丢掉入站 XFF」改为强制条款（第 6.2、21 节）；`ClientOriginResolver` 兜住端口的运行时异常（安全通知在提交之后才解析，抛出会让已生效的操作回 500）；`SessionStoreAdapter` 一处 Javadoc 错位。延后的 Minor 见交接笔记。
 - 登录现在会发新设备提醒：流程测试的 `mailFor` 与 `EmailVerificationFlowIT.waitForMail` 改为按收件人 / 主题等邮件，不按总封数。

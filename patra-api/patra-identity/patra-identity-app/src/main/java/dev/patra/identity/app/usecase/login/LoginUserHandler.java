@@ -179,7 +179,8 @@ public class LoginUserHandler implements CommandHandler<LoginUserCommand, Authen
         .orElse(false);
   }
 
-  /// 新设备登录：取 24 小时限流，放行才发提醒。限流的 Redis 不可用只记日志：提醒不能挡住登录。
+  /// 新设备登录：取 24 小时限流，放行才发提醒；发信被拒（队列满、已停机）时退还冷却。
+  /// 限流的 Redis 不可用只记日志：提醒不能挡住登录。
   ///
   /// @param account 账号信息
   /// @param client 客户端信息
@@ -197,12 +198,22 @@ public class LoginUserHandler implements CommandHandler<LoginUserCommand, Authen
     if (!allowed) {
       return;
     }
-    emailDelivery.send(
-        NewDeviceLoginMail.of(
-            EmailAddress.of(account.email()),
-            account.displayName(),
-            origin.toNotice(now, NewDeviceLoginMail.NOT_ME_ADVICE)));
-    log.info("已发新设备登录提醒: userId={}", account.userId());
+    boolean accepted =
+        emailDelivery.send(
+            NewDeviceLoginMail.of(
+                EmailAddress.of(account.email()),
+                account.displayName(),
+                origin.toNotice(now, NewDeviceLoginMail.NOT_ME_ADVICE)));
+    if (accepted) {
+      log.info("已发新设备登录提醒: userId={}", account.userId());
+      return;
+    }
+    // 这封被丢掉了：退还冷却，否则这台设备 24 小时内再登录也不会提醒
+    try {
+      newDeviceThrottle.reset(account.userId(), client.device().orElse(null));
+    } catch (RuntimeException e) {
+      log.warn("新设备提醒没发出，退还冷却也失败: userId={}, {}", account.userId(), e.getMessage());
+    }
   }
 
   /// 校验密码。用户或凭据不存在时拿假哈希校验一次，然后返回 `false`。

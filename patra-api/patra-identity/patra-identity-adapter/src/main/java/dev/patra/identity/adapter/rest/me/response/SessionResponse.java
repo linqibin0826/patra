@@ -1,6 +1,6 @@
 package dev.patra.identity.adapter.rest.me.response;
 
-import dev.patra.identity.app.usecase.session.SessionView;
+import dev.patra.identity.app.usecase.session.query.SessionView;
 import dev.patra.identity.domain.model.enums.DeviceClass;
 import java.time.Instant;
 import lombok.Builder;

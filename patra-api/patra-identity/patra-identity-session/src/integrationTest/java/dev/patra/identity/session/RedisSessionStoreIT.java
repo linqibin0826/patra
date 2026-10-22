@@ -494,9 +494,6 @@ class RedisSessionStoreIT {
         .isEqualTo(Instant.EPOCH);
   }
 
-  /// 找一个当前没人监听的端口。
-  ///
-  /// @return 端口号
   @Test
   @DisplayName("按用户列出：只返回这个用户还活着的会话")
   void should_list_live_sessions_of_user() {
@@ -547,11 +544,28 @@ class RedisSessionStoreIT {
   }
 
   @Test
+  @DisplayName("按用户列出：缺 expires_at 的会话当悬空条目清掉，不让整个列表报错")
+  void should_prune_session_without_expiry_when_listing() {
+    SessionToken broken = store.create(newSession(76L, 9001L).build()).token();
+    store.create(newSession(76L, 9002L).build());
+    redis.opsForHash().delete("idn:session:user:" + broken.hash(), "expires_at");
+
+    List<StoredSession> listed = store.list(AccountType.USER, 76L);
+
+    assertThat(listed).extracting(StoredSession::sessionId).containsExactly(9002L);
+    assertThat(redis.opsForHash().keys("idn:user-sessions:user:76")).containsExactly("9002");
+    assertThat(redis.hasKey("idn:session:user:" + broken.hash())).isFalse();
+  }
+
+  @Test
   @DisplayName("按用户列出：没有会话时返回空列表")
   void should_return_empty_list_for_user_without_sessions() {
     assertThat(store.list(AccountType.USER, 75L)).isEmpty();
   }
 
+  /// 找一个当前没人监听的端口。
+  ///
+  /// @return 端口号
   static int closedPort() {
     try (ServerSocket socket = new ServerSocket(0)) {
       return socket.getLocalPort();

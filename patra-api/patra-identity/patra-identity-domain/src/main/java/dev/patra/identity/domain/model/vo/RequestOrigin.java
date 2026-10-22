@@ -42,7 +42,7 @@ public record RequestOrigin(String ip, String userAgent) {
   }
 
   /// IP：去方括号与首尾空白，只收字面量（`InetAddress.ofLiteral` 不做 DNS）；IPv4 映射地址还原成 IPv4，
-  /// IPv6 保留原写法的小写。
+  /// IPv6 规范成 RFC 5952 的写法（同一地址只有一种写法，经网关转来的展开形式也一样）。
   ///
   /// @param raw 原值
   /// @return 规范文本；不合法时为 `null`
@@ -66,7 +66,47 @@ public record RequestOrigin(String ip, String userAgent) {
     if (address instanceof Inet4Address) {
       return address.getHostAddress();
     }
-    return value.toLowerCase(Locale.ROOT);
+    int scope = value.indexOf('%');
+    String zone = scope < 0 ? "" : value.substring(scope).toLowerCase(Locale.ROOT);
+    return rfc5952(address.getAddress()) + zone;
+  }
+
+  /// IPv6 的 RFC 5952 写法：每组小写十六进制、去前导零；最长的一段（至少两组）连续零压成 `::`，
+  /// 一样长时压第一段。
+  ///
+  /// @param bytes 16 字节地址
+  /// @return 文本，不带区域标识
+  private static String rfc5952(byte[] bytes) {
+    int[] groups = new int[8];
+    for (int i = 0; i < groups.length; i++) {
+      groups[i] = ((bytes[2 * i] & 0xff) << 8) | (bytes[2 * i + 1] & 0xff);
+    }
+    int bestStart = -1;
+    int bestLength = 1;
+    for (int i = 0; i < groups.length; i++) {
+      int length = 0;
+      while (i + length < groups.length && groups[i + length] == 0) {
+        length++;
+      }
+      if (length > bestLength) {
+        bestStart = i;
+        bestLength = length;
+      }
+      i += length;
+    }
+    StringBuilder text = new StringBuilder();
+    for (int i = 0; i < groups.length; i++) {
+      if (i == bestStart) {
+        text.append("::");
+        i += bestLength - 1;
+        continue;
+      }
+      if (!text.isEmpty() && text.charAt(text.length() - 1) != ':') {
+        text.append(':');
+      }
+      text.append(Integer.toHexString(groups[i]));
+    }
+    return text.toString();
   }
 
   /// UA：去掉控制字符，按码点截到 {@link #USER_AGENT_MAX_LENGTH}；空白当 `null`。

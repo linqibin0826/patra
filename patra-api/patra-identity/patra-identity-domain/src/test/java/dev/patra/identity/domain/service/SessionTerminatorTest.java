@@ -3,8 +3,10 @@ package dev.patra.identity.domain.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -18,7 +20,6 @@ import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.ClientType;
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -37,7 +38,7 @@ class SessionTerminatorTest {
   void should_end_records_of_revoked_sessions_with_reason() {
     UserLoginRecord first = open(7001L);
     when(sessions.revokeAllExcept(AccountType.USER, 42L, 7000L)).thenReturn(List.of(7001L));
-    when(records.findById(7001L)).thenReturn(Optional.of(first));
+    when(records.findAllByIds(List.of(7001L))).thenReturn(List.of(first));
 
     List<Long> ended =
         terminator.terminateAllExcept(42L, 7000L, LoginEndReason.PASSWORD_CHANGED, NOW);
@@ -49,12 +50,35 @@ class SessionTerminatorTest {
   }
 
   @Test
+  @DisplayName("一次批量取出全部被撤销的记录，不逐条查")
+  void should_load_revoked_records_in_one_query() {
+    when(sessions.revokeAll(AccountType.USER, 42L)).thenReturn(List.of(7001L, 7002L, 7003L));
+    when(records.findAllByIds(List.of(7001L, 7002L, 7003L)))
+        .thenReturn(List.of(open(7001L), open(7002L), open(7003L)));
+
+    terminator.terminateAll(42L, LoginEndReason.PASSWORD_RESET, NOW);
+
+    verify(records).findAllByIds(List.of(7001L, 7002L, 7003L));
+    verify(records, never()).findById(anyLong());
+    verify(records, times(3)).save(any(UserLoginRecord.class));
+  }
+
+  @Test
+  @DisplayName("没有被撤销的会话：不查记录")
+  void should_not_query_records_when_nothing_revoked() {
+    when(sessions.revokeAll(AccountType.USER, 42L)).thenReturn(List.of());
+
+    assertThat(terminator.terminateAll(42L, LoginEndReason.BANNED, NOW)).isEmpty();
+
+    verifyNoInteractions(records);
+  }
+
+  @Test
   @DisplayName("撤销全部会话：记录缺失的跳过")
   void should_skip_missing_records() {
     UserLoginRecord present = open(7002L);
     when(sessions.revokeAll(AccountType.USER, 42L)).thenReturn(List.of(7001L, 7002L));
-    when(records.findById(7001L)).thenReturn(Optional.empty());
-    when(records.findById(7002L)).thenReturn(Optional.of(present));
+    when(records.findAllByIds(List.of(7001L, 7002L))).thenReturn(List.of(present));
 
     assertThat(terminator.terminateAll(42L, LoginEndReason.BANNED, NOW))
         .containsExactly(7001L, 7002L);
@@ -69,7 +93,7 @@ class SessionTerminatorTest {
     UserLoginRecord ended = open(7003L);
     ended.end(LoginEndReason.LOGOUT, NOW.minusSeconds(5));
     when(sessions.revoke(AccountType.USER, 42L, 7003L)).thenReturn(true);
-    when(records.findById(7003L)).thenReturn(Optional.of(ended));
+    when(records.findAllByIds(List.of(7003L))).thenReturn(List.of(ended));
 
     assertThat(terminator.terminate(42L, 7003L, LoginEndReason.REVOKED, NOW)).isTrue();
 

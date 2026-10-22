@@ -1,4 +1,4 @@
--- 按用户列出还活着的会话，不续期。顺手清掉悬空条目和已过绝对期的会话。
+-- 按用户列出还活着的会话，不续期。顺手清掉悬空条目、缺 expires_at 的残缺会话和已过绝对期的会话。
 -- KEYS[1] 用户的会话索引（HASH：session_id → 令牌哈希）
 -- ARGV[1] 会话键前缀  ARGV[2] 当前时间（epoch 毫秒）
 -- 返回：每条会话一个 HGETALL 扁平数组；没有会话时是空表（Lettuce 把 false 解成 [null]）
@@ -20,7 +20,7 @@ for i = 1, #entries, 2 do
         expiresAt = tonumber(fields[j + 1])
       end
     end
-    if now >= expiresAt then
+    if expiresAt == nil or now >= expiresAt then
       redis.call('DEL', key)
       redis.call('HDEL', index, sid)
     else

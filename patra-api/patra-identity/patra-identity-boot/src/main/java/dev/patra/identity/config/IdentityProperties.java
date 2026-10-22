@@ -119,11 +119,8 @@ public record IdentityProperties(
   ///
   /// @param maxSessionsPerUser 每用户的会话上限，所有账号类型一个数
   /// @param lifetime 有效期，两层键分别是账号类型和客户端类型的 `code`，比如 `user.web`
-  /// @param recordRetention 登录记录结束或过期之后保留多久再删（PAP-99；《网络安全法》日志留存 ≥ 6 个月）
   public record Session(
-      @DefaultValue("10") int maxSessionsPerUser,
-      Map<String, Map<String, Lifetime>> lifetime,
-      @DefaultValue("190d") Duration recordRetention) {
+      @DefaultValue("10") int maxSessionsPerUser, Map<String, Map<String, Lifetime>> lifetime) {
 
     /// 拷贝有效期表；没配时是空表。
     public Session {

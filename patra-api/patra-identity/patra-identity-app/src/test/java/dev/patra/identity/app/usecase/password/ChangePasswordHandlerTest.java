@@ -144,8 +144,7 @@ class ChangePasswordHandlerTest {
     when(sessions.rotate(AccountType.USER, 42L, 7001L, Duration.ZERO))
         .thenReturn(Optional.of(SessionRotation.rotated(NEW_TOKEN)));
     when(sessions.revokeAllExcept(AccountType.USER, 42L, 7001L)).thenReturn(List.of(7002L, 7003L));
-    when(records.findById(7002L)).thenReturn(Optional.of(record()));
-    when(records.findById(7003L)).thenReturn(Optional.of(record()));
+    when(records.findAllByIds(List.of(7002L, 7003L))).thenReturn(List.of(record(), record()));
     when(userReadPort.findAccount(42L)).thenReturn(Optional.of(ACCOUNT));
   }
 

@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -125,6 +126,24 @@ class SmtpEmailDeliveryAdapterTest {
     verify(mailSender, never()).send(any(MimeMessage.class));
     tasks.getFirst().run();
     verify(mailSender).send(any(MimeMessage.class));
+  }
+
+  @Test
+  @DisplayName("交给执行器返回 true；执行器拒绝（队列满、已停机）返回 false，不抛出")
+  void should_report_whether_executor_accepted_the_mail() {
+    SmtpEmailDeliveryAdapter accepting =
+        new SmtpEmailDeliveryAdapter(mailSender, renderer, FROM, task -> {});
+    SmtpEmailDeliveryAdapter rejecting =
+        new SmtpEmailDeliveryAdapter(
+            mailSender,
+            renderer,
+            FROM,
+            task -> {
+              throw new RejectedExecutionException("队列满");
+            });
+
+    assertThat(accepting.send(mail)).isTrue();
+    assertThat(rejecting.send(mail)).isFalse();
   }
 
   @Test

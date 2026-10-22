@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.groups.Tuple.tuple;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -37,6 +38,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -88,8 +90,12 @@ class VerifyEmailHandlerTest {
     when(users.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     when(sessions.revokeAllExcept(AccountType.USER, 42L, 7L)).thenReturn(List.of(5L, 6L));
     when(sessions.revokeAll(AccountType.USER, 42L)).thenReturn(List.of(5L, 6L, 7L));
-    when(records.findById(anyLong()))
-        .thenAnswer(invocation -> Optional.of(openLogin(invocation.getArgument(0))));
+    when(records.findAllByIds(anyCollection()))
+        .thenAnswer(
+            invocation ->
+                invocation.<Collection<Long>>getArgument(0).stream()
+                    .map(VerifyEmailHandlerTest::openLogin)
+                    .toList());
     when(records.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
   }
 

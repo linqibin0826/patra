@@ -344,4 +344,4 @@ patra:
 | 数据在哪 | 规则在 jar 里 | 宿主机 `~/.patra/data/ip2region/`，只读挂进容器 `/data/ip2region`；缺文件或不兼容启动失败 |
 | 更新 | 改 `gradle/libs.versions.toml` 的版本，跑 `YauaaUserAgentParsingAdapterTest` | 按季度看一次上游：改 `patra-infra/scripts/ip2region.properties` 的 tag 与两个 SHA-256 → 跑 `Ip2RegionGeolocationAdapterTest`（`downloadIp2RegionData` 任务按同一文件下载测试数据）→ 提交 → mini 上 `git pull` 后重跑 `fetch-ip2region.sh`、重启 identity |
 
-测试：identity-infra 与 identity-boot 的测试任务依赖 `downloadIp2RegionData`（下到 `patra-identity-infra/build/ip2region/`，校验 SHA-256、增量缓存），用系统属性 `patra.identity.ip-geolocation.directory` 指过去。
+测试：identity-infra 的 `downloadIp2RegionData` 下到 Gradle 用户目录的 `caches/patra/ip2region/<tag>/`（校验 SHA-256；文件已在且校验和对得上直接跳过，`clean` 不用重下；连接 30 秒、读取 60 秒超时），经 consumable configuration `ip2regionData` 提供给 identity-boot；两个模块的测试任务用系统属性 `patra.identity.ip-geolocation.directory` 指过去，目录登记为测试输入。

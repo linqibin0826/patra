@@ -62,4 +62,19 @@ class RequestOriginTest {
   void should_normalize_ip_literal(String raw, String expected) {
     assertThat(RequestOrigin.of(raw, null).ip()).isEqualTo(expected);
   }
+
+  @ParameterizedTest
+  @CsvSource({
+    "2408:8207:0:0:0:0:0:1, 2408:8207::1",
+    "2001:0DB8:0000:0000:0001:0000:0000:0001, 2001:db8::1:0:0:1",
+    "2001:db8:0:0:1:0:0:0, 2001:db8:0:0:1::",
+    "2001:db8:0:1:1:1:1:1, 2001:db8:0:1:1:1:1:1",
+    "0:0:0:0:0:0:0:1, ::1",
+    "0:0:0:0:0:0:0:0, ::",
+    "fe80:0:0:0:0:0:0:1%1, fe80::1%1"
+  })
+  @DisplayName("IPv6 规范成 RFC 5952：去前导零、最长的一段连续零压成 ::（一样长取第一段，单个零不压）")
+  void should_normalize_ipv6_to_rfc5952(String raw, String expected) {
+    assertThat(RequestOrigin.of(raw, null).ip()).isEqualTo(expected);
+  }
 }

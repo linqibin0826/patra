@@ -128,9 +128,9 @@ class ResetPasswordHandlerTest {
             invocation -> Optional.of(UserPasswordCredential.restore(7L, 42L, OLD_HASH, 0L)));
     when(credentials.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     when(sessions.revokeAll(AccountType.USER, 42L)).thenReturn(List.of(7001L));
-    when(records.findById(7001L))
+    when(records.findAllByIds(List.of(7001L)))
         .thenReturn(
-            Optional.of(
+            List.of(
                 UserLoginRecord.start(
                     42L,
                     LoginClient.of("web", null),

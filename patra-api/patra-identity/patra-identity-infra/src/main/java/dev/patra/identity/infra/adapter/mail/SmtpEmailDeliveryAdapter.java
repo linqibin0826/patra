@@ -79,13 +79,16 @@ public final class SmtpEmailDeliveryAdapter implements EmailDeliveryPort, AutoCl
   /// 异步发一封邮件，立即返回。执行器拒绝（队列满、已停机）时这封丢掉，只记 WARN。
   ///
   /// @param mail 要发的邮件
+  /// @return 交给了执行器为 `true`；被拒绝为 `false`
   @Override
-  public void send(OutgoingMail mail) {
+  public boolean send(OutgoingMail mail) {
     Objects.requireNonNull(mail, "mail 不能为 null");
     try {
       executor.execute(() -> deliver(mail));
+      return true;
     } catch (RejectedExecutionException e) {
       log.warn("邮件发送队列已满或已停机，这封丢弃: template={}", mail.template(), e);
+      return false;
     }
   }
 

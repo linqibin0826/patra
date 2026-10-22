@@ -1,6 +1,6 @@
 package dev.patra.identity.adapter.rest.me.response;
 
-import dev.patra.identity.app.usecase.session.SessionView;
+import dev.patra.identity.app.usecase.session.query.SessionView;
 import java.util.List;
 
 /// 登录设备列表：本机第一，其余按最后活跃倒序。

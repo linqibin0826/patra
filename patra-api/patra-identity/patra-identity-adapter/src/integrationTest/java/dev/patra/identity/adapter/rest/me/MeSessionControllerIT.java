@@ -8,9 +8,9 @@ import static org.mockito.Mockito.when;
 
 import dev.patra.identity.app.usecase.session.RevokeOtherSessionsCommand;
 import dev.patra.identity.app.usecase.session.RevokeSessionCommand;
-import dev.patra.identity.app.usecase.session.SessionQueryService;
-import dev.patra.identity.app.usecase.session.SessionView;
 import dev.patra.identity.app.usecase.session.SessionsRevoked;
+import dev.patra.identity.app.usecase.session.query.SessionQueryService;
+import dev.patra.identity.app.usecase.session.query.SessionView;
 import dev.patra.identity.domain.exception.CurrentSessionRevocationException;
 import dev.patra.identity.domain.model.enums.DeviceClass;
 import dev.patra.tool.cqrs.CommandBus;

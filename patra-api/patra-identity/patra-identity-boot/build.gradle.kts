@@ -38,13 +38,13 @@ dependencies {
     testImplementation(testFixtures(project(":patra-tool:patra-tool-security")))
 }
 
-// 装配了 ip2region 适配器的测试上下文要有数据文件（PAP-99）：用 infra 按 ip2region.properties 下好的那份
+// 装配了 ip2region 适配器的测试上下文要有数据文件（PAP-99）：用 infra 按 ip2region.properties 下好的那份，
+// 经 infra 对外提供的 ip2regionData 取得（下载任务自动排在测试之前，目录内容是测试的输入）
+val ip2regionDataScope = configurations.dependencyScope("ip2regionData")
+val ip2regionData = configurations.resolvable("ip2regionDataFiles") { extendsFrom(ip2regionDataScope.get()) }
+dependencies {
+    "ip2regionData"(project(path = ":patra-api:patra-identity:patra-identity-infra", configuration = "ip2regionData"))
+}
 tasks.withType<Test>().configureEach {
-    dependsOn(":patra-api:patra-identity:patra-identity-infra:downloadIp2RegionData")
-    systemProperty(
-        "patra.identity.ip-geolocation.directory",
-        rootProject.layout.projectDirectory
-            .dir("patra-api/patra-identity/patra-identity-infra/build/ip2region")
-            .asFile.absolutePath,
-    )
+    jvmArgumentProviders.add(DirectorySystemProperty("patra.identity.ip-geolocation.directory", ip2regionData.get()))
 }

@@ -125,8 +125,7 @@ class BanUserHandlerTest {
             .createdAt(NOW)
             .updatedAt(NOW)
             .build();
-    when(records.findById(7001L)).thenReturn(Optional.of(first));
-    when(records.findById(7002L)).thenReturn(Optional.empty());
+    when(records.findAllByIds(List.of(7001L, 7002L))).thenReturn(List.of(first));
 
     handler.handle(BanUserCommand.of(42L));
 

@@ -4,7 +4,7 @@ import dev.patra.identity.adapter.rest.me.response.SessionListResponse;
 import dev.patra.identity.adapter.rest.me.response.SessionsRevokedResponse;
 import dev.patra.identity.app.usecase.session.RevokeOtherSessionsCommand;
 import dev.patra.identity.app.usecase.session.RevokeSessionCommand;
-import dev.patra.identity.app.usecase.session.SessionQueryService;
+import dev.patra.identity.app.usecase.session.query.SessionQueryService;
 import dev.patra.tool.cqrs.CommandBus;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

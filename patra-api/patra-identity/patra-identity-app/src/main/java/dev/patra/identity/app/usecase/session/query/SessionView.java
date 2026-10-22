@@ -1,4 +1,4 @@
-package dev.patra.identity.app.usecase.session;
+package dev.patra.identity.app.usecase.session.query;
 
 import dev.patra.identity.domain.model.enums.DeviceClass;
 import java.time.Instant;
