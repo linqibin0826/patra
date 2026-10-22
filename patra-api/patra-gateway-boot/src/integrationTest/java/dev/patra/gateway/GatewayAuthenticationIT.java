@@ -478,6 +478,32 @@ class GatewayAuthenticationIT {
         .doesNotContain("203.0.113.9");
   }
 
+  /// 「仅登录用户可见」的主页靠这一点：公开路由上带令牌来的请求，下游照样拿到身份断言（PAP-95）。
+  @Test
+  void should_forward_public_user_page_with_assertion_when_logged_in() {
+    String token = GatewayITSessions.issue(sessions, 4231L, 9231L);
+    identity.stubFor(
+        get(urlPathEqualTo("/users/chen-yu")).willReturn(okJson("{\"username\":\"chen-yu\"}")));
+
+    restClient
+        .get()
+        .uri("/patra-identity/users/chen-yu")
+        .header(HttpHeaders.AUTHORIZATION, BEARER + token)
+        .exchange()
+        .expectStatus()
+        .isOk();
+
+    List<LoggedRequest> received =
+        identity.findAll(getRequestedFor(urlPathEqualTo("/users/chen-yu")));
+    assertThat(received).hasSize(1);
+    String authorization = received.getFirst().getHeader(HttpHeaders.AUTHORIZATION);
+    assertThat(authorization).startsWith(BEARER).doesNotContain(token);
+    assertThat(
+            IdentityAssertionClaims.toCurrentUser(
+                decoder.decode(authorization.substring(BEARER.length()))))
+        .isEqualTo(CurrentUser.of(4231L, 9231L, AccountType.USER, ClientType.WEB));
+  }
+
   @Test
   void should_forward_public_user_page_anonymously() {
     identity.stubFor(
