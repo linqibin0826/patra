@@ -55,6 +55,7 @@ patra:
       reservation-period: 90d    # 旧名保留多久：期间只有原主能改回，/users/旧名 跳到新名
     session:
       max-sessions-per-user: 10
+      record-retention: 190d             # 登录记录结束或过期满这么久后由 loginRecordCleanupJob 删除（日志留存 ≥ 6 个月）
       lifetime:
         user:
           web:
