@@ -248,4 +248,105 @@ class UserLoginRecordRepositoryAdapterIT {
         .isInstanceOf(UserModifiedConcurrentlyException.class)
         .hasMessage("用户正被其他操作修改，请重试");
   }
+
+  @Test
+  @DisplayName("按 ID 批量查：只返回存在的")
+  void should_find_records_by_ids() {
+    long userId = newUser("by.ids");
+    UserLoginRecord first = records.save(start(userId, DEVICE, EXPIRES_AT));
+    UserLoginRecord second = records.save(start(userId, null, EXPIRES_AT));
+
+    assertThat(records.findAllByIds(List.of(first.getId(), second.getId(), 1L)))
+        .extracting(UserLoginRecord::getId)
+        .containsExactlyInAnyOrder(first.getId(), second.getId());
+    assertThat(records.findAllByIds(List.of())).isEmpty();
+  }
+
+  @Test
+  @DisplayName("见过这台设备：同账号同设备、结束或过期时刻在窗口内、不是被踢掉的")
+  void should_tell_whether_device_was_seen() {
+    Instant since = Instant.parse("2026-10-01T00:00:00Z");
+    DeviceId device = new DeviceId(DEVICE);
+    long open = newUser("seen.open");
+    records.save(start(open, DEVICE, EXPIRES_AT));
+    long stale = newUser("seen.stale");
+    records.save(ended(stale, Instant.parse("2026-09-30T23:59:59Z"), LoginEndReason.LOGOUT));
+    long kicked = newUser("seen.kicked");
+    records.save(ended(kicked, Instant.parse("2026-10-10T00:00:00Z"), LoginEndReason.REVOKED));
+    long changed = newUser("seen.changed");
+    records.save(
+        ended(changed, Instant.parse("2026-10-10T00:00:00Z"), LoginEndReason.PASSWORD_CHANGED));
+    long stranger = newUser("seen.stranger");
+
+    assertThat(records.existsTrustedDevice(open, device, since)).isTrue();
+    assertThat(records.existsTrustedDevice(stale, device, since)).isFalse();
+    assertThat(records.existsTrustedDevice(kicked, device, since)).isFalse();
+    assertThat(records.existsTrustedDevice(changed, device, since)).isTrue();
+    assertThat(records.existsTrustedDevice(stranger, device, since)).isFalse();
+  }
+
+  @Test
+  @DisplayName("按退役时刻批量删：已结束看结束时刻，未结束看绝对过期，分批返回删除数")
+  void should_delete_retired_records_in_batches() {
+    Instant cutoff = Instant.parse("2026-06-01T00:00:00Z");
+    long userId = newUser("retire");
+    UserLoginRecord endedLongAgo =
+        records.save(ended(userId, Instant.parse("2026-01-01T00:00:00Z"), LoginEndReason.LOGOUT));
+    UserLoginRecord expiredLongAgo =
+        records.save(start(userId, null, Instant.parse("2026-03-01T00:00:00Z")));
+    UserLoginRecord expiredJustBefore =
+        records.save(start(userId, null, Instant.parse("2026-05-31T23:59:59Z")));
+    UserLoginRecord alive = records.save(start(userId, null, EXPIRES_AT));
+    UserLoginRecord endedRecently =
+        records.save(ended(userId, Instant.parse("2026-06-01T00:00:00Z"), LoginEndReason.LOGOUT));
+
+    assertThat(records.deleteRetiredBefore(cutoff, 2)).isEqualTo(2);
+    assertThat(records.deleteRetiredBefore(cutoff, 2)).isEqualTo(1);
+    assertThat(records.deleteRetiredBefore(cutoff, 2)).isZero();
+
+    assertThat(
+            records.findAllByIds(
+                List.of(
+                    endedLongAgo.getId(),
+                    expiredLongAgo.getId(),
+                    expiredJustBefore.getId(),
+                    alive.getId(),
+                    endedRecently.getId())))
+        .extracting(UserLoginRecord::getId)
+        .containsExactlyInAnyOrder(alive.getId(), endedRecently.getId());
+  }
+
+  /// 建一个用户。
+  ///
+  /// @param name 邮箱本地部分，也用于用户名
+  /// @return 用户 ID
+  private long newUser(String name) {
+    return users
+        .save(
+            User.register(
+                EmailAddress.of(name + "@example.com"), Username.of("u-" + name.replace('.', '-'))))
+        .getId();
+  }
+
+  /// 一条未结束的记录。
+  ///
+  /// @param userId 用户 ID
+  /// @param device 设备标识，可以为 `null`
+  /// @param expiresAt 绝对过期时间
+  /// @return 记录
+  private static UserLoginRecord start(long userId, String device, Instant expiresAt) {
+    return UserLoginRecord.start(userId, LoginClient.of("web", device), UNKNOWN_ORIGIN, expiresAt);
+  }
+
+  /// 一条带设备标识、已结束的记录（绝对过期在很久以后）。
+  ///
+  /// @param userId 用户 ID
+  /// @param endedAt 结束时间
+  /// @param reason 结束原因
+  /// @return 记录
+  private static UserLoginRecord ended(long userId, Instant endedAt, LoginEndReason reason) {
+    UserLoginRecord login = start(userId, DEVICE, EXPIRES_AT);
+    login.end(reason, endedAt);
+    return login;
+  }
 }

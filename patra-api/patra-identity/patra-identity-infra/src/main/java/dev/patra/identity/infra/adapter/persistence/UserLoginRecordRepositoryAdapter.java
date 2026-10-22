@@ -2,11 +2,15 @@ package dev.patra.identity.infra.adapter.persistence;
 
 import dev.patra.identity.domain.exception.UserModifiedConcurrentlyException;
 import dev.patra.identity.domain.model.aggregate.UserLoginRecord;
+import dev.patra.identity.domain.model.vo.DeviceId;
 import dev.patra.identity.domain.port.repository.UserLoginRecordRepository;
 import dev.patra.identity.infra.adapter.persistence.converter.mapper.UserLoginRecordJpaMapper;
 import dev.patra.identity.infra.adapter.persistence.dao.UserLoginRecordDao;
 import dev.patra.identity.infra.adapter.persistence.entity.UserLoginRecordEntity;
 import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
+import java.time.Instant;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -46,5 +50,38 @@ public class UserLoginRecordRepositoryAdapter implements UserLoginRecordReposito
   @Override
   public Optional<UserLoginRecord> findById(long id) {
     return dao.findById(id).map(mapper::toAggregate);
+  }
+
+  /// 按 ID 批量查。
+  ///
+  /// @param ids 记录 ID
+  /// @return 存在的记录
+  @Override
+  public List<UserLoginRecord> findAllByIds(Collection<Long> ids) {
+    if (ids.isEmpty()) {
+      return List.of();
+    }
+    return dao.findAllById(ids).stream().map(mapper::toAggregate).toList();
+  }
+
+  /// 是否见过这台设备。
+  ///
+  /// @param userId 用户 ID
+  /// @param deviceId 设备标识
+  /// @param since 回看窗口的起点
+  /// @return 见过时为 `true`
+  @Override
+  public boolean existsTrustedDevice(long userId, DeviceId deviceId, Instant since) {
+    return dao.existsTrustedDevice(userId, deviceId.value(), since);
+  }
+
+  /// 按退役时刻删一批。
+  ///
+  /// @param cutoff 截止时间
+  /// @param batchSize 一批最多几行
+  /// @return 删了几行
+  @Override
+  public int deleteRetiredBefore(Instant cutoff, int batchSize) {
+    return dao.deleteRetiredBefore(cutoff, batchSize);
   }
 }
