@@ -82,6 +82,17 @@ public class EmailTokenRepositoryAdapter implements EmailTokenRepository {
     return dao.findByTokenHash(tokenHash).map(mapper::toAggregate);
   }
 
+  /// 查有效令牌。
+  ///
+  /// @param userId 用户 ID
+  /// @param purpose 用途
+  /// @param now 判过期的基准
+  /// @return 令牌
+  @Override
+  public Optional<EmailToken> findActive(long userId, EmailTokenPurpose purpose, Instant now) {
+    return dao.findActive(userId, purpose.name(), now).map(mapper::toAggregate);
+  }
+
   /// 条件消费。绕过 JPA 直接改库：同一事务里之前按哈希查出的实体不会跟着变，调用方用返回值，不要再读旧实例。
   ///
   /// @param tokenHash 令牌哈希

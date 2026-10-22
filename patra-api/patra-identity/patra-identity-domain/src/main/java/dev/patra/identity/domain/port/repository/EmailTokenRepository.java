@@ -26,6 +26,15 @@ public interface EmailTokenRepository {
   /// @return 令牌；不存在时为空
   Optional<EmailToken> findByTokenHash(String tokenHash);
 
+  /// 查一个用户某种用途的有效令牌：未消费、未作废、`expires_at > now`。同用途至多一条（部分唯一索引），
+  /// 改邮箱的「待确认」状态就是这么查出来的；撤销令牌可并存，不用它查。
+  ///
+  /// @param userId 用户 ID
+  /// @param purpose 用途
+  /// @param now 当前时间，判过期的基准
+  /// @return 有效令牌；没有时为空
+  Optional<EmailToken> findActive(long userId, EmailTokenPurpose purpose, Instant now);
+
   /// 消费一枚令牌：一条带条件的 `UPDATE … RETURNING`，只有哈希、用途都对且没消费、没作废、没过期的行才会被
   /// 更新。两个请求同时消费同一枚令牌只有一个成功。
   ///

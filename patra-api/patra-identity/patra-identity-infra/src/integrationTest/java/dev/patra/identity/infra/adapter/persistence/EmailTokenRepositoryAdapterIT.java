@@ -254,6 +254,36 @@ class EmailTokenRepositoryAdapterIT {
         .isInstanceOf(UserModifiedConcurrentlyException.class);
   }
 
+  @Test
+  @DisplayName("查有效令牌：只返回未消费、未作废、未过期的那条；别的用途查不到")
+  void should_find_active_token_only_when_unused_unrevoked_and_unexpired() {
+    EmailToken consumed =
+        tokens.save(
+            issued(EmailTokenPurpose.EMAIL_CHANGE_CONFIRM, EmailTokenSecret.generate(RANDOM), NOW));
+    tokens.consume(
+        consumed.getTokenHash(), EmailTokenPurpose.EMAIL_CHANGE_CONFIRM, NOW.plusSeconds(1));
+    EmailToken active =
+        tokens.save(
+            issued(EmailTokenPurpose.EMAIL_CHANGE_CONFIRM, EmailTokenSecret.generate(RANDOM), NOW));
+
+    assertThat(
+            tokens.findActive(userId, EmailTokenPurpose.EMAIL_CHANGE_CONFIRM, NOW.plusSeconds(2)))
+        .map(EmailToken::getId)
+        .contains(active.getId());
+    assertThat(
+            tokens.findActive(
+                userId, EmailTokenPurpose.EMAIL_CHANGE_CONFIRM, active.getExpiresAt()))
+        .isEmpty();
+    assertThat(tokens.findActive(userId, EmailTokenPurpose.PASSWORD_RESET, NOW.plusSeconds(2)))
+        .isEmpty();
+    assertThat(
+            tokens.revokeActive(userId, EmailTokenPurpose.EMAIL_CHANGE_CONFIRM, NOW.plusSeconds(3)))
+        .isEqualTo(1);
+    assertThat(
+            tokens.findActive(userId, EmailTokenPurpose.EMAIL_CHANGE_CONFIRM, NOW.plusSeconds(4)))
+        .isEmpty();
+  }
+
   /// 给当前用户签发一枚令牌，不保存。
   ///
   /// @param purpose 用途

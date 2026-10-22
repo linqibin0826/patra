@@ -75,4 +75,16 @@ class UserPasswordCredentialRepositoryAdapterIT {
     assertThatThrownBy(() -> credentials.save(UserPasswordCredential.create(user.getId(), HASH)))
         .isInstanceOf(DataIntegrityViolationException.class);
   }
+
+  @Test
+  @DisplayName("按用户删凭据：删掉返回真，再删返回假")
+  void should_delete_credential_by_user_id_and_report_whether_a_row_existed() {
+    User user =
+        users.save(User.register(EmailAddress.of("delete@example.com"), Username.of("u-delete")));
+    credentials.save(UserPasswordCredential.create(user.getId(), HASH));
+
+    assertThat(credentials.deleteByUserId(user.getId())).isTrue();
+    assertThat(credentials.findByUserId(user.getId())).isEmpty();
+    assertThat(credentials.deleteByUserId(user.getId())).isFalse();
+  }
 }

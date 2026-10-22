@@ -27,6 +27,17 @@ public class UserPasswordCredentialRepositoryAdapter implements UserPasswordCred
     return dao.findByUserId(userId).map(mapper::toAggregate);
   }
 
+  /// 按用户 ID 删凭据，立刻刷到库里。
+  ///
+  /// @param userId 用户 ID
+  /// @return 真的删掉了一行时为 `true`
+  @Override
+  public boolean deleteByUserId(long userId) {
+    int deleted = dao.deleteByUserId(userId);
+    dao.flush();
+    return deleted > 0;
+  }
+
   /// 保存凭据，新凭据分配雪花 ID。
   ///
   /// @param credential 凭据

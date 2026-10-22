@@ -17,6 +17,18 @@ public interface EmailTokenDao extends JpaRepository<EmailTokenEntity, Long> {
   /// @return 实体
   Optional<EmailTokenEntity> findByTokenHash(String tokenHash);
 
+  /// 查一个用户某种用途的有效令牌：未消费、未作废、未过期。
+  ///
+  /// @param userId 用户 ID
+  /// @param purpose 用途
+  /// @param now 判过期的基准
+  /// @return 实体
+  @Query(
+      "select t from EmailTokenEntity t where t.userId = :userId and t.purpose = :purpose"
+          + " and t.consumedAt is null and t.revokedAt is null and t.expiresAt > :now")
+  Optional<EmailTokenEntity> findActive(
+      @Param("userId") Long userId, @Param("purpose") String purpose, @Param("now") Instant now);
+
   /// 作废一个用户某种用途的全部有效令牌。
   ///
   /// @param userId 用户 ID
