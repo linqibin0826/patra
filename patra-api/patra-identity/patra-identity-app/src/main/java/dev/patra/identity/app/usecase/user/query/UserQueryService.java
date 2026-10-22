@@ -9,6 +9,7 @@ import dev.patra.identity.domain.model.read.PublicUserLookup;
 import dev.patra.identity.domain.model.read.PublicUserReadModel;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.model.vo.Username;
+import dev.patra.identity.domain.policy.ProfileDisplayPolicy;
 import dev.patra.identity.domain.port.read.UserReadPort;
 import dev.patra.identity.domain.port.repository.EmailTokenRepository;
 import dev.patra.identity.domain.port.repository.FormerUsernameRepository;
@@ -38,6 +39,7 @@ public class UserQueryService {
   private final UserReadPort userReadPort;
   private final FormerUsernameRepository formerUsernames;
   private final EmailTokenRepository tokens;
+  private final ProfileDisplayPolicy display;
   private final Clock clock;
 
   /// 当前登录用户的账号信息。
@@ -98,7 +100,7 @@ public class UserQueryService {
       if (!user.isVisibleTo(requester)) {
         throw new UserNotFoundException();
       }
-      return PublicUserLookup.Found.of(user);
+      return PublicUserLookup.Found.of(user.viewFor(requester, display));
     }
     FormerUsername former =
         formerUsernames

@@ -20,6 +20,7 @@ import dev.patra.identity.domain.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.EmailTokenSecret;
 import dev.patra.identity.domain.model.vo.Username;
+import dev.patra.identity.domain.policy.ProfileDisplayPolicy;
 import dev.patra.identity.domain.port.read.UserReadPort;
 import dev.patra.identity.domain.port.repository.EmailTokenRepository;
 import dev.patra.identity.domain.port.repository.FormerUsernameRepository;
@@ -53,7 +54,12 @@ class UserQueryServiceTest {
   private final EmailTokenRepository tokens = mock(EmailTokenRepository.class);
   private final UserQueryService service =
       new UserQueryService(
-          currentUserPort, userReadPort, formerUsernames, tokens, Clock.fixed(NOW, ZoneOffset.UTC));
+          currentUserPort,
+          userReadPort,
+          formerUsernames,
+          tokens,
+          ProfileDisplayPolicy.of(ZoneOffset.UTC),
+          Clock.fixed(NOW, ZoneOffset.UTC));
 
   /// 一个账号读模型。
   ///
@@ -176,8 +182,8 @@ class UserQueryServiceTest {
         .isInstanceOfSatisfying(
             PublicUserLookup.Found.class,
             found -> {
-              assertThat(found.user().displayName()).isEqualTo("陈宇");
-              assertThat(found.user().audience()).isEqualTo(PublicAudience.PUBLIC);
+              assertThat(found.view().displayName()).isEqualTo("陈宇");
+              assertThat(found.view().audience()).isEqualTo(PublicAudience.PUBLIC);
             });
   }
 
@@ -209,7 +215,7 @@ class UserQueryServiceTest {
     assertThat(service.publicIdentity("chen-yu"))
         .isInstanceOfSatisfying(
             PublicUserLookup.Found.class,
-            found -> assertThat(found.user().audience()).isEqualTo(PublicAudience.SELF));
+            found -> assertThat(found.view().audience()).isEqualTo(PublicAudience.SELF));
 
     when(userReadPort.findPublicIdentity(CHEN_YU))
         .thenReturn(Optional.of(publicUser("chen-yu", UserStatus.PENDING_DELETION, true)));

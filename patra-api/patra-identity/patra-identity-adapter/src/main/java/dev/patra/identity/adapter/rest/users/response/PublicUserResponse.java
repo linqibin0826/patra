@@ -1,7 +1,7 @@
 package dev.patra.identity.adapter.rest.users.response;
 
 import dev.patra.identity.domain.model.read.PublicAudience;
-import dev.patra.identity.domain.model.read.PublicUserReadModel;
+import dev.patra.identity.domain.model.read.PublicUserView;
 
 /// 公开身份卡的响应体。不含邮箱、ID、状态、任何设置。
 ///
@@ -12,11 +12,11 @@ import dev.patra.identity.domain.model.read.PublicUserReadModel;
 public record PublicUserResponse(
     String username, String displayName, String avatarUrl, PublicAudience audience) {
 
-  /// 从读模型映射。
+  /// 从裁剪后的视图映射。
   ///
-  /// @param user 身份卡读模型
+  /// @param view 公开主页视图
   /// @return 响应
-  public static PublicUserResponse from(PublicUserReadModel user) {
-    return new PublicUserResponse(user.username(), user.displayName(), null, user.audience());
+  public static PublicUserResponse from(PublicUserView view) {
+    return new PublicUserResponse(view.username(), view.displayName(), null, view.audience());
   }
 }

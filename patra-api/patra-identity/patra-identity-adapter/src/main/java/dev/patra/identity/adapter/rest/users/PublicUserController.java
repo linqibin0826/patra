@@ -33,7 +33,7 @@ public class PublicUserController {
   @GetMapping("/{username}")
   public ResponseEntity<Object> byUsername(@PathVariable String username) {
     return switch (userQueryService.publicIdentity(username)) {
-      case PublicUserLookup.Found found -> ResponseEntity.ok(PublicUserResponse.from(found.user()));
+      case PublicUserLookup.Found found -> ResponseEntity.ok(PublicUserResponse.from(found.view()));
       case PublicUserLookup.Moved moved ->
           ResponseEntity.status(HttpStatus.MOVED_PERMANENTLY)
               .location(URI.create("/users/" + moved.current().value()))

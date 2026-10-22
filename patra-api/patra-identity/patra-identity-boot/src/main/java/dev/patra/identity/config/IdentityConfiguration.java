@@ -7,6 +7,7 @@ import dev.patra.identity.domain.policy.LoginThrottlePolicy;
 import dev.patra.identity.domain.policy.MailLinkPolicy;
 import dev.patra.identity.domain.policy.PasswordPolicy;
 import dev.patra.identity.domain.policy.PasswordResetPolicy;
+import dev.patra.identity.domain.policy.ProfileDisplayPolicy;
 import dev.patra.identity.domain.policy.ReauthenticationPolicy;
 import dev.patra.identity.domain.policy.SessionLifetime;
 import dev.patra.identity.domain.policy.SessionLifetimePolicy;
@@ -95,6 +96,15 @@ public class IdentityConfiguration {
   @Bean
   public DisplayNamePolicy displayNamePolicy() {
     return new DisplayNamePolicy();
+  }
+
+  /// 公开主页的展示规则：加入时间按安全通知邮件的同一个展示时区换算到月。
+  ///
+  /// @param properties identity 配置
+  /// @return 规则
+  @Bean
+  public ProfileDisplayPolicy profileDisplayPolicy(IdentityProperties properties) {
+    return ProfileDisplayPolicy.of(ZoneId.of(properties.mail().zone()));
   }
 
   /// 改名策略：冷却与旧名保留期。不是正数时在这里让启动失败。

@@ -5,9 +5,9 @@ import static org.mockito.Mockito.when;
 
 import dev.patra.identity.app.usecase.user.query.UserQueryService;
 import dev.patra.identity.domain.exception.UserNotFoundException;
-import dev.patra.identity.domain.model.enums.UserStatus;
+import dev.patra.identity.domain.model.read.PublicAudience;
 import dev.patra.identity.domain.model.read.PublicUserLookup;
-import dev.patra.identity.domain.model.read.PublicUserReadModel;
+import dev.patra.identity.domain.model.read.PublicUserView;
 import dev.patra.identity.domain.model.vo.Username;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -40,12 +40,10 @@ class PublicUserControllerIT {
     when(userQueryService.publicIdentity("chen-yu"))
         .thenReturn(
             PublicUserLookup.Found.of(
-                PublicUserReadModel.builder()
-                    .userId(42L)
+                PublicUserView.builder()
                     .username("chen-yu")
                     .displayName("陈宇")
-                    .status(UserStatus.ACTIVE)
-                    .emailVerified(true)
+                    .audience(PublicAudience.PUBLIC)
                     .build()));
 
     String body =
