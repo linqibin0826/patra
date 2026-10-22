@@ -342,6 +342,23 @@ class ProfilePolicyTest {
             "profileVisibility/INVALID_FORMAT", "professionalVisibility/INVALID_FORMAT");
   }
 
+  // ===== 从网页复制来的不换行空格 =====
+
+  @Test
+  void should_strip_no_break_spaces_around_url_ror_id_and_mesh_ui() {
+    String nbsp = cp(0x00A0);
+    ParsedProfile parsed =
+        parse(
+            draft()
+                .links(List.of(LinkDraft.of(null, nbsp + "https://a.org/x" + nbsp)))
+                .organizationRorId(nbsp + "04jztag35" + nbsp)
+                .researchInterests(List.of(nbsp + "D003920" + nbsp)));
+
+    assertThat(parsed.links()).containsExactly(ProfileLink.of(null, "https://a.org/x"));
+    assertThat(parsed.organizationRorId()).isEqualTo(RorId.of("04jztag35"));
+    assertThat(parsed.researchInterests()).containsExactly(MeshUi.of("D003920"));
+  }
+
   // ===== 辅助方法 =====
 
   /// 空草稿的构建器。

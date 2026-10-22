@@ -17,6 +17,7 @@ import dev.patra.identity.domain.exception.UserPendingDeletionException;
 import dev.patra.identity.domain.model.aggregate.User;
 import dev.patra.identity.domain.model.aggregate.UserProfile;
 import dev.patra.identity.domain.model.enums.UserStatus;
+import dev.patra.identity.domain.model.vo.DisplayName;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.Username;
 import dev.patra.identity.domain.model.vo.profile.Affiliation;
@@ -39,10 +40,14 @@ import java.util.Optional;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.transaction.support.TransactionOperations;
 
 /// UpdateProfileHandler 单元测试：名称快照来自 catalog、已存的不重新校验、catalog 失败的语义、状态守卫与并发。
+@ExtendWith(OutputCaptureExtension.class)
 class UpdateProfileHandlerTest {
 
   private static final long USER_ID = 42L;
@@ -243,6 +248,22 @@ class UpdateProfileHandlerTest {
         .isInstanceOf(InvalidUserFieldsException.class);
 
     verifyNoInteractions(catalog);
+  }
+
+  @Test
+  void should_log_previous_and_new_display_name(CapturedOutput output) {
+    stubProfile(
+        () ->
+            UserProfile.restore()
+                .id(1L)
+                .userId(USER_ID)
+                .displayName(new DisplayName("陈宇"))
+                .version(0L)
+                .build());
+
+    handler.handle(UpdateProfileCommand.of(ProfileDraft.builder().displayName("陈宇二").build()));
+
+    assertThat(output).contains("昵称已修改: userId=42, from=陈宇, to=陈宇二");
   }
 
   /// 每次读资料都返回一个新实例。

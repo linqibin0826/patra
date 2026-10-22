@@ -1,5 +1,6 @@
 package dev.patra.identity.domain.model.vo.profile;
 
+import dev.patra.identity.domain.policy.ProfileTextRules;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
@@ -28,12 +29,12 @@ public record MeshUi(String value) {
     return FORMAT.matcher(stripped).matches();
   }
 
-  /// 去首尾空白后构造。
+  /// 去首尾空白（含不换行空格）后构造。
   ///
   /// @param raw 用户输入
   /// @return UI
   /// @throws IllegalArgumentException 不合法
   public static MeshUi of(String raw) {
-    return new MeshUi(raw.strip());
+    return new MeshUi(ProfileTextRules.stripSpaces(raw));
   }
 }

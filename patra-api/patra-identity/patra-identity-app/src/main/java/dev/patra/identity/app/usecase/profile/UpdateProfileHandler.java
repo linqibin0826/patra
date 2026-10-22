@@ -78,12 +78,14 @@ public class UpdateProfileHandler implements CommandHandler<UpdateProfileCommand
     locked.requireActive();
     UserProfile profile = requireProfile(userId);
     Affiliation previousAffiliation = profile.getAffiliation().orElse(null);
+    String previousDisplayName = profile.getDisplayName().map(DisplayName::value).orElse(null);
     boolean displayNameChanged = profile.edit(assemble(parsed, snapshots, profile));
     UserProfile saved = profiles.save(profile);
     if (displayNameChanged) {
       log.info(
-          "昵称已修改: userId={}, to={}",
+          "昵称已修改: userId={}, from={}, to={}",
           userId,
+          previousDisplayName,
           saved.getDisplayName().map(DisplayName::value).orElse(null));
     }
     log.info(

@@ -283,7 +283,7 @@ public final class ProfilePolicy {
   /// @return 去首尾空白后的 URL，出错时为 `null`
   private static String parseUrl(
       String raw, int index, Set<String> seen, List<FieldViolation> violations) {
-    String url = raw == null ? "" : raw.strip();
+    String url = raw == null ? "" : ProfileTextRules.stripSpaces(raw);
     if (url.isEmpty()) {
       violations.add(UserFieldViolations.linkUrlRequired(index));
       return null;
@@ -373,7 +373,7 @@ public final class ProfilePolicy {
     List<MeshUi> uis = new ArrayList<>();
     Set<String> seen = new HashSet<>();
     for (int i = 0; i < raws.size(); i++) {
-      String stripped = raws.get(i) == null ? "" : raws.get(i).strip();
+      String stripped = raws.get(i) == null ? "" : ProfileTextRules.stripSpaces(raws.get(i));
       if (stripped.isEmpty()) {
         violations.add(UserFieldViolations.researchInterestRequired(i));
       } else if (!MeshUi.isValid(stripped)) {

@@ -1,5 +1,6 @@
 package dev.patra.identity.domain.model.vo.profile;
 
+import dev.patra.identity.domain.policy.ProfileTextRules;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.regex.Pattern;
@@ -21,12 +22,12 @@ public record RorId(String value) {
     }
   }
 
-  /// 规范化：去首尾空白、转小写。
+  /// 规范化：去首尾空白（含不换行空格）、转小写。
   ///
   /// @param raw 用户输入
   /// @return 规范化之后的值
   public static String normalize(String raw) {
-    return raw.strip().toLowerCase(Locale.ROOT);
+    return ProfileTextRules.stripSpaces(raw).toLowerCase(Locale.ROOT);
   }
 
   /// 规范化之后的值是否合法。

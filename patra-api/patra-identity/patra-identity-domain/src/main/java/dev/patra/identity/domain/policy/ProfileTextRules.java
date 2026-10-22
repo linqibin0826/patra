@@ -49,12 +49,37 @@ public final class ProfileTextRules {
     return count;
   }
 
+  /// 去掉首尾的空白与空格类字符。`String.strip()` 不认 U+00A0 等不换行空格，从网页或文档复制来的 URL、
+  /// ROR ID、MeSH UI 常常带着它们。
+  ///
+  /// @param text 文本
+  /// @return 去掉首尾空白之后的文本
+  public static String stripSpaces(String text) {
+    int start = 0;
+    int end = text.length();
+    while (start < end && isSpace(text.codePointAt(start))) {
+      start += Character.charCount(text.codePointAt(start));
+    }
+    while (end > start && isSpace(text.codePointBefore(end))) {
+      end -= Character.charCount(text.codePointBefore(end));
+    }
+    return text.substring(start, end);
+  }
+
   /// UTF-8 字节数。
   ///
   /// @param text 文本
   /// @return 字节数
   public static int utf8Length(String text) {
     return text.getBytes(StandardCharsets.UTF_8).length;
+  }
+
+  /// 空白或空格类字符（含不换行空格、全角空格）。
+  ///
+  /// @param codePoint 码点
+  /// @return 是空白时为 `true`
+  private static boolean isSpace(int codePoint) {
+    return Character.isWhitespace(codePoint) || Character.isSpaceChar(codePoint);
   }
 
   /// 一个字素簇是否含拒绝字符：以组合用字符开头；含控制（可放行换行）、行 / 段分隔、私用、未分配、孤立代理项；
