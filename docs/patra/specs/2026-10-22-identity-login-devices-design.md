@@ -666,4 +666,4 @@ AC 2 的属地写法用空格分隔（「中国 广东 深圳」），与设计�
 **整分支评审（opus，2026-10-22）**：无 Critical。修了：I1 只有登录与注册的登录记录规范化了 IP，注册、找回密码、改邮箱等其余用例仍拿原始 `getRemoteAddr()` 入库与当限流键（超长值写 `requested_ip` 失败、伪造值绕过按 IP 限流）→ 适配器层统一 `ClientIp.from(request)`，`LoginDeviceFlowIT` 两条超长 XFF 用例 RED→GREEN；I2 PAP-101 的「丢掉入站 XFF」改为强制条款（第 6.2、21 节）；`ClientOriginResolver` 兜住端口的运行时异常（安全通知在提交之后才解析，抛出会让已生效的操作回 500）；`SessionStoreAdapter` 一处 Javadoc 错位。延后的 Minor 见交接笔记。
 - 登录现在会发新设备提醒：流程测试的 `mailFor` 与 `EmailVerificationFlowIT.waitForMail` 改为按收件人 / 主题等邮件，不按总封数。
 
-**回归**：`./gradlew spotlessApply && ./gradlew check` 全绿；集成测试 identity-session 28、identity-infra 142、identity-adapter 75、identity-boot 79、gateway-boot 60 全过；单元测试 identity-domain 437、identity-app 192、identity-infra 102、identity-boot 21、identity-session 25、identity-adapter 6、gateway-boot 35。`module-graph.json` 无变化。
+**回归**：`./gradlew spotlessApply && ./gradlew check` 全绿；集成测试 identity-session 28、identity-infra 142、identity-adapter 75、identity-boot 81、gateway-boot 60 全过（评审修正后重跑）；单元测试 identity-domain 437、identity-app 192、identity-infra 102、identity-boot 21、identity-session 25、identity-adapter 6、gateway-boot 35。`module-graph.json` 无变化。
