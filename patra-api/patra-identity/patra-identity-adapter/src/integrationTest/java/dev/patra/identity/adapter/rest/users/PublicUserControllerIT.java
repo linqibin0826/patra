@@ -5,10 +5,19 @@ import static org.mockito.Mockito.when;
 
 import dev.patra.identity.app.usecase.user.query.UserQueryService;
 import dev.patra.identity.domain.exception.UserNotFoundException;
+import dev.patra.identity.domain.model.enums.Occupation;
 import dev.patra.identity.domain.model.read.PublicAudience;
 import dev.patra.identity.domain.model.read.PublicUserLookup;
 import dev.patra.identity.domain.model.read.PublicUserView;
 import dev.patra.identity.domain.model.vo.Username;
+import dev.patra.identity.domain.model.vo.profile.Affiliation;
+import dev.patra.identity.domain.model.vo.profile.MeshUi;
+import dev.patra.identity.domain.model.vo.profile.ProfileLink;
+import dev.patra.identity.domain.model.vo.profile.ResearchInterest;
+import dev.patra.identity.domain.model.vo.profile.RorId;
+import java.time.YearMonth;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -105,5 +114,97 @@ class PublicUserControllerIT {
         .isEqualTo("IDN-0404")
         .jsonPath("$.detail")
         .isEqualTo("用户不存在");
+  }
+
+  @Test
+  @DisplayName("完整主页：头部、链接、专业背景、关注领域、加入年月、indexable，顶层键恰好这些")
+  void should_render_full_public_page_without_settings() {
+    when(userQueryService.publicIdentity("chen-yu"))
+        .thenReturn(
+            PublicUserLookup.Found.of(
+                PublicUserView.builder()
+                    .username("chen-yu")
+                    .displayName("陈宇")
+                    .audience(PublicAudience.PUBLIC)
+                    .joinedMonth(YearMonth.of(2026, 10))
+                    .bio("心内科医生")
+                    .links(List.of(ProfileLink.of(null, "https://lab.org")))
+                    .professional(
+                        PublicUserView.Professional.of(
+                            Occupation.PHYSICIAN,
+                            "主治医师",
+                            Affiliation.Registered.of(RorId.of("04jztag35"), "北京协和医院"),
+                            "心内科"))
+                    .researchInterests(
+                        List.of(ResearchInterest.of(MeshUi.of("D006333"), "Heart Failure")))
+                    .indexable(true)
+                    .build()));
+
+    JsonNode json = getJson("/users/chen-yu");
+
+    List<String> keys = new ArrayList<>();
+    json.propertyNames().forEach(keys::add);
+    assertThat(keys)
+        .containsExactlyInAnyOrder(
+            "username",
+            "displayName",
+            "avatarUrl",
+            "audience",
+            "joinedAt",
+            "bio",
+            "links",
+            "professional",
+            "researchInterests",
+            "indexable");
+    assertThat(json.get("joinedAt").asString()).isEqualTo("2026-10");
+    assertThat(json.get("bio").asString()).isEqualTo("心内科医生");
+    assertThat(json.get("links").get(0).get("url").asString()).isEqualTo("https://lab.org");
+    JsonNode professional = json.get("professional");
+    assertThat(professional.get("occupation").asString()).isEqualTo("PHYSICIAN");
+    assertThat(professional.get("jobTitle").asString()).isEqualTo("主治医师");
+    assertThat(professional.get("organization").get("rorId").asString()).isEqualTo("04jztag35");
+    assertThat(professional.get("organization").get("name").asString()).isEqualTo("北京协和医院");
+    assertThat(professional.get("department").asString()).isEqualTo("心内科");
+    assertThat(json.get("researchInterests").get(0).get("name").asString())
+        .isEqualTo("Heart Failure");
+    assertThat(json.get("indexable").asBoolean()).isTrue();
+  }
+
+  @Test
+  @DisplayName("专业背景不可见：professional 为 null；没有加入时间时 joinedAt 为 null")
+  void should_render_null_professional() {
+    when(userQueryService.publicIdentity("chen-yu"))
+        .thenReturn(
+            PublicUserLookup.Found.of(
+                PublicUserView.builder()
+                    .username("chen-yu")
+                    .displayName("陈宇")
+                    .audience(PublicAudience.SIGNED_IN)
+                    .build()));
+
+    JsonNode json = getJson("/users/chen-yu");
+
+    assertThat(json.get("professional").isNull()).isTrue();
+    assertThat(json.get("links")).isEmpty();
+    assertThat(json.get("audience").asString()).isEqualTo("SIGNED_IN");
+    assertThat(json.get("indexable").asBoolean()).isFalse();
+  }
+
+  /// GET 一个路径，断言 200，返回响应体。
+  ///
+  /// @param path 路径
+  /// @return 响应体
+  private JsonNode getJson(String path) {
+    String body =
+        restClient
+            .get()
+            .uri(path)
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody(String.class)
+            .returnResult()
+            .getResponseBody();
+    return JSON.readTree(body);
   }
 }
