@@ -380,6 +380,84 @@ class RedisSessionStoreIT {
     }
   }
 
+  @Test
+  @DisplayName("建会话时 auth_at 等于 created_at")
+  void should_write_auth_at_equal_to_created_at_on_create() {
+    SessionToken token = store.create(newSession(61L, 8101L).build()).token();
+
+    assertThat(store.findAndTouch(token).orElseThrow().authenticatedAt()).isEqualTo(START);
+    assertThat(redis.opsForHash().get("idn:session:user:" + token.hash(), "auth_at"))
+        .isEqualTo(Long.toString(START.toEpochMilli()));
+  }
+
+  @Test
+  @DisplayName("换令牌：会话 ID、创建与绝对过期、设备不变，auth_at 刷新，旧令牌立即失效，索引指向新哈希")
+  void should_rotate_token_keeping_session_id_and_invalidate_old_token() {
+    SessionToken old = store.create(newSession(62L, 8201L).deviceId("dev-1").build()).token();
+    clock.advance(Duration.ofMinutes(3));
+
+    SessionToken fresh = store.rotate(AccountType.USER, 62L, 8201L).orElseThrow();
+
+    assertThat(fresh).isNotEqualTo(old);
+    assertThat(store.findAndTouch(old)).isEmpty();
+    StoredSession session = store.findAndTouch(fresh).orElseThrow();
+    assertThat(session.sessionId()).isEqualTo(8201L);
+    assertThat(session.createdAt()).isEqualTo(START);
+    assertThat(session.expiresAt()).isEqualTo(START.plus(ABSOLUTE));
+    assertThat(session.deviceId()).isEqualTo("dev-1");
+    assertThat(session.authenticatedAt()).isEqualTo(START.plus(Duration.ofMinutes(3)));
+    assertThat(session.lastActiveAt()).isEqualTo(START.plus(Duration.ofMinutes(3)));
+    assertThat(redis.opsForHash().get("idn:user-sessions:user:62", "8201")).isEqualTo(fresh.hash());
+    assertThat(redis.hasKey("idn:session:user:" + old.hash())).isFalse();
+    assertThat(ttl("idn:session:user:" + fresh.hash()))
+        .isBetween(IDLE.toMillis() - TOLERANCE_MILLIS, IDLE.toMillis());
+  }
+
+  @Test
+  @DisplayName("换令牌：会话不在或已过绝对期返回空并清掉索引条目")
+  void should_return_empty_on_rotate_when_session_is_gone_or_expired() {
+    assertThat(store.rotate(AccountType.USER, 63L, 8301L)).isEmpty();
+    store.create(newSession(63L, 8302L).build());
+    clock.advance(ABSOLUTE.plusSeconds(1));
+
+    assertThat(store.rotate(AccountType.USER, 63L, 8302L)).isEmpty();
+    assertThat(redis.opsForHash().hasKey("idn:user-sessions:user:63", "8302")).isFalse();
+  }
+
+  @Test
+  @DisplayName("按会话 ID 读：不续期、不改最后活跃时间；不存在为空")
+  void should_find_by_session_id_without_renewing() {
+    store.create(newSession(64L, 8401L).build());
+    clock.advance(Duration.ofMinutes(5));
+
+    StoredSession found = store.find(AccountType.USER, 64L, 8401L).orElseThrow();
+
+    assertThat(found.lastActiveAt()).isEqualTo(START);
+    assertThat(found.authenticatedAt()).isEqualTo(START);
+    assertThat(store.find(AccountType.USER, 64L, 8499L)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("按会话 ID 读：已过绝对期返回空并删掉会话与索引条目")
+  void should_find_return_empty_for_expired_session() {
+    SessionToken token = store.create(newSession(66L, 8601L).build()).token();
+    clock.advance(ABSOLUTE.plusSeconds(1));
+
+    assertThat(store.find(AccountType.USER, 66L, 8601L)).isEmpty();
+    assertThat(redis.hasKey("idn:session:user:" + token.hash())).isFalse();
+    assertThat(redis.opsForHash().hasKey("idn:user-sessions:user:66", "8601")).isFalse();
+  }
+
+  @Test
+  @DisplayName("没有 auth_at 字段的旧会话按 EPOCH 读出")
+  void should_read_missing_auth_at_as_epoch() {
+    SessionToken token = store.create(newSession(65L, 8501L).build()).token();
+    redis.opsForHash().delete("idn:session:user:" + token.hash(), "auth_at");
+
+    assertThat(store.find(AccountType.USER, 65L, 8501L).orElseThrow().authenticatedAt())
+        .isEqualTo(Instant.EPOCH);
+  }
+
   /// 找一个当前没人监听的端口。
   ///
   /// @return 端口号

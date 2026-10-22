@@ -4,6 +4,7 @@
 -- ARGV[4] 用户 ID  ARGV[5] 账号类型  ARGV[6] 客户端类型  ARGV[7] 设备标识（空串表示没有）
 -- ARGV[8] 当前时间（epoch 毫秒）  ARGV[9] 不活跃过期毫秒  ARGV[10] 绝对过期时间（epoch 毫秒）
 -- ARGV[11] 每用户会话上限
+-- auth_at = created_at：刚输过密码就是一次再认证
 -- 返回：被挤掉的会话 ID 列表
 local index = KEYS[1]
 local sessionKey = KEYS[2]
@@ -49,7 +50,8 @@ end
 -- 3. 写新会话
 local fields = {
   'user_id', ARGV[4], 'session_id', ARGV[3], 'account_type', ARGV[5], 'client_type', ARGV[6],
-  'created_at', ARGV[8], 'last_active_at', ARGV[8], 'expires_at', ARGV[10], 'idle_timeout_ms', ARGV[9]
+  'created_at', ARGV[8], 'last_active_at', ARGV[8], 'auth_at', ARGV[8], 'expires_at', ARGV[10],
+  'idle_timeout_ms', ARGV[9]
 }
 if ARGV[7] ~= '' then
   fields[#fields + 1] = 'device_id'

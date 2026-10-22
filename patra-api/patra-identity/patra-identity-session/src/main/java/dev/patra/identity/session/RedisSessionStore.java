@@ -18,7 +18,8 @@ import org.springframework.data.redis.core.script.RedisScript;
 
 /// Redis 里的会话存储：identity 建和删，网关查和续期。
 ///
-/// 键 1 `idn:session:<账号类型>:<令牌哈希>` 是一条会话；键 2 `idn:user-sessions:<账号类型>:<用户 ID>`
+/// 键 1 `idn:session:<账号类型>:<令牌哈希>` 是一条会话（含最近一次再认证时间 `auth_at`）；键 2 `idn:user-sessions:<账号类型>:<用户
+// ID>`
 /// 是该用户全部会话的索引（会话 ID → 令牌哈希）。每个操作是一段 Lua，原子执行。
 /// 会话键在脚本里由前缀拼出来，所以只支持单机 Redis。
 ///
@@ -49,6 +50,14 @@ public final class RedisSessionStore {
   @SuppressWarnings("rawtypes")
   private static final RedisScript<List> DELETE_OTHERS_SCRIPT =
       RedisScript.of(new ClassPathResource("redis/session-delete-others.lua"), List.class);
+
+  @SuppressWarnings("rawtypes")
+  private static final RedisScript<List> ROTATE_SCRIPT =
+      RedisScript.of(new ClassPathResource("redis/session-rotate.lua"), List.class);
+
+  @SuppressWarnings("rawtypes")
+  private static final RedisScript<List> FIND_SCRIPT =
+      RedisScript.of(new ClassPathResource("redis/session-find.lua"), List.class);
 
   private final StringRedisTemplate redis;
   private final Clock clock;
@@ -108,6 +117,57 @@ public final class RedisSessionStore {
                     List.of(sessionKey(token.accountType(), token.hash())),
                     Long.toString(clock.millis()),
                     Long.toString(RENEW_INTERVAL.toMillis())));
+    if (fields == null || fields.isEmpty()) {
+      return Optional.empty();
+    }
+    return Optional.of(toStoredSession(fields));
+  }
+
+  /// 换令牌、保留会话 ID：再认证、改密码用。会话 ID、创建时间、绝对过期、设备都不变，
+  /// `auth_at` 与最后活跃时间刷新成现在；旧令牌在返回的那一刻失效。
+  ///
+  /// @param accountType 账号类型
+  /// @param userId 用户 ID
+  /// @param sessionId 会话 ID
+  /// @return 新令牌；会话不在或已过绝对期时为空
+  /// @throws SessionStoreUnavailableException Redis 暂时不可用时
+  public Optional<SessionToken> rotate(AccountType accountType, long userId, long sessionId) {
+    Objects.requireNonNull(accountType, "accountType 不能为 null");
+    SessionToken token = SessionToken.generate(accountType, random);
+    List<?> fields =
+        execute(
+            () ->
+                redis.execute(
+                    ROTATE_SCRIPT,
+                    List.of(indexKey(accountType, userId), sessionKey(accountType, token.hash())),
+                    sessionKeyPrefix(accountType),
+                    Long.toString(sessionId),
+                    token.hash(),
+                    Long.toString(clock.millis())));
+    if (fields == null || fields.isEmpty()) {
+      return Optional.empty();
+    }
+    return Optional.of(token);
+  }
+
+  /// 按用户 ID 和会话 ID 读一条会话，不续期。再认证守卫读 `auth_at` 用：守卫是读，不是活动。
+  ///
+  /// @param accountType 账号类型
+  /// @param userId 用户 ID
+  /// @param sessionId 会话 ID
+  /// @return 会话；不存在或已过绝对期时为空
+  /// @throws SessionStoreUnavailableException Redis 暂时不可用时
+  public Optional<StoredSession> find(AccountType accountType, long userId, long sessionId) {
+    Objects.requireNonNull(accountType, "accountType 不能为 null");
+    List<?> fields =
+        execute(
+            () ->
+                redis.execute(
+                    FIND_SCRIPT,
+                    List.of(indexKey(accountType, userId)),
+                    sessionKeyPrefix(accountType),
+                    Long.toString(sessionId),
+                    Long.toString(clock.millis())));
     if (fields == null || fields.isEmpty()) {
       return Optional.empty();
     }
@@ -225,7 +285,7 @@ public final class RedisSessionStore {
     return raw.stream().map(value -> Long.parseLong(String.valueOf(value))).toList();
   }
 
-  /// `HGETALL` 的扁平数组转成会话。
+  /// `HGETALL` 的扁平数组转成会话。没有 `auth_at` 的旧会话按 `Instant.EPOCH` 读出。
   ///
   /// @param fields 字段名和值交替的列表
   /// @return 会话
@@ -247,6 +307,10 @@ public final class RedisSessionStore {
         .createdAt(Instant.ofEpochMilli(Long.parseLong(values.get("created_at"))))
         .lastActiveAt(Instant.ofEpochMilli(Long.parseLong(values.get("last_active_at"))))
         .expiresAt(Instant.ofEpochMilli(Long.parseLong(values.get("expires_at"))))
+        .authenticatedAt(
+            values.containsKey("auth_at")
+                ? Instant.ofEpochMilli(Long.parseLong(values.get("auth_at")))
+                : Instant.EPOCH)
         .build();
   }
 }

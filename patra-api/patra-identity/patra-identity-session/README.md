@@ -1,6 +1,6 @@
 # patra-identity-session
 
-identity 与网关共用的会话存储契约：令牌格式、Redis 键、五段 Lua 和 `RedisSessionStore`。
+identity 与网关共用的会话存储契约：令牌格式、Redis 键、七段 Lua 和 `RedisSessionStore`。
 只有这两个消费者；其他服务只认网关签的身份断言（`patra-spring-boot-starter-security`），不碰 Redis。
 
 设计：`docs/patra/specs/2026-10-09-identity-session-design.md` 第 6、7 节。
@@ -20,8 +20,8 @@ Redis 里只存 `SessionToken.hash()`：整个令牌 UTF-8 的 SHA-256，小写�
 | `idn:user-sessions:user:<userId>` | HASH | `session_id → <哈希>` | 不小于该用户最新会话的绝对有效期 |
 
 会话字段（都是字符串）：`user_id`、`session_id`、`account_type`（`user`）、`client_type`（`web`）、
-`device_id`（可选，没有就没这个字段）、`created_at`、`last_active_at`、`expires_at`（epoch 毫秒）、
-`idle_timeout_ms`。
+`device_id`（可选，没有就没这个字段）、`created_at`、`last_active_at`、`auth_at`（最近一次用密码证明身份：
+登录、注册、再认证、改密码；缺失的旧会话按 EPOCH 读出）、`expires_at`（epoch 毫秒）、`idle_timeout_ms`。
 
 ## 操作
 
@@ -31,6 +31,8 @@ Redis 里只存 `SessionToken.hash()`：整个令牌 UTF-8 的 SHA-256，小写�
 | `findAndTouch(SessionToken)` | `session-touch.lua` | 读会话；过了绝对过期返回空并删键；距上次写入满 60 秒（`RENEW_INTERVAL`）才写回 `last_active_at` 和 TTL |
 | `delete(accountType, userId, sessionId)` | `session-delete.lua` | 按索引找到哈希删会话；真的删掉了返回 `true` |
 | `deleteAll(accountType, userId)` | `session-delete-all.lua` | 删该用户全部会话和索引；返回真的删掉了的会话 ID |
+| `rotate(accountType, userId, sessionId)` | `session-rotate.lua` | 换令牌保留会话 ID（再认证、改密码）：其余字段不变，`auth_at` 与 `last_active_at` 刷新，旧令牌立即失效，索引指向新哈希；会话不在或已过绝对期返回空 |
+| `find(accountType, userId, sessionId)` | `session-find.lua` | 按会话 ID 读，不续期（再认证守卫读 `auth_at`）；不在或已过绝对期返回空 |
 | `deleteAllExcept(accountType, userId, keepSessionId)` | `session-delete-others.lua` | 删该用户除指定一条外的全部会话（验证邮箱、改密码保留本机、踢其他设备）；指定的会话不存在时等于全删；返回真的删掉了的会话 ID |
 
 时间由 Java 按注入的 `Clock` 传进脚本，脚本不调 `TIME`。会话 ID 的大小按「字符串长度，再字典序」比，

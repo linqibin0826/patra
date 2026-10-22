@@ -18,6 +18,8 @@ import lombok.Builder;
 /// @param createdAt 创建时间
 /// @param lastActiveAt 最后活跃时间，最多落后真实活跃时间一个续期间隔
 /// @param expiresAt 绝对过期时间
+/// @param authenticatedAt 最近一次用密码证明身份的时间（登录、注册、再认证、改密码）；
+///     本字段出现之前建立的会话按 `Instant.EPOCH` 读出，视作从未再认证
 @Builder
 public record StoredSession(
     long userId,
@@ -27,7 +29,8 @@ public record StoredSession(
     String deviceId,
     Instant createdAt,
     Instant lastActiveAt,
-    Instant expiresAt) {
+    Instant expiresAt,
+    Instant authenticatedAt) {
 
   /// 校验各字段。
   public StoredSession {
@@ -42,6 +45,7 @@ public record StoredSession(
     Objects.requireNonNull(createdAt, "createdAt 不能为 null");
     Objects.requireNonNull(lastActiveAt, "lastActiveAt 不能为 null");
     Objects.requireNonNull(expiresAt, "expiresAt 不能为 null");
+    Objects.requireNonNull(authenticatedAt, "authenticatedAt 不能为 null");
   }
 
   /// 转成当前用户，网关据此建认证对象。
