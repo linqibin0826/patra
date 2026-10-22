@@ -49,7 +49,7 @@ class BanUserHandlerTest {
   @Test
   @DisplayName("封禁正常用户：状态改为封禁，封禁时间取时钟")
   void should_ban_active_user() {
-    when(users.findById(42L))
+    when(users.findByIdForUpdate(42L))
         .thenReturn(
             Optional.of(
                 User.restore()
@@ -73,7 +73,7 @@ class BanUserHandlerTest {
   @DisplayName("重复封禁保留原来的封禁时间")
   void should_keep_original_ban_time() {
     Instant earlier = Instant.parse("2026-10-01T00:00:00Z");
-    when(users.findById(42L))
+    when(users.findByIdForUpdate(42L))
         .thenReturn(
             Optional.of(
                 User.restore()
@@ -96,7 +96,7 @@ class BanUserHandlerTest {
   @Test
   @DisplayName("封禁后删掉该用户的全部会话，被删会话的记录标成 BANNED；找不到的记录跳过")
   void should_revoke_all_sessions_and_end_records() {
-    when(users.findById(42L))
+    when(users.findByIdForUpdate(42L))
         .thenReturn(
             Optional.of(
                 User.restore()
@@ -127,7 +127,7 @@ class BanUserHandlerTest {
   @Test
   @DisplayName("用户不存在：404，不碰会话")
   void should_not_touch_sessions_when_user_is_missing() {
-    when(users.findById(42L)).thenReturn(Optional.empty());
+    when(users.findByIdForUpdate(42L)).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> handler.handle(BanUserCommand.of(42L)))
         .isInstanceOf(UserNotFoundException.class);
@@ -137,7 +137,7 @@ class BanUserHandlerTest {
   @Test
   @DisplayName("封禁顺带作废该用户全部有效令牌（改邮箱撤销令牌除外，由仓储保证），在保存用户之后")
   void should_revoke_all_email_tokens_when_banning() {
-    when(users.findById(42L))
+    when(users.findByIdForUpdate(42L))
         .thenReturn(
             Optional.of(
                 User.restore()

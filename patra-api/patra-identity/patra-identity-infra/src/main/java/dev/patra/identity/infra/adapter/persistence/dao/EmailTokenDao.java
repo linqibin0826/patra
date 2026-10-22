@@ -2,7 +2,6 @@ package dev.patra.identity.infra.adapter.persistence.dao;
 
 import dev.patra.identity.infra.adapter.persistence.entity.EmailTokenEntity;
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -17,12 +16,6 @@ public interface EmailTokenDao extends JpaRepository<EmailTokenEntity, Long> {
   /// @param tokenHash 令牌哈希
   /// @return 实体
   Optional<EmailTokenEntity> findByTokenHash(String tokenHash);
-
-  /// 某个用户按 ID 升序的全部令牌，测试用。
-  ///
-  /// @param userId 用户 ID
-  /// @return 实体列表
-  List<EmailTokenEntity> findByUserIdOrderByIdAsc(Long userId);
 
   /// 作废一个用户某种用途的全部有效令牌。
   ///

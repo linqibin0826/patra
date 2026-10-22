@@ -8,17 +8,20 @@ import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import java.util.Objects;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.concurrent.ExecutorConfigurationSupport;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 /// 邮件发送端口的 SMTP 实现：渲染文本 + HTML，组成 `multipart/alternative`，交给 Boot 装配的
 /// `JavaMailSender` 发出。
 ///
-/// `send` 把工作交给执行器就返回；渲染、发送中的任何失败只记 WARN，不抛给调用方，也不重试。
-/// 执行器由 {@link #async} 自己建（虚拟线程、有并发上限、停机时等在途的几封）——不声明成 Bean：
-/// 容器里多一个 `Executor` Bean 会让 Boot 的 `applicationTaskExecutor` 退让。每封邮件加
+/// `send` 把工作交给执行器就返回，从不阻塞请求线程；渲染、发送中的任何失败只记 WARN，不抛给调用方，
+/// 也不重试；队列满了这封丢掉、记 WARN。执行器由 {@link #async} 自己建（固定几条虚拟线程、有界队列、
+/// 停机时等在途的几封）——不声明成 Bean：容器里多一个 `Executor` Bean 会让 Boot 的
+/// `applicationTaskExecutor` 退让。每封邮件加
 /// `Auto-Submitted: auto-generated` 与 `X-Auto-Response-Suppress: All`，抑制对方的自动回复。
 /// 收件人与链接不进日志。
 @Slf4j
@@ -26,6 +29,9 @@ public final class SmtpEmailDeliveryAdapter implements EmailDeliveryPort, AutoCl
 
   /// 停机时等在途邮件发完的时长（毫秒）。
   static final long TERMINATION_TIMEOUT_MILLIS = 10_000;
+
+  /// 排队等发的邮件上限：服务商长时间不通时不让内存无限涨，超出的丢掉并记 WARN。
+  static final int QUEUE_CAPACITY = 1_000;
 
   private final JavaMailSender mailSender;
   private final ThymeleafMailRenderer renderer;
@@ -47,7 +53,9 @@ public final class SmtpEmailDeliveryAdapter implements EmailDeliveryPort, AutoCl
     this.executor = Objects.requireNonNull(executor, "executor 不能为 null");
   }
 
-  /// 带自己的异步执行器的适配器：虚拟线程、线程名前缀 `mail-`、并发上限、停机等 10 秒。
+  /// 带自己的异步执行器的适配器：固定 `maxConcurrency` 条虚拟线程、线程名前缀 `mail-`、
+  /// 有界队列（{@link #QUEUE_CAPACITY}）、停机等 10 秒。提交永不阻塞：槽全占着就排队，队列满了就丢。
+  /// 不用 `SimpleAsyncTaskExecutor` 的并发上限：它在提交时阻塞提交线程，服务商不通时会把请求线程拖住。
   ///
   /// @param mailSender Boot 装配的发信器
   /// @param renderer 模板渲染器
@@ -56,26 +64,37 @@ public final class SmtpEmailDeliveryAdapter implements EmailDeliveryPort, AutoCl
   /// @return 适配器
   public static SmtpEmailDeliveryAdapter async(
       JavaMailSender mailSender, ThymeleafMailRenderer renderer, String from, int maxConcurrency) {
-    SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("mail-");
+    ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+    executor.setThreadNamePrefix("mail-");
     executor.setVirtualThreads(true);
-    executor.setConcurrencyLimit(maxConcurrency);
-    executor.setTaskTerminationTimeout(TERMINATION_TIMEOUT_MILLIS);
+    executor.setCorePoolSize(maxConcurrency);
+    executor.setMaxPoolSize(maxConcurrency);
+    executor.setQueueCapacity(QUEUE_CAPACITY);
+    executor.setWaitForTasksToCompleteOnShutdown(true);
+    executor.setAwaitTerminationMillis(TERMINATION_TIMEOUT_MILLIS);
+    executor.initialize();
     return new SmtpEmailDeliveryAdapter(mailSender, renderer, from, executor);
   }
 
-  /// 异步发一封邮件，立即返回。
+  /// 异步发一封邮件，立即返回。执行器拒绝（队列满、已停机）时这封丢掉，只记 WARN。
   ///
   /// @param mail 要发的邮件
   @Override
   public void send(OutgoingMail mail) {
     Objects.requireNonNull(mail, "mail 不能为 null");
-    executor.execute(() -> deliver(mail));
+    try {
+      executor.execute(() -> deliver(mail));
+    } catch (RejectedExecutionException e) {
+      log.warn("邮件发送队列已满或已停机，这封丢弃: template={}", mail.template(), e);
+    }
   }
 
-  /// 关掉自己持有的执行器（若它可关）。
+  /// 关掉自己持有的执行器（若它可关），等在途的发完。
   @Override
   public void close() {
-    if (executor instanceof AutoCloseable closeable) {
+    if (executor instanceof ExecutorConfigurationSupport support) {
+      support.shutdown();
+    } else if (executor instanceof AutoCloseable closeable) {
       try {
         closeable.close();
       } catch (Exception e) {

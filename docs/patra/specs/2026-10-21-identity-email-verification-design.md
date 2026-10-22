@@ -238,7 +238,7 @@
 2. 当前用户 = `currentUserPort.current()`（匿名为空）。
 3. 事务里：
    1. `tokens.findByTokenHash(secret.hash())`（不加锁）：空，或 `purpose` 不是 `EMAIL_VERIFY` → 422 `token` / `INVALID`。
-   2. `users.findByIdForUpdate(token.userId)`：不存在 → 422 `token` / `INVALID`。**先锁用户行再动令牌行**：重发（第 8.2 节第 4 步）和封禁（先 `save` 用户再 `revokeAllActive`）都是这个顺序，同一用户并发「验证 + 重发」「验证 + 封禁」才不会死锁（builder check 指出）。
+   2. `users.findByIdForUpdate(token.userId)`：不存在 → 422 `token` / `INVALID`。**先锁用户行再动令牌行**：重发（第 8.2 节第 4 步）和封禁（`findByIdForUpdate` 锁用户行，再 `save`、再 `revokeAllActive`；评审修正：原来的 `findById` 不锁行，JPA 要到提交才更新用户行，封禁实际是先锁令牌行后锁用户行）都是这个顺序，同一用户并发「验证 + 重发」「验证 + 封禁」才不会死锁（builder check 指出）。
    3. `tokens.consume(secret.hash(), EMAIL_VERIFY, now)`：空（这期间过期、被重发作废、被另一个请求抢先消费）→ 422 `token` / `INVALID`。
    4. 用户当前邮箱与令牌的 `email` 不同（期间改过邮箱）→ 422 `token` / `INVALID`。抛出让事务回滚、消费撤回也无妨：这条令牌对当前邮箱已经无效，再来还是 422。
    5. `user.markEmailVerified(now)`（幂等；`DELETED` 抛 409，但 `DELETED` 的邮箱为空、上一步已经 422）→ `users.save(user)`。
@@ -273,7 +273,7 @@
 
 `send(mail)`：`executor.execute(() -> deliver(mail))` 后立即返回。`deliver`：渲染 → `MimeMessageHelper(message, true, "UTF-8")`：`setFrom(from)`、`setTo`、`setSubject`、`setText(text, html)`（`multipart/alternative`，纯文本在前）、加头 `Auto-Submitted: auto-generated`、`X-Auto-Response-Suppress: All` → `mailSender.send`。任何 `RuntimeException`（含 `MailException`）和 `MessagingException` 捕获后 `log.warn("邮件发送失败: template={}, userId 由调用方记", …, e)`，不重试、不抛。
 
-执行器由适配器自己持有：`SmtpEmailDeliveryAdapter.async(mailSender, renderer, from, 4)` 建一个 `SimpleAsyncTaskExecutor`——虚拟线程、线程名前缀 `mail-`、并发上限 4（一次 SMTP 会话几百毫秒，上限只防突发把连接打满）、`taskTerminationTimeout` 10 秒（停机时等在途的几封发完）；适配器实现 `AutoCloseable`，容器销毁时关掉它。不把执行器声明成 Bean：容器里多一个 `Executor` 类型的 Bean 会让 Boot 的 `applicationTaskExecutor` 退让（CQRS 自动配置为此专门排在它之后）。也不复用 CQRS 的 `commandBusAsyncExecutor`：那是平台线程池、有队列容量，语义是命令总线的。
+执行器由适配器自己持有：`SmtpEmailDeliveryAdapter.async(mailSender, renderer, from, 4)` 建一个 `ThreadPoolTaskExecutor`——固定 4 条虚拟线程、线程名前缀 `mail-`（一次 SMTP 会话几百毫秒，上限只防突发把连接打满）、有界队列 1000（服务商长时间不通时不让内存无限涨，满了丢这封并记 WARN）、停机等 10 秒让在途的几封发完。提交永不阻塞请求线程（评审修正：`SimpleAsyncTaskExecutor` 的并发上限在提交时阻塞提交线程，服务商不通时会拖住注册 / 重发请求）；适配器实现 `AutoCloseable`，容器销毁时关掉它。不把执行器声明成 Bean：容器里多一个 `Executor` 类型的 Bean 会让 Boot 的 `applicationTaskExecutor` 退让（CQRS 自动配置为此专门排在它之后）。也不复用 CQRS 的 `commandBusAsyncExecutor`：那是平台线程池、有队列容量，语义是命令总线的。
 
 公开构造器接任何 `Executor`：传同步执行器就是同步发送，单测这样用。
 
@@ -638,7 +638,7 @@ boot 端到端（PG + Redis 容器 + GreenMail，`RANDOM_PORT`，`MutableClock`�
 | 5 | Thymeleaf 两个 `ClassLoaderTemplateResolver` 按 `resolvablePatterns` 分流 HTML / TEXT 模式；TEXT 模式的片段 `[# th:fragment]` 与 `th:replace` | 退化为文本模板不用片段，公共部分放 Java 字符串 | 部分成立：HTML 模式片段正常；TEXT 模式不支持 `~{tpl :: fragment}` 片段选择器，文本片段改为整文件 `th:replace`，不放 Java 字符串 |
 | 6 | `MailSenderAutoConfiguration` 在 `spring.mail.username` 为空串时装配出可用的 `JavaMailSender`（Mailpit 无鉴权） | 用 `PATRA_MAIL_USERNAME` 缺省时不写该键的写法，或自己装配 `JavaMailSenderImpl` | 成立：boot 集成测试镜像 Nacos 缺省 `username: ""` / `password: ""` + `mail.smtp.auth=false`，`EmailVerificationFlowIT` 经 GreenMail 正常收发 |
 | 7 | GreenMail 2.1.14 与 Angus Mail 2.0.5 在同一类路径下收发正常 | 换 GreenMail 2.1.x 其他小版本 | 成立：`SmtpEmailDeliveryAdapterIT` 与 `EmailVerificationFlowIT` 收发正常（读正文要用 `part.getContent()`，`GreenMailUtil.getBody` 给的是 base64） |
-| 8 | `SimpleAsyncTaskExecutor` 虚拟线程 + 并发上限 + `taskTerminationTimeout` 在 Boot 4 可用 | `Executors.newThreadPerTaskExecutor` + 信号量 | 成立：`SmtpEmailDeliveryAdapter.async` 用 `SimpleAsyncTaskExecutor` 虚拟线程 + `concurrencyLimit` + `taskTerminationTimeout` |
+| 8 | `SimpleAsyncTaskExecutor` 虚拟线程 + 并发上限 + `taskTerminationTimeout` 在 Boot 4 可用 | `Executors.newThreadPerTaskExecutor` + 信号量 | 可用但不采用：它的并发上限在提交时阻塞提交线程（评审发现），改用 `ThreadPoolTaskExecutor`：固定虚拟线程 + 有界队列，提交不阻塞 |
 | 9 | `@WebMvcTest` 切片不加载 adapter 包里的 `XxlJobConfig`（catalog 的切片测试没有关它，推测如此）；boot 的 `@SpringBootTest` 要靠 `xxl.job.enabled: false` | 切片测试配置里也加 `xxl.job.enabled: false` | 成立：adapter 的 `@WebMvcTest` 切片没加载 `XxlJobConfig`；boot 的 `@SpringBootTest` 靠 `xxl.job.enabled: false` |
 | 10 | 控制器方法参数 `HttpServletRequest` 在 `@WebMvcTest` + `RestTestClient` 下 `getRemoteAddr()` 有值（MockMvc 默认 `127.0.0.1`） | 命令里 IP 允许为空 | 成立：`AuthControllerIT` 里 `getRemoteAddr()` 是 `127.0.0.1`，命令里的 IP 非空 |
 | 11 | `uk_idn_email_token_active` 部分唯一索引：`CREATE UNIQUE INDEX … WHERE …` 在 Flyway 脚本里与 `CREATE TABLE` 分开写 | — | 成立：`V1` 里 `CREATE UNIQUE INDEX … WHERE …` 与建表分开写，`IdentitySchemaConstraintsIT` 覆盖 |
@@ -695,7 +695,7 @@ boot 端到端（PG + Redis 容器 + GreenMail，`RANDOM_PORT`，`MutableClock`�
 7. 令牌表的请求 IP 用 `VARCHAR(45)` 文本列，不用 `inet`、不用审计列 `ip_address`。
 8. `OutgoingMail` 是接口（收件人、模板名、主题、变量），渲染器按模板名找文件，不按类型 `switch`；主题写在邮件记录里。
 9. Thymeleaf 直接引 `org.thymeleaf:thymeleaf`，渲染器自建引擎，不用 starter。
-10. 异步执行器是虚拟线程的 `SimpleAsyncTaskExecutor`，并发上限 4，停机等 10 秒，由适配器持有而不是 Bean；失败不重试。
+10. 异步执行器是固定 4 条虚拟线程、有界队列 1000 的 `ThreadPoolTaskExecutor`，提交不阻塞，停机等 10 秒，由适配器持有而不是 Bean；失败不重试、队列满丢弃并记 WARN。
 11. 清理任务用 XXL-Job（identity 第一次接执行器，端口 6401），不用 `@Scheduled`。
 12. Mailpit 放 core 栈常驻；`mail.env` 对 identity 容器是可选文件，缺它就发到 Mailpit。
 13. 集成测试的 SMTP 桩用 GreenMail（JVM 内），初始化器放 `patra-tool-test`；不用 Mailpit 的 Testcontainers。

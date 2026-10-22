@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /// 封禁前台用户。幂等：已经封禁时保留原来的封禁时间。
 ///
+/// 先对用户行加锁再动令牌：与验证邮箱、重发（都先锁用户再改令牌）同一个加锁顺序，不会死锁。
 /// 保存之后作废该用户的有效邮件令牌（改邮箱撤销令牌除外）、删掉全部会话，被删会话的登录记录标成 `BANNED`。Redis 失败整个事务回滚，
 /// 返回 503，管理员重试。
 @Slf4j
@@ -39,7 +40,7 @@ public class BanUserHandler implements CommandHandler<BanUserCommand, Void> {
   @Override
   @Transactional
   public Void handle(BanUserCommand command) {
-    User user = users.findById(command.userId()).orElseThrow(UserNotFoundException::new);
+    User user = users.findByIdForUpdate(command.userId()).orElseThrow(UserNotFoundException::new);
     Instant now = clock.instant();
     user.ban(now);
     users.save(user);

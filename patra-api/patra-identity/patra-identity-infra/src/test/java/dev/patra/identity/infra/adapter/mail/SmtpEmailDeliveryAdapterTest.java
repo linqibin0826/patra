@@ -22,7 +22,9 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -116,6 +118,38 @@ class SmtpEmailDeliveryAdapterTest {
     verify(mailSender, never()).send(any(MimeMessage.class));
     tasks.getFirst().run();
     verify(mailSender).send(any(MimeMessage.class));
+  }
+
+  @Test
+  @DisplayName("自带执行器：发送槽全被占住时 send 照样立即返回，不阻塞请求线程")
+  void should_not_block_caller_when_all_senders_are_busy() throws Exception {
+    when(mailSender.createMimeMessage())
+        .thenAnswer(invocation -> new MimeMessage(Session.getInstance(new Properties())));
+    CountDownLatch release = new CountDownLatch(1);
+    CountDownLatch started = new CountDownLatch(1);
+    org.mockito.Mockito.doAnswer(
+            invocation -> {
+              started.countDown();
+              release.await(5, TimeUnit.SECONDS);
+              return null;
+            })
+        .when(mailSender)
+        .send(any(MimeMessage.class));
+    SmtpEmailDeliveryAdapter adapter =
+        SmtpEmailDeliveryAdapter.async(mailSender, renderer, FROM, 1);
+    try {
+      adapter.send(mail);
+      assertThat(started.await(5, TimeUnit.SECONDS)).isTrue();
+
+      long begin = System.nanoTime();
+      adapter.send(mail);
+      long elapsedMillis = (System.nanoTime() - begin) / 1_000_000;
+
+      assertThat(elapsedMillis).isLessThan(500);
+    } finally {
+      release.countDown();
+      adapter.close();
+    }
   }
 
   @Test
