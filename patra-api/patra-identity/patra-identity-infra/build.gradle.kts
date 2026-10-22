@@ -32,5 +32,9 @@ dependencies {
     implementation("org.springframework.security:spring-security-crypto")
     runtimeOnly("org.bouncycastle:bcprov-jdk18on")
 
+    // 登录设备（PAP-99）：Yauaa 把 User-Agent 解析成设备名与端。它用 Log4j2 API 打日志，
+    // Boot 的 log4j-to-slf4j 已带 log4j-api，日志进 logback；antlr / snakeyaml 等都 shade 在它自己的包里
+    implementation(libs.yauaa)
+
     testImplementation(project(":patra-tool:patra-tool-test"))
 }
