@@ -138,6 +138,7 @@ class SessionTokenAuthenticationConverterTest {
         .createdAt(now)
         .lastActiveAt(now)
         .expiresAt(now.plus(Duration.ofDays(180)))
+        .authenticatedAt(now)
         .build();
   }
 }
