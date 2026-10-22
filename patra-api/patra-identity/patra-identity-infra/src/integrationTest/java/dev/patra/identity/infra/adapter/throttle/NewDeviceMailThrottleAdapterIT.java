@@ -66,6 +66,22 @@ class NewDeviceMailThrottleAdapterIT {
   }
 
   @Test
+  @DisplayName("清掉一台设备的冷却后立即放行；别的设备的冷却不受影响；没有设备标识的桶也能清")
+  void should_allow_again_after_reset() {
+    long user = NEXT_USER.getAndIncrement();
+    assertThat(adapter.acquire(user, DEVICE_A, T0)).isTrue();
+    assertThat(adapter.acquire(user, DEVICE_B, T0)).isTrue();
+    assertThat(adapter.acquire(user, null, T0)).isTrue();
+
+    adapter.reset(user, DEVICE_A);
+    adapter.reset(user, null);
+
+    assertThat(adapter.acquire(user, DEVICE_A, T0.plusSeconds(60))).isTrue();
+    assertThat(adapter.acquire(user, DEVICE_B, T0.plusSeconds(60))).isFalse();
+    assertThat(adapter.acquire(user, null, T0.plusSeconds(60))).isTrue();
+  }
+
+  @Test
   @DisplayName("没有设备标识的登录共用一个桶；键里不出现设备标识原文")
   void should_share_one_bucket_without_device_and_hide_device_in_key() {
     long user = NEXT_USER.getAndIncrement();

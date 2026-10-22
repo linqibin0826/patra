@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 @Component
 public final class NewDeviceMailThrottleAdapter implements NewDeviceMailThrottlePort {
 
+  private final StringRedisTemplate redis;
   private final ActionThrottleScript script;
   private final NewDeviceLoginPolicy policy;
 
@@ -24,7 +25,8 @@ public final class NewDeviceMailThrottleAdapter implements NewDeviceMailThrottle
   /// @param redis Redis 模板
   /// @param policy 新设备提醒的规则
   public NewDeviceMailThrottleAdapter(StringRedisTemplate redis, NewDeviceLoginPolicy policy) {
-    this.script = new ActionThrottleScript(Objects.requireNonNull(redis, "redis 不能为 null"));
+    this.redis = Objects.requireNonNull(redis, "redis 不能为 null");
+    this.script = new ActionThrottleScript(redis);
     this.policy = Objects.requireNonNull(policy, "policy 不能为 null");
   }
 
@@ -37,6 +39,15 @@ public final class NewDeviceMailThrottleAdapter implements NewDeviceMailThrottle
   @Override
   public boolean acquire(long userId, DeviceId device, Instant now) {
     return script.run(key(userId, device), policy.cooldown(), List.of(), now, true) == 0;
+  }
+
+  /// 清掉一台设备的冷却：删掉它的冷却键。
+  ///
+  /// @param userId 用户 ID
+  /// @param device 设备标识，可以为 `null`
+  @Override
+  public void reset(long userId, DeviceId device) {
+    redis.delete(key(userId, device));
   }
 
   /// 冷却键：账号 + 设备标识的哈希，没有设备标识时是 `none`。

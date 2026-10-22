@@ -12,6 +12,9 @@ public interface UserLoginRecordDao extends JpaRepository<UserLoginRecordEntity,
 
   /// 这个账号有没有用这台设备、在某个时刻之后还可能在用的、不是被本人踢掉的记录。
   ///
+  /// 按设备算而不是按记录算：这台设备有一条被踢掉的记录时，比它早的记录（登出、静默过期、被挤掉）
+  /// 都不再算数，只有踢掉之后再登录的记录算。ID 是雪花 ID，按签发先后递增。
+  ///
   /// @param userId 用户 ID
   /// @param deviceId 设备标识
   /// @param since 窗口起点，和记录的「结束或过期的时刻」比
@@ -22,6 +25,10 @@ public interface UserLoginRecordDao extends JpaRepository<UserLoginRecordEntity,
       WHERE r.userId = :userId AND r.deviceId = :deviceId
         AND COALESCE(r.endedAt, r.expiresAt) >= :since
         AND (r.endReason IS NULL OR r.endReason <> 'REVOKED')
+        AND NOT EXISTS (
+          SELECT 1 FROM UserLoginRecordEntity k
+          WHERE k.userId = r.userId AND k.deviceId = r.deviceId
+            AND k.endReason = 'REVOKED' AND k.id > r.id)
       """)
   boolean existsTrustedDevice(
       @Param("userId") long userId,

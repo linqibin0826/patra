@@ -249,8 +249,8 @@ class LoginDeviceFlowIT extends IdentityFlowITSupport {
   }
 
   @Test
-  @DisplayName("被踢掉的设备再登录算新设备，但同设备 24 小时最多 1 封")
-  void should_mail_again_after_device_was_kicked_but_at_most_once_a_day() {
+  @DisplayName("被踢掉的设备再登录立即再提醒，不等 24 小时冷却：踢单个、踢其他全部都一样")
+  void should_mail_again_right_after_device_was_kicked() {
     String email = "kicked.device@example.com";
     long userId = userIdOf(registerFrom(email, "kicked-device", DEVICE_A));
     long sessionA = latestSessionIdOf(userId);
@@ -259,13 +259,27 @@ class LoginDeviceFlowIT extends IdentityFlowITSupport {
 
     kickLatest(userId, sessionA);
     assertThat(loginFrom(email, DEVICE_B, from(SHENZHEN_IP)).status()).isEqualTo(200);
-    assertThat(newDeviceMailsTo(email)).as("24 小时冷却内").isEqualTo(1);
+    awaitNewDeviceMails(email, 2);
 
-    clock.advance(Duration.ofHours(24).plusSeconds(1));
-    assertThat(
-            post("/auth/reauth", Map.of("password", PASSWORD), assertionFor(userId, sessionA))
-                .status())
-        .isEqualTo(200);
+    RawResponse kicked = delete("/me/sessions/others", assertionFor(userId, sessionA));
+    assertThat(kicked.status()).as(kicked.body()).isEqualTo(200);
+    assertThat(loginFrom(email, DEVICE_B, from(SHENZHEN_IP)).status()).isEqualTo(200);
+    awaitNewDeviceMails(email, 3);
+  }
+
+  @Test
+  @DisplayName("踢掉一台设备后，它更早的登出记录也不再算见过：再登录照样提醒")
+  void should_mail_when_kicked_device_has_earlier_logged_out_session() {
+    String email = "kicked.earlier@example.com";
+    long userId = userIdOf(registerFrom(email, "kicked-earlier", DEVICE_A));
+    long sessionA = latestSessionIdOf(userId);
+    loginFrom(email, DEVICE_B, from(SHENZHEN_IP));
+    awaitNewDeviceMails(email, 1);
+    long firstB = latestSessionIdOf(userId);
+    assertThat(post("/auth/logout", Map.of(), assertionFor(userId, firstB)).status())
+        .isEqualTo(204);
+    loginFrom(email, DEVICE_B, from(SHENZHEN_IP));
+
     kickLatest(userId, sessionA);
     assertThat(loginFrom(email, DEVICE_B, from(SHENZHEN_IP)).status()).isEqualTo(200);
     awaitNewDeviceMails(email, 2);

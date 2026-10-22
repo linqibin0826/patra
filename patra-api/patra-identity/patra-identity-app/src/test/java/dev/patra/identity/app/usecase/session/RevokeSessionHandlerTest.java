@@ -5,12 +5,19 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import dev.patra.identity.domain.exception.CurrentSessionRevocationException;
 import dev.patra.identity.domain.exception.ReauthenticationRequiredException;
+import dev.patra.identity.domain.model.aggregate.UserLoginRecord;
+import dev.patra.identity.domain.model.enums.DeviceClass;
 import dev.patra.identity.domain.model.enums.LoginEndReason;
+import dev.patra.identity.domain.model.vo.DeviceId;
+import dev.patra.identity.domain.port.repository.UserLoginRecordRepository;
+import dev.patra.identity.domain.port.throttle.NewDeviceMailThrottlePort;
 import dev.patra.identity.domain.service.ReauthenticationGuard;
 import dev.patra.identity.domain.service.SessionTerminator;
 import dev.patra.tool.core.security.AccountType;
@@ -20,6 +27,7 @@ import dev.patra.tool.core.security.CurrentUserPort;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -32,12 +40,21 @@ class RevokeSessionHandlerTest {
   static final Instant NOW = Instant.parse("2026-10-22T08:00:00Z");
   static final CurrentUser CURRENT = CurrentUser.of(42L, 7002L, AccountType.USER, ClientType.WEB);
 
+  static final DeviceId DEVICE = new DeviceId("Kq3_z-0aB1cD2eF3gH4iJ5kL6mN7oP8qR9sT0uV1wXy");
+
   private final CurrentUserPort currentUserPort = mock(CurrentUserPort.class);
   private final ReauthenticationGuard guard = mock(ReauthenticationGuard.class);
   private final SessionTerminator terminator = mock(SessionTerminator.class);
+  private final UserLoginRecordRepository records = mock(UserLoginRecordRepository.class);
+  private final NewDeviceMailThrottlePort newDeviceThrottle = mock(NewDeviceMailThrottlePort.class);
   private final RevokeSessionHandler handler =
       new RevokeSessionHandler(
-          currentUserPort, guard, terminator, Clock.fixed(NOW, ZoneOffset.UTC));
+          currentUserPort,
+          guard,
+          terminator,
+          records,
+          newDeviceThrottle,
+          Clock.fixed(NOW, ZoneOffset.UTC));
 
   @BeforeEach
   void stubCurrentUser() {
@@ -78,10 +95,44 @@ class RevokeSessionHandlerTest {
   }
 
   @Test
-  @DisplayName("会话已经不在：返回 0，不报错")
+  @DisplayName("会话已经不在：返回 0，不报错，不动提醒冷却")
   void should_return_zero_when_session_already_gone() {
     when(terminator.terminate(42L, 7001L, LoginEndReason.REVOKED, NOW)).thenReturn(false);
 
     assertThat(handler.handle(RevokeSessionCommand.of(7001L)).revokedSessions()).isZero();
+    verify(newDeviceThrottle, never()).reset(42L, DEVICE);
+  }
+
+  @Test
+  @DisplayName("踢掉之后清掉这台设备的新设备提醒冷却：它再登录要立即提醒")
+  void should_reset_new_device_mail_cooldown_of_kicked_device() {
+    when(terminator.terminate(42L, 7001L, LoginEndReason.REVOKED, NOW)).thenReturn(true);
+    when(records.findById(7001L)).thenReturn(Optional.of(kickedRecord(7001L)));
+
+    handler.handle(RevokeSessionCommand.of(7001L));
+
+    InOrder order = inOrder(terminator, newDeviceThrottle);
+    order.verify(terminator).terminate(42L, 7001L, LoginEndReason.REVOKED, NOW);
+    order.verify(newDeviceThrottle).reset(42L, DEVICE);
+  }
+
+  /// 一条被踢掉的、带设备标识的登录记录。
+  ///
+  /// @param id 记录 ID
+  /// @return 记录
+  static UserLoginRecord kickedRecord(long id) {
+    return UserLoginRecord.restore()
+        .id(id)
+        .userId(42L)
+        .clientType(ClientType.WEB)
+        .deviceId(DEVICE)
+        .deviceClass(DeviceClass.DESKTOP)
+        .expiresAt(NOW.plusSeconds(3600))
+        .endedAt(NOW)
+        .endReason(LoginEndReason.REVOKED)
+        .version(1L)
+        .createdAt(NOW.minusSeconds(60))
+        .updatedAt(NOW)
+        .build();
   }
 }

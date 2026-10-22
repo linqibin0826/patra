@@ -246,7 +246,7 @@ patra:
 - **令牌**：32 字节 CSPRNG、base64url 原文 43 个字符，库里只存 SHA-256 十六进制；四种用途共用 `idn_email_token`（`EMAIL_VERIFY` 24 小时、`PASSWORD_RESET` 1 小时、`EMAIL_CHANGE_CONFIRM` 1 小时、`EMAIL_CHANGE_REVERT` 7 天）。签发前在同一事务里作废同用户同用途的旧令牌；消费是一条带条件的 `UPDATE … RETURNING`，并发只有一个赢。封禁按用户批量作废（`EMAIL_CHANGE_REVERT` 例外，可并存、不被批量作废）。令牌原文只出现在邮件里，不进响应、不进日志。
 - **链接**：`<base-url><verify-email-path>#token=<原文>`，域名来自配置不来自请求的 Host 头；令牌在 URL 片段里，门户落地页读出后 POST `/auth/email/verify`，GET 预取不会把它用掉。
 - **注册与重发**：注册成功、事务提交后异步发首封并计入重发配额；重发先判状态（已验证 409、注销中 409）再限流：冷却 60 秒、每账号每小时 5 次、每天 10 次、每 IP 每小时 30 次（Redis Lua 原子判定，`Retry-After` 取最长的等待）。配置在 `patra.identity.mail.resend.*`。
-- **验证**：写 `email_verified_at`；带会话验证时保留当前会话、撤销其余（登录记录标 `REVOKED`），匿名验证撤销全部会话。
+- **验证**：写 `email_verified_at`；带会话验证时保留当前会话、撤销其余（登录记录标 `EMAIL_VERIFIED`），匿名验证撤销全部会话。
 - **签发**：四种用途共用 `EmailTokenIssuer.issue(purpose, userId, email, ip)`，返回已落库的聚合与原文；调用方用 `MailLinkPolicy` 拼链接、构造邮件；撤销令牌（`EMAIL_CHANGE_REVERT`）签发时不作废旧的。
 - **邮件**：`EmailDeliveryPort.send(OutgoingMail)`，infra 的 `SmtpEmailDeliveryAdapter` 用 Spring Mail 发 multipart（文本 + HTML），虚拟线程异步、并发上限 4，失败只记日志（不含收件人与令牌）；带 `Auto-Submitted` / `X-Auto-Response-Suppress` 头。模板在 `infra/src/main/resources/mail/html/` 与 `mail/text/`，同名一对；新邮件 = 一个 `OutgoingMail` 实现 + 两份模板，公共抬头 / 页脚是片段，安全通知共用 `security-notice` 片段（`SecurityNotice`：时间、设备、IP 与属地、「不是我」该怎么办；PAP-99 之前设备与属地为「未知」；「建议到安全设置……」一句由各模板按场景自己写——改回邮箱后密码已作废的人登不进去）。
 - **配置**：服务商坐标 `spring.mail.*`、发件人 `patra.identity.mail.from`、门户地址 `patra.identity.mail.links.base-url` 在 Nacos 的 `patra-identity.yaml`，缺省指向 Mailpit；mini 接真实服务商（Resend）靠 `~/.patra/secrets/mail.env` 覆盖（模板 `patra-infra/docker/secrets/mail.env.example`）。时区 `patra.identity.mail.zone`、保留期 `patra.identity.mail.token-retention` 在 jar 里。SMTP 连通性不计入健康检查（`management.health.mail.enabled: false`）。
@@ -257,7 +257,7 @@ patra:
 工程设计：`docs/patra/specs/2026-10-22-identity-account-security-design.md`。
 
 - **再认证**：会话 HASH 多一个 `auth_at`（登录、注册、再认证、改密码时写）。改邮箱、踢设备（PAP-99）、注销（PAP-100）要求 10 分钟内输过密码：`ReauthenticationGuard` 按断言里的会话 ID 读 `auth_at`，会话不在 401，超窗 403 `REAUTH_REQUIRED`。`POST /auth/reauth` 校验密码（共用登录失败限制）后换新令牌保留会话 ID（`RedisSessionStore.rotate`），旧令牌立即失效，门户要换 Cookie；`auth_at` 距今不足宽限期（10 秒）时不换、响应 `sessionToken` 为 `null`、门户保持现有 Cookie——两个标签页并发再认证时先换出的令牌保持有效。本 PR 前建立的会话没有 `auth_at`，视作从未再认证。配置 `patra.identity.reauth.window`（10m）、`patra.identity.reauth.rotation-grace`（10s）。
-- **改密码**：每次都输当前密码（不走窗口）；新密码按注册规则、不能与当前相同（NFKC 后比较）；事务里锁行后再比一次凭据哈希是不是刚校验过的那个（并发改密码只有先到的生效，后到的 401）、换哈希、按用户批量作废令牌、撤销其余会话并记 `REVOKED`、最后本机换令牌（刷新 `auth_at`；放最后一步，之前失败不碰旧令牌）；提交后发「密码已修改」。不存历史密码。
+- **改密码**：每次都输当前密码（不走窗口）；新密码按注册规则、不能与当前相同（NFKC 后比较）；事务里锁行后再比一次凭据哈希是不是刚校验过的那个（并发改密码只有先到的生效，后到的 401）、换哈希、按用户批量作废令牌、撤销其余会话并记 `PASSWORD_CHANGED`、最后本机换令牌（刷新 `auth_at`；放最后一步，之前失败不碰旧令牌）；提交后发「密码已修改」。不存历史密码。
 - **找回密码**：申请一律 202、异步发信，未注册与已封禁不发（未注册分支做同样的随机数与哈希计算）；限流在查用户之前计数（同邮箱冷却 60 秒、每天 5；同 IP 每小时 20）。提交先过 IP 每分钟 10 的限制，密码不合规时令牌不被消费；成功后换哈希（没有凭据行就新建）、批量作废令牌（含待确认的改邮箱）、写 `email_verified_at`、撤销全部会话、清零登录失败计数与锁，发「密码已重设」，不自动登录。令牌 1 小时。
 - **改邮箱**：申请先过再认证；已有待确认 409 `EMAIL_CHANGE_PENDING`，新地址已被别人使用 409（和注册一致）；每账号每天 3 次。向新邮箱发 1 小时的确认链接；确认后立即生效（改 `email`、写验证时间、批量作废旧地址的令牌），旧邮箱收到含 7 天「不是我」链接的通知（新地址遮掩成 `c***@example.com`），新邮箱收到「已绑定」；确认不撤销会话。撤销：改回旧地址、作废全部令牌（撤销链接只作废比它更晚签发的，更早的保留——X → Y → Z 时攻击者先点 Y 的也废不掉原主 X 的）、删凭据（原密码作废）、撤销全部会话、向改回的地址发重设链接；注销冷静期内也能撤，撤销不碰注销状态。撤销令牌可并存，不被改密码 / 重设 / 再次改邮箱作废。
 - **限流**：四个适配器共用 `action-throttle.lua`（一个可选冷却 + 任意个滑动窗口，时间由 Java 传入）。键：`idn:pw-reset:cooldown:email:{h}`、`idn:pw-reset:day:email:{h}`、`idn:pw-reset:hour:ip:{h}`、`idn:pw-reset-submit:minute:ip:{h}`、`idn:email-change:day:user:{userId}`，`h` 是 SHA-256 前 32 位，IP 取不到时是 `unknown`（所有未知来源共用一个桶，不放行）。受信转发（PAP-99）接通前 IP 是门户地址，两个 IP 维度等于全站配额。配置 `patra.identity.password-reset.*`、`patra.identity.email-change.per-account-daily`。
@@ -305,7 +305,7 @@ patra:
 
 **请求来源**：`RequestOrigin` 只收合法 IP 字面量（受信门户可能转来浏览器谎报的值、tailnet 上直连 6400 时也可伪造），UA 去控制字符后截到 512；`ClientOriginResolver` 用 Yauaa 得设备名（「浏览器主版本 · 系统族」，如 `Chrome 141 · macOS`）与端（`DESKTOP` / `MOBILE` / `TABLET` / `UNKNOWN`），公网地址用 ip2region 查属地（中国到国家 / 省 / 市并去「省」「市」后缀，境外只到国家并转中文名，如 `中国 广东 深圳`、`美国`），回环、私网段、CGNAT（`100.64.0.0/10`，tailnet 用它）、IPv6 ULA 等内网地址不查属地。登录、注册把这些写进 `idn_user_login_record`（`user_agent`、`device_name`、`device_class`、`client_ip`、`ip_region`）；改密码、重设密码、确认 / 撤销改邮箱与新设备提醒的安全通知也用它，内网的属地写「内网」。
 
-**会话列表与踢设备**：`GET /me/sessions` = Redis 里活着的会话（登录时间、最后活跃；网关续期时距上次写入满 60 秒才写）⋈ 登录记录（设备与属地）；本机第一，其余按最后活跃倒序；记录缺失照样列出、设备字段为空。`DELETE /me/sessions/{id}`、`DELETE /me/sessions/others` 先判「不是本机」（409 `CURRENT_SESSION`），再过再认证守卫（403 `REAUTH_REQUIRED`），撤销会话并把记录结束为 `REVOKED`；踢设备不锁用户行、不判账号状态、不发邮件。
+**会话列表与踢设备**：`GET /me/sessions` = Redis 里活着的会话（登录时间、最后活跃；网关续期时距上次写入满 60 秒才写）⋈ 登录记录（设备与属地）；本机第一，其余按最后活跃倒序；记录缺失照样列出、设备字段为空。`DELETE /me/sessions/{id}`、`DELETE /me/sessions/others` 先判「不是本机」（409 `CURRENT_SESSION`），再过再认证守卫（403 `REAUTH_REQUIRED`），撤销会话并把记录结束为 `REVOKED`，再清掉被踢设备的新设备提醒冷却；踢设备不锁用户行、不判账号状态、不发邮件。
 
 **结束原因**：
 
@@ -320,7 +320,7 @@ patra:
 | `PASSWORD_RESET` | 重设密码撤销全部会话 |
 | `EMAIL_REVERTED` | 撤销改邮箱撤销全部会话 |
 
-**新设备提醒**：只在登录时判（注册不判）。事务里、建会话之前查这个账号有没有「见过」这台设备：同设备标识、`COALESCE(ended_at, expires_at)` 在 180 天内、结束原因不是 `REVOKED`（被本人踢掉的不算见过）；按结束或过期的时刻算，常用设备在会话绝对过期（180 天）后被迫重新登录不会误报。没见过（含没带设备标识）就在提交后取 24 小时限流（键 `idn:new-device-mail:user:<userId>:<设备标识哈希 | none>`），放行才发「你的 Patra 账号在新设备上登录」；限流的 Redis 不可用只记日志，登录照常成功。注册时已记下设备，同一个浏览器注册后再登录不发；换设备首次登录照发。
+**新设备提醒**：只在登录时判（注册不判）。事务里、建会话之前查这个账号有没有「见过」这台设备：同设备标识、`COALESCE(ended_at, expires_at)` 在 180 天内、结束原因不是 `REVOKED`，而且不早于这台设备任何一条 `REVOKED` 记录（按设备算：踢掉一台设备后，它之前的登出、过期记录也不再算见过，只认踢掉之后的登录）；按结束或过期的时刻算，常用设备在会话绝对过期（180 天）后被迫重新登录不会误报。没见过（含没带设备标识）就在提交后取 24 小时限流（键 `idn:new-device-mail:user:<userId>:<设备标识哈希 | none>`），放行才发「你的 Patra 账号在新设备上登录」；限流的 Redis 不可用只记日志，登录照常成功。踢设备时清掉被踢设备的冷却键，它再登录立即提醒，不等 24 小时。注册时已记下设备，同一个浏览器注册后再登录不发；换设备首次登录照发。
 
 ```yaml
 patra:

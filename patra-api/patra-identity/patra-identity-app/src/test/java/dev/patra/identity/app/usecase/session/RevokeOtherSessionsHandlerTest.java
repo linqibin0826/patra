@@ -5,11 +5,17 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import dev.patra.identity.domain.exception.ReauthenticationRequiredException;
+import dev.patra.identity.domain.model.aggregate.UserLoginRecord;
+import dev.patra.identity.domain.model.enums.DeviceClass;
 import dev.patra.identity.domain.model.enums.LoginEndReason;
+import dev.patra.identity.domain.model.vo.DeviceId;
+import dev.patra.identity.domain.port.repository.UserLoginRecordRepository;
+import dev.patra.identity.domain.port.throttle.NewDeviceMailThrottlePort;
 import dev.patra.identity.domain.service.ReauthenticationGuard;
 import dev.patra.identity.domain.service.SessionTerminator;
 import dev.patra.tool.core.security.AccountType;
@@ -35,9 +41,16 @@ class RevokeOtherSessionsHandlerTest {
   private final CurrentUserPort currentUserPort = mock(CurrentUserPort.class);
   private final ReauthenticationGuard guard = mock(ReauthenticationGuard.class);
   private final SessionTerminator terminator = mock(SessionTerminator.class);
+  private final UserLoginRecordRepository records = mock(UserLoginRecordRepository.class);
+  private final NewDeviceMailThrottlePort newDeviceThrottle = mock(NewDeviceMailThrottlePort.class);
   private final RevokeOtherSessionsHandler handler =
       new RevokeOtherSessionsHandler(
-          currentUserPort, guard, terminator, Clock.fixed(NOW, ZoneOffset.UTC));
+          currentUserPort,
+          guard,
+          terminator,
+          records,
+          newDeviceThrottle,
+          Clock.fixed(NOW, ZoneOffset.UTC));
 
   @BeforeEach
   void stubCurrentUser() {
@@ -67,5 +80,41 @@ class RevokeOtherSessionsHandlerTest {
         .isInstanceOf(ReauthenticationRequiredException.class);
 
     verifyNoInteractions(terminator);
+  }
+
+  @Test
+  @DisplayName("踢掉之后清掉每台被踢设备的新设备提醒冷却，没有设备标识的清「无设备」桶")
+  void should_reset_new_device_mail_cooldown_of_every_kicked_device() {
+    DeviceId device = new DeviceId("Kq3_z-0aB1cD2eF3gH4iJ5kL6mN7oP8qR9sT0uV1wXy");
+    when(terminator.terminateAllExcept(42L, 7002L, LoginEndReason.REVOKED, NOW))
+        .thenReturn(List.of(7001L, 7003L));
+    when(records.findAllByIds(List.of(7001L, 7003L)))
+        .thenReturn(List.of(kickedRecord(7001L, device), kickedRecord(7003L, null)));
+
+    handler.handle(RevokeOtherSessionsCommand.of());
+
+    verify(newDeviceThrottle).reset(42L, device);
+    verify(newDeviceThrottle).reset(42L, null);
+  }
+
+  /// 一条被踢掉的登录记录。
+  ///
+  /// @param id 记录 ID
+  /// @param device 设备标识，可以为 `null`
+  /// @return 记录
+  static UserLoginRecord kickedRecord(long id, DeviceId device) {
+    return UserLoginRecord.restore()
+        .id(id)
+        .userId(42L)
+        .clientType(ClientType.WEB)
+        .deviceId(device)
+        .deviceClass(DeviceClass.DESKTOP)
+        .expiresAt(NOW.plusSeconds(3600))
+        .endedAt(NOW)
+        .endReason(LoginEndReason.REVOKED)
+        .version(1L)
+        .createdAt(NOW.minusSeconds(60))
+        .updatedAt(NOW)
+        .build();
   }
 }

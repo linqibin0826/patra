@@ -29,7 +29,8 @@ public interface UserLoginRecordRepository {
   List<UserLoginRecord> findAllByIds(Collection<Long> ids);
 
   /// 这个账号是不是「见过」这台设备：有一条同设备的记录，它结束或过期的时刻不早于 `since`，
-  /// 而且不是被本人在设备列表里踢掉的（`REVOKED`）。新设备邮件据此判定。
+  /// 不是被本人在设备列表里踢掉的（`REVOKED`），也不早于这台设备任何一条被踢掉的记录：踢掉一台设备
+  /// 就不再认它之前的登录，只认踢掉之后的。新设备邮件据此判定。
   ///
   /// @param userId 用户 ID
   /// @param deviceId 设备标识

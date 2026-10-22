@@ -286,6 +286,23 @@ class UserLoginRecordRepositoryAdapterIT {
   }
 
   @Test
+  @DisplayName("踢掉一台设备后，它更早的记录（登出、静默过期）也不再算见过；踢掉之后再登录的记录才算")
+  void should_distrust_earlier_records_of_a_kicked_device() {
+    Instant since = Instant.parse("2026-10-01T00:00:00Z");
+    DeviceId device = new DeviceId(DEVICE);
+    long userId = newUser("seen.kicked.earlier");
+    records.save(ended(userId, Instant.parse("2026-10-05T00:00:00Z"), LoginEndReason.LOGOUT));
+    records.save(start(userId, DEVICE, EXPIRES_AT));
+    records.save(ended(userId, Instant.parse("2026-10-10T00:00:00Z"), LoginEndReason.REVOKED));
+
+    assertThat(records.existsTrustedDevice(userId, device, since)).isFalse();
+
+    records.save(start(userId, DEVICE, EXPIRES_AT));
+
+    assertThat(records.existsTrustedDevice(userId, device, since)).isTrue();
+  }
+
+  @Test
   @DisplayName("按退役时刻批量删：已结束看结束时刻，未结束看绝对过期，分批返回删除数")
   void should_delete_retired_records_in_batches() {
     Instant cutoff = Instant.parse("2026-06-01T00:00:00Z");

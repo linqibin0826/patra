@@ -15,4 +15,10 @@ public interface NewDeviceMailThrottlePort {
   /// @param now 当前时间
   /// @return 放行时为 `true`；冷却期内为 `false`
   boolean acquire(long userId, DeviceId device, Instant now);
+
+  /// 清掉一台设备的冷却：本人在设备列表里踢掉它之后，它再登录要立即提醒。
+  ///
+  /// @param userId 用户 ID
+  /// @param device 设备标识；没有时为 `null`，清「无设备」桶
+  void reset(long userId, DeviceId device);
 }
