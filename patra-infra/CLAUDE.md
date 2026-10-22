@@ -76,6 +76,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | 脚本 | 跑在哪 | 作用 |
 |---|---|---|
 | `init-volumes.sh` | Mac mini | 首次部署建数据卷目录骨架和密钥目录 ~/.patra/secrets（幂等，不生成密钥） |
+| `fetch-ip2region.sh` + `ip2region.properties` | Mac mini / MacBook | 按固定 tag 与 SHA-256 下载 identity 查 IP 属地的两个 xdb 到 ~/.patra/data/ip2region（幂等，已是该版本则跳过）；identity 的 Gradle 测试按同一份 properties 下载测试数据 |
 | `install-github-runner.sh [token]` | Mac mini | 安装或升级 GitHub self-hosted runner（launchd 常驻服务，CD deploy job 在此执行）：首次安装带 registration token，已注册时不带参数即升级 |
 | `install-tailscale-route-guard.sh` + `tailscale-route-guard.sh` | macOS（root LaunchDaemon） | 守护 tailnet 路由：Shadowrocket 等代理拨断重连时清除被抢占的克隆主机路由并 `tailscale down/up` 重协商 |
 | `dev.patra.tailscale-route-guard.plist` | — | 上述路由守护 LaunchDaemon 的模板 |

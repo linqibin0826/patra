@@ -86,6 +86,10 @@ scp -p ~/.patra/secrets/redis.env ~/.patra/secrets/gateway.env ~/.patra/secrets/
 # 4d. (Mac mini) 生成只放 mini 的 nacos-server.env、nacos-admin.env，命令见 secrets/ 下对应的 *.example。
 #     管理员密码另存一份到密码管理器
 
+# 4e. (Mac mini) 下载 identity 查 IP 属地用的 ip2region 数据（两个 xdb，约 46 MB，到 ~/.patra/data/ip2region/）。
+#     版本与校验和在 scripts/ip2region.properties；缺文件 identity 起不来。更新数据 = 改它、pull、重跑、重启 identity
+bash patra-infra/scripts/fetch-ip2region.sh
+
 # 5. (Mac mini) 启动全栈（含 tailscale 网关；镜像走 ghcr.io，docker.io 在国内常 502）
 #    脚本会先幂等创建共享网络 patra-net，再按依赖顺序逐个子栈 up
 bash patra-infra/scripts/compose-all.sh up
@@ -253,6 +257,12 @@ docker exec patra-postgres bash /docker-entrypoint-initdb.d/03-nacos-schema.sh
 - 升到 3.3 时，compose 里数据库相关的环境变量要改名为 `NACOS_PLUGIN_DATASOURCE_DB_*`：3.3 镜像的配置文件改用新键，新键优先于旧的 `db.*`。
 
 ---
+
+## 门户的固定地址与受信转发（PAP-99）
+
+`portal` 容器在 `patra-net` 上固定为 `192.168.97.250`（`docker-compose.apps.yaml`）：网关只信任这个地址发来的 `X-Forwarded-For`（同一个文件里 gateway 的 `PATRA_GATEWAY_TRUSTED_PROXIES`，即 `server.tomcat.remoteip.internal-proxies`），据此记录浏览器的真实 IP。两边要一起改。不能信任整个网段：tailnet 经 `tailscale-gw` 子网路由进来的连接会被 SNAT 成网段内地址，OrbStack 端口转发进来的连接都显示成 `192.168.97.1`。所以 mini 上从 tailnet 访问门户时，门户看到的浏览器地址本身就是内网地址，登录设备列表里属地显示「内网」。
+
+identity 的定时任务除 `emailTokenCleanupJob`（04:30）外还有 `loginRecordCleanupJob`（Cron `0 40 4 * * ?`），在 xxl-job-admin 里手工新建，执行器 `patra-identity`。
 
 ## 应用侧配置（patra-api，本仓库范围外）
 
