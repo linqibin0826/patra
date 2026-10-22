@@ -4,6 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.policy.MailLinkPolicy;
+import dev.patra.identity.domain.port.mail.AccountDeletionCancelledMail;
+import dev.patra.identity.domain.port.mail.AccountDeletionCompletedMail;
+import dev.patra.identity.domain.port.mail.AccountDeletionReminderMail;
+import dev.patra.identity.domain.port.mail.AccountDeletionRequestedMail;
 import dev.patra.identity.domain.port.mail.EmailChangeConfirmMail;
 import dev.patra.identity.domain.port.mail.EmailChangeRevertedMail;
 import dev.patra.identity.domain.port.mail.EmailChangedConfirmationMail;
@@ -351,5 +355,99 @@ class ThymeleafMailRendererTest {
     }
     assertThat(rendered.text()).doesNotContain("[(").doesNotContain("<");
     assertThat(rendered.html()).doesNotContainPattern("\\sth:[a-z]+=").doesNotContain("${");
+  }
+
+  /// 注销到期时刻：北京时间 2026-11-04 08:00。
+  private static final Instant DUE = Instant.parse("2026-11-04T00:00:00Z");
+
+  /// 带设备与属地的通知。
+  private static final SecurityNotice FULL_NOTICE =
+      SecurityNotice.builder()
+          .occurredAt(Instant.parse("2026-10-20T08:00:00Z"))
+          .device("Chrome 141 · macOS")
+          .ipAddress("113.92.157.29")
+          .ipLocation("中国 广东 深圳")
+          .notMeAdvice(AccountDeletionRequestedMail.NOT_ME_ADVICE)
+          .build();
+
+  @Test
+  @DisplayName("注销已提交：文本与 HTML 都有到期时刻（按时区）、昵称、设备与 IP")
+  void should_render_deletion_requested_with_due_time_and_notice() {
+    RenderedMail rendered =
+        renderer.render(AccountDeletionRequestedMail.of(TO, "陈宇", DUE, FULL_NOTICE));
+
+    assertThat(rendered.subject()).isEqualTo("你的 Patra 账号将被注销");
+    for (String part : new String[] {rendered.text(), rendered.html()}) {
+      assertThat(part)
+          .contains("陈宇")
+          .contains("2026-11-04 08:00 (UTC+8)")
+          .contains("Chrome 141 · macOS")
+          .contains("113.92.157.29")
+          .contains(AccountDeletionRequestedMail.NOT_ME_ADVICE);
+    }
+  }
+
+  @Test
+  @DisplayName("即将删除提醒：主题按剩余天数拼，含到期时刻，不带安全通知片段")
+  void should_render_deletion_reminder_with_days_left_subject() {
+    RenderedMail rendered = renderer.render(AccountDeletionReminderMail.of(TO, "陈宇", DUE, 3));
+
+    assertThat(rendered.subject()).isEqualTo("你的 Patra 账号将在 3 天后删除");
+    for (String part : new String[] {rendered.text(), rendered.html()}) {
+      assertThat(part).contains("陈宇").contains("2026-11-04 08:00 (UTC+8)").doesNotContain("设备：");
+    }
+  }
+
+  @Test
+  @DisplayName("已取消注销：带安全通知片段与「不是我」一句")
+  void should_render_deletion_cancelled_with_notice() {
+    RenderedMail rendered =
+        renderer.render(
+            AccountDeletionCancelledMail.of(
+                TO,
+                "陈宇",
+                SecurityNotice.builder()
+                    .occurredAt(Instant.parse("2026-10-21T08:00:00Z"))
+                    .notMeAdvice(AccountDeletionCancelledMail.NOT_ME_ADVICE)
+                    .build()));
+
+    assertThat(rendered.subject()).isEqualTo("你的 Patra 账号已取消注销");
+    for (String part : new String[] {rendered.text(), rendered.html()}) {
+      assertThat(part).contains("陈宇").contains(AccountDeletionCancelledMail.NOT_ME_ADVICE);
+    }
+  }
+
+  @Test
+  @DisplayName("已注销：带用户名，不带安全通知片段")
+  void should_render_deletion_completed_with_username() {
+    RenderedMail rendered = renderer.render(AccountDeletionCompletedMail.of(TO, "陈宇", "chen-yu"));
+
+    assertThat(rendered.subject()).isEqualTo("你的 Patra 账号已注销");
+    for (String part : new String[] {rendered.text(), rendered.html()}) {
+      assertThat(part).contains("陈宇").contains("@chen-yu").doesNotContain("设备：");
+    }
+  }
+
+  @Test
+  @DisplayName("注销的四封邮件不放任何站内链接，也没有残留的模板语法")
+  void should_not_link_anywhere_in_deletion_mails() {
+    List<OutgoingMail> mails =
+        List.of(
+            AccountDeletionRequestedMail.of(TO, "陈宇", DUE, FULL_NOTICE),
+            AccountDeletionReminderMail.of(TO, "陈宇", DUE, 3),
+            AccountDeletionCancelledMail.of(TO, "陈宇", NOTICE),
+            AccountDeletionCompletedMail.of(TO, "陈宇", "chen-yu"));
+
+    for (OutgoingMail mail : mails) {
+      RenderedMail rendered = renderer.render(mail);
+      assertThat(rendered.text())
+          .doesNotContain("https://patra.example")
+          .doesNotContain("#token=")
+          .doesNotContain("[(");
+      assertThat(rendered.html())
+          .doesNotContain("https://patra.example")
+          .doesNotContainPattern("\\sth:[a-z]+=")
+          .doesNotContain("${");
+    }
   }
 }

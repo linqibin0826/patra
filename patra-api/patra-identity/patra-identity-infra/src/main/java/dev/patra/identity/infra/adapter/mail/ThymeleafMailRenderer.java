@@ -3,6 +3,7 @@ package dev.patra.identity.infra.adapter.mail;
 import dev.patra.identity.domain.policy.MailLinkPolicy;
 import dev.patra.identity.domain.port.mail.OutgoingMail;
 import dev.patra.identity.domain.port.mail.SecurityNotice;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.Locale;
@@ -18,7 +19,8 @@ import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
 ///
 /// 两个类路径解析器按模板名前缀分流：`html/*` 是 HTML 模式、`mail/html/<名>.html`；`text/*` 是 TEXT 模式、
 /// `mail/text/<名>.txt`。模板变量是邮件自己的 `model()` 加公共变量 `siteName`、`securityUrl`、`subject`；
-/// 变量 `notice` 若是 {@link SecurityNotice}，换成按时区格式化好的 {@link SecurityNoticeView}。
+/// 变量 `notice` 若是 {@link SecurityNotice}，换成按时区格式化好的 {@link SecurityNoticeView}；值是 `Instant` 的变量
+/// （如注销到期时刻）换成同一写法的时间文字，形如 `2026-11-04 08:00 (UTC+8)`。
 /// 自建引擎、不用 starter：identity 没有页面，不需要 MVC 视图解析器。
 public final class ThymeleafMailRenderer {
 
@@ -50,6 +52,11 @@ public final class ThymeleafMailRenderer {
   public RenderedMail render(OutgoingMail mail) {
     Objects.requireNonNull(mail, "mail 不能为 null");
     Map<String, Object> variables = new HashMap<>(mail.model());
+    variables.replaceAll(
+        (name, value) ->
+            value instanceof Instant instant
+                ? SecurityNoticeView.formatTime(instant, zone)
+                : value);
     variables.put("siteName", SITE_NAME);
     variables.put("securityUrl", links.securitySettingsUrl());
     variables.put("subject", mail.subject());

@@ -1,0 +1,10 @@
+[# th:replace="~{text/fragments/header}" /]
+你好，[(${displayName})]：
+
+你的 [(${siteName})] 账号将于 [(${deletionDueAt})] 永久删除。
+
+想保留账号：在此之前用这个邮箱和密码登录 [(${siteName})]，按页面提示取消注销即可。
+
+到期后资料、头像和关注领域会被删除，无法恢复；用户名不会释放。
+
+[# th:replace="~{text/fragments/footer}" /]
