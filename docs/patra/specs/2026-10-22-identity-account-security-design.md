@@ -4,7 +4,7 @@
 > **版本**：[v0.12 User Center](../release-specs/v0.12-user-center.md)（2.1.7 账号安全、2.1.10 安全通知邮件、决策 E / K）
 > **前置设计**：[identity 账号重建（PAP-93）](2026-10-20-identity-account-rebuild-design.md)（`IdentityErrorTrait`、状态守卫、第 16 节交给本 Issue 的约束）、[identity 邮件发送与邮箱验证（PAP-96）](2026-10-21-identity-email-verification-design.md)（令牌表、批量作废、安全通知邮件框架、限流脚本、第 18 节交给本 Issue 的约束）、[identity 会话（PAP-64）](2026-10-09-identity-session-design.md)（会话 HASH、Lua 约定）、[网关鉴权（PAP-65）](2026-10-09-gateway-auth-design.md)（公开名单、断言里的 `sid`）
 > **日期**：2026-10-22
-> **状态**：已评审（2026-10-22，六条待拍板都按建议定；实施中，分支 `feat/v0.12-user-center-api`）
+> **状态**：已实施（2026-10-22，分支 `feat/v0.12-user-center-api`，六条待拍板都按建议定）；实测结果见第 16 节，mini 上的验收（D4）随后端 PR 部署时做
 
 ## 1. 要解决的问题
 
@@ -613,22 +613,24 @@ boot 端到端（PG + Redis + GreenMail，`RANDOM_PORT`，`MutableClock`）：
 | 改邮箱：确认前登录标识仍是旧邮箱；确认后新邮箱可登录、旧邮箱收到含撤销链接的通知；7 天内撤销后邮箱改回、全部会话 401、旧密码不可用并收到重设邮件；第二个申请被拒；新邮箱已占用回 409（偏离 AC 原文的「仍回已发送」，2026-10-22 拍板） | `EmailChangeFlowIT`、四个处理器的单测 |
 | 改密码 / 重设 / 改邮箱生效时按用户批量作废令牌（集成测试） | `PasswordChangeFlowIT`（AC 5 步）、`PasswordResetFlowIT`、`EmailChangeFlowIT`：各自断言 `idn_email_token` 里其他令牌的 `revoked_at` |
 | 四种限流（找回密码同邮箱、找回密码同 IP、提交重设同 IP、改邮箱同账号）各自 429 并带 `Retry-After` | `PasswordResetThrottleAdapterIT`、`EmailChangeThrottleAdapterIT`、`PasswordResetFlowIT`、`EmailChangeFlowIT` |
-| `./gradlew check` + `integrationTest` 全绿 | 第 15.3 节命令输出，写回第 16 节 |
+| `./gradlew check` + `integrationTest` 全绿 | 第 15.3 节命令输出，写回第 16 节末尾 |
 
 ## 16. 实施时要实测的点
 
 | # | 要实测的 | 不成立时的替代 | 实施结果 |
 |---|---|---|---|
-| 1 | Lua 里 `HSET` 一次写入 `HGETALL` 拿到的扁平数组（`unpack(fields)`）：字段数 ≤ Lua 的 `unpack` 上限（默认 8000），当前 10 个字段没问题 | 循环 `HSET` | |
-| 2 | `rotate` 返回 `HGETALL` 形式的字段后，Java 侧复用 `toStoredSession`；新令牌由 Java 生成、脚本只收哈希，脚本返回值不含令牌 | — | |
-| 3 | `LoginThrottleAdapter.clear` 只 `DEL` 失败计数与锁；`login-throttle-begin.lua` 对缺失的键按 0 处理（PAP-63 已如此） | 写一段 `clear` 脚本 | |
-| 4 | `PasswordPolicy.validate(raw, field)` 改签名后 `RegisterUserHandlerTest`、`AccountFlowIT` 的 `errors[].field` 仍是 `password` | — | |
-| 5 | `ActionThrottleScript` 参数化后 `EmailResendThrottleAdapterIT` 全绿、键名不变 | 保留旧脚本给重发单独用 | |
-| 6 | `RestTestClient`（切片测试）对 `PUT` 带体正常；`DELETE /me/email/change` 无体 204 | — | |
-| 7 | 耗时对比用例在 CI（核数少）稳定：10 次中位数之比 < 10 | 放宽到 < 20 或只断言结构一致 | |
-| 8 | `UserIdentifierTakenException` 在确认 / 撤销接口上的 409 体里 `errors[0].field` 是 `email` | — | |
-| 9 | 改密码事务里 `rotate` 后 `revokeAllExcept(keep = sessionId)`：索引已指向新哈希，保留的是新会话 | 调换顺序：先 `revokeAllExcept` 再 `rotate` | |
-| 10 | GreenMail 对同一事务后连发两封（确认改邮箱）都收到且顺序先旧后新 | 只断言集合 | |
+| 1 | Lua 里 `HSET` 一次写入 `HGETALL` 拿到的扁平数组（`unpack(fields)`）：字段数 ≤ Lua 的 `unpack` 上限（默认 8000），当前 10 个字段没问题 | 循环 `HSET` | 成立：`session-rotate.lua` 用 `unpack`，`RedisSessionStoreIT` 23 个用例全绿 |
+| 2 | `rotate` 返回 `HGETALL` 形式的字段后，Java 侧复用 `toStoredSession`；新令牌由 Java 生成、脚本只收哈希，脚本返回值不含令牌 | — | 成立；`rotate` 只返回 `Optional<SessionToken>`，字段不用再转 |
+| 3 | `LoginThrottleAdapter.clear` 只 `DEL` 失败计数与锁；`login-throttle-begin.lua` 对缺失的键按 0 处理（PAP-63 已如此） | 写一段 `clear` 脚本 | 成立：`LoginThrottleAdapterIT.should_clear_failures_and_lock_but_keep_in_flight_entries` |
+| 4 | `PasswordPolicy.validate(raw, field)` 改签名后 `RegisterUserHandlerTest`、`AccountFlowIT` 的 `errors[].field` 仍是 `password` | — | 成立：注册传 `UserFieldViolations.PASSWORD`，现有用例未改照样绿 |
+| 5 | `ActionThrottleScript` 参数化后 `EmailResendThrottleAdapterIT` 全绿、键名不变 | 保留旧脚本给重发单独用 | 成立：9 个用例未改全绿，`email-resend-throttle.lua` 已删 |
+| 6 | `RestTestClient`（切片测试）对 `PUT` 带体正常；`DELETE /me/email/change` 无体 204 | — | 成立：`MeControllerIT`、`MeEmailControllerIT` |
+| 7 | 耗时对比用例在 CI（核数少）稳定：10 次中位数之比 < 10 | 放宽到 < 20 或只断言结构一致 | 本机成立（5 + 5 次，比值远小于 10）；CI 上要看本 PR 的运行结果 |
+| 8 | `UserIdentifierTakenException` 在确认 / 撤销接口上的 409 体里 `errors[0].field` 是 `email` | — | 成立：`EmailChangeControllerIT`、`EmailChangeFlowIT` |
+| 9 | 改密码事务里 `rotate` 后 `revokeAllExcept(keep = sessionId)`：索引已指向新哈希，保留的是新会话 | 调换顺序：先 `revokeAllExcept` 再 `rotate` | 成立：`PasswordChangeFlowIT` 断言新令牌的键还在、另一会话的键没了 |
+| 10 | GreenMail 对同一事务后连发两封（确认改邮箱）都收到且顺序先旧后新 | 只断言集合 | 两封都收到；发信走 4 条虚拟线程，到达顺序不保证，流程测试按收件人 + 主题找邮件，不按顺序 |
+
+**回归结果（2026-10-22，本机）**：`./gradlew spotlessApply` 后 `./gradlew check`——identity 六个模块与 gateway 的单测全绿（domain 288、app 148、infra 45、adapter 4、boot 20、session 25、gateway 35）；`patra-tool-jpa`、`patra-tool-batch` 各一条 `ApplicationContextRunner` 用例在 `check` 并行跑满机器时 15 秒超时，单独重跑通过，与本 Issue 无关（没动这两个模块）。`integrationTest`：session 23、infra 96、adapter 57、boot 48（含四个账号安全流程 12 个用例）全绿；gateway 53 个用例里 `GatewayFailureIT` 的「慢客户端大文件下载」计时用例在同一轮负载下失败一次，单独重跑通过。`build.gradle.kts` 没改，模块图不变。本机没有起 jar 做手工验收（第 15.4 节），端到端由四个流程测试覆盖；mini 上的 D4 随后端 PR 部署时做。
 
 ## 17. README
 

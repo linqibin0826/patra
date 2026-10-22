@@ -1,17 +1,17 @@
 # patra-identity
 
-前台用户的账号服务：注册、登录、会话、登出、「当前用户」、用户名与公开身份卡、邮箱验证与邮件、登录失败限制、封禁与解封。
+前台用户的账号服务：注册、登录、会话、登出、「当前用户」、用户名与公开身份卡、邮箱验证与邮件、再认证、改密码、找回密码、改邮箱、登录失败限制、封禁与解封。
 
-工程设计：`docs/patra/specs/2026-10-05-identity-account-design.md`（账号）、`docs/patra/specs/2026-10-09-identity-session-design.md`（会话）、`docs/patra/specs/2026-10-20-identity-account-rebuild-design.md`（账号重建：用户名、昵称、邮箱验证状态、四态状态机、`V1` 最终形态）、`docs/patra/specs/2026-10-21-identity-email-verification-design.md`（邮件发送与邮箱验证）。
+工程设计：`docs/patra/specs/2026-10-05-identity-account-design.md`（账号）、`docs/patra/specs/2026-10-09-identity-session-design.md`（会话）、`docs/patra/specs/2026-10-20-identity-account-rebuild-design.md`（账号重建：用户名、昵称、邮箱验证状态、四态状态机、`V1` 最终形态）、`docs/patra/specs/2026-10-21-identity-email-verification-design.md`（邮件发送与邮箱验证）、`docs/patra/specs/2026-10-22-identity-account-security-design.md`（账号安全：再认证、改密码、找回密码、改邮箱）。
 
 ## 1. 模块
 
 | 模块 | 内容 |
 |---|---|
-| `patra-identity-domain` | `User`、`UserProfile`、`FormerUsername`、`UserPasswordCredential`、`UserLoginRecord`、`EmailToken` 六个聚合，邮箱、用户名、昵称、密码、客户端信息、令牌密文值对象，用户名 / 昵称 / 改名 / 密码 / 失败限制 / 重发限流 / 邮件链接规则、会话策略，端口（含邮件发送 `EmailDeliveryPort`、重发限流 `EmailResendThrottlePort`），`SessionIssuer`、`EmailVerificationIssuer` 领域服务，领域异常 |
-| `patra-identity-app` | 注册、登录、登出、改用户名、封禁、解封、重发验证邮件、验证邮箱、清理过期令牌九个处理器，走 CommandBus；「当前用户」和公开身份卡走 `UserQueryService` |
-| `patra-identity-infra` | JPA 持久化（含令牌表）、Argon2id 哈希、常见密码名单、Redis 失败限制与重发限流（Lua）、会话存储适配器、SMTP 发信适配器与 Thymeleaf 邮件模板、Flyway 脚本（一份最终形态的 `V1`） |
-| `patra-identity-adapter` | 前台的 `AuthController`、`EmailVerificationController`、`MeController`、`MeEmailController`、`PublicUserController`，后台的 `AdminUserController`，XXL-Job 任务 `EmailTokenCleanupScheduleJob` |
+| `patra-identity-domain` | `User`、`UserProfile`、`FormerUsername`、`UserPasswordCredential`、`UserLoginRecord`、`EmailToken` 六个聚合，邮箱、用户名、昵称、密码、客户端信息、令牌密文值对象，用户名 / 昵称 / 改名 / 密码 / 失败限制 / 重发限流 / 再认证 / 找回密码限流 / 改邮箱限流 / 邮件链接规则、会话策略，端口（含邮件发送 `EmailDeliveryPort`、三个限流端口），`SessionIssuer`、`EmailTokenIssuer`、`ReauthenticationGuard` 领域服务，七个 `OutgoingMail` 记录，领域异常 |
+| `patra-identity-app` | 注册、登录、登出、再认证、改用户名、改密码、找回密码（申请、重设）、改邮箱（申请、取消、确认、撤销）、封禁、解封、重发验证邮件、验证邮箱、清理过期令牌十七个处理器，走 CommandBus；`CurrentPasswordVerifier` 给再认证与改密码共用；「当前用户」、待确认的改邮箱和公开身份卡走 `UserQueryService` |
+| `patra-identity-infra` | JPA 持久化（含令牌表）、Argon2id 哈希、常见密码名单、Redis 失败限制与通用限流脚本 `action-throttle.lua`（重发、找回密码、改邮箱三个适配器共用）、会话存储适配器、SMTP 发信适配器与 Thymeleaf 邮件模板（八对）、Flyway 脚本（一份最终形态的 `V1`） |
+| `patra-identity-adapter` | 前台的 `AuthController`、`EmailVerificationController`、`PasswordResetController`、`EmailChangeController`、`MeController`、`MeEmailController`、`PublicUserController`，后台的 `AdminUserController`，XXL-Job 任务 `EmailTokenCleanupScheduleJob` |
 | `patra-identity-boot` | 启动类、配置、安全 starter 接入 |
 | `patra-identity-session` | 与网关共用的会话存储契约（令牌、Redis 键、Lua、`RedisSessionStore`），见它自己的 README |
 
@@ -26,6 +26,15 @@
 | `PATCH /me/username` | 200 `{ username, nextUsernameChangeAt }` | 需要登录（`/me/**` 整体） |
 | `POST /me/email/verification/resend` | 202 `{ email, nextResendAt }`，无请求体 | 需要登录 |
 | `POST /auth/email/verify` | 200 `{ email, emailVerifiedAt }`，请求体 `{ token }` | 公开（匿名设备点链接也能验证；带会话时网关照样翻译令牌） |
+| `POST /auth/reauth` | 200 `{ sessionToken, user }`，请求体 `{ password }`；新令牌，旧令牌立即失效，会话 ID 不变 | 需要登录 |
+| `PUT /me/password` | 200 `{ sessionToken, user }`，请求体 `{ currentPassword, newPassword }`；本机换新令牌，其他会话全部撤销 | 需要登录 |
+| `POST /auth/password/forgot` | 202 `{ email, nextRequestAt }`，请求体 `{ email }`；注册与否一样 | 公开 |
+| `POST /auth/password/reset` | 200 `{ email }`，请求体 `{ token, newPassword }`；不自动登录 | 公开 |
+| `POST /me/email/change` | 202 `{ newEmail, expiresAt }`，请求体 `{ newEmail }` | 需要登录 + 再认证 |
+| `GET /me/email/change` | 200 `{ newEmail, expiresAt }`，没有待确认 204 | 需要登录 |
+| `DELETE /me/email/change` | 204 | 需要登录 |
+| `POST /auth/email/change/confirm` | 200 `{ email, emailVerifiedAt }`，请求体 `{ token }` | 公开 |
+| `POST /auth/email/change/revert` | 200 `{ email }`，请求体 `{ token }` | 公开 |
 | `GET /users/{username}` | 200 `{ username, displayName, avatarUrl, audience }`；保留期内的旧名 301，`Location: /users/<新名>`，体 `{ username: <新名> }` | 公开（`/users/**` 整体，网关照样翻译令牌） |
 | `POST /admin/users/{userId}/ban` | 204 | 拒绝外部访问 |
 | `POST /admin/users/{userId}/unban` | 204 | 拒绝外部访问 |
@@ -58,6 +67,8 @@
 | `idn_user_profile` | 用户 ID（唯一）、昵称（可空，空表示跟随用户名）。PAP-95 在这份骨架上加列 |
 | `idn_user_former_username` | 用户 ID、旧用户名、替换时间、保留到期时间 |
 | `idn_user_login_record` | 会话 ID、用户 ID、客户端信息、结束原因（第 9 节） |
+
+改邮箱、重设密码、撤销改邮箱都直接改 `idn_user.email` 并把 `email_verified_at` 写成当时（点链接的人证明了对地址的控制）；「待确认的改邮箱」不是表列，是一条未过期的 `EMAIL_CHANGE_CONFIRM` 令牌。
 | `idn_email_token` | 用途、用户 ID、发往的邮箱、令牌哈希（SHA-256 十六进制，唯一）、过期 / 消费 / 撤销时间、申请方 IP。同一用户同一用途只留一个有效令牌，由部分唯一索引守住（改邮箱撤销令牌例外） |
 
 ### 状态机
@@ -105,14 +116,14 @@ patra:
 
 ## 5. 密码
 
-- 规则：8 到 64 个码点，不去空格，不能在常见密码名单里。登录只要求非空、不含孤立代理项；超过 1024 个码点的密码直接按密码错误处理，不做哈希。
+- 规则：8 到 64 个码点，不去空格，不能在常见密码名单里（注册、改密码、重设密码同一条规则）。登录只要求非空、不含孤立代理项；超过 1024 个码点的密码直接按密码错误处理，不做哈希。与 NIST SP 800-63B-4「单因子至少 15 位」的有意偏离按 ASVS 7.1.1 记录在账号安全设计第 14 节。
 - 哈希：Argon2id，`m=19456 KiB, t=2, p=1`，盐 16 字节、输出 32 字节；哈希和校验前都做 NFKC。开发机上单次约 20 毫秒（mini 上的耗时等 PAP-66 部署后实测）。
 - 并发：同时进行的哈希计算最多 4 个，排队超过 3 秒返回 503。
 - 常见密码名单：`infra/src/main/resources/password/common-passwords.txt.gz`，取自 Django 6.0 的 `django/contrib/auth/common-passwords.txt.gz`（Royce Williams 整理，19640 行），SHA-256 `3c1baed62596de36860824eb3f436d5932d37ca8b06e59df78f5a44ec175afe4`。许可证见同目录的 `common-passwords.LICENSE`（BSD 3-Clause）。比较时对密码做 NFKC、转小写、去掉首尾空白。
 
 ## 6. 登录失败限制
 
-- 按「账号类型 + 邮箱」计数，没注册过的邮箱也一样。15 分钟内失败 5 次锁 15 分钟，成功一次清零。
+- 按「账号类型 + 邮箱」计数，没注册过的邮箱也一样。15 分钟内失败 5 次锁 15 分钟，成功一次清零。再认证、改密码时的当前密码校验共用这把锁：错计失败，锁定期内 429；重设密码成功后清零并解锁。找回密码的申请与提交不计入。
 - 只有确认的失败才计数；正在校验的尝试单独登记，「失败数 + 在途数」到上限时返回 429（1 秒），不上锁。
 - Redis 键：`idn:login-failures:user:{邮箱 SHA-256}`、`idn:login-inflight:…`、`idn:login-lock:…`，脚本在 `infra/src/main/resources/redis/`。
 - 配置：
@@ -146,13 +157,20 @@ patra:
 | 邮箱已经验证过了（`traits` 为 `CONFLICT` + `EMAIL_ALREADY_VERIFIED`，文案「邮箱已经验证过了」） | 409 | `IDN-0409` |
 | 验证令牌为空、格式不对、不存在、过期、已用或已作废（`errors[]`：`token` / `REQUIRED` 或 `INVALID`，文案「验证链接无效或已过期」；不区分原因） | 422 | `IDN-0422` |
 | 改名冷却期内（`traits` 为 `CONFLICT` + `USERNAME_CHANGE_COOLDOWN`，不带 `Retry-After`，下次可改时间看 `/auth/me` 的 `nextUsernameChangeAt`；文案「用户名修改过于频繁，请稍后再试」） | 409 | `IDN-0409` |
+| 再认证超时（`traits` 为 `FORBIDDEN` + `REAUTH_REQUIRED`，文案「请重新输入密码以继续」；门户弹密码框、`POST /auth/reauth` 后重试） | 403 | `IDN-0403` |
+| 再认证、改密码时当前密码不正确（`traits` 为 `UNAUTHORIZED` + `PASSWORD_MISMATCH`，文案「密码不正确」；门户不把它当登出） | 401 | `IDN-0401` |
+| 已有待确认的改邮箱（`traits` 为 `CONFLICT` + `EMAIL_CHANGE_PENDING`，文案「已有一个待确认的邮箱更改，请先取消或等它过期」） | 409 | `IDN-0409` |
+| 改邮箱的新地址已被使用；确认 / 撤销时地址被别人注册了（`errors[]`：`email` / `ALREADY_REGISTERED`） | 409 | `IDN-0409` |
+| 找回密码的申请或提交过于频繁（`Retry-After`、`retryAfterSeconds`；文案「操作过于频繁，请稍后再试」） | 429 | `IDN-0429` |
+| 改邮箱今天的配额用完（文案「今天更改邮箱的次数已用完，请明天再试」） | 429 | `IDN-0429` |
+| 新密码与当前相同、新邮箱与当前相同（`errors[]`：`newPassword` / `UNCHANGED`、`newEmail` / `UNCHANGED`） | 422 | `IDN-0422` |
 | 账号已被封禁 | 403 | `IDN-0403` |
 | 用户不存在：后台接口；公开身份卡不存在或对请求者不可见 | 404 | `IDN-0404` |
 | Redis 不可用（登录限流、会话存储）、哈希排队超时 | 503 | `IDN-0503` |
 
 请求本身格式不对时由 Spring 直接处理，返回默认格式的 ProblemDetail，没有 `code`：请求体不是 JSON 对象（`[]`、`"x"`、空请求体、坏 JSON）或字段类型不对返回 400；`Content-Type` 不是 JSON 返回 415；方法不对（比如 GET）返回 405；路径里的 `userId` 不是数字或溢出返回 400，负数和 0 按用户不存在返回 404 `IDN-0404`；`/users/{username}` 路径里带 `%20`、`%25` 等百分号编码时被 Spring Security 的请求防火墙拒绝，返回 400。
 
-原因码：邮箱 `REQUIRED`、`TOO_LONG`、`INVALID_FORMAT`、`ALREADY_REGISTERED`（409）；用户名 `REQUIRED`、`INVALID_CHARACTER`、`TOO_SHORT`、`TOO_LONG`、`INVALID_FORMAT`、`DIGITS_ONLY`、`RESERVED`、`UNCHANGED`（改名）、`ALREADY_TAKEN`（409）；昵称 `REQUIRED`、`INVALID_CHARACTER`、`TOO_SHORT`、`TOO_LONG`、`INVALID_FORMAT`、`RESERVED`（PAP-95 的接口才会返回）；密码 `REQUIRED`、`INVALID_CHARACTER`、`TOO_SHORT`、`TOO_LONG`、`TOO_COMMON`；客户端类型 `INVALID_FORMAT`；设备标识 `TOO_LONG`、`INVALID_FORMAT`（含控制字符）。
+原因码：邮箱 `REQUIRED`、`TOO_LONG`、`INVALID_FORMAT`、`ALREADY_REGISTERED`（409）；用户名 `REQUIRED`、`INVALID_CHARACTER`、`TOO_SHORT`、`TOO_LONG`、`INVALID_FORMAT`、`DIGITS_ONLY`、`RESERVED`、`UNCHANGED`（改名）、`ALREADY_TAKEN`（409）；昵称 `REQUIRED`、`INVALID_CHARACTER`、`TOO_SHORT`、`TOO_LONG`、`INVALID_FORMAT`、`RESERVED`（PAP-95 的接口才会返回）；密码 `REQUIRED`、`INVALID_CHARACTER`、`TOO_SHORT`、`TOO_LONG`、`TOO_COMMON`（改密码、重设时字段名是 `currentPassword` / `newPassword`，改邮箱时新邮箱字段名是 `newEmail`）；客户端类型 `INVALID_FORMAT`；设备标识 `TOO_LONG`、`INVALID_FORMAT`（含控制字符）。
 
 ## 8. 本地运行和测试
 
@@ -167,11 +185,12 @@ mini 上先 `docker stop patra-identity`，重建后 `docker start patra-identit
 
 - 邮件：`spring.mail.host` 缺省跟随 `PATRA_INFRA_HOST`、端口 1025，即 mini core 栈的 Mailpit（UI `http://linqibins-mac-mini:8025`）；本机不用放 `mail.env`。验证链接的域名来自 `patra.identity.mail.links.base-url`（Nacos 里 `${PATRA_PORTAL_BASE_URL:http://linqibins-mac-mini:4000}`），本机起门户时设 `PATRA_PORTAL_BASE_URL=http://localhost:4000`，链接才指向本机门户。
 - XXL-Job 执行器端口 6401（服务端口 + 1），回调地址读 `PATRA_ADVERTISE_IP`；本机不想注册到 mini 的调度中心时设 `XXL_JOB_ENABLED=false`。
+- 手工验收再认证时不想等 10 分钟：临时把 `patra.identity.reauth.window` 设成 `30s`（环境变量 `PATRA_IDENTITY_REAUTH_WINDOW=30s`）。
 
 - 测试全部用 Testcontainers（PostgreSQL 17、Redis 7.0.15），本机要有 Docker：
 
 ```bash
-./gradlew spotlessApply && ./gradlew check && ./gradlew :patra-api:patra-identity:patra-identity-infra:integrationTest :patra-api:patra-identity:patra-identity-adapter:integrationTest :patra-api:patra-identity:patra-identity-boot:integrationTest
+./gradlew spotlessApply && ./gradlew check && ./gradlew :patra-api:patra-identity:patra-identity-session:integrationTest :patra-api:patra-identity:patra-identity-infra:integrationTest :patra-api:patra-identity:patra-identity-adapter:integrationTest :patra-api:patra-identity:patra-identity-boot:integrationTest
 ```
 
 `check` 不包含集成测试，按模块各自跑。
@@ -215,6 +234,29 @@ patra:
 - **链接**：`<base-url><verify-email-path>#token=<原文>`，域名来自配置不来自请求的 Host 头；令牌在 URL 片段里，门户落地页读出后 POST `/auth/email/verify`，GET 预取不会把它用掉。
 - **注册与重发**：注册成功、事务提交后异步发首封并计入重发配额；重发先判状态（已验证 409、注销中 409）再限流：冷却 60 秒、每账号每小时 5 次、每天 10 次、每 IP 每小时 30 次（Redis Lua 原子判定，`Retry-After` 取最长的等待）。配置在 `patra.identity.mail.resend.*`。
 - **验证**：写 `email_verified_at`；带会话验证时保留当前会话、撤销其余（登录记录标 `REVOKED`），匿名验证撤销全部会话。
-- **邮件**：`EmailDeliveryPort.send(OutgoingMail)`，infra 的 `SmtpEmailDeliveryAdapter` 用 Spring Mail 发 multipart（文本 + HTML），虚拟线程异步、并发上限 4，失败只记日志（不含收件人与令牌）；带 `Auto-Submitted` / `X-Auto-Response-Suppress` 头。模板在 `infra/src/main/resources/mail/html/` 与 `mail/text/`，同名一对；新邮件 = 一个 `OutgoingMail` 实现 + 两份模板，公共抬头 / 页脚是片段，安全通知共用 `security-notice` 片段（`SecurityNotice`：时间、设备、IP 与属地、「不是我」该怎么办；PAP-99 之前设备与属地为「未知」）。
+- **签发**：四种用途共用 `EmailTokenIssuer.issue(purpose, userId, email, ip)`，返回已落库的聚合与原文；调用方用 `MailLinkPolicy` 拼链接、构造邮件；撤销令牌（`EMAIL_CHANGE_REVERT`）签发时不作废旧的。
+- **邮件**：`EmailDeliveryPort.send(OutgoingMail)`，infra 的 `SmtpEmailDeliveryAdapter` 用 Spring Mail 发 multipart（文本 + HTML），虚拟线程异步、并发上限 4，失败只记日志（不含收件人与令牌）；带 `Auto-Submitted` / `X-Auto-Response-Suppress` 头。模板在 `infra/src/main/resources/mail/html/` 与 `mail/text/`，同名一对；新邮件 = 一个 `OutgoingMail` 实现 + 两份模板，公共抬头 / 页脚是片段，安全通知共用 `security-notice` 片段（`SecurityNotice`：时间、设备、IP 与属地、「不是我」该怎么办；PAP-99 之前设备与属地为「未知」；「建议到安全设置……」一句由各模板按场景自己写——改回邮箱后密码已作废的人登不进去）。
 - **配置**：服务商坐标 `spring.mail.*`、发件人 `patra.identity.mail.from`、门户地址 `patra.identity.mail.links.base-url` 在 Nacos 的 `patra-identity.yaml`，缺省指向 Mailpit；mini 接真实服务商（Resend）靠 `~/.patra/secrets/mail.env` 覆盖（模板 `patra-infra/docker/secrets/mail.env.example`）。时区 `patra.identity.mail.zone`、保留期 `patra.identity.mail.token-retention` 在 jar 里。SMTP 连通性不计入健康检查（`management.health.mail.enabled: false`）。
 - **清理**：XXL-Job 任务 `emailTokenCleanupJob`（执行器 `patra-identity`）删过期超过保留期（默认 30 天）的令牌，每批 1000 行、每批一个事务；mini 上每天 04:30 一次。
+
+## 11. 账号安全：再认证、改密码、找回密码、改邮箱
+
+工程设计：`docs/patra/specs/2026-10-22-identity-account-security-design.md`。
+
+- **再认证**：会话 HASH 多一个 `auth_at`（登录、注册、再认证、改密码时写）。改邮箱、踢设备（PAP-99）、注销（PAP-100）要求 10 分钟内输过密码：`ReauthenticationGuard` 按断言里的会话 ID 读 `auth_at`，会话不在 401，超窗 403 `REAUTH_REQUIRED`。`POST /auth/reauth` 校验密码（共用登录失败限制）后换新令牌保留会话 ID（`RedisSessionStore.rotate`），旧令牌立即失效，门户要换 Cookie。本 PR 前建立的会话没有 `auth_at`，视作从未再认证。窗口 `patra.identity.reauth.window`（10m）。
+- **改密码**：每次都输当前密码（不走窗口）；新密码按注册规则、不能与当前相同（NFKC 后比较）；事务里换哈希、按用户批量作废令牌、本机换令牌（刷新 `auth_at`）、撤销其余会话并记 `REVOKED`；提交后发「密码已修改」。不存历史密码。
+- **找回密码**：申请一律 202、异步发信，未注册与已封禁不发（未注册分支做同样的随机数与哈希计算）；限流在查用户之前计数（同邮箱冷却 60 秒、每天 5；同 IP 每小时 20）。提交先过 IP 每分钟 10 的限制，密码不合规时令牌不被消费；成功后换哈希（没有凭据行就新建）、批量作废令牌（含待确认的改邮箱）、写 `email_verified_at`、撤销全部会话、清零登录失败计数与锁，发「密码已重设」，不自动登录。令牌 1 小时。
+- **改邮箱**：申请先过再认证；已有待确认 409 `EMAIL_CHANGE_PENDING`，新地址已被别人使用 409（和注册一致）；每账号每天 3 次。向新邮箱发 1 小时的确认链接；确认后立即生效（改 `email`、写验证时间、批量作废旧地址的令牌），旧邮箱收到含 7 天「不是我」链接的通知（新地址遮掩成 `c***@example.com`），新邮箱收到「已绑定」；确认不撤销会话。撤销：改回旧地址、作废全部令牌（含其余撤销链接）、删凭据（原密码作废）、撤销全部会话、向改回的地址发重设链接；注销冷静期内也能撤，撤销不碰注销状态。撤销令牌可并存，不被改密码 / 重设 / 再次改邮箱作废。
+- **限流**：四个适配器共用 `action-throttle.lua`（一个可选冷却 + 任意个滑动窗口，时间由 Java 传入）。键：`idn:pw-reset:cooldown:email:{h}`、`idn:pw-reset:day:email:{h}`、`idn:pw-reset:hour:ip:{h}`、`idn:pw-reset-submit:minute:ip:{h}`、`idn:email-change:day:user:{userId}`，`h` 是 SHA-256 前 32 位。受信转发（PAP-99）接通前 IP 是门户地址，两个 IP 维度等于全站配额。配置 `patra.identity.password-reset.*`、`patra.identity.email-change.per-account-daily`。
+- **邮件**：七封——`password-reset`（重设链接）、`password-changed`、`password-reset-done`、`email-change-confirm`（确认链接）、`email-changed-notice`（旧邮箱，含撤销链接）、`email-changed-confirmation`（新邮箱）、`email-change-reverted`（改回的地址，含重设链接）。落地页路径 `patra.identity.mail.links.reset-password-path`（`/reset-password`）、`confirm-email-change-path`（`/confirm-email-change`）、`revert-email-change-path`（`/revert-email-change`），链接格式同验证邮件。
+- **令牌、会话、密码的联动**：
+
+| 操作 | 令牌 | 会话 | 密码 | 登录失败计数 |
+|---|---|---|---|---|
+| 再认证 | — | 本机换令牌 | — | 共用 |
+| 改密码 | 批量作废 | 本机换令牌 + 其余撤销 | 换 | 共用 |
+| 找回密码：申请 | 作废旧的重设令牌再签发 | — | — | 不计 |
+| 找回密码：重设 | 批量作废 | 全部撤销 | 换或新建 | 清零 |
+| 改邮箱：申请 / 取消 | 作废旧的确认令牌（再签发） | — | — | — |
+| 改邮箱：确认 | 批量作废，再签发撤销令牌 | 不动 | — | — |
+| 改邮箱：撤销 | 批量作废 + 其余撤销令牌 | 全部撤销 | 删凭据 | — |
