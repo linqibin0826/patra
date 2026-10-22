@@ -169,7 +169,7 @@ class RevertEmailChangeHandlerTest {
   }
 
   @Test
-  @DisplayName("成功：改回 → 作废全部（含其余撤销令牌）→ 删凭据 → 撤销全部会话并记 REVOKED → 签发重设 → 发到改回的地址")
+  @DisplayName("成功：改回 → 作废全部 + 只作废比本条更晚签发的撤销令牌（更早的保留）→ 删凭据 → 撤销全部会话并记 REVOKED → 签发重设 → 发到改回的地址")
   void should_revert_in_order() {
     EmailChangeReverted result =
         handler.handle(RevertEmailChangeCommand.of(SECRET.value(), "127.0.0.1"));
@@ -181,7 +181,7 @@ class RevertEmailChangeHandlerTest {
         .verify(users)
         .save(argThat(u -> u.getEmail().orElseThrow().equals(OLD) && u.isEmailVerified()));
     order.verify(tokens).revokeAllActive(42L, NOW);
-    order.verify(tokens).revokeActive(42L, EmailTokenPurpose.EMAIL_CHANGE_REVERT, NOW);
+    order.verify(tokens).revokeRevertTokensIssuedAfter(42L, 500L, NOW);
     order.verify(credentials).deleteByUserId(42L);
     order.verify(sessions).revokeAll(AccountType.USER, 42L);
     order.verify(records).save(argThat(r -> r.getEndReason() == LoginEndReason.REVOKED));
@@ -216,7 +216,15 @@ class RevertEmailChangeHandlerTest {
   /// @param email 发往的邮箱
   /// @return 令牌
   private static EmailToken token(EmailTokenPurpose purpose, EmailAddress email) {
-    return EmailToken.issue(purpose, 42L, email, SECRET, NOW.minusSeconds(60), "127.0.0.1");
+    return EmailToken.restore()
+        .id(500L)
+        .userId(42L)
+        .purpose(purpose)
+        .email(email)
+        .tokenHash(SECRET.hash())
+        .expiresAt(NOW.plus(java.time.Duration.ofDays(7)))
+        .version(0L)
+        .build();
   }
 
   /// 指定状态的用户 42，邮箱已改成 NEW。

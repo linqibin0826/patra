@@ -38,7 +38,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionOperations;
 
 /// 改密码：每次都输当前密码（不走再认证窗口）；新密码按注册规则且不能与当前相同；
-/// 事务里换哈希、按用户批量作废令牌、本机换令牌（刷新 `auth_at`）、撤销其余会话并记 `REVOKED`；
+/// 事务里换哈希、按用户批量作废令牌、撤销其余会话并记 `REVOKED`、最后本机换令牌（刷新 `auth_at`）；
 /// 事务提交后发「密码已修改」。
 ///
 /// 当前密码的校验和登录共用失败限制：错是 401 + `PASSWORD_MISMATCH`，锁定 429。
@@ -108,10 +108,6 @@ public class ChangePasswordHandler
                   credential.rotate(hash);
                   credentials.save(credential);
                   tokens.revokeAllActive(userId, now);
-                  String token =
-                      sessions
-                          .rotate(current.accountType(), userId, current.sessionId())
-                          .orElseThrow(AuthenticationRequiredException::new);
                   List<Long> revoked =
                       sessions.revokeAllExcept(current.accountType(), userId, current.sessionId());
                   for (Long sessionId : revoked) {
@@ -126,6 +122,11 @@ public class ChangePasswordHandler
                   UserAccountReadModel account =
                       userReadPort
                           .findAccount(userId)
+                          .orElseThrow(AuthenticationRequiredException::new);
+                  // 换令牌放在事务最后一步：之前任何一步失败都不碰旧令牌，用户还能在原会话里重试
+                  String token =
+                      sessions
+                          .rotate(current.accountType(), userId, current.sessionId())
                           .orElseThrow(AuthenticationRequiredException::new);
                   return new Changed(token, account, revoked.size());
                 }));

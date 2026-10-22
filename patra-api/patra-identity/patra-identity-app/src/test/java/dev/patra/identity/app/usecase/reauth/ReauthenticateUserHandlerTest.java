@@ -125,10 +125,11 @@ class ReauthenticateUserHandlerTest {
   void should_rotate_session_and_return_new_token_after_success() {
     AuthenticatedUser result = handler.handle(ReauthenticateUserCommand.of("Correct-Horse-02"));
 
-    InOrder order = inOrder(loginThrottle, passwordHashing, sessions);
+    InOrder order = inOrder(loginThrottle, passwordHashing, userReadPort, sessions);
     order.verify(loginThrottle).begin(AccountType.USER, EMAIL);
     order.verify(passwordHashing).matches(any(), any());
     order.verify(loginThrottle).recordSuccess(ATTEMPT);
+    order.verify(userReadPort).findAccount(42L);
     order.verify(sessions).rotate(AccountType.USER, 42L, 7001L);
     assertThat(result.sessionToken()).isEqualTo(NEW_TOKEN);
     assertThat(result.account()).isEqualTo(ACCOUNT);
@@ -196,6 +197,18 @@ class ReauthenticateUserHandlerTest {
     assertThatThrownBy(() -> handler.handle(ReauthenticateUserCommand.of("any"))).isSameAs(boom);
     verify(loginThrottle).cancel(ATTEMPT);
     verify(loginThrottle, never()).recordFailure(any());
+  }
+
+  @Test
+  @DisplayName("读账号失败时不换令牌：旧令牌仍然可用")
+  void should_not_rotate_when_account_lookup_fails() {
+    when(userReadPort.findAccount(42L)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> handler.handle(ReauthenticateUserCommand.of("Correct-Horse-02")))
+        .isInstanceOf(AuthenticationRequiredException.class);
+    verify(sessions, never())
+        .rotate(
+            any(), org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyLong());
   }
 
   @Test

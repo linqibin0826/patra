@@ -131,6 +131,17 @@ public class EmailTokenRepositoryAdapter implements EmailTokenRepository {
     return dao.revokeAllActive(userId, now);
   }
 
+  /// 只作废比指定那条更晚签发的撤销令牌。
+  ///
+  /// @param userId 用户 ID
+  /// @param tokenId 刚消费的撤销令牌的 ID
+  /// @param now 作废时间
+  /// @return 作废了几行
+  @Override
+  public int revokeRevertTokensIssuedAfter(long userId, long tokenId, Instant now) {
+    return dao.revokeRevertTokensIssuedAfter(userId, tokenId, now);
+  }
+
   /// 删掉过期时间早于截止时间的行，一次最多一批。
   ///
   /// @param cutoff 截止时间

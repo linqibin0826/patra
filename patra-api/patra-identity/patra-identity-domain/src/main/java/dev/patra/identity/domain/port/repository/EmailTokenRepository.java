@@ -10,7 +10,8 @@ import java.util.Optional;
 ///
 /// 「同一用户同一用途只留一个有效令牌」靠签发前在同一事务里 {@link #revokeActive} 守，
 /// 表上的部分唯一索引只是兜底；改邮箱的撤销令牌（`EMAIL_CHANGE_REVERT`）不受这条规则约束，
-/// 也不被 {@link #revokeAllActive} 作废：连续改两次邮箱时，两个旧邮箱里的「不是我」链接要各自活满 7 天。
+/// 也不被 {@link #revokeAllActive} 作废：连续改两次邮箱时，两个旧邮箱里的「不是我」链接要各自活满 7 天；
+/// 消费一条时只作废比它更晚签发的（{@link #revokeRevertTokensIssuedAfter}）。
 public interface EmailTokenRepository {
 
   /// 保存令牌，新令牌在这里分配雪花 ID。
@@ -58,6 +59,16 @@ public interface EmailTokenRepository {
   /// @param now 作废时间
   /// @return 作废了几行
   int revokeAllActive(long userId, Instant now);
+
+  /// 消费一条撤销令牌后调用：只作废该用户比它**更晚签发**的撤销令牌（ID 更大，雪花 ID 按时间递增），
+  /// 更早的保留——越早的地址越可信。X → Y → Z 时攻击者先点 Y 的链接改回 Y，原主再点 X 的仍然胜出；
+  /// 原主先点 X 的，Y 的随之作废。
+  ///
+  /// @param userId 用户 ID
+  /// @param tokenId 刚消费的那条撤销令牌的 ID
+  /// @param now 作废时间
+  /// @return 作废了几行
+  int revokeRevertTokensIssuedAfter(long userId, long tokenId, Instant now);
 
   /// 删掉过期时间早于某一刻的令牌，一次最多删一批。清理任务循环调用直到一批不足。
   ///

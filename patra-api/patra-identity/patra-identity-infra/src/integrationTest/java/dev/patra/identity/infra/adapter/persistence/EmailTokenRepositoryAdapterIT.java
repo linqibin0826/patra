@@ -284,6 +284,27 @@ class EmailTokenRepositoryAdapterIT {
         .isEmpty();
   }
 
+  @Test
+  @DisplayName("按签发先后作废撤销令牌：只作废比指定那条更晚签发的，更早的保留")
+  void should_revoke_only_revert_tokens_issued_after_the_given_one() {
+    EmailToken first =
+        tokens.save(
+            issued(EmailTokenPurpose.EMAIL_CHANGE_REVERT, EmailTokenSecret.generate(RANDOM), NOW));
+    EmailToken second =
+        tokens.save(
+            issued(EmailTokenPurpose.EMAIL_CHANGE_REVERT, EmailTokenSecret.generate(RANDOM), NOW));
+    EmailToken third =
+        tokens.save(
+            issued(EmailTokenPurpose.EMAIL_CHANGE_REVERT, EmailTokenSecret.generate(RANDOM), NOW));
+
+    assertThat(tokens.revokeRevertTokensIssuedAfter(userId, second.getId(), NOW.plusSeconds(1)))
+        .isEqualTo(1);
+
+    assertThat(revokedAt(first.getId())).isNull();
+    assertThat(revokedAt(second.getId())).isNull();
+    assertThat(revokedAt(third.getId())).isNotNull();
+  }
+
   /// 给当前用户签发一枚令牌，不保存。
   ///
   /// @param purpose 用途

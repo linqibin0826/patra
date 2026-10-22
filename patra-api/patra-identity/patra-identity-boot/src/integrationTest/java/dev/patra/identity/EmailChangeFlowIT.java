@@ -167,6 +167,34 @@ class EmailChangeFlowIT extends IdentityFlowITSupport {
   }
 
   @Test
+  @DisplayName("X → Y → Z：攻击者先点 Y 的撤销链接改回 Y，原主再点 X 的仍然胜出（更早的地址更可信）")
+  void should_let_the_earlier_revert_link_win_over_a_later_one() {
+    String x = "flow.race.x@example.com";
+    String y = "flow.race.y@example.com";
+    String z = "flow.race.z@example.com";
+    RawResponse registered = register(x, "u-flow-race");
+    long userId = userIdOf(registered);
+    long sessionId = latestSessionIdOf(userId);
+    String revertX = changeEmail(userId, sessionId, y, x, 2);
+    String revertY = changeEmail(userId, sessionId, z, y, 5);
+
+    RawResponse revertedToY =
+        post("/auth/email/change/revert", Map.of("token", revertY), noHeaders());
+    assertThat(revertedToY.status()).as(revertedToY.body()).isEqualTo(200);
+    assertThat(json(revertedToY).get("email").asString()).isEqualTo(y);
+    assertThat(activeTokenPurposesOf(userId))
+        .as("X 的撤销令牌还活着")
+        .containsExactlyInAnyOrder("EMAIL_CHANGE_REVERT", "PASSWORD_RESET");
+
+    RawResponse revertedToX =
+        post("/auth/email/change/revert", Map.of("token", revertX), noHeaders());
+    assertThat(revertedToX.status()).as(revertedToX.body()).isEqualTo(200);
+    assertThat(json(revertedToX).get("email").asString()).isEqualTo(x);
+    assertThat(login(y, PASSWORD).status()).isEqualTo(401);
+    assertThat(activeTokenPurposesOf(userId)).containsExactly("PASSWORD_RESET");
+  }
+
+  @Test
   @DisplayName("新邮箱已被别人使用：409 errors[0].field 是 email、不发信、没有待确认；改密码后待确认的改邮箱消失")
   void should_reject_taken_email_with_409_and_leave_no_pending_change() {
     RawResponse alice = register("flow.taken.alice@example.com", "u-flow-taken-alice");

@@ -56,12 +56,12 @@ public class ReauthenticateUserHandler
     }
     EmailAddress email = user.getEmail().orElseThrow(AuthenticationRequiredException::new);
     passwordVerifier.verify(email, userId, password);
+    UserAccountReadModel account =
+        userReadPort.findAccount(userId).orElseThrow(AuthenticationRequiredException::new);
     String token =
         sessions
             .rotate(current.accountType(), userId, current.sessionId())
             .orElseThrow(AuthenticationRequiredException::new);
-    UserAccountReadModel account =
-        userReadPort.findAccount(userId).orElseThrow(AuthenticationRequiredException::new);
     log.info("前台用户已再认证: userId={}, sessionId={}", userId, current.sessionId());
     return AuthenticatedUser.of(token, account);
   }

@@ -3,6 +3,7 @@ package dev.patra.identity.app.usecase.password;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.inOrder;
@@ -201,18 +202,19 @@ class ChangePasswordHandlerTest {
   }
 
   @Test
-  @DisplayName("成功：换哈希 → 批量作废令牌 → 本机换令牌 → 撤销其余并记 REVOKED → 发「密码已修改」；返回新令牌")
+  @DisplayName("成功：换哈希 → 批量作废令牌 → 撤销其余并记 REVOKED → 读账号 → 本机换令牌（事务最后一步）→ 发「密码已修改」；返回新令牌")
   void should_change_in_order_rotate_keep_current_and_revoke_the_rest() {
     AuthenticatedUser result =
         handler.handle(
             ChangePasswordCommand.of("Correct-Horse-02", "Another-Horse-03", "127.0.0.1"));
 
-    InOrder order = inOrder(credentials, tokens, sessions, records, emailDelivery);
+    InOrder order = inOrder(credentials, tokens, sessions, records, userReadPort, emailDelivery);
     order.verify(credentials).save(argThat(c -> c.getPasswordHash().equals(NEW_HASH)));
     order.verify(tokens).revokeAllActive(42L, NOW);
-    order.verify(sessions).rotate(AccountType.USER, 42L, 7001L);
     order.verify(sessions).revokeAllExcept(AccountType.USER, 42L, 7001L);
     order.verify(records, times(2)).save(argThat(r -> r.getEndReason() == LoginEndReason.REVOKED));
+    order.verify(userReadPort).findAccount(42L);
+    order.verify(sessions).rotate(AccountType.USER, 42L, 7001L);
     order
         .verify(emailDelivery)
         .send(
@@ -266,6 +268,20 @@ class ChangePasswordHandlerTest {
                 handler.handle(
                     ChangePasswordCommand.of("Correct-Horse-02", "Another-Horse-03", "127.0.0.1")))
         .isSameAs(down);
+    verifyNoInteractions(emailDelivery);
+  }
+
+  @Test
+  @DisplayName("换令牌是事务里最后一步：之前任何一步失败都不碰旧令牌，用户还能在原会话里重试")
+  void should_not_rotate_when_a_step_before_rotation_fails() {
+    when(userReadPort.findAccount(42L)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(
+            () ->
+                handler.handle(
+                    ChangePasswordCommand.of("Correct-Horse-02", "Another-Horse-03", "127.0.0.1")))
+        .isInstanceOf(dev.patra.tool.core.security.AuthenticationRequiredException.class);
+    verify(sessions, never()).rotate(any(), anyLong(), anyLong());
     verifyNoInteractions(emailDelivery);
   }
 

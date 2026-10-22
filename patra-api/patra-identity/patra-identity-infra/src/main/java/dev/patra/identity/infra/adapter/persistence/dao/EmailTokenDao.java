@@ -54,6 +54,20 @@ public interface EmailTokenDao extends JpaRepository<EmailTokenEntity, Long> {
           + " and t.revokedAt is null")
   int revokeAllActive(@Param("userId") Long userId, @Param("now") Instant now);
 
+  /// 作废一个用户比指定那条更晚签发（ID 更大）的有效撤销令牌。
+  ///
+  /// @param userId 用户 ID
+  /// @param tokenId 刚消费的撤销令牌的 ID
+  /// @param now 作废时间
+  /// @return 作废了几行
+  @Modifying
+  @Query(
+      "update EmailTokenEntity t set t.revokedAt = :now where t.userId = :userId"
+          + " and t.purpose = 'EMAIL_CHANGE_REVERT' and t.id > :tokenId"
+          + " and t.consumedAt is null and t.revokedAt is null")
+  int revokeRevertTokensIssuedAfter(
+      @Param("userId") Long userId, @Param("tokenId") Long tokenId, @Param("now") Instant now);
+
   /// 删掉过期时间早于截止时间的行，一次最多一批。
   ///
   /// @param cutoff 截止时间

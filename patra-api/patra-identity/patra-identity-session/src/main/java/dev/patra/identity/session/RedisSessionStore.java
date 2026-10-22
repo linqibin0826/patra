@@ -18,9 +18,9 @@ import org.springframework.data.redis.core.script.RedisScript;
 
 /// Redis 里的会话存储：identity 建和删，网关查和续期。
 ///
-/// 键 1 `idn:session:<账号类型>:<令牌哈希>` 是一条会话（含最近一次再认证时间 `auth_at`）；键 2 `idn:user-sessions:<账号类型>:<用户
-// ID>`
-/// 是该用户全部会话的索引（会话 ID → 令牌哈希）。每个操作是一段 Lua，原子执行。
+/// 键 1 `idn:session:<账号类型>:<令牌哈希>` 是一条会话（含最近一次再认证时间 `auth_at`）；
+/// 键 2 `idn:user-sessions:<账号类型>:<用户 ID>` 是该用户全部会话的索引（会话 ID → 令牌哈希）。
+/// 每个操作是一段 Lua，原子执行。
 /// 会话键在脚本里由前缀拼出来，所以只支持单机 Redis。
 ///
 /// Redis 暂时不可用时抛 {@link SessionStoreUnavailableException}；其他 Redis 异常是缺陷，原样抛出。

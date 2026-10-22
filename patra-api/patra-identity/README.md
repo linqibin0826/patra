@@ -67,9 +67,9 @@
 | `idn_user_profile` | 用户 ID（唯一）、昵称（可空，空表示跟随用户名）。PAP-95 在这份骨架上加列 |
 | `idn_user_former_username` | 用户 ID、旧用户名、替换时间、保留到期时间 |
 | `idn_user_login_record` | 会话 ID、用户 ID、客户端信息、结束原因（第 9 节） |
-
-改邮箱、重设密码、撤销改邮箱都直接改 `idn_user.email` 并把 `email_verified_at` 写成当时（点链接的人证明了对地址的控制）；「待确认的改邮箱」不是表列，是一条未过期的 `EMAIL_CHANGE_CONFIRM` 令牌。
 | `idn_email_token` | 用途、用户 ID、发往的邮箱、令牌哈希（SHA-256 十六进制，唯一）、过期 / 消费 / 撤销时间、申请方 IP。同一用户同一用途只留一个有效令牌，由部分唯一索引守住（改邮箱撤销令牌例外） |
+
+改邮箱确认与撤销直接改 `idn_user.email` 并把 `email_verified_at` 写成当时（点链接的人证明了对地址的控制）；重设密码不改邮箱，只写 `email_verified_at`。「待确认的改邮箱」不是表列，是一条未过期的 `EMAIL_CHANGE_CONFIRM` 令牌。
 
 ### 状态机
 
@@ -244,9 +244,9 @@ patra:
 工程设计：`docs/patra/specs/2026-10-22-identity-account-security-design.md`。
 
 - **再认证**：会话 HASH 多一个 `auth_at`（登录、注册、再认证、改密码时写）。改邮箱、踢设备（PAP-99）、注销（PAP-100）要求 10 分钟内输过密码：`ReauthenticationGuard` 按断言里的会话 ID 读 `auth_at`，会话不在 401，超窗 403 `REAUTH_REQUIRED`。`POST /auth/reauth` 校验密码（共用登录失败限制）后换新令牌保留会话 ID（`RedisSessionStore.rotate`），旧令牌立即失效，门户要换 Cookie。本 PR 前建立的会话没有 `auth_at`，视作从未再认证。窗口 `patra.identity.reauth.window`（10m）。
-- **改密码**：每次都输当前密码（不走窗口）；新密码按注册规则、不能与当前相同（NFKC 后比较）；事务里换哈希、按用户批量作废令牌、本机换令牌（刷新 `auth_at`）、撤销其余会话并记 `REVOKED`；提交后发「密码已修改」。不存历史密码。
+- **改密码**：每次都输当前密码（不走窗口）；新密码按注册规则、不能与当前相同（NFKC 后比较）；事务里换哈希、按用户批量作废令牌、撤销其余会话并记 `REVOKED`、最后本机换令牌（刷新 `auth_at`；放最后一步，之前失败不碰旧令牌）；提交后发「密码已修改」。不存历史密码。
 - **找回密码**：申请一律 202、异步发信，未注册与已封禁不发（未注册分支做同样的随机数与哈希计算）；限流在查用户之前计数（同邮箱冷却 60 秒、每天 5；同 IP 每小时 20）。提交先过 IP 每分钟 10 的限制，密码不合规时令牌不被消费；成功后换哈希（没有凭据行就新建）、批量作废令牌（含待确认的改邮箱）、写 `email_verified_at`、撤销全部会话、清零登录失败计数与锁，发「密码已重设」，不自动登录。令牌 1 小时。
-- **改邮箱**：申请先过再认证；已有待确认 409 `EMAIL_CHANGE_PENDING`，新地址已被别人使用 409（和注册一致）；每账号每天 3 次。向新邮箱发 1 小时的确认链接；确认后立即生效（改 `email`、写验证时间、批量作废旧地址的令牌），旧邮箱收到含 7 天「不是我」链接的通知（新地址遮掩成 `c***@example.com`），新邮箱收到「已绑定」；确认不撤销会话。撤销：改回旧地址、作废全部令牌（含其余撤销链接）、删凭据（原密码作废）、撤销全部会话、向改回的地址发重设链接；注销冷静期内也能撤，撤销不碰注销状态。撤销令牌可并存，不被改密码 / 重设 / 再次改邮箱作废。
+- **改邮箱**：申请先过再认证；已有待确认 409 `EMAIL_CHANGE_PENDING`，新地址已被别人使用 409（和注册一致）；每账号每天 3 次。向新邮箱发 1 小时的确认链接；确认后立即生效（改 `email`、写验证时间、批量作废旧地址的令牌），旧邮箱收到含 7 天「不是我」链接的通知（新地址遮掩成 `c***@example.com`），新邮箱收到「已绑定」；确认不撤销会话。撤销：改回旧地址、作废全部令牌（撤销链接只作废比它更晚签发的，更早的保留——X → Y → Z 时攻击者先点 Y 的也废不掉原主 X 的）、删凭据（原密码作废）、撤销全部会话、向改回的地址发重设链接；注销冷静期内也能撤，撤销不碰注销状态。撤销令牌可并存，不被改密码 / 重设 / 再次改邮箱作废。
 - **限流**：四个适配器共用 `action-throttle.lua`（一个可选冷却 + 任意个滑动窗口，时间由 Java 传入）。键：`idn:pw-reset:cooldown:email:{h}`、`idn:pw-reset:day:email:{h}`、`idn:pw-reset:hour:ip:{h}`、`idn:pw-reset-submit:minute:ip:{h}`、`idn:email-change:day:user:{userId}`，`h` 是 SHA-256 前 32 位。受信转发（PAP-99）接通前 IP 是门户地址，两个 IP 维度等于全站配额。配置 `patra.identity.password-reset.*`、`patra.identity.email-change.per-account-daily`。
 - **邮件**：七封——`password-reset`（重设链接）、`password-changed`、`password-reset-done`、`email-change-confirm`（确认链接）、`email-changed-notice`（旧邮箱，含撤销链接）、`email-changed-confirmation`（新邮箱）、`email-change-reverted`（改回的地址，含重设链接）。落地页路径 `patra.identity.mail.links.reset-password-path`（`/reset-password`）、`confirm-email-change-path`（`/confirm-email-change`）、`revert-email-change-path`（`/revert-email-change`），链接格式同验证邮件。
 - **令牌、会话、密码的联动**：
@@ -259,4 +259,4 @@ patra:
 | 找回密码：重设 | 批量作废 | 全部撤销 | 换或新建 | 清零 |
 | 改邮箱：申请 / 取消 | 作废旧的确认令牌（再签发） | — | — | — |
 | 改邮箱：确认 | 批量作废，再签发撤销令牌 | 不动 | — | — |
-| 改邮箱：撤销 | 批量作废 + 其余撤销令牌 | 全部撤销 | 删凭据 | — |
+| 改邮箱：撤销 | 批量作废 + 更晚签发的撤销令牌 | 全部撤销 | 删凭据 | — |
