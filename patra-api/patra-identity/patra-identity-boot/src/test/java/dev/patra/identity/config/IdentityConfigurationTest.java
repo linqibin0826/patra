@@ -16,12 +16,15 @@ import dev.patra.identity.domain.policy.SessionLifetime;
 import dev.patra.identity.domain.policy.SessionLifetimePolicy;
 import dev.patra.identity.domain.policy.UsernameChangePolicy;
 import dev.patra.identity.domain.policy.UsernamePolicy;
+import dev.patra.identity.domain.port.geolocation.IpGeolocationPort;
 import dev.patra.identity.domain.port.hashing.PasswordHashingPort;
 import dev.patra.identity.domain.port.mail.EmailDeliveryPort;
 import dev.patra.identity.domain.port.password.CommonPasswordPort;
 import dev.patra.identity.domain.port.repository.EmailTokenRepository;
 import dev.patra.identity.domain.port.repository.UserLoginRecordRepository;
 import dev.patra.identity.domain.port.session.SessionStorePort;
+import dev.patra.identity.domain.port.useragent.UserAgentParsingPort;
+import dev.patra.identity.domain.service.ClientOriginResolver;
 import dev.patra.identity.domain.service.EmailTokenIssuer;
 import dev.patra.identity.domain.service.ReauthenticationGuard;
 import dev.patra.identity.domain.service.SessionIssuer;
@@ -73,7 +76,9 @@ class IdentityConfigurationTest {
         .withBean(SessionStorePort.class, () -> mock(SessionStorePort.class))
         .withBean(CurrentUserPort.class, () -> mock(CurrentUserPort.class))
         .withBean(EmailTokenRepository.class, () -> mock(EmailTokenRepository.class))
-        .withBean(JavaMailSender.class, () -> mock(JavaMailSender.class));
+        .withBean(JavaMailSender.class, () -> mock(JavaMailSender.class))
+        .withBean(UserAgentParsingPort.class, () -> mock(UserAgentParsingPort.class))
+        .withBean(IpGeolocationPort.class, () -> mock(IpGeolocationPort.class));
   }
 
   @Test
@@ -94,6 +99,7 @@ class IdentityConfigurationTest {
           assertThat(context).hasSingleBean(RedisSessionStore.class);
           assertThat(context).hasSingleBean(SessionIssuer.class);
           assertThat(context).hasSingleBean(SessionTerminator.class);
+          assertThat(context).hasSingleBean(ClientOriginResolver.class);
         });
   }
 

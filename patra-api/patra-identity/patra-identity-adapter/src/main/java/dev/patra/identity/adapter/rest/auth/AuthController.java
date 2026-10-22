@@ -17,10 +17,12 @@ import dev.patra.tool.cqrs.CommandBus;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -35,16 +37,20 @@ public class AuthController {
   private final CommandBus commandBus;
   private final UserQueryService userQueryService;
 
-  /// 注册并登录。成功返回 201。客户端 IP 取 `getRemoteAddr()`：网关加的 `X-Forwarded-For` 已按
-  /// `forward-headers-strategy: framework` 解析；门户是 BFF，所以在受信转发链路接通前这是门户的地址。
+  /// 注册并登录。成功返回 201。客户端 IP 取 `getRemoteAddr()`：网关写的 `Forwarded` /
+  /// `X-Forwarded-For` 已按 `forward-headers-strategy: framework` 解析，经受信转发链路（门户 → 网关）
+  /// 是浏览器的 IP（PAP-99）；UA 取 `User-Agent` 头，门户转来的是浏览器的原值。
   ///
   /// @param request 请求体
   /// @param http 原始请求，取客户端 IP
+  /// @param userAgent `User-Agent` 头，可以没有
   /// @return 会话令牌和新用户的账号信息
   @PostMapping("/register")
   @ResponseStatus(HttpStatus.CREATED)
   public AuthenticatedUserResponse register(
-      @RequestBody RegisterRequest request, HttpServletRequest http) {
+      @RequestBody RegisterRequest request,
+      HttpServletRequest http,
+      @RequestHeader(value = HttpHeaders.USER_AGENT, required = false) String userAgent) {
     AuthenticatedUser result =
         commandBus.handle(
             RegisterUserCommand.builder()
@@ -54,20 +60,32 @@ public class AuthController {
                 .clientType(request.clientType())
                 .deviceId(request.deviceId())
                 .clientIp(http.getRemoteAddr())
+                .userAgent(userAgent)
                 .build());
     return toResponse(result);
   }
 
-  /// 登录。成功返回 200。
+  /// 登录。成功返回 200。客户端 IP 与 UA 的取法同注册。
   ///
   /// @param request 请求体
+  /// @param http 原始请求，取客户端 IP
+  /// @param userAgent `User-Agent` 头，可以没有
   /// @return 会话令牌和账号信息
   @PostMapping("/login")
-  public AuthenticatedUserResponse login(@RequestBody LoginRequest request) {
+  public AuthenticatedUserResponse login(
+      @RequestBody LoginRequest request,
+      HttpServletRequest http,
+      @RequestHeader(value = HttpHeaders.USER_AGENT, required = false) String userAgent) {
     AuthenticatedUser result =
         commandBus.handle(
-            LoginUserCommand.of(
-                request.email(), request.password(), request.clientType(), request.deviceId()));
+            LoginUserCommand.builder()
+                .email(request.email())
+                .password(request.password())
+                .clientType(request.clientType())
+                .deviceId(request.deviceId())
+                .clientIp(http.getRemoteAddr())
+                .userAgent(userAgent)
+                .build());
     return toResponse(result);
   }
 

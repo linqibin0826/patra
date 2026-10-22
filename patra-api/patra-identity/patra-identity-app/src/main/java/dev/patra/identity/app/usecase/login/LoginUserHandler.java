@@ -8,9 +8,11 @@ import dev.patra.identity.domain.exception.UserBannedException;
 import dev.patra.identity.domain.model.aggregate.User;
 import dev.patra.identity.domain.model.aggregate.UserPasswordCredential;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
+import dev.patra.identity.domain.model.vo.ClientOrigin;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.LoginClient;
 import dev.patra.identity.domain.model.vo.PlainPassword;
+import dev.patra.identity.domain.model.vo.RequestOrigin;
 import dev.patra.identity.domain.policy.PasswordPolicy;
 import dev.patra.identity.domain.port.hashing.PasswordHashingPort;
 import dev.patra.identity.domain.port.read.UserReadPort;
@@ -19,6 +21,7 @@ import dev.patra.identity.domain.port.repository.UserRepository;
 import dev.patra.identity.domain.port.session.IssuedUserSession;
 import dev.patra.identity.domain.port.throttle.LoginAttempt;
 import dev.patra.identity.domain.port.throttle.LoginThrottlePort;
+import dev.patra.identity.domain.service.ClientOriginResolver;
 import dev.patra.identity.domain.service.SessionIssuer;
 import dev.patra.tool.core.error.field.FieldViolation;
 import dev.patra.tool.core.security.AccountType;
@@ -57,6 +60,7 @@ public class LoginUserHandler implements CommandHandler<LoginUserCommand, Authen
   private final PasswordHashingPort passwordHashing;
   private final LoginThrottlePort loginThrottle;
   private final SessionIssuer sessionIssuer;
+  private final ClientOriginResolver clientOriginResolver;
   private final TransactionOperations transactions;
 
   /// 登录。
@@ -102,6 +106,9 @@ public class LoginUserHandler implements CommandHandler<LoginUserCommand, Authen
     if (verified.isBanned()) {
       throw new UserBannedException();
     }
+    // 解析 UA 与属地是纯计算：凭据校验通过之后、事务之外
+    ClientOrigin origin =
+        clientOriginResolver.resolve(RequestOrigin.of(command.clientIp(), command.userAgent()));
     Login login =
         Objects.requireNonNull(
             transactions.execute(
@@ -116,7 +123,7 @@ public class LoginUserHandler implements CommandHandler<LoginUserCommand, Authen
                   if (locked.isBanned()) {
                     throw new UserBannedException();
                   }
-                  IssuedUserSession session = sessionIssuer.issue(locked.getId(), client);
+                  IssuedUserSession session = sessionIssuer.issue(locked.getId(), client, origin);
                   UserAccountReadModel account =
                       userReadPort
                           .findAccount(locked.getId())

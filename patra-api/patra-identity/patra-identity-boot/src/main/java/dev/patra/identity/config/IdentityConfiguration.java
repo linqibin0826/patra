@@ -14,12 +14,15 @@ import dev.patra.identity.domain.policy.SessionLifetime;
 import dev.patra.identity.domain.policy.SessionLifetimePolicy;
 import dev.patra.identity.domain.policy.UsernameChangePolicy;
 import dev.patra.identity.domain.policy.UsernamePolicy;
+import dev.patra.identity.domain.port.geolocation.IpGeolocationPort;
 import dev.patra.identity.domain.port.hashing.PasswordHashingPort;
 import dev.patra.identity.domain.port.mail.EmailDeliveryPort;
 import dev.patra.identity.domain.port.password.CommonPasswordPort;
 import dev.patra.identity.domain.port.repository.EmailTokenRepository;
 import dev.patra.identity.domain.port.repository.UserLoginRecordRepository;
 import dev.patra.identity.domain.port.session.SessionStorePort;
+import dev.patra.identity.domain.port.useragent.UserAgentParsingPort;
+import dev.patra.identity.domain.service.ClientOriginResolver;
 import dev.patra.identity.domain.service.EmailTokenIssuer;
 import dev.patra.identity.domain.service.ReauthenticationGuard;
 import dev.patra.identity.domain.service.SessionIssuer;
@@ -318,5 +321,16 @@ public class IdentityConfiguration {
   public SessionTerminator sessionTerminator(
       SessionStorePort sessionStore, UserLoginRecordRepository records) {
     return new SessionTerminator(sessionStore, records);
+  }
+
+  /// 把请求来源解析成设备名、端与属地的领域服务（PAP-99）。
+  ///
+  /// @param userAgents User-Agent 解析端口（Yauaa）
+  /// @param geolocation IP 属地端口（ip2region）
+  /// @return 领域服务
+  @Bean
+  public ClientOriginResolver clientOriginResolver(
+      UserAgentParsingPort userAgents, IpGeolocationPort geolocation) {
+    return new ClientOriginResolver(userAgents, geolocation);
   }
 }

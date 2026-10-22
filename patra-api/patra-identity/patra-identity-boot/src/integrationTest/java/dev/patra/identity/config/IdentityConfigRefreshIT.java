@@ -5,10 +5,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
 import dev.patra.identity.domain.policy.LoginThrottlePolicy;
+import dev.patra.identity.domain.port.geolocation.IpGeolocationPort;
 import dev.patra.identity.domain.port.password.CommonPasswordPort;
 import dev.patra.identity.domain.port.repository.EmailTokenRepository;
 import dev.patra.identity.domain.port.repository.UserLoginRecordRepository;
 import dev.patra.identity.domain.port.session.SessionStorePort;
+import dev.patra.identity.domain.port.useragent.UserAgentParsingPort;
 import dev.patra.tool.core.security.CurrentUserPort;
 import java.time.Clock;
 import java.util.Map;
@@ -56,6 +58,8 @@ class IdentityConfigRefreshIT {
           .withBean(CurrentUserPort.class, () -> mock(CurrentUserPort.class))
           .withBean(EmailTokenRepository.class, () -> mock(EmailTokenRepository.class))
           .withBean(JavaMailSender.class, () -> mock(JavaMailSender.class))
+          .withBean(UserAgentParsingPort.class, () -> mock(UserAgentParsingPort.class))
+          .withBean(IpGeolocationPort.class, () -> mock(IpGeolocationPort.class))
           .withPropertyValues(
               "patra.identity.session.lifetime.user.web.idle=30d",
               "patra.identity.session.lifetime.user.web.absolute=180d");

@@ -82,6 +82,7 @@ class AuthControllerIT {
         .post()
         .uri("/auth/register")
         .contentType(MediaType.APPLICATION_JSON)
+        .header(HttpHeaders.USER_AGENT, "Mozilla/5.0 (Macintosh) Chrome/141.0.0.0")
         .body(
             Map.of(
                 "email", " Chen.Yu@Example.com ",
@@ -119,10 +120,12 @@ class AuthControllerIT {
     assertThat(command.getValue().deviceId()).isNull();
     // MockMvc 的远端地址固定是回环地址；真实请求里是 getRemoteAddr()（网关转发头已按 framework 策略解析）
     assertThat(command.getValue().clientIp()).isEqualTo("127.0.0.1");
+    assertThat(command.getValue().userAgent())
+        .isEqualTo("Mozilla/5.0 (Macintosh) Chrome/141.0.0.0");
   }
 
   @Test
-  @DisplayName("登录成功返回 200，带会话令牌；clientType 和 deviceId 原样交给命令")
+  @DisplayName("登录成功返回 200，带会话令牌；clientType、deviceId、客户端 IP 与 UA 交给命令")
   void should_login_and_return_200() {
     when(commandBus.handle(any(LoginUserCommand.class)))
         .thenReturn(AuthenticatedUser.of("patra_user_x", account(42L)));
@@ -131,6 +134,7 @@ class AuthControllerIT {
         .post()
         .uri("/auth/login")
         .contentType(MediaType.APPLICATION_JSON)
+        .header(HttpHeaders.USER_AGENT, "Mozilla/5.0 (Macintosh) Chrome/141.0.0.0")
         .body(
             Map.of(
                 "email", "chen.yu@example.com",
@@ -154,6 +158,9 @@ class AuthControllerIT {
     verify(commandBus).handle(command.capture());
     assertThat(command.getValue().clientType()).isEqualTo("web");
     assertThat(command.getValue().deviceId()).isEqualTo("mac-safari");
+    assertThat(command.getValue().clientIp()).isEqualTo("127.0.0.1");
+    assertThat(command.getValue().userAgent())
+        .isEqualTo("Mozilla/5.0 (Macintosh) Chrome/141.0.0.0");
   }
 
   @Test

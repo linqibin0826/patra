@@ -23,14 +23,17 @@ import dev.patra.identity.domain.model.aggregate.EmailToken;
 import dev.patra.identity.domain.model.aggregate.User;
 import dev.patra.identity.domain.model.aggregate.UserPasswordCredential;
 import dev.patra.identity.domain.model.aggregate.UserProfile;
+import dev.patra.identity.domain.model.enums.DeviceClass;
 import dev.patra.identity.domain.model.enums.EmailTokenPurpose;
 import dev.patra.identity.domain.model.enums.UserStatus;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
+import dev.patra.identity.domain.model.vo.ClientOrigin;
 import dev.patra.identity.domain.model.vo.DeviceId;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.EmailTokenSecret;
 import dev.patra.identity.domain.model.vo.LoginClient;
 import dev.patra.identity.domain.model.vo.PasswordHash;
+import dev.patra.identity.domain.model.vo.RequestOrigin;
 import dev.patra.identity.domain.model.vo.UserFieldViolations;
 import dev.patra.identity.domain.model.vo.Username;
 import dev.patra.identity.domain.policy.MailLinkPolicy;
@@ -46,6 +49,7 @@ import dev.patra.identity.domain.port.repository.UserProfileRepository;
 import dev.patra.identity.domain.port.repository.UserRepository;
 import dev.patra.identity.domain.port.session.IssuedUserSession;
 import dev.patra.identity.domain.port.throttle.EmailResendThrottlePort;
+import dev.patra.identity.domain.service.ClientOriginResolver;
 import dev.patra.identity.domain.service.EmailTokenIssuer;
 import dev.patra.identity.domain.service.IssuedEmailToken;
 import dev.patra.identity.domain.service.SessionIssuer;
@@ -121,7 +125,16 @@ class RegisterUserHandlerTest {
   private final PasswordHashingPort passwordHashing = mock(PasswordHashingPort.class);
   private final PasswordPolicy passwordPolicy = new PasswordPolicy(Set.of("password123")::contains);
   private final UsernamePolicy usernamePolicy = new UsernamePolicy();
+  private static final String UA = "Mozilla/5.0 (Macintosh) Chrome/141.0.0.0";
+  private static final ClientOrigin ORIGIN =
+      ClientOrigin.builder()
+          .ip("203.0.113.9")
+          .userAgent(UA)
+          .deviceName("Chrome 141 · macOS")
+          .deviceClass(DeviceClass.DESKTOP)
+          .build();
   private final SessionIssuer sessionIssuer = mock(SessionIssuer.class);
+  private final ClientOriginResolver resolver = mock(ClientOriginResolver.class);
   private final EmailTokenIssuer emailTokenIssuer = mock(EmailTokenIssuer.class);
   private final EmailDeliveryPort emailDelivery = mock(EmailDeliveryPort.class);
   private final EmailResendThrottlePort emailResendThrottle = mock(EmailResendThrottlePort.class);
@@ -143,6 +156,7 @@ class RegisterUserHandlerTest {
         passwordPolicy,
         usernamePolicy,
         sessionIssuer,
+        resolver,
         emailTokenIssuer,
         LINKS,
         emailDelivery,
@@ -180,10 +194,11 @@ class RegisterUserHandlerTest {
     when(users.save(any())).thenReturn(SAVED_USER);
     when(profiles.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     when(credentials.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-    when(sessionIssuer.issue(anyLong(), any()))
+    when(sessionIssuer.issue(anyLong(), any(), any()))
         .thenReturn(IssuedUserSession.of("patra_user_x", List.of()));
     when(userReadPort.findAccount(42L)).thenReturn(Optional.of(ACCOUNT));
     when(emailTokenIssuer.issue(any(), anyLong(), any(), any())).thenReturn(ISSUED);
+    when(resolver.resolve(any())).thenReturn(ORIGIN);
   }
 
   /// 带邮箱、用户名、密码的命令。
@@ -236,7 +251,7 @@ class RegisterUserHandlerTest {
     order.verify(users).save(any());
     order.verify(profiles).save(any());
     order.verify(credentials).save(any());
-    order.verify(sessionIssuer).issue(eq(42L), any());
+    order.verify(sessionIssuer).issue(eq(42L), any(), any());
   }
 
   @Test
@@ -379,7 +394,7 @@ class RegisterUserHandlerTest {
               assertThat(inTransaction).isTrue();
               return invocation.getArgument(0);
             });
-    when(sessionIssuer.issue(anyLong(), any()))
+    when(sessionIssuer.issue(anyLong(), any(), any()))
         .thenAnswer(
             invocation -> {
               assertThat(inTransaction).isTrue();
@@ -391,7 +406,7 @@ class RegisterUserHandlerTest {
 
     verify(profiles).save(any());
     verify(credentials).save(any());
-    verify(sessionIssuer).issue(eq(42L), any());
+    verify(sessionIssuer).issue(eq(42L), any(), any());
   }
 
   @Test
@@ -434,7 +449,7 @@ class RegisterUserHandlerTest {
 
     assertThat(result.sessionToken()).isEqualTo("patra_user_x");
     ArgumentCaptor<LoginClient> client = ArgumentCaptor.forClass(LoginClient.class);
-    verify(sessionIssuer).issue(eq(42L), client.capture());
+    verify(sessionIssuer).issue(eq(42L), client.capture(), any());
     assertThat(client.getValue().device())
         .map(DeviceId::value)
         .contains("Kq3_z-0aB1cD2eF3gH4iJ5kL6mN7oP8qR9sT0uV1wXy");
@@ -490,7 +505,7 @@ class RegisterUserHandlerTest {
             .build());
 
     InOrder order = inOrder(sessionIssuer, emailTokenIssuer, emailResendThrottle, emailDelivery);
-    order.verify(sessionIssuer).issue(eq(42L), any());
+    order.verify(sessionIssuer).issue(eq(42L), any(), any());
     order
         .verify(emailTokenIssuer)
         .issue(eq(EmailTokenPurpose.EMAIL_VERIFY), eq(42L), eq(EMAIL), eq("203.0.113.9"));
@@ -523,5 +538,25 @@ class RegisterUserHandlerTest {
 
     assertThat(result.sessionToken()).isEqualTo("patra_user_x");
     verify(emailDelivery).send(EXPECTED_MAIL);
+  }
+
+  @Test
+  @DisplayName("请求来源在事务之前解析，注册建的登录记录带上它")
+  void should_resolve_origin_outside_transaction_and_record_it() {
+    stubHappyPath();
+
+    handler.handle(
+        RegisterUserCommand.builder()
+            .email("chen.yu@example.com")
+            .username("chen-yu")
+            .password("correct horse battery")
+            .clientIp("203.0.113.9")
+            .userAgent(UA)
+            .build());
+
+    InOrder order = inOrder(resolver, users, sessionIssuer);
+    order.verify(resolver).resolve(RequestOrigin.of("203.0.113.9", UA));
+    order.verify(users).save(any());
+    order.verify(sessionIssuer).issue(eq(42L), any(), eq(ORIGIN));
   }
 }

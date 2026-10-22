@@ -9,10 +9,12 @@ import dev.patra.identity.domain.model.aggregate.UserPasswordCredential;
 import dev.patra.identity.domain.model.aggregate.UserProfile;
 import dev.patra.identity.domain.model.enums.EmailTokenPurpose;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
+import dev.patra.identity.domain.model.vo.ClientOrigin;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.LoginClient;
 import dev.patra.identity.domain.model.vo.PasswordHash;
 import dev.patra.identity.domain.model.vo.PlainPassword;
+import dev.patra.identity.domain.model.vo.RequestOrigin;
 import dev.patra.identity.domain.model.vo.UserFieldViolations;
 import dev.patra.identity.domain.model.vo.Username;
 import dev.patra.identity.domain.policy.MailLinkPolicy;
@@ -28,6 +30,7 @@ import dev.patra.identity.domain.port.repository.UserProfileRepository;
 import dev.patra.identity.domain.port.repository.UserRepository;
 import dev.patra.identity.domain.port.session.IssuedUserSession;
 import dev.patra.identity.domain.port.throttle.EmailResendThrottlePort;
+import dev.patra.identity.domain.service.ClientOriginResolver;
 import dev.patra.identity.domain.service.EmailTokenIssuer;
 import dev.patra.identity.domain.service.IssuedEmailToken;
 import dev.patra.identity.domain.service.SessionIssuer;
@@ -65,6 +68,7 @@ public class RegisterUserHandler implements CommandHandler<RegisterUserCommand, 
   private final PasswordPolicy passwordPolicy;
   private final UsernamePolicy usernamePolicy;
   private final SessionIssuer sessionIssuer;
+  private final ClientOriginResolver clientOriginResolver;
   private final EmailTokenIssuer emailTokenIssuer;
   private final MailLinkPolicy links;
   private final EmailDeliveryPort emailDelivery;
@@ -103,6 +107,9 @@ public class RegisterUserHandler implements CommandHandler<RegisterUserCommand, 
       throw new UserIdentifierTakenException(taken);
     }
     PasswordHash hash = passwordHashing.hash(PlainPassword.of(command.password()));
+    // 解析 UA 与属地是纯计算：字段与唯一性校验通过之后、事务之外
+    ClientOrigin origin =
+        clientOriginResolver.resolve(RequestOrigin.of(command.clientIp(), command.userAgent()));
     Registration registration =
         Objects.requireNonNull(
             transactions.execute(
@@ -110,7 +117,7 @@ public class RegisterUserHandler implements CommandHandler<RegisterUserCommand, 
                   User saved = users.save(User.register(email, username));
                   profiles.save(UserProfile.create(saved.getId()));
                   credentials.save(UserPasswordCredential.create(saved.getId(), hash));
-                  IssuedUserSession session = sessionIssuer.issue(saved.getId(), client);
+                  IssuedUserSession session = sessionIssuer.issue(saved.getId(), client, origin);
                   UserAccountReadModel account =
                       userReadPort
                           .findAccount(saved.getId())
