@@ -1,0 +1,9 @@
+[# th:replace="~{text/fragments/header}" /]
+你好，[(${displayName})]：
+
+本地址现在是你 [(${siteName})] 账号的登录邮箱，之后用它登录和接收通知。
+
+[# th:replace="~{text/fragments/security-notice}" /]
+建议立即到安全设置修改密码并检查登录设备：[(${securityUrl})]
+
+[# th:replace="~{text/fragments/footer}" /]

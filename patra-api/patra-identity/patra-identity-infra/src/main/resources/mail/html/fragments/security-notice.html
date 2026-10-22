@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <body>
-<!-- 安全通知共用片段：时间、设备、IP 与属地、不是我怎么办。n 是 SecurityNoticeView -->
+<!-- 安全通知共用片段：时间、设备、IP 与属地、不是我怎么办。n 是 SecurityNoticeView。
+     「到安全设置」一句由各模板按场景自己写：改回邮箱后密码已作废的人登不进去 -->
 <table th:fragment="notice(n)" role="presentation" width="100%" cellspacing="0" cellpadding="0"
        style="margin:16px 0;background:#fafaf9;border:1px solid #e7e5e4;border-radius:6px;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Helvetica Neue',Arial,sans-serif;font-size:14px;line-height:1.8;color:#44403c;">
   <tr>
@@ -11,7 +12,6 @@
       <div>IP：<span th:text="${n.ip}">未知</span></div>
       <div style="margin-top:10px;color:#1c1917;">
         不是你本人的操作？<span th:text="${n.notMeAdvice}">请立即修改密码</span>
-        建议立即到<a th:href="${securityUrl}" href="#" style="color:#b45309;">安全设置</a>修改密码并检查登录设备。
       </div>
     </td>
   </tr>

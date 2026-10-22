@@ -4,11 +4,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.policy.MailLinkPolicy;
+import dev.patra.identity.domain.port.mail.EmailChangeConfirmMail;
+import dev.patra.identity.domain.port.mail.EmailChangeRevertedMail;
+import dev.patra.identity.domain.port.mail.EmailChangedConfirmationMail;
+import dev.patra.identity.domain.port.mail.EmailChangedNoticeMail;
 import dev.patra.identity.domain.port.mail.EmailVerificationMail;
 import dev.patra.identity.domain.port.mail.OutgoingMail;
+import dev.patra.identity.domain.port.mail.PasswordChangedMail;
+import dev.patra.identity.domain.port.mail.PasswordResetDoneMail;
+import dev.patra.identity.domain.port.mail.PasswordResetMail;
 import dev.patra.identity.domain.port.mail.SecurityNotice;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,6 +35,30 @@ class ThymeleafMailRendererTest {
           .revertEmailChangePath("/revert-email-change")
           .build();
   private static final String VERIFY_URL = "https://patra.example/verify-email#token=abc";
+  private static final String RESET_URL = "https://patra.example/reset-password#token=rst";
+  private static final String CONFIRM_URL = "https://patra.example/confirm-email-change#token=cfm";
+  private static final String REVERT_URL = "https://patra.example/revert-email-change#token=rvt";
+  private static final EmailAddress TO = EmailAddress.of("chen.yu@example.com");
+  private static final SecurityNotice NOTICE =
+      SecurityNotice.builder()
+          .occurredAt(Instant.parse("2026-10-22T08:30:00Z"))
+          .notMeAdvice("不是我怎么办的一句话")
+          .build();
+  private static final List<OutgoingMail> SEVEN =
+      List.of(
+          PasswordResetMail.of(TO, "陈宇", RESET_URL),
+          PasswordChangedMail.of(TO, "陈宇", NOTICE),
+          PasswordResetDoneMail.of(TO, "陈宇", NOTICE),
+          EmailChangeConfirmMail.of(TO, "陈宇", CONFIRM_URL),
+          EmailChangedNoticeMail.builder()
+              .to(TO)
+              .displayName("陈宇")
+              .newEmailMasked("n***@example.com")
+              .revertUrl(REVERT_URL)
+              .notice(NOTICE)
+              .build(),
+          EmailChangedConfirmationMail.of(TO, "陈宇", NOTICE),
+          EmailChangeRevertedMail.of(TO, "陈宇", RESET_URL, NOTICE));
 
   private final ThymeleafMailRenderer renderer =
       new ThymeleafMailRenderer(LINKS, ZoneId.of("Asia/Shanghai"));
@@ -73,7 +105,7 @@ class ThymeleafMailRendererTest {
   }
 
   @Test
-  @DisplayName("安全通知片段：时间按 Asia/Shanghai 显示并标 UTC+8，缺失的设备和 IP 显示「未知」，带安全设置链接")
+  @DisplayName("安全通知片段：时间按 Asia/Shanghai 显示并标 UTC+8，缺失的设备和 IP 显示「未知」；片段本身不带安全设置链接")
   void should_render_security_notice_fragment_with_unknown_placeholders() {
     OutgoingMail probe =
         probe(
@@ -90,12 +122,12 @@ class ThymeleafMailRendererTest {
         .contains("设备：未知")
         .contains("IP：未知")
         .contains("请立即修改密码")
-        .contains("https://patra.example/settings/security");
+        .doesNotContain("/settings/security");
     assertThat(rendered.html())
         .contains("2026-10-21 16:30 (UTC+8)")
         .contains("未知")
         .contains("请立即修改密码")
-        .contains("href=\"https://patra.example/settings/security\"")
+        .doesNotContain("/settings/security")
         .doesNotContainPattern("\\sth:[a-z]+=");
   }
 
@@ -119,6 +151,93 @@ class ThymeleafMailRendererTest {
         .contains("Chrome 131 · macOS")
         .contains("203.0.113.9")
         .contains("中国 上海");
+  }
+
+  @Test
+  @DisplayName("七个模板的文本与 HTML 都渲染得出来：含昵称、主题，无残留的 th: 与表达式")
+  void should_render_all_seven_templates_in_text_and_html() {
+    for (OutgoingMail mail : SEVEN) {
+      RenderedMail rendered = renderer.render(mail);
+      assertThat(rendered.subject()).as(mail.template()).isEqualTo(mail.subject());
+      assertThat(rendered.text())
+          .as(mail.template())
+          .contains("陈宇")
+          .contains("Patra 不会在邮件里向你索要密码")
+          .doesNotContain("[(")
+          .doesNotContain("<");
+      assertThat(rendered.html())
+          .as(mail.template())
+          .contains("陈宇")
+          .contains("Patra 不会在邮件里向你索要密码")
+          .doesNotContainPattern("\\sth:[a-z]+=")
+          .doesNotContain("${");
+    }
+  }
+
+  @Test
+  @DisplayName("带链接的四封：链接在文本里原样出现、在 HTML 里是 href 和可复制的全文")
+  void should_put_links_in_both_parts() {
+    assertLink(renderer.render(PasswordResetMail.of(TO, "陈宇", RESET_URL)), RESET_URL, "60 分钟");
+    assertLink(
+        renderer.render(EmailChangeConfirmMail.of(TO, "陈宇", CONFIRM_URL)), CONFIRM_URL, "60 分钟");
+    assertLink(renderer.render(SEVEN.get(4)), REVERT_URL, "7 天");
+    assertLink(
+        renderer.render(EmailChangeRevertedMail.of(TO, "陈宇", RESET_URL, NOTICE)),
+        RESET_URL,
+        "60 分钟");
+  }
+
+  @Test
+  @DisplayName("安全通知四项都在；「到安全设置」一句只在需要它的模板里，「已改回请重设密码」那封没有")
+  void should_render_notice_four_items_without_fixed_security_line_in_fragment() {
+    RenderedMail reverted =
+        renderer.render(EmailChangeRevertedMail.of(TO, "陈宇", RESET_URL, NOTICE));
+    assertThat(reverted.text())
+        .contains("时间：2026-10-22 16:30 (UTC+8)")
+        .contains("设备：未知")
+        .contains("IP：未知")
+        .contains("不是我怎么办的一句话")
+        .doesNotContain("/settings/security");
+    assertThat(reverted.html()).doesNotContain("/settings/security");
+
+    for (OutgoingMail mail :
+        List.of(
+            PasswordChangedMail.of(TO, "陈宇", NOTICE),
+            SEVEN.get(4),
+            EmailChangedConfirmationMail.of(TO, "陈宇", NOTICE))) {
+      RenderedMail rendered = renderer.render(mail);
+      assertThat(rendered.text())
+          .as(mail.template())
+          .contains("https://patra.example/settings/security");
+      assertThat(rendered.html())
+          .as(mail.template())
+          .contains("href=\"https://patra.example/settings/security\"");
+    }
+    assertThat(renderer.render(PasswordResetDoneMail.of(TO, "陈宇", NOTICE)).text())
+        .contains("不是我怎么办的一句话")
+        .doesNotContain("/settings/security");
+  }
+
+  @Test
+  @DisplayName("旧邮箱的通知里新地址是遮掩过的")
+  void should_mask_new_email_in_old_address_notice() {
+    RenderedMail rendered = renderer.render(SEVEN.get(4));
+
+    assertThat(rendered.text()).contains("n***@example.com");
+    assertThat(rendered.html()).contains("n***@example.com");
+  }
+
+  /// 断言链接在两部分里都出现，有效期文案也在。
+  ///
+  /// @param rendered 渲染结果
+  /// @param url 链接
+  /// @param validity 有效期文案
+  private static void assertLink(RenderedMail rendered, String url, String validity) {
+    assertThat(rendered.text()).contains(url).contains(validity);
+    assertThat(rendered.html())
+        .contains("href=\"" + url + "\"")
+        .contains(url + "</")
+        .contains(validity);
   }
 
   /// 测试资源里的探针模板 `security-notice-probe`，正文只放安全通知片段。
