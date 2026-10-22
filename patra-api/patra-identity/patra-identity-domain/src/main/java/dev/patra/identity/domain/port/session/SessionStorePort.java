@@ -1,11 +1,13 @@
 package dev.patra.identity.domain.port.session;
 
 import dev.patra.tool.core.security.AccountType;
+import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
-/// 会话存储：建会话、按会话 ID 删、按用户删全部、按用户删除指定一条外的全部。
+/// 会话存储：建会话、换令牌、读再认证时间、按会话 ID 删、按用户删全部、按用户删除指定一条外的全部。
 ///
-/// Redis 暂时不可用时，三个方法都抛带 `DEP_UNAVAILABLE` 特征的异常（由适配器原样传出，映射成 503）。
+/// Redis 暂时不可用时，所有方法都抛带 `DEP_UNAVAILABLE` 特征的异常（由适配器原样传出，映射成 503）。
 public interface SessionStorePort {
 
   /// 建一条会话，返回令牌。超过上限时挤掉最老的，返回被挤掉的会话 ID。
@@ -13,6 +15,22 @@ public interface SessionStorePort {
   /// @param session 要签发的会话
   /// @return 签发结果
   IssuedUserSession issue(NewUserSession session);
+
+  /// 换令牌、保留会话 ID：再认证、改密码用。`auth_at` 刷新成现在，旧令牌立即失效。
+  ///
+  /// @param accountType 账号类型
+  /// @param userId 用户 ID
+  /// @param sessionId 会话 ID
+  /// @return 新令牌原文；会话不在或已过期时为空
+  Optional<String> rotate(AccountType accountType, long userId, long sessionId);
+
+  /// 读一条会话最近一次用密码证明身份的时间，不续期。再认证守卫用。
+  ///
+  /// @param accountType 账号类型
+  /// @param userId 用户 ID
+  /// @param sessionId 会话 ID
+  /// @return 再认证时间；会话不在或已过期时为空
+  Optional<Instant> findAuthenticatedAt(AccountType accountType, long userId, long sessionId);
 
   /// 按用户 ID 和会话 ID 删一条会话。
   ///

@@ -63,6 +63,28 @@ class LoginThrottleAdapterIT {
   }
 
   @Test
+  @DisplayName("清零：锁与失败计数都删掉，下一次尝试放行；在途登记不动")
+  void should_clear_failures_and_lock_but_keep_in_flight_entries() {
+    LoginThrottleAdapter adapter = new LoginThrottleAdapter(redis, () -> DEFAULT_POLICY);
+    EmailAddress email = uniqueEmail();
+    for (int i = 0; i < 5; i++) {
+      adapter.recordFailure(adapter.begin(AccountType.USER, email));
+    }
+    assertThatThrownBy(() -> adapter.begin(AccountType.USER, email))
+        .isInstanceOf(LoginTemporarilyLockedException.class);
+    List<String> keys = LoginThrottleAdapter.keys(AccountType.USER, email);
+
+    adapter.clear(AccountType.USER, email);
+
+    assertThat(redis.hasKey(keys.get(0))).isFalse();
+    assertThat(redis.hasKey(keys.get(2))).isFalse();
+    LoginAttempt attempt = adapter.begin(AccountType.USER, email);
+    assertThat(attempt).isNotNull();
+    assertThat(redis.opsForZSet().size(keys.get(1))).isEqualTo(1L);
+    adapter.recordSuccess(attempt);
+  }
+
+  @Test
   @DisplayName("连续失败 5 次，第 5 次上锁并返回锁定时长，之后的尝试被拒")
   void should_lock_on_fifth_failure() {
     LoginThrottleAdapter adapter = new LoginThrottleAdapter(redis, () -> DEFAULT_POLICY);

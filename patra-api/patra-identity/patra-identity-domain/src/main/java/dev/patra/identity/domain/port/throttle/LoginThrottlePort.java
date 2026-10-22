@@ -10,7 +10,7 @@ import java.util.Optional;
 /// 登录失败限制。只有确认的失败才计数、才上锁；正在校验的尝试单独登记，只用来限制并发。
 ///
 /// 每次尝试先 {@link #begin}，校验之后必定结算一次：成功、失败或取消。
-/// Redis 不可用时，四个方法都抛 {@link TemporarilyUnavailableException}。
+/// Redis 不可用时，所有方法都抛 {@link TemporarilyUnavailableException}。
 public interface LoginThrottlePort {
 
   /// 开始一次尝试，在校验密码之前调用。
@@ -36,4 +36,10 @@ public interface LoginThrottlePort {
   ///
   /// @param attempt 尝试
   void cancel(LoginAttempt attempt);
+
+  /// 清零：删掉失败计数和锁，在途登记不动（自然过期）。重设密码成功后用。
+  ///
+  /// @param accountType 账号类型
+  /// @param email 邮箱
+  void clear(AccountType accountType, EmailAddress email);
 }

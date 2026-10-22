@@ -14,12 +14,14 @@ import dev.patra.identity.session.IssuedSession;
 import dev.patra.identity.session.NewSession;
 import dev.patra.identity.session.RedisSessionStore;
 import dev.patra.identity.session.SessionToken;
+import dev.patra.identity.session.StoredSession;
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.ClientType;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -83,5 +85,39 @@ class SessionStoreAdapterTest {
     when(store.deleteAllExcept(AccountType.USER, 42L, 7L)).thenReturn(List.of(5L, 6L));
 
     assertThat(adapter.revokeAllExcept(AccountType.USER, 42L, 7L)).containsExactly(5L, 6L);
+  }
+
+  @Test
+  @DisplayName("换令牌：返回新令牌原文；会话不在为空")
+  void should_rotate_and_return_token_value() {
+    SessionToken token = SessionToken.generate(AccountType.USER, new SecureRandom());
+    when(store.rotate(AccountType.USER, 42L, 7001L)).thenReturn(Optional.of(token));
+    when(store.rotate(AccountType.USER, 42L, 7002L)).thenReturn(Optional.empty());
+
+    assertThat(adapter.rotate(AccountType.USER, 42L, 7001L)).contains(token.value());
+    assertThat(adapter.rotate(AccountType.USER, 42L, 7002L)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("读再认证时间：取会话的 authenticatedAt；会话不在为空")
+  void should_find_authenticated_at_from_stored_session() {
+    when(store.find(AccountType.USER, 42L, 7001L))
+        .thenReturn(
+            Optional.of(
+                StoredSession.builder()
+                    .userId(42L)
+                    .sessionId(7001L)
+                    .accountType(AccountType.USER)
+                    .clientType(ClientType.WEB)
+                    .createdAt(NOW)
+                    .lastActiveAt(NOW)
+                    .expiresAt(NOW.plus(Duration.ofDays(180)))
+                    .authenticatedAt(NOW.plusSeconds(5))
+                    .build()));
+    when(store.find(AccountType.USER, 42L, 7002L)).thenReturn(Optional.empty());
+
+    assertThat(adapter.findAuthenticatedAt(AccountType.USER, 42L, 7001L))
+        .contains(NOW.plusSeconds(5));
+    assertThat(adapter.findAuthenticatedAt(AccountType.USER, 42L, 7002L)).isEmpty();
   }
 }

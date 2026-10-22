@@ -7,8 +7,12 @@ import dev.patra.identity.domain.port.session.SessionStorePort;
 import dev.patra.identity.session.IssuedSession;
 import dev.patra.identity.session.NewSession;
 import dev.patra.identity.session.RedisSessionStore;
+import dev.patra.identity.session.SessionToken;
+import dev.patra.identity.session.StoredSession;
 import dev.patra.tool.core.security.AccountType;
+import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -41,6 +45,29 @@ public class SessionStoreAdapter implements SessionStorePort {
                 .maxSessionsPerUser(session.maxSessionsPerUser())
                 .build());
     return IssuedUserSession.of(issued.token().value(), issued.replacedSessionIds());
+  }
+
+  /// 换令牌、保留会话 ID。
+  ///
+  /// @param accountType 账号类型
+  /// @param userId 用户 ID
+  /// @param sessionId 会话 ID
+  /// @return 新令牌原文；会话不在时为空
+  @Override
+  public Optional<String> rotate(AccountType accountType, long userId, long sessionId) {
+    return store.rotate(accountType, userId, sessionId).map(SessionToken::value);
+  }
+
+  /// 读再认证时间。
+  ///
+  /// @param accountType 账号类型
+  /// @param userId 用户 ID
+  /// @param sessionId 会话 ID
+  /// @return 再认证时间；会话不在时为空
+  @Override
+  public Optional<Instant> findAuthenticatedAt(
+      AccountType accountType, long userId, long sessionId) {
+    return store.find(accountType, userId, sessionId).map(StoredSession::authenticatedAt);
   }
 
   /// 删一条会话。
