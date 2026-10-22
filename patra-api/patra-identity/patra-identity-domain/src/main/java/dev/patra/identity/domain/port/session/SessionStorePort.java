@@ -6,7 +6,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
-/// 会话存储：建会话、换令牌、读再认证时间、按会话 ID 删、按用户删全部、按用户删除指定一条外的全部。
+/// 会话存储：建会话、换令牌、读再认证时间、按用户列出活会话、按会话 ID 删、按用户删全部、按用户删除指定一条外的全部。
 ///
 /// Redis 暂时不可用时，所有方法都抛带 `DEP_UNAVAILABLE` 特征的异常（由适配器原样传出，映射成 503）。
 public interface SessionStorePort {
@@ -35,6 +35,13 @@ public interface SessionStorePort {
   /// @param sessionId 会话 ID
   /// @return 再认证时间；会话不在或已过期时为空
   Optional<Instant> findAuthenticatedAt(AccountType accountType, long userId, long sessionId);
+
+  /// 按用户列出还活着的会话，不续期（登录设备列表，PAP-99）。
+  ///
+  /// @param accountType 账号类型
+  /// @param userId 用户 ID
+  /// @return 活会话，顺序不保证
+  List<ActiveUserSession> listActive(AccountType accountType, long userId);
 
   /// 按用户 ID 和会话 ID 删一条会话。
   ///

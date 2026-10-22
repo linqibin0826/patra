@@ -22,5 +22,8 @@ public enum IdentityErrorTrait implements ErrorTrait {
   EMAIL_CHANGE_PENDING,
 
   /// 再认证或改密码时当前密码不正确（401）；和「会话失效」的 401 区分开，门户不把它当登出。
-  PASSWORD_MISMATCH
+  PASSWORD_MISMATCH,
+
+  /// 在登录设备列表里踢的是本机（409）；本机走退出登录（PAP-99）。
+  CURRENT_SESSION
 }

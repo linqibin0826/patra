@@ -1,6 +1,7 @@
 package dev.patra.identity.infra.adapter.session;
 
 import dev.patra.identity.domain.model.vo.DeviceId;
+import dev.patra.identity.domain.port.session.ActiveUserSession;
 import dev.patra.identity.domain.port.session.IssuedUserSession;
 import dev.patra.identity.domain.port.session.NewUserSession;
 import dev.patra.identity.domain.port.session.SessionRotation;
@@ -88,6 +89,21 @@ public class SessionStoreAdapter implements SessionStorePort {
   /// @param userId 用户 ID
   /// @param sessionId 会话 ID
   /// @return 真的删掉了返回 `true`
+  /// 列出活会话：只取会话 ID、创建时间、最后活跃。
+  ///
+  /// @param accountType 账号类型
+  /// @param userId 用户 ID
+  /// @return 活会话
+  @Override
+  public List<ActiveUserSession> listActive(AccountType accountType, long userId) {
+    return store.list(accountType, userId).stream()
+        .map(
+            session ->
+                ActiveUserSession.of(
+                    session.sessionId(), session.createdAt(), session.lastActiveAt()))
+        .toList();
+  }
+
   @Override
   public boolean revoke(AccountType accountType, long userId, long sessionId) {
     return store.delete(accountType, userId, sessionId);

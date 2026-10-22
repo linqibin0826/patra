@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import dev.patra.identity.domain.model.vo.LoginClient;
 import dev.patra.identity.domain.policy.SessionLifetime;
+import dev.patra.identity.domain.port.session.ActiveUserSession;
 import dev.patra.identity.domain.port.session.IssuedUserSession;
 import dev.patra.identity.domain.port.session.NewUserSession;
 import dev.patra.identity.domain.port.session.SessionRotation;
@@ -127,5 +128,26 @@ class SessionStoreAdapterTest {
     assertThat(adapter.findAuthenticatedAt(AccountType.USER, 42L, 7001L))
         .contains(NOW.plusSeconds(5));
     assertThat(adapter.findAuthenticatedAt(AccountType.USER, 42L, 7002L)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("列出活会话：只取会话 ID、创建时间、最后活跃")
+  void should_list_active_sessions() {
+    when(store.list(AccountType.USER, 42L))
+        .thenReturn(
+            List.of(
+                StoredSession.builder()
+                    .userId(42L)
+                    .sessionId(7001L)
+                    .accountType(AccountType.USER)
+                    .clientType(ClientType.WEB)
+                    .createdAt(NOW)
+                    .lastActiveAt(NOW.plusSeconds(120))
+                    .expiresAt(NOW.plus(Duration.ofDays(180)))
+                    .authenticatedAt(NOW)
+                    .build()));
+
+    assertThat(adapter.listActive(AccountType.USER, 42L))
+        .containsExactly(ActiveUserSession.of(7001L, NOW, NOW.plusSeconds(120)));
   }
 }

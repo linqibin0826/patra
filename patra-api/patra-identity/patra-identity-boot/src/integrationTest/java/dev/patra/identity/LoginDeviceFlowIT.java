@@ -2,6 +2,8 @@ package dev.patra.identity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.patra.identity.session.RedisSessionStore;
+import dev.patra.identity.session.SessionToken;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Map;
@@ -9,13 +11,18 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import tools.jackson.databind.JsonNode;
 
 /// 登录设备的端到端流程（PAP-99）：经受信转发链路来的客户端 IP 与 UA 写进登录记录，解析出设备名、端与属地；
 /// 会话列表与踢设备；新设备邮件。identity 测试里没有网关，`X-Forwarded-For` 直接由测试带上，
 /// 和网关转发后 identity 看到的一样（`forward-headers-strategy: framework`）。
 @DisplayName("登录设备流程")
 class LoginDeviceFlowIT extends IdentityFlowITSupport {
+
+  @Autowired RedisSessionStore sessionStore;
 
   static final String UA_CHROME_MAC =
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko)"
@@ -145,6 +152,158 @@ class LoginDeviceFlowIT extends IdentityFlowITSupport {
     assertThat(loginFrom(email, DEVICE_A, from(SHENZHEN_IP)).status()).isEqualTo(200);
 
     awaitNewDeviceMails(email, 1);
+  }
+
+  @Test
+  @DisplayName("会话列表：两台设备，本机第一并标 current，设备名、IP、属地来自登录记录")
+  void should_list_sessions_with_current_first() {
+    String email = "list.sessions@example.com";
+    long userId = userIdOf(registerFrom(email, "list-sessions", DEVICE_A));
+    long sessionA = latestSessionIdOf(userId);
+    clock.advance(Duration.ofMinutes(5));
+    assertThat(loginFrom(email, DEVICE_B, from("119.29.29.29")).status()).isEqualTo(200);
+    long sessionB = latestSessionIdOf(userId);
+
+    RawResponse listed = get("/me/sessions", assertionFor(userId, sessionA));
+
+    assertThat(listed.status()).as(listed.body()).isEqualTo(200);
+    JsonNode sessions = json(listed).get("sessions");
+    assertThat(sessions).hasSize(2);
+    assertThat(sessions.get(0).get("id").asString()).isEqualTo(Long.toString(sessionA));
+    assertThat(sessions.get(0).get("current").asBoolean()).isTrue();
+    assertThat(sessions.get(0).get("ipRegion").asString()).isEqualTo("中国 广东 深圳");
+    assertThat(sessions.get(1).get("id").asString()).isEqualTo(Long.toString(sessionB));
+    assertThat(sessions.get(1).get("current").asBoolean()).isFalse();
+    assertThat(sessions.get(1).get("deviceName").asString()).isEqualTo("Chrome 141 · macOS");
+    assertThat(sessions.get(1).get("deviceClass").asString()).isEqualTo("DESKTOP");
+    assertThat(sessions.get(1).get("ipAddress").asString()).isEqualTo("119.29.29.29");
+    assertThat(sessions.get(1).get("ipRegion").asString()).isEqualTo("中国 北京");
+    assertThat(sessions.get(1).get("privateNetwork").asBoolean()).isFalse();
+  }
+
+  @Test
+  @DisplayName("最后活跃随请求更新：网关续期距上次写入不满 60 秒不写，满 60 秒写")
+  void should_reflect_renewal_in_last_active_at() {
+    RawResponse registered = registerFrom("renew.session@example.com", "renew-session", DEVICE_A);
+    long userId = userIdOf(registered);
+    long sessionId = latestSessionIdOf(userId);
+    SessionToken token = SessionToken.parse(sessionTokenOf(registered)).orElseThrow();
+
+    clock.advance(Duration.ofSeconds(30));
+    sessionStore.findAndTouch(token).orElseThrow();
+    assertThat(lastActiveAtOf(userId, sessionId)).isEqualTo(T0.toString());
+
+    clock.advance(Duration.ofSeconds(31));
+    sessionStore.findAndTouch(token).orElseThrow();
+    assertThat(lastActiveAtOf(userId, sessionId)).isEqualTo(T0.plusSeconds(61).toString());
+  }
+
+  @Test
+  @DisplayName("踢单个：超过再认证窗口 403；再认证后踢掉，令牌失效、记录 REVOKED、回 1；再踢回 0；踢本机 409")
+  void should_kick_one_device_after_reauth() {
+    String email = "kick.one@example.com";
+    long userId = userIdOf(registerFrom(email, "kick-one", DEVICE_A));
+    long sessionA = latestSessionIdOf(userId);
+    RawResponse other = loginFrom(email, DEVICE_B, from(SHENZHEN_IP));
+    long sessionB = latestSessionIdOf(userId);
+    SessionToken tokenB = SessionToken.parse(sessionTokenOf(other)).orElseThrow();
+    clock.advance(Duration.ofMinutes(11));
+
+    RawResponse stale = delete("/me/sessions/" + sessionB, assertionFor(userId, sessionA));
+    assertThat(stale.status()).as(stale.body()).isEqualTo(403);
+    assertThat(json(stale).get("traits").toString()).contains("REAUTH_REQUIRED");
+
+    RawResponse reauth =
+        post("/auth/reauth", Map.of("password", PASSWORD), assertionFor(userId, sessionA));
+    assertThat(reauth.status()).as(reauth.body()).isEqualTo(200);
+
+    RawResponse kicked = delete("/me/sessions/" + sessionB, assertionFor(userId, sessionA));
+    assertThat(kicked.status()).as(kicked.body()).isEqualTo(200);
+    assertThat(json(kicked).get("revokedSessions").asInt()).isEqualTo(1);
+    assertThat(sessionStore.findAndTouch(tokenB)).as("被踢的令牌，网关下一个请求 401").isEmpty();
+    assertThat(endReasonOf(sessionB)).isEqualTo("REVOKED");
+
+    RawResponse again = delete("/me/sessions/" + sessionB, assertionFor(userId, sessionA));
+    assertThat(json(again).get("revokedSessions").asInt()).isZero();
+    RawResponse self = delete("/me/sessions/" + sessionA, assertionFor(userId, sessionA));
+    assertThat(self.status()).as(self.body()).isEqualTo(409);
+    assertThat(json(self).get("traits").toString()).contains("CURRENT_SESSION");
+  }
+
+  @Test
+  @DisplayName("踢其他全部：三台设备只剩本机")
+  void should_kick_all_other_devices() {
+    String email = "kick.all@example.com";
+    long userId = userIdOf(registerFrom(email, "kick-all", DEVICE_A));
+    long sessionA = latestSessionIdOf(userId);
+    loginFrom(email, DEVICE_B, from(SHENZHEN_IP));
+    loginFrom(email, DEVICE_C, from(SHENZHEN_IP));
+
+    RawResponse kicked = delete("/me/sessions/others", assertionFor(userId, sessionA));
+
+    assertThat(kicked.status()).as(kicked.body()).isEqualTo(200);
+    assertThat(json(kicked).get("revokedSessions").asInt()).isEqualTo(2);
+    JsonNode sessions = json(get("/me/sessions", assertionFor(userId, sessionA))).get("sessions");
+    assertThat(sessions).hasSize(1);
+    assertThat(sessions.get(0).get("id").asString()).isEqualTo(Long.toString(sessionA));
+  }
+
+  @Test
+  @DisplayName("被踢掉的设备再登录算新设备，但同设备 24 小时最多 1 封")
+  void should_mail_again_after_device_was_kicked_but_at_most_once_a_day() {
+    String email = "kicked.device@example.com";
+    long userId = userIdOf(registerFrom(email, "kicked-device", DEVICE_A));
+    long sessionA = latestSessionIdOf(userId);
+    loginFrom(email, DEVICE_B, from(SHENZHEN_IP));
+    awaitNewDeviceMails(email, 1);
+
+    kickLatest(userId, sessionA);
+    assertThat(loginFrom(email, DEVICE_B, from(SHENZHEN_IP)).status()).isEqualTo(200);
+    assertThat(newDeviceMailsTo(email)).as("24 小时冷却内").isEqualTo(1);
+
+    clock.advance(Duration.ofHours(24).plusSeconds(1));
+    assertThat(
+            post("/auth/reauth", Map.of("password", PASSWORD), assertionFor(userId, sessionA))
+                .status())
+        .isEqualTo(200);
+    kickLatest(userId, sessionA);
+    assertThat(loginFrom(email, DEVICE_B, from(SHENZHEN_IP)).status()).isEqualTo(200);
+    awaitNewDeviceMails(email, 2);
+  }
+
+  /// 踢掉最近一次登录的会话（用本机的断言）。
+  ///
+  /// @param userId 用户 ID
+  /// @param current 本机会话 ID
+  void kickLatest(long userId, long current) {
+    RawResponse kicked =
+        delete("/me/sessions/" + latestSessionIdOf(userId), assertionFor(userId, current));
+    assertThat(kicked.status()).as(kicked.body()).isEqualTo(200);
+    assertThat(json(kicked).get("revokedSessions").asInt()).isEqualTo(1);
+  }
+
+  /// 发一个 DELETE。
+  ///
+  /// @param uri 路径
+  /// @param headers 请求头
+  /// @return 响应
+  RawResponse delete(String uri, HttpHeaders headers) {
+    return exchange(HttpMethod.DELETE, uri, null, headers);
+  }
+
+  /// 会话列表里某个会话的 `lastActiveAt`。
+  ///
+  /// @param userId 用户 ID
+  /// @param sessionId 会话 ID
+  /// @return ISO-8601 文本
+  String lastActiveAtOf(long userId, long sessionId) {
+    for (JsonNode session :
+        json(get("/me/sessions", assertionFor(userId, sessionId))).get("sessions")) {
+      if (session.get("id").asString().equals(Long.toString(sessionId))) {
+        return session.get("lastActiveAt").asString();
+      }
+    }
+    throw new AssertionError("列表里没有会话 " + sessionId);
   }
 
   /// 带设备标识、从深圳的 IP 注册。
