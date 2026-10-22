@@ -147,7 +147,8 @@ CREATE TABLE idn_user_login_record
     CONSTRAINT ck_idn_user_login_record_client_type CHECK (client_type IN ('WEB')),
     CONSTRAINT ck_idn_user_login_record_device_class CHECK (device_class IN ('DESKTOP', 'MOBILE', 'TABLET', 'UNKNOWN')),
     CONSTRAINT ck_idn_user_login_record_end_reason CHECK (end_reason IN ('LOGOUT', 'BANNED', 'REPLACED', 'REVOKED',
-        'EMAIL_VERIFIED', 'PASSWORD_CHANGED', 'PASSWORD_RESET', 'EMAIL_REVERTED')),
+        'EMAIL_VERIFIED', 'PASSWORD_CHANGED', 'PASSWORD_RESET', 'EMAIL_REVERTED', 'DELETION_REQUESTED',
+        'DELETION_COMPLETED')),
     CONSTRAINT ck_idn_user_login_record_ended CHECK ((ended_at IS NULL) = (end_reason IS NULL))
 );
 
@@ -167,7 +168,7 @@ COMMENT ON COLUMN idn_user_login_record.client_ip IS 'Client IP at login via the
 COMMENT ON COLUMN idn_user_login_record.ip_region IS 'IP region from ip2region (country / province / city, country only abroad); null for private addresses or unknown';
 COMMENT ON COLUMN idn_user_login_record.expires_at IS 'Absolute expiry of the session (UTC)';
 COMMENT ON COLUMN idn_user_login_record.ended_at IS 'When the session ended explicitly; null while open or after a silent expiry';
-COMMENT ON COLUMN idn_user_login_record.end_reason IS 'LOGOUT, BANNED, REPLACED, REVOKED (kicked from the device list), EMAIL_VERIFIED, PASSWORD_CHANGED, PASSWORD_RESET or EMAIL_REVERTED';
+COMMENT ON COLUMN idn_user_login_record.end_reason IS 'LOGOUT, BANNED, REPLACED, REVOKED (kicked from the device list), EMAIL_VERIFIED, PASSWORD_CHANGED, PASSWORD_RESET, EMAIL_REVERTED, DELETION_REQUESTED or DELETION_COMPLETED';
 COMMENT ON COLUMN idn_user_login_record.record_remarks IS 'Audit remarks log';
 COMMENT ON COLUMN idn_user_login_record.version IS 'Optimistic lock version number';
 COMMENT ON COLUMN idn_user_login_record.ip_address IS 'Requester IP (IPv4/IPv6)';

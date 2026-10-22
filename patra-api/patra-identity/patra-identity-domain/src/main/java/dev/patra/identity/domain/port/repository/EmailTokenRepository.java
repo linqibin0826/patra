@@ -76,4 +76,10 @@ public interface EmailTokenRepository {
   /// @param batchSize 一批最多删几行
   /// @return 删了几行
   int deleteExpiredBefore(Instant cutoff, int batchSize);
+
+  /// 删掉一个用户的全部令牌行（含改邮箱撤销令牌）：注销到期执行时用，行里有发往的邮箱和申请方 IP，作废不够。
+  ///
+  /// @param userId 用户 ID
+  /// @return 删了几行
+  int deleteAllByUserId(long userId);
 }

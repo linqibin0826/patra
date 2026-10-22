@@ -80,4 +80,12 @@ public interface EmailTokenDao extends JpaRepository<EmailTokenEntity, Long> {
               + " WHERE expires_at < :cutoff ORDER BY id LIMIT :batchSize)",
       nativeQuery = true)
   int deleteExpiredBefore(@Param("cutoff") Instant cutoff, @Param("batchSize") int batchSize);
+
+  /// 删掉一个用户的全部令牌行。
+  ///
+  /// @param userId 用户 ID
+  /// @return 删了几行
+  @Modifying
+  @Query("delete from EmailTokenEntity t where t.userId = :userId")
+  int deleteAllByUserId(@Param("userId") Long userId);
 }

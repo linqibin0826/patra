@@ -194,6 +194,39 @@ class EmailTokenRepositoryAdapterIT {
   }
 
   @Test
+  @DisplayName("按用户删行：删掉该用户全部令牌（含撤销令牌），别的用户不受影响")
+  void should_delete_all_tokens_of_one_user_only() {
+    tokens.save(issued(EmailTokenPurpose.EMAIL_VERIFY, EmailTokenSecret.generate(RANDOM), NOW));
+    tokens.save(issued(EmailTokenPurpose.PASSWORD_RESET, EmailTokenSecret.generate(RANDOM), NOW));
+    tokens.save(
+        issued(EmailTokenPurpose.EMAIL_CHANGE_REVERT, EmailTokenSecret.generate(RANDOM), NOW));
+    EmailAddress otherEmail = EmailAddress.of("other-del-" + userId + "@example.com");
+    long otherUser = users.save(User.register(otherEmail, Username.of("u-od-" + userId))).getId();
+    tokens.save(
+        EmailToken.issue(
+            EmailTokenPurpose.EMAIL_VERIFY,
+            otherUser,
+            otherEmail,
+            EmailTokenSecret.generate(RANDOM),
+            NOW,
+            null));
+
+    assertThat(tokens.deleteAllByUserId(userId)).isEqualTo(3);
+
+    assertThat(countTokens(userId)).isZero();
+    assertThat(countTokens(otherUser)).isEqualTo(1);
+  }
+
+  /// 数某个用户的令牌行。
+  ///
+  /// @param user 用户 ID
+  /// @return 行数
+  private int countTokens(long user) {
+    return jdbcTemplate.queryForObject(
+        "select count(*) from idn_email_token where user_id = ?", Integer.class, user);
+  }
+
+  @Test
   @DisplayName("改邮箱的撤销令牌可以并存，按用户作废时留着；按用途作废才清掉")
   void should_let_email_change_revert_tokens_coexist_and_survive_revoke_all() {
     EmailToken first =

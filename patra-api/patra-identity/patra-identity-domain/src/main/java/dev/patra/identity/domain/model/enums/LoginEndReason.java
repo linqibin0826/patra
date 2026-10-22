@@ -17,5 +17,9 @@ public enum LoginEndReason {
   /// 重设密码后，全部会话被撤销。
   PASSWORD_RESET,
   /// 撤销改邮箱后，全部会话被撤销。
-  EMAIL_REVERTED
+  EMAIL_REVERTED,
+  /// 申请注销，全部会话被撤销。
+  DELETION_REQUESTED,
+  /// 注销到期执行，冷静期内登录的会话被撤销。
+  DELETION_COMPLETED
 }

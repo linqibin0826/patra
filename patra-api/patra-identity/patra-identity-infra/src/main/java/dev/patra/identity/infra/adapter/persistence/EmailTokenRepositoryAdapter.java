@@ -152,6 +152,15 @@ public class EmailTokenRepositoryAdapter implements EmailTokenRepository {
     return dao.deleteExpiredBefore(cutoff, batchSize);
   }
 
+  /// 删掉一个用户的全部令牌行。
+  ///
+  /// @param userId 用户 ID
+  /// @return 删了几行
+  @Override
+  public int deleteAllByUserId(long userId) {
+    return dao.deleteAllByUserId(userId);
+  }
+
   /// `RETURNING` 的一行转成聚合。
   ///
   /// @param rs 结果集，已定位到当前行

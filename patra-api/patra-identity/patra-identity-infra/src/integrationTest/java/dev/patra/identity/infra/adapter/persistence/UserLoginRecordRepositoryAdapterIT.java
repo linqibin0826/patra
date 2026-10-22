@@ -133,6 +133,27 @@ class UserLoginRecordRepositoryAdapterIT {
   }
 
   @Test
+  @DisplayName("检查约束：注销的两个结束原因（发起、到期执行）能写入")
+  void should_end_records_with_deletion_reasons() {
+    User user =
+        users.save(
+            User.register(
+                EmailAddress.of("ck.deletion@example.com"), Username.of("u-ck-deletion")));
+
+    for (LoginEndReason reason :
+        List.of(LoginEndReason.DELETION_REQUESTED, LoginEndReason.DELETION_COMPLETED)) {
+      insertRaw(user.getId(), "WEB", EXPIRES_AT, reason.name());
+    }
+
+    assertThat(
+            jdbcTemplate.queryForList(
+                "select end_reason from idn_user_login_record where user_id = ? order by id",
+                String.class,
+                user.getId()))
+        .containsExactly("DELETION_REQUESTED", "DELETION_COMPLETED");
+  }
+
+  @Test
   @DisplayName("检查约束：第 9.2 节的八个结束原因都能写入")
   void should_accept_all_end_reasons() {
     User user =
