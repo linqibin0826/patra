@@ -5,15 +5,22 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import dev.patra.identity.app.usecase.auth.AuthenticatedUser;
+import dev.patra.identity.app.usecase.password.ChangePasswordCommand;
 import dev.patra.identity.app.usecase.username.ChangeUsernameCommand;
 import dev.patra.identity.app.usecase.username.ChangeUsernameResult;
+import dev.patra.identity.domain.exception.CurrentPasswordMismatchException;
 import dev.patra.identity.domain.exception.InvalidUserFieldsException;
+import dev.patra.identity.domain.exception.LoginTemporarilyLockedException;
 import dev.patra.identity.domain.exception.UserIdentifierTakenException;
 import dev.patra.identity.domain.exception.UserPendingDeletionException;
 import dev.patra.identity.domain.exception.UsernameChangeCooldownException;
+import dev.patra.identity.domain.model.enums.UserStatus;
+import dev.patra.identity.domain.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.model.vo.UserFieldViolations;
 import dev.patra.tool.core.security.AuthenticationRequiredException;
 import dev.patra.tool.cqrs.CommandBus;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -169,5 +176,112 @@ class MeControllerIT {
 
     assertThat(json.get("status").asInt()).isEqualTo(401);
     assertThat(json.get("code").asString()).isEqualTo("IDN-0401");
+  }
+
+  /// 发改密码请求。
+  ///
+  /// @param current 当前密码
+  /// @param next 新密码
+  /// @return 响应规格
+  private RestTestClient.ResponseSpec changePassword(String current, String next) {
+    return restClient
+        .put()
+        .uri("/me/password")
+        .contentType(MediaType.APPLICATION_JSON)
+        .body(Map.of("currentPassword", current, "newPassword", next))
+        .exchange();
+  }
+
+  @Test
+  @DisplayName("改密码成功：200，和登录同构、带新令牌；两个密码与客户端 IP 交给命令")
+  void should_change_password_and_return_200_with_new_token() {
+    when(commandBus.handle(any(ChangePasswordCommand.class)))
+        .thenReturn(
+            AuthenticatedUser.of(
+                "patra_user_rotated",
+                UserAccountReadModel.builder()
+                    .userId(42L)
+                    .email("chen.yu@example.com")
+                    .emailVerified(true)
+                    .username("chen-yu")
+                    .displayName("陈宇")
+                    .status(UserStatus.ACTIVE)
+                    .build()));
+
+    changePassword("Correct-Horse-02", "Another-Horse-03")
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .jsonPath("$.sessionToken")
+        .isEqualTo("patra_user_rotated")
+        .jsonPath("$.user.userId")
+        .isEqualTo("42");
+
+    ArgumentCaptor<ChangePasswordCommand> command =
+        ArgumentCaptor.forClass(ChangePasswordCommand.class);
+    verify(commandBus).handle(command.capture());
+    assertThat(command.getValue().currentPassword()).isEqualTo("Correct-Horse-02");
+    assertThat(command.getValue().newPassword()).isEqualTo("Another-Horse-03");
+    assertThat(command.getValue().clientIp()).isEqualTo("127.0.0.1");
+  }
+
+  @Test
+  @DisplayName("改密码字段错误：422，两条 errors 按请求体字段名")
+  void should_render_change_password_field_errors() {
+    when(commandBus.handle(any(ChangePasswordCommand.class)))
+        .thenThrow(
+            new InvalidUserFieldsException(
+                List.of(
+                    UserFieldViolations.passwordRequired(UserFieldViolations.CURRENT_PASSWORD),
+                    UserFieldViolations.newPasswordUnchanged())));
+
+    String body =
+        changePassword("", "x")
+            .expectStatus()
+            .isEqualTo(422)
+            .expectBody(String.class)
+            .returnResult()
+            .getResponseBody();
+
+    JsonNode errors = JSON.readTree(body).get("errors");
+    assertThat(errors.size()).isEqualTo(2);
+    assertThat(errors.get(0).get("field").asString()).isEqualTo("currentPassword");
+    assertThat(errors.get(0).get("code").asString()).isEqualTo("REQUIRED");
+    assertThat(errors.get(1).get("field").asString()).isEqualTo("newPassword");
+    assertThat(errors.get(1).get("code").asString()).isEqualTo("UNCHANGED");
+  }
+
+  @Test
+  @DisplayName("当前密码错误：401，traits 含 PASSWORD_MISMATCH")
+  void should_render_change_password_mismatch_as_401_with_trait() {
+    when(commandBus.handle(any(ChangePasswordCommand.class)))
+        .thenThrow(new CurrentPasswordMismatchException());
+
+    String body =
+        changePassword("wrong", "Another-Horse-03")
+            .expectStatus()
+            .isUnauthorized()
+            .expectBody(String.class)
+            .returnResult()
+            .getResponseBody();
+
+    assertThat(JSON.readTree(body).get("traits").toString()).contains("PASSWORD_MISMATCH");
+    assertThat(body).doesNotContain("Another-Horse-03");
+  }
+
+  @Test
+  @DisplayName("改密码时登录限制锁定：429，带 Retry-After")
+  void should_render_change_password_lock_as_429() {
+    when(commandBus.handle(any(ChangePasswordCommand.class)))
+        .thenThrow(new LoginTemporarilyLockedException(Duration.ofSeconds(90)));
+
+    changePassword("wrong", "Another-Horse-03")
+        .expectStatus()
+        .isEqualTo(429)
+        .expectHeader()
+        .valueEquals(HttpHeaders.RETRY_AFTER, "90")
+        .expectBody()
+        .jsonPath("$.retryAfterSeconds")
+        .isEqualTo(90);
   }
 }

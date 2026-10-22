@@ -1,18 +1,25 @@
 package dev.patra.identity.adapter.rest.me;
 
+import dev.patra.identity.adapter.rest.auth.response.AuthenticatedUserResponse;
+import dev.patra.identity.adapter.rest.auth.response.CurrentUserResponse;
+import dev.patra.identity.adapter.rest.me.request.ChangePasswordRequest;
 import dev.patra.identity.adapter.rest.me.request.ChangeUsernameRequest;
 import dev.patra.identity.adapter.rest.me.response.ChangeUsernameResponse;
+import dev.patra.identity.app.usecase.auth.AuthenticatedUser;
+import dev.patra.identity.app.usecase.password.ChangePasswordCommand;
 import dev.patra.identity.app.usecase.username.ChangeUsernameCommand;
 import dev.patra.identity.app.usecase.username.ChangeUsernameResult;
 import dev.patra.tool.cqrs.CommandBus;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/// 当前用户自己的账号设置，网关上 `/me/**` 需要登录。本 Issue 只有改用户名；PAP-95 等在这里加资料、隐私。
+/// 当前用户自己的账号设置，网关上 `/me/**` 需要登录：改用户名、改密码；PAP-95 等在这里加资料、隐私。
 @Tag(name = "Me", description = "当前用户的账号设置")
 @RestController
 @RequestMapping("/me")
@@ -29,5 +36,22 @@ public class MeController {
   public ChangeUsernameResponse changeUsername(@RequestBody ChangeUsernameRequest request) {
     ChangeUsernameResult result = commandBus.handle(ChangeUsernameCommand.of(request.username()));
     return ChangeUsernameResponse.of(result.username(), result.nextUsernameChangeAt());
+  }
+
+  /// 改密码。成功返回 200，和登录同构（本机的新令牌，门户要换 Cookie）；422 字段错误或新旧相同，
+  /// 401 当前密码错（`traits` 含 `PASSWORD_MISMATCH`），429 登录限制锁定，409 注销中。
+  ///
+  /// @param request 请求体
+  /// @param http 原始请求，取客户端 IP
+  /// @return 新令牌和账号信息
+  @PutMapping("/password")
+  public AuthenticatedUserResponse changePassword(
+      @RequestBody ChangePasswordRequest request, HttpServletRequest http) {
+    AuthenticatedUser result =
+        commandBus.handle(
+            ChangePasswordCommand.of(
+                request.currentPassword(), request.newPassword(), http.getRemoteAddr()));
+    return AuthenticatedUserResponse.of(
+        result.sessionToken(), CurrentUserResponse.from(result.account()));
   }
 }
