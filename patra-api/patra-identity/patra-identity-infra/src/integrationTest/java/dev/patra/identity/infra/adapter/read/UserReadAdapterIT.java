@@ -5,13 +5,25 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.patra.identity.domain.model.aggregate.User;
 import dev.patra.identity.domain.model.aggregate.UserProfile;
+import dev.patra.identity.domain.model.enums.Occupation;
+import dev.patra.identity.domain.model.enums.ProfessionalVisibility;
+import dev.patra.identity.domain.model.enums.ProfileVisibility;
 import dev.patra.identity.domain.model.enums.UserStatus;
 import dev.patra.identity.domain.model.read.PublicUserReadModel;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.model.vo.DisplayName;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.Username;
+import dev.patra.identity.domain.model.vo.profile.Affiliation;
+import dev.patra.identity.domain.model.vo.profile.Bio;
+import dev.patra.identity.domain.model.vo.profile.Department;
+import dev.patra.identity.domain.model.vo.profile.JobTitle;
+import dev.patra.identity.domain.model.vo.profile.MeshUi;
+import dev.patra.identity.domain.model.vo.profile.PrivacySettings;
 import dev.patra.identity.domain.model.vo.profile.ProfileContent;
+import dev.patra.identity.domain.model.vo.profile.ProfileLink;
+import dev.patra.identity.domain.model.vo.profile.ResearchInterest;
+import dev.patra.identity.domain.model.vo.profile.RorId;
 import dev.patra.identity.infra.adapter.persistence.UserProfileRepositoryAdapter;
 import dev.patra.identity.infra.adapter.persistence.UserRepositoryAdapter;
 import dev.patra.identity.infra.config.IdentityITPostgreSQLContainerInitializer;
@@ -22,6 +34,7 @@ import jakarta.persistence.EntityManager;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
@@ -130,9 +143,70 @@ class UserReadAdapterIT {
             .emailVerified(false)
             .build();
 
-    assertThat(reader.findPublicIdentity(Username.of("u-pub"))).contains(expected);
-    assertThat(reader.findPublicIdentityByUserId(saved.getId())).contains(expected);
+    assertThat(reader.findPublicIdentity(Username.of("u-pub")))
+        .get()
+        .usingRecursiveComparison()
+        .ignoringFields("joinedAt")
+        .isEqualTo(expected);
+    assertThat(reader.findPublicIdentityByUserId(saved.getId()))
+        .get()
+        .usingRecursiveComparison()
+        .ignoringFields("joinedAt")
+        .isEqualTo(expected);
     assertThat(reader.findPublicIdentity(Username.of("nobody"))).isEmpty();
     assertThat(reader.findPublicIdentityByUserId(1L)).isEmpty();
+  }
+
+  @Test
+  void should_read_public_page_fields() {
+    User saved =
+        users.save(User.register(EmailAddress.of("page@example.com"), Username.of("u-page")));
+    UserProfile profile = profiles.save(UserProfile.create(saved.getId()));
+    profile.edit(
+        ProfileContent.builder()
+            .displayName(new DisplayName("陈宇"))
+            .bio(new Bio("心内科医生"))
+            .links(List.of(ProfileLink.of("实验室", "https://lab.org")))
+            .occupation(Occupation.PHYSICIAN)
+            .jobTitle(JobTitle.of("主治医师"))
+            .affiliation(Affiliation.Registered.of(RorId.of("04jztag35"), "北京协和医院"))
+            .department(Department.of("心内科"))
+            .researchInterests(
+                List.of(
+                    ResearchInterest.of(MeshUi.of("D006333"), "Heart Failure"),
+                    ResearchInterest.of(MeshUi.of("D001281"), "Atrial Fibrillation")))
+            .build());
+    PrivacySettings privacy =
+        PrivacySettings.of(ProfileVisibility.SIGNED_IN, ProfessionalVisibility.SELF, true);
+    profile.changePrivacy(privacy);
+    profiles.save(profile);
+
+    PublicUserReadModel page = reader.findPublicIdentity(Username.of("u-page")).orElseThrow();
+
+    assertThat(page.displayName()).isEqualTo("陈宇");
+    assertThat(page.bio()).isEqualTo("心内科医生");
+    assertThat(page.links()).containsExactly(ProfileLink.of("实验室", "https://lab.org"));
+    assertThat(page.occupation()).isEqualTo(Occupation.PHYSICIAN);
+    assertThat(page.jobTitle()).isEqualTo("主治医师");
+    assertThat(page.affiliation())
+        .isEqualTo(Affiliation.Registered.of(RorId.of("04jztag35"), "北京协和医院"));
+    assertThat(page.department()).isEqualTo("心内科");
+    assertThat(page.researchInterests())
+        .extracting(interest -> interest.ui().value())
+        .containsExactly("D006333", "D001281");
+    assertThat(page.privacy()).isEqualTo(privacy);
+  }
+
+  @Test
+  void should_use_user_created_at_as_joined_at() {
+    User saved =
+        users.save(User.register(EmailAddress.of("joined@example.com"), Username.of("u-joined")));
+    profiles.save(UserProfile.create(saved.getId()));
+    jdbcTemplate.update(
+        "UPDATE idn_user SET created_at = ? WHERE id = ?", Timestamp.from(T0), saved.getId());
+    entityManager.clear();
+
+    assertThat(reader.findPublicIdentityByUserId(saved.getId()).orElseThrow().joinedAt())
+        .isEqualTo(T0);
   }
 }

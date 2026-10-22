@@ -1,20 +1,27 @@
 package dev.patra.identity.infra.adapter.read;
 
+import dev.patra.identity.domain.model.aggregate.UserProfile;
 import dev.patra.identity.domain.model.enums.UserStatus;
 import dev.patra.identity.domain.model.read.PublicUserReadModel;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.model.vo.Username;
+import dev.patra.identity.domain.model.vo.profile.Bio;
+import dev.patra.identity.domain.model.vo.profile.Department;
+import dev.patra.identity.domain.model.vo.profile.JobTitle;
 import dev.patra.identity.domain.policy.UsernameChangePolicy;
 import dev.patra.identity.domain.port.read.UserReadPort;
+import dev.patra.identity.infra.adapter.persistence.converter.mapper.UserProfileJpaMapper;
 import dev.patra.identity.infra.adapter.persistence.dao.UserDao;
 import dev.patra.identity.infra.adapter.persistence.dao.UserProfileDao;
+import dev.patra.identity.infra.adapter.persistence.dao.UserProfileLinkDao;
+import dev.patra.identity.infra.adapter.persistence.dao.UserResearchInterestDao;
 import dev.patra.identity.infra.adapter.persistence.entity.UserEntity;
 import dev.patra.identity.infra.adapter.persistence.entity.UserProfileEntity;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/// 前台用户读端口的 JPA 实现：用户表加资料表，两次查询拼起来。
+/// 前台用户读端口的 JPA 实现：账号信息是用户表加资料表；公开主页再加链接与关注领域两张子表。
 ///
 /// 资料行缺失是数据不一致（注册时同事务建的），抛 `IllegalStateException` 而不是静默回退。
 @Component
@@ -23,6 +30,9 @@ public class UserReadAdapter implements UserReadPort {
 
   private final UserDao userDao;
   private final UserProfileDao profileDao;
+  private final UserProfileLinkDao linkDao;
+  private final UserResearchInterestDao interestDao;
+  private final UserProfileJpaMapper profileMapper;
   private final UsernameChangePolicy usernameChangePolicy;
 
   /// 按 ID 读账号信息。
@@ -69,17 +79,32 @@ public class UserReadAdapter implements UserReadPort {
         .build();
   }
 
-  /// 把用户行和资料行拼成公开身份卡。
+  /// 把用户行、资料行和两张子表拼成公开主页：昵称为空回退成用户名，加入时间是注册时间。
   ///
   /// @param user 用户行
-  /// @return 身份卡
+  /// @return 公开主页读模型
   private PublicUserReadModel toPublicIdentity(UserEntity user) {
+    UserProfileEntity row = profileOf(user);
+    UserProfile profile =
+        profileMapper.toAggregate(
+            row,
+            linkDao.findByUserIdOrderByPositionAsc(user.getId()),
+            interestDao.findByUserIdOrderByPositionAsc(user.getId()));
     return PublicUserReadModel.builder()
         .userId(user.getId())
         .username(user.getUsername())
-        .displayName(displayNameOf(user))
+        .displayName(row.getDisplayName() == null ? user.getUsername() : row.getDisplayName())
         .status(UserStatus.valueOf(user.getStatus()))
         .emailVerified(user.getEmailVerifiedAt() != null)
+        .joinedAt(user.getCreatedAt())
+        .bio(profile.getBio().map(Bio::value).orElse(null))
+        .links(profile.getLinks())
+        .occupation(profile.getOccupation().orElse(null))
+        .jobTitle(profile.getJobTitle().map(JobTitle::value).orElse(null))
+        .affiliation(profile.getAffiliation().orElse(null))
+        .department(profile.getDepartment().map(Department::value).orElse(null))
+        .researchInterests(profile.getResearchInterests())
+        .privacy(profile.getPrivacy())
         .build();
   }
 
@@ -88,10 +113,17 @@ public class UserReadAdapter implements UserReadPort {
   /// @param user 用户行
   /// @return 昵称
   private String displayNameOf(UserEntity user) {
-    UserProfileEntity profile =
-        profileDao
-            .findByUserId(user.getId())
-            .orElseThrow(() -> new IllegalStateException("用户 " + user.getId() + " 没有资料行"));
+    UserProfileEntity profile = profileOf(user);
     return profile.getDisplayName() == null ? user.getUsername() : profile.getDisplayName();
+  }
+
+  /// 用户的资料行；缺行是数据不一致（注册时同事务建的）。
+  ///
+  /// @param user 用户行
+  /// @return 资料行
+  private UserProfileEntity profileOf(UserEntity user) {
+    return profileDao
+        .findByUserId(user.getId())
+        .orElseThrow(() -> new IllegalStateException("用户 " + user.getId() + " 没有资料行"));
   }
 }
