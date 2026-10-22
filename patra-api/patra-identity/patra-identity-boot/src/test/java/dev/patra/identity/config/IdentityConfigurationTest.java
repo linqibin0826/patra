@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 import dev.patra.identity.domain.model.vo.EmailTokenSecret;
+import dev.patra.identity.domain.policy.AccountDeletionPolicy;
 import dev.patra.identity.domain.policy.DisplayNamePolicy;
 import dev.patra.identity.domain.policy.EmailChangePolicy;
 import dev.patra.identity.domain.policy.EmailResendPolicy;
@@ -80,6 +81,24 @@ class IdentityConfigurationTest {
         .withBean(JavaMailSender.class, () -> mock(JavaMailSender.class))
         .withBean(UserAgentParsingPort.class, () -> mock(UserAgentParsingPort.class))
         .withBean(IpGeolocationPort.class, () -> mock(IpGeolocationPort.class));
+  }
+
+  @Test
+  @DisplayName("注销：不配置时冷静期 15 天、提前 3 天提醒")
+  void should_bind_deletion_defaults() {
+    runner.run(
+        context ->
+            assertThat(context.getBean(AccountDeletionPolicy.class))
+                .isEqualTo(AccountDeletionPolicy.of(Duration.ofDays(15), Duration.ofDays(3))));
+  }
+
+  @Test
+  @DisplayName("注销：提前量不短于冷静期时启动失败")
+  void should_fail_startup_when_lead_not_shorter() {
+    runner
+        .withPropertyValues(
+            "patra.identity.deletion.cooling-period=3d", "patra.identity.deletion.reminder-lead=3d")
+        .run(context -> assertThat(context).hasFailed());
   }
 
   @Test

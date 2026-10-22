@@ -16,6 +16,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 /// @param passwordReset 找回密码的限流
 /// @param emailChange 改邮箱的限流
 /// @param newDeviceMail 新设备登录提醒
+/// @param deletion 注销：冷静期与提醒提前量
 @ConfigurationProperties(prefix = "patra.identity")
 public record IdentityProperties(
     @DefaultValue PasswordHashing passwordHashing,
@@ -25,7 +26,15 @@ public record IdentityProperties(
     @DefaultValue Reauth reauth,
     @DefaultValue PasswordReset passwordReset,
     @DefaultValue EmailChange emailChange,
-    @DefaultValue NewDeviceMail newDeviceMail) {
+    @DefaultValue NewDeviceMail newDeviceMail,
+    @DefaultValue Deletion deletion) {
+
+  /// 注销。
+  ///
+  /// @param coolingPeriod 冷静期
+  /// @param reminderLead 到期前多久提醒，必须短于冷静期
+  public record Deletion(
+      @DefaultValue("15d") Duration coolingPeriod, @DefaultValue("3d") Duration reminderLead) {}
 
   /// 再认证。
   ///

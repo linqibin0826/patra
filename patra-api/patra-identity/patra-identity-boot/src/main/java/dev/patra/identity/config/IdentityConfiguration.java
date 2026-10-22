@@ -1,5 +1,6 @@
 package dev.patra.identity.config;
 
+import dev.patra.identity.domain.policy.AccountDeletionPolicy;
 import dev.patra.identity.domain.policy.DisplayNamePolicy;
 import dev.patra.identity.domain.policy.EmailChangePolicy;
 import dev.patra.identity.domain.policy.EmailResendPolicy;
@@ -130,6 +131,16 @@ public class IdentityConfiguration {
   public UsernameChangePolicy usernameChangePolicy(IdentityProperties properties) {
     IdentityProperties.Username username = properties.username();
     return UsernameChangePolicy.of(username.changeCooldown(), username.reservationPeriod());
+  }
+
+  /// 注销规则：把 `patra.identity.deletion.*` 变成领域的策略对象；非正数或提前量不短于冷静期时启动失败。
+  ///
+  /// @param properties identity 配置
+  /// @return 规则
+  @Bean
+  public AccountDeletionPolicy accountDeletionPolicy(IdentityProperties properties) {
+    IdentityProperties.Deletion deletion = properties.deletion();
+    return AccountDeletionPolicy.of(deletion.coolingPeriod(), deletion.reminderLead());
   }
 
   /// 会话策略：把 `patra.identity.session.*` 变成领域的策略对象。
