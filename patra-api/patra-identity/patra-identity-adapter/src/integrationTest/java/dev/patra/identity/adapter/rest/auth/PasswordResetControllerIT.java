@@ -128,6 +128,7 @@ class PasswordResetControllerIT {
             .post()
             .uri("/auth/password/reset")
             .contentType(MediaType.APPLICATION_JSON)
+            .header(HttpHeaders.USER_AGENT, "Mozilla/5.0 (Macintosh) Chrome/141.0.0.0")
             .body(Map.of("token", TOKEN, "newPassword", "Another-Horse-03"))
             .exchange()
             .expectStatus()
@@ -144,6 +145,8 @@ class PasswordResetControllerIT {
     assertThat(command.getValue().token()).isEqualTo(TOKEN);
     assertThat(command.getValue().newPassword()).isEqualTo("Another-Horse-03");
     assertThat(command.getValue().clientIp()).isEqualTo("127.0.0.1");
+    assertThat(command.getValue().userAgent())
+        .isEqualTo("Mozilla/5.0 (Macintosh) Chrome/141.0.0.0");
   }
 
   @Test

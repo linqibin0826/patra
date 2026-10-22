@@ -6,17 +6,19 @@ import dev.patra.identity.domain.model.aggregate.EmailToken;
 import dev.patra.identity.domain.model.aggregate.User;
 import dev.patra.identity.domain.model.enums.EmailTokenPurpose;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
+import dev.patra.identity.domain.model.vo.ClientOrigin;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.EmailTokenSecret;
+import dev.patra.identity.domain.model.vo.RequestOrigin;
 import dev.patra.identity.domain.model.vo.UserFieldViolations;
 import dev.patra.identity.domain.policy.MailLinkPolicy;
 import dev.patra.identity.domain.port.mail.EmailChangedConfirmationMail;
 import dev.patra.identity.domain.port.mail.EmailChangedNoticeMail;
 import dev.patra.identity.domain.port.mail.EmailDeliveryPort;
-import dev.patra.identity.domain.port.mail.SecurityNotice;
 import dev.patra.identity.domain.port.read.UserReadPort;
 import dev.patra.identity.domain.port.repository.EmailTokenRepository;
 import dev.patra.identity.domain.port.repository.UserRepository;
+import dev.patra.identity.domain.service.ClientOriginResolver;
 import dev.patra.identity.domain.service.EmailTokenIssuer;
 import dev.patra.identity.domain.service.IssuedEmailToken;
 import dev.patra.tool.cqrs.CommandHandler;
@@ -46,6 +48,7 @@ public class ConfirmEmailChangeHandler
   private final UserReadPort userReadPort;
   private final EmailTokenIssuer emailTokenIssuer;
   private final MailLinkPolicy links;
+  private final ClientOriginResolver clientOriginResolver;
   private final EmailDeliveryPort emailDelivery;
   private final TransactionOperations transactions;
   private final Clock clock;
@@ -96,19 +99,22 @@ public class ConfirmEmailChangeHandler
                   return new Changed(
                       userId, oldEmail, newEmail, account.displayName(), revert.secret());
                 }));
+    // 解析放在事务提交之后、发信之前：纯计算，不占事务
+    ClientOrigin origin =
+        clientOriginResolver.resolve(RequestOrigin.of(command.clientIp(), command.userAgent()));
     emailDelivery.send(
         EmailChangedNoticeMail.builder()
             .to(changed.oldEmail())
             .displayName(changed.displayName())
             .newEmailMasked(changed.newEmail().masked())
             .revertUrl(links.revertEmailChangeUrl(changed.revertSecret()))
-            .notice(notice(now, EmailChangedNoticeMail.NOT_ME_ADVICE))
+            .notice(origin.toNotice(now, EmailChangedNoticeMail.NOT_ME_ADVICE))
             .build());
     emailDelivery.send(
         EmailChangedConfirmationMail.of(
             changed.newEmail(),
             changed.displayName(),
-            notice(now, EmailChangedConfirmationMail.NOT_ME_ADVICE)));
+            origin.toNotice(now, EmailChangedConfirmationMail.NOT_ME_ADVICE)));
     log.info("邮箱已更改: userId={}", changed.userId());
     return EmailChanged.of(changed.newEmail().value(), now);
   }
@@ -129,15 +135,6 @@ public class ConfirmEmailChangeHandler
   /// @return 422 的异常
   static InvalidUserFieldsException invalid() {
     return new InvalidUserFieldsException(List.of(UserFieldViolations.tokenInvalid()));
-  }
-
-  /// 安全通知的上下文。设备、IP、属地在受信转发接通（PAP-99）前都是未知。
-  ///
-  /// @param now 发生时间
-  /// @param notMeAdvice 不是我怎么办
-  /// @return 上下文
-  static SecurityNotice notice(Instant now, String notMeAdvice) {
-    return SecurityNotice.builder().occurredAt(now).notMeAdvice(notMeAdvice).build();
   }
 
   /// 事务里的结果。

@@ -6,16 +6,18 @@ import dev.patra.tool.cqrs.Command;
 ///
 /// @param token 令牌原文
 /// @param clientIp 客户端 IP，可以为 `null`
-public record RevertEmailChangeCommand(String token, String clientIp)
+/// @param userAgent User-Agent，可以为 `null`；安全通知里的设备（PAP-99）
+public record RevertEmailChangeCommand(String token, String clientIp, String userAgent)
     implements Command<EmailChangeReverted> {
 
   /// 创建命令。
   ///
   /// @param token 令牌原文
   /// @param clientIp 客户端 IP，可以为 `null`
+  /// @param userAgent User-Agent，可以为 `null`
   /// @return 命令
-  public static RevertEmailChangeCommand of(String token, String clientIp) {
-    return new RevertEmailChangeCommand(token, clientIp);
+  public static RevertEmailChangeCommand of(String token, String clientIp, String userAgent) {
+    return new RevertEmailChangeCommand(token, clientIp, userAgent);
   }
 
   /// 不输出令牌。
@@ -23,6 +25,10 @@ public record RevertEmailChangeCommand(String token, String clientIp)
   /// @return 描述
   @Override
   public String toString() {
-    return "RevertEmailChangeCommand[token=***, clientIp=" + clientIp + "]";
+    return "RevertEmailChangeCommand[token=***, clientIp="
+        + clientIp
+        + ", userAgentLength="
+        + (userAgent == null ? 0 : userAgent.length())
+        + "]";
   }
 }

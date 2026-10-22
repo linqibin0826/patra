@@ -76,7 +76,7 @@ class PasswordResetFlowIT extends IdentityFlowITSupport {
         post(
             "/auth/password/reset",
             Map.of("token", resetToken, "newPassword", "Another-Horse-03"),
-            noHeaders());
+            fromShenzhenChrome(noHeaders()));
 
     assertThat(reset.status()).as(reset.body()).isEqualTo(200);
     assertThat(json(reset).get("email").asString()).isEqualTo(email);
@@ -97,6 +97,8 @@ class PasswordResetFlowIT extends IdentityFlowITSupport {
     waitForMails(4);
     assertThat(partText(mailFor(email, "你的 Patra 密码已重设"), "text/plain"))
         .contains("时间：")
+        .contains("Chrome 141 · macOS")
+        .contains("113.92.157.29（中国 广东 深圳）")
         .doesNotContain("/settings/security");
     assertThat(login(email, "Another-Horse-03").status()).isEqualTo(200);
     assertThat(login(email, PASSWORD).status()).isEqualTo(401);

@@ -23,6 +23,7 @@ import dev.patra.identity.domain.model.enums.LoginEndReason;
 import dev.patra.identity.domain.model.enums.UserStatus;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.model.vo.ClientOrigin;
+import dev.patra.identity.domain.model.vo.DeviceProfile;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.EmailTokenSecret;
 import dev.patra.identity.domain.model.vo.LoginClient;
@@ -40,6 +41,7 @@ import dev.patra.identity.domain.port.repository.UserRepository;
 import dev.patra.identity.domain.port.session.SessionStorePort;
 import dev.patra.identity.domain.port.throttle.LoginThrottlePort;
 import dev.patra.identity.domain.port.throttle.PasswordResetThrottlePort;
+import dev.patra.identity.domain.service.ClientOriginResolver;
 import dev.patra.identity.domain.service.SessionTerminator;
 import dev.patra.tool.core.error.field.FieldViolation;
 import dev.patra.tool.core.security.AccountType;
@@ -89,6 +91,10 @@ class ResetPasswordHandlerTest {
   private final UserLoginRecordRepository records = mock(UserLoginRecordRepository.class);
   private final LoginThrottlePort loginThrottle = mock(LoginThrottlePort.class);
   private final EmailDeliveryPort emailDelivery = mock(EmailDeliveryPort.class);
+  private final ClientOriginResolver resolver =
+      new ClientOriginResolver(
+          userAgent -> DeviceProfile.of("Chrome 141 · macOS", DeviceClass.DESKTOP),
+          ip -> Optional.of("中国 广东 深圳"));
   private final AtomicBoolean inTransaction = new AtomicBoolean(false);
   private final ResetPasswordHandler handler =
       new ResetPasswordHandler(
@@ -101,6 +107,7 @@ class ResetPasswordHandlerTest {
           userReadPort,
           new SessionTerminator(sessions, records),
           loginThrottle,
+          resolver,
           emailDelivery,
           RequestPasswordResetHandlerTest.recording(inTransaction),
           Clock.fixed(NOW, ZoneOffset.UTC));
@@ -140,7 +147,8 @@ class ResetPasswordHandlerTest {
 
     assertThatThrownBy(
             () ->
-                handler.handle(ResetPasswordCommand.of("garbage", "Another-Horse-03", "127.0.0.1")))
+                handler.handle(
+                    ResetPasswordCommand.of("garbage", "Another-Horse-03", "127.0.0.1", null)))
         .isInstanceOf(PasswordResetLimitedException.class);
     verifyNoInteractions(tokens, users, passwordHashing);
   }
@@ -149,7 +157,8 @@ class ResetPasswordHandlerTest {
   @DisplayName("新密码不合规：422 newPassword，令牌不被消费")
   void should_not_consume_token_when_new_password_is_invalid() {
     assertThatThrownBy(
-            () -> handler.handle(ResetPasswordCommand.of(SECRET.value(), "short", "127.0.0.1")))
+            () ->
+                handler.handle(ResetPasswordCommand.of(SECRET.value(), "short", "127.0.0.1", null)))
         .isInstanceOf(InvalidUserFieldsException.class)
         .satisfies(
             e ->
@@ -165,10 +174,13 @@ class ResetPasswordHandlerTest {
   @DisplayName("令牌为空：422 token/REQUIRED；格式不对：422 token/INVALID，不查库")
   void should_reject_blank_or_malformed_token() {
     assertThatThrownBy(
-            () -> handler.handle(ResetPasswordCommand.of("", "Another-Horse-03", "127.0.0.1")))
+            () ->
+                handler.handle(ResetPasswordCommand.of("", "Another-Horse-03", "127.0.0.1", null)))
         .isInstanceOf(InvalidUserFieldsException.class);
     assertThatThrownBy(
-            () -> handler.handle(ResetPasswordCommand.of("abc", "Another-Horse-03", "127.0.0.1")))
+            () ->
+                handler.handle(
+                    ResetPasswordCommand.of("abc", "Another-Horse-03", "127.0.0.1", null)))
         .isInstanceOf(InvalidUserFieldsException.class)
         .satisfies(
             e ->
@@ -181,7 +193,8 @@ class ResetPasswordHandlerTest {
   @Test
   @DisplayName("令牌格式不对且新密码不合规：一次报全 token/INVALID + newPassword/TOO_SHORT，不查库、不哈希")
   void should_report_malformed_token_and_invalid_password_together() {
-    assertThatThrownBy(() -> handler.handle(ResetPasswordCommand.of("abc", "short", "127.0.0.1")))
+    assertThatThrownBy(
+            () -> handler.handle(ResetPasswordCommand.of("abc", "short", "127.0.0.1", null)))
         .isInstanceOf(InvalidUserFieldsException.class)
         .satisfies(
             e ->
@@ -202,7 +215,7 @@ class ResetPasswordHandlerTest {
     assertThatThrownBy(
             () ->
                 handler.handle(
-                    ResetPasswordCommand.of(SECRET.value(), "Another-Horse-03", "127.0.0.1")))
+                    ResetPasswordCommand.of(SECRET.value(), "Another-Horse-03", "127.0.0.1", null)))
         .isInstanceOf(InvalidUserFieldsException.class);
     verify(tokens, never()).consume(any(), any(), any());
   }
@@ -225,7 +238,7 @@ class ResetPasswordHandlerTest {
     assertThatThrownBy(
             () ->
                 handler.handle(
-                    ResetPasswordCommand.of(SECRET.value(), "Another-Horse-03", "127.0.0.1")))
+                    ResetPasswordCommand.of(SECRET.value(), "Another-Horse-03", "127.0.0.1", null)))
         .isInstanceOf(InvalidUserFieldsException.class);
     verify(credentials, never()).save(any());
   }
@@ -239,7 +252,7 @@ class ResetPasswordHandlerTest {
     assertThatThrownBy(
             () ->
                 handler.handle(
-                    ResetPasswordCommand.of(SECRET.value(), "Another-Horse-03", "127.0.0.1")))
+                    ResetPasswordCommand.of(SECRET.value(), "Another-Horse-03", "127.0.0.1", null)))
         .isInstanceOf(InvalidUserFieldsException.class);
     verify(credentials, never()).save(any());
   }
@@ -248,7 +261,8 @@ class ResetPasswordHandlerTest {
   @DisplayName("成功：换哈希 → 批量作废令牌 → 写验证时间 → 撤销全部会话并记 REVOKED → 清零登录失败 → 发「密码已重设」")
   void should_reset_in_order_and_clear_login_failures() {
     PasswordReset result =
-        handler.handle(ResetPasswordCommand.of(SECRET.value(), "Another-Horse-03", "127.0.0.1"));
+        handler.handle(
+            ResetPasswordCommand.of(SECRET.value(), "Another-Horse-03", "127.0.0.1", null));
 
     InOrder order =
         inOrder(tokens, credentials, users, sessions, records, loginThrottle, emailDelivery);
@@ -266,9 +280,10 @@ class ResetPasswordHandlerTest {
                 m ->
                     m instanceof PasswordResetDoneMail mail
                         && mail.to().equals(EMAIL)
-                        && mail.notice()
-                            .notMeAdvice()
-                            .equals(PasswordResetDoneMail.NOT_ME_ADVICE)));
+                        && mail.notice().notMeAdvice().equals(PasswordResetDoneMail.NOT_ME_ADVICE)
+                        && mail.notice().device().equals("Chrome 141 · macOS")
+                        && mail.notice().ipAddress().equals("127.0.0.1")
+                        && mail.notice().ipLocation().equals("内网")));
     assertThat(result.email()).isEqualTo("chen.yu@example.com");
   }
 
@@ -277,7 +292,7 @@ class ResetPasswordHandlerTest {
   void should_create_credential_when_user_has_none() {
     when(credentials.findByUserId(42L)).thenReturn(Optional.empty());
 
-    handler.handle(ResetPasswordCommand.of(SECRET.value(), "Another-Horse-03", "127.0.0.1"));
+    handler.handle(ResetPasswordCommand.of(SECRET.value(), "Another-Horse-03", "127.0.0.1", null));
 
     verify(credentials)
         .save(argThat(c -> c.getId() == null && c.getPasswordHash().equals(NEW_HASH)));
@@ -286,7 +301,7 @@ class ResetPasswordHandlerTest {
   @Test
   @DisplayName("命令的 toString 不输出令牌与密码")
   void should_hide_token_and_password_in_command_to_string() {
-    assertThat(ResetPasswordCommand.of(SECRET.value(), "Another-Horse-03", null).toString())
+    assertThat(ResetPasswordCommand.of(SECRET.value(), "Another-Horse-03", null, null).toString())
         .doesNotContain(SECRET.value())
         .doesNotContain("Another-Horse-03");
   }

@@ -23,6 +23,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.client.RestTestClient;
@@ -52,6 +53,7 @@ class EmailChangeControllerIT {
         .post()
         .uri(path)
         .contentType(MediaType.APPLICATION_JSON)
+        .header(HttpHeaders.USER_AGENT, "Mozilla/5.0 (Macintosh) Chrome/141.0.0.0")
         .body(Map.of("token", TOKEN))
         .exchange();
   }
@@ -79,6 +81,8 @@ class EmailChangeControllerIT {
     verify(commandBus).handle(command.capture());
     assertThat(command.getValue().token()).isEqualTo(TOKEN);
     assertThat(command.getValue().clientIp()).isEqualTo("127.0.0.1");
+    assertThat(command.getValue().userAgent())
+        .isEqualTo("Mozilla/5.0 (Macintosh) Chrome/141.0.0.0");
   }
 
   @Test
@@ -126,6 +130,8 @@ class EmailChangeControllerIT {
     verify(commandBus).handle(command.capture());
     assertThat(command.getValue().token()).isEqualTo(TOKEN);
     assertThat(command.getValue().clientIp()).isEqualTo("127.0.0.1");
+    assertThat(command.getValue().userAgent())
+        .isEqualTo("Mozilla/5.0 (Macintosh) Chrome/141.0.0.0");
   }
 
   @Test

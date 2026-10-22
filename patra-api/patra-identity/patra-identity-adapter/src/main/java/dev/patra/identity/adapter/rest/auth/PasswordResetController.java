@@ -10,9 +10,11 @@ import dev.patra.tool.cqrs.CommandBus;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -43,12 +45,16 @@ public class PasswordResetController {
   ///
   /// @param request 请求体
   /// @param http 原始请求，取客户端 IP
+  /// @param userAgent `User-Agent` 头，可以没有；进「密码已重设」通知的设备
   /// @return 重设了密码的账号邮箱
   @PostMapping("/reset")
   public PasswordResetResponse reset(
-      @RequestBody ResetPasswordRequest request, HttpServletRequest http) {
+      @RequestBody ResetPasswordRequest request,
+      HttpServletRequest http,
+      @RequestHeader(value = HttpHeaders.USER_AGENT, required = false) String userAgent) {
     return PasswordResetResponse.from(
         commandBus.handle(
-            ResetPasswordCommand.of(request.token(), request.newPassword(), http.getRemoteAddr())));
+            ResetPasswordCommand.of(
+                request.token(), request.newPassword(), http.getRemoteAddr(), userAgent)));
   }
 }

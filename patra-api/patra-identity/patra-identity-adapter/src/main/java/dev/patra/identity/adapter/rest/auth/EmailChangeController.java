@@ -10,8 +10,10 @@ import dev.patra.tool.cqrs.CommandBus;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -29,12 +31,16 @@ public class EmailChangeController {
   ///
   /// @param request 请求体
   /// @param http 原始请求，取客户端 IP
+  /// @param userAgent `User-Agent` 头，可以没有；进安全通知的设备
   /// @return 新邮箱和验证时间
   @PostMapping("/confirm")
   public EmailChangedResponse confirm(
-      @RequestBody ConfirmEmailChangeRequest request, HttpServletRequest http) {
+      @RequestBody ConfirmEmailChangeRequest request,
+      HttpServletRequest http,
+      @RequestHeader(value = HttpHeaders.USER_AGENT, required = false) String userAgent) {
     return EmailChangedResponse.from(
-        commandBus.handle(ConfirmEmailChangeCommand.of(request.token(), http.getRemoteAddr())));
+        commandBus.handle(
+            ConfirmEmailChangeCommand.of(request.token(), http.getRemoteAddr(), userAgent)));
   }
 
   /// 撤销（「不是我」）：成功 200，邮箱改回、全部会话下线、密码作废并发重设链接；令牌不可用 422；
@@ -42,11 +48,15 @@ public class EmailChangeController {
   ///
   /// @param request 请求体
   /// @param http 原始请求，取客户端 IP
+  /// @param userAgent `User-Agent` 头，可以没有；进安全通知的设备
   /// @return 改回的旧邮箱
   @PostMapping("/revert")
   public EmailChangeRevertedResponse revert(
-      @RequestBody RevertEmailChangeRequest request, HttpServletRequest http) {
+      @RequestBody RevertEmailChangeRequest request,
+      HttpServletRequest http,
+      @RequestHeader(value = HttpHeaders.USER_AGENT, required = false) String userAgent) {
     return EmailChangeRevertedResponse.from(
-        commandBus.handle(RevertEmailChangeCommand.of(request.token(), http.getRemoteAddr())));
+        commandBus.handle(
+            RevertEmailChangeCommand.of(request.token(), http.getRemoteAddr(), userAgent)));
   }
 }

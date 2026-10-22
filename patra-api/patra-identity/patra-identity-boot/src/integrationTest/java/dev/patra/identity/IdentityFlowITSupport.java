@@ -187,6 +187,21 @@ abstract class IdentityFlowITSupport {
     return new HttpHeaders();
   }
 
+  /// 像浏览器经门户与网关来的请求：深圳的公网 IP 与 Chrome 141 / macOS 的 UA（PAP-99），可叠加在已有的头上。
+  ///
+  /// @param base 已有的请求头，比如断言
+  /// @return 新的请求头
+  static HttpHeaders fromShenzhenChrome(HttpHeaders base) {
+    HttpHeaders headers = new HttpHeaders();
+    headers.addAll(base);
+    headers.add("X-Forwarded-For", "113.92.157.29");
+    headers.add(
+        HttpHeaders.USER_AGENT,
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko)"
+            + " Chrome/141.0.0.0 Safari/537.36");
+    return headers;
+  }
+
   /// 用测试私钥、按可拨动的时钟签一条断言。
   ///
   /// @param userId 用户 ID

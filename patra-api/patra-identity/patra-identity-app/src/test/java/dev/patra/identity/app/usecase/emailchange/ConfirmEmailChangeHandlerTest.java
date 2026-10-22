@@ -16,9 +16,11 @@ import dev.patra.identity.domain.exception.InvalidUserFieldsException;
 import dev.patra.identity.domain.exception.UserIdentifierTakenException;
 import dev.patra.identity.domain.model.aggregate.EmailToken;
 import dev.patra.identity.domain.model.aggregate.User;
+import dev.patra.identity.domain.model.enums.DeviceClass;
 import dev.patra.identity.domain.model.enums.EmailTokenPurpose;
 import dev.patra.identity.domain.model.enums.UserStatus;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
+import dev.patra.identity.domain.model.vo.DeviceProfile;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.EmailTokenSecret;
 import dev.patra.identity.domain.model.vo.Username;
@@ -29,6 +31,7 @@ import dev.patra.identity.domain.port.mail.EmailDeliveryPort;
 import dev.patra.identity.domain.port.read.UserReadPort;
 import dev.patra.identity.domain.port.repository.EmailTokenRepository;
 import dev.patra.identity.domain.port.repository.UserRepository;
+import dev.patra.identity.domain.service.ClientOriginResolver;
 import dev.patra.identity.domain.service.EmailTokenIssuer;
 import dev.patra.identity.domain.service.IssuedEmailToken;
 import dev.patra.tool.core.error.field.FieldViolation;
@@ -75,6 +78,10 @@ class ConfirmEmailChangeHandlerTest {
   private final UserReadPort userReadPort = mock(UserReadPort.class);
   private final EmailTokenIssuer emailTokenIssuer = mock(EmailTokenIssuer.class);
   private final EmailDeliveryPort emailDelivery = mock(EmailDeliveryPort.class);
+  private final ClientOriginResolver resolver =
+      new ClientOriginResolver(
+          userAgent -> DeviceProfile.of("Chrome 141 · macOS", DeviceClass.DESKTOP),
+          ip -> Optional.of("中国 广东 深圳"));
   private final AtomicBoolean inTransaction = new AtomicBoolean(false);
   private final ConfirmEmailChangeHandler handler =
       new ConfirmEmailChangeHandler(
@@ -83,6 +90,7 @@ class ConfirmEmailChangeHandlerTest {
           userReadPort,
           emailTokenIssuer,
           LINKS,
+          resolver,
           emailDelivery,
           RequestEmailChangeHandlerTest.recording(inTransaction),
           Clock.fixed(NOW, ZoneOffset.UTC));
@@ -109,9 +117,9 @@ class ConfirmEmailChangeHandlerTest {
   @Test
   @DisplayName("令牌为空或格式不对：422，不查库")
   void should_reject_blank_or_malformed_token() {
-    assertThatThrownBy(() -> handler.handle(ConfirmEmailChangeCommand.of("", "127.0.0.1")))
+    assertThatThrownBy(() -> handler.handle(ConfirmEmailChangeCommand.of("", "127.0.0.1", null)))
         .isInstanceOf(InvalidUserFieldsException.class);
-    assertThatThrownBy(() -> handler.handle(ConfirmEmailChangeCommand.of("abc", "127.0.0.1")))
+    assertThatThrownBy(() -> handler.handle(ConfirmEmailChangeCommand.of("abc", "127.0.0.1", null)))
         .isInstanceOf(InvalidUserFieldsException.class);
     verifyNoInteractions(tokens);
   }
@@ -123,7 +131,7 @@ class ConfirmEmailChangeHandlerTest {
         .thenReturn(Optional.of(token(EmailTokenPurpose.PASSWORD_RESET, NEW)));
 
     assertThatThrownBy(
-            () -> handler.handle(ConfirmEmailChangeCommand.of(SECRET.value(), "127.0.0.1")))
+            () -> handler.handle(ConfirmEmailChangeCommand.of(SECRET.value(), "127.0.0.1", null)))
         .isInstanceOf(InvalidUserFieldsException.class);
     verify(tokens, never()).consume(any(), any(), any());
   }
@@ -134,7 +142,7 @@ class ConfirmEmailChangeHandlerTest {
     when(users.findByIdForUpdate(42L)).thenReturn(Optional.of(user(UserStatus.PENDING_DELETION)));
 
     assertThatThrownBy(
-            () -> handler.handle(ConfirmEmailChangeCommand.of(SECRET.value(), "127.0.0.1")))
+            () -> handler.handle(ConfirmEmailChangeCommand.of(SECRET.value(), "127.0.0.1", null)))
         .isInstanceOf(InvalidUserFieldsException.class)
         .satisfies(
             e ->
@@ -150,7 +158,7 @@ class ConfirmEmailChangeHandlerTest {
     when(users.existsByEmail(NEW)).thenReturn(true);
 
     assertThatThrownBy(
-            () -> handler.handle(ConfirmEmailChangeCommand.of(SECRET.value(), "127.0.0.1")))
+            () -> handler.handle(ConfirmEmailChangeCommand.of(SECRET.value(), "127.0.0.1", null)))
         .isInstanceOf(UserIdentifierTakenException.class)
         .satisfies(
             e ->
@@ -164,7 +172,8 @@ class ConfirmEmailChangeHandlerTest {
   @Test
   @DisplayName("成功：消费 → 改邮箱并写验证时间 → 批量作废令牌 → 签发撤销令牌 → 先旧邮箱通知（含撤销链接与遮掩的新地址）后新邮箱确认")
   void should_change_email_revoke_tokens_issue_revert_and_send_two_mails_old_first() {
-    EmailChanged result = handler.handle(ConfirmEmailChangeCommand.of(SECRET.value(), "127.0.0.1"));
+    EmailChanged result =
+        handler.handle(ConfirmEmailChangeCommand.of(SECRET.value(), "127.0.0.1", null));
 
     InOrder order = inOrder(tokens, users, emailTokenIssuer, emailDelivery);
     order.verify(tokens).consume(SECRET.hash(), EmailTokenPurpose.EMAIL_CHANGE_CONFIRM, NOW);
@@ -187,7 +196,10 @@ class ConfirmEmailChangeHandlerTest {
                             .equals(
                                 "https://patra.example/revert-email-change#token="
                                     + REVERT_SECRET.value())
-                        && n.notice().notMeAdvice().equals(EmailChangedNoticeMail.NOT_ME_ADVICE)));
+                        && n.notice().notMeAdvice().equals(EmailChangedNoticeMail.NOT_ME_ADVICE)
+                        && n.notice().device().equals("Chrome 141 · macOS")
+                        && n.notice().ipAddress().equals("127.0.0.1")
+                        && n.notice().ipLocation().equals("内网")));
     order
         .verify(emailDelivery)
         .send(argThat(m -> m instanceof EmailChangedConfirmationMail c && c.to().equals(NEW)));
@@ -215,7 +227,7 @@ class ConfirmEmailChangeHandlerTest {
         .when(emailDelivery)
         .send(any());
 
-    handler.handle(ConfirmEmailChangeCommand.of(SECRET.value(), "127.0.0.1"));
+    handler.handle(ConfirmEmailChangeCommand.of(SECRET.value(), "127.0.0.1", null));
 
     verify(emailDelivery, org.mockito.Mockito.times(2)).send(any());
   }

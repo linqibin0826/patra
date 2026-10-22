@@ -63,7 +63,7 @@ class PasswordChangeFlowIT extends IdentityFlowITSupport {
             HttpMethod.PUT,
             "/me/password",
             Map.of("currentPassword", PASSWORD, "newPassword", "Another-Horse-03"),
-            assertionFor(userId, sessionA));
+            fromShenzhenChrome(assertionFor(userId, sessionA)));
 
     assertThat(changed.status()).as(changed.body()).isEqualTo(200);
     String rotated = sessionTokenOf(changed);
@@ -80,7 +80,8 @@ class PasswordChangeFlowIT extends IdentityFlowITSupport {
     String text = partText(notice, "text/plain");
     assertThat(text)
         .contains("时间：")
-        .contains("设备：未知")
+        .contains("设备：Chrome 141 · macOS")
+        .contains("113.92.157.29（中国 广东 深圳）")
         .contains("忘记密码")
         .doesNotContain("/settings/security");
     assertThat(partText(notice, "text/html")).contains("忘记密码").doesNotContain("/settings/security");

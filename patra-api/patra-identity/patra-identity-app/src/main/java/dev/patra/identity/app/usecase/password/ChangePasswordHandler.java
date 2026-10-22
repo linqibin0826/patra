@@ -8,21 +8,23 @@ import dev.patra.identity.domain.model.aggregate.User;
 import dev.patra.identity.domain.model.aggregate.UserPasswordCredential;
 import dev.patra.identity.domain.model.enums.LoginEndReason;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
+import dev.patra.identity.domain.model.vo.ClientOrigin;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.PasswordHash;
 import dev.patra.identity.domain.model.vo.PlainPassword;
+import dev.patra.identity.domain.model.vo.RequestOrigin;
 import dev.patra.identity.domain.model.vo.UserFieldViolations;
 import dev.patra.identity.domain.policy.PasswordPolicy;
 import dev.patra.identity.domain.port.hashing.PasswordHashingPort;
 import dev.patra.identity.domain.port.mail.EmailDeliveryPort;
 import dev.patra.identity.domain.port.mail.PasswordChangedMail;
-import dev.patra.identity.domain.port.mail.SecurityNotice;
 import dev.patra.identity.domain.port.read.UserReadPort;
 import dev.patra.identity.domain.port.repository.EmailTokenRepository;
 import dev.patra.identity.domain.port.repository.UserPasswordCredentialRepository;
 import dev.patra.identity.domain.port.repository.UserRepository;
 import dev.patra.identity.domain.port.session.SessionRotation;
 import dev.patra.identity.domain.port.session.SessionStorePort;
+import dev.patra.identity.domain.service.ClientOriginResolver;
 import dev.patra.identity.domain.service.SessionTerminator;
 import dev.patra.tool.core.error.field.FieldViolation;
 import dev.patra.tool.core.security.AuthenticationRequiredException;
@@ -64,6 +66,7 @@ public class ChangePasswordHandler
   private final EmailTokenRepository tokens;
   private final SessionStorePort sessions;
   private final SessionTerminator sessionTerminator;
+  private final ClientOriginResolver clientOriginResolver;
   private final EmailDeliveryPort emailDelivery;
   private final TransactionOperations transactions;
   private final Clock clock;
@@ -132,14 +135,14 @@ public class ChangePasswordHandler
                           .orElseThrow(AuthenticationRequiredException::new);
                   return new Changed(token, account, revoked.size());
                 }));
+    // 解析放在事务提交之后、发信之前：纯计算，不占事务
+    ClientOrigin origin =
+        clientOriginResolver.resolve(RequestOrigin.of(command.clientIp(), command.userAgent()));
     emailDelivery.send(
         PasswordChangedMail.of(
             email,
             changed.account().displayName(),
-            SecurityNotice.builder()
-                .occurredAt(now)
-                .notMeAdvice(PasswordChangedMail.NOT_ME_ADVICE)
-                .build()));
+            origin.toNotice(now, PasswordChangedMail.NOT_ME_ADVICE)));
     log.info(
         "前台用户已改密码: userId={}, sessionId={}, revokedSessions={}",
         userId,

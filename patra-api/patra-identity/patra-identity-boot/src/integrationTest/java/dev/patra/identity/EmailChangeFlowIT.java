@@ -52,7 +52,10 @@ class EmailChangeFlowIT extends IdentityFlowITSupport {
     String confirmToken = tokenInMail(fresh, CONFIRM_SUBJECT);
 
     RawResponse confirmed =
-        post("/auth/email/change/confirm", Map.of("token", confirmToken), noHeaders());
+        post(
+            "/auth/email/change/confirm",
+            Map.of("token", confirmToken),
+            fromShenzhenChrome(noHeaders()));
 
     assertThat(confirmed.status()).as(confirmed.body()).isEqualTo(200);
     assertThat(json(confirmed).get("email").asString()).isEqualTo(fresh);
@@ -70,7 +73,9 @@ class EmailChangeFlowIT extends IdentityFlowITSupport {
         .contains("f***@example.com")
         .doesNotContain(fresh)
         .contains("/revert-email-change#token=")
-        .contains("7 天");
+        .contains("7 天")
+        .contains("Chrome 141 · macOS")
+        .contains("113.92.157.29（中国 广东 深圳）");
     assertThat(mailFor(fresh, BOUND_SUBJECT)).isNotNull();
     assertThat(activeTokenPurposesOf(userId)).containsExactly("EMAIL_CHANGE_REVERT");
   }

@@ -28,6 +28,7 @@ import dev.patra.identity.domain.model.enums.LoginEndReason;
 import dev.patra.identity.domain.model.enums.UserStatus;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.model.vo.ClientOrigin;
+import dev.patra.identity.domain.model.vo.DeviceProfile;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.LoginClient;
 import dev.patra.identity.domain.model.vo.PasswordHash;
@@ -45,6 +46,7 @@ import dev.patra.identity.domain.port.session.SessionRotation;
 import dev.patra.identity.domain.port.session.SessionStorePort;
 import dev.patra.identity.domain.port.throttle.LoginAttempt;
 import dev.patra.identity.domain.port.throttle.LoginThrottlePort;
+import dev.patra.identity.domain.service.ClientOriginResolver;
 import dev.patra.identity.domain.service.SessionTerminator;
 import dev.patra.tool.core.error.field.FieldViolation;
 import dev.patra.tool.core.security.AccountType;
@@ -103,6 +105,10 @@ class ChangePasswordHandlerTest {
   private final SessionStorePort sessions = mock(SessionStorePort.class);
   private final UserLoginRecordRepository records = mock(UserLoginRecordRepository.class);
   private final EmailDeliveryPort emailDelivery = mock(EmailDeliveryPort.class);
+  private final ClientOriginResolver resolver =
+      new ClientOriginResolver(
+          userAgent -> DeviceProfile.of("Chrome 141 · macOS", DeviceClass.DESKTOP),
+          ip -> Optional.of("中国 广东 深圳"));
   private final AtomicBoolean inTransaction = new AtomicBoolean(false);
   private final ChangePasswordHandler handler =
       new ChangePasswordHandler(
@@ -116,6 +122,7 @@ class ChangePasswordHandlerTest {
           tokens,
           sessions,
           new SessionTerminator(sessions, records),
+          resolver,
           emailDelivery,
           recording(inTransaction),
           Clock.fixed(NOW, ZoneOffset.UTC));
@@ -145,7 +152,8 @@ class ChangePasswordHandlerTest {
   @Test
   @DisplayName("两个字段一起报：当前密码为空、新密码太短；不碰登录失败限制")
   void should_report_both_field_errors_at_once() {
-    assertThatThrownBy(() -> handler.handle(ChangePasswordCommand.of("", "short", "127.0.0.1")))
+    assertThatThrownBy(
+            () -> handler.handle(ChangePasswordCommand.of("", "short", "127.0.0.1", null)))
         .isInstanceOf(InvalidUserFieldsException.class)
         .satisfies(
             e ->
@@ -165,7 +173,8 @@ class ChangePasswordHandlerTest {
     assertThatThrownBy(
             () ->
                 handler.handle(
-                    ChangePasswordCommand.of("Correct-Horse-02", "Another-Horse-03", "127.0.0.1")))
+                    ChangePasswordCommand.of(
+                        "Correct-Horse-02", "Another-Horse-03", "127.0.0.1", null)))
         .isInstanceOf(UserPendingDeletionException.class);
     verifyNoInteractions(loginThrottle, sessions, emailDelivery);
   }
@@ -177,7 +186,8 @@ class ChangePasswordHandlerTest {
 
     assertThatThrownBy(
             () ->
-                handler.handle(ChangePasswordCommand.of("wrong", "Another-Horse-03", "127.0.0.1")))
+                handler.handle(
+                    ChangePasswordCommand.of("wrong", "Another-Horse-03", "127.0.0.1", null)))
         .isInstanceOf(CurrentPasswordMismatchException.class);
     verify(loginThrottle).recordFailure(ATTEMPT);
     verify(passwordHashing, never()).hash(any());
@@ -195,7 +205,8 @@ class ChangePasswordHandlerTest {
     assertThatThrownBy(
             () ->
                 handler.handle(
-                    ChangePasswordCommand.of("Correct-Horse-02", "Another-Horse-03", "127.0.0.1")))
+                    ChangePasswordCommand.of(
+                        "Correct-Horse-02", "Another-Horse-03", "127.0.0.1", null)))
         .isInstanceOf(CurrentPasswordMismatchException.class);
     verify(loginThrottle, never()).recordFailure(any());
     verify(credentials, never()).save(any());
@@ -209,7 +220,8 @@ class ChangePasswordHandlerTest {
     assertThatThrownBy(
             () ->
                 handler.handle(
-                    ChangePasswordCommand.of("Correct-Horse-02", "Correct-Horse-02", "127.0.0.1")))
+                    ChangePasswordCommand.of(
+                        "Correct-Horse-02", "Correct-Horse-02", "127.0.0.1", null)))
         .isInstanceOf(InvalidUserFieldsException.class)
         .satisfies(
             e ->
@@ -220,7 +232,8 @@ class ChangePasswordHandlerTest {
     assertThatThrownBy(
             () ->
                 handler.handle(
-                    ChangePasswordCommand.of("Correct-Horse-02", "Ｃorrect-Horse-02", "127.0.0.1")))
+                    ChangePasswordCommand.of(
+                        "Correct-Horse-02", "Ｃorrect-Horse-02", "127.0.0.1", null)))
         .isInstanceOf(InvalidUserFieldsException.class);
     verify(passwordHashing, never()).hash(any());
     verifyNoInteractions(sessions, emailDelivery);
@@ -231,7 +244,7 @@ class ChangePasswordHandlerTest {
   void should_change_in_order_rotate_keep_current_and_revoke_the_rest() {
     AuthenticatedUser result =
         handler.handle(
-            ChangePasswordCommand.of("Correct-Horse-02", "Another-Horse-03", "127.0.0.1"));
+            ChangePasswordCommand.of("Correct-Horse-02", "Another-Horse-03", "127.0.0.1", null));
 
     InOrder order = inOrder(credentials, tokens, sessions, records, userReadPort, emailDelivery);
     order.verify(credentials).save(argThat(c -> c.getPasswordHash().equals(NEW_HASH)));
@@ -251,7 +264,10 @@ class ChangePasswordHandlerTest {
                         && mail.to().equals(EMAIL)
                         && mail.displayName().equals("陈宇")
                         && mail.notice().occurredAt().equals(NOW)
-                        && mail.notice().notMeAdvice().equals(PasswordChangedMail.NOT_ME_ADVICE)));
+                        && mail.notice().notMeAdvice().equals(PasswordChangedMail.NOT_ME_ADVICE)
+                        && mail.notice().device().equals("Chrome 141 · macOS")
+                        && mail.notice().ipAddress().equals("127.0.0.1")
+                        && mail.notice().ipLocation().equals("内网")));
     assertThat(result.sessionToken()).isEqualTo(NEW_TOKEN);
     assertThat(result.account()).isEqualTo(ACCOUNT);
   }
@@ -279,7 +295,8 @@ class ChangePasswordHandlerTest {
         .when(emailDelivery)
         .send(any());
 
-    handler.handle(ChangePasswordCommand.of("Correct-Horse-02", "Another-Horse-03", "127.0.0.1"));
+    handler.handle(
+        ChangePasswordCommand.of("Correct-Horse-02", "Another-Horse-03", "127.0.0.1", null));
 
     verify(emailDelivery).send(any());
   }
@@ -293,7 +310,8 @@ class ChangePasswordHandlerTest {
     assertThatThrownBy(
             () ->
                 handler.handle(
-                    ChangePasswordCommand.of("Correct-Horse-02", "Another-Horse-03", "127.0.0.1")))
+                    ChangePasswordCommand.of(
+                        "Correct-Horse-02", "Another-Horse-03", "127.0.0.1", null)))
         .isSameAs(down);
     verifyNoInteractions(emailDelivery);
   }
@@ -306,7 +324,8 @@ class ChangePasswordHandlerTest {
     assertThatThrownBy(
             () ->
                 handler.handle(
-                    ChangePasswordCommand.of("Correct-Horse-02", "Another-Horse-03", "127.0.0.1")))
+                    ChangePasswordCommand.of(
+                        "Correct-Horse-02", "Another-Horse-03", "127.0.0.1", null)))
         .isInstanceOf(dev.patra.tool.core.security.AuthenticationRequiredException.class);
     verify(sessions, never()).rotate(any(), anyLong(), anyLong(), any());
     verifyNoInteractions(emailDelivery);
@@ -315,7 +334,8 @@ class ChangePasswordHandlerTest {
   @Test
   @DisplayName("命令的 toString 不输出两个密码")
   void should_hide_passwords_in_command_to_string() {
-    assertThat(ChangePasswordCommand.of("Correct-Horse-02", "Another-Horse-03", null).toString())
+    assertThat(
+            ChangePasswordCommand.of("Correct-Horse-02", "Another-Horse-03", null, null).toString())
         .doesNotContain("Correct-Horse-02")
         .doesNotContain("Another-Horse-03");
   }

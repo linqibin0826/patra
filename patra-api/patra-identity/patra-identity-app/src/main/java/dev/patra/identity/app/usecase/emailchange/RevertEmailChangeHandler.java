@@ -6,8 +6,10 @@ import dev.patra.identity.domain.model.aggregate.User;
 import dev.patra.identity.domain.model.enums.EmailTokenPurpose;
 import dev.patra.identity.domain.model.enums.LoginEndReason;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
+import dev.patra.identity.domain.model.vo.ClientOrigin;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.EmailTokenSecret;
+import dev.patra.identity.domain.model.vo.RequestOrigin;
 import dev.patra.identity.domain.model.vo.UserFieldViolations;
 import dev.patra.identity.domain.policy.MailLinkPolicy;
 import dev.patra.identity.domain.port.mail.EmailChangeRevertedMail;
@@ -16,6 +18,7 @@ import dev.patra.identity.domain.port.read.UserReadPort;
 import dev.patra.identity.domain.port.repository.EmailTokenRepository;
 import dev.patra.identity.domain.port.repository.UserPasswordCredentialRepository;
 import dev.patra.identity.domain.port.repository.UserRepository;
+import dev.patra.identity.domain.service.ClientOriginResolver;
 import dev.patra.identity.domain.service.EmailTokenIssuer;
 import dev.patra.identity.domain.service.IssuedEmailToken;
 import dev.patra.identity.domain.service.SessionTerminator;
@@ -50,6 +53,7 @@ public class RevertEmailChangeHandler
   private final SessionTerminator sessionTerminator;
   private final EmailTokenIssuer emailTokenIssuer;
   private final MailLinkPolicy links;
+  private final ClientOriginResolver clientOriginResolver;
   private final EmailDeliveryPort emailDelivery;
   private final TransactionOperations transactions;
   private final Clock clock;
@@ -110,12 +114,15 @@ public class RevertEmailChangeHandler
                   return new Reverted(
                       userId, restore, account.displayName(), reset.secret(), revoked.size());
                 }));
+    // 解析放在事务提交之后、发信之前：纯计算，不占事务
+    ClientOrigin origin =
+        clientOriginResolver.resolve(RequestOrigin.of(command.clientIp(), command.userAgent()));
     emailDelivery.send(
         EmailChangeRevertedMail.of(
             reverted.email(),
             reverted.displayName(),
             links.resetPasswordUrl(reverted.resetSecret()),
-            ConfirmEmailChangeHandler.notice(now, EmailChangeRevertedMail.NOT_ME_ADVICE)));
+            origin.toNotice(now, EmailChangeRevertedMail.NOT_ME_ADVICE)));
     log.info(
         "邮箱更改已撤销: userId={}, revokedSessions={}", reverted.userId(), reverted.revokedSessions());
     return EmailChangeReverted.of(reverted.email().value());

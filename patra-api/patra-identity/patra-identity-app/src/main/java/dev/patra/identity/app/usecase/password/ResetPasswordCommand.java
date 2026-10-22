@@ -7,7 +7,9 @@ import dev.patra.tool.cqrs.Command;
 /// @param token 令牌原文
 /// @param newPassword 新密码，原始输入
 /// @param clientIp 客户端 IP，可以为 `null`
-public record ResetPasswordCommand(String token, String newPassword, String clientIp)
+/// @param userAgent User-Agent，可以为 `null`；安全通知里的设备（PAP-99）
+public record ResetPasswordCommand(
+    String token, String newPassword, String clientIp, String userAgent)
     implements Command<PasswordReset> {
 
   /// 创建命令。
@@ -15,9 +17,11 @@ public record ResetPasswordCommand(String token, String newPassword, String clie
   /// @param token 令牌原文
   /// @param newPassword 新密码
   /// @param clientIp 客户端 IP，可以为 `null`
+  /// @param userAgent User-Agent，可以为 `null`
   /// @return 命令
-  public static ResetPasswordCommand of(String token, String newPassword, String clientIp) {
-    return new ResetPasswordCommand(token, newPassword, clientIp);
+  public static ResetPasswordCommand of(
+      String token, String newPassword, String clientIp, String userAgent) {
+    return new ResetPasswordCommand(token, newPassword, clientIp, userAgent);
   }
 
   /// 不输出令牌与密码。
@@ -25,6 +29,10 @@ public record ResetPasswordCommand(String token, String newPassword, String clie
   /// @return 描述
   @Override
   public String toString() {
-    return "ResetPasswordCommand[token=***, newPassword=***, clientIp=" + clientIp + "]";
+    return "ResetPasswordCommand[token=***, newPassword=***, clientIp="
+        + clientIp
+        + ", userAgentLength="
+        + (userAgent == null ? 0 : userAgent.length())
+        + "]";
   }
 }

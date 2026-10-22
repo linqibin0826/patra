@@ -8,22 +8,24 @@ import dev.patra.identity.domain.model.aggregate.UserPasswordCredential;
 import dev.patra.identity.domain.model.enums.EmailTokenPurpose;
 import dev.patra.identity.domain.model.enums.LoginEndReason;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
+import dev.patra.identity.domain.model.vo.ClientOrigin;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.EmailTokenSecret;
 import dev.patra.identity.domain.model.vo.PasswordHash;
 import dev.patra.identity.domain.model.vo.PlainPassword;
+import dev.patra.identity.domain.model.vo.RequestOrigin;
 import dev.patra.identity.domain.model.vo.UserFieldViolations;
 import dev.patra.identity.domain.policy.PasswordPolicy;
 import dev.patra.identity.domain.port.hashing.PasswordHashingPort;
 import dev.patra.identity.domain.port.mail.EmailDeliveryPort;
 import dev.patra.identity.domain.port.mail.PasswordResetDoneMail;
-import dev.patra.identity.domain.port.mail.SecurityNotice;
 import dev.patra.identity.domain.port.read.UserReadPort;
 import dev.patra.identity.domain.port.repository.EmailTokenRepository;
 import dev.patra.identity.domain.port.repository.UserPasswordCredentialRepository;
 import dev.patra.identity.domain.port.repository.UserRepository;
 import dev.patra.identity.domain.port.throttle.LoginThrottlePort;
 import dev.patra.identity.domain.port.throttle.PasswordResetThrottlePort;
+import dev.patra.identity.domain.service.ClientOriginResolver;
 import dev.patra.identity.domain.service.SessionTerminator;
 import dev.patra.tool.core.error.field.FieldViolation;
 import dev.patra.tool.core.security.AccountType;
@@ -60,6 +62,7 @@ public class ResetPasswordHandler implements CommandHandler<ResetPasswordCommand
   private final UserReadPort userReadPort;
   private final SessionTerminator sessionTerminator;
   private final LoginThrottlePort loginThrottle;
+  private final ClientOriginResolver clientOriginResolver;
   private final EmailDeliveryPort emailDelivery;
   private final TransactionOperations transactions;
   private final Clock clock;
@@ -137,14 +140,14 @@ public class ResetPasswordHandler implements CommandHandler<ResetPasswordCommand
                       userReadPort.findAccount(userId).orElseThrow(() -> invalid());
                   return new Done(userId, email, account.displayName(), revoked.size());
                 }));
+    // 解析放在事务提交之后、发信之前：纯计算，不占事务
+    ClientOrigin origin =
+        clientOriginResolver.resolve(RequestOrigin.of(command.clientIp(), command.userAgent()));
     emailDelivery.send(
         PasswordResetDoneMail.of(
             done.email(),
             done.displayName(),
-            SecurityNotice.builder()
-                .occurredAt(now)
-                .notMeAdvice(PasswordResetDoneMail.NOT_ME_ADVICE)
-                .build()));
+            origin.toNotice(now, PasswordResetDoneMail.NOT_ME_ADVICE)));
     log.info("密码已重设: userId={}, revokedSessions={}", done.userId(), done.revokedSessions());
     return PasswordReset.of(done.email().value());
   }

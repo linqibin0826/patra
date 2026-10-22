@@ -23,6 +23,7 @@ import dev.patra.identity.domain.model.enums.LoginEndReason;
 import dev.patra.identity.domain.model.enums.UserStatus;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.model.vo.ClientOrigin;
+import dev.patra.identity.domain.model.vo.DeviceProfile;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.EmailTokenSecret;
 import dev.patra.identity.domain.model.vo.LoginClient;
@@ -36,6 +37,7 @@ import dev.patra.identity.domain.port.repository.UserLoginRecordRepository;
 import dev.patra.identity.domain.port.repository.UserPasswordCredentialRepository;
 import dev.patra.identity.domain.port.repository.UserRepository;
 import dev.patra.identity.domain.port.session.SessionStorePort;
+import dev.patra.identity.domain.service.ClientOriginResolver;
 import dev.patra.identity.domain.service.EmailTokenIssuer;
 import dev.patra.identity.domain.service.IssuedEmailToken;
 import dev.patra.identity.domain.service.SessionTerminator;
@@ -88,6 +90,10 @@ class RevertEmailChangeHandlerTest {
   private final UserLoginRecordRepository records = mock(UserLoginRecordRepository.class);
   private final EmailTokenIssuer emailTokenIssuer = mock(EmailTokenIssuer.class);
   private final EmailDeliveryPort emailDelivery = mock(EmailDeliveryPort.class);
+  private final ClientOriginResolver resolver =
+      new ClientOriginResolver(
+          userAgent -> DeviceProfile.of("Chrome 141 · macOS", DeviceClass.DESKTOP),
+          ip -> Optional.of("中国 广东 深圳"));
   private final AtomicBoolean inTransaction = new AtomicBoolean(false);
   private final RevertEmailChangeHandler handler =
       new RevertEmailChangeHandler(
@@ -98,6 +104,7 @@ class RevertEmailChangeHandlerTest {
           new SessionTerminator(sessions, records),
           emailTokenIssuer,
           LINKS,
+          resolver,
           emailDelivery,
           RequestEmailChangeHandlerTest.recording(inTransaction),
           Clock.fixed(NOW, ZoneOffset.UTC));
@@ -135,7 +142,7 @@ class RevertEmailChangeHandlerTest {
   void should_allow_pending_deletion_user() {
     when(users.findByIdForUpdate(42L)).thenReturn(Optional.of(user(UserStatus.PENDING_DELETION)));
 
-    handler.handle(RevertEmailChangeCommand.of(SECRET.value(), "127.0.0.1"));
+    handler.handle(RevertEmailChangeCommand.of(SECRET.value(), "127.0.0.1", null));
 
     verify(users)
         .save(argThat(u -> u.isPendingDeletion() && u.getEmail().orElseThrow().equals(OLD)));
@@ -157,7 +164,7 @@ class RevertEmailChangeHandlerTest {
                     .build()));
 
     assertThatThrownBy(
-            () -> handler.handle(RevertEmailChangeCommand.of(SECRET.value(), "127.0.0.1")))
+            () -> handler.handle(RevertEmailChangeCommand.of(SECRET.value(), "127.0.0.1", null)))
         .isInstanceOf(InvalidUserFieldsException.class);
     verify(tokens, never()).consume(any(), any(), any());
   }
@@ -168,7 +175,7 @@ class RevertEmailChangeHandlerTest {
     when(users.existsByEmail(OLD)).thenReturn(true);
 
     assertThatThrownBy(
-            () -> handler.handle(RevertEmailChangeCommand.of(SECRET.value(), "127.0.0.1")))
+            () -> handler.handle(RevertEmailChangeCommand.of(SECRET.value(), "127.0.0.1", null)))
         .isInstanceOf(UserIdentifierTakenException.class);
     verify(users, never()).save(any());
     verifyNoInteractions(credentials, sessions, emailDelivery);
@@ -192,7 +199,7 @@ class RevertEmailChangeHandlerTest {
     when(users.existsByEmail(OLD)).thenReturn(true);
 
     EmailChangeReverted result =
-        handler.handle(RevertEmailChangeCommand.of(SECRET.value(), "127.0.0.1"));
+        handler.handle(RevertEmailChangeCommand.of(SECRET.value(), "127.0.0.1", null));
 
     assertThat(result.email()).isEqualTo("chen.yu@example.com");
     verify(users).save(argThat(u -> u.getEmail().orElseThrow().equals(OLD)));
@@ -204,7 +211,7 @@ class RevertEmailChangeHandlerTest {
   @DisplayName("成功：改回 → 作废全部 + 只作废比本条更晚签发的撤销令牌（更早的保留）→ 删凭据 → 撤销全部会话并记 REVOKED → 签发重设 → 发到改回的地址")
   void should_revert_in_order() {
     EmailChangeReverted result =
-        handler.handle(RevertEmailChangeCommand.of(SECRET.value(), "127.0.0.1"));
+        handler.handle(RevertEmailChangeCommand.of(SECRET.value(), "127.0.0.1", null));
 
     InOrder order =
         inOrder(users, tokens, credentials, sessions, records, emailTokenIssuer, emailDelivery);
@@ -229,16 +236,19 @@ class RevertEmailChangeHandlerTest {
                             .equals(
                                 "https://patra.example/reset-password#token="
                                     + RESET_SECRET.value())
-                        && r.notice().notMeAdvice().equals(EmailChangeRevertedMail.NOT_ME_ADVICE)));
+                        && r.notice().notMeAdvice().equals(EmailChangeRevertedMail.NOT_ME_ADVICE)
+                        && r.notice().device().equals("Chrome 141 · macOS")
+                        && r.notice().ipAddress().equals("127.0.0.1")
+                        && r.notice().ipLocation().equals("内网")));
     assertThat(result.email()).isEqualTo("chen.yu@example.com");
   }
 
   @Test
   @DisplayName("命令的 toString 不输出令牌")
   void should_hide_token_in_command_to_string() {
-    assertThat(RevertEmailChangeCommand.of(SECRET.value(), null).toString())
+    assertThat(RevertEmailChangeCommand.of(SECRET.value(), null, null).toString())
         .doesNotContain(SECRET.value());
-    assertThat(ConfirmEmailChangeCommand.of(SECRET.value(), null).toString())
+    assertThat(ConfirmEmailChangeCommand.of(SECRET.value(), null, null).toString())
         .doesNotContain(SECRET.value());
   }
 

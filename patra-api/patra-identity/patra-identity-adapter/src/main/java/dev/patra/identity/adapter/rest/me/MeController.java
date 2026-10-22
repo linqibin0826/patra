@@ -13,9 +13,11 @@ import dev.patra.tool.cqrs.CommandBus;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -43,14 +45,17 @@ public class MeController {
   ///
   /// @param request 请求体
   /// @param http 原始请求，取客户端 IP
+  /// @param userAgent `User-Agent` 头，可以没有；进「密码已修改」通知的设备
   /// @return 新令牌和账号信息
   @PutMapping("/password")
   public AuthenticatedUserResponse changePassword(
-      @RequestBody ChangePasswordRequest request, HttpServletRequest http) {
+      @RequestBody ChangePasswordRequest request,
+      HttpServletRequest http,
+      @RequestHeader(value = HttpHeaders.USER_AGENT, required = false) String userAgent) {
     AuthenticatedUser result =
         commandBus.handle(
             ChangePasswordCommand.of(
-                request.currentPassword(), request.newPassword(), http.getRemoteAddr()));
+                request.currentPassword(), request.newPassword(), http.getRemoteAddr(), userAgent));
     return AuthenticatedUserResponse.of(
         result.sessionToken(), CurrentUserResponse.from(result.account()));
   }

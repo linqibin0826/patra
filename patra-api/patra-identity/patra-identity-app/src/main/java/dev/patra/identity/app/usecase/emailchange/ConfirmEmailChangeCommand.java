@@ -6,16 +6,18 @@ import dev.patra.tool.cqrs.Command;
 ///
 /// @param token 令牌原文
 /// @param clientIp 客户端 IP，可以为 `null`
-public record ConfirmEmailChangeCommand(String token, String clientIp)
+/// @param userAgent User-Agent，可以为 `null`；安全通知里的设备（PAP-99）
+public record ConfirmEmailChangeCommand(String token, String clientIp, String userAgent)
     implements Command<EmailChanged> {
 
   /// 创建命令。
   ///
   /// @param token 令牌原文
   /// @param clientIp 客户端 IP，可以为 `null`
+  /// @param userAgent User-Agent，可以为 `null`
   /// @return 命令
-  public static ConfirmEmailChangeCommand of(String token, String clientIp) {
-    return new ConfirmEmailChangeCommand(token, clientIp);
+  public static ConfirmEmailChangeCommand of(String token, String clientIp, String userAgent) {
+    return new ConfirmEmailChangeCommand(token, clientIp, userAgent);
   }
 
   /// 不输出令牌。
@@ -23,6 +25,10 @@ public record ConfirmEmailChangeCommand(String token, String clientIp)
   /// @return 描述
   @Override
   public String toString() {
-    return "ConfirmEmailChangeCommand[token=***, clientIp=" + clientIp + "]";
+    return "ConfirmEmailChangeCommand[token=***, clientIp="
+        + clientIp
+        + ", userAgentLength="
+        + (userAgent == null ? 0 : userAgent.length())
+        + "]";
   }
 }
