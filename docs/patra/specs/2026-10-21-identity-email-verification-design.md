@@ -173,9 +173,9 @@
 | 重发验证邮件 | `revokeActive(userId, EMAIL_VERIFY)` | 本 Issue |
 | 封禁 | `revokeAllActive(userId)` | 本 Issue（`BanUserHandler`） |
 | 改密码、重设密码、改邮箱生效、「不是我」 | `revokeAllActive` 或按用途 | PAP-98 |
-| 注销申请、到期执行 | `revokeAllActive` | PAP-100 |
+| 注销申请 | `revokeAllActive`（到期执行改为按用户删行，PAP-100） | PAP-100 |
 
-`revokeAllActive` **不动 `EMAIL_CHANGE_REVERT`**：原主旧邮箱里的「不是我」链接必须活过改密码、重设密码、再次改邮箱、封禁这些事件，否则攻击者抢到账号后随便做一件就能让它失效；只有注销（邮箱置空，撤回已无意义）由 PAP-100 显式 `revokeActive(userId, EMAIL_CHANGE_REVERT, now)` 清掉，以及 PAP-98 消费一条撤销令牌后作废该用户其余的撤销令牌。
+`revokeAllActive` **不动 `EMAIL_CHANGE_REVERT`**：原主旧邮箱里的「不是我」链接必须活过改密码、重设密码、再次改邮箱、封禁这些事件，否则攻击者抢到账号后随便做一件就能让它失效；只有注销到期执行（邮箱置空，撤回已无意义）时随全部令牌按用户删行（PAP-100；发起注销时保留，冷静期内原主仍能撤销改邮箱），以及 PAP-98 消费一条撤销令牌后作废该用户其余的撤销令牌。
 
 解封不恢复令牌：用户重发即可。
 
@@ -668,7 +668,7 @@ boot 端到端（PG + Redis 容器 + GreenMail，`RANDOM_PORT`，`MutableClock`�
 |---|---|
 | 找回密码：`EmailTokenPurpose.PASSWORD_RESET`（1h）已在枚举和表里；签发走 `EmailTokenRepository.revokeActive` + `save`（照 `EmailVerificationIssuer` 的写法，或把它泛化成 `EmailTokenIssuer`）；消费走 `consume(hash, PASSWORD_RESET, now)`；重设成功 `revokeAllActive` + `sessions.revokeAll` + `markEmailVerified`；申请的限流复用 `email-resend-throttle.lua`（换键前缀与参数：同邮箱 60 秒、每天 5、同 IP 每小时 20）；改邮箱确认 / 撤销用 `EMAIL_CHANGE_CONFIRM`（`email` 列存新邮箱）/ `EMAIL_CHANGE_REVERT`（7d，`email` 列存要改回的旧邮箱）；撤销令牌不受「同用途只留一个」和 `revokeAllActive` 约束，X → Y → Z 时两条撤销令牌并存；消费一条撤销令牌：把邮箱改回它的 `email`、作废该用户其余的撤销令牌，再按 2.1.7 撤销全部会话、作废密码并发重设链接；改密码保留本机用 `revokeAllExcept`，结束原因 `REVOKED`；三封通知邮件按第 9.4 节加记录 + 模板，`MailLinkPolicy` 加 `reset-password-path`、`revert-email-change-path`；`403 REAUTH_REQUIRED` 仍按 PAP-93 | PAP-98 |
 | 新设备邮件：实现 `OutgoingMail` 的记录 + 两个模板，`SecurityNotice` 的 `device` / `ipAddress` / `ipLocation` 由 Yauaa / ip2region 填；踢设备用 `revoke` / `revokeAllExcept`，结束原因 `REVOKED` 已在 `V1`；受信转发接通后 `getRemoteAddr()` 自动是真实 IP，令牌表的 `requested_ip` 与登录记录的 IP 用同样的文本列 | PAP-99 |
-| 注销：发起与到期执行都 `revokeAllActive` + `revokeActive(userId, EMAIL_CHANGE_REVERT, now)`（注销后邮箱为空，撤回已无意义）；三封邮件按第 9.4 节；到期任务照 `EmailTokenCleanupScheduleJob` 的写法加 `@XxlJob`，执行器已注册 | PAP-100 |
+| 注销：发起时 `revokeAllActive`、撤销令牌保留（release spec 2.1.7：冷静期内也能撤销改邮箱），到期执行时按用户删光令牌行（PAP-100 设计第 12 节改定）；三封邮件按第 9.4 节；到期任务照 `EmailTokenCleanupScheduleJob` 的写法加 `@XxlJob`，执行器已注册 | PAP-100 |
 | 未验证用户的主页 404、链接不展示：读 `emailVerified`，本 Issue 不动 | PAP-95 |
 | 落地页 `/verify-email`：读 `location.hash` 里的 `token`，点按钮后 POST `{ token }` 到门户 Route Handler → 网关 `/patra-identity/auth/email/verify`，有会话 Cookie 就带会话令牌（保留本机会话）；200 显示已验证并刷新 `/auth/me`；422 `errors[0].code` 为 `INVALID` 显示「链接无效或已过期」并给已登录用户「重新发送」；顶部提示的「重发」调 `POST /patra-identity/me/email/verification/resend`，202 读 `nextResendAt` 倒计时，429 读 `retryAfterSeconds`，409 `EMAIL_ALREADY_VERIFIED` 刷新状态；安全设置页路径 `/settings/security`（邮件里的链接指向它） | PAP-102 |
 | 门户的公开地址进 identity 配置 `PATRA_PORTAL_BASE_URL`（默认 `http://linqibins-mac-mini:4000`）；门户换域名时改它 | PAP-101 / 运维 |

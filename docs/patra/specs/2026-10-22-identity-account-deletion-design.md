@@ -5,7 +5,7 @@
 > **前置设计**：[identity 账号重建（PAP-93）](2026-10-20-identity-account-rebuild-design.md)（四态状态机、`requireActive()`、`V1`、第 16 节）、[identity 邮件与邮箱验证（PAP-96）](2026-10-21-identity-email-verification-design.md)（`OutgoingMail`、`SecurityNotice`、令牌表、XXL-Job、第 18 节）、[identity 账号安全（PAP-98）](2026-10-22-identity-account-security-design.md)（`ReauthenticationGuard`、撤销改邮箱对冷静期放行、第 18 节）、[identity 资料与公开主页（PAP-95）](2026-10-22-identity-profile-design.md)（资料清理清单、第 15 节）、[identity 登录设备（PAP-99）](2026-10-22-identity-login-devices-design.md)（`SessionTerminator`、`ClientOriginResolver`、结束原因、第 21 节）
 > **设计简报**：`patra-portal/docs/design-briefs/v0.12/user-center.md` §3.10 卡片 3「危险区」、§3.15 注销对话框、§3.16 取消注销页、§9 附录 A
 > **日期**：2026-10-22
-> **状态**：草案，待用户评审。基线是 PAP-99 评审修正提交之后的代码（`EmailDeliveryPort.send` 返回 `boolean`、`SessionQueryService` 在 `session/query/` 下）
+> **状态**：已实施（2026-10-22，分支 `feat/v0.12-user-center-api`，提交 `1dc34b66f`..本节所在提交）。实施结果、偏离与评审见第 24 节
 
 ## 1. 要解决的问题
 
@@ -431,3 +431,40 @@ identity README：
 10. 旧用户名行不随注销删除（第 11 节；保留期到了自然失效）。
 11. 头像不预建端口，契约写到 PAP-97（第 14 节）。
 12. 发起时再发起返回 409 而不是幂等 200（门户据此跳取消页；聚合的 `requestDeletion` 仍保持幂等）。
+
+## 24. 实施结果（2026-10-22）
+
+**提交**：`1dc34b66f`（设计与计划）→ `110838662` 用户提醒标记 → `40d4426db` 资料清空 → `023cefe2f` 落库与扫描 → `31a0fd389` 结束原因与令牌删行 → `2f122b018` 四封邮件 → `a9da1a427` 发起 → `27ed60771` 取消 → `7aba6b85c` 到期执行 → `01892702e` 提醒 → `829279dca` 配置 → `4b14e1883` 接口 → `f7da72275` 任务入口 → `5e9e2361f` 端到端测试 → 评审修正与文档。
+
+**回归**（`./gradlew spotlessApply && ./gradlew check` + 各模块 `integrationTest`，全绿；`dumpModuleGraph` 后 `module-graph.json` 无变化）：
+
+| 模块 | 单元测试 | 集成测试 |
+|---|---|---|
+| identity-domain | 458 | — |
+| identity-app | 216 | — |
+| identity-infra | 108 | 151 |
+| identity-adapter | 12 | 79 |
+| identity-boot | 23 | 88 |
+| identity-session | — | 29 |
+| gateway-boot | — | 61 |
+
+**与计划的偏离**（账本 `Ruling:`）：
+
+1. 结束原因的约束测试用原始 SQL 写入两个新取值并读回，没走仓储的 `end` + `save`：要验证的是约束，枚举名映射是通用的。
+2. 四封邮件的记录没单独建单测文件，在 `ThymeleafMailRendererTest` 里覆盖。
+3. 取消、到期执行、提醒三个处理器的单测用 `TransactionOperations.withoutTransaction()`。
+4. 端到端测试：两个任务扫全库，同库别的用例留下的冷静期用户会被一起处理，所以对任务结果只断言「至少 1」与「重跑为 0」，对用户逐项断言；失败隔离测试断言恰好 1 个失败。首跑因测试自己用 JDBC 绑定 `Instant` 报错，改用 SQL `now()` 后全绿。
+5. 第 19.2 节点名的 `UserProfileRepositoryAdapterIT`（`erase` 后保存）没有补：链接与关注领域子表删行由 `AccountDeletionFlowIT` 端到端覆盖，仓储整组替换的行为 PAP-95 的 IT 已覆盖。
+
+**整分支评审**（opus，`1dc34b66f..5e9e2361f`）：0 Critical。Important 1 条：「全量门控没跑、文档没提交」——门控在评审前已跑（上表），文档随本节提交。补修：
+
+- 发起注销对封禁用户 401 的单测原先缺失（第 19.4 节表里写了它），补 `RequestAccountDeletionHandlerTest.should_require_authentication_for_banned_user`（行为由 `requireActive()` 早已提供，首跑即绿，作为 AC 证据）。
+- README 两处措辞、两处把 PAP-97 尚未实现的行为写成现在时的注释。
+
+**延后的 Minor**：
+
+- 提醒邮件主题的天数取配置的提前量，不是实际剩余天数：任务停摆后补发时主题仍写「3 天后」，提前量配成 12 小时时写「0 天后」；正文的精确时刻是对的。
+- 退回提醒标记这一步本身失败时（数据库刚好不可用），这个用户以后不会再被提醒，只有 `log.error`。
+- 用户名比对手写了 `strip().toLowerCase(Locale.ROOT)`，与 `Username` 的规范化重复。
+
+**mini 上要做的**（随后端 PR 部署）：重建 `patra_identity`；xxl-job-admin 建 `accountDeletionJob`（`0 5 * * * ?`）与 `accountDeletionReminderJob`（`0 15 * * * ?`），执行器 `patra-identity`；D6 按 release spec 的手法（把 `deletion_due_at` 改到过去再手动触发）验收。本机没有起 jar 做手工验收，四条路径由 `AccountDeletionFlowIT`（PG + Redis + GreenMail + 真实过滤器链）覆盖。

@@ -1,17 +1,17 @@
 # patra-identity
 
-前台用户的账号服务：注册、登录、会话、登出、「当前用户」、用户名、资料与隐私设置、公开主页、邮箱验证与邮件、再认证、改密码、找回密码、改邮箱、登录设备与新设备提醒、登录失败限制、封禁与解封。
+前台用户的账号服务：注册、登录、会话、登出、「当前用户」、用户名、资料与隐私设置、公开主页、邮箱验证与邮件、再认证、改密码、找回密码、改邮箱、登录设备与新设备提醒、注销账号、登录失败限制、封禁与解封。
 
-工程设计：`docs/patra/specs/2026-10-05-identity-account-design.md`（账号）、`docs/patra/specs/2026-10-09-identity-session-design.md`（会话）、`docs/patra/specs/2026-10-20-identity-account-rebuild-design.md`（账号重建：用户名、昵称、邮箱验证状态、四态状态机、`V1` 最终形态）、`docs/patra/specs/2026-10-21-identity-email-verification-design.md`（邮件发送与邮箱验证）、`docs/patra/specs/2026-10-22-identity-account-security-design.md`（账号安全：再认证、改密码、找回密码、改邮箱）、`docs/patra/specs/2026-10-22-identity-profile-design.md`（资料、隐私设置与公开主页）、`docs/patra/specs/2026-10-22-identity-login-devices-design.md`（登录设备：受信转发链路、设备与属地、会话列表、踢设备、新设备邮件、记录清理）。
+工程设计：`docs/patra/specs/2026-10-05-identity-account-design.md`（账号）、`docs/patra/specs/2026-10-09-identity-session-design.md`（会话）、`docs/patra/specs/2026-10-20-identity-account-rebuild-design.md`（账号重建：用户名、昵称、邮箱验证状态、四态状态机、`V1` 最终形态）、`docs/patra/specs/2026-10-21-identity-email-verification-design.md`（邮件发送与邮箱验证）、`docs/patra/specs/2026-10-22-identity-account-security-design.md`（账号安全：再认证、改密码、找回密码、改邮箱）、`docs/patra/specs/2026-10-22-identity-profile-design.md`（资料、隐私设置与公开主页）、`docs/patra/specs/2026-10-22-identity-login-devices-design.md`（登录设备：受信转发链路、设备与属地、会话列表、踢设备、新设备邮件、记录清理）、`docs/patra/specs/2026-10-22-identity-account-deletion-design.md`（注销账号：冷静期、取消、到期执行与匿名化、提醒）。
 
 ## 1. 模块
 
 | 模块 | 内容 |
 |---|---|
-| `patra-identity-domain` | `User`、`UserProfile`、`FormerUsername`、`UserPasswordCredential`、`UserLoginRecord`、`EmailToken` 六个聚合，邮箱、用户名、昵称、密码、客户端信息、令牌密文值对象，资料值对象（`vo/profile/`：简介、链接、职称、科室、ROR ID、MeSH UI、机构、关注领域、隐私设置），用户名 / 昵称 / 资料字段（`ProfilePolicy`，拒绝字符与昵称共用 `ProfileTextRules`）/ 改名 / 密码 / 失败限制 / 重发限流 / 再认证 / 找回密码限流 / 改邮箱限流 / 邮件链接规则、会话策略，端口（含邮件发送 `EmailDeliveryPort`、三个限流端口、向 catalog 取名称快照的 `CatalogReferencePort`），公开主页读模型（`viewFor` 按请求者裁剪），`SessionIssuer`、`EmailTokenIssuer`、`ReauthenticationGuard` 领域服务，`SessionTerminator`（撤销会话并按原因结束登录记录）、`ClientOriginResolver`（请求来源 → 设备名、端、属地，内网判定 `IpAddressScope`）、`UserAgentParsingPort` / `IpGeolocationPort`，新设备提醒规则 `NewDeviceLoginPolicy` 与限流端口，八个 `OutgoingMail` 记录，领域异常 |
-| `patra-identity-app` | 注册、登录、登出、再认证、改用户名、改密码、找回密码（申请、重设）、改邮箱（申请、取消、确认、撤销）、封禁、解封、重发验证邮件、验证邮箱、清理过期令牌、改资料、改隐私设置、踢单个设备、踢其他设备、清理登录记录二十二个处理器，走 CommandBus；`CurrentPasswordVerifier` 给再认证与改密码共用；「当前用户」、本人的资料与隐私设置、待确认的改邮箱和公开主页走 `UserQueryService`，登录设备列表走 `SessionQueryService` |
-| `patra-identity-infra` | JPA 持久化（含令牌表）、Argon2id 哈希、常见密码名单、Redis 失败限制与通用限流脚本 `action-throttle.lua`（重发、找回密码、改邮箱三个适配器共用）、会话存储适配器、新设备提醒限流适配器，SMTP 发信适配器与 Thymeleaf 邮件模板（九对），Yauaa 解析 UA（`YauaaUserAgentParsingAdapter`）、ip2region 查属地（`Ip2RegionGeolocationAdapter`）、Flyway 脚本（一份最终形态的 `V1`）、catalog 内部接口适配器 `CatalogReferenceAdapter`（依赖 `patra-catalog-api`） |
-| `patra-identity-adapter` | 前台的 `AuthController`、`EmailVerificationController`、`PasswordResetController`、`EmailChangeController`、`MeController`、`MeEmailController`、`MeProfileController`、`MeSessionController`、`PublicUserController`，后台的 `AdminUserController`，XXL-Job 任务 `EmailTokenCleanupScheduleJob`、`LoginRecordCleanupScheduleJob` |
+| `patra-identity-domain` | `User`、`UserProfile`、`FormerUsername`、`UserPasswordCredential`、`UserLoginRecord`、`EmailToken` 六个聚合，邮箱、用户名、昵称、密码、客户端信息、令牌密文值对象，资料值对象（`vo/profile/`：简介、链接、职称、科室、ROR ID、MeSH UI、机构、关注领域、隐私设置），用户名 / 昵称 / 资料字段（`ProfilePolicy`，拒绝字符与昵称共用 `ProfileTextRules`）/ 改名 / 密码 / 失败限制 / 重发限流 / 再认证 / 找回密码限流 / 改邮箱限流 / 邮件链接规则、会话策略，端口（含邮件发送 `EmailDeliveryPort`、三个限流端口、向 catalog 取名称快照的 `CatalogReferencePort`），公开主页读模型（`viewFor` 按请求者裁剪），`SessionIssuer`、`EmailTokenIssuer`、`ReauthenticationGuard` 领域服务，`SessionTerminator`（撤销会话并按原因结束登录记录）、`ClientOriginResolver`（请求来源 → 设备名、端、属地，内网判定 `IpAddressScope`）、`UserAgentParsingPort` / `IpGeolocationPort`，新设备提醒规则 `NewDeviceLoginPolicy` 与限流端口，注销规则 `AccountDeletionPolicy`（冷静期、提醒提前量），十三个 `OutgoingMail` 记录，领域异常 |
+| `patra-identity-app` | 注册、登录、登出、再认证、改用户名、改密码、找回密码（申请、重设）、改邮箱（申请、取消、确认、撤销）、封禁、解封、重发验证邮件、验证邮箱、清理过期令牌、改资料、改隐私设置、踢单个设备、踢其他设备、清理登录记录、发起注销、取消注销、注销到期执行、注销到期前提醒二十六个处理器，走 CommandBus；`CurrentPasswordVerifier` 给再认证与改密码共用；「当前用户」、本人的资料与隐私设置、待确认的改邮箱和公开主页走 `UserQueryService`，登录设备列表走 `SessionQueryService` |
+| `patra-identity-infra` | JPA 持久化（含令牌表）、Argon2id 哈希、常见密码名单、Redis 失败限制与通用限流脚本 `action-throttle.lua`（重发、找回密码、改邮箱三个适配器共用）、会话存储适配器、新设备提醒限流适配器，SMTP 发信适配器与 Thymeleaf 邮件模板（十三对），Yauaa 解析 UA（`YauaaUserAgentParsingAdapter`）、ip2region 查属地（`Ip2RegionGeolocationAdapter`）、Flyway 脚本（一份最终形态的 `V1`）、catalog 内部接口适配器 `CatalogReferenceAdapter`（依赖 `patra-catalog-api`） |
+| `patra-identity-adapter` | 前台的 `AuthController`、`EmailVerificationController`、`PasswordResetController`、`EmailChangeController`、`MeController`、`MeEmailController`、`MeProfileController`、`MeSessionController`、`MeDeletionController`、`PublicUserController`，后台的 `AdminUserController`，XXL-Job 任务 `EmailTokenCleanupScheduleJob`、`LoginRecordCleanupScheduleJob`、`AccountDeletionScheduleJob`、`AccountDeletionReminderScheduleJob` |
 | `patra-identity-boot` | 启动类、配置、安全 starter 接入、catalog 两个 HTTP Interface 代理（`CatalogClientConfiguration`，`lb://patra-catalog`） |
 | `patra-identity-session` | 与网关共用的会话存储契约（令牌、Redis 键、Lua、`RedisSessionStore`），见它自己的 README |
 
@@ -43,6 +43,8 @@
 | `DELETE /me/sessions/{id}` | 200 `{ revokedSessions }`（0 或 1，会话已不在也 200）；踢本机 409 | 需要登录 + 再认证 |
 | `DELETE /me/sessions/others` | 200 `{ revokedSessions }` | 需要登录 + 再认证 |
 | `GET /users/{username}` | 200 公开主页 `{ username, displayName, avatarUrl, audience, joinedAt, bio, links, professional, researchInterests, indexable }`，按请求者裁剪（第 12 节）；保留期内的旧名 301，`Location: /users/<新名>`，体 `{ username: <新名> }` | 公开（`/users/**` 整体，网关照样翻译令牌） |
+| `POST /me/deletion` | 200 `{ deletionDueAt }`，请求体 `{ username }`（不分大小写）；进入 15 天冷静期，本机在内全部会话下线（第 14 节） | 需要登录 + 再认证 |
+| `DELETE /me/deletion` | 200 `user`（与 `/auth/me` 同构）；本来就正常时照样 200 | 需要登录 |
 | `POST /admin/users/{userId}/ban` | 204 | 拒绝外部访问 |
 | `POST /admin/users/{userId}/unban` | 204 | 拒绝外部访问 |
 
@@ -69,7 +71,7 @@
 
 | 表 | 内容 |
 |---|---|
-| `idn_user` | ID、邮箱（唯一、只能小写，`DELETED` 时为空）、`email_verified_at`、用户名（唯一）、最近改名时间、状态、封禁时间、注销到期时间、注销时间。用户名格式、状态与各时间列的配对都由检查约束守在表上 |
+| `idn_user` | ID、邮箱（唯一、只能小写，`DELETED` 时为空）、`email_verified_at`、用户名（唯一）、最近改名时间、状态、封禁时间、注销到期时间、到期前提醒的发送时间（只在冷静期可能有值）、注销时间。用户名格式、状态与各时间列的配对都由检查约束守在表上；冷静期的到期时间上有部分索引 |
 | `idn_user_password_credential` | 用户 ID（唯一）、Argon2id 编码串 |
 | `idn_user_profile` | 用户 ID（唯一）、昵称（可空，空表示跟随用户名）、简介、身份大类、职称、机构（ROR ID + catalog 名称快照，或无 ROR 的手填名称）、科室、三个隐私开关 |
 | `idn_user_profile_link` | 用户 ID、顺序（0 ~ 4）、标题（可空）、URL；`(user_id, lower(url))` 唯一 |
@@ -92,7 +94,7 @@
 | `markEmailVerified(now)` | 记第一次 | 记第一次 | 记第一次 | 409 |
 | `changeUsername(...)` | 见第 4 节 | 401 | 409（`traits` 含 `PENDING_DELETION`） | 401 |
 
-表里的 409 是 `InvalidUserStateTransitionException`（「账号当前状态不允许此操作」）。进入 `DELETED` 时邮箱、邮箱验证时间、注销到期时间、封禁时间全部清空，用户名和 ID 留着，不能回退。`/me/**` 的写接口先 `requireActive()`：`PENDING_DELETION` 409，`BANNED`、`DELETED` 401。注销冷静期、到期执行是 PAP-100；到期时资料行置空不删行（读模型要求资料行与用户一对一存在，缺行是 500）。
+表里的 409 是 `InvalidUserStateTransitionException`（「账号当前状态不允许此操作」）。进入 `DELETED` 时邮箱、邮箱验证时间、注销到期时间、提醒标记、封禁时间全部清空，用户名和 ID 留着，不能回退。`/me/**` 的写接口先 `requireActive()`：`PENDING_DELETION` 409，`BANNED`、`DELETED` 401。注销的发起、取消、到期执行见第 14 节；到期时资料行置空不删行（读模型要求资料行与用户一对一存在，缺行是 500）。
 
 ### 用户名规则
 
@@ -174,6 +176,8 @@ patra:
 | 找回密码的申请或提交过于频繁（`Retry-After`、`retryAfterSeconds`；文案「操作过于频繁，请稍后再试」） | 429 | `IDN-0429` |
 | 改邮箱今天的配额用完（文案「今天更改邮箱的次数已用完，请明天再试」） | 429 | `IDN-0429` |
 | 新密码与当前相同、新邮箱与当前相同（`errors[]`：`newPassword` / `UNCHANGED`、`newEmail` / `UNCHANGED`） | 422 | `IDN-0422` |
+| 注销确认的用户名为空或与当前不一致（`errors[]`：`username` / `REQUIRED`、`MISMATCH`，后者文案「和你的用户名不一致」） | 422 | `IDN-0422` |
+| 已在注销冷静期又发起注销（`traits` 为 `CONFLICT` + `PENDING_DELETION`） | 409 | `IDN-0409` |
 | 账号已被封禁 | 403 | `IDN-0403` |
 | 用户不存在：后台接口；公开身份卡不存在或对请求者不可见 | 404 | `IDN-0404` |
 | Redis 不可用（登录限流、会话存储）、哈希排队超时 | 503 | `IDN-0503` |
@@ -295,7 +299,7 @@ patra:
 
 「已登录」是任何带有效会话的人（含邮箱未验证、冷静期中的账号）。专业背景在本人或其可见性为公开时给出，否则 `professional` 为 `null`（四项都没填也是 `null`）；链接只在邮箱已验证时给出（本人也一样）；`indexable` 只在谁都能看且用户允许收录时为真，门户据此输出 `noindex`；`joinedAt` 是 `YYYY-MM`（时区同 `patra.identity.mail.zone`）。响应不含邮箱、ID、状态、任何设置原值。旧名跳转的可见性看原主的当前主页。
 - **昵称修改**只打 INFO 日志（`昵称已修改`）；账号审计记录以后单独做成通用的账号事件表。
-- **注销（PAP-100）**：到期执行时资料行置空不删行、隐私回默认，两张子表按 `user_id` 删行。
+- **注销（第 14 节）**：到期执行时资料行置空不删行、隐私回默认，两张子表按 `user_id` 删行。
 
 ## 13. 登录设备、新设备提醒与登录记录清理
 
@@ -319,6 +323,8 @@ patra:
 | `PASSWORD_CHANGED` | 改密码撤销其他会话 |
 | `PASSWORD_RESET` | 重设密码撤销全部会话 |
 | `EMAIL_REVERTED` | 撤销改邮箱撤销全部会话 |
+| `DELETION_REQUESTED` | 发起注销撤销全部会话 |
+| `DELETION_COMPLETED` | 注销到期执行撤销冷静期内登录的会话 |
 
 **新设备提醒**：只在登录时判（注册不判）。事务里、建会话之前查这个账号有没有「见过」这台设备：同设备标识、`COALESCE(ended_at, expires_at)` 在 180 天内、结束原因不是 `REVOKED`，而且不早于这台设备任何一条 `REVOKED` 记录（按设备算：踢掉一台设备后，它之前的登出、过期记录也不再算见过，只认踢掉之后的登录）；按结束或过期的时刻算，常用设备在会话绝对过期（180 天）后被迫重新登录不会误报。没见过（含没带设备标识）就在提交后取 24 小时限流（键 `idn:new-device-mail:user:<userId>:<设备标识哈希 | none>`），放行才发「你的 Patra 账号在新设备上登录」；限流的 Redis 不可用只记日志，登录照常成功。踢设备时清掉被踢设备的冷却键，它再登录立即提醒，不等 24 小时。注册时已记下设备，同一个浏览器注册后再登录不发；换设备首次登录照发。
 
@@ -345,3 +351,26 @@ patra:
 | 更新 | 改 `gradle/libs.versions.toml` 的版本，跑 `YauaaUserAgentParsingAdapterTest` | 按季度看一次上游：改 `patra-infra/scripts/ip2region.properties` 的 tag 与两个 SHA-256 → 跑 `Ip2RegionGeolocationAdapterTest`（`downloadIp2RegionData` 任务按同一文件下载测试数据）→ 提交 → mini 上 `git pull` 后重跑 `fetch-ip2region.sh`、重启 identity |
 
 测试：identity-infra 的 `downloadIp2RegionData` 下到 Gradle 用户目录的 `caches/patra/ip2region/<tag>/`（校验 SHA-256；文件已在且校验和对得上直接跳过，`clean` 不用重下；连接 30 秒、读取 60 秒超时），经 consumable configuration `ip2regionData` 提供给 identity-boot；两个模块的测试任务用系统属性 `patra.identity.ip-geolocation.directory` 指过去，目录登记为测试输入。
+
+## 14. 注销账号
+
+设计：`docs/patra/specs/2026-10-22-identity-account-deletion-design.md`（PAP-100）。
+
+- **发起** `POST /me/deletion`：字段 → `requireActive()`（冷静期再发起 409 `PENDING_DELETION`）→ 用户名比对（去首尾空白、转小写，不一致 422 `MISMATCH`；放在再认证之前，门户本来先比一遍）→ 再认证（403 `REAUTH_REQUIRED`）→ 事务里锁行、转 `PENDING_DELETION`（到期 = 现在 + 冷静期）、`revokeAllActive` 作废验证 / 重设 / 改邮箱确认令牌、撤销全部会话（含本机，记 `DELETION_REQUESTED`）→ 提交后发「注销已提交」（到期时刻、怎么取消，带安全通知片段）。**改邮箱的撤销令牌不作废**：冷静期内原主仍能用「不是我」把邮箱抢回来，再用重设链接登录后取消注销。邮箱未验证也能注销。Redis 失败整个回滚、503。
+- **冷静期**：照常能登录（响应与 `/auth/me` 的 `status` 为 `PENDING_DELETION`、带 `deletionDueAt`）。放行：取消注销、登出、再认证、踢设备、找回密码与重设、撤销改邮箱（不碰注销状态）；其余写接口 409 `PENDING_DELETION`（已有的 `requireActive()`），读接口不拦；公开主页对别人 404、对本人 `SELF`。
+- **取消** `DELETE /me/deletion`：锁行，冷静期回到 `ACTIVE`（清到期时间与提醒标记）；本来正常时什么都不改（幂等）；封禁、已注销 401。不要求再认证，不动会话；只有真的取消了才发「已取消注销」。到期之后、任务执行之前也能取消。
+- **到期执行**（XXL-Job `accountDeletionJob`）：按 ID 游标每批 100 个扫 `status = 'PENDING_DELETION' AND deletion_due_at <= now`；每个用户一个事务，锁内复核仍到期才做：`completeDeletion`（邮箱、验证时间、到期时间、提醒标记、封禁时间置空，记 `deleted_at`，ID 与用户名留着、用户名永不释放）、删密码凭据、`UserProfile.erase()`（资料行保留、内容清空、隐私回默认，链接与关注领域子表删行）、令牌按用户删行（行里有邮箱和 IP）、撤销冷静期内登录的会话（`DELETION_COMPLETED`）；提交后给注销前的邮箱发「已注销」。单个用户失败只记日志、计数，留在冷静期等下次；有失败时任务回写失败。登录记录不删，按第 13 节的 190 天清理；旧用户名行不动，保留期到了自然失效。同一邮箱立刻可以注册与旧账号无关的新账号；旧用户名注册、改名都 409 `ALREADY_TAKEN`。
+- **到期前提醒**（XXL-Job `accountDeletionReminderJob`）：扫冷静期、`deletion_reminded_at` 为空、`now < 到期 <= now + 提前量` 的用户，锁内复核后先记 `deletion_reminded_at` 再发「将在 N 天后删除」，只发一次；发信被执行器拒收时把标记清回去、下次重发。取消、封禁、完成注销都清掉标记。
+- **头像**（PAP-97 接入）：`erase()` 同时清头像键；到期执行在加锁事务之前按前缀 `avatar/{userId}/` 删对象。
+- **邮件**：`account-deletion-requested`、`account-deletion-reminder`、`account-deletion-cancelled`、`account-deletion-completed`；都不放链接（怎么取消写成文字）；「将在 N 天后删除」与「已注销」两封不是请求触发的，不带安全通知片段。到期时刻按 `patra.identity.mail.zone` 显示（渲染器把模型里的 `Instant` 统一格式化）。
+- **配置**（jar 里的默认值，Nacos 不加键；非正数或提前量不短于冷静期启动失败）：
+
+```yaml
+patra:
+  identity:
+    deletion:
+      cooling-period: 15d   # 冷静期
+      reminder-lead: 3d     # 到期前多久提醒
+```
+
+- **mini 的 xxl-job-admin**：执行器 `patra-identity`，handler `accountDeletionJob` Cron `0 5 * * * ?`、`accountDeletionReminderJob` Cron `0 15 * * * ?`（都每小时一次：取消注销页给的是精确到分钟的到期时刻）。验收不想等 15 天：把库里的 `deletion_due_at` 改到过去，在调度中心手动触发。

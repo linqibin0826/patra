@@ -35,12 +35,12 @@
 
 ## Before Task 1: 前提核对与提交文档
 
-- [ ] **Step 1: 核对工作区**
+- [x] **Step 1: 核对工作区**
 
 Run: `git status --short && git log -1 --format='%h %ci %s'`
 Expected: 只有本 Issue 的 spec、plan 和三份不属于本 Issue 的未跟踪文档；否则停下问用户。
 
-- [ ] **Step 2: 提交 spec 与 plan**
+- [x] **Step 2: 提交 spec 与 plan**
 
 ```bash
 git add docs/patra/specs/2026-10-22-identity-account-deletion-design.md docs/patra/plans/2026-10-22-identity-account-deletion.md
@@ -48,7 +48,7 @@ git diff --cached --name-only
 git commit -m "docs(identity): 加注销账号的设计与计划 (PAP-100)" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
-- [ ] **Step 3: Linear PAP-100 推到 BE（In Progress 类状态）**
+- [x] **Step 3: Linear PAP-100 推到 BE（In Progress 类状态）**
 
 ---
 
@@ -69,7 +69,7 @@ git commit -m "docs(identity): 加注销账号的设计与计划 (PAP-100)" -m "
   - `cancelDeletion()`、`ban(now)`、`completeDeletion(now)` 都把 `deletionRemindedAt` 置空
   - `record AccountDeletionPolicy(Duration coolingPeriod, Duration reminderLead)` + `static of(…)`；紧凑构造器：两者非空且为正、`reminderLead < coolingPeriod`，否则 `IllegalArgumentException`
 
-- [ ] **Step 1: 写失败的测试**（`UserTest`，`T = Instant.parse("2026-10-20T08:00:00Z")`，冷静期 `Duration.ofDays(15)`）
+- [x] **Step 1: 写失败的测试**（`UserTest`，`T = Instant.parse("2026-10-20T08:00:00Z")`，冷静期 `Duration.ofDays(15)`）
 
 ```java
 @Test void should_mark_reminder_once_and_keep_first_time()          // mark(T+12d) 再 mark(T+13d) → getDeletionRemindedAt() == T+12d
@@ -88,16 +88,16 @@ git commit -m "docs(identity): 加注销账号的设计与计划 (PAP-100)" -m "
 @Test void should_accept_defaults()                                // of(15d, 3d) 两个访问器原样返回
 ```
 
-- [ ] **Step 2: 运行确认失败**
+- [x] **Step 2: 运行确认失败**
 
 Run: `./gradlew :patra-api:patra-identity:patra-identity-domain:test --tests "*UserTest*" --tests "*AccountDeletionPolicyTest*"`
 Expected: 编译失败（缺 `markDeletionReminded`、`AccountDeletionPolicy`）
 
-- [ ] **Step 3: 实现上面的签名**；类注释的状态迁移说明补一句提醒标记的清除规则。
+- [x] **Step 3: 实现上面的签名**；类注释的状态迁移说明补一句提醒标记的清除规则。
 
-- [ ] **Step 4: 运行确认通过**（同 Step 2 命令，Expected: PASS；`UserTest` 原有用例不受影响）
+- [x] **Step 4: 运行确认通过**（同 Step 2 命令，Expected: PASS；`UserTest` 原有用例不受影响）
 
-- [ ] **Step 5: 提交** `feat(identity): 给用户加注销提醒标记与到期判定 (PAP-100)`
+- [x] **Step 5: 提交** `feat(identity): 给用户加注销提醒标记与到期判定 (PAP-100)`
 
 ---
 
@@ -110,11 +110,11 @@ Expected: 编译失败（缺 `markDeletionReminded`、`AccountDeletionPolicy`）
 **Interfaces:**
 - Produces: `void erase()`：内容整体换成空的 `ProfileContent`（昵称、简介、链接、身份大类、职称、机构、科室、关注领域都空），隐私换成 `PrivacySettings.defaults()`；Javadoc 写明「注销到期时用，PAP-97 在这里补头像键」
 
-- [ ] **Step 1: 写失败的测试** `should_erase_content_and_reset_privacy`：先 `edit` 一份带昵称、简介、两条链接、机构、两个关注领域的内容并 `changePrivacy` 成 `SELF` / `SELF` / `true`，`erase()` 后所有 `getXxx()` 为空 / 空列表、`getPrivacy()` 等于 `PrivacySettings.defaults()`、`getUserId()` 不变。
-- [ ] **Step 2: 运行确认失败**：`./gradlew :patra-api:patra-identity:patra-identity-domain:test --tests "*UserProfileTest*"` → 编译失败
-- [ ] **Step 3: 实现**（复用私有 `apply(ProfileContent.builder().build())`）
-- [ ] **Step 4: 运行确认通过**
-- [ ] **Step 5: 提交** `feat(identity): 加资料的注销清空方法 (PAP-100)`
+- [x] **Step 1: 写失败的测试** `should_erase_content_and_reset_privacy`：先 `edit` 一份带昵称、简介、两条链接、机构、两个关注领域的内容并 `changePrivacy` 成 `SELF` / `SELF` / `true`，`erase()` 后所有 `getXxx()` 为空 / 空列表、`getPrivacy()` 等于 `PrivacySettings.defaults()`、`getUserId()` 不变。
+- [x] **Step 2: 运行确认失败**：`./gradlew :patra-api:patra-identity:patra-identity-domain:test --tests "*UserProfileTest*"` → 编译失败
+- [x] **Step 3: 实现**（复用私有 `apply(ProfileContent.builder().build())`）
+- [x] **Step 4: 运行确认通过**
+- [x] **Step 5: 提交** `feat(identity): 加资料的注销清空方法 (PAP-100)`
 
 ---
 
@@ -133,7 +133,7 @@ Expected: 编译失败（缺 `markDeletionReminded`、`AccountDeletionPolicy`）
   - `List<Long> UserRepository.findIdsDueForDeletionReminder(Instant now, Instant dueUntil, long afterId, int limit)`：`status = 'PENDING_DELETION' AND deletion_reminded_at IS NULL AND deletion_due_at > now AND deletion_due_at <= dueUntil AND id > afterId ORDER BY id LIMIT limit`
   - `V1`：列 `deletion_reminded_at timestamptz(6) NULL`（放在 `deletion_due_at` 后）、约束 `ck_idn_user_deletion_reminded_at CHECK (deletion_reminded_at IS NULL OR status = 'PENDING_DELETION')`、部分索引 `idx_idn_user_deletion_due_at ON idn_user (deletion_due_at) WHERE status = 'PENDING_DELETION'`、列注释（spec §15 原文）
 
-- [ ] **Step 1: 写失败的测试**（`UserRepositoryAdapterIT`，用户经仓储 `register` + `requestDeletion` 造出）
+- [x] **Step 1: 写失败的测试**（`UserRepositoryAdapterIT`，用户经仓储 `register` + `requestDeletion` 造出）
 
 ```java
 @Test void should_round_trip_deletion_reminded_at()                 // mark 后 save，findById 读回同一时刻；cancel 后读回 null
@@ -143,10 +143,10 @@ Expected: 编译失败（缺 `markDeletionReminded`、`AccountDeletionPolicy`）
 @Test void should_not_pick_overdue_users_for_reminder()             // deletion_due_at <= now 的不入选（Review Focus 4）
 ```
 
-- [ ] **Step 2: 运行确认失败**：`./gradlew :patra-api:patra-identity:patra-identity-infra:integrationTest --tests "*UserRepositoryAdapterIT*"` → 编译失败
-- [ ] **Step 3: 实现**：`UserDao` 两个 `@Query`（JPQL 或原生，`Limit` / `Pageable.ofSize(limit)` 二选一，注意文本块行尾空格坑）；实体加列；映射器双向带上；适配器委托。
-- [ ] **Step 4: 运行确认通过**；再跑整个 `patra-identity-infra:integrationTest` 确认 `V1` 改动没破坏其他 IT。
-- [ ] **Step 5: 提交** `feat(identity): 落库注销提醒标记并加到期扫描查询 (PAP-100)`
+- [x] **Step 2: 运行确认失败**：`./gradlew :patra-api:patra-identity:patra-identity-infra:integrationTest --tests "*UserRepositoryAdapterIT*"` → 编译失败
+- [x] **Step 3: 实现**：`UserDao` 两个 `@Query`（JPQL 或原生，`Limit` / `Pageable.ofSize(limit)` 二选一，注意文本块行尾空格坑）；实体加列；映射器双向带上；适配器委托。
+- [x] **Step 4: 运行确认通过**；再跑整个 `patra-identity-infra:integrationTest` 确认 `V1` 改动没破坏其他 IT。
+- [x] **Step 5: 提交** `feat(identity): 落库注销提醒标记并加到期扫描查询 (PAP-100)`
 
 ---
 
@@ -163,7 +163,7 @@ Expected: 编译失败（缺 `markDeletionReminded`、`AccountDeletionPolicy`）
   - `LoginEndReason.DELETION_REQUESTED`（「申请注销，全部会话被撤销」）、`LoginEndReason.DELETION_COMPLETED`（「注销到期执行，冷静期内的会话被撤销」）
   - `int EmailTokenRepository.deleteAllByUserId(long userId)`：删该用户全部令牌行（含撤销令牌），返回行数；DAO 用 `@Modifying @Query` 批量删
 
-- [ ] **Step 1: 写失败的测试**
+- [x] **Step 1: 写失败的测试**
 
 ```java
 // UserLoginRecordRepositoryAdapterIT
@@ -172,10 +172,10 @@ Expected: 编译失败（缺 `markDeletionReminded`、`AccountDeletionPolicy`）
 @Test void should_delete_all_tokens_of_one_user_only()  // 用户 A 有验证、重设、撤销三条，用户 B 一条 → deleteAllByUserId(A) == 3，B 的仍在
 ```
 
-- [ ] **Step 2: 运行确认失败**（infra `integrationTest`，两个类）→ 编译失败
-- [ ] **Step 3: 实现**
-- [ ] **Step 4: 运行确认通过**
-- [ ] **Step 5: 提交** `feat(identity): 加注销的两个结束原因与令牌按用户删除 (PAP-100)`
+- [x] **Step 2: 运行确认失败**（infra `integrationTest`，两个类）→ 编译失败
+- [x] **Step 3: 实现**
+- [x] **Step 4: 运行确认通过**
+- [x] **Step 5: 提交** `feat(identity): 加注销的两个结束原因与令牌按用户删除 (PAP-100)`
 
 ---
 
@@ -196,7 +196,7 @@ Expected: 编译失败（缺 `markDeletionReminded`、`AccountDeletionPolicy`）
   - 渲染器：`notice` 之外，模型里值是 `Instant` 的变量换成 `SecurityNoticeView.formatTime(instant, zone)` 的字符串
 - 模板文案要点见 spec §13 表格；有通知片段的两封引用 `~{html/fragments/security-notice :: notice(${notice})}` / `text/fragments/security-notice`；四封都不出现 `http` 链接（页脚固定内容除外）。
 
-- [ ] **Step 1: 写失败的测试**（`ThymeleafMailRendererTest`，时区 `Asia/Shanghai`，到期 `2026-11-04T00:00:00Z`）
+- [x] **Step 1: 写失败的测试**（`ThymeleafMailRendererTest`，时区 `Asia/Shanghai`，到期 `2026-11-04T00:00:00Z`）
 
 ```java
 @Test void should_render_deletion_requested_with_due_time_and_notice()   // 文本与 HTML 都含 "2026-11-04 08:00 (UTC+8)"、昵称、设备、IP；主题原样
@@ -206,10 +206,10 @@ Expected: 编译失败（缺 `markDeletionReminded`、`AccountDeletionPolicy`）
 @Test void should_not_link_anywhere_in_deletion_mails()                  // 四封的文本部分都不含 "#token=" 与门户 baseUrl
 ```
 
-- [ ] **Step 2: 运行确认失败**：`./gradlew :patra-api:patra-identity:patra-identity-infra:test --tests "*ThymeleafMailRendererTest*"` → 编译失败
-- [ ] **Step 3: 实现四个记录、渲染器改动、八个模板**
-- [ ] **Step 4: 运行确认通过**（整个 `ThymeleafMailRendererTest`，现有八封的用例保持绿，验证 spec §20 第 2 条）
-- [ ] **Step 5: 提交** `feat(identity): 加注销的四封邮件 (PAP-100)`
+- [x] **Step 2: 运行确认失败**：`./gradlew :patra-api:patra-identity:patra-identity-infra:test --tests "*ThymeleafMailRendererTest*"` → 编译失败
+- [x] **Step 3: 实现四个记录、渲染器改动、八个模板**
+- [x] **Step 4: 运行确认通过**（整个 `ThymeleafMailRendererTest`，现有八封的用例保持绿，验证 spec §20 第 2 条）
+- [x] **Step 5: 提交** `feat(identity): 加注销的四封邮件 (PAP-100)`
 
 ---
 
@@ -229,7 +229,7 @@ Expected: 编译失败（缺 `markDeletionReminded`、`AccountDeletionPolicy`）
   - `RequestAccountDeletionHandler`（`@Component @RequiredArgsConstructor`），依赖：`CurrentUserPort`、`UserRepository`、`UserReadPort`、`ReauthenticationGuard`、`EmailTokenRepository`、`SessionTerminator`、`ClientOriginResolver`、`EmailDeliveryPort`、`AccountDeletionPolicy`、`TransactionOperations`、`Clock`
 - 顺序严格按 spec §7.1 第 1–7 步；事务里只调 `tokens.revokeAllActive(userId, now)`，**不调** `revokeActive(…, EMAIL_CHANGE_REVERT, …)`；`send` 返回 `false` 时 `log.warn` 后照常返回。
 
-- [ ] **Step 1: 写失败的测试**（Mockito；`Clock.fixed(T)`；`TransactionOperations` 用直接执行回调的桩）
+- [x] **Step 1: 写失败的测试**（Mockito；`Clock.fixed(T)`；`TransactionOperations` 用直接执行回调的桩）
 
 ```java
 @Test void should_reject_blank_username_with_required()            // "  " → InvalidUserFieldsException，errors 含 username/REQUIRED；没碰仓储
@@ -243,10 +243,10 @@ Expected: 编译失败（缺 `markDeletionReminded`、`AccountDeletionPolicy`）
 @Test void should_still_succeed_when_mail_rejected()                // send 返回 false → 照常返回到期时间
 ```
 
-- [ ] **Step 2: 运行确认失败**：`./gradlew :patra-api:patra-identity:patra-identity-app:test --tests "*RequestAccountDeletionHandlerTest*"` → 编译失败
-- [ ] **Step 3: 实现**
-- [ ] **Step 4: 运行确认通过**
-- [ ] **Step 5: 提交** `feat(identity): 加发起注销的处理器 (PAP-100)`
+- [x] **Step 2: 运行确认失败**：`./gradlew :patra-api:patra-identity:patra-identity-app:test --tests "*RequestAccountDeletionHandlerTest*"` → 编译失败
+- [x] **Step 3: 实现**
+- [x] **Step 4: 运行确认通过**
+- [x] **Step 5: 提交** `feat(identity): 加发起注销的处理器 (PAP-100)`
 
 ---
 
@@ -262,7 +262,7 @@ Expected: 编译失败（缺 `markDeletionReminded`、`AccountDeletionPolicy`）
   - `CancelAccountDeletionHandler`，依赖：`CurrentUserPort`、`UserRepository`、`UserReadPort`、`ClientOriginResolver`、`EmailDeliveryPort`、`TransactionOperations`、`Clock`
 - 行为见 spec §7.2：锁行；封禁 / 已注销抛 `AuthenticationRequiredException`；`cancelDeletion()`；只有原来是 `PENDING_DELETION` 才在提交后发 `AccountDeletionCancelledMail`；返回 `findAccount` 的结果。
 
-- [ ] **Step 1: 写失败的测试**
+- [x] **Step 1: 写失败的测试**
 
 ```java
 @Test void should_cancel_pending_deletion_and_send_mail()           // save 的用户 ACTIVE、到期为 null；发信一次；返回 findAccount 的结果
@@ -272,10 +272,10 @@ Expected: 编译失败（缺 `markDeletionReminded`、`AccountDeletionPolicy`）
 
 会话不动由构造器保证：处理器不依赖 `SessionTerminator` / `SessionStorePort`。
 
-- [ ] **Step 2: 运行确认失败** → 编译失败
-- [ ] **Step 3: 实现**
-- [ ] **Step 4: 运行确认通过**
-- [ ] **Step 5: 提交** `feat(identity): 加取消注销的处理器 (PAP-100)`
+- [x] **Step 2: 运行确认失败** → 编译失败
+- [x] **Step 3: 实现**
+- [x] **Step 4: 运行确认通过**
+- [x] **Step 5: 提交** `feat(identity): 加取消注销的处理器 (PAP-100)`
 
 ---
 
@@ -311,7 +311,7 @@ loop:
 log.info 汇总；return DeletionRunResult.of(completed, failed)
 ```
 
-- [ ] **Step 1: 写失败的测试**
+- [x] **Step 1: 写失败的测试**
 
 ```java
 @Test void should_anonymize_due_user_and_send_completed_mail()   // 状态 DELETED、邮箱空；deleteByUserId、erase 后 save、deleteAllByUserId、terminateAll(id, DELETION_COMPLETED, now)；
@@ -322,10 +322,10 @@ log.info 汇总；return DeletionRunResult.of(completed, failed)
 @Test void should_count_completed_even_if_mail_rejected()        // send 返回 false → 结果 (1, 0)
 ```
 
-- [ ] **Step 2: 运行确认失败** → 编译失败
-- [ ] **Step 3: 实现**
-- [ ] **Step 4: 运行确认通过**
-- [ ] **Step 5: 提交** `feat(identity): 加注销到期执行的处理器 (PAP-100)`
+- [x] **Step 2: 运行确认失败** → 编译失败
+- [x] **Step 3: 实现**
+- [x] **Step 4: 运行确认通过**
+- [x] **Step 5: 提交** `feat(identity): 加注销到期执行的处理器 (PAP-100)`
 
 ---
 
@@ -343,7 +343,7 @@ log.info 汇总；return DeletionRunResult.of(completed, failed)
   - `SendAccountDeletionRemindersHandler`，`BATCH_SIZE = 100`；依赖：`UserRepository`、`UserReadPort`、`AccountDeletionPolicy`、`EmailDeliveryPort`、`TransactionOperations`、`Clock`
 - 每个用户：事务 {锁行 → `needsDeletionReminder(now, lead)` 否则空 → `markDeletionReminded(now)` + save → 取邮箱、昵称、到期} → 提交后发 `AccountDeletionReminderMail.of(email, displayName, dueAt, lead.toDays())`；`send` 为 `false` 时另一个事务 {锁行 → `clearDeletionReminder()` + save}，计 `failed`；异常同 Task 8 计 `failed`。扫描用 `findIdsDueForDeletionReminder(now, now.plus(lead), afterId, BATCH_SIZE)`。
 
-- [ ] **Step 1: 写失败的测试**
+- [x] **Step 1: 写失败的测试**
 
 ```java
 @Test void should_mark_and_send_reminder()                     // save 的用户 deletionRemindedAt == now；邮件 daysLeft 3；结果 (1, 0)
@@ -352,10 +352,10 @@ log.info 汇总；return DeletionRunResult.of(completed, failed)
 @Test void should_continue_after_one_user_fails()              // 同 Task 8
 ```
 
-- [ ] **Step 2: 运行确认失败** → 编译失败
-- [ ] **Step 3: 实现**
-- [ ] **Step 4: 运行确认通过**
-- [ ] **Step 5: 提交** `feat(identity): 加注销到期前提醒的处理器 (PAP-100)`
+- [x] **Step 2: 运行确认失败** → 编译失败
+- [x] **Step 3: 实现**
+- [x] **Step 4: 运行确认通过**
+- [x] **Step 5: 提交** `feat(identity): 加注销到期前提醒的处理器 (PAP-100)`
 
 ---
 
@@ -368,17 +368,17 @@ log.info 汇总；return DeletionRunResult.of(completed, failed)
 **Interfaces:**
 - Produces: `IdentityProperties.Deletion(@DefaultValue("15d") Duration coolingPeriod, @DefaultValue("3d") Duration reminderLead)`，`IdentityProperties` 加 `@DefaultValue Deletion deletion`（Javadoc `@param deletion 注销：冷静期与提醒提前量`）；`@Bean AccountDeletionPolicy accountDeletionPolicy(IdentityProperties properties)`
 
-- [ ] **Step 1: 写失败的测试**（照 `IdentityConfigurationTest` 现有的 `ApplicationContextRunner` 写法）
+- [x] **Step 1: 写失败的测试**（照 `IdentityConfigurationTest` 现有的 `ApplicationContextRunner` 写法）
 
 ```java
 @Test void should_bind_deletion_defaults()                    // 不配 → policy 为 (15d, 3d)
 @Test void should_fail_startup_when_lead_not_shorter()        // cooling-period=3d, reminder-lead=3d → 上下文启动失败
 ```
 
-- [ ] **Step 2: 运行确认失败**：`./gradlew :patra-api:patra-identity:patra-identity-boot:test --tests "*IdentityConfigurationTest*"`
-- [ ] **Step 3: 实现**
-- [ ] **Step 4: 运行确认通过**
-- [ ] **Step 5: 提交** `feat(identity): 加注销冷静期与提醒提前量配置 (PAP-100)`
+- [x] **Step 2: 运行确认失败**：`./gradlew :patra-api:patra-identity:patra-identity-boot:test --tests "*IdentityConfigurationTest*"`
+- [x] **Step 3: 实现**
+- [x] **Step 4: 运行确认通过**
+- [x] **Step 5: 提交** `feat(identity): 加注销冷静期与提醒提前量配置 (PAP-100)`
 
 ---
 
@@ -396,7 +396,7 @@ log.info 汇总；return DeletionRunResult.of(completed, failed)
   - `@DeleteMapping CurrentUserResponse cancel(HttpServletRequest http, @RequestHeader(value = USER_AGENT, required = false) String userAgent)` → 200
   - `record RequestAccountDeletionRequest(String username)`；`record AccountDeletionRequestedResponse(Instant deletionDueAt)` + `static from(AccountDeletionRequested)`
 
-- [ ] **Step 1: 写失败的测试**（照 `MeEmailControllerIT`：`@WebMvcTest @Import(MeDeletionController.class) @AutoConfigureRestTestClient`，`@MockitoBean CommandBus`）
+- [x] **Step 1: 写失败的测试**（照 `MeEmailControllerIT`：`@WebMvcTest @Import(MeDeletionController.class) @AutoConfigureRestTestClient`，`@MockitoBean CommandBus`）
 
 ```java
 @Test void should_request_deletion_with_200_and_due_time()   // 体 {"deletionDueAt":"2026-11-04T08:00:00Z"}；ArgumentCaptor：命令 username "chen-yu"、userAgent 原值、clientIp 非空
@@ -405,10 +405,10 @@ log.info 汇总；return DeletionRunResult.of(completed, failed)
 @Test void should_map_pending_deletion_to_409()              // 抛 UserPendingDeletionException → 409，traits 含 PENDING_DELETION
 ```
 
-- [ ] **Step 2: 运行确认失败**：`./gradlew :patra-api:patra-identity:patra-identity-adapter:integrationTest --tests "*MeDeletionControllerIT*"`
-- [ ] **Step 3: 实现**
-- [ ] **Step 4: 运行确认通过**
-- [ ] **Step 5: 提交** `feat(identity): 加注销与取消注销接口 (PAP-100)`
+- [x] **Step 2: 运行确认失败**：`./gradlew :patra-api:patra-identity:patra-identity-adapter:integrationTest --tests "*MeDeletionControllerIT*"`
+- [x] **Step 3: 实现**
+- [x] **Step 4: 运行确认通过**
+- [x] **Step 5: 提交** `feat(identity): 加注销与取消注销接口 (PAP-100)`
 
 ---
 
@@ -422,7 +422,7 @@ log.info 汇总；return DeletionRunResult.of(completed, failed)
 - Consumes: Task 8、9 的命令与结果
 - Produces: `@XxlJob("accountDeletionJob") void execute()`、`@XxlJob("accountDeletionReminderJob") void execute()`；`failed > 0` → `XxlJobHelper.handleFail("已注销 N 个，失败 M 个")`，否则 `handleSuccess("已注销 N 个")`（提醒：「已提醒 N 个，失败 M 个」）；命令总线抛异常 → `handleFail("执行失败：…")`。Javadoc 写 mini Cron（`0 5 * * * ?` / `0 15 * * * ?`）。
 
-- [ ] **Step 1: 写失败的测试**（照 `EmailTokenCleanupScheduleJobTest` 对 `XxlJobHelper` 的处理方式）
+- [x] **Step 1: 写失败的测试**（照 `EmailTokenCleanupScheduleJobTest` 对 `XxlJobHelper` 的处理方式）
 
 ```java
 @Test void should_report_success_when_nothing_failed()
@@ -430,8 +430,8 @@ log.info 汇总；return DeletionRunResult.of(completed, failed)
 @Test void should_report_failure_when_command_throws()
 ```
 
-- [ ] **Step 2–4: 失败 → 实现 → 通过**（`./gradlew :patra-api:patra-identity:patra-identity-adapter:test --tests "*AccountDeletion*JobTest*"`）
-- [ ] **Step 5: 提交** `feat(identity): 加注销到期执行与提醒的定时任务入口 (PAP-100)`
+- [x] **Step 2–4: 失败 → 实现 → 通过**（`./gradlew :patra-api:patra-identity:patra-identity-adapter:test --tests "*AccountDeletion*JobTest*"`）
+- [x] **Step 5: 提交** `feat(identity): 加注销到期执行与提醒的定时任务入口 (PAP-100)`
 
 ---
 
@@ -445,7 +445,7 @@ log.info 汇总；return DeletionRunResult.of(completed, failed)
 **Interfaces:**
 - Consumes: 全部前序任务；`IdentityFlowITSupport` 的 `register`、`login`、`exchange`、`assertionFor`、`latestSessionIdOf`、`endReasonOf`、`activeTokenPurposesOf`、`mailFor`、`redis`、`sessionKey`、`clock`（`MutableClock`，起点 `T0`）、`jdbcTemplate`；`@Autowired CommandBus commandBus` 跑两个任务命令
 
-- [ ] **Step 1: 写测试**（每条一个 `@Test`，spec §19.2）
+- [x] **Step 1: 写测试**（每条一个 `@Test`，spec §19.2）
 
 ```java
 @Test void should_request_deletion_after_reauth_and_username_check()
@@ -483,9 +483,9 @@ log.info 汇总；return DeletionRunResult.of(completed, failed)
 
 `GatewayAuthenticationIT`：匿名 `POST /patra-identity/me/deletion`、`DELETE /patra-identity/me/deletion` 都 401（照该类「未列出的 identity 路径要登录」那条用例）。
 
-- [ ] **Step 2: 运行**：`./gradlew :patra-api:patra-identity:patra-identity-boot:integrationTest --tests "*AccountDeletion*"` 与 `:patra-api:patra-gateway-boot:integrationTest --tests "*GatewayAuthenticationIT*"`
+- [x] **Step 2: 运行**：`./gradlew :patra-api:patra-identity:patra-identity-boot:integrationTest --tests "*AccountDeletion*"` 与 `:patra-api:patra-gateway-boot:integrationTest --tests "*GatewayAuthenticationIT*"`
 Expected: 全过（前序任务已各自 TDD 过；首跑全绿按 PAP-96 先例不为凑 RED 改测试，失败则按 systematic-debugging 处理）。注意 spec §20 第 3 条：冷静期会话在拨钟之后登录。
-- [ ] **Step 3: 提交** `test(identity): 加注销的端到端流程测试 (PAP-100)`（含网关测试文件）
+- [x] **Step 3: 提交** `test(identity): 加注销的端到端流程测试 (PAP-100)`（含网关测试文件）
 
 ---
 
@@ -497,9 +497,9 @@ Expected: 全过（前序任务已各自 TDD 过；首跑全绿按 PAP-96 先例
 - Modify: `docs/patra/specs/2026-10-22-identity-account-deletion-design.md`（状态改「已实施」，末尾加「实施结果」一节：偏离、实测、回归数字）
 - Modify: `docs/patra/plans/2026-10-22-identity-account-deletion.md`（勾选）
 
-- [ ] **Step 1: 改 README 与两份 spec**
-- [ ] **Step 2: 模块图核对**：`./gradlew dumpModuleGraph` 后 `git diff --stat patra-infra/cd/module-graph.json`，Expected: 无变化（有变化就一并提交）
-- [ ] **Step 3: 全量回归**
+- [x] **Step 1: 改 README 与两份 spec**
+- [x] **Step 2: 模块图核对**：`./gradlew dumpModuleGraph` 后 `git diff --stat patra-infra/cd/module-graph.json`，Expected: 无变化（有变化就一并提交）
+- [x] **Step 3: 全量回归**
 
 Run（后台跑，> 2 分钟）：
 
@@ -509,9 +509,9 @@ Run（后台跑，> 2 分钟）：
 
 Expected: `BUILD SUCCESSFUL`；记下各模块 IT 数写进 spec 的实施结果。spotless 改了文件就补一个 `style(identity): 按 gjf 格式化 (PAP-100)` 提交（只含本 Issue 的路径）。
 
-- [ ] **Step 4: 提交** `docs(identity): 写回注销账号的 README 与实施结果 (PAP-100)`
-- [ ] **Step 5: Linear**
+- [x] **Step 4: 提交** `docs(identity): 写回注销账号的 README 与实施结果 (PAP-100)`
+- [x] **Step 5: Linear**
   - PAP-100：To-Do / AC 措辞按 spec §22 对齐并勾选；评论附 AC 证据（spec §19.4 的表 + 回归输出摘要 + 提交范围）；状态推到 Review。
   - PAP-97：评论「来自 PAP-100 的契约」（spec §14 三条）。
   - PAP-102：评论「来自 PAP-100 的契约」（spec §22 PAP-102 行）。
-- [ ] **Step 6: 交接**：在共享笔记目录写 `pap-100-account-deletion-implementation-handover.md`（产物、回归、裁决、mini 上要做的：重建库、xxl-job-admin 建两个任务与 Cron、D6 验收手法；release spec 2.1.9 / 2.1.10 待同步）。
+- [x] **Step 6: 交接**：在共享笔记目录写 `pap-100-account-deletion-implementation-handover.md`（产物、回归、裁决、mini 上要做的：重建库、xxl-job-admin 建两个任务与 Cron、D6 验收手法；release spec 2.1.9 / 2.1.10 待同步）。
