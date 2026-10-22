@@ -53,7 +53,8 @@ class SessionIssuerTest {
     when(records.save(any())).thenAnswer(invocation -> withId(invocation.getArgument(0), 7001L));
     when(sessions.issue(any())).thenReturn(IssuedUserSession.of("patra_user_x", List.of()));
 
-    IssuedUserSession issued = issuer.issue(42L, LoginClient.of("web", "mac-safari"));
+    IssuedUserSession issued =
+        issuer.issue(42L, LoginClient.of("web", "Kq3_z-0aB1cD2eF3gH4iJ5kL6mN7oP8qR9sT0uV1wXy"));
 
     assertThat(issued.token()).isEqualTo("patra_user_x");
     ArgumentCaptor<UserLoginRecord> saved = ArgumentCaptor.forClass(UserLoginRecord.class);

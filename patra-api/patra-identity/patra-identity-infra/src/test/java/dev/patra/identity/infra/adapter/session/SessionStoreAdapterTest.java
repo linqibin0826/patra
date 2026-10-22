@@ -49,7 +49,7 @@ class SessionStoreAdapterTest {
                 .userId(42L)
                 .sessionId(7001L)
                 .accountType(AccountType.USER)
-                .client(LoginClient.of("web", "mac-safari"))
+                .client(LoginClient.of("web", "Kq3_z-0aB1cD2eF3gH4iJ5kL6mN7oP8qR9sT0uV1wXy"))
                 .now(NOW)
                 .lifetime(SessionLifetime.of(Duration.ofDays(30), Duration.ofDays(180)))
                 .maxSessionsPerUser(10)
@@ -64,7 +64,7 @@ class SessionStoreAdapterTest {
     assertThat(session.sessionId()).isEqualTo(7001L);
     assertThat(session.accountType()).isEqualTo(AccountType.USER);
     assertThat(session.clientType()).isEqualTo(ClientType.WEB);
-    assertThat(session.deviceId()).isEqualTo("mac-safari");
+    assertThat(session.deviceId()).isEqualTo("Kq3_z-0aB1cD2eF3gH4iJ5kL6mN7oP8qR9sT0uV1wXy");
     assertThat(session.createdAt()).isEqualTo(NOW);
     assertThat(session.expiresAt()).isEqualTo(NOW.plus(Duration.ofDays(180)));
     assertThat(session.idleTimeout()).isEqualTo(Duration.ofDays(30));

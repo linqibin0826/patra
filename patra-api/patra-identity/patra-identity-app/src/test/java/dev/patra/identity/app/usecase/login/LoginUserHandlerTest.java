@@ -341,12 +341,19 @@ class LoginUserHandlerTest {
     when(passwordHashing.matches(any(), any())).thenReturn(true);
 
     AuthenticatedUser result =
-        handler.handle(LoginUserCommand.of("chen.yu@example.com", "correct horse", "web", " mac "));
+        handler.handle(
+            LoginUserCommand.of(
+                "chen.yu@example.com",
+                "correct horse",
+                "web",
+                "Kq3_z-0aB1cD2eF3gH4iJ5kL6mN7oP8qR9sT0uV1wXy"));
 
     assertThat(result.sessionToken()).isEqualTo("patra_user_x");
     ArgumentCaptor<LoginClient> client = ArgumentCaptor.forClass(LoginClient.class);
     verify(sessionIssuer).issue(eq(42L), client.capture());
-    assertThat(client.getValue().device()).map(DeviceId::value).contains("mac");
+    assertThat(client.getValue().device())
+        .map(DeviceId::value)
+        .contains("Kq3_z-0aB1cD2eF3gH4iJ5kL6mN7oP8qR9sT0uV1wXy");
     var order = inOrder(loginThrottle, sessionIssuer);
     order.verify(loginThrottle).recordSuccess(ATTEMPT);
     order.verify(sessionIssuer).issue(anyLong(), any());

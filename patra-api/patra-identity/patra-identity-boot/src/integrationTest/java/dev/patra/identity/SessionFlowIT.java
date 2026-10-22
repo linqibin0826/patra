@@ -99,19 +99,19 @@ class SessionFlowIT {
                 "email", "flow.login@example.com",
                 "password", PASSWORD,
                 "clientType", "web",
-                "deviceId", " mac-safari "));
+                "deviceId", "Kq3_z-0aB1cD2eF3gH4iJ5kL6mN7oP8qR9sT0uV1wXy"));
 
     assertThat(login.getStatus().value()).isEqualTo(200);
     String hash = SessionToken.parse(tokenOf(login)).orElseThrow().hash();
     assertThat(redis.opsForHash().get("idn:session:user:" + hash, "device_id"))
-        .isEqualTo("mac-safari");
+        .isEqualTo("Kq3_z-0aB1cD2eF3gH4iJ5kL6mN7oP8qR9sT0uV1wXy");
     long sessionId = latestSessionIdOf(userId);
     assertThat(
             jdbcTemplate.queryForObject(
                 "SELECT device_id FROM idn_user_login_record WHERE id = ?",
                 String.class,
                 sessionId))
-        .isEqualTo("mac-safari");
+        .isEqualTo("Kq3_z-0aB1cD2eF3gH4iJ5kL6mN7oP8qR9sT0uV1wXy");
 
     EntityExchangeResult<String> me = me(assertionFor(userId, sessionId));
     assertThat(me.getStatus().value()).isEqualTo(200);
@@ -127,7 +127,7 @@ class SessionFlowIT {
   }
 
   @Test
-  @DisplayName("客户端类型不认识、设备标识太长：422 带原因码")
+  @DisplayName("客户端类型不认识、设备标识不是 43 个 base64url 字符：422 带原因码")
   void should_reject_invalid_client_fields() {
     register("flow.invalid@example.com");
 
@@ -146,7 +146,7 @@ class SessionFlowIT {
                 "password",
                 PASSWORD,
                 "deviceId",
-                "x".repeat(129)));
+                " mac-safari "));
 
     assertThat(badType.getStatus().value()).isEqualTo(422);
     JsonNode typeError = JSON.readTree(badType.getResponseBody()).get("errors").get(0);
@@ -155,7 +155,7 @@ class SessionFlowIT {
     assertThat(badDevice.getStatus().value()).isEqualTo(422);
     JsonNode deviceError = JSON.readTree(badDevice.getResponseBody()).get("errors").get(0);
     assertThat(deviceError.get("field").asString()).isEqualTo("deviceId");
-    assertThat(deviceError.get("code").asString()).isEqualTo("TOO_LONG");
+    assertThat(deviceError.get("code").asString()).isEqualTo("INVALID_FORMAT");
   }
 
   @Test

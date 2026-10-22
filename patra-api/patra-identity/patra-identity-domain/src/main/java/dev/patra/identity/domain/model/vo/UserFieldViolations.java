@@ -246,18 +246,11 @@ public final class UserFieldViolations {
     return FieldViolation.of(CLIENT_TYPE, INVALID_FORMAT, "不支持的客户端类型");
   }
 
-  /// 设备标识太长。
-  ///
-  /// @return 字段错误
-  public static FieldViolation deviceIdTooLong() {
-    return FieldViolation.of(DEVICE_ID, TOO_LONG, "设备标识最长 128 个字符");
-  }
-
-  /// 设备标识含控制字符。
+  /// 设备标识格式不对（不是 43 个 base64url 字符）。
   ///
   /// @return 字段错误
   public static FieldViolation deviceIdInvalidFormat() {
-    return FieldViolation.of(DEVICE_ID, INVALID_FORMAT, "设备标识不能包含控制字符");
+    return FieldViolation.of(DEVICE_ID, INVALID_FORMAT, "设备标识必须是 43 个 base64url 字符");
   }
 
   /// 邮箱已注册。

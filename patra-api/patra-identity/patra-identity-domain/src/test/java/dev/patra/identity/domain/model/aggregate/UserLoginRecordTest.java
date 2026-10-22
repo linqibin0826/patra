@@ -22,12 +22,15 @@ class UserLoginRecordTest {
   @DisplayName("开始一条记录：未结束，带客户端类型、设备标识和绝对过期时间，ID 留给仓储")
   void should_start_unended_record() {
     UserLoginRecord login =
-        UserLoginRecord.start(42L, LoginClient.of("web", "mac-safari"), EXPIRES_AT);
+        UserLoginRecord.start(
+            42L, LoginClient.of("web", "Kq3_z-0aB1cD2eF3gH4iJ5kL6mN7oP8qR9sT0uV1wXy"), EXPIRES_AT);
 
     assertThat(login.getId()).isNull();
     assertThat(login.getUserId()).isEqualTo(42L);
     assertThat(login.getClientType()).isEqualTo(ClientType.WEB);
-    assertThat(login.getDeviceId()).map(DeviceId::value).contains("mac-safari");
+    assertThat(login.getDeviceId())
+        .map(DeviceId::value)
+        .contains("Kq3_z-0aB1cD2eF3gH4iJ5kL6mN7oP8qR9sT0uV1wXy");
     assertThat(login.getExpiresAt()).isEqualTo(EXPIRES_AT);
     assertThat(login.isEnded()).isFalse();
     assertThat(login.getEndedAt()).isNull();
