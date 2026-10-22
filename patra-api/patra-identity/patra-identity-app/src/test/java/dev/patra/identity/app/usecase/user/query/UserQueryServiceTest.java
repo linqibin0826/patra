@@ -11,7 +11,10 @@ import dev.patra.identity.app.usecase.emailchange.PendingEmailChange;
 import dev.patra.identity.domain.exception.UserNotFoundException;
 import dev.patra.identity.domain.model.aggregate.EmailToken;
 import dev.patra.identity.domain.model.aggregate.FormerUsername;
+import dev.patra.identity.domain.model.aggregate.UserProfile;
 import dev.patra.identity.domain.model.enums.EmailTokenPurpose;
+import dev.patra.identity.domain.model.enums.ProfessionalVisibility;
+import dev.patra.identity.domain.model.enums.ProfileVisibility;
 import dev.patra.identity.domain.model.enums.UserStatus;
 import dev.patra.identity.domain.model.read.PublicAudience;
 import dev.patra.identity.domain.model.read.PublicUserLookup;
@@ -20,10 +23,12 @@ import dev.patra.identity.domain.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.EmailTokenSecret;
 import dev.patra.identity.domain.model.vo.Username;
+import dev.patra.identity.domain.model.vo.profile.PrivacySettings;
 import dev.patra.identity.domain.policy.ProfileDisplayPolicy;
 import dev.patra.identity.domain.port.read.UserReadPort;
 import dev.patra.identity.domain.port.repository.EmailTokenRepository;
 import dev.patra.identity.domain.port.repository.FormerUsernameRepository;
+import dev.patra.identity.domain.port.repository.UserProfileRepository;
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.AuthenticationRequiredException;
 import dev.patra.tool.core.security.ClientType;
@@ -52,12 +57,14 @@ class UserQueryServiceTest {
   private final UserReadPort userReadPort = mock(UserReadPort.class);
   private final FormerUsernameRepository formerUsernames = mock(FormerUsernameRepository.class);
   private final EmailTokenRepository tokens = mock(EmailTokenRepository.class);
+  private final UserProfileRepository profiles = mock(UserProfileRepository.class);
   private final UserQueryService service =
       new UserQueryService(
           currentUserPort,
           userReadPort,
           formerUsernames,
           tokens,
+          profiles,
           ProfileDisplayPolicy.of(ZoneOffset.UTC),
           Clock.fixed(NOW, ZoneOffset.UTC));
 
@@ -323,5 +330,89 @@ class UserQueryServiceTest {
 
     assertThat(service.publicIdentity(" Chen-Yu ")).isInstanceOf(PublicUserLookup.Found.class);
     verify(userReadPort).findPublicIdentity(CHEN_YU);
+  }
+
+  @Test
+  @DisplayName("本人资料：冷静期照常返回，封禁 401")
+  void should_return_own_profile_unless_banned() {
+    when(currentUserPort.require()).thenReturn(OWNER);
+    UserProfile profile = UserProfile.restore().id(1L).userId(42L).version(0L).build();
+    when(profiles.findByUserId(42L)).thenReturn(Optional.of(profile));
+    when(userReadPort.findAccount(42L))
+        .thenReturn(Optional.of(account(UserStatus.PENDING_DELETION)));
+
+    assertThat(service.myProfile()).isSameAs(profile);
+    assertThat(service.myPrivacy()).isEqualTo(PrivacySettings.defaults());
+
+    when(userReadPort.findAccount(42L)).thenReturn(Optional.of(account(UserStatus.BANNED)));
+    assertThatThrownBy(service::myProfile).isInstanceOf(AuthenticationRequiredException.class);
+    assertThatThrownBy(service::myPrivacy).isInstanceOf(AuthenticationRequiredException.class);
+  }
+
+  @Test
+  @DisplayName("主页仅登录用户：匿名 404，别人 Found 且 audience 是 SIGNED_IN")
+  void should_hide_signed_in_page_from_anonymous() {
+    when(userReadPort.findPublicIdentity(CHEN_YU))
+        .thenReturn(Optional.of(withVisibility(ProfileVisibility.SIGNED_IN)));
+
+    when(currentUserPort.current()).thenReturn(Optional.empty());
+    assertThatThrownBy(() -> service.publicIdentity("chen-yu"))
+        .isInstanceOf(UserNotFoundException.class);
+
+    when(currentUserPort.current()).thenReturn(Optional.of(OTHER));
+    assertThat(service.publicIdentity("chen-yu"))
+        .isInstanceOfSatisfying(
+            PublicUserLookup.Found.class,
+            found -> assertThat(found.view().audience()).isEqualTo(PublicAudience.SIGNED_IN));
+  }
+
+  @Test
+  @DisplayName("主页仅自己：别人 404，本人 Found")
+  void should_hide_self_only_page_from_others() {
+    when(userReadPort.findPublicIdentity(CHEN_YU))
+        .thenReturn(Optional.of(withVisibility(ProfileVisibility.SELF)));
+
+    when(currentUserPort.current()).thenReturn(Optional.of(OTHER));
+    assertThatThrownBy(() -> service.publicIdentity("chen-yu"))
+        .isInstanceOf(UserNotFoundException.class);
+
+    when(currentUserPort.current()).thenReturn(Optional.of(OWNER));
+    assertThat(service.publicIdentity("chen-yu")).isInstanceOf(PublicUserLookup.Found.class);
+  }
+
+  @Test
+  @DisplayName("旧名的原主仅登录可见：匿名 404，登录者 Moved")
+  void should_apply_visibility_to_former_username_owner() {
+    Username old = Username.of("chen-old");
+    when(userReadPort.findPublicIdentity(old)).thenReturn(Optional.empty());
+    when(formerUsernames.findReserved(old, NOW))
+        .thenReturn(
+            Optional.of(
+                FormerUsername.restore(
+                    1L,
+                    42L,
+                    old,
+                    NOW.minus(Duration.ofDays(1)),
+                    NOW.plus(Duration.ofDays(89)),
+                    0L)));
+    when(userReadPort.findPublicIdentityByUserId(42L))
+        .thenReturn(Optional.of(withVisibility(ProfileVisibility.SIGNED_IN)));
+
+    when(currentUserPort.current()).thenReturn(Optional.empty());
+    assertThatThrownBy(() -> service.publicIdentity("chen-old"))
+        .isInstanceOf(UserNotFoundException.class);
+
+    when(currentUserPort.current()).thenReturn(Optional.of(OTHER));
+    assertThat(service.publicIdentity("chen-old")).isInstanceOf(PublicUserLookup.Moved.class);
+  }
+
+  /// 正常、已验证、主页可见性为给定值的公开主页读模型。
+  ///
+  /// @param visibility 主页可见性
+  /// @return 读模型
+  private static PublicUserReadModel withVisibility(ProfileVisibility visibility) {
+    return publicUser("chen-yu", UserStatus.ACTIVE, true).toBuilder()
+        .privacy(PrivacySettings.of(visibility, ProfessionalVisibility.PUBLIC, false))
+        .build();
   }
 }

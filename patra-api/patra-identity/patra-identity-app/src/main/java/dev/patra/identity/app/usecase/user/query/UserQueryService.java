@@ -3,16 +3,19 @@ package dev.patra.identity.app.usecase.user.query;
 import dev.patra.identity.app.usecase.emailchange.PendingEmailChange;
 import dev.patra.identity.domain.exception.UserNotFoundException;
 import dev.patra.identity.domain.model.aggregate.FormerUsername;
+import dev.patra.identity.domain.model.aggregate.UserProfile;
 import dev.patra.identity.domain.model.enums.EmailTokenPurpose;
 import dev.patra.identity.domain.model.enums.UserStatus;
 import dev.patra.identity.domain.model.read.PublicUserLookup;
 import dev.patra.identity.domain.model.read.PublicUserReadModel;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.model.vo.Username;
+import dev.patra.identity.domain.model.vo.profile.PrivacySettings;
 import dev.patra.identity.domain.policy.ProfileDisplayPolicy;
 import dev.patra.identity.domain.port.read.UserReadPort;
 import dev.patra.identity.domain.port.repository.EmailTokenRepository;
 import dev.patra.identity.domain.port.repository.FormerUsernameRepository;
+import dev.patra.identity.domain.port.repository.UserProfileRepository;
 import dev.patra.tool.core.security.AuthenticationRequiredException;
 import dev.patra.tool.core.security.CurrentUser;
 import dev.patra.tool.core.security.CurrentUserPort;
@@ -22,7 +25,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-/// 「当前用户」、待确认的改邮箱和公开身份卡的查询。只读，不经 CommandBus，没有事务。
+/// 「当前用户」、本人的资料与隐私设置、待确认的改邮箱和公开主页的查询。只读，不经 CommandBus，没有事务。
 ///
 /// 当前用户：没有当前用户、会话指向的用户不存在、用户已封禁或已注销，这些情况都抛
 /// {@link AuthenticationRequiredException}（401）：对客户端来说都是「这个会话不再有效」。
@@ -39,6 +42,7 @@ public class UserQueryService {
   private final UserReadPort userReadPort;
   private final FormerUsernameRepository formerUsernames;
   private final EmailTokenRepository tokens;
+  private final UserProfileRepository profiles;
   private final ProfileDisplayPolicy display;
   private final Clock clock;
 
@@ -47,7 +51,34 @@ public class UserQueryService {
   /// @return 账号信息
   /// @throws AuthenticationRequiredException 没有当前用户、用户不存在、已封禁或已注销
   public UserAccountReadModel currentAccount() {
-    CurrentUser current = currentUserPort.require();
+    return requireUsableAccount(currentUserPort.require());
+  }
+
+  /// 当前用户自己的资料（`GET /me/profile`）。状态判断同 {@link #currentAccount()}。
+  ///
+  /// @return 资料
+  /// @throws AuthenticationRequiredException 没有当前用户、用户不存在、已封禁或已注销
+  public UserProfile myProfile() {
+    long userId = requireUsableAccount(currentUserPort.require()).userId();
+    return profiles
+        .findByUserId(userId)
+        .orElseThrow(() -> new IllegalStateException("用户 " + userId + " 没有资料行"));
+  }
+
+  /// 当前用户自己的隐私设置（`GET /me/privacy`）。状态判断同 {@link #currentAccount()}。
+  ///
+  /// @return 隐私设置
+  /// @throws AuthenticationRequiredException 没有当前用户、用户不存在、已封禁或已注销
+  public PrivacySettings myPrivacy() {
+    return myProfile().getPrivacy();
+  }
+
+  /// 会话指向的账号还能用：存在且不是已封禁、已注销。
+  ///
+  /// @param current 当前用户
+  /// @return 账号信息
+  /// @throws AuthenticationRequiredException 用户不存在、已封禁或已注销
+  private UserAccountReadModel requireUsableAccount(CurrentUser current) {
     UserAccountReadModel account =
         userReadPort
             .findAccount(current.userId())
