@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { USER } from "@tests/fixtures/user";
+import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { EmailCard } from "@/components/settings/account/EmailCard";
@@ -163,6 +164,18 @@ describe("EmailCard", () => {
 
   it("已过期的待确认不显示", () => {
     renderCard({}, { newEmail: "new@example.com", expiresAt: "2026-10-23T07:00:00Z" });
+    expect(screen.queryByText(/正在等待/)).not.toBeInTheDocument();
+  });
+
+  it("首帧只看服务端给的数据，不看当前时间（服务端渲染与水合一致），挂载后再按时间收起", () => {
+    const expired = { newEmail: "new@example.com", expiresAt: "2026-10-23T07:00:00Z" };
+    const html = renderToString(
+      <QueryClientProvider client={new QueryClient()}>
+        <EmailCard user={USER} pending={expired} />
+      </QueryClientProvider>,
+    );
+    expect(html).toContain("正在等待");
+    renderCard({}, expired);
     expect(screen.queryByText(/正在等待/)).not.toBeInTheDocument();
   });
 

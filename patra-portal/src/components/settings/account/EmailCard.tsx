@@ -32,10 +32,6 @@ const ALERTS: Record<Alert, string> = {
   failed: ACCOUNT_MESSAGES.saveFailed,
 };
 
-/// 待确认是否还有效
-const alive = (pending: PendingEmailChange | null): pending is PendingEmailChange =>
-  pending !== null && Date.parse(pending.expiresAt) > Date.now();
-
 /// 账号页 · 邮箱卡片（简报 §3.10 卡片 2、§4.7）：邮箱与验证状态、未验证时重发；「更改邮箱」在卡片内展开，
 /// 提交经再认证包装，成功后显示待确认块（到期自动消失）并禁用「更改邮箱」。锚点 `#email`（横幅的「更改邮箱」）。
 export function EmailCard({
@@ -49,7 +45,8 @@ export function EmailCard({
   const leave = useCommonFailureRedirect(PAGE);
   const { withReauth } = useReauth();
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const [pending, setPending] = useState(() => (alive(initialPending) ? initialPending : null));
+  // 首帧只用服务端给的数据，不看当前时间：服务端渲染与水合的结果一致；过期的由下面的 effect 挂载后立即收起
+  const [pending, setPending] = useState(initialPending);
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -58,13 +55,18 @@ export function EmailCard({
 
   // 页面刷新带回新的待确认（如「已有待确认」之后）时同步过来
   useEffect(() => {
-    setPending(alive(initialPending) ? initialPending : null);
+    setPending(initialPending);
   }, [initialPending]);
 
-  // 到期那一刻收起待确认块，「更改邮箱」恢复可点
+  // 到期那一刻收起待确认块，「更改邮箱」恢复可点；已经过期的立即收起
   useEffect(() => {
     if (!pending) return;
-    const timer = setTimeout(() => setPending(null), Date.parse(pending.expiresAt) - Date.now());
+    const remaining = Date.parse(pending.expiresAt) - Date.now();
+    if (remaining <= 0) {
+      setPending(null);
+      return;
+    }
+    const timer = setTimeout(() => setPending(null), remaining);
     return () => clearTimeout(timer);
   }, [pending]);
 
