@@ -1,17 +1,14 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
 import { ArrowUpRight, Check, MailWarning } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { SettingsCard } from "@/components/settings/SettingsCard";
-import { authPageHref, deletionPendingHref } from "@/lib/auth/next-path";
 import type { CurrentUser } from "@/lib/auth/types";
+import { useCommonFailureRedirect } from "@/lib/auth/use-common-failure-redirect";
 import { type SavePrivacyResult, savePrivacy } from "@/lib/identity/profile-actions";
 import type { PrivacySettings } from "@/lib/identity/profile-schema";
 import { RADIO_INPUT, SWITCH_INPUT } from "@/lib/portal-ui";
-import { queryKeys } from "@/lib/query-keys";
 
 const PAGE = "/settings/privacy";
 /// 「已保存」显示 2 秒后淡出
@@ -43,8 +40,7 @@ interface PrivacyFormProps {
 /// 不出 toast。快速连续改动时按顺序串行提交；界面停在最后一次点的值，全部回来后若最后一次失败，回到服务端
 /// 最后确认的值。
 export function PrivacyForm({ initial, user }: PrivacyFormProps) {
-  const router = useRouter();
-  const queryClient = useQueryClient();
+  const leave = useCommonFailureRedirect(PAGE);
   const [shown, setShown] = useState(initial);
   const [status, setStatus] = useState<Partial<Record<Group, Status>>>({});
   const confirmed = useRef(initial);
@@ -90,13 +86,8 @@ export function PrivacyForm({ initial, user }: PrivacyFormProps) {
       }
       return;
     }
-    if (result.reason === "pending-deletion") {
-      router.replace(deletionPendingHref(PAGE));
-      return;
-    }
-    if (result.reason === "signed-out") {
-      queryClient.setQueryData(queryKeys.currentUser, null);
-      router.replace(authPageHref("/login", PAGE));
+    if (result.reason === "pending-deletion" || result.reason === "signed-out") {
+      leave(result.reason);
       return;
     }
     if (sequence === latest.current) {

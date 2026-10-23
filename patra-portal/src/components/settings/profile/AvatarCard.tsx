@@ -10,8 +10,8 @@ import { FieldError } from "@/components/settings/profile/FieldError";
 import { SettingsCard } from "@/components/settings/SettingsCard";
 import { Avatar } from "@/components/user/Avatar";
 import { useCurrentUser } from "@/lib/auth/current-user-query";
-import { authPageHref, deletionPendingHref } from "@/lib/auth/next-path";
 import type { CurrentUser } from "@/lib/auth/types";
+import { useCommonFailureRedirect } from "@/lib/auth/use-common-failure-redirect";
 import {
   AVATAR_FILE_MESSAGES,
   avatarUploadMessage,
@@ -33,6 +33,7 @@ const PAGE = "/settings/profile";
 export function AvatarCard({ user }: { user: CurrentUser }) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const leave = useCommonFailureRedirect(PAGE);
   const state = useCurrentUser();
   const current = state.status === "authenticated" ? state.user : user;
   const input = useRef<HTMLInputElement>(null);
@@ -52,13 +53,8 @@ export function AvatarCard({ user }: { user: CurrentUser }) {
   /// 冷静期、会话失效时离开本页；处理了返回 true
   function leaveIfBlocked(result: AvatarMutationResult): boolean {
     if (result.ok) return false;
-    if (result.reason === "pending-deletion") {
-      router.replace(deletionPendingHref(PAGE));
-      return true;
-    }
-    if (result.reason === "signed-out") {
-      queryClient.setQueryData(queryKeys.currentUser, null);
-      router.replace(authPageHref("/login", PAGE));
+    if (result.reason === "pending-deletion" || result.reason === "signed-out") {
+      leave(result.reason);
       return true;
     }
     return false;

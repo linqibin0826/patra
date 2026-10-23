@@ -1,11 +1,11 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { RESEND_MESSAGES, resendWaitMessage } from "@/lib/auth/messages";
-import { authPageHref, deletionPendingHref } from "@/lib/auth/next-path";
+import { useCommonFailureRedirect } from "@/lib/auth/use-common-failure-redirect";
 import { resendVerificationEmail } from "@/lib/identity/verification-actions";
 import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/utils";
@@ -27,10 +27,10 @@ export function ResendVerificationButton({
   label = "重新发送",
   className,
 }: ResendVerificationButtonProps) {
-  const router = useRouter();
   const pathname = usePathname();
   const query = useSearchParams().toString();
   const queryClient = useQueryClient();
+  const leave = useCommonFailureRedirect(query ? `${pathname}?${query}` : pathname);
   const { availableAt, limited, startCooldown, markLimited } = useVerificationResendStore();
   const [now, setNow] = useState(() => Date.now());
   const [sending, setSending] = useState(false);
@@ -70,7 +70,6 @@ export function ResendVerificationButton({
       () => ({ ok: false, reason: "unavailable" }) as const,
     );
     setSending(false);
-    const current = query ? `${pathname}?${query}` : pathname;
     if (result.ok) {
       startCooldown(Date.parse(result.nextResendAt) || Date.now() + DEFAULT_WAIT_MS);
       toast.success(RESEND_MESSAGES.sent);
@@ -90,11 +89,8 @@ export function ResendVerificationButton({
         toast.success(RESEND_MESSAGES.verified);
         return;
       case "pending-deletion":
-        router.replace(deletionPendingHref(current));
-        return;
       case "signed-out":
-        queryClient.setQueryData(queryKeys.currentUser, null);
-        router.replace(authPageHref("/login", current));
+        leave(result.reason);
         return;
       case "unavailable":
         toast.error(RESEND_MESSAGES.failed);

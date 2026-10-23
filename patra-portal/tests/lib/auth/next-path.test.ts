@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { authPageHref, deletionPendingHref, safeNextPath } from "@/lib/auth/next-path";
+import { authPageHref, deletionPendingHref, isFocusPage, safeNextPath } from "@/lib/auth/next-path";
 
 describe("safeNextPath", () => {
   it.each([
@@ -67,5 +67,30 @@ describe("deletionPendingHref", () => {
   it("next 是首页或不合法时不带参数", () => {
     expect(deletionPendingHref("/")).toBe("/account/deletion-pending");
     expect(deletionPendingHref("//evil.com")).toBe("/account/deletion-pending");
+  });
+});
+
+describe("专注布局的页面", () => {
+  it.each([
+    "/login",
+    "/register",
+    "/forgot-password",
+    "/verify-email",
+    "/reset-password",
+    "/confirm-email-change",
+    "/revert-email-change",
+    "/account/deletion-pending",
+  ])("%s 不能作为 next", (page) => {
+    expect(safeNextPath(page)).toBe("/");
+    expect(safeNextPath(`${page}?next=%2Fpapers`)).toBe("/");
+  });
+
+  it("末尾带斜杠也算", () => {
+    expect(isFocusPage("/account/deletion-pending/")).toBe(true);
+  });
+
+  it("设置页、首页不是专注页", () => {
+    expect(isFocusPage("/settings/account")).toBe(false);
+    expect(isFocusPage("/")).toBe(false);
   });
 });

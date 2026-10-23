@@ -31,3 +31,15 @@ describe("requireUser", () => {
     await expect(requireUser("/settings/profile")).rejects.toThrow(/不可用/);
   });
 });
+
+describe("requireUser：冷静期", () => {
+  it("冷静期账号去取消注销页，next 是这一页", async () => {
+    vi.mocked(lookupSession).mockResolvedValue({
+      status: "authenticated",
+      user: { ...USER, status: "PENDING_DELETION", deletionDueAt: "2026-11-06T00:00:00Z" },
+    });
+    await expect(requireUser("/settings/account")).rejects.toThrow(
+      "NEXT_REDIRECT:/account/deletion-pending?next=%2Fsettings%2Faccount",
+    );
+  });
+});

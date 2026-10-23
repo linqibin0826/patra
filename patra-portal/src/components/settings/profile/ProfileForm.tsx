@@ -18,8 +18,8 @@ import { MeshInterestPicker } from "@/components/settings/profile/MeshInterestPi
 import { OrganizationPicker } from "@/components/settings/profile/OrganizationPicker";
 import { SettingsCard } from "@/components/settings/SettingsCard";
 import { StickySaveBar } from "@/components/settings/StickySaveBar";
-import { authPageHref, deletionPendingHref } from "@/lib/auth/next-path";
 import type { CurrentUser } from "@/lib/auth/types";
+import { useCommonFailureRedirect } from "@/lib/auth/use-common-failure-redirect";
 import { OCCUPATIONS, occupationLabel } from "@/lib/identity/occupation";
 import { type SaveProfileResult, saveProfile } from "@/lib/identity/profile-actions";
 import {
@@ -58,6 +58,7 @@ interface ProfileFormProps {
 export function ProfileForm({ initial, user, privacy }: ProfileFormProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const leave = useCommonFailureRedirect(PAGE);
   const [saving, setSaving] = useState(false);
   const [alert, setAlert] = useState<string | null>(null);
   // 后端报的某个关注领域的错误（`researchInterests[i]`），按主题词 UI 记：调整顺序后仍标在那个词上，
@@ -146,11 +147,8 @@ export function ProfileForm({ initial, user, privacy }: ProfileFormProps) {
         return;
       }
       case "pending-deletion":
-        router.replace(deletionPendingHref(PAGE));
-        return;
       case "signed-out":
-        queryClient.setQueryData(queryKeys.currentUser, null);
-        router.replace(authPageHref("/login", PAGE));
+        leave(result.reason);
         return;
       default:
         setAlert(ALERTS[result.reason]);
