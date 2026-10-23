@@ -30,3 +30,15 @@ describe("AuthShell", () => {
     expect(screen.getByRole("link", { name: "返回" })).toHaveAttribute("href", "/papers?q=GLP-1");
   });
 });
+
+describe("AuthShell 不显示返回", () => {
+  it("back 为 null 时没有「返回」链接", () => {
+    render(
+      <AuthShell title="你的账号正在注销" description="账号将于某日永久删除。" back={null}>
+        <p>内容</p>
+      </AuthShell>,
+    );
+    expect(screen.queryByRole("link", { name: "返回" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Patra 首页" })).toBeInTheDocument();
+  });
+});

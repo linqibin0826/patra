@@ -7,8 +7,8 @@ import { Venation } from "@/components/portal/Venation";
 interface AuthShellProps {
   title: string;
   description: string;
-  /// 「返回」指向的站内路径，已经过 `safeNextPath`
-  back: string;
+  /// 「返回」指向的站内路径，已经过 `safeNextPath`；null 时不显示「返回」（取消注销页不能被绕开，简报 §3.16）
+  back: string | null;
   children: ReactNode;
 }
 
@@ -38,16 +38,18 @@ export function AuthShell({ title, description, back, children }: AuthShellProps
             </span>
           </Link>
           {/* 下划线只在悬停时画出，键盘聚焦时只有焦点环（高保真稿 Spec-Form 05） */}
-          <Link
-            replace
-            href={back}
-            className="group/back inline-flex items-center gap-1.5 rounded-sm py-2 text-sm leading-5 font-medium text-fg-2 transition-colors hover:text-ink-900 max-[880px]:py-3"
-          >
-            <ArrowLeft className="size-3.5 shrink-0" strokeWidth={1.75} aria-hidden="true" />
-            <span className="link-draw pb-px group-hover/back:[background-size:100%_1px]">
-              返回
-            </span>
-          </Link>
+          {back !== null && (
+            <Link
+              replace
+              href={back}
+              className="group/back inline-flex items-center gap-1.5 rounded-sm py-2 text-sm leading-5 font-medium text-fg-2 transition-colors hover:text-ink-900 max-[880px]:py-3"
+            >
+              <ArrowLeft className="size-3.5 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+              <span className="link-draw pb-px group-hover/back:[background-size:100%_1px]">
+                返回
+              </span>
+            </Link>
+          )}
         </header>
         <main className="flex flex-1 flex-col py-6 max-[880px]:pt-10 max-[880px]:pb-0">
           <div aria-hidden="true" className="flex-2 max-[880px]:hidden" />

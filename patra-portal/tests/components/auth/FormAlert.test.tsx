@@ -11,3 +11,16 @@ describe("FormAlert", () => {
     expect(alert.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
   });
 });
+
+describe("FormAlert 的语气", () => {
+  it.each(["success", "info"] as const)("%s 是 status，不打断朗读", (tone) => {
+    render(<FormAlert tone={tone}>密码已重设，请用新密码登录</FormAlert>);
+    expect(screen.getByRole("status")).toHaveTextContent("密码已重设，请用新密码登录");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("显式 danger 仍是 alert", () => {
+    render(<FormAlert tone="danger">没有成功</FormAlert>);
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+  });
+});
