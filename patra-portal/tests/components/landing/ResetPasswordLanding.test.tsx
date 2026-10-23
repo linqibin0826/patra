@@ -54,6 +54,15 @@ describe("ResetPasswordLanding", () => {
     await waitFor(() => expect(screen.getByLabelText("新密码")).toHaveFocus());
   });
 
+  it("提交中：两个密码框都只读", async () => {
+    vi.mocked(resetPassword).mockReturnValue(new Promise(() => {}));
+    const { user } = renderPage();
+    await fill(user, "new-pass-1");
+    expect(await screen.findByRole("button", { name: "提交中…" })).toBeInTheDocument();
+    expect(screen.getByLabelText("新密码")).toHaveAttribute("readonly");
+    expect(screen.getByLabelText("确认新密码")).toHaveAttribute("readonly");
+  });
+
   it("两次不一致：就地提示，不提交", async () => {
     const { user } = renderPage();
     await fill(user, "new-pass-1", "new-pass-2");

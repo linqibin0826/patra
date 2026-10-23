@@ -31,7 +31,7 @@ export function ResetPasswordLanding() {
     getValues,
     setError,
     setFocus,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<ResetPasswordFormValues>({
     resolver: zodResolver(resetPasswordSchema),
     mode: "onSubmit",
@@ -88,38 +88,43 @@ export function ResetPasswordLanding() {
         ),
       })}
     >
-      {alert && <FormAlert>{alert}</FormAlert>}
-      <FormField
-        id="reset-new-password"
-        label="新密码"
-        hint="至少 8 位"
-        error={errors.newPassword?.message}
-      >
-        {(control) => (
-          <PasswordInput
-            {...control}
-            {...register("newPassword")}
-            autoComplete="new-password"
-            spellCheck={false}
-            readOnly={isSubmitting}
-            autoFocus
-          />
-        )}
-      </FormField>
-      <FormField
-        id="reset-confirm-password"
-        label="确认新密码"
-        error={errors.confirmPassword?.message}
-      >
-        {(control) => (
-          <PasswordInput
-            {...control}
-            {...register("confirmPassword")}
-            autoComplete="new-password"
-            spellCheck={false}
-          />
-        )}
-      </FormField>
+      {(busy) => (
+        <>
+          {alert && <FormAlert>{alert}</FormAlert>}
+          <FormField
+            id="reset-new-password"
+            label="新密码"
+            hint="至少 8 位"
+            error={errors.newPassword?.message}
+          >
+            {(control) => (
+              <PasswordInput
+                {...control}
+                {...register("newPassword")}
+                autoComplete="new-password"
+                spellCheck={false}
+                readOnly={busy}
+                autoFocus
+              />
+            )}
+          </FormField>
+          <FormField
+            id="reset-confirm-password"
+            label="确认新密码"
+            error={errors.confirmPassword?.message}
+          >
+            {(control) => (
+              <PasswordInput
+                {...control}
+                {...register("confirmPassword")}
+                autoComplete="new-password"
+                spellCheck={false}
+                readOnly={busy}
+              />
+            )}
+          </FormField>
+        </>
+      )}
     </TokenLandingPage>
   );
 }

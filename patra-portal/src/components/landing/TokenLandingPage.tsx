@@ -35,8 +35,9 @@ interface TokenLandingPageProps<S, C> {
   pendingLabel: string;
   /// 主按钮用危险色（撤销改邮箱）
   danger?: boolean;
-  /// 就绪态里说明与按钮之间的内容（撤销页的说明列表、重设页的密码字段），与按钮在同一个表单里
-  children?: ReactNode;
+  /// 就绪态里说明与按钮之间的内容（撤销页的说明列表、重设页的密码字段），与按钮在同一个表单里。传函数时拿到
+  /// 「提交中」，字段据此只读（简报 §6）
+  children?: ReactNode | ((busy: boolean) => ReactNode);
   /// 就绪态把焦点放在主按钮上；重设密码页由自己的第一个输入框接管，传 false
   focusAction?: boolean;
   /// 点主按钮后提交令牌
@@ -160,7 +161,7 @@ export function TokenLandingPage<S, C = never>({
         className="mt-6 flex flex-col gap-5"
       >
         {phase.name === "ready" && phase.failed && <FormAlert>没有成功，请稍后再试</FormAlert>}
-        {children}
+        {typeof children === "function" ? children(busy) : children}
         <button
           ref={actionRef}
           type="submit"
