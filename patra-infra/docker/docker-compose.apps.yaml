@@ -7,7 +7,7 @@ name: patra-apps
 # env_file 按「本地变量、密钥」叠加（后者覆盖同名）：
 #   .env.common   本地变量 PATRA_INFRA_HOST、PATRA_LOG_DIR。6 个后端服务的其余配置都在 Nacos（patra-infra/nacos/dev/）
 #   ${HOME}/.patra/secrets/*.env   密钥，放在仓库外（见 README「密钥」）：
-#     redis.env     Redis 密码。catalog、identity、gateway 必需
+#     redis.env     Redis 密码。catalog、identity 必需（gateway 经 identity 查会话，不连 Redis）
 #     gateway.env   网关签身份断言的私钥。gateway 必需
 #     nacos.env     Nacos 应用账号 patra-app。6 个后端服务必需
 #     mail.env      真实邮件服务商（Resend）的 SMTP 凭据。identity 可选，缺失时邮件发往 core 栈的 Mailpit
@@ -129,8 +129,6 @@ services:
     env_file:
       - .env.common
       - path: ${HOME}/.patra/secrets/nacos.env
-        required: true
-      - path: ${HOME}/.patra/secrets/redis.env
         required: true
       - path: ${HOME}/.patra/secrets/gateway.env
         required: true

@@ -1,6 +1,6 @@
 # 会话存储归 identity 独占：网关调 identity 查会话（PAP-106）
 
-> **状态**：设计（2026-10-23，分支 `refactor/pap-106-session-introspection`，从 `feat/v0.12-user-center-api` 切出）
+> **状态**：已实施（2026-10-23，分支 `refactor/pap-106-session-introspection`，基于 main；开发时从 v0.12 后端分支切出，v0.12 经 #273 合入后变基）
 > **Issue**：PAP-106
 > **改写**：`docs/patra/specs/2026-10-09-identity-session-design.md` 第 5 节（模块）与第 7 节（会话模块的接口）、`docs/patra/specs/2026-10-09-gateway-auth-design.md` 的查会话部分、v0.8 release spec 决策 B 的补充与决策 C
 
@@ -39,6 +39,7 @@
 | `patra-identity-infra` | 收下会话模块的类（包 `dev.patra.identity.infra.adapter.session`）、8 段 Lua（`src/main/resources/redis/`）、单测与 `RedisSessionStoreIT`；`SessionStoreAdapter` 实现新方法；`build.gradle.kts` 去掉对会话模块的依赖 |
 | `patra-identity-adapter` | `rest/internal/SessionEndpointImpl` 实现 `SessionEndpoint`；依赖 `patra-identity-api` |
 | `patra-identity-boot` | `RedisSessionStore` 的 Bean 改引 infra 的类；去掉对会话模块的依赖；集成测试改引 infra 的类 |
+| `patra-tool-http-client` | `RestClientFactory` 把分组超时的请求工厂改到 customizer 之后设（第 6 节「实施中发现」） |
 | `patra-gateway-boot` | 去掉会话模块依赖，加 `patra-tool-http-client` 与 `patra-identity-api`；`IdentityClientConfiguration`；转换器改造；`application.yml` 去掉 `spring.data.redis`，加 `identity` 分组超时 |
 | `patra-infra` | `nacos/dev/patra-gateway.yaml` 去掉 `spring.data.redis.password`；`docker-compose.apps.yaml` 的 gateway 去掉 `redis.env`；`docker/README.md`、`secrets/redis.env.example`、`CLAUDE.md` 里「redis.env 给 gateway」的描述同步 |
 
@@ -63,7 +64,7 @@ public record SessionIntrospectionResp(
 ```
 
 - 令牌放请求体，不放 `Authorization`：identity 的过滤器链会把 `Authorization: Bearer` 当身份断言验签，会话令牌放进去会被拒成 401。放请求体也让令牌不进 URL 和访问日志。
-- 令牌格式不对、会话不存在、过了绝对期：`200 {"active": false}`，其余字段为空。形状参照 RFC 7662 的 `active`。
+- 令牌格式不对、会话不存在、过了绝对期：`200 {"active": false, ...}`，其余字段为 `null`。形状参照 RFC 7662 的 `active`。
 - 会话在：`200 {"active": true, "userId": "…", "sessionId": "…", "accountType": …, "clientType": …}`。`Long` 经 identity 的 MVC 转换器写成字符串，网关的 `JsonMapper` 读回 `Long`（集成测试钉住）。
 - Redis 暂时不可用：identity 照现有规则回 503（`IDN-0503`，`DEP_UNAVAILABLE`）。
 - 外部访问：网关拒绝名单已含 `/*/_internal/**`，`/patra-identity/_internal/sessions/introspect` 从外部打是 403（集成测试补一条）。服务之间直连信任内网，属 v0.8 边界 F。
@@ -92,6 +93,11 @@ public record SessionIntrospectionResp(
 
   不带令牌的请求不调 identity，不受 identity 可用性影响。
 
+实施中发现：`RestClientFactory` 原先先设分组的 Apache 请求工厂、再应用全部 `RestClientCustomizer`，而 Spring Cloud Gateway 的
+`gatewayRestClientCustomizer` 会把容器里的请求工厂（网关是 Reactor Netty）设到每个 builder 上。结果是网关里的内部客户端丢了
+分组超时；而且负载均衡还原 URI 时，`SimpleDiscoveryClient` 之类 `getScheme()` 为空的实例会沿用 `lb` 协议，Apache 能连，Reactor 拒绝
+（`Invalid scheme [lb]`）。改为在 customizer 之后设分组工厂，网关与其他服务走同一条路（`RestClientFactoryTest` 钉住）。
+
 ## 7. 测试
 
 - identity-infra：会话模块的单测与 `RedisSessionStoreIT` 原样搬入（只改包名）；`SessionStoreAdapterTest` 加 `findAndTouch` 三种情形（格式不对不碰存储、查不到、查到转 `CurrentUser`）。
@@ -99,17 +105,19 @@ public record SessionIntrospectionResp(
 - identity-adapter：`SessionEndpointImpl` 的 `@WebMvcTest` 切片（active / inactive 的 JSON 形状，`Long` 为字符串）。
 - identity-boot：`SessionFlowIT` 加一条：登录 → introspect 为 active → 登出 → introspect 为 inactive；60 秒节流由 `RedisSessionStoreIT` 覆盖。
 - gateway 单测：`SessionTokenAuthenticationConverterTest` 改为 mock `SessionEndpoint`，覆盖上表四类失败与 active / inactive。
-- gateway 集成测试：去掉 `RedisContainerInitializer`；`GatewayITSessions` 改成给 WireMock 的 identity 桩 introspect（按令牌返回 active / inactive）；`GatewayRedisUnavailableIT` 改成 `GatewayIdentityUnavailableIT`（identity 回 503 problem、identity 端口关闭两种，均 503，且下游未被调用；不带令牌照常放行）；拒绝名单补 `/_internal/sessions/introspect`；ArchUnit 式检查不需要，AC「网关类路径无 Spring Data Redis」用 `./gradlew :patra-api:patra-gateway-boot:dependencies` 核对。
+- gateway 集成测试：去掉 `RedisContainerInitializer`（网关集成测试不再需要 Docker）；`GatewayITSessions` 改成给 WireMock 的 identity 桩 introspect（`issue` / `revoke`，优先级最高；没登记的令牌落到优先级最低的 inactive 兜底）；原「续期不越过绝对期」用例改为「同一令牌两次请求查两次、令牌只在请求体」（续期由 identity 的 `RedisSessionStoreIT` 覆盖）；`GatewayRedisUnavailableIT` 改成 `GatewayIdentityUnavailableIT`（identity 回 503 problem、连接被重置两种，均 503 且不转下游；不带令牌不查会话）；拒绝名单补 `/_internal/sessions/introspect`；`PatraGatewayApplicationIT` 断言类路径上没有 Spring Data Redis。
 
-## 8. 上线顺序（合入 main 后）
+## 8. 上线（合入 main 后由 CD 完成）
 
-`ConfigSourceCheckPostProcessor` 会拒绝 Nacos 配置里解析不了的 `${REDIS_PASSWORD}`，所以：
+`ConfigSourceCheckPostProcessor` 会让「Nacos 配置里有解析不了的 `${变量}`」的服务启动失败。本分支同时改了
+`nacos/dev/patra-gateway.yaml`（去掉 `spring.data.redis.password: ${REDIS_PASSWORD}`）和 `docker-compose.apps.yaml`
+（gateway 不再加载 `redis.env`）。CD 的顺序是先 `nacos-push` 全量同步、再构建部署，所以新网关启动时 Nacos 里已没有这个引用，
+不需要手动分步。`patra-common.yaml` 里 Redis 的地址和账号不含密码引用，网关读到也不用。
 
-1. CD 部署新网关（compose 仍给 `redis.env`，旧的 Nacos 配置仍能解析，新代码不读它）。
-2. 推送 `patra-gateway.yaml`（去掉 Redis 密码）到 mini 的 Nacos。
-3. compose 去掉 gateway 的 `redis.env` 后重建网关容器。
-
-这三步的文件改动随本分支提交，执行在合入后由用户确认再做。
+- 推送与部署之间的几分钟里旧网关仍在跑：它已建立的 Redis 连接不受配置刷新影响，只有重连时才会因缺密码失败。
+- 改了 compose，CD 按「改公共面」重建全部 6 个服务；gateway 与 identity 同批部署，`deploy.sh` 里 identity 先于 gateway。
+- 回滚网关到本版之前的镜像不可行：旧网关要读 Redis 密码，而 Nacos 与 compose 都已不再提供（同 PAP-66 删 `CATALOG_REDIS_URL` 的情形）。
+  要回滚就 git revert 本分支的基建改动后走 CD。
 
 ## 9. 文档同步
 

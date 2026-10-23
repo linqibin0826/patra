@@ -87,6 +87,7 @@
             "impacts": [
                 "catalog",
                 "foundation",
+                "gateway",
                 "identity",
                 "ingest",
                 "object-storage",
@@ -118,6 +119,18 @@
             "tasks": [
                 "check",
                 "integrationTest"
+            ]
+        },
+        {
+            "dir": "patra-api/patra-identity/patra-identity-api",
+            "project": ":patra-api:patra-identity:patra-identity-api",
+            "unit": "identity",
+            "impacts": [
+                "gateway",
+                "identity"
+            ],
+            "tasks": [
+                "check"
             ]
         },
         {
@@ -159,19 +172,6 @@
             "project": ":patra-api:patra-identity:patra-identity-infra",
             "unit": "identity",
             "impacts": [
-                "identity"
-            ],
-            "tasks": [
-                "check",
-                "integrationTest"
-            ]
-        },
-        {
-            "dir": "patra-api/patra-identity/patra-identity-session",
-            "project": ":patra-api:patra-identity:patra-identity-session",
-            "unit": "identity",
-            "impacts": [
-                "gateway",
                 "identity"
             ],
             "tasks": [

@@ -17,7 +17,7 @@
 
 **Files:** `patra-identity-session/src/**` → `patra-identity-infra` 的 `dev.patra.identity.infra.adapter.session`（main / test / integrationTest，Lua 进 `src/main/resources/redis/`）；infra、boot 的 `build.gradle.kts`；infra 与 boot 里引用 `dev.patra.identity.session` 的类。
 
-会话模块暂不删除（网关还在用，Task 5 之后删）。infra 已有 `spring-boot-starter-data-redis`；integrationTest 用测试 starter 的 `RedisContainerInitializer`。
+会话模块的目录与构建文件 Task 6 再删；网关依赖已清空的会话模块，编译在 Task 5 之前不过（实际按此执行）。infra 已有 `spring-boot-starter-data-redis`；integrationTest 用测试 starter 的 `RedisContainerInitializer`。
 
 验证：`:patra-identity-infra:test :patra-identity-infra:integrationTest`（含搬来的 `RedisSessionStoreIT`）、`:patra-identity-boot:test`、boot 编译集成测试。
 
