@@ -113,10 +113,6 @@ describe("已登录的人打开登录页、注册页时直接跳走", () => {
       headers: { "Content-Type": "application/problem+json" },
     });
 
-  it("matcher 包含登录页和注册页，详情页的两项不变", () => {
-    expect(config.matcher).toEqual(["/papers/:id", "/journals/:id", "/login", "/register"]);
-  });
-
   it.each(["/login", "/register"])("已登录时 GET %s 回 307，跳到 next", async (page) => {
     fetchMock.mockResolvedValue(json(200, ME_RESPONSE));
     const res = await proxy(signedIn(`${page}?next=%2Fpapers%3Fq%3DGLP-1`));
@@ -197,5 +193,139 @@ describe("已登录的人打开登录页、注册页时直接跳走", () => {
     const res = await proxy(signedIn("/login"));
     expect(res.headers.get("x-middleware-next")).toBe("1");
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("冷静期账号整页打开任何页面都去取消注销页", () => {
+  const TOKEN = "patra_user_abc";
+  const PENDING = {
+    ...ME_RESPONSE,
+    status: "PENDING_DELETION",
+    deletionDueAt: "2026-11-06T00:00:00Z",
+  };
+
+  beforeEach(() => {
+    vi.stubEnv("PATRA_SESSION_COOKIE_SECURE", "false");
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const signedIn = (path: string, headers: Record<string, string> = {}) =>
+    request(path, { "sec-fetch-dest": "document", cookie: `patra_session=${TOKEN}`, ...headers });
+  const me = (body: unknown) => Response.json(body, { status: 200 });
+
+  it("matcher 覆盖全部页面，不含 api、_next 与静态文件", () => {
+    const [matcher] = config.matcher;
+    const inner = matcher?.replace(/^\/\(/, "").replace(/\)$/, "") ?? "";
+    const regex = new RegExp(`^/${inner}$`);
+    for (const path of ["/", "/settings/account", "/u/chen-yu", "/papers/42", "/login"]) {
+      expect(regex.test(path), path).toBe(true);
+    }
+    for (const path of ["/api/auth/me", "/_next/static/x.js", "/icon.svg"]) {
+      expect(regex.test(path), path).toBe(false);
+    }
+  });
+
+  it("redirects_pending_account_on_document_get", async () => {
+    fetchMock.mockResolvedValue(me(PENDING));
+    const res = await proxy(signedIn("/papers?q=a"));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe(
+      "http://portal.test/account/deletion-pending?next=%2Fpapers%3Fq%3Da",
+    );
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("http://gw.test/patra-identity/auth/me");
+  });
+
+  it("keeps_query_in_next_when_redirecting_pending_account", async () => {
+    fetchMock.mockResolvedValue(me(PENDING));
+    const res = await proxy(signedIn("/papers?q=a#x"));
+    expect(res.headers.get("location")).toBe(
+      "http://portal.test/account/deletion-pending?next=%2Fpapers%3Fq%3Da",
+    );
+  });
+
+  it("首页也拦", async () => {
+    fetchMock.mockResolvedValue(me(PENDING));
+    const res = await proxy(signedIn("/"));
+    expect(res.headers.get("location")).toBe("http://portal.test/account/deletion-pending");
+  });
+
+  it("正常账号放行", async () => {
+    fetchMock.mockResolvedValue(me(ME_RESPONSE));
+    const res = await proxy(signedIn("/settings/account"));
+    expect(res.headers.get("x-middleware-next")).toBe("1");
+  });
+
+  it("没有 Cookie 不请求网关", async () => {
+    const res = await proxy(request("/settings/account"));
+    expect(res.headers.get("x-middleware-next")).toBe("1");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("站内跳转（sec-fetch-dest: empty）不查", async () => {
+    const res = await proxy(signedIn("/settings/account", { "sec-fetch-dest": "empty" }));
+    expect(res.headers.get("x-middleware-next")).toBe("1");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("POST 不查", async () => {
+    const req = new NextRequest("http://portal.test/settings/account", {
+      method: "POST",
+      headers: { cookie: `patra_session=${TOKEN}`, "sec-fetch-dest": "document" },
+    });
+    const res = await proxy(req);
+    expect(res.headers.get("x-middleware-next")).toBe("1");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    "/forgot-password",
+    "/verify-email",
+    "/reset-password",
+    "/confirm-email-change",
+    "/revert-email-change",
+    "/account/deletion-pending",
+  ])("专注页 %s 不查", async (path) => {
+    const res = await proxy(signedIn(path));
+    expect(res.headers.get("x-middleware-next")).toBe("1");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["网关抛错", () => Promise.reject(new DOMException("timed out", "TimeoutError"))],
+    ["网关 500", () => Promise.resolve(new Response(null, { status: 500 }))],
+  ])("%s时放行", async (_label, reply) => {
+    fetchMock.mockImplementation(reply);
+    const res = await proxy(signedIn("/settings/account"));
+    expect(res.headers.get("x-middleware-next")).toBe("1");
+  });
+
+  it("详情页：冷静期跳转优先于 404 检查", async () => {
+    fetchMock.mockImplementation(async (url) =>
+      String(url).endsWith("/auth/me") ? me(PENDING) : new Response(null, { status: 404 }),
+    );
+    const res = await proxy(signedIn("/papers/42"));
+    expect(res.headers.get("location")).toBe(
+      "http://portal.test/account/deletion-pending?next=%2Fpapers%2F42",
+    );
+  });
+
+  it("详情页：正常账号照旧做 404 检查", async () => {
+    fetchMock.mockImplementation(async (url) =>
+      String(url).endsWith("/auth/me") ? me(ME_RESPONSE) : new Response(null, { status: 404 }),
+    );
+    const res = await proxy(signedIn("/papers/42"));
+    expect(rewrittenTo(res)).toBe("http://portal.test/missing/paper");
+  });
+
+  it("冷静期账号打开登录页直接去取消注销页", async () => {
+    fetchMock.mockResolvedValue(me(PENDING));
+    const res = await proxy(signedIn("/login?next=%2Fjournals%2F7"));
+    expect(res.headers.get("location")).toBe(
+      "http://portal.test/account/deletion-pending?next=%2Fjournals%2F7",
+    );
   });
 });
