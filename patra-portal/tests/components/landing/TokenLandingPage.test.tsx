@@ -122,6 +122,19 @@ describe("TokenLandingPage", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
+  it("leaving：页面要跳走了，按钮保持进行中，不能再点", async () => {
+    const submit = vi.fn(async () => ({ kind: "leaving" }) as const);
+    renderLanding(`#token=${TOKEN}`, submit);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "验证邮箱" }));
+    expect(await screen.findByRole("button", { name: "验证中…" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    await user.click(screen.getByRole("button", { name: "验证中…" }));
+    expect(submit).toHaveBeenCalledTimes(1);
+  });
+
   it("「返回」去首页", async () => {
     renderLanding(`#token=${TOKEN}`, vi.fn());
     expect(await screen.findByRole("link", { name: "返回" })).toHaveAttribute("href", "/");

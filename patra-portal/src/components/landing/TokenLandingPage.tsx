@@ -10,13 +10,15 @@ import { btnBlock, btnDanger, btnPrimary } from "@/lib/portal-ui";
 import { cn } from "@/lib/utils";
 
 /// 一次提交的结果：成功（带数据）、链接无效、冲突（带数据）、服务错误（回就绪态 + 通用提示条）、
-/// 留在就绪态（页面已自己显示了错误，比如重设密码的字段错误与限流）
+/// 留在就绪态（页面已自己显示了错误，比如重设密码的字段错误与限流）、页面要跳走了（重设成功去登录页：按钮
+/// 保持进行中，不能再点）
 export type LandingOutcome<S, C = never> =
   | { kind: "succeeded"; data: S }
   | { kind: "invalid" }
   | { kind: "conflict"; data: C }
   | { kind: "unavailable" }
-  | { kind: "stay" };
+  | { kind: "stay" }
+  | { kind: "leaving" };
 
 /// 结果屏：成功是绿色对勾，无效与冲突是红色感叹号；`actions` 是下一步按钮
 export interface LandingScreen {
@@ -105,6 +107,8 @@ export function TokenLandingPage<S, C = never>({
         return;
       case "invalid":
         setPhase({ name: "invalid" });
+        return;
+      case "leaving":
         return;
       default:
         setPhase({ name: "ready", token, failed: outcome.kind === "unavailable" });

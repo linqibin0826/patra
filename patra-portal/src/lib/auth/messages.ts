@@ -291,3 +291,14 @@ export const VERIFY_LANDING_MESSAGES = {
   continue: "继续浏览",
   login: "登录",
 } as const;
+
+/// 重设密码落地页（简报 §3.18 b，画板 Landing）
+export const RESET_LANDING_MESSAGES = {
+  title: "设置新密码",
+  description: "提交后，所有设备都会退出登录。",
+  action: "设置新密码",
+  pending: "提交中…",
+  invalidTitle: "链接无效或已过期",
+  invalidDescription: "重设链接 1 小时内有效，而且只能用一次。",
+  again: "重新申请",
+} as const;

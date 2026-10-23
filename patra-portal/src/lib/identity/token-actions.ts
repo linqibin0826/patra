@@ -97,3 +97,51 @@ export async function verifyEmail(
   }
   return result.reason === "invalid" ? { ok: false, reason: "invalid" } : UNAVAILABLE;
 }
+
+/// 重设密码的结果。不带文案。
+export type ResetResult =
+  | { ok: true; email: string }
+  | { ok: false; reason: "invalid" }
+  | { ok: false; reason: "invalid-password"; code: string | null }
+  | { ok: false; reason: "throttled"; retryAfterSeconds: number | null }
+  | Unavailable;
+
+const RESET_PATH = "/auth/password/reset";
+
+/// 提交新密码（`POST /auth/password/reset`）：200 带邮箱，不自动登录（全部会话已撤销）；422 `token` 是链接无效、
+/// `newPassword` 带原因码（令牌没被消费，可以改了再交）；429 过于频繁。
+export async function resetPassword(input: {
+  token: string;
+  newPassword: string;
+}): Promise<ResetResult> {
+  const endpoint = `/patra-identity${RESET_PATH}`;
+  const reply = await callIdentity(
+    RESET_PATH,
+    { method: "POST", json: { token: input.token, newPassword: input.newPassword } },
+    { auth: "optional" },
+  );
+  if (reply.kind === "ok") {
+    const parsed = reply.res.status === 200 ? emailSchema.safeParse(reply.body) : undefined;
+    if (!parsed?.success) {
+      logUnexpectedResponse(endpoint, reply.res.status, reply.body);
+      return UNAVAILABLE;
+    }
+    return { ok: true, email: parsed.data.email };
+  }
+  if (reply.kind !== "problem") {
+    return UNAVAILABLE;
+  }
+  const { problem } = reply;
+  if (problem.status === 422 && problem.errors.some((error) => error.field === "token")) {
+    return { ok: false, reason: "invalid" };
+  }
+  const passwordError = problem.errors.find((error) => error.field === "newPassword");
+  if (problem.status === 422 && passwordError) {
+    return { ok: false, reason: "invalid-password", code: passwordError.code };
+  }
+  if (problem.status === 429) {
+    return { ok: false, reason: "throttled", retryAfterSeconds: problem.retryAfterSeconds };
+  }
+  unexpectedProblem(endpoint, problem);
+  return UNAVAILABLE;
+}

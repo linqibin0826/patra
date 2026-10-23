@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { resetCookieJar } from "@tests/stubs/cookie-jar";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { requestPasswordReset, verifyEmail } from "@/lib/identity/token-actions";
+import { requestPasswordReset, resetPassword, verifyEmail } from "@/lib/identity/token-actions";
 
 vi.mock("next/headers", () => import("@tests/stubs/cookie-jar"));
 
@@ -115,5 +115,50 @@ describe("verifyEmail", () => {
     resetCookieJar();
     await expect(verifyEmail(TOKEN)).resolves.toEqual({ ok: false, reason: "unavailable" });
     expect(console.error).toHaveBeenCalled();
+  });
+});
+
+describe("resetPassword", () => {
+  it("200：POST /auth/password/reset，返回邮箱", async () => {
+    respond(200, { email: "a@b.com" });
+    resetCookieJar();
+    await expect(resetPassword({ token: TOKEN, newPassword: "new-pass-1" })).resolves.toEqual({
+      ok: true,
+      email: "a@b.com",
+    });
+    expect(lastRequest()).toMatchObject({
+      url: "http://gw.test/patra-identity/auth/password/reset",
+      method: "POST",
+      body: { token: TOKEN, newPassword: "new-pass-1" },
+    });
+  });
+
+  it("422 token：invalid", async () => {
+    respond(422, { code: "IDN-0422", errors: [{ field: "token", code: "INVALID" }] });
+    resetCookieJar();
+    await expect(resetPassword({ token: TOKEN, newPassword: "x" })).resolves.toEqual({
+      ok: false,
+      reason: "invalid",
+    });
+  });
+
+  it("422 newPassword：invalid-password，带原因码", async () => {
+    respond(422, { code: "IDN-0422", errors: [{ field: "newPassword", code: "TOO_COMMON" }] });
+    resetCookieJar();
+    await expect(resetPassword({ token: TOKEN, newPassword: "password" })).resolves.toEqual({
+      ok: false,
+      reason: "invalid-password",
+      code: "TOO_COMMON",
+    });
+  });
+
+  it("429：throttled", async () => {
+    respond(429, { code: "IDN-0429", retryAfterSeconds: 125 });
+    resetCookieJar();
+    await expect(resetPassword({ token: TOKEN, newPassword: "new-pass-1" })).resolves.toEqual({
+      ok: false,
+      reason: "throttled",
+      retryAfterSeconds: 125,
+    });
   });
 });

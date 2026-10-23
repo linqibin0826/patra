@@ -81,3 +81,16 @@ export type ChangePasswordFormValues = z.input<typeof changePasswordSchema>;
 export const forgotPasswordSchema = z.object({ email: emailField });
 
 export type ForgotPasswordFormValues = z.input<typeof forgotPasswordSchema>;
+
+/// 重设密码落地页：新密码同注册页，确认新密码只在前端比对
+export const resetPasswordSchema = z
+  .object({
+    newPassword: newPasswordField,
+    confirmPassword: z.string().min(1, FIELD_MESSAGES.confirmNewRequired),
+  })
+  .refine((values) => values.newPassword === values.confirmPassword, {
+    path: ["confirmPassword"],
+    error: FIELD_MESSAGES.confirmMismatch,
+  });
+
+export type ResetPasswordFormValues = z.input<typeof resetPasswordSchema>;
