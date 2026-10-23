@@ -111,6 +111,12 @@ describe("SessionsCard", () => {
     expect(row).toHaveTextContent(/内网(?! ·)/);
   });
 
+  it("属地是空串或空白：按属地未知", async () => {
+    renderCard([{ ...(SESSIONS[2] as SessionItem), ipRegion: "  " }]);
+    const [row] = await rows();
+    expect(row).toHaveTextContent("属地未知 · 101.88.12.9");
+  });
+
   it("treats_blank_device_name_as_unknown", async () => {
     renderCard([{ ...(SESSIONS[1] as SessionItem), deviceName: "  " }]);
     const [row] = await rows();

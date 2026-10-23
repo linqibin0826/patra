@@ -30,11 +30,11 @@ interface SessionRowProps {
 const deviceName = (session: SessionItem) =>
   session.deviceName?.trim() || SESSIONS_MESSAGES.unknownDevice;
 
-/// 第二行：内网 / 属地 / 属地未知，IP 有才接「 · IP」
+/// 第二行：内网 / 属地 / 属地未知（空或全是空白也算未知），IP 有才接「 · IP」
 function whereText(session: SessionItem): string {
   const region = session.privateNetwork
     ? SESSIONS_MESSAGES.privateNetwork
-    : (session.ipRegion ?? SESSIONS_MESSAGES.unknownRegion);
+    : session.ipRegion?.trim() || SESSIONS_MESSAGES.unknownRegion;
   return session.ipAddress ? `${region} · ${session.ipAddress}` : region;
 }
 
