@@ -21,7 +21,8 @@ beforeEach(() => {
 afterEach(() => {
   useAuthHandoffStore.getState().take();
   vi.useRealTimers();
-  vi.clearAllMocks();
+  // 重置而不只是清空：一条用例中途失败时，没用掉的 mockResolvedValueOnce 不能漏到下一条
+  vi.resetAllMocks();
 });
 
 function renderForm() {
@@ -92,11 +93,12 @@ describe("ForgotPasswordForm", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("没收到？先看看垃圾邮件。")).toBeInTheDocument();
-    expect(screen.getByText("52 秒后可重新发送")).toBeInTheDocument();
-    act(() => {
-      vi.advanceTimersByTime(53_000);
+    // 假时钟随真实时间推进（shouldAdvanceTime），机器忙时可能已过去一两秒
+    expect(screen.getByText(/^(5[0-2]) 秒后可重新发送$/)).toBeInTheDocument();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(53_000);
     });
-    expect(screen.getByRole("button", { name: "重新发送" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "重新发送" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "返回登录" })).toHaveAttribute(
       "href",
       "/login?next=%2Fpapers",
@@ -132,11 +134,11 @@ describe("ForgotPasswordForm", () => {
       .mockResolvedValueOnce({ ok: false, reason: "throttled", retryAfterSeconds: 30 });
     const user = renderForm();
     await send(user, "a@b.com");
-    act(() => {
-      vi.advanceTimersByTime(2_000);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
     });
-    await user.click(screen.getByRole("button", { name: "重新发送" }));
-    expect(screen.getByText("发送太频繁，请 30 秒后再试")).toBeInTheDocument();
+    await user.click(await screen.findByRole("button", { name: "重新发送" }));
+    expect(screen.getByText(/^发送太频繁，请 (2[89]|30) 秒后再试$/)).toBeInTheDocument();
   });
 
   it("服务错误：没有发出去，请稍后再试", async () => {
