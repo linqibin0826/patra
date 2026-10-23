@@ -32,7 +32,7 @@ export function UserMenu({ user, loggingOut, onLogout }: UserMenuProps) {
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label="账号菜单"
-        className="inline-flex shrink-0 rounded-full transition-shadow hover:shadow-[0_0_0_3px_var(--color-paper-300)] data-popup-open:shadow-[0_0_0_3px_var(--color-paper-300)]"
+        className="inline-flex shrink-0 rounded-full ring-paper-300 transition-shadow hover:ring-3 data-popup-open:ring-3"
       >
         <Avatar identity={user} size={36} />
       </DropdownMenuTrigger>

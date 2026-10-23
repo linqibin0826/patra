@@ -29,7 +29,7 @@ export function Slider({ value, min, max, step, onValueChange, disabled, ...prop
           <SliderPrimitive.Indicator className="rounded-full bg-clay-500" />
           <SliderPrimitive.Thumb
             aria-label={props["aria-label"]}
-            className="size-4 rounded-full border border-border-strong bg-paper-50 shadow-sm outline-none data-dragging:scale-110 focus-visible:ring-4 focus-visible:ring-clay-500/20"
+            className="size-4 rounded-full border border-border-strong bg-paper-50 shadow-sm outline-none data-dragging:scale-110"
           />
         </SliderPrimitive.Track>
       </SliderPrimitive.Control>

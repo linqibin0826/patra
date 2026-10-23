@@ -33,7 +33,7 @@ export function UnverifiedEmailBanner() {
             <Suspense>
               <ResendVerificationButton />
             </Suspense>
-            <span aria-hidden="true" className="text-fg-4 max-[880px]:hidden">
+            <span aria-hidden="true" className="text-fg-3 max-[880px]:hidden">
               ·
             </span>
             <Link

@@ -53,7 +53,7 @@ export function Dialog({
         <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-bg-scrim transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0 supports-backdrop-filter:backdrop-blur-xs" />
         <DialogPrimitive.Popup
           className={cn(
-            "fixed z-50 flex flex-col gap-5 overflow-y-auto bg-bg-elevated p-6 text-fg-1 shadow-lg outline-none transition-[opacity,translate,scale] duration-300 ease-out-expo",
+            "fixed z-50 flex flex-col gap-5 overflow-y-auto bg-bg-elevated p-6 text-fg-1 shadow-lg outline-none transition-opacity motion-safe:transition-[opacity,translate,scale] duration-300 ease-out-expo",
             "min-[881px]:top-1/2 min-[881px]:left-1/2 min-[881px]:max-h-[calc(100dvh-4rem)] min-[881px]:-translate-x-1/2 min-[881px]:-translate-y-1/2 min-[881px]:rounded-xl data-starting-style:opacity-0 motion-safe:min-[881px]:data-starting-style:scale-[0.98] data-ending-style:opacity-0",
             "max-[880px]:inset-0 max-[880px]:px-4 max-[880px]:pb-[max(1.5rem,env(safe-area-inset-bottom))] motion-safe:max-[880px]:data-starting-style:translate-y-8",
             WIDTH[size],
