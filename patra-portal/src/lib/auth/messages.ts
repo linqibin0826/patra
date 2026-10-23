@@ -21,6 +21,7 @@ export const TOAST_MESSAGES = {
   loggedIn: "已登录",
   registered: "注册成功，已登录",
   loggedOut: "已退出登录",
+  deletionCancelled: "已取消注销，欢迎回来",
 } as const;
 
 /// 注册失败、只能请用户稍后再试时的提示条
@@ -121,3 +122,14 @@ export function resendWaitMessage(seconds: number, limited: boolean): string {
     ? `发送太频繁，请 ${seconds} 秒后再试`
     : `发送太频繁，请 ${Math.ceil(seconds / 60)} 分钟后再试`;
 }
+
+/// 取消注销页（简报 §3.16）
+export const DELETION_PENDING_MESSAGES = {
+  title: "你的账号正在注销",
+  warning: "删除后资料、头像和关注领域无法恢复，用户名不会释放。",
+  cancel: "取消注销，恢复账号",
+  cancelling: "恢复中…",
+  failed: "没有取消成功，请稍后再试",
+  logout: "退出登录",
+  loggingOut: "正在退出…",
+} as const;
