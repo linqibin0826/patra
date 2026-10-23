@@ -6,7 +6,8 @@ import { Venation } from "@/components/portal/Venation";
 
 interface AuthShellProps {
   title: string;
-  description: string;
+  /// 副文案；可以带强调（找回密码已发送态里的邮箱）
+  description: ReactNode;
   /// 「返回」指向的站内路径，已经过 `safeNextPath`；null 时不显示「返回」（取消注销页不能被绕开，简报 §3.16）
   back: string | null;
   /// 标题上方的状态图标（落地页结果、取消注销页，见 `StateIcon`）

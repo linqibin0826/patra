@@ -76,3 +76,8 @@ export const changePasswordSchema = z
   });
 
 export type ChangePasswordFormValues = z.input<typeof changePasswordSchema>;
+
+/// 忘记密码：只有邮箱，规则同注册页
+export const forgotPasswordSchema = z.object({ email: emailField });
+
+export type ForgotPasswordFormValues = z.input<typeof forgotPasswordSchema>;

@@ -261,3 +261,18 @@ export function revokedOthersToast(count: number): string {
 export const LOGIN_NOTICES = {
   passwordReset: "密码已重设，请用新密码登录",
 } as const;
+
+/// 忘记密码页（简报 §3.17、§4.10）
+export const FORGOT_MESSAGES = {
+  title: "找回密码",
+  description: "输入注册时用的邮箱，我们会发一封重设密码的邮件。",
+  submit: "发送重设邮件",
+  submitting: "发送中…",
+  remembered: "想起来了？",
+  sentTitle: "查看你的邮箱",
+  spam: "没收到？先看看垃圾邮件。",
+  resend: "重新发送",
+  changeEmail: "换一个邮箱",
+  backToLogin: "返回登录",
+  failed: "没有发出去，请稍后再试",
+} as const;
