@@ -77,6 +77,21 @@ describe("ResendVerificationButton", () => {
     expect(screen.getByRole("status")).toHaveTextContent("可以重新发送了");
   });
 
+  it("倒计时结束后不再每秒走表", async () => {
+    vi.mocked(resendVerificationEmail).mockResolvedValue({
+      ok: true,
+      nextResendAt: new Date(NOW + 3_000).toISOString(),
+    });
+    renderButton();
+    // QueryClient 自己有回收缓存的定时器，只看按钮带来的
+    const before = vi.getTimerCount();
+    await clickResend();
+    expect(vi.getTimerCount()).toBe(before + 1);
+    act(() => vi.advanceTimersByTime(3_000));
+    expect(screen.getByRole("button", { name: "重新发送" })).toBeEnabled();
+    expect(vi.getTimerCount()).toBe(before);
+  });
+
   it.each([
     [125, "发送太频繁，请 3 分钟后再试"],
     [45, "发送太频繁，请 45 秒后再试"],

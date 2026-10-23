@@ -43,7 +43,14 @@ export function ResendVerificationButton({
       return;
     }
     setNow(Date.now());
-    const timer = setInterval(() => setNow(Date.now()), 1_000);
+    // 每秒走一次；走到可以重发的那一刻就停，不再空转
+    const timer = setInterval(() => {
+      const current = Date.now();
+      setNow(current);
+      if (current >= availableAt) {
+        clearInterval(timer);
+      }
+    }, 1_000);
     return () => clearInterval(timer);
   }, [availableAt]);
 
