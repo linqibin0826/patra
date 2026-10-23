@@ -1,6 +1,7 @@
 package dev.patra.tool.httpclient.factory;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -11,16 +12,20 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 import dev.patra.tool.httpclient.autoconfigure.HttpClientProperties;
 import dev.patra.tool.httpclient.interceptor.InternalCallInterceptor;
+import java.io.IOException;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.restclient.RestClientCustomizer;
+import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.service.annotation.GetExchange;
 import org.springframework.web.service.annotation.HttpExchange;
@@ -164,6 +169,42 @@ class RestClientFactoryTest {
 
       // Then
       verify(customizer).customize(any(RestClient.Builder.class));
+    }
+
+    /// Spring Cloud Gateway 的 `gatewayRestClientCustomizer` 会把容器里的请求工厂设到每个 builder 上；
+    /// 分组配了自己的超时，就不能被它盖掉（PAP-106：网关查会话要 2 秒内超时）。
+    @Test
+    @DisplayName("分组配了超时：customizer 设的请求工厂不生效，请求走分组自己的客户端")
+    @SuppressWarnings("unchecked")
+    void shouldKeepGroupRequestFactoryOverCustomizerFactory() {
+      // Given
+      PropsBuilder properties = new PropsBuilder();
+      GroupBuilder groupProps = new GroupBuilder();
+      groupProps.connectTimeout = Duration.ofMillis(500);
+      groupProps.readTimeout = Duration.ofMillis(500);
+      properties.groups.put("identity", groupProps.build());
+      AtomicBoolean customizerFactoryUsed = new AtomicBoolean();
+      ClientHttpRequestFactory customizerFactory =
+          (uri, method) -> {
+            customizerFactoryUsed.set(true);
+            throw new IOException("customizer 设的请求工厂");
+          };
+      ObjectProvider<RestClientCustomizer> customizers = mock(ObjectProvider.class);
+      when(customizers.orderedStream())
+          .thenReturn(Stream.of(builder -> builder.requestFactory(customizerFactory)));
+      ObjectProvider<InternalCallInterceptor> interceptors = mock(ObjectProvider.class);
+      when(interceptors.orderedStream()).thenReturn(Stream.empty());
+      RestClientFactory factory =
+          new RestClientFactory(customizers, interceptors, properties.build());
+
+      // When：127.0.0.1:1 没人监听，分组的客户端会连接失败
+      RestClient restClient =
+          factory.createRestClient(RestClient.builder(), "identity", "http://127.0.0.1:1");
+      assertThatThrownBy(() -> restClient.get().uri("/x").retrieve().toBodilessEntity())
+          .isInstanceOf(ResourceAccessException.class);
+
+      // Then
+      assertThat(customizerFactoryUsed).isFalse();
     }
 
     @Test
