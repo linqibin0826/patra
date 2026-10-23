@@ -1,6 +1,7 @@
 package dev.patra.tool.httpclient.factory;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -11,16 +12,28 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 import dev.patra.tool.httpclient.autoconfigure.HttpClientProperties;
 import dev.patra.tool.httpclient.interceptor.InternalCallInterceptor;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.restclient.RestClientCustomizer;
+import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.service.annotation.GetExchange;
 import org.springframework.web.service.annotation.HttpExchange;
@@ -164,6 +177,91 @@ class RestClientFactoryTest {
 
       // Then
       verify(customizer).customize(any(RestClient.Builder.class));
+    }
+
+    /// Spring Cloud Gateway 的 `gatewayRestClientCustomizer` 会把容器里的请求工厂设到每个 builder 上；
+    /// 分组配了自己的超时，就不能被它盖掉（PAP-106：网关查会话要 2 秒内超时）。
+    /// 连接池占满时，新请求等连接的时间也受分组超时约束，不按 Apache HttpClient 默认的 3 分钟排队
+    /// （PAP-106：identity 卡住时网关要几秒内 503）。
+    @Test
+    @DisplayName("分组配了超时：连接池占满时等连接按分组的连接超时失败，不排队等前一个请求结束")
+    void shouldFailConnectionLeaseWithinGroupConnectTimeout() throws Exception {
+      // Given：只接受连接、从不回响应的服务端；每个路由只有 1 个连接
+      // executor 先声明后关闭：server 先关，accept 循环才会退出，executor 关闭时不会一直等它
+      try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+          ServerSocket server = new ServerSocket(0, 50, InetAddress.getLoopbackAddress())) {
+        List<Socket> accepted = new CopyOnWriteArrayList<>();
+        executor.submit(
+            () -> {
+              while (!server.isClosed()) {
+                accepted.add(server.accept());
+              }
+              return null;
+            });
+        PropsBuilder properties = new PropsBuilder();
+        properties.maxConnPerRoute = 1;
+        GroupBuilder groupProps = new GroupBuilder();
+        groupProps.connectTimeout = Duration.ofMillis(300);
+        groupProps.readTimeout = Duration.ofSeconds(5);
+        properties.groups.put("identity", groupProps.build());
+        RestClient restClient =
+            createFactory(properties)
+                .createRestClient(
+                    RestClient.builder(), "identity", "http://127.0.0.1:" + server.getLocalPort());
+        Future<?> holder =
+            executor.submit(() -> restClient.get().uri("/hold").retrieve().toBodilessEntity());
+        while (accepted.isEmpty()) {
+          Thread.sleep(10);
+        }
+
+        // When
+        long start = System.nanoTime();
+        assertThatThrownBy(() -> restClient.get().uri("/next").retrieve().toBodilessEntity())
+            .isInstanceOf(ResourceAccessException.class);
+        Duration waited = Duration.ofNanos(System.nanoTime() - start);
+
+        // Then：等连接只等了连接超时那么久，前一个请求还挂着
+        assertThat(waited).isLessThan(Duration.ofSeconds(2));
+        assertThat(holder).isNotDone();
+        holder.cancel(true);
+        for (Socket socket : accepted) {
+          socket.close();
+        }
+      }
+    }
+
+    @Test
+    @DisplayName("分组配了超时：customizer 设的请求工厂不生效，请求走分组自己的客户端")
+    @SuppressWarnings("unchecked")
+    void shouldKeepGroupRequestFactoryOverCustomizerFactory() {
+      // Given
+      PropsBuilder properties = new PropsBuilder();
+      GroupBuilder groupProps = new GroupBuilder();
+      groupProps.connectTimeout = Duration.ofMillis(500);
+      groupProps.readTimeout = Duration.ofMillis(500);
+      properties.groups.put("identity", groupProps.build());
+      AtomicBoolean customizerFactoryUsed = new AtomicBoolean();
+      ClientHttpRequestFactory customizerFactory =
+          (uri, method) -> {
+            customizerFactoryUsed.set(true);
+            throw new IOException("customizer 设的请求工厂");
+          };
+      ObjectProvider<RestClientCustomizer> customizers = mock(ObjectProvider.class);
+      when(customizers.orderedStream())
+          .thenReturn(Stream.of(builder -> builder.requestFactory(customizerFactory)));
+      ObjectProvider<InternalCallInterceptor> interceptors = mock(ObjectProvider.class);
+      when(interceptors.orderedStream()).thenReturn(Stream.empty());
+      RestClientFactory factory =
+          new RestClientFactory(customizers, interceptors, properties.build());
+
+      // When：127.0.0.1:1 没人监听，分组的客户端会连接失败
+      RestClient restClient =
+          factory.createRestClient(RestClient.builder(), "identity", "http://127.0.0.1:1");
+      assertThatThrownBy(() -> restClient.get().uri("/x").retrieve().toBodilessEntity())
+          .isInstanceOf(ResourceAccessException.class);
+
+      // Then
+      assertThat(customizerFactoryUsed).isFalse();
     }
 
     @Test

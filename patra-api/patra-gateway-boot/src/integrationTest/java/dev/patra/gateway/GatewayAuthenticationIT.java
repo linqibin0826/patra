@@ -18,23 +18,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import com.github.tomakehurst.wiremock.verification.LoggedRequest;
-import dev.patra.identity.session.NewSession;
-import dev.patra.identity.session.RedisSessionStore;
-import dev.patra.identity.session.SessionToken;
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.ClientType;
 import dev.patra.tool.core.security.CurrentUser;
 import dev.patra.tool.security.assertion.IdentityAssertionClaims;
 import dev.patra.tool.security.test.TestIdentity;
-import dev.patra.tool.test.container.initializer.RedisContainerInitializer;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
-import java.security.SecureRandom;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -43,7 +35,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.env.Environment;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
@@ -57,12 +48,11 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 import org.springframework.web.client.RestClient;
 
 /// 会话认证与路径规则（设计第 6.2、6.3、7.1 节）、出站的断言与头（第 8 节）。
-/// identity 和 catalog 都由 WireMock 顶替；会话直接写进 Redis 测试容器。
+/// identity 和 catalog 都由 WireMock 顶替；查会话也由 WireMock 的 identity 回答（`GatewayITSessions`，PAP-106）。
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @AutoConfigureRestTestClient
-@ContextConfiguration(
-    initializers = {RedisContainerInitializer.class, GatewayITSigningKeyInitializer.class})
+@ContextConfiguration(initializers = GatewayITSigningKeyInitializer.class)
 class GatewayAuthenticationIT {
 
   private static final String BEARER = "Bearer ";
@@ -80,9 +70,7 @@ class GatewayAuthenticationIT {
           .build();
 
   @Autowired private RestTestClient restClient;
-  @Autowired private RedisSessionStore sessions;
   @Autowired private Environment environment;
-  @Autowired private StringRedisTemplate redis;
 
   @Autowired
   @Qualifier("identityAssertionDecoder")
@@ -100,6 +88,7 @@ class GatewayAuthenticationIT {
   void resetDownstreams() {
     identity.resetAll();
     catalog.resetAll();
+    GatewayITSessions.inactiveByDefault(identity);
   }
 
   @Test
@@ -137,7 +126,7 @@ class GatewayAuthenticationIT {
 
   @Test
   void should_treat_a_well_formed_unknown_token_as_anonymous() {
-    String unknown = SessionToken.generate(AccountType.USER, new SecureRandom()).value();
+    String unknown = "patra_user_Kq3_z-0aB1cD2eF3gH4iJ5kL6mN7oP8qR9sT0uV1wXy";
     catalog.stubFor(get(urlPathEqualTo("/portal/venues")).willReturn(okJson("{}")));
 
     restClient
@@ -161,7 +150,7 @@ class GatewayAuthenticationIT {
 
   @Test
   void should_let_a_valid_session_reach_identity_without_cookies_or_redirects() {
-    String token = GatewayITSessions.issue(sessions, 4201L, 9201L);
+    String token = GatewayITSessions.issue(identity, 4201L, 9201L);
     identity.stubFor(get(urlPathEqualTo("/auth/me")).willReturn(okJson("{\"userId\":\"4201\"}")));
 
     restClient
@@ -183,9 +172,9 @@ class GatewayAuthenticationIT {
 
   @Test
   void should_reject_the_token_once_the_session_is_deleted_but_still_let_logout_through() {
-    String token = GatewayITSessions.issue(sessions, 4203L, 9203L);
+    String token = GatewayITSessions.issue(identity, 4203L, 9203L);
     identity.stubFor(post(urlPathEqualTo("/auth/logout")).willReturn(aResponse().withStatus(204)));
-    assertThat(sessions.delete(AccountType.USER, 4203L, 9203L)).isTrue();
+    GatewayITSessions.revoke(identity, token);
 
     restClient
         .get()
@@ -205,42 +194,38 @@ class GatewayAuthenticationIT {
     identity.verify(1, postRequestedFor(urlPathEqualTo("/auth/logout")));
   }
 
-  /// 会话模块满 60 秒才写回：建一条最后活跃时间在两分钟前的会话，一次请求后它被写回、TTL 重算，
-  /// 且不超过绝对过期剩下的十分钟。
+  /// 不缓存（PAP-106）：同一令牌的两次请求查两次会话，登出、封禁即时生效；
+  /// 令牌只放在查会话的请求体里，不进 `Authorization`（identity 会把它当断言验签）。
   @Test
-  void should_renew_the_session_on_request_without_passing_absolute_expiry() {
-    Instant twoMinutesAgo = Instant.now().minus(Duration.ofMinutes(2));
-    Duration remaining = Duration.ofMinutes(10);
-    NewSession stale =
-        GatewayITSessions.session(4204L, 9204L)
-            .createdAt(twoMinutesAgo)
-            .expiresAt(Instant.now().plus(remaining))
-            .build();
-    SessionToken token = sessions.create(stale).token();
-    String key = "idn:session:user:" + token.hash();
-    assertThat(redis.opsForHash().get(key, "last_active_at"))
-        .isEqualTo(Long.toString(twoMinutesAgo.toEpochMilli()));
+  void should_introspect_every_request_with_the_token_in_the_body() {
+    String token = GatewayITSessions.issue(identity, 4204L, 9204L);
     identity.stubFor(get(urlPathEqualTo("/auth/me")).willReturn(okJson("{}")));
 
-    restClient
-        .get()
-        .uri("/patra-identity/auth/me")
-        .header(HttpHeaders.AUTHORIZATION, BEARER + token.value())
-        .exchange()
-        .expectStatus()
-        .isOk();
+    for (int i = 0; i < 2; i++) {
+      restClient
+          .get()
+          .uri("/patra-identity/auth/me")
+          .header(HttpHeaders.AUTHORIZATION, BEARER + token)
+          .exchange()
+          .expectStatus()
+          .isOk();
+    }
 
-    long lastActiveAt = Long.parseLong((String) redis.opsForHash().get(key, "last_active_at"));
-    assertThat(lastActiveAt).isGreaterThan(twoMinutesAgo.toEpochMilli());
-    assertThat(redis.getExpire(key, TimeUnit.MILLISECONDS))
-        .isPositive()
-        .isLessThanOrEqualTo(remaining.toMillis());
+    List<LoggedRequest> introspections =
+        identity.findAll(postRequestedFor(urlPathEqualTo(GatewayITSessions.INTROSPECT_PATH)));
+    assertThat(introspections)
+        .hasSize(2)
+        .allSatisfy(
+            request -> {
+              assertThat(request.getHeader(HttpHeaders.AUTHORIZATION)).isNull();
+              assertThat(request.getBodyAsString()).contains(token);
+            });
   }
 
   @Test
   void should_require_login_for_unlisted_identity_paths_and_let_the_public_list_through() {
     identity.stubFor(any(urlPathMatching("/.*")).willReturn(okJson("{}")));
-    String token = GatewayITSessions.issue(sessions, 4205L, 9205L);
+    String token = GatewayITSessions.issue(identity, 4205L, 9205L);
 
     restClient.get().uri("/patra-identity/devices").exchange().expectStatus().isUnauthorized();
     restClient
@@ -264,7 +249,7 @@ class GatewayAuthenticationIT {
 
   @Test
   void should_hand_identity_a_signed_assertion_for_the_session_user() {
-    String token = GatewayITSessions.issue(sessions, 4211L, 9211L);
+    String token = GatewayITSessions.issue(identity, 4211L, 9211L);
     identity.stubFor(get(urlPathEqualTo("/auth/me")).willReturn(okJson("{}")));
 
     restClient
@@ -289,7 +274,7 @@ class GatewayAuthenticationIT {
   @Test
   void should_forward_email_verify_anonymously_and_with_assertion_when_logged_in() {
     identity.stubFor(post(urlPathEqualTo("/auth/email/verify")).willReturn(okJson("{}")));
-    String token = GatewayITSessions.issue(sessions, 4221L, 9221L);
+    String token = GatewayITSessions.issue(identity, 4221L, 9221L);
 
     restClient.post().uri("/patra-identity/auth/email/verify").exchange().expectStatus().isOk();
     restClient
@@ -346,7 +331,7 @@ class GatewayAuthenticationIT {
     identity.verify(0, postRequestedFor(urlPathEqualTo("/auth/reauth")));
     identity.verify(0, postRequestedFor(urlPathEqualTo("/me/email/change")));
 
-    String token = GatewayITSessions.issue(sessions, 4231L, 9231L);
+    String token = GatewayITSessions.issue(identity, 4231L, 9231L);
     restClient
         .post()
         .uri("/patra-identity/auth/reauth")
@@ -411,7 +396,7 @@ class GatewayAuthenticationIT {
   @Test
   void should_require_login_and_stream_large_avatar_upload() {
     identity.stubFor(post(urlPathEqualTo("/me/avatar")).willReturn(okJson("{}")));
-    String token = GatewayITSessions.issue(sessions, 4241L, 9241L);
+    String token = GatewayITSessions.issue(identity, 4241L, 9241L);
     byte[] body = new byte[5_000_000];
     new Random(97).nextBytes(body);
     MediaType multipart = MediaType.parseMediaType("multipart/form-data; boundary=avatar-it");
@@ -446,7 +431,7 @@ class GatewayAuthenticationIT {
   void should_require_session_for_email_verification_resend() {
     identity.stubFor(
         post(urlPathEqualTo("/me/email/verification/resend")).willReturn(okJson("{}")));
-    String token = GatewayITSessions.issue(sessions, 4222L, 9222L);
+    String token = GatewayITSessions.issue(identity, 4222L, 9222L);
 
     restClient
         .post()
@@ -499,7 +484,7 @@ class GatewayAuthenticationIT {
 
   @Test
   void should_treat_multiple_authorization_headers_as_anonymous_and_strip_them_all() {
-    String token = GatewayITSessions.issue(sessions, 4212L, 9212L);
+    String token = GatewayITSessions.issue(identity, 4212L, 9212L);
     identity.stubFor(post(urlPathEqualTo("/auth/logout")).willReturn(aResponse().withStatus(204)));
 
     restClient
@@ -518,8 +503,8 @@ class GatewayAuthenticationIT {
   /// 会话已失效时拿旧令牌登出：以匿名身份到达 identity，不带任何 `Authorization`，identity 回 204。
   @Test
   void should_let_logout_with_a_dead_token_reach_identity_anonymously() {
-    String token = GatewayITSessions.issue(sessions, 4213L, 9213L);
-    sessions.delete(AccountType.USER, 4213L, 9213L);
+    String token = GatewayITSessions.issue(identity, 4213L, 9213L);
+    GatewayITSessions.revoke(identity, token);
     identity.stubFor(post(urlPathEqualTo("/auth/logout")).willReturn(aResponse().withStatus(204)));
 
     restClient
@@ -564,7 +549,7 @@ class GatewayAuthenticationIT {
   /// 「仅登录用户可见」的主页靠这一点：公开路由上带令牌来的请求，下游照样拿到身份断言（PAP-95）。
   @Test
   void should_forward_public_user_page_with_assertion_when_logged_in() {
-    String token = GatewayITSessions.issue(sessions, 4231L, 9231L);
+    String token = GatewayITSessions.issue(identity, 4231L, 9231L);
     identity.stubFor(
         get(urlPathEqualTo("/users/chen-yu")).willReturn(okJson("{\"username\":\"chen-yu\"}")));
 
@@ -653,7 +638,7 @@ class GatewayAuthenticationIT {
         .isUnauthorized();
     identity.verify(0, patchRequestedFor(urlPathEqualTo("/me/username")));
 
-    String token = GatewayITSessions.issue(sessions, 4221L, 9221L);
+    String token = GatewayITSessions.issue(identity, 4221L, 9221L);
     restClient
         .patch()
         .uri("/patra-identity/me/username")

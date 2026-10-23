@@ -6,12 +6,8 @@ import dev.patra.identity.domain.port.session.IssuedUserSession;
 import dev.patra.identity.domain.port.session.NewUserSession;
 import dev.patra.identity.domain.port.session.SessionRotation;
 import dev.patra.identity.domain.port.session.SessionStorePort;
-import dev.patra.identity.session.IssuedSession;
-import dev.patra.identity.session.NewSession;
-import dev.patra.identity.session.RedisSessionStore;
-import dev.patra.identity.session.SessionToken;
-import dev.patra.identity.session.StoredSession;
 import dev.patra.tool.core.security.AccountType;
+import dev.patra.tool.core.security.CurrentUser;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -19,7 +15,7 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/// 会话存储端口的实现：把 domain 的记录转成会话模块的类型，交给 `RedisSessionStore`。
+/// 会话存储端口的实现：把 domain 的记录转成会话存储的类型，交给 `RedisSessionStore`。
 ///
 /// `SessionStoreUnavailableException` 原样穿过，错误引擎按 `DEP_UNAVAILABLE` 映射成 503。
 @Component
@@ -48,6 +44,15 @@ public class SessionStoreAdapter implements SessionStorePort {
                 .maxSessionsPerUser(session.maxSessionsPerUser())
                 .build());
     return IssuedUserSession.of(issued.token().value(), issued.replacedSessionIds());
+  }
+
+  /// 按令牌查会话并节流续期：格式不对的令牌不碰 Redis。
+  ///
+  /// @param token 令牌原文
+  /// @return 当前用户；令牌格式不对或会话不在时为空
+  @Override
+  public Optional<CurrentUser> findAndTouch(String token) {
+    return SessionToken.parse(token).flatMap(store::findAndTouch).map(StoredSession::toCurrentUser);
   }
 
   /// 换令牌、保留会话 ID；宽限期内不换。

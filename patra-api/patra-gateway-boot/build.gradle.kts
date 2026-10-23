@@ -32,8 +32,9 @@ dependencies {
     // 鉴权：Spring Security、无状态默认配置、ProblemDetail 写出器、验签器、签名器、认证对象
     implementation(project(":patra-tool:patra-tool-security"))
 
-    // 会话存储契约（RedisSessionStore、SessionToken）；它用 api 带进 spring-boot-starter-data-redis
-    implementation(project(":patra-api:patra-identity:patra-identity-session"))
+    // 查会话：经 identity 的内部接口（PAP-106），网关不连 Redis。契约 + 服务间调用能力
+    implementation(project(":patra-api:patra-identity:patra-identity-api"))
+    implementation(project(":patra-tool:patra-tool-http-client"))
 
     // 测试依赖（含 RestTestClient 与 WireMock）
     testImplementation(project(":patra-tool:patra-tool-test"))

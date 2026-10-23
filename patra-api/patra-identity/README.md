@@ -2,18 +2,18 @@
 
 前台用户的账号服务：注册、登录、会话、登出、「当前用户」、用户名、资料与隐私设置、公开主页、邮箱验证与邮件、再认证、改密码、找回密码、改邮箱、登录设备与新设备提醒、注销账号、登录失败限制、封禁与解封。
 
-工程设计：`docs/patra/specs/2026-10-05-identity-account-design.md`（账号）、`docs/patra/specs/2026-10-09-identity-session-design.md`（会话）、`docs/patra/specs/2026-10-20-identity-account-rebuild-design.md`（账号重建：用户名、昵称、邮箱验证状态、四态状态机、`V1` 最终形态）、`docs/patra/specs/2026-10-21-identity-email-verification-design.md`（邮件发送与邮箱验证）、`docs/patra/specs/2026-10-22-identity-account-security-design.md`（账号安全：再认证、改密码、找回密码、改邮箱）、`docs/patra/specs/2026-10-22-identity-profile-design.md`（资料、隐私设置与公开主页）、`docs/patra/specs/2026-10-22-identity-login-devices-design.md`（登录设备：受信转发链路、设备与属地、会话列表、踢设备、新设备邮件、记录清理）、`docs/patra/specs/2026-10-22-identity-account-deletion-design.md`（注销账号：冷静期、取消、到期执行与匿名化、提醒）。
+工程设计：`docs/patra/specs/2026-10-05-identity-account-design.md`（账号）、`docs/patra/specs/2026-10-09-identity-session-design.md`（会话）、`docs/patra/specs/2026-10-20-identity-account-rebuild-design.md`（账号重建：用户名、昵称、邮箱验证状态、四态状态机、`V1` 最终形态）、`docs/patra/specs/2026-10-21-identity-email-verification-design.md`（邮件发送与邮箱验证）、`docs/patra/specs/2026-10-22-identity-account-security-design.md`（账号安全：再认证、改密码、找回密码、改邮箱）、`docs/patra/specs/2026-10-22-identity-profile-design.md`（资料、隐私设置与公开主页）、`docs/patra/specs/2026-10-22-identity-login-devices-design.md`（登录设备：受信转发链路、设备与属地、会话列表、踢设备、新设备邮件、记录清理）、`docs/patra/specs/2026-10-22-identity-account-deletion-design.md`（注销账号：冷静期、取消、到期执行与匿名化、提醒）、`docs/patra/specs/2026-10-23-session-introspection-design.md`（会话存储归 identity 独占、网关查会话的内部接口）。
 
 ## 1. 模块
 
 | 模块 | 内容 |
 |---|---|
 | `patra-identity-domain` | `User`、`UserProfile`、`FormerUsername`、`UserPasswordCredential`、`UserLoginRecord`、`EmailToken` 六个聚合，邮箱、用户名、昵称、密码、客户端信息、令牌密文值对象，资料值对象（`vo/profile/`：简介、链接、职称、科室、ROR ID、MeSH UI、机构、关注领域、隐私设置），用户名 / 昵称 / 资料字段（`ProfilePolicy`，拒绝字符与昵称共用 `ProfileTextRules`）/ 改名 / 密码 / 失败限制 / 重发限流 / 再认证 / 找回密码限流 / 改邮箱限流 / 邮件链接规则、会话策略，端口（含邮件发送 `EmailDeliveryPort`、三个限流端口、向 catalog 取名称快照的 `CatalogReferencePort`），公开主页读模型（`viewFor` 按请求者裁剪），`SessionIssuer`、`EmailTokenIssuer`、`ReauthenticationGuard` 领域服务，`SessionTerminator`（撤销会话并按原因结束登录记录）、`ClientOriginResolver`（请求来源 → 设备名、端、属地，内网判定 `IpAddressScope`）、`UserAgentParsingPort` / `IpGeolocationPort`，新设备提醒规则 `NewDeviceLoginPolicy` 与限流端口，注销规则 `AccountDeletionPolicy`（冷静期、提醒提前量），头像（`vo/avatar/`：`Avatar`、两档尺寸、两档字节，`AvatarPalette` 默认头像色号、`AvatarPolicy`，出图端口 `AvatarImagePort` 与存储端口 `AvatarStoragePort`），十三个 `OutgoingMail` 记录，领域异常 |
-| `patra-identity-app` | 注册、登录、登出、再认证、改用户名、改密码、找回密码（申请、重设）、改邮箱（申请、取消、确认、撤销）、封禁、解封、重发验证邮件、验证邮箱、清理过期令牌、改资料、改隐私设置、踢单个设备、踢其他设备、清理登录记录、发起注销、取消注销、注销到期执行、注销到期前提醒、换头像、移除头像二十八个处理器，走 CommandBus；`CurrentPasswordVerifier` 给再认证与改密码共用；「当前用户」、本人的资料与隐私设置、待确认的改邮箱和公开主页走 `UserQueryService`，登录设备列表走 `SessionQueryService`，头像读取走 `AvatarQueryService` |
-| `patra-identity-infra` | JPA 持久化（含令牌表）、Argon2id 哈希、常见密码名单、Redis 失败限制与通用限流脚本 `action-throttle.lua`（重发、找回密码、改邮箱三个适配器共用）、会话存储适配器、新设备提醒限流适配器，SMTP 发信适配器与 Thymeleaf 邮件模板（十三对），Yauaa 解析 UA（`YauaaUserAgentParsingAdapter`）、ip2region 查属地（`Ip2RegionGeolocationAdapter`）、Flyway 脚本（一份最终形态的 `V1`）、catalog 内部接口适配器 `CatalogReferenceAdapter`（依赖 `patra-catalog-api`），头像出图 `AvatarImageAdapter`（TwelveMonkeys 解码、`webp-imageio` 编码）与魔数识别 `AvatarFormatSniffer`、头像存储 `AvatarStorageAdapter`（依赖 `patra-tool-object-storage`）；测试夹具 `AvatarImageFixture`（`testFixtures`，boot 的流程测试也用） |
-| `patra-identity-adapter` | 前台的 `AuthController`、`EmailVerificationController`、`PasswordResetController`、`EmailChangeController`、`MeController`、`MeEmailController`、`MeProfileController`、`MeSessionController`、`MeDeletionController`、`MeAvatarController`、`PublicUserController`、`PublicAvatarController`，后台的 `AdminUserController`，XXL-Job 任务 `EmailTokenCleanupScheduleJob`、`LoginRecordCleanupScheduleJob`、`AccountDeletionScheduleJob`、`AccountDeletionReminderScheduleJob` |
+| `patra-identity-app` | 注册、登录、登出、再认证、改用户名、改密码、找回密码（申请、重设）、改邮箱（申请、取消、确认、撤销）、封禁、解封、重发验证邮件、验证邮箱、清理过期令牌、改资料、改隐私设置、踢单个设备、踢其他设备、清理登录记录、发起注销、取消注销、注销到期执行、注销到期前提醒、换头像、移除头像二十八个处理器，走 CommandBus；`CurrentPasswordVerifier` 给再认证与改密码共用；「当前用户」、本人的资料与隐私设置、待确认的改邮箱和公开主页走 `UserQueryService`，登录设备列表走 `SessionQueryService`，网关查会话走 `SessionIntrospectionService`（不经 CommandBus），头像读取走 `AvatarQueryService` |
+| `patra-identity-infra` | JPA 持久化（含令牌表）、Argon2id 哈希、常见密码名单、Redis 失败限制与通用限流脚本 `action-throttle.lua`（重发、找回密码、改邮箱三个适配器共用）、会话存储（`RedisSessionStore`、八段 Lua、令牌格式，第 9 节）与适配器、新设备提醒限流适配器，SMTP 发信适配器与 Thymeleaf 邮件模板（十三对），Yauaa 解析 UA（`YauaaUserAgentParsingAdapter`）、ip2region 查属地（`Ip2RegionGeolocationAdapter`）、Flyway 脚本（一份最终形态的 `V1`）、catalog 内部接口适配器 `CatalogReferenceAdapter`（依赖 `patra-catalog-api`），头像出图 `AvatarImageAdapter`（TwelveMonkeys 解码、`webp-imageio` 编码）与魔数识别 `AvatarFormatSniffer`、头像存储 `AvatarStorageAdapter`（依赖 `patra-tool-object-storage`）；测试夹具 `AvatarImageFixture`（`testFixtures`，boot 的流程测试也用） |
+| `patra-identity-adapter` | 前台的 `AuthController`、`EmailVerificationController`、`PasswordResetController`、`EmailChangeController`、`MeController`、`MeEmailController`、`MeProfileController`、`MeSessionController`、`MeDeletionController`、`MeAvatarController`、`PublicUserController`、`PublicAvatarController`，后台的 `AdminUserController`，内部接口 `SessionEndpointImpl`（网关查会话），XXL-Job 任务 `EmailTokenCleanupScheduleJob`、`LoginRecordCleanupScheduleJob`、`AccountDeletionScheduleJob`、`AccountDeletionReminderScheduleJob` |
 | `patra-identity-boot` | 启动类、配置、安全 starter 接入、catalog 两个 HTTP Interface 代理（`CatalogClientConfiguration`，`lb://patra-catalog`） |
-| `patra-identity-session` | 与网关共用的会话存储契约（令牌、Redis 键、Lua、`RedisSessionStore`），见它自己的 README |
+| `patra-identity-api` | 服务间契约：网关查会话的 `SessionEndpoint` 与请求、响应 DTO（PAP-106） |
 
 ## 2. 接口
 
@@ -48,6 +48,7 @@
 | `GET /users/{username}/avatar?size=512\|128&v={hash}` | 200 `image/webp`，`Cache-Control: public, max-age=31536000, immutable`、`ETag`；`If-None-Match` 命中 304；对不上一律 404 | 公开（`/users/**` 整体） |
 | `POST /me/deletion` | 200 `{ deletionDueAt }`，请求体 `{ username }`（不分大小写）；进入 15 天冷静期，本机在内全部会话下线（第 14 节） | 需要登录 + 再认证 |
 | `DELETE /me/deletion` | 200 `user`（与 `/auth/me` 同构）；本来就正常时照样 200 | 需要登录 |
+| `POST /_internal/sessions/introspect` | 200 `{ active, userId, sessionId, accountType, clientType }`，查不到 `{ active: false }`；Redis 暂时不可用 503（第 9 节） | 拒绝外部访问；网关经服务发现直连 |
 | `POST /admin/users/{userId}/ban` | 204 | 拒绝外部访问 |
 | `POST /admin/users/{userId}/unban` | 204 | 拒绝外部访问 |
 
@@ -212,7 +213,7 @@ mini 上先 `docker stop patra-identity`，重建后 `docker start patra-identit
 - 测试全部用 Testcontainers（PostgreSQL 17、Redis 7.0.15、MinIO `pgsty/minio`），本机要有 Docker：
 
 ```bash
-./gradlew spotlessApply && ./gradlew check && ./gradlew :patra-api:patra-identity:patra-identity-session:integrationTest :patra-api:patra-identity:patra-identity-infra:integrationTest :patra-api:patra-identity:patra-identity-adapter:integrationTest :patra-api:patra-identity:patra-identity-boot:integrationTest
+./gradlew spotlessApply && ./gradlew check && ./gradlew :patra-api:patra-identity:patra-identity-infra:integrationTest :patra-api:patra-identity:patra-identity-adapter:integrationTest :patra-api:patra-identity:patra-identity-boot:integrationTest
 ```
 
 `check` 不包含集成测试，按模块各自跑。
@@ -224,7 +225,8 @@ identity 从网关签的身份断言取当前用户，要配网关的公钥：�
 ## 9. 会话
 
 登录、注册成功后签发不透明令牌，会话写进 Redis，登录记录写进 `idn_user_login_record`（ID 就是会话 ID）。
-令牌、键和脚本见 `patra-identity-session/README.md`。
+会话存储只有 identity 读写：网关每个带令牌的请求调 `POST /_internal/sessions/introspect` 查会话（PAP-106，
+设计 `docs/patra/specs/2026-10-23-session-introspection-design.md`），不连 Redis。
 
 策略只在这里配，网关不配：
 
@@ -237,7 +239,7 @@ patra:
       lifetime:
         user:
           web:
-            idle: 30d                # 不活跃过期；网关每个请求续期，60 秒内只读不写
+            idle: 30d                # 不活跃过期；每次查会话续期，60 秒内只读不写
             absolute: 180d           # 绝对过期
 ```
 
@@ -248,6 +250,50 @@ patra:
 
 登录建会话前在事务里对用户行加锁重读、复核封禁（`UserRepository.findByIdForUpdate`），封禁与登录并发时
 要么登录返回 403，要么封禁把这条新会话一起删掉；被封用户拿不到有效会话。
+
+### 令牌
+
+`patra_user_` + 43 个 base64url 字符（32 字节 `SecureRandom`），总长 54。前缀只说明账号类型，据它决定查哪个
+键空间。`SessionToken.parse` 对格式不对的值返回空，查会话直接回 `active: false`、不碰 Redis。
+Redis 里只存 `SessionToken.hash()`：整个令牌 UTF-8 的 SHA-256，小写十六进制。令牌不进日志，`toString()` 只有前缀。
+
+### Redis 键
+
+| 键 | 类型 | 内容 | TTL |
+|---|---|---|---|
+| `idn:session:user:<哈希>` | HASH | 一条会话 | `min(idle_timeout_ms, expires_at − now)`，续期时重算 |
+| `idn:user-sessions:user:<userId>` | HASH | `session_id → <哈希>` | 不小于该用户最新会话的绝对有效期 |
+
+会话字段（都是字符串）：`user_id`、`session_id`、`account_type`（`user`）、`client_type`（`web`）、
+`device_id`（可选，没有就没这个字段）、`created_at`、`last_active_at`、`auth_at`（最近一次用密码证明身份：
+登录、注册、再认证、改密码；必填，缺失按数据损坏报错）、`expires_at`（epoch 毫秒）、`idle_timeout_ms`。
+
+### 操作（`RedisSessionStore`）
+
+| 方法 | 脚本 | 做什么 |
+|---|---|---|
+| `create(NewSession)` | `session-create.lua` | 清掉索引里指向不存在会话的条目；到上限按会话 ID 从小到大挤掉多出来的；写会话和索引。返回令牌和被挤掉的 ID |
+| `findAndTouch(SessionToken)` | `session-touch.lua` | 网关查会话：读会话；过了绝对过期返回空并删键；距上次写入满 60 秒（`RENEW_INTERVAL`）才写回 `last_active_at` 和 TTL |
+| `delete(accountType, userId, sessionId)` | `session-delete.lua` | 按索引找到哈希删会话；真的删掉了返回 `true` |
+| `deleteAll(accountType, userId)` | `session-delete-all.lua` | 删该用户全部会话和索引；返回真的删掉了的会话 ID |
+| `rotate(accountType, userId, sessionId, grace)` | `session-rotate.lua` | 换令牌保留会话 ID（再认证、改密码）：其余字段不变，`auth_at` 与 `last_active_at` 刷新，旧令牌立即失效，索引指向新哈希；`auth_at` 距今不足 `grace` 时原子地判定不换、返回「没换」（并发再认证时先换出的令牌保持有效，`grace` 为零则每次都换）；会话不在或已过绝对期返回空 |
+| `find(accountType, userId, sessionId)` | `session-find.lua` | 按会话 ID 读，不续期（再认证守卫读 `auth_at`）；不在或已过绝对期返回空 |
+| `deleteAllExcept(accountType, userId, keepSessionId)` | `session-delete-others.lua` | 删该用户除指定一条外的全部会话（验证邮箱、改密码保留本机、踢其他设备）；指定的会话不存在时等于全删；返回真的删掉了的会话 ID |
+| `list(accountType, userId)` | `session-list.lua` | 按用户列出还活着的会话（登录设备列表）：不续期、不改 `last_active_at`；顺手清掉悬空条目和已过绝对期的会话；顺序不保证 |
+
+时间由 Java 按注入的 `Clock` 传进脚本，脚本不调 `TIME`。会话 ID 的大小按「字符串长度，再字典序」比，
+雪花 ID 转成 Lua 的 double 会丢精度。脚本「没有结果」时返回空表而不是 `false`：Lettuce 把 `false`
+解成 `[null]`，Java 侧拿到的不是空列表。
+
+### 错误与限制
+
+Redis 连不上、超时、`LOADING` / `READONLY` / `BUSY` / `MASTERDOWN`，以及连接层的 `RedisException`
+（Redis 重启瞬间在途命令的「Connection closed」、命令被中断）转成 `SessionStoreUnavailableException`
+（`DEP_UNAVAILABLE`，503）；网关据此对带令牌的请求回 503。判定在 `TransientRedisFailures`，登录限流也用它。
+其他服务端错误回复（脚本写错、`WRONGTYPE`、`NOAUTH`）是缺陷或配置错，原样抛出。
+
+只支持单机 Redis：会话键在脚本里由前缀拼出来，Redis Cluster 要求所有键事先声明。索引里过期会话留下的条目
+在该用户下一次登录时清理，封禁时整键删除。
 
 ## 10. 邮箱验证与邮件
 

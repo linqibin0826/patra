@@ -12,8 +12,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import com.github.tomakehurst.wiremock.verification.LoggedRequest;
-import dev.patra.identity.session.RedisSessionStore;
-import dev.patra.tool.test.container.initializer.RedisContainerInitializer;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,8 +31,7 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @AutoConfigureRestTestClient
-@ContextConfiguration(
-    initializers = {RedisContainerInitializer.class, GatewayITSigningKeyInitializer.class})
+@ContextConfiguration(initializers = GatewayITSigningKeyInitializer.class)
 class GatewayUntrustedProxyIT {
 
   private static final String BEARER = "Bearer ";
@@ -46,7 +43,6 @@ class GatewayUntrustedProxyIT {
           .build();
 
   @Autowired private RestTestClient restClient;
-  @Autowired private RedisSessionStore sessions;
 
   @DynamicPropertySource
   static void downstreams(DynamicPropertyRegistry registry) {
@@ -97,7 +93,7 @@ class GatewayUntrustedProxyIT {
 
     identity.stubFor(get(urlPathEqualTo("/me/sessions")).willReturn(okJson("{}")));
     identity.stubFor(delete(urlPathEqualTo("/me/sessions/others")).willReturn(okJson("{}")));
-    String token = GatewayITSessions.issue(sessions, 4291L, 9291L);
+    String token = GatewayITSessions.issue(identity, 4291L, 9291L);
 
     restClient
         .get()

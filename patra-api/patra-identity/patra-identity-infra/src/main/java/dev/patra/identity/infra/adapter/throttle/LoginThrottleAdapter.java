@@ -6,7 +6,7 @@ import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.policy.LoginThrottlePolicy;
 import dev.patra.identity.domain.port.throttle.LoginAttempt;
 import dev.patra.identity.domain.port.throttle.LoginThrottlePort;
-import dev.patra.identity.session.TransientRedisFailures;
+import dev.patra.identity.infra.adapter.session.TransientRedisFailures;
 import dev.patra.tool.core.security.AccountType;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -27,7 +27,7 @@ import org.springframework.stereotype.Component;
 ///
 /// 失败次数、在途登记、锁分三个键，键名带账号类型和邮箱的 SHA-256，不放明文邮箱。
 /// 「开始」和「结算」各是一段 Lua 脚本，原子执行。Redis 暂时不可用（连不上、超时、`LOADING` 等，
-/// 由会话模块的 `TransientRedisFailures` 判定）转成 {@link TemporarilyUnavailableException}；
+/// 由会话存储的 `TransientRedisFailures` 判定）转成 {@link TemporarilyUnavailableException}；
 /// 其他 Redis 异常（比如脚本写错）是程序缺陷，原样抛出。
 @Component
 public final class LoginThrottleAdapter implements LoginThrottlePort {

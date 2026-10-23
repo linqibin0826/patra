@@ -31,8 +31,8 @@ dependencies {
     // 从网关签的断言取当前用户：过滤器链、CurrentUserPort、401 / 403 输出、JPA 审计人
     implementation(project(":patra-tool:patra-tool-security"))
 
-    // 装配 RedisSessionStore
-    implementation(project(":patra-api:patra-identity:patra-identity-session"))
+    // 装配 RedisSessionStore 要用 StringRedisTemplate
+    implementation("org.springframework.boot:spring-boot-starter-data-redis")
 
     // 装配 catalog 内部接口的 HTTP Interface 代理（PAP-95）
     implementation(project(":patra-api:patra-catalog:patra-catalog-api"))

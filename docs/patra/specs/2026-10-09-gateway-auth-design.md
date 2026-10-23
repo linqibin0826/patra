@@ -6,6 +6,7 @@
 > **后续 Issue**：[PAP-66](https://linear.app/papertrace/issue/PAP-66) 注入密钥与 Redis 密码；[PAP-67](https://linear.app/papertrace/issue/PAP-67) 门户按本设计的 401 处理 Cookie
 > **日期**：2026-10-09
 > **状态**：已实施（2026-10-09，分支 `feat/v0.8-accounts-api`）
+> **已改写**：会话存储改为 identity 独占、网关调 identity 的内部接口查会话，`patra-identity-session` 已删除，见 [PAP-106 设计](2026-10-23-session-introspection-design.md)。本文涉及会话模块与网关读 Redis 的部分只作历史记录。
 
 ## 1. 要解决的问题
 

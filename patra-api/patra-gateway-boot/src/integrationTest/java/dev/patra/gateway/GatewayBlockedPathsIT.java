@@ -5,8 +5,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.anyUrl;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
-import dev.patra.identity.session.RedisSessionStore;
-import dev.patra.tool.test.container.initializer.RedisContainerInitializer;
 import java.net.URI;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,8 +29,7 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @AutoConfigureRestTestClient
-@ContextConfiguration(
-    initializers = {RedisContainerInitializer.class, GatewayITSigningKeyInitializer.class})
+@ContextConfiguration(initializers = GatewayITSigningKeyInitializer.class)
 class GatewayBlockedPathsIT {
 
   @RegisterExtension
@@ -48,7 +45,6 @@ class GatewayBlockedPathsIT {
           .build();
 
   @Autowired private RestTestClient restClient;
-  @Autowired private RedisSessionStore sessions;
   @Autowired private Environment environment;
 
   @DynamicPropertySource
@@ -67,12 +63,13 @@ class GatewayBlockedPathsIT {
 
   @Test
   void should_answer_403_for_blocked_paths_whether_anonymous_or_logged_in() {
-    String token = GatewayITSessions.issue(sessions, 4301L, 9301L);
+    String token = GatewayITSessions.issue(identity, 4301L, 9301L);
     List<String> blocked =
         List.of(
             "/patra-registry/_internal/provenances",
             "/patra-catalog/_internal/organizations/04jztag35",
             "/patra-catalog/_internal/mesh/descriptors/D003920",
+            "/patra-identity/_internal/sessions/introspect",
             "/patra-identity/admin/users/1/ban",
             "/patra-catalog/actuator/health",
             "/patra-identity/actuator/env");

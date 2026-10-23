@@ -9,8 +9,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 /// 把测试私钥写进网关的私钥配置项。
 ///
 /// 公钥由安全 starter 测试支持的环境后处理器自动注入，两边是同一对密钥，启动自检才能过。
-/// 用法：`@ContextConfiguration(initializers = {RedisContainerInitializer.class,
-/// GatewayITSigningKeyInitializer.class})`。
+/// 用法：`@ContextConfiguration(initializers = GatewayITSigningKeyInitializer.class)`。
 public class GatewayITSigningKeyInitializer
     implements ApplicationContextInitializer<ConfigurableApplicationContext> {
 

@@ -109,14 +109,15 @@ public class RestClientFactory {
     // 克隆 builder 避免污染原始实例
     RestClient.Builder clientBuilder = builder.clone().baseUrl(baseUrl);
 
-    // 应用超时配置（使用 Apache HttpClient）
+    // 应用所有 RestClientCustomizer（错误处理器、TraceId 拦截器等）
+    customizers.orderedStream().forEach(customizer -> customizer.customize(clientBuilder));
+
+    // 分组超时（Apache HttpClient）放在 customizer 之后：Spring Cloud Gateway 的 customizer 会把容器里的
+    // 请求工厂设到每个 builder 上，分组显式配的超时不能被它盖掉
     ClientHttpRequestFactory requestFactory = createRequestFactory(groupProps);
     if (requestFactory != null) {
       clientBuilder.requestFactory(requestFactory);
     }
-
-    // 应用所有 RestClientCustomizer（错误处理器、TraceId 拦截器等）
-    customizers.orderedStream().forEach(customizer -> customizer.customize(clientBuilder));
 
     // 只给内部客户端挂的拦截器（比如转发身份断言）。
     // RestClientCustomizer 也会作用到外部数据源的客户端上，这些拦截器不会。
@@ -176,6 +177,8 @@ public class RestClientFactory {
     RequestConfig requestConfig =
         RequestConfig.custom()
             .setConnectTimeout(Timeout.of(connectTimeout))
+            // 连接池占满时等连接也按连接超时算，不用 Apache HttpClient 默认的 3 分钟
+            .setConnectionRequestTimeout(Timeout.of(connectTimeout))
             .setResponseTimeout(Timeout.of(readTimeout))
             .build();
 

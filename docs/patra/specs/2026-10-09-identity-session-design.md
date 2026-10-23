@@ -5,6 +5,7 @@
 > **前置设计**：[identity 账号（PAP-63）](2026-10-05-identity-account-design.md)、[安全 starter（PAP-62 / PAP-70）](2026-10-05-security-starter-design.md)
 > **日期**：2026-10-09
 > **状态**：已实施（2026-10-09，分支 `feat/v0.8-accounts-api`）
+> **已改写**：会话存储改为 identity 独占、网关调 identity 的内部接口查会话，`patra-identity-session` 已删除，见 [PAP-106 设计](2026-10-23-session-introspection-design.md)。本文涉及会话模块与网关读 Redis 的部分只作历史记录。
 
 ## 1. 要解决的问题
 

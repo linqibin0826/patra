@@ -8,7 +8,6 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
-import dev.patra.tool.test.container.initializer.RedisContainerInitializer;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -42,8 +41,7 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @AutoConfigureRestTestClient
-@ContextConfiguration(
-    initializers = {RedisContainerInitializer.class, GatewayITSigningKeyInitializer.class})
+@ContextConfiguration(initializers = GatewayITSigningKeyInitializer.class)
 class GatewayFailureIT {
 
   private static final int STREAM_BODY_LENGTH = 10_000;

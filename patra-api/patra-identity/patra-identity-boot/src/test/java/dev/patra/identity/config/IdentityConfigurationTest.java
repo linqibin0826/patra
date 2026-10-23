@@ -33,7 +33,7 @@ import dev.patra.identity.domain.service.SessionIssuer;
 import dev.patra.identity.domain.service.SessionTerminator;
 import dev.patra.identity.infra.adapter.mail.SmtpEmailDeliveryAdapter;
 import dev.patra.identity.infra.adapter.mail.ThymeleafMailRenderer;
-import dev.patra.identity.session.RedisSessionStore;
+import dev.patra.identity.infra.adapter.session.RedisSessionStore;
 import dev.patra.tool.core.security.ClientType;
 import dev.patra.tool.core.security.CurrentUserPort;
 import java.time.Clock;
