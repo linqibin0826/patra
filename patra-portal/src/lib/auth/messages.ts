@@ -4,6 +4,7 @@ import type { FieldError, LoginResult } from "@/lib/auth/types";
 export const FIELD_MESSAGES = {
   emailRequired: "请输入邮箱",
   emailInvalid: "邮箱格式不正确",
+  emailUnchanged: "新邮箱和现在的一样",
   passwordRequired: "请输入密码",
   passwordTooShort: "密码至少 8 位",
   passwordTooLong: "密码最长 64 位",
@@ -169,4 +170,24 @@ export const ACCOUNT_MESSAGES = {
 /// 改名成功的提示
 export function usernameChangedToast(username: string): string {
   return `用户名已改为 @${username}`;
+}
+
+/// 账号页 · 邮箱卡片（简报 §3.10 卡片 2、§4.7）
+export const EMAIL_MESSAGES = {
+  verified: "已验证",
+  unverified: "未验证",
+  unverifiedNote: "验证邮件已发到这个地址，24 小时内有效。",
+  changeNote:
+    "我们会向新邮箱发一封确认邮件，1 小时内点链接后生效；旧邮箱会收到通知。每天最多更改 3 次。",
+  taken: "这个邮箱已被其他账号使用",
+  pendingExists: "已有一个待确认的更改，请先取消或等它过期",
+  throttled: "今天更改邮箱的次数已用完，请明天再试",
+  cancelled: "已取消更改邮箱",
+} as const;
+
+/// 改邮箱 `newEmail` 的原因码 → 文案：为空、与当前相同各一句，其余（含不认识的）是「邮箱格式不正确」
+export function newEmailMessage(code: string | null): string {
+  if (code === "REQUIRED") return FIELD_MESSAGES.emailRequired;
+  if (code === "UNCHANGED") return FIELD_MESSAGES.emailUnchanged;
+  return FIELD_MESSAGES.emailInvalid;
 }

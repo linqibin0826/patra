@@ -3,8 +3,12 @@
 import { z } from "zod";
 import { logUnexpectedResponse } from "@/lib/auth/gateway-response";
 import type { CurrentUser } from "@/lib/auth/types";
+import { type PendingEmailChange, pendingEmailChangeSchema } from "@/lib/identity/account-schema";
 import {
   type CommonFailure,
+  isReauthRequired,
+  REAUTH_REQUIRED,
+  type ReauthRequired,
   settleFailure,
   unexpectedProblem,
 } from "@/lib/identity/mutation-failure";
@@ -76,4 +80,65 @@ export async function changeUsername(username: string): Promise<ChangeUsernameRe
     return { ok: false, reason: "cooldown" };
   }
   return unexpectedProblem(endpoint, problem);
+}
+
+const EMAIL_CHANGE_PATH = "/me/email/change";
+
+/// 申请改邮箱的结果。不带文案，卡片按 `reason` 与原因码选文案。
+export type RequestEmailChangeResult =
+  | { ok: true; pending: PendingEmailChange }
+  | { ok: false; reason: "invalid"; code: string | null }
+  | { ok: false; reason: "taken" | "pending-exists" | "throttled" }
+  | ReauthRequired
+  | CommonFailure;
+
+/// 申请改邮箱（`POST /me/email/change`，要求再认证）：202 返回待确认；403 `REAUTH_REQUIRED` 交给
+/// `withReauth`；409 按 `traits` 是已有待确认（`EMAIL_CHANGE_PENDING`）、按 `errors[]` 是新邮箱已被使用；
+/// 422 `newEmail` 带原因码（含 `UNCHANGED`）；429 今天的次数用完。
+export async function requestEmailChange(newEmail: string): Promise<RequestEmailChangeResult> {
+  const endpoint = `/patra-identity${EMAIL_CHANGE_PATH}`;
+  const reply = await callIdentity(EMAIL_CHANGE_PATH, { method: "POST", json: { newEmail } });
+  if (reply.kind === "ok") {
+    const parsed =
+      reply.res.status === 202 ? pendingEmailChangeSchema.safeParse(reply.body) : undefined;
+    if (!parsed?.success) {
+      logUnexpectedResponse(endpoint, reply.res.status, reply.body);
+      return UNAVAILABLE;
+    }
+    return { ok: true, pending: parsed.data };
+  }
+  const settled = await settleFailure(reply);
+  if ("failure" in settled) {
+    return settled.failure;
+  }
+  const { problem } = settled;
+  if (isReauthRequired(problem)) {
+    return REAUTH_REQUIRED;
+  }
+  if (problem.status === 409 && problem.traits.has("EMAIL_CHANGE_PENDING")) {
+    return { ok: false, reason: "pending-exists" };
+  }
+  if (problem.status === 409 && problem.errors.some((error) => error.field === "email")) {
+    return { ok: false, reason: "taken" };
+  }
+  const fieldError = problem.errors.find((error) => error.field === "newEmail");
+  if (problem.status === 422 && fieldError) {
+    return { ok: false, reason: "invalid", code: fieldError.code };
+  }
+  if (problem.status === 429) {
+    return { ok: false, reason: "throttled" };
+  }
+  return unexpectedProblem(endpoint, problem);
+}
+
+/// 取消待确认的改邮箱（`DELETE /me/email/change`，没有待确认也 204）
+export async function cancelEmailChange(): Promise<{ ok: true } | CommonFailure> {
+  const reply = await callIdentity(EMAIL_CHANGE_PATH, { method: "DELETE" });
+  if (reply.kind === "ok") {
+    return { ok: true };
+  }
+  const settled = await settleFailure(reply);
+  return "failure" in settled
+    ? settled.failure
+    : unexpectedProblem(`/patra-identity${EMAIL_CHANGE_PATH}`, settled.problem);
 }

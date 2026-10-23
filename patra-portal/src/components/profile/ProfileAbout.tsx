@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Pill } from "@/components/portal/Pill";
+import { StatusPill } from "@/components/ui/status-pill";
 import { occupationLabel } from "@/lib/identity/occupation";
 import type { PublicProfile } from "@/lib/identity/public-profile";
 
@@ -43,11 +44,7 @@ export function ProfileAbout({ profile, self, professionalSelfOnly }: ProfileAbo
             className="mb-3.5 flex items-center gap-2.5 font-serif text-xl font-medium text-fg-1"
           >
             专业背景
-            {professionalSelfOnly && (
-              <span className="inline-flex h-5.5 items-center rounded-full border border-border-default px-2 font-sans text-xs font-medium text-fg-3">
-                仅你可见
-              </span>
-            )}
+            {professionalSelfOnly && <StatusPill tone="outline">仅你可见</StatusPill>}
           </h2>
           <div className="flex flex-col gap-2 text-md leading-6 text-fg-1">
             {role && <span>{role}</span>}

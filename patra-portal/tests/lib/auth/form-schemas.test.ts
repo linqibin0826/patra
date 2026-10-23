@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import type { z } from "zod";
-import { loginSchema, registerSchema } from "@/lib/auth/form-schemas";
+import { emailChangeSchema, loginSchema, registerSchema } from "@/lib/auth/form-schemas";
 
 /// 每个字段的第一条错误：表单只显示这一条（RHF 的 zodResolver 默认也只取第一条）
 function firstErrors(schema: z.ZodType, values: unknown): Record<string, string> {
@@ -126,5 +126,25 @@ describe("注册页的确认密码", () => {
     expect(firstErrors(registerSchema, { ...values, email: "", confirmPassword: "wrong" })).toEqual(
       { email: "请输入邮箱", confirmPassword: "两次输入的密码不一致" },
     );
+  });
+});
+
+describe("emailChangeSchema", () => {
+  const schema = emailChangeSchema("Chen.Yu@example.com");
+  const message = (newEmail: string) => {
+    const result = schema.safeParse({ newEmail });
+    return result.success ? null : result.error.issues[0]?.message;
+  };
+
+  it("空、格式不对、与当前相同（忽略大小写）各有说法", () => {
+    expect(message("  ")).toBe("请输入邮箱");
+    expect(message("not-an-email")).toBe("邮箱格式不正确");
+    expect(message(" chen.yu@EXAMPLE.com ")).toBe("新邮箱和现在的一样");
+  });
+
+  it("合规时解析为去空白后的值", () => {
+    expect(schema.parse({ newEmail: " new@example.com " })).toEqual({
+      newEmail: "new@example.com",
+    });
   });
 });

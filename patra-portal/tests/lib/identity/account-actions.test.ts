@@ -2,7 +2,12 @@
 import { ME_RESPONSE, USER } from "@tests/fixtures/user";
 import { resetCookieJar } from "@tests/stubs/cookie-jar";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cancelDeletion, changeUsername } from "@/lib/identity/account-actions";
+import {
+  cancelDeletion,
+  cancelEmailChange,
+  changeUsername,
+  requestEmailChange,
+} from "@/lib/identity/account-actions";
 
 vi.mock("next/headers", () => import("@tests/stubs/cookie-jar"));
 
@@ -130,5 +135,91 @@ describe("changeUsername", () => {
     respond(500, { code: "IDN-0500" });
     resetCookieJar({ patra_session: "patra_user_abc" });
     await expect(changeUsername("x-name")).resolves.toEqual({ ok: false, reason: "unavailable" });
+  });
+});
+
+describe("requestEmailChange", () => {
+  const PENDING = { newEmail: "new@example.com", expiresAt: "2026-10-23T08:42:00Z" };
+
+  it("202：POST /me/email/change，返回待确认", async () => {
+    respond(202, PENDING);
+    resetCookieJar({ patra_session: "patra_user_abc" });
+    await expect(requestEmailChange("new@example.com")).resolves.toEqual({
+      ok: true,
+      pending: PENDING,
+    });
+    expect(lastRequest()).toEqual({
+      url: "http://gw.test/patra-identity/me/email/change",
+      method: "POST",
+      body: { newEmail: "new@example.com" },
+    });
+  });
+
+  it("403 REAUTH_REQUIRED：reauth-required", async () => {
+    respond(403, { code: "IDN-0403", traits: ["FORBIDDEN", "REAUTH_REQUIRED"] });
+    resetCookieJar({ patra_session: "patra_user_abc" });
+    await expect(requestEmailChange("new@example.com")).resolves.toEqual({
+      ok: false,
+      reason: "reauth-required",
+    });
+  });
+
+  it("409 EMAIL_CHANGE_PENDING：pending-exists", async () => {
+    respond(409, { code: "IDN-0409", traits: ["CONFLICT", "EMAIL_CHANGE_PENDING"] });
+    resetCookieJar({ patra_session: "patra_user_abc" });
+    await expect(requestEmailChange("new@example.com")).resolves.toEqual({
+      ok: false,
+      reason: "pending-exists",
+    });
+  });
+
+  it("409 errors[] email / ALREADY_REGISTERED：taken", async () => {
+    respond(409, {
+      code: "IDN-0409",
+      traits: ["CONFLICT"],
+      errors: [{ field: "email", code: "ALREADY_REGISTERED" }],
+    });
+    resetCookieJar({ patra_session: "patra_user_abc" });
+    await expect(requestEmailChange("used@example.com")).resolves.toEqual({
+      ok: false,
+      reason: "taken",
+    });
+  });
+
+  it("422 newEmail：invalid，带原因码", async () => {
+    respond(422, { code: "IDN-0422", errors: [{ field: "newEmail", code: "UNCHANGED" }] });
+    resetCookieJar({ patra_session: "patra_user_abc" });
+    await expect(requestEmailChange("chen.yu@example.com")).resolves.toEqual({
+      ok: false,
+      reason: "invalid",
+      code: "UNCHANGED",
+    });
+  });
+
+  it("429：throttled", async () => {
+    respond(429, { code: "IDN-0429", retryAfterSeconds: 3600 });
+    resetCookieJar({ patra_session: "patra_user_abc" });
+    await expect(requestEmailChange("new@example.com")).resolves.toEqual({
+      ok: false,
+      reason: "throttled",
+    });
+  });
+});
+
+describe("cancelEmailChange", () => {
+  it("204：DELETE /me/email/change", async () => {
+    respond(204);
+    resetCookieJar({ patra_session: "patra_user_abc" });
+    await expect(cancelEmailChange()).resolves.toEqual({ ok: true });
+    expect(lastRequest()).toMatchObject({
+      url: "http://gw.test/patra-identity/me/email/change",
+      method: "DELETE",
+    });
+  });
+
+  it("409 PENDING_DELETION：pending-deletion", async () => {
+    respond(409, { code: "IDN-0409", traits: ["PENDING_DELETION"] });
+    resetCookieJar({ patra_session: "patra_user_abc" });
+    await expect(cancelEmailChange()).resolves.toEqual({ ok: false, reason: "pending-deletion" });
   });
 });

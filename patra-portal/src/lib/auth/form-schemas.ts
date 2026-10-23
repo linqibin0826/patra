@@ -49,3 +49,13 @@ export const registerSchema = z
 /// 表单里各字段的原始值
 export type LoginFormValues = z.input<typeof loginSchema>;
 export type RegisterFormValues = z.input<typeof registerSchema>;
+
+/// 账号页改邮箱：同注册页的邮箱规则，另外不能与当前邮箱相同（忽略大小写，后端的 `UNCHANGED` 同一句）
+export function emailChangeSchema(currentEmail: string) {
+  return z.object({
+    newEmail: emailField.refine(
+      (value) => value.toLowerCase() !== currentEmail.trim().toLowerCase(),
+      FIELD_MESSAGES.emailUnchanged,
+    ),
+  });
+}
