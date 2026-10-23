@@ -102,7 +102,7 @@ describe("SessionsCard", () => {
     expect(phone).toHaveTextContent("最后活跃 2 小时前");
     expect(tablet).toHaveTextContent("未知设备");
     expect(tablet).toHaveTextContent("属地未知 · 101.88.12.9");
-    expect(tablet).toHaveTextContent("最后活跃 2026-10-12");
+    expect(tablet).toHaveTextContent("最后活跃 10 月 12 日");
   });
 
   it("omits_separator_when_ip_missing", async () => {

@@ -56,7 +56,8 @@ describe("formatRelative", () => {
     ["2026-10-22T13:40:00Z", "昨天 21:40"],
     [iso(NOW - 3 * DAY), "3 天前"],
     [iso(NOW - 7 * DAY), "7 天前"],
-    [iso(NOW - 8 * DAY), "2026-10-15"],
+    [iso(NOW - 8 * DAY), "10 月 15 日"],
+    ["2025-12-30T04:00:00Z", "2025 年 12 月 30 日"],
   ])("%s → %s", (value, expected) => {
     expect(formatRelative(value, NOW)).toBe(expected);
   });

@@ -102,6 +102,7 @@ export function SessionsCard() {
     <SettingsCard
       title="登录设备"
       description={SESSIONS_MESSAGES.description}
+      asidePlacement="block"
       aside={
         <button
           type="button"

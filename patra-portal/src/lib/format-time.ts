@@ -74,7 +74,7 @@ export function formatClock(iso: string, now: number): string {
 }
 
 /// 相对时间：`刚刚`（不到 1 分钟，含时钟偏差造成的未来时间）、`N 分钟前`、`N 小时前`（同一天）、
-/// `昨天 HH:mm`、`N 天前`（7 天以内）、再早写 `YYYY-MM-DD`
+/// `昨天 HH:mm`、`N 天前`（7 天以内）、再早写日期（今年 `10 月 15 日`，往年带年份，画板 Security）
 export function formatRelative(iso: string, now: number): string {
   const at = Date.parse(iso);
   const elapsed = now - at;
@@ -95,7 +95,9 @@ export function formatRelative(iso: string, now: number): string {
   if (days <= 7) {
     return `${days} 天前`;
   }
-  return `${p.year}-${pad(p.month)}-${pad(p.day)}`;
+  return p.year === partsOf(now).year
+    ? `${p.month} 月 ${p.day} 日`
+    : `${p.year} 年 ${p.month} 月 ${p.day} 日`;
 }
 
 /// `now` 加 `days` 天后的 ISO 时间
