@@ -233,3 +233,21 @@ describe("ProfileForm · 保存条", () => {
     expect(client.getQueryData(queryKeys.currentUser)).toBeNull();
   });
 });
+
+describe("ProfileForm · 机构", () => {
+  it("回显已保存的 ROR 机构；机构已不在库中（422）时提示并聚焦「更换」", async () => {
+    vi.mocked(saveProfile).mockResolvedValue({
+      ok: false,
+      reason: "invalid-fields",
+      fieldErrors: [{ field: "organization.rorId", code: "NOT_FOUND" }],
+    });
+    const { user } = renderForm();
+    expect(screen.getByText("北京协和医院")).toBeInTheDocument();
+    await user.type(nickname(), "!");
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    expect(
+      await screen.findByText("这个机构已不在机构库中，请重新选择或手动填写"),
+    ).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("button", { name: "更换" })).toHaveFocus());
+  });
+});

@@ -6,13 +6,15 @@ import { ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
-import { type FieldPath, FormProvider, useForm } from "react-hook-form";
+import { Controller, type FieldPath, FormProvider, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { FormAlert } from "@/components/auth/FormAlert";
 import { FormField } from "@/components/auth/FormField";
 import { LeaveGuard } from "@/components/settings/LeaveGuard";
 import { CharCounter } from "@/components/settings/profile/CharCounter";
+import { FieldError } from "@/components/settings/profile/FieldError";
 import { LinkListField } from "@/components/settings/profile/LinkListField";
+import { OrganizationPicker } from "@/components/settings/profile/OrganizationPicker";
 import { SettingsCard } from "@/components/settings/SettingsCard";
 import { StickySaveBar } from "@/components/settings/StickySaveBar";
 import { authPageHref, deletionPendingHref } from "@/lib/auth/next-path";
@@ -240,28 +242,31 @@ export function ProfileForm({ initial, user, privacy }: ProfileFormProps) {
               />
             )}
           </FormField>
-          <FormField
-            id="profile-organization"
-            label="机构"
-            optional
-            error={errors.organization?.message}
-          >
-            {(control) => (
-              <input
-                {...control}
-                value={watch("organization")?.name ?? ""}
-                onChange={(event) =>
-                  form.setValue(
-                    "organization",
-                    event.target.value === "" ? null : { kind: "free", name: event.target.value },
-                    { shouldDirty: true },
-                  )
-                }
-                type="text"
-                readOnly={saving}
-              />
+          <div className="flex min-w-0 flex-col gap-2">
+            <label
+              htmlFor="profile-organization"
+              className="font-medium text-fg-1 text-sm leading-5"
+            >
+              机构<span className="font-normal text-fg-3">（可选）</span>
+            </label>
+            <Controller
+              control={form.control}
+              name="organization"
+              render={({ field }) => (
+                <OrganizationPicker
+                  id="profile-organization"
+                  value={field.value}
+                  onChange={field.onChange}
+                  focusRef={field.ref}
+                  error={errors.organization?.message}
+                  readOnly={saving}
+                />
+              )}
+            />
+            {errors.organization?.message && (
+              <FieldError id="profile-organization-error">{errors.organization.message}</FieldError>
             )}
-          </FormField>
+          </div>
           <FormField
             id="profile-department"
             label="科室 / 院系"

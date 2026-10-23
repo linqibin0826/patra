@@ -1,8 +1,9 @@
 "use client";
 
-import { CircleAlert, Plus, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { useFieldArray, useFormContext } from "react-hook-form";
 import { FIELD_BOX, FIELD_INPUT } from "@/components/auth/FormField";
+import { FieldError } from "@/components/settings/profile/FieldError";
 import type { ProfileFormValues } from "@/lib/identity/profile-form";
 
 /// 最多 5 条（release spec 2.1.2）
@@ -77,15 +78,7 @@ export function LinkListField({ emailVerified, readOnly }: LinkListFieldProps) {
                 <X className="size-4" strokeWidth={1.75} aria-hidden="true" />
               </button>
             </div>
-            {error && (
-              <p
-                id={errorId}
-                className="flex items-start gap-1.5 text-sm text-status-danger leading-5"
-              >
-                <CircleAlert className="mt-0.75 size-3.5 shrink-0" aria-hidden="true" />
-                <span>{error}</span>
-              </p>
-            )}
+            {error && <FieldError id={errorId}>{error}</FieldError>}
           </div>
         );
       })}
@@ -102,7 +95,7 @@ export function LinkListField({ emailVerified, readOnly }: LinkListFieldProps) {
       ) : (
         <p className="text-sm leading-5 text-fg-3">最多 5 条链接</p>
       )}
-      {listError && <p className="text-sm text-status-danger leading-5">{listError}</p>}
+      {listError && <FieldError>{listError}</FieldError>}
     </div>
   );
 }
