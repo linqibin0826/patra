@@ -11,6 +11,7 @@ import { revokedOthersToast, SESSIONS_MESSAGES } from "@/lib/auth/messages";
 import { useCommonFailureRedirect } from "@/lib/auth/use-common-failure-redirect";
 import { revokeOtherSessions, revokeSession } from "@/lib/identity/security-actions";
 import type { SessionItem } from "@/lib/identity/session-list";
+import { orUnavailable } from "@/lib/or-unavailable";
 import { btnSecondary, btnText } from "@/lib/portal-ui";
 import { queryKeys } from "@/lib/query-keys";
 import { useReauth } from "@/lib/reauth/use-reauth";
@@ -58,9 +59,7 @@ export function SessionsCard() {
   async function revokeOne(id: string) {
     if (busyId || revokingAll) return;
     setBusyId(id);
-    const result = await withReauth(() => revokeSession(id)).catch(
-      () => ({ ok: false, reason: "unavailable" }) as const,
-    );
+    const result = await orUnavailable(withReauth(() => revokeSession(id)));
     setBusyId(null);
     if (result.ok) {
       toast.success(SESSIONS_MESSAGES.revoked);
@@ -80,9 +79,7 @@ export function SessionsCard() {
   async function revokeAll() {
     if (revokingAll || busyId || others.length === 0) return;
     setRevokingAll(true);
-    const result = await withReauth(() => revokeOtherSessions()).catch(
-      () => ({ ok: false, reason: "unavailable" }) as const,
-    );
+    const result = await orUnavailable(withReauth(() => revokeOtherSessions()));
     setRevokingAll(false);
     if (result.ok) {
       toast.success(revokedOthersToast(result.revokedSessions));

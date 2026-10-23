@@ -9,6 +9,7 @@ import { logout } from "@/lib/auth/actions";
 import { DELETION_PENDING_MESSAGES, TOAST_MESSAGES } from "@/lib/auth/messages";
 import { useCommonFailureRedirect } from "@/lib/auth/use-common-failure-redirect";
 import { cancelDeletion } from "@/lib/identity/account-actions";
+import { orUnavailable } from "@/lib/or-unavailable";
 import { btnBlock, btnPrimary, btnText } from "@/lib/portal-ui";
 import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/utils";
@@ -27,9 +28,7 @@ export function DeletionPendingPanel({ next }: { next: string }) {
     if (busy) return;
     setBusy("cancel");
     setFailed(false);
-    const result = await cancelDeletion().catch(
-      () => ({ ok: false, reason: "unavailable" }) as const,
-    );
+    const result = await orUnavailable(cancelDeletion());
     if (result.ok) {
       await queryClient.cancelQueries({ queryKey: queryKeys.currentUser });
       queryClient.setQueryData(queryKeys.currentUser, result.user);

@@ -13,6 +13,7 @@ import { useCommonFailureRedirect } from "@/lib/auth/use-common-failure-redirect
 import { addDays, formatDate } from "@/lib/format-time";
 import { endDeletedSession, requestDeletion } from "@/lib/identity/account-actions";
 import { normalizeUsername } from "@/lib/identity/username-rules";
+import { orUnavailable } from "@/lib/or-unavailable";
 import { btnDanger, btnPrimary, btnSecondary } from "@/lib/portal-ui";
 import { queryKeys } from "@/lib/query-keys";
 import { useReauth } from "@/lib/reauth/use-reauth";
@@ -75,9 +76,7 @@ export function DeleteAccountDialog({ open, onOpenChange, user }: DeleteAccountD
     setBusy(true);
     setAlert(false);
     setError(null);
-    const result = await withReauth(() => requestDeletion(normalizeUsername(value))).catch(
-      () => ({ ok: false, reason: "unavailable" }) as const,
-    );
+    const result = await orUnavailable(withReauth(() => requestDeletion(normalizeUsername(value))));
     setBusy(false);
     if (result.ok) {
       setDueAt(result.deletionDueAt);

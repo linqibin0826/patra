@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { RESEND_MESSAGES, resendWaitMessage } from "@/lib/auth/messages";
 import { useCommonFailureRedirect } from "@/lib/auth/use-common-failure-redirect";
 import { resendVerificationEmail } from "@/lib/identity/verification-actions";
+import { orUnavailable } from "@/lib/or-unavailable";
 import { btnBlock, btnPrimary } from "@/lib/portal-ui";
 import { queryKeys } from "@/lib/query-keys";
 import { useCountdown } from "@/lib/use-countdown";
@@ -61,9 +62,7 @@ export function ResendVerificationButton({
     if (inFlight.current) return;
     inFlight.current = true;
     setSending(true);
-    const result = await resendVerificationEmail().catch(
-      () => ({ ok: false, reason: "unavailable" }) as const,
-    );
+    const result = await orUnavailable(resendVerificationEmail());
     inFlight.current = false;
     setSending(false);
     if (result.ok) {

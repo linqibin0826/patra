@@ -16,6 +16,7 @@ import { useCommonFailureRedirect } from "@/lib/auth/use-common-failure-redirect
 import { formatClock } from "@/lib/format-time";
 import { cancelEmailChange, requestEmailChange } from "@/lib/identity/account-actions";
 import type { PendingEmailChange } from "@/lib/identity/account-schema";
+import { orUnavailable } from "@/lib/or-unavailable";
 import { btnPrimary, btnSecondary, btnText } from "@/lib/portal-ui";
 import { useReauth } from "@/lib/reauth/use-reauth";
 import { cn } from "@/lib/utils";
@@ -94,9 +95,7 @@ export function EmailCard({
     }
     setBusy("submit");
     setAlert(null);
-    const result = await withReauth(() => requestEmailChange(value.trim())).catch(
-      () => ({ ok: false, reason: "unavailable" }) as const,
-    );
+    const result = await orUnavailable(withReauth(() => requestEmailChange(value.trim())));
     setBusy(null);
     if (result.ok) {
       setPending(result.pending);
@@ -134,9 +133,7 @@ export function EmailCard({
     if (busy) return;
     setBusy("cancel");
     setAlert(null);
-    const result = await cancelEmailChange().catch(
-      () => ({ ok: false, reason: "unavailable" }) as const,
-    );
+    const result = await orUnavailable(cancelEmailChange());
     setBusy(null);
     if (result.ok) {
       setPending(null);

@@ -19,6 +19,7 @@ import { useCommonFailureRedirect } from "@/lib/auth/use-common-failure-redirect
 import { formatDate } from "@/lib/format-time";
 import { changeUsername } from "@/lib/identity/account-actions";
 import { normalizeUsername, usernameIssue } from "@/lib/identity/username-rules";
+import { orUnavailable } from "@/lib/or-unavailable";
 import { btnPrimary, btnSecondary } from "@/lib/portal-ui";
 import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/utils";
@@ -87,9 +88,7 @@ export function UsernameCard({ user, now: renderedAt }: UsernameCardProps) {
     }
     setBusy(true);
     setAlert(null);
-    const result = await changeUsername(normalizeUsername(value)).catch(
-      () => ({ ok: false, reason: "unavailable" }) as const,
-    );
+    const result = await orUnavailable(changeUsername(normalizeUsername(value)));
     setBusy(false);
     if (result.ok) {
       toast.success(usernameChangedToast(result.username));

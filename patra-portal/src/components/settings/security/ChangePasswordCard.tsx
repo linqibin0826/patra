@@ -20,6 +20,7 @@ import {
 } from "@/lib/auth/messages";
 import { useCommonFailureRedirect } from "@/lib/auth/use-common-failure-redirect";
 import { changePassword } from "@/lib/identity/security-actions";
+import { orUnavailable } from "@/lib/or-unavailable";
 import { btnPrimary } from "@/lib/portal-ui";
 import { queryKeys } from "@/lib/query-keys";
 
@@ -55,10 +56,12 @@ export function ChangePasswordCard() {
   async function save(values: ChangePasswordFormValues) {
     if (busy) return;
     setBusy(true);
-    const result = await changePassword({
-      currentPassword: values.currentPassword,
-      newPassword: values.newPassword,
-    }).catch(() => ({ ok: false, reason: "unavailable" }) as const);
+    const result = await orUnavailable(
+      changePassword({
+        currentPassword: values.currentPassword,
+        newPassword: values.newPassword,
+      }),
+    );
     setBusy(false);
     if (result.ok) {
       reset(EMPTY);

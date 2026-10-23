@@ -14,6 +14,7 @@ import { type ForgotPasswordFormValues, forgotPasswordSchema } from "@/lib/auth/
 import { FIELD_MESSAGES, FORGOT_MESSAGES, resendWaitMessage } from "@/lib/auth/messages";
 import { authPageHref } from "@/lib/auth/next-path";
 import { requestPasswordReset } from "@/lib/identity/token-actions";
+import { orUnavailable } from "@/lib/or-unavailable";
 import { btnBlock, btnPrimary, btnSecondary, btnText } from "@/lib/portal-ui";
 import { useCountdown } from "@/lib/use-countdown";
 import { cn } from "@/lib/utils";
@@ -60,9 +61,7 @@ export function ForgotPasswordForm({ next }: { next: string }) {
     if (busy) return;
     setBusy(true);
     setAlert(null);
-    const result = await requestPasswordReset(email).catch(
-      () => ({ ok: false, reason: "unavailable" }) as const,
-    );
+    const result = await orUnavailable(requestPasswordReset(email));
     setBusy(false);
     if (result.ok) {
       setSentTo(result.email);
