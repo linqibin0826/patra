@@ -127,7 +127,7 @@ class CatalogReferenceAdapterIT {
   void should_be_unavailable_on_read_timeout() {
     stubFor(
         get(urlEqualTo("/_internal/mesh/descriptors/D003920"))
-            .willReturn(okJson("{\"ui\":\"D003920\",\"name\":\"x\"}").withFixedDelay(2000)));
+            .willReturn(okJson("{\"ui\":\"D003920\",\"name\":\"x\"}").withFixedDelay(6000)));
 
     assertThatThrownBy(() -> adapter.meshName(DIABETES))
         .isInstanceOf(CatalogUnavailableException.class);
@@ -145,7 +145,8 @@ class CatalogReferenceAdapterIT {
         .isInstanceOf(CatalogUnavailableException.class);
   }
 
-  /// 指向给定地址的适配器：JDK HttpClient（HTTP/1.1，WireMock 默认的 h2c 会藏掉 Host）、读超时 1 秒、
+  /// 指向给定地址的适配器：JDK HttpClient（HTTP/1.1，WireMock 默认的 h2c 会藏掉 Host）、
+  /// 读超时 5 秒（CI 负载下请求偶发超过 1 秒）、
   /// 容错模式的 ProblemDetail 错误处理器；`JsonMapper` 照 Boot 的 Jackson 自动配置注册 ProblemDetail 的 mixin，
   /// 否则扩展属性（`code`、`traits`）读不出来。
   ///
@@ -158,7 +159,7 @@ class CatalogReferenceAdapterIT {
             .connectTimeout(Duration.ofSeconds(1))
             .build();
     JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
-    requestFactory.setReadTimeout(Duration.ofSeconds(1));
+    requestFactory.setReadTimeout(Duration.ofSeconds(5));
     ProblemDetailErrorHandler errorHandler =
         new ProblemDetailErrorHandler(
             JsonMapper.builder()
