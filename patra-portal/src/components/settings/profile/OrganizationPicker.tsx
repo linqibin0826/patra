@@ -12,8 +12,7 @@ import {
   ComboboxPopup,
   ComboboxStatus,
 } from "@/components/ui/combobox";
-import { graphemeCount } from "@/lib/grapheme";
-import type { OrganizationValue } from "@/lib/identity/profile-form";
+import { lengthIssue, type OrganizationValue, TEXT_LIMITS } from "@/lib/identity/profile-form";
 import { organizationDetail, organizationTypeLabel } from "@/lib/identity/suggest-labels";
 import type { OrganizationSuggestion } from "@/lib/portal-api/suggest";
 import { useOrganizationSuggestQuery } from "@/lib/portal-api/suggest-query-hooks";
@@ -21,8 +20,6 @@ import { normalizeSuggestQuery, suggestQueryLength } from "@/lib/suggest-query";
 import { cn } from "@/lib/utils";
 
 const DEBOUNCE_MS = 250;
-/// 手填机构名称上限（release spec 2.1.2）
-const MAX_FREE_NAME = 200;
 
 /// 下拉里的一项：ROR 候选，或最后固定的「直接使用」
 type Option =
@@ -69,7 +66,13 @@ export function OrganizationPicker({
     ...suggestions.map((suggestion) => ({ type: "ror" as const, suggestion })),
     ...(name === ""
       ? []
-      : [{ type: "free" as const, name, tooLong: graphemeCount(name) > MAX_FREE_NAME }]),
+      : [
+          {
+            type: "free" as const,
+            name,
+            tooLong: lengthIssue(name, TEXT_LIMITS.organizationName) === "TOO_LONG",
+          },
+        ]),
   ];
 
   let note: string | null = null;

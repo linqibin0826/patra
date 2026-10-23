@@ -2,6 +2,7 @@ import { EMPTY_PROFILE, MY_PROFILE } from "@tests/fixtures/profile";
 import { describe, expect, it } from "vitest";
 import {
   formPathOf,
+  lengthMessage,
   type ProfileFormValues,
   profileFieldMessage,
   profileFormSchema,
@@ -200,5 +201,17 @@ describe("profileFieldMessage", () => {
     ["bio", null, "这一项不符合要求"],
   ])("%s %s → %s", (field, code, message) => {
     expect(profileFieldMessage(field, code)).toBe(message);
+  });
+});
+
+describe("lengthMessage", () => {
+  it.each([
+    ["没超", "displayName", "陈宇", 30, undefined],
+    ["字数超了", "displayName", "字".repeat(31), 30, "昵称最多 30 个字"],
+    ["字数没超、字节超了", "bio", "👨‍👩‍👧‍👦".repeat(40), 200, "表情符号占用的位置较多，请删减一些"],
+    ["首尾空白不算", "displayName", `  ${"字".repeat(30)}  `, 30, undefined],
+    ["链接标题按 links[].title 取文案", "links[].title", "字".repeat(31), 30, "标题最多 30 个字"],
+  ] as const)("%s", (_, field, value, max, message) => {
+    expect(lengthMessage(field, value, max)).toBe(message);
   });
 });

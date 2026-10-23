@@ -20,29 +20,19 @@ import { SettingsCard } from "@/components/settings/SettingsCard";
 import { StickySaveBar } from "@/components/settings/StickySaveBar";
 import { authPageHref, deletionPendingHref } from "@/lib/auth/next-path";
 import type { CurrentUser } from "@/lib/auth/types";
-import { graphemeCount } from "@/lib/grapheme";
 import { OCCUPATIONS, occupationLabel } from "@/lib/identity/occupation";
 import { type SaveProfileResult, saveProfile } from "@/lib/identity/profile-actions";
 import {
-  BYTES_PER_GRAPHEME,
   formPathOf,
+  lengthMessage,
   type ProfileFormValues,
   profileFieldMessage,
   profileFormSchema,
-  TOO_MANY_BYTES_MESSAGE,
+  TEXT_LIMITS,
   toFormValues,
-  utf8Length,
 } from "@/lib/identity/profile-form";
 import type { MyProfile, PrivacySettings } from "@/lib/identity/profile-schema";
 import { queryKeys } from "@/lib/query-keys";
-
-/// 字数超了是「最多 N 个字」，字数没超、字节超了是删减表情的提示；都没超为 undefined
-function overLimitMessage(field: "displayName" | "bio", value: string, max: number) {
-  if (graphemeCount(value.trim()) > max) {
-    return profileFieldMessage(field, "TOO_LONG");
-  }
-  return utf8Length(value) > max * BYTES_PER_GRAPHEME ? TOO_MANY_BYTES_MESSAGE : undefined;
-}
 
 /// 这一页的地址：保存失败跳登录页、取消注销页时作 `next`
 const PAGE = "/settings/profile";
@@ -91,8 +81,9 @@ export function ProfileForm({ initial, user, privacy }: ProfileFormProps) {
   const [displayName, bio, interests] = watch(["displayName", "bio", "researchInterests"]);
   // 计数超出上限（字数或字节）时立即显示字段错误，不等提交（简报 §4.5）
   const displayNameError =
-    errors.displayName?.message ?? overLimitMessage("displayName", displayName, 30);
-  const bioError = errors.bio?.message ?? overLimitMessage("bio", bio, 200);
+    errors.displayName?.message ??
+    lengthMessage("displayName", displayName, TEXT_LIMITS.displayName);
+  const bioError = errors.bio?.message ?? lengthMessage("bio", bio, TEXT_LIMITS.bio);
 
   /// 后端的字段错误挂到表单字段上（某个关注领域的错误按提交时那一项的 UI 记下），返回第一个挂上的字段
   function showFieldErrors(
@@ -188,7 +179,7 @@ export function ProfileForm({ initial, user, privacy }: ProfileFormProps) {
           <FormField
             id="profile-display-name"
             label="昵称"
-            aside={<CharCounter value={displayName} max={30} />}
+            aside={<CharCounter value={displayName} max={TEXT_LIMITS.displayName} />}
             hint="2–30 个字。不填就显示用户名。昵称可以和别人重复，主页上会同时显示 @用户名"
             error={displayNameError}
           >
@@ -206,7 +197,7 @@ export function ProfileForm({ initial, user, privacy }: ProfileFormProps) {
             id="profile-bio"
             label="简介"
             optional
-            aside={<CharCounter value={bio} max={200} />}
+            aside={<CharCounter value={bio} max={TEXT_LIMITS.bio} />}
             hint="最多 3 行"
             error={bioError}
           >

@@ -157,62 +157,76 @@ function isWebUrl(value: string): boolean {
   }
 }
 
-/// 字素数不超过 `max`
-const withinGraphemes = (max: number) => (value: string) => graphemeCount(value.trim()) <= max;
+/// 文字字段的字素上限（release spec 2.1.2，与后端一致）
+export const TEXT_LIMITS = {
+  displayName: 30,
+  bio: 200,
+  linkTitle: 30,
+  jobTitle: 50,
+  organizationName: 200,
+  department: 100,
+} as const;
 
 /// 后端对文字字段还卡 UTF-8 字节数：字素上限 × 4（昵称 120 字节）。表情组合序列一个字素就能占十几字节，
 /// 字数没超也可能超这个
-export const BYTES_PER_GRAPHEME = 4;
+const BYTES_PER_GRAPHEME = 4;
 
 /// UTF-8 字节数（去首尾空白后）
-export function utf8Length(value: string): number {
+function utf8Length(value: string): number {
   return new TextEncoder().encode(value.trim()).length;
 }
 
-/// 字节数不超过「字素上限 × 4」
-const withinBytes = (max: number) => (value: string) =>
-  utf8Length(value) <= max * BYTES_PER_GRAPHEME;
-
 /// 字数没超、字节超了时的提示（后端同样回 TOO_LONG，但写「最多 N 个字」会和计数对不上）
-export const TOO_MANY_BYTES_MESSAGE = "表情符号占用的位置较多，请删减一些";
+const TOO_MANY_BYTES_MESSAGE = "表情符号占用的位置较多，请删减一些";
+
+/// 文字字段的上限检查（去首尾空白后）：字素数超过 `max` 是 `TOO_LONG`；字素没超、UTF-8 字节超过
+/// `max × 4` 是 `TOO_MANY_BYTES`；都没超为 null。前端校验、输入时的即时提示、计数的颜色都用它，规则只有这一份。
+export function lengthIssue(value: string, max: number): "TOO_LONG" | "TOO_MANY_BYTES" | null {
+  if (graphemeCount(value.trim()) > max) {
+    return "TOO_LONG";
+  }
+  return utf8Length(value) > max * BYTES_PER_GRAPHEME ? "TOO_MANY_BYTES" : null;
+}
+
+/// `lengthIssue` 的文案：`TOO_LONG` 取该字段的「最多 N 个字」（`field` 是 `FIELD_MESSAGES` 的键），字节超了是
+/// 删减表情的提示；没超为 undefined
+export function lengthMessage(field: string, value: string, max: number): string | undefined {
+  const issue = lengthIssue(value, max);
+  if (issue === null) {
+    return undefined;
+  }
+  return issue === "TOO_LONG" ? profileFieldMessage(field, "TOO_LONG") : TOO_MANY_BYTES_MESSAGE;
+}
+
+/// 有上限的文字字段：超了按 `lengthMessage` 报错
+const limitedText = (field: string, max: number) =>
+  z.string().superRefine((value, ctx) => {
+    const message = lengthMessage(field, value, max);
+    if (message) ctx.addIssue({ code: "custom", message });
+  });
 
 /// 前端校验（与后端同规则的那部分：长度、行数、条数、网址格式与重复）；字符、保留字、网址 / 手机号形态等
 /// 只由后端判，失败时按原因码显示。文案取 `FIELD_MESSAGES`，两边一致。
 export const profileFormSchema = z
   .object({
-    displayName: z.string().superRefine((value, ctx) => {
-      const length = graphemeCount(value.trim());
-      if (length === 1)
-        ctx.addIssue({ code: "custom", message: profileFieldMessage("displayName", "TOO_SHORT") });
-      if (length > 30)
-        ctx.addIssue({ code: "custom", message: profileFieldMessage("displayName", "TOO_LONG") });
-      else if (!withinBytes(30)(value))
-        ctx.addIssue({ code: "custom", message: TOO_MANY_BYTES_MESSAGE });
-    }),
-    bio: z
-      .string()
-      .refine(withinGraphemes(200), profileFieldMessage("bio", "TOO_LONG"))
-      .refine(withinBytes(200), TOO_MANY_BYTES_MESSAGE)
-      .refine(
-        (value) => value.trim().split("\n").length <= 3,
-        profileFieldMessage("bio", "TOO_MANY_LINES"),
-      ),
+    displayName: limitedText("displayName", TEXT_LIMITS.displayName).refine(
+      (value) => graphemeCount(value.trim()) !== 1,
+      profileFieldMessage("displayName", "TOO_SHORT"),
+    ),
+    bio: limitedText("bio", TEXT_LIMITS.bio).refine(
+      (value) => value.trim().split("\n").length <= 3,
+      profileFieldMessage("bio", "TOO_MANY_LINES"),
+    ),
     links: z
       .array(
         z.object({
-          title: z
-            .string()
-            .refine(withinGraphemes(30), profileFieldMessage("links[].title", "TOO_LONG"))
-            .refine(withinBytes(30), TOO_MANY_BYTES_MESSAGE),
+          title: limitedText("links[].title", TEXT_LIMITS.linkTitle),
           url: z.string(),
         }),
       )
       .max(5, profileFieldMessage("links", "TOO_MANY")),
     occupation: z.union([z.enum(OCCUPATIONS), z.literal("")]),
-    jobTitle: z
-      .string()
-      .refine(withinGraphemes(50), profileFieldMessage("jobTitle", "TOO_LONG"))
-      .refine(withinBytes(50), TOO_MANY_BYTES_MESSAGE),
+    jobTitle: limitedText("jobTitle", TEXT_LIMITS.jobTitle),
     organization: z
       .union([
         z.object({
@@ -224,10 +238,7 @@ export const profileFormSchema = z
         z.object({ kind: z.literal("free"), name: z.string() }),
       ])
       .nullable(),
-    department: z
-      .string()
-      .refine(withinGraphemes(100), profileFieldMessage("department", "TOO_LONG"))
-      .refine(withinBytes(100), TOO_MANY_BYTES_MESSAGE),
+    department: limitedText("department", TEXT_LIMITS.department),
     researchInterests: z
       .array(z.object({ ui: z.string(), name: z.string() }))
       .max(10, profileFieldMessage("researchInterests", "TOO_MANY")),
@@ -235,12 +246,11 @@ export const profileFormSchema = z
   .superRefine((values, ctx) => {
     // 机构的错误挂在选择器 `organization` 上，不挂在子字段上
     if (values.organization?.kind === "free") {
-      const { name } = values.organization;
-      const message = !withinGraphemes(200)(name)
-        ? profileFieldMessage("organization.name", "TOO_LONG")
-        : !withinBytes(200)(name)
-          ? TOO_MANY_BYTES_MESSAGE
-          : null;
+      const message = lengthMessage(
+        "organization.name",
+        values.organization.name,
+        TEXT_LIMITS.organizationName,
+      );
       if (message) {
         ctx.addIssue({ code: "custom", path: ["organization"], message });
       }
