@@ -51,3 +51,49 @@ export async function requestPasswordReset(email: string): Promise<ForgotResult>
   unexpectedProblem(endpoint, problem);
   return UNAVAILABLE;
 }
+
+/// 落地页提交令牌的结果：成功带邮箱；令牌不可用（422 `token`）；地址已被别人注册（409，只有确认 / 撤销改邮箱）
+export type TokenResult =
+  | { ok: true; email: string }
+  | { ok: false; reason: "invalid" | "taken" }
+  | Unavailable;
+
+const emailSchema = z.object({ email: z.string().min(1) });
+
+/// 落地页的共同部分：POST `{ token }`，200 读邮箱；422 `token` 是无效；409 是被占用；其余记日志后 `unavailable`
+async function consumeToken(path: string, token: string): Promise<TokenResult> {
+  const endpoint = `/patra-identity${path}`;
+  const reply = await callIdentity(path, { method: "POST", json: { token } }, { auth: "optional" });
+  if (reply.kind === "ok") {
+    const parsed = reply.res.status === 200 ? emailSchema.safeParse(reply.body) : undefined;
+    if (!parsed?.success) {
+      logUnexpectedResponse(endpoint, reply.res.status, reply.body);
+      return UNAVAILABLE;
+    }
+    return { ok: true, email: parsed.data.email };
+  }
+  if (reply.kind !== "problem") {
+    return UNAVAILABLE;
+  }
+  const { problem } = reply;
+  if (problem.status === 422 && problem.errors.some((error) => error.field === "token")) {
+    return { ok: false, reason: "invalid" };
+  }
+  if (problem.status === 409) {
+    return { ok: false, reason: "taken" };
+  }
+  unexpectedProblem(endpoint, problem);
+  return UNAVAILABLE;
+}
+
+/// 验证邮箱（`POST /auth/email/verify`）。有会话 Cookie 就带上令牌：令牌属于当前用户时 identity 保留本机会话、
+/// 撤销其余，否则撤销该用户全部会话。不会回 409，回了按 `unavailable`。
+export async function verifyEmail(
+  token: string,
+): Promise<{ ok: true; email: string } | { ok: false; reason: "invalid" } | Unavailable> {
+  const result = await consumeToken("/auth/email/verify", token);
+  if (result.ok) {
+    return result;
+  }
+  return result.reason === "invalid" ? { ok: false, reason: "invalid" } : UNAVAILABLE;
+}

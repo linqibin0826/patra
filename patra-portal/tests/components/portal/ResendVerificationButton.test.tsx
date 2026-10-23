@@ -152,3 +152,20 @@ describe("ResendVerificationButton", () => {
     expect(screen.queryByRole("button", { name: "重新发送" })).not.toBeInTheDocument();
   });
 });
+
+describe("ResendVerificationButton · 整宽按钮样式", () => {
+  it("冷却中仍是按钮（不可点），文字是倒计时", () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    client.setQueryData(queryKeys.currentUser, { ...USER, emailVerified: false });
+    useVerificationResendStore.getState().startCooldown(NOW + 52_000);
+    render(
+      <QueryClientProvider client={client}>
+        <ResendVerificationButton variant="block" label="重新发送验证邮件" />
+      </QueryClientProvider>,
+    );
+    expect(screen.getByRole("button", { name: "已发送 · 52 秒后可重发" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+  });
+});

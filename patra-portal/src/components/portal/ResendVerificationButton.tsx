@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { RESEND_MESSAGES, resendWaitMessage } from "@/lib/auth/messages";
 import { useCommonFailureRedirect } from "@/lib/auth/use-common-failure-redirect";
 import { resendVerificationEmail } from "@/lib/identity/verification-actions";
+import { btnBlock, btnPrimary } from "@/lib/portal-ui";
 import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/utils";
 import { useVerificationResendStore } from "@/store/verification-resend";
@@ -17,6 +18,9 @@ const DEFAULT_WAIT_MS = 60_000;
 interface ResendVerificationButtonProps {
   /// 按钮文字，默认「重新发送」；主页提示条上是「重新发送验证邮件」
   label?: string;
+  /// `text`（默认）：文字按钮，冷却时换成一行文字；`block`：整宽主按钮，冷却时按钮不可点、文字是倒计时
+  /// （验证落地页的无效屏，画板 Landing）
+  variant?: "text" | "block";
   className?: string;
 }
 
@@ -25,6 +29,7 @@ interface ResendVerificationButtonProps {
 /// 冷却存在共享的 store 里，横幅和主页提示条看到的是同一个倒计时。
 export function ResendVerificationButton({
   label = "重新发送",
+  variant = "text",
   className,
 }: ResendVerificationButtonProps) {
   const pathname = usePathname();
@@ -100,7 +105,22 @@ export function ResendVerificationButton({
 
   return (
     <>
-      {waiting ? (
+      {variant === "block" ? (
+        <button
+          type="button"
+          aria-disabled={waiting || sending || undefined}
+          onClick={() => {
+            if (!waiting) void resend();
+          }}
+          className={cn(btnPrimary, btnBlock, "tabular-nums", className)}
+        >
+          {waiting
+            ? resendWaitMessage(Math.ceil((availableAt - now) / 1_000), limited)
+            : sending
+              ? RESEND_MESSAGES.sending
+              : label}
+        </button>
+      ) : waiting ? (
         <span className={cn("text-sm leading-5 text-fg-3 tabular-nums", className)}>
           {resendWaitMessage(Math.ceil((availableAt - now) / 1_000), limited)}
         </span>

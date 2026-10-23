@@ -276,3 +276,18 @@ export const FORGOT_MESSAGES = {
   backToLogin: "返回登录",
   failed: "没有发出去，请稍后再试",
 } as const;
+
+/// 验证邮箱落地页（简报 §3.18 a，画板 Landing）
+export const VERIFY_LANDING_MESSAGES = {
+  title: "验证你的邮箱",
+  description: "点下面的按钮完成验证。",
+  action: "验证邮箱",
+  pending: "验证中…",
+  verifiedTitle: "邮箱已验证",
+  invalidTitle: "链接无效或已过期",
+  invalidDescription: "验证链接 24 小时内有效，重新发送会让旧链接失效。",
+  resend: "重新发送验证邮件",
+  loginToResend: "登录后重新发送",
+  continue: "继续浏览",
+  login: "登录",
+} as const;

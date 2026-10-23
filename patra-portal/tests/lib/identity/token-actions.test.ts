@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { resetCookieJar } from "@tests/stubs/cookie-jar";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { requestPasswordReset } from "@/lib/identity/token-actions";
+import { requestPasswordReset, verifyEmail } from "@/lib/identity/token-actions";
 
 vi.mock("next/headers", () => import("@tests/stubs/cookie-jar"));
 
@@ -78,5 +78,42 @@ describe("requestPasswordReset", () => {
       ok: false,
       reason: "unavailable",
     });
+  });
+});
+
+const TOKEN = "t".repeat(43);
+
+describe("verifyEmail", () => {
+  it("200：有会话 Cookie 时带上令牌，返回邮箱", async () => {
+    respond(200, { email: "a@b.com", emailVerifiedAt: "2026-10-23T08:00:00Z" });
+    resetCookieJar({ patra_session: "patra_user_abc" });
+    await expect(verifyEmail(TOKEN)).resolves.toEqual({ ok: true, email: "a@b.com" });
+    const request = lastRequest();
+    expect(request).toMatchObject({
+      url: "http://gw.test/patra-identity/auth/email/verify",
+      method: "POST",
+      body: { token: TOKEN },
+    });
+    expect(request.headers.Authorization).toBe("Bearer patra_user_abc");
+  });
+
+  it("没有会话也请求，不带 Authorization", async () => {
+    respond(200, { email: "a@b.com", emailVerifiedAt: "2026-10-23T08:00:00Z" });
+    resetCookieJar();
+    await verifyEmail(TOKEN);
+    expect(lastRequest().headers.Authorization).toBeUndefined();
+  });
+
+  it("422 token：invalid", async () => {
+    respond(422, { code: "IDN-0422", errors: [{ field: "token", code: "INVALID" }] });
+    resetCookieJar();
+    await expect(verifyEmail(TOKEN)).resolves.toEqual({ ok: false, reason: "invalid" });
+  });
+
+  it("422 其他字段：unavailable 并记日志", async () => {
+    respond(422, { code: "IDN-0422", errors: [{ field: "other", code: "X" }] });
+    resetCookieJar();
+    await expect(verifyEmail(TOKEN)).resolves.toEqual({ ok: false, reason: "unavailable" });
+    expect(console.error).toHaveBeenCalled();
   });
 });
