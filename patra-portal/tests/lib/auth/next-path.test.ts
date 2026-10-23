@@ -1,6 +1,12 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { authPageHref, deletionPendingHref, isFocusPage, safeNextPath } from "@/lib/auth/next-path";
+import {
+  authPageHref,
+  deletionPendingHref,
+  forgotPasswordHref,
+  isFocusPage,
+  safeNextPath,
+} from "@/lib/auth/next-path";
 
 describe("safeNextPath", () => {
   it.each([
@@ -92,5 +98,13 @@ describe("专注布局的页面", () => {
   it("设置页、首页不是专注页", () => {
     expect(isFocusPage("/settings/account")).toBe(false);
     expect(isFocusPage("/")).toBe(false);
+  });
+});
+
+describe("forgotPasswordHref", () => {
+  it("带上校验后的 next；是首页时不带", () => {
+    expect(forgotPasswordHref("/papers?q=a")).toBe("/forgot-password?next=%2Fpapers%3Fq%3Da");
+    expect(forgotPasswordHref("/")).toBe("/forgot-password");
+    expect(forgotPasswordHref("/login")).toBe("/forgot-password");
   });
 });

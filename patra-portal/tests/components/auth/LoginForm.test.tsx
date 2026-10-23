@@ -8,6 +8,7 @@ import { LoginForm } from "@/components/auth/LoginForm";
 import { login } from "@/lib/auth/actions";
 import type { LoginResult } from "@/lib/auth/types";
 import { queryKeys } from "@/lib/query-keys";
+import { useAuthHandoffStore } from "@/store/auth-handoff";
 
 const router = { replace: vi.fn(), prefetch: vi.fn() };
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
@@ -387,5 +388,38 @@ describe("LoginForm · 成功", () => {
     await act(async () => pending.answer({ ok: false, reason: "bad-credentials" }));
     expect(router.replace).not.toHaveBeenCalled();
     expect(toast.success).not.toHaveBeenCalled();
+  });
+});
+
+describe("LoginForm · 忘记密码与重设后的提示", () => {
+  afterEach(() => useAuthHandoffStore.getState().take());
+
+  it("密码标签行有「忘记密码？」，带上 next；点击时把已填的邮箱交给找回页", async () => {
+    const form = renderLogin();
+    const link = screen.getByRole("link", { name: "忘记密码？" });
+    expect(link).toHaveAttribute("href", "/forgot-password?next=%2Fpapers%3Fq%3DGLP-1");
+    await form.user.type(form.email, "  reader@example.com ");
+    link.addEventListener("click", (event) => event.preventDefault());
+    await form.user.click(link);
+    expect(useAuthHandoffStore.getState().take()).toEqual({
+      email: "reader@example.com",
+      notice: null,
+    });
+  });
+
+  it("从重设页过来：预填邮箱、成功提示、焦点在密码框", async () => {
+    useAuthHandoffStore.getState().put({ email: "reader@example.com", notice: "password-reset" });
+    const form = renderLogin();
+    expect(form.email).toHaveValue("reader@example.com");
+    expect(screen.getByRole("status")).toHaveTextContent("密码已重设，请用新密码登录");
+    await waitFor(() => expect(form.password).toHaveFocus());
+    // 读一次就清空，刷新或再进一次不会重复出现
+    expect(useAuthHandoffStore.getState().take()).toEqual({ email: null, notice: null });
+  });
+
+  it("平常进入：没有提示，焦点在邮箱框", async () => {
+    const form = renderLogin();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    await waitFor(() => expect(form.email).toHaveFocus());
   });
 });

@@ -55,3 +55,12 @@ export function deletionPendingHref(next: string): string {
   const page = "/account/deletion-pending";
   return target === "/" ? page : `${page}?${new URLSearchParams({ next: target })}`;
 }
+
+/// 忘记密码页的地址：带上 `next`，找回页的「返回」「返回登录」回到带同一个 `next` 的登录页。`next` 先经过
+/// `safeNextPath`，结果是 `/` 时不带参数。
+export function forgotPasswordHref(next: string): string {
+  const target = safeNextPath(next);
+  return target === "/"
+    ? "/forgot-password"
+    : `/forgot-password?${new URLSearchParams({ next: target })}`;
+}

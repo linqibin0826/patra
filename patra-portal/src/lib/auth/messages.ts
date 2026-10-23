@@ -256,3 +256,8 @@ export const SESSIONS_MESSAGES = {
 export function revokedOthersToast(count: number): string {
   return `已退出其他 ${count} 台设备`;
 }
+
+/// 登录页的成功提示（简报 §3.2、§4.2）
+export const LOGIN_NOTICES = {
+  passwordReset: "密码已重设，请用新密码登录",
+} as const;
