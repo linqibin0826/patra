@@ -177,6 +177,8 @@ public class RestClientFactory {
     RequestConfig requestConfig =
         RequestConfig.custom()
             .setConnectTimeout(Timeout.of(connectTimeout))
+            // 连接池占满时等连接也按连接超时算，不用 Apache HttpClient 默认的 3 分钟
+            .setConnectionRequestTimeout(Timeout.of(connectTimeout))
             .setResponseTimeout(Timeout.of(readTimeout))
             .build();
 
