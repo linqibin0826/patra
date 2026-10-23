@@ -1,4 +1,5 @@
 import "server-only";
+import { unstable_rethrow } from "next/navigation";
 import { logRequestError, readJson } from "@/lib/auth/gateway-response";
 import { readSessionToken } from "@/lib/auth/session-cookie";
 import { readClientOrigin } from "@/lib/client-origin";
@@ -41,6 +42,8 @@ export async function callIdentity(
       ? { kind: "ok", res, body }
       : { kind: "problem", problem: parseProblem(res, body) };
   } catch (error) {
+    // 静态渲染时 Next 用抛错切到动态渲染（读 Cookie、请求头），这个信号必须原样抛出去
+    unstable_rethrow(error);
     logRequestError(endpoint, error);
     return { kind: "error" };
   }

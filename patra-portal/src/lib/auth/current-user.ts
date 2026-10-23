@@ -1,4 +1,5 @@
 import "server-only";
+import { unstable_rethrow } from "next/navigation";
 import { cache } from "react";
 import { logRequestError, logUnexpectedResponse, readJson } from "@/lib/auth/gateway-response";
 import { readSessionToken } from "@/lib/auth/session-cookie";
@@ -60,6 +61,8 @@ export const lookupSession = cache(async (): Promise<SessionLookup> => {
   try {
     token = await readSessionToken();
   } catch (error) {
+    // 静态渲染时 Next 用抛错切到动态渲染，这个信号必须原样抛出去
+    unstable_rethrow(error);
     logRequestError(ME_ENDPOINT, error);
     return { status: "unavailable" };
   }

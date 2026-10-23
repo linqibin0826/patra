@@ -79,6 +79,15 @@ describe("callIdentity", () => {
     ]);
   });
 
+  it("Next 的动态渲染信号原样抛出，不当成 error", async () => {
+    const dynamic = Object.assign(new Error("Dynamic server usage"), {
+      digest: "DYNAMIC_SERVER_USAGE",
+    });
+    const jar = await import("@tests/stubs/cookie-jar");
+    vi.spyOn(jar, "cookies").mockRejectedValueOnce(dynamic);
+    await expect(callIdentity("/me/profile")).rejects.toBe(dynamic);
+  });
+
   it("请求抛错：error，并记日志", async () => {
     fetchMock.mockRejectedValue(new TypeError("fetch failed"));
     await expect(callIdentity("/me/profile")).resolves.toEqual({ kind: "error" });

@@ -112,6 +112,15 @@ describe("lookupSession", () => {
     await expect(lookupSession()).resolves.toEqual({ status: "unavailable" });
   });
 
+  it("读 Cookie 时 Next 抛出的动态渲染信号要原样抛出，不能当成 unavailable", async () => {
+    const dynamic = Object.assign(new Error("Dynamic server usage"), {
+      digest: "DYNAMIC_SERVER_USAGE",
+    });
+    const jar = await import("@tests/stubs/cookie-jar");
+    vi.spyOn(jar, "cookies").mockRejectedValueOnce(dynamic);
+    await expect(lookupSession()).rejects.toBe(dynamic);
+  });
+
   it("Secure 开关写错时是 unavailable，不请求网关", async () => {
     vi.stubEnv("PATRA_SESSION_COOKIE_SECURE", "yes");
     await expect(lookupSession()).resolves.toEqual({ status: "unavailable" });
