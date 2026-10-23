@@ -1,7 +1,9 @@
 "use server";
 
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import { logUnexpectedResponse } from "@/lib/auth/gateway-response";
+import { clearSessionCookie } from "@/lib/auth/session-cookie";
 import type { CurrentUser } from "@/lib/auth/types";
 import { type PendingEmailChange, pendingEmailChangeSchema } from "@/lib/identity/account-schema";
 import {
@@ -141,4 +143,49 @@ export async function cancelEmailChange(): Promise<{ ok: true } | CommonFailure>
   return "failure" in settled
     ? settled.failure
     : unexpectedProblem(`/patra-identity${EMAIL_CHANGE_PATH}`, settled.problem);
+}
+
+/// 发起注销的结果。不带文案。
+export type RequestDeletionResult =
+  | { ok: true; deletionDueAt: string }
+  | { ok: false; reason: "mismatch" }
+  | ReauthRequired
+  | CommonFailure;
+
+const deletionRequestedSchema = z.object({ deletionDueAt: z.string().min(1) });
+
+/// 发起注销（`POST /me/deletion`，要求再认证；用户名比对先于再认证）。200 时本机会话已在服务端撤销，但这里
+/// **不清 Cookie**：Server Action 写 Cookie 会让当前设置页重新渲染、被守卫送去登录页，结果屏就没了（spec §7.1）。
+/// Cookie 由结果屏的「好的」经 `endDeletedSession` 清掉。
+export async function requestDeletion(username: string): Promise<RequestDeletionResult> {
+  const endpoint = `/patra-identity${DELETION_PATH}`;
+  const reply = await callIdentity(DELETION_PATH, { method: "POST", json: { username } });
+  if (reply.kind === "ok") {
+    const parsed =
+      reply.res.status === 200 ? deletionRequestedSchema.safeParse(reply.body) : undefined;
+    if (!parsed?.success) {
+      logUnexpectedResponse(endpoint, reply.res.status, reply.body);
+      return UNAVAILABLE;
+    }
+    return { ok: true, deletionDueAt: parsed.data.deletionDueAt };
+  }
+  const settled = await settleFailure(reply);
+  if ("failure" in settled) {
+    return settled.failure;
+  }
+  const { problem } = settled;
+  if (problem.status === 422 && problem.errors.some((error) => error.field === "username")) {
+    return { ok: false, reason: "mismatch" };
+  }
+  if (isReauthRequired(problem)) {
+    return REAUTH_REQUIRED;
+  }
+  return unexpectedProblem(endpoint, problem);
+}
+
+/// 注销结果屏关闭时：清掉已失效的会话 Cookie 后去首页。Action 里的 `redirect` 优先于当前页的重新渲染，
+/// 浏览器直接到首页，不会先闪到登录页。
+export async function endDeletedSession(): Promise<never> {
+  await clearSessionCookie();
+  redirect("/");
 }

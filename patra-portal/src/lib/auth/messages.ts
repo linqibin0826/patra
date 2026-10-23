@@ -191,3 +191,20 @@ export function newEmailMessage(code: string | null): string {
   if (code === "UNCHANGED") return FIELD_MESSAGES.emailUnchanged;
   return FIELD_MESSAGES.emailInvalid;
 }
+
+/// 注销卡片与对话框（简报 §3.10 卡片 3、§3.15、§4.7）
+export const DELETE_ACCOUNT_MESSAGES = {
+  cardNotes: [
+    "提交后进入 15 天冷静期：所有设备立即退出登录，主页对别人消失。",
+    "冷静期内登录即可取消。到期后资料、头像、关注领域被删除，邮箱可以重新注册，用户名永久保留、不能再被使用。",
+    "被封禁的账号不能自助注销。",
+  ],
+  open: "注销账号…",
+  stepOneTitle: "注销账号",
+  stepTwoTitle: "确认注销",
+  doneTitle: "注销申请已提交",
+  mismatch: "和你的用户名不一致",
+  failed: "没有提交成功，请稍后再试",
+  submit: "注销账号",
+  submitting: "提交中…",
+} as const;

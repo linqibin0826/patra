@@ -6,10 +6,18 @@ import {
   cancelDeletion,
   cancelEmailChange,
   changeUsername,
+  endDeletedSession,
+  requestDeletion,
   requestEmailChange,
 } from "@/lib/identity/account-actions";
 
 vi.mock("next/headers", () => import("@tests/stubs/cookie-jar"));
+vi.mock("next/navigation", () => ({
+  redirect: vi.fn((url: string) => {
+    throw new Error(`NEXT_REDIRECT:${url}`);
+  }),
+  unstable_rethrow: vi.fn(),
+}));
 
 const fetchMock = vi.fn<typeof fetch>();
 const CLEARED = "patra_session=; Path=/; Max-Age=0; HttpOnly; SameSite=lax";
@@ -221,5 +229,54 @@ describe("cancelEmailChange", () => {
     respond(409, { code: "IDN-0409", traits: ["PENDING_DELETION"] });
     resetCookieJar({ patra_session: "patra_user_abc" });
     await expect(cancelEmailChange()).resolves.toEqual({ ok: false, reason: "pending-deletion" });
+  });
+});
+
+describe("requestDeletion", () => {
+  it("200：POST /me/deletion，返回到期时间，不碰 Cookie", async () => {
+    respond(200, { deletionDueAt: "2026-11-07T08:00:00Z" });
+    const jar = resetCookieJar({ patra_session: "patra_user_abc" });
+    await expect(requestDeletion("chen-yu")).resolves.toEqual({
+      ok: true,
+      deletionDueAt: "2026-11-07T08:00:00Z",
+    });
+    expect(lastRequest()).toEqual({
+      url: "http://gw.test/patra-identity/me/deletion",
+      method: "POST",
+      body: { username: "chen-yu" },
+    });
+    expect(jar.written).toEqual([]);
+  });
+
+  it.each(["MISMATCH", "REQUIRED"])("422 username / %s：mismatch", async (code) => {
+    respond(422, { code: "IDN-0422", errors: [{ field: "username", code }] });
+    resetCookieJar({ patra_session: "patra_user_abc" });
+    await expect(requestDeletion("x")).resolves.toEqual({ ok: false, reason: "mismatch" });
+  });
+
+  it("403 REAUTH_REQUIRED：reauth-required", async () => {
+    respond(403, { code: "IDN-0403", traits: ["REAUTH_REQUIRED", "FORBIDDEN"] });
+    resetCookieJar({ patra_session: "patra_user_abc" });
+    await expect(requestDeletion("chen-yu")).resolves.toEqual({
+      ok: false,
+      reason: "reauth-required",
+    });
+  });
+
+  it("409 PENDING_DELETION：pending-deletion", async () => {
+    respond(409, { code: "IDN-0409", traits: ["PENDING_DELETION"] });
+    resetCookieJar({ patra_session: "patra_user_abc" });
+    await expect(requestDeletion("chen-yu")).resolves.toEqual({
+      ok: false,
+      reason: "pending-deletion",
+    });
+  });
+});
+
+describe("endDeletedSession", () => {
+  it("清掉会话 Cookie 后跳首页", async () => {
+    const jar = resetCookieJar({ patra_session: "patra_user_abc" });
+    await expect(endDeletedSession()).rejects.toThrow("NEXT_REDIRECT:/");
+    expect(jar.written).toEqual([CLEARED]);
   });
 });

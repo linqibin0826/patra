@@ -24,6 +24,8 @@ interface DialogProps {
   alert?: ReactNode;
   /// 打开时先聚焦的元素；不传时聚焦第一个可聚焦元素（标签行里有链接时就要指定输入框）
   initialFocus?: RefObject<HTMLElement | null>;
+  /// 标题上方的状态图标（注销结果屏，见 `StateIcon`）
+  icon?: ReactNode;
   children: ReactNode;
   className?: string;
 }
@@ -39,6 +41,7 @@ export function Dialog({
   dismissible = true,
   alert,
   initialFocus,
+  icon,
   children,
   className,
 }: DialogProps) {
@@ -65,6 +68,7 @@ export function Dialog({
           )}
         >
           <div className="flex flex-col gap-1.5">
+            {icon}
             <DialogPrimitive.Title className="font-serif text-xl leading-6.5 font-medium text-fg-1">
               {title}
             </DialogPrimitive.Title>

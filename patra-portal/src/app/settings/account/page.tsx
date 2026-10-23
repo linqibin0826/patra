@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { DeleteAccountCard } from "@/components/settings/account/DeleteAccountCard";
 import { EmailCard } from "@/components/settings/account/EmailCard";
 import { UsernameCard } from "@/components/settings/account/UsernameCard";
 import { authPageHref } from "@/lib/auth/next-path";
@@ -22,6 +23,7 @@ export default async function AccountSettingsPage() {
     <div className="flex flex-col gap-8 max-[880px]:gap-6">
       <UsernameCard user={user} now={Date.now()} />
       <EmailCard user={user} pending={pending} />
+      <DeleteAccountCard user={user} />
     </div>
   );
 }
