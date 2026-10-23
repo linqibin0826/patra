@@ -3,6 +3,7 @@ import { z } from "zod";
 import { logRequestError, logUnexpectedResponse, readJson } from "@/lib/auth/gateway-response";
 import { readSessionToken } from "@/lib/auth/session-cookie";
 import type { CurrentUser } from "@/lib/auth/types";
+import type { ClientOrigin } from "@/lib/client-origin";
 import { canSendToken, gatewayFetch } from "@/lib/gateway";
 
 const ME_ENDPOINT = "/patra-identity/auth/me";
@@ -24,10 +25,10 @@ const currentUserSchema = z.object({ userId: z.string().min(1), email: z.string(
 /// - 401（`GW-0401` 或 `IDN-0401`）：`rejected`
 /// - 其他状态码、请求抛错、响应体格式不对：`unavailable`
 ///
-/// `timeoutMs` 不传时用 `gatewayFetch` 默认的 10 秒。proxy 传 3 秒。
+/// `timeoutMs` 不传时用 `gatewayFetch` 默认的 10 秒，proxy 传 3 秒；`client` 是要转发的浏览器来源。
 export async function lookupSessionByToken(
   token: string | null,
-  timeoutMs?: number,
+  options: { timeoutMs?: number; client?: ClientOrigin } = {},
 ): Promise<SessionLookup> {
   if (!token) {
     return { status: "anonymous" };
@@ -36,7 +37,7 @@ export async function lookupSessionByToken(
     return { status: "rejected" };
   }
   try {
-    const res = await gatewayFetch(ME_ENDPOINT, { token, timeoutMs });
+    const res = await gatewayFetch(ME_ENDPOINT, { token, ...options });
     if (res.status === 401) {
       return { status: "rejected" };
     }

@@ -137,6 +137,16 @@ describe("已登录的人打开登录页、注册页时直接跳走", () => {
     expect(res.headers.get("location")).toBe("http://portal.test/");
   });
 
+  it("问 /auth/me 时转发浏览器的 IP 与 UA", async () => {
+    fetchMock.mockResolvedValue(json(200, USER));
+    await proxy(signedIn("/login", { "x-forwarded-for": "10.0.0.9", "user-agent": "UA/9" }));
+    expect(fetchMock.mock.calls[0]?.[1]?.headers).toEqual({
+      Authorization: `Bearer ${TOKEN}`,
+      "X-Forwarded-For": "10.0.0.9",
+      "User-Agent": "UA/9",
+    });
+  });
+
   it("next 出现多次时取第一个", async () => {
     fetchMock.mockResolvedValue(json(200, USER));
     const res = await proxy(signedIn("/login?next=%2Fjournals&next=%2Fpapers"));

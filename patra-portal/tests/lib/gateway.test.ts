@@ -150,3 +150,57 @@ describe("gatewayStream", () => {
     expect(call()[1]?.signal?.aborted).toBe(true);
   });
 });
+
+describe("gatewayFetch 的方法、请求体、重定向与转发头", () => {
+  it("sends_put_and_delete", async () => {
+    await gatewayFetch("/patra-identity/me/profile", { method: "PUT", json: {} });
+    await gatewayFetch("/patra-identity/me/avatar", { method: "DELETE" });
+    expect(call(0)[1]?.method).toBe("PUT");
+    expect(call(1)[1]?.method).toBe("DELETE");
+  });
+
+  it("sends_form_data_without_content_type", async () => {
+    const form = new FormData();
+    form.append("file", new Blob(["x"], { type: "image/png" }), "a.png");
+    await gatewayFetch("/patra-identity/me/avatar", { method: "POST", body: form });
+    const [, init] = call();
+    expect(init?.body).toBe(form);
+    expect(init?.headers).toEqual({});
+  });
+
+  it("json 和 body 同时给时报错，不发请求", async () => {
+    await expect(
+      gatewayFetch("/x", { method: "POST", json: {}, body: new FormData() }),
+    ).rejects.toThrow();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("writes_only_two_forwarding_headers", async () => {
+    await gatewayFetch("/patra-identity/auth/me", {
+      token: "patra_user_abc",
+      client: { ip: "10.0.0.2", userAgent: "UA/1" },
+    });
+    expect(call()[1]?.headers).toEqual({
+      Authorization: "Bearer patra_user_abc",
+      "X-Forwarded-For": "10.0.0.2",
+      "User-Agent": "UA/1",
+    });
+  });
+
+  it("omits_null_client_fields", async () => {
+    await gatewayFetch("/patra-identity/auth/me", { client: { ip: null, userAgent: null } });
+    expect(call()[1]?.headers).toEqual({});
+  });
+
+  it("does_not_follow_redirects_by_default", async () => {
+    await gatewayFetch("/patra-identity/users/old-name");
+    expect(call()[1]?.redirect).toBe("manual");
+  });
+
+  it("gatewayStream_forwards_client", async () => {
+    await gatewayStream("/patra-identity/users/a/avatar?size=128&v=0123456789abcdef", {
+      client: { ip: "::1", userAgent: "UA/3" },
+    });
+    expect(call()[1]?.headers).toEqual({ "X-Forwarded-For": "::1", "User-Agent": "UA/3" });
+  });
+});

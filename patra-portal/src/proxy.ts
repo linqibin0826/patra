@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { lookupSessionByToken } from "@/lib/auth/current-user";
 import { safeNextPath } from "@/lib/auth/next-path";
 import { readRequestSessionToken } from "@/lib/auth/session-cookie";
+import { clientOriginFromHeaders } from "@/lib/client-origin";
 import { gatewayFetch } from "@/lib/gateway";
 
 /// 详情页 404 状态码。详情页有 loading.tsx，服务器先回 200 把骨架流出去，等页面发现文献不存在时
@@ -32,7 +33,10 @@ async function leaveAuthPage(req: NextRequest): Promise<NextResponse> {
   if (!token) {
     return NextResponse.next();
   }
-  const session = await lookupSessionByToken(token, CHECK_TIMEOUT_MS);
+  const session = await lookupSessionByToken(token, {
+    timeoutMs: CHECK_TIMEOUT_MS,
+    client: clientOriginFromHeaders(req.headers),
+  });
   if (session.status !== "authenticated") {
     return NextResponse.next();
   }

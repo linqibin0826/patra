@@ -165,7 +165,7 @@ describe("lookupSessionByToken", () => {
   it("超时按传入的毫秒数，不传时是 10 秒", async () => {
     const timeout = vi.spyOn(AbortSignal, "timeout");
     fetchMock.mockImplementation(async () => json(200, USER));
-    await lookupSessionByToken(TOKEN, 3_000);
+    await lookupSessionByToken(TOKEN, { timeoutMs: 3_000 });
     await lookupSessionByToken(TOKEN);
     expect(timeout.mock.calls).toEqual([[3_000], [10_000]]);
   });
