@@ -67,21 +67,22 @@ export interface CropArea {
 }
 
 /// 把裁好的正方形画到 canvas 导出：边长取 min(裁剪边长, 1024)；JPEG 源出 JPEG（q 0.92），PNG / WebP
-/// （可能有透明）出 PNG。`src` 是原图的对象地址。
-export async function exportCrop(src: string, area: CropArea, sourceType: string): Promise<Blob> {
-  const image = new Image();
-  image.src = src;
-  await image.decode();
+/// （可能有透明）出 PNG。直接用 `createImageBitmap` 解码原图文件：脱离文档的 `Image.decode()` 在页面
+/// 不渲染时（比如被收起的面板）可能一直不返回，上传就卡在「上传中…」。
+export async function exportCrop(file: Blob, area: CropArea, sourceType: string): Promise<Blob> {
+  const bitmap = await createImageBitmap(file);
   const edge = Math.round(Math.min(area.width, MAX_EXPORT_EDGE));
   const canvas = document.createElement("canvas");
   canvas.width = edge;
   canvas.height = edge;
   const context = canvas.getContext("2d");
   if (!context) {
+    bitmap.close();
     throw new Error("浏览器不支持 canvas");
   }
   context.imageSmoothingQuality = "high";
-  context.drawImage(image, area.x, area.y, area.width, area.height, 0, 0, edge, edge);
+  context.drawImage(bitmap, area.x, area.y, area.width, area.height, 0, 0, edge, edge);
+  bitmap.close();
   const type = sourceType === "image/jpeg" ? "image/jpeg" : "image/png";
   return new Promise((resolve, reject) =>
     canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("导出失败"))), type, 0.92),

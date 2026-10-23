@@ -150,7 +150,10 @@ export function OrganizationPicker({
       filter={null}
       value={null}
       inputValue={input}
-      onInputValueChange={(next) => setInput(next)}
+      onInputValueChange={(next, { reason }) => {
+        // 选中候选时 base-ui 会把条目名回填进输入框；这里选中后要清空（或换成卡片），不接受回填
+        if (reason !== "item-press") setInput(next);
+      }}
       onValueChange={(option) => pick(option)}
       itemToStringLabel={(option) =>
         option.type === "ror"

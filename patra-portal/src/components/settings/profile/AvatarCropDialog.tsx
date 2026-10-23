@@ -52,7 +52,7 @@ export function AvatarCropDialog({ file, onCancel, onUpload }: AvatarCropDialogP
     setBusy(true);
     setError(null);
     try {
-      const blob = await exportCrop(src, pixels, file.type);
+      const blob = await exportCrop(file, pixels, file.type);
       const message = await onUpload(
         blob,
         blob.type === "image/jpeg" ? "avatar.jpg" : "avatar.png",

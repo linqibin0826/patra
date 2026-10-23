@@ -116,6 +116,15 @@ describe("MeshInterestPicker · 搜索", () => {
     expect(screen.getByRole("combobox", { name: "搜索 MeSH 主题词" })).toHaveValue("");
   });
 
+  it("键盘选中（↓ + 回车）后输入框清空，不回填主题词名", async () => {
+    const user = renderPicker();
+    await typeAndSettle(user, "cancer");
+    await screen.findByRole("option", { name: /Neoplasms/ });
+    await user.keyboard("{ArrowDown}{Enter}");
+    expect(latest).toEqual([HF, AF, { ui: "D009369", name: "Neoplasms" }]);
+    expect(screen.getByRole("combobox", { name: "搜索 MeSH 主题词" })).toHaveValue("");
+  });
+
   it("没有结果、接口失败各有提示", async () => {
     fetchMock.mockImplementationOnce(async () => Response.json({ items: [] }));
     const user = renderPicker();
