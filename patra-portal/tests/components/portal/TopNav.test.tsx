@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { USER } from "@tests/fixtures/user";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { TopNav } from "@/components/portal/TopNav";
@@ -195,9 +196,15 @@ describe("TopNav 账号区", () => {
     expect(await screen.findByRole("link", { name: "登录" })).toHaveAttribute("href", "/login");
   });
 
-  it("桌面：已登录时是圆形标识", async () => {
-    renderTopNav({ userId: "319041872872550658", email: "chen.yu@example.com" });
-    expect(await screen.findByRole("button", { name: "账号菜单" })).toHaveTextContent("C");
+  it("邮箱未验证时，导航栏下方出现验证横幅（在 header 之外，随页面滚走）", async () => {
+    renderTopNav({ ...USER, emailVerified: false });
+    const text = await screen.findByText(/验证邮箱后，别人才能看到你的主页/);
+    expect(screen.getByRole("banner")).not.toContainElement(text);
+  });
+
+  it("桌面：已登录时是头像", async () => {
+    renderTopNav(USER);
+    expect(await screen.findByRole("button", { name: "账号菜单" })).toHaveTextContent("陈");
   });
 
   it("移动菜单最底部是账号块，点「登录」先关闭菜单", async () => {

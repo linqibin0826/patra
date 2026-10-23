@@ -1,16 +1,18 @@
 // @vitest-environment node
+import { ME_RESPONSE, USER } from "@tests/fixtures/user";
 import { resetCookieJar } from "@tests/stubs/cookie-jar";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { login, logout, register } from "@/lib/auth/actions";
-import type { Credentials } from "@/lib/auth/types";
+import type { Credentials, RegisterInput } from "@/lib/auth/types";
 
 vi.mock("next/headers", () => import("@tests/stubs/cookie-jar"));
 
 const TOKEN = "patra_user_abc";
 const PASSWORD = "correct-horse-battery";
 const CREDENTIALS: Credentials = { email: "reader@example.com", password: PASSWORD };
-const USER = { userId: "319041872872550658", email: "reader@example.com" };
-const SIGNED_IN = { sessionToken: TOKEN, ...USER };
+const REGISTRATION: RegisterInput = { ...CREDENTIALS, username: "reader" };
+const SIGNED_IN = { sessionToken: TOKEN, user: ME_RESPONSE };
+const DEVICE_ID = "D".repeat(43);
 /// 写入：令牌原文，有效期 30 天
 const WRITTEN =
   /^patra_session=patra_user_abc; Path=\/; Expires=[^;]+; Max-Age=2592000; HttpOnly; SameSite=lax$/;
@@ -69,24 +71,52 @@ const asFormData = (fields: Record<string, string>) => {
 /// 第一次请求网关时的 init
 const sent = () => fetchMock.mock.calls[0]?.[1] ?? {};
 
+/// 写入的会话 Cookie（设备标识 Cookie 不算）
+const sessionWrites = (jar: { written: string[] }) =>
+  jar.written.filter((line) => line.startsWith("patra_session="));
+
 describe("register", () => {
   it("201：写入 Cookie，返回用户", async () => {
     respondWith(201, SIGNED_IN);
     const jar = resetCookieJar();
-    await expect(register(CREDENTIALS)).resolves.toEqual({ ok: true, user: USER });
-    expect(jar.written).toEqual([expect.stringMatching(WRITTEN)]);
+    await expect(register(REGISTRATION)).resolves.toEqual({ ok: true, user: USER });
+    expect(sessionWrites(jar)).toEqual([expect.stringMatching(WRITTEN)]);
   });
 
-  it("只转发 email 和 password，不带 Authorization，即使已经有 Cookie", async () => {
+  it("转发 email、username、password 与设备标识，带浏览器来源，不带 Authorization", async () => {
     respondWith(201, SIGNED_IN);
-    resetCookieJar({ patra_session: "patra_user_old" });
-    const withExtras = { ...CREDENTIALS, clientType: "WEB", deviceId: "d-1" };
+    resetCookieJar(
+      { patra_session: "patra_user_old", patra_device: DEVICE_ID },
+      { "x-forwarded-for": "10.0.0.4", "user-agent": "UA/4" },
+    );
+    const withExtras = {
+      ...REGISTRATION,
+      clientType: "WEB",
+      deviceId: "d-1",
+      confirmPassword: "x",
+    };
     await register(withExtras);
     expect(fetchMock).toHaveBeenCalledWith(
       "http://gw.test:9528/patra-identity/auth/register",
-      expect.objectContaining({ method: "POST", headers: { "Content-Type": "application/json" } }),
+      expect.objectContaining({
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Forwarded-For": "10.0.0.4",
+          "User-Agent": "UA/4",
+        },
+      }),
     );
-    expect(JSON.parse(String(sent().body))).toEqual(CREDENTIALS);
+    expect(JSON.parse(String(sent().body))).toEqual({ ...REGISTRATION, deviceId: DEVICE_ID });
+  });
+
+  it("没有设备标识 Cookie 时新生成一个并写回", async () => {
+    respondWith(201, SIGNED_IN);
+    const jar = resetCookieJar();
+    await register(REGISTRATION);
+    const { deviceId } = JSON.parse(String(sent().body)) as { deviceId: string };
+    expect(deviceId).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(jar.written.some((line) => line.startsWith(`patra_device=${deviceId};`))).toBe(true);
   });
 
   it("422：返回字段和原因码，其余字段（包括 rejectedValue）不带回浏览器", async () => {
@@ -100,7 +130,7 @@ describe("register", () => {
       }),
     );
     const jar = resetCookieJar();
-    await expect(register(CREDENTIALS)).resolves.toEqual({
+    await expect(register(REGISTRATION)).resolves.toEqual({
       ok: false,
       reason: "invalid-fields",
       fieldErrors: [
@@ -108,7 +138,7 @@ describe("register", () => {
         { field: "password", code: "TOO_SHORT" },
       ],
     });
-    expect(jar.written).toEqual([]);
+    expect(sessionWrites(jar)).toEqual([]);
   });
 
   it("422：code 不是字符串时记为 null，field 不是字符串的项跳过", async () => {
@@ -125,7 +155,7 @@ describe("register", () => {
       }),
     );
     resetCookieJar();
-    await expect(register(CREDENTIALS)).resolves.toEqual({
+    await expect(register(REGISTRATION)).resolves.toEqual({
       ok: false,
       reason: "invalid-fields",
       fieldErrors: [
@@ -135,22 +165,56 @@ describe("register", () => {
     });
   });
 
-  it("409：email-taken，不写 Cookie", async () => {
-    respondWith(409, problem(409));
+  it.each([
+    [[{ field: "email", code: "ALREADY_REGISTERED" }], { email: true, username: false }],
+    [[{ field: "username", code: "ALREADY_TAKEN" }], { email: false, username: true }],
+    [
+      [
+        { field: "username", code: "ALREADY_TAKEN" },
+        { field: "email", code: "ALREADY_REGISTERED" },
+      ],
+      { email: true, username: true },
+    ],
+  ])("409 %j：taken，不写会话 Cookie", async (errors, taken) => {
+    respondWith(409, problem(409, { errors }));
     const jar = resetCookieJar();
-    await expect(register(CREDENTIALS)).resolves.toEqual({ ok: false, reason: "email-taken" });
-    expect(jar.written).toEqual([]);
+    await expect(register(REGISTRATION)).resolves.toEqual({ ok: false, reason: "taken", ...taken });
+    expect(sessionWrites(jar)).toEqual([]);
+  });
+
+  it("422 只有 deviceId 或 clientType 出错：门户自己的 bug，unavailable", async () => {
+    respondWith(422, problem(422, { errors: [{ field: "deviceId", code: "INVALID_FORMAT" }] }));
+    resetCookieJar();
+    await expect(register(REGISTRATION)).resolves.toEqual(UNAVAILABLE);
+  });
+
+  it("422 带 username：invalid-fields", async () => {
+    respondWith(422, problem(422, { errors: [{ field: "username", code: "RESERVED" }] }));
+    resetCookieJar();
+    await expect(register(REGISTRATION)).resolves.toEqual({
+      ok: false,
+      reason: "invalid-fields",
+      fieldErrors: [{ field: "username", code: "RESERVED" }],
+    });
   });
 
   it.each([
-    ["201 但缺 sessionToken", () => respondWith(201, USER)],
-    ["201 但 userId 不是字符串", () => respondWith(201, { ...SIGNED_IN, userId: 42 })],
+    ["201 但缺 sessionToken", () => respondWith(201, { user: ME_RESPONSE })],
+    [
+      "201 但是旧的顶层字段",
+      () => respondWith(201, { sessionToken: TOKEN, userId: USER.userId, email: USER.email }),
+    ],
+    [
+      "201 但 userId 不是字符串",
+      () => respondWith(201, { sessionToken: TOKEN, user: { ...ME_RESPONSE, userId: 42 } }),
+    ],
     ["201 但响应体不是 JSON", () => respondWith(201)],
     ["422 但没有 errors", () => respondWith(422, problem(422))],
     [
       "422 但 errors 一项都取不到",
       () => respondWith(422, problem(422, { errors: [{ code: "X" }] })),
     ],
+    ["409 但 errors 一项都认不出", () => respondWith(409, problem(409))],
     ["401", () => respondWith(401, problem(401))],
     ["403", () => respondWith(403, problem(403))],
     ["429", () => respondWith(429, problem(429, { retryAfterSeconds: 60 }))],
@@ -161,25 +225,26 @@ describe("register", () => {
   ])("%s：unavailable，不写 Cookie", async (_label, arrange) => {
     arrange();
     const jar = resetCookieJar();
-    await expect(register(CREDENTIALS)).resolves.toEqual(UNAVAILABLE);
-    expect(jar.written).toEqual([]);
+    await expect(register(REGISTRATION)).resolves.toEqual(UNAVAILABLE);
+    expect(sessionWrites(jar)).toEqual([]);
   });
 
   it.each([
-    ["缺 password", { email: "reader@example.com" }],
-    ["email 不是字符串", { email: 42, password: PASSWORD }],
+    ["缺 password", { email: "reader@example.com", username: "reader" }],
+    ["缺 username", { email: "reader@example.com", password: PASSWORD }],
+    ["email 不是字符串", { email: 42, username: "reader", password: PASSWORD }],
     ["不是对象", "reader@example.com"],
     ["是 FormData", asFormData({ email: "reader@example.com", password: PASSWORD })],
   ])("入参%s：unavailable，不请求网关", async (_label, input) => {
     resetCookieJar();
-    await expect(register(input as unknown as Credentials)).resolves.toEqual(UNAVAILABLE);
+    await expect(register(input as unknown as RegisterInput)).resolves.toEqual(UNAVAILABLE);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("意外的状态码：记下接口、状态码和 code，不记响应体", async () => {
     respondWith(500, problem(500, { detail: "boom" }));
     resetCookieJar();
-    await register(CREDENTIALS);
+    await register(REGISTRATION);
     expect(console.error).toHaveBeenCalledWith(
       "[auth] /patra-identity/auth/register 返回了意外的结果",
       { status: 500, code: "IDN-0500" },
@@ -192,26 +257,39 @@ describe("login", () => {
     respondWith(200, SIGNED_IN);
     const jar = resetCookieJar();
     await expect(login(CREDENTIALS)).resolves.toEqual({ ok: true, user: USER });
-    expect(jar.written).toEqual([expect.stringMatching(WRITTEN)]);
+    expect(sessionWrites(jar)).toEqual([expect.stringMatching(WRITTEN)]);
   });
 
-  it("只转发 email 和 password，不带 Authorization，即使已经有 Cookie", async () => {
+  it("转发 email、password 与设备标识，不带 Authorization，即使已经有 Cookie", async () => {
     respondWith(200, SIGNED_IN);
-    resetCookieJar({ patra_session: "patra_user_old" });
+    resetCookieJar({ patra_session: "patra_user_old", patra_device: DEVICE_ID });
     const withExtras = { ...CREDENTIALS, clientType: "WEB", deviceId: "d-1" };
     await login(withExtras);
     expect(fetchMock).toHaveBeenCalledWith(
       "http://gw.test:9528/patra-identity/auth/login",
       expect.objectContaining({ method: "POST", headers: { "Content-Type": "application/json" } }),
     );
-    expect(JSON.parse(String(sent().body))).toEqual(CREDENTIALS);
+    expect(JSON.parse(String(sent().body))).toEqual({ ...CREDENTIALS, deviceId: DEVICE_ID });
+  });
+
+  it("冷静期账号照常登录：写 Cookie，user.status 是 PENDING_DELETION", async () => {
+    respondWith(200, {
+      sessionToken: TOKEN,
+      user: { ...ME_RESPONSE, status: "PENDING_DELETION", deletionDueAt: "2026-11-07T00:00:00Z" },
+    });
+    const jar = resetCookieJar();
+    await expect(login(CREDENTIALS)).resolves.toEqual({
+      ok: true,
+      user: { ...USER, status: "PENDING_DELETION", deletionDueAt: "2026-11-07T00:00:00Z" },
+    });
+    expect(sessionWrites(jar)).toEqual([expect.stringMatching(WRITTEN)]);
   });
 
   it("已经登录时再登录：新令牌覆盖 Cookie，不去作废旧会话", async () => {
     respondWith(200, SIGNED_IN);
     const jar = resetCookieJar({ patra_session: "patra_user_old" });
     await expect(login(CREDENTIALS)).resolves.toEqual({ ok: true, user: USER });
-    expect(jar.written).toEqual([expect.stringMatching(WRITTEN)]);
+    expect(sessionWrites(jar)).toEqual([expect.stringMatching(WRITTEN)]);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -232,7 +310,7 @@ describe("login", () => {
     respondWith(status, problem(status));
     const jar = resetCookieJar();
     await expect(login(CREDENTIALS)).resolves.toEqual({ ok: false, reason });
-    expect(jar.written).toEqual([]);
+    expect(sessionWrites(jar)).toEqual([]);
   });
 
   it.each([
@@ -251,11 +329,11 @@ describe("login", () => {
       reason: "throttled",
       retryAfterSeconds: expected,
     });
-    expect(jar.written).toEqual([]);
+    expect(sessionWrites(jar)).toEqual([]);
   });
 
   it.each([
-    ["200 但缺 sessionToken", () => respondWith(200, USER)],
+    ["200 但缺 sessionToken", () => respondWith(200, { user: ME_RESPONSE })],
     ["422 但没有 errors", () => respondWith(422, problem(422))],
     ["409", () => respondWith(409, problem(409))],
     ["500", () => respondWith(500, problem(500))],
@@ -266,7 +344,7 @@ describe("login", () => {
     arrange();
     const jar = resetCookieJar();
     await expect(login(CREDENTIALS)).resolves.toEqual(UNAVAILABLE);
-    expect(jar.written).toEqual([]);
+    expect(sessionWrites(jar)).toEqual([]);
   });
 
   it("入参形状不对：unavailable，不请求网关", async () => {

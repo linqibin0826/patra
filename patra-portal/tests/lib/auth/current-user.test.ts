@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { ME_RESPONSE, USER } from "@tests/fixtures/user";
 import { resetCookieJar } from "@tests/stubs/cookie-jar";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { lookupSession, lookupSessionByToken } from "@/lib/auth/current-user";
@@ -6,7 +7,6 @@ import { lookupSession, lookupSessionByToken } from "@/lib/auth/current-user";
 vi.mock("next/headers", () => import("@tests/stubs/cookie-jar"));
 
 const TOKEN = "patra_user_abc";
-const USER = { userId: "319041872872550658", email: "reader@example.com" };
 const fetchMock = vi.fn<typeof fetch>();
 
 beforeEach(() => {
@@ -43,15 +43,29 @@ describe("lookupSession", () => {
   });
 
   it("带着令牌请求网关的 /auth/me", async () => {
-    fetchMock.mockResolvedValue(json(200, { ...USER, accountType: "user" }));
+    fetchMock.mockResolvedValue(json(200, ME_RESPONSE));
     await lookupSession();
     const [url, init] = fetchMock.mock.calls[0] ?? [];
     expect(url).toBe("http://gw.test:9528/patra-identity/auth/me");
     expect(init?.headers).toEqual({ Authorization: `Bearer ${TOKEN}` });
   });
 
+  it("转发浏览器的 IP 与 UA", async () => {
+    resetCookieJar(
+      { patra_session: TOKEN },
+      { "x-forwarded-for": "10.0.0.8", "user-agent": "UA/8" },
+    );
+    fetchMock.mockResolvedValue(json(200, ME_RESPONSE));
+    await lookupSession();
+    expect(fetchMock.mock.calls[0]?.[1]?.headers).toEqual({
+      Authorization: `Bearer ${TOKEN}`,
+      "X-Forwarded-For": "10.0.0.8",
+      "User-Agent": "UA/8",
+    });
+  });
+
   it("200 且字段齐全时是 authenticated，结果里没有 accountType", async () => {
-    fetchMock.mockResolvedValue(json(200, { ...USER, accountType: "user" }));
+    fetchMock.mockResolvedValue(json(200, ME_RESPONSE));
     await expect(lookupSession()).resolves.toEqual({ status: "authenticated", user: USER });
   });
 
@@ -75,7 +89,10 @@ describe("lookupSession", () => {
     ["503 GW-0503", () => problem(503, "GW-0503")],
     ["500 GW-0500", () => problem(500, "GW-0500")],
     ["200 但缺 email", () => json(200, { userId: USER.userId })],
-    ["200 但 userId 是数字", () => json(200, { userId: 1, email: USER.email })],
+    ["200 但 userId 是数字", () => json(200, { ...ME_RESPONSE, userId: 1 })],
+    ["200 但 avatarPalette 超出 0–11", () => json(200, { ...ME_RESPONSE, avatarPalette: 12 })],
+    ["200 但 status 是 BANNED", () => json(200, { ...ME_RESPONSE, status: "BANNED" })],
+    ["200 但缺 username", () => json(200, { ...ME_RESPONSE, username: undefined })],
     ["200 但响应体不是 JSON", () => new Response("<html></html>", { status: 200 })],
   ])("%s 时是 unavailable", async (_label, response) => {
     fetchMock.mockResolvedValue(response());
@@ -93,6 +110,15 @@ describe("lookupSession", () => {
   it("缺网关地址时是 unavailable", async () => {
     vi.stubEnv("PATRA_GATEWAY_BASE_URL", undefined);
     await expect(lookupSession()).resolves.toEqual({ status: "unavailable" });
+  });
+
+  it("读 Cookie 时 Next 抛出的动态渲染信号要原样抛出，不能当成 unavailable", async () => {
+    const dynamic = Object.assign(new Error("Dynamic server usage"), {
+      digest: "DYNAMIC_SERVER_USAGE",
+    });
+    const jar = await import("@tests/stubs/cookie-jar");
+    vi.spyOn(jar, "cookies").mockRejectedValueOnce(dynamic);
+    await expect(lookupSession()).rejects.toBe(dynamic);
   });
 
   it("Secure 开关写错时是 unavailable，不请求网关", async () => {
@@ -121,7 +147,7 @@ describe("lookupSessionByToken", () => {
   it("带着传入的令牌请求网关的 /auth/me，不读 Cookie", async () => {
     // 读 Cookie 会因为开关写错而抛错；不读 Cookie 才能照常拿到用户
     vi.stubEnv("PATRA_SESSION_COOKIE_SECURE", "yes");
-    fetchMock.mockResolvedValue(json(200, { ...USER, accountType: "user" }));
+    fetchMock.mockResolvedValue(json(200, ME_RESPONSE));
     await expect(lookupSessionByToken("patra_user_other")).resolves.toEqual({
       status: "authenticated",
       user: USER,
@@ -165,7 +191,7 @@ describe("lookupSessionByToken", () => {
   it("超时按传入的毫秒数，不传时是 10 秒", async () => {
     const timeout = vi.spyOn(AbortSignal, "timeout");
     fetchMock.mockImplementation(async () => json(200, USER));
-    await lookupSessionByToken(TOKEN, 3_000);
+    await lookupSessionByToken(TOKEN, { timeoutMs: 3_000 });
     await lookupSessionByToken(TOKEN);
     expect(timeout.mock.calls).toEqual([[3_000], [10_000]]);
   });

@@ -56,11 +56,7 @@ export function NavAccount() {
   }
   return (
     <div className="ml-1.5 flex max-[880px]:hidden">
-      <UserMenu
-        email={state.user.email}
-        loggingOut={logout.isPending}
-        onLogout={() => logout.mutate()}
-      />
+      <UserMenu user={state.user} loggingOut={logout.isPending} onLogout={() => logout.mutate()} />
     </div>
   );
 }

@@ -33,7 +33,9 @@ RUN addgroup -g 10001 -S nodejs \
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+# 预加载模块：在 Next 处理请求之前删掉浏览器带来的 X-Forwarded-For，门户转给网关的只会是连接上的真实地址
+COPY --from=builder --chown=nextjs:nodejs /app/server/strip-forwarded-for.mjs ./
 USER nextjs
 EXPOSE 4000
 # standalone 入口；监听 0.0.0.0:4000（HOSTNAME/PORT env 控制）
-CMD ["node", "server.js"]
+CMD ["node", "--import", "./strip-forwarded-for.mjs", "server.js"]

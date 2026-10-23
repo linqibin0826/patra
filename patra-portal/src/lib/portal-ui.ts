@@ -8,6 +8,13 @@ const BTN_BASE =
 export const btnPrimary = `${BTN_BASE} border-action-primary bg-action-primary text-fg-on-clay not-disabled:not-aria-disabled:hover:border-action-primary-hover not-disabled:not-aria-disabled:hover:bg-action-primary-hover not-disabled:not-aria-disabled:active:bg-action-primary-press`;
 export const btnSecondary = `${BTN_BASE} border-border-default bg-paper-50 text-fg-1 not-disabled:not-aria-disabled:hover:border-border-hover not-disabled:not-aria-disabled:hover:bg-paper-200`;
 export const btnBlock = "w-full px-4 py-3";
+/// 危险主按钮（画板 `.pt-btn-danger`）：注销账号、撤销更改并锁定账号
+export const btnDanger = `${BTN_BASE} border-rust-500 bg-rust-500 text-paper-50 not-disabled:not-aria-disabled:hover:brightness-90`;
+/// 危险次按钮（画板 `.pt-btn-danger-sec`）：注销卡片的「注销账号…」
+export const btnDangerOutline = `${BTN_BASE} border-rust-500/40 bg-paper-50 text-rust-500 not-disabled:not-aria-disabled:hover:border-rust-500 not-disabled:not-aria-disabled:hover:bg-rust-50`;
+/// 文字按钮（画板 `.pt-tbtn`）：链接色、中粗；不可点时灰色、不加粗
+export const btnText =
+  "font-medium text-link transition-colors not-aria-disabled:hover:text-link-hover aria-disabled:cursor-default aria-disabled:font-normal aria-disabled:text-fg-3";
 
 /// 自绘复选框：纸面方框，选中为 action-primary 填充 + 纸色勾线描出（见 CHECK_MARK；焦点环走全局规则）。
 /// hover 只加深未选中控件的描边：选中态的 action-primary 描边不被 hover 盖掉；禁用态不响应 hover。

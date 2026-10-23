@@ -1,18 +1,21 @@
-/// 当前登录的用户。`userId` 是字符串：后端的雪花 ID 超出 JS 的安全整数范围。
-export interface CurrentUser {
-  userId: string;
-  email: string;
-}
+import type { CurrentUser } from "@/lib/identity/user-schema";
+
+export type { CurrentUser } from "@/lib/identity/user-schema";
 
 /// `GET /api/auth/me` 的响应体，没有登录时 `user` 为 null。
 export interface CurrentUserPayload {
   user: CurrentUser | null;
 }
 
-/// 注册、登录的入参。
+/// 登录的入参。
 export interface Credentials {
   email: string;
   password: string;
+}
+
+/// 注册的入参。确认密码只在前端比对，不在这里。
+export interface RegisterInput extends Credentials {
+  username: string;
 }
 
 /// 422 里的一个字段错误。
@@ -26,7 +29,8 @@ export interface FieldError {
 export type RegisterResult =
   | { ok: true; user: CurrentUser }
   | { ok: false; reason: "invalid-fields"; fieldErrors: FieldError[] }
-  | { ok: false; reason: "email-taken" }
+  /// 邮箱和 / 或用户名已被占用，两者可以同时为 true
+  | { ok: false; reason: "taken"; email: boolean; username: boolean }
   | { ok: false; reason: "unavailable" };
 
 /// `login` 的结果。不带文案，页面按 `reason` 和字段的 `code` 选文案。

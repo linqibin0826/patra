@@ -1,12 +1,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { USER } from "@tests/fixtures/user";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { login } from "@/lib/auth/actions";
 import type { LoginResult } from "@/lib/auth/types";
 import { queryKeys } from "@/lib/query-keys";
+import { useAuthHandoffStore } from "@/store/auth-handoff";
 
 const router = { replace: vi.fn(), prefetch: vi.fn() };
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
@@ -16,7 +18,6 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn() } }));
 import { toast } from "sonner";
 
 const NEXT = "/papers?q=GLP-1";
-const USER = { userId: "319041872872550658", email: "chen.yu@example.com" };
 
 /// 一个还没回来的请求，`answer` 让它在测试想要的时候回来
 function deferred<T>() {
@@ -319,6 +320,21 @@ describe("LoginForm · 成功", () => {
     expect(toast.success).toHaveBeenCalledWith("已登录");
   });
 
+  it("冷静期账号：不提示「已登录」，去取消注销页并带上 next", async () => {
+    vi.mocked(login).mockResolvedValue({
+      ok: true,
+      user: { ...USER, status: "PENDING_DELETION", deletionDueAt: "2026-11-07T00:00:00Z" },
+    });
+    const form = renderLogin();
+    await fillAndSubmit(form);
+    await waitFor(() =>
+      expect(router.replace).toHaveBeenCalledWith(
+        "/account/deletion-pending?next=%2Fpapers%3Fq%3DGLP-1",
+      ),
+    );
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
   it("跳转完成前一直显示提交中，不能再提交", async () => {
     const form = renderLogin();
     await fillAndSubmit(form);
@@ -372,5 +388,38 @@ describe("LoginForm · 成功", () => {
     await act(async () => pending.answer({ ok: false, reason: "bad-credentials" }));
     expect(router.replace).not.toHaveBeenCalled();
     expect(toast.success).not.toHaveBeenCalled();
+  });
+});
+
+describe("LoginForm · 忘记密码与重设后的提示", () => {
+  afterEach(() => useAuthHandoffStore.getState().take());
+
+  it("密码标签行有「忘记密码？」，带上 next；点击时把已填的邮箱交给找回页", async () => {
+    const form = renderLogin();
+    const link = screen.getByRole("link", { name: "忘记密码？" });
+    expect(link).toHaveAttribute("href", "/forgot-password?next=%2Fpapers%3Fq%3DGLP-1");
+    await form.user.type(form.email, "  reader@example.com ");
+    link.addEventListener("click", (event) => event.preventDefault());
+    await form.user.click(link);
+    expect(useAuthHandoffStore.getState().take()).toEqual({
+      email: "reader@example.com",
+      notice: null,
+    });
+  });
+
+  it("从重设页过来：预填邮箱、成功提示、焦点在密码框", async () => {
+    useAuthHandoffStore.getState().put({ email: "reader@example.com", notice: "password-reset" });
+    const form = renderLogin();
+    expect(form.email).toHaveValue("reader@example.com");
+    expect(screen.getByRole("status")).toHaveTextContent("密码已重设，请用新密码登录");
+    await waitFor(() => expect(form.password).toHaveFocus());
+    // 读一次就清空，刷新或再进一次不会重复出现
+    expect(useAuthHandoffStore.getState().take()).toEqual({ email: null, notice: null });
+  });
+
+  it("平常进入：没有提示，焦点在邮箱框", async () => {
+    const form = renderLogin();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    await waitFor(() => expect(form.email).toHaveFocus());
   });
 });

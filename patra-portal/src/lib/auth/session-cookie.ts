@@ -62,3 +62,35 @@ export async function refreshSessionCookie(): Promise<void> {
 export async function clearSessionCookie(): Promise<void> {
   (await cookies()).set({ ...sessionCookie(), value: "", maxAge: 0 });
 }
+
+/// 设备标识的格式：32 字节随机数的 base64url，无填充，恰好 43 个字符（identity `DeviceId` 同一条规则）
+export const DEVICE_ID_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+
+/// 400 天：Chrome 对 Cookie 有效期的上限
+const DEVICE_MAX_AGE_SECONDS = 400 * 24 * 60 * 60;
+
+/// 设备标识 Cookie 的名称和固定属性，`Secure` 与会话 Cookie 同一个开关
+function deviceCookie() {
+  const secure = secureEnabled();
+  return {
+    name: secure ? "__Host-patra_device" : "patra_device",
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    secure,
+  } as const;
+}
+
+/// 登录、注册前取设备标识（登录设备 spec 第 7 节）：Cookie 里的值格式对就原样用，没有或被改坏了就
+/// 新生成一个；两种情况都写回一次，有效期顺延到 400 天。登出、会话失效都不清它。
+export async function ensureDeviceId(): Promise<string> {
+  const store = await cookies();
+  const cookie = deviceCookie();
+  const stored = store.get(cookie.name)?.value;
+  const id =
+    stored && DEVICE_ID_PATTERN.test(stored)
+      ? stored
+      : Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
+  store.set({ ...cookie, value: id, maxAge: DEVICE_MAX_AGE_SECONDS });
+  return id;
+}

@@ -42,3 +42,12 @@ describe("Pill", () => {
     expect(pill).toHaveAttribute("title", "主要主题词");
   });
 });
+
+describe("Pill · 链接", () => {
+  it("给了 href 时渲染成链接，悬停换陶土色", () => {
+    render(<Pill href="/papers?q=Heart%20Failure">Heart Failure</Pill>);
+    const link = screen.getByRole("link", { name: "Heart Failure" });
+    expect(link).toHaveAttribute("href", "/papers?q=Heart%20Failure");
+    expect(link).toHaveClass("rounded-full", "border-border-default", "hover:bg-clay-50");
+  });
+});

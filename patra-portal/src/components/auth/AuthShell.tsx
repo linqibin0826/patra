@@ -6,9 +6,12 @@ import { Venation } from "@/components/portal/Venation";
 
 interface AuthShellProps {
   title: string;
-  description: string;
-  /// 「返回」指向的站内路径，已经过 `safeNextPath`
-  back: string;
+  /// 副文案；可以带强调（找回密码已发送态里的邮箱）
+  description: ReactNode;
+  /// 「返回」指向的站内路径，已经过 `safeNextPath`；null 时不显示「返回」（取消注销页不能被绕开，简报 §3.16）
+  back: string | null;
+  /// 标题上方的状态图标（落地页结果、取消注销页，见 `StateIcon`）
+  icon?: ReactNode;
   children: ReactNode;
 }
 
@@ -19,7 +22,7 @@ interface AuthShellProps {
 /// 2 : 3 分剩余高度，视觉上略偏上；移动端改为顶部对齐。
 /// h1 和定位语的类名直接写字符串，不经过 `cn()`：tailwind-merge 会把 `text-display-3`
 /// 当成文字颜色，和真正的颜色类互相覆盖。
-export function AuthShell({ title, description, back, children }: AuthShellProps) {
+export function AuthShell({ title, description, back, icon, children }: AuthShellProps) {
   return (
     <div className="flex min-h-screen">
       <div className="flex min-w-0 grow basis-1/2 flex-col pl-[max(var(--gutter),calc((100vw-var(--page-max))/2+var(--gutter)))] pr-gutter max-[880px]:pb-10">
@@ -38,20 +41,23 @@ export function AuthShell({ title, description, back, children }: AuthShellProps
             </span>
           </Link>
           {/* 下划线只在悬停时画出，键盘聚焦时只有焦点环（高保真稿 Spec-Form 05） */}
-          <Link
-            replace
-            href={back}
-            className="group/back inline-flex items-center gap-1.5 rounded-sm py-2 text-sm leading-5 font-medium text-fg-2 transition-colors hover:text-ink-900 max-[880px]:py-3"
-          >
-            <ArrowLeft className="size-3.5 shrink-0" strokeWidth={1.75} aria-hidden="true" />
-            <span className="link-draw pb-px group-hover/back:[background-size:100%_1px]">
-              返回
-            </span>
-          </Link>
+          {back !== null && (
+            <Link
+              replace
+              href={back}
+              className="group/back inline-flex items-center gap-1.5 rounded-sm py-2 text-sm leading-5 font-medium text-fg-2 transition-colors hover:text-ink-900 max-[880px]:py-3"
+            >
+              <ArrowLeft className="size-3.5 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+              <span className="link-draw pb-px group-hover/back:[background-size:100%_1px]">
+                返回
+              </span>
+            </Link>
+          )}
         </header>
         <main className="flex flex-1 flex-col py-6 max-[880px]:pt-10 max-[880px]:pb-0">
           <div aria-hidden="true" className="flex-2 max-[880px]:hidden" />
           <div className="w-full max-w-100">
+            {icon}
             <h1 className="font-serif text-display-3 leading-heading font-medium tracking-tight text-fg-1">
               {title}
             </h1>

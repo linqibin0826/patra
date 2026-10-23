@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { AuthLink } from "@/components/auth/AuthLink";
 import { FormAlert } from "@/components/auth/FormAlert";
@@ -11,13 +11,27 @@ import { useAuthSubmit, useServerFieldErrors } from "@/components/auth/use-auth-
 import { useBlurValidation } from "@/components/auth/use-blur-validation";
 import { login } from "@/lib/auth/actions";
 import { loginSchema } from "@/lib/auth/form-schemas";
-import { loginAlertMessage, TOAST_MESSAGES } from "@/lib/auth/messages";
-import { authPageHref } from "@/lib/auth/next-path";
+import { LOGIN_NOTICES, loginAlertMessage, TOAST_MESSAGES } from "@/lib/auth/messages";
+import { authPageHref, forgotPasswordHref } from "@/lib/auth/next-path";
 import { btnBlock, btnPrimary } from "@/lib/portal-ui";
 import { cn } from "@/lib/utils";
+import { useAuthHandoffStore } from "@/store/auth-handoff";
 
-/// 登录表单（spec 第 9 节）：提示条、邮箱、密码、提交按钮、去注册的链接。`next` 已经过 `safeNextPath`。
+/// 登录表单（spec 第 9 节）：提示条、邮箱、密码（标签行右端「忘记密码？」）、提交按钮、去注册的链接。
+/// `next` 已经过 `safeNextPath`。从重设密码页过来时（PAP-102 spec §8.1）预填邮箱、表单上方是成功提示、
+/// 焦点在密码框。
 export function LoginForm({ next }: { next: string }) {
+  // 挂载时读一次带过来的内容，读完在 effect 里清空（严格模式下初始化函数跑两次也读得到）
+  const [handoff] = useState(() => {
+    const { email, notice } = useAuthHandoffStore.getState();
+    return { email, notice };
+  });
+  const takeHandoff = useAuthHandoffStore((state) => state.take);
+  const putHandoff = useAuthHandoffStore((state) => state.put);
+  useEffect(() => {
+    takeHandoff();
+  }, [takeHandoff]);
+  const afterReset = handoff.notice === "password-reset";
   const [alert, setAlert] = useState<string | null>(null);
   const serverErrors = useServerFieldErrors();
   const {
@@ -25,6 +39,7 @@ export function LoginForm({ next }: { next: string }) {
     handleSubmit,
     formState: { errors },
     getFieldState,
+    getValues,
     trigger,
     setValue,
     setFocus,
@@ -35,7 +50,7 @@ export function LoginForm({ next }: { next: string }) {
     // 空着离开又不校验，离开密码框时没有可查的，所以密码框不接 onBlur
     mode: "onSubmit",
     reValidateMode: "onSubmit",
-    defaultValues: { email: "", password: "" },
+    defaultValues: { email: handoff.email ?? "", password: "" },
   });
   const validateOnBlur = useBlurValidation(trigger);
   const { submitting, submit } = useAuthSubmit({
@@ -92,7 +107,11 @@ export function LoginForm({ next }: { next: string }) {
         onSubmit={onSubmit}
         className={cn("flex flex-col gap-5", alert ? "mt-6" : "mt-8")}
       >
-        {alert && <FormAlert>{alert}</FormAlert>}
+        {alert ? (
+          <FormAlert>{alert}</FormAlert>
+        ) : (
+          afterReset && <FormAlert tone="success">{LOGIN_NOTICES.passwordReset}</FormAlert>
+        )}
         <FormField id="login-email" label="邮箱" error={emailError}>
           {(control) => (
             <input
@@ -107,11 +126,27 @@ export function LoginForm({ next }: { next: string }) {
               placeholder="name@example.com"
               readOnly={submitting}
               // biome-ignore lint/a11y/noAutofocus: 简报 §6 要求进入登录页时焦点在邮箱框
-              autoFocus
+              autoFocus={!afterReset}
             />
           )}
         </FormField>
-        <FormField id="login-password" label="密码" error={passwordError}>
+        <FormField
+          id="login-password"
+          label="密码"
+          error={passwordError}
+          aside={
+            <span className="text-sm">
+              <AuthLink
+                href={forgotPasswordHref(next)}
+                onClick={() =>
+                  putHandoff({ email: getValues("email").trim() || null, notice: null })
+                }
+              >
+                忘记密码？
+              </AuthLink>
+            </span>
+          }
+        >
           {(control) => (
             <PasswordInput
               {...control}
@@ -119,6 +154,7 @@ export function LoginForm({ next }: { next: string }) {
               autoComplete="current-password"
               spellCheck={false}
               readOnly={submitting}
+              autoFocus={afterReset}
             />
           )}
         </FormField>

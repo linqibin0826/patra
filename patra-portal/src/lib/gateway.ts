@@ -1,4 +1,5 @@
 import "server-only";
+import type { ClientOrigin } from "@/lib/client-origin";
 
 /// 默认超时：慢后端不应无限阻塞服务端渲染
 const DEFAULT_TIMEOUT_MS = 10_000;
@@ -8,11 +9,18 @@ const HEADER_VALUE_CHARS = /^[\t\x20-\x7e\x80-\xff]*$/;
 
 export interface GatewayRequestInit {
   /// 默认 GET
-  method?: "GET" | "HEAD" | "POST";
-  /// 有值时序列化成 JSON 请求体，并带 `Content-Type: application/json`
+  method?: "GET" | "HEAD" | "POST" | "PUT" | "PATCH" | "DELETE";
+  /// 有值时序列化成 JSON 请求体，并带 `Content-Type: application/json`；与 `body` 互斥
   json?: unknown;
+  /// multipart 请求体，`Content-Type`（带边界）由 fetch 生成；与 `json` 互斥
+  body?: FormData;
   /// 会话令牌，有值时写成 `Authorization: Bearer <token>`
   token?: string;
+  /// 浏览器来源：门户代表浏览器请求 identity 时传，写成 `X-Forwarded-For` 与 `User-Agent`
+  client?: ClientOrigin;
+  /// 默认 `manual`：网关不跟随下游的 3xx，原样交给门户（旧用户名的 301 要读响应体），跟随只会去请求
+  /// 缺了服务前缀的地址
+  redirect?: "follow" | "manual";
   /// 超时毫秒数，默认 10_000
   timeoutMs?: number;
 }
@@ -25,20 +33,38 @@ export async function gatewayFetch(path: string, init: GatewayRequestInit = {}):
   if (!baseUrl) {
     throw new Error("PATRA_GATEWAY_BASE_URL 未配置");
   }
-  const headers: Record<string, string> = {};
+  if (init.json !== undefined && init.body !== undefined) {
+    throw new Error("json 和 body 只能给一个");
+  }
+  const headers: Record<string, string> = { ...forwardingHeaders(init.client) };
   if (init.token) {
     headers.Authorization = `Bearer ${init.token}`;
   }
   if (init.json !== undefined) {
     headers["Content-Type"] = "application/json";
   }
+  const body = init.json === undefined ? init.body : JSON.stringify(init.json);
   return fetch(`${baseUrl}${path}`, {
     method: init.method ?? "GET",
     headers,
     cache: "no-store",
+    redirect: init.redirect ?? "manual",
     signal: AbortSignal.timeout(init.timeoutMs ?? DEFAULT_TIMEOUT_MS),
-    ...(init.json === undefined ? {} : { body: JSON.stringify(init.json) }),
+    ...(body === undefined ? {} : { body }),
   });
+}
+
+/// 浏览器来源 → 转发给网关的两个头。只写这两个：网关对受信连接会按 `X-Forwarded-Host` / `-Proto` /
+/// `-Port` 改写主机与协议，门户从不发它们（工程 spec §6.2）。值为 null 的不写。
+function forwardingHeaders(client: ClientOrigin | undefined): Record<string, string> {
+  const headers: Record<string, string> = {};
+  if (client?.ip) {
+    headers["X-Forwarded-For"] = client.ip;
+  }
+  if (client?.userAgent) {
+    headers["User-Agent"] = client.userAgent;
+  }
+  return headers;
 }
 
 export interface GatewayStreamInit {
@@ -48,6 +74,8 @@ export interface GatewayStreamInit {
   signal?: AbortSignal;
   /// 等响应头的超时毫秒数，默认 10_000
   headerTimeoutMs?: number;
+  /// 浏览器来源，同 `GatewayRequestInit.client`
+  client?: ClientOrigin;
 }
 
 /// 取网关上的文件（PDF、正文图片），响应体原样流式交给调用方转发。
@@ -69,7 +97,10 @@ export async function gatewayStream(path: string, init: GatewayStreamInit = {}):
   try {
     return await fetch(`${baseUrl}${path}`, {
       method: "GET",
-      headers: init.ifNoneMatch ? { "If-None-Match": init.ifNoneMatch } : {},
+      headers: {
+        ...forwardingHeaders(init.client),
+        ...(init.ifNoneMatch ? { "If-None-Match": init.ifNoneMatch } : {}),
+      },
       cache: "no-store",
       signal,
     });
@@ -78,9 +109,14 @@ export async function gatewayStream(path: string, init: GatewayStreamInit = {}):
   }
 }
 
-/// 令牌能不能放进 `Authorization` 头。Cookie 被改坏时，读出来的值可能含有换行、控制字符或
-/// 0xFF 以上的字符：带着它请求，fetch 在发出之前就会抛错，错误消息里还可能带着这个值。
-/// 这样的值不可能是有效令牌，调用方不要拿它请求网关。
+/// 一个值能不能放进 HTTP 请求头：含换行、控制字符或 0xFF 以上的字符时，fetch 在发出之前就会抛错，
+/// 错误消息里还可能带着这个值。
+export function isSendableHeaderValue(value: string): boolean {
+  return HEADER_VALUE_CHARS.test(value);
+}
+
+/// 令牌能不能放进 `Authorization` 头。Cookie 被改坏时，读出来的值可能放不进请求头（见
+/// `isSendableHeaderValue`）：这样的值不可能是有效令牌，调用方不要拿它请求网关。
 export function canSendToken(token: string): boolean {
-  return HEADER_VALUE_CHARS.test(token);
+  return isSendableHeaderValue(token);
 }

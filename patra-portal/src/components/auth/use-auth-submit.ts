@@ -2,67 +2,76 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { type ReactNode, startTransition, useRef, useState } from "react";
 import { toast } from "sonner";
-import { fieldErrorMessages } from "@/lib/auth/messages";
-import type { Credentials, CurrentUser, FieldError } from "@/lib/auth/types";
+import { type CredentialField, fieldErrorMessages } from "@/lib/auth/messages";
+import { deletionPendingHref } from "@/lib/auth/next-path";
+import type { CurrentUser, FieldError } from "@/lib/auth/types";
 import { queryKeys } from "@/lib/query-keys";
 
 /// action 的 promise 被拒绝时，按服务不可用处理
 const UNAVAILABLE = { ok: false, reason: "unavailable" } as const;
 
-interface AuthSubmitOptions<F> {
+interface AuthSubmitOptions<I, F> {
   /// 成功后跳去的地址，已经过 `safeNextPath`
   next: string;
   /// `login` 或 `register`
-  action: (credentials: Credentials) => Promise<{ ok: true; user: CurrentUser } | F>;
+  action: (input: I) => Promise<{ ok: true; user: CurrentUser } | F>;
   /// 成功提示
   successToast: string;
+  /// 成功、跳转之前调用，比如注册后开始重发验证邮件的冷却
+  onSuccess?: (user: CurrentUser) => void;
   /// 失败时调用，拿到失败结果和这次提交的值
-  onFailure: (failure: F | typeof UNAVAILABLE, credentials: Credentials) => void;
+  onFailure: (failure: F | typeof UNAVAILABLE, input: I) => void;
 }
 
 /// 两张表单共用的提交流程，表单通过校验后调用 `submit`（spec 第 9.5、9.6 节）：
 /// 1. 提交中再次调用一律忽略，只发一次请求。
 /// 2. 先预取目标页，再调用 action。promise 被拒绝时按服务不可用处理。
 /// 3. 成功：先取消进行中的当前用户请求，再写入用户，弹成功提示，在 transition 里替换到 `next`。
+///    冷静期账号（`status` 是 `PENDING_DELETION`）不弹提示，替换到取消注销页（简报 §2.2 规则 2）。
 ///    之后一直保持提交中，直到跳转完成、表单卸载。表单提前卸载了，这几步照样做完。
 /// 4. 失败：退出提交中，交给 `onFailure`。
-export function useAuthSubmit<F extends { ok: false }>({
+export function useAuthSubmit<I, F extends { ok: false }>({
   next,
   action,
   successToast,
+  onSuccess,
   onFailure,
-}: AuthSubmitOptions<F>) {
+}: AuthSubmitOptions<I, F>) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const busy = useRef(false);
   const [submitting, setSubmitting] = useState(false);
 
-  async function submit(credentials: Credentials) {
+  async function submit(input: I) {
     if (busy.current) {
       return;
     }
     busy.current = true;
     setSubmitting(true);
     router.prefetch(next);
-    const result = await action(credentials).catch(() => UNAVAILABLE);
+    const result = await action(input).catch(() => UNAVAILABLE);
     if (result.ok) {
       await queryClient.cancelQueries({ queryKey: queryKeys.currentUser });
       queryClient.setQueryData(queryKeys.currentUser, result.user);
+      onSuccess?.(result.user);
+      if (result.user.status === "PENDING_DELETION") {
+        startTransition(() => router.replace(deletionPendingHref(next)));
+        return;
+      }
       toast.success(successToast);
       startTransition(() => router.replace(next));
       return;
     }
     busy.current = false;
     setSubmitting(false);
-    onFailure(result, credentials);
+    onFailure(result, input);
   }
 
   return { submitting, submit };
 }
 
-/// 有后端字段错误的两个字段，按页面上的顺序
-const CREDENTIAL_FIELDS = ["email", "password"] as const;
-type CredentialField = (typeof CREDENTIAL_FIELDS)[number];
+/// 有后端字段错误的字段，按页面上的顺序
+const CREDENTIAL_FIELDS: readonly CredentialField[] = ["email", "username", "password"];
 
 /// 后端返回的一个字段错误，和提交时字段的值绑在一起
 interface ServerFieldError {
@@ -80,22 +89,29 @@ export function useServerFieldErrors() {
       const error = errors[field];
       return error?.value === value ? error.message : undefined;
     },
-    /// 在一个字段下方显示错误，比如注册时的「该邮箱已注册」
-    show(field: CredentialField, value: string, message: ReactNode) {
-      setErrors({ [field]: { value, message } });
+    /// 在这些字段下方显示错误（比如注册时的「该邮箱已注册」「这个用户名已被使用」），替换之前的全部
+    show(shown: Partial<Record<CredentialField, ServerFieldError>>) {
+      setErrors(shown);
     },
     /// 显示 `invalid-fields` 里的字段错误，返回第一个出错的字段。一条都对不上时什么也不显示，返回 null
-    showFieldErrors(fieldErrors: FieldError[], credentials: Credentials): CredentialField | null {
+    /// `values` 只有表单里有的字段（登录页没有用户名），返回值也只会是其中之一
+    showFieldErrors<K extends CredentialField>(
+      fieldErrors: FieldError[],
+      values: Partial<Record<K, string>>,
+    ): K | null {
       const messages = fieldErrorMessages(fieldErrors);
       const shown: Partial<Record<CredentialField, ServerFieldError>> = {};
-      for (const field of CREDENTIAL_FIELDS) {
+      let first: K | null = null;
+      for (const field of CREDENTIAL_FIELDS.filter((f): f is K => Object.hasOwn(values, f))) {
         const message = messages[field];
-        if (message !== undefined) {
-          shown[field] = { value: credentials[field], message };
+        const value = values[field];
+        if (message !== undefined && value !== undefined) {
+          shown[field] = { value, message };
+          first ??= field;
         }
       }
       setErrors(shown);
-      return CREDENTIAL_FIELDS.find((field) => shown[field] !== undefined) ?? null;
+      return first;
     },
     clear() {
       setErrors({});

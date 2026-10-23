@@ -7,6 +7,7 @@ import {
   loginAlertMessage,
   REGISTER_UNAVAILABLE_MESSAGE,
   TOAST_MESSAGES,
+  usernameMessage,
 } from "@/lib/auth/messages";
 
 describe("fieldErrorMessage", () => {
@@ -39,7 +40,13 @@ describe("fieldErrorMessage", () => {
 });
 
 describe("fieldErrorMessages", () => {
-  it("同一字段只取第一条，email、password 以外的字段丢掉", () => {
+  it("用户名的错误也取出来", () => {
+    expect(fieldErrorMessages([{ field: "username", code: "RESERVED" }])).toEqual({
+      username: "这个用户名不能使用，请换一个",
+    });
+  });
+
+  it("同一字段只取第一条，email、username、password 以外的字段丢掉", () => {
     expect(
       fieldErrorMessages([
         { field: "deviceId", code: "REQUIRED" },
@@ -50,8 +57,26 @@ describe("fieldErrorMessages", () => {
     ).toEqual({ password: "密码至少 8 位", email: "邮箱格式不正确" });
   });
 
-  it("一条都对不上 email、password 时返回空对象", () => {
+  it("一条都对不上 email、username、password 时返回空对象", () => {
     expect(fieldErrorMessages([{ field: "deviceId", code: "REQUIRED" }])).toEqual({});
+  });
+});
+
+describe("usernameMessage", () => {
+  it.each([
+    ["REQUIRED", "请输入用户名"],
+    ["TOO_SHORT", "用户名至少 3 个字符"],
+    ["TOO_LONG", "用户名最多 30 个字符"],
+    ["INVALID_CHARACTER", "只能用小写字母、数字、_ 和 -"],
+    ["INVALID_FORMAT", "开头和结尾要是字母或数字，_ 和 - 不能连着用"],
+    ["DIGITS_ONLY", "用户名不能全是数字"],
+    ["RESERVED", "这个用户名不能使用，请换一个"],
+    ["ALREADY_TAKEN", "这个用户名已被使用"],
+    ["SOMETHING_NEW", "用户名不符合要求"],
+    [null, "用户名不符合要求"],
+    ["toString", "用户名不符合要求"],
+  ])("%s → %s", (code, message) => {
+    expect(usernameMessage(code)).toBe(message);
   });
 });
 
@@ -80,11 +105,12 @@ describe("其余文案", () => {
     expect(REGISTER_UNAVAILABLE_MESSAGE).toBe("注册没有成功，请稍后再试");
   });
 
-  it("三条成功提示", () => {
+  it("登录、注册、退出与取消注销的成功提示", () => {
     expect(TOAST_MESSAGES).toEqual({
       loggedIn: "已登录",
       registered: "注册成功，已登录",
       loggedOut: "已退出登录",
+      deletionCancelled: "已取消注销，欢迎回来",
     });
   });
 

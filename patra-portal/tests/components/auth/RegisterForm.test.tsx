@@ -1,12 +1,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { USER } from "@tests/fixtures/user";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { RegisterForm } from "@/components/auth/RegisterForm";
 import { register } from "@/lib/auth/actions";
 import type { RegisterResult } from "@/lib/auth/types";
 import { queryKeys } from "@/lib/query-keys";
+import { useVerificationResendStore } from "@/store/verification-resend";
 
 const router = { replace: vi.fn(), prefetch: vi.fn() };
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
@@ -16,7 +18,6 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn() } }));
 import { toast } from "sonner";
 
 const NEXT = "/journals/7";
-const USER = { userId: "319041872872550658", email: "chen.yu@example.com" };
 const PASSWORD = "correct horse";
 
 /// 一个还没回来的请求，`answer` 让它在测试想要的时候回来
@@ -37,15 +38,17 @@ function renderRegister() {
     </QueryClientProvider>,
   );
   const email = screen.getByLabelText("邮箱") as HTMLInputElement;
+  const username = screen.getByLabelText("用户名") as HTMLInputElement;
   const password = screen.getByLabelText("密码") as HTMLInputElement;
   const confirm = screen.getByLabelText("确认密码") as HTMLInputElement;
   const submit = screen.getByRole("button", { name: "注册" });
-  return { client, user, email, password, confirm, submit };
+  return { client, user, email, username, password, confirm, submit };
 }
 
-/// 三个字段都填好后点「注册」。邮箱前后带空格：type="email" 的输入框读出的值不带首尾空白
+/// 四个字段都填好后点「注册」。邮箱前后带空格：type="email" 的输入框读出的值不带首尾空白
 async function fillAndSubmit(form: ReturnType<typeof renderRegister>) {
   await form.user.type(form.email, ` ${USER.email} `);
+  await form.user.type(form.username, USER.username);
   await form.user.type(form.password, PASSWORD);
   await form.user.type(form.confirm, PASSWORD);
   await form.user.click(form.submit);
@@ -88,9 +91,42 @@ describe("RegisterForm · 输入框", () => {
     expect(screen.queryByText("至少 8 位")).not.toBeInTheDocument();
   });
 
-  it("提交按钮上方提示不支持找回密码", () => {
+  it("不再提示不支持找回密码", () => {
     renderRegister();
-    expect(screen.getByText("请牢记密码，目前不支持找回密码。")).toBeInTheDocument();
+    expect(screen.queryByText("请牢记密码，目前不支持找回密码。")).not.toBeInTheDocument();
+  });
+
+  it("用户名在邮箱下面；不自动大写、不做拼写检查，自动填充认作用户名", () => {
+    const { email, username, password } = renderRegister();
+    const order = screen.getAllByRole("textbox").concat(password);
+    expect(order.indexOf(username)).toBe(order.indexOf(email) + 1);
+    expect(username).toHaveAttribute("autocomplete", "username");
+    expect(username).toHaveAttribute("spellcheck", "false");
+    expect(username).toHaveAttribute("autocapitalize", "none");
+  });
+
+  it("常驻提示写出主页地址，随输入变化", async () => {
+    const { user, username } = renderRegister();
+    expect(username).toHaveAccessibleDescription(
+      "3–30 位，小写字母、数字、_ 或 -，用作主页地址 /u/你的用户名",
+    );
+    await user.type(username, "chen");
+    expect(username).toHaveAccessibleDescription(
+      "3–30 位，小写字母、数字、_ 或 -，用作主页地址 /u/chen",
+    );
+  });
+
+  it("输入的大写字母直接显示成小写", async () => {
+    const { user, username } = renderRegister();
+    await user.type(username, "Chen-Yu");
+    expect(username).toHaveValue("chen-yu");
+  });
+
+  it("用户名离开时按规则校验", async () => {
+    const { user, username } = renderRegister();
+    await user.type(username, "ab");
+    await user.tab();
+    expect(username).toHaveAccessibleDescription("用户名至少 3 个字符");
   });
 
   it("两个显示 / 隐藏切换互不影响", async () => {
@@ -175,7 +211,12 @@ describe("RegisterForm · 确认密码", () => {
 
 describe("RegisterForm · 后端返回失败", () => {
   it("邮箱已注册：邮箱下方提示并给出去登录的链接，保留全部内容，焦点移到邮箱", async () => {
-    vi.mocked(register).mockResolvedValue({ ok: false, reason: "email-taken" });
+    vi.mocked(register).mockResolvedValue({
+      ok: false,
+      reason: "taken",
+      email: true,
+      username: false,
+    });
     const form = renderRegister();
     await fillAndSubmit(form);
     await waitFor(() => expect(form.email).toHaveAccessibleDescription("该邮箱已注册，去登录"));
@@ -186,6 +227,48 @@ describe("RegisterForm · 后端返回失败", () => {
     expect(form.email).toHaveFocus();
     expect(form.password).toHaveValue(PASSWORD);
     expect(form.confirm).toHaveValue(PASSWORD);
+  });
+
+  it("邮箱和用户名都被占用：两处都提示，焦点移到邮箱", async () => {
+    vi.mocked(register).mockResolvedValue({
+      ok: false,
+      reason: "taken",
+      email: true,
+      username: true,
+    });
+    const form = renderRegister();
+    await fillAndSubmit(form);
+    await waitFor(() => expect(form.username).toHaveAccessibleDescription("这个用户名已被使用"));
+    expect(form.email).toHaveAccessibleDescription("该邮箱已注册，去登录");
+    expect(form.email).toHaveFocus();
+  });
+
+  it("只有用户名被占用：用户名下方提示，焦点移到用户名；改了用户名提示就消失", async () => {
+    vi.mocked(register).mockResolvedValue({
+      ok: false,
+      reason: "taken",
+      email: false,
+      username: true,
+    });
+    const form = renderRegister();
+    await fillAndSubmit(form);
+    await waitFor(() => expect(form.username).toHaveAccessibleDescription("这个用户名已被使用"));
+    expect(form.username).toHaveFocus();
+    await form.user.type(form.username, "x");
+    expect(form.username).not.toHaveAccessibleDescription("这个用户名已被使用");
+  });
+
+  it("用户名是保留字：用户名下方提示", async () => {
+    vi.mocked(register).mockResolvedValue({
+      ok: false,
+      reason: "invalid-fields",
+      fieldErrors: [{ field: "username", code: "RESERVED" }],
+    });
+    const form = renderRegister();
+    await fillAndSubmit(form);
+    await waitFor(() =>
+      expect(form.username).toHaveAccessibleDescription("这个用户名不能使用，请换一个"),
+    );
   });
 
   it("密码太常见：密码下方提示，保留全部内容，焦点移到密码框；改了密码提示就消失", async () => {
@@ -243,7 +326,7 @@ describe("RegisterForm · 提交", () => {
     const busy = screen.getByRole("button", { name: "注册中…" });
     expect(busy).toHaveAttribute("aria-disabled", "true");
     expect(busy).toHaveAttribute("title", "正在注册");
-    for (const input of [form.email, form.password, form.confirm]) {
+    for (const input of [form.email, form.username, form.password, form.confirm]) {
       expect(input).toHaveAttribute("readonly");
     }
     await form.user.click(busy);
@@ -251,11 +334,15 @@ describe("RegisterForm · 提交", () => {
     await act(async () => pending.answer({ ok: false, reason: "unavailable" }));
   });
 
-  it("只把邮箱（去掉首尾空白）和密码交给后端，确认密码不传", async () => {
+  it("只把邮箱（去掉首尾空白）、用户名和密码交给后端，确认密码不传", async () => {
     const form = renderRegister();
     await fillAndSubmit(form);
     await waitFor(() => expect(register).toHaveBeenCalledTimes(1));
-    expect(register).toHaveBeenCalledWith({ email: USER.email, password: PASSWORD });
+    expect(register).toHaveBeenCalledWith({
+      email: USER.email,
+      username: USER.username,
+      password: PASSWORD,
+    });
   });
 
   it("成功：先预取目标页，写入当前用户，提示「注册成功，已登录」，替换到 next", async () => {
@@ -267,5 +354,15 @@ describe("RegisterForm · 提交", () => {
     );
     expect(form.client.getQueryData(queryKeys.currentUser)).toEqual(USER);
     expect(toast.success).toHaveBeenCalledWith("注册成功，已登录");
+  });
+
+  it("成功：首封验证邮件计入冷却，60 秒内「重新发送」是倒计时", async () => {
+    const before = Date.now();
+    const form = renderRegister();
+    await fillAndSubmit(form);
+    await waitFor(() => expect(router.replace).toHaveBeenCalled());
+    const { availableAt } = useVerificationResendStore.getState();
+    expect(availableAt).toBeGreaterThanOrEqual(before + 60_000);
+    expect(availableAt).toBeLessThanOrEqual(Date.now() + 60_000);
   });
 });

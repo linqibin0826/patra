@@ -1,7 +1,12 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import type { z } from "zod";
-import { loginSchema, registerSchema } from "@/lib/auth/form-schemas";
+import {
+  changePasswordSchema,
+  emailChangeSchema,
+  loginSchema,
+  registerSchema,
+} from "@/lib/auth/form-schemas";
 
 /// 每个字段的第一条错误：表单只显示这一条（RHF 的 zodResolver 默认也只取第一条）
 function firstErrors(schema: z.ZodType, values: unknown): Record<string, string> {
@@ -16,6 +21,7 @@ function firstErrors(schema: z.ZodType, values: unknown): Record<string, string>
 /// 64 + 1 + 185 + 4 = 254 个字符的合法邮箱
 const EMAIL_254 = `${"a".repeat(64)}@${"b".repeat(185)}.com`;
 const VALID = { email: "reader@example.com", password: "correct horse" };
+const USERNAME = { username: "reader" };
 
 describe("邮箱（两页相同）", () => {
   it("去掉首尾空白后提交", () => {
@@ -55,7 +61,7 @@ describe("登录页的密码", () => {
 
 describe("注册页的密码", () => {
   const register = (password: string, confirmPassword = password) =>
-    firstErrors(registerSchema, { email: VALID.email, password, confirmPassword });
+    firstErrors(registerSchema, { email: VALID.email, ...USERNAME, password, confirmPassword });
 
   it("为空：请输入密码", () => {
     expect(register("", "x")).toMatchObject({ password: "请输入密码" });
@@ -83,8 +89,31 @@ describe("注册页的密码", () => {
   });
 });
 
+describe("注册页的用户名", () => {
+  const base = {
+    email: "reader@example.com",
+    password: "correct horse",
+    confirmPassword: "correct horse",
+  };
+
+  it("为空：请输入用户名", () => {
+    expect(firstErrors(registerSchema, { ...base, username: "" }).username).toBe("请输入用户名");
+  });
+
+  it("不合规时按原因码出文案", () => {
+    expect(firstErrors(registerSchema, { ...base, username: "12345" }).username).toBe(
+      "用户名不能全是数字",
+    );
+  });
+
+  it("去掉首尾空白、转小写后提交", () => {
+    const parsed = registerSchema.safeParse({ ...base, username: " Chen-Yu " });
+    expect(parsed.success && parsed.data.username).toBe("chen-yu");
+  });
+});
+
 describe("注册页的确认密码", () => {
-  const values = { email: VALID.email, password: "correct horse" };
+  const values = { email: VALID.email, ...USERNAME, password: "correct horse" };
 
   it("为空：请再输入一次密码", () => {
     expect(firstErrors(registerSchema, { ...values, confirmPassword: "" })).toEqual({
@@ -102,5 +131,55 @@ describe("注册页的确认密码", () => {
     expect(firstErrors(registerSchema, { ...values, email: "", confirmPassword: "wrong" })).toEqual(
       { email: "请输入邮箱", confirmPassword: "两次输入的密码不一致" },
     );
+  });
+});
+
+describe("emailChangeSchema", () => {
+  const schema = emailChangeSchema("Chen.Yu@example.com");
+  const message = (newEmail: string) => {
+    const result = schema.safeParse({ newEmail });
+    return result.success ? null : result.error.issues[0]?.message;
+  };
+
+  it("空、格式不对、与当前相同（忽略大小写）各有说法", () => {
+    expect(message("  ")).toBe("请输入邮箱");
+    expect(message("not-an-email")).toBe("邮箱格式不正确");
+    expect(message(" chen.yu@EXAMPLE.com ")).toBe("新邮箱和现在的一样");
+  });
+
+  it("合规时解析为去空白后的值", () => {
+    expect(schema.parse({ newEmail: " new@example.com " })).toEqual({
+      newEmail: "new@example.com",
+    });
+  });
+});
+
+describe("changePasswordSchema", () => {
+  const issues = (values: {
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword: string;
+  }) => {
+    const result = changePasswordSchema.safeParse(values);
+    return result.success
+      ? {}
+      : Object.fromEntries(
+          // 同一字段只取第一条，和表单上显示的一致
+          [...result.error.issues].reverse().map((issue) => [issue.path[0], issue.message]),
+        );
+  };
+
+  it("当前密码为空、新密码太短、确认为空", () => {
+    expect(issues({ currentPassword: "", newPassword: "short", confirmPassword: "" })).toEqual({
+      currentPassword: "请输入当前密码",
+      newPassword: "密码至少 8 位",
+      confirmPassword: "请再输入一次新密码",
+    });
+  });
+
+  it("两次不一致", () => {
+    expect(
+      issues({ currentPassword: "x", newPassword: "new-pass-1", confirmPassword: "new-pass-2" }),
+    ).toEqual({ confirmPassword: "两次输入的密码不一致" });
   });
 });

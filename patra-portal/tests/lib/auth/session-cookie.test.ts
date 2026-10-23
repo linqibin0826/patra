@@ -4,6 +4,8 @@ import { NextRequest } from "next/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   clearSessionCookie,
+  DEVICE_ID_PATTERN,
+  ensureDeviceId,
   readRequestSessionToken,
   readSessionToken,
   refreshSessionCookie,
@@ -144,5 +146,63 @@ describe("clearSessionCookie", () => {
     expect(jar.written).toEqual([
       "__Host-patra_session=; Path=/; Max-Age=0; Secure; HttpOnly; SameSite=lax",
     ]);
+  });
+});
+
+describe("设备标识 Cookie", () => {
+  const VALID = `${"A".repeat(42)}_`;
+  const PLAIN =
+    /^patra_device=([A-Za-z0-9_-]{43}); Path=\/; Expires=[^;]+; Max-Age=34560000; HttpOnly; SameSite=lax$/;
+
+  it("issues_a_device_id_when_missing", async () => {
+    vi.stubEnv("PATRA_SESSION_COOKIE_SECURE", "false");
+    const jar = resetCookieJar();
+    const id = await ensureDeviceId();
+    expect(id).toMatch(DEVICE_ID_PATTERN);
+    expect(jar.written).toEqual([expect.stringMatching(PLAIN)]);
+    expect(jar.written[0]).toContain(`patra_device=${id};`);
+  });
+
+  it("uses_host_prefix_when_secure", async () => {
+    vi.stubEnv("PATRA_SESSION_COOKIE_SECURE", undefined);
+    const jar = resetCookieJar();
+    await ensureDeviceId();
+    expect(jar.written[0]).toMatch(
+      /^__Host-patra_device=[A-Za-z0-9_-]{43}; .*Secure; HttpOnly; SameSite=lax$/,
+    );
+  });
+
+  it("keeps_a_valid_device_id_and_extends_it", async () => {
+    vi.stubEnv("PATRA_SESSION_COOKIE_SECURE", "false");
+    const jar = resetCookieJar({ patra_device: VALID });
+    await expect(ensureDeviceId()).resolves.toBe(VALID);
+    expect(jar.written).toEqual([expect.stringMatching(PLAIN)]);
+    expect(jar.written[0]).toContain(`patra_device=${VALID};`);
+  });
+
+  it.each(["abc", `${"A".repeat(42)}.`, "A".repeat(44)])(
+    "replaces_a_malformed_device_cookie：%s",
+    async (bad) => {
+      vi.stubEnv("PATRA_SESSION_COOKIE_SECURE", "false");
+      resetCookieJar({ patra_device: bad });
+      const id = await ensureDeviceId();
+      expect(id).toMatch(DEVICE_ID_PATTERN);
+      expect(id).not.toBe(bad);
+    },
+  );
+
+  it("每次新生成的值都不同", async () => {
+    vi.stubEnv("PATRA_SESSION_COOKIE_SECURE", "false");
+    resetCookieJar();
+    const first = await ensureDeviceId();
+    resetCookieJar();
+    expect(await ensureDeviceId()).not.toBe(first);
+  });
+
+  it("clearSessionCookie_does_not_touch_device_cookie", async () => {
+    vi.stubEnv("PATRA_SESSION_COOKIE_SECURE", "false");
+    const jar = resetCookieJar({ patra_session: TOKEN, patra_device: VALID });
+    await clearSessionCookie();
+    expect(jar.written.every((line) => line.startsWith("patra_session="))).toBe(true);
   });
 });
