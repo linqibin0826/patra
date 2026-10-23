@@ -2,6 +2,7 @@ package dev.patra.identity.infra.adapter.avatar;
 
 import static dev.patra.identity.infra.adapter.avatar.AvatarImageFixture.decodeWebp;
 import static dev.patra.identity.infra.adapter.avatar.AvatarImageFixture.gray;
+import static dev.patra.identity.infra.adapter.avatar.AvatarImageFixture.grayWithAlpha;
 import static dev.patra.identity.infra.adapter.avatar.AvatarImageFixture.jpeg;
 import static dev.patra.identity.infra.adapter.avatar.AvatarImageFixture.png;
 import static dev.patra.identity.infra.adapter.avatar.AvatarImageFixture.pngHeaderOnly;
@@ -149,6 +150,18 @@ class AvatarImageAdapterTest {
     assertThat((argb >> 16) & 0xFF).isBetween(118, 138);
     assertThat((argb >> 8) & 0xFF).isBetween(118, 138);
     assertThat(argb & 0xFF).isBetween(118, 138);
+  }
+
+  /// 半透明灰度图的灰度值不能被预乘两次而变暗：灰度 200、alpha 128 出图后仍约为 200。
+  @Test
+  void should_keep_gray_level_of_semi_transparent_grayscale_images() {
+    BufferedImage large = decodeWebp(adapter.render(grayWithAlpha(300, 300, 200, 128)).large());
+
+    int argb = large.getRGB(256, 256);
+    assertThat((argb >>> 24) & 0xFF).isBetween(118, 138);
+    assertThat((argb >> 16) & 0xFF).isBetween(190, 210);
+    assertThat((argb >> 8) & 0xFF).isBetween(190, 210);
+    assertThat(argb & 0xFF).isBetween(190, 210);
   }
 
   /// 两档都是 WebP，尺寸分别 512 与 128。

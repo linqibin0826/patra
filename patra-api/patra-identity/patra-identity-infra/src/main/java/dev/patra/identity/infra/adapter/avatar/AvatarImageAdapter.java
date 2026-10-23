@@ -226,9 +226,7 @@ public class AvatarImageAdapter implements AvatarImagePort {
       for (int x = 0; x < source.getWidth(); x++) {
         int gray = raster.getSample(x, y, 0) >> grayShift;
         int a = alpha ? raster.getSample(x, y, 1) >> alphaShift : 0xFF;
-        if (target.getType() == BufferedImage.TYPE_INT_ARGB_PRE) {
-          gray = gray * a / 0xFF;
-        }
+        // setRGB 收的是非预乘值，写进 TYPE_INT_ARGB_PRE 时它自己会预乘，这里不能再乘一次
         target.setRGB(x, y, a << 24 | gray << 16 | gray << 8 | gray);
       }
     }

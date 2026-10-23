@@ -97,6 +97,31 @@ public final class AvatarImageFixture {
     return encode(image, format.equals("jpg") ? "jpg" : "png");
   }
 
+  /// 半透明的单色灰度 PNG（灰度 + alpha 两个通道）。
+  ///
+  /// @param width 宽
+  /// @param height 高
+  /// @param value 灰度值
+  /// @param alpha 不透明度 0 ~ 255
+  /// @return 字节
+  public static byte[] grayWithAlpha(int width, int height, int value, int alpha) {
+    ComponentColorModel model =
+        new ComponentColorModel(
+            ColorSpace.getInstance(ColorSpace.CS_GRAY),
+            true,
+            false,
+            Transparency.TRANSLUCENT,
+            DataBuffer.TYPE_BYTE);
+    WritableRaster raster = model.createCompatibleWritableRaster(width, height);
+    for (int y = 0; y < height; y++) {
+      for (int x = 0; x < width; x++) {
+        raster.setSample(x, y, 0, value);
+        raster.setSample(x, y, 1, alpha);
+      }
+    }
+    return encode(new BufferedImage(model, raster, false, null), "png");
+  }
+
   /// 竖带图编码成有损 WebP。
   ///
   /// @param width 宽
