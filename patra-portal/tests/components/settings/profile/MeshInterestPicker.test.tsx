@@ -16,7 +16,7 @@ const NEOPLASMS = { ui: "D009369", name: "Neoplasms", matchedTerm: "Cancer", tre
 const fetchMock = vi.fn();
 let latest: Interest[] = [];
 
-function Harness({ initial, errors }: { initial: Interest[]; errors?: Record<number, string> }) {
+function Harness({ initial, errors }: { initial: Interest[]; errors?: Record<string, string> }) {
   const [value, setValue] = useState(initial);
   return (
     <MeshInterestPicker
@@ -31,7 +31,7 @@ function Harness({ initial, errors }: { initial: Interest[]; errors?: Record<num
   );
 }
 
-function renderPicker(initial: Interest[] = [HF, AF], errors?: Record<number, string>) {
+function renderPicker(initial: Interest[] = [HF, AF], errors?: Record<string, string>) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
@@ -177,8 +177,8 @@ describe("MeshInterestPicker · 已选列表", () => {
     expect(latest.map((i) => i.name)).toEqual(["Atrial Fibrillation", "Heart Failure"]);
   });
 
-  it("某一项出错：胶囊描红，下方写原因", () => {
-    renderPicker([HF, AF], { 1: "这个主题词已不可用，请移除" });
+  it("某一项出错（按 UI 给）：胶囊描红，下方写原因", () => {
+    renderPicker([HF, AF], { [AF.ui]: "这个主题词已不可用，请移除" });
     const items = within(screen.getByRole("list", { name: "已选主题词，可排序" })).getAllByRole(
       "listitem",
     );

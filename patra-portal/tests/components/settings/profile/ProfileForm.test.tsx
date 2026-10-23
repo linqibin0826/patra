@@ -275,4 +275,35 @@ describe("ProfileForm · 关注领域", () => {
       await screen.findByText("Atrial Fibrillation：这个主题词已不可用，请移除"),
     ).toBeInTheDocument();
   });
+
+  it("主题词的错误跟着词走：调整顺序后仍标在原来那个词上", async () => {
+    vi.mocked(saveProfile).mockResolvedValue({
+      ok: false,
+      reason: "invalid-fields",
+      fieldErrors: [{ field: "researchInterests[1]", code: "NOT_FOUND" }],
+    });
+    const { user } = renderForm();
+    await user.type(nickname(), "!");
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    await screen.findByText("Atrial Fibrillation：这个主题词已不可用，请移除");
+    screen.getByRole("button", { name: "调整 Heart Failure 的位置" }).focus();
+    await user.keyboard("{Alt>}{ArrowRight}{/Alt}");
+    expect(screen.getByText("Atrial Fibrillation：这个主题词已不可用，请移除")).toBeInTheDocument();
+    expect(screen.queryByText(/^Heart Failure：/)).not.toBeInTheDocument();
+  });
+
+  it("移除出错的主题词：错误跟着消失；焦点在保存失败时移到搜索框", async () => {
+    vi.mocked(saveProfile).mockResolvedValue({
+      ok: false,
+      reason: "invalid-fields",
+      fieldErrors: [{ field: "researchInterests[1]", code: "NOT_FOUND" }],
+    });
+    const { user } = renderForm();
+    await user.type(nickname(), "!");
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    await screen.findByText("Atrial Fibrillation：这个主题词已不可用，请移除");
+    expect(screen.getByRole("combobox", { name: "搜索 MeSH 主题词" })).toHaveFocus();
+    await user.click(screen.getByRole("button", { name: "移除 Atrial Fibrillation" }));
+    expect(screen.queryByText(/这个主题词已不可用/)).not.toBeInTheDocument();
+  });
 });

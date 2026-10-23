@@ -70,6 +70,9 @@ export function ProfileForm({ initial, user, privacy }: ProfileFormProps) {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [alert, setAlert] = useState<string | null>(null);
+  // 后端报的某个关注领域的错误（`researchInterests[i]`），按主题词 UI 记：调整顺序后仍标在那个词上，
+  // 移除了就跟着消失。不进 RHF：RHF 只认下标，选择器一改动就会按前端规则重新校验、把它清掉
+  const [interestErrors, setInterestErrors] = useState<Record<string, string>>({});
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: toFormValues(initial),
@@ -86,30 +89,40 @@ export function ProfileForm({ initial, user, privacy }: ProfileFormProps) {
     formState: { errors, isDirty },
   } = form;
   const [displayName, bio, interests] = watch(["displayName", "bio", "researchInterests"]);
-  // 后端报的某一项关注领域的错误（`researchInterests[i]`）：下标 → 文案
-  const interestErrors: Record<number, string> = {};
-  interests.forEach((_, index) => {
-    const message = errors.researchInterests?.[index]?.message;
-    if (message) {
-      interestErrors[index] = message;
-    }
-  });
   // 计数超出上限（字数或字节）时立即显示字段错误，不等提交（简报 §4.5）
   const displayNameError =
     errors.displayName?.message ?? overLimitMessage("displayName", displayName, 30);
   const bioError = errors.bio?.message ?? overLimitMessage("bio", bio, 200);
 
-  /// 后端的字段错误挂到表单字段上，返回第一个挂上的字段
-  function showFieldErrors(fieldErrors: { field: string; code: string | null }[]) {
+  /// 后端的字段错误挂到表单字段上（某个关注领域的错误按提交时那一项的 UI 记下），返回第一个挂上的字段
+  function showFieldErrors(
+    fieldErrors: { field: string; code: string | null }[],
+    values: ProfileFormValues,
+  ) {
     let first: FieldPath<ProfileFormValues> | null = null;
+    const byInterest: Record<string, string> = {};
     for (const { field, code } of fieldErrors) {
+      const index = /^researchInterests\[(\d+)\]$/.exec(field)?.[1];
+      const interest = index === undefined ? undefined : values.researchInterests[Number(index)];
+      if (interest) {
+        byInterest[interest.ui] = profileFieldMessage(field, code);
+        first ??= "researchInterests";
+        continue;
+      }
       const path = formPathOf(field) as FieldPath<ProfileFormValues> | null;
       if (path) {
         setError(path, { type: "server", message: profileFieldMessage(field, code) });
         first ??= path;
       }
     }
+    setInterestErrors(byInterest);
     return first;
+  }
+
+  /// 放弃改动或保存成功后回到某份值，后端报过的错误一并作废
+  function resetTo(values?: ProfileFormValues) {
+    reset(values);
+    setInterestErrors({});
   }
 
   /// 保存结果 → 界面
@@ -125,7 +138,7 @@ export function ProfileForm({ initial, user, privacy }: ProfileFormProps) {
       ) {
         saved.organization = { ...saved.organization, detail: organization.detail };
       }
-      reset(saved);
+      resetTo(saved);
       toast.success("资料已保存");
       void queryClient.invalidateQueries({ queryKey: queryKeys.currentUser });
       router.refresh();
@@ -133,7 +146,7 @@ export function ProfileForm({ initial, user, privacy }: ProfileFormProps) {
     }
     switch (result.reason) {
       case "invalid-fields": {
-        const first = showFieldErrors(result.fieldErrors);
+        const first = showFieldErrors(result.fieldErrors, values);
         if (first) {
           setFocus(first, { shouldSelect: false });
           return;
@@ -159,6 +172,7 @@ export function ProfileForm({ initial, user, privacy }: ProfileFormProps) {
       return;
     }
     setAlert(null);
+    setInterestErrors({});
     void handleSubmit(async (values) => {
       setSaving(true);
       const result = await saveProfile(values).catch(() => UNAVAILABLE);
@@ -316,7 +330,15 @@ export function ProfileForm({ initial, user, privacy }: ProfileFormProps) {
               <MeshInterestPicker
                 id="profile-research-interests"
                 value={field.value}
-                onChange={field.onChange}
+                onChange={(next) => {
+                  field.onChange(next);
+                  // 移除的词带走它的错误，再加回来时不再描红
+                  setInterestErrors((current) =>
+                    Object.fromEntries(
+                      next.flatMap(({ ui }) => (current[ui] ? [[ui, current[ui]]] : [])),
+                    ),
+                  );
+                }}
                 focusRef={field.ref}
                 errors={interestErrors}
                 readOnly={saving}
@@ -329,7 +351,7 @@ export function ProfileForm({ initial, user, privacy }: ProfileFormProps) {
         </SettingsCard>
 
         {alert && <FormAlert>{alert}</FormAlert>}
-        {isDirty && <StickySaveBar saving={saving} onDiscard={() => reset()} />}
+        {isDirty && <StickySaveBar saving={saving} onDiscard={() => resetTo()} />}
         <LeaveGuard when={isDirty && !saving} />
       </form>
     </FormProvider>

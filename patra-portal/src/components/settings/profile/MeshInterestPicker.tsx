@@ -55,8 +55,8 @@ interface MeshInterestPickerProps {
   id: string;
   value: Interest[];
   onChange: (value: Interest[]) => void;
-  /// 下标 → 这一项的错误文案（保存时后端报的 `researchInterests[i]`）
-  errors?: Record<number, string>;
+  /// 主题词 UI → 这一项的错误文案（保存时后端报的 `researchInterests[i]`，按 UI 记，排序后仍跟着词）
+  errors?: Record<string, string>;
   readOnly?: boolean;
   /// 保存出错时要聚焦的搜索框（交给 RHF 的 `field.ref`）
   focusRef?: (element: HTMLElement | null) => void;
@@ -124,8 +124,8 @@ export function MeshInterestPicker({
     setInput("");
   }
 
-  const errorLines = value.flatMap((interest, index) =>
-    errors[index] ? [`${interest.name}：${errors[index]}`] : [],
+  const errorLines = value.flatMap((interest) =>
+    errors[interest.ui] ? [`${interest.name}：${errors[interest.ui]}`] : [],
   );
 
   return (
@@ -150,7 +150,7 @@ export function MeshInterestPicker({
                   index={index}
                   count={value.length}
                   narrow={narrow}
-                  invalid={Boolean(errors[index])}
+                  invalid={Boolean(errors[interest.ui])}
                   readOnly={readOnly}
                   onMove={move}
                   onRemove={() => onChange(value.filter((_, i) => i !== index))}
