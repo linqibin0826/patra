@@ -41,6 +41,13 @@ dependencies {
     // 登录设备（PAP-99）：ip2region 离线库查 IP 属地；数据文件不在 jar 里，见下面的 downloadIp2RegionData
     implementation(libs.ip2region)
 
+    // 头像：解码只用纯 Java（TwelveMonkeys 的 JPEG / WebP），WebP 编码用 libwebp 的 JNI 包装
+    implementation(libs.twelvemonkeys.imageio.jpeg)
+    implementation(libs.twelvemonkeys.imageio.webp)
+    implementation(libs.webp.imageio)
+    testFixturesImplementation(libs.twelvemonkeys.imageio.webp)
+    testFixturesImplementation(libs.webp.imageio)
+
     testImplementation(project(":patra-tool:patra-tool-test"))
 }
 
