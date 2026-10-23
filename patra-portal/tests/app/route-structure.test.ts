@@ -14,3 +14,11 @@ describe("路由结构", () => {
     expect(existsSync(join(APP, segment, "[id]", "page.tsx"))).toBe(true);
   });
 });
+
+describe("公开主页", () => {
+  it("没有 loading.tsx：404 要是真正的 404 状态码", () => {
+    expect(existsSync(join(APP, "u", "[username]", "loading.tsx"))).toBe(false);
+    expect(existsSync(join(APP, "u", "[username]", "page.tsx"))).toBe(true);
+    expect(existsSync(join(APP, "u", "[username]", "not-found.tsx"))).toBe(true);
+  });
+});

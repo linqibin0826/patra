@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
@@ -21,21 +22,36 @@ interface PillProps {
   title?: string;
   /** 只放外边距、对齐等布局类 */
   className?: string;
+  /** 给了就渲染成站内链接，悬停换陶土色（主页的关注领域 → 文献检索） */
+  href?: string;
 }
 
-/// 只读圆角胶囊（无衬线）：身份、分级、主题词这类短标签。不可点击；可点击的条件用 FilterChip，
-/// 等宽的来源 / 类型 / 开放获取标签用 Tag 的写法。
-export function Pill({ children, tone = "neutral", size = "md", title, className }: PillProps) {
+/// 圆角胶囊（无衬线）：身份、分级、主题词这类短标签。默认只读；给了 `href` 是去别处的链接（不是筛选
+/// 条件，筛选条件用 FilterChip）；等宽的来源 / 类型 / 开放获取标签用 Tag 的写法。
+export function Pill({
+  children,
+  tone = "neutral",
+  size = "md",
+  title,
+  className,
+  href,
+}: PillProps) {
+  const classes = cn(
+    "inline-flex items-center gap-1 rounded-full border font-sans",
+    TONE[tone],
+    SIZE[size],
+    href && "transition-colors hover:border-clay-200 hover:bg-clay-50 hover:text-clay-800",
+    className,
+  );
+  if (href) {
+    return (
+      <Link href={href} title={title} className={classes}>
+        {children}
+      </Link>
+    );
+  }
   return (
-    <span
-      title={title}
-      className={cn(
-        "inline-flex items-center gap-1 rounded-full border font-sans",
-        TONE[tone],
-        SIZE[size],
-        className,
-      )}
-    >
+    <span title={title} className={classes}>
       {children}
     </span>
   );
