@@ -42,3 +42,16 @@ export function unexpectedProblem(endpoint: string, problem: Problem): CommonFai
   logUnexpectedResponse(endpoint, problem.status, { code: problem.code });
   return { ok: false, reason: "unavailable" };
 }
+
+/// 需要再认证（spec §6.1）：要求 10 分钟内输过密码的操作超出窗口时的结果。客户端拿到它就弹再认证对话框，
+/// 验证后重试原操作（`useReauth().withReauth`）。只出现在改邮箱、踢设备、发起注销这几个 Action 里，所以不并进
+/// `CommonFailure`：否则不需要再认证的操作也得为它写分支。
+export type ReauthRequired = { ok: false; reason: "reauth-required" };
+
+/// `ReauthRequired` 的唯一实例
+export const REAUTH_REQUIRED: ReauthRequired = { ok: false, reason: "reauth-required" };
+
+/// 403 且 `traits` 含 `REAUTH_REQUIRED`
+export function isReauthRequired(problem: Problem): boolean {
+  return problem.status === 403 && problem.traits.has("REAUTH_REQUIRED");
+}

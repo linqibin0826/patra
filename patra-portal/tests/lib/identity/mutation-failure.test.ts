@@ -1,7 +1,11 @@
 // @vitest-environment node
 import { resetCookieJar } from "@tests/stubs/cookie-jar";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { settleFailure, unexpectedProblem } from "@/lib/identity/mutation-failure";
+import {
+  isReauthRequired,
+  settleFailure,
+  unexpectedProblem,
+} from "@/lib/identity/mutation-failure";
 import { parseProblem } from "@/lib/identity/problem";
 
 vi.mock("next/headers", () => import("@tests/stubs/cookie-jar"));
@@ -81,5 +85,23 @@ describe("unexpectedProblem", () => {
       "[auth] /patra-identity/me/profile 返回了意外的结果",
       { status: 500, code: "IDN-0500" },
     );
+  });
+});
+
+describe("isReauthRequired", () => {
+  it("403 且 traits 含 REAUTH_REQUIRED", () => {
+    const { problem } = problemReply(403, {
+      code: "IDN-0403",
+      traits: ["FORBIDDEN", "REAUTH_REQUIRED"],
+    });
+    expect(isReauthRequired(problem)).toBe(true);
+  });
+
+  it.each([
+    [403, ["FORBIDDEN"]],
+    [401, ["REAUTH_REQUIRED"]],
+  ])("%i %j 不算", (status, traits) => {
+    const { problem } = problemReply(status, { traits });
+    expect(isReauthRequired(problem)).toBe(false);
   });
 });
