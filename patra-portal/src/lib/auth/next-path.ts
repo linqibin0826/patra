@@ -25,7 +25,9 @@ export function isFocusPage(pathname: string): boolean {
 /// 2. 第一个字符是 `/`，第二个字符不能是 `/` 或 `\`（跳转规则 4）。
 /// 3. 按 URL 解析后仍是本站。解析会去掉制表符和换行、把 `\` 当成 `/`，`/\t/evil.com` 在这一步变成
 ///    `//evil.com`，被挡住。
-/// 4. 解析后的路径去掉末尾的 `/`，不能是专注布局的页面（`FOCUS_PAGES`）。`/papers/../login` 解析后就是 `/login`。
+/// 4. 解析后的路径不能以 `//` 开头：点路径段折叠之后（`/..//evil.com`、`/%2e%2e//evil.com`）会变成协议相对地址，
+///    原样拿去跳转就到了站外。
+/// 5. 解析后的路径去掉末尾的 `/`，不能是专注布局的页面（`FOCUS_PAGES`）。`/papers/../login` 解析后就是 `/login`。
 export function safeNextPath(raw: string | null | undefined): string {
   if (raw?.[0] !== "/" || raw[1] === "/" || raw[1] === "\\") {
     return "/";
@@ -36,7 +38,11 @@ export function safeNextPath(raw: string | null | undefined): string {
   } catch {
     return "/";
   }
-  if (url.origin !== PLACEHOLDER_ORIGIN || isFocusPage(url.pathname)) {
+  if (
+    url.origin !== PLACEHOLDER_ORIGIN ||
+    url.pathname.startsWith("//") ||
+    isFocusPage(url.pathname)
+  ) {
     return "/";
   }
   return `${url.pathname}${url.search}`;

@@ -108,3 +108,17 @@ describe("forgotPasswordHref", () => {
     expect(forgotPasswordHref("/login")).toBe("/forgot-password");
   });
 });
+
+describe("safeNextPath：点路径段折叠后变成协议相对地址", () => {
+  it.each(["/..//evil.com", "/%2e%2e//evil.com", "/./\\evil.com", "/a/..//evil.com"])(
+    "%j 解析后是 //evil.com：一律回首页",
+    (raw) => {
+      expect(safeNextPath(raw)).toBe("/");
+    },
+  );
+
+  it("取消注销页、登录页的链接也不会带出去", () => {
+    expect(deletionPendingHref("/..//evil.com")).toBe("/account/deletion-pending");
+    expect(authPageHref("/login", "/..//evil.com")).toBe("/login");
+  });
+});
