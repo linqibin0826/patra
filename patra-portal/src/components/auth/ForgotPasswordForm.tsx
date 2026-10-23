@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { MailCheck } from "lucide-react";
 import Link from "next/link";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { AuthLink } from "@/components/auth/AuthLink";
 import { AuthShell } from "@/components/auth/AuthShell";
@@ -32,7 +32,12 @@ interface Wait {
 /// 副文案随态切换。冷却只在本页内存里，换页丢失可以接受（再点得到 429）。`next` 已经过 `safeNextPath`。
 export function ForgotPasswordForm({ next }: { next: string }) {
   const loginHref = authPageHref("/login", next);
-  const [initialEmail] = useState(() => useAuthHandoffStore.getState().take().email ?? "");
+  // 挂载时读一次登录页带来的邮箱，读完在 effect 里清空（不在渲染期清：被丢弃的渲染会把它带走）
+  const [initialEmail] = useState(() => useAuthHandoffStore.getState().email ?? "");
+  const takeHandoff = useAuthHandoffStore((state) => state.take);
+  useEffect(() => {
+    takeHandoff();
+  }, [takeHandoff]);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [wait, setWait] = useState<Wait | null>(null);
   const [alert, setAlert] = useState<string | null>(null);

@@ -47,6 +47,8 @@ describe("ForgotPasswordForm", () => {
     ).toBeInTheDocument();
     const input = screen.getByLabelText("邮箱");
     expect(input).toHaveValue("reader@example.com");
+    // 读一次就清空
+    expect(useAuthHandoffStore.getState().take()).toEqual({ email: null, notice: null });
     expect(input).toHaveFocus();
     expect(screen.getByRole("link", { name: "返回" })).toHaveAttribute(
       "href",
