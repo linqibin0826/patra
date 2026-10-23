@@ -1,12 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
+import { USER } from "@tests/fixtures/user";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useCurrentUser } from "@/lib/auth/current-user-query";
 import type { CurrentUser } from "@/lib/auth/types";
 import { queryKeys } from "@/lib/query-keys";
-
-const USER: CurrentUser = { userId: "319041872872550658", email: "reader@example.com" };
 
 /// 每次调用都新建响应：同一个 Response 的响应体只能读一次
 const respondWith = (status: number, body?: unknown) =>

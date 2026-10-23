@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { USER } from "@tests/fixtures/user";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { TopNav } from "@/components/portal/TopNav";
@@ -196,7 +197,7 @@ describe("TopNav 账号区", () => {
   });
 
   it("桌面：已登录时是圆形标识", async () => {
-    renderTopNav({ userId: "319041872872550658", email: "chen.yu@example.com" });
+    renderTopNav(USER);
     expect(await screen.findByRole("button", { name: "账号菜单" })).toHaveTextContent("C");
   });
 

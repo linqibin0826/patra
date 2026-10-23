@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { ME_RESPONSE, USER } from "@tests/fixtures/user";
 import { resetCookieJar } from "@tests/stubs/cookie-jar";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { login, logout, register } from "@/lib/auth/actions";
@@ -9,8 +10,7 @@ vi.mock("next/headers", () => import("@tests/stubs/cookie-jar"));
 const TOKEN = "patra_user_abc";
 const PASSWORD = "correct-horse-battery";
 const CREDENTIALS: Credentials = { email: "reader@example.com", password: PASSWORD };
-const USER = { userId: "319041872872550658", email: "reader@example.com" };
-const SIGNED_IN = { sessionToken: TOKEN, ...USER };
+const SIGNED_IN = { sessionToken: TOKEN, user: ME_RESPONSE };
 /// 写入：令牌原文，有效期 30 天
 const WRITTEN =
   /^patra_session=patra_user_abc; Path=\/; Expires=[^;]+; Max-Age=2592000; HttpOnly; SameSite=lax$/;
@@ -143,8 +143,15 @@ describe("register", () => {
   });
 
   it.each([
-    ["201 但缺 sessionToken", () => respondWith(201, USER)],
-    ["201 但 userId 不是字符串", () => respondWith(201, { ...SIGNED_IN, userId: 42 })],
+    ["201 但缺 sessionToken", () => respondWith(201, { user: ME_RESPONSE })],
+    [
+      "201 但是旧的顶层字段",
+      () => respondWith(201, { sessionToken: TOKEN, userId: USER.userId, email: USER.email }),
+    ],
+    [
+      "201 但 userId 不是字符串",
+      () => respondWith(201, { sessionToken: TOKEN, user: { ...ME_RESPONSE, userId: 42 } }),
+    ],
     ["201 但响应体不是 JSON", () => respondWith(201)],
     ["422 但没有 errors", () => respondWith(422, problem(422))],
     [
@@ -255,7 +262,7 @@ describe("login", () => {
   });
 
   it.each([
-    ["200 但缺 sessionToken", () => respondWith(200, USER)],
+    ["200 但缺 sessionToken", () => respondWith(200, { user: ME_RESPONSE })],
     ["422 但没有 errors", () => respondWith(422, problem(422))],
     ["409", () => respondWith(409, problem(409))],
     ["500", () => respondWith(500, problem(500))],

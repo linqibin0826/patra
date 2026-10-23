@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { ME_RESPONSE, USER } from "@tests/fixtures/user";
 import { resetCookieJar } from "@tests/stubs/cookie-jar";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GET } from "@/app/api/auth/me/route";
@@ -6,7 +7,6 @@ import { GET } from "@/app/api/auth/me/route";
 vi.mock("next/headers", () => import("@tests/stubs/cookie-jar"));
 
 const TOKEN = "patra_user_abc";
-const USER = { userId: "319041872872550658", email: "reader@example.com" };
 const SIGNED_IN: Record<string, string> = { patra_session: TOKEN };
 const SIGNED_OUT: Record<string, string> = {};
 /// 刷新：原值重写，有效期回到 30 天
@@ -37,7 +37,7 @@ const respondWith = (status: number, body: unknown) =>
 
 describe("GET /api/auth/me", () => {
   it("读到用户：200 + 用户，并把 Cookie 的有效期顺延回 30 天", async () => {
-    respondWith(200, { ...USER, accountType: "user" });
+    respondWith(200, ME_RESPONSE);
     const jar = resetCookieJar(SIGNED_IN);
     const res = await GET();
     expect(res.status).toBe(200);

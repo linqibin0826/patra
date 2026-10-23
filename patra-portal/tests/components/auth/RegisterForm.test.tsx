@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { USER } from "@tests/fixtures/user";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { RegisterForm } from "@/components/auth/RegisterForm";
@@ -16,7 +17,6 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn() } }));
 import { toast } from "sonner";
 
 const NEXT = "/journals/7";
-const USER = { userId: "319041872872550658", email: "chen.yu@example.com" };
 const PASSWORD = "correct horse";
 
 /// 一个还没回来的请求，`answer` 让它在测试想要的时候回来

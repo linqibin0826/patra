@@ -20,6 +20,7 @@ import type {
   RegisterResult,
 } from "@/lib/auth/types";
 import { canSendToken, gatewayFetch } from "@/lib/gateway";
+import { userSchema } from "@/lib/identity/user-schema";
 
 const REGISTER_ENDPOINT = "/patra-identity/auth/register";
 const LOGIN_ENDPOINT = "/patra-identity/auth/login";
@@ -31,12 +32,8 @@ const LOGOUT_TIMEOUT_MS = 5_000;
 /// 入参只校验形状，多余的字段被剥掉；长度和格式由后端校验，失败时回 422 并带原因码
 const credentialsSchema = z.object({ email: z.string(), password: z.string() });
 
-/// 注册、登录成功时的响应体
-const signedInSchema = z.object({
-  sessionToken: z.string().min(1),
-  userId: z.string().min(1),
-  email: z.string().min(1),
-});
+/// 注册、登录成功时的响应体：`user` 与 `/auth/me` 同构
+const signedInSchema = z.object({ sessionToken: z.string().min(1), user: userSchema });
 
 /// 422 响应体 `errors[]` 里的一项：`field` 必须是字符串，`code` 不是字符串时记为 null，其余字段丢掉
 const fieldErrorSchema = z.object({ field: z.string(), code: z.string().nullable().catch(null) });
@@ -79,7 +76,7 @@ async function signIn(endpoint: string, reply: GatewayReply): Promise<CurrentUse
     return null;
   }
   await writeSessionCookie(parsed.data.sessionToken);
-  return { userId: parsed.data.userId, email: parsed.data.email };
+  return parsed.data.user;
 }
 
 /// 422：取到字段错误时返回 `invalid-fields`；一项都取不到时记日志，返回 `unavailable`。

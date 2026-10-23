@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 type SetCookieArgs = Parameters<NextResponse["cookies"]["set"]>;
 
-/// 测试用的 Cookie 存储，替换 `next/headers` 的 `cookies()`：
+/// 测试用的 Cookie 存储与请求头，替换 `next/headers` 的 `cookies()` 与 `headers()`：
 /// `vi.mock("next/headers", () => import("@tests/stubs/cookie-jar"))`。
 /// 读到的是 `resetCookieJar` 传入的请求 Cookie；每次写入都交给 Next 自己的 ResponseCookies
 /// 序列化成一条 Set-Cookie 原文记下来，测试直接断言原文。
@@ -30,14 +30,25 @@ function createCookieJar(incoming: Record<string, string>): CookieJar {
 }
 
 let current = createCookieJar({});
+let currentHeaders = new Headers();
 
-/// 换一个新的 Cookie 存储，`incoming` 是这次请求带来的 Cookie。每个测试开头调用。
-export function resetCookieJar(incoming: Record<string, string> = {}): CookieJar {
+/// 换一个新的 Cookie 存储，`incoming` 是这次请求带来的 Cookie，`requestHeaders` 是这次请求的请求头
+/// （`headers()` 读到的，默认没有）。每个测试开头调用。
+export function resetCookieJar(
+  incoming: Record<string, string> = {},
+  requestHeaders: Record<string, string> = {},
+): CookieJar {
   current = createCookieJar(incoming);
+  currentHeaders = new Headers(requestHeaders);
   return current;
 }
 
 /// 替换 `next/headers` 的 `cookies()`。
 export async function cookies(): Promise<CookieJar> {
   return current;
+}
+
+/// 替换 `next/headers` 的 `headers()`。
+export async function headers(): Promise<Headers> {
+  return currentHeaders;
 }

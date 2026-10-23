@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { ME_RESPONSE } from "@tests/fixtures/user";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { config, proxy } from "@/proxy";
@@ -88,7 +89,6 @@ describe("matcher 按解码后的路径放进来的编码地址", () => {
 
 describe("已登录的人打开登录页、注册页时直接跳走", () => {
   const TOKEN = "patra_user_abc";
-  const USER = { userId: "319041872872550658", email: "reader@example.com" };
 
   beforeEach(() => {
     vi.stubEnv("PATRA_SESSION_COOKIE_SECURE", "false");
@@ -118,7 +118,7 @@ describe("已登录的人打开登录页、注册页时直接跳走", () => {
   });
 
   it.each(["/login", "/register"])("已登录时 GET %s 回 307，跳到 next", async (page) => {
-    fetchMock.mockResolvedValue(json(200, USER));
+    fetchMock.mockResolvedValue(json(200, ME_RESPONSE));
     const res = await proxy(signedIn(`${page}?next=%2Fpapers%3Fq%3DGLP-1`));
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toBe("http://portal.test/papers?q=GLP-1");
@@ -132,13 +132,13 @@ describe("已登录的人打开登录页、注册页时直接跳走", () => {
     ["next 是站外地址", "/login?next=%2F%2Fevil.com"],
     ["next 是登录页自己", "/register?next=%2Flogin"],
   ])("%s，跳到首页", async (_label, path) => {
-    fetchMock.mockResolvedValue(json(200, USER));
+    fetchMock.mockResolvedValue(json(200, ME_RESPONSE));
     const res = await proxy(signedIn(path));
     expect(res.headers.get("location")).toBe("http://portal.test/");
   });
 
   it("问 /auth/me 时转发浏览器的 IP 与 UA", async () => {
-    fetchMock.mockResolvedValue(json(200, USER));
+    fetchMock.mockResolvedValue(json(200, ME_RESPONSE));
     await proxy(signedIn("/login", { "x-forwarded-for": "10.0.0.9", "user-agent": "UA/9" }));
     expect(fetchMock.mock.calls[0]?.[1]?.headers).toEqual({
       Authorization: `Bearer ${TOKEN}`,
@@ -148,13 +148,13 @@ describe("已登录的人打开登录页、注册页时直接跳走", () => {
   });
 
   it("next 出现多次时取第一个", async () => {
-    fetchMock.mockResolvedValue(json(200, USER));
+    fetchMock.mockResolvedValue(json(200, ME_RESPONSE));
     const res = await proxy(signedIn("/login?next=%2Fjournals&next=%2Fpapers"));
     expect(res.headers.get("location")).toBe("http://portal.test/journals");
   });
 
   it("站内点链接、预取（sec-fetch-dest: empty）同样会跳走", async () => {
-    fetchMock.mockResolvedValue(json(200, USER));
+    fetchMock.mockResolvedValue(json(200, ME_RESPONSE));
     const res = await proxy(signedIn("/login?next=%2Fjournals", { "sec-fetch-dest": "empty" }));
     expect(res.headers.get("location")).toBe("http://portal.test/journals");
   });

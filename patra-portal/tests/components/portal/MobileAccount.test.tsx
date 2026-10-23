@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { USER } from "@tests/fixtures/user";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { MobileAccount } from "@/components/portal/MobileAccount";
@@ -22,7 +23,6 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn() } }));
 
 import { toast } from "sonner";
 
-const USER: CurrentUser = { userId: "319041872872550658", email: "chen.yu@example.com" };
 const LONG_EMAIL =
   "postdoctoral.researcher.zhang@cardiovascular-research.university-hospital.example.org";
 
