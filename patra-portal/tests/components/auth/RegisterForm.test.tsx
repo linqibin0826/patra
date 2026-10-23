@@ -8,6 +8,7 @@ import { RegisterForm } from "@/components/auth/RegisterForm";
 import { register } from "@/lib/auth/actions";
 import type { RegisterResult } from "@/lib/auth/types";
 import { queryKeys } from "@/lib/query-keys";
+import { useVerificationResendStore } from "@/store/verification-resend";
 
 const router = { replace: vi.fn(), prefetch: vi.fn() };
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
@@ -353,5 +354,15 @@ describe("RegisterForm · 提交", () => {
     );
     expect(form.client.getQueryData(queryKeys.currentUser)).toEqual(USER);
     expect(toast.success).toHaveBeenCalledWith("注册成功，已登录");
+  });
+
+  it("成功：首封验证邮件计入冷却，60 秒内「重新发送」是倒计时", async () => {
+    const before = Date.now();
+    const form = renderRegister();
+    await fillAndSubmit(form);
+    await waitFor(() => expect(router.replace).toHaveBeenCalled());
+    const { availableAt } = useVerificationResendStore.getState();
+    expect(availableAt).toBeGreaterThanOrEqual(before + 60_000);
+    expect(availableAt).toBeLessThanOrEqual(Date.now() + 60_000);
   });
 });

@@ -196,6 +196,12 @@ describe("TopNav 账号区", () => {
     expect(await screen.findByRole("link", { name: "登录" })).toHaveAttribute("href", "/login");
   });
 
+  it("邮箱未验证时，导航栏下方出现验证横幅（在 header 之外，随页面滚走）", async () => {
+    renderTopNav({ ...USER, emailVerified: false });
+    const text = await screen.findByText(/验证邮箱后，别人才能看到你的主页/);
+    expect(screen.getByRole("banner")).not.toContainElement(text);
+  });
+
   it("桌面：已登录时是头像", async () => {
     renderTopNav(USER);
     expect(await screen.findByRole("button", { name: "账号菜单" })).toHaveTextContent("陈");

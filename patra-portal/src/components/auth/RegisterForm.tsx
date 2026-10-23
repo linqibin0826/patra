@@ -21,6 +21,7 @@ import {
 import { authPageHref } from "@/lib/auth/next-path";
 import { btnBlock, btnPrimary } from "@/lib/portal-ui";
 import { cn } from "@/lib/utils";
+import { useVerificationResendStore } from "@/store/verification-resend";
 
 /// 用户名下方的常驻提示：写出主页地址，空着时是占位说法（简报 §3.1）
 function usernameHint(value: string): string {
@@ -49,11 +50,14 @@ export function RegisterForm({ next }: { next: string }) {
     defaultValues: { email: "", username: "", password: "", confirmPassword: "" },
   });
   const validateOnBlur = useBlurValidation(trigger);
+  const startResendCooldown = useVerificationResendStore((state) => state.startCooldown);
   const loginHref = authPageHref("/login", next);
   const { submitting, submit } = useAuthSubmit({
     next,
     action: registerAccount,
     successToast: TOAST_MESSAGES.registered,
+    // 注册时发出的首封验证邮件计入重发冷却：60 秒内横幅上是倒计时（简报 §3.4）
+    onSuccess: () => startResendCooldown(Date.now() + 60_000),
     onFailure: (failure, input) => {
       if (failure.reason === "taken") {
         serverErrors.show({

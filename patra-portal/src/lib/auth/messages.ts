@@ -102,3 +102,22 @@ export function loginAlertMessage(failure: LoginAlertFailure): string {
       return "登录没有成功，请稍后再试";
   }
 }
+
+/// 重发验证邮件（简报 §3.4、§4.4）
+export const RESEND_MESSAGES = {
+  sent: "验证邮件已发送",
+  verified: "邮箱已验证",
+  failed: "没有发出去，请稍后再试",
+  sending: "发送中…",
+  ready: "可以重新发送了",
+} as const;
+
+/// 重发冷却中的文案：刚发出是「已发送 · N 秒后可重发」；限流时不到 60 秒按秒说，否则向上取整到分钟
+export function resendWaitMessage(seconds: number, limited: boolean): string {
+  if (!limited) {
+    return `已发送 · ${seconds} 秒后可重发`;
+  }
+  return seconds < 60
+    ? `发送太频繁，请 ${seconds} 秒后再试`
+    : `发送太频繁，请 ${Math.ceil(seconds / 60)} 分钟后再试`;
+}
