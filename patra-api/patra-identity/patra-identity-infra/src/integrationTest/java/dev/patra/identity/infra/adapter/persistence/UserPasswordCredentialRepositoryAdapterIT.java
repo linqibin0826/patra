@@ -7,6 +7,7 @@ import dev.patra.identity.domain.model.aggregate.User;
 import dev.patra.identity.domain.model.aggregate.UserPasswordCredential;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.PasswordHash;
+import dev.patra.identity.domain.model.vo.Username;
 import dev.patra.identity.infra.config.IdentityITPostgreSQLContainerInitializer;
 import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.autoconfigure.PatraHibernatePropertiesCustomizer;
@@ -49,7 +50,9 @@ class UserPasswordCredentialRepositoryAdapterIT {
   @Test
   @DisplayName("保存后按用户 ID 查回哈希")
   void should_save_and_find_by_user_id() {
-    User user = users.save(User.register(EmailAddress.of("credential@example.com")));
+    User user =
+        users.save(
+            User.register(EmailAddress.of("credential@example.com"), Username.of("u-credential")));
 
     UserPasswordCredential saved =
         credentials.save(UserPasswordCredential.create(user.getId(), HASH));
@@ -65,10 +68,23 @@ class UserPasswordCredentialRepositoryAdapterIT {
   @Test
   @DisplayName("同一个用户不能有两份密码凭据")
   void should_reject_second_credential_for_same_user() {
-    User user = users.save(User.register(EmailAddress.of("twice@example.com")));
+    User user =
+        users.save(User.register(EmailAddress.of("twice@example.com"), Username.of("u-twice")));
     credentials.save(UserPasswordCredential.create(user.getId(), HASH));
 
     assertThatThrownBy(() -> credentials.save(UserPasswordCredential.create(user.getId(), HASH)))
         .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  @DisplayName("按用户删凭据：删掉返回真，再删返回假")
+  void should_delete_credential_by_user_id_and_report_whether_a_row_existed() {
+    User user =
+        users.save(User.register(EmailAddress.of("delete@example.com"), Username.of("u-delete")));
+    credentials.save(UserPasswordCredential.create(user.getId(), HASH));
+
+    assertThat(credentials.deleteByUserId(user.getId())).isTrue();
+    assertThat(credentials.findByUserId(user.getId())).isEmpty();
+    assertThat(credentials.deleteByUserId(user.getId())).isFalse();
   }
 }

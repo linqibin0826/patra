@@ -5,23 +5,22 @@ import dev.patra.tool.core.error.field.FieldViolation;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
-/// 客户端自报的设备标识，去掉首尾空白后最多 128 个字符（按码点数），不含控制字符。
+/// 客户端的设备标识：门户种在浏览器里的长期 Cookie，值是 32 字节随机数的 base64url（无填充），
+/// 恰好 43 个字符。格式由我们定，任何偏离都是坏值，不做去空白之类的宽容处理。
 ///
-/// @param value 规范化之后的值
+/// @param value 设备标识
 public record DeviceId(String value) {
 
-  /// 最多 128 个字符。
-  public static final int MAX_LENGTH = 128;
+  /// 合规的设备标识。
+  public static final Pattern PATTERN = Pattern.compile("^[A-Za-z0-9_-]{43}$");
 
-  /// 只接受规范化之后的合法值。
+  /// 只接受合规的值。
   public DeviceId {
     Objects.requireNonNull(value, "value 不能为 null");
-    if (value.isEmpty()
-        || !value.equals(value.strip())
-        || codePoints(value) > MAX_LENGTH
-        || hasControlCharacter(value)) {
-      throw new IllegalArgumentException("设备标识必须是去掉首尾空白、不含控制字符、不超过 128 个字符的非空值");
+    if (!PATTERN.matcher(value).matches()) {
+      throw new IllegalArgumentException("设备标识必须是 43 个 base64url 字符");
     }
   }
 
@@ -30,24 +29,17 @@ public record DeviceId(String value) {
   /// @param raw 用户输入，可以为 `null`
   /// @return 不满足的规则；合法或没有时为空
   public static Optional<FieldViolation> validate(String raw) {
-    if (raw == null || raw.isBlank()) {
+    if (raw == null || raw.isBlank() || PATTERN.matcher(raw).matches()) {
       return Optional.empty();
     }
-    String stripped = raw.strip();
-    if (codePoints(stripped) > MAX_LENGTH) {
-      return Optional.of(UserFieldViolations.deviceIdTooLong());
-    }
-    if (hasControlCharacter(stripped)) {
-      return Optional.of(UserFieldViolations.deviceIdInvalidFormat());
-    }
-    return Optional.empty();
+    return Optional.of(UserFieldViolations.deviceIdInvalidFormat());
   }
 
   /// 从用户输入创建。`null` 和空白返回空。
   ///
   /// @param raw 用户输入，可以为 `null`
   /// @return 设备标识；没有时为空
-  /// @throws InvalidUserFieldsException 太长时
+  /// @throws InvalidUserFieldsException 格式不对时
   public static Optional<DeviceId> of(String raw) {
     if (raw == null || raw.isBlank()) {
       return Optional.empty();
@@ -56,22 +48,6 @@ public record DeviceId(String value) {
     if (violation.isPresent()) {
       throw new InvalidUserFieldsException(List.of(violation.get()));
     }
-    return Optional.of(new DeviceId(raw.strip()));
-  }
-
-  /// 是否含控制字符（换行、制表、ANSI 转义、NUL 等）：存进库和 Redis 后会在后台展示，不收。
-  ///
-  /// @param value 字符串
-  /// @return 含控制字符时为 `true`
-  private static boolean hasControlCharacter(String value) {
-    return value.codePoints().anyMatch(Character::isISOControl);
-  }
-
-  /// 码点数。
-  ///
-  /// @param value 字符串
-  /// @return 码点数
-  private static int codePoints(String value) {
-    return value.codePointCount(0, value.length());
+    return Optional.of(new DeviceId(raw));
   }
 }

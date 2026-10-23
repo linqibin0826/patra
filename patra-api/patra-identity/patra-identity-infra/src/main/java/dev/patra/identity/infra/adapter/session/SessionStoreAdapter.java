@@ -1,14 +1,21 @@
 package dev.patra.identity.infra.adapter.session;
 
 import dev.patra.identity.domain.model.vo.DeviceId;
+import dev.patra.identity.domain.port.session.ActiveUserSession;
 import dev.patra.identity.domain.port.session.IssuedUserSession;
 import dev.patra.identity.domain.port.session.NewUserSession;
+import dev.patra.identity.domain.port.session.SessionRotation;
 import dev.patra.identity.domain.port.session.SessionStorePort;
 import dev.patra.identity.session.IssuedSession;
 import dev.patra.identity.session.NewSession;
 import dev.patra.identity.session.RedisSessionStore;
+import dev.patra.identity.session.SessionToken;
+import dev.patra.identity.session.StoredSession;
 import dev.patra.tool.core.security.AccountType;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -43,6 +50,54 @@ public class SessionStoreAdapter implements SessionStorePort {
     return IssuedUserSession.of(issued.token().value(), issued.replacedSessionIds());
   }
 
+  /// 换令牌、保留会话 ID；宽限期内不换。
+  ///
+  /// @param accountType 账号类型
+  /// @param userId 用户 ID
+  /// @param sessionId 会话 ID
+  /// @param grace 换令牌的宽限期
+  /// @return 换令牌的结果；会话不在时为空
+  @Override
+  public Optional<SessionRotation> rotate(
+      AccountType accountType, long userId, long sessionId, Duration grace) {
+    return store
+        .rotate(accountType, userId, sessionId, grace)
+        .map(
+            rotation ->
+                rotation
+                    .newToken()
+                    .map(SessionToken::value)
+                    .map(SessionRotation::rotated)
+                    .orElseGet(SessionRotation::kept));
+  }
+
+  /// 读再认证时间。
+  ///
+  /// @param accountType 账号类型
+  /// @param userId 用户 ID
+  /// @param sessionId 会话 ID
+  /// @return 再认证时间；会话不在时为空
+  @Override
+  public Optional<Instant> findAuthenticatedAt(
+      AccountType accountType, long userId, long sessionId) {
+    return store.find(accountType, userId, sessionId).map(StoredSession::authenticatedAt);
+  }
+
+  /// 列出活会话：只取会话 ID、创建时间、最后活跃。
+  ///
+  /// @param accountType 账号类型
+  /// @param userId 用户 ID
+  /// @return 活会话
+  @Override
+  public List<ActiveUserSession> listActive(AccountType accountType, long userId) {
+    return store.list(accountType, userId).stream()
+        .map(
+            session ->
+                ActiveUserSession.of(
+                    session.sessionId(), session.createdAt(), session.lastActiveAt()))
+        .toList();
+  }
+
   /// 删一条会话。
   ///
   /// @param accountType 账号类型
@@ -62,5 +117,16 @@ public class SessionStoreAdapter implements SessionStorePort {
   @Override
   public List<Long> revokeAll(AccountType accountType, long userId) {
     return store.deleteAll(accountType, userId);
+  }
+
+  /// 删一个用户除指定一条之外的全部会话。
+  ///
+  /// @param accountType 账号类型
+  /// @param userId 用户 ID
+  /// @param keepSessionId 要保留的会话 ID
+  /// @return 真的删掉了的会话 ID
+  @Override
+  public List<Long> revokeAllExcept(AccountType accountType, long userId, long keepSessionId) {
+    return store.deleteAllExcept(accountType, userId, keepSessionId);
   }
 }

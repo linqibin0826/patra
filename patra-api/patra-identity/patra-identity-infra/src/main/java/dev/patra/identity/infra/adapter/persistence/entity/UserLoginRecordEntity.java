@@ -32,8 +32,25 @@ public class UserLoginRecordEntity extends BaseJpaEntity {
 
   /// 设备标识，可空
   @ToString.Exclude
-  @Column(name = "device_id", length = 128)
+  @Column(name = "device_id", length = 43)
   private String deviceId;
+
+  @ToString.Exclude
+  @Column(name = "user_agent", length = 512)
+  private String userAgent;
+
+  @Column(name = "device_name", length = 64)
+  private String deviceName;
+
+  @Column(name = "device_class", nullable = false, length = 16)
+  private String deviceClass;
+
+  @ToString.Exclude
+  @Column(name = "client_ip", length = 45)
+  private String clientIp;
+
+  @Column(name = "ip_region", length = 64)
+  private String ipRegion;
 
   /// 会话的绝对过期时间
   @Column(name = "expires_at", nullable = false)
@@ -43,7 +60,7 @@ public class UserLoginRecordEntity extends BaseJpaEntity {
   @Column(name = "ended_at")
   private Instant endedAt;
 
-  /// 结束原因：LOGOUT / BANNED / REPLACED，未结束时为 null
-  @Column(name = "end_reason", length = 16)
+  /// 结束原因：LOGOUT / BANNED / REPLACED / REVOKED，未结束时为 null
+  @Column(name = "end_reason", length = 32)
   private String endReason;
 }

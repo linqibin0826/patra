@@ -10,6 +10,7 @@ name: patra-apps
 #     redis.env     Redis 密码。catalog、identity、gateway 必需
 #     gateway.env   网关签身份断言的私钥。gateway 必需
 #     nacos.env     Nacos 应用账号 patra-app。6 个后端服务必需
+#     mail.env      真实邮件服务商（Resend）的 SMTP 凭据。identity 可选，缺失时邮件发往 core 栈的 Mailpit
 #     <svc>.env     外部数据源密钥等。可选，缺失时跳过
 # 必需文件缺一个，compose 对本项目的任何命令都会失败（portal 也部署不了），报错里有完整路径。
 # 密钥不放在 compose 目录：CD 每次运行前的 git clean 会删掉 runner 工作区里被忽略的文件。
@@ -108,6 +109,13 @@ services:
         required: true
       - path: ${HOME}/.patra/secrets/identity.env
         required: false
+      - path: ${HOME}/.patra/secrets/mail.env
+        required: false
+    # IP 属地的离线库（PAP-99）：两个 xdb 由 scripts/fetch-ip2region.sh 下载到宿主机，只读挂进来；缺文件 identity 起不来
+    volumes:
+      - ${HOME}/.patra/data/ip2region:/data/ip2region:ro
+    environment:
+      PATRA_IDENTITY_IP_GEOLOCATION_DIRECTORY: /data/ip2region
     healthcheck:
       test: [ "CMD", "curl", "-fs", "http://localhost:6400/actuator/health" ]
       <<: *app-healthcheck
@@ -126,6 +134,9 @@ services:
         required: true
       - path: ${HOME}/.patra/secrets/gateway.env
         required: true
+    # 受信代理（PAP-99）：只有门户（下面 portal 的固定地址）发来的 X-Forwarded-For 被采用，两处一起改
+    environment:
+      PATRA_GATEWAY_TRUSTED_PROXIES: 192.168.97.250/32
     healthcheck:
       test: [ "CMD", "curl", "-fs", "http://localhost:9528/actuator/health" ]
       <<: *app-healthcheck
@@ -135,6 +146,12 @@ services:
     container_name: patra-portal
     restart: unless-stopped
     ports: [ "4000:4000" ]
+    # 固定地址：网关只信任这个地址发来的 X-Forwarded-For（上面 gateway 的 PATRA_GATEWAY_TRUSTED_PROXIES），
+    # 两处要一起改。选 .250 是避开 Docker 从 .2 起的顺序分配；
+    # .1 是 patra-net 网关，OrbStack 端口转发进来的连接都显示成它，不能当受信地址（PAP-99）
+    networks:
+      default:
+        ipv4_address: 192.168.97.250
     # portal 是 BFF（Next.js Node server），不读 .env.common（那是 Spring/Nacos/MinIO，portal 用不到）
     env_file:
       - .env.portal

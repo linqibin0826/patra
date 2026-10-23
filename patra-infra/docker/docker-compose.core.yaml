@@ -44,6 +44,27 @@ services:
       timeout: 5s
       retries: 10
 
+  mailpit:
+    # 开发环境的邮件收集器：identity 默认往这里发（spring.mail.host 跟随 PATRA_INFRA_HOST），
+    # mini 放了 ~/.patra/secrets/mail.env 后才改发真实服务商。只在 tailnet 内可达，和其他基础设施一样不设密码
+    image: axllent/mailpit:v1.31.6
+    container_name: patra-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI：http://linqibins-mac-mini:8025
+    environment:
+      TZ: Asia/Shanghai
+      MP_DATABASE: /data/mailpit.db
+      MP_MAX_MESSAGES: 500
+    volumes:
+      - ${HOME}/.patra/docker/mailpit:/data
+    healthcheck:
+      test: [ "CMD", "/mailpit", "readyz" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   nacos:
     image: nacos/nacos-server:v3.2.4
     container_name: patra-nacos

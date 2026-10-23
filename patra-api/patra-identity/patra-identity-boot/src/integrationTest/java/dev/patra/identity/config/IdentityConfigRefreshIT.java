@@ -5,9 +5,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
 import dev.patra.identity.domain.policy.LoginThrottlePolicy;
+import dev.patra.identity.domain.port.geolocation.IpGeolocationPort;
 import dev.patra.identity.domain.port.password.CommonPasswordPort;
+import dev.patra.identity.domain.port.repository.EmailTokenRepository;
 import dev.patra.identity.domain.port.repository.UserLoginRecordRepository;
 import dev.patra.identity.domain.port.session.SessionStorePort;
+import dev.patra.identity.domain.port.useragent.UserAgentParsingPort;
 import dev.patra.tool.core.security.CurrentUserPort;
 import java.time.Clock;
 import java.util.Map;
@@ -30,6 +33,7 @@ import org.springframework.cloud.health.RefreshScopeHealthIndicator;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.mail.javamail.JavaMailSender;
 
 /// identity 配置的在线刷新（PAP-78）：改环境后发布 `EnvironmentChangeEvent`，即 Nacos 推送后
 /// Spring Cloud 的 `ContextRefresher` 发出的事件，验证服务不重启就用上新值。
@@ -52,6 +56,10 @@ class IdentityConfigRefreshIT {
           .withBean(UserLoginRecordRepository.class, () -> mock(UserLoginRecordRepository.class))
           .withBean(SessionStorePort.class, () -> mock(SessionStorePort.class))
           .withBean(CurrentUserPort.class, () -> mock(CurrentUserPort.class))
+          .withBean(EmailTokenRepository.class, () -> mock(EmailTokenRepository.class))
+          .withBean(JavaMailSender.class, () -> mock(JavaMailSender.class))
+          .withBean(UserAgentParsingPort.class, () -> mock(UserAgentParsingPort.class))
+          .withBean(IpGeolocationPort.class, () -> mock(IpGeolocationPort.class))
           .withPropertyValues(
               "patra.identity.session.lifetime.user.web.idle=30d",
               "patra.identity.session.lifetime.user.web.absolute=180d");

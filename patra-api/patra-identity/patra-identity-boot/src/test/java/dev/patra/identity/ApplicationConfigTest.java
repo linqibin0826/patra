@@ -41,6 +41,55 @@ class ApplicationConfigTest {
         .noneMatch(name -> name.startsWith("patra.identity.login-throttle."));
   }
 
+  @Test
+  @DisplayName("邮件健康检查关掉；服务商坐标、发件人、门户地址这些随环境变的键不在 jar 里（在 Nacos）")
+  void should_disable_mail_health_indicator_and_keep_environment_keys_in_nacos()
+      throws IOException {
+    assertThat(property("application.yml", "management.health.mail.enabled")).isEqualTo("false");
+    assertThat(propertyNames("application.yml"))
+        .noneMatch(
+            name ->
+                name.startsWith("spring.mail.")
+                    || name.equals("patra.identity.mail.from")
+                    || name.equals("patra.identity.mail.links.base-url"));
+  }
+
+  @Test
+  @DisplayName("账号安全的参数在 jar 里：再认证窗口、找回密码与改邮箱的限流、三个落地页路径")
+  void should_keep_account_security_settings_in_jar() throws IOException {
+    assertThat(property("application.yml", "patra.identity.reauth.window")).isEqualTo("10m");
+    assertThat(property("application.yml", "patra.identity.password-reset.per-email-daily"))
+        .isEqualTo("5");
+    assertThat(property("application.yml", "patra.identity.password-reset.per-ip-hourly"))
+        .isEqualTo("20");
+    assertThat(property("application.yml", "patra.identity.password-reset.submit-per-ip-minutely"))
+        .isEqualTo("10");
+    assertThat(property("application.yml", "patra.identity.email-change.per-account-daily"))
+        .isEqualTo("3");
+    assertThat(property("application.yml", "patra.identity.mail.links.reset-password-path"))
+        .isEqualTo("/reset-password");
+    assertThat(property("application.yml", "patra.identity.mail.links.confirm-email-change-path"))
+        .isEqualTo("/confirm-email-change");
+    assertThat(property("application.yml", "patra.identity.mail.links.revert-email-change-path"))
+        .isEqualTo("/revert-email-change");
+  }
+
+  /// 读出 classpath 上一份 YAML 里某个属性的值。
+  ///
+  /// @param resource classpath 上的文件名
+  /// @param name 属性名
+  /// @return 值的字符串形式；没有时为 `null`
+  /// @throws IOException 读取失败时
+  private static String property(String resource, String name) throws IOException {
+    return new YamlPropertySourceLoader()
+        .load(resource, new ClassPathResource(resource)).stream()
+            .map(source -> source.getProperty(name))
+            .filter(java.util.Objects::nonNull)
+            .map(String::valueOf)
+            .findFirst()
+            .orElse(null);
+  }
+
   /// 读出 classpath 上一份 YAML 的全部属性名，多文档合在一起。
   ///
   /// @param resource classpath 上的文件名

@@ -4,11 +4,13 @@ import dev.patra.tool.core.error.codes.ErrorCodeLike;
 import dev.patra.tool.core.error.codes.HttpStdErrors;
 import dev.patra.tool.web.error.spi.ErrorMappingContributor;
 import java.util.Optional;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /// Spring MVC 自带异常的错误码：未匹配路径（静态资源处理器的 `NoResourceFoundException`、
-/// 没有处理器的 `NoHandlerFoundException`）映射为 404。
+/// 没有处理器的 `NoHandlerFoundException`）映射为 404；上传超过 multipart 上限的
+/// `MaxUploadSizeExceededException` 映射为 413。
 public class WebMvcErrorMappingContributor implements ErrorMappingContributor {
 
   private final HttpStdErrors.Group http;
@@ -25,6 +27,9 @@ public class WebMvcErrorMappingContributor implements ErrorMappingContributor {
     if (exception instanceof NoResourceFoundException
         || exception instanceof NoHandlerFoundException) {
       return Optional.of(http.NOT_FOUND());
+    }
+    if (exception instanceof MaxUploadSizeExceededException) {
+      return Optional.of(http.CONTENT_TOO_LARGE());
     }
     return Optional.empty();
   }

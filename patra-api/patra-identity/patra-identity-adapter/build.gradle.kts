@@ -12,5 +12,8 @@ dependencies {
     api(project(":patra-api:patra-identity:patra-identity-app"))
     api(project(":patra-tool:patra-tool-web"))
 
+    // XXL-Job：过期令牌清理任务（执行器端口 = 服务端口 + 1 = 6401）
+    api(libs.xxl.job)
+
     testImplementation(project(":patra-tool:patra-tool-test"))
 }

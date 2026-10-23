@@ -9,8 +9,10 @@ import com.zaxxer.hikari.HikariPoolMXBean;
 import dev.patra.identity.config.IdentityITPostgreSQLContainerInitializer;
 import dev.patra.identity.domain.port.hashing.PasswordHashingPort;
 import dev.patra.tool.test.container.initializer.RedisContainerInitializer;
+import dev.patra.tool.test.mail.GreenMailSmtpInitializer;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import javax.sql.DataSource;
@@ -31,7 +33,8 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 @ContextConfiguration(
     initializers = {
       IdentityITPostgreSQLContainerInitializer.class,
-      RedisContainerInitializer.class
+      RedisContainerInitializer.class,
+      GreenMailSmtpInitializer.class
     })
 @ActiveProfiles("test")
 @AutoConfigureRestTestClient
@@ -74,7 +77,16 @@ class PasswordHashingConnectionIT {
         .post()
         .uri(uri)
         .contentType(MediaType.APPLICATION_JSON)
-        .body(Map.of("email", email, "password", password))
+        .body(Map.of("email", email, "username", usernameFor(email), "password", password))
         .exchange();
+  }
+
+  /// 按邮箱派生一个合法的用户名：本地部分小写、`.` 换成 `-`，前面加 `u-`。
+  ///
+  /// @param email 邮箱
+  /// @return 用户名
+  private static String usernameFor(String email) {
+    String local = email.strip().toLowerCase(Locale.ROOT);
+    return "u-" + local.substring(0, local.indexOf('@')).replace('.', '-');
   }
 }

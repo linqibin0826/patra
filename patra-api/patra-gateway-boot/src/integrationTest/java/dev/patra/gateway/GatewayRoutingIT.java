@@ -107,6 +107,36 @@ class GatewayRoutingIT {
             .withQueryParam("q", equalTo("GLP-1 肠道")));
   }
 
+  /// 建议接口匿名放行（PAP-94）：中文查询串原样转发，下游收不到 `Authorization`。
+  @Test
+  void should_forward_anonymous_suggest_request_with_chinese_query_unchanged() {
+    catalog.stubFor(
+        get(urlPathEqualTo("/portal/organizations/suggest"))
+            .withQueryParam("q", equalTo("协和"))
+            .withQueryParam("limit", equalTo("5"))
+            .willReturn(okJson("{\"items\":[]}")));
+
+    restClient
+        .get()
+        .uri(
+            builder ->
+                builder
+                    .path("/patra-catalog/portal/organizations/suggest")
+                    .queryParam("q", "协和")
+                    .queryParam("limit", 5)
+                    .build())
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .json("{\"items\":[]}");
+
+    catalog.verify(
+        getRequestedFor(urlPathEqualTo("/portal/organizations/suggest"))
+            .withQueryParam("q", equalTo("协和"))
+            .withoutHeader(HttpHeaders.AUTHORIZATION));
+  }
+
   @Test
   void should_forward_post_body_unchanged() {
     catalog.stubFor(post(urlPathEqualTo("/auth/login")).willReturn(okJson("{\"ok\":true}")));

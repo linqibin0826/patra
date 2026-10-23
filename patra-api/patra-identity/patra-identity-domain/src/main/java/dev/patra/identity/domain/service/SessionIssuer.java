@@ -2,6 +2,7 @@ package dev.patra.identity.domain.service;
 
 import dev.patra.identity.domain.model.aggregate.UserLoginRecord;
 import dev.patra.identity.domain.model.enums.LoginEndReason;
+import dev.patra.identity.domain.model.vo.ClientOrigin;
 import dev.patra.identity.domain.model.vo.LoginClient;
 import dev.patra.identity.domain.policy.SessionLifetime;
 import dev.patra.identity.domain.policy.SessionLifetimePolicy;
@@ -48,13 +49,15 @@ public final class SessionIssuer {
   ///
   /// @param userId 用户 ID
   /// @param client 客户端信息
+  /// @param origin 请求来源，写进登录记录
   /// @return 令牌和被挤掉的会话 ID
-  public IssuedUserSession issue(long userId, LoginClient client) {
+  public IssuedUserSession issue(long userId, LoginClient client, ClientOrigin origin) {
     Objects.requireNonNull(client, "client 不能为 null");
+    Objects.requireNonNull(origin, "origin 不能为 null");
     Instant now = clock.instant();
     SessionLifetime lifetime = policy.lifetimeFor(client.clientType());
     UserLoginRecord login =
-        records.save(UserLoginRecord.start(userId, client, now.plus(lifetime.absolute())));
+        records.save(UserLoginRecord.start(userId, client, origin, now.plus(lifetime.absolute())));
     IssuedUserSession issued =
         sessions.issue(
             NewUserSession.builder()

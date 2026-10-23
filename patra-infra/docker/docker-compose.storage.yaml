@@ -49,14 +49,18 @@ services:
       echo 'Setting bucket policy to private (authenticated access only)...';
       mc anonymous set none patra/patra-ingest-cache;
 
+      echo 'Creating identity avatar bucket (private; served through identity, never public)...';
+      mc mb --ignore-existing patra/patra-identity-avatar;
+      mc anonymous set none patra/patra-identity-avatar;
+
       echo 'MinIO initialization completed successfully!';
       echo 'Available buckets:';
       mc ls patra;
 
       echo '';
       echo '==================================================';
-      echo 'MinIO is ready for patra-ingest service';
-      echo 'Bucket: patra-ingest-cache';
+      echo 'MinIO is ready for patra-ingest and patra-identity';
+      echo 'Buckets: patra-ingest-cache, patra-identity-avatar';
       echo 'Access: Private (authenticated only)';
       echo '==================================================';
       echo '';

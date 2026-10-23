@@ -254,4 +254,27 @@ public class ObjectStorageTemplate implements ObjectStorageOperations {
     // 复用上传的分类逻辑
     return classifyError(ex);
   }
+
+  /// 删除一个对象，瞬时故障按重试策略重试。
+  ///
+  /// @param bucket 存储桶名称
+  /// @param key 对象键
+  @Override
+  public void delete(String bucket, String key) {
+    retryTemplate.execute(
+        context -> {
+          provider.delete(bucket, key);
+          return null;
+        });
+  }
+
+  /// 删除前缀下的全部对象，瞬时故障按重试策略重试（重跑天然幂等）。
+  ///
+  /// @param bucket 存储桶名称
+  /// @param prefix 键前缀
+  /// @return 删除的对象个数
+  @Override
+  public int deleteByPrefix(String bucket, String prefix) {
+    return retryTemplate.execute(context -> provider.deleteByPrefix(bucket, prefix));
+  }
 }

@@ -8,18 +8,23 @@ import static org.mockito.Mockito.when;
 
 import dev.patra.identity.domain.model.vo.LoginClient;
 import dev.patra.identity.domain.policy.SessionLifetime;
+import dev.patra.identity.domain.port.session.ActiveUserSession;
 import dev.patra.identity.domain.port.session.IssuedUserSession;
 import dev.patra.identity.domain.port.session.NewUserSession;
+import dev.patra.identity.domain.port.session.SessionRotation;
 import dev.patra.identity.session.IssuedSession;
 import dev.patra.identity.session.NewSession;
 import dev.patra.identity.session.RedisSessionStore;
+import dev.patra.identity.session.Rotation;
 import dev.patra.identity.session.SessionToken;
+import dev.patra.identity.session.StoredSession;
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.ClientType;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -45,7 +50,7 @@ class SessionStoreAdapterTest {
                 .userId(42L)
                 .sessionId(7001L)
                 .accountType(AccountType.USER)
-                .client(LoginClient.of("web", "mac-safari"))
+                .client(LoginClient.of("web", "Kq3_z-0aB1cD2eF3gH4iJ5kL6mN7oP8qR9sT0uV1wXy"))
                 .now(NOW)
                 .lifetime(SessionLifetime.of(Duration.ofDays(30), Duration.ofDays(180)))
                 .maxSessionsPerUser(10)
@@ -60,7 +65,7 @@ class SessionStoreAdapterTest {
     assertThat(session.sessionId()).isEqualTo(7001L);
     assertThat(session.accountType()).isEqualTo(AccountType.USER);
     assertThat(session.clientType()).isEqualTo(ClientType.WEB);
-    assertThat(session.deviceId()).isEqualTo("mac-safari");
+    assertThat(session.deviceId()).isEqualTo("Kq3_z-0aB1cD2eF3gH4iJ5kL6mN7oP8qR9sT0uV1wXy");
     assertThat(session.createdAt()).isEqualTo(NOW);
     assertThat(session.expiresAt()).isEqualTo(NOW.plus(Duration.ofDays(180)));
     assertThat(session.idleTimeout()).isEqualTo(Duration.ofDays(30));
@@ -75,5 +80,74 @@ class SessionStoreAdapterTest {
 
     assertThat(adapter.revoke(AccountType.USER, 42L, 7001L)).isTrue();
     assertThat(adapter.revokeAll(AccountType.USER, 42L)).containsExactly(7001L, 7002L);
+  }
+
+  @Test
+  @DisplayName("撤销除当前外的全部会话：原样委托，返回真的删掉了的 ID")
+  void should_delegate_revoke_all_except() {
+    when(store.deleteAllExcept(AccountType.USER, 42L, 7L)).thenReturn(List.of(5L, 6L));
+
+    assertThat(adapter.revokeAllExcept(AccountType.USER, 42L, 7L)).containsExactly(5L, 6L);
+  }
+
+  @Test
+  @DisplayName("换令牌：换了带新令牌原文，宽限期内没换是「没换」；会话不在为空；宽限期原样传给会话模块")
+  void should_rotate_and_return_token_value() {
+    SessionToken token = SessionToken.generate(AccountType.USER, new SecureRandom());
+    when(store.rotate(AccountType.USER, 42L, 7001L, Duration.ofSeconds(10)))
+        .thenReturn(Optional.of(Rotation.rotated(token)));
+    when(store.rotate(AccountType.USER, 42L, 7002L, Duration.ofSeconds(10)))
+        .thenReturn(Optional.of(Rotation.kept()));
+    when(store.rotate(AccountType.USER, 42L, 7003L, Duration.ZERO)).thenReturn(Optional.empty());
+
+    assertThat(adapter.rotate(AccountType.USER, 42L, 7001L, Duration.ofSeconds(10)))
+        .contains(SessionRotation.rotated(token.value()));
+    assertThat(adapter.rotate(AccountType.USER, 42L, 7002L, Duration.ofSeconds(10)))
+        .contains(SessionRotation.kept());
+    assertThat(adapter.rotate(AccountType.USER, 42L, 7003L, Duration.ZERO)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("读再认证时间：取会话的 authenticatedAt；会话不在为空")
+  void should_find_authenticated_at_from_stored_session() {
+    when(store.find(AccountType.USER, 42L, 7001L))
+        .thenReturn(
+            Optional.of(
+                StoredSession.builder()
+                    .userId(42L)
+                    .sessionId(7001L)
+                    .accountType(AccountType.USER)
+                    .clientType(ClientType.WEB)
+                    .createdAt(NOW)
+                    .lastActiveAt(NOW)
+                    .expiresAt(NOW.plus(Duration.ofDays(180)))
+                    .authenticatedAt(NOW.plusSeconds(5))
+                    .build()));
+    when(store.find(AccountType.USER, 42L, 7002L)).thenReturn(Optional.empty());
+
+    assertThat(adapter.findAuthenticatedAt(AccountType.USER, 42L, 7001L))
+        .contains(NOW.plusSeconds(5));
+    assertThat(adapter.findAuthenticatedAt(AccountType.USER, 42L, 7002L)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("列出活会话：只取会话 ID、创建时间、最后活跃")
+  void should_list_active_sessions() {
+    when(store.list(AccountType.USER, 42L))
+        .thenReturn(
+            List.of(
+                StoredSession.builder()
+                    .userId(42L)
+                    .sessionId(7001L)
+                    .accountType(AccountType.USER)
+                    .clientType(ClientType.WEB)
+                    .createdAt(NOW)
+                    .lastActiveAt(NOW.plusSeconds(120))
+                    .expiresAt(NOW.plus(Duration.ofDays(180)))
+                    .authenticatedAt(NOW)
+                    .build()));
+
+    assertThat(adapter.listActive(AccountType.USER, 42L))
+        .containsExactly(ActiveUserSession.of(7001L, NOW, NOW.plusSeconds(120)));
   }
 }

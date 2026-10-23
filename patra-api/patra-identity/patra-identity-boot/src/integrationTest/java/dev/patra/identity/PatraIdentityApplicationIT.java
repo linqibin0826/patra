@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.identity.config.IdentityITPostgreSQLContainerInitializer;
 import dev.patra.tool.test.container.initializer.RedisContainerInitializer;
+import dev.patra.tool.test.mail.GreenMailSmtpInitializer;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,7 +20,8 @@ import org.springframework.test.context.ContextConfiguration;
 @ContextConfiguration(
     initializers = {
       IdentityITPostgreSQLContainerInitializer.class,
-      RedisContainerInitializer.class
+      RedisContainerInitializer.class,
+      GreenMailSmtpInitializer.class
     })
 @ActiveProfiles("test")
 @DisplayName("identity 应用启动")
@@ -29,7 +31,7 @@ class PatraIdentityApplicationIT {
   @Autowired private Environment environment;
 
   @Test
-  @DisplayName("启动时 Flyway 建好三张表")
+  @DisplayName("启动时 Flyway 用一份 V1 建好八张表")
   void should_create_identity_tables_on_startup() {
     List<String> tables =
         jdbcTemplate.queryForList(
@@ -39,7 +41,15 @@ class PatraIdentityApplicationIT {
             String.class);
 
     assertThat(tables)
-        .containsExactly("idn_user", "idn_user_login_record", "idn_user_password_credential");
+        .containsExactly(
+            "idn_email_token",
+            "idn_user",
+            "idn_user_former_username",
+            "idn_user_login_record",
+            "idn_user_password_credential",
+            "idn_user_profile",
+            "idn_user_profile_link",
+            "idn_user_research_interest");
   }
 
   @Test

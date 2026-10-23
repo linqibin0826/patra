@@ -47,11 +47,19 @@ public class GatewaySecurityConfiguration {
   /// 这三组路径在各服务里都挂在根上。
   static final String[] BLOCKED_PATHS = {"/*/_internal/**", "/*/admin/**", "/*/actuator/**"};
 
-  /// identity 上匿名也能访问的路径：注册、登录、登出（幂等，会话已失效也要能到达）、OpenAPI 文档（Scalar 聚合要拉）。
+  /// identity 上匿名也能访问的路径：注册、登录、登出（幂等，会话已失效也要能到达）、
+  /// 邮箱验证（邮件链接在哪台设备点都要能用；带会话时照样换成断言）、找回密码的申请与提交
+  /// （`/auth/password/**`，忘了密码的人没有会话）、改邮箱的确认与撤销（`/auth/email/change/**`，
+  /// 新旧邮箱的链接在哪台设备点都要能用；申请在 `/me/email/change`，不在这个前缀下）、
+  /// 公开身份卡与头像（`/users/**`，旧用户名的 301 原样透传）、OpenAPI 文档（Scalar 聚合要拉）。
   static final String[] IDENTITY_PUBLIC_PATHS = {
     "/patra-identity/auth/register",
     "/patra-identity/auth/login",
     "/patra-identity/auth/logout",
+    "/patra-identity/auth/email/verify",
+    "/patra-identity/auth/password/**",
+    "/patra-identity/auth/email/change/**",
+    "/patra-identity/users/**",
     "/patra-identity/v3/api-docs",
     "/patra-identity/v3/api-docs/**"
   };
@@ -139,11 +147,12 @@ public class GatewaySecurityConfiguration {
 
   /// 入站的 `Forwarded` / `X-Forwarded-*` 在 servlet 层直接剥掉、不解释（`removeOnly`）。
   ///
-  /// 网关前面没有任何反向代理，这些头从外面进来一律不合法。springdoc 的 Scalar starter 会无条件注册一个
-  /// 「应用」入站转发头的 `ForwardedHeaderFilter`：客户端带 `X-Forwarded-Prefix` 就能改写网关看到的路径，
-  /// 让 `StripPrefix` 剥错段。这里声明同类型的 Bean 让它让位。注册在最高优先级，先于 Security 和路由，
-  /// 所以路径规则、路由、出站的 `X-Forwarded-*` 都按真实请求算。
-  /// 将来网关前面放了反向代理：去掉 `removeOnly`，把 `trusted-proxies` 改成代理的地址。
+  /// 客户端 IP 在这之前已由 Tomcat 的 `RemoteIpValve` 处理：只有 `server.tomcat.remoteip.internal-proxies`
+  /// 里的地址（门户）发来的 `X-Forwarded-For` 被采用并改写 `remoteAddr`（PAP-99），本过滤器不改
+  /// `remoteAddr`，只剥掉其余一切转发头。springdoc 的 Scalar starter 会无条件注册一个「应用」入站转发头的
+  /// `ForwardedHeaderFilter`：客户端带 `X-Forwarded-Prefix` 就能改写网关看到的路径，让 `StripPrefix`
+  /// 剥错段。这里声明同类型的 Bean 让它让位。注册在最高优先级，先于 Security 和路由，所以路径规则、
+  /// 路由、出站的 `X-Forwarded-*` 都按真实请求算。
   ///
   /// @return 过滤器注册
   @Bean

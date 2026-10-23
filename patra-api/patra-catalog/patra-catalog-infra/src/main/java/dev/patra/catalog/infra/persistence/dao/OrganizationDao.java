@@ -1,5 +1,6 @@
 package dev.patra.catalog.infra.persistence.dao;
 
+import dev.patra.catalog.infra.adapter.read.OrganizationSummaryRow;
 import dev.patra.catalog.infra.persistence.entity.OrganizationEntity;
 import java.util.Collection;
 import java.util.List;
@@ -73,4 +74,11 @@ public interface OrganizationDao extends JpaRepository<OrganizationEntity, Long>
   /// @param displayName 机构显示名称
   /// @return 机构实体
   Optional<OrganizationEntity> findByDisplayName(String displayName);
+
+  /// 按 9 位裸 ROR ID 查机构摘要（中文名、第一条地点、类型码），只认 active 且未软删。
+  ///
+  /// @param rorId 裸 ROR ID
+  /// @return 摘要投影；不存在或非 active 为空
+  @Query(value = OrganizationSuggestSql.FIND_SUMMARY_BY_ROR_ID, nativeQuery = true)
+  Optional<OrganizationSummaryRow> findSummaryByRorId(@Param("rorId") String rorId);
 }

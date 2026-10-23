@@ -109,6 +109,16 @@ public final class LoginThrottleAdapter implements LoginThrottlePort {
     settle(attempt, "CANCEL");
   }
 
+  /// 清零：删失败计数与锁两个键，在途登记不动。
+  ///
+  /// @param accountType 账号类型
+  /// @param email 邮箱
+  @Override
+  public void clear(AccountType accountType, EmailAddress email) {
+    List<String> keys = keys(accountType, email);
+    execute(() -> redis.delete(List.of(keys.get(0), keys.get(2))));
+  }
+
   /// 执行结算脚本。
   ///
   /// @param attempt 尝试

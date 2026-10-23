@@ -27,7 +27,8 @@
             "project": ":patra-api:patra-catalog:patra-catalog-api",
             "unit": "catalog",
             "impacts": [
-                "catalog"
+                "catalog",
+                "identity"
             ],
             "tasks": [
                 "check"
@@ -510,6 +511,7 @@
             "impacts": [
                 "catalog",
                 "foundation",
+                "identity",
                 "ingest"
             ],
             "tasks": [

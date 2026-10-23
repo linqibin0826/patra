@@ -1,5 +1,9 @@
 server:
   port: 6400
+  tomcat:
+    # 超过上传上限时 Tomcat 按 Content-Length 一字节不读就拒，要先读完最多这么多再回 413，客户端看到状态码
+    # 而不是连接被重置；覆盖手机直出原图的大小（10–20 MB），更大的只保证门户本地校验
+    max-swallow-size: 32MB
   # 解析网关注入的 X-Forwarded-*，让 OpenAPI 文档里的地址指向网关
   forward-headers-strategy: framework
 
@@ -21,25 +25,90 @@ spring:
     # 关掉 OSIV：开着时请求第一次查库拿到的连接会一直占到请求结束，
     # Argon2 排队和计算期间也占着，连接池会被一批登录拖垮
     open-in-view: false
+  servlet:
+    multipart:
+      max-file-size: 5MB      # 头像原图上限（release spec 2.1.3），超过回 413
+      max-request-size: 6MB   # 留出 multipart 边界与表单字段
   data:
     redis:
       # 所有环境都设超时：Redis 卡住时登录几秒内返回 503，不用等 Lettuce 默认的 60 秒
       connect-timeout: 10s
       timeout: 5s
 
+management:
+  health:
+    mail:
+      # 不拿 SMTP 连通性当健康：容器 healthcheck 每 10 秒一次会变成一天八千多次登录服务商，CD 也不该因此回滚
+      enabled: false
+
 patra:
   web:
     error:
       context-prefix: IDN
+  http-client:
+    http-interface:
+      groups:
+        # 保存资料时调 catalog 的内部接口（主键查询，毫秒级）：超时压短，catalog 卡住时一次保存很快 503
+        catalog:
+          base-url: lb://patra-catalog
+          connect-timeout: 1s
+          read-timeout: 2s
   identity:
+    avatar:
+      bucket: patra-identity-avatar   # 头像专用桶（私有；minio-init 建，首次上传也会按需建）
     # 登录失败限制可在线刷新：默认值在 LoginThrottleProperties，要调就在 Nacos 的 patra-identity.yaml 里加键
     password-hashing:
       max-concurrent: 4
       wait-timeout: 3s
+    username:
+      change-cooldown: 30d       # 两次改名的最短间隔
+      reservation-period: 90d    # 旧名保留多久：期间只有原主能改回，/users/旧名 跳到新名
     session:
       max-sessions-per-user: 10
+      record-retention: 190d             # 登录记录结束或过期满这么久后由 loginRecordCleanupJob 删除（日志留存 ≥ 6 个月）
       lifetime:
         user:
           web:
             idle: 30d
             absolute: 180d
+    # 邮件：服务商坐标（spring.mail.*）、发件人、门户地址随环境变，在 Nacos 的 patra-identity.yaml
+    mail:
+      zone: Asia/Shanghai                 # 安全通知里时间的显示时区
+      token-retention: 30d                # 过期令牌保留多久后删行
+      links:
+        verify-email-path: /verify-email          # 门户的验证邮箱落地页
+        security-settings-path: /settings/security  # 门户的安全设置页
+        reset-password-path: /reset-password          # 门户的重设密码落地页
+        confirm-email-change-path: /confirm-email-change  # 门户的确认改邮箱落地页
+        revert-email-change-path: /revert-email-change    # 门户的撤销改邮箱落地页
+      resend:
+        cooldown: 60s
+        per-account-hourly: 5
+        per-account-daily: 10
+        per-ip-hourly: 30
+    reauth:
+      window: 10m                         # 再认证窗口：改邮箱、踢设备、注销等敏感操作要求这么久内输过密码
+      rotation-grace: 10s                 # 再认证换令牌的宽限期：上次密码验证距今不足这么久就不换（两个标签页并发再认证时先换出的令牌保持有效）
+    password-reset:
+      cooldown: 60s                       # 同邮箱两次申请的最短间隔
+      per-email-daily: 5
+      per-ip-hourly: 20                   # 受信转发接通（PAP-99）前 IP 是门户地址，等于全站配额
+      submit-per-ip-minutely: 10          # 提交重设令牌
+    email-change:
+      per-account-daily: 3
+    new-device-mail:
+      lookback: 180d                      # 这么久内用过的设备标识不算新设备（按那次登录结束或过期的时刻算）
+      cooldown: 24h                       # 同一账号同一设备两封新设备提醒的最短间隔
+    # IP 属地（PAP-99）：ip2region 两个 xdb 所在目录，由 patra-infra/scripts/fetch-ip2region.sh 下载；
+    # 容器里由 compose 设 PATRA_IDENTITY_IP_GEOLOCATION_DIRECTORY=/data/ip2region（只读挂载）。缺文件启动失败
+    ip-geolocation:
+      directory: ${user.home}/.patra/data/ip2region
+
+# XXL-Job 执行器：管理端地址随环境变，在 Nacos 公共配置 patra-common.yaml；执行器端口 = 服务端口 + 1 = 6401
+xxl:
+  job:
+    executor:
+      # 回调地址：admin 按它回调本执行器。与 Nacos 注册地址同一个变量；容器里不设，自动探测 patra-net 上的 IP
+      ip: ${PATRA_ADVERTISE_IP:}
+      logpath: ${XXL_JOB_EXECUTOR_LOG_PATH:${PATRA_LOG_DIR:logs}/xxl-job/patra-identity}
+      logretentiondays: ${XXL_JOB_LOG_RETENTION_DAYS:30}

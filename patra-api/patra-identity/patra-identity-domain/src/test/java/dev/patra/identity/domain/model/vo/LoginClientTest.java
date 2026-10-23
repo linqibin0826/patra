@@ -37,7 +37,7 @@ class LoginClientTest {
   @Test
   @DisplayName("两个字段的错误一次报全；of 抛 InvalidUserFieldsException")
   void should_report_both_violations_at_once() {
-    String tooLong = "x".repeat(129);
+    String tooLong = "x".repeat(44);
 
     assertThat(LoginClient.validate("app", tooLong))
         .extracting(FieldViolation::field)
@@ -51,8 +51,10 @@ class LoginClientTest {
   @Test
   @DisplayName("设备标识原样带过去")
   void should_carry_device_id() {
-    LoginClient client = LoginClient.of("web", " mac-safari ");
+    LoginClient client = LoginClient.of("web", "Kq3_z-0aB1cD2eF3gH4iJ5kL6mN7oP8qR9sT0uV1wXy");
 
-    assertThat(client.device()).map(DeviceId::value).contains("mac-safari");
+    assertThat(client.device())
+        .map(DeviceId::value)
+        .contains("Kq3_z-0aB1cD2eF3gH4iJ5kL6mN7oP8qR9sT0uV1wXy");
   }
 }

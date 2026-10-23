@@ -10,7 +10,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import dev.patra.identity.domain.model.aggregate.UserLoginRecord;
+import dev.patra.identity.domain.model.enums.DeviceClass;
 import dev.patra.identity.domain.model.enums.LoginEndReason;
+import dev.patra.identity.domain.model.vo.ClientOrigin;
 import dev.patra.identity.domain.model.vo.LoginClient;
 import dev.patra.identity.domain.policy.SessionLifetime;
 import dev.patra.identity.domain.policy.SessionLifetimePolicy;
@@ -36,6 +38,15 @@ import org.mockito.InOrder;
 @DisplayName("SessionIssuer 单元测试")
 class SessionIssuerTest {
 
+  private static final ClientOrigin ORIGIN =
+      ClientOrigin.builder()
+          .ip("203.0.113.9")
+          .userAgent("Mozilla/5.0 Chrome")
+          .deviceName("Chrome 141 · macOS")
+          .deviceClass(DeviceClass.DESKTOP)
+          .ipRegion("澳大利亚")
+          .build();
+
   private static final Instant NOW = Instant.parse("2026-10-09T08:00:00Z");
   private static final SessionLifetime WEB =
       SessionLifetime.of(Duration.ofDays(30), Duration.ofDays(180));
@@ -53,7 +64,9 @@ class SessionIssuerTest {
     when(records.save(any())).thenAnswer(invocation -> withId(invocation.getArgument(0), 7001L));
     when(sessions.issue(any())).thenReturn(IssuedUserSession.of("patra_user_x", List.of()));
 
-    IssuedUserSession issued = issuer.issue(42L, LoginClient.of("web", "mac-safari"));
+    IssuedUserSession issued =
+        issuer.issue(
+            42L, LoginClient.of("web", "Kq3_z-0aB1cD2eF3gH4iJ5kL6mN7oP8qR9sT0uV1wXy"), ORIGIN);
 
     assertThat(issued.token()).isEqualTo("patra_user_x");
     ArgumentCaptor<UserLoginRecord> saved = ArgumentCaptor.forClass(UserLoginRecord.class);
@@ -81,12 +94,20 @@ class SessionIssuerTest {
     when(sessions.issue(any()))
         .thenReturn(IssuedUserSession.of("patra_user_x", List.of(6001L, 6002L)));
     UserLoginRecord replaced =
-        UserLoginRecord.restore(
-            6001L, 42L, ClientType.WEB, null, NOW.plusSeconds(1), null, null, 0L, NOW, NOW);
+        UserLoginRecord.restore()
+            .id(6001L)
+            .userId(42L)
+            .clientType(ClientType.WEB)
+            .deviceClass(DeviceClass.UNKNOWN)
+            .expiresAt(NOW.plusSeconds(1))
+            .version(0L)
+            .createdAt(NOW)
+            .updatedAt(NOW)
+            .build();
     when(records.findById(6001L)).thenReturn(Optional.of(replaced));
     when(records.findById(6002L)).thenReturn(Optional.empty());
 
-    issuer.issue(42L, LoginClient.web());
+    issuer.issue(42L, LoginClient.web(), ORIGIN);
 
     assertThat(replaced.getEndReason()).isEqualTo(LoginEndReason.REPLACED);
     assertThat(replaced.getEndedAt()).isEqualTo(NOW);
@@ -101,7 +122,7 @@ class SessionIssuerTest {
     SessionIssuer broken =
         new SessionIssuer(records, sessions, policy, Clock.fixed(NOW, ZoneOffset.UTC));
 
-    assertThatThrownBy(() -> broken.issue(42L, LoginClient.web()))
+    assertThatThrownBy(() -> broken.issue(42L, LoginClient.web(), ORIGIN))
         .isInstanceOf(IllegalStateException.class);
     verify(records, never()).save(any());
     verify(sessions, never()).issue(any());
@@ -113,16 +134,39 @@ class SessionIssuerTest {
   /// @param id 分配的 ID
   /// @return 带 ID 的记录
   private static UserLoginRecord withId(UserLoginRecord login, long id) {
-    return UserLoginRecord.restore(
-        id,
-        login.getUserId(),
-        login.getClientType(),
-        login.getDeviceId().orElse(null),
-        login.getExpiresAt(),
-        login.getEndedAt(),
-        login.getEndReason(),
-        0L,
-        NOW,
-        NOW);
+    return UserLoginRecord.restore()
+        .id(id)
+        .userId(login.getUserId())
+        .clientType(login.getClientType())
+        .deviceId(login.getDeviceId().orElse(null))
+        .userAgent(login.getUserAgent())
+        .deviceName(login.getDeviceName())
+        .deviceClass(login.getDeviceClass())
+        .clientIp(login.getClientIp())
+        .ipRegion(login.getIpRegion())
+        .expiresAt(login.getExpiresAt())
+        .endedAt(login.getEndedAt())
+        .endReason(login.getEndReason())
+        .version(0L)
+        .createdAt(NOW)
+        .updatedAt(NOW)
+        .build();
+  }
+
+  @Test
+  @DisplayName("登录记录带上请求来源")
+  void should_start_record_with_origin() {
+    when(records.save(any())).thenAnswer(invocation -> withId(invocation.getArgument(0), 7001L));
+    when(sessions.issue(any())).thenReturn(IssuedUserSession.of("patra_user_x", List.of()));
+
+    issuer.issue(42L, LoginClient.web(), ORIGIN);
+
+    ArgumentCaptor<UserLoginRecord> saved = ArgumentCaptor.forClass(UserLoginRecord.class);
+    verify(records).save(saved.capture());
+    assertThat(saved.getValue().getClientIp()).isEqualTo("203.0.113.9");
+    assertThat(saved.getValue().getDeviceName()).isEqualTo("Chrome 141 · macOS");
+    assertThat(saved.getValue().getDeviceClass()).isEqualTo(DeviceClass.DESKTOP);
+    assertThat(saved.getValue().getIpRegion()).isEqualTo("澳大利亚");
+    assertThat(saved.getValue().getUserAgent()).isEqualTo("Mozilla/5.0 Chrome");
   }
 }

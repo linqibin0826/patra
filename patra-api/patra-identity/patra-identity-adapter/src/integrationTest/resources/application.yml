@@ -2,3 +2,8 @@ patra:
   web:
     error:
       context-prefix: IDN
+
+# 测试里不起 XXL-Job 执行器
+xxl:
+  job:
+    enabled: false

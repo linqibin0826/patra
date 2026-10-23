@@ -18,8 +18,9 @@ import org.springframework.data.redis.core.script.RedisScript;
 
 /// Redis 里的会话存储：identity 建和删，网关查和续期。
 ///
-/// 键 1 `idn:session:<账号类型>:<令牌哈希>` 是一条会话；键 2 `idn:user-sessions:<账号类型>:<用户 ID>`
-/// 是该用户全部会话的索引（会话 ID → 令牌哈希）。每个操作是一段 Lua，原子执行。
+/// 键 1 `idn:session:<账号类型>:<令牌哈希>` 是一条会话（含最近一次再认证时间 `auth_at`）；
+/// 键 2 `idn:user-sessions:<账号类型>:<用户 ID>` 是该用户全部会话的索引（会话 ID → 令牌哈希）。
+/// 每个操作是一段 Lua，原子执行。
 /// 会话键在脚本里由前缀拼出来，所以只支持单机 Redis。
 ///
 /// Redis 暂时不可用时抛 {@link SessionStoreUnavailableException}；其他 Redis 异常是缺陷，原样抛出。
@@ -29,6 +30,8 @@ public final class RedisSessionStore {
   public static final Duration RENEW_INTERVAL = Duration.ofSeconds(60);
 
   static final String SESSION_KEY_PREFIX = "idn:session:";
+  /// `session-rotate.lua` 在宽限期内不换令牌时的返回值。
+  private static final String KEPT = "KEPT";
   static final String INDEX_KEY_PREFIX = "idn:user-sessions:";
 
   @SuppressWarnings("rawtypes")
@@ -45,6 +48,22 @@ public final class RedisSessionStore {
   @SuppressWarnings("rawtypes")
   private static final RedisScript<List> DELETE_ALL_SCRIPT =
       RedisScript.of(new ClassPathResource("redis/session-delete-all.lua"), List.class);
+
+  @SuppressWarnings("rawtypes")
+  private static final RedisScript<List> DELETE_OTHERS_SCRIPT =
+      RedisScript.of(new ClassPathResource("redis/session-delete-others.lua"), List.class);
+
+  @SuppressWarnings("rawtypes")
+  private static final RedisScript<List> ROTATE_SCRIPT =
+      RedisScript.of(new ClassPathResource("redis/session-rotate.lua"), List.class);
+
+  @SuppressWarnings("rawtypes")
+  private static final RedisScript<List> FIND_SCRIPT =
+      RedisScript.of(new ClassPathResource("redis/session-find.lua"), List.class);
+
+  @SuppressWarnings("rawtypes")
+  private static final RedisScript<List> LIST_SCRIPT =
+      RedisScript.of(new ClassPathResource("redis/session-list.lua"), List.class);
 
   private final StringRedisTemplate redis;
   private final Clock clock;
@@ -110,6 +129,87 @@ public final class RedisSessionStore {
     return Optional.of(toStoredSession(fields));
   }
 
+  /// 换令牌、保留会话 ID：再认证、改密码用。会话 ID、创建时间、绝对过期、设备都不变，
+  /// `auth_at` 与最后活跃时间刷新成现在；旧令牌在返回的那一刻失效。
+  /// `auth_at` 距今不足 `grace` 时脚本里原子地判定不换，什么都不动，返回「没换」。
+  ///
+  /// @param accountType 账号类型
+  /// @param userId 用户 ID
+  /// @param sessionId 会话 ID
+  /// @param grace 换令牌的宽限期；`Duration.ZERO` 表示每次都换
+  /// @return 换令牌的结果；会话不在或已过绝对期时为空
+  /// @throws SessionStoreUnavailableException Redis 暂时不可用时
+  public Optional<Rotation> rotate(
+      AccountType accountType, long userId, long sessionId, Duration grace) {
+    Objects.requireNonNull(accountType, "accountType 不能为 null");
+    Objects.requireNonNull(grace, "grace 不能为 null");
+    SessionToken token = SessionToken.generate(accountType, random);
+    List<?> fields =
+        execute(
+            () ->
+                redis.execute(
+                    ROTATE_SCRIPT,
+                    List.of(indexKey(accountType, userId), sessionKey(accountType, token.hash())),
+                    sessionKeyPrefix(accountType),
+                    Long.toString(sessionId),
+                    token.hash(),
+                    Long.toString(clock.millis()),
+                    Long.toString(grace.toMillis())));
+    if (fields == null || fields.isEmpty()) {
+      return Optional.empty();
+    }
+    if (fields.size() == 1 && KEPT.equals(String.valueOf(fields.getFirst()))) {
+      return Optional.of(Rotation.kept());
+    }
+    return Optional.of(Rotation.rotated(token));
+  }
+
+  /// 按用户 ID 和会话 ID 读一条会话，不续期。再认证守卫读 `auth_at` 用：守卫是读，不是活动。
+  ///
+  /// @param accountType 账号类型
+  /// @param userId 用户 ID
+  /// @param sessionId 会话 ID
+  /// @return 会话；不存在或已过绝对期时为空
+  /// @throws SessionStoreUnavailableException Redis 暂时不可用时
+  public Optional<StoredSession> find(AccountType accountType, long userId, long sessionId) {
+    Objects.requireNonNull(accountType, "accountType 不能为 null");
+    List<?> fields =
+        execute(
+            () ->
+                redis.execute(
+                    FIND_SCRIPT,
+                    List.of(indexKey(accountType, userId)),
+                    sessionKeyPrefix(accountType),
+                    Long.toString(sessionId),
+                    Long.toString(clock.millis())));
+    if (fields == null || fields.isEmpty()) {
+      return Optional.empty();
+    }
+    return Optional.of(toStoredSession(fields));
+  }
+
+  /// 按用户列出还活着的会话，不续期：看设备列表不是活动。顺手清掉悬空条目和已过绝对期的会话。
+  ///
+  /// @param accountType 账号类型
+  /// @param userId 用户 ID
+  /// @return 会话，顺序不保证；没有时为空列表
+  /// @throws SessionStoreUnavailableException Redis 暂时不可用时
+  public List<StoredSession> list(AccountType accountType, long userId) {
+    Objects.requireNonNull(accountType, "accountType 不能为 null");
+    List<?> sessions =
+        execute(
+            () ->
+                redis.execute(
+                    LIST_SCRIPT,
+                    List.of(indexKey(accountType, userId)),
+                    sessionKeyPrefix(accountType),
+                    Long.toString(clock.millis())));
+    if (sessions == null) {
+      return List.of();
+    }
+    return sessions.stream().map(fields -> toStoredSession((List<?>) fields)).toList();
+  }
+
   /// 按用户 ID 和会话 ID 删一条会话。登出用：identity 手里只有断言里的 `sub` 和 `sid`。
   ///
   /// @param accountType 账号类型
@@ -145,6 +245,26 @@ public final class RedisSessionStore {
                     DELETE_ALL_SCRIPT,
                     List.of(indexKey(accountType, userId)),
                     sessionKeyPrefix(accountType)));
+    return toSessionIds(deleted);
+  }
+
+  /// 删掉一个用户除指定一条之外的全部会话。验证邮箱、改密码保留本机、踢其他设备用。
+  ///
+  /// @param accountType 账号类型
+  /// @param userId 用户 ID
+  /// @param keepSessionId 要保留的会话 ID；它不在索引里时等于删全部
+  /// @return 会话键真正删掉了的会话 ID，调用方据此结束登录记录
+  /// @throws SessionStoreUnavailableException Redis 暂时不可用时
+  public List<Long> deleteAllExcept(AccountType accountType, long userId, long keepSessionId) {
+    Objects.requireNonNull(accountType, "accountType 不能为 null");
+    List<?> deleted =
+        execute(
+            () ->
+                redis.execute(
+                    DELETE_OTHERS_SCRIPT,
+                    List.of(indexKey(accountType, userId)),
+                    sessionKeyPrefix(accountType),
+                    Long.toString(keepSessionId)));
     return toSessionIds(deleted);
   }
 
@@ -201,7 +321,7 @@ public final class RedisSessionStore {
     return raw.stream().map(value -> Long.parseLong(String.valueOf(value))).toList();
   }
 
-  /// `HGETALL` 的扁平数组转成会话。
+  /// `HGETALL` 的扁平数组转成会话。字段缺失是数据损坏，解析时直接报错，不给默认值。
   ///
   /// @param fields 字段名和值交替的列表
   /// @return 会话
@@ -223,6 +343,7 @@ public final class RedisSessionStore {
         .createdAt(Instant.ofEpochMilli(Long.parseLong(values.get("created_at"))))
         .lastActiveAt(Instant.ofEpochMilli(Long.parseLong(values.get("last_active_at"))))
         .expiresAt(Instant.ofEpochMilli(Long.parseLong(values.get("expires_at"))))
+        .authenticatedAt(Instant.ofEpochMilli(Long.parseLong(values.get("auth_at"))))
         .build();
   }
 }

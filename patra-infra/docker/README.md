@@ -79,11 +79,16 @@ cp patra-infra/docker/.env.secret.example patra-infra/docker/.env.secret
 # 编辑 .env.secret，把 TS_AUTHKEY 填成真实值（tskey-auth-...）
 
 # 4c. (MacBook) 把密钥文件复制到 Mac mini：与 MacBook 上的是同一份，生成方法见下文「密钥」。
-#     目录由第 4 步建好；缺了这几个文件，core 栈的 redis、nacos 和整个 apps 栈都起不来
+#     目录由第 4 步建好；缺了这几个文件，core 栈的 redis、nacos 和整个 apps 栈都起不来。
+#     mail.env 可选：没有它 identity 的邮件进 core 栈的 Mailpit；接真实服务商时按 secrets/mail.env.example 在 mini 上放一份
 scp -p ~/.patra/secrets/redis.env ~/.patra/secrets/gateway.env ~/.patra/secrets/nacos.env \
   ~/.patra/secrets/nacos-push.env linqibin@linqibins-mac-mini:.patra/secrets/
 # 4d. (Mac mini) 生成只放 mini 的 nacos-server.env、nacos-admin.env，命令见 secrets/ 下对应的 *.example。
 #     管理员密码另存一份到密码管理器
+
+# 4e. (Mac mini) 下载 identity 查 IP 属地用的 ip2region 数据（两个 xdb，约 46 MB，到 ~/.patra/data/ip2region/）。
+#     版本与校验和在 scripts/ip2region.properties；缺文件 identity 起不来。更新数据 = 改它、pull、重跑、重启 identity
+bash patra-infra/scripts/fetch-ip2region.sh
 
 # 5. (Mac mini) 启动全栈（含 tailscale 网关；镜像走 ghcr.io，docker.io 在国内常 502）
 #    脚本会先幂等创建共享网络 patra-net，再按依赖顺序逐个子栈 up
@@ -156,6 +161,7 @@ ssh linqibin@linqibins-mac-mini 'docker restart patra-rocketmq-broker'  # 只重
 | `nacos-admin.env` | Nacos 管理员密码 `NACOS_ADMIN_PASSWORD`。**只放 mini**，另存密码管理器 | `nacos-init.sh`、`nacos-verify.sh` | 脚本说明缺哪个变量并退出 |
 | `nacos.env` | 应用账号 `NACOS_USERNAME=patra-app`、`NACOS_PASSWORD` | 6 个后端服务的容器和本机进程；两个 Nacos 脚本 | 同 `redis.env` |
 | `nacos-push.env` | 推送账号 `NACOS_PUSH_USERNAME=patra-push`、`NACOS_PUSH_PASSWORD` | 两个 Nacos 脚本；PAP-75 的推送 | 脚本说明缺哪个变量并退出 |
+| `mail.env` | 真实邮件服务商（Resend）的 SMTP 凭据：`PATRA_MAIL_HOST` / `PORT` / `USERNAME` / `PASSWORD` / `AUTH` / `SSL` / `STARTTLS` / `FROM`。**只放 mini**（本机要走真实服务商时再放一份） | identity 的容器和本机进程 | 跳过：邮件发往 core 栈的 Mailpit |
 | `<服务>.env` | 该服务的外部数据源密钥，例如 catalog 的 `SCOPUS_API_KEY`、`PROXY_AUTH_KEY`、`PROXY_AUTH_PWD`，ingest 的 `ROCKETMQ_AK`、`ROCKETMQ_SK` | 对应服务的容器和本机进程 | 跳过 |
 
 两种进程怎么读到这些文件：
@@ -252,6 +258,12 @@ docker exec patra-postgres bash /docker-entrypoint-initdb.d/03-nacos-schema.sh
 
 ---
 
+## 门户的固定地址与受信转发（PAP-99）
+
+`portal` 容器在 `patra-net` 上固定为 `192.168.97.250`（`docker-compose.apps.yaml`）：网关只信任这个地址发来的 `X-Forwarded-For`（同一个文件里 gateway 的 `PATRA_GATEWAY_TRUSTED_PROXIES`，即 `server.tomcat.remoteip.internal-proxies`），据此记录浏览器的真实 IP。两边要一起改。不能信任整个网段：tailnet 经 `tailscale-gw` 子网路由进来的连接会被 SNAT 成网段内地址，OrbStack 端口转发进来的连接都显示成 `192.168.97.1`。所以 mini 上从 tailnet 访问门户时，门户看到的浏览器地址本身就是内网地址，登录设备列表里属地显示「内网」。
+
+identity 的定时任务除 `emailTokenCleanupJob`（04:30）外还有 `loginRecordCleanupJob`（Cron `0 40 4 * * ?`），在 xxl-job-admin 里手工新建，执行器 `patra-identity`。
+
 ## 应用侧配置（patra-api，本仓库范围外）
 
 各微服务通过单一环境变量切换基础设施地址：
@@ -294,6 +306,7 @@ Nacos 的地址、账号和服务发现设置由 `patra-spring-boot-starter-naco
 - **PostgreSQL**: `linqibins-mac-mini:15432` (postgres/123456)
 - **Redis**: `linqibins-mac-mini:16379`（要密码：用户 `default`，密码在 `~/.patra/secrets/redis.env`）
 - **Nacos 控制台**: http://linqibins-mac-mini:8080（用管理员 `nacos` 登录，密码在 mini 的 `~/.patra/secrets/nacos-admin.env`）
+- **Mailpit**（开发环境的邮件收集器）: SMTP `linqibins-mac-mini:1025`（无鉴权、无 TLS），Web UI http://linqibins-mac-mini:8025。identity 没放 `mail.env` 时的邮件都在这里
 
 ### 存储服务
 - **MinIO API**: `linqibins-mac-mini:19000` (minioadmin/minioadmin123)

@@ -12,6 +12,12 @@ springBoot {
     mainClass = "dev.patra.identity.PatraIdentityApplication"
 }
 
+// 头像的 WebP 编码器（webp-imageio）用 System.load 加载 jar 里的 libwebp：JDK 25 对未命名模块只告警，
+// 以后的版本默认拦截。可执行 jar 的清单属性对 `java -jar` 生效
+tasks.bootJar {
+    manifest { attributes("Enable-Native-Access" to "ALL-UNNAMED") }
+}
+
 dependencies {
     // 六边形架构各层
     implementation(project(":patra-api:patra-identity:patra-identity-adapter"))
@@ -28,8 +34,27 @@ dependencies {
     // 装配 RedisSessionStore
     implementation(project(":patra-api:patra-identity:patra-identity-session"))
 
+    // 装配 catalog 内部接口的 HTTP Interface 代理（PAP-95）
+    implementation(project(":patra-api:patra-catalog:patra-catalog-api"))
+    implementation(project(":patra-tool:patra-tool-http-client"))
+
+    // 头像存专用桶
+    implementation(project(":patra-tool:patra-tool-object-storage"))
+
     testImplementation(project(":patra-tool:patra-tool-test"))
+    testImplementation(testFixtures(project(":patra-api:patra-identity:patra-identity-infra")))
 
     // 测试里自动注入测试公钥，并能签出带身份的请求头
     testImplementation(testFixtures(project(":patra-tool:patra-tool-security")))
+}
+
+// 装配了 ip2region 适配器的测试上下文要有数据文件（PAP-99）：用 infra 按 ip2region.properties 下好的那份，
+// 经 infra 对外提供的 ip2regionData 取得（下载任务自动排在测试之前，目录内容是测试的输入）
+val ip2regionDataScope = configurations.dependencyScope("ip2regionData")
+val ip2regionData = configurations.resolvable("ip2regionDataFiles") { extendsFrom(ip2regionDataScope.get()) }
+dependencies {
+    "ip2regionData"(project(path = ":patra-api:patra-identity:patra-identity-infra", configuration = "ip2regionData"))
+}
+tasks.withType<Test>().configureEach {
+    jvmArgumentProviders.add(DirectorySystemProperty("patra.identity.ip-geolocation.directory", ip2regionData.get()))
 }

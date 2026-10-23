@@ -71,6 +71,13 @@ public final class HttpStdErrors {
       return code("0409", 409);
     }
 
+    /// 获取 413 Content Too Large 错误码（上传超过上限）。
+    ///
+    /// @return CONTENT_TOO_LARGE 错误码
+    public ErrorCodeLike CONTENT_TOO_LARGE() {
+      return code("0413", 413);
+    }
+
     /// 获取 422 Unprocessable Entity 错误码。
     ///
     /// @return UNPROCESSABLE 错误码

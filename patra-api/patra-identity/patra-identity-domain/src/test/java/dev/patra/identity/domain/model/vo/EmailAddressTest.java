@@ -130,4 +130,20 @@ class EmailAddressTest {
         .isInstanceOf(IllegalArgumentException.class);
     assertThat(new EmailAddress("chen@example.com").value()).isEqualTo("chen@example.com");
   }
+
+  @Test
+  @DisplayName("遮掩：本地部分只留首字符")
+  void should_mask_local_part_keeping_first_character() {
+    assertThat(EmailAddress.of("chen.yu@example.com").masked()).isEqualTo("c***@example.com");
+    assertThat(EmailAddress.of("a@example.com").masked()).isEqualTo("a***@example.com");
+  }
+
+  @Test
+  @DisplayName("按指定字段名报错：改邮箱用 newEmail")
+  void should_report_violation_under_given_field() {
+    assertThat(EmailAddress.validate("", "newEmail").orElseThrow().field()).isEqualTo("newEmail");
+    assertThat(EmailAddress.validate("nope", "newEmail").orElseThrow().code())
+        .isEqualTo("INVALID_FORMAT");
+    assertThat(EmailAddress.validate("nope").orElseThrow().field()).isEqualTo("email");
+  }
 }

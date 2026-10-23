@@ -9,3 +9,23 @@ spring:
     service-registry:
       auto-registration:
         enabled: false
+
+# 对象存储的占位端点：不带 MinIO 的独立 IT 上下文也能装配（不连接）；
+# 继承 IdentityFlowITSupport 的流程测试由 IdentityITMinIOContainerInitializer 覆盖成真实容器
+patra:
+  object-storage:
+    providers:
+      minio:
+        endpoint: http://127.0.0.1:1
+        access-key: unused
+        secret-key: unused
+
+# 测试里不起 XXL-Job 执行器
+xxl:
+  job:
+    enabled: false
+
+# 镜像 Nacos 里的缺省：无鉴权收集器（Mailpit / GreenMail）时用户名、密码都是空串
+spring.mail:
+  username: ""
+  password: ""

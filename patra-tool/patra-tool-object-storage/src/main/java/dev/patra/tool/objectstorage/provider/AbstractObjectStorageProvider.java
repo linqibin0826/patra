@@ -82,6 +82,20 @@ public abstract class AbstractObjectStorageProvider implements ObjectStorageProv
     }
   }
 
+  /// 验证按前缀删除的参数。
+  ///
+  /// @param bucket 存储桶名称
+  /// @param prefix 键前缀
+  /// @throws IllegalArgumentException 桶名或前缀为空
+  protected void validatePrefix(String bucket, String prefix) {
+    if (bucket == null || bucket.isBlank()) {
+      throw new IllegalArgumentException("存储桶名称不能为空");
+    }
+    if (prefix == null || prefix.isBlank()) {
+      throw new IllegalArgumentException("前缀不能为空，空前缀会删光整个存储桶");
+    }
+  }
+
   /// 验证下载参数。
   ///
   /// @param bucket 存储桶名称
