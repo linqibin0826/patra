@@ -136,6 +136,15 @@ class RedisSessionStoreIT {
   }
 
   @Test
+  @DisplayName("会话缺 auth_at 是数据损坏：和缺 user_id 一样直接报错，不给默认值")
+  void should_reject_session_without_auth_at() {
+    SessionToken token = store.create(newSession(42L, 7001L).build()).token();
+    redis.opsForHash().delete("idn:session:user:" + token.hash(), "auth_at");
+
+    assertThatThrownBy(() -> store.findAndTouch(token)).isInstanceOf(NumberFormatException.class);
+  }
+
+  @Test
   @DisplayName("给了设备标识就存进去并能读回")
   void should_store_device_id_when_given() {
     IssuedSession issued = store.create(newSession(42L, 7001L).deviceId("mac-safari").build());
@@ -482,16 +491,6 @@ class RedisSessionStoreIT {
     assertThat(store.find(AccountType.USER, 66L, 8601L)).isEmpty();
     assertThat(redis.hasKey("idn:session:user:" + token.hash())).isFalse();
     assertThat(redis.opsForHash().hasKey("idn:user-sessions:user:66", "8601")).isFalse();
-  }
-
-  @Test
-  @DisplayName("没有 auth_at 字段的旧会话按 EPOCH 读出")
-  void should_read_missing_auth_at_as_epoch() {
-    SessionToken token = store.create(newSession(65L, 8501L).build()).token();
-    redis.opsForHash().delete("idn:session:user:" + token.hash(), "auth_at");
-
-    assertThat(store.find(AccountType.USER, 65L, 8501L).orElseThrow().authenticatedAt())
-        .isEqualTo(Instant.EPOCH);
   }
 
   @Test

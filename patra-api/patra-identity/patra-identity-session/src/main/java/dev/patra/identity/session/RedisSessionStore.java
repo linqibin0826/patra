@@ -321,7 +321,7 @@ public final class RedisSessionStore {
     return raw.stream().map(value -> Long.parseLong(String.valueOf(value))).toList();
   }
 
-  /// `HGETALL` 的扁平数组转成会话。没有 `auth_at` 的旧会话按 `Instant.EPOCH` 读出。
+  /// `HGETALL` 的扁平数组转成会话。字段缺失是数据损坏，解析时直接报错，不给默认值。
   ///
   /// @param fields 字段名和值交替的列表
   /// @return 会话
@@ -343,10 +343,7 @@ public final class RedisSessionStore {
         .createdAt(Instant.ofEpochMilli(Long.parseLong(values.get("created_at"))))
         .lastActiveAt(Instant.ofEpochMilli(Long.parseLong(values.get("last_active_at"))))
         .expiresAt(Instant.ofEpochMilli(Long.parseLong(values.get("expires_at"))))
-        .authenticatedAt(
-            values.containsKey("auth_at")
-                ? Instant.ofEpochMilli(Long.parseLong(values.get("auth_at")))
-                : Instant.EPOCH)
+        .authenticatedAt(Instant.ofEpochMilli(Long.parseLong(values.get("auth_at"))))
         .build();
   }
 }

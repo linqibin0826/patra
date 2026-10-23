@@ -61,7 +61,7 @@ class ReauthenticationGuardTest {
   }
 
   @Test
-  @DisplayName("没有 auth_at 的旧会话（EPOCH）视作从未再认证")
+  @DisplayName("再认证时间远早于窗口（EPOCH）视作超窗")
   void should_treat_epoch_as_never_authenticated() {
     when(sessions.findAuthenticatedAt(AccountType.USER, 42L, 7001L))
         .thenReturn(Optional.of(Instant.EPOCH));

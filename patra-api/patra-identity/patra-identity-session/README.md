@@ -21,7 +21,7 @@ Redis 里只存 `SessionToken.hash()`：整个令牌 UTF-8 的 SHA-256，小写�
 
 会话字段（都是字符串）：`user_id`、`session_id`、`account_type`（`user`）、`client_type`（`web`）、
 `device_id`（可选，没有就没这个字段）、`created_at`、`last_active_at`、`auth_at`（最近一次用密码证明身份：
-登录、注册、再认证、改密码；缺失的旧会话按 EPOCH 读出）、`expires_at`（epoch 毫秒）、`idle_timeout_ms`。
+登录、注册、再认证、改密码；必填，缺失按数据损坏报错）、`expires_at`（epoch 毫秒）、`idle_timeout_ms`。
 
 ## 操作
 

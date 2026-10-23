@@ -101,7 +101,7 @@
 | 改密码（`session-rotate.lua`） | `= now`：输过当前密码 |
 | 续期（`session-touch.lua`） | 不动 |
 
-`StoredSession` 加 `Instant authenticatedAt`：没有 `auth_at` 字段的会话（本 PR 部署前建立的）按 `Instant.EPOCH` 读出——视作从未再认证，第一次做敏感操作时要输一次密码。不回填、不迁移。网关的 `toCurrentUser()` 不读它，网关代码不改。
+`StoredSession` 加 `Instant authenticatedAt`：`auth_at` 是必填字段，建会话时一定写入；缺失按数据损坏报错，和缺 `user_id` 一样（PR #273 评审修正，绿地项目不兼容旧格式会话，部署时清空 mini 上 v0.8 遗留的会话键）。网关的 `toCurrentUser()` 不读它，网关代码不改。
 
 ### 6.2 `session-rotate.lua`：换令牌保留会话 ID
 
@@ -570,7 +570,7 @@ patra:
 
 session（Redis 容器）：
 
-- `RedisSessionStoreIT`：`create` 写 `auth_at = created_at`；`rotate` 返回新令牌、旧令牌 `findAndTouch` 为空、新令牌能查到且 `session_id` / `created_at` / `expires_at` / `device_id` 不变、`auth_at` 为 `now`、索引指向新哈希；`rotate` 对不存在 / 过期的会话为空且清掉索引条目；`find` 不改 `last_active_at`；没有 `auth_at` 的旧格式会话读出 `EPOCH`。
+- `RedisSessionStoreIT`：`create` 写 `auth_at = created_at`；`rotate` 返回新令牌、旧令牌 `findAndTouch` 为空、新令牌能查到且 `session_id` / `created_at` / `expires_at` / `device_id` 不变、`auth_at` 为 `now`、索引指向新哈希；`rotate` 对不存在 / 过期的会话为空且清掉索引条目；`find` 不改 `last_active_at`；没有 `auth_at` 的会话读出时报错。
 
 infra：
 
