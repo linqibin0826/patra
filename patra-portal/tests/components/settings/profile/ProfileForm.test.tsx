@@ -251,3 +251,20 @@ describe("ProfileForm · 机构", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "更换" })).toHaveFocus());
   });
 });
+
+describe("ProfileForm · 关注领域", () => {
+  it("计数 n / 10；某个主题词已不可用（422）时那一项描红并说明", async () => {
+    vi.mocked(saveProfile).mockResolvedValue({
+      ok: false,
+      reason: "invalid-fields",
+      fieldErrors: [{ field: "researchInterests[1]", code: "NOT_FOUND" }],
+    });
+    const { user } = renderForm();
+    expect(screen.getByText("2 / 10")).toBeInTheDocument();
+    await user.type(nickname(), "!");
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    expect(
+      await screen.findByText("Atrial Fibrillation：这个主题词已不可用，请移除"),
+    ).toBeInTheDocument();
+  });
+});

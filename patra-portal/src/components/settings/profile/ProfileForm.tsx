@@ -14,6 +14,7 @@ import { LeaveGuard } from "@/components/settings/LeaveGuard";
 import { CharCounter } from "@/components/settings/profile/CharCounter";
 import { FieldError } from "@/components/settings/profile/FieldError";
 import { LinkListField } from "@/components/settings/profile/LinkListField";
+import { MeshInterestPicker } from "@/components/settings/profile/MeshInterestPicker";
 import { OrganizationPicker } from "@/components/settings/profile/OrganizationPicker";
 import { SettingsCard } from "@/components/settings/SettingsCard";
 import { StickySaveBar } from "@/components/settings/StickySaveBar";
@@ -73,7 +74,15 @@ export function ProfileForm({ initial, user, privacy }: ProfileFormProps) {
     watch,
     formState: { errors, isDirty },
   } = form;
-  const [displayName, bio] = watch(["displayName", "bio"]);
+  const [displayName, bio, interests] = watch(["displayName", "bio", "researchInterests"]);
+  // 后端报的某一项关注领域的错误（`researchInterests[i]`）：下标 → 文案
+  const interestErrors: Record<number, string> = {};
+  interests.forEach((_, index) => {
+    const message = errors.researchInterests?.[index]?.message;
+    if (message) {
+      interestErrors[index] = message;
+    }
+  });
   // 计数超出上限时立即显示字段错误，不等提交（简报 §4.5）
   const displayNameError =
     errors.displayName?.message ??
@@ -287,13 +296,30 @@ export function ProfileForm({ initial, user, privacy }: ProfileFormProps) {
 
         <SettingsCard
           title="关注领域"
+          aside={
+            <span className="font-mono text-2xs text-fg-3 tabular-nums">
+              {interests.length} / 10
+            </span>
+          }
           description="选择最多 10 个 MeSH 主题词，展示在主页上，点击可检索相关文献。主题词只有英文。"
         >
-          <ul className="flex flex-wrap gap-2">
-            {watch("researchInterests").map((interest) => (
-              <li key={interest.ui}>{interest.name}</li>
-            ))}
-          </ul>
+          <Controller
+            control={form.control}
+            name="researchInterests"
+            render={({ field }) => (
+              <MeshInterestPicker
+                id="profile-research-interests"
+                value={field.value}
+                onChange={field.onChange}
+                focusRef={field.ref}
+                errors={interestErrors}
+                readOnly={saving}
+              />
+            )}
+          />
+          {errors.researchInterests?.message && (
+            <FieldError>{errors.researchInterests.message}</FieldError>
+          )}
         </SettingsCard>
 
         {alert && <FormAlert>{alert}</FormAlert>}
