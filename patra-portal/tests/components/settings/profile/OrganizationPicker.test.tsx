@@ -139,6 +139,20 @@ describe("OrganizationPicker · 输入", () => {
   });
 });
 
+describe("OrganizationPicker · Esc", () => {
+  it("第一次 Esc 收起候选、保留输入；收起后再按 Esc 清空输入", async () => {
+    const user = renderPicker();
+    await typeAndSettle(user, "协和");
+    const input = screen.getByRole("combobox");
+    expect(input).toHaveAttribute("aria-expanded", "true");
+    await user.keyboard("{Escape}");
+    expect(input).toHaveAttribute("aria-expanded", "false");
+    expect(input).toHaveValue("协和");
+    await user.keyboard("{Escape}");
+    expect(input).toHaveValue("");
+  });
+});
+
 describe("OrganizationPicker · 已选", () => {
   it("回显已保存的 ROR 机构（没有副行信息）：副行写「ROR 机构库」", () => {
     renderPicker({ kind: "ror", rorId: "04jztag35", name: "北京协和医院", detail: null });

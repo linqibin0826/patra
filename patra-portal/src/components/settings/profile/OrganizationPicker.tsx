@@ -151,8 +151,10 @@ export function OrganizationPicker({
       value={null}
       inputValue={input}
       onInputValueChange={(next, { reason }) => {
-        // 选中候选时 base-ui 会把条目名回填进输入框；这里选中后要清空（或换成卡片），不接受回填
-        if (reason !== "item-press") setInput(next);
+        // 不接受 base-ui 自己改输入框的两种情况：选中候选时回填条目名（选中后这里清空或换成卡片）；
+        // 候选收起后把输入同步成已选值（没有已选值就是清空）——Esc 只收起、保留输入，收起后再按
+        // Esc 才清空（简报 §3.8，base-ui 以 `escape-key` 处理）
+        if (reason !== "item-press" && reason !== "input-clear") setInput(next);
       }}
       onValueChange={(option) => pick(option)}
       itemToStringLabel={(option) =>
@@ -176,12 +178,6 @@ export function OrganizationPicker({
           aria-describedby={error ? `${id}-error` : undefined}
           placeholder="搜索医院、高校或研究机构，中英文都可以"
           autoFocus={changing}
-          onKeyDown={(event) => {
-            // 下拉已收起时再按 Esc：清空输入（简报 §3.8）
-            if (event.key === "Escape" && options.length === 0) {
-              setInput("");
-            }
-          }}
         />
       </div>
       <ComboboxPopup
