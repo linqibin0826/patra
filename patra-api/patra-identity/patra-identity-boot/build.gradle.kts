@@ -12,6 +12,12 @@ springBoot {
     mainClass = "dev.patra.identity.PatraIdentityApplication"
 }
 
+// 头像的 WebP 编码器（webp-imageio）用 System.load 加载 jar 里的 libwebp：JDK 25 对未命名模块只告警，
+// 以后的版本默认拦截。可执行 jar 的清单属性对 `java -jar` 生效
+tasks.bootJar {
+    manifest { attributes("Enable-Native-Access" to "ALL-UNNAMED") }
+}
+
 dependencies {
     // 六边形架构各层
     implementation(project(":patra-api:patra-identity:patra-identity-adapter"))

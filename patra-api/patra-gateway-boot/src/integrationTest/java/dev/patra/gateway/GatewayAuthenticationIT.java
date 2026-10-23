@@ -33,6 +33,7 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -372,6 +373,71 @@ class GatewayAuthenticationIT {
         .expectStatus()
         .isUnauthorized();
     identity.verify(0, anyRequestedFor(urlPathEqualTo("/me/deletion")));
+  }
+
+  /// 头像读取公开：匿名转发，下游的不可变缓存头、ETag、类型原样回到客户端（PAP-97）。
+  @Test
+  void should_forward_anonymous_avatar_read_with_cache_headers() {
+    identity.stubFor(
+        get(urlPathEqualTo("/users/chen-yu/avatar"))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader(HttpHeaders.CONTENT_TYPE, "image/webp")
+                    .withHeader(HttpHeaders.CACHE_CONTROL, "public, max-age=31536000, immutable")
+                    .withHeader(HttpHeaders.ETAG, "\"0123456789abcdef-128\"")
+                    .withBody(new byte[] {1, 2, 3})));
+
+    restClient
+        .get()
+        .uri("/patra-identity/users/chen-yu/avatar?size=128&v=0123456789abcdef")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectHeader()
+        .valueEquals(HttpHeaders.CONTENT_TYPE, "image/webp")
+        .expectHeader()
+        .valueEquals(HttpHeaders.CACHE_CONTROL, "public, max-age=31536000, immutable")
+        .expectHeader()
+        .valueEquals(HttpHeaders.ETAG, "\"0123456789abcdef-128\"");
+
+    identity.verify(
+        1,
+        getRequestedFor(urlPathEqualTo("/users/chen-yu/avatar"))
+            .withoutHeader(HttpHeaders.AUTHORIZATION));
+  }
+
+  /// 头像上传要登录；带会话时约 5 MB 的请求体原样流到下游，网关不截断（PAP-97）。
+  @Test
+  void should_require_login_and_stream_large_avatar_upload() {
+    identity.stubFor(post(urlPathEqualTo("/me/avatar")).willReturn(okJson("{}")));
+    String token = GatewayITSessions.issue(sessions, 4241L, 9241L);
+    byte[] body = new byte[5_000_000];
+    new Random(97).nextBytes(body);
+    MediaType multipart = MediaType.parseMediaType("multipart/form-data; boundary=avatar-it");
+
+    restClient
+        .post()
+        .uri("/patra-identity/me/avatar")
+        .contentType(multipart)
+        .body(body)
+        .exchange()
+        .expectStatus()
+        .isUnauthorized();
+    identity.verify(0, postRequestedFor(urlPathEqualTo("/me/avatar")));
+
+    restClient
+        .post()
+        .uri("/patra-identity/me/avatar")
+        .header(HttpHeaders.AUTHORIZATION, BEARER + token)
+        .contentType(multipart)
+        .body(body)
+        .exchange()
+        .expectStatus()
+        .isOk();
+    List<LoggedRequest> received = identity.findAll(postRequestedFor(urlPathEqualTo("/me/avatar")));
+    assertThat(received).hasSize(1);
+    assertThat(received.getFirst().getBody()).isEqualTo(body);
   }
 
   /// 重发验证邮件是本人操作：匿名 401、不到下游；带会话才转发，且带断言。
