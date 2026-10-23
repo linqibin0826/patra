@@ -1,6 +1,7 @@
 package dev.patra.identity.infra.adapter.avatar;
 
 import static dev.patra.identity.infra.adapter.avatar.AvatarImageFixture.decodeWebp;
+import static dev.patra.identity.infra.adapter.avatar.AvatarImageFixture.gray;
 import static dev.patra.identity.infra.adapter.avatar.AvatarImageFixture.jpeg;
 import static dev.patra.identity.infra.adapter.avatar.AvatarImageFixture.png;
 import static dev.patra.identity.infra.adapter.avatar.AvatarImageFixture.pngHeaderOnly;
@@ -19,6 +20,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class AvatarImageAdapterTest {
 
@@ -115,6 +118,18 @@ class AvatarImageAdapterTest {
         assertThat(riffChunks(output)).doesNotContain("EXIF", "XMP ", "ICCP");
       }
     }
+  }
+
+  /// 灰度图按 sRGB 编码的灰度值原样变成 r = g = b，不能被当成线性灰度提亮（中灰 128 不能变成 189）。
+  @ParameterizedTest
+  @ValueSource(strings = {"png", "png-alpha", "jpg"})
+  void should_keep_gray_level_of_grayscale_images(String format) {
+    BufferedImage large = decodeWebp(adapter.render(gray(300, 300, 128, format)).large());
+
+    int argb = large.getRGB(256, 256);
+    assertThat((argb >> 16) & 0xFF).isBetween(118, 138);
+    assertThat((argb >> 8) & 0xFF).isBetween(118, 138);
+    assertThat(argb & 0xFF).isBetween(118, 138);
   }
 
   /// 两档都是 WebP，尺寸分别 512 与 128。

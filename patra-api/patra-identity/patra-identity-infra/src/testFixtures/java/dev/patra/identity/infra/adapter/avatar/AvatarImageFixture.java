@@ -4,9 +4,13 @@ import com.luciad.imageio.webp.WebPImageWriterSpi;
 import com.twelvemonkeys.imageio.plugins.webp.WebPImageReaderSpi;
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.Transparency;
 import java.awt.color.ColorSpace;
 import java.awt.color.ICC_Profile;
 import java.awt.image.BufferedImage;
+import java.awt.image.ComponentColorModel;
+import java.awt.image.DataBuffer;
+import java.awt.image.WritableRaster;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -56,6 +60,41 @@ public final class AvatarImageFixture {
     g.fillRect(width / 4, height / 4, width / 2, height / 2);
     g.dispose();
     return encode(image, "png");
+  }
+
+  /// 纯灰图：灰度 PNG（可带 alpha，全不透明）或灰度 JPEG，每个像素都是同一个灰度值。
+  ///
+  /// @param width 宽
+  /// @param height 高
+  /// @param value 灰度值 0–255
+  /// @param format `png`、`png-alpha` 或 `jpg`
+  /// @return 字节
+  public static byte[] gray(int width, int height, int value, String format) {
+    if (format.equals("png-alpha")) {
+      ComponentColorModel model =
+          new ComponentColorModel(
+              ColorSpace.getInstance(ColorSpace.CS_GRAY),
+              true,
+              false,
+              Transparency.TRANSLUCENT,
+              DataBuffer.TYPE_BYTE);
+      WritableRaster raster = model.createCompatibleWritableRaster(width, height);
+      for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+          raster.setSample(x, y, 0, value);
+          raster.setSample(x, y, 1, 255);
+        }
+      }
+      return encode(new BufferedImage(model, raster, false, null), "png");
+    }
+    BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);
+    WritableRaster raster = image.getRaster();
+    for (int y = 0; y < height; y++) {
+      for (int x = 0; x < width; x++) {
+        raster.setSample(x, y, 0, value);
+      }
+    }
+    return encode(image, format.equals("jpg") ? "jpg" : "png");
   }
 
   /// 竖带图编码成有损 WebP。

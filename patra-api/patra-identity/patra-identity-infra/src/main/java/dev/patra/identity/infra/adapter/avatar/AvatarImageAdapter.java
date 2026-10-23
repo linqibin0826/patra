@@ -11,8 +11,11 @@ import java.awt.AlphaComposite;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
+import java.awt.color.ColorSpace;
 import java.awt.image.BufferedImage;
 import java.awt.image.ColorConvertOp;
+import java.awt.image.ColorModel;
+import java.awt.image.Raster;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -154,12 +157,38 @@ public class AvatarImageAdapter implements AvatarImagePort {
             source.getWidth(),
             source.getHeight(),
             alpha ? BufferedImage.TYPE_INT_ARGB_PRE : BufferedImage.TYPE_INT_RGB);
-    if (source.getColorModel().getColorSpace().isCS_sRGB()) {
+    ColorSpace colorSpace = source.getColorModel().getColorSpace();
+    if (colorSpace.getType() == ColorSpace.TYPE_GRAY) {
+      copyGray(source, target);
+    } else if (colorSpace.isCS_sRGB()) {
       draw(source, target, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
     } else {
       new ColorConvertOp(null).filter(source, target);
     }
     return target;
+  }
+
+  /// 灰度图逐像素复制成 r = g = b。解码器给灰度图的色彩空间是线性的 `CS_GRAY`，但文件里的灰度值实际按
+  /// sRGB 编码；交给 `ColorConvertOp` 或 `drawImage` 会当线性值做一次 gamma 提升，中灰 128 变成 189。
+  ///
+  /// @param source 灰度图（可带 alpha，可 16 位）
+  /// @param target 同尺寸的 `TYPE_INT_RGB` 或 `TYPE_INT_ARGB_PRE`
+  private static void copyGray(BufferedImage source, BufferedImage target) {
+    Raster raster = source.getRaster();
+    ColorModel model = source.getColorModel();
+    int grayShift = Math.max(0, model.getComponentSize(0) - 8);
+    boolean alpha = model.hasAlpha();
+    int alphaShift = alpha ? Math.max(0, model.getComponentSize(1) - 8) : 0;
+    for (int y = 0; y < source.getHeight(); y++) {
+      for (int x = 0; x < source.getWidth(); x++) {
+        int gray = raster.getSample(x, y, 0) >> grayShift;
+        int a = alpha ? raster.getSample(x, y, 1) >> alphaShift : 0xFF;
+        if (target.getType() == BufferedImage.TYPE_INT_ARGB_PRE) {
+          gray = gray * a / 0xFF;
+        }
+        target.setRGB(x, y, a << 24 | gray << 16 | gray << 8 | gray);
+      }
+    }
   }
 
   /// 缩放到 `size × size`：比目标大一倍以上时先逐次双线性减半，最后一步双三次。
