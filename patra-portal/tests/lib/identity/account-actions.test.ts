@@ -2,7 +2,7 @@
 import { ME_RESPONSE, USER } from "@tests/fixtures/user";
 import { resetCookieJar } from "@tests/stubs/cookie-jar";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cancelDeletion } from "@/lib/identity/account-actions";
+import { cancelDeletion, changeUsername } from "@/lib/identity/account-actions";
 
 vi.mock("next/headers", () => import("@tests/stubs/cookie-jar"));
 
@@ -72,5 +72,63 @@ describe("cancelDeletion", () => {
     fetchMock.mockRejectedValue(new Error("boom"));
     resetCookieJar({ patra_session: "patra_user_abc" });
     await expect(cancelDeletion()).resolves.toEqual({ ok: false, reason: "unavailable" });
+  });
+});
+
+describe("changeUsername", () => {
+  it("200：PATCH /me/username，返回新用户名与下次可改时间", async () => {
+    respond(200, { username: "new-name", nextUsernameChangeAt: "2026-11-22T08:00:00Z" });
+    resetCookieJar({ patra_session: "patra_user_abc" });
+    await expect(changeUsername("new-name")).resolves.toEqual({
+      ok: true,
+      username: "new-name",
+      nextUsernameChangeAt: "2026-11-22T08:00:00Z",
+    });
+    expect(lastRequest()).toEqual({
+      url: "http://gw.test/patra-identity/me/username",
+      method: "PATCH",
+      body: { username: "new-name" },
+    });
+  });
+
+  it("422：invalid，带原因码", async () => {
+    respond(422, { code: "IDN-0422", errors: [{ field: "username", code: "UNCHANGED" }] });
+    resetCookieJar({ patra_session: "patra_user_abc" });
+    await expect(changeUsername("chen-yu")).resolves.toEqual({
+      ok: false,
+      reason: "invalid",
+      code: "UNCHANGED",
+    });
+  });
+
+  it("409 errors[] username / ALREADY_TAKEN：taken", async () => {
+    respond(409, {
+      code: "IDN-0409",
+      traits: ["CONFLICT"],
+      errors: [{ field: "username", code: "ALREADY_TAKEN" }],
+    });
+    resetCookieJar({ patra_session: "patra_user_abc" });
+    await expect(changeUsername("taken")).resolves.toEqual({ ok: false, reason: "taken" });
+  });
+
+  it("409 USERNAME_CHANGE_COOLDOWN：cooldown", async () => {
+    respond(409, { code: "IDN-0409", traits: ["CONFLICT", "USERNAME_CHANGE_COOLDOWN"] });
+    resetCookieJar({ patra_session: "patra_user_abc" });
+    await expect(changeUsername("again")).resolves.toEqual({ ok: false, reason: "cooldown" });
+  });
+
+  it("409 PENDING_DELETION：pending-deletion", async () => {
+    respond(409, { code: "IDN-0409", traits: ["PENDING_DELETION", "CONFLICT"] });
+    resetCookieJar({ patra_session: "patra_user_abc" });
+    await expect(changeUsername("x-name")).resolves.toEqual({
+      ok: false,
+      reason: "pending-deletion",
+    });
+  });
+
+  it("其余：unavailable", async () => {
+    respond(500, { code: "IDN-0500" });
+    resetCookieJar({ patra_session: "patra_user_abc" });
+    await expect(changeUsername("x-name")).resolves.toEqual({ ok: false, reason: "unavailable" });
   });
 });

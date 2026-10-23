@@ -16,17 +16,13 @@ import {
   FIELD_MESSAGES,
   REGISTER_UNAVAILABLE_MESSAGE,
   TOAST_MESSAGES,
+  usernameHint,
   usernameMessage,
 } from "@/lib/auth/messages";
 import { authPageHref } from "@/lib/auth/next-path";
 import { btnBlock, btnPrimary } from "@/lib/portal-ui";
 import { cn } from "@/lib/utils";
 import { useVerificationResendStore } from "@/store/verification-resend";
-
-/// 用户名下方的常驻提示：写出主页地址，空着时是占位说法（简报 §3.1）
-function usernameHint(value: string): string {
-  return `3–30 位，小写字母、数字、_ 或 -，用作主页地址 /u/${value.trim() || "你的用户名"}`;
-}
 
 /// 注册表单（v0.8 spec 第 9 节，v0.12 简报 §3.1）：提示条、邮箱、用户名、密码、确认密码、提交按钮、
 /// 去登录的链接。`next` 已经过 `safeNextPath`。

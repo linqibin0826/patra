@@ -9,7 +9,7 @@ const HEADER_VALUE_CHARS = /^[\t\x20-\x7e\x80-\xff]*$/;
 
 export interface GatewayRequestInit {
   /// 默认 GET
-  method?: "GET" | "HEAD" | "POST" | "PUT" | "DELETE";
+  method?: "GET" | "HEAD" | "POST" | "PUT" | "PATCH" | "DELETE";
   /// 有值时序列化成 JSON 请求体，并带 `Content-Type: application/json`；与 `body` 互斥
   json?: unknown;
   /// multipart 请求体，`Content-Type`（带边界）由 fetch 生成；与 `json` 互斥

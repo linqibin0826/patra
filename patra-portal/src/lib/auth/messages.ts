@@ -37,7 +37,13 @@ const USERNAME_MESSAGES: Record<string, string> = {
   DIGITS_ONLY: "用户名不能全是数字",
   RESERVED: "这个用户名不能使用，请换一个",
   ALREADY_TAKEN: "这个用户名已被使用",
+  UNCHANGED: "新用户名和现在的一样",
 };
+
+/// 用户名输入框下的常驻提示（注册页、账号页改用户名共用）：空时末尾是 `/u/你的用户名`
+export function usernameHint(value: string): string {
+  return `3–30 位，小写字母、数字、_ 或 -，用作主页地址 /u/${value.trim() || "你的用户名"}`;
+}
 
 /// 用户名下方的错误文案
 export function usernameMessage(code: string | null): string {
@@ -150,4 +156,17 @@ export const REAUTH_MESSAGES = {
 /// 「尝试次数过多，请 N 分钟后再试」：秒数向上取整到分钟、至少 1 分钟；没给秒数时按 1 分钟
 export function waitMinutes(retryAfterSeconds: number | null): number {
   return Math.max(1, Math.ceil((retryAfterSeconds ?? 60) / 60));
+}
+
+/// 账号页（简报 §3.10、§4.7）
+export const ACCOUNT_MESSAGES = {
+  usernameNote:
+    "改名后，旧用户名保留 90 天：访问旧地址会跳到新地址，期间只有你能改回。两次修改至少间隔 30 天。",
+  cooldown: "30 天内只能修改一次",
+  saveFailed: "没有保存成功，请稍后再试",
+} as const;
+
+/// 改名成功的提示
+export function usernameChangedToast(username: string): string {
+  return `用户名已改为 @${username}`;
 }
