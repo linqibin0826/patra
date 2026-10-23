@@ -21,6 +21,7 @@ import dev.patra.identity.domain.port.mail.PasswordResetMail;
 import dev.patra.identity.domain.port.mail.SecurityNotice;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
@@ -69,7 +70,7 @@ class ThymeleafMailRendererTest {
       new ThymeleafMailRenderer(LINKS, ZoneId.of("Asia/Shanghai"));
 
   @Test
-  @DisplayName("验证邮件：主题固定；文本和 HTML 都含昵称、链接、有效期；HTML 里按钮指向链接且没有残留的 th: 属性")
+  @DisplayName("验证邮件：主题固定；文本和 HTML 都含昵称、链接、有效期；HTML 里链接只挂在按钮上、不另外列出全文，且没有残留的 th: 属性")
   void should_render_verification_mail_in_text_and_html() {
     RenderedMail rendered =
         renderer.render(
@@ -88,13 +89,33 @@ class ThymeleafMailRendererTest {
         .doesNotContain("<")
         .doesNotContain("[(");
     assertThat(rendered.html())
-        .contains("href=\"" + VERIFY_URL + "\"")
-        .contains(VERIFY_URL + "</")
+        .containsOnlyOnce("href=\"" + VERIFY_URL + "\"")
+        .doesNotContain(VERIFY_URL + "</")
         .contains("陈宇")
         .contains("24 小时")
         .contains("Patra 不会在邮件里向你索要密码")
         .doesNotContainPattern("\\sth:[a-z]+=")
         .doesNotContain("${");
+  }
+
+  @Test
+  @DisplayName("十三封的 HTML 都声明支持浅色与深色两种配色，客户端按系统主题切换而不是自己反色")
+  void should_declare_light_and_dark_color_schemes_in_every_html() {
+    List<OutgoingMail> all = new ArrayList<>(SEVEN);
+    all.add(EmailVerificationMail.of(TO, "陈宇", VERIFY_URL, Instant.EPOCH));
+    all.add(NewDeviceLoginMail.of(TO, "陈宇", NOTICE));
+    all.add(AccountDeletionRequestedMail.of(TO, "陈宇", DUE, NOTICE));
+    all.add(AccountDeletionReminderMail.of(TO, "陈宇", DUE, 3));
+    all.add(AccountDeletionCancelledMail.of(TO, "陈宇", NOTICE));
+    all.add(AccountDeletionCompletedMail.of(TO, "陈宇", "chen-yu"));
+
+    assertThat(all).hasSize(13);
+    for (OutgoingMail mail : all) {
+      assertThat(renderer.render(mail).html())
+          .as(mail.template())
+          .contains("<meta name=\"color-scheme\" content=\"light dark\">")
+          .contains("@media (prefers-color-scheme: dark)");
+    }
   }
 
   @Test
@@ -180,7 +201,7 @@ class ThymeleafMailRendererTest {
   }
 
   @Test
-  @DisplayName("带链接的四封：链接在文本里原样出现、在 HTML 里是 href 和可复制的全文")
+  @DisplayName("带链接的四封：链接在文本里原样出现；在 HTML 里只挂在按钮上，不另外列出全文")
   void should_put_links_in_both_parts() {
     assertLink(renderer.render(PasswordResetMail.of(TO, "陈宇", RESET_URL)), RESET_URL, "60 分钟");
     assertLink(
@@ -285,7 +306,7 @@ class ThymeleafMailRendererTest {
     assertThat(rendered.html()).contains("n***@example.com");
   }
 
-  /// 断言链接在两部分里都出现，有效期文案也在。
+  /// 断言链接在文本里原样出现、在 HTML 里只挂在按钮上，有效期文案也在。
   ///
   /// @param rendered 渲染结果
   /// @param url 链接
@@ -293,8 +314,8 @@ class ThymeleafMailRendererTest {
   private static void assertLink(RenderedMail rendered, String url, String validity) {
     assertThat(rendered.text()).contains(url).contains(validity);
     assertThat(rendered.html())
-        .contains("href=\"" + url + "\"")
-        .contains(url + "</")
+        .containsOnlyOnce("href=\"" + url + "\"")
+        .doesNotContain(url + "</")
         .contains(validity);
   }
 
