@@ -78,9 +78,14 @@ export async function gatewayStream(path: string, init: GatewayStreamInit = {}):
   }
 }
 
-/// 令牌能不能放进 `Authorization` 头。Cookie 被改坏时，读出来的值可能含有换行、控制字符或
-/// 0xFF 以上的字符：带着它请求，fetch 在发出之前就会抛错，错误消息里还可能带着这个值。
-/// 这样的值不可能是有效令牌，调用方不要拿它请求网关。
+/// 一个值能不能放进 HTTP 请求头：含换行、控制字符或 0xFF 以上的字符时，fetch 在发出之前就会抛错，
+/// 错误消息里还可能带着这个值。
+export function isSendableHeaderValue(value: string): boolean {
+  return HEADER_VALUE_CHARS.test(value);
+}
+
+/// 令牌能不能放进 `Authorization` 头。Cookie 被改坏时，读出来的值可能放不进请求头（见
+/// `isSendableHeaderValue`）：这样的值不可能是有效令牌，调用方不要拿它请求网关。
 export function canSendToken(token: string): boolean {
-  return HEADER_VALUE_CHARS.test(token);
+  return isSendableHeaderValue(token);
 }
