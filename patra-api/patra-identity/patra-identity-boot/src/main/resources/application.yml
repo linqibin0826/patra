@@ -1,8 +1,9 @@
 server:
   port: 6400
   tomcat:
-    # 超过上传上限时 Tomcat 先读完这么多请求体再回 413，客户端看到状态码而不是连接被重置
-    max-swallow-size: 8MB
+    # 超过上传上限时 Tomcat 按 Content-Length 一字节不读就拒，要先读完最多这么多再回 413，客户端看到状态码
+    # 而不是连接被重置；覆盖手机直出原图的大小（10–20 MB），更大的只保证门户本地校验
+    max-swallow-size: 32MB
   # 解析网关注入的 X-Forwarded-*，让 OpenAPI 文档里的地址指向网关
   forward-headers-strategy: framework
 

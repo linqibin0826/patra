@@ -416,12 +416,12 @@ class GatewayAuthenticationIT {
     new Random(97).nextBytes(body);
     MediaType multipart = MediaType.parseMediaType("multipart/form-data; boundary=avatar-it");
 
-    // 匿名那一下用小请求体：网关不读体就回 401 并关连接，大请求体会让客户端写到一半撞上 Broken pipe
+    // 会话过期后上传：网关不读体就回 401，要把剩下的体读完再关连接，客户端才拿得到 401 而不是 Broken pipe
     restClient
         .post()
         .uri("/patra-identity/me/avatar")
         .contentType(multipart)
-        .body(new byte[] {1})
+        .body(new byte[20 * 1024 * 1024])
         .exchange()
         .expectStatus()
         .isUnauthorized();

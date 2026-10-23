@@ -127,6 +127,19 @@ class AvatarFlowIT extends IdentityFlowITSupport {
         .isEqualTo("UNSUPPORTED_TYPE");
   }
 
+  /// 手机直出原图常见 10–20 MB：Tomcat 按 Content-Length 一字节不读就拒，必须把剩下的体读完再回 413，
+  /// 否则客户端写到一半撞上连接重置。
+  @Test
+  @DisplayName("20 MB 的上传经真实 HTTP 也回 413，不是连接重置")
+  void should_reject_upload_of_20mb_with_413() {
+    long userId = userIdOf(register("flow.avatar.huge@example.com", "u-avatar-huge"));
+    HttpHeaders auth = assertionFor(userId, latestSessionIdOf(userId));
+
+    BinaryResponse huge = upload(new byte[20 * 1024 * 1024], auth);
+
+    assertThat(huge.status()).as(huge.text()).isEqualTo(413);
+  }
+
   @Test
   @DisplayName("冷静期账号上传 409")
   void should_reject_upload_during_pending_deletion_with_409() {

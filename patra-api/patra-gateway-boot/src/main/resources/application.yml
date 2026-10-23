@@ -19,6 +19,9 @@ server:
   tomcat:
     remoteip:
       internal-proxies: ${PATRA_GATEWAY_TRUSTED_PROXIES:}
+    # 不读请求体就回响应（会话过期的上传回 401）时，Tomcat 先读完最多这么多再关连接，客户端才拿得到状态码
+    # 而不是 Broken pipe；默认 2MB。覆盖手机直出原图的大小（PAP-97）
+    max-swallow-size: 32MB
 
 spring:
   # 每个请求一个虚拟线程：等下游的时间不占平台线程
