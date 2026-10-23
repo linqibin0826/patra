@@ -9,6 +9,7 @@ import { useCommonFailureRedirect } from "@/lib/auth/use-common-failure-redirect
 import { resendVerificationEmail } from "@/lib/identity/verification-actions";
 import { btnBlock, btnPrimary } from "@/lib/portal-ui";
 import { queryKeys } from "@/lib/query-keys";
+import { useCountdown } from "@/lib/use-countdown";
 import { cn } from "@/lib/utils";
 import { useVerificationResendStore } from "@/store/verification-resend";
 
@@ -37,28 +38,13 @@ export function ResendVerificationButton({
   const queryClient = useQueryClient();
   const leave = useCommonFailureRedirect(query ? `${pathname}?${query}` : pathname);
   const { availableAt, limited, startCooldown, markLimited } = useVerificationResendStore();
-  const [now, setNow] = useState(() => Date.now());
   const [sending, setSending] = useState(false);
   const inFlight = useRef(false);
   const [announcement, setAnnouncement] = useState("");
-  const waiting = availableAt !== null && availableAt > now;
+  // 剩余秒数按渲染时的当前时间算（`useCountdown`），换了新的截止时间时第一次渲染就是对的
+  const left = useCountdown(availableAt);
+  const waiting = left > 0;
   const wasWaiting = useRef(waiting);
-
-  useEffect(() => {
-    if (availableAt === null || availableAt <= Date.now()) {
-      return;
-    }
-    setNow(Date.now());
-    // 每秒走一次；走到可以重发的那一刻就停，不再空转
-    const timer = setInterval(() => {
-      const current = Date.now();
-      setNow(current);
-      if (current >= availableAt) {
-        clearInterval(timer);
-      }
-    }, 1_000);
-    return () => clearInterval(timer);
-  }, [availableAt]);
 
   useEffect(() => {
     if (wasWaiting.current && !waiting) {
@@ -119,15 +105,11 @@ export function ResendVerificationButton({
           }}
           className={cn(btnPrimary, btnBlock, "tabular-nums", className)}
         >
-          {waiting
-            ? resendWaitMessage(Math.ceil((availableAt - now) / 1_000), limited)
-            : sending
-              ? RESEND_MESSAGES.sending
-              : label}
+          {waiting ? resendWaitMessage(left, limited) : sending ? RESEND_MESSAGES.sending : label}
         </button>
       ) : waiting ? (
         <span className={cn("text-sm leading-5 text-fg-3 tabular-nums", className)}>
-          {resendWaitMessage(Math.ceil((availableAt - now) / 1_000), limited)}
+          {resendWaitMessage(left, limited)}
         </span>
       ) : (
         <button
