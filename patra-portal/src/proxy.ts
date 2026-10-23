@@ -90,9 +90,11 @@ export async function proxy(req: NextRequest) {
   if (req.headers.get("sec-fetch-dest") === "empty") {
     return NextResponse.next();
   }
-  const [, section = "", id = ""] = req.nextUrl.pathname.split("/");
+  const segments = req.nextUrl.pathname.split("/");
+  const [, section = "", id = ""] = segments;
+  // 只有 `/papers/:id`、`/journals/:id` 两段的地址是详情页；列表页（`/papers`、`/journals/`）和更深的路径放行。
   // matcher 按解码后的路径匹配，pathname 却保留编码（`/%70apers/1`、`/%6Cogin` 也会进来）：认不出的放行
-  if (!Object.hasOwn(DETAIL, section)) {
+  if (segments.length !== 3 || id === "" || !Object.hasOwn(DETAIL, section)) {
     return (await pending) ?? NextResponse.next();
   }
   const { kind, endpoint } = DETAIL[section as keyof typeof DETAIL];

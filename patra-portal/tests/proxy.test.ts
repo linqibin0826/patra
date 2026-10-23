@@ -75,6 +75,18 @@ describe("详情页直接打开时先确认存在", () => {
   });
 });
 
+describe("列表页与更深的路径不做详情页检查", () => {
+  it.each(["/papers", "/journals", "/papers?q=GLP-1", "/journals/", "/papers/42/extra", "/"])(
+    "直接打开 %s：放行，不改写、不请求网关",
+    async (path) => {
+      const res = await proxy(request(path));
+      expect(res.headers.get("x-middleware-next")).toBe("1");
+      expect(rewrittenTo(res)).toBeNull();
+      expect(fetchMock).not.toHaveBeenCalled();
+    },
+  );
+});
+
 describe("matcher 按解码后的路径放进来的编码地址", () => {
   // pathname 保留编码，这里认不出是详情页还是登录页、注册页：放行，不能抛错变成 500
   it.each(["/%6Cogin", "/%72egister", "/login%2F", "/%70apers/42"])(
