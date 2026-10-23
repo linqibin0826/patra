@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import dev.patra.identity.domain.model.vo.LoginClient;
@@ -14,6 +15,7 @@ import dev.patra.identity.domain.port.session.NewUserSession;
 import dev.patra.identity.domain.port.session.SessionRotation;
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.ClientType;
+import dev.patra.tool.core.security.CurrentUser;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
@@ -143,5 +145,44 @@ class SessionStoreAdapterTest {
 
     assertThat(adapter.listActive(AccountType.USER, 42L))
         .containsExactly(ActiveUserSession.of(7001L, NOW, NOW.plusSeconds(120)));
+  }
+
+  @Test
+  @DisplayName("按令牌查会话：格式不对直接为空，不碰存储")
+  void should_skip_store_when_token_is_malformed() {
+    assertThat(adapter.findAndTouch("not-a-session-token")).isEmpty();
+
+    verifyNoInteractions(store);
+  }
+
+  @Test
+  @DisplayName("按令牌查会话：存储里没有为空")
+  void should_return_empty_when_session_is_absent() {
+    SessionToken token = SessionToken.generate(AccountType.USER, new SecureRandom());
+    when(store.findAndTouch(token)).thenReturn(Optional.empty());
+
+    assertThat(adapter.findAndTouch(token.value())).isEmpty();
+  }
+
+  @Test
+  @DisplayName("按令牌查会话：查到转成当前用户")
+  void should_return_current_user_when_session_is_found() {
+    SessionToken token = SessionToken.generate(AccountType.USER, new SecureRandom());
+    when(store.findAndTouch(token))
+        .thenReturn(
+            Optional.of(
+                StoredSession.builder()
+                    .userId(42L)
+                    .sessionId(7001L)
+                    .accountType(AccountType.USER)
+                    .clientType(ClientType.WEB)
+                    .createdAt(NOW)
+                    .lastActiveAt(NOW)
+                    .expiresAt(NOW.plus(Duration.ofDays(180)))
+                    .authenticatedAt(NOW)
+                    .build()));
+
+    assertThat(adapter.findAndTouch(token.value()))
+        .contains(CurrentUser.of(42L, 7001L, AccountType.USER, ClientType.WEB));
   }
 }

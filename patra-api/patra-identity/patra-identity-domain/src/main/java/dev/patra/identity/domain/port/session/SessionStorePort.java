@@ -1,12 +1,13 @@
 package dev.patra.identity.domain.port.session;
 
 import dev.patra.tool.core.security.AccountType;
+import dev.patra.tool.core.security.CurrentUser;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
-/// 会话存储：建会话、换令牌、读再认证时间、按用户列出活会话、按会话 ID 删、按用户删全部、按用户删除指定一条外的全部。
+/// 会话存储：建会话、按令牌查会话、换令牌、读再认证时间、按用户列出活会话、按会话 ID 删、按用户删全部、按用户删除指定一条外的全部。
 ///
 /// Redis 暂时不可用时，所有方法都抛带 `DEP_UNAVAILABLE` 特征的异常（由适配器原样传出，映射成 503）。
 public interface SessionStorePort {
@@ -16,6 +17,12 @@ public interface SessionStorePort {
   /// @param session 要签发的会话
   /// @return 签发结果
   IssuedUserSession issue(NewUserSession session);
+
+  /// 按令牌原文查会话并节流续期：网关每个带令牌的请求经内部接口调到这里（PAP-106）。
+  ///
+  /// @param token 令牌原文，格式不对时直接为空
+  /// @return 当前用户；令牌格式不对、会话不在或已过绝对期时为空
+  Optional<CurrentUser> findAndTouch(String token);
 
   /// 换令牌、保留会话 ID：再认证、改密码用。`auth_at` 刷新成现在，旧令牌立即失效；
   /// `auth_at` 距今不足 `grace` 时不换（原子判断），返回「没换」。
