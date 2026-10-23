@@ -45,10 +45,13 @@ dependencies {
     implementation(libs.twelvemonkeys.imageio.jpeg)
     implementation(libs.twelvemonkeys.imageio.webp)
     implementation(libs.webp.imageio)
+    implementation(project(":patra-tool:patra-tool-object-storage"))
     testFixturesImplementation(libs.twelvemonkeys.imageio.webp)
     testFixturesImplementation(libs.webp.imageio)
 
     testImplementation(project(":patra-tool:patra-tool-test"))
+    // 对象存储配置带 @Validated；服务里由 patra-tool-web 带进校验器，infra 的 IT 自己补
+    integrationTestImplementation("org.springframework.boot:spring-boot-starter-validation")
 }
 
 // ip2region 的数据文件（PAP-99）：不进 git、不进镜像。版本与校验和在 patra-infra/scripts/ip2region.properties
