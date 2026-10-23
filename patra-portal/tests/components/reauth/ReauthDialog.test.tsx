@@ -5,8 +5,8 @@ import { USER } from "@tests/fixtures/user";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { ReauthDialog } from "@/components/reauth/ReauthDialog";
-import { reauthenticate } from "@/lib/identity/reauth-actions";
 import { queryKeys } from "@/lib/query-keys";
+import { postReauth as reauthenticate } from "@/lib/reauth/post-reauth";
 import { useReauthStore } from "@/store/reauth";
 
 const router = { replace: vi.fn() };
@@ -15,7 +15,7 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/settings/security",
   useSearchParams: () => new URLSearchParams(),
 }));
-vi.mock("@/lib/identity/reauth-actions", () => ({ reauthenticate: vi.fn() }));
+vi.mock("@/lib/reauth/post-reauth", () => ({ postReauth: vi.fn() }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import { toast } from "sonner";

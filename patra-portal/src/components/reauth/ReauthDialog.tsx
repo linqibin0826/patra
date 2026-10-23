@@ -9,9 +9,9 @@ import { PasswordInput } from "@/components/auth/PasswordInput";
 import { Dialog } from "@/components/ui/dialog";
 import { REAUTH_MESSAGES, waitMinutes } from "@/lib/auth/messages";
 import { useCommonFailureRedirect } from "@/lib/auth/use-common-failure-redirect";
-import { reauthenticate } from "@/lib/identity/reauth-actions";
 import { btnPrimary, btnSecondary } from "@/lib/portal-ui";
 import { queryKeys } from "@/lib/query-keys";
+import { postReauth } from "@/lib/reauth/post-reauth";
 import { useReauthStore } from "@/store/reauth";
 
 /// 再认证对话框（简报 §3.14、§4.9）：store 打开它，验证成功 `settle(true)`、取消或会话没了 `settle(false)`。
@@ -74,9 +74,7 @@ function ReauthForm({
     }
     setFieldError(null);
     markBusy(true);
-    const result = await reauthenticate(password).catch(
-      () => ({ ok: false, reason: "unavailable" }) as const,
-    );
+    const result = await postReauth(password);
     markBusy(false);
     if (result.ok) {
       queryClient.setQueryData(queryKeys.currentUser, result.user);

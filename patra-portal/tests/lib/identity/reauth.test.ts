@@ -2,7 +2,7 @@
 import { ME_RESPONSE, USER } from "@tests/fixtures/user";
 import { resetCookieJar } from "@tests/stubs/cookie-jar";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { reauthenticate } from "@/lib/identity/reauth-actions";
+import { reauthenticate } from "@/lib/identity/reauth";
 
 vi.mock("next/headers", () => import("@tests/stubs/cookie-jar"));
 

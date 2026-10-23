@@ -1,5 +1,4 @@
-"use server";
-
+import "server-only";
 import { z } from "zod";
 import { logUnexpectedResponse } from "@/lib/auth/gateway-response";
 import { writeSessionCookie } from "@/lib/auth/session-cookie";
@@ -28,7 +27,9 @@ const reauthenticatedSchema = z.object({
   user: userSchema,
 });
 
-/// 再认证（`POST /auth/reauth`）：验证密码，刷新本会话的再认证时间。
+/// 再认证（`POST /auth/reauth`）：验证密码，刷新本会话的再认证时间。只由 Route Handler `POST /api/auth/reauth`
+/// 调用，不做成 Server Action：Server Action 里写 Cookie 会让 Next 重新渲染当前页，这次重新渲染可能晚于随后重试
+/// 的原操作才到——注销成功后会话已被撤销，设置页的守卫就把结果屏换成了登录页（spec §18.3）。
 /// - 200：令牌非 null 时换掉 Cookie 里的令牌（旧令牌已失效），为 null 时保持现有 Cookie（两个标签页并发再认证，
 ///   先换出的令牌保持有效）
 /// - 401 含 `PASSWORD_MISMATCH`、422 `password`：`wrong-password`（会话仍有效，不清 Cookie）
