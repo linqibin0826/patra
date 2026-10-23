@@ -494,5 +494,16 @@ class AbstractObjectStorageProviderTest {
     public Optional<ObjectInfo> statObject(String bucket, String key) {
       throw new UnsupportedOperationException("测试用子类不实现此方法");
     }
+
+    @Override
+    public void delete(String bucket, String key) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public int deleteByPrefix(String bucket, String prefix) {
+      validatePrefix(bucket, prefix);
+      return 0;
+    }
   }
 }

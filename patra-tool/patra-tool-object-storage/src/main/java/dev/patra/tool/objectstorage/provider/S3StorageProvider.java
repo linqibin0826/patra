@@ -1,5 +1,6 @@
 package dev.patra.tool.objectstorage.provider;
 
+import dev.patra.tool.objectstorage.domain.DeleteFailedException;
 import dev.patra.tool.objectstorage.domain.DownloadFailedException;
 import dev.patra.tool.objectstorage.domain.DownloadResult;
 import dev.patra.tool.objectstorage.domain.InvalidDownloadRequestException;
@@ -11,18 +12,27 @@ import dev.patra.tool.objectstorage.domain.UploadFailedException;
 import dev.patra.tool.objectstorage.domain.UploadResult;
 import java.io.InputStream;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.Delete;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
@@ -37,6 +47,9 @@ import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 /// @see MinioStorageProvider MinIO 实现(支持自动创建存储桶)
 @Slf4j
 public class S3StorageProvider extends AbstractObjectStorageProvider {
+
+  /// 每批最多删除几个对象（S3 协议上限）。
+  private static final int DELETE_BATCH_SIZE = 1000;
 
   private final S3Client s3Client;
 
@@ -236,5 +249,70 @@ public class S3StorageProvider extends AbstractObjectStorageProvider {
       throw new DownloadFailedException(
           String.format("S3 获取对象信息失败: bucket=%s, key=%s", bucket, key), ex);
     }
+  }
+
+  /// 删除对象；S3 的删除本来就幂等。
+  ///
+  /// @param bucket 存储桶名称
+  /// @param key 对象键
+  /// @throws DeleteFailedException 删除失败
+  @Override
+  public void delete(String bucket, String key) {
+    validateDownloadArguments(bucket, key);
+    try {
+      s3Client.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(key).build());
+    } catch (NoSuchBucketException ex) {
+      // 桶都不在，对象自然不在
+    } catch (Exception ex) {
+      throw new DeleteFailedException(
+          String.format("S3 删除对象失败: bucket=%s, key=%s", bucket, key), ex);
+    }
+  }
+
+  /// 分页列出前缀下的键，按每批最多 1000 个删除。
+  ///
+  /// @param bucket 存储桶名称
+  /// @param prefix 键前缀
+  /// @return 删除的对象个数；桶不存在时为 0
+  /// @throws DeleteFailedException 列举或删除失败
+  @Override
+  public int deleteByPrefix(String bucket, String prefix) {
+    validatePrefix(bucket, prefix);
+    List<ObjectIdentifier> keys = new ArrayList<>();
+    try {
+      s3Client
+          .listObjectsV2Paginator(
+              ListObjectsV2Request.builder().bucket(bucket).prefix(prefix).build())
+          .contents()
+          .forEach(object -> keys.add(ObjectIdentifier.builder().key(object.key()).build()));
+    } catch (NoSuchBucketException ex) {
+      return 0;
+    } catch (Exception ex) {
+      throw new DeleteFailedException(
+          String.format("S3 列举对象失败: bucket=%s, prefix=%s", bucket, prefix), ex);
+    }
+    for (int from = 0; from < keys.size(); from += DELETE_BATCH_SIZE) {
+      List<ObjectIdentifier> batch =
+          keys.subList(from, Math.min(keys.size(), from + DELETE_BATCH_SIZE));
+      DeleteObjectsResponse response;
+      try {
+        response =
+            s3Client.deleteObjects(
+                DeleteObjectsRequest.builder()
+                    .bucket(bucket)
+                    .delete(Delete.builder().objects(batch).build())
+                    .build());
+      } catch (Exception ex) {
+        throw new DeleteFailedException(
+            String.format("S3 批量删除失败: bucket=%s, prefix=%s", bucket, prefix), ex);
+      }
+      if (response.hasErrors() && !response.errors().isEmpty()) {
+        throw new DeleteFailedException(
+            String.format(
+                "S3 批量删除有 %d 个对象失败: bucket=%s, prefix=%s, 例如 %s",
+                response.errors().size(), bucket, prefix, response.errors().getFirst().key()));
+      }
+    }
+    return keys.size();
   }
 }

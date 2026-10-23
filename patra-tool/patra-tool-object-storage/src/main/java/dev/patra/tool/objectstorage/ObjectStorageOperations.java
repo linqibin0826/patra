@@ -86,4 +86,18 @@ public interface ObjectStorageOperations {
   default boolean exists(String bucket, String key) {
     return statObject(bucket, key).isPresent();
   }
+
+  /// 删除一个对象；对象不存在不算错。
+  ///
+  /// @param bucket 存储桶名称
+  /// @param key 对象键
+  void delete(String bucket, String key);
+
+  /// 删除某个前缀下的全部对象。
+  ///
+  /// @param bucket 存储桶名称
+  /// @param prefix 键前缀，不能为空（空前缀会删光整桶）
+  /// @return 删除的对象个数；桶不存在时为 0
+  /// @throws IllegalArgumentException 前缀为空
+  int deleteByPrefix(String bucket, String prefix);
 }

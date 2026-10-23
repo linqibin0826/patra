@@ -867,4 +867,52 @@ class ObjectStorageTemplateTest {
       verify(metrics).recordRetry(ProviderType.MINIO, BUCKET, 2);
     }
   }
+
+  @Nested
+  @DisplayName("删除")
+  class Delete {
+
+    /// 只重试 IOException 的真实重试模板，不退避。
+    private ObjectStorageTemplate retrying() {
+      RetryTemplate retry =
+          RetryTemplate.builder()
+              .maxAttempts(3)
+              .noBackoff()
+              .retryOn(IOException.class)
+              .traversingCauses()
+              .build();
+      return new ObjectStorageTemplate(provider, retry, metrics);
+    }
+
+    @Test
+    @DisplayName("删除委托给提供者")
+    void should_delegate_delete_to_provider() {
+      retrying().delete(BUCKET, KEY);
+
+      verify(provider).delete(BUCKET, KEY);
+    }
+
+    @Test
+    @DisplayName("按前缀删除遇到瞬时故障时重试并返回个数")
+    void should_retry_delete_by_prefix_on_transient_failure() {
+      when(provider.deleteByPrefix(BUCKET, "avatar/1/"))
+          .thenThrow(new RuntimeException(new IOException("reset")))
+          .thenReturn(2);
+
+      int deleted = retrying().deleteByPrefix(BUCKET, "avatar/1/");
+
+      assertThat(deleted).isEqualTo(2);
+      verify(provider, times(2)).deleteByPrefix(BUCKET, "avatar/1/");
+    }
+
+    @Test
+    @DisplayName("空前缀不重试，原样抛出")
+    void should_not_retry_blank_prefix() {
+      when(provider.deleteByPrefix(BUCKET, "")).thenThrow(new IllegalArgumentException("空"));
+
+      assertThatThrownBy(() -> retrying().deleteByPrefix(BUCKET, ""))
+          .isInstanceOf(IllegalArgumentException.class);
+      verify(provider, times(1)).deleteByPrefix(BUCKET, "");
+    }
+  }
 }
