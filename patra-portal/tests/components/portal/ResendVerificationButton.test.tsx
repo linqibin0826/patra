@@ -168,4 +168,22 @@ describe("ResendVerificationButton · 整宽按钮样式", () => {
       "true",
     );
   });
+
+  it("发送中再点不会重复请求", async () => {
+    vi.mocked(resendVerificationEmail).mockReturnValue(new Promise(() => {}));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    client.setQueryData(queryKeys.currentUser, { ...USER, emailVerified: false });
+    render(
+      <QueryClientProvider client={client}>
+        <ResendVerificationButton variant="block" label="重新发送验证邮件" />
+      </QueryClientProvider>,
+    );
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "重新发送验证邮件" }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "发送中…" }));
+    });
+    expect(resendVerificationEmail).toHaveBeenCalledTimes(1);
+  });
 });

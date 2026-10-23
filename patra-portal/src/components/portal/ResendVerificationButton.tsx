@@ -39,6 +39,7 @@ export function ResendVerificationButton({
   const { availableAt, limited, startCooldown, markLimited } = useVerificationResendStore();
   const [now, setNow] = useState(() => Date.now());
   const [sending, setSending] = useState(false);
+  const inFlight = useRef(false);
   const [announcement, setAnnouncement] = useState("");
   const waiting = availableAt !== null && availableAt > now;
   const wasWaiting = useRef(waiting);
@@ -70,10 +71,14 @@ export function ResendVerificationButton({
   }, [waiting]);
 
   async function resend() {
+    // 发送中再点（整宽样式没有 disabled，只有 aria-disabled）一律忽略，只发一次
+    if (inFlight.current) return;
+    inFlight.current = true;
     setSending(true);
     const result = await resendVerificationEmail().catch(
       () => ({ ok: false, reason: "unavailable" }) as const,
     );
+    inFlight.current = false;
     setSending(false);
     if (result.ok) {
       startCooldown(Date.parse(result.nextResendAt) || Date.now() + DEFAULT_WAIT_MS);
