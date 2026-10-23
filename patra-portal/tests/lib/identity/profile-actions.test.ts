@@ -2,7 +2,7 @@
 import { MY_PROFILE } from "@tests/fixtures/profile";
 import { resetCookieJar } from "@tests/stubs/cookie-jar";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { saveProfile } from "@/lib/identity/profile-actions";
+import { savePrivacy, saveProfile } from "@/lib/identity/profile-actions";
 import { toFormValues } from "@/lib/identity/profile-form";
 
 vi.mock("next/headers", () => import("@tests/stubs/cookie-jar"));
@@ -102,5 +102,40 @@ describe("saveProfile", () => {
   it("其他状态码或网络错误：unavailable", async () => {
     fetchMock.mockResolvedValue(reply(500, { code: "IDN-0500" }));
     await expect(saveProfile(VALUES)).resolves.toEqual({ ok: false, reason: "unavailable" });
+  });
+});
+
+describe("savePrivacy", () => {
+  const SETTINGS = {
+    profileVisibility: "SIGNED_IN",
+    professionalVisibility: "SELF",
+    searchIndexing: true,
+  } as const;
+
+  it("PUT 三项，200 返回保存后的设置", async () => {
+    fetchMock.mockResolvedValue(reply(200, SETTINGS));
+    await expect(savePrivacy(SETTINGS)).resolves.toEqual({ ok: true, settings: SETTINGS });
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    expect(url).toBe("http://gw.test/patra-identity/me/privacy");
+    expect(init?.method).toBe("PUT");
+    expect(JSON.parse(String(init?.body))).toEqual(SETTINGS);
+  });
+
+  it.each([
+    [409, { traits: ["CONFLICT", "PENDING_DELETION"] }, "pending-deletion"],
+    [401, { code: "GW-0401" }, "signed-out"],
+    [422, { errors: [{ field: "profileVisibility", code: "INVALID_FORMAT" }] }, "unavailable"],
+    [503, {}, "unavailable"],
+  ])("%i：%s", async (status, body, reason) => {
+    fetchMock.mockResolvedValue(reply(status, body));
+    await expect(savePrivacy(SETTINGS)).resolves.toEqual({ ok: false, reason });
+  });
+
+  it("入参形状不对：unavailable，不请求网关", async () => {
+    await expect(savePrivacy({ ...SETTINGS, searchIndexing: "yes" } as never)).resolves.toEqual({
+      ok: false,
+      reason: "unavailable",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

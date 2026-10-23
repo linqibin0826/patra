@@ -7,7 +7,12 @@ import type { FieldError } from "@/lib/auth/types";
 import { OCCUPATIONS } from "@/lib/identity/occupation";
 import { isSessionRejected } from "@/lib/identity/problem";
 import { type ProfileFormValues, toUpdateRequest } from "@/lib/identity/profile-form";
-import { type MyProfile, myProfileSchema } from "@/lib/identity/profile-schema";
+import {
+  type MyProfile,
+  myProfileSchema,
+  type PrivacySettings,
+  privacySettingsSchema,
+} from "@/lib/identity/profile-schema";
 import { callIdentity, type IdentityReply } from "@/lib/identity/request";
 
 const PROFILE_PATH = "/me/profile";
@@ -102,4 +107,43 @@ export async function saveProfile(values: ProfileFormValues): Promise<SaveProfil
       return { ok: false, reason: "unavailable" };
     }
   }
+}
+
+const PRIVACY_PATH = "/me/privacy";
+
+/// 保存隐私设置的结果
+export type SavePrivacyResult =
+  | { ok: true; settings: PrivacySettings }
+  | { ok: false; reason: "pending-deletion" | "signed-out" | "unavailable" };
+
+/// 保存隐私设置（`PUT /me/privacy`，三项必填）。会话失效时清掉会话 Cookie；422 是门户自己发错了值，
+/// 按 `unavailable` 处理并记日志。
+export async function savePrivacy(settings: PrivacySettings): Promise<SavePrivacyResult> {
+  const input = privacySettingsSchema.safeParse(settings);
+  if (!input.success) {
+    return { ok: false, reason: "unavailable" };
+  }
+  const reply = await callIdentity(PRIVACY_PATH, { method: "PUT", json: input.data });
+  if (reply.kind === "no-session") {
+    return { ok: false, reason: "signed-out" };
+  }
+  if (reply.kind === "ok") {
+    const parsed = privacySettingsSchema.safeParse(reply.body);
+    if (reply.res.status === 200 && parsed.success) {
+      return { ok: true, settings: parsed.data };
+    }
+    logUnexpectedResponse(`/patra-identity${PRIVACY_PATH}`, reply.res.status, reply.body);
+  }
+  if (reply.kind === "problem") {
+    const { problem } = reply;
+    if (isSessionRejected(problem)) {
+      await clearSessionCookie();
+      return { ok: false, reason: "signed-out" };
+    }
+    if (problem.status === 409 && problem.traits.has("PENDING_DELETION")) {
+      return { ok: false, reason: "pending-deletion" };
+    }
+    logUnexpectedResponse(`/patra-identity${PRIVACY_PATH}`, problem.status, { code: problem.code });
+  }
+  return { ok: false, reason: "unavailable" };
 }
