@@ -1,6 +1,6 @@
 # 门户用户中心：账号、安全、再认证、找回密码、邮件落地页、取消注销工程设计（PAP-102）
 
-> **状态**：草稿（2026-10-23），待用户审阅
+> **状态**：已实施（2026-10-23），待用户验收；实施结果见第 18 节
 > **Issue**：Linear PAP-102（GitHub #268），v0.12 User Center 的第二个、也是最后一个前端 Issue
 > **分支**：`feat/v0.12-user-center-portal`（接在 PAP-101 的提交后面，两个 Issue 合一个前端 PR）
 > **产品定义**：`docs/patra/release-specs/v0.12-user-center.md` 2.1 节与第 4 节
@@ -390,7 +390,7 @@ reading ──► ready ──点按钮──► submitting ──► succeeded
 ## 11. 时间显示
 
 - 全部按 `Asia/Shanghai` 格式化（`format-time.ts`，`Intl.DateTimeFormat` 固定 `timeZone`），沿用 `PapersInfoRow` 的做法；安全邮件也写「北京时间」。简报 §3.10 写「本地时区」：用户群在国内，固定时区换来服务端与浏览器渲染一致、没有水合差异（第 17 节记一笔）。
-- 函数：`formatDate(iso)` → `2026 年 11 月 19 日`；`formatDateTime(iso)` → `2026-10-20 09:12`；`formatClock(iso, now)` → 同一天 `15:42`，否则 `11 月 6 日 15:42`；`formatRelative(iso, now)` → `刚刚`（< 1 分钟）/ `N 分钟前` / `N 小时前`（< 24 小时且同一天）/ `昨天 HH:mm` / `N 天前`（≤ 7 天）/ `YYYY-MM-DD`。
+- 函数：`formatDate(iso)` → `2026 年 11 月 19 日`；`formatDateTime(iso)` → `2026-10-20 09:12`；`formatClock(iso, now)` → 同一天 `15:42`，否则 `11 月 6 日 15:42`；`formatRelative(iso, now)` → `刚刚`（< 1 分钟）/ `N 分钟前` / `N 小时前`（< 24 小时且同一天）/ `昨天 HH:mm` / `N 天前`（≤ 7 天）/ 再早写日期（今年 `10 月 15 日`，往年带年份，照画板 Security）。
 - 相对时间只在客户端组件里算（设备列表是客户端查询，天然不参与服务端渲染）。
 
 ## 12. 安全
@@ -450,7 +450,7 @@ reading ──► ready ──点按钮──► submitting ──► succeeded
 
 简报没写、由我补（看到不对就改）：
 
-- 重设密码 429 提示条：`请求太频繁，请 N 分钟后再试`
+- 重设密码 429 提示条：`提交太频繁，请 N 分钟后再试`（照画板 Landing）
 - 改邮箱输入为空：`请输入邮箱`
 - 改用户名前端发现与当前相同：用后端 `UNCHANGED` 的 `新用户名和现在的一样`
 - 待确认块跨天时的时刻：`M 月 D 日 HH:mm 前有效`
@@ -479,3 +479,38 @@ reading ──► ready ──点按钮──► submitting ──► succeeded
 10. 落地页片段里没有令牌或格式不对时直接显示无效屏，不等点按钮（§8.3）。
 11. 冒烟覆盖七条路径，超出 Issue 写的三条：PAP-101 页面与四个落地页里能用真邮件走通的都放进来（§13.2）。
 12. 补的文案（§15）。
+
+## 18. 实施结果（2026-10-23）
+
+按计划 `docs/patra/plans/2026-10-23-portal-user-center-account-security.md` 的 22 个任务在 `feat/v0.12-user-center-portal` 上内联 TDD 完成，未推送、未开 PR（与 PAP-101 合一个前端 PR）。
+
+### 18.1 门禁
+
+- `pnpm lint`、`pnpm typecheck`、`pnpm test`（Vitest 213 个文件 2035 条）全绿；`pnpm build` 通过。
+- Playwright：`tests/e2e/user-center.spec.ts` 七条 + `auth.spec.ts` 对 mini 网关与 Mailpit `--workers=1` 全过；全部 e2e 一起跑时 `detail-rail-sticky` 偶发一条冷编译超时，单独重跑通过（与本 Issue 无关的老问题）。不带环境变量时七条全部跳过。
+
+### 18.2 实测（spec §14）
+
+1. 两个独立的 base-ui 模态叠放：jsdom 里上层可聚焦、输入，`Esc` 只关上层（`tests/components/reauth/stacked-dialogs.test.tsx`）；真浏览器复核见 18.4。
+2. 再认证、改密码写 Cookie 后的重新渲染不打断进行中状态：改密码 e2e（本机仍登录、另一台设备回登录页）与再认证真浏览器核对通过。
+3. `endDeletedSession` 的 `redirect("/")` 先于设置页重新渲染生效：注销 e2e 落在首页、导航栏是「登录」，没有闪到登录页。
+4. proxy 放宽 matcher 后静态资源、`/api/*` 不进 proxy；首页本来就是动态渲染，路由表无变化。e2e 暴露了一个回归并已修（18.3 第 1 条）。
+5. 冷静期整页打开 `/papers` 被 307 到 `/account/deletion-pending?next=%2Fpapers`，取消后回到 `/papers`（e2e）。
+6. 落地页读完令牌后地址栏不含 `#token=`（组件测试断言 `location.hash` 为空；e2e 断言 URL 已去掉片段）。
+
+### 18.3 实施中的偏离与修正
+
+1. **proxy 列表页回归**（e2e 发现）：matcher 覆盖全部页面后，`/papers`、`/journals` 列表页进入了详情页的存在检查，空 id 被改写到 404 页。改为只有恰好 `/papers/:id`、`/journals/:id` 两段的地址才检查。
+2. **落地页在严格模式下读两次片段**（e2e 发现）：开发模式 effect 跑两次，第二次时片段已被抹掉，显示「链接无效」。令牌改为记在 ref 里只读一次。
+3. **倒计时首帧多出一截**（高负载下全量单测暴露）：换了新的截止时间后第一次渲染用的是旧的「当前时间」。`useCountdown` 改为渲染时按当前时间算。PAP-101 的 `ResendVerificationButton` 有同样写法，未改（留作后续）。
+4. 会话 `id` 只接受字符串（计划写数字或字符串）：雪花 ID 作为 JSON 数字解析时已丢精度；后端按字符串序列化。
+5. `REAUTH_REQUIRED` 没有并进 `CommonFailure`，只在四个要再认证的 Action 里由 `isReauthRequired` 识别（spec §6.1 已按此修订）。
+6. 按画板补的组件与写法：专注布局标题上方的 44px 状态图标（`StateIcon`，`AuthShell` / `Dialog` 加 `icon`）、文字按钮与危险按钮（`portal-ui` 的 `btnText`、`btnDanger`、`btnDangerOutline`）、状态小胶囊（`StatusPill`，主页「仅你可见」一并改用）、注销第 2 屏标题「确认注销」、找回密码已发送态的信息图标、验证页无效屏的整宽「重新发送验证邮件」（`ResendVerificationButton variant="block"`）。
+7. 文案按画板：重设密码 429 是「提交太频繁，请 N 分钟后再试」（§15 原写「请求太频繁」）；验证页「已登录且已验证」的说法是「你的邮箱 X 已经验证过了。」；设备列表超过 7 天写「10 月 15 日」（往年带年份），§11 原写 `YYYY-MM-DD`。
+8. 窄屏下「退出其他所有设备」落到卡片说明下方（`SettingsCard asidePlacement="block"`），照画板 `Security-M`。
+9. 落地页状态机加了 `leaving` 结果：重设成功跳登录页期间按钮保持进行中，不能重复提交已消费的令牌。
+10. 再认证对话框用组件内状态而不是 RHF（只有一个密码框）；`Dialog` 加 `initialFocus`，焦点落在密码框而不是标签行里的「忘记密码？」。
+
+### 18.4 预览走查
+
+本机门户连 mini 网关，Playwright 无头浏览器在 1440×900 与 375×812 下截了账号页（默认、冷却 + 待确认 + 未验证）、注销对话框三屏、安全页、四个落地页就绪态与无效态、忘记密码、登录页、取消注销页（桌面、移动），与画板 `Account` / `Security` / `Landing` / `Main`（含 `-M`）离线截图逐屏对照，差异已修（18.3 第 7、8 条）。登录页「还没有账号？注册」画板居中、页面左对齐，是 v0.8 起的旧写法，未动。
