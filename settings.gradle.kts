@@ -101,6 +101,7 @@ includeAt(":patra-api:patra-object-storage:patra-object-storage-adapter", "patra
 includeAt(":patra-api:patra-object-storage:patra-object-storage-boot", "patra-api/patra-object-storage/patra-object-storage-boot")
 mapParent(":patra-api:patra-object-storage", "patra-api/patra-object-storage")
 
+includeAt(":patra-api:patra-identity:patra-identity-api", "patra-api/patra-identity/patra-identity-api")
 includeAt(":patra-api:patra-identity:patra-identity-domain", "patra-api/patra-identity/patra-identity-domain")
 includeAt(":patra-api:patra-identity:patra-identity-app", "patra-api/patra-identity/patra-identity-app")
 includeAt(":patra-api:patra-identity:patra-identity-infra", "patra-api/patra-identity/patra-identity-infra")

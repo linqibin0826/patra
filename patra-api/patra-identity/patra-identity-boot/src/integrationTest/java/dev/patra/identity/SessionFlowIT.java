@@ -180,6 +180,32 @@ class SessionFlowIT {
   }
 
   @Test
+  @DisplayName("网关查会话（PAP-106）：不带断言能到达；登录后 active 且身份对得上，登出后、乱写的令牌都是 inactive")
+  void should_introspect_session_for_gateway() {
+    EntityExchangeResult<String> registered = register("flow.introspect@example.com");
+    String token = tokenOf(registered);
+    long userId = userIdOf(registered);
+    long sessionId = latestSessionIdOf(userId);
+
+    JsonNode active = JSON.readTree(introspect(token).getResponseBody());
+    assertThat(active.get("active").asBoolean()).isTrue();
+    assertThat(active.get("userId").asString()).isEqualTo(Long.toString(userId));
+    assertThat(active.get("sessionId").asString()).isEqualTo(Long.toString(sessionId));
+    assertThat(active.get("accountType").asString()).isEqualTo("USER");
+    assertThat(active.get("clientType").asString()).isEqualTo("WEB");
+
+    assertThat(logout(assertionFor(userId, sessionId)).getStatus().value()).isEqualTo(204);
+
+    assertThat(JSON.readTree(introspect(token).getResponseBody()).get("active").asBoolean())
+        .isFalse();
+    assertThat(
+            JSON.readTree(introspect("patra_user_forged").getResponseBody())
+                .get("active")
+                .asBoolean())
+        .isFalse();
+  }
+
+  @Test
   @DisplayName("封禁后全部会话消失、记录标 BANNED，断言还在有效期内也拿不到当前用户；解封后能重新登录")
   void should_ban_and_revoke_all_sessions() {
     EntityExchangeResult<String> registered = register("flow.ban@example.com");
@@ -281,6 +307,17 @@ class SessionFlowIT {
         .exchange()
         .expectBody(String.class)
         .returnResult();
+  }
+
+  /// 按令牌查会话，和网关一样不带断言。
+  ///
+  /// @param token 令牌原文
+  /// @return 响应，状态必须是 200
+  private EntityExchangeResult<String> introspect(String token) {
+    EntityExchangeResult<String> result =
+        post("/_internal/sessions/introspect", Map.of("token", token));
+    assertThat(result.getStatus().value()).isEqualTo(200);
+    return result;
   }
 
   /// 登出，带或不带断言。
