@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { logUnexpectedResponse } from "@/lib/auth/gateway-response";
-import { clearSessionCookie, readSessionToken } from "@/lib/auth/session-cookie";
+import { isRecord } from "@/lib/auth/gateway-response";
+import { readSessionToken } from "@/lib/auth/session-cookie";
 import type { AvatarMutationResult } from "@/lib/identity/avatar-upload";
-import { isSessionRejected } from "@/lib/identity/problem";
+import { settleFailure, unexpectedProblem } from "@/lib/identity/mutation-failure";
 import { callIdentity, type IdentityReply } from "@/lib/identity/request";
 import { isSameOrigin } from "@/lib/same-origin";
 
@@ -18,19 +18,19 @@ function reply(status: number, body: AvatarMutationResult): NextResponse {
   return NextResponse.json(body, { status, headers: NO_STORE });
 }
 
-/// 网关的失败 → 门户的结果（spec §11）。会话失效时顺手清会话 Cookie。
-async function failure(identity: IdentityReply, endpoint: string): Promise<NextResponse> {
-  if (identity.kind === "no-session") {
-    return reply(401, { ok: false, reason: "signed-out" });
+/// 几种共同失败的状态码
+const COMMON_STATUS = { "signed-out": 401, "pending-deletion": 409, unavailable: 503 } as const;
+
+/// 网关的失败 → 门户的结果（spec §11）。会话失效时顺手清会话 Cookie（`settleFailure`）。
+async function failure(
+  identity: Exclude<IdentityReply, { kind: "ok" }>,
+  endpoint: string,
+): Promise<NextResponse> {
+  const settled = await settleFailure(identity);
+  if ("failure" in settled) {
+    return reply(COMMON_STATUS[settled.failure.reason], settled.failure);
   }
-  if (identity.kind !== "problem") {
-    return reply(503, { ok: false, reason: "unavailable" });
-  }
-  const { problem } = identity;
-  if (isSessionRejected(problem)) {
-    await clearSessionCookie();
-    return reply(401, { ok: false, reason: "signed-out" });
-  }
+  const { problem } = settled;
   if (problem.status === 413) {
     return reply(413, { ok: false, reason: "too-large" });
   }
@@ -41,11 +41,7 @@ async function failure(identity: IdentityReply, endpoint: string): Promise<NextR
       code: problem.errors[0]?.code ?? "REQUIRED",
     });
   }
-  if (problem.status === 409 && problem.traits.has("PENDING_DELETION")) {
-    return reply(409, { ok: false, reason: "pending-deletion" });
-  }
-  logUnexpectedResponse(endpoint, problem.status, { code: problem.code });
-  return reply(503, { ok: false, reason: "unavailable" });
+  return reply(503, unexpectedProblem(endpoint, problem));
 }
 
 /// 上传裁好的头像：同源校验 → 会话 → 长度头（缺失或不合法 411，超 6 MB 413，都不读体）→ 取 `file` →
@@ -76,10 +72,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   body.append("file", file, file.name);
   const identity = await callIdentity("/me/avatar", { method: "POST", body, timeoutMs: 30_000 });
   if (identity.kind === "ok") {
-    const avatarUrl =
-      typeof identity.body === "object" && identity.body !== null && "avatarUrl" in identity.body
-        ? identity.body.avatarUrl
-        : null;
+    const avatarUrl = isRecord(identity.body) ? identity.body.avatarUrl : null;
     return typeof avatarUrl === "string"
       ? reply(200, { ok: true, avatarUrl })
       : reply(503, { ok: false, reason: "unavailable" });

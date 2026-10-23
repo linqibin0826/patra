@@ -2,10 +2,9 @@
 
 import { z } from "zod";
 import { logUnexpectedResponse } from "@/lib/auth/gateway-response";
-import { clearSessionCookie } from "@/lib/auth/session-cookie";
 import type { FieldError } from "@/lib/auth/types";
+import { settleFailure, unexpectedProblem } from "@/lib/identity/mutation-failure";
 import { OCCUPATIONS } from "@/lib/identity/occupation";
-import { isSessionRejected } from "@/lib/identity/problem";
 import { type ProfileFormValues, toUpdateRequest } from "@/lib/identity/profile-form";
 import {
   type MyProfile,
@@ -16,6 +15,7 @@ import {
 import { callIdentity, type IdentityReply } from "@/lib/identity/request";
 
 const PROFILE_PATH = "/me/profile";
+const PROFILE_ENDPOINT = `/patra-identity${PROFILE_PATH}`;
 
 /// 保存资料的结果。不带文案，表单按 `reason` 与字段原因码选文案。
 export type SaveProfileResult =
@@ -71,46 +71,34 @@ export async function saveProfile(values: ProfileFormValues): Promise<SaveProfil
   if (isTransientConflict(reply)) {
     reply = await callIdentity(PROFILE_PATH, request);
   }
-  switch (reply.kind) {
-    case "no-session":
-      return { ok: false, reason: "signed-out" };
-    case "error":
-      return { ok: false, reason: "unavailable" };
-    case "ok": {
-      const parsed = myProfileSchema.safeParse(reply.body);
-      if (reply.res.status === 200 && parsed.success) {
-        return { ok: true, profile: parsed.data };
-      }
-      logUnexpectedResponse(`/patra-identity${PROFILE_PATH}`, reply.res.status, reply.body);
-      return { ok: false, reason: "unavailable" };
+  if (reply.kind === "ok") {
+    const parsed = myProfileSchema.safeParse(reply.body);
+    if (reply.res.status === 200 && parsed.success) {
+      return { ok: true, profile: parsed.data };
     }
-    case "problem": {
-      const { problem } = reply;
-      if (isSessionRejected(problem)) {
-        await clearSessionCookie();
-        return { ok: false, reason: "signed-out" };
-      }
-      if (problem.status === 422 && problem.errors.length > 0) {
-        return { ok: false, reason: "invalid-fields", fieldErrors: problem.errors };
-      }
-      // identity 自己回的 503（`IDN-0503`）才是 catalog 不可用；网关的 503 是 identity 连不上
-      if (problem.status === 503 && problem.code === "IDN-0503") {
-        return { ok: false, reason: "catalog-unavailable" };
-      }
-      if (problem.status === 409) {
-        return problem.traits.has("PENDING_DELETION")
-          ? { ok: false, reason: "pending-deletion" }
-          : { ok: false, reason: "conflict" };
-      }
-      logUnexpectedResponse(`/patra-identity${PROFILE_PATH}`, problem.status, {
-        code: problem.code,
-      });
-      return { ok: false, reason: "unavailable" };
-    }
+    logUnexpectedResponse(PROFILE_ENDPOINT, reply.res.status, reply.body);
+    return { ok: false, reason: "unavailable" };
   }
+  const settled = await settleFailure(reply);
+  if ("failure" in settled) {
+    return settled.failure;
+  }
+  const { problem } = settled;
+  if (problem.status === 422 && problem.errors.length > 0) {
+    return { ok: false, reason: "invalid-fields", fieldErrors: problem.errors };
+  }
+  // identity 自己回的 503（`IDN-0503`）才是 catalog 不可用；网关的 503 是 identity 连不上
+  if (problem.status === 503 && problem.code === "IDN-0503") {
+    return { ok: false, reason: "catalog-unavailable" };
+  }
+  if (problem.status === 409) {
+    return { ok: false, reason: "conflict" };
+  }
+  return unexpectedProblem(PROFILE_ENDPOINT, problem);
 }
 
 const PRIVACY_PATH = "/me/privacy";
+const PRIVACY_ENDPOINT = `/patra-identity${PRIVACY_PATH}`;
 
 /// 保存隐私设置的结果
 export type SavePrivacyResult =
@@ -125,26 +113,16 @@ export async function savePrivacy(settings: PrivacySettings): Promise<SavePrivac
     return { ok: false, reason: "unavailable" };
   }
   const reply = await callIdentity(PRIVACY_PATH, { method: "PUT", json: input.data });
-  if (reply.kind === "no-session") {
-    return { ok: false, reason: "signed-out" };
-  }
   if (reply.kind === "ok") {
     const parsed = privacySettingsSchema.safeParse(reply.body);
     if (reply.res.status === 200 && parsed.success) {
       return { ok: true, settings: parsed.data };
     }
-    logUnexpectedResponse(`/patra-identity${PRIVACY_PATH}`, reply.res.status, reply.body);
+    logUnexpectedResponse(PRIVACY_ENDPOINT, reply.res.status, reply.body);
+    return { ok: false, reason: "unavailable" };
   }
-  if (reply.kind === "problem") {
-    const { problem } = reply;
-    if (isSessionRejected(problem)) {
-      await clearSessionCookie();
-      return { ok: false, reason: "signed-out" };
-    }
-    if (problem.status === 409 && problem.traits.has("PENDING_DELETION")) {
-      return { ok: false, reason: "pending-deletion" };
-    }
-    logUnexpectedResponse(`/patra-identity${PRIVACY_PATH}`, problem.status, { code: problem.code });
-  }
-  return { ok: false, reason: "unavailable" };
+  const settled = await settleFailure(reply);
+  return "failure" in settled
+    ? settled.failure
+    : unexpectedProblem(PRIVACY_ENDPOINT, settled.problem);
 }
