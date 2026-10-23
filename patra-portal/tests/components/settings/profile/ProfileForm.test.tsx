@@ -120,6 +120,13 @@ describe("ProfileForm · 保存条", () => {
     expect(saveBar()).not.toBeInTheDocument();
   });
 
+  it("有未保存的修改时点「更改」（去隐私页）：先弹离开确认", async () => {
+    const { user } = renderForm();
+    await user.type(nickname(), "!");
+    await user.click(screen.getByRole("link", { name: "更改" }));
+    expect(await screen.findByRole("dialog", { name: "有未保存的修改" })).toBeInTheDocument();
+  });
+
   it("保存成功：提交表单值，提示「资料已保存」，保存条消失，刷新当前用户与页面", async () => {
     const { user, invalidate } = renderForm();
     await user.clear(nickname());

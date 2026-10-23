@@ -10,6 +10,7 @@ import { type FieldPath, FormProvider, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { FormAlert } from "@/components/auth/FormAlert";
 import { FormField } from "@/components/auth/FormField";
+import { LeaveGuard } from "@/components/settings/LeaveGuard";
 import { CharCounter } from "@/components/settings/profile/CharCounter";
 import { LinkListField } from "@/components/settings/profile/LinkListField";
 import { SettingsCard } from "@/components/settings/SettingsCard";
@@ -292,6 +293,7 @@ export function ProfileForm({ initial, user, privacy }: ProfileFormProps) {
 
         {alert && <FormAlert>{alert}</FormAlert>}
         {isDirty && <StickySaveBar saving={saving} onDiscard={() => reset()} />}
+        <LeaveGuard when={isDirty && !saving} />
       </form>
     </FormProvider>
   );
