@@ -1,5 +1,6 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { type LandingOutcome, TokenLandingPage } from "@/components/landing/TokenLandingPage";
@@ -133,6 +134,27 @@ describe("TokenLandingPage", () => {
     );
     await user.click(screen.getByRole("button", { name: "验证中…" }));
     expect(submit).toHaveBeenCalledTimes(1);
+  });
+
+  it("严格模式下 effect 跑两次：令牌只读一次，不会因为片段已被抹掉而显示无效", async () => {
+    window.history.replaceState(null, "", `/verify-email#token=${TOKEN}`);
+    render(
+      <StrictMode>
+        <TokenLandingPage<string>
+          title="验证你的邮箱"
+          description="点下面的按钮完成验证。"
+          actionLabel="验证邮箱"
+          pendingLabel="验证中…"
+          submit={vi.fn()}
+          renderSucceeded={() => ({ tone: "success", title: "邮箱已验证", description: "" })}
+          renderInvalid={() => ({ tone: "danger", title: "链接无效或已过期", description: "" })}
+        />
+      </StrictMode>,
+    );
+    expect(await screen.findByRole("button", { name: "验证邮箱" })).not.toHaveAttribute(
+      "aria-disabled",
+    );
+    expect(screen.queryByRole("heading", { name: "链接无效或已过期" })).not.toBeInTheDocument();
   });
 
   it("「返回」去首页", async () => {

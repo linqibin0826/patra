@@ -74,8 +74,14 @@ export function TokenLandingPage<S, C = never>({
   const [phase, setPhase] = useState<Phase<S, C>>({ name: "reading" });
   const actionRef = useRef<HTMLButtonElement | null>(null);
 
+  // 读到的令牌记在 ref 里：严格模式下 effect 会跑两次，第二次时片段已经被抹掉了
+  const tokenRef = useRef<string | null | undefined>(undefined);
+
   useEffect(() => {
-    const token = readFragmentToken(window.location.hash);
+    if (tokenRef.current === undefined) {
+      tokenRef.current = readFragmentToken(window.location.hash);
+    }
+    const token = tokenRef.current;
     if (window.location.hash) {
       window.history.replaceState(
         window.history.state,
