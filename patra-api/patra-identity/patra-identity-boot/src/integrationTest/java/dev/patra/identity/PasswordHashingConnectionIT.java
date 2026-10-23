@@ -7,6 +7,7 @@ import static org.mockito.Mockito.doAnswer;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.HikariPoolMXBean;
 import dev.patra.identity.config.IdentityITPostgreSQLContainerInitializer;
+import dev.patra.identity.config.IdentityMailITSpringConfig;
 import dev.patra.identity.domain.port.hashing.PasswordHashingPort;
 import dev.patra.tool.test.container.initializer.RedisContainerInitializer;
 import dev.patra.tool.test.mail.GreenMailSmtpInitializer;
@@ -22,6 +23,7 @@ import org.mockito.stubbing.Answer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
@@ -37,6 +39,7 @@ import org.springframework.test.web.servlet.client.RestTestClient;
       GreenMailSmtpInitializer.class
     })
 @ActiveProfiles("test")
+@Import(IdentityMailITSpringConfig.class)
 @AutoConfigureRestTestClient
 @DisplayName("哈希期间不占数据库连接")
 class PasswordHashingConnectionIT {

@@ -3,6 +3,7 @@ package dev.patra.identity;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.identity.config.IdentityITPostgreSQLContainerInitializer;
+import dev.patra.identity.config.IdentityMailITSpringConfig;
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.ClientType;
 import dev.patra.tool.core.security.CurrentUser;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -35,6 +37,7 @@ import tools.jackson.databind.node.ObjectNode;
       GreenMailSmtpInitializer.class
     })
 @ActiveProfiles("test")
+@Import(IdentityMailITSpringConfig.class)
 @AutoConfigureRestTestClient
 @DisplayName("登录与当前用户按四态分流")
 class UserStatusFlowIT {

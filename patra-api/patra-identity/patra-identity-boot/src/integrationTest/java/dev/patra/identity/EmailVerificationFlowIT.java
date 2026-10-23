@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.icegreen.greenmail.util.GreenMail;
 import dev.patra.identity.config.IdentityClockITSpringConfig;
 import dev.patra.identity.config.IdentityITPostgreSQLContainerInitializer;
+import dev.patra.identity.config.IdentityMailITSpringConfig;
 import dev.patra.identity.domain.port.mail.EmailVerificationMail;
 import dev.patra.identity.infra.adapter.session.SessionToken;
 import dev.patra.tool.core.security.AccountType;
@@ -71,7 +72,7 @@ import tools.jackson.databind.json.JsonMapper;
     })
 @ActiveProfiles("test")
 @AutoConfigureRestTestClient
-@Import(IdentityClockITSpringConfig.class)
+@Import({IdentityClockITSpringConfig.class, IdentityMailITSpringConfig.class})
 @ExtendWith(OutputCaptureExtension.class)
 @DisplayName("邮箱验证的完整流程")
 class EmailVerificationFlowIT {

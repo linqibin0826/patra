@@ -3,6 +3,7 @@ package dev.patra.identity;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.identity.config.IdentityITPostgreSQLContainerInitializer;
+import dev.patra.identity.config.IdentityMailITSpringConfig;
 import dev.patra.tool.test.mail.GreenMailSmtpInitializer;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
@@ -30,6 +32,7 @@ import tools.jackson.databind.json.JsonMapper;
 @ContextConfiguration(
     initializers = {IdentityITPostgreSQLContainerInitializer.class, GreenMailSmtpInitializer.class})
 @ActiveProfiles("test")
+@Import(IdentityMailITSpringConfig.class)
 @AutoConfigureRestTestClient
 @DisplayName("Redis 不可用时注册回滚、登录返回 503")
 class RedisUnavailableIT {

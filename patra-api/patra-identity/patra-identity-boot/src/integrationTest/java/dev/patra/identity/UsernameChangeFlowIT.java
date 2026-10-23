@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.identity.config.IdentityClockITSpringConfig;
 import dev.patra.identity.config.IdentityITPostgreSQLContainerInitializer;
+import dev.patra.identity.config.IdentityMailITSpringConfig;
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.ClientType;
 import dev.patra.tool.core.security.CurrentUser;
@@ -53,7 +54,7 @@ import tools.jackson.databind.json.JsonMapper;
     })
 @ActiveProfiles("test")
 @AutoConfigureRestTestClient
-@Import(IdentityClockITSpringConfig.class)
+@Import({IdentityClockITSpringConfig.class, IdentityMailITSpringConfig.class})
 @DisplayName("改名的完整流程")
 class UsernameChangeFlowIT {
 

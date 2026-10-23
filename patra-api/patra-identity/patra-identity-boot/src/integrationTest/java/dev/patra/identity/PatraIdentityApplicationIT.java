@@ -3,6 +3,7 @@ package dev.patra.identity;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.identity.config.IdentityITPostgreSQLContainerInitializer;
+import dev.patra.identity.config.IdentityMailITSpringConfig;
 import dev.patra.tool.test.container.initializer.RedisContainerInitializer;
 import dev.patra.tool.test.mail.GreenMailSmtpInitializer;
 import java.util.List;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
@@ -24,6 +26,7 @@ import org.springframework.test.context.ContextConfiguration;
       GreenMailSmtpInitializer.class
     })
 @ActiveProfiles("test")
+@Import(IdentityMailITSpringConfig.class)
 @DisplayName("identity 应用启动")
 class PatraIdentityApplicationIT {
 

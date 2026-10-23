@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import dev.patra.identity.config.IdentityITPostgreSQLContainerInitializer;
+import dev.patra.identity.config.IdentityMailITSpringConfig;
 import dev.patra.tool.test.container.initializer.RedisContainerInitializer;
 import dev.patra.tool.test.mail.GreenMailSmtpInitializer;
 import java.time.Duration;
@@ -19,6 +20,7 @@ import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTe
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -39,6 +41,7 @@ import tools.jackson.databind.node.ObjectNode;
       GreenMailSmtpInitializer.class
     })
 @ActiveProfiles("test")
+@Import(IdentityMailITSpringConfig.class)
 @AutoConfigureRestTestClient
 @ExtendWith(OutputCaptureExtension.class)
 @DisplayName("前台用户账号的完整流程")
