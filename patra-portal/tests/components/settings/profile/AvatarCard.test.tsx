@@ -19,6 +19,9 @@ vi.mock("@/lib/identity/avatar-file", async (importOriginal) => ({
   checkAvatarFile: vi.fn(),
   exportCrop: vi.fn(),
 }));
+/// 裁剪库的桩挂上时要不要报裁剪区域：关掉相当于新图还没加载完
+const cropper = vi.hoisted(() => ({ reports: true }));
+
 /// 裁剪库换成一个挂上就报一次裁剪区域的桩：jsdom 里量不出图片尺寸
 vi.mock("react-easy-crop", async () => {
   const { useEffect } = await import("react");
@@ -29,6 +32,7 @@ vi.mock("react-easy-crop", async () => {
       onCropComplete: (a: unknown, b: unknown) => void;
     }) {
       useEffect(() => {
+        if (!cropper.reports) return;
         onCropComplete(
           { x: 0, y: 0, width: 100, height: 100 },
           { x: 0, y: 0, width: 800, height: 800 },
@@ -63,9 +67,14 @@ async function chooseFile(type = "image/png") {
 }
 
 beforeEach(() => {
+  cropper.reports = true;
+  let objectUrls = 0;
   vi.stubGlobal(
     "URL",
-    Object.assign(URL, { createObjectURL: vi.fn(() => "blob:x"), revokeObjectURL: vi.fn() }),
+    Object.assign(URL, {
+      createObjectURL: vi.fn(() => `blob:${++objectUrls}`),
+      revokeObjectURL: vi.fn(),
+    }),
   );
   vi.mocked(checkAvatarFile).mockResolvedValue(null);
   vi.mocked(exportCrop).mockResolvedValue(new Blob(["png"], { type: "image/png" }));
@@ -133,6 +142,19 @@ describe("AvatarCard", () => {
     expect(toast.success).toHaveBeenCalledWith("头像已更新");
     expect(client.getQueryData<CurrentUser>(queryKeys.currentUser)?.avatarUrl).toBe(AVATAR_URL);
     expect(router.refresh).toHaveBeenCalled();
+  });
+
+  it("换一张图：新图报出裁剪区域之前不能上传，不会拿上一张的区域去裁", async () => {
+    const { user } = renderCard();
+    await chooseFile();
+    await user.click(await screen.findByRole("button", { name: "取消" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    cropper.reports = false;
+    await chooseFile();
+    const confirm = await screen.findByRole("button", { name: "使用这张头像" });
+    expect(confirm).toHaveAttribute("aria-disabled", "true");
+    await user.click(confirm);
+    expect(exportCrop).not.toHaveBeenCalled();
   });
 
   it("服务端拒绝：对话框不关，标题下提示条", async () => {

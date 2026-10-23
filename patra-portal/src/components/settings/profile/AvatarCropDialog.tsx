@@ -35,11 +35,19 @@ export function AvatarCropDialog({ file, onCancel, onUpload }: AvatarCropDialogP
   const [pixels, setPixels] = useState<CropArea | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [shownSrc, setShownSrc] = useState(src);
 
-  useEffect(() => {
+  // 换了图就在渲染时重置（早于裁剪库的 effect）：上一张图的裁剪区域作废，新图报出区域之前不能上传
+  if (src !== shownSrc) {
+    setShownSrc(src);
     setCrop({ x: 0, y: 0 });
     setZoom(1);
     setError(null);
+    setArea(null);
+    setPixels(null);
+  }
+
+  useEffect(() => {
     return () => {
       if (src) URL.revokeObjectURL(src);
     };
