@@ -10,4 +10,6 @@ export const queryKeys = {
   meshSuggest: (q: string) => ["mesh-suggest", q] as const,
   /** 当前用户：导航栏读取；注册、登录、登出之后由页面直接写入 */
   currentUser: ["current-user"] as const,
+  /** 登录设备列表：安全页读取；改密码、踢设备后失效 */
+  sessions: ["sessions"] as const,
 };

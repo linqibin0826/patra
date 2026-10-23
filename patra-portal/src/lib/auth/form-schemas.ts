@@ -14,6 +14,13 @@ const emailField = z
   .max(254, FIELD_MESSAGES.emailInvalid)
   .pipe(z.email(FIELD_MESSAGES.emailInvalid));
 
+/// 新密码：8 ~ 64 位，不去空格（注册、改密码、重设密码共用；常见密码名单只在后端判）
+const newPasswordField = z
+  .string()
+  .min(1, FIELD_MESSAGES.passwordRequired)
+  .refine((value) => codePoints(value) >= 8, FIELD_MESSAGES.passwordTooShort)
+  .refine((value) => codePoints(value) <= 64, FIELD_MESSAGES.passwordTooLong);
+
 /// 登录表单：后端的登录接口只检查密码非空，前端也只查这一条，不去空格
 export const loginSchema = z.object({
   email: emailField,
@@ -34,11 +41,7 @@ export const registerSchema = z
         }
       })
       .transform(normalizeUsername),
-    password: z
-      .string()
-      .min(1, FIELD_MESSAGES.passwordRequired)
-      .refine((value) => codePoints(value) >= 8, FIELD_MESSAGES.passwordTooShort)
-      .refine((value) => codePoints(value) <= 64, FIELD_MESSAGES.passwordTooLong),
+    password: newPasswordField,
     confirmPassword: z.string().min(1, FIELD_MESSAGES.confirmRequired),
   })
   .refine((values) => values.password === values.confirmPassword, {
@@ -59,3 +62,17 @@ export function emailChangeSchema(currentEmail: string) {
     ),
   });
 }
+
+/// 安全页改密码：当前密码只查非空；新密码同注册页；确认新密码只在前端比对
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, FIELD_MESSAGES.currentPasswordRequired),
+    newPassword: newPasswordField,
+    confirmPassword: z.string().min(1, FIELD_MESSAGES.confirmNewRequired),
+  })
+  .refine((values) => values.newPassword === values.confirmPassword, {
+    path: ["confirmPassword"],
+    error: FIELD_MESSAGES.confirmMismatch,
+  });
+
+export type ChangePasswordFormValues = z.input<typeof changePasswordSchema>;

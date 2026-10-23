@@ -1,7 +1,12 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import type { z } from "zod";
-import { emailChangeSchema, loginSchema, registerSchema } from "@/lib/auth/form-schemas";
+import {
+  changePasswordSchema,
+  emailChangeSchema,
+  loginSchema,
+  registerSchema,
+} from "@/lib/auth/form-schemas";
 
 /// 每个字段的第一条错误：表单只显示这一条（RHF 的 zodResolver 默认也只取第一条）
 function firstErrors(schema: z.ZodType, values: unknown): Record<string, string> {
@@ -146,5 +151,35 @@ describe("emailChangeSchema", () => {
     expect(schema.parse({ newEmail: " new@example.com " })).toEqual({
       newEmail: "new@example.com",
     });
+  });
+});
+
+describe("changePasswordSchema", () => {
+  const issues = (values: {
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword: string;
+  }) => {
+    const result = changePasswordSchema.safeParse(values);
+    return result.success
+      ? {}
+      : Object.fromEntries(
+          // 同一字段只取第一条，和表单上显示的一致
+          [...result.error.issues].reverse().map((issue) => [issue.path[0], issue.message]),
+        );
+  };
+
+  it("当前密码为空、新密码太短、确认为空", () => {
+    expect(issues({ currentPassword: "", newPassword: "short", confirmPassword: "" })).toEqual({
+      currentPassword: "请输入当前密码",
+      newPassword: "密码至少 8 位",
+      confirmPassword: "请再输入一次新密码",
+    });
+  });
+
+  it("两次不一致", () => {
+    expect(
+      issues({ currentPassword: "x", newPassword: "new-pass-1", confirmPassword: "new-pass-2" }),
+    ).toEqual({ confirmPassword: "两次输入的密码不一致" });
   });
 });

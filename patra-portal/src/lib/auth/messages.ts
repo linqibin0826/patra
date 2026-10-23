@@ -11,6 +11,10 @@ export const FIELD_MESSAGES = {
   passwordTooCommon: "这个密码太常见，容易被猜到，请换一个",
   passwordInvalid: "密码不符合要求",
   confirmRequired: "请再输入一次密码",
+  confirmNewRequired: "请再输入一次新密码",
+  currentPasswordRequired: "请输入当前密码",
+  currentPasswordWrong: "当前密码不正确",
+  newPasswordUnchanged: "新密码不能和当前密码相同",
   confirmMismatch: "两次输入的密码不一致",
   /// 注册时邮箱已被占用：后面紧跟「去登录」链接
   emailTaken: "该邮箱已注册，",
@@ -208,3 +212,20 @@ export const DELETE_ACCOUNT_MESSAGES = {
   submit: "注销账号",
   submitting: "提交中…",
 } as const;
+
+/// 安全页 · 改密码（简报 §3.11 卡片 1、§4.8）
+export const CHANGE_PASSWORD_MESSAGES = {
+  note: "修改后，除本机外的所有设备都会退出登录，你会收到一封通知邮件。",
+  forgot: "忘记当前密码？",
+  submit: "修改密码",
+  submitting: "修改中…",
+  changed: "密码已修改，其他设备已退出登录",
+  failed: "没有保存成功，请稍后再试",
+} as const;
+
+/// 新密码字段的原因码 → 文案：新旧相同单独一句，其余同注册页
+export function newPasswordMessage(code: string | null): string {
+  return code === "UNCHANGED"
+    ? FIELD_MESSAGES.newPasswordUnchanged
+    : fieldErrorMessage("password", code);
+}

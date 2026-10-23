@@ -105,11 +105,12 @@ describe("其余文案", () => {
     expect(REGISTER_UNAVAILABLE_MESSAGE).toBe("注册没有成功，请稍后再试");
   });
 
-  it("三条成功提示", () => {
+  it("登录、注册、退出与取消注销的成功提示", () => {
     expect(TOAST_MESSAGES).toEqual({
       loggedIn: "已登录",
       registered: "注册成功，已登录",
       loggedOut: "已退出登录",
+      deletionCancelled: "已取消注销，欢迎回来",
     });
   });
 
