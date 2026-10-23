@@ -2,7 +2,11 @@
 import { ME_RESPONSE, USER } from "@tests/fixtures/user";
 import { resetCookieJar } from "@tests/stubs/cookie-jar";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { changePassword } from "@/lib/identity/security-actions";
+import {
+  changePassword,
+  revokeOtherSessions,
+  revokeSession,
+} from "@/lib/identity/security-actions";
 
 vi.mock("next/headers", () => import("@tests/stubs/cookie-jar"));
 
@@ -93,5 +97,48 @@ describe("changePassword", () => {
     const jar = resetCookieJar({ patra_session: "patra_user_abc" });
     await expect(changePassword(INPUT)).resolves.toEqual({ ok: false, reason: "unavailable" });
     expect(jar.written).toEqual([]);
+  });
+});
+
+describe("revokeSession / revokeOtherSessions", () => {
+  it("踢单个：DELETE /me/sessions/{id}，返回被踢数量", async () => {
+    respond(200, { revokedSessions: 1 });
+    resetCookieJar({ patra_session: "patra_user_abc" });
+    await expect(revokeSession("723511223344556678")).resolves.toEqual({
+      ok: true,
+      revokedSessions: 1,
+    });
+    expect(lastRequest()).toMatchObject({
+      url: "http://gw.test/patra-identity/me/sessions/723511223344556678",
+      method: "DELETE",
+    });
+  });
+
+  it("踢其他全部：DELETE /me/sessions/others", async () => {
+    respond(200, { revokedSessions: 2 });
+    resetCookieJar({ patra_session: "patra_user_abc" });
+    await expect(revokeOtherSessions()).resolves.toEqual({ ok: true, revokedSessions: 2 });
+    expect(lastRequest()).toMatchObject({
+      url: "http://gw.test/patra-identity/me/sessions/others",
+      method: "DELETE",
+    });
+  });
+
+  it("403 REAUTH_REQUIRED：reauth-required", async () => {
+    respond(403, { code: "IDN-0403", traits: ["REAUTH_REQUIRED"] });
+    resetCookieJar({ patra_session: "patra_user_abc" });
+    await expect(revokeOtherSessions()).resolves.toEqual({ ok: false, reason: "reauth-required" });
+  });
+
+  it("409 CURRENT_SESSION：unavailable", async () => {
+    respond(409, { code: "IDN-0409", traits: ["CURRENT_SESSION"] });
+    resetCookieJar({ patra_session: "patra_user_abc" });
+    await expect(revokeSession("1")).resolves.toEqual({ ok: false, reason: "unavailable" });
+  });
+
+  it("id 不是数字：unavailable，不请求", async () => {
+    resetCookieJar({ patra_session: "patra_user_abc" });
+    await expect(revokeSession("../others")).resolves.toEqual({ ok: false, reason: "unavailable" });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

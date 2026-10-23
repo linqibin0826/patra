@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ChangePasswordCard } from "@/components/settings/security/ChangePasswordCard";
+import { SessionsCard } from "@/components/settings/security/SessionsCard";
 import { requireUser } from "@/lib/auth/require-user";
 
 export const metadata: Metadata = { title: "安全 · 设置 · Patra" };
@@ -12,6 +13,7 @@ export default async function SecuritySettingsPage() {
   return (
     <div className="flex flex-col gap-8 max-[880px]:gap-6">
       <ChangePasswordCard />
+      <SessionsCard />
     </div>
   );
 }

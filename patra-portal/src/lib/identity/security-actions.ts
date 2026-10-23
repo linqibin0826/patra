@@ -6,6 +6,9 @@ import { writeSessionCookie } from "@/lib/auth/session-cookie";
 import type { CurrentUser, FieldError } from "@/lib/auth/types";
 import {
   type CommonFailure,
+  isReauthRequired,
+  REAUTH_REQUIRED,
+  type ReauthRequired,
   settleFailure,
   unexpectedProblem,
 } from "@/lib/identity/mutation-failure";
@@ -62,4 +65,45 @@ export async function changePassword(input: {
   }
   const settled = await settleFailure(reply);
   return "failure" in settled ? settled.failure : unexpectedProblem(endpoint, settled.problem);
+}
+
+/// 踢设备的结果
+export type RevokeResult = { ok: true; revokedSessions: number } | ReauthRequired | CommonFailure;
+
+const revokedSchema = z.object({ revokedSessions: z.number().int().nonnegative() });
+
+/// 踢设备的共同部分：DELETE 一个会话路径，200 带被踢数量；403 交给 `withReauth`；其余（含 409
+/// `CURRENT_SESSION`：本机行不显示「退出」，正常不会出现）按 `unavailable`
+async function revoke(path: string): Promise<RevokeResult> {
+  const endpoint = `/patra-identity${path}`;
+  const reply = await callIdentity(path, { method: "DELETE" });
+  if (reply.kind === "ok") {
+    const parsed = reply.res.status === 200 ? revokedSchema.safeParse(reply.body) : undefined;
+    if (!parsed?.success) {
+      logUnexpectedResponse(endpoint, reply.res.status, reply.body);
+      return UNAVAILABLE;
+    }
+    return { ok: true, revokedSessions: parsed.data.revokedSessions };
+  }
+  const settled = await settleFailure(reply);
+  if ("failure" in settled) {
+    return settled.failure;
+  }
+  return isReauthRequired(settled.problem)
+    ? REAUTH_REQUIRED
+    : unexpectedProblem(endpoint, settled.problem);
+}
+
+/// 踢掉一台设备（`DELETE /me/sessions/{id}`，要求再认证；已经不在也是 200、数量 0）。`id` 只收数字串，
+/// 其余不请求，防止拼出别的路径
+export async function revokeSession(id: string): Promise<RevokeResult> {
+  if (!/^\d{1,19}$/.test(id)) {
+    return UNAVAILABLE;
+  }
+  return revoke(`/me/sessions/${id}`);
+}
+
+/// 踢掉除本机外的全部设备（`DELETE /me/sessions/others`，要求再认证）
+export async function revokeOtherSessions(): Promise<RevokeResult> {
+  return revoke("/me/sessions/others");
 }

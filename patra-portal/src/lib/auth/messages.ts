@@ -229,3 +229,30 @@ export function newPasswordMessage(code: string | null): string {
     ? FIELD_MESSAGES.newPasswordUnchanged
     : fieldErrorMessage("password", code);
 }
+
+/// 安全页 · 登录设备（简报 §3.11 卡片 2、§4.8）
+export const SESSIONS_MESSAGES = {
+  description: "这里列出所有正在登录的设备。不认识的设备请退出它，并修改密码。",
+  loading: "正在加载登录设备",
+  failed: "设备列表加载失败",
+  retry: "重试",
+  revokeAll: "退出其他所有设备",
+  revokingAll: "退出中…",
+  noOthersTitle: "没有其他设备登录着",
+  noOthers: "没有其他设备登录着。",
+  here: "本机",
+  online: "当前在线",
+  unknownDevice: "未知设备",
+  privateNetwork: "内网",
+  unknownRegion: "属地未知",
+  logout: "退出登录",
+  revoke: "退出",
+  revoking: "退出中…",
+  revoked: "已退出该设备",
+  revokeFailed: "没有退出成功，请稍后再试",
+} as const;
+
+/// 「已退出其他 N 台设备」
+export function revokedOthersToast(count: number): string {
+  return `已退出其他 ${count} 台设备`;
+}

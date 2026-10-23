@@ -38,3 +38,18 @@ describe("useCommonFailureRedirect", () => {
     expect(router.replace).toHaveBeenCalledWith("/login?next=%2Fsettings%2Faccount");
   });
 });
+
+describe("useCommonFailureRedirect 的引用", () => {
+  it("page 不变时重新渲染返回同一个函数", () => {
+    const client = new QueryClient();
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+    const { result, rerender } = renderHook(() => useCommonFailureRedirect("/settings/security"), {
+      wrapper,
+    });
+    const first = result.current;
+    rerender();
+    expect(result.current).toBe(first);
+  });
+});
