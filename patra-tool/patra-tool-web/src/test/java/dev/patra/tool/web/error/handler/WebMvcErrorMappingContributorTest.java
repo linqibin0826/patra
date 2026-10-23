@@ -6,6 +6,7 @@ import dev.patra.tool.core.error.codes.HttpStdErrors;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -28,6 +29,15 @@ class WebMvcErrorMappingContributorTest {
         new NoHandlerFoundException("GET", "/nowhere", new HttpHeaders());
 
     assertThat(contributor.mapException(noHandler).orElseThrow().code()).isEqualTo("T-0404");
+  }
+
+  @Test
+  void should_map_max_upload_size_exceeded_to_413() {
+    var code =
+        contributor.mapException(new MaxUploadSizeExceededException(5_242_880)).orElseThrow();
+
+    assertThat(code.code()).isEqualTo("T-0413");
+    assertThat(code.httpStatus()).isEqualTo(413);
   }
 
   @Test

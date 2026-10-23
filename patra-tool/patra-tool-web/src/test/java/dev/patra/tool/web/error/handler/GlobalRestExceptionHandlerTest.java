@@ -51,6 +51,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.context.request.ServletWebRequest;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -579,6 +580,34 @@ class GlobalRestExceptionHandlerTest {
             exception, new HttpHeaders(), HttpStatus.NOT_FOUND, new ServletWebRequest(request));
 
     assertThat(result.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    assertThat(result.getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_PROBLEM_JSON);
+    assertThat(result.getBody()).isSameAs(problemDetail);
+  }
+
+  @Test
+  @DisplayName("超过上传上限的 MaxUploadSizeExceededException 应经适配器渲染为 413")
+  void should_render_max_upload_size_exceeded_as_problem_detail() {
+    MaxUploadSizeExceededException exception = new MaxUploadSizeExceededException(5_242_880);
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.CONTENT_TOO_LARGE);
+    problemDetail.setProperty("code", "T-0413");
+    ErrorResolution errorResolution = mock(ErrorResolution.class);
+    dev.patra.tool.core.error.codes.ErrorCodeLike errorCode =
+        mock(dev.patra.tool.core.error.codes.ErrorCodeLike.class);
+    when(errorCode.code()).thenReturn("T-0413");
+    when(errorResolution.errorCode()).thenReturn(errorCode);
+    ProblemDetailResponse response =
+        new ProblemDetailResponse(problemDetail, HttpStatus.CONTENT_TOO_LARGE, errorResolution);
+    when(problemDetailAdapter.adapt(exception, request)).thenReturn(response);
+
+    ResponseEntity<Object> result =
+        handler.handleMaxUploadSizeExceededException(
+            exception,
+            new HttpHeaders(),
+            HttpStatus.CONTENT_TOO_LARGE,
+            new ServletWebRequest(request));
+
+    assertThat(result.getStatusCode()).isEqualTo(HttpStatus.CONTENT_TOO_LARGE);
     assertThat(result.getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_PROBLEM_JSON);
     assertThat(result.getBody()).isSameAs(problemDetail);
   }

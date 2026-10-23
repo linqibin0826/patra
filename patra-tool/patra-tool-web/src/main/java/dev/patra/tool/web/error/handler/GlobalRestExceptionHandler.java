@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -168,6 +169,22 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
   @Override
   protected ResponseEntity<Object> handleNoHandlerFoundException(
       NoHandlerFoundException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+    return renderThroughAdapter(ex, request);
+  }
+
+  /// 上传超过 multipart 上限：父类默认回的 413 不带错误码，同样交给适配器渲染。
+  ///
+  /// @param ex 超限异常
+  /// @param headers HTTP 响应头
+  /// @param status HTTP 状态码
+  /// @param request Web 请求上下文
+  /// @return ProblemDetail 响应；响应已提交时为 `null`
+  @Override
+  protected ResponseEntity<Object> handleMaxUploadSizeExceededException(
+      MaxUploadSizeExceededException ex,
+      HttpHeaders headers,
+      HttpStatusCode status,
+      WebRequest request) {
     return renderThroughAdapter(ex, request);
   }
 
