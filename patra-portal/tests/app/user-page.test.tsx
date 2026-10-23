@@ -19,6 +19,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn() }),
   usePathname: () => "/u/chen-yu",
   useSearchParams: () => new URLSearchParams(),
+  unstable_rethrow: vi.fn(),
 }));
 vi.mock("@/components/portal/TopNav", () => ({ TopNav: () => <nav aria-label="导航栏桩" /> }));
 vi.mock("@/components/portal/Footer", () => ({ Footer: () => <footer /> }));
@@ -73,6 +74,22 @@ describe("/u/[username] · 取数", () => {
   it("旧用户名：临时跳到新名", async () => {
     vi.mocked(fetchPublicProfile).mockResolvedValue({ kind: "moved", username: "new-name" });
     await expect(UserPage(params("old-name"))).rejects.toThrow("NEXT_REDIRECT:/u/new-name");
+  });
+
+  it("主页与当前会话同时请求，不等前一个回来", async () => {
+    let resolve: (lookup: PublicProfileLookup) => void = () => {};
+    vi.mocked(fetchPublicProfile).mockReturnValue(
+      new Promise((done) => {
+        resolve = done;
+      }),
+    );
+    viewAs("anonymous");
+    const page = UserPage(params());
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(lookupSession).toHaveBeenCalled();
+    resolve(found());
+    await page;
   });
 
   it("不存在或不可见：404", async () => {
@@ -211,6 +228,16 @@ describe("/u/[username] · 本人视角", () => {
     expect(
       within(screen.getByRole("heading", { name: /专业背景/ })).getByText("仅你可见"),
     ).toBeInTheDocument();
+  });
+
+  it("本人视角读不到隐私设置：照常显示主页，只是不标「仅你可见」", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(fetchPublicProfile).mockResolvedValue(found());
+    vi.mocked(fetchMyPrivacy).mockRejectedValue(new Error("读取 /me/privacy 失败"));
+    viewAs("self");
+    await renderPage();
+    expect(screen.getByRole("heading", { name: /专业背景/ })).toBeInTheDocument();
+    expect(screen.queryByText("仅你可见")).not.toBeInTheDocument();
   });
 
   it("profile.self-empty：你的主页还很空 + 完善资料", async () => {
