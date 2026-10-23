@@ -26,6 +26,25 @@ export const TOAST_MESSAGES = {
 /// 注册失败、只能请用户稍后再试时的提示条
 export const REGISTER_UNAVAILABLE_MESSAGE = "注册没有成功，请稍后再试";
 
+/// 用户名的原因码 → 文案（简报 §4.1）。前端规则与后端原因码共用这张表；不认识的码和 null 是通用说法。
+const USERNAME_MESSAGES: Record<string, string> = {
+  REQUIRED: "请输入用户名",
+  TOO_SHORT: "用户名至少 3 个字符",
+  TOO_LONG: "用户名最多 30 个字符",
+  INVALID_CHARACTER: "只能用小写字母、数字、_ 和 -",
+  INVALID_FORMAT: "开头和结尾要是字母或数字，_ 和 - 不能连着用",
+  DIGITS_ONLY: "用户名不能全是数字",
+  RESERVED: "这个用户名不能使用，请换一个",
+  ALREADY_TAKEN: "这个用户名已被使用",
+};
+
+/// 用户名下方的错误文案
+export function usernameMessage(code: string | null): string {
+  return code !== null && Object.hasOwn(USERNAME_MESSAGES, code)
+    ? (USERNAME_MESSAGES[code] as string)
+    : "用户名不符合要求";
+}
+
 /// 后端返回的字段错误 → 字段下方的文案。邮箱只有「为空」单独一种说法，其余原因码、不认识的原因码
 /// 和 null 都是「邮箱格式不正确」；密码不认识的原因码和 null 是「密码不符合要求」。
 export function fieldErrorMessage(field: "email" | "password", code: string | null): string {
@@ -46,14 +65,19 @@ export function fieldErrorMessage(field: "email" | "password", code: string | nu
   }
 }
 
-/// `invalid-fields` 里的字段错误 → 各字段下方的文案。同一字段只取第一条；`email`、`password`
-/// 以外的字段丢掉，一条都对不上时返回空对象。
+/// 有后端字段错误文案的字段
+export type CredentialField = "email" | "username" | "password";
+
+/// `invalid-fields` 里的字段错误 → 各字段下方的文案。同一字段只取第一条；`email`、`username`、
+/// `password` 以外的字段丢掉，一条都对不上时返回空对象。
 export function fieldErrorMessages(
   fieldErrors: FieldError[],
-): Partial<Record<"email" | "password", string>> {
-  const messages: Partial<Record<"email" | "password", string>> = {};
+): Partial<Record<CredentialField, string>> {
+  const messages: Partial<Record<CredentialField, string>> = {};
   for (const { field, code } of fieldErrors) {
-    if ((field === "email" || field === "password") && messages[field] === undefined) {
+    if (field === "username" && messages.username === undefined) {
+      messages.username = usernameMessage(code);
+    } else if ((field === "email" || field === "password") && messages[field] === undefined) {
       messages[field] = fieldErrorMessage(field, code);
     }
   }

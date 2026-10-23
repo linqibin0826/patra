@@ -16,6 +16,7 @@ function firstErrors(schema: z.ZodType, values: unknown): Record<string, string>
 /// 64 + 1 + 185 + 4 = 254 个字符的合法邮箱
 const EMAIL_254 = `${"a".repeat(64)}@${"b".repeat(185)}.com`;
 const VALID = { email: "reader@example.com", password: "correct horse" };
+const USERNAME = { username: "reader" };
 
 describe("邮箱（两页相同）", () => {
   it("去掉首尾空白后提交", () => {
@@ -55,7 +56,7 @@ describe("登录页的密码", () => {
 
 describe("注册页的密码", () => {
   const register = (password: string, confirmPassword = password) =>
-    firstErrors(registerSchema, { email: VALID.email, password, confirmPassword });
+    firstErrors(registerSchema, { email: VALID.email, ...USERNAME, password, confirmPassword });
 
   it("为空：请输入密码", () => {
     expect(register("", "x")).toMatchObject({ password: "请输入密码" });
@@ -83,8 +84,31 @@ describe("注册页的密码", () => {
   });
 });
 
+describe("注册页的用户名", () => {
+  const base = {
+    email: "reader@example.com",
+    password: "correct horse",
+    confirmPassword: "correct horse",
+  };
+
+  it("为空：请输入用户名", () => {
+    expect(firstErrors(registerSchema, { ...base, username: "" }).username).toBe("请输入用户名");
+  });
+
+  it("不合规时按原因码出文案", () => {
+    expect(firstErrors(registerSchema, { ...base, username: "12345" }).username).toBe(
+      "用户名不能全是数字",
+    );
+  });
+
+  it("去掉首尾空白、转小写后提交", () => {
+    const parsed = registerSchema.safeParse({ ...base, username: " Chen-Yu " });
+    expect(parsed.success && parsed.data.username).toBe("chen-yu");
+  });
+});
+
 describe("注册页的确认密码", () => {
-  const values = { email: VALID.email, password: "correct horse" };
+  const values = { email: VALID.email, ...USERNAME, password: "correct horse" };
 
   it("为空：请再输入一次密码", () => {
     expect(firstErrors(registerSchema, { ...values, confirmPassword: "" })).toEqual({

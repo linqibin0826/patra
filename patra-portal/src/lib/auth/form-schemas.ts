@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { FIELD_MESSAGES } from "@/lib/auth/messages";
+import { FIELD_MESSAGES, usernameMessage } from "@/lib/auth/messages";
+import { normalizeUsername, usernameIssue } from "@/lib/identity/username-rules";
 
 /// 密码长度按码点计，汉字、表情各算 1 位，和后端一致
 const codePoints = (value: string): number => [...value].length;
@@ -19,10 +20,20 @@ export const loginSchema = z.object({
   password: z.string().min(1, FIELD_MESSAGES.passwordRequired),
 });
 
-/// 注册表单：密码 8 ~ 64 位，不去空格；确认密码只在前端比对，不传给后端
+/// 注册表单：用户名见下；密码 8 ~ 64 位，不去空格；确认密码只在前端比对，不传给后端
 export const registerSchema = z
   .object({
     email: emailField,
+    /// 用户名：规则与后端同一条（`usernameIssue`），提交的是去空白、转小写之后的值
+    username: z
+      .string()
+      .superRefine((value, ctx) => {
+        const issue = usernameIssue(value);
+        if (issue) {
+          ctx.addIssue({ code: "custom", message: usernameMessage(issue) });
+        }
+      })
+      .transform(normalizeUsername),
     password: z
       .string()
       .min(1, FIELD_MESSAGES.passwordRequired)
