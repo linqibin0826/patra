@@ -5,12 +5,14 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import dev.patra.identity.domain.exception.AvatarStorageException;
 import dev.patra.identity.domain.model.aggregate.User;
 import dev.patra.identity.domain.model.aggregate.UserProfile;
 import dev.patra.identity.domain.model.enums.LoginEndReason;
@@ -20,6 +22,7 @@ import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.Username;
 import dev.patra.identity.domain.model.vo.profile.Bio;
 import dev.patra.identity.domain.model.vo.profile.ProfileContent;
+import dev.patra.identity.domain.port.avatar.AvatarStoragePort;
 import dev.patra.identity.domain.port.mail.AccountDeletionCompletedMail;
 import dev.patra.identity.domain.port.mail.EmailDeliveryPort;
 import dev.patra.identity.domain.port.mail.OutgoingMail;
@@ -39,6 +42,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.springframework.transaction.support.TransactionOperations;
 
 /// ExecuteDueAccountDeletionsHandler 单元测试：匿名化清单、锁内复核、单个失败不影响其他、键集翻页、发信。
@@ -54,6 +58,7 @@ class ExecuteDueAccountDeletionsHandlerTest {
       mock(UserPasswordCredentialRepository.class);
   private final UserProfileRepository profiles = mock(UserProfileRepository.class);
   private final EmailTokenRepository tokens = mock(EmailTokenRepository.class);
+  private final AvatarStoragePort avatarStorage = mock(AvatarStoragePort.class);
   private final SessionTerminator sessionTerminator = mock(SessionTerminator.class);
   private final EmailDeliveryPort emailDelivery = mock(EmailDeliveryPort.class);
   private final ExecuteDueAccountDeletionsHandler handler =
@@ -63,6 +68,7 @@ class ExecuteDueAccountDeletionsHandlerTest {
           credentials,
           profiles,
           tokens,
+          avatarStorage,
           sessionTerminator,
           emailDelivery,
           TransactionOperations.withoutTransaction(),
@@ -127,6 +133,53 @@ class ExecuteDueAccountDeletionsHandlerTest {
   }
 
   @Test
+  @DisplayName("头像对象在加锁事务之前按前缀删光")
+  void should_delete_avatar_objects_before_locking() {
+    dueUsers(42L);
+
+    handler.handle(ExecuteDueAccountDeletionsCommand.of());
+
+    InOrder order = inOrder(avatarStorage, users);
+    order.verify(avatarStorage).deleteAll(42L);
+    order.verify(users).findByIdForUpdate(42L);
+  }
+
+  @Test
+  @DisplayName("扫描之后刚取消的用户：不删头像对象")
+  void should_not_delete_avatar_objects_when_user_cancelled_after_scan() {
+    when(users.findIdsDueForDeletion(NOW, 0L, 100)).thenReturn(List.of(42L));
+    User active =
+        User.restore()
+            .id(42L)
+            .email(email(42L))
+            .username(Username.of("u-42"))
+            .status(UserStatus.ACTIVE)
+            .version(1L)
+            .build();
+    when(users.findById(42L)).thenReturn(Optional.of(active));
+    when(users.findByIdForUpdate(42L)).thenReturn(Optional.of(active));
+
+    handler.handle(ExecuteDueAccountDeletionsCommand.of());
+
+    verify(avatarStorage, never()).deleteAll(anyLong());
+  }
+
+  @Test
+  @DisplayName("删头像对象失败：该用户计失败、不进事务，下一个照常处理")
+  void should_count_failure_when_avatar_deletion_fails() {
+    dueUsers(41L, 42L);
+    doThrow(new AvatarStorageException("boom", new RuntimeException()))
+        .when(avatarStorage)
+        .deleteAll(41L);
+
+    DeletionRunResult result = handler.handle(ExecuteDueAccountDeletionsCommand.of());
+
+    assertThat(result).isEqualTo(DeletionRunResult.of(1, 1));
+    verify(users, never()).findByIdForUpdate(41L);
+    verify(tokens).deleteAllByUserId(42L);
+  }
+
+  @Test
   @DisplayName("一个用户失败，另一个照样完成")
   void should_continue_after_one_user_fails() {
     dueUsers(41L, 42L);
@@ -174,22 +227,27 @@ class ExecuteDueAccountDeletionsHandlerTest {
     }
   }
 
+  /// 冷静期且已到期的用户。
+  ///
+  /// @param id 用户 ID
+  /// @return 用户
+  private static User pendingUser(long id) {
+    return User.restore()
+        .id(id)
+        .email(email(id))
+        .username(Username.of("u-" + id))
+        .status(UserStatus.PENDING_DELETION)
+        .deletionDueAt(DUE)
+        .version(1L)
+        .build();
+  }
+
   /// 给一个冷静期且已到期的用户打桩：加锁读、账号信息。
   ///
   /// @param id 用户 ID
   private void stubPending(long id) {
-    when(users.findByIdForUpdate(id))
-        .thenAnswer(
-            invocation ->
-                Optional.of(
-                    User.restore()
-                        .id(id)
-                        .email(email(id))
-                        .username(Username.of("u-" + id))
-                        .status(UserStatus.PENDING_DELETION)
-                        .deletionDueAt(DUE)
-                        .version(1L)
-                        .build()));
+    when(users.findById(id)).thenAnswer(invocation -> Optional.of(pendingUser(id)));
+    when(users.findByIdForUpdate(id)).thenAnswer(invocation -> Optional.of(pendingUser(id)));
     when(userReadPort.findAccount(id))
         .thenReturn(
             Optional.of(

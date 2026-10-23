@@ -12,6 +12,9 @@ import dev.patra.identity.domain.port.mail.AccountDeletionRequestedMail;
 import dev.patra.identity.domain.port.mail.EmailChangeConfirmMail;
 import dev.patra.identity.domain.port.mail.EmailChangedNoticeMail;
 import dev.patra.tool.cqrs.CommandBus;
+import dev.patra.tool.objectstorage.ObjectStorageOperations;
+import dev.patra.tool.objectstorage.domain.ObjectMetadata;
+import java.io.ByteArrayInputStream;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
@@ -32,7 +35,10 @@ class AccountDeletionFlowIT extends IdentityFlowITSupport {
   private static final Duration COOLING = Duration.ofDays(15);
   private static final String REMINDER_SUBJECT = "你的 Patra 账号将在 3 天后删除";
 
+  private static final String AVATAR_BUCKET = "patra-identity-avatar";
+
   @Autowired CommandBus commandBus;
+  @Autowired ObjectStorageOperations avatarStorage;
 
   @Test
   @DisplayName("发起：超窗 403、用户名不符 422；成功后全部会话下线、主页 404、令牌作废但撤销链接仍有效、收到「注销已提交」")
@@ -155,7 +161,7 @@ class AccountDeletionFlowIT extends IdentityFlowITSupport {
   }
 
   @Test
-  @DisplayName("到期执行：已注销、邮箱空、行保留，凭据/链接/关注领域/令牌没了、资料行全空；冷静期会话下线；邮箱可重新注册，用户名不行")
+  @DisplayName("到期执行：已注销、邮箱空、行保留，凭据/链接/关注领域/令牌/头像对象没了、资料行全空；冷静期会话下线；邮箱可重新注册，用户名不行")
   void should_anonymize_on_due_and_free_email_but_not_username() {
     String email = "flow.del.done@example.com";
     RawResponse registered = register(email, "u-del-done");
@@ -176,6 +182,16 @@ class AccountDeletionFlowIT extends IdentityFlowITSupport {
             + " VALUES (?, ?, 0, 'D006333', 'Heart Failure')",
         userId + 1,
         userId);
+    String avatarKey = "avatar/" + userId + "/0123456789abcdef-512.webp";
+    for (String key : List.of(avatarKey, "avatar/" + userId + "/0123456789abcdef-128.webp")) {
+      avatarStorage.upload(
+          AVATAR_BUCKET,
+          key,
+          new ByteArrayInputStream(new byte[] {1}),
+          ObjectMetadata.builder().contentLength(1).contentType("image/webp").build());
+    }
+    jdbcTemplate.update(
+        "UPDATE idn_user_profile SET avatar_object_key = ? WHERE user_id = ?", avatarKey, userId);
     assertThat(deletion(userId, sessionId, "u-del-done").status()).isEqualTo(200);
     clock.set(T0.plus(COOLING));
     RawResponse coolingLogin = login(email, PASSWORD);
@@ -209,6 +225,14 @@ class AccountDeletionFlowIT extends IdentityFlowITSupport {
     assertThat(erased.get("profile_visibility")).isEqualTo("PUBLIC");
     assertThat(erased.get("professional_visibility")).isEqualTo("PUBLIC");
     assertThat(erased.get("search_indexing")).isEqualTo(false);
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT avatar_object_key FROM idn_user_profile WHERE user_id = ?",
+                String.class,
+                userId))
+        .isNull();
+    assertThat(avatarStorage.statObject(AVATAR_BUCKET, avatarKey)).isEmpty();
+    assertThat(avatarStorage.deleteByPrefix(AVATAR_BUCKET, "avatar/" + userId + "/")).isZero();
     assertThat(redis.hasKey(sessionKey(coolingToken))).isFalse();
     assertThat(endReasonOf(coolingSession)).isEqualTo("DELETION_COMPLETED");
     mailFor(email, AccountDeletionCompletedMail.SUBJECT);

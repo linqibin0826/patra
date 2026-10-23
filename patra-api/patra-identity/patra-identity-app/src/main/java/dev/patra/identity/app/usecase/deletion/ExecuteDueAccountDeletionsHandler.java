@@ -4,6 +4,7 @@ import dev.patra.identity.domain.model.aggregate.User;
 import dev.patra.identity.domain.model.enums.LoginEndReason;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.model.vo.EmailAddress;
+import dev.patra.identity.domain.port.avatar.AvatarStoragePort;
 import dev.patra.identity.domain.port.mail.AccountDeletionCompletedMail;
 import dev.patra.identity.domain.port.mail.EmailDeliveryPort;
 import dev.patra.identity.domain.port.read.UserReadPort;
@@ -29,7 +30,7 @@ import org.springframework.transaction.support.TransactionOperations;
 ///
 /// 单个用户失败只记日志、计数，接着处理下一个，它仍在冷静期，下次运行再试；按 ID 往后翻，不会反复撞上它。
 /// 锁内复核挡住「扫描之后刚取消」与并发的两次运行，重跑幂等。「已注销」被发信执行器拒收时邮箱已经置空，
-/// 没法重发，只记日志，注销本身照样算完成。PAP-97 接入头像后，头像对象在加锁事务之前按前缀删（设计第 14 节）。
+/// 没法重发，只记日志，注销本身照样算完成。头像对象在加锁事务之前按前缀删，删之前不加锁复核仍到期（PAP-97）。
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -44,6 +45,7 @@ public class ExecuteDueAccountDeletionsHandler
   private final UserPasswordCredentialRepository credentials;
   private final UserProfileRepository profiles;
   private final EmailTokenRepository tokens;
+  private final AvatarStoragePort avatarStorage;
   private final SessionTerminator sessionTerminator;
   private final EmailDeliveryPort emailDelivery;
   private final TransactionOperations transactions;
@@ -65,6 +67,7 @@ public class ExecuteDueAccountDeletionsHandler
       for (long id : ids) {
         afterId = id;
         try {
+          deleteAvatarObjectsIfDue(id, now);
           Optional<Completed> done = completeOne(id, now);
           if (done.isPresent()) {
             notifyCompleted(id, done.get());
@@ -78,6 +81,18 @@ public class ExecuteDueAccountDeletionsHandler
     } while (ids.size() >= BATCH_SIZE);
     log.info("注销到期执行完成: completed={}, failed={}", completed, failed);
     return DeletionRunResult.of(completed, failed);
+  }
+
+  /// 头像对象不参与数据库事务，在加锁事务之前按前缀删光：先删对象后提交，失败时用户还在冷静期、下次重试，
+  /// 重删空前缀天然幂等。删之前不加锁复读一次：扫描之后刚取消的用户不能丢头像（剩下复读到加锁之间的毫秒级
+  /// 窗口，撞上时该用户头像读取 404，重新上传即恢复）。
+  ///
+  /// @param id 用户 ID
+  /// @param now 本轮的当前时间
+  private void deleteAvatarObjectsIfDue(long id, Instant now) {
+    if (users.findById(id).filter(user -> user.isDeletionDue(now)).isPresent()) {
+      avatarStorage.deleteAll(id);
+    }
   }
 
   /// 在一个事务里匿名化一个用户。锁内复核不到期（刚取消、被封禁、已完成）就跳过。
