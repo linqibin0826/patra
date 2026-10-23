@@ -91,7 +91,7 @@ server/strip-forwarded-for.mjs  # 生产入口的预加载模块（见下文「�
 
 ## 用户中心
 
-- **再认证**：改邮箱、踢设备、注销要求 10 分钟内输过密码。这几个 Server Action 把 403 `REAUTH_REQUIRED` 收敛成 `reason: "reauth-required"`，客户端用 `useReauth().withReauth(() => action(...))` 调用：拿到它就弹再认证对话框（挂在设置页 layout），验证成功后用同样的参数重试一次，取消则返回 `cancelled`、什么都不显示。
+- **再认证**：改邮箱、踢设备、注销要求 10 分钟内输过密码。这几个 Server Action 把 403 `REAUTH_REQUIRED` 收敛成 `reason: "reauth-required"`，客户端用 `useReauth().withReauth(() => action(...))` 调用：拿到它就弹再认证对话框（挂在设置页 layout），验证成功后用同样的参数重试一次，取消则返回 `cancelled`、什么都不显示。验证密码走 Route Handler `POST /api/auth/reauth`（同源校验）而不是 Server Action：Server Action 写 Cookie 会重新渲染当前页，注销路径上这次重新渲染晚到时会把结果屏换成登录页。
 - **冷静期跳转**：冷静期账号打开带导航栏的页面都去 `/account/deletion-pending?next=…`。整页打开由 proxy 拦（只查带会话 Cookie 的 GET 文档请求，3 秒超时、出错放行，已登录用户每次整页打开多一次 `/auth/me`），站内跳转由导航栏的 `PendingDeletionRedirect` 兜底，设置页的 `requireUser` 也会拦。专注布局的页面（登录、注册、找回密码、四个落地页、取消注销页）不拦。proxy 的 matcher 因此覆盖全部页面（不含 `/api/`、`/_next/`、静态文件）。
 - **邮件落地页**：令牌只在地址片段里，页面读完立即 `replaceState` 抹掉；打开页面不发请求，点按钮才 POST。
 - **端到端冒烟**：`tests/e2e/user-center.spec.ts` 走注册、验证邮箱、资料与主页、改用户名、改密码、踢设备、找回密码、改邮箱、注销与取消，邮件链接从 Mailpit 取。缺任一环境变量就跳过：

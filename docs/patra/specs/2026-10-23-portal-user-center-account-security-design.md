@@ -107,7 +107,7 @@ patra-portal/src/
 │   │   ├── account.ts                         # 新：GET /me/email/change（RSC 用）
 │   │   ├── account-actions.ts                 # 新："use server"：changeUsername、requestEmailChange、cancelEmailChange、requestDeletion、endDeletedSession、cancelDeletion
 │   │   ├── security-actions.ts                # 新："use server"：changePassword、revokeSession、revokeOtherSessions
-│   │   ├── reauth-actions.ts                  # 新："use server"：reauthenticate
+│   │   ├── reauth.ts                          # 新：server-only 的 reauthenticate（只由 `/api/auth/reauth` 调用，§6.1）
 │   │   ├── token-actions.ts                   # 新："use server"：verifyEmail、resetPassword、confirmEmailChange、revertEmailChange、requestPasswordReset
 │   │   ├── session-list.ts                    # 新：会话列表的 Zod schema 与类型（Route Handler 与客户端共用）
 │   │   └── email-token.ts                     # 新：读片段令牌（格式 `^[A-Za-z0-9_-]{43}$`）
@@ -120,6 +120,7 @@ patra-portal/src/
 │   └── auth-handoff.ts                        # 新：登录页 ↔ 忘记密码 ↔ 重设密码之间带邮箱与提示（§8.1）
 ├── app/
 │   ├── api/me/sessions/route.ts               # 新：GET（§7.5）
+│   ├── api/auth/reauth/route.ts               # 新：POST，再认证并换 Cookie（§6.1）
 │   ├── settings/account/page.tsx              # 新
 │   ├── settings/security/page.tsx             # 新
 │   ├── settings/layout.tsx                    # 改：包 `ReauthProvider`
@@ -151,11 +152,11 @@ patra-portal/src/
 ### 6.1 Action 侧
 
 - `mutation-failure.ts` 加 `isReauthRequired(problem)`（403 且 `traits` 含 `REAUTH_REQUIRED`）与类型 `ReauthRequired = { ok: false; reason: "reauth-required" }`。四个要再认证的 Action 在 `settleFailure` 之后先判它。不并进 `CommonFailure`：那样 PAP-101 的资料、头像、隐私、重发四处结果类型都会多出一个它们永远收不到的分支，穷举 `switch` 要为它写兜底。
-- `reauthenticate(password)`（`reauth-actions.ts`）：`POST /auth/reauth`。结果：
+- `reauthenticate(password)`（`lib/identity/reauth.ts`，server-only）：`POST /auth/reauth`。由 Route Handler `POST /api/auth/reauth`（同源校验，请求体 `{ password }`）调用，浏览器端经 `lib/reauth/post-reauth.ts` 的 `postReauth` 请求它。**不做成 Server Action**：Server Action 里写 Cookie 会让 Next 重新渲染当前页，这次重新渲染可能晚于随后重试的原操作才到；重试的是注销时，会话已被撤销，设置页守卫就把结果屏换成登录页（真浏览器实测，§18.3）。结果：
   - 200：`sessionToken` 非空时 `writeSessionCookie(token)`，为 `null` 时不动 Cookie；返回 `{ ok: true, user }`
   - 401 含 `PASSWORD_MISMATCH` → `wrong-password`；429 → `throttled`（`retryAfterSeconds`）；422 `password` → `wrong-password`（前端已挡空值，到这里只可能是异常输入，按密码不对说）
   - 其余经 `settleFailure`：会话没了 → `signed-out`（清 Cookie）、抛错 → `unavailable`
-- 写 Cookie 会触发当前页重新渲染（§3 最后一条），客户端状态保留，对话框与原操作的进行中状态不受影响。
+- Route Handler 写 Cookie 不触发当前页重新渲染。
 
 ### 6.2 客户端侧
 
@@ -398,7 +399,7 @@ reading ──► ready ──点按钮──► submitting ──► succeeded
 - 令牌只从片段读，读完立即 `replaceState` 抹掉；不进查询串、不进日志、不进 Server Action 以外的任何请求。
 - 落地页打开不发请求；直接 GET 不消费令牌（后端本来就只认 POST）。
 - 重设成功后的邮箱经内存 store 带到登录页，不进地址栏。
-- Server Action 自带 `Origin` 校验；唯一新增的 Route Handler `GET /api/me/sessions` 只读。
+- Server Action 自带 `Origin` 校验；新增的 Route Handler 里 `GET /api/me/sessions` 只读，`POST /api/auth/reauth` 先做同源校验（`isSameOrigin`，与头像接口一致）。
 - `reauthenticate` 失败计入登录失败限制（后端），对话框不自动重试。
 - 再认证对话框的「忘记密码？」新标签页打开，`rel="noopener"`。
 
@@ -440,7 +441,7 @@ reading ──► ready ──点按钮──► submitting ──► succeeded
 ## 14. 实施时要实测的点
 
 1. 两个独立的 base-ui 模态同时打开（注销对话框 + 再认证对话框）：焦点、`Esc`、遮罩只作用于上层；不行就改嵌套（§6.2）。
-2. `reauthenticate` / `changePassword` 写 Cookie 引起的重新渲染不打断进行中的状态，重试的 Action 带上新令牌。
+2. `changePassword` 写 Cookie 引起的重新渲染不打断进行中的状态；再认证换 Cookie 后重试的 Action 带上新令牌。
 3. `endDeletedSession` 的 `redirect("/")` 确实先于设置页的重新渲染生效，不会闪到登录页。
 4. proxy 放宽 matcher 后：静态资源、`/_next/*`、`/api/*` 不进 proxy；首页、文献页的静态渲染不受影响（`pnpm build` 的路由表与 PAP-101 对比）。
 5. 冷静期整页打开 `/papers` 被 307 到取消注销页，`next` 带回 `/papers`；取消后回到 `/papers`。
@@ -492,7 +493,7 @@ reading ──► ready ──点按钮──► submitting ──► succeeded
 ### 18.2 实测（spec §14）
 
 1. 两个独立的 base-ui 模态叠放：jsdom 里上层可聚焦、输入，`Esc` 只关上层（`tests/components/reauth/stacked-dialogs.test.tsx`）；真浏览器复核见 18.4。
-2. 再认证、改密码写 Cookie 后的重新渲染不打断进行中状态：改密码 e2e（本机仍登录、另一台设备回登录页）与再认证真浏览器核对通过。
+2. 改密码写 Cookie 后的重新渲染不打断进行中状态（改密码 e2e：本机仍登录、另一台设备回登录页）。再认证起初是 Server Action，真浏览器发现注销路径的问题后改为 Route Handler（18.3 第 11 条），复核见 18.5。
 3. `endDeletedSession` 的 `redirect("/")` 先于设置页重新渲染生效：注销 e2e 落在首页、导航栏是「登录」，没有闪到登录页。
 4. proxy 放宽 matcher 后静态资源、`/api/*` 不进 proxy；首页本来就是动态渲染，路由表无变化。e2e 暴露了一个回归并已修（18.3 第 1 条）。
 5. 冷静期整页打开 `/papers` 被 307 到 `/account/deletion-pending?next=%2Fpapers`，取消后回到 `/papers`（e2e）。
@@ -510,7 +511,24 @@ reading ──► ready ──点按钮──► submitting ──► succeeded
 8. 窄屏下「退出其他所有设备」落到卡片说明下方（`SettingsCard asidePlacement="block"`），照画板 `Security-M`。
 9. 落地页状态机加了 `leaving` 结果：重设成功跳登录页期间按钮保持进行中，不能重复提交已消费的令牌。
 10. 再认证对话框用组件内状态而不是 RHF（只有一个密码框）；`Dialog` 加 `initialFocus`，焦点落在密码框而不是标签行里的「忘记密码？」。
+11. **再认证改由 Route Handler 换 Cookie**（真浏览器发现）：会话超过 10 分钟后发起注销，再认证（Server Action）写 Cookie 触发的设置页重新渲染晚于注销请求才到，此时会话已撤销，守卫把页面送去 `/login?next=/settings/account`，结果屏消失。改为 `POST /api/auth/reauth`（§6.1）。踢设备、改邮箱不受影响（会话仍有效），但同样改走新路径。
+12. 整分支评审（opus）后修了两条：`safeNextPath` 被点路径段绕过（`/..//evil.com` 解析成 `//evil.com`，开放重定向，PAP-101 起就有）；重设密码与改密码表单补 `method="post"`（页面接管前提交时密码不进地址栏）。其余 8 条 Minor 记在第 19 节。
 
 ### 18.4 预览走查
 
 本机门户连 mini 网关，Playwright 无头浏览器在 1440×900 与 375×812 下截了账号页（默认、冷却 + 待确认 + 未验证）、注销对话框三屏、安全页、四个落地页就绪态与无效态、忘记密码、登录页、取消注销页（桌面、移动），与画板 `Account` / `Security` / `Landing` / `Main`（含 `-M`）离线截图逐屏对照，差异已修（18.3 第 7、8 条）。登录页「还没有账号？注册」画板居中、页面左对齐，是 v0.8 起的旧写法，未动。
+
+### 18.5 再认证的真浏览器核对
+
+Playwright 无头浏览器，账号注册后等 10.5 分钟让再认证窗口过期：踢设备弹出再认证（焦点在密码框）、输错显示「密码不正确」、输对后踢出自动完成；注销时再认证叠在注销对话框之上，验证后注销自动完成并停在结果屏，「好的」回首页。
+
+## 19. 留给之后的 Minor（整分支评审，未修）
+
+1. 再认证验证中，「取消」按钮没被拦住（`Esc` 与遮罩已拦）。
+2. 重设密码提交中字段不是只读（`isSubmitting` 只在 `handleSubmit` 里变化）。
+3. 忘记密码页在 `useState` 初始化函数里调 `take()`（渲染期副作用；登录页是初始化读、effect 里清）。
+4. 验证邮箱页：无令牌直接进无效屏时，当前用户还在加载会让出口闪一下；成功后重新取用户失败时 `sessionKept` 可能判错。
+5. 设备行只把 `ipRegion` 的 null 当「属地未知」，空串没处理。
+6. 本机「退出登录」没有进行中状态，连点会登出两次（无害）。
+7. 邮箱卡片的待确认是否过期、时刻格式在服务端与水合时各算一次，只有过期时刻或北京时间零点恰好落在两次之间才不一致。
+8. PAP-101 的 `ResendVerificationButton` 有与 `useCountdown` 同样的首帧旧时间问题。
