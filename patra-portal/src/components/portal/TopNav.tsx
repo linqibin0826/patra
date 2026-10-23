@@ -8,6 +8,7 @@ import { Suspense, useEffect, useState } from "react";
 import { BrandMark } from "@/components/portal/BrandMark";
 import { MobileAccount, MobileAccountPlaceholder } from "@/components/portal/MobileAccount";
 import { NavAccount, NavAccountPlaceholder } from "@/components/portal/NavAccount";
+import { PendingDeletionRedirect } from "@/components/portal/PendingDeletionRedirect";
 import { UnverifiedEmailBanner } from "@/components/portal/UnverifiedEmailBanner";
 import { Venation } from "@/components/portal/Venation";
 import { buttonVariants } from "@/components/ui/button";
@@ -239,6 +240,10 @@ export function TopNav() {
         {searchLoaded && <QuickSearch open={searchOpen} onOpenChange={setSearchOpen} />}
       </header>
       <UnverifiedEmailBanner />
+      {/* 读查询串拼 next，包一层 Suspense，不让整个导航栏退出静态渲染 */}
+      <Suspense fallback={null}>
+        <PendingDeletionRedirect />
+      </Suspense>
     </>
   );
 }
