@@ -60,6 +60,11 @@ describe("saveProfile", () => {
     });
   });
 
+  it("网关自己的 503（identity 连不上）：unavailable，不说 catalog", async () => {
+    fetchMock.mockResolvedValue(reply(503, { code: "GW-0503", traits: ["DEP_UNAVAILABLE"] }));
+    await expect(saveProfile(VALUES)).resolves.toEqual({ ok: false, reason: "unavailable" });
+  });
+
   it("409 只有 CONFLICT：自动重试一次，第二次成功就算成功", async () => {
     fetchMock
       .mockResolvedValueOnce(reply(409, { code: "IDN-0409", traits: ["CONFLICT"] }))

@@ -93,7 +93,8 @@ export async function saveProfile(values: ProfileFormValues): Promise<SaveProfil
       if (problem.status === 422 && problem.errors.length > 0) {
         return { ok: false, reason: "invalid-fields", fieldErrors: problem.errors };
       }
-      if (problem.status === 503) {
+      // identity 自己回的 503（`IDN-0503`）才是 catalog 不可用；网关的 503 是 identity 连不上
+      if (problem.status === 503 && problem.code === "IDN-0503") {
         return { ok: false, reason: "catalog-unavailable" };
       }
       if (problem.status === 409) {
