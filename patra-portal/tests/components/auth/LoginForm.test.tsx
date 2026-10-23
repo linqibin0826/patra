@@ -319,6 +319,21 @@ describe("LoginForm · 成功", () => {
     expect(toast.success).toHaveBeenCalledWith("已登录");
   });
 
+  it("冷静期账号：不提示「已登录」，去取消注销页并带上 next", async () => {
+    vi.mocked(login).mockResolvedValue({
+      ok: true,
+      user: { ...USER, status: "PENDING_DELETION", deletionDueAt: "2026-11-07T00:00:00Z" },
+    });
+    const form = renderLogin();
+    await fillAndSubmit(form);
+    await waitFor(() =>
+      expect(router.replace).toHaveBeenCalledWith(
+        "/account/deletion-pending?next=%2Fpapers%3Fq%3DGLP-1",
+      ),
+    );
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
   it("跳转完成前一直显示提交中，不能再提交", async () => {
     const form = renderLogin();
     await fillAndSubmit(form);

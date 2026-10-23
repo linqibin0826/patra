@@ -18,10 +18,12 @@ const SESSION_COOKIES = ["patra_session", "__Host-patra_session"];
 /// 提交后要经过网关和目标页的服务端渲染，比默认的 5 秒宽一些
 const ROUND_TRIP = { timeout: 15_000 };
 
-/// 每跑一次在网关后面注册一个一次性账号：邮箱随机，密码运行时生成，都不写进仓库
+/// 每跑一次在网关后面注册一个一次性账号：邮箱、用户名随机，密码运行时生成，都不写进仓库
 function freshAccount() {
+  const tag = randomBytes(6).toString("hex");
   return {
-    email: `e2e-${randomBytes(6).toString("hex")}@example.org`,
+    email: `e2e-${tag}@example.org`,
+    username: `e2e-${tag}`,
     password: randomBytes(12).toString("base64url"),
   };
 }
@@ -92,6 +94,7 @@ test.describe("页面接管表单之前就提交：邮箱、密码不进地址�
   test("注册页", async ({ page }) => {
     await page.goto("/register?next=%2Fjournals%2F7");
     await page.getByLabel("邮箱").fill("reader@example.org");
+    await page.getByLabel("用户名").fill("reader");
     await page.getByLabel("密码", { exact: true }).fill("correct horse");
     await page.getByLabel("确认密码").fill("correct horse");
     const submitted = page.waitForRequest((request) => request.isNavigationRequest());
@@ -112,7 +115,8 @@ test.describe("账号：注册、登录、退出", () => {
     test.setTimeout(90_000);
     const account = freshAccount();
     const nav = page.getByRole("banner");
-    const initial = account.email[0]?.toUpperCase() ?? "";
+    // 默认头像的字：昵称默认等于用户名，取首字母大写
+    const initial = account.username[0]?.toUpperCase() ?? "";
 
     await test.step("导航栏「登录」→ 登录页 → 互跳到注册页，next 一路带着", async () => {
       await page.goto(SOURCE);
@@ -124,6 +128,7 @@ test.describe("账号：注册、登录、退出", () => {
       await expect(page).toHaveURL("/register?next=%2Fpapers%3Fq%3DGLP-1");
 
       await page.getByLabel("邮箱").fill(account.email);
+      await page.getByLabel("用户名").fill(account.username);
       await page.getByLabel("密码", { exact: true }).fill(account.password);
       await page.getByLabel("确认密码").fill(account.password);
       await page.getByRole("button", { name: "注册" }).click();

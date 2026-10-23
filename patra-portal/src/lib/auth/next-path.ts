@@ -31,3 +31,11 @@ export function authPageHref(page: "/login" | "/register", next: string): string
   const target = safeNextPath(next);
   return target === "/" ? page : `${page}?${new URLSearchParams({ next: target })}`;
 }
+
+/// 取消注销页的地址（简报 §2.2 规则 2）：冷静期账号登录后去这里，确认取消后再回 `next`。`next` 先经过
+/// `safeNextPath`，结果是 `/` 时不带参数。
+export function deletionPendingHref(next: string): string {
+  const target = safeNextPath(next);
+  const page = "/account/deletion-pending";
+  return target === "/" ? page : `${page}?${new URLSearchParams({ next: target })}`;
+}

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { authPageHref, safeNextPath } from "@/lib/auth/next-path";
+import { authPageHref, deletionPendingHref, safeNextPath } from "@/lib/auth/next-path";
 
 describe("safeNextPath", () => {
   it.each([
@@ -54,5 +54,18 @@ describe("authPageHref", () => {
   it.each(["/", "//evil.com", "/login"])("next 校验后是 / 时（%j）不带参数", (next) => {
     expect(authPageHref("/login", next)).toBe("/login");
     expect(authPageHref("/register", next)).toBe("/register");
+  });
+});
+
+describe("deletionPendingHref", () => {
+  it("带上经过校验的 next", () => {
+    expect(deletionPendingHref("/papers?q=a")).toBe(
+      "/account/deletion-pending?next=%2Fpapers%3Fq%3Da",
+    );
+  });
+
+  it("next 是首页或不合法时不带参数", () => {
+    expect(deletionPendingHref("/")).toBe("/account/deletion-pending");
+    expect(deletionPendingHref("//evil.com")).toBe("/account/deletion-pending");
   });
 });
