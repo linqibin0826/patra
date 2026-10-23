@@ -196,9 +196,9 @@ describe("TopNav 账号区", () => {
     expect(await screen.findByRole("link", { name: "登录" })).toHaveAttribute("href", "/login");
   });
 
-  it("桌面：已登录时是圆形标识", async () => {
+  it("桌面：已登录时是头像", async () => {
     renderTopNav(USER);
-    expect(await screen.findByRole("button", { name: "账号菜单" })).toHaveTextContent("C");
+    expect(await screen.findByRole("button", { name: "账号菜单" })).toHaveTextContent("陈");
   });
 
   it("移动菜单最底部是账号块，点「登录」先关闭菜单", async () => {

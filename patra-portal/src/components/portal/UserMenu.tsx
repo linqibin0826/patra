@@ -1,49 +1,66 @@
 "use client";
 
-import { LogOut } from "lucide-react";
+import { LogOut, Settings, UserRound } from "lucide-react";
+import Link from "next/link";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuLinkItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-/// 圆形标识里的字：邮箱的第一个字符（按码点取），字母转大写，数字和符号原样
-function emailInitial(email: string): string {
-  return Array.from(email)[0]?.toUpperCase() ?? "";
-}
+import { Avatar } from "@/components/user/Avatar";
+import type { CurrentUser } from "@/lib/auth/types";
 
 interface UserMenuProps {
-  email: string;
+  user: CurrentUser;
   /// 退出登录进行中：「退出登录」禁用
   loggingOut: boolean;
   onLogout: () => void;
 }
 
-/// 已登录时导航栏右上角的圆形标识和用户菜单（高保真稿 Nav-LoggedIn、Nav-MenuOpen、
-/// Nav-MenuLongEmail、Nav-LoggingOut）。开合、方向键、Esc 和点外面关闭、关闭后焦点回到圆形，
-/// 都用 base-ui 自带的。「退出登录」点了不关菜单：退出完成前菜单一直开着，完成后整个菜单
-/// 随登录状态换成「登录」。
-export function UserMenu({ email, loggingOut, onLogout }: UserMenuProps) {
+/// 已登录时导航栏右上角的头像和用户菜单（简报 §3.3、§4.3 nav.*）。顶栏只放 36px 头像；菜单头部是 40px
+/// 头像 + 昵称 / @用户名（都截断，悬停看全），邮箱不再出现。菜单项：个人主页、设置、退出登录。
+/// 开合、方向键、Esc 和点外面关闭、关闭后焦点回到头像，都用 base-ui 自带的。「退出登录」点了不关菜单：
+/// 退出完成前菜单一直开着，完成后整个菜单随登录状态换成「登录」。
+export function UserMenu({ user, loggingOut, onLogout }: UserMenuProps) {
+  const handle = `@${user.username}`;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label="账号菜单"
-        className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-ink-900 font-serif text-md leading-none font-medium text-paper-50 tabular-nums transition-colors hover:bg-ink-800 data-popup-open:bg-ink-800"
+        className="inline-flex shrink-0 rounded-full transition-shadow hover:shadow-[0_0_0_3px_var(--color-paper-300)] data-popup-open:shadow-[0_0_0_3px_var(--color-paper-300)]"
       >
-        {emailInitial(email)}
+        <Avatar identity={user} size={36} />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align="end" className="w-60">
         <DropdownMenuGroup>
-          <DropdownMenuLabel>
-            <div className="font-mono text-3xs leading-4 tracking-caps text-fg-3">当前账号</div>
-            <div title={email} className="mt-0.5 truncate text-sm leading-5 font-medium text-fg-1">
-              {email}
+          <DropdownMenuLabel className="flex items-center gap-3">
+            <Avatar identity={user} size={40} />
+            <div className="flex min-w-0 flex-col">
+              <div
+                title={user.displayName}
+                className="truncate text-sm leading-5 font-medium text-fg-1"
+              >
+                {user.displayName}
+              </div>
+              <div title={handle} className="truncate font-mono text-2xs leading-4 text-fg-3">
+                {handle}
+              </div>
             </div>
           </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuLinkItem render={<Link href={`/u/${user.username}`} />}>
+            <UserRound className="size-3.75 text-fg-3" aria-hidden="true" />
+            个人主页
+          </DropdownMenuLinkItem>
+          <DropdownMenuLinkItem render={<Link href="/settings/profile" />}>
+            <Settings className="size-3.75 text-fg-3" aria-hidden="true" />
+            设置
+          </DropdownMenuLinkItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             closeOnClick={false}

@@ -25,8 +25,9 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn() } }));
 
 import { toast } from "sonner";
 
-const LONG_EMAIL =
-  "postdoctoral.researcher.zhang@cardiovascular-research.university-hospital.example.org";
+/// 30 个字素的昵称、30 个字符的用户名（简报 §4.3 nav.menu-long）
+const LONG_NAME = "心血管内科博士后研究员张某某心血管内科博士后研究员张某某";
+const LONG_USERNAME = "postdoctoral-researcher-zhang1";
 
 /// 一个还没回来的请求，`answer` 让它在测试想要的时候回来
 function deferred<T>() {
@@ -60,8 +61,8 @@ function renderNav(user: CurrentUser | null | undefined) {
 }
 
 /// 已登录，点开用户菜单
-async function openMenu(email = USER.email) {
-  const nav = renderNav({ ...USER, email });
+async function openMenu(user: CurrentUser = USER) {
+  const nav = renderNav(user);
   await nav.user.click(screen.getByRole("button", { name: "账号菜单" }));
   return { ...nav, menu: await screen.findByRole("menu") };
 }
@@ -92,28 +93,50 @@ describe("NavAccount · 三种形态", () => {
   });
 
   it.each([
-    ["chen.yu@example.com", "C"],
-    [LONG_EMAIL, "P"],
-    ["2024cohort@example.org", "2"],
-  ])("已登录：圆形标识显示邮箱的第一个字符（%s → %s）", (email, initial) => {
-    renderNav({ ...USER, email });
+    ["陈宇", "陈"],
+    ["alice", "A"],
+    ["·小林", "小"],
+  ])("已登录：显示默认头像，字取昵称（%s → %s）", (displayName, initial) => {
+    renderNav({ ...USER, displayName });
     expect(screen.getByRole("button", { name: "账号菜单" })).toHaveTextContent(initial);
     expect(screen.queryByRole("link", { name: "登录" })).not.toBeInTheDocument();
+  });
+
+  it("已登录且有头像：显示 128 档的图片", () => {
+    renderNav({ ...USER, avatarUrl: "/users/chen-yu/avatar?v=0123456789abcdef" });
+    const img = screen.getByRole("button", { name: "账号菜单" }).querySelector("img");
+    expect(img).toHaveAttribute("src", "/api/users/chen-yu/avatar?v=0123456789abcdef&size=128");
   });
 });
 
 describe("NavAccount · 用户菜单", () => {
-  it("第一行是「当前账号」和完整邮箱，过长时截断、悬停看全；下面只有「退出登录」一项", async () => {
-    const { menu } = await openMenu(LONG_EMAIL);
-    expect(within(menu).getByRole("group", { name: `当前账号 ${LONG_EMAIL}` })).toBeInTheDocument();
-    const email = within(menu).getByText(LONG_EMAIL);
-    expect(email).toHaveAttribute("title", LONG_EMAIL);
-    expect(email).toHaveClass("truncate");
+  it("头部是昵称和 @用户名，不出现邮箱；下面是个人主页、设置、退出登录", async () => {
+    const { menu } = await openMenu();
+    expect(within(menu).getByRole("group", { name: "陈宇 @chen-yu" })).toBeInTheDocument();
+    expect(within(menu).queryByText(USER.email)).not.toBeInTheDocument();
     expect(
       within(menu)
         .getAllByRole("menuitem")
         .map((item) => item.textContent),
-    ).toEqual(["退出登录"]);
+    ).toEqual(["个人主页", "设置", "退出登录"]);
+    expect(within(menu).getByRole("menuitem", { name: "个人主页" })).toHaveAttribute(
+      "href",
+      "/u/chen-yu",
+    );
+    expect(within(menu).getByRole("menuitem", { name: "设置" })).toHaveAttribute(
+      "href",
+      "/settings/profile",
+    );
+  });
+
+  it("昵称和用户名过长时截断，悬停看全", async () => {
+    const { menu } = await openMenu({ ...USER, displayName: LONG_NAME, username: LONG_USERNAME });
+    const name = within(menu).getByText(LONG_NAME);
+    expect(name).toHaveAttribute("title", LONG_NAME);
+    expect(name).toHaveClass("truncate");
+    const handle = within(menu).getByText(`@${LONG_USERNAME}`);
+    expect(handle).toHaveAttribute("title", `@${LONG_USERNAME}`);
+    expect(handle).toHaveClass("truncate");
   });
 
   it("退出进行中：「退出登录」禁用并说明原因，菜单一直开着；再点不会再发一次", async () => {

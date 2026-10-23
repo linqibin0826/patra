@@ -62,17 +62,26 @@ function DropdownMenuLabel({ className, ...props }: MenuPrimitive.GroupLabel.Pro
   );
 }
 
+/// 菜单项的样式，普通项与链接项共用
+const ITEM =
+  "relative flex h-9 w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 text-left text-base leading-5 text-fg-1 no-underline outline-hidden transition-colors select-none data-highlighted:not-data-disabled:bg-bg-sunken data-disabled:cursor-not-allowed data-disabled:opacity-55 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4";
+
 /// 菜单项：悬停或方向键高亮时换成凹陷底色。禁用时 55% 不透明度、不可点的光标，不关掉指针事件：
 /// 关掉的话 `title`（比如「正在退出登录」）就不会显示。base-ui 的禁用项仍能被方向键高亮，
 /// 所以高亮底色要排除禁用项。
 function DropdownMenuItem({ className, ...props }: MenuPrimitive.Item.Props) {
   return (
-    <MenuPrimitive.Item
-      data-slot="dropdown-menu-item"
-      className={cn(
-        "relative flex h-9 w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 text-left text-base leading-5 text-fg-1 outline-hidden transition-colors select-none data-highlighted:not-data-disabled:bg-bg-sunken data-disabled:cursor-not-allowed data-disabled:opacity-55 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        className,
-      )}
+    <MenuPrimitive.Item data-slot="dropdown-menu-item" className={cn(ITEM, className)} {...props} />
+  );
+}
+
+/// 链接菜单项：样式同菜单项，点了关闭菜单。站内链接用 `render={<Link href=… />}` 交给 Next 跳转。
+function DropdownMenuLinkItem({ className, ...props }: MenuPrimitive.LinkItem.Props) {
+  return (
+    <MenuPrimitive.LinkItem
+      data-slot="dropdown-menu-link-item"
+      closeOnClick
+      className={cn(ITEM, className)}
       {...props}
     />
   );
@@ -95,6 +104,7 @@ export {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuLinkItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 };

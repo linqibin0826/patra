@@ -1,9 +1,10 @@
 "use client";
 
-import { LogOut } from "lucide-react";
+import { LogOut, Settings, UserRound } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { AuthLink } from "@/components/auth/AuthLink";
+import { Avatar } from "@/components/user/Avatar";
 import { useCurrentUser } from "@/lib/auth/current-user-query";
 import { useLogout } from "@/lib/auth/logout-mutation";
 import { useAuthPageHref } from "@/lib/auth/use-auth-page-href";
@@ -13,7 +14,10 @@ import { cn } from "@/lib/utils";
 /// 「登录」「退出登录」：48px 高的次按钮，占满一行
 const ACCOUNT_BUTTON = cn(btnSecondary, "flex h-12 w-full gap-2 py-0");
 
-/// 账号块的外框：上方一条分隔线。三种形态的内容都是 80px 高，切换时菜单不跳
+/// 「个人主页」「设置」：两个并排的次按钮
+const LINK_BUTTON = cn(btnSecondary, "flex h-12 min-w-0 flex-1 gap-2 py-0");
+
+/// 账号块的外框：上方一条分隔线。未登录与占位的内容是 80px 高；已登录多一行链接，更高（简报 §3.3）
 function Frame({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-w-0 flex-col gap-3 border-t border-border-default pt-5">
@@ -40,8 +44,8 @@ interface MobileAccountProps {
   onClose: () => void;
 }
 
-/// 移动端全屏菜单底部的账号块（高保真稿 Nav-M-MenuLoggedOut、Nav-M-MenuLoggedIn、
-/// Nav-M-MenuLongEmail、Nav-M-MenuLoggingOut、Nav-M-MenuPending）。
+/// 移动端全屏菜单底部的账号块（v0.8 高保真稿 Nav-M-*；已登录形态按 v0.12 简报 §3.3：头像 + 昵称 /
+/// @用户名一行，下面并排「个人主页」「设置」，再下面整行「退出登录」）。
 /// 「退出登录」进行中用 `aria-disabled` 而不是 `disabled`：按钮不丢焦点，`title` 照常显示。
 export function MobileAccount({ onClose }: MobileAccountProps) {
   const state = useCurrentUser();
@@ -69,14 +73,30 @@ export function MobileAccount({ onClose }: MobileAccountProps) {
   }
   return (
     <Frame>
-      <p className="flex min-w-0 items-baseline gap-2.5 text-base leading-5">
-        <span className="shrink-0 font-mono text-3xs leading-4 tracking-caps text-fg-3">
-          当前账号
-        </span>
-        <span title={state.user.email} className="min-w-0 truncate font-medium text-fg-1">
-          {state.user.email}
-        </span>
-      </p>
+      <div className="flex min-w-0 items-center gap-3">
+        <Avatar identity={state.user} size={40} />
+        <div className="flex min-w-0 flex-col">
+          <span
+            title={state.user.displayName}
+            className="truncate text-base leading-5 font-medium text-fg-1"
+          >
+            {state.user.displayName}
+          </span>
+          <span className="truncate font-mono text-xs leading-4 text-fg-3">
+            @{state.user.username}
+          </span>
+        </div>
+      </div>
+      <div className="flex gap-3">
+        <Link href={`/u/${state.user.username}`} onClick={onClose} className={LINK_BUTTON}>
+          <UserRound className="size-3.75" aria-hidden="true" />
+          个人主页
+        </Link>
+        <Link href="/settings/profile" onClick={onClose} className={LINK_BUTTON}>
+          <Settings className="size-3.75" aria-hidden="true" />
+          设置
+        </Link>
+      </div>
       <button
         type="button"
         aria-disabled={logout.isPending || undefined}

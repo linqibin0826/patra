@@ -23,8 +23,7 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn() } }));
 
 import { toast } from "sonner";
 
-const LONG_EMAIL =
-  "postdoctoral.researcher.zhang@cardiovascular-research.university-hospital.example.org";
+const LONG_NAME = "心血管内科博士后研究员张某某心血管内科博士后研究员张某某";
 
 /// 一个还没回来的请求，`answer` 让它在测试想要的时候回来
 function deferred<T>() {
@@ -89,14 +88,23 @@ describe("MobileAccount · 三种形态", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it("已登录：「当前账号」和邮箱，过长时截断、悬停看全；下面是「退出登录」", () => {
-    renderAccount({ ...USER, email: LONG_EMAIL });
-    expect(screen.getByText("当前账号")).toBeInTheDocument();
-    const email = screen.getByText(LONG_EMAIL);
-    expect(email).toHaveAttribute("title", LONG_EMAIL);
-    expect(email).toHaveClass("truncate");
+  it("已登录：头像、昵称、@用户名，昵称过长时截断；不出现邮箱；下面是个人主页、设置、退出登录", () => {
+    renderAccount({ ...USER, displayName: LONG_NAME });
+    const name = screen.getByText(LONG_NAME);
+    expect(name).toHaveAttribute("title", LONG_NAME);
+    expect(name).toHaveClass("truncate");
+    expect(screen.getByText("@chen-yu")).toBeInTheDocument();
+    expect(screen.queryByText(USER.email)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "个人主页" })).toHaveAttribute("href", "/u/chen-yu");
+    expect(screen.getByRole("link", { name: "设置" })).toHaveAttribute("href", "/settings/profile");
     expect(screen.getByRole("button", { name: "退出登录" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "登录" })).not.toBeInTheDocument();
+  });
+
+  it.each(["个人主页", "设置"])("已登录：点「%s」先关闭菜单", async (name) => {
+    const { user, onClose } = renderAccount(USER);
+    await user.click(screen.getByRole("link", { name }));
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
 
