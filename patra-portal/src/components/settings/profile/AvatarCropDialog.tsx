@@ -1,7 +1,7 @@
 "use client";
 
 import { Minus, Plus } from "lucide-react";
-import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
+import { type CSSProperties, type KeyboardEvent, useEffect, useMemo, useState } from "react";
 import Cropper, { type Area, type Point } from "react-easy-crop";
 import { FormAlert } from "@/components/auth/FormAlert";
 import { Dialog } from "@/components/ui/dialog";
@@ -213,14 +213,16 @@ function Preview({
           <img
             src={src}
             alt=""
-            className="absolute max-w-none"
-            // 位置随裁剪区域每一帧变化，只能写成行内样式
-            style={{
-              width: `${10_000 / area.width}%`,
-              height: `${10_000 / area.height}%`,
-              left: `${(-area.x / area.width) * 100}%`,
-              top: `${(-area.y / area.height) * 100}%`,
-            }}
+            className="absolute top-(--preview-top) left-(--preview-left) h-(--preview-h) w-(--preview-w) max-w-none"
+            // 位置随裁剪区域每一帧变化，无法写成静态类：按设计系统约定经 CSS 变量传入
+            style={
+              {
+                "--preview-w": `${10_000 / area.width}%`,
+                "--preview-h": `${10_000 / area.height}%`,
+                "--preview-left": `${(-area.x / area.width) * 100}%`,
+                "--preview-top": `${(-area.y / area.height) * 100}%`,
+              } as CSSProperties
+            }
           />
         )}
       </span>

@@ -11,7 +11,7 @@ import {
 import { arrayMove, rectSortingStrategy, SortableContext, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Search, X } from "lucide-react";
-import { type KeyboardEvent, useEffect, useId, useState } from "react";
+import { type CSSProperties, type KeyboardEvent, useEffect, useId, useState } from "react";
 import { FIELD_BOX } from "@/components/auth/FormField";
 import { FieldError } from "@/components/settings/profile/FieldError";
 import { HighlightedText } from "@/components/settings/profile/HighlightedText";
@@ -290,9 +290,17 @@ function InterestChip({
   return (
     <li
       ref={setNodeRef}
-      // dnd-kit 拖动时的位移只能写成行内样式（每一帧的数值不同）
-      style={{ transform: CSS.Translate.toString(transform), transition }}
-      className={cn("relative", isDragging && "z-10 opacity-80")}
+      // dnd-kit 每一帧的位移与回位过渡无法写成静态类：按设计系统约定经 CSS 变量传入
+      style={
+        {
+          "--drag-transform": CSS.Translate.toString(transform) ?? "none",
+          "--drag-transition": transition ?? "none",
+        } as CSSProperties
+      }
+      className={cn(
+        "relative transform-(--drag-transform) motion-safe:[transition:var(--drag-transition)]",
+        isDragging && "z-10 opacity-80",
+      )}
     >
       <span
         lang="en"
