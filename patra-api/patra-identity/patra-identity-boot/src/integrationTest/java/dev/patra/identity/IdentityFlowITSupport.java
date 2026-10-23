@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.icegreen.greenmail.util.GreenMail;
 import dev.patra.identity.config.IdentityClockITSpringConfig;
+import dev.patra.identity.config.IdentityITMinIOContainerInitializer;
 import dev.patra.identity.config.IdentityITPostgreSQLContainerInitializer;
 import dev.patra.identity.session.SessionToken;
 import dev.patra.tool.core.security.AccountType;
@@ -62,7 +63,8 @@ import tools.jackson.databind.json.JsonMapper;
     initializers = {
       IdentityITPostgreSQLContainerInitializer.class,
       RedisContainerInitializer.class,
-      GreenMailSmtpInitializer.class
+      GreenMailSmtpInitializer.class,
+      IdentityITMinIOContainerInitializer.class
     })
 @ActiveProfiles("test")
 @AutoConfigureRestTestClient

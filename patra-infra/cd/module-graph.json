@@ -511,6 +511,7 @@
             "impacts": [
                 "catalog",
                 "foundation",
+                "identity",
                 "ingest"
             ],
             "tasks": [

@@ -19,6 +19,7 @@ class PublicProfileFlowIT extends IdentityFlowITSupport {
           "username",
           "displayName",
           "avatarUrl",
+          "avatarPalette",
           "audience",
           "joinedAt",
           "bio",

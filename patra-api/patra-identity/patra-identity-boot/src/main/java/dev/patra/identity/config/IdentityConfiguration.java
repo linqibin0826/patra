@@ -29,6 +29,7 @@ import dev.patra.identity.domain.service.EmailTokenIssuer;
 import dev.patra.identity.domain.service.ReauthenticationGuard;
 import dev.patra.identity.domain.service.SessionIssuer;
 import dev.patra.identity.domain.service.SessionTerminator;
+import dev.patra.identity.infra.adapter.avatar.AvatarStorageProperties;
 import dev.patra.identity.infra.adapter.hashing.PasswordHashingAdapter;
 import dev.patra.identity.infra.adapter.mail.SmtpEmailDeliveryAdapter;
 import dev.patra.identity.infra.adapter.mail.ThymeleafMailRenderer;
@@ -50,7 +51,11 @@ import org.springframework.mail.javamail.JavaMailSender;
 /// identity 的装配：把配置项变成领域层的规则对象，创建密码哈希适配器、会话策略、Redis 会话存储、签发领域服务、
 /// 邮件链接规则、重发限流规则、令牌签发服务、模板渲染器与 SMTP 发信端口，以及再认证、找回密码、改邮箱的规则与守卫。
 @Configuration(proxyBeanMethods = false)
-@EnableConfigurationProperties({IdentityProperties.class, LoginThrottleProperties.class})
+@EnableConfigurationProperties({
+  IdentityProperties.class,
+  LoginThrottleProperties.class,
+  AvatarStorageProperties.class
+})
 public class IdentityConfiguration {
 
   /// 同时发送的邮件上限：一次 SMTP 会话几百毫秒，上限只防突发把连接打满。

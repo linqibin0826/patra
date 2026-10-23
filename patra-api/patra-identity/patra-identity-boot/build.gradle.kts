@@ -32,7 +32,11 @@ dependencies {
     implementation(project(":patra-api:patra-catalog:patra-catalog-api"))
     implementation(project(":patra-tool:patra-tool-http-client"))
 
+    // 头像存专用桶
+    implementation(project(":patra-tool:patra-tool-object-storage"))
+
     testImplementation(project(":patra-tool:patra-tool-test"))
+    testImplementation(testFixtures(project(":patra-api:patra-identity:patra-identity-infra")))
 
     // 测试里自动注入测试公钥，并能签出带身份的请求头
     testImplementation(testFixtures(project(":patra-tool:patra-tool-security")))

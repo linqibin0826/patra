@@ -1,5 +1,8 @@
 server:
   port: 6400
+  tomcat:
+    # 超过上传上限时 Tomcat 先读完这么多请求体再回 413，客户端看到状态码而不是连接被重置
+    max-swallow-size: 8MB
   # 解析网关注入的 X-Forwarded-*，让 OpenAPI 文档里的地址指向网关
   forward-headers-strategy: framework
 
@@ -21,6 +24,10 @@ spring:
     # 关掉 OSIV：开着时请求第一次查库拿到的连接会一直占到请求结束，
     # Argon2 排队和计算期间也占着，连接池会被一批登录拖垮
     open-in-view: false
+  servlet:
+    multipart:
+      max-file-size: 5MB      # 头像原图上限（release spec 2.1.3），超过回 413
+      max-request-size: 6MB   # 留出 multipart 边界与表单字段
   data:
     redis:
       # 所有环境都设超时：Redis 卡住时登录几秒内返回 503，不用等 Lettuce 默认的 60 秒
@@ -46,6 +53,8 @@ patra:
           connect-timeout: 1s
           read-timeout: 2s
   identity:
+    avatar:
+      bucket: patra-identity-avatar   # 头像专用桶（私有；minio-init 建，首次上传也会按需建）
     # 登录失败限制可在线刷新：默认值在 LoginThrottleProperties，要调就在 Nacos 的 patra-identity.yaml 里加键
     password-hashing:
       max-concurrent: 4
