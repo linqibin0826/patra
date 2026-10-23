@@ -145,3 +145,14 @@ export async function resetPassword(input: {
   unexpectedProblem(endpoint, problem);
   return UNAVAILABLE;
 }
+
+/// 确认新邮箱（`POST /auth/email/change/confirm`）：成功立即生效；409 是地址在确认前被别人注册了
+export async function confirmEmailChange(token: string): Promise<TokenResult> {
+  return consumeToken("/auth/email/change/confirm", token);
+}
+
+/// 撤销改邮箱（`POST /auth/email/change/revert`，「不是我」）：邮箱改回、全部会话下线、密码作废并发重设邮件；
+/// 409 是旧地址已被别人注册。冷静期内也能撤销
+export async function revertEmailChange(token: string): Promise<TokenResult> {
+  return consumeToken("/auth/email/change/revert", token);
+}

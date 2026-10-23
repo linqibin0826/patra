@@ -302,3 +302,33 @@ export const RESET_LANDING_MESSAGES = {
   invalidDescription: "重设链接 1 小时内有效，而且只能用一次。",
   again: "重新申请",
 } as const;
+
+/// 确认新邮箱与撤销改邮箱落地页（简报 §3.18 c / d，画板 Landing）
+export const EMAIL_CHANGE_LANDING_MESSAGES = {
+  confirmTitle: "确认新邮箱",
+  confirmDescription: "确认后，这个邮箱会成为你登录 Patra 的邮箱。",
+  confirmAction: "确认更改",
+  confirmPending: "确认中…",
+  confirmedTitle: "邮箱已更改",
+  confirmTakenTitle: "这个邮箱已被注册",
+  confirmTakenDescription:
+    "在你确认之前，这个地址被另一个账号注册了，无法使用。你的登录邮箱没有变。",
+  confirmInvalidDescription: "确认链接 1 小时内有效。可以回到设置重新发起更改。",
+  revertTitle: "撤销邮箱更改",
+  revertDescription: "撤销后：",
+  revertConsequences: [
+    "登录邮箱改回本地址",
+    "所有设备退出登录，原密码作废",
+    "我们会给本地址发一封重设密码的邮件",
+  ],
+  revertAction: "撤销更改并锁定账号",
+  revertPending: "撤销中…",
+  revertedTitle: "邮箱已改回",
+  revertTakenTitle: "无法改回原邮箱",
+  revertTakenDescription: "原邮箱已被另一个账号注册。",
+  revertInvalidDescription: "撤销链接 7 天内有效。",
+  invalidTitle: "链接无效或已过期",
+  continue: "继续浏览",
+  toAccount: "去账号设置",
+  login: "登录",
+} as const;

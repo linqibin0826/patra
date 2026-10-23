@@ -1,7 +1,13 @@
 // @vitest-environment node
 import { resetCookieJar } from "@tests/stubs/cookie-jar";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { requestPasswordReset, resetPassword, verifyEmail } from "@/lib/identity/token-actions";
+import {
+  confirmEmailChange,
+  requestPasswordReset,
+  resetPassword,
+  revertEmailChange,
+  verifyEmail,
+} from "@/lib/identity/token-actions";
 
 vi.mock("next/headers", () => import("@tests/stubs/cookie-jar"));
 
@@ -160,5 +166,37 @@ describe("resetPassword", () => {
       reason: "throttled",
       retryAfterSeconds: 125,
     });
+  });
+});
+
+describe.each([
+  ["confirmEmailChange", confirmEmailChange, "/auth/email/change/confirm"],
+  ["revertEmailChange", revertEmailChange, "/auth/email/change/revert"],
+] as const)("%s", (_name, action, path) => {
+  it("200：POST，返回邮箱", async () => {
+    respond(200, { email: "x@b.com", emailVerifiedAt: "2026-10-23T08:00:00Z" });
+    resetCookieJar();
+    await expect(action(TOKEN)).resolves.toEqual({ ok: true, email: "x@b.com" });
+    expect(lastRequest()).toMatchObject({
+      url: `http://gw.test/patra-identity${path}`,
+      method: "POST",
+      body: { token: TOKEN },
+    });
+  });
+
+  it("422 token：invalid", async () => {
+    respond(422, { code: "IDN-0422", errors: [{ field: "token", code: "INVALID" }] });
+    resetCookieJar();
+    await expect(action(TOKEN)).resolves.toEqual({ ok: false, reason: "invalid" });
+  });
+
+  it("409：taken", async () => {
+    respond(409, {
+      code: "IDN-0409",
+      traits: ["CONFLICT"],
+      errors: [{ field: "email", code: "ALREADY_REGISTERED" }],
+    });
+    resetCookieJar();
+    await expect(action(TOKEN)).resolves.toEqual({ ok: false, reason: "taken" });
   });
 });
