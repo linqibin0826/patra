@@ -22,6 +22,8 @@ import dev.patra.identity.domain.exception.UserIdentifierTakenException;
 import dev.patra.identity.domain.model.enums.UserStatus;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.model.vo.UserFieldViolations;
+import dev.patra.identity.domain.model.vo.avatar.Avatar;
+import dev.patra.identity.domain.policy.AvatarPalette;
 import dev.patra.tool.core.security.AuthenticationRequiredException;
 import dev.patra.tool.cqrs.CommandBus;
 import java.time.Duration;
@@ -430,7 +432,32 @@ class AuthControllerIT {
   }
 
   @Test
-  @DisplayName("当前用户：200，带 ID、邮箱、验证状态、用户名、昵称、头像（恒 null）、状态、两个时间、账号类型")
+  @DisplayName("当前用户有头像：avatarUrl 是带版本的 identity 相对路径")
+  void should_return_avatar_url_of_current_user() {
+    when(userQueryService.currentAccount())
+        .thenReturn(
+            UserAccountReadModel.builder()
+                .userId(42L)
+                .email("chen.yu@example.com")
+                .username("chen-yu")
+                .displayName("陈宇")
+                .avatar(Avatar.of(42L, "0123456789abcdef"))
+                .status(UserStatus.ACTIVE)
+                .build());
+
+    restClient
+        .get()
+        .uri("/auth/me")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .jsonPath("$.avatarUrl")
+        .isEqualTo("/users/chen-yu/avatar?v=0123456789abcdef");
+  }
+
+  @Test
+  @DisplayName("当前用户：200，带 ID、邮箱、验证状态、用户名、昵称、头像（没上传为 null）、默认头像色号、状态、两个时间、账号类型")
   void should_return_current_user() {
     when(userQueryService.currentAccount())
         .thenReturn(
@@ -464,6 +491,7 @@ class AuthControllerIT {
     assertThat(json.get("displayName").asString()).isEqualTo("陈宇");
     assertThat(json.has("avatarUrl")).isTrue();
     assertThat(json.get("avatarUrl").isNull()).isTrue();
+    assertThat(json.get("avatarPalette").asInt()).isEqualTo(AvatarPalette.of(42L));
     assertThat(json.get("status").asString()).isEqualTo("PENDING_DELETION");
     assertThat(json.get("deletionDueAt").asString()).isEqualTo("2026-11-04T08:00:00Z");
     assertThat(json.get("nextUsernameChangeAt").asString()).isEqualTo("2026-11-19T08:00:00Z");

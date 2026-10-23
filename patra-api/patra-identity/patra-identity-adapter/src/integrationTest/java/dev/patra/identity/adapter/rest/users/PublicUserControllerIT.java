@@ -10,6 +10,7 @@ import dev.patra.identity.domain.model.read.PublicAudience;
 import dev.patra.identity.domain.model.read.PublicUserLookup;
 import dev.patra.identity.domain.model.read.PublicUserView;
 import dev.patra.identity.domain.model.vo.Username;
+import dev.patra.identity.domain.model.vo.avatar.Avatar;
 import dev.patra.identity.domain.model.vo.profile.Affiliation;
 import dev.patra.identity.domain.model.vo.profile.MeshUi;
 import dev.patra.identity.domain.model.vo.profile.ProfileLink;
@@ -44,7 +45,27 @@ class PublicUserControllerIT {
   @MockitoBean private UserQueryService userQueryService;
 
   @Test
-  @DisplayName("找到：200，带用户名、昵称、头像（恒 null）、audience，不带邮箱和 ID")
+  @DisplayName("有头像：avatarUrl 是带版本的 identity 相对路径")
+  void should_return_avatar_url_in_public_identity() {
+    when(userQueryService.publicIdentity("chen-yu"))
+        .thenReturn(
+            PublicUserLookup.Found.of(
+                PublicUserView.builder()
+                    .username("chen-yu")
+                    .displayName("陈宇")
+                    .avatar(Avatar.of(42L, "0123456789abcdef"))
+                    .audience(PublicAudience.PUBLIC)
+                    .build()));
+
+    JsonNode json = getJson("/users/chen-yu");
+
+    assertThat(json.get("avatarUrl").asString())
+        .isEqualTo("/users/chen-yu/avatar?v=0123456789abcdef");
+    assertThat(json.has("userId")).isFalse();
+  }
+
+  @Test
+  @DisplayName("找到：200，带用户名、昵称、头像（没上传为 null）、色号、audience，不带邮箱和 ID")
   void should_return_public_identity() {
     when(userQueryService.publicIdentity("chen-yu"))
         .thenReturn(
@@ -52,6 +73,7 @@ class PublicUserControllerIT {
                 PublicUserView.builder()
                     .username("chen-yu")
                     .displayName("陈宇")
+                    .avatarPalette(7)
                     .audience(PublicAudience.PUBLIC)
                     .build()));
 
@@ -71,6 +93,7 @@ class PublicUserControllerIT {
     assertThat(json.get("displayName").asString()).isEqualTo("陈宇");
     assertThat(json.has("avatarUrl")).isTrue();
     assertThat(json.get("avatarUrl").isNull()).isTrue();
+    assertThat(json.get("avatarPalette").asInt()).isEqualTo(7);
     assertThat(json.get("audience").asString()).isEqualTo("PUBLIC");
     assertThat(json.has("email")).isFalse();
     assertThat(json.has("userId")).isFalse();
@@ -149,6 +172,7 @@ class PublicUserControllerIT {
             "username",
             "displayName",
             "avatarUrl",
+            "avatarPalette",
             "audience",
             "joinedAt",
             "bio",

@@ -1,5 +1,6 @@
 package dev.patra.identity.adapter.rest.auth.response;
 
+import dev.patra.identity.adapter.rest.AvatarUrls;
 import dev.patra.identity.domain.model.enums.UserStatus;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
 import dev.patra.tool.core.security.AccountType;
@@ -13,7 +14,8 @@ import lombok.Builder;
 /// @param emailVerified 邮箱是否已验证
 /// @param username 用户名
 /// @param displayName 昵称，没设时等于用户名
-/// @param avatarUrl 头像地址，本版恒为 `null`（用默认头像）
+/// @param avatarUrl 头像地址（identity 相对路径，带版本），没上传时为 `null`，门户画默认头像
+/// @param avatarPalette 默认头像色号（0–11），按用户 ID 算，有没有头像都给
 /// @param status 账号状态，只会是 `ACTIVE` 或 `PENDING_DELETION`
 /// @param deletionDueAt 注销到期时间，不在冷静期时为 `null`
 /// @param nextUsernameChangeAt 下次可以改名的时间，没改过名时为 `null`
@@ -26,6 +28,7 @@ public record CurrentUserResponse(
     String username,
     String displayName,
     String avatarUrl,
+    int avatarPalette,
     UserStatus status,
     Instant deletionDueAt,
     Instant nextUsernameChangeAt,
@@ -42,7 +45,8 @@ public record CurrentUserResponse(
         .emailVerified(account.emailVerified())
         .username(account.username())
         .displayName(account.displayName())
-        .avatarUrl(null)
+        .avatarUrl(AvatarUrls.of(account.username(), account.avatar()))
+        .avatarPalette(account.avatarPalette())
         .status(account.status())
         .deletionDueAt(account.deletionDueAt())
         .nextUsernameChangeAt(account.nextUsernameChangeAt())

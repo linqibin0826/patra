@@ -1,5 +1,6 @@
 package dev.patra.identity.adapter.rest.users.response;
 
+import dev.patra.identity.adapter.rest.AvatarUrls;
 import dev.patra.identity.adapter.rest.me.response.LinkResponse;
 import dev.patra.identity.adapter.rest.me.response.OrganizationResponse;
 import dev.patra.identity.adapter.rest.me.response.ResearchInterestResponse;
@@ -14,7 +15,8 @@ import lombok.Builder;
 ///
 /// @param username 用户名
 /// @param displayName 昵称，没设时等于用户名
-/// @param avatarUrl 头像地址，本版恒为 `null`（用默认头像）
+/// @param avatarUrl 头像地址（identity 相对路径，带版本），没上传时为 `null`
+/// @param avatarPalette 默认头像色号（0–11），服务端按用户 ID 算好（响应里没有用户 ID）
 /// @param audience 实际能被谁看到：`PUBLIC` / `SIGNED_IN` / `SELF`（门户在本人视角据此提示）
 /// @param joinedAt 加入时间，`YYYY-MM`
 /// @param bio 简介
@@ -27,6 +29,7 @@ public record PublicUserResponse(
     String username,
     String displayName,
     String avatarUrl,
+    int avatarPalette,
     PublicAudience audience,
     String joinedAt,
     String bio,
@@ -49,6 +52,8 @@ public record PublicUserResponse(
     return PublicUserResponse.builder()
         .username(view.username())
         .displayName(view.displayName())
+        .avatarUrl(AvatarUrls.of(view.username(), view.avatar()))
+        .avatarPalette(view.avatarPalette())
         .audience(view.audience())
         .joinedAt(view.joinedMonth() == null ? null : view.joinedMonth().toString())
         .bio(view.bio())
