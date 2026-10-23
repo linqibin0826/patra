@@ -60,3 +60,9 @@ COMMENT ON COLUMN cat_organization_alias.source IS 'SEED = 手工种子；WIKIDA
 
 CREATE INDEX idx_org_alias_ror_id ON cat_organization_alias (ror_id);
 CREATE INDEX idx_org_alias_trgm   ON cat_organization_alias USING gin (alias gin_trgm_ops);
+
+-- 一家机构只能有一条中文 LABEL：zhName 取 zh LABEL，两条文字不同的 LABEL 会让「最短者胜出」压掉审过的名字。
+-- 种子（R__cat_organization_alias_seed.sql）按此规则生成：某机构已有手工 LABEL 时，Wikidata 的 LABEL 生成为 ALIAS。
+CREATE UNIQUE INDEX uk_org_alias_zh_label
+    ON cat_organization_alias (ror_id)
+    WHERE alias_type = 'LABEL' AND lang = 'zh';

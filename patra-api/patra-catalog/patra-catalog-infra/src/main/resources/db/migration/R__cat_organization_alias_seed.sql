@@ -14,7 +14,7 @@
 --            作 LABEL，其余标签与别名作 ALIAS。只有 zh 标签的机构可能是繁体。CC0。
 --
 -- 同一 (ror_id, alias) 以先出现的为准（SEED 在前），所以手工行可以压过 Wikidata。
--- V10 起一家机构只能有一条 zh LABEL（局部唯一索引 uk_org_alias_zh_label）：某机构已有手工 LABEL 时，
+-- 一家机构只能有一条 zh LABEL（V9 的局部唯一索引 uk_org_alias_zh_label）：某机构已有手工 LABEL 时，
 -- Wikidata 的 LABEL 生成为 ALIAS；繁体标签（微創醫療、鞍鋼股份、中國中材）也只作 ALIAS。
 -- ============================================================
 

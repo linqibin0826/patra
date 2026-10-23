@@ -459,7 +459,7 @@ LIMIT :limit
 - 别名表的 `alias_type` 只有 `LABEL`（可作显示名的中文全名）与 `ALIAS`（简称、别名、旧名，只参与匹配）；`source` 为 `SEED`（手工种子）或 `WIKIDATA`。
 - 交付程度：本 Issue 交付机制 + 种子第一版——Wikidata 能取到的 199 家自动生成，再加手工百家左右（从第 4 节那 18 家起，按常见三甲清单补），由 Claude 起草；用户审完种子文件是 PR 转 ready 前的一个阻塞点。
 - 第一版（2026-10-21，`R__cat_organization_alias_seed.sql`）：手工 374 行（305 条 LABEL + 69 条 ALIAS，覆盖三条压名与 300 多家缺中文名的医院）+ Wikidata 247 行（199 家里 107 家有 zh 标签；Wikidata 的 SPARQL 端点当天限流到每分钟 1 次，改用 `wbgetentities` 动作 API），共 621 行、374 条 LABEL。
-- **一家机构只能有一条 zh LABEL**（评审修正，`V10` 的局部唯一索引 `uk_org_alias_zh_label`）：`ON CONFLICT (ror_id, alias)` 只能去掉文字相同的重复，手工 LABEL 与 Wikidata LABEL 文字不同时两条都入库、最短者当 `zhName`，审过的名字会被压掉（第一版里有 7 家，如徐州医科大学附属医院被旧名「徐州医学院附属医院」压过）。所以种子生成规则：某机构已有手工 LABEL 时，Wikidata 的 LABEL 降为 ALIAS；三条繁体标签（微創醫療、鞍鋼股份、中國中材）只作 ALIAS；误标成 zh 的英文「Coolpad」删掉。`V10` 先删种子行再建索引，已应用过 `V9` 的库（mini）靠种子文件校验和变化重跑 `R__` 重新插入。
+- **一家机构只能有一条 zh LABEL**（评审修正，`V9` 的局部唯一索引 `uk_org_alias_zh_label`）：`ON CONFLICT (ror_id, alias)` 只能去掉文字相同的重复，手工 LABEL 与 Wikidata LABEL 文字不同时两条都入库、最短者当 `zhName`，审过的名字会被压掉（第一版里有 7 家，如徐州医科大学附属医院被旧名「徐州医学院附属医院」压过）。所以种子生成规则：某机构已有手工 LABEL 时，Wikidata 的 LABEL 降为 ALIAS；三条繁体标签（微創醫療、鞍鋼股份、中國中材）只作 ALIAS；误标成 zh 的英文「Coolpad」删掉。索引最初放在单独的 `V10`（先删种子行再建索引），PR #273 评审按绿地项目不写补丁迁移的规则并回 `V9`；mini 已应用过旧 `V9` 与 `V10`，部署时删掉 `V10` 的迁移记录并修复 `V9` 的校验和，表结构不变。
 - `042jtt364` 的 LABEL 用现名「空军特色医学中心」、旧名「空军总医院」作 ALIAS（2026-10-21 用户定）。其他改过名的军队医院（海军总医院、济南军区总医院、117 / 181 / 150 / 421 医院）的现名我没有十足把握，LABEL 仍是旧名、现名只作 ALIAS，留给种子审阅时一并定。手工 305 条 LABEL 与 ROR ID 是否逐条对应同一家机构，用户回头审阅；建议在 mini 上把 `cat_organization_alias` 与 `cat_organization` 按 `ror_id` 连起来导一张审阅表（英文名、城市、状态、LABEL、来源）核对。
 
 代价：一张表 + 一个 `UNION ALL` + 一份种子文件（本 Issue 多出约四分之一的工作量：建表、查询、IT 各加一组用例，种子起草半天）；之后每次有人报「搜不到」就改种子文件、随下一次部署生效，没有后台界面。不做的代价：这些医院的用户只能用英文名搜，或填自由文本（没有 ROR ID，公开主页上只是一段文字）。
@@ -486,7 +486,7 @@ LIMIT :limit
 12. 用户已存的机构在 ROR 重导后变成 `inactive` 时，内部接口照样 404；由 PAP-95 只在 `rorId` 变化时才校验机构，避免只改简介也被挡（第 14 节）。不给 `OrganizationResp` 加 `status` 字段。
 13. 别名表 LABEL 的 `type_rank` 取 0（视同官方名），不是第 16 节原文的「视同 alias」（第 10.2 节）。
 14. 2 码点的子串查询走 `lower()` 条件的第三条查询，绕开预编译语句通用计划下的 trigram 全索引扫描（第 10.2 节）；不用全局的 `prepareThreshold=0` 或 `plan_cache_mode`，不碰别的查询。
-15. 一家机构只能有一条 zh LABEL，用 `V10` 的局部唯一索引守住，种子按此生成（第 16 节）。
+15. 一家机构只能有一条 zh LABEL，用 `V9` 的局部唯一索引守住，种子按此生成（第 16 节）。
 
 **已拍板（2026-10-21，用户按建议定）**：
 
