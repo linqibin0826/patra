@@ -2,41 +2,43 @@ package dev.patra.gateway.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import dev.patra.identity.session.RedisSessionStore;
-import dev.patra.identity.session.SessionStoreUnavailableException;
-import dev.patra.identity.session.SessionToken;
-import dev.patra.identity.session.StoredSession;
+import dev.patra.identity.api.dto.SessionIntrospectionReq;
+import dev.patra.identity.api.dto.SessionIntrospectionResp;
+import dev.patra.identity.api.endpoint.SessionEndpoint;
+import dev.patra.tool.core.error.remote.RemoteCallException;
+import dev.patra.tool.core.error.trait.ErrorTrait;
+import dev.patra.tool.core.error.trait.StandardErrorTrait;
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.ClientType;
 import dev.patra.tool.core.security.CurrentUser;
 import dev.patra.tool.security.authentication.CurrentUserAuthentication;
-import io.lettuce.core.RedisCommandExecutionException;
-import java.security.SecureRandom;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.Optional;
+import java.io.IOException;
+import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
-import org.springframework.data.redis.RedisConnectionFailureException;
-import org.springframework.data.redis.RedisSystemException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestClientException;
 
-/// 设计第 7.1 节那张表逐行：前六行当匿名，后两行分别是 503 与 500 对应的异常。
+/// 网关鉴权设计第 7.1 节那张表，查会话改为调 identity 后（PAP-106 设计第 6 节）：
+/// 前几行当匿名、不调或调了 inactive；后几行分别是 503 与 500 对应的异常。
 class SessionTokenAuthenticationConverterTest {
 
+  private static final String TOKEN = "patra_user_Kq3_z-0aB1cD2eF3gH4iJ5kL6mN7oP8qR9sT0uV1wXy";
   private static final CurrentUser USER =
       CurrentUser.of(1001L, 2001L, AccountType.USER, ClientType.WEB);
 
-  private final RedisSessionStore sessions = mock(RedisSessionStore.class);
+  private final SessionEndpoint sessions = mock(SessionEndpoint.class);
   private final SessionTokenAuthenticationConverter converter =
       new SessionTokenAuthenticationConverter(sessions);
-  private final SessionToken token = SessionToken.generate(AccountType.USER, new SecureRandom());
 
   @Test
   void should_return_null_without_authorization_header() {
@@ -46,8 +48,7 @@ class SessionTokenAuthenticationConverterTest {
 
   @Test
   void should_return_null_for_multiple_authorization_headers() {
-    assertThat(converter.convert(request("Bearer " + token.value(), "Bearer " + token.value())))
-        .isNull();
+    assertThat(converter.convert(request("Bearer " + TOKEN, "Bearer " + TOKEN))).isNull();
     verifyNoInteractions(sessions);
   }
 
@@ -58,25 +59,25 @@ class SessionTokenAuthenticationConverterTest {
   }
 
   @Test
-  void should_return_null_when_bearer_value_is_not_a_session_token() {
-    assertThat(converter.convert(request("Bearer not-a-session-token"))).isNull();
-    assertThat(converter.convert(request("Bearer eyJhbGciOiJFUzI1NiJ9.e30.c2ln"))).isNull();
+  void should_return_null_for_empty_bearer_value() {
     assertThat(converter.convert(request("Bearer"))).isNull();
+    assertThat(converter.convert(request("Bearer    "))).isNull();
     verifyNoInteractions(sessions);
   }
 
   @Test
-  void should_return_null_when_session_is_missing() {
-    when(sessions.findAndTouch(token)).thenReturn(Optional.empty());
+  void should_return_null_when_identity_reports_inactive() {
+    when(sessions.introspect(SessionIntrospectionReq.of(TOKEN)))
+        .thenReturn(SessionIntrospectionResp.inactive());
 
-    assertThat(converter.convert(request("Bearer " + token.value()))).isNull();
+    assertThat(converter.convert(request("Bearer " + TOKEN))).isNull();
   }
 
   @Test
-  void should_authenticate_when_session_exists() {
-    when(sessions.findAndTouch(token)).thenReturn(Optional.of(storedSession()));
+  void should_authenticate_when_identity_reports_active() {
+    when(sessions.introspect(SessionIntrospectionReq.of(TOKEN))).thenReturn(active());
 
-    Authentication authentication = converter.convert(request("Bearer " + token.value()));
+    Authentication authentication = converter.convert(request("Bearer " + TOKEN));
 
     assertThat(authentication).isInstanceOf(CurrentUserAuthentication.class);
     assertThat(authentication.getPrincipal()).isEqualTo(USER);
@@ -86,38 +87,84 @@ class SessionTokenAuthenticationConverterTest {
 
   @Test
   void should_accept_lowercase_scheme_and_surrounding_whitespace() {
-    when(sessions.findAndTouch(token)).thenReturn(Optional.of(storedSession()));
+    when(sessions.introspect(SessionIntrospectionReq.of(TOKEN))).thenReturn(active());
 
-    Authentication authentication = converter.convert(request(" bearer  " + token.value() + " "));
+    Authentication authentication = converter.convert(request(" bearer  " + TOKEN + " "));
 
     assertThat(authentication.getPrincipal()).isEqualTo(USER);
   }
 
   @Test
-  void should_translate_store_unavailable_into_authentication_service_exception() {
-    when(sessions.findAndTouch(token))
-        .thenThrow(
-            new SessionStoreUnavailableException(new RedisConnectionFailureException("refused")));
+  void should_translate_identity_dependency_unavailable_into_authentication_service_exception() {
+    when(sessions.introspect(any()))
+        .thenThrow(remote(503, Set.of(StandardErrorTrait.DEP_UNAVAILABLE)));
 
-    assertThatThrownBy(() -> converter.convert(request("Bearer " + token.value())))
-        .isInstanceOf(AuthenticationServiceException.class)
-        .isNotInstanceOf(SessionLookupFailedException.class)
-        .hasCauseInstanceOf(SessionStoreUnavailableException.class)
-        .hasMessageNotContaining(token.value());
+    assertUnavailable(RemoteCallException.class);
   }
 
   @Test
-  void should_wrap_other_store_failures_as_lookup_failed() {
-    when(sessions.findAndTouch(token))
-        .thenThrow(
-            new RedisSystemException(
-                "Error in execution",
-                new RedisCommandExecutionException("NOAUTH Authentication required.")));
+  void should_translate_unreachable_identity_into_authentication_service_exception() {
+    when(sessions.introspect(any()))
+        .thenThrow(new ResourceAccessException("I/O error", new IOException("refused")));
 
-    assertThatThrownBy(() -> converter.convert(request("Bearer " + token.value())))
+    assertUnavailable(ResourceAccessException.class);
+  }
+
+  @Test
+  void should_translate_missing_identity_instance_into_authentication_service_exception() {
+    when(sessions.introspect(any()))
+        .thenThrow(new IllegalStateException("No instances available for patra-identity"));
+
+    assertUnavailable(IllegalStateException.class);
+  }
+
+  @Test
+  void should_wrap_other_identity_errors_as_lookup_failed() {
+    when(sessions.introspect(any())).thenThrow(remote(500, Set.of()));
+
+    assertThatThrownBy(() -> converter.convert(request("Bearer " + TOKEN)))
         .isInstanceOf(SessionLookupFailedException.class)
-        .hasCauseInstanceOf(RedisSystemException.class)
-        .hasMessageNotContaining(token.value());
+        .hasCauseInstanceOf(RemoteCallException.class)
+        .hasMessageNotContaining(TOKEN);
+  }
+
+  @Test
+  void should_wrap_unexpected_client_failures_as_lookup_failed() {
+    when(sessions.introspect(any())).thenThrow(new RestClientException("响应解析失败"));
+
+    assertThatThrownBy(() -> converter.convert(request("Bearer " + TOKEN)))
+        .isInstanceOf(SessionLookupFailedException.class)
+        .hasCauseInstanceOf(RestClientException.class)
+        .hasMessageNotContaining(TOKEN);
+  }
+
+  private void assertUnavailable(Class<? extends Throwable> cause) {
+    assertThatThrownBy(() -> converter.convert(request("Bearer " + TOKEN)))
+        .isInstanceOf(AuthenticationServiceException.class)
+        .isNotInstanceOf(SessionLookupFailedException.class)
+        .hasCauseInstanceOf(cause)
+        .hasMessageNotContaining(TOKEN);
+  }
+
+  private static SessionIntrospectionResp active() {
+    return SessionIntrospectionResp.builder()
+        .active(true)
+        .userId(USER.userId())
+        .sessionId(USER.sessionId())
+        .accountType(USER.accountType())
+        .clientType(USER.clientType())
+        .build();
+  }
+
+  private static RemoteCallException remote(int status, Set<ErrorTrait> traits) {
+    return new RemoteCallException(
+        "IDN-0" + status,
+        status,
+        "remote",
+        "POST /_internal/sessions/introspect",
+        null,
+        Map.of(),
+        traits);
   }
 
   private static MockHttpServletRequest request(String... authorizations) {
@@ -126,19 +173,5 @@ class SessionTokenAuthenticationConverterTest {
       request.addHeader(HttpHeaders.AUTHORIZATION, value);
     }
     return request;
-  }
-
-  private static StoredSession storedSession() {
-    Instant now = Instant.parse("2026-10-09T08:00:00Z");
-    return StoredSession.builder()
-        .userId(USER.userId())
-        .sessionId(USER.sessionId())
-        .accountType(AccountType.USER)
-        .clientType(ClientType.WEB)
-        .createdAt(now)
-        .lastActiveAt(now)
-        .expiresAt(now.plus(Duration.ofDays(180)))
-        .authenticatedAt(now)
-        .build();
   }
 }

@@ -9,7 +9,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import com.github.tomakehurst.wiremock.verification.LoggedRequest;
-import dev.patra.tool.test.container.initializer.RedisContainerInitializer;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,8 +29,7 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @AutoConfigureRestTestClient
-@ContextConfiguration(
-    initializers = {RedisContainerInitializer.class, GatewayITSigningKeyInitializer.class})
+@ContextConfiguration(initializers = GatewayITSigningKeyInitializer.class)
 @TestPropertySource(properties = "server.tomcat.remoteip.internal-proxies=127.0.0.1/32,::1/128")
 class GatewayTrustedProxyIT {
 

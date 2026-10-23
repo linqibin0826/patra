@@ -1,7 +1,7 @@
 package dev.patra.gateway.security;
 
 import com.nimbusds.jose.jwk.ECKey;
-import dev.patra.identity.session.RedisSessionStore;
+import dev.patra.identity.api.endpoint.SessionEndpoint;
 import dev.patra.tool.core.error.codes.HttpStdErrors;
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.ClientType;
@@ -20,7 +20,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -32,7 +31,8 @@ import org.springframework.security.web.authentication.AnonymousAuthenticationFi
 import org.springframework.security.web.authentication.AuthenticationFilter;
 import org.springframework.web.filter.ForwardedHeaderFilter;
 
-/// 网关鉴权的装配：会话存储、签名器、两条过滤器链、入站转发头的剥除、出站头过滤器。
+/// 网关鉴权的装配：签名器、两条过滤器链、入站转发头的剥除、出站头过滤器。查会话经 identity 的内部接口
+/// （代理在 `IdentityClientConfiguration`，PAP-106）。
 ///
 /// 两条过滤器链：第一条只匹配拒绝名单、对所有人 403；第二条查会话、identity 默认需登录、其余放行。
 /// starter 的默认过滤器链因为这里声明了而让位，它的写出器、错误映射、验签器照常生效。
@@ -67,20 +67,10 @@ public class GatewaySecurityConfiguration {
   /// identity 的全部路径，公开名单之外默认需登录。
   static final String IDENTITY_PATHS = "/patra-identity/**";
 
-  /// Redis 里的会话存储，和 identity 共用同一份契约；网关只查和续期。
-  ///
-  /// @param redis Redis 模板，Boot 按 `spring.data.redis.*` 装配
-  /// @param clock 容器里的时钟（starter-core 提供）
-  /// @return 存储
-  @Bean
-  public RedisSessionStore redisSessionStore(StringRedisTemplate redis, Clock clock) {
-    return new RedisSessionStore(redis, clock);
-  }
-
   /// 第一条链：拒绝名单，对任何人 403。
   ///
   /// 链里没有认证过滤器，所有人在这条链上都是匿名，撞上 `denyAll` 时框架走的是未登录入口点；
-  /// 把入口点换成拒绝访问的输出，匿名和已登录就得到同一个 403，不读令牌、不查 Redis。
+  /// 把入口点换成拒绝访问的输出，匿名和已登录就得到同一个 403，不读令牌、不查会话。
   ///
   /// @param http Spring Security 的构建器
   /// @param problemWriter 统一的错误写出器
@@ -110,12 +100,12 @@ public class GatewaySecurityConfiguration {
   ///
   /// @param http Spring Security 的构建器
   /// @param problemWriter 统一的错误写出器
-  /// @param sessions 会话存储
+  /// @param sessions identity 查会话接口的代理
   /// @return 过滤器链
   @Bean
   @Order(2)
   public SecurityFilterChain gatewayFilterChain(
-      HttpSecurity http, SecurityProblemWriter problemWriter, RedisSessionStore sessions) {
+      HttpSecurity http, SecurityProblemWriter problemWriter, SessionEndpoint sessions) {
     StatelessSecurityDefaults.apply(http, problemWriter);
     http.headers(AbstractHttpConfigurer::disable);
 

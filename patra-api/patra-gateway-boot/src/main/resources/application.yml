@@ -5,7 +5,8 @@
 # Spring Cloud Gateway 的 WebMVC 版（servlet 栈），代理走 Boot 的 RestClient。
 # 设计：docs/patra/specs/2026-10-09-gateway-webmvc-design.md
 # 鉴权：docs/patra/specs/2026-10-09-gateway-auth-design.md
-# 随环境变的值（Redis、身份断言公钥、私钥引用）在 Nacos：patra-common.yaml、patra-gateway.yaml
+# 随环境变的值（身份断言公钥、私钥引用）在 Nacos：patra-common.yaml、patra-gateway.yaml
+# 查会话经 identity 的内部接口（PAP-106），网关不连 Redis
 # ============================================================================
 
 server:
@@ -40,13 +41,6 @@ spring:
       read-timeout: 60s
       # 网关不替客户端跟随下游的 3xx
       redirects: DONT_FOLLOW
-
-  # 会话存储：地址、账号在 Nacos 公共配置 patra-common.yaml。
-  # 命令超时 2 秒：带令牌的请求每个都要等这一跳，Redis 卡住时几秒内变成 503；建连耗时另计。
-  data:
-    redis:
-      connect-timeout: 5s
-      timeout: 2s
 
   cloud:
     # Gateway Route Configuration（WebMVC 版）
@@ -125,3 +119,11 @@ patra:
   web:
     error:
       context-prefix: GW
+  http-client:
+    http-interface:
+      groups:
+        # 查会话（PAP-106）：带令牌的请求每个都要等这一跳，identity 卡住时几秒内变成 503
+        identity:
+          base-url: lb://patra-identity
+          connect-timeout: 1s
+          read-timeout: 2s

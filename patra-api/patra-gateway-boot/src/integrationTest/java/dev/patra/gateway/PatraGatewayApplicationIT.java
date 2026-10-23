@@ -2,9 +2,8 @@ package dev.patra.gateway;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.patra.identity.session.RedisSessionStore;
+import dev.patra.identity.api.endpoint.SessionEndpoint;
 import dev.patra.tool.security.assertion.IdentityAssertionSigner;
-import dev.patra.tool.test.container.initializer.RedisContainerInitializer;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,7 +19,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.ReactorClientHttpRequestFactory;
 import org.springframework.security.web.SecurityFilterChain;
@@ -37,14 +35,12 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @AutoConfigureRestTestClient
-@ContextConfiguration(
-    initializers = {RedisContainerInitializer.class, GatewayITSigningKeyInitializer.class})
+@ContextConfiguration(initializers = GatewayITSigningKeyInitializer.class)
 class PatraGatewayApplicationIT {
 
   @Autowired private ApplicationContext context;
   @Autowired private RestTestClient restClient;
   @Autowired private RequestThreadProbe probe;
-  @Autowired private StringRedisTemplate redis;
 
   @Test
   void should_start_as_servlet_application_without_webflux_gateway() {
@@ -70,10 +66,13 @@ class PatraGatewayApplicationIT {
         .isInstanceOf(ReactorClientHttpRequestFactory.class);
   }
 
+  /// 查会话经 identity 的内部接口（PAP-106）：网关的类路径上没有 Spring Data Redis。
   @Test
-  void should_have_the_session_store_ready() {
-    assertThat(context.getBean(RedisSessionStore.class)).isNotNull();
-    assertThat(redis.getRequiredConnectionFactory().getConnection().ping()).isEqualTo("PONG");
+  void should_look_up_sessions_through_identity_without_redis() {
+    assertThat(context.getBean(SessionEndpoint.class)).isNotNull();
+    assertThat(
+            ClassUtils.isPresent("org.springframework.data.redis.core.StringRedisTemplate", null))
+        .isFalse();
   }
 
   @Test
