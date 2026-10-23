@@ -133,3 +133,21 @@ export const DELETION_PENDING_MESSAGES = {
   logout: "退出登录",
   loggingOut: "正在退出…",
 } as const;
+
+/// 再认证对话框（简报 §3.14、§4.9）
+export const REAUTH_MESSAGES = {
+  title: "确认是你本人",
+  description: "这项操作需要验证密码。验证后 10 分钟内不用再输。",
+  forgot: "忘记密码？",
+  cancel: "取消",
+  confirm: "确认",
+  verifying: "验证中…",
+  required: "请输入密码",
+  wrong: "密码不正确",
+  failed: "没有验证成功，请稍后再试",
+} as const;
+
+/// 「尝试次数过多，请 N 分钟后再试」：秒数向上取整到分钟、至少 1 分钟；没给秒数时按 1 分钟
+export function waitMinutes(retryAfterSeconds: number | null): number {
+  return Math.max(1, Math.ceil((retryAfterSeconds ?? 60) / 60));
+}
