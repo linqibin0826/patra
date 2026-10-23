@@ -4,11 +4,11 @@ import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-/// 桌面宽度档：sm 400（再认证、离开确认）/ md 480（注销）/ lg 520（头像裁剪）
+/// 桌面宽度档：sm 400（再认证、离开确认）/ md 480（注销）/ lg 620（头像裁剪，画板 Profile 的宽度）
 const WIDTH = {
   sm: "min-[881px]:w-100",
   md: "min-[881px]:w-120",
-  lg: "min-[881px]:w-130",
+  lg: "min-[881px]:w-155",
 } as const;
 
 interface DialogProps {
