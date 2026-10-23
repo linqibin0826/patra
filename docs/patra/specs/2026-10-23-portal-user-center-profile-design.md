@@ -1,6 +1,6 @@
 # 门户用户中心：注册、导航、设置页、个人资料、隐私、公开主页工程设计（PAP-101）
 
-> **状态**：已评审，用户 2026-10-23 批准
+> **状态**：已实施（2026-10-23），待用户验收；实施结果见第 18 节
 > **Issue**：Linear PAP-101（GitHub #267），v0.12 User Center 的第一个前端 Issue
 > **分支**：`feat/v0.12-user-center-portal`（PAP-102 在同一分支继续，两个 Issue 合一个前端 PR）
 > **产品定义**：`docs/patra/release-specs/v0.12-user-center.md` 2.1 节与第 4 节
@@ -373,3 +373,34 @@ interface GatewayRequestInit {
 
 1. 同意：生产容器入口改成 `node --import ./strip-forwarded-for.mjs server.js`（§4.1，动 Dockerfile 的 CMD，随 CD 上 mini）。
 2. 同意：catalog 的公开读不转发 IP / UA，与 PAP-99 契约评论「每个请求都带」不同（§4.2）。
+
+## 18. 实施结果（2026-10-23）
+
+按计划 `docs/patra/plans/2026-10-23-portal-user-center-profile.md` 的 25 个任务在 `feat/v0.12-user-center-portal` 上内联 TDD 完成，未推送、未开 PR（等 PAP-102 一起）。
+
+### 18.1 门禁
+
+- `pnpm lint`、`pnpm typecheck`、`pnpm test`（Vitest 180 个文件 1700+ 条）全绿；`pnpm build` 通过。
+- `tests/e2e/auth.spec.ts` 补了用户名，对 mini 网关 `--workers=1` 6 条全过。
+
+### 18.2 实测
+
+1. **预加载模块**：本地生产构建，临时探针路由读 `headers().get("x-forwarded-for")`，请求带伪造的 `X-Forwarded-For: 203.0.113.9`：带 `--import ./strip-forwarded-for.mjs` 时读到 `127.0.0.1`，不带时读到 `203.0.113.9`。探针已删除。
+2. **本机 dev 连 mini 网关走查**：注册（前端规则、转小写）→ 横幅（注册后倒计时）→ 菜单 → 资料全部字段（机构搜「协和」命中 ROR、关注领域搜英文、中文拦截、Alt + 方向键排序）→ 保存 → 头像裁剪上传与转发（`image/webp`、`Cache-Control: public, max-age=31536000, immutable`、`If-None-Match` 回 304、版本号不对 404）→ 隐私三项即时保存 → 公开主页本人 / 匿名两种视角、`noindex` 随设置切换、「仅登录用户」对匿名回真正的 404、路径大写可访问、非法字符 404。邮箱验证用 Mailpit 里的令牌直接调 `POST /auth/email/verify`（落地页归 PAP-102）。
+3. **桌面 1440×900 与移动 375×812**：Playwright 无头浏览器截全套，与画板逐屏对照，差异已修（见 18.3）。走查时浏览器控制台除故意访问的不存在用户外没有报错。
+
+### 18.3 实施中的偏离与修正
+
+1. `actions.ts` 改读嵌套 `{ sessionToken, user }` 提前到计划 Task 4（类型变宽后旧解析编译不过）。
+2. 生产构建发现 `lookupSession` / `callIdentity` 的 try/catch 吞掉了 Next 的动态渲染信号，设置页预渲染时被当成网关不可用：catch 里先 `unstable_rethrow`。
+3. base-ui 组合框选中候选后用 `reason: "item-press"` 回填输入框：两个选择器都忽略这类回填（真实浏览器复现，jsdom 复现不了）。
+4. 头像导出原用脱离文档的 `Image.decode()`，在不渲染的页面里一直不返回：改为 `createImageBitmap(file)`。
+5. dnd-kit 默认全局计数器 id 造成水合不一致、窄屏切换时传感器数组长短变化触发 React 警告：`DndContext` 传 `useId()`、读屏拖动说明改中文、传感器始终不变。
+6. 裁剪对话框按画板改为 620px 宽（简报文字 520px，已在简报 §10 记一笔）；手机头像卡片头像与按钮同一行。
+7. 设计系统守护测试拦下的写法（自定义阴影、`fg-4` 正文、组件自带焦点环、非 `motion-safe` 的位移过渡与 `animate-*`）全部改成允许的写法。
+8. 隐私页单选、开关的说明文字用块级元素，读屏名称里标签与说明之间有停顿。
+
+### 18.4 留给 PAP-102 / 之后
+
+- 设置页「账号」「安全」两项指向的页面、`/account/deletion-pending`、`/verify-email` 等落地页由 PAP-102 建；本 Issue 已有的跳转（冷静期 → 取消注销页、横幅「更改邮箱」→ `/settings/account#email`）在那之前是 404。
+- 旧用户名 307 跳转要等 PAP-102 的改名功能落地后在 mini 上实测（单测已覆盖）。
