@@ -1,8 +1,9 @@
-import { CalendarClock, TriangleAlert } from "lucide-react";
+import { CalendarClock } from "lucide-react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { DeletionPendingPanel } from "@/components/account/DeletionPendingPanel";
 import { AuthShell } from "@/components/auth/AuthShell";
+import { FormAlert } from "@/components/auth/FormAlert";
 import { StateIcon } from "@/components/auth/StateIcon";
 import { lookupSession } from "@/lib/auth/current-user";
 import { DELETION_PENDING_MESSAGES } from "@/lib/auth/messages";
@@ -38,12 +39,8 @@ export default async function DeletionPendingPage({
       back={null}
       icon={<StateIcon icon={CalendarClock} tone="warning" />}
     >
-      <div className="mt-5 flex items-start gap-2.5 rounded-lg bg-status-warning-bg px-3.5 py-3 text-base leading-5 text-fg-1">
-        <TriangleAlert
-          className="mt-0.5 size-4 shrink-0 text-status-warning-ink"
-          aria-hidden="true"
-        />
-        <span className="min-w-0">{DELETION_PENDING_MESSAGES.warning}</span>
+      <div className="mt-5">
+        <FormAlert tone="warning">{DELETION_PENDING_MESSAGES.warning}</FormAlert>
       </div>
       <DeletionPendingPanel next={next} />
     </AuthShell>

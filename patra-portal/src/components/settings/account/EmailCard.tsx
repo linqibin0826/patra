@@ -181,21 +181,23 @@ export function EmailCard({
         </p>
       )}
       {pending && (
-        <div className="flex items-center gap-2.5 rounded-lg bg-status-info-bg px-3.5 py-3 text-base leading-5 text-fg-1">
-          <Mail className="size-4 shrink-0 text-status-info" aria-hidden="true" />
-          <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
-            正在等待 <b className="font-medium">{pending.newEmail}</b> 确认 ·{" "}
-            {formatClock(pending.expiresAt, Date.now())} 前有效
-          </span>
-          <button
-            type="button"
-            onClick={cancelPending}
-            aria-disabled={busy === "cancel" || undefined}
-            className={btnText}
-          >
-            {busy === "cancel" ? "取消中…" : "取消更改"}
-          </button>
-        </div>
+        <FormAlert
+          tone="info"
+          icon={Mail}
+          action={
+            <button
+              type="button"
+              onClick={cancelPending}
+              aria-disabled={busy === "cancel" || undefined}
+              className={btnText}
+            >
+              {busy === "cancel" ? "取消中…" : "取消更改"}
+            </button>
+          }
+        >
+          正在等待 <b className="font-medium">{pending.newEmail}</b> 确认 ·{" "}
+          {formatClock(pending.expiresAt, Date.now())} 前有效
+        </FormAlert>
       )}
       {alert && <FormAlert>{ALERTS[alert]}</FormAlert>}
       {editing && (

@@ -1,9 +1,9 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { CircleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { FormAlert } from "@/components/auth/FormAlert";
 import { SettingsCard } from "@/components/settings/SettingsCard";
 import { SessionRow } from "@/components/settings/security/SessionRow";
 import { useLogout } from "@/lib/auth/logout-mutation";
@@ -131,13 +131,15 @@ export function SessionsCard() {
           )}
         </div>
       ) : error && !error.signedOut ? (
-        <div className="flex items-center gap-2.5 rounded-lg bg-status-danger-bg px-3.5 py-3 text-base leading-5 text-fg-1">
-          <CircleAlert className="size-4 shrink-0 text-status-danger" aria-hidden="true" />
-          <span className="flex-1">{SESSIONS_MESSAGES.failed}</span>
-          <button type="button" onClick={() => void refetch()} className={btnText}>
-            {SESSIONS_MESSAGES.retry}
-          </button>
-        </div>
+        <FormAlert
+          action={
+            <button type="button" onClick={() => void refetch()} className={btnText}>
+              {SESSIONS_MESSAGES.retry}
+            </button>
+          }
+        >
+          {SESSIONS_MESSAGES.failed}
+        </FormAlert>
       ) : (
         <div
           role="status"
