@@ -3,10 +3,12 @@ package dev.patra.identity.domain.model.read;
 import dev.patra.identity.domain.model.enums.Occupation;
 import dev.patra.identity.domain.model.enums.ProfessionalVisibility;
 import dev.patra.identity.domain.model.enums.UserStatus;
+import dev.patra.identity.domain.model.vo.avatar.Avatar;
 import dev.patra.identity.domain.model.vo.profile.Affiliation;
 import dev.patra.identity.domain.model.vo.profile.PrivacySettings;
 import dev.patra.identity.domain.model.vo.profile.ProfileLink;
 import dev.patra.identity.domain.model.vo.profile.ResearchInterest;
+import dev.patra.identity.domain.policy.AvatarPalette;
 import dev.patra.identity.domain.policy.ProfileDisplayPolicy;
 import java.time.Instant;
 import java.util.List;
@@ -20,6 +22,7 @@ import lombok.Builder;
 /// @param userId 用户 ID
 /// @param username 用户名
 /// @param displayName 昵称；资料里没设时已回退成用户名
+/// @param avatar 头像，没上传时为 `null`
 /// @param status 状态
 /// @param emailVerified 邮箱是否已验证
 /// @param joinedAt 注册时间
@@ -36,6 +39,7 @@ public record PublicUserReadModel(
     long userId,
     String username,
     String displayName,
+    Avatar avatar,
     UserStatus status,
     boolean emailVerified,
     Instant joinedAt,
@@ -103,6 +107,8 @@ public record PublicUserReadModel(
     return PublicUserView.builder()
         .username(username)
         .displayName(displayName)
+        .avatar(avatar)
+        .avatarPalette(AvatarPalette.of(userId))
         .audience(audience())
         .joinedMonth(joinedAt == null ? null : display.joinedMonth(joinedAt))
         .bio(bio)

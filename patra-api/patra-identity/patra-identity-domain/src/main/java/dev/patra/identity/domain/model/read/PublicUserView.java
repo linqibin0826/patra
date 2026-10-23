@@ -1,6 +1,7 @@
 package dev.patra.identity.domain.model.read;
 
 import dev.patra.identity.domain.model.enums.Occupation;
+import dev.patra.identity.domain.model.vo.avatar.Avatar;
 import dev.patra.identity.domain.model.vo.profile.Affiliation;
 import dev.patra.identity.domain.model.vo.profile.ProfileLink;
 import dev.patra.identity.domain.model.vo.profile.ResearchInterest;
@@ -12,6 +13,8 @@ import lombok.Builder;
 ///
 /// @param username 用户名
 /// @param displayName 昵称（已回退）
+/// @param avatar 头像，没上传时为 `null`
+/// @param avatarPalette 默认头像色号（0–11），按用户 ID 算好，视图里不带用户 ID
 /// @param audience 实际能被谁看到，门户在本人视角据此提示
 /// @param joinedMonth 加入时间，只到月
 /// @param bio 简介
@@ -23,6 +26,8 @@ import lombok.Builder;
 public record PublicUserView(
     String username,
     String displayName,
+    Avatar avatar,
+    int avatarPalette,
     PublicAudience audience,
     YearMonth joinedMonth,
     String bio,

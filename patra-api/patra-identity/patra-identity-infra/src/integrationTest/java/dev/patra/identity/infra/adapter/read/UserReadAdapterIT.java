@@ -9,11 +9,13 @@ import dev.patra.identity.domain.model.enums.Occupation;
 import dev.patra.identity.domain.model.enums.ProfessionalVisibility;
 import dev.patra.identity.domain.model.enums.ProfileVisibility;
 import dev.patra.identity.domain.model.enums.UserStatus;
+import dev.patra.identity.domain.model.read.AvatarOwner;
 import dev.patra.identity.domain.model.read.PublicUserReadModel;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.model.vo.DisplayName;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.Username;
+import dev.patra.identity.domain.model.vo.avatar.Avatar;
 import dev.patra.identity.domain.model.vo.profile.Affiliation;
 import dev.patra.identity.domain.model.vo.profile.Bio;
 import dev.patra.identity.domain.model.vo.profile.Department;
@@ -208,5 +210,43 @@ class UserReadAdapterIT {
 
     assertThat(reader.findPublicIdentityByUserId(saved.getId()).orElseThrow().joinedAt())
         .isEqualTo(T0);
+  }
+
+  @Test
+  void should_carry_avatar_in_account_and_public_identity() {
+    User saved =
+        users.save(User.register(EmailAddress.of("ava@example.com"), Username.of("u-ava")));
+    UserProfile profile = profiles.save(UserProfile.create(saved.getId()));
+    Avatar avatar = Avatar.of(saved.getId(), "0123456789abcdef");
+    profile.changeAvatar(avatar);
+    profiles.save(profile);
+
+    assertThat(reader.findAccount(saved.getId()).orElseThrow().avatar()).isEqualTo(avatar);
+    assertThat(reader.findPublicIdentity(Username.of("u-ava")).orElseThrow().avatar())
+        .isEqualTo(avatar);
+  }
+
+  @Test
+  void should_find_avatar_owner_by_current_username_only() {
+    User saved =
+        users.save(User.register(EmailAddress.of("owner@example.com"), Username.of("u-owner")));
+    UserProfile profile = profiles.save(UserProfile.create(saved.getId()));
+    Avatar avatar = Avatar.of(saved.getId(), "0123456789abcdef");
+    profile.changeAvatar(avatar);
+    profiles.save(profile);
+    User bare =
+        users.save(User.register(EmailAddress.of("bare@example.com"), Username.of("u-bare")));
+    profiles.save(UserProfile.create(bare.getId()));
+
+    assertThat(reader.findAvatarOwner(Username.of("u-owner")))
+        .contains(AvatarOwner.of(saved.getId(), UserStatus.ACTIVE, avatar));
+    assertThat(reader.findAvatarOwner(Username.of("u-bare")))
+        .contains(AvatarOwner.of(bare.getId(), UserStatus.ACTIVE, null));
+    assertThat(reader.findAvatarOwner(Username.of("nobody"))).isEmpty();
+
+    jdbcTemplate.update("UPDATE idn_user SET username = 'u-owner-new' WHERE id = ?", saved.getId());
+    entityManager.clear();
+
+    assertThat(reader.findAvatarOwner(Username.of("u-owner"))).isEmpty();
   }
 }

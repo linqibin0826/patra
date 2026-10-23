@@ -7,12 +7,14 @@ import dev.patra.identity.domain.model.enums.Occupation;
 import dev.patra.identity.domain.model.enums.ProfessionalVisibility;
 import dev.patra.identity.domain.model.enums.ProfileVisibility;
 import dev.patra.identity.domain.model.enums.UserStatus;
+import dev.patra.identity.domain.model.vo.avatar.Avatar;
 import dev.patra.identity.domain.model.vo.profile.Affiliation;
 import dev.patra.identity.domain.model.vo.profile.MeshUi;
 import dev.patra.identity.domain.model.vo.profile.PrivacySettings;
 import dev.patra.identity.domain.model.vo.profile.ProfileLink;
 import dev.patra.identity.domain.model.vo.profile.ResearchInterest;
 import dev.patra.identity.domain.model.vo.profile.RorId;
+import dev.patra.identity.domain.policy.AvatarPalette;
 import dev.patra.identity.domain.policy.ProfileDisplayPolicy;
 import java.time.Instant;
 import java.time.YearMonth;
@@ -128,6 +130,18 @@ class PublicUserReadModelTest {
     assertThat(view.joinedMonth()).isEqualTo(YearMonth.of(2026, 10));
     assertThat(view.researchInterests())
         .containsExactly(ResearchInterest.of(MeshUi.of("D006333"), "Heart Failure"));
+  }
+
+  @Test
+  void should_carry_avatar_and_palette_for_any_requester() {
+    Avatar avatar = Avatar.of(OWNER, "0123456789abcdef");
+    PublicUserReadModel user = full().avatar(avatar).build();
+
+    for (Optional<Long> requester : List.of(ANONYMOUS, SELF)) {
+      PublicUserView view = user.viewFor(requester, DISPLAY);
+      assertThat(view.avatar()).isEqualTo(avatar);
+      assertThat(view.avatarPalette()).isEqualTo(AvatarPalette.of(OWNER));
+    }
   }
 
   @Test

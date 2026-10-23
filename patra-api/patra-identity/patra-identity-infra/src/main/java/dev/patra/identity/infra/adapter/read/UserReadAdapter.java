@@ -2,9 +2,11 @@ package dev.patra.identity.infra.adapter.read;
 
 import dev.patra.identity.domain.model.aggregate.UserProfile;
 import dev.patra.identity.domain.model.enums.UserStatus;
+import dev.patra.identity.domain.model.read.AvatarOwner;
 import dev.patra.identity.domain.model.read.PublicUserReadModel;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.model.vo.Username;
+import dev.patra.identity.domain.model.vo.avatar.Avatar;
 import dev.patra.identity.domain.model.vo.profile.Bio;
 import dev.patra.identity.domain.model.vo.profile.Department;
 import dev.patra.identity.domain.model.vo.profile.JobTitle;
@@ -62,6 +64,22 @@ public class UserReadAdapter implements UserReadPort {
     return userDao.findById(userId).map(this::toPublicIdentity);
   }
 
+  /// 按当前用户名读头像归属：用户行加资料行里的头像键，不读子表。
+  ///
+  /// @param username 用户名
+  /// @return 归属
+  @Override
+  public Optional<AvatarOwner> findAvatarOwner(Username username) {
+    return userDao
+        .findByUsername(username.value())
+        .map(
+            user ->
+                AvatarOwner.of(
+                    user.getId(),
+                    UserStatus.valueOf(user.getStatus()),
+                    avatarOf(user, profileOf(user))));
+  }
+
   /// 把用户行和资料行拼成账号读模型：昵称为空回退成用户名，下次改名时间按策略算。
   ///
   /// @param user 用户行
@@ -73,6 +91,7 @@ public class UserReadAdapter implements UserReadPort {
         .emailVerified(user.getEmailVerifiedAt() != null)
         .username(user.getUsername())
         .displayName(displayNameOf(user))
+        .avatar(avatarOf(user, profileOf(user)))
         .status(UserStatus.valueOf(user.getStatus()))
         .deletionDueAt(user.getDeletionDueAt())
         .nextUsernameChangeAt(usernameChangePolicy.nextChangeAt(user.getUsernameChangedAt()))
@@ -94,6 +113,7 @@ public class UserReadAdapter implements UserReadPort {
         .userId(user.getId())
         .username(user.getUsername())
         .displayName(row.getDisplayName() == null ? user.getUsername() : row.getDisplayName())
+        .avatar(profile.getAvatar().orElse(null))
         .status(UserStatus.valueOf(user.getStatus()))
         .emailVerified(user.getEmailVerifiedAt() != null)
         .joinedAt(user.getCreatedAt())
@@ -115,6 +135,16 @@ public class UserReadAdapter implements UserReadPort {
   private String displayNameOf(UserEntity user) {
     UserProfileEntity profile = profileOf(user);
     return profile.getDisplayName() == null ? user.getUsername() : profile.getDisplayName();
+  }
+
+  /// 资料行里的头像。
+  ///
+  /// @param user 用户行
+  /// @param profile 资料行
+  /// @return 头像；没上传时为 `null`
+  private static Avatar avatarOf(UserEntity user, UserProfileEntity profile) {
+    String key = profile.getAvatarObjectKey();
+    return key == null ? null : Avatar.parse(user.getId(), key);
   }
 
   /// 用户的资料行；缺行是数据不一致（注册时同事务建的）。

@@ -1,6 +1,8 @@
 package dev.patra.identity.domain.model.read;
 
 import dev.patra.identity.domain.model.enums.UserStatus;
+import dev.patra.identity.domain.model.vo.avatar.Avatar;
+import dev.patra.identity.domain.policy.AvatarPalette;
 import java.time.Instant;
 import java.util.Objects;
 import lombok.Builder;
@@ -12,6 +14,7 @@ import lombok.Builder;
 /// @param emailVerified 邮箱是否已验证
 /// @param username 用户名
 /// @param displayName 昵称；资料里没设时已回退成用户名，永远非空
+/// @param avatar 头像，没上传时为 `null`
 /// @param status 状态
 /// @param deletionDueAt 注销到期时间，不在冷静期时为 `null`
 /// @param nextUsernameChangeAt 下次可以改名的时间，没改过名时为 `null`
@@ -22,6 +25,7 @@ public record UserAccountReadModel(
     boolean emailVerified,
     String username,
     String displayName,
+    Avatar avatar,
     UserStatus status,
     Instant deletionDueAt,
     Instant nextUsernameChangeAt) {
@@ -31,5 +35,12 @@ public record UserAccountReadModel(
     Objects.requireNonNull(username, "username 不能为 null");
     Objects.requireNonNull(displayName, "displayName 不能为 null");
     Objects.requireNonNull(status, "status 不能为 null");
+  }
+
+  /// 默认头像色号，按用户 ID 算。
+  ///
+  /// @return 0–11
+  public int avatarPalette() {
+    return AvatarPalette.of(userId);
   }
 }

@@ -1,5 +1,6 @@
 package dev.patra.identity.domain.port.read;
 
+import dev.patra.identity.domain.model.read.AvatarOwner;
 import dev.patra.identity.domain.model.read.PublicUserReadModel;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.model.vo.Username;
@@ -25,4 +26,10 @@ public interface UserReadPort {
   /// @param userId 用户 ID
   /// @return 身份卡；不存在时为空
   Optional<PublicUserReadModel> findPublicIdentityByUserId(long userId);
+
+  /// 按**当前**用户名读头像归属（不查旧名）：给头像读取接口判状态、比对版本。
+  ///
+  /// @param username 用户名
+  /// @return 归属；不存在时为空
+  Optional<AvatarOwner> findAvatarOwner(Username username);
 }
