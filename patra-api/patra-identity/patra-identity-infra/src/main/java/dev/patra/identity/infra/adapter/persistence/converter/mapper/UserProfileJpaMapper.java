@@ -5,6 +5,8 @@ import dev.patra.identity.domain.model.enums.Occupation;
 import dev.patra.identity.domain.model.enums.ProfessionalVisibility;
 import dev.patra.identity.domain.model.enums.ProfileVisibility;
 import dev.patra.identity.domain.model.vo.DisplayName;
+import dev.patra.identity.domain.model.vo.avatar.Avatar;
+import dev.patra.identity.domain.model.vo.avatar.AvatarSize;
 import dev.patra.identity.domain.model.vo.profile.Affiliation;
 import dev.patra.identity.domain.model.vo.profile.Bio;
 import dev.patra.identity.domain.model.vo.profile.Department;
@@ -57,6 +59,8 @@ public interface UserProfileJpaMapper {
         .profileVisibility(privacy.profile().name())
         .professionalVisibility(privacy.professional().name())
         .searchIndexing(privacy.searchIndexing())
+        .avatarObjectKey(
+            profile.getAvatar().map(avatar -> avatar.objectKey(AvatarSize.LARGE)).orElse(null))
         .build();
   }
 
@@ -129,6 +133,10 @@ public interface UserProfileJpaMapper {
                 ProfileVisibility.valueOf(entity.getProfileVisibility()),
                 ProfessionalVisibility.valueOf(entity.getProfessionalVisibility()),
                 entity.isSearchIndexing()))
+        .avatar(
+            entity.getAvatarObjectKey() == null
+                ? null
+                : Avatar.parse(entity.getUserId(), entity.getAvatarObjectKey()))
         .version(entity.getVersion())
         .createdAt(entity.getCreatedAt())
         .updatedAt(entity.getUpdatedAt())

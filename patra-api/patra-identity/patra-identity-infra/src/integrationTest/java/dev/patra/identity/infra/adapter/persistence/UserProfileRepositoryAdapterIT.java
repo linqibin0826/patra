@@ -11,6 +11,7 @@ import dev.patra.identity.domain.model.enums.ProfileVisibility;
 import dev.patra.identity.domain.model.vo.DisplayName;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.Username;
+import dev.patra.identity.domain.model.vo.avatar.Avatar;
 import dev.patra.identity.domain.model.vo.profile.Affiliation;
 import dev.patra.identity.domain.model.vo.profile.Bio;
 import dev.patra.identity.domain.model.vo.profile.Department;
@@ -27,6 +28,8 @@ import dev.patra.tool.jpa.autoconfigure.PatraHibernatePropertiesCustomizer;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -36,6 +39,7 @@ import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabas
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
@@ -56,6 +60,7 @@ class UserProfileRepositoryAdapterIT {
 
   @Autowired private UserRepositoryAdapter users;
   @Autowired private UserProfileRepositoryAdapter profiles;
+  @Autowired private JdbcTemplate jdbcTemplate;
 
   @Test
   void should_save_empty_profile_and_find_by_user_id() {
@@ -238,5 +243,48 @@ class UserProfileRepositoryAdapterIT {
   /// @return 关注领域
   private static ResearchInterest interest(String ui, String name) {
     return ResearchInterest.of(MeshUi.of(ui), name);
+  }
+
+  @Test
+  void should_round_trip_avatar_object_key() {
+    User user =
+        users.save(User.register(EmailAddress.of("avatar@example.com"), Username.of("u-avatar")));
+    UserProfile profile = profiles.save(UserProfile.create(user.getId()));
+    Avatar avatar = Avatar.of(user.getId(), "0123456789abcdef");
+    profile.changeAvatar(avatar);
+
+    profiles.save(profile);
+
+    assertThat(profiles.findByUserId(user.getId()).orElseThrow().getAvatar()).contains(avatar);
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT avatar_object_key FROM idn_user_profile WHERE user_id = ?",
+                String.class,
+                user.getId()))
+        .isEqualTo("avatar/" + user.getId() + "/0123456789abcdef-512.webp");
+  }
+
+  /// 每个用例一个坏键：违反约束会让测试事务中止，同一事务里不能接着发语句。
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "avatar/999/0123456789abcdef-512.webp",
+        "avatar/%d/XYZ-512.webp",
+        "avatar/%d/0123456789abcdef-128.webp"
+      })
+  void should_reject_malformed_or_foreign_avatar_key_at_database(String pattern) {
+    User user =
+        users.save(
+            User.register(EmailAddress.of("avatar.bad@example.com"), Username.of("u-avatar-bad")));
+    profiles.save(UserProfile.create(user.getId()));
+    String key = pattern.formatted(user.getId());
+
+    assertThatThrownBy(
+            () ->
+                jdbcTemplate.update(
+                    "UPDATE idn_user_profile SET avatar_object_key = ? WHERE user_id = ?",
+                    key,
+                    user.getId()))
+        .isInstanceOf(DataIntegrityViolationException.class);
   }
 }

@@ -2,6 +2,7 @@ package dev.patra.identity.domain.model.aggregate;
 
 import dev.patra.identity.domain.model.enums.Occupation;
 import dev.patra.identity.domain.model.vo.DisplayName;
+import dev.patra.identity.domain.model.vo.avatar.Avatar;
 import dev.patra.identity.domain.model.vo.profile.Affiliation;
 import dev.patra.identity.domain.model.vo.profile.Bio;
 import dev.patra.identity.domain.model.vo.profile.Department;
@@ -62,6 +63,10 @@ public final class UserProfile {
   private List<ResearchInterest> researchInterests;
 
   private PrivacySettings privacy;
+
+  @Getter(AccessLevel.NONE)
+  private Avatar avatar;
+
   private final Long version;
   private final Instant createdAt;
   private final Instant updatedAt;
@@ -79,6 +84,7 @@ public final class UserProfile {
   /// @param department 科室
   /// @param researchInterests 关注领域
   /// @param privacy 隐私设置
+  /// @param avatar 头像，没上传时为 `null`
   /// @param version 乐观锁版本
   /// @param createdAt 创建时间
   /// @param updatedAt 更新时间
@@ -95,12 +101,17 @@ public final class UserProfile {
       Department department,
       List<ResearchInterest> researchInterests,
       PrivacySettings privacy,
+      Avatar avatar,
       Long version,
       Instant createdAt,
       Instant updatedAt) {
     this.id = id;
     this.userId = Objects.requireNonNull(userId, "userId 不能为 null");
     this.privacy = privacy != null ? privacy : PrivacySettings.defaults();
+    this.avatar = avatar;
+    if (avatar != null) {
+      requireOwn(avatar);
+    }
     this.version = version;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
@@ -138,10 +149,39 @@ public final class UserProfile {
   }
 
   /// 注销到期时清空资料：内容全部清掉（昵称、简介、链接、专业背景、关注领域），隐私回默认；行本身保留，
-  /// 读模型要求资料行与用户一对一存在。PAP-97 加头像键后在这里一起清。
+  /// 读模型要求资料行与用户一对一存在。头像键也一起清（对象由到期执行在事务前按前缀删）。
   public void erase() {
     apply(ProfileContent.builder().build());
     privacy = PrivacySettings.defaults();
+    avatar = null;
+  }
+
+  /// 换头像。
+  ///
+  /// @param avatar 新头像
+  /// @return 被替换的旧头像；原来没有头像时为空
+  /// @throws IllegalArgumentException 头像不是本人的
+  public Optional<Avatar> changeAvatar(Avatar avatar) {
+    requireOwn(Objects.requireNonNull(avatar, "avatar 不能为 null"));
+    Optional<Avatar> previous = Optional.ofNullable(this.avatar);
+    this.avatar = avatar;
+    return previous;
+  }
+
+  /// 移除头像，回到默认头像。
+  ///
+  /// @return 被移除的头像；原来没有头像时为空
+  public Optional<Avatar> removeAvatar() {
+    Optional<Avatar> previous = Optional.ofNullable(avatar);
+    avatar = null;
+    return previous;
+  }
+
+  /// 头像。
+  ///
+  /// @return 头像；没上传时为空，门户画默认头像
+  public Optional<Avatar> getAvatar() {
+    return Optional.ofNullable(avatar);
   }
 
   /// 替换隐私设置。
@@ -213,6 +253,15 @@ public final class UserProfile {
   @Override
   public String toString() {
     return "UserProfile[id=" + id + ", userId=" + userId + "]";
+  }
+
+  /// 头像必须属于本资料的用户。
+  ///
+  /// @param avatar 头像
+  private void requireOwn(Avatar avatar) {
+    if (avatar.userId() != userId) {
+      throw new IllegalArgumentException("头像属于用户 " + avatar.userId() + "，不是 " + userId);
+    }
   }
 
   /// 校验不变式后写入字段。

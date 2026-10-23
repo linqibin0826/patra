@@ -201,6 +201,7 @@ CREATE TABLE idn_user_profile
     profile_visibility      VARCHAR(16)     NOT NULL DEFAULT 'PUBLIC',
     professional_visibility VARCHAR(16)     NOT NULL DEFAULT 'PUBLIC',
     search_indexing         BOOLEAN         NOT NULL DEFAULT false,
+    avatar_object_key       VARCHAR(64)     NULL,
     record_remarks  jsonb           NULL,
     version         BIGINT          NOT NULL DEFAULT 0,
     ip_address      bytea           NULL,
@@ -240,7 +241,10 @@ CREATE TABLE idn_user_profile
     CONSTRAINT ck_idn_user_profile_visibility CHECK (
         profile_visibility IN ('PUBLIC', 'SIGNED_IN', 'SELF')),
     CONSTRAINT ck_idn_user_profile_professional_visibility CHECK (
-        professional_visibility IN ('PUBLIC', 'SELF'))
+        professional_visibility IN ('PUBLIC', 'SELF')),
+    CONSTRAINT ck_idn_user_profile_avatar_object_key CHECK (
+        avatar_object_key IS NULL
+        OR avatar_object_key ~ ('^avatar/' || user_id::text || '/[0-9a-f]{16}-512\.webp$'))
 );
 
 COMMENT ON TABLE idn_user_profile IS 'Profile of a front-end user, one row per user';
@@ -248,6 +252,7 @@ COMMENT ON COLUMN idn_user_profile.id IS 'PK (snowflake)';
 COMMENT ON COLUMN idn_user_profile.user_id IS 'Owner user ID';
 COMMENT ON COLUMN idn_user_profile.display_name IS 'Display name (NFC, trimmed); null means follow the username';
 COMMENT ON COLUMN idn_user_profile.bio IS 'Bio (plain text, NFC, at most 3 lines separated by LF)';
+COMMENT ON COLUMN idn_user_profile.avatar_object_key IS '512-px avatar object key in bucket patra-identity-avatar; the 128-px key shares the hash; NULL means default avatar';
 COMMENT ON COLUMN idn_user_profile.occupation IS 'Self-declared occupation category; null means not set';
 COMMENT ON COLUMN idn_user_profile.job_title IS 'Self-declared job title (free text)';
 COMMENT ON COLUMN idn_user_profile.organization_ror_id IS 'Bare ROR ID of the affiliation; null for free text or none';

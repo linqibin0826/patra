@@ -7,6 +7,7 @@ import dev.patra.identity.domain.model.enums.Occupation;
 import dev.patra.identity.domain.model.enums.ProfessionalVisibility;
 import dev.patra.identity.domain.model.enums.ProfileVisibility;
 import dev.patra.identity.domain.model.vo.DisplayName;
+import dev.patra.identity.domain.model.vo.avatar.Avatar;
 import dev.patra.identity.domain.model.vo.profile.Affiliation;
 import dev.patra.identity.domain.model.vo.profile.Bio;
 import dev.patra.identity.domain.model.vo.profile.Department;
@@ -132,6 +133,7 @@ class UserProfileTest {
     profile.edit(fullContent());
     profile.changePrivacy(
         PrivacySettings.of(ProfileVisibility.SELF, ProfessionalVisibility.SELF, true));
+    profile.changeAvatar(Avatar.of(7L, "0123456789abcdef"));
 
     profile.erase();
 
@@ -145,6 +147,37 @@ class UserProfileTest {
     assertThat(profile.getDepartment()).isEmpty();
     assertThat(profile.getResearchInterests()).isEmpty();
     assertThat(profile.getPrivacy()).isEqualTo(PrivacySettings.defaults());
+    assertThat(profile.getAvatar()).isEmpty();
+  }
+
+  @Test
+  void should_return_previous_avatar_when_changing() {
+    UserProfile profile = UserProfile.create(7L);
+    Avatar first = Avatar.of(7L, "0123456789abcdef");
+    Avatar second = Avatar.of(7L, "fedcba9876543210");
+
+    assertThat(profile.changeAvatar(first)).isEmpty();
+    assertThat(profile.changeAvatar(second)).contains(first);
+    assertThat(profile.getAvatar()).contains(second);
+  }
+
+  @Test
+  void should_reject_avatar_of_another_user() {
+    UserProfile profile = UserProfile.create(7L);
+
+    assertThatThrownBy(() -> profile.changeAvatar(Avatar.of(8L, "0123456789abcdef")))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void should_return_removed_avatar() {
+    UserProfile profile = UserProfile.create(7L);
+    Avatar avatar = Avatar.of(7L, "0123456789abcdef");
+    profile.changeAvatar(avatar);
+
+    assertThat(profile.removeAvatar()).contains(avatar);
+    assertThat(profile.getAvatar()).isEmpty();
+    assertThat(profile.removeAvatar()).isEmpty();
   }
 
   @Test

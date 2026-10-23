@@ -63,4 +63,8 @@ public class UserProfileEntity extends BaseJpaEntity {
   /// 是否允许搜索引擎收录主页
   @Column(name = "search_indexing", nullable = false)
   private boolean searchIndexing;
+
+  /// 512 档头像的对象键，没上传时为 null
+  @Column(name = "avatar_object_key", length = 64)
+  private String avatarObjectKey;
 }
