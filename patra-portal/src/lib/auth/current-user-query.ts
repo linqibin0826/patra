@@ -9,7 +9,7 @@ export type CurrentUserState =
   | { status: "authenticated"; user: CurrentUser };
 
 /// 请求门户自己的 `/api/auth/me`：2xx 时取 `user`，非 2xx 时抛错。
-async function fetchCurrentUser(): Promise<CurrentUser | null> {
+export async function fetchCurrentUser(): Promise<CurrentUser | null> {
   const res = await fetch("/api/auth/me");
   if (!res.ok) {
     throw new Error(`当前用户加载失败：${res.status}`);

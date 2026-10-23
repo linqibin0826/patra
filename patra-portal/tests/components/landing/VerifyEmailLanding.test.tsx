@@ -77,6 +77,32 @@ describe("VerifyEmailLanding", () => {
     expect(screen.getByRole("link", { name: "登录" })).toHaveAttribute("href", "/login");
   });
 
+  it("成功后重新取当前用户失败：按无会话说（不拿旧的用户判断）", async () => {
+    vi.mocked(verifyEmail).mockResolvedValue({ ok: true, email: "chen.yu@example.com" });
+    window.history.replaceState(null, "", `/verify-email#token=${TOKEN}`);
+    let calls = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        calls += 1;
+        return calls === 1
+          ? Response.json({ user: UNVERIFIED })
+          : new Response(null, { status: 503 });
+      }),
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <VerifyEmailLanding />
+      </QueryClientProvider>,
+    );
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "验证邮箱" }));
+    expect(
+      await screen.findByText("chen.yu@example.com 已验证。为了安全，所有设备都已退出登录。"),
+    ).toBeInTheDocument();
+  });
+
   it("无效 + 已登录未验证：重新发送验证邮件", async () => {
     vi.mocked(verifyEmail).mockResolvedValue({ ok: false, reason: "invalid" });
     const user = renderPage([UNVERIFIED]);

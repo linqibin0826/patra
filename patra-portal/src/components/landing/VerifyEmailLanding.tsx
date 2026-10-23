@@ -4,10 +4,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { type LandingScreen, TokenLandingPage } from "@/components/landing/TokenLandingPage";
 import { ResendVerificationButton } from "@/components/portal/ResendVerificationButton";
-import { useCurrentUser } from "@/lib/auth/current-user-query";
+import { fetchCurrentUser, useCurrentUser } from "@/lib/auth/current-user-query";
 import { VERIFY_LANDING_MESSAGES as M } from "@/lib/auth/messages";
 import { authPageHref } from "@/lib/auth/next-path";
-import type { CurrentUser } from "@/lib/auth/types";
 import { verifyEmail } from "@/lib/identity/token-actions";
 import { btnBlock, btnPrimary, btnSecondary } from "@/lib/portal-ui";
 import { queryKeys } from "@/lib/query-keys";
@@ -41,8 +40,10 @@ export function VerifyEmailLanding() {
         ? ({ kind: "invalid" } as const)
         : ({ kind: "unavailable" } as const);
     }
-    await queryClient.invalidateQueries({ queryKey: queryKeys.currentUser });
-    const user = queryClient.getQueryData<CurrentUser | null>(queryKeys.currentUser);
+    // 重新取一次；取不到就按无会话说，不拿验证之前的旧用户判断
+    const user = await queryClient
+      .fetchQuery({ queryKey: queryKeys.currentUser, queryFn: fetchCurrentUser, staleTime: 0 })
+      .catch(() => null);
     const sessionKept = user?.email.toLowerCase() === result.email.toLowerCase();
     return { kind: "succeeded", data: { email: result.email, sessionKept } } as const;
   }
