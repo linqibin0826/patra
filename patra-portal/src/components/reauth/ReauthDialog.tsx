@@ -133,7 +133,15 @@ function ReauthForm({
         )}
       </FormField>
       <div className="flex justify-end gap-3 max-[880px]:flex-col-reverse">
-        <button type="button" className={btnSecondary} onClick={() => settle(false)}>
+        <button
+          type="button"
+          className={btnSecondary}
+          // 验证中不能取消（与 Esc、点遮罩一致，简报 §6）：否则请求回来时已换了 Cookie，原操作却报了取消
+          aria-disabled={busy || undefined}
+          onClick={() => {
+            if (!busy) settle(false);
+          }}
+        >
           {REAUTH_MESSAGES.cancel}
         </button>
         <button type="submit" aria-disabled={busy || undefined} className={btnPrimary}>

@@ -118,6 +118,22 @@ describe("ReauthDialog", () => {
     );
   });
 
+  it("验证中：「取消」不可点，点了也不关、不返回取消", async () => {
+    vi.mocked(reauthenticate).mockReturnValue(new Promise(() => {}));
+    const { outcome } = openDialog();
+    const { user } = await submit("x-pass");
+    const cancel = screen.getByRole("button", { name: "取消" });
+    expect(cancel).toHaveAttribute("aria-disabled", "true");
+    await user.click(cancel);
+    expect(useReauthStore.getState().open).toBe(true);
+    let settled = false;
+    void outcome.then(() => {
+      settled = true;
+    });
+    await Promise.resolve();
+    expect(settled).toBe(false);
+  });
+
   it("会话没了：关对话框、当前用户写成 null、去登录页", async () => {
     vi.mocked(reauthenticate).mockResolvedValue({ ok: false, reason: "signed-out" });
     const { client, outcome } = openDialog();
