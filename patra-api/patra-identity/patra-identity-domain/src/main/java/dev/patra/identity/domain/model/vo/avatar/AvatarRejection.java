@@ -9,7 +9,7 @@ public enum AvatarRejection {
   UNSUPPORTED_TYPE,
   /// 短边不足 128 像素。
   TOO_SMALL,
-  /// 宽 × 高超过 5000 万像素（防解压炸弹）。
+  /// 宽 × 高超过 4096²（防解压炸弹与解码内存放大）。
   TOO_MANY_PIXELS,
   /// 文件头坏了或解码失败。
   UNREADABLE

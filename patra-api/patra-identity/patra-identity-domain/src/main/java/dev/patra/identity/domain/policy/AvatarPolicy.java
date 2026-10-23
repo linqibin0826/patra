@@ -6,8 +6,9 @@ public final class AvatarPolicy {
   /// 短边至少几像素。
   public static final int MIN_SHORT_SIDE = 128;
 
-  /// 宽 × 高最多多少像素：手机直出最大约 4800 万，挡住 5 MB 内声明出超大尺寸的文件。
-  public static final long MAX_PIXELS = 50_000_000L;
+  /// 宽 × 高最多多少像素（4096²）：WebP 与渐进式 JPEG 解码时整张图进内存（49 MP 的 WebP 堆峰值约 300 MB），
+  /// 不能靠下采样封顶；门户上传的是裁好的方图（边长 ≤ 1024），这个上限只挡直接调接口的超大图。
+  public static final long MAX_PIXELS = 4096L * 4096L;
 
   /// WebP 有损编码质量。
   public static final float WEBP_QUALITY = 0.82f;

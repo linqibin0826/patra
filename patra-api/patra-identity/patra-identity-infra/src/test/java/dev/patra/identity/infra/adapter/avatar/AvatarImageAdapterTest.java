@@ -13,11 +13,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.patra.identity.domain.exception.InvalidAvatarException;
+import dev.patra.identity.domain.exception.TemporarilyUnavailableException;
 import dev.patra.identity.domain.model.vo.avatar.AvatarRejection;
 import dev.patra.identity.domain.model.vo.avatar.AvatarRenditions;
 import java.awt.image.BufferedImage;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Arrays;
+import java.util.concurrent.Semaphore;
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -86,6 +89,22 @@ class AvatarImageAdapterTest {
   void should_reject_too_many_pixels_without_decoding() {
     assertRejected(
         () -> adapter.render(pngHeaderOnly(8000, 8000)), AvatarRejection.TOO_MANY_PIXELS);
+  }
+
+  /// 像素上限 4096²：WebP 与渐进式 JPEG 解码时不受下采样约束，49 MP 的 WebP 堆峰值约 300 MB。
+  @Test
+  void should_reject_more_than_4096_squared_pixels() {
+    assertRejected(
+        () -> adapter.render(pngHeaderOnly(4097, 4096)), AvatarRejection.TOO_MANY_PIXELS);
+  }
+
+  /// 同时出图的路数有上限，等不到名额回 503，不让并发上传把堆占满。
+  @Test
+  void should_answer_unavailable_when_render_slots_are_busy() {
+    AvatarImageAdapter busy = new AvatarImageAdapter(new Semaphore(0), Duration.ofMillis(10));
+
+    assertThatThrownBy(() -> busy.render(png(300, 300, false)))
+        .isInstanceOf(TemporarilyUnavailableException.class);
   }
 
   @Test

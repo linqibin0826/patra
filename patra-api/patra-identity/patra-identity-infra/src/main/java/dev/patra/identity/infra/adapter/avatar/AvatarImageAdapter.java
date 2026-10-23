@@ -2,6 +2,7 @@ package dev.patra.identity.infra.adapter.avatar;
 
 import com.luciad.imageio.webp.WebPImageWriterSpi;
 import dev.patra.identity.domain.exception.InvalidAvatarException;
+import dev.patra.identity.domain.exception.TemporarilyUnavailableException;
 import dev.patra.identity.domain.model.vo.avatar.AvatarRejection;
 import dev.patra.identity.domain.model.vo.avatar.AvatarRenditions;
 import dev.patra.identity.domain.model.vo.avatar.AvatarSize;
@@ -20,9 +21,12 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReadParam;
@@ -49,8 +53,27 @@ public class AvatarImageAdapter implements AvatarImagePort {
   /// 下采样后解码出来的方图至少保留这么大，再逐次减半缩到 512。
   private static final int DECODE_TARGET = 1024;
 
-  /// 扫一次 ImageIO 插件：Boot 胖 jar 里 SPI 在嵌套 jar 中，默认注册表看不到。
+  /// 最多同时出几张图：WebP 与渐进式 JPEG 解码时整张图进内存，并发上传不能把堆占满。
+  private static final int MAX_CONCURRENT_RENDERS = 2;
+
+  /// 等出图名额最多等多久，等不到回 503。
+  private static final Duration RENDER_WAIT = Duration.ofSeconds(10);
+
+  private final Semaphore renderSlots;
+  private final Duration renderWait;
+
+  /// 默认名额与等待时间；扫一次 ImageIO 插件（Boot 胖 jar 里 SPI 在嵌套 jar 中，默认注册表看不到）。
   public AvatarImageAdapter() {
+    this(new Semaphore(MAX_CONCURRENT_RENDERS), RENDER_WAIT);
+  }
+
+  /// 指定名额与等待时间（测试用）。
+  ///
+  /// @param renderSlots 出图名额
+  /// @param renderWait 等名额的上限
+  AvatarImageAdapter(Semaphore renderSlots, Duration renderWait) {
+    this.renderSlots = renderSlots;
+    this.renderWait = renderWait;
     ImageIO.scanForPlugins();
   }
 
@@ -59,13 +82,33 @@ public class AvatarImageAdapter implements AvatarImagePort {
   /// @param upload 原图字节
   /// @return 两档 WebP
   /// @throws InvalidAvatarException 类型不对、太小、像素过多或读不出
+  /// @throws TemporarilyUnavailableException 出图名额等不到
   @Override
   public AvatarRenditions render(byte[] upload) {
     AvatarFormat format = AvatarFormatSniffer.sniff(upload);
-    BufferedImage square = decodeSquare(upload, format);
-    BufferedImage large = scale(square, AvatarSize.LARGE.getPixels());
-    BufferedImage small = scale(large, AvatarSize.SMALL.getPixels());
-    return AvatarRenditions.of(encode(large), encode(small));
+    acquireSlot();
+    try {
+      BufferedImage square = decodeSquare(upload, format);
+      BufferedImage large = scale(square, AvatarSize.LARGE.getPixels());
+      BufferedImage small = scale(large, AvatarSize.SMALL.getPixels());
+      return AvatarRenditions.of(encode(large), encode(small));
+    } finally {
+      renderSlots.release();
+    }
+  }
+
+  /// 等一个出图名额。
+  ///
+  /// @throws TemporarilyUnavailableException 超时或被中断
+  private void acquireSlot() {
+    try {
+      if (!renderSlots.tryAcquire(renderWait.toMillis(), TimeUnit.MILLISECONDS)) {
+        throw new TemporarilyUnavailableException();
+      }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new TemporarilyUnavailableException(e);
+    }
   }
 
   /// 读头校验后，按居中的正方形区域解码，边长大于 2048 时整数倍下采样。解码有任何告警都算读不出。
