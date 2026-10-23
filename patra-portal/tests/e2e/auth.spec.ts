@@ -1,32 +1,11 @@
-import { randomBytes } from "node:crypto";
 import { expect, type Page, test } from "@playwright/test";
+import { freshAccount, ROUND_TRIP, waitForTakeover } from "@tests/e2e/support/account";
 
 /// 真人点一下要按住一会儿。Playwright 默认的点击按下就松开，测不出按住期间页面的挤动
 const PRESS = { delay: 100 };
 
-/// 等页面接管 `selector` 指向的元素：React 接管一个元素时，在它上面挂一个以 `__reactProps$` 开头的
-/// 属性。接管之前操作，点链接是浏览器原生的跳转，离开字段也不校验，这里的用例没修好也会通过
-async function waitForTakeover(page: Page, selector: string) {
-  await page.waitForFunction((target) => {
-    const element = document.querySelector(target);
-    return element !== null && Object.keys(element).some((key) => key.startsWith("__reactProps$"));
-  }, selector);
-}
-
 const SOURCE = "/papers?q=GLP-1";
 const SESSION_COOKIES = ["patra_session", "__Host-patra_session"];
-/// 提交后要经过网关和目标页的服务端渲染，比默认的 5 秒宽一些
-const ROUND_TRIP = { timeout: 15_000 };
-
-/// 每跑一次在网关后面注册一个一次性账号：邮箱、用户名随机，密码运行时生成，都不写进仓库
-function freshAccount() {
-  const tag = randomBytes(6).toString("hex");
-  return {
-    email: `e2e-${tag}@example.org`,
-    username: `e2e-${tag}`,
-    password: randomBytes(12).toString("base64url"),
-  };
-}
 
 /// 当前标签页的历史记录条数
 const historyLength = (page: Page) => page.evaluate(() => history.length);
