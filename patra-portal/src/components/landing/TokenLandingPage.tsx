@@ -152,7 +152,13 @@ export function TokenLandingPage<S, C = never>({
   const busy = phase.name !== "ready";
   return (
     <AuthShell title={title} description={description} back="/">
-      <form noValidate onSubmit={onSubmit} className="mt-6 flex flex-col gap-5">
+      <form
+        // 页面还没接管表单就提交时（脚本没加载完），浏览器按这里的 method 提交：用 POST，重设密码的新密码不进地址栏
+        method="post"
+        noValidate
+        onSubmit={onSubmit}
+        className="mt-6 flex flex-col gap-5"
+      >
         {phase.name === "ready" && phase.failed && <FormAlert>没有成功，请稍后再试</FormAlert>}
         {children}
         <button

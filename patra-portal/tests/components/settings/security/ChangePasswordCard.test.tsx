@@ -52,6 +52,14 @@ describe("ChangePasswordCard", () => {
     expect(screen.getByText("至少 8 位")).toBeInTheDocument();
   });
 
+  it("页面接管之前就提交：表单按 POST 提交，密码不进地址栏", () => {
+    renderCard();
+    expect(screen.getByRole("button", { name: "修改密码" }).closest("form")).toHaveAttribute(
+      "method",
+      "post",
+    );
+  });
+
   it("前端校验：为空与不一致，不请求", async () => {
     renderCard();
     await fill("", "new-pass-1", "new-pass-2");

@@ -111,7 +111,13 @@ export function ChangePasswordCard() {
   return (
     <SettingsCard title="修改密码">
       {alert && <FormAlert>{alert}</FormAlert>}
-      <form noValidate onSubmit={onSubmit} className="flex flex-col gap-5">
+      <form
+        // 页面还没接管表单就提交时（脚本没加载完），浏览器按这里的 method 提交：用 POST，密码不进地址栏
+        method="post"
+        noValidate
+        onSubmit={onSubmit}
+        className="flex flex-col gap-5"
+      >
         <FormField
           id="security-current-password"
           label="当前密码"

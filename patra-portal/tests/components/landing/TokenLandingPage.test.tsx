@@ -157,6 +157,12 @@ describe("TokenLandingPage", () => {
     expect(screen.queryByRole("heading", { name: "链接无效或已过期" })).not.toBeInTheDocument();
   });
 
+  it("页面接管之前就提交：表单按 POST 提交，字段不进地址栏", async () => {
+    renderLanding(`#token=${TOKEN}`, vi.fn());
+    const button = await screen.findByRole("button", { name: "验证邮箱" });
+    expect(button.closest("form")).toHaveAttribute("method", "post");
+  });
+
   it("「返回」去首页", async () => {
     renderLanding(`#token=${TOKEN}`, vi.fn());
     expect(await screen.findByRole("link", { name: "返回" })).toHaveAttribute("href", "/");
