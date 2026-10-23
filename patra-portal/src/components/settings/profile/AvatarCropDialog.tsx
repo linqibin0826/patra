@@ -98,7 +98,7 @@ export function AvatarCropDialog({ file, onCancel, onUpload }: AvatarCropDialogP
       dismissible={!busy}
       alert={error && <FormAlert>{error}</FormAlert>}
     >
-      <div className="flex gap-6 max-[880px]:flex-col max-[880px]:items-center">
+      <div className="flex items-start gap-7 max-[880px]:flex-col max-[880px]:items-center max-[880px]:gap-5">
         <div
           onKeyDownCapture={onKeyDownCapture}
           className="relative size-90 shrink-0 overflow-hidden rounded-lg bg-ink-900 max-[880px]:size-[calc(100vw-2rem)]"
@@ -128,7 +128,7 @@ export function AvatarCropDialog({ file, onCancel, onUpload }: AvatarCropDialogP
             />
           )}
         </div>
-        <div className="flex min-w-0 flex-1 flex-col justify-between gap-6 self-stretch max-[880px]:w-full">
+        <div className="flex min-w-0 flex-1 flex-col items-start gap-7 pt-2 max-[880px]:w-full max-[880px]:items-center max-[880px]:gap-5 max-[880px]:pt-0">
           <div className="flex items-end gap-5">
             <Preview src={src} area={area} size="size-24" label="主页" />
             <Preview src={src} area={area} size="size-9" label="导航栏" />

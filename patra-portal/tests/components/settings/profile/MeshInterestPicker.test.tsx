@@ -186,3 +186,49 @@ describe("MeshInterestPicker · 已选列表", () => {
     expect(screen.getByText("Atrial Fibrillation：这个主题词已不可用，请移除")).toBeInTheDocument();
   });
 });
+
+describe("MeshInterestPicker · 服务端渲染", () => {
+  it("拖动排序的读屏说明 id 稳定：两次服务端渲染输出相同（否则水合不一致）", async () => {
+    const { renderToString } = await import("react-dom/server");
+    const html = () =>
+      renderToString(
+        <QueryClientProvider client={new QueryClient()}>
+          <MeshInterestPicker id="mesh" value={[HF, AF]} onChange={() => {}} />
+        </QueryClientProvider>,
+      );
+    expect(html()).toBe(html());
+  });
+
+  it("读屏的拖动说明是中文", () => {
+    renderPicker([HF]);
+    expect(document.body.textContent).not.toContain("To pick up a draggable item");
+    expect(document.body.textContent).toContain("Alt + 方向键");
+  });
+});
+
+describe("MeshInterestPicker · 窄屏切换", () => {
+  it("宽窄切换时不报 React 警告（拖动传感器保持不变）", () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const client = new QueryClient();
+    const view = (
+      <QueryClientProvider client={client}>
+        <MeshInterestPicker id="mesh" value={[HF, AF]} onChange={() => {}} />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(view);
+    setNarrow(true);
+    rerender(
+      <QueryClientProvider client={client}>
+        <MeshInterestPicker id="mesh" value={[HF, AF, HT]} onChange={() => {}} />
+      </QueryClientProvider>,
+    );
+    expect(screen.getByRole("button", { name: "调整 Hypertension 的位置" })).toHaveAttribute(
+      "aria-haspopup",
+      "menu",
+    );
+    expect(
+      error.mock.calls.map((call) => String(call[0])).filter((m) => m.includes("changed size")),
+    ).toEqual([]);
+    error.mockRestore();
+  });
+});

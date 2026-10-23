@@ -107,10 +107,11 @@ export function AvatarCard({ user }: { user: CurrentUser }) {
 
   return (
     <SettingsCard title="头像" description="上传后立即生效，不需要点保存。">
-      <div className="flex flex-wrap items-center gap-6">
+      {/* 头像与按钮始终同一行（窄屏 72px 头像，简报 §3.6） */}
+      <div className="flex items-center gap-6 max-[880px]:gap-4">
         <Avatar identity={current} size={96} className="max-[880px]:hidden" />
         <Avatar identity={current} size={72} className="hidden max-[880px]:inline-flex" />
-        <div className="flex min-w-0 flex-col gap-2.5">
+        <div className="flex min-w-0 flex-1 flex-col gap-2.5">
           <div className="flex items-center gap-3">
             <button
               type="button"

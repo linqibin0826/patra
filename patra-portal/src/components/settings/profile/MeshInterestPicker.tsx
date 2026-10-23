@@ -11,7 +11,7 @@ import {
 import { arrayMove, rectSortingStrategy, SortableContext, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Search, X } from "lucide-react";
-import { type KeyboardEvent, useEffect, useState } from "react";
+import { type KeyboardEvent, useEffect, useId, useState } from "react";
 import { FIELD_BOX } from "@/components/auth/FormField";
 import { FieldError } from "@/components/settings/profile/FieldError";
 import { HighlightedText } from "@/components/settings/profile/HighlightedText";
@@ -37,6 +37,11 @@ import { useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
 
 const DEBOUNCE_MS = 250;
+
+/// dnd-kit 给读屏的拖动说明（默认是英文）
+const DRAG_INSTRUCTIONS = {
+  draggable: "拖动手柄可以调整顺序；也可以聚焦手柄后按 Alt + 方向键移动。",
+};
 /// 最多 10 个（release spec 2.1.2）
 const MAX_INTERESTS = 10;
 
@@ -68,6 +73,8 @@ export function MeshInterestPicker({
   focusRef,
 }: MeshInterestPickerProps) {
   const narrow = useMediaQuery("(max-width: 880px)");
+  // DndContext 默认用全局计数器生成读屏说明的 id，服务端与浏览器数到的不一样会水合不一致；给它稳定的 id
+  const dndId = useId();
   const [input, setInput] = useState("");
   const normalized = normalizeSuggestQuery(input);
   const [debounced, setDebounced] = useState("");
@@ -90,6 +97,7 @@ export function MeshInterestPicker({
   else if (settled && query.isError) note = "主题词搜索暂时不可用，请稍后再试";
   else if (settled && query.data?.length === 0) note = "没有找到匹配的主题词";
 
+  // 传感器始终是同一组：窄屏只是让每个胶囊的 useSortable 关掉拖动，DndContext 的依赖不能随宽度变长短
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
   /// 把第 `from` 项挪到 `to`
@@ -124,9 +132,11 @@ export function MeshInterestPicker({
     <div className="flex min-w-0 flex-col gap-3">
       {value.length > 0 && (
         <DndContext
-          sensors={narrow ? [] : sensors}
+          id={dndId}
+          sensors={sensors}
           collisionDetection={closestCenter}
           onDragEnd={onDragEnd}
+          accessibility={{ screenReaderInstructions: DRAG_INSTRUCTIONS }}
         >
           <SortableContext
             items={value.map((interest) => interest.ui)}
