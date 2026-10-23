@@ -49,7 +49,10 @@ export function PrivacyForm({ initial, user }: PrivacyFormProps) {
   const [status, setStatus] = useState<Partial<Record<Group, Status>>>({});
   const confirmed = useRef(initial);
   const queue = useRef<Promise<void>>(Promise.resolve());
+  /// 最近一次发出的请求序号，以及每组最近一次改动的请求序号
   const latest = useRef(0);
+  const groupLatest = useRef<Partial<Record<Group, number>>>({});
+  const statusRef = useRef<Partial<Record<Group, Status>>>({});
   const timers = useRef<Partial<Record<Group, ReturnType<typeof setTimeout>>>>({});
 
   useEffect(() => {
@@ -59,18 +62,31 @@ export function PrivacyForm({ initial, user }: PrivacyFormProps) {
 
   function mark(group: Group, next: Status | undefined) {
     clearTimeout(timers.current[group]);
-    setStatus((current) => ({ ...current, [group]: next }));
+    statusRef.current = { ...statusRef.current, [group]: next };
+    setStatus(statusRef.current);
     if (next === "saved") {
       timers.current[group] = setTimeout(() => mark(group, undefined), SAVED_MS);
     }
   }
 
-  function settle(result: SavePrivacyResult, group: Group, isLatest: boolean) {
+  /// 一次请求回来了。每次 PUT 都是三项整份，所以一次成功也确认了此前各组的改动：那些还在「保存中」或
+  /// 「失败」的组一并标成已保存。失败时如果后面还有请求在途（它们带着这一组的值），先保持「保存中」，
+  /// 等后面的结果；没有了才显示失败、回到服务端最后确认的值。
+  function settle(result: SavePrivacyResult, group: Group, sequence: number) {
     if (result.ok) {
       confirmed.current = result.settings;
-      if (isLatest) {
+      if (sequence === latest.current) {
         setShown(result.settings);
-        mark(group, "saved");
+      }
+      for (const [other, otherSequence] of Object.entries(groupLatest.current) as [
+        Group,
+        number,
+      ][]) {
+        const settled =
+          statusRef.current[other] === "saving" || statusRef.current[other] === "failed";
+        if (otherSequence <= sequence && (other === group || settled)) {
+          mark(other, "saved");
+        }
       }
       return;
     }
@@ -83,9 +99,16 @@ export function PrivacyForm({ initial, user }: PrivacyFormProps) {
       router.replace(authPageHref("/login", PAGE));
       return;
     }
-    if (isLatest) {
+    if (sequence === latest.current) {
       setShown(confirmed.current);
-      mark(group, "failed");
+      for (const [other, otherSequence] of Object.entries(groupLatest.current) as [
+        Group,
+        number,
+      ][]) {
+        if (statusRef.current[other] === "saving" && otherSequence <= sequence) {
+          mark(other, "failed");
+        }
+      }
     }
   }
 
@@ -94,10 +117,13 @@ export function PrivacyForm({ initial, user }: PrivacyFormProps) {
     mark(group, "saving");
     latest.current += 1;
     const sequence = latest.current;
-    queue.current = queue.current.then(async () => {
-      const result = await savePrivacy(next).catch(() => UNAVAILABLE);
-      settle(result, group, sequence === latest.current);
-    });
+    groupLatest.current = { ...groupLatest.current, [group]: sequence };
+    queue.current = queue.current
+      .then(async () => {
+        const result = await savePrivacy(next).catch(() => UNAVAILABLE);
+        settle(result, group, sequence);
+      })
+      .catch(() => {});
   }
 
   return (

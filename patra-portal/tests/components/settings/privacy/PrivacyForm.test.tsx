@@ -111,6 +111,45 @@ describe("PrivacyForm", () => {
     await waitFor(() => expect(radio(/^仅登录用户/)).toBeChecked());
   });
 
+  it("跨卡片快速改动：两张卡片各自结束「保存中…」，显示已保存", async () => {
+    const first = deferred();
+    const second = deferred();
+    vi.mocked(savePrivacy).mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+    const user = renderForm();
+    await user.click(radio(/^仅登录用户/));
+    await user.click(screen.getByRole("switch", { name: /允许搜索引擎收录主页/ }));
+    expect(screen.getAllByText("保存中…")).toHaveLength(2);
+    await act(async () => first.answer(ok({ ...PUBLIC_PRIVACY, profileVisibility: "SIGNED_IN" })));
+    await waitFor(() => expect(savePrivacy).toHaveBeenCalledTimes(2));
+    await act(async () =>
+      second.answer(
+        ok({ ...PUBLIC_PRIVACY, profileVisibility: "SIGNED_IN", searchIndexing: true }),
+      ),
+    );
+    expect(screen.queryByText("保存中…")).not.toBeInTheDocument();
+    expect(screen.getAllByText("已保存")).toHaveLength(2);
+  });
+
+  it("跨卡片：前一张失败、后一张成功：后一次整份保存把前一张的值也存上了，两张都显示已保存", async () => {
+    const first = deferred();
+    const second = deferred();
+    vi.mocked(savePrivacy).mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+    const user = renderForm();
+    await user.click(radio(/^仅登录用户/));
+    await user.click(screen.getByRole("switch", { name: /允许搜索引擎收录主页/ }));
+    await act(async () => first.answer({ ok: false, reason: "unavailable" }));
+    await waitFor(() => expect(savePrivacy).toHaveBeenCalledTimes(2));
+    await act(async () =>
+      second.answer(
+        ok({ ...PUBLIC_PRIVACY, profileVisibility: "SIGNED_IN", searchIndexing: true }),
+      ),
+    );
+    expect(screen.queryByText("保存中…")).not.toBeInTheDocument();
+    expect(screen.queryByText("没有保存成功，请重试")).not.toBeInTheDocument();
+    expect(screen.getAllByText("已保存")).toHaveLength(2);
+    expect(radio(/^仅登录用户/)).toBeChecked();
+  });
+
   it("邮箱未验证：顶部说明不论怎么设都只有自己能看到", () => {
     renderForm({ ...USER, emailVerified: false });
     expect(

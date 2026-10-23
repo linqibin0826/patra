@@ -24,14 +24,25 @@ import { graphemeCount } from "@/lib/grapheme";
 import { OCCUPATIONS, occupationLabel } from "@/lib/identity/occupation";
 import { type SaveProfileResult, saveProfile } from "@/lib/identity/profile-actions";
 import {
+  BYTES_PER_GRAPHEME,
   formPathOf,
   type ProfileFormValues,
   profileFieldMessage,
   profileFormSchema,
+  TOO_MANY_BYTES_MESSAGE,
   toFormValues,
+  utf8Length,
 } from "@/lib/identity/profile-form";
 import type { MyProfile, PrivacySettings } from "@/lib/identity/profile-schema";
 import { queryKeys } from "@/lib/query-keys";
+
+/// 字数超了是「最多 N 个字」，字数没超、字节超了是删减表情的提示；都没超为 undefined
+function overLimitMessage(field: "displayName" | "bio", value: string, max: number) {
+  if (graphemeCount(value.trim()) > max) {
+    return profileFieldMessage(field, "TOO_LONG");
+  }
+  return utf8Length(value) > max * BYTES_PER_GRAPHEME ? TOO_MANY_BYTES_MESSAGE : undefined;
+}
 
 /// 这一页的地址：保存失败跳登录页、取消注销页时作 `next`
 const PAGE = "/settings/profile";
@@ -83,15 +94,10 @@ export function ProfileForm({ initial, user, privacy }: ProfileFormProps) {
       interestErrors[index] = message;
     }
   });
-  // 计数超出上限时立即显示字段错误，不等提交（简报 §4.5）
+  // 计数超出上限（字数或字节）时立即显示字段错误，不等提交（简报 §4.5）
   const displayNameError =
-    errors.displayName?.message ??
-    (graphemeCount(displayName.trim()) > 30
-      ? profileFieldMessage("displayName", "TOO_LONG")
-      : undefined);
-  const bioError =
-    errors.bio?.message ??
-    (graphemeCount(bio.trim()) > 200 ? profileFieldMessage("bio", "TOO_LONG") : undefined);
+    errors.displayName?.message ?? overLimitMessage("displayName", displayName, 30);
+  const bioError = errors.bio?.message ?? overLimitMessage("bio", bio, 200);
 
   /// 后端的字段错误挂到表单字段上，返回第一个挂上的字段
   function showFieldErrors(fieldErrors: { field: string; code: string | null }[]) {

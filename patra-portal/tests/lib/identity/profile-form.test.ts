@@ -101,6 +101,16 @@ describe("profileFormSchema", () => {
     expect(errorsOf({ ...VALUES, displayName }).displayName).toBe(message);
   });
 
+  it("字节也有上限（字素上限 × 4，与后端一致）：7 个家庭表情 126 字节超出昵称的 120 字节", () => {
+    expect(errorsOf({ ...VALUES, displayName: "👨‍👩‍👧".repeat(7) }).displayName).toBe(
+      "表情符号占用的位置较多，请删减一些",
+    );
+    expect(errorsOf({ ...VALUES, displayName: "👨‍👩‍👧".repeat(6) })).toEqual({});
+    expect(errorsOf({ ...VALUES, jobTitle: "👨‍👩‍👧".repeat(12) }).jobTitle).toBe(
+      "表情符号占用的位置较多，请删减一些",
+    );
+  });
+
   it("昵称空着可以（跟随用户名）", () => {
     expect(errorsOf({ ...VALUES, displayName: "" })).toEqual({});
   });
@@ -108,7 +118,7 @@ describe("profileFormSchema", () => {
   it("简介按字素计 200，最多 3 行", () => {
     expect(errorsOf({ ...VALUES, bio: "字".repeat(201) }).bio).toBe("简介最多 200 字");
     expect(errorsOf({ ...VALUES, bio: "a\nb\nc\nd" }).bio).toBe("简介最多 3 行");
-    expect(errorsOf({ ...VALUES, bio: "👨‍👩‍👧".repeat(200) })).toEqual({});
+    expect(errorsOf({ ...VALUES, bio: "👨‍👩‍👧".repeat(44) })).toEqual({});
   });
 
   it("链接：网址必填、只收 http(s)、不能重复；标题最多 30 字；最多 5 条", () => {

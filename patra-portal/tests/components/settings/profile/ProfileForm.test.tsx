@@ -72,6 +72,14 @@ describe("ProfileForm · 公开资料", () => {
     expect(bio).toHaveAccessibleDescription("简介最多 200 字");
   });
 
+  it("昵称表情太多超出字节上限：计数变危险色，立即提示删减", async () => {
+    const { user } = renderForm({ profile: EMPTY_PROFILE });
+    await user.click(nickname());
+    await user.paste("👨‍👩‍👧".repeat(7));
+    expect(screen.getByText("7 / 30")).toHaveClass("text-status-danger");
+    expect(nickname()).toHaveAccessibleDescription("表情符号占用的位置较多，请删减一些");
+  });
+
   it("链接：加到 5 条后「添加链接」换成说明；可以删除一行", async () => {
     const { user } = renderForm();
     for (let i = 0; i < 3; i += 1) {

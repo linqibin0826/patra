@@ -48,7 +48,8 @@ async function failure(identity: IdentityReply, endpoint: string): Promise<NextR
   return reply(503, { ok: false, reason: "unavailable" });
 }
 
-/// 上传裁好的头像：同源校验 → 会话 → 大小 → 取 `file` → multipart 转给 identity `POST /me/avatar`。
+/// 上传裁好的头像：同源校验 → 会话 → 长度头（缺失或不合法 411，超 6 MB 413，都不读体）→ 取 `file` →
+/// multipart 转给 identity `POST /me/avatar`。
 export async function POST(request: Request): Promise<NextResponse> {
   if (!isSameOrigin(request)) {
     return new NextResponse(null, { status: 403 });
@@ -56,7 +57,12 @@ export async function POST(request: Request): Promise<NextResponse> {
   if (!(await readSessionToken())) {
     return reply(401, { ok: false, reason: "signed-out" });
   }
-  if (Number(request.headers.get("content-length") ?? 0) > MAX_BODY_BYTES) {
+  // 只收带长度头的请求：浏览器发 FormData 一定带；分块传输不带长度时 formData() 会无上限地缓冲
+  const length = request.headers.get("content-length");
+  if (length === null || !/^\d+$/.test(length)) {
+    return reply(411, { ok: false, reason: "unavailable" });
+  }
+  if (Number(length) > MAX_BODY_BYTES) {
     return reply(413, { ok: false, reason: "too-large" });
   }
   const file = await request
