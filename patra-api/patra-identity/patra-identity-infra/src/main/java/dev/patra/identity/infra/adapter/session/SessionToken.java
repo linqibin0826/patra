@@ -1,4 +1,4 @@
-package dev.patra.identity.session;
+package dev.patra.identity.infra.adapter.session;
 
 import dev.patra.tool.core.security.AccountType;
 import java.nio.charset.StandardCharsets;
@@ -14,7 +14,7 @@ import java.util.regex.Pattern;
 
 /// 会话令牌：`<账号类型前缀><43 个 base64url 字符>`，随机部分 32 字节。
 ///
-/// 前缀只说明令牌属于哪类账号，不含用户信息；网关靠它决定查哪个键空间。
+/// 前缀只说明令牌属于哪类账号，不含用户信息；据它决定查哪个键空间。
 /// Redis 里只存 `hash()`，令牌本身不落任何存储，也不进日志。
 ///
 /// @param value 令牌原文

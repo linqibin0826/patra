@@ -12,12 +12,6 @@ import dev.patra.identity.domain.port.session.ActiveUserSession;
 import dev.patra.identity.domain.port.session.IssuedUserSession;
 import dev.patra.identity.domain.port.session.NewUserSession;
 import dev.patra.identity.domain.port.session.SessionRotation;
-import dev.patra.identity.session.IssuedSession;
-import dev.patra.identity.session.NewSession;
-import dev.patra.identity.session.RedisSessionStore;
-import dev.patra.identity.session.Rotation;
-import dev.patra.identity.session.SessionToken;
-import dev.patra.identity.session.StoredSession;
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.ClientType;
 import java.security.SecureRandom;
@@ -29,7 +23,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
-/// SessionStoreAdapter 单元测试：domain 的记录怎么转成会话模块的类型。
+/// SessionStoreAdapter 单元测试：domain 的记录怎么转成会话存储的类型。
 @DisplayName("SessionStoreAdapter 单元测试")
 class SessionStoreAdapterTest {
 
@@ -91,7 +85,7 @@ class SessionStoreAdapterTest {
   }
 
   @Test
-  @DisplayName("换令牌：换了带新令牌原文，宽限期内没换是「没换」；会话不在为空；宽限期原样传给会话模块")
+  @DisplayName("换令牌：换了带新令牌原文，宽限期内没换是「没换」；会话不在为空；宽限期原样传给会话存储")
   void should_rotate_and_return_token_value() {
     SessionToken token = SessionToken.generate(AccountType.USER, new SecureRandom());
     when(store.rotate(AccountType.USER, 42L, 7001L, Duration.ofSeconds(10)))

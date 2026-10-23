@@ -1,4 +1,4 @@
-package dev.patra.identity.session;
+package dev.patra.identity.infra.adapter.session;
 
 import io.lettuce.core.RedisBusyException;
 import io.lettuce.core.RedisCommandExecutionException;

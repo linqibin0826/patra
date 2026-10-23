@@ -1,4 +1,4 @@
-package dev.patra.identity.session;
+package dev.patra.identity.infra.adapter.session;
 
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.ClientType;

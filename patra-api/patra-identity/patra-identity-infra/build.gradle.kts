@@ -14,11 +14,8 @@ dependencies {
     api(project(":patra-api:patra-identity:patra-identity-domain"))
     api(project(":patra-tool:patra-tool-jpa"))
 
-    // 登录失败限制存在 Redis
+    // 会话与登录失败限制存在 Redis
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
-
-    // identity 与网关共用的会话存储
-    implementation(project(":patra-api:patra-identity:patra-identity-session"))
 
     // 保存资料时经 catalog 内部接口校验 ROR ID / MeSH UI 并取名称快照（PAP-95）：契约 + 服务间调用能力
     implementation(project(":patra-api:patra-catalog:patra-catalog-api"))

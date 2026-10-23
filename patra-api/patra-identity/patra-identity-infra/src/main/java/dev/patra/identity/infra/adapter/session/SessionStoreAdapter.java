@@ -6,11 +6,6 @@ import dev.patra.identity.domain.port.session.IssuedUserSession;
 import dev.patra.identity.domain.port.session.NewUserSession;
 import dev.patra.identity.domain.port.session.SessionRotation;
 import dev.patra.identity.domain.port.session.SessionStorePort;
-import dev.patra.identity.session.IssuedSession;
-import dev.patra.identity.session.NewSession;
-import dev.patra.identity.session.RedisSessionStore;
-import dev.patra.identity.session.SessionToken;
-import dev.patra.identity.session.StoredSession;
 import dev.patra.tool.core.security.AccountType;
 import java.time.Duration;
 import java.time.Instant;
@@ -19,7 +14,7 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/// 会话存储端口的实现：把 domain 的记录转成会话模块的类型，交给 `RedisSessionStore`。
+/// 会话存储端口的实现：把 domain 的记录转成会话存储的类型，交给 `RedisSessionStore`。
 ///
 /// `SessionStoreUnavailableException` 原样穿过，错误引擎按 `DEP_UNAVAILABLE` 映射成 503。
 @Component

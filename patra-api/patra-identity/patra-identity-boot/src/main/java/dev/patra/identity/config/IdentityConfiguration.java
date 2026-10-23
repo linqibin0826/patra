@@ -33,7 +33,7 @@ import dev.patra.identity.infra.adapter.avatar.AvatarStorageProperties;
 import dev.patra.identity.infra.adapter.hashing.PasswordHashingAdapter;
 import dev.patra.identity.infra.adapter.mail.SmtpEmailDeliveryAdapter;
 import dev.patra.identity.infra.adapter.mail.ThymeleafMailRenderer;
-import dev.patra.identity.session.RedisSessionStore;
+import dev.patra.identity.infra.adapter.session.RedisSessionStore;
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.ClientType;
 import java.security.SecureRandom;
@@ -197,7 +197,7 @@ public class IdentityConfiguration {
     return SessionLifetimePolicy.of(lifetimes, session.maxSessionsPerUser());
   }
 
-  /// Redis 里的会话存储，和网关共用同一份契约。
+  /// Redis 里的会话存储，只有 identity 读写（网关经内部接口查会话）。
   ///
   /// @param redis Redis 模板
   /// @param clock 时钟

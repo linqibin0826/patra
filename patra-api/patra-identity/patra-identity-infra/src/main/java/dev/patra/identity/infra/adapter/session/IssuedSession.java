@@ -1,4 +1,4 @@
-package dev.patra.identity.session;
+package dev.patra.identity.infra.adapter.session;
 
 import java.util.List;
 import java.util.Objects;

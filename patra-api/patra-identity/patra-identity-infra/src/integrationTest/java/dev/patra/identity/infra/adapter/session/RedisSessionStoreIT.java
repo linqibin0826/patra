@@ -1,4 +1,4 @@
-package dev.patra.identity.session;
+package dev.patra.identity.infra.adapter.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -33,7 +33,7 @@ import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.testcontainers.containers.GenericContainer;
 
-/// RedisSessionStore 集成测试：四段 Lua 在 redis:7.0.15 上的行为。
+/// RedisSessionStore 集成测试：八段 Lua 在 redis:7.0.15 上的行为。
 @DisplayName("RedisSessionStore 集成测试")
 class RedisSessionStoreIT {
 

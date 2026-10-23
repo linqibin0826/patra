@@ -1,4 +1,4 @@
-package dev.patra.identity.session;
+package dev.patra.identity.infra.adapter.session;
 
 import dev.patra.tool.core.error.DomainException;
 import dev.patra.tool.core.error.trait.StandardErrorTrait;

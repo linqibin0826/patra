@@ -1,4 +1,4 @@
-package dev.patra.identity.session;
+package dev.patra.identity.infra.adapter.session;
 
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.ClientType;
@@ -47,7 +47,7 @@ public record StoredSession(
     Objects.requireNonNull(authenticatedAt, "authenticatedAt 不能为 null");
   }
 
-  /// 转成当前用户，网关据此建认证对象。
+  /// 转成当前用户，查会话的内部接口据此回给网关。
   ///
   /// @return 当前用户
   public CurrentUser toCurrentUser() {

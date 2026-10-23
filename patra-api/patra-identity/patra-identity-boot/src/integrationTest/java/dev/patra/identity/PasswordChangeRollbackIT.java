@@ -6,7 +6,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
 
 import dev.patra.identity.domain.port.session.SessionStorePort;
-import dev.patra.identity.session.SessionStoreUnavailableException;
+import dev.patra.identity.infra.adapter.session.SessionStoreUnavailableException;
 import java.util.Arrays;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;

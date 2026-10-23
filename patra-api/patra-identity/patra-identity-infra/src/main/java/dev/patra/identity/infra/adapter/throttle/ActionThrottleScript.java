@@ -1,7 +1,7 @@
 package dev.patra.identity.infra.adapter.throttle;
 
 import dev.patra.identity.domain.exception.TemporarilyUnavailableException;
-import dev.patra.identity.session.TransientRedisFailures;
+import dev.patra.identity.infra.adapter.session.TransientRedisFailures;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -20,7 +20,7 @@ import org.springframework.data.redis.core.script.RedisScript;
 /// 各自只负责算键和参数。
 ///
 /// 时间由调用方传入、脚本不调 `TIME`，固定时钟下窗口能被拨过去；键的过期用真实时间，只是回收。
-/// Redis 暂时不可用（由会话模块的 `TransientRedisFailures` 判定）转成 {@link TemporarilyUnavailableException}；
+/// Redis 暂时不可用（由会话存储的 `TransientRedisFailures` 判定）转成 {@link TemporarilyUnavailableException}；
 /// 脚本没有真正执行（返回 `null`）也按不可用处理：限流默认拒绝，不放行。
 public final class ActionThrottleScript {
 

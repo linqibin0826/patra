@@ -1,4 +1,4 @@
-package dev.patra.identity.session;
+package dev.patra.identity.infra.adapter.session;
 
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.ClientType;
@@ -16,7 +16,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
 
-/// Redis 里的会话存储：identity 建和删，网关查和续期。
+/// Redis 里的会话存储：建、删、查和续期都在 identity；网关经内部接口查会话（PAP-106）。
 ///
 /// 键 1 `idn:session:<账号类型>:<令牌哈希>` 是一条会话（含最近一次再认证时间 `auth_at`）；
 /// 键 2 `idn:user-sessions:<账号类型>:<用户 ID>` 是该用户全部会话的索引（会话 ID → 令牌哈希）。

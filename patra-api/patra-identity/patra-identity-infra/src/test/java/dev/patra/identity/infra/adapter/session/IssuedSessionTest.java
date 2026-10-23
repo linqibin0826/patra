@@ -1,4 +1,4 @@
-package dev.patra.identity.session;
+package dev.patra.identity.infra.adapter.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
