@@ -150,7 +150,7 @@ describe("clearSessionCookie", () => {
 });
 
 describe("设备标识 Cookie", () => {
-  const VALID = "A".repeat(42) + "_";
+  const VALID = `${"A".repeat(42)}_`;
   const PLAIN =
     /^patra_device=([A-Za-z0-9_-]{43}); Path=\/; Expires=[^;]+; Max-Age=34560000; HttpOnly; SameSite=lax$/;
 

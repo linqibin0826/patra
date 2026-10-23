@@ -28,7 +28,6 @@ vi.mock("react-easy-crop", async () => {
     }: {
       onCropComplete: (a: unknown, b: unknown) => void;
     }) {
-      // biome-ignore lint/correctness/useExhaustiveDependencies: 桩只在挂载时报一次
       useEffect(() => {
         onCropComplete(
           { x: 0, y: 0, width: 100, height: 100 },
