@@ -41,7 +41,7 @@ assert_field "$F" '.backend_units' '["ingest","object-storage"]' "object-storage
 echo "== 场景 6：全局 path → 全量；foundation 模块 → 扇出（非全量）=="
 assert_field "build-logic/src/main/kotlin/x.gradle.kts" '.full_run' 'true' "build-logic 全量"
 assert_field "patra-api/patra-common/src/main/java/X.java" '.full_run' 'false' "patra-common 非全量"
-assert_field "patra-api/patra-common/src/main/java/X.java" '.backend_units' '["catalog","foundation","identity","ingest","object-storage","registry"]' "patra-common 扇出全部六个单元"
+assert_field "patra-api/patra-common/src/main/java/X.java" '.backend_units' '["catalog","foundation","gateway","identity","ingest","interaction","object-storage","registry"]' "patra-common 扇出全部 7 个服务与 foundation（网关经 identity-api 间接依赖它）"
 
 echo "== 场景 7：workflow 自身变更 → 全量后端 + portal =="
 assert_field ".github/workflows/ci.yml" '.full_run' 'true' "workflow 全量"
@@ -96,7 +96,7 @@ F="patra-infra/nacos/dev/patra-ingest.yaml"
 assert_field "$F" '.nacos_changed' 'true' "nacos yaml 触发推送"
 assert_field "$F" '.backend_units' '["foundation","ingest"]' "服务的 nacos yaml 重部署该服务（启动时读的配置才生效）"
 assert_field "patra-infra/nacos/dev/patra-object-storage.yaml" '.backend_units' '["foundation","object-storage"]' "带连字符的服务名也能对上"
-assert_field "patra-infra/nacos/dev/patra-common.yaml" '.backend_units' '["catalog","foundation","gateway","identity","ingest","object-storage","registry"]' "公共 nacos yaml 重部署全部 6 个服务"
+assert_field "patra-infra/nacos/dev/patra-common.yaml" '.backend_units' '["catalog","foundation","gateway","identity","ingest","interaction","object-storage","registry"]' "公共 nacos yaml 重部署全部 7 个服务"
 assert_field "patra-infra/nacos/dev/patra-common.yaml" '.full_run' 'false' "公共 nacos yaml 非全量"
 assert_field "patra-infra/nacos/dev/patra-unknown.yaml" '.backend_units' '["foundation"]' "对不上服务的 nacos yaml 只跑 foundation"
 assert_field "$F" '.full_run' 'false' "nacos yaml 非全量"
@@ -117,6 +117,11 @@ if [ "$got" = "false" ]; then PASS=$((PASS+1)); echo "  ✓ dispatch 单服务�
 got="$(bash "$DETECT" dispatch all | jq -c '.nacos_changed')"
 if [ "$got" = "true" ]; then PASS=$((PASS+1)); echo "  ✓ dispatch all 推送"; else FAIL=$((FAIL+1)); echo "  ✗ dispatch all nacos_changed 实得 $got"; fi
 
+echo "== 场景 15：interaction 单元（私有改动只跑 interaction；全量运行包含 interaction；它的 nacos yaml 只重部署它）=="
+F="patra-api/patra-interaction/patra-interaction-infra/src/main/resources/db/migration/subject/V1__x.sql"
+assert_field "$F" '.backend_units' '["interaction"]' "interaction 私有只跑 interaction"
+assert_field "settings.gradle.kts" '.backend_units | index("interaction") != null' 'true' "全量运行包含 interaction"
+assert_field "patra-infra/nacos/dev/patra-interaction.yaml" '.backend_units' '["foundation","interaction"]' "interaction 的 nacos yaml 重部署 interaction"
 echo
 echo "通过 $PASS / 失败 $FAIL"
 [ "$FAIL" -eq 0 ]

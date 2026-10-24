@@ -109,6 +109,14 @@ includeAt(":patra-api:patra-identity:patra-identity-adapter", "patra-api/patra-i
 includeAt(":patra-api:patra-identity:patra-identity-boot", "patra-api/patra-identity/patra-identity-boot")
 mapParent(":patra-api:patra-identity", "patra-api/patra-identity")
 
+includeAt(":patra-api:patra-interaction:patra-interaction-api", "patra-api/patra-interaction/patra-interaction-api")
+includeAt(":patra-api:patra-interaction:patra-interaction-domain", "patra-api/patra-interaction/patra-interaction-domain")
+includeAt(":patra-api:patra-interaction:patra-interaction-app", "patra-api/patra-interaction/patra-interaction-app")
+includeAt(":patra-api:patra-interaction:patra-interaction-infra", "patra-api/patra-interaction/patra-interaction-infra")
+includeAt(":patra-api:patra-interaction:patra-interaction-adapter", "patra-api/patra-interaction/patra-interaction-adapter")
+includeAt(":patra-api:patra-interaction:patra-interaction-boot", "patra-api/patra-interaction/patra-interaction-boot")
+mapParent(":patra-api:patra-interaction", "patra-api/patra-interaction")
+
 // ==================== patra-api / Gateway ====================
 includeAt(":patra-api:patra-gateway-boot", "patra-api/patra-gateway-boot")
 

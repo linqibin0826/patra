@@ -65,7 +65,7 @@ val bootConfigFiles =
         }.map { dir -> fileTree(dir) { include("*.yml", "*.yaml") } }
 
 // NacosConfigFilesTest 检查仓库里要推送到 Nacos 的配置文件；JarConfigOverlapCheckerTest 再拿它们
-// 和 6 个 boot 模块的 jar 配置比对
+// 和 7 个 boot 模块的 jar 配置比对
 tasks.named<Test>("test") {
     inputs
         .dir(nacosConfigDir)

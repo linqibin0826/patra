@@ -52,6 +52,13 @@ class GatewayRoutingIT {
           .options(wireMockConfig().dynamicPort().http2PlainDisabled(true).gzipDisabled(true))
           .build();
 
+  /// interaction 的下游桩：验证 `/patra-interaction/**` 路由（PAP-111）。
+  @RegisterExtension
+  static final WireMockExtension interaction =
+      WireMockExtension.newInstance()
+          .options(wireMockConfig().dynamicPort().http2PlainDisabled(true).gzipDisabled(true))
+          .build();
+
   @Autowired private RestTestClient restClient;
   @Autowired private Environment environment;
 
@@ -59,6 +66,29 @@ class GatewayRoutingIT {
   static void downstreams(DynamicPropertyRegistry registry) {
     registry.add(
         "spring.cloud.discovery.client.simple.instances.patra-catalog[0].uri", catalog::baseUrl);
+    registry.add(
+        "spring.cloud.discovery.client.simple.instances.patra-interaction[0].uri",
+        interaction::baseUrl);
+  }
+
+  /// `/patra-interaction/**` 剥掉前缀转到 `lb://patra-interaction`，查询串原样。
+  @Test
+  void should_route_interaction_prefix_to_interaction_service() {
+    interaction.stubFor(
+        get(urlPathEqualTo("/collections/1"))
+            .withQueryParam("view", equalTo("reader"))
+            .willReturn(okJson("{}")));
+
+    restClient
+        .get()
+        .uri("/patra-interaction/collections/1?view=reader")
+        .exchange()
+        .expectStatus()
+        .isOk();
+
+    interaction.verify(
+        getRequestedFor(urlPathEqualTo("/collections/1"))
+            .withQueryParam("view", equalTo("reader")));
   }
 
   @Test

@@ -317,7 +317,9 @@ public class HexagonalArchitectureRules {
         .allowEmptyShould(true);
   }
 
-  /// DO 类必须在 infra.persistence.entity 包。
+  /// DO 类必须在 infra 下任意层级的 `persistence.entity` 包。
+  ///
+  /// 兼容按子域分包的布局：`infra.<子域>.persistence.entity`。
   ///
   /// @return ArchRule 规则实例
   public ArchRule doClassesShouldResideInPersistenceEntity() {
@@ -325,13 +327,15 @@ public class HexagonalArchitectureRules {
         .that()
         .haveSimpleNameEndingWith("DO")
         .should()
-        .resideInAPackage("..infra.persistence.entity..")
-        .as("DO 类必须在 infra.persistence.entity 包")
+        .resideInAPackage("..infra..persistence.entity..")
+        .as("DO 类必须在 infra 下任意层级的 persistence.entity 包")
         .because("DO 类是持久化层的概念，不应泄露到其他层（CHK-ARCH-004）")
         .allowEmptyShould(true);
   }
 
-  /// Aggregate 必须在 domain.model.aggregate 包。
+  /// Aggregate 必须在 domain 下任意层级的 `model.aggregate` 包。
+  ///
+  /// 兼容按子域分包的布局：`domain.<子域>.model.aggregate`。
   ///
   /// @return ArchRule 规则实例
   public ArchRule aggregatesShouldResideInDomainModelAggregate() {
@@ -339,13 +343,15 @@ public class HexagonalArchitectureRules {
         .that()
         .haveSimpleNameEndingWith("Aggregate")
         .should()
-        .resideInAPackage("..domain.model.aggregate..")
-        .as("Aggregate 必须在 domain.model.aggregate 包")
+        .resideInAPackage("..domain..model.aggregate..")
+        .as("Aggregate 必须在 domain 下任意层级的 model.aggregate 包")
         .because("Aggregate 是 DDD 的核心概念，属于 Domain 层")
         .allowEmptyShould(true);
   }
 
-  /// Orchestrator/Coordinator 必须在 app.usecase 包。
+  /// Orchestrator/Coordinator 必须在 app 下任意层级的 `usecase` 包。
+  ///
+  /// 兼容按子域分包的布局：`app.<子域>.usecase`。
   ///
   /// @return ArchRule 规则实例
   public ArchRule orchestratorsShouldResideInAppUsecase() {
@@ -355,8 +361,8 @@ public class HexagonalArchitectureRules {
         .or()
         .haveSimpleNameEndingWith("Coordinator")
         .should()
-        .resideInAPackage("..app.usecase..")
-        .as("Orchestrator/Coordinator 必须在 app.usecase 包")
+        .resideInAPackage("..app..usecase..")
+        .as("Orchestrator/Coordinator 必须在 app 下任意层级的 usecase 包")
         .because("编排器是应用层概念，负责用例流程编排和事务边界（CHK-ARCH-003）")
         .allowEmptyShould(true);
   }
@@ -395,7 +401,9 @@ public class HexagonalArchitectureRules {
         .allowEmptyShould(true);
   }
 
-  /// Domain Event 必须在 domain.event 包。
+  /// Domain Event 必须在 domain 下任意层级的 `event` 包。
+  ///
+  /// 兼容按子域分包的布局：`domain.<子域>.event`。
   ///
   /// @return ArchRule 规则实例
   public ArchRule eventsShouldResideInDomainEvent() {
@@ -407,8 +415,8 @@ public class HexagonalArchitectureRules {
         .and()
         .haveSimpleNameNotEndingWith("CursorEvent")
         .should()
-        .resideInAPackage("..domain.event..")
-        .as("Domain Event 必须在 domain.event 包")
+        .resideInAPackage("..domain..event..")
+        .as("Domain Event 必须在 domain 下任意层级的 event 包")
         .because("领域事件是 DDD 事件驱动架构的核心，应统一管理")
         .allowEmptyShould(true);
   }

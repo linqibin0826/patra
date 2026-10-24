@@ -19,7 +19,7 @@ import org.springframework.core.io.FileSystemResource;
 /// 检查同一个键没有同时写在 jar 和 Nacos 里。
 ///
 /// 两处都写时，哪个生效取决于导入顺序：改了 Nacos 可能不生效，排查时也说不清以哪处为准。只在测试里用：
-/// [JarConfigOverlapCheckerTest] 检查仓库里 `patra-infra/nacos/dev/` 与 6 个 boot 模块的配置。
+/// [JarConfigOverlapCheckerTest] 检查仓库里 `patra-infra/nacos/dev/` 与 7 个 boot 模块的配置。
 final class JarConfigOverlapChecker {
 
   /// boot 模块里 jar 配置所在目录。
