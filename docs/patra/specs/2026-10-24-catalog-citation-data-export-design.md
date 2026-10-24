@@ -342,7 +342,7 @@ Content-Type: application/json
 - 门户经网关调用：网关对下游有读超时（PAP-106 一系）。5,000 条约 10 批、两条 SQL 一批，预计数秒；release spec D6 的手工导出必须经网关走一次，确认不触发超时。网关下游读超时为 60 秒空闲超时（`patra-gateway-boot` 的 `spring.http.clients.imperative.read-timeout`，连续 60 秒收不到字节才断、不限总时长）；导出每批写完即刷出，批间隔远小于 60 秒。
 - 端口只有一个方法 `CitationExportPort.export(format, Iterator<List<CitationRecord>> batches, out)`：导出服务交出懒加载的批次迭代器（每次 `next()` 在一个只读事务里读一批），infra 适配器逐批拉取；写出器有状态（CSV 表头、JSON 数组括号与逗号），是 infra 内部类型（`begin` / `write` / `flush` / `end`），不越过端口边界。每批写完即刷出。
 - 异步请求总时长：catalog 配 `spring.mvc.async.request-timeout: 10m`（不配时 Tomcat 默认 30 秒、按总时长计，慢速客户端会被中途掐断）。
-- 已知限制：响应头发出后若中途失败（数据库报错、超时），`patra-tool-web` 的全局异常处理器在响应已提交时放弃渲染、请求正常结束，客户端拿到的是被截断的 200 文件而不是下载失败。要让连接中断需要改 `patra-tool-web`，不在本 Issue 范围。
+- 中途失败（已解决）：响应头发出后若中途失败（数据库报错等），`patra-tool-web` 的全局异常处理器把异常抛回容器，由 Tomcat 中断连接，客户端判定下载失败，不再拿到截断的 200（`docs/patra/specs/2026-10-24-committed-response-abort-design.md`）。异步请求超时（`AsyncRequestTimeoutException`）不在该修复范围内，仍是截断的 200，但 10 分钟碰不到。
 
 ### 6.3 引用记录 `CitationRecord`（领域读模型）
 

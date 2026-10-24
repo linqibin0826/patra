@@ -28,6 +28,7 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.springframework.web.util.DisconnectedClientHelper;
 
 /// 全局 REST 异常处理器,使用共享平台错误解析管道呈现 RFC 7807 {@link ProblemDetail} 文档。
 ///
@@ -39,6 +40,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 ///   - 掩码敏感字段(通过 {@link ValidationErrorsFormatter})
 ///   - 4xx 记 WARN、不带堆栈（按类名兜底分类出来的 4xx 带堆栈），5xx 记 ERROR、带堆栈；参数校验失败不记字段原始值
 ///   - 返回符合 RFC 7807 标准的 JSON 响应(Content-Type: application/problem+json)
+///   - 响应已提交（写到一半才出错）时不渲染，原样抛回异常，由容器中止连接
 ///
 /// **响应格式示例:**
 ///
@@ -90,19 +92,27 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
   /// 后备处理器，将任何未捕获的异常转换为问题详情文档。
   ///
   /// 异常实现 {@link HasRetryAfter} 且剩余等待时间不为 `null` 时，加上 `Retry-After` 响应头。
-  /// 响应已提交（状态码和响应头已经发出，例如代理转发到一半下游断了）时无法再改写，返回 `null`
-  /// 交给容器收尾；未提交时先清掉已写入的响应体，ProblemDetail 不会和半截响应拼在一起。
+  /// 响应已提交（状态码和响应头已经发出，例如流式导出或代理转发写到一半出错）时无法再改写：
+  /// 原样抛回原始异常，Spring MVC 当作没处理，异常传到容器，由容器中止连接。客户端收不到分块终止块，
+  /// 能识别出传输失败，而不是拿到一个看起来完整的 200。未提交时先清掉已写入的响应体，
+  /// ProblemDetail 不会和半截响应拼在一起。
+  ///
+  /// 客户端主动断开（用户取消下载）时同样抛回，但不记 WARN：Spring 的
+  /// `ExceptionHandlerExceptionResolver` 会认出客户端断开、按自己的规则安静处理，异常到不了容器。
   ///
   /// @param ex 未捕获的异常
   /// @param request HTTP 请求上下文
   /// @param response HTTP 响应
-  /// @return 包含问题详情的响应实体；响应已提交时为 `null`
+  /// @return 包含问题详情的响应实体
+  /// @throws Exception 响应已提交时原样抛回的 `ex`
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ProblemDetail> handleException(
-      Exception ex, HttpServletRequest request, HttpServletResponse response) {
+      Exception ex, HttpServletRequest request, HttpServletResponse response) throws Exception {
     if (!prepareForProblemDetail(response)) {
-      logResponseAlreadyCommitted(request, ex);
-      return null;
+      if (!DisconnectedClientHelper.isClientDisconnectedException(ex)) {
+        logAbortingCommittedResponse(request, ex);
+      }
+      throw ex;
     }
     ProblemDetailResponse problem = problemDetailAdapter.adapt(ex, request);
 
@@ -221,6 +231,18 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
     response.resetBuffer();
     response.setContentLengthLong(-1);
     return true;
+  }
+
+  /// 记录「响应已提交、交给容器中断连接」。堆栈由容器那条 ERROR 日志带出，这里只记一行。
+  ///
+  /// @param request HTTP 请求，可能为 null
+  /// @param ex 异常
+  private static void logAbortingCommittedResponse(HttpServletRequest request, Exception ex) {
+    log.warn(
+        "响应已提交，交给容器中断连接: request path [{}], exception={}: {}",
+        request == null ? null : request.getRequestURI(),
+        ex.getClass().getSimpleName(),
+        ex.getMessage());
   }
 
   /// 记录「响应已提交、放弃渲染」。

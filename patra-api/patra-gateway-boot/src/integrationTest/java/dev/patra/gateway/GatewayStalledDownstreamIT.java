@@ -1,6 +1,7 @@
 package dev.patra.gateway;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -44,6 +45,9 @@ class GatewayStalledDownstreamIT {
 
   private static final long STALL_MILLIS = 2_000;
 
+  /// 中途断开前写出的正文长度：超过 Tomcat 8 KB 缓冲，网关的响应一定已提交
+  private static final int ABORTED_BODY_LENGTH = 32 * 1024;
+
   /// 上传 32 MB：远大于本机回环的 socket 缓冲，下游不读时网关的写一定会卡住
   private static final int UPLOAD_LENGTH = 32 * 1024 * 1024;
 
@@ -67,21 +71,35 @@ class GatewayStalledDownstreamIT {
     catalog.stop(0);
   }
 
-  /// 流式响应逐块 flush、状态码已经发出，网关不再往后拼任何东西，Tomcat 干净地结束分块传输：
-  /// 客户端拿到 200 和一段只含已到字节的半截响应体。
+  /// 流式响应逐块 flush、状态码已经发出，下游停住超过读超时后，网关把异常抛回容器、中止与客户端的连接：
+  /// 客户端收不到分块终止块，拿不到一个看起来正常结束的 200（`2026-10-24-committed-response-abort-design.md`）。
   @Test
-  void should_end_committed_streaming_response_cleanly_when_downstream_stalls() throws Exception {
-    HttpResponse<String> response;
+  void should_abort_committed_streaming_response_when_downstream_stalls() throws Exception {
     try (HttpClient client = HttpClient.newHttpClient()) {
-      response =
-          client.send(
-              HttpRequest.newBuilder(URI.create(gatewayUrl("/patra-catalog/stalled-stream")))
-                  .build(),
-              HttpResponse.BodyHandlers.ofString());
+      assertThatThrownBy(
+              () ->
+                  client.send(
+                      HttpRequest.newBuilder(
+                              URI.create(gatewayUrl("/patra-catalog/stalled-stream")))
+                          .build(),
+                      HttpResponse.BodyHandlers.ofString()))
+          .isInstanceOf(IOException.class);
     }
+  }
 
-    assertThat(response.statusCode()).isEqualTo(200);
-    assertThat(response.body()).isNotEmpty().hasSizeLessThan(2 * HALF_BODY_LENGTH).matches("x+");
+  /// 下游写过 Tomcat 缓冲之后中途断开（catalog 导出中途失败、被它自己的全局处理器中止连接）：
+  /// 网关这时也已提交，同样把异常抛回容器、中止与客户端的连接。证明一处修复覆盖 catalog → 网关两跳。
+  @Test
+  void should_abort_committed_response_when_downstream_aborts_mid_body() throws Exception {
+    try (HttpClient client = HttpClient.newHttpClient()) {
+      assertThatThrownBy(
+              () ->
+                  client.send(
+                      HttpRequest.newBuilder(URI.create(gatewayUrl("/patra-catalog/aborted-body")))
+                          .build(),
+                      HttpResponse.BodyHandlers.ofString()))
+          .isInstanceOf(IOException.class);
+    }
   }
 
   /// 非流式响应此时还没提交（Tomcat 缓冲没满）：网关清掉半截响应体，回一份完整的 ProblemDetail。
@@ -144,6 +162,7 @@ class GatewayStalledDownstreamIT {
       server.createContext("/stalled-stream", exchange -> stall(exchange, "text/event-stream"));
       server.createContext("/stalled-body", exchange -> stall(exchange, "text/plain"));
       server.createContext("/unread-upload", GatewayStalledDownstreamIT::holdWithoutReading);
+      server.createContext("/aborted-body", GatewayStalledDownstreamIT::abortMidBody);
       // 每个请求一个虚拟线程：不读请求体的那个处理器挂着时，不挡住别的用例
       server.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
       server.start();
@@ -169,6 +188,19 @@ class GatewayStalledDownstreamIT {
     } catch (IOException | InterruptedException cutByGateway) {
       // 网关已经断开：这正是要验证的行为
     }
+  }
+
+  /// 发响应头和 32 KB 正文后直接抛异常：JDK `HttpServer` 会关掉连接，不写分块终止块，
+  /// 和下游被自己的容器中止连接时网关看到的一样。
+  ///
+  /// @param exchange 当前请求
+  private static void abortMidBody(HttpExchange exchange) throws IOException {
+    exchange.getResponseHeaders().set("Content-Type", "application/x-research-info-systems");
+    exchange.sendResponseHeaders(200, 0);
+    OutputStream body = exchange.getResponseBody();
+    body.write("x".repeat(ABORTED_BODY_LENGTH).getBytes(StandardCharsets.US_ASCII));
+    body.flush();
+    throw new IOException("下游写出中途失败");
   }
 
   /// 不读请求体，挂住远超读超时之后才回 200。网关若不设写超时，就会一直等到这里回应。

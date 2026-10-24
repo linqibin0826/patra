@@ -26,7 +26,8 @@ class GatewayProxyFailureAdviceTest {
       new GatewayProxyFailureAdvice(HttpStdErrors.of("GW"), globalHandler);
 
   @Test
-  void should_hand_a_safe_wrapper_to_the_global_handler_instead_of_the_raw_exception() {
+  void should_hand_a_safe_wrapper_to_the_global_handler_instead_of_the_raw_exception()
+      throws Exception {
     ResourceAccessException raw =
         new ResourceAccessException(
             "I/O error on GET request for \"http://192.168.97.5:6300/venues\"",
@@ -42,7 +43,7 @@ class GatewayProxyFailureAdviceTest {
   }
 
   @Test
-  void should_pass_unclassified_exceptions_through_unchanged() {
+  void should_pass_unclassified_exceptions_through_unchanged() throws Exception {
     HttpServerErrorException badGateway = new HttpServerErrorException(HttpStatus.BAD_GATEWAY);
 
     advice.handleProxyFailure(badGateway, request, response);
