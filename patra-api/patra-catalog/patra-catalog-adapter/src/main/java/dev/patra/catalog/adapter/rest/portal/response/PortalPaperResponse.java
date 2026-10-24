@@ -12,7 +12,6 @@ import java.util.List;
 /// @param year 出版年份（可空）
 /// @param authors 全部作者展示名
 /// @param cites 被引次数（可空）
-/// @param bookmarks 收藏数（无用户系统，恒为 0）
 /// @param doi DOI（可空）
 /// @param pmid PubMed ID（可空）
 /// @param source 数据来源展示名
@@ -32,7 +31,6 @@ public record PortalPaperResponse(
     Integer year,
     List<String> authors,
     Integer cites,
-    Integer bookmarks,
     String doi,
     String pmid,
     String source,

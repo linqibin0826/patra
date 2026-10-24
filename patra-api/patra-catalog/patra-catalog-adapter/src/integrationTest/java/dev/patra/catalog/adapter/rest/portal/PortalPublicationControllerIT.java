@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import dev.patra.catalog.adapter.config.CatalogAdapterITWebMvcConfig;
 import dev.patra.catalog.app.usecase.portal.query.PortalFeedQueryService;
+import dev.patra.catalog.app.usecase.portal.query.PortalPublicationCardQueryService;
 import dev.patra.catalog.app.usecase.portal.query.PortalPublicationDetailQueryService;
 import dev.patra.catalog.app.usecase.portal.query.PortalPublicationFullTextQueryService;
 import dev.patra.catalog.app.usecase.portal.query.PortalPublicationSearchQueryService;
@@ -31,8 +32,12 @@ import dev.patra.catalog.domain.query.PageResult;
 import dev.patra.catalog.domain.query.PagingParams;
 import java.time.Instant;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.LongStream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
@@ -58,6 +63,7 @@ class PortalPublicationControllerIT {
   @MockitoBean private PortalPublicationDetailQueryService portalPublicationDetailQueryService;
   @MockitoBean private PortalPublicationSearchQueryService portalPublicationSearchQueryService;
   @MockitoBean private PortalPublicationFullTextQueryService portalPublicationFullTextQueryService;
+  @MockitoBean private PortalPublicationCardQueryService portalPublicationCardQueryService;
 
   @Test
   @DisplayName("GET /portal/publications 返回 200 + 对齐前端的分页信封")
@@ -108,7 +114,7 @@ class PortalPublicationControllerIT {
         .jsonPath("$.items[0].cites")
         .isEqualTo(142)
         .jsonPath("$.items[0].bookmarks")
-        .isEqualTo(0)
+        .doesNotExist()
         .jsonPath("$.items[0].source")
         .isEqualTo("PubMed")
         .jsonPath("$.items[0].kind")
@@ -212,7 +218,7 @@ class PortalPublicationControllerIT {
         .jsonPath("$.fullTextUrl")
         .isEqualTo("https://x/full")
         .jsonPath("$.bookmarks")
-        .isEqualTo(0)
+        .doesNotExist()
         .jsonPath("$.estimatedReadMin")
         .isEmpty()
         .jsonPath("$.retracted")
@@ -603,5 +609,101 @@ class PortalPublicationControllerIT {
         .thenReturn(PageResult.empty(1, 20));
     restClient.get().uri("/portal/publications/search").exchange().expectStatus().isOk();
     verifyNoInteractions(portalPublicationDetailQueryService);
+  }
+
+  // ===== GET /portal/publications/batch =====
+
+  @Test
+  @DisplayName("batch：按服务顺序返回 items，超 2^53 的 ID 为字符串，没有 bookmarks")
+  void should_return_cards_in_service_order() {
+    long bigId = 9_007_199_254_740_993L;
+    when(portalPublicationCardQueryService.findByIds(List.of(bigId, 2L)))
+        .thenReturn(List.of(batchCard(bigId), batchCard(2L)));
+
+    restClient
+        .get()
+        .uri("/portal/publications/batch?id=" + bigId + "&id=2")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .jsonPath("$.items.length()")
+        .isEqualTo(2)
+        .jsonPath("$.items[0].id")
+        .isEqualTo("9007199254740993")
+        .jsonPath("$.items[1].id")
+        .isEqualTo("2")
+        .jsonPath("$.items[0].bookmarks")
+        .doesNotExist();
+    verify(portalPublicationCardQueryService).findByIds(List.of(bigId, 2L));
+  }
+
+  @Test
+  @DisplayName("batch：重复参数绑定为多个 ID，空值被丢弃")
+  void should_bind_repeated_id_params_and_drop_blank_ones() {
+    when(portalPublicationCardQueryService.findByIds(List.of(5L, 6L))).thenReturn(List.of());
+
+    restClient
+        .get()
+        .uri("/portal/publications/batch?id=5&id=&id=6")
+        .exchange()
+        .expectStatus()
+        .isOk();
+
+    verify(portalPublicationCardQueryService).findByIds(List.of(5L, 6L));
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("invalidBatchQueries")
+  @DisplayName("batch：缺失、只有空值、非正整数、超过 100 个 → 422，不触达服务")
+  void should_reject_invalid_ids_with_422_without_calling_service(String query) {
+    restClient
+        .get()
+        .uri("/portal/publications/batch" + query)
+        .exchange()
+        .expectStatus()
+        .isEqualTo(422);
+
+    verifyNoInteractions(portalPublicationCardQueryService);
+  }
+
+  static List<String> invalidBatchQueries() {
+    String ids101 =
+        LongStream.rangeClosed(1, 101)
+            .mapToObj(i -> "id=" + i)
+            .collect(Collectors.joining("&", "?", ""));
+    return List.of("", "?id=", "?id=0", ids101);
+  }
+
+  @Test
+  @DisplayName("batch：逗号连在一个值里不拆开，也不静默放过")
+  void should_reject_comma_joined_ids() {
+    restClient
+        .get()
+        .uri("/portal/publications/batch?id=1,2")
+        .exchange()
+        .expectStatus()
+        .isEqualTo(422);
+
+    verifyNoInteractions(portalPublicationCardQueryService);
+  }
+
+  @Test
+  @DisplayName("batch 是字面路径，不会落到 /{id} 详情端点")
+  void should_not_route_batch_to_detail_endpoint() {
+    when(portalPublicationCardQueryService.findByIds(List.of(1L))).thenReturn(List.of());
+
+    restClient.get().uri("/portal/publications/batch?id=1").exchange().expectStatus().isOk();
+
+    verifyNoInteractions(portalPublicationDetailQueryService);
+  }
+
+  private static PortalPaperReadModel batchCard(long id) {
+    return PortalPaperReadModel.builder()
+        .id(id)
+        .title("Card " + id)
+        .provenanceCode("PUBMED")
+        .evidenceLevel(EvidenceLevel.UNKNOWN)
+        .build();
   }
 }

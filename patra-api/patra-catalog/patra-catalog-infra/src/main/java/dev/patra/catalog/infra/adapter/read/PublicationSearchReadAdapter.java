@@ -11,6 +11,7 @@ import dev.patra.catalog.domain.query.PageResult;
 import dev.patra.catalog.domain.query.PagingParams;
 import dev.patra.catalog.infra.persistence.dao.PublicationSearchDao;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -243,6 +244,14 @@ public class PublicationSearchReadAdapter implements PublicationSearchReadPort {
   /// @return facet 列表
   private static List<FacetCount> toFacets(List<PublicationFacetCountRow> rows) {
     return rows.stream().map(r -> FacetCount.of(r.getValue(), r.getCount())).toList();
+  }
+
+  @Override
+  public List<PortalPaperReadModel> findCardsByIds(Collection<Long> ids) {
+    if (ids.isEmpty()) {
+      return List.of();
+    }
+    return dao.findCardsByIds(ids.toArray(Long[]::new)).stream().map(this::toReadModel).toList();
   }
 
   /// rank 分组 → 固定 6 项（rank 降序，UNKNOWN 末尾），缺档补 0。

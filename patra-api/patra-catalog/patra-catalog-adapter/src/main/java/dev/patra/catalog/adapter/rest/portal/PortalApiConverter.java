@@ -81,7 +81,6 @@ public class PortalApiConverter {
         model.publicationYear(),
         model.authors(),
         model.citationCount(),
-        0, // bookmarks：无用户系统，恒为 0
         model.doi(),
         model.pmid(),
         toSource(model.provenanceCode()),
@@ -321,7 +320,6 @@ public class PortalApiConverter {
         .aiSummary(null) // 当前无 LLM 摘要生成，恒为 null
         .source(toSource(model.provenanceCode()))
         .fullTextUrl(model.fullTextUrl())
-        .bookmarks(0) // 无用户系统，恒为 0
         .estimatedReadMin(estimatedReadMin(model.hasFullText(), model.wordCount()))
         .retracted(model.retracted())
         .hasFullText(model.hasFullText())

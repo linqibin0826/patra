@@ -125,6 +125,15 @@ public interface PublicationSearchDao extends JpaRepository<PublicationEntity, L
       @Param("sortMode") String sortMode,
       Pageable pageable);
 
+  /// 按 ID 批量取列表项（单条 SQL，无 N+1；不排序，由调用方按请求顺序重排）。
+  ///
+  /// @param ids 文献主键数组
+  /// @return 存在且未软删的投影行
+  @Query(
+      value = SELECT_LIST + "WHERE p.deleted_at IS NULL AND p.id = ANY((:ids)::bigint[])",
+      nativeQuery = true)
+  List<PublicationSearchRow> findCardsByIds(@Param("ids") Long[] ids);
+
   /// 满足条件的文献总数（facets 的 total 也用它）。
   ///
   /// @param keyword 已 LIKE 转义的标题关键词，null 不过滤

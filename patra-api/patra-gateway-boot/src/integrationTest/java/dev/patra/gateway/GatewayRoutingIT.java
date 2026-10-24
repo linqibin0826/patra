@@ -10,6 +10,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.matching;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -162,6 +163,27 @@ class GatewayRoutingIT {
     catalog.verify(
         getRequestedFor(urlPathEqualTo("/portal/organizations/suggest"))
             .withQueryParam("q", equalTo("协和"))
+            .withoutHeader(HttpHeaders.AUTHORIZATION));
+  }
+
+  /// 批量卡片匿名放行（PAP-109）：重复参数 `id` 原样转发，下游收不到 `Authorization`。
+  @Test
+  void should_forward_anonymous_batch_request_with_repeated_ids() {
+    catalog.stubFor(
+        get(urlEqualTo("/portal/publications/batch?id=1&id=2"))
+            .willReturn(okJson("{\"items\":[]}")));
+
+    restClient
+        .get()
+        .uri("/patra-catalog/portal/publications/batch?id=1&id=2")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .json("{\"items\":[]}");
+
+    catalog.verify(
+        getRequestedFor(urlEqualTo("/portal/publications/batch?id=1&id=2"))
             .withoutHeader(HttpHeaders.AUTHORIZATION));
   }
 
