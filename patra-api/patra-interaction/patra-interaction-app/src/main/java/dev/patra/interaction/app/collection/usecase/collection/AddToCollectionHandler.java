@@ -64,12 +64,8 @@ public class AddToCollectionHandler
             }
           }
           collections.addMembers(userId, id, toAdd, clock.instant());
-          return AddToCollectionResult.builder()
-              .added(toAdd.size())
-              .alreadyIn(alreadyIn)
-              .skippedFull(skippedFull)
-              .skippedNotInLibrary(skippedNotInLibrary)
-              .build();
+          return AddToCollectionResult.of(
+              toAdd.size(), alreadyIn, skippedFull, skippedNotInLibrary);
         });
   }
 }

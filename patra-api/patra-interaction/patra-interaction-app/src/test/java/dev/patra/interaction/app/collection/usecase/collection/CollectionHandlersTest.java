@@ -144,14 +144,7 @@ class CollectionHandlersTest {
         new AddToCollectionHandler(library, collections, currentUser, transactions, clock)
             .handle(AddToCollectionCommand.of(500L, List.of(11L, 12L, 13L, 14L, 15L)));
 
-    assertThat(result)
-        .isEqualTo(
-            AddToCollectionResult.builder()
-                .added(2)
-                .alreadyIn(1)
-                .skippedFull(1)
-                .skippedNotInLibrary(1)
-                .build());
+    assertThat(result).isEqualTo(AddToCollectionResult.of(2, 1, 1, 1));
     verify(collections).addMembers(U, C, List.of(S3, S4), NOW);
   }
 

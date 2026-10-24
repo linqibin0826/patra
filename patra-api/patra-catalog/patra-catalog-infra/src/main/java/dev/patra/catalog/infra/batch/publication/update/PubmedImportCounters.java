@@ -51,12 +51,12 @@ public class PubmedImportCounters {
     doiConflicts.addAndGet(count);
   }
 
-  /// 写入出错被跳过的记录 +1。
   /// 比库里版本旧而跳过一条。
   public void incrementSkippedStale() {
     skippedStale.incrementAndGet();
   }
 
+  /// 写入出错被跳过的记录 +1。
   public void incrementSkipErrors() {
     skipErrors.incrementAndGet();
   }
