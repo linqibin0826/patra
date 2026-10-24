@@ -1,7 +1,7 @@
 /**
  * Patra Identity API
  *
- * 服务契约层 - 查会话的内部 HTTP Interface 与 DTO（网关调，PAP-106）
+ * 服务契约层 - 内部 HTTP Interface 与 DTO：查会话（网关调，PAP-106）、批量用户摘要（interaction 调，PAP-108）
  */
 
 plugins {

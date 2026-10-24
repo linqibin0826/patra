@@ -32,7 +32,7 @@ class PublicAvatarControllerIT {
 
   private static final Avatar AVATAR = Avatar.of(42L, "0123456789abcdef");
   private static final AvatarRef REF = AvatarRef.of(AVATAR, AvatarSize.SMALL);
-  private static final String URI = "/users/chen-yu/avatar?size=128&v=0123456789abcdef";
+  private static final String URI = "/users/42/avatar?size=128&v=0123456789abcdef";
 
   @Autowired private RestTestClient restClient;
 
@@ -41,7 +41,7 @@ class PublicAvatarControllerIT {
   /// 默认：命中，对象是三个字节。
   @BeforeEach
   void stubHit() {
-    when(avatarQueryService.locate("chen-yu", "128", "0123456789abcdef")).thenReturn(REF);
+    when(avatarQueryService.locate("42", "128", "0123456789abcdef")).thenReturn(REF);
     when(avatarQueryService.open(REF))
         .thenAnswer(
             invocation -> StoredAvatar.of(new ByteArrayInputStream(new byte[] {7, 8, 9}), 3));
@@ -83,12 +83,25 @@ class PublicAvatarControllerIT {
 
   @Test
   void should_404_when_not_located() {
-    when(avatarQueryService.locate("chen-yu", "abc", "0123456789abcdef"))
+    when(avatarQueryService.locate("42", "abc", "0123456789abcdef"))
         .thenThrow(new AvatarNotFoundException());
 
     restClient
         .get()
-        .uri("/users/chen-yu/avatar?size=abc&v=0123456789abcdef")
+        .uri("/users/42/avatar?size=abc&v=0123456789abcdef")
+        .exchange()
+        .expectStatus()
+        .isNotFound();
+  }
+
+  @Test
+  void should_404_for_username_path() {
+    when(avatarQueryService.locate("chen-yu", "128", "0123456789abcdef"))
+        .thenThrow(new AvatarNotFoundException());
+
+    restClient
+        .get()
+        .uri("/users/chen-yu/avatar?size=128&v=0123456789abcdef")
         .exchange()
         .expectStatus()
         .isNotFound();

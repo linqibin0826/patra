@@ -58,6 +58,8 @@ class PublicUserReadModelTest {
     assertVisibility(withVisibility(ProfileVisibility.SELF), false, false, true);
     assertVisibility(full().emailVerified(false).build(), false, false, true);
     assertVisibility(full().status(UserStatus.PENDING_DELETION).build(), false, false, true);
+    assertVisibility(full().status(UserStatus.BANNED).build(), false, false, true);
+    assertVisibility(full().status(UserStatus.DELETED).build(), false, false, false);
   }
 
   @Test
@@ -142,6 +144,11 @@ class PublicUserReadModelTest {
       assertThat(view.avatar()).isEqualTo(avatar);
       assertThat(view.avatarPalette()).isEqualTo(AvatarPalette.of(OWNER));
     }
+  }
+
+  @Test
+  void should_carry_user_id_in_view() {
+    assertThat(full().build().viewFor(ANONYMOUS, DISPLAY).userId()).isEqualTo(OWNER);
   }
 
   @Test

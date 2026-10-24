@@ -1,12 +1,13 @@
 package dev.patra.identity.app.usecase.avatar;
 
+import dev.patra.identity.domain.model.vo.avatar.Avatar;
 import dev.patra.tool.cqrs.Command;
 import java.util.Arrays;
 
 /// 当前用户换头像。
 ///
 /// @param content 上传的原图字节；为空表示没有文件
-public record ChangeAvatarCommand(byte[] content) implements Command<AvatarChanged> {
+public record ChangeAvatarCommand(byte[] content) implements Command<Avatar> {
 
   /// 拷贝传入的数组，`null` 视为空。
   public ChangeAvatarCommand {

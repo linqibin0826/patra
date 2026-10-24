@@ -1,10 +1,12 @@
 package dev.patra.identity.infra.adapter.read;
 
 import dev.patra.identity.domain.model.aggregate.UserProfile;
+import dev.patra.identity.domain.model.enums.ProfileVisibility;
 import dev.patra.identity.domain.model.enums.UserStatus;
 import dev.patra.identity.domain.model.read.AvatarOwner;
 import dev.patra.identity.domain.model.read.PublicUserReadModel;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
+import dev.patra.identity.domain.model.read.UserSummaryReadModel;
 import dev.patra.identity.domain.model.vo.Username;
 import dev.patra.identity.domain.model.vo.avatar.Avatar;
 import dev.patra.identity.domain.model.vo.profile.Bio;
@@ -19,7 +21,12 @@ import dev.patra.identity.infra.adapter.persistence.dao.UserProfileLinkDao;
 import dev.patra.identity.infra.adapter.persistence.dao.UserResearchInterestDao;
 import dev.patra.identity.infra.adapter.persistence.entity.UserEntity;
 import dev.patra.identity.infra.adapter.persistence.entity.UserProfileEntity;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -64,14 +71,31 @@ public class UserReadAdapter implements UserReadPort {
     return userDao.findById(userId).map(this::toPublicIdentity);
   }
 
-  /// 按当前用户名读头像归属：用户行加资料行里的头像键，不读子表。
+  /// 按用户 ID 批量读摘要原始数据：用户表、资料表各一条 `IN` 查询，内存里按用户 ID 拼。
   ///
-  /// @param username 用户名
+  /// @param userIds 用户 ID
+  /// @return 存在的那些，不保证顺序
+  @Override
+  public List<UserSummaryReadModel> findSummaries(Collection<Long> userIds) {
+    if (userIds.isEmpty()) {
+      return List.of();
+    }
+    Map<Long, UserProfileEntity> profiles =
+        profileDao.findByUserIdIn(userIds).stream()
+            .collect(Collectors.toMap(UserProfileEntity::getUserId, Function.identity()));
+    return userDao.findAllById(userIds).stream()
+        .map(user -> toSummary(user, profiles.get(user.getId())))
+        .toList();
+  }
+
+  /// 按用户 ID 读头像归属：用户行加资料行里的头像键，不读子表。
+  ///
+  /// @param userId 用户 ID
   /// @return 归属
   @Override
-  public Optional<AvatarOwner> findAvatarOwner(Username username) {
+  public Optional<AvatarOwner> findAvatarOwner(long userId) {
     return userDao
-        .findByUsername(username.value())
+        .findById(userId)
         .map(
             user ->
                 AvatarOwner.of(
@@ -125,6 +149,26 @@ public class UserReadAdapter implements UserReadPort {
         .department(profile.getDepartment().map(Department::value).orElse(null))
         .researchInterests(profile.getResearchInterests())
         .privacy(profile.getPrivacy())
+        .build();
+  }
+
+  /// 把用户行和资料行拼成摘要原始数据：昵称取原值，不回退（回退与已注销的占位在读模型里做）。
+  ///
+  /// @param user 用户行
+  /// @param profile 资料行，缺失时为 `null`
+  /// @return 摘要原始数据
+  private static UserSummaryReadModel toSummary(UserEntity user, UserProfileEntity profile) {
+    if (profile == null) {
+      throw new IllegalStateException("用户 " + user.getId() + " 没有资料行");
+    }
+    return UserSummaryReadModel.builder()
+        .userId(user.getId())
+        .username(user.getUsername())
+        .displayName(profile.getDisplayName())
+        .avatar(avatarOf(user, profile))
+        .status(UserStatus.valueOf(user.getStatus()))
+        .emailVerified(user.getEmailVerifiedAt() != null)
+        .profileVisibility(ProfileVisibility.valueOf(profile.getProfileVisibility()))
         .build();
   }
 

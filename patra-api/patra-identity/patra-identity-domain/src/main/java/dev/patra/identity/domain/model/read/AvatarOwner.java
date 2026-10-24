@@ -4,7 +4,7 @@ import dev.patra.identity.domain.model.enums.UserStatus;
 import dev.patra.identity.domain.model.vo.avatar.Avatar;
 import java.util.Objects;
 
-/// 读头像时要的最少信息：按当前用户名找到的用户、状态和资料里的头像。
+/// 读头像时要的最少信息：按用户 ID 找到的用户、状态和资料里的头像。
 ///
 /// @param userId 用户 ID
 /// @param status 状态

@@ -16,6 +16,8 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -50,7 +52,7 @@ class AvatarFlowIT extends IdentityFlowITSupport {
     assertThat(uploaded.status()).as(uploaded.text()).isEqualTo(200);
     String url = json(uploaded).get("avatarUrl").asString();
     String hash = url.substring(url.indexOf("v=") + 2);
-    assertThat(url).isEqualTo("/users/u-avatar/avatar?v=" + hash);
+    assertThat(url).isEqualTo("/users/" + userId + "/avatar?v=" + hash);
     byte[] large = object(userId, hash, 512);
     byte[] small = object(userId, hash, 128);
     for (byte[] bytes : new byte[][] {large, small}) {
@@ -82,6 +84,23 @@ class AvatarFlowIT extends IdentityFlowITSupport {
     HttpHeaders conditional = new HttpHeaders();
     conditional.setIfNoneMatch("\"" + hash + "-128\"");
     assertThat(binaryGet(url + "&size=128", conditional).status()).isEqualTo(304);
+
+    // 改用户名（PAP-108）：/auth/me、主页、批量摘要三处地址不变，原地址照常可读；按用户名的地址 404
+    jdbcTemplate.update("UPDATE idn_user SET username = 'u-avatar-renamed' WHERE id = ?", userId);
+    assertThat(json(get("/auth/me", auth)).get("avatarUrl").asString()).isEqualTo(url);
+    assertThat(json(get("/users/u-avatar-renamed", auth)).get("avatarUrl").asString())
+        .isEqualTo(url);
+    RawResponse summaries =
+        post(
+            "/_internal/users/summaries",
+            Map.of("userIds", List.of(userId), "viewerUserId", userId),
+            noHeaders());
+    assertThat(json(summaries).get("users").get(0).get("avatarUrl").asString()).isEqualTo(url);
+    assertThat(binaryGet(url + "&size=128", noHeaders()).status()).isEqualTo(200);
+    assertThat(binaryGet("/users/u-avatar/avatar?size=128&v=" + hash, noHeaders()).status())
+        .isEqualTo(404);
+    assertThat(binaryGet("/users/u-avatar-renamed/avatar?size=128&v=" + hash, noHeaders()).status())
+        .isEqualTo(404);
 
     // 同一张图再传一次：地址不变，对象还在
     BinaryResponse again = upload(withExifGps(jpeg(900, 600)), auth);

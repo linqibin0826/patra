@@ -16,6 +16,7 @@ class PublicProfileFlowIT extends IdentityFlowITSupport {
 
   private static final List<String> PUBLIC_KEYS =
       List.of(
+          "userId",
           "username",
           "displayName",
           "avatarUrl",
@@ -127,6 +128,7 @@ class PublicProfileFlowIT extends IdentityFlowITSupport {
     List<String> keys = new ArrayList<>();
     json.propertyNames().forEach(keys::add);
     assertThat(keys).containsExactlyInAnyOrderElementsOf(PUBLIC_KEYS);
+    assertThat(json.get("userId").asString()).isEqualTo(String.valueOf(party.ownerId()));
     assertThat(json.get("joinedAt").asString()).matches("\\d{4}-\\d{2}");
     assertThat(json.get("indexable").asBoolean()).isFalse();
 
