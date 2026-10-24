@@ -38,8 +38,7 @@ Issue 与 PR 解耦：Issue 保持细粒度，只用来跟踪进度；PR 是合�
 1. **每版最多两个 PR**：后端 PR（承载本版全部 `area:be` Issue）+ 前端 PR（承载本版全部 `area:fe` Issue）。`area:design` 与纯文档 Issue 不单独开 PR。
 2. **文档随代码 PR 提交**：release spec（`docs/patra/release-specs/`）、设计简报（`patra-portal/docs/design-briefs/<version>/`）、设计快照（`docs/patra/design/snapshots/`）、工程 spec（`docs/patra/specs/`）、plan（`docs/patra/plans/`）随同版本第一个代码 PR 提交；产出时该 PR 已合并的（如前端 spec / plan），随下一个代码 PR 提交。它们仍写在 feature branch 上，不直接提交到 main。
 3. **一个 PR 关闭多个 Issue**：PR 描述逐行列出 `Closes PAP-xx`，只列本 PR 合并时 AC 已满足的 Issue（含产物随本 PR 提交的 design / 文档 Issue）；产物尚未交付的 Issue 不写 `Closes`，避免 PR 合并时被提前关闭、提前解锁下一个 Milestone。
-4. **设计文档在写代码前评审**：用户在本地让 Codex 审 spec 和 plan，不为评审单独开 PR。
-5. **小改动并入依赖页面**：出口接通这类只改几处链接的小改动，与它依赖的页面在同一 PR、同一份 plan 里完成，不单独拆分支。
+4. **小改动并入依赖页面**：出口接通这类只改几处链接的小改动，与它依赖的页面在同一 PR、同一份 plan 里完成，不单独拆分支。
 
 **HARD-GATE**：在产出版本规划文档并获得用户批准之前，不要进入 Issue 层的任何工程活动（Tech Design 起草 / area:be / area:fe / area:design Issue 的 In Progress 工作），不要写任何实现代码。
 
