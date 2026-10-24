@@ -22,6 +22,9 @@ guava = "31.1-jre"
 okio = "3.6.0"
 icu4j = "76.1"
 jsoup = "1.23.2"
+# 引用格式化（PAP-110）：citeproc-java 渲染 CSL 样式；样式与 locale 取官方 CSL 仓库发布的 jar（CC BY-SA 3.0）
+citeproc-java = "3.5.2"
+citation-styles = "26.8"
 yauaa = "8.2.0"
 ip2region = "3.3.7"
 twelvemonkeys = "3.15.2"
@@ -154,6 +157,9 @@ commons-compress = { module = "org.apache.commons:commons-compress", version.ref
 commons-net = { module = "commons-net:commons-net", version.ref = "commons-net" }
 icu4j = { module = "com.ibm.icu:icu4j", version.ref = "icu4j" }
 jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
+citeproc-java = { module = "de.undercouch:citeproc-java", version.ref = "citeproc-java" }
+citation-styles = { module = "org.citationstyles:styles", version.ref = "citation-styles" }
+citation-locales = { module = "org.citationstyles:locales", version.ref = "citation-styles" }
 yauaa = { module = "nl.basjes.parse.useragent:yauaa", version.ref = "yauaa" }
 ip2region = { module = "org.lionsoul:ip2region", version.ref = "ip2region" }
 twelvemonkeys-imageio-webp = { module = "com.twelvemonkeys.imageio:imageio-webp", version.ref = "twelvemonkeys" }

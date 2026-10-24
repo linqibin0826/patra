@@ -5,7 +5,7 @@
 > **相关设计**：[catalog 文献批量解析与批量卡片（PAP-109）](2026-10-24-catalog-publication-resolve-cards-design.md)、v0.11 增量同步（`PubmedUpdateSyncHandler` 一系）
 > **下游**：PAP-113（interaction 导出编排、收藏夹按出版日期排序）、PAP-114（门户日期展示、导出与复制引用）、PAP-115（复制引用）
 > **日期**：2026-10-24
-> **状态**：设计稿，待 Codex 评审
+> **状态**：已实施（2026-10-24：计划一 `2791bdf91`，计划二随后提交）；release spec D6 的手工导出核对与第 9 节 mini 回填待执行
 
 ## 1. 要解决的问题
 
@@ -339,8 +339,10 @@ Content-Type: application/json
 - 控制器返回 `StreamingResponseBody`；导出服务按 500 个 ID 一批：读一批 → 写一批 → 丢弃。任一时刻内存里最多 500 条。
 - 每批两条 SQL：主行（文献 + 期刊 + 期次 + PMCID / PII 子查询）、作者（`publication_id = ANY(...)`，按 `author_order`）。没有 N+1。
 - 每批一个只读事务（查询服务方法级 `@Transactional(readOnly = true)`）：响应体在控制器返回之后才执行，不能依赖请求级的会话。
-- 门户经网关调用：网关对下游有读超时（PAP-106 一系）。5,000 条约 10 批、两条 SQL 一批，预计数秒；release spec D6 的手工导出必须经网关走一次，确认不触发超时（实施时查出网关的超时值写回本节）。
-- 写出器有状态（CSV 表头、JSON 数组括号与逗号）：`CitationExportPort.open(format, OutputStream)` 返回 `CitationExportWriter`，方法 `begin()` / `write(List<CitationRecord>)` / `end()`。
+- 门户经网关调用：网关对下游有读超时（PAP-106 一系）。5,000 条约 10 批、两条 SQL 一批，预计数秒；release spec D6 的手工导出必须经网关走一次，确认不触发超时。网关下游读超时为 60 秒空闲超时（`patra-gateway-boot` 的 `spring.http.clients.imperative.read-timeout`，连续 60 秒收不到字节才断、不限总时长）；导出每批写完即刷出，批间隔远小于 60 秒。
+- 端口只有一个方法 `CitationExportPort.export(format, Iterator<List<CitationRecord>> batches, out)`：导出服务交出懒加载的批次迭代器（每次 `next()` 在一个只读事务里读一批），infra 适配器逐批拉取；写出器有状态（CSV 表头、JSON 数组括号与逗号），是 infra 内部类型（`begin` / `write` / `flush` / `end`），不越过端口边界。每批写完即刷出。
+- 异步请求总时长：catalog 配 `spring.mvc.async.request-timeout: 10m`（不配时 Tomcat 默认 30 秒、按总时长计，慢速客户端会被中途掐断）。
+- 已知限制：响应头发出后若中途失败（数据库报错、超时），`patra-tool-web` 的全局异常处理器在响应已提交时放弃渲染、请求正常结束，客户端拿到的是被截断的 200 文件而不是下载失败。要让连接中断需要改 `patra-tool-web`，不在本 Issue 范围。
 
 ### 6.3 引用记录 `CitationRecord`（领域读模型）
 
@@ -410,7 +412,7 @@ Content-Type: application/json
 
 ### 7.2 生成
 
-- 依赖：`de.undercouch:citeproc-java:3.5.2`（纯 Java，Apache-2.0）、`org.citationstyles:styles:26.8`、`org.citationstyles:locales:26.8`，版本进 `gradle/libs.versions.toml`、经 `build-logic` 的 `PatraDependencyManagement.kt` 管理，只加在 `patra-catalog-infra`。它们会带进 `jbibtex`、`antlr4-runtime`、`commons-lang3`、`commons-text`，不要再单独声明。样式库是 CC BY-SA 3.0：catalog README 写明出处与许可（公开仓库）。
+- 依赖：`de.undercouch:citeproc-java:3.5.2`（纯 Java，Apache-2.0）、`org.citationstyles:styles:26.8`、`org.citationstyles:locales:26.8`，版本只进 `gradle/libs.versions.toml`（`PatraDependencyManagement.kt` 只登记 BOM 与安全覆盖，普通库不在其中），只加在 `patra-catalog-infra`。它们会带进 `jbibtex`、`antlr4-runtime`、`commons-lang3`、`commons-text`，不要再单独声明。样式库是 CC BY-SA 3.0：catalog README 写明出处与许可（公开仓库）。
 - `CslItemMapper`（infra）：`CitationRecord` → `CSLItemData`：`type = article-journal`；`author`（`family` / `given`，团体作者用 `literal`）；`title`；`container-title` = 期刊全称；`container-title-short` = 期刊缩写；`volume`、`issue`；`page` = `MedlinePgn` 原文（没有则 `首页-尾页`，再没有则文章号）；`number` = 文章号；`issued` 按精度；`DOI`、`PMID`、`PMCID`。
 - `CiteprocCitationFormatterAdapter implements CitationFormatterPort`：每个请求新建一个 `CSL` 实例（它有状态、不是线程安全的，不共享），`ListItemDataProvider` 按请求顺序注册全部条目，渲染两遍：`html` 取 `csl-left-margin` 作为 `label`，`text` 去掉开头的 `label` 后作为 `text`。
 - citeproc-java 3.5.2 的 `Bibliography.getEntryIds()` 返回 `null`（spike 实测），拿不到条目与 ID 的对应，所以 APA 只能按样式顺序返回，不做 ID 映射。
@@ -442,10 +444,10 @@ Content-Type: application/json
 | 层 | 新增 / 修改 |
 |---|---|
 | `patra-common` | 新增 `PartialDate(year, month, day, season, text)`（record，按部件推断精度）；`CanonicalPublication.PublicationDates` 的各字段从 `LocalDate` 改为 `PartialDate`（catalog 只写 `published`、`pmcRelease`；ingest 的 `PubmedPublicationConverter` 也构造 `PublicationDates`，改为 `PartialDate.ofDay(localDate)` 包一层，语义不变，其测试同步改；ingest 会把 `CanonicalPublication` 序列化进对象存储，JSON 形状随之变化——ingest 从未在 mini 上运行，没有存量数据）；`pagination`、`journal.isoAbbreviation / medlineAbbreviation` 补赋值，类型不变 |
-| domain | 值对象 `Pagination`、`SourcePosition`、`ArticleNumber`；`PublicationDate` 加 `toIsoString()`；聚合加字段；读模型 `CitationRecord`、`CitationAuthor`、`CitationEntry`；端口 `CitationRecordReadPort`、`CitationFormatterPort`、`CitationExportPort`（+ `CitationExportWriter`）；`PubmedXmlParserPort.parseArticle`；`PublicationSyncRepository` 的来源表方法；进度仓储改名；枚举 `ExportFormat`、`CitationStyle` |
+| domain | 值对象 `Pagination`、`SourcePosition`、`ArticleNumber`；`PublicationDate` 加 `toIsoString()`；聚合加字段；读模型 `CitationRecord`、`CitationAuthor`、`CitationEntry`；端口 `CitationRecordReadPort`、`CitationFormatterPort`、`CitationExportPort`（写出器是 infra 内部类型）；`PubmedXmlParserPort.parseArticle`；`PublicationSyncRepository` 的来源表方法；进度仓储改名；枚举 `ExportFormat`、`CitationStyle` |
 | app | `PubmedFileImportHandler` / `Command`、`PubmedReparseHandler`；`PortalPublicationExportService`、`PortalCitationQueryService` |
 | infra | 解析策略改造；`PubmedFileFetcher`；`PubmedFileItemReader`、`PubmedSourceRecordReader`；`PubmedArticleSyncProcessor`；写入器与删除 Tasklet 改造；作业配置合并；`CitationRecordReadAdapter` + Dao；`CslItemMapper`、`CiteprocCitationFormatterAdapter`；`CitationExportAdapter` 与四个写出器；`V10`（引用列）、`V11`（来源表、进度表改名）；读端日期 / 卡片 / 排序 SQL |
-| adapter | XXL `pubmedImportJob`、`pubmedReparseJob`（删除 `pubmedBaselineImportJob`、`pubmedUpdateSyncJob`）；`PortalPublicationController` 加 `export`、`citations`；响应加 `publishedDate`；`PublicationEndpointImpl` 带 `publishedDate` |
+| adapter | XXL `pubmedImportJob`、`pubmedReparseJob`（删除 `pubmedBaselineImportJob`、`pubmedUpdateSyncJob`）；新控制器 `PortalCitationController`（同前缀 `/portal/publications`）提供 `export`、`citations`；响应加 `publishedDate`；`PublicationEndpointImpl` 带 `publishedDate` |
 | infra 配置 | `patra-infra/nacos/dev/patra-catalog.yaml`：`update-scope` 改键名 `scope` |
 | 文档 | catalog README（导入流水线、来源表、导出与引用、样式库许可） |
 

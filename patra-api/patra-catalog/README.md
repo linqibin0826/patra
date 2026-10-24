@@ -132,6 +132,14 @@ patra-catalog 是 Patra 医学文献数据平台的目录管理微服务，负�
    - 按主键与 `uk_pmid` 命中，不加索引；门户响应不再有写死为 0 的 `bookmarks`
    - 设计：[文献批量解析与批量卡片](../../docs/patra/specs/2026-10-24-catalog-publication-resolve-cards-design.md)
 
+15. **引用导出与复制引用**（v0.13 文献库，PAP-110 计划二）
+   - 门户：`POST /portal/publications/export`，请求体 `{ "ids": [...], "format": "ris|bibtex|csv|csl-json", "name": "…" }`（1 ~ 5,000 个 ID，`name` ≤ 100 字）；附件流式写出，文件名 `patra-<name>-<YYYY-MM-DD>.<ext>`（北京时间当天，RFC 5987 `filename*`）；不存在与软删的跳过，按请求顺序去重
+   - 门户：`POST /portal/publications/citations`，请求体 `{ "ids": [...], "style": "gb-t-7714-2015|vancouver|apa-7|ama-11" }`（1 ~ 100 个）；响应 `{ "style", "entries": [{ "label", "text" }] }`，序号与正文分开；编号样式按请求顺序，APA 按作者字母序、`label` 为 null
+   - 读端 `CitationRecordReadPort`：每批 ≤ 500 个 ID、两条 SQL（主行 + 作者）；标题去内联标记，期刊缩写按 ISO → MedlineTA → 全称兜底，文章号只在没有页码时取 PII
+   - 导出服务按 500 个一批读 → 写 → 丢弃，每批一个只读事务（响应体在控制器返回后执行）；写出器有状态（CSV 的 BOM 与表头、JSON 数组括号）。RIS 与 CSV 行尾 CRLF，CSV 带 BOM 便于 Excel 打开中文；日期按实际精度（RIS `DA` 留空、BibTeX 只到年时不写 `month`、CSL-JSON `date-parts` 按精度）
+   - 引用用 [citeproc-java](https://github.com/michel-kraemer/citeproc-java)（Apache-2.0）渲染官方 [CSL 样式库](https://github.com/citation-style-language/styles)与 [locales](https://github.com/citation-style-language/locales)（CC BY-SA 3.0，经 `org.citationstyles:styles` / `locales` jar 引入）；四种样式对应 `china-national-standard-gb-t-7714-2015-numeric`、`nlm-citation-sequence`、`apa`、`american-medical-association`，全部 `en-US`（GB/T 西文文献写 et al.）
+   - 设计：[文献引用数据、可重放导入与导出](../../docs/patra/specs/2026-10-24-catalog-citation-data-export-design.md)（第 6、7 节）
+
 运维步骤见 [v0.11 运维手册](../../docs/patra/runbooks/v0.11-fulltext-runbook.md)。
 
 ### 计划功能
@@ -489,6 +497,7 @@ patra:
 
 ## 📝 变更日志
 
+- 2026-10-24（v0.13，PAP-110 计划二）：门户引用导出（RIS / BibTeX / CSV / CSL-JSON，流式、每批 500）与复制引用（GB/T 7714-2015、Vancouver、APA 7、AMA 11，citeproc-java + 官方 CSL 样式）。
 - 2026-10-24（v0.13，PAP-110 计划一）：baseline 与 updatefiles 合成一条可重放的导入流水线（`pubmedImportJob`、`pubmedReparseJob`，删除 `pubmedBaselineImportJob` / `pubmedUpdateSyncJob`）；`V10` 引用字段（出版月日、页码、ISO 缩写），`V11` 来源表 `cat_publication_source` 与进度表改名 `cat_pubmed_file`；md5 校验、坏记录隔离；日期按实际精度输出（门户与解析接口新增 `publishedDate`，详情 `dates[].date` 降精度），检索 `sort=year` 按年月日排序；配置键 `update-scope` 改名 `scope`。
 - 2026-10-24（v0.13，PAP-109）：文献批量解析内部接口与 `PublicationEndpoint` 契约；门户批量卡片接口；删除门户响应的 `bookmarks`。
 - 2026-10-21（v0.12，PAP-94）：机构与 MeSH 建议接口、内部查询接口与 `patra-catalog-api` 契约；`V9` 加 `pg_trgm` 索引与 `cat_organization_alias`；别名种子第一版。

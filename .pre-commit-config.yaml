@@ -16,10 +16,14 @@ repos:
       - id: check-added-large-files
         args: ['--maxkb=2000']
       - id: detect-private-key
+      # 导出夹具按字节比对：RIS / CSV 要求 CRLF、RIS 的 `ER  - ` 带行尾空格、条目之间有空行
       - id: end-of-file-fixer
+        exclude: ^patra-api/patra-catalog/patra-catalog-infra/src/test/resources/citation/export/
       - id: trailing-whitespace
+        exclude: ^patra-api/patra-catalog/patra-catalog-infra/src/test/resources/citation/export/
       - id: mixed-line-ending
         args: ['--fix=lf']
+        exclude: ^patra-api/patra-catalog/patra-catalog-infra/src/test/resources/citation/export/
 
   # 2) Secret scanning
   - repo: https://github.com/gitleaks/gitleaks
