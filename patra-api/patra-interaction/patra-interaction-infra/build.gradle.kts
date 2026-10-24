@@ -10,11 +10,19 @@ plugins {
 }
 
 dependencies {
+    api(project(":patra-api:patra-interaction:patra-interaction-domain"))
+
+    // 对象登记表向 catalog 解析文献（PAP-109 的内部接口）；http-client 带来 spring-web 的 ResourceAccessException
+    implementation(project(":patra-api:patra-catalog:patra-catalog-api"))
+    implementation(project(":patra-tool:patra-tool-http-client"))
+
     // JPA、Flyway、PostgreSQL 驱动（自动配置生效）
     api(project(":patra-tool:patra-tool-jpa"))
 
     // 集成测试的 PG 容器初始化器放 testFixtures，infra 与 boot 的集成测试共用
     testFixturesImplementation(project(":patra-tool:patra-tool-test"))
+    // http-client 的属性类带 Bean Validation 约束：集成测试的上下文要有校验实现（同 identity-infra）
+    integrationTestImplementation("org.springframework.boot:spring-boot-starter-validation")
 }
 
 // 子域包只有 package-info.java 时也产出 package-info.class：架构测试据此确认每层每个子域都被导入，

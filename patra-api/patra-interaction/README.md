@@ -8,7 +8,7 @@
 
 | 子域 | 职责 | 本版 |
 |---|---|---|
-| `subject` | 对象底座：每个被互动过的外部对象（本版只有文献）一行登记，互动数据只引用本地 `subject_id`；对象身份锚定在外部标识上（文献是 PMID），catalog 换库重导后只需对账刷新登记表 | PAP-112 |
+| `subject` | 对象底座：每个被互动过的外部对象（本版只有文献）在登记表 `subject.registry` 里一行，互动数据只引用本地 `subject_id`；对象身份锚定在外部标识上（文献是 `pmid:…`），catalog 内部 ID 只是缓存。首次互动时同步向 catalog 解析并登记（catalog 不可用或对象不存在则拒绝），每日对账按 PMID 刷新；能力矩阵在 `SubjectType`。工程设计 `docs/patra/specs/2026-10-24-subject-registry-design.md` | PAP-112 |
 | `collection` | 文献库与收藏夹：文献库条目（用户 × 文献唯一，可带备注），扁平的收藏夹（私有 / 公开、一个条目可进多个夹） | PAP-113 |
 
 新增子域时同时改两处：各层下建子域包；`InteractionArchitectureTest` 里 `SubdomainArchitectureRules` 的子域列表。不建没有代码的空包和空 schema。
@@ -45,6 +45,8 @@ dev.patra.interaction.config           装配（XXL-Job 执行器等），不属
 - 实体用 `@Table(schema = "…")` 写明 schema，原生 SQL 写带 schema 的表名；不设 Hibernate 默认 schema。
 - 子域的表不对 `subject` 建跨 schema 外键，只建索引；引用完整性由写入路径和每日对账保证。
 - 表里只存用户 ID，不存用户名、昵称、头像（R6 检查守着迁移脚本）。
+- 表名不带服务前缀，schema 已经说明归属（如 `subject.registry`）。
+- `set_updated_at()` 触发器函数每个 schema 一份（`subject.set_updated_at()`），schema 整体搬走时不依赖 `public`。
 
 ## 5. 运行
 
@@ -54,7 +56,7 @@ dev.patra.interaction.config           装配（XXL-Job 执行器等），不属
 | 网关前缀 | `/patra-interaction/**` |
 | 错误码前缀 | `INTERACTION`（如 `INTERACTION-0404`） |
 | 配置 | jar 里的 `application.yml` 放随代码变的默认值；库地址在 Nacos `patra-interaction.yaml`，账号与 xxl-job 管理端地址在 `patra-common.yaml` |
-| 定时任务 | 执行器 `patra-interaction`；对象对账 `subjectReconciliationJob`（`0 30 6 * * ?`，PAP-112）、注销清理 `deletedUserCleanupJob`（`0 0 6 * * ?`，PAP-113） |
+| 定时任务 | 执行器 `patra-interaction`；对象对账 `subjectReconciliationJob`（`0 30 6 * * ?`，超时 600 秒、不重试，PAP-112；catalog 换库重建或重跑导入后立即手动触发一次）、注销清理 `deletedUserCleanupJob`（`0 0 6 * * ?`，PAP-113） |
 | 上线 | `docs/patra/runbooks/v0.13-library-go-live-runbook.md` |
 
 ## 6. 什么时候拆分

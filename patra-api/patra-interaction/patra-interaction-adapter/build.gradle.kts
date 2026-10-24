@@ -10,6 +10,15 @@ plugins {
     id("patra.hexagonal-adapter")
 }
 
+dependencies {
+    api(project(":patra-api:patra-interaction:patra-interaction-app"))
+
+    // 对象对账等每日任务的处理器
+    api(libs.xxl.job)
+
+    testImplementation(project(":patra-tool:patra-tool-test"))
+}
+
 // 子域包只有 package-info.java 时也产出 package-info.class：架构测试据此确认每层每个子域都被导入，
 // 层规则也不会因为层为空而失败。javac 默认只给带注解的 package-info 产出 class
 tasks.compileJava {

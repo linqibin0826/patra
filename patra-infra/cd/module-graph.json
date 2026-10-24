@@ -29,7 +29,8 @@
             "unit": "catalog",
             "impacts": [
                 "catalog",
-                "identity"
+                "identity",
+                "interaction"
             ],
             "tasks": [
                 "check"
@@ -517,6 +518,7 @@
                 "foundation",
                 "identity",
                 "ingest",
+                "interaction",
                 "object-storage"
             ],
             "tasks": [
@@ -532,7 +534,8 @@
                 "foundation",
                 "gateway",
                 "identity",
-                "ingest"
+                "ingest",
+                "interaction"
             ],
             "tasks": [
                 "check",

@@ -56,6 +56,17 @@ class ApplicationConfigTest {
     assertThat(propertyNames()).noneMatch(name -> name.startsWith("spring.flyway.schemas"));
   }
 
+  /// catalog 分组走服务发现，超时压短：catalog 卡住时首次收藏很快 503。
+  ///
+  /// @throws IOException 读取失败时
+  @Test
+  void should_route_catalog_group_through_load_balancer() throws IOException {
+    String group = "patra.http-client.http-interface.groups.catalog.";
+    assertThat(property(group + "base-url")).isEqualTo("lb://patra-catalog");
+    assertThat(property(group + "connect-timeout")).isEqualTo("1s");
+    assertThat(property(group + "read-timeout")).isEqualTo("2s");
+  }
+
   /// interaction 不连 Redis。
   ///
   /// @throws IOException 读取失败时

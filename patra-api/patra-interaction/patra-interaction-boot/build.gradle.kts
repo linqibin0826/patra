@@ -25,9 +25,11 @@ dependencies {
     // XXL-Job 执行器（执行器端口 = 服务端口 + 1 = 6501）
     implementation(libs.xxl.job)
 
-    // 架构测试要看到全部五层：domain、app、api 在层间依赖接上之前不在运行时类路径上
-    testImplementation(project(":patra-api:patra-interaction:patra-interaction-domain"))
-    testImplementation(project(":patra-api:patra-interaction:patra-interaction-app"))
+    // catalog 内部接口的 HTTP Interface 代理（对象登记表解析文献）：infra 对 catalog-api 是 implementation，传不到这里
+    implementation(project(":patra-tool:patra-tool-http-client"))
+    implementation(project(":patra-api:patra-catalog:patra-catalog-api"))
+
+    // 架构测试要看到全部五层：domain、app 已经经 adapter、infra 传进来，api 还没有调用方
     testImplementation(project(":patra-api:patra-interaction:patra-interaction-api"))
 
     // 集成测试的 PG 容器初始化器
