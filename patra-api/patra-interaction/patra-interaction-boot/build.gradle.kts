@@ -29,9 +29,17 @@ dependencies {
     implementation(project(":patra-tool:patra-tool-http-client"))
     implementation(project(":patra-api:patra-catalog:patra-catalog-api"))
 
+    // identity 内部接口的代理（批量用户摘要），同上：infra 对 identity-api 是 implementation
+    implementation(project(":patra-api:patra-identity:patra-identity-api"))
+
+    // 身份断言验签 → CurrentUserPort：文献库、收藏夹的接口要知道是谁在操作
+    implementation(project(":patra-tool:patra-tool-security"))
+
     // 架构测试要看到全部五层：domain、app 已经经 adapter、infra 传进来，api 还没有调用方
     testImplementation(project(":patra-api:patra-interaction:patra-interaction-api"))
 
     // 集成测试的 PG 容器初始化器
     testImplementation(testFixtures(project(":patra-api:patra-interaction:patra-interaction-infra")))
+    // 流程测试用测试私钥签身份断言
+    testImplementation(testFixtures(project(":patra-tool:patra-tool-security")))
 }

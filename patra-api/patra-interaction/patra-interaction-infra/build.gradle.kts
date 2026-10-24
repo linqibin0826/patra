@@ -14,6 +14,8 @@ dependencies {
 
     // 对象登记表向 catalog 解析文献（PAP-109 的内部接口）；http-client 带来 spring-web 的 ResourceAccessException
     implementation(project(":patra-api:patra-catalog:patra-catalog-api"))
+    // 收藏夹所有者摘要、设公开的资格、公开收藏夹的可见性、注销清理（PAP-108 的内部接口）
+    implementation(project(":patra-api:patra-identity:patra-identity-api"))
     implementation(project(":patra-tool:patra-tool-http-client"))
 
     // JPA、Flyway、PostgreSQL 驱动（自动配置生效）

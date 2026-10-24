@@ -13,6 +13,9 @@ plugins {
 dependencies {
     api(project(":patra-api:patra-interaction:patra-interaction-app"))
 
+    // 文献库与收藏夹的门户接口
+    api(project(":patra-tool:patra-tool-web"))
+
     // 对象对账等每日任务的处理器
     api(libs.xxl.job)
 

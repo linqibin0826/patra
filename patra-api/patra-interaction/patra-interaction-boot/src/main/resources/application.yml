@@ -35,6 +35,11 @@ patra:
           base-url: lb://patra-catalog
           connect-timeout: 1s
           read-timeout: 2s
+        # 设公开时回查资格、读公开收藏夹时判可见性、注销清理（批量用户摘要，按主键查）：同样压短
+        identity:
+          base-url: lb://patra-identity
+          connect-timeout: 1s
+          read-timeout: 2s
 
 # XXL-Job 执行器：管理端地址随环境变，在 Nacos 公共配置 patra-common.yaml；执行器端口 = 服务端口 + 1 = 6501
 xxl:

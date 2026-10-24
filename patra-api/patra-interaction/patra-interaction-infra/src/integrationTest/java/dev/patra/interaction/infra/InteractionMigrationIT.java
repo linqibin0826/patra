@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import dev.patra.interaction.infra.config.InteractionITPostgreSQLContainerInitializer;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,7 +55,7 @@ class InteractionMigrationIT {
                 "SELECT version FROM public.flyway_schema_history "
                     + "WHERE success ORDER BY installed_rank",
                 String.class))
-        .containsExactly("20261024100000", "20261024100100", "20261024200000");
+        .containsExactly("20261024100000", "20261024100100", "20261024200000", "20261024210000");
   }
 
   /// 身份锚全表唯一；来源 ID 只对非空行唯一。
@@ -105,6 +106,95 @@ class InteractionMigrationIT {
             jdbcTemplate.queryForObject(
                 "SELECT updated_at FROM subject.registry WHERE subject_id = 6", Timestamp.class))
         .isAfter(past);
+  }
+
+  /// 两张状态窄表按 `user_id` 哈希分 16 区（release spec 决策 B）。
+  @Test
+  void should_hash_partition_state_tables_by_user_into_16() {
+    for (String table : List.of("library_item", "collection_item")) {
+      assertThat(
+              jdbcTemplate.queryForObject(
+                  "SELECT count(*) FROM pg_inherits i JOIN pg_class p ON p.oid = i.inhparent"
+                      + " JOIN pg_namespace n ON n.oid = p.relnamespace"
+                      + " WHERE n.nspname = 'collection' AND p.relname = ?",
+                  Integer.class,
+                  table))
+          .as(table)
+          .isEqualTo(16);
+      assertThat(
+              jdbcTemplate.queryForObject(
+                  "SELECT pg_get_partkeydef(('collection.' || ?)::regclass)", String.class, table))
+          .isEqualTo("HASH (user_id)");
+    }
+  }
+
+  /// 状态窄表的主键以分区键 `user_id` 打头。
+  @Test
+  void should_key_state_tables_by_user_first() {
+    assertThat(primaryKeyColumns("library_item")).containsExactly("user_id", "subject_id");
+    assertThat(primaryKeyColumns("collection_item"))
+        .containsExactly("user_id", "collection_id", "subject_id");
+  }
+
+  /// 收藏夹名称在同一用户下唯一，不同用户可以同名。
+  @Test
+  void should_keep_collection_names_unique_per_user() {
+    jdbcTemplate.update("DELETE FROM collection.collection");
+    insertCollection(1L, 10L, "组会");
+    assertThatThrownBy(() -> insertCollection(2L, 10L, "组会"))
+        .isInstanceOf(DataIntegrityViolationException.class);
+    insertCollection(3L, 11L, "组会");
+
+    assertThat(
+            jdbcTemplate.queryForObject("SELECT count(*) FROM collection.collection", Long.class))
+        .isEqualTo(2L);
+  }
+
+  /// 可见性只有两种取值，篇数在 0 ~ 5000。
+  @Test
+  void should_enforce_collection_checks() {
+    jdbcTemplate.update("DELETE FROM collection.collection");
+    assertThatThrownBy(
+            () ->
+                jdbcTemplate.update(
+                    "INSERT INTO collection.collection (collection_id, user_id, name, visibility)"
+                        + " VALUES (1, 10, 'a', 'SHARED')"))
+        .isInstanceOf(DataIntegrityViolationException.class);
+    assertThatThrownBy(
+            () ->
+                jdbcTemplate.update(
+                    "INSERT INTO collection.collection (collection_id, user_id, name, visibility,"
+                        + " item_count) VALUES (2, 10, 'b', 'PRIVATE', 5001)"))
+        .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  /// 取主键列（按序）。
+  ///
+  /// @param table collection schema 下的表名
+  /// @return 列名
+  private List<String> primaryKeyColumns(String table) {
+    return jdbcTemplate.queryForList(
+        "SELECT k.column_name FROM information_schema.table_constraints c"
+            + " JOIN information_schema.key_column_usage k"
+            + " ON k.constraint_name = c.constraint_name AND k.table_schema = c.table_schema"
+            + " WHERE c.table_schema = 'collection' AND c.table_name = ?"
+            + " AND c.constraint_type = 'PRIMARY KEY' ORDER BY k.ordinal_position",
+        String.class,
+        table);
+  }
+
+  /// 直接插一个私有收藏夹。
+  ///
+  /// @param collectionId 收藏夹 ID
+  /// @param userId 所有者
+  /// @param name 名称
+  private void insertCollection(long collectionId, long userId, String name) {
+    jdbcTemplate.update(
+        "INSERT INTO collection.collection (collection_id, user_id, name, visibility)"
+            + " VALUES (?, ?, ?, 'PRIVATE')",
+        collectionId,
+        userId,
+        name);
   }
 
   /// 取索引定义。

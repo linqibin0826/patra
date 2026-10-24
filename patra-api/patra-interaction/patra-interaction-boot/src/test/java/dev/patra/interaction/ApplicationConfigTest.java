@@ -67,6 +67,17 @@ class ApplicationConfigTest {
     assertThat(property(group + "read-timeout")).isEqualTo("2s");
   }
 
+  /// identity 分组走服务发现，超时压短：identity 卡住时设公开、读公开收藏夹很快 503。
+  ///
+  /// @throws IOException 读取失败时
+  @Test
+  void should_route_identity_group_through_load_balancer() throws IOException {
+    String group = "patra.http-client.http-interface.groups.identity.";
+    assertThat(property(group + "base-url")).isEqualTo("lb://patra-identity");
+    assertThat(property(group + "connect-timeout")).isEqualTo("1s");
+    assertThat(property(group + "read-timeout")).isEqualTo("2s");
+  }
+
   /// interaction 不连 Redis。
   ///
   /// @throws IOException 读取失败时

@@ -130,7 +130,8 @@
             "unit": "identity",
             "impacts": [
                 "gateway",
-                "identity"
+                "identity",
+                "interaction"
             ],
             "tasks": [
                 "check"
@@ -634,7 +635,8 @@
             "impacts": [
                 "foundation",
                 "gateway",
-                "identity"
+                "identity",
+                "interaction"
             ],
             "tasks": [
                 "check",
