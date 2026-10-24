@@ -505,4 +505,33 @@ class PublicationDetailReadAdapterIT {
     assertThat(model.abstractSections()).isEmpty();
     assertThat(model.abstractPlainText()).isEqualTo("plain fallback");
   }
+
+  @Test
+  @DisplayName("日期列表与 publishedDate 按精度输出降精度 ISO，不出现补出来的月日")
+  void dates_use_reduced_iso_by_precision() {
+    Long pubId = savePublication(saveVenue("Lancet"), "Dated", "10.1000/dated", "77700001");
+    em.flush();
+    em.getEntityManager()
+        .createNativeQuery("UPDATE cat_publication SET publication_year = 2023 WHERE id = :id")
+        .setParameter("id", pubId)
+        .executeUpdate();
+    em.getEntityManager()
+        .createNativeQuery(
+            "INSERT INTO cat_publication_date (id, publication_id, date_type, year, month, day,"
+                + " date_precision, is_primary, order_num) VALUES"
+                + " (:id1, :pub, 'published', 2023, NULL, NULL, 'year', true, 1),"
+                + " (:id2, :pub, 'pmcrelease', 2022, 5, NULL, 'month', false, 2)")
+        .setParameter("id1", pubId + 101)
+        .setParameter("id2", pubId + 102)
+        .setParameter("pub", pubId)
+        .executeUpdate();
+    em.clear();
+
+    PublicationDetailReadModel model = adapter.findById(pubId).orElseThrow();
+
+    assertThat(model.publishedDate()).isEqualTo("2023");
+    assertThat(model.dates())
+        .extracting(PublicationDetailReadModel.PublicationDateView::date)
+        .containsExactly("2023", "2022-05");
+  }
 }

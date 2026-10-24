@@ -21,6 +21,8 @@ public interface PublicationResolveDao extends JpaRepository<PublicationEntity, 
              p.title AS "title",
              v.title AS "venueName",
              p.publication_year AS "publicationYear",
+             p.publication_month AS "publicationMonth",
+             p.publication_day AS "publicationDay",
              (p.deleted_at IS NOT NULL) AS "deleted"
       FROM cat_publication p
       LEFT JOIN cat_venue v ON v.id = p.venue_id

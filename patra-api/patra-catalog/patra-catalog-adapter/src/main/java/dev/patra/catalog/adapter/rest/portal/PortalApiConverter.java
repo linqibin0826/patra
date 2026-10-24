@@ -79,6 +79,7 @@ public class PortalApiConverter {
         model.title(),
         model.venueName(),
         model.publicationYear(),
+        model.publishedDate(),
         model.authors(),
         model.citationCount(),
         model.doi(),
@@ -268,6 +269,7 @@ public class PortalApiConverter {
         .venueId(model.venueId() != null ? Long.toString(model.venueId()) : null)
         .venueName(model.venueName())
         .publicationYear(model.publicationYear())
+        .publishedDate(model.publishedDate())
         .evidenceLevel(EvidenceLevelView.of(model.evidenceLevel()))
         .abstractType(model.abstractType())
         .abstractSections(

@@ -182,4 +182,23 @@ class PublicationEndpointIT {
         .deleted(deleted)
         .build();
   }
+
+  @Test
+  @DisplayName("只有年份的文献：publishedDate 只输出年份，不补月日")
+  void year_only_publication_has_no_fabricated_month_day() {
+    PublicationResolveReadModel yearOnly =
+        PublicationResolveReadModel.builder()
+            .id(8L)
+            .title("Year only")
+            .publicationYear(2023)
+            .publishedDate("2023")
+            .build();
+    when(service.resolveByIds(List.of(8L)))
+        .thenReturn(List.of(PublicationResolution.of("8", yearOnly)));
+
+    JsonNode first = JSON.readTree(post("/by-ids", "{\"ids\":[8]}")).get("items").get(0);
+
+    assertThat(first.get("publishedDate").asString()).isEqualTo("2023");
+    assertThat(first.get("year").asInt()).isEqualTo(2023);
+  }
 }

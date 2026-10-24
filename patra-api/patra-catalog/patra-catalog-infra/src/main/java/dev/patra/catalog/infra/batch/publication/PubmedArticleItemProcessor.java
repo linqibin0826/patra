@@ -10,6 +10,7 @@ import dev.patra.catalog.domain.model.enums.PublicationMedium;
 import dev.patra.catalog.domain.model.enums.PublicationStatus;
 import dev.patra.catalog.domain.model.vo.author.Orcid;
 import dev.patra.catalog.domain.model.vo.publication.LanguageInfo;
+import dev.patra.catalog.domain.model.vo.publication.Pagination;
 import dev.patra.catalog.domain.model.vo.publication.PublicationAbstract;
 import dev.patra.catalog.domain.model.vo.publication.PublicationAbstractSection;
 import dev.patra.catalog.domain.model.vo.publication.PublicationAuthorAffiliationSnapshot;
@@ -249,7 +250,7 @@ public class PubmedArticleItemProcessor
     if (dates == null || dates.getPublished() == null) {
       return null;
     }
-    return dates.getPublished().getYear();
+    return dates.getPublished().year();
   }
 
   /// 从 CanonicalPublication 提取出版月份。
@@ -258,7 +259,7 @@ public class PubmedArticleItemProcessor
     if (dates == null || dates.getPublished() == null) {
       return null;
     }
-    return dates.getPublished().getMonthValue();
+    return dates.getPublished().month();
   }
 
   /// 从 CanonicalPublication 提取出版日期。
@@ -267,7 +268,7 @@ public class PubmedArticleItemProcessor
     if (dates == null || dates.getPublished() == null) {
       return null;
     }
-    return dates.getPublished().getDayOfMonth();
+    return dates.getPublished().day();
   }
 
   /// 收集所有 ISSN（按优先级排序：Linking → Print/Electronic）。
@@ -327,6 +328,13 @@ public class PubmedArticleItemProcessor
             publication.getNumberOfReferences(),
             publication.getConflictOfInterestStatement());
 
+    // 补充引用数据：月 / 日按实际精度，页码与期刊 ISO 缩写
+    aggregate.assignCitationDetails(
+        extractPublicationMonth(publication),
+        extractPublicationDay(publication),
+        buildPagination(publication),
+        publication.getJournal() != null ? publication.getJournal().getIsoAbbreviation() : null);
+
     // 补充摘要
     PublicationAbstract abstractContent = buildPublicationAbstract(publication);
     if (abstractContent != null && abstractContent.hasContent()) {
@@ -346,6 +354,20 @@ public class PubmedArticleItemProcessor
     }
 
     return aggregate;
+  }
+
+  /// 构建页码；XML 里没有 Pagination 时为 null。
+  ///
+  /// @param publication 规范化文献
+  /// @return 页码，可空
+  private Pagination buildPagination(CanonicalPublication publication) {
+    CanonicalPublication.Pagination source = publication.getPagination();
+    if (source == null) {
+      return null;
+    }
+    Pagination pagination =
+        Pagination.of(source.getMedlinePgn(), source.getStartPage(), source.getEndPage());
+    return pagination.isEmpty() ? null : pagination;
   }
 
   /// 解析媒介类型。
@@ -917,7 +939,7 @@ public class PubmedArticleItemProcessor
   /// **特殊处理**：
   ///
   /// - `published` 日期标记为 `isPrimary=true`（主要发表日期）
-  /// - 所有日期从 `LocalDate` 转换，精度均为 `day`
+  /// - 日期按实际精度（[dev.patra.common.PartialDate]），缺的月 / 日不补
   ///
   /// @param publication 规范化文献
   /// @return 日期数据列表（可能为空，不会为 null）
@@ -933,63 +955,63 @@ public class PubmedArticleItemProcessor
     // published → PUBLISHED（主要发表日期）
     if (dates.getPublished() != null) {
       result.add(
-          PublicationDateData.primaryFromLocalDate(
+          PublicationDateData.primaryFromPartialDate(
               PublicationDateType.PUBLISHED.getCode(), dates.getPublished(), order++));
     }
 
     // electronic → EPUBLISH
     if (dates.getElectronic() != null) {
       result.add(
-          PublicationDateData.fromLocalDate(
+          PublicationDateData.fromPartialDate(
               PublicationDateType.EPUBLISH.getCode(), dates.getElectronic(), order++));
     }
 
     // received → RECEIVED
     if (dates.getReceived() != null) {
       result.add(
-          PublicationDateData.fromLocalDate(
+          PublicationDateData.fromPartialDate(
               PublicationDateType.RECEIVED.getCode(), dates.getReceived(), order++));
     }
 
     // accepted → ACCEPTED
     if (dates.getAccepted() != null) {
       result.add(
-          PublicationDateData.fromLocalDate(
+          PublicationDateData.fromPartialDate(
               PublicationDateType.ACCEPTED.getCode(), dates.getAccepted(), order++));
     }
 
     // revised → REVISED
     if (dates.getRevised() != null) {
       result.add(
-          PublicationDateData.fromLocalDate(
+          PublicationDateData.fromPartialDate(
               PublicationDateType.REVISED.getCode(), dates.getRevised(), order++));
     }
 
     // created → ENTREZ_DATE（进入 PubMed 数据库日期）
     if (dates.getCreated() != null) {
       result.add(
-          PublicationDateData.fromLocalDate(
+          PublicationDateData.fromPartialDate(
               PublicationDateType.ENTREZ_DATE.getCode(), dates.getCreated(), order++));
     }
 
     // pmcRelease → PMC_RELEASE（PMC 放开日期，全文抓取据此安排再查时间）
     if (dates.getPmcRelease() != null) {
       result.add(
-          PublicationDateData.fromLocalDate(
+          PublicationDateData.fromPartialDate(
               PublicationDateType.PMC_RELEASE.getCode(), dates.getPmcRelease(), order++));
     }
 
     // completed → OTHER
     if (dates.getCompleted() != null) {
       result.add(
-          PublicationDateData.fromLocalDate(
+          PublicationDateData.fromPartialDate(
               PublicationDateType.OTHER.getCode(), dates.getCompleted(), order++));
     }
 
     // indexed → OTHER
     if (dates.getIndexed() != null) {
       result.add(
-          PublicationDateData.fromLocalDate(
+          PublicationDateData.fromPartialDate(
               PublicationDateType.OTHER.getCode(), dates.getIndexed(), order++));
     }
 

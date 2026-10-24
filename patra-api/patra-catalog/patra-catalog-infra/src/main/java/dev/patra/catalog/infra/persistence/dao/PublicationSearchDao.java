@@ -66,6 +66,8 @@ public interface PublicationSearchDao extends JpaRepository<PublicationEntity, L
         p.venue_id AS "venueId",
         v.title AS "venueName",
         p.publication_year AS "publicationYear",
+        p.publication_month AS "publicationMonth",
+        p.publication_day AS "publicationDay",
         p.citation_count AS "citationCount",
         p.doi AS "doi",
         p.pmid AS "pmid",
@@ -84,11 +86,14 @@ public interface PublicationSearchDao extends JpaRepository<PublicationEntity, L
   /// 排序：`:sortMode` 为
   /// [dev.patra.catalog.domain.model.read.portal.PublicationSearchSort] 名称。
   /// CITED 只按被引 + id（与原 feed 一致，同被引不看采集时间）；LATEST / YEAR 才用 last_synced_at。
+  /// YEAR 依次按年、月、日降序且空值靠后：同一年里只到年的排在有月份的之后，同一月里只到月的排在有日的之后。
   String ORDER_BY =
       """
       ORDER BY
         CASE WHEN :sortMode = 'CITED' THEN COALESCE(p.citation_count, -1) ELSE NULL END DESC,
         CASE WHEN :sortMode = 'YEAR' THEN p.publication_year ELSE NULL END DESC NULLS LAST,
+        CASE WHEN :sortMode = 'YEAR' THEN p.publication_month ELSE NULL END DESC NULLS LAST,
+        CASE WHEN :sortMode = 'YEAR' THEN p.publication_day ELSE NULL END DESC NULLS LAST,
         CASE WHEN :sortMode IN ('LATEST', 'YEAR') THEN p.last_synced_at ELSE NULL END DESC NULLS LAST,
         p.id DESC
       """;

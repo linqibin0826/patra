@@ -1,6 +1,7 @@
 package dev.patra.catalog.infra.adapter.read;
 
 import dev.patra.catalog.domain.model.read.publication.PublicationResolveReadModel;
+import dev.patra.catalog.domain.model.vo.publication.PublicationDate;
 import dev.patra.catalog.domain.port.read.PublicationResolveReadPort;
 import dev.patra.catalog.infra.persistence.dao.PublicationResolveDao;
 import java.util.Collection;
@@ -49,6 +50,9 @@ public class PublicationResolveReadAdapter implements PublicationResolveReadPort
         .title(row.getTitle())
         .venueName(row.getVenueName())
         .publicationYear(row.getPublicationYear())
+        .publishedDate(
+            PublicationDate.isoString(
+                row.getPublicationYear(), row.getPublicationMonth(), row.getPublicationDay()))
         .deleted(Boolean.TRUE.equals(row.getDeleted()))
         .build();
   }

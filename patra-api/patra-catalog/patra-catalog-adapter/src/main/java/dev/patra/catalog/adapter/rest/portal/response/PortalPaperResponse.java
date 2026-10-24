@@ -10,6 +10,7 @@ import java.util.List;
 /// @param title 标题
 /// @param journal 载体名称（可空）
 /// @param year 出版年份（可空）
+/// @param publishedDate 出版日期，按实际精度输出 `yyyy` / `yyyy-MM` / `yyyy-MM-dd`（可空）
 /// @param authors 全部作者展示名
 /// @param cites 被引次数（可空）
 /// @param doi DOI（可空）
@@ -29,6 +30,7 @@ public record PortalPaperResponse(
     String title,
     String journal,
     Integer year,
+    String publishedDate,
     List<String> authors,
     Integer cites,
     String doi,

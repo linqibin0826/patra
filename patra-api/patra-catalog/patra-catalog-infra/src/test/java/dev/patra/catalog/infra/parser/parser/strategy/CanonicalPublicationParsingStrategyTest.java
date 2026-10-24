@@ -18,9 +18,10 @@ import dev.patra.common.CanonicalPublication.Keyword;
 import dev.patra.common.CanonicalPublication.KeywordSet;
 import dev.patra.common.CanonicalPublication.MeshHeading;
 import dev.patra.common.CanonicalPublication.PublicationType;
+import dev.patra.common.PartialDate;
 import dev.patra.common.PublicationIdentifierType;
 import java.io.StringReader;
-import java.time.LocalDate;
+import java.util.List;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
@@ -414,12 +415,11 @@ class CanonicalPublicationParsingStrategyTest {
   // ========== 出版日期解析测试 ==========
 
   @Nested
-  @DisplayName("出版日期解析")
+  @DisplayName("出版日期解析（按实际精度，不补月日）")
   class PubDateParsing {
 
-    @Test
-    @DisplayName("应解析完整的 PubDate 到 dates.published")
-    void shouldParseCompletePubDate() throws Exception {
+    /// 用给定的 `<PubDate>` 内容解析一篇最小文献。
+    private CanonicalPublication parseWithPubDate(String pubDateInner) throws Exception {
       var xml =
           """
           <PubmedArticle>
@@ -428,11 +428,7 @@ class CanonicalPublicationParsingStrategyTest {
               <Article>
                 <Journal>
                   <JournalIssue>
-                    <PubDate>
-                      <Year>2024</Year>
-                      <Month>Jun</Month>
-                      <Day>15</Day>
-                    </PubDate>
+                    <PubDate>%s</PubDate>
                   </JournalIssue>
                 </Journal>
                 <ArticleTitle>T</ArticleTitle>
@@ -442,81 +438,103 @@ class CanonicalPublicationParsingStrategyTest {
               </MedlineJournalInfo>
             </MedlineCitation>
           </PubmedArticle>
-          """;
-      var reader = createReaderAtStartElement(xml);
-
-      CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
-
-      assertNotNull(result.getDates());
-      assertEquals(LocalDate.of(2024, 6, 15), result.getDates().getPublished());
+          """
+              .formatted(pubDateInner);
+      return strategy.parseRecord(createReaderAtStartElement(xml), XmlParsingContext.empty());
     }
 
     @Test
-    @DisplayName("应解析仅有 Year 的 PubDate（月日默认为1）")
-    void shouldParseYearOnlyPubDateWithDefaults() throws Exception {
-      var xml =
-          """
-          <PubmedArticle>
-            <MedlineCitation>
-              <PMID>1</PMID>
-              <Article>
-                <Journal>
-                  <JournalIssue>
-                    <PubDate>
-                      <Year>2024</Year>
-                    </PubDate>
-                  </JournalIssue>
-                </Journal>
-                <ArticleTitle>T</ArticleTitle>
-              </Article>
-              <MedlineJournalInfo>
-                <NlmUniqueID>N</NlmUniqueID>
-              </MedlineJournalInfo>
-            </MedlineCitation>
-          </PubmedArticle>
-          """;
-      var reader = createReaderAtStartElement(xml);
+    @DisplayName("年月日齐全且合法：精确到日")
+    void should_keep_day_precision_when_year_month_day_valid() throws Exception {
+      PartialDate d =
+          parseWithPubDate("<Year>2021</Year><Month>Oct</Month><Day>14</Day>")
+              .getDates()
+              .getPublished();
 
-      CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
-
-      assertEquals(LocalDate.of(2024, 1, 1), result.getDates().getPublished());
+      assertThat(d).isEqualTo(new PartialDate(2021, 10, 14, null, null));
+      assertThat(d.precision()).isEqualTo("day");
     }
 
     @Test
-    @DisplayName("应从 MedlineDate 提取年份")
-    void shouldExtractYearFromMedlineDate() throws Exception {
-      var xml =
-          """
-          <PubmedArticle>
-            <MedlineCitation>
-              <PMID>1</PMID>
-              <Article>
-                <Journal>
-                  <JournalIssue>
-                    <PubDate>
-                      <MedlineDate>2024 Jun-Jul</MedlineDate>
-                    </PubDate>
-                  </JournalIssue>
-                </Journal>
-                <ArticleTitle>T</ArticleTitle>
-              </Article>
-              <MedlineJournalInfo>
-                <NlmUniqueID>N</NlmUniqueID>
-              </MedlineJournalInfo>
-            </MedlineCitation>
-          </PubmedArticle>
-          """;
-      var reader = createReaderAtStartElement(xml);
+    @DisplayName("日对该月不合法（2 月 30 日）：丢掉日，降为月精度")
+    void should_drop_day_when_day_invalid_for_month() throws Exception {
+      PartialDate d =
+          parseWithPubDate("<Year>2021</Year><Month>Feb</Month><Day>30</Day>")
+              .getDates()
+              .getPublished();
 
-      CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
-
-      // MedlineDate 时，年份应被提取，月日默认为1
-      assertEquals(LocalDate.of(2024, 1, 1), result.getDates().getPublished());
+      assertThat(d).isEqualTo(new PartialDate(2021, 2, null, null, null));
+      assertThat(d.precision()).isEqualTo("month");
     }
 
     @Test
-    @DisplayName("应将月份缩写转换为数字")
-    void shouldConvertMonthAbbreviationToNumber() throws Exception {
+    @DisplayName("只有年月：月精度，不补日")
+    void should_keep_month_precision_when_no_day() throws Exception {
+      assertThat(parseWithPubDate("<Year>2022</Year><Month>10</Month>").getDates().getPublished())
+          .isEqualTo(new PartialDate(2022, 10, null, null, null));
+    }
+
+    @Test
+    @DisplayName("只有年：年精度，不补月日")
+    void should_keep_year_precision_when_year_only() throws Exception {
+      PartialDate d = parseWithPubDate("<Year>2023</Year>").getDates().getPublished();
+
+      assertThat(d).isEqualTo(new PartialDate(2023, null, null, null, null));
+      assertThat(d.precision()).isEqualTo("year");
+    }
+
+    @Test
+    @DisplayName("年 + 季节：年精度，季节原文另存")
+    void should_store_season_with_year_precision() throws Exception {
+      assertThat(
+              parseWithPubDate("<Year>2000</Year><Season>Spring</Season>")
+                  .getDates()
+                  .getPublished())
+          .isEqualTo(new PartialDate(2000, null, null, "Spring", null));
+    }
+
+    @Test
+    @DisplayName("月份是区间（Jun-Jul）：年精度，原文进 text")
+    void should_store_month_range_as_text_with_year_precision() throws Exception {
+      assertThat(
+              parseWithPubDate("<Year>2019</Year><Month>Jun-Jul</Month>").getDates().getPublished())
+          .isEqualTo(new PartialDate(2019, null, null, null, "Jun-Jul"));
+    }
+
+    @Test
+    @DisplayName("月份超出 1 ~ 12：年精度，原文进 text")
+    void should_treat_out_of_range_month_as_year_precision() throws Exception {
+      assertThat(
+              parseWithPubDate("<Year>2019</Year><Month>13</Month><Day>2</Day>")
+                  .getDates()
+                  .getPublished())
+          .isEqualTo(new PartialDate(2019, null, null, null, "13"));
+    }
+
+    @Test
+    @DisplayName("MedlineDate：取第一个四位年份，原文进 text")
+    void should_take_first_year_from_medline_date() throws Exception {
+      assertThat(
+              parseWithPubDate("<MedlineDate>1998 Dec-1999 Jan</MedlineDate>")
+                  .getDates()
+                  .getPublished())
+          .isEqualTo(new PartialDate(1998, null, null, null, "1998 Dec-1999 Jan"));
+    }
+
+    @Test
+    @DisplayName("没有任何年份：出版日期为 null")
+    void should_leave_published_null_without_year() throws Exception {
+      assertThat(parseWithPubDate("<Month>Jun</Month>").getDates().getPublished()).isNull();
+    }
+  }
+
+  @Nested
+  @DisplayName("引用字段解析：页码、ELocationID、期刊缩写")
+  class CitationFieldParsing {
+
+    /// 用给定的 Article 片段、MedlineJournalInfo 片段与 ArticleIdList 片段解析一篇最小文献。
+    private CanonicalPublication parse(String articleExtra, String journalExtra, String idList)
+        throws Exception {
       var xml =
           """
           <PubmedArticle>
@@ -524,26 +542,86 @@ class CanonicalPublicationParsingStrategyTest {
               <PMID>1</PMID>
               <Article>
                 <Journal>
-                  <JournalIssue>
-                    <PubDate>
-                      <Year>2024</Year>
-                      <Month>Dec</Month>
-                    </PubDate>
-                  </JournalIssue>
+                  <Title>The New England journal of medicine</Title>
+                  %s
                 </Journal>
                 <ArticleTitle>T</ArticleTitle>
+                %s
               </Article>
               <MedlineJournalInfo>
-                <NlmUniqueID>N</NlmUniqueID>
+                <MedlineTA>N Engl J Med</MedlineTA>
+                <NlmUniqueID>0255562</NlmUniqueID>
               </MedlineJournalInfo>
             </MedlineCitation>
+            <PubmedData>
+              <ArticleIdList>%s</ArticleIdList>
+            </PubmedData>
           </PubmedArticle>
-          """;
-      var reader = createReaderAtStartElement(xml);
+          """
+              .formatted(journalExtra, articleExtra, idList);
+      return strategy.parseRecord(createReaderAtStartElement(xml), XmlParsingContext.empty());
+    }
 
-      CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
+    private static List<String> idsOf(CanonicalPublication p, PublicationIdentifierType type) {
+      return p.getIdentifiers().stream()
+          .filter(id -> id.getType() == type)
+          .map(Identifier::getValue)
+          .toList();
+    }
 
-      assertEquals(LocalDate.of(2024, 12, 1), result.getDates().getPublished());
+    @Test
+    @DisplayName("Pagination：StartPage、EndPage、MedlinePgn 都读")
+    void should_parse_medline_pgn_and_start_end_pages() throws Exception {
+      CanonicalPublication p =
+          parse(
+              "<Pagination><StartPage>1451</StartPage><EndPage>1461</EndPage>"
+                  + "<MedlinePgn>1451-61</MedlinePgn></Pagination>",
+              "",
+              "");
+
+      assertThat(p.getPagination().getStartPage()).isEqualTo("1451");
+      assertThat(p.getPagination().getEndPage()).isEqualTo("1461");
+      assertThat(p.getPagination().getMedlinePgn()).isEqualTo("1451-61");
+    }
+
+    @Test
+    @DisplayName("ELocationID pii 进标识符 PII")
+    void should_parse_elocation_pii_as_identifier() throws Exception {
+      CanonicalPublication p =
+          parse("<ELocationID EIdType=\"pii\" ValidYN=\"Y\">e0123456</ELocationID>", "", "");
+
+      assertThat(idsOf(p, PublicationIdentifierType.PII)).containsExactly("e0123456");
+    }
+
+    @Test
+    @DisplayName("ValidYN=N 的 ELocationID 不收")
+    void should_ignore_invalid_elocation() throws Exception {
+      CanonicalPublication p =
+          parse("<ELocationID EIdType=\"pii\" ValidYN=\"N\">bad</ELocationID>", "", "");
+
+      assertThat(idsOf(p, PublicationIdentifierType.PII)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("ELocationID doi 只在 ArticleIdList 没有 DOI 时使用")
+    void should_use_elocation_doi_only_when_article_id_doi_missing() throws Exception {
+      String eloc = "<ELocationID EIdType=\"doi\" ValidYN=\"Y\">10.1/eloc</ELocationID>";
+
+      CanonicalPublication onlyEloc = parse(eloc, "", "");
+      CanonicalPublication both =
+          parse(eloc, "", "<ArticleId IdType=\"doi\">10.1/articleid</ArticleId>");
+
+      assertThat(idsOf(onlyEloc, PublicationIdentifierType.DOI)).containsExactly("10.1/eloc");
+      assertThat(idsOf(both, PublicationIdentifierType.DOI)).containsExactly("10.1/articleid");
+    }
+
+    @Test
+    @DisplayName("期刊 ISOAbbreviation 与 MedlineTA 都读")
+    void should_parse_iso_abbreviation_and_medline_ta() throws Exception {
+      CanonicalPublication p = parse("", "<ISOAbbreviation>N. Engl. J. Med.</ISOAbbreviation>", "");
+
+      assertThat(p.getJournal().getIsoAbbreviation()).isEqualTo("N. Engl. J. Med.");
+      assertThat(p.getJournal().getMedlineAbbreviation()).isEqualTo("N Engl J Med");
     }
   }
 
@@ -583,8 +661,41 @@ class CanonicalPublicationParsingStrategyTest {
 
       CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
 
-      assertThat(result.getDates().getPmcRelease()).isEqualTo(LocalDate.of(2027, 1, 15));
+      assertThat(result.getDates().getPmcRelease())
+          .isEqualTo(new PartialDate(2027, 1, 15, null, null));
       assertThat(result.getPublicationStatus()).isEqualTo("ppublish");
+    }
+
+    @Test
+    @DisplayName("pmc-release 只到年月：月精度，不补日")
+    void should_parse_pmc_release_with_precision() throws Exception {
+      var xml =
+          """
+          <PubmedArticle>
+            <MedlineCitation>
+              <PMID>1</PMID>
+              <Article>
+                <ArticleTitle>T</ArticleTitle>
+              </Article>
+              <MedlineJournalInfo>
+                <NlmUniqueID>N</NlmUniqueID>
+              </MedlineJournalInfo>
+            </MedlineCitation>
+            <PubmedData>
+              <History>
+                <PubMedPubDate PubStatus="pmc-release">
+                  <Year>2022</Year><Month>May</Month>
+                </PubMedPubDate>
+              </History>
+            </PubmedData>
+          </PubmedArticle>
+          """;
+      var reader = createReaderAtStartElement(xml);
+
+      CanonicalPublication result = strategy.parseRecord(reader, XmlParsingContext.empty());
+
+      assertThat(result.getDates().getPmcRelease())
+          .isEqualTo(new PartialDate(2022, 5, null, null, null));
     }
 
     @Test
@@ -1873,7 +1984,7 @@ class CanonicalPublicationParsingStrategyTest {
       assertEquals("2", journal.getIssue());
 
       // 日期
-      assertEquals(LocalDate.of(2024, 6, 15), result.getDates().getPublished());
+      assertEquals(new PartialDate(2024, 6, 15, null, null), result.getDates().getPublished());
 
       // 语言（保留原始 ISO 639-3 代码）
       assertEquals("eng", result.getLanguage());

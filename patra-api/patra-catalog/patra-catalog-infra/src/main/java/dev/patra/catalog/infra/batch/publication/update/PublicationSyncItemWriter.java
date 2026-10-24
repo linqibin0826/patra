@@ -2,12 +2,14 @@ package dev.patra.catalog.infra.batch.publication.update;
 
 import dev.patra.catalog.domain.model.vo.publication.PublicationCompleteData;
 import dev.patra.catalog.domain.model.vo.publication.PublicationId;
+import dev.patra.catalog.domain.model.vo.publication.PublicationSourceRow;
 import dev.patra.catalog.domain.model.vo.publication.PublicationSyncTarget;
 import dev.patra.catalog.domain.port.repository.PublicationSyncRepository;
 import dev.patra.catalog.infra.batch.publication.PublicationImportResult;
 import dev.patra.catalog.infra.batch.publication.PublicationImportResultMapper;
 import dev.patra.catalog.infra.batch.publication.PublicationItemWriter;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -15,7 +17,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.infrastructure.item.Chunk;
 import org.springframework.batch.infrastructure.item.ItemWriter;
@@ -33,7 +34,7 @@ public class PublicationSyncItemWriter implements ItemWriter<PublicationSyncItem
   private final PublicationSyncRepository syncRepository;
   private final PublicationItemWriter insertWriter;
   private final PublicationImportResultMapper resultMapper;
-  private final PubmedUpdateCounters counters;
+  private final PubmedImportCounters counters;
   private final Clock clock;
 
   /// 创建写入器。
@@ -47,7 +48,7 @@ public class PublicationSyncItemWriter implements ItemWriter<PublicationSyncItem
       PublicationSyncRepository syncRepository,
       PublicationItemWriter insertWriter,
       PublicationImportResultMapper resultMapper,
-      PubmedUpdateCounters counters,
+      PubmedImportCounters counters,
       Clock clock) {
     this.syncRepository = syncRepository;
     this.insertWriter = insertWriter;
@@ -69,41 +70,75 @@ public class PublicationSyncItemWriter implements ItemWriter<PublicationSyncItem
       byPmid.put(item.result().publication().getPmid(), item);
     }
 
+    Instant now = clock.instant();
     List<PublicationCompleteData> overwrites = new ArrayList<>();
     Map<Long, String> currentDois = new HashMap<>();
+    Set<Long> refreshSyncedAt = new HashSet<>();
+    List<PublicationSourceRow> sources = new ArrayList<>();
     List<PublicationImportResult> inserts = new ArrayList<>();
+    Map<String, PublicationSyncItem> insertItems = new HashMap<>();
     for (PublicationSyncItem item : byPmid.values()) {
       PublicationSyncTarget target = item.target();
       if (target == null) {
         inserts.add(item.result());
+        insertItems.put(item.result().publication().getPmid(), item);
         continue;
       }
       item.result().publication().assignId(PublicationId.of(target.publicationId()));
       overwrites.add(resultMapper.toCompleteData(item.result()));
       currentDois.put(target.publicationId(), target.doi());
+      if (target.sourceRank() != null && item.position().rank() > target.sourceRank()) {
+        refreshSyncedAt.add(target.publicationId());
+      }
+      sources.add(sourceRow(item, now));
     }
 
-    // 2. 已有的：DOI 冲突时保留旧值，然后覆盖
+    // 2. 已有的：DOI 冲突时保留旧值，然后覆盖；只有拿到真正更新的版本才刷新 last_synced_at
     int conflicts = 0;
     if (!overwrites.isEmpty()) {
       Map<Long, String> doiOverrides = resolveDoiConflicts(overwrites, currentDois);
       conflicts = doiOverrides.size();
-      syncRepository.overwriteAllWithAssociations(overwrites, doiOverrides, clock.instant());
+      syncRepository.overwriteAllWithAssociations(overwrites, doiOverrides, now, refreshSyncedAt);
     }
 
-    // 3. 没有的（只在 ALL 范围出现）：委托 baseline 写入器
+    // 3. 没有的：委托插入写入器；它会静默丢掉 DOI 已存在或重复的项，回查哪些真的进了库（墓碑不算）
     int created = 0;
     if (!inserts.isEmpty()) {
       insertWriter.write(new Chunk<>(inserts));
-      Set<String> pmids =
-          inserts.stream().map(r -> r.publication().getPmid()).collect(Collectors.toSet());
-      created = syncRepository.findSyncTargetsByPmids(pmids).size();
+      Map<String, PublicationSyncTarget> found =
+          syncRepository.findSyncTargetsByPmids(insertItems.keySet());
+      for (Map.Entry<String, PublicationSyncTarget> e : found.entrySet()) {
+        if (!e.getValue().isTombstone()) {
+          created++;
+          sources.add(sourceRow(insertItems.get(e.getKey()), now));
+        }
+      }
+    }
+
+    // 来源行与文献在同一个 chunk 事务里写
+    if (!sources.isEmpty()) {
+      syncRepository.upsertSources(sources);
     }
 
     // 4. 全部成功后才计数
     counters.addUpdated(overwrites.size());
     counters.addCreated(created);
     counters.addDoiConflicts(conflicts);
+  }
+
+  /// 写入项 → 来源行。
+  ///
+  /// @param item 写入项
+  /// @param parsedAt 解析写入时间
+  /// @return 来源行
+  private static PublicationSourceRow sourceRow(PublicationSyncItem item, Instant parsedAt) {
+    return PublicationSourceRow.builder()
+        .pmid(item.result().publication().getPmid())
+        .sourceFile(item.position().fileName())
+        .sourceRank(item.position().rank())
+        .rawXml(item.rawXml())
+        .parsedAt(parsedAt)
+        .build();
   }
 
   /// 找出 DOI 冲突的项，返回文献 ID → 旧 DOI。

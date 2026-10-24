@@ -32,6 +32,7 @@ public interface PublicationDetailDao extends JpaRepository<PublicationEntity, L
           """
       SELECT p.id AS "id", p.title AS "title", p.original_title AS "originalTitle",
         p.venue_id AS "venueId", v.title AS "venueName", p.publication_year AS "publicationYear",
+        p.publication_month AS "publicationMonth", p.publication_day AS "publicationDay",
         a.abstract_type AS "abstractType", a.structured_sections::text AS "structuredSectionsJson",
         a.plain_text AS "abstractPlainText", p.doi AS "doi", p.pmid AS "pmid",
         (SELECT i.identifier_value FROM cat_publication_identifier i
@@ -132,7 +133,8 @@ public interface PublicationDetailDao extends JpaRepository<PublicationEntity, L
   @Query(
       value =
           """
-      SELECT d.date_type AS "type", d.date_value AS "date"
+      SELECT d.date_type AS "type", d.year AS "year", d.month AS "month", d.day AS "day",
+        d.date_precision AS "precision"
       FROM cat_publication_date d
       WHERE d.publication_id = :id
       ORDER BY d.order_num ASC NULLS LAST, d.id ASC

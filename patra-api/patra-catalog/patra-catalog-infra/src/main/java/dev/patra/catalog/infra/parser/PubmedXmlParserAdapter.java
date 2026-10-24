@@ -3,35 +3,21 @@ package dev.patra.catalog.infra.parser;
 import dev.patra.catalog.domain.exception.XmlParseException;
 import dev.patra.catalog.domain.port.parser.PubmedXmlParserPort;
 import dev.patra.catalog.infra.parser.strategy.CanonicalPublicationParsingStrategy;
-import dev.patra.catalog.infra.parser.strategy.PubmedUpdateParsingStrategy;
-import dev.patra.catalog.infra.parser.support.AbstractStaxParserAdapter;
+import dev.patra.catalog.infra.parser.support.SecureXmlInputFactory;
+import dev.patra.catalog.infra.parser.support.XmlParsingContext;
 import dev.patra.common.CanonicalPublication;
-import java.io.InputStream;
-import java.util.function.Consumer;
-import java.util.stream.Stream;
+import java.io.StringReader;
+import javax.xml.stream.XMLStreamConstants;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
 import org.springframework.stereotype.Component;
 
-/// PubMed XML 解析适配器。
-///
-/// 基于 StAX 流式解析 PubMed Baseline XML 文件，返回 `CanonicalPublication` 流。
-///
-/// **实现细节**：
-///
-/// - 继承 `AbstractStaxParserAdapter` 模板，复用资源管理逻辑
-/// - 使用 `CanonicalPublicationParsingStrategy` 解析单条记录
-/// - 无效记录（缺少 PMID）自动跳过，不中断流处理
-///
-/// **性能特点**：
-///
-/// - 流式解析，内存占用恒定（不受文件大小影响）
-/// - 惰性求值，可随时中断处理
-/// - 约 30,000 条/文件，解析速度约 1,000 条/秒
+/// PubMed XML 解析适配器：在独立的 `XMLStreamReader` 上用 `CanonicalPublicationParsingStrategy` 解析一篇原文。
 ///
 /// @author linqibin
 /// @since 0.1.0
 @Component
-public class PubmedXmlParserAdapter extends AbstractStaxParserAdapter<CanonicalPublication>
-    implements PubmedXmlParserPort {
+public class PubmedXmlParserAdapter implements PubmedXmlParserPort {
 
   /// 解析 PubMed XML 输入流。
   ///
@@ -39,27 +25,33 @@ public class PubmedXmlParserAdapter extends AbstractStaxParserAdapter<CanonicalP
   /// @return 文献记录流（惰性求值）
   /// @throws XmlParseException 解析失败时抛出
   @Override
-  public Stream<CanonicalPublication> parse(InputStream inputStream) {
-    return doParse(
-        inputStream,
-        CanonicalPublicationParsingStrategy.INSTANCE,
-        "开始解析 PubMed Baseline XML",
-        XmlParseException::new);
+  public CanonicalPublication parseArticle(String rawXml) {
+    XMLStreamReader reader = null;
+    try {
+      reader = SecureXmlInputFactory.getInstance().createXMLStreamReader(new StringReader(rawXml));
+      while (reader.hasNext() && reader.next() != XMLStreamConstants.START_ELEMENT) {
+        // 定位到 <PubmedArticle>
+      }
+      return CanonicalPublicationParsingStrategy.INSTANCE.parseRecord(
+          reader, XmlParsingContext.empty());
+    } catch (XMLStreamException e) {
+      throw new XmlParseException("PubmedArticle 原文解析失败", e);
+    } finally {
+      closeQuietly(reader);
+    }
   }
 
-  /// 解析 PubMed updatefiles 输入流：文章照常流出，`DeleteCitation` 里的 PMID 交给回调。
+  /// 关闭读取器，失败忽略（原文在内存里，没有外部资源）。
   ///
-  /// @param inputStream XML 输入流（调用方负责关闭）
-  /// @param deletedPmidSink 每遇到一个被删除的 PMID 调用一次
-  /// @return 文献记录流（惰性求值，回调在消费流的过程中被调用）
-  /// @throws XmlParseException 解析失败时抛出
-  @Override
-  public Stream<CanonicalPublication> parseUpdateFile(
-      InputStream inputStream, Consumer<String> deletedPmidSink) {
-    return doParse(
-        inputStream,
-        new PubmedUpdateParsingStrategy(deletedPmidSink),
-        "开始解析 PubMed updatefiles XML",
-        XmlParseException::new);
+  /// @param reader 读取器，可空
+  private static void closeQuietly(XMLStreamReader reader) {
+    if (reader == null) {
+      return;
+    }
+    try {
+      reader.close();
+    } catch (XMLStreamException ignored) {
+      // 内存里的字符串，关闭失败不影响结果
+    }
   }
 }

@@ -123,6 +123,30 @@ public class PublicationEntity extends SoftDeletableJpaEntity {
   @Column(name = "publication_year", nullable = false)
   private Integer publicationYear;
 
+  /// 出版月份（主出版日期冗余；只到年时为 null）
+  @Column(name = "publication_month")
+  private Integer publicationMonth;
+
+  /// 出版日（主出版日期冗余；只到年月时为 null）
+  @Column(name = "publication_day")
+  private Integer publicationDay;
+
+  /// PubMed MedlinePgn 原文（NLM 缩写形式，如 `1451-61`）
+  @Column(name = "medline_pgn", length = 200)
+  private String medlinePgn;
+
+  /// PubMed StartPage
+  @Column(name = "start_page", length = 50)
+  private String startPage;
+
+  /// PubMed EndPage
+  @Column(name = "end_page", length = 50)
+  private String endPage;
+
+  /// 期刊 ISO 缩写（Journal/ISOAbbreviation）
+  @Column(name = "journal_iso_abbreviation", length = 200)
+  private String journalIsoAbbreviation;
+
   // ========== OA 信息 ==========
 
   /// 是否有 OA 版本（冗余：快速筛选）

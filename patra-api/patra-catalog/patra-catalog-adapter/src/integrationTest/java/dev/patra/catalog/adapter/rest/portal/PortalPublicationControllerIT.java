@@ -706,4 +706,56 @@ class PortalPublicationControllerIT {
         .evidenceLevel(EvidenceLevel.UNKNOWN)
         .build();
   }
+
+  @Test
+  @DisplayName("只有年份的文献：publishedDate 与 dates 只输出年份，不补月日；卡片同样")
+  void year_only_publication_has_no_fabricated_month_day() {
+    PublicationDetailReadModel model =
+        PublicationDetailReadModel.builder()
+            .id(11L)
+            .title("Year only")
+            .publicationYear(2023)
+            .publishedDate("2023")
+            .evidenceLevel(EvidenceLevel.UNKNOWN)
+            .provenanceCode("PUBMED")
+            .dates(
+                List.of(
+                    PublicationDetailReadModel.PublicationDateView.of("published", "2023"),
+                    PublicationDetailReadModel.PublicationDateView.of("pmcrelease", "2022-05")))
+            .build();
+    when(portalPublicationDetailQueryService.getById(11L)).thenReturn(model);
+    when(portalPublicationCardQueryService.findByIds(List.of(11L)))
+        .thenReturn(
+            List.of(
+                PortalPaperReadModel.builder()
+                    .id(11L)
+                    .title("Year only")
+                    .publicationYear(2023)
+                    .publishedDate("2023")
+                    .provenanceCode("PUBMED")
+                    .build()));
+
+    restClient
+        .get()
+        .uri("/portal/publications/11")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .jsonPath("$.publishedDate")
+        .isEqualTo("2023")
+        .jsonPath("$.dates[0].date")
+        .isEqualTo("2023")
+        .jsonPath("$.dates[1].date")
+        .isEqualTo("2022-05");
+    restClient
+        .get()
+        .uri("/portal/publications/batch?id=11")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .jsonPath("$.items[0].publishedDate")
+        .isEqualTo("2023");
+  }
 }

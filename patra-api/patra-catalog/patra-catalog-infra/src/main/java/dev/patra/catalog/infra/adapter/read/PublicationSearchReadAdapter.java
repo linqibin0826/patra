@@ -6,6 +6,7 @@ import dev.patra.catalog.domain.model.read.portal.PublicationSearchFacets;
 import dev.patra.catalog.domain.model.read.portal.PublicationSearchFilter;
 import dev.patra.catalog.domain.model.vo.publication.EvidenceLevel;
 import dev.patra.catalog.domain.model.vo.publication.InlineMarkup;
+import dev.patra.catalog.domain.model.vo.publication.PublicationDate;
 import dev.patra.catalog.domain.port.read.PublicationSearchReadPort;
 import dev.patra.catalog.domain.query.PageResult;
 import dev.patra.catalog.domain.query.PagingParams;
@@ -296,6 +297,9 @@ public class PublicationSearchReadAdapter implements PublicationSearchReadPort {
         .venueId(row.getVenueId())
         .venueName(row.getVenueName())
         .publicationYear(row.getPublicationYear())
+        .publishedDate(
+            PublicationDate.isoString(
+                row.getPublicationYear(), row.getPublicationMonth(), row.getPublicationDay()))
         .authors(split(row.getAuthorNames()))
         .citationCount(row.getCitationCount())
         .doi(row.getDoi())

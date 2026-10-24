@@ -12,6 +12,7 @@ import lombok.Builder;
 /// @param title 标题原文（含内联标记）；不存在时为 null
 /// @param journal 期刊全称；不存在或没有载体时为 null
 /// @param year 出版年份；不存在或未知时为 null
+/// @param publishedDate 出版日期，按实际精度输出 `yyyy` / `yyyy-MM` / `yyyy-MM-dd`；不存在或未知时为 null
 /// @author linqibin
 /// @since 0.1.0
 @Builder
@@ -23,7 +24,8 @@ public record PublicationResolutionResp(
     String pmid,
     String title,
     String journal,
-    Integer year) {
+    Integer year,
+    String publishedDate) {
 
   /// 查不到的键。
   ///

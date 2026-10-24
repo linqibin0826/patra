@@ -1,73 +1,22 @@
 package dev.patra.catalog.domain.port.parser;
 
 import dev.patra.common.CanonicalPublication;
-import java.io.InputStream;
-import java.util.function.Consumer;
-import java.util.stream.Stream;
 
 /// PubMed 文献 XML 解析端口（领域层定义，基础设施层实现）。
 ///
-/// 从 PubMed Baseline XML 文件中流式解析文献记录。
+/// 按篇解析：导入时由读取器把文件逐篇切成 `<PubmedArticle>` 原文，本地重算时从来源表读出原文，
+/// 两条路径都调用 [#parseArticle]，因此一篇的解析异常只影响这一篇。
 ///
-/// **设计原则**：
-///
-/// - 接口在 Domain 层定义，确保领域层独立于具体解析技术
-/// - 实现在 Infrastructure 层，遵循依赖倒置原则（DIP）
-/// - 使用 Stream 返回，支持大文件流式处理（约 30,000 条/文件）
-///
-/// **返回类型说明**：
-///
-/// 返回 `CanonicalPublication`（Shared Kernel 标准化模型），该模型：
-///
-/// 1. 覆盖 ~95% PubMed DTD 元素，字段完备
-/// 2. 统一了多数据源（PubMed/EPMC/Crossref）的数据结构
-/// 3. `Journal` 内嵌对象包含 Venue 匹配所需的全部字段（nlmUniqueId、issn、issnLinking）
-///
-/// **主要使用场景**：
-///
-/// PubMed Baseline 文献批量导入，通过 Spring Batch 逐条消费 Stream。
+/// 返回 `CanonicalPublication`（Shared Kernel 标准化模型），`Journal` 内嵌对象包含 Venue 匹配所需的全部字段。
 ///
 /// @author linqibin
 /// @since 0.1.0
 public interface PubmedXmlParserPort {
 
-  /// 解析 PubMed XML 输入流，返回文献记录流。
+  /// 解析一篇 `<PubmedArticle>` 原文（逐篇切出或从来源表读出）。
   ///
-  /// 使用 StAX 流式解析，避免将整个文件加载到内存。
-  /// 调用方负责关闭返回的 Stream（推荐使用 try-with-resources）。
-  ///
-  /// **注意**：
-  ///
-  /// - 此方法**不关闭**传入的 InputStream，由调用方负责管理
-  /// - 每个 `CanonicalPublication` 对应一个 `<PubmedArticle>` XML 元素
-  /// - 无效记录（缺少 PMID）会被跳过，不会中断流处理
-  ///
-  /// **使用示例**：
-  ///
-  /// ```java
-  /// FileDownloadResult result = downloadPort.download(uri);
-  /// try (InputStream in = Files.newInputStream(result.filePath())) {
-  ///     port.parse(in)
-  ///         .forEach(publication -> processPublication(publication));
-  /// } finally {
-  ///     Files.deleteIfExists(result.filePath());
-  /// }
-  /// ```
-  ///
-  /// @param inputStream XML 输入流（调用方负责关闭）
-  /// @return 文献记录流（调用方负责关闭）
-  /// @throws dev.patra.catalog.domain.exception.XmlParseException 解析失败时抛出
-  Stream<CanonicalPublication> parse(InputStream inputStream);
-
-  /// 解析 PubMed updatefiles 输入流。
-  ///
-  /// 与 `parse` 一样流出 `<PubmedArticle>`；另外每遇到 `<DeleteCitation>` 下的一个 `PMID`，
-  /// 就调用一次 `deletedPmidSink`。回调发生在消费流的过程中，流读完后删除列表才完整。
-  ///
-  /// @param inputStream XML 输入流（调用方负责关闭）
-  /// @param deletedPmidSink 被删除 PMID 的回调
-  /// @return 文献记录流（调用方负责关闭）
-  /// @throws dev.patra.catalog.domain.exception.XmlParseException 解析失败时抛出
-  Stream<CanonicalPublication> parseUpdateFile(
-      InputStream inputStream, Consumer<String> deletedPmidSink);
+  /// @param rawXml 一篇 `<PubmedArticle>` 的原文
+  /// @return 规范化文献；缺 PMID 时为 null
+  /// @throws dev.patra.catalog.domain.exception.XmlParseException 原文不是合法 XML 时
+  CanonicalPublication parseArticle(String rawXml);
 }
