@@ -45,7 +45,7 @@ public record CurrentUserResponse(
         .emailVerified(account.emailVerified())
         .username(account.username())
         .displayName(account.displayName())
-        .avatarUrl(AvatarUrls.of(account.username(), account.avatar()))
+        .avatarUrl(AvatarUrls.of(account.avatar()))
         .avatarPalette(account.avatarPalette())
         .status(account.status())
         .deletionDueAt(account.deletionDueAt())

@@ -7,7 +7,6 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import dev.patra.identity.app.usecase.avatar.AvatarChanged;
 import dev.patra.identity.app.usecase.avatar.ChangeAvatarCommand;
 import dev.patra.identity.app.usecase.avatar.RemoveAvatarCommand;
 import dev.patra.identity.domain.exception.InvalidAvatarException;
@@ -47,12 +46,11 @@ class MeAvatarControllerIT {
   @Test
   void should_upload_and_return_avatar_url() {
     when(commandBus.handle(any(ChangeAvatarCommand.class)))
-        .thenReturn(AvatarChanged.of("chen-yu", Avatar.of(42L, "0123456789abcdef")));
+        .thenReturn(Avatar.of(42L, "0123456789abcdef"));
 
     JsonNode json = upload(FILE, 200);
 
-    assertThat(json.get("avatarUrl").asString())
-        .isEqualTo("/users/chen-yu/avatar?v=0123456789abcdef");
+    assertThat(json.get("avatarUrl").asString()).isEqualTo("/users/42/avatar?v=0123456789abcdef");
     ArgumentCaptor<ChangeAvatarCommand> command =
         ArgumentCaptor.forClass(ChangeAvatarCommand.class);
     verify(commandBus).handle(command.capture());

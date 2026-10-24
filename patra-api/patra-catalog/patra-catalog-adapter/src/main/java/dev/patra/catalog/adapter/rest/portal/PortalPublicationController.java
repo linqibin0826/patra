@@ -1,13 +1,16 @@
 package dev.patra.catalog.adapter.rest.portal;
 
+import dev.patra.catalog.adapter.rest.portal.request.PortalPublicationBatchRequest;
 import dev.patra.catalog.adapter.rest.portal.request.PortalPublicationListRequest;
 import dev.patra.catalog.adapter.rest.portal.request.PortalPublicationSearchRequest;
 import dev.patra.catalog.adapter.rest.portal.request.RepeatedParamListEditor;
 import dev.patra.catalog.adapter.rest.portal.response.PortalFullTextResponse;
+import dev.patra.catalog.adapter.rest.portal.response.PortalPaperBatchResponse;
 import dev.patra.catalog.adapter.rest.portal.response.PortalPaperResponse;
 import dev.patra.catalog.adapter.rest.portal.response.PortalPublicationDetailResponse;
 import dev.patra.catalog.adapter.rest.portal.response.PortalPublicationFacetsResponse;
 import dev.patra.catalog.app.usecase.portal.query.PortalFeedQueryService;
+import dev.patra.catalog.app.usecase.portal.query.PortalPublicationCardQueryService;
 import dev.patra.catalog.app.usecase.portal.query.PortalPublicationDetailQueryService;
 import dev.patra.catalog.app.usecase.portal.query.PortalPublicationFullTextQueryService;
 import dev.patra.catalog.app.usecase.portal.query.PortalPublicationSearchQueryService;
@@ -52,6 +55,7 @@ public class PortalPublicationController {
   private final PortalPublicationDetailQueryService portalPublicationDetailQueryService;
   private final PortalPublicationSearchQueryService portalPublicationSearchQueryService;
   private final PortalPublicationFullTextQueryService portalPublicationFullTextQueryService;
+  private final PortalPublicationCardQueryService portalPublicationCardQueryService;
   private final PortalApiConverter portalApiConverter;
 
   /// 本控制器的 `List` 参数全部按重复参数绑定、不拆逗号（类型值含逗号，见 [RepeatedParamListEditor]）。
@@ -94,6 +98,20 @@ public class PortalPublicationController {
   public PortalPublicationFacetsResponse facets(@Valid PortalPublicationSearchRequest req) {
     return portalApiConverter.toPublicationFacetsResponse(
         portalPublicationSearchQueryService.facets(toFilter(req)));
+  }
+
+  /// 按 ID 批量取文献卡片（文献库、收藏夹页）。不存在与软删的 ID 不返回。
+  ///
+  /// `/batch` 是字面路径，优先于 `/{id}` 模板匹配。
+  ///
+  /// @param request 文献 ID 列表（重复参数 `id`）
+  /// @return 卡片，按请求顺序
+  @GetMapping("/batch")
+  public PortalPaperBatchResponse batch(@Valid PortalPublicationBatchRequest request) {
+    return PortalPaperBatchResponse.of(
+        portalPublicationCardQueryService.findByIds(request.id()).stream()
+            .map(portalApiConverter::toResponse)
+            .toList());
   }
 
   /// 查询文献详情。

@@ -21,9 +21,9 @@ import dev.patra.common.CanonicalPublication.PublicationDates;
 import dev.patra.common.CanonicalPublication.PublicationType;
 import dev.patra.common.CanonicalPublication.QualifierName;
 import dev.patra.common.CanonicalPublication.SupplMeshName;
+import dev.patra.common.PartialDate;
 import dev.patra.common.PublicationIdentifierType;
-import java.time.DateTimeException;
-import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -78,7 +78,7 @@ import lombok.extern.slf4j.Slf4j;
 ///
 /// 1. 多语言处理：取第一个语言，保留原始 ISO 639-3 代码（转换在 Processor 层完成）
 /// 2. ISSN 存储：优先存储 Print ISSN，issnLinking 单独存储
-/// 3. 日期转换：Year/Month/Day → LocalDate，缺失月/日用默认值 1
+/// 3. 日期转换：Year/Month/Day → [PartialDate]，按实际精度记录，缺失的月/日不补
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -216,6 +216,7 @@ public final class CanonicalPublicationParsingStrategy
           case PubmedXmlElements.Article.PUBLICATION_TYPE_LIST ->
               parsePublicationTypeList(reader, fields);
           case PubmedXmlElements.Article.PAGINATION -> parsePagination(reader, fields);
+          case PubmedXmlElements.Article.E_LOCATION_ID -> parseELocationId(reader, fields);
           default -> XmlParsingHelper.skipElement(reader, localName);
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
@@ -237,6 +238,9 @@ public final class CanonicalPublicationParsingStrategy
           case PubmedXmlElements.Journal.JOURNAL_ISSUE -> parseJournalIssue(reader, fields);
           case PubmedXmlElements.Journal.TITLE ->
               fields.journalTitle = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
+          case PubmedXmlElements.Journal.ISO_ABBREVIATION ->
+              fields.isoAbbreviation =
+                  XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
           default -> XmlParsingHelper.skipElement(reader, localName);
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
@@ -293,10 +297,10 @@ public final class CanonicalPublicationParsingStrategy
             String yearStr = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
             fields.pubYear = parseIntSafe(yearStr);
           }
-          case PubmedXmlElements.Date.MONTH -> {
-            String monthStr = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
-            fields.pubMonth = parseMonth(monthStr);
-          }
+          case PubmedXmlElements.Date.MONTH ->
+              fields.pubMonthRaw = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
+          case PubmedXmlElements.Date.SEASON ->
+              fields.pubSeason = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
           case PubmedXmlElements.Date.DAY -> {
             String dayStr = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
             fields.pubDay = parseIntSafe(dayStr);
@@ -330,6 +334,8 @@ public final class CanonicalPublicationParsingStrategy
               fields.nlmUniqueId = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
           case PubmedXmlElements.Journal.ISSN_LINKING ->
               fields.issnLinking = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
+          case PubmedXmlElements.Journal.MEDLINE_TA ->
+              fields.medlineTa = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
           default -> XmlParsingHelper.skipElement(reader, localName);
         }
       } else if (event == XMLStreamConstants.END_ELEMENT
@@ -385,10 +391,10 @@ public final class CanonicalPublicationParsingStrategy
     }
   }
 
-  /// 解析一个 PubMedPubDate 元素为日期，月、日缺省补 1；年份缺失或不合法时返回 `null`。
-  private LocalDate parsePubMedPubDate(XMLStreamReader reader) throws XMLStreamException {
+  /// 解析一个 PubMedPubDate 元素为按精度记录的日期，缺的月 / 日不补；年份缺失时返回 `null`。
+  private PartialDate parsePubMedPubDate(XMLStreamReader reader) throws XMLStreamException {
     Integer year = null;
-    Integer month = null;
+    String month = null;
     Integer day = null;
     while (reader.hasNext()) {
       int event = reader.next();
@@ -399,7 +405,7 @@ public final class CanonicalPublicationParsingStrategy
           case PubmedXmlElements.Date.YEAR ->
               year = parseIntSafe(XmlParsingHelper.getElementTextWithMixedContent(reader).trim());
           case PubmedXmlElements.Date.MONTH ->
-              month = parseMonth(XmlParsingHelper.getElementTextWithMixedContent(reader).trim());
+              month = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
           case PubmedXmlElements.Date.DAY ->
               day = parseIntSafe(XmlParsingHelper.getElementTextWithMixedContent(reader).trim());
           default -> XmlParsingHelper.skipElement(reader, localName);
@@ -409,14 +415,7 @@ public final class CanonicalPublicationParsingStrategy
         break;
       }
     }
-    if (year == null) {
-      return null;
-    }
-    try {
-      return LocalDate.of(year, month != null ? month : 1, day != null ? day : 1);
-    } catch (DateTimeException e) {
-      return null;
-    }
+    return toPartialDate(year, month, day, null, null);
   }
 
   /// 解析 ArticleIdList 元素。
@@ -779,15 +778,23 @@ public final class CanonicalPublicationParsingStrategy
     }
   }
 
-  /// 解析 Pagination 元素。
+  /// 解析 Pagination 元素：`StartPage`、`EndPage`、`MedlinePgn` 都可能出现。
   private void parsePagination(XMLStreamReader reader, ParsedFields fields)
       throws XMLStreamException {
     while (reader.hasNext()) {
       int event = reader.next();
 
-      if (event == XMLStreamConstants.START_ELEMENT
-          && PubmedXmlElements.Article.MEDLINE_PGN.equals(reader.getLocalName())) {
-        fields.medlinePgn = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
+      if (event == XMLStreamConstants.START_ELEMENT) {
+        String localName = reader.getLocalName();
+        switch (localName) {
+          case PubmedXmlElements.Article.MEDLINE_PGN ->
+              fields.medlinePgn = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
+          case PubmedXmlElements.Article.START_PAGE ->
+              fields.startPage = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
+          case PubmedXmlElements.Article.END_PAGE ->
+              fields.endPage = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
+          default -> XmlParsingHelper.skipElement(reader, localName);
+        }
       } else if (event == XMLStreamConstants.END_ELEMENT
           && PubmedXmlElements.Article.PAGINATION.equals(reader.getLocalName())) {
         break;
@@ -795,21 +802,66 @@ public final class CanonicalPublicationParsingStrategy
     }
   }
 
+  /// 解析 ELocationID 元素：`ValidYN="N"` 的不收；pii 取第一个，doi 只作 `ArticleIdList` 没有 DOI 时的后备。
+  private void parseELocationId(XMLStreamReader reader, ParsedFields fields)
+      throws XMLStreamException {
+    String type = reader.getAttributeValue(null, PubmedXmlElements.Attribute.E_ID_TYPE);
+    String valid = reader.getAttributeValue(null, PubmedXmlElements.Attribute.VALID_YN);
+    String value = XmlParsingHelper.getElementTextWithMixedContent(reader).trim();
+    if ("N".equals(valid) || value.isEmpty()) {
+      return;
+    }
+    if ("pii".equals(type) && fields.elocationPii == null) {
+      fields.elocationPii = value;
+    } else if ("doi".equals(type) && fields.elocationDoi == null) {
+      fields.elocationDoi = value;
+    }
+  }
+
   // ========== 辅助方法 ==========
 
-  /// 解析月份（支持数字和英文缩写）。
+  /// 解析月份（支持数字和英文缩写），认不出或超出范围时返回 `null`。
   private Integer parseMonth(String monthStr) {
     if (monthStr == null || monthStr.isBlank()) {
       return null;
     }
 
-    // 尝试解析数字
+    // 尝试解析数字（超出 1 ~ 12 视为认不出）
     try {
-      return Integer.parseInt(monthStr);
+      int month = Integer.parseInt(monthStr);
+      return month >= 1 && month <= 12 ? month : null;
     } catch (NumberFormatException e) {
       // 尝试解析英文缩写
       return MONTH_MAP.get(monthStr.toLowerCase(Locale.ROOT));
     }
+  }
+
+  /// 由日期部件组装按精度记录的日期，不补缺失的月 / 日。
+  ///
+  /// - 年份为空：返回 `null`（整篇记录会被当作无效跳过）
+  /// - 月份认不出（区间 `Jun-Jul`、超出 1 ~ 12）：丢掉月份，原文放进 `text`
+  /// - 日对该月不合法（2 月 30 日）或没有月份：丢掉日
+  ///
+  /// @param year 年
+  /// @param monthRaw 月份原文，可空
+  /// @param day 日，可空
+  /// @param season 季节原文，可空
+  /// @param text 其他原文（如 `MedlineDate`），可空
+  /// @return 按精度记录的日期，年份为空时为 `null`
+  private PartialDate toPartialDate(
+      Integer year, String monthRaw, Integer day, String season, String text) {
+    if (year == null) {
+      return null;
+    }
+    Integer month = parseMonth(monthRaw);
+    String rawText = text;
+    if (month == null && monthRaw != null && !monthRaw.isBlank() && rawText == null) {
+      rawText = monthRaw;
+    }
+    Integer validDay =
+        month != null && day != null && YearMonth.of(year, month).isValidDay(day) ? day : null;
+    String seasonText = season == null || season.isBlank() ? null : season;
+    return new PartialDate(year, month, validDay, seasonText, rawText);
   }
 
   /// 从 MedlineDate 提取年份。
@@ -822,6 +874,14 @@ public final class CanonicalPublicationParsingStrategy
       return Integer.parseInt(matcher.group(1));
     }
     return null;
+  }
+
+  /// 是否为空或空白。
+  ///
+  /// @param value 字符串，可空
+  /// @return 为 null 或只含空白时为 `true`
+  private static boolean isBlank(String value) {
+    return value == null || value.isBlank();
   }
 
   /// 安全解析整数。
@@ -890,16 +950,25 @@ public final class CanonicalPublicationParsingStrategy
           Identifier.builder().type(PublicationIdentifierType.PMID).value(fields.pmid).build());
     }
 
-    // DOI（可选）
-    if (fields.doi != null && !fields.doi.isBlank()) {
-      identifiers.add(
-          Identifier.builder().type(PublicationIdentifierType.DOI).value(fields.doi).build());
+    // DOI（可选）：ArticleIdList 优先，没有时用 ELocationID 的 doi
+    String doi = fields.doi != null && !fields.doi.isBlank() ? fields.doi : fields.elocationDoi;
+    if (doi != null && !doi.isBlank()) {
+      identifiers.add(Identifier.builder().type(PublicationIdentifierType.DOI).value(doi).build());
     }
 
     // PMC（可选）
     if (fields.pmcId != null && !fields.pmcId.isBlank()) {
       identifiers.add(
           Identifier.builder().type(PublicationIdentifierType.PMC).value(fields.pmcId).build());
+    }
+
+    // PII（可选）：来自 ELocationID，文章号或出版商条目号
+    if (fields.elocationPii != null) {
+      identifiers.add(
+          Identifier.builder()
+              .type(PublicationIdentifierType.PII)
+              .value(fields.elocationPii)
+              .build());
     }
 
     return identifiers;
@@ -937,25 +1006,23 @@ public final class CanonicalPublicationParsingStrategy
         .issn(issn)
         .issnType(issnType)
         .issnLinking(fields.issnLinking)
+        .isoAbbreviation(fields.isoAbbreviation)
+        .medlineAbbreviation(fields.medlineTa)
         .volume(fields.volume)
         .issue(fields.issue)
         .build();
   }
 
-  /// 构建出版日期。
-  ///
-  /// 日期转换规则：Year/Month/Day → LocalDate，缺失月/日用默认值 1。
+  /// 构建出版日期，按实际精度记录（见 [#toPartialDate]）。
   private PublicationDates buildDates(ParsedFields fields) {
-    LocalDate publishedDate = null;
-
-    if (fields.pubYear != null) {
-      int month = fields.pubMonth != null ? fields.pubMonth : 1;
-      int day = fields.pubDay != null ? fields.pubDay : 1;
-      publishedDate = LocalDate.of(fields.pubYear, month, day);
-    }
-
     return PublicationDates.builder()
-        .published(publishedDate)
+        .published(
+            toPartialDate(
+                fields.pubYear,
+                fields.pubMonthRaw,
+                fields.pubDay,
+                fields.pubSeason,
+                fields.medlineDate))
         .pmcRelease(fields.pmcRelease)
         .build();
   }
@@ -1103,11 +1170,15 @@ public final class CanonicalPublicationParsingStrategy
 
   /// 构建页码信息。
   private Pagination buildPagination(ParsedFields fields) {
-    if (fields.medlinePgn == null || fields.medlinePgn.isBlank()) {
+    if (isBlank(fields.medlinePgn) && isBlank(fields.startPage) && isBlank(fields.endPage)) {
       return null;
     }
 
-    return Pagination.builder().medlinePgn(fields.medlinePgn).build();
+    return Pagination.builder()
+        .medlinePgn(blankToNull(fields.medlinePgn))
+        .startPage(blankToNull(fields.startPage))
+        .endPage(blankToNull(fields.endPage))
+        .build();
   }
 
   /// 构建补充 MeSH 概念列表。
@@ -1236,10 +1307,11 @@ public final class CanonicalPublicationParsingStrategy
 
     // 日期
     Integer pubYear;
-    Integer pubMonth;
+    String pubMonthRaw;
     Integer pubDay;
+    String pubSeason;
     String medlineDate;
-    LocalDate pmcRelease;
+    PartialDate pmcRelease;
 
     // 元数据
     List<String> languages = new ArrayList<>();
@@ -1275,6 +1347,12 @@ public final class CanonicalPublicationParsingStrategy
 
     // 页码
     String medlinePgn;
+    String startPage;
+    String endPage;
+    String elocationPii;
+    String elocationDoi;
+    String isoAbbreviation;
+    String medlineTa;
 
     // 其他语言摘要
     List<ParsedOtherAbstract> otherAbstracts = new ArrayList<>();

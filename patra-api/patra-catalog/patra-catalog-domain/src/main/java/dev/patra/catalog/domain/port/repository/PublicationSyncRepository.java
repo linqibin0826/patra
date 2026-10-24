@@ -1,11 +1,15 @@
 package dev.patra.catalog.domain.port.repository;
 
 import dev.patra.catalog.domain.model.vo.publication.PublicationCompleteData;
+import dev.patra.catalog.domain.model.vo.publication.PublicationSourceRow;
 import dev.patra.catalog.domain.model.vo.publication.PublicationSyncTarget;
+import dev.patra.catalog.domain.model.vo.publication.PubmedSourceRecord;
+import dev.patra.catalog.domain.model.vo.publication.SourcePosition;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /// PubMed 增量同步的覆盖更新仓储。
 ///
@@ -31,18 +35,42 @@ public interface PublicationSyncRepository {
 
   /// 覆盖更新已有文献及其 PubMed 子数据。
   ///
-  /// 前置条件：每条 `data.getPublicationId()` 已是库里存在的 ID。已软删除的会被复活。
-  ///
   /// @param data 覆盖数据，已分配好已有 ID
-  /// @param doiOverrides 文献 ID → 要写入的 DOI（DOI 冲突时调用方传旧值），不在其中的用新值
-  /// @param syncedAt 本次同步时间，写入 `last_synced_at`
+  /// @param doiOverrides 文献 ID → 要写入的 DOI（新 DOI 冲突时保留旧值）
+  /// @param syncedAt 本次同步时间
+  /// @param refreshSyncedAt 要刷新 `last_synced_at` 的文献 ID（拿到真正更新的版本时）；其余保留原值
   void overwriteAllWithAssociations(
-      List<PublicationCompleteData> data, Map<Long, String> doiOverrides, Instant syncedAt);
+      List<PublicationCompleteData> data,
+      Map<Long, String> doiOverrides,
+      Instant syncedAt,
+      Set<Long> refreshSyncedAt);
 
-  /// 按 PMID 软删除文献，已删除的不重复计数。
+  /// 按 PMID 写来源行（存在则覆盖）。
   ///
-  /// @param pmids PMID
+  /// @param rows 来源行
+  void upsertSources(List<PublicationSourceRow> rows);
+
+  /// 按 `DeleteCitation` 软删文献，带来源位置守卫。
+  ///
+  /// - 库里有该 PMID 且来源表的位置不比删除文件新（或没有位置）：软删（已软删的不重复计数），来源位置改为删除文件
+  /// - 来源表的位置比删除文件新：不动
+  /// - 库里没有该 PMID：`writeTombstones` 为真时写墓碑来源行（原文为空），否则不动
+  ///
+  /// @param pmids 被删除的 PMID
+  /// @param position 删除文件的来源位置
+  /// @param writeTombstones 是否为库里没有的 PMID 写墓碑（`ALL` 范围）
   /// @param deletedAt 删除时间
-  /// @return 本次实际软删除的行数
-  int softDeleteByPmids(Collection<String> pmids, Instant deletedAt);
+  /// @return 本次实际软删的行数
+  int softDeleteByPmids(
+      Collection<String> pmids,
+      SourcePosition position,
+      boolean writeTombstones,
+      Instant deletedAt);
+
+  /// 本地重算的候选：有原文、文献未软删的来源行，按 PMID 升序键集分页。
+  ///
+  /// @param afterPmid 上一页最后一个 PMID；第一页为 null
+  /// @param limit 每页条数
+  /// @return 原文与来源位置
+  List<PubmedSourceRecord> findReparseCandidates(String afterPmid, int limit);
 }

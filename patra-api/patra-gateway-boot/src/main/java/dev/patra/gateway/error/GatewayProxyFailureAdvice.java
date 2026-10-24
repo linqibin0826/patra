@@ -39,9 +39,11 @@ public class GatewayProxyFailureAdvice {
   /// @param request HTTP 请求
   /// @param response HTTP 响应
   /// @return 全局处理器的响应
+  /// @throws Exception 响应已提交时全局处理器原样抛回的异常，由容器中止连接
   @ExceptionHandler({ResourceAccessException.class, HttpServerErrorException.class})
   public ResponseEntity<ProblemDetail> handleProxyFailure(
-      RuntimeException ex, HttpServletRequest request, HttpServletResponse response) {
+      RuntimeException ex, HttpServletRequest request, HttpServletResponse response)
+      throws Exception {
     Exception toRender =
         ProxyFailureClassifier.wrap(ex, http).map(Exception.class::cast).orElse(ex);
     return globalHandler.handleException(toRender, request, response);

@@ -4,16 +4,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.patra.catalog.domain.model.aggregate.PublicationAggregate;
+import dev.patra.catalog.domain.model.enums.PublicationDateType;
 import dev.patra.catalog.domain.model.enums.PublicationMedium;
 import dev.patra.catalog.domain.model.enums.PublicationStatus;
 import dev.patra.catalog.domain.model.vo.publication.LanguageInfo;
+import dev.patra.catalog.domain.model.vo.publication.Pagination;
 import dev.patra.catalog.domain.model.vo.publication.PublicationAuthorSnapshot;
 import dev.patra.catalog.domain.model.vo.publication.PublicationCompleteData;
+import dev.patra.catalog.domain.model.vo.publication.PublicationDate;
 import dev.patra.catalog.domain.model.vo.publication.PublicationId;
 import dev.patra.catalog.domain.model.vo.publication.PublicationIdentifier;
 import dev.patra.catalog.domain.model.vo.publication.PublicationMeshHeading;
 import dev.patra.catalog.domain.model.vo.publication.PublicationMetadata;
 import dev.patra.catalog.domain.model.vo.publication.PublicationSyncTarget;
+import dev.patra.catalog.domain.model.vo.publication.SourcePosition;
 import dev.patra.catalog.domain.model.vo.venue.VenueId;
 import dev.patra.catalog.domain.model.vo.venue.VenueInstanceId;
 import dev.patra.catalog.infra.config.CatalogITPostgreSQLContainerInitializer;
@@ -27,6 +31,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -114,7 +119,7 @@ class PublicationSyncRepositoryAdapterIT {
         List.of(PublicationIdentifier.of(PublicationIdentifierType.PMC, "PMC9100001", "PubMed")));
     revised.assignId(PublicationId.of(id));
     adapter.overwriteAllWithAssociations(
-        List.of(completeData(revised, "D000002", "batch-2")), Map.of(), SYNCED_AT);
+        List.of(completeData(revised, "D000002", "batch-2")), Map.of(), SYNCED_AT, Set.of(id));
     flushAndClear();
 
     assertThat(string("SELECT title FROM cat_publication WHERE id = ?", id)).isEqualTo("Title B");
@@ -181,13 +186,14 @@ class PublicationSyncRepositoryAdapterIT {
         List.of(completeData(original, "D000001", "batch-1")));
     flushAndClear();
     long id = original.getId().value();
-    adapter.softDeleteByPmids(List.of("91000002"), SYNCED_AT);
+    adapter.softDeleteByPmids(
+        List.of("91000002"), SourcePosition.ofFileName("pubmed26n1350.xml.gz"), false, SYNCED_AT);
     flushAndClear();
 
     PublicationAggregate revised = aggregate("91000002", "10.9100/b", "New");
     revised.assignId(PublicationId.of(id));
     adapter.overwriteAllWithAssociations(
-        List.of(completeData(revised, "D000003", "batch-2")), Map.of(), SYNCED_AT);
+        List.of(completeData(revised, "D000003", "batch-2")), Map.of(), SYNCED_AT, Set.of());
     flushAndClear();
 
     assertThat(
@@ -204,7 +210,8 @@ class PublicationSyncRepositoryAdapterIT {
     publicationRepository.insertAllWithAssociations(
         List.of(PublicationCompleteData.ofPublication(original)));
     flushAndClear();
-    adapter.softDeleteByPmids(List.of("91000003"), SYNCED_AT);
+    adapter.softDeleteByPmids(
+        List.of("91000003"), SourcePosition.ofFileName("pubmed26n1350.xml.gz"), false, SYNCED_AT);
     flushAndClear();
 
     Map<String, PublicationSyncTarget> targets =
@@ -224,9 +231,21 @@ class PublicationSyncRepositoryAdapterIT {
         List.of(PublicationCompleteData.ofPublication(aggregate("91000004", "10.9100/d", "T"))));
     flushAndClear();
 
-    assertThat(adapter.softDeleteByPmids(List.of("91000004", "99999998"), SYNCED_AT)).isEqualTo(1);
+    assertThat(
+            adapter.softDeleteByPmids(
+                List.of("91000004", "99999998"),
+                SourcePosition.ofFileName("pubmed26n1350.xml.gz"),
+                false,
+                SYNCED_AT))
+        .isEqualTo(1);
     flushAndClear();
-    assertThat(adapter.softDeleteByPmids(List.of("91000004"), SYNCED_AT)).isZero();
+    assertThat(
+            adapter.softDeleteByPmids(
+                List.of("91000004"),
+                SourcePosition.ofFileName("pubmed26n1350.xml.gz"),
+                false,
+                SYNCED_AT))
+        .isZero();
   }
 
   @Test
@@ -239,7 +258,8 @@ class PublicationSyncRepositoryAdapterIT {
             PublicationCompleteData.ofPublication(upper),
             PublicationCompleteData.ofPublication(deleted)));
     flushAndClear();
-    adapter.softDeleteByPmids(List.of("91000006"), SYNCED_AT);
+    adapter.softDeleteByPmids(
+        List.of("91000006"), SourcePosition.ofFileName("pubmed26n1350.xml.gz"), false, SYNCED_AT);
     flushAndClear();
 
     assertThat(adapter.findPublicationIdsByDois(List.of("10.9100/ABC", "10.9100/x")))
@@ -262,7 +282,8 @@ class PublicationSyncRepositoryAdapterIT {
     adapter.overwriteAllWithAssociations(
         List.of(PublicationCompleteData.ofPublication(revised)),
         Map.of(id, "10.9100/old"),
-        SYNCED_AT);
+        SYNCED_AT,
+        Set.of());
     flushAndClear();
 
     assertThat(string("SELECT doi FROM cat_publication WHERE id = ?", id)).isEqualTo("10.9100/old");
@@ -285,8 +306,77 @@ class PublicationSyncRepositoryAdapterIT {
     assertThatThrownBy(
             () ->
                 adapter.overwriteAllWithAssociations(
-                    List.of(PublicationCompleteData.ofPublication(revisedB)), Map.of(), SYNCED_AT))
+                    List.of(PublicationCompleteData.ofPublication(revisedB)),
+                    Map.of(),
+                    SYNCED_AT,
+                    Set.of()))
         .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  @DisplayName("插入：引用列与按精度的日期落库，年精度的日期行不带月日、date_value 为空")
+  void should_persist_citation_columns_and_precise_dates() {
+    PublicationAggregate p = aggregate("91000101", "10.9100/c1", "Citation insert");
+    p.assignCitationDetails(10, null, Pagination.of("1451-61", "1451", "1461"), "N Engl J Med");
+    publicationRepository.insertAllWithAssociations(
+        List.of(
+            PublicationCompleteData.builder()
+                .publication(p)
+                .metadata(PublicationMetadata.ofImport(ProvenanceCode.PUBMED, "batch-c1"))
+                .dates(List.of(PublicationDate.ofYear(PublicationDateType.PUBLISHED, 2024)))
+                .build()));
+    flushAndClear();
+    long id = p.getId().value();
+
+    Map<String, Object> row =
+        jdbc.queryForMap(
+            "SELECT publication_month, publication_day, medline_pgn, start_page, end_page,"
+                + " journal_iso_abbreviation FROM cat_publication WHERE id = ?",
+            id);
+    assertThat(row)
+        .containsEntry("publication_month", 10)
+        .containsEntry("medline_pgn", "1451-61")
+        .containsEntry("start_page", "1451")
+        .containsEntry("end_page", "1461")
+        .containsEntry("journal_iso_abbreviation", "N Engl J Med");
+    assertThat(row.get("publication_day")).isNull();
+    Map<String, Object> date =
+        jdbc.queryForMap(
+            "SELECT month, day, date_value, date_precision FROM cat_publication_date"
+                + " WHERE publication_id = ?",
+            id);
+    assertThat(date.get("month")).isNull();
+    assertThat(date.get("day")).isNull();
+    assertThat(date.get("date_value")).isNull();
+    assertThat(date).containsEntry("date_precision", "year");
+  }
+
+  @Test
+  @DisplayName("覆盖：引用列一并更新")
+  void should_overwrite_citation_columns() {
+    PublicationAggregate original = aggregate("91000102", "10.9100/c2", "Citation overwrite");
+    publicationRepository.insertAllWithAssociations(
+        List.of(completeData(original, "D000001", "batch-c2")));
+    flushAndClear();
+    long id = original.getId().value();
+
+    PublicationAggregate revised = aggregate("91000102", "10.9100/c2", "Citation overwrite");
+    revised.assignCitationDetails(3, 5, Pagination.of("e12", null, null), "Sci Rep");
+    revised.assignId(PublicationId.of(id));
+    adapter.overwriteAllWithAssociations(
+        List.of(completeData(revised, "D000001", "batch-c2b")), Map.of(), SYNCED_AT, Set.of());
+    flushAndClear();
+
+    Map<String, Object> row =
+        jdbc.queryForMap(
+            "SELECT publication_month, publication_day, medline_pgn, journal_iso_abbreviation"
+                + " FROM cat_publication WHERE id = ?",
+            id);
+    assertThat(row)
+        .containsEntry("publication_month", 3)
+        .containsEntry("publication_day", 5)
+        .containsEntry("medline_pgn", "e12")
+        .containsEntry("journal_iso_abbreviation", "Sci Rep");
   }
 
   private PublicationCompleteData completeData(

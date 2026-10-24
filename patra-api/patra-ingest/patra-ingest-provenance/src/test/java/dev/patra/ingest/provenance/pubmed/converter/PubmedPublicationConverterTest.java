@@ -3,6 +3,7 @@ package dev.patra.ingest.provenance.pubmed.converter;
 import static org.assertj.core.api.Assertions.*;
 
 import dev.patra.common.CanonicalPublication;
+import dev.patra.common.PartialDate;
 import dev.patra.common.PublicationIdentifierType;
 import dev.patra.ingest.provenance.pubmed.model.response.PubmedPublication;
 import java.time.LocalDate;
@@ -122,7 +123,8 @@ class PubmedPublicationConverterTest {
             tuple(PublicationIdentifierType.DOI, "10.1234/test.2023.001"),
             tuple(PublicationIdentifierType.PMC, "PMC1234567"));
     assertThat(result.getDates()).isNotNull();
-    assertThat(result.getDates().getPublished()).isEqualTo(LocalDate.of(2023, 12, 15));
+    assertThat(result.getDates().getPublished())
+        .isEqualTo(PartialDate.ofDay(LocalDate.of(2023, 12, 15)));
     assertThat(result.getKeywords()).hasSize(1);
     assertThat(result.getKeywords().get(0).getKeywords())
         .extracting("term")
@@ -423,7 +425,8 @@ class PubmedPublicationConverterTest {
 
     // Assert
     assertThat(result.getDates()).isNotNull();
-    assertThat(result.getDates().getPublished()).isEqualTo(LocalDate.of(2022, 1, 1));
+    assertThat(result.getDates().getPublished())
+        .isEqualTo(PartialDate.ofDay(LocalDate.of(2022, 1, 1)));
   }
 
   @Test
@@ -457,7 +460,8 @@ class PubmedPublicationConverterTest {
 
     // Assert
     assertThat(result.getDates()).isNotNull();
-    assertThat(result.getDates().getPublished()).isEqualTo(LocalDate.of(2021, 6, 1));
+    assertThat(result.getDates().getPublished())
+        .isEqualTo(PartialDate.ofDay(LocalDate.of(2021, 6, 1)));
   }
 
   @Test
@@ -492,7 +496,8 @@ class PubmedPublicationConverterTest {
 
     // Assert
     assertThat(result.getDates()).isNotNull();
-    assertThat(result.getDates().getPublished()).isEqualTo(LocalDate.of(2020, 3, 25));
+    assertThat(result.getDates().getPublished())
+        .isEqualTo(PartialDate.ofDay(LocalDate.of(2020, 3, 25)));
   }
 
   @Test
@@ -558,7 +563,8 @@ class PubmedPublicationConverterTest {
 
     // Assert
     assertThat(result.getDates()).isNotNull();
-    assertThat(result.getDates().getPublished()).isEqualTo(LocalDate.of(2023, 12, 1));
+    assertThat(result.getDates().getPublished())
+        .isEqualTo(PartialDate.ofDay(LocalDate.of(2023, 12, 1)));
   }
 
   @Test
@@ -593,7 +599,8 @@ class PubmedPublicationConverterTest {
 
     // Assert
     assertThat(result.getDates()).isNotNull();
-    assertThat(result.getDates().getPublished()).isEqualTo(LocalDate.of(2023, 1, 28));
+    assertThat(result.getDates().getPublished())
+        .isEqualTo(PartialDate.ofDay(LocalDate.of(2023, 1, 28)));
   }
 
   @Test
@@ -914,6 +921,7 @@ class PubmedPublicationConverterTest {
 
     // Assert
     assertThat(result.getDates()).isNotNull();
-    assertThat(result.getDates().getPublished()).isEqualTo(LocalDate.of(2023, 1, 1));
+    assertThat(result.getDates().getPublished())
+        .isEqualTo(PartialDate.ofDay(LocalDate.of(2023, 1, 1)));
   }
 }

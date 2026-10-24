@@ -16,6 +16,7 @@ import dev.patra.catalog.domain.model.enums.ReviewStatus;
 import dev.patra.catalog.domain.model.enums.TranslationType;
 import dev.patra.catalog.domain.model.enums.VersionType;
 import dev.patra.catalog.domain.model.vo.publication.LanguageInfo;
+import dev.patra.catalog.domain.model.vo.publication.Pagination;
 import dev.patra.catalog.domain.model.vo.publication.PublicationAbstract;
 import dev.patra.catalog.domain.model.vo.publication.PublicationAlternativeAbstract;
 import dev.patra.catalog.domain.model.vo.publication.PublicationAuthorAffiliationSnapshot;
@@ -87,6 +88,9 @@ public abstract class PublicationJpaMapper {
   @Mapping(target = "mediaType", source = "mediaType", qualifiedByName = "mediaTypeToString")
   @Mapping(target = "oaStatus", source = "oaStatus", qualifiedByName = "oaStatusToString")
   @Mapping(target = "extData", ignore = true) // 暂未使用
+  @Mapping(target = "medlinePgn", source = "pagination.medlinePgn")
+  @Mapping(target = "startPage", source = "pagination.startPage")
+  @Mapping(target = "endPage", source = "pagination.endPage")
   @Mapping(target = "version", ignore = true)
   @Mapping(target = "createdAt", ignore = true)
   @Mapping(target = "createdBy", ignore = true)
@@ -114,29 +118,36 @@ public abstract class PublicationJpaMapper {
     // 重建嵌入式值对象
     LanguageInfo languageInfo = rebuildLanguageInfo(entity);
 
-    return PublicationAggregate.restore(
-        entity.getId() != null ? PublicationId.of(entity.getId()) : null,
-        stringToProvenanceCode(entity.getProvenanceCode()),
-        entity.getPmid(),
-        entity.getDoi(),
-        List.of(), // extendedIdentifiers 单独加载
-        entity.getVenueId() != null ? VenueId.of(entity.getVenueId()) : null,
-        VenueInstanceId.of(entity.getVenueInstanceId()),
-        entity.getTitle(),
-        entity.getOriginalTitle(),
-        languageInfo,
-        null, // publicationAbstract 单独加载
-        stringToPublicationStatus(entity.getPublicationStatus()),
-        stringToPublicationMedium(entity.getMediaType()),
-        entity.getPublicationYear(),
-        entity.getIsOa(),
-        stringToOaStatus(entity.getOaStatus()),
-        entity.getAuthorsComplete(),
-        entity.getCitationCount(),
-        entity.getNumberOfReferences(),
-        entity.getConflictOfInterest(),
-        entity.getLastSyncedAt(),
-        entity.getVersion());
+    PublicationAggregate aggregate =
+        PublicationAggregate.restore(
+            entity.getId() != null ? PublicationId.of(entity.getId()) : null,
+            stringToProvenanceCode(entity.getProvenanceCode()),
+            entity.getPmid(),
+            entity.getDoi(),
+            List.of(), // extendedIdentifiers 单独加载
+            entity.getVenueId() != null ? VenueId.of(entity.getVenueId()) : null,
+            VenueInstanceId.of(entity.getVenueInstanceId()),
+            entity.getTitle(),
+            entity.getOriginalTitle(),
+            languageInfo,
+            null, // publicationAbstract 单独加载
+            stringToPublicationStatus(entity.getPublicationStatus()),
+            stringToPublicationMedium(entity.getMediaType()),
+            entity.getPublicationYear(),
+            entity.getIsOa(),
+            stringToOaStatus(entity.getOaStatus()),
+            entity.getAuthorsComplete(),
+            entity.getCitationCount(),
+            entity.getNumberOfReferences(),
+            entity.getConflictOfInterest(),
+            entity.getLastSyncedAt(),
+            entity.getVersion());
+    aggregate.assignCitationDetails(
+        entity.getPublicationMonth(),
+        entity.getPublicationDay(),
+        Pagination.of(entity.getMedlinePgn(), entity.getStartPage(), entity.getEndPage()),
+        entity.getJournalIsoAbbreviation());
+    return aggregate;
   }
 
   /// 更新托管实体的可变字段。

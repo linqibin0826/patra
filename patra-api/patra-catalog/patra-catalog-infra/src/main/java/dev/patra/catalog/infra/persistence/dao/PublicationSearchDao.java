@@ -66,6 +66,8 @@ public interface PublicationSearchDao extends JpaRepository<PublicationEntity, L
         p.venue_id AS "venueId",
         v.title AS "venueName",
         p.publication_year AS "publicationYear",
+        p.publication_month AS "publicationMonth",
+        p.publication_day AS "publicationDay",
         p.citation_count AS "citationCount",
         p.doi AS "doi",
         p.pmid AS "pmid",
@@ -84,11 +86,14 @@ public interface PublicationSearchDao extends JpaRepository<PublicationEntity, L
   /// 排序：`:sortMode` 为
   /// [dev.patra.catalog.domain.model.read.portal.PublicationSearchSort] 名称。
   /// CITED 只按被引 + id（与原 feed 一致，同被引不看采集时间）；LATEST / YEAR 才用 last_synced_at。
+  /// YEAR 依次按年、月、日降序且空值靠后：同一年里只到年的排在有月份的之后，同一月里只到月的排在有日的之后。
   String ORDER_BY =
       """
       ORDER BY
         CASE WHEN :sortMode = 'CITED' THEN COALESCE(p.citation_count, -1) ELSE NULL END DESC,
         CASE WHEN :sortMode = 'YEAR' THEN p.publication_year ELSE NULL END DESC NULLS LAST,
+        CASE WHEN :sortMode = 'YEAR' THEN p.publication_month ELSE NULL END DESC NULLS LAST,
+        CASE WHEN :sortMode = 'YEAR' THEN p.publication_day ELSE NULL END DESC NULLS LAST,
         CASE WHEN :sortMode IN ('LATEST', 'YEAR') THEN p.last_synced_at ELSE NULL END DESC NULLS LAST,
         p.id DESC
       """;
@@ -124,6 +129,15 @@ public interface PublicationSearchDao extends JpaRepository<PublicationEntity, L
       @Param("lvl1") String[] lvl1,
       @Param("sortMode") String sortMode,
       Pageable pageable);
+
+  /// 按 ID 批量取列表项（单条 SQL，无 N+1；不排序，由调用方按请求顺序重排）。
+  ///
+  /// @param ids 文献主键数组
+  /// @return 存在且未软删的投影行
+  @Query(
+      value = SELECT_LIST + "WHERE p.deleted_at IS NULL AND p.id = ANY((:ids)::bigint[])",
+      nativeQuery = true)
+  List<PublicationSearchRow> findCardsByIds(@Param("ids") Long[] ids);
 
   /// 满足条件的文献总数（facets 的 total 也用它）。
   ///

@@ -3,6 +3,7 @@ package dev.patra.catalog.infra.batch.publication;
 import dev.patra.catalog.domain.model.aggregate.PublicationAggregate;
 import dev.patra.catalog.domain.model.vo.publication.PublicationAbstractSection;
 import dev.patra.catalog.domain.model.vo.publication.PublicationMetadata;
+import dev.patra.common.PartialDate;
 import java.util.List;
 import lombok.Builder;
 
@@ -399,43 +400,46 @@ public record PublicationImportResult(
           dateType, year, month, day, "day", null, null, false, orderNum);
     }
 
-    /// 从 LocalDate 创建日期数据。
+    /// 从按精度记录的日期创建日期数据，精度照部件，不补月 / 日。
     ///
     /// @param dateType 日期类型代码
-    /// @param localDate LocalDate 对象
+    /// @param date 按精度记录的日期
     /// @param orderNum 顺序号
     /// @return 日期数据对象
-    public static PublicationDateData fromLocalDate(
-        String dateType, java.time.LocalDate localDate, Integer orderNum) {
-      return new PublicationDateData(
-          dateType,
-          localDate.getYear(),
-          localDate.getMonthValue(),
-          localDate.getDayOfMonth(),
-          "day",
-          null,
-          null,
-          false,
-          orderNum);
+    public static PublicationDateData fromPartialDate(
+        String dateType, PartialDate date, Integer orderNum) {
+      return of(dateType, date, false, orderNum);
     }
 
-    /// 创建主要日期数据。
+    /// 从按精度记录的日期创建主要日期数据。
     ///
     /// @param dateType 日期类型代码
-    /// @param localDate LocalDate 对象
+    /// @param date 按精度记录的日期
     /// @param orderNum 顺序号
     /// @return 主要日期数据对象
-    public static PublicationDateData primaryFromLocalDate(
-        String dateType, java.time.LocalDate localDate, Integer orderNum) {
+    public static PublicationDateData primaryFromPartialDate(
+        String dateType, PartialDate date, Integer orderNum) {
+      return of(dateType, date, true, orderNum);
+    }
+
+    /// 由按精度记录的日期组装。
+    ///
+    /// @param dateType 日期类型代码
+    /// @param date 按精度记录的日期
+    /// @param primary 是否主要日期
+    /// @param orderNum 顺序号
+    /// @return 日期数据对象
+    private static PublicationDateData of(
+        String dateType, PartialDate date, boolean primary, Integer orderNum) {
       return new PublicationDateData(
           dateType,
-          localDate.getYear(),
-          localDate.getMonthValue(),
-          localDate.getDayOfMonth(),
-          "day",
-          null,
-          null,
-          true,
+          date.year(),
+          date.month(),
+          date.day(),
+          date.precision(),
+          date.season(),
+          date.text(),
+          primary,
           orderNum);
     }
   }

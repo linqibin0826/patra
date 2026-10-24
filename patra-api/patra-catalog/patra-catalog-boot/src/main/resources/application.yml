@@ -25,6 +25,12 @@ spring:
     job:
       enabled: false
 
+  # 异步请求（StreamingResponseBody：引用导出、全文 PDF / 图片）的总时长上限。不配时用 Tomcat 默认 30 秒，
+  # 按总时长计、持续写出也不重置，慢速客户端下载 5,000 条导出会被中途掐断（spec 第 6.2 节）
+  mvc:
+    async:
+      request-timeout: 10m
+
   # Database Configuration
   datasource:
     driver-class-name: org.postgresql.Driver

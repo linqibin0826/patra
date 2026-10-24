@@ -1,6 +1,7 @@
 package dev.patra.tool.web.error.handler;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -25,6 +26,7 @@ import dev.patra.tool.web.error.model.ValidationError;
 import dev.patra.tool.web.error.spi.ValidationErrorsFormatter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.lang.reflect.Method;
 import java.time.Duration;
 import java.util.List;
@@ -96,7 +98,7 @@ class GlobalRestExceptionHandlerTest {
 
   @Test
   @DisplayName("应该处理通用异常并返回 ProblemDetail 响应")
-  void shouldHandleGenericException() {
+  void shouldHandleGenericException() throws Exception {
     // Given: 准备异常和响应
     Exception exception = new RuntimeException("测试异常");
     HttpServletRequest request = mock(HttpServletRequest.class);
@@ -279,7 +281,7 @@ class GlobalRestExceptionHandlerTest {
 
   @Test
   @DisplayName("应该在 ProblemDetail 没有 properties 时安全处理")
-  void shouldHandleProblemDetailWithoutProperties() {
+  void shouldHandleProblemDetailWithoutProperties() throws Exception {
     // Given: 准备没有 properties 的 ProblemDetail
     Exception exception = new RuntimeException("测试异常");
     HttpServletRequest request = mock(HttpServletRequest.class);
@@ -310,7 +312,7 @@ class GlobalRestExceptionHandlerTest {
 
   @Test
   @DisplayName("应该使用正确的 Content-Type 响应")
-  void shouldRespondWithCorrectContentType() {
+  void shouldRespondWithCorrectContentType() throws Exception {
     // Given: 准备异常
     Exception exception = new RuntimeException("测试异常");
     HttpServletRequest request = mock(HttpServletRequest.class);
@@ -339,7 +341,7 @@ class GlobalRestExceptionHandlerTest {
 
   @Test
   @DisplayName("应该返回与错误解析相匹配的 HTTP 状态码")
-  void shouldReturnHttpStatusMatchingErrorResolution() {
+  void shouldReturnHttpStatusMatchingErrorResolution() throws Exception {
     // Given: 准备不同的 HTTP 状态码
     Exception exception = new RuntimeException("测试异常");
     HttpServletRequest request = mock(HttpServletRequest.class);
@@ -374,7 +376,7 @@ class GlobalRestExceptionHandlerTest {
 
   @Test
   @DisplayName("异常带剩余等待时间时加上 Retry-After 响应头")
-  void should_add_retry_after_header_when_exception_has_retry_after() {
+  void should_add_retry_after_header_when_exception_has_retry_after() throws Exception {
     Exception exception = new RetryAfterException(Duration.ofMinutes(15));
     HttpServletRequest request = mock(HttpServletRequest.class);
     ProblemDetailResponse tooMany = response(HttpStatus.TOO_MANY_REQUESTS, "TEST-0429");
@@ -388,7 +390,7 @@ class GlobalRestExceptionHandlerTest {
 
   @Test
   @DisplayName("普通异常不加 Retry-After 响应头")
-  void should_not_add_retry_after_header_for_plain_exception() {
+  void should_not_add_retry_after_header_for_plain_exception() throws Exception {
     Exception exception = new IllegalStateException("x");
     HttpServletRequest request = mock(HttpServletRequest.class);
     ProblemDetailResponse conflict = response(HttpStatus.CONFLICT, "TEST-0409");
@@ -415,7 +417,7 @@ class GlobalRestExceptionHandlerTest {
 
   @Test
   @DisplayName("4xx 记 WARN，不带堆栈")
-  void should_log_client_error_at_warn_without_stack_trace() {
+  void should_log_client_error_at_warn_without_stack_trace() throws Exception {
     Exception exception = new IllegalStateException("邮箱或密码错误");
     HttpServletRequest request = mock(HttpServletRequest.class);
     ProblemDetailResponse unauthorized = response(HttpStatus.UNAUTHORIZED, "TEST-0401");
@@ -435,7 +437,7 @@ class GlobalRestExceptionHandlerTest {
 
   @Test
   @DisplayName("5xx 记 ERROR，带堆栈")
-  void should_log_server_error_at_error_with_stack_trace() {
+  void should_log_server_error_at_error_with_stack_trace() throws Exception {
     Exception exception = new IllegalStateException("连接池耗尽");
     HttpServletRequest request = mock(HttpServletRequest.class);
     ProblemDetailResponse serverError = response(HttpStatus.INTERNAL_SERVER_ERROR, "TEST-0500");
@@ -488,7 +490,7 @@ class GlobalRestExceptionHandlerTest {
 
   @Test
   @DisplayName("剩余等待时间为 null 时不加 Retry-After 响应头，也不出错")
-  void should_skip_retry_after_header_when_value_is_null() {
+  void should_skip_retry_after_header_when_value_is_null() throws Exception {
     Exception exception = new RetryAfterException(null);
     HttpServletRequest request = mock(HttpServletRequest.class);
     ProblemDetailResponse tooMany = response(HttpStatus.TOO_MANY_REQUESTS, "TEST-0429");
@@ -502,7 +504,7 @@ class GlobalRestExceptionHandlerTest {
 
   @Test
   @DisplayName("领域层报的字段错误：WARN 日志带上「字段:原因码」，不带字段值和堆栈")
-  void should_log_field_codes_for_domain_field_violations() {
+  void should_log_field_codes_for_domain_field_violations() throws Exception {
     Exception exception =
         new FieldViolationsException(
             List.of(FieldViolation.of("password", "TOO_COMMON", "这个密码太常见")));
@@ -527,7 +529,8 @@ class GlobalRestExceptionHandlerTest {
       value = ResolutionStrategy.class,
       names = {"FALLBACK", "CAUSE"})
   @DisplayName("按类名兜底分类出来的 4xx 可能是服务端缺陷：记 WARN，但保留堆栈")
-  void should_keep_stack_trace_for_inferred_client_error(ResolutionStrategy strategy) {
+  void should_keep_stack_trace_for_inferred_client_error(ResolutionStrategy strategy)
+      throws Exception {
     Exception exception = new IllegalStateException("不变量被破坏");
     HttpServletRequest request = mock(HttpServletRequest.class);
     ProblemDetailResponse inferred =
@@ -637,22 +640,34 @@ class GlobalRestExceptionHandlerTest {
   }
 
   @Test
-  @DisplayName("响应已提交时不再渲染 ProblemDetail，返回 null 交给容器收尾")
-  void shouldSkipRenderingWhenResponseIsCommitted() {
+  @DisplayName("响应已提交时原样抛回原始异常，由容器中止连接")
+  void shouldRethrowOriginalExceptionWhenResponseIsCommitted() {
     HttpServletRequest request = mock(HttpServletRequest.class);
     HttpServletResponse committed = mock(HttpServletResponse.class);
     when(committed.isCommitted()).thenReturn(true);
+    RuntimeException exception = new RuntimeException("下游中断");
 
-    ResponseEntity<ProblemDetail> result =
-        handler.handleException(new RuntimeException("下游中断"), request, committed);
-
-    assertThat(result).isNull();
+    assertThatThrownBy(() -> handler.handleException(exception, request, committed))
+        .isSameAs(exception);
     verifyNoInteractions(problemDetailAdapter);
   }
 
   @Test
+  @DisplayName("用户中途取消下载（客户端断开）时照样抛回，但不记「交给容器中断连接」的 WARN")
+  void should_rethrow_without_warn_when_client_disconnected_after_commit() {
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    HttpServletResponse committed = mock(HttpServletResponse.class);
+    when(committed.isCommitted()).thenReturn(true);
+    IOException clientGone = new IOException("Broken pipe");
+
+    assertThatThrownBy(() -> handler.handleException(clientGone, request, committed))
+        .isSameAs(clientGone);
+    assertThat(logAppender.list).noneMatch(event -> event.getLevel() == Level.WARN);
+  }
+
+  @Test
   @DisplayName("渲染 ProblemDetail 前先清掉已写入的响应体，不和半截响应拼在一起")
-  void shouldResetBufferBeforeRenderingProblemDetail() {
+  void shouldResetBufferBeforeRenderingProblemDetail() throws Exception {
     Exception exception = new RuntimeException("下游中断");
     HttpServletRequest request = mock(HttpServletRequest.class);
     ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);

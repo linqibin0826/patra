@@ -10,13 +10,14 @@ import dev.patra.identity.domain.model.read.PublicUserView;
 import java.util.List;
 import lombok.Builder;
 
-/// 公开主页的响应体，已按请求者裁剪。不含邮箱、ID、状态、任何设置原值；`indexable` 是给门户输出
-/// `noindex` 的渲染指令。
+/// 公开主页的响应体，已按请求者裁剪。不含邮箱、状态、任何设置原值；`indexable` 是给门户输出
+/// `noindex` 的渲染指令。用户 ID 从 PAP-108 起带上（v0.13 决策 E，修订 PAP-95 的「不含 ID」）。
 ///
+/// @param userId 用户 ID（JSON 里是字符串）
 /// @param username 用户名
 /// @param displayName 昵称，没设时等于用户名
 /// @param avatarUrl 头像地址（identity 相对路径，带版本），没上传时为 `null`
-/// @param avatarPalette 默认头像色号（0–11），服务端按用户 ID 算好（响应里没有用户 ID）
+/// @param avatarPalette 默认头像色号（0–11），服务端按用户 ID 算好
 /// @param audience 实际能被谁看到：`PUBLIC` / `SIGNED_IN` / `SELF`（门户在本人视角据此提示）
 /// @param joinedAt 加入时间，`YYYY-MM`
 /// @param bio 简介
@@ -26,6 +27,7 @@ import lombok.Builder;
 /// @param indexable 是否允许搜索引擎收录
 @Builder
 public record PublicUserResponse(
+    Long userId,
     String username,
     String displayName,
     String avatarUrl,
@@ -50,9 +52,10 @@ public record PublicUserResponse(
   /// @return 响应
   public static PublicUserResponse from(PublicUserView view) {
     return PublicUserResponse.builder()
+        .userId(view.userId())
         .username(view.username())
         .displayName(view.displayName())
-        .avatarUrl(AvatarUrls.of(view.username(), view.avatar()))
+        .avatarUrl(AvatarUrls.of(view.avatar()))
         .avatarPalette(view.avatarPalette())
         .audience(view.audience())
         .joinedAt(view.joinedMonth() == null ? null : view.joinedMonth().toString())

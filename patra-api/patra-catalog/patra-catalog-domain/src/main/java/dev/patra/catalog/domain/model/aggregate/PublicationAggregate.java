@@ -6,6 +6,7 @@ import dev.patra.catalog.domain.model.enums.OaStatus;
 import dev.patra.catalog.domain.model.enums.PublicationMedium;
 import dev.patra.catalog.domain.model.enums.PublicationStatus;
 import dev.patra.catalog.domain.model.vo.publication.LanguageInfo;
+import dev.patra.catalog.domain.model.vo.publication.Pagination;
 import dev.patra.catalog.domain.model.vo.publication.PublicationAbstract;
 import dev.patra.catalog.domain.model.vo.publication.PublicationAuthorSnapshot;
 import dev.patra.catalog.domain.model.vo.publication.PublicationId;
@@ -17,6 +18,7 @@ import dev.patra.common.PublicationIdentifierType;
 import dev.patra.tool.core.domain.AggregateRoot;
 import java.io.Serial;
 import java.time.Instant;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -129,6 +131,18 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
 
   /// 出版年份（冗余优化 - 最高频查询字段）
   private final Integer publicationYear;
+
+  /// 出版月份（主出版日期，冗余；只到年时为 null，不补）
+  private Integer publicationMonth;
+
+  /// 出版日（主出版日期，冗余；只到年月时为 null，不补）
+  private Integer publicationDay;
+
+  /// 页码（PubMed Pagination），可空
+  private Pagination pagination;
+
+  /// 期刊 ISO 缩写（文献 XML 的 Journal/ISOAbbreviation），可空
+  private String journalIsoAbbreviation;
 
   // ========== OA 信息（冗余 - 快速筛选） ==========
 
@@ -372,6 +386,37 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
   }
 
   // ========== 业务行为方法 ==========
+
+  /// 设置引用数据：出版月 / 日（按实际精度）、页码、期刊 ISO 缩写。导入与从持久化重建时调用。
+  ///
+  /// @param publicationMonth 出版月份，可空
+  /// @param publicationDay 出版日，可空；有日必须有月且对该年月合法
+  /// @param pagination 页码，可空
+  /// @param journalIsoAbbreviation 期刊 ISO 缩写，可空
+  /// @throws IllegalArgumentException 月份不在 1 ~ 12、有日无月或日不合法时
+  public void assignCitationDetails(
+      Integer publicationMonth,
+      Integer publicationDay,
+      Pagination pagination,
+      String journalIsoAbbreviation) {
+    if (publicationMonth != null) {
+      Assert.isTrue(
+          publicationMonth >= 1 && publicationMonth <= 12, "出版月份必须在 1-12：%d", publicationMonth);
+    }
+    if (publicationDay != null) {
+      Assert.notNull(publicationMonth, "有出版日必须有出版月份");
+      Assert.isTrue(
+          YearMonth.of(publicationYear, publicationMonth).isValidDay(publicationDay),
+          "出版日期不合法：%d-%d-%d",
+          publicationYear,
+          publicationMonth,
+          publicationDay);
+    }
+    this.publicationMonth = publicationMonth;
+    this.publicationDay = publicationDay;
+    this.pagination = pagination;
+    this.journalIsoAbbreviation = journalIsoAbbreviation;
+  }
 
   /// 更新 OA 状态（由 OA 位置管理触发）。
   ///

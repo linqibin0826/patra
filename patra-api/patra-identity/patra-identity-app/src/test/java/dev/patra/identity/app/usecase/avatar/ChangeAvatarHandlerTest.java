@@ -76,9 +76,9 @@ class ChangeAvatarHandlerTest {
 
   @Test
   void should_store_then_save_then_delete_previous() {
-    AvatarChanged result = handler.handle(ChangeAvatarCommand.of(UPLOAD));
+    Avatar result = handler.handle(ChangeAvatarCommand.of(UPLOAD));
 
-    assertThat(result).isEqualTo(AvatarChanged.of("chen-yu", NEW));
+    assertThat(result).isEqualTo(NEW);
     InOrder order = inOrder(storage, profiles);
     order.verify(storage).store(NEW, RENDITIONS);
     order.verify(profiles).save(any());
@@ -110,9 +110,9 @@ class ChangeAvatarHandlerTest {
   void should_short_circuit_when_same_image_uploaded_again() {
     when(profiles.findByUserId(USER_ID)).thenAnswer(invocation -> Optional.of(profileWith(NEW)));
 
-    AvatarChanged result = handler.handle(ChangeAvatarCommand.of(UPLOAD));
+    Avatar result = handler.handle(ChangeAvatarCommand.of(UPLOAD));
 
-    assertThat(result).isEqualTo(AvatarChanged.of("chen-yu", NEW));
+    assertThat(result).isEqualTo(NEW);
     verify(storage, never()).store(any(), any());
     verify(storage, never()).delete(any());
     verify(profiles, never()).save(any());
@@ -146,9 +146,9 @@ class ChangeAvatarHandlerTest {
   void should_still_return_when_deleting_previous_fails() {
     doThrow(new AvatarStorageException("boom", new RuntimeException())).when(storage).delete(OLD);
 
-    AvatarChanged result = handler.handle(ChangeAvatarCommand.of(UPLOAD));
+    Avatar result = handler.handle(ChangeAvatarCommand.of(UPLOAD));
 
-    assertThat(result.avatar()).isEqualTo(NEW);
+    assertThat(result).isEqualTo(NEW);
   }
 
   /// 资料，带给定头像（可空）。

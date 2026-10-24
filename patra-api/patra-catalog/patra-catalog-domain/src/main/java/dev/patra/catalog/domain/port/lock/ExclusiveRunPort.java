@@ -11,8 +11,8 @@ import java.util.function.Supplier;
 /// @since 0.11.0
 public interface ExclusiveRunPort {
 
-  /// 增量同步任务的锁名。
-  String PUBMED_UPDATE_SYNC = "catalog.pubmed-update-sync";
+  /// PubMed 文件导入与本地重算共用的锁名（两者不能并发，否则重算可能用旧原文写回较新的数据）。
+  String PUBMED_IMPORT = "catalog.pubmed-import";
 
   /// 全文抓取任务的锁名。
   String FULLTEXT_FETCH = "catalog.fulltext-fetch";

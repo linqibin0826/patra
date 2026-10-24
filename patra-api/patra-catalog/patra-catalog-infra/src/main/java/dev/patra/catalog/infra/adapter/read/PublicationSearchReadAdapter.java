@@ -6,11 +6,13 @@ import dev.patra.catalog.domain.model.read.portal.PublicationSearchFacets;
 import dev.patra.catalog.domain.model.read.portal.PublicationSearchFilter;
 import dev.patra.catalog.domain.model.vo.publication.EvidenceLevel;
 import dev.patra.catalog.domain.model.vo.publication.InlineMarkup;
+import dev.patra.catalog.domain.model.vo.publication.PublicationDate;
 import dev.patra.catalog.domain.port.read.PublicationSearchReadPort;
 import dev.patra.catalog.domain.query.PageResult;
 import dev.patra.catalog.domain.query.PagingParams;
 import dev.patra.catalog.infra.persistence.dao.PublicationSearchDao;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -245,6 +247,14 @@ public class PublicationSearchReadAdapter implements PublicationSearchReadPort {
     return rows.stream().map(r -> FacetCount.of(r.getValue(), r.getCount())).toList();
   }
 
+  @Override
+  public List<PortalPaperReadModel> findCardsByIds(Collection<Long> ids) {
+    if (ids.isEmpty()) {
+      return List.of();
+    }
+    return dao.findCardsByIds(ids.toArray(Long[]::new)).stream().map(this::toReadModel).toList();
+  }
+
   /// rank 分组 → 固定 6 项（rank 降序，UNKNOWN 末尾），缺档补 0。
   ///
   /// @param rows rank 分组行（value 为 rank 文本）
@@ -287,6 +297,9 @@ public class PublicationSearchReadAdapter implements PublicationSearchReadPort {
         .venueId(row.getVenueId())
         .venueName(row.getVenueName())
         .publicationYear(row.getPublicationYear())
+        .publishedDate(
+            PublicationDate.isoString(
+                row.getPublicationYear(), row.getPublicationMonth(), row.getPublicationDay()))
         .authors(split(row.getAuthorNames()))
         .citationCount(row.getCitationCount())
         .doi(row.getDoi())

@@ -3,29 +3,25 @@ package dev.patra.catalog.infra.batch.publication;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import dev.patra.catalog.domain.model.enums.PubmedUpdateScope;
-import dev.patra.catalog.domain.model.vo.publication.PublicationImportParams;
-import dev.patra.catalog.domain.model.vo.publication.PubmedUpdateFileCounts;
-import dev.patra.catalog.domain.model.vo.publication.PubmedUpdateFileRef;
-import dev.patra.catalog.domain.model.vo.publication.PubmedUpdateImportParams;
-import dev.patra.catalog.infra.batch.publication.update.PubmedUpdateContextKeys;
+import dev.patra.catalog.domain.model.enums.PubmedFileKind;
+import dev.patra.catalog.domain.model.enums.PubmedImportScope;
+import dev.patra.catalog.domain.model.vo.publication.PubmedFileCounts;
+import dev.patra.catalog.domain.model.vo.publication.PubmedFileImportParams;
+import dev.patra.catalog.domain.model.vo.publication.PubmedFileRef;
+import dev.patra.catalog.infra.batch.publication.update.PubmedImportContextKeys;
 import dev.patra.tool.batch.core.JobOperatorHelper;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.JobExecution;
@@ -34,305 +30,140 @@ import org.springframework.batch.core.launch.JobOperator;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.infrastructure.item.ExecutionContext;
 
-/// PublicationBatchAdapter 单元测试。
+/// `PublicationBatchAdapter` 单元测试：文件导入与本地重算的作业参数、已完成实例直接读计数、失败抛出。
 ///
 /// @author linqibin
 /// @since 0.1.0
-@DisplayName("PublicationBatchAdapter")
-@ExtendWith(MockitoExtension.class)
+@DisplayName("PublicationBatchAdapter 单元测试")
 class PublicationBatchAdapterTest {
 
-  @Mock private JobOperatorHelper jobOperatorHelper;
-  @Mock private Job pubmedBaselineImportJob;
-  @Mock private Job pubmedUpdateImportJob;
-  @Mock private JobRepository jobRepository;
-  @Mock private JobOperator jobOperator;
+  private static final String BASELINE_URL = "https://ftp.ncbi.nlm.nih.gov/pubmed/baseline/";
+  private static final String UPDATE_URL = "https://ftp.ncbi.nlm.nih.gov/pubmed/updatefiles/";
 
-  @Captor private ArgumentCaptor<PublicationImportJobParams> jobParamsCaptor;
-  @Captor private ArgumentCaptor<PubmedUpdateImportJobParams> updateParamsCaptor;
-
+  private final JobOperatorHelper helper = mock(JobOperatorHelper.class);
+  private final JobOperator jobOperator = mock(JobOperator.class);
+  private final JobRepository jobRepository = mock(JobRepository.class);
+  private final Job fileJob = mock(Job.class);
+  private final Job reparseJob = mock(Job.class);
   private PublicationBatchAdapter adapter;
-
-  private static final String BASE_URL = "https://ftp.ncbi.nlm.nih.gov/pubmed/baseline/";
-  private static final int FILE_INDEX = 1;
-  private static final Long EXPECTED_EXECUTION_ID = 12345L;
 
   @BeforeEach
   void setUp() {
-    adapter =
-        new PublicationBatchAdapter(
-            jobOperatorHelper,
-            jobOperator,
-            jobRepository,
-            pubmedBaselineImportJob,
-            pubmedUpdateImportJob);
+    when(fileJob.getName()).thenReturn("pubmedFileImportJob");
+    when(reparseJob.getName()).thenReturn("pubmedReparseJob");
+    adapter = new PublicationBatchAdapter(helper, jobOperator, jobRepository, fileJob, reparseJob);
   }
 
-  @Nested
-  @DisplayName("launchBaselineImport()")
-  class LaunchBaselineImportTest {
+  @Test
+  @DisplayName("baseline 文件：下载地址取 baseline 目录，批次名 baseline- 前缀，范围照传")
+  void should_launch_baseline_file_with_baseline_url_and_batch() {
+    JobExecution done = execution(BatchStatus.COMPLETED, 3);
+    when(helper.launch(eq(fileJob), any(), eq(false))).thenReturn(1L);
+    when(helper.findJobExecution(1L)).thenReturn(Optional.of(done));
 
-    @Test
-    @DisplayName("应该启动 Job 并返回 Execution ID")
-    void should_launch_job_and_return_execution_id() {
-      // given
-      PublicationImportParams params = PublicationImportParams.of(BASE_URL, FILE_INDEX);
-      when(jobOperatorHelper.launch(eq(pubmedBaselineImportJob), any(), eq(false)))
-          .thenReturn(EXPECTED_EXECUTION_ID);
+    PubmedFileCounts counts =
+        adapter.launchFileImport(
+            PubmedFileImportParams.of(
+                PubmedFileRef.of(PubmedFileKind.BASELINE, "pubmed26n", 1333),
+                BASELINE_URL,
+                PubmedImportScope.EXISTING_ONLY,
+                "replay-1"));
 
-      // when
-      Long executionId = adapter.launchBaselineImport(params);
-
-      // then
-      assertThat(executionId).isEqualTo(EXPECTED_EXECUTION_ID);
-    }
-
-    @Test
-    @DisplayName("应该传递正确的 Job 参数")
-    void should_pass_correct_job_params() {
-      // given
-      PublicationImportParams params = PublicationImportParams.of(BASE_URL, FILE_INDEX);
-      when(jobOperatorHelper.launch(eq(pubmedBaselineImportJob), any(), eq(false)))
-          .thenReturn(EXPECTED_EXECUTION_ID);
-
-      // when
-      adapter.launchBaselineImport(params);
-
-      // then
-      verify(jobOperatorHelper)
-          .launch(eq(pubmedBaselineImportJob), jobParamsCaptor.capture(), eq(false));
-
-      PublicationImportJobParams captured = jobParamsCaptor.getValue();
-      assertThat(captured.getDownloadUrl())
-          .isEqualTo("https://ftp.ncbi.nlm.nih.gov/pubmed/baseline/pubmed26n0001.xml.gz");
-    }
-
-    @Test
-    @DisplayName("应该生成非空的 importBatch 参数")
-    void should_generate_non_null_import_batch() {
-      // given
-      PublicationImportParams params = PublicationImportParams.of(BASE_URL, FILE_INDEX);
-      when(jobOperatorHelper.launch(eq(pubmedBaselineImportJob), any(), eq(false)))
-          .thenReturn(EXPECTED_EXECUTION_ID);
-
-      // when
-      adapter.launchBaselineImport(params);
-
-      // then
-      verify(jobOperatorHelper)
-          .launch(eq(pubmedBaselineImportJob), jobParamsCaptor.capture(), eq(false));
-
-      PublicationImportJobParams captured = jobParamsCaptor.getValue();
-      assertThat(captured.getImportBatch()).isNotNull().isNotBlank();
-    }
-
-    @Test
-    @DisplayName("importBatch 应从 downloadUrl 中提取文件名标识")
-    void should_extract_import_batch_from_download_url() {
-      // given
-      PublicationImportParams params = PublicationImportParams.of(BASE_URL, FILE_INDEX);
-      when(jobOperatorHelper.launch(eq(pubmedBaselineImportJob), any(), eq(false)))
-          .thenReturn(EXPECTED_EXECUTION_ID);
-
-      // when
-      adapter.launchBaselineImport(params);
-
-      // then
-      verify(jobOperatorHelper)
-          .launch(eq(pubmedBaselineImportJob), jobParamsCaptor.capture(), eq(false));
-
-      PublicationImportJobParams captured = jobParamsCaptor.getValue();
-      // 从 pubmed26n0001.xml.gz 提取为 baseline-pubmed26n0001
-      assertThat(captured.getImportBatch()).isEqualTo("baseline-pubmed26n0001");
-    }
-
-    @Test
-    @DisplayName("应该把 generation 透传到 Job 参数")
-    void should_pass_generation_to_job_params() {
-      // given
-      PublicationImportParams params = PublicationImportParams.of(BASE_URL, FILE_INDEX, "v0.6");
-      when(jobOperatorHelper.launch(eq(pubmedBaselineImportJob), any(), eq(false)))
-          .thenReturn(EXPECTED_EXECUTION_ID);
-
-      // when
-      adapter.launchBaselineImport(params);
-
-      // then
-      verify(jobOperatorHelper)
-          .launch(eq(pubmedBaselineImportJob), jobParamsCaptor.capture(), eq(false));
-
-      assertThat(jobParamsCaptor.getValue().getGeneration()).isEqualTo("v0.6");
-    }
-
-    @Test
-    @DisplayName("未指定 generation 时 Job 参数应为 null")
-    void should_leave_generation_null_when_absent() {
-      // given
-      PublicationImportParams params = PublicationImportParams.of(BASE_URL, FILE_INDEX);
-      when(jobOperatorHelper.launch(eq(pubmedBaselineImportJob), any(), eq(false)))
-          .thenReturn(EXPECTED_EXECUTION_ID);
-
-      // when
-      adapter.launchBaselineImport(params);
-
-      // then
-      verify(jobOperatorHelper)
-          .launch(eq(pubmedBaselineImportJob), jobParamsCaptor.capture(), eq(false));
-
-      assertThat(jobParamsCaptor.getValue().getGeneration()).isNull();
-    }
-
-    @Test
-    @DisplayName("应该使用不添加时间戳的模式（支持断点续传）")
-    void should_use_no_timestamp_mode_for_restart() {
-      // given
-      PublicationImportParams params = PublicationImportParams.of(BASE_URL, FILE_INDEX);
-      when(jobOperatorHelper.launch(eq(pubmedBaselineImportJob), any(), eq(false)))
-          .thenReturn(EXPECTED_EXECUTION_ID);
-
-      // when
-      adapter.launchBaselineImport(params);
-
-      // then
-      verify(jobOperatorHelper).launch(any(), any(), eq(false)); // addTimestamp = false
-    }
-
-    @Test
-    @DisplayName("Job 同步执行失败时应该快速失败抛出异常")
-    void should_fail_fast_when_job_execution_unsuccessful() {
-      // given
-      PublicationImportParams params = PublicationImportParams.of(BASE_URL, FILE_INDEX);
-      JobExecution jobExecution = mock(JobExecution.class);
-      when(jobExecution.getStatus()).thenReturn(BatchStatus.FAILED);
-
-      when(jobOperatorHelper.launch(eq(pubmedBaselineImportJob), any(), eq(false)))
-          .thenReturn(EXPECTED_EXECUTION_ID);
-      when(jobOperatorHelper.findJobExecution(EXPECTED_EXECUTION_ID))
-          .thenReturn(Optional.of(jobExecution));
-
-      // when / then
-      assertThatThrownBy(() -> adapter.launchBaselineImport(params))
-          .isInstanceOf(IllegalStateException.class)
-          .hasMessageContaining("executionId=" + EXPECTED_EXECUTION_ID)
-          .hasMessageContaining("status=FAILED");
-    }
-
-    @Test
-    @DisplayName("Job 执行记录不存在时不应因状态检查失败")
-    void should_not_fail_when_job_execution_not_found() {
-      // given
-      PublicationImportParams params = PublicationImportParams.of(BASE_URL, FILE_INDEX);
-      when(jobOperatorHelper.launch(eq(pubmedBaselineImportJob), any(), eq(false)))
-          .thenReturn(EXPECTED_EXECUTION_ID);
-      when(jobOperatorHelper.findJobExecution(EXPECTED_EXECUTION_ID)).thenReturn(Optional.empty());
-
-      // when
-      Long executionId = adapter.launchBaselineImport(params);
-
-      // then
-      assertThat(executionId).isEqualTo(EXPECTED_EXECUTION_ID);
-      verify(jobOperatorHelper).findJobExecution(EXPECTED_EXECUTION_ID);
-    }
+    ArgumentCaptor<PubmedFileImportJobParams> params =
+        ArgumentCaptor.forClass(PubmedFileImportJobParams.class);
+    verify(helper).launch(eq(fileJob), params.capture(), eq(false));
+    assertThat(params.getValue().getDownloadUrl()).isEqualTo(BASELINE_URL + "pubmed26n1333.xml.gz");
+    assertThat(params.getValue().getImportBatch()).isEqualTo("baseline-pubmed26n1333");
+    assertThat(params.getValue().getScope()).isEqualTo("EXISTING_ONLY");
+    assertThat(params.getValue().getGeneration()).isEqualTo("replay-1");
+    assertThat(params.getValue().getReparse()).isNull();
+    assertThat(counts.skippedStale()).isEqualTo(3);
   }
 
-  @Nested
-  @DisplayName("launchUpdateImport()")
-  class LaunchUpdateImportTest {
+  @Test
+  @DisplayName("update 文件：批次名 update- 前缀")
+  void should_use_update_prefix_for_update_files() {
+    when(helper.launch(eq(fileJob), any(), eq(false))).thenReturn(2L);
+    JobExecution execution = execution(BatchStatus.COMPLETED, 0);
+    when(helper.findJobExecution(2L)).thenReturn(Optional.of(execution));
 
-    private final PubmedUpdateImportParams params =
-        PubmedUpdateImportParams.of(
-            PubmedUpdateFileRef.of("pubmed26n", 1335),
-            "https://ftp.ncbi.nlm.nih.gov/pubmed/updatefiles/",
-            PubmedUpdateScope.EXISTING_ONLY,
-            null);
+    adapter.launchFileImport(
+        PubmedFileImportParams.of(
+            PubmedFileRef.of(PubmedFileKind.UPDATE, "pubmed26n", 1350),
+            UPDATE_URL,
+            PubmedImportScope.ALL,
+            null));
 
-    @Test
-    @DisplayName("以不带时间戳的标识参数启动更新 Job，并从上下文读回计数")
-    void should_launch_update_job_with_identifying_params() {
-      when(pubmedUpdateImportJob.getName()).thenReturn("pubmedUpdateImportJob");
-      when(jobRepository.getLastJobExecution(eq("pubmedUpdateImportJob"), any(JobParameters.class)))
-          .thenReturn(null);
-      when(jobOperatorHelper.launch(
-              eq(pubmedUpdateImportJob), updateParamsCaptor.capture(), eq(false)))
-          .thenReturn(EXPECTED_EXECUTION_ID);
-      JobExecution execution = completedExecution(countsContext(3, 2));
-      when(jobOperatorHelper.findJobExecution(EXPECTED_EXECUTION_ID))
-          .thenReturn(Optional.of(execution));
+    ArgumentCaptor<PubmedFileImportJobParams> params =
+        ArgumentCaptor.forClass(PubmedFileImportJobParams.class);
+    verify(helper).launch(eq(fileJob), params.capture(), eq(false));
+    assertThat(params.getValue().getImportBatch()).isEqualTo("update-pubmed26n1350");
+    assertThat(params.getValue().getDownloadUrl()).isEqualTo(UPDATE_URL + "pubmed26n1350.xml.gz");
+  }
 
-      PubmedUpdateFileCounts counts = adapter.launchUpdateImport(params);
+  @Test
+  @DisplayName("同参数实例已完成：不再启动，直接读计数")
+  void should_return_counts_of_completed_instance_without_launching() {
+    JobExecution completed = execution(BatchStatus.COMPLETED, 5);
+    when(jobRepository.getLastJobExecution(anyString(), any(JobParameters.class)))
+        .thenReturn(completed);
 
-      PubmedUpdateImportJobParams sent = updateParamsCaptor.getValue();
-      assertThat(sent.getDownloadUrl())
-          .isEqualTo("https://ftp.ncbi.nlm.nih.gov/pubmed/updatefiles/pubmed26n1335.xml.gz");
-      assertThat(sent.getImportBatch()).isEqualTo("update-pubmed26n1335");
-      assertThat(sent.getScope()).isEqualTo("EXISTING_ONLY");
-      assertThat(sent.getGeneration()).isNull();
-      assertThat(counts.updated()).isEqualTo(3);
-      assertThat(counts.deleted()).isEqualTo(2);
-    }
+    PubmedFileCounts counts =
+        adapter.launchFileImport(
+            PubmedFileImportParams.of(
+                PubmedFileRef.of(PubmedFileKind.UPDATE, "pubmed26n", 1350),
+                UPDATE_URL,
+                PubmedImportScope.EXISTING_ONLY,
+                null));
 
-    @Test
-    @DisplayName("同参数的作业已经完成时不再启动，直接读它的计数")
-    void should_return_counts_of_completed_execution_without_relaunch() {
-      when(pubmedUpdateImportJob.getName()).thenReturn("pubmedUpdateImportJob");
-      JobExecution execution = completedExecution(countsContext(5, 1));
-      when(jobRepository.getLastJobExecution(eq("pubmedUpdateImportJob"), any(JobParameters.class)))
-          .thenReturn(execution);
+    assertThat(counts.skippedStale()).isEqualTo(5);
+    verify(helper, never()).launch(any(), any(), eq(false));
+  }
 
-      PubmedUpdateFileCounts counts = adapter.launchUpdateImport(params);
+  @Test
+  @DisplayName("作业失败时抛出")
+  void should_throw_when_job_failed() {
+    when(helper.launch(eq(fileJob), any(), eq(false))).thenReturn(3L);
+    JobExecution execution = execution(BatchStatus.FAILED, 0);
+    when(helper.findJobExecution(3L)).thenReturn(Optional.of(execution));
 
-      verify(jobOperatorHelper, never()).launch(any(), any(), eq(false));
-      assertThat(counts.updated()).isEqualTo(5);
-      assertThat(counts.deleted()).isEqualTo(1);
-    }
+    assertThatThrownBy(
+            () ->
+                adapter.launchFileImport(
+                    PubmedFileImportParams.of(
+                        PubmedFileRef.of(PubmedFileKind.UPDATE, "pubmed26n", 1379),
+                        UPDATE_URL,
+                        PubmedImportScope.EXISTING_ONLY,
+                        null)))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("FAILED");
+  }
 
-    @Test
-    @DisplayName("上次执行残留在 STARTED（进程被杀）时先 recover 再续跑")
-    void should_recover_stale_running_execution_before_relaunch() {
-      when(pubmedUpdateImportJob.getName()).thenReturn("pubmedUpdateImportJob");
-      JobExecution stale = mock(JobExecution.class);
-      when(stale.getStatus()).thenReturn(BatchStatus.STARTED);
-      when(jobRepository.getLastJobExecution(eq("pubmedUpdateImportJob"), any(JobParameters.class)))
-          .thenReturn(stale);
-      when(jobOperatorHelper.launch(eq(pubmedUpdateImportJob), any(), eq(false)))
-          .thenReturn(EXPECTED_EXECUTION_ID);
-      JobExecution execution = completedExecution(countsContext(1, 0));
-      when(jobOperatorHelper.findJobExecution(EXPECTED_EXECUTION_ID))
-          .thenReturn(Optional.of(execution));
+  @Test
+  @DisplayName("本地重算：没有下载地址，reparse=true，范围 EXISTING_ONLY，批次名 reparse")
+  void should_launch_reparse_job() {
+    when(helper.launch(eq(reparseJob), any(), eq(false))).thenReturn(4L);
+    JobExecution execution = execution(BatchStatus.COMPLETED, 0);
+    when(helper.findJobExecution(4L)).thenReturn(Optional.of(execution));
 
-      PubmedUpdateFileCounts counts = adapter.launchUpdateImport(params);
+    adapter.launchReparse("reparse-9");
 
-      verify(jobOperator).recover(stale);
-      assertThat(counts.updated()).isEqualTo(1);
-    }
+    ArgumentCaptor<PubmedFileImportJobParams> params =
+        ArgumentCaptor.forClass(PubmedFileImportJobParams.class);
+    verify(helper).launch(eq(reparseJob), params.capture(), eq(false));
+    assertThat(params.getValue().getDownloadUrl()).isNull();
+    assertThat(params.getValue().getReparse()).isEqualTo("true");
+    assertThat(params.getValue().getScope()).isEqualTo("EXISTING_ONLY");
+    assertThat(params.getValue().getImportBatch()).isEqualTo("reparse");
+    assertThat(params.getValue().getGeneration()).isEqualTo("reparse-9");
+  }
 
-    @Test
-    @DisplayName("作业失败时抛异常")
-    void should_throw_when_update_job_failed() {
-      when(pubmedUpdateImportJob.getName()).thenReturn("pubmedUpdateImportJob");
-      when(jobOperatorHelper.launch(eq(pubmedUpdateImportJob), any(), eq(false)))
-          .thenReturn(EXPECTED_EXECUTION_ID);
-      JobExecution execution = mock(JobExecution.class);
-      when(execution.getStatus()).thenReturn(BatchStatus.FAILED);
-      when(jobOperatorHelper.findJobExecution(EXPECTED_EXECUTION_ID))
-          .thenReturn(Optional.of(execution));
-
-      assertThatThrownBy(() -> adapter.launchUpdateImport(params))
-          .isInstanceOf(IllegalStateException.class);
-    }
-
-    private ExecutionContext countsContext(int updated, int deleted) {
-      ExecutionContext ctx = new ExecutionContext();
-      ctx.putInt(PubmedUpdateContextKeys.COUNT_UPDATED, updated);
-      ctx.putInt(PubmedUpdateContextKeys.COUNT_DELETED, deleted);
-      return ctx;
-    }
-
-    private JobExecution completedExecution(ExecutionContext ctx) {
-      JobExecution execution = mock(JobExecution.class);
-      when(execution.getStatus()).thenReturn(BatchStatus.COMPLETED);
-      when(execution.getExecutionContext()).thenReturn(ctx);
-      return execution;
-    }
+  private static JobExecution execution(BatchStatus status, int stale) {
+    JobExecution execution = mock(JobExecution.class);
+    when(execution.getStatus()).thenReturn(status);
+    ExecutionContext ctx = new ExecutionContext();
+    ctx.putInt(PubmedImportContextKeys.COUNT_SKIPPED_STALE, stale);
+    when(execution.getExecutionContext()).thenReturn(ctx);
+    return execution;
   }
 }

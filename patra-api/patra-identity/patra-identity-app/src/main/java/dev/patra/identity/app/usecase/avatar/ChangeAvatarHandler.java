@@ -28,7 +28,7 @@ import org.springframework.transaction.support.TransactionOperations;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class ChangeAvatarHandler implements CommandHandler<ChangeAvatarCommand, AvatarChanged> {
+public class ChangeAvatarHandler implements CommandHandler<ChangeAvatarCommand, Avatar> {
 
   private final CurrentUserPort currentUserPort;
   private final UserRepository users;
@@ -40,9 +40,9 @@ public class ChangeAvatarHandler implements CommandHandler<ChangeAvatarCommand, 
   /// 换头像。
   ///
   /// @param command 命令
-  /// @return 当前用户名与生效的头像
+  /// @return 生效的头像
   @Override
-  public AvatarChanged handle(ChangeAvatarCommand command) {
+  public Avatar handle(ChangeAvatarCommand command) {
     long userId = currentUserPort.require().userId();
     byte[] content = command.content();
     if (content.length == 0) {
@@ -55,37 +55,34 @@ public class ChangeAvatarHandler implements CommandHandler<ChangeAvatarCommand, 
     AvatarRenditions renditions = images.render(content);
     Avatar avatar = Avatar.forContent(userId, renditions.large());
     if (existing.filter(avatar::equals).isPresent()) {
-      return AvatarChanged.of(current.getUsername().value(), avatar);
+      return avatar;
     }
     storage.store(avatar, renditions);
 
-    Swapped swapped;
+    Optional<Avatar> previous;
     try {
-      swapped = Objects.requireNonNull(transactions.execute(status -> swap(userId, avatar)));
+      previous = Objects.requireNonNull(transactions.execute(status -> swap(userId, avatar)));
     } catch (RuntimeException e) {
       deleteQuietly(avatar, "提交失败后删除新头像对象失败");
       throw e;
     }
-    swapped
-        .previous()
-        .filter(previous -> !previous.equals(avatar))
-        .ifPresent(previous -> deleteQuietly(previous, "删除旧头像对象失败"));
+    previous.filter(old -> !old.equals(avatar)).ifPresent(old -> deleteQuietly(old, "删除旧头像对象失败"));
     log.info("头像已更换: userId={}, hash={}", userId, avatar.hash());
-    return AvatarChanged.of(swapped.username(), avatar);
+    return avatar;
   }
 
   /// 锁内复核状态并换资料里的键。
   ///
   /// @param userId 用户 ID
   /// @param avatar 新头像
-  /// @return 当前用户名与被替换的旧头像
-  private Swapped swap(long userId, Avatar avatar) {
+  /// @return 被替换的旧头像
+  private Optional<Avatar> swap(long userId, Avatar avatar) {
     User user = users.findByIdForUpdate(userId).orElseThrow(AuthenticationRequiredException::new);
     user.requireActive();
     UserProfile profile = profileOf(userId);
     Optional<Avatar> previous = profile.changeAvatar(avatar);
     profiles.save(profile);
-    return new Swapped(user.getUsername().value(), previous);
+    return previous;
   }
 
   /// 读资料；缺行是数据不一致。
@@ -109,10 +106,4 @@ public class ChangeAvatarHandler implements CommandHandler<ChangeAvatarCommand, 
       log.warn("{}: userId={}, hash={}", message, avatar.userId(), avatar.hash(), e);
     }
   }
-
-  /// 事务里读到的当前用户名与被替换的旧头像。
-  ///
-  /// @param username 当前用户名
-  /// @param previous 旧头像
-  private record Swapped(String username, Optional<Avatar> previous) {}
 }

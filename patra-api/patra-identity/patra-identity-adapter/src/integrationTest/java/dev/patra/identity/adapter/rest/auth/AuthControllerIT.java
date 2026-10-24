@@ -453,7 +453,7 @@ class AuthControllerIT {
         .isOk()
         .expectBody()
         .jsonPath("$.avatarUrl")
-        .isEqualTo("/users/chen-yu/avatar?v=0123456789abcdef");
+        .isEqualTo("/users/42/avatar?v=0123456789abcdef");
   }
 
   @Test

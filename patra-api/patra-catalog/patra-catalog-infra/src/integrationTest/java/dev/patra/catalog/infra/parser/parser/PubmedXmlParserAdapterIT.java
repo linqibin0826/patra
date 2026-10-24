@@ -1,22 +1,15 @@
 package dev.patra.catalog.infra.parser;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import dev.patra.catalog.domain.exception.XmlParseException;
 import dev.patra.common.CanonicalPublication;
 import dev.patra.common.PublicationIdentifierType;
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/// PubmedXmlParserAdapter 集成测试。
-///
-/// 验证 PubMed XML 解析适配器的端到端正确性。
+/// PubmedXmlParserAdapter 集成测试：解析一篇 `<PubmedArticle>` 原文（逐篇切出或从来源表读出）。
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -25,327 +18,74 @@ class PubmedXmlParserAdapterIT {
 
   private final PubmedXmlParserAdapter adapter = new PubmedXmlParserAdapter();
 
-  @Nested
-  @DisplayName("parse() 流式解析")
-  class ParseStreamTest {
-
-    @Test
-    @DisplayName("应正确解析包含单个文章的 XML")
-    void shouldParseSingleArticle() {
-      var xml =
-          """
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE PubmedArticleSet PUBLIC "-//NLM//DTD PubMedArticle, 1st January 2025//EN"
-            "https://dtd.nlm.nih.gov/ncbi/pubmed/out/pubmed_250101.dtd">
-          <PubmedArticleSet>
-            <PubmedArticle>
-              <MedlineCitation Status="MEDLINE">
-                <PMID Version="1">12345678</PMID>
-                <Article PubModel="Print">
-                  <Journal>
-                    <ISSN IssnType="Print">1234-5678</ISSN>
-                    <JournalIssue CitedMedium="Print">
-                      <Volume>10</Volume>
-                      <Issue>2</Issue>
-                      <PubDate>
-                        <Year>2024</Year>
-                        <Month>Jun</Month>
-                      </PubDate>
-                    </JournalIssue>
-                    <Title>Journal of Examples</Title>
-                  </Journal>
-                  <ArticleTitle>Sample Article Title</ArticleTitle>
-                  <Language>eng</Language>
-                </Article>
-                <MedlineJournalInfo>
-                  <NlmUniqueID>101234567</NlmUniqueID>
-                </MedlineJournalInfo>
-              </MedlineCitation>
-              <PubmedData>
-                <PublicationStatus>epublish</PublicationStatus>
-                <ArticleIdList>
-                  <ArticleId IdType="doi">10.1000/example</ArticleId>
-                </ArticleIdList>
-              </PubmedData>
-            </PubmedArticle>
-          </PubmedArticleSet>
-          """;
-      InputStream inputStream = toInputStream(xml);
-
-      List<CanonicalPublication> publications;
-      try (var stream = adapter.parse(inputStream)) {
-        publications = stream.toList();
-      }
-
-      assertThat(publications).hasSize(1);
-      CanonicalPublication pub = publications.getFirst();
-      assertEquals("12345678", extractPmid(pub));
-      assertEquals("Sample Article Title", pub.getTitle());
-      assertEquals("10.1000/example", extractDoi(pub));
-      assertEquals("101234567", pub.getJournal().getNlmUniqueId());
-      assertEquals("1234-5678", pub.getJournal().getIssn());
-      assertEquals("print", pub.getJournal().getIssnType());
-      assertEquals("10", pub.getJournal().getVolume());
-      assertEquals("2", pub.getJournal().getIssue());
-      assertEquals(2024, pub.getDates().getPublished().getYear());
-      assertEquals(6, pub.getDates().getPublished().getMonthValue());
-    }
-
-    @Test
-    @DisplayName("应正确解析包含多个文章的 XML")
-    void shouldParseMultipleArticles() {
-      var xml =
-          """
-          <?xml version="1.0" encoding="UTF-8"?>
-          <PubmedArticleSet>
-            <PubmedArticle>
-              <MedlineCitation>
-                <PMID>1</PMID>
-                <Article>
-                  <ArticleTitle>First Article</ArticleTitle>
-                </Article>
-                <MedlineJournalInfo>
-                  <NlmUniqueID>N1</NlmUniqueID>
-                </MedlineJournalInfo>
-              </MedlineCitation>
-            </PubmedArticle>
-            <PubmedArticle>
-              <MedlineCitation>
-                <PMID>2</PMID>
-                <Article>
-                  <ArticleTitle>Second Article</ArticleTitle>
-                </Article>
-                <MedlineJournalInfo>
-                  <NlmUniqueID>N2</NlmUniqueID>
-                </MedlineJournalInfo>
-              </MedlineCitation>
-            </PubmedArticle>
-            <PubmedArticle>
-              <MedlineCitation>
-                <PMID>3</PMID>
-                <Article>
-                  <ArticleTitle>Third Article</ArticleTitle>
-                </Article>
-                <MedlineJournalInfo>
-                  <NlmUniqueID>N3</NlmUniqueID>
-                </MedlineJournalInfo>
-              </MedlineCitation>
-            </PubmedArticle>
-          </PubmedArticleSet>
-          """;
-      InputStream inputStream = toInputStream(xml);
-
-      List<CanonicalPublication> publications;
-      try (var stream = adapter.parse(inputStream)) {
-        publications = stream.toList();
-      }
-
-      assertThat(publications).hasSize(3);
-      assertEquals("1", extractPmid(publications.get(0)));
-      assertEquals("2", extractPmid(publications.get(1)));
-      assertEquals("3", extractPmid(publications.get(2)));
-    }
-
-    @Test
-    @DisplayName("应跳过缺少 PMID 的无效记录")
-    void shouldSkipInvalidRecordsWithoutPmid() {
-      var xml =
-          """
-          <?xml version="1.0" encoding="UTF-8"?>
-          <PubmedArticleSet>
-            <PubmedArticle>
-              <MedlineCitation>
-                <PMID>1</PMID>
-                <Article>
-                  <ArticleTitle>Valid Article</ArticleTitle>
-                </Article>
-                <MedlineJournalInfo>
-                  <NlmUniqueID>N1</NlmUniqueID>
-                </MedlineJournalInfo>
-              </MedlineCitation>
-            </PubmedArticle>
-            <PubmedArticle>
-              <MedlineCitation>
-                <Article>
-                  <ArticleTitle>Invalid - No PMID</ArticleTitle>
-                </Article>
-              </MedlineCitation>
-            </PubmedArticle>
-            <PubmedArticle>
-              <MedlineCitation>
-                <PMID>3</PMID>
-                <Article>
-                  <ArticleTitle>Another Valid Article</ArticleTitle>
-                </Article>
-                <MedlineJournalInfo>
-                  <NlmUniqueID>N3</NlmUniqueID>
-                </MedlineJournalInfo>
-              </MedlineCitation>
-            </PubmedArticle>
-          </PubmedArticleSet>
-          """;
-      InputStream inputStream = toInputStream(xml);
-
-      List<CanonicalPublication> publications;
-      try (var stream = adapter.parse(inputStream)) {
-        publications = stream.toList();
-      }
-
-      assertThat(publications).hasSize(2);
-      assertEquals("1", extractPmid(publications.get(0)));
-      assertEquals("3", extractPmid(publications.get(1)));
-    }
-
-    @Test
-    @DisplayName("应正确处理空的 PubmedArticleSet")
-    void shouldHandleEmptyArticleSet() {
-      var xml =
-          """
-          <?xml version="1.0" encoding="UTF-8"?>
-          <PubmedArticleSet>
-          </PubmedArticleSet>
-          """;
-      InputStream inputStream = toInputStream(xml);
-
-      List<CanonicalPublication> publications;
-      try (var stream = adapter.parse(inputStream)) {
-        publications = stream.toList();
-      }
-
-      assertThat(publications).isEmpty();
-    }
-  }
-
-  @Nested
-  @DisplayName("惰性求值验证")
-  class LazyEvaluationTest {
-
-    @Test
-    @DisplayName("Stream 应支持惰性求值")
-    void shouldSupportLazyEvaluation() {
-      var xml =
-          """
-          <?xml version="1.0" encoding="UTF-8"?>
-          <PubmedArticleSet>
-            <PubmedArticle>
-              <MedlineCitation>
-                <PMID>1</PMID>
-                <Article><ArticleTitle>A1</ArticleTitle></Article>
-                <MedlineJournalInfo><NlmUniqueID>N</NlmUniqueID></MedlineJournalInfo>
-              </MedlineCitation>
-            </PubmedArticle>
-            <PubmedArticle>
-              <MedlineCitation>
-                <PMID>2</PMID>
-                <Article><ArticleTitle>A2</ArticleTitle></Article>
-                <MedlineJournalInfo><NlmUniqueID>N</NlmUniqueID></MedlineJournalInfo>
-              </MedlineCitation>
-            </PubmedArticle>
-            <PubmedArticle>
-              <MedlineCitation>
-                <PMID>3</PMID>
-                <Article><ArticleTitle>A3</ArticleTitle></Article>
-                <MedlineJournalInfo><NlmUniqueID>N</NlmUniqueID></MedlineJournalInfo>
-              </MedlineCitation>
-            </PubmedArticle>
-          </PubmedArticleSet>
-          """;
-      InputStream inputStream = toInputStream(xml);
-
-      // 使用 limit() 验证惰性求值 - 只获取前 2 条
-      List<CanonicalPublication> publications;
-      try (var stream = adapter.parse(inputStream)) {
-        publications = stream.limit(2).toList();
-      }
-
-      assertThat(publications).hasSize(2);
-      assertEquals("1", extractPmid(publications.get(0)));
-      assertEquals("2", extractPmid(publications.get(1)));
-    }
-  }
-
-  @Nested
-  @DisplayName("parseUpdateFile() 更新文件解析")
-  class ParseUpdateFileTest {
-
-    private static final String UPDATE_XML =
+  @Test
+  @DisplayName("一篇完整原文：标识符、期刊、卷期、日期部件都解析出来")
+  void should_parse_single_article() {
+    String raw =
         """
-        <?xml version="1.0" encoding="UTF-8"?>
-        <PubmedArticleSet>
-          <PubmedArticle>
-            <MedlineCitation Status="MEDLINE">
-              <PMID Version="1">100</PMID>
-              <Article><ArticleTitle>A</ArticleTitle></Article>
-              <MedlineJournalInfo><NlmUniqueID>N1</NlmUniqueID></MedlineJournalInfo>
-            </MedlineCitation>
-          </PubmedArticle>
-          <PubmedArticle>
-            <MedlineCitation Status="MEDLINE">
-              <PMID Version="1">200</PMID>
-              <Article><ArticleTitle>B</ArticleTitle></Article>
-              <MedlineJournalInfo><NlmUniqueID>N1</NlmUniqueID></MedlineJournalInfo>
-            </MedlineCitation>
-          </PubmedArticle>
-          <DeleteCitation>
-            <PMID Version="1">111</PMID>
-            <PMID Version="1">222</PMID>
-          </DeleteCitation>
-        </PubmedArticleSet>
+        <PubmedArticle>
+          <MedlineCitation Status="MEDLINE">
+            <PMID Version="1">12345678</PMID>
+            <Article PubModel="Print">
+              <Journal>
+                <ISSN IssnType="Print">1234-5678</ISSN>
+                <JournalIssue CitedMedium="Print">
+                  <Volume>10</Volume>
+                  <Issue>2</Issue>
+                  <PubDate><Year>2024</Year><Month>Jun</Month></PubDate>
+                </JournalIssue>
+                <Title>Journal of Examples</Title>
+              </Journal>
+              <ArticleTitle>Sample Article Title</ArticleTitle>
+              <Language>eng</Language>
+            </Article>
+            <MedlineJournalInfo><NlmUniqueID>101234567</NlmUniqueID></MedlineJournalInfo>
+          </MedlineCitation>
+          <PubmedData>
+            <PublicationStatus>epublish</PublicationStatus>
+            <ArticleIdList><ArticleId IdType="doi">10.1000/example</ArticleId></ArticleIdList>
+          </PubmedData>
+        </PubmedArticle>
         """;
 
-    @Test
-    @DisplayName("应流出文章并把 DeleteCitation 里的 PMID 交给回调")
-    void should_stream_articles_and_report_deleted_pmids() {
-      List<String> deleted = new ArrayList<>();
+    CanonicalPublication pub = adapter.parseArticle(raw);
 
-      List<CanonicalPublication> publications;
-      try (var stream = adapter.parseUpdateFile(toInputStream(UPDATE_XML), deleted::add)) {
-        publications = stream.toList();
-      }
-
-      assertThat(publications).extracting(p -> extractPmid(p)).containsExactly("100", "200");
-      assertThat(deleted).containsExactly("111", "222");
-    }
-
-    @Test
-    @DisplayName("parse() 对同一份更新文件只流出文章、不受 DeleteCitation 影响")
-    void should_ignore_delete_citation_in_plain_parse() {
-      List<CanonicalPublication> publications;
-      try (var stream = adapter.parse(toInputStream(UPDATE_XML))) {
-        publications = stream.toList();
-      }
-
-      assertThat(publications).extracting(p -> extractPmid(p)).containsExactly("100", "200");
-    }
+    assertThat(idOf(pub, PublicationIdentifierType.PMID)).isEqualTo("12345678");
+    assertThat(idOf(pub, PublicationIdentifierType.DOI)).isEqualTo("10.1000/example");
+    assertThat(pub.getTitle()).isEqualTo("Sample Article Title");
+    assertThat(pub.getJournal().getNlmUniqueId()).isEqualTo("101234567");
+    assertThat(pub.getJournal().getVolume()).isEqualTo("10");
+    assertThat(pub.getJournal().getIssue()).isEqualTo("2");
+    assertThat(pub.getDates().getPublished().year()).isEqualTo(2024);
+    assertThat(pub.getDates().getPublished().month()).isEqualTo(6);
+    assertThat(pub.getDates().getPublished().day()).isNull();
   }
 
-  // ========== 辅助方法 ==========
+  @Test
+  @DisplayName("缺 PMID 的原文返回 null")
+  void should_return_null_without_pmid() {
+    String raw =
+        """
+        <PubmedArticle>
+          <MedlineCitation><Article><ArticleTitle>No PMID</ArticleTitle></Article></MedlineCitation>
+        </PubmedArticle>
+        """;
 
-  /// 从 CanonicalPublication 中提取 PMID。
-  private String extractPmid(CanonicalPublication publication) {
-    if (publication.getIdentifiers() == null) {
-      return null;
-    }
+    assertThat(adapter.parseArticle(raw)).isNull();
+  }
+
+  @Test
+  @DisplayName("原文不是合法 XML（截断）时抛 XmlParseException")
+  void should_throw_on_malformed_xml() {
+    assertThatThrownBy(() -> adapter.parseArticle("<PubmedArticle><MedlineCitation><PMID>1</PMID>"))
+        .isInstanceOf(XmlParseException.class);
+  }
+
+  private static String idOf(CanonicalPublication publication, PublicationIdentifierType type) {
     return publication.getIdentifiers().stream()
-        .filter(id -> PublicationIdentifierType.PMID.equals(id.getType()))
+        .filter(id -> type == id.getType())
         .map(CanonicalPublication.Identifier::getValue)
         .findFirst()
         .orElse(null);
-  }
-
-  /// 从 CanonicalPublication 中提取 DOI。
-  private String extractDoi(CanonicalPublication publication) {
-    if (publication.getIdentifiers() == null) {
-      return null;
-    }
-    return publication.getIdentifiers().stream()
-        .filter(id -> PublicationIdentifierType.DOI.equals(id.getType()))
-        .map(CanonicalPublication.Identifier::getValue)
-        .findFirst()
-        .orElse(null);
-  }
-
-  private InputStream toInputStream(String xml) {
-    return new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8));
   }
 }

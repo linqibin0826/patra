@@ -2,9 +2,9 @@ package dev.patra.identity.adapter.rest.me;
 
 import dev.patra.identity.adapter.rest.AvatarUrls;
 import dev.patra.identity.adapter.rest.me.response.AvatarResponse;
-import dev.patra.identity.app.usecase.avatar.AvatarChanged;
 import dev.patra.identity.app.usecase.avatar.ChangeAvatarCommand;
 import dev.patra.identity.app.usecase.avatar.RemoveAvatarCommand;
+import dev.patra.identity.domain.model.vo.avatar.Avatar;
 import dev.patra.tool.cqrs.CommandBus;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.io.IOException;
@@ -36,8 +36,8 @@ public class MeAvatarController {
   /// @return 新头像地址
   @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public AvatarResponse upload(@RequestPart(name = "file", required = false) MultipartFile file) {
-    AvatarChanged changed = commandBus.handle(ChangeAvatarCommand.of(bytesOf(file)));
-    return AvatarResponse.of(AvatarUrls.of(changed.username(), changed.avatar()));
+    Avatar avatar = commandBus.handle(ChangeAvatarCommand.of(bytesOf(file)));
+    return AvatarResponse.of(AvatarUrls.of(avatar));
   }
 
   /// 移除头像，回到默认头像；没有头像也是 204。注销中 409。

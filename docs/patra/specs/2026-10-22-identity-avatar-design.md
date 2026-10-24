@@ -277,6 +277,8 @@ log.info("头像已更换: userId={}, hash={}")
 - **为什么 `PENDING_DELETION` 照常下发**：冷静期里本人还能登录（进取消页），导航栏要显示头像。`BANNED` 与 `DELETED` 404：封禁账号的主页本来就 404，头像跟着不出。
 - **旧用户名**：404，不跳转。`avatarUrl` 总是用当前用户名生成，改名后响应里的地址随之变化。
 
+> 修订（2026-10-24，PAP-108，v0.13 决策 E）：读取路由改为 `GET /users/{userId}/avatar`，地址按用户 ID，改名后不变，旧的按用户名路由已删除。见 `2026-10-24-identity-external-contract-design.md` 第 6 节。
+
 ### 8.4 PAP-100 接入点
 
 照 PAP-100 spec 第 14 节，不另起一套：
@@ -312,6 +314,8 @@ server:
 - 形态：identity 自己的相对路径 `/users/{当前用户名}/avatar?v={hash}`，没有头像为 `null`。和 301 的 `Location` 一样是 identity 的相对路径，不含尺寸，不含任何基地址（决策 G）。
 - 门户（PAP-101）把它换成自己的同源地址并追加尺寸：例如 `/api/users/{username}/avatar?v={hash}&size=128`，Route Handler 转发到网关 `/patra-identity/users/{username}/avatar?v=…&size=…`，照搬 `fulltext-files.ts` 的头部白名单（`ETag`、`Cache-Control`、`Content-Type`、`Content-Length`）与 304 透传。尺寸选择：36 / 40 px 用 128 档，72 px 及以上用 512 档。
 - 生成位置：adapter 层的 `AvatarUrls.of(String username, Avatar avatar)`（URL 是 REST 关注点，不进领域）。
+
+> 修订（2026-10-24，PAP-108，v0.13 决策 E）：形态改为 `/users/{userId}/avatar?v={hash}`。
 
 | 响应 | 来源 |
 |---|---|
@@ -474,6 +478,8 @@ identity README：
 12. 注销到期删对象前不加锁复读一次状态（8.4），剩余的毫秒级窗口接受。
 13. 不做孤儿对象定时清扫：只在「提交后删旧对象失败」时出现，都在本用户前缀下，注销时一并删。
 14. 不限上传并发。
+
+> 修订（2026-10-24，PAP-108，v0.13 决策 E）：第 3 条的地址形态改为按用户 ID。
 
 ## 18. 要同步改的文档和 Issue
 

@@ -1,7 +1,6 @@
 package dev.patra.catalog.domain.model.read.portal;
 
 import dev.patra.catalog.domain.model.vo.publication.EvidenceLevel;
-import java.time.LocalDate;
 import java.util.List;
 import lombok.Builder;
 
@@ -17,6 +16,7 @@ public record PublicationDetailReadModel(
     Long venueId,
     String venueName,
     Integer publicationYear,
+    String publishedDate,
     EvidenceLevel evidenceLevel,
     String abstractType,
     List<AbstractSectionView> abstractSections,
@@ -121,15 +121,15 @@ public record PublicationDetailReadModel(
   /// 出版日期视图。
   ///
   /// @param type 日期类型（如 published）
-  /// @param date 日期值
-  public record PublicationDateView(String type, LocalDate date) {
+  /// @param date 降精度 ISO 日期（`yyyy` / `yyyy-MM` / `yyyy-MM-dd`）
+  public record PublicationDateView(String type, String date) {
 
     /// 创建出版日期视图。
     ///
     /// @param type 日期类型
     /// @param date 日期值
     /// @return 出版日期视图
-    public static PublicationDateView of(String type, LocalDate date) {
+    public static PublicationDateView of(String type, String date) {
       return new PublicationDateView(type, date);
     }
   }

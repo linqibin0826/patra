@@ -1,6 +1,5 @@
 package dev.patra.catalog.adapter.rest.portal.response;
 
-import java.time.LocalDate;
 import java.util.List;
 import lombok.Builder;
 
@@ -14,6 +13,7 @@ import lombok.Builder;
 /// @param venueId 期刊 ID（String）
 /// @param venueName 期刊名称
 /// @param publicationYear 出版年份
+/// @param publishedDate 出版日期，按实际精度输出 `yyyy` / `yyyy-MM` / `yyyy-MM-dd`
 /// @param evidenceLevel 证据等级（衍生自出版类型）
 /// @param abstractType 摘要类型
 /// @param abstractSections 结构化摘要段落（有序数组）
@@ -37,7 +37,6 @@ import lombok.Builder;
 /// @param aiSummary AI 摘要（当前恒为 null）
 /// @param source 数据来源（人类可读，如 "PubMed"；来自 provenance_code）
 /// @param fullTextUrl 原文链接（cat_publication_metadata.full_text_url，可为 null）
-/// @param bookmarks 收藏数（无用户系统，恒为 0）
 /// @param estimatedReadMin 预估阅读分钟数 `ceil(字数 / 230)`，不可读全文时为 null
 /// @param retracted 是否撤稿文献（PubMed 文献类型标了撤稿，或抓取时 PMC 标为撤稿）
 /// @param hasFullText 是否可读全文（全文接口 `/fulltext` 有正文）
@@ -53,6 +52,7 @@ public record PortalPublicationDetailResponse(
     String venueId,
     String venueName,
     Integer publicationYear,
+    String publishedDate,
     EvidenceLevelView evidenceLevel,
     String abstractType,
     List<AbstractSection> abstractSections,
@@ -76,7 +76,6 @@ public record PortalPublicationDetailResponse(
     String aiSummary,
     String source,
     String fullTextUrl,
-    Integer bookmarks,
     Integer estimatedReadMin,
     Boolean retracted,
     Boolean hasFullText,
@@ -159,15 +158,15 @@ public record PortalPublicationDetailResponse(
   /// 出版日期响应。
   ///
   /// @param type 日期类型
-  /// @param date 日期值
-  public record PublicationDate(String type, LocalDate date) {
+  /// @param date 降精度 ISO 日期（`yyyy` / `yyyy-MM` / `yyyy-MM-dd`）
+  public record PublicationDate(String type, String date) {
 
     /// 创建出版日期响应。
     ///
     /// @param type 日期类型
     /// @param date 日期值
     /// @return 出版日期响应
-    public static PublicationDate of(String type, LocalDate date) {
+    public static PublicationDate of(String type, String date) {
       return new PublicationDate(type, date);
     }
   }

@@ -1,0 +1,2 @@
+# 引用导出夹具按字节比对（RIS / CSV 要求 CRLF）：不做换行转换，避免 core.autocrlf=input 把 CRLF 改成 LF
+patra-api/patra-catalog/patra-catalog-infra/src/test/resources/citation/export/** -text

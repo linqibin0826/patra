@@ -9,14 +9,14 @@ patra-catalog 是 Patra 医学文献数据平台的目录管理微服务，负�
 - 维护期刊（Venue）目录和影响因子
 - 管理作者（Author）和机构（Organization）信息
 - 提供文献分类和标引服务
-- PubMed updatefiles 增量同步：让文献记录跟上 PubMed（PMCID、撤稿、勘误、删除）
+- PubMed 文献导入（baseline + updatefiles 一条可重放的流水线）：让文献记录跟上 PubMed（PMCID、撤稿、勘误、删除），任何文件可随时重放、不会回退
 - PMC 开放获取全文的抓取、JATS 解析入库，以及门户的全文、PDF、图片读端点
 
 ## 🏗️ 架构位置
 
 在 Patra 微服务架构中的位置：
 - **外部数据源**：NLM（PubMed baseline / updatefiles、MeSH）、PMC Cloud Service（公开 S3 桶 `pmc-oa-opendata`）、OpenAlex、Scopus、LetPub
-- **调用方**：patra-gateway 转发的门户（patra-portal）读端点 `/portal/**`；patra-identity 经 HTTP Interface 直连（`lb://patra-catalog`）的内部接口 `/_internal/**`（保存资料时校验 ROR ID / MeSH UI 并取名称快照）
+- **调用方**：patra-gateway 转发的门户（patra-portal）读端点 `/portal/**`；patra-identity 经 HTTP Interface 直连（`lb://patra-catalog`）的内部接口 `/_internal/**`（保存资料时校验 ROR ID / MeSH UI 并取名称快照）；patra-interaction 同样直连内部接口，按内部 ID 或 PMID 批量解析文献（对象登记表首次收藏与每日对账）
 - **依赖服务**：patra-registry（获取 Provenance 配置和数据字典）；MinIO（期刊封面、全文 XML / PDF / 图片）
 
 ## 🔧 主要功能
@@ -93,53 +93,52 @@ patra-catalog 是 Patra 医学文献数据平台的目录管理微服务，负�
    - **幂等去重**：Persister 按 `(venue_id, year)` 过滤已存在行，跨次调用不会重复插入同一年份
    - XXL-Job 调度入口（`venueScopusEnrichJob`，参数：`targetYear[,minCitedByCount]`）
 
-10. **PubMed Baseline 文献批量导入**（Spring Batch 实现）
-   - 使用 Spring Batch 实现大规模 PubMed 文献导入（2025 年约 3,700 万条）
-   - **临时文件下载**：从 NLM FTP 下载 gzip 压缩 XML 到临时目录，从本地文件解压并解析
-   - **单文件模式**：每次 Job 执行只处理一个文件（1,334 个文件可并行调度）
-   - **VenueLookupPort 双索引缓存**：使用 `BatchVenueLookupAdapter`（Step 级别缓存），NLM ID + ISSN 组合匹配
-   - **LanguageLookupPort 语言解析**：ISO 639-3 → BCP 47 语言代码转换，支持批量解析
-   - **FunderLookupPort 资助机构匹配**：通过 FundRef ID / ROR ID 匹配资助机构，支持批量缓存
-   - **VenueInstance 自动创建**：按卷期自动创建或复用期刊实例
-   - **SupplMeshName 处理**：提取文献补充 MeSH 概念标引（化学物质、疾病、方案等 SCR 关联）
-   - **OtherAbstract 处理**：提取文献的其他语言摘要（翻译摘要），来源包括 Publisher（官方翻译）、AIMSHP/KIEML（专业机构翻译）、plain-language-summary（通俗语言摘要）
-   - **PublicationDate 处理**：提取文献生命周期日期（投稿/接收/发表/修订/电子版发表/进入数据库等），支持不完整日期表达（年/月/日三种精度）
-   - **Identifier 处理**：提取文献标识符（PMID、DOI、PMC、PII 等），建立反向索引支持按标识符查询
-   - **Abstract 处理**：提取文献摘要（支持结构化摘要和纯文本摘要），独立存储便于全文检索
-   - **Investigator 处理**：提取非作者研究人员（如临床试验 PI、协调员），支持 ORCID 和 dedupKey 去重匹配
-   - **PersonalNameSubject 处理**：提取传记类/历史类/纪念类文献的主题人物信息
-   - **Keyword 处理**：解析 `<KeywordList>` 关键词列表（支持多 Owner 分组：NOTNLM=作者关键词、NLM=索引词），含 MajorTopic 标记和规范化去重
-   - **标题容错规则**：优先使用 `ArticleTitle`，为空时回退 `VernacularTitle`，两者都为空则跳过该记录
-   - **Writer 双阶段去重**：先做 chunk 内 `PMID/DOI` 去重（first-win），再批量查询数据库过滤已存在记录
-   - **幂等兜底**：数据库唯一索引（`uk_pmid`/`uk_doi`）作为最终一致性保障，回滚重试不依赖内存状态
-   - 支持断点续传（Job 级别幂等执行）
-   - XXL-Job 调度入口（`pubmedBaselineImportJob`，参数：`fileIndex=1~1334`）
+10. **PubMed 文献导入**（Spring Batch，baseline 与 updatefiles 共用一条流水线，PAP-110）
+   - **一条链路**：下载 `.xml.gz` 并按 NCBI 的 `.md5` 旁文件校验（不符重试，共 3 次）→ 逐篇切出原始 `<PubmedArticle>` → 解析 → 来源位置守卫 → 组装 → 新增 / 覆盖文献并 upsert 来源表 → 最后处理 `DeleteCitation`
+   - **来源位置守卫**：文件名 `pubmed{yy}n{seq}.xml.gz` 换算成 `rank = yy × 10000 + seq`，记在来源表 `cat_publication_source`（每个 PMID 一行，含逐篇原文 `raw_xml`，lz4 压缩）。比库里旧的记录跳过（计 `skipped_stale`）、相同或更新的覆盖；软删与墓碑只被更新的文件覆盖；`DeleteCitation` 只删 rank 不大于删除文件的文献；`ALL` 范围删除库里没有的 PMID 时写墓碑，防止重放更早的 baseline 把它加回来；`last_synced_at` 只在 rank 前进时刷新
+   - **覆盖更新**：内部 ID 不变；PubMed 管的列与子表全部替换；`is_oa`、`citation_count`、`has_full_text`、非 PubMed 标识符、OA 位置、全文记录等别的流程写入的数据保留；新 DOI 属于别的文献时保留旧 DOI
+   - **范围**：`EXISTING_ONLY`（开发环境默认）只覆盖库里已有的，`ALL` 也新增；配置 `patra.catalog.pubmed.scope`
+   - **坏记录隔离**：单篇解析或校验失败（年份不在 1800 ~ 2100、缺标题、缺 PMID 等）跳过并计 `skipped_invalid`，文件照常完成；数据库等基础设施错误仍让文件失败
+   - **日期按实际精度**：`year` / `month` / `day` 三种精度，不补月日；日对该月不合法（2 月 30 日）降为月精度，月份非法降为年精度，季节原文另存；门户与解析接口输出 `yyyy` / `yyyy-MM` / `yyyy-MM-dd`
+   - **引用字段**：页码（`MedlinePgn` / `StartPage` / `EndPage`）、出版月日、期刊 ISO 缩写进 `cat_publication`；PII 进标识符表
+   - **进度表** `cat_pubmed_file`（`kind` = `BASELINE` / `UPDATE`）：每个文件一行，记状态、范围、作业 generation 与各类计数；UPDATE 无参数时从最小的未完成 UPDATE 文件续跑（没有则最后一个成功文件的下一个），只看 UPDATE 行；失败即停、下次续跑同一个作业实例；`reprocess=true` 重放已完成的文件时换新的 generation
+   - **本地重算**（`pubmedReparseJob`）：不联网，从来源表读原文按 PMID 键集分页重新解析覆盖，用于解析器升级后回填；只处理未软删的文献，rank 不变、`last_synced_at` 不变
+   - 导入与本地重算共用一把任务锁（`catalog.pubmed-import`），另一个实例在跑时本次跳过并写明
+   - **组装沿用的能力**：`VenueLookupPort` 双索引缓存（NLM ID + ISSN）、ISO 639-3 → BCP 47 语言转换、资助机构匹配、按卷期创建或复用期刊实例、补充 MeSH 概念、翻译摘要、标识符、结构化摘要、非作者研究人员、人物主题、关键词（多 Owner 分组）；标题优先 `ArticleTitle`，为空回退 `VernacularTitle`
+   - XXL-Job 调度入口：`pubmedImportJob`（参数均可省：`kind=BASELINE|UPDATE,from=N,to=M,maxFiles=K,scope=EXISTING_ONLY|ALL,reprocess=true|false`；无参数 = 每日增量；`kind=BASELINE` 必须给 `from`）、`pubmedReparseJob`（无参数）
+   - 设计与回填 runbook：[文献引用数据、可重放导入与导出](../../docs/patra/specs/2026-10-24-catalog-citation-data-export-design.md)（第 5 节流水线、第 9 节 mini 回填步骤）
 
-11. **PubMed updatefiles 增量同步**（Spring Batch 实现）
-   - 从进度表 `cat_pubmed_update_file` 最小的未完成文件（没有则最后一个成功文件的下一个）开始，按文件号处理到最新，跳过已成功的文件；失败即停、下次续跑同一个作业实例
-   - **覆盖更新**：内部 ID 不变；PubMed 管的列与子表全部替换；`is_oa`、`citation_count`、`has_full_text`、非 PubMed 标识符、OA 位置、全文记录等别的流程写入的数据保留
-   - **分流在委托之前**：`EXISTING_ONLY`（开发环境）下库里没有的记录不进 baseline 处理器，不留期刊实例
-   - `DeleteCitation` 软删除；软删除的文献再出现时复活；新 DOI 属于别的文献时保留旧 DOI
-   - XXL-Job 调度入口（`pubmedUpdateSyncJob`，参数：`fromFile=N,maxFiles=M,scope=EXISTING_ONLY|ALL`）
-
-12. **PMC 全文抓取与 JATS 解析**（Runner / Worker / Persister）
+11. **PMC 全文抓取与 JATS 解析**（Runner / Worker / Persister）
    - 抓取：从 PMC Cloud Service 选版本（开放获取、优先非手稿），下载 XML、PDF、正文图片（含 webp，读像素宽高）写入 MinIO；暂不可用的按放开日期或退避再查
    - 解析：JDK DOM 解析 `<body>` / `<back>` 为 `FullTextBody`（JSONB），只做格式转换不改写内容；`PARSER_VERSION` 提升后全量重新解析，不访问 PMC
    - 三个任务用父子任务串起来，PG advisory lock 防同类任务并发
    - XXL-Job 调度入口（`pmcFullTextFetchJob`、`jatsFullTextParseJob`）
 
-13. **门户全文读端点**
+12. **门户全文读端点**
    - 详情接口的 `retracted`、`hasFullText`、`hasPdf`、`pdfSizeBytes`、`estimatedReadMin`
    - `GET /portal/publications/{id}/fulltext`（正文、许可、署名）、`/fulltext/pdf`、`/fulltext/figures/{fileName}`
    - 撤稿文献（发表类型 `D016441`，或抓取时 PMC 标为撤稿）在读端自动下线全文
 
-14. **机构（ROR）与 MeSH 的建议接口 + 内部查询接口**（v0.12 用户中心，PAP-94）
+13. **机构（ROR）与 MeSH 的建议接口 + 内部查询接口**（v0.12 用户中心，PAP-94）
    - 门户：`GET /portal/organizations/suggest?q=&limit=`、`GET /portal/mesh/suggest?q=&limit=`，响应 `{ "items": [...] }`；`q` 归一（NFKC、去空白）后 2 ~ 100 字，`limit` 1 ~ 20 缺省 10，非法 422
    - 机构按名称、中文名、别名、缩写搜：含中日韩文字走任意位置子串，拉丁文字只做前缀与词首；排序 = 命中方式（精确 > 前缀 > 词首 > 子串）→ 中国优先 → 医疗机构优先 → 名称类型 → 短名优先；只给 `active` 且未软删的机构；`zhName` 取 Patra 别名表的 LABEL > ROR `label` > ROR `alias`
    - MeSH 按主题词名与非排列入口词搜（前缀 / 词首），精确命中排最前，经入口词命中的返回主题词并带 `matchedTerm`；只给主题类（class 1）且 active 的主题词；`treeNumbers` 主树号在前
    - 内部（给 identity，网关对外 403）：`GET /_internal/organizations/{rorId}`、`GET /_internal/mesh/descriptors/{ui}`，契约在 `patra-catalog-api` 的 `OrganizationEndpoint` / `MeshEndpoint`（`@HttpExchange`），ID 格式不对、不存在、机构非 active 都 404
    - Patra 自维护的机构别名表 `cat_organization_alias` 补 ROR 缺的中文名与简称，种子在可重复迁移 `R__cat_organization_alias_seed.sql`（手工三甲清单 + Wikidata zh 标签），改文件即改数据
    - 设计：[机构与 MeSH 建议接口](../../docs/patra/specs/2026-10-21-catalog-org-mesh-suggest-design.md)
+14. **文献批量解析与批量卡片**（v0.13 文献库，PAP-109）
+   - 内部（给 interaction，网关对外 403）：`POST /_internal/publications/resolve/by-ids`、`POST /_internal/publications/resolve/by-pmids`，请求体 1 ~ 100 个键；每个请求键一行（按请求顺序、去重），软删的文献照样返回 `state = DELETED`，查不到的 `exists = false`；契约在 `patra-catalog-api` 的 `PublicationEndpoint`
+   - 门户：`GET /portal/publications/batch?id=…&id=…`（1 ~ 100），响应 `{ "items": [...] }`，元素与 feed / 检索列表项同形；不存在与软删的 ID 不返回，按请求顺序；整批一条 SQL
+   - 按主键与 `uk_pmid` 命中，不加索引；门户响应不再有写死为 0 的 `bookmarks`
+   - 设计：[文献批量解析与批量卡片](../../docs/patra/specs/2026-10-24-catalog-publication-resolve-cards-design.md)
+
+15. **引用导出与复制引用**（v0.13 文献库，PAP-110 计划二）
+   - 门户：`POST /portal/publications/export`，请求体 `{ "ids": [...], "format": "ris|bibtex|csv|csl-json", "name": "…" }`（1 ~ 5,000 个 ID，`name` ≤ 100 字）；附件流式写出，文件名 `patra-<name>-<YYYY-MM-DD>.<ext>`（北京时间当天，RFC 5987 `filename*`）；不存在与软删的跳过，按请求顺序去重
+   - 门户：`POST /portal/publications/citations`，请求体 `{ "ids": [...], "style": "gb-t-7714-2015|vancouver|apa-7|ama-11" }`（1 ~ 100 个）；响应 `{ "style", "entries": [{ "label", "text" }] }`，序号与正文分开；编号样式按请求顺序，APA 按作者字母序、`label` 为 null
+   - 读端 `CitationRecordReadPort`：每批 ≤ 500 个 ID、两条 SQL（主行 + 作者）；标题去内联标记，期刊缩写按 ISO → MedlineTA → 全称兜底，文章号只在没有页码时取 PII
+   - 导出服务按 500 个一批读 → 写 → 丢弃，每批一个只读事务（响应体在控制器返回后执行）；写出器有状态（CSV 的 BOM 与表头、JSON 数组括号）。RIS 与 CSV 行尾 CRLF，CSV 带 BOM 便于 Excel 打开中文；日期按实际精度（RIS `DA` 留空、BibTeX 只到年时不写 `month`、CSL-JSON `date-parts` 按精度）
+   - 引用用 [citeproc-java](https://github.com/michel-kraemer/citeproc-java)（Apache-2.0）渲染官方 [CSL 样式库](https://github.com/citation-style-language/styles)与 [locales](https://github.com/citation-style-language/locales)（CC BY-SA 3.0，经 `org.citationstyles:styles` / `locales` jar 引入）；四种样式对应 `china-national-standard-gb-t-7714-2015-numeric`、`nlm-citation-sequence`、`apa`、`american-medical-association`，全部 `en-US`（GB/T 西文文献写 et al.）
+   - 设计：[文献引用数据、可重放导入与导出](../../docs/patra/specs/2026-10-24-catalog-citation-data-export-design.md)（第 6、7 节）
 
 运维步骤见 [v0.11 运维手册](../../docs/patra/runbooks/v0.11-fulltext-runbook.md)。
 
@@ -442,6 +441,8 @@ patra:
   - `cat_publication_abstract`：文献摘要表（独立存储，支持结构化摘要 JSON 和纯文本摘要，含版权信息）
   - `cat_publication_alternative_abstract`：文献翻译摘要表（支持同语言多来源类型摘要，含 language_code、source_type、translation_type、官方/专业翻译标记）
   - `cat_publication_date`：文献日期表（支持不完整日期，含年/月/日三种精度，日期类型：received/accepted/published/revised/epublish/entrezdate 等）
+  - `cat_publication_source`：PubMed 来源表（每个 PMID 一行：最后写入或软删它的文件、`source_rank`、逐篇原文 `raw_xml`；只被软删、没写过原文的为墓碑行）
+  - `cat_pubmed_file`：PubMed 文件进度表（baseline 与 updatefiles，`kind` 区分；状态、范围、作业 generation、各类计数含 `skipped_stale_count`）
   - `cat_publication_identifier`：文献标识符表（支持 PMID/DOI/PMC/PII 等多种标识符类型，建立反向索引）
 
 - **Investigator（研究者）相关表**
@@ -496,6 +497,9 @@ patra:
 
 ## 📝 变更日志
 
+- 2026-10-24（v0.13，PAP-110 计划二）：门户引用导出（RIS / BibTeX / CSV / CSL-JSON，流式、每批 500）与复制引用（GB/T 7714-2015、Vancouver、APA 7、AMA 11，citeproc-java + 官方 CSL 样式）。
+- 2026-10-24（v0.13，PAP-110 计划一）：baseline 与 updatefiles 合成一条可重放的导入流水线（`pubmedImportJob`、`pubmedReparseJob`，删除 `pubmedBaselineImportJob` / `pubmedUpdateSyncJob`）；`V10` 引用字段（出版月日、页码、ISO 缩写），`V11` 来源表 `cat_publication_source` 与进度表改名 `cat_pubmed_file`；md5 校验、坏记录隔离；日期按实际精度输出（门户与解析接口新增 `publishedDate`，详情 `dates[].date` 降精度），检索 `sort=year` 按年月日排序；配置键 `update-scope` 改名 `scope`。
+- 2026-10-24（v0.13，PAP-109）：文献批量解析内部接口与 `PublicationEndpoint` 契约；门户批量卡片接口；删除门户响应的 `bookmarks`。
 - 2026-10-21（v0.12，PAP-94）：机构与 MeSH 建议接口、内部查询接口与 `patra-catalog-api` 契约；`V9` 加 `pg_trgm` 索引与 `cat_organization_alias`；别名种子第一版。
 
 ## 📖 相关文档

@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.WebRequest;
 
 /// 公开的头像读取，网关上 `/users/**` 公开。地址带版本，内容永远不变，所以按不可变长期缓存下发；
-/// 版本、尺寸、用户名任一对不上一律 404（不用 Bean Validation：`@Validated` 下会变 422）。
+/// 版本、尺寸、用户 ID 任一对不上一律 404（不用 Bean Validation：`@Validated` 下会变 422）。
 ///
 /// 返回 `InputStreamResource` 而不是 `StreamingResponseBody`：后者走异步分派，有 Tomcat 30 秒超时，
 /// 所有检查都在写响应之前做完，404 照样能回（同 catalog 的全文文件下发）。
@@ -37,18 +37,18 @@ public class PublicAvatarController {
 
   /// 读头像。
   ///
-  /// @param username 路径里的用户名，大小写不敏感
+  /// @param userId 路径里的用户 ID
   /// @param size `512` 或 `128`
   /// @param version 当前头像的哈希
   /// @param request 用于条件请求
   /// @return 200 WebP 字节流；`If-None-Match` 命中时 304
-  @GetMapping("/{username}/avatar")
+  @GetMapping("/{userId}/avatar")
   public ResponseEntity<Resource> avatar(
-      @PathVariable String username,
+      @PathVariable String userId,
       @RequestParam(required = false) String size,
       @RequestParam(name = "v", required = false) String version,
       WebRequest request) {
-    AvatarRef ref = avatarQueryService.locate(username, size, version);
+    AvatarRef ref = avatarQueryService.locate(userId, size, version);
     if (request.checkNotModified(ref.etag())) {
       return null;
     }

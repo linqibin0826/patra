@@ -1,0 +1,3 @@
+	Anker, S. D., Butler, J., Filippatos, G., Ferreira, J. P., Bocchi, E., Böhm, M., Brunner-La Rocca, H.-P., & EMPEROR-Preserved Trial Investigators. (2021). Empagliflozin in Heart Failure with a Preserved Ejection Fraction. The New England Journal of Medicine, 385(16), 1451–1461. https://doi.org/10.1056/NEJMoa2107038
+	Smith, J. A. (2023). A year-only paper. Scientific Reports, 13, Article 12345. https://doi.org/10.1038/s41598-023-00001-1
+	Wang, L. (2022). Year month paper. Lancet, 400(10360), 1200–1210.
