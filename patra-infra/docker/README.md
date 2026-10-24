@@ -159,7 +159,7 @@ ssh linqibin@linqibins-mac-mini 'docker restart patra-rocketmq-broker'  # 只重
 | `gateway.env` | `PATRA_GATEWAY_IDENTITY_ASSERTION_PRIVATE_KEY`，含私钥的 EC P-256 JWK JSON，一行 | gateway 的容器和本机进程 | 同上 |
 | `nacos-server.env` | Nacos 的 `NACOS_AUTH_TOKEN`、`NACOS_AUTH_IDENTITY_KEY`、`NACOS_AUTH_IDENTITY_VALUE`。**只放 mini** | core 栈的 nacos | compose 报出路径并拒绝执行 |
 | `nacos-admin.env` | Nacos 管理员密码 `NACOS_ADMIN_PASSWORD`。**只放 mini**，另存密码管理器 | `nacos-init.sh`、`nacos-verify.sh` | 脚本说明缺哪个变量并退出 |
-| `nacos.env` | 应用账号 `NACOS_USERNAME=patra-app`、`NACOS_PASSWORD` | 6 个后端服务的容器和本机进程；两个 Nacos 脚本 | 同 `redis.env` |
+| `nacos.env` | 应用账号 `NACOS_USERNAME=patra-app`、`NACOS_PASSWORD` | 7 个后端服务的容器和本机进程；两个 Nacos 脚本 | 同 `redis.env` |
 | `nacos-push.env` | 推送账号 `NACOS_PUSH_USERNAME=patra-push`、`NACOS_PUSH_PASSWORD` | 两个 Nacos 脚本；PAP-75 的推送 | 脚本说明缺哪个变量并退出 |
 | `mail.env` | 真实邮件服务商（Resend）的 SMTP 凭据：`PATRA_MAIL_HOST` / `PORT` / `USERNAME` / `PASSWORD` / `AUTH` / `SSL` / `STARTTLS` / `FROM`。**只放 mini**（本机要走真实服务商时再放一份） | identity 的容器和本机进程 | 跳过：邮件发往 core 栈的 Mailpit |
 | `<服务>.env` | 该服务的外部数据源密钥，例如 catalog 的 `SCOPUS_API_KEY`、`PROXY_AUTH_KEY`、`PROXY_AUTH_PWD`，ingest 的 `ROCKETMQ_AK`、`ROCKETMQ_SK` | 对应服务的容器和本机进程 | 跳过 |
@@ -221,7 +221,7 @@ GATEWAY_IMAGE_TAG="$(cat ~/.patra/cd/last-good-gateway)" docker compose -f docke
 ### 换签名密钥
 
 1. 按上面的方法生成一对新密钥。新私钥先存成别的文件名，不要覆盖 `gateway.env`。
-2. 把新公钥加进 `patra-common.yaml` 的 `keys` 数组，旧公钥保留。提交、推送：CD 把配置推到 Nacos 后重新部署全部 6 个服务，容器读到新公钥；本机进程各重启一次。
+2. 把新公钥加进 `patra-common.yaml` 的 `keys` 数组，旧公钥保留。提交、推送：CD 把配置推到 Nacos 后重新部署全部 7 个服务，容器读到新公钥；本机进程各重启一次。
 
    此时新旧两把公钥都被信任，网关仍用旧私钥签。
 3. 两台机器上都把 `gateway.env` 换成新私钥。
@@ -235,8 +235,8 @@ GATEWAY_IMAGE_TAG="$(cat ~/.patra/cd/last-good-gateway)" docker compose -f docke
 - 3.2.4，开着鉴权。存储在业务 PG 的 `patra_nacos` 库（官方 PG 插件，镜像自带）；`data/` 卷只剩服务发现的持久化数据和 jraft 元数据。
 - namespace：配置只有 `dev` 一个 namespace，服务发现留在 `public`。密钥不进 Nacos：配置里写 `${变量}`，值在 `~/.patra/secrets/`（PAP-74 撤销了 `dev-secrets`，见 `docs/patra/specs/2026-10-13-nacos-config-starter-design.md` 第 4 节）。
 - 账号：管理员 `nacos`；应用账号 `patra-app`（public 服务注册读写、`dev` 的配置只读）；推送账号 `patra-push`（只能写 `dev` 的 `DEFAULT_GROUP`）。
-- 账号、角色、权限由 `scripts/nacos-init.sh` 按脚本里的清单同步，不要在控制台手改：下次执行会被改回。验收用 `scripts/nacos-verify.sh`（加 `--expect-services` 时另查 6 个服务都已注册）。
-- 改应用或推送账号的密码：两台机器都改密钥文件，mini 上跑 `nacos-init.sh`，再按「改了密钥文件之后」重建 6 个应用容器、重启本机进程。
+- 账号、角色、权限由 `scripts/nacos-init.sh` 按脚本里的清单同步，不要在控制台手改：下次执行会被改回。验收用 `scripts/nacos-verify.sh`（加 `--expect-services` 时另查 7 个服务都已注册）。
+- 改应用或推送账号的密码：两台机器都改密钥文件，mini 上跑 `nacos-init.sh`，再按「改了密钥文件之后」重建 7 个应用容器、重启本机进程。
 - 换 token 签名密钥：改 mini 上的 `nacos-server.env`，执行 `docker compose -f docker-compose.core.yaml up -d --force-recreate nacos`。已签出的令牌全部失效，客户端会自动重新登录。改密码或删用户**不会**作废已签出的令牌（默认 18000 秒有效），要立刻撤销只能换签名密钥。
 - 镜像启动脚本开着 `set -x`，token 签名密钥和 identity 会出现在 `docker logs patra-nacos` 里（3.3 起改掉）。排查时不要把这段日志贴到任何地方。
 
@@ -263,6 +263,8 @@ docker exec patra-postgres bash /docker-entrypoint-initdb.d/03-nacos-schema.sh
 `portal` 容器在 `patra-net` 上固定为 `192.168.97.250`（`docker-compose.apps.yaml`）：网关只信任这个地址发来的 `X-Forwarded-For`（同一个文件里 gateway 的 `PATRA_GATEWAY_TRUSTED_PROXIES`，即 `server.tomcat.remoteip.internal-proxies`），据此记录浏览器的真实 IP。两边要一起改。不能信任整个网段：tailnet 经 `tailscale-gw` 子网路由进来的连接会被 SNAT 成网段内地址，OrbStack 端口转发进来的连接都显示成 `192.168.97.1`。所以 mini 上从 tailnet 访问门户时，门户看到的浏览器地址本身就是内网地址，登录设备列表里属地显示「内网」。
 
 identity 的定时任务除 `emailTokenCleanupJob`（04:30）外还有 `loginRecordCleanupJob`（Cron `0 40 4 * * ?`），在 xxl-job-admin 里手工新建，执行器 `patra-identity`。
+
+interaction 的执行器 `patra-interaction`（端口 6501，不映射到宿主机）在 xxl-job-admin 的「执行器管理」里手工新建、自动注册；它的两个每日任务 `subjectReconciliationJob`（`0 30 6 * * ?`）、`deletedUserCleanupJob`（`0 0 6 * * ?`）见 `docs/patra/runbooks/v0.13-library-go-live-runbook.md`。
 
 ## 应用侧配置（patra-api，本仓库范围外）
 

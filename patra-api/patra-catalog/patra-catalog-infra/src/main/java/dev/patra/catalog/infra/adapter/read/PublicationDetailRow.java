@@ -18,6 +18,16 @@ public interface PublicationDetailRow {
 
   Integer getPublicationYear();
 
+  /// 出版月。
+  ///
+  /// @return 月，可空
+  Integer getPublicationMonth();
+
+  /// 出版日。
+  ///
+  /// @return 日，可空
+  Integer getPublicationDay();
+
   String getAbstractType();
 
   /// 结构化摘要段落 JSON 字符串（原始 jsonb 转换为文本）。

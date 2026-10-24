@@ -5,6 +5,8 @@ import dev.patra.catalog.domain.model.read.portal.PublicationSearchFacets;
 import dev.patra.catalog.domain.model.read.portal.PublicationSearchFilter;
 import dev.patra.catalog.domain.query.PageResult;
 import dev.patra.catalog.domain.query.PagingParams;
+import java.util.Collection;
+import java.util.List;
 
 /// 文献检索 CQRS 读端口，首页 feed 与 `/portal/publications/search` 共用。
 ///
@@ -27,4 +29,10 @@ public interface PublicationSearchReadPort {
   /// @param filter 过滤参数（含已选维度）
   /// @return facet 聚合结果
   PublicationSearchFacets facets(PublicationSearchFilter filter);
+
+  /// 按 ID 批量取列表项（门户批量卡片），与检索列表同一个投影。
+  ///
+  /// @param ids 文献主键；空集合时直接返回空列表、不查库
+  /// @return 存在且未软删的文献，顺序不保证
+  List<PortalPaperReadModel> findCardsByIds(Collection<Long> ids);
 }

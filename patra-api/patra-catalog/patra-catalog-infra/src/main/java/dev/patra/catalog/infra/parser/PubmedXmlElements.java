@@ -88,6 +88,8 @@ public final class PubmedXmlElements {
     public static final String TITLE = "Title";
     public static final String MEDLINE_JOURNAL_INFO = "MedlineJournalInfo";
     public static final String ISSN_LINKING = "ISSNLinking";
+    public static final String ISO_ABBREVIATION = "ISOAbbreviation";
+    public static final String MEDLINE_TA = "MedlineTA";
 
     private Journal() {}
   }
@@ -106,6 +108,9 @@ public final class PubmedXmlElements {
     public static final String PUBLICATION_TYPE = "PublicationType";
     public static final String PAGINATION = "Pagination";
     public static final String MEDLINE_PGN = "MedlinePgn";
+    public static final String START_PAGE = "StartPage";
+    public static final String END_PAGE = "EndPage";
+    public static final String E_LOCATION_ID = "ELocationID";
 
     private Article() {}
   }
@@ -166,6 +171,7 @@ public final class PubmedXmlElements {
     public static final String MONTH = "Month";
     public static final String DAY = "Day";
     public static final String MEDLINE_DATE = "MedlineDate";
+    public static final String SEASON = "Season";
     public static final String HISTORY = "History";
     public static final String PUBMED_PUB_DATE = "PubMedPubDate";
 
@@ -178,6 +184,7 @@ public final class PubmedXmlElements {
     public static final String ID_TYPE = "IdType";
     public static final String COMPLETE_YN = "CompleteYN";
     public static final String VALID_YN = "ValidYN";
+    public static final String E_ID_TYPE = "EIdType";
     public static final String EQUAL_CONTRIB = "EqualContrib";
     public static final String MAJOR_TOPIC_YN = "MajorTopicYN";
     public static final String UI = "UI";

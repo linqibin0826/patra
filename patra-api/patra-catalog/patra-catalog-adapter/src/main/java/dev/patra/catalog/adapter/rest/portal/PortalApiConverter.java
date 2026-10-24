@@ -79,9 +79,9 @@ public class PortalApiConverter {
         model.title(),
         model.venueName(),
         model.publicationYear(),
+        model.publishedDate(),
         model.authors(),
         model.citationCount(),
-        0, // bookmarks：无用户系统，恒为 0
         model.doi(),
         model.pmid(),
         toSource(model.provenanceCode()),
@@ -269,6 +269,7 @@ public class PortalApiConverter {
         .venueId(model.venueId() != null ? Long.toString(model.venueId()) : null)
         .venueName(model.venueName())
         .publicationYear(model.publicationYear())
+        .publishedDate(model.publishedDate())
         .evidenceLevel(EvidenceLevelView.of(model.evidenceLevel()))
         .abstractType(model.abstractType())
         .abstractSections(
@@ -321,7 +322,6 @@ public class PortalApiConverter {
         .aiSummary(null) // 当前无 LLM 摘要生成，恒为 null
         .source(toSource(model.provenanceCode()))
         .fullTextUrl(model.fullTextUrl())
-        .bookmarks(0) // 无用户系统，恒为 0
         .estimatedReadMin(estimatedReadMin(model.hasFullText(), model.wordCount()))
         .retracted(model.retracted())
         .hasFullText(model.hasFullText())

@@ -61,6 +61,7 @@ Patra 是一个**医学出版物数据平台**,旨在:
 | [**patra-catalog**](./patra-catalog/README.md) | 文献、期刊、主题词等目录数据 | `patra-catalog-boot` |
 | [**patra-object-storage**](./patra-object-storage/README.md) | 上传到 MinIO/S3 的文件元数据，只对内 | `patra-object-storage-boot` |
 | [**patra-identity**](./patra-identity/README.md) | 前台用户的账号：注册、登录、会话、封禁 | `patra-identity-boot` |
+| [**patra-interaction**](./patra-interaction/README.md) | 社区互动：文献库与收藏夹（以后的讨论、关注、通知），按子域分包 | `patra-interaction-boot` |
 | [**patra-gateway-boot**](./patra-gateway-boot/README.md) | API 网关 (入口),包含路由和认证 | `patra-gateway-boot` |
 
 
@@ -142,7 +143,7 @@ curl http://localhost:8082/actuator/health   # Ingest
 
 ## 🔧 环境配置文件
 
-- **6 个后端服务**：配置从 Nacos 读（`patra-common.yaml` 加 `{服务名}.yaml`，源文件在 `patra-infra/nacos/dev/`），启动类用 `PatraApplication.run(服务名, …)`。jar 里只有 `application.yml`，放端口、连接池、超时等随代码变的默认值；库地址、Redis、MinIO、xxl-job、公钥、密钥引用等随环境变的值在 Nacos。IDE 与容器读同一份配置，只差 `PATRA_INFRA_HOST`、`PATRA_ADVERTISE_IP`、`PATRA_LOG_DIR` 三个本地变量。设计见 `docs/patra/specs/2026-10-13-config-migration-batch1-design.md`、`docs/patra/specs/2026-10-14-config-migration-batch2-design.md`。
+- **7 个后端服务**：配置从 Nacos 读（`patra-common.yaml` 加 `{服务名}.yaml`，源文件在 `patra-infra/nacos/dev/`），启动类用 `PatraApplication.run(服务名, …)`。jar 里只有 `application.yml`，放端口、连接池、超时等随代码变的默认值；库地址、Redis、MinIO、xxl-job、公钥、密钥引用等随环境变的值在 Nacos。IDE 与容器读同一份配置，只差 `PATRA_INFRA_HOST`、`PATRA_ADVERTISE_IP`、`PATRA_LOG_DIR` 三个本地变量。设计见 `docs/patra/specs/2026-10-13-config-migration-batch1-design.md`、`docs/patra/specs/2026-10-14-config-migration-batch2-design.md`。
 - 服务注册中心 (Nacos) 在端口 8848 运行，提供服务发现、配置和健康检查功能。
 - 密钥（Redis 密码、网关私钥、外部数据源 API key）不进仓库：Nacos 配置里只写 `${变量}`，值放在 `~/.patra/secrets/` 下的 `.env` 文件里，本机由 Nacos starter 读，容器经 compose 的 `env_file` 注入。
 

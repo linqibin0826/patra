@@ -20,6 +20,16 @@ public interface PublicationSearchRow {
 
   Integer getPublicationYear();
 
+  /// 出版月。
+  ///
+  /// @return 月，可空
+  Integer getPublicationMonth();
+
+  /// 出版日。
+  ///
+  /// @return 日，可空
+  Integer getPublicationDay();
+
   Integer getCitationCount();
 
   String getDoi();

@@ -12,6 +12,7 @@ import dev.patra.identity.domain.model.enums.UserStatus;
 import dev.patra.identity.domain.model.read.AvatarOwner;
 import dev.patra.identity.domain.model.read.PublicUserReadModel;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
+import dev.patra.identity.domain.model.read.UserSummaryReadModel;
 import dev.patra.identity.domain.model.vo.DisplayName;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.Username;
@@ -37,6 +38,9 @@ import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
@@ -227,7 +231,7 @@ class UserReadAdapterIT {
   }
 
   @Test
-  void should_find_avatar_owner_by_current_username_only() {
+  void should_find_avatar_owner_by_user_id() {
     User saved =
         users.save(User.register(EmailAddress.of("owner@example.com"), Username.of("u-owner")));
     UserProfile profile = profiles.save(UserProfile.create(saved.getId()));
@@ -238,15 +242,64 @@ class UserReadAdapterIT {
         users.save(User.register(EmailAddress.of("bare@example.com"), Username.of("u-bare")));
     profiles.save(UserProfile.create(bare.getId()));
 
-    assertThat(reader.findAvatarOwner(Username.of("u-owner")))
+    assertThat(reader.findAvatarOwner(saved.getId()))
         .contains(AvatarOwner.of(saved.getId(), UserStatus.ACTIVE, avatar));
-    assertThat(reader.findAvatarOwner(Username.of("u-bare")))
+    assertThat(reader.findAvatarOwner(bare.getId()))
         .contains(AvatarOwner.of(bare.getId(), UserStatus.ACTIVE, null));
-    assertThat(reader.findAvatarOwner(Username.of("nobody"))).isEmpty();
+    assertThat(reader.findAvatarOwner(Long.MAX_VALUE)).isEmpty();
 
     jdbcTemplate.update("UPDATE idn_user SET username = 'u-owner-new' WHERE id = ?", saved.getId());
     entityManager.clear();
 
-    assertThat(reader.findAvatarOwner(Username.of("u-owner"))).isEmpty();
+    assertThat(reader.findAvatarOwner(saved.getId()))
+        .contains(AvatarOwner.of(saved.getId(), UserStatus.ACTIVE, avatar));
+  }
+
+  @Test
+  void should_read_summaries_in_batch() {
+    User named =
+        users.save(User.register(EmailAddress.of("sum.a@example.com"), Username.of("u-sum-a")));
+    UserProfile namedProfile = profiles.save(UserProfile.create(named.getId()));
+    namedProfile.edit(ProfileContent.builder().displayName(new DisplayName("陈宇")).build());
+    Avatar avatar = Avatar.of(named.getId(), "0123456789abcdef");
+    namedProfile.changeAvatar(avatar);
+    namedProfile.changePrivacy(
+        PrivacySettings.of(ProfileVisibility.SIGNED_IN, ProfessionalVisibility.PUBLIC, false));
+    profiles.save(namedProfile);
+    User bare =
+        users.save(User.register(EmailAddress.of("sum.b@example.com"), Username.of("u-sum-b")));
+    profiles.save(UserProfile.create(bare.getId()));
+    User gone =
+        users.save(User.register(EmailAddress.of("sum.c@example.com"), Username.of("u-sum-c")));
+    profiles.save(UserProfile.create(gone.getId()));
+    jdbcTemplate.update(
+        "UPDATE idn_user SET status = 'DELETED', deleted_at = now(), email = NULL WHERE id = ?",
+        gone.getId());
+    entityManager.clear();
+
+    Map<Long, UserSummaryReadModel> byId =
+        reader
+            .findSummaries(List.of(named.getId(), bare.getId(), gone.getId(), Long.MAX_VALUE))
+            .stream()
+            .collect(Collectors.toMap(UserSummaryReadModel::userId, Function.identity()));
+
+    assertThat(byId).containsOnlyKeys(named.getId(), bare.getId(), gone.getId());
+    UserSummaryReadModel a = byId.get(named.getId());
+    assertThat(a.username()).isEqualTo("u-sum-a");
+    assertThat(a.displayName()).isEqualTo("陈宇");
+    assertThat(a.avatar()).isEqualTo(avatar);
+    assertThat(a.profileVisibility()).isEqualTo(ProfileVisibility.SIGNED_IN);
+    assertThat(a.status()).isEqualTo(UserStatus.ACTIVE);
+    assertThat(a.emailVerified()).isFalse();
+    UserSummaryReadModel b = byId.get(bare.getId());
+    assertThat(b.displayName()).isNull();
+    assertThat(b.avatar()).isNull();
+    assertThat(b.profileVisibility()).isEqualTo(ProfileVisibility.PUBLIC);
+    assertThat(byId.get(gone.getId()).status()).isEqualTo(UserStatus.DELETED);
+  }
+
+  @Test
+  void should_return_empty_summaries_for_empty_input() {
+    assertThat(reader.findSummaries(List.of())).isEmpty();
   }
 }

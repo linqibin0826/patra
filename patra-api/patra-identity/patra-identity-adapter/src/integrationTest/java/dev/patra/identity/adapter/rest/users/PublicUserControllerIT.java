@@ -59,18 +59,17 @@ class PublicUserControllerIT {
 
     JsonNode json = getJson("/users/chen-yu");
 
-    assertThat(json.get("avatarUrl").asString())
-        .isEqualTo("/users/chen-yu/avatar?v=0123456789abcdef");
-    assertThat(json.has("userId")).isFalse();
+    assertThat(json.get("avatarUrl").asString()).isEqualTo("/users/42/avatar?v=0123456789abcdef");
   }
 
   @Test
-  @DisplayName("找到：200，带用户名、昵称、头像（没上传为 null）、色号、audience，不带邮箱和 ID")
+  @DisplayName("找到：200，带用户 ID（字符串）、用户名、昵称、头像（没上传为 null）、色号、audience，不带邮箱")
   void should_return_public_identity() {
     when(userQueryService.publicIdentity("chen-yu"))
         .thenReturn(
             PublicUserLookup.Found.of(
                 PublicUserView.builder()
+                    .userId(42L)
                     .username("chen-yu")
                     .displayName("陈宇")
                     .avatarPalette(7)
@@ -96,7 +95,7 @@ class PublicUserControllerIT {
     assertThat(json.get("avatarPalette").asInt()).isEqualTo(7);
     assertThat(json.get("audience").asString()).isEqualTo("PUBLIC");
     assertThat(json.has("email")).isFalse();
-    assertThat(json.has("userId")).isFalse();
+    assertThat(json.get("userId").asString()).isEqualTo("42");
     assertThat(json.has("status")).isFalse();
   }
 
@@ -169,6 +168,7 @@ class PublicUserControllerIT {
     json.propertyNames().forEach(keys::add);
     assertThat(keys)
         .containsExactlyInAnyOrder(
+            "userId",
             "username",
             "displayName",
             "avatarUrl",

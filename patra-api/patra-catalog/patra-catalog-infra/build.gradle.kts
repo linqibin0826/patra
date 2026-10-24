@@ -38,6 +38,10 @@ dependencies {
 
     // Jsoup（HTML 解析，LetPub 爬虫）
     implementation(libs.jsoup)
+    // 复制引用与 CSL-JSON 导出：citeproc-java + 官方 CSL 样式与 locale
+    implementation(libs.citeproc.java)
+    implementation(libs.citation.styles)
+    implementation(libs.citation.locales)
     // WebP 图片尺寸读取（ImageIO SPI 插件，代码只用 javax.imageio）
     runtimeOnly(libs.twelvemonkeys.imageio.webp)
 

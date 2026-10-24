@@ -215,6 +215,38 @@ public record PublicationDate(
     };
   }
 
+  /// 对外的 ISO 8601 降精度字符串：`2023`、`2022-10`、`2021-10-14`，长度即精度。
+  ///
+  /// 与 [#toDisplayString] 不同，不用 `dateString` / `season` 原文。
+  ///
+  /// @return 降精度字符串
+  public String toIsoString() {
+    return switch (datePrecision) {
+      case DAY -> String.format("%04d-%02d-%02d", year, month, day);
+      case MONTH -> String.format("%04d-%02d", year, month);
+      case YEAR -> String.format("%04d", year);
+    };
+  }
+
+  /// 由年月日部件生成降精度 ISO 字符串（读端按列直接组装时用）：缺月只到年，缺日只到月。
+  ///
+  /// @param year 年，可空
+  /// @param month 月，可空
+  /// @param day 日，可空
+  /// @return `yyyy`、`yyyy-MM` 或 `yyyy-MM-dd`；年为空时 `null`
+  public static String isoString(Integer year, Integer month, Integer day) {
+    if (year == null) {
+      return null;
+    }
+    if (month == null) {
+      return String.format("%04d", year);
+    }
+    if (day == null) {
+      return String.format("%04d-%02d", year, month);
+    }
+    return String.format("%04d-%02d-%02d", year, month, day);
+  }
+
   /// 构建器创建方法（用于复杂场景）。
   ///
   /// @return PublicationDateBuilder

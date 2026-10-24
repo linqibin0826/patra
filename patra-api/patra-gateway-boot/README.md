@@ -6,12 +6,12 @@ Patra 的 API 网关：所有外部请求的统一入口，按路径前缀路由
 
 ## 职责
 
-- **路由**：`/patra-catalog/**`、`/patra-registry/**`、`/patra-ingest/**`、`/patra-identity/**` 剥掉第一段后转给对应服务，经 Nacos 发现、Spring Cloud LoadBalancer 选实例。
+- **路由**：`/patra-catalog/**`、`/patra-registry/**`、`/patra-ingest/**`、`/patra-identity/**`、`/patra-interaction/**` 剥掉第一段后转给对应服务，经 Nacos 发现、Spring Cloud LoadBalancer 选实例。
 - **鉴权**：`Authorization: Bearer <会话令牌>` → 调 identity 的 `POST /_internal/sessions/introspect`（`lb://patra-identity`，令牌放请求体，不缓存）→ 建认证对象；不是「恰好一个非空 Bearer 头 + identity 说 active」的一律按匿名，是否放行由下面的路径规则决定。令牌格式只由 identity 判断，网关不连 Redis。
 - **入站转发头**：只有受信代理（门户）发来的 `X-Forwarded-For` 被采用，Tomcat `RemoteIpValve` 据此改写客户端地址；其余一切 `Forwarded` / `X-Forwarded-*`（包括非受信来源的 `X-Forwarded-For`）在 servlet 层直接剥掉、不解释（`ForwardedHeaderFilter` 的 `removeOnly`），路径规则、路由和下面的出站头都按真实请求算。
 - **出站请求头**：剥掉外部自带的 `Authorization`；已登录时写入网关现签的 60 秒身份断言（`Authorization: Bearer <JWT>`），匿名不写；再由框架追加网关自己的 `X-Forwarded-*` / `Forwarded`，剥逐跳头。下游收到的 `Authorization` 只可能是网关签的断言，或者没有。
 - **透传**：下游的状态码、响应头、响应体原样回客户端，包括 4xx / 5xx / 3xx；不跟随重定向，不替任何一方谈压缩；代理链上关掉了 Spring Security 默认补的响应头（`Cache-Control: no-store`、`X-Content-Type-Options` 等），下游没给的头网关也不补。
-- **文档聚合**：`/scalar` 聚合四个服务的 OpenAPI 文档。
+- **文档聚合**：`/scalar` 聚合五个服务的 OpenAPI 文档。
 - **可观测性**：OTel Agent + Micrometer，actuator 暴露 `health` / `info` / `metrics`。
 
 ## 路径规则
@@ -101,7 +101,7 @@ patra-gateway-boot/
 | 响应头到达前读超时（下游 60 秒没回） | 504 | `GW-0504` | 下游服务响应超时 |
 | 下游不读请求体超过 60 秒（写超时） | 504 | `GW-0504` | 下游服务响应超时 |
 | 响应头已到、下游中途停住超过读超时，响应还没提交 | 500 | `GW-0500` | |
-| 同上，响应已提交 | 200，半截响应体 | 无 | |
+| 同上，响应已提交 | 连接中止（没有分块终止块，客户端报传输不完整） | 无 | |
 | 防火墙拒绝的畸形路径 | 400 | 无 | 框架默认 |
 
 identity 自己的 `IDN-0401` 仍会出现：带有效断言但用户已封禁的 60 秒窗口里由 identity 回 401。

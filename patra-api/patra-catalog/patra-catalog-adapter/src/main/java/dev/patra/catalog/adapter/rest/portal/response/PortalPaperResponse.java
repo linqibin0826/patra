@@ -10,9 +10,9 @@ import java.util.List;
 /// @param title 标题
 /// @param journal 载体名称（可空）
 /// @param year 出版年份（可空）
+/// @param publishedDate 出版日期，按实际精度输出 `yyyy` / `yyyy-MM` / `yyyy-MM-dd`（可空）
 /// @param authors 全部作者展示名
 /// @param cites 被引次数（可空）
-/// @param bookmarks 收藏数（无用户系统，恒为 0）
 /// @param doi DOI（可空）
 /// @param pmid PubMed ID（可空）
 /// @param source 数据来源展示名
@@ -30,9 +30,9 @@ public record PortalPaperResponse(
     String title,
     String journal,
     Integer year,
+    String publishedDate,
     List<String> authors,
     Integer cites,
-    Integer bookmarks,
     String doi,
     String pmid,
     String source,

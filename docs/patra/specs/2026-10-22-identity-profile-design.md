@@ -336,6 +336,8 @@ URL 只校验、不改写：不做规范化、不跟随、不探活。`javascrip
 | `BANNED` / `DELETED` | 404 | 404 | —（登不进来；断言窗口内的请求按 PAP-93 现状为 200 `SELF`） |
 | 保留期内的旧名 | 原主按上面各行可见时 301，否则 404 | 同左 | 301 |
 
+> 修订（2026-10-24，PAP-108，v0.13 决策 E）：公开主页响应改为带 `userId`（门户凭它取该用户的公开收藏夹）；主页可见性规则抽到 `ProfileAccess`，已注销对本人也不可见。见 `2026-10-24-identity-external-contract-design.md` 第 4、7 节。
+
 本人带着断言请求时，专业背景总在、链接看邮箱是否验证；旧名跳转的可见性判断和 PAP-93 一样作用在原主的当前读模型上。
 
 ### 8.4 `GET /me/privacy`、`PUT /me/privacy`
@@ -440,6 +442,8 @@ boot 端到端（PG + Redis + GreenMail 容器，`RANDOM_PORT`，`MutableClock`�
 - `ProfileFlowIT`（新，AC 2、5）：注册 → `GET /me/privacy` 是公开 / 公开 / 关、`GET /me/profile` 全空 → `PUT /me/profile` 带 ROR ID 和前端名字，库里是 catalog 的中文快照 → 再 PUT 只改简介，WireMock 没收到机构请求 → 换成自由文本机构 → 不存在的 ROR ID 与 UI 422 → WireMock 回 500 时 503 且库里不变 → 昵称改两次再清空，变更表三行。
 - `PublicIdentityFlowIT` 扩（AC 3、4、6）：在 PAP-93 的未验证 / 验证 / 封禁之外，加主页仅自己（匿名 404、别人 404、本人 200 `SELF`）、仅登录（匿名 404、别人 200 `SIGNED_IN`）、`PENDING_DELETION`（SQL 改状态，别人 404、本人 200）、`DELETED`（SQL 改状态并置空邮箱，404）、旧名在原主「仅登录」时匿名 404 而登录者 301；专业背景仅自己时别人看到 `professional` 为 `null`、本人看到完整；未验证时本人看到 `links` 为 `[]`、验证后出现；响应 JSON 的键集合恰好是 8.3 列出的那些（不含 `email`、`userId`、`status`、任何设置原值）。
 
+> 修订（2026-10-24，PAP-108，v0.13 决策 E）：键集合加 `userId`，断言改在 `PublicProfileFlowIT`。
+
 网关（`GatewayAuthenticationIT`）：带有效令牌访问 `/patra-identity/users/chen-yu` 被转发且下游收到身份断言头（第 10 节）。
 
 ### 12.3 门控
@@ -472,6 +476,8 @@ boot 端到端（PG + Redis + GreenMail 容器，`RANDOM_PORT`，`MutableClock`�
 | 5 隐私默认公开 / 公开 / 关 | `UserProfileTest`、`UserProfileRepositoryAdapterIT`（库默认）、`ProfileFlowIT` |
 | 6 公开读不含邮箱、不含任何设置 | `PublicIdentityFlowIT` 断言键集合；`indexable` 的例外见第 17 节第 18 条 |
 | 7 `check` + `integrationTest` 全绿 | 12.3 |
+
+> 修订（2026-10-24，PAP-108，v0.13 决策 E）：AC 6 不再要求「不含用户 ID」。
 
 ## 15. 交给其他 Issue 的约束
 

@@ -2,7 +2,7 @@
 
 ## 环境配置
 
-6 个后端服务的配置分两处，不用 Spring profile：
+7 个后端服务的配置分两处，不用 Spring profile：
 
 ```
 patra-{service}-boot/src/main/resources/
@@ -37,7 +37,7 @@ IDE 与容器的差异只放在 Nacos 之外的本地变量里，变量按用途
 6. `application.yml`
 7. default properties：启动器 `PatraApplication` 放的服务名、Nacos 导入、签到开关，以及 patra-tool-launch 补的 Nacos 连接与服务发现默认值
 
-同一个键不在 jar 和 Nacos 两处写：patra-tool-launch 的 `JarConfigOverlapCheckerTest` 拿 `patra-infra/nacos/dev/` 与 6 个 boot 模块 `src/main/resources` 下的全部 yml 比对。
+同一个键不在 jar 和 Nacos 两处写：patra-tool-launch 的 `JarConfigOverlapCheckerTest` 拿 `patra-infra/nacos/dev/` 与 7 个 boot 模块 `src/main/resources` 下的全部 yml 比对。
 
 ## Nacos 接入
 

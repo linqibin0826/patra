@@ -1,6 +1,6 @@
 package dev.patra.catalog.adapter.scheduler.config;
 
-import dev.patra.catalog.domain.model.enums.PubmedUpdateScope;
+import dev.patra.catalog.domain.model.enums.PubmedImportScope;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -11,7 +11,7 @@ import org.springframework.validation.annotation.Validated;
 
 /// PubMed 数据源配置属性。
 ///
-/// 配置 PubMed Baseline 和 Update 文件的下载 URL、文件名前缀与增量同步的范围。
+/// 配置 PubMed Baseline 和 Update 文件的下载 URL、文件名前缀与导入范围。
 ///
 /// **配置示例**：
 ///
@@ -22,7 +22,7 @@ import org.springframework.validation.annotation.Validated;
 ///       baseline-url: https://ftp.ncbi.nlm.nih.gov/pubmed/baseline/
 ///       update-url: https://ftp.ncbi.nlm.nih.gov/pubmed/updatefiles/
 ///       file-prefix: pubmed26n
-///       update-scope: EXISTING_ONLY
+///       scope: EXISTING_ONLY
 ///       update-start-seq: 1335
 /// ```
 ///
@@ -57,9 +57,11 @@ public class PubmedDataSourceProperties {
   @NotBlank(message = "patra.catalog.pubmed.file-prefix 不能为空")
   private String filePrefix = "pubmed26n";
 
-  /// 增量同步的导入范围：`ALL` 新文献也导入，`EXISTING_ONLY` 只更新库里已有的。
-  @NotNull(message = "patra.catalog.pubmed.update-scope 不能为空")
-  private PubmedUpdateScope updateScope = PubmedUpdateScope.ALL;
+  /// 导入范围的默认值（任务参数没给 `scope` 时用）：`ALL` 新文献也导入，`EXISTING_ONLY` 只更新库里已有的。
+  ///
+  /// 默认 `EXISTING_ONLY`：更安全，误配时不会把大量老文献的修订当成新文献灌进来。
+  @NotNull(message = "patra.catalog.pubmed.scope 不能为空")
+  private PubmedImportScope scope = PubmedImportScope.EXISTING_ONLY;
 
   /// 进度表为空时增量同步的起始文件号（2026 年 updatefiles 的第一个文件是 1335）。
   @Min(value = 1, message = "patra.catalog.pubmed.update-start-seq 必须不小于 1")

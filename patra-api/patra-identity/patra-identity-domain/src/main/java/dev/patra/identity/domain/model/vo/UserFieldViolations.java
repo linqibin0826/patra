@@ -56,6 +56,9 @@ public final class UserFieldViolations {
   /// 已注册。
   public static final String ALREADY_REGISTERED = "ALREADY_REGISTERED";
 
+  /// 批量用户摘要的用户 ID 列表字段名，和请求体一致（PAP-108）。
+  public static final String USER_IDS = "userIds";
+
   /// 一次性令牌字段名，和请求体一致。
   public static final String TOKEN = "token";
 
@@ -596,6 +599,27 @@ public final class UserFieldViolations {
   /// @return 字段错误
   public static FieldViolation privacyInvalidFormat(String field) {
     return FieldViolation.of(field, INVALID_FORMAT, "不支持的取值");
+  }
+
+  /// 批量用户摘要缺少用户 ID 列表。
+  ///
+  /// @return 字段错误
+  public static FieldViolation userIdsRequired() {
+    return FieldViolation.of(USER_IDS, REQUIRED, "缺少用户 ID 列表");
+  }
+
+  /// 批量用户摘要的用户 ID 列表里有空值。
+  ///
+  /// @return 字段错误
+  public static FieldViolation userIdsInvalidFormat() {
+    return FieldViolation.of(USER_IDS, INVALID_FORMAT, "用户 ID 不能为空");
+  }
+
+  /// 批量用户摘要一次超过上限。
+  ///
+  /// @return 字段错误
+  public static FieldViolation userIdsTooMany() {
+    return FieldViolation.of(USER_IDS, TOO_MANY, "一次最多 100 个用户 ID");
   }
 
   /// 第 `index` 条链接的子字段路径，如 `links[1].url`。

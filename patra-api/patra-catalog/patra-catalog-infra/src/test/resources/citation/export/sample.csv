@@ -1,0 +1,4 @@
+﻿id,pmid,pmcid,doi,title,authors,journal,journal_abbreviation,published_date,year,volume,issue,pages,article_number
+1,34449189,PMC8459591,10.1056/NEJMoa2107038,Empagliflozin in Heart Failure with a Preserved Ejection Fraction,Anker Stefan D; Butler Javed; Filippatos Gerasimos; Ferreira João Pedro; Bocchi Edimar; Böhm Michael; Brunner-La Rocca Hans-Peter; EMPEROR-Preserved Trial Investigators,The New England journal of medicine,N Engl J Med,2021-10-14,2021,385,16,1451-1461,
+2,,,10.1038/s41598-023-00001-1,A year-only paper,Smith John A,Scientific reports,Sci Rep,2023,2023,13,,,12345
+3,,,,Year month paper,Wang Li,Lancet,Lancet,2022-10,2022,400,10360,1200-1210,

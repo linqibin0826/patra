@@ -1,7 +1,6 @@
 package dev.patra.common;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import java.time.LocalDate;
 import java.util.List;
 import lombok.Builder;
 import lombok.Value;
@@ -449,38 +448,38 @@ public class CanonicalPublication {
     public static class SubstanceBuilder {}
   }
 
-  /// 多种日期信息。
+  /// 多种日期信息，按实际精度记录（见 [PartialDate]），缺的月 / 日不补。
   @Value
   @Builder
   @JsonDeserialize(builder = PublicationDates.PublicationDatesBuilder.class)
   public static class PublicationDates {
 
     /// 主要出版日期（期刊出版日期）。
-    LocalDate published;
+    PartialDate published;
 
     /// 电子版发布日期。
-    LocalDate electronic;
+    PartialDate electronic;
 
     /// 记录创建日期。
-    LocalDate created;
+    PartialDate created;
 
     /// 出版物完成日期（PubMed 索引流程完成）。
-    LocalDate completed;
+    PartialDate completed;
 
     /// 最后修订日期。
-    LocalDate revised;
+    PartialDate revised;
 
     /// 索引完成日期（如 MEDLINE 索引完成）。
-    LocalDate indexed;
+    PartialDate indexed;
 
     /// 收稿日期（投稿日期）。
-    LocalDate received;
+    PartialDate received;
 
     /// 接受日期（录用日期）。
-    LocalDate accepted;
+    PartialDate accepted;
 
     /// PMC 放开日期（PubMed `History` 里 `PubStatus="pmc-release"`，禁发期结束、PMC 全文可公开的日期）。
-    LocalDate pmcRelease;
+    PartialDate pmcRelease;
 
     /// Jackson 3.x Builder 配置。
     @JsonPOJOBuilder(withPrefix = "")

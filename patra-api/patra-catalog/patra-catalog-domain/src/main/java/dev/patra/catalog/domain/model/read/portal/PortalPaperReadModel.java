@@ -16,6 +16,7 @@ import lombok.Builder;
 /// @param venueId 载体主键（可空）
 /// @param venueName 载体名称（可空）
 /// @param publicationYear 出版年份（可空）
+/// @param publishedDate 出版日期，按实际精度输出 `yyyy` / `yyyy-MM` / `yyyy-MM-dd`（可空）
 /// @param authors 全部作者展示名，按 author_order 升序（无作者则空列表）
 /// @param citationCount 被引次数（可空）
 /// @param doi DOI（可空）
@@ -34,6 +35,7 @@ public record PortalPaperReadModel(
     Long venueId,
     String venueName,
     Integer publicationYear,
+    String publishedDate,
     List<String> authors,
     Integer citationCount,
     String doi,

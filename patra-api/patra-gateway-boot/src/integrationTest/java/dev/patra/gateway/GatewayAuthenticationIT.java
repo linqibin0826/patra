@@ -364,7 +364,7 @@ class GatewayAuthenticationIT {
   @Test
   void should_forward_anonymous_avatar_read_with_cache_headers() {
     identity.stubFor(
-        get(urlPathEqualTo("/users/chen-yu/avatar"))
+        get(urlPathEqualTo("/users/42/avatar"))
             .willReturn(
                 aResponse()
                     .withStatus(200)
@@ -375,7 +375,7 @@ class GatewayAuthenticationIT {
 
     restClient
         .get()
-        .uri("/patra-identity/users/chen-yu/avatar?size=128&v=0123456789abcdef")
+        .uri("/patra-identity/users/42/avatar?size=128&v=0123456789abcdef")
         .exchange()
         .expectStatus()
         .isOk()
@@ -388,7 +388,7 @@ class GatewayAuthenticationIT {
 
     identity.verify(
         1,
-        getRequestedFor(urlPathEqualTo("/users/chen-yu/avatar"))
+        getRequestedFor(urlPathEqualTo("/users/42/avatar"))
             .withoutHeader(HttpHeaders.AUTHORIZATION));
   }
 

@@ -2,16 +2,16 @@
 
 前台用户的账号服务：注册、登录、会话、登出、「当前用户」、用户名、资料与隐私设置、公开主页、邮箱验证与邮件、再认证、改密码、找回密码、改邮箱、登录设备与新设备提醒、注销账号、登录失败限制、封禁与解封。
 
-工程设计：`docs/patra/specs/2026-10-05-identity-account-design.md`（账号）、`docs/patra/specs/2026-10-09-identity-session-design.md`（会话）、`docs/patra/specs/2026-10-20-identity-account-rebuild-design.md`（账号重建：用户名、昵称、邮箱验证状态、四态状态机、`V1` 最终形态）、`docs/patra/specs/2026-10-21-identity-email-verification-design.md`（邮件发送与邮箱验证）、`docs/patra/specs/2026-10-22-identity-account-security-design.md`（账号安全：再认证、改密码、找回密码、改邮箱）、`docs/patra/specs/2026-10-22-identity-profile-design.md`（资料、隐私设置与公开主页）、`docs/patra/specs/2026-10-22-identity-login-devices-design.md`（登录设备：受信转发链路、设备与属地、会话列表、踢设备、新设备邮件、记录清理）、`docs/patra/specs/2026-10-22-identity-account-deletion-design.md`（注销账号：冷静期、取消、到期执行与匿名化、提醒）、`docs/patra/specs/2026-10-23-session-introspection-design.md`（会话存储归 identity 独占、网关查会话的内部接口）。
+工程设计：`docs/patra/specs/2026-10-05-identity-account-design.md`（账号）、`docs/patra/specs/2026-10-09-identity-session-design.md`（会话）、`docs/patra/specs/2026-10-20-identity-account-rebuild-design.md`（账号重建：用户名、昵称、邮箱验证状态、四态状态机、`V1` 最终形态）、`docs/patra/specs/2026-10-21-identity-email-verification-design.md`（邮件发送与邮箱验证）、`docs/patra/specs/2026-10-22-identity-account-security-design.md`（账号安全：再认证、改密码、找回密码、改邮箱）、`docs/patra/specs/2026-10-22-identity-profile-design.md`（资料、隐私设置与公开主页）、`docs/patra/specs/2026-10-22-identity-login-devices-design.md`（登录设备：受信转发链路、设备与属地、会话列表、踢设备、新设备邮件、记录清理）、`docs/patra/specs/2026-10-22-identity-account-deletion-design.md`（注销账号：冷静期、取消、到期执行与匿名化、提醒）、`docs/patra/specs/2026-10-23-session-introspection-design.md`（会话存储归 identity 独占、网关查会话的内部接口）、`docs/patra/specs/2026-10-24-identity-external-contract-design.md`（对外契约：批量用户摘要、头像按用户 ID、公开主页带用户 ID）。
 
 ## 1. 模块
 
 | 模块 | 内容 |
 |---|---|
-| `patra-identity-domain` | `User`、`UserProfile`、`FormerUsername`、`UserPasswordCredential`、`UserLoginRecord`、`EmailToken` 六个聚合，邮箱、用户名、昵称、密码、客户端信息、令牌密文值对象，资料值对象（`vo/profile/`：简介、链接、职称、科室、ROR ID、MeSH UI、机构、关注领域、隐私设置），用户名 / 昵称 / 资料字段（`ProfilePolicy`，拒绝字符与昵称共用 `ProfileTextRules`）/ 改名 / 密码 / 失败限制 / 重发限流 / 再认证 / 找回密码限流 / 改邮箱限流 / 邮件链接规则、会话策略，端口（含邮件发送 `EmailDeliveryPort`、三个限流端口、向 catalog 取名称快照的 `CatalogReferencePort`），公开主页读模型（`viewFor` 按请求者裁剪），`SessionIssuer`、`EmailTokenIssuer`、`ReauthenticationGuard` 领域服务，`SessionTerminator`（撤销会话并按原因结束登录记录）、`ClientOriginResolver`（请求来源 → 设备名、端、属地，内网判定 `IpAddressScope`）、`UserAgentParsingPort` / `IpGeolocationPort`，新设备提醒规则 `NewDeviceLoginPolicy` 与限流端口，注销规则 `AccountDeletionPolicy`（冷静期、提醒提前量），头像（`vo/avatar/`：`Avatar`、两档尺寸、两档字节，`AvatarPalette` 默认头像色号、`AvatarPolicy`，出图端口 `AvatarImagePort` 与存储端口 `AvatarStoragePort`），十三个 `OutgoingMail` 记录，领域异常 |
-| `patra-identity-app` | 注册、登录、登出、再认证、改用户名、改密码、找回密码（申请、重设）、改邮箱（申请、取消、确认、撤销）、封禁、解封、重发验证邮件、验证邮箱、清理过期令牌、改资料、改隐私设置、踢单个设备、踢其他设备、清理登录记录、发起注销、取消注销、注销到期执行、注销到期前提醒、换头像、移除头像二十八个处理器，走 CommandBus；`CurrentPasswordVerifier` 给再认证与改密码共用；「当前用户」、本人的资料与隐私设置、待确认的改邮箱和公开主页走 `UserQueryService`，登录设备列表走 `SessionQueryService`，网关查会话走 `SessionIntrospectionService`（不经 CommandBus），头像读取走 `AvatarQueryService` |
+| `patra-identity-domain` | `User`、`UserProfile`、`FormerUsername`、`UserPasswordCredential`、`UserLoginRecord`、`EmailToken` 六个聚合，邮箱、用户名、昵称、密码、客户端信息、令牌密文值对象，资料值对象（`vo/profile/`：简介、链接、职称、科室、ROR ID、MeSH UI、机构、关注领域、隐私设置），用户名 / 昵称 / 资料字段（`ProfilePolicy`，拒绝字符与昵称共用 `ProfileTextRules`）/ 改名 / 密码 / 失败限制 / 重发限流 / 再认证 / 找回密码限流 / 改邮箱限流 / 邮件链接规则、会话策略，端口（含邮件发送 `EmailDeliveryPort`、三个限流端口、向 catalog 取名称快照的 `CatalogReferencePort`），主页可见性规则 `ProfileAccess`（公开主页与批量用户摘要共用的唯一一份），公开主页读模型（`viewFor` 按请求者裁剪）与批量用户摘要读模型 `UserSummaryReadModel`，`SessionIssuer`、`EmailTokenIssuer`、`ReauthenticationGuard` 领域服务，`SessionTerminator`（撤销会话并按原因结束登录记录）、`ClientOriginResolver`（请求来源 → 设备名、端、属地，内网判定 `IpAddressScope`）、`UserAgentParsingPort` / `IpGeolocationPort`，新设备提醒规则 `NewDeviceLoginPolicy` 与限流端口，注销规则 `AccountDeletionPolicy`（冷静期、提醒提前量），头像（`vo/avatar/`：`Avatar`、两档尺寸、两档字节，`AvatarPalette` 默认头像色号、`AvatarPolicy`，出图端口 `AvatarImagePort` 与存储端口 `AvatarStoragePort`），十三个 `OutgoingMail` 记录，领域异常 |
+| `patra-identity-app` | 注册、登录、登出、再认证、改用户名、改密码、找回密码（申请、重设）、改邮箱（申请、取消、确认、撤销）、封禁、解封、重发验证邮件、验证邮箱、清理过期令牌、改资料、改隐私设置、踢单个设备、踢其他设备、清理登录记录、发起注销、取消注销、注销到期执行、注销到期前提醒、换头像、移除头像二十八个处理器，走 CommandBus；`CurrentPasswordVerifier` 给再认证与改密码共用；「当前用户」、本人的资料与隐私设置、待确认的改邮箱和公开主页走 `UserQueryService`，登录设备列表走 `SessionQueryService`，网关查会话走 `SessionIntrospectionService`（不经 CommandBus），头像读取走 `AvatarQueryService`，批量用户摘要走 `UserSummaryQueryService` |
 | `patra-identity-infra` | JPA 持久化（含令牌表）、Argon2id 哈希、常见密码名单、Redis 失败限制与通用限流脚本 `action-throttle.lua`（重发、找回密码、改邮箱三个适配器共用）、会话存储（`RedisSessionStore`、八段 Lua、令牌格式，第 9 节）与适配器、新设备提醒限流适配器，SMTP 发信适配器与 Thymeleaf 邮件模板（十三对），Yauaa 解析 UA（`YauaaUserAgentParsingAdapter`）、ip2region 查属地（`Ip2RegionGeolocationAdapter`）、Flyway 脚本（一份最终形态的 `V1`）、catalog 内部接口适配器 `CatalogReferenceAdapter`（依赖 `patra-catalog-api`），头像出图 `AvatarImageAdapter`（TwelveMonkeys 解码、`webp-imageio` 编码）与魔数识别 `AvatarFormatSniffer`、头像存储 `AvatarStorageAdapter`（依赖 `patra-tool-object-storage`）；测试夹具 `AvatarImageFixture`（`testFixtures`，boot 的流程测试也用） |
-| `patra-identity-adapter` | 前台的 `AuthController`、`EmailVerificationController`、`PasswordResetController`、`EmailChangeController`、`MeController`、`MeEmailController`、`MeProfileController`、`MeSessionController`、`MeDeletionController`、`MeAvatarController`、`PublicUserController`、`PublicAvatarController`，后台的 `AdminUserController`，内部接口 `SessionEndpointImpl`（网关查会话），XXL-Job 任务 `EmailTokenCleanupScheduleJob`、`LoginRecordCleanupScheduleJob`、`AccountDeletionScheduleJob`、`AccountDeletionReminderScheduleJob` |
+| `patra-identity-adapter` | 前台的 `AuthController`、`EmailVerificationController`、`PasswordResetController`、`EmailChangeController`、`MeController`、`MeEmailController`、`MeProfileController`、`MeSessionController`、`MeDeletionController`、`MeAvatarController`、`PublicUserController`、`PublicAvatarController`，后台的 `AdminUserController`，内部接口 `SessionEndpointImpl`（网关查会话）、`UserEndpointImpl`（批量用户摘要，interaction 调），XXL-Job 任务 `EmailTokenCleanupScheduleJob`、`LoginRecordCleanupScheduleJob`、`AccountDeletionScheduleJob`、`AccountDeletionReminderScheduleJob` |
 | `patra-identity-boot` | 启动类、配置、安全 starter 接入、catalog 两个 HTTP Interface 代理（`CatalogClientConfiguration`，`lb://patra-catalog`） |
 | `patra-identity-api` | 服务间契约：网关查会话的 `SessionEndpoint` 与请求、响应 DTO（PAP-106） |
 
@@ -42,13 +42,14 @@
 | `GET /me/sessions` | 200 `{ sessions: [{ id, current, deviceName, deviceClass, ipAddress, ipRegion, privateNetwork, signedInAt, lastActiveAt }] }`，只含活会话，本机第一（第 13 节） | 需要登录 |
 | `DELETE /me/sessions/{id}` | 200 `{ revokedSessions }`（0 或 1，会话已不在也 200）；踢本机 409 | 需要登录 + 再认证 |
 | `DELETE /me/sessions/others` | 200 `{ revokedSessions }` | 需要登录 + 再认证 |
-| `GET /users/{username}` | 200 公开主页 `{ username, displayName, avatarUrl, avatarPalette, audience, joinedAt, bio, links, professional, researchInterests, indexable }`，按请求者裁剪（第 12 节）；保留期内的旧名 301，`Location: /users/<新名>`，体 `{ username: <新名> }` | 公开（`/users/**` 整体，网关照样翻译令牌） |
+| `GET /users/{username}` | 200 公开主页 `{ userId, username, displayName, avatarUrl, avatarPalette, audience, joinedAt, bio, links, professional, researchInterests, indexable }`，按请求者裁剪（第 12 节）；保留期内的旧名 301，`Location: /users/<新名>`，体 `{ username: <新名> }` | 公开（`/users/**` 整体，网关照样翻译令牌） |
 | `POST /me/avatar` | 200 `{ avatarUrl }`，multipart，part 名 `file`；超过 5 MB 413，其余拒绝 422（第 15 节） | 需要登录 |
 | `DELETE /me/avatar` | 204；没有头像也是 204 | 需要登录 |
-| `GET /users/{username}/avatar?size=512\|128&v={hash}` | 200 `image/webp`，`Cache-Control: public, max-age=31536000, immutable`、`ETag`；`If-None-Match` 命中 304；对不上一律 404 | 公开（`/users/**` 整体） |
+| `GET /users/{userId}/avatar?size=512\|128&v={hash}` | 200 `image/webp`，`Cache-Control: public, max-age=31536000, immutable`、`ETag`；`If-None-Match` 命中 304；对不上一律 404 | 公开（`/users/**` 整体） |
 | `POST /me/deletion` | 200 `{ deletionDueAt }`，请求体 `{ username }`（不分大小写）；进入 15 天冷静期，本机在内全部会话下线（第 14 节） | 需要登录 + 再认证 |
 | `DELETE /me/deletion` | 200 `user`（与 `/auth/me` 同构）；本来就正常时照样 200 | 需要登录 |
 | `POST /_internal/sessions/introspect` | 200 `{ active, userId, sessionId, accountType, clientType }`，查不到 `{ active: false }`；Redis 暂时不可用 503（第 9 节） | 拒绝外部访问；网关经服务发现直连 |
+| `POST /_internal/users/summaries` | 200 `{ users: [{ userId, username, displayName, avatarUrl, avatarPalette, accountStatus, emailVerified, profileVisible }] }`，请求体 `{ userIds, viewerUserId }`（第 16 节） | 拒绝外部访问；interaction 经服务发现直连 |
 | `POST /admin/users/{userId}/ban` | 204 | 拒绝外部访问 |
 | `POST /admin/users/{userId}/unban` | 204 | 拒绝外部访问 |
 
@@ -60,7 +61,7 @@
 {
   "userId": "352303128713027974", "email": "chen.yu@example.com", "emailVerified": false,
   "username": "chen-yu", "displayName": "chen-yu",
-  "avatarUrl": "/users/chen-yu/avatar?v=3f9a1c0d2b4e5f60", "avatarPalette": 7,
+  "avatarUrl": "/users/352303128713027974/avatar?v=3f9a1c0d2b4e5f60", "avatarPalette": 7,
   "status": "ACTIVE", "deletionDueAt": null, "nextUsernameChangeAt": null, "accountType": "user"
 }
 ```
@@ -347,9 +348,10 @@ Redis 连不上、超时、`LOADING` / `READONLY` / `BUSY` / `MASTERDOWN`，以�
 | 主页仅登录用户 | 404 | 200 `SIGNED_IN` | 200 `SIGNED_IN` |
 | 主页仅自己 | 404 | 404 | 200 `SELF` |
 | 邮箱未验证、注销冷静期 | 404 | 404 | 200 `SELF` |
-| 已封禁、已注销 | 404 | 404 | — |
+| 已封禁 | 404 | 404 | — |
+| 已注销 | 404 | 404 | 404 |
 
-「已登录」是任何带有效会话的人（含邮箱未验证、冷静期中的账号）。专业背景在本人或其可见性为公开时给出，否则 `professional` 为 `null`（四项都没填也是 `null`）；链接只在邮箱已验证时给出（本人也一样）；`indexable` 只在谁都能看且用户允许收录时为真，门户据此输出 `noindex`；`joinedAt` 是 `YYYY-MM`（时区同 `patra.identity.mail.zone`）。响应不含邮箱、ID、状态、任何设置原值。旧名跳转的可见性看原主的当前主页。
+「已登录」是任何带有效会话的人（含邮箱未验证、冷静期中的账号）。专业背景在本人或其可见性为公开时给出，否则 `professional` 为 `null`（四项都没填也是 `null`）；链接只在邮箱已验证时给出（本人也一样）；`indexable` 只在谁都能看且用户允许收录时为真，门户据此输出 `noindex`；`joinedAt` 是 `YYYY-MM`（时区同 `patra.identity.mail.zone`）。响应不含邮箱、状态、任何设置原值；带 `userId`（PAP-108 起，门户凭它取该用户的公开收藏夹）。旧名跳转的可见性看原主的当前主页。规则只在 `ProfileAccess` 里有一份，批量用户摘要的 `profileVisible` 用同一份（第 16 节）；已注销对本人也不可见（会话已撤销，线上触达不到，为两处一致而定）。
 - **昵称修改**只打 INFO 日志（`昵称已修改`）；账号审计记录以后单独做成通用的账号事件表。
 - **注销（第 14 节）**：到期执行时资料行置空不删行、隐私回默认，两张子表按 `user_id` 删行。
 
@@ -436,7 +438,17 @@ patra:
 - **库**：解码用 TwelveMonkeys `imageio-jpeg` / `imageio-webp` 3.15.2 与 JDK 的 PNG（WebP、PNG 纯 Java；JPEG 的 DCT 由 TwelveMonkeys 委托给 JDK 自带的原生 libjpeg）；编码用 `com.github.usefulness:webp-imageio` 0.10.0（Apache-2.0，JNI 包装 libwebp，BSD-3），jar 自带 Linux x86_64 / aarch64、macOS x86_64 / aarch64 的原生库。没有可用的纯 Java WebP 编码器（2026-10-22 定）。读取器从 ImageIO 注册表按类名前缀挑（TwelveMonkeys 的 JPEG 读取器要经注册拿到 JDK 的委托，注册表里还有一个不能用来解码上传的原生 WebP 读取器），构造时 `ImageIO.scanForPlugins()`。
 - **原生访问**：`webp-imageio` 用 `System.load`，JDK 25 对未命名模块只告警、以后默认拦截。identity 的可执行 jar 清单带 `Enable-Native-Access: ALL-UNNAMED`（`patra-identity-boot/build.gradle.kts`），镜像分层解包后仍在，`java -jar` 启动生效。
 - **存储**：桶 `patra-identity-avatar`（`patra.identity.avatar.bucket`，私有，不开匿名访问、不用预签名）；键 `avatar/{userId}/{hash}-512.webp` 与 `-128.webp`，`hash` 是 512 档字节 SHA-256 的前 16 位小写十六进制。资料表 `idn_user_profile.avatar_object_key` 只存 512 档的键（约束前缀里的用户 ID 等于本行），128 档同哈希换后缀。桶由 `patra-storage` 栈的 `minio-init` 建，对象存储库第一次上传时也会按需建。
-- **读取** `GET /users/{username}/avatar?size=512|128&v={hash}`：只认当前用户名（旧名 404，不跳转），`ACTIVE` 与 `PENDING_DELETION` 下发（冷静期本人还要显示头像），`BANNED` / `DELETED` 404；`v` 必须等于当前哈希，所以同一地址内容永远不变，`Cache-Control: public, max-age=31536000, immutable`、`ETag: "{hash}-{size}"`，`If-None-Match` 命中直接 304 不碰 MinIO。不看主页可见性：响应是公开缓存，`v` 只出现在请求者有权看到的响应里，猜不到（2026-10-22 定）。返回 `InputStreamResource`（不用 `StreamingResponseBody`）。
-- **`avatarUrl`**：identity 相对路径 `/users/{当前用户名}/avatar?v={hash}`，在 `/auth/me`（及登录、注册、再认证、改密码、取消注销响应里的 `user`）、`GET /users/{username}`、`POST /me/avatar` 里；门户换成自己的同源地址并追加 `size`（36 / 40 px 用 128，72 px 以上用 512）。`GET /me/profile` 不带：头像不随资料表单保存。
+- **读取** `GET /users/{userId}/avatar?size=512|128&v={hash}`：按用户 ID（PAP-108 起；用户名不能是纯数字，与 `/users/{username}` 不混淆），改用户名后地址照常可用；用户 ID 只认规范写法 `[1-9][0-9]{0,18}`（溢出也 404），同一张头像只有一个地址；`UserStatus.servesAvatar()` 为真才下发（`ACTIVE` 与 `PENDING_DELETION`，冷静期本人还要显示头像），`BANNED` / `DELETED` 404；`v` 必须等于当前哈希，所以同一地址内容永远不变，`Cache-Control: public, max-age=31536000, immutable`、`ETag: "{hash}-{size}"`，`If-None-Match` 命中直接 304 不碰 MinIO。不看主页可见性：响应是公开缓存，`v` 只出现在请求者有权看到的响应里，猜不到（2026-10-22 定）。返回 `InputStreamResource`（不用 `StreamingResponseBody`）。
+- **`avatarUrl`**：identity 相对路径 `/users/{userId}/avatar?v={hash}`（`AvatarUrls.of(avatar)`），在 `/auth/me`（及登录、注册、再认证、改密码、取消注销响应里的 `user`）、`GET /users/{username}`、`POST /me/avatar`、批量用户摘要里；门户换成自己的同源地址并追加 `size`（36 / 40 px 用 128，72 px 以上用 512）。`GET /me/profile` 不带：头像不随资料表单保存。
 - **`avatarPalette`**：`AvatarPalette.of(userId)`，SplitMix64 最终混合后对 12 取余，0–11 对应门户 12 色板。**上线后不能改**：一改所有人的默认头像都变色；`AvatarPaletteTest` 钉了固定向量。
 - **与注销**：见第 14 节「头像」。
+
+## 16. 批量用户摘要（内部接口）
+
+设计：`docs/patra/specs/2026-10-24-identity-external-contract-design.md`（PAP-108）。契约在 `patra-identity-api`：`UserEndpoint`、`UserSummariesReq` / `UserSummariesResp` / `UserSummaryResp`、`AccountStatus`。
+
+- **用途**：interaction 拼收藏夹所有者的信息，并判断公开收藏夹对某位访客是否可见；注销清理任务按 `accountStatus` 找已注销的用户。调用方只透传访客 ID，主页隐私规则只在 identity 里（`ProfileAccess`）。
+- **请求** `{ userIds, viewerUserId }`：`userIds` 最多 100 个（按去重前长度算），`null` / 含 `null` / 超限 422（字段 `userIds`，原因 `REQUIRED` / `INVALID_FORMAT` / `TOO_MANY`）；空列表回空结果；重复的保留第一次出现。`viewerUserId` 匿名或后台任务为 `null`，取自请求体（identity 信任内部调用方，不看转发的断言）。
+- **响应**：按去重后的请求顺序；identity 不认识的 ID 省略（记 `WARN`），不等于已注销。已注销是占位：`username`、`displayName`、`avatarUrl` 为 `null`，`emailVerified`、`profileVisible` 为假，文案由门户出；已封禁不给 `avatarUrl`（头像路由同样 404）。JSON 里 `userId` 是字符串，HTTP Interface 客户端反序列化回 `Long`。
+- **读法**：`UserReadPort.findSummaries` 用户表、资料表各一条 `IN` 查询，不读子表；`UserSummaryQueryService` 校验、去重、按请求顺序重排；`UserSummaryReadModel.viewFor` 出占位、昵称回退与 `profileVisible`。不经 CommandBus，没有事务。
+- **调用方的义务**：`profileVisible` 为假的人，不要把其 `avatarUrl`、`username` 放进给这位访客的响应（头像地址里的版本号是「只出现在有权看到的响应里」的凭证，第 15 节）。

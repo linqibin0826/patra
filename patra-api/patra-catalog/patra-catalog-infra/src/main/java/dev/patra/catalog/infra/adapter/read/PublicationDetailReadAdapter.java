@@ -9,6 +9,7 @@ import dev.patra.catalog.domain.model.read.portal.PublicationDetailReadModel.Fun
 import dev.patra.catalog.domain.model.read.portal.PublicationDetailReadModel.MeshHeadingView;
 import dev.patra.catalog.domain.model.read.portal.PublicationDetailReadModel.PublicationDateView;
 import dev.patra.catalog.domain.model.vo.publication.EvidenceLevel;
+import dev.patra.catalog.domain.model.vo.publication.PublicationDate;
 import dev.patra.catalog.domain.port.read.PublicationDetailReadPort;
 import dev.patra.catalog.infra.persistence.dao.PublicationDetailDao;
 import java.util.List;
@@ -67,6 +68,11 @@ public class PublicationDetailReadAdapter implements PublicationDetailReadPort {
                   .venueId(main.getVenueId())
                   .venueName(main.getVenueName())
                   .publicationYear(main.getPublicationYear())
+                  .publishedDate(
+                      PublicationDate.isoString(
+                          main.getPublicationYear(),
+                          main.getPublicationMonth(),
+                          main.getPublicationDay()))
                   .evidenceLevel(evidenceLevel)
                   .abstractType(main.getAbstractType())
                   .abstractSections(
@@ -166,7 +172,21 @@ public class PublicationDetailReadAdapter implements PublicationDetailReadPort {
         .toList();
   }
 
+  /// 日期行按存储的精度输出降精度 ISO 字符串，不补出原文没有的月日。
+  ///
+  /// @param rows 日期行
+  /// @return 日期视图
   private List<PublicationDateView> mapDates(List<PublicationDateRow> rows) {
-    return rows.stream().map(r -> PublicationDateView.of(r.getType(), r.getDate())).toList();
+    return rows.stream()
+        .map(
+            r -> {
+              boolean hasMonth = !"year".equals(r.getPrecision());
+              boolean hasDay = "day".equals(r.getPrecision());
+              return PublicationDateView.of(
+                  r.getType(),
+                  PublicationDate.isoString(
+                      r.getYear(), hasMonth ? r.getMonth() : null, hasDay ? r.getDay() : null));
+            })
+        .toList();
   }
 }

@@ -1,6 +1,7 @@
 package dev.patra.catalog.infra.adapter.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.groups.Tuple.tuple;
 
 import dev.patra.catalog.domain.model.read.portal.FacetCount;
 import dev.patra.catalog.domain.model.read.portal.PortalPaperReadModel;
@@ -527,5 +528,38 @@ class PublicationSearchReadAdapterIT {
         .mapToLong(FacetCount::count)
         .findFirst()
         .orElse(-1L);
+  }
+
+  @Test
+  @DisplayName("sort=YEAR：同年里精度低的排在精度高的之后（2021-12、2021-03-05、2021-03、2021）")
+  void sort_by_year_puts_less_precise_dates_after_precise_ones() {
+    Long yearOnly = persist(publication("2021").publicationYear(2021));
+    Long march = persist(publication("2021-03").publicationYear(2021).publicationMonth(3));
+    Long march5 =
+        persist(
+            publication("2021-03-05").publicationYear(2021).publicationMonth(3).publicationDay(5));
+    Long december = persist(publication("2021-12").publicationYear(2021).publicationMonth(12));
+    flush();
+
+    PageResult<PortalPaperReadModel> page =
+        adapter.search(
+            PublicationSearchFilter.builder().sort(PublicationSearchSort.YEAR).build(), FIRST_PAGE);
+
+    assertThat(page.items())
+        .extracting(PortalPaperReadModel::id)
+        .containsExactly(december, march5, march, yearOnly);
+  }
+
+  @Test
+  @DisplayName("卡片带降精度的 publishedDate")
+  void cards_carry_published_date_in_reduced_iso() {
+    Long yearOnly = persist(publication("year only").publicationYear(2023));
+    Long day =
+        persist(publication("full").publicationYear(2021).publicationMonth(10).publicationDay(14));
+    flush();
+
+    assertThat(adapter.findCardsByIds(List.of(yearOnly, day)))
+        .extracting(PortalPaperReadModel::id, PortalPaperReadModel::publishedDate)
+        .containsExactlyInAnyOrder(tuple(yearOnly, "2023"), tuple(day, "2021-10-14"));
   }
 }

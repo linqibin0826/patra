@@ -6,6 +6,7 @@
         "catalog",
         "ingest",
         "identity",
+        "interaction",
         "gateway",
         "foundation"
     ],
@@ -28,7 +29,8 @@
             "unit": "catalog",
             "impacts": [
                 "catalog",
-                "identity"
+                "identity",
+                "interaction"
             ],
             "tasks": [
                 "check"
@@ -90,6 +92,7 @@
                 "gateway",
                 "identity",
                 "ingest",
+                "interaction",
                 "object-storage",
                 "registry"
             ],
@@ -127,7 +130,8 @@
             "unit": "identity",
             "impacts": [
                 "gateway",
-                "identity"
+                "identity",
+                "interaction"
             ],
             "tasks": [
                 "check"
@@ -267,6 +271,74 @@
             ],
             "tasks": [
                 "check"
+            ]
+        },
+        {
+            "dir": "patra-api/patra-interaction/patra-interaction-adapter",
+            "project": ":patra-api:patra-interaction:patra-interaction-adapter",
+            "unit": "interaction",
+            "impacts": [
+                "interaction"
+            ],
+            "tasks": [
+                "check"
+            ]
+        },
+        {
+            "dir": "patra-api/patra-interaction/patra-interaction-api",
+            "project": ":patra-api:patra-interaction:patra-interaction-api",
+            "unit": "interaction",
+            "impacts": [
+                "interaction"
+            ],
+            "tasks": [
+                "check"
+            ]
+        },
+        {
+            "dir": "patra-api/patra-interaction/patra-interaction-app",
+            "project": ":patra-api:patra-interaction:patra-interaction-app",
+            "unit": "interaction",
+            "impacts": [
+                "interaction"
+            ],
+            "tasks": [
+                "check"
+            ]
+        },
+        {
+            "dir": "patra-api/patra-interaction/patra-interaction-boot",
+            "project": ":patra-api:patra-interaction:patra-interaction-boot",
+            "unit": "interaction",
+            "impacts": [
+                "interaction"
+            ],
+            "tasks": [
+                "check",
+                "integrationTest"
+            ]
+        },
+        {
+            "dir": "patra-api/patra-interaction/patra-interaction-domain",
+            "project": ":patra-api:patra-interaction:patra-interaction-domain",
+            "unit": "interaction",
+            "impacts": [
+                "interaction"
+            ],
+            "tasks": [
+                "check"
+            ]
+        },
+        {
+            "dir": "patra-api/patra-interaction/patra-interaction-infra",
+            "project": ":patra-api:patra-interaction:patra-interaction-infra",
+            "unit": "interaction",
+            "impacts": [
+                "interaction"
+            ],
+            "tasks": [
+                "check",
+                "integrationTest"
             ]
         },
         {
@@ -430,6 +502,7 @@
                 "gateway",
                 "identity",
                 "ingest",
+                "interaction",
                 "object-storage",
                 "registry"
             ],
@@ -446,6 +519,7 @@
                 "foundation",
                 "identity",
                 "ingest",
+                "interaction",
                 "object-storage"
             ],
             "tasks": [
@@ -461,7 +535,8 @@
                 "foundation",
                 "gateway",
                 "identity",
-                "ingest"
+                "ingest",
+                "interaction"
             ],
             "tasks": [
                 "check",
@@ -478,6 +553,7 @@
                 "gateway",
                 "identity",
                 "ingest",
+                "interaction",
                 "object-storage",
                 "registry"
             ],
@@ -496,6 +572,7 @@
                 "gateway",
                 "identity",
                 "ingest",
+                "interaction",
                 "object-storage",
                 "registry"
             ],
@@ -529,6 +606,7 @@
                 "gateway",
                 "identity",
                 "ingest",
+                "interaction",
                 "object-storage",
                 "registry"
             ],
@@ -543,7 +621,8 @@
             "impacts": [
                 "catalog",
                 "foundation",
-                "identity"
+                "identity",
+                "interaction"
             ],
             "tasks": [
                 "check"
@@ -556,7 +635,8 @@
             "impacts": [
                 "foundation",
                 "gateway",
-                "identity"
+                "identity",
+                "interaction"
             ],
             "tasks": [
                 "check",
@@ -573,6 +653,7 @@
                 "gateway",
                 "identity",
                 "ingest",
+                "interaction",
                 "object-storage",
                 "registry"
             ],
@@ -591,6 +672,7 @@
                 "gateway",
                 "identity",
                 "ingest",
+                "interaction",
                 "object-storage",
                 "registry"
             ],

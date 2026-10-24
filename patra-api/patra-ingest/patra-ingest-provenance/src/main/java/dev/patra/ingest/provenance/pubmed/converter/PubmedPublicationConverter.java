@@ -1,6 +1,7 @@
 package dev.patra.ingest.provenance.pubmed.converter;
 
 import dev.patra.common.CanonicalPublication;
+import dev.patra.common.PartialDate;
 import dev.patra.common.PublicationIdentifierType;
 import dev.patra.ingest.provenance.pubmed.model.response.PubmedPublication;
 import dev.patra.ingest.provenance.pubmed.model.response.PubmedPublication.Article;
@@ -405,15 +406,23 @@ public class PubmedPublicationConverter {
     }
 
     return CanonicalPublication.PublicationDates.builder()
-        .published(publishedDate)
-        .electronic(electronicDate)
-        .received(receivedDate)
-        .accepted(acceptedDate)
-        .revised(revisedDate)
-        .created(createdDate)
-        .completed(completedDate)
-        .indexed(completedDate)
+        .published(toPartialDate(publishedDate))
+        .electronic(toPartialDate(electronicDate))
+        .received(toPartialDate(receivedDate))
+        .accepted(toPartialDate(acceptedDate))
+        .revised(toPartialDate(revisedDate))
+        .created(toPartialDate(createdDate))
+        .completed(toPartialDate(completedDate))
+        .indexed(toPartialDate(completedDate))
         .build();
+  }
+
+  /// 完整日期包成按精度记录的日期（精度为日）；本转换器的日期都是完整日期，语义不变。
+  ///
+  /// @param date 完整日期，可空
+  /// @return 日精度日期，入参为空时为 `null`
+  private static PartialDate toPartialDate(LocalDate date) {
+    return date == null ? null : PartialDate.ofDay(date);
   }
 
   private LocalDate extractPublicationDate(PubmedPublication article) {

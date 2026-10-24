@@ -13,6 +13,7 @@ import dev.patra.catalog.domain.model.aggregate.PublicationAggregate;
 import dev.patra.catalog.domain.model.aggregate.VenueInstanceAggregate;
 import dev.patra.catalog.domain.model.enums.AbstractType;
 import dev.patra.catalog.domain.model.enums.PublicationMedium;
+import dev.patra.catalog.domain.model.vo.publication.Pagination;
 import dev.patra.catalog.domain.model.vo.publication.PublicationAbstract;
 import dev.patra.catalog.domain.model.vo.publication.PublicationAuthorSnapshot;
 import dev.patra.catalog.domain.model.vo.publication.PublicationIdentifier;
@@ -23,6 +24,7 @@ import dev.patra.catalog.domain.port.gateway.VenueInstanceGateway;
 import dev.patra.catalog.domain.port.lookup.FunderLookupPort;
 import dev.patra.catalog.domain.port.lookup.LanguageLookupPort;
 import dev.patra.catalog.domain.port.lookup.VenueLookupPort;
+import dev.patra.catalog.infra.batch.publication.PublicationImportResult.PublicationDateData;
 import dev.patra.catalog.infra.batch.publication.PublicationImportResult.QualifierData;
 import dev.patra.common.CanonicalPublication;
 import dev.patra.common.CanonicalPublication.Abstract;
@@ -41,6 +43,7 @@ import dev.patra.common.CanonicalPublication.PublicationDates;
 import dev.patra.common.CanonicalPublication.PublicationType;
 import dev.patra.common.CanonicalPublication.QualifierName;
 import dev.patra.common.CanonicalPublication.SupplMeshName;
+import dev.patra.common.PartialDate;
 import dev.patra.common.PublicationIdentifierType;
 import java.time.LocalDate;
 import java.util.List;
@@ -50,6 +53,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -104,6 +108,91 @@ class PubmedArticleItemProcessorTest {
   }
 
   @Nested
+  @DisplayName("引用数据：日期精度、页码、ISO 缩写、PII")
+  class CitationDataTest {
+
+    private CanonicalPublication citationPublication(PartialDate published) {
+      return CanonicalPublication.builder()
+          .identifiers(
+              List.of(
+                  Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build(),
+                  Identifier.builder()
+                      .type(PublicationIdentifierType.PII)
+                      .value("e0123456")
+                      .build()))
+          .title("Citation Article")
+          .journal(
+              Journal.builder()
+                  .nlmUniqueId(NLM_ID)
+                  .isoAbbreviation("PLoS One")
+                  .medlineAbbreviation("PLoS One")
+                  .build())
+          .pagination(
+              CanonicalPublication.Pagination.builder()
+                  .medlinePgn("1451-61")
+                  .startPage("1451")
+                  .endPage("1461")
+                  .build())
+          .dates(PublicationDates.builder().published(published).build())
+          .build();
+    }
+
+    private PublicationImportResult processWithVenue(CanonicalPublication publication)
+        throws Exception {
+      when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
+          .thenReturn(Optional.of(VenueId.of(VENUE_ID)));
+      when(venueInstanceGateway.findOrCreateJournalInstance(any(JournalInstanceParams.class)))
+          .thenReturn(createVenueInstance());
+      return processor.process(publication);
+    }
+
+    @Test
+    @DisplayName("只到年：聚合不带月日，主出版日期行为年精度")
+    void should_carry_year_only_date_without_fabricated_month_day() throws Exception {
+      PublicationImportResult result =
+          processWithVenue(citationPublication(PartialDate.ofYear(2023)));
+
+      assertThat(result.publication().getPublicationYear()).isEqualTo(2023);
+      assertThat(result.publication().getPublicationMonth()).isNull();
+      assertThat(result.publication().getPublicationDay()).isNull();
+      PublicationDateData published = result.dates().getFirst();
+      assertThat(published.datePrecision()).isEqualTo("year");
+      assertThat(published.month()).isNull();
+      assertThat(published.day()).isNull();
+    }
+
+    @Test
+    @DisplayName("缺月日时期刊实例参数的月日为 null，不补 1")
+    void should_pass_null_month_day_to_journal_instance_when_absent() throws Exception {
+      processWithVenue(citationPublication(PartialDate.ofYear(2023)));
+
+      ArgumentCaptor<JournalInstanceParams> captor =
+          ArgumentCaptor.forClass(JournalInstanceParams.class);
+      verify(venueInstanceGateway).findOrCreateJournalInstance(captor.capture());
+      assertThat(captor.getValue().getPublicationMonth()).isNull();
+      assertThat(captor.getValue().getPublicationDay()).isNull();
+    }
+
+    @Test
+    @DisplayName("页码、ISO 缩写进聚合，PII 进扩展标识符")
+    void should_add_pii_identifier_and_pagination_and_iso_abbreviation() throws Exception {
+      PublicationImportResult result =
+          processWithVenue(citationPublication(PartialDate.ofYearMonth(2022, 10)));
+
+      PublicationAggregate aggregate = result.publication();
+      assertThat(aggregate.getPublicationMonth()).isEqualTo(10);
+      assertThat(aggregate.getPagination()).isEqualTo(Pagination.of("1451-61", "1451", "1461"));
+      assertThat(aggregate.getJournalIsoAbbreviation()).isEqualTo("PLoS One");
+      assertThat(aggregate.getExtendedIdentifiers())
+          .anySatisfy(
+              id -> {
+                assertThat(id.type()).isEqualTo(PublicationIdentifierType.PII);
+                assertThat(id.value()).isEqualTo("e0123456");
+              });
+    }
+  }
+
+  @Nested
   @DisplayName("process()")
   class ProcessTest {
 
@@ -115,7 +204,10 @@ class PubmedArticleItemProcessorTest {
           CanonicalPublication.builder()
               .title("No PMID")
               .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
-              .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+              .dates(
+                  PublicationDates.builder()
+                      .published(PartialDate.ofDay(LocalDate.of(2024, 1, 1)))
+                      .build())
               .build();
 
       // when
@@ -298,7 +390,10 @@ class PubmedArticleItemProcessorTest {
                           .build()))
               .title("Test Article")
               .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
-              .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+              .dates(
+                  PublicationDates.builder()
+                      .published(PartialDate.ofDay(LocalDate.of(2024, 1, 1)))
+                      .build())
               .build();
 
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
@@ -448,7 +543,10 @@ class PubmedArticleItemProcessorTest {
                           .build()))
               .title("Test Article")
               .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
-              .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+              .dates(
+                  PublicationDates.builder()
+                      .published(PartialDate.ofDay(LocalDate.of(2024, 1, 1)))
+                      .build())
               .publicationStatus("epublish")
               .build();
 
@@ -899,7 +997,10 @@ class PubmedArticleItemProcessorTest {
                           .build()))
               .title("Test Article")
               .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
-              .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+              .dates(
+                  PublicationDates.builder()
+                      .published(PartialDate.ofDay(LocalDate.of(2024, 1, 1)))
+                      .build())
               .alternativeAbstracts(
                   List.of(
                       AlternativeAbstract.builder()
@@ -949,7 +1050,10 @@ class PubmedArticleItemProcessorTest {
                           .build()))
               .title("Test Article")
               .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
-              .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+              .dates(
+                  PublicationDates.builder()
+                      .published(PartialDate.ofDay(LocalDate.of(2024, 1, 1)))
+                      .build())
               .alternativeAbstracts(
                   List.of(
                       AlternativeAbstract.builder()
@@ -1040,8 +1144,8 @@ class PubmedArticleItemProcessorTest {
               .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
               .dates(
                   PublicationDates.builder()
-                      .published(LocalDate.of(2026, 1, 1))
-                      .pmcRelease(LocalDate.of(2027, 1, 15))
+                      .published(PartialDate.ofDay(LocalDate.of(2026, 1, 1)))
+                      .pmcRelease(PartialDate.ofDay(LocalDate.of(2027, 1, 15)))
                       .build())
               .build();
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
@@ -1080,7 +1184,10 @@ class PubmedArticleItemProcessorTest {
               .title("Test Article")
               .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
               // 使用最小的 PublicationDates（只有 published）
-              .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+              .dates(
+                  PublicationDates.builder()
+                      .published(PartialDate.ofDay(LocalDate.of(2024, 1, 1)))
+                      .build())
               .build();
 
       when(venueLookupPort.findByPriority(eq(NLM_ID), any()))
@@ -1150,7 +1257,10 @@ class PubmedArticleItemProcessorTest {
                           .build()))
               .title("Test Article")
               .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
-              .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+              .dates(
+                  PublicationDates.builder()
+                      .published(PartialDate.ofDay(LocalDate.of(2024, 1, 1)))
+                      .build())
               .investigators(
                   List.of(
                       // 有效研究者
@@ -1242,7 +1352,10 @@ class PubmedArticleItemProcessorTest {
                           .build()))
               .title("Test Article")
               .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
-              .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+              .dates(
+                  PublicationDates.builder()
+                      .published(PartialDate.ofDay(LocalDate.of(2024, 1, 1)))
+                      .build())
               .personalNameSubjects(
                   List.of(
                       // 有效
@@ -1301,7 +1414,10 @@ class PubmedArticleItemProcessorTest {
                           .build()))
               .title("Test Article")
               .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
-              .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+              .dates(
+                  PublicationDates.builder()
+                      .published(PartialDate.ofDay(LocalDate.of(2024, 1, 1)))
+                      .build())
               .language("eng")
               .build();
 
@@ -1337,7 +1453,10 @@ class PubmedArticleItemProcessorTest {
                           .build()))
               .title("Test Article")
               .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
-              .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+              .dates(
+                  PublicationDates.builder()
+                      .published(PartialDate.ofDay(LocalDate.of(2024, 1, 1)))
+                      .build())
               .language("zzz")
               .build();
 
@@ -1371,7 +1490,10 @@ class PubmedArticleItemProcessorTest {
                           .build()))
               .title("Test Article")
               .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
-              .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+              .dates(
+                  PublicationDates.builder()
+                      .published(PartialDate.ofDay(LocalDate.of(2024, 1, 1)))
+                      .build())
               .investigators(
                   List.of(
                       Investigator.builder()
@@ -1557,7 +1679,10 @@ class PubmedArticleItemProcessorTest {
                           .build()))
               .title("Test Article")
               .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
-              .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+              .dates(
+                  PublicationDates.builder()
+                      .published(PartialDate.ofDay(LocalDate.of(2024, 1, 1)))
+                      .build())
               .abstractContent(abstractContent)
               .build();
       return processor.process(publication).publication().getPublicationAbstract();
@@ -1778,7 +1903,10 @@ class PubmedArticleItemProcessorTest {
                           .build()))
               .title("Test Article")
               .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
-              .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+              .dates(
+                  PublicationDates.builder()
+                      .published(PartialDate.ofDay(LocalDate.of(2024, 1, 1)))
+                      .build())
               .authors(authors)
               .build();
       return processor.process(publication).publication().getAuthors();
@@ -1797,7 +1925,10 @@ class PubmedArticleItemProcessorTest {
             List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(pmid).build()))
         .title("Test Article")
         .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
-        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .dates(
+            PublicationDates.builder()
+                .published(PartialDate.ofDay(LocalDate.of(2024, 1, 1)))
+                .build())
         .build();
   }
 
@@ -1810,7 +1941,10 @@ class PubmedArticleItemProcessorTest {
                 Identifier.builder().type(PublicationIdentifierType.DOI).value(doi).build()))
         .title("Test Article")
         .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
-        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .dates(
+            PublicationDates.builder()
+                .published(PartialDate.ofDay(LocalDate.of(2024, 1, 1)))
+                .build())
         .build();
   }
 
@@ -1823,7 +1957,10 @@ class PubmedArticleItemProcessorTest {
         .title(title)
         .originalTitle(originalTitle)
         .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
-        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .dates(
+            PublicationDates.builder()
+                .published(PartialDate.ofDay(LocalDate.of(2024, 1, 1)))
+                .build())
         .build();
   }
 
@@ -1845,7 +1982,10 @@ class PubmedArticleItemProcessorTest {
                 .volume("10")
                 .issue("2")
                 .build())
-        .dates(PublicationDates.builder().published(LocalDate.of(2024, 6, 15)).build())
+        .dates(
+            PublicationDates.builder()
+                .published(PartialDate.ofDay(LocalDate.of(2024, 6, 15)))
+                .build())
         .language("en")
         .publicationStatus("ppublish")
         .authorsComplete(true)
@@ -1859,7 +1999,10 @@ class PubmedArticleItemProcessorTest {
             List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build()))
         .title("Test Article")
         .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
-        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .dates(
+            PublicationDates.builder()
+                .published(PartialDate.ofDay(LocalDate.of(2024, 1, 1)))
+                .build())
         .abstractContent(
             Abstract.builder()
                 .text("This is a test abstract content.")
@@ -1875,7 +2018,10 @@ class PubmedArticleItemProcessorTest {
             List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build()))
         .title("Test Article")
         .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
-        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .dates(
+            PublicationDates.builder()
+                .published(PartialDate.ofDay(LocalDate.of(2024, 1, 1)))
+                .build())
         .abstractContent(
             Abstract.builder()
                 .sections(
@@ -1917,7 +2063,10 @@ class PubmedArticleItemProcessorTest {
                     .build()))
         .title("Test Article")
         .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
-        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .dates(
+            PublicationDates.builder()
+                .published(PartialDate.ofDay(LocalDate.of(2024, 1, 1)))
+                .build())
         .build();
   }
 
@@ -1928,7 +2077,10 @@ class PubmedArticleItemProcessorTest {
             List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build()))
         .title("Test Article")
         .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
-        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .dates(
+            PublicationDates.builder()
+                .published(PartialDate.ofDay(LocalDate.of(2024, 1, 1)))
+                .build())
         .mediaType("electronic")
         .build();
   }
@@ -1940,7 +2092,10 @@ class PubmedArticleItemProcessorTest {
             List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build()))
         .title("Test Article")
         .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
-        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .dates(
+            PublicationDates.builder()
+                .published(PartialDate.ofDay(LocalDate.of(2024, 1, 1)))
+                .build())
         .numberOfReferences(42)
         .conflictOfInterestStatement("The authors declare no conflict of interest.")
         .build();
@@ -1972,7 +2127,10 @@ class PubmedArticleItemProcessorTest {
             List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build()))
         .title("Test Article with MeSH")
         .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
-        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .dates(
+            PublicationDates.builder()
+                .published(PartialDate.ofDay(LocalDate.of(2024, 1, 1)))
+                .build())
         .meshHeadings(
             List.of(
                 MeshHeading.builder()
@@ -2000,7 +2158,10 @@ class PubmedArticleItemProcessorTest {
             List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build()))
         .title("Test Article with Qualifiers")
         .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
-        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .dates(
+            PublicationDates.builder()
+                .published(PartialDate.ofDay(LocalDate.of(2024, 1, 1)))
+                .build())
         .meshHeadings(
             List.of(
                 MeshHeading.builder()
@@ -2027,7 +2188,10 @@ class PubmedArticleItemProcessorTest {
             List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build()))
         .title("Test Article with Keywords")
         .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
-        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .dates(
+            PublicationDates.builder()
+                .published(PartialDate.ofDay(LocalDate.of(2024, 1, 1)))
+                .build())
         .keywords(
             List.of(
                 KeywordSet.builder()
@@ -2056,7 +2220,10 @@ class PubmedArticleItemProcessorTest {
             List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build()))
         .title("Test Article with Funding")
         .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
-        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .dates(
+            PublicationDates.builder()
+                .published(PartialDate.ofDay(LocalDate.of(2024, 1, 1)))
+                .build())
         .funding(
             List.of(
                 FundingInfo.builder()
@@ -2083,7 +2250,10 @@ class PubmedArticleItemProcessorTest {
             List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build()))
         .title("Test Article with Publication Types")
         .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
-        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .dates(
+            PublicationDates.builder()
+                .published(PartialDate.ofDay(LocalDate.of(2024, 1, 1)))
+                .build())
         .publicationTypes(
             List.of(
                 PublicationType.builder()
@@ -2106,7 +2276,10 @@ class PubmedArticleItemProcessorTest {
             List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build()))
         .title("Test Article with SupplMeshNames")
         .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
-        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .dates(
+            PublicationDates.builder()
+                .published(PartialDate.ofDay(LocalDate.of(2024, 1, 1)))
+                .build())
         .supplMeshNames(
             List.of(
                 SupplMeshName.builder()
@@ -2129,7 +2302,10 @@ class PubmedArticleItemProcessorTest {
             List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build()))
         .title("Test Article with Alternative Abstracts")
         .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
-        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .dates(
+            PublicationDates.builder()
+                .published(PartialDate.ofDay(LocalDate.of(2024, 1, 1)))
+                .build())
         .alternativeAbstracts(
             List.of(
                 AlternativeAbstract.builder()
@@ -2154,7 +2330,10 @@ class PubmedArticleItemProcessorTest {
             List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build()))
         .title("Test Article with Same Language Alternative Abstract Types")
         .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
-        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .dates(
+            PublicationDates.builder()
+                .published(PartialDate.ofDay(LocalDate.of(2024, 1, 1)))
+                .build())
         .alternativeAbstracts(
             List.of(
                 AlternativeAbstract.builder()
@@ -2179,9 +2358,9 @@ class PubmedArticleItemProcessorTest {
         .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
         .dates(
             PublicationDates.builder()
-                .published(LocalDate.of(2024, 6, 15))
-                .received(LocalDate.of(2024, 1, 10))
-                .accepted(LocalDate.of(2024, 5, 20))
+                .published(PartialDate.ofDay(LocalDate.of(2024, 6, 15)))
+                .received(PartialDate.ofDay(LocalDate.of(2024, 1, 10)))
+                .accepted(PartialDate.ofDay(LocalDate.of(2024, 5, 20)))
                 .build())
         .build();
   }
@@ -2193,7 +2372,10 @@ class PubmedArticleItemProcessorTest {
             List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build()))
         .title("Test Article with Investigators")
         .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
-        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .dates(
+            PublicationDates.builder()
+                .published(PartialDate.ofDay(LocalDate.of(2024, 1, 1)))
+                .build())
         .investigators(
             List.of(
                 // 第一个研究者：带 ORCID 和机构
@@ -2235,7 +2417,10 @@ class PubmedArticleItemProcessorTest {
             List.of(Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build()))
         .title("Biography of Famous Scientists")
         .journal(Journal.builder().nlmUniqueId(NLM_ID).build())
-        .dates(PublicationDates.builder().published(LocalDate.of(2024, 1, 1)).build())
+        .dates(
+            PublicationDates.builder()
+                .published(PartialDate.ofDay(LocalDate.of(2024, 1, 1)))
+                .build())
         .personalNameSubjects(
             List.of(
                 PersonalNameSubject.builder()

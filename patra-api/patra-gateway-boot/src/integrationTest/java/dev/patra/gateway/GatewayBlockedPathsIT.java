@@ -69,6 +69,7 @@ class GatewayBlockedPathsIT {
             "/patra-registry/_internal/provenances",
             "/patra-catalog/_internal/organizations/04jztag35",
             "/patra-catalog/_internal/mesh/descriptors/D003920",
+            "/patra-catalog/_internal/publications/resolve/by-ids",
             "/patra-identity/_internal/sessions/introspect",
             "/patra-identity/admin/users/1/ban",
             "/patra-catalog/actuator/health",
@@ -87,6 +88,28 @@ class GatewayBlockedPathsIT {
 
     catalog.verify(0, anyRequestedFor(anyUrl()));
     identity.verify(0, anyRequestedFor(anyUrl()));
+  }
+
+  /// 内部接口多是 POST 带 JSON 体（PAP-109 的文献解析），拒绝名单对 POST 同样生效。
+  @Test
+  void should_block_internal_post_with_json_body() {
+    String token = GatewayITSessions.issue(identity, 4302L, 9302L);
+
+    expectForbidden(
+        restClient
+            .post()
+            .uri("/patra-catalog/_internal/publications/resolve/by-ids")
+            .contentType(MediaType.APPLICATION_JSON)
+            .body("{\"ids\":[1]}"));
+    expectForbidden(
+        restClient
+            .post()
+            .uri("/patra-catalog/_internal/publications/resolve/by-ids")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body("{\"ids\":[1]}"));
+
+    catalog.verify(0, anyRequestedFor(anyUrl()));
   }
 
   /// 匹配的是解码后的路径：`%5F` 就是 `_`；`/**` 也匹配零个尾段。

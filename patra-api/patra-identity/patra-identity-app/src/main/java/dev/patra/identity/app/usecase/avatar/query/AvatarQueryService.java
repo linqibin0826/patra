@@ -1,9 +1,7 @@
 package dev.patra.identity.app.usecase.avatar.query;
 
 import dev.patra.identity.domain.exception.AvatarNotFoundException;
-import dev.patra.identity.domain.model.enums.UserStatus;
 import dev.patra.identity.domain.model.read.AvatarOwner;
-import dev.patra.identity.domain.model.vo.Username;
 import dev.patra.identity.domain.model.vo.avatar.Avatar;
 import dev.patra.identity.domain.model.vo.avatar.AvatarSize;
 import dev.patra.identity.domain.model.vo.avatar.StoredAvatar;
@@ -14,11 +12,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-/// 公开的头像读取：`GET /users/{username}/avatar?size=&v=`。
+/// 公开的头像读取：`GET /users/{userId}/avatar?size=&v=`。
 ///
 /// 地址里的版本 `v` 必须等于当前头像的哈希：同一个地址的内容永远不变，响应才能按不可变长期缓存；旧版本的地址
-/// 一律 404，不会把新图缓存在旧地址下。只认当前用户名（旧名不跳转），`ACTIVE` 与 `PENDING_DELETION` 下发
-/// （冷静期里本人还能登录），`BANNED` / `DELETED` 404。不看主页可见性：响应是 `public` 缓存，`v` 只出现在
+/// 一律 404，不会把新图缓存在旧地址下。地址按用户 ID，改用户名后照常可用（PAP-108）；用户 ID 只认规范的十进制
+/// 写法（不认 `+1`、`007`），同一张头像只有一个地址。`UserStatus.servesAvatar()` 为真才下发（`ACTIVE` 与
+/// `PENDING_DELETION`），`BANNED` / `DELETED` 404。不看主页可见性：响应是 `public` 缓存，`v` 只出现在
 /// 请求者有权看到的响应里，猜不到（spec 第 17 节已拍板 2）。任何不满足一律 404，不区分原因。
 @Slf4j
 @Service
@@ -27,26 +26,27 @@ public class AvatarQueryService {
 
   private static final Pattern VERSION = Pattern.compile("[0-9a-f]{16}");
 
+  /// 规范的正整数写法，最多 19 位；19 位里超出 `long` 的由解析时拦下。
+  private static final Pattern USER_ID = Pattern.compile("[1-9][0-9]{0,18}");
+
   private final UserReadPort reader;
   private final AvatarStoragePort storage;
 
   /// 找到要下发的头像。
   ///
-  /// @param rawUsername 路径里的用户名，大小写不敏感
+  /// @param rawUserId 路径里的用户 ID
   /// @param size 查询参数 `size`，`512` 或 `128`
   /// @param version 查询参数 `v`，当前头像的哈希
   /// @return 命中
   /// @throws AvatarNotFoundException 任一条件不满足
-  public AvatarRef locate(String rawUsername, String size, String version) {
-    if (Username.violation(rawUsername).isPresent()
-        || version == null
-        || !VERSION.matcher(version).matches()) {
+  public AvatarRef locate(String rawUserId, String size, String version) {
+    if (version == null || !VERSION.matcher(version).matches()) {
       throw new AvatarNotFoundException();
     }
+    long userId = parseUserId(rawUserId);
     AvatarSize avatarSize = AvatarSize.fromPixels(size).orElseThrow(AvatarNotFoundException::new);
-    AvatarOwner owner =
-        reader.findAvatarOwner(Username.of(rawUsername)).orElseThrow(AvatarNotFoundException::new);
-    if (owner.status() != UserStatus.ACTIVE && owner.status() != UserStatus.PENDING_DELETION) {
+    AvatarOwner owner = reader.findAvatarOwner(userId).orElseThrow(AvatarNotFoundException::new);
+    if (!owner.status().servesAvatar()) {
       throw new AvatarNotFoundException();
     }
     Avatar avatar = owner.avatar();
@@ -54,6 +54,22 @@ public class AvatarQueryService {
       throw new AvatarNotFoundException();
     }
     return AvatarRef.of(avatar, avatarSize);
+  }
+
+  /// 解析路径里的用户 ID：只认规范的正整数写法，溢出也算不合法。
+  ///
+  /// @param raw 路径里的用户 ID
+  /// @return 用户 ID
+  /// @throws AvatarNotFoundException 不合法
+  private static long parseUserId(String raw) {
+    if (raw == null || !USER_ID.matcher(raw).matches()) {
+      throw new AvatarNotFoundException();
+    }
+    try {
+      return Long.parseLong(raw);
+    } catch (NumberFormatException e) {
+      throw new AvatarNotFoundException();
+    }
   }
 
   /// 打开命中的那一档。

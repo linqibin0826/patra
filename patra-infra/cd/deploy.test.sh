@@ -7,6 +7,7 @@
 #   场景4 未知服务名：入参校验拒绝，exit 2（防 dispatch 手滑打错服务名后"假成功"）
 #   场景5 非法 SERVICES_JSON：入参校验拒绝，exit 2
 #   场景6 按 services.json 的条目顺序部署：请求的服务一个不漏，identity 先于 gateway
+#   场景7 interaction 在 services.json 里：请求它就部署，排在 catalog 之后
 # 运行：bash patra-infra/cd/deploy.test.sh
 # ============================================================================
 # shellcheck disable=SC2016  # 断言用单引号是有意的：延迟到 check() 内 eval 时才展开
@@ -133,6 +134,18 @@ check "场景6 按 services.json 顺序部署" 0 "$rc" \
   '[ "$(cat "$LAST_GOOD_DIR/last-good-object-storage")" = newsha ]' \
   '[ "$(cat "$LAST_GOOD_DIR/last-good-identity")" = newsha ]' \
   '[ "$(cat "$LAST_GOOD_DIR/last-good-gateway")" = newsha ]'
+
+# ---- 场景7：interaction 在 services.json 里，按条目顺序排在 catalog 之后 ----
+setup
+for s in interaction catalog; do
+  echo "ghcr.io/linqibin0826/patra-$s:newsha" >> "$STUB_IMAGES"
+done
+echo newsha >> "$STUB_HEALTHY"
+bash "$SCRIPT_DIR/deploy.sh" newsha '["interaction","catalog"]' > "$TMP/out" 2>&1; rc=$?
+check "场景7 interaction 部署且排在 catalog 之后" 0 "$rc" \
+  '[ "$(sed -n "s/.* up -d //p" "$STUB_LOG" | xargs)" = "catalog interaction" ]' \
+  '[ "$(cat "$LAST_GOOD_DIR/last-good-catalog")" = newsha ]' \
+  '[ "$(cat "$LAST_GOOD_DIR/last-good-interaction")" = newsha ]'
 
 echo "----"
 echo "PASS=$PASS FAIL=$FAIL"

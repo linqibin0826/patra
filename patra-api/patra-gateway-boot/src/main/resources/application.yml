@@ -88,6 +88,15 @@ spring:
               filters:
                 - StripPrefix=1
 
+            # Interaction Service Route（文献库、收藏夹；以后的讨论、关注、通知）
+            # Example: /patra-interaction/collections/1 -> lb://patra-interaction/collections/1
+            - id: patra-interaction
+              uri: lb://patra-interaction
+              predicates:
+                - Path=/patra-interaction/**
+              filters:
+                - StripPrefix=1
+
 # ----------------------------------------------------------------------------
 # API Documentation Aggregation
 # ----------------------------------------------------------------------------
@@ -106,6 +115,9 @@ scalar:
     - url: /patra-identity/v3/api-docs
       title: Identity Service
       slug: identity
+    - url: /patra-interaction/v3/api-docs
+      title: Interaction Service
+      slug: interaction
 
 # ----------------------------------------------------------------------------
 # Logging Configuration
