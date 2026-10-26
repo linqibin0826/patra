@@ -100,6 +100,35 @@ class PubmedArticleSplitterTest {
     return articles;
   }
 
+  @Test
+  @DisplayName("全文累计超过 100,000 个 &amp;（真实的 pubmed26n1379）：照常逐篇切出，不因 JDK 实体上限失败")
+  void should_split_file_with_more_than_100000_entity_references() throws Exception {
+    StringBuilder file = new StringBuilder("<?xml version=\"1.0\"?><PubmedArticleSet>");
+    for (int a = 1; a <= 2; a++) {
+      file.append("<PubmedArticle><MedlineCitation><PMID Version=\"1\">")
+          .append(a)
+          .append("</PMID></MedlineCitation><PubmedData><ReferenceList>");
+      for (int i = 0; i < 50_001; i++) {
+        file.append("<Reference><Citation>Knight &amp; Ortel</Citation></Reference>");
+      }
+      file.append("</ReferenceList></PubmedData></PubmedArticle>");
+    }
+    file.append("</PubmedArticleSet>");
+    List<String> articles = new ArrayList<>();
+
+    try (PubmedArticleSplitter splitter =
+        new PubmedArticleSplitter(
+            new ByteArrayInputStream(file.toString().getBytes(StandardCharsets.UTF_8)),
+            pmid -> {})) {
+      for (Optional<String> next = splitter.next(); next.isPresent(); next = splitter.next()) {
+        articles.add(next.get());
+      }
+    }
+
+    assertThat(articles).hasSize(2);
+    assertThat(PubmedArticleSplitter.pmidOf(articles.get(1))).isEqualTo("2");
+  }
+
   private static PubmedArticleSplitter splitter(List<String> deleted) {
     return new PubmedArticleSplitter(
         new ByteArrayInputStream(FILE.getBytes(StandardCharsets.UTF_8)), deleted::add);
