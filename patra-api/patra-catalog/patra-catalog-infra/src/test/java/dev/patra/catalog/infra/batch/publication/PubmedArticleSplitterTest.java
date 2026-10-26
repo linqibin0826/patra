@@ -100,6 +100,9 @@ class PubmedArticleSplitterTest {
     return articles;
   }
 
+  /// 两篇文章合计 100,002 个 `&amp;` 时，切分器照常切出两篇、第二篇 PMID 正确。
+  ///
+  /// @throws Exception 切分失败时（修复前为 `JAXP00010003`）
   @Test
   @DisplayName("全文累计超过 100,000 个 &amp;（真实的 pubmed26n1379）：照常逐篇切出，不因 JDK 实体上限失败")
   void should_split_file_with_more_than_100000_entity_references() throws Exception {

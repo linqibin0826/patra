@@ -18,6 +18,9 @@ import org.junit.jupiter.api.Test;
 @DisplayName("SecureXmlInputFactory 单元测试")
 class SecureXmlInputFactoryTest {
 
+  /// 文档里有 100,001 个 `&amp;` 时，用共享工厂读完整篇不抛错、元素数正确。
+  ///
+  /// @throws Exception 解析失败时（修复前为 `JAXP00010003`）
   @Test
   @DisplayName("全文超过 100,000 个 &amp; 照常解析（JDK 25 默认把预定义实体引用累计到 10 万上限）")
   void should_parse_document_with_more_than_100000_predefined_entity_references() throws Exception {
@@ -41,6 +44,7 @@ class SecureXmlInputFactoryTest {
     assertThat(elements).isEqualTo(100_002);
   }
 
+  /// DTD 里声明的实体被引用时，共享工厂仍抛出 [XMLStreamException]，不展开实体。
   @Test
   @DisplayName("DTD 里声明的实体仍不展开（防 XXE / 实体膨胀）")
   void should_still_reject_declared_entities() {
