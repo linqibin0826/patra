@@ -1,4 +1,11 @@
-import { expect, type Locator, type Page } from "@playwright/test";
+import { readFile } from "node:fs/promises";
+import {
+  type BrowserContext,
+  type Download,
+  expect,
+  type Locator,
+  type Page,
+} from "@playwright/test";
 import { ROUND_TRIP, waitForTakeover } from "@tests/e2e/support/account";
 
 /// 还没收藏的收藏按钮（读屏名「收藏「标题」」）
@@ -27,4 +34,34 @@ export async function openLibrary(page: Page, path = "/library") {
 /// 文献库里的条目
 export function libraryItems(page: Page): Locator {
   return page.getByRole("list", { name: "文献库条目" }).getByRole("article");
+}
+
+/// 模拟 mini 的 HTTP 环境：剪贴板接口不可用（`writeText` 拒绝），逼复制走 `execCommand` 那一步（简报 §3.8）。
+/// 本机 localhost 是安全上下文，不模拟就测不到降级。读剪贴板（`readCopied`）仍走真实的 `readText`
+export async function simulateInsecureClipboard(context: BrowserContext): Promise<void> {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await context.addInitScript(() => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText = () =>
+        Promise.reject(new DOMException("insecure context", "NotAllowedError"));
+    }
+  });
+}
+
+/// 剪贴板里现在的文字（要先 `simulateInsecureClipboard` 授权读剪贴板）
+export function readCopied(page: Page): Promise<string> {
+  return page.evaluate(() => navigator.clipboard.readText());
+}
+
+/// 下载的文件内容（文本）
+export async function downloadedText(download: Download): Promise<string> {
+  const path = await download.path();
+  return readFile(path, "utf8");
+}
+
+/// 门户给出的规范地址（canonical 与「复制链接」），口径同 `src/lib/public-url.ts`：配了 `PATRA_PORTAL_PUBLIC_URL` 用它，
+/// 没配时用这次访问的 Host 拼 `http://`
+export function publicLink(page: Page, path: string): string {
+  const configured = process.env.PATRA_PORTAL_PUBLIC_URL?.trim().replace(/\/+$/, "");
+  return `${configured || `http://${new URL(page.url()).host}`}${path}`;
 }

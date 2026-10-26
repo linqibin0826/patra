@@ -17,18 +17,21 @@ export function PdfDownloadLink({
   sizeBytes,
   primary = false,
   block = false,
+  className,
 }: {
   paperId: string;
   sizeBytes: string | null;
   primary?: boolean;
   block?: boolean;
+  /** 详情页页头窄屏的紧凑竖排形态（≤ 540px 时文件大小放不下，隐藏） */
+  className?: string;
 }) {
   const size = formatFileSize(sizeBytes);
   return (
     <a
       href={pdfHref(paperId)}
       download
-      className={cn(primary ? btnPrimary : btnSecondary, block && btnBlock)}
+      className={cn(primary ? btnPrimary : btnSecondary, block && btnBlock, className)}
     >
       <Download size={15} aria-hidden />
       下载 PDF
@@ -37,6 +40,7 @@ export function PdfDownloadLink({
           className={cn(
             "font-mono text-2xs font-normal tracking-mono tabular-nums",
             primary ? "text-fg-on-clay/80" : "text-fg-3",
+            className && "max-[540px]:hidden",
           )}
         >
           {size}

@@ -8,6 +8,7 @@ import {
   CitationFormatTabs,
   type CitationStyle,
 } from "@/components/library/CitationFormatTabs";
+import { CitationPreview } from "@/components/library/CitationPreview";
 import { CopyButton } from "@/components/library/CopyButton";
 import { Dialog } from "@/components/ui/dialog";
 import { LIMITS } from "@/lib/library/messages";
@@ -102,34 +103,19 @@ export function CiteDialog({ open, onOpenChange, scope, onExport }: CiteDialogPr
           {keys.kind === "ready" && keys.skipped > 0 && (
             <p className="text-sm text-fg-3">{keys.skipped} 篇已失效，不含在内。</p>
           )}
-          <div
+          <CitationPreview
             ref={preview}
-            className="max-h-90 overflow-y-auto rounded-md bg-paper-100 px-4 py-3 font-serif text-sm leading-6 text-fg-1 select-text"
-          >
-            {citations.isError || keys.kind === "error" ? (
-              <p className="flex items-center gap-3 font-sans text-fg-2">
-                引用暂时生成不了
-                <button
-                  type="button"
-                  className={cn(btnText, "text-sm")}
-                  onClick={() => (keys.kind === "error" ? retry() : void citations.refetch())}
-                >
-                  重试
-                </button>
-              </p>
-            ) : citations.data ? (
-              lines.map((line) => (
-                <p key={line} className="m-0 [overflow-wrap:anywhere]">
-                  {line}
-                </p>
-              ))
-            ) : (
-              <div aria-hidden="true" className="flex flex-col gap-2">
-                <div className="shimmer h-4 w-full rounded-sm" />
-                <div className="shimmer h-4 w-2/3 rounded-sm" />
-              </div>
-            )}
-          </div>
+            className="max-h-90"
+            lines={lines}
+            state={
+              citations.isError || keys.kind === "error"
+                ? "error"
+                : citations.data
+                  ? "ready"
+                  : "loading"
+            }
+            onRetry={() => (keys.kind === "error" ? retry() : void citations.refetch())}
+          />
           <div className="flex items-center justify-end gap-4">
             <button
               type="button"

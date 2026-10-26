@@ -6,7 +6,16 @@ import {
   register,
   waitForTakeover,
 } from "@tests/e2e/support/account";
-import { libraryItems, openLibrary, save, unsavedButtons } from "@tests/e2e/support/library";
+import {
+  downloadedText,
+  libraryItems,
+  openLibrary,
+  publicLink,
+  readCopied,
+  save,
+  simulateInsecureClipboard,
+  unsavedButtons,
+} from "@tests/e2e/support/library";
 
 /// v0.13 文献库（PAP-114）：连 mini 上的后端跑。新注册的账号邮箱未验证，私人收藏照样能用（release spec 2.1.1）
 test.describe("收藏与文献库", () => {
@@ -251,6 +260,72 @@ async function cleanUpVerified(page: Page, collectionId: string | null, savedTit
   }
 }
 
+test.describe("分享与页面信息", () => {
+  test.setTimeout(120_000);
+
+  test("详情页分享面板：HTTP 下复制链接、复制引用成功，导出这篇 RIS", async ({ browser }) => {
+    const context = await browser.newContext();
+    await simulateInsecureClipboard(context);
+    const page = await context.newPage();
+    try {
+      await page.goto("/papers?q=heart");
+      const first = page.getByRole("list", { name: "文献列表" }).getByRole("listitem").first();
+      await first.waitFor(ROUND_TRIP).catch(() => {});
+      test.skip((await first.count()) === 0, "没有检索结果（catalog 不可达）");
+      const href = (await first.getByRole("heading").getByRole("link").getAttribute("href")) ?? "";
+      await page.goto(href, { timeout: 60_000 });
+      await waitForTakeover(page, "#masthead");
+      const link = publicLink(page, href);
+
+      await page.getByRole("button", { name: "分享" }).click();
+      const share = page.getByRole("dialog", { name: "分享" });
+      await expect(share.getByRole("textbox", { name: "链接" })).toHaveValue(link);
+      await share.getByRole("button", { name: "复制链接" }).click();
+      await expect(share.getByRole("button", { name: "已复制" })).toBeVisible();
+      expect(await readCopied(page)).toBe(link);
+      // 「已复制」1.6 秒后变回原文，免得下面认错按钮
+      await expect(share.getByRole("button", { name: "复制链接" })).toBeVisible();
+
+      // 单选框是读屏用的 sr-only，点它所在的标签
+      await share.getByText("APA", { exact: true }).click();
+      await expect(share.getByRole("radio", { name: "APA" })).toBeChecked();
+      const copyCitation = share.getByRole("button", { name: "复制引用" });
+      await expect(copyCitation).toBeEnabled(ROUND_TRIP);
+      await copyCitation.click();
+      await expect(share.getByRole("button", { name: "已复制" })).toBeVisible();
+      expect(await readCopied(page)).toMatch(/\(\d{4}\)/);
+
+      const exporting = page.waitForEvent("download", ROUND_TRIP);
+      await share.getByRole("button", { name: "RIS" }).click();
+      expect(await downloadedText(await exporting)).toMatch(/^TY {2}- /);
+    } finally {
+      await context.close();
+    }
+  });
+
+  test("文献页、期刊页的 HTML 带标题、描述、canonical", async ({ page }) => {
+    await page.goto("/papers?q=heart");
+    const first = page.getByRole("list", { name: "文献列表" }).getByRole("listitem").first();
+    await first.waitFor(ROUND_TRIP).catch(() => {});
+    test.skip((await first.count()) === 0, "没有检索结果（catalog 不可达）");
+    const paperHref =
+      (await first.getByRole("heading").getByRole("link").getAttribute("href")) ?? "";
+    const paperHtml = await (await page.request.get(paperHref)).text();
+    expect(paperHtml).toMatch(/<title>[^<]+ · Patra<\/title>/);
+    expect(paperHtml).toMatch(/<meta name="description" content="[^"]+"/);
+    expect(paperHtml).toContain(`<link rel="canonical" href="${publicLink(page, paperHref)}"/>`);
+
+    const journalHref = paperHtml.match(/href="(\/journals\/\d+)"/)?.[1];
+    test.skip(!journalHref, "这篇文献没有期刊页");
+    const journalHtml = await (await page.request.get(journalHref ?? "")).text();
+    expect(journalHtml).toMatch(/<title>[^<]+ · Patra<\/title>/);
+    expect(journalHtml).toMatch(/<meta name="description" content="[^"]+"/);
+    expect(journalHtml).toContain(
+      `<link rel="canonical" href="${publicLink(page, journalHref ?? "")}"/>`,
+    );
+  });
+});
+
 test.describe("公开收藏夹", () => {
   test.setTimeout(240_000);
   test.skip(
@@ -268,6 +343,7 @@ test.describe("公开收藏夹", () => {
     let failure: unknown;
     const anon = await browser.newContext();
     const other = await browser.newContext();
+    await simulateInsecureClipboard(other);
     try {
       // 登录后直接回到检索结果（登录后的客户端跳转还在进行时再 goto 会被中断）
       await login(page, VERIFIED, "/papers?q=heart");
@@ -313,6 +389,38 @@ test.describe("公开收藏夹", () => {
       await register(otherPage, freshAccount());
       await otherPage.goto(`/collections/${collectionId}`);
       await waitForTakeover(otherPage, "main");
+
+      // B 查看并复制（PAP-115 冒烟）：B 的上下文模拟 mini 的 HTTP（剪贴板接口不可用），复制走降级那一步
+      const link = publicLink(otherPage, `/collections/${collectionId}`);
+      await otherPage.getByRole("button", { name: "分享" }).click();
+      const share = otherPage.getByRole("dialog", { name: "分享" });
+      await expect(share.getByRole("textbox", { name: "链接" })).toHaveValue(link);
+      await share.getByRole("button", { name: "复制链接" }).click();
+      await expect(share.getByRole("button", { name: "已复制" })).toBeVisible();
+      expect(await readCopied(otherPage)).toBe(link);
+      await otherPage.keyboard.press("Escape");
+
+      await otherPage.getByRole("button", { name: "复制引用" }).click();
+      const cite = otherPage.getByRole("dialog", { name: /^复制引用/ });
+      await cite.getByRole("button", { name: "复制 1 条引用" }).click(ROUND_TRIP);
+      await expect(cite.getByRole("button", { name: "已复制" })).toBeVisible();
+      expect(await readCopied(otherPage)).toMatch(/^\[1\] .+/);
+      await cite.getByRole("button", { name: "关闭" }).click();
+
+      await otherPage.getByRole("button", { name: "导出" }).click();
+      const exporting = otherPage.waitForEvent("download", ROUND_TRIP);
+      await otherPage
+        .getByRole("dialog", { name: "导出" })
+        .getByRole("button", { name: "下载 .ris" })
+        .click(ROUND_TRIP);
+      expect(await downloadedText(await exporting)).toMatch(/^TY {2}- /);
+
+      // 页面信息：标题、描述、canonical 在 HTML 里
+      const html = await (await otherPage.request.get(link)).text();
+      expect(html).toContain(`<title>${name} · `);
+      expect(html).toMatch(/<meta name="description" content="[^"]+"/);
+      expect(html).toContain(`<link rel="canonical" href="${link}"/>`);
+
       await otherPage.getByRole("button", { name: "复制为我的收藏夹" }).click();
       await expect(otherPage.getByText(/^已复制为「/)).toBeVisible(ROUND_TRIP);
 

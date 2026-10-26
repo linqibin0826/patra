@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { FormAlert } from "@/components/auth/FormAlert";
 import { Dialog } from "@/components/ui/dialog";
 import { saveResponseAsFile } from "@/lib/download";
+import { EXPORT_FORMATS, type ExportFormat } from "@/lib/library/export-formats";
 import { LIMITS } from "@/lib/library/messages";
 import { type DialogScope, formatCount, scopeCount, useScopeKeys } from "@/lib/library/scope";
 import { btnPrimary, btnText, RADIO_INPUT } from "@/lib/portal-ui";
@@ -13,14 +14,7 @@ import { cn } from "@/lib/utils";
 
 export type { DialogScope } from "@/lib/library/scope";
 
-const FORMATS = [
-  { id: "ris", name: "RIS", ext: "ris", hint: "Zotero、EndNote、NoteExpress、Mendeley" },
-  { id: "bibtex", name: "BibTeX", ext: "bib", hint: "LaTeX、Overleaf" },
-  { id: "csv", name: "CSV", ext: "csv", hint: "Excel 等表格软件" },
-  { id: "csl-json", name: "CSL-JSON", ext: "json", hint: "Zotero、Pandoc 等支持 CSL 的工具" },
-] as const;
-type Format = (typeof FORMATS)[number]["id"];
-const FORMAT_IDS = FORMATS.map((format) => format.id);
+const FORMAT_IDS = EXPORT_FORMATS.map((format) => format.id);
 const FORMAT_KEY = "patra.export-format";
 
 interface ExportDialogProps {
@@ -44,7 +38,7 @@ function overLimitText(scope: DialogScope): string {
 /// 导出对话框（简报 §3.6）：范围（只读）→ 四种格式 → 下载。下载交给 catalog（经门户转发），文件名由 catalog 生成。
 /// 记住上次的格式（浏览器本地）。超 5,000 篇时主按钮禁用；下载失败不关、就地提示。
 export function ExportDialog({ open, onOpenChange, scope }: ExportDialogProps) {
-  const [format, setFormat] = useState<Format>("ris");
+  const [format, setFormat] = useState<ExportFormat>("ris");
   const [downloading, setDownloading] = useState(false);
   const [failed, setFailed] = useState(false);
   const { keys } = useScopeKeys(scope, LIMITS.export, open);
@@ -56,7 +50,7 @@ export function ExportDialog({ open, onOpenChange, scope }: ExportDialogProps) {
     }
   }, [open]);
 
-  const current = FORMATS.find((item) => item.id === format) ?? FORMATS[0];
+  const current = EXPORT_FORMATS.find((item) => item.id === format) ?? EXPORT_FORMATS[0];
 
   async function download() {
     if (keys.kind !== "ready" || keys.keys.length === 0) {
@@ -100,7 +94,7 @@ export function ExportDialog({ open, onOpenChange, scope }: ExportDialogProps) {
       <p className="text-sm text-fg-2">{scope.label}</p>
       <fieldset className="grid min-w-0 grid-cols-2 gap-3 max-[880px]:grid-cols-1">
         <legend className="sr-only">格式</legend>
-        {FORMATS.map((item) => (
+        {EXPORT_FORMATS.map((item) => (
           <label
             key={item.id}
             className={cn(

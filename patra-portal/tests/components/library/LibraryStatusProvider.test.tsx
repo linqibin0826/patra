@@ -1,11 +1,12 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { focusManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { makeItemStatus } from "@tests/fixtures/interaction";
 import { USER } from "@tests/fixtures/user";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { LibraryStatusProvider, useSaveStatus } from "@/components/library/LibraryStatusProvider";
 import type { CurrentUser } from "@/lib/auth/types";
+import { createQueryClient } from "@/lib/query-client";
 import { queryKeys } from "@/lib/query-keys";
 
 afterEach(() => {
@@ -79,6 +80,58 @@ describe("LibraryStatusProvider", () => {
     vi.stubGlobal("fetch", fetchMock);
     renderScope(USER, ["11"], ["11"]);
     await waitFor(() => expect(screen.getByTestId("s-11")).toHaveTextContent("unavailable"));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("LibraryStatusProvider · 出错后页面内自愈（D11）", () => {
+  /// 用门户真实的 QueryClient 默认值（全局关了聚焦重取）
+  function renderWithPortalClient() {
+    const client = createQueryClient();
+    client.setQueryData(queryKeys.currentUser, USER);
+    render(
+      <QueryClientProvider client={client}>
+        <LibraryStatusProvider keys={["11"]}>
+          <Probe id="11" />
+        </LibraryStatusProvider>
+      </QueryClientProvider>,
+    );
+  }
+
+  afterEach(() => {
+    focusManager.setFocused(undefined);
+  });
+
+  it("refetches on focus after an error：interaction 恢复后回到页面，按钮恢复", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(null, { status: 502 }))
+      .mockResolvedValue(
+        Response.json({ items: [makeItemStatus({ key: "11", collected: true })] }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    renderWithPortalClient();
+    await waitFor(() => expect(screen.getByTestId("s-11")).toHaveTextContent("unavailable"));
+    act(() => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+    });
+    await waitFor(() => expect(screen.getByTestId("s-11")).toHaveTextContent("collected"));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not refetch on focus when healthy", async () => {
+    const fetchMock = vi.fn(async () =>
+      Response.json({ items: [makeItemStatus({ key: "11", collected: false })] }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    renderWithPortalClient();
+    await waitFor(() => expect(screen.getByTestId("s-11")).toHaveTextContent("idle"));
+    act(() => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+    });
+    await new Promise((resolve) => queueMicrotask(() => resolve(undefined)));
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

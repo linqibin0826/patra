@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import {
   attachPapers,
   READ_TIMEOUT_MS,
@@ -24,8 +25,9 @@ export type PublicEntry = WithPaper<PublicItem>;
 const OPTIONAL = { auth: "optional" } as const;
 
 /// 公开收藏夹头部：访客已登录就带会话（可见性取决于访客，决策 H）。不存在、私有、所有者主页对访客不可见
-/// 都是 `not-found`；identity 不可用是 503 → `unavailable`，不能当 404（简报 §3.17）
-export async function fetchPublicCollection(id: string): Promise<Read<PublicCollection>> {
+/// 都是 `not-found`；identity 不可用是 503 → `unavailable`，不能当 404（简报 §3.17）。用 `cache()` 包住，
+/// `generateMetadata` 与页面共用一次请求
+export const fetchPublicCollection = cache(async (id: string): Promise<Read<PublicCollection>> => {
   if (!isEntityId(id)) {
     return { kind: "not-found" };
   }
@@ -35,7 +37,7 @@ export async function fetchPublicCollection(id: string): Promise<Read<PublicColl
     publicCollectionSchema,
     path,
   );
-}
+});
 
 /// 公开收藏夹一页条目（不带备注），配好卡片
 export async function fetchPublicCollectionPage(

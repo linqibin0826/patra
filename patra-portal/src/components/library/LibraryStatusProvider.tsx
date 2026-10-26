@@ -26,7 +26,7 @@ interface Scope {
 const ScopeContext = createContext<Scope | null>(null);
 
 /// 一屏的「我的状态」：包住列表（或详情页页头），传本屏全部文献 ID，一屏只发一次批量请求（决策 H）。
-/// 只在已登录时请求；失败不重试，按钮直接显示「收藏暂不可用」。
+/// 只在已登录时请求；失败不重试，按钮直接显示「收藏暂不可用」，回到页面时再试一次。
 export function LibraryStatusProvider({
   keys,
   children,
@@ -41,6 +41,9 @@ export function LibraryStatusProvider({
     queryFn: () => fetchLibraryStatus(unique),
     enabled: user.status === "authenticated" && unique.length > 0,
     retry: false,
+    // 出错后回到页面或网络恢复时重取一次：interaction 恢复后不用换页，按钮自己回来（D11）；正常时不多发请求
+    refetchOnWindowFocus: (query) => query.state.status === "error",
+    refetchOnReconnect: (query) => query.state.status === "error",
   });
   return <ScopeContext.Provider value={{ user, query }}>{children}</ScopeContext.Provider>;
 }

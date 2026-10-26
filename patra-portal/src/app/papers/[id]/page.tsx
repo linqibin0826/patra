@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { Footer } from "@/components/portal/Footer";
@@ -10,13 +11,29 @@ import { FactCellsSkeleton, FullTextFacts } from "@/components/portal/paper-deta
 import { PublicationDetailView } from "@/components/portal/paper-detail/PublicationDetailView";
 import { RecordSection } from "@/components/portal/paper-detail/RecordSection";
 import { TopNav } from "@/components/portal/TopNav";
+import { paperMetadata } from "@/lib/page-metadata";
 import { deriveFullTextState } from "@/lib/portal-api/fulltext-derive";
 import { fetchPublicationDetail } from "@/lib/portal-api/publications";
 import { shortTitle } from "@/lib/portal-api/title-derive";
+import { publicUrl } from "@/lib/public-url";
+
+/// 标题、描述、canonical（简报 §3.18）；不存在时交给 `not-found.tsx` 的元数据，5xx 与页面一样交给错误页
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const paper = await fetchPublicationDetail(id);
+  return paper ? paperMetadata(paper, await publicUrl(`/papers/${id}`)) : {};
+}
 
 export default async function PaperDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const paper = await fetchPublicationDetail(id); // 5xx/超时会 throw → 全局 error.tsx
+  const [paper, shareLink] = await Promise.all([
+    fetchPublicationDetail(id), // 5xx/超时会 throw → 全局 error.tsx
+    publicUrl(`/papers/${id}`),
+  ]);
   if (!paper) {
     notFound(); // 非数字 id 或 BE 404 → [id]/not-found.tsx
   }
@@ -27,6 +44,7 @@ export default async function PaperDetailPage({ params }: { params: Promise<{ id
       <main>
         <PublicationDetailView
           paper={paper}
+          shareLink={shareLink}
           crumbStatus={
             <Suspense
               fallback={<CrumbStatus shortTitle={shortTitle(paper.title)} positions={[]} />}

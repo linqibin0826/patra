@@ -1,6 +1,7 @@
 import { screen, within } from "@testing-library/react";
 import { makePublicCollection, makePublicItem } from "@tests/fixtures/interaction";
 import { makePaper } from "@tests/fixtures/paper";
+import { PUBLIC_PROFILE } from "@tests/fixtures/public-profile";
 import { USER } from "@tests/fixtures/user";
 import { renderWithQuery } from "@tests/support/render-with-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -22,12 +23,18 @@ vi.mock("@/lib/interaction/collections", () => ({
   fetchPublicCollectionPage: vi.fn(),
 }));
 vi.mock("@/lib/interaction/collection-actions", () => ({ copyCollection: vi.fn() }));
+vi.mock("@/lib/identity/public-profile", () => ({ fetchPublicProfile: vi.fn() }));
+vi.mock("@/lib/auth/gateway-response", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/auth/gateway-response")>()),
+  logRequestError: vi.fn(),
+}));
 vi.mock("@/lib/public-url", () => ({
   publicUrl: vi.fn(async (path: string) => `http://mini${path}`),
 }));
 
-import CollectionPage from "@/app/collections/[id]/page";
+import CollectionPage, { generateMetadata } from "@/app/collections/[id]/page";
 import { lookupSession } from "@/lib/auth/current-user";
+import { fetchPublicProfile } from "@/lib/identity/public-profile";
 import { fetchPublicCollection, fetchPublicCollectionPage } from "@/lib/interaction/collections";
 
 const params = (id = "9", query: Record<string, string> = {}) => ({
@@ -194,5 +201,82 @@ describe("/collections/[id]", () => {
     viewAs("anonymous");
     await renderPage("9", { sort: "journal", page: "2" });
     expect(fetchPublicCollectionPage).toHaveBeenCalledWith("9", "journal", 2);
+  });
+});
+
+describe("/collections/[id] 页面信息", () => {
+  beforeEach(() => {
+    vi.mocked(fetchPublicProfile).mockReset();
+  });
+
+  const meta = (id = "9") => generateMetadata({ params: Promise.resolve({ id }) });
+
+  it("empty on not-found", async () => {
+    vi.mocked(fetchPublicCollection).mockResolvedValue({ kind: "not-found" });
+    expect(await meta()).toEqual({});
+  });
+
+  it("noindex placeholder when interaction is unavailable", async () => {
+    vi.mocked(fetchPublicCollection).mockResolvedValue({ kind: "unavailable" });
+    expect(await meta()).toEqual({
+      title: "收藏夹暂时打不开 · Patra",
+      robots: { index: false },
+    });
+  });
+
+  it("indexable owner: canonical, no robots", async () => {
+    vi.mocked(fetchPublicCollection).mockResolvedValue({
+      kind: "ok",
+      data: makePublicCollection(),
+    });
+    vi.mocked(fetchPublicProfile).mockResolvedValue({
+      kind: "found",
+      profile: { ...PUBLIC_PROFILE, indexable: true },
+    });
+    const result = await meta();
+    expect(result.title).toBe("组会 · 陈宇的收藏夹 · Patra");
+    expect(result.alternates?.canonical).toBe("http://mini/collections/9");
+    expect(result).not.toHaveProperty("robots");
+    expect(fetchPublicProfile).toHaveBeenCalledWith("chen-yu");
+  });
+
+  it("noindex when owner hides from search", async () => {
+    vi.mocked(fetchPublicCollection).mockResolvedValue({
+      kind: "ok",
+      data: makePublicCollection(),
+    });
+    vi.mocked(fetchPublicProfile).mockResolvedValue({
+      kind: "found",
+      profile: { ...PUBLIC_PROFILE, indexable: false },
+    });
+    expect((await meta()).robots).toEqual({ index: false });
+  });
+
+  it("noindex when owner deleted or null", async () => {
+    const owner = makePublicCollection().owner;
+    vi.mocked(fetchPublicCollection).mockResolvedValueOnce({
+      kind: "ok",
+      data: makePublicCollection({
+        owner: owner && { ...owner, deleted: true, username: null, displayName: null },
+      }),
+    });
+    expect((await meta()).robots).toEqual({ index: false });
+    vi.mocked(fetchPublicCollection).mockResolvedValueOnce({
+      kind: "ok",
+      data: makePublicCollection({ owner: null }),
+    });
+    expect((await meta()).robots).toEqual({ index: false });
+    expect(fetchPublicProfile).not.toHaveBeenCalled();
+  });
+
+  it("falls back to noindex when identity throws", async () => {
+    vi.mocked(fetchPublicCollection).mockResolvedValue({
+      kind: "ok",
+      data: makePublicCollection(),
+    });
+    vi.mocked(fetchPublicProfile).mockRejectedValue(new Error("identity 503"));
+    const result = await meta();
+    expect(result.robots).toEqual({ index: false });
+    expect(result.title).toBe("组会 · 陈宇的收藏夹 · Patra");
   });
 });

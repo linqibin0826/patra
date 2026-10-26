@@ -22,12 +22,14 @@ interface SaveButtonProps {
   title: string;
   /// pill：详情页页头的胶囊次按钮；icon：首页卡片、列表项的 32px 圆形图标按钮
   variant: "pill" | "icon";
+  /// 详情页页头窄屏的紧凑竖排形态（只用于 pill）
+  className?: string;
 }
 
 /// 收藏按钮（简报 §3.1）：三处入口与公开收藏夹页共用一个组件，只有外形不同。状态来自一屏一批的「我的状态」
 /// （`LibraryStatusProvider`）。点「收藏」立即收进文献库（乐观更新）并打开浮层；点「已收藏」只打开浮层，
 /// 取消收藏在浮层里。未登录点了去登录，回来后不自动收藏。
-export function SaveButton({ paperKey, title, variant }: SaveButtonProps) {
+export function SaveButton({ paperKey, title, variant, className }: SaveButtonProps) {
   const client = useQueryClient();
   const save = useSaveStatus(paperKey);
   const redirectToLogin = useLoginRedirect();
@@ -126,7 +128,7 @@ export function SaveButton({ paperKey, title, variant }: SaveButtonProps) {
                 !inactive && "hover:bg-paper-200 hover:text-ink-900",
                 inactive && "cursor-default",
               )
-            : cn(btnSecondary, "data-open:bg-paper-200")
+            : cn(btnSecondary, "data-open:bg-paper-200", className)
         }
       >
         {icon}

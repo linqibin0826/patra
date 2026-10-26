@@ -53,7 +53,7 @@ function paper(overrides: Partial<PaperDetail> = {}): PaperDetail {
 
 describe("PublicationDetailView", () => {
   it("AI 速读尚未接入：按未上线功能的统一写法挂「即将上线」，不对访客露出 mock 字样", () => {
-    renderWithQuery(<PublicationDetailView paper={paper()} />);
+    renderWithQuery(<PublicationDetailView shareLink="http://mini/papers/1" paper={paper()} />);
     expect(screen.getByText("即将上线")).toBeInTheDocument();
     expect(screen.queryByText(/mock/i)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /生成速读|重新生成/ })).toHaveAttribute(
@@ -63,7 +63,7 @@ describe("PublicationDetailView", () => {
   });
 
   it("渲染面包屑（pmid）+ 标题 + 摘要节；正文前不再有「关键标识」「深度数据」（PAP-89）", () => {
-    renderWithQuery(<PublicationDetailView paper={paper()} />);
+    renderWithQuery(<PublicationDetailView shareLink="http://mini/papers/1" paper={paper()} />);
     const nav = screen.getByRole("navigation", { name: "面包屑" });
     expect(nav).toHaveTextContent("9");
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Semaglutide RCT");
@@ -75,7 +75,10 @@ describe("PublicationDetailView", () => {
 
   it("整页只有一组全文操作；main 是标签栏的容器", () => {
     const { container } = renderWithQuery(
-      <PublicationDetailView paper={paper({ hasFullText: true, pmcid: "PMC1" })} />,
+      <PublicationDetailView
+        shareLink="http://mini/papers/1"
+        paper={paper({ hasFullText: true, pmcid: "PMC1" })}
+      />,
     );
     expect(screen.getAllByRole("link", { name: /阅读全文/ })).toHaveLength(1);
     expect(container.querySelector('[class~="@container/main"]')).not.toBeNull();
@@ -86,6 +89,7 @@ describe("PublicationDetailView · 全文", () => {
   it("事实条插槽在全文区块之前；面包屑右端放目录按钮", () => {
     const { container } = renderWithQuery(
       <PublicationDetailView
+        shareLink="http://mini/papers/1"
         paper={paper({ hasFullText: true, pmcid: "PMC1" })}
         fullTextFacts={<div>FACTS-SLOT</div>}
         fullText={<p>FULLTEXT-SLOT</p>}
@@ -105,6 +109,7 @@ describe("PublicationDetailView · 全文", () => {
   it("有全文：侧栏不整体吸顶，目录卡单独吸顶；标识卡里有 PMCID", () => {
     renderWithQuery(
       <PublicationDetailView
+        shareLink="http://mini/papers/1"
         paper={paper({ hasFullText: true, pmcid: "PMC13583816" })}
         fullText={null}
         tocCard={<p>TOC-CARD</p>}
@@ -121,6 +126,7 @@ describe("PublicationDetailView · 全文", () => {
   it("没有全文：侧栏照旧整体吸顶，不放目录卡", () => {
     renderWithQuery(
       <PublicationDetailView
+        shareLink="http://mini/papers/1"
         paper={paper()}
         fullText={null}
         tocCard={<p>TOC-CARD</p>}
@@ -134,6 +140,7 @@ describe("PublicationDetailView · 全文", () => {
   it("已撤稿（即便标着有全文）：侧栏整体吸顶，不放目录卡", () => {
     renderWithQuery(
       <PublicationDetailView
+        shareLink="http://mini/papers/1"
         paper={paper({ hasFullText: true, retracted: true, pmcid: "PMC1" })}
         fullText={null}
         tocCard={<p>TOC-CARD</p>}
