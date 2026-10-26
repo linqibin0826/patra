@@ -45,7 +45,7 @@ vi.mock("react-easy-crop", async () => {
 
 import { toast } from "sonner";
 
-const AVATAR_URL = "/users/chen-yu/avatar?v=0123456789abcdef";
+const AVATAR_URL = "/users/352303128713027814/avatar?v=0123456789abcdef";
 
 function renderCard(user: CurrentUser = USER) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });

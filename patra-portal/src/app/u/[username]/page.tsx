@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { notFound, redirect, unstable_rethrow } from "next/navigation";
+import { Suspense } from "react";
 import { Footer } from "@/components/portal/Footer";
 import { TopNav } from "@/components/portal/TopNav";
 import { ProfileAbout } from "@/components/profile/ProfileAbout";
 import { ProfileHeader } from "@/components/profile/ProfileHeader";
+import { ProfileTabsGate } from "@/components/profile/ProfileTabs";
 import { ProfileVisibilityNotice } from "@/components/profile/ProfileVisibilityNotice";
 import { lookupSession } from "@/lib/auth/current-user";
 import { logRequestError } from "@/lib/auth/gateway-response";
@@ -42,7 +44,7 @@ async function readProfessionalSelfOnly(): Promise<boolean> {
 
 /// 公开主页（简报 §3.13、spec §10）：旧用户名临时跳到新名（RSC 的 `redirect` 是 307，90 天内可能改回）；
 /// 对请求者不存在时 404。主页与当前会话同时取；本人视角（当前用户名与主页相同）再取一次隐私设置，用来标注
-/// 专业背景「仅你可见」。
+/// 专业背景「仅你可见」。头部之下是「关于 · 收藏夹」标签栏（别人视角要先问 interaction，放在自己的 Suspense 里）。
 export default async function UserPage({ params }: UserPageProps) {
   const [lookup, session] = await Promise.all([
     fetchPublicProfile((await params).username),
@@ -66,6 +68,9 @@ export default async function UserPage({ params }: UserPageProps) {
       )}
       <main>
         <ProfileHeader profile={profile} self={self} linksPending={self && !viewer.emailVerified} />
+        <Suspense fallback={null}>
+          <ProfileTabsGate profile={profile} self={self} />
+        </Suspense>
         <ProfileAbout profile={profile} self={self} professionalSelfOnly={professionalSelfOnly} />
       </main>
       <Footer />

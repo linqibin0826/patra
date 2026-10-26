@@ -1,11 +1,12 @@
 import { ArrowRight, Quote } from "lucide-react";
 import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
+import { SaveButton } from "@/components/library/SaveButton";
 import { AISummaryBadge } from "@/components/portal/AISummaryBadge";
-import { BookmarkButton } from "@/components/portal/paper-detail/BookmarkButton";
 import { RichInlineText } from "@/components/portal/RichInlineText";
 import { snippetText } from "@/lib/portal-api/publication-derive";
 import { sourceDotClass } from "@/lib/portal-ui";
+import { publishedYear } from "@/lib/published-date";
 import { cn } from "@/lib/utils";
 import type { Paper } from "@/types/portal";
 
@@ -18,7 +19,8 @@ interface PaperCardProps {
 }
 
 /// 首页文献流条目（编辑排版，无卡片框）：顶部发丝线 hover 时由陶土色自左生长、标题下划线绘出。
-/// 来源行（序号 · 来源 · DOI）→ 衬线标题 → 刊名 · 年份 · 作者 → [头条摘要] → [AI 速读] → 阅读详情 / 收藏 / 引用数。
+/// 来源行（序号 · 来源 · DOI）→ 衬线标题 → 刊名 · 年份 · 作者 → [头条摘要] → [AI 速读] → 阅读详情 / 引用数 / 收藏。
+/// 收藏状态来自外层的 `LibraryStatusProvider`（文献流一屏一批）。
 export function PaperCard({ paper, variant = "default", index }: PaperCardProps) {
   const lead = variant === "lead";
   const visibleAuthors = paper.authors.slice(0, 2);
@@ -26,8 +28,9 @@ export function PaperCard({ paper, variant = "default", index }: PaperCardProps)
 
   // 元信息两行：刊名独占一行（过长截断），年份 · 作者第二行——避免长刊名把分隔符挤到行首
   const byline: { key: string; node: ReactNode }[] = [];
-  if (paper.year != null) {
-    byline.push({ key: "year", node: <span className="tabular-nums">{paper.year}</span> });
+  const year = publishedYear(paper);
+  if (year != null) {
+    byline.push({ key: "year", node: <span className="tabular-nums">{year}</span> });
   }
   if (paper.authors.length > 0) {
     byline.push({
@@ -133,7 +136,7 @@ export function PaperCard({ paper, variant = "default", index }: PaperCardProps)
           <Quote className="size-3.5" strokeWidth={1.5} aria-hidden />
           {paper.cites ?? 0} 引用
         </span>
-        <BookmarkButton paperId={paper.id} compact />
+        <SaveButton paperKey={paper.id} title={paper.title} variant="icon" />
       </div>
     </article>
   );

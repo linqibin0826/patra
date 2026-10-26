@@ -1,3 +1,5 @@
+import { LibraryStatusProvider } from "@/components/library/LibraryStatusProvider";
+import { SaveButton } from "@/components/library/SaveButton";
 import { BrowsePagination } from "@/components/portal/browse/BrowsePagination";
 import { PaperListItem } from "@/components/portal/papers/PaperListItem";
 import { PapersEmptyResult, papersEmptyKind } from "@/components/portal/papers/PapersEmptyResult";
@@ -12,7 +14,7 @@ interface PaperResultsProps {
 
 /**
  * 文献检索结果区（async RSC）：取 search → 列表 + 分页，或空态。
- * 关键词检索时标题高亮命中片段（仅标题，本版不做全文匹配）。
+ * 关键词检索时标题高亮命中片段（仅标题，本版不做全文匹配）。每条标题行右端是收藏按钮，状态一屏一批取。
  */
 export async function PaperResults({ query, prefetched }: PaperResultsProps) {
   const page = prefetched ?? (await fetchPublicationSearch(query));
@@ -23,13 +25,19 @@ export async function PaperResults({ query, prefetched }: PaperResultsProps) {
 
   return (
     <div className="flex flex-col gap-6">
-      <ul aria-label="文献列表" className="flex flex-col">
-        {page.items.map((paper) => (
-          <li key={paper.id}>
-            <PaperListItem paper={paper} highlight={query.q || undefined} />
-          </li>
-        ))}
-      </ul>
+      <LibraryStatusProvider keys={page.items.map((paper) => paper.id)}>
+        <ul aria-label="文献列表" className="flex flex-col">
+          {page.items.map((paper) => (
+            <li key={paper.id}>
+              <PaperListItem
+                paper={paper}
+                highlight={query.q || undefined}
+                action={<SaveButton paperKey={paper.id} title={paper.title} variant="icon" />}
+              />
+            </li>
+          ))}
+        </ul>
+      </LibraryStatusProvider>
       <BrowsePagination page={query.page} total={page.total} pageSize={page.pageSize} unit="篇" />
     </div>
   );

@@ -103,9 +103,32 @@ describe("NavAccount · 三种形态", () => {
   });
 
   it("已登录且有头像：显示 128 档的图片", () => {
-    renderNav({ ...USER, avatarUrl: "/users/chen-yu/avatar?v=0123456789abcdef" });
+    renderNav({ ...USER, avatarUrl: "/users/352303128713027814/avatar?v=0123456789abcdef" });
     const img = screen.getByRole("button", { name: "账号菜单" }).querySelector("img");
-    expect(img).toHaveAttribute("src", "/api/users/chen-yu/avatar?v=0123456789abcdef&size=128");
+    expect(img).toHaveAttribute(
+      "src",
+      "/api/users/352303128713027814/avatar?v=0123456789abcdef&size=128",
+    );
+  });
+});
+
+describe("NavAccount · 文献库入口", () => {
+  it("已登录：头像左边「文献库」链接", () => {
+    renderNav(USER);
+    expect(screen.getByRole("link", { name: "文献库" })).toHaveAttribute("href", "/library");
+    expect(screen.getByRole("link", { name: "文献库" })).not.toHaveAttribute("aria-current");
+  });
+
+  it("在 /library/** 时是当前项", () => {
+    mockPathname = "/library/unfiled";
+    renderNav(USER);
+    expect(screen.getByRole("link", { name: "文献库" })).toHaveAttribute("aria-current", "page");
+    mockPathname = "/papers";
+  });
+
+  it("未登录：没有「文献库」", () => {
+    renderNav(null);
+    expect(screen.queryByRole("link", { name: "文献库" })).not.toBeInTheDocument();
   });
 });
 
@@ -118,7 +141,11 @@ describe("NavAccount · 用户菜单", () => {
       within(menu)
         .getAllByRole("menuitem")
         .map((item) => item.textContent),
-    ).toEqual(["个人主页", "设置", "退出登录"]);
+    ).toEqual(["个人主页", "我的文献库", "设置", "退出登录"]);
+    expect(within(menu).getByRole("menuitem", { name: "我的文献库" })).toHaveAttribute(
+      "href",
+      "/library",
+    );
     expect(within(menu).getByRole("menuitem", { name: "个人主页" })).toHaveAttribute(
       "href",
       "/u/chen-yu",

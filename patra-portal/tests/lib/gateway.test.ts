@@ -203,4 +203,15 @@ describe("gatewayFetch 的方法、请求体、重定向与转发头", () => {
     });
     expect(call()[1]?.headers).toEqual({ "X-Forwarded-For": "::1", "User-Agent": "UA/3" });
   });
+
+  it("gatewayStream_posts_json", async () => {
+    await gatewayStream("/patra-catalog/portal/publications/export", {
+      method: "POST",
+      json: { ids: ["1"], format: "ris" },
+    });
+    const init = call()[1];
+    expect(init?.method).toBe("POST");
+    expect(init?.headers).toEqual({ "Content-Type": "application/json" });
+    expect(JSON.parse(String(init?.body))).toEqual({ ids: ["1"], format: "ris" });
+  });
 });

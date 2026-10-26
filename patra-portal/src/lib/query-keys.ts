@@ -12,4 +12,19 @@ export const queryKeys = {
   currentUser: ["current-user"] as const,
   /** 登录设备列表：安全页读取；改密码、踢设备后失效 */
   sessions: ["sessions"] as const,
+  /** 我的状态：全部批次的公共前缀（收藏、移除后按前缀改所有屏里这篇的状态） */
+  libraryStatusAll: ["library-status"] as const,
+  /** 我的状态：一屏一批，按去重后的文献 ID 缓存 */
+  libraryStatus: (keys: readonly string[]) => ["library-status", ...keys] as const,
+  /** 文献库：概览与条目页的公共前缀（写操作之后整体失效） */
+  library: ["library"] as const,
+  /** 文献库概览：侧栏与收藏浮层共用 */
+  libraryOverview: ["library", "overview"] as const,
+  /** 文献库条目页：视图为 `all` / `unfiled` / 收藏夹 ID */
+  libraryItems: (view: string, sort: string, page: number) =>
+    ["library", "items", view, sort, page] as const,
+  /** 复制引用：按样式与文献 ID 列表缓存（引用对话框与分享面板共用） */
+  citations: (style: string, ids: readonly string[]) => ["citations", style, ids] as const,
+  /** 导出 / 引用范围展开成的文献 ID：整库或整夹按范围参数缓存，勾选条目时为 null */
+  scopeKeys: (scope: object | null) => ["scope-keys", scope] as const,
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, Settings, UserRound } from "lucide-react";
+import { Library, LogOut, Settings, UserRound } from "lucide-react";
 import Link from "next/link";
 import {
   DropdownMenu,
@@ -23,7 +23,7 @@ interface UserMenuProps {
 }
 
 /// 已登录时导航栏右上角的头像和用户菜单（简报 §3.3、§4.3 nav.*）。顶栏只放 36px 头像；菜单头部是 40px
-/// 头像 + 昵称 / @用户名（都截断，悬停看全），邮箱不再出现。菜单项：个人主页、设置、退出登录。
+/// 头像 + 昵称 / @用户名（都截断，悬停看全），邮箱不再出现。菜单项：个人主页、我的文献库、设置、退出登录。
 /// 开合、方向键、Esc 和点外面关闭、关闭后焦点回到头像，都用 base-ui 自带的。「退出登录」点了不关菜单：
 /// 退出完成前菜单一直开着，完成后整个菜单随登录状态换成「登录」。
 export function UserMenu({ user, loggingOut, onLogout }: UserMenuProps) {
@@ -56,6 +56,10 @@ export function UserMenu({ user, loggingOut, onLogout }: UserMenuProps) {
           <DropdownMenuLinkItem render={<Link href={`/u/${user.username}`} />}>
             <UserRound className="size-3.75 text-fg-3" aria-hidden="true" />
             个人主页
+          </DropdownMenuLinkItem>
+          <DropdownMenuLinkItem render={<Link href="/library" />}>
+            <Library className="size-3.75 text-fg-3" aria-hidden="true" />
+            我的文献库
           </DropdownMenuLinkItem>
           <DropdownMenuLinkItem render={<Link href="/settings/profile" />}>
             <Settings className="size-3.75 text-fg-3" aria-hidden="true" />

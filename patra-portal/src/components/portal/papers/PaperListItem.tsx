@@ -4,6 +4,7 @@ import { EvidenceBadge } from "@/components/portal/EvidenceBadge";
 import { RichInlineText } from "@/components/portal/RichInlineText";
 import { snippetText } from "@/lib/portal-api/publication-derive";
 import { sourceDotClass } from "@/lib/portal-ui";
+import { formatPublishedDate, publishedYear } from "@/lib/published-date";
 import { cn } from "@/lib/utils";
 import type { Paper } from "@/types/portal";
 
@@ -11,15 +12,30 @@ interface PaperListItemProps {
   paper: Paper;
   /** 检索词：标题中的命中片段高亮 */
   highlight?: string;
+  /** 标题行右端的 32px 操作：检索结果是收藏按钮，文献库条目是条目菜单 */
+  action?: ReactNode;
+  /** 日期按精度写到月日（文献库、公开收藏夹条目）；默认只写年（检索结果，简报 §3.19） */
+  detailedDate?: boolean;
+  /** 显示证据徽章与摘要；文献库是整理视图，信息密度优先，不显示（简报 §3.10） */
+  summary?: boolean;
+  /** 元信息之后的附加行（文献库条目的归属与备注） */
+  children?: ReactNode;
 }
 
 /**
  * 文献检索页列表项（RSC）：PaperCard 的紧凑列表变体。
  * 来源行（来源 · DOI · 类型）→ 衬线标题（两行截断，可高亮）→ 期刊 · 年份 · 作者 → 证据徽章 → 摘要两行。
- * hover 时左侧页边一道陶土细线自上而下生长、标题下划线绘出。
- * 不放收藏 / 评论 / 引用与被引数（本版边界 D，被引数据全 0）。
+ * hover 时左侧页边一道陶土细线自上而下生长、标题下划线绘出。标题行右端可放一个 32px 操作（收藏按钮，简报 §3.1）。
+ * 不放评论、被引数（被引数据全 0）。
  */
-export function PaperListItem({ paper, highlight }: PaperListItemProps) {
+export function PaperListItem({
+  paper,
+  highlight,
+  action,
+  detailedDate = false,
+  summary = true,
+  children,
+}: PaperListItemProps) {
   const shownAuthors = paper.authors.slice(0, 2);
   const moreAuthors = paper.authors.length - shownAuthors.length;
 
@@ -41,8 +57,11 @@ export function PaperListItem({ paper, highlight }: PaperListItemProps) {
       ),
     });
   }
-  if (paper.year !== null) {
-    meta.push({ key: "year", node: <span className="tabular-nums">{paper.year}</span> });
+  const date = detailedDate
+    ? (formatPublishedDate(paper.publishedDate) ?? publishedYear(paper))
+    : publishedYear(paper);
+  if (date !== null) {
+    meta.push({ key: "year", node: <span className="tabular-nums">{date}</span> });
   }
   if (shownAuthors.length > 0) {
     meta.push({
@@ -55,6 +74,19 @@ export function PaperListItem({ paper, highlight }: PaperListItemProps) {
       ),
     });
   }
+
+  // 两行截断放在链接里面：截断容器的 overflow: hidden 若在链接外层，会裁掉链接的键盘焦点环
+  const title = (
+    <h3 className="font-serif text-xl leading-snug font-medium tracking-tight text-pretty text-ink-900">
+      <Link href={`/papers/${paper.id}`} className="group/title block">
+        <span className="line-clamp-2">
+          <span className="link-draw pb-0.5 group-hover/item:[background-size:100%_1px] group-focus-visible/title:[background-size:100%_1px]">
+            <RichInlineText text={paper.title} highlight={highlight} />
+          </span>
+        </span>
+      </Link>
+    </h3>
+  );
 
   return (
     <article className="group/item relative flex flex-col gap-2 border-b border-border-subtle py-6 before:absolute before:top-6 before:bottom-6 before:-left-5 before:w-0.5 before:origin-top before:scale-y-0 before:rounded-full before:bg-clay-500 motion-safe:before:transition-transform before:duration-500 before:ease-out-expo hover:before:scale-y-100 max-md:before:hidden">
@@ -74,16 +106,14 @@ export function PaperListItem({ paper, highlight }: PaperListItemProps) {
         )}
       </div>
 
-      {/* 两行截断放在链接里面：截断容器的 overflow: hidden 若在链接外层，会裁掉链接的键盘焦点环 */}
-      <h3 className="font-serif text-xl leading-snug font-medium tracking-tight text-pretty text-ink-900">
-        <Link href={`/papers/${paper.id}`} className="group/title block">
-          <span className="line-clamp-2">
-            <span className="link-draw pb-0.5 group-hover/item:[background-size:100%_1px] group-focus-visible/title:[background-size:100%_1px]">
-              <RichInlineText text={paper.title} highlight={highlight} />
-            </span>
-          </span>
-        </Link>
-      </h3>
+      {action ? (
+        <div className="grid grid-cols-[minmax(0,1fr)_32px] items-start gap-4">
+          {title}
+          {action}
+        </div>
+      ) : (
+        title
+      )}
 
       {meta.length > 0 && (
         <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1 text-xs text-fg-2">
@@ -107,17 +137,18 @@ export function PaperListItem({ paper, highlight }: PaperListItemProps) {
         </div>
       )}
 
-      {paper.evidenceLevel.derived && (
+      {summary && paper.evidenceLevel.derived && (
         <div className="flex flex-wrap items-center gap-2">
           <EvidenceBadge level={paper.evidenceLevel} compact />
         </div>
       )}
 
-      {paper.abstractSnippet && (
+      {summary && paper.abstractSnippet && (
         <p className="mt-1 line-clamp-2 max-w-[72ch] font-serif text-md leading-relaxed text-fg-2">
           {snippetText(paper.abstractSnippet)}
         </p>
       )}
+      {children}
     </article>
   );
 }

@@ -24,16 +24,11 @@ function cells(): string[] {
 }
 
 describe("PaperFacts", () => {
-  it("详情里有的五项：证据等级、被引、收藏、来源、原文阅读", () => {
-    render(
-      <PaperFacts
-        paper={makePaperDetail({ citationCount: 1234, bookmarks: 3, estimatedReadMin: 34 })}
-      />,
-    );
+  it("详情里有的四项：证据等级、被引、来源、原文阅读；没有「收藏」格", () => {
+    render(<PaperFacts paper={makePaperDetail({ citationCount: 1234, estimatedReadMin: 34 })} />);
     expect(cells()).toEqual([
       expect.stringMatching(/^证据等级 /),
       "被引 1,234",
-      "收藏 3",
       "来源 PubMed",
       "原文阅读 ≈ 34 分钟",
     ]);
@@ -51,13 +46,7 @@ describe("PaperFacts", () => {
         }
       />,
     );
-    expect(cells().map((c) => c.split(" ")[0])).toEqual([
-      "证据等级",
-      "被引",
-      "收藏",
-      "来源",
-      "篇幅",
-    ]);
+    expect(cells().map((c) => c.split(" ")[0])).toEqual(["证据等级", "被引", "来源", "篇幅"]);
   });
 });
 

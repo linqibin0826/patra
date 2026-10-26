@@ -112,8 +112,10 @@ export async function fetchVenuesFacets(filters: VenueBrowseFilters): Promise<Ve
  * - 非正整数 id（坏 URL，含 0 与前导零）→ 直接 `null`，不触达 BE
  * - BE 404（刊不存在）/ 400 / 422（id 被拒）→ `null`，由调用方转 `notFound()`
  * - 其他失败（5xx / 超时 / 网络）→ throw，冒泡到全局 error boundary
+ *
+ * 用 `cache()` 包住，`generateMetadata` 与页面共用一次请求。
  */
-export async function fetchVenueDetail(id: string): Promise<VenueDetail | null> {
+export const fetchVenueDetail = cache(async (id: string): Promise<VenueDetail | null> => {
   if (!/^[1-9]\d*$/.test(id)) {
     return null;
   }
@@ -125,7 +127,7 @@ export async function fetchVenueDetail(id: string): Promise<VenueDetail | null> 
     throw new Error(`期刊详情加载失败：${res.status}`);
   }
   return (await res.json()) as VenueDetail;
-}
+});
 
 /**
  * 期刊候选（文献页期刊 facet 的"搜索 → 选候选"）。仅 Route Handler 调用（server-only）。

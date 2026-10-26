@@ -1,36 +1,52 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { LibraryStatusProvider } from "@/components/library/LibraryStatusProvider";
+import { SaveButton } from "@/components/library/SaveButton";
+import { ShareButton } from "@/components/library/SharePanel";
 import { pmcArticleUrl } from "@/components/portal/fulltext/FullTextUnavailable";
-import { BookmarkButton } from "@/components/portal/paper-detail/BookmarkButton";
-import { FullTextActions } from "@/components/portal/paper-detail/FullTextActions";
+import {
+  FullTextPdfAction,
+  FullTextPrimaryAction,
+} from "@/components/portal/paper-detail/FullTextActions";
 import { PaperFacts } from "@/components/portal/paper-detail/PaperFacts";
 import { RichInlineNodes, RichInlineText } from "@/components/portal/RichInlineText";
 import { deriveFullTextState } from "@/lib/portal-api/fulltext-derive";
 import { deriveByline } from "@/lib/portal-api/publication-derive";
 import { splitTitle } from "@/lib/portal-api/title-derive";
+import { formatPublishedDate } from "@/lib/published-date";
 import { cn } from "@/lib/utils";
 import type { PaperDetail } from "@/types/portal";
+
+/// ≤ 540px 次按钮的紧凑竖排形态：48px 高，图标在上、文字在下（简报 §3.3 方案 A）
+const COMPACT =
+  "max-[540px]:h-12 max-[540px]:flex-col max-[540px]:gap-1 max-[540px]:px-2 max-[540px]:py-1 max-[540px]:text-xs max-[540px]:[&>svg]:shrink-0";
 
 const TITLE_CLASS = {
   lg: "max-w-[20em] text-[clamp(30px,1.4rem+1.6vw,46px)] leading-[1.1]",
   md: "max-w-[24em] text-[clamp(26px,1.2rem+1.2vw,36px)] leading-[1.15]",
 } as const;
 
-/// 文献页头（spec §5.1 – §5.3，整宽）：等宽刊头行 → 主标题与副标题 → 原文标题 → 作者 · 刊名 · 年份 →
-/// 事实条 → 全页唯一一组操作（阅读全文 / 下载 PDF / 收藏 / 在 PMC 查看原文）。
+/// 文献页头（spec §5.1 – §5.3，整宽）：等宽刊头行 → 主标题与副标题 → 原文标题 → 作者 · 刊名 · 按精度的出版日期 →
+/// 事实条 → 全页唯一一组操作（阅读全文 / 下载 PDF / 收藏 / 分享 / 在 PMC 查看原文）。
 export function PaperHeader({
   paper,
   fullTextFacts,
+  shareLink,
 }: {
   paper: PaperDetail;
   /** 事实条里来自全文接口的几格（Suspense 包好的节点） */
   fullTextFacts?: ReactNode;
+  /** 这篇的规范地址（服务端按门户公开地址拼好），分享面板「复制链接」用 */
+  shareLink: string;
 }) {
   const { shown, extra } = deriveByline(paper.authors);
   const state = deriveFullTextState(paper);
   const retracted = state === "retracted";
   const types = paper.publicationTypes.slice(0, 2);
   const title = splitTitle(paper.title);
+  const published =
+    formatPublishedDate(paper.publishedDate) ??
+    (paper.publicationYear == null ? null : String(paper.publicationYear));
   const pmcUrl =
     (state === "full" || state === "pdf-only") && paper.pmcid ? pmcArticleUrl(paper.pmcid) : null;
 
@@ -110,16 +126,32 @@ export function PaperHeader({
             <span className="font-serif text-lg text-ink-800 italic">{paper.venueName}</span>
           )
         )}
-        {paper.publicationYear != null && (
-          <span className="tabular-nums text-fg-2">&nbsp;· {paper.publicationYear}</span>
-        )}
+        {published != null && <span className="tabular-nums text-fg-2">&nbsp;· {published}</span>}
       </div>
 
       <PaperFacts paper={paper} fullTextFacts={fullTextFacts} />
 
       <div className="anim-rise mt-6 flex flex-wrap items-center gap-3 [--delay:200ms] max-[540px]:flex-col max-[540px]:items-stretch">
-        <FullTextActions paper={paper} />
-        <BookmarkButton paperId={paper.id} />
+        <FullTextPrimaryAction paper={paper} />
+        {/* 次按钮组：桌面与主按钮同一行；≤ 540px 等分一行、图标在上文字在下（方案 A），
+            有几个就几等分，「收藏暂不可用」变长也不挤动其他按钮 */}
+        {/* biome-ignore lint/a11y/useSemanticElements: 这是一组操作按钮，不是表单控件，用 fieldset 不对 */}
+        <div
+          role="group"
+          aria-label="次要操作"
+          className="contents max-[540px]:grid max-[540px]:grid-flow-col max-[540px]:auto-cols-fr max-[540px]:gap-2"
+        >
+          <FullTextPdfAction paper={paper} className={COMPACT} />
+          <LibraryStatusProvider keys={[paper.id]}>
+            <SaveButton
+              paperKey={paper.id}
+              title={paper.title}
+              variant="pill"
+              className={COMPACT}
+            />
+          </LibraryStatusProvider>
+          <ShareButton paperId={paper.id} pmid={paper.pmid} link={shareLink} className={COMPACT} />
+        </div>
         {pmcUrl && (
           <a
             href={pmcUrl}

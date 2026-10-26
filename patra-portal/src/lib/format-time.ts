@@ -53,6 +53,12 @@ export function formatDate(iso: string): string {
   return `${p.year} 年 ${p.month} 月 ${p.day} 日`;
 }
 
+/// `10 月 24 日`（文献库「收藏」「加入」时间）
+export function formatMonthDay(iso: string): string {
+  const p = partsOf(Date.parse(iso));
+  return `${p.month} 月 ${p.day} 日`;
+}
+
 /// `2026-10-20 09:12`
 export function formatDateTime(iso: string): string {
   const p = partsOf(Date.parse(iso));

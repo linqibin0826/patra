@@ -33,8 +33,8 @@ export function avatarInitial(displayName: string, username: string): string {
   return (first ?? username.slice(0, 1)).toUpperCase();
 }
 
-/// identity 给的头像地址：`/users/{用户名}/avatar?v={16 位十六进制}`
-const AVATAR_URL = /^\/users\/([A-Za-z0-9_-]+)\/avatar\?v=([0-9a-f]{16})$/;
+/// identity 给的头像地址：`/users/{用户 ID}/avatar?v={16 位十六进制}`（v0.13 起按用户 ID，改名不失效）
+const AVATAR_URL = /^\/users\/([1-9][0-9]{0,18})\/avatar\?v=([0-9a-f]{16})$/;
 
 /// identity 的头像相对地址 → 门户同源的转发地址，追加尺寸档（36 / 40px 用 128，72px 及以上用 512）。
 /// 形状不对时为 null，调用方显示默认头像。
@@ -43,6 +43,6 @@ export function avatarSrc(avatarUrl: string | null, size: 128 | 512): string | n
   if (!match) {
     return null;
   }
-  const [, username, version] = match;
-  return `/api/users/${username}/avatar?v=${version}&size=${size}`;
+  const [, userId, version] = match;
+  return `/api/users/${userId}/avatar?v=${version}&size=${size}`;
 }

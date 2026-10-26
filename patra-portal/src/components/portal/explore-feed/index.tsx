@@ -1,6 +1,7 @@
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { LibraryStatusProvider } from "@/components/library/LibraryStatusProvider";
 import { PaperCard } from "@/components/portal/PaperCard";
 import { SectionEyebrow } from "@/components/portal/SectionEyebrow";
 import { fetchFeed } from "@/lib/portal-api/publications";
@@ -26,7 +27,13 @@ export async function ExploreFeed({ tab }: { tab: FeedTab }) {
 
   return (
     <FeedSection tabs={<ExploreFeedTabs currentTab={tab} />}>
-      {papers.length === 0 ? <ExploreFeedEmpty reason="empty" /> : <FeedLayout papers={papers} />}
+      {papers.length === 0 ? (
+        <ExploreFeedEmpty reason="empty" />
+      ) : (
+        <LibraryStatusProvider keys={papers.map((paper) => paper.id)}>
+          <FeedLayout papers={papers} />
+        </LibraryStatusProvider>
+      )}
     </FeedSection>
   );
 }

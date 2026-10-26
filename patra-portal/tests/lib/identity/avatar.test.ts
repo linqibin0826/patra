@@ -25,20 +25,26 @@ describe("avatarInitial", () => {
 });
 
 describe("avatarSrc", () => {
-  const URL = "/users/chen-yu/avatar?v=0123456789abcdef";
+  const URL = "/users/352303128713027814/avatar?v=0123456789abcdef";
 
   it("换成门户同源地址并追加尺寸", () => {
-    expect(avatarSrc(URL, 128)).toBe("/api/users/chen-yu/avatar?v=0123456789abcdef&size=128");
-    expect(avatarSrc(URL, 512)).toBe("/api/users/chen-yu/avatar?v=0123456789abcdef&size=512");
+    expect(avatarSrc(URL, 128)).toBe(
+      "/api/users/352303128713027814/avatar?v=0123456789abcdef&size=128",
+    );
+    expect(avatarSrc(URL, 512)).toBe(
+      "/api/users/352303128713027814/avatar?v=0123456789abcdef&size=512",
+    );
   });
 
   it.each([
     [null],
-    ["/users/chen-yu/avatar?v=xyz"],
-    ["/users/chen-yu/avatar?v=0123456789ABCDEF"],
+    ["/users/chen-yu/avatar?v=0123456789abcdef"],
+    ["/users/0123/avatar?v=0123456789abcdef"],
+    ["/users/352303128713027814/avatar?v=xyz"],
+    ["/users/352303128713027814/avatar?v=0123456789ABCDEF"],
     ["/users/a/b/avatar?v=0123456789abcdef"],
     ["https://evil.example/users/a/avatar?v=0123456789abcdef"],
-    ["/users/chen-yu/avatar?v=0123456789abcdef&size=512"],
+    ["/users/352303128713027814/avatar?v=0123456789abcdef&size=512"],
   ])("形状不对（%j）时为 null", (url) => {
     expect(avatarSrc(url, 128)).toBeNull();
   });

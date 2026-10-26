@@ -11,11 +11,13 @@ export interface Account {
   password: string;
 }
 
-/// 每跑一次在网关后面注册一个新账号用
+/// 每跑一次在网关后面注册一个新账号用。邮箱用 Resend 的测试地址 `delivered+<标识>@resend.dev`：mini 的 identity
+/// 走真实邮件服务商，发往这个地址的邮件 Resend 只记为已送达、不真的投递，也不会因为退信影响发件域名的信誉
+/// （以前的 `@example.org` 会真的发出去再被退回）。`+` 后面的标识让每个账号的邮箱各不相同
 export function freshAccount(): Account {
   const tag = randomBytes(6).toString("hex");
   return {
-    email: `e2e-${tag}@example.org`,
+    email: `delivered+e2e-${tag}@resend.dev`,
     username: `e2e-${tag}`,
     password: randomBytes(12).toString("base64url"),
   };

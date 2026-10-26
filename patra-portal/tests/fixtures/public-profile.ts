@@ -2,6 +2,7 @@ import type { PublicProfile } from "@/lib/identity/public-profile";
 
 /// `GET /users/{username}` 的一份完整响应体（画板 profile.public-full）
 export const PUBLIC_PROFILE: PublicProfile = {
+  userId: "352303128713027814",
   username: "chen-yu",
   displayName: "陈宇",
   avatarUrl: null,

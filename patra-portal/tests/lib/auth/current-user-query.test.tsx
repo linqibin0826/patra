@@ -88,3 +88,20 @@ describe("useCurrentUser", () => {
     expect(result.current).toEqual(expected);
   });
 });
+
+describe("useCurrentUser · 水合", () => {
+  it("服务端渲染与水合那一次一律 pending：缓存里已有用户也不提前显示，免得与服务端的占位不一致", async () => {
+    const { renderToString } = await import("react-dom/server");
+    const client = noRetryClient();
+    client.setQueryData(queryKeys.currentUser, USER);
+    function Probe() {
+      return <span>{useCurrentUser().status}</span>;
+    }
+    const html = renderToString(
+      <QueryClientProvider client={client}>
+        <Probe />
+      </QueryClientProvider>,
+    );
+    expect(html).toContain("pending");
+  });
+});
