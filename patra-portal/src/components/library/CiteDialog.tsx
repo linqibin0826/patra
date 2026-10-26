@@ -60,6 +60,8 @@ export function CiteDialog({ open, onOpenChange, scope, onExport }: CiteDialogPr
   }, [open]);
 
   const ids = keys.kind === "ready" ? keys.keys : [];
+  /// 范围里的文献全部已失效：没有可请求的 ID，引用查询不会启动，要单独说明而不是一直显示加载
+  const nothingToCite = keys.kind === "ready" && ids.length === 0;
   const citations = useQuery({
     queryKey: queryKeys.citations(style, ids),
     queryFn: async () => {
@@ -101,22 +103,28 @@ export function CiteDialog({ open, onOpenChange, scope, onExport }: CiteDialogPr
               writeChoice(CITATION_STYLE_KEY, next);
             }}
           />
-          {keys.kind === "ready" && keys.skipped > 0 && (
-            <p className="text-sm text-fg-3">{keys.skipped} 篇已失效，不含在内。</p>
+          {nothingToCite ? (
+            <p className="text-sm leading-6 text-fg-2">选中的文献都已失效，没有可复制的引用。</p>
+          ) : (
+            <>
+              {keys.kind === "ready" && keys.skipped > 0 && (
+                <p className="text-sm text-fg-3">{keys.skipped} 篇已失效，不含在内。</p>
+              )}
+              <CitationPreview
+                ref={preview}
+                className="max-h-90"
+                lines={lines}
+                state={
+                  citations.isError || keys.kind === "error"
+                    ? "error"
+                    : citations.data
+                      ? "ready"
+                      : "loading"
+                }
+                onRetry={() => (keys.kind === "error" ? retry() : void citations.refetch())}
+              />
+            </>
           )}
-          <CitationPreview
-            ref={preview}
-            className="max-h-90"
-            lines={lines}
-            state={
-              citations.isError || keys.kind === "error"
-                ? "error"
-                : citations.data
-                  ? "ready"
-                  : "loading"
-            }
-            onRetry={() => (keys.kind === "error" ? retry() : void citations.refetch())}
-          />
           <div className="flex items-center justify-end gap-4">
             <button
               type="button"

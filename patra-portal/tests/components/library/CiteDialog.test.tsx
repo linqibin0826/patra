@@ -112,6 +112,15 @@ describe("CiteDialog", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("选中的全是已失效的：说明没有可复制的引用，不一直显示加载，复制按钮不可用", async () => {
+    respond({ keys: [], skippedUnavailable: 3 });
+    open();
+    expect(await screen.findByText("选中的文献都已失效，没有可复制的引用。")).toBeInTheDocument();
+    expect(screen.queryByText("3 篇已失效，不含在内。")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^复制/ })).toBeDisabled();
+    expect(fetchMock.mock.calls.some(([url]) => url === "/api/publications/citations")).toBe(false);
+  });
+
   it("有已失效的：说明不含在内", async () => {
     respond({ keys: ["11", "12"], skippedUnavailable: 2 });
     open();
