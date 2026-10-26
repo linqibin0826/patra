@@ -165,7 +165,8 @@ public class PubmedArticleSyncProcessor
     if (published.year() < 1800 || published.year() > 2100) {
       return "出版年份不在 1800 ~ 2100：" + published.year();
     }
-    if (publication.getTitle() == null || publication.getTitle().isBlank()) {
+    // 与组装处理器的标题容错一致：ArticleTitle 为空时用 VernacularTitle（非英文文献常见）
+    if (isBlank(publication.getTitle()) && isBlank(publication.getOriginalTitle())) {
       return "缺少标题";
     }
     return null;
@@ -210,5 +211,13 @@ public class PubmedArticleSyncProcessor
     SKIP_STALE,
     /// 库里没有且范围不允许新增，跳过
     SKIP_ABSENT
+  }
+
+  /// 值是否为空或只含空白。
+  ///
+  /// @param value 值，可空
+  /// @return 是否空白
+  private static boolean isBlank(String value) {
+    return value == null || value.isBlank();
   }
 }
