@@ -141,7 +141,8 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1g
+          # 10/26 回填结束后实测 954.6MiB / 1GiB（93%），上调留余量
+          memory: 1536m
     ports: [ "6400:6400" ]
     extra_hosts: *infra-hosts
     env_file:
