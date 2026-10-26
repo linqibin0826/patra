@@ -65,3 +65,28 @@ export function publicLink(page: Page, path: string): string {
   const configured = process.env.PATRA_PORTAL_PUBLIC_URL?.trim().replace(/\/+$/, "");
   return `${configured || `http://${new URL(page.url()).host}`}${path}`;
 }
+
+/// 打开「新建收藏夹」对话框：桌面点侧栏的「+」；≤ 880px 侧栏收进视图切换抽屉，先点视图切换按钮再点抽屉里的「+」
+export async function openNewCollectionDialog(page: Page): Promise<void> {
+  const visible = page.getByRole("button", { name: "新建收藏夹" }).filter({ visible: true });
+  if ((await visible.count()) === 0) {
+    await page
+      .getByRole("main")
+      .getByRole("button", { name: /^(全部|未分类|文献库视图)/ })
+      .first()
+      .click();
+    await page.getByRole("dialog", { name: "文献库视图" }).waitFor();
+  }
+  await visible.first().click();
+}
+
+/// 收藏夹头部的「导出」「复制引用」：桌面是按钮；≤ 880px 收进 `···`（收藏夹操作）菜单
+export async function collectionHeaderAction(page: Page, name: "导出" | "复制引用"): Promise<void> {
+  const button = page.getByRole("button", { name, exact: true }).filter({ visible: true });
+  if ((await button.count()) > 0) {
+    await button.first().click();
+    return;
+  }
+  await page.getByRole("button", { name: "收藏夹操作" }).click();
+  await page.getByRole("menuitem", { name: new RegExp(`^${name}`) }).click();
+}

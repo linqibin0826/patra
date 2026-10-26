@@ -7,9 +7,11 @@ import {
   waitForTakeover,
 } from "@tests/e2e/support/account";
 import {
+  collectionHeaderAction,
   downloadedText,
   libraryItems,
   openLibrary,
+  openNewCollectionDialog,
   publicLink,
   readCopied,
   save,
@@ -99,12 +101,27 @@ test.describe("收藏与文献库", () => {
     await expect(libraryItems(page)).toHaveCount(2, ROUND_TRIP);
 
     // 新建「组会」：进入新收藏夹
-    await page.getByRole("button", { name: "新建收藏夹" }).first().click();
+    await openNewCollectionDialog(page);
     const dialog = page.getByRole("dialog", { name: "新建收藏夹" });
     await dialog.getByRole("textbox", { name: "名称" }).fill("组会");
     await dialog.getByRole("button", { name: "创建" }).click();
     await expect(page).toHaveURL(/\/library\/\d+$/, ROUND_TRIP);
     await expect(page.getByText("这个收藏夹还没有文献")).toBeVisible(ROUND_TRIP);
+    const collectionId = new URL(page.url()).pathname.split("/").pop();
+
+    // 再建「精读」：第一篇同时放进两个收藏夹（release spec D4）
+    await openLibrary(page);
+    await openNewCollectionDialog(page);
+    await page
+      .getByRole("dialog", { name: "新建收藏夹" })
+      .getByRole("textbox", { name: "名称" })
+      .fill("精读");
+    await page
+      .getByRole("dialog", { name: "新建收藏夹" })
+      .getByRole("button", { name: "创建" })
+      .click();
+    await expect(page).toHaveURL(/\/library\/\d+$/, ROUND_TRIP);
+    const secondId = new URL(page.url()).pathname.split("/").pop();
 
     // 回到全部：两篇都放进「组会」
     await openLibrary(page);
@@ -115,6 +132,12 @@ test.describe("收藏与文献库", () => {
       await box.check();
       await expect(box).toBeChecked();
       await expect(box).toBeEnabled(ROUND_TRIP);
+      if (index === 0) {
+        const second = page.getByRole("checkbox", { name: "精读 私有" });
+        await second.check();
+        await expect(second).toBeChecked();
+        await expect(second).toBeEnabled(ROUND_TRIP);
+      }
       await page.keyboard.press("Escape");
     }
 
@@ -128,20 +151,20 @@ test.describe("收藏与文献库", () => {
     // 刷新后归属与备注都在；未分类为空
     await page.reload();
     await expect(page.getByText("第 3 张表的亚组结果组会讲")).toBeVisible(ROUND_TRIP);
-    await expect(libraryItems(page).first().getByRole("link", { name: /组会/ })).toBeVisible();
+    const firstItem = libraryItems(page).filter({ hasText: "第 3 张表的亚组结果组会讲" });
+    await expect(firstItem.getByRole("link", { name: /组会/ })).toBeVisible();
+    await expect(firstItem.getByRole("link", { name: /精读/ })).toBeVisible();
+    await openLibrary(page, `/library/${secondId}`);
+    await expect(libraryItems(page)).toHaveCount(1, ROUND_TRIP);
     await openLibrary(page, "/library/unfiled");
     await expect(page.getByRole("heading", { name: "都已整理好了" })).toBeVisible(ROUND_TRIP);
 
-    // 删除「组会」：回到文献库，两篇仍在，都回到未分类
-    await page
-      .getByRole("navigation", { name: "文献库视图" })
-      .getByRole("link", { name: /组会/ })
-      .click();
-    await expect(page).toHaveURL(/\/library\/\d+$/, ROUND_TRIP);
+    // 进「组会」（窄屏侧栏收进抽屉，直接按地址进）：两篇都在
+    await openLibrary(page, `/library/${collectionId}`);
     await expect(libraryItems(page)).toHaveCount(2, ROUND_TRIP);
 
     // 导出：经门户转发到 catalog，下载 RIS（文件名由 catalog 按收藏夹名生成）
-    await page.getByRole("button", { name: "导出", exact: true }).click();
+    await collectionHeaderAction(page, "导出");
     const download = page.waitForEvent("download");
     await page
       .getByRole("dialog", { name: "导出" })
@@ -150,7 +173,7 @@ test.describe("收藏与文献库", () => {
     expect((await download).suggestedFilename()).toMatch(/^patra-.*\.ris$/);
 
     // 复制引用：catalog 生成的 GB/T 7714 预览带序号
-    await page.getByRole("button", { name: "复制引用", exact: true }).click();
+    await collectionHeaderAction(page, "复制引用");
     const cite = page.getByRole("dialog", { name: /复制引用/ });
     await expect(cite.getByText(/^\[1\] /)).toBeVisible(ROUND_TRIP);
     await page.keyboard.press("Escape");
@@ -158,7 +181,6 @@ test.describe("收藏与文献库", () => {
     await expect(cite).toBeHidden();
 
     // 私有收藏夹：匿名访客打开公开页是真的 404（release spec 2.1.2）
-    const collectionId = new URL(page.url()).pathname.split("/").pop();
     const anonymous = await browser.newContext();
     const anonPage = await anonymous.newPage();
     const response = await anonPage.goto(`/collections/${collectionId}`);
@@ -172,8 +194,14 @@ test.describe("收藏与文献库", () => {
     await page.getByRole("dialog").getByRole("button", { name: "删除收藏夹" }).click();
     await expect(page).toHaveURL("/library", ROUND_TRIP);
     await expect(libraryItems(page)).toHaveCount(2, ROUND_TRIP);
+    // 删了「组会」：只在「组会」里的第二篇归入未分类；第一篇还在「精读」里，不算未分类
     await openLibrary(page, "/library/unfiled");
-    await expect(libraryItems(page)).toHaveCount(2, ROUND_TRIP);
+    await expect(libraryItems(page)).toHaveCount(1, ROUND_TRIP);
+    await expect(libraryItems(page).filter({ hasText: "第 3 张表的亚组结果组会讲" })).toHaveCount(
+      0,
+    );
+    await openLibrary(page, `/library/${secondId}`);
+    await expect(libraryItems(page)).toHaveCount(1, ROUND_TRIP);
   });
 
   test("未登录点收藏：去登录，next 带回当前页", async ({ page }) => {
@@ -355,7 +383,7 @@ test.describe("公开收藏夹", () => {
       await results.waitFor(ROUND_TRIP);
       savedTitle = await save(page, unsavedButtons(results).first());
       await openLibrary(page);
-      await page.getByRole("button", { name: "新建收藏夹" }).first().click();
+      await openNewCollectionDialog(page);
       await page.getByRole("dialog").getByRole("textbox", { name: "名称" }).fill(name);
       await page.getByRole("dialog").getByRole("button", { name: "创建" }).click();
       await expect(page).toHaveURL(/\/library\/\d+$/, ROUND_TRIP);
