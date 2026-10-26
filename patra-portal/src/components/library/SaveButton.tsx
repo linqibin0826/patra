@@ -85,6 +85,8 @@ export function SaveButton({ paperKey, title, variant, className }: SaveButtonPr
     }
     if (saved) {
       setPhase({ kind: "existing" });
+      // 上次收藏回来的备注可能已过时（之后加过备注），清掉让浮层按「我的状态」重新取
+      setCollectedNote(undefined);
       setOpen(true);
       return;
     }

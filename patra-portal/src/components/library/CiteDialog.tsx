@@ -14,6 +14,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { LIMITS } from "@/lib/library/messages";
 import { type DialogScope, formatCount, scopeCount, useScopeKeys } from "@/lib/library/scope";
 import { btnSecondary, btnText } from "@/lib/portal-ui";
+import { queryKeys } from "@/lib/query-keys";
 import { readChoice, writeChoice } from "@/lib/remembered-choice";
 import { cn } from "@/lib/utils";
 
@@ -60,7 +61,7 @@ export function CiteDialog({ open, onOpenChange, scope, onExport }: CiteDialogPr
 
   const ids = keys.kind === "ready" ? keys.keys : [];
   const citations = useQuery({
-    queryKey: ["citations", style, ids],
+    queryKey: queryKeys.citations(style, ids),
     queryFn: async () => {
       const res = await fetch("/api/publications/citations", {
         method: "POST",

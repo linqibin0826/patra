@@ -195,4 +195,33 @@ describe("SaveButton · 评审修复", () => {
     expect(await screen.findByText("别处写的备注")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "+ 添加备注" })).not.toBeInTheDocument();
   });
+
+  it("收藏后加了备注，再点「已收藏」：浮层取回现有备注，不沿用第一次收藏时的空备注", async () => {
+    collect.mockResolvedValueOnce({
+      ok: true,
+      created: true,
+      item: makeLibraryItem({ note: null }),
+    });
+    const { user, client } = renderWithLibrary(
+      <SaveButton paperKey="11" title={TITLE} variant="icon" />,
+      { statuses: [makeItemStatus({ key: "11" })], overview },
+    );
+    await user.click(screen.getByRole("button", { name: /^收藏「/ }));
+    expect(await screen.findByText("已收进文献库")).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByText("已收进文献库")).not.toBeInTheDocument());
+
+    client.setQueryData(queryKeys.libraryStatus(["11"]), [
+      makeItemStatus({
+        key: "11",
+        collected: true,
+        itemId: "501",
+        collectedAt: "2026-10-24T02:00:00Z",
+        hasNote: true,
+      }),
+    ]);
+    collect.mockResolvedValue({ ok: true, created: false, item: makeLibraryItem({ note: "X" }) });
+    await user.click(screen.getByRole("button", { name: "已收藏，管理收藏" }));
+    expect(await screen.findByText("X")).toBeInTheDocument();
+  });
 });

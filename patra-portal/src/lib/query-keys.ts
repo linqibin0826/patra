@@ -23,4 +23,8 @@ export const queryKeys = {
   /** 文献库条目页：视图为 `all` / `unfiled` / 收藏夹 ID */
   libraryItems: (view: string, sort: string, page: number) =>
     ["library", "items", view, sort, page] as const,
+  /** 复制引用：按样式与文献 ID 列表缓存（引用对话框与分享面板共用） */
+  citations: (style: string, ids: readonly string[]) => ["citations", style, ids] as const,
+  /** 导出 / 引用范围展开成的文献 ID：整库或整夹按范围参数缓存，勾选条目时为 null */
+  scopeKeys: (scope: object | null) => ["scope-keys", scope] as const,
 };

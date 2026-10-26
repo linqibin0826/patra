@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ItemState } from "@/lib/interaction/schema";
 import type { ExportScope } from "@/lib/interaction/scope";
+import { queryKeys } from "@/lib/query-keys";
 
 /// 导出 / 复制引用对话框的范围（简报 §3.5、§3.6）：
 /// - `items`：单篇、选中的几篇，条目里已有 key 与状态，不经 interaction
@@ -38,7 +39,7 @@ export function useScopeKeys(
   const whole = scope.kind !== "items";
   const over = scopeCount(scope) > limit;
   const query = useQuery({
-    queryKey: ["scope-keys", whole ? scopeParams(scope) : null],
+    queryKey: queryKeys.scopeKeys(whole ? scopeParams(scope) : null),
     queryFn: async () => {
       const res = await fetch("/api/library/keys", {
         method: "POST",
