@@ -3,7 +3,12 @@ package dev.patra.catalog.infra.adapter.citation;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.catalog.domain.model.enums.CitationStyle;
+import dev.patra.catalog.domain.model.enums.PublicationDateType;
+import dev.patra.catalog.domain.model.read.citation.CitationAuthor;
 import dev.patra.catalog.domain.model.read.citation.CitationEntry;
+import dev.patra.catalog.domain.model.read.citation.CitationRecord;
+import dev.patra.catalog.domain.model.vo.publication.Pagination;
+import dev.patra.catalog.domain.model.vo.publication.PublicationDate;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -87,6 +92,32 @@ class CiteprocCitationFormatterAdapterTest {
         .extracting(CitationEntry::text)
         .asString()
         .contains("Anonymous editorial");
+  }
+
+  /// 真实 PubMed 标题末尾带句点时，GB/T 输出「标题[J/OL]」，不出现「.[J/OL]」。
+  @Test
+  @DisplayName("GB/T：PubMed 标题末尾的句点不留在文献类型标识前")
+  void should_not_leave_title_period_before_gb_t_type_marker() {
+    CitationRecord record =
+        CitationRecord.builder()
+            .id(8L)
+            .doi("10.1080/10810730.2026.2615828")
+            .title(
+                "Promotion - The 4th P of Social Marketing: A Scoping Review of Efforts from"
+                    + " 2010-2022.")
+            .authors(List.of(CitationAuthor.of("Perrault", "Evan K", "EK", null)))
+            .journalTitle("Journal of health communication")
+            .journalAbbreviation("J Health Commun")
+            .volume("31")
+            .issue("1")
+            .pagination(Pagination.of("65-76", "65", "76"))
+            .publishedDate(PublicationDate.ofYear(PublicationDateType.PUBLISHED, 2026))
+            .language("en")
+            .build();
+
+    String text = adapter.format(CitationStyle.GB_T_7714_2015, List.of(record)).get(0).text();
+
+    assertThat(text).contains("2010-2022[J/OL]").doesNotContain(".[J/OL]");
   }
 
   @Test

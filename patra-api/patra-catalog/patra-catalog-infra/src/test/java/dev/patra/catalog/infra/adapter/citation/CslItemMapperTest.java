@@ -87,6 +87,26 @@ class CslItemMapperTest {
     assertThat(authors[7].getFamily()).isNull();
   }
 
+  /// PubMed 标题末尾的句点去掉（与 Zotero 导入 PubMed 一致），问号、感叹号保留。
+  @Test
+  @DisplayName("标题末尾的句点去掉，问号保留")
+  void should_strip_trailing_period_from_title() {
+    CitationRecord withPeriod =
+        CitationRecord.builder()
+            .id(6L)
+            .title(
+                "Promotion - The 4th P of Social Marketing: A Scoping Review of Efforts from"
+                    + " 2010-2022.")
+            .build();
+    CitationRecord withQuestion =
+        CitationRecord.builder().id(7L).title("Is aspirin still useful?").build();
+
+    assertThat(CslItemMapper.toCsl(withPeriod).getTitle())
+        .isEqualTo(
+            "Promotion - The 4th P of Social Marketing: A Scoping Review of Efforts from 2010-2022");
+    assertThat(CslItemMapper.toCsl(withQuestion).getTitle()).isEqualTo("Is aspirin still useful?");
+  }
+
   @Test
   @DisplayName("没有作者：不设 author")
   void should_omit_author_when_empty() {

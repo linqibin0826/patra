@@ -29,7 +29,7 @@ public final class CslItemMapper {
         new CSLItemDataBuilder()
             .id(String.valueOf(record.id()))
             .type(CSLType.ARTICLE_JOURNAL)
-            .title(record.title())
+            .title(stripTrailingPeriod(record.title()))
             .containerTitle(record.journalTitle())
             .containerTitleShort(record.journalAbbreviation())
             .volume(record.volume())
@@ -48,6 +48,19 @@ public final class CslItemMapper {
           new CSLDateBuilder().dateParts(new int[][] {dateParts(record.publishedDate())}).build());
     }
     return builder.build();
+  }
+
+  /// 去掉标题末尾的一个句点：PubMed 的 `ArticleTitle` 以句点结尾，CSL 样式会在标题后再接标点或文献类型
+  /// （GB/T 的 `[J]`），留着会出现「….[J/OL]」。与 Zotero 导入 PubMed 的做法一致；问号、感叹号保留。
+  ///
+  /// @param title 标题，可空
+  /// @return 去掉末尾句点后的标题；入参为 null 时为 null
+  private static String stripTrailingPeriod(String title) {
+    if (title == null) {
+      return null;
+    }
+    String trimmed = title.strip();
+    return trimmed.endsWith(".") ? trimmed.substring(0, trimmed.length() - 1) : trimmed;
   }
 
   /// 页码：MedlinePgn 原文 → 首页-尾页 → 文章号。
