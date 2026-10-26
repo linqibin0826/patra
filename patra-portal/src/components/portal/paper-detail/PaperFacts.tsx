@@ -34,7 +34,6 @@ export function PaperFacts({
     <dl className="m-0 mt-8 grid grid-cols-[repeat(auto-fit,minmax(128px,1fr))] border-y border-border-default">
       <FactCell term="证据等级">{deriveEvidence(paper.evidenceLevel).label}</FactCell>
       <FactCell term="被引">{(paper.citationCount ?? 0).toLocaleString("en-US")}</FactCell>
-      <FactCell term="收藏">{(paper.bookmarks ?? 0).toLocaleString("en-US")}</FactCell>
       <FactCell term="来源">
         <span aria-hidden className="size-1.5 rounded-full bg-slate-500" />
         {paper.source ?? "—"}

@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fetchFeed, fetchPublicationDetail } from "@/lib/portal-api/publications";
+import {
+  fetchFeed,
+  fetchPublicationCards,
+  fetchPublicationDetail,
+} from "@/lib/portal-api/publications";
 import type { PageResult, Paper } from "@/types/portal";
 
 const EMPTY: PageResult<Paper> = { page: 1, pageSize: 14, total: 0, totalPages: 0, items: [] };
@@ -100,5 +104,36 @@ describe("fetchPublicationDetail", () => {
   it("缺 PATRA_GATEWAY_BASE_URL 抛错（数字 id）", async () => {
     delete process.env.PATRA_GATEWAY_BASE_URL;
     await expect(fetchPublicationDetail("1")).rejects.toThrow(/PATRA_GATEWAY_BASE_URL/);
+  });
+});
+
+describe("fetchPublicationCards", () => {
+  beforeEach(() => {
+    process.env.PATRA_GATEWAY_BASE_URL = "http://gw.test:9528";
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete process.env.PATRA_GATEWAY_BASE_URL;
+  });
+
+  it("一次批量取卡片：重复 id 参数，不带会话", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ items: [] }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(fetchPublicationCards(["11", "12"])).resolves.toEqual([]);
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    expect(url).toBe("http://gw.test:9528/patra-catalog/portal/publications/batch?id=11&id=12");
+    expect(init.headers).not.toHaveProperty("Authorization");
+  });
+
+  it("空列表不请求", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(fetchPublicationCards([])).resolves.toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("非 2xx 抛错", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("err", { status: 503 })));
+    await expect(fetchPublicationCards(["11"])).rejects.toThrow(/503/);
   });
 });

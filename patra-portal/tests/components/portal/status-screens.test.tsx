@@ -32,6 +32,15 @@ describe("NotFoundState", () => {
   });
 });
 
+describe("NotFoundState · 收藏夹", () => {
+  it("不存在、私有、对你不可见同一句", () => {
+    render(<NotFoundState kind="collection" />);
+    expect(screen.getByRole("heading", { name: "没有找到这个收藏夹" })).toBeInTheDocument();
+    expect(screen.getByText("地址可能有误，或者这个收藏夹没有对你公开。")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /浏览全部文献/ })).toHaveAttribute("href", "/papers");
+  });
+});
+
 describe("ErrorState", () => {
   it("点击重试调用 onRetry，不渲染原始堆栈", async () => {
     const onRetry = vi.fn();

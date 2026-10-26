@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
+import { renderWithQuery } from "@tests/support/render-with-query";
 import { describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { makePaper } from "@tests/fixtures/paper";
@@ -21,7 +22,7 @@ describe("ExploreFeed 查看更多", () => {
       totalPages: 1,
       items: [makePaper()],
     });
-    render(await ExploreFeed({ tab: "recent" }));
+    renderWithQuery(await ExploreFeed({ tab: "recent" }));
     expect(screen.getByRole("link", { name: /查看更多文献/ })).toHaveAttribute("href", "/papers");
   });
 
@@ -33,11 +34,11 @@ describe("ExploreFeed 查看更多", () => {
       totalPages: 0,
       items: [],
     });
-    const { unmount } = render(await ExploreFeed({ tab: "recent" }));
+    const { unmount } = renderWithQuery(await ExploreFeed({ tab: "recent" }));
     expect(screen.queryByRole("link", { name: /查看更多文献/ })).not.toBeInTheDocument();
     unmount();
     vi.mocked(fetchFeed).mockRejectedValue(new Error("boom"));
-    render(await ExploreFeed({ tab: "recent" }));
+    renderWithQuery(await ExploreFeed({ tab: "recent" }));
     expect(screen.queryByRole("link", { name: /查看更多文献/ })).not.toBeInTheDocument();
   });
 });
@@ -51,7 +52,7 @@ describe("ExploreFeed 区块说明", () => {
       totalPages: 1,
       items: [makePaper()],
     });
-    render(await ExploreFeed({ tab: "recent" }));
+    renderWithQuery(await ExploreFeed({ tab: "recent" }));
     expect(screen.getByText(/最近入库与高被引的文献/)).not.toHaveTextContent(/采集时生成/);
   });
 });

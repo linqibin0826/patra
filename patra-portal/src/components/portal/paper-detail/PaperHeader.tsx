@@ -1,13 +1,15 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { LibraryStatusProvider } from "@/components/library/LibraryStatusProvider";
+import { SaveButton } from "@/components/library/SaveButton";
 import { pmcArticleUrl } from "@/components/portal/fulltext/FullTextUnavailable";
-import { BookmarkButton } from "@/components/portal/paper-detail/BookmarkButton";
 import { FullTextActions } from "@/components/portal/paper-detail/FullTextActions";
 import { PaperFacts } from "@/components/portal/paper-detail/PaperFacts";
 import { RichInlineNodes, RichInlineText } from "@/components/portal/RichInlineText";
 import { deriveFullTextState } from "@/lib/portal-api/fulltext-derive";
 import { deriveByline } from "@/lib/portal-api/publication-derive";
 import { splitTitle } from "@/lib/portal-api/title-derive";
+import { formatPublishedDate } from "@/lib/published-date";
 import { cn } from "@/lib/utils";
 import type { PaperDetail } from "@/types/portal";
 
@@ -16,7 +18,7 @@ const TITLE_CLASS = {
   md: "max-w-[24em] text-[clamp(26px,1.2rem+1.2vw,36px)] leading-[1.15]",
 } as const;
 
-/// 文献页头（spec §5.1 – §5.3，整宽）：等宽刊头行 → 主标题与副标题 → 原文标题 → 作者 · 刊名 · 年份 →
+/// 文献页头（spec §5.1 – §5.3，整宽）：等宽刊头行 → 主标题与副标题 → 原文标题 → 作者 · 刊名 · 按精度的出版日期 →
 /// 事实条 → 全页唯一一组操作（阅读全文 / 下载 PDF / 收藏 / 在 PMC 查看原文）。
 export function PaperHeader({
   paper,
@@ -31,6 +33,9 @@ export function PaperHeader({
   const retracted = state === "retracted";
   const types = paper.publicationTypes.slice(0, 2);
   const title = splitTitle(paper.title);
+  const published =
+    formatPublishedDate(paper.publishedDate) ??
+    (paper.publicationYear == null ? null : String(paper.publicationYear));
   const pmcUrl =
     (state === "full" || state === "pdf-only") && paper.pmcid ? pmcArticleUrl(paper.pmcid) : null;
 
@@ -110,16 +115,16 @@ export function PaperHeader({
             <span className="font-serif text-lg text-ink-800 italic">{paper.venueName}</span>
           )
         )}
-        {paper.publicationYear != null && (
-          <span className="tabular-nums text-fg-2">&nbsp;· {paper.publicationYear}</span>
-        )}
+        {published != null && <span className="tabular-nums text-fg-2">&nbsp;· {published}</span>}
       </div>
 
       <PaperFacts paper={paper} fullTextFacts={fullTextFacts} />
 
       <div className="anim-rise mt-6 flex flex-wrap items-center gap-3 [--delay:200ms] max-[540px]:flex-col max-[540px]:items-stretch">
         <FullTextActions paper={paper} />
-        <BookmarkButton paperId={paper.id} />
+        <LibraryStatusProvider keys={[paper.id]}>
+          <SaveButton paperKey={paper.id} title={paper.title} variant="pill" />
+        </LibraryStatusProvider>
         {pmcUrl && (
           <a
             href={pmcUrl}

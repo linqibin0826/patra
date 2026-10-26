@@ -68,6 +68,10 @@ function forwardingHeaders(client: ClientOrigin | undefined): Record<string, str
 }
 
 export interface GatewayStreamInit {
+  /// 默认 GET；导出这类要带请求体的下载用 POST
+  method?: "GET" | "POST";
+  /// 有值时序列化成 JSON 请求体，并带 `Content-Type: application/json`
+  json?: unknown;
   /// 浏览器带来的 `If-None-Match`，原样转给网关（命中时网关回 304）
   ifNoneMatch?: string | null;
   /// 调用方的中止信号：浏览器断开下载时，一并取消向网关的请求
@@ -78,7 +82,7 @@ export interface GatewayStreamInit {
   client?: ClientOrigin;
 }
 
-/// 取网关上的文件（PDF、正文图片），响应体原样流式交给调用方转发。
+/// 取网关上的文件（PDF、正文图片、导出文件），响应体原样流式交给调用方转发。
 /// 与 `gatewayFetch` 的区别在超时：只计到响应头到达为止。之后的下载可能持续几分钟（155 MB 的 PDF、
 /// 慢速网络），不能用总时长掐断；下载中途卡住由 fetch 自带的两次读之间的空闲超时兜底。
 export async function gatewayStream(path: string, init: GatewayStreamInit = {}): Promise<Response> {
@@ -96,13 +100,15 @@ export async function gatewayStream(path: string, init: GatewayStreamInit = {}):
     : headerTimeout.signal;
   try {
     return await fetch(`${baseUrl}${path}`, {
-      method: "GET",
+      method: init.method ?? "GET",
       headers: {
         ...forwardingHeaders(init.client),
         ...(init.ifNoneMatch ? { "If-None-Match": init.ifNoneMatch } : {}),
+        ...(init.json === undefined ? {} : { "Content-Type": "application/json" }),
       },
       cache: "no-store",
       signal,
+      ...(init.json === undefined ? {} : { body: JSON.stringify(init.json) }),
     });
   } finally {
     clearTimeout(timer);

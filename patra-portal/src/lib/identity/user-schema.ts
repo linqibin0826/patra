@@ -9,7 +9,7 @@ export const userSchema = z.object({
   username: z.string().min(1),
   /// 永远非空：没设昵称时 identity 回退成用户名
   displayName: z.string().min(1),
-  /// identity 的相对路径 `/users/{用户名}/avatar?v={哈希}`，没有头像时为 null
+  /// identity 的相对路径 `/users/{用户 ID}/avatar?v={哈希}`，没有头像时为 null
   avatarUrl: z.string().nullable(),
   /// 默认头像的色号，按用户 ID 算，有没有头像都给
   avatarPalette: z.number().int().min(0).max(11),

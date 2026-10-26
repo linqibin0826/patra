@@ -147,9 +147,10 @@ export interface Paper {
   title: string;
   journal: string | null;
   year: number | null;
+  /** 出版日期，ISO 降精度：`2019` / `2019-03` / `2019-03-15`，长度即精度；没有时为 null */
+  publishedDate: string | null;
   authors: string[];
   cites: number | null;
-  bookmarks: number;
   doi: string | null;
   pmid: string | null;
   source: PaperSource;
@@ -199,16 +200,16 @@ export interface Funding {
   country: string | null;
 }
 
-/** 出版日期；type 如 received/accepted/epublished/published，date 为 "yyyy-MM-dd" */
+/** 出版日期；type 如 received/accepted/epublished/published，date 为 ISO 降精度（`2019` / `2019-03` / `2019-03-15`） */
 export interface PublicationDate {
   type: string;
-  date: string; // LocalDate 序列化为 "yyyy-MM-dd"
+  date: string;
 }
 
 /**
  * 文献详情端点 `GET /portal/publications/{id}` 响应（PaperDetail）。
  * 对应后端 `PortalPublicationDetailResponse`——扁平 + 列表，零运行时映射。
- * source/fullTextUrl 为真实数据；bookmarks 恒 0（占位，无数据源）。
+ * source/fullTextUrl 为真实数据。
  */
 export interface PaperDetail {
   id: string;
@@ -217,6 +218,8 @@ export interface PaperDetail {
   venueId: string | null;
   venueName: string | null;
   publicationYear: number | null;
+  /** 出版日期，ISO 降精度，同 `Paper.publishedDate` */
+  publishedDate: string | null;
   evidenceLevel: EvidenceLevel;
   abstractType: string | null;
   abstractSections: AbstractSection[];
@@ -240,7 +243,6 @@ export interface PaperDetail {
   aiSummary: string | null;
   source: string | null;
   fullTextUrl: string | null;
-  bookmarks: number | null;
   /** 可读全文时为 ceil(字数 / 230)，否则为 null */
   estimatedReadMin: number | null;
   /** 已撤稿：PubMed 文献类型标了撤稿，或抓取时 PMC 标为撤稿（后端合并两处判定） */

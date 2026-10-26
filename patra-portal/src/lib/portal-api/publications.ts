@@ -42,3 +42,19 @@ export async function fetchPublicationDetail(id: string): Promise<PaperDetail | 
   }
   return (await res.json()) as PaperDetail;
 }
+
+/// 文献库、公开收藏夹的一页条目一次取卡片（`GET /portal/publications/batch?id=…&id=…`，≤ 100 个）。
+/// 公共数据，不带会话（决策 H）。只回存在且未软删的，按请求顺序；空列表不请求。非 2xx / 超时抛错。
+export async function fetchPublicationCards(ids: string[]): Promise<Paper[]> {
+  if (ids.length === 0) {
+    return [];
+  }
+  const query = ids.map((id) => `id=${encodeURIComponent(id)}`).join("&");
+  const res = await gatewayFetch(`/patra-catalog/portal/publications/batch?${query}`, {
+    timeoutMs: 5_000,
+  });
+  if (!res.ok) {
+    throw new Error(`文献卡片加载失败：${res.status}`);
+  }
+  return ((await res.json()) as { items: Paper[] }).items;
+}

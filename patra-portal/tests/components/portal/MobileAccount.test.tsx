@@ -95,13 +95,14 @@ describe("MobileAccount · 三种形态", () => {
     expect(name).toHaveClass("truncate");
     expect(screen.getByText("@chen-yu")).toBeInTheDocument();
     expect(screen.queryByText(USER.email)).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "个人主页" })).toHaveAttribute("href", "/u/chen-yu");
+    expect(screen.getByRole("link", { name: "主页" })).toHaveAttribute("href", "/u/chen-yu");
+    expect(screen.getByRole("link", { name: "文献库" })).toHaveAttribute("href", "/library");
     expect(screen.getByRole("link", { name: "设置" })).toHaveAttribute("href", "/settings/profile");
     expect(screen.getByRole("button", { name: "退出登录" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "登录" })).not.toBeInTheDocument();
   });
 
-  it.each(["个人主页", "设置"])("已登录：点「%s」先关闭菜单", async (name) => {
+  it.each(["主页", "文献库", "设置"])("已登录：点「%s」先关闭菜单", async (name) => {
     const { user, onClose } = renderAccount(USER);
     await user.click(screen.getByRole("link", { name }));
     expect(onClose).toHaveBeenCalledTimes(1);

@@ -1,6 +1,8 @@
 "use client";
 
+import { Bookmark } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { UserMenu } from "@/components/portal/UserMenu";
 import { useCurrentUser } from "@/lib/auth/current-user-query";
@@ -22,9 +24,10 @@ export function NavAccountPlaceholder() {
 }
 
 /// 桌面导航栏的账号区，在「关于」右边：登录状态未定时是占位，未登录是「登录」，已登录是
-/// 圆形标识和用户菜单。移动端顶栏不显示登录状态（高保真稿 Nav-M-TopBar），账号块在全屏菜单里。
+/// 「文献库」入口（v0.13 简报 §2.3，在 `/library/**` 时是当前项）+ 圆形标识和用户菜单。移动端顶栏不显示登录状态（高保真稿 Nav-M-TopBar），账号块在全屏菜单里。
 export function NavAccount() {
   const state = useCurrentUser();
+  const pathname = usePathname();
   const logout = useLogout();
   const loginHref = useAuthPageHref("/login");
   const loginRef = useRef<HTMLAnchorElement>(null);
@@ -54,8 +57,17 @@ export function NavAccount() {
       </Link>
     );
   }
+  const inLibrary = pathname === "/library" || pathname.startsWith("/library/");
   return (
-    <div className="ml-1.5 flex max-[880px]:hidden">
+    <div className="ml-1.5 flex items-center gap-3 max-[880px]:hidden">
+      <Link
+        href="/library"
+        aria-current={inLibrary ? "page" : undefined}
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-fg-2 underline-offset-[6px] transition-colors hover:text-fg-1 aria-[current=page]:text-fg-1 aria-[current=page]:underline"
+      >
+        <Bookmark className="size-3.75" strokeWidth={1.6} aria-hidden="true" />
+        文献库
+      </Link>
       <UserMenu user={state.user} loggingOut={logout.isPending} onLogout={() => logout.mutate()} />
     </div>
   );

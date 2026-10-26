@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, Settings, UserRound } from "lucide-react";
+import { Library, LogOut, Settings, UserRound } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { AuthLink } from "@/components/auth/AuthLink";
@@ -14,8 +14,8 @@ import { cn } from "@/lib/utils";
 /// 「登录」「退出登录」：48px 高的次按钮，占满一行
 const ACCOUNT_BUTTON = cn(btnSecondary, "flex h-12 w-full gap-2 py-0");
 
-/// 「个人主页」「设置」：两个并排的次按钮
-const LINK_BUTTON = cn(btnSecondary, "flex h-12 min-w-0 flex-1 gap-2 py-0");
+/// 「主页」「文献库」「设置」：三个并排的等宽次按钮（v0.13 简报 §2.3）
+const LINK_BUTTON = cn(btnSecondary, "flex h-12 min-w-0 flex-1 gap-2 px-2 py-0");
 
 /// 账号块的外框：上方一条分隔线。未登录与占位的内容是 80px 高；已登录多一行链接，更高（简报 §3.3）
 function Frame({ children }: { children: ReactNode }) {
@@ -45,7 +45,7 @@ interface MobileAccountProps {
 }
 
 /// 移动端全屏菜单底部的账号块（v0.8 高保真稿 Nav-M-*；已登录形态按 v0.12 简报 §3.3：头像 + 昵称 /
-/// @用户名一行，下面并排「个人主页」「设置」，再下面整行「退出登录」）。
+/// @用户名一行，下面并排「主页」「文献库」「设置」，再下面整行「退出登录」；v0.13 加文献库）。
 /// 「退出登录」进行中用 `aria-disabled` 而不是 `disabled`：按钮不丢焦点，`title` 照常显示。
 export function MobileAccount({ onClose }: MobileAccountProps) {
   const state = useCurrentUser();
@@ -90,7 +90,11 @@ export function MobileAccount({ onClose }: MobileAccountProps) {
       <div className="flex gap-3">
         <Link href={`/u/${state.user.username}`} onClick={onClose} className={LINK_BUTTON}>
           <UserRound className="size-3.75" aria-hidden="true" />
-          个人主页
+          主页
+        </Link>
+        <Link href="/library" onClick={onClose} className={LINK_BUTTON}>
+          <Library className="size-3.75" aria-hidden="true" />
+          文献库
         </Link>
         <Link href="/settings/profile" onClick={onClose} className={LINK_BUTTON}>
           <Settings className="size-3.75" aria-hidden="true" />

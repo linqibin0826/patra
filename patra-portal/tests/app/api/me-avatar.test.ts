@@ -114,14 +114,14 @@ describe("POST /api/me/avatar", () => {
 
   it("成功：multipart 转发 file（文件名、类型保留），带令牌与浏览器来源，回 avatarUrl", async () => {
     fetchMock.mockResolvedValue(
-      Response.json({ avatarUrl: "/users/chen-yu/avatar?v=0123456789abcdef" }),
+      Response.json({ avatarUrl: "/users/352303128713027814/avatar?v=0123456789abcdef" }),
     );
     const res = await upload();
     expect(res.status).toBe(200);
     expect(res.headers.get("cache-control")).toBe("private, no-store");
     await expect(res.json()).resolves.toEqual({
       ok: true,
-      avatarUrl: "/users/chen-yu/avatar?v=0123456789abcdef",
+      avatarUrl: "/users/352303128713027814/avatar?v=0123456789abcdef",
     });
     const [url, init] = fetchMock.mock.calls[0] ?? [];
     expect(url).toBe("http://gw.test/patra-identity/me/avatar");

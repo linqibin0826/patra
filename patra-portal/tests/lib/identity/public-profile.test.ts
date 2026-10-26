@@ -88,6 +88,7 @@ describe("fetchPublicProfile", () => {
   it.each([
     ["500", () => respond(500, { code: "IDN-0500" })],
     ["200 但形状不对", () => respond(200, { username: 1 })],
+    ["200 但缺 userId", () => respond(200, { ...PUBLIC_PROFILE, userId: undefined })],
     ["网络错误", () => fetchMock.mockRejectedValue(new TypeError("fetch failed"))],
   ])("%s：抛错", async (_label, arrange) => {
     arrange();

@@ -6,7 +6,7 @@ import { Avatar } from "@/components/user/Avatar";
 const IDENTITY = {
   displayName: "陈宇",
   username: "chen-yu",
-  avatarUrl: "/users/chen-yu/avatar?v=0123456789abcdef",
+  avatarUrl: "/users/352303128713027814/avatar?v=0123456789abcdef",
   avatarPalette: 1,
 };
 
@@ -14,7 +14,10 @@ describe("Avatar", () => {
   it("有头像：小尺寸用 128 档图，图片不读名字", () => {
     const { container } = render(<Avatar identity={IDENTITY} size={36} />);
     const img = container.querySelector("img");
-    expect(img).toHaveAttribute("src", "/api/users/chen-yu/avatar?v=0123456789abcdef&size=128");
+    expect(img).toHaveAttribute(
+      "src",
+      "/api/users/352303128713027814/avatar?v=0123456789abcdef&size=128",
+    );
     expect(img).toHaveAttribute("alt", "");
   });
 

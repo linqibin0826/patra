@@ -50,15 +50,43 @@ interface BrowsePaginationProps {
  * 浏览页分页（client）：页码链接由 Provider 的 hrefFor 生成。
  * 导航进行中整体禁用——旧页码属于旧结果集，此时点击会撤销刚做的筛选。pageCount ≤ 1 时不渲染。
  */
-export function BrowsePagination({ page: rawPage, total, pageSize, unit }: BrowsePaginationProps) {
+export function BrowsePagination({ page, total, pageSize, unit }: BrowsePaginationProps) {
   const { query, isPending, hrefFor } = useBrowseQuery();
+  return (
+    <PaginationView
+      page={page}
+      total={total}
+      pageSize={pageSize}
+      unit={unit}
+      isPending={isPending}
+      hrefOf={(p) => hrefFor({ ...query, page: p })}
+    />
+  );
+}
+
+interface PaginationViewProps extends BrowsePaginationProps {
+  /// 导航进行中：整体禁用
+  isPending?: boolean;
+  /// 第 p 页的地址
+  hrefOf: (page: number) => string;
+}
+
+/// 分页外观（与数据来源无关）：浏览页经 `BrowsePagination` 用，文献库、公开收藏夹页自己给 `hrefOf`。
+/// pageCount ≤ 1 时不渲染。
+export function PaginationView({
+  page: rawPage,
+  total,
+  pageSize,
+  unit,
+  isPending = false,
+  hrefOf,
+}: PaginationViewProps) {
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   if (pageCount <= 1) return null;
 
   const page = Math.max(1, Math.min(rawPage, pageCount));
   const start = (page - 1) * pageSize;
   const end = Math.min(page * pageSize, total);
-  const hrefOf = (p: number) => hrefFor({ ...query, page: p });
   const edgeClass = (disabled: boolean) =>
     cn(
       CELL,

@@ -5,6 +5,7 @@ import {
   formatDate,
   formatDateMinute,
   formatDateTime,
+  formatMonthDay,
   formatRelative,
 } from "@/lib/format-time";
 
@@ -66,5 +67,11 @@ describe("formatRelative", () => {
 describe("addDays", () => {
   it("返回加上天数后的 ISO 时间", () => {
     expect(addDays(NOW, 15)).toBe("2026-11-07T08:00:00.000Z");
+  });
+});
+
+describe("formatMonthDay", () => {
+  it("北京时间的月日", () => {
+    expect(formatMonthDay("2026-10-23T17:00:00Z")).toBe("10 月 24 日");
   });
 });

@@ -6,8 +6,10 @@ import { OCCUPATIONS } from "@/lib/identity/occupation";
 import { PROFILE_VISIBILITIES } from "@/lib/identity/profile-schema";
 import { callIdentity } from "@/lib/identity/request";
 
-/// `GET /users/{username}` 的响应体（PAP-95 / 97）：公开身份卡。不含用户 ID、邮箱与设置原值。
+/// `GET /users/{username}` 的响应体（PAP-95 / 97）：公开身份卡。不含邮箱与设置原值。
 const publicProfileSchema = z.object({
+  /// 用户 ID（v0.13 决策 E）：主页「收藏夹」栏按它取公开收藏夹
+  userId: z.string().regex(/^[1-9][0-9]{0,18}$/),
   username: z.string().min(1),
   displayName: z.string().min(1),
   avatarUrl: z.string().nullable(),

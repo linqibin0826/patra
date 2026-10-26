@@ -12,10 +12,11 @@ export interface AvatarIdentity {
   avatarPalette: number;
 }
 
-type AvatarSize = 36 | 40 | 72 | 88 | 96 | 128;
+type AvatarSize = 24 | 36 | 40 | 72 | 88 | 96 | 128;
 
 /// 每档的直径与默认头像的字号（约直径 × 0.42，取最近的字号阶，简报 §3.20）
 const SIZE_CLASS: Record<AvatarSize, string> = {
+  24: "size-6 text-xs",
   36: "size-9 text-md",
   40: "size-10 text-lg",
   72: "size-18 text-3xl",

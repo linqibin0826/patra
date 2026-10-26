@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
+import { renderWithQuery } from "@tests/support/render-with-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { makePaper } from "@tests/fixtures/paper";
@@ -21,7 +22,7 @@ function pageOf(items: Paper[], total = items.length): PageResult<Paper> {
 
 async function renderResults(query: PaperSearchQuery, prefetched?: PageResult<Paper>) {
   const ui = await PaperResults({ query, prefetched });
-  return render(<PapersQueryProvider query={query}>{ui}</PapersQueryProvider>);
+  return renderWithQuery(<PapersQueryProvider query={query}>{ui}</PapersQueryProvider>);
 }
 
 describe("PaperResults", () => {

@@ -99,3 +99,18 @@ describe("PaperListSkeleton", () => {
     expect(container.firstChild).toHaveAttribute("aria-hidden", "true");
   });
 });
+
+describe("PaperListItem 标题行操作", () => {
+  it("传了 action 时渲染在标题行右端", () => {
+    render(<PaperListItem paper={makePaper()} action={<button type="button">收藏「x」</button>} />);
+    const heading = screen.getByRole("heading", { level: 3 });
+    expect(heading.parentElement).toContainElement(
+      screen.getByRole("button", { name: "收藏「x」" }),
+    );
+  });
+
+  it("不传时没有按钮", () => {
+    render(<PaperListItem paper={makePaper()} />);
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+});
