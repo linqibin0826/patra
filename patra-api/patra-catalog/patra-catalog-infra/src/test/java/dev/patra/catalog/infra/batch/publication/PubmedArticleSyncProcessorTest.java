@@ -229,6 +229,47 @@ class PubmedArticleSyncProcessorTest {
     verify(delegate, never()).process(any());
   }
 
+  /// `ArticleTitle` 为空、只有 `VernacularTitle`（非英文文献）时照常进组装，不算无效记录。
+  ///
+  /// @throws Exception 处理失败时
+  @Test
+  @DisplayName("只有 VernacularTitle（非英文文献）：照常进组装，不计 skippedInvalid")
+  void should_pass_record_with_only_vernacular_title_to_assembler() throws Exception {
+    CanonicalPublication vernacularOnly =
+        CanonicalPublication.builder()
+            .identifiers(
+                List.of(
+                    Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build()))
+            .originalTitle("Medizinische Klinik dankt den Gutachterinnen und Gutachtern")
+            .dates(PublicationDates.builder().published(PartialDate.ofYear(2026)).build())
+            .build();
+    given(vernacularOnly, null);
+
+    assertThat(processor(PubmedImportScope.ALL, false).process(record(P1333))).isNotNull();
+    assertThat(counters.snapshot(0).skippedInvalid()).isZero();
+    verify(delegate).process(any());
+  }
+
+  /// `ArticleTitle` 与 `VernacularTitle` 都为空时跳过这一篇，计 `skippedInvalid`，不进组装。
+  ///
+  /// @throws Exception 处理失败时
+  @Test
+  @DisplayName("两种标题都没有：跳过这一篇，不进组装")
+  void should_skip_record_without_any_title() throws Exception {
+    CanonicalPublication noTitle =
+        CanonicalPublication.builder()
+            .identifiers(
+                List.of(
+                    Identifier.builder().type(PublicationIdentifierType.PMID).value(PMID).build()))
+            .dates(PublicationDates.builder().published(PartialDate.ofYear(2026)).build())
+            .build();
+    given(noTitle, null);
+
+    assertThat(processor(PubmedImportScope.ALL, false).process(record(P1333))).isNull();
+    assertThat(counters.snapshot(0).skippedInvalid()).isEqualTo(1);
+    verify(delegate, never()).process(any());
+  }
+
   @Test
   @DisplayName("数据库异常不吞，照常抛出让文件失败")
   void should_propagate_infrastructure_exception() throws Exception {
