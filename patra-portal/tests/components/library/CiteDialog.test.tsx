@@ -121,6 +121,13 @@ describe("CiteDialog", () => {
     expect(fetchMock.mock.calls.some(([url]) => url === "/api/publications/citations")).toBe(false);
   });
 
+  it("空收藏夹：说明还没有文献，不一直显示加载", async () => {
+    respond({ keys: [], skippedUnavailable: 0 });
+    open({ ...COLLECTION, count: 0, label: "收藏夹「组会」· 0 篇" });
+    expect(await screen.findByText("这里还没有文献，没有可复制的引用。")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^复制/ })).toBeDisabled();
+  });
+
   it("有已失效的：说明不含在内", async () => {
     respond({ keys: ["11", "12"], skippedUnavailable: 2 });
     open();

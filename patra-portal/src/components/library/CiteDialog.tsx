@@ -60,7 +60,7 @@ export function CiteDialog({ open, onOpenChange, scope, onExport }: CiteDialogPr
   }, [open]);
 
   const ids = keys.kind === "ready" ? keys.keys : [];
-  /// 范围里的文献全部已失效：没有可请求的 ID，引用查询不会启动，要单独说明而不是一直显示加载
+  /// 范围里没有可引用的文献（空收藏夹、空视图，或全部已失效）：引用查询不会启动，要单独说明而不是一直显示加载
   const nothingToCite = keys.kind === "ready" && ids.length === 0;
   const citations = useQuery({
     queryKey: queryKeys.citations(style, ids),
@@ -104,7 +104,11 @@ export function CiteDialog({ open, onOpenChange, scope, onExport }: CiteDialogPr
             }}
           />
           {nothingToCite ? (
-            <p className="text-sm leading-6 text-fg-2">选中的文献都已失效，没有可复制的引用。</p>
+            <p className="text-sm leading-6 text-fg-2">
+              {keys.kind === "ready" && keys.skipped > 0
+                ? "选中的文献都已失效，没有可复制的引用。"
+                : "这里还没有文献，没有可复制的引用。"}
+            </p>
           ) : (
             <>
               {keys.kind === "ready" && keys.skipped > 0 && (
