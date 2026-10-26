@@ -33,6 +33,12 @@ services:
     image: ghcr.io/linqibin0826/patra-registry:${REGISTRY_IMAGE_TAG:-latest}
     container_name: patra-registry
     restart: unless-stopped
+    # 内存上限（2026-10-26）：镜像以 -XX:MaxRAMPercentage=75 启动，不设上限时每个 JVM 的堆可涨到整个 OrbStack
+    # 虚拟机内存的 75%；10/25 catalog 回填时堆膨胀把虚拟机撑满，被内核全局 OOM 杀掉。设上限后堆为上限的 75%
+    deploy:
+      resources:
+        limits:
+          memory: 1g
     ports: [ "6000:6000" ]
     extra_hosts: *infra-hosts
     env_file:
@@ -49,6 +55,10 @@ services:
     image: ghcr.io/linqibin0826/patra-object-storage:${OBJECT_STORAGE_IMAGE_TAG:-latest}
     container_name: patra-object-storage
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
     ports: [ "6200:6200" ]
     extra_hosts: *infra-hosts
     env_file:
@@ -65,6 +75,10 @@ services:
     image: ghcr.io/linqibin0826/patra-catalog:${CATALOG_IMAGE_TAG:-latest}
     container_name: patra-catalog
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2g
     ports: [ "6300:6300" ]
     extra_hosts: *infra-hosts
     env_file:
@@ -83,6 +97,10 @@ services:
     image: ghcr.io/linqibin0826/patra-interaction:${INTERACTION_IMAGE_TAG:-latest}
     container_name: patra-interaction
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
     ports: [ "6500:6500" ]
     extra_hosts: *infra-hosts
     # 不连 Redis，不加 redis.env；XXL-Job 执行器 6501 不映射：调度中心经 patra-net 回调容器 IP
@@ -100,6 +118,10 @@ services:
     image: ghcr.io/linqibin0826/patra-ingest:${INGEST_IMAGE_TAG:-latest}
     container_name: patra-ingest
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
     ports: [ "6100:6100" ]
     extra_hosts: *infra-hosts
     env_file:
@@ -116,6 +138,10 @@ services:
     image: ghcr.io/linqibin0826/patra-identity:${IDENTITY_IMAGE_TAG:-latest}
     container_name: patra-identity
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
     ports: [ "6400:6400" ]
     extra_hosts: *infra-hosts
     env_file:
@@ -141,6 +167,10 @@ services:
     image: ghcr.io/linqibin0826/patra-gateway:${GATEWAY_IMAGE_TAG:-latest}
     container_name: patra-gateway
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
     ports: [ "9528:9528" ]
     extra_hosts: *infra-hosts
     env_file:
