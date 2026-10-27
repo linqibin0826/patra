@@ -8,7 +8,13 @@ import dev.patra.identity.infra.adapter.persistence.dao.FormerUsernameDao;
 import dev.patra.identity.infra.adapter.persistence.entity.FormerUsernameEntity;
 import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Optional;
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -42,6 +48,28 @@ public class FormerUsernameRepositoryAdapter implements FormerUsernameRepository
   public Optional<FormerUsername> findReserved(Username username, Instant now) {
     return dao.findFirstByUsernameAndReservedUntilAfterOrderByReplacedAtDesc(username.value(), now)
         .map(mapper::toAggregate);
+  }
+
+  /// 批量查此刻仍在保留期内的记录：一条 `IN` 查询取出全部未到期的，每个名字留改名时间最近的一条。
+  ///
+  /// @param usernames 名字
+  /// @param now 时刻
+  /// @return 记录，每个名字最多一条，不保证顺序
+  @Override
+  public List<FormerUsername> findAllReserved(Collection<Username> usernames, Instant now) {
+    return dao
+        .findByUsernameInAndReservedUntilAfter(
+            usernames.stream().map(Username::value).toList(), now)
+        .stream()
+        .collect(
+            Collectors.toMap(
+                FormerUsernameEntity::getUsername,
+                Function.identity(),
+                BinaryOperator.maxBy(Comparator.comparing(FormerUsernameEntity::getReplacedAt))))
+        .values()
+        .stream()
+        .map(mapper::toAggregate)
+        .toList();
   }
 
   /// 此刻是否被任何人保留着。

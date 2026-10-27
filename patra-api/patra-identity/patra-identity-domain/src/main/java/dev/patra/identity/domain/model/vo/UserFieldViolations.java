@@ -59,6 +59,15 @@ public final class UserFieldViolations {
   /// 批量用户摘要的用户 ID 列表字段名，和请求体一致（PAP-108）。
   public static final String USER_IDS = "userIds";
 
+  /// @ 联想的用户名前缀字段名，和请求体一致（PAP-118）。
+  public static final String PREFIX = "prefix";
+
+  /// @ 联想的条数上限字段名，和请求体一致（PAP-118）。
+  public static final String LIMIT = "limit";
+
+  /// 用户名批量解析的用户名列表字段名，和请求体一致（PAP-118）。
+  public static final String USERNAMES = "usernames";
+
   /// 一次性令牌字段名，和请求体一致。
   public static final String TOKEN = "token";
 
@@ -620,6 +629,41 @@ public final class UserFieldViolations {
   /// @return 字段错误
   public static FieldViolation userIdsTooMany() {
     return FieldViolation.of(USER_IDS, TOO_MANY, "一次最多 100 个用户 ID");
+  }
+
+  /// @ 联想缺少前缀。
+  ///
+  /// @return 字段错误
+  public static FieldViolation prefixRequired() {
+    return FieldViolation.of(PREFIX, REQUIRED, "缺少前缀");
+  }
+
+  /// @ 联想缺少条数上限。
+  ///
+  /// @return 字段错误
+  public static FieldViolation limitRequired() {
+    return FieldViolation.of(LIMIT, REQUIRED, "缺少条数上限");
+  }
+
+  /// @ 联想的条数上限越界。
+  ///
+  /// @return 字段错误
+  public static FieldViolation limitOutOfRange() {
+    return FieldViolation.of(LIMIT, INVALID_FORMAT, "条数上限是 1 ~ 20");
+  }
+
+  /// 用户名批量解析缺少用户名列表。
+  ///
+  /// @return 字段错误
+  public static FieldViolation usernamesRequired() {
+    return FieldViolation.of(USERNAMES, REQUIRED, "缺少用户名列表");
+  }
+
+  /// 用户名批量解析一次超过上限。
+  ///
+  /// @return 字段错误
+  public static FieldViolation usernamesTooMany() {
+    return FieldViolation.of(USERNAMES, TOO_MANY, "一次最多 100 个用户名");
   }
 
   /// 第 `index` 条链接的子字段路径，如 `links[1].url`。

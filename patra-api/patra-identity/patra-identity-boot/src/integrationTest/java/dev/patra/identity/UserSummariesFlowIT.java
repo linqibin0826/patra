@@ -13,7 +13,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
 import tools.jackson.databind.JsonNode;
 
 /// 批量用户摘要的完整流程（PAP-108 AC 1、2）：真实过滤器链、PostgreSQL、Redis。`profileVisible` 与公开主页
@@ -58,14 +57,15 @@ class UserSummariesFlowIT extends IdentityFlowITSupport {
   @Test
   @DisplayName("已注销：占位，响应里不出现用户名")
   void should_not_leak_username_of_deleted_user() {
-    long gone = userIdOf(register("gone.user@example.com", "gone-user"));
+    // 用户名要和 AccountFlowIT 的 gone-user 错开：同一个 JVM 里各流程测试共用一个库，注销后用户名也不释放
+    long gone = userIdOf(register("sum.gone@example.com", "sum-gone-user"));
     markDeleted(gone);
 
     RawResponse response =
         post(SUMMARIES, Map.of("userIds", List.of(gone), "viewerUserId", gone), noHeaders());
 
     assertThat(response.status()).as(response.body()).isEqualTo(200);
-    assertThat(response.body()).doesNotContain("gone-user");
+    assertThat(response.body()).doesNotContain("sum-gone-user");
     JsonNode user = json(response).get("users").get(0);
     assertThat(user.get("accountStatus").asString()).isEqualTo("DELETED");
     assertThat(user.get("username").isNull()).isTrue();
@@ -84,7 +84,7 @@ class UserSummariesFlowIT extends IdentityFlowITSupport {
     HttpHeaders other = assertionFor(otherId, latestSessionIdOf(otherId));
     setPrivacy(owner, visibility);
     if (!status.equals("ACTIVE_UNVERIFIED")) {
-      jdbcTemplate.update("UPDATE idn_user SET email_verified_at = now() WHERE id = ?", ownerId);
+      markEmailVerified(ownerId);
     }
     applyStatus(ownerId, status);
 
@@ -131,54 +131,5 @@ class UserSummariesFlowIT extends IdentityFlowITSupport {
     RawResponse response = post(SUMMARIES, body, noHeaders());
     assertThat(response.status()).as(response.body()).isEqualTo(200);
     return json(response).get("users");
-  }
-
-  /// 主人改主页可见性。
-  ///
-  /// @param owner 主人的断言头
-  /// @param visibility 主页可见性
-  private void setPrivacy(HttpHeaders owner, String visibility) {
-    RawResponse saved =
-        exchange(
-            HttpMethod.PUT,
-            "/me/privacy",
-            Map.of(
-                "profileVisibility",
-                visibility,
-                "professionalVisibility",
-                "PUBLIC",
-                "searchIndexing",
-                false),
-            owner);
-    assertThat(saved.status()).as(saved.body()).isEqualTo(200);
-  }
-
-  /// 用 SQL 把账号改到给定状态（`ACTIVE`、`ACTIVE_UNVERIFIED` 不动）。
-  ///
-  /// @param userId 用户 ID
-  /// @param status 状态
-  private void applyStatus(long userId, String status) {
-    switch (status) {
-      case "PENDING_DELETION" ->
-          jdbcTemplate.update(
-              "UPDATE idn_user SET status = 'PENDING_DELETION',"
-                  + " deletion_due_at = now() + interval '15 days' WHERE id = ?",
-              userId);
-      case "BANNED" ->
-          jdbcTemplate.update(
-              "UPDATE idn_user SET status = 'BANNED', banned_at = now() WHERE id = ?", userId);
-      case "DELETED" -> markDeleted(userId);
-      default -> {}
-    }
-  }
-
-  /// 用 SQL 标成已注销：只改用户行，不动资料（隐私设置保留，矩阵要三档都测）。
-  ///
-  /// @param userId 用户 ID
-  private void markDeleted(long userId) {
-    jdbcTemplate.update(
-        "UPDATE idn_user SET status = 'DELETED', deleted_at = now(), email = NULL,"
-            + " email_verified_at = NULL WHERE id = ?",
-        userId);
   }
 }

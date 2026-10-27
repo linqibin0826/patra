@@ -11,6 +11,9 @@ import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.autoconfigure.PatraHibernatePropertiesCustomizer;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -76,6 +79,47 @@ class FormerUsernameRepositoryAdapterIT {
 
     assertThat(formerUsernames.findReserved(shared, T0.plus(Duration.ofDays(120))))
         .hasValueSatisfying(former -> assertThat(former.getUserId()).isEqualTo(b));
+  }
+
+  @Test
+  @DisplayName("批量：每个名字取未到期里改名时间最近的一条；过期的、没保留过的不返回")
+  void should_find_latest_reserved_record_for_each_name() {
+    long a = saveUser("former-d@example.com");
+    long b = saveUser("former-e@example.com");
+    Duration period = Duration.ofDays(90);
+    formerUsernames.save(FormerUsername.reserve(a, Username.of("dup"), T0, period));
+    formerUsernames.save(
+        FormerUsername.reserve(b, Username.of("dup"), T0.plus(Duration.ofDays(10)), period));
+    formerUsernames.save(
+        FormerUsername.reserve(a, Username.of("kept"), T0.plus(Duration.ofDays(5)), period));
+    formerUsernames.save(
+        FormerUsername.reserve(a, Username.of("gone"), T0.minus(Duration.ofDays(100)), period));
+
+    Map<String, Long> owners =
+        formerUsernames
+            .findAllReserved(
+                List.of(
+                    Username.of("dup"),
+                    Username.of("kept"),
+                    Username.of("gone"),
+                    Username.of("free")),
+                T0.plus(Duration.ofDays(20)))
+            .stream()
+            .collect(Collectors.toMap(f -> f.getUsername().value(), FormerUsername::getUserId));
+
+    assertThat(owners).containsOnly(Map.entry("dup", b), Map.entry("kept", a));
+  }
+
+  @Test
+  @DisplayName("批量：到期当刻不再保留")
+  void should_not_return_record_at_its_expiry_instant() {
+    long a = saveUser("former-f@example.com");
+    formerUsernames.save(FormerUsername.reserve(a, Username.of("edge"), T0, Duration.ofDays(90)));
+    Instant expiry = T0.plus(Duration.ofDays(90));
+
+    assertThat(formerUsernames.findAllReserved(List.of(Username.of("edge")), expiry)).isEmpty();
+    assertThat(formerUsernames.findAllReserved(List.of(Username.of("edge")), expiry.minusMillis(1)))
+        .hasSize(1);
   }
 
   /// 存一个用户，返回 ID。

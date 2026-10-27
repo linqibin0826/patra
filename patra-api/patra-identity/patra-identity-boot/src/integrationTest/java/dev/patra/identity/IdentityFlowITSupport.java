@@ -418,6 +418,63 @@ abstract class IdentityFlowITSupport {
         userId);
   }
 
+  /// 主人改主页可见性（专业背景公开、不收录），断言 200。
+  ///
+  /// @param owner 主人的断言头
+  /// @param visibility 主页可见性
+  void setPrivacy(HttpHeaders owner, String visibility) {
+    RawResponse saved =
+        exchange(
+            HttpMethod.PUT,
+            "/me/privacy",
+            Map.of(
+                "profileVisibility",
+                visibility,
+                "professionalVisibility",
+                "PUBLIC",
+                "searchIndexing",
+                false),
+            owner);
+    assertThat(saved.status()).as(saved.body()).isEqualTo(200);
+  }
+
+  /// 用 SQL 标成邮箱已验证。
+  ///
+  /// @param userId 用户 ID
+  void markEmailVerified(long userId) {
+    jdbcTemplate.update("UPDATE idn_user SET email_verified_at = now() WHERE id = ?", userId);
+  }
+
+  /// 用 SQL 把账号改到给定状态（`ACTIVE`、`ACTIVE_UNVERIFIED` 不动）。冷静期里 `/me/**` 的写接口被拒，
+  /// 要改隐私先改再调这里。
+  ///
+  /// @param userId 用户 ID
+  /// @param status 状态
+  void applyStatus(long userId, String status) {
+    switch (status) {
+      case "PENDING_DELETION" ->
+          jdbcTemplate.update(
+              "UPDATE idn_user SET status = 'PENDING_DELETION',"
+                  + " deletion_due_at = now() + interval '15 days' WHERE id = ?",
+              userId);
+      case "BANNED" ->
+          jdbcTemplate.update(
+              "UPDATE idn_user SET status = 'BANNED', banned_at = now() WHERE id = ?", userId);
+      case "DELETED" -> markDeleted(userId);
+      default -> {}
+    }
+  }
+
+  /// 用 SQL 标成已注销：只改用户行，不动资料（隐私设置保留）。
+  ///
+  /// @param userId 用户 ID
+  void markDeleted(long userId) {
+    jdbcTemplate.update(
+        "UPDATE idn_user SET status = 'DELETED', deleted_at = now(), email = NULL,"
+            + " email_verified_at = NULL WHERE id = ?",
+        userId);
+  }
+
   /// 原始响应：状态、头、体。
   ///
   /// @param status 状态码
