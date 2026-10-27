@@ -78,6 +78,14 @@ dev.patra.interaction.config           装配（XXL-Job 执行器等），不属
 - 读：对象未登记（还没人讨论过）回空列表，对象已失效回 404 `SUBJECT_UNAVAILABLE`；作者、被回复者、被 @ 的人一次批量向 identity 取名片，主页对访客不可见的去掉用户名与头像地址。
 - 进程内事件：`CommentPublishedEvent`、`CommentEditedEvent`、`CommentDeletedEvent`，在写入事务里用 `ApplicationEventPublisher` 发布；提醒子域用同步 `@EventListener` 订阅，订阅方失败时评论一起回滚。
 
+## 4.4 notification 的存储与并发
+
+- 一张表：`notification.notification`，按收件人 `recipient_id` 哈希分 16 区（同 collection），主键 `(recipient_id, notification_id)`。列按以后通知中心的信箱设计：收件人、类型（`COMMENT_REPLY` / `POST_COMMENT` / `MENTION`）、触发人与「是否匿名所有者」、对象、评论、摘录、评论是否已删除、生成时刻、已读时刻。
+- 写入：同步订阅讨论的三个事件，与评论同一事务；规则（谁收、什么类型、不提醒自己、同一条里既回复又 @ 只发一条）在 `domain.notification.policy.NotificationRules`。唯一索引 `(recipient_id, comment_id)` 保证一个人对一条评论最多一条提醒，编辑新增 @ 时用 `ON CONFLICT DO NOTHING` 跳过已被回复或已是经验作者的人。写入失败包成 500（`NotificationWriteFailedException`），评论一起回滚。
+- 摘录：写入时用 commonmark-java 把评论 Markdown 转成纯文本存前 300 个单位，字面的 `\` 与 `<` 转义、提及存 `<@ID>`（`ExcerptText`）；读取时换成 `@用户名` / `@昵称` / `@已注销用户`，再截到 120 个字素。评论编辑后刷新它全部提醒的摘录，删除后清空。
+- 读：未读数走部分索引 `(recipient_id, type) WHERE read_at IS NULL`，接口按两个计数出 ETag，没变化 304；列表按 `notification_id` 倒序、每页 20；对象与触发人读时经登记表与 identity 取，匿名所有者触发的不取他的名片；对象已不可用时不给摘录。
+- 清理：每日任务删 5 个月前的；注销清理经底座的 `UserDataCleanupGateway` 删收件人的全部提醒。
+
 ## 5. 运行
 
 | 项 | 值 |
@@ -86,7 +94,7 @@ dev.patra.interaction.config           装配（XXL-Job 执行器等），不属
 | 网关前缀 | `/patra-interaction/**` |
 | 错误码前缀 | `INTERACTION`（如 `INTERACTION-0404`） |
 | 配置 | jar 里的 `application.yml` 放随代码变的默认值；库地址在 Nacos `patra-interaction.yaml`，账号与 xxl-job 管理端地址在 `patra-common.yaml` |
-| 定时任务 | 执行器 `patra-interaction`；对象对账 `subjectReconciliationJob`（`0 30 6 * * ?`，超时 600 秒、不重试，PAP-112；只对外部对象，文献按 PMID、期刊按 NLM ID；catalog 换库重建或重跑导入后立即手动触发一次）、注销清理 `deletedUserCleanupJob`（`0 0 6 * * ?`，超时 600 秒、不重试；PAP-120 起是底座的公共流程：合并各子域有数据的用户，分批回查 identity，只删 `DELETED` 用户在各子域登记的个人数据，现在是收藏与发表计数，PAP-123 起加上提醒） |
+| 定时任务 | 执行器 `patra-interaction`；对象对账 `subjectReconciliationJob`（`0 30 6 * * ?`，超时 600 秒、不重试，PAP-112；只对外部对象，文献按 PMID、期刊按 NLM ID；catalog 换库重建或重跑导入后立即手动触发一次）、注销清理 `deletedUserCleanupJob`（`0 0 6 * * ?`，超时 600 秒、不重试；PAP-120 起是底座的公共流程：合并各子域有数据的用户，分批回查 identity，只删 `DELETED` 用户在各子域登记的个人数据：收藏、发表计数与提醒）、提醒清理 `notificationRetentionJob`（`0 45 6 * * ?`，超时 300 秒、不重试，PAP-123；删除北京时间 5 个自然月前的提醒） |
 | 上线 | `docs/patra/runbooks/v0.13-library-go-live-runbook.md`、`docs/patra/runbooks/v0.14-discussion-go-live-runbook.md` |
 
 ## 6. 什么时候拆分
