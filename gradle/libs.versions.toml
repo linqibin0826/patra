@@ -18,7 +18,7 @@ lombok-mapstruct-binding = "0.2.0"
 
 # Utilities
 hutool = "5.8.25"
-guava = "31.1-jre"
+guava = "33.7.1-jre"
 okio = "3.6.0"
 icu4j = "76.1"
 jsoup = "1.23.2"
