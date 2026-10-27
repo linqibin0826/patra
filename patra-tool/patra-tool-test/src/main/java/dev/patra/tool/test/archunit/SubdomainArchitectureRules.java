@@ -13,7 +13,10 @@ import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 import com.tngtech.archunit.library.dependencies.SliceAssignment;
 import com.tngtech.archunit.library.dependencies.SliceIdentifier;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -26,12 +29,18 @@ import java.util.stream.Stream;
 ///
 /// 子域之间只经对方的**公开包**交互：
 ///
-/// - 任意子域 X：`{根包}.domain.X.port.read..`、`{根包}.domain.X.model.read..`
-/// - 底座子域另加：`port.gateway`、`model.vo`、`model.enums`（都在 `{根包}.domain.{底座}` 下）
+/// - 任意子域 X：`{根包}.domain.X.port.read..`、`{根包}.domain.X.model.read..`，以及事件契约
+///   `{根包}.domain.X.event..`（X 发布的进程内事件）
+/// - 底座子域另加（都在 `{根包}.domain.{底座}` 下）：驱动端口与扩展点 `port.gateway`，用户名片
+///   `port.user`、`model.user`，所有互动都引用的值 `model.vo`、`model.enums`，领域异常 `exception`
+///
+/// 依赖方向也要声明：任何子域都可以依赖底座；其余的边用 {@link #allowingDependency} 或
+/// {@link #allowingSubscription} 声明，没声明的边违规（{@link #crossSubdomainDependenciesAreDeclared}）。
 ///
 /// ```java
-/// Set<String> subdomains = Set.of("subject", "collection");
+/// Set<String> subdomains = Set.of("subject", "collection", "discussion", "notification");
 /// new SubdomainArchitectureRules("dev.patra.interaction", "subject", subdomains)
+///     .allowingSubscription("notification", "discussion")
 ///     .allRules()
 ///     .forEach(rule -> rule.check(classes));
 /// ```
@@ -40,12 +49,18 @@ public final class SubdomainArchitectureRules {
   /// 按子域分包的五个层。
   private static final List<String> LAYERS = List.of("domain", "app", "infra", "adapter", "api");
 
-  /// 每个子域都公开的包，相对 `{根包}.domain.{子域}`。
-  private static final List<String> PUBLISHED = List.of("port.read", "model.read");
+  /// 每个子域都公开的包，相对 `{根包}.domain.{子域}`：读端口、读模型、事件契约。
+  private static final List<String> PUBLISHED = List.of("port.read", "model.read", "event");
+
+  /// 事件契约包，相对 `{根包}.domain.{子域}`。订阅边只放行它。
+  private static final String EVENT_CONTRACT = "event";
 
   /// 底座子域另外公开的包，相对 `{根包}.domain.{底座}`。
+  ///
+  /// `exception` 公开，是为了让调用方在需要降级时能捕获底座端口抛出的异常（如用户名片取不到）；
+  /// 默认做法仍是不捕获、直接传播。
   private static final List<String> FOUNDATION_PUBLISHED =
-      List.of("port.gateway", "model.vo", "model.enums");
+      List.of("port.gateway", "port.user", "model.vo", "model.enums", "model.user", "exception");
 
   /// 服务根包，如 `dev.patra.interaction`。
   private final String basePackage;
@@ -56,7 +71,13 @@ public final class SubdomainArchitectureRules {
   /// 声明的全部子域名，含底座。
   private final Set<String> subdomains;
 
-  /// 创建规则集。
+  /// 依赖边：键子域可以经值里各子域的全部公开包依赖它们。
+  private final Map<String, Set<String>> dependencies;
+
+  /// 订阅边：键子域只能经值里各子域的事件契约依赖它们。
+  private final Map<String, Set<String>> subscriptions;
+
+  /// 创建规则集，不带任何依赖边（各子域只能依赖底座）。
   ///
   /// @param basePackage 服务根包，不能为空白
   /// @param foundationSubdomain 底座子域名，必须在 `subdomains` 里
@@ -64,10 +85,29 @@ public final class SubdomainArchitectureRules {
   /// @throws IllegalArgumentException 参数不满足上面的条件时
   public SubdomainArchitectureRules(
       String basePackage, String foundationSubdomain, Set<String> subdomains) {
+    this(basePackage, foundationSubdomain, subdomains, Map.of(), Map.of());
+  }
+
+  /// 创建规则集并带上已声明的边。
+  ///
+  /// @param basePackage 服务根包
+  /// @param foundationSubdomain 底座子域名
+  /// @param subdomains 声明的全部子域名
+  /// @param dependencies 依赖边
+  /// @param subscriptions 订阅边
+  /// @throws IllegalArgumentException 参数不满足公开构造器的条件时
+  private SubdomainArchitectureRules(
+      String basePackage,
+      String foundationSubdomain,
+      Set<String> subdomains,
+      Map<String, Set<String>> dependencies,
+      Map<String, Set<String>> subscriptions) {
     this.basePackage = Objects.requireNonNull(basePackage, "basePackage 不能为空");
     this.foundationSubdomain =
         Objects.requireNonNull(foundationSubdomain, "foundationSubdomain 不能为空");
     this.subdomains = Set.copyOf(Objects.requireNonNull(subdomains, "subdomains 不能为空"));
+    this.dependencies = Map.copyOf(dependencies);
+    this.subscriptions = Map.copyOf(subscriptions);
     if (basePackage.isBlank()) {
       throw new IllegalArgumentException("basePackage 不能为空白字符串");
     }
@@ -75,6 +115,38 @@ public final class SubdomainArchitectureRules {
       throw new IllegalArgumentException(
           "底座子域 " + foundationSubdomain + " 必须在声明的子域 " + this.subdomains + " 里");
     }
+  }
+
+  /// 声明子域 `from` 可以经 `to` 的全部公开包依赖它。
+  ///
+  /// @param from 依赖方
+  /// @param to 被依赖方
+  /// @return 多了这条边的新规则集；原规则集不变
+  /// @throws IllegalArgumentException 名字未声明、`from == to`、`from` 或 `to` 是底座
+  public SubdomainArchitectureRules allowingDependency(String from, String to) {
+    requireEdge(from, to);
+    return new SubdomainArchitectureRules(
+        basePackage,
+        foundationSubdomain,
+        subdomains,
+        withEdge(dependencies, from, to),
+        subscriptions);
+  }
+
+  /// 声明子域 `from` 只能经 `to` 的事件契约（`{根包}.domain.{to}.event..`）依赖它，即订阅它发布的事件。
+  ///
+  /// @param from 订阅方
+  /// @param to 发布方
+  /// @return 多了这条边的新规则集；原规则集不变
+  /// @throws IllegalArgumentException 名字未声明、`from == to`、`from` 或 `to` 是底座
+  public SubdomainArchitectureRules allowingSubscription(String from, String to) {
+    requireEdge(from, to);
+    return new SubdomainArchitectureRules(
+        basePackage,
+        foundationSubdomain,
+        subdomains,
+        dependencies,
+        withEdge(subscriptions, from, to));
   }
 
   /// 五个层根包下的类必须落在某个已声明子域的包里。
@@ -100,8 +172,25 @@ public final class SubdomainArchitectureRules {
     return classes()
         .that(resideInSomeSubdomain())
         .should(dependOnOtherSubdomainsOnlyThroughPublishedPackages())
-        .as("跨子域只经对方的公开包（port.read、model.read；底座另加 port.gateway、model.vo、model.enums）")
+        .as(
+            "跨子域只经对方的公开包（port.read、model.read、event；底座另加 port.gateway、port.user、"
+                + "model.vo、model.enums、model.user、exception）")
         .because("子域之间不直接用对方的实体或仓储，拆分时只需把公开包换成 HTTP 契约")
+        .allowEmptyShould(true);
+  }
+
+  /// 子域 A 的类依赖子域 B（B ≠ A）的类时，这条边必须声明过：B 是底座；或声明了 A → B 的依赖边；
+  /// 或声明了 A → B 的订阅边，且目标在 B 的事件契约里。
+  ///
+  /// 目标是否在公开包里由 {@link #crossSubdomainDependenciesGoThroughPublishedPackages} 管，这里只管方向。
+  ///
+  /// @return ArchRule 规则实例
+  public ArchRule crossSubdomainDependenciesAreDeclared() {
+    return classes()
+        .that(resideInSomeSubdomain())
+        .should(dependOnOtherSubdomainsOnlyAlongDeclaredEdges())
+        .as("跨子域依赖必须声明：都可以依赖底座；其余要声明依赖边，或声明只经对方事件契约的订阅边")
+        .because("依赖方向是设计决定：对方恰好公开了读端口，不等于可以随手多一条子域依赖")
         .allowEmptyShould(true);
   }
 
@@ -154,7 +243,81 @@ public final class SubdomainArchitectureRules {
         layersContainOnlyDeclaredSubdomains(),
         subdomainsAreFreeOfCycles(),
         crossSubdomainDependenciesGoThroughPublishedPackages(),
+        crossSubdomainDependenciesAreDeclared(),
         foundationDependsOnNoOtherSubdomain());
+  }
+
+  /// 校验一条要声明的边。
+  ///
+  /// @param from 依赖方
+  /// @param to 被依赖方
+  /// @throws IllegalArgumentException 名字未声明、自环、从底座出发或指向底座
+  private void requireEdge(String from, String to) {
+    if (!subdomains.contains(from) || !subdomains.contains(to)) {
+      throw new IllegalArgumentException("边 " + from + " → " + to + " 里有未声明的子域，已声明 " + subdomains);
+    }
+    if (from.equals(to)) {
+      throw new IllegalArgumentException("子域不用声明依赖自己：" + from);
+    }
+    if (from.equals(foundationSubdomain)) {
+      throw new IllegalArgumentException("底座 " + from + " 不依赖任何子域");
+    }
+    if (to.equals(foundationSubdomain)) {
+      throw new IllegalArgumentException("依赖底座 " + to + " 无需声明");
+    }
+  }
+
+  /// 在边表里加一条边，返回新表。
+  ///
+  /// @param edges 原边表
+  /// @param from 起点
+  /// @param to 终点
+  /// @return 新边表
+  private static Map<String, Set<String>> withEdge(
+      Map<String, Set<String>> edges, String from, String to) {
+    Map<String, Set<String>> copy = new HashMap<>(edges);
+    Set<String> targets = new HashSet<>(copy.getOrDefault(from, Set.of()));
+    targets.add(to);
+    copy.put(from, Set.copyOf(targets));
+    return copy;
+  }
+
+  /// 依赖别的子域时只沿声明过的边。
+  ///
+  /// @return 条件
+  private ArchCondition<JavaClass> dependOnOtherSubdomainsOnlyAlongDeclaredEdges() {
+    return new ArchCondition<>("只沿声明过的边依赖别的子域") {
+      @Override
+      public void check(JavaClass javaClass, ConditionEvents events) {
+        String source = subdomainOf(javaClass.getPackageName()).orElseThrow();
+        for (Dependency dependency : javaClass.getDirectDependenciesFromSelf()) {
+          String targetPackage =
+              dependency.getTargetClass().getBaseComponentType().getPackageName();
+          Optional<String> target = subdomainOf(targetPackage);
+          if (target.isPresent()
+              && !target.get().equals(source)
+              && !isDeclared(source, target.get(), targetPackage)) {
+            events.add(SimpleConditionEvent.violated(dependency, dependency.getDescription()));
+          }
+        }
+      }
+    };
+  }
+
+  /// 从 `source` 到 `target` 子域里这个包的依赖是否声明过。
+  ///
+  /// @param source 依赖方子域
+  /// @param target 被依赖方子域
+  /// @param targetPackage 被依赖的类所在的包
+  /// @return 声明过时为真
+  private boolean isDeclared(String source, String target, String targetPackage) {
+    if (target.equals(foundationSubdomain)
+        || dependencies.getOrDefault(source, Set.of()).contains(target)) {
+      return true;
+    }
+    String eventContract = basePackage + ".domain." + target + "." + EVENT_CONTRACT;
+    return subscriptions.getOrDefault(source, Set.of()).contains(target)
+        && (targetPackage.equals(eventContract) || targetPackage.startsWith(eventContract + "."));
   }
 
   /// 类属于指定子域。

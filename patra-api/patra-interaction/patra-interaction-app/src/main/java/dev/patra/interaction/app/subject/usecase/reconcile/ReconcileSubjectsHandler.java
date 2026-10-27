@@ -20,7 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionOperations;
 
-/// 每日对账：对每种对象按 `subject_id` 升序 {@value #PAGE_SIZE} 行一页，按身份锚批量回查来源（事务外），
+/// 每日对账：对每种外部对象按 `subject_id` 升序 {@value #PAGE_SIZE} 行一页，按身份锚批量回查来源（事务外），
 /// 套聚合的对账规则后一页一个事务写回。某页来源不可用就跳过、计数，继续下一页；任务内不重试，次日再跑。
 ///
 /// 不加锁：调度中心「单机串行」保证同一时间只有一个实例在跑。与首次解析并发写同一行时，两边写的都是来源的
@@ -39,14 +39,14 @@ public class ReconcileSubjectsHandler
   private final TransactionOperations transactions;
   private final Clock clock;
 
-  /// 对账全部对象。
+  /// 对账全部外部对象；本地对象由所属子域维护，不进对账。
   ///
   /// @param command 命令
   /// @return 计数
   @Override
   public ReconciliationResult handle(ReconcileSubjectsCommand command) {
     Counter total = new Counter();
-    for (SubjectType type : SubjectType.values()) {
+    for (SubjectType type : SubjectType.externalTypes()) {
       Counter counter = reconcile(type, sources.of(type));
       log.info(
           "对象对账完成: type={}, scanned={}, sourceIdChanged={}, becameUnavailable={}, revived={},"

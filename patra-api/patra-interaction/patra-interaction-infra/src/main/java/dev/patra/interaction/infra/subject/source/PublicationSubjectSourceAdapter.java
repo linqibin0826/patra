@@ -6,7 +6,6 @@ import dev.patra.catalog.api.dto.publication.PublicationResolveByPmidsReq;
 import dev.patra.catalog.api.dto.publication.PublicationResolveResp;
 import dev.patra.catalog.api.dto.publication.PublicationStateResp;
 import dev.patra.catalog.api.endpoint.PublicationEndpoint;
-import dev.patra.interaction.domain.subject.exception.SubjectSourceUnavailableException;
 import dev.patra.interaction.domain.subject.model.enums.NaturalKeyScheme;
 import dev.patra.interaction.domain.subject.model.enums.SubjectType;
 import dev.patra.interaction.domain.subject.model.source.SourceRecord;
@@ -14,23 +13,18 @@ import dev.patra.interaction.domain.subject.model.source.SourceState;
 import dev.patra.interaction.domain.subject.model.vo.NaturalKey;
 import dev.patra.interaction.domain.subject.model.vo.SubjectSnapshot;
 import dev.patra.interaction.domain.subject.port.source.SubjectSourcePort;
-import dev.patra.tool.core.error.remote.RemoteCallException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.ResourceAccessException;
 
 /// 文献的来源策略：经 catalog 的内部 HTTP Interface（`patra-catalog-api` 的 `PublicationEndpoint`）解析。
 ///
-/// 下游的三种失败都翻译成 {@link SubjectSourceUnavailableException}：回了错误响应
-/// （`RemoteCallException`；这两个接口不用 404，422 / 400 是本服务的程序错误，日志里看得出来）；连不上或超时
-/// （`ResourceAccessException`）；注册中心里没有 catalog 实例（`IllegalStateException`）。`try` 只包住一次代理调用。
+/// 失败翻译见 {@link CatalogSourceCalls}：任何失败都是 `SubjectSourceUnavailableException`。
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -56,7 +50,10 @@ public class PublicationSubjectSourceAdapter implements SubjectSourcePort {
   @Override
   public Optional<SourceRecord> resolveByKey(long sourceId) {
     PublicationResolveResp resp =
-        call(() -> publications.resolveByIds(PublicationResolveByIdsReq.of(List.of(sourceId))), 1);
+        CatalogSourceCalls.call(
+            SubjectType.PUBLICATION,
+            () -> publications.resolveByIds(PublicationResolveByIdsReq.of(List.of(sourceId))),
+            1);
     return resp.items().stream().findFirst().flatMap(PublicationSubjectSourceAdapter::toRecord);
   }
 
@@ -71,7 +68,8 @@ public class PublicationSubjectSourceAdapter implements SubjectSourcePort {
     }
     List<String> pmids = keys.stream().map(NaturalKey::value).toList();
     PublicationResolveResp resp =
-        call(
+        CatalogSourceCalls.call(
+            SubjectType.PUBLICATION,
             () -> publications.resolveByPmids(PublicationResolveByPmidsReq.of(pmids)),
             pmids.size());
     return resp.items().stream()
@@ -97,7 +95,7 @@ public class PublicationSubjectSourceAdapter implements SubjectSourcePort {
             item.id(),
             NaturalKey.of(NaturalKeyScheme.PMID, item.pmid()),
             item.state() == PublicationStateResp.DELETED ? SourceState.DELETED : SourceState.ACTIVE,
-            SubjectSnapshot.of(item.title(), item.journal(), publishedDate(item))));
+            SubjectSnapshot.of(item.title(), item.journal(), publishedDate(item), null)));
   }
 
   /// 出版日期：不合降精度写法时按「无日期」处理并记 WARN，不让一行坏数据拖垮整页对账或一次收藏。
@@ -111,28 +109,5 @@ public class PublicationSubjectSourceAdapter implements SubjectSourcePort {
       return null;
     }
     return date;
-  }
-
-  /// 调一次内部接口并翻译失败。
-  ///
-  /// @param request 代理调用
-  /// @param keyCount 请求键个数（日志用）
-  /// @return 响应
-  /// @throws SubjectSourceUnavailableException 任何失败
-  private static PublicationResolveResp call(
-      Supplier<PublicationResolveResp> request, int keyCount) {
-    try {
-      return request.get();
-    } catch (RemoteCallException ex) {
-      log.warn(
-          "catalog 解析接口返回错误: keys={}, httpStatus={}, errorCode={}",
-          keyCount,
-          ex.getHttpStatus(),
-          ex.getErrorCode());
-      throw new SubjectSourceUnavailableException(ex);
-    } catch (ResourceAccessException | IllegalStateException ex) {
-      log.warn("catalog 解析接口不可用: keys={}, cause={}", keyCount, ex.getClass().getSimpleName());
-      throw new SubjectSourceUnavailableException(ex);
-    }
   }
 }

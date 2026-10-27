@@ -10,6 +10,7 @@ import dev.patra.interaction.domain.subject.model.source.SourceRecord;
 import dev.patra.interaction.domain.subject.model.source.SourceState;
 import dev.patra.interaction.domain.subject.model.vo.NaturalKey;
 import dev.patra.interaction.domain.subject.model.vo.SubjectId;
+import dev.patra.interaction.domain.subject.model.vo.SubjectOwner;
 import dev.patra.interaction.domain.subject.model.vo.SubjectSnapshot;
 import java.time.Instant;
 import java.util.Optional;
@@ -19,8 +20,10 @@ import org.junit.jupiter.api.Test;
 class SubjectAggregateTest {
 
   private static final NaturalKey PMID_1 = NaturalKey.of(NaturalKeyScheme.PMID, "1");
-  private static final SubjectSnapshot SNAPSHOT_A = SubjectSnapshot.of("A", "Journal A", "2019");
-  private static final SubjectSnapshot SNAPSHOT_B = SubjectSnapshot.of("B", "Journal B", "2020-03");
+  private static final SubjectSnapshot SNAPSHOT_A =
+      SubjectSnapshot.of("A", "Journal A", "2019", null);
+  private static final SubjectSnapshot SNAPSHOT_B =
+      SubjectSnapshot.of("B", "Journal B", "2020-03", null);
   private static final Instant T0 = Instant.parse("2026-10-23T06:30:00Z");
   private static final Instant T1 = Instant.parse("2026-10-24T06:30:00Z");
 
@@ -79,6 +82,52 @@ class SubjectAggregateTest {
   void should_reject_active_without_source_id() {
     assertThatThrownBy(() -> active(100L).toBuilder().sourceId(null).build())
         .isInstanceOf(IllegalStateException.class);
+  }
+
+  /// 本地对象必须有所有者。
+  @Test
+  void should_require_owner_for_local_subject() {
+    assertThatThrownBy(() -> post(null)).isInstanceOf(IllegalStateException.class);
+  }
+
+  /// 外部对象不能有所有者。
+  @Test
+  void should_forbid_owner_for_external_subject() {
+    assertThatThrownBy(() -> active(100L).toBuilder().owner(SubjectOwner.of(9L, false)).build())
+        .isInstanceOf(IllegalStateException.class);
+  }
+
+  /// 本地对象的所有者与匿名标记照原样保存。
+  @Test
+  void should_keep_owner_of_local_subject() {
+    assertThat(post(SubjectOwner.of(9L, true)).getOwner()).isEqualTo(SubjectOwner.of(9L, true));
+    assertThat(active(100L).getOwner()).isNull();
+  }
+
+  /// 本地对象不对账：对账会清掉它的来源 ID。
+  @Test
+  void should_refuse_to_reconcile_local_subject() {
+    SubjectAggregate post = post(SubjectOwner.of(9L, false));
+
+    assertThatThrownBy(() -> post.reconcile(Optional.empty(), T1))
+        .isInstanceOf(IllegalStateException.class);
+  }
+
+  /// 帖子 7 的登记行。
+  ///
+  /// @param owner 所有者，可空
+  /// @return 聚合
+  private static SubjectAggregate post(SubjectOwner owner) {
+    return SubjectAggregate.builder()
+        .subjectId(SubjectId.of(8L))
+        .type(SubjectType.POST)
+        .naturalKey(NaturalKey.of(NaturalKeyScheme.POST, "7"))
+        .sourceId(7L)
+        .state(SubjectState.ACTIVE)
+        .snapshot(SNAPSHOT_A)
+        .snapshotAt(T0)
+        .owner(owner)
+        .build();
   }
 
   /// 基线：ACTIVE、快照 A、快照时间 T0。

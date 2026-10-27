@@ -1,12 +1,12 @@
 package dev.patra.interaction.app.collection.service;
 
 import dev.patra.interaction.domain.collection.exception.CollectionNotFoundException;
-import dev.patra.interaction.domain.collection.exception.UserDirectoryUnavailableException;
 import dev.patra.interaction.domain.collection.model.read.CollectionSummary;
-import dev.patra.interaction.domain.collection.model.user.UserCard;
 import dev.patra.interaction.domain.collection.model.vo.CollectionId;
 import dev.patra.interaction.domain.collection.port.read.LibraryReadPort;
-import dev.patra.interaction.domain.collection.port.user.UserDirectoryPort;
+import dev.patra.interaction.domain.subject.exception.UserDirectoryUnavailableException;
+import dev.patra.interaction.domain.subject.model.user.UserCard;
+import dev.patra.interaction.domain.subject.port.user.UserDirectoryPort;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;

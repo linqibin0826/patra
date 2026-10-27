@@ -4,13 +4,23 @@ import java.util.regex.Pattern;
 
 /// 对象的展示快照：兜底与「已失效」展示，也是 collection 按出版日期 / 期刊排序的数据来源。
 ///
+/// 各字段在不同类型里的含义：
+///
+/// | 类型 | `title` | `journal` | `publishedDate` | `abbreviation` |
+/// |---|---|---|---|---|
+/// | 文献 | 标题 | 期刊全称 | 出版日期 | null |
+/// | 期刊 | 期刊全称 | null | null | MEDLINE 刊名缩写，可空 |
+/// | 投稿经验 | 由投稿经验子域定 | 由投稿经验子域定 | 由投稿经验子域定 | 由投稿经验子域定 |
+///
 /// `publishedDate` 是 ISO 8601 降精度字符串（`2019`、`2019-03`、`2019-03-15`），按字典序倒排即
 /// 「年、月、日依次降序，缺的排后」。只校验写法，不做历法校验，以来源为准。
 ///
 /// @param title 标题原文（含内联标记），可空
 /// @param journal 期刊全称，可空
 /// @param publishedDate 出版日期，可空
-public record SubjectSnapshot(String title, String journal, String publishedDate) {
+/// @param abbreviation 期刊缩写，可空
+public record SubjectSnapshot(
+    String title, String journal, String publishedDate, String abbreviation) {
 
   private static final Pattern PUBLISHED_DATE =
       Pattern.compile("[0-9]{4}(-(0[1-9]|1[0-2])(-(0[1-9]|[12][0-9]|3[01]))?)?");
@@ -20,6 +30,7 @@ public record SubjectSnapshot(String title, String journal, String publishedDate
   /// @param title 标题
   /// @param journal 期刊
   /// @param publishedDate 出版日期
+  /// @param abbreviation 期刊缩写
   public SubjectSnapshot {
     if (publishedDate != null && !isValidPublishedDate(publishedDate)) {
       throw new IllegalArgumentException("出版日期不是 ISO 8601 降精度写法：" + publishedDate);
@@ -31,9 +42,11 @@ public record SubjectSnapshot(String title, String journal, String publishedDate
   /// @param title 标题
   /// @param journal 期刊
   /// @param publishedDate 出版日期
+  /// @param abbreviation 期刊缩写
   /// @return 快照
-  public static SubjectSnapshot of(String title, String journal, String publishedDate) {
-    return new SubjectSnapshot(title, journal, publishedDate);
+  public static SubjectSnapshot of(
+      String title, String journal, String publishedDate, String abbreviation) {
+    return new SubjectSnapshot(title, journal, publishedDate, abbreviation);
   }
 
   /// 出版日期的写法是否合法。

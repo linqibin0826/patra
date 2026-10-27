@@ -117,7 +117,7 @@ class CollectItemHandlerTest {
   /// 未知类型。
   @Test
   void should_reject_unknown_type() {
-    assertThatThrownBy(() -> handler.handle(CollectItemCommand.of("journal", "100")))
+    assertThatThrownBy(() -> handler.handle(CollectItemCommand.of("unknown", "100")))
         .isInstanceOf(InvalidCollectionRequestException.class);
     verifyNoInteractions(gateway);
   }

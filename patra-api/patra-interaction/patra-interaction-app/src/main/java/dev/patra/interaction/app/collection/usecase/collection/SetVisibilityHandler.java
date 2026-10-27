@@ -4,12 +4,12 @@ import dev.patra.interaction.domain.collection.exception.CollectionNotFoundExcep
 import dev.patra.interaction.domain.collection.exception.PublishNotAllowedException;
 import dev.patra.interaction.domain.collection.model.enums.CollectionVisibility;
 import dev.patra.interaction.domain.collection.model.read.CollectionSummary;
-import dev.patra.interaction.domain.collection.model.user.AccountState;
-import dev.patra.interaction.domain.collection.model.user.UserCard;
 import dev.patra.interaction.domain.collection.model.vo.CollectionId;
 import dev.patra.interaction.domain.collection.port.repository.CollectionRepository;
 import dev.patra.interaction.domain.collection.port.repository.LibraryRepository;
-import dev.patra.interaction.domain.collection.port.user.UserDirectoryPort;
+import dev.patra.interaction.domain.subject.model.user.AccountState;
+import dev.patra.interaction.domain.subject.model.user.UserCard;
+import dev.patra.interaction.domain.subject.port.user.UserDirectoryPort;
 import dev.patra.tool.core.security.CurrentUserPort;
 import dev.patra.tool.cqrs.CommandHandler;
 import java.time.Clock;
