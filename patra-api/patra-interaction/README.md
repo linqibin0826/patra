@@ -10,7 +10,7 @@
 |---|---|---|
 | `subject` | 对象底座：每个被互动过的对象在登记表 `subject.registry` 里一行，互动数据只引用本地 `subject_id`。外部对象（文献、期刊）锚定在外部标识上（`pmid:…`、`nlm:…`），catalog 内部 ID 只是缓存，首次互动时同步向 catalog 解析并登记（catalog 不可用或对象不存在则拒绝），每日对账按锚刷新；本地对象（投稿经验，`post:…`）由所属子域在自己的事务里登记、改状态，带所有者与「是否匿名」，不对账。能力矩阵在 `SubjectType`。另外提供各子域共用的用户名片（`UserDirectoryPort`）、发表守卫（`PublishGuardGateway`：资格回查与按作者计数的频率限制）和注销清理流程（各子域实现 `UserDataCleanupGateway`）。工程设计 `docs/patra/specs/2026-10-24-subject-registry-design.md`、`docs/patra/specs/2026-10-27-interaction-foundation-extension-design.md` | PAP-112、PAP-120 |
 | `collection` | 文献库与收藏夹：文献库条目（用户 × 文献唯一，可带备注），扁平的收藏夹（私有 / 公开、一个条目可进多个夹），复制别人的公开收藏夹、批量「我的状态」、导出 key；向底座登记注销清理动作。工程设计 `docs/patra/specs/2026-10-24-interaction-collection-design.md` | PAP-113 |
-| `discussion` | 文献与投稿经验下的讨论：评论与回复、两层展示与单楼视图、修改历史、@ 联想；评论写入时在同一事务里发布进程内事件（事件契约 `domain.discussion.event`） | PAP-121 |
+| `discussion` | 文献与投稿经验下的讨论：评论与回复（树存、两层展示、「回复 @X」）、单楼视图与对话链、Markdown 正文与 @（存 `<@用户ID>`）、修改历史（发布 5 分钟内的修改不记版本）、有回复的删除留占位、@ 联想；匿名所有者的评论对别人显示「匿名作者」。评论写入、编辑、删除时在同一事务里发布进程内事件（事件契约 `domain.discussion.event`）。工程设计 `docs/patra/specs/2026-10-27-interaction-discussion-design.md` | PAP-121 |
 | `post` | 投稿经验（按帖子结构存）：帖子基表 + 经验扩展表 + 修改历史（发布后 5 分钟内的修改不记版本）；字段与首轮 / 最终结果的一致性规则；同一作者同刊同投稿日期只能有一条；匿名由服务端遮蔽（他人拿不到作者 ID）；期刊页汇总读取时由 PG `percentile_cont` 算、Java 半进位；写入经发表守卫（每天 10 条），经验作为本地对象 `POST` 在同一事务里登记、删除时置为失效。工程设计 `docs/patra/specs/2026-10-27-interaction-post-design.md` | PAP-122 |
 | `notification` | 站内提醒：订阅讨论的事件，按规则在同一事务里写入；未读数、列表、已读、5 个月清理 | PAP-123 |
 
@@ -69,6 +69,14 @@ dev.patra.interaction.config           装配（XXL-Job 执行器等），不属
 - 删除是软删：内容留在库里不再展示；列表、汇总、主页都只读 `ACTIVE`。帖子不物理删除，所以列表的游标（上一页最后一条的 ID）总能反查排序键。
 - 「同一作者同刊同投稿日期只能有一条未删除的经验」跨两张表、只对 `ACTIVE` 生效，没有唯一索引：写、改经验的事务先拿事务级 advisory lock `post.author:{userId}` 再查重。写经验时先过底座的发表守卫（它拿 `subject.publish:{userId}`），再拿作者锁。
 - 登记表里 `POST` 的快照：`journal` = 期刊全称、`abbreviation` = 期刊缩写、`publishedDate` = 投稿月份（提醒的上下文行用）；改投稿月份时刷新。
+
+## 4.3 discussion 的存储与并发
+
+- 两张表：`discussion.comment`（根评论与回复，`root_id` 是所在楼的根评论、根评论等于自己；`parent_id` 是回复的那一条；正文存 Markdown 原文，@ 存 `<@用户ID>`；`mentioned_user_ids` 记这条评论曾经 @ 过的人，编辑时只对第一次 @ 到的人算新增）、`discussion.comment_revision`（被替换下来的旧版本，当前版本在主表）。按对象读、量很小，不分区。
+- 树的完整性：`root_id`、`parent_id` 两个自引用外键，还有回复的评论删不掉（只能变占位）；修改历史随评论级联删除。删除时有直接回复的变占位（清正文与修改历史），没有的整行删除，再沿父评论往上删掉已经没有回复的占位。
+- 并发：发表回复、删除先拿事务级 advisory lock `discussion.thread:{rootId}`（同一楼的结构变化排队），编辑用 `SELECT … FOR NO KEY UPDATE` 锁行；加锁顺序是作者锁（发表守卫）→ 楼锁 → 行锁。
+- 读：对象未登记（还没人讨论过）回空列表，对象已失效回 404 `SUBJECT_UNAVAILABLE`；作者、被回复者、被 @ 的人一次批量向 identity 取名片，主页对访客不可见的去掉用户名与头像地址。
+- 进程内事件：`CommentPublishedEvent`、`CommentEditedEvent`、`CommentDeletedEvent`，在写入事务里用 `ApplicationEventPublisher` 发布；提醒子域用同步 `@EventListener` 订阅，订阅方失败时评论一起回滚。
 
 ## 5. 运行
 

@@ -5,15 +5,16 @@ import static com.github.tomakehurst.wiremock.client.WireMock.anyUrl;
 import static com.github.tomakehurst.wiremock.client.WireMock.ok;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 
-import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
+import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.extension.Extension;
 import dev.patra.interaction.infra.config.InteractionITPostgreSQLContainerInitializer;
 import dev.patra.tool.security.test.TestIdentity;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
@@ -35,6 +36,7 @@ import tools.jackson.databind.json.JsonMapper;
 @ContextConfiguration(initializers = InteractionITPostgreSQLContainerInitializer.class)
 @ActiveProfiles("test")
 @AutoConfigureRestTestClient
+@Import(DiscussionEventRecorder.class)
 public abstract class InteractionFlowITSupport {
 
   /// JSON 解析。
@@ -46,18 +48,12 @@ public abstract class InteractionFlowITSupport {
   /// 假 identity。
   protected static final FakeIdentity IDENTITY_DATA = new FakeIdentity();
 
-  @RegisterExtension
-  protected static final WireMockExtension catalog =
-      WireMockExtension.newInstance()
-          .options(wireMockConfig().dynamicPort().http2PlainDisabled(true).extensions(CATALOG_DATA))
-          .build();
+  /// 假 catalog 的 WireMock：每个测试 JVM 只启动一次，端口在整个 JVM 里不变。JUnit 扩展会在每个测试类前换一个新端口，
+  /// 而流程测试共用的 Spring 上下文在第一个类启动时就记下了下游地址，同一 JVM 里跑到后面的类会连不上。
+  protected static final WireMockServer catalog = start(CATALOG_DATA);
 
-  @RegisterExtension
-  protected static final WireMockExtension identity =
-      WireMockExtension.newInstance()
-          .options(
-              wireMockConfig().dynamicPort().http2PlainDisabled(true).extensions(IDENTITY_DATA))
-          .build();
+  /// 假 identity 的 WireMock，同上。
+  protected static final WireMockServer identity = start(IDENTITY_DATA);
 
   @DynamicPropertySource
   static void downstreamInstances(DynamicPropertyRegistry registry) {
@@ -82,10 +78,25 @@ public abstract class InteractionFlowITSupport {
     if (!tables.isEmpty()) {
       jdbcTemplate.update("TRUNCATE " + String.join(", ", tables));
     }
+    catalog.resetAll();
+    identity.resetAll();
     CATALOG_DATA.clear();
     IDENTITY_DATA.clear();
+    DiscussionEventRecorder.EVENTS.clear();
     catalog.stubFor(any(anyUrl()).willReturn(ok()));
     identity.stubFor(any(anyUrl()).willReturn(ok()));
+  }
+
+  /// 启动一个 WireMock（JVM 退出时随之结束）。
+  ///
+  /// @param transformer 对任何请求都交给它回应的扩展
+  /// @return 已启动的服务
+  private static WireMockServer start(Extension transformer) {
+    WireMockServer server =
+        new WireMockServer(
+            wireMockConfig().dynamicPort().http2PlainDisabled(true).extensions(transformer));
+    server.start();
+    return server;
   }
 
   /// 以某个用户（或匿名，`null`）发请求。

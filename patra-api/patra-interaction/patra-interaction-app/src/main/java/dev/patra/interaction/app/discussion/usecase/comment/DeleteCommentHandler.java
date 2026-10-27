@@ -1,0 +1,103 @@
+package dev.patra.interaction.app.discussion.usecase.comment;
+
+import dev.patra.interaction.domain.discussion.event.CommentDeletedEvent;
+import dev.patra.interaction.domain.discussion.exception.CommentNotFoundException;
+import dev.patra.interaction.domain.discussion.model.aggregate.CommentAggregate;
+import dev.patra.interaction.domain.discussion.model.enums.CommentRemoval;
+import dev.patra.interaction.domain.discussion.model.enums.CommentState;
+import dev.patra.interaction.domain.discussion.port.repository.CommentRepository;
+import dev.patra.tool.core.security.CurrentUserPort;
+import dev.patra.tool.cqrs.CommandHandler;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionOperations;
+
+/// 删除自己的评论（spec 5.6）：只有作者能删，不查发表资格。在楼锁里判断：有直接回复变占位（清正文与修改历史），
+/// 没有就整条去掉，再沿父评论往上，去掉已经没有回复的占位；已是占位再删什么都不做。变占位或去掉时发布
+/// {@link CommentDeletedEvent}。
+@Component
+@RequiredArgsConstructor
+public class DeleteCommentHandler implements CommandHandler<DeleteCommentCommand, DeleteResult> {
+
+  private final CommentRepository comments;
+  private final CurrentUserPort currentUser;
+  private final TransactionOperations transactions;
+  private final ApplicationEventPublisher events;
+  private final Clock clock;
+
+  /// 删除。
+  ///
+  /// @param command 命令
+  /// @return 结果
+  @Override
+  public DeleteResult handle(DeleteCommentCommand command) {
+    long actor = currentUser.require().userId();
+    long id = command.commentId();
+    CommentAggregate preRead = comments.find(id).orElseThrow(CommentNotFoundException::new);
+    preRead.requireAuthor(actor);
+    Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
+    return transactions.execute(
+        status -> {
+          comments.lockThread(preRead.getRootId());
+          CommentAggregate comment =
+              comments.findForUpdate(id).orElseThrow(CommentNotFoundException::new);
+          CommentRemoval removal = comment.removalFor(actor, comments.hasReplies(id));
+          return switch (removal) {
+            case NONE -> DeleteResult.of(true, List.of());
+            case PLACEHOLDER -> {
+              comments.markDeleted(id, now);
+              events.publishEvent(deleted(comment, true, now));
+              yield DeleteResult.of(true, List.of());
+            }
+            case REMOVE -> {
+              comments.delete(id);
+              events.publishEvent(deleted(comment, false, now));
+              yield DeleteResult.of(false, removeOrphanedAncestors(comment));
+            }
+          };
+        });
+  }
+
+  /// 沿父评论往上，去掉已经没有回复的占位，直到遇到正常评论、仍有回复的占位或到顶。
+  ///
+  /// @param removed 刚去掉的评论
+  /// @return 去掉的评论：它在前，之后是级联去掉的
+  private List<Long> removeOrphanedAncestors(CommentAggregate removed) {
+    List<Long> removedIds = new ArrayList<>(List.of(removed.getCommentId()));
+    Long parentId = removed.getParentId();
+    while (parentId != null) {
+      CommentAggregate parent =
+          comments.findForUpdate(parentId).orElseThrow(() -> new IllegalStateException("父评论不存在"));
+      if (parent.getState() != CommentState.DELETED || comments.hasReplies(parentId)) {
+        break;
+      }
+      comments.delete(parentId);
+      removedIds.add(parentId);
+      parentId = parent.getParentId();
+    }
+    return removedIds;
+  }
+
+  /// 「评论已删除」事件。
+  ///
+  /// @param comment 被删的评论
+  /// @param placeholder 是否留下占位
+  /// @param now 删除时刻
+  /// @return 事件
+  private static CommentDeletedEvent deleted(
+      CommentAggregate comment, boolean placeholder, Instant now) {
+    return CommentDeletedEvent.builder()
+        .commentId(comment.getCommentId())
+        .subjectId(comment.getSubjectId())
+        .authorId(comment.getAuthorId())
+        .placeholder(placeholder)
+        .deletedAt(now)
+        .build();
+  }
+}
