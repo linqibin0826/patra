@@ -47,7 +47,7 @@ abstract class SubjectRegistryITSupport {
         sourceId,
         pmid(pmid),
         SourceState.ACTIVE,
-        SubjectSnapshot.of("Title " + pmid, "Journal", "2019-03"));
+        SubjectSnapshot.of("Title " + pmid, "Journal", "2019-03", null));
   }
 
   /// 登记表行数。

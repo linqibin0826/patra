@@ -10,6 +10,7 @@ import dev.patra.interaction.domain.subject.model.read.SubjectView;
 import dev.patra.interaction.domain.subject.model.source.SourceRecord;
 import dev.patra.interaction.domain.subject.model.source.SourceState;
 import dev.patra.interaction.domain.subject.model.vo.SubjectId;
+import dev.patra.interaction.domain.subject.model.vo.SubjectOwner;
 import dev.patra.interaction.domain.subject.model.vo.SubjectSnapshot;
 import dev.patra.interaction.domain.subject.port.read.SubjectReadPort;
 import dev.patra.interaction.domain.subject.port.repository.SubjectRepository;
@@ -70,12 +71,49 @@ class SubjectReadAdapterIT extends SubjectRegistryITSupport {
                 .type(PUB)
                 .key("100")
                 .state(SubjectState.ACTIVE)
-                .snapshot(SubjectSnapshot.of("Title 1", "Journal 1", "2019"))
+                .snapshot(SubjectSnapshot.of("Title 1", "Journal 1", "2019", null))
                 .build());
     assertThat(views.get(month.getSubjectId()).snapshot().publishedDate()).isEqualTo("2019-03");
     assertThat(views.get(day.getSubjectId()).key()).isNull();
     assertThat(views.get(day.getSubjectId()).state()).isEqualTo(SubjectState.UNAVAILABLE);
     assertThat(views.get(day.getSubjectId()).snapshot().publishedDate()).isEqualTo("2019-03-15");
+  }
+
+  /// 本地对象的视图带所有者与匿名标记；外部对象的所有者为 null。
+  @Test
+  void should_return_owner_in_views() {
+    SubjectAggregate post = insertPost(7L);
+    SubjectAggregate publication = upsert(active(100L, "1"));
+
+    Map<SubjectId, SubjectView> views =
+        readPort.findByIds(List.of(post.getSubjectId(), publication.getSubjectId()));
+
+    assertThat(views.get(post.getSubjectId()).owner()).isEqualTo(SubjectOwner.of(9L, true));
+    assertThat(views.get(post.getSubjectId()).key()).isEqualTo("7");
+    assertThat(views.get(publication.getSubjectId()).owner()).isNull();
+  }
+
+  /// 本地对象按帖子 ID 查得到。
+  @Test
+  void should_find_local_ids_by_key() {
+    SubjectAggregate post = insertPost(7L);
+
+    assertThat(readPort.findIdsByKeys(SubjectType.POST, List.of("7", "8")))
+        .containsOnly(Map.entry("7", post.getSubjectId()));
+  }
+
+  /// 迁移前写下的行：快照里没有 `abbreviation` 键、所有者两列为空，照样读回。
+  @Test
+  void should_read_rows_written_before_migration() {
+    jdbcTemplate.update(
+        "INSERT INTO subject.registry (subject_id, target_type, natural_key, source_id, state,"
+            + " snapshot, snapshot_at) VALUES (5, 1, 'pmid:5', 500, 'ACTIVE',"
+            + " '{\"title\":\"T\",\"journal\":\"J\",\"publishedDate\":\"2019\"}'::jsonb, now())");
+
+    SubjectView view = readPort.findByIds(List.of(SubjectId.of(5L))).get(SubjectId.of(5L));
+
+    assertThat(view.snapshot()).isEqualTo(SubjectSnapshot.of("T", "J", "2019", null));
+    assertThat(view.owner()).isNull();
   }
 
   @Test
@@ -99,7 +137,7 @@ class SubjectReadAdapterIT extends SubjectRegistryITSupport {
         sourceId,
         pmid(pmid),
         SourceState.ACTIVE,
-        SubjectSnapshot.of("Title " + pmid, "Journal " + pmid, publishedDate));
+        SubjectSnapshot.of("Title " + pmid, "Journal " + pmid, publishedDate, null));
   }
 
   /// 在事务里 upsert。
@@ -108,5 +146,20 @@ class SubjectReadAdapterIT extends SubjectRegistryITSupport {
   /// @return 写入后的聚合
   private SubjectAggregate upsert(SourceRecord record) {
     return transactions.execute(s -> repository.upsertResolved(PUB, record, NOW));
+  }
+
+  /// 在事务里登记帖子（所有者 9，匿名）。
+  ///
+  /// @param postId 帖子 ID
+  /// @return 登记后的聚合
+  private SubjectAggregate insertPost(long postId) {
+    return transactions.execute(
+        s ->
+            repository.insertLocal(
+                SubjectType.POST,
+                postId,
+                SubjectOwner.of(9L, true),
+                SubjectSnapshot.of(null, "The Lancet", "2026-03", "Lancet"),
+                NOW));
   }
 }

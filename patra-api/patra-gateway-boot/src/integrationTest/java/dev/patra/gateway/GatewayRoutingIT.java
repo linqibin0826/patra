@@ -187,6 +187,26 @@ class GatewayRoutingIT {
             .withoutHeader(HttpHeaders.AUTHORIZATION));
   }
 
+  /// 期刊批量卡片匿名放行（PAP-117）：重复参数 `id` 原样转发，下游收不到 `Authorization`。
+  @Test
+  void should_forward_anonymous_venue_batch_request_with_repeated_ids() {
+    catalog.stubFor(
+        get(urlEqualTo("/portal/venues/batch?id=1&id=2")).willReturn(okJson("{\"items\":[]}")));
+
+    restClient
+        .get()
+        .uri("/patra-catalog/portal/venues/batch?id=1&id=2")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .json("{\"items\":[]}");
+
+    catalog.verify(
+        getRequestedFor(urlEqualTo("/portal/venues/batch?id=1&id=2"))
+            .withoutHeader(HttpHeaders.AUTHORIZATION));
+  }
+
   @Test
   void should_forward_post_body_unchanged() {
     catalog.stubFor(post(urlPathEqualTo("/auth/login")).willReturn(okJson("{\"ok\":true}")));

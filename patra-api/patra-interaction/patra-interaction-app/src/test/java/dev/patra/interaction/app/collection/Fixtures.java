@@ -2,12 +2,12 @@ package dev.patra.interaction.app.collection;
 
 import dev.patra.interaction.domain.collection.model.enums.CollectionVisibility;
 import dev.patra.interaction.domain.collection.model.read.CollectionSummary;
-import dev.patra.interaction.domain.collection.model.user.AccountState;
-import dev.patra.interaction.domain.collection.model.user.UserCard;
 import dev.patra.interaction.domain.collection.model.vo.CollectionId;
 import dev.patra.interaction.domain.subject.model.enums.SubjectState;
 import dev.patra.interaction.domain.subject.model.enums.SubjectType;
 import dev.patra.interaction.domain.subject.model.read.SubjectView;
+import dev.patra.interaction.domain.subject.model.user.AccountState;
+import dev.patra.interaction.domain.subject.model.user.UserCard;
 import dev.patra.interaction.domain.subject.model.vo.SubjectId;
 import dev.patra.interaction.domain.subject.model.vo.SubjectSnapshot;
 import java.time.Instant;
@@ -72,7 +72,7 @@ public final class Fixtures {
         .type(SubjectType.PUBLICATION)
         .key(key)
         .state(state)
-        .snapshot(SubjectSnapshot.of("Title " + id, journal, publishedDate))
+        .snapshot(SubjectSnapshot.of("Title " + id, journal, publishedDate, null))
         .build();
   }
 }

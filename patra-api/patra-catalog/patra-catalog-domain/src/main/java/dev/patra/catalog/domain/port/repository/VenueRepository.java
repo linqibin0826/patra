@@ -81,7 +81,7 @@ public interface VenueRepository {
 
   /// 根据 ISSN-L 批量查找载体聚合根。
   ///
-  /// 用于 LSIOU 导入时的匹配查询（优先级最高）。
+  /// 用于 LSIOU 导入时的匹配查询（优先级次高）。
   /// 返回的聚合根包含完整的子实体（标识符、MeSH、关联、索引历史）。
   ///
   /// @param issnLs ISSN-L 集合（不能为 null，可以为空）
@@ -90,12 +90,21 @@ public interface VenueRepository {
 
   /// 根据 NLM ID 批量查找载体聚合根。
   ///
-  /// 用于 LSIOU 导入时的匹配查询（优先级次高）。
+  /// 用于 LSIOU 导入时的匹配查询（优先级最高）。主 NLM、副 NLM 都能命中，同一期刊的多个 NLM
+  /// 各占一个键；只返回未软删的期刊（软删期刊的 NLM 见 [#findSoftDeletedNlmIds]）。
   /// 返回的聚合根包含完整的子实体。
   ///
   /// @param nlmIds NLM ID 集合（不能为 null，可以为空）
-  /// @return NLM ID 到聚合根的映射（永不为 null）
+  /// @return 命中的 NLM ID 到聚合根的映射（永不为 null）
   Map<String, VenueAggregate> findByNlmIds(Collection<String> nlmIds);
+
+  /// 找出入参里属于已软删期刊的 NLM ID（主或副）。
+  ///
+  /// LSIOU 导入据此跳过这些记录：NLM 全局唯一，既不能新建同 NLM 的期刊，也不能把它并进别的期刊。
+  ///
+  /// @param nlmIds NLM ID 集合（不能为 null，可以为空；为空时不查库）
+  /// @return 属于已软删期刊的 NLM ID（永不为 null）
+  Set<String> findSoftDeletedNlmIds(Collection<String> nlmIds);
 
   /// 根据 ISSN（Print 或 Electronic）批量查找载体聚合根。
   ///

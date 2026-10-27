@@ -3,9 +3,13 @@ package dev.patra.interaction.infra.subject.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.interaction.domain.subject.model.aggregate.SubjectAggregate;
+import dev.patra.interaction.domain.subject.model.enums.NaturalKeyScheme;
 import dev.patra.interaction.domain.subject.model.enums.SubjectState;
 import dev.patra.interaction.domain.subject.model.enums.SubjectType;
 import dev.patra.interaction.domain.subject.model.source.SourceRecord;
+import dev.patra.interaction.domain.subject.model.source.SourceState;
+import dev.patra.interaction.domain.subject.model.vo.NaturalKey;
+import dev.patra.interaction.domain.subject.model.vo.SubjectOwner;
 import dev.patra.interaction.domain.subject.model.vo.SubjectSnapshot;
 import dev.patra.interaction.domain.subject.port.repository.SubjectRepository;
 import java.sql.Connection;
@@ -37,7 +41,8 @@ class SubjectRepositoryAdapterIT extends SubjectRegistryITSupport {
 
     assertThat(saved.getState()).isEqualTo(SubjectState.ACTIVE);
     assertThat(saved.getSourceId()).isEqualTo(100L);
-    assertThat(saved.getSnapshot()).isEqualTo(SubjectSnapshot.of("Title 1", "Journal", "2019-03"));
+    assertThat(saved.getSnapshot())
+        .isEqualTo(SubjectSnapshot.of("Title 1", "Journal", "2019-03", null));
     assertThat(saved.getSnapshotAt()).isEqualTo(NOW);
     assertThat(repository.findBySourceId(PUB, 100L))
         .get()
@@ -130,6 +135,109 @@ class SubjectRepositoryAdapterIT extends SubjectRegistryITSupport {
     }
   }
 
+  /// 期刊的锚按字符串原样落库、原样读回：前导零、`R` / `A` 后缀、16 位的新式 ID。
+  @Test
+  void should_round_trip_nlm_anchors_as_written() {
+    List<String> nlmIds = List.of("0404401", "2985213R", "9300367A", "9918523075306676");
+    for (int i = 0; i < nlmIds.size(); i++) {
+      long journalId = 500L + i;
+      NaturalKey anchor = NaturalKey.of(NaturalKeyScheme.NLM, nlmIds.get(i));
+      transactions.execute(
+          s ->
+              repository.upsertResolved(
+                  SubjectType.JOURNAL,
+                  SourceRecord.of(
+                      journalId,
+                      anchor,
+                      SourceState.ACTIVE,
+                      SubjectSnapshot.of("Journal", null, null, "J")),
+                  NOW));
+
+      assertThat(repository.findBySourceId(SubjectType.JOURNAL, journalId))
+          .get()
+          .extracting(SubjectAggregate::getNaturalKey)
+          .isEqualTo(anchor);
+      assertThat(
+              jdbcTemplate.queryForObject(
+                  "SELECT natural_key FROM subject.registry"
+                      + " WHERE source_id = ? AND target_type = 2",
+                  String.class,
+                  journalId))
+          .isEqualTo("nlm:" + nlmIds.get(i));
+    }
+  }
+
+  /// 本地对象：锚是 `post:{帖子 ID}`，来源 ID 就是帖子 ID，带所有者，ACTIVE。
+  @Test
+  void should_insert_local_subject_with_owner() {
+    SubjectAggregate saved = insertPost(7L, SubjectOwner.of(9L, true));
+
+    assertThat(saved.getType()).isEqualTo(SubjectType.POST);
+    assertThat(saved.getNaturalKey()).isEqualTo(NaturalKey.of(NaturalKeyScheme.POST, "7"));
+    assertThat(saved.getSourceId()).isEqualTo(7L);
+    assertThat(saved.getState()).isEqualTo(SubjectState.ACTIVE);
+    assertThat(saved.getOwner()).isEqualTo(SubjectOwner.of(9L, true));
+    assertThat(saved.getSnapshotAt()).isEqualTo(NOW);
+    assertThat(repository.findBySourceId(SubjectType.POST, 7L))
+        .get()
+        .extracting(SubjectAggregate::getSubjectId)
+        .isEqualTo(saved.getSubjectId());
+  }
+
+  /// 改本地对象只写状态与快照，所有者不变。
+  @Test
+  void should_update_local_state_and_snapshot_only() {
+    SubjectAggregate saved = insertPost(7L, SubjectOwner.of(9L, false));
+    SubjectSnapshot edited =
+        SubjectSnapshot.of(null, "Lancet (London, England)", "2026-03", "Lancet");
+    Instant later = NOW.plusSeconds(60);
+
+    boolean updated =
+        transactions.execute(
+            s ->
+                repository.updateLocal(
+                    SubjectType.POST, 7L, SubjectState.UNAVAILABLE, edited, later));
+
+    SubjectAggregate reloaded = repository.findBySourceId(SubjectType.POST, 7L).orElseThrow();
+    assertThat(updated).isTrue();
+    assertThat(reloaded.getSubjectId()).isEqualTo(saved.getSubjectId());
+    assertThat(reloaded.getState()).isEqualTo(SubjectState.UNAVAILABLE);
+    assertThat(reloaded.getSnapshot()).isEqualTo(edited);
+    assertThat(reloaded.getSnapshotAt()).isEqualTo(later);
+    assertThat(reloaded.getOwner()).isEqualTo(SubjectOwner.of(9L, false));
+  }
+
+  /// 没登记过的本地对象：返回 false，什么都不写。
+  @Test
+  void should_report_missing_local_subject() {
+    Boolean updated =
+        transactions.execute(
+            s ->
+                repository.updateLocal(
+                    SubjectType.POST,
+                    8L,
+                    SubjectState.UNAVAILABLE,
+                    SubjectSnapshot.of(null, null, null, null),
+                    NOW));
+
+    assertThat(updated).isFalse();
+    assertThat(rowCount()).isZero();
+  }
+
+  /// 外部对象的 upsert 不碰所有者两列。
+  @Test
+  void should_leave_owner_columns_empty_for_external_subjects() {
+    SubjectAggregate saved = upsert(active(100L, "1"));
+
+    assertThat(saved.getOwner()).isNull();
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM subject.registry"
+                    + " WHERE owner_user_id IS NULL AND owner_anonymous IS NULL",
+                Long.class))
+        .isEqualTo(1L);
+  }
+
   @Test
   void should_page_in_subject_id_order() {
     List<SubjectAggregate> saved =
@@ -160,7 +268,7 @@ class SubjectRepositoryAdapterIT extends SubjectRegistryITSupport {
     SubjectAggregate aChanged =
         a.toBuilder()
             .sourceId(150L)
-            .snapshot(SubjectSnapshot.of("New", "J2", "2020"))
+            .snapshot(SubjectSnapshot.of("New", "J2", "2020", null))
             .snapshotAt(later)
             .build();
     SubjectAggregate bChanged = b.toBuilder().state(SubjectState.UNAVAILABLE).build();
@@ -245,5 +353,21 @@ class SubjectRepositoryAdapterIT extends SubjectRegistryITSupport {
       Thread.currentThread().interrupt();
       throw new IllegalStateException(ex);
     }
+  }
+
+  /// 在事务里登记帖子。
+  ///
+  /// @param postId 帖子 ID
+  /// @param owner 所有者
+  /// @return 登记后的聚合
+  private SubjectAggregate insertPost(long postId, SubjectOwner owner) {
+    return transactions.execute(
+        s ->
+            repository.insertLocal(
+                SubjectType.POST,
+                postId,
+                owner,
+                SubjectSnapshot.of(null, "The Lancet", "2026-03", "Lancet"),
+                NOW));
   }
 }

@@ -43,6 +43,7 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,6 +56,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -215,11 +218,10 @@ class VenuePubmedImportHandlerTest {
   class MatchingPriorityTest {
 
     @Test
-    @DisplayName("优先级 1：应该优先使用 ISSN-L 匹配")
-    void shouldPrioritizeIssnLMatching() {
+    @DisplayName("优先级 1：ISSN-L 与 NLM ID 指向不同期刊时，NLM ID 胜出，不碰 ISSN-L 那个")
+    void should_prefer_nlm_over_issn_l_when_they_point_to_different_venues() {
       // Given
       VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
-      // 记录同时有 ISSN-L, NLM ID 和 ISSN，应该使用 ISSN-L 匹配
       PubmedSerialData record =
           createSerialData("0000001", "Test Journal", "1111-1111", "2222-2222", "3333-3333");
 
@@ -235,38 +237,114 @@ class VenuePubmedImportHandlerTest {
       // When
       handler.handle(command);
 
-      // Then - 验证更新的是 ISSN-L 匹配的期刊
+      // Then - 更新的是 NLM ID 匹配的期刊；ISSN-L 匹配的期刊没被挂上这个 NLM
       verify(venueRepository).updateBatch(updateBatchCaptor.capture());
-      List<VenueAggregate> updated = updateBatchCaptor.getValue();
-      assertThat(updated).hasSize(1);
-      assertThat(updated.getFirst().getIdentifier(VenueIdentifierType.ISSN_L))
-          .hasValue("1111-1111");
+      assertThat(updateBatchCaptor.getValue()).containsExactly(nlmIdMatch);
+      assertThat(issnLMatch.getIdentifiers(VenueIdentifierType.NLM)).isEmpty();
     }
 
     @Test
-    @DisplayName("优先级 2：ISSN-L 无匹配时应该使用 NLM ID 匹配")
-    void shouldFallbackToNlmIdMatching() {
+    @ExtendWith(OutputCaptureExtension.class)
+    @DisplayName("NLM 与 ISSN-L 指向不同期刊时打 WARN，写明两边的期刊")
+    void should_warn_when_nlm_and_issn_l_point_to_different_venues(CapturedOutput output) {
       // Given
       VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
       PubmedSerialData record =
-          createSerialData("0000001", "Test Journal", null, "2222-2222", null);
-
+          createSerialData("0000001", "Test Journal", "1111-1111", null, null);
+      VenueAggregate issnLMatch = createExistingVenue("ISSN-L Matched", null, "1111-1111");
       VenueAggregate nlmIdMatch = createExistingVenue("NLM ID Matched", "0000001", null);
 
       when(fileDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
       when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
-      when(venueRepository.findByIssnLs(any())).thenReturn(Map.of());
+      when(venueRepository.findByIssnLs(any())).thenReturn(Map.of("1111-1111", issnLMatch));
       when(venueRepository.findByNlmIds(any())).thenReturn(Map.of("0000001", nlmIdMatch));
       when(venueRepository.findByIssns(any())).thenReturn(Map.of());
 
       // When
       handler.handle(command);
 
-      // Then - 验证更新的是 NLM ID 匹配的期刊
+      // Then
+      assertThat(output)
+          .contains("WARN")
+          .contains("NLM ID [0000001]")
+          .contains("ISSN-L [1111-1111]")
+          .contains(String.valueOf(nlmIdMatch.getId().value()))
+          .contains(String.valueOf(issnLMatch.getId().value()));
+    }
+
+    @Test
+    @ExtendWith(OutputCaptureExtension.class)
+    @DisplayName("NLM 与 ISSN-L 指向同一期刊时不打 WARN")
+    void should_not_warn_when_nlm_and_issn_l_point_to_the_same_venue(CapturedOutput output) {
+      // Given
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
+      PubmedSerialData record =
+          createSerialData("0000001", "Test Journal", "1111-1111", null, null);
+      VenueAggregate venue = createExistingVenue("Same Journal", "0000001", "1111-1111");
+
+      when(fileDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
+      when(venueRepository.findByIssnLs(any())).thenReturn(Map.of("1111-1111", venue));
+      when(venueRepository.findByNlmIds(any())).thenReturn(Map.of("0000001", venue));
+      when(venueRepository.findByIssns(any())).thenReturn(Map.of());
+
+      // When
+      handler.handle(command);
+
+      // Then
+      assertThat(output).doesNotContain("指向不同期刊");
+    }
+
+    @Test
+    @DisplayName("优先级 2：NLM ID 无匹配时用 ISSN-L，期刊没有主 NLM 时这个 NLM 成为主 NLM")
+    void should_fall_back_to_issn_l_and_adopt_unowned_nlm_as_primary() {
+      // Given
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
+      PubmedSerialData record =
+          createSerialData("0000009", "Test Journal", "1111-1111", null, null);
+
+      VenueAggregate issnLMatch = createExistingVenue("ISSN-L Matched", null, "1111-1111");
+
+      when(fileDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
+      when(venueRepository.findByIssnLs(any())).thenReturn(Map.of("1111-1111", issnLMatch));
+      when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
+      when(venueRepository.findByIssns(any())).thenReturn(Map.of());
+
+      // When
+      handler.handle(command);
+
+      // Then
       verify(venueRepository).updateBatch(updateBatchCaptor.capture());
-      List<VenueAggregate> updated = updateBatchCaptor.getValue();
-      assertThat(updated).hasSize(1);
-      assertThat(updated.getFirst().getIdentifier(VenueIdentifierType.NLM)).hasValue("0000001");
+      assertThat(updateBatchCaptor.getValue()).containsExactly(issnLMatch);
+      assertThat(issnLMatch.getNlmId()).isEqualTo("0000009");
+    }
+
+    @Test
+    @DisplayName("ISSN-L 命中且期刊已有主 NLM 时，无主的 NLM 只挂成副 NLM，主 NLM 不变")
+    void should_add_unowned_nlm_as_secondary_to_issn_l_match() {
+      // Given
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
+      PubmedSerialData record =
+          createSerialData("0000002", "Renamed Journal", "1111-1111", null, null);
+
+      VenueAggregate issnLMatch = createExistingVenue("Old Title", "0000001", "1111-1111");
+
+      when(fileDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
+      when(venueRepository.findByIssnLs(any())).thenReturn(Map.of("1111-1111", issnLMatch));
+      when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
+      when(venueRepository.findByIssns(any())).thenReturn(Map.of());
+
+      // When
+      handler.handle(command);
+
+      // Then
+      verify(venueRepository).updateBatch(updateBatchCaptor.capture());
+      assertThat(updateBatchCaptor.getValue()).containsExactly(issnLMatch);
+      assertThat(issnLMatch.getNlmId()).isEqualTo("0000001");
+      assertThat(issnLMatch.getIdentifiers(VenueIdentifierType.NLM))
+          .containsExactlyInAnyOrder("0000001", "0000002");
     }
 
     @Test
@@ -318,6 +396,40 @@ class VenuePubmedImportHandlerTest {
 
       assertThat(result.createdCount()).isEqualTo(1);
       assertThat(result.updatedCount()).isZero();
+    }
+  }
+
+  @Nested
+  @DisplayName("软删期刊的 NLM")
+  class SoftDeletedVenueTest {
+
+    @Test
+    @DisplayName("NLM 属于已软删期刊的记录跳过：不新建，也不并进 ISSN-L 命中的别的期刊")
+    void should_skip_record_whose_nlm_belongs_to_soft_deleted_venue() {
+      // Given
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
+      PubmedSerialData record =
+          createSerialData("0000003R", "Gone Journal", "3333-3333", null, null);
+      VenueAggregate sameIssnL = createExistingVenue("Has same ISSN-L", null, "3333-3333");
+
+      when(fileDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
+      when(venueRepository.findByIssnLs(any())).thenReturn(Map.of("3333-3333", sameIssnL));
+      when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
+      when(venueRepository.findByIssns(any())).thenReturn(Map.of());
+      when(venueRepository.findSoftDeletedNlmIds(any())).thenReturn(Set.of("0000003R"));
+
+      // When
+      VenuePubmedImportResult result = handler.handle(command);
+
+      // Then
+      assertThat(result.skippedCount()).isEqualTo(1);
+      assertThat(result.updatedCount()).isZero();
+      assertThat(result.createdCount()).isZero();
+      verify(venueRepository, never()).insertAll(anyList());
+      verify(venueRepository, never()).updateBatch(anyList());
+      verify(venueRepository).findSoftDeletedNlmIds(Set.of("0000003R"));
+      assertThat(sameIssnL.getIdentifiers(VenueIdentifierType.NLM)).isEmpty();
     }
   }
 
@@ -713,6 +825,88 @@ class VenuePubmedImportHandlerTest {
   }
 
   @Nested
+  @DisplayName("同一批里同一份刊物的第二条记录")
+  class SameBatchSecondaryNlmTest {
+
+    @Test
+    @DisplayName("库里都没有、共用 ISSN-L：只新建一个期刊，第二条的 NLM 挂成副 NLM")
+    void should_attach_second_nlm_to_venue_created_in_same_batch() {
+      // Given
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
+      PubmedSerialData oldTitle =
+          createSerialData("0404401", "Schweiz Med Wochenschr", "0036-7672", null, null);
+      PubmedSerialData newTitle =
+          createSerialData("100970884", "Swiss medical weekly", "0036-7672", null, null);
+
+      when(fileDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(oldTitle, newTitle));
+      when(venueRepository.findByIssnLs(any())).thenReturn(Map.of());
+      when(venueRepository.findByNlmIds(any())).thenReturn(Map.of());
+      when(venueRepository.findByIssns(any())).thenReturn(Map.of());
+
+      // When
+      VenuePubmedImportResult result = handler.handle(command);
+
+      // Then
+      verify(venueRepository).insertAll(insertAllCaptor.capture());
+      assertThat(insertAllCaptor.getValue())
+          .singleElement()
+          .satisfies(
+              venue -> {
+                assertThat(venue.getNlmId()).isEqualTo("0404401");
+                assertThat(venue.getIdentifiers(VenueIdentifierType.NLM))
+                    .containsExactly("0404401", "100970884");
+              });
+      assertThat(result.createdCount()).isEqualTo(1);
+      assertThat(result.skippedCount()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("先按 NLM 更新了期刊、后一条按 ISSN-L 命中同一期刊：NLM 挂到本批要保存的那个实例上")
+    void should_attach_second_nlm_to_the_instance_being_updated() {
+      // Given
+      VenuePubmedImportCommand command = VenuePubmedImportCommand.of(TEST_URL, TEST_VERSION);
+      PubmedSerialData primary =
+          createSerialData("0404401", "Schweiz Med Wochenschr", "0036-7672", null, null);
+      PubmedSerialData renamed =
+          createSerialData("100970884", "Swiss medical weekly", "0036-7672", null, null);
+      // 三种查找各自重建聚合：同一期刊在内存里是两个实例，只有放进 updateBatch 的那个会被保存
+      VenueAggregate byNlm = existingSwissVenue();
+      VenueAggregate byIssnL = existingSwissVenue();
+
+      when(fileDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
+      when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(primary, renamed));
+      when(venueRepository.findByIssnLs(any())).thenReturn(Map.of("0036-7672", byIssnL));
+      when(venueRepository.findByNlmIds(any())).thenReturn(Map.of("0404401", byNlm));
+      when(venueRepository.findByIssns(any())).thenReturn(Map.of());
+
+      // When
+      VenuePubmedImportResult result = handler.handle(command);
+
+      // Then
+      verify(venueRepository).updateBatch(updateBatchCaptor.capture());
+      assertThat(updateBatchCaptor.getValue()).singleElement().isSameAs(byNlm);
+      assertThat(byNlm.getNlmId()).isEqualTo("0404401");
+      assertThat(byNlm.getIdentifiers(VenueIdentifierType.NLM))
+          .containsExactlyInAnyOrder("0404401", "100970884");
+      assertThat(result.updatedCount()).isEqualTo(1);
+      assertThat(result.skippedCount()).isEqualTo(1);
+    }
+
+    /// 库里已有的合并期刊（主 NLM `0404401`、ISSN-L `0036-7672`），每次调用重建一个新实例。
+    ///
+    /// @return 期刊聚合
+    private VenueAggregate existingSwissVenue() {
+      VenueAggregate venue =
+          VenueAggregate.restore(
+              VenueId.of(77L), VenueType.JOURNAL, "Schweiz Med Wochenschr", null, "0404401", 0L);
+      venue.addIdentifier(VenueIdentifier.forNlm("0404401"));
+      venue.addIdentifier(VenueIdentifier.forIssnL("0036-7672"));
+      return venue;
+    }
+  }
+
+  @Nested
   @DisplayName("已删除 Serial 过滤测试")
   class DeletedSerialFilterTest {
 
@@ -1023,7 +1217,8 @@ class VenuePubmedImportHandlerTest {
   /// @return 带 ID 的 VenueAggregate
   private VenueAggregate createExistingVenue(String title, String nlmId, String issnL) {
     VenueAggregate venue =
-        VenueAggregate.restore(VenueId.of(venueIdCounter++), VenueType.JOURNAL, title, null, 0L);
+        VenueAggregate.restore(
+            VenueId.of(venueIdCounter++), VenueType.JOURNAL, title, null, null, 0L);
     if (nlmId != null) {
       venue.addIdentifier(VenueIdentifier.forNlm(nlmId));
     }

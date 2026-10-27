@@ -195,31 +195,34 @@ public class VenueRepositoryAdapter implements VenueRepository {
       return Map.of();
     }
 
-    // 获取 venue IDs 并构建 NLM ID -> venueId 的映射
-    Map<Long, String> venueIdToNlmId = new HashMap<>();
-    Set<Long> venueIds = new HashSet<>();
-    for (VenueIdentifierEntity idEntity : identifierEntities) {
-      venueIds.add(idEntity.getVenueId());
-      venueIdToNlmId.put(idEntity.getVenueId(), idEntity.getIdentifierValue());
-    }
-
-    // 查询主表并重建聚合根
-    List<VenueAggregate> aggregates = reconstructAggregates(venueIds);
-
-    // 按 NLM ID 构建 Map
+    // 查询主表并重建聚合根（JPA 排除软删的期刊）
+    Set<Long> venueIds =
+        identifierEntities.stream()
+            .map(VenueIdentifierEntity::getVenueId)
+            .collect(Collectors.toSet());
     Map<Long, VenueAggregate> venueIdToAggregate =
-        aggregates.stream()
+        reconstructAggregates(venueIds).stream()
             .collect(Collectors.toMap(a -> a.getId().value(), a -> a, (a1, a2) -> a1));
 
+    // 每个命中的 NLM（主或副）映射到它的期刊：同一期刊的多个 NLM 各占一个键
     Map<String, VenueAggregate> result = new HashMap<>();
-    for (Map.Entry<Long, String> entry : venueIdToNlmId.entrySet()) {
-      VenueAggregate aggregate = venueIdToAggregate.get(entry.getKey());
+    for (VenueIdentifierEntity idEntity : identifierEntities) {
+      VenueAggregate aggregate = venueIdToAggregate.get(idEntity.getVenueId());
       if (aggregate != null) {
-        result.put(entry.getValue(), aggregate);
+        result.put(idEntity.getIdentifierValue(), aggregate);
       }
     }
 
     return result;
+  }
+
+  @Override
+  public Set<String> findSoftDeletedNlmIds(Collection<String> nlmIds) {
+    if (nlmIds == null || nlmIds.isEmpty()) {
+      return Set.of();
+    }
+    return Set.copyOf(
+        identifierDao.findNlmValuesOfSoftDeletedVenues(nlmIds.toArray(String[]::new)));
   }
 
   @Override

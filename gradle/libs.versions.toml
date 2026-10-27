@@ -29,6 +29,8 @@ yauaa = "8.2.0"
 ip2region = "3.3.7"
 twelvemonkeys = "3.15.2"
 webp-imageio = "0.10.0"
+# 提醒摘录：评论 Markdown 转纯文本（PAP-123）
+commonmark = "0.30.1"
 commons-net = "3.11.1"
 commons-compress = "1.28.0"
 bouncycastle = "1.86"
@@ -165,6 +167,7 @@ ip2region = { module = "org.lionsoul:ip2region", version.ref = "ip2region" }
 twelvemonkeys-imageio-webp = { module = "com.twelvemonkeys.imageio:imageio-webp", version.ref = "twelvemonkeys" }
 twelvemonkeys-imageio-jpeg = { module = "com.twelvemonkeys.imageio:imageio-jpeg", version.ref = "twelvemonkeys" }
 webp-imageio = { module = "com.github.usefulness:webp-imageio", version.ref = "webp-imageio" }
+commonmark = { module = "org.commonmark:commonmark", version.ref = "commonmark" }
 
 # Messaging
 rocketmq-spring-boot = { module = "org.apache.rocketmq:rocketmq-spring-boot-starter", version.ref = "rocketmq-spring-boot" }

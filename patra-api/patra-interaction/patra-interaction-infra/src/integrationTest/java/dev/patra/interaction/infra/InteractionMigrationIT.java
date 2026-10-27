@@ -25,7 +25,8 @@ class InteractionMigrationIT {
 
   @Autowired private JdbcTemplate jdbcTemplate;
 
-  /// 除 PG 自带的 schema 外，恰好是 public 与两个子域的 schema。
+  /// 除 PG 自带的 schema 外，只有 public 与子域清单里的 schema（schema 名就是子域名）；subject、collection 一定在。
+  /// 新子域随自己的迁移建 schema，不用改这条测试。
   @Test
   void should_create_one_schema_per_subdomain() {
     assertThat(
@@ -33,7 +34,8 @@ class InteractionMigrationIT {
                 "SELECT schema_name FROM information_schema.schemata "
                     + "WHERE schema_name NOT LIKE 'pg\\_%' AND schema_name <> 'information_schema'",
                 String.class))
-        .containsExactlyInAnyOrder("public", "subject", "collection");
+        .contains("public", "subject", "collection")
+        .isSubsetOf("public", "subject", "collection", "discussion", "post", "notification");
   }
 
   /// Flyway 历史表只有一张，在 public。
@@ -47,15 +49,26 @@ class InteractionMigrationIT {
         .containsExactly("public");
   }
 
-  /// 各子域的脚本都执行成功，版本号就是它们的时间戳。
+  /// 各子域的脚本都执行成功，版本号就是它们的时间戳，按安装顺序递增。新增脚本不用改这条测试。
   @Test
   void should_record_migrations_with_timestamp_versions() {
     assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM public.flyway_schema_history WHERE NOT success", Long.class))
+        .isZero();
+    assertThat(
             jdbcTemplate.queryForList(
-                "SELECT version FROM public.flyway_schema_history "
-                    + "WHERE success ORDER BY installed_rank",
+                "SELECT version FROM public.flyway_schema_history ORDER BY installed_rank",
                 String.class))
-        .containsExactly("20261024100000", "20261024100100", "20261024200000", "20261024210000");
+        .allMatch(version -> version.matches("[0-9]{14}"))
+        .isSorted()
+        .contains(
+            "20261024100000",
+            "20261024100100",
+            "20261024200000",
+            "20261024210000",
+            "20261027120000",
+            "20261027120100");
   }
 
   /// 身份锚全表唯一；来源 ID 只对非空行唯一。
@@ -71,12 +84,12 @@ class InteractionMigrationIT {
         .contains("WHERE (source_id IS NOT NULL)");
   }
 
-  /// 编码、状态、「无来源 ID 必须失效」、PMID 格式四条 CHECK。
+  /// 编码、状态、「无来源 ID 必须失效」、PMID 格式四条 CHECK（99 是不存在的类型编码）。
   @Test
   void should_enforce_registry_checks() {
     jdbcTemplate.update("DELETE FROM subject.registry");
 
-    assertThatThrownBy(() -> insert(1L, 2, "pmid:1", 100L, "ACTIVE"))
+    assertThatThrownBy(() -> insert(1L, 99, "pmid:1", 100L, "ACTIVE"))
         .isInstanceOf(DataIntegrityViolationException.class);
     assertThatThrownBy(() -> insert(2L, 1, "pmid:2", 200L, "GONE"))
         .isInstanceOf(DataIntegrityViolationException.class);
@@ -87,6 +100,63 @@ class InteractionMigrationIT {
     insert(5L, 1, "pmid:5", null, "UNAVAILABLE");
 
     assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM subject.registry", Long.class))
+        .isEqualTo(1L);
+  }
+
+  /// 期刊的 `nlm:` 格式（前导零、`R` 后缀，区分大小写）；帖子的锚必须等于 `post:{source_id}`；所有者两列成对，
+  /// 且只有本地对象（类型 3）有。
+  @Test
+  void should_enforce_journal_post_and_owner_checks() {
+    jdbcTemplate.update("DELETE FROM subject.registry");
+
+    insert(1L, 2, "nlm:0404401", 100L, "ACTIVE");
+    insert(2L, 2, "nlm:2985213R", 200L, "ACTIVE");
+    insertOwned(3L, 3, "post:7", 7L, 9L, true);
+    assertThatThrownBy(() -> insert(4L, 2, "nlm:2985213r", 400L, "ACTIVE"))
+        .isInstanceOf(DataIntegrityViolationException.class);
+    assertThatThrownBy(() -> insert(5L, 2, "pmid:1", 500L, "ACTIVE"))
+        .isInstanceOf(DataIntegrityViolationException.class);
+    assertThatThrownBy(() -> insertOwned(6L, 3, "post:7", 8L, 9L, false))
+        .isInstanceOf(DataIntegrityViolationException.class);
+    assertThatThrownBy(() -> insertOwned(7L, 3, "post:8", null, 9L, false))
+        .isInstanceOf(DataIntegrityViolationException.class);
+    assertThatThrownBy(() -> insert(8L, 3, "post:8", 8L, "ACTIVE"))
+        .isInstanceOf(DataIntegrityViolationException.class);
+    assertThatThrownBy(() -> insertOwned(9L, 1, "pmid:9", 900L, 9L, false))
+        .isInstanceOf(DataIntegrityViolationException.class);
+    assertThatThrownBy(() -> insertOwned(10L, 3, "post:10", 10L, 9L, null))
+        .isInstanceOf(DataIntegrityViolationException.class);
+
+    assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM subject.registry", Long.class))
+        .isEqualTo(3L);
+  }
+
+  /// 帖子的来源 ID 就是帖子 ID，永远不为空：失效状态也不例外（`ck_registry_source_present` 放行失效行，
+  /// 这里只能靠 `ck_registry_post_key` 自己拦住）。
+  @Test
+  void should_reject_post_without_source_id_even_when_unavailable() {
+    jdbcTemplate.update("DELETE FROM subject.registry");
+
+    assertThatThrownBy(() -> insertOwned(11L, 3, "post:11", null, "UNAVAILABLE", 9L, false))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("ck_registry_post_key");
+  }
+
+  /// 发表计数：种类只有 COMMENT / POST，当天条数大于 0，每个作者每种一行。
+  @Test
+  void should_enforce_publish_quota_checks() {
+    jdbcTemplate.update("DELETE FROM subject.publish_quota");
+
+    insertQuota(1L, "COMMENT", 1);
+    assertThatThrownBy(() -> insertQuota(2L, "LIKE", 1))
+        .isInstanceOf(DataIntegrityViolationException.class);
+    assertThatThrownBy(() -> insertQuota(3L, "POST", 0))
+        .isInstanceOf(DataIntegrityViolationException.class);
+    assertThatThrownBy(() -> insertQuota(1L, "COMMENT", 2))
+        .isInstanceOf(DataIntegrityViolationException.class);
+
+    assertThat(
+            jdbcTemplate.queryForObject("SELECT count(*) FROM subject.publish_quota", Long.class))
         .isEqualTo(1L);
   }
 
@@ -206,6 +276,68 @@ class InteractionMigrationIT {
         "SELECT indexdef FROM pg_indexes WHERE schemaname = 'subject' AND indexname = ?",
         String.class,
         name);
+  }
+
+  /// 直接插一行发表计数。
+  ///
+  /// @param userId 作者
+  /// @param kind 种类
+  /// @param dayCount 当天条数
+  private void insertQuota(long userId, String kind, int dayCount) {
+    jdbcTemplate.update(
+        "INSERT INTO subject.publish_quota (user_id, kind, quota_day, day_count,"
+            + " last_published_at) VALUES (?, ?, DATE '2026-10-27', ?, now())",
+        userId,
+        kind,
+        dayCount);
+  }
+
+  /// 直接插一行带所有者的（ACTIVE）。
+  ///
+  /// @param subjectId 本地 ID
+  /// @param type 类型编码
+  /// @param naturalKey 身份锚
+  /// @param sourceId 来源 ID，可空
+  /// @param ownerUserId 所有者
+  /// @param anonymous 是否匿名，可空
+  private void insertOwned(
+      long subjectId,
+      int type,
+      String naturalKey,
+      Long sourceId,
+      long ownerUserId,
+      Boolean anonymous) {
+    insertOwned(subjectId, type, naturalKey, sourceId, "ACTIVE", ownerUserId, anonymous);
+  }
+
+  /// 直接插一行带所有者的，状态自定。
+  ///
+  /// @param subjectId 本地 ID
+  /// @param type 类型编码
+  /// @param naturalKey 身份锚
+  /// @param sourceId 来源 ID，可空
+  /// @param state 状态
+  /// @param ownerUserId 所有者
+  /// @param anonymous 是否匿名，可空
+  private void insertOwned(
+      long subjectId,
+      int type,
+      String naturalKey,
+      Long sourceId,
+      String state,
+      long ownerUserId,
+      Boolean anonymous) {
+    jdbcTemplate.update(
+        "INSERT INTO subject.registry (subject_id, target_type, natural_key, source_id, state,"
+            + " snapshot, snapshot_at, owner_user_id, owner_anonymous)"
+            + " VALUES (?, ?, ?, ?, ?, '{}'::jsonb, now(), ?, ?)",
+        subjectId,
+        type,
+        naturalKey,
+        sourceId,
+        state,
+        ownerUserId,
+        anonymous);
   }
 
   /// 直接插一行。

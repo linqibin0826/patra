@@ -2,6 +2,8 @@ package dev.patra.identity.infra.adapter.persistence.dao;
 
 import dev.patra.identity.infra.adapter.persistence.entity.FormerUsernameEntity;
 import java.time.Instant;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -15,6 +17,14 @@ public interface FormerUsernameDao extends JpaRepository<FormerUsernameEntity, L
   /// @return 实体
   Optional<FormerUsernameEntity> findFirstByUsernameAndReservedUntilAfterOrderByReplacedAtDesc(
       String username, Instant now);
+
+  /// 一组名字在此刻仍在保留期内的全部记录。
+  ///
+  /// @param usernames 名字
+  /// @param now 时刻
+  /// @return 实体，同一个名字可能有多条，不保证顺序
+  List<FormerUsernameEntity> findByUsernameInAndReservedUntilAfter(
+      Collection<String> usernames, Instant now);
 
   /// 某个名字在此刻是否被任何人保留着。
   ///

@@ -7,6 +7,7 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -70,7 +71,11 @@ class GatewayBlockedPathsIT {
             "/patra-catalog/_internal/organizations/04jztag35",
             "/patra-catalog/_internal/mesh/descriptors/D003920",
             "/patra-catalog/_internal/publications/resolve/by-ids",
+            "/patra-catalog/_internal/venues/resolve/by-ids",
+            "/patra-catalog/_internal/venues/resolve/by-nlm-ids",
             "/patra-identity/_internal/sessions/introspect",
+            "/patra-identity/_internal/users/suggest",
+            "/patra-identity/_internal/users/resolve/by-usernames",
             "/patra-identity/admin/users/1/ban",
             "/patra-catalog/actuator/health",
             "/patra-identity/actuator/env");
@@ -90,24 +95,28 @@ class GatewayBlockedPathsIT {
     identity.verify(0, anyRequestedFor(anyUrl()));
   }
 
-  /// 内部接口多是 POST 带 JSON 体（PAP-109 的文献解析），拒绝名单对 POST 同样生效。
+  /// 内部接口多是 POST 带 JSON 体（PAP-109 的文献解析、PAP-117 的期刊解析），拒绝名单对 POST 同样生效。
   @Test
   void should_block_internal_post_with_json_body() {
     String token = GatewayITSessions.issue(identity, 4302L, 9302L);
+    Map<String, String> internalPosts =
+        Map.of(
+            "/patra-catalog/_internal/publications/resolve/by-ids", "{\"ids\":[1]}",
+            "/patra-catalog/_internal/venues/resolve/by-ids", "{\"ids\":[1]}",
+            "/patra-catalog/_internal/venues/resolve/by-nlm-ids", "{\"nlmIds\":[\"0404401\"]}");
 
-    expectForbidden(
-        restClient
-            .post()
-            .uri("/patra-catalog/_internal/publications/resolve/by-ids")
-            .contentType(MediaType.APPLICATION_JSON)
-            .body("{\"ids\":[1]}"));
-    expectForbidden(
-        restClient
-            .post()
-            .uri("/patra-catalog/_internal/publications/resolve/by-ids")
-            .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
-            .contentType(MediaType.APPLICATION_JSON)
-            .body("{\"ids\":[1]}"));
+    internalPosts.forEach(
+        (path, body) -> {
+          expectForbidden(
+              restClient.post().uri(path).contentType(MediaType.APPLICATION_JSON).body(body));
+          expectForbidden(
+              restClient
+                  .post()
+                  .uri(path)
+                  .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .body(body));
+        });
 
     catalog.verify(0, anyRequestedFor(anyUrl()));
   }

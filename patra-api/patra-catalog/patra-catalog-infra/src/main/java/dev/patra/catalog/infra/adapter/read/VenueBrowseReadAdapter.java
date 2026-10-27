@@ -8,6 +8,7 @@ import dev.patra.catalog.domain.port.read.VenueBrowseReadPort;
 import dev.patra.catalog.domain.query.PageResult;
 import dev.patra.catalog.domain.query.PagingParams;
 import dev.patra.catalog.infra.persistence.dao.VenueDao;
+import java.util.Collection;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -55,6 +56,16 @@ public class VenueBrowseReadAdapter implements VenueBrowseReadPort {
 
     List<VenueBrowseReadModel> items = page.getContent().stream().map(this::toReadModel).toList();
     return PageResult.of(items, paging.page(), paging.pageSize(), page.getTotalElements());
+  }
+
+  @Override
+  public List<VenueBrowseReadModel> findCardsByIds(Collection<Long> ids) {
+    if (ids.isEmpty()) {
+      return List.of();
+    }
+    return venueDao.findPortalVenueCardsByIds(ids.toArray(Long[]::new)).stream()
+        .map(this::toReadModel)
+        .toList();
   }
 
   /// 计算各筛选维度的 drill-down 计数。
@@ -161,6 +172,7 @@ public class VenueBrowseReadAdapter implements VenueBrowseReadPort {
         .isOpenAccess(row.getIsOpenAccess())
         .isInDoaj(row.getIsInDoaj())
         .issnL(row.getIssnL())
+        .nlmId(row.getNlmId())
         .build();
   }
 }

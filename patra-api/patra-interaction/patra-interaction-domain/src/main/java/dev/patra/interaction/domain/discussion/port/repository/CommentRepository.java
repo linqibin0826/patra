@@ -1,0 +1,68 @@
+package dev.patra.interaction.domain.discussion.port.repository;
+
+import dev.patra.interaction.domain.discussion.model.aggregate.CommentAggregate;
+import dev.patra.interaction.domain.discussion.model.read.RevisionRecord;
+import dev.patra.interaction.domain.discussion.model.vo.NewComment;
+import java.time.Instant;
+import java.util.Optional;
+
+/// 评论的写端（`discussion.comment`、`discussion.comment_revision`）。写方法不开事务，由 app 层的事务包住。
+public interface CommentRepository {
+
+  /// 拿一楼的事务级 advisory lock `discussion.thread:{rootId}`：同一楼的回复与删除在锁上排队。
+  ///
+  /// @param rootId 根评论
+  void lockThread(long rootId);
+
+  /// 按 ID 取。
+  ///
+  /// @param commentId 评论
+  /// @return 评论；不存在为空
+  Optional<CommentAggregate> find(long commentId);
+
+  /// 按 ID 取并锁行（`FOR UPDATE`，删除用）。
+  ///
+  /// @param commentId 评论
+  /// @return 评论；不存在为空
+  Optional<CommentAggregate> findForUpdate(long commentId);
+
+  /// 按 ID 取并锁行（`FOR NO KEY UPDATE`，编辑用：不挡往它下面插回复时外键要的锁）。
+  ///
+  /// @param commentId 评论
+  /// @return 评论；不存在为空
+  Optional<CommentAggregate> findForEdit(long commentId);
+
+  /// 有没有直接回复（`parent_id` 是它的评论）。
+  ///
+  /// @param commentId 评论
+  /// @return 有时为 `true`
+  boolean hasReplies(long commentId);
+
+  /// 插入一条新评论（ACTIVE），ID 由这里生成；根评论的 `root_id` 是新 ID 本身。
+  ///
+  /// @param comment 新评论
+  /// @return 新评论 ID
+  long insert(NewComment comment);
+
+  /// 改正文：只写 `body`、`mentioned_user_ids`、`revised_at`。
+  ///
+  /// @param comment 改完的评论
+  void updateBody(CommentAggregate comment);
+
+  /// 往修改历史里追加一个旧版本，版本号是该评论已有最大值 + 1。
+  ///
+  /// @param commentId 评论
+  /// @param revision 旧版本
+  void appendRevision(long commentId, RevisionRecord revision);
+
+  /// 变占位：清正文与提及、记删除时刻，并删掉它的修改历史。
+  ///
+  /// @param commentId 评论
+  /// @param now 删除时刻
+  void markDeleted(long commentId, Instant now);
+
+  /// 整条删除（修改历史随外键级联删除）。
+  ///
+  /// @param commentId 评论
+  void delete(long commentId);
+}

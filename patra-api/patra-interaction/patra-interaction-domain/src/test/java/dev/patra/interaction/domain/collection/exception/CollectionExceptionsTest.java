@@ -41,7 +41,7 @@ class CollectionExceptionsTest {
         .containsExactly(tuple("name", "TAKEN"));
   }
 
-  /// 404、422、503 只带标准特征。
+  /// 404、422 只带标准特征。
   @Test
   void should_use_standard_traits_for_plain_errors() {
     assertThat(new CollectionNotFoundException().getErrorTraits())
@@ -50,7 +50,5 @@ class CollectionExceptionsTest {
         .containsExactly(StandardErrorTrait.NOT_FOUND);
     assertThat(new InvalidCollectionRequestException("x").getErrorTraits())
         .containsExactly(StandardErrorTrait.RULE_VIOLATION);
-    assertThat(new UserDirectoryUnavailableException(new RuntimeException()).getErrorTraits())
-        .containsExactly(StandardErrorTrait.DEP_UNAVAILABLE);
   }
 }

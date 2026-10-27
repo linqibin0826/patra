@@ -2,7 +2,7 @@ package dev.patra.interaction.collection;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.patra.interaction.app.collection.usecase.cleanup.CleanupDeletedUsersCommand;
+import dev.patra.interaction.app.subject.usecase.cleanup.CleanupDeletedUsersCommand;
 import dev.patra.interaction.app.subject.usecase.reconcile.ReconcileSubjectsCommand;
 import dev.patra.tool.cqrs.CommandBus;
 import java.util.ArrayList;

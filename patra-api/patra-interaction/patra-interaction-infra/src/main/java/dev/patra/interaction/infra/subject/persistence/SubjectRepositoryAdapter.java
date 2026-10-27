@@ -1,8 +1,12 @@
 package dev.patra.interaction.infra.subject.persistence;
 
 import dev.patra.interaction.domain.subject.model.aggregate.SubjectAggregate;
+import dev.patra.interaction.domain.subject.model.enums.SubjectState;
 import dev.patra.interaction.domain.subject.model.enums.SubjectType;
 import dev.patra.interaction.domain.subject.model.source.SourceRecord;
+import dev.patra.interaction.domain.subject.model.vo.NaturalKey;
+import dev.patra.interaction.domain.subject.model.vo.SubjectOwner;
+import dev.patra.interaction.domain.subject.model.vo.SubjectSnapshot;
 import dev.patra.interaction.domain.subject.port.repository.SubjectRepository;
 import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
@@ -12,7 +16,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
-/// `SubjectRepository` 的原生 SQL 实现。表只有一张、查询都走索引，不建 JPA 实体。
+/// `SubjectRepository` 的原生 SQL 实现。表只有一张、查询都走索引，不建 JPA 实体。所有者两列只在登记本地对象时
+/// 写入，之后没有任何语句改它们。
 ///
 /// 写方法不开事务，由 app 层的事务包住（`upsertResolved` 的两条语句、`saveReconciled` 的一页）。
 @Component
@@ -141,5 +146,65 @@ public class SubjectRepositoryAdapter implements SubjectRepository {
           .param("subjectId", subject.getSubjectId().value())
           .update();
     }
+  }
+
+  /// 插入本地对象的登记行：锚由类型的前缀与 `localId` 拼成（同时校验 `localId` 的写法），来源 ID 就是 `localId`。
+  ///
+  /// @param type 本地对象种类
+  /// @param localId 所属子域里的 ID
+  /// @param owner 所有者
+  /// @param snapshot 展示快照
+  /// @param now 快照时间
+  /// @return 写入后的登记对象
+  @Override
+  public SubjectAggregate insertLocal(
+      SubjectType type, long localId, SubjectOwner owner, SubjectSnapshot snapshot, Instant now) {
+    NaturalKey naturalKey = NaturalKey.of(type.naturalKeyScheme(), Long.toString(localId));
+    return jdbc.sql(
+            """
+            INSERT INTO subject.registry
+                   (subject_id, target_type, natural_key, source_id, state, snapshot, snapshot_at,
+                    owner_user_id, owner_anonymous)
+            VALUES (:subjectId, :type, :naturalKey, :sourceId, 'ACTIVE', CAST(:snapshot AS jsonb),
+                    :snapshotAt, :ownerUserId, :ownerAnonymous)
+            RETURNING\s"""
+                + SubjectRows.COLUMNS)
+        .param("subjectId", SnowflakeIdGenerator.getId())
+        .param("type", type.code())
+        .param("naturalKey", naturalKey.toString())
+        .param("sourceId", localId)
+        .param("snapshot", rows.writeSnapshot(snapshot))
+        .param("snapshotAt", SubjectRows.utc(now))
+        .param("ownerUserId", owner.userId())
+        .param("ownerAnonymous", owner.anonymous())
+        .query(rows.aggregateMapper())
+        .single();
+  }
+
+  /// 按类型与来源 ID 改本地对象的状态与快照，不碰所有者两列。
+  ///
+  /// @param type 本地对象种类
+  /// @param localId 所属子域里的 ID
+  /// @param state 新状态
+  /// @param snapshot 新快照
+  /// @param now 快照时间
+  /// @return 有这一行时为 `true`
+  @Override
+  public boolean updateLocal(
+      SubjectType type, long localId, SubjectState state, SubjectSnapshot snapshot, Instant now) {
+    return jdbc.sql(
+                """
+                UPDATE subject.registry
+                   SET state = :state, snapshot = CAST(:snapshot AS jsonb),
+                       snapshot_at = :snapshotAt
+                 WHERE target_type = :type AND source_id = :sourceId
+                """)
+            .param("state", state.name())
+            .param("snapshot", rows.writeSnapshot(snapshot))
+            .param("snapshotAt", SubjectRows.utc(now))
+            .param("type", type.code())
+            .param("sourceId", localId)
+            .update()
+        == 1;
   }
 }

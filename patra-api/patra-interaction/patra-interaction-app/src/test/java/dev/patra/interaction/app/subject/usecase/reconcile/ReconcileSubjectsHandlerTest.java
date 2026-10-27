@@ -2,7 +2,9 @@ package dev.patra.interaction.app.subject.usecase.reconcile;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -42,21 +44,32 @@ class ReconcileSubjectsHandlerTest {
   private static final SubjectType PUB = SubjectType.PUBLICATION;
   private static final Instant T0 = Instant.parse("2026-10-23T06:30:00Z");
   private static final Instant NOW = Instant.parse("2026-10-24T06:30:00Z");
-  private static final SubjectSnapshot SNAPSHOT = SubjectSnapshot.of("T", "J", "2019");
+  private static final SubjectSnapshot SNAPSHOT = SubjectSnapshot.of("T", "J", "2019", null);
 
   private final SubjectRepository repository = mock(SubjectRepository.class);
   private final SubjectSourcePort source = mock(SubjectSourcePort.class);
+  private final SubjectSourcePort journals = mock(SubjectSourcePort.class);
   private ReconcileSubjectsHandler handler;
 
   @BeforeEach
   void setUp() {
     when(source.type()).thenReturn(PUB);
+    when(journals.type()).thenReturn(SubjectType.JOURNAL);
     handler =
         new ReconcileSubjectsHandler(
             repository,
-            new SubjectSources(List.of(source)),
+            new SubjectSources(List.of(source, journals)),
             TransactionOperations.withoutTransaction(),
             Clock.fixed(NOW, ZoneOffset.UTC));
+  }
+
+  /// 本地对象不进对账：连分页都不取。
+  @Test
+  void should_never_page_local_types() {
+    handler.handle(ReconcileSubjectsCommand.of());
+
+    verify(repository, never()).findPage(eq(SubjectType.POST), anyLong(), anyInt());
+    verify(repository).findPage(SubjectType.JOURNAL, 0L, 100);
   }
 
   @Test
@@ -114,7 +127,7 @@ class ReconcileSubjectsHandlerTest {
     when(repository.findPage(PUB, 100L, 100)).thenReturn(second);
     when(repository.findPage(PUB, 150L, 100)).thenReturn(List.of());
     when(source.resolveByNaturalKeys(anyCollection()))
-        .thenThrow(new SubjectSourceUnavailableException(new RuntimeException("down")))
+        .thenThrow(new SubjectSourceUnavailableException(PUB, new RuntimeException("down")))
         .thenAnswer(inv -> echo(inv.getArgument(0)));
 
     ReconciliationResult result = handler.handle(ReconcileSubjectsCommand.of());

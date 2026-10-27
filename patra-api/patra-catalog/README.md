@@ -16,7 +16,7 @@ patra-catalog 是 Patra 医学文献数据平台的目录管理微服务，负�
 
 在 Patra 微服务架构中的位置：
 - **外部数据源**：NLM（PubMed baseline / updatefiles、MeSH）、PMC Cloud Service（公开 S3 桶 `pmc-oa-opendata`）、OpenAlex、Scopus、LetPub
-- **调用方**：patra-gateway 转发的门户（patra-portal）读端点 `/portal/**`；patra-identity 经 HTTP Interface 直连（`lb://patra-catalog`）的内部接口 `/_internal/**`（保存资料时校验 ROR ID / MeSH UI 并取名称快照）；patra-interaction 同样直连内部接口，按内部 ID 或 PMID 批量解析文献（对象登记表首次收藏与每日对账）
+- **调用方**：patra-gateway 转发的门户（patra-portal）读端点 `/portal/**`；patra-identity 经 HTTP Interface 直连（`lb://patra-catalog`）的内部接口 `/_internal/**`（保存资料时校验 ROR ID / MeSH UI 并取名称快照）；patra-interaction 同样直连内部接口，按内部 ID 或 PMID 批量解析文献、按期刊 ID 或 NLM ID 批量解析期刊（对象登记表首次登记与每日对账）
 - **依赖服务**：patra-registry（获取 Provenance 配置和数据字典）；MinIO（期刊封面、全文 XML / PDF / 图片）
 
 ## 🔧 主要功能
@@ -67,7 +67,8 @@ patra-catalog 是 Patra 医学文献数据平台的目录管理微服务，负�
 
 7. **PubMed Venue 数据导入**
    - 数据来源：NLM LSIOU（List of Serials Indexed for Online Users），约 15,000 条 MEDLINE 索引期刊
-   - 增量覆盖模式：ISSN-L → NLM ID → ISSN 三级降级匹配策略
+   - 增量覆盖模式：NLM ID → ISSN-L → ISSN 三级降级匹配策略（NLM 与 ISSN-L 指向不同期刊时 NLM 胜出）
+   - NLM 身份：NLM ID 全局唯一（主 NLM 与副 NLM 都只属于一个期刊，V12 两条唯一约束）；期刊的主 NLM 第一次写入后不再改，之后匹配上的其他 NLM 是副 NLM；NLM 属于已软删期刊的记录跳过
    - 批内去重：NLM ID + ISSN-L 双维度防重复创建
    - 已删除 Serial 过滤：跳过 `deletedTimestamp` 非空的记录
    - **OpenAlex 富化**：通过 REST API 查询 OpenAlex Sources，按 ISSN-L 批量获取期刊引用指标（H 指数、i10 指数、两年平均被引）、年度发文统计及开放获取信息（OA 状态、DOAJ 收录、APC 定价）（`OpenAlexEnrichmentQueryPort` → `OpenAlexEnrichmentQueryAdapter`）
@@ -139,6 +140,12 @@ patra-catalog 是 Patra 医学文献数据平台的目录管理微服务，负�
    - 导出服务按 500 个一批读 → 写 → 丢弃，每批一个只读事务（响应体在控制器返回后执行）；写出器有状态（CSV 的 BOM 与表头、JSON 数组括号）。RIS 与 CSV 行尾 CRLF，CSV 带 BOM 便于 Excel 打开中文；日期按实际精度（RIS `DA` 留空、BibTeX 只到年时不写 `month`、CSL-JSON `date-parts` 按精度）
    - 引用用 [citeproc-java](https://github.com/michel-kraemer/citeproc-java)（Apache-2.0）渲染官方 [CSL 样式库](https://github.com/citation-style-language/styles)与 [locales](https://github.com/citation-style-language/locales)（CC BY-SA 3.0，经 `org.citationstyles:styles` / `locales` jar 引入）；四种样式对应 `china-national-standard-gb-t-7714-2015-numeric`、`nlm-citation-sequence`、`apa`、`american-medical-association`，全部 `en-US`（GB/T 西文文献写 et al.）
    - 设计：[文献引用数据、可重放导入与导出](../../docs/patra/specs/2026-10-24-catalog-citation-data-export-design.md)（第 6、7 节）
+
+16. **期刊身份与批量接口**（v0.14 讨论，PAP-117）
+   - 内部（给 interaction，网关对外 403）：`POST /_internal/venues/resolve/by-ids`、`POST /_internal/venues/resolve/by-nlm-ids`，请求体 1 ~ 100 个键；每个请求键一行（按请求顺序、去重），软删的期刊照样返回 `state = DELETED`，查不到的与非期刊类型 `exists = false`；按 NLM 时主、副 NLM 都能命中，返回的 `nlmId` 总是主 NLM；契约在 `patra-catalog-api` 的 `VenueEndpoint`
+   - NLM ID 一律按字符串处理、保留前导零；写法 `^[0-9]{1,19}[A-Z]?$`（有 `R` / `A` 后缀与 16 位新式 ID），区分大小写
+   - 门户：`GET /portal/venues/batch?id=…&id=…`（1 ~ 100），响应 `{ "items": [...] }`，元素与期刊浏览列表项同形；不存在、软删、非期刊的不返回，按请求顺序；期刊卡片（浏览与批量）带 `nlmId`
+   - 设计与上线步骤：[期刊身份与批量接口](../../docs/patra/specs/2026-10-27-catalog-venue-identity-design.md)（第 11 节）
 
 运维步骤见 [v0.11 运维手册](../../docs/patra/runbooks/v0.11-fulltext-runbook.md)。
 

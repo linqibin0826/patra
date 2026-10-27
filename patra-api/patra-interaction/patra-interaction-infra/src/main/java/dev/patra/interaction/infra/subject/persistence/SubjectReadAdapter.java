@@ -89,6 +89,7 @@ public class SubjectReadAdapter implements SubjectReadPort {
         .key(subject.getSourceId() == null ? null : Long.toString(subject.getSourceId()))
         .state(subject.getState())
         .snapshot(subject.getSnapshot())
+        .owner(subject.getOwner())
         .build();
   }
 

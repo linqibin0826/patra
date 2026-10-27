@@ -22,7 +22,7 @@ class VenueAggregateImageKeyTest {
     @DisplayName("restore 后传入非 null 值应更新字段")
     void shouldUpdateWhenPreviousIsNull() {
       VenueAggregate aggregate =
-          VenueAggregate.restore(VenueId.of(1L), VenueType.JOURNAL, "Nature", null, 0L);
+          VenueAggregate.restore(VenueId.of(1L), VenueType.JOURNAL, "Nature", null, null, 0L);
       assertThat(aggregate.getImageObjectKey()).isNull();
 
       aggregate.enrichImageObjectKey("catalog/venue-cover/1.jpg");
@@ -35,7 +35,7 @@ class VenueAggregateImageKeyTest {
     void shouldOverrideWhenPreviousExists() {
       VenueAggregate aggregate =
           VenueAggregate.restore(
-              VenueId.of(1L), VenueType.JOURNAL, "Nature", "catalog/venue-cover/old.jpg", 0L);
+              VenueId.of(1L), VenueType.JOURNAL, "Nature", "catalog/venue-cover/old.jpg", null, 0L);
 
       aggregate.enrichImageObjectKey("catalog/venue-cover/new.jpg");
 
@@ -47,7 +47,7 @@ class VenueAggregateImageKeyTest {
     void shouldIgnoreWhenInputIsNull() {
       VenueAggregate aggregate =
           VenueAggregate.restore(
-              VenueId.of(1L), VenueType.JOURNAL, "Nature", "catalog/venue-cover/1.jpg", 0L);
+              VenueId.of(1L), VenueType.JOURNAL, "Nature", "catalog/venue-cover/1.jpg", null, 0L);
       assertThat(aggregate.getImageObjectKey()).isEqualTo("catalog/venue-cover/1.jpg");
 
       aggregate.enrichImageObjectKey(null);
