@@ -7,7 +7,9 @@ import dev.patra.identity.domain.model.read.AvatarOwner;
 import dev.patra.identity.domain.model.read.PublicUserReadModel;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.model.read.UserSummaryReadModel;
+import dev.patra.identity.domain.model.vo.DisplayNamePrefix;
 import dev.patra.identity.domain.model.vo.Username;
+import dev.patra.identity.domain.model.vo.UsernamePrefix;
 import dev.patra.identity.domain.model.vo.avatar.Avatar;
 import dev.patra.identity.domain.model.vo.profile.Bio;
 import dev.patra.identity.domain.model.vo.profile.Department;
@@ -80,12 +82,40 @@ public class UserReadAdapter implements UserReadPort {
     if (userIds.isEmpty()) {
       return List.of();
     }
-    Map<Long, UserProfileEntity> profiles =
-        profileDao.findByUserIdIn(userIds).stream()
-            .collect(Collectors.toMap(UserProfileEntity::getUserId, Function.identity()));
-    return userDao.findAllById(userIds).stream()
-        .map(user -> toSummary(user, profiles.get(user.getId())))
-        .toList();
+    return summariesOf(userDao.findAllById(userIds));
+  }
+
+  /// 按用户名前缀读正常账号：`[前缀, 前缀末字符加一)` 的范围查询，资料行一次 `IN` 取齐，保持查询的字节序。
+  ///
+  /// @param prefix 前缀
+  /// @param limit 最多几个
+  /// @return 摘要原始数据，按用户名字节序
+  @Override
+  public List<UserSummaryReadModel> findActiveSummariesByUsernamePrefix(
+      UsernamePrefix prefix, int limit) {
+    String from = prefix.value();
+    return summariesOf(userDao.findActiveByUsernameRange(from, upperBound(from), limit));
+  }
+
+  /// 按昵称前缀读正常账号：`[前缀, 前缀末码点加一)` 的范围查询，资料行一次 `IN` 取齐，保持查询的顺序。
+  ///
+  /// @param prefix 昵称前缀，已转小写
+  /// @param limit 最多几个
+  /// @return 摘要原始数据，按小写昵称的码点序
+  @Override
+  public List<UserSummaryReadModel> findActiveSummariesByDisplayNamePrefix(
+      DisplayNamePrefix prefix, int limit) {
+    String from = prefix.value();
+    return summariesOf(userDao.findActiveByDisplayNameRange(from, upperBound(from), limit));
+  }
+
+  /// 按当前用户名批量读摘要原始数据：用户表、资料表各一条 `IN` 查询。
+  ///
+  /// @param usernames 用户名
+  /// @return 存在的那些，不保证顺序
+  @Override
+  public List<UserSummaryReadModel> findSummariesByUsernames(Collection<Username> usernames) {
+    return summariesOf(userDao.findByUsernameIn(usernames.stream().map(Username::value).toList()));
   }
 
   /// 按用户 ID 读头像归属：用户行加资料行里的头像键，不读子表。
@@ -150,6 +180,31 @@ public class UserReadAdapter implements UserReadPort {
         .researchInterests(profile.getResearchInterests())
         .privacy(profile.getPrivacy())
         .build();
+  }
+
+  /// 用户行配上资料行（一次 `IN` 取齐）拼成摘要原始数据，按传入的顺序。
+  ///
+  /// @param users 用户行
+  /// @return 摘要原始数据
+  private List<UserSummaryReadModel> summariesOf(List<UserEntity> users) {
+    if (users.isEmpty()) {
+      return List.of();
+    }
+    Map<Long, UserProfileEntity> profiles =
+        profileDao.findByUserIdIn(users.stream().map(UserEntity::getId).toList()).stream()
+            .collect(Collectors.toMap(UserProfileEntity::getUserId, Function.identity()));
+    return users.stream().map(user -> toSummary(user, profiles.get(user.getId()))).toList();
+  }
+
+  /// 码点序（`COLLATE "C"` 下即 UTF-8 字节序）里排在所有以前缀开头的字符串之后的最小字符串：末码点加一，
+  /// 代理对按码点算。用户名只有 ASCII，昵称前缀已排除代理项与未分配码点，加一不会越界。
+  ///
+  /// @param prefix 前缀
+  /// @return 上界（不含）
+  private static String upperBound(String prefix) {
+    int last = prefix.codePointBefore(prefix.length());
+    return prefix.substring(0, prefix.length() - Character.charCount(last))
+        + Character.toString(last + 1);
   }
 
   /// 把用户行和资料行拼成摘要原始数据：昵称取原值，不回退（回退与已注销的占位在读模型里做）。

@@ -71,6 +71,8 @@ class GatewayBlockedPathsIT {
             "/patra-catalog/_internal/mesh/descriptors/D003920",
             "/patra-catalog/_internal/publications/resolve/by-ids",
             "/patra-identity/_internal/sessions/introspect",
+            "/patra-identity/_internal/users/suggest",
+            "/patra-identity/_internal/users/resolve/by-usernames",
             "/patra-identity/admin/users/1/ban",
             "/patra-catalog/actuator/health",
             "/patra-identity/actuator/env");

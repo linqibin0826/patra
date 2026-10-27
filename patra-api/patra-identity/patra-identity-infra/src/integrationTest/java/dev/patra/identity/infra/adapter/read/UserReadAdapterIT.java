@@ -14,8 +14,10 @@ import dev.patra.identity.domain.model.read.PublicUserReadModel;
 import dev.patra.identity.domain.model.read.UserAccountReadModel;
 import dev.patra.identity.domain.model.read.UserSummaryReadModel;
 import dev.patra.identity.domain.model.vo.DisplayName;
+import dev.patra.identity.domain.model.vo.DisplayNamePrefix;
 import dev.patra.identity.domain.model.vo.EmailAddress;
 import dev.patra.identity.domain.model.vo.Username;
+import dev.patra.identity.domain.model.vo.UsernamePrefix;
 import dev.patra.identity.domain.model.vo.avatar.Avatar;
 import dev.patra.identity.domain.model.vo.profile.Affiliation;
 import dev.patra.identity.domain.model.vo.profile.Bio;
@@ -301,5 +303,234 @@ class UserReadAdapterIT {
   @Test
   void should_return_empty_summaries_for_empty_input() {
     assertThat(reader.findSummaries(List.of())).isEmpty();
+  }
+
+  @Test
+  void should_find_active_summaries_by_username_prefix_in_byte_order() {
+    for (String name : List.of("chena", "chen_li", "chen9", "chen-yu", "chen", "chex")) {
+      saveWithProfile(name);
+    }
+    saveWithStatus("chen-banned", "BANNED");
+    saveWithStatus("chen-wait", "PENDING_DELETION");
+    saveWithStatus("chen-gone", "DELETED");
+
+    assertThat(reader.findActiveSummariesByUsernamePrefix(prefix("chen"), 10))
+        .extracting(UserSummaryReadModel::username)
+        .containsExactly("chen", "chen-yu", "chen9", "chen_li", "chena");
+  }
+
+  @Test
+  void should_not_treat_separators_as_wildcards() {
+    for (String name : List.of("chen-yu", "chen_li", "chena", "chen0")) {
+      saveWithProfile(name);
+    }
+
+    assertThat(reader.findActiveSummariesByUsernamePrefix(prefix("chen_"), 10))
+        .extracting(UserSummaryReadModel::username)
+        .containsExactly("chen_li");
+    assertThat(reader.findActiveSummariesByUsernamePrefix(prefix("chen-"), 10))
+        .extracting(UserSummaryReadModel::username)
+        .containsExactly("chen-yu");
+  }
+
+  @Test
+  void should_cut_prefix_candidates_to_limit() {
+    for (String name : List.of("chen9", "chen", "chen-yu")) {
+      saveWithProfile(name);
+    }
+
+    assertThat(reader.findActiveSummariesByUsernamePrefix(prefix("chen"), 2))
+        .extracting(UserSummaryReadModel::username)
+        .containsExactly("chen", "chen-yu");
+  }
+
+  @Test
+  void should_match_single_character_username_prefix() {
+    for (String name : List.of("cat", "c-ow", "czar", "dog", "bat")) {
+      saveWithProfile(name);
+    }
+
+    assertThat(reader.findActiveSummariesByUsernamePrefix(prefix("c"), 10))
+        .extracting(UserSummaryReadModel::username)
+        .containsExactly("c-ow", "cat", "czar");
+  }
+
+  @Test
+  void should_index_active_usernames_in_byte_order() {
+    String definition =
+        jdbcTemplate.queryForObject(
+            "SELECT indexdef FROM pg_indexes WHERE indexname = 'idx_idn_user_username_prefix'",
+            String.class);
+
+    assertThat(definition).contains("(username COLLATE \"C\")").contains("'ACTIVE'");
+  }
+
+  @Test
+  void should_index_display_names_in_byte_order() {
+    String definition =
+        jdbcTemplate.queryForObject(
+            "SELECT indexdef FROM pg_indexes"
+                + " WHERE indexname = 'idx_idn_user_profile_display_name_prefix'",
+            String.class);
+
+    assertThat(definition)
+        .contains("lower((display_name)::text)")
+        .contains("COLLATE \"C\"")
+        .contains("display_name IS NOT NULL");
+  }
+
+  @Test
+  void should_read_summaries_by_usernames() {
+    long active = saveWithProfile("by-name-a");
+    long banned = saveWithStatus("by-name-b", "BANNED");
+
+    Map<String, UserSummaryReadModel> found =
+        reader
+            .findSummariesByUsernames(
+                List.of(
+                    Username.of("by-name-a"), Username.of("by-name-b"), Username.of("by-name-x")))
+            .stream()
+            .collect(Collectors.toMap(UserSummaryReadModel::username, Function.identity()));
+
+    assertThat(found).containsOnlyKeys("by-name-a", "by-name-b");
+    assertThat(found.get("by-name-a").userId()).isEqualTo(active);
+    assertThat(found.get("by-name-b").userId()).isEqualTo(banned);
+    assertThat(found.get("by-name-b").status()).isEqualTo(UserStatus.BANNED);
+  }
+
+  @Test
+  void should_return_empty_summaries_for_no_usernames() {
+    assertThat(reader.findSummariesByUsernames(List.of())).isEmpty();
+  }
+
+  @Test
+  void should_find_active_summaries_by_display_name_prefix_in_code_point_order() {
+    saveWithDisplayName("u-zw", "张伟");
+    saveWithDisplayName("u-zsf", "张三丰");
+    saveWithDisplayName("u-zs", "张三");
+    saveWithDisplayName("u-zz", "章子");
+    applyStatus(saveWithDisplayName("u-zf", "张飞"), "BANNED");
+    saveWithProfile("u-zn");
+
+    assertThat(reader.findActiveSummariesByDisplayNamePrefix(nickname("张"), 10))
+        .extracting(UserSummaryReadModel::displayName)
+        .containsExactly("张三", "张三丰", "张伟");
+  }
+
+  @Test
+  void should_match_display_names_case_insensitively() {
+    saveWithDisplayName("u-cy", "Chen Yu");
+    saveWithDisplayName("u-cl", "CHEN Li");
+    saveWithDisplayName("u-cg", "Cheng");
+    saveWithDisplayName("u-cx", "Chex");
+
+    assertThat(reader.findActiveSummariesByDisplayNamePrefix(nickname("Chen"), 10))
+        .extracting(UserSummaryReadModel::displayName)
+        .containsExactly("CHEN Li", "Chen Yu", "Cheng");
+  }
+
+  @Test
+  void should_break_display_name_ties_by_username() {
+    // 倒着存：同名的人不靠存入顺序或物理位置碰巧排对
+    for (String name : List.of("u-tie-e", "u-tie-d", "u-tie-c", "u-tie-b", "u-tie-a")) {
+      saveWithDisplayName(name, "张三");
+    }
+
+    assertThat(reader.findActiveSummariesByDisplayNamePrefix(nickname("张三"), 10))
+        .extracting(UserSummaryReadModel::username)
+        .containsExactly("u-tie-a", "u-tie-b", "u-tie-c", "u-tie-d", "u-tie-e");
+  }
+
+  @Test
+  void should_bound_supplementary_character_prefix_by_next_code_point() {
+    // U+1F3FF 的低位代理是 \uDFFF：按 char 加一会拆坏代理对，按码点加一是 U+1F400
+    saveWithDisplayName("u-dark", "🏿Dark");
+    saveWithDisplayName("u-rat", "🐀Rat");
+
+    assertThat(reader.findActiveSummariesByDisplayNamePrefix(nickname("🏿"), 10))
+        .extracting(UserSummaryReadModel::username)
+        .containsExactly("u-dark");
+  }
+
+  @Test
+  void should_cut_display_name_candidates_to_limit() {
+    saveWithDisplayName("u-zw", "张伟");
+    saveWithDisplayName("u-zs", "张三");
+    saveWithDisplayName("u-zsf", "张三丰");
+
+    assertThat(reader.findActiveSummariesByDisplayNamePrefix(nickname("张"), 2))
+        .extracting(UserSummaryReadModel::displayName)
+        .containsExactly("张三", "张三丰");
+  }
+
+  /// 存一个正常账号和它的资料行。
+  ///
+  /// @param username 用户名，邮箱按它拼
+  /// @return 用户 ID
+  private long saveWithProfile(String username) {
+    User saved =
+        users.save(
+            User.register(EmailAddress.of(username + "@example.com"), Username.of(username)));
+    profiles.save(UserProfile.create(saved.getId()));
+    return saved.getId();
+  }
+
+  /// 存一个正常账号，资料里设好昵称。
+  ///
+  /// @param username 用户名
+  /// @param displayName 昵称，已规范化
+  /// @return 用户 ID
+  private long saveWithDisplayName(String username, String displayName) {
+    long id = saveWithProfile(username);
+    UserProfile profile = profiles.findByUserId(id).orElseThrow();
+    profile.edit(ProfileContent.builder().displayName(new DisplayName(displayName)).build());
+    profiles.save(profile);
+    return id;
+  }
+
+  /// 存一个账号，再用 SQL 改到给定状态。
+  ///
+  /// @param username 用户名
+  /// @param status `BANNED`、`PENDING_DELETION` 或 `DELETED`
+  /// @return 用户 ID
+  private long saveWithStatus(String username, String status) {
+    return applyStatus(saveWithProfile(username), status);
+  }
+
+  /// 用 SQL 把已存的账号改到给定状态（与 `UserSummariesFlowIT` 的改法相同）。
+  ///
+  /// @param id 用户 ID
+  /// @param status `BANNED`、`PENDING_DELETION` 或 `DELETED`
+  /// @return 用户 ID
+  private long applyStatus(long id, String status) {
+    String assignments =
+        switch (status) {
+          case "BANNED" -> "status = 'BANNED', banned_at = now()";
+          case "PENDING_DELETION" ->
+              "status = 'PENDING_DELETION', deletion_due_at = now() + interval '15 days'";
+          case "DELETED" ->
+              "status = 'DELETED', deleted_at = now(), email = NULL, email_verified_at = NULL";
+          default -> throw new IllegalArgumentException("不支持的状态: " + status);
+        };
+    jdbcTemplate.update("UPDATE idn_user SET " + assignments + " WHERE id = ?", id);
+    // 绕过 JPA 改的列不会进一级缓存，清掉再读才是库里的值
+    entityManager.clear();
+    return id;
+  }
+
+  /// 合法的前缀。
+  ///
+  /// @param raw 前缀原文
+  /// @return 前缀
+  private static UsernamePrefix prefix(String raw) {
+    return UsernamePrefix.parse(raw).orElseThrow();
+  }
+
+  /// 合法的昵称前缀。
+  ///
+  /// @param raw 前缀原文
+  /// @return 前缀
+  private static DisplayNamePrefix nickname(String raw) {
+    return DisplayNamePrefix.parse(raw).orElseThrow();
   }
 }
