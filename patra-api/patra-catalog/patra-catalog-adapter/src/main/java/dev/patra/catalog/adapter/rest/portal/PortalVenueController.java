@@ -1,10 +1,13 @@
 package dev.patra.catalog.adapter.rest.portal;
 
+import dev.patra.catalog.adapter.rest.portal.request.PortalVenueBatchRequest;
 import dev.patra.catalog.adapter.rest.portal.request.PortalVenueListRequest;
+import dev.patra.catalog.adapter.rest.portal.response.PortalVenueBatchResponse;
 import dev.patra.catalog.adapter.rest.portal.response.PortalVenueBrowseResponse;
 import dev.patra.catalog.adapter.rest.portal.response.PortalVenueDetailResponse;
 import dev.patra.catalog.adapter.rest.portal.response.PortalVenueFacetsResponse;
 import dev.patra.catalog.app.usecase.portal.query.PortalVenueBrowseQueryService;
+import dev.patra.catalog.app.usecase.portal.query.PortalVenueCardQueryService;
 import dev.patra.catalog.app.usecase.portal.query.PortalVenueDetailQueryService;
 import dev.patra.catalog.domain.model.read.portal.VenueBrowseFilter;
 import dev.patra.catalog.domain.model.read.portal.VenueBrowseSort;
@@ -39,6 +42,7 @@ public class PortalVenueController {
 
   private final PortalVenueBrowseQueryService portalVenueBrowseQueryService;
   private final PortalVenueDetailQueryService portalVenueDetailQueryService;
+  private final PortalVenueCardQueryService portalVenueCardQueryService;
   private final PortalApiConverter portalApiConverter;
 
   /// 浏览/检索期刊（支持多维度过滤和分页）。
@@ -63,6 +67,20 @@ public class PortalVenueController {
   public PortalVenueFacetsResponse facets(@Valid PortalVenueListRequest req) {
     VenueBrowseFilter filter = toFilter(req);
     return portalApiConverter.toVenueFacetsResponse(portalVenueBrowseQueryService.facets(filter));
+  }
+
+  /// 按 ID 批量取期刊卡片（重复参数 `id`，1 ~ 100 个）：不存在、软删与非期刊的不返回，按请求顺序。
+  ///
+  /// `/batch` 是字面路径，路径匹配优先于 `/{id}` 模板。
+  ///
+  /// @param req 批量请求
+  /// @return 卡片，元素与浏览列表项同形
+  @GetMapping("/batch")
+  public PortalVenueBatchResponse batch(@Valid PortalVenueBatchRequest req) {
+    return PortalVenueBatchResponse.of(
+        portalVenueCardQueryService.findByIds(req.id()).stream()
+            .map(portalApiConverter::toVenueBrowseResponse)
+            .toList());
   }
 
   /// 查询期刊详情。

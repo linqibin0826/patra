@@ -21,6 +21,7 @@ import lombok.Builder;
 /// @param isOpenAccess 是否开放获取，可空
 /// @param isInDoaj 是否收录于 DOAJ，可空
 /// @param issnL ISSN-L，可空
+/// @param nlmId 主 NLM（身份锚，字符串保留前导零），可空
 /// @author linqibin
 /// @since 0.1.0
 @Builder
@@ -40,4 +41,5 @@ public record VenueBrowseReadModel(
     Integer foundedYear,
     Boolean isOpenAccess,
     Boolean isInDoaj,
-    String issnL) {}
+    String issnL,
+    String nlmId) {}

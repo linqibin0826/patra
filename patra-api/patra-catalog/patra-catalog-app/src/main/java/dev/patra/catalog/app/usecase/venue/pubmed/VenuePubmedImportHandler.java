@@ -49,6 +49,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -71,7 +72,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 /// 增量覆盖模式：
 ///
 /// 1. 匹配已有期刊记录时，PubMed 数据覆盖旧数据
-/// 2. 匹配策略：ISSN-L → NLM ID → ISSN（降级策略）
+/// 2. 匹配策略：NLM ID → ISSN-L → ISSN（降级策略）；NLM ID 全局唯一，属于已软删期刊的记录跳过
 /// 3. PubMed 独有期刊将创建新的 VenueAggregate 记录
 ///
 /// **批处理设计**：
@@ -345,7 +346,8 @@ public class VenuePubmedImportHandler
         new ExistingVenuesLookup(
             venueRepository.findByIssnLs(identifiers.issnLs()),
             venueRepository.findByNlmIds(identifiers.nlmIds()),
-            venueRepository.findByIssns(identifiers.issns()));
+            venueRepository.findByIssns(identifiers.issns()),
+            venueRepository.findSoftDeletedNlmIds(identifiers.nlmIds()));
 
     // 3. 收集并解析国家编码（每批次一次 RPC 调用）
     // PubMed LSIOU Country 字段使用英文全名（NAME_EN 标准）
@@ -517,11 +519,13 @@ public class VenuePubmedImportHandler
       List<PubmedSerialData> batch, ExistingVenuesLookup existingVenues, ImportContext context) {
 
     BatchProcessingResult result = new BatchProcessingResult();
-    // 防重集合（UPDATE 路径）：避免同一期刊被多条 PubMed 记录更新
-    Set<Long> processedVenueIds = new HashSet<>();
-    // 防重集合（CREATE 路径）：避免同批次内创建重复期刊
-    Set<String> createdNlmIds = new HashSet<>();
-    Set<String> createdIssnLs = new HashSet<>();
+    // 防重（UPDATE 路径）：同一期刊只按第一条命中它的记录更新；值是本批要保存的那个实例
+    // （三种查找各自重建聚合，同一期刊在内存里可能有多个实例）
+    Map<Long, VenueAggregate> processedVenues = new HashMap<>();
+    // 防重（CREATE 路径）：同批次内同一 ISSN-L 只新建一个期刊
+    Map<String, VenueAggregate> createdByIssnL = new HashMap<>();
+    // 本批已挂到某个期刊上的 NLM：同一个 NLM 不新建第二个期刊，也不挂到第二个期刊上
+    Set<String> claimedNlmIds = new HashSet<>();
 
     for (PubmedSerialData record : batch) {
       // ═══════════════════════════════════════════════════════════════════════
@@ -534,7 +538,14 @@ public class VenuePubmedImportHandler
         continue;
       }
 
-      // 按优先级匹配：ISSN-L → NLM ID → ISSN（详见 findMatch 方法）
+      // NLM 全局唯一：属于已软删期刊的 NLM 不新建、也不并进别的期刊，整条跳过（不推翻人工下架）
+      if (record.hasNlmId() && existingVenues.softDeletedNlmIds().contains(record.nlmUniqueId())) {
+        result.markSkipped();
+        log.debug("跳过 NLM ID 属于已软删期刊的 Serial：NLM ID [{}]", record.nlmUniqueId());
+        continue;
+      }
+
+      // 按优先级匹配：NLM ID → ISSN-L → ISSN（详见 findMatch 方法）
       Optional<VenueAggregate> matched = findMatch(record, existingVenues);
 
       if (matched.isPresent()) {
@@ -542,9 +553,11 @@ public class VenuePubmedImportHandler
         // 情况 A：匹配到已有期刊 → 覆盖更新
         // ═══════════════════════════════════════════════════════════════════════
         VenueAggregate venue = matched.get();
-        if (!processedVenueIds.contains(venue.getId().value())) {
+        VenueAggregate processed = processedVenues.get(venue.getId().value());
+        if (processed == null) {
           // 首次处理该期刊：补全标识符
           updateVenueIdentifiers(venue, record);
+          claimNlm(record, claimedNlmIds);
           // 构建并附加 PublicationProfile（嵌入式值对象）
           PublicationProfile profile =
               buildPublicationProfileFromRecord(record, context.countryCodeMap());
@@ -556,7 +569,7 @@ public class VenuePubmedImportHandler
           // 标准化语言代码：ISO 639-3 → BCP 47
           venue.normalizeLanguages(context.languageCodeMap());
           result.addUpdate(venue);
-          processedVenueIds.add(venue.getId().value());
+          processedVenues.put(venue.getId().value(), venue);
           // 收集 PubMed 子实体（MeSH、关系、索引历史），稍后批量持久化
           result.collectPubmedEntities(
               venue,
@@ -565,7 +578,9 @@ public class VenuePubmedImportHandler
               toVenueRelationList(record.titleRelations()),
               toVenueIndexingHistoryList(record.indexingHistories()));
         } else {
-          // 重复记录：同一期刊已被处理，跳过（可能是 ISSN 重复匹配）
+          // 同一期刊本批已处理过（如同一份刊物改名前后的两条记录）：资料不再覆盖，
+          // 但无主的 NLM 挂成副 NLM，挂在本批要保存的那个实例上
+          attachUnownedNlm(processed, record, existingVenues, claimedNlmIds);
           result.markSkipped();
         }
       } else {
@@ -573,8 +588,16 @@ public class VenuePubmedImportHandler
         // 情况 B：无匹配 → 创建新期刊
         // ═══════════════════════════════════════════════════════════════════════
 
-        // 批内去重：检查当前批次是否已创建了相同 NLM ID 或 ISSN-L 的期刊
-        if (isDuplicateInCurrentBatch(record, createdNlmIds, createdIssnLs)) {
+        // 批内去重：本批已用过这个 NLM ID → 跳过
+        if (record.hasNlmId() && claimedNlmIds.contains(record.nlmUniqueId())) {
+          result.markSkipped();
+          log.debug("跳过批内重复 Serial：NLM ID [{}]", record.nlmUniqueId());
+          continue;
+        }
+        // 批内去重：本批已按这个 ISSN-L 新建了期刊 → 不再新建，NLM 挂成那个期刊的副 NLM
+        if (record.hasIssnL() && createdByIssnL.containsKey(record.issnL())) {
+          attachUnownedNlm(
+              createdByIssnL.get(record.issnL()), record, existingVenues, claimedNlmIds);
           result.markSkipped();
           log.debug("跳过批内重复 Serial：NLM ID [{}]，ISSN-L [{}]", record.nlmUniqueId(), record.issnL());
           continue;
@@ -594,11 +617,9 @@ public class VenuePubmedImportHandler
         result.addCreate(newVenue);
 
         // 记录已创建的标识符，供批内去重使用
-        if (record.hasNlmId()) {
-          createdNlmIds.add(record.nlmUniqueId());
-        }
+        claimNlm(record, claimedNlmIds);
         if (record.hasIssnL()) {
-          createdIssnLs.add(record.issnL());
+          createdByIssnL.put(record.issnL(), newVenue);
         }
 
         // 收集 PubMed 子实体（MeSH、关系、索引历史），稍后批量持久化
@@ -687,7 +708,7 @@ public class VenuePubmedImportHandler
 
   /// 按优先级匹配期刊。
   ///
-  /// 优先级：ISSN-L → NLM ID → ISSN
+  /// 优先级：NLM ID → ISSN-L → ISSN
   ///
   /// @param record 待匹配的 PubMed 记录
   /// @param lookup 现有期刊查询结果
@@ -695,21 +716,22 @@ public class VenuePubmedImportHandler
   private Optional<VenueAggregate> findMatch(PubmedSerialData record, ExistingVenuesLookup lookup) {
     // ────────────────────────────────────────────────────────────────────────────
     // 匹配优先级设计说明：
-    // - ISSN-L (Linking ISSN)：国际标准，一个期刊只有一个 ISSN-L，唯一性最高
-    // - NLM ID：NLM 内部标识符，在 PubMed 体系内唯一
+    // - NLM ID：期刊的身份锚（全局唯一，主或副），interaction 以 nlm: 锚定期刊；
+    //   与 ISSN-L 指向不同期刊时必须 NLM 胜出，否则同一个 NLM 会挂到两个期刊上
+    // - ISSN-L (Linking ISSN)：一个期刊只有一个 ISSN-L，用于记录的 NLM 还没有期刊时
     // - ISSN (Print/Electronic)：同一期刊可能有多个 ISSN，唯一性较低
-    //
-    // 优先使用唯一性高的标识符，可减少误匹配风险
     // ────────────────────────────────────────────────────────────────────────────
 
-    // 优先级 1: ISSN-L（唯一性最高）
-    if (record.hasIssnL() && lookup.byIssnL().containsKey(record.issnL())) {
-      return Optional.of(lookup.byIssnL().get(record.issnL()));
+    // 优先级 1: NLM ID（身份锚）
+    if (record.hasNlmId() && lookup.byNlmId().containsKey(record.nlmUniqueId())) {
+      VenueAggregate byNlmId = lookup.byNlmId().get(record.nlmUniqueId());
+      warnIfIssnLPointsElsewhere(record, byNlmId, lookup);
+      return Optional.of(byNlmId);
     }
 
-    // 优先级 2: NLM ID（PubMed 体系内唯一）
-    if (record.hasNlmId() && lookup.byNlmId().containsKey(record.nlmUniqueId())) {
-      return Optional.of(lookup.byNlmId().get(record.nlmUniqueId()));
+    // 优先级 2: ISSN-L
+    if (record.hasIssnL() && lookup.byIssnL().containsKey(record.issnL())) {
+      return Optional.of(lookup.byIssnL().get(record.issnL()));
     }
 
     // 优先级 3: ISSN（降级匹配，Print 优先于 Electronic）
@@ -725,20 +747,63 @@ public class VenuePubmedImportHandler
     return Optional.empty();
   }
 
-  /// 判断记录是否与当前批次中已创建的期刊重复。
+  /// ISSN-L 指向的是另一个期刊时打 WARN。
   ///
-  /// 基于 NLM ID 和 ISSN-L 判断，两者都是全局唯一标识符。
+  /// 按 NLM 匹配后，这条记录的 ISSN-L 会挂到 NLM 那个期刊上，同一个 ISSN-L 就出现在两个期刊上
+  /// （有意的取舍，见工程 spec 第 6.3 节）；日志让这样的期刊对可见。
   ///
-  /// @param record 待检查的 PubMed 记录
-  /// @param createdNlmIds 当前批次已创建的 NLM ID 集合
-  /// @param createdIssnLs 当前批次已创建的 ISSN-L 集合
-  /// @return 如果重复返回 true
-  private boolean isDuplicateInCurrentBatch(
-      PubmedSerialData record, Set<String> createdNlmIds, Set<String> createdIssnLs) {
-    if (record.hasNlmId() && createdNlmIds.contains(record.nlmUniqueId())) {
-      return true;
+  /// @param record PubMed 记录
+  /// @param byNlmId 按 NLM 命中的期刊
+  /// @param lookup 现有期刊查询结果
+  private void warnIfIssnLPointsElsewhere(
+      PubmedSerialData record, VenueAggregate byNlmId, ExistingVenuesLookup lookup) {
+    if (!record.hasIssnL()) {
+      return;
     }
-    return record.hasIssnL() && createdIssnLs.contains(record.issnL());
+    VenueAggregate byIssnL = lookup.byIssnL().get(record.issnL());
+    if (byIssnL != null && !Objects.equals(byIssnL.getId(), byNlmId.getId())) {
+      log.warn(
+          "NLM ID 与 ISSN-L 指向不同期刊，按 NLM 匹配：NLM ID [{}] → 期刊 {}，ISSN-L [{}] → 期刊 {}",
+          record.nlmUniqueId(),
+          byNlmId.getId().value(),
+          record.issnL(),
+          byIssnL.getId().value());
+    }
+  }
+
+  /// 记下本批已挂到某个期刊上的 NLM（记录有 NLM 时）。
+  ///
+  /// @param record PubMed 记录
+  /// @param claimedNlmIds 本批已挂上的 NLM
+  private void claimNlm(PubmedSerialData record, Set<String> claimedNlmIds) {
+    if (record.hasNlmId()) {
+      claimedNlmIds.add(record.nlmUniqueId());
+    }
+  }
+
+  /// 把记录的 NLM 作为副 NLM 挂到本批已处理的期刊上。
+  ///
+  /// 只挂无主的 NLM：库里没有任何期刊用它，本批也还没挂过它；否则什么都不做。
+  /// 用于同一份刊物的两条记录落在同一批时，第二条不覆盖资料、但 NLM 照样记下。
+  ///
+  /// @param target 本批要保存的期刊实例
+  /// @param record PubMed 记录
+  /// @param lookup 现有期刊查询结果
+  /// @param claimedNlmIds 本批已挂上的 NLM（挂上后加入）
+  private void attachUnownedNlm(
+      VenueAggregate target,
+      PubmedSerialData record,
+      ExistingVenuesLookup lookup,
+      Set<String> claimedNlmIds) {
+    if (!record.hasNlmId()) {
+      return;
+    }
+    String nlmId = record.nlmUniqueId();
+    if (lookup.byNlmId().containsKey(nlmId) || !claimedNlmIds.add(nlmId)) {
+      return;
+    }
+    target.addIdentifier(VenueIdentifier.forNlm(nlmId));
+    log.debug("同批同一期刊的另一条 Serial：NLM ID [{}] 挂成副 NLM，期刊 [{}]", nlmId, target.getTitle());
   }
 
   /// 从 PubmedSerialData 补全 VenueAggregate 的标识符。
@@ -1006,10 +1071,16 @@ public class VenuePubmedImportHandler
   /// 现有期刊查询结果。
   ///
   /// 封装按不同标识符查询的结果，简化 findMatch 方法签名。
+  ///
+  /// @param byIssnL ISSN-L → 未软删的期刊
+  /// @param byNlmId NLM ID（主或副）→ 未软删的期刊
+  /// @param byIssn ISSN → 未软删的期刊
+  /// @param softDeletedNlmIds 属于已软删期刊的 NLM ID
   private record ExistingVenuesLookup(
       Map<String, VenueAggregate> byIssnL,
       Map<String, VenueAggregate> byNlmId,
-      Map<String, VenueAggregate> byIssn) {}
+      Map<String, VenueAggregate> byIssn,
+      Set<String> softDeletedNlmIds) {}
 
   /// 批次处理结果。
   ///

@@ -9,6 +9,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
 import java.util.List;
 import lombok.Getter;
@@ -29,11 +30,14 @@ import org.hibernate.type.SqlTypes;
 /// - `open_access` - 开放获取信息（OA 状态 + APC 定价）
 /// - `affiliated_societies` - 关联学会列表
 ///
+/// **主 NLM**：`nlm_id` 是期刊的身份锚（interaction 以 `nlm:{NLM ID}` 锚定期刊），全局唯一、写一次。
+/// 一个期刊在 `cat_venue_identifier` 里可能有多个 NLM 行，哪个是主 NLM 只看这一列。
+///
 /// **快速访问字段**（优化查询性能）：
 ///
 /// | 字段 | 来源 | 策略 |
 /// |------|------|------|
-/// | nlm_id | cat_venue_identifier | 冗余 |
+/// | nlm_id | 聚合的主 NLM | 主 NLM 的唯一来源（见上） |
 /// | issn_l | cat_venue_identifier | 冗余 |
 /// | openalex_id | cat_venue_identifier | 冗余 |
 /// | abbreviated_title | PublicationProfile | 快照 |
@@ -48,12 +52,12 @@ import org.hibernate.type.SqlTypes;
 @Entity
 @Table(
     name = "cat_venue",
+    uniqueConstraints = @UniqueConstraint(name = "uk_venue_nlm_id", columnNames = "nlm_id"),
     indexes = {
       @Index(name = "idx_venue_type", columnList = "venue_type"),
       @Index(name = "idx_title", columnList = "title"),
       @Index(name = "idx_provenance", columnList = "provenance_code"),
       @Index(name = "idx_issn_l", columnList = "issn_l"),
-      @Index(name = "idx_nlm_id", columnList = "nlm_id"),
       @Index(name = "idx_openalex_id", columnList = "openalex_id"),
       @Index(name = "idx_cited_by_count", columnList = "cited_by_count")
     })

@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import dev.patra.catalog.adapter.config.CatalogAdapterITWebMvcConfig;
 import dev.patra.catalog.app.usecase.portal.query.PortalVenueBrowseQueryService;
+import dev.patra.catalog.app.usecase.portal.query.PortalVenueCardQueryService;
 import dev.patra.catalog.app.usecase.portal.query.PortalVenueDetailQueryService;
 import dev.patra.catalog.domain.model.read.portal.FacetCount;
 import dev.patra.catalog.domain.model.read.portal.VenueBrowseFacets;
@@ -18,8 +19,12 @@ import dev.patra.catalog.domain.model.read.portal.VenueBrowseSort;
 import dev.patra.catalog.domain.query.PageResult;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.LongStream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
@@ -43,6 +48,8 @@ class PortalVenueControllerIT {
 
   @MockitoBean private PortalVenueDetailQueryService portalVenueDetailQueryService;
 
+  @MockitoBean private PortalVenueCardQueryService portalVenueCardQueryService;
+
   @Test
   @DisplayName("GET /portal/venues 返回 200 + 分页信封 + 期刊卡片（回归）")
   void shouldReturnBrowseResult() {
@@ -54,6 +61,7 @@ class PortalVenueControllerIT {
             .impactFactor(new BigDecimal("65.4"))
             .jcrQuartile("Q1")
             .foundedYear(1990)
+            .nlmId("8007974")
             .build();
     when(portalVenueBrowseQueryService.browse(any(), any()))
         .thenReturn(PageResult.of(List.of(model), 1, 12, 1));
@@ -74,7 +82,9 @@ class PortalVenueControllerIT {
         .jsonPath("$.page")
         .isEqualTo(1)
         .jsonPath("$.items[0].id")
-        .isEqualTo("319041872872550658");
+        .isEqualTo("319041872872550658")
+        .jsonPath("$.items[0].nlmId")
+        .isEqualTo("8007974");
   }
 
   @Test
@@ -192,5 +202,55 @@ class PortalVenueControllerIT {
         .isEqualTo(60)
         .jsonPath("$.doaj")
         .isEqualTo(30);
+  }
+
+  @Test
+  @DisplayName("GET /portal/venues/batch：按服务顺序返回卡片，id 为字符串，带主 NLM（保留前导零）")
+  void should_return_batch_cards_in_service_order_with_nlm_id() {
+    when(portalVenueCardQueryService.findByIds(List.of(2L, 1L)))
+        .thenReturn(
+            List.of(
+                VenueBrowseReadModel.builder().id(2L).name("Swiss").nlmId("0404401").build(),
+                VenueBrowseReadModel.builder().id(1L).name("Lancet").nlmId("2985213R").build()));
+
+    restClient
+        .get()
+        .uri("/portal/venues/batch?id=2&id=1")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .jsonPath("$.items.length()")
+        .isEqualTo(2)
+        .jsonPath("$.items[0].id")
+        .isEqualTo("2")
+        .jsonPath("$.items[0].nlmId")
+        .isEqualTo("0404401")
+        .jsonPath("$.items[1].id")
+        .isEqualTo("1")
+        .jsonPath("$.items[1].nlmId")
+        .isEqualTo("2985213R");
+
+    verify(portalVenueCardQueryService).findByIds(List.of(2L, 1L));
+  }
+
+  @ParameterizedTest(name = "[{index}] {0}")
+  @MethodSource("invalidBatchQueries")
+  @DisplayName("GET /portal/venues/batch：缺失、只有空值、非正整数、超过 100 个 → 422，不触达服务")
+  void should_reject_invalid_batch_ids_with_422(String query) {
+    restClient.get().uri("/portal/venues/batch" + query).exchange().expectStatus().isEqualTo(422);
+
+    verifyNoInteractions(portalVenueCardQueryService);
+  }
+
+  /// 非法的批量请求参数。
+  ///
+  /// @return 查询串
+  static List<String> invalidBatchQueries() {
+    String ids101 =
+        LongStream.rangeClosed(1, 101)
+            .mapToObj(i -> "id=" + i)
+            .collect(Collectors.joining("&", "?", ""));
+    return List.of("", "?id=", "?id=0", ids101);
   }
 }

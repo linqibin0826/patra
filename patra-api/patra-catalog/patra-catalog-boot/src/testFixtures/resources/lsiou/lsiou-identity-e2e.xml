@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE SerialsSet SYSTEM "nlmserials_230101.dtd">
+<!--
+  PAP-117 期刊身份 E2E 夹具（VenuePubmedImportE2E）。测试预置：
+  X 主 NLM 0000001、ISSN-L 1000-0001；Y 主 NLM 0000002；Z 主 NLM 0000003R（已软删）。
+-->
+<SerialsSet>
+  <!-- NLM 属于 Y、ISSN-L 属于 X：应更新 Y，不碰 X -->
+  <Serial Status="NLMCollection">
+    <NlmUniqueID>0000002</NlmUniqueID>
+    <Title>Journal Y</Title>
+    <MedlineTA>J Y</MedlineTA>
+    <ISSNLinking>1000-0001</ISSNLinking>
+    <SortSerialName>JOURNAL Y</SortSerialName>
+  </Serial>
+  <!-- NLM 属于软删的 Z：应跳过 -->
+  <Serial Status="NLMCollection">
+    <NlmUniqueID>0000003R</NlmUniqueID>
+    <Title>Journal Z</Title>
+    <ISSNLinking>3000-0003</ISSNLinking>
+    <SortSerialName>JOURNAL Z</SortSerialName>
+  </Serial>
+  <!-- NLM 无主、ISSN-L 属于 X：应并进 X 成为副 NLM -->
+  <Serial Status="NLMCollection">
+    <NlmUniqueID>0000004</NlmUniqueID>
+    <Title>Journal X Renamed</Title>
+    <ISSNLinking>1000-0001</ISSNLinking>
+    <SortSerialName>JOURNAL X RENAMED</SortSerialName>
+  </Serial>
+  <!-- 16 位新式 NLM ID，库里没有：应新建 -->
+  <Serial Status="NLMCollection">
+    <NlmUniqueID>9918523075306676</NlmUniqueID>
+    <Title>Journal New</Title>
+    <ISSNLinking>4000-0004</ISSNLinking>
+    <SortSerialName>JOURNAL NEW</SortSerialName>
+  </Serial>
+</SerialsSet>

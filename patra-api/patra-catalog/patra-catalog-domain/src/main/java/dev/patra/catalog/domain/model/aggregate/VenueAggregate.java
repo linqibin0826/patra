@@ -57,6 +57,11 @@ import lombok.Getter;
 /// - 所有类型：title 和 venueType 必填
 /// - 来自 PubMed：必须包含 NLM 或 ISSN_L 类型的标识符
 ///
+/// **主 NLM**（interaction 以 `nlm:{NLM ID}` 锚定期刊，PAP-117）：
+///
+/// - 一经写入不再改：恢复时以持久化的值为准，之后加入的 NLM 都是副 NLM
+/// - 一定在标识符集合里：只能经 `fromPubMed` / `addIdentifier` 产生，且不能被移除
+///
 /// @author linqibin
 /// @since 0.1.0
 @Getter
@@ -77,6 +82,9 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
 
   /// 标识符集合（聚合边界内值对象）
   private final List<VenueIdentifier> identifiers;
+
+  /// 主 NLM ID，期刊的身份锚：第一次得到 NLM 时写入，之后不再改；其余 NLM 是副 NLM，只在标识符集合里
+  private String nlmId;
 
   /// 数据来源信息
   private ProvenanceInfo provenance;
@@ -119,7 +127,7 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
   /// 从 PubMed 创建期刊载体。
   ///
   /// @param title 期刊名称
-  /// @param nlmId NLM 唯一标识符（nlmId 或 issnL 至少一个必填）
+  /// @param nlmId NLM 唯一标识符，非空时成为主 NLM（nlmId 或 issnL 至少一个必填）
   /// @param issnL Linking ISSN（nlmId 或 issnL 至少一个必填）
   /// @return 载体聚合根
   public static VenueAggregate fromPubMed(String title, String nlmId, String issnL) {
@@ -149,11 +157,18 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
   /// @param venueType 载体类型
   /// @param title 标题
   /// @param imageObjectKey 封面对象存储键（可空）
+  /// @param nlmId 持久化的主 NLM（`cat_venue.nlm_id`，可空）
   /// @param version 乐观锁版本
   /// @return 重建的聚合根
   public static VenueAggregate restore(
-      VenueId id, VenueType venueType, String title, String imageObjectKey, Long version) {
+      VenueId id,
+      VenueType venueType,
+      String title,
+      String imageObjectKey,
+      String nlmId,
+      Long version) {
     VenueAggregate aggregate = new VenueAggregate(id, venueType, title, imageObjectKey);
+    aggregate.nlmId = nlmId;
     aggregate.assignVersion(version != null ? version : 0L);
     return aggregate;
   }
@@ -318,6 +333,7 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
   ///
   /// 如果已存在相同类型和值的标识符，则忽略。
   /// 成功添加后会将聚合根标记为脏，触发版本号递增。
+  /// NLM 类型：期刊还没有主 NLM 时，它成为主 NLM；已有主 NLM 时它是副 NLM。
   ///
   /// @param identifier 标识符
   public void addIdentifier(VenueIdentifier identifier) {
@@ -326,6 +342,9 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
     // 检查是否已存在相同的标识符（基于 Record 的 equals）
     if (!identifiers.contains(identifier)) {
       identifiers.add(identifier);
+    }
+    if (identifier.type() == VenueIdentifierType.NLM && nlmId == null) {
+      nlmId = identifier.value();
     }
   }
 
@@ -339,12 +358,17 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
 
   /// 移除标识符。
   ///
-  /// 成功移除后会将聚合根标记为脏，触发版本号递增。
+  /// 成功移除后会将聚合根标记为脏，触发版本号递增。主 NLM 不能移除。
   ///
   /// @param type 标识符类型
   /// @param value 标识符值
   /// @return 是否成功移除
+  /// @throws IllegalStateException 要移除的是主 NLM 时
   public boolean removeIdentifier(VenueIdentifierType type, String value) {
+    Assert.state(
+        type != VenueIdentifierType.NLM || !Objects.equals(value, nlmId),
+        "主 NLM 不能从标识符中移除：{}",
+        value);
     VenueIdentifier target = new VenueIdentifier(type, value);
     return identifiers.remove(target);
   }
@@ -469,7 +493,6 @@ public class VenueAggregate extends AggregateRoot<VenueId> {
 
   @Override
   public String toString() {
-    String nlmId = getIdentifier(VenueIdentifierType.NLM).orElse(null);
     String issnL = getIdentifier(VenueIdentifierType.ISSN_L).orElse(null);
     return String.format(
         "VenueAggregate[id=%s, type=%s, name=%s, nlmId=%s, issnL=%s]",

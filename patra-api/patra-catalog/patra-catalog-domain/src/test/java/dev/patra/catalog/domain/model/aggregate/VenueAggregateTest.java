@@ -104,7 +104,8 @@ class VenueAggregateTest {
       Long version = 5L;
 
       // When
-      VenueAggregate venue = VenueAggregate.restore(id, VenueType.REPOSITORY, TITLE, null, version);
+      VenueAggregate venue =
+          VenueAggregate.restore(id, VenueType.REPOSITORY, TITLE, null, null, version);
 
       // Then
       assertThat(venue.getId()).isEqualTo(id);
@@ -112,6 +113,70 @@ class VenueAggregateTest {
       assertThat(venue.getTitle()).isEqualTo(TITLE);
       assertThat(venue.getImageObjectKey()).isNull();
       assertThat(venue.getVersion()).isEqualTo(version);
+    }
+  }
+
+  @Nested
+  @DisplayName("主 NLM")
+  class PrimaryNlmTests {
+
+    @Test
+    @DisplayName("fromPubMed() 把传入的 NLM 设为主 NLM")
+    void fromPubMed_sets_primary_nlm() {
+      assertThat(VenueAggregate.fromPubMed("J", "0404401", "0036-7672").getNlmId())
+          .isEqualTo("0404401");
+    }
+
+    @Test
+    @DisplayName("fromPubMed() 没有 NLM 时没有主 NLM")
+    void fromPubMed_without_nlm_has_no_primary() {
+      assertThat(VenueAggregate.fromPubMed("J", null, "0036-7672").getNlmId()).isNull();
+    }
+
+    @Test
+    @DisplayName("restore() 以持久化的主 NLM 为准，不随标识符加入顺序改变")
+    void restore_keeps_persisted_primary_nlm() {
+      VenueAggregate venue =
+          VenueAggregate.restore(VenueId.of(1L), VenueType.JOURNAL, "J", null, "100970884", 0L);
+
+      venue.addIdentifier(VenueIdentifier.forNlm("0404401"));
+      venue.addIdentifier(VenueIdentifier.forNlm("100970884"));
+
+      assertThat(venue.getNlmId()).isEqualTo("100970884");
+    }
+
+    @Test
+    @DisplayName("没有主 NLM 时第一次加入的 NLM 成为主 NLM，之后加入的只是副 NLM")
+    void first_added_nlm_becomes_primary_when_absent() {
+      VenueAggregate venue =
+          VenueAggregate.restore(VenueId.of(1L), VenueType.JOURNAL, "J", null, null, 0L);
+
+      venue.addIdentifier(VenueIdentifier.forNlm("0404401"));
+      venue.addIdentifier(VenueIdentifier.forNlm("100970884"));
+
+      assertThat(venue.getNlmId()).isEqualTo("0404401");
+      assertThat(venue.getIdentifiers(VenueIdentifierType.NLM))
+          .containsExactly("0404401", "100970884");
+    }
+
+    @Test
+    @DisplayName("移除主 NLM 被拒绝，标识符保持不变")
+    void removing_primary_nlm_is_rejected() {
+      VenueAggregate venue = VenueAggregate.fromPubMed("J", "0404401", null);
+
+      assertThatThrownBy(() -> venue.removeIdentifier(VenueIdentifierType.NLM, "0404401"))
+          .isInstanceOf(IllegalStateException.class);
+      assertThat(venue.getIdentifiers(VenueIdentifierType.NLM)).containsExactly("0404401");
+    }
+
+    @Test
+    @DisplayName("移除副 NLM 可以，主 NLM 不变")
+    void removing_secondary_nlm_keeps_primary() {
+      VenueAggregate venue = VenueAggregate.fromPubMed("J", "0404401", null);
+      venue.addIdentifier(VenueIdentifier.forNlm("100970884"));
+
+      assertThat(venue.removeIdentifier(VenueIdentifierType.NLM, "100970884")).isTrue();
+      assertThat(venue.getNlmId()).isEqualTo("0404401");
     }
   }
 
@@ -263,7 +328,7 @@ class VenueAggregateTest {
     void isJournalShouldWork() {
       VenueAggregate journal = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
       VenueAggregate repo =
-          VenueAggregate.restore(VenueId.of(1L), VenueType.REPOSITORY, TITLE, null, 0L);
+          VenueAggregate.restore(VenueId.of(1L), VenueType.REPOSITORY, TITLE, null, null, 0L);
 
       assertThat(journal.isJournal()).isTrue();
       assertThat(repo.isJournal()).isFalse();
@@ -273,7 +338,7 @@ class VenueAggregateTest {
     @DisplayName("isRepository() 应该正确判断")
     void isRepositoryShouldWork() {
       VenueAggregate repo =
-          VenueAggregate.restore(VenueId.of(1L), VenueType.REPOSITORY, TITLE, null, 0L);
+          VenueAggregate.restore(VenueId.of(1L), VenueType.REPOSITORY, TITLE, null, null, 0L);
 
       assertThat(repo.isRepository()).isTrue();
     }
@@ -282,7 +347,7 @@ class VenueAggregateTest {
     @DisplayName("isConference() 应该正确判断")
     void isConferenceShouldWork() {
       VenueAggregate conf =
-          VenueAggregate.restore(VenueId.of(1L), VenueType.CONFERENCE, TITLE, null, 0L);
+          VenueAggregate.restore(VenueId.of(1L), VenueType.CONFERENCE, TITLE, null, null, 0L);
 
       assertThat(conf.isConference()).isTrue();
     }
@@ -292,7 +357,7 @@ class VenueAggregateTest {
     void isFromPubMedShouldWork() {
       VenueAggregate pubmedVenue = VenueAggregate.fromPubMed(TITLE, NLM_ID, null);
       VenueAggregate restoredVenue =
-          VenueAggregate.restore(VenueId.of(1L), VenueType.JOURNAL, TITLE, null, 0L);
+          VenueAggregate.restore(VenueId.of(1L), VenueType.JOURNAL, TITLE, null, null, 0L);
 
       assertThat(pubmedVenue.isFromPubMed()).isTrue();
       assertThat(restoredVenue.isFromPubMed()).isFalse(); // restore 不设置 provenance
@@ -315,6 +380,7 @@ class VenueAggregateTest {
       // Then
       assertThat(result).contains("JOURNAL");
       assertThat(result).contains("name=" + TITLE);
+      assertThat(result).contains("nlmId=" + NLM_ID);
     }
   }
 
