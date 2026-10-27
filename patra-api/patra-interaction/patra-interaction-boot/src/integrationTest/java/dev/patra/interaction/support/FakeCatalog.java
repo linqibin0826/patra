@@ -11,12 +11,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/// 扮演 catalog 的文献内部解析接口（各子域的流程测试共用；要扮演期刊接口时在这里扩展）：按 catalog ID 或 PMID 查一张内存表。测试里改表就是「catalog 变了」。
+/// 扮演 catalog 的文献与期刊内部解析接口（各子域的流程测试共用）：按 catalog ID、PMID 或 NLM ID 查内存表。测试里改表就是「catalog 变了」。
 public final class FakeCatalog implements ResponseDefinitionTransformerV2 {
 
   private static final JsonMapper JSON = JsonMapper.builder().build();
 
   private final Map<Long, Publication> publications = new ConcurrentHashMap<>();
+  private final Map<Long, Journal> journals = new ConcurrentHashMap<>();
 
   /// 一篇文献。
   ///
@@ -55,6 +56,7 @@ public final class FakeCatalog implements ResponseDefinitionTransformerV2 {
   /// 清空。
   public void clear() {
     publications.clear();
+    journals.clear();
   }
 
   /// 按请求体回解析结果。
@@ -64,6 +66,9 @@ public final class FakeCatalog implements ResponseDefinitionTransformerV2 {
   @Override
   public ResponseDefinition transform(ServeEvent serveEvent) {
     JsonNode body = JSON.readTree(serveEvent.getRequest().getBodyAsString());
+    if (serveEvent.getRequest().getUrl().contains("/venues/")) {
+      return venues(serveEvent.getRequest().getUrl(), body);
+    }
     List<Map<String, Object>> items = new ArrayList<>();
     if (serveEvent.getRequest().getUrl().endsWith("/by-ids")) {
       for (JsonNode id : body.get("ids")) {
@@ -120,6 +125,93 @@ public final class FakeCatalog implements ResponseDefinitionTransformerV2 {
     Map<String, Object> item = new LinkedHashMap<>();
     item.put("key", key);
     item.put("exists", false);
+    return item;
+  }
+
+  // ---- 期刊解析（PAP-122 起）：`/_internal/venues/resolve/by-ids`、`by-nlm-ids` ----
+
+  /// 一本期刊。
+  ///
+  /// @param id catalog 期刊 ID
+  /// @param nlmId 主 NLM ID
+  /// @param state `ACTIVE` / `DELETED`
+  /// @param title 全称
+  /// @param abbreviation MEDLINE 缩写，可空
+  record Journal(long id, String nlmId, String state, String title, String abbreviation) {}
+
+  /// 放一本正常的期刊。
+  ///
+  /// @param id catalog 期刊 ID
+  /// @param nlmId 主 NLM ID
+  /// @param title 全称
+  /// @param abbreviation 缩写，可空
+  public void putJournal(long id, String nlmId, String title, String abbreviation) {
+    journals.put(id, new Journal(id, nlmId, "ACTIVE", title, abbreviation));
+  }
+
+  /// 软删一本期刊。
+  ///
+  /// @param id catalog 期刊 ID
+  public void softDeleteJournal(long id) {
+    Journal j = journals.get(id);
+    journals.put(id, new Journal(id, j.nlmId(), "DELETED", j.title(), j.abbreviation()));
+  }
+
+  /// 期刊解析：按期刊 ID（`ids`）或 NLM ID（`nlmIds`），每个请求键一行。
+  ///
+  /// @param url 请求地址
+  /// @param body 请求体
+  /// @return 响应
+  private ResponseDefinition venues(String url, JsonNode body) {
+    List<Map<String, Object>> items = new ArrayList<>();
+    if (url.endsWith("/by-ids")) {
+      for (JsonNode id : body.get("ids")) {
+        Journal j = journals.get(id.asLong());
+        items.add(j == null ? missingJournal(id.asString()) : journal(id.asString(), j));
+      }
+    } else {
+      for (JsonNode nlm : body.get("nlmIds")) {
+        Journal j =
+            journals.values().stream()
+                .filter(x -> x.nlmId().equals(nlm.asString()))
+                .findFirst()
+                .orElse(null);
+        items.add(j == null ? missingJournal(nlm.asString()) : journal(nlm.asString(), j));
+      }
+    }
+    return ResponseDefinition.okForJson(Map.of("items", items));
+  }
+
+  /// 存在的一行期刊。
+  ///
+  /// @param key 请求键
+  /// @param j 期刊
+  /// @return 行
+  private static Map<String, Object> journal(String key, Journal j) {
+    Map<String, Object> item = new LinkedHashMap<>();
+    item.put("key", key);
+    item.put("exists", true);
+    item.put("state", j.state());
+    item.put("id", Long.toString(j.id()));
+    item.put("nlmId", j.nlmId());
+    item.put("title", j.title());
+    item.put("abbreviatedTitle", j.abbreviation());
+    return item;
+  }
+
+  /// 不存在的一行期刊。
+  ///
+  /// @param key 请求键
+  /// @return 行
+  private static Map<String, Object> missingJournal(String key) {
+    Map<String, Object> item = new LinkedHashMap<>();
+    item.put("key", key);
+    item.put("exists", false);
+    item.put("state", null);
+    item.put("id", null);
+    item.put("nlmId", null);
+    item.put("title", null);
+    item.put("abbreviatedTitle", null);
     return item;
   }
 }

@@ -11,7 +11,7 @@
 | `subject` | 对象底座：每个被互动过的对象在登记表 `subject.registry` 里一行，互动数据只引用本地 `subject_id`。外部对象（文献、期刊）锚定在外部标识上（`pmid:…`、`nlm:…`），catalog 内部 ID 只是缓存，首次互动时同步向 catalog 解析并登记（catalog 不可用或对象不存在则拒绝），每日对账按锚刷新；本地对象（投稿经验，`post:…`）由所属子域在自己的事务里登记、改状态，带所有者与「是否匿名」，不对账。能力矩阵在 `SubjectType`。另外提供各子域共用的用户名片（`UserDirectoryPort`）、发表守卫（`PublishGuardGateway`：资格回查与按作者计数的频率限制）和注销清理流程（各子域实现 `UserDataCleanupGateway`）。工程设计 `docs/patra/specs/2026-10-24-subject-registry-design.md`、`docs/patra/specs/2026-10-27-interaction-foundation-extension-design.md` | PAP-112、PAP-120 |
 | `collection` | 文献库与收藏夹：文献库条目（用户 × 文献唯一，可带备注），扁平的收藏夹（私有 / 公开、一个条目可进多个夹），复制别人的公开收藏夹、批量「我的状态」、导出 key；向底座登记注销清理动作。工程设计 `docs/patra/specs/2026-10-24-interaction-collection-design.md` | PAP-113 |
 | `discussion` | 文献与投稿经验下的讨论：评论与回复、两层展示与单楼视图、修改历史、@ 联想；评论写入时在同一事务里发布进程内事件（事件契约 `domain.discussion.event`） | PAP-121 |
-| `post` | 投稿经验（按帖子结构存）：帖子基表与经验扩展表、匿名、修改历史、期刊汇总；经验作为本地对象 `POST` 向底座登记 | PAP-122 |
+| `post` | 投稿经验（按帖子结构存）：帖子基表 + 经验扩展表 + 修改历史（发布后 5 分钟内的修改不记版本）；字段与首轮 / 最终结果的一致性规则；同一作者同刊同投稿日期只能有一条；匿名由服务端遮蔽（他人拿不到作者 ID）；期刊页汇总读取时由 PG `percentile_cont` 算、Java 半进位；写入经发表守卫（每天 10 条），经验作为本地对象 `POST` 在同一事务里登记、删除时置为失效。工程设计 `docs/patra/specs/2026-10-27-interaction-post-design.md` | PAP-122 |
 | `notification` | 站内提醒：订阅讨论的事件，按规则在同一事务里写入；未读数、列表、已读、5 个月清理 | PAP-123 |
 
 `InteractionArchitectureTest` 的子域清单已经写满上面五个；以后再新增子域才改清单。子域的各层包随第一批代码建（规则 22b：一个子域只要有一层出现，四层就都要有），不建没有代码的空包和空 schema。
@@ -62,6 +62,13 @@ dev.patra.interaction.config           装配（XXL-Job 执行器等），不属
 - 新增收藏经 subject 的 `SubjectGateway`（事务外，可能同步调 catalog）；已有条目只用 `subject_id`（= 对外的 `itemId`），对象失效、catalog 整行消失后仍能改备注、移出、移除。
 - 排序：加入时间走 SQL 分页；出版日期、期刊在内存里排（快照经 `SubjectReadPort.findByIds` 每 5,000 个一块取），不把排序键抄进条目。
 - 公开资格与可见性只问 identity（批量用户摘要）：设公开回查账号状态与邮箱，读公开收藏夹透传访客 ID、看 `profileVisible`。
+
+## 4.2 post 的存储与并发
+
+- 三张表：`post.post`（帖子基表：类型、挂在哪个对象下、作者、是否匿名、正文、状态、`revised_at`）、`post.submission_experience`（经验扩展表，一对一）、`post.revision`（被替换的旧版本，结构化字段存 jsonb，各帖子类型共用）。都不分区（按对象读，量很小）。
+- 删除是软删：内容留在库里不再展示；列表、汇总、主页都只读 `ACTIVE`。帖子不物理删除，所以列表的游标（上一页最后一条的 ID）总能反查排序键。
+- 「同一作者同刊同投稿日期只能有一条未删除的经验」跨两张表、只对 `ACTIVE` 生效，没有唯一索引：写、改经验的事务先拿事务级 advisory lock `post.author:{userId}` 再查重。写经验时先过底座的发表守卫（它拿 `subject.publish:{userId}`），再拿作者锁。
+- 登记表里 `POST` 的快照：`journal` = 期刊全称、`abbreviation` = 期刊缩写、`publishedDate` = 投稿月份（提醒的上下文行用）；改投稿月份时刷新。
 
 ## 5. 运行
 
