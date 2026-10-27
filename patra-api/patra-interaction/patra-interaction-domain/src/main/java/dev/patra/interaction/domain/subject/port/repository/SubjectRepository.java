@@ -1,8 +1,11 @@
 package dev.patra.interaction.domain.subject.port.repository;
 
 import dev.patra.interaction.domain.subject.model.aggregate.SubjectAggregate;
+import dev.patra.interaction.domain.subject.model.enums.SubjectState;
 import dev.patra.interaction.domain.subject.model.enums.SubjectType;
 import dev.patra.interaction.domain.subject.model.source.SourceRecord;
+import dev.patra.interaction.domain.subject.model.vo.SubjectOwner;
+import dev.patra.interaction.domain.subject.model.vo.SubjectSnapshot;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -38,4 +41,26 @@ public interface SubjectRepository {
   ///
   /// @param subjects 对账后的登记对象
   void saveReconciled(List<SubjectAggregate> subjects);
+
+  /// 登记一个本地对象：身份锚 `{前缀}:{localId}`，来源 ID 就是 `localId`，ACTIVE。已登记过就违反唯一约束。
+  ///
+  /// @param type 本地对象种类
+  /// @param localId 所属子域里的 ID
+  /// @param owner 所有者
+  /// @param snapshot 展示快照
+  /// @param now 快照时间
+  /// @return 写入后的登记对象
+  SubjectAggregate insertLocal(
+      SubjectType type, long localId, SubjectOwner owner, SubjectSnapshot snapshot, Instant now);
+
+  /// 改一个本地对象的状态与快照；所有者不变。
+  ///
+  /// @param type 本地对象种类
+  /// @param localId 所属子域里的 ID
+  /// @param state 新状态
+  /// @param snapshot 新快照
+  /// @param now 快照时间
+  /// @return 有这一行时为 `true`
+  boolean updateLocal(
+      SubjectType type, long localId, SubjectState state, SubjectSnapshot snapshot, Instant now);
 }

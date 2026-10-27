@@ -17,6 +17,8 @@ import com.github.tomakehurst.wiremock.http.Fault;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import dev.patra.interaction.app.subject.usecase.reconcile.ReconcileSubjectsCommand;
 import dev.patra.interaction.app.subject.usecase.reconcile.ReconciliationResult;
+import dev.patra.interaction.domain.subject.exception.SubjectCapabilityNotSupportedException;
+import dev.patra.interaction.domain.subject.exception.SubjectErrorTrait;
 import dev.patra.interaction.domain.subject.exception.SubjectNotFoundException;
 import dev.patra.interaction.domain.subject.exception.SubjectSourceUnavailableException;
 import dev.patra.interaction.domain.subject.model.enums.SubjectCapability;
@@ -58,6 +60,10 @@ class SubjectRegistryFlowIT {
   private static final SubjectCapability COLLECT = SubjectCapability.COLLECT;
   private static final String BY_IDS = "/_internal/publications/resolve/by-ids";
   private static final String BY_PMIDS = "/_internal/publications/resolve/by-pmids";
+  private static final SubjectType JOURNAL = SubjectType.JOURNAL;
+  private static final SubjectCapability EXPERIENCE = SubjectCapability.SUBMISSION_EXPERIENCE;
+  private static final String VENUE_BY_IDS = "/_internal/venues/resolve/by-ids";
+  private static final String VENUE_BY_NLM_IDS = "/_internal/venues/resolve/by-nlm-ids";
   private static final String DOWN =
       """
       {"type":"about:blank","title":"Service Unavailable","status":503,
@@ -238,6 +244,78 @@ class SubjectRegistryFlowIT {
 
   // ---------- 桩与辅助 ----------
 
+  /// AC：期刊锚定在 NLM ID 上。catalog 重导换了期刊 ID，且原来的主 NLM 成了副 NLM（按它解析返回的 `nlmId` 是别的
+  /// 值）：对账后登记行仍是同一个 `subject_id`、锚不变，指向新的期刊 ID。
+  @Test
+  void should_anchor_journal_on_nlm_and_follow_reimport() {
+    stubVenueById(100L, "0404401", "ACTIVE");
+    SubjectId journal = gateway.resolveForInteraction(JOURNAL, "100", EXPERIENCE);
+    assertThat(naturalKeyOf(journal.value())).isEqualTo("nlm:0404401");
+
+    stubVenuesByNlm(Map.of("0404401", venue("0404401", 200L, "100970884", "ACTIVE")));
+    ReconciliationResult result = reconcile();
+
+    assertThat(result.failedBatches()).isZero();
+    assertThat(naturalKeyOf(journal.value())).isEqualTo("nlm:0404401");
+    assertThat(readPort.findByIds(List.of(journal)).get(journal).key()).isEqualTo("200");
+    assertThat(readPort.findIdsByKeys(JOURNAL, List.of("200"))).containsEntry("200", journal);
+    catalog.verify(
+        postRequestedFor(urlEqualTo(VENUE_BY_NLM_IDS))
+            .withRequestBody(equalToJson("{\"nlmIds\":[\"0404401\"]}")));
+    catalog.resetRequests();
+    assertThat(gateway.resolveForInteraction(JOURNAL, "200", EXPERIENCE)).isEqualTo(journal);
+    catalog.verify(0, postRequestedFor(anyUrl()));
+  }
+
+  /// 期刊不存在、没有 NLM 都按不存在拒绝；软删的期刊不能首次登记（带「已失效」原因码）；都不建行。
+  @Test
+  void should_reject_journal_that_is_missing_soft_deleted_or_without_nlm() {
+    catalog.stubFor(
+        post(urlEqualTo(VENUE_BY_IDS))
+            .withRequestBody(equalToJson("{\"ids\":[100]}"))
+            .willReturn(okJson(itemsJson(List.of(venueMissing("100"))))));
+    stubVenueById(200L, "2985213R", "DELETED");
+    stubVenueById(300L, null, "ACTIVE");
+
+    assertThatThrownBy(() -> gateway.resolveForInteraction(JOURNAL, "100", EXPERIENCE))
+        .isInstanceOfSatisfying(
+            SubjectNotFoundException.class,
+            ex ->
+                assertThat(ex.getErrorTraits())
+                    .doesNotContain(SubjectErrorTrait.SUBJECT_UNAVAILABLE));
+    assertThatThrownBy(() -> gateway.resolveForInteraction(JOURNAL, "200", EXPERIENCE))
+        .isInstanceOfSatisfying(
+            SubjectNotFoundException.class,
+            ex -> assertThat(ex.getErrorTraits()).contains(SubjectErrorTrait.SUBJECT_UNAVAILABLE));
+    assertThatThrownBy(() -> gateway.resolveForInteraction(JOURNAL, "300", EXPERIENCE))
+        .isInstanceOf(SubjectNotFoundException.class);
+    assertThat(rowCount()).isZero();
+  }
+
+  /// 期刊在 catalog 里整行消失：失效、清空来源 ID、保留快照。
+  @Test
+  void should_mark_vanished_journal_unavailable() {
+    stubVenueById(100L, "0404401", "ACTIVE");
+    SubjectId journal = gateway.resolveForInteraction(JOURNAL, "100", EXPERIENCE);
+
+    stubVenuesByNlm(Map.of("0404401", venueMissing("0404401")));
+    reconcile();
+
+    SubjectView view = readPort.findByIds(List.of(journal)).get(journal);
+    assertThat(view.state()).isEqualTo(SubjectState.UNAVAILABLE);
+    assertThat(view.key()).isNull();
+    assertThat(view.snapshot().title()).isEqualTo("Journal 100");
+    assertThat(view.snapshot().abbreviation()).isEqualTo("J 100");
+  }
+
+  /// 期刊不能收藏：能力矩阵先拒绝，不请求 catalog。
+  @Test
+  void should_reject_collecting_a_journal() {
+    assertThatThrownBy(() -> gateway.resolveForInteraction(JOURNAL, "100", COLLECT))
+        .isInstanceOf(SubjectCapabilityNotSupportedException.class);
+    catalog.verify(0, postRequestedFor(anyUrl()));
+  }
+
   /// 按 ID 解析一篇的桩。
   ///
   /// @param id 主键
@@ -275,6 +353,61 @@ class SubjectRegistryFlowIT {
             pmid == null ? "null" : "\"" + pmid + "\"",
             pmid,
             state);
+  }
+
+  /// 按期刊 ID 解析的桩：只对 `{"ids":[id]}` 回这一行。
+  ///
+  /// @param id 期刊 ID
+  /// @param nlmId 主 NLM，可空
+  /// @param state 状态
+  private static void stubVenueById(long id, String nlmId, String state) {
+    catalog.stubFor(
+        post(urlEqualTo(VENUE_BY_IDS))
+            .withRequestBody(equalToJson("{\"ids\":[" + id + "]}"))
+            .willReturn(okJson(itemsJson(List.of(venue(Long.toString(id), id, nlmId, state))))));
+  }
+
+  /// 按 NLM ID 解析的桩：响应只含给出的行。
+  ///
+  /// @param items 请求的 NLM → 一行 JSON
+  private static void stubVenuesByNlm(Map<String, String> items) {
+    catalog.stubFor(
+        post(urlEqualTo(VENUE_BY_NLM_IDS))
+            .willReturn(okJson(itemsJson(List.copyOf(items.values())))));
+  }
+
+  /// 一行存在的期刊解析结果：刊名 `Journal {期刊 ID}`，缩写 `J {期刊 ID}`（同一期刊按哪种 key 查都一样）。
+  ///
+  /// @param key 请求键
+  /// @param id 期刊 ID
+  /// @param nlmId 主 NLM，可空
+  /// @param state 状态
+  /// @return JSON
+  private static String venue(String key, long id, String nlmId, String state) {
+    return """
+        {"key":"%s","exists":true,"state":"%s","id":"%d","nlmId":%s,"title":"Journal %d",
+         "abbreviatedTitle":"J %d"}"""
+        .formatted(key, state, id, nlmId == null ? "null" : "\"" + nlmId + "\"", id, id);
+  }
+
+  /// 一行不存在的期刊解析结果。
+  ///
+  /// @param key 请求键
+  /// @return JSON
+  private static String venueMissing(String key) {
+    return """
+        {"key":"%s","exists":false,"state":null,"id":null,"nlmId":null,"title":null,
+         "abbreviatedTitle":null}"""
+        .formatted(key);
+  }
+
+  /// 某行的身份锚。
+  ///
+  /// @param subjectId 本地 ID
+  /// @return 身份锚
+  private String naturalKeyOf(long subjectId) {
+    return jdbcTemplate.queryForObject(
+        "SELECT natural_key FROM subject.registry WHERE subject_id = ?", String.class, subjectId);
   }
 
   /// 包成响应体。

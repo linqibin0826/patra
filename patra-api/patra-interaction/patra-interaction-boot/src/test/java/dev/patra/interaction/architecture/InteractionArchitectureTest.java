@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test;
 /// - `HexagonalArchitectureRules`：层依赖方向、Domain 纯净性、命名、封装、事务边界
 /// - `TestingRules`：测试规范
 /// - `SubdomainArchitectureRules`：子域边界（层下面只有已声明的子域、子域间无环、
-///   跨子域只经公开包、底座不依赖其他子域）
+///   跨子域只经公开包、跨子域依赖必须声明、底座不依赖其他子域）
 ///
 /// 导入 interaction 全部模块的主代码；test-fixtures 不导入，测试代码不受子域规则管。
 ///
@@ -39,10 +39,20 @@ class InteractionArchitectureTest {
       new HexagonalArchitectureRules(
           "dev.patra.interaction", List.of("dev.patra.common..", "dev.patra.tool.."));
 
-  /// 子域边界规则：底座 subject，本版两个子域。
+  /// 底座子域。
+  private static final String FOUNDATION = "subject";
+
+  /// 声明的全部子域：v0.14 起讨论、投稿经验、提醒（PAP-121 ~ 123）一次写进来，各子域随第一批代码建自己的包。
+  private static final List<String> SUBDOMAINS =
+      List.of(FOUNDATION, "collection", "discussion", "post", "notification");
+
+  /// 按子域分包的四层（api 模块还没有类）。
+  private static final List<String> LAYERS = List.of("domain", "app", "infra", "adapter");
+
+  /// 子域边界规则。依赖方向按 v0.14 决策 A：提醒只经事件契约依赖讨论，其余子域只依赖底座。
   private static final SubdomainArchitectureRules subdomainRules =
-      new SubdomainArchitectureRules(
-          "dev.patra.interaction", "subject", Set.of("subject", "collection"));
+      new SubdomainArchitectureRules("dev.patra.interaction", FOUNDATION, Set.copyOf(SUBDOMAINS))
+          .allowingSubscription("notification", "discussion");
 
   /// 导入 interaction 全部模块的主代码。
   @BeforeAll
@@ -250,14 +260,22 @@ class InteractionArchitectureTest {
   @DisplayName("第七类：子域边界规则")
   class SubdomainBoundaryTests {
 
-    /// 每层的每个子域包都被导入了：导入条件写错时这里先红，其余规则才不会对空集合判通过。
+    /// 底座四层必须都被导入：导入条件写错时这里先红，其余规则才不会对空集合判通过。其余子域只要有一层出现，
+    /// 四层就都要在：新子域谁先加代码谁补齐四层的包，不用改这条测试，也不建没有代码的空包。
     @Test
-    @DisplayName("规则 22b: 四层的两个子域包都在导入结果里")
+    @DisplayName("规则 22b: 底座四层都在；其余子域出现在任一层时四层都在")
     void everySubdomainPackageShouldBeImported() {
-      for (String layer : List.of("domain", "app", "infra", "adapter")) {
-        for (String subdomain : List.of("subject", "collection")) {
-          String packageName = "dev.patra.interaction." + layer + "." + subdomain;
-          assertThat(classes.containPackage(packageName)).as(packageName).isTrue();
+      for (String subdomain : SUBDOMAINS) {
+        boolean present =
+            subdomain.equals(FOUNDATION)
+                || LAYERS.stream()
+                    .anyMatch(layer -> classes.containPackage(packageOf(layer, subdomain)));
+        if (present) {
+          for (String layer : LAYERS) {
+            assertThat(classes.containPackage(packageOf(layer, subdomain)))
+                .as(packageOf(layer, subdomain))
+                .isTrue();
+          }
         }
       }
     }
@@ -284,6 +302,21 @@ class InteractionArchitectureTest {
     @DisplayName("规则 26: 底座子域不依赖其他子域")
     void foundationShouldDependOnNoOtherSubdomain() {
       subdomainRules.foundationDependsOnNoOtherSubdomain().check(classes);
+    }
+
+    @Test
+    @DisplayName("规则 27: 跨子域依赖必须声明（提醒只经事件契约依赖讨论）")
+    void crossSubdomainDependenciesShouldBeDeclared() {
+      subdomainRules.crossSubdomainDependenciesAreDeclared().check(classes);
+    }
+
+    /// 某层某子域的包名。
+    ///
+    /// @param layer 层
+    /// @param subdomain 子域
+    /// @return 包名
+    private static String packageOf(String layer, String subdomain) {
+      return "dev.patra.interaction." + layer + "." + subdomain;
     }
   }
 }

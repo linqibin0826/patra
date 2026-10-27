@@ -54,7 +54,7 @@ class PublicationSubjectSourceAdapterTest {
                 100L,
                 pmid("1"),
                 SourceState.ACTIVE,
-                SubjectSnapshot.of("Title 1", "Journal 1", "2019-03")));
+                SubjectSnapshot.of("Title 1", "Journal 1", "2019-03", null)));
   }
 
   @Test
@@ -64,7 +64,8 @@ class PublicationSubjectSourceAdapterTest {
     SourceRecord record = adapter.resolveByKey(100L).orElseThrow();
 
     assertThat(record.state()).isEqualTo(SourceState.DELETED);
-    assertThat(record.snapshot()).isEqualTo(SubjectSnapshot.of("Title 1", "Journal 1", "2019"));
+    assertThat(record.snapshot())
+        .isEqualTo(SubjectSnapshot.of("Title 1", "Journal 1", "2019", null));
   }
 
   @Test
@@ -122,7 +123,7 @@ class PublicationSubjectSourceAdapterTest {
 
     SubjectSnapshot snapshot = adapter.resolveByKey(100L).orElseThrow().snapshot();
 
-    assertThat(snapshot).isEqualTo(SubjectSnapshot.of("Title 1", "Journal 1", null));
+    assertThat(snapshot).isEqualTo(SubjectSnapshot.of("Title 1", "Journal 1", null, null));
   }
 
   @ParameterizedTest

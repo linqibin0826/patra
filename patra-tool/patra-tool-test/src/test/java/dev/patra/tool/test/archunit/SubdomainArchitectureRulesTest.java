@@ -128,10 +128,102 @@ class SubdomainArchitectureRulesTest {
         .isFalse();
   }
 
-  /// 全部规则是四条。
+  /// 任意子域的事件契约包都是公开的。
   @Test
-  void should_list_all_four_rules() {
-    assertThat(rules("compliant").allRules()).hasSize(4);
+  void should_publish_event_contract_of_any_subdomain() {
+    assertThat(
+            evaluate(
+                    "events",
+                    rules("events").crossSubdomainDependenciesGoThroughPublishedPackages())
+                .hasViolation())
+        .isFalse();
+  }
+
+  /// 声明了订阅边，就可以依赖对方的事件契约。
+  @Test
+  void should_accept_declared_subscription() {
+    SubdomainArchitectureRules rules = rules("events").allowingSubscription("note", "collection");
+
+    assertThat(evaluate("events", rules.crossSubdomainDependenciesAreDeclared()).hasViolation())
+        .isFalse();
+  }
+
+  /// 没声明的边，哪怕只是事件契约也违规。
+  @Test
+  void should_reject_undeclared_subscription() {
+    assertViolationNaming(
+        "events", rules("events").crossSubdomainDependenciesAreDeclared(), "ItemCollectedEvent");
+  }
+
+  /// 订阅边只放行事件契约，读端口不行。
+  @Test
+  void should_reject_read_port_across_subscription_edge() {
+    assertViolationNaming(
+        "notereads",
+        rules("notereads")
+            .allowingSubscription("note", "collection")
+            .crossSubdomainDependenciesAreDeclared(),
+        "CollectionReadPort");
+  }
+
+  /// 声明了依赖边，就可以用对方的全部公开包。
+  @Test
+  void should_accept_declared_dependency() {
+    SubdomainArchitectureRules rules = rules("notereads").allowingDependency("note", "collection");
+
+    assertThat(evaluate("notereads", rules.crossSubdomainDependenciesAreDeclared()).hasViolation())
+        .isFalse();
+  }
+
+  /// 没声明依赖边就用对方的读端口，违规。
+  @Test
+  void should_reject_undeclared_dependency() {
+    assertViolationNaming(
+        "notereads",
+        rules("notereads").crossSubdomainDependenciesAreDeclared(),
+        "CollectionReadPort");
+  }
+
+  /// 底座公开名片端口、名片和领域异常。
+  @Test
+  void should_publish_foundation_user_directory_and_exceptions() {
+    assertThat(
+            evaluate(
+                    "foundationextras",
+                    rules("foundationextras")
+                        .crossSubdomainDependenciesGoThroughPublishedPackages())
+                .hasViolation())
+        .isFalse();
+  }
+
+  /// 只依赖底座的子域不用声明任何边。
+  @Test
+  void should_accept_compliant_without_declarations() {
+    assertThat(
+            evaluate("compliant", rules("compliant").crossSubdomainDependenciesAreDeclared())
+                .hasViolation())
+        .isFalse();
+  }
+
+  /// 未知子域、自环、从底座出发、指向底座的边都拒绝声明。
+  @Test
+  void should_reject_invalid_edges() {
+    SubdomainArchitectureRules rules = rules("compliant");
+
+    assertThatThrownBy(() -> rules.allowingDependency("unknown", "note"))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> rules.allowingSubscription("note", "note"))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> rules.allowingDependency("subject", "note"))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> rules.allowingSubscription("note", "subject"))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  /// 全部规则是五条。
+  @Test
+  void should_list_all_five_rules() {
+    assertThat(rules("compliant").allRules()).hasSize(5);
   }
 
   /// 断言规则在场景里有违规，且违规文本点名了某个类。

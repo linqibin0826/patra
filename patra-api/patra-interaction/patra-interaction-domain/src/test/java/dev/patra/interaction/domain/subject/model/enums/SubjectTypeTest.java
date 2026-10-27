@@ -20,6 +20,7 @@ class SubjectTypeTest {
     assertThat(SubjectType.fromCode((short) 1)).isEqualTo(SubjectType.PUBLICATION);
     assertThat(SubjectType.fromSlug("publication")).contains(SubjectType.PUBLICATION);
     assertThat(SubjectType.PUBLICATION.naturalKeyScheme()).isEqualTo(NaturalKeyScheme.PMID);
+    assertThat(SubjectType.PUBLICATION.displayName()).isEqualTo("文献");
   }
 
   /// 库里出现未知编码是程序错误。
@@ -32,13 +33,52 @@ class SubjectTypeTest {
   /// 未知 slug 交给调用方翻译成 404。
   @Test
   void should_return_empty_for_unknown_slug() {
-    assertThat(SubjectType.fromSlug("journal")).isEmpty();
+    assertThat(SubjectType.fromSlug("unknown")).isEmpty();
   }
 
-  /// 本版只开「收藏文献」。
+  /// 文献可以收藏、讨论。
   @Test
-  void should_support_collect_for_publication() {
+  void should_support_collect_and_discuss_for_publication() {
     assertThat(SubjectType.PUBLICATION.supports(SubjectCapability.COLLECT)).isTrue();
+    assertThat(SubjectType.PUBLICATION.supports(SubjectCapability.DISCUSS)).isTrue();
+    assertThat(SubjectType.PUBLICATION.supports(SubjectCapability.SUBMISSION_EXPERIENCE)).isFalse();
+  }
+
+  /// 期刊：key 是 catalog 期刊 ID，身份锚是 NLM ID，只能挂投稿经验。
+  @Test
+  void should_define_journal() {
+    assertThat(SubjectType.JOURNAL.code()).isEqualTo((short) 2);
+    assertThat(SubjectType.JOURNAL.slug()).isEqualTo("journal");
+    assertThat(SubjectType.JOURNAL.displayName()).isEqualTo("期刊");
+    assertThat(SubjectType.JOURNAL.naturalKeyScheme()).isEqualTo(NaturalKeyScheme.NLM);
+    assertThat(SubjectType.fromCode((short) 2)).isEqualTo(SubjectType.JOURNAL);
+    assertThat(SubjectType.fromSlug("journal")).contains(SubjectType.JOURNAL);
+    assertThat(SubjectType.JOURNAL.supports(SubjectCapability.SUBMISSION_EXPERIENCE)).isTrue();
+    assertThat(SubjectType.JOURNAL.supports(SubjectCapability.COLLECT)).isFalse();
+    assertThat(SubjectType.JOURNAL.supports(SubjectCapability.DISCUSS)).isFalse();
+    assertThat(SubjectType.JOURNAL.parseKey("319059608675758187")).isEqualTo(319059608675758187L);
+  }
+
+  /// 投稿经验（帖子）：本地对象，key 是帖子 ID，只能讨论。
+  @Test
+  void should_define_post_as_local() {
+    assertThat(SubjectType.POST.code()).isEqualTo((short) 3);
+    assertThat(SubjectType.POST.slug()).isEqualTo("post");
+    assertThat(SubjectType.POST.displayName()).isEqualTo("投稿经验");
+    assertThat(SubjectType.POST.origin()).isEqualTo(SubjectOrigin.LOCAL);
+    assertThat(SubjectType.POST.isLocal()).isTrue();
+    assertThat(SubjectType.POST.naturalKeyScheme()).isEqualTo(NaturalKeyScheme.POST);
+    assertThat(SubjectType.POST.supports(SubjectCapability.DISCUSS)).isTrue();
+    assertThat(SubjectType.POST.supports(SubjectCapability.COLLECT)).isFalse();
+    assertThat(SubjectType.PUBLICATION.isLocal()).isFalse();
+    assertThat(SubjectType.JOURNAL.origin()).isEqualTo(SubjectOrigin.EXTERNAL);
+  }
+
+  /// 启动校验与对账只管外部类型。
+  @Test
+  void should_list_only_external_types() {
+    assertThat(SubjectType.externalTypes())
+        .containsExactly(SubjectType.PUBLICATION, SubjectType.JOURNAL);
   }
 
   /// 文献的 key 是 catalog 内部 ID 的规范十进制。

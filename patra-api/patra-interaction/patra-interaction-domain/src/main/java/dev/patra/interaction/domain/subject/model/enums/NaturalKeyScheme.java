@@ -7,7 +7,14 @@ import java.util.regex.Pattern;
 /// 外部身份锚的种类：落库为 `{前缀}:{值}`。
 public enum NaturalKeyScheme {
   /// PubMed ID，与 catalog 的 PMID 校验一致。
-  PMID("pmid", "[1-9][0-9]{0,14}");
+  PMID("pmid", "[1-9][0-9]{0,14}"),
+
+  /// NLM Unique ID，与 catalog 的校验一致，区分大小写。按字符串存：mini 上有前导零（`0404401`）、`R` / `A`
+  /// 后缀（`2985213R`）和 16 位的新式 ID（`9918523075306676`）。
+  NLM("nlm", "[0-9]{1,19}[A-Z]?"),
+
+  /// 帖子 ID（本地对象，Snowflake）。
+  POST("post", "[1-9][0-9]{0,18}");
 
   private final String prefix;
   private final Pattern format;

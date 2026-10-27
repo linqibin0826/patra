@@ -5,6 +5,7 @@ import dev.patra.interaction.domain.subject.model.enums.SubjectState;
 import dev.patra.interaction.domain.subject.model.enums.SubjectType;
 import dev.patra.interaction.domain.subject.model.vo.NaturalKey;
 import dev.patra.interaction.domain.subject.model.vo.SubjectId;
+import dev.patra.interaction.domain.subject.model.vo.SubjectOwner;
 import dev.patra.interaction.domain.subject.model.vo.SubjectSnapshot;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -24,7 +25,7 @@ class SubjectRows {
   /// 读回聚合要的列（`snapshot` 以文本取出）。
   static final String COLUMNS =
       "subject_id, target_type, natural_key, source_id, state, snapshot::text AS snapshot,"
-          + " snapshot_at";
+          + " snapshot_at, owner_user_id, owner_anonymous";
 
   private final JsonMapper jsonMapper;
 
@@ -50,7 +51,20 @@ class SubjectRows {
         .state(SubjectState.valueOf(rs.getString("state")))
         .snapshot(jsonMapper.readValue(rs.getString("snapshot"), SubjectSnapshot.class))
         .snapshotAt(rs.getObject("snapshot_at", OffsetDateTime.class).toInstant())
+        .owner(owner(rs))
         .build();
+  }
+
+  /// 读所有者两列：外部对象两列都为空。
+  ///
+  /// @param rs 结果集（当前行）
+  /// @return 所有者；外部对象为 `null`
+  /// @throws SQLException 读列失败
+  private static SubjectOwner owner(ResultSet rs) throws SQLException {
+    Long ownerUserId = rs.getObject("owner_user_id", Long.class);
+    return ownerUserId == null
+        ? null
+        : SubjectOwner.of(ownerUserId, rs.getBoolean("owner_anonymous"));
   }
 
   /// 快照 → jsonb 文本。
