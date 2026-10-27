@@ -424,7 +424,96 @@ class VenueBrowseReadAdapterIT {
     assertThat(facets.jcrQuartiles().get(0).count()).isEqualTo(1);
   }
 
+  // ===== 按 ID 批量读卡片（PAP-117） =====
+
+  @Test
+  @DisplayName("findCardsByIds：只返回存在且未软删的期刊，带主 NLM 与最新年 JCR；非期刊、不存在的不返回")
+  void should_return_cards_by_ids_excluding_soft_deleted_and_non_journals() {
+    Long swiss = saveJournalWithNlm("Schweizerische medizinische Wochenschrift", "0404401");
+    Long lancet = saveJournalWithNlm("Lancet (London, England)", "2985213R");
+    Long gone = saveJournalWithNlm("Gone Journal", "0000003R");
+    Long repository = saveVenueOfType("REPOSITORY", "Some repository");
+    saveJcr(lancet, 2023, new BigDecimal("98.4"), "Q1", "MEDICINE, GENERAL & INTERNAL");
+    saveJcr(lancet, 2024, new BigDecimal("88.5"), "Q1", "MEDICINE, GENERAL & INTERNAL");
+    em.flush();
+    softDelete(gone);
+    em.clear();
+
+    List<VenueBrowseReadModel> cards =
+        adapter.findCardsByIds(List.of(swiss, lancet, gone, repository, 999L));
+
+    assertThat(cards).extracting(VenueBrowseReadModel::id).containsExactlyInAnyOrder(swiss, lancet);
+    assertThat(cards)
+        .filteredOn(c -> c.id().equals(lancet))
+        .singleElement()
+        .satisfies(
+            c -> {
+              assertThat(c.nlmId()).isEqualTo("2985213R");
+              assertThat(c.impactFactor()).isEqualByComparingTo("88.5");
+            });
+    assertThat(cards)
+        .filteredOn(c -> c.id().equals(swiss))
+        .singleElement()
+        .extracting(VenueBrowseReadModel::nlmId)
+        .isEqualTo("0404401");
+  }
+
+  @Test
+  @DisplayName("findCardsByIds：空入参返回空列表")
+  void should_return_no_cards_for_empty_ids() {
+    assertThat(adapter.findCardsByIds(List.of())).isEmpty();
+  }
+
+  @Test
+  @DisplayName("浏览结果的卡片带主 NLM")
+  void browse_items_carry_primary_nlm() {
+    saveJournalWithNlm("Alpha Journal", "0404401");
+    em.flush();
+    em.clear();
+
+    PageResult<VenueBrowseReadModel> result =
+        adapter.search(VenueBrowseFilter.builder().sort(VenueBrowseSort.TITLE).build(), FIRST_PAGE);
+
+    assertThat(result.items()).extracting(VenueBrowseReadModel::nlmId).containsExactly("0404401");
+  }
+
   // ===== 测试数据构建助手 =====
+
+  /// 保存带主 NLM 的期刊。
+  ///
+  /// @param title 期刊全称
+  /// @param nlmId 主 NLM
+  /// @return 期刊 ID
+  private Long saveJournalWithNlm(String title, String nlmId) {
+    Long id = saveJournal(title, null, null, null, null);
+    em.find(VenueEntity.class, id).setNlmId(nlmId);
+    return id;
+  }
+
+  /// 保存指定类型的载体（非期刊类型用）。
+  ///
+  /// @param type 载体类型
+  /// @param title 全称
+  /// @return 载体 ID
+  private Long saveVenueOfType(String type, String title) {
+    VenueEntity v = new VenueEntity();
+    v.setId(SnowflakeIdGenerator.getId());
+    v.setVenueType(type);
+    v.setTitle(title);
+    v.setProvenanceCode("OPENALEX");
+    em.persist(v);
+    return v.getId();
+  }
+
+  /// 软删一个载体：实体走 Hibernate `@SoftDelete` 会被过滤，测试直接改列。
+  ///
+  /// @param id 载体 ID
+  private void softDelete(Long id) {
+    em.getEntityManager()
+        .createNativeQuery("UPDATE cat_venue SET deleted_at = now() WHERE id = :id")
+        .setParameter("id", id)
+        .executeUpdate();
+  }
 
   private Long saveJournal(
       String title, String abbr, String countryCode, Boolean isOa, Boolean isInDoaj) {

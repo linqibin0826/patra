@@ -30,6 +30,28 @@ import org.springframework.data.repository.query.Param;
 /// @since 0.1.0
 public interface VenueDao extends JpaRepository<VenueEntity, Long> {
 
+  /// 门户期刊卡片的投影与 FROM：浏览检索与按 ID 批量读卡片共用（以换行结束，后面直接拼 WHERE）。
+  ///
+  /// 最新年 JCR / CAS 各用 LATERAL 取一行；列别名与 [VenueBrowseRow] 的 getter 一一对应。
+  String PORTAL_VENUE_CARD_SELECT =
+      """
+      SELECT v.id AS "id", v.title AS "name", v.abbreviated_title AS "abbr",
+             v.image_object_key AS "coverObjectKey",
+             jcr.impact_factor AS "impactFactor", jcr.jif_quartile AS "jcrQuartile", jcr.subject AS "jcrSubject",
+             cas.major_category AS "casMajorCategory", cas.major_quartile AS "casMajorQuartile",
+             cas.is_top_journal AS "casIsTop", v.country_code AS "countryCode",
+             v.cited_by_count AS "citedByCount",
+             (v.publication_profile -> 'publicationHistory' ->> 'startYear')::int AS "foundedYear",
+             (v.open_access ->> 'isOa')::boolean AS "isOpenAccess",
+             (v.open_access ->> 'isInDoaj')::boolean AS "isInDoaj", v.issn_l AS "issnL",
+             v.nlm_id AS "nlmId"
+      FROM cat_venue v
+      LEFT JOIN LATERAL (SELECT r.impact_factor, r.jif_quartile, r.subject
+          FROM cat_venue_jcr_rating r WHERE r.venue_id = v.id ORDER BY r.year DESC LIMIT 1) jcr ON TRUE
+      LEFT JOIN LATERAL (SELECT r.major_category, r.major_quartile, r.is_top_journal
+          FROM cat_venue_cas_rating r WHERE r.venue_id = v.id ORDER BY r.year DESC, r.edition ASC LIMIT 1) cas ON TRUE
+      """;
+
   /// 检查是否存在任何数据。
   ///
   /// @return 如果存在数据则返回 true
@@ -274,21 +296,8 @@ public interface VenueDao extends JpaRepository<VenueEntity, Long> {
   /// @return 期刊分页投影
   @Query(
       value =
-          """
-      SELECT v.id AS "id", v.title AS "name", v.abbreviated_title AS "abbr",
-             v.image_object_key AS "coverObjectKey",
-             jcr.impact_factor AS "impactFactor", jcr.jif_quartile AS "jcrQuartile", jcr.subject AS "jcrSubject",
-             cas.major_category AS "casMajorCategory", cas.major_quartile AS "casMajorQuartile",
-             cas.is_top_journal AS "casIsTop", v.country_code AS "countryCode",
-             v.cited_by_count AS "citedByCount",
-             (v.publication_profile -> 'publicationHistory' ->> 'startYear')::int AS "foundedYear",
-             (v.open_access ->> 'isOa')::boolean AS "isOpenAccess",
-             (v.open_access ->> 'isInDoaj')::boolean AS "isInDoaj", v.issn_l AS "issnL"
-      FROM cat_venue v
-      LEFT JOIN LATERAL (SELECT r.impact_factor, r.jif_quartile, r.subject
-          FROM cat_venue_jcr_rating r WHERE r.venue_id = v.id ORDER BY r.year DESC LIMIT 1) jcr ON TRUE
-      LEFT JOIN LATERAL (SELECT r.major_category, r.major_quartile, r.is_top_journal
-          FROM cat_venue_cas_rating r WHERE r.venue_id = v.id ORDER BY r.year DESC, r.edition ASC LIMIT 1) cas ON TRUE
+          PORTAL_VENUE_CARD_SELECT
+              + """
       WHERE v.venue_type = 'JOURNAL' AND v.deleted_at IS NULL
         AND (:keyword IS NULL OR v.title ILIKE CONCAT(:keyword, '%') ESCAPE '!'
              OR v.abbreviated_title ILIKE CONCAT(:keyword, '%') ESCAPE '!')
@@ -336,6 +345,20 @@ public interface VenueDao extends JpaRepository<VenueEntity, Long> {
       @Param("doaj") Boolean doaj,
       @Param("countryCodes") String[] countryCodes,
       Pageable pageable);
+
+  /// 按 ID 批量读门户期刊卡片（PAP-117）：只返回期刊类型且未软删的，整批一条 SQL，顺序不保证。
+  ///
+  /// @param ids 期刊 ID 数组
+  /// @return 卡片投影
+  @Query(
+      value =
+          PORTAL_VENUE_CARD_SELECT
+              + """
+      WHERE v.venue_type = 'JOURNAL' AND v.deleted_at IS NULL
+        AND v.id = ANY((:ids)::bigint[])
+      """,
+      nativeQuery = true)
+  List<VenueBrowseRow> findPortalVenueCardsByIds(@Param("ids") Long[] ids);
 
   /// JCR 学科 facet 聚合（drill-down：忽略 subjects 维度自身的过滤）。
   ///

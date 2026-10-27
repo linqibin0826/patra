@@ -5,6 +5,7 @@ import static org.mockito.Mockito.when;
 
 import dev.patra.catalog.adapter.config.CatalogAdapterITWebMvcConfig;
 import dev.patra.catalog.app.usecase.portal.query.PortalVenueBrowseQueryService;
+import dev.patra.catalog.app.usecase.portal.query.PortalVenueCardQueryService;
 import dev.patra.catalog.app.usecase.portal.query.PortalVenueDetailQueryService;
 import dev.patra.catalog.domain.exception.VenueNotFoundException;
 import dev.patra.catalog.domain.model.read.portal.VenueDetailReadModel;
@@ -35,6 +36,8 @@ class PortalVenueDetailControllerIT {
 
   // PortalVenueBrowseQueryService 也需要 mock（Controller 里已注入）
   @MockitoBean private PortalVenueBrowseQueryService portalVenueBrowseQueryService;
+
+  @MockitoBean private PortalVenueCardQueryService portalVenueCardQueryService;
 
   @Test
   @DisplayName("GET /portal/venues/{id} 返回 200 + 对齐前端的期刊详情")

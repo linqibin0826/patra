@@ -39,7 +39,8 @@ import org.slf4j.LoggerFactory;
 ///
 /// **特殊处理**：
 ///
-/// - 快速访问字段（nlmId、issnL、openalexId）从标识符集合提取
+/// - nlmId 写聚合的主 NLM（`VenueAggregate.getNlmId()`，写一次的身份锚），恢复时原样传回聚合
+/// - 快速访问字段（issnL、openalexId）从标识符集合提取
 /// - 快速访问字段（abbreviatedTitle、primaryLanguage、countryCode）从 publicationProfile 提取
 /// - toAggregate 后需手动设置 identifiers、provenance 和嵌入式值对象
 ///
@@ -114,6 +115,7 @@ public abstract class VenueJpaMapper {
             stringToVenueType(entity.getVenueType()),
             entity.getTitle(),
             entity.getImageObjectKey(),
+            entity.getNlmId(),
             entity.getVersion());
 
     // 设置来源信息
@@ -228,8 +230,11 @@ public abstract class VenueJpaMapper {
   /// @param entity JPA 实体
   /// @param aggregate 聚合根
   private void populateQuickAccessFields(VenueEntity entity, VenueAggregate aggregate) {
+    // 主 NLM 是身份锚：取聚合记录的主 NLM，不取标识符列表里排第一的 NLM（列表不保证顺序）
+    if (aggregate.getNlmId() != null) {
+      entity.setNlmId(aggregate.getNlmId());
+    }
     // 从标识符提取快速访问字段
-    aggregate.getIdentifier(VenueIdentifierType.NLM).ifPresent(entity::setNlmId);
     aggregate.getIdentifier(VenueIdentifierType.ISSN_L).ifPresent(entity::setIssnL);
     aggregate.getIdentifier(VenueIdentifierType.OPENALEX).ifPresent(entity::setOpenalexId);
 

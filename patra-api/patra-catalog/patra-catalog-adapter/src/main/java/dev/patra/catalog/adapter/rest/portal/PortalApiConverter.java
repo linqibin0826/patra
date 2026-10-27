@@ -118,6 +118,7 @@ public class PortalApiConverter {
         .isOpenAccess(model.isOpenAccess())
         .isInDoaj(model.isInDoaj())
         .issnL(model.issnL())
+        .nlmId(model.nlmId())
         .build();
   }
 

@@ -5,6 +5,8 @@ import dev.patra.catalog.domain.model.read.portal.VenueBrowseFilter;
 import dev.patra.catalog.domain.model.read.portal.VenueBrowseReadModel;
 import dev.patra.catalog.domain.query.PageResult;
 import dev.patra.catalog.domain.query.PagingParams;
+import java.util.Collection;
+import java.util.List;
 
 /// 期刊浏览检索 CQRS 读端口。
 ///
@@ -21,6 +23,12 @@ public interface VenueBrowseReadPort {
   /// @param paging 已归一化的分页参数
   /// @return 分页结果
   PageResult<VenueBrowseReadModel> search(VenueBrowseFilter filter, PagingParams paging);
+
+  /// 按 ID 批量读期刊卡片（门户 `/portal/venues/batch`）：只返回期刊类型且未软删的，顺序不保证。
+  ///
+  /// @param ids 期刊 ID；空集合时直接返回空列表、不查库
+  /// @return 卡片，与浏览结果同形
+  List<VenueBrowseReadModel> findCardsByIds(Collection<Long> ids);
 
   /// 计算各维度 facet 计数，支持 drill-down 多选语义。
   ///

@@ -20,7 +20,7 @@ import java.net.URI;
 /// 导入操作设计为「增量覆盖」语义：
 ///
 /// - 匹配已有期刊记录时，PubMed 数据覆盖旧数据
-/// - 匹配策略：ISSN-L → NLM ID → ISSN（降级策略）
+/// - 匹配策略：NLM ID → ISSN-L → ISSN（降级策略）
 /// - PubMed 独有期刊将创建新的 VenueAggregate 记录
 ///
 /// **不变量**：

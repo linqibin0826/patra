@@ -2,6 +2,7 @@ package dev.patra.catalog.infra.adapter.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.patra.catalog.domain.model.aggregate.VenueAggregate;
 import dev.patra.catalog.domain.model.enums.VenueIdentifierType;
@@ -11,13 +12,16 @@ import dev.patra.catalog.domain.model.vo.venue.ProvenanceInfo;
 import dev.patra.catalog.domain.model.vo.venue.PublicationHistory;
 import dev.patra.catalog.domain.model.vo.venue.PublicationProfile;
 import dev.patra.catalog.domain.model.vo.venue.Society;
+import dev.patra.catalog.domain.model.vo.venue.VenueIdentifier;
 import dev.patra.catalog.domain.model.vo.venue.VenueLanguages;
 import dev.patra.catalog.infra.config.CatalogITPostgreSQLContainerInitializer;
 import dev.patra.catalog.infra.persistence.dao.VenueDao;
 import dev.patra.catalog.infra.persistence.dao.VenueIdentifierDao;
+import dev.patra.catalog.infra.persistence.entity.VenueEntity;
 import dev.patra.common.ProvenanceCode;
 import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.json.JsonColumnCodec;
+import jakarta.persistence.PersistenceException;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -30,8 +34,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
@@ -66,6 +72,7 @@ class VenueRepositoryAdapterIT {
 
   @Autowired private VenueDao venueDao;
   @Autowired private VenueIdentifierDao identifierDao;
+  @Autowired private TestEntityManager em;
 
   // ========== hasAnyData() 测试 ==========
 
@@ -364,6 +371,25 @@ class VenueRepositoryAdapterIT {
       assertThat(result).hasSize(1);
       assertThat(result.get("NLM001").getTitle()).isEqualTo("Journal A");
     }
+
+    @Test
+    @DisplayName("同一期刊的主、副 NLM 一起查时两个都返回，指向同一期刊")
+    void should_return_every_requested_nlm_of_a_merged_venue() {
+      repository.insertAll(List.of(VenueAggregate.fromPubMed("J", "0404401", "0036-7672")));
+      em.flush();
+      em.clear();
+      VenueAggregate venue = repository.findByNlmIds(Set.of("0404401")).get("0404401");
+      venue.addIdentifier(VenueIdentifier.forNlm("100970884"));
+      repository.updateBatch(List.of(venue));
+      em.flush();
+      em.clear();
+
+      Map<String, VenueAggregate> result = repository.findByNlmIds(Set.of("0404401", "100970884"));
+
+      assertThat(result).containsOnlyKeys("0404401", "100970884");
+      assertThat(result.get("100970884").getId()).isEqualTo(result.get("0404401").getId());
+      assertThat(result.get("100970884").getNlmId()).isEqualTo("0404401");
+    }
   }
 
   // ========== findByIssns() 测试 ==========
@@ -515,6 +541,153 @@ class VenueRepositoryAdapterIT {
       Map<String, VenueAggregate> updatedResult = repository.findByIssnLs(Set.of("1111-1111"));
       VenueAggregate updatedVenue = updatedResult.get("1111-1111");
       assertThat(updatedVenue.getIdentifier(VenueIdentifierType.OPENALEX)).isEmpty();
+    }
+  }
+
+  // ========== NLM 全局唯一（V12）测试 ==========
+
+  @Nested
+  @DisplayName("NLM 全局唯一（V12）")
+  class NlmUniquenessTests {
+
+    @Test
+    @DisplayName("主 NLM 与已有期刊相同的期刊被 uk_venue_nlm_id 拒绝")
+    void should_reject_second_venue_with_same_primary_nlm() {
+      repository.insertAll(List.of(VenueAggregate.fromPubMed("Journal A", "0404401", "1111-1111")));
+      em.flush();
+
+      assertThatThrownBy(
+              () -> {
+                repository.insertAll(
+                    List.of(VenueAggregate.fromPubMed("Journal B", "0404401", "2222-2222")));
+                em.flush();
+              })
+          .isInstanceOfAny(PersistenceException.class, DataIntegrityViolationException.class)
+          .hasStackTraceContaining("uk_venue_nlm_id");
+    }
+
+    @Test
+    @DisplayName("把别的期刊已有的 NLM 加成副 NLM 被 uk_venue_identifier_nlm 拒绝")
+    void should_reject_nlm_identifier_already_owned_by_another_venue() {
+      repository.insertAll(
+          List.of(
+              VenueAggregate.fromPubMed("Journal A", "0404401", "1111-1111"),
+              VenueAggregate.fromPubMed("Journal B", "100970884", "2222-2222")));
+      em.flush();
+      em.clear();
+      VenueAggregate b = repository.findByNlmIds(Set.of("100970884")).get("100970884");
+      b.addIdentifier(VenueIdentifier.forNlm("0404401"));
+
+      assertThatThrownBy(
+              () -> {
+                repository.updateBatch(List.of(b));
+                em.flush();
+              })
+          .isInstanceOfAny(PersistenceException.class, DataIntegrityViolationException.class)
+          .hasStackTraceContaining("uk_venue_identifier_nlm");
+    }
+
+    @Test
+    @DisplayName("多个没有 NLM 的期刊可以共存")
+    void should_allow_many_venues_without_nlm() {
+      repository.insertAll(
+          List.of(
+              VenueAggregate.fromPubMed("Journal A", null, "1111-1111"),
+              VenueAggregate.fromPubMed("Journal B", null, "2222-2222")));
+      em.flush();
+
+      assertThat(venueDao.findAll())
+          .extracting(VenueEntity::getNlmId)
+          .hasSize(2)
+          .containsOnlyNulls();
+    }
+  }
+
+  // ========== findSoftDeletedNlmIds() 测试 ==========
+
+  @Nested
+  @DisplayName("findSoftDeletedNlmIds()")
+  class FindSoftDeletedNlmIdsTests {
+
+    @Test
+    @DisplayName("只返回软删期刊的主 NLM 与副 NLM；JPA 查询看不到软删期刊")
+    void should_find_primary_and_secondary_nlm_of_soft_deleted_venues_only() {
+      repository.insertAll(
+          List.of(
+              VenueAggregate.fromPubMed("Active", "0404401", "1111-1111"),
+              VenueAggregate.fromPubMed("Gone", "0000003R", "3333-3333")));
+      em.flush();
+      em.clear();
+      VenueAggregate gone = repository.findByNlmIds(Set.of("0000003R")).get("0000003R");
+      gone.addIdentifier(VenueIdentifier.forNlm("0000005"));
+      repository.updateBatch(List.of(gone));
+      em.flush();
+      em.getEntityManager()
+          .createNativeQuery("UPDATE cat_venue SET deleted_at = now() WHERE nlm_id = '0000003R'")
+          .executeUpdate();
+      em.clear();
+
+      assertThat(
+              repository.findSoftDeletedNlmIds(
+                  List.of("0404401", "0000003R", "0000005", "9999999")))
+          .containsExactlyInAnyOrder("0000003R", "0000005");
+      assertThat(repository.findByNlmIds(Set.of("0000003R"))).isEmpty();
+      assertThat(repository.findSoftDeletedNlmIds(List.of())).isEmpty();
+    }
+  }
+
+  // ========== 主 NLM 稳定测试 ==========
+
+  @Nested
+  @DisplayName("主 NLM 稳定")
+  class PrimaryNlmStabilityTests {
+
+    @Test
+    @DisplayName("没有主 NLM 的期刊在导入里第一次拿到 NLM：它成为主 NLM，并写进 nlm_id 列")
+    void should_write_primary_nlm_when_a_venue_without_nlm_gains_one() {
+      repository.insertAll(List.of(VenueAggregate.fromPubMed("Journal A", null, "1111-1111")));
+      em.flush();
+      em.clear();
+      VenueAggregate venue = repository.findByIssnLs(Set.of("1111-1111")).get("1111-1111");
+      venue.addIdentifier(VenueIdentifier.forNlm("0404401"));
+
+      repository.updateBatch(List.of(venue));
+      em.flush();
+      em.clear();
+
+      assertThat(venueDao.findById(venue.getId().value()))
+          .get()
+          .extracting(VenueEntity::getNlmId)
+          .isEqualTo("0404401");
+      assertThat(repository.findByNlmIds(Set.of("0404401")).get("0404401").getNlmId())
+          .isEqualTo("0404401");
+    }
+
+    @Test
+    @DisplayName("标识符表里副 NLM 排在前面时，反复读出再更新，主 NLM 不变")
+    void should_keep_primary_nlm_when_another_nlm_comes_first_in_identifiers() {
+      em.getEntityManager()
+          .createNativeQuery(
+              "INSERT INTO cat_venue (id, venue_type, title, provenance_code, nlm_id)"
+                  + " VALUES (1001, 'JOURNAL', 'Swiss medical weekly', 'PUBMED', '100970884')")
+          .executeUpdate();
+      em.getEntityManager()
+          .createNativeQuery(
+              "INSERT INTO cat_venue_identifier (id, venue_id, identifier_type, identifier_value)"
+                  + " VALUES (2001, 1001, 'NLM', '0404401'), (2002, 1001, 'NLM', '100970884')")
+          .executeUpdate();
+
+      for (int round = 0; round < 2; round++) {
+        VenueAggregate venue = repository.findByNlmIds(Set.of("100970884")).get("100970884");
+        repository.updateBatch(List.of(venue));
+        em.flush();
+        em.clear();
+
+        assertThat(venueDao.findById(1001L))
+            .get()
+            .extracting(VenueEntity::getNlmId)
+            .isEqualTo("100970884");
+      }
     }
   }
 

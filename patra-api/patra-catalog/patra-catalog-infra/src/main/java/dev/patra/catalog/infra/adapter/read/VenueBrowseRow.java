@@ -41,4 +41,9 @@ public interface VenueBrowseRow {
   Boolean getIsInDoaj();
 
   String getIssnL();
+
+  /// 主 NLM（身份锚，字符串保留前导零）。
+  ///
+  /// @return 主 NLM，可空
+  String getNlmId();
 }
