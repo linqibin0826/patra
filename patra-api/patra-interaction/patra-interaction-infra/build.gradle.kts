@@ -1,7 +1,7 @@
 /**
  * Patra Interaction Infrastructure
  *
- * 基础设施层 - 持久化与 Flyway 迁移，按子域分包（subject、collection）；
+ * 基础设施层 - 持久化与 Flyway 迁移，按子域分包（subject、collection、discussion、post、notification）；
  * 每个子域一个 schema，迁移脚本在 db/migration/{子域}/，整个服务一份 Flyway 历史
  */
 
@@ -17,6 +17,8 @@ dependencies {
     // 收藏夹所有者摘要、设公开的资格、公开收藏夹的可见性、注销清理（PAP-108 的内部接口）
     implementation(project(":patra-api:patra-identity:patra-identity-api"))
     implementation(project(":patra-tool:patra-tool-http-client"))
+    // 提醒摘录：评论 Markdown 转纯文本（PAP-123）
+    implementation(libs.commonmark)
 
     // JPA、Flyway、PostgreSQL 驱动（自动配置生效）
     api(project(":patra-tool:patra-tool-jpa"))
