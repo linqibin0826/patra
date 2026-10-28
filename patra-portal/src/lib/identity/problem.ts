@@ -13,6 +13,8 @@ export interface Problem {
   errors: FieldError[];
   /// 429 时还要等多少秒：先取响应体的 `retryAfterSeconds`，再取 `Retry-After` 头，都要是非负整数
   retryAfterSeconds: number | null;
+  /// interaction 409 `DUPLICATE_SUBMISSION`（同刊同投稿日期已有一条经验）时那条经验的 ID；其余情况为 null
+  existingPostId: string | null;
 }
 
 /// 非负整数，否则 null
@@ -42,6 +44,7 @@ export function parseProblem(res: Response, body: unknown): Problem {
     retryAfterSeconds:
       nonNegativeInteger(record.retryAfterSeconds) ??
       (header !== null && /^\d+$/.test(header) ? Number(header) : null),
+    existingPostId: typeof record.existingPostId === "string" ? record.existingPostId : null,
   };
 }
 

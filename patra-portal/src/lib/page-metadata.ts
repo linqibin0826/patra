@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
+import { formatOutcomeLine, formatSubmittedMonth } from "@/lib/experience/format";
 import { graphemes } from "@/lib/grapheme";
+import type { PostDetail } from "@/lib/interaction/experience-schema";
 import type { PublicCollection } from "@/lib/interaction/schema";
+import { excerpt } from "@/lib/markdown/plain";
 import { inlinePlainText, shortTitle } from "@/lib/portal-api/title-derive";
 import { formatPublishedDate } from "@/lib/published-date";
 import { parseInlineMarkup } from "@/lib/rich-inline-text";
@@ -13,6 +16,7 @@ import type { PaperDetail, VenueDetail } from "@/types/portal";
 const SITE = "Patra";
 const PAPER_DESCRIPTION_MAX = 160;
 const COLLECTION_DESCRIPTION_MAX = 120;
+const POST_BODY_DESCRIPTION_MAX = 100;
 
 /// 去掉内联标记（`<i>`、`<sup>` 等），连续空白压成一个空格
 function plainText(value: string): string {
@@ -97,4 +101,18 @@ export function collectionMetadata(
     ...build(title, description, canonical, "website"),
     ...(indexable ? {} : { robots: { index: false } }),
   };
+}
+
+/// 经验页（简报 §3.16、spec 8.5）：标题 `<期刊缩写> 投稿经验 · 2026 年 3 月投稿`；描述 = 结果行 + 正文纯文本前
+/// 100 字。不写作者：匿名经验不能出现，实名的也不写，统一一种写法。已删除的不允许收录
+export function postMetadata(detail: PostDetail, canonical: string): Metadata {
+  const { experience } = detail;
+  if (detail.deleted || !experience) {
+    return { title: `该经验已删除 · ${SITE}`, robots: { index: false } };
+  }
+  const journal = detail.journal.abbreviation ?? detail.journal.title;
+  const title = `${journal} 投稿经验 · ${formatSubmittedMonth(experience.submittedOn)}`;
+  const outcome = `${formatOutcomeLine(experience).replace("  →  ", " → ")}。`;
+  const body = experience.body ? excerpt(experience.body, POST_BODY_DESCRIPTION_MAX) : "";
+  return build(title, `${outcome}${body}`, canonical, "article");
 }

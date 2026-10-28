@@ -24,12 +24,14 @@ vi.mock("@/lib/identity/public-profile", async (importOriginal) => ({
 }));
 vi.mock("@/lib/auth/current-user", () => ({ lookupSession: vi.fn() }));
 vi.mock("@/lib/interaction/collections", () => ({ fetchUserPublicCollections: vi.fn() }));
+vi.mock("@/lib/interaction/experience", () => ({ fetchUserExperiences: vi.fn() }));
 vi.mock("@/lib/identity/verification-actions", () => ({ resendVerificationEmail: vi.fn() }));
 
 import CollectionsPage, { generateMetadata } from "@/app/u/[username]/collections/page";
 import { lookupSession } from "@/lib/auth/current-user";
 import { fetchPublicProfile } from "@/lib/identity/public-profile";
 import { fetchUserPublicCollections } from "@/lib/interaction/collections";
+import { fetchUserExperiences } from "@/lib/interaction/experience";
 
 const params = (username = "chen-yu") => ({ params: Promise.resolve({ username }) });
 
@@ -51,6 +53,10 @@ const CARD = {
 beforeEach(() => {
   vi.mocked(fetchPublicProfile).mockResolvedValue({ kind: "found", profile: PUBLIC_PROFILE });
   vi.mocked(fetchUserPublicCollections).mockResolvedValue({ kind: "ok", data: [CARD] });
+  vi.mocked(fetchUserExperiences).mockResolvedValue({
+    kind: "ok",
+    data: { items: [], nextCursor: null },
+  });
 });
 
 async function renderPage() {
@@ -80,6 +86,21 @@ describe("/u/[username]/collections", () => {
     expect(card).toHaveAttribute("href", "/collections/9");
     expect(screen.getByText("23 篇 · 更新于 10 月 24 日")).toBeInTheDocument();
     expect(screen.queryByText("这里只显示公开的收藏夹。")).not.toBeInTheDocument();
+  });
+
+  it("别人视角：没有署名经验时不出「投稿经验」标签（PAP-125）", async () => {
+    viewAs(false);
+    await renderPage();
+    expect(screen.queryByRole("link", { name: "投稿经验" })).not.toBeInTheDocument();
+  });
+
+  it("本人视角：三个标签都在", async () => {
+    viewAs(true);
+    await renderPage();
+    expect(screen.getByRole("link", { name: "投稿经验" })).toHaveAttribute(
+      "href",
+      "/u/chen-yu/experiences",
+    );
   });
 
   it("本人视角：提示行与管理入口", async () => {

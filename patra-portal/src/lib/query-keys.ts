@@ -47,4 +47,17 @@ export const queryKeys = {
   /** @ 联想：按对象与查询词缓存 */
   discussionMentions: (type: string, key: string, q: string) =>
     ["discussion", type, key, "mentions", q] as const,
+  /** 投稿经验：全部缓存的公共前缀。`mine`、本人的匿名经验按访客不同，身份变化时整体清掉 */
+  experience: ["experience"] as const,
+  /** 一本期刊的经验缓存（两个窗口的汇总与列表）：发布、编辑、删除之后整体处理 */
+  experienceJournal: (journalId: string) => ["experience", "journal", journalId] as const,
+  /** 期刊页「同行经验」汇总：按窗口（`3y` / `all`）缓存 */
+  experienceSummary: (journalId: string, window: string) =>
+    ["experience", "journal", journalId, "summary", window] as const,
+  /** 期刊页经验列表（`useInfiniteQuery`） */
+  experienceList: (journalId: string) => ["experience", "journal", journalId, "list"] as const,
+  /** 主页「投稿经验」标签（`useInfiniteQuery`） */
+  experienceUser: (userId: string) => ["experience", "user", userId] as const,
+  /** 一条经验的修改历史 */
+  experienceRevisions: (postId: string) => ["experience", "revisions", postId] as const,
 };

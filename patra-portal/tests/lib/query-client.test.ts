@@ -71,3 +71,16 @@ describe("createQueryClient · 当前用户变化时清掉讨论缓存", () => {
     expect(client.getQueryCache().findAll({ queryKey: queryKeys.discussion })).toHaveLength(1);
   });
 });
+
+describe("createQueryClient · 当前用户变化时清掉投稿经验缓存（PAP-125）", () => {
+  it("换号后期刊汇总、列表、主页列表、修改历史缓存都被清掉", () => {
+    const client = createQueryClient();
+    client.setQueryData(queryKeys.currentUser, A);
+    client.setQueryData(queryKeys.experienceSummary("100", "3y"), { count: 1 });
+    client.setQueryData(queryKeys.experienceList("100"), { pages: [] });
+    client.setQueryData(queryKeys.experienceUser("7"), { pages: [] });
+    client.setQueryData(queryKeys.experienceRevisions("9"), { items: [] });
+    client.setQueryData(queryKeys.currentUser, B);
+    expect(client.getQueryCache().findAll({ queryKey: queryKeys.experience })).toHaveLength(0);
+  });
+});
