@@ -47,4 +47,12 @@ export const queryKeys = {
   /** @ 联想：按对象与查询词缓存 */
   discussionMentions: (type: string, key: string, q: string) =>
     ["discussion", type, key, "mentions", q] as const,
+  /** 提醒：全部提醒缓存的公共前缀（未读数与两个标签的列表），身份变化时整体清掉 */
+  notifications: ["notifications"] as const,
+  /** 未读数：数据是 `{ counts, etag }`，ETag 留给下一次轮询带 `If-None-Match` */
+  notificationUnread: ["notifications", "unread"] as const,
+  /** 两个标签的提醒列表：已读之后一起改 */
+  notificationListAll: ["notifications", "list"] as const,
+  /** 提醒列表（`useInfiniteQuery`）：按标签缓存 */
+  notificationList: (tab: string) => ["notifications", "list", tab] as const,
 };

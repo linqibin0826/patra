@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { BrandMark } from "@/components/portal/BrandMark";
 import { MobileAccount, MobileAccountPlaceholder } from "@/components/portal/MobileAccount";
 import { NavAccount, NavAccountPlaceholder } from "@/components/portal/NavAccount";
@@ -13,6 +14,7 @@ import { UnverifiedEmailBanner } from "@/components/portal/UnverifiedEmailBanner
 import { Venation } from "@/components/portal/Venation";
 import { buttonVariants } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { useUnreadCountsPolling } from "@/lib/notifications/queries";
 import { REPO_URL } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
@@ -47,7 +49,8 @@ function isNavActive(pathname: string, href: string): boolean {
 }
 
 /// 吸顶导航：内容区恒高 56px，另有 1px 下边框（详情页面包屑 / 侧栏的吸顶偏移依赖它），滚动离开顶部后才出现纸色毛玻璃与发丝线。
-/// ⌘K / Ctrl+K 与「快速检索」按钮在任何页面唤起检索对话框。
+/// ⌘K / Ctrl+K 与「快速检索」按钮在任何页面唤起检索对话框。未读数的轮询只在这里挂一处（铃铛、菜单项都只读缓存）；
+/// 提醒铃铛桌面在账号区里，窄屏在检索与菜单按钮之间（简报 §2.3 方案 B）。
 /// 未验证邮箱横幅放在 header 之后（同一个 fragment）：所有带导航栏的页面都有，不吸顶、随页面滚走。
 /// 账号区：桌面在「关于」右边，移动端在全屏菜单最底部。两处都读查询串拼 `next`，各包一层 Suspense，
 /// 否则静态渲染的页面在构建时报错；fallback 就是登录状态未定时的占位。
@@ -59,6 +62,7 @@ export function TopNav() {
   // 快捷键提示：服务端与首帧写 ⌘K，挂载后在非 Apple 平台改写 Ctrl K（避免水合不一致）
   const [shortcut, setShortcut] = useState("⌘K");
   const pathname = usePathname();
+  useUnreadCountsPolling();
 
   useEffect(() => {
     if (!/Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent)) {
@@ -161,6 +165,7 @@ export function TopNav() {
             <Suspense fallback={<NavAccountPlaceholder />}>
               <NavAccount />
             </Suspense>
+            <NotificationBell className="hidden max-[880px]:inline-flex" />
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
               <SheetTrigger
                 aria-label="打开菜单"

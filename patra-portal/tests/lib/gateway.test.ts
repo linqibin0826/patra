@@ -215,3 +215,17 @@ describe("gatewayFetch 的方法、请求体、重定向与转发头", () => {
     expect(JSON.parse(String(init?.body))).toEqual({ ids: ["1"], format: "ris" });
   });
 });
+
+describe("gatewayFetch 的条件请求", () => {
+  it("有 ifNoneMatch 时原样写成 If-None-Match", async () => {
+    await gatewayFetch("/patra-interaction/me/notifications/unread-count", {
+      ifNoneMatch: '"2-1"',
+    });
+    expect(new Headers(call()[1]?.headers).get("If-None-Match")).toBe('"2-1"');
+  });
+
+  it("没有 ifNoneMatch 时不带这个头", async () => {
+    await gatewayFetch("/x", { ifNoneMatch: null });
+    expect(new Headers(call()[1]?.headers).has("If-None-Match")).toBe(false);
+  });
+});
