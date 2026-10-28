@@ -18,6 +18,13 @@ import {
   waitSince,
 } from "@tests/e2e/support/discussion";
 import {
+  deletePost,
+  type ExperienceInput,
+  openExperiences,
+  pickEmptyJournal,
+  publishExperience,
+} from "@tests/e2e/support/experience";
+import {
   bell,
   markAllRead,
   nextUnread,
@@ -31,7 +38,8 @@ import {
 /// v0.14 提醒（PAP-126，release spec 验证场景 1、4 与 D6）：两个邮箱已验证的账号 A、B 连 mini 上的后端跑，B 兼任场景里的
 /// C。两个都是用户在本机环境变量里给的账号（A 是用户的真实账号），不进仓库。另现注册一个邮箱未验证的账号 X：它是
 /// 「主页对别人不可见的正常账号」，也用来改用户名。用例最后删掉自己发的评论、三个账号都全部已读；提醒不能删，A、B 的
-/// 列表里会留下测试行（保留 5 个月）。场景 2、3（投稿经验）在 PAP-125 的经验页合回之后补
+/// 列表里会留下测试行（保留 5 个月）。场景 2–4 的投稿经验部分另一条用例：写经验用账号 C（专门的测试账号，不占
+/// 用户真实账号与 B 的经验额度），B 在 C 的经验下追问并 @C
 const A = {
   email: process.env.PATRA_E2E_VERIFIED_EMAIL ?? "",
   password: process.env.PATRA_E2E_VERIFIED_PASSWORD ?? "",
@@ -39,6 +47,20 @@ const A = {
 const B = {
   email: process.env.PATRA_E2E_VERIFIED_B_EMAIL ?? "",
   password: process.env.PATRA_E2E_VERIFIED_B_PASSWORD ?? "",
+};
+const C = {
+  email: process.env.PATRA_E2E_VERIFIED_C_EMAIL ?? "",
+  password: process.env.PATRA_E2E_VERIFIED_C_PASSWORD ?? "",
+};
+
+/// 场景 2 的那条经验：3 月投稿，首轮 6 周（42 天）大修，之后录用
+const EXPERIENCE: ExperienceInput = {
+  submittedOn: "2026-03-02",
+  firstDecisionOn: "2026-04-13",
+  firstDecision: "大修",
+  finalOutcome: "录用",
+  finalDecisionOn: "2026-05-25",
+  articleType: "原创研究",
 };
 
 const VIEWPORTS = [
@@ -260,6 +282,125 @@ test.describe("提醒", () => {
       }
     });
   }
+});
+
+test.describe("提醒 · 投稿经验", () => {
+  test.skip(!process.env.PATRA_GATEWAY_BASE_URL, "未设置 PATRA_GATEWAY_BASE_URL：跳过提醒冒烟");
+  test.skip(
+    !B.email || !B.password || !C.email || !C.password,
+    "没有账号 B、C（~/.patra/secrets/e2e.env 的 PATRA_E2E_VERIFIED_B_* 与 PATRA_E2E_VERIFIED_C_*）",
+  );
+
+  // 每跑一次占 C 当天经验额度里的 1 条（删除不退额度），只在桌面跑；窄屏的经验页由 experience.spec 覆盖
+  test("场景 2–4：写经验、汇总更新；在经验下追问并 @ 作者；作者收到一条「评论了你的投稿经验」并回复", async ({
+    browser,
+    request,
+  }) => {
+    test.setTimeout(6 * 60_000);
+    const viewport = { width: 1440, height: 900 };
+    const tag = `e2e-np-${Date.now()}`;
+    const ASK = `${tag}-ask`;
+    const ANSWER = `${tag}-answer`;
+    const c: Session = await signIn(browser, viewport, C);
+    const b: Session = await signIn(browser, viewport, B);
+    const journalId = await pickEmptyJournal(request);
+    let postId: string | null = null;
+
+    /// 经验页的回复区：等它接管，收起的编辑器先点开
+    const openReplies = async (page: Page, query = "") => {
+      await page.goto(`/posts/${postId}${query}`, { timeout: 60_000 });
+      const section = page.locator("#discussion");
+      await expect(section.getByRole("heading", { name: /回复 · Replies/ })).toBeVisible(
+        ROUND_TRIP,
+      );
+      await waitForTakeover(page, "#discussion button");
+      return section;
+    };
+    const post = async (section: Awaited<ReturnType<typeof openReplies>>, body: string) => {
+      const collapsed = section.getByRole("button", { name: "对这条投稿经验有疑问？在这里追问…" });
+      if (await collapsed.isVisible()) {
+        await collapsed.click();
+      }
+      await section.getByRole("combobox", { name: "评论内容" }).first().fill(body);
+      await section.getByRole("button", { name: "发表", exact: true }).click();
+    };
+
+    try {
+      await test.step("开始前 B、C 全部已读", async () => {
+        await markAllRead(b.page);
+        await markAllRead(c.page);
+      });
+
+      await test.step("场景 2：C 在期刊页写一条投稿经验，「同行经验」汇总随之更新", async () => {
+        const section = await openExperiences(c.page, journalId);
+        await expect(section.getByText("还没有同行分享这本期刊的投稿经验。")).toBeVisible();
+        postId = await publishExperience(section, EXPERIENCE, "2026 年 3 月投稿");
+        await expect(section.getByRole("article", { name: "同行经验" })).toContainText(
+          "近 3 年有 1 条投稿经验，满 5 条后显示统计。",
+          ROUND_TRIP,
+        );
+      });
+
+      await test.step("场景 3：B 在 C 的经验下追问并 @C", async () => {
+        const section = await openReplies(b.page);
+        await post(section, `第二轮的小修大概花了多久？@${c.username} ${ASK}`);
+        await expect(commentWith(section, ASK)).toBeVisible(ROUND_TRIP);
+      });
+
+      await test.step("场景 4：C 切回页面看到 1 条未读；只在「回复我的」，不在「@ 我的」", async () => {
+        await c.page.goto("/");
+        await expect(bell(c.page)).toBeVisible(ROUND_TRIP);
+        await switchBack(c.page);
+        await expect(bell(c.page)).toHaveAccessibleName("提醒，1 条未读", ROUND_TRIP);
+        const replies = await openInbox(c.page, "replies");
+        await expect(rowWith(replies, ASK)).toHaveCount(1);
+        await expect(rowWith(replies, ASK)).toContainText("评论了你的投稿经验");
+        await expect(rowWith(replies, ASK)).toContainText(/你的投稿经验 · .+ · 2026 年 3 月投稿/);
+        const mentions = await openInbox(c.page, "mentions");
+        await expect(rowWith(mentions, ASK)).toHaveCount(0);
+      });
+
+      await test.step("C 点开提醒：经验页的单楼视图高亮追问；在这里回复，未读归零", async () => {
+        const replies = await openInbox(c.page, "replies");
+        await rowWith(replies, ASK).getByRole("link").click();
+        await expect(c.page).toHaveURL(new RegExp(`/posts/${postId}\\?comment=\\d+$`), {
+          timeout: 60_000,
+        });
+        const section = c.page.locator("#discussion");
+        await expect(section.locator('[aria-current="true"]')).toContainText(ASK, ROUND_TRIP);
+        await expect(bell(c.page)).toHaveAccessibleName("提醒", ROUND_TRIP);
+        await waitForTakeover(c.page, "#discussion button");
+        await replyTo(section, commentWith(section, ASK), `大概三周 ${ANSWER}`);
+        await expect(commentWith(section, ANSWER)).toBeVisible(ROUND_TRIP);
+      });
+
+      await test.step("B 收到 C 的回复", async () => {
+        const replies = await openInbox(b.page, "replies");
+        await expect(rowWith(replies, ANSWER)).toHaveCount(1, ROUND_TRIP);
+        await expect(rowWith(replies, ANSWER)).toContainText("回复了你的评论");
+      });
+    } finally {
+      await test.step("清理：删掉回复、追问与经验，B、C 全部已读", async () => {
+        if (postId) {
+          for (const [session, text] of [
+            [c, ANSWER],
+            [b, ASK],
+          ] as const) {
+            const section = await openReplies(session.page);
+            const target = commentWith(section, text).first();
+            if (await target.isVisible().catch(() => false)) {
+              await deleteOwn(target);
+            }
+          }
+          await deletePost(c.page, postId);
+        }
+        await markAllRead(b.page);
+        await markAllRead(c.page);
+      });
+      await b.close();
+      await c.close();
+    }
+  });
 });
 
 /// 这个页面所在的会话还登录着吗
