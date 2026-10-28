@@ -52,3 +52,22 @@ describe("createQueryClient · 当前用户变化时清掉文献库缓存", () =
     expect(libraryEntries(client)).toBe(3);
   });
 });
+
+describe("createQueryClient · 当前用户变化时清掉讨论缓存", () => {
+  it("退出登录后讨论区的列表、单楼、联想缓存都被清掉", () => {
+    const client = createQueryClient();
+    client.setQueryData(queryKeys.currentUser, A);
+    client.setQueryData(queryKeys.discussionThreads("publication", "1", "asc"), { pages: [] });
+    client.setQueryData(queryKeys.discussionSingle("publication", "1", "5"), { missing: true });
+    client.setQueryData(queryKeys.discussionMentions("publication", "1", "zh"), []);
+    client.setQueryData(queryKeys.currentUser, null);
+    expect(client.getQueryCache().findAll({ queryKey: queryKeys.discussion })).toHaveLength(0);
+  });
+
+  it("第一次取回当前用户之前的讨论缓存不动", () => {
+    const client = createQueryClient();
+    client.setQueryData(queryKeys.discussionThreads("publication", "1", "asc"), { pages: [] });
+    client.setQueryData(queryKeys.currentUser, A);
+    expect(client.getQueryCache().findAll({ queryKey: queryKeys.discussion })).toHaveLength(1);
+  });
+});

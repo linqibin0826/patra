@@ -39,4 +39,16 @@ describe("Avatar", () => {
     expect(letter).toHaveAttribute("aria-hidden", "true");
     expect(container.firstElementChild).toHaveClass("bg-slate-500", "size-32", "text-5xl");
   });
+
+  it("讨论区的尺寸：桌面 32、窄屏 28", () => {
+    const { container } = render(
+      <Avatar identity={{ ...IDENTITY, avatarUrl: null }} size={32} mobileSize={28} />,
+    );
+    expect(container.firstElementChild).toHaveClass("size-8", "max-[880px]:size-7");
+  });
+
+  it("主页对访客不可见（没有用户名）：首字取昵称", () => {
+    render(<Avatar identity={{ ...IDENTITY, username: null, avatarUrl: null }} size={24} />);
+    expect(screen.getByText("陈")).toBeInTheDocument();
+  });
 });

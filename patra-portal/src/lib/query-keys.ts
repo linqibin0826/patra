@@ -27,4 +27,24 @@ export const queryKeys = {
   citations: (style: string, ids: readonly string[]) => ["citations", style, ids] as const,
   /** 导出 / 引用范围展开成的文献 ID：整库或整夹按范围参数缓存，勾选条目时为 null */
   scopeKeys: (scope: object | null) => ["scope-keys", scope] as const,
+  /** 讨论区：全部讨论缓存的公共前缀。「这条是我发的」、联想里排除自己都按访客不同，身份变化时整体清掉 */
+  discussion: ["discussion"] as const,
+  /** 一个对象下的全部讨论缓存（列表的两种排序、单楼、联想）：写操作之后整体标为过期 */
+  discussionSubject: (type: string, key: string) => ["discussion", type, key] as const,
+  /** 全部「查看对话」与修改历史的缓存：写操作之后标为过期 */
+  discussionConversationAll: ["discussion", "conversation"] as const,
+  discussionRevisionsAll: ["discussion", "revisions"] as const,
+  /** 讨论区一页页的楼（`useInfiniteQuery`）：按对象与根评论排序缓存 */
+  discussionThreads: (type: string, key: string, sort: string) =>
+    ["discussion", type, key, "threads", sort] as const,
+  /** 单楼视图：目标评论所在的整楼；目标不存在时数据是 `{ missing: true }` */
+  discussionSingle: (type: string, key: string, commentId: string) =>
+    ["discussion", type, key, "single", commentId] as const,
+  /** 「查看对话」的回复链 */
+  discussionConversation: (commentId: string) => ["discussion", "conversation", commentId] as const,
+  /** 一条评论的修改历史 */
+  discussionRevisions: (commentId: string) => ["discussion", "revisions", commentId] as const,
+  /** @ 联想：按对象与查询词缓存 */
+  discussionMentions: (type: string, key: string, q: string) =>
+    ["discussion", type, key, "mentions", q] as const,
 };

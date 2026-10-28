@@ -24,4 +24,11 @@ describe("InteractionUnavailable", () => {
     render(<InteractionUnavailable title="收藏夹暂时打不开" retryHref="/collections/9" />);
     expect(screen.getByRole("link", { name: "重试" })).toHaveAttribute("href", "/collections/9");
   });
+
+  it("紧凑版：区块里用，上下留白更少、标题小一号", () => {
+    render(<InteractionUnavailable compact title="讨论暂不可用" retryHref="/papers/1" />);
+    const heading = screen.getByRole("heading", { name: "讨论暂不可用" });
+    expect(heading).toHaveClass("text-lg");
+    expect(heading.parentElement).toHaveClass("py-10");
+  });
 });

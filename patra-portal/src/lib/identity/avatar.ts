@@ -27,10 +27,10 @@ export function avatarPaletteClass(index: number): string {
 const SKIPPED = /^[\p{P}\p{White_Space}]+$/u;
 
 /// 默认头像上的字（简报 §3.20）：昵称里第一个不是标点或空白的字素，拉丁字母转大写，其余原样；
-/// 昵称里没有可取的字时用用户名的首字母。
-export function avatarInitial(displayName: string, username: string): string {
+/// 昵称里没有可取的字时用用户名的首字母（主页对访客不可见时没有用户名，为空）。
+export function avatarInitial(displayName: string, username: string | null): string {
   const first = graphemes(displayName).find((part) => !SKIPPED.test(part));
-  return (first ?? username.slice(0, 1)).toUpperCase();
+  return (first ?? (username ?? "").slice(0, 1)).toUpperCase();
 }
 
 /// identity 给的头像地址：`/users/{用户 ID}/avatar?v={16 位十六进制}`（v0.13 起按用户 ID，改名不失效）

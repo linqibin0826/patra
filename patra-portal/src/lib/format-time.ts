@@ -59,6 +59,12 @@ export function formatMonthDay(iso: string): string {
   return `${p.month} 月 ${p.day} 日`;
 }
 
+/// `10 月 26 日 18:40`（修改历史的版本时间）
+export function formatMonthDayTime(iso: string): string {
+  const p = partsOf(Date.parse(iso));
+  return `${p.month} 月 ${p.day} 日 ${clock(p)}`;
+}
+
 /// `2026-10-20 09:12`
 export function formatDateTime(iso: string): string {
   const p = partsOf(Date.parse(iso));

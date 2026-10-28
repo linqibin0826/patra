@@ -75,3 +75,10 @@ describe("formatMonthDay", () => {
     expect(formatMonthDay("2026-10-23T17:00:00Z")).toBe("10 月 24 日");
   });
 });
+
+describe("formatMonthDayTime", () => {
+  it("北京时间的月日时分", async () => {
+    const { formatMonthDayTime } = await import("@/lib/format-time");
+    expect(formatMonthDayTime("2026-10-26T10:40:00Z")).toBe("10 月 26 日 18:40");
+  });
+});
