@@ -37,6 +37,7 @@ function clearUserScopedCacheOnIdentityChange(client: QueryClient) {
     client.removeQueries({ queryKey: queryKeys.libraryStatusAll });
     client.removeQueries({ queryKey: queryKeys.discussion });
     client.removeQueries({ queryKey: queryKeys.notifications });
+    client.removeQueries({ queryKey: queryKeys.experience });
   });
 }
 

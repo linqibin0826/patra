@@ -3,54 +3,58 @@ import { PUBLIC_PROFILE } from "@tests/fixtures/public-profile";
 import { describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { ProfileTabs, ProfileTabsGate } from "@/components/profile/ProfileTabs";
-import { fetchUserPublicCollections } from "@/lib/interaction/collections";
+import { visibleProfileTabs } from "@/lib/profile/tabs";
 
-vi.mock("@/lib/interaction/collections", () => ({ fetchUserPublicCollections: vi.fn() }));
+vi.mock("@/lib/profile/tabs", () => ({ visibleProfileTabs: vi.fn() }));
 
 describe("ProfileTabs", () => {
-  it("关于 · 收藏夹两个链接，当前标签 aria-current，不带个数", () => {
-    render(<ProfileTabs username="chen-yu" current="collections" />);
-    const nav = screen.getByRole("navigation", { name: "主页分区" });
-    expect(nav).toBeInTheDocument();
+  it("按可见标签渲染，顺序固定，当前标签 aria-current，不带个数", () => {
+    render(
+      <ProfileTabs
+        username="chen-yu"
+        tabs={["about", "collections", "experiences"]}
+        current="experiences"
+      />,
+    );
+    expect(screen.getByRole("navigation", { name: "主页分区" })).toBeInTheDocument();
+    expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual([
+      "关于",
+      "收藏夹",
+      "投稿经验",
+    ]);
     expect(screen.getByRole("link", { name: "关于" })).toHaveAttribute("href", "/u/chen-yu");
     expect(screen.getByRole("link", { name: "收藏夹" })).toHaveAttribute(
       "href",
       "/u/chen-yu/collections",
     );
-    expect(screen.getByRole("link", { name: "收藏夹" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "投稿经验" })).toHaveAttribute(
+      "href",
+      "/u/chen-yu/experiences",
+    );
+    expect(screen.getByRole("link", { name: "投稿经验" })).toHaveAttribute("aria-current", "page");
+  });
+
+  it("只有「关于」时不渲染", () => {
+    const { container } = render(
+      <ProfileTabs username="chen-yu" tabs={["about"]} current="about" />,
+    );
+    expect(container).toBeEmptyDOMElement();
   });
 });
 
 describe("ProfileTabsGate（「关于」页上的标签栏）", () => {
-  it("本人视角：总出标签栏，不请求", async () => {
-    render(await ProfileTabsGate({ profile: PUBLIC_PROFILE, self: true }));
-    expect(screen.getByRole("navigation", { name: "主页分区" })).toBeInTheDocument();
-    expect(fetchUserPublicCollections).not.toHaveBeenCalled();
-  });
-
-  it("别人视角：至少一个可见的公开收藏夹才出", async () => {
-    vi.mocked(fetchUserPublicCollections).mockResolvedValue({
-      kind: "ok",
-      data: [
-        {
-          collectionId: "9",
-          name: "组会",
-          description: null,
-          itemCount: 2,
-          updatedAt: "2026-10-24T02:00:00Z",
-        },
-      ],
-    });
+  it("按判定结果渲染", async () => {
+    vi.mocked(visibleProfileTabs).mockResolvedValue(["about", "experiences"]);
     render(await ProfileTabsGate({ profile: PUBLIC_PROFILE, self: false }));
-    expect(screen.getByRole("navigation", { name: "主页分区" })).toBeInTheDocument();
-    expect(fetchUserPublicCollections).toHaveBeenCalledWith(PUBLIC_PROFILE.userId);
+    expect(visibleProfileTabs).toHaveBeenCalledWith(PUBLIC_PROFILE, false, "about");
+    expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual([
+      "关于",
+      "投稿经验",
+    ]);
   });
 
-  it.each<[string, Awaited<ReturnType<typeof fetchUserPublicCollections>>]>([
-    ["空", { kind: "ok", data: [] }],
-    ["失败", { kind: "unavailable" }],
-  ])("别人视角、%s：不渲染标签栏", async (_label, read) => {
-    vi.mocked(fetchUserPublicCollections).mockResolvedValue(read);
+  it("只有「关于」：不渲染标签栏", async () => {
+    vi.mocked(visibleProfileTabs).mockResolvedValue(["about"]);
     const { container } = render(await ProfileTabsGate({ profile: PUBLIC_PROFILE, self: false }));
     expect(container).toBeEmptyDOMElement();
   });

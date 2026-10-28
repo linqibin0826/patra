@@ -18,7 +18,7 @@ import {
   type ThreadPage,
   threadPageSchema,
 } from "@/lib/interaction/discussion-schema";
-import { READ_TIMEOUT_MS, type Read, toRead } from "@/lib/interaction/read";
+import { READ_TIMEOUT_MS, type Read, readPublic, toRead } from "@/lib/interaction/read";
 import { callInteraction } from "@/lib/interaction/request";
 import { isEntityId } from "@/lib/library/params";
 
@@ -31,16 +31,6 @@ export function isSubject(type: unknown, key: unknown): boolean {
 
 function subjectPath(subject: Subject): string {
   return `/discussions/${subject.type}/${subject.key}`;
-}
-
-/// 公开读（登录可选）：有会话就带（拿「这条是我发的」与主页可见性）；令牌被网关拒时按访客重取一次，不降级
-async function readPublic<S extends z.ZodType>(path: string, schema: S): Promise<Read<z.infer<S>>> {
-  const init = { timeoutMs: READ_TIMEOUT_MS };
-  const reply = await callInteraction(path, init, { auth: "optional" });
-  if (reply.kind === "problem" && reply.problem.status === 401) {
-    return toRead(await callInteraction(path, init, { auth: "none" }), schema, path);
-  }
-  return toRead(reply, schema, path);
 }
 
 /// 要登录的读（编辑原文、@ 联想）

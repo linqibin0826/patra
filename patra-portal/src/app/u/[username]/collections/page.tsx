@@ -9,6 +9,7 @@ import { ProfileVisibilityNotice } from "@/components/profile/ProfileVisibilityN
 import { lookupSession } from "@/lib/auth/current-user";
 import { fetchPublicProfile } from "@/lib/identity/public-profile";
 import { fetchUserPublicCollections } from "@/lib/interaction/collections";
+import { visibleProfileTabs } from "@/lib/profile/tabs";
 
 interface UserCollectionsPageProps {
   params: Promise<{ username: string }>;
@@ -27,7 +28,8 @@ export async function generateMetadata({ params }: UserCollectionsPageProps): Pr
   };
 }
 
-/// 主页「收藏夹」标签（简报 §3.15）：取主页与旧名跳转同 `/u/[username]`；人已经在这个标签上，标签栏总渲染。
+/// 主页「收藏夹」标签（简报 §3.15）：取主页与旧名跳转同 `/u/[username]`；人已经在这个标签上，标签栏总渲染，
+/// 其余标签按 `visibleProfileTabs` 的条件。
 /// 公开收藏夹按主页的用户 ID 取，访客已登录就带会话
 export default async function UserCollectionsPage({ params }: UserCollectionsPageProps) {
   const [lookup, session] = await Promise.all([
@@ -43,7 +45,10 @@ export default async function UserCollectionsPage({ params }: UserCollectionsPag
   const { profile } = lookup;
   const viewer = session.status === "authenticated" ? session.user : null;
   const self = viewer?.username === profile.username;
-  const collections = await fetchUserPublicCollections(profile.userId);
+  const [collections, tabs] = await Promise.all([
+    fetchUserPublicCollections(profile.userId),
+    visibleProfileTabs(profile, self, "collections"),
+  ]);
   return (
     <>
       <TopNav />
@@ -52,7 +57,7 @@ export default async function UserCollectionsPage({ params }: UserCollectionsPag
       )}
       <main>
         <ProfileHeader profile={profile} self={self} linksPending={self && !viewer.emailVerified} />
-        <ProfileTabs username={profile.username} current="collections" />
+        <ProfileTabs username={profile.username} tabs={tabs} current="collections" />
         <div className="mx-auto max-w-page px-gutter pt-8 pb-30">
           <ProfileCollections username={profile.username} self={self} collections={collections} />
         </div>

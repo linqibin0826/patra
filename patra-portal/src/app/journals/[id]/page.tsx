@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { ExperienceSection } from "@/components/experience/ExperienceSection";
 import { Footer } from "@/components/portal/Footer";
 import { JournalDetailView } from "@/components/portal/journal-detail/JournalDetailView";
 import { TopNav } from "@/components/portal/TopNav";
@@ -28,7 +29,10 @@ export default async function JournalDetailPage({ params }: { params: Promise<{ 
     <>
       <TopNav />
       <main>
-        <JournalDetailView venue={venue} />
+        <JournalDetailView
+          venue={venue}
+          experiences={<ExperienceSection journalId={id} journalTitle={venue.title} />}
+        />
       </main>
       <Footer />
     </>

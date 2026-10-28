@@ -4,7 +4,7 @@ import { CjkDashText } from "@/components/portal/CjkDashText";
 import { StatusScreen } from "@/components/portal/status/StatusScreen";
 import { btnPrimary, btnSecondary } from "@/lib/portal-ui";
 
-type NotFoundKind = "journal" | "paper" | "page" | "user" | "collection";
+type NotFoundKind = "journal" | "paper" | "page" | "user" | "collection" | "post";
 
 /// 标题：用户主页另有说法，其余都是「没有这一页」
 const TITLES: Record<NotFoundKind, string> = {
@@ -13,6 +13,7 @@ const TITLES: Record<NotFoundKind, string> = {
   page: "没有这一页",
   user: "没有找到这个用户",
   collection: "没有找到这个收藏夹",
+  post: "没有找到这条投稿经验",
 };
 
 const LINES: Record<NotFoundKind, string> = {
@@ -23,6 +24,8 @@ const LINES: Record<NotFoundKind, string> = {
   user: "地址可能有误，或者这个主页没有对你公开。",
   /// 不存在、私有、所有者主页对你不可见都是这一句（简报 §3.14）
   collection: "地址可能有误，或者这个收藏夹没有对你公开。",
+  /// 已删除的经验不是 404（页面显示「该经验已删除」），这里只有地址不对
+  post: "地址可能有误。",
 };
 
 /// 浏览入口随缺失对象而变：缺期刊引去期刊库，其余引去文献库
@@ -32,6 +35,7 @@ const BROWSE: Record<NotFoundKind, { href: string; label: string }> = {
   page: { href: "/papers", label: "浏览全部文献" },
   user: { href: "/papers", label: "浏览全部文献" },
   collection: { href: "/papers", label: "浏览全部文献" },
+  post: { href: "/journals", label: "浏览期刊" },
 };
 
 /// 全站复用 404 状态屏（RSC）。暖纸编辑风，不暴露堆栈。

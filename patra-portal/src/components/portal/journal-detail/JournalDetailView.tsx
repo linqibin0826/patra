@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { DetailCrumbs } from "@/components/portal/DetailCrumbs";
 import { DisclosureSection } from "@/components/portal/DisclosureSection";
 import { IdentifierChip } from "@/components/portal/IdentifierChip";
@@ -23,7 +24,14 @@ const DT = "whitespace-nowrap font-mono text-2xs tracking-mono text-fg-3 pt-0.5"
 const DD = "m-0 font-sans text-md text-fg-1";
 const DD_MONO = "m-0 font-mono text-sm text-fg-1 tabular-nums";
 
-export function JournalDetailView({ venue }: { venue: VenueDetail }) {
+/// `experiences`：期刊页的经验区（PAP-125），放在「影响力速览」之后、「期刊定位」之前
+export function JournalDetailView({
+  venue,
+  experiences,
+}: {
+  venue: VenueDetail;
+  experiences?: ReactNode;
+}) {
   const metrics = deriveMetrics(venue);
   const cards = deriveMetricCards(metrics);
   const subjects = deriveSubjectAreas(venue);
@@ -56,6 +64,8 @@ export function JournalDetailView({ venue }: { venue: VenueDetail }) {
               </div>
             </section>
           )}
+
+          {experiences}
 
           <JournalPositioning venue={venue} subjects={subjects} />
 

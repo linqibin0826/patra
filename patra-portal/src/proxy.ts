@@ -9,8 +9,10 @@ import { gatewayFetch } from "@/lib/gateway";
 /// 状态码已改不了。这里只拦地址栏直接打开 / 刷新的文档请求：先确认存在，不存在就改写到 /missing/*，
 /// 由那里的 notFound() 回真正的 404。站内跳转照常秒出骨架。
 const DETAIL = {
-  papers: { kind: "paper", endpoint: "publications" },
-  journals: { kind: "journal", endpoint: "venues" },
+  papers: { kind: "paper", endpoint: "/patra-catalog/portal/publications" },
+  journals: { kind: "journal", endpoint: "/patra-catalog/portal/venues" },
+  /// 经验页（PAP-125）：已删除的经验是 200（页面显示「该经验已删除」），不存在才 404
+  posts: { kind: "post", endpoint: "/patra-interaction/posts" },
 } as const;
 
 const CHECK_TIMEOUT_MS = 3_000;
@@ -92,7 +94,7 @@ export async function proxy(req: NextRequest) {
   }
   const segments = req.nextUrl.pathname.split("/");
   const [, section = "", id = ""] = segments;
-  // 只有 `/papers/:id`、`/journals/:id` 两段的地址是详情页；列表页（`/papers`、`/journals/`）和更深的路径放行。
+  // 只有 `/papers/:id`、`/journals/:id`、`/posts/:id` 两段的地址是详情页；列表页（`/papers`、`/journals/`）和更深的路径放行。
   // matcher 按解码后的路径匹配，pathname 却保留编码（`/%70apers/1`、`/%6Cogin` 也会进来）：认不出的放行
   if (segments.length !== 3 || id === "" || !Object.hasOwn(DETAIL, section)) {
     return (await pending) ?? NextResponse.next();
@@ -104,7 +106,7 @@ export async function proxy(req: NextRequest) {
   // 后端出错或超时不在这里拦：放行后由页面照原路报错，不让中间层多等
   const [redirect, status] = await Promise.all([
     pending,
-    gatewayFetch(`/patra-catalog/portal/${endpoint}/${id}`, {
+    gatewayFetch(`${endpoint}/${id}`, {
       method: "HEAD",
       timeoutMs: CHECK_TIMEOUT_MS,
     }).then(
