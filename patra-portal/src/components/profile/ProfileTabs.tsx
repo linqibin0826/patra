@@ -1,41 +1,49 @@
 import Link from "next/link";
 import type { PublicProfile } from "@/lib/identity/public-profile";
-import { fetchUserPublicCollections } from "@/lib/interaction/collections";
+import { type ProfileTab, visibleProfileTabs } from "@/lib/profile/tabs";
 
-/// 主页标签栏（简报 §3.15）：「关于」「收藏夹」两条路由，下划线样式，不带个数
+const TABS: Record<ProfileTab, { label: string; path: string }> = {
+  about: { label: "关于", path: "" },
+  collections: { label: "收藏夹", path: "/collections" },
+  experiences: { label: "投稿经验", path: "/experiences" },
+};
+
+/// 主页标签栏（简报 §3.15、§3.17）：「关于」「收藏夹」「投稿经验」三条路由，按 `tabs` 渲染，下划线样式，不带个数。
+/// 只有「关于」一个标签时不渲染
 export function ProfileTabs({
   username,
+  tabs,
   current,
 }: {
   username: string;
-  current: "about" | "collections";
+  tabs: readonly ProfileTab[];
+  current: ProfileTab;
 }) {
+  if (tabs.length <= 1) {
+    return null;
+  }
   const tab =
     "-mb-px flex h-11 items-center border-b-2 border-transparent px-1 text-base text-fg-2 transition-colors hover:text-fg-1 aria-[current=page]:border-clay-500 aria-[current=page]:font-medium aria-[current=page]:text-fg-1";
   return (
     <nav aria-label="主页分区" className="mx-auto max-w-page px-gutter">
       <div className="flex gap-6 border-b border-border-default">
-        <Link
-          href={`/u/${username}`}
-          aria-current={current === "about" ? "page" : undefined}
-          className={tab}
-        >
-          关于
-        </Link>
-        <Link
-          href={`/u/${username}/collections`}
-          aria-current={current === "collections" ? "page" : undefined}
-          className={tab}
-        >
-          收藏夹
-        </Link>
+        {tabs.map((key) => (
+          <Link
+            key={key}
+            href={`/u/${username}${TABS[key].path}`}
+            aria-current={current === key ? "page" : undefined}
+            className={tab}
+          >
+            {TABS[key].label}
+          </Link>
+        ))}
       </div>
     </nav>
   );
 }
 
-/// 「关于」页上的标签栏：本人视角总出；别人视角只有至少一个对他可见的公开收藏夹时出，空或失败都不出、不占位
-/// （只有「关于」一个标签时不渲染标签栏）。包在 Suspense 里，不拖慢主页
+/// 「关于」页上的标签栏：按 `visibleProfileTabs` 的判定渲染，「任一标签有内容」才出（只有「关于」时不出、
+/// 不占位）。包在 Suspense 里，不拖慢主页
 export async function ProfileTabsGate({
   profile,
   self,
@@ -43,11 +51,6 @@ export async function ProfileTabsGate({
   profile: PublicProfile;
   self: boolean;
 }) {
-  if (!self) {
-    const read = await fetchUserPublicCollections(profile.userId);
-    if (read.kind !== "ok" || read.data.length === 0) {
-      return null;
-    }
-  }
-  return <ProfileTabs username={profile.username} current="about" />;
+  const tabs = await visibleProfileTabs(profile, self, "about");
+  return <ProfileTabs username={profile.username} tabs={tabs} current="about" />;
 }

@@ -10,6 +10,8 @@ interface InteractionUnavailableProps {
   onRetry?: () => void;
   /// 服务端区块：没有客户端缓存可重取，重试就是重新进入当前地址
   retryHref?: string;
+  /// 紧凑版：页面里的一个区块（讨论区），上下留白 40px、标题小一号（简报 §3.21）
+  compact?: boolean;
 }
 
 /// 互动区块的错误块（简报 §3.17）：不是整页错误，导航栏与页面标题照常。interaction 出问题时文献库、
@@ -19,11 +21,23 @@ export function InteractionUnavailable({
   body,
   onRetry,
   retryHref,
+  compact = false,
 }: InteractionUnavailableProps) {
   return (
-    <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
-      <CloudOff className="size-12 text-fg-3" strokeWidth={1.25} aria-hidden="true" />
-      <h2 className="font-serif text-xl font-medium text-fg-1">{title}</h2>
+    <div
+      className={cn(
+        "flex flex-col items-center gap-3 px-6 text-center",
+        compact ? "py-10" : "py-16",
+      )}
+    >
+      <CloudOff
+        className={cn("text-fg-3", compact ? "size-9" : "size-12")}
+        strokeWidth={1.25}
+        aria-hidden="true"
+      />
+      <h2 className={cn("font-serif font-medium text-fg-1", compact ? "text-lg" : "text-xl")}>
+        {title}
+      </h2>
       {body && <p className="text-sm text-fg-2">{body}</p>}
       {onRetry ? (
         <button type="button" onClick={onRetry} className={cn(btnSecondary, "mt-2")}>

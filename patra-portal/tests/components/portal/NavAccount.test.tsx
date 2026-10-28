@@ -133,7 +133,7 @@ describe("NavAccount · 文献库入口", () => {
 });
 
 describe("NavAccount · 用户菜单", () => {
-  it("头部是昵称和 @用户名，不出现邮箱；下面是个人主页、设置、退出登录", async () => {
+  it("头部是昵称和 @用户名，不出现邮箱；下面是个人主页、我的文献库、提醒、设置、退出登录", async () => {
     const { menu } = await openMenu();
     expect(within(menu).getByRole("group", { name: "陈宇 @chen-yu" })).toBeInTheDocument();
     expect(within(menu).queryByText(USER.email)).not.toBeInTheDocument();
@@ -141,7 +141,7 @@ describe("NavAccount · 用户菜单", () => {
       within(menu)
         .getAllByRole("menuitem")
         .map((item) => item.textContent),
-    ).toEqual(["个人主页", "我的文献库", "设置", "退出登录"]);
+    ).toEqual(["个人主页", "我的文献库", expect.stringMatching(/^提醒/), "设置", "退出登录"]);
     expect(within(menu).getByRole("menuitem", { name: "我的文献库" })).toHaveAttribute(
       "href",
       "/library",
@@ -203,5 +203,59 @@ describe("NavAccount · 用户菜单", () => {
     expect(screen.getByRole("menu")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "账号菜单" })).toBeInTheDocument();
     expect(toast.success).not.toHaveBeenCalled();
+  });
+});
+
+describe("NavAccount · 提醒入口", () => {
+  it("已登录：「文献库」与头像之间是铃铛", () => {
+    const { client } = renderNav(USER);
+    client.setQueryData(queryKeys.notificationUnread, {
+      counts: { total: 3, replies: 2, mentions: 1 },
+      etag: null,
+    });
+    const links = screen.getAllByRole("link").map((link) => link.getAttribute("href"));
+    expect(links).toEqual(["/library", "/notifications"]);
+  });
+
+  it("未登录没有铃铛", () => {
+    renderNav(null);
+    expect(screen.queryByRole("link", { name: /^提醒/ })).not.toBeInTheDocument();
+  });
+
+  it("用户菜单：「我的文献库」后是「提醒」，右端是未读数；0 不写数字", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ total: 3, replies: 2, mentions: 1 })),
+    );
+    const { client, menu } = await openMenu();
+    await waitFor(() =>
+      expect(
+        within(menu)
+          .getAllByRole("menuitem")
+          .map((item) => item.textContent),
+      ).toEqual(["个人主页", "我的文献库", "提醒3", "设置", "退出登录"]),
+    );
+    expect(within(menu).getByRole("menuitem", { name: /提醒/ })).toHaveAttribute(
+      "href",
+      "/notifications",
+    );
+    client.setQueryData(queryKeys.notificationUnread, {
+      counts: { total: 0, replies: 0, mentions: 0 },
+      etag: null,
+    });
+    await waitFor(() =>
+      expect(within(menu).getByRole("menuitem", { name: /提醒/ })).toHaveTextContent(/^提醒$/),
+    );
+  });
+
+  it("用户菜单：未读数取不到时写「暂不可用」", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ reason: "unavailable" }, { status: 502 })),
+    );
+    const { menu } = await openMenu();
+    await waitFor(() =>
+      expect(within(menu).getByRole("menuitem", { name: /提醒/ })).toHaveTextContent("暂不可用"),
+    );
   });
 });

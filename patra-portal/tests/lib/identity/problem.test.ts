@@ -63,3 +63,11 @@ describe("isSessionRejected", () => {
     expect(isSessionRejected(parseProblem(res(status), { traits }))).toBe(expected);
   });
 });
+
+describe("parseProblem：existingPostId（PAP-125，同刊同投稿日期重复时的已有经验）", () => {
+  it("字符串才取", () => {
+    expect(parseProblem(res(409), { existingPostId: "77" }).existingPostId).toBe("77");
+    expect(parseProblem(res(409), { existingPostId: 77 }).existingPostId).toBeNull();
+    expect(parseProblem(res(409), {}).existingPostId).toBeNull();
+  });
+});

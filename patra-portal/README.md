@@ -59,7 +59,9 @@ src/
 │   ├── account/                # 取消注销页的操作区
 │   ├── settings/               # 设置页外壳、个人资料（头像裁剪、机构与关注领域选择器）、账号、安全、隐私
 │   ├── profile/                # 公开主页的头部、正文与本人视角提示条
-│   ├── user/                   # 头像（图片 / 默认头像）
+│   ├── user/                   # 头像（图片 / 默认头像 / 匿名与已注销用的中性头像）
+│   ├── discussion/             # 讨论区：列表与单楼视图、评论条目、编辑器与 @ 联想、Markdown 渲染、对话框
+│   ├── experience/             # 投稿经验：期刊页汇总与列表、填写表单、经验页（时间线、修改历史、删除）
 │   ├── portal/                 # 业务组件（按页面 / 功能分目录）
 │   └── ui/                     # shadcn/ui 原语
 ├── lib/
@@ -70,6 +72,11 @@ src/
 │   ├── identity/               # 用户中心：资料、隐私、公开主页、头像、账号、安全、再认证、邮件令牌的取数与 Server Action，错误解析
 │   ├── reauth/                 # useReauth：需要再认证的操作的统一包装
 │   ├── portal-api/             # 服务端向网关取数、解析检索参数
+│   ├── interaction/            # 互动服务（文献库、收藏夹、讨论、投稿经验）的取数与 Server Action
+│   ├── discussion/             # 讨论区的客户端查询、缓存合并、计数、@ 联想、修改历史比较
+│   ├── experience/             # 投稿经验的写法、一致性规则、表单 schema、客户端查询与首屏预取
+│   ├── markdown/               # Markdown 子集的解析插件（白名单、提及、自动链接）与纯文本摘录
+│   ├── profile/                # 主页标签栏出现哪些标签
 │   └── …                       # 工具函数、TanStack Query 工厂与 queryKey
 ├── data/                       # 静态内容（示例检索、主题等）
 ├── providers/                  # 'use client' Provider 包装
@@ -98,6 +105,29 @@ server/strip-forwarded-for.mjs  # 生产入口的预加载模块（见下文「�
 
   ```bash
   PATRA_GATEWAY_BASE_URL=http://100.103.73.27:9528 PATRA_MAILPIT_BASE_URL=http://100.103.73.27:8025 pnpm test:e2e tests/e2e/user-center.spec.ts --workers=1
+  ```
+
+## 讨论区
+
+- **位置与复用**：`DiscussionSection` 是一个独立区块（`section#discussion`，自己的 Suspense），文献页放在主栏最后，经验页 `/posts/{id}` 用同一个组件显示回复（换 `subject` 与文案）。首屏由服务端取（已登录时带会话），脱水后交给客户端；视图以地址为准：`?comment=<评论 ID>` 是单楼视图（永久链接），`?sort=latest` 是最新。排序、打开单楼都在客户端改地址，不重新渲染整页。
+- **Markdown 白名单在解析层**：react-markdown 之下用 micromark 的 `disable` 关掉标题、HTML、表格、代码块等构造，它们的原文按普通文字显示；图片、嵌套列表、跨行的三反引号按源位置切回原文。正文里的提及 `<@用户ID>` 由自写的 micromark 构造识别（转义的、行内代码里的不算），PMID、DOI、网址在文本节点上变成链接。链接只放行 http(s)。
+- **降级**：interaction 不可用时讨论区显示「暂不可用」，文献页其余照常；切回页面时自动重取。
+- **端到端**：发评论要邮箱已验证的账号（放 `~/.patra/secrets/e2e.env`），每遍要等满 5 分钟测修改历史：
+
+  ```bash
+  set -a; . ~/.patra/secrets/e2e.env; set +a; PATRA_GATEWAY_BASE_URL=http://100.103.73.27:9528 pnpm test:e2e tests/e2e/discussion.spec.ts --workers=1
+  ```
+
+## 投稿经验
+
+- **期刊页经验区**：`ExperienceSection`（`section#experiences`，自己的 Suspense）放在「影响力速览」之后，是期刊页第一个互动区块。首屏由服务端取汇总（近 3 年）与列表第一页，只作初值放进缓存；切「近 3 年 / 全部」、加载更多、发布后的重取都在客户端。interaction 不可用时整块显示「同行经验暂不可用」，期刊页其余照常，切回页面自动重取。
+- **表单**：期刊页原地展开新建、经验页原地切换编辑，同一个 `ExperienceForm`（RHF + Zod）。首轮结果与最终结果的一致性规则做成联动（`lib/experience/rules.ts`，与后端规则一一对应），选填没填发 `null`。
+- **经验页 `/posts/{id}`**：已删除的经验是 200（「该经验已删除」，不挂回复区），不存在才 404（proxy 预检同文献、期刊详情）。回复区复用讨论区。
+- **主页标签**：哪些标签出现由 `lib/profile/tabs.ts` 统一判定（本人全有；别人按收藏夹、署名经验各自是否有内容）。
+- **端到端**：写经验用 `~/.patra/secrets/e2e.env` 里 mini 上的测试账号 C（`PATRA_E2E_VERIFIED_C_*`，不占真实账号的额度），每跑一次写 5 条再全部删除；删除不退当天额度（每人每天 10 条），同一天最多完整跑两次：
+
+  ```bash
+  set -a; . ~/.patra/secrets/e2e.env; set +a; PATRA_GATEWAY_BASE_URL=http://100.103.73.27:9528 pnpm test:e2e tests/e2e/experience.spec.ts --workers=1
   ```
 
 ## 设计文档

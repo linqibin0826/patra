@@ -16,7 +16,8 @@ function identityOf(data: unknown): UserIdentity {
 }
 
 /// 当前用户一变（退出、换号、注销、会话失效）就清掉按用户区分的缓存：文献库与「我的状态」的 key 不带用户 ID，
-/// 留着会在 60 秒内把上一个人的收藏、收藏夹名、备注给下一个人看。第一次取回当前用户之前的缓存不动。
+/// 留着会在 60 秒内把上一个人的收藏、收藏夹名、备注给下一个人看；讨论区的「这条是我发的」、联想里排除自己同理。
+/// 第一次取回当前用户之前的缓存不动。
 function clearUserScopedCacheOnIdentityChange(client: QueryClient) {
   let known: UserIdentity;
   client.getQueryCache().subscribe((event) => {
@@ -34,6 +35,9 @@ function clearUserScopedCacheOnIdentityChange(client: QueryClient) {
     }
     client.removeQueries({ queryKey: queryKeys.library });
     client.removeQueries({ queryKey: queryKeys.libraryStatusAll });
+    client.removeQueries({ queryKey: queryKeys.discussion });
+    client.removeQueries({ queryKey: queryKeys.notifications });
+    client.removeQueries({ queryKey: queryKeys.experience });
   });
 }
 

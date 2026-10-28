@@ -34,6 +34,13 @@ describe("callInteraction", () => {
     expect(init?.headers).toMatchObject({ Authorization: "Bearer patra_user_abc" });
   });
 
+  it("auth: none：有 Cookie 也不带令牌", async () => {
+    fetchMock.mockResolvedValue(Response.json({}));
+    await callInteraction("/discussions/publication/1/threads", {}, { auth: "none" });
+    const [, init] = fetchMock.mock.calls[0] ?? [];
+    expect(init?.headers).not.toHaveProperty("Authorization");
+  });
+
   it("没有 Cookie 且要求登录：no-session，不请求网关", async () => {
     resetCookieJar();
     await expect(callInteraction("/me/library")).resolves.toEqual({ kind: "no-session" });

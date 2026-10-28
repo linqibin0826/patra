@@ -21,11 +21,15 @@ vi.mock("next/navigation", async (importOriginal) => {
 });
 vi.mock("@/lib/auth/actions", () => ({ login: vi.fn(), logout: vi.fn(), register: vi.fn() }));
 
-/// 账号区要读当前用户：每次用新的 QueryClient，`/api/auth/me` 回 `user`（默认未登录）
+/// 账号区要读当前用户：每次用新的 QueryClient，`/api/auth/me` 回 `user`（默认未登录），未读数接口回 3 条
 function renderTopNav(user: CurrentUser | null = null) {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () => Response.json({ user })),
+    vi.fn(async (url: string) =>
+      url.startsWith("/api/me/notifications/unread-count")
+        ? Response.json({ total: 3, replies: 2, mentions: 1 })
+        : Response.json({ user }),
+    ),
   );
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -218,5 +222,31 @@ describe("TopNav 账号区", () => {
     );
     await user.click(within(dialog).getByRole("link", { name: "登录" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+});
+
+describe("TopNav 提醒入口", () => {
+  it("已登录：桌面一个、窄屏顶栏一个；窄屏的在检索与菜单之间", async () => {
+    renderTopNav(USER);
+    const bells = await screen.findAllByRole("link", { name: "提醒，3 条未读" });
+    expect(bells).toHaveLength(2);
+    const narrow = bells.find((bell) => bell.className.includes("max-[880px]:inline-flex"));
+    const search = screen.getByRole("button", { name: /快速检索/ });
+    const menu = screen.getByRole("button", { name: "打开菜单" });
+    expect(narrow).toBeDefined();
+    expect(
+      search.compareDocumentPosition(narrow as Node) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      (narrow as Node).compareDocumentPosition(menu) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("未登录：没有铃铛，也不请求未读数", async () => {
+    renderTopNav(null);
+    expect(await screen.findByRole("link", { name: "登录" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /^提醒/ })).not.toBeInTheDocument();
+    const urls = vi.mocked(fetch).mock.calls.map(([url]) => String(url));
+    expect(urls.some((url) => url.includes("notifications"))).toBe(false);
   });
 });

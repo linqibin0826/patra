@@ -48,6 +48,26 @@ describe("详情页直接打开时先确认存在", () => {
     expect(fetchMock.mock.calls[0]?.[0]).toBe("http://gw.test/patra-catalog/portal/venues/7");
   });
 
+  it("经验页问 interaction 的经验详情，不存在时改写到经验的 404 页（PAP-125）", async () => {
+    fetchMock.mockResolvedValue(new Response(null, { status: 404 }));
+    const res = await proxy(request("/posts/9"));
+    expect(rewrittenTo(res)).toBe("http://portal.test/missing/post");
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("http://gw.test/patra-interaction/posts/9");
+    expect(fetchMock.mock.calls[0]?.[1]?.method).toBe("HEAD");
+  });
+
+  it("经验已删除（200）放行，由页面显示「该经验已删除」", async () => {
+    fetchMock.mockResolvedValue(new Response(null, { status: 200 }));
+    const res = await proxy(request("/posts/9"));
+    expect(res.headers.get("x-middleware-next")).toBe("1");
+  });
+
+  it("经验页非正整数 id 直接改写", async () => {
+    const res = await proxy(request("/posts/abc"));
+    expect(rewrittenTo(res)).toBe("http://portal.test/missing/post");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it.each([200, 500])("后端回 %i → 放行，由页面照常渲染或报错", async (status) => {
     fetchMock.mockResolvedValue(new Response(null, { status }));
     const res = await proxy(request("/papers/42"));

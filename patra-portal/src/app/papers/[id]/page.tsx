@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { DiscussionSection } from "@/components/discussion/DiscussionSection";
 import { Footer } from "@/components/portal/Footer";
 import { FullTextCrumbStatus } from "@/components/portal/fulltext/FullTextCrumbStatus";
 import { FullTextTocButton, FullTextTocCard } from "@/components/portal/fulltext/FullTextNav";
@@ -11,6 +12,8 @@ import { FactCellsSkeleton, FullTextFacts } from "@/components/portal/paper-deta
 import { PublicationDetailView } from "@/components/portal/paper-detail/PublicationDetailView";
 import { RecordSection } from "@/components/portal/paper-detail/RecordSection";
 import { TopNav } from "@/components/portal/TopNav";
+import { PAPER_DISCUSSION_COPY } from "@/lib/discussion/copy";
+import { parseDiscussionView } from "@/lib/discussion/server";
 import { paperMetadata } from "@/lib/page-metadata";
 import { deriveFullTextState } from "@/lib/portal-api/fulltext-derive";
 import { fetchPublicationDetail } from "@/lib/portal-api/publications";
@@ -28,8 +31,14 @@ export async function generateMetadata({
   return paper ? paperMetadata(paper, await publicUrl(`/papers/${id}`)) : {};
 }
 
-export default async function PaperDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default async function PaperDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [{ id }, search] = await Promise.all([params, searchParams]);
   const [paper, shareLink] = await Promise.all([
     fetchPublicationDetail(id), // 5xx/超时会 throw → 全局 error.tsx
     publicUrl(`/papers/${id}`),
@@ -37,7 +46,9 @@ export default async function PaperDetailPage({ params }: { params: Promise<{ id
   if (!paper) {
     notFound(); // 非数字 id 或 BE 404 → [id]/not-found.tsx
   }
-  // 全文走独立接口：详情先出，事实条的全文三格、全文区块、目录卡、目录按钮各自在 Suspense 里后到（共用一次请求）
+  // 全文走独立接口：详情先出，事实条的全文三格、全文区块、目录卡、目录按钮各自在 Suspense 里后到（共用一次请求）；
+  // 讨论区（`?comment=` 是单楼视图、`?sort=latest` 是最新）也在自己的 Suspense 里
+
   return (
     <>
       <TopNav />
@@ -68,6 +79,14 @@ export default async function PaperDetailPage({ params }: { params: Promise<{ id
             <Suspense fallback={<TocCardSkeleton />}>
               <FullTextTocCard paper={paper} />
             </Suspense>
+          }
+          discussion={
+            <DiscussionSection
+              subject={{ type: "publication", key: id }}
+              view={parseDiscussionView(search)}
+              copy={PAPER_DISCUSSION_COPY}
+              basePath={`/papers/${id}`}
+            />
           }
           tocButton={
             deriveFullTextState(paper) === "full" && (

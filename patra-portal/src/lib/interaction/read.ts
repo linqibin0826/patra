@@ -1,7 +1,7 @@
 import "server-only";
 import type { z } from "zod";
 import { logRequestError, logUnexpectedResponse } from "@/lib/auth/gateway-response";
-import type { InteractionReply } from "@/lib/interaction/request";
+import { callInteraction, type InteractionReply } from "@/lib/interaction/request";
 import type { Page } from "@/lib/interaction/schema";
 import { fetchPublicationCards } from "@/lib/portal-api/publications";
 import type { Paper } from "@/types/portal";
@@ -47,6 +47,20 @@ export function toRead<S extends z.ZodType>(
     return { kind: "unavailable" };
   }
   return { kind: "ok", data: parsed.data };
+}
+
+/// 公开读（登录可选）：有会话就带（拿「这条是我发的」、本人的匿名内容与主页可见性）；令牌被网关拒时按访客
+/// 重取一次，不降级。讨论区与投稿经验共用
+export async function readPublic<S extends z.ZodType>(
+  path: string,
+  schema: S,
+): Promise<Read<z.infer<S>>> {
+  const init = { timeoutMs: READ_TIMEOUT_MS };
+  const reply = await callInteraction(path, init, { auth: "optional" });
+  if (reply.kind === "problem" && reply.problem.status === 401) {
+    return toRead(await callInteraction(path, init, { auth: "none" }), schema, path);
+  }
+  return toRead(reply, schema, path);
 }
 
 /// 条目与它的卡片。`paper` 为 null：条目已失效，或 catalog 这次没回它（刚软删、对账还没跑），按已失效外观显示

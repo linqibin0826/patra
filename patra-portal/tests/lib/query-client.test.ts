@@ -52,3 +52,50 @@ describe("createQueryClient · 当前用户变化时清掉文献库缓存", () =
     expect(libraryEntries(client)).toBe(3);
   });
 });
+
+describe("createQueryClient · 当前用户变化时清掉讨论缓存", () => {
+  it("退出登录后讨论区的列表、单楼、联想缓存都被清掉", () => {
+    const client = createQueryClient();
+    client.setQueryData(queryKeys.currentUser, A);
+    client.setQueryData(queryKeys.discussionThreads("publication", "1", "asc"), { pages: [] });
+    client.setQueryData(queryKeys.discussionSingle("publication", "1", "5"), { missing: true });
+    client.setQueryData(queryKeys.discussionMentions("publication", "1", "zh"), []);
+    client.setQueryData(queryKeys.currentUser, null);
+    expect(client.getQueryCache().findAll({ queryKey: queryKeys.discussion })).toHaveLength(0);
+  });
+
+  it("第一次取回当前用户之前的讨论缓存不动", () => {
+    const client = createQueryClient();
+    client.setQueryData(queryKeys.discussionThreads("publication", "1", "asc"), { pages: [] });
+    client.setQueryData(queryKeys.currentUser, A);
+    expect(client.getQueryCache().findAll({ queryKey: queryKeys.discussion })).toHaveLength(1);
+  });
+});
+
+describe("createQueryClient · 当前用户变化时清掉提醒缓存", () => {
+  it("换成另一个用户后未读数与两个标签的列表都被清掉", () => {
+    const client = createQueryClient();
+    client.setQueryData(queryKeys.currentUser, A);
+    client.setQueryData(queryKeys.notificationUnread, {
+      counts: { total: 1, replies: 1, mentions: 0 },
+      etag: '"1-0"',
+    });
+    client.setQueryData(queryKeys.notificationList("replies"), { pages: [] });
+    client.setQueryData(queryKeys.notificationList("mentions"), { pages: [] });
+    client.setQueryData(queryKeys.currentUser, B);
+    expect(client.getQueryCache().findAll({ queryKey: queryKeys.notifications })).toHaveLength(0);
+  });
+});
+
+describe("createQueryClient · 当前用户变化时清掉投稿经验缓存（PAP-125）", () => {
+  it("换号后期刊汇总、列表、主页列表、修改历史缓存都被清掉", () => {
+    const client = createQueryClient();
+    client.setQueryData(queryKeys.currentUser, A);
+    client.setQueryData(queryKeys.experienceSummary("100", "3y"), { count: 1 });
+    client.setQueryData(queryKeys.experienceList("100"), { pages: [] });
+    client.setQueryData(queryKeys.experienceUser("7"), { pages: [] });
+    client.setQueryData(queryKeys.experienceRevisions("9"), { items: [] });
+    client.setQueryData(queryKeys.currentUser, B);
+    expect(client.getQueryCache().findAll({ queryKey: queryKeys.experience })).toHaveLength(0);
+  });
+});
