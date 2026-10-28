@@ -71,3 +71,18 @@ describe("createQueryClient · 当前用户变化时清掉讨论缓存", () => {
     expect(client.getQueryCache().findAll({ queryKey: queryKeys.discussion })).toHaveLength(1);
   });
 });
+
+describe("createQueryClient · 当前用户变化时清掉提醒缓存", () => {
+  it("换成另一个用户后未读数与两个标签的列表都被清掉", () => {
+    const client = createQueryClient();
+    client.setQueryData(queryKeys.currentUser, A);
+    client.setQueryData(queryKeys.notificationUnread, {
+      counts: { total: 1, replies: 1, mentions: 0 },
+      etag: '"1-0"',
+    });
+    client.setQueryData(queryKeys.notificationList("replies"), { pages: [] });
+    client.setQueryData(queryKeys.notificationList("mentions"), { pages: [] });
+    client.setQueryData(queryKeys.currentUser, B);
+    expect(client.getQueryCache().findAll({ queryKey: queryKeys.notifications })).toHaveLength(0);
+  });
+});

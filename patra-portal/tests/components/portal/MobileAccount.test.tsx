@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { USER } from "@tests/fixtures/user";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -144,5 +144,50 @@ describe("MobileAccount · 退出登录", () => {
     await waitFor(() => expect(button).not.toHaveAttribute("aria-disabled"));
     expect(onClose).not.toHaveBeenCalled();
     expect(toast.success).not.toHaveBeenCalled();
+  });
+});
+
+describe("MobileAccount · 提醒", () => {
+  it("已登录：四个按钮排成 2×2（主页、文献库 / 提醒、设置），「提醒」挂未读数", () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ total: 5, replies: 5, mentions: 0 })),
+    );
+    renderAccount(USER);
+    const links = screen.getAllByRole("link").map((link) => link.getAttribute("href"));
+    expect(links).toEqual(["/u/chen-yu", "/library", "/notifications", "/settings/profile"]);
+    expect(screen.getByRole("link", { name: "主页" }).parentElement).toHaveClass("grid-cols-2");
+  });
+
+  it("「提醒」的名称带未读数，点了先关闭菜单", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ total: 5, replies: 5, mentions: 0 })),
+    );
+    const { user, onClose } = renderAccount(USER);
+    await user.click(await screen.findByRole("link", { name: "提醒，5 条未读" }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("未读数取不到：「提醒」按钮里写「暂不可用」", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ reason: "unavailable" }, { status: 502 })),
+    );
+    renderAccount(USER);
+    expect(await screen.findByRole("link", { name: "提醒（暂不可用）" })).toHaveTextContent(
+      "暂不可用",
+    );
+  });
+
+  it("「提醒」的未读徽标收在按钮内的右上角", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ total: 5, replies: 5, mentions: 0 })),
+    );
+    renderAccount(USER);
+    const link = await screen.findByRole("link", { name: "提醒，5 条未读" });
+    const badge = within(link).getByText("5");
+    expect(badge).toHaveClass("absolute", "top-1.5", "right-1.5");
   });
 });

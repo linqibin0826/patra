@@ -23,6 +23,8 @@ export interface GatewayRequestInit {
   redirect?: "follow" | "manual";
   /// 超时毫秒数，默认 10_000
   timeoutMs?: number;
+  /// 浏览器带来的 `If-None-Match`，原样转给网关（未读数没变时网关回 304）
+  ifNoneMatch?: string | null;
 }
 
 /// 统一网关客户端（server-only）：全仓库只有这里读 `PATRA_GATEWAY_BASE_URL`、向网关发请求。
@@ -39,6 +41,9 @@ export async function gatewayFetch(path: string, init: GatewayRequestInit = {}):
   const headers: Record<string, string> = { ...forwardingHeaders(init.client) };
   if (init.token) {
     headers.Authorization = `Bearer ${init.token}`;
+  }
+  if (init.ifNoneMatch) {
+    headers["If-None-Match"] = init.ifNoneMatch;
   }
   if (init.json !== undefined) {
     headers["Content-Type"] = "application/json";

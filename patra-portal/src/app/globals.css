@@ -294,6 +294,12 @@
     scale: 0.4;
   }
 }
+/* 回弹：未读数变化时放大到 1.15 倍再回来 */
+@keyframes patra-bounce {
+  50% {
+    scale: 1.15;
+  }
+}
 @keyframes patra-shimmer {
   from {
     background-position: 160% 0;
@@ -415,6 +421,10 @@
     /* 弹出：图标状态切换（如复制成功的对勾） */
     .anim-pop {
       animation: patra-pop 360ms var(--ease-out-expo) both;
+    }
+    /* 回弹：未读数徽标的数字变化 */
+    .anim-bounce {
+      animation: patra-bounce var(--dur-fast) var(--ease-out-quart);
     }
     /* 描线：配合 pathLength="1"，[--dur] 可按路径覆盖时长 */
     .anim-draw {
