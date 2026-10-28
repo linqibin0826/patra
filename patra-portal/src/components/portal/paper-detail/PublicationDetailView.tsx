@@ -24,10 +24,12 @@ interface PublicationDetailViewProps {
   tocButton?: ReactNode;
   /** 面包屑中段的短标题与阅读进度 */
   crumbStatus?: ReactNode;
+  /** 讨论区（主栏最后、全文区块之后；页面在自己的 Suspense 里流式给出） */
+  discussion?: ReactNode;
 }
 
 /// 文献详情（spec §4）：吸顶面包屑 → 整宽页头（标题、事实条、唯一一组操作）→ 两栏：
-/// 主栏（摘要 → MeSH · 关键词 → 全文区块（含文末的文献档案），统一挂在标签栏上）+ 右侧栏（标识卡、AI 速读、目录卡）。
+/// 主栏（摘要 → MeSH · 关键词 → 全文区块（含文末的文献档案）→ 讨论区，统一挂在标签栏上）+ 右侧栏（标识卡、AI 速读、目录卡）。
 /// 没有全文时侧栏整体吸顶；有全文时侧栏卡片随页面滚走，下面的目录卡单独吸顶、一直陪到页底。
 export function PublicationDetailView({
   paper,
@@ -37,6 +39,7 @@ export function PublicationDetailView({
   tocCard,
   tocButton,
   crumbStatus,
+  discussion,
 }: PublicationDetailViewProps) {
   const crumb = paper.pmid ? `PMID ${paper.pmid}` : `#${paper.id}`;
   // 与全文区块同一口径：已撤稿的文献即便后端标了有全文也不展示正文、不出目录卡
@@ -70,6 +73,8 @@ export function PublicationDetailView({
           <KeywordRow items={deriveKeywordItems(paper)} />
 
           {fullText}
+
+          {discussion}
         </div>
 
         {/* sticky top = TopNav 57px + 面包屑 45px（均含 1px 底边）+ 32px 留白 = 134px */}

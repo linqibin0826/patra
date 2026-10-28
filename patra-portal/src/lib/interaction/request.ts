@@ -16,11 +16,11 @@ export type InteractionReply = IdentityReply;
 export async function callInteraction(
   path: string,
   init: Omit<GatewayRequestInit, "token" | "client"> = {},
-  options: { auth?: "required" | "optional" } = {},
+  options: { auth?: "required" | "optional" | "none" } = {},
 ): Promise<InteractionReply> {
   const endpoint = `/patra-interaction${path}`;
   try {
-    const stored = await readSessionToken();
+    const stored = options.auth === "none" ? null : await readSessionToken();
     const token = stored && canSendToken(stored) ? stored : null;
     if (!token && (options.auth ?? "required") === "required") {
       return { kind: "no-session" };

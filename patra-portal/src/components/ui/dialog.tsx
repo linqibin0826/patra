@@ -26,6 +26,8 @@ interface DialogProps {
   initialFocus?: RefObject<HTMLElement | null>;
   /// 标题上方的状态图标（注销结果屏，见 `StateIcon`）
   icon?: ReactNode;
+  /// 关闭后焦点去哪：不传时回到触发按钮；返回元素就聚焦它（触发按钮随操作消失时用，如删除评论）
+  finalFocus?: () => HTMLElement | boolean | null | undefined;
   children: ReactNode;
   className?: string;
 }
@@ -42,6 +44,7 @@ export function Dialog({
   alert,
   initialFocus,
   icon,
+  finalFocus,
   children,
   className,
 }: DialogProps) {
@@ -59,6 +62,7 @@ export function Dialog({
         <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-bg-scrim transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0 supports-backdrop-filter:backdrop-blur-xs" />
         <DialogPrimitive.Popup
           initialFocus={initialFocus}
+          finalFocus={finalFocus}
           className={cn(
             "fixed z-50 flex flex-col gap-5 overflow-y-auto bg-bg-elevated p-6 text-fg-1 shadow-lg outline-none transition-opacity motion-safe:transition-[opacity,translate,scale] duration-300 ease-out-expo",
             "min-[881px]:top-1/2 min-[881px]:left-1/2 min-[881px]:max-h-[calc(100dvh-4rem)] min-[881px]:-translate-x-1/2 min-[881px]:-translate-y-1/2 min-[881px]:rounded-xl data-starting-style:opacity-0 motion-safe:min-[881px]:data-starting-style:scale-[0.98] data-ending-style:opacity-0",
