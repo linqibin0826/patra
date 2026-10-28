@@ -266,6 +266,23 @@ identity 的定时任务除 `emailTokenCleanupJob`（04:30）外还有 `loginRec
 
 interaction 的执行器 `patra-interaction`（端口 6501，不映射到宿主机）在 xxl-job-admin 的「执行器管理」里手工新建、自动注册；它的两个每日任务 `subjectReconciliationJob`（`0 30 6 * * ?`）、`deletedUserCleanupJob`（`0 0 6 * * ?`）见 `docs/patra/runbooks/v0.13-library-go-live-runbook.md`。
 
+## 门户的公网入口（Cloudflare Tunnel）
+
+给少数人体验和测试用：https://patra.linqibin.dev 经 Cloudflare Tunnel 转到 mini 上门户的 `localhost:4000`。**只有门户对外**，PG、Redis、Nacos、MinIO 等基础设施端口仍然只在 tailnet 和局域网里。门口没有加 Cloudflare Access，访问控制只靠 Patra 自己的登录（2026-10-28 决定）。2026-10-28 实测：首页首次打开 5～6 秒，连接复用后每个请求约 1 秒（免费版落在洛杉矶节点）。
+
+- **隧道**：Cloudflare 账号里的 `patra-portal`（远程管理，ingress 在 Cloudflare 后台：`patra.linqibin.dev` → `http://localhost:4000`，其余返回 404）；DNS 是 `patra` 指向 `<隧道 ID>.cfargotunnel.com` 的代理 CNAME。`linqibin.dev` 开着 Always Use HTTPS，http 访问会 301 到 https。同一账号里的 `office-mac-ssh` 隧道与 Patra 无关。
+- **mini 上的进程**：brew 装的 `cloudflared`，由 LaunchAgent `~/Library/LaunchAgents/dev.patra.cloudflared-portal.plist` 常驻（`RunAtLoad` + `KeepAlive`，执行 `cloudflared tunnel --no-autoupdate run --token-file ~/.patra/secrets/cloudflared-patra-portal.token`），日志在 `~/Library/Logs/cloudflared-patra-portal.log`。cloudflared 走家宽直连 Cloudflare（QUIC），不经 Clash。LaunchAgent 要有用户登录会话才会运行。
+- **令牌**：`~/.patra/secrets/cloudflared-patra-portal.token`（权限 600），只在 mini 上。泄露后到 Cloudflare 后台轮换该隧道的令牌，再覆盖这个文件并 `launchctl kickstart -k gui/$(id -u)/dev.patra.cloudflared-portal`。
+- **查状态**：`launchctl print gui/$(id -u)/dev.patra.cloudflared-portal | grep state`；正常时日志里有 4 条 `Registered tunnel connection`。
+- **暂停对外**：`launchctl bootout gui/$(id -u)/dev.patra.cloudflared-portal`；恢复用 `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/dev.patra.cloudflared-portal.plist`。
+
+已知限制：
+
+- 门户没配 `PATRA_PORTAL_PUBLIC_URL`，「复制链接」按请求的 `Host` 拼成 `http://patra.linqibin.dev/...`，点开后由 Always Use HTTPS 跳到 https。
+- 外网访问也经 OrbStack 端口转发进入，门户看到的来源都是 `192.168.97.1`，登录设备列表里外网用户同样显示「内网」。
+- 会话 Cookie 仍是 `PATRA_SESSION_COOKIE_SECURE=false`（不带 `Secure`、不带 `__Host-` 前缀），经 https 访问照常能用。
+- 没有人机验证，注册邮件经 Resend 以 `linqibin.dev` 发出：被刷注册会影响域名的发信信誉。
+
 ## 应用侧配置（patra-api，本仓库范围外）
 
 各微服务通过单一环境变量切换基础设施地址：

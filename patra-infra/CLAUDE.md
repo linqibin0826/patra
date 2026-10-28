@@ -48,7 +48,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 3. **RocketMQ broker 注册地址由 `.env` 的 `BROKER_IP1` 决定**，注册错会导致客户端连不上。回退方案是改用 FQDN `linqibins-mac-mini.taild06182.ts.net`（见 README 故障排查）。
 
-4. **`.env` 含 dev 默认凭据且随仓库提交。** 这是有意为之 —— Mac mini 靠 `git pull` 同步这些配置（mysql-ops 的密码等）。这些是 dev 默认值、对应服务仅在 tailscale 内网暴露，公网打不到端口。**Nacos 不在此例**：token 签名密钥、identity 和三个账号的密码只放 `~/.patra/secrets/`（见 README「密钥」「Nacos」）；原先提交在 `.env` 里的那组鉴权值已经公开，PAP-71 已轮换作废。新增密钥一律放 `~/.patra/secrets/`，不再往 `.env` 加；如未来引入真正敏感的生产密钥，须改走外部 secret 注入。
+4. **`.env` 含 dev 默认凭据且随仓库提交。** 这是有意为之 —— Mac mini 靠 `git pull` 同步这些配置（mysql-ops 的密码等）。这些是 dev 默认值、对应服务仅在 tailscale 内网暴露，公网打不到端口。公网上只有门户（`patra.linqibin.dev` 经 Cloudflare Tunnel，见 README「门户的公网入口」），往隧道里加别的服务前先确认不会把这些端口带出去。**Nacos 不在此例**：token 签名密钥、identity 和三个账号的密码只放 `~/.patra/secrets/`（见 README「密钥」「Nacos」）；原先提交在 `.env` 里的那组鉴权值已经公开，PAP-71 已轮换作废。新增密钥一律放 `~/.patra/secrets/`，不再往 `.env` 加；如未来引入真正敏感的生产密钥，须改走外部 secret 注入。
 
 5. **CD 在 runner 工作区里执行，被 git 忽略的文件每次都会被清掉。** `actions/checkout` 默认 `clean: true`，每次运行前执行 `git clean -ffdx`，放在 compose 目录里的密钥文件活不过下一次部署。所以密钥放在仓库外的 `~/.patra/secrets/`，compose 按 `${HOME}` 绝对路径加载（runner 进程的 `HOME` 就是用户主目录），见 README「密钥」。
 
