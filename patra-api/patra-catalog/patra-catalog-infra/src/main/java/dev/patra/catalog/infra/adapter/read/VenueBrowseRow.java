@@ -2,48 +2,26 @@ package dev.patra.catalog.infra.adapter.read;
 
 import java.math.BigDecimal;
 
-/// `VenueDao#findPortalVenueBrowsePage` native query 的 Spring Data 接口投影。
+/// [VenueBrowseReadAdapter] 的 SQL 查询行，组件名与列别名一一对应。
 ///
-/// getter 名与 SQL 列别名一一对应（别名在 SQL 中加双引号保持 camelCase）。
-///
+/// @param nlmId 主 NLM（身份锚，字符串保留前导零）。
 /// @author linqibin
 /// @since 0.1.0
-public interface VenueBrowseRow {
-
-  Long getId();
-
-  String getName();
-
-  String getAbbr();
-
-  String getCoverObjectKey();
-
-  BigDecimal getImpactFactor();
-
-  String getJcrQuartile();
-
-  String getJcrSubject();
-
-  String getCasMajorCategory();
-
-  String getCasMajorQuartile();
-
-  Boolean getCasIsTop();
-
-  String getCountryCode();
-
-  Integer getCitedByCount();
-
-  Integer getFoundedYear();
-
-  Boolean getIsOpenAccess();
-
-  Boolean getIsInDoaj();
-
-  String getIssnL();
-
-  /// 主 NLM（身份锚，字符串保留前导零）。
-  ///
-  /// @return 主 NLM，可空
-  String getNlmId();
-}
+record VenueBrowseRow(
+    Long id,
+    String name,
+    String abbr,
+    String coverObjectKey,
+    BigDecimal impactFactor,
+    String jcrQuartile,
+    String jcrSubject,
+    String casMajorCategory,
+    String casMajorQuartile,
+    Boolean casIsTop,
+    String countryCode,
+    Integer citedByCount,
+    Integer foundedYear,
+    Boolean isOpenAccess,
+    Boolean isInDoaj,
+    String issnL,
+    String nlmId) {}

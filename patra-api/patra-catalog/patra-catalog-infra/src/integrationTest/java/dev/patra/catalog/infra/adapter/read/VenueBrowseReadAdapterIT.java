@@ -25,6 +25,7 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
@@ -45,6 +46,7 @@ class VenueBrowseReadAdapterIT {
 
   @Autowired private VenueBrowseReadAdapter adapter;
   @Autowired private TestEntityManager em;
+  @Autowired private JdbcTemplate jdbc;
 
   private static final PagingParams FIRST_PAGE = PagingParams.of(1, 20);
 
@@ -475,6 +477,125 @@ class VenueBrowseReadAdapterIT {
         adapter.search(VenueBrowseFilter.builder().sort(VenueBrowseSort.TITLE).build(), FIRST_PAGE);
 
     assertThat(result.items()).extracting(VenueBrowseReadModel::nlmId).containsExactly("0404401");
+  }
+
+  @Test
+  @DisplayName("分页边界：末页不满一页与越过末页时 total 不变，越过末页 items 为空")
+  void should_keep_total_on_partial_and_out_of_range_pages() {
+    for (int i = 1; i <= 5; i++) {
+      saveJournal("Journal " + i, "J" + i, null, null, null);
+    }
+    em.flush();
+    em.clear();
+    VenueBrowseFilter filter = VenueBrowseFilter.builder().sort(VenueBrowseSort.TITLE).build();
+
+    PageResult<VenueBrowseReadModel> last = adapter.search(filter, PagingParams.of(3, 2));
+    PageResult<VenueBrowseReadModel> beyond = adapter.search(filter, PagingParams.of(4, 2));
+
+    assertThat(last.items()).extracting(VenueBrowseReadModel::name).containsExactly("Journal 5");
+    assertThat(last.total()).isEqualTo(5);
+    assertThat(last.totalPages()).isEqualTo(3);
+    assertThat(beyond.items()).isEmpty();
+    assertThat(beyond.total()).isEqualTo(5);
+  }
+
+  @Test
+  @DisplayName("全字段卡片：检索与按 ID 读卡片的每一列都按列读出；最新年 CAS 取版本升序第一条")
+  void should_map_every_card_column_in_search_and_find_cards() {
+    long id = SnowflakeIdGenerator.getId();
+    jdbc.update(
+        """
+        INSERT INTO cat_venue (id, venue_type, title, provenance_code, issn_l, nlm_id,
+          abbreviated_title, country_code, image_object_key, cited_by_count,
+          publication_profile, open_access)
+        VALUES (?, 'JOURNAL', 'Nature', 'OPENALEX', '0028-0836', '0410462', 'Nat', 'GB',
+          'venue/cover.jpg', 987, '{"publicationHistory":{"startYear":1869}}',
+          '{"isOa":false,"isInDoaj":true}')
+        """,
+        id);
+    jdbc.update(
+        "INSERT INTO cat_venue_jcr_rating (id, venue_id, year, impact_factor, jif_quartile, subject)"
+            + " VALUES (?, ?, 2025, 69.5, 'Q1', 'MULTIDISCIPLINARY')",
+        SnowflakeIdGenerator.getId(),
+        id);
+    String cas =
+        "INSERT INTO cat_venue_cas_rating (id, venue_id, year, edition, major_category,"
+            + " major_quartile, is_top_journal) VALUES (?, ?, 2025, ?, '综合', ?, ?)";
+    jdbc.update(cas, SnowflakeIdGenerator.getId(), id, "upgrade", "2区", false);
+    jdbc.update(cas, SnowflakeIdGenerator.getId(), id, "base", "1区", true);
+    long bare = SnowflakeIdGenerator.getId();
+    jdbc.update(
+        "INSERT INTO cat_venue (id, venue_type, title, provenance_code)"
+            + " VALUES (?, 'JOURNAL', 'Zeta', 'OPENALEX')",
+        bare);
+
+    VenueBrowseReadModel full =
+        VenueBrowseReadModel.builder()
+            .id(id)
+            .name("Nature")
+            .abbr("Nat")
+            .coverObjectKey("venue/cover.jpg")
+            .impactFactor(new BigDecimal("69.5000"))
+            .jcrQuartile("Q1")
+            .jcrSubject("MULTIDISCIPLINARY")
+            .casMajorCategory("综合")
+            .casMajorQuartile("1区")
+            .casIsTop(true)
+            .countryCode("GB")
+            .citedByCount(987)
+            .foundedYear(1869)
+            .isOpenAccess(false)
+            .isInDoaj(true)
+            .issnL("0028-0836")
+            .nlmId("0410462")
+            .build();
+    VenueBrowseReadModel empty = VenueBrowseReadModel.builder().id(bare).name("Zeta").build();
+
+    PageResult<VenueBrowseReadModel> page =
+        adapter.search(VenueBrowseFilter.builder().sort(VenueBrowseSort.TITLE).build(), FIRST_PAGE);
+
+    assertThat(page.items()).containsExactly(full, empty);
+    assertThat(adapter.findCardsByIds(List.of(id, bare))).containsExactlyInAnyOrder(full, empty);
+  }
+
+  @Test
+  @DisplayName("所有筛选同时给值：检索、facets 各维度与三个布尔计数都只数命中的那本")
+  void should_apply_every_filter_at_once() {
+    Long hit = saveJournal("Nature Medicine", "Nat Med", "US", true, true);
+    saveJcr(hit, 2025, new BigDecimal("82.9"), "Q1", "MEDICINE");
+    saveCasWithTop(hit, 2025, "1区", true);
+    Long miss = saveJournal("Nature Plants", "Nat Plants", "US", true, true);
+    saveJcr(miss, 2025, new BigDecimal("15.8"), "Q1", "PLANT SCIENCES");
+    saveCasWithTop(miss, 2025, "1区", true);
+    em.flush();
+    em.clear();
+    VenueBrowseFilter filter =
+        VenueBrowseFilter.builder()
+            .keyword("Nature")
+            .sort(VenueBrowseSort.CITED_BY)
+            .subjects(List.of("MEDICINE"))
+            .jcrQuartiles(List.of("Q1"))
+            .casQuartiles(List.of("1区"))
+            .casTop(true)
+            .isOpenAccess(true)
+            .doaj(true)
+            .countryCodes(List.of("US"))
+            .build();
+
+    PageResult<VenueBrowseReadModel> page = adapter.search(filter, FIRST_PAGE);
+    VenueBrowseFacets facets = adapter.facets(filter);
+
+    assertThat(page.items()).extracting(VenueBrowseReadModel::id).containsExactly(hit);
+    assertThat(page.total()).isEqualTo(1);
+    assertThat(facets.subjects())
+        .containsExactlyInAnyOrder(
+            FacetCount.of("MEDICINE", 1), FacetCount.of("PLANT SCIENCES", 1));
+    assertThat(facets.jcrQuartiles()).containsExactly(FacetCount.of("Q1", 1));
+    assertThat(facets.casQuartiles()).containsExactly(FacetCount.of("1区", 1));
+    assertThat(facets.countries()).containsExactly(FacetCount.of("US", 1));
+    assertThat(facets.casTop()).isEqualTo(1);
+    assertThat(facets.openAccess()).isEqualTo(1);
+    assertThat(facets.doaj()).isEqualTo(1);
   }
 
   // ===== 测试数据构建助手 =====

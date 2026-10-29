@@ -8,12 +8,12 @@ import dev.patra.catalog.domain.model.vo.publication.InlineMarkup;
 import dev.patra.catalog.domain.model.vo.publication.Pagination;
 import dev.patra.catalog.domain.model.vo.publication.PublicationDate;
 import dev.patra.catalog.domain.port.read.CitationRecordReadPort;
-import dev.patra.catalog.infra.persistence.dao.CitationRecordDao;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 /// 引用记录读端适配器：主行与作者两条 SQL，在内存里拼成 [CitationRecord]。
@@ -24,7 +24,41 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 public class CitationRecordReadAdapter implements CitationRecordReadPort {
 
-  private final CitationRecordDao dao;
+  /// 按主键批量查主行：文献 + 期刊 + 期次 + PMCID / PII 子查询，排除软删。
+  private static final String FIND_RECORDS =
+      """
+      SELECT p.id AS "id", p.pmid AS "pmid", p.doi AS "doi", p.title AS "title",
+             (SELECT i.identifier_value FROM cat_publication_identifier i
+               WHERE i.publication_id = p.id AND i.type = 'pmc' ORDER BY i.id ASC LIMIT 1) AS "pmcid",
+             (SELECT i.identifier_value FROM cat_publication_identifier i
+               WHERE i.publication_id = p.id AND i.type = 'pii' ORDER BY i.id ASC LIMIT 1) AS "pii",
+             v.title AS "journalTitle",
+             p.journal_iso_abbreviation AS "isoAbbreviation",
+             v.abbreviated_title AS "medlineAbbreviation",
+             vi.volume AS "volume", vi.issue AS "issue",
+             p.medline_pgn AS "medlinePgn", p.start_page AS "startPage", p.end_page AS "endPage",
+             p.publication_year AS "publicationYear",
+             p.publication_month AS "publicationMonth",
+             p.publication_day AS "publicationDay",
+             p.language_code AS "language"
+      FROM cat_publication p
+      LEFT JOIN cat_venue v ON v.id = p.venue_id
+      LEFT JOIN cat_venue_instance vi ON vi.id = p.venue_instance_id
+      WHERE p.id = ANY((:ids)::bigint[]) AND p.deleted_at IS NULL
+      """;
+
+  /// 按文献主键批量查作者，按文献、`author_order` 排序。
+  private static final String FIND_AUTHORS =
+      """
+      SELECT pa.publication_id AS "publicationId", pa.last_name AS "family",
+             pa.fore_name AS "given", pa.initials AS "initials",
+             pa.collective_name AS "collective"
+      FROM cat_publication_author pa
+      WHERE pa.publication_id = ANY((:ids)::bigint[])
+      ORDER BY pa.publication_id, pa.author_order, pa.id
+      """;
+
+  private final JdbcClient jdbc;
 
   /// 按 ID 批量读取，只返回存在且未软删的文献。
   ///
@@ -39,21 +73,28 @@ public class CitationRecordReadAdapter implements CitationRecordReadPort {
     if (ids.isEmpty()) {
       return List.of();
     }
-    List<CitationRecordRow> rows = dao.findRecords(ids.toArray(Long[]::new));
+    List<CitationRecordRow> rows =
+        jdbc.sql(FIND_RECORDS)
+            .param("ids", ids.toArray(Long[]::new))
+            .query(CitationRecordRow.class)
+            .list();
     if (rows.isEmpty()) {
       return List.of();
     }
     Map<Long, List<CitationAuthor>> authors =
-        dao.findAuthors(rows.stream().map(CitationRecordRow::getId).toArray(Long[]::new)).stream()
+        jdbc
+            .sql(FIND_AUTHORS)
+            .param("ids", rows.stream().map(CitationRecordRow::id).toArray(Long[]::new))
+            .query(CitationAuthorRow.class)
+            .list()
+            .stream()
             .collect(
                 Collectors.groupingBy(
-                    CitationAuthorRow::getPublicationId,
+                    CitationAuthorRow::publicationId,
                     Collectors.mapping(
-                        a ->
-                            CitationAuthor.of(
-                                a.getFamily(), a.getGiven(), a.getInitials(), a.getCollective()),
+                        a -> CitationAuthor.of(a.family(), a.given(), a.initials(), a.collective()),
                         Collectors.toList())));
-    return rows.stream().map(r -> toRecord(r, authors.getOrDefault(r.getId(), List.of()))).toList();
+    return rows.stream().map(r -> toRecord(r, authors.getOrDefault(r.id(), List.of()))).toList();
   }
 
   /// 主行 → 引用记录：标题去标记、缩写兜底、文章号只在没有页码时给、出版日期按精度。
@@ -62,26 +103,23 @@ public class CitationRecordReadAdapter implements CitationRecordReadPort {
   /// @param authors 作者
   /// @return 引用记录
   private static CitationRecord toRecord(CitationRecordRow row, List<CitationAuthor> authors) {
-    Pagination pagination =
-        Pagination.of(row.getMedlinePgn(), row.getStartPage(), row.getEndPage());
+    Pagination pagination = Pagination.of(row.medlinePgn(), row.startPage(), row.endPage());
     return CitationRecord.builder()
-        .id(row.getId())
-        .pmid(row.getPmid())
-        .pmcid(row.getPmcid())
-        .doi(row.getDoi())
-        .title(InlineMarkup.toPlainText(row.getTitle()))
+        .id(row.id())
+        .pmid(row.pmid())
+        .pmcid(row.pmcid())
+        .doi(row.doi())
+        .title(InlineMarkup.toPlainText(row.title()))
         .authors(authors)
-        .journalTitle(row.getJournalTitle())
+        .journalTitle(row.journalTitle())
         .journalAbbreviation(
-            firstNonBlank(
-                row.getIsoAbbreviation(), row.getMedlineAbbreviation(), row.getJournalTitle()))
-        .volume(row.getVolume())
-        .issue(row.getIssue())
+            firstNonBlank(row.isoAbbreviation(), row.medlineAbbreviation(), row.journalTitle()))
+        .volume(row.volume())
+        .issue(row.issue())
         .pagination(pagination)
-        .articleNumber(ArticleNumber.of(row.getPii(), pagination).orElse(null))
-        .publishedDate(
-            toDate(row.getPublicationYear(), row.getPublicationMonth(), row.getPublicationDay()))
-        .language(row.getLanguage())
+        .articleNumber(ArticleNumber.of(row.pii(), pagination).orElse(null))
+        .publishedDate(toDate(row.publicationYear(), row.publicationMonth(), row.publicationDay()))
+        .language(row.language())
         .build();
   }
 

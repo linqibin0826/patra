@@ -2,15 +2,21 @@ package dev.patra.catalog.infra.adapter.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
+import dev.patra.catalog.domain.model.enums.PublicationDateType;
 import dev.patra.catalog.domain.model.read.citation.CitationAuthor;
 import dev.patra.catalog.domain.model.read.citation.CitationRecord;
+import dev.patra.catalog.domain.model.vo.publication.Pagination;
+import dev.patra.catalog.domain.model.vo.publication.PublicationDate;
 import dev.patra.catalog.infra.config.CatalogITPostgreSQLContainerInitializer;
 import dev.patra.catalog.infra.persistence.entity.PublicationEntity;
 import dev.patra.catalog.infra.persistence.entity.VenueEntity;
 import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
-import jakarta.persistence.EntityManagerFactory;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,8 +24,6 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
-import org.hibernate.SessionFactory;
-import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,16 +31,18 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 /// `CitationRecordReadAdapter` 集成测试：按 ID 批量读引用记录，一批两条 SQL，缩写三级兜底，文章号只在没有页码时给。
 ///
-/// 打开 Hibernate 统计会换一个 Spring 测试上下文，所以单独成类。
+/// 监视 `JdbcClient` 会换一个 Spring 测试上下文，所以单独成类。
 ///
 /// @author linqibin
 /// @since 0.1.0
-@DataJpaTest(properties = "spring.jpa.properties.hibernate.generate_statistics=true")
+@DataJpaTest
 @ContextConfiguration(initializers = CatalogITPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({CitationRecordReadAdapter.class, JpaAuditingConfiguration.class})
@@ -48,7 +54,7 @@ class CitationRecordReadAdapterIT {
 
   @Autowired private CitationRecordReadAdapter adapter;
   @Autowired private TestEntityManager em;
-  @Autowired private EntityManagerFactory emf;
+  @MockitoSpyBean private JdbcClient jdbcClient;
 
   @Test
   @DisplayName("500 篇带期刊、期次、作者、PMCID / PII 的文献：只发两条 SQL")
@@ -68,11 +74,10 @@ class CitationRecordReadAdapterIT {
     }
     flush();
 
-    Statistics stats = emf.unwrap(SessionFactory.class).getStatistics();
-    stats.clear();
+    clearInvocations(jdbcClient);
     List<CitationRecord> records = adapter.findByIds(ids);
 
-    assertThat(stats.getPrepareStatementCount()).isEqualTo(2);
+    verify(jdbcClient, times(2)).sql(anyString());
     assertThat(records).hasSize(500);
     CitationRecord any = records.get(0);
     assertThat(any.journalTitle()).isEqualTo("The New England journal of medicine");
@@ -271,5 +276,68 @@ class CitationRecordReadAdapterIT {
     PublicationEntity p = builder.build();
     em.persist(p);
     return p.getId();
+  }
+
+  @Test
+  @DisplayName("全字段：每一列都按列读出，PMCID / PII 取同类型中 id 最小的一条")
+  void should_map_every_column_when_record_is_fully_populated() {
+    Long venueId = saveVenue("The Lancet", "Lancet");
+    Long instanceId = saveInstance(venueId, "397", "10275");
+    Long id =
+        persist(
+            publication("Aspirin <i>in vivo</i>", "33000001")
+                .doi("10.1016/x")
+                .venueId(venueId)
+                .venueInstanceId(instanceId)
+                .journalIsoAbbreviation("Lancet (London)")
+                .medlinePgn("e1-e9")
+                .startPage("e1")
+                .endPage("e9")
+                .publicationMonth(2)
+                .publicationDay(27)
+                .languageCode("eng"));
+    saveIdentifier(id, "pmc", "PMC1");
+    saveIdentifier(id, "pmc", "PMC2");
+    saveIdentifier(id, "pii", "S0140");
+    saveAuthor(id, 2, "Doe", "Anne", "A", null);
+    saveAuthor(id, 1, "Smith", "John", "J", null);
+    flush();
+
+    CitationRecord expected =
+        CitationRecord.builder()
+            .id(id)
+            .pmid("33000001")
+            .pmcid("PMC1")
+            .doi("10.1016/x")
+            .title("Aspirin in vivo")
+            .authors(
+                List.of(
+                    CitationAuthor.of("Smith", "John", "J", null),
+                    CitationAuthor.of("Doe", "Anne", "A", null)))
+            .journalTitle("The Lancet")
+            .journalAbbreviation("Lancet (London)")
+            .volume("397")
+            .issue("10275")
+            .pagination(Pagination.of("e1-e9", "e1", "e9"))
+            .publishedDate(PublicationDate.of(PublicationDateType.PUBLISHED, 2021, 2, 27))
+            .language("eng")
+            .build();
+
+    assertThat(adapter.findByIds(List.of(id))).containsExactly(expected);
+  }
+
+  @Test
+  @DisplayName("只有必填列：可空列为 null、作者为空列表、页码为空")
+  void should_leave_optional_columns_null_when_record_has_only_required_columns() {
+    long id = SnowflakeIdGenerator.getId();
+    em.getEntityManager()
+        .createNativeQuery(
+            "INSERT INTO cat_publication (id, provenance_code, title) VALUES (:id, 'PUBMED', 'Bare')")
+        .setParameter("id", id)
+        .executeUpdate();
+
+    CitationRecord expected = CitationRecord.builder().id(id).title("Bare").build();
+
+    assertThat(adapter.findByIds(List.of(id))).containsExactly(expected);
   }
 }

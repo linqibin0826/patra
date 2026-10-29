@@ -7,12 +7,15 @@ import dev.patra.catalog.domain.model.read.portal.VenueBrowseReadModel;
 import dev.patra.catalog.domain.port.read.VenueBrowseReadPort;
 import dev.patra.catalog.domain.query.PageResult;
 import dev.patra.catalog.domain.query.PagingParams;
-import dev.patra.catalog.infra.persistence.dao.VenueDao;
+import java.sql.Types;
 import java.util.Collection;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.support.PageableExecutionUtils;
+import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.jdbc.core.simple.JdbcClient.StatementSpec;
 import org.springframework.stereotype.Repository;
 
 /// 期刊浏览检索 CQRS 读适配器。
@@ -27,7 +30,281 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 public class VenueBrowseReadAdapter implements VenueBrowseReadPort {
 
-  private final VenueDao venueDao;
+  /// 门户期刊卡片的投影与 FROM：浏览检索与按 ID 批量读卡片共用（以换行结束，后面直接拼 WHERE）。
+  ///
+  /// 最新年 JCR / CAS 各用 LATERAL 取一行；列别名与 [VenueBrowseRow] 的组件一一对应。
+  private static final String CARD_SELECT =
+      """
+      SELECT v.id AS "id", v.title AS "name", v.abbreviated_title AS "abbr",
+             v.image_object_key AS "coverObjectKey",
+             jcr.impact_factor AS "impactFactor", jcr.jif_quartile AS "jcrQuartile", jcr.subject AS "jcrSubject",
+             cas.major_category AS "casMajorCategory", cas.major_quartile AS "casMajorQuartile",
+             cas.is_top_journal AS "casIsTop", v.country_code AS "countryCode",
+             v.cited_by_count AS "citedByCount",
+             (v.publication_profile -> 'publicationHistory' ->> 'startYear')::int AS "foundedYear",
+             (v.open_access ->> 'isOa')::boolean AS "isOpenAccess",
+             (v.open_access ->> 'isInDoaj')::boolean AS "isInDoaj", v.issn_l AS "issnL",
+             v.nlm_id AS "nlmId"
+      FROM cat_venue v
+      LEFT JOIN LATERAL (SELECT r.impact_factor, r.jif_quartile, r.subject
+          FROM cat_venue_jcr_rating r WHERE r.venue_id = v.id ORDER BY r.year DESC LIMIT 1) jcr ON TRUE
+      LEFT JOIN LATERAL (SELECT r.major_category, r.major_quartile, r.is_top_journal
+          FROM cat_venue_cas_rating r WHERE r.venue_id = v.id ORDER BY r.year DESC, r.edition ASC LIMIT 1) cas ON TRUE
+      """;
+
+  /// 浏览检索的 WHERE 与 ORDER BY（以换行结束，后面拼分页）。
+  private static final String BROWSE_WHERE_ORDER =
+      """
+      WHERE v.venue_type = 'JOURNAL' AND v.deleted_at IS NULL
+        AND (:keyword IS NULL OR v.title ILIKE CONCAT(:keyword, '%') ESCAPE '!'
+             OR v.abbreviated_title ILIKE CONCAT(:keyword, '%') ESCAPE '!')
+        AND ((:subjects)::text[] IS NULL OR jcr.subject = ANY((:subjects)::text[]))
+        AND ((:jcrQuartiles)::text[] IS NULL OR jcr.jif_quartile = ANY((:jcrQuartiles)::text[]))
+        AND ((:casQuartiles)::text[] IS NULL OR cas.major_quartile = ANY((:casQuartiles)::text[]))
+        AND (:casTop IS NULL OR cas.is_top_journal = :casTop)
+        AND (:isOpenAccess IS NULL OR (v.open_access ->> 'isOa')::boolean = :isOpenAccess)
+        AND (:doaj IS NULL OR (v.open_access ->> 'isInDoaj')::boolean = :doaj)
+        AND ((:countryCodes)::text[] IS NULL OR v.country_code = ANY((:countryCodes)::text[]))
+      ORDER BY
+        CASE WHEN :sort = 'IMPACT_FACTOR' THEN COALESCE(jcr.impact_factor, 0) ELSE NULL END DESC,
+        CASE WHEN :sort = 'CITED_BY' THEN COALESCE(v.cited_by_count, 0) ELSE NULL END DESC,
+        CASE WHEN :sort = 'CAS_QUARTILE' THEN cas.major_quartile ELSE NULL END ASC NULLS LAST,
+        CASE WHEN :sort = 'TITLE' THEN v.title ELSE NULL END ASC NULLS LAST,
+        v.id DESC
+      """;
+
+  /// 浏览检索总数，条件与 [#BROWSE_WHERE_ORDER] 相同。
+  private static final String BROWSE_COUNT =
+      """
+      SELECT COUNT(*) FROM cat_venue v
+      LEFT JOIN LATERAL (SELECT r.jif_quartile, r.subject
+          FROM cat_venue_jcr_rating r WHERE r.venue_id = v.id ORDER BY r.year DESC LIMIT 1) jcr ON TRUE
+      LEFT JOIN LATERAL (SELECT r.major_category, r.major_quartile, r.is_top_journal
+          FROM cat_venue_cas_rating r WHERE r.venue_id = v.id ORDER BY r.year DESC, r.edition ASC LIMIT 1) cas ON TRUE
+      WHERE v.venue_type = 'JOURNAL' AND v.deleted_at IS NULL
+        AND (:keyword IS NULL OR v.title ILIKE CONCAT(:keyword, '%') ESCAPE '!'
+             OR v.abbreviated_title ILIKE CONCAT(:keyword, '%') ESCAPE '!')
+        AND ((:subjects)::text[] IS NULL OR jcr.subject = ANY((:subjects)::text[]))
+        AND ((:jcrQuartiles)::text[] IS NULL OR jcr.jif_quartile = ANY((:jcrQuartiles)::text[]))
+        AND ((:casQuartiles)::text[] IS NULL OR cas.major_quartile = ANY((:casQuartiles)::text[]))
+        AND (:casTop IS NULL OR cas.is_top_journal = :casTop)
+        AND (:isOpenAccess IS NULL OR (v.open_access ->> 'isOa')::boolean = :isOpenAccess)
+        AND (:doaj IS NULL OR (v.open_access ->> 'isInDoaj')::boolean = :doaj)
+        AND ((:countryCodes)::text[] IS NULL OR v.country_code = ANY((:countryCodes)::text[]))
+      """;
+
+  /// 按 ID 批量读卡片：只返回期刊类型且未软删的，顺序不保证。
+  private static final String CARDS_BY_IDS_WHERE =
+      """
+      WHERE v.venue_type = 'JOURNAL' AND v.deleted_at IS NULL
+        AND v.id = ANY((:ids)::bigint[])
+      """;
+
+  /// JCR 学科 facet（drill-down：忽略 subjects 维度自身的过滤），按计数降序。
+  private static final String FACET_SUBJECTS =
+      """
+      SELECT b.jcr_subject AS "value", count(*) AS "count"
+      FROM (
+        SELECT v.id,
+               jcr.subject AS jcr_subject
+        FROM cat_venue v
+        LEFT JOIN LATERAL (SELECT r.jif_quartile, r.subject
+            FROM cat_venue_jcr_rating r WHERE r.venue_id = v.id ORDER BY r.year DESC LIMIT 1) jcr ON TRUE
+        LEFT JOIN LATERAL (SELECT r.major_quartile, r.is_top_journal
+            FROM cat_venue_cas_rating r WHERE r.venue_id = v.id ORDER BY r.year DESC, r.edition ASC LIMIT 1) cas ON TRUE
+        WHERE v.venue_type = 'JOURNAL' AND v.deleted_at IS NULL
+          AND (:keyword IS NULL OR v.title ILIKE CONCAT(:keyword, '%') ESCAPE '!'
+               OR v.abbreviated_title ILIKE CONCAT(:keyword, '%') ESCAPE '!')
+          AND ((:jcrQuartiles)::text[] IS NULL OR jcr.jif_quartile = ANY((:jcrQuartiles)::text[]))
+          AND ((:casQuartiles)::text[] IS NULL OR cas.major_quartile = ANY((:casQuartiles)::text[]))
+          AND (:casTop IS NULL OR cas.is_top_journal = :casTop)
+          AND (:isOpenAccess IS NULL OR (v.open_access ->> 'isOa')::boolean = :isOpenAccess)
+          AND (:doaj IS NULL OR (v.open_access ->> 'isInDoaj')::boolean = :doaj)
+          AND ((:countryCodes)::text[] IS NULL OR v.country_code = ANY((:countryCodes)::text[]))
+      ) b
+      WHERE b.jcr_subject IS NOT NULL
+      GROUP BY b.jcr_subject
+      ORDER BY count(*) DESC
+      """;
+
+  /// JCR 分区 facet（drill-down：忽略 jcrQuartiles 维度自身的过滤），按计数降序。
+  private static final String FACET_JCR_QUARTILES =
+      """
+      SELECT b.jcr_quartile AS "value", count(*) AS "count"
+      FROM (
+        SELECT v.id,
+               jcr.jif_quartile AS jcr_quartile
+        FROM cat_venue v
+        LEFT JOIN LATERAL (SELECT r.jif_quartile, r.subject
+            FROM cat_venue_jcr_rating r WHERE r.venue_id = v.id ORDER BY r.year DESC LIMIT 1) jcr ON TRUE
+        LEFT JOIN LATERAL (SELECT r.major_quartile, r.is_top_journal
+            FROM cat_venue_cas_rating r WHERE r.venue_id = v.id ORDER BY r.year DESC, r.edition ASC LIMIT 1) cas ON TRUE
+        WHERE v.venue_type = 'JOURNAL' AND v.deleted_at IS NULL
+          AND (:keyword IS NULL OR v.title ILIKE CONCAT(:keyword, '%') ESCAPE '!'
+               OR v.abbreviated_title ILIKE CONCAT(:keyword, '%') ESCAPE '!')
+          AND ((:subjects)::text[] IS NULL OR jcr.subject = ANY((:subjects)::text[]))
+          AND ((:casQuartiles)::text[] IS NULL OR cas.major_quartile = ANY((:casQuartiles)::text[]))
+          AND (:casTop IS NULL OR cas.is_top_journal = :casTop)
+          AND (:isOpenAccess IS NULL OR (v.open_access ->> 'isOa')::boolean = :isOpenAccess)
+          AND (:doaj IS NULL OR (v.open_access ->> 'isInDoaj')::boolean = :doaj)
+          AND ((:countryCodes)::text[] IS NULL OR v.country_code = ANY((:countryCodes)::text[]))
+      ) b
+      WHERE b.jcr_quartile IS NOT NULL
+      GROUP BY b.jcr_quartile
+      ORDER BY count(*) DESC
+      """;
+
+  /// CAS 分区 facet（drill-down：忽略 casQuartiles 维度自身的过滤），按计数降序。
+  private static final String FACET_CAS_QUARTILES =
+      """
+      SELECT b.cas_quartile AS "value", count(*) AS "count"
+      FROM (
+        SELECT v.id,
+               cas.major_quartile AS cas_quartile
+        FROM cat_venue v
+        LEFT JOIN LATERAL (SELECT r.jif_quartile, r.subject
+            FROM cat_venue_jcr_rating r WHERE r.venue_id = v.id ORDER BY r.year DESC LIMIT 1) jcr ON TRUE
+        LEFT JOIN LATERAL (SELECT r.major_quartile, r.is_top_journal
+            FROM cat_venue_cas_rating r WHERE r.venue_id = v.id ORDER BY r.year DESC, r.edition ASC LIMIT 1) cas ON TRUE
+        WHERE v.venue_type = 'JOURNAL' AND v.deleted_at IS NULL
+          AND (:keyword IS NULL OR v.title ILIKE CONCAT(:keyword, '%') ESCAPE '!'
+               OR v.abbreviated_title ILIKE CONCAT(:keyword, '%') ESCAPE '!')
+          AND ((:subjects)::text[] IS NULL OR jcr.subject = ANY((:subjects)::text[]))
+          AND ((:jcrQuartiles)::text[] IS NULL OR jcr.jif_quartile = ANY((:jcrQuartiles)::text[]))
+          AND (:casTop IS NULL OR cas.is_top_journal = :casTop)
+          AND (:isOpenAccess IS NULL OR (v.open_access ->> 'isOa')::boolean = :isOpenAccess)
+          AND (:doaj IS NULL OR (v.open_access ->> 'isInDoaj')::boolean = :doaj)
+          AND ((:countryCodes)::text[] IS NULL OR v.country_code = ANY((:countryCodes)::text[]))
+      ) b
+      WHERE b.cas_quartile IS NOT NULL
+      GROUP BY b.cas_quartile
+      ORDER BY count(*) DESC
+      """;
+
+  /// 国家 / 地区 facet（drill-down：忽略 countryCodes 维度自身的过滤），按计数降序。
+  private static final String FACET_COUNTRIES =
+      """
+      SELECT b.country_code AS "value", count(*) AS "count"
+      FROM (
+        SELECT v.id, v.country_code
+        FROM cat_venue v
+        LEFT JOIN LATERAL (SELECT r.jif_quartile, r.subject
+            FROM cat_venue_jcr_rating r WHERE r.venue_id = v.id ORDER BY r.year DESC LIMIT 1) jcr ON TRUE
+        LEFT JOIN LATERAL (SELECT r.major_quartile, r.is_top_journal
+            FROM cat_venue_cas_rating r WHERE r.venue_id = v.id ORDER BY r.year DESC, r.edition ASC LIMIT 1) cas ON TRUE
+        WHERE v.venue_type = 'JOURNAL' AND v.deleted_at IS NULL
+          AND (:keyword IS NULL OR v.title ILIKE CONCAT(:keyword, '%') ESCAPE '!'
+               OR v.abbreviated_title ILIKE CONCAT(:keyword, '%') ESCAPE '!')
+          AND ((:subjects)::text[] IS NULL OR jcr.subject = ANY((:subjects)::text[]))
+          AND ((:jcrQuartiles)::text[] IS NULL OR jcr.jif_quartile = ANY((:jcrQuartiles)::text[]))
+          AND ((:casQuartiles)::text[] IS NULL OR cas.major_quartile = ANY((:casQuartiles)::text[]))
+          AND (:casTop IS NULL OR cas.is_top_journal = :casTop)
+          AND (:isOpenAccess IS NULL OR (v.open_access ->> 'isOa')::boolean = :isOpenAccess)
+          AND (:doaj IS NULL OR (v.open_access ->> 'isInDoaj')::boolean = :doaj)
+      ) b
+      WHERE b.country_code IS NOT NULL
+      GROUP BY b.country_code
+      ORDER BY count(*) DESC
+      """;
+
+  /// CAS 顶刊计数：满足除 casTop 外全部筛选且是顶刊的期刊数。
+  private static final String COUNT_CAS_TOP =
+      """
+      SELECT count(*) FROM cat_venue v
+      LEFT JOIN LATERAL (SELECT r.jif_quartile, r.subject
+          FROM cat_venue_jcr_rating r WHERE r.venue_id = v.id ORDER BY r.year DESC LIMIT 1) jcr ON TRUE
+      LEFT JOIN LATERAL (SELECT r.major_quartile, r.is_top_journal
+          FROM cat_venue_cas_rating r WHERE r.venue_id = v.id ORDER BY r.year DESC, r.edition ASC LIMIT 1) cas ON TRUE
+      WHERE v.venue_type = 'JOURNAL' AND v.deleted_at IS NULL
+        AND (:keyword IS NULL OR v.title ILIKE CONCAT(:keyword, '%') ESCAPE '!'
+             OR v.abbreviated_title ILIKE CONCAT(:keyword, '%') ESCAPE '!')
+        AND ((:subjects)::text[] IS NULL OR jcr.subject = ANY((:subjects)::text[]))
+        AND ((:jcrQuartiles)::text[] IS NULL OR jcr.jif_quartile = ANY((:jcrQuartiles)::text[]))
+        AND ((:casQuartiles)::text[] IS NULL OR cas.major_quartile = ANY((:casQuartiles)::text[]))
+        AND (:isOpenAccess IS NULL OR (v.open_access ->> 'isOa')::boolean = :isOpenAccess)
+        AND (:doaj IS NULL OR (v.open_access ->> 'isInDoaj')::boolean = :doaj)
+        AND ((:countryCodes)::text[] IS NULL OR v.country_code = ANY((:countryCodes)::text[]))
+        AND cas.is_top_journal = TRUE
+      """;
+
+  /// OA 计数：满足除 isOpenAccess 外全部筛选且 OA 的期刊数。
+  private static final String COUNT_OPEN_ACCESS =
+      """
+      SELECT count(*) FROM cat_venue v
+      LEFT JOIN LATERAL (SELECT r.jif_quartile, r.subject
+          FROM cat_venue_jcr_rating r WHERE r.venue_id = v.id ORDER BY r.year DESC LIMIT 1) jcr ON TRUE
+      LEFT JOIN LATERAL (SELECT r.major_quartile, r.is_top_journal
+          FROM cat_venue_cas_rating r WHERE r.venue_id = v.id ORDER BY r.year DESC, r.edition ASC LIMIT 1) cas ON TRUE
+      WHERE v.venue_type = 'JOURNAL' AND v.deleted_at IS NULL
+        AND (:keyword IS NULL OR v.title ILIKE CONCAT(:keyword, '%') ESCAPE '!'
+             OR v.abbreviated_title ILIKE CONCAT(:keyword, '%') ESCAPE '!')
+        AND ((:subjects)::text[] IS NULL OR jcr.subject = ANY((:subjects)::text[]))
+        AND ((:jcrQuartiles)::text[] IS NULL OR jcr.jif_quartile = ANY((:jcrQuartiles)::text[]))
+        AND ((:casQuartiles)::text[] IS NULL OR cas.major_quartile = ANY((:casQuartiles)::text[]))
+        AND (:casTop IS NULL OR cas.is_top_journal = :casTop)
+        AND (:doaj IS NULL OR (v.open_access ->> 'isInDoaj')::boolean = :doaj)
+        AND ((:countryCodes)::text[] IS NULL OR v.country_code = ANY((:countryCodes)::text[]))
+        AND (v.open_access ->> 'isOa')::boolean = TRUE
+      """;
+
+  /// DOAJ 计数：满足除 doaj 外全部筛选且收录于 DOAJ 的期刊数。
+  private static final String COUNT_DOAJ =
+      """
+      SELECT count(*) FROM cat_venue v
+      LEFT JOIN LATERAL (SELECT r.jif_quartile, r.subject
+          FROM cat_venue_jcr_rating r WHERE r.venue_id = v.id ORDER BY r.year DESC LIMIT 1) jcr ON TRUE
+      LEFT JOIN LATERAL (SELECT r.major_quartile, r.is_top_journal
+          FROM cat_venue_cas_rating r WHERE r.venue_id = v.id ORDER BY r.year DESC, r.edition ASC LIMIT 1) cas ON TRUE
+      WHERE v.venue_type = 'JOURNAL' AND v.deleted_at IS NULL
+        AND (:keyword IS NULL OR v.title ILIKE CONCAT(:keyword, '%') ESCAPE '!'
+             OR v.abbreviated_title ILIKE CONCAT(:keyword, '%') ESCAPE '!')
+        AND ((:subjects)::text[] IS NULL OR jcr.subject = ANY((:subjects)::text[]))
+        AND ((:jcrQuartiles)::text[] IS NULL OR jcr.jif_quartile = ANY((:jcrQuartiles)::text[]))
+        AND ((:casQuartiles)::text[] IS NULL OR cas.major_quartile = ANY((:casQuartiles)::text[]))
+        AND (:casTop IS NULL OR cas.is_top_journal = :casTop)
+        AND (:isOpenAccess IS NULL OR (v.open_access ->> 'isOa')::boolean = :isOpenAccess)
+        AND ((:countryCodes)::text[] IS NULL OR v.country_code = ANY((:countryCodes)::text[]))
+        AND (v.open_access ->> 'isInDoaj')::boolean = TRUE
+      """;
+
+  private final JdbcClient jdbc;
+
+  /// 一次检索的已绑定参数（LIKE 已转义、列表已转数组）。facets 的 drill-down 靠 SQL 不引用本维度参数实现。
+  ///
+  /// @param keyword 已转义的标题前缀，null 不过滤
+  /// @param subjects JCR 学科，null 不过滤
+  /// @param jcrQuartiles JCR 分区，null 不过滤
+  /// @param casQuartiles CAS 大类分区，null 不过滤
+  /// @param casTop 是否 CAS 顶刊，null 不过滤
+  /// @param isOpenAccess 是否 OA，null 不过滤
+  /// @param doaj 是否收录于 DOAJ，null 不过滤
+  /// @param countryCodes 国家 / 地区码，null 不过滤
+  private record Bound(
+      String keyword,
+      String[] subjects,
+      String[] jcrQuartiles,
+      String[] casQuartiles,
+      Boolean casTop,
+      Boolean isOpenAccess,
+      Boolean doaj,
+      String[] countryCodes) {
+
+    /// 由领域筛选条件构建。
+    ///
+    /// @param f 筛选条件
+    /// @return 已绑定参数
+    static Bound of(VenueBrowseFilter f) {
+      return new Bound(
+          escapeLike(f.keyword()),
+          toArray(f.subjects()),
+          toArray(f.jcrQuartiles()),
+          toArray(f.casQuartiles()),
+          f.casTop(),
+          f.isOpenAccess(),
+          f.doaj(),
+          toArray(f.countryCodes()));
+    }
+  }
 
   /// 分页检索期刊浏览列表。
   ///
@@ -41,18 +318,17 @@ public class VenueBrowseReadAdapter implements VenueBrowseReadPort {
 
   @Override
   public PageResult<VenueBrowseReadModel> search(VenueBrowseFilter filter, PagingParams paging) {
+    Bound b = Bound.of(filter);
+    PageRequest pageable = PageRequest.of(paging.page() - 1, paging.pageSize());
+    List<VenueBrowseRow> content =
+        bind(jdbc.sql(CARD_SELECT + BROWSE_WHERE_ORDER + "LIMIT :limit OFFSET :offset"), b)
+            .param("sort", filter.sort().name())
+            .param("limit", pageable.getPageSize())
+            .param("offset", pageable.getOffset())
+            .query(VenueBrowseRow.class)
+            .list();
     Page<VenueBrowseRow> page =
-        venueDao.findPortalVenueBrowsePage(
-            escapeLike(filter.keyword()),
-            filter.sort().name(),
-            toArray(filter.subjects()),
-            toArray(filter.jcrQuartiles()),
-            toArray(filter.casQuartiles()),
-            filter.casTop(),
-            filter.isOpenAccess(),
-            filter.doaj(),
-            toArray(filter.countryCodes()),
-            PageRequest.of(paging.page() - 1, paging.pageSize()));
+        PageableExecutionUtils.getPage(content, pageable, () -> count(BROWSE_COUNT, b));
 
     List<VenueBrowseReadModel> items = page.getContent().stream().map(this::toReadModel).toList();
     return PageResult.of(items, paging.page(), paging.pageSize(), page.getTotalElements());
@@ -63,7 +339,12 @@ public class VenueBrowseReadAdapter implements VenueBrowseReadPort {
     if (ids.isEmpty()) {
       return List.of();
     }
-    return venueDao.findPortalVenueCardsByIds(ids.toArray(Long[]::new)).stream()
+    return jdbc
+        .sql(CARD_SELECT + CARDS_BY_IDS_WHERE)
+        .param("ids", ids.toArray(Long[]::new))
+        .query(VenueBrowseRow.class)
+        .list()
+        .stream()
         .map(this::toReadModel)
         .toList();
   }
@@ -82,61 +363,61 @@ public class VenueBrowseReadAdapter implements VenueBrowseReadPort {
 
   @Override
   public VenueBrowseFacets facets(VenueBrowseFilter filter) {
-    String kw = escapeLike(filter.keyword());
-    String[] subjects = toArray(filter.subjects());
-    String[] jcrQuartiles = toArray(filter.jcrQuartiles());
-    String[] casQuartiles = toArray(filter.casQuartiles());
-    String[] countryCodes = toArray(filter.countryCodes());
-    Boolean casTop = filter.casTop();
-    Boolean isOpenAccess = filter.isOpenAccess();
-    Boolean doaj = filter.doaj();
-
+    Bound b = Bound.of(filter);
     return VenueBrowseFacets.builder()
-        .subjects(
-            venueDao
-                .facetSubjects(
-                    kw, jcrQuartiles, casQuartiles, casTop, isOpenAccess, doaj, countryCodes)
-                .stream()
-                .map(r -> FacetCount.of(r.getValue(), r.getCount()))
-                .toList())
-        .jcrQuartiles(
-            venueDao
-                .facetJcrQuartiles(
-                    kw, subjects, casQuartiles, casTop, isOpenAccess, doaj, countryCodes)
-                .stream()
-                .map(r -> FacetCount.of(r.getValue(), r.getCount()))
-                .toList())
-        .casQuartiles(
-            venueDao
-                .facetCasQuartiles(
-                    kw, subjects, jcrQuartiles, casTop, isOpenAccess, doaj, countryCodes)
-                .stream()
-                .map(r -> FacetCount.of(r.getValue(), r.getCount()))
-                .toList())
-        .countries(
-            venueDao
-                .facetCountries(
-                    kw, subjects, jcrQuartiles, casQuartiles, casTop, isOpenAccess, doaj)
-                .stream()
-                .map(r -> FacetCount.of(r.getValue(), r.getCount()))
-                .toList())
-        .casTop(
-            venueDao.countCasTop(
-                kw, subjects, jcrQuartiles, casQuartiles, isOpenAccess, doaj, countryCodes))
-        .openAccess(
-            venueDao.countOpenAccess(
-                kw, subjects, jcrQuartiles, casQuartiles, casTop, doaj, countryCodes))
-        .doaj(
-            venueDao.countDoaj(
-                kw, subjects, jcrQuartiles, casQuartiles, casTop, isOpenAccess, countryCodes))
+        .subjects(facet(FACET_SUBJECTS, b))
+        .jcrQuartiles(facet(FACET_JCR_QUARTILES, b))
+        .casQuartiles(facet(FACET_CAS_QUARTILES, b))
+        .countries(facet(FACET_COUNTRIES, b))
+        .casTop(count(COUNT_CAS_TOP, b))
+        .openAccess(count(COUNT_OPEN_ACCESS, b))
+        .doaj(count(COUNT_DOAJ, b))
         .build();
+  }
+
+  /// 分组计数（保持 SQL 排序）。
+  ///
+  /// @param sql 分组查询
+  /// @param b 已绑定参数
+  /// @return facet 列表
+  private List<FacetCount> facet(String sql, Bound b) {
+    return bind(jdbc.sql(sql), b).query(VenueFacetCountRow.class).list().stream()
+        .map(r -> FacetCount.of(r.value(), r.count()))
+        .toList();
+  }
+
+  /// 计数。
+  ///
+  /// @param sql 计数查询
+  /// @param b 已绑定参数
+  /// @return 条数
+  private long count(String sql, Bound b) {
+    return bind(jdbc.sql(sql), b).query(Long.class).single();
+  }
+
+  /// 绑定筛选参数；SQL 没引用的参数被忽略。可空标量带上 SQL 类型，否则 PostgreSQL 推断不出
+  /// `:x IS NULL` 里参数的类型；数组在 SQL 里自带类型转换。
+  ///
+  /// @param statement 语句
+  /// @param b 已绑定参数
+  /// @return 绑定后的语句
+  private static StatementSpec bind(StatementSpec statement, Bound b) {
+    return statement
+        .param("keyword", b.keyword(), Types.VARCHAR)
+        .param("subjects", b.subjects())
+        .param("jcrQuartiles", b.jcrQuartiles())
+        .param("casQuartiles", b.casQuartiles())
+        .param("casTop", b.casTop(), Types.BOOLEAN)
+        .param("isOpenAccess", b.isOpenAccess(), Types.BOOLEAN)
+        .param("doaj", b.doaj(), Types.BOOLEAN)
+        .param("countryCodes", b.countryCodes());
   }
 
   /// List → `String[]` 转换：空列表转 null（表示"不过滤"），非空则转数组。
   ///
   /// @param list 输入列表，null 或空均表示无过滤
   /// @return String 数组，或 null
-  private String[] toArray(List<String> list) {
+  private static String[] toArray(List<String> list) {
     if (list == null || list.isEmpty()) {
       return null;
     }
@@ -147,7 +428,7 @@ public class VenueBrowseReadAdapter implements VenueBrowseReadPort {
   ///
   /// @param keyword 原始关键词，null 时直接返回 null
   /// @return 转义后的关键词，或 null
-  private String escapeLike(String keyword) {
+  private static String escapeLike(String keyword) {
     if (keyword == null) {
       return null;
     }
@@ -156,23 +437,23 @@ public class VenueBrowseReadAdapter implements VenueBrowseReadPort {
 
   private VenueBrowseReadModel toReadModel(VenueBrowseRow row) {
     return VenueBrowseReadModel.builder()
-        .id(row.getId())
-        .name(row.getName())
-        .abbr(row.getAbbr())
-        .coverObjectKey(row.getCoverObjectKey())
-        .impactFactor(row.getImpactFactor())
-        .jcrQuartile(row.getJcrQuartile())
-        .jcrSubject(row.getJcrSubject())
-        .casMajorCategory(row.getCasMajorCategory())
-        .casMajorQuartile(row.getCasMajorQuartile())
-        .casIsTop(row.getCasIsTop())
-        .countryCode(row.getCountryCode())
-        .citedByCount(row.getCitedByCount())
-        .foundedYear(row.getFoundedYear())
-        .isOpenAccess(row.getIsOpenAccess())
-        .isInDoaj(row.getIsInDoaj())
-        .issnL(row.getIssnL())
-        .nlmId(row.getNlmId())
+        .id(row.id())
+        .name(row.name())
+        .abbr(row.abbr())
+        .coverObjectKey(row.coverObjectKey())
+        .impactFactor(row.impactFactor())
+        .jcrQuartile(row.jcrQuartile())
+        .jcrSubject(row.jcrSubject())
+        .casMajorCategory(row.casMajorCategory())
+        .casMajorQuartile(row.casMajorQuartile())
+        .casIsTop(row.casIsTop())
+        .countryCode(row.countryCode())
+        .citedByCount(row.citedByCount())
+        .foundedYear(row.foundedYear())
+        .isOpenAccess(row.isOpenAccess())
+        .isInDoaj(row.isInDoaj())
+        .issnL(row.issnL())
+        .nlmId(row.nlmId())
         .build();
   }
 }

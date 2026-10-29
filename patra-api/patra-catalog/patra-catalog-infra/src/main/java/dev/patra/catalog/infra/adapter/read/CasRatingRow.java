@@ -1,24 +1,15 @@
 package dev.patra.catalog.infra.adapter.read;
 
-/// `VenueDao#findCasRatingsByVenueId` native query 的 Spring Data 接口投影。
+/// [VenueDetailReadAdapter] 的 SQL 查询行，组件名与列别名一一对应。
 ///
 /// @author linqibin
 /// @since 0.1.0
-public interface CasRatingRow {
-
-  Integer getYear();
-
-  String getEdition();
-
-  String getMajorCategory();
-
-  String getMajorQuartile();
-
-  String getMinorSubject();
-
-  String getMinorQuartile();
-
-  Boolean getIsTop();
-
-  Boolean getIsReview();
-}
+record CasRatingRow(
+    Integer year,
+    String edition,
+    String majorCategory,
+    String majorQuartile,
+    String minorSubject,
+    String minorQuartile,
+    Boolean isTop,
+    Boolean isReview) {}

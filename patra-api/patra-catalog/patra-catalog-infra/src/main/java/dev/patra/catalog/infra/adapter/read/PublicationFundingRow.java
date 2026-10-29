@@ -1,14 +1,7 @@
 package dev.patra.catalog.infra.adapter.read;
 
-/// 文献资助信息子表投影接口，对应 `PublicationDetailDao.findFundingByPublicationId` 查询结果。
+/// [PublicationDetailReadAdapter] 的 SQL 查询行，组件名与列别名一一对应。
 ///
 /// @author linqibin
 /// @since 0.1.0
-public interface PublicationFundingRow {
-
-  String getFunder();
-
-  String getGrantId();
-
-  String getCountry();
-}
+record PublicationFundingRow(String funder, String grantId, String country) {}

@@ -28,6 +28,7 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
@@ -45,6 +46,7 @@ class PublicationSearchReadAdapterIT {
 
   @Autowired private PublicationSearchReadAdapter adapter;
   @Autowired private TestEntityManager em;
+  @Autowired private JdbcTemplate jdbc;
 
   private static final PagingParams FIRST_PAGE = PagingParams.of(1, 20);
   private static final PublicationSearchFilter NO_FILTER =
@@ -561,5 +563,153 @@ class PublicationSearchReadAdapterIT {
     assertThat(adapter.findCardsByIds(List.of(yearOnly, day)))
         .extracting(PortalPaperReadModel::id, PortalPaperReadModel::publishedDate)
         .containsExactlyInAnyOrder(tuple(yearOnly, "2023"), tuple(day, "2021-10-14"));
+  }
+
+  @Test
+  @DisplayName("全字段卡片：检索与按 ID 读卡片的每一列都按列读出，采集时间保留微秒")
+  void should_map_every_card_column_in_search_and_find_cards() {
+    Instant synced = Instant.parse("2026-03-04T05:06:07.123456Z");
+    Long venueId = saveVenue("Lancet");
+    Long id =
+        persist(
+            publication("CO<sub>2</sub> trial")
+                .venueId(venueId)
+                .publicationYear(2021)
+                .publicationMonth(3)
+                .publicationDay(5)
+                .citationCount(42)
+                .doi("10.1016/s0140-6736(21)00001-1")
+                .pmid("33000001")
+                .lastSyncedAt(synced));
+    saveAuthors(id, "Smith J.", "Doe A.");
+    savePublicationType(id, "Randomized Controlled Trial", 1);
+    savePublicationType(id, "Journal Article", 2);
+    saveAbstract(id, "Plain abstract.");
+    flush();
+
+    PortalPaperReadModel expected =
+        PortalPaperReadModel.builder()
+            .id(id)
+            .title("CO<sub>2</sub> trial")
+            .venueId(venueId)
+            .venueName("Lancet")
+            .publicationYear(2021)
+            .publishedDate("2021-03-05")
+            .authors(List.of("Smith J.", "Doe A."))
+            .citationCount(42)
+            .doi("10.1016/s0140-6736(21)00001-1")
+            .pmid("33000001")
+            .provenanceCode("PUBMED")
+            .studyType("Randomized Controlled Trial")
+            .evidenceLevel(EvidenceLevel.RANDOMIZED_CONTROLLED_TRIAL)
+            .abstractSnippet("Plain abstract.")
+            .lastSyncedAt(synced)
+            .build();
+
+    assertThat(adapter.search(NO_FILTER, FIRST_PAGE).items()).containsExactly(expected);
+    assertThat(adapter.findCardsByIds(List.of(id))).containsExactly(expected);
+  }
+
+  @Test
+  @DisplayName("只有必填列：可空列为 null、被引取列默认值 0、作者为空列表、证据等级 UNKNOWN")
+  void should_leave_optional_card_columns_null_when_absent() {
+    Long id = insertBarePublication();
+
+    PortalPaperReadModel expected =
+        PortalPaperReadModel.builder()
+            .id(id)
+            .title("Bare")
+            .citationCount(0)
+            .provenanceCode("PUBMED")
+            .build();
+
+    assertThat(adapter.findCardsByIds(List.of(id))).containsExactly(expected);
+  }
+
+  @Test
+  @DisplayName("分页边界：末页不满一页与越过末页时 total 不变，越过末页 items 为空")
+  void should_keep_total_on_partial_and_out_of_range_pages() {
+    for (int i = 1; i <= 5; i++) {
+      persist(publication("Paper " + i).citationCount(i));
+    }
+    flush();
+    PublicationSearchFilter cited =
+        PublicationSearchFilter.builder().sort(PublicationSearchSort.CITED).build();
+
+    PageResult<PortalPaperReadModel> last = adapter.search(cited, PagingParams.of(3, 2));
+    PageResult<PortalPaperReadModel> beyond = adapter.search(cited, PagingParams.of(4, 2));
+
+    assertThat(last.items()).extracting(PortalPaperReadModel::title).containsExactly("Paper 1");
+    assertThat(last.total()).isEqualTo(5);
+    assertThat(last.totalPages()).isEqualTo(3);
+    assertThat(beyond.items()).isEmpty();
+    assertThat(beyond.total()).isEqualTo(5);
+  }
+
+  @Test
+  @DisplayName("所有筛选同时给值：检索与 facets 都只数命中的那篇")
+  void should_apply_every_filter_at_once() {
+    Long venueId = saveVenue("Lancet");
+    Long hit =
+        persist(
+            publication("Aspirin trial")
+                .venueId(venueId)
+                .pmid("1001")
+                .doi("10.1/abc")
+                .publicationYear(2021)
+                .isOa(true)
+                .languageCode("en"));
+    saveAuthors(hit, "Smith J.");
+    savePublicationType(hit, "Randomized Controlled Trial", 1);
+    Long miss =
+        persist(
+            publication("Aspirin trial")
+                .venueId(venueId)
+                .pmid("1002")
+                .doi("10.1/abd")
+                .publicationYear(2021)
+                .isOa(true)
+                .languageCode("en"));
+    saveAuthors(miss, "Smith J.");
+    savePublicationType(miss, "Randomized Controlled Trial", 1);
+    flush();
+    PublicationSearchFilter filter =
+        PublicationSearchFilter.builder()
+            .keyword("aspirin")
+            .author("smith")
+            .pmid("1001")
+            .doi("https://doi.org/10.1/ABC")
+            .yearFrom(2020)
+            .yearTo(2022)
+            .venueIds(List.of(venueId))
+            .types(List.of("randomized controlled trial"))
+            .evidenceLevels(List.of(EvidenceLevel.RANDOMIZED_CONTROLLED_TRIAL))
+            .isOpenAccess(true)
+            .languages(List.of("en"))
+            .sort(PublicationSearchSort.YEAR)
+            .build();
+
+    PageResult<PortalPaperReadModel> page = adapter.search(filter, FIRST_PAGE);
+    PublicationSearchFacets facets = adapter.facets(filter);
+
+    assertThat(page.items()).extracting(PortalPaperReadModel::id).containsExactly(hit);
+    assertThat(page.total()).isEqualTo(1);
+    assertThat(facets.total()).isEqualTo(1);
+    assertThat(facets.openAccess()).isEqualTo(1);
+    assertThat(facets.years()).containsExactly(FacetCount.of("2021", 1));
+    assertThat(facets.types()).containsExactly(FacetCount.of("Randomized Controlled Trial", 1));
+    assertThat(facets.languages()).containsExactly(FacetCount.of("en", 1));
+    assertThat(countOf(facets.evidence(), "RANDOMIZED_CONTROLLED_TRIAL")).isEqualTo(1);
+  }
+
+  /// 只写必填列的文献，其余列取库默认值。
+  ///
+  /// @return 文献 ID
+  private Long insertBarePublication() {
+    long id = SnowflakeIdGenerator.getId();
+    jdbc.update(
+        "INSERT INTO cat_publication (id, provenance_code, title) VALUES (?, 'PUBMED', 'Bare')",
+        id);
+    return id;
   }
 }

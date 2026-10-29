@@ -6,6 +6,11 @@ import dev.patra.catalog.domain.model.enums.DisambiguationStatus;
 import dev.patra.catalog.domain.model.enums.FullTextStatus;
 import dev.patra.catalog.domain.model.enums.FullTextUnavailableReason;
 import dev.patra.catalog.domain.model.read.portal.PublicationDetailReadModel;
+import dev.patra.catalog.domain.model.read.portal.PublicationDetailReadModel.AbstractSectionView;
+import dev.patra.catalog.domain.model.read.portal.PublicationDetailReadModel.AuthorView;
+import dev.patra.catalog.domain.model.read.portal.PublicationDetailReadModel.FundingView;
+import dev.patra.catalog.domain.model.read.portal.PublicationDetailReadModel.MeshHeadingView;
+import dev.patra.catalog.domain.model.read.portal.PublicationDetailReadModel.PublicationDateView;
 import dev.patra.catalog.domain.model.vo.publication.EvidenceLevel;
 import dev.patra.catalog.domain.model.vo.publication.PublicationAbstractSection;
 import dev.patra.catalog.infra.config.CatalogITPostgreSQLContainerInitializer;
@@ -34,6 +39,7 @@ import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
@@ -51,6 +57,7 @@ class PublicationDetailReadAdapterIT {
 
   @Autowired private PublicationDetailReadAdapter adapter;
   @Autowired private TestEntityManager em;
+  @Autowired private JdbcTemplate jdbc;
 
   @Test
   @DisplayName("按 ID 查询文献详情，返回 present + 标量字段正确")
@@ -533,5 +540,153 @@ class PublicationDetailReadAdapterIT {
     assertThat(model.dates())
         .extracting(PublicationDetailReadModel.PublicationDateView::date)
         .containsExactly("2023", "2022-05");
+  }
+
+  @Test
+  @DisplayName("全字段：主行每一列与五个子表的值、顺序都按列读出")
+  void should_map_every_column_when_publication_is_fully_populated() {
+    Long venueId = saveVenue("Lancet");
+    long id = SnowflakeIdGenerator.getId();
+    jdbc.update(
+        """
+        INSERT INTO cat_publication (id, provenance_code, pmid, doi, venue_id, title,
+          original_title, publication_year, publication_month, publication_day, is_oa, oa_status,
+          citation_count, number_of_references, conflict_of_interest)
+        VALUES (?, 'PUBMED', '33000001', '10.1/full', ?, 'Aspirin trial', 'Essai aspirine',
+          2021, 3, 5, true, 'gold', 42, 30, 'None declared.')
+        """,
+        id,
+        venueId);
+    saveAbstract(
+        id,
+        "STRUCTURED",
+        List.of(
+            new PublicationAbstractSection("BACKGROUND", "bg"),
+            new PublicationAbstractSection("RESULTS", "rs")),
+        "bg rs");
+    saveMetadata(id, "https://example.org/full");
+    saveFullText(id, FullTextStatus.PARSED, "pmc/PMC9/PMC9.1.pdf", 1024L, 3000);
+    saveIdentifier(id, "pmc", "PMC9");
+    saveIdentifier(id, "pii", "S0140-6736(21)00001-1");
+    saveType(id, "D016449", "Randomized Controlled Trial", 1);
+    saveType(id, "D016428", "Journal Article", 2);
+    Long first = savePublicationAuthor(id, null, "Smith J", 1, true, false);
+    saveAffiliation(first, id, 2, "Second Org");
+    saveAffiliation(first, id, 1, "First Org");
+    savePublicationAuthor(id, null, "Doe A", 2, false, true);
+    saveMeshDescriptor("D001241", "Aspirin");
+    saveMeshHeading(id, "D001241", true, 1);
+    saveMeshHeading(id, "D999999", false, 2);
+    em.flush();
+    long keywordA = SnowflakeIdGenerator.getId();
+    long keywordB = SnowflakeIdGenerator.getId();
+    jdbc.update(
+        "INSERT INTO cat_keyword (id, term) VALUES (?, 'platelets'), (?, 'stroke')",
+        keywordA,
+        keywordB);
+    jdbc.update(
+        "INSERT INTO cat_publication_keyword (id, publication_id, keyword_id, order_num)"
+            + " VALUES (?, ?, ?, 2), (?, ?, ?, 1)",
+        SnowflakeIdGenerator.getId(),
+        id,
+        keywordA,
+        SnowflakeIdGenerator.getId(),
+        id,
+        keywordB);
+    jdbc.update(
+        "INSERT INTO cat_publication_funding (id, publication_id, grant_id, funder_name_raw,"
+            + " country_raw, funding_order, provenance_code)"
+            + " VALUES (?, ?, 'R01-1', 'NIH', 'United States', 2, 'PUBMED'),"
+            + " (?, ?, NULL, 'Wellcome', NULL, 1, 'PUBMED')",
+        SnowflakeIdGenerator.getId(),
+        id,
+        SnowflakeIdGenerator.getId(),
+        id);
+    jdbc.update(
+        "INSERT INTO cat_publication_date (id, publication_id, date_type, year, month, day,"
+            + " date_precision, order_num) VALUES (?, ?, 'published', 2021, 3, 5, 'day', 1),"
+            + " (?, ?, 'revised', 2022, 7, 9, 'month', 2)",
+        SnowflakeIdGenerator.getId(),
+        id,
+        SnowflakeIdGenerator.getId(),
+        id);
+    em.clear();
+
+    PublicationDetailReadModel expected =
+        PublicationDetailReadModel.builder()
+            .id(id)
+            .title("Aspirin trial")
+            .originalTitle("Essai aspirine")
+            .venueId(venueId)
+            .venueName("Lancet")
+            .publicationYear(2021)
+            .publishedDate("2021-03-05")
+            .evidenceLevel(EvidenceLevel.RANDOMIZED_CONTROLLED_TRIAL)
+            .abstractType("STRUCTURED")
+            .abstractSections(
+                List.of(
+                    AbstractSectionView.of("BACKGROUND", "bg"),
+                    AbstractSectionView.of("RESULTS", "rs")))
+            .abstractPlainText("bg rs")
+            .doi("10.1/full")
+            .pmid("33000001")
+            .pmcid("PMC9")
+            .pii("S0140-6736(21)00001-1")
+            .primaryType("Randomized Controlled Trial")
+            .publicationTypes(List.of("Randomized Controlled Trial", "Journal Article"))
+            .citationCount(42)
+            .numberOfReferences(30)
+            .conflictOfInterest("None declared.")
+            .isOa(true)
+            .oaStatus("gold")
+            .provenanceCode("PUBMED")
+            .fullTextUrl("https://example.org/full")
+            .retracted(false)
+            .hasFullText(true)
+            .hasPdf(true)
+            .pdfSizeBytes(1024L)
+            .wordCount(3000)
+            .authors(
+                List.of(
+                    new AuthorView(1, true, false, "Smith J", "First Org"),
+                    new AuthorView(2, false, true, "Doe A", null)))
+            .meshHeadings(
+                List.of(
+                    MeshHeadingView.of("D001241", "Aspirin", true),
+                    MeshHeadingView.of("D999999", null, false)))
+            .keywords(List.of("stroke", "platelets"))
+            .funding(
+                List.of(
+                    FundingView.of("Wellcome", null, null),
+                    FundingView.of("NIH", "R01-1", "United States")))
+            .dates(
+                List.of(
+                    PublicationDateView.of("published", "2021-03-05"),
+                    PublicationDateView.of("revised", "2022-07")))
+            .build();
+
+    assertThat(adapter.findById(id)).contains(expected);
+  }
+
+  @Test
+  @DisplayName("只有必填列：可空列为 null、有默认值的列取默认值、子表为空列表")
+  void should_leave_optional_columns_null_when_publication_has_only_required_columns() {
+    long id = SnowflakeIdGenerator.getId();
+    jdbc.update(
+        "INSERT INTO cat_publication (id, provenance_code, title) VALUES (?, 'PUBMED', 'Bare')",
+        id);
+
+    PublicationDetailReadModel expected =
+        PublicationDetailReadModel.builder()
+            .id(id)
+            .title("Bare")
+            .evidenceLevel(EvidenceLevel.UNKNOWN)
+            .citationCount(0)
+            .numberOfReferences(0)
+            .isOa(false)
+            .provenanceCode("PUBMED")
+            .build();
+
+    assertThat(adapter.findById(id)).contains(expected);
   }
 }

@@ -1,33 +1,13 @@
 package dev.patra.catalog.infra.adapter.read;
 
-/// 文献日期子表投影接口，对应 `PublicationDetailDao.findDatesByPublicationId` 查询结果。
+/// [PublicationDetailReadAdapter] 的 SQL 查询行，组件名与列别名一一对应。
 ///
+/// @param type 日期类型。
+/// @param year 年。
+/// @param month 月。
+/// @param day 日。
+/// @param precision 精度。
 /// @author linqibin
 /// @since 0.1.0
-public interface PublicationDateRow {
-
-  /// 日期类型。
-  ///
-  /// @return 日期类型（如 published）
-  String getType();
-
-  /// 年。
-  ///
-  /// @return 年
-  Integer getYear();
-
-  /// 月。
-  ///
-  /// @return 月，可空
-  Integer getMonth();
-
-  /// 日。
-  ///
-  /// @return 日，可空
-  Integer getDay();
-
-  /// 精度。
-  ///
-  /// @return `year`、`month` 或 `day`
-  String getPrecision();
-}
+record PublicationDateRow(
+    String type, Integer year, Integer month, Integer day, String precision) {}

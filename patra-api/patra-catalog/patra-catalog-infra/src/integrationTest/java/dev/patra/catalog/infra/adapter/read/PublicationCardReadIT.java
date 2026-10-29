@@ -1,6 +1,10 @@
 package dev.patra.catalog.infra.adapter.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import dev.patra.catalog.domain.model.read.portal.PortalPaperReadModel;
 import dev.patra.catalog.infra.config.CatalogITPostgreSQLContainerInitializer;
@@ -11,12 +15,9 @@ import dev.patra.catalog.infra.persistence.entity.PublicationTypeEntity;
 import dev.patra.catalog.infra.persistence.entity.VenueEntity;
 import dev.patra.tool.jpa.autoconfigure.JpaAuditingConfiguration;
 import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
-import jakarta.persistence.EntityManagerFactory;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import org.hibernate.SessionFactory;
-import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,16 +25,18 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 /// 按 ID 批量取文献卡片的集成测试：100 个 ID 只发一条 SQL（PAP-109 AC「无 N+1」）。
 ///
-/// 单独成类：打开 Hibernate 统计会换一个 Spring 测试上下文，不和其他读适配器 IT 共用。
+/// 单独成类：监视 `JdbcClient` 会换一个 Spring 测试上下文，不和其他读适配器 IT 共用。
 ///
 /// @author linqibin
 /// @since 0.1.0
-@DataJpaTest(properties = "spring.jpa.properties.hibernate.generate_statistics=true")
+@DataJpaTest
 @ContextConfiguration(initializers = CatalogITPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({PublicationSearchReadAdapter.class, JpaAuditingConfiguration.class})
@@ -45,7 +48,7 @@ class PublicationCardReadIT {
 
   @Autowired private PublicationSearchReadAdapter adapter;
   @Autowired private TestEntityManager em;
-  @Autowired private EntityManagerFactory emf;
+  @MockitoSpyBean private JdbcClient jdbcClient;
 
   @Test
   @DisplayName("100 篇带载体、作者、类型、摘要的文献 + 1 篇软删：返回 100 张卡，只发 1 条 SQL")
@@ -67,11 +70,10 @@ class PublicationCardReadIT {
     softDelete(deleted);
     ids.add(deleted);
 
-    Statistics stats = emf.unwrap(SessionFactory.class).getStatistics();
-    stats.clear();
+    clearInvocations(jdbcClient);
     List<PortalPaperReadModel> cards = adapter.findCardsByIds(ids);
 
-    assertThat(stats.getPrepareStatementCount()).isEqualTo(1);
+    verify(jdbcClient, times(1)).sql(anyString());
     assertThat(cards).hasSize(100);
     assertThat(cards).extracting(PortalPaperReadModel::id).doesNotContain(deleted);
     PortalPaperReadModel any = cards.get(0);
