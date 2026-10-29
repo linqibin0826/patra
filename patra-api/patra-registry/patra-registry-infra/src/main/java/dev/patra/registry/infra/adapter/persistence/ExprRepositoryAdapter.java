@@ -1,16 +1,15 @@
 package dev.patra.registry.infra.adapter.persistence;
 
 import dev.patra.common.ProvenanceCode;
-import dev.patra.registry.domain.exception.provenance.ProvenanceNotFoundException;
 import dev.patra.registry.domain.model.vo.expr.*;
 import dev.patra.registry.domain.port.ExprRepository;
+import dev.patra.registry.domain.port.ProvenanceReadPort;
 import dev.patra.registry.domain.support.RegistryKeyStandardizer;
 import dev.patra.registry.infra.adapter.persistence.converter.mapper.ExprJpaMapper;
 import dev.patra.registry.infra.adapter.persistence.dao.expr.ExprFieldDictDao;
 import dev.patra.registry.infra.adapter.persistence.dao.expr.ProvApiParamMapDao;
 import dev.patra.registry.infra.adapter.persistence.dao.expr.ProvExprCapabilityDao;
 import dev.patra.registry.infra.adapter.persistence.dao.expr.ProvExprRenderRuleDao;
-import dev.patra.registry.infra.adapter.persistence.dao.provenance.ProvenanceDao;
 import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -23,11 +22,11 @@ import org.springframework.stereotype.Repository;
 ///
 /// - 聚合字段字典、能力、渲染规则和 API 参数映射以构建领域快照
 /// - 优先使用操作特定配置，当专用切片不可用时回退到 `ALL`
+/// - 数据源代码经 `ProvenanceReadPort` 解析为 ID，未找到时由其抛出异常
 ///
 /// 日志策略：
 ///
 /// - DEBUG 级别记录所有查询操作和转换过程
-/// - WARN 级别记录数据源代码未找到等异常情况
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -40,7 +39,7 @@ public class ExprRepositoryAdapter implements ExprRepository {
   private final ProvApiParamMapDao apiParamMapDao;
   private final ProvExprCapabilityDao capabilityDao;
   private final ProvExprRenderRuleDao renderRuleDao;
-  private final ProvenanceDao provenanceDao;
+  private final ProvenanceReadPort provenanceReadPort;
   private final ExprJpaMapper mapper;
 
   /// 加载指定数据源和操作的表达式元数据快照。
@@ -56,7 +55,7 @@ public class ExprRepositoryAdapter implements ExprRepository {
   public ExprSnapshot loadSnapshot(
       ProvenanceCode provenanceCode, String operationType, String endpointName, Instant at) {
     Instant timestamp = atOrNow(at);
-    Long provenanceId = resolveProvenanceId(provenanceCode);
+    Long provenanceId = provenanceReadPort.requireIdByCode(provenanceCode);
 
     String operationKey = RegistryKeyStandardizer.toOperationKeyOrAll(operationType);
     String normalizedEndpoint =
@@ -169,27 +168,5 @@ public class ExprRepositoryAdapter implements ExprRepository {
   /// @return 时间戳或当前时间
   private Instant atOrNow(Instant at) {
     return at != null ? at : Instant.now();
-  }
-
-  /// 从业务代码解析数据源 ID。
-  ///
-  /// @param provenanceCode 数据源代码
-  /// @return 数据源 ID
-  /// @throws ProvenanceNotFoundException 如果数据源代码未找到
-  private Long resolveProvenanceId(ProvenanceCode provenanceCode) {
-    String code = provenanceCode.getCode();
-    log.debug("Querying provenance ID for code [{}] from database", code);
-    return provenanceDao
-        .findByProvenanceCode(code)
-        .map(
-            entity -> {
-              log.debug("Resolved provenance code [{}] to ID [{}]", code, entity.getId());
-              return entity.getId();
-            })
-        .orElseThrow(
-            () -> {
-              log.warn("Provenance code not found: {}", code);
-              return new ProvenanceNotFoundException("Provenance code not found: " + code);
-            });
   }
 }

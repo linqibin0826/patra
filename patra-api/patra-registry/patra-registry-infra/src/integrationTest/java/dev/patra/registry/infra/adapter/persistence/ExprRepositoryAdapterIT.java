@@ -71,6 +71,7 @@ import tools.jackson.databind.json.JsonMapper;
 @ImportAutoConfiguration({FlywayAutoConfiguration.class, JacksonAutoConfiguration.class})
 @Import({
   ExprRepositoryAdapter.class,
+  ProvenanceReadAdapter.class,
   JpaAuditingConfiguration.class,
   PatraHibernatePropertiesCustomizer.class
 })
