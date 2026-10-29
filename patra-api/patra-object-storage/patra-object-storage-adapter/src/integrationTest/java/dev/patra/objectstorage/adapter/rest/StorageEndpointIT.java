@@ -6,8 +6,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import dev.patra.objectstorage.adapter.rest.internal.StorageEndpointImpl;
-import dev.patra.objectstorage.api.dto.RecordUploadResponse;
-import dev.patra.objectstorage.api.dto.UploadRecordRequest;
+import dev.patra.objectstorage.api.file.dto.RecordUploadResponse;
+import dev.patra.objectstorage.api.file.dto.UploadRecordRequest;
 import dev.patra.objectstorage.app.recordupload.RecordUploadCommand;
 import dev.patra.objectstorage.app.recordupload.RecordUploadResult;
 import dev.patra.tool.cqrs.CommandBus;

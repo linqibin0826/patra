@@ -1,4 +1,4 @@
-package dev.patra.objectstorage.api.dto;
+package dev.patra.objectstorage.api.file.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.PositiveOrZero;

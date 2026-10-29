@@ -1,4 +1,4 @@
-package dev.patra.objectstorage.api.dto;
+package dev.patra.objectstorage.api.file.dto;
 
 import java.time.Instant;
 

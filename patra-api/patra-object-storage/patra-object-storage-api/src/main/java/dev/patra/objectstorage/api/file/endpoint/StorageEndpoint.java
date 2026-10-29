@@ -1,7 +1,7 @@
-package dev.patra.objectstorage.api.endpoint;
+package dev.patra.objectstorage.api.file.endpoint;
 
-import dev.patra.objectstorage.api.dto.RecordUploadResponse;
-import dev.patra.objectstorage.api.dto.UploadRecordRequest;
+import dev.patra.objectstorage.api.file.dto.RecordUploadResponse;
+import dev.patra.objectstorage.api.file.dto.UploadRecordRequest;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.service.annotation.HttpExchange;
