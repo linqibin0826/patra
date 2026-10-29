@@ -1,20 +1,20 @@
 package dev.patra.catalog.app.usecase.fulltext.fetch;
 
+import dev.patra.catalog.domain.event.PmcFullTextFetchedEvent;
 import dev.patra.catalog.domain.model.enums.FullTextStatus;
 import dev.patra.catalog.domain.model.enums.FullTextUnavailableReason;
 import dev.patra.catalog.domain.model.read.fulltext.FetchCandidate;
 import dev.patra.catalog.domain.model.vo.fulltext.FullTextMedia;
 import dev.patra.catalog.domain.model.vo.fulltext.PmcArticleMetadata;
 import dev.patra.catalog.domain.model.vo.fulltext.PublicationFullText;
-import dev.patra.catalog.domain.model.vo.publication.PublicationOaLocation;
 import dev.patra.catalog.domain.port.repository.PublicationFullTextRepository;
-import dev.patra.catalog.domain.port.repository.PublicationRepository;
 import dev.patra.catalog.domain.port.storage.FullTextObjectStoragePort;
 import dev.patra.catalog.domain.service.fulltext.FullTextRetrySchedule;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,10 +32,11 @@ public class PmcFullTextFetchPersister {
   private static final int MAX_ERROR_LENGTH = 2000;
 
   private final PublicationFullTextRepository fullTextRepository;
-  private final PublicationRepository publicationRepository;
+  private final ApplicationEventPublisher events;
   private final FullTextRetrySchedule retrySchedule;
 
-  /// 记录抓取成功：全文记录 `FETCHED`，文献标为开放获取并替换 PMC 位置。
+  /// 记录抓取成功：全文记录 `FETCHED`，并发布 [PmcFullTextFetchedEvent]，由文献子域在同一事务里
+  /// 标为开放获取并替换 PMC 位置。
   ///
   /// @param c 候选
   /// @param selected 选中的版本
@@ -67,9 +68,9 @@ public class PmcFullTextFetchPersister {
             .fetchedAt(fetchedAt)
             .attemptCount(0)
             .build());
-    publicationRepository.markPmcOpenAccess(
-        c.publicationId(),
-        PublicationOaLocation.ofPmc(c.pmcid(), selected.licenseCode(), selected.manuscript()));
+    events.publishEvent(
+        new PmcFullTextFetchedEvent(
+            c.publicationId(), c.pmcid(), selected.licenseCode(), selected.manuscript()));
   }
 
   /// 记录不可用；可再查的原因按次数或放开日期算下次再查时间，撤稿等终态不再查。

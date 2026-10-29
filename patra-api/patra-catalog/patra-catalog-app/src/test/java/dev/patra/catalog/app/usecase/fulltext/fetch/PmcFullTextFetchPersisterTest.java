@@ -2,23 +2,19 @@ package dev.patra.catalog.app.usecase.fulltext.fetch;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import dev.patra.catalog.domain.event.PmcFullTextFetchedEvent;
 import dev.patra.catalog.domain.model.enums.FullTextStatus;
 import dev.patra.catalog.domain.model.enums.FullTextUnavailableReason;
-import dev.patra.catalog.domain.model.enums.VersionType;
 import dev.patra.catalog.domain.model.read.fulltext.FetchCandidate;
 import dev.patra.catalog.domain.model.vo.fulltext.FullTextMedia;
 import dev.patra.catalog.domain.model.vo.fulltext.PmcArticleFile;
 import dev.patra.catalog.domain.model.vo.fulltext.PmcArticleMetadata;
 import dev.patra.catalog.domain.model.vo.fulltext.PublicationFullText;
-import dev.patra.catalog.domain.model.vo.publication.PublicationOaLocation;
 import dev.patra.catalog.domain.port.repository.PublicationFullTextRepository;
-import dev.patra.catalog.domain.port.repository.PublicationRepository;
 import dev.patra.catalog.domain.service.fulltext.FullTextRetrySchedule;
 import java.time.Clock;
 import java.time.Duration;
@@ -34,6 +30,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 /// `PmcFullTextFetchPersister` 单元测试。
 @ExtendWith(MockitoExtension.class)
@@ -43,9 +40,8 @@ class PmcFullTextFetchPersisterTest {
   private static final Instant NOW = Instant.parse("2026-10-20T05:00:00Z");
 
   @Mock private PublicationFullTextRepository fullTextRepository;
-  @Mock private PublicationRepository publicationRepository;
+  @Mock private ApplicationEventPublisher events;
   @Captor private ArgumentCaptor<PublicationFullText> savedCaptor;
-  @Captor private ArgumentCaptor<PublicationOaLocation> locationCaptor;
 
   private PmcFullTextFetchPersister persister;
 
@@ -54,12 +50,12 @@ class PmcFullTextFetchPersisterTest {
     persister =
         new PmcFullTextFetchPersister(
             fullTextRepository,
-            publicationRepository,
+            events,
             new FullTextRetrySchedule(Clock.fixed(NOW, ZoneOffset.UTC)));
   }
 
   @Test
-  @DisplayName("抓取成功时次数清零、写入文件信息并记 PMC 开放获取")
+  @DisplayName("抓取成功时次数清零、写入文件信息并发布全文已抓取事件")
   void should_reset_attempts_and_mark_pmc_open_access_when_fetched() {
     PmcArticleMetadata selected =
         PmcArticleMetadata.builder()
@@ -89,9 +85,7 @@ class PmcFullTextFetchPersisterTest {
     assertThat(saved.pdfMd5()).isEqualTo("pdfmd5");
     assertThat(saved.media()).isEqualTo(media);
     assertThat(saved.fetchedAt()).isEqualTo(NOW);
-    verify(publicationRepository).markPmcOpenAccess(eq(7L), locationCaptor.capture());
-    assertThat(locationCaptor.getValue().license()).isEqualTo("CC BY");
-    assertThat(locationCaptor.getValue().versionType()).isEqualTo(VersionType.ACCEPTED);
+    verify(events).publishEvent(new PmcFullTextFetchedEvent(7L, "PMC1", "CC BY", true));
   }
 
   @Test
@@ -103,7 +97,7 @@ class PmcFullTextFetchPersisterTest {
     verify(fullTextRepository).save(savedCaptor.capture());
     assertThat(savedCaptor.getValue().attemptCount()).isEqualTo(3);
     assertThat(savedCaptor.getValue().nextAttemptAt()).isEqualTo(NOW.plus(Duration.ofDays(7)));
-    verify(publicationRepository, never()).markPmcOpenAccess(anyLong(), any());
+    verify(events, never()).publishEvent(any(Object.class));
   }
 
   @Test
@@ -175,7 +169,7 @@ class PmcFullTextFetchPersisterTest {
     persister.recordUnavailable(
         candidate(FullTextStatus.PARSED, 0), FullTextUnavailableReason.NOT_OPEN_ACCESS);
 
-    verify(publicationRepository, never()).markPmcOpenAccess(anyLong(), any());
+    verify(events, never()).publishEvent(any(Object.class));
     verify(fullTextRepository).setHasFullText(7L, false);
   }
 
