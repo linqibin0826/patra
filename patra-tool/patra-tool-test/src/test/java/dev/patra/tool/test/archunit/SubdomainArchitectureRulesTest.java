@@ -51,6 +51,22 @@ class SubdomainArchitectureRulesTest {
     assertThat(result.getFailureReport().getDetails()).anyMatch(line -> line.contains("Shared"));
   }
 
+  /// 服务级错误码的保留包 `api.error` 不属于任何子域，不违规。
+  @Test
+  void should_accept_reserved_api_error_package() {
+    assertThat(
+            evaluate("reservederror", rules("reservederror").layersContainOnlyDeclaredSubdomains())
+                .hasViolation())
+        .isFalse();
+  }
+
+  /// 子域不能叫 `error`，避免和保留包冲突。
+  @Test
+  void should_reject_error_as_subdomain_name() {
+    assertThatThrownBy(() -> new SubdomainArchitectureRules("x", "error", Set.of("error")))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
   /// 底座不在声明的子域里时拒绝构造。
   @Test
   void should_reject_foundation_missing_from_subdomains() {

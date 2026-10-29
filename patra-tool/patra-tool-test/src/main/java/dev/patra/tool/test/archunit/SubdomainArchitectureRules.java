@@ -50,6 +50,12 @@ public final class SubdomainArchitectureRules {
   /// 每个子域都公开的包，相对 `{根包}.domain.{子域}`：读端口、读模型、事件契约。
   private static final List<String> PUBLISHED = List.of("port.read", "model.read", "event");
 
+  /// 服务级错误码的保留包，相对根包；不属于任何子域，所有子域都可以依赖。
+  private static final String RESERVED_ERROR_PACKAGE = "api.error";
+
+  /// 保留包占用的名字，不能用作子域名。
+  private static final String RESERVED_SUBDOMAIN_NAME = "error";
+
   /// 事件契约包，相对 `{根包}.domain.{子域}`。订阅边只放行它。
   private static final String EVENT_CONTRACT = "event";
 
@@ -102,6 +108,10 @@ public final class SubdomainArchitectureRules {
     if (basePackage.isBlank()) {
       throw new IllegalArgumentException("basePackage 不能为空白字符串");
     }
+    if (this.subdomains.contains(RESERVED_SUBDOMAIN_NAME)) {
+      throw new IllegalArgumentException(
+          "子域不能叫 " + RESERVED_SUBDOMAIN_NAME + "：" + RESERVED_ERROR_PACKAGE + " 是保留包");
+    }
     if (!this.subdomains.contains(foundationSubdomain)) {
       throw new IllegalArgumentException(
           "底座子域 " + foundationSubdomain + " 必须在声明的子域 " + this.subdomains + " 里");
@@ -142,7 +152,8 @@ public final class SubdomainArchitectureRules {
 
   /// 五个层根包下的类必须落在某个已声明子域的包里。
   ///
-  /// 直接放在层根下的类、未声明的子域包（如顺手建的 `domain.common`）都违规。
+  /// 直接放在层根下的类、未声明的子域包（如顺手建的 `domain.common`）都违规；服务级错误码的保留包
+  /// `api.error` 例外。
   ///
   /// @return ArchRule 规则实例
   public ArchRule layersContainOnlyDeclaredSubdomains() {
@@ -377,13 +388,24 @@ public final class SubdomainArchitectureRules {
         .anyMatch(prefix -> packageName.equals(prefix) || packageName.startsWith(prefix + "."));
   }
 
-  /// 类在五个层之一的根包下（含层根包本身）。
+  /// 类在五个层之一的根包下（含层根包本身），保留包 `api.error` 除外。
   ///
   /// @return 谓词
   private DescribedPredicate<JavaClass> resideInLayer() {
     return DescribedPredicate.describe(
         "在 " + basePackage + " 的五个层下",
-        javaClass -> layerOf(javaClass.getPackageName()).isPresent());
+        javaClass ->
+            layerOf(javaClass.getPackageName()).isPresent()
+                && !isReserved(javaClass.getPackageName()));
+  }
+
+  /// 包是否在保留包 `{根包}.api.error`（或其子包）里。
+  ///
+  /// @param packageName 包名
+  /// @return 在保留包里时为真
+  private boolean isReserved(String packageName) {
+    String reserved = basePackage + "." + RESERVED_ERROR_PACKAGE;
+    return packageName.equals(reserved) || packageName.startsWith(reserved + ".");
   }
 
   /// 类所在的包是已声明的子域。
