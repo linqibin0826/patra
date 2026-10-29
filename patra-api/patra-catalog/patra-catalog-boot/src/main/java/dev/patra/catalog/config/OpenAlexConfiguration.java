@@ -1,6 +1,6 @@
 package dev.patra.catalog.config;
 
-import dev.patra.catalog.infra.adapter.integration.openalex.OpenAlexSourcesClient;
+import dev.patra.catalog.infra.venue.enrichment.OpenAlexSourcesClient;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import org.springframework.context.annotation.Bean;

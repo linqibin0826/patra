@@ -1,8 +1,8 @@
 package dev.patra.catalog.config;
 
-import dev.patra.catalog.app.usecase.fulltext.FullTextJobProperties;
-import dev.patra.catalog.infra.adapter.integration.pmc.FullTextSourceProperties;
-import dev.patra.catalog.infra.adapter.storage.VenueCoverImageProperties;
+import dev.patra.catalog.app.fulltext.config.FullTextJobProperties;
+import dev.patra.catalog.infra.fulltext.config.FullTextSourceProperties;
+import dev.patra.catalog.infra.venue.config.VenueCoverImageProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
