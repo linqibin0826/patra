@@ -1,7 +1,7 @@
 package dev.patra.gateway.security;
 
 import com.nimbusds.jose.jwk.ECKey;
-import dev.patra.identity.api.endpoint.SessionEndpoint;
+import dev.patra.identity.api.session.endpoint.SessionEndpoint;
 import dev.patra.tool.core.error.codes.HttpStdErrors;
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.ClientType;

@@ -1,4 +1,4 @@
-package dev.patra.identity.api.dto;
+package dev.patra.identity.api.account.dto;
 
 /// 账号状态，与 identity 领域里的用户状态按名字一一对应。
 public enum AccountStatus {

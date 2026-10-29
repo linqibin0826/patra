@@ -1,11 +1,11 @@
-package dev.patra.identity.api.endpoint;
+package dev.patra.identity.api.account.endpoint;
 
-import dev.patra.identity.api.dto.UserResolveByUsernamesReq;
-import dev.patra.identity.api.dto.UserResolveResp;
-import dev.patra.identity.api.dto.UserSuggestReq;
-import dev.patra.identity.api.dto.UserSuggestionsResp;
-import dev.patra.identity.api.dto.UserSummariesReq;
-import dev.patra.identity.api.dto.UserSummariesResp;
+import dev.patra.identity.api.account.dto.UserResolveByUsernamesReq;
+import dev.patra.identity.api.account.dto.UserResolveResp;
+import dev.patra.identity.api.account.dto.UserSuggestReq;
+import dev.patra.identity.api.account.dto.UserSuggestionsResp;
+import dev.patra.identity.api.account.dto.UserSummariesReq;
+import dev.patra.identity.api.account.dto.UserSummariesResp;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.service.annotation.HttpExchange;
 import org.springframework.web.service.annotation.PostExchange;

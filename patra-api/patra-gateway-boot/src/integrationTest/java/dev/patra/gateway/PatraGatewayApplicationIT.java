@@ -2,7 +2,7 @@ package dev.patra.gateway;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.patra.identity.api.endpoint.SessionEndpoint;
+import dev.patra.identity.api.session.endpoint.SessionEndpoint;
 import dev.patra.tool.security.assertion.IdentityAssertionSigner;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

@@ -1,8 +1,8 @@
 package dev.patra.gateway.security;
 
-import dev.patra.identity.api.dto.SessionIntrospectionReq;
-import dev.patra.identity.api.dto.SessionIntrospectionResp;
-import dev.patra.identity.api.endpoint.SessionEndpoint;
+import dev.patra.identity.api.session.dto.SessionIntrospectionReq;
+import dev.patra.identity.api.session.dto.SessionIntrospectionResp;
+import dev.patra.identity.api.session.endpoint.SessionEndpoint;
 import dev.patra.tool.core.error.remote.RemoteCallException;
 import dev.patra.tool.core.error.trait.StandardErrorTrait;
 import dev.patra.tool.core.security.CurrentUser;

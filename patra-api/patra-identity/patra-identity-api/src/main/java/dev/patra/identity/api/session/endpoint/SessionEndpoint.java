@@ -1,7 +1,7 @@
-package dev.patra.identity.api.endpoint;
+package dev.patra.identity.api.session.endpoint;
 
-import dev.patra.identity.api.dto.SessionIntrospectionReq;
-import dev.patra.identity.api.dto.SessionIntrospectionResp;
+import dev.patra.identity.api.session.dto.SessionIntrospectionReq;
+import dev.patra.identity.api.session.dto.SessionIntrospectionResp;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.service.annotation.HttpExchange;
 import org.springframework.web.service.annotation.PostExchange;

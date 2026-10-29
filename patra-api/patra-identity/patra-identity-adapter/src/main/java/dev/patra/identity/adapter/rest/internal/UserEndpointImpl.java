@@ -1,16 +1,16 @@
 package dev.patra.identity.adapter.rest.internal;
 
 import dev.patra.identity.adapter.rest.AvatarUrls;
-import dev.patra.identity.api.dto.AccountStatus;
-import dev.patra.identity.api.dto.UserResolutionResp;
-import dev.patra.identity.api.dto.UserResolveByUsernamesReq;
-import dev.patra.identity.api.dto.UserResolveResp;
-import dev.patra.identity.api.dto.UserSuggestReq;
-import dev.patra.identity.api.dto.UserSuggestionsResp;
-import dev.patra.identity.api.dto.UserSummariesReq;
-import dev.patra.identity.api.dto.UserSummariesResp;
-import dev.patra.identity.api.dto.UserSummaryResp;
-import dev.patra.identity.api.endpoint.UserEndpoint;
+import dev.patra.identity.api.account.dto.AccountStatus;
+import dev.patra.identity.api.account.dto.UserResolutionResp;
+import dev.patra.identity.api.account.dto.UserResolveByUsernamesReq;
+import dev.patra.identity.api.account.dto.UserResolveResp;
+import dev.patra.identity.api.account.dto.UserSuggestReq;
+import dev.patra.identity.api.account.dto.UserSuggestionsResp;
+import dev.patra.identity.api.account.dto.UserSummariesReq;
+import dev.patra.identity.api.account.dto.UserSummariesResp;
+import dev.patra.identity.api.account.dto.UserSummaryResp;
+import dev.patra.identity.api.account.endpoint.UserEndpoint;
 import dev.patra.identity.app.usecase.user.query.UserResolutionQueryService;
 import dev.patra.identity.app.usecase.user.query.UserSuggestionQueryService;
 import dev.patra.identity.app.usecase.user.query.UserSummaryQueryService;

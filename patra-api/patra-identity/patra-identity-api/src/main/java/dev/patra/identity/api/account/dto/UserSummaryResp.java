@@ -1,4 +1,4 @@
-package dev.patra.identity.api.dto;
+package dev.patra.identity.api.account.dto;
 
 import lombok.Builder;
 

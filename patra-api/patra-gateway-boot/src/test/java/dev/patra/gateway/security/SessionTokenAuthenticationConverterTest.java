@@ -7,9 +7,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import dev.patra.identity.api.dto.SessionIntrospectionReq;
-import dev.patra.identity.api.dto.SessionIntrospectionResp;
-import dev.patra.identity.api.endpoint.SessionEndpoint;
+import dev.patra.identity.api.session.dto.SessionIntrospectionReq;
+import dev.patra.identity.api.session.dto.SessionIntrospectionResp;
+import dev.patra.identity.api.session.endpoint.SessionEndpoint;
 import dev.patra.tool.core.error.remote.RemoteCallException;
 import dev.patra.tool.core.error.trait.ErrorTrait;
 import dev.patra.tool.core.error.trait.StandardErrorTrait;

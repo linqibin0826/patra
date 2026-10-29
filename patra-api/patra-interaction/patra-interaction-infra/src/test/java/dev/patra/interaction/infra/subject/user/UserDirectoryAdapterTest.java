@@ -9,11 +9,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import dev.patra.identity.api.dto.AccountStatus;
-import dev.patra.identity.api.dto.UserSummariesReq;
-import dev.patra.identity.api.dto.UserSummariesResp;
-import dev.patra.identity.api.dto.UserSummaryResp;
-import dev.patra.identity.api.endpoint.UserEndpoint;
+import dev.patra.identity.api.account.dto.AccountStatus;
+import dev.patra.identity.api.account.dto.UserSummariesReq;
+import dev.patra.identity.api.account.dto.UserSummariesResp;
+import dev.patra.identity.api.account.dto.UserSummaryResp;
+import dev.patra.identity.api.account.endpoint.UserEndpoint;
 import dev.patra.interaction.domain.subject.exception.UserDirectoryUnavailableException;
 import dev.patra.interaction.domain.subject.model.user.AccountState;
 import dev.patra.interaction.domain.subject.model.user.UserCard;

@@ -1,4 +1,4 @@
-package dev.patra.identity.api.dto;
+package dev.patra.identity.api.session.dto;
 
 /// 查会话的请求。
 ///

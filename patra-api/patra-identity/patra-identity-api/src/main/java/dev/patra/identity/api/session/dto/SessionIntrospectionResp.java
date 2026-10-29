@@ -1,4 +1,4 @@
-package dev.patra.identity.api.dto;
+package dev.patra.identity.api.session.dto;
 
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.ClientType;

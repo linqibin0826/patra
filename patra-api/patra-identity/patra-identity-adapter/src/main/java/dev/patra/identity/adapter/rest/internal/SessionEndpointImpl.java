@@ -1,8 +1,8 @@
 package dev.patra.identity.adapter.rest.internal;
 
-import dev.patra.identity.api.dto.SessionIntrospectionReq;
-import dev.patra.identity.api.dto.SessionIntrospectionResp;
-import dev.patra.identity.api.endpoint.SessionEndpoint;
+import dev.patra.identity.api.session.dto.SessionIntrospectionReq;
+import dev.patra.identity.api.session.dto.SessionIntrospectionResp;
+import dev.patra.identity.api.session.endpoint.SessionEndpoint;
 import dev.patra.identity.app.usecase.session.introspect.SessionIntrospectionService;
 import dev.patra.tool.core.security.CurrentUser;
 import lombok.RequiredArgsConstructor;
