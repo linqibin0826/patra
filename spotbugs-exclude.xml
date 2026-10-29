@@ -475,6 +475,25 @@
     </Or>
   </Match>
 
+  <!-- Identity 领域模型（按子域分包后多一级 domain.{子域}.model，上面按 domain.model 写的通用规则匹配不到）：
+       与通用规则同义——聚合与值对象暴露内部表示、聚合与实体构造器做不变式校验、策略构造器校验 -->
+  <Match>
+    <Class name="~dev\.patra\.identity\.domain\.\w+\.model\.(aggregate|vo|entity)\..*"/>
+    <Or>
+      <Bug pattern="EI_EXPOSE_REP"/>
+      <Bug pattern="EI_EXPOSE_REP2"/>
+      <Bug pattern="SE_BAD_FIELD"/>
+    </Or>
+  </Match>
+  <Match>
+    <Class name="~dev\.patra\.identity\.domain\.\w+\.(model\.(aggregate|entity)|policy)\..*"/>
+    <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+  </Match>
+  <Match>
+    <Package name="~dev\.patra\.identity\.domain\.\w+\.model\.vo.*"/>
+    <Bug pattern="RV_RETURN_VALUE_IGNORED"/>
+  </Match>
+
   <!-- MS_EXPOSE_REP: 静态工厂单例暴露是设计意图 -->
   <Match>
     <Or>

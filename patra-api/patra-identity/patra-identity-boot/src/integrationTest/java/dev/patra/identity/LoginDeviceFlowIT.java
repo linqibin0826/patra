@@ -2,8 +2,8 @@ package dev.patra.identity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.patra.identity.infra.adapter.session.RedisSessionStore;
-import dev.patra.identity.infra.adapter.session.SessionToken;
+import dev.patra.identity.infra.session.store.RedisSessionStore;
+import dev.patra.identity.infra.session.store.SessionToken;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Map;
