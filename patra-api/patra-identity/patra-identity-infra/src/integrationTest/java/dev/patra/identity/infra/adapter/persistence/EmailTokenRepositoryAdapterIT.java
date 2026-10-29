@@ -73,6 +73,7 @@ class EmailTokenRepositoryAdapterIT {
             .getId();
   }
 
+  /// 条件消费令牌在事务外调用时被拒绝（`MANDATORY`）。
   @Test
   @Transactional(propagation = Propagation.NOT_SUPPORTED)
   @DisplayName("条件消费令牌必须在事务里调用")

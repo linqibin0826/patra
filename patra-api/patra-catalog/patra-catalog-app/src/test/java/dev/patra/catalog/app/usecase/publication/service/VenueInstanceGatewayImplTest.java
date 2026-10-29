@@ -136,6 +136,7 @@ class VenueInstanceGatewayImplTest {
           .insertJournalInstanceIfAbsent(any(VenueInstanceAggregate.class));
     }
 
+    /// 插入因同一卷期已被并发插入而跳过时，重新查询返回已有实例。
     @Test
     @DisplayName("同一卷期已被并发插入时应重新查询返回已存在实例")
     void should_return_existing_instance_when_insert_skipped_by_conflict() {

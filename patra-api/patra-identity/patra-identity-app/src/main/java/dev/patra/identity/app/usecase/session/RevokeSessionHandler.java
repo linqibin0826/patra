@@ -26,6 +26,9 @@ import org.springframework.transaction.support.TransactionOperations;
 /// 4. 清掉这台设备的新设备提醒冷却：本人不认这台设备，它再登录要立即提醒，不等 24 小时。
 ///
 /// 不锁用户行、不判账号状态：只动会话与登录记录，不改用户聚合。不发邮件。
+///
+/// 事务：撤销会话（先 Redis 后登录记录）包在一个短事务里，登录记录一起结束；库失败时会话已撤、记录未结束，
+/// 方向安全。不锁用户行：不改用户状态，没有要挡的并发登录（transaction.md 第 2 节的会话例外）。清提醒冷却在提交之后。
 @Slf4j
 @Component
 @RequiredArgsConstructor

@@ -173,6 +173,7 @@ class BanUserHandlerTest {
     order.verify(tokens).revokeAllActive(42L, NOW);
   }
 
+  /// 撤销会话在锁住用户行的同一事务里：Redis 失败时封禁回滚，并挡住并发登录。
   @Test
   @DisplayName("撤销会话在锁住用户行的同一事务里：Redis 失败时封禁回滚，挡住并发登录")
   void should_terminate_sessions_inside_transaction() {

@@ -47,6 +47,7 @@ class PubmedFileRepositoryAdapterIT {
     dao.deleteAll();
   }
 
+  /// 进度写方法在事务外调用时被拒绝（`MANDATORY`）。
   @Test
   @Transactional(propagation = Propagation.NOT_SUPPORTED)
   @DisplayName("事务外调用写方法被拒绝")

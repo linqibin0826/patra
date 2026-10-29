@@ -32,7 +32,7 @@ class CommentRepositoryAdapterIT extends DiscussionPersistenceITSupport {
   @Autowired private CommentRepository comments;
   @Autowired private DataSource dataSource;
 
-  /// 根评论的根是自己，回复的根是所在楼的根；字段原样读回。
+  /// 楼锁、删除锁、编辑锁在事务外调用时被拒绝（`MANDATORY`）。
   @Test
   @DisplayName("楼锁、删除锁、编辑锁都必须在事务里调用")
   void should_reject_lock_outside_transaction() {
@@ -44,6 +44,7 @@ class CommentRepositoryAdapterIT extends DiscussionPersistenceITSupport {
         .isInstanceOf(IllegalTransactionStateException.class);
   }
 
+  /// 根评论的根是自己，回复的根是所在楼的根；字段原样读回。
   @Test
   void should_insert_root_and_reply() {
     long root = insert(null, null, 1L, "根", List.of(7L), T0);

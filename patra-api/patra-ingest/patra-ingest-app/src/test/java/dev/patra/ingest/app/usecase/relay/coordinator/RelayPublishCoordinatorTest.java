@@ -114,6 +114,21 @@ class RelayPublishCoordinatorTest {
   @DisplayName("发布成功场景")
   class PublishSuccessTests {
 
+    /// MQ 已经收下、标记已发布却失败：不能当成发送失败去改写状态，消息留给租约过期后重新领取。
+    @Test
+    @DisplayName("标记已发布失败时仍算发送成功，不改写为重试或失败")
+    void shouldNotDeferOrFailWhenMarkPublishedFails() throws Exception {
+      doNothing().when(publisherPort).publish(testMessage, testPlan);
+      doThrow(new IllegalStateException("version conflict")).when(relayStore).markPublished(1L, 1L);
+
+      RelayResult result = coordinator.publish(testMessage, testPlan);
+
+      assertThat(result.isSuccess()).isTrue();
+      verify(relayStore, never()).markDeferred(anyLong(), anyLong(), anyInt(), any(), any(), any());
+      verify(relayStore, never()).markFailed(anyLong(), anyLong(), anyInt(), any(), any());
+    }
+
+    /// 发到 MQ 在事务外，标记已发布用一个短事务。
     @Test
     @DisplayName("发到 MQ 在事务外，标记已发布用一个短事务")
     void shouldPublishOutsideTransactionAndMarkInside() throws Exception {

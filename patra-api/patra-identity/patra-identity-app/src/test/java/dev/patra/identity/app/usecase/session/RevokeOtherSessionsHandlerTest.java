@@ -102,6 +102,7 @@ class RevokeOtherSessionsHandlerTest {
     verify(newDeviceThrottle).reset(42L, null);
   }
 
+  /// 撤销会话在事务里，清提醒冷却在提交之后。
   @Test
   @DisplayName("撤销会话在事务里，清提醒冷却（与会话无关的 Redis 写入）在提交之后")
   void should_reset_cooldowns_after_commit() {

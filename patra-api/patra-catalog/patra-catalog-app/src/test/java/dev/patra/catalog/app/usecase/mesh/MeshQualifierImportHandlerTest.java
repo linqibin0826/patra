@@ -137,6 +137,7 @@ class MeshQualifierImportHandlerTest {
   @DisplayName("正常导入流程测试")
   class NormalImportFlowTest {
 
+    /// 下载和解析在事务外，事务只包批量保存。
     @Test
     @DisplayName("下载和解析在事务外，事务只包批量保存")
     void shouldDownloadOutsideTransaction_andSaveInside() {

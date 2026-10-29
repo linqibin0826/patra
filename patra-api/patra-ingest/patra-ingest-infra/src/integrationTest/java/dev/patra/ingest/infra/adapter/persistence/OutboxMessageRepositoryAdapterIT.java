@@ -138,6 +138,7 @@ class OutboxMessageRepositoryAdapterIT {
       assertThat(result).isEmpty();
     }
 
+    /// 领了租约却没标记（进程挂掉或标记失败）的消息，租约过期后被重新领取。
     @Test
     @DisplayName("租约已过期的 PUBLISHING 消息应被重新领取（领租约后进程挂掉或标记失败）")
     void shouldReclaimPublishingMessageWhoseLeaseExpired() {
@@ -154,6 +155,7 @@ class OutboxMessageRepositoryAdapterIT {
       assertThat(result).extracting(OutboxMessage::getId).containsExactly(entity.getId());
     }
 
+    /// 租约未过期的 PUBLISHING 消息不被领取。
     @Test
     @DisplayName("租约未过期的 PUBLISHING 消息不应被领取")
     void shouldNotFetchPublishingMessageWhoseLeaseIsActive() {

@@ -29,7 +29,7 @@ class LibraryRepositoryAdapterIT extends CollectionPersistenceITSupport {
   @Autowired private CollectionRepository collections;
   @Autowired private DataSource dataSource;
 
-  /// 同一 (用户, 对象) 只插一次，第二次不改收藏时间。
+  /// 文献库锁在事务外调用时被拒绝（`MANDATORY`）。
   @Test
   @DisplayName("文献库锁必须在事务里调用")
   void should_reject_lock_outside_transaction() {
@@ -37,6 +37,7 @@ class LibraryRepositoryAdapterIT extends CollectionPersistenceITSupport {
         .isInstanceOf(IllegalTransactionStateException.class);
   }
 
+  /// 同一 (用户, 对象) 只插一次，第二次不改收藏时间。
   @Test
   void should_insert_item_once() {
     assertThat(tx(() -> library.insertItem(U, S1, T0))).isTrue();

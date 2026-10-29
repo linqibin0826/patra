@@ -278,6 +278,7 @@ class PubmedFileImportHandlerTest {
     assertThat(handler.handle(builder.reprocess(true).build()).filesProcessed()).isEqualTo(2);
   }
 
+  /// 进度写入各自在短事务里，Spring Batch 作业在事务外启动。
   @Test
   @DisplayName("进度写入各自在短事务里，作业在事务外启动")
   void should_write_progress_in_own_transactions_and_launch_job_outside() {
@@ -303,6 +304,7 @@ class PubmedFileImportHandlerTest {
             RecordingTransactions.END);
   }
 
+  /// 作业失败时在短事务里标记失败，再抛出。
   @Test
   @DisplayName("作业失败时在短事务里标记失败")
   void should_mark_failed_in_own_transaction_when_job_fails() {

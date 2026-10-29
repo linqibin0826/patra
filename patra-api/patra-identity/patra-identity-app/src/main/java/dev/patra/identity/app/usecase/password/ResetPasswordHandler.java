@@ -139,8 +139,12 @@ public class ResetPasswordHandler implements CommandHandler<ResetPasswordCommand
                       userReadPort.findAccount(userId).orElseThrow(() -> invalid());
                   return new Done(userId, email, account.displayName(), revoked.size());
                 }));
-    // 清零登录失败与会话无关，放在提交之后（transaction.md 第 2 节）
-    loginThrottle.clear(AccountType.USER, done.email());
+    // 清零登录失败与会话无关，放在提交之后（transaction.md 第 2 节）；重设已生效，清理失败只记日志
+    try {
+      loginThrottle.clear(AccountType.USER, done.email());
+    } catch (RuntimeException e) {
+      log.warn("重设密码后清零登录失败计数失败: userId={}", done.userId(), e);
+    }
     // 解析放在事务提交之后、发信之前：纯计算，不占事务
     ClientOrigin origin =
         clientOriginResolver.resolve(RequestOrigin.of(command.clientIp(), command.userAgent()));

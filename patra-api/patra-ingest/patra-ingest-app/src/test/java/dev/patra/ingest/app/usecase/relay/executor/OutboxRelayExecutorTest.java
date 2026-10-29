@@ -41,6 +41,7 @@ class OutboxRelayExecutorTest {
           logCoordinator,
           new RecordingTransactions(events));
 
+  /// 租约在发布前单独提交，中继日志在事务里批量写入。
   @Test
   @DisplayName("租约在发布前单独提交，中继日志在事务里批量写入")
   void should_commit_lease_before_publishing() {

@@ -32,7 +32,7 @@ class PostRepositoryAdapterIT extends PostPersistenceITSupport {
 
   @Autowired private DataSource dataSource;
 
-  /// 全部字段写进去读回来一样；选填全空、没有正文也一样。
+  /// 作者锁在事务外调用时被拒绝（`MANDATORY`）。
   @Test
   @DisplayName("作者锁必须在事务里调用")
   void should_reject_lock_outside_transaction() {
@@ -40,6 +40,7 @@ class PostRepositoryAdapterIT extends PostPersistenceITSupport {
         .isInstanceOf(IllegalTransactionStateException.class);
   }
 
+  /// 全部字段写进去读回来一样；选填全空、没有正文也一样。
   @Test
   void should_round_trip_post_with_all_fields() {
     ExperienceFields full =

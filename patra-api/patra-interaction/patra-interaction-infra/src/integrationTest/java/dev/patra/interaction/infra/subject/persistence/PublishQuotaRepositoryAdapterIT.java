@@ -36,6 +36,7 @@ class PublishQuotaRepositoryAdapterIT extends SubjectRegistryITSupport {
     jdbcTemplate.update("TRUNCATE subject.publish_quota");
   }
 
+  /// 配额锁在事务外调用时被拒绝（`MANDATORY`）。
   @Test
   @DisplayName("配额锁必须在事务里调用")
   void should_reject_lock_outside_transaction() {

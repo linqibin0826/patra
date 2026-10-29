@@ -61,6 +61,7 @@ class UserRepositoryAdapterIT {
   @Autowired private PlatformTransactionManager transactionManager;
   @Autowired private JdbcTemplate jdbcTemplate;
 
+  /// 锁用户行在事务外调用时被拒绝（`MANDATORY`）。
   @Test
   @Transactional(propagation = Propagation.NOT_SUPPORTED)
   @DisplayName("锁用户行必须在事务里调用")

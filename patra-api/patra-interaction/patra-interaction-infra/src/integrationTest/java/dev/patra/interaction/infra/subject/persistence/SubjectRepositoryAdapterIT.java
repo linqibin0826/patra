@@ -38,6 +38,7 @@ class SubjectRepositoryAdapterIT extends SubjectRegistryITSupport {
   @Autowired private SubjectRepository repository;
   @Autowired private DataSource dataSource;
 
+  /// 带身份锚锁的登记在事务外调用时被拒绝（`MANDATORY`）。
   @Test
   @DisplayName("带身份锚锁的登记必须在事务里调用")
   void should_reject_lock_outside_transaction() {

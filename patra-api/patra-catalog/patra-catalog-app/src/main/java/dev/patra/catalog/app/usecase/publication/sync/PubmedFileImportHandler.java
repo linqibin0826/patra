@@ -15,6 +15,7 @@ import dev.patra.catalog.domain.port.source.PubmedFileListingPort;
 import dev.patra.tool.core.error.ApplicationException;
 import dev.patra.tool.cqrs.CommandHandler;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.OptionalInt;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -138,21 +139,22 @@ public class PubmedFileImportHandler
   /// @return 计数
   private PubmedFileCounts processFile(PubmedFileImportCommand command, PubmedFileRef file) {
     String generation = generationFor(command, file);
+    Instant startedAt = clock.instant();
     transactions.executeWithoutResult(
-        status ->
-            progressRepository.markRunning(file, command.scope(), generation, clock.instant()));
+        status -> progressRepository.markRunning(file, command.scope(), generation, startedAt));
     try {
       PubmedFileCounts counts =
           publicationBatchPort.launchFileImport(
               PubmedFileImportParams.of(file, command.baseUrl(), command.scope(), generation));
+      Instant finishedAt = clock.instant();
       transactions.executeWithoutResult(
-          status -> progressRepository.markCompleted(file.fileName(), counts, clock.instant()));
+          status -> progressRepository.markCompleted(file.fileName(), counts, finishedAt));
       log.info("PubMed 文件完成：{}，{}", file.fileName(), counts);
       return counts;
     } catch (RuntimeException e) {
+      Instant failedAt = clock.instant();
       transactions.executeWithoutResult(
-          status ->
-              progressRepository.markFailed(file.fileName(), e.getMessage(), clock.instant()));
+          status -> progressRepository.markFailed(file.fileName(), e.getMessage(), failedAt));
       throw new ApplicationException(
           CatalogErrorCode.CAT_1501, "PubMed 文件处理失败：" + file.fileName() + "，" + e.getMessage(), e);
     }

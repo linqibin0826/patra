@@ -65,6 +65,7 @@ class UserProfileRepositoryAdapterIT {
   @Autowired private UserProfileRepositoryAdapter profiles;
   @Autowired private JdbcTemplate jdbcTemplate;
 
+  /// 资料保存在事务外调用时被拒绝（`MANDATORY`）。
   @Test
   @Transactional(propagation = Propagation.NOT_SUPPORTED)
   void should_reject_save_outside_transaction() {

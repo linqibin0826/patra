@@ -70,6 +70,7 @@ class TaskExecutionHandlerTest {
   @DisplayName("正常流程")
   class HappyPathTests {
 
+    /// 执行阶段（调外部 API）在事务外，完成阶段包在一个短事务里。
     @Test
     @DisplayName("执行阶段（调外部 API）在事务外，完成阶段包在一个短事务里")
     void shouldCompleteInsideTransactionAfterExecutingOutside() {
