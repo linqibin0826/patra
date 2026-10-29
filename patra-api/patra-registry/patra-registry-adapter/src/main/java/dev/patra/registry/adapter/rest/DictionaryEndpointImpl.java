@@ -1,9 +1,9 @@
 package dev.patra.registry.adapter.rest;
 
 import dev.patra.registry.adapter.rest.converter.DictionaryApiConverter;
-import dev.patra.registry.api.dto.dict.DictionaryResolveReq;
-import dev.patra.registry.api.dto.dict.DictionaryResolveResp;
-import dev.patra.registry.api.endpoint.DictionaryEndpoint;
+import dev.patra.registry.api.dictionary.dto.DictionaryResolveReq;
+import dev.patra.registry.api.dictionary.dto.DictionaryResolveResp;
+import dev.patra.registry.api.dictionary.endpoint.DictionaryEndpoint;
 import dev.patra.registry.app.service.DictionaryQueryService;
 import dev.patra.registry.domain.model.read.dictionary.DictionaryResolveQuery;
 import jakarta.validation.Valid;

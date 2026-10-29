@@ -2,7 +2,7 @@ package dev.patra.registry.adapter.rest.converter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.patra.registry.api.dto.dict.DictionaryResolveResp;
+import dev.patra.registry.api.dictionary.dto.DictionaryResolveResp;
 import dev.patra.registry.domain.model.read.dictionary.DictionaryResolveItemQuery;
 import dev.patra.registry.domain.model.read.dictionary.DictionaryResolveQuery;
 import dev.patra.registry.domain.model.read.dictionary.DictionaryResolveStatus;

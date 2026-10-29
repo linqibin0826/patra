@@ -14,8 +14,8 @@ import dev.patra.ingest.expr.compiler.snapshot.RegistryRuleSnapshotLoader;
 import dev.patra.ingest.expr.compiler.snapshot.RuleSnapshotLoader;
 import dev.patra.ingest.expr.compiler.snapshot.convert.SnapshotAssembler;
 import dev.patra.ingest.expr.compiler.transform.TransformRegistry;
-import dev.patra.registry.api.endpoint.ExprEndpoint;
-import dev.patra.registry.api.endpoint.ProvenanceEndpoint;
+import dev.patra.registry.api.expr.endpoint.ExprEndpoint;
+import dev.patra.registry.api.provenance.endpoint.ProvenanceEndpoint;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -86,8 +86,8 @@ public class ExprCompilerAutoConfiguration {
   @ConditionalOnMissingBean(RuleSnapshotLoader.class)
   @ConditionalOnClass(
       name = {
-        "dev.patra.registry.api.endpoint.ProvenanceEndpoint",
-        "dev.patra.registry.api.endpoint.ExprEndpoint"
+        "dev.patra.registry.api.provenance.endpoint.ProvenanceEndpoint",
+        "dev.patra.registry.api.expr.endpoint.ExprEndpoint"
       })
   @ConditionalOnProperty(
       prefix = "patra.ingest.expr.compiler.registry-api",

@@ -7,9 +7,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import dev.patra.registry.adapter.rest.converter.DictionaryApiConverter;
-import dev.patra.registry.api.dto.dict.DictionaryResolveItemResp;
-import dev.patra.registry.api.dto.dict.DictionaryResolveReq;
-import dev.patra.registry.api.dto.dict.DictionaryResolveResp;
+import dev.patra.registry.api.dictionary.dto.DictionaryResolveItemResp;
+import dev.patra.registry.api.dictionary.dto.DictionaryResolveReq;
+import dev.patra.registry.api.dictionary.dto.DictionaryResolveResp;
 import dev.patra.registry.app.service.DictionaryQueryService;
 import dev.patra.registry.domain.model.read.dictionary.DictionaryResolveItemQuery;
 import dev.patra.registry.domain.model.read.dictionary.DictionaryResolveQuery;

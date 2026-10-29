@@ -2,9 +2,9 @@ package dev.patra.registry.adapter.rest;
 
 import dev.patra.common.ProvenanceCode;
 import dev.patra.registry.adapter.rest.converter.ProvenanceApiConverter;
-import dev.patra.registry.api.dto.provenance.ProvenanceConfigResp;
-import dev.patra.registry.api.dto.provenance.ProvenanceResp;
-import dev.patra.registry.api.endpoint.ProvenanceEndpoint;
+import dev.patra.registry.api.provenance.dto.ProvenanceConfigResp;
+import dev.patra.registry.api.provenance.dto.ProvenanceResp;
+import dev.patra.registry.api.provenance.endpoint.ProvenanceEndpoint;
 import dev.patra.registry.app.service.ProvenanceQueryService;
 import dev.patra.registry.domain.exception.provenance.ProvenanceNotFoundException;
 import java.time.Instant;

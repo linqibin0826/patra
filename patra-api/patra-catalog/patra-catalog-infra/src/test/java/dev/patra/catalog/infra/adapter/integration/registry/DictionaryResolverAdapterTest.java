@@ -8,10 +8,10 @@ import static org.mockito.Mockito.when;
 
 import dev.patra.catalog.domain.model.enums.DictionaryType;
 import dev.patra.catalog.domain.model.vo.common.SourceStandard;
-import dev.patra.registry.api.dto.dict.DictionaryResolveItemResp;
-import dev.patra.registry.api.dto.dict.DictionaryResolveReq;
-import dev.patra.registry.api.dto.dict.DictionaryResolveResp;
-import dev.patra.registry.api.endpoint.DictionaryEndpoint;
+import dev.patra.registry.api.dictionary.dto.DictionaryResolveItemResp;
+import dev.patra.registry.api.dictionary.dto.DictionaryResolveReq;
+import dev.patra.registry.api.dictionary.dto.DictionaryResolveResp;
+import dev.patra.registry.api.dictionary.endpoint.DictionaryEndpoint;
 import dev.patra.tool.core.error.remote.RemoteCallException;
 import java.util.List;
 import java.util.Map;

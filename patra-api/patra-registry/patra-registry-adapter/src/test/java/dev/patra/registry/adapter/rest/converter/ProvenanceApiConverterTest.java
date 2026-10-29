@@ -2,14 +2,14 @@ package dev.patra.registry.adapter.rest.converter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.patra.registry.api.dto.provenance.BatchingConfigResp;
-import dev.patra.registry.api.dto.provenance.HttpConfigResp;
-import dev.patra.registry.api.dto.provenance.PaginationConfigResp;
-import dev.patra.registry.api.dto.provenance.ProvenanceConfigResp;
-import dev.patra.registry.api.dto.provenance.ProvenanceResp;
-import dev.patra.registry.api.dto.provenance.RateLimitConfigResp;
-import dev.patra.registry.api.dto.provenance.RetryConfigResp;
-import dev.patra.registry.api.dto.provenance.WindowOffsetResp;
+import dev.patra.registry.api.provenance.dto.BatchingConfigResp;
+import dev.patra.registry.api.provenance.dto.HttpConfigResp;
+import dev.patra.registry.api.provenance.dto.PaginationConfigResp;
+import dev.patra.registry.api.provenance.dto.ProvenanceConfigResp;
+import dev.patra.registry.api.provenance.dto.ProvenanceResp;
+import dev.patra.registry.api.provenance.dto.RateLimitConfigResp;
+import dev.patra.registry.api.provenance.dto.RetryConfigResp;
+import dev.patra.registry.api.provenance.dto.WindowOffsetResp;
 import dev.patra.registry.domain.model.read.provenance.BatchingConfigQuery;
 import dev.patra.registry.domain.model.read.provenance.HttpConfigQuery;
 import dev.patra.registry.domain.model.read.provenance.PaginationConfigQuery;

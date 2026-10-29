@@ -16,7 +16,7 @@ import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import dev.patra.catalog.domain.model.enums.DictionaryType;
 import dev.patra.catalog.domain.model.vo.common.SourceStandard;
-import dev.patra.registry.api.endpoint.DictionaryEndpoint;
+import dev.patra.registry.api.dictionary.endpoint.DictionaryEndpoint;
 import dev.patra.tool.httpclient.autoconfigure.HttpClientProperties;
 import dev.patra.tool.httpclient.error.ProblemDetailErrorHandler;
 import java.net.http.HttpClient;

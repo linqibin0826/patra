@@ -3,7 +3,7 @@ package dev.patra.ingest.infra.integration.registry.converter;
 import static org.assertj.core.api.Assertions.*;
 
 import dev.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
-import dev.patra.registry.api.dto.provenance.*;
+import dev.patra.registry.api.provenance.dto.*;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

@@ -1,10 +1,10 @@
 package dev.patra.registry.adapter.rest.converter;
 
-import dev.patra.registry.api.dto.expr.ApiParamMappingResp;
-import dev.patra.registry.api.dto.expr.ExprCapabilityResp;
-import dev.patra.registry.api.dto.expr.ExprFieldResp;
-import dev.patra.registry.api.dto.expr.ExprRenderRuleResp;
-import dev.patra.registry.api.dto.expr.ExprSnapshotResp;
+import dev.patra.registry.api.expr.dto.ApiParamMappingResp;
+import dev.patra.registry.api.expr.dto.ExprCapabilityResp;
+import dev.patra.registry.api.expr.dto.ExprFieldResp;
+import dev.patra.registry.api.expr.dto.ExprRenderRuleResp;
+import dev.patra.registry.api.expr.dto.ExprSnapshotResp;
 import dev.patra.registry.domain.model.read.expr.ApiParamMappingQuery;
 import dev.patra.registry.domain.model.read.expr.ExprCapabilityQuery;
 import dev.patra.registry.domain.model.read.expr.ExprFieldQuery;

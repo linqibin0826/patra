@@ -8,7 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import dev.patra.registry.adapter.rest.converter.ExprApiConverter;
-import dev.patra.registry.api.dto.expr.ExprSnapshotResp;
+import dev.patra.registry.api.expr.dto.ExprSnapshotResp;
 import dev.patra.registry.app.service.ExprQueryService;
 import dev.patra.registry.domain.model.read.expr.ExprSnapshotQuery;
 import java.time.Instant;
