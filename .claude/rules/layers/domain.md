@@ -1,5 +1,5 @@
 ---
-paths: patra-*/*-domain/**/*.java
+paths: patra-api/*/*-domain/**/*.java
 ---
 
 # Domain 层开发规范

@@ -1,5 +1,5 @@
 ---
-paths: patra-*/*-adapter/**/*.java
+paths: patra-api/*/*-adapter/**/*.java
 ---
 
 # Adapter 层开发规范

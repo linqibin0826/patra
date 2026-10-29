@@ -1,5 +1,5 @@
 ---
-paths: patra-*/*-app/**/*.java
+paths: patra-api/*/*-app/**/*.java
 ---
 
 # Application 层开发规范

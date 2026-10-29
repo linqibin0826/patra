@@ -1,5 +1,5 @@
 ---
-paths: patra-*/*-api/**/*.java
+paths: patra-api/*/*-api/**/*.java
 ---
 
 # API 模块开发规范

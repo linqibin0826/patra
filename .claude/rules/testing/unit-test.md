@@ -1,5 +1,5 @@
 ---
-paths: patra-*/*-domain/**/src/test/**/*Test.java, patra-*/*-app/**/src/test/**/*Test.java
+paths: patra-api/*/*-domain/**/src/test/**/*Test.java, patra-api/*/*-app/**/src/test/**/*Test.java
 ---
 
 # 单元测试规范

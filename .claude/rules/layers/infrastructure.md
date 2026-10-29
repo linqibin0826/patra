@@ -1,5 +1,5 @@
 ---
-paths: patra-*/*-infra/**/*.java
+paths: patra-api/*/*-infra/**/*.java
 ---
 
 # Infrastructure 层开发规范

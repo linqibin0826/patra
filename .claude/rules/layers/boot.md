@@ -1,5 +1,5 @@
 ---
-paths: patra-*/*-boot/**/*.java
+paths: patra-api/*/*-boot/**/*.java
 ---
 
 # Boot 模块开发规范

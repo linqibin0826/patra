@@ -1,5 +1,5 @@
 ---
-paths: patra-*/*-app/**/*.java, patra-*/*-infra/**/*.java, patra-*/*-adapter/**/*.java
+paths: patra-api/*/*-app/**/*.java, patra-api/*/*-infra/**/*.java, patra-api/*/*-adapter/**/*.java
 ---
 
 # 可观测性规范

@@ -1,5 +1,5 @@
 ---
-paths: patra-*/*-infra/**/*.java, patra-tool/patra-tool-jpa/**/*.java
+paths: patra-api/*/*-infra/**/*.java, patra-tool/patra-tool-jpa/**/*.java
 ---
 
 # JPA 使用规范
