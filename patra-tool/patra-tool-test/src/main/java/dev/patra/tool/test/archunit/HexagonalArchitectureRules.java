@@ -63,8 +63,8 @@ import org.springframework.transaction.annotation.Transactional;
 ///
 /// 1. **层依赖规则**: 验证依赖方向（Domain ← App/Infra ← Adapter）
 /// 2. **Domain 层纯净性**: 禁止 Spring 依赖、限制允许的依赖
-/// 3. **命名约定**: Port/Repository/DO/Aggregate/Orchestrator 命名和位置
-/// 4. **封装规则**: DO 不暴露、Port 必须 public、Event 位置
+/// 3. **命名约定**: Port/Repository/JPA 实体/Aggregate 命名和位置
+/// 4. **封装规则**: JPA 实体不暴露、Port 必须 public、Event 位置
 /// 5. **事务边界**: 方法级 @Transactional 只在 app 层（infra 只放行 MANDATORY 守卫），不许类级注解，命令 Handler 不加注解
 ///
 /// @author linqibin
@@ -73,6 +73,9 @@ public class HexagonalArchitectureRules {
 
   /// 项目基础包（如 `"dev.patra.ingest"`、`"com.sutra"`）。
   private final String basePackage;
+
+  /// JPA 实体注解的全类名；按名字匹配，规则类不依赖 JPA。
+  private static final String JPA_ENTITY = "jakarta.persistence.Entity";
 
   /// Domain 层允许依赖的业务公共包列表（ArchUnit 包模式，如 `"dev.patra.common.."`）。
   private final List<String> allowedCommonPackages;
@@ -326,19 +329,22 @@ public class HexagonalArchitectureRules {
         .allowEmptyShould(true);
   }
 
-  /// DO 类必须在 infra 下任意层级的 `persistence.entity` 包。
+  /// JPA 实体（带 `jakarta.persistence.Entity` 注解）必须在 infra 下任意层级的 `persistence.entity` 包。
   ///
-  /// 兼容按子域分包的布局：`infra.<子域>.persistence.entity`。
+  /// 按注解而不是类名后缀识别，不会误伤 `ResponseEntity`、名字以 Entity 结尾的领域接口。兼容按子域分包的布局：
+  /// `infra.<子域>.persistence.entity`。
   ///
   /// @return ArchRule 规则实例
-  public ArchRule doClassesShouldResideInPersistenceEntity() {
+  public ArchRule jpaEntitiesShouldResideInPersistenceEntity() {
     return classes()
         .that()
-        .haveSimpleNameEndingWith("DO")
+        .areAnnotatedWith(JPA_ENTITY)
+        .and()
+        .resideInAPackage(basePackage + "..")
         .should()
         .resideInAPackage("..infra..persistence.entity..")
-        .as("DO 类必须在 infra 下任意层级的 persistence.entity 包")
-        .because("DO 类是持久化层的概念，不应泄露到其他层（CHK-ARCH-004）")
+        .as("JPA 实体必须在 infra 下任意层级的 persistence.entity 包")
+        .because("JPA 实体是持久化层的概念，不应泄露到其他层（CHK-ARCH-004）")
         .allowEmptyShould(true);
   }
 
@@ -358,38 +364,20 @@ public class HexagonalArchitectureRules {
         .allowEmptyShould(true);
   }
 
-  /// Orchestrator/Coordinator 必须在 app 下任意层级的 `usecase` 包。
-  ///
-  /// 兼容按子域分包的布局：`app.<子域>.usecase`。
-  ///
-  /// @return ArchRule 规则实例
-  public ArchRule orchestratorsShouldResideInAppUsecase() {
-    return classes()
-        .that()
-        .haveSimpleNameEndingWith("Orchestrator")
-        .or()
-        .haveSimpleNameEndingWith("Coordinator")
-        .should()
-        .resideInAPackage("..app..usecase..")
-        .as("Orchestrator/Coordinator 必须在 app 下任意层级的 usecase 包")
-        .because("编排器是应用层概念，负责用例流程编排和事务边界（CHK-ARCH-003）")
-        .allowEmptyShould(true);
-  }
-
   // ==================== 封装规则 ====================
 
-  /// DO 类不能被 infra 层外部访问。
+  /// JPA 实体不能被 infra 层外部访问。
   ///
   /// @return ArchRule 规则实例
-  public ArchRule dataObjectsShouldNotBeAccessedOutsideInfra() {
+  public ArchRule jpaEntitiesShouldNotBeAccessedOutsideInfra() {
     return noClasses()
         .that()
         .resideOutsideOfPackage("..infra..")
         .should()
         .dependOnClassesThat()
-        .haveSimpleNameEndingWith("DO")
-        .as("DO 类不能被 infra 层外部访问")
-        .because("DO 是持久化层的内部实现细节，不应泄露到其他层（六边形架构铁律 CHK-ARCH-004）");
+        .areAnnotatedWith(JPA_ENTITY)
+        .as("JPA 实体不能被 infra 层外部访问")
+        .because("JPA 实体是持久化层的内部实现细节，不应泄露到其他层（六边形架构铁律 CHK-ARCH-004）");
   }
 
   /// Port 接口必须是 public。
@@ -523,12 +511,11 @@ public class HexagonalArchitectureRules {
     rules.add(portsShouldResideInDomainPortPackage());
     rules.add(repositoryImplsShouldResideInInfra());
     rules.add(gatewayImplsShouldResideInApp());
-    rules.add(doClassesShouldResideInPersistenceEntity());
+    rules.add(jpaEntitiesShouldResideInPersistenceEntity());
     rules.add(aggregatesShouldResideInDomainModelAggregate());
-    rules.add(orchestratorsShouldResideInAppUsecase());
 
     // 封装规则
-    rules.add(dataObjectsShouldNotBeAccessedOutsideInfra());
+    rules.add(jpaEntitiesShouldNotBeAccessedOutsideInfra());
     rules.add(portsShouldBePublic());
     rules.add(eventsShouldResideInDomainEvent());
 

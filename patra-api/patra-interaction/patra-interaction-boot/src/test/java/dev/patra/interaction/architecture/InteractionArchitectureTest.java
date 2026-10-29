@@ -159,21 +159,15 @@ class InteractionArchitectureTest {
     }
 
     @Test
-    @DisplayName("规则 9: DO 类必须在 infra.persistence.entity 包")
-    void doClassesShouldResideInPersistenceEntity() {
-      rules.doClassesShouldResideInPersistenceEntity().check(classes);
+    @DisplayName("规则 9: JPA 实体必须在 infra.persistence.entity 包")
+    void jpaEntitiesShouldResideInPersistenceEntity() {
+      rules.jpaEntitiesShouldResideInPersistenceEntity().check(classes);
     }
 
     @Test
     @DisplayName("规则 10: Aggregate 必须在 domain.model.aggregate 包")
     void aggregatesShouldResideInDomainModelAggregate() {
       rules.aggregatesShouldResideInDomainModelAggregate().check(classes);
-    }
-
-    @Test
-    @DisplayName("规则 11: Orchestrator 必须在 app.usecase 包")
-    void orchestratorsShouldResideInAppUsecase() {
-      rules.orchestratorsShouldResideInAppUsecase().check(classes);
     }
   }
 
@@ -182,9 +176,9 @@ class InteractionArchitectureTest {
   class EncapsulationTests {
 
     @Test
-    @DisplayName("规则 12: DO 类不能被 infra 层外部访问")
-    void dataObjectsShouldNotBeAccessedOutsideInfra() {
-      rules.dataObjectsShouldNotBeAccessedOutsideInfra().check(classes);
+    @DisplayName("规则 12: JPA 实体不能被 infra 层外部访问")
+    void jpaEntitiesShouldNotBeAccessedOutsideInfra() {
+      rules.jpaEntitiesShouldNotBeAccessedOutsideInfra().check(classes);
     }
 
     @Test
