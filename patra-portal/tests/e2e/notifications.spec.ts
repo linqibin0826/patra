@@ -10,6 +10,7 @@ import {
   commentMenu,
   commentWith,
   deleteOwn,
+  openComposer,
   openDiscussion,
   PUBLISH_GAP_MS,
   pickPaper,
@@ -136,12 +137,7 @@ test.describe("提醒", () => {
         await test.step("联想里没有主页不可见的 X；完整输入 X 的用户名照样 @ 到", async () => {
           await waitSince(b.page, bAt, PUBLISH_GAP_MS);
           const section = await openDiscussion(b.page, paperId);
-          const collapsed = section.getByRole("button", {
-            name: "写下你对这篇文献的看法、疑问或补充证据…",
-          });
-          if (await collapsed.isVisible()) {
-            await collapsed.click();
-          }
+          const box = await openComposer(section, "写下你对这篇文献的看法、疑问或补充证据…");
           // 联想弹层在没有结果且查询词超过 6 个字时自动收起，界面上搜不到完整用户名：直接问联想用的门户接口
           const suggest = async (q: string) => {
             const res = await b.page.request.get(
@@ -152,8 +148,6 @@ test.describe("提醒", () => {
           };
           expect(await suggest(a.username)).toContain(a.username);
           expect(await suggest(xName)).not.toContain(xName);
-          await waitForTakeover(b.page, '#discussion [role="combobox"]');
-          const box = section.getByRole("combobox", { name: "评论内容" }).first();
           await box.fill(`${B2} 请教 @${xName} `);
           await section.getByRole("button", { name: "发表", exact: true }).click();
           await expect(commentWith(section, B2)).toBeVisible(ROUND_TRIP);
@@ -333,11 +327,8 @@ test.describe("提醒 · 投稿经验", () => {
       return section;
     };
     const post = async (section: Awaited<ReturnType<typeof openReplies>>, body: string) => {
-      const collapsed = section.getByRole("button", { name: "对这条投稿经验有疑问？在这里追问…" });
-      if (await collapsed.isVisible()) {
-        await collapsed.click();
-      }
-      await section.getByRole("combobox", { name: "评论内容" }).first().fill(body);
+      const box = await openComposer(section, "对这条投稿经验有疑问？在这里追问…");
+      await box.fill(body);
       await section.getByRole("button", { name: "发表", exact: true }).click();
     };
 
