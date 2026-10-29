@@ -1,4 +1,4 @@
-package dev.patra.interaction.app.notification.eventhandler;
+package dev.patra.interaction.app.notification.listener;
 
 import dev.patra.tool.core.error.ApplicationException;
 import dev.patra.tool.core.error.codes.HttpStdErrors;

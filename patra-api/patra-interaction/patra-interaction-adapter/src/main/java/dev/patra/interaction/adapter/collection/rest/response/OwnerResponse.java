@@ -1,7 +1,7 @@
 package dev.patra.interaction.adapter.collection.rest.response;
 
-import dev.patra.interaction.domain.subject.model.user.AccountState;
-import dev.patra.interaction.domain.subject.model.user.UserCard;
+import dev.patra.interaction.domain.subject.model.enums.AccountState;
+import dev.patra.interaction.domain.subject.model.read.UserCard;
 import lombok.Builder;
 
 /// 收藏夹所有者（来自 identity 的摘要）。已注销时 `username`、`displayName`、`avatarUrl` 为 `null`，门户显示「已注销

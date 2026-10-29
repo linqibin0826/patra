@@ -12,7 +12,7 @@ import dev.patra.interaction.domain.collection.model.enums.CollectionVisibility;
 import dev.patra.interaction.domain.collection.model.vo.CollectionId;
 import dev.patra.interaction.domain.collection.port.read.LibraryReadPort;
 import dev.patra.interaction.domain.subject.exception.UserDirectoryUnavailableException;
-import dev.patra.interaction.domain.subject.model.user.AccountState;
+import dev.patra.interaction.domain.subject.model.enums.AccountState;
 import dev.patra.interaction.domain.subject.port.user.UserDirectoryPort;
 import java.util.List;
 import java.util.Map;

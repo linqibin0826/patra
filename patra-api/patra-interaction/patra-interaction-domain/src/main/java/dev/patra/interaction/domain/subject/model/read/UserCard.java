@@ -1,5 +1,6 @@
-package dev.patra.interaction.domain.subject.model.user;
+package dev.patra.interaction.domain.subject.model.read;
 
+import dev.patra.interaction.domain.subject.model.enums.AccountState;
 import lombok.Builder;
 
 /// identity 给的一个用户的摘要。已注销的是占位：`username`、`displayName`、`avatarUrl` 为 `null`。

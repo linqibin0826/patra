@@ -238,7 +238,7 @@ public final class SubdomainArchitectureRules {
 
   /// 子域下的包必须落在分包模板的白名单里（模板见 `.claude/rules/tech/package-layout.md`）。
   ///
-  /// 子域根包本身不放类；`usecase.<用例族>`、`port.<协作者>`、infra 的协作者包名字自定，
+  /// 子域根包本身不放类（`package-info` 除外）；`usecase.<用例族>`、`port.<协作者>`、infra 的协作者包名字自定，
   /// infra 协作者包是否有同名端口由 {@link #infraPackagesMatchPorts} 管。
   ///
   /// @return ArchRule 规则实例
@@ -301,6 +301,9 @@ public final class SubdomainArchitectureRules {
     return new ArchCondition<>("落在分包模板的白名单里") {
       @Override
       public void check(JavaClass javaClass, ConditionEvents events) {
+        if (javaClass.getSimpleName().equals("package-info")) {
+          return;
+        }
         String packageName = javaClass.getPackageName();
         String layer = layerOf(packageName).orElseThrow();
         String subdomainPackage =

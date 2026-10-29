@@ -4,8 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.interaction.domain.notification.model.vo.ExcerptText;
 import dev.patra.interaction.domain.notification.model.vo.RenderedExcerpt;
-import dev.patra.interaction.domain.subject.model.user.AccountState;
-import dev.patra.interaction.domain.subject.model.user.UserCard;
+import dev.patra.interaction.domain.subject.model.enums.AccountState;
+import dev.patra.interaction.domain.subject.model.read.UserCard;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 

@@ -1,4 +1,4 @@
-package dev.patra.interaction.domain.subject.model.user;
+package dev.patra.interaction.domain.subject.model.enums;
 
 /// identity 里的账号状态（与 identity 的 `AccountStatus` 按名字一一对应）。
 public enum AccountState {

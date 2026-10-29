@@ -1,4 +1,4 @@
-package dev.patra.interaction.domain.subject.model.source;
+package dev.patra.interaction.domain.subject.model.enums;
 
 /// 对象在来源（catalog）里的状态。
 public enum SourceState {

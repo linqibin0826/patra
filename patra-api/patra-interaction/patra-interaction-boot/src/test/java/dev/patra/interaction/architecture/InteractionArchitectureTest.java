@@ -1,7 +1,5 @@
 package dev.patra.interaction.architecture;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
@@ -45,9 +43,6 @@ class InteractionArchitectureTest {
   /// 声明的全部子域：v0.14 起讨论、投稿经验、提醒（PAP-121 ~ 123）一次写进来，各子域随第一批代码建自己的包。
   private static final List<String> SUBDOMAINS =
       List.of(FOUNDATION, "collection", "discussion", "post", "notification");
-
-  /// 按子域分包的四层（api 模块还没有类）。
-  private static final List<String> LAYERS = List.of("domain", "app", "infra", "adapter");
 
   /// 子域边界规则。依赖方向按 v0.14 决策 A：提醒只经事件契约依赖讨论与投稿经验（PAP-127 经验删除即删提醒），
   /// 其余子域只依赖底座。
@@ -262,24 +257,10 @@ class InteractionArchitectureTest {
   @DisplayName("第七类：子域边界规则")
   class SubdomainBoundaryTests {
 
-    /// 底座四层必须都被导入：导入条件写错时这里先红，其余规则才不会对空集合判通过。其余子域只要有一层出现，
-    /// 四层就都要在：新子域谁先加代码谁补齐四层的包，不用改这条测试，也不建没有代码的空包。
     @Test
-    @DisplayName("规则 22b: 底座四层都在；其余子域出现在任一层时四层都在")
-    void everySubdomainPackageShouldBeImported() {
-      for (String subdomain : SUBDOMAINS) {
-        boolean present =
-            subdomain.equals(FOUNDATION)
-                || LAYERS.stream()
-                    .anyMatch(layer -> classes.containPackage(packageOf(layer, subdomain)));
-        if (present) {
-          for (String layer : LAYERS) {
-            assertThat(classes.containPackage(packageOf(layer, subdomain)))
-                .as(packageOf(layer, subdomain))
-                .isTrue();
-          }
-        }
-      }
+    @DisplayName("规则 22b: 每个声明的子域在 domain 层都有类")
+    void everyDeclaredSubdomainShouldHaveDomainPackage() {
+      subdomainRules.everyDeclaredSubdomainHasDomainPackage().check(classes);
     }
 
     @Test
@@ -312,13 +293,16 @@ class InteractionArchitectureTest {
       subdomainRules.crossSubdomainDependenciesAreDeclared().check(classes);
     }
 
-    /// 某层某子域的包名。
-    ///
-    /// @param layer 层
-    /// @param subdomain 子域
-    /// @return 包名
-    private static String packageOf(String layer, String subdomain) {
-      return "dev.patra.interaction." + layer + "." + subdomain;
+    @Test
+    @DisplayName("规则 28: 子域下的包落在分包模板的白名单里")
+    void componentPackagesShouldFollowTemplate() {
+      subdomainRules.componentPackagesFollowTemplate().check(classes);
+    }
+
+    @Test
+    @DisplayName("规则 29: infra 协作者包与本子域端口包同名")
+    void infraPackagesShouldMatchPorts() {
+      subdomainRules.infraPackagesMatchPorts().check(classes);
     }
   }
 }

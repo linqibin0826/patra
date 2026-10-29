@@ -5,7 +5,7 @@ import dev.patra.interaction.domain.discussion.model.read.MentionTarget;
 import dev.patra.interaction.domain.discussion.policy.DiscussionLimits;
 import dev.patra.interaction.domain.discussion.policy.MentionSyntax;
 import dev.patra.interaction.domain.discussion.port.mention.MentionDirectoryPort;
-import dev.patra.interaction.domain.subject.model.user.AccountState;
+import dev.patra.interaction.domain.subject.model.enums.AccountState;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;

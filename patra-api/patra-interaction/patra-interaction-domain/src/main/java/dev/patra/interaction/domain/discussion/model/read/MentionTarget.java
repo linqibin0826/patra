@@ -1,6 +1,6 @@
 package dev.patra.interaction.domain.discussion.model.read;
 
-import dev.patra.interaction.domain.subject.model.user.AccountState;
+import dev.patra.interaction.domain.subject.model.enums.AccountState;
 
 /// identity 把一个 `@用户名` 解析到的人：当前用户名或 90 天保留期内旧名的主人。
 ///

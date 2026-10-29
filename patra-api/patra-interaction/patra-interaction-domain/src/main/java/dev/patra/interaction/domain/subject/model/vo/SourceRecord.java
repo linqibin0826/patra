@@ -1,7 +1,6 @@
-package dev.patra.interaction.domain.subject.model.source;
+package dev.patra.interaction.domain.subject.model.vo;
 
-import dev.patra.interaction.domain.subject.model.vo.NaturalKey;
-import dev.patra.interaction.domain.subject.model.vo.SubjectSnapshot;
+import dev.patra.interaction.domain.subject.model.enums.SourceState;
 
 /// 来源对一个对象的解析结果：存在且带身份锚的才会有这条记录。
 ///

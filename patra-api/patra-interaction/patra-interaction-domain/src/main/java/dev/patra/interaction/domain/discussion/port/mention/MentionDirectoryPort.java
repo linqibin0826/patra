@@ -2,7 +2,7 @@ package dev.patra.interaction.domain.discussion.port.mention;
 
 import dev.patra.interaction.domain.discussion.model.read.MentionTarget;
 import dev.patra.interaction.domain.subject.exception.UserDirectoryUnavailableException;
-import dev.patra.interaction.domain.subject.model.user.UserCard;
+import dev.patra.interaction.domain.subject.model.read.UserCard;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;

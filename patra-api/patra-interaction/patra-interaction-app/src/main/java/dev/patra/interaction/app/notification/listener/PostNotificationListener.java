@@ -1,4 +1,4 @@
-package dev.patra.interaction.app.notification.eventhandler;
+package dev.patra.interaction.app.notification.listener;
 
 import dev.patra.interaction.domain.notification.port.repository.NotificationRepository;
 import dev.patra.interaction.domain.post.event.PostDeletedEvent;

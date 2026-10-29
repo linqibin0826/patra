@@ -14,7 +14,7 @@ import dev.patra.interaction.domain.post.port.read.PostReadPort;
 import dev.patra.interaction.domain.post.port.repository.PostRepository;
 import dev.patra.interaction.domain.subject.model.enums.SubjectType;
 import dev.patra.interaction.domain.subject.model.read.SubjectView;
-import dev.patra.interaction.domain.subject.model.user.UserCard;
+import dev.patra.interaction.domain.subject.model.read.UserCard;
 import dev.patra.interaction.domain.subject.model.vo.SubjectId;
 import dev.patra.interaction.domain.subject.port.read.SubjectReadPort;
 import dev.patra.interaction.domain.subject.port.user.UserDirectoryPort;

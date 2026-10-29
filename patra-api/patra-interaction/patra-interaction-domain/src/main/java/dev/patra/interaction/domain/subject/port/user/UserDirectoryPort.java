@@ -1,7 +1,7 @@
 package dev.patra.interaction.domain.subject.port.user;
 
 import dev.patra.interaction.domain.subject.exception.UserDirectoryUnavailableException;
-import dev.patra.interaction.domain.subject.model.user.UserCard;
+import dev.patra.interaction.domain.subject.model.read.UserCard;
 import java.util.Collection;
 import java.util.Map;
 

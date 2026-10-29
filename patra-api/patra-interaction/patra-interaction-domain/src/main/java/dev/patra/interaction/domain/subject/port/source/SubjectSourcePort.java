@@ -2,8 +2,8 @@ package dev.patra.interaction.domain.subject.port.source;
 
 import dev.patra.interaction.domain.subject.exception.SubjectSourceUnavailableException;
 import dev.patra.interaction.domain.subject.model.enums.SubjectType;
-import dev.patra.interaction.domain.subject.model.source.SourceRecord;
 import dev.patra.interaction.domain.subject.model.vo.NaturalKey;
+import dev.patra.interaction.domain.subject.model.vo.SourceRecord;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;

@@ -1,6 +1,6 @@
 package dev.patra.interaction.adapter.notification.rest.response;
 
-import dev.patra.interaction.domain.subject.model.user.UserCard;
+import dev.patra.interaction.domain.subject.model.read.UserCard;
 import lombok.Builder;
 
 /// 触发人名片，与讨论、投稿经验的作者对象同形。主页对收件人不可见时不给用户名与头像。

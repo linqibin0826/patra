@@ -10,7 +10,7 @@ import dev.patra.interaction.domain.notification.port.read.NotificationReadPort;
 import dev.patra.interaction.domain.subject.model.enums.SubjectState;
 import dev.patra.interaction.domain.subject.model.enums.SubjectType;
 import dev.patra.interaction.domain.subject.model.read.SubjectView;
-import dev.patra.interaction.domain.subject.model.user.UserCard;
+import dev.patra.interaction.domain.subject.model.read.UserCard;
 import dev.patra.interaction.domain.subject.model.vo.SubjectId;
 import dev.patra.interaction.domain.subject.model.vo.SubjectSnapshot;
 import dev.patra.interaction.domain.subject.port.read.SubjectReadPort;

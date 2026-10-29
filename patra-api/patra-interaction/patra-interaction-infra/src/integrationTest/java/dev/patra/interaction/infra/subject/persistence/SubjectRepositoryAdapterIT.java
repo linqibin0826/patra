@@ -5,11 +5,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.patra.interaction.domain.subject.model.aggregate.SubjectAggregate;
 import dev.patra.interaction.domain.subject.model.enums.NaturalKeyScheme;
+import dev.patra.interaction.domain.subject.model.enums.SourceState;
 import dev.patra.interaction.domain.subject.model.enums.SubjectState;
 import dev.patra.interaction.domain.subject.model.enums.SubjectType;
-import dev.patra.interaction.domain.subject.model.source.SourceRecord;
-import dev.patra.interaction.domain.subject.model.source.SourceState;
 import dev.patra.interaction.domain.subject.model.vo.NaturalKey;
+import dev.patra.interaction.domain.subject.model.vo.SourceRecord;
 import dev.patra.interaction.domain.subject.model.vo.SubjectOwner;
 import dev.patra.interaction.domain.subject.model.vo.SubjectSnapshot;
 import dev.patra.interaction.domain.subject.port.repository.SubjectRepository;

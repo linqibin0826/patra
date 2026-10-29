@@ -1,4 +1,4 @@
-package dev.patra.interaction.app.notification.eventhandler;
+package dev.patra.interaction.app.notification.listener;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
