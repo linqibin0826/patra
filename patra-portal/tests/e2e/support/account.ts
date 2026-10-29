@@ -24,12 +24,19 @@ export function freshAccount(): Account {
 }
 
 /// 等页面接管 `selector` 指向的元素：React 接管一个元素时，在它上面挂一个以 `__reactProps$` 开头的
-/// 属性。接管之前操作，点链接是浏览器原生的跳转，离开字段也不校验，这里的用例没修好也会通过
+/// 属性。接管之前操作，点链接是浏览器原生的跳转，离开字段也不校验，这里的用例没修好也会通过。
+/// 最多等 60 秒：元素一直不出现（比如收起的编辑器没被点开）时尽快报错，不要干等到整条用例超时
 export async function waitForTakeover(page: Page, selector: string) {
-  await page.waitForFunction((target) => {
-    const element = document.querySelector(target);
-    return element !== null && Object.keys(element).some((key) => key.startsWith("__reactProps$"));
-  }, selector);
+  await page.waitForFunction(
+    (target) => {
+      const element = document.querySelector(target);
+      return (
+        element !== null && Object.keys(element).some((key) => key.startsWith("__reactProps$"))
+      );
+    },
+    selector,
+    { timeout: 60_000 },
+  );
 }
 
 /// 在注册页注册，回到首页（已登录）

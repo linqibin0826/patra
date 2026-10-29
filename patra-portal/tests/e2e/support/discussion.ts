@@ -42,16 +42,23 @@ export function commentWith(section: Locator, text: string): Locator {
 
 /// 在顶部编辑器发表一条根评论（收起态先点开）
 export async function postRoot(section: Locator, body: string): Promise<void> {
-  const collapsed = section.getByRole("button", {
-    name: "写下你对这篇文献的看法、疑问或补充证据…",
-  });
+  const box = await openComposer(section, "写下你对这篇文献的看法、疑问或补充证据…");
+  await box.fill(body);
+  await section.getByRole("button", { name: "发表", exact: true }).click();
+}
+
+/// 打开讨论区顶部的编辑器，返回接管好的输入框。编辑器默认收起成一个按钮（文案 `placeholder`），也可能已经展开：
+/// 先**等到**按钮或输入框之一出现再判断要不要点开——页面刚打开时两者都还没渲染，这时只看一眼就会跳过点击，
+/// 之后再等输入框就永远等不到
+export async function openComposer(section: Locator, placeholder: string): Promise<Locator> {
+  const collapsed = section.getByRole("button", { name: placeholder });
+  const box = section.getByRole("combobox", { name: "评论内容" }).first();
+  await expect(collapsed.or(box).first()).toBeVisible(ROUND_TRIP);
   if (await collapsed.isVisible()) {
     await collapsed.click();
   }
-  const box = section.getByRole("combobox", { name: "评论内容" }).first();
   await waitForTakeover(section.page(), '#discussion [role="combobox"]');
-  await box.fill(body);
-  await section.getByRole("button", { name: "发表", exact: true }).click();
+  return box;
 }
 
 /// 点某条评论的「回复」，在楼里的回复框里写好并提交

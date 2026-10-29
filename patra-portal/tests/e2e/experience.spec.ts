@@ -6,6 +6,7 @@ import {
   register,
   waitForTakeover,
 } from "@tests/e2e/support/account";
+import { openComposer } from "@tests/e2e/support/discussion";
 import {
   days,
   deletePost,
@@ -322,12 +323,8 @@ test.describe("投稿经验", () => {
     await expect(author.getByText("匿名发布 · 只有你知道是你写的")).toBeVisible(ROUND_TRIP);
     const body = `e2e 作者补充 ${Date.now()}`;
     const discussion = author.locator("#discussion");
-    await waitForTakeover(author, '#discussion [role="combobox"], #discussion button');
-    const collapsed = discussion.getByRole("button", { name: "对这条投稿经验有疑问？在这里追问…" });
-    if (await collapsed.isVisible()) {
-      await collapsed.click();
-    }
-    await discussion.getByRole("combobox", { name: "评论内容" }).first().fill(body);
+    const box = await openComposer(discussion, "对这条投稿经验有疑问？在这里追问…");
+    await box.fill(body);
     await discussion.getByRole("button", { name: "发表", exact: true }).click();
     replies.push({ postId: anonymous, body });
     const own = discussion.getByRole("article").filter({ hasText: body });
