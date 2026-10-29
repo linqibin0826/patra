@@ -81,6 +81,21 @@ patra-object-storage/
 - **Gradle 架构检查**: 通过 `checkDomainPurity` 任务强制检查 domain 层纯净性
 - **依赖方向**: 所有模块均指向 domain,确保业务逻辑独立于框架
 
+### 分包
+
+模块内先按子域、再按组件类型分包，按全项目统一的分包规范（`.claude/rules/tech/package-layout.md`）。本服务只有一个子域 `file`，同时声明为底座：
+
+```
+dev.patra.objectstorage.domain.file    model.{aggregate, vo, enums}、port.repository
+dev.patra.objectstorage.app.file       usecase.recordupload
+dev.patra.objectstorage.infra.file     persistence(.entity | .dao | .mapper)
+dev.patra.objectstorage.adapter.file   internal（StorageEndpointImpl，实现 /_internal 契约）
+dev.patra.objectstorage.api.file       endpoint、dto
+dev.patra.objectstorage                启动类
+```
+
+`ObjectStorageArchitectureTest` 执行 `HexagonalArchitectureRules`、`TestingRules` 与 `SubdomainArchitectureRules` 三组规则，层下出现未声明的子域或白名单外的包都会让 `check` 失败。
+
 ## 领域模型
 
 ### 聚合根

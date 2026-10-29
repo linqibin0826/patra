@@ -642,7 +642,7 @@
 
   <!-- StorageEndpointImpl.resolveIp: null 表示"解析失败"，语义上区别于"无 IP" -->
   <Match>
-    <Class name="dev.patra.objectstorage.adapter.rest.internal.StorageEndpointImpl"/>
+    <Class name="dev.patra.objectstorage.adapter.file.internal.StorageEndpointImpl"/>
     <Bug pattern="PZLA_PREFER_ZERO_LENGTH_ARRAYS"/>
   </Match>
 
