@@ -256,7 +256,7 @@ export interface PaperDetail {
 }
 
 /**
- * 后端 `dev.patra.catalog.domain.query.PageResult` 的序列化形态。
+ * 后端 `dev.patra.catalog.domain.portal.model.read.PageResult` 的序列化形态。
  * 字段：page / pageSize / total / totalPages / items（非 content/totalElements）。
  */
 export interface PageResult<T> {

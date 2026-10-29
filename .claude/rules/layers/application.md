@@ -17,6 +17,8 @@ paths: patra-api/*/*-app/**/*.java
 | 处理器 | `{Action}{Entity}Handler` | `CreateUserHandler` |
 | 结果对象 | `{Action}{Entity}Result` | `CreateUserResult` |
 
+三者放同一个包 `app.{子域}.usecase.{用例族}`，不再分 `command/`、`dto/` 子包（见 [package-layout.md](../tech/package-layout.md)）。
+
 ## 事务管理
 
 - Application 层是**唯一**划定事务边界的层级（infra 只允许 `MANDATORY` 守卫）
@@ -35,7 +37,7 @@ paths: patra-api/*/*-app/**/*.java
 | 组件 | 位置 | 说明 |
 |------|------|------|
 | `{Entity}Gateway` | Domain 层 `port/` | 接口定义 |
-| `{Entity}GatewayImpl` | App 层 `usecase/{domain}/service/` | 实现类 |
+| `{Entity}GatewayImpl` | `app.{子域}.service` | 实现类 |
 
 **使用场景**：
 - Spring Batch Processor 需要 findOrCreate 语义
@@ -49,8 +51,8 @@ CQRS 读端查询服务，不走 CommandBus，直接被 Controller 注入。
 
 | 组件 | 位置 | 说明 |
 |------|------|------|
-| `{Domain}QueryService` | `usecase/{domain}/query/` | 具体类，无接口 |
-| `{Domain}ListQuery` | `usecase/{domain}/query/dto/` | 查询参数 DTO |
+| `{Domain}QueryService` | `app.{子域}.usecase.query` | 具体类，无接口 |
+| `{Domain}ListQuery` | `app.{子域}.usecase.query` | 查询参数 DTO，与 QueryService 同包 |
 
 **特点**：
 - 默认不加事务；需要同一会话多次读 JPA 实体时才加 `@Transactional(readOnly = true)`（见 [transaction.md](../tech/transaction.md)）

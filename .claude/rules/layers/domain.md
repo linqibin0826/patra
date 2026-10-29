@@ -30,10 +30,10 @@ paths: patra-api/*/*-domain/**/*.java
 
 | 类型 | 接口命名 | 包位置 | 实现层 |
 |------|----------|--------|--------|
-| Repository | `{Entity}Repository` | `port/repository/` | Infra |
-| Driven Port | `{Function}Port` | `port/{function}/` | Infra |
-| ReadPort | `{Entity}ReadPort` | `port/read/` | Infra |
-| Driving Port | `{Entity}Gateway` | `port/gateway/` | App |
+| Repository | `{Entity}Repository` | `domain.{子域}.port.repository` | Infra |
+| Driven Port | `{Function}Port` | `domain.{子域}.port.{协作者}` | Infra |
+| ReadPort | `{Entity}ReadPort` | `domain.{子域}.port.read` | Infra |
+| Driving Port | `{Entity}Gateway` | `domain.{子域}.port.gateway` | App |
 
 > 详细规范参见 [port-service.md](../tech/port-service.md)
 
@@ -51,7 +51,7 @@ Read Model 是 CQRS 读端的查询投影，属于领域层但不属于聚合，
 ### 包位置
 
 ```
-domain/model/read/{entity}/
+domain.{子域}.model.read
 ├── {Entity}SummaryReadModel.java
 └── {Entity}DetailReadModel.java
 ```

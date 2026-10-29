@@ -26,14 +26,16 @@
 
 ## 包位置速查
 
+完整分包模板见 [package-layout.md](package-layout.md)；`{子域}` 是服务声明的子域。
+
 | 类型 | 接口位置 | 实现位置 |
 |------|----------|----------|
-| Repository | `domain/port/repository/` | `infra/adapter/persistence/` |
-| Driven Port | `domain/port/{function}/` | `infra/adapter/{function}/` |
-| LookupPort | `domain/port/lookup/` | `infra/adapter/lookup/` |
-| ReadPort | `domain/port/read/` | `infra/adapter/read/` |
-| Gateway | `domain/port/gateway/` | `app/usecase/{domain}/service/` |
-| QueryService | — | `app/usecase/{domain}/query/` |
+| Repository | `domain.{子域}.port.repository` | `infra.{子域}.persistence` |
+| Driven Port | `domain.{子域}.port.{协作者}` | `infra.{子域}.{协作者}`（与端口包同名） |
+| LookupPort | `domain.{子域}.port.lookup`；被其他子域用时放 `port.read` | `infra.{子域}.lookup`；端口在 `port.read` 时放 `infra.{子域}.persistence` |
+| ReadPort | `domain.{子域}.port.read` | `infra.{子域}.persistence` |
+| Gateway | `domain.{子域}.port.gateway` | `app.{子域}.service` |
+| QueryService | — | `app.{子域}.usecase.query` |
 
 ## 禁止行为
 

@@ -237,6 +237,7 @@ ingest 的去留另行决定，本次保持现有分包，不接 `SubdomainArchi
   - 服务级的 `IdentityErrorTrait`：两个子域的异常都用。
   - 新设备提醒的判定与发信（`NewDeviceLoginPolicy`、`NewDeviceLoginMail`）只有登录用，留在 account。
 - 实现改动：无，只搬包。`AuthController` 的 `POST /auth/logout` 拆成 `adapter.session.rest.LogoutController`（路径不变）。
+- **实际（10/29 迁移按代码实测依赖修正）**：`OutgoingMail`、`RequestOrigin`、`DeviceProfile` session 并未使用，归 account；`SecurityNotice` 不依赖 `OutgoingMail`。`NewDeviceLoginPolicy`、`InvalidUserFieldsException`、`UserFieldViolations`、`UserModifiedConcurrentlyException`、`TemporarilyUnavailableException` 被 session 使用，进底座 session。13 个邮件 record 放 `domain.account.model.vo.mail`；`ActiveUserSession` 等会话值对象放 `domain.session.model.vo`（端口包只放端口）。
 
 ### 8.5 interaction
 
@@ -251,6 +252,7 @@ ingest 的去留另行决定，本次保持现有分包，不接 `SubdomainArchi
   2. fulltext 写 publication 的 `markPmcOpenAccess` 改为 fulltext 发事件、publication 同步监听（同一事务）。
   3. author 新增 `port.read`（ORCID → 作者 ID）；mesh 在 `port.read` 新增名称 → UI 查询；Funder 查找整组从 publication 搬到 organization 的 `port.read`。各自替换现在直接读对方 DAO / 仓储的代码。
   4. `XmlParsingHelper` 去掉对 `LsiouXmlElements` 的静态 import，常量搬进 helper。
+- **实际（10/29 迁移按代码实测依赖修正）**：`ArticleNumber`、`InlineMarkup` 只有 portal 使用，归 portal；`FullTextAvailability`、`Orcid`、`PublicationDateType` 等 7 个类被两个以上子域共用，进底座 kernel。portal 的 Row 投影是 18 个（`PublicationLastSyncedRow` 已删），改为 record 后访问器由 `getXxx()` 变为 `xxx()`。各层 `*Properties` 都放本层的 `config` 包。卷期实例整组归 publication；Funder、Venue 查找端口放 `port.read`、实现放 `persistence`。
 
 ## 9. 实施顺序与验证
 

@@ -59,11 +59,13 @@ public class VenueController {
 ### Controller 子包结构
 
 ```
-adapter/rest/{entity}/
+adapter.{子域}.rest
 ├── {Entity}Controller.java
 ├── request/{Entity}ListRequest.java      # 查询参数 DTO
 ├── response/{Entity}ItemResponse.java    # 列表项响应 DTO
-└── mapper/{Entity}ApiConverter.java      # MapStruct 转换器
+└── converter/{Entity}ApiConverter.java   # MapStruct 转换器
+
+adapter.{子域}.internal                    # /_internal 契约实现 *EndpointImpl 与它用的 *ApiConverter
 ```
 
 ## MapStruct ApiConverter 模板
