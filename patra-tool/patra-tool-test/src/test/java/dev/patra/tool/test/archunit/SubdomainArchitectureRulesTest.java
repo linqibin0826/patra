@@ -95,6 +95,20 @@ class SubdomainArchitectureRulesTest {
         .anyMatch(line -> line.contains("UsecaseRoot"));
   }
 
+  /// infra 下的协作者包必须有同名的 domain 端口包；persistence、support、config 不受此限。
+  @Test
+  void should_reject_infra_package_without_matching_port() {
+    EvaluationResult result = evaluate("infraports", rules("infraports").infraPackagesMatchPorts());
+
+    assertThat(result.hasViolation()).isTrue();
+    assertThat(result.getFailureReport().getDetails())
+        .anyMatch(line -> line.contains("SmtpAdapter"))
+        .noneMatch(line -> line.contains("MailAdapter"))
+        .noneMatch(line -> line.contains("SqlFragments"))
+        .noneMatch(line -> line.contains("CollectionRepositoryAdapter"))
+        .noneMatch(line -> line.contains("InfraConfig"));
+  }
+
   /// 底座不在声明的子域里时拒绝构造。
   @Test
   void should_reject_foundation_missing_from_subdomains() {

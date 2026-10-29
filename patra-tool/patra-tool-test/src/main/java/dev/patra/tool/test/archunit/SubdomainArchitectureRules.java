@@ -13,6 +13,7 @@ import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 import com.tngtech.archunit.library.dependencies.SliceAssignment;
 import com.tngtech.archunit.library.dependencies.SliceIdentifier;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -250,6 +251,20 @@ public final class SubdomainArchitectureRules {
         .allowEmptyShould(true);
   }
 
+  /// `infra.{子域}.X`（X 不是 `persistence`、`support`、`config`）必须有同名的 `domain.{子域}.port.X`。
+  ///
+  /// infra 的协作者包按它实现的端口命名，看包名就能找到端口。
+  ///
+  /// @return ArchRule 规则实例
+  public ArchRule infraPackagesMatchPorts() {
+    return classes()
+        .that(resideInSomeSubdomain())
+        .should(implementNamesakePort())
+        .as("infra 的协作者包与本子域 domain 的端口包同名")
+        .because("实现谁就叫谁：infra.{子域}.X 对应 domain.{子域}.port.X")
+        .allowEmptyShould(true);
+  }
+
   /// 全部子域规则。
   ///
   /// @return 不可变的规则列表
@@ -282,6 +297,49 @@ public final class SubdomainArchitectureRules {
               SimpleConditionEvent.violated(
                   javaClass,
                   javaClass.getName() + " 的包 " + String.join(".", segments) + " 不在分包模板里"));
+        }
+      }
+    };
+  }
+
+  /// infra 协作者包有同名的 domain 端口包。
+  ///
+  /// @return 条件
+  private ArchCondition<JavaClass> implementNamesakePort() {
+    return new ArchCondition<>("有同名的 domain 端口包") {
+      private final Set<String> portPackages = new HashSet<>();
+
+      @Override
+      public void init(Collection<JavaClass> allObjectsToTest) {
+        allObjectsToTest.stream()
+            .map(JavaClass::getPackageName)
+            .filter(name -> layerOf(name).filter("domain"::equals).isPresent())
+            .forEach(portPackages::add);
+      }
+
+      @Override
+      public void check(JavaClass javaClass, ConditionEvents events) {
+        String packageName = javaClass.getPackageName();
+        if (layerOf(packageName).filter("infra"::equals).isEmpty()) {
+          return;
+        }
+        String subdomain = subdomainOf(packageName).orElseThrow();
+        String infraSubdomain = basePackage + ".infra." + subdomain;
+        if (packageName.equals(infraSubdomain)) {
+          return;
+        }
+        String collaborator = packageName.substring(infraSubdomain.length() + 1).split("\\.", 2)[0];
+        if (Set.of("persistence", "support", "config").contains(collaborator)) {
+          return;
+        }
+        String port = basePackage + ".domain." + subdomain + ".port." + collaborator;
+        boolean exists =
+            portPackages.stream()
+                .anyMatch(name -> name.equals(port) || name.startsWith(port + "."));
+        if (!exists) {
+          events.add(
+              SimpleConditionEvent.violated(
+                  javaClass, javaClass.getName() + " 所在的 infra 包没有同名端口包 " + port));
         }
       }
     };
