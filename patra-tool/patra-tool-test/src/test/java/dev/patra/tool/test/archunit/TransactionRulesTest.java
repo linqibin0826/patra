@@ -8,7 +8,7 @@ import com.tngtech.archunit.lang.ArchRule;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-/// 事务规则（`.claude/rules/tech/transaction.md` 第 6 节）：方法级注解也要查，infra 只放行 `MANDATORY`，
+/// 事务规则（`.claude/rules/tech/transaction.md` 的规则 15 / 16 / 16b）：方法级注解也要查，infra 只放行 `MANDATORY`，
 /// 类级注解和命令 Handler 上的注解一律违规。
 @DisplayName("六边形层规则：事务边界")
 class TransactionRulesTest {

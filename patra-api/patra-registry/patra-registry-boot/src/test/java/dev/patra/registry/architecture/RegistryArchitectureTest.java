@@ -9,7 +9,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-/// patra-registry 架构测试：事务边界规则（`.claude/rules/tech/transaction.md` 第 6 节）。
+/// patra-registry 架构测试：事务边界规则（`.claude/rules/tech/transaction.md` 的规则 15 / 16 / 16b）。
 ///
 /// 导入 patra-registry 全部模块的主代码，第三方库与测试代码不导入。
 ///
