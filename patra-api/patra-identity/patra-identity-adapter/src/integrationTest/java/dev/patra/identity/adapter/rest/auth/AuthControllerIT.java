@@ -7,7 +7,6 @@ import static org.mockito.Mockito.when;
 
 import dev.patra.identity.app.usecase.auth.AuthenticatedUser;
 import dev.patra.identity.app.usecase.login.LoginUserCommand;
-import dev.patra.identity.app.usecase.logout.LogoutUserCommand;
 import dev.patra.identity.app.usecase.reauth.ReauthenticateUserCommand;
 import dev.patra.identity.app.usecase.reauth.Reauthenticated;
 import dev.patra.identity.app.usecase.register.RegisterUserCommand;
@@ -421,14 +420,6 @@ class AuthControllerIT {
         .isEqualTo("IDN-0503")
         .jsonPath("$.detail")
         .isEqualTo("服务暂时不可用");
-  }
-
-  @Test
-  @DisplayName("登出返回 204，没有响应体；命令没有字段")
-  void should_logout_and_return_204() {
-    restClient.post().uri("/auth/logout").exchange().expectStatus().isNoContent();
-
-    verify(commandBus).handle(LogoutUserCommand.of());
   }
 
   @Test

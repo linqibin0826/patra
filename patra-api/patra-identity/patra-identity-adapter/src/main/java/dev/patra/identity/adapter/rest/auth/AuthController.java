@@ -9,7 +9,6 @@ import dev.patra.identity.adapter.rest.auth.response.CurrentUserResponse;
 import dev.patra.identity.adapter.rest.auth.response.ReauthenticatedResponse;
 import dev.patra.identity.app.usecase.auth.AuthenticatedUser;
 import dev.patra.identity.app.usecase.login.LoginUserCommand;
-import dev.patra.identity.app.usecase.logout.LogoutUserCommand;
 import dev.patra.identity.app.usecase.reauth.ReauthenticateUserCommand;
 import dev.patra.identity.app.usecase.reauth.Reauthenticated;
 import dev.patra.identity.app.usecase.register.RegisterUserCommand;
@@ -28,7 +27,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/// 前台用户的注册、登录、再认证、登出与当前用户。字段校验在应用层做，这里只把请求转成命令；读操作直接走查询服务。
+/// 前台用户的注册、登录、再认证与当前用户（登出在 {@link LogoutController}）。字段校验在应用层做，这里只把请求转成命令；读操作直接走查询服务。
 @Tag(name = "Auth", description = "前台用户的注册、登录、登出与当前用户")
 @RestController
 @RequestMapping("/auth")
@@ -101,13 +100,6 @@ public class AuthController {
     Reauthenticated result = commandBus.handle(ReauthenticateUserCommand.of(request.password()));
     return ReauthenticatedResponse.of(
         result.sessionToken(), CurrentUserResponse.from(result.account()));
-  }
-
-  /// 登出。有当前用户就删会话，没有也返回 204：这条路由在网关上是公开的。
-  @PostMapping("/logout")
-  @ResponseStatus(HttpStatus.NO_CONTENT)
-  public void logout() {
-    commandBus.handle(LogoutUserCommand.of());
   }
 
   /// 当前登录用户。没有当前用户、用户不存在、已封禁或已注销都是 401。
