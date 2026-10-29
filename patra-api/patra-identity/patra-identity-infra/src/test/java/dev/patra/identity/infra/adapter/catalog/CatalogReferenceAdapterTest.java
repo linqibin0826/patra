@@ -5,10 +5,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import dev.patra.catalog.api.dto.mesh.MeshDescriptorResp;
-import dev.patra.catalog.api.dto.organization.OrganizationResp;
-import dev.patra.catalog.api.endpoint.MeshEndpoint;
-import dev.patra.catalog.api.endpoint.OrganizationEndpoint;
+import dev.patra.catalog.api.mesh.dto.MeshDescriptorResp;
+import dev.patra.catalog.api.mesh.endpoint.MeshEndpoint;
+import dev.patra.catalog.api.organization.dto.OrganizationResp;
+import dev.patra.catalog.api.organization.endpoint.OrganizationEndpoint;
 import dev.patra.identity.domain.exception.CatalogUnavailableException;
 import dev.patra.identity.domain.model.vo.profile.MeshUi;
 import dev.patra.identity.domain.model.vo.profile.RorId;

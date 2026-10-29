@@ -1,11 +1,11 @@
 package dev.patra.interaction.infra.subject.source;
 
-import dev.patra.catalog.api.dto.venue.VenueResolutionResp;
-import dev.patra.catalog.api.dto.venue.VenueResolveByIdsReq;
-import dev.patra.catalog.api.dto.venue.VenueResolveByNlmIdsReq;
-import dev.patra.catalog.api.dto.venue.VenueResolveResp;
-import dev.patra.catalog.api.dto.venue.VenueStateResp;
-import dev.patra.catalog.api.endpoint.VenueEndpoint;
+import dev.patra.catalog.api.venue.dto.VenueResolutionResp;
+import dev.patra.catalog.api.venue.dto.VenueResolveByIdsReq;
+import dev.patra.catalog.api.venue.dto.VenueResolveByNlmIdsReq;
+import dev.patra.catalog.api.venue.dto.VenueResolveResp;
+import dev.patra.catalog.api.venue.dto.VenueStateResp;
+import dev.patra.catalog.api.venue.endpoint.VenueEndpoint;
 import dev.patra.interaction.domain.subject.model.enums.NaturalKeyScheme;
 import dev.patra.interaction.domain.subject.model.enums.SubjectType;
 import dev.patra.interaction.domain.subject.model.source.SourceRecord;

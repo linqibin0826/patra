@@ -1,4 +1,4 @@
-package dev.patra.catalog.api.dto.organization;
+package dev.patra.catalog.api.organization.dto;
 
 import java.util.List;
 import lombok.Builder;

@@ -1,4 +1,4 @@
-package dev.patra.catalog.api.dto.venue;
+package dev.patra.catalog.api.venue.dto;
 
 /// 期刊在 catalog 里的状态。
 ///

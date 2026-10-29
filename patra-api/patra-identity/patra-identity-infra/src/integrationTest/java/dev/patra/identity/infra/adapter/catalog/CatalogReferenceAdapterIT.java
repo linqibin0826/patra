@@ -12,8 +12,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
-import dev.patra.catalog.api.endpoint.MeshEndpoint;
-import dev.patra.catalog.api.endpoint.OrganizationEndpoint;
+import dev.patra.catalog.api.mesh.endpoint.MeshEndpoint;
+import dev.patra.catalog.api.organization.endpoint.OrganizationEndpoint;
 import dev.patra.identity.domain.exception.CatalogUnavailableException;
 import dev.patra.identity.domain.model.vo.profile.MeshUi;
 import dev.patra.identity.domain.model.vo.profile.RorId;

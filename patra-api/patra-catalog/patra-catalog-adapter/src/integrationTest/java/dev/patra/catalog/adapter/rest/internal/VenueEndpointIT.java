@@ -7,7 +7,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import dev.patra.catalog.adapter.config.CatalogAdapterITWebMvcConfig;
-import dev.patra.catalog.api.dto.venue.VenueResolveResp;
+import dev.patra.catalog.api.venue.dto.VenueResolveResp;
 import dev.patra.catalog.app.usecase.venue.query.VenueResolveQueryService;
 import dev.patra.catalog.app.usecase.venue.query.dto.VenueResolution;
 import dev.patra.catalog.domain.model.read.venue.VenueResolveReadModel;

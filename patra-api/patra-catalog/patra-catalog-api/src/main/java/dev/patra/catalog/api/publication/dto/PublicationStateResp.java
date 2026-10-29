@@ -1,4 +1,4 @@
-package dev.patra.catalog.api.dto.publication;
+package dev.patra.catalog.api.publication.dto;
 
 /// 文献在 catalog 里的状态。
 ///

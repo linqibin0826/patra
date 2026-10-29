@@ -1,6 +1,6 @@
-package dev.patra.catalog.api.endpoint;
+package dev.patra.catalog.api.mesh.endpoint;
 
-import dev.patra.catalog.api.dto.mesh.MeshDescriptorResp;
+import dev.patra.catalog.api.mesh.dto.MeshDescriptorResp;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.service.annotation.GetExchange;
 import org.springframework.web.service.annotation.HttpExchange;

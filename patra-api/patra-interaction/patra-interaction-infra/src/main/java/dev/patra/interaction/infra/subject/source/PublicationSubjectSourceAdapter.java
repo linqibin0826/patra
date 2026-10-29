@@ -1,11 +1,11 @@
 package dev.patra.interaction.infra.subject.source;
 
-import dev.patra.catalog.api.dto.publication.PublicationResolutionResp;
-import dev.patra.catalog.api.dto.publication.PublicationResolveByIdsReq;
-import dev.patra.catalog.api.dto.publication.PublicationResolveByPmidsReq;
-import dev.patra.catalog.api.dto.publication.PublicationResolveResp;
-import dev.patra.catalog.api.dto.publication.PublicationStateResp;
-import dev.patra.catalog.api.endpoint.PublicationEndpoint;
+import dev.patra.catalog.api.publication.dto.PublicationResolutionResp;
+import dev.patra.catalog.api.publication.dto.PublicationResolveByIdsReq;
+import dev.patra.catalog.api.publication.dto.PublicationResolveByPmidsReq;
+import dev.patra.catalog.api.publication.dto.PublicationResolveResp;
+import dev.patra.catalog.api.publication.dto.PublicationStateResp;
+import dev.patra.catalog.api.publication.endpoint.PublicationEndpoint;
 import dev.patra.interaction.domain.subject.model.enums.NaturalKeyScheme;
 import dev.patra.interaction.domain.subject.model.enums.SubjectType;
 import dev.patra.interaction.domain.subject.model.source.SourceRecord;

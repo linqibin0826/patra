@@ -1,4 +1,4 @@
-package dev.patra.catalog.api.dto.venue;
+package dev.patra.catalog.api.venue.dto;
 
 import java.util.List;
 

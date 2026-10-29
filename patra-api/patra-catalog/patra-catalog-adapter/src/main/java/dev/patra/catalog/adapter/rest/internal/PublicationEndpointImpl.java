@@ -1,11 +1,11 @@
 package dev.patra.catalog.adapter.rest.internal;
 
-import dev.patra.catalog.api.dto.publication.PublicationResolutionResp;
-import dev.patra.catalog.api.dto.publication.PublicationResolveByIdsReq;
-import dev.patra.catalog.api.dto.publication.PublicationResolveByPmidsReq;
-import dev.patra.catalog.api.dto.publication.PublicationResolveResp;
-import dev.patra.catalog.api.dto.publication.PublicationStateResp;
-import dev.patra.catalog.api.endpoint.PublicationEndpoint;
+import dev.patra.catalog.api.publication.dto.PublicationResolutionResp;
+import dev.patra.catalog.api.publication.dto.PublicationResolveByIdsReq;
+import dev.patra.catalog.api.publication.dto.PublicationResolveByPmidsReq;
+import dev.patra.catalog.api.publication.dto.PublicationResolveResp;
+import dev.patra.catalog.api.publication.dto.PublicationStateResp;
+import dev.patra.catalog.api.publication.endpoint.PublicationEndpoint;
 import dev.patra.catalog.app.usecase.publication.query.PublicationResolveQueryService;
 import dev.patra.catalog.app.usecase.publication.query.dto.PublicationResolution;
 import dev.patra.catalog.domain.model.read.publication.PublicationResolveReadModel;

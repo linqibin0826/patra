@@ -1,8 +1,8 @@
-package dev.patra.catalog.api.endpoint;
+package dev.patra.catalog.api.publication.endpoint;
 
-import dev.patra.catalog.api.dto.publication.PublicationResolveByIdsReq;
-import dev.patra.catalog.api.dto.publication.PublicationResolveByPmidsReq;
-import dev.patra.catalog.api.dto.publication.PublicationResolveResp;
+import dev.patra.catalog.api.publication.dto.PublicationResolveByIdsReq;
+import dev.patra.catalog.api.publication.dto.PublicationResolveByPmidsReq;
+import dev.patra.catalog.api.publication.dto.PublicationResolveResp;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.service.annotation.HttpExchange;

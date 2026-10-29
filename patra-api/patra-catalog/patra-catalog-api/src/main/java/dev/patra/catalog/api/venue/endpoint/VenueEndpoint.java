@@ -1,8 +1,8 @@
-package dev.patra.catalog.api.endpoint;
+package dev.patra.catalog.api.venue.endpoint;
 
-import dev.patra.catalog.api.dto.venue.VenueResolveByIdsReq;
-import dev.patra.catalog.api.dto.venue.VenueResolveByNlmIdsReq;
-import dev.patra.catalog.api.dto.venue.VenueResolveResp;
+import dev.patra.catalog.api.venue.dto.VenueResolveByIdsReq;
+import dev.patra.catalog.api.venue.dto.VenueResolveByNlmIdsReq;
+import dev.patra.catalog.api.venue.dto.VenueResolveResp;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.service.annotation.HttpExchange;

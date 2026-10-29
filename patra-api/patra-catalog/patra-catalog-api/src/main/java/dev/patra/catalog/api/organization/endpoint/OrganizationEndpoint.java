@@ -1,6 +1,6 @@
-package dev.patra.catalog.api.endpoint;
+package dev.patra.catalog.api.organization.endpoint;
 
-import dev.patra.catalog.api.dto.organization.OrganizationResp;
+import dev.patra.catalog.api.organization.dto.OrganizationResp;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.service.annotation.GetExchange;
 import org.springframework.web.service.annotation.HttpExchange;

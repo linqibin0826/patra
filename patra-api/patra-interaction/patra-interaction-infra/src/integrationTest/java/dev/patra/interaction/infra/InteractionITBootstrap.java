@@ -2,8 +2,8 @@ package dev.patra.interaction.infra;
 
 import static org.mockito.Mockito.mock;
 
-import dev.patra.catalog.api.endpoint.PublicationEndpoint;
-import dev.patra.catalog.api.endpoint.VenueEndpoint;
+import dev.patra.catalog.api.publication.endpoint.PublicationEndpoint;
+import dev.patra.catalog.api.venue.endpoint.VenueEndpoint;
 import dev.patra.identity.api.endpoint.UserEndpoint;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;

@@ -1,4 +1,4 @@
-package dev.patra.catalog.api.dto.publication;
+package dev.patra.catalog.api.publication.dto;
 
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Positive;

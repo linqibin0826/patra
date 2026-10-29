@@ -1,4 +1,4 @@
-package dev.patra.catalog.api.dto.publication;
+package dev.patra.catalog.api.publication.dto;
 
 import java.util.List;
 

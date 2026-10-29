@@ -1,7 +1,7 @@
 package dev.patra.catalog.adapter.rest.internal;
 
-import dev.patra.catalog.api.dto.organization.OrganizationResp;
-import dev.patra.catalog.api.endpoint.OrganizationEndpoint;
+import dev.patra.catalog.api.organization.dto.OrganizationResp;
+import dev.patra.catalog.api.organization.endpoint.OrganizationEndpoint;
 import dev.patra.catalog.app.usecase.organization.query.OrganizationQueryService;
 import dev.patra.catalog.domain.model.read.organization.OrganizationSummary;
 import lombok.RequiredArgsConstructor;

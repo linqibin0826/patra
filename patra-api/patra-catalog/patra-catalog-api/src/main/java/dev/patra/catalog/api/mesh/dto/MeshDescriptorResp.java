@@ -1,4 +1,4 @@
-package dev.patra.catalog.api.dto.mesh;
+package dev.patra.catalog.api.mesh.dto;
 
 import java.util.List;
 

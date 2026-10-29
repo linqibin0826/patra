@@ -1,7 +1,7 @@
 package dev.patra.interaction.config;
 
-import dev.patra.catalog.api.endpoint.PublicationEndpoint;
-import dev.patra.catalog.api.endpoint.VenueEndpoint;
+import dev.patra.catalog.api.publication.endpoint.PublicationEndpoint;
+import dev.patra.catalog.api.venue.endpoint.VenueEndpoint;
 import dev.patra.tool.httpclient.factory.RestClientFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

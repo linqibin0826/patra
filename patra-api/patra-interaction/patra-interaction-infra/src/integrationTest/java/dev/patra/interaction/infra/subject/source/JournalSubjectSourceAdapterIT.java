@@ -11,7 +11,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
-import dev.patra.catalog.api.endpoint.VenueEndpoint;
+import dev.patra.catalog.api.venue.endpoint.VenueEndpoint;
 import dev.patra.interaction.domain.subject.exception.SubjectSourceUnavailableException;
 import dev.patra.interaction.domain.subject.model.enums.NaturalKeyScheme;
 import dev.patra.interaction.domain.subject.model.source.SourceRecord;

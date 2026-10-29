@@ -1,7 +1,7 @@
 package dev.patra.catalog.adapter.rest.internal;
 
-import dev.patra.catalog.api.dto.mesh.MeshDescriptorResp;
-import dev.patra.catalog.api.endpoint.MeshEndpoint;
+import dev.patra.catalog.api.mesh.dto.MeshDescriptorResp;
+import dev.patra.catalog.api.mesh.endpoint.MeshEndpoint;
 import dev.patra.catalog.app.usecase.mesh.query.MeshDescriptorQueryService;
 import dev.patra.catalog.domain.model.read.mesh.MeshDescriptorSummary;
 import lombok.RequiredArgsConstructor;

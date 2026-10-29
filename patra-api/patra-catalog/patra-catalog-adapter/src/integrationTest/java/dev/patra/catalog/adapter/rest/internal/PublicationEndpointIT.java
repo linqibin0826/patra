@@ -6,7 +6,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import dev.patra.catalog.adapter.config.CatalogAdapterITWebMvcConfig;
-import dev.patra.catalog.api.dto.publication.PublicationResolveResp;
+import dev.patra.catalog.api.publication.dto.PublicationResolveResp;
 import dev.patra.catalog.app.usecase.publication.query.PublicationResolveQueryService;
 import dev.patra.catalog.app.usecase.publication.query.dto.PublicationResolution;
 import dev.patra.catalog.domain.model.read.publication.PublicationResolveReadModel;
