@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 @SpringBootConfiguration
 @EnableAutoConfiguration
 @ComponentScan(
-    basePackages = "dev.patra.catalog.adapter.rest",
+    basePackages = {"dev.patra.catalog.adapter.*.rest", "dev.patra.catalog.adapter.*.internal"},
     excludeFilters =
         @ComponentScan.Filter(type = FilterType.ANNOTATION, classes = RestController.class))
 public class CatalogAdapterITWebMvcConfig {

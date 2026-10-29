@@ -150,6 +150,26 @@
     </Or>
   </Match>
 
+  <!-- catalog 按子域分包后（domain.{子域}.model.*），上面三条通用规则匹配不到，这里按新包等价排除 -->
+  <Match>
+    <Class name="~dev\.patra\.catalog\.domain\.\w+\.model\.(aggregate|vo|entity)\..*"/>
+    <Or>
+      <Bug pattern="EI_EXPOSE_REP"/>
+      <Bug pattern="EI_EXPOSE_REP2"/>
+      <Bug pattern="SE_BAD_FIELD"/>
+    </Or>
+  </Match>
+
+  <Match>
+    <Class name="~dev\.patra\.catalog\.domain\.\w+\.model\.(aggregate|entity)\..*"/>
+    <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+  </Match>
+
+  <Match>
+    <Package name="~dev\.patra\.catalog\.domain\.\w+\.model\.vo.*"/>
+    <Bug pattern="RV_RETURN_VALUE_IGNORED"/>
+  </Match>
+
   <!-- Domain policies may validate in constructors (throw by design) -->
   <Match>
     <Class name="~.*\.domain\.policy\..*"/>
@@ -336,7 +356,7 @@
   <!-- 基础设施批处理迭代器构造时初始化 JSON 流是合理设计 -->
   <Match>
     <Or>
-      <Class name="dev.patra.catalog.infra.batch.organization.RorOrganizationParser$RorRecordIterator"/>
+      <Class name="dev.patra.catalog.infra.organization.batch.RorOrganizationParser$RorRecordIterator"/>
       <Class name="dev.patra.ingest.app.usecase.execution.strategy.builder.BatchScheduleBuilder"/>
       <Class name="dev.patra.ingest.infra.mapper.ProviderParameterMapperRegistry"/>
     </Or>
@@ -458,7 +478,7 @@
   <!-- MS_EXPOSE_REP: 静态工厂单例暴露是设计意图 -->
   <Match>
     <Or>
-      <Class name="dev.patra.catalog.infra.parser.support.SecureXmlInputFactory"/>
+      <Class name="dev.patra.catalog.infra.kernel.support.SecureXmlInputFactory"/>
     </Or>
     <Bug pattern="MS_EXPOSE_REP"/>
   </Match>
@@ -591,7 +611,7 @@
   <!-- VenueRepositoryAdapter.computeIdentifierDiff: 遍历 Set 通过 Map.get() 查值
        是正确的用法，SpotBugs 将其误判为低效 Map 迭代 -->
   <Match>
-    <Class name="dev.patra.catalog.infra.adapter.persistence.VenueRepositoryAdapter"/>
+    <Class name="dev.patra.catalog.infra.venue.persistence.VenueRepositoryAdapter"/>
     <Bug pattern="WMI_WRONG_MAP_ITERATOR"/>
   </Match>
 
@@ -648,7 +668,7 @@
 
   <!-- VenueBrowseReadAdapter.toArray: null 表示"不过滤"，语义上区别于"空过滤数组" -->
   <Match>
-    <Class name="dev.patra.catalog.infra.adapter.read.VenueBrowseReadAdapter"/>
+    <Class name="dev.patra.catalog.infra.portal.persistence.VenueBrowseReadAdapter"/>
     <Bug pattern="PZLA_PREFER_ZERO_LENGTH_ARRAYS"/>
   </Match>
 
@@ -679,7 +699,7 @@
 
   <!-- RorRecordIterator.next() 由 advance() 驱动，hasNext() 已确保非空 -->
   <Match>
-    <Class name="dev.patra.catalog.infra.batch.organization.RorOrganizationParser$RorRecordIterator"/>
+    <Class name="dev.patra.catalog.infra.organization.batch.RorOrganizationParser$RorRecordIterator"/>
     <Bug pattern="IT_NO_SUCH_ELEMENT"/>
   </Match>
 
@@ -688,7 +708,7 @@
        ======================================================================== -->
 
   <Match>
-    <Class name="dev.patra.catalog.domain.model.aggregate.PublicationAggregate"/>
+    <Class name="dev.patra.catalog.domain.publication.model.aggregate.PublicationAggregate"/>
     <Bug pattern="DLS_DEAD_LOCAL_STORE"/>
   </Match>
 

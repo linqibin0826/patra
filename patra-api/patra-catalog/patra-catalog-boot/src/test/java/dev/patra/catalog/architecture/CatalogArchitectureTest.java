@@ -1,11 +1,17 @@
 package dev.patra.catalog.architecture;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
+import com.tngtech.archunit.lang.ArchRule;
+import com.tngtech.archunit.lang.EvaluationResult;
 import dev.patra.tool.test.archunit.HexagonalArchitectureRules;
+import dev.patra.tool.test.archunit.SubdomainArchitectureRules;
 import dev.patra.tool.test.archunit.TestingRules;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -21,6 +27,7 @@ import org.junit.jupiter.api.Test;
 /// - 封装规则（DO 不泄露、Port 可见性）
 /// - 事务边界（@Transactional 仅在 App 层）
 /// - 测试规范（命名规范、测试独立性、分层测试策略）
+/// - 子域边界（`SubdomainArchitectureRules`：层下只有已声明子域、分包模板白名单、跨子域只经公开包且须声明）
 ///
 /// **运行方式：**
 ///
@@ -41,6 +48,7 @@ import org.junit.jupiter.api.Test;
 /// @since 0.1.0
 /// @see HexagonalArchitectureRules
 /// @see TestingRules
+/// @see SubdomainArchitectureRules
 @DisplayName("patra-catalog 架构测试")
 class CatalogArchitectureTest {
 
@@ -51,6 +59,30 @@ class CatalogArchitectureTest {
       new HexagonalArchitectureRules(
           "dev.patra.catalog", List.of("dev.patra.common..", "dev.patra.tool.."));
 
+  /// 底座子域：异常基类、数据源与字典枚举、跨子域 ID、书目值对象、文件下载、运行锁、字典解析、StAX 解析基座等。
+  private static final String FOUNDATION = "kernel";
+
+  /// 声明的全部子域（spec §8.6）。
+  private static final List<String> SUBDOMAINS =
+      List.of(
+          FOUNDATION,
+          "publication",
+          "venue",
+          "mesh",
+          "organization",
+          "author",
+          "fulltext",
+          "portal");
+
+  /// 子域边界规则：文献依赖期刊、机构、作者，期刊依赖 MeSH，文献只经事件订阅全文；portal 只依赖底座。
+  private static final SubdomainArchitectureRules subdomainRules =
+      new SubdomainArchitectureRules("dev.patra.catalog", FOUNDATION, Set.copyOf(SUBDOMAINS))
+          .allowingDependency("publication", "venue")
+          .allowingDependency("publication", "organization")
+          .allowingDependency("publication", "author")
+          .allowingDependency("venue", "mesh")
+          .allowingSubscription("publication", "fulltext");
+
   @BeforeAll
   static void setup() {
     // 导入 patra-catalog 所有模块的类（domain/app/infra/adapter/boot）
@@ -60,6 +92,10 @@ class CatalogArchitectureTest {
             .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
             .withImportOption(
                 location -> {
+                  // test-fixtures 不导入：夹具不受子域规则管
+                  if (location.contains("test-fixtures") || location.contains("/testFixtures/")) {
+                    return false;
+                  }
                   // 包含 patra-catalog 模块的 JAR
                   if (location.contains("/patra-catalog-")) {
                     return true;
@@ -245,6 +281,73 @@ class CatalogArchitectureTest {
     @DisplayName("规则 22: E2E 测试必须在 boot 模块")
     void e2eTestsShouldResideInBootModule() {
       TestingRules.e2eTestsShouldResideInBootModule().check(classes);
+    }
+  }
+
+  /// 六边形规则全部执行，汇总所有违规一次报出。
+  @Test
+  @DisplayName("六边形规则全集")
+  void hexagonalRulesShouldHold() {
+    List<ArchRule> all = rules.allRules();
+    List<String> violations =
+        all.stream()
+            .map(rule -> rule.evaluate(classes))
+            .filter(EvaluationResult::hasViolation)
+            .map(result -> result.getFailureReport().toString())
+            .toList();
+    assertThat(violations).isEmpty();
+  }
+
+  @Nested
+  @DisplayName("第七类：子域边界规则")
+  class SubdomainBoundaryTests {
+
+    @Test
+    @DisplayName("规则 22b: 每个声明的子域在 domain 层都有类")
+    void everyDeclaredSubdomainShouldHaveDomainPackage() {
+      subdomainRules.everyDeclaredSubdomainHasDomainPackage().check(classes);
+    }
+
+    @Test
+    @DisplayName("规则 23: 层下面只有已声明的子域")
+    void layersShouldContainOnlyDeclaredSubdomains() {
+      subdomainRules.layersContainOnlyDeclaredSubdomains().check(classes);
+    }
+
+    @Test
+    @DisplayName("规则 24: 子域之间无环")
+    void subdomainsShouldBeFreeOfCycles() {
+      subdomainRules.subdomainsAreFreeOfCycles().check(classes);
+    }
+
+    @Test
+    @DisplayName("规则 25: 跨子域只经对方的公开包")
+    void crossSubdomainDependenciesShouldGoThroughPublishedPackages() {
+      subdomainRules.crossSubdomainDependenciesGoThroughPublishedPackages().check(classes);
+    }
+
+    @Test
+    @DisplayName("规则 26: 底座子域不依赖其他子域")
+    void foundationShouldDependOnNoOtherSubdomain() {
+      subdomainRules.foundationDependsOnNoOtherSubdomain().check(classes);
+    }
+
+    @Test
+    @DisplayName("规则 27: 跨子域依赖必须声明")
+    void crossSubdomainDependenciesShouldBeDeclared() {
+      subdomainRules.crossSubdomainDependenciesAreDeclared().check(classes);
+    }
+
+    @Test
+    @DisplayName("规则 28: 子域下的包落在分包模板的白名单里")
+    void componentPackagesShouldFollowTemplate() {
+      subdomainRules.componentPackagesFollowTemplate().check(classes);
+    }
+
+    @Test
+    @DisplayName("规则 29: infra 协作者包与本子域端口包同名")
+    void infraPackagesShouldMatchPorts() {
+      subdomainRules.infraPackagesMatchPorts().check(classes);
     }
   }
 }

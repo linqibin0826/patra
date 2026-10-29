@@ -19,6 +19,23 @@ patra-catalog 是 Patra 医学文献数据平台的目录管理微服务，负�
 - **调用方**：patra-gateway 转发的门户（patra-portal）读端点 `/portal/**`；patra-identity 经 HTTP Interface 直连（`lb://patra-catalog`）的内部接口 `/_internal/**`（保存资料时校验 ROR ID / MeSH UI 并取名称快照）；patra-interaction 同样直连内部接口，按内部 ID 或 PMID 批量解析文献、按期刊 ID 或 NLM ID 批量解析期刊（对象登记表首次登记与每日对账）
 - **依赖服务**：patra-registry（获取 Provenance 配置和数据字典）；MinIO（期刊封面、全文 XML / PDF / 图片）
 
+## 🗂️ 分包
+
+模块按层（domain / app / infra / adapter / api / boot），模块内先按子域、再按组件类型：`dev.patra.catalog.{层}.{子域}.{组件}`。模板见 `.claude/rules/tech/package-layout.md`，由 `CatalogArchitectureTest` 的子域规则与六边形规则在 `check` 里强制。
+
+| 子域 | 内容 |
+|---|---|
+| `kernel`（底座） | 异常基类、数据源与字典枚举、ORCID、书目值对象（出版日期、页码）、`VenueId`、全文状态与可读判定、文件下载、运行锁、字典解析、StAX 解析基座、LIKE 转义 |
+| `publication` | 文献主数据、PubMed 同步与重解析、按 PMID / ID 解析、语言查找、期刊卷期实例 |
+| `venue` | 期刊主数据：NLM LSIOU 导入、LetPub / Scopus / OpenAlex 富化、封面、解析 |
+| `mesh` | MeSH 主题词、限定词、SCR；名称 → UI 查询 |
+| `organization` | ROR 导入、建议、资助机构查找 |
+| `author` | computed author 导入；ORCID → 作者 ID |
+| `fulltext` | PMC 抓取、JATS 解析；全文正文、PDF、图片端点 |
+| `portal` | 门户读子域：feed、检索与 facets、详情、卡片、期刊浏览、引文格式化与导出；读适配器用 `JdbcClient` 写 SQL |
+
+子域之间：`publication → venue / organization / author`、`venue → mesh` 是依赖边（只经对方 `domain.{子域}.{port.read, model.read, event}`）；`publication → fulltext` 是订阅边（全文抓取后发 `PmcFullTextFetchedEvent`，文献子域同步监听、同一事务标记开放获取）。底座对所有子域公开；`portal` 只依赖底座。
+
 ## 🔧 主要功能
 
 ### 已实现功能
@@ -271,7 +288,7 @@ patra:
 - **读模型**（CQRS 读端查询投影）
   - `OrganizationSummary` / `OrganizationSuggestion`：机构摘要（ROR ID、显示名、中文名、国家、城市、类型）与建议候选（摘要 + 命中的名称）
   - `MeshDescriptorSummary` / `MeshDescriptorSuggestion`：MeSH 主题词摘要（UI、英文名、树号）与建议候选（摘要 + 命中的入口词）
-  - `SuggestQuery`（`domain/query/`）：归一化、已验证的建议查询（文本、`MatchMode`、limit）
+  - `SuggestQuery`（`domain/kernel/model/vo/`）：归一化、已验证的建议查询（文本、`MatchMode`、limit）
   - `VenueSummaryReadModel`：期刊列表摘要读模型
   - `VenueDetailReadModel`：期刊详情读模型（`@Builder`，17 字段）
   - `VenueFilter`：期刊筛选条件（`@Builder`，支持 keyword/countryCode/issnL/nlmId 独立筛选）

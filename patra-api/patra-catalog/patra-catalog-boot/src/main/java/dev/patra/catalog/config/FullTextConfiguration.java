@@ -1,6 +1,6 @@
 package dev.patra.catalog.config;
 
-import dev.patra.catalog.domain.service.fulltext.FullTextRetrySchedule;
+import dev.patra.catalog.domain.fulltext.policy.FullTextRetrySchedule;
 import java.time.Clock;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
