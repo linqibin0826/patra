@@ -67,6 +67,34 @@ class SubdomainArchitectureRulesTest {
         .isInstanceOf(IllegalArgumentException.class);
   }
 
+  /// 落在分包模板白名单里的包都不违规。
+  @Test
+  void should_accept_packages_on_template() {
+    assertThat(
+            evaluate(
+                    "templatecompliant",
+                    rules("templatecompliant").componentPackagesFollowTemplate())
+                .hasViolation())
+        .isFalse();
+  }
+
+  /// 白名单之外的包、子域根包里的类、多出来的层级都违规。
+  @Test
+  void should_reject_packages_off_template() {
+    EvaluationResult result =
+        evaluate("offtemplate", rules("offtemplate").componentPackagesFollowTemplate());
+
+    assertThat(result.hasViolation()).isTrue();
+    assertThat(result.getFailureReport().getDetails())
+        .anyMatch(line -> line.contains("CollectionDto"))
+        .anyMatch(line -> line.contains("Snapshot"))
+        .anyMatch(line -> line.contains("WebController"))
+        .anyMatch(line -> line.contains("RepoHelper"))
+        .anyMatch(line -> line.contains("RootLevel"))
+        .anyMatch(line -> line.contains("NestedPort"))
+        .anyMatch(line -> line.contains("UsecaseRoot"));
+  }
+
   /// 底座不在声明的子域里时拒绝构造。
   @Test
   void should_reject_foundation_missing_from_subdomains() {

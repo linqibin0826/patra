@@ -235,6 +235,21 @@ public final class SubdomainArchitectureRules {
         .allowEmptyShould(true);
   }
 
+  /// 子域下的包必须落在分包模板的白名单里（模板见 `.claude/rules/tech/package-layout.md`）。
+  ///
+  /// 子域根包本身不放类；`usecase.<用例族>`、`port.<协作者>`、infra 的协作者包名字自定，
+  /// infra 协作者包是否有同名端口由 {@link #infraPackagesMatchPorts} 管。
+  ///
+  /// @return ArchRule 规则实例
+  public ArchRule componentPackagesFollowTemplate() {
+    return classes()
+        .that(resideInSomeSubdomain())
+        .should(followTemplate())
+        .as("子域下的包落在分包模板的白名单里")
+        .because("分包模板见 .claude/rules/tech/package-layout.md")
+        .allowEmptyShould(true);
+  }
+
   /// 全部子域规则。
   ///
   /// @return 不可变的规则列表
@@ -245,6 +260,84 @@ public final class SubdomainArchitectureRules {
         crossSubdomainDependenciesGoThroughPublishedPackages(),
         crossSubdomainDependenciesAreDeclared(),
         foundationDependsOnNoOtherSubdomain());
+  }
+
+  /// 类所在的包在分包模板的白名单里。
+  ///
+  /// @return 条件
+  private ArchCondition<JavaClass> followTemplate() {
+    return new ArchCondition<>("落在分包模板的白名单里") {
+      @Override
+      public void check(JavaClass javaClass, ConditionEvents events) {
+        String packageName = javaClass.getPackageName();
+        String layer = layerOf(packageName).orElseThrow();
+        String subdomainPackage =
+            basePackage + "." + layer + "." + subdomainOf(packageName).orElseThrow();
+        List<String> segments =
+            packageName.equals(subdomainPackage)
+                ? List.of()
+                : List.of(packageName.substring(subdomainPackage.length() + 1).split("\\."));
+        if (!onTemplate(layer, segments)) {
+          events.add(
+              SimpleConditionEvent.violated(
+                  javaClass,
+                  javaClass.getName() + " 的包 " + String.join(".", segments) + " 不在分包模板里"));
+        }
+      }
+    };
+  }
+
+  /// 子域下的相对包是否在某层的白名单里。
+  ///
+  /// @param layer 层名
+  /// @param segments 子域包之后的各段，空表示子域根包
+  /// @return 在白名单里时为真
+  private static boolean onTemplate(String layer, List<String> segments) {
+    if (segments.isEmpty()) {
+      return false;
+    }
+    String first = segments.getFirst();
+    int depth = segments.size();
+    return switch (layer) {
+      case "domain" ->
+          switch (first) {
+            case "model" ->
+                depth >= 2
+                    && (segments.get(1).equals("vo")
+                        || depth == 2
+                            && Set.of("aggregate", "entity", "enums", "read")
+                                .contains(segments.get(1)));
+            case "port" -> depth == 2;
+            case "policy", "service", "event", "exception" -> depth == 1;
+            default -> false;
+          };
+      case "app" ->
+          switch (first) {
+            case "usecase" -> depth == 2;
+            case "service", "listener", "config" -> depth == 1;
+            default -> false;
+          };
+      case "infra" ->
+          switch (first) {
+            case "persistence" ->
+                depth == 1
+                    || depth == 2
+                        && Set.of("entity", "dao", "mapper", "converter").contains(segments.get(1));
+            case "support", "config" -> depth == 1;
+            default -> true;
+          };
+      case "adapter" ->
+          switch (first) {
+            case "rest" ->
+                depth == 1
+                    || depth == 2
+                        && Set.of("request", "response", "converter").contains(segments.get(1));
+            case "internal", "scheduler", "mq", "config" -> depth == 1;
+            default -> false;
+          };
+      case "api" -> depth == 1 && Set.of("endpoint", "dto").contains(first);
+      default -> false;
+    };
   }
 
   /// 校验一条要声明的边。
