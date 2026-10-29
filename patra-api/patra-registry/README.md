@@ -31,7 +31,19 @@ patra-registry/
 - `api` 为独立契约模块,由 `adapter` 实现
 - `boot` 组装所有模块并提供可执行入口
 
-详细的子模块说明请参阅各子模块的 README.md。
+## 子域与分包
+
+模块内先按子域、再按组件类型分包（`dev.patra.registry.{层}.{子域}.{组件}`），模板见 `.claude/rules/tech/package-layout.md`，由 `RegistryArchitectureTest` 执行的 `SubdomainArchitectureRules` 守住。
+
+| 子域 | 内容 |
+|------|------|
+| `provenance` | 数据源与运营配置聚合 `ProvenanceConfiguration`；对外公开读端口 `ProvenanceReadPort`（按代码解析数据源 ID） |
+| `expr` | 表达式元数据快照（字段、能力、渲染规则、API 参数映射），时态值对象接口 `TemporalEntity` |
+| `dictionary` | 字典解析，来源标准 `ReferenceStandard` 并入此处 |
+| `kernel`（底座） | 只在 domain 层：6 个异常根（`domain.kernel.exception`）与注册键规范化 `RegistryKeyStandardizer` / `RegistryKeyPlaceholders`（`domain.kernel.policy`） |
+
+- 子域间只有一条依赖边 `expr → provenance`：`ExprRepositoryAdapter` 经 `domain.provenance.port.read.ProvenanceReadPort` 把数据源代码解析为 ID，不碰 provenance 的 entity / dao。
+- 各层落点：读用例 `app.{子域}.usecase.query`（`*QueryService` + `*QueryAssembler`）；仓储与读适配器 `infra.{子域}.persistence(.entity|.dao|.mapper)`；内部 RPC `adapter.{子域}.internal`（`*EndpointImpl` + `*ApiConverter`）；门户字典接口 `adapter.dictionary.rest`；契约 `api.{子域}.{endpoint,dto}`，错误码在保留包 `api.error`。
 
 ## 核心领域概念
 
@@ -194,8 +206,8 @@ Flyway 自动执行数据库迁移,种子数据包括:
 
 假设需要添加 `CacheConfig`:
 
-1. **定义值对象**: `patra-registry-domain/.../vo/provenance/CacheConfig.java`
-2. **定义读模型**: `patra-registry-domain/.../read/provenance/CacheConfigQuery.java`
+1. **定义值对象**: `patra-registry-domain/.../domain/provenance/model/vo/CacheConfig.java`
+2. **定义读模型**: `patra-registry-domain/.../domain/provenance/model/read/CacheConfigQuery.java`
 3. **更新聚合根**: 在 `ProvenanceConfiguration` 中添加 `cacheConfig` 字段
 4. **扩展仓储接口**: 在 `ProvenanceConfigRepository` 中添加查询方法
 5. **创建 DO 和 Mapper**: 在 `patra-registry-infra` 中创建数据库实体和映射器
