@@ -53,7 +53,7 @@ CQRS 读端查询服务，不走 CommandBus，直接被 Controller 注入。
 | `{Domain}ListQuery` | `usecase/{domain}/query/dto/` | 查询参数 DTO |
 
 **特点**：
-- 公开方法加 `@Transactional(readOnly = true)`（见 [transaction.md](../tech/transaction.md)）
+- 默认不加事务；需要同一会话多次读 JPA 实体时才加 `@Transactional(readOnly = true)`（见 [transaction.md](../tech/transaction.md)）
 - 无接口定义（CQRS 读端不需要抽象）
 - 使用 `PagingParams.normalize()` 统一归一化分页参数
 - 返回 `PageResult<{Entity}SummaryReadModel>`

@@ -38,6 +38,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
+import org.springframework.transaction.support.TransactionOperations;
 
 /// ChangeUsernameHandler 单元测试。
 @DisplayName("ChangeUsernameHandler 单元测试")
@@ -61,6 +62,7 @@ class ChangeUsernameHandlerTest {
           users,
           formerUsernames,
           POLICY,
+          TransactionOperations.withoutTransaction(),
           Clock.fixed(NOW, ZoneOffset.UTC));
 
   /// 默认：当前用户 42，正常状态，每次加锁读都给一个新实例（聚合会被处理器改掉），保存原样返回。

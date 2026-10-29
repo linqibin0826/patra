@@ -10,6 +10,8 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 /// `CommentRepository` 的原生 SQL 实现。写方法不开事务，由 app 层的事务包住。
 @Component
@@ -28,6 +30,7 @@ public class CommentRepositoryAdapter implements CommentRepository {
   ///
   /// @param rootId 根评论
   @Override
+  @Transactional(propagation = Propagation.MANDATORY)
   public void lockThread(long rootId) {
     jdbc.sql("SELECT pg_advisory_xact_lock(hashtextextended(:lockKey, 0))")
         .param("lockKey", THREAD_LOCK_PREFIX + rootId)
@@ -49,6 +52,7 @@ public class CommentRepositoryAdapter implements CommentRepository {
   /// @param commentId 评论
   /// @return 评论
   @Override
+  @Transactional(propagation = Propagation.MANDATORY)
   public Optional<CommentAggregate> findForUpdate(long commentId) {
     return findWith(SELECT_COMMENT + " FOR UPDATE", commentId);
   }
@@ -58,6 +62,7 @@ public class CommentRepositoryAdapter implements CommentRepository {
   /// @param commentId 评论
   /// @return 评论
   @Override
+  @Transactional(propagation = Propagation.MANDATORY)
   public Optional<CommentAggregate> findForEdit(long commentId) {
     return findWith(SELECT_COMMENT + " FOR NO KEY UPDATE", commentId);
   }

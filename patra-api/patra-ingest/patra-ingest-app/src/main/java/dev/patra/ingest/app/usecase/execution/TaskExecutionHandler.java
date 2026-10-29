@@ -10,6 +10,7 @@ import dev.patra.tool.cqrs.CommandHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionOperations;
 
 /// 任务执行处理器（顶层编排器）。
 ///
@@ -45,6 +46,7 @@ public class TaskExecutionHandler implements CommandHandler<TaskReadyCommand, Vo
   private final TaskPreparationPhase preparePhase;
   private final BatchExecutionPhase executePhase;
   private final TaskCompletionPhase completePhase;
+  private final TransactionOperations transactions;
 
   /// 执行任务（准备 → 执行 → 完成）。
   ///
@@ -102,7 +104,11 @@ public class TaskExecutionHandler implements CommandHandler<TaskReadyCommand, Vo
 
       // ========== 阶段2: 完成 ==========
       log.debug("进入完成阶段 taskId={} runId={}", taskId, session.runId());
-      completePhase.complete(session, context, executeResult);
+      // 执行阶段调外部 API，在事务外；完成阶段（推进游标、改状态、写 Outbox）包一个短事务
+      ExecutionSession completing = session;
+      ExecutionContext completingContext = context;
+      transactions.executeWithoutResult(
+          status -> completePhase.complete(completing, completingContext, executeResult));
 
       log.info("任务执行完成 taskId={} runId={}", taskId, session.runId());
       return null;

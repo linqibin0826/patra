@@ -10,10 +10,12 @@ import dev.patra.tool.core.security.CurrentUser;
 import dev.patra.tool.core.security.CurrentUserPort;
 import dev.patra.tool.cqrs.CommandHandler;
 import java.time.Clock;
+import java.time.Instant;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionOperations;
 
 /// 踢单个设备（PAP-99 设计第 11.2 节）。
 ///
@@ -34,6 +36,7 @@ public class RevokeSessionHandler implements CommandHandler<RevokeSessionCommand
   private final SessionTerminator sessionTerminator;
   private final UserLoginRecordRepository records;
   private final NewDeviceMailThrottlePort newDeviceThrottle;
+  private final TransactionOperations transactions;
   private final Clock clock;
 
   /// 踢掉。
@@ -41,16 +44,20 @@ public class RevokeSessionHandler implements CommandHandler<RevokeSessionCommand
   /// @param command 命令
   /// @return 被踢掉的会话数，0 或 1
   @Override
-  @Transactional
   public SessionsRevoked handle(RevokeSessionCommand command) {
     CurrentUser current = currentUserPort.require();
     if (command.sessionId() == current.sessionId()) {
       throw new CurrentSessionRevocationException();
     }
     reauthenticationGuard.requireRecent(current);
+    Instant now = clock.instant();
     boolean revoked =
-        sessionTerminator.terminate(
-            current.userId(), command.sessionId(), LoginEndReason.REVOKED, clock.instant());
+        Objects.requireNonNull(
+            transactions.execute(
+                status ->
+                    sessionTerminator.terminate(
+                        current.userId(), command.sessionId(), LoginEndReason.REVOKED, now)));
+    // 清提醒冷却与会话无关，放在提交之后（transaction.md 第 2 节）
     if (revoked) {
       records
           .findById(command.sessionId())

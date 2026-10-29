@@ -32,6 +32,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.transaction.support.TransactionOperations;
 
 /// UpdatePrivacyHandler 单元测试：解析、保存、状态守卫。
 class UpdatePrivacyHandlerTest {
@@ -43,7 +44,11 @@ class UpdatePrivacyHandlerTest {
   private final UserProfileRepository profiles = mock(UserProfileRepository.class);
   private final UpdatePrivacyHandler handler =
       new UpdatePrivacyHandler(
-          currentUserPort, users, profiles, new ProfilePolicy(new DisplayNamePolicy()));
+          currentUserPort,
+          users,
+          profiles,
+          new ProfilePolicy(new DisplayNamePolicy()),
+          TransactionOperations.withoutTransaction());
 
   /// 默认：当前用户正常，资料为默认隐私；每次读都给新实例。
   @BeforeEach

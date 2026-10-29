@@ -15,6 +15,8 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 /// `SubjectRepository` 的原生 SQL 实现。表只有一张、查询都走索引，不建 JPA 实体。所有者两列只在登记本地对象时
 /// 写入，之后没有任何语句改它们。
@@ -64,6 +66,7 @@ public class SubjectRepositoryAdapter implements SubjectRepository {
   /// @param now 快照时间
   /// @return 写入后的登记对象
   @Override
+  @Transactional(propagation = Propagation.MANDATORY)
   public SubjectAggregate upsertResolved(SubjectType type, SourceRecord record, Instant now) {
     jdbc.sql("SELECT pg_advisory_xact_lock(hashtextextended(:lockKey, 0))")
         .param("lockKey", LOCK_PREFIX + type.code() + ":" + record.naturalKey())

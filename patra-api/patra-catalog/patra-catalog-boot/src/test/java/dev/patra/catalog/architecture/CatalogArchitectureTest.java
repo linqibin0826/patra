@@ -195,15 +195,21 @@ class CatalogArchitectureTest {
   class TransactionBoundaryTests {
 
     @Test
-    @DisplayName("规则 15: @Transactional 只能在 app 层")
+    @DisplayName("规则 15: @Transactional 只能在 app 层（infra 只允许 MANDATORY 守卫）")
     void transactionsShouldOnlyBeInAppLayer() {
       rules.transactionsOnlyInAppLayer().check(classes);
     }
 
     @Test
-    @DisplayName("规则 16: Domain 层严禁使用 @Transactional")
-    void domainShouldNotUseTransactions() {
-      rules.domainShouldNotUseTransactions().check(classes);
+    @DisplayName("规则 16: 禁止类级 @Transactional")
+    void shouldNotUseClassLevelTransactions() {
+      rules.noClassLevelTransactions().check(classes);
+    }
+
+    @Test
+    @DisplayName("规则 16b: 命令 Handler 不得标 @Transactional")
+    void commandHandlersShouldNotBeTransactional() {
+      rules.commandHandlersShouldNotBeTransactional().check(classes);
     }
   }
 

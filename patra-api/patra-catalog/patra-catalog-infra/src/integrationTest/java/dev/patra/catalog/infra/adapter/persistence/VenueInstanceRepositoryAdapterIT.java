@@ -278,6 +278,46 @@ class VenueInstanceRepositoryAdapterIT {
   }
 
   @Nested
+  @DisplayName("insertJournalInstanceIfAbsent 测试")
+  class InsertIfAbsentTests {
+
+    @Test
+    @DisplayName("新卷期 - 应该插入并回填 ID")
+    void insertJournalInstanceIfAbsent_newKey_shouldInsertAndAssignId() {
+      // Given
+      VenueInstanceAggregate instance = createJournalInstance(VenueId.of(1001L), "45", "3", 2024);
+
+      // When
+      boolean inserted = repository.insertJournalInstanceIfAbsent(instance);
+
+      // Then
+      assertThat(inserted).isTrue();
+      assertThat(instance.getId()).isNotNull();
+      assertThat(repository.findJournalInstance(1001L, "45", "3", 2024))
+          .get()
+          .extracting(found -> found.getId())
+          .isEqualTo(instance.getId());
+    }
+
+    @Test
+    @DisplayName("同一卷期已存在（期号为 null）- 应该跳过且不产生重复行")
+    void insertJournalInstanceIfAbsent_existingKeyWithNullIssue_shouldSkip() {
+      // Given
+      repository.insertJournalInstanceIfAbsent(
+          createJournalInstance(VenueId.of(1001L), "45", null, 2024));
+
+      // When
+      boolean inserted =
+          repository.insertJournalInstanceIfAbsent(
+              createJournalInstance(VenueId.of(1001L), "45", null, 2024));
+
+      // Then
+      assertThat(inserted).isFalse();
+      assertThat(jpaRepository.count()).isEqualTo(1);
+    }
+  }
+
+  @Nested
   @DisplayName("save 测试")
   class SaveTests {
 

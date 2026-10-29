@@ -26,7 +26,7 @@ import org.springframework.stereotype.Service;
 /// - 安全地持久化计划聚合根、切片、任务和调度实例
 ///   - 提供适当的异常处理和日志记录
 ///
-/// 注意：该协调器不使用 `@Transactional`，依赖主编排器的外部事务边界来确保与事件发布的原子性。
+/// 注意：该协调器不使用 `@Transactional`，依赖主编排器用 `TransactionOperations` 开的事务来确保与事件发布的原子性。
 ///
 /// @author linqibin
 /// @since 0.1.0

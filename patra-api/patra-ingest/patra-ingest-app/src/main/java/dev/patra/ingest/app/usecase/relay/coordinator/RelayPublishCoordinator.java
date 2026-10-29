@@ -13,6 +13,7 @@ import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionOperations;
 
 /// 中继发布协调器 - 管理消息发布和状态转换
 ///
@@ -58,6 +59,7 @@ public class RelayPublishCoordinator {
   private final OutboxPublisherPort publisherPort;
   private final RelayErrorClassifier errorClassifier;
   private final RelayRetryPolicy retryPolicy;
+  private final TransactionOperations transactions;
 
   /// 发布单条 Outbox 消息并处理结果
   ///
@@ -155,7 +157,8 @@ public class RelayPublishCoordinator {
   ///
   /// @param message 成功发布的 Outbox 消息
   private void handleSuccess(OutboxMessage message) {
-    relayStore.markPublished(message.getId(), message.getVersion());
+    transactions.executeWithoutResult(
+        status -> relayStore.markPublished(message.getId(), message.getVersion()));
   }
 
   /// 通过调度重试来处理暂时性发布错误
@@ -181,13 +184,15 @@ public class RelayPublishCoordinator {
     Duration backoff = retryPolicy.computeDelay(attemptNumber);
     Instant nextRetryAt = Instant.now().plus(backoff);
 
-    relayStore.markDeferred(
-        message.getId(),
-        message.getVersion(),
-        attemptNumber, // 已更新的重试计数
-        nextRetryAt,
-        extractErrorCode(exception),
-        truncateMessage(exception.getMessage(), 500));
+    transactions.executeWithoutResult(
+        status ->
+            relayStore.markDeferred(
+                message.getId(),
+                message.getVersion(),
+                attemptNumber, // 已更新的重试计数
+                nextRetryAt,
+                extractErrorCode(exception),
+                truncateMessage(exception.getMessage(), 500)));
   }
 
   /// 处理致命发布错误或达到最大重试
@@ -211,12 +216,14 @@ public class RelayPublishCoordinator {
   private void handleFailed(OutboxMessage message, RelayPlan plan, Exception exception) {
     int attemptNumber = message.computeNextAttempt();
 
-    relayStore.markFailed(
-        message.getId(),
-        message.getVersion(),
-        attemptNumber, // 最终重试计数
-        extractErrorCode(exception),
-        truncateMessage(exception.getMessage(), 500));
+    transactions.executeWithoutResult(
+        status ->
+            relayStore.markFailed(
+                message.getId(),
+                message.getVersion(),
+                attemptNumber, // 最终重试计数
+                extractErrorCode(exception),
+                truncateMessage(exception.getMessage(), 500)));
   }
 
   /// 从异常类名提取简单的错误代码

@@ -10,6 +10,8 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 /// `PublishQuotaRepository` 的原生 SQL 实现（`subject.publish_quota`）。写方法不开事务，由 app 层的事务包住。
 @Component
@@ -25,6 +27,7 @@ public class PublishQuotaRepositoryAdapter implements PublishQuotaRepository {
   ///
   /// @param userId 作者
   @Override
+  @Transactional(propagation = Propagation.MANDATORY)
   public void lock(long userId) {
     jdbc.sql("SELECT pg_advisory_xact_lock(hashtextextended(:lockKey, 0))")
         .param("lockKey", LOCK_PREFIX + userId)

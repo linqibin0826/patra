@@ -69,6 +69,15 @@ public interface VenueInstanceRepository {
   Optional<VenueInstanceAggregate> findConferenceInstance(
       Long venueId, String conferenceName, Integer publicationYear);
 
+  /// 期刊实例不存在时插入；同一载体、卷期、年份已有实例时什么都不做。
+  ///
+  /// 靠唯一键 `uk_venue_instance_identity` 判断冲突，并发插入同一卷期时只有一条成功，
+  /// 失败的一方不报错、不中断所在事务。插入成功时回填实例 ID。
+  ///
+  /// @param instance 期刊实例（尚未持久化）
+  /// @return 是否插入了新行
+  boolean insertJournalInstanceIfAbsent(VenueInstanceAggregate instance);
+
   /// 保存单个载体实例（插入或更新）。
   ///
   /// @param instance 载体实例聚合根

@@ -46,7 +46,7 @@ public class SliceStatusChangedEventHandler {
   ///
   /// @param event Slice 状态变更事件
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
   public void handle(SliceStatusChangedEvent event) {
     try {
       log.debug(

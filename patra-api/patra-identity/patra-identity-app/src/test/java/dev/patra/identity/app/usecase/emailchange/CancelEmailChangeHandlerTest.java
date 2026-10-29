@@ -25,6 +25,7 @@ import java.time.ZoneOffset;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.support.TransactionOperations;
 
 /// CancelEmailChangeHandler 单元测试：作废待确认的令牌，没有也成功；注销中 409。
 @DisplayName("CancelEmailChangeHandler 单元测试")
@@ -39,7 +40,11 @@ class CancelEmailChangeHandlerTest {
   private final EmailTokenRepository tokens = mock(EmailTokenRepository.class);
   private final CancelEmailChangeHandler handler =
       new CancelEmailChangeHandler(
-          currentUserPort, users, tokens, Clock.fixed(NOW, ZoneOffset.UTC));
+          currentUserPort,
+          users,
+          tokens,
+          TransactionOperations.withoutTransaction(),
+          Clock.fixed(NOW, ZoneOffset.UTC));
 
   @Test
   @DisplayName("作废 EMAIL_CHANGE_CONFIRM；0 行也不抛")

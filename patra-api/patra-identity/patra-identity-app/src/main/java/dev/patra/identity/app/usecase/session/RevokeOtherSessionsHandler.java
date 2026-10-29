@@ -10,11 +10,13 @@ import dev.patra.tool.core.security.CurrentUser;
 import dev.patra.tool.core.security.CurrentUserPort;
 import dev.patra.tool.cqrs.CommandHandler;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionOperations;
 
 /// 踢掉除本机外的全部设备（PAP-99 设计第 11.3 节）：先过再认证守卫，再撤销其余会话并把登录记录结束为
 /// `REVOKED`，再清掉每台被踢设备的新设备提醒冷却（它们再登录要立即提醒）。没有其他设备时返回 0。不发邮件。
@@ -29,6 +31,7 @@ public class RevokeOtherSessionsHandler
   private final SessionTerminator sessionTerminator;
   private final UserLoginRecordRepository records;
   private final NewDeviceMailThrottlePort newDeviceThrottle;
+  private final TransactionOperations transactions;
   private final Clock clock;
 
   /// 踢掉其他全部。
@@ -36,13 +39,17 @@ public class RevokeOtherSessionsHandler
   /// @param command 命令
   /// @return 被踢掉的会话数
   @Override
-  @Transactional
   public SessionsRevoked handle(RevokeOtherSessionsCommand command) {
     CurrentUser current = currentUserPort.require();
     reauthenticationGuard.requireRecent(current);
+    Instant now = clock.instant();
     List<Long> revoked =
-        sessionTerminator.terminateAllExcept(
-            current.userId(), current.sessionId(), LoginEndReason.REVOKED, clock.instant());
+        Objects.requireNonNull(
+            transactions.execute(
+                status ->
+                    sessionTerminator.terminateAllExcept(
+                        current.userId(), current.sessionId(), LoginEndReason.REVOKED, now)));
+    // 清提醒冷却与会话无关，放在提交之后（transaction.md 第 2 节）
     for (UserLoginRecord record : records.findAllByIds(revoked)) {
       newDeviceThrottle.reset(current.userId(), record.getDeviceId().orElse(null));
     }

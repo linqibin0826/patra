@@ -76,7 +76,7 @@ public HarvestResult handle(HarvestCommand command) {
 
 | 写法 | 使用场景 |
 |------|---------|
-| `@Transactional(readOnly = true)` | QueryService 的公开查询方法 |
+| `@Transactional(readOnly = true)` | QueryService 里要在同一会话多次读 JPA 实体的方法（方法里不能有远程调用） |
 | `@Transactional(propagation = MANDATORY)` | 必须在调用方事务里执行的方法：加锁、`FOR UPDATE` 读取、被 Handler 在事务里调用的 Gateway（infra 也允许） |
 | `@Transactional(propagation = REQUIRES_NEW, rollbackFor = Exception.class)` | 独立 bean 的逐条落库 Persister；调用方不得持有事务 |
 
@@ -90,7 +90,6 @@ public class VenueQueryService {
     private final VenueReadPort venueReadPort;
 
     /// 查询 Venue 分页列表。
-    @Transactional(readOnly = true)
     public PageResult<VenueSummaryReadModel> listVenues(VenueListQuery query) {
         Objects.requireNonNull(query, "query must not be null");
         PagingParams paging = PagingParams.normalize(query.page(), query.pageSize());
@@ -103,7 +102,7 @@ public class VenueQueryService {
 }
 ```
 
-**特点**：无接口定义、公开方法加 `@Transactional(readOnly = true)`、返回 `PageResult<ReadModel>`。
+**特点**：无接口定义、默认不加事务（需要同一会话多次读 JPA 实体时才加 `readOnly`）、返回 `PageResult<ReadModel>`。
 
 ## Handler 单元测试模板
 

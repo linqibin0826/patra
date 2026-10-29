@@ -20,14 +20,14 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionOperations;
 
 /// MeSH 限定词导入处理器。
 ///
 /// **职责**：
 ///
 /// - 编排 MeSH 限定词导入流程
-/// - 管理事务边界
+/// - 管理事务边界：下载和解析在事务外，事务只包批量保存
 /// - 委派具体任务给领域端口
 ///
 /// **下载策略**：
@@ -54,12 +54,13 @@ public class MeshQualifierImportHandler
   private final FileDownloadPort fileDownloadPort;
   private final MeshQualifierParserPort qualifierParserPort;
   private final MeshQualifierRepository qualifierRepository;
+  private final TransactionOperations transactions;
 
   /// 导入 MeSH 限定词。
   ///
   /// 从远程 URL 下载到临时文件并解析 XML，批量保存到数据库。
   ///
-  /// **事务策略**：整个操作在一个事务内完成（数据量小，约 80 条）。
+  /// **事务策略**：下载与解析在事务外，批量保存（约 80 条）用一个短事务。
   ///
   /// **前置条件**：
   ///
@@ -73,7 +74,6 @@ public class MeshQualifierImportHandler
   /// @return 导入结果摘要
   /// @throws DataAlreadyExistsException 当表中已有数据时
   @Override
-  @Transactional
   public MeshQualifierImportResult handle(MeshQualifierImportCommand command) {
     log.info("启动 MeSH 限定词导入，URL：{}，版本：{}", command.url(), command.meshVersion());
 
@@ -98,7 +98,7 @@ public class MeshQualifierImportHandler
       }
 
       // 4. 批量保存
-      qualifierRepository.saveBatch(qualifiers);
+      transactions.executeWithoutResult(status -> qualifierRepository.saveBatch(qualifiers));
 
       log.info("MeSH 限定词导入完成，数量：{}", qualifiers.size());
       return MeshQualifierImportResult.success(

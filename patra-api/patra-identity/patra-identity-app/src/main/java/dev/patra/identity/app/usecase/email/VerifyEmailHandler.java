@@ -16,11 +16,12 @@ import dev.patra.tool.cqrs.CommandHandler;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionOperations;
 
 /// 用邮件里的令牌验证邮箱：消费令牌、写验证时间、撤销该用户此前的其他会话。
 ///
@@ -41,6 +42,7 @@ public class VerifyEmailHandler implements CommandHandler<VerifyEmailCommand, Em
   private final EmailTokenRepository tokens;
   private final UserRepository users;
   private final SessionTerminator sessionTerminator;
+  private final TransactionOperations transactions;
   private final Clock clock;
 
   /// 验证。
@@ -48,7 +50,6 @@ public class VerifyEmailHandler implements CommandHandler<VerifyEmailCommand, Em
   /// @param command 命令
   /// @return 验证的邮箱和验证时间
   @Override
-  @Transactional
   public EmailVerified handle(VerifyEmailCommand command) {
     if (command.token() == null || command.token().isBlank()) {
       throw new InvalidUserFieldsException(List.of(UserFieldViolations.tokenRequired()));
@@ -60,32 +61,40 @@ public class VerifyEmailHandler implements CommandHandler<VerifyEmailCommand, Em
       throw invalid();
     }
     long userId = found.getUserId();
-    User user = users.findByIdForUpdate(userId).orElseThrow(() -> invalid());
     Instant now = clock.instant();
-    EmailToken consumed =
-        tokens.consume(hash, EmailTokenPurpose.EMAIL_VERIFY, now).orElseThrow(() -> invalid());
-    if (!user.getEmail().map(consumed.getEmail()::equals).orElse(false)) {
-      throw invalid();
-    }
-    user.markEmailVerified(now);
-    User saved = users.save(user);
-
     Optional<CurrentUser> current = currentUserPort.current();
-    List<Long> revoked =
-        current
-            .filter(requester -> requester.userId() == userId)
-            .map(
-                self ->
-                    sessionTerminator.terminateAllExcept(
-                        userId, self.sessionId(), LoginEndReason.EMAIL_VERIFIED, now))
-            .orElseGet(
-                () -> sessionTerminator.terminateAll(userId, LoginEndReason.EMAIL_VERIFIED, now));
-    log.info(
-        "邮箱已验证: userId={}, tokenId={}, revokedSessions={}",
-        userId,
-        consumed.getId(),
-        revoked.size());
-    return EmailVerified.of(consumed.getEmail().value(), saved.getEmailVerifiedAt());
+    // 撤销会话留在锁住用户行的事务里（transaction.md 第 2 节的例外）
+    return Objects.requireNonNull(
+        transactions.execute(
+            status -> {
+              User user = users.findByIdForUpdate(userId).orElseThrow(() -> invalid());
+              EmailToken consumed =
+                  tokens
+                      .consume(hash, EmailTokenPurpose.EMAIL_VERIFY, now)
+                      .orElseThrow(() -> invalid());
+              if (!user.getEmail().map(consumed.getEmail()::equals).orElse(false)) {
+                throw invalid();
+              }
+              user.markEmailVerified(now);
+              User saved = users.save(user);
+              List<Long> revoked =
+                  current
+                      .filter(requester -> requester.userId() == userId)
+                      .map(
+                          self ->
+                              sessionTerminator.terminateAllExcept(
+                                  userId, self.sessionId(), LoginEndReason.EMAIL_VERIFIED, now))
+                      .orElseGet(
+                          () ->
+                              sessionTerminator.terminateAll(
+                                  userId, LoginEndReason.EMAIL_VERIFIED, now));
+              log.info(
+                  "邮箱已验证: userId={}, tokenId={}, revokedSessions={}",
+                  userId,
+                  consumed.getId(),
+                  revoked.size());
+              return EmailVerified.of(consumed.getEmail().value(), saved.getEmailVerifiedAt());
+            }));
   }
 
   /// 令牌不可用：不区分原因。

@@ -18,11 +18,12 @@ import dev.patra.tool.cqrs.CommandHandler;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionOperations;
 
 /// 当前用户改用户名。
 ///
@@ -40,6 +41,7 @@ public class ChangeUsernameHandler
   private final UserRepository users;
   private final FormerUsernameRepository formerUsernames;
   private final UsernameChangePolicy policy;
+  private final TransactionOperations transactions;
   private final Clock clock;
 
   /// 改名。
@@ -47,7 +49,6 @@ public class ChangeUsernameHandler
   /// @param command 命令
   /// @return 新用户名和下次可以改名的时间
   @Override
-  @Transactional
   public ChangeUsernameResult handle(ChangeUsernameCommand command) {
     CurrentUser current = currentUserPort.require();
     Optional<FieldViolation> violation = usernamePolicy.validate(command.username());
@@ -55,18 +56,28 @@ public class ChangeUsernameHandler
       throw new InvalidUserFieldsException(List.of(violation.get()));
     }
     Username next = Username.of(command.username());
-    User user =
-        users.findByIdForUpdate(current.userId()).orElseThrow(AuthenticationRequiredException::new);
     Instant now = clock.instant();
-    Username previous = user.changeUsername(next, now, policy);
-    if (users.existsByUsername(next)
-        || formerUsernames.existsReservedByOther(next, user.getId(), now)) {
-      throw new UserIdentifierTakenException(List.of(UserFieldViolations.usernameAlreadyTaken()));
-    }
-    users.save(user);
-    formerUsernames.save(
-        FormerUsername.reserve(user.getId(), previous, now, policy.reservationPeriod()));
-    log.info("前台用户已改名: userId={}, from={}, to={}", user.getId(), previous.value(), next.value());
+    Username previous =
+        Objects.requireNonNull(
+            transactions.execute(
+                status -> {
+                  User user =
+                      users
+                          .findByIdForUpdate(current.userId())
+                          .orElseThrow(AuthenticationRequiredException::new);
+                  Username old = user.changeUsername(next, now, policy);
+                  if (users.existsByUsername(next)
+                      || formerUsernames.existsReservedByOther(next, user.getId(), now)) {
+                    throw new UserIdentifierTakenException(
+                        List.of(UserFieldViolations.usernameAlreadyTaken()));
+                  }
+                  users.save(user);
+                  formerUsernames.save(
+                      FormerUsername.reserve(user.getId(), old, now, policy.reservationPeriod()));
+                  return old;
+                }));
+    log.info(
+        "前台用户已改名: userId={}, from={}, to={}", current.userId(), previous.value(), next.value());
     return ChangeUsernameResult.of(next.value(), policy.nextChangeAt(now));
   }
 }

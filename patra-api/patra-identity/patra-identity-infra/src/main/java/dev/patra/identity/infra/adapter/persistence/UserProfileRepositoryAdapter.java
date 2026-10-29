@@ -16,6 +16,7 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /// 资料仓储的 JPA 实现：资料表一行，加链接、关注领域两张有序子表。
@@ -41,12 +42,12 @@ public class UserProfileRepositoryAdapter implements UserProfileRepository {
     return dao.findByUserId(userId).map(this::assemble);
   }
 
-  /// 保存资料，新资料分配雪花 ID；两张子表整组替换。
+  /// 保存资料，新资料分配雪花 ID；两张子表整组替换，所以要求调用方的事务（`MANDATORY`）。
   ///
   /// @param profile 资料
   /// @return 保存后的资料
   @Override
-  @Transactional
+  @Transactional(propagation = Propagation.MANDATORY)
   public UserProfile save(UserProfile profile) {
     UserProfileEntity entity = mapper.toEntity(profile);
     if (entity.getId() == null) {

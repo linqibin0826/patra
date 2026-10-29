@@ -25,6 +25,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
@@ -68,7 +69,7 @@ public class DefaultTaskCompletionPhase implements TaskCompletionPhase {
 
   /// Completes execution (advance cursor + update status).
   @Override
-  @Transactional(rollbackFor = Exception.class)
+  @Transactional(propagation = Propagation.MANDATORY)
   public void complete(
       ExecutionSession session,
       ExecutionContext context,

@@ -54,9 +54,10 @@ class CitationRecordReadAdapterIT {
   @DisplayName("500 篇带期刊、期次、作者、PMCID / PII 的文献：只发两条 SQL")
   void should_load_500_records_with_two_statements() {
     Long venueId = saveVenue("The New England journal of medicine", "N Engl J Med");
+    // 同一卷期只有一个实例（唯一键 uk_venue_instance_identity），500 篇共用
+    Long instanceId = saveInstance(venueId, "385", "16");
     List<Long> ids = new ArrayList<>();
     for (int i = 0; i < 500; i++) {
-      Long instanceId = saveInstance(venueId, "385", "16");
       Long id =
           persist(
               publication("Paper " + i, "3800" + i).venueId(venueId).venueInstanceId(instanceId));

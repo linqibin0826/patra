@@ -13,8 +13,11 @@ import dev.patra.ingest.domain.policy.RelayErrorClassifier.RelayErrorKind;
 import dev.patra.ingest.domain.policy.RelayRetryPolicy;
 import dev.patra.ingest.domain.port.OutboxPublisherPort;
 import dev.patra.ingest.domain.port.OutboxRelayRepository;
+import dev.patra.tool.test.transaction.RecordingTransactions;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -22,7 +25,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -52,7 +54,9 @@ class RelayPublishCoordinatorTest {
 
   @Mock private RelayRetryPolicy retryPolicy;
 
-  @InjectMocks private RelayPublishCoordinator coordinator;
+  private final List<String> events = new ArrayList<>();
+
+  private RelayPublishCoordinator coordinator;
 
   @Captor private ArgumentCaptor<Long> messageIdCaptor;
 
@@ -71,6 +75,13 @@ class RelayPublishCoordinatorTest {
 
   @BeforeEach
   void setUp() {
+    coordinator =
+        new RelayPublishCoordinator(
+            relayStore,
+            publisherPort,
+            errorClassifier,
+            retryPolicy,
+            new RecordingTransactions(events));
     testMessage =
         OutboxMessage.builder()
             .id(1L)
@@ -102,6 +113,19 @@ class RelayPublishCoordinatorTest {
   @Nested
   @DisplayName("发布成功场景")
   class PublishSuccessTests {
+
+    @Test
+    @DisplayName("发到 MQ 在事务外，标记已发布用一个短事务")
+    void shouldPublishOutsideTransactionAndMarkInside() throws Exception {
+      doAnswer(inv -> events.add("publish")).when(publisherPort).publish(testMessage, testPlan);
+      doAnswer(inv -> events.add("markPublished")).when(relayStore).markPublished(1L, 1L);
+
+      coordinator.publish(testMessage, testPlan);
+
+      assertThat(events)
+          .containsExactly(
+              "publish", RecordingTransactions.BEGIN, "markPublished", RecordingTransactions.END);
+    }
 
     @Test
     @DisplayName("发布成功应标记为 PUBLISHED 并返回成功结果")

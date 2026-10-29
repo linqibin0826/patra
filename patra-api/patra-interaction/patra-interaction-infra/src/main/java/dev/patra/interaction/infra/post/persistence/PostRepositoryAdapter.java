@@ -16,6 +16,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 /// `PostRepository` 的原生 SQL 实现。写方法不开事务，由 app 层的事务包住。
 @Component
@@ -40,6 +42,7 @@ public class PostRepositoryAdapter implements PostRepository {
   ///
   /// @param userId 作者
   @Override
+  @Transactional(propagation = Propagation.MANDATORY)
   public void lockAuthor(long userId) {
     jdbc.sql("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))")
         .param("key", LOCK_PREFIX + userId)

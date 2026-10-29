@@ -23,7 +23,7 @@ import org.springframework.stereotype.Service;
 ///   - 识别符合重试条件的任务
 ///   - 协调重试操作
 ///
-/// 注意：该协调器不使用 `@Transactional`，依赖主编排器的外部事务边界来确保与持久化和发布的原子性。
+/// 注意：该协调器不使用 `@Transactional`，依赖主编排器用 `TransactionOperations` 开的事务来确保与持久化和发布的原子性。
 ///
 /// @author linqibin
 /// @since 0.1.0

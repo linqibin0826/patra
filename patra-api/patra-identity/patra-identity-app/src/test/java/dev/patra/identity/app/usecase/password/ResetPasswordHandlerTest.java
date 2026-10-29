@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -255,6 +256,23 @@ class ResetPasswordHandlerTest {
                     ResetPasswordCommand.of(SECRET.value(), "Another-Horse-03", "127.0.0.1", null)))
         .isInstanceOf(InvalidUserFieldsException.class);
     verify(credentials, never()).save(any());
+  }
+
+  @Test
+  @DisplayName("清零登录失败（与会话无关的 Redis 写入）在事务提交之后")
+  void should_clear_login_failures_after_commit() {
+    AtomicBoolean clearedInTransaction = new AtomicBoolean(true);
+    doAnswer(
+            invocation -> {
+              clearedInTransaction.set(inTransaction.get());
+              return null;
+            })
+        .when(loginThrottle)
+        .clear(AccountType.USER, EMAIL);
+
+    handler.handle(ResetPasswordCommand.of(SECRET.value(), "Another-Horse-03", "127.0.0.1", null));
+
+    assertThat(clearedInTransaction).isFalse();
   }
 
   @Test
