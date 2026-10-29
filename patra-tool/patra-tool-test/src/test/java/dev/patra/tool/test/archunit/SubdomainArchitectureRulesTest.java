@@ -109,6 +109,15 @@ class SubdomainArchitectureRulesTest {
         .noneMatch(line -> line.contains("InfraConfig"));
   }
 
+  /// 声明了却在 domain 层没有任何类的子域违规（子域名拼错或声明了空子域）。
+  @Test
+  void should_reject_declared_subdomain_without_domain_classes() {
+    SubdomainArchitectureRules rules =
+        new SubdomainArchitectureRules(FIXTURES + "ghost", "subject", Set.of("subject", "ghostly"));
+
+    assertViolationNaming("ghost", rules.everyDeclaredSubdomainHasDomainPackage(), "ghostly");
+  }
+
   /// 底座不在声明的子域里时拒绝构造。
   @Test
   void should_reject_foundation_missing_from_subdomains() {
@@ -290,10 +299,10 @@ class SubdomainArchitectureRulesTest {
         .isInstanceOf(IllegalArgumentException.class);
   }
 
-  /// 全部规则是五条。
+  /// 全部规则是八条。
   @Test
-  void should_list_all_five_rules() {
-    assertThat(rules("compliant").allRules()).hasSize(5);
+  void should_list_all_eight_rules() {
+    assertThat(rules("compliant").allRules()).hasSize(8);
   }
 
   /// 断言规则在场景里有违规，且违规文本点名了某个类。

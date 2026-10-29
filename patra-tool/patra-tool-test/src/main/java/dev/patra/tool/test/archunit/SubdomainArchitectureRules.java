@@ -265,6 +265,20 @@ public final class SubdomainArchitectureRules {
         .allowEmptyShould(true);
   }
 
+  /// 每个已声明的子域在 domain 层至少有一个类。
+  ///
+  /// 防止子域名拼错，或声明了还没有代码的空子域。
+  ///
+  /// @return ArchRule 规则实例
+  public ArchRule everyDeclaredSubdomainHasDomainPackage() {
+    return classes()
+        .that(resideInLayer())
+        .should(coverEveryDeclaredSubdomainInDomain())
+        .as("每个已声明的子域在 domain 层都有类")
+        .because("子域清单要与代码一致：拼错的名字、空子域都会让其他规则静默失效")
+        .allowEmptyShould(true);
+  }
+
   /// 全部子域规则。
   ///
   /// @return 不可变的规则列表
@@ -274,7 +288,10 @@ public final class SubdomainArchitectureRules {
         subdomainsAreFreeOfCycles(),
         crossSubdomainDependenciesGoThroughPublishedPackages(),
         crossSubdomainDependenciesAreDeclared(),
-        foundationDependsOnNoOtherSubdomain());
+        foundationDependsOnNoOtherSubdomain(),
+        componentPackagesFollowTemplate(),
+        infraPackagesMatchPorts(),
+        everyDeclaredSubdomainHasDomainPackage());
   }
 
   /// 类所在的包在分包模板的白名单里。
@@ -341,6 +358,35 @@ public final class SubdomainArchitectureRules {
               SimpleConditionEvent.violated(
                   javaClass, javaClass.getName() + " 所在的 infra 包没有同名端口包 " + port));
         }
+      }
+    };
+  }
+
+  /// 导入的 domain 层类覆盖了全部已声明的子域。
+  ///
+  /// @return 条件
+  private ArchCondition<JavaClass> coverEveryDeclaredSubdomainInDomain() {
+    return new ArchCondition<>("覆盖全部已声明的子域") {
+      private final Set<String> present = new HashSet<>();
+
+      @Override
+      public void check(JavaClass javaClass, ConditionEvents events) {
+        String packageName = javaClass.getPackageName();
+        if (layerOf(packageName).filter("domain"::equals).isPresent()) {
+          subdomainOf(packageName).ifPresent(present::add);
+        }
+      }
+
+      @Override
+      public void finish(ConditionEvents events) {
+        subdomains.stream()
+            .filter(subdomain -> !present.contains(subdomain))
+            .sorted()
+            .forEach(
+                subdomain ->
+                    events.add(
+                        SimpleConditionEvent.violated(
+                            subdomain, "已声明的子域 " + subdomain + " 在 domain 层没有任何类")));
       }
     };
   }
