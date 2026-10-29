@@ -1,7 +1,7 @@
 package dev.patra.ingest.infra.integration.storage.converter;
 
 import dev.patra.ingest.domain.port.StorageMetadataPort.MetadataRequest;
-import dev.patra.objectstorage.api.dto.UploadRecordRequest;
+import dev.patra.objectstorage.api.file.dto.UploadRecordRequest;
 import org.mapstruct.Context;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;

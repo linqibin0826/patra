@@ -1,9 +1,9 @@
 package dev.patra.ingest.config;
 
-import dev.patra.objectstorage.api.endpoint.StorageEndpoint;
-import dev.patra.registry.api.endpoint.DictionaryEndpoint;
-import dev.patra.registry.api.endpoint.ExprEndpoint;
-import dev.patra.registry.api.endpoint.ProvenanceEndpoint;
+import dev.patra.objectstorage.api.file.endpoint.StorageEndpoint;
+import dev.patra.registry.api.dictionary.endpoint.DictionaryEndpoint;
+import dev.patra.registry.api.expr.endpoint.ExprEndpoint;
+import dev.patra.registry.api.provenance.endpoint.ProvenanceEndpoint;
 import dev.patra.tool.httpclient.factory.RestClientFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;

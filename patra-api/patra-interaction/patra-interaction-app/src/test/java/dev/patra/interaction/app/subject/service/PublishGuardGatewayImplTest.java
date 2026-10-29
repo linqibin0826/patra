@@ -14,9 +14,9 @@ import dev.patra.interaction.domain.subject.exception.PublishIneligibleException
 import dev.patra.interaction.domain.subject.exception.PublishRateLimitedException;
 import dev.patra.interaction.domain.subject.exception.SubjectErrorTrait;
 import dev.patra.interaction.domain.subject.exception.UserDirectoryUnavailableException;
+import dev.patra.interaction.domain.subject.model.enums.AccountState;
 import dev.patra.interaction.domain.subject.model.enums.PublishKind;
-import dev.patra.interaction.domain.subject.model.user.AccountState;
-import dev.patra.interaction.domain.subject.model.user.UserCard;
+import dev.patra.interaction.domain.subject.model.read.UserCard;
 import dev.patra.interaction.domain.subject.policy.PublishQuota;
 import dev.patra.interaction.domain.subject.port.repository.PublishQuotaRepository;
 import dev.patra.interaction.domain.subject.port.user.UserDirectoryPort;

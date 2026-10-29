@@ -5,11 +5,11 @@ import static org.mockito.Mockito.when;
 
 import dev.patra.interaction.domain.discussion.model.enums.CommentState;
 import dev.patra.interaction.domain.discussion.model.read.CommentRecord;
+import dev.patra.interaction.domain.subject.model.enums.AccountState;
 import dev.patra.interaction.domain.subject.model.enums.SubjectState;
 import dev.patra.interaction.domain.subject.model.enums.SubjectType;
 import dev.patra.interaction.domain.subject.model.read.SubjectView;
-import dev.patra.interaction.domain.subject.model.user.AccountState;
-import dev.patra.interaction.domain.subject.model.user.UserCard;
+import dev.patra.interaction.domain.subject.model.read.UserCard;
 import dev.patra.interaction.domain.subject.model.vo.SubjectId;
 import dev.patra.interaction.domain.subject.model.vo.SubjectOwner;
 import dev.patra.interaction.domain.subject.model.vo.SubjectSnapshot;

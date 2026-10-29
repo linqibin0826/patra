@@ -1,6 +1,6 @@
 package dev.patra.interaction.app.discussion.usecase.query;
 
-import dev.patra.interaction.domain.subject.model.user.UserCard;
+import dev.patra.interaction.domain.subject.model.read.UserCard;
 import java.time.Instant;
 import java.util.List;
 import lombok.Builder;

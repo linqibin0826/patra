@@ -1,9 +1,9 @@
 package dev.patra.interaction.app.subject.service;
 
 import dev.patra.interaction.domain.subject.exception.PublishIneligibleException;
+import dev.patra.interaction.domain.subject.model.enums.AccountState;
 import dev.patra.interaction.domain.subject.model.enums.PublishKind;
-import dev.patra.interaction.domain.subject.model.user.AccountState;
-import dev.patra.interaction.domain.subject.model.user.UserCard;
+import dev.patra.interaction.domain.subject.model.read.UserCard;
 import dev.patra.interaction.domain.subject.policy.PublishQuota;
 import dev.patra.interaction.domain.subject.port.gateway.PublishGuardGateway;
 import dev.patra.interaction.domain.subject.port.repository.PublishQuotaRepository;

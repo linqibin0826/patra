@@ -1,5 +1,5 @@
 ---
-paths: patra-*/*-infra/**/*.java
+paths: patra-api/*/*-infra/**/*.java
 ---
 
 # Infrastructure 层开发规范
@@ -12,9 +12,9 @@ paths: patra-*/*-infra/**/*.java
 
 ## 被动适配器命名
 
-- `{Entity}Repository` → `{Entity}RepositoryAdapter`（放 `adapter/persistence/`）
-- `{Function}Port` → `{Function}Adapter`（放 `adapter/{function}/`）
-- `{Entity}ReadPort` → `{Entity}ReadAdapter`（放 `adapter/read/`）
+- `{Entity}Repository` → `{Entity}RepositoryAdapter`（放 `infra.{子域}.persistence`）
+- `{Function}Port` → `{Function}Adapter`（放 `infra.{子域}.{协作者}`，与端口包同名）
+- `{Entity}ReadPort` → `{Entity}ReadAdapter`（放 `infra.{子域}.persistence`）
 
 ## 对象转换
 

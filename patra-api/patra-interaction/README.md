@@ -26,7 +26,7 @@ dev.patra.interaction                  启动类
 dev.patra.interaction.config           装配（XXL-Job 执行器等），不属于任何子域
 ```
 
-层下面只能是已声明的子域，不放 `common` 之类的共享包。子域内部的分包沿用各服务的写法（`domain.collection.model.aggregate`、`domain.collection.port.repository`、`infra.collection.persistence`、`adapter.collection.rest`、`adapter.subject.scheduler`）。api 模块是服务间契约，目前没有别的服务调用 interaction，模块里还没有类。
+层下面只能是已声明的子域，不放 `common` 之类的共享包。子域内部的分包按全项目统一的分包规范（`.claude/rules/tech/package-layout.md`），由 `SubdomainArchitectureRules` 的白名单规则守住。api 模块是服务间契约，目前没有别的服务调用 interaction，模块里还没有类。
 
 ## 3. 子域边界
 
@@ -35,9 +35,9 @@ dev.patra.interaction.config           装配（XXL-Job 执行器等），不属
 | 子域 | 公开包 |
 |---|---|
 | 任意子域 X | `domain.X.port.read`（读端口）、`domain.X.model.read`（读端口用到的读模型）、`domain.X.event`（事件契约：X 发布的进程内事件） |
-| 底座 `subject` 另加 | `domain.subject.port.gateway`（驱动端口：对象登记、发表守卫，实现在 `app.subject`；以及注销清理扩展点 `UserDataCleanupGateway`，由各子域实现）、`domain.subject.port.user` 与 `domain.subject.model.user`（用户名片）、`domain.subject.model.vo`、`domain.subject.model.enums`（`SubjectId`、`SubjectType` 这类所有互动都引用的值）、`domain.subject.exception`（底座端口抛出的异常，需要降级时可以捕获） |
+| 底座 `subject` | 对其他子域完全公开（所有层、所有包），只放被两个以上子域共用的东西：对象登记与发表守卫的驱动端口（实现在 `app.subject`）、注销清理扩展点 `UserDataCleanupGateway`（由各子域实现）、用户名片 `domain.subject.port.user` 与 `domain.subject.model.read.UserCard`、`SubjectId` / `SubjectType` 这类所有互动都引用的值、底座端口抛出的异常 |
 
-- 公开包之外的一切（聚合、实体、仓储、领域服务、app / infra / adapter 的任何类）只在子域内部用。
+- 普通子域公开包之外的一切（聚合、实体、仓储、领域服务、app / infra / adapter 的任何类）只在子域内部用。
 - 子域之间无环；底座不依赖任何其他子域。
 - **跨子域依赖必须声明**（规则 27）：任何子域都可以依赖底座；其余的边要在 `InteractionArchitectureTest` 里用 `allowingDependency`（经对方全部公开包）或 `allowingSubscription`（只经对方的事件契约）声明。现在有两条：提醒订阅讨论的事件（v0.14 决策 A）、提醒订阅投稿经验的删除事件（PAP-127）。除这条事件契约外，讨论、提醒都不依赖投稿经验：「作者」标记与匿名遮蔽只看登记表的所有者两列。
 - 推论：非底座子域的读端口签名、事件 record 的字段，只能用 JDK 类型、自己 `model.read` / `event` 里的类型和底座公开的类型。

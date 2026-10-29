@@ -17,7 +17,7 @@ import dev.patra.interaction.domain.discussion.policy.MentionSyntax;
 import dev.patra.interaction.domain.discussion.port.read.DiscussionReadPort;
 import dev.patra.interaction.domain.discussion.port.repository.CommentRepository;
 import dev.patra.interaction.domain.subject.model.read.SubjectView;
-import dev.patra.interaction.domain.subject.model.user.UserCard;
+import dev.patra.interaction.domain.subject.model.read.UserCard;
 import dev.patra.interaction.domain.subject.model.vo.SubjectOwner;
 import dev.patra.interaction.domain.subject.port.gateway.PublishGuardGateway;
 import dev.patra.tool.core.security.CurrentUserPort;

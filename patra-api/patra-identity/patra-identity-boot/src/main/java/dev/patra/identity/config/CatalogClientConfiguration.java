@@ -1,7 +1,7 @@
 package dev.patra.identity.config;
 
-import dev.patra.catalog.api.endpoint.MeshEndpoint;
-import dev.patra.catalog.api.endpoint.OrganizationEndpoint;
+import dev.patra.catalog.api.mesh.endpoint.MeshEndpoint;
+import dev.patra.catalog.api.organization.endpoint.OrganizationEndpoint;
 import dev.patra.tool.httpclient.factory.RestClientFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

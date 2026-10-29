@@ -10,7 +10,7 @@ import static org.mockito.Mockito.when;
 import dev.patra.interaction.domain.discussion.exception.InvalidCommentException;
 import dev.patra.interaction.domain.discussion.model.read.MentionTarget;
 import dev.patra.interaction.domain.discussion.port.mention.MentionDirectoryPort;
-import dev.patra.interaction.domain.subject.model.user.AccountState;
+import dev.patra.interaction.domain.subject.model.enums.AccountState;
 import dev.patra.tool.core.error.field.FieldViolation;
 import java.util.List;
 import java.util.Map;

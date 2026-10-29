@@ -1,6 +1,6 @@
 package dev.patra.interaction.app.discussion.usecase.query;
 
-import dev.patra.interaction.domain.subject.model.user.UserCard;
+import dev.patra.interaction.domain.subject.model.read.UserCard;
 
 /// @ 联想的一项。
 ///

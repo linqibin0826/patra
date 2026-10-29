@@ -41,6 +41,8 @@ patra-{service}/
 - `patra-tool-launch` - `PatraApplication`、Nacos 默认值、`Clock`
 - `patra-tool-test` - 测试自动配置与 Testcontainers 基座
 
+**服务内分包**：层模块内先按子域、再按组件类型，模板与子域规则见 `.claude/rules/tech/package-layout.md`，由 `patra-tool-test` 的 `SubdomainArchitectureRules` 守（ingest 尚未迁移）。
+
 **Patra 共享模块** (`patra-api/patra-common/`，一个模块): Shared Kernel 数据模型、共享枚举、Provenance 服务契约
 
 **ingest 专属子模块** (`patra-api/patra-ingest/`):

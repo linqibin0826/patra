@@ -1,6 +1,6 @@
 package dev.patra.interaction.app.discussion.usecase.query;
 
-import dev.patra.interaction.domain.subject.model.user.UserCard;
+import dev.patra.interaction.domain.subject.model.read.UserCard;
 
 /// 「回复 @X」的对象：只在回复的不是根评论时给。
 ///

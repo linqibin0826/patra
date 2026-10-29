@@ -1,6 +1,6 @@
 package dev.patra.catalog.config;
 
-import dev.patra.registry.api.endpoint.DictionaryEndpoint;
+import dev.patra.registry.api.dictionary.endpoint.DictionaryEndpoint;
 import dev.patra.tool.httpclient.factory.RestClientFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;

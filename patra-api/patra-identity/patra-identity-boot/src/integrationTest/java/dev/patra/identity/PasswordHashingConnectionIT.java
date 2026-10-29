@@ -8,7 +8,7 @@ import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.HikariPoolMXBean;
 import dev.patra.identity.config.IdentityITPostgreSQLContainerInitializer;
 import dev.patra.identity.config.IdentityMailITSpringConfig;
-import dev.patra.identity.domain.port.hashing.PasswordHashingPort;
+import dev.patra.identity.domain.account.port.hashing.PasswordHashingPort;
 import dev.patra.tool.test.container.initializer.RedisContainerInitializer;
 import dev.patra.tool.test.mail.GreenMailSmtpInitializer;
 import java.sql.SQLException;

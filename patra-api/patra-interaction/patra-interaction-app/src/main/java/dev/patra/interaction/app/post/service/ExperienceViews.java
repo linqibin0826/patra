@@ -5,7 +5,7 @@ import dev.patra.interaction.app.post.usecase.query.ExperienceDetailView;
 import dev.patra.interaction.app.post.usecase.query.ExperienceItemView;
 import dev.patra.interaction.app.post.usecase.query.JournalRefView;
 import dev.patra.interaction.domain.post.model.aggregate.PostAggregate;
-import dev.patra.interaction.domain.subject.model.user.UserCard;
+import dev.patra.interaction.domain.subject.model.read.UserCard;
 import dev.patra.interaction.domain.subject.model.vo.SubjectId;
 import dev.patra.interaction.domain.subject.port.read.SubjectReadPort;
 import dev.patra.interaction.domain.subject.port.user.UserDirectoryPort;

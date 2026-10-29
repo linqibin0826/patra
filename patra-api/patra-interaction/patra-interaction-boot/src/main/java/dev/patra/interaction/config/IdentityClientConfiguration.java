@@ -1,6 +1,6 @@
 package dev.patra.interaction.config;
 
-import dev.patra.identity.api.endpoint.UserEndpoint;
+import dev.patra.identity.api.account.endpoint.UserEndpoint;
 import dev.patra.tool.httpclient.factory.RestClientFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

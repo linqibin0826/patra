@@ -1,6 +1,6 @@
 package dev.patra.gateway.config;
 
-import dev.patra.identity.api.endpoint.SessionEndpoint;
+import dev.patra.identity.api.session.endpoint.SessionEndpoint;
 import dev.patra.tool.httpclient.factory.RestClientFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;

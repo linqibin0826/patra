@@ -4,12 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-import dev.patra.catalog.app.usecase.venue.pubmed.command.VenuePubmedImportCommand;
-import dev.patra.catalog.app.usecase.venue.pubmed.dto.VenuePubmedImportResult;
-import dev.patra.catalog.domain.port.enrichment.OpenAlexEnrichmentQueryPort;
-import dev.patra.catalog.domain.port.registry.DictionaryResolverPort;
-import dev.patra.catalog.domain.port.source.FileDownloadPort;
-import dev.patra.catalog.domain.port.source.FileDownloadResult;
+import dev.patra.catalog.app.venue.usecase.pubmed.VenuePubmedImportCommand;
+import dev.patra.catalog.app.venue.usecase.pubmed.VenuePubmedImportResult;
+import dev.patra.catalog.domain.kernel.port.registry.DictionaryResolverPort;
+import dev.patra.catalog.domain.kernel.port.source.FileDownloadPort;
+import dev.patra.catalog.domain.kernel.port.source.FileDownloadResult;
+import dev.patra.catalog.domain.venue.port.enrichment.OpenAlexEnrichmentQueryPort;
 import dev.patra.catalog.integration.config.CatalogE2EPostgreSQLContainerInitializer;
 import dev.patra.tool.cqrs.CommandBus;
 import dev.patra.tool.objectstorage.ObjectStorageOperations;

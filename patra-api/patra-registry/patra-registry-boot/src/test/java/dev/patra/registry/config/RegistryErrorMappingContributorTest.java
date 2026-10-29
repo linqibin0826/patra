@@ -4,8 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import dev.patra.registry.domain.exception.DomainValidationException;
-import dev.patra.registry.domain.exception.RegistryQuotaExceeded;
+import dev.patra.registry.domain.kernel.exception.DomainValidationException;
+import dev.patra.registry.domain.kernel.exception.RegistryQuotaExceeded;
 import dev.patra.tool.core.error.codes.ErrorCodeLike;
 import dev.patra.tool.core.error.codes.HttpStdErrors;
 import java.util.Optional;

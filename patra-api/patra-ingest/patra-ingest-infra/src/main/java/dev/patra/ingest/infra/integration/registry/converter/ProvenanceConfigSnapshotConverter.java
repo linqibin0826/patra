@@ -1,7 +1,7 @@
 package dev.patra.ingest.infra.integration.registry.converter;
 
 import dev.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
-import dev.patra.registry.api.dto.provenance.*;
+import dev.patra.registry.api.provenance.dto.*;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;

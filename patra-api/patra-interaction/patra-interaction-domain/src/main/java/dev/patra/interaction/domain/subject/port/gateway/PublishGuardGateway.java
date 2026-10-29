@@ -4,7 +4,7 @@ import dev.patra.interaction.domain.subject.exception.PublishIneligibleException
 import dev.patra.interaction.domain.subject.exception.PublishRateLimitedException;
 import dev.patra.interaction.domain.subject.exception.UserDirectoryUnavailableException;
 import dev.patra.interaction.domain.subject.model.enums.PublishKind;
-import dev.patra.interaction.domain.subject.model.user.UserCard;
+import dev.patra.interaction.domain.subject.model.read.UserCard;
 
 /// 发表守卫（实现在 app）：讨论与投稿经验写入前的资格与频率检查（决策 E）。
 ///

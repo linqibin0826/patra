@@ -1,15 +1,15 @@
 package dev.patra.interaction.infra.discussion.mention;
 
-import dev.patra.identity.api.dto.UserResolutionResp;
-import dev.patra.identity.api.dto.UserResolveByUsernamesReq;
-import dev.patra.identity.api.dto.UserSuggestReq;
-import dev.patra.identity.api.dto.UserSummaryResp;
-import dev.patra.identity.api.endpoint.UserEndpoint;
+import dev.patra.identity.api.account.dto.UserResolutionResp;
+import dev.patra.identity.api.account.dto.UserResolveByUsernamesReq;
+import dev.patra.identity.api.account.dto.UserSuggestReq;
+import dev.patra.identity.api.account.dto.UserSummaryResp;
+import dev.patra.identity.api.account.endpoint.UserEndpoint;
 import dev.patra.interaction.domain.discussion.model.read.MentionTarget;
 import dev.patra.interaction.domain.discussion.port.mention.MentionDirectoryPort;
 import dev.patra.interaction.domain.subject.exception.UserDirectoryUnavailableException;
-import dev.patra.interaction.domain.subject.model.user.AccountState;
-import dev.patra.interaction.domain.subject.model.user.UserCard;
+import dev.patra.interaction.domain.subject.model.enums.AccountState;
+import dev.patra.interaction.domain.subject.model.read.UserCard;
 import dev.patra.tool.core.error.remote.RemoteCallException;
 import java.util.Collection;
 import java.util.LinkedHashMap;

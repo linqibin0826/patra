@@ -15,7 +15,7 @@ import dev.patra.interaction.domain.post.policy.ExperienceRules;
 import dev.patra.interaction.domain.post.port.repository.PostRepository;
 import dev.patra.interaction.domain.subject.model.enums.SubjectState;
 import dev.patra.interaction.domain.subject.model.enums.SubjectType;
-import dev.patra.interaction.domain.subject.model.user.UserCard;
+import dev.patra.interaction.domain.subject.model.read.UserCard;
 import dev.patra.interaction.domain.subject.model.vo.SubjectSnapshot;
 import dev.patra.interaction.domain.subject.port.gateway.PublishGuardGateway;
 import dev.patra.interaction.domain.subject.port.gateway.SubjectGateway;

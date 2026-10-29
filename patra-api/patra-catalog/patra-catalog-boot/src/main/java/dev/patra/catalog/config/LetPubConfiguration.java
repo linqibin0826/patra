@@ -1,6 +1,6 @@
 package dev.patra.catalog.config;
 
-import dev.patra.catalog.infra.adapter.integration.letpub.LetPubScrapingClient;
+import dev.patra.catalog.infra.venue.enrichment.LetPubScrapingClient;
 import dev.patra.tool.httpclient.proxy.TunnelProxyConfigurer;
 import java.net.http.HttpClient;
 import java.time.Duration;

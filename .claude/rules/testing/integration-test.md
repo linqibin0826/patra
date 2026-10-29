@@ -1,5 +1,5 @@
 ---
-paths: patra-*/*-infra/**/src/integrationTest/**/*IT.java, patra-*/*-adapter/**/src/integrationTest/**/*IT.java
+paths: patra-api/*/*-infra/**/src/integrationTest/**/*IT.java, patra-api/*/*-adapter/**/src/integrationTest/**/*IT.java
 ---
 
 # 集成测试规范

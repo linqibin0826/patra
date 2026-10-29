@@ -139,9 +139,9 @@
   <!-- Domain aggregates and VOs intentionally expose internal representation -->
   <Match>
     <Or>
-      <Class name="~.*\.domain\.model\.aggregate\..*"/>
-      <Class name="~.*\.domain\.model\.vo\..*"/>
-      <Class name="~.*\.domain\.model\.entity\..*"/>
+      <Class name="~.*\.domain\.(\w+\.)?model\.aggregate\..*"/>
+      <Class name="~.*\.domain\.(\w+\.)?model\.vo\..*"/>
+      <Class name="~.*\.domain\.(\w+\.)?model\.entity\..*"/>
     </Or>
     <Or>
       <Bug pattern="EI_EXPOSE_REP"/>
@@ -152,7 +152,7 @@
 
   <!-- Domain policies may validate in constructors (throw by design) -->
   <Match>
-    <Class name="~.*\.domain\.policy\..*"/>
+    <Class name="~.*\.domain\.(\w+\.)?policy\..*"/>
     <Bug pattern="CT_CONSTRUCTOR_THROW"/>
   </Match>
 
@@ -244,7 +244,7 @@
 
   <!-- Immutable value objects intentionally return same instance -->
   <Match>
-    <Package name="~.*\.domain\.model\.vo.*"/>
+    <Package name="~.*\.domain\.(\w+\.)?model\.vo.*"/>
     <Bug pattern="RV_RETURN_VALUE_IGNORED"/>
   </Match>
 
@@ -285,13 +285,13 @@
 
   <!-- 领域聚合根构造器做不变式校验是 DDD 标准做法 -->
   <Match>
-    <Class name="~.*\.domain\.model\.aggregate\..*"/>
+    <Class name="~.*\.domain\.(\w+\.)?model\.aggregate\..*"/>
     <Bug pattern="CT_CONSTRUCTOR_THROW"/>
   </Match>
 
   <!-- 领域实体构造器做不变式校验是 DDD 标准做法 -->
   <Match>
-    <Class name="~.*\.domain\.model\.entity\..*"/>
+    <Class name="~.*\.domain\.(\w+\.)?model\.entity\..*"/>
     <Bug pattern="CT_CONSTRUCTOR_THROW"/>
   </Match>
 
@@ -336,7 +336,7 @@
   <!-- 基础设施批处理迭代器构造时初始化 JSON 流是合理设计 -->
   <Match>
     <Or>
-      <Class name="dev.patra.catalog.infra.batch.organization.RorOrganizationParser$RorRecordIterator"/>
+      <Class name="dev.patra.catalog.infra.organization.batch.RorOrganizationParser$RorRecordIterator"/>
       <Class name="dev.patra.ingest.app.usecase.execution.strategy.builder.BatchScheduleBuilder"/>
       <Class name="dev.patra.ingest.infra.mapper.ProviderParameterMapperRegistry"/>
     </Or>
@@ -458,7 +458,7 @@
   <!-- MS_EXPOSE_REP: 静态工厂单例暴露是设计意图 -->
   <Match>
     <Or>
-      <Class name="dev.patra.catalog.infra.parser.support.SecureXmlInputFactory"/>
+      <Class name="dev.patra.catalog.infra.kernel.support.SecureXmlInputFactory"/>
     </Or>
     <Bug pattern="MS_EXPOSE_REP"/>
   </Match>
@@ -591,7 +591,7 @@
   <!-- VenueRepositoryAdapter.computeIdentifierDiff: 遍历 Set 通过 Map.get() 查值
        是正确的用法，SpotBugs 将其误判为低效 Map 迭代 -->
   <Match>
-    <Class name="dev.patra.catalog.infra.adapter.persistence.VenueRepositoryAdapter"/>
+    <Class name="dev.patra.catalog.infra.venue.persistence.VenueRepositoryAdapter"/>
     <Bug pattern="WMI_WRONG_MAP_ITERATOR"/>
   </Match>
 
@@ -642,13 +642,13 @@
 
   <!-- StorageEndpointImpl.resolveIp: null 表示"解析失败"，语义上区别于"无 IP" -->
   <Match>
-    <Class name="dev.patra.objectstorage.adapter.rest.internal.StorageEndpointImpl"/>
+    <Class name="dev.patra.objectstorage.adapter.file.internal.StorageEndpointImpl"/>
     <Bug pattern="PZLA_PREFER_ZERO_LENGTH_ARRAYS"/>
   </Match>
 
   <!-- VenueBrowseReadAdapter.toArray: null 表示"不过滤"，语义上区别于"空过滤数组" -->
   <Match>
-    <Class name="dev.patra.catalog.infra.adapter.read.VenueBrowseReadAdapter"/>
+    <Class name="dev.patra.catalog.infra.portal.persistence.VenueBrowseReadAdapter"/>
     <Bug pattern="PZLA_PREFER_ZERO_LENGTH_ARRAYS"/>
   </Match>
 
@@ -679,7 +679,7 @@
 
   <!-- RorRecordIterator.next() 由 advance() 驱动，hasNext() 已确保非空 -->
   <Match>
-    <Class name="dev.patra.catalog.infra.batch.organization.RorOrganizationParser$RorRecordIterator"/>
+    <Class name="dev.patra.catalog.infra.organization.batch.RorOrganizationParser$RorRecordIterator"/>
     <Bug pattern="IT_NO_SUCH_ELEMENT"/>
   </Match>
 
@@ -688,7 +688,7 @@
        ======================================================================== -->
 
   <Match>
-    <Class name="dev.patra.catalog.domain.model.aggregate.PublicationAggregate"/>
+    <Class name="dev.patra.catalog.domain.publication.model.aggregate.PublicationAggregate"/>
     <Bug pattern="DLS_DEAD_LOCAL_STORE"/>
   </Match>
 

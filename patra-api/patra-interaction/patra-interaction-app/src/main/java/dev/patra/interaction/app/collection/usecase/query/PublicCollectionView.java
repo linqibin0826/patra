@@ -1,7 +1,7 @@
 package dev.patra.interaction.app.collection.usecase.query;
 
 import dev.patra.interaction.domain.collection.model.read.CollectionSummary;
-import dev.patra.interaction.domain.subject.model.user.UserCard;
+import dev.patra.interaction.domain.subject.model.read.UserCard;
 
 /// 公开收藏夹页的头部。
 ///

@@ -1,9 +1,9 @@
 package dev.patra.interaction.infra.subject.persistence;
 
 import dev.patra.interaction.domain.subject.model.enums.NaturalKeyScheme;
-import dev.patra.interaction.domain.subject.model.source.SourceRecord;
-import dev.patra.interaction.domain.subject.model.source.SourceState;
+import dev.patra.interaction.domain.subject.model.enums.SourceState;
 import dev.patra.interaction.domain.subject.model.vo.NaturalKey;
+import dev.patra.interaction.domain.subject.model.vo.SourceRecord;
 import dev.patra.interaction.domain.subject.model.vo.SubjectSnapshot;
 import dev.patra.interaction.infra.config.InteractionITPostgreSQLContainerInitializer;
 import org.junit.jupiter.api.BeforeEach;

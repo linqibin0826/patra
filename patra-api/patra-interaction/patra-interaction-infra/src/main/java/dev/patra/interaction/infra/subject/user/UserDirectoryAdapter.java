@@ -1,11 +1,11 @@
 package dev.patra.interaction.infra.subject.user;
 
-import dev.patra.identity.api.dto.UserSummariesReq;
-import dev.patra.identity.api.dto.UserSummaryResp;
-import dev.patra.identity.api.endpoint.UserEndpoint;
+import dev.patra.identity.api.account.dto.UserSummariesReq;
+import dev.patra.identity.api.account.dto.UserSummaryResp;
+import dev.patra.identity.api.account.endpoint.UserEndpoint;
 import dev.patra.interaction.domain.subject.exception.UserDirectoryUnavailableException;
-import dev.patra.interaction.domain.subject.model.user.AccountState;
-import dev.patra.interaction.domain.subject.model.user.UserCard;
+import dev.patra.interaction.domain.subject.model.enums.AccountState;
+import dev.patra.interaction.domain.subject.model.read.UserCard;
 import dev.patra.interaction.domain.subject.port.user.UserDirectoryPort;
 import dev.patra.tool.core.error.remote.RemoteCallException;
 import java.util.Collection;

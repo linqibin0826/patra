@@ -1,5 +1,5 @@
 ---
-paths: patra-*/patra-*-app/**/*.java, patra-*/patra-*-adapter/**/*.java
+paths: patra-api/*/patra-*-app/**/*.java, patra-api/*/patra-*-adapter/**/*.java
 ---
 
 # CommandBus 使用规范

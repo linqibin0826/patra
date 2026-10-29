@@ -1,7 +1,7 @@
 package dev.patra.catalog.config;
 
-import dev.patra.catalog.infra.adapter.integration.pmc.FullTextSourceProperties;
-import dev.patra.catalog.infra.adapter.integration.pmc.PmcCloudArticleSourceAdapter;
+import dev.patra.catalog.infra.fulltext.config.FullTextSourceProperties;
+import dev.patra.catalog.infra.fulltext.source.PmcCloudArticleSourceAdapter;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import org.springframework.context.annotation.Bean;

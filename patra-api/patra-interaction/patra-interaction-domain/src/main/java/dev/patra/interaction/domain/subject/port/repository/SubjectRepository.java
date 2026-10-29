@@ -3,7 +3,7 @@ package dev.patra.interaction.domain.subject.port.repository;
 import dev.patra.interaction.domain.subject.model.aggregate.SubjectAggregate;
 import dev.patra.interaction.domain.subject.model.enums.SubjectState;
 import dev.patra.interaction.domain.subject.model.enums.SubjectType;
-import dev.patra.interaction.domain.subject.model.source.SourceRecord;
+import dev.patra.interaction.domain.subject.model.vo.SourceRecord;
 import dev.patra.interaction.domain.subject.model.vo.SubjectOwner;
 import dev.patra.interaction.domain.subject.model.vo.SubjectSnapshot;
 import java.time.Instant;

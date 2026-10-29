@@ -16,8 +16,8 @@ Domain 层                          Infra 层
 ```
 
 **位置**：
-- 接口：`{service}-domain/.../domain/port/repository/{Entity}Repository.java`
-- 实现：`{service}-infra/.../infra/adapter/persistence/{Entity}RepositoryAdapter.java`
+- 接口：`{service}-domain/.../domain/{子域}/port/repository/{Entity}Repository.java`
+- 实现：`{service}-infra/.../infra/{子域}/persistence/{Entity}RepositoryAdapter.java`
 
 ## Driven Port（被驱动端口）
 
@@ -32,8 +32,8 @@ Domain 层                          Infra 层
 ```
 
 **位置**：
-- 接口：`{service}-domain/.../domain/port/{subdir}/{Function}Port.java`
-- 实现：`{service}-infra/.../infra/adapter/{subdir}/{Function}Adapter.java`
+- 接口：`{service}-domain/.../domain/{子域}/port/{协作者}/{Function}Port.java`
+- 实现：`{service}-infra/.../infra/{子域}/{协作者}/{Function}Adapter.java`（包名与端口包同名）
 
 ## LookupPort（查找端口）
 
@@ -68,10 +68,10 @@ public PubmedArticleItemProcessor processor(
 ```
 
 **位置**：
-- 接口：`{service}-domain/.../domain/port/lookup/{Entity}LookupPort.java`
-- 默认实现：`{service}-infra/.../infra/adapter/lookup/Default{Entity}LookupAdapter.java`
-- 缓存装饰器：`{service}-infra/.../infra/adapter/lookup/Caching{Entity}LookupDecorator.java`
-- 批处理实现：`{service}-infra/.../infra/adapter/lookup/Batch{Entity}LookupAdapter.java`
+- 接口：`{service}-domain/.../domain/{子域}/port/lookup/{Entity}LookupPort.java`（被其他子域用时放 `port/read/`）
+- 默认实现：`{service}-infra/.../infra/{子域}/lookup/Default{Entity}LookupAdapter.java`（端口在 `port/read/` 时放 `persistence/`）
+- 缓存装饰器：同上目录的 `Caching{Entity}LookupDecorator.java`
+- 批处理实现：同上目录的 `Batch{Entity}LookupAdapter.java`
 
 ## ReadPort（CQRS 读端口）
 
@@ -82,8 +82,8 @@ public PubmedArticleItemProcessor processor(
 - ReadPort：仅提供查询投影（返回 Read Model，非聚合根）
 
 **位置**：
-- 接口：`{service}-domain/.../domain/port/read/{Entity}ReadPort.java`
-- 实现：`{service}-infra/.../infra/adapter/read/{Entity}ReadAdapter.java`
+- 接口：`{service}-domain/.../domain/{子域}/port/read/{Entity}ReadPort.java`
+- 实现：`{service}-infra/.../infra/{子域}/persistence/{Entity}ReadAdapter.java`
 
 ## Gateway（驱动端口）
 
@@ -96,42 +96,24 @@ public PubmedArticleItemProcessor processor(
 - 需要独立事务管理的跨聚合协调
 
 **位置**：
-- 接口：`{service}-domain/.../domain/port/gateway/{Entity}Gateway.java`
-- 实现：`{service}-app/.../app/usecase/{domain}/service/{Entity}GatewayImpl.java`
+- 接口：`{service}-domain/.../domain/{子域}/port/gateway/{Entity}Gateway.java`
+- 实现：`{service}-app/.../app/{子域}/service/{Entity}GatewayImpl.java`
 
 ## 目录结构示例
 
+各层先按子域、再按组件类型分包，完整模板见 `.claude/rules/tech/package-layout.md`。以 catalog 的 venue 子域为例：
+
 ```
-patra-catalog/
-├── patra-catalog-domain/
-│   └── domain/port/
-│       ├── repository/          # 仓储接口
-│       ├── read/                # CQRS 读端口
-│       ├── gateway/             # 驱动端口接口
-│       ├── lookup/              # 查找端口接口
-│       ├── parser/              # 解析器端口
-│       ├── batch/               # 批处理端口
-│       ├── enrichment/          # 富化端口
-│       ├── source/              # 数据源端口
-│       └── registry/            # 注册中心端口
-│
-├── patra-catalog-app/
-│   └── app/usecase/
-│       ├── publication/
-│       │   ├── service/         # Gateway 实现
-│       │   └── query/           # QueryService
-│       └── venue/
-│           └── query/
-│
-└── patra-catalog-infra/
-    └── infra/
-        ├── adapter/             # 端口适配器
-        │   ├── persistence/     # 仓储实现
-        │   ├── lookup/          # 查找端口实现（含缓存装饰器）
-        │   ├── read/            # CQRS 读适配器
-        │   ├── integration/     # 外部服务集成
-        │   └── source/          # 数据源适配器
-        ├── batch/               # Spring Batch 子系统
-        ├── parser/              # XML 解析子系统
-        └── persistence/         # JPA 内部实现（非端口）
+patra-catalog-domain/  domain/venue/
+    model/{aggregate,vo,enums,read}
+    port/{repository,read,enrichment,parser,storage}
+patra-catalog-app/     app/venue/
+    usecase/{pubmed,letpub,scopus,query}     # 写用例三件套同包；query 放 QueryService
+    service/                                 # GatewayImpl、多个用例复用的类
+    config/
+patra-catalog-infra/   infra/venue/
+    persistence/{entity,dao,mapper,converter}  # RepositoryAdapter、ReadAdapter、查找适配器
+    enrichment/  parser/  storage/             # 与 domain 端口包同名
+patra-catalog-adapter/ adapter/venue/
+    rest/  internal/  scheduler/  config/
 ```

@@ -1,7 +1,7 @@
 package dev.patra.interaction.adapter.discussion.rest.response;
 
-import dev.patra.interaction.domain.subject.model.user.AccountState;
-import dev.patra.interaction.domain.subject.model.user.UserCard;
+import dev.patra.interaction.domain.subject.model.enums.AccountState;
+import dev.patra.interaction.domain.subject.model.read.UserCard;
 import lombok.Builder;
 
 /// 评论作者或被回复者的名片（与 PAP-122 的作者对象同形）。主页对访客不可见时没有用户名与头像地址；已注销时

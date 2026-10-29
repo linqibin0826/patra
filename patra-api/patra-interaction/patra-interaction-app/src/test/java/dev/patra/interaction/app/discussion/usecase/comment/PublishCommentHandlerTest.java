@@ -39,11 +39,11 @@ import dev.patra.interaction.domain.discussion.port.mention.MentionDirectoryPort
 import dev.patra.interaction.domain.discussion.port.read.DiscussionReadPort;
 import dev.patra.interaction.domain.discussion.port.repository.CommentRepository;
 import dev.patra.interaction.domain.subject.exception.PublishIneligibleException;
+import dev.patra.interaction.domain.subject.model.enums.AccountState;
 import dev.patra.interaction.domain.subject.model.enums.PublishKind;
 import dev.patra.interaction.domain.subject.model.enums.SubjectCapability;
 import dev.patra.interaction.domain.subject.model.enums.SubjectType;
-import dev.patra.interaction.domain.subject.model.user.AccountState;
-import dev.patra.interaction.domain.subject.model.user.UserCard;
+import dev.patra.interaction.domain.subject.model.read.UserCard;
 import dev.patra.interaction.domain.subject.model.vo.SubjectOwner;
 import dev.patra.interaction.domain.subject.port.gateway.PublishGuardGateway;
 import dev.patra.interaction.domain.subject.port.gateway.SubjectGateway;

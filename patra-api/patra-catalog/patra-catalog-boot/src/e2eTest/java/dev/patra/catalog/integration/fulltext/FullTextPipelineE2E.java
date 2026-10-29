@@ -12,10 +12,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
-import dev.patra.catalog.app.usecase.fulltext.fetch.FullTextFetchRunStats;
-import dev.patra.catalog.app.usecase.fulltext.fetch.command.PmcFullTextFetchCommand;
-import dev.patra.catalog.app.usecase.fulltext.parse.FullTextParseRunStats;
-import dev.patra.catalog.app.usecase.fulltext.parse.command.JatsFullTextParseCommand;
+import dev.patra.catalog.app.fulltext.usecase.fetch.FullTextFetchRunStats;
+import dev.patra.catalog.app.fulltext.usecase.fetch.PmcFullTextFetchCommand;
+import dev.patra.catalog.app.fulltext.usecase.parse.FullTextParseRunStats;
+import dev.patra.catalog.app.fulltext.usecase.parse.JatsFullTextParseCommand;
 import dev.patra.catalog.integration.config.CatalogE2EMinIOContainerInitializer;
 import dev.patra.catalog.integration.config.CatalogE2EPostgreSQLContainerInitializer;
 import dev.patra.tool.cqrs.CommandBus;

@@ -1,8 +1,8 @@
 package dev.patra.identity.config;
 
-import dev.patra.identity.domain.port.mail.EmailDeliveryPort;
-import dev.patra.identity.infra.adapter.mail.SmtpEmailDeliveryAdapter;
-import dev.patra.identity.infra.adapter.mail.ThymeleafMailRenderer;
+import dev.patra.identity.domain.account.port.mail.EmailDeliveryPort;
+import dev.patra.identity.infra.account.mail.SmtpEmailDeliveryAdapter;
+import dev.patra.identity.infra.account.mail.ThymeleafMailRenderer;
 import java.time.Duration;
 import java.util.concurrent.ThreadPoolExecutor;
 import org.springframework.boot.test.context.TestConfiguration;

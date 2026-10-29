@@ -5,7 +5,7 @@ import dev.patra.interaction.domain.notification.model.vo.ExcerptText.Literal;
 import dev.patra.interaction.domain.notification.model.vo.ExcerptText.Mention;
 import dev.patra.interaction.domain.notification.model.vo.ExcerptText.Segment;
 import dev.patra.interaction.domain.notification.model.vo.RenderedExcerpt;
-import dev.patra.interaction.domain.subject.model.user.UserCard;
+import dev.patra.interaction.domain.subject.model.read.UserCard;
 import java.text.BreakIterator;
 import java.util.Map;
 

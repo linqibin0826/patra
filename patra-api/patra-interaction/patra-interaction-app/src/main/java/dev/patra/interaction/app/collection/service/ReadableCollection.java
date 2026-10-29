@@ -1,7 +1,7 @@
 package dev.patra.interaction.app.collection.service;
 
 import dev.patra.interaction.domain.collection.model.read.CollectionSummary;
-import dev.patra.interaction.domain.subject.model.user.UserCard;
+import dev.patra.interaction.domain.subject.model.read.UserCard;
 
 /// 一个对当前访客可读的收藏夹，带所有者摘要。
 ///

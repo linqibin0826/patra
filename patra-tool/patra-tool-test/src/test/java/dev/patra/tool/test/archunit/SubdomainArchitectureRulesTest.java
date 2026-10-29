@@ -51,6 +51,88 @@ class SubdomainArchitectureRulesTest {
     assertThat(result.getFailureReport().getDetails()).anyMatch(line -> line.contains("Shared"));
   }
 
+  /// 服务级错误码的保留包 `api.error` 不属于任何子域，不违规。
+  @Test
+  void should_accept_reserved_api_error_package() {
+    assertThat(
+            evaluate("reservederror", rules("reservederror").layersContainOnlyDeclaredSubdomains())
+                .hasViolation())
+        .isFalse();
+  }
+
+  /// 子域不能叫 `error`，避免和保留包冲突。
+  @Test
+  void should_reject_error_as_subdomain_name() {
+    assertThatThrownBy(() -> new SubdomainArchitectureRules("x", "error", Set.of("error")))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  /// 落在分包模板白名单里的包都不违规。
+  @Test
+  void should_accept_packages_on_template() {
+    assertThat(
+            evaluate(
+                    "templatecompliant",
+                    rules("templatecompliant").componentPackagesFollowTemplate())
+                .hasViolation())
+        .isFalse();
+  }
+
+  /// 白名单之外的包、子域根包里的类、多出来的层级都违规。
+  @Test
+  void should_reject_packages_off_template() {
+    EvaluationResult result =
+        evaluate("offtemplate", rules("offtemplate").componentPackagesFollowTemplate());
+
+    assertThat(result.hasViolation()).isTrue();
+    assertThat(result.getFailureReport().getDetails())
+        .anyMatch(line -> line.contains("CollectionDto"))
+        .anyMatch(line -> line.contains("Snapshot"))
+        .anyMatch(line -> line.contains("WebController"))
+        .anyMatch(line -> line.contains("RepoHelper"))
+        .anyMatch(line -> line.contains("RootLevel"))
+        .anyMatch(line -> line.contains("NestedPort"))
+        .anyMatch(line -> line.contains("UsecaseRoot"));
+  }
+
+  /// infra 下的协作者包必须有同名的 domain 端口包；persistence、support、config 不受此限。
+  @Test
+  void should_reject_infra_package_without_matching_port() {
+    EvaluationResult result = evaluate("infraports", rules("infraports").infraPackagesMatchPorts());
+
+    assertThat(result.hasViolation()).isTrue();
+    assertThat(result.getFailureReport().getDetails())
+        .anyMatch(line -> line.contains("SmtpAdapter"))
+        .anyMatch(line -> line.contains("CollectionReadAdapter"))
+        .anyMatch(line -> line.contains("CollectionGatewayImpl"))
+        .noneMatch(line -> line.contains("MailAdapter"))
+        .noneMatch(line -> line.contains("SqlFragments"))
+        .noneMatch(line -> line.contains("CollectionRepositoryAdapter"))
+        .noneMatch(line -> line.contains("InfraConfig"));
+  }
+
+  /// 声明了却在 domain 层没有任何类的子域违规（子域名拼错或声明了空子域）。
+  @Test
+  void should_reject_declared_subdomain_without_domain_classes() {
+    SubdomainArchitectureRules rules =
+        new SubdomainArchitectureRules(FIXTURES + "ghost", "subject", Set.of("subject", "ghostly"));
+
+    assertViolationNaming("ghost", rules.everyDeclaredSubdomainHasDomainPackage(), "ghostly");
+  }
+
+  /// 不在五个层下的类只能在根包或 `{根}.config` 下：启动类与组装之外不另起包。
+  @Test
+  void should_reject_package_outside_layers_other_than_root_and_config() {
+    EvaluationResult result =
+        evaluate("rootescape", rules("rootescape").nonLayerClassesStayInRootOrConfig());
+
+    assertThat(result.hasViolation()).isTrue();
+    assertThat(result.getFailureReport().getDetails())
+        .anyMatch(line -> line.contains("LooseHelper"))
+        .noneMatch(line -> line.contains("RootApplication"))
+        .noneMatch(line -> line.contains("Wiring"));
+  }
+
   /// 底座不在声明的子域里时拒绝构造。
   @Test
   void should_reject_foundation_missing_from_subdomains() {
@@ -69,22 +151,34 @@ class SubdomainArchitectureRulesTest {
         .isFalse();
   }
 
-  /// 用别的子域的仓储违规。
+  /// 用别的普通子域的仓储违规。
   @Test
   void should_reject_foreign_repository() {
     assertViolationNaming(
         "foreignrepository",
         rules("foreignrepository").crossSubdomainDependenciesGoThroughPublishedPackages(),
-        "SubjectRepository");
+        "NoteRepository");
   }
 
-  /// 用别的子域 app 层的类违规。
+  /// 底座对其他子域完全公开：仓储、app 协作类、infra 辅助类都可以用。
+  @Test
+  void should_allow_any_foundation_package() {
+    assertThat(
+            evaluate(
+                    "foundationinternals",
+                    rules("foundationinternals")
+                        .crossSubdomainDependenciesGoThroughPublishedPackages())
+                .hasViolation())
+        .isFalse();
+  }
+
+  /// 用别的普通子域 app 层的类违规。
   @Test
   void should_reject_foreign_app_class() {
     assertViolationNaming(
         "foreignapp",
         rules("foreignapp").crossSubdomainDependenciesGoThroughPublishedPackages(),
-        "ResolveSubjectHandler");
+        "ResolveNoteHandler");
   }
 
   /// 驱动端口只有底座公开：用非底座子域的驱动端口违规。
@@ -220,10 +314,10 @@ class SubdomainArchitectureRulesTest {
         .isInstanceOf(IllegalArgumentException.class);
   }
 
-  /// 全部规则是五条。
+  /// 全部规则是九条。
   @Test
-  void should_list_all_five_rules() {
-    assertThat(rules("compliant").allRules()).hasSize(5);
+  void should_list_all_nine_rules() {
+    assertThat(rules("compliant").allRules()).hasSize(9);
   }
 
   /// 断言规则在场景里有违规，且违规文本点名了某个类。

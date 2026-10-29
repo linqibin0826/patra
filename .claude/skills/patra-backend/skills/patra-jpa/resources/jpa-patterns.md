@@ -153,7 +153,7 @@ public class VenueTypeAttributeConverter
 }
 ```
 
-**位置**：`infra/persistence/converter/attribute/`
+**位置**：`infra/{子域}/persistence/converter/`
 
 ## N+1 查询解决方案
 

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
+import com.tngtech.archunit.lang.EvaluationResult;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -45,23 +46,12 @@ class HexagonalArchitectureRulesTest {
         .isFalse();
   }
 
-  /// 子域下的 `usecase` 里的编排器不违规。
+  /// 子域下的 `persistence.entity` 里的 JPA 实体不违规。
   @Test
-  void should_accept_orchestrator_under_subdomain_usecase() {
+  void should_accept_jpa_entity_under_subdomain_persistence_entity() {
     assertThat(
             LAYOUT_RULES
-                .orchestratorsShouldResideInAppUsecase()
-                .evaluate(LAYOUT_CLASSES)
-                .hasViolation())
-        .isFalse();
-  }
-
-  /// 子域下的 `persistence.entity` 里的 DO 不违规。
-  @Test
-  void should_accept_data_object_under_subdomain_persistence_entity() {
-    assertThat(
-            LAYOUT_RULES
-                .doClassesShouldResideInPersistenceEntity()
+                .jpaEntitiesShouldResideInPersistenceEntity()
                 .evaluate(LAYOUT_CLASSES)
                 .hasViolation())
         .isFalse();
@@ -78,5 +68,37 @@ class HexagonalArchitectureRulesTest {
                 .evaluate(misplaced)
                 .hasViolation())
         .isTrue();
+  }
+
+  /// 不在 `persistence.entity` 下的 JPA 实体违规；名字以 Entity 结尾的普通接口不算实体。
+  @Test
+  void should_reject_misplaced_jpa_entity() {
+    JavaClasses misplaced = new ClassFileImporter().importPackages(MISPLACED);
+
+    EvaluationResult result =
+        new HexagonalArchitectureRules(MISPLACED)
+            .jpaEntitiesShouldResideInPersistenceEntity()
+            .evaluate(misplaced);
+
+    assertThat(result.hasViolation()).isTrue();
+    assertThat(result.getFailureReport().getDetails())
+        .anyMatch(line -> line.contains("MisplacedEntity"))
+        .noneMatch(line -> line.contains("TemporalEntity"))
+        .noneMatch(line -> line.contains("LeakedEntity"));
+  }
+
+  /// infra 之外引用 JPA 实体违规。
+  @Test
+  void should_reject_jpa_entity_used_outside_infra() {
+    JavaClasses misplaced = new ClassFileImporter().importPackages(MISPLACED);
+
+    EvaluationResult result =
+        new HexagonalArchitectureRules(MISPLACED)
+            .jpaEntitiesShouldNotBeAccessedOutsideInfra()
+            .evaluate(misplaced);
+
+    assertThat(result.hasViolation()).isTrue();
+    assertThat(result.getFailureReport().getDetails())
+        .anyMatch(line -> line.contains("UsesLeakedEntity"));
   }
 }

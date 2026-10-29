@@ -1,7 +1,7 @@
 package dev.patra.interaction.app.notification.usecase.query;
 
 import dev.patra.interaction.domain.notification.model.enums.NotificationType;
-import dev.patra.interaction.domain.subject.model.user.UserCard;
+import dev.patra.interaction.domain.subject.model.read.UserCard;
 import java.time.Instant;
 import lombok.Builder;
 
