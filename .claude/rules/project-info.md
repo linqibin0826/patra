@@ -15,7 +15,7 @@
 - `patra-catalog` - 目录服务 (文献、期刊数据索引)
 - `patra-object-storage` - 对象存储元数据服务 (记录上传到 MinIO/S3 的文件元数据，仅对内提供 HTTP Interface)
 - `patra-identity` - 身份服务 (前台用户的注册、登录、会话、封禁)
-- `patra-interaction` - 社区互动服务 (文献库、收藏夹；以后的讨论、关注、通知)，每层按子域分包，子域边界由 ArchUnit 守
+- `patra-interaction` - 社区互动服务 (文献库、收藏夹、讨论、投稿经验、提醒、有帮助；以后的关注)，每层按子域分包，子域边界由 ArchUnit 守
 - `patra-gateway-boot` - API 网关 (路由、认证、限流)
 
 ## 模块结构

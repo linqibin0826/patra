@@ -35,7 +35,8 @@ class InteractionMigrationIT {
                     + "WHERE schema_name NOT LIKE 'pg\\_%' AND schema_name <> 'information_schema'",
                 String.class))
         .contains("public", "subject", "collection")
-        .isSubsetOf("public", "subject", "collection", "discussion", "post", "notification");
+        .isSubsetOf(
+            "public", "subject", "collection", "discussion", "post", "notification", "reaction");
   }
 
   /// Flyway 历史表只有一张，在 public。
@@ -142,12 +143,13 @@ class InteractionMigrationIT {
         .hasMessageContaining("ck_registry_post_key");
   }
 
-  /// 发表计数：种类只有 COMMENT / POST，当天条数大于 0，每个作者每种一行。
+  /// 发表计数：种类只有 COMMENT / POST / HELPFUL，当天条数大于 0，每个作者每种一行。
   @Test
   void should_enforce_publish_quota_checks() {
     jdbcTemplate.update("DELETE FROM subject.publish_quota");
 
     insertQuota(1L, "COMMENT", 1);
+    insertQuota(1L, "HELPFUL", 1);
     assertThatThrownBy(() -> insertQuota(2L, "LIKE", 1))
         .isInstanceOf(DataIntegrityViolationException.class);
     assertThatThrownBy(() -> insertQuota(3L, "POST", 0))
@@ -157,7 +159,7 @@ class InteractionMigrationIT {
 
     assertThat(
             jdbcTemplate.queryForObject("SELECT count(*) FROM subject.publish_quota", Long.class))
-        .isEqualTo(1L);
+        .isEqualTo(2L);
   }
 
   /// 更新时触发器推进 `updated_at`。

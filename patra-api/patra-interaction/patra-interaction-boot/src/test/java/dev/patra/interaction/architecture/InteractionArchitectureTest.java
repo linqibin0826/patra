@@ -43,16 +43,20 @@ class InteractionArchitectureTest {
   /// 底座子域。
   private static final String FOUNDATION = "subject";
 
-  /// 声明的全部子域：v0.14 起讨论、投稿经验、提醒（PAP-121 ~ 123）一次写进来，各子域随第一批代码建自己的包。
+  /// 声明的全部子域：v0.14 起讨论、投稿经验、提醒（PAP-121 ~ 123）一次写进来，v0.15 加有帮助（PAP-131）；各子域随
+  /// 第一批代码建自己的包。
   private static final List<String> SUBDOMAINS =
-      List.of(FOUNDATION, "collection", "discussion", "post", "notification");
+      List.of(FOUNDATION, "collection", "discussion", "post", "notification", "reaction");
 
-  /// 子域边界规则。依赖方向按 v0.14 决策 A：提醒只经事件契约依赖讨论与投稿经验（PAP-127 经验删除即删提醒），
-  /// 其余子域只依赖底座。
+  /// 子域边界规则。依赖方向按 v0.14 决策 A：提醒只经事件契约依赖讨论与投稿经验（PAP-127 经验删除即删提醒）。
+  /// 有帮助（v0.15 决策 B）经讨论的读端口取评论、订阅它的删除事件，只经事件契约依赖投稿经验（经验的作者与匿名读
+  /// 登记表）。其余子域只依赖底座。
   private static final SubdomainArchitectureRules subdomainRules =
       new SubdomainArchitectureRules("dev.patra.interaction", FOUNDATION, Set.copyOf(SUBDOMAINS))
           .allowingSubscription("notification", "discussion")
-          .allowingSubscription("notification", "post");
+          .allowingSubscription("notification", "post")
+          .allowingDependency("reaction", "discussion")
+          .allowingSubscription("reaction", "post");
 
   /// 导入 interaction 全部模块的主代码。
   @BeforeAll
