@@ -23,13 +23,25 @@ public class PostRegistry {
   /// @return 快照
   /// @throws IllegalStateException 经验没有登记（写入与登记在同一事务里，出现即程序错误）
   public SubjectSnapshot snapshotOf(PostId id) {
-    String key = Long.toString(id.value());
-    SubjectId subjectId = subjects.findIdsByKeys(SubjectType.POST, List.of(key)).get(key);
-    SubjectView view =
-        subjectId == null ? null : subjects.findByIds(List.of(subjectId)).get(subjectId);
+    SubjectId subjectId = subjectIdOf(id);
+    SubjectView view = subjects.findByIds(List.of(subjectId)).get(subjectId);
     if (view == null) {
       throw new IllegalStateException("经验没有登记成 POST 对象：" + id);
     }
     return view.snapshot();
+  }
+
+  /// 经验自己在登记表里的对象 ID（类型 POST、`source_id` 是帖子 ID），不是经验所属期刊的对象。
+  ///
+  /// @param id 经验 ID
+  /// @return 对象 ID
+  /// @throws IllegalStateException 经验没有登记（写入与登记在同一事务里，出现即程序错误）
+  public SubjectId subjectIdOf(PostId id) {
+    String key = Long.toString(id.value());
+    SubjectId subjectId = subjects.findIdsByKeys(SubjectType.POST, List.of(key)).get(key);
+    if (subjectId == null) {
+      throw new IllegalStateException("经验没有登记成 POST 对象：" + id);
+    }
+    return subjectId;
   }
 }

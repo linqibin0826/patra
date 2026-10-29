@@ -33,7 +33,6 @@ public class NotificationReadAdapter implements NotificationReadPort {
                 excerpt == null
                     ? null
                     : ExcerptText.of(excerpt, rs.getBoolean("excerpt_truncated")))
-            .commentDeleted(rs.getBoolean("comment_deleted"))
             .createdAt(NotificationRows.instant(rs, "created_at"))
             .readAt(NotificationRows.instant(rs, "read_at"))
             .build();
@@ -53,7 +52,7 @@ public class NotificationReadAdapter implements NotificationReadPort {
       long recipientId, NotificationTab tab, Long beforeNotificationId, int limit) {
     return jdbc.sql(
             "SELECT notification_id, type, actor_id, actor_anonymous, subject_id, comment_id,"
-                + " excerpt, excerpt_truncated, comment_deleted, created_at, read_at"
+                + " excerpt, excerpt_truncated, created_at, read_at"
                 + " FROM notification.notification"
                 + " WHERE recipient_id = :recipientId AND type IN (:types)"
                 + " AND (CAST(:before AS bigint) IS NULL OR notification_id < :before)"

@@ -14,8 +14,7 @@ import lombok.Builder;
 /// @param actorAnonymous 触发人是对象的匿名所有者
 /// @param subjectId 对象
 /// @param commentId 评论，可空
-/// @param excerpt 摘录；评论删除后为空
-/// @param commentDeleted 评论已删除
+/// @param excerpt 摘录
 /// @param createdAt 生成时刻
 /// @param readAt 已读时刻；未读为空
 @Builder
@@ -27,7 +26,6 @@ public record NotificationEntry(
     SubjectId subjectId,
     Long commentId,
     ExcerptText excerpt,
-    boolean commentDeleted,
     Instant createdAt,
     Instant readAt) {
 

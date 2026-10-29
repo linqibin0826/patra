@@ -21,7 +21,6 @@ export function makeNotification(overrides: Partial<Notification> = {}): Notific
       mine: false,
     },
     commentId: "9",
-    commentDeleted: false,
     excerpt: "同意。补充一点：文中的倾向评分只用来校正主要结局",
     excerptTruncated: false,
     ...overrides,

@@ -14,8 +14,7 @@ import lombok.Builder;
 /// @param actorAnonymous 触发人是匿名作者（为 `true` 时 `actor` 恒为空）
 /// @param subject 对象上下文
 /// @param commentId 评论（永久链接用）
-/// @param commentDeleted 评论已删除
-/// @param excerpt 纯文本摘录 ≤ 120 字素；评论已删除或对象不可用时为空
+/// @param excerpt 纯文本摘录 ≤ 120 字素；对象不可用（文献下线）时为空
 /// @param excerptTruncated 摘录截断过
 @Builder
 public record NotificationResponse(
@@ -27,7 +26,6 @@ public record NotificationResponse(
     boolean actorAnonymous,
     SubjectRefResponse subject,
     Long commentId,
-    boolean commentDeleted,
     String excerpt,
     boolean excerptTruncated) {
 
@@ -45,7 +43,6 @@ public record NotificationResponse(
         .actorAnonymous(view.actorAnonymous())
         .subject(SubjectRefResponse.from(view.subject()))
         .commentId(view.commentId())
-        .commentDeleted(view.commentDeleted())
         .excerpt(view.excerpt())
         .excerptTruncated(view.excerptTruncated())
         .build();

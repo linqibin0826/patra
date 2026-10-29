@@ -112,6 +112,33 @@ export function formatRelative(iso: string, now: number): string {
     : `${p.year} 年 ${p.month} 月 ${p.day} 日`;
 }
 
+/// 按北京时间的自然日分的三组（提醒列表）
+export type DayGroup = "today" | "yesterday" | "earlier";
+
+/// 与 `now` 同一天（含时钟偏差造成的未来时间）是今天，前一天是昨天，再早是更早
+export function dayGroupOf(iso: string, now: number): DayGroup {
+  const days = dayNumber(partsOf(now)) - dayNumber(partsOf(Date.parse(iso)));
+  if (days <= 0) {
+    return "today";
+  }
+  return days === 1 ? "yesterday" : "earlier";
+}
+
+/// 分组之后的时间写法（分组已经说明是哪天）：今天写相对时间、昨天写 `21:40`、更早写 `10 月 21 日`（往年带年份）
+export function formatGroupedTime(iso: string, now: number): string {
+  const group = dayGroupOf(iso, now);
+  if (group === "today") {
+    return formatRelative(iso, now);
+  }
+  const p = partsOf(Date.parse(iso));
+  if (group === "yesterday") {
+    return clock(p);
+  }
+  return p.year === partsOf(now).year
+    ? `${p.month} 月 ${p.day} 日`
+    : `${p.year} 年 ${p.month} 月 ${p.day} 日`;
+}
+
 /// `now` 加 `days` 天后的 ISO 时间
 export function addDays(now: number, days: number): string {
   return new Date(now + days * DAY).toISOString();

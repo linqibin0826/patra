@@ -19,6 +19,7 @@ import static org.mockito.Mockito.when;
 import dev.patra.interaction.app.post.RecordingTransactions;
 import dev.patra.interaction.app.post.TestUsers;
 import dev.patra.interaction.app.post.service.PostRegistry;
+import dev.patra.interaction.domain.post.event.PostDeletedEvent;
 import dev.patra.interaction.domain.post.exception.PostForbiddenException;
 import dev.patra.interaction.domain.post.exception.PostNotFoundException;
 import dev.patra.interaction.domain.post.model.enums.PostStatus;
@@ -37,6 +38,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationEventPublisher;
 
 /// 删除经验（spec 6.3）：作者本人；不查资格；软删并把登记行置为失效（同一事务、传当前快照）；已删的幂等。
 class DeleteExperienceHandlerTest {
@@ -47,6 +49,7 @@ class DeleteExperienceHandlerTest {
   private final SubjectReadPort subjects = mock(SubjectReadPort.class);
   private final PublishGuardGateway guard = mock(PublishGuardGateway.class);
   private final PostRepository posts = mock(PostRepository.class);
+  private final ApplicationEventPublisher publisher = mock(ApplicationEventPublisher.class);
   private final List<String> events = new ArrayList<>();
   private DeleteExperienceHandler handler;
 
@@ -60,6 +63,7 @@ class DeleteExperienceHandlerTest {
     doAnswer(invocation -> events.add("unavailable"))
         .when(gateway)
         .updateLocal(any(), anyLong(), any(), any());
+    doAnswer(invocation -> events.add("publish")).when(publisher).publishEvent(any(Object.class));
     handler =
         new DeleteExperienceHandler(
             gateway,
@@ -67,10 +71,11 @@ class DeleteExperienceHandlerTest {
             posts,
             TestUsers.signedIn(U),
             new RecordingTransactions(events),
-            Clock.fixed(NOW, ZoneOffset.UTC));
+            Clock.fixed(NOW, ZoneOffset.UTC),
+            publisher);
   }
 
-  /// 软删与登记行置为失效都在同一个事务里，登记快照原样传回。
+  /// 软删、登记行置为失效、发布删除事件都在同一个事务里，登记快照原样传回。
   @Test
   void should_soft_delete_and_mark_registry_unavailable() {
     when(posts.find(POST_ID)).thenReturn(Optional.of(post(U, true, NOW)));
@@ -79,7 +84,11 @@ class DeleteExperienceHandlerTest {
 
     assertThat(events)
         .containsExactly(
-            RecordingTransactions.BEGIN, "delete", "unavailable", RecordingTransactions.END);
+            RecordingTransactions.BEGIN,
+            "delete",
+            "unavailable",
+            "publish",
+            RecordingTransactions.END);
     verify(posts).lockAuthor(U);
     verify(posts).markDeleted(POST_ID, NOW);
     verify(gateway)
@@ -107,7 +116,17 @@ class DeleteExperienceHandlerTest {
     assertThat(events).containsSubsequence("lock", "snapshot", "delete", "unavailable");
   }
 
-  /// 已经删了：什么都不做（幂等）。
+  /// 删除事件带上帖子、这条经验自己的登记对象（不是期刊）、作者与删除时刻（与软删同一时刻）。
+  @Test
+  void should_publish_post_deleted_event() {
+    when(posts.find(POST_ID)).thenReturn(Optional.of(post(U, true, NOW)));
+
+    handler.handle(DeleteExperienceCommand.of(POST_ID.value()));
+
+    verify(publisher).publishEvent(PostDeletedEvent.of(POST_ID.value(), POST_SUBJECT, U, NOW));
+  }
+
+  /// 已经删了：什么都不做（幂等），也不发事件。
   @Test
   void should_be_idempotent_for_deleted_post() {
     when(posts.find(POST_ID))
@@ -117,6 +136,21 @@ class DeleteExperienceHandlerTest {
 
     verify(posts, never()).markDeleted(any(), any());
     verify(gateway, never()).updateLocal(any(), anyLong(), any(), any());
+    verifyNoInteractions(publisher);
+  }
+
+  /// 锁内复核发现已被并发删除：不再写、不发事件。
+  @Test
+  void should_not_publish_when_deleted_meanwhile() {
+    when(posts.find(POST_ID))
+        .thenReturn(
+            Optional.of(post(U, true, NOW)),
+            Optional.of(post(U, true, NOW).toBuilder().status(PostStatus.DELETED).build()));
+
+    handler.handle(DeleteExperienceCommand.of(POST_ID.value()));
+
+    verify(posts, never()).markDeleted(any(), any());
+    verifyNoInteractions(publisher);
   }
 
   /// 删除不查发表资格（冷静期、封禁、未验证都能删自己的）。
@@ -137,6 +171,7 @@ class DeleteExperienceHandlerTest {
     assertThatThrownBy(() -> handler.handle(DeleteExperienceCommand.of(POST_ID.value())))
         .isInstanceOf(PostForbiddenException.class);
     verify(posts, never()).markDeleted(any(), any());
+    verifyNoInteractions(publisher);
   }
 
   /// 不存在：404。
@@ -146,5 +181,6 @@ class DeleteExperienceHandlerTest {
 
     assertThatThrownBy(() -> handler.handle(DeleteExperienceCommand.of(POST_ID.value())))
         .isInstanceOf(PostNotFoundException.class);
+    verifyNoInteractions(publisher);
   }
 }
