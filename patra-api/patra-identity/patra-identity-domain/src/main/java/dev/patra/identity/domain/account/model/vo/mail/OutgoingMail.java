@@ -1,6 +1,7 @@
 package dev.patra.identity.domain.account.model.vo.mail;
 
 import dev.patra.identity.domain.account.model.vo.EmailAddress;
+import dev.patra.identity.domain.session.model.vo.SecurityNotice;
 import java.util.Map;
 
 /// 一封要发出去的邮件：收件人、模板名、主题和模板变量。
