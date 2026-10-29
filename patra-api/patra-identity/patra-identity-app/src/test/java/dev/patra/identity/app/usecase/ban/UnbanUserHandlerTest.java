@@ -18,6 +18,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.transaction.support.TransactionOperations;
 
 /// UnbanUserHandler 单元测试。
 @DisplayName("UnbanUserHandler 单元测试")
@@ -26,7 +27,8 @@ class UnbanUserHandlerTest {
   private static final EmailAddress EMAIL = EmailAddress.of("chen.yu@example.com");
 
   private final UserRepository users = mock(UserRepository.class);
-  private final UnbanUserHandler handler = new UnbanUserHandler(users);
+  private final UnbanUserHandler handler =
+      new UnbanUserHandler(users, TransactionOperations.withoutTransaction());
 
   @Test
   @DisplayName("解封已封禁的用户：回到正常，清掉封禁时间")

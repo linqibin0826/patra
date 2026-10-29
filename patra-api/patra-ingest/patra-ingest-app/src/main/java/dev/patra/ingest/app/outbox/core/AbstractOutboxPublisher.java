@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -98,14 +99,16 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
 
   // ==================== 模板方法(公共 API) ====================
 
-  /// 将事件发布为 Outbox 消息(带事务的批量插入)。
+  /// 将事件发布为 Outbox 消息(批量插入，必须加入业务事务：`MANDATORY`)。
+  ///
+  /// 子类经 `super.publish(...)` 调到这里时不走代理，守卫要同样加在子类对外的入口方法上。
   ///
   /// 工作流程:
   ///
   /// @param events 要发布的领域事件列表
   /// @param ctx 发布上下文(聚合、元数据、traceId 等)
   /// @return 包含成功/失败计数和持续时间的发布结果
-  @Transactional(rollbackFor = Exception.class)
+  @Transactional(propagation = Propagation.MANDATORY)
   public OutboxPublishResult publish(List<E> events, OutboxPublishContext ctx) {
     return executePublish(events, ctx, "batch", this::saveBatchMessages);
   }
@@ -119,7 +122,7 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
   /// @param events 要重试的领域事件列表
   /// @param ctx 发布上下文
   /// @return 发布结果
-  @Transactional(rollbackFor = Exception.class)
+  @Transactional(propagation = Propagation.MANDATORY)
   public OutboxPublishResult publishRetry(List<E> events, OutboxPublishContext ctx) {
     validateRetryBatchSize(events.size());
     return executePublish(events, ctx, "retry", this::upsertMessages);

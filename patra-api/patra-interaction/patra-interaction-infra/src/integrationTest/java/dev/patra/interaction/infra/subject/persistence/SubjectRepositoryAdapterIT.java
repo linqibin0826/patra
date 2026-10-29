@@ -1,6 +1,7 @@
 package dev.patra.interaction.infra.subject.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.patra.interaction.domain.subject.model.aggregate.SubjectAggregate;
 import dev.patra.interaction.domain.subject.model.enums.NaturalKeyScheme;
@@ -23,8 +24,10 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import javax.sql.DataSource;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.IllegalTransactionStateException;
 
 /// 登记表仓储：按身份锚 upsert、过期来源 ID 的清理、并发、分页、对账写回。
 class SubjectRepositoryAdapterIT extends SubjectRegistryITSupport {
@@ -34,6 +37,14 @@ class SubjectRepositoryAdapterIT extends SubjectRegistryITSupport {
 
   @Autowired private SubjectRepository repository;
   @Autowired private DataSource dataSource;
+
+  /// 带身份锚锁的登记在事务外调用时被拒绝（`MANDATORY`）。
+  @Test
+  @DisplayName("带身份锚锁的登记必须在事务里调用")
+  void should_reject_lock_outside_transaction() {
+    assertThatThrownBy(() -> repository.upsertResolved(PUB, active(100L, "1"), NOW))
+        .isInstanceOf(IllegalTransactionStateException.class);
+  }
 
   @Test
   void should_insert_new_subject() {

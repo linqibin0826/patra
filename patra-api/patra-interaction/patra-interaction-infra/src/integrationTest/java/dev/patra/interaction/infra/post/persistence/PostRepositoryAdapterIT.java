@@ -1,6 +1,7 @@
 package dev.patra.interaction.infra.post.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.patra.interaction.domain.post.model.aggregate.PostAggregate;
 import dev.patra.interaction.domain.post.model.enums.ArticleType;
@@ -21,13 +22,23 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import javax.sql.DataSource;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.IllegalTransactionStateException;
 
 /// 帖子写端：两张表往返、查重只看未删除、编辑只改内容、修改历史编号、软删、作者锁。
 class PostRepositoryAdapterIT extends PostPersistenceITSupport {
 
   @Autowired private DataSource dataSource;
+
+  /// 作者锁在事务外调用时被拒绝（`MANDATORY`）。
+  @Test
+  @DisplayName("作者锁必须在事务里调用")
+  void should_reject_lock_outside_transaction() {
+    assertThatThrownBy(() -> posts.lockAuthor(U))
+        .isInstanceOf(IllegalTransactionStateException.class);
+  }
 
   /// 全部字段写进去读回来一样；选填全空、没有正文也一样。
   @Test

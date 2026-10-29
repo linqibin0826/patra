@@ -19,6 +19,8 @@ import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 /// 前台用户仓储的 JPA 实现。
 ///
@@ -52,6 +54,7 @@ public class UserRepositoryAdapter implements UserRepository {
   /// @param id 用户 ID
   /// @return 用户
   @Override
+  @Transactional(propagation = Propagation.MANDATORY)
   public Optional<User> findByIdForUpdate(long id) {
     return dao.findByIdForUpdate(id).map(mapper::toAggregate);
   }

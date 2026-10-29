@@ -13,6 +13,8 @@ import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 /// `LibraryRepository` 的原生 SQL 实现。状态窄表按 `user_id` 分区，每条语句都带 `user_id`。
 @Component
@@ -28,6 +30,7 @@ public class LibraryRepositoryAdapter implements LibraryRepository {
   ///
   /// @param userId 用户
   @Override
+  @Transactional(propagation = Propagation.MANDATORY)
   public void lockOwner(long userId) {
     jdbc.sql("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))")
         .param("key", LOCK_PREFIX + userId)

@@ -13,6 +13,7 @@ import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionOperations;
 
 /// 中继发布协调器 - 管理消息发布和状态转换
 ///
@@ -58,6 +59,7 @@ public class RelayPublishCoordinator {
   private final OutboxPublisherPort publisherPort;
   private final RelayErrorClassifier errorClassifier;
   private final RelayRetryPolicy retryPolicy;
+  private final TransactionOperations transactions;
 
   /// 发布单条 Outbox 消息并处理结果
   ///
@@ -71,24 +73,8 @@ public class RelayPublishCoordinator {
     int attemptNumber = message.computeNextAttempt();
 
     try {
-      // 尝试发布到下游代理
+      // 尝试发布到下游代理（只有这一步的异常算发送失败）
       publisherPort.publish(message, plan);
-
-      // 成功: 标记为 PUBLISHED 并释放租约
-      handleSuccess(message);
-
-      if (log.isDebugEnabled()) {
-        long durationMs = Duration.between(startTime, Instant.now()).toMillis();
-        log.debug(
-            "发布成功: messageId={}, channel={}, attemptNumber={}, durationMs={}",
-            message.getId(),
-            message.getChannel(),
-            attemptNumber,
-            durationMs);
-      }
-
-      return RelayResult.success(message.getId(), attemptNumber);
-
     } catch (Exception exception) {
       // 分类错误以确定重试资格
       RelayErrorKind errorKind = errorClassifier.classify(exception);
@@ -136,6 +122,21 @@ public class RelayPublishCoordinator {
         return RelayResult.failed(message.getId(), attemptNumber, errorCode, errorMessage);
       }
     }
+
+    // 成功: 标记为 PUBLISHED 并释放租约
+    handleSuccess(message);
+
+    if (log.isDebugEnabled()) {
+      long durationMs = Duration.between(startTime, Instant.now()).toMillis();
+      log.debug(
+          "发布成功: messageId={}, channel={}, attemptNumber={}, durationMs={}",
+          message.getId(),
+          message.getChannel(),
+          attemptNumber,
+          durationMs);
+    }
+
+    return RelayResult.success(message.getId(), attemptNumber);
   }
 
   /// 通过将消息标记为 PUBLISHED 来处理成功发布
@@ -155,7 +156,14 @@ public class RelayPublishCoordinator {
   ///
   /// @param message 成功发布的 Outbox 消息
   private void handleSuccess(OutboxMessage message) {
-    relayStore.markPublished(message.getId(), message.getVersion());
+    try {
+      transactions.executeWithoutResult(
+          status -> relayStore.markPublished(message.getId(), message.getVersion()));
+    } catch (RuntimeException e) {
+      // MQ 已收下：不能当成发送失败改写状态。消息停在 PUBLISHING，租约过期后重新领取（至少一次投递）
+      log.warn(
+          "标记已发布失败，租约过期后会重新投递: messageId={}, channel={}", message.getId(), message.getChannel(), e);
+    }
   }
 
   /// 通过调度重试来处理暂时性发布错误
@@ -181,13 +189,15 @@ public class RelayPublishCoordinator {
     Duration backoff = retryPolicy.computeDelay(attemptNumber);
     Instant nextRetryAt = Instant.now().plus(backoff);
 
-    relayStore.markDeferred(
-        message.getId(),
-        message.getVersion(),
-        attemptNumber, // 已更新的重试计数
-        nextRetryAt,
-        extractErrorCode(exception),
-        truncateMessage(exception.getMessage(), 500));
+    transactions.executeWithoutResult(
+        status ->
+            relayStore.markDeferred(
+                message.getId(),
+                message.getVersion(),
+                attemptNumber, // 已更新的重试计数
+                nextRetryAt,
+                extractErrorCode(exception),
+                truncateMessage(exception.getMessage(), 500)));
   }
 
   /// 处理致命发布错误或达到最大重试
@@ -211,12 +221,14 @@ public class RelayPublishCoordinator {
   private void handleFailed(OutboxMessage message, RelayPlan plan, Exception exception) {
     int attemptNumber = message.computeNextAttempt();
 
-    relayStore.markFailed(
-        message.getId(),
-        message.getVersion(),
-        attemptNumber, // 最终重试计数
-        extractErrorCode(exception),
-        truncateMessage(exception.getMessage(), 500));
+    transactions.executeWithoutResult(
+        status ->
+            relayStore.markFailed(
+                message.getId(),
+                message.getVersion(),
+                attemptNumber, // 最终重试计数
+                extractErrorCode(exception),
+                truncateMessage(exception.getMessage(), 500)));
   }
 
   /// 从异常类名提取简单的错误代码

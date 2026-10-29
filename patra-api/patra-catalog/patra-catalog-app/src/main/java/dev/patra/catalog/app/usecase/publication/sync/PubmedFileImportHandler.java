@@ -15,10 +15,12 @@ import dev.patra.catalog.domain.port.source.PubmedFileListingPort;
 import dev.patra.tool.core.error.ApplicationException;
 import dev.patra.tool.cqrs.CommandHandler;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.OptionalInt;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionOperations;
 
 /// 处理一段 PubMed 文件（baseline 或 updatefiles），按序号依次处理（spec 第 5.8 节）。
 ///
@@ -28,7 +30,7 @@ import org.springframework.stereotype.Component;
 /// - `reprocess = false` 跳过已完成的文件；`true` 不跳过，已完成的文件换新的作业 generation（生成新的作业实例）
 ///
 /// 遇到失败的文件就标记失败并停止（下次运行从它重试）。整次运行包在与本地重算共用的任务锁里。
-/// 不加 `@Transactional`：Spring Batch 不能在外层事务里启动，进度仓储的写方法自带事务。
+/// 不整体包事务：Spring Batch 不能在外层事务里启动；进度表的每次写入各用 `TransactionOperations` 包一个短事务。
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -42,6 +44,7 @@ public class PubmedFileImportHandler
   private final PubmedFileListingPort listingPort;
   private final PublicationBatchPort publicationBatchPort;
   private final ExclusiveRunPort exclusiveRunPort;
+  private final TransactionOperations transactions;
   private final Clock clock;
 
   /// 执行一次。
@@ -136,16 +139,22 @@ public class PubmedFileImportHandler
   /// @return 计数
   private PubmedFileCounts processFile(PubmedFileImportCommand command, PubmedFileRef file) {
     String generation = generationFor(command, file);
-    progressRepository.markRunning(file, command.scope(), generation, clock.instant());
+    Instant startedAt = clock.instant();
+    transactions.executeWithoutResult(
+        status -> progressRepository.markRunning(file, command.scope(), generation, startedAt));
     try {
       PubmedFileCounts counts =
           publicationBatchPort.launchFileImport(
               PubmedFileImportParams.of(file, command.baseUrl(), command.scope(), generation));
-      progressRepository.markCompleted(file.fileName(), counts, clock.instant());
+      Instant finishedAt = clock.instant();
+      transactions.executeWithoutResult(
+          status -> progressRepository.markCompleted(file.fileName(), counts, finishedAt));
       log.info("PubMed 文件完成：{}，{}", file.fileName(), counts);
       return counts;
     } catch (RuntimeException e) {
-      progressRepository.markFailed(file.fileName(), e.getMessage(), clock.instant());
+      Instant failedAt = clock.instant();
+      transactions.executeWithoutResult(
+          status -> progressRepository.markFailed(file.fileName(), e.getMessage(), failedAt));
       throw new ApplicationException(
           CatalogErrorCode.CAT_1501, "PubMed 文件处理失败：" + file.fileName() + "，" + e.getMessage(), e);
     }

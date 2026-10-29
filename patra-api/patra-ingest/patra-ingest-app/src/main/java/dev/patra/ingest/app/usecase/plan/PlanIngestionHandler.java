@@ -29,10 +29,11 @@ import dev.patra.ingest.domain.port.TaskRepository;
 import dev.patra.tool.cqrs.CommandHandler;
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionOperations;
 
 /// 计划接入处理器。
 ///
@@ -47,7 +48,7 @@ import org.springframework.transaction.annotation.Transactional;
 /// 该处理器将持久化操作委托给 {@link PlanPersistenceCoordinator}，幂等性处理委托给 {@link
 /// PlanIdempotencyCoordinator}，发布操作委托给 {@link PlanPublishingCoordinator}。
 ///
-/// 注意：该处理器维护 `@Transactional` 事务边界，确保持久化和事件发布的原子性（Outbox 模式）。
+/// 事务：先在事务外取 registry 配置，再用 `TransactionOperations` 包住持久化和 Outbox 写入，确保两者原子（Outbox 模式）。
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -70,6 +71,7 @@ public class PlanIngestionHandler
   private final PlanPersistenceCoordinator persistenceCoordinator;
   private final PlanIdempotencyCoordinator idempotencyCoordinator;
   private final PlanPublishingCoordinator publishingCoordinator;
+  private final TransactionOperations transactions;
 
   /// 计划编排主流程（入口方法）。
   ///
@@ -78,11 +80,23 @@ public class PlanIngestionHandler
   /// @param command 计划接入命令
   /// @return 计划执行摘要
   @Override
-  @Transactional
   public PlanIngestionResult handle(PlanIngestionCommand command) {
     logPlanIngestionStart(command);
+    // registry 配置是远程调用，放在事务外（transaction.md 第 2 节）
+    ProvenanceConfigSnapshot configSnapshot =
+        patraRegistryPort.fetchConfig(command.provenanceCode(), command.operationCode());
+    return Objects.requireNonNull(
+        transactions.execute(status -> planInTransaction(command, configSnapshot)));
+  }
 
-    PlanningContext context = preparePlanningContext(command);
+  /// 事务内：持久化调度实例、组装计划、持久化计划并写 Outbox，同成同败。
+  ///
+  /// @param command 计划命令
+  /// @param configSnapshot 事务外取到的数据源配置
+  /// @return 计划结果
+  private PlanIngestionResult planInTransaction(
+      PlanIngestionCommand command, ProvenanceConfigSnapshot configSnapshot) {
+    PlanningContext context = preparePlanningContext(command, configSnapshot);
     PlanExpressionDescriptor expressionDescriptor = buildPlanExpression(context);
     performPreValidation(context);
 
@@ -110,16 +124,16 @@ public class PlanIngestionHandler
         request.scheduler());
   }
 
-  /// 准备计划上下文：加载配置并解析窗口。
+  /// 准备计划上下文：持久化调度实例并解析窗口。
   ///
   /// @param request 计划接入命令
+  /// @param configSnapshot 事务外取到的数据源配置
   /// @return 包含调度、配置、规范和窗口的计划上下文
-  private PlanningContext preparePlanningContext(PlanIngestionCommand request) {
+  private PlanningContext preparePlanningContext(
+      PlanIngestionCommand request, ProvenanceConfigSnapshot configSnapshot) {
     log.debug("准备计划上下文 数据源 [{}] 操作 [{}]", request.provenanceCode(), request.operationCode());
 
     ScheduleInstanceAggregate schedule = persistenceCoordinator.persistScheduleInstance(request);
-    ProvenanceConfigSnapshot configSnapshot =
-        patraRegistryPort.fetchConfig(request.provenanceCode(), request.operationCode());
     PlanTriggerNorm norm = buildTriggerNorm(schedule, request);
 
     Instant cursorWatermark =

@@ -30,7 +30,10 @@ public interface OutboxMessageDao extends JpaRepository<OutboxMessageEntity, Lon
   /// @return 消息实体
   Optional<OutboxMessageEntity> findByChannelAndDedupKey(String channel, String dedupKey);
 
-  /// 获取可发布的消息（PENDING 状态且时间满足且未租约）。
+  /// 获取可发布的消息：PENDING 且时间满足且未租约，或 PUBLISHING 但租约已过期。
+  ///
+  /// 租约单独提交后，领了租约却没能标记状态（进程挂掉、标记事务失败）的消息停在 PUBLISHING，
+  /// 租约过期后靠这里重新领取，保证「至少一次」投递。
   ///
   /// @param channel 通道名称（可为 null 表示所有通道）
   /// @param available 可用时间点
@@ -39,7 +42,7 @@ public interface OutboxMessageDao extends JpaRepository<OutboxMessageEntity, Lon
   @Query(
       """
       SELECT m FROM OutboxMessageEntity m
-      WHERE m.statusCode = 'PENDING'
+      WHERE m.statusCode IN ('PENDING', 'PUBLISHING')
         AND (m.notBefore IS NULL OR m.notBefore <= :available)
         AND (m.pubLeaseOwner IS NULL OR m.pubLeasedUntil < :available)
         AND (:channel IS NULL OR m.channel = :channel)

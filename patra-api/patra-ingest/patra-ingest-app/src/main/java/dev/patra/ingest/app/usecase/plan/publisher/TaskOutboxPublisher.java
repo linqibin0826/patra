@@ -19,6 +19,8 @@ import java.util.List;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
 
 /// Task Outbox 发布器
@@ -70,6 +72,7 @@ public class TaskOutboxPublisher
   /// @param events 任务排队事件
   /// @param plan Plan 聚合(不能为 null)
   /// @param schedule 调度实例聚合(不能为 null)
+  @Transactional(propagation = Propagation.MANDATORY)
   public void publish(
       List<TaskQueuedEvent> events, PlanAggregate plan, ScheduleInstanceAggregate schedule) {
     Objects.requireNonNull(plan, "plan must not be null");
@@ -97,6 +100,7 @@ public class TaskOutboxPublisher
   /// @param events 任务排队事件
   /// @param plan Plan 聚合(不能为 null)
   /// @param schedule 调度实例聚合(不能为 null)
+  @Transactional(propagation = Propagation.MANDATORY)
   public void publishRetry(
       List<TaskQueuedEvent> events, PlanAggregate plan, ScheduleInstanceAggregate schedule) {
     Objects.requireNonNull(plan, "plan must not be null");

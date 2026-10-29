@@ -104,6 +104,38 @@ public class VenueInstanceRepositoryAdapter implements VenueInstanceRepository {
         .map(jpaConverter::toAggregate);
   }
 
+  /// 用原生 `INSERT … ON CONFLICT DO NOTHING` 插入期刊实例，冲突时不抛异常，所在事务继续可用。
+  ///
+  /// @param instance 期刊实例（尚未持久化）
+  /// @return 是否插入了新行
+  @Override
+  public boolean insertJournalInstanceIfAbsent(VenueInstanceAggregate instance) {
+    long id = SnowflakeIdGenerator.getId();
+    int inserted =
+        entityManager
+            .createNativeQuery(
+                """
+                INSERT INTO cat_venue_instance
+                    (id, venue_id, volume, issue, publication_year, publication_month, publication_day)
+                VALUES (:id, :venueId, :volume, :issue, :year, :month, :day)
+                ON CONFLICT (venue_id, volume, issue, edition, conference_name, publication_year)
+                DO NOTHING
+                """)
+            .setParameter("id", id)
+            .setParameter("venueId", instance.getVenueId().value())
+            .setParameter("volume", instance.getVolume())
+            .setParameter("issue", instance.getIssue())
+            .setParameter("year", instance.getPublicationYear())
+            .setParameter("month", instance.getPublicationMonth())
+            .setParameter("day", instance.getPublicationDay())
+            .executeUpdate();
+    if (inserted == 0) {
+      return false;
+    }
+    instance.assignId(VenueInstanceId.of(id));
+    return true;
+  }
+
   @Override
   public void save(VenueInstanceAggregate instance) {
     if (instance == null) {

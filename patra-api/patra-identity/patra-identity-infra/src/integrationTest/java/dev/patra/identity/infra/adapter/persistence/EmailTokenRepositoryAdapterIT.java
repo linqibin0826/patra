@@ -31,6 +31,9 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.transaction.IllegalTransactionStateException;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 /// EmailTokenRepositoryAdapter 集成测试：只存哈希、条件消费只成功一次、按用途 / 按用户作废、分批清理、
 /// 部分唯一索引与改邮箱撤销令牌的豁免。
@@ -68,6 +71,15 @@ class EmailTokenRepositoryAdapterIT {
             .save(
                 User.register(email, Username.of("u" + address.substring(6, address.indexOf('@')))))
             .getId();
+  }
+
+  /// 条件消费令牌在事务外调用时被拒绝（`MANDATORY`）。
+  @Test
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
+  @DisplayName("条件消费令牌必须在事务里调用")
+  void should_reject_lock_outside_transaction() {
+    assertThatThrownBy(() -> tokens.consume("hash", EmailTokenPurpose.EMAIL_VERIFY, NOW))
+        .isInstanceOf(IllegalTransactionStateException.class);
   }
 
   @Test

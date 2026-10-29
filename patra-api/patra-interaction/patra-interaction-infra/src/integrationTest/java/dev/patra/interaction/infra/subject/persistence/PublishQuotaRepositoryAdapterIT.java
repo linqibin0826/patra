@@ -1,6 +1,7 @@
 package dev.patra.interaction.infra.subject.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.patra.interaction.domain.subject.model.enums.PublishKind;
 import dev.patra.interaction.domain.subject.policy.PublishQuota;
@@ -14,8 +15,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.IllegalTransactionStateException;
 
 /// 发表计数：每个作者每种一行的读写、作者锁、注销清理的游标与删除。
 class PublishQuotaRepositoryAdapterIT extends SubjectRegistryITSupport {
@@ -31,6 +34,13 @@ class PublishQuotaRepositoryAdapterIT extends SubjectRegistryITSupport {
   @BeforeEach
   void truncateQuotas() {
     jdbcTemplate.update("TRUNCATE subject.publish_quota");
+  }
+
+  /// 配额锁在事务外调用时被拒绝（`MANDATORY`）。
+  @Test
+  @DisplayName("配额锁必须在事务里调用")
+  void should_reject_lock_outside_transaction() {
+    assertThatThrownBy(() -> quotas.lock(1L)).isInstanceOf(IllegalTransactionStateException.class);
   }
 
   @Test

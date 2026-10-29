@@ -14,7 +14,6 @@ import dev.patra.tool.cqrs.CommandHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 /// Outbox 中继处理器：提供单批次发布的编排入口。
 ///
@@ -25,7 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 /// - 执行消息发布
 /// - 发布领域事件
 ///
-/// 事务语义：方法使用 `@Transactional` 注解（单数据库写入原子性），执行器在相同边界内更新消息状态。
+/// 事务语义：不整体包事务（transaction.md 第 3 节）。领取租约、标记状态、写中继日志各用一个短事务，
+/// 发到 MQ 在事务外；投递语义是「至少一次」，标记失败时消息租约过期后会被重新领取。
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -43,7 +43,6 @@ public class OutboxRelayHandler implements CommandHandler<OutboxRelayCommand, Re
   /// @param command 中继命令，允许可选的覆盖配置
   /// @return 执行报告
   @Override
-  @Transactional
   public RelayReport handle(OutboxRelayCommand command) {
     if (!properties.isEnabled()) {
       var channelKey = command.channel() != null ? command.channel() : null; // null 表示所有通道

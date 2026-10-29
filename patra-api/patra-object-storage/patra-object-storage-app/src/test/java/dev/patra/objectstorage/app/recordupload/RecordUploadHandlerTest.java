@@ -21,9 +21,9 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.TransactionOperations;
 
 /// RecordUploadHandler 单元测试。
 ///
@@ -45,13 +45,14 @@ class RecordUploadHandlerTest {
 
   @Mock private FileMetadataRepository repository;
 
-  @InjectMocks private RecordUploadHandler handler;
+  private RecordUploadHandler handler;
 
   /// 配置 Repository Mock 的默认行为。
   ///
   /// 模拟数据库保存后返回带 ID 的实体。使用 lenient() 允许某些测试不使用此 stub（如异常测试）。
   @BeforeEach
   void setUp() {
+    handler = new RecordUploadHandler(repository, TransactionOperations.withoutTransaction());
     lenient()
         .when(repository.save(any(FileMetadata.class)))
         .thenAnswer(

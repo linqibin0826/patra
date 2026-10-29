@@ -13,6 +13,8 @@ import dev.patra.ingest.domain.messaging.OperationType;
 import dev.patra.ingest.domain.port.OutboxMessageRepository;
 import java.util.List;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
 
 /// 出版物事件发布器
@@ -38,6 +40,7 @@ public class PublicationEventPublisher
   /// 将事件持久化到outbox表,由relay组件投递到MQ。
   ///
   /// @param event 出版物就绪领域事件
+  @Transactional(propagation = Propagation.MANDATORY)
   public void publish(PublicationDataReadyEvent event) {
     if (!validateEvent(event)) {
       return;

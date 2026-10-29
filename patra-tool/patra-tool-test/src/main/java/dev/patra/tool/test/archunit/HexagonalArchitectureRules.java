@@ -1,15 +1,24 @@
 package dev.patra.tool.test.archunit;
 
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.simpleName;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noMethods;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
+import com.tngtech.archunit.core.domain.JavaMethod;
+import com.tngtech.archunit.core.domain.PackageMatcher;
+import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
+import com.tngtech.archunit.lang.ConditionEvents;
+import com.tngtech.archunit.lang.SimpleConditionEvent;
 import com.tngtech.archunit.library.Architectures;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /// 六边形架构规则工厂。
@@ -56,7 +65,7 @@ import org.springframework.transaction.annotation.Transactional;
 /// 2. **Domain 层纯净性**: 禁止 Spring 依赖、限制允许的依赖
 /// 3. **命名约定**: Port/Repository/DO/Aggregate/Orchestrator 命名和位置
 /// 4. **封装规则**: DO 不暴露、Port 必须 public、Event 位置
-/// 5. **事务边界**: @Transactional 只在 app 层
+/// 5. **事务边界**: 方法级 @Transactional 只在 app 层（infra 只放行 MANDATORY 守卫），不许类级注解，命令 Handler 不加注解
 ///
 /// @author linqibin
 /// @since 0.1.0
@@ -423,31 +432,69 @@ public class HexagonalArchitectureRules {
 
   // ==================== 事务边界规则 ====================
 
-  /// {@code @Transactional} 只能在 app 层。
+  /// 方法上的 `@Transactional` 只能在 app 层；infra 层只允许 `propagation = MANDATORY` 守卫。
+  ///
+  /// `MANDATORY` 不开事务，只在调用方没有事务时报错，所以不算划定事务边界。
   ///
   /// @return ArchRule 规则实例
   public ArchRule transactionsOnlyInAppLayer() {
-    return classes()
+    return methods()
         .that()
         .areAnnotatedWith(Transactional.class)
-        .should()
-        .resideInAPackage("..app..")
-        .as("@Transactional 只能在 app 层")
-        .because("事务边界应该在应用层的用例编排器中定义（六边形架构原则 CHK-ARCH-003）")
+        .should(beInAppLayerOrMandatoryGuardInInfra())
+        .as("@Transactional 只能在 app 层（infra 只允许 MANDATORY 守卫）")
+        .because("事务边界在应用层划定，见 .claude/rules/tech/transaction.md")
         .allowEmptyShould(true);
   }
 
-  /// Domain 层严禁使用 @Transactional。
+  /// 禁止类级 `@Transactional`：注解只加在 public 方法上，事务范围一眼可见。
   ///
   /// @return ArchRule 规则实例
-  public ArchRule domainShouldNotUseTransactions() {
+  public ArchRule noClassLevelTransactions() {
     return noClasses()
-        .that()
-        .resideInAPackage("..domain..")
         .should()
         .beAnnotatedWith(Transactional.class)
-        .as("Domain 层严禁使用 @Transactional")
-        .because("Domain 层必须保持纯净，事务是技术关注点，应该在 app 层管理（CHK-ARCH-001）");
+        .as("禁止类级 @Transactional")
+        .because("类级注解会把每个方法都包进事务，见 .claude/rules/tech/transaction.md 第 4 节");
+  }
+
+  /// 命令 Handler 不加 `@Transactional`，改为注入 `TransactionOperations` 只包写库那一段。
+  ///
+  /// 按接口简单类名 `CommandHandler` 识别 Handler，不依赖命令总线模块。
+  ///
+  /// @return ArchRule 规则实例
+  public ArchRule commandHandlersShouldNotBeTransactional() {
+    return noMethods()
+        .that()
+        .areDeclaredInClassesThat()
+        .implement(simpleName("CommandHandler"))
+        .should()
+        .beAnnotatedWith(Transactional.class)
+        .as("命令 Handler 不得标 @Transactional")
+        .because("远程调用要放在事务外，事务用 TransactionOperations 只包写库段，见 .claude/rules/tech/transaction.md")
+        .allowEmptyShould(true);
+  }
+
+  /// 方法声明在 app 层，或是 infra 层的 `MANDATORY` 守卫。
+  ///
+  /// @return 条件
+  private static ArchCondition<JavaMethod> beInAppLayerOrMandatoryGuardInInfra() {
+    PackageMatcher app = PackageMatcher.of("..app..");
+    PackageMatcher infra = PackageMatcher.of("..infra..");
+    return new ArchCondition<>("声明在 app 层，或是 infra 层的 MANDATORY 守卫") {
+      @Override
+      public void check(JavaMethod method, ConditionEvents events) {
+        String pkg = method.getOwner().getPackageName();
+        boolean mandatory =
+            method.getAnnotationOfType(Transactional.class).propagation() == Propagation.MANDATORY;
+        boolean satisfied = app.matches(pkg) || (infra.matches(pkg) && mandatory);
+        events.add(
+            new SimpleConditionEvent(
+                method,
+                satisfied,
+                method.getFullName() + " 的 @Transactional 不在 app 层，也不是 infra 层的 MANDATORY 守卫"));
+      }
+    };
   }
 
   // ==================== 便捷方法 ====================
@@ -487,7 +534,8 @@ public class HexagonalArchitectureRules {
 
     // 事务边界规则
     rules.add(transactionsOnlyInAppLayer());
-    rules.add(domainShouldNotUseTransactions());
+    rules.add(noClassLevelTransactions());
+    rules.add(commandHandlersShouldNotBeTransactional());
 
     return Collections.unmodifiableList(rules);
   }

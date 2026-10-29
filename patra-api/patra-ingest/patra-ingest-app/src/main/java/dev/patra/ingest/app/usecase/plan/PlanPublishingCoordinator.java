@@ -22,7 +22,7 @@ import org.springframework.stereotype.Service;
 /// - 从任务聚合根收集领域事件
 ///   - 通过 Outbox 模式发布事件
 ///
-/// 注意：该协调器不使用 `@Transactional`，依赖主编排器的外部事务边界来确保与持久化的原子性。
+/// 注意：该协调器不使用 `@Transactional`，依赖主编排器用 `TransactionOperations` 开的事务来确保与持久化的原子性。
 ///
 /// @author linqibin
 /// @since 0.1.0

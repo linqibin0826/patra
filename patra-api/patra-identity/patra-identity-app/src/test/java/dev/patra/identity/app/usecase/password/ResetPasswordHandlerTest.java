@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -255,6 +257,40 @@ class ResetPasswordHandlerTest {
                     ResetPasswordCommand.of(SECRET.value(), "Another-Horse-03", "127.0.0.1", null)))
         .isInstanceOf(InvalidUserFieldsException.class);
     verify(credentials, never()).save(any());
+  }
+
+  /// 提交后清零登录失败抛错（Redis 不可用）：重设已经生效，仍返回成功并照常发「密码已重设」。
+  @Test
+  @DisplayName("提交后清零登录失败抛错不影响重设结果与通知")
+  void should_ignore_clear_failure_after_commit() {
+    doThrow(new IllegalStateException("redis down"))
+        .when(loginThrottle)
+        .clear(AccountType.USER, EMAIL);
+
+    PasswordReset result =
+        handler.handle(
+            ResetPasswordCommand.of(SECRET.value(), "Another-Horse-03", "127.0.0.1", null));
+
+    assertThat(result).isNotNull();
+    verify(emailDelivery).send(any(PasswordResetDoneMail.class));
+  }
+
+  /// 清零登录失败与会话无关，放在事务提交之后。
+  @Test
+  @DisplayName("清零登录失败（与会话无关的 Redis 写入）在事务提交之后")
+  void should_clear_login_failures_after_commit() {
+    AtomicBoolean clearedInTransaction = new AtomicBoolean(true);
+    doAnswer(
+            invocation -> {
+              clearedInTransaction.set(inTransaction.get());
+              return null;
+            })
+        .when(loginThrottle)
+        .clear(AccountType.USER, EMAIL);
+
+    handler.handle(ResetPasswordCommand.of(SECRET.value(), "Another-Horse-03", "127.0.0.1", null));
+
+    assertThat(clearedInTransaction).isFalse();
   }
 
   @Test

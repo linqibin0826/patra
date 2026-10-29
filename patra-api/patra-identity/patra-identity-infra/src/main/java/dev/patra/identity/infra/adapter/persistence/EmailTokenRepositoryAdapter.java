@@ -21,6 +21,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 /// 一次性邮件令牌仓储的 JPA 实现。
 ///
@@ -100,6 +102,7 @@ public class EmailTokenRepositoryAdapter implements EmailTokenRepository {
   /// @param now 消费时间
   /// @return 消费后的令牌；没命中时为空
   @Override
+  @Transactional(propagation = Propagation.MANDATORY)
   public Optional<EmailToken> consume(String tokenHash, EmailTokenPurpose purpose, Instant now) {
     return JdbcClient.create(jdbcTemplate)
         .sql(CONSUME_SQL)

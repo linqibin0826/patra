@@ -3,7 +3,6 @@ package dev.patra.catalog.app.usecase.publication.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -20,7 +19,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.dao.DataIntegrityViolationException;
 
 /// VenueInstanceGatewayImpl 单元测试。
 ///
@@ -70,7 +68,7 @@ class VenueInstanceGatewayImplTest {
 
       // then
       assertThat(result).isSameAs(existingInstance);
-      verify(venueInstanceRepository, never()).save(any());
+      verify(venueInstanceRepository, never()).insertJournalInstanceIfAbsent(any());
     }
 
     @Test
@@ -80,6 +78,7 @@ class VenueInstanceGatewayImplTest {
       when(venueInstanceRepository.findJournalInstance(
               eq(VENUE_ID.value()), eq(VOLUME), eq(ISSUE), eq(YEAR)))
           .thenReturn(Optional.empty());
+      when(venueInstanceRepository.insertJournalInstanceIfAbsent(any())).thenReturn(true);
 
       JournalInstanceParams params =
           JournalInstanceParams.builder()
@@ -102,7 +101,8 @@ class VenueInstanceGatewayImplTest {
       assertThat(result.getPublicationYear()).isEqualTo(YEAR);
       assertThat(result.getPublicationMonth()).isEqualTo(MONTH);
       assertThat(result.getPublicationDay()).isEqualTo(DAY);
-      verify(venueInstanceRepository).save(any(VenueInstanceAggregate.class));
+      verify(venueInstanceRepository)
+          .insertJournalInstanceIfAbsent(any(VenueInstanceAggregate.class));
     }
 
     @Test
@@ -112,6 +112,7 @@ class VenueInstanceGatewayImplTest {
       when(venueInstanceRepository.findJournalInstance(
               eq(VENUE_ID.value()), eq(null), eq(null), eq(YEAR)))
           .thenReturn(Optional.empty());
+      when(venueInstanceRepository.insertJournalInstanceIfAbsent(any())).thenReturn(true);
 
       JournalInstanceParams params =
           JournalInstanceParams.builder()
@@ -131,28 +132,22 @@ class VenueInstanceGatewayImplTest {
       assertThat(result.getVolume()).isNull();
       assertThat(result.getIssue()).isNull();
       assertThat(result.getPublicationYear()).isEqualTo(YEAR);
-      verify(venueInstanceRepository).save(any(VenueInstanceAggregate.class));
+      verify(venueInstanceRepository)
+          .insertJournalInstanceIfAbsent(any(VenueInstanceAggregate.class));
     }
 
+    /// 插入因同一卷期已被并发插入而跳过时，重新查询返回已有实例。
     @Test
-    @DisplayName("并发创建冲突时应重新查询返回已存在实例")
-    void should_retry_query_on_concurrent_creation_conflict() {
+    @DisplayName("同一卷期已被并发插入时应重新查询返回已存在实例")
+    void should_return_existing_instance_when_insert_skipped_by_conflict() {
       // given
       VenueInstanceAggregate existingInstance =
           VenueInstanceAggregate.forJournal(VENUE_ID, VOLUME, ISSUE, YEAR, MONTH, DAY);
-
-      // 第一次查询返回空（不存在）
-      // 保存时抛出异常（模拟并发冲突）
-      // 重新查询返回已存在实例
       when(venueInstanceRepository.findJournalInstance(
               eq(VENUE_ID.value()), eq(VOLUME), eq(ISSUE), eq(YEAR)))
           .thenReturn(Optional.empty())
           .thenReturn(Optional.of(existingInstance));
-
-      // 模拟保存时并发冲突（void 方法用 doThrow）
-      doThrow(new DataIntegrityViolationException("Duplicate entry"))
-          .when(venueInstanceRepository)
-          .save(any());
+      when(venueInstanceRepository.insertJournalInstanceIfAbsent(any())).thenReturn(false);
 
       JournalInstanceParams params =
           JournalInstanceParams.builder()

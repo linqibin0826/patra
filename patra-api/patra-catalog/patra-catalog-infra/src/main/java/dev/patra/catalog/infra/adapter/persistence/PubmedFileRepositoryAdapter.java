@@ -15,11 +15,13 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /// `PubmedFileRepository` 的 JPA 实现。
 ///
-/// 写方法自带事务：调用方（增量同步 Handler）在事务外启动 Spring Batch 作业，本身不开事务。
+/// 写方法要求调用方的事务（`MANDATORY`）：增量同步 Handler 用 `TransactionOperations` 为每次写入开短事务，
+/// Spring Batch 作业在事务外启动；读方法各是一条查询，不需要事务。
 ///
 /// @author linqibin
 /// @since 0.11.0
@@ -35,7 +37,6 @@ public class PubmedFileRepositoryAdapter implements PubmedFileRepository {
   ///
   /// @return 文件号，没有成功文件时为空
   @Override
-  @Transactional(readOnly = true)
   public OptionalInt findLastCompletedSeq(PubmedFileKind kind) {
     Integer max = dao.findMaxSeqByKindAndStatus(kind, PubmedFileStatus.COMPLETED);
     return max == null ? OptionalInt.empty() : OptionalInt.of(max);
@@ -45,7 +46,6 @@ public class PubmedFileRepositoryAdapter implements PubmedFileRepository {
   ///
   /// @return 文件号，没有未完成文件时为空
   @Override
-  @Transactional(readOnly = true)
   public OptionalInt findFirstUnfinishedSeq(PubmedFileKind kind) {
     Integer min = dao.findMinSeqByKindAndStatusNot(kind, PubmedFileStatus.COMPLETED);
     return min == null ? OptionalInt.empty() : OptionalInt.of(min);
@@ -56,7 +56,6 @@ public class PubmedFileRepositoryAdapter implements PubmedFileRepository {
   /// @param fileName 文件名
   /// @return 记录
   @Override
-  @Transactional(readOnly = true)
   public Optional<PubmedFileRecord> findByFileName(String fileName) {
     return dao.findByFileName(fileName).map(PubmedFileRepositoryAdapter::toRecord);
   }
@@ -68,7 +67,7 @@ public class PubmedFileRepositoryAdapter implements PubmedFileRepository {
   /// @param generation 这次所用的作业 generation，可空
   /// @param startedAt 开始时间
   @Override
-  @Transactional
+  @Transactional(propagation = Propagation.MANDATORY)
   public void markRunning(
       PubmedFileRef ref, PubmedImportScope scope, String generation, Instant startedAt) {
     PubmedFileEntity entity =
@@ -92,7 +91,7 @@ public class PubmedFileRepositoryAdapter implements PubmedFileRepository {
   /// @param counts 计数
   /// @param finishedAt 结束时间
   @Override
-  @Transactional
+  @Transactional(propagation = Propagation.MANDATORY)
   public void markCompleted(String fileName, PubmedFileCounts counts, Instant finishedAt) {
     PubmedFileEntity entity = requireEntity(fileName);
     entity.setStatus(PubmedFileStatus.COMPLETED);
@@ -107,7 +106,7 @@ public class PubmedFileRepositoryAdapter implements PubmedFileRepository {
   /// @param error 错误信息
   /// @param finishedAt 结束时间
   @Override
-  @Transactional
+  @Transactional(propagation = Propagation.MANDATORY)
   public void markFailed(String fileName, String error, Instant finishedAt) {
     PubmedFileEntity entity = requireEntity(fileName);
     entity.setStatus(PubmedFileStatus.FAILED);

@@ -46,6 +46,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
+import org.springframework.transaction.support.TransactionOperations;
 
 /// VerifyEmailHandler 单元测试：加锁顺序、条件消费、邮箱核对、会话撤销、幂等。
 @DisplayName("VerifyEmailHandler 单元测试")
@@ -76,6 +77,7 @@ class VerifyEmailHandlerTest {
           tokens,
           users,
           new SessionTerminator(sessions, records),
+          TransactionOperations.withoutTransaction(),
           Clock.fixed(NOW, ZoneOffset.UTC));
 
   /// 默认：令牌存在且可消费，用户 42 未验证，当前用户是 42 的会话 7。

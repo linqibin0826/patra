@@ -36,6 +36,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -59,6 +60,15 @@ class UserRepositoryAdapterIT {
   @Autowired private UserRepositoryAdapter repository;
   @Autowired private PlatformTransactionManager transactionManager;
   @Autowired private JdbcTemplate jdbcTemplate;
+
+  /// 锁用户行在事务外调用时被拒绝（`MANDATORY`）。
+  @Test
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
+  @DisplayName("锁用户行必须在事务里调用")
+  void should_reject_lock_outside_transaction() {
+    assertThatThrownBy(() -> repository.findByIdForUpdate(1L))
+        .isInstanceOf(IllegalTransactionStateException.class);
+  }
 
   @Test
   @DisplayName("保存新用户时分配雪花 ID，能按邮箱、用户名和 ID 查回")

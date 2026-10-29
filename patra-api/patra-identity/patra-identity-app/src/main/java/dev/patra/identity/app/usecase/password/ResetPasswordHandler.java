@@ -47,7 +47,7 @@ import org.springframework.transaction.support.TransactionOperations;
 /// 令牌不被消费）→ 哈希（事务外）→
 /// 事务里：按哈希查令牌（用途不符 422）→ 锁用户行（不存在、封禁、注销 422）→ 条件消费 → 令牌邮箱
 /// 必须等于当前邮箱 → 换哈希（没有凭据行就新建）→ 批量作废令牌（待确认的改邮箱随之取消）→
-/// 写验证时间 → 撤销全部会话并记 `PASSWORD_RESET` → 清零登录失败 → 事务后发「密码已重设」。不自动登录。
+/// 写验证时间 → 撤销全部会话并记 `PASSWORD_RESET` → 事务后清零登录失败、发「密码已重设」。不自动登录。
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -135,11 +135,16 @@ public class ResetPasswordHandler implements CommandHandler<ResetPasswordCommand
                   users.save(user);
                   List<Long> revoked =
                       sessionTerminator.terminateAll(userId, LoginEndReason.PASSWORD_RESET, now);
-                  loginThrottle.clear(AccountType.USER, email);
                   UserAccountReadModel account =
                       userReadPort.findAccount(userId).orElseThrow(() -> invalid());
                   return new Done(userId, email, account.displayName(), revoked.size());
                 }));
+    // 清零登录失败与会话无关，放在提交之后（transaction.md 第 2 节）；重设已生效，清理失败只记日志
+    try {
+      loginThrottle.clear(AccountType.USER, done.email());
+    } catch (RuntimeException e) {
+      log.warn("重设密码后清零登录失败计数失败: userId={}", done.userId(), e);
+    }
     // 解析放在事务提交之后、发信之前：纯计算，不占事务
     ClientOrigin origin =
         clientOriginResolver.resolve(RequestOrigin.of(command.clientIp(), command.userAgent()));

@@ -12,7 +12,7 @@ import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionOperations;
 
 /// 记录上传命令处理器。
 ///
@@ -38,6 +38,7 @@ public class RecordUploadHandler
     implements CommandHandler<RecordUploadCommand, RecordUploadResult> {
 
   private final FileMetadataRepository repository;
+  private final TransactionOperations transactions;
 
   /// 处理记录上传命令。
   ///
@@ -47,7 +48,6 @@ public class RecordUploadHandler
   /// @param command 来自适配器的已验证上传描述
   /// @return 持久化结果载荷
   @Override
-  @Transactional
   public RecordUploadResult handle(RecordUploadCommand command) {
     Objects.requireNonNull(command, "command 不能为 null");
 
@@ -67,7 +67,8 @@ public class RecordUploadHandler
             .withRecordRemarks(command.recordRemarks())
             .withIpAddress(command.ipAddress());
 
-    FileMetadata saved = repository.save(metadata);
+    FileMetadata saved =
+        Objects.requireNonNull(transactions.execute(status -> repository.save(metadata)));
     log.info("文件元数据已记录: id={}, storageKey={}", saved.getId(), saved.getStorageKey().fullKey());
     return new RecordUploadResult(saved.getId(), saved.getUploadedAt());
   }

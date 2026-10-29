@@ -45,7 +45,9 @@ import dev.patra.ingest.domain.port.CursorRepository;
 import dev.patra.ingest.domain.port.PatraRegistryPort;
 import dev.patra.ingest.domain.port.PlanRepository;
 import dev.patra.ingest.domain.port.TaskRepository;
+import dev.patra.tool.test.transaction.RecordingTransactions;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -105,6 +107,8 @@ class PlanIngestionHandlerTest {
 
   @Captor private ArgumentCaptor<PlanAssemblyRequest> assemblyRequestCaptor;
 
+  private final List<String> events = new ArrayList<>();
+
   private PlanIngestionHandler handler;
 
   @BeforeEach
@@ -121,7 +125,8 @@ class PlanIngestionHandlerTest {
             planRepository,
             persistenceCoordinator,
             idempotencyCoordinator,
-            publishingCoordinator);
+            publishingCoordinator,
+            new RecordingTransactions(events));
   }
 
   @Nested
@@ -129,7 +134,7 @@ class PlanIngestionHandlerTest {
   class NormalFlowTests {
 
     @Test
-    @DisplayName("应成功创建新计划并发布事件")
+    @DisplayName("应成功创建新计划并发布事件；registry 配置在事务外取，其余在一个事务里")
     void shouldCreateNewPlanSuccessfully() {
       // Given: 准备测试数据
       PlanIngestionCommand command = createValidCommand();
@@ -145,9 +150,18 @@ class PlanIngestionHandlerTest {
       when(plan.getOperationCode()).thenReturn(OperationCode.HARVEST.getCode());
       when(plan.getStatus()).thenReturn(PlanStatus.READY);
 
-      when(persistenceCoordinator.persistScheduleInstance(command)).thenReturn(schedule);
+      when(persistenceCoordinator.persistScheduleInstance(command))
+          .thenAnswer(
+              inv -> {
+                events.add("persistSchedule");
+                return schedule;
+              });
       when(patraRegistryPort.fetchConfig(ProvenanceCode.PUBMED, OperationCode.HARVEST))
-          .thenReturn(configSnapshot);
+          .thenAnswer(
+              inv -> {
+                events.add("fetchConfig");
+                return configSnapshot;
+              });
       when(cursorRepository.findLatestGlobalTimeWatermark(
               ProvenanceCode.PUBMED, OperationCode.HARVEST.getCode()))
           .thenReturn(Optional.empty());
@@ -194,8 +208,8 @@ class PlanIngestionHandlerTest {
               planRepository,
               publishingCoordinator);
 
-      inOrder.verify(persistenceCoordinator).persistScheduleInstance(command);
       inOrder.verify(patraRegistryPort).fetchConfig(ProvenanceCode.PUBMED, OperationCode.HARVEST);
+      inOrder.verify(persistenceCoordinator).persistScheduleInstance(command);
       inOrder
           .verify(cursorRepository)
           .findLatestGlobalTimeWatermark(ProvenanceCode.PUBMED, OperationCode.HARVEST.getCode());
@@ -219,6 +233,12 @@ class PlanIngestionHandlerTest {
       inOrder
           .verify(publishingCoordinator)
           .buildIngestionResult(eq(schedule), eq(plan), any(), eq(1), anyString());
+      assertThat(events)
+          .containsExactly(
+              "fetchConfig",
+              RecordingTransactions.BEGIN,
+              "persistSchedule",
+              RecordingTransactions.END);
     }
 
     @Test

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -26,9 +27,12 @@ import dev.patra.catalog.domain.port.lock.ExclusiveRunPort;
 import dev.patra.catalog.domain.port.repository.PubmedFileRepository;
 import dev.patra.catalog.domain.port.source.PubmedFileListingPort;
 import dev.patra.tool.core.error.ApplicationException;
+import dev.patra.tool.test.transaction.RecordingTransactions;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.function.Supplier;
@@ -59,6 +63,8 @@ class PubmedFileImportHandlerTest {
   @Mock private ExclusiveRunPort exclusiveRunPort;
   @Captor private ArgumentCaptor<PubmedFileImportParams> paramsCaptor;
 
+  private final List<String> events = new ArrayList<>();
+
   private PubmedFileImportHandler handler;
 
   @BeforeEach
@@ -69,6 +75,7 @@ class PubmedFileImportHandlerTest {
             listingPort,
             batchPort,
             exclusiveRunPort,
+            new RecordingTransactions(events),
             Clock.fixed(NOW, ZoneOffset.UTC));
     when(exclusiveRunPort.runExclusively(eq(ExclusiveRunPort.PUBMED_IMPORT), any()))
         .thenAnswer(inv -> Optional.ofNullable(((Supplier<?>) inv.getArgument(1)).get()));
@@ -269,6 +276,66 @@ class PubmedFileImportHandlerTest {
 
     assertThat(handler.handle(builder.reprocess(false).build()).filesProcessed()).isEqualTo(1);
     assertThat(handler.handle(builder.reprocess(true).build()).filesProcessed()).isEqualTo(2);
+  }
+
+  /// 进度写入各自在短事务里，Spring Batch 作业在事务外启动。
+  @Test
+  @DisplayName("进度写入各自在短事务里，作业在事务外启动")
+  void should_write_progress_in_own_transactions_and_launch_job_outside() {
+    recordProgressWrites();
+    doAnswer(
+            inv -> {
+              events.add("launch");
+              return counts(1);
+            })
+        .when(batchPort)
+        .launchFileImport(any());
+
+    handler.handle(command(1336, 1));
+
+    assertThat(events)
+        .containsExactly(
+            RecordingTransactions.BEGIN,
+            "markRunning",
+            RecordingTransactions.END,
+            "launch",
+            RecordingTransactions.BEGIN,
+            "markCompleted",
+            RecordingTransactions.END);
+  }
+
+  /// 作业失败时在短事务里标记失败，再抛出。
+  @Test
+  @DisplayName("作业失败时在短事务里标记失败")
+  void should_mark_failed_in_own_transaction_when_job_fails() {
+    recordProgressWrites();
+    when(batchPort.launchFileImport(any())).thenThrow(new IllegalStateException("boom"));
+
+    assertThatThrownBy(() -> handler.handle(command(1336, 1)))
+        .isInstanceOf(ApplicationException.class);
+
+    assertThat(events)
+        .containsExactly(
+            RecordingTransactions.BEGIN,
+            "markRunning",
+            RecordingTransactions.END,
+            RecordingTransactions.BEGIN,
+            "markFailed",
+            RecordingTransactions.END);
+  }
+
+  /// 让三个进度写方法往事件列表里记名字。
+  private void recordProgressWrites() {
+    when(listingPort.findLatestSeq(URL, "pubmed26n")).thenReturn(1340);
+    doAnswer(inv -> events.add("markRunning"))
+        .when(progressRepository)
+        .markRunning(any(), any(), any(), any());
+    doAnswer(inv -> events.add("markCompleted"))
+        .when(progressRepository)
+        .markCompleted(anyString(), any(), any());
+    doAnswer(inv -> events.add("markFailed"))
+        .when(progressRepository)
+        .markFailed(anyString(), anyString(), any());
   }
 
   private static PubmedFileImportCommand command(Integer from, Integer maxFiles) {

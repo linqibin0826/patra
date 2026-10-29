@@ -24,9 +24,11 @@ import dev.patra.identity.domain.port.session.SessionStorePort;
 import dev.patra.identity.domain.service.SessionTerminator;
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.ClientType;
+import dev.patra.tool.test.transaction.RecordingTransactions;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
@@ -41,6 +43,7 @@ class BanUserHandlerTest {
   private static final Instant NOW = Instant.parse("2026-10-06T08:00:00Z");
   private static final EmailAddress EMAIL = EmailAddress.of("chen.yu@example.com");
 
+  private final List<String> events = new ArrayList<>();
   private final UserRepository users = mock(UserRepository.class);
   private final SessionStorePort sessions = mock(SessionStorePort.class);
   private final UserLoginRecordRepository records = mock(UserLoginRecordRepository.class);
@@ -50,6 +53,7 @@ class BanUserHandlerTest {
           users,
           new SessionTerminator(sessions, records),
           tokens,
+          new RecordingTransactions(events),
           Clock.fixed(NOW, ZoneOffset.UTC));
 
   @Test
@@ -167,5 +171,37 @@ class BanUserHandlerTest {
     InOrder order = inOrder(users, tokens);
     order.verify(users).save(any());
     order.verify(tokens).revokeAllActive(42L, NOW);
+  }
+
+  /// 撤销会话在锁住用户行的同一事务里：Redis 失败时封禁回滚，并挡住并发登录。
+  @Test
+  @DisplayName("撤销会话在锁住用户行的同一事务里：Redis 失败时封禁回滚，挡住并发登录")
+  void should_terminate_sessions_inside_transaction() {
+    when(users.findByIdForUpdate(42L))
+        .thenAnswer(
+            inv -> {
+              events.add("lock");
+              return Optional.of(
+                  User.restore()
+                      .id(42L)
+                      .email(EMAIL)
+                      .username(Username.of("chen-yu"))
+                      .status(UserStatus.ACTIVE)
+                      .version(0L)
+                      .build());
+            });
+    when(users.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+    when(sessions.revokeAll(AccountType.USER, 42L))
+        .thenAnswer(
+            inv -> {
+              events.add("revokeSessions");
+              return List.of();
+            });
+
+    handler.handle(BanUserCommand.of(42L));
+
+    assertThat(events)
+        .containsExactly(
+            RecordingTransactions.BEGIN, "lock", "revokeSessions", RecordingTransactions.END);
   }
 }

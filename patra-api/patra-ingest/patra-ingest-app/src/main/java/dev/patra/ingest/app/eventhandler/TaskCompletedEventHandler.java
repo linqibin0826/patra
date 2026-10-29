@@ -49,7 +49,7 @@ public class TaskCompletedEventHandler {
   ///
   /// @param event Task 完成事件
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
   public void handle(TaskCompletedEvent event) {
     try {
       log.debug(

@@ -42,6 +42,9 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.transaction.IllegalTransactionStateException;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 /// UserProfileRepositoryAdapter 集成测试。不用 JUnit 的 `@DisplayName`：它和值对象同名。
 @DataJpaTest
@@ -61,6 +64,14 @@ class UserProfileRepositoryAdapterIT {
   @Autowired private UserRepositoryAdapter users;
   @Autowired private UserProfileRepositoryAdapter profiles;
   @Autowired private JdbcTemplate jdbcTemplate;
+
+  /// 资料保存在事务外调用时被拒绝（`MANDATORY`）。
+  @Test
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
+  void should_reject_save_outside_transaction() {
+    assertThatThrownBy(() -> profiles.save(UserProfile.create(1L)))
+        .isInstanceOf(IllegalTransactionStateException.class);
+  }
 
   @Test
   void should_save_empty_profile_and_find_by_user_id() {

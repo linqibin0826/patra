@@ -10,6 +10,9 @@ import dev.patra.ingest.app.usecase.execution.prepare.TaskPreparationPhase;
 import dev.patra.ingest.app.usecase.execution.session.ExecutionSession;
 import dev.patra.ingest.app.usecase.execution.strategy.BatchExecutionPhase;
 import dev.patra.ingest.domain.model.vo.execution.ExecutionContext;
+import dev.patra.tool.test.transaction.RecordingTransactions;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -17,7 +20,6 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -44,7 +46,9 @@ class TaskExecutionHandlerTest {
   @Mock private BatchExecutionPhase executePhase;
   @Mock private TaskCompletionPhase completePhase;
 
-  @InjectMocks private TaskExecutionHandler taskExecutionHandler;
+  private final List<String> events = new ArrayList<>();
+
+  private TaskExecutionHandler taskExecutionHandler;
 
   private TaskReadyCommand command;
   private ExecutionSession mockSession;
@@ -52,6 +56,9 @@ class TaskExecutionHandlerTest {
 
   @BeforeEach
   void setUp() {
+    taskExecutionHandler =
+        new TaskExecutionHandler(
+            preparePhase, executePhase, completePhase, new RecordingTransactions(events));
     command = createTestCommand();
     mockSession = createMockSession();
     mockContext = createMockContext();
@@ -62,6 +69,31 @@ class TaskExecutionHandlerTest {
   @Nested
   @DisplayName("正常流程")
   class HappyPathTests {
+
+    /// 执行阶段（调外部 API）在事务外，完成阶段包在一个短事务里。
+    @Test
+    @DisplayName("执行阶段（调外部 API）在事务外，完成阶段包在一个短事务里")
+    void shouldCompleteInsideTransactionAfterExecutingOutside() {
+      when(preparePhase.prepare(command))
+          .thenReturn(new TaskPreparationPhase.PrepareResult(mockSession, mockContext));
+      BatchExecutionPhase.ExecuteResult executeResult =
+          new BatchExecutionPhase.ExecuteResult(10, 10, 0);
+      when(executePhase.execute(mockSession, mockContext))
+          .thenAnswer(
+              inv -> {
+                events.add("execute");
+                return executeResult;
+              });
+      doAnswer(inv -> events.add("complete"))
+          .when(completePhase)
+          .complete(mockSession, mockContext, executeResult);
+
+      taskExecutionHandler.handle(command);
+
+      assertThat(events)
+          .containsExactly(
+              "execute", RecordingTransactions.BEGIN, "complete", RecordingTransactions.END);
+    }
 
     @Test
     @DisplayName("应该成功执行完整的三阶段流程")

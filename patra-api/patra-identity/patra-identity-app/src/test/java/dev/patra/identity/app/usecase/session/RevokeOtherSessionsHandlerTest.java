@@ -2,6 +2,7 @@ package dev.patra.identity.app.usecase.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -22,9 +23,11 @@ import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.ClientType;
 import dev.patra.tool.core.security.CurrentUser;
 import dev.patra.tool.core.security.CurrentUserPort;
+import dev.patra.tool.test.transaction.RecordingTransactions;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -38,6 +41,7 @@ class RevokeOtherSessionsHandlerTest {
   static final Instant NOW = Instant.parse("2026-10-22T08:00:00Z");
   static final CurrentUser CURRENT = CurrentUser.of(42L, 7002L, AccountType.USER, ClientType.WEB);
 
+  private final List<String> events = new ArrayList<>();
   private final CurrentUserPort currentUserPort = mock(CurrentUserPort.class);
   private final ReauthenticationGuard guard = mock(ReauthenticationGuard.class);
   private final SessionTerminator terminator = mock(SessionTerminator.class);
@@ -50,6 +54,7 @@ class RevokeOtherSessionsHandlerTest {
           terminator,
           records,
           newDeviceThrottle,
+          new RecordingTransactions(events),
           Clock.fixed(NOW, ZoneOffset.UTC));
 
   @BeforeEach
@@ -95,6 +100,26 @@ class RevokeOtherSessionsHandlerTest {
 
     verify(newDeviceThrottle).reset(42L, device);
     verify(newDeviceThrottle).reset(42L, null);
+  }
+
+  /// 撤销会话在事务里，清提醒冷却在提交之后。
+  @Test
+  @DisplayName("撤销会话在事务里，清提醒冷却（与会话无关的 Redis 写入）在提交之后")
+  void should_reset_cooldowns_after_commit() {
+    when(terminator.terminateAllExcept(42L, 7002L, LoginEndReason.REVOKED, NOW))
+        .thenAnswer(
+            inv -> {
+              events.add("terminate");
+              return List.of(7001L);
+            });
+    when(records.findAllByIds(List.of(7001L))).thenReturn(List.of(kickedRecord(7001L, null)));
+    doAnswer(inv -> events.add("reset")).when(newDeviceThrottle).reset(42L, null);
+
+    handler.handle(RevokeOtherSessionsCommand.of());
+
+    assertThat(events)
+        .containsExactly(
+            RecordingTransactions.BEGIN, "terminate", RecordingTransactions.END, "reset");
   }
 
   /// 一条被踢掉的登录记录。

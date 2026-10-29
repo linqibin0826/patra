@@ -1,6 +1,7 @@
 package dev.patra.interaction.infra.collection.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.patra.interaction.domain.collection.model.read.CollectionSummary;
 import dev.patra.interaction.domain.collection.model.read.DeletedUserData;
@@ -16,8 +17,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import javax.sql.DataSource;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.IllegalTransactionStateException;
 
 /// 文献库条目的写端：幂等插入、备注、连带移出收藏夹、注销删除、用户锁。
 class LibraryRepositoryAdapterIT extends CollectionPersistenceITSupport {
@@ -25,6 +28,14 @@ class LibraryRepositoryAdapterIT extends CollectionPersistenceITSupport {
   @Autowired private LibraryRepository library;
   @Autowired private CollectionRepository collections;
   @Autowired private DataSource dataSource;
+
+  /// 文献库锁在事务外调用时被拒绝（`MANDATORY`）。
+  @Test
+  @DisplayName("文献库锁必须在事务里调用")
+  void should_reject_lock_outside_transaction() {
+    assertThatThrownBy(() -> library.lockOwner(U))
+        .isInstanceOf(IllegalTransactionStateException.class);
+  }
 
   /// 同一 (用户, 对象) 只插一次，第二次不改收藏时间。
   @Test

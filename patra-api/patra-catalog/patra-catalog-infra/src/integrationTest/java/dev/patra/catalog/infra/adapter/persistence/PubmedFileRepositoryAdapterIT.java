@@ -1,6 +1,7 @@
 package dev.patra.catalog.infra.adapter.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.patra.catalog.domain.model.enums.PubmedFileKind;
 import dev.patra.catalog.domain.model.enums.PubmedFileStatus;
@@ -21,17 +22,17 @@ import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabas
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /// `PubmedFileRepositoryAdapter` 集成测试。
 ///
-/// 关闭测试事务：调用方 Handler 不开事务，写方法必须自带事务，测试事务会掩盖这一点。
+/// 写方法要求调用方的事务（`MANDATORY`），用例跑在测试事务里；事务外调用会被拒绝，单独验证。
 @DataJpaTest
 @ContextConfiguration(initializers = CatalogITPostgreSQLContainerInitializer.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({PubmedFileRepositoryAdapter.class, JpaAuditingConfiguration.class})
-@Transactional(propagation = Propagation.NOT_SUPPORTED)
 @ActiveProfiles("test")
 @DisplayName("PubmedFileRepositoryAdapter 集成测试")
 class PubmedFileRepositoryAdapterIT {
@@ -44,6 +45,16 @@ class PubmedFileRepositoryAdapterIT {
   @AfterEach
   void cleanUp() {
     dao.deleteAll();
+  }
+
+  /// 进度写方法在事务外调用时被拒绝（`MANDATORY`）。
+  @Test
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
+  @DisplayName("事务外调用写方法被拒绝")
+  void should_reject_write_outside_transaction() {
+    assertThatThrownBy(
+            () -> adapter.markRunning(ref(1336), PubmedImportScope.EXISTING_ONLY, null, T0))
+        .isInstanceOf(IllegalTransactionStateException.class);
   }
 
   @Test

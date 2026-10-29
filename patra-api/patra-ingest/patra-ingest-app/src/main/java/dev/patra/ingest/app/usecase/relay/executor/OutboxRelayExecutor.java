@@ -21,6 +21,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionOperations;
 
 /// Outbox 中继执行器 - 通过专门的协调器编排中继批次执行
 ///
@@ -75,6 +76,7 @@ public class OutboxRelayExecutor {
   private final RelayLeaseCoordinator leaseCoordinator;
   private final RelayPublishCoordinator publishCoordinator;
   private final RelayLogCoordinator logCoordinator;
+  private final TransactionOperations transactions;
 
   /// 根据计划执行单批次中继
   ///
@@ -113,7 +115,7 @@ public class OutboxRelayExecutor {
     }
 
     // 批量持久化所有中继日志 (单条 INSERT,N 行数据)
-    logCoordinator.persistBatch(logAcc);
+    transactions.executeWithoutResult(status -> logCoordinator.persistBatch(logAcc));
 
     return context.toBatchResult(messages.size());
   }
@@ -127,7 +129,12 @@ public class OutboxRelayExecutor {
     Instant startTime = Instant.now();
 
     // 尝试获取租约
-    if (!leaseCoordinator.tryAcquire(message, context.plan())) {
+    // 租约单独提交：发布期间别的实例就能看到它，不会重复领取
+    OutboxMessage candidate = message;
+    boolean leased =
+        Boolean.TRUE.equals(
+            transactions.execute(status -> leaseCoordinator.tryAcquire(candidate, context.plan())));
+    if (!leased) {
       context.onLeaseMissed(message);
       logAcc.recordLeaseMissed(message, context.plan().leaseOwner(), startTime);
       return;

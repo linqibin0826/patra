@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -20,10 +21,12 @@ import dev.patra.catalog.domain.port.source.FileDownloadPort;
 import dev.patra.catalog.domain.port.source.FileDownloadResult;
 import dev.patra.tool.core.error.ApplicationException;
 import dev.patra.tool.core.error.codes.ErrorCodeLike;
+import dev.patra.tool.test.transaction.RecordingTransactions;
 import java.io.InputStream;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
@@ -66,6 +69,8 @@ class MeshQualifierImportHandlerTest {
 
   @TempDir Path tempDir;
 
+  private final List<String> events = new ArrayList<>();
+
   private MeshQualifierImportHandler handler;
   private Path tempFile;
   private FileDownloadResult downloadResult;
@@ -73,7 +78,11 @@ class MeshQualifierImportHandlerTest {
   @BeforeEach
   void setUp() throws Exception {
     handler =
-        new MeshQualifierImportHandler(fileDownloadPort, qualifierParserPort, qualifierRepository);
+        new MeshQualifierImportHandler(
+            fileDownloadPort,
+            qualifierParserPort,
+            qualifierRepository,
+            new RecordingTransactions(events));
     tempFile = tempDir.resolve("qual2025.xml");
     Files.write(tempFile, "<xml/>".getBytes());
     downloadResult = FileDownloadResult.of(tempFile, Files.size(tempFile));
@@ -127,6 +136,33 @@ class MeshQualifierImportHandlerTest {
   @Nested
   @DisplayName("正常导入流程测试")
   class NormalImportFlowTest {
+
+    /// 下载和解析在事务外，事务只包批量保存。
+    @Test
+    @DisplayName("下载和解析在事务外，事务只包批量保存")
+    void shouldDownloadOutsideTransaction_andSaveInside() {
+      // Given
+      MeshQualifierImportCommand command = new MeshQualifierImportCommand(TEST_URL, TEST_VERSION);
+      MeshQualifierAggregate q1 =
+          MeshQualifierAggregate.create(MeshUI.qualifierOf(1), "immunology", "IM");
+      when(qualifierRepository.hasAnyData()).thenReturn(false);
+      when(fileDownloadPort.download(any(URI.class)))
+          .thenAnswer(
+              inv -> {
+                events.add("download");
+                return downloadResult;
+              });
+      when(qualifierParserPort.parse(any(InputStream.class))).thenReturn(Stream.of(q1));
+      doAnswer(inv -> events.add("saveBatch")).when(qualifierRepository).saveBatch(anyList());
+
+      // When
+      handler.handle(command);
+
+      // Then
+      assertThat(events)
+          .containsExactly(
+              "download", RecordingTransactions.BEGIN, "saveBatch", RecordingTransactions.END);
+    }
 
     @Test
     @DisplayName("应该正确传递 URL 到 FileDownloadPort")

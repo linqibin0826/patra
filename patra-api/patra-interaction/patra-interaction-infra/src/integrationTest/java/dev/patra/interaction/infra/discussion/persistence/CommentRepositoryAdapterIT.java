@@ -20,15 +20,29 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import javax.sql.DataSource;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.transaction.IllegalTransactionStateException;
 
 /// 评论的写端：插入根评论与回复、改正文、存修改历史、变占位、删除、楼锁。
 class CommentRepositoryAdapterIT extends DiscussionPersistenceITSupport {
 
   @Autowired private CommentRepository comments;
   @Autowired private DataSource dataSource;
+
+  /// 楼锁、删除锁、编辑锁在事务外调用时被拒绝（`MANDATORY`）。
+  @Test
+  @DisplayName("楼锁、删除锁、编辑锁都必须在事务里调用")
+  void should_reject_lock_outside_transaction() {
+    assertThatThrownBy(() -> comments.lockThread(1L))
+        .isInstanceOf(IllegalTransactionStateException.class);
+    assertThatThrownBy(() -> comments.findForUpdate(1L))
+        .isInstanceOf(IllegalTransactionStateException.class);
+    assertThatThrownBy(() -> comments.findForEdit(1L))
+        .isInstanceOf(IllegalTransactionStateException.class);
+  }
 
   /// 根评论的根是自己，回复的根是所在楼的根；字段原样读回。
   @Test

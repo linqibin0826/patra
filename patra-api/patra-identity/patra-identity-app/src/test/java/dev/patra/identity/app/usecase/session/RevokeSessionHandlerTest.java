@@ -2,6 +2,7 @@ package dev.patra.identity.app.usecase.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -24,9 +25,12 @@ import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.ClientType;
 import dev.patra.tool.core.security.CurrentUser;
 import dev.patra.tool.core.security.CurrentUserPort;
+import dev.patra.tool.test.transaction.RecordingTransactions;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -42,6 +46,7 @@ class RevokeSessionHandlerTest {
 
   static final DeviceId DEVICE = new DeviceId("Kq3_z-0aB1cD2eF3gH4iJ5kL6mN7oP8qR9sT0uV1wXy");
 
+  private final List<String> events = new ArrayList<>();
   private final CurrentUserPort currentUserPort = mock(CurrentUserPort.class);
   private final ReauthenticationGuard guard = mock(ReauthenticationGuard.class);
   private final SessionTerminator terminator = mock(SessionTerminator.class);
@@ -54,6 +59,7 @@ class RevokeSessionHandlerTest {
           terminator,
           records,
           newDeviceThrottle,
+          new RecordingTransactions(events),
           Clock.fixed(NOW, ZoneOffset.UTC));
 
   @BeforeEach
@@ -134,5 +140,25 @@ class RevokeSessionHandlerTest {
         .createdAt(NOW.minusSeconds(60))
         .updatedAt(NOW)
         .build();
+  }
+
+  /// 撤销会话在事务里，清提醒冷却在提交之后。
+  @Test
+  @DisplayName("撤销会话在事务里，清提醒冷却（与会话无关的 Redis 写入）在提交之后")
+  void should_reset_cooldown_after_commit() {
+    when(terminator.terminate(42L, 7001L, LoginEndReason.REVOKED, NOW))
+        .thenAnswer(
+            inv -> {
+              events.add("terminate");
+              return true;
+            });
+    when(records.findById(7001L)).thenReturn(Optional.of(kickedRecord(7001L)));
+    doAnswer(inv -> events.add("reset")).when(newDeviceThrottle).reset(42L, DEVICE);
+
+    handler.handle(RevokeSessionCommand.of(7001L));
+
+    assertThat(events)
+        .containsExactly(
+            RecordingTransactions.BEGIN, "terminate", RecordingTransactions.END, "reset");
   }
 }

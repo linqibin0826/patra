@@ -10,10 +10,12 @@ import dev.patra.tool.core.security.CurrentUser;
 import dev.patra.tool.core.security.CurrentUserPort;
 import dev.patra.tool.cqrs.CommandHandler;
 import java.time.Clock;
+import java.time.Instant;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionOperations;
 
 /// 踢单个设备（PAP-99 设计第 11.2 节）。
 ///
@@ -24,6 +26,9 @@ import org.springframework.transaction.annotation.Transactional;
 /// 4. 清掉这台设备的新设备提醒冷却：本人不认这台设备，它再登录要立即提醒，不等 24 小时。
 ///
 /// 不锁用户行、不判账号状态：只动会话与登录记录，不改用户聚合。不发邮件。
+///
+/// 事务：撤销会话（先 Redis 后登录记录）包在一个短事务里，登录记录一起结束；库失败时会话已撤、记录未结束，
+/// 方向安全。不锁用户行：不改用户状态，没有要挡的并发登录（transaction.md 第 2 节的会话例外）。清提醒冷却在提交之后。
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -34,6 +39,7 @@ public class RevokeSessionHandler implements CommandHandler<RevokeSessionCommand
   private final SessionTerminator sessionTerminator;
   private final UserLoginRecordRepository records;
   private final NewDeviceMailThrottlePort newDeviceThrottle;
+  private final TransactionOperations transactions;
   private final Clock clock;
 
   /// 踢掉。
@@ -41,16 +47,20 @@ public class RevokeSessionHandler implements CommandHandler<RevokeSessionCommand
   /// @param command 命令
   /// @return 被踢掉的会话数，0 或 1
   @Override
-  @Transactional
   public SessionsRevoked handle(RevokeSessionCommand command) {
     CurrentUser current = currentUserPort.require();
     if (command.sessionId() == current.sessionId()) {
       throw new CurrentSessionRevocationException();
     }
     reauthenticationGuard.requireRecent(current);
+    Instant now = clock.instant();
     boolean revoked =
-        sessionTerminator.terminate(
-            current.userId(), command.sessionId(), LoginEndReason.REVOKED, clock.instant());
+        Objects.requireNonNull(
+            transactions.execute(
+                status ->
+                    sessionTerminator.terminate(
+                        current.userId(), command.sessionId(), LoginEndReason.REVOKED, now)));
+    // 清提醒冷却与会话无关，放在提交之后（transaction.md 第 2 节）
     if (revoked) {
       records
           .findById(command.sessionId())
