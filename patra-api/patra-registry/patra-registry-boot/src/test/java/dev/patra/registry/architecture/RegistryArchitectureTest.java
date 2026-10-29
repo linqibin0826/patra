@@ -1,8 +1,12 @@
 package dev.patra.registry.architecture;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
+import com.tngtech.archunit.lang.ArchRule;
+import com.tngtech.archunit.lang.EvaluationResult;
 import dev.patra.tool.test.archunit.HexagonalArchitectureRules;
 import java.util.List;
 import org.junit.jupiter.api.BeforeAll;
@@ -51,5 +55,18 @@ class RegistryArchitectureTest {
   @Test
   void commandHandlersShouldNotBeTransactional() {
     rules.commandHandlersShouldNotBeTransactional().check(classes);
+  }
+
+  /// 六边形规则全部执行，汇总所有违规一次报出。
+  @Test
+  void hexagonalRulesShouldHold() {
+    List<ArchRule> all = rules.allRules();
+    List<String> violations =
+        all.stream()
+            .map(rule -> rule.evaluate(classes))
+            .filter(EvaluationResult::hasViolation)
+            .map(result -> result.getFailureReport().toString())
+            .toList();
+    assertThat(violations).isEmpty();
   }
 }

@@ -437,7 +437,15 @@ void should_reject_declared_subdomain_without_domain_classes() {
 
 ## Task 13 结果
 
-（执行 Task 13 时填写）
+试跑 `HexagonalArchitectureRules.allRules()`（10/29）：
+
+| 服务 | 结果 | 处理 |
+|---|---|---|
+| object-storage | 全部通过 | 已接入（`hexagonalRulesShouldHold`） |
+| registry | 全部通过 | 已接入 |
+| identity | 14 处，全是类放错包：`OutgoingMail` 与 13 个邮件 record（`*Mail`）放在 `domain.port.mail`，被端口命名规则和「端口实现须在 infra」规则判违规 | Task 17 搬包时移出端口包：`OutgoingMail` 随 `SecurityNotice` 进底座 `domain.session.model.vo`，13 个邮件 record 进 `domain.account.model.vo`（`NewDeviceLoginMail` 同样归 account）；`EmailDeliveryPort` 留在 `domain.account.port.mail`。接入用例的改动存为补丁，随 Task 17 提交 |
+
+`TestingRules` 的规则检查的是测试类，而各服务架构测试只导入主代码（`DO_NOT_INCLUDE_TESTS`），在 object-storage 上直接报「没有检查到任何类」。第 1 步各服务接入时照 catalog 现有写法（逐条调用、允许为空），不强求 `allRules` 形式。
 
 ## 用例数基线
 
