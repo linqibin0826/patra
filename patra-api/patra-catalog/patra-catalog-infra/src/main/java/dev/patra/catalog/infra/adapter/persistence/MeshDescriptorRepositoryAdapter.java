@@ -20,10 +20,7 @@ import dev.patra.tool.jpa.entity.IdAwareEntity;
 import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import jakarta.persistence.EntityManager;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
@@ -231,23 +228,5 @@ public class MeshDescriptorRepositoryAdapter implements MeshDescriptorRepository
     if (entity.getId() == null) {
       entity.setId(SnowflakeIdGenerator.getId());
     }
-  }
-
-  @Override
-  public Map<String, String> findAllByNameIn(Collection<String> names) {
-    if (names == null || names.isEmpty()) {
-      return Map.of();
-    }
-
-    List<MeshDescriptorEntity> entities = descriptorDao.findAllByNameIn(names);
-
-    // 转换为 name → ui 映射
-    return entities.stream()
-        .collect(
-            Collectors.toMap(
-                MeshDescriptorEntity::getName,
-                MeshDescriptorEntity::getUi,
-                (existing, replacement) -> existing // 保留首个匹配
-                ));
   }
 }

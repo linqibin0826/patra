@@ -16,6 +16,7 @@ import dev.patra.catalog.domain.model.vo.publication.PublicationAlternativeAbstr
 import dev.patra.catalog.domain.model.vo.publication.PublicationCompleteData;
 import dev.patra.catalog.domain.model.vo.venue.VenueId;
 import dev.patra.catalog.domain.model.vo.venue.VenueInstanceId;
+import dev.patra.catalog.infra.adapter.read.AuthorOrcidReadAdapter;
 import dev.patra.catalog.infra.adapter.read.PublicationDetailReadAdapter;
 import dev.patra.catalog.infra.config.CatalogITPostgreSQLContainerInitializer;
 import dev.patra.catalog.infra.persistence.dao.PublicationAbstractDao;
@@ -78,6 +79,7 @@ import tools.jackson.databind.ser.std.StdSerializer;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
   PublicationRepositoryAdapter.class,
+  AuthorOrcidReadAdapter.class,
   PublicationDetailReadAdapter.class,
   PatraHibernatePropertiesCustomizer.class,
   JpaAuditingConfiguration.class,

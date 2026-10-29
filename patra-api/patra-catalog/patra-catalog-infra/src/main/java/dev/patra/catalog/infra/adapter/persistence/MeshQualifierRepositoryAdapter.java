@@ -6,10 +6,7 @@ import dev.patra.catalog.infra.persistence.converter.mapper.MeshQualifierJpaMapp
 import dev.patra.catalog.infra.persistence.dao.MeshQualifierDao;
 import dev.patra.catalog.infra.persistence.entity.MeshQualifierEntity;
 import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
-import java.util.Collection;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
@@ -73,23 +70,5 @@ public class MeshQualifierRepositoryAdapter implements MeshQualifierRepository {
   @Override
   public boolean hasAnyData() {
     return jpaRepository.hasAnyData();
-  }
-
-  @Override
-  public Map<String, String> findAllByNameIn(Collection<String> names) {
-    if (names == null || names.isEmpty()) {
-      return Map.of();
-    }
-
-    List<MeshQualifierEntity> entities = jpaRepository.findAllByNameIn(names);
-
-    // 转换为 name → ui 映射
-    return entities.stream()
-        .collect(
-            Collectors.toMap(
-                MeshQualifierEntity::getName,
-                MeshQualifierEntity::getUi,
-                (existing, replacement) -> existing // 保留首个匹配
-                ));
   }
 }

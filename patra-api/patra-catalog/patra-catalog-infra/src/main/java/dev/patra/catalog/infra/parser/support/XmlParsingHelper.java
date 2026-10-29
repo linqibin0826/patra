@@ -1,12 +1,5 @@
 package dev.patra.catalog.infra.parser.support;
 
-import static dev.patra.catalog.infra.parser.LsiouXmlElements.Date.DAY;
-import static dev.patra.catalog.infra.parser.LsiouXmlElements.Date.HOUR;
-import static dev.patra.catalog.infra.parser.LsiouXmlElements.Date.MINUTE;
-import static dev.patra.catalog.infra.parser.LsiouXmlElements.Date.MONTH;
-import static dev.patra.catalog.infra.parser.LsiouXmlElements.Date.SECOND;
-import static dev.patra.catalog.infra.parser.LsiouXmlElements.Date.YEAR;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -27,6 +20,13 @@ import javax.xml.stream.XMLStreamReader;
 /// @author linqibin
 /// @since 0.1.0
 public final class XmlParsingHelper {
+
+  private static final String YEAR = "Year";
+  private static final String MONTH = "Month";
+  private static final String DAY = "Day";
+  private static final String HOUR = "Hour";
+  private static final String MINUTE = "Minute";
+  private static final String SECOND = "Second";
 
   private XmlParsingHelper() {
     throw new UnsupportedOperationException("工具类禁止实例化");

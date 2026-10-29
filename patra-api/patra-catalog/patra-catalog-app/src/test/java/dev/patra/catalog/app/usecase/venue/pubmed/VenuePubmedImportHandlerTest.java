@@ -27,9 +27,8 @@ import dev.patra.catalog.domain.model.vo.venue.pubmed.PubmedMeshHeading;
 import dev.patra.catalog.domain.model.vo.venue.pubmed.PubmedSerialData;
 import dev.patra.catalog.domain.port.enrichment.OpenAlexEnrichmentQueryPort;
 import dev.patra.catalog.domain.port.parser.LsiouParserPort;
+import dev.patra.catalog.domain.port.read.MeshNameReadPort;
 import dev.patra.catalog.domain.port.registry.DictionaryResolverPort;
-import dev.patra.catalog.domain.port.repository.MeshDescriptorRepository;
-import dev.patra.catalog.domain.port.repository.MeshQualifierRepository;
 import dev.patra.catalog.domain.port.repository.VenueRepository;
 import dev.patra.catalog.domain.port.source.FileDownloadPort;
 import dev.patra.catalog.domain.port.source.FileDownloadResult;
@@ -89,8 +88,7 @@ class VenuePubmedImportHandlerTest {
   @Mock private TransactionTemplate transactionTemplate;
   @Mock private TransactionStatus transactionStatus;
   @Mock private DictionaryResolverPort dictionaryResolverPort;
-  @Mock private MeshDescriptorRepository meshDescriptorRepository;
-  @Mock private MeshQualifierRepository meshQualifierRepository;
+  @Mock private MeshNameReadPort meshNameReadPort;
   @Mock private OpenAlexEnrichmentQueryPort openAlexEnrichmentQueryPort;
 
   @Captor private ArgumentCaptor<List<VenueAggregate>> updateBatchCaptor;
@@ -114,8 +112,7 @@ class VenuePubmedImportHandlerTest {
             venueRepository,
             transactionTemplate,
             dictionaryResolverPort,
-            meshDescriptorRepository,
-            meshQualifierRepository,
+            meshNameReadPort,
             openAlexEnrichmentQueryPort);
 
     // 创建临时 XML 文件，供 Handler 中 Files.newInputStream() 使用
@@ -139,8 +136,8 @@ class VenuePubmedImportHandlerTest {
     lenient().when(dictionaryResolverPort.resolve(any(), any(), any())).thenReturn(Map.of());
 
     // 配置 MeSH Repository 默认返回空 Map（测试不关心 MeSH UI 导入）
-    lenient().when(meshDescriptorRepository.findAllByNameIn(any())).thenReturn(Map.of());
-    lenient().when(meshQualifierRepository.findAllByNameIn(any())).thenReturn(Map.of());
+    lenient().when(meshNameReadPort.findDescriptorUisByNameIn(any())).thenReturn(Map.of());
+    lenient().when(meshNameReadPort.findQualifierUisByNameIn(any())).thenReturn(Map.of());
 
     // 配置 OpenAlex 富化端口默认返回空 Map（测试不关心 OpenAlex 富化查询）
     lenient()
@@ -591,7 +588,7 @@ class VenuePubmedImportHandlerTest {
               .build();
 
       // 配置 MeSH Repository 返回 UI 映射
-      when(meshDescriptorRepository.findAllByNameIn(any()))
+      when(meshNameReadPort.findDescriptorUisByNameIn(any()))
           .thenReturn(
               Map.of(
                   "Cardiovascular Diseases", "D002318",
@@ -607,7 +604,7 @@ class VenuePubmedImportHandlerTest {
       handler.handle(command);
 
       // Then: 验证 MeSH Repository 被调用
-      verify(meshDescriptorRepository).findAllByNameIn(any());
+      verify(meshNameReadPort).findDescriptorUisByNameIn(any());
     }
 
     @Test
@@ -627,12 +624,12 @@ class VenuePubmedImportHandlerTest {
               .build();
 
       // 配置 MeSH Repository 返回 UI 映射
-      when(meshDescriptorRepository.findAllByNameIn(any()))
+      when(meshNameReadPort.findDescriptorUisByNameIn(any()))
           .thenReturn(
               Map.of(
                   "Cardiovascular Diseases", "D002318",
                   "Neoplasms", "D009369"));
-      when(meshQualifierRepository.findAllByNameIn(any()))
+      when(meshNameReadPort.findQualifierUisByNameIn(any()))
           .thenReturn(
               Map.of(
                   "diagnosis", "Q000175",
@@ -648,8 +645,8 @@ class VenuePubmedImportHandlerTest {
       handler.handle(command);
 
       // Then: 验证两个 MeSH Repository 都被调用
-      verify(meshDescriptorRepository).findAllByNameIn(any());
-      verify(meshQualifierRepository).findAllByNameIn(any());
+      verify(meshNameReadPort).findDescriptorUisByNameIn(any());
+      verify(meshNameReadPort).findQualifierUisByNameIn(any());
     }
 
     @Test
@@ -666,7 +663,7 @@ class VenuePubmedImportHandlerTest {
               .build();
 
       // MeSH Repository 返回空（表示未找到）
-      when(meshDescriptorRepository.findAllByNameIn(any())).thenReturn(Map.of());
+      when(meshNameReadPort.findDescriptorUisByNameIn(any())).thenReturn(Map.of());
 
       when(fileDownloadPort.download(any(URI.class))).thenReturn(downloadResult);
       when(parserPort.parse(any(InputStream.class))).thenReturn(Stream.of(record));
@@ -704,8 +701,8 @@ class VenuePubmedImportHandlerTest {
       handler.handle(command);
 
       // Then: MeSH Repository 应该被调用（收集到空集合，但方法仍被调用）
-      // 由于批次处理，即使没有 MeSH 也会调用 findAllByNameIn(emptySet)
-      verify(meshDescriptorRepository).findAllByNameIn(any());
+      // 由于批次处理，即使没有 MeSH 也会调用 findDescriptorUisByNameIn(emptySet)
+      verify(meshNameReadPort).findDescriptorUisByNameIn(any());
     }
   }
 

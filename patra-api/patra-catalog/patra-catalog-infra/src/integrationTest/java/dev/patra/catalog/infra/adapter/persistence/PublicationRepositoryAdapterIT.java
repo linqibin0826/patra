@@ -27,6 +27,7 @@ import dev.patra.catalog.domain.model.vo.publication.PublicationSupplMesh;
 import dev.patra.catalog.domain.model.vo.publication.PublicationTypeInfo;
 import dev.patra.catalog.domain.model.vo.venue.VenueId;
 import dev.patra.catalog.domain.model.vo.venue.VenueInstanceId;
+import dev.patra.catalog.infra.adapter.read.AuthorOrcidReadAdapter;
 import dev.patra.catalog.infra.config.CatalogITPostgreSQLContainerInitializer;
 import dev.patra.catalog.infra.persistence.dao.InvestigatorDao;
 import dev.patra.catalog.infra.persistence.dao.KeywordDao;
@@ -85,6 +86,7 @@ import org.springframework.test.context.ContextConfiguration;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
   PublicationRepositoryAdapter.class,
+  AuthorOrcidReadAdapter.class,
   JpaAuditingConfiguration.class,
   JacksonAutoConfiguration.class,
   JsonColumnCodec.class

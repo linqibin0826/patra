@@ -31,9 +31,8 @@ import dev.patra.catalog.domain.model.vo.venue.pubmed.PubmedSerialData;
 import dev.patra.catalog.domain.model.vo.venue.pubmed.PubmedTitleRelation;
 import dev.patra.catalog.domain.port.enrichment.OpenAlexEnrichmentQueryPort;
 import dev.patra.catalog.domain.port.parser.LsiouParserPort;
+import dev.patra.catalog.domain.port.read.MeshNameReadPort;
 import dev.patra.catalog.domain.port.registry.DictionaryResolverPort;
-import dev.patra.catalog.domain.port.repository.MeshDescriptorRepository;
-import dev.patra.catalog.domain.port.repository.MeshQualifierRepository;
 import dev.patra.catalog.domain.port.repository.VenueRepository;
 import dev.patra.catalog.domain.port.source.FileDownloadPort;
 import dev.patra.catalog.domain.port.source.FileDownloadResult;
@@ -100,8 +99,7 @@ public class VenuePubmedImportHandler
   private final VenueRepository venueRepository;
   private final TransactionTemplate transactionTemplate;
   private final DictionaryResolverPort dictionaryResolverPort;
-  private final MeshDescriptorRepository meshDescriptorRepository;
-  private final MeshQualifierRepository meshQualifierRepository;
+  private final MeshNameReadPort meshNameReadPort;
   private final OpenAlexEnrichmentQueryPort openAlexEnrichmentQueryPort;
 
   /// 导入上下文：封装批次级别的查询映射结果。
@@ -369,9 +367,9 @@ public class VenuePubmedImportHandler
     Set<String> meshDescriptorNames = collectMeshDescriptorNames(batch);
     Set<String> meshQualifierNames = collectMeshQualifierNames(batch);
     Map<String, String> descriptorUiMap =
-        meshDescriptorRepository.findAllByNameIn(meshDescriptorNames);
+        meshNameReadPort.findDescriptorUisByNameIn(meshDescriptorNames);
     Map<String, String> qualifierUiMap =
-        meshQualifierRepository.findAllByNameIn(meshQualifierNames);
+        meshNameReadPort.findQualifierUisByNameIn(meshQualifierNames);
     log.debug(
         "MeSH UI 查询完成：描述符原始 {} 个/匹配 {} 个，限定词原始 {} 个/匹配 {} 个",
         meshDescriptorNames.size(),

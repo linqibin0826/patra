@@ -26,9 +26,9 @@ import dev.patra.catalog.domain.model.vo.publication.PublicationOaLocation;
 import dev.patra.catalog.domain.model.vo.publication.PublicationPersonalNameSubject;
 import dev.patra.catalog.domain.model.vo.publication.PublicationSupplMesh;
 import dev.patra.catalog.domain.model.vo.publication.PublicationTypeInfo;
+import dev.patra.catalog.domain.port.read.AuthorOrcidReadPort;
 import dev.patra.catalog.domain.port.repository.PublicationRepository;
 import dev.patra.catalog.infra.persistence.converter.mapper.PublicationJpaMapper;
-import dev.patra.catalog.infra.persistence.dao.AuthorOrcidDao;
 import dev.patra.catalog.infra.persistence.dao.InvestigatorDao;
 import dev.patra.catalog.infra.persistence.dao.KeywordDao;
 import dev.patra.catalog.infra.persistence.dao.PublicationAbstractDao;
@@ -115,9 +115,6 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
   /// 批量操作时每批次的大小，超过此值会 flush 并 clear 以防内存溢出。
   private static final int BATCH_FLUSH_SIZE = 500;
 
-  /// ORCID 批量软关联查询的分片大小（PostgreSQL 单条语句绑定参数上限 65535）。
-  private static final int ORCID_BATCH_SIZE = 5000;
-
   /// ICU4J Collator，用于解析后内存对象的 collation-aware 去重，与 DB 无关；
   /// PRIMARY 强度对齐外部数据源的 accent-/case-insensitive 期望（spec §4.24 / §4.55）。
   /// DB collation = `C`（确定性，性能优先）。
@@ -154,7 +151,7 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
   private final PublicationPersonalNameSubjectDao personalNameSubjectDao;
   private final PublicationAuthorDao publicationAuthorDao;
   private final PublicationAuthorAffiliationDao publicationAuthorAffiliationDao;
-  private final AuthorOrcidDao authorOrcidDao;
+  private final AuthorOrcidReadPort authorOrcidReadPort;
 
   @Override
   public Optional<PublicationAggregate> findById(Long id) {
@@ -1007,7 +1004,7 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
   /// 本轮无作者的文献同样清掉上一轮遗留行；删除走 bulk DML 立即下发，
   /// 幂等重导不会撞 `uk_author_order`。
   ///
-  /// **ORCID 软关联**：批量查 `cat_author`（分片，见 [#resolveOrcidAuthorIds]），
+  /// **ORCID 软关联**：经 [AuthorOrcidReadPort] 批量查作者（见 [#resolveOrcidAuthorIds]），
   /// 命中即填 `author_id`，绝不因导入向 `cat_author` 新建行；同篇多个作者命中同一作者时，
   /// 仅首次命中的行保留 `author_id`（部分唯一索引 `uk_pub_author` 约束），
   /// 其余置 null 而非整批失败。
@@ -1064,10 +1061,7 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
     log.debug("写入 {} 条作者机构归属", affiliationRows.size());
   }
 
-  /// 分片批量解析 ORCID → 已消歧作者 ID。
-  ///
-  /// 单次 `IN` 参数量受 PostgreSQL 绑定参数上限（65535）约束，故按
-  /// [#ORCID_BATCH_SIZE] 分片查询后合并；ORCID 全局唯一，重复键取先到者。
+  /// 批量解析 ORCID → 已消歧作者 ID（分片由读端口负责）。
   ///
   /// @param data 本批文献数据（无作者的条目不贡献 ORCID）
   /// @return ORCID → 作者 ID 映射（未命中的 ORCID 不出现在结果中）
@@ -1082,15 +1076,7 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
     if (orcids.isEmpty()) {
       return Map.of();
     }
-
-    Map<String, Long> result = new HashMap<>();
-    for (int i = 0; i < orcids.size(); i += ORCID_BATCH_SIZE) {
-      List<String> slice = orcids.subList(i, Math.min(i + ORCID_BATCH_SIZE, orcids.size()));
-      authorOrcidDao
-          .findAuthorIdsByOrcidIn(slice)
-          .forEach(view -> result.merge(view.getOrcid(), view.getAuthorId(), (a, b) -> a));
-    }
-    return result;
+    return authorOrcidReadPort.findAuthorIdsByOrcidIn(orcids);
   }
 
   @Override
