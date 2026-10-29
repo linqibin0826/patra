@@ -2,15 +2,15 @@ package dev.patra.identity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.patra.identity.app.usecase.deletion.DeletionRunResult;
-import dev.patra.identity.app.usecase.deletion.ExecuteDueAccountDeletionsCommand;
-import dev.patra.identity.app.usecase.deletion.ReminderRunResult;
-import dev.patra.identity.app.usecase.deletion.SendAccountDeletionRemindersCommand;
-import dev.patra.identity.domain.port.mail.AccountDeletionCancelledMail;
-import dev.patra.identity.domain.port.mail.AccountDeletionCompletedMail;
-import dev.patra.identity.domain.port.mail.AccountDeletionRequestedMail;
-import dev.patra.identity.domain.port.mail.EmailChangeConfirmMail;
-import dev.patra.identity.domain.port.mail.EmailChangedNoticeMail;
+import dev.patra.identity.app.account.usecase.deletion.DeletionRunResult;
+import dev.patra.identity.app.account.usecase.deletion.ExecuteDueAccountDeletionsCommand;
+import dev.patra.identity.app.account.usecase.deletion.ReminderRunResult;
+import dev.patra.identity.app.account.usecase.deletion.SendAccountDeletionRemindersCommand;
+import dev.patra.identity.domain.account.model.vo.mail.AccountDeletionCancelledMail;
+import dev.patra.identity.domain.account.model.vo.mail.AccountDeletionCompletedMail;
+import dev.patra.identity.domain.account.model.vo.mail.AccountDeletionRequestedMail;
+import dev.patra.identity.domain.account.model.vo.mail.EmailChangeConfirmMail;
+import dev.patra.identity.domain.account.model.vo.mail.EmailChangedNoticeMail;
 import dev.patra.tool.cqrs.CommandBus;
 import dev.patra.tool.objectstorage.ObjectStorageOperations;
 import dev.patra.tool.objectstorage.domain.ObjectMetadata;

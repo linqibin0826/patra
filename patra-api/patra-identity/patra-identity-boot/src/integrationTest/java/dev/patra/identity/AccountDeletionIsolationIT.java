@@ -3,9 +3,9 @@ package dev.patra.identity;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doThrow;
 
-import dev.patra.identity.app.usecase.deletion.DeletionRunResult;
-import dev.patra.identity.app.usecase.deletion.ExecuteDueAccountDeletionsCommand;
-import dev.patra.identity.domain.port.repository.UserPasswordCredentialRepository;
+import dev.patra.identity.app.account.usecase.deletion.DeletionRunResult;
+import dev.patra.identity.app.account.usecase.deletion.ExecuteDueAccountDeletionsCommand;
+import dev.patra.identity.domain.account.port.repository.UserPasswordCredentialRepository;
 import dev.patra.tool.cqrs.CommandBus;
 import java.time.Duration;
 import java.util.Map;

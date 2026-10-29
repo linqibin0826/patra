@@ -1,10 +1,10 @@
 package dev.patra.identity;
 
-import static dev.patra.identity.infra.adapter.avatar.AvatarImageFixture.decodeWebp;
-import static dev.patra.identity.infra.adapter.avatar.AvatarImageFixture.jpeg;
-import static dev.patra.identity.infra.adapter.avatar.AvatarImageFixture.png;
-import static dev.patra.identity.infra.adapter.avatar.AvatarImageFixture.riffChunks;
-import static dev.patra.identity.infra.adapter.avatar.AvatarImageFixture.withExifGps;
+import static dev.patra.identity.infra.account.avatar.AvatarImageFixture.decodeWebp;
+import static dev.patra.identity.infra.account.avatar.AvatarImageFixture.jpeg;
+import static dev.patra.identity.infra.account.avatar.AvatarImageFixture.png;
+import static dev.patra.identity.infra.account.avatar.AvatarImageFixture.riffChunks;
+import static dev.patra.identity.infra.account.avatar.AvatarImageFixture.withExifGps;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.tool.objectstorage.ObjectStorageOperations;

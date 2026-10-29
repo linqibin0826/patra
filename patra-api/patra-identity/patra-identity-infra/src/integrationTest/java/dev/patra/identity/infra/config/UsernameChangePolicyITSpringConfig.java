@@ -1,6 +1,6 @@
 package dev.patra.identity.infra.config;
 
-import dev.patra.identity.domain.policy.UsernameChangePolicy;
+import dev.patra.identity.domain.account.policy.UsernameChangePolicy;
 import java.time.Duration;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;

@@ -11,9 +11,27 @@
 | `patra-identity-domain` | `User`、`UserProfile`、`FormerUsername`、`UserPasswordCredential`、`UserLoginRecord`、`EmailToken` 六个聚合，邮箱、用户名、昵称、密码、客户端信息、令牌密文值对象，资料值对象（`vo/profile/`：简介、链接、职称、科室、ROR ID、MeSH UI、机构、关注领域、隐私设置），用户名 / 昵称 / 资料字段（`ProfilePolicy`，拒绝字符与昵称共用 `ProfileTextRules`）/ 改名 / 密码 / 失败限制 / 重发限流 / 再认证 / 找回密码限流 / 改邮箱限流 / 邮件链接规则、会话策略，端口（含邮件发送 `EmailDeliveryPort`、三个限流端口、向 catalog 取名称快照的 `CatalogReferencePort`），主页可见性规则 `ProfileAccess`（公开主页与批量用户摘要共用的唯一一份），公开主页读模型（`viewFor` 按请求者裁剪）与批量用户摘要读模型 `UserSummaryReadModel`，@ 联想用的用户名、昵称前缀值对象 `UsernamePrefix`、`DisplayNamePrefix`，`SessionIssuer`、`EmailTokenIssuer`、`ReauthenticationGuard` 领域服务，`SessionTerminator`（撤销会话并按原因结束登录记录）、`ClientOriginResolver`（请求来源 → 设备名、端、属地，内网判定 `IpAddressScope`）、`UserAgentParsingPort` / `IpGeolocationPort`，新设备提醒规则 `NewDeviceLoginPolicy` 与限流端口，注销规则 `AccountDeletionPolicy`（冷静期、提醒提前量），头像（`vo/avatar/`：`Avatar`、两档尺寸、两档字节，`AvatarPalette` 默认头像色号、`AvatarPolicy`，出图端口 `AvatarImagePort` 与存储端口 `AvatarStoragePort`），十三个 `OutgoingMail` 记录，领域异常 |
 | `patra-identity-app` | 注册、登录、登出、再认证、改用户名、改密码、找回密码（申请、重设）、改邮箱（申请、取消、确认、撤销）、封禁、解封、重发验证邮件、验证邮箱、清理过期令牌、改资料、改隐私设置、踢单个设备、踢其他设备、清理登录记录、发起注销、取消注销、注销到期执行、注销到期前提醒、换头像、移除头像二十八个处理器，走 CommandBus；`CurrentPasswordVerifier` 给再认证与改密码共用；「当前用户」、本人的资料与隐私设置、待确认的改邮箱和公开主页走 `UserQueryService`，登录设备列表走 `SessionQueryService`，网关查会话走 `SessionIntrospectionService`（不经 CommandBus），头像读取走 `AvatarQueryService`，批量用户摘要走 `UserSummaryQueryService`，@ 联想走 `UserSuggestionQueryService`，用户名批量解析走 `UserResolutionQueryService` |
 | `patra-identity-infra` | JPA 持久化（含令牌表）、Argon2id 哈希、常见密码名单、Redis 失败限制与通用限流脚本 `action-throttle.lua`（重发、找回密码、改邮箱三个适配器共用）、会话存储（`RedisSessionStore`、八段 Lua、令牌格式，第 9 节）与适配器、新设备提醒限流适配器，SMTP 发信适配器与 Thymeleaf 邮件模板（十三对），Yauaa 解析 UA（`YauaaUserAgentParsingAdapter`）、ip2region 查属地（`Ip2RegionGeolocationAdapter`）、Flyway 脚本（一份最终形态的 `V1`，加上 `V2` 的用户名与昵称前缀索引）、catalog 内部接口适配器 `CatalogReferenceAdapter`（依赖 `patra-catalog-api`），头像出图 `AvatarImageAdapter`（TwelveMonkeys 解码、`webp-imageio` 编码）与魔数识别 `AvatarFormatSniffer`、头像存储 `AvatarStorageAdapter`（依赖 `patra-tool-object-storage`）；测试夹具 `AvatarImageFixture`（`testFixtures`，boot 的流程测试也用） |
-| `patra-identity-adapter` | 前台的 `AuthController`、`EmailVerificationController`、`PasswordResetController`、`EmailChangeController`、`MeController`、`MeEmailController`、`MeProfileController`、`MeSessionController`、`MeDeletionController`、`MeAvatarController`、`PublicUserController`、`PublicAvatarController`，后台的 `AdminUserController`，内部接口 `SessionEndpointImpl`（网关查会话）、`UserEndpointImpl`（批量用户摘要、@ 联想、用户名批量解析，interaction 调），XXL-Job 任务 `EmailTokenCleanupScheduleJob`、`LoginRecordCleanupScheduleJob`、`AccountDeletionScheduleJob`、`AccountDeletionReminderScheduleJob` |
+| `patra-identity-adapter` | 前台的 `AuthController`、`LogoutController`、`EmailVerificationController`、`PasswordResetController`、`EmailChangeController`、`MeController`、`MeEmailController`、`MeProfileController`、`MeSessionController`、`MeDeletionController`、`MeAvatarController`、`PublicUserController`、`PublicAvatarController`，后台的 `AdminUserController`，内部接口 `SessionEndpointImpl`（网关查会话）、`UserEndpointImpl`（批量用户摘要、@ 联想、用户名批量解析，interaction 调），XXL-Job 任务 `EmailTokenCleanupScheduleJob`、`LoginRecordCleanupScheduleJob`、`AccountDeletionScheduleJob`、`AccountDeletionReminderScheduleJob` |
 | `patra-identity-boot` | 启动类、配置、安全 starter 接入、catalog 两个 HTTP Interface 代理（`CatalogClientConfiguration`，`lb://patra-catalog`） |
 | `patra-identity-api` | 服务间契约：网关查会话的 `SessionEndpoint`（PAP-106）；interaction 调的 `UserEndpoint`：批量用户摘要（PAP-108）、@ 联想与用户名批量解析（PAP-118）；各自的请求、响应 DTO 与 `AccountStatus` |
+
+### 子域与包
+
+每层模块下先按子域、再按组件类型分包，子域内部的分包按全项目统一的分包规范（`.claude/rules/tech/package-layout.md`），由 `IdentityArchitectureTest`（`patra-tool-test` 的 `SubdomainArchitectureRules`）守住：
+
+```
+dev.patra.identity.{domain|app|infra|adapter|api}.{session|account}..
+dev.patra.identity                  启动类
+dev.patra.identity.config           装配（XXL-Job 执行器、catalog 客户端、配置属性），不属于任何子域
+```
+
+| 子域 | 职责 |
+|---|---|
+| `session`（底座） | 会话签发与撤销（`SessionIssuer`、`SessionTerminator`）、会话存储（`SessionStorePort`，Redis 实现在 `infra.session.store`）、登录记录 `UserLoginRecord`、再认证守卫与会话生命周期策略、登出、踢设备、登录设备列表、网关查会话、登录记录清理；以及被两个子域共用的东西：客户端与设备值（`ClientOrigin`、`LoginClient`、`DeviceId`、`DeviceClass`、`LoginEndReason`、`IpAddressScope`）、安全通知 `SecurityNotice`、字段校验 `UserFieldViolations` 与 `InvalidUserFieldsException`、`TemporarilyUnavailableException` 等共用异常与服务级 `IdentityErrorTrait`、新设备提醒规则 `NewDeviceLoginPolicy` 与限流端口、限流脚本 `ActionThrottleScript` 与 Redis 故障判定 `TransientRedisFailures`（`infra.session.support`） |
+| `account` | 用户与围绕用户的全部流程：注册、登录、再认证、密码、用户名、邮箱验证与更换、封禁、注销、资料与隐私、头像、公开主页、批量用户摘要与提及支撑、邮件（`EmailDeliveryPort` 与十三种邮件 `domain.account.model.vo.mail`） |
+
+- 底座 `session` 对 account 完全公开，自己不依赖 account；account 只依赖底座，没有其他依赖边。
+- 底座只放被两个子域共用的东西：只被 account 用的（请求来源 `RequestOrigin`、UA 解析结果 `DeviceProfile`、邮件公共接口 `OutgoingMail`）归 account。
 
 ## 2. 接口
 
