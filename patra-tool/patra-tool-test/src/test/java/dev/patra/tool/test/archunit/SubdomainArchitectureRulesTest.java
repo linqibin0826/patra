@@ -69,22 +69,34 @@ class SubdomainArchitectureRulesTest {
         .isFalse();
   }
 
-  /// 用别的子域的仓储违规。
+  /// 用别的普通子域的仓储违规。
   @Test
   void should_reject_foreign_repository() {
     assertViolationNaming(
         "foreignrepository",
         rules("foreignrepository").crossSubdomainDependenciesGoThroughPublishedPackages(),
-        "SubjectRepository");
+        "NoteRepository");
   }
 
-  /// 用别的子域 app 层的类违规。
+  /// 底座对其他子域完全公开：仓储、app 协作类、infra 辅助类都可以用。
+  @Test
+  void should_allow_any_foundation_package() {
+    assertThat(
+            evaluate(
+                    "foundationinternals",
+                    rules("foundationinternals")
+                        .crossSubdomainDependenciesGoThroughPublishedPackages())
+                .hasViolation())
+        .isFalse();
+  }
+
+  /// 用别的普通子域 app 层的类违规。
   @Test
   void should_reject_foreign_app_class() {
     assertViolationNaming(
         "foreignapp",
         rules("foreignapp").crossSubdomainDependenciesGoThroughPublishedPackages(),
-        "ResolveSubjectHandler");
+        "ResolveNoteHandler");
   }
 
   /// 驱动端口只有底座公开：用非底座子域的驱动端口违规。

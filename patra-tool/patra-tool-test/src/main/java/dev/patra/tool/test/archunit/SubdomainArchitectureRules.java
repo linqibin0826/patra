@@ -20,7 +20,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Stream;
 
 /// 按子域分包的服务的子域边界规则。
 ///
@@ -31,8 +30,7 @@ import java.util.stream.Stream;
 ///
 /// - 任意子域 X：`{根包}.domain.X.port.read..`、`{根包}.domain.X.model.read..`，以及事件契约
 ///   `{根包}.domain.X.event..`（X 发布的进程内事件）
-/// - 底座子域另加（都在 `{根包}.domain.{底座}` 下）：驱动端口与扩展点 `port.gateway`，用户名片
-///   `port.user`、`model.user`，所有互动都引用的值 `model.vo`、`model.enums`，领域异常 `exception`
+/// - 底座子域（共享内核）对同服务的其他子域完全公开：所有层、所有包都可以用；底座只放被两个以上子域共用的东西
 ///
 /// 依赖方向也要声明：任何子域都可以依赖底座；其余的边用 {@link #allowingDependency} 或
 /// {@link #allowingSubscription} 声明，没声明的边违规（{@link #crossSubdomainDependenciesAreDeclared}）。
@@ -54,13 +52,6 @@ public final class SubdomainArchitectureRules {
 
   /// 事件契约包，相对 `{根包}.domain.{子域}`。订阅边只放行它。
   private static final String EVENT_CONTRACT = "event";
-
-  /// 底座子域另外公开的包，相对 `{根包}.domain.{底座}`。
-  ///
-  /// `exception` 公开，是为了让调用方在需要降级时能捕获底座端口抛出的异常（如用户名片取不到）；
-  /// 默认做法仍是不捕获、直接传播。
-  private static final List<String> FOUNDATION_PUBLISHED =
-      List.of("port.gateway", "port.user", "model.vo", "model.enums", "model.user", "exception");
 
   /// 服务根包，如 `dev.patra.interaction`。
   private final String basePackage;
@@ -165,16 +156,14 @@ public final class SubdomainArchitectureRules {
 
   /// 子域 A 的类依赖子域 B（B ≠ A）的类时，目标必须在 B 的公开包里。
   ///
-  /// 公开包之外的一切（聚合、实体、仓储、领域服务、app / infra / adapter 的任何类）只能在子域内部用。
+  /// 公开包之外的一切（聚合、实体、仓储、领域服务、app / infra / adapter 的任何类）只能在子域内部用；底座除外，它对其他子域完全公开。
   ///
   /// @return ArchRule 规则实例
   public ArchRule crossSubdomainDependenciesGoThroughPublishedPackages() {
     return classes()
         .that(resideInSomeSubdomain())
         .should(dependOnOtherSubdomainsOnlyThroughPublishedPackages())
-        .as(
-            "跨子域只经对方的公开包（port.read、model.read、event；底座另加 port.gateway、port.user、"
-                + "model.vo、model.enums、model.user、exception）")
+        .as("跨子域只经对方的公开包（port.read、model.read、event）；底座完全公开")
         .because("子域之间不直接用对方的实体或仓储，拆分时只需把公开包换成 HTTP 契约")
         .allowEmptyShould(true);
   }
@@ -373,18 +362,17 @@ public final class SubdomainArchitectureRules {
     };
   }
 
-  /// 包是否在某个子域的公开包里。
+  /// 包是否在某个子域的公开包里；底座的任何包都算公开。
   ///
   /// @param subdomain 子域名
   /// @param packageName 包名
-  /// @return 在公开包（或其子包）里时为真
+  /// @return 在公开包（或其子包）里、或属于底座时为真
   private boolean isPublished(String subdomain, String packageName) {
+    if (subdomain.equals(foundationSubdomain)) {
+      return true;
+    }
     String domainPackage = basePackage + ".domain." + subdomain + ".";
-    List<String> published =
-        subdomain.equals(foundationSubdomain)
-            ? Stream.concat(PUBLISHED.stream(), FOUNDATION_PUBLISHED.stream()).toList()
-            : PUBLISHED;
-    return published.stream()
+    return PUBLISHED.stream()
         .map(relative -> domainPackage + relative)
         .anyMatch(prefix -> packageName.equals(prefix) || packageName.startsWith(prefix + "."));
   }
