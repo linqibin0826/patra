@@ -139,6 +139,38 @@ class OutboxMessageRepositoryAdapterIT {
     }
 
     @Test
+    @DisplayName("租约已过期的 PUBLISHING 消息应被重新领取（领租约后进程挂掉或标记失败）")
+    void shouldReclaimPublishingMessageWhoseLeaseExpired() {
+      // Given: 领了租约（状态变 PUBLISHING）但再没标记
+      OutboxMessageEntity entity = createTestOutboxMessageEntity("dedup-001");
+      outboxMessageDao.saveAndFlush(entity);
+      repository.acquireLease(entity.getId(), 0L, TEST_OWNER, TEST_NOW.plusSeconds(300));
+
+      // When: 租约过期之后
+      List<OutboxMessage> result =
+          repository.fetchPending(TEST_CHANNEL, TEST_NOW.plusSeconds(301), 10);
+
+      // Then
+      assertThat(result).extracting(OutboxMessage::getId).containsExactly(entity.getId());
+    }
+
+    @Test
+    @DisplayName("租约未过期的 PUBLISHING 消息不应被领取")
+    void shouldNotFetchPublishingMessageWhoseLeaseIsActive() {
+      // Given
+      OutboxMessageEntity entity = createTestOutboxMessageEntity("dedup-001");
+      outboxMessageDao.saveAndFlush(entity);
+      repository.acquireLease(entity.getId(), 0L, TEST_OWNER, TEST_NOW.plusSeconds(300));
+
+      // When: 租约还在
+      List<OutboxMessage> result =
+          repository.fetchPending(TEST_CHANNEL, TEST_NOW.plusSeconds(100), 10);
+
+      // Then
+      assertThat(result).isEmpty();
+    }
+
+    @Test
     @DisplayName("应支持从所有通道获取消息")
     void shouldFetchPendingFromAllChannelsWhenChannelIsNull() {
       // Given

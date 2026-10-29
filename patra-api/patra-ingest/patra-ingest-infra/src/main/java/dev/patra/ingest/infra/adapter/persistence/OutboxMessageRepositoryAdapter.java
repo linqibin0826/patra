@@ -28,13 +28,15 @@ import org.springframework.stereotype.Repository;
 /// ### 状态机（简化版）
 ///
 /// ```
-/// PENDING --(acquireLease 成功)--> LEASED --(markPublished)--> PUBLISHED (终态)
-///           |
-///           |--(发布失败,可重试 → markDeferred)--> PENDING (retryCount+1, 等待到 nextRetryAt)
-///           |--(发布失败,耗尽 → markFailed)-----> FAILED (终态)
+/// PENDING --(acquireLease 成功)--> PUBLISHING --(markPublished)--> PUBLISHED (终态)
+///                                   |
+///                                   |--(发布失败,可重试 → markDeferred)--> PENDING (retryCount+1, 等待到
+// nextRetryAt)
+///                                   |--(发布失败,耗尽 → markFailed)-----> FAILED (终态)
+///                                   |--(租约过期仍未标记)--> 被 fetchPending 重新领取
 ///
-/// 注意："LEASED" 中间状态未显式存储（由 leaseOwner!=null & leaseExpireAt 未过期 + version 条件隐式表示）。
-///       fetchPending 仅返回未被"活跃租约"持有的记录（SQL 过滤已过期或 null 租约）。
+/// 注意：租约与标记各自单独提交。fetchPending 返回 PENDING，以及租约已过期的 PUBLISHING
+///       （领了租约后进程挂掉或标记事务失败），都只取未被「活跃租约」持有的记录。
 /// ```
 ///
 /// ### 并发控制
