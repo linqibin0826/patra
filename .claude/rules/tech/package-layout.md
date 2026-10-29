@@ -40,6 +40,7 @@ Gradle 模块按层，**模块内先按子域、再按组件类型**。由 `patr
 ```
 
 - 层下第二级只能是已声明子域（`api.error` 除外）；子域根包不放类；白名单外的包名一律违规。
+- infra 下不用 `read`、`repository`、`gateway` 作包名（读端口与仓储的实现放 `persistence`，Gateway 实现在 `app.{子域}.service`）；层外的类只放 `{根}` 与 `{根}.config`。
 - `usecase.<用例族>`、`port.<协作者>` 用业务词命名。
 - 新增子域要改该服务 `*ArchitectureTest` 的子域清单；每个声明的子域在 domain 层必须有类。
 

@@ -182,6 +182,7 @@ catalog 的门户查询要一条 SQL 联多个子域的表，独立成 `portal` 
 4. **新增 `infraPackagesMatchPorts`**：`infra.{子域}.X`（X ∉ {`persistence`, `support`, `config`}）必须存在 `domain.{子域}.port.X`。
 5. **新增 `everyDeclaredSubdomainHasDomainPackage`**：每个已声明子域至少在 domain 层有类，防止子域名拼错或声明了空子域。取代 `InteractionArchitectureTest` 自带的「一层出现则四层都要有」检查。
 6. 其余规则（层下只有已声明子域、无环、跨子域只经公开包、边要声明、底座不依赖他人）语义不变。
+7. **整分支评审后补充**：`infraPackagesMatchPorts` 另拒绝 `read`、`repository`、`gateway` 作 infra 包名；新增 `nonLayerClassesStayInRootOrConfig`（层外的类只放根包与 `{根}.config`）。`allRules()` 共 9 条，各服务架构测试执行 `allRules()` 而不是逐条调用。
 
 ### 6.2 `HexagonalArchitectureRules`（patra-tool-test）
 
