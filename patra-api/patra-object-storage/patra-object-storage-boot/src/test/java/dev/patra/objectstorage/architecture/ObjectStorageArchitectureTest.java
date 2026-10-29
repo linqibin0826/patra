@@ -132,51 +132,16 @@ class ObjectStorageArchitectureTest {
     TestingRules.e2eTestsShouldResideInBootModule().check(classes);
   }
 
-  /// 规则 22b：每个声明的子域在 domain 层都有类。
+  /// 子域规则全部执行（`SubdomainArchitectureRules.allRules()`），汇总所有违规一次报出；规则新增时自动生效。
   @Test
-  void everyDeclaredSubdomainShouldHaveDomainPackage() {
-    subdomainRules.everyDeclaredSubdomainHasDomainPackage().check(classes);
-  }
-
-  /// 规则 23：层下面只有已声明的子域。
-  @Test
-  void layersShouldContainOnlyDeclaredSubdomains() {
-    subdomainRules.layersContainOnlyDeclaredSubdomains().check(classes);
-  }
-
-  /// 规则 24：子域之间无环。
-  @Test
-  void subdomainsShouldBeFreeOfCycles() {
-    subdomainRules.subdomainsAreFreeOfCycles().check(classes);
-  }
-
-  /// 规则 25：跨子域只经对方的公开包。
-  @Test
-  void crossSubdomainDependenciesShouldGoThroughPublishedPackages() {
-    subdomainRules.crossSubdomainDependenciesGoThroughPublishedPackages().check(classes);
-  }
-
-  /// 规则 26：底座子域不依赖其他子域。
-  @Test
-  void foundationShouldDependOnNoOtherSubdomain() {
-    subdomainRules.foundationDependsOnNoOtherSubdomain().check(classes);
-  }
-
-  /// 规则 27：跨子域依赖必须声明。
-  @Test
-  void crossSubdomainDependenciesShouldBeDeclared() {
-    subdomainRules.crossSubdomainDependenciesAreDeclared().check(classes);
-  }
-
-  /// 规则 28：子域下的包落在分包模板的白名单里。
-  @Test
-  void componentPackagesShouldFollowTemplate() {
-    subdomainRules.componentPackagesFollowTemplate().check(classes);
-  }
-
-  /// 规则 29：infra 协作者包与本子域端口包同名。
-  @Test
-  void infraPackagesShouldMatchPorts() {
-    subdomainRules.infraPackagesMatchPorts().check(classes);
+  @DisplayName("子域规则：分包模板与子域边界")
+  void subdomainRulesShouldHold() {
+    List<String> violations =
+        subdomainRules.allRules().stream()
+            .map(rule -> rule.evaluate(classes))
+            .filter(EvaluationResult::hasViolation)
+            .map(result -> result.getFailureReport().toString())
+            .toList();
+    assertThat(violations).isEmpty();
   }
 }

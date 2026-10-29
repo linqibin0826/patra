@@ -253,7 +253,8 @@ public final class SubdomainArchitectureRules {
 
   /// `infra.{子域}.X`（X 不是 `persistence`、`support`、`config`）必须有同名的 `domain.{子域}.port.X`。
   ///
-  /// infra 的协作者包按它实现的端口命名，看包名就能找到端口。
+  /// infra 的协作者包按它实现的端口命名，看包名就能找到端口。`read`、`repository`、`gateway` 不能作 infra 包名：
+  /// 读端口与仓储的实现放 `persistence`，Gateway 的实现在 app 层。
   ///
   /// @return ArchRule 规则实例
   public ArchRule infraPackagesMatchPorts() {
@@ -279,6 +280,29 @@ public final class SubdomainArchitectureRules {
         .allowEmptyShould(true);
   }
 
+  /// 不在五个层下的类只能在根包（启动类）或 `{根}.config`（组装）下。
+  ///
+  /// 防止在层外另起 `{根}.util`、`{根}.common` 之类绕开子域规则的包。
+  ///
+  /// @return ArchRule 规则实例
+  public ArchRule nonLayerClassesStayInRootOrConfig() {
+    String config = basePackage + ".config";
+    return classes()
+        .that(
+            DescribedPredicate.describe(
+                "在 " + basePackage + " 下、但不在五个层下",
+                javaClass -> {
+                  String name = javaClass.getPackageName();
+                  return (name.equals(basePackage) || name.startsWith(basePackage + "."))
+                      && layerOf(name).isEmpty();
+                }))
+        .should()
+        .resideInAnyPackage(basePackage, config, config + "..")
+        .as("层外的类只放根包（启动类）或 " + config + "（组装）")
+        .because("层外再起包会绕开子域规则；新代码按分包模板放进某个层的子域")
+        .allowEmptyShould(true);
+  }
+
   /// 全部子域规则。
   ///
   /// @return 不可变的规则列表
@@ -291,7 +315,8 @@ public final class SubdomainArchitectureRules {
         foundationDependsOnNoOtherSubdomain(),
         componentPackagesFollowTemplate(),
         infraPackagesMatchPorts(),
-        everyDeclaredSubdomainHasDomainPackage());
+        everyDeclaredSubdomainHasDomainPackage(),
+        nonLayerClassesStayInRootOrConfig());
   }
 
   /// 类所在的包在分包模板的白名单里。
@@ -350,6 +375,20 @@ public final class SubdomainArchitectureRules {
         }
         String collaborator = packageName.substring(infraSubdomain.length() + 1).split("\\.", 2)[0];
         if (Set.of("persistence", "support", "config").contains(collaborator)) {
+          return;
+        }
+        if (Set.of("read", "repository", "gateway").contains(collaborator)) {
+          events.add(
+              SimpleConditionEvent.violated(
+                  javaClass,
+                  javaClass.getName()
+                      + " 放在 infra."
+                      + subdomain
+                      + "."
+                      + collaborator
+                      + "：读端口与仓储的实现放 persistence，Gateway 的实现放 app."
+                      + subdomain
+                      + ".service"));
           return;
         }
         String port = basePackage + ".domain." + subdomain + ".port." + collaborator;

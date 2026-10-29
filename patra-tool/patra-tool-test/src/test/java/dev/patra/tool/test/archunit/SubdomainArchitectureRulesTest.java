@@ -103,6 +103,8 @@ class SubdomainArchitectureRulesTest {
     assertThat(result.hasViolation()).isTrue();
     assertThat(result.getFailureReport().getDetails())
         .anyMatch(line -> line.contains("SmtpAdapter"))
+        .anyMatch(line -> line.contains("CollectionReadAdapter"))
+        .anyMatch(line -> line.contains("CollectionGatewayImpl"))
         .noneMatch(line -> line.contains("MailAdapter"))
         .noneMatch(line -> line.contains("SqlFragments"))
         .noneMatch(line -> line.contains("CollectionRepositoryAdapter"))
@@ -116,6 +118,19 @@ class SubdomainArchitectureRulesTest {
         new SubdomainArchitectureRules(FIXTURES + "ghost", "subject", Set.of("subject", "ghostly"));
 
     assertViolationNaming("ghost", rules.everyDeclaredSubdomainHasDomainPackage(), "ghostly");
+  }
+
+  /// 不在五个层下的类只能在根包或 `{根}.config` 下：启动类与组装之外不另起包。
+  @Test
+  void should_reject_package_outside_layers_other_than_root_and_config() {
+    EvaluationResult result =
+        evaluate("rootescape", rules("rootescape").nonLayerClassesStayInRootOrConfig());
+
+    assertThat(result.hasViolation()).isTrue();
+    assertThat(result.getFailureReport().getDetails())
+        .anyMatch(line -> line.contains("LooseHelper"))
+        .noneMatch(line -> line.contains("RootApplication"))
+        .noneMatch(line -> line.contains("Wiring"));
   }
 
   /// 底座不在声明的子域里时拒绝构造。
@@ -299,10 +314,10 @@ class SubdomainArchitectureRulesTest {
         .isInstanceOf(IllegalArgumentException.class);
   }
 
-  /// 全部规则是八条。
+  /// 全部规则是九条。
   @Test
-  void should_list_all_eight_rules() {
-    assertThat(rules("compliant").allRules()).hasSize(8);
+  void should_list_all_nine_rules() {
+    assertThat(rules("compliant").allRules()).hasSize(9);
   }
 
   /// 断言规则在场景里有违规，且违规文本点名了某个类。

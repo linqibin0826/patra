@@ -36,7 +36,7 @@ public record TaskCompletedEvent(
 }
 ```
 
-**位置**：`domain/event/`
+**位置**：`domain/{子域}/event/`
 
 ## 事件处理器模式
 
