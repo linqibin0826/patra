@@ -11,6 +11,7 @@ import dev.patra.tool.cqrs.CommandBus;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
+import org.springframework.test.web.servlet.client.EntityExchangeResult;
 
 /// 注销清理的公共流程（决策 H）：各子域登记的个人数据（收藏、发表计数）对已注销用户一并删除，别人的不动；
 /// 候选用户来自各子域的并集，一批只回查一次 identity。
@@ -46,6 +47,47 @@ class DeletedUserCleanupFlowIT extends InteractionFlowITSupport {
     assertThat(count("SELECT count(*) FROM collection.library_item WHERE user_id = ?", C))
         .isEqualTo(1L);
     identity.verify(1, postRequestedFor(urlEqualTo("/_internal/users/summaries")));
+  }
+
+  /// 有帮助不接入注销清理（PAP-131）：两个注销用户互相点过的有帮助、两人的获赞在清理后原样保留。
+  @Test
+  void should_keep_helpful_data_of_deleted_users() {
+    CATALOG_DATA.put(100L, "1", "Lancet", "2019");
+    IDENTITY_DATA.put(A, "ACTIVE", true, "PUBLIC");
+    IDENTITY_DATA.put(B, "ACTIVE", true, "PUBLIC");
+    long fromA = comment(A, "A 的评论");
+    long fromB = comment(B, "B 的评论");
+    assertThat(status(call(HttpMethod.PUT, A, "/comments/" + fromB + "/helpful", null)))
+        .isEqualTo(200);
+    assertThat(status(call(HttpMethod.PUT, B, "/comments/" + fromA + "/helpful", null)))
+        .isEqualTo(200);
+    IDENTITY_DATA.put(A, "DELETED", false, "PUBLIC");
+    IDENTITY_DATA.put(B, "DELETED", false, "PUBLIC");
+
+    CleanupResult result = commandBus.handle(CleanupDeletedUsersCommand.of());
+
+    assertThat(result.deletedUsers()).isEqualTo(2);
+    assertThat(count("SELECT count(*) FROM reaction.helpful")).isEqualTo(2L);
+    assertThat(count("SELECT sum(helpful_count) FROM reaction.target_stats")).isEqualTo(2L);
+    assertThat(count("SELECT sum(helpful_received) FROM reaction.user_stats")).isEqualTo(2L);
+    assertThat(count("SELECT count(*) FROM reaction.user_stats WHERE user_id IN (?, ?)", A, B))
+        .isEqualTo(2L);
+  }
+
+  /// 在文献 100 下发一条根评论，回它的 ID。
+  ///
+  /// @param user 作者
+  /// @param body 正文
+  /// @return 评论 ID
+  private long comment(long user, String body) {
+    EntityExchangeResult<String> result =
+        call(
+            HttpMethod.POST,
+            user,
+            "/discussions/publication/100/comments",
+            "{\"body\": \"" + body + "\"}");
+    assertThat(status(result)).as(result.getResponseBody()).isEqualTo(201);
+    return Long.parseLong(json(result).get("commentId").asString());
   }
 
   /// 预写一行发表计数。
