@@ -1,11 +1,11 @@
 package dev.patra.interaction.infra.notification.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.patra.interaction.domain.notification.model.enums.NotificationType;
 import dev.patra.interaction.domain.notification.model.vo.ExcerptText;
 import dev.patra.interaction.domain.notification.model.vo.NotificationDraft;
+import dev.patra.interaction.domain.subject.model.vo.SubjectId;
 import java.sql.Timestamp;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -51,7 +51,7 @@ class NotificationRepositoryAdapterIT extends NotificationPersistenceITSupport {
         .containsExactly("COMMENT_REPLY");
   }
 
-  /// 编辑后刷新这条评论的全部提醒；已标删除的不会被刷回。
+  /// 编辑后刷新这条评论的全部提醒，别的评论不动。
   @Test
   void should_refresh_excerpt_for_all_recipients_of_comment() {
     notifications.insertAll(
@@ -59,11 +59,9 @@ class NotificationRepositoryAdapterIT extends NotificationPersistenceITSupport {
             draft(A, NotificationType.COMMENT_REPLY, 500L),
             draft(B, NotificationType.MENTION, 500L),
             draft(B, NotificationType.MENTION, 501L)));
-    notifications.markCommentDeleted(501L);
 
     ExcerptText edited = ExcerptText.of("改过了 <@7>", true);
     assertThat(notifications.refreshExcerpt(500L, edited)).isEqualTo(2);
-    assertThat(notifications.refreshExcerpt(501L, edited)).isZero();
 
     assertThat(
             jdbcTemplate.queryForList(
@@ -73,34 +71,65 @@ class NotificationRepositoryAdapterIT extends NotificationPersistenceITSupport {
         .containsExactly("改过了 <@7>", "改过了 <@7>");
   }
 
-  /// 评论删除后：标删除、摘录清空。
+  /// 评论删除后：它的提醒跨收件人全部删掉，别的评论的提醒不动。
   @Test
-  void should_clear_excerpt_when_comment_deleted() {
-    notifications.insertAll(List.of(draft(A, NotificationType.COMMENT_REPLY, 500L)));
+  void should_delete_all_recipients_notifications_of_comment() {
+    notifications.insertAll(
+        List.of(
+            draft(A, NotificationType.COMMENT_REPLY, 500L),
+            draft(B, NotificationType.MENTION, 500L),
+            draft(A, NotificationType.MENTION, 501L)));
 
-    assertThat(notifications.markCommentDeleted(500L)).isEqualTo(1);
+    assertThat(notifications.deleteByComment(500L)).isEqualTo(2);
 
     assertThat(
-            jdbcTemplate.queryForMap(
-                "SELECT excerpt, comment_deleted FROM notification.notification"
-                    + " WHERE recipient_id = ?",
-                A))
-        .containsEntry("excerpt", null)
-        .containsEntry("comment_deleted", true);
+            jdbcTemplate.queryForList(
+                "SELECT comment_id FROM notification.notification", Long.class))
+        .containsExactly(501L);
   }
 
-  /// 已删除的评论不能留着摘录（约束兜底）。
+  /// 经验删除后：这个对象下的提醒跨收件人全部删掉，别的对象不动。
   @Test
-  void should_reject_excerpt_on_deleted_comment_by_constraint() {
+  void should_delete_all_notifications_of_subject() {
+    notifications.insertAll(
+        List.of(
+            onSubject(draft(A, NotificationType.POST_COMMENT, 500L), 77L),
+            onSubject(draft(B, NotificationType.COMMENT_REPLY, 501L), 77L),
+            onSubject(draft(A, NotificationType.COMMENT_REPLY, 502L), 78L)));
+
+    assertThat(notifications.deleteBySubject(SubjectId.of(77L))).isEqualTo(2);
+
+    assertThat(
+            jdbcTemplate.queryForList(
+                "SELECT subject_id FROM notification.notification", Long.class))
+        .containsExactly(78L);
+  }
+
+  /// 对象下没有提醒：删 0 条，不报错。
+  @Test
+  void should_return_zero_when_subject_has_no_notifications() {
     notifications.insertAll(List.of(draft(A, NotificationType.COMMENT_REPLY, 500L)));
 
-    assertThatThrownBy(
-            () ->
-                jdbcTemplate.update(
-                    "UPDATE notification.notification SET comment_deleted = true"
-                        + " WHERE recipient_id = ?",
-                    A))
-        .hasMessageContaining("ck_notification_deleted_excerpt");
+    assertThat(notifications.deleteBySubject(SubjectId.of(77L))).isZero();
+    assertThat(countOf(A)).isEqualTo(1L);
+  }
+
+  /// 同一条提醒，换到另一个对象下。
+  ///
+  /// @param draft 提醒
+  /// @param subjectId 对象
+  /// @return 换过对象的提醒
+  private static NotificationDraft onSubject(NotificationDraft draft, long subjectId) {
+    return NotificationDraft.builder()
+        .recipientId(draft.recipientId())
+        .type(draft.type())
+        .actorId(draft.actorId())
+        .actorAnonymous(draft.actorAnonymous())
+        .subjectId(SubjectId.of(subjectId))
+        .commentId(draft.commentId())
+        .excerpt(draft.excerpt())
+        .createdAt(draft.createdAt())
+        .build();
   }
 
   /// 只能标自己的；已读的再标不改已读时刻。

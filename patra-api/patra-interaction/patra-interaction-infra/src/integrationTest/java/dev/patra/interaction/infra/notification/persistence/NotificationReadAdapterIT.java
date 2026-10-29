@@ -74,9 +74,9 @@ class NotificationReadAdapterIT extends NotificationPersistenceITSupport {
     assertThat(reads.unreadCounts(B)).isEqualTo(UnreadCounts.of(0, 0));
   }
 
-  /// 摘录与截断标记原样读回；已删除的没有摘录。
+  /// 摘录与截断标记原样读回。
   @Test
-  void should_map_excerpt_and_deleted_flag() {
+  void should_map_excerpt() {
     NotificationDraft truncated =
         NotificationDraft.builder()
             .recipientId(A)
@@ -88,15 +88,12 @@ class NotificationReadAdapterIT extends NotificationPersistenceITSupport {
             .excerpt(ExcerptText.of("长 <@7>", true))
             .createdAt(T0)
             .build();
-    notifications.insertAll(List.of(truncated, draft(A, NotificationType.COMMENT_REPLY, 502L)));
-    notifications.markCommentDeleted(502L);
+    notifications.insertAll(List.of(truncated));
 
     List<NotificationEntry> page = reads.page(A, NotificationTab.REPLIES, null, 20);
 
-    NotificationEntry deleted = page.get(0);
-    assertThat(deleted.commentDeleted()).isTrue();
-    assertThat(deleted.excerpt()).isNull();
-    NotificationEntry kept = page.get(1);
+    assertThat(page).hasSize(1);
+    NotificationEntry kept = page.get(0);
     assertThat(kept.excerpt()).isEqualTo(ExcerptText.of("长 <@7>", true));
     assertThat(kept.actorAnonymous()).isTrue();
     assertThat(kept.actorId()).isEqualTo(ACTOR);

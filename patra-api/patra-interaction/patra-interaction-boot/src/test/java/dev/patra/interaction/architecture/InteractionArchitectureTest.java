@@ -49,10 +49,12 @@ class InteractionArchitectureTest {
   /// 按子域分包的四层（api 模块还没有类）。
   private static final List<String> LAYERS = List.of("domain", "app", "infra", "adapter");
 
-  /// 子域边界规则。依赖方向按 v0.14 决策 A：提醒只经事件契约依赖讨论，其余子域只依赖底座。
+  /// 子域边界规则。依赖方向按 v0.14 决策 A：提醒只经事件契约依赖讨论与投稿经验（PAP-127 经验删除即删提醒），
+  /// 其余子域只依赖底座。
   private static final SubdomainArchitectureRules subdomainRules =
       new SubdomainArchitectureRules("dev.patra.interaction", FOUNDATION, Set.copyOf(SUBDOMAINS))
-          .allowingSubscription("notification", "discussion");
+          .allowingSubscription("notification", "discussion")
+          .allowingSubscription("notification", "post");
 
   /// 导入 interaction 全部模块的主代码。
   @BeforeAll

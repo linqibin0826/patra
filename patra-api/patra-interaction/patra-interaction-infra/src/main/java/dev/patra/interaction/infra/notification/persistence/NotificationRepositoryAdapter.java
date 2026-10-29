@@ -3,6 +3,7 @@ package dev.patra.interaction.infra.notification.persistence;
 import dev.patra.interaction.domain.notification.model.vo.ExcerptText;
 import dev.patra.interaction.domain.notification.model.vo.NotificationDraft;
 import dev.patra.interaction.domain.notification.port.repository.NotificationRepository;
+import dev.patra.interaction.domain.subject.model.vo.SubjectId;
 import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -63,7 +64,7 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
         .update();
   }
 
-  /// 刷新一条评论的全部未删除提醒的摘录。
+  /// 刷新一条评论的全部提醒的摘录。
   ///
   /// @param commentId 评论
   /// @param excerpt 新摘录
@@ -72,24 +73,32 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
   public int refreshExcerpt(long commentId, ExcerptText excerpt) {
     return jdbc.sql(
             "UPDATE notification.notification SET excerpt = :excerpt, excerpt_truncated = :truncated"
-                + " WHERE comment_id = :commentId AND NOT comment_deleted")
+                + " WHERE comment_id = :commentId")
         .param("excerpt", excerpt.stored())
         .param("truncated", excerpt.truncated())
         .param("commentId", commentId)
         .update();
   }
 
-  /// 标记一条评论的全部提醒为已删除，清空摘录。
+  /// 删掉一条评论的全部提醒。
   ///
   /// @param commentId 评论
-  /// @return 更新的条数
+  /// @return 删除的条数
   @Override
-  public int markCommentDeleted(long commentId) {
-    return jdbc.sql(
-            "UPDATE notification.notification"
-                + " SET comment_deleted = true, excerpt = NULL, excerpt_truncated = false"
-                + " WHERE comment_id = :commentId")
+  public int deleteByComment(long commentId) {
+    return jdbc.sql("DELETE FROM notification.notification WHERE comment_id = :commentId")
         .param("commentId", commentId)
+        .update();
+  }
+
+  /// 删掉一个对象下的全部提醒（走 `idx_notification_subject`）。
+  ///
+  /// @param subjectId 对象
+  /// @return 删除的条数
+  @Override
+  public int deleteBySubject(SubjectId subjectId) {
+    return jdbc.sql("DELETE FROM notification.notification WHERE subject_id = :subjectId")
+        .param("subjectId", subjectId.value())
         .update();
   }
 

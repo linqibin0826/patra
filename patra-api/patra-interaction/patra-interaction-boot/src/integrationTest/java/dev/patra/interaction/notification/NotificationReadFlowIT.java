@@ -90,9 +90,10 @@ class NotificationReadFlowIT extends NotificationFlowITSupport {
     assertThat(result.getResponseBody()).doesNotContain(Long.toString(OWNER));
   }
 
-  /// 经验删除后：对象不可用，提醒里不给摘录。
+  /// 对象不可用时提醒里不给摘录。经验真删除时提醒已随事件删掉（`ExperienceFlowIT`），这里直接把登记行置为失效，
+  /// 只验读路径（线上仍会遇到的是文献下线）。
   @Test
-  void should_hide_excerpt_after_post_deleted() {
+  void should_hide_excerpt_when_subject_unavailable() {
     registerPost(POST, OWNER, false);
     comment(B, "post", POST, "有个问题", null);
     deletePost(POST);

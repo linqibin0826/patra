@@ -96,7 +96,6 @@ public class NotificationQueryService {
         .actorAnonymous(entry.actorAnonymous())
         .subject(subject == null ? null : subjectRef(subject, recipient))
         .commentId(entry.commentId())
-        .commentDeleted(entry.commentDeleted())
         .excerpt(excerpt == null ? null : excerpt.text())
         .excerptTruncated(excerpt != null && excerpt.truncated())
         .build();

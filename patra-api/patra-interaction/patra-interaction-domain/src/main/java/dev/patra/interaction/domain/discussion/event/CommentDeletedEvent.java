@@ -5,7 +5,7 @@ import java.time.Instant;
 import lombok.Builder;
 
 /// 评论已删除：变占位或整条去掉（已是占位再删不发；级联去掉的占位当初变占位时已发过）。讨论子域在写入的同一事务里
-/// 发布，订阅方式同 {@link CommentPublishedEvent}。提醒列表据此显示「评论已删除」。
+/// 发布，订阅方式同 {@link CommentPublishedEvent}。提醒子域据此删除这条评论的全部提醒。
 ///
 /// @param commentId 被删的评论
 /// @param subjectId 对象

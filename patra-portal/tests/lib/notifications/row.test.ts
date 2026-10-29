@@ -45,9 +45,9 @@ describe("触发人", () => {
 
 describe("动作与标签", () => {
   it("三种动作的文案", () => {
-    expect(actionLabel("COMMENT_REPLY")).toBe("回复了你的评论");
+    expect(actionLabel("COMMENT_REPLY")).toBe("回复了你");
     expect(actionLabel("POST_COMMENT")).toBe("评论了你的投稿经验");
-    expect(actionLabel("MENTION")).toBe("在评论中 @ 了你");
+    expect(actionLabel("MENTION")).toBe("@ 了你");
   });
 
   it("@ 归「@ 我的」，其余归「回复我的」", () => {
@@ -58,21 +58,9 @@ describe("动作与标签", () => {
 });
 
 describe("摘录", () => {
-  it("评论已删除优先", () => {
-    expect(excerptOf(makeNotification({ commentDeleted: true, excerpt: null }))).toEqual({
-      kind: "deleted",
-    });
-  });
-
   it("被截断时末尾加「…」", () => {
-    expect(excerptOf(makeNotification({ excerpt: "同意", excerptTruncated: true }))).toEqual({
-      kind: "text",
-      text: "同意…",
-    });
-    expect(excerptOf(makeNotification({ excerpt: "同意" }))).toEqual({
-      kind: "text",
-      text: "同意",
-    });
+    expect(excerptOf(makeNotification({ excerpt: "同意", excerptTruncated: true }))).toBe("同意…");
+    expect(excerptOf(makeNotification({ excerpt: "同意" }))).toBe("同意");
   });
 
   it("对象已不可用时没有摘录", () => {
@@ -81,34 +69,33 @@ describe("摘录", () => {
 });
 
 describe("上下文", () => {
-  it("文献：交出原样的标题（含内联标记，由组件渲染成《标题》的讨论）；没有标题时「一篇文献的讨论」", () => {
+  it("文献：交出原样的标题（含内联标记，由组件渲染）；没有标题时「一篇文献的讨论」", () => {
     expect(
       contextLabel({ ...(makeNotification().subject as NotificationSubject), title: "A <i>B</i>" }),
     ).toEqual({ kind: "paper", title: "A <i>B</i>" });
     expect(
       contextLabel({ ...(makeNotification().subject as NotificationSubject), title: null }),
-    ).toEqual({ kind: "text", text: "一篇文献的讨论" });
+    ).toEqual({ kind: "text", text: "一篇文献的讨论", post: false });
   });
 
   it("你的经验：你的投稿经验 · 缩写 · YYYY 年 M 月投稿；没有缩写用全称", () => {
     expect(contextLabel(POST)).toEqual({
       kind: "text",
       text: "你的投稿经验 · J Am Heart Assoc · 2026 年 3 月投稿",
+      post: true,
     });
     expect(contextLabel({ ...POST, abbreviation: null })).toEqual({
       kind: "text",
       text: "你的投稿经验 · Journal of the American Heart Association · 2026 年 3 月投稿",
+      post: true,
     });
   });
 
-  it("别人的经验、已删除的经验、没有对象", () => {
+  it("别人的经验、没有对象", () => {
     expect(contextLabel({ ...POST, mine: false })).toEqual({
       kind: "text",
       text: "J Am Heart Assoc 的一条投稿经验",
-    });
-    expect(contextLabel({ ...POST, available: false })).toEqual({
-      kind: "text",
-      text: "一条已删除的投稿经验",
+      post: true,
     });
     expect(contextLabel(null)).toBeNull();
   });
@@ -120,10 +107,14 @@ describe("链接", () => {
     expect(notificationHref(makeNotification({ subject: POST }))).toBe("/posts/5?comment=9");
   });
 
-  it("经验已删除去经验页（显示「该经验已删除」）", () => {
-    expect(notificationHref(makeNotification({ subject: { ...POST, available: false } }))).toBe(
-      "/posts/5",
-    );
+  it("文献下线（对象不可用）时仍走评论永久链接", () => {
+    expect(
+      notificationHref(
+        makeNotification({
+          subject: { ...(makeNotification().subject as NotificationSubject), available: false },
+        }),
+      ),
+    ).toBe("/papers/11?comment=9");
   });
 
   it("key 为空或没有对象时不是链接", () => {

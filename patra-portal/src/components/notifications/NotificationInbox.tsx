@@ -14,6 +14,7 @@ import { fetchCurrentUser } from "@/lib/auth/current-user-query";
 import { authPageHref } from "@/lib/auth/next-path";
 import { useNow } from "@/lib/discussion/use-now";
 import type { NotificationTab } from "@/lib/interaction/notification-schema";
+import { groupByDay } from "@/lib/notifications/groups";
 import { useMarkAllRead, useMarkRead } from "@/lib/notifications/mark-read";
 import { useNotificationList, useUnreadCounts } from "@/lib/notifications/queries";
 import { btnSecondary } from "@/lib/portal-ui";
@@ -29,7 +30,8 @@ const TABS = [
   { tab: "mentions", label: "@ 我的", href: "/notifications/mentions" },
 ] as const;
 
-/// 提醒列表页（简报 §3.19）：h1 + 「全部标为已读」、两个标签（未读胶囊）、一页 20 条的列表与「加载更多提醒」。
+/// 提醒列表页（简报 §3.19；分组与版式见 spec 2026-10-28-notification-inbox-redesign 4.2）：h1 + 「全部标为已读」、
+/// 两个标签（未读胶囊）、按今天 / 昨天 / 更早分组的列表（一页 20 条）与「加载更多提醒」。
 /// 列表在客户端取（已读是乐观写、与铃铛共用缓存）；页面壳同步渲染，加载中只有列表区是骨架。会话过期时去登录页
 export function NotificationInbox({ tab }: { tab: NotificationTab }) {
   const list = useNotificationList(tab);
@@ -102,13 +104,28 @@ export function NotificationInbox({ tab }: { tab: NotificationTab }) {
           <NotificationEmpty tab={tab} />
         ) : (
           <div className="flex flex-col gap-4">
-            <ol className="flex flex-col divide-y divide-border-subtle">
-              {items.map((notification) => (
-                <li key={notification.notificationId}>
-                  <NotificationRow notification={notification} now={now} onOpen={markRead} />
-                </li>
+            <div className="flex flex-col">
+              {groupByDay(items, now).map((group, index) => (
+                <section key={group.group} aria-labelledby={`notification-group-${group.group}`}>
+                  <h2
+                    id={`notification-group-${group.group}`}
+                    className={cn(
+                      "border-border-subtle border-b pb-2 font-medium text-fg-3 text-xs tracking-wide",
+                      index === 0 ? "mt-5" : "mt-7",
+                    )}
+                  >
+                    {group.label}
+                  </h2>
+                  <ol className="flex flex-col">
+                    {group.items.map((notification) => (
+                      <li key={notification.notificationId}>
+                        <NotificationRow notification={notification} now={now} onOpen={markRead} />
+                      </li>
+                    ))}
+                  </ol>
+                </section>
               ))}
-            </ol>
+            </div>
             {list.hasNextPage ? (
               <button
                 type="button"

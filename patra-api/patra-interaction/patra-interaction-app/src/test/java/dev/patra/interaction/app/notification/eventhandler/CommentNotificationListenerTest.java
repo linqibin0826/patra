@@ -12,6 +12,7 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import dev.patra.interaction.domain.discussion.event.CommentDeletedEvent;
@@ -102,12 +103,13 @@ class CommentNotificationListenerTest {
             });
   }
 
-  /// 删除：标记这条评论的提醒。
+  /// 删除：删掉这条评论的全部提醒。
   @Test
-  void should_mark_deleted_on_comment_deleted() {
+  void should_delete_notifications_on_comment_deleted() {
     listener.on(new CommentDeletedEvent(10L, SubjectId.of(100L), A, true, AT));
 
-    verify(notifications).markCommentDeleted(10L);
+    verify(notifications).deleteByComment(10L);
+    verifyNoMoreInteractions(notifications);
   }
 
   /// 数据库异常包成 500，原始异常留在原因链里。
@@ -129,7 +131,7 @@ class CommentNotificationListenerTest {
   @Test
   void should_propagate_domain_exception() {
     NotificationNotFoundException failure = new NotificationNotFoundException();
-    when(notifications.markCommentDeleted(10L)).thenThrow(failure);
+    when(notifications.deleteByComment(10L)).thenThrow(failure);
 
     assertThatThrownBy(
             () -> listener.on(new CommentDeletedEvent(10L, SubjectId.of(100L), A, false, AT)))

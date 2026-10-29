@@ -8,24 +8,51 @@ import { NotificationRow } from "@/components/notifications/NotificationRow";
 const NOW = Date.parse("2026-10-27T10:00:00Z");
 
 describe("NotificationRow", () => {
-  it("未读：圆点与浅底；三层文案；整行链到永久链接，时间悬停看完整时间", () => {
+  it("未读：有圆点、没有浅底；三层文案；整行链到永久链接，时间悬停看完整时间", () => {
     render(<NotificationRow notification={makeNotification()} now={NOW} onOpen={vi.fn()} />);
     const row = screen.getByRole("link");
     expect(row).toHaveAttribute("href", "/papers/11?comment=9");
     expect(row).toHaveAttribute("data-unread", "true");
-    expect(row).toHaveTextContent("陈宇回复了你的评论");
+    expect(row).not.toHaveClass("bg-paper-50");
+    expect(row).toHaveTextContent("陈宇回复了你");
     expect(screen.getByText("2 小时前")).toHaveAttribute("title", "2026-10-27 16:00");
     expect(
       screen.getByText("同意。补充一点：文中的倾向评分只用来校正主要结局"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("《Hydrocortisone, Vitamin C, and Thiamine for Sepsis》的讨论"),
+      screen.getByText("Hydrocortisone, Vitamin C, and Thiamine for Sepsis"),
     ).toBeInTheDocument();
+    expect(row).not.toHaveTextContent("的讨论");
   });
 
   it("未读在读屏名称里说出来", () => {
     render(<NotificationRow notification={makeNotification()} now={NOW} onOpen={vi.fn()} />);
-    expect(screen.getByRole("link", { name: /^未读，陈宇回复了你的评论/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^未读，陈宇回复了你/ })).toBeInTheDocument();
+  });
+
+  it.each([
+    ["昨天写时分", "2026-10-26T13:40:00Z", "21:40"],
+    ["更早写月日", "2026-10-21T02:00:00Z", "10 月 21 日"],
+  ])("时间按分组写：%s", (_, createdAt, text) => {
+    render(
+      <NotificationRow notification={makeNotification({ createdAt })} now={NOW} onOpen={vi.fn()} />,
+    );
+    expect(screen.getByText(text)).toBeInTheDocument();
+  });
+
+  it("文献下线（没有摘录）：只有上下两行", () => {
+    render(
+      <NotificationRow
+        notification={makeNotification({ excerpt: null })}
+        now={NOW}
+        onOpen={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("link")).toHaveTextContent("陈宇回复了你");
+    expect(screen.queryByText(/倾向评分/)).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Hydrocortisone, Vitamin C, and Thiamine for Sepsis"),
+    ).toBeInTheDocument();
   });
 
   it("已读：没有未读标记", () => {
@@ -39,21 +66,15 @@ describe("NotificationRow", () => {
     expect(screen.getByRole("link")).toHaveAttribute("data-unread", "false");
   });
 
-  it("匿名作者、评论已删除", () => {
+  it("匿名作者", () => {
     render(
       <NotificationRow
-        notification={makeNotification({
-          actor: null,
-          actorAnonymous: true,
-          commentDeleted: true,
-          excerpt: null,
-        })}
+        notification={makeNotification({ actor: null, actorAnonymous: true })}
         now={NOW}
         onOpen={vi.fn()}
       />,
     );
-    expect(screen.getByRole("link")).toHaveTextContent("匿名作者回复了你的评论");
-    expect(screen.getByText("该评论已删除")).toBeInTheDocument();
+    expect(screen.getByRole("link")).toHaveTextContent("匿名作者回复了你");
   });
 
   it("点一行先交给 onOpen（标已读），照常跳转", async () => {
@@ -76,12 +97,12 @@ describe("NotificationRow", () => {
     });
     render(<NotificationRow notification={notification} now={NOW} onOpen={onOpen} />);
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
-    screen.getByRole("button", { name: /陈宇回复了你的评论/ }).focus();
+    screen.getByRole("button", { name: /陈宇回复了你/ }).focus();
     await userEvent.keyboard("{Enter}");
     expect(onOpen).toHaveBeenCalledWith(notification);
   });
 
-  it("已读：名字、动作、摘录整体降一级", () => {
+  it("已读：名字 fg-2 中粗、正文 fg-2，动作始终 fg-3", () => {
     render(
       <NotificationRow
         notification={makeNotification({ read: true })}
@@ -89,19 +110,19 @@ describe("NotificationRow", () => {
         onOpen={vi.fn()}
       />,
     );
-    expect(screen.getByText("陈宇")).toHaveClass("text-fg-2");
-    expect(screen.getByText("回复了你的评论")).toHaveClass("text-fg-3");
+    expect(screen.getByText("陈宇")).toHaveClass("text-fg-2", "font-medium");
+    expect(screen.getByText("回复了你")).toHaveClass("text-fg-3");
     expect(screen.getByText("同意。补充一点：文中的倾向评分只用来校正主要结局")).toHaveClass(
-      "text-fg-3",
+      "text-fg-2",
     );
   });
 
-  it("未读：可见的人名字 fg-1、动作与摘录 fg-2", () => {
+  it("未读：名字 fg-1 加粗、正文 fg-1", () => {
     render(<NotificationRow notification={makeNotification()} now={NOW} onOpen={vi.fn()} />);
-    expect(screen.getByText("陈宇")).toHaveClass("text-fg-1");
-    expect(screen.getByText("回复了你的评论")).toHaveClass("text-fg-2");
+    expect(screen.getByText("陈宇")).toHaveClass("text-fg-1", "font-semibold");
+    expect(screen.getByText("回复了你")).toHaveClass("text-fg-3");
     expect(screen.getByText("同意。补充一点：文中的倾向评分只用来校正主要结局")).toHaveClass(
-      "text-fg-2",
+      "text-fg-1",
     );
   });
 
@@ -121,7 +142,7 @@ describe("NotificationRow", () => {
     expect(screen.getByText(name)).toHaveClass(color);
   });
 
-  it("行的内边距是上下 16px、左右 0（简报 §3.19）", () => {
+  it("行的内边距是上下 16px、左右 0（spec 4.3）", () => {
     render(<NotificationRow notification={makeNotification()} now={NOW} onOpen={vi.fn()} />);
     const row = screen.getByRole("link");
     expect(row).toHaveClass("py-4");
@@ -147,7 +168,7 @@ describe("NotificationRow", () => {
     expect(onOpen).not.toHaveBeenCalled();
   });
 
-  it("上下文行的文献标题按内联标记渲染：白名单标签按格式显示，不露出尖括号", () => {
+  it("下行的文献标题按内联标记渲染：白名单标签按格式显示，不露出尖括号，不包书名号", () => {
     const base = makeNotification();
     const title =
       "Fecal Microbiota and <i>Bifidobacterium longum</i> Treatment of CO<sub>2</sub> &amp; Mice";
@@ -163,8 +184,9 @@ describe("NotificationRow", () => {
     const row = screen.getByRole("link");
     expect(row).not.toHaveTextContent("<i>");
     expect(row).toHaveTextContent(
-      "《Fecal Microbiota and Bifidobacterium longum Treatment of CO2 & Mice》的讨论",
+      "Fecal Microbiota and Bifidobacterium longum Treatment of CO2 & Mice",
     );
+    expect(row).not.toHaveTextContent("《");
     expect(row.querySelector("i")).toHaveTextContent("Bifidobacterium longum");
     expect(row.querySelector("sub")).toHaveTextContent("2");
   });

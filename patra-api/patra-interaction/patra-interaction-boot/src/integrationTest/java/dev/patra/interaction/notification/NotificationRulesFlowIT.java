@@ -71,17 +71,17 @@ class NotificationRulesFlowIT extends NotificationFlowITSupport {
     assertThat(b.get(0).get("type").asString()).isEqualTo("COMMENT_REPLY");
   }
 
-  /// 评论删除后：提醒还在，标已删除、没有摘录，未读数不变。
+  /// 评论删除后：它引起的提醒随之删除，列表里没有、未读数减回去。
   @Test
-  void should_show_deleted_comment() {
+  void should_remove_notification_when_comment_deleted() {
     long root = comment(A, "publication", PAPER, "根", null);
     long reply = comment(B, "publication", PAPER, "回复", root);
+    assertThat(unread(A).get("replies").asInt()).isEqualTo(1);
+
     delete(B, reply);
 
-    JsonNode item = inbox(A, "replies").get("items").get(0);
-    assertThat(item.get("commentDeleted").asBoolean()).isTrue();
-    assertThat(item.get("excerpt").isNull()).isTrue();
-    assertThat(unread(A).get("total").asInt()).isEqualTo(1);
+    assertThat(inbox(A, "replies").get("items")).isEmpty();
+    assertThat(unread(A).get("replies").asInt()).isZero();
   }
 
   /// 摘录是纯文本：Markdown 标记去掉，链接取文字，提及换成用户名。

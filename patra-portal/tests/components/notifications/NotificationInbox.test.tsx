@@ -19,6 +19,18 @@ vi.mock("next/navigation", async (importOriginal) => {
 });
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
+const DAY = 24 * 60 * 60 * 1000;
+
+/// 一条生成于 `ms` 的提醒（列表用真实时钟分组，时间都相对现在取）
+function at(id: string, ms: number, excerpt: string): Notification {
+  return makeNotification({
+    notificationId: id,
+    commentId: id,
+    createdAt: new Date(ms).toISOString(),
+    excerpt,
+  });
+}
+
 /// 门户接口的桩：按地址回列表页、未读数、已读
 function stubApi(routes: {
   pages?: { items: Notification[]; nextCursor: string | null }[];
@@ -129,6 +141,59 @@ describe("NotificationInbox", () => {
     expect(screen.getByText("提醒保留 5 个月。")).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith("/api/me/notifications?tab=mentions&cursor=c2");
     expect(screen.getAllByRole("listitem")).toHaveLength(2);
+  });
+
+  it("按今天、昨天、更早分组，每组一个二级标题", async () => {
+    const now = Date.now();
+    stubApi({
+      pages: [
+        {
+          items: [
+            at("1", now, "今天一"),
+            at("2", now, "今天二"),
+            at("3", now - DAY, "昨天的"),
+            at("4", now - 10 * DAY, "更早的"),
+          ],
+          nextCursor: null,
+        },
+      ],
+    });
+    renderNotifications(<NotificationInbox tab="replies" />);
+    await screen.findByText("今天一");
+    expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual([
+      "今天",
+      "昨天",
+      "更早",
+    ]);
+    const today = screen.getByRole("region", { name: "今天" });
+    expect(within(today).getAllByRole("listitem")).toHaveLength(2);
+  });
+
+  it("没有条目的组不出标题", async () => {
+    stubApi({ pages: [{ items: [at("4", Date.now() - 10 * DAY, "更早的")], nextCursor: null }] });
+    renderNotifications(<NotificationInbox tab="replies" />);
+    await screen.findByText("更早的");
+    expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual([
+      "更早",
+    ]);
+  });
+
+  it("加载更多后同一组的标题不重复，条目并进已有的组", async () => {
+    const earlier = Date.now() - 10 * DAY;
+    stubApi({
+      pages: [
+        { items: [at("1", earlier, "第一页")], nextCursor: "c2" },
+        { items: [at("2", earlier - DAY, "第二页")], nextCursor: null },
+      ],
+    });
+    renderNotifications(<NotificationInbox tab="replies" />);
+    await screen.findByText("第一页");
+    await userEvent.click(screen.getByRole("button", { name: "加载更多提醒" }));
+    await screen.findByText("第二页");
+    expect(screen.getAllByRole("heading", { level: 2, name: "更早" })).toHaveLength(1);
+    expect(
+      within(screen.getByRole("region", { name: "更早" })).getAllByRole("listitem"),
+    ).toHaveLength(2);
   });
 
   it("点一行：立即去掉未读标记并请求已读", async () => {

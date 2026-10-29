@@ -88,6 +88,7 @@ test.describe("提醒", () => {
       const B1 = `${tag}-b1`;
       const B2 = `${tag}-b2`;
       const B3 = `${tag}-b3`;
+      const B4 = `${tag}-b4`;
       const A2 = `${tag}-a2`;
 
       const a: Session = await signIn(browser, viewport, A);
@@ -198,12 +199,12 @@ test.describe("提醒", () => {
         await test.step("两栏：B 的回复在「回复我的」，编辑新增的 @ 在「@ 我的」，各一条；A 的自 @ 没有提醒", async () => {
           const replies = await openInbox(a.page, "replies");
           await expect(rowWith(replies, B1)).toHaveCount(1);
-          await expect(rowWith(replies, B1)).toContainText("回复了你的评论");
+          await expect(rowWith(replies, B1)).toContainText("回复了你");
           await expect(rowWith(replies, A1)).toHaveCount(0);
           const mentions = await openInbox(a.page, "mentions");
           await expect(rowWith(mentions, B1)).toHaveCount(0);
           await expect(rowWith(mentions, B2)).toHaveCount(1);
-          await expect(rowWith(mentions, B2)).toContainText("在评论中 @ 了你");
+          await expect(rowWith(mentions, B2)).toContainText("@ 了你");
           await expect(rowWith(mentions, A1)).toHaveCount(0);
         });
 
@@ -235,6 +236,21 @@ test.describe("提醒", () => {
           await expect(a.page.getByText("已全部标为已读")).toBeVisible(ROUND_TRIP);
           await expect(bell(a.page)).toHaveAccessibleName("提醒", ROUND_TRIP);
           await expect(list.getByRole("button", { name: "全部标为已读" })).toBeDisabled();
+        });
+
+        await test.step("PAP-127：B 回复后又删掉，A 的提醒随之消失、铃铛数字减回去", async () => {
+          await waitSince(b.page, bAt, PUBLISH_GAP_MS);
+          const section = await openDiscussion(b.page, paperId);
+          await replyTo(section, commentWith(section, A1), `临时补一句 ${B4}`);
+          await expect(commentWith(section, B4)).toBeVisible(ROUND_TRIP);
+          bAt = Date.now();
+          await a.page.goto("/");
+          await switchBack(a.page);
+          await expect(bell(a.page)).toHaveAccessibleName("提醒，1 条未读", ROUND_TRIP);
+          await deleteOwn(commentWith(section, B4));
+          const replies = await openInbox(a.page, "replies");
+          await expect(rowWith(replies, B4)).toHaveCount(0, ROUND_TRIP);
+          await expect(bell(a.page)).toHaveAccessibleName("提醒", ROUND_TRIP);
         });
 
         await test.step("B 收到 A 的回复（场景 4 的「点进去回复」）", async () => {
@@ -377,7 +393,7 @@ test.describe("提醒 · 投稿经验", () => {
       await test.step("B 收到 C 的回复", async () => {
         const replies = await openInbox(b.page, "replies");
         await expect(rowWith(replies, ANSWER)).toHaveCount(1, ROUND_TRIP);
-        await expect(rowWith(replies, ANSWER)).toContainText("回复了你的评论");
+        await expect(rowWith(replies, ANSWER)).toContainText("回复了你");
       });
     } finally {
       await test.step("清理：删掉回复、追问与经验，B、C 全部已读", async () => {

@@ -90,12 +90,12 @@ public class CommentNotificationListener {
         });
   }
 
-  /// 评论已删除：它的提醒标为已删除、清空摘录。
+  /// 评论已删除：删掉它的全部提醒。
   ///
   /// @param event 事件
   @EventListener
   public void on(CommentDeletedEvent event) {
-    guard(() -> notifications.markCommentDeleted(event.commentId()));
+    guard(() -> notifications.deleteByComment(event.commentId()));
   }
 
   /// 评论正文转成存储用的摘录。

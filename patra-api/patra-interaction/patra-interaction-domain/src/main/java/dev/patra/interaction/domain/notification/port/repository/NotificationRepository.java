@@ -2,6 +2,7 @@ package dev.patra.interaction.domain.notification.port.repository;
 
 import dev.patra.interaction.domain.notification.model.vo.ExcerptText;
 import dev.patra.interaction.domain.notification.model.vo.NotificationDraft;
+import dev.patra.interaction.domain.subject.model.vo.SubjectId;
 import java.time.Instant;
 import java.util.List;
 
@@ -14,18 +15,24 @@ public interface NotificationRepository {
   /// @return 新写入的条数
   int insertAll(List<NotificationDraft> drafts);
 
-  /// 评论编辑后刷新它的全部提醒的摘录；已标删除的不动。
+  /// 评论编辑后刷新它的全部提醒的摘录。
   ///
   /// @param commentId 评论
   /// @param excerpt 新摘录
   /// @return 更新的条数
   int refreshExcerpt(long commentId, ExcerptText excerpt);
 
-  /// 评论删除后标记它的全部提醒，并清空摘录。
+  /// 评论删除后删掉它的全部提醒（所有收件人）。
   ///
   /// @param commentId 评论
-  /// @return 更新的条数
-  int markCommentDeleted(long commentId);
+  /// @return 删除的条数
+  int deleteByComment(long commentId);
+
+  /// 投稿经验删除后删掉这个对象下的全部提醒（所有收件人）。
+  ///
+  /// @param subjectId 经验的登记对象
+  /// @return 删除的条数
+  int deleteBySubject(SubjectId subjectId);
 
   /// 标一条为已读；已读的保持原来的已读时刻。
   ///
