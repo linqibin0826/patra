@@ -30,7 +30,7 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 /// @since 0.1.0
 @WebMvcTest(controllers = PortalOrganizationController.class)
 @ContextConfiguration(classes = CatalogAdapterITWebMvcConfig.class)
-@Import({PortalOrganizationController.class, PortalApiConverter.class})
+@Import({PortalOrganizationController.class, PortalOrganizationApiConverter.class})
 @AutoConfigureRestTestClient
 @DisplayName("PortalOrganizationController REST 切片测试")
 class PortalOrganizationControllerIT {

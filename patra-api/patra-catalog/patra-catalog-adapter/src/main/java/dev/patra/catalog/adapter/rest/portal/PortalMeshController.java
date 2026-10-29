@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class PortalMeshController {
 
   private final MeshDescriptorQueryService meshDescriptorQueryService;
-  private final PortalApiConverter portalApiConverter;
+  private final PortalMeshApiConverter portalMeshApiConverter;
 
   /// 按主题词英文名与入口词搜 MeSH 主题词，经入口词命中的返回主题词本身。
   ///
@@ -38,7 +38,7 @@ public class PortalMeshController {
     SuggestQuery query = SuggestQuery.of(req.q(), req.limitOrDefault());
     List<PortalMeshSuggestionResponse> items =
         meshDescriptorQueryService.suggest(query).stream()
-            .map(portalApiConverter::toMeshSuggestionResponse)
+            .map(portalMeshApiConverter::toMeshSuggestionResponse)
             .toList();
     return PortalSuggestionsResponse.of(items);
   }

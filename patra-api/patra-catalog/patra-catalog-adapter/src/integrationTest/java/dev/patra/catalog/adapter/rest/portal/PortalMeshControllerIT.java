@@ -28,7 +28,7 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 /// @since 0.1.0
 @WebMvcTest(controllers = PortalMeshController.class)
 @ContextConfiguration(classes = CatalogAdapterITWebMvcConfig.class)
-@Import({PortalMeshController.class, PortalApiConverter.class})
+@Import({PortalMeshController.class, PortalMeshApiConverter.class})
 @AutoConfigureRestTestClient
 @DisplayName("PortalMeshController REST 切片测试")
 class PortalMeshControllerIT {

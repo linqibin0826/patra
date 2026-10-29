@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class PortalOrganizationController {
 
   private final OrganizationQueryService organizationQueryService;
-  private final PortalApiConverter portalApiConverter;
+  private final PortalOrganizationApiConverter portalOrganizationApiConverter;
 
   /// 按中文名、英文名、别名、缩写搜机构（ROR），中国机构优先。
   ///
@@ -38,7 +38,7 @@ public class PortalOrganizationController {
     SuggestQuery query = SuggestQuery.of(req.q(), req.limitOrDefault());
     List<PortalOrganizationSuggestionResponse> items =
         organizationQueryService.suggest(query).stream()
-            .map(portalApiConverter::toOrganizationSuggestionResponse)
+            .map(portalOrganizationApiConverter::toOrganizationSuggestionResponse)
             .toList();
     return PortalSuggestionsResponse.of(items);
   }
