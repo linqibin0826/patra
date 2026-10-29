@@ -449,4 +449,17 @@ void should_reject_declared_subdomain_without_domain_classes() {
 
 ## 用例数基线
 
-（执行 Task 14 时填写）
+第 0 步完成后（基线提交见账本 Task 14），`./gradlew check integrationTest` 的结果文件汇总：
+
+| 服务 | test | integrationTest |
+|---|---|---|
+| patra-catalog | 2646 | 627 |
+| patra-identity | 1044 | 266 |
+| patra-interaction | 506 | 220 |
+| patra-object-storage | 419 | 7 |
+| patra-registry | 1505 | 78 |
+| patra-ingest | 2918 | 83 |
+| patra-gateway-boot | 76 | 12 |
+| patra-common | 50 | 0 |
+
+全量运行时负载均值约 200，`GatewayFailureIT` 的慢客户端大文件下载与 `SmtpEmailDeliveryAdapterIT` 的异步发信各失败一次，单独重跑通过，属高负载下的时序抖动，与本次改动无关。第 1 步并行时同样注意同时跑全量的会话数。
