@@ -3,8 +3,8 @@
 ## 写入 Outbox（业务事务中）
 
 ```java
-@Transactional
-public void completeTask(Long taskId) {
+// Handler 内：TransactionOperations 包住业务写入和 Outbox 写入
+transactions.executeWithoutResult(status -> {
     // 1. 更新业务数据
     TaskAggregate task = taskRepository.findById(taskId).orElseThrow();
     task.markCompleted();
@@ -21,7 +21,7 @@ public void completeTask(Long taskId) {
         .payloadJson(toJson(task))        // 最小必要负载
         .build();
     outboxRepository.saveOrUpdate(message);
-}
+});
 ```
 
 ## 状态机

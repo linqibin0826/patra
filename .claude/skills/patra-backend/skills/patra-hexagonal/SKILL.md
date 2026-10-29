@@ -60,7 +60,7 @@ allowed-tools: Read, Edit, Write, Grep, Glob, Bash
 [Adapter] CreateXxxRequest（record）
     ↓ ApiConverter.toCommand()      ← MapStruct 反腐层
 [App]     CreateXxxCommand（record implements Command<R>）
-    ↓ Handler.handle()              ← @Transactional 事务边界
+    ↓ Handler.handle()              ← TransactionOperations 只包写库段
 [Domain]  XxxAggregate / DomainService
     ↓ Repository.save()
 [Infra]   XxxEntity → JPA 持久化

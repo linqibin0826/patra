@@ -6,7 +6,7 @@ paths: patra-*/*-app/**/*.java
 
 ## 核心职责
 
-- 编排领域服务，管理事务边界（`@Transactional`）
+- 编排领域服务，管理事务边界
 - 转换数据格式：Command → Domain → Result
 
 ## 命名约定
@@ -19,9 +19,9 @@ paths: patra-*/*-app/**/*.java
 
 ## 事务管理
 
-- Application 层是**唯一**管理事务的层级
-- 在 Handler 的 `handle()` 方法上使用 `@Transactional`
-- 禁止在 Domain/Infrastructure/Adapter 层使用 `@Transactional`
+- Application 层是**唯一**划定事务边界的层级（infra 只允许 `MANDATORY` 守卫）
+- 写命令 Handler 注入 `TransactionOperations`，只包住写库那一段，`handle()` 上不加 `@Transactional`
+- 各场景的写法、事务里禁止的操作、加锁约定见 [transaction.md](../tech/transaction.md)
 
 ## 异常处理
 
@@ -53,7 +53,7 @@ CQRS 读端查询服务，不走 CommandBus，直接被 Controller 注入。
 | `{Domain}ListQuery` | `usecase/{domain}/query/dto/` | 查询参数 DTO |
 
 **特点**：
-- 无 `@Transactional`（只读操作，JPA 默认读事务即可）
+- 公开方法加 `@Transactional(readOnly = true)`（见 [transaction.md](../tech/transaction.md)）
 - 无接口定义（CQRS 读端不需要抽象）
 - 使用 `PagingParams.normalize()` 统一归一化分页参数
 - 返回 `PageResult<{Entity}SummaryReadModel>`

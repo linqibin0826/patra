@@ -19,7 +19,7 @@ paths: patra-*/*-infra/**/*.java, patra-tool/patra-tool-jpa/**/*.java
 1. **命名**：`{Name}Entity`、`{Name}Dao`、`{Name}JpaMapper`
 2. **转换**：Entity ↔ Aggregate 使用 MapStruct
 3. **ID**：使用 `SnowflakeIdGenerator.getId()` 预分配
-4. **事务**：只在 Application 层使用 `@Transactional`
+4. **事务**：infra 不划定事务边界，只允许 `@Transactional(propagation = MANDATORY)` 守卫，详见 [transaction.md](transaction.md)
 5. **批量**：大批量（> 500 条）需 `flush()` + `clear()`
 
 ## 软删除

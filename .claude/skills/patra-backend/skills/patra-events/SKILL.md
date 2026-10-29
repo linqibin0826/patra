@@ -21,8 +21,8 @@ allowed-tools: Read, Edit, Write, Grep, Glob, Bash
 │
 ├── 同一服务内的其他聚合
 │   └── Spring ApplicationEvent（内部事件）
-│       ├── 需要事务一致性 → @TransactionalEventListener(AFTER_COMMIT)
-│       ├── 立即处理 → @EventListener
+│       ├── 必须与业务同成败（计数、站内提醒）→ @EventListener（同步，同一事务）
+│       ├── 提交后才做、可丢可重建（缓存、限流）→ @TransactionalEventListener(AFTER_COMMIT)
 │       └── 异步处理 → @EventListener + @Async
 │
 └── 其他微服务
@@ -136,7 +136,7 @@ eventPublisher.publishEvent(TaskCompletedEvent.of(taskId, sliceId, planId, "COMP
 |------|------|------|
 | 事件重复处理 | 并发或重试 | 幂等性检查 + 乐观锁 |
 | 事件循环 | A → B → A | 确保事件链是线性的 |
-| 事务回滚但事件已发 | 使用了 @EventListener | 改用 `AFTER_COMMIT` |
+| 事务回滚但外部副作用已发生 | 在同步 @EventListener 里做了远程调用 / Redis | 副作用改到 `AFTER_COMMIT`，不能丢的走 Outbox |
 | Outbox 消息重复发布 | 未使用租约机制 | 先获取租约再发布 |
 
 ## 资源索引

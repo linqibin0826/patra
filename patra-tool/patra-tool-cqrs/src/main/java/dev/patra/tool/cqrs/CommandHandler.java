@@ -9,7 +9,8 @@ package dev.patra.tool.cqrs;
 ///
 /// - **单一职责**：每个 Handler 只处理一种 Command
 /// - **无状态**：Handler 不应持有可变状态，保证线程安全
-/// - **事务边界**：使用 `@Transactional` 管理事务（在 Spring 环境中）
+/// - **事务边界**：注入 `TransactionOperations`，只包住写库那一段；`handle()` 上不加
+///   `@Transactional`，远程调用放在事务外（命令总线不包事务）
 ///
 /// ## 使用示例
 ///
@@ -18,12 +19,12 @@ package dev.patra.tool.cqrs;
 /// public class CreateUserHandler implements CommandHandler<CreateUserCommand, UserId> {
 ///
 ///     private final UserRepository userRepository;
+///     private final TransactionOperations transactions;
 ///
 ///     @Override
-///     @Transactional
 ///     public UserId handle(CreateUserCommand command) {
 ///         User user = User.create(command.name(), command.email());
-///         return userRepository.save(user).getId();
+///         return transactions.execute(status -> userRepository.save(user).getId());
 ///     }
 /// }
 /// ```

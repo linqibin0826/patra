@@ -8,12 +8,12 @@
 public class CreateUserHandler implements CommandHandler<CreateUserCommand, UserId> {
 
     private final UserRepository userRepository;
+    private final TransactionOperations transactions;
 
     @Override
-    @Transactional
     public UserId handle(CreateUserCommand command) {
         User user = User.create(command.name(), command.email());
-        return userRepository.save(user).getId();
+        return transactions.execute(status -> userRepository.save(user).getId());
     }
 }
 ```
@@ -36,57 +36,49 @@ public record CreateUserCommand(
 
 ## 事务管理模式
 
-### 标准事务（大多数 Handler）
+完整规则见 `.claude/rules/tech/transaction.md`。要点：写命令 Handler 注入 `TransactionOperations`，`handle()` 上**不加** `@Transactional`；事务只包「加锁 → 锁内复核 → 写库」，远程调用、发信、Redis、文件都在事务外。
+
+### 标准写法
 
 ```java
 @Override
-@Transactional  // 默认 REQUIRED
 public CreatePlanResult handle(CreatePlanCommand command) {
-    PlanAggregate plan = assemblePlan(command);
-    planRepository.save(plan);
-    outboxRepository.save(createOutboxMessage(plan));  // 同一事务
+    PlanAggregate plan = assemblePlan(command);              // 事务外：组装、计算
+    transactions.executeWithoutResult(status -> {
+        planRepository.save(plan);
+        outboxRepository.save(createOutboxMessage(plan));     // 同一事务
+    });
     return new CreatePlanResult(plan.getId());
 }
 ```
 
-### 外部 API 调用：拆分事务
-
-**绝不在 @Transactional 内调用外部 API**（事务过长 → 连接池耗尽）。
+### 有外部调用：事务只包写库段
 
 ```java
 @Override
 public HarvestResult handle(HarvestCommand command) {
-    // 事务 1: 创建计划
-    PlanAggregate plan = createPlan(command);
+    // 事务 1：创建计划
+    PlanAggregate plan = transactions.execute(status -> planRepository.save(assemblePlan(command)));
 
-    // 无事务: 调用外部 API
+    // 无事务：调用外部 API
     SearchResult results = pubmedSearchPort.search(plan.getQuery());
 
-    // 事务 2: 保存结果
-    saveResults(results);
+    // 事务 2：保存结果
+    transactions.executeWithoutResult(status -> publicationRepository.saveAll(results.publications()));
 
     return new HarvestResult(plan.getId());
 }
-
-@Transactional
-protected PlanAggregate createPlan(HarvestCommand command) {
-    return planRepository.save(assemblePlan(command));
-}
-
-@Transactional
-protected void saveResults(SearchResult results) {
-    publicationRepository.saveAll(results.publications());
-}
 ```
 
-### 事务传播行为选择
+不要用「同类里另写一个 `@Transactional` 方法再自己调用」来拆事务：自调用不走代理，事务不生效。
 
-| 传播行为 | 使用场景 |
-|---------|---------|
-| **REQUIRED**（默认） | 大多数 Handler |
-| **REQUIRES_NEW** | 审计日志、独立操作（即使主事务回滚也要提交） |
-| **MANDATORY** | 内部 Phase 组件（必须在事务内调用） |
-| **readOnly=true** | QueryService 的查询方法 |
+### 声明式注解的使用范围
+
+| 写法 | 使用场景 |
+|------|---------|
+| `@Transactional(readOnly = true)` | QueryService 的公开查询方法 |
+| `@Transactional(propagation = MANDATORY)` | 必须在调用方事务里执行的方法：加锁、`FOR UPDATE` 读取、被 Handler 在事务里调用的 Gateway（infra 也允许） |
+| `@Transactional(propagation = REQUIRES_NEW, rollbackFor = Exception.class)` | 独立 bean 的逐条落库 Persister；调用方不得持有事务 |
 
 ## QueryService 模板
 
@@ -98,6 +90,7 @@ public class VenueQueryService {
     private final VenueReadPort venueReadPort;
 
     /// 查询 Venue 分页列表。
+    @Transactional(readOnly = true)
     public PageResult<VenueSummaryReadModel> listVenues(VenueListQuery query) {
         Objects.requireNonNull(query, "query must not be null");
         PagingParams paging = PagingParams.normalize(query.page(), query.pageSize());
@@ -110,7 +103,7 @@ public class VenueQueryService {
 }
 ```
 
-**特点**：无接口定义、无 @Transactional（只读）、返回 `PageResult<ReadModel>`。
+**特点**：无接口定义、公开方法加 `@Transactional(readOnly = true)`、返回 `PageResult<ReadModel>`。
 
 ## Handler 单元测试模板
 
