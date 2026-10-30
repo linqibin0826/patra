@@ -32,6 +32,8 @@ dependencies {
     // 安全邮件队列也用它绑定 identity 的交换机与路由键（契约常量在 identity-api）
     implementation(project(":patra-tool:patra-tool-http-client"))
     implementation(project(":patra-api:patra-identity:patra-identity-api"))
+    // interaction 内部接口的代理（对象视图与经验结果）：同上，infra 对它是 implementation
+    implementation(project(":patra-api:patra-interaction:patra-interaction-api"))
 
     // 身份断言验签 → CurrentUserPort：偏好读写要知道是谁在操作
     implementation(project(":patra-tool:patra-tool-security"))

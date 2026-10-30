@@ -182,7 +182,8 @@
             "project": ":patra-api:patra-interaction:patra-interaction-api",
             "unit": "interaction",
             "impacts": [
-                "interaction"
+                "interaction",
+                "notification"
             ],
             "tasks": [
                 "check"
