@@ -48,6 +48,9 @@ dependencies {
     testImplementation(project(":patra-tool:patra-tool-test"))
     testImplementation(libs.mockftpserver)
     // Apache HttpClient 5：隧道代理连通性测试需要（starter-rest-client 中为 compileOnly）
+    // 对象存储配置带 @Validated；服务里由 patra-tool-web 带进校验器，infra 的 IT 自己补（同 identity-infra）。
+    // 有了校验实现，Hibernate 也和生产一样不再自做非空检查
+    integrationTestImplementation("org.springframework.boot:spring-boot-starter-validation")
 }
 
 // 生成 test-jar 供 boot 模块复用
