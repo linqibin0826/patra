@@ -65,6 +65,8 @@ assert_field "patra-infra/scripts/compose-all.sh" '.full_run' 'false' "运维脚
 assert_field "patra-infra/docker/docker-compose.tailnet.yaml" '.backend_units' '[]' "tailnet 栈 backend 空"
 assert_field "patra-infra/docker/docker-compose.core.yaml" '.backend_units' '[]' "core 栈 backend 空"
 assert_field "patra-infra/docker/prometheus/prometheus.yml" '.backend_units' '[]' "基建栈配置目录 backend 空"
+assert_field "patra-infra/docker/rabbitmq/conf.d/20-patra.conf" '.full_run' 'false' "rabbitmq 配置目录非全量"
+assert_field "patra-infra/docker/rabbitmq/conf.d/20-patra.conf" '.backend_units' '[]' "rabbitmq 配置目录 backend 空"
 assert_field "patra-infra/docker/.env" '.backend_units' '[]' "基建栈 .env backend 空"
 assert_field "patra-infra/docker/docker-compose.tailnet.yaml" '.docs_only' 'false' "纯基建不算 docs_only"
 F="$(printf 'patra-infra/docker/docker-compose.tailnet.yaml\npatra-api/patra-catalog/patra-catalog-infra/src/main/java/X.java')"

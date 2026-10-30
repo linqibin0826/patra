@@ -22,6 +22,7 @@ permissions:
 env:
   POSTGRES_IMAGE: postgres:17
   REDIS_IMAGE: redis:7.0.15
+  RABBITMQ_IMAGE: rabbitmq:4.4.0-management
 
 jobs:
   # ---- 1) 受影响单元路由 ----
@@ -82,6 +83,18 @@ jobs:
             echo "::error file=$REDIS_FILE::REDIS_IMAGE 常量与 workflow env REDIS_IMAGE=$REDIS_IMAGE 不一致"
             FAIL=1
           fi
+          # RabbitMQ 还要和 mini 上跑的版本一致：测试容器与 core 栈 compose 用同一个镜像
+          RABBITMQ_FILE="patra-tool/patra-tool-test/src/main/java/dev/patra/tool/test/container/initializer/RabbitMQContainerInitializer.java"
+          if ! grep -Fq "private static final String RABBITMQ_IMAGE = \"$RABBITMQ_IMAGE\";" "$RABBITMQ_FILE"; then
+            echo "::error file=$RABBITMQ_FILE::RABBITMQ_IMAGE 常量与 workflow env RABBITMQ_IMAGE=$RABBITMQ_IMAGE 不一致"
+            FAIL=1
+          fi
+          RABBITMQ_COMPOSE="patra-infra/docker/docker-compose.core.yaml"
+          COMPOSE_IMAGE=$(sed -n 's/^[[:space:]]*image:[[:space:]]*\(rabbitmq:[^[:space:]]*\).*/\1/p' "$RABBITMQ_COMPOSE")
+          if [ "$COMPOSE_IMAGE" != "$RABBITMQ_IMAGE" ]; then
+            echo "::error file=$RABBITMQ_COMPOSE::rabbitmq 的镜像（$COMPOSE_IMAGE）与 workflow env RABBITMQ_IMAGE=$RABBITMQ_IMAGE 不一致"
+            FAIL=1
+          fi
           [ "$FAIL" -ne 0 ] && { echo "镜像版本治理 SSOT 失守"; exit 1; }
           echo "✓ 镜像版本一致"
       - uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
@@ -137,7 +150,9 @@ jobs:
         run: |
           docker pull "$POSTGRES_IMAGE" & pid_pg=$!
           docker pull "$REDIS_IMAGE" & pid_redis=$!
+          docker pull "$RABBITMQ_IMAGE" & pid_mq=$!
           wait "$pid_pg"; wait "$pid_redis"
+          wait "$pid_mq"
       - name: ✅ Test unit (check + integrationTest + e2eTest)
         run: ./gradlew ${{ steps.tasks.outputs.list }} -x jacocoTestReport -x integrationTestCodeCoverageReport --build-cache
       - name: 📦 Upload jacoco exec (${{ matrix.unit }})

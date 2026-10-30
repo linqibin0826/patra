@@ -23,7 +23,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 | 子栈 / project | 内容 |
 |---|---|
-| `patra-core` | postgres / redis / nacos |
+| `patra-core` | postgres / redis / nacos / rabbitmq |
 | `patra-storage` | minio / minio-init |
 | `patra-search` | elasticsearch |
 | `patra-observability` | otel-collector / prometheus / loki / tempo / grafana / alertmanager |
@@ -50,6 +50,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 4. **CD 在 runner 工作区里执行，被 git 忽略的文件每次都会被清掉。** `actions/checkout` 默认 `clean: true`，每次运行前执行 `git clean -ffdx`，放在 compose 目录里的密钥文件活不过下一次部署。所以密钥放在仓库外的 `~/.patra/secrets/`，compose 按 `${HOME}` 绝对路径加载（runner 进程的 `HOME` 就是用户主目录），见 README「密钥」。
 
+5. **RabbitMQ 的三个坑**（详见 README「RabbitMQ」）：hostname 固定为 `patra-rabbitmq`，变了会另起空的数据目录；它不读容器内存上限，`rabbitmq/conf.d/20-patra.conf` 的可用内存要和 compose 的 `limits.memory` 一起改；`patra` 账号只在首次启动时按 `rabbitmq.env` 创建，改文件不改密码，要在容器里 `rabbitmqctl change_password`。
+
 ## Self-hosted Runner 与 CD（多服务，Mac mini 原生构建）
 
 5 个后端应用 + portal + learn 由 GitHub Actions CD 自动部署，链路见 `.github/workflows/cd.yml` / `portal-cd.yml` / `learn-cd.yml`，设计见 `docs/patra/specs/2026-06-08-backend-multiservice-cd-design.html`（单服务首版见 `2026-06-07-cd-macmini-design.html`）。**2026-08-27 架构修订：构建从 ubuntu(QEMU 交叉编译) 搬回 Mac mini 原生 arm64**——部署不再经翻墙代理从 GHCR 拉大镜像（曾致 EOF/20 分钟超时），amd64 架构错配事故结构性消除；GHCR 降级为「归档/回滚备源」，推送 best-effort 失败不阻塞部署。
@@ -67,7 +69,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **runner 看门狗**：`runner-watchdog.yml` 每日 API 查在线 + mini canary（docker/磁盘/unhealthy 容器）。防「离线 30 天被 GitHub 注销」（2026-08 实际发生）。需 secrets `RUNNER_ADMIN_TOKEN`（fine-grained PAT，仅本仓库 Administration:Read）。
 - **运维红线**：派发任务期间严禁重启 runner（杀 Worker）；runner 自更新已禁用（`--disableupdate`），升级=闲时不带参数重跑 `install-github-runner.sh`（已注册时跳过 config.sh，registration 不动）。
 - **容器经宿主机网关访问基础设施**：应用容器加 `extra_hosts: linqibins-mac-mini:host-gateway`，PG、Redis、Nacos（含 gRPC 9848）、MinIO、xxl admin 都走映射端口，不经 tailscale。新增连基础设施的容器要同样加。
-- **环境文件，密钥在仓库外**：`env_file` 顺序叠加 `.env.common`（本地变量 `PATRA_INFRA_HOST`、`PATRA_LOG_DIR`；5 个后端服务的其余配置都在 Nacos，源文件在 `nacos/dev/`）→ `${HOME}/.patra/secrets/` 下的密钥文件（`redis.env` 给 catalog/identity、`gateway.env` 给 gateway、`nacos.env` 给 5 个后端服务，三者必需；`<svc>.env` 可选；后者覆盖同名）。**Redis 密码、网关私钥、外部数据源 API key（Scopus / 青果 proxy 等）一律只进 `~/.patra/secrets/`**，committed 文件只放内网 dev 默认值和公钥，Nacos 配置里只写 `${变量}`。必需文件缺一个，compose 对整个 apps 项目的命令都会失败（portal 也部署不了）。
+- **环境文件，密钥在仓库外**：`env_file` 顺序叠加 `.env.common`（本地变量 `PATRA_INFRA_HOST`、`PATRA_LOG_DIR`；5 个后端服务的其余配置都在 Nacos，源文件在 `nacos/dev/`）→ `${HOME}/.patra/secrets/` 下的密钥文件（`redis.env` 给 catalog/identity、`rabbitmq.env` 给 interaction/identity/notification、`gateway.env` 给 gateway、`nacos.env` 给 5 个后端服务，都是必需；`<svc>.env` 可选；后者覆盖同名）。**Redis 密码、网关私钥、外部数据源 API key（Scopus / 青果 proxy 等）一律只进 `~/.patra/secrets/`**，committed 文件只放内网 dev 默认值和公钥，Nacos 配置里只写 `${变量}`。必需文件缺一个，compose 对整个 apps 项目的命令都会失败（portal 也部署不了）。
 
 ## scripts 一览
 

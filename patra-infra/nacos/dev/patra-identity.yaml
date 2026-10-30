@@ -6,6 +6,8 @@ spring:
   data:
     redis:
       password: ${REDIS_PASSWORD}
+  rabbitmq:
+    password: ${RABBITMQ_PASSWORD}
   mail:
     # 默认指向 Mailpit（mini 的 core 栈，无鉴权、无 TLS）；mini 的真实服务商（Resend）由 ~/.patra/secrets/mail.env 覆盖
     host: ${PATRA_MAIL_HOST:${PATRA_INFRA_HOST:127.0.0.1}}

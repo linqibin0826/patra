@@ -10,7 +10,7 @@ Patra 全部基础设施容器部署在 **Mac mini**（hostname: `linqibins-mac-
 
 ```
 docker/
-├── docker-compose.core.yaml         # project patra-core：postgres + redis + nacos
+├── docker-compose.core.yaml         # project patra-core：postgres + redis + nacos + rabbitmq
 ├── docker-compose.storage.yaml      # project patra-storage：minio + minio-init
 ├── docker-compose.search.yaml       # project patra-search：elasticsearch
 ├── docker-compose.observability.yaml # project patra-observability：otel/prom/loki/tempo/grafana
@@ -18,6 +18,7 @@ docker/
 ├── docker-compose.tailnet.yaml      # project patra-tailnet：tailscale 共享网关
 ├── .env                              # mysql-ops 凭据等环境变量
 ├── .env.secret                       # TS_AUTHKEY 等真实密钥（gitignore，不入库）
+├── rabbitmq/conf.d/                  # RabbitMQ 的内存与磁盘水位，只读挂进容器
 ├── secrets/                          # 密钥模板（*.example）；真文件在仓库外的 ~/.patra/secrets/
 └── README.md                         # 本文件
 ```
@@ -79,10 +80,10 @@ cp patra-infra/docker/.env.secret.example patra-infra/docker/.env.secret
 # 编辑 .env.secret，把 TS_AUTHKEY 填成真实值（tskey-auth-...）
 
 # 4c. (MacBook) 把密钥文件复制到 Mac mini：与 MacBook 上的是同一份，生成方法见下文「密钥」。
-#     目录由第 4 步建好；缺了这几个文件，core 栈的 redis、nacos 和整个 apps 栈都起不来。
+#     目录由第 4 步建好；缺了这几个文件，core 栈的 redis、nacos、rabbitmq 和整个 apps 栈都起不来。
 #     mail.env 可选：没有它 identity 的邮件进 core 栈的 Mailpit；接真实服务商时按 secrets/mail.env.example 在 mini 上放一份
-scp -p ~/.patra/secrets/redis.env ~/.patra/secrets/gateway.env ~/.patra/secrets/nacos.env \
-  ~/.patra/secrets/nacos-push.env linqibin@linqibins-mac-mini:.patra/secrets/
+scp -p ~/.patra/secrets/redis.env ~/.patra/secrets/rabbitmq.env ~/.patra/secrets/gateway.env \
+  ~/.patra/secrets/nacos.env ~/.patra/secrets/nacos-push.env linqibin@linqibins-mac-mini:.patra/secrets/
 # 4d. (Mac mini) 生成只放 mini 的 nacos-server.env、nacos-admin.env，命令见 secrets/ 下对应的 *.example。
 #     管理员密码另存一份到密码管理器
 
@@ -150,12 +151,13 @@ ssh linqibin@linqibins-mac-mini 'docker restart patra-xxl-job-admin'  # 只重�
 
 密钥放在仓库外的 `~/.patra/secrets/`（目录 0700，文件 0600）。除了只放 mini 的 `nacos-server.env`、`nacos-admin.env`，MacBook 和 Mac mini 各放一份，内容相同。
 
-- 两边放同一份，是因为本机开发和 mini 是同一个环境，共用 mini 的 Redis 和同一对签名密钥。
+- 两边放同一份，是因为本机开发和 mini 是同一个环境，共用 mini 的 Redis、RabbitMQ 和同一对签名密钥。
 - 不放在 compose 目录，是因为 CD 每次运行前的 `git clean` 会删掉 runner 工作区里被忽略的文件。
 
 | 文件 | 内容 | 谁加载 | 缺失时 |
 |---|---|---|---|
 | `redis.env` | `REDIS_PASSWORD`，64 位十六进制 | core 栈的 redis；catalog、identity 的容器和本机进程（gateway 经 identity 查会话，不连 Redis） | compose 报出路径并拒绝执行；本机进程启动失败，报出缺的文件路径或变量名 |
+| `rabbitmq.env` | `RABBITMQ_PASSWORD`，64 位十六进制，RabbitMQ 账号 `patra` 的密码 | core 栈的 rabbitmq（只在首次启动时用来建账号，见「RabbitMQ」）；interaction、identity、notification 的容器和本机进程 | 同 `redis.env`；rabbitmq 的值为空时拒绝启动 |
 | `gateway.env` | `PATRA_GATEWAY_IDENTITY_ASSERTION_PRIVATE_KEY`，含私钥的 EC P-256 JWK JSON，一行 | gateway 的容器和本机进程 | 同上 |
 | `nacos-server.env` | Nacos 的 `NACOS_AUTH_TOKEN`、`NACOS_AUTH_IDENTITY_KEY`、`NACOS_AUTH_IDENTITY_VALUE`。**只放 mini** | core 栈的 nacos | compose 报出路径并拒绝执行 |
 | `nacos-admin.env` | Nacos 管理员密码 `NACOS_ADMIN_PASSWORD`。**只放 mini**，另存密码管理器 | `nacos-init.sh`、`nacos-verify.sh` | 脚本说明缺哪个变量并退出 |
@@ -183,6 +185,7 @@ docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' patra-gateway | cu
 ```bash
 umask 077 && mkdir -p ~/.patra/secrets
 printf 'REDIS_PASSWORD=%s\n' "$(openssl rand -hex 32)" > ~/.patra/secrets/redis.env
+printf 'RABBITMQ_PASSWORD=%s\n' "$(openssl rand -hex 32)" > ~/.patra/secrets/rabbitmq.env
 
 K="$(mktemp -u ~/.patra/secrets/key.XXXXXX)"   # 任务要求私钥文件事先不存在
 ./gradlew -q :patra-tool:patra-tool-security:generateIdentityAssertionKey -PkeyOut="$K" \
@@ -201,8 +204,8 @@ printf 'NACOS_PUSH_USERNAME=patra-push\nNACOS_PUSH_PASSWORD=%s\n' "$(openssl ran
 
 ```bash
 ssh linqibin@linqibins-mac-mini 'umask 077 && mkdir -p ~/.patra/secrets && chmod 700 ~/.patra/secrets'
-scp -p ~/.patra/secrets/redis.env ~/.patra/secrets/gateway.env ~/.patra/secrets/nacos.env \
-  ~/.patra/secrets/nacos-push.env linqibin@linqibins-mac-mini:.patra/secrets/
+scp -p ~/.patra/secrets/redis.env ~/.patra/secrets/rabbitmq.env ~/.patra/secrets/gateway.env \
+  ~/.patra/secrets/nacos.env ~/.patra/secrets/nacos-push.env linqibin@linqibins-mac-mini:.patra/secrets/
 ```
 
 ### 改了密钥文件之后
@@ -217,6 +220,8 @@ GATEWAY_IMAGE_TAG="$(cat ~/.patra/cd/last-good-gateway)" docker compose -f docke
 ```
 
 本机进程重启一次即可。
+
+`rabbitmq.env` 另有一步：RabbitMQ 里的账号密码不会跟着文件变，见「RabbitMQ」的「改密码」。
 
 ### 换签名密钥
 
@@ -257,6 +262,67 @@ docker exec patra-postgres bash /docker-entrypoint-initdb.d/03-nacos-schema.sh
 - 升到 3.3 时，compose 里数据库相关的环境变量要改名为 `NACOS_PLUGIN_DATASOURCE_DB_*`：3.3 镜像的配置文件改用新键，新键优先于旧的 `db.*`。
 
 ---
+
+## RabbitMQ
+
+v0.16 起的消息中间件：interaction、identity 把集成事件发到这里，notification 从这里收（v0.16 release spec 决策 E）。交换机、队列、死信队列都由应用启动时自己声明，这里不预建任何东西。
+
+- **镜像**：`rabbitmq:4.4.0-management`（带管理界面）。版本以 `.github/workflows/ci.yml` 的 `RABBITMQ_IMAGE` 为准，CI 检查 core 栈的 compose 和测试容器 `RabbitMQContainerInitializer` 都和它一致，升级时三处一起改。
+- **端口**：`5672` 是 AMQP，应用连这个；`15672` 是管理界面。集群端口 25672、指标端口 15692 不映射到宿主机。
+- **账号**：只有 `patra` 一个（管理员），应用和管理界面共用；vhost（RabbitMQ 里互相隔离的命名空间）只用默认的 `/`。密码在 `~/.patra/secrets/rabbitmq.env`。
+- **只在 tailnet 与局域网内可达**：安全邮件的一次性令牌链接会经过这里的消息（决策 F）。不要把 5672、15672 加进 Cloudflare Tunnel 或路由器的端口转发。
+- **固定 hostname `patra-rabbitmq`**：数据目录按节点名 `rabbit@patra-rabbitmq` 分。hostname 一变，RabbitMQ 会当成新节点另起一个空目录，账号和没消费的消息看上去全没了（其实还在旧目录里）。
+- **内存与磁盘水位**：容器内存上限 768 MiB。RabbitMQ 不读容器上限，`rabbitmq/conf.d/20-patra.conf` 里写死了可用内存 768 MiB，两处一起改。用量超过其中 0.6（约 460 MiB）或磁盘剩余不足 2 GB 时，它暂停接收消息、阻塞发送方，等降下来再放行。本机实测空闲约 210 MiB。
+- **健康检查**：端口连得上，且没有内存或磁盘告警。命令以 `rabbitmq` 用户执行，自己 `docker exec` 进去跑命令行工具也要加 `gosu rabbitmq`：用 root 跑，首次启动时可能抢先建出 root 属主的 `.erlang.cookie`，节点读不了就退出。
+
+### 管理界面
+
+http://linqibins-mac-mini:15672 ，用 `patra` 登录。
+
+- **Overview**：节点状态，内存、磁盘离水位还有多远。
+- **Queues**：每个队列的 Ready 是等着被取走的消息数，Unacked 是消费方取走了还没确认的。某个队列的 Ready 一直涨，说明消费方没在取（服务挂了，或一直处理失败）。
+- 死信队列里的消息不会自己回来。在该队列页面的 **Get messages** 里查看内容，Ack mode 选 Nack message requeue true，查看后消息仍留在队列里。
+
+### 改密码
+
+账号只在数据目录为空的首次启动时按 `rabbitmq.env` 创建，之后改文件不会改到 RabbitMQ 里的密码。
+
+1. 两台机器都改 `rabbitmq.env`（生成命令见 `secrets/rabbitmq.env.example`）。
+2. mini 上重建容器读入新文件，再在容器里改密码。密码从容器自己的环境变量里取，不经过 shell 历史：
+
+   ```bash
+   cd ~/Projects/patra/patra-infra/docker
+   docker compose -f docker-compose.core.yaml up -d --force-recreate rabbitmq
+   docker exec patra-rabbitmq sh -c 'gosu rabbitmq rabbitmqctl change_password patra "$RABBITMQ_PASSWORD"'
+   ```
+
+3. 按「改了密钥文件之后」重建 interaction、identity、notification 的容器，本机进程各重启一次。
+
+### 排查
+
+```bash
+# 节点状态：内存与磁盘用量、水位、告警
+docker exec patra-rabbitmq gosu rabbitmq rabbitmq-diagnostics status
+# 只看有没有告警（有告警时发送方被阻塞）
+docker exec patra-rabbitmq gosu rabbitmq rabbitmq-diagnostics check_local_alarms
+# 队列：待取消息数、未确认数、消费者数
+docker exec patra-rabbitmq gosu rabbitmq rabbitmqctl list_queues name messages_ready messages_unacknowledged consumers
+# 连接：哪些服务连着
+docker exec patra-rabbitmq gosu rabbitmq rabbitmqctl list_connections user peer_host state
+# 内存花在哪
+docker exec patra-rabbitmq gosu rabbitmq rabbitmq-diagnostics memory_breakdown --unit mb
+# 日志
+docker logs --tail 200 patra-rabbitmq
+```
+
+| 现象 | 原因与处理 |
+|---|---|
+| 应用连接被拒，报 `ACCESS_REFUSED` | 应用读到的密码和 RabbitMQ 里的不一样，多半是改了 `rabbitmq.env` 没做「改密码」第 2 步 |
+| 容器反复重启，日志是 `RABBITMQ_PASSWORD 为空` | `rabbitmq.env` 缺值 |
+| 容器退出，日志里有 `.erlang.cookie: eacces` | 有人用 root 跑了命令行工具。`docker restart patra-rabbitmq`：入口脚本启动时会把目录属主改回 `rabbitmq` |
+| 声明队列时连接被关，报 `transient_nonexcl_queues` | RabbitMQ 4 默认不允许非持久的共享队列，把队列声明成持久（durable）的 |
+| 发送卡住、健康检查 unhealthy | 触发了内存或磁盘告警，先看 `check_local_alarms` 和 Overview |
+| 从 MacBook 连不上 | `nc -zv linqibins-mac-mini 5672`，不通再按「故障排查」查 tailscale |
 
 ## 门户的固定地址与受信转发（PAP-99）
 
@@ -323,6 +389,7 @@ Nacos 的地址、账号和服务发现设置由 `patra-spring-boot-starter-naco
 - **PostgreSQL**: `linqibins-mac-mini:15432` (postgres/123456)
 - **Redis**: `linqibins-mac-mini:16379`（要密码：用户 `default`，密码在 `~/.patra/secrets/redis.env`）
 - **Nacos 控制台**: http://linqibins-mac-mini:8080（用管理员 `nacos` 登录，密码在 mini 的 `~/.patra/secrets/nacos-admin.env`）
+- **RabbitMQ**: AMQP `linqibins-mac-mini:5672`；管理界面 http://linqibins-mac-mini:15672（账号 `patra`，密码在 `~/.patra/secrets/rabbitmq.env`）
 - **Mailpit**（开发环境的邮件收集器）: SMTP `linqibins-mac-mini:1025`（无鉴权、无 TLS），Web UI http://linqibins-mac-mini:8025。identity 没放 `mail.env` 时的邮件都在这里
 
 ### 存储服务
@@ -356,7 +423,7 @@ bash patra-infra/scripts/compose-all.sh up core
 # 核心 + 存储（开发文件上传）
 bash patra-infra/scripts/compose-all.sh up core storage
 
-# 核心 + 任务（开发消息/定时任务）
+# 核心 + 任务（开发定时任务）
 bash patra-infra/scripts/compose-all.sh up core jobs
 
 # 核心 + 监控
@@ -438,7 +505,7 @@ PATRA_INFRA_HOST=100.103.73.27 docker compose -f patra-infra/docker/docker-compo
 ```
 ┌─────────────────────────────────────┐
 │ 核心服务                             │  (无依赖)
-│ - postgres, redis, nacos            │
+│ - postgres, redis, nacos, rabbitmq  │
 └─────────────────────────────────────┘
          ▲                    ▲             ▲
          │                    │             │
