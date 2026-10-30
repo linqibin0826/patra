@@ -28,7 +28,8 @@ dependencies {
     // 通用事件模块：消费 interaction、identity 经 RabbitMQ 发来的集成事件（去重表与登记表见 infra 的 db/migration/kernel）
     implementation(project(":patra-tool:patra-tool-events"))
 
-    // identity 内部接口的代理（批量收件信息）：infra 对 identity-api、http-client 是 implementation，传不到这里
+    // identity 内部接口的代理（批量收件信息）：infra 对 identity-api、http-client 是 implementation，传不到这里；
+    // 安全邮件队列也用它绑定 identity 的交换机与路由键（契约常量在 identity-api）
     implementation(project(":patra-tool:patra-tool-http-client"))
     implementation(project(":patra-api:patra-identity:patra-identity-api"))
 

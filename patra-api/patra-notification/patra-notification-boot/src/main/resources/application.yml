@@ -35,6 +35,12 @@ patra:
           base-url: lb://patra-identity
           connect-timeout: 1s
           read-timeout: 2s
+  events:
+    consumer:
+      # 监听方法的参数是 sealed 接口时，按消息头 __TypeId__ 反序列化，只认这些包（按包名精确匹配、不含子包）
+      trusted-packages:
+        # identity 的安全邮件事件（PAP-104）
+        - dev.patra.identity.api.account.event
 
 # XXL-Job 执行器：管理端地址随环境变，在 Nacos 公共配置 patra-common.yaml；执行器端口 = 服务端口 + 1 = 6601
 xxl:

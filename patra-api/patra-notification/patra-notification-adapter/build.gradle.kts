@@ -16,6 +16,11 @@ dependencies {
     api(project(":patra-tool:patra-tool-web"))
 
     api(libs.xxl.job)
+
+    // identity 的安全邮件事件（PAP-104）：监听方法按它们反序列化
+    implementation(project(":patra-api:patra-identity:patra-identity-api"))
+    // @RabbitListener
+    implementation("org.springframework.boot:spring-boot-starter-amqp")
 }
 
 // 子域包只有 package-info.java 时也产出 package-info.class：架构测试据此确认每个子域都被导入，
