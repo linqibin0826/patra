@@ -114,7 +114,7 @@ export const LINES: Line[] = [
     softColor: "#c06ea3",
     status: "planned",
     stations: [
-      { id: "ingest-pipeline", name: "采集管道", summary: "规划中" },
+      { id: "import-pipeline", name: "采集管道", summary: "规划中" },
       { id: "storage-and-index", name: "存储与索引", summary: "规划中" },
     ],
   },

@@ -31,17 +31,17 @@
 
 | Type | 说明 | 示例 |
 |------|------|------|
-| `feat` | 新功能 | `feat(ingest): 添加 PubMed 批量计划编排器` |
-| `fix` | 修复 Bug | `fix(registry): 修复 Provenance 查找空指针异常` |
+| `feat` | 新功能 | `feat(catalog): 添加 PubMed 增量导入` |
+| `fix` | 修复 Bug | `fix(registry): 修复字典类型查找空指针异常` |
 | `docs` | 文档变更 | `docs: 更新架构设计指南` |
-| `style` | 代码格式（不影响功能） | `style(domain): 格式化 BatchPlan 类代码` |
+| `style` | 代码格式（不影响功能） | `style(domain): 格式化 VenueAggregate 类代码` |
 | `refactor` | 重构（不改变功能） | `refactor(app): 提取校验逻辑到领域层` |
-| `test` | 测试相关 | `test(domain): 为 BatchPlan 聚合根添加单元测试` |
+| `test` | 测试相关 | `test(domain): 为 VenueAggregate 聚合根添加单元测试` |
 | `chore` | 构建/工具/依赖 | `chore: 升级 Spring Boot 到 4.0.1` |
 | `perf` | 性能优化 | `perf(test): 优化 GenericBatchExecutor 重试测试延迟` |
 | `ci` | CI/CD 配置 | `ci: 优化 CI 流程，减少无代码变更时的构建` |
 | `build` | 构建系统变更 | `build: 更新 Gradle wrapper 到 9.2.1` |
-| `revert` | 回滚提交 | `revert: 回滚"feat(ingest): 添加批量计划功能"` |
+| `revert` | 回滚提交 | `revert: 回滚"feat(catalog): 添加增量导入"` |
 
 ---
 
@@ -55,10 +55,10 @@ Scope 是可选的，但**强烈推荐**添加，用于标识提交影响的模�
 
 | Scope | 说明 |
 |-------|------|
-| `ingest` | patra-ingest 微服务 |
+| `catalog` | patra-catalog 微服务 |
 | `registry` | patra-registry 微服务 |
 | `gateway` | patra-gateway 微服务 |
-| `common` | patra-common 公共模块 |
+| `tool` | patra-tool 工具模块 |
 | `domain` | 领域层（domain 包） |
 | `app` | 应用层（app 包） |
 | `infra` | 基础设施层（infra 包） |
@@ -77,9 +77,9 @@ Scope 是可选的，但**强烈推荐**添加，用于标识提交影响的模�
 
 **示例：**
 ```
-feat(ingest): 添加批量计划编排器
-fix(registry-api): 修复 Provenance DTO 校验逻辑
-test(domain-model): 添加 BatchPlan 单元测试
+feat(catalog): 添加 PubMed 增量导入
+fix(registry): 修复字典解析的来源标准校验
+test(catalog): 添加 PartialDate 单元测试
 ```
 
 ---
@@ -141,13 +141,13 @@ Body 是可选的，用于提供更详细的变更说明。**使用中文**。
 ### 示例
 
 ```
-feat(ingest): 添加批量计划编排器
+feat(catalog): 添加 PubMed 增量导入
 
-实现新的编排器来规划 PubMed 文章的批量处理。
-这替换了旧的单体处理逻辑，采用更模块化的方法。
+按 updatefiles 每日跟进 PubMed 的新增、修订与删除。
+任何文件都可以重放，不会回退已有数据。
 
-- 提取批量计划逻辑到独立服务
-- 支持动态批量大小配置
+- 文件下载与解析解耦，失败的文件可单独重跑
+- 用进度表记录每个文件的处理状态
 - 改进错误处理和重试机制
 ```
 
@@ -162,9 +162,9 @@ Footer 用于记录特殊信息，如关闭 Issue、破坏性变更等。**使�
 如果提交包含破坏性变更，必须在 Footer 中标明：
 
 ```
-feat(api)!: 变更 Provenance API 响应格式
+feat(api)!: 变更字典解析 API 响应格式
 
-破坏性变更：Provenance API 现在返回嵌套结构而不是扁平结构。
+破坏性变更：字典解析 API 现在返回嵌套结构而不是扁平结构。
 客户端需要更新集成代码。
 
 变更前：{ "id": 1, "name": "PubMed" }
@@ -174,7 +174,7 @@ feat(api)!: 变更 Provenance API 响应格式
 ### 关联 Issue
 
 ```
-fix(ingest): 修复批量大小计算错误
+fix(catalog): 修复批量大小计算错误
 
 修复 #123
 关闭 #456
@@ -188,15 +188,15 @@ fix(ingest): 修复批量大小计算错误
 ### 示例 1：简单功能
 
 ```
-feat(ingest): 添加 PubMed 批量计划编排器
+feat(catalog): 添加 PubMed 增量导入
 ```
 
 ### 示例 2：带详细描述
 
 ```
-fix(registry): 修复 Provenance 查找空指针异常
+fix(registry): 修复字典类型查找空指针异常
 
-当缓存为空时，Provenance 查找会失败，
+当缓存为空时，字典类型查找会失败，
 导致下游服务出现 NullPointerException。
 
 - 访问缓存前添加空值检查
@@ -319,10 +319,10 @@ git rebase -i HEAD~N
 
 ```bash
 # 功能开发
-git commit -m "feat(ingest): 添加 PubMed 解析器"
+git commit -m "feat(catalog): 添加 PubMed 解析器"
 
 # Bug 修复
-git commit -m "fix(registry): 修复 Provenance 查找空指针异常"
+git commit -m "fix(registry): 修复字典类型查找空指针异常"
 
 # 文档更新
 git commit -m "docs: 更新 README 部署指南"

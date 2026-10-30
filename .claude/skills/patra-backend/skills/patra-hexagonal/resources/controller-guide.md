@@ -107,41 +107,30 @@ MethodArgumentNotValidException   → 400
 
 ## XXL-Job 定时任务模板
 
+放在 `adapter.{子域}.scheduler`，类名 `*ScheduleJob`（见 `.claude/rules/tech/package-layout.md`）。一个类可以有多个 `@XxlJob` 方法；参数取自配置类或 `XxlJobHelper.getJobParam()`，业务一律经 CommandBus 交给 Handler。
+
 ```java
 @Slf4j
 @Component
-public class PubmedHarvestJob extends AbstractProvenanceScheduleJob {
+@RequiredArgsConstructor
+public class MeshImportScheduleJob {
 
-    @Override
-    protected ProvenanceCode getProvenanceCode() {
-        return ProvenanceCode.PUBMED;
+    private final CommandBus commandBus;
+    private final MeshDataSourceProperties properties;
+
+    @XxlJob("meshDescriptorImportJob")
+    public void executeDescriptorImport() {
+        try {
+            String url = properties.getDescriptorUrl();
+            MeshDescriptorImportResult result =
+                commandBus.handle(MeshDescriptorImportCommand.of(url, MeshFileNameParser.extractVersion(url)));
+            XxlJobHelper.handleSuccess(result.message());
+        } catch (Exception ex) {
+            log.error("MeSH Descriptor 导入失败", ex);
+            XxlJobHelper.handleFail("失败: " + ex.getMessage());
+            // 不再抛出异常，handleFail 已标记任务失败
+        }
     }
-
-    @Override
-    protected OperationCode getOperationCode() {
-        return OperationCode.HARVEST;
-    }
-
-    @XxlJob("pubmedHarvest")
-    public void run() {
-        executeScheduleJob(XxlJobHelper.getJobParam());
-    }
-}
-```
-
-**基类 `AbstractProvenanceScheduleJob`** 提供：解析参数 → 调用 CommandBus → 报告结果的通用流程。
-
-### XXL-Job 错误处理
-
-```java
-// 在基类或自定义 Job 中：
-try {
-    RelayReport report = commandBus.handle(command);
-    XxlJobHelper.handleSuccess("成功: " + report.count());
-} catch (Exception ex) {
-    log.error("作业失败", ex);
-    XxlJobHelper.handleFail("失败: " + ex.getMessage());
-    // 不再抛出异常，handleFail 已标记任务失败
 }
 ```
 

@@ -17,7 +17,7 @@ patra-catalog 是 Patra 医学文献数据平台的目录管理微服务，负�
 在 Patra 微服务架构中的位置：
 - **外部数据源**：NLM（PubMed baseline / updatefiles、MeSH）、PMC Cloud Service（公开 S3 桶 `pmc-oa-opendata`）、OpenAlex、Scopus、LetPub
 - **调用方**：patra-gateway 转发的门户（patra-portal）读端点 `/portal/**`；patra-identity 经 HTTP Interface 直连（`lb://patra-catalog`）的内部接口 `/_internal/**`（保存资料时校验 ROR ID / MeSH UI 并取名称快照）；patra-interaction 同样直连内部接口，按内部 ID 或 PMID 批量解析文献、按期刊 ID 或 NLM ID 批量解析期刊（对象登记表首次登记与每日对账）
-- **依赖服务**：patra-registry（获取 Provenance 配置和数据字典）；MinIO（期刊封面、全文 XML / PDF / 图片）
+- **依赖服务**：patra-registry（解析国家、语言等数据字典）；MinIO（期刊封面、全文 XML / PDF / 图片）
 
 ## 🗂️ 分包
 
@@ -174,8 +174,7 @@ patra-catalog 是 Patra 医学文献数据平台的目录管理微服务，负�
 ## 📦 模块依赖
 
 ### 内部依赖
-- `patra-common-core`：通用工具和基础类
-- `patra-common-model`：共享领域模型
+- `patra-tool-core`：DDD 基类与错误类型
 - `patra-spring-boot-starter-jpa`：数据访问层支持
 - `patra-spring-boot-starter-batch`：批处理支持
 - `patra-spring-boot-starter-rest-client`：HTTP 客户端支持（文件下载）

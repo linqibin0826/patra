@@ -26,7 +26,7 @@
   ```sh
   export PATRA_ADVERTISE_IP="$TAILSCALE_IP"
   ```
-  对应应用配置 `xxl.job.executor.ip: ${PATRA_ADVERTISE_IP:}`（catalog/ingest 的 `application.yml`），Nacos 注册地址 `spring.cloud.nacos.discovery.ip` 读同一个变量。
+  对应应用配置 `xxl.job.executor.ip: ${PATRA_ADVERTISE_IP:}`（catalog 的 `application.yml`），Nacos 注册地址 `spring.cloud.nacos.discovery.ip` 读同一个变量。
 - **验证**：重启服务后，xxl-job-admin「执行器管理」注册地址应为 `http://100.x.x.x:<port>/`（catalog 执行器端口 6301）；手动触发返回 `Success`。
 - **坑**：macOS GUI（Dock/Spotlight）启动的 IntelliJ **不继承** `env.zsh` 的环境变量。需从终端 `bootRun`，或在 IDEA 运行配置的 Environment variables 里手填。
 - **注意**：设对 IP 后若仍 `Connect timed out`，是 admin 容器自身到不了 tailnet，见 §6。
@@ -45,12 +45,9 @@
   ```
   8848 正常而 9848 握手超时才指向 MTU 问题（注：`ping -D -s 1400` 在本机 tailscale 网卡 MTU 1280 下必然 `Message too long`，正常时也如此，不能作判据）。临时解法是 `ssh -N -L 8848:127.0.0.1:8848 -L 9848:127.0.0.1:9848 linqibin@linqibins-mac-mini` 并以 `NACOS_HOST=127.0.0.1` 启动应用。
 
-### 3. RocketMQ 客户端连不上 broker（BROKER_IP1 注册错误）
+### 3. （已删除）
 
-- **症状**：NameServer 拿到 broker 地址后客户端解析/连接失败。
-- **根因**：broker 对外注册地址由 `docker/.env` 的 `BROKER_IP1` 决定，注册成客户端不可达的字符串即失败。
-- **解决**：`BROKER_IP1=linqibins-mac-mini`（MagicDNS 短名，家内/离家自动解析）；回退用 FQDN `linqibins-mac-mini.taild06182.ts.net`。详见 `../docker/README.md` §故障排查。
-- **容器侧**：容器里解析不了 MagicDNS 名。应用容器和 rocketmq-dashboard 靠 compose 的 `extra_hosts: linqibins-mac-mini:host-gateway` 把这个名字指向宿主机网关，见 §8。2026-10-13 之前容器里的 ingest 一直连不上 broker。
+原为消息队列 broker 注册地址的排查。2026-10-30 消息队列下线后删除；保留节号，别处引用的 §4～§8 不变。
 
 ### 4. JDK HttpClient 把 tailscale 100.x 流量误走代理
 
@@ -85,7 +82,7 @@
 - **与 Shadowrocket 共存**：该路由为非 scoped（`netstat -rn` 标志 `UCS`，不含 `I`），`/24` 比 Shadowrocket 的 `128.0/1` 与 Wi-Fi 的 `192.168/16` 都具体，最长前缀匹配下走 tailscale，不受 §5 那类抢占影响。
 - **已知限制**：若所连 Wi-Fi 本身就是 `192.168.97.0/24`，会与子网路由冲突；本地服务注册后，mini 的 gateway 会在容器实例与本地实例间轮询。
 - **冷启动慢（2026-09-24 实测）**：MacBook ↔ `patra-docker-gw` 平时走 tencent peer relay（~40ms），但该通道空闲约 5 分钟会被回收（`tailscale status --json` 里该 peer `Active=false`、`Relay` 退回 `hkg`）。再次访问需经官方 DERP（网关的 home DERP 为香港）重新协商 peer relay；若此时 tailscale 到香港 DERP 的连接已断开要重连，而电信直连香港丢包（TCP 建连常见 1.4~2.3s，即首个 SYN 丢失重传），首个请求建连实测 3~5s，此间 TCP SYN 被丢弃按退避重传。现成连接仍在时冷启动约 0.6s。tailscale 的 DERP 连接绑定物理网卡直连，不经 Shadowrocket。
-  - 应对（2026-10-14 起取消）：曾在 catalog / ingest 的 `application-dev.yml` 把 `linqibin.starter.http-interface.connect-timeout` 从全局 2s 放宽到 10s。PAP-77 起两种运行方式读同一份配置，都用 jar 里的 2s：本机首个请求撞上冷启动会超时失败，重试即可；容器走 Docker 内网，不受影响。
+  - 应对（2026-10-14 起取消）：曾在 catalog 等服务的 `application-dev.yml` 把 `linqibin.starter.http-interface.connect-timeout` 从全局 2s 放宽到 10s。PAP-77 起两种运行方式读同一份配置，都用 jar 里的 2s：本机首个请求撞上冷启动会超时失败，重试即可；容器走 Docker 内网，不受影响。
   - 根治方向（未做）：ACL `derpMap` 排除香港区域让网关 home DERP 落到东京（直连东京较稳），或在 tencent 自建 DERP。
 - **验证**：
   ```sh
@@ -101,11 +98,10 @@
 - **实测代价**：大批量传输（`\copy` 114 MB、MinIO 512 MB）与直连容器名没有差别；PG 小查询每次往返多 0.07～0.2 ms（OrbStack 端口转发）。PG 看到的来源地址是 patra-net 网关 `192.168.97.1`。
 - **验证**：
   ```sh
-  docker exec patra-ingest getent ahostsv4 linqibins-mac-mini   # 应为 0.250.250.254
-  docker exec patra-ingest bash -c 'exec 3<>/dev/tcp/linqibins-mac-mini/15432 && echo OK'
+  docker exec patra-catalog getent ahostsv4 linqibins-mac-mini   # 应为 0.250.250.254
+  docker exec patra-catalog bash -c 'exec 3<>/dev/tcp/linqibins-mac-mini/15432 && echo OK'
   ```
 - **新增连基础设施的容器**：同样加 `extra_hosts`（apps compose 里引用 `*infra-hosts` 锚点）。
-- **副作用**：容器里的 ingest 从此能连上 broker，与本机 ingest 同在一个集群消费组，消息会分给两边（与网关在容器实例和本机实例之间轮询同理）。本机调试需要独占消息时，改用别的消费组。
 
 ---
 

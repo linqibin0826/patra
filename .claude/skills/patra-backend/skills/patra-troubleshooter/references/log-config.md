@@ -6,7 +6,7 @@
 
 ```
 ~/Projects/Products/patra/patra-api/patra-catalog/patra-catalog-boot/logs/patra-catalog.log
-~/Projects/Products/patra/patra-api/patra-ingest/patra-ingest-boot/logs/patra-ingest.log
+~/Projects/Products/patra/patra-api/patra-catalog/patra-catalog-boot/logs/patra-catalog.log
 ~/Projects/Products/patra/patra-api/patra-registry/patra-registry-boot/logs/patra-registry.log
 ~/Projects/Products/patra/patra-api/patra-gateway-boot/logs/patra-gateway.log
 ```

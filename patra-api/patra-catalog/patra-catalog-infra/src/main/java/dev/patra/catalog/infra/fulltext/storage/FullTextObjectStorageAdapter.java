@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component;
 
 /// 全文文件的 MinIO 存取实现，桶取 `patra.catalog.fulltext.bucket`（上传时懒建）。
 ///
-/// 文件直写对象存储，不经 `patra-object-storage` 服务登记（与期刊封面一致）。
+/// 文件直写对象存储，引用记在 catalog 自己的全文表里（与期刊封面一致）。
 ///
 /// @author linqibin
 /// @since 0.11.0

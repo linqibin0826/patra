@@ -24,7 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 /// 六边形架构规则工厂。
 ///
 /// 提供参数化的架构规则，支持任意基础包前缀的项目复用同一套架构约束。
-/// 通过构造函数传入项目基础包（如 `"dev.patra.ingest"`、`"com.sutra"`）生成对应的规则集。
+/// 通过构造函数传入项目基础包（如 `"dev.patra.catalog"`、`"com.sutra"`）生成对应的规则集。
 ///
 /// ### 设计目的
 ///
@@ -39,12 +39,12 @@ import org.springframework.transaction.annotation.Transactional;
 ///
 ///     private static final JavaClasses classes = new ClassFileImporter()
 ///         .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
-///         .importPackages("dev.patra.ingest");
+///         .importPackages("dev.patra.catalog");
 ///
-///     // 显式传入 Domain 层允许依赖的业务公共包（如 patra-common）
+///     // 显式传入 Domain 层允许依赖的业务公共包（如工具模块）
 ///     private static final HexagonalArchitectureRules rules =
-///         new HexagonalArchitectureRules("dev.patra.ingest",
-///             List.of("dev.patra.common.."));
+///         new HexagonalArchitectureRules("dev.patra.catalog",
+///             List.of("dev.patra.tool.."));
 ///
 ///     @Test
 ///     void layerDependencies() {
@@ -71,21 +71,21 @@ import org.springframework.transaction.annotation.Transactional;
 /// @since 0.1.0
 public class HexagonalArchitectureRules {
 
-  /// 项目基础包（如 `"dev.patra.ingest"`、`"com.sutra"`）。
+  /// 项目基础包（如 `"dev.patra.catalog"`、`"com.sutra"`）。
   private final String basePackage;
 
   /// JPA 实体注解的全类名；按名字匹配，规则类不依赖 JPA。
   private static final String JPA_ENTITY = "jakarta.persistence.Entity";
 
-  /// Domain 层允许依赖的业务公共包列表（ArchUnit 包模式，如 `"dev.patra.common.."`）。
+  /// Domain 层允许依赖的业务公共包列表（ArchUnit 包模式，如 `"dev.patra.tool.."`）。
   private final List<String> allowedCommonPackages;
 
   /// 完整构造函数。
   ///
-  /// @param basePackage           项目基础包前缀（如 `"dev.patra.ingest"`、`"com.sutra"`），
+  /// @param basePackage           项目基础包前缀（如 `"dev.patra.catalog"`、`"com.sutra"`），
   ///                              必须是 Domain/App/Infra/Adapter 等子包的共同父包
   /// @param allowedCommonPackages Domain 层允许依赖的业务公共包列表（ArchUnit 包模式字符串，
-  ///                              如 `List.of("dev.patra.common..")`）；
+  ///                              如 `List.of("dev.patra.tool..")`）；
   ///                              传空列表时 Domain 层不允许依赖任何业务公共包
   public HexagonalArchitectureRules(String basePackage, List<String> allowedCommonPackages) {
     this.basePackage = Objects.requireNonNull(basePackage, "basePackage 不能为空");
@@ -216,7 +216,7 @@ public class HexagonalArchitectureRules {
   /// Domain 层允许的依赖白名单。
   ///
   /// 固定允许依赖：JDK、Lombok、Hutool、Jackson 及 `basePackage` 自身的 domain 子包。
-  /// 业务公共包（如 `patra-common`）通过构造函数的 `allowedCommonPackages` 参数传入。
+  /// 业务公共包（如 `dev.patra.tool..`）通过构造函数的 `allowedCommonPackages` 参数传入。
   ///
   /// @return ArchRule 规则实例
   public ArchRule domainAllowedDependencies() {

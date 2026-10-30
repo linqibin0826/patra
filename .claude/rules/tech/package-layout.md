@@ -4,7 +4,7 @@ paths: patra-api/**/*.java
 
 # 分包规范
 
-Gradle 模块按层，**模块内先按子域、再按组件类型**。由 `patra-tool-test` 的 `SubdomainArchitectureRules` 在 `check` 里强制。设计与推导见 `docs/patra/specs/2026-10-29-backend-package-layout-design.md`。ingest 尚未迁移，暂不适用。
+Gradle 模块按层，**模块内先按子域、再按组件类型**。由 `patra-tool-test` 的 `SubdomainArchitectureRules` 在 `check` 里强制。设计与推导见 `docs/patra/specs/2026-10-29-backend-package-layout-design.md`。
 
 ## 模板
 

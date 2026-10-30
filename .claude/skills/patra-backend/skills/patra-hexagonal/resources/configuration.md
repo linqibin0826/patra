@@ -63,8 +63,8 @@ public class AppConfig {
 
 ```yaml
 # 层级结构 + 语义化命名
-app:
-  ingest:
+patra:
+  catalog:
     pubmed:
       batch-size: 1000
       api-timeout: 30s

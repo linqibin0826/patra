@@ -14,9 +14,9 @@ docker/
 ├── docker-compose.storage.yaml      # project patra-storage：minio + minio-init
 ├── docker-compose.search.yaml       # project patra-search：elasticsearch
 ├── docker-compose.observability.yaml # project patra-observability：otel/prom/loki/tempo/grafana
-├── docker-compose.jobs.yaml         # project patra-jobs：rocketmq + xxl-job-admin + 路由边车
+├── docker-compose.jobs.yaml         # project patra-jobs：xxl-job-admin + mysql-ops + 路由边车
 ├── docker-compose.tailnet.yaml      # project patra-tailnet：tailscale 共享网关
-├── .env                              # BROKER_IP1 等环境变量
+├── .env                              # mysql-ops 凭据等环境变量
 ├── .env.secret                       # TS_AUTHKEY 等真实密钥（gitignore，不入库）
 ├── secrets/                          # 密钥模板（*.example）；真文件在仓库外的 ~/.patra/secrets/
 └── README.md                         # 本文件
@@ -139,7 +139,7 @@ ssh linqibin@linqibins-mac-mini '
   cd ~/Projects/patra &&
   bash patra-infra/scripts/compose-all.sh up jobs   # 只重建 jobs 栈
 '
-ssh linqibin@linqibins-mac-mini 'docker restart patra-rocketmq-broker'  # 只重启单容器
+ssh linqibin@linqibins-mac-mini 'docker restart patra-xxl-job-admin'  # 只重启单容器
 ```
 
 > **一次性迁移（旧单 project `patra` → 多 project）**：旧容器 `container_name` 与新栈相同，
@@ -159,10 +159,10 @@ ssh linqibin@linqibins-mac-mini 'docker restart patra-rocketmq-broker'  # 只重
 | `gateway.env` | `PATRA_GATEWAY_IDENTITY_ASSERTION_PRIVATE_KEY`，含私钥的 EC P-256 JWK JSON，一行 | gateway 的容器和本机进程 | 同上 |
 | `nacos-server.env` | Nacos 的 `NACOS_AUTH_TOKEN`、`NACOS_AUTH_IDENTITY_KEY`、`NACOS_AUTH_IDENTITY_VALUE`。**只放 mini** | core 栈的 nacos | compose 报出路径并拒绝执行 |
 | `nacos-admin.env` | Nacos 管理员密码 `NACOS_ADMIN_PASSWORD`。**只放 mini**，另存密码管理器 | `nacos-init.sh`、`nacos-verify.sh` | 脚本说明缺哪个变量并退出 |
-| `nacos.env` | 应用账号 `NACOS_USERNAME=patra-app`、`NACOS_PASSWORD` | 7 个后端服务的容器和本机进程；两个 Nacos 脚本 | 同 `redis.env` |
+| `nacos.env` | 应用账号 `NACOS_USERNAME=patra-app`、`NACOS_PASSWORD` | 5 个后端服务的容器和本机进程；两个 Nacos 脚本 | 同 `redis.env` |
 | `nacos-push.env` | 推送账号 `NACOS_PUSH_USERNAME=patra-push`、`NACOS_PUSH_PASSWORD` | 两个 Nacos 脚本；PAP-75 的推送 | 脚本说明缺哪个变量并退出 |
 | `mail.env` | 真实邮件服务商（Resend）的 SMTP 凭据：`PATRA_MAIL_HOST` / `PORT` / `USERNAME` / `PASSWORD` / `AUTH` / `SSL` / `STARTTLS` / `FROM`。**只放 mini**（本机要走真实服务商时再放一份） | identity 的容器和本机进程 | 跳过：邮件发往 core 栈的 Mailpit |
-| `<服务>.env` | 该服务的外部数据源密钥，例如 catalog 的 `SCOPUS_API_KEY`、`PROXY_AUTH_KEY`、`PROXY_AUTH_PWD`，ingest 的 `ROCKETMQ_AK`、`ROCKETMQ_SK` | 对应服务的容器和本机进程 | 跳过 |
+| `<服务>.env` | 该服务的外部数据源密钥，例如 catalog 的 `SCOPUS_API_KEY`、`PROXY_AUTH_KEY`、`PROXY_AUTH_PWD` | 对应服务的容器和本机进程 | 跳过 |
 
 两种进程怎么读到这些文件：
 
@@ -221,7 +221,7 @@ GATEWAY_IMAGE_TAG="$(cat ~/.patra/cd/last-good-gateway)" docker compose -f docke
 ### 换签名密钥
 
 1. 按上面的方法生成一对新密钥。新私钥先存成别的文件名，不要覆盖 `gateway.env`。
-2. 把新公钥加进 `patra-common.yaml` 的 `keys` 数组，旧公钥保留。提交、推送：CD 把配置推到 Nacos 后重新部署全部 7 个服务，容器读到新公钥；本机进程各重启一次。
+2. 把新公钥加进 `patra-common.yaml` 的 `keys` 数组，旧公钥保留。提交、推送：CD 把配置推到 Nacos 后重新部署全部 5 个服务，容器读到新公钥；本机进程各重启一次。
 
    此时新旧两把公钥都被信任，网关仍用旧私钥签。
 3. 两台机器上都把 `gateway.env` 换成新私钥。
@@ -235,8 +235,8 @@ GATEWAY_IMAGE_TAG="$(cat ~/.patra/cd/last-good-gateway)" docker compose -f docke
 - 3.2.4，开着鉴权。存储在业务 PG 的 `patra_nacos` 库（官方 PG 插件，镜像自带）；`data/` 卷只剩服务发现的持久化数据和 jraft 元数据。
 - namespace：配置只有 `dev` 一个 namespace，服务发现留在 `public`。密钥不进 Nacos：配置里写 `${变量}`，值在 `~/.patra/secrets/`（PAP-74 撤销了 `dev-secrets`，见 `docs/patra/specs/2026-10-13-nacos-config-starter-design.md` 第 4 节）。
 - 账号：管理员 `nacos`；应用账号 `patra-app`（public 服务注册读写、`dev` 的配置只读）；推送账号 `patra-push`（只能写 `dev` 的 `DEFAULT_GROUP`）。
-- 账号、角色、权限由 `scripts/nacos-init.sh` 按脚本里的清单同步，不要在控制台手改：下次执行会被改回。验收用 `scripts/nacos-verify.sh`（加 `--expect-services` 时另查 7 个服务都已注册）。
-- 改应用或推送账号的密码：两台机器都改密钥文件，mini 上跑 `nacos-init.sh`，再按「改了密钥文件之后」重建 7 个应用容器、重启本机进程。
+- 账号、角色、权限由 `scripts/nacos-init.sh` 按脚本里的清单同步，不要在控制台手改：下次执行会被改回。验收用 `scripts/nacos-verify.sh`（加 `--expect-services` 时另查 5 个服务都已注册）。
+- 改应用或推送账号的密码：两台机器都改密钥文件，mini 上跑 `nacos-init.sh`，再按「改了密钥文件之后」重建 5 个应用容器、重启本机进程。
 - 换 token 签名密钥：改 mini 上的 `nacos-server.env`，执行 `docker compose -f docker-compose.core.yaml up -d --force-recreate nacos`。已签出的令牌全部失效，客户端会自动重新登录。改密码或删用户**不会**作废已签出的令牌（默认 18000 秒有效），要立刻撤销只能换签名密钥。
 - 镜像启动脚本开着 `set -x`，token 签名密钥和 identity 会出现在 `docker logs patra-nacos` 里（3.3 起改掉）。排查时不要把这段日志贴到任何地方。
 
@@ -298,7 +298,7 @@ export PATRA_INFRA_HOST=100.103.73.27   # IDE；容器里由 .env.common 设为 
 ```yaml
 spring:
   datasource:
-    url: jdbc:postgresql://${PATRA_INFRA_HOST:127.0.0.1}:15432/patra_ingest
+    url: jdbc:postgresql://${PATRA_INFRA_HOST:127.0.0.1}:15432/patra_catalog
   data:
     redis:
       host: ${PATRA_INFRA_HOST:127.0.0.1}
@@ -307,8 +307,6 @@ patra:
     providers:
       minio:
         endpoint: http://${PATRA_INFRA_HOST:127.0.0.1}:19000
-rocketmq:
-  name-server: ${PATRA_INFRA_HOST:127.0.0.1}:9876
 ```
 
 Nacos 的地址、账号和服务发现设置由 `patra-spring-boot-starter-nacos` 注入，服务的配置里不写。
@@ -344,8 +342,6 @@ Nacos 的地址、账号和服务发现设置由 `patra-spring-boot-starter-naco
 ### 任务服务
 - **mysql-ops**: 不暴露宿主机端口；容器内 `mysql-ops:3306`，仅供 xxl-job-admin 使用，凭据见 `.env` 的 `MYSQL_OPS_*`
 - **XXL-Job Admin**: http://linqibins-mac-mini:7070/xxl-job-admin (admin/123456)
-- **RocketMQ NameServer**: `linqibins-mac-mini:9876`
-- **RocketMQ Dashboard**: http://linqibins-mac-mini:4002
 
 ---
 
@@ -390,7 +386,7 @@ bash patra-infra/scripts/compose-all.sh ps
 docker logs -f patra-postgres
 
 # 重启单服务
-docker restart patra-rocketmq-broker
+docker restart patra-redis
 
 # 停止全栈（逆序；patra-net 是 external，保留不删）
 bash patra-infra/scripts/compose-all.sh down
@@ -427,20 +423,6 @@ nc -zv linqibins-mac-mini 16379
 tailscale status | grep linqibins-mac-mini
 ```
 
-### RocketMQ 客户端连不上 broker
-
-最常见原因：`BROKER_IP1` 注册的字符串客户端解析失败。
-
-若只有容器里的客户端连不上：检查该容器是否带 `extra_hosts: linqibins-mac-mini:host-gateway`，`docker exec <容器> getent ahostsv4 linqibins-mac-mini` 应返回 0.250.250.254。
-
-```bash
-# 查看 broker 启动日志，确认 brokerIP1 写入正确
-ssh linqibin@linqibins-mac-mini 'docker logs patra-rocketmq-broker 2>&1 | grep "Final broker.conf" -A 10'
-
-# 回退方案：改为 FQDN（在 docker/.env 中）
-# BROKER_IP1=linqibins-mac-mini.taild06182.ts.net
-```
-
 ### MinIO 登录后跳转 404
 
 `MINIO_BROWSER_REDIRECT_URL` 必须指向用户浏览器能访问的地址。默认 `linqibins-mac-mini:19001`，如改用 IP 部署可：
@@ -463,10 +445,9 @@ PATRA_INFRA_HOST=100.103.73.27 docker compose -f patra-infra/docker/docker-compo
 ┌────────┴─────────────┐  ┌──┴────────┐  ┌─┴───────────────────┐
 │ 任务服务              │  │ 可观测性   │  │ 存储 + 搜索         │
 │ - xxl-job → mysql-ops│  │ - otel    │  │ - minio              │
-│ - rocketmq           │  │ - grafana │  │ - elasticsearch      │
+│                      │  │ - grafana │  │ - elasticsearch      │
 └──────────────────────┘  └───────────┘  └─────────────────────┘
 ```
 
 - **xxl-job-admin** 依赖 `mysql-ops`（独立的 MySQL 8.0 容器，仅服务于不支持 PG 的运维组件；业务库走 PG）
 - **可观测性栈** 自包含
-- **rocketmq** 自包含；broker 注册地址由 `.env` BROKER_IP1 控制

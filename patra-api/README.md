@@ -8,45 +8,41 @@
 
 ## 📖 什么是 Patra?
 
-Patra 是一个**医学出版物数据平台**,旨在:
+Patra 是一个面向个人专业用户的**医学文献门户**，后端负责:
 
-1. **采集** 来自 10+ 外部数据源的文献 (PubMed, EPMC, Crossref 等)
-2. **解析和标准化** 原始数据为统一的模式
-3. **存储和索引** 以实现高效的搜索和分析
-4. **提供 API** 供下游应用使用 (搜索、推荐、分析)
-
-**当前重点**: 确保**可靠的数据落地** — 采集 → 解析 → 存储,具备幂等性、重试和可观测性。
+1. **采集** 外部数据源（PubMed baseline / updatefiles、MeSH、ROR、PMC 开放获取全文、OpenAlex、Scopus、LetPub）：
+   由 catalog 下载文件或调用 API，解析后直接写入自己的库
+2. **存储和索引** 文献、期刊、主题词、机构、全文，供门户检索与阅读
+3. **账号与社区互动**：注册登录、文献库与收藏夹、讨论、投稿经验、提醒
+4. **提供 API** 经网关给门户（patra-portal）使用
 
 ---
 
 ## 🏗️ 架构概览
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│           API Gateway (patra-gateway-boot)               │
-│         入口: 路由 • 认证 • 限流                           │
-└────────────┬──────────────────────────────┬──────────────┘
-             │                              │
-    ┌────────▼────────────┐        ┌────────▼────────────┐
-    │  patra-registry     │◀───────│   patra-ingest      │
-    │  (SSOT 注册中心)     │        │   (数据采集器)       │
-    └─────────────────────┘        └──────────┬──────────┘
-      • Provenance 配置                       │
-      • Expression 元数据                     │
-      • 字典管理                               │
-                                              │
-                                              ▼
-                                      外部 API
-                                (PubMed, EPMC, Crossref 等)
+                ┌──────────────────────────────────────────────┐
+                │        API Gateway (patra-gateway-boot)      │
+                │        入口: 路由 • 认证 • 身份断言            │
+                └───────┬──────────────┬──────────────┬────────┘
+                        │              │              │
+               ┌────────▼───────┐ ┌────▼─────────┐ ┌──▼──────────────┐
+               │ patra-catalog  │ │patra-identity│ │patra-interaction│
+               │ 采集 + 目录数据 │ │ 账号与会话    │ │ 社区互动         │
+               └───┬────────┬───┘ └──────────────┘ └─────────────────┘
+                   │        │       identity、interaction 经内部接口调 catalog
+                   │        ▼
+                   │  patra-registry（平台字典：国家、语言）
+                   ▼
+        外部数据源（PubMed、MeSH、ROR、PMC、OpenAlex、Scopus、LetPub）
 ```
 
 ### 核心概念
 
-- **Provenance**: 外部数据源 (PubMed, Crossref) 及其操作配置
-- **Plan**: 数据采集蓝图 (时间窗口 + 切片策略)
-- **Task**: 原子工作单元 (例如: 从 PubMed 抓取记录 1-1000)
-- **Outbox**: 事务性事件发布,用于可靠的异步通信
-- **Cursor**: 水位线跟踪,用于增量采集
+- **整库镜像 + 每日增量**: PubMed baseline 一次导入，updatefiles 每日跟进，任何文件可重放、不会回退
+- **子域分包**: 层模块内先按子域、再按组件类型分包，子域边界由 ArchUnit 守（`.claude/rules/tech/package-layout.md`）
+- **领域事件**: 子域之间用同步领域事件，与发布方同一事务（`patra-events` 技能）
+- **对象存储**: 各服务经 `patra-tool-object-storage` 直接读写 MinIO，文件引用记在各自的业务表里
 
 ---
 
@@ -56,22 +52,13 @@ Patra 是一个**医学出版物数据平台**,旨在:
 
 | 模块 | 用途 | 入口点 |
 |--------|---------|-------------|
-| [**patra-registry**](./patra-registry/README.md) | Provenance 配置、表达式、字典的 SSOT | `patra-registry-boot` |
-| [**patra-ingest**](./patra-ingest/README.md) | 编排采集计划,管理任务生命周期 | `patra-ingest-boot` |
-| [**patra-catalog**](./patra-catalog/README.md) | 文献、期刊、主题词等目录数据 | `patra-catalog-boot` |
-| [**patra-object-storage**](./patra-object-storage/README.md) | 上传到 MinIO/S3 的文件元数据，只对内 | `patra-object-storage-boot` |
+| [**patra-registry**](./patra-registry/README.md) | 平台字典（国家、语言）及来源标准，catalog 导入时调它解析 | `patra-registry-boot` |
+| [**patra-catalog**](./patra-catalog/README.md) | 采集外部数据源并直接入库；文献、期刊、主题词、机构、全文等目录数据 | `patra-catalog-boot` |
 | [**patra-identity**](./patra-identity/README.md) | 前台用户的账号：注册、登录、会话、封禁 | `patra-identity-boot` |
-| [**patra-interaction**](./patra-interaction/README.md) | 社区互动：文献库与收藏夹（以后的讨论、关注、通知），按子域分包 | `patra-interaction-boot` |
+| [**patra-interaction**](./patra-interaction/README.md) | 社区互动：文献库与收藏夹、讨论、投稿经验、提醒，按子域分包 | `patra-interaction-boot` |
 | [**patra-gateway-boot**](./patra-gateway-boot/README.md) | API 网关 (入口),包含路由和认证 | `patra-gateway-boot` |
 
-
-### 共享库
-
-| 模块 | 用途 |
-|--------|---------|
-| [**patra-common**](./patra-common/README.md) | 跨服务共用的业务词汇（Shared Kernel）：`ProvenanceCode`、`DataType` 等 |
-| [**patra-ingest-provenance**](./patra-ingest/patra-ingest-provenance/README.md) | ingest 对 PubMed / EPMC / Crossref 的客户端、处理器与 API 常量 |
-| [**patra-ingest-expr**](./patra-ingest/patra-ingest-expr/README.md) | ingest 的表达式 AST 与编译器 |
+### 工具模块
 
 技术能力（JSON、错误处理、JPA、批处理、HTTP 客户端、对象存储、可观测性、安全、OpenAPI、启动器、测试支持）
 在仓库根的 [`patra-tool/`](../patra-tool/) 下，一个能力一个模块、一个 `patra.<能力>` 配置前缀，各模块 README 列了配置键与默认值。
@@ -103,15 +90,10 @@ docker-compose up -d
 这将启动:
 - PostgreSQL (端口 15432)
 - Nacos (端口 8848) — 服务注册中心
-- RocketMQ (端口 9876, 10911) — 消息队列
 
 ### 2. 初始化数据库
 
-```bash
-# 运行 SQL 脚本 (位置待定)
-psql -h 127.0.0.1 -p 15432 -U postgres -f scripts/init-registry.sql
-psql -h 127.0.0.1 -p 15432 -U postgres -f scripts/init-ingest.sql
-```
+各服务启动时由 Flyway 自动建表并灌入种子数据，库本身由基础设施的 PG 初始化脚本创建（`patra-infra/docker/postgres/init-scripts/`）。
 
 ### 3. 构建项目
 
@@ -123,27 +105,27 @@ psql -h 127.0.0.1 -p 15432 -U postgres -f scripts/init-ingest.sql
 
 ```bash
 # 终端 1: 启动 registry
-./gradlew :patra-registry:patra-registry-boot:bootRun
+./gradlew :patra-api:patra-registry:patra-registry-boot:bootRun
 
-# 终端 2: 启动 ingest
-./gradlew :patra-ingest:patra-ingest-boot:bootRun
+# 终端 2: 启动 catalog
+./gradlew :patra-api:patra-catalog:patra-catalog-boot:bootRun
 
 # 终端 3: 启动 gateway
-./gradlew :patra-gateway-boot:bootRun
+./gradlew :patra-api:patra-gateway-boot:bootRun
 ```
 
 ### 5. 验证服务
 
 ```bash
 # 健康检查
-curl http://localhost:8080/actuator/health   # Gateway
-curl http://localhost:8081/actuator/health   # Registry
-curl http://localhost:8082/actuator/health   # Ingest
+curl http://localhost:9528/actuator/health   # Gateway
+curl http://localhost:6000/actuator/health   # Registry
+curl http://localhost:6300/actuator/health   # Catalog
 ```
 
 ## 🔧 环境配置文件
 
-- **7 个后端服务**：配置从 Nacos 读（`patra-common.yaml` 加 `{服务名}.yaml`，源文件在 `patra-infra/nacos/dev/`），启动类用 `PatraApplication.run(服务名, …)`。jar 里只有 `application.yml`，放端口、连接池、超时等随代码变的默认值；库地址、Redis、MinIO、xxl-job、公钥、密钥引用等随环境变的值在 Nacos。IDE 与容器读同一份配置，只差 `PATRA_INFRA_HOST`、`PATRA_ADVERTISE_IP`、`PATRA_LOG_DIR` 三个本地变量。设计见 `docs/patra/specs/2026-10-13-config-migration-batch1-design.md`、`docs/patra/specs/2026-10-14-config-migration-batch2-design.md`。
+- **5 个后端服务**：配置从 Nacos 读（`patra-common.yaml` 加 `{服务名}.yaml`，源文件在 `patra-infra/nacos/dev/`），启动类用 `PatraApplication.run(服务名, …)`。jar 里只有 `application.yml`，放端口、连接池、超时等随代码变的默认值；库地址、Redis、MinIO、xxl-job、公钥、密钥引用等随环境变的值在 Nacos。IDE 与容器读同一份配置，只差 `PATRA_INFRA_HOST`、`PATRA_ADVERTISE_IP`、`PATRA_LOG_DIR` 三个本地变量。设计见 `docs/patra/specs/2026-10-13-config-migration-batch1-design.md`、`docs/patra/specs/2026-10-14-config-migration-batch2-design.md`。
 - 服务注册中心 (Nacos) 在端口 8848 运行，提供服务发现、配置和健康检查功能。
 - 密钥（Redis 密码、网关私钥、外部数据源 API key）不进仓库：Nacos 配置里只写 `${变量}`，值放在 `~/.patra/secrets/` 下的 `.env` 文件里，本机由 Nacos starter 读，容器经 compose 的 `env_file` 注入。
 
@@ -160,7 +142,7 @@ curl http://localhost:8082/actuator/health   # Ingest
 ### 模块 README
 
 - [patra-registry README](./patra-registry/README.md) — Registry 服务深入解析
-- [patra-ingest README](./patra-ingest/README.md) — Ingest 服务深入解析
+- [patra-catalog README](./patra-catalog/README.md) — Catalog 服务深入解析
 
 ---
 
@@ -171,16 +153,16 @@ curl http://localhost:8082/actuator/health   # Ingest
 1. **六边形架构**: 领域层在中心,适配器在边缘
 2. **DDD**: 聚合强制不变量,领域事件捕获状态变化
 3. **CQRS**: 分离读/写模型以实现可扩展性
-4. **事件驱动**: 通过 Outbox 模式实现异步通信
+4. **事件驱动**: 子域之间用同步领域事件，与发布方同一事务
 5. **幂等性**: 通过业务键实现安全重试
 
 ### 依赖规则 ⚠️
 
 ```
 adapter  →  app + api
-app      →  domain + patra-common
+app      →  domain
 infra    →  domain
-domain   →  仅 patra-common (无框架)
+domain   →  仅 patra-tool-core (无框架)
 ```
 
 **关键**: 领域层 = **纯 Java** (无 Spring,无 JPA 注解)
@@ -227,29 +209,7 @@ Patra 项目遵循**测试金字塔**，各层使用不同的测试策略：
 
 ## 📊 当前状态
 
-### ✅ 已完成
-
-- ✅ 六边形架构脚手架
-- ✅ 领域模型 (Provenance, Plan, Task 聚合)
-- ✅ Registry CRUD API (基于 HTTP Interface)
-- ✅ Plan 编排 (时间窗口解析、切片、任务生成)
-- ✅ Outbox 模式实现
-- ✅ Cursor 水位线跟踪
-- ✅ 通过业务键实现幂等性
-
-### 🚧 进行中
-
-- 🚧 PubMed 批量规划器 (最近提交)
-- 🚧 任务执行工作器
-- 🚧 数据解析和清洗管道
-
-### 📋 计划中
-
-- 📋 更多数据源 (EPMC, Crossref 等)
-- 📋 数据存储微服务 (`patra-catalog`)
-- 📋 搜索微服务 (集成 Elasticsearch)
-- 📋 可观测性 (指标、分布式追踪)
-- 📋 管理后台 UI
+各版本的目标、范围与完成情况见 `docs/patra/release-specs/`。
 
 ---
 
@@ -294,4 +254,4 @@ Patra 项目遵循**测试金字塔**，各层使用不同的测试策略：
 
 **由 Patra 团队用 ❤️ 构建**
 
-最后更新: 2025-01-12
+最后更新: 2026-10-30
