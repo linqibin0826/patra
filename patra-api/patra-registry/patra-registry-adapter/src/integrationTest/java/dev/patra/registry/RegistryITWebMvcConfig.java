@@ -18,7 +18,7 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 ///
 /// 异常处理说明：
 ///
-/// 领域异常（如 ProvenanceNotFoundException）携带 StandardErrorTrait.NOT_FOUND，
+/// 领域异常（如 DictionaryTypeNotFoundException）携带 StandardErrorTrait.NOT_FOUND，
 /// 由 DefaultErrorResolutionEngine 内置映射自动转换为 HTTP 404。
 ///
 /// 注意：Controller 由 @WebMvcTest + @Import 显式指定，保持切片测试的隔离性。

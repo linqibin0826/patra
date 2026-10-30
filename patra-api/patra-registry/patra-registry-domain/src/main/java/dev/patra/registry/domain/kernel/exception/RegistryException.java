@@ -12,9 +12,9 @@ import dev.patra.tool.core.error.trait.ErrorTrait;
 /// **使用示例**:
 ///
 /// ```java
-/// public class ProvenanceNotFoundException extends RegistryException {
-///     public ProvenanceNotFoundException(String provenanceCode) {
-///         super("Provenance 未找到: " + provenanceCode, StandardErrorTrait.NOT_FOUND);
+/// public class DictionaryTypeNotFoundException extends RegistryException {
+///     public DictionaryTypeNotFoundException(String typeCode) {
+///         super("字典类型未找到: " + typeCode, StandardErrorTrait.NOT_FOUND);
 ///     }
 /// }
 /// ```

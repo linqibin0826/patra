@@ -1,5 +1,5 @@
 /* ====================================================================
- * 迁移: V3 - country 字典种子数据
+ * 迁移: V2 - country 字典种子数据
  * ====================================================================
  * 目的: 初始化完整的 ISO 3166-1 国家代码字典
  *
@@ -561,6 +561,44 @@ ON CONFLICT (source_standard, external_code) DO NOTHING;
 /* ====================================================================
  * 国家字典种子数据结束
  * ==================================================================== */
+
+
+-- country ISO_3166_1_ALPHA2（规范标准）与 NAME_EN 标准
+INSERT INTO sys_reference_standard
+(id, dict_type_code, standard_code, standard_name, description, display_order, is_canonical, enabled,
+ created_at, updated_at, version)
+VALUES (
+  900000000000000002,
+  'country',
+  'ISO_3166_1_ALPHA2',
+  'ISO 3166-1 alpha-2',
+  '国家代码两字母标准（平台规范标准，item_code 采用此格式）',
+  10,
+  true,
+  true,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP,
+  0
+)
+ON CONFLICT (dict_type_code, standard_code) DO NOTHING;
+
+INSERT INTO sys_reference_standard
+(id, dict_type_code, standard_code, standard_name, description, display_order, is_canonical, enabled,
+ created_at, updated_at, version)
+VALUES (
+  900000000000000003,
+  'country',
+  'NAME_EN',
+  'English Name',
+  '英文名称标准（用于名称型输入，需转换为 ISO 代码）',
+  20,
+  false,
+  true,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP,
+  0
+)
+ON CONFLICT (dict_type_code, standard_code) DO NOTHING;
 
 
 -- country NAME_ZH 标准

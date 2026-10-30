@@ -2,17 +2,14 @@
 
 ## 概述
 
-`patra-registry` 是 Patra 平台的**单一真实数据源(SSOT)**和配置中枢,负责管理所有数据源的元数据、运营配置、表达式元数据和系统字典。本服务采用六边形架构 + DDD 设计模式,通过时态配置机制确保配置变更的可追溯性和安全性。
+`patra-registry` 是 Patra 平台系统字典的**单一真实数据源(SSOT)**,管理国家、语言等平台级字典及其来源标准目录。本服务采用六边形架构 + DDD 设计模式。
 
-其他微服务(特别是 `patra-ingest`)通过 HTTP Interface 客户端查询本服务,获取特定时间点的有效配置快照,实现配置的集中管理和一致性保障。
+`patra-catalog` 导入数据时通过 HTTP Interface 客户端调用本服务,把外部原始值(英文国名、ISO 639-3 语言代码等)解析为平台字典项。
 
 ## 核心职责
 
-- **数据源管理**: 维护外部数据源目录(PubMed、EPMC、Crossref 等)及其基础元数据
-- **运营配置**: 管理 HTTP 策略、重试策略、速率限制、分页规则、批处理配置、时间窗口偏移等运营参数
-- **表达式元数据**: 提供 API 参数映射、字段定义、渲染规则,支持 `patra-expr-kernel` 动态表达式编译
-- **时态切片**: 通过 `effectiveFrom` 和 `effectiveUntil` 实现配置的时间有效性管理,支持安全的配置更新和审计
 - **系统字典**: 管理统一的枚举代码、业务字典项及来源标准目录
+- **字典解析**: 按来源标准把外部原始值批量解析为字典项
 
 ## 模块结构
 
@@ -37,51 +34,14 @@ patra-registry/
 
 | 子域 | 内容 |
 |------|------|
-| `provenance` | 数据源与运营配置聚合 `ProvenanceConfiguration`；对外公开读端口 `ProvenanceReadPort`（按代码解析数据源 ID） |
-| `expr` | 表达式元数据快照（字段、能力、渲染规则、API 参数映射），时态值对象接口 `TemporalEntity` |
 | `dictionary` | 字典解析，来源标准 `ReferenceStandard` 并入此处 |
-| `kernel`（底座） | 只在 domain 层：6 个异常根（`domain.kernel.exception`）与注册键规范化 `RegistryKeyStandardizer` / `RegistryKeyPlaceholders`（`domain.kernel.policy`） |
+| `kernel`（底座） | 只在 domain 层：6 个异常根（`domain.kernel.exception`） |
 
-- 子域间只有一条依赖边 `expr → provenance`：`ExprRepositoryAdapter` 经 `domain.provenance.port.read.ProvenanceReadPort` 把数据源代码解析为 ID，不碰 provenance 的 entity / dao。
 - 各层落点：读用例 `app.{子域}.usecase.query`（`*QueryService` + `*QueryAssembler`）；仓储与读适配器 `infra.{子域}.persistence(.entity|.dao|.mapper)`；内部 RPC `adapter.{子域}.internal`（`*EndpointImpl` + `*ApiConverter`）；门户字典接口 `adapter.dictionary.rest`；契约 `api.{子域}.{endpoint,dto}`，错误码在保留包 `api.error`。
 
 ## 核心领域概念
 
-### 1. Provenance(数据源)
-
-外部数据源的核心元数据,包含唯一标识符(`code`)、显示名称、默认基础 URL、默认时区、激活状态和生命周期状态代码。
-
-**领域对象**: `Provenance` (值对象)
-
-### 2. ProvenanceConfiguration(聚合根)
-
-只读聚合,将 `Provenance` 与所有运营配置组合成统一视图,包括:
-- `WindowOffsetConfig`: 时间窗口分段配置
-- `PaginationConfig`: 分页策略
-- `HttpConfig`: HTTP 客户端设置
-- `BatchingConfig`: 批处理规则
-- `RetryConfig`: 重试策略
-- `RateLimitConfig`: 速率限制
-
-**作用域优先级**: TASK 级配置覆盖 SOURCE 级默认值。
-
-### 3. 时态配置
-
-所有运营配置(除 `Provenance` 本身)都具有时间有效性范围:
-- `effectiveFrom`: 配置生效时间
-- `effectiveUntil`: 配置失效时间
-
-**查询模式**: 通过指定时间点(`at`)查询该时刻有效的配置,支持配置的安全更新、A/B 测试和审计轨迹。
-
-### 4. 表达式元数据
-
-支持动态 API 参数映射的元数据体系:
-- **ExprCapability**: 数据源支持的操作能力(HARVEST、UPDATE 等)
-- **ApiParamMapping**: 逻辑参数到 API 查询参数的映射规则
-- **ExprField**: 字段定义(数据类型、约束、语义键)
-- **ExprRenderRule**: 表达式渲染为 API 查询的转换规则
-
-### 5. Dictionary（字典）
+### 1. Dictionary（字典）
 
 提供字典值的统一解析服务，支持将外部系统的代码映射到内部标准代码:
 
@@ -98,7 +58,7 @@ patra-registry/
 - `DictionaryStandardNotFoundException`: 来源标准不存在
 - `DictionaryStandardDisabledException`: 来源标准已禁用
 
-### 6. ReferenceStandard（来源标准）
+### 2. ReferenceStandard（来源标准）
 
 管理外部值遵循的格式规范:
 - **ReferenceStandard**: 来源标准值对象(如 `ISO_3166_1_ALPHA2`、`NAME_EN`)
@@ -106,22 +66,6 @@ patra-registry/
 - 通过 `DictionaryItemAlias.sourceStandard` 关联字典项
 
 ## 主要 API 契约
-
-### ProvenanceEndpoint (内部 RPC)
-
-**基础路径**: `/_internal/provenances`
-
-**核心端点**:
-- `GET /_internal/provenances` - 列出所有数据源
-- `GET /_internal/provenances/{code}` - 获取单个数据源
-- `GET /_internal/provenances/{code}/config` - 加载完整配置聚合(支持时态切片)
-
-### ExprEndpoint (内部 RPC)
-
-**基础路径**: `/_internal/expr`
-
-**核心端点**:
-- `GET /_internal/expr/snapshot` - 获取完整表达式快照(支持时态切片)
 
 ### DictionaryEndpoint (内部 RPC)
 
@@ -133,11 +77,9 @@ patra-registry/
 ## 依赖关系
 
 **上游依赖**:
-- `patra-common-core`: 共享枚举、工具类
-- `patra-spring-boot-starter-*`: 统一的 Spring Boot 配置
+- `patra-tool-*`: 工具模块（JPA、Web、HTTP Interface 等）
 
 **下游消费者**:
-- `patra-ingest`: 通过 HTTP Interface 客户端查询数据源配置
 - `patra-catalog`: 通过 `DictionaryEndpoint` 解析字典值（国家、语言等多种类型标准化）
 - 其他微服务: 通过 `patra-registry-api` 模块引入 HTTP Interface 契约
 
@@ -195,24 +137,8 @@ cd patra-registry-boot
 ### 数据库迁移
 
 Flyway 自动执行数据库迁移,种子数据包括:
-- 数据源元数据
-- 表达式配置(字段、能力、映射、规则)
-- 系统字典
-- 来源标准目录
-
-## 扩展指南
-
-### 添加新的配置类型
-
-假设需要添加 `CacheConfig`:
-
-1. **定义值对象**: `patra-registry-domain/.../domain/provenance/model/vo/CacheConfig.java`
-2. **定义读模型**: `patra-registry-domain/.../domain/provenance/model/read/CacheConfigQuery.java`
-3. **更新聚合根**: 在 `ProvenanceConfiguration` 中添加 `cacheConfig` 字段
-4. **扩展仓储接口**: 在 `ProvenanceConfigRepository` 中添加查询方法
-5. **创建 DO 和 Mapper**: 在 `patra-registry-infra` 中创建数据库实体和映射器
-6. **实现仓储方法**: 在 `ProvenanceConfigRepositoryAdapter` 中实现查询逻辑
-7. **更新 DTO**: 在 `patra-registry-api` 中添加响应 DTO
+- 国家字典（V2：ISO 3166-1 alpha-2 代码、英文名与中文名别名及其来源标准）
+- 语言字典（V3）
 
 ## 相关文档
 
@@ -225,4 +151,4 @@ Flyway 自动执行数据库迁移,种子数据包括:
 
 ---
 
-**最后更新**: 2026-01-14
+**最后更新**: 2026-10-30
