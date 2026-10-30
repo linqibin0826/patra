@@ -53,12 +53,7 @@ fun Project.applyPatraDependencyManagement(libs: VersionCatalog) {
 
     extensions.configure<DependencyManagementExtension> {
         imports {
-            mavenBom("org.springframework.boot:spring-boot-dependencies:$springBootVersion") {
-                bomProperty("tomcat.version", version("tomcat"))
-                bomProperty("httpclient5.version", version("httpclient5"))
-                bomProperty("httpcore5.version", version("httpcore5"))
-                bomProperty("opentelemetry.version", version("opentelemetry"))
-            }
+            mavenBom("org.springframework.boot:spring-boot-dependencies:$springBootVersion")
             mavenBom("org.springframework.cloud:spring-cloud-dependencies:$springCloudVersion")
             // spring-cloud-alibaba 2025.1.0.0 BOM 内锁定的 log4j-core 2.25.1 上游 POM 损坏
             // 通过 bomProperty 覆盖 BOM 内部属性，使最终解析跳过坏版本

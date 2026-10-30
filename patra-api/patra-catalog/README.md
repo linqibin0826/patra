@@ -183,9 +183,9 @@ patra-catalog 是 Patra 医学文献数据平台的目录管理微服务，负�
 - `patra-registry-api`：Registry 服务契约（DictionaryEndpoint 字典解析）
 
 ### 外部依赖
-- Spring Boot 4.0.6
-- Spring Cloud 2025.1.1
-- Spring Data JPA + Hibernate 7.1
+- Spring Boot 4.1.2
+- Spring Cloud 2025.1.4
+- Spring Data JPA + Hibernate 7.4
 - Nacos（服务发现）
 
 ## ⚙️ 配置说明

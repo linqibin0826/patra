@@ -88,8 +88,8 @@ patra-registry/
 | 组件 | 版本/说明 |
 |------|---------|
 | **Java** | 25 |
-| **Spring Boot** | 4.0.6 |
-| **Spring Cloud** | 2025.1.0 |
+| **Spring Boot** | 4.1.2 |
+| **Spring Cloud** | 2025.1.4 |
 | **Spring Data JPA** | 持久化框架 |
 | **MapStruct** | 对象映射 |
 | **Nacos** | 服务注册中心 |
