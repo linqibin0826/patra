@@ -124,14 +124,14 @@ check "场景5 非法 JSON 拒绝" 2 "$rc" \
 
 # ---- 场景6：按 services.json 的条目顺序部署，请求的服务一个不漏 ----
 setup
-for s in gateway identity object-storage; do
+for s in gateway identity registry; do
   echo "ghcr.io/linqibin0826/patra-$s:newsha" >> "$STUB_IMAGES"
 done
 echo newsha >> "$STUB_HEALTHY"
-bash "$SCRIPT_DIR/deploy.sh" newsha '["gateway","identity","object-storage"]' > "$TMP/out" 2>&1; rc=$?
+bash "$SCRIPT_DIR/deploy.sh" newsha '["gateway","identity","registry"]' > "$TMP/out" 2>&1; rc=$?
 check "场景6 按 services.json 顺序部署" 0 "$rc" \
-  '[ "$(sed -n "s/.* up -d //p" "$STUB_LOG" | xargs)" = "object-storage identity gateway" ]' \
-  '[ "$(cat "$LAST_GOOD_DIR/last-good-object-storage")" = newsha ]' \
+  '[ "$(sed -n "s/.* up -d //p" "$STUB_LOG" | xargs)" = "registry identity gateway" ]' \
+  '[ "$(cat "$LAST_GOOD_DIR/last-good-registry")" = newsha ]' \
   '[ "$(cat "$LAST_GOOD_DIR/last-good-identity")" = newsha ]' \
   '[ "$(cat "$LAST_GOOD_DIR/last-good-gateway")" = newsha ]'
 

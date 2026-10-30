@@ -37,7 +37,7 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 /// 下游中途停住的情形在 [GatewayStalledDownstreamIT]。
 ///
 /// `test` profile 把读超时压到 1 秒。三条路由各扮一个角色：catalog 指向 WireMock，
-/// registry 指向没人监听的端口，ingest 不配实例。
+/// registry 指向没人监听的端口，interaction 不配实例。
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @AutoConfigureRestTestClient
@@ -88,7 +88,7 @@ class GatewayFailureIT {
   void should_return_503_when_no_instance_is_available() {
     restClient
         .get()
-        .uri("/patra-ingest/plans")
+        .uri("/patra-interaction/libraries")
         .exchange()
         .expectStatus()
         .isEqualTo(503)

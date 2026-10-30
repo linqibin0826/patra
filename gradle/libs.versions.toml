@@ -40,7 +40,6 @@ error-prone = "2.14.0"
 xxl-job = "3.2.0"
 rocketmq = "5.3.1"
 rocketmq-spring-boot = "2.3.1"
-fastjson2 = "2.0.58"
 
 # API Documentation (swagger-annotations 版本须与 springdoc 传递依赖保持一致)
 springdoc = "3.0.1"
@@ -85,7 +84,6 @@ wiremock = "3.10.0"
 awaitility = "4.2.2"
 greenmail = "2.1.14"
 mockftpserver = "3.2.0"
-jmh = "1.37"
 archunit = "1.4.1"
 objenesis = "3.4"
 
@@ -186,8 +184,6 @@ awaitility = { module = "org.awaitility:awaitility", version.ref = "awaitility" 
 greenmail = { module = "com.icegreen:greenmail", version.ref = "greenmail" }
 objenesis = { module = "org.objenesis:objenesis", version.ref = "objenesis" }
 mockftpserver = { module = "org.mockftpserver:MockFtpServer", version.ref = "mockftpserver" }
-jmh-core = { module = "org.openjdk.jmh:jmh-core", version.ref = "jmh" }
-jmh-generator = { module = "org.openjdk.jmh:jmh-generator-annprocess", version.ref = "jmh" }
 
 # Testcontainers
 testcontainers-core = { module = "org.testcontainers:testcontainers" }

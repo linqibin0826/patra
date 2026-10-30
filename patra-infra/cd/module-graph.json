@@ -2,9 +2,7 @@
     "_comment": "dumpModuleGraph \u4ea7\u7269\uff0c\u52ff\u624b\u6539\u3002\u53d7\u5f71\u54cd\u5355\u5143\u95e8\u63a7 SSOT\u3002\u6539 build \u6587\u4ef6\u540e\u91cd\u8dd1 ./gradlew dumpModuleGraph\u3002",
     "units": [
         "registry",
-        "object-storage",
         "catalog",
-        "ingest",
         "identity",
         "interaction",
         "gateway",
@@ -92,9 +90,7 @@
                 "foundation",
                 "gateway",
                 "identity",
-                "ingest",
                 "interaction",
-                "object-storage",
                 "registry"
             ],
             "tasks": [
@@ -185,96 +181,6 @@
             ]
         },
         {
-            "dir": "patra-api/patra-ingest/patra-ingest-adapter",
-            "project": ":patra-api:patra-ingest:patra-ingest-adapter",
-            "unit": "ingest",
-            "impacts": [
-                "ingest"
-            ],
-            "tasks": [
-                "check"
-            ]
-        },
-        {
-            "dir": "patra-api/patra-ingest/patra-ingest-api",
-            "project": ":patra-api:patra-ingest:patra-ingest-api",
-            "unit": "ingest",
-            "impacts": [
-                "ingest"
-            ],
-            "tasks": [
-                "check"
-            ]
-        },
-        {
-            "dir": "patra-api/patra-ingest/patra-ingest-app",
-            "project": ":patra-api:patra-ingest:patra-ingest-app",
-            "unit": "ingest",
-            "impacts": [
-                "ingest"
-            ],
-            "tasks": [
-                "check"
-            ]
-        },
-        {
-            "dir": "patra-api/patra-ingest/patra-ingest-boot",
-            "project": ":patra-api:patra-ingest:patra-ingest-boot",
-            "unit": "ingest",
-            "impacts": [
-                "ingest"
-            ],
-            "tasks": [
-                "check",
-                "integrationTest"
-            ]
-        },
-        {
-            "dir": "patra-api/patra-ingest/patra-ingest-domain",
-            "project": ":patra-api:patra-ingest:patra-ingest-domain",
-            "unit": "ingest",
-            "impacts": [
-                "ingest"
-            ],
-            "tasks": [
-                "check"
-            ]
-        },
-        {
-            "dir": "patra-api/patra-ingest/patra-ingest-expr",
-            "project": ":patra-api:patra-ingest:patra-ingest-expr",
-            "unit": "ingest",
-            "impacts": [
-                "ingest"
-            ],
-            "tasks": [
-                "check"
-            ]
-        },
-        {
-            "dir": "patra-api/patra-ingest/patra-ingest-infra",
-            "project": ":patra-api:patra-ingest:patra-ingest-infra",
-            "unit": "ingest",
-            "impacts": [
-                "ingest"
-            ],
-            "tasks": [
-                "check",
-                "integrationTest"
-            ]
-        },
-        {
-            "dir": "patra-api/patra-ingest/patra-ingest-provenance",
-            "project": ":patra-api:patra-ingest:patra-ingest-provenance",
-            "unit": "ingest",
-            "impacts": [
-                "ingest"
-            ],
-            "tasks": [
-                "check"
-            ]
-        },
-        {
             "dir": "patra-api/patra-interaction/patra-interaction-adapter",
             "project": ":patra-api:patra-interaction:patra-interaction-adapter",
             "unit": "interaction",
@@ -343,74 +249,6 @@
             ]
         },
         {
-            "dir": "patra-api/patra-object-storage/patra-object-storage-adapter",
-            "project": ":patra-api:patra-object-storage:patra-object-storage-adapter",
-            "unit": "object-storage",
-            "impacts": [
-                "object-storage"
-            ],
-            "tasks": [
-                "check",
-                "integrationTest"
-            ]
-        },
-        {
-            "dir": "patra-api/patra-object-storage/patra-object-storage-api",
-            "project": ":patra-api:patra-object-storage:patra-object-storage-api",
-            "unit": "object-storage",
-            "impacts": [
-                "ingest",
-                "object-storage"
-            ],
-            "tasks": [
-                "check"
-            ]
-        },
-        {
-            "dir": "patra-api/patra-object-storage/patra-object-storage-app",
-            "project": ":patra-api:patra-object-storage:patra-object-storage-app",
-            "unit": "object-storage",
-            "impacts": [
-                "object-storage"
-            ],
-            "tasks": [
-                "check"
-            ]
-        },
-        {
-            "dir": "patra-api/patra-object-storage/patra-object-storage-boot",
-            "project": ":patra-api:patra-object-storage:patra-object-storage-boot",
-            "unit": "object-storage",
-            "impacts": [
-                "object-storage"
-            ],
-            "tasks": [
-                "check"
-            ]
-        },
-        {
-            "dir": "patra-api/patra-object-storage/patra-object-storage-domain",
-            "project": ":patra-api:patra-object-storage:patra-object-storage-domain",
-            "unit": "object-storage",
-            "impacts": [
-                "object-storage"
-            ],
-            "tasks": [
-                "check"
-            ]
-        },
-        {
-            "dir": "patra-api/patra-object-storage/patra-object-storage-infra",
-            "project": ":patra-api:patra-object-storage:patra-object-storage-infra",
-            "unit": "object-storage",
-            "impacts": [
-                "object-storage"
-            ],
-            "tasks": [
-                "check"
-            ]
-        },
-        {
             "dir": "patra-api/patra-registry/patra-registry-adapter",
             "project": ":patra-api:patra-registry:patra-registry-adapter",
             "unit": "registry",
@@ -428,7 +266,6 @@
             "unit": "registry",
             "impacts": [
                 "catalog",
-                "ingest",
                 "registry"
             ],
             "tasks": [
@@ -502,9 +339,7 @@
                 "foundation",
                 "gateway",
                 "identity",
-                "ingest",
                 "interaction",
-                "object-storage",
                 "registry"
             ],
             "tasks": [
@@ -519,9 +354,7 @@
                 "catalog",
                 "foundation",
                 "identity",
-                "ingest",
-                "interaction",
-                "object-storage"
+                "interaction"
             ],
             "tasks": [
                 "check"
@@ -536,7 +369,6 @@
                 "foundation",
                 "gateway",
                 "identity",
-                "ingest",
                 "interaction"
             ],
             "tasks": [
@@ -553,9 +385,7 @@
                 "foundation",
                 "gateway",
                 "identity",
-                "ingest",
                 "interaction",
-                "object-storage",
                 "registry"
             ],
             "tasks": [
@@ -572,9 +402,7 @@
                 "foundation",
                 "gateway",
                 "identity",
-                "ingest",
                 "interaction",
-                "object-storage",
                 "registry"
             ],
             "tasks": [
@@ -589,8 +417,7 @@
             "impacts": [
                 "catalog",
                 "foundation",
-                "identity",
-                "ingest"
+                "identity"
             ],
             "tasks": [
                 "check",
@@ -606,9 +433,7 @@
                 "foundation",
                 "gateway",
                 "identity",
-                "ingest",
                 "interaction",
-                "object-storage",
                 "registry"
             ],
             "tasks": [
@@ -653,9 +478,7 @@
                 "foundation",
                 "gateway",
                 "identity",
-                "ingest",
                 "interaction",
-                "object-storage",
                 "registry"
             ],
             "tasks": [
@@ -672,9 +495,7 @@
                 "foundation",
                 "gateway",
                 "identity",
-                "ingest",
                 "interaction",
-                "object-storage",
                 "registry"
             ],
             "tasks": [
