@@ -4,9 +4,11 @@ import dev.patra.interaction.app.post.service.ExperienceViews;
 import dev.patra.interaction.domain.post.exception.InvalidPostRequestException;
 import dev.patra.interaction.domain.post.exception.PostNotFoundException;
 import dev.patra.interaction.domain.post.model.aggregate.PostAggregate;
+import dev.patra.interaction.domain.post.model.enums.ExperienceSort;
 import dev.patra.interaction.domain.post.model.enums.SummaryWindow;
 import dev.patra.interaction.domain.post.model.read.ExperienceStats;
 import dev.patra.interaction.domain.post.model.read.ExperienceSummary;
+import dev.patra.interaction.domain.post.model.read.HelpfulRankedPost;
 import dev.patra.interaction.domain.post.model.vo.PostId;
 import dev.patra.interaction.domain.post.policy.ExperienceRules;
 import dev.patra.interaction.domain.post.policy.ExperienceSummaryRules;
@@ -15,6 +17,7 @@ import dev.patra.interaction.domain.post.port.repository.PostRepository;
 import dev.patra.interaction.domain.subject.model.enums.SubjectType;
 import dev.patra.interaction.domain.subject.model.read.SubjectView;
 import dev.patra.interaction.domain.subject.model.read.UserCard;
+import dev.patra.interaction.domain.subject.model.vo.RankCursor;
 import dev.patra.interaction.domain.subject.model.vo.SubjectId;
 import dev.patra.interaction.domain.subject.port.read.SubjectReadPort;
 import dev.patra.interaction.domain.subject.port.user.UserDirectoryPort;
@@ -24,6 +27,7 @@ import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -48,23 +52,42 @@ public class ExperienceQueryService {
   private final CurrentUserPort currentUser;
   private final Clock clock;
 
-  /// 期刊下的经验一页（不受统计窗口影响，列全部）。
+  /// 期刊下的经验一页（不受统计窗口影响，列全部），带期刊下的总条数。
+  ///
+  /// 「最新投稿」的游标是经验 ID（反查排序键）；「最有帮助」的游标是三元组，有帮助数会变，所以嵌进游标，且取排序
+  /// 那条查询读出的数（不取随后统计查询里的，两者之间有人取消会让下一页跳过同数的经验）。
   ///
   /// @param journalKey 期刊的对外 key
-  /// @param cursor 游标，可空
+  /// @param sort `latest`（默认）/ `helpful`
+  /// @param cursor 游标，可空；格式要与排序配套
   /// @param limit 每页条数 1–10，默认 10
   /// @return 一页
-  public CursorPage<ExperienceItemView> journalExperiences(
-      String journalKey, String cursor, Integer limit) {
+  public JournalExperiencePage journalExperiences(
+      String journalKey, String sort, String cursor, Integer limit) {
     int size = pageSize(limit, JOURNAL_PAGE_SIZE);
-    PostId after = PostId.parseCursor(cursor);
+    boolean helpful = ExperienceSort.fromParam(sort) == ExperienceSort.HELPFUL;
+    PostId after = helpful ? null : PostId.parseCursor(cursor);
+    RankCursor rankAfter = helpful ? rankCursor(cursor) : null;
     SubjectId journal = registeredJournal(journalKey);
     if (journal == null) {
-      return CursorPage.empty();
+      return JournalExperiencePage.of(List.of(), null, 0);
     }
-    List<PostAggregate> rows = reads.pageByJournal(journal, after, size + 1);
+    List<HelpfulRankedPost> ranked =
+        helpful ? reads.pageByJournalHelpful(journal, rankAfter, size + 1) : List.of();
+    List<PostAggregate> rows =
+        helpful
+            ? ranked.stream().map(HelpfulRankedPost::post).toList()
+            : reads.pageByJournal(journal, after, size + 1);
     List<PostAggregate> page = rows.subList(0, Math.min(size, rows.size()));
-    return CursorPage.of(views.items(page, viewer()), nextCursor(rows, page));
+    List<ExperienceItemView> items = views.items(page, viewer());
+    String next = nextCursor(rows, page);
+    if (helpful && next != null) {
+      HelpfulRankedPost last = ranked.get(page.size() - 1);
+      next =
+          RankCursor.of(last.helpfulCount(), last.post().createdAt(), last.post().postId().value())
+              .format();
+    }
+    return JournalExperiencePage.of(items, next, reads.countByJournal(journal));
   }
 
   /// 期刊汇总。
@@ -142,13 +165,14 @@ public class ExperienceQueryService {
         page.isEmpty()
             ? Map.of()
             : subjects.findByIds(page.stream().map(PostAggregate::subjectId).distinct().toList());
+    List<ExperienceItemView> experiences = views.withoutAuthor(page, viewer);
     List<UserExperienceView> items =
-        page.stream()
-            .map(
-                post ->
+        IntStream.range(0, page.size())
+            .mapToObj(
+                i ->
                     UserExperienceView.of(
-                        JournalRefView.of(journals.get(post.subjectId())),
-                        views.withoutAuthor(post, viewer)))
+                        JournalRefView.of(journals.get(page.get(i).subjectId())),
+                        experiences.get(i)))
             .toList();
     return CursorPage.of(items, nextCursor(rows, page));
   }
@@ -175,6 +199,19 @@ public class ExperienceQueryService {
       throw new InvalidPostRequestException("每页条数要在 1 到 " + max + " 之间：" + limit);
     }
     return limit;
+  }
+
+  /// 「最有帮助」的游标：没传为 `null`，格式不对 422。
+  ///
+  /// @param raw 原文，可空
+  /// @return 游标
+  /// @throws InvalidPostRequestException 格式不对
+  private static RankCursor rankCursor(String raw) {
+    if (raw == null || raw.isBlank()) {
+      return null;
+    }
+    return RankCursor.parse(raw)
+        .orElseThrow(() -> new InvalidPostRequestException("分页游标不合法：" + raw));
   }
 
   /// 多取的那一条存在时，下一页游标是本页最后一条的 ID。

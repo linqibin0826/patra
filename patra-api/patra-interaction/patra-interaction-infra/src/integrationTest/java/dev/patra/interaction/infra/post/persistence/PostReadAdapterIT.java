@@ -6,16 +6,23 @@ import dev.patra.interaction.domain.post.model.aggregate.PostAggregate;
 import dev.patra.interaction.domain.post.model.enums.FinalOutcome;
 import dev.patra.interaction.domain.post.model.enums.FirstDecision;
 import dev.patra.interaction.domain.post.model.read.ExperienceStats;
+import dev.patra.interaction.domain.post.model.read.HelpfulRankedPost;
+import dev.patra.interaction.domain.post.model.read.PostStats;
 import dev.patra.interaction.domain.post.model.vo.ExperienceFields;
 import dev.patra.interaction.domain.post.model.vo.PostId;
 import dev.patra.interaction.domain.post.model.vo.PostRevision;
 import dev.patra.interaction.domain.post.port.read.PostReadPort;
+import dev.patra.interaction.domain.subject.model.vo.RankCursor;
+import dev.patra.interaction.domain.subject.model.vo.SubjectId;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-/// 读端：排序与游标、删除与匿名的过滤、修改历史的顺序、汇总的分位数（与 Excel 的 PERCENTILE.INC 一致）。
+/// 读端：排序与游标（最新投稿、最有帮助）、删除与匿名的过滤、修改历史的顺序、汇总的分位数（与 Excel 的
+/// PERCENTILE.INC 一致）、每条经验的有帮助数 / 回复数 / 「我点过」、期刊下的条数。
 class PostReadAdapterIT extends PostPersistenceITSupport {
 
   private static final LocalDate SINCE = LocalDate.parse("2023-10-27");
@@ -175,6 +182,101 @@ class PostReadAdapterIT extends PostPersistenceITSupport {
             .finalOutcome(FinalOutcome.REJECTED)
             .build();
     publish(100 + days, J1, false, f, null, T0);
+  }
+
+  /// 有帮助数与「我点过」按 reaction 的表；回复数经登记表两跳到讨论的对象统计；没有统计的都是 0。
+  @Test
+  void should_find_stats_with_two_hop_reply_count() {
+    PostAggregate p1 = publish(U, J1, false, fields("2026-03-01"), null, T0);
+    PostAggregate p2 = publish(V, J1, false, fields("2026-03-02"), null, T0);
+    helpful(p1, 2);
+    registered(31L, p1);
+    jdbcTemplate.update("INSERT INTO discussion.subject_stats VALUES (31, 4)");
+    jdbcTemplate.update(
+        "INSERT INTO reaction.helpful (user_id, target_type, target_id, credited_user_id,"
+            + " created_at) VALUES (7, 'POST', ?, ?, now())",
+        p1.postId().value(),
+        U);
+
+    assertThat(reads.findStats(List.of(p1.postId(), p2.postId()), 7L))
+        .containsExactlyInAnyOrderEntriesOf(
+            Map.of(p1.postId(), PostStats.of(2, 4, true), p2.postId(), PostStats.of(0, 0, false)));
+    assertThat(reads.findStats(List.of(p1.postId()), null))
+        .containsExactlyEntriesOf(Map.of(p1.postId(), PostStats.of(2, 4, null)));
+    assertThat(reads.findStats(List.of(), 7L)).isEmpty();
+  }
+
+  /// 「最有帮助」：有帮助数降序，相同时发布时间新的在前；三元组游标逐页翻完不重复；已删除与别的期刊的不出现。
+  @Test
+  void should_page_journal_by_helpful_then_newest() {
+    PostAggregate oldOne = publish(U, J1, false, fields("2026-05-01"), null, T0);
+    PostAggregate newOne = publish(U, J1, false, fields("2026-03-01"), null, T0.plusSeconds(60));
+    PostAggregate top = publish(V, J1, false, fields("2026-01-01"), null, T0);
+    PostAggregate gone = publish(V, J1, false, fields("2026-02-01"), null, T0);
+    PostAggregate elsewhere = publish(V, J2, false, fields("2026-02-01"), null, T0);
+    helpful(oldOne, 1);
+    helpful(newOne, 1);
+    helpful(top, 3);
+    helpful(gone, 9);
+    helpful(elsewhere, 9);
+    delete(gone.postId(), T0.plusSeconds(120));
+
+    List<HelpfulRankedPost> all = reads.pageByJournalHelpful(J1, null, 10);
+    assertThat(all.stream().map(r -> r.post().postId()))
+        .containsExactly(top.postId(), newOne.postId(), oldOne.postId());
+    assertThat(all).extracting(HelpfulRankedPost::helpfulCount).containsExactly(3, 1, 1);
+    List<PostId> paged = new ArrayList<>();
+    RankCursor after = null;
+    for (int page = 0; page < 5; page++) {
+      List<HelpfulRankedPost> one = reads.pageByJournalHelpful(J1, after, 1);
+      if (one.isEmpty()) {
+        break;
+      }
+      PostAggregate last = one.getLast().post();
+      paged.add(last.postId());
+      after = RankCursor.of(one.getLast().helpfulCount(), last.createdAt(), last.postId().value());
+    }
+    assertThat(paged).containsExactly(top.postId(), newOne.postId(), oldOne.postId());
+  }
+
+  /// 期刊下未删除的经验数。
+  @Test
+  void should_count_active_experiences_of_journal() {
+    publish(U, J1, false, fields("2026-03-01"), null, T0);
+    PostAggregate gone = publish(V, J1, false, fields("2026-03-02"), null, T0);
+    publish(V, J2, false, fields("2026-03-02"), null, T0);
+    delete(gone.postId(), T0.plusSeconds(1));
+
+    assertThat(reads.countByJournal(J1)).isEqualTo(1);
+    assertThat(reads.countByJournal(SubjectId.of(99L))).isZero();
+  }
+
+  /// 直接写一条经验的有帮助数。
+  ///
+  /// @param post 经验
+  /// @param count 有帮助数
+  private void helpful(PostAggregate post, int count) {
+    jdbcTemplate.update(
+        "INSERT INTO reaction.target_stats (target_type, target_id, helpful_count)"
+            + " VALUES ('POST', ?, ?)",
+        post.postId().value(),
+        count);
+  }
+
+  /// 把经验登记成底座里的对象。
+  ///
+  /// @param subjectId 对象的本地 ID
+  /// @param post 经验
+  private void registered(long subjectId, PostAggregate post) {
+    long id = post.postId().value();
+    jdbcTemplate.update(
+        "INSERT INTO subject.registry (subject_id, target_type, natural_key, source_id, state,"
+            + " snapshot, snapshot_at, owner_user_id, owner_anonymous)"
+            + " VALUES (?, 3, ?, ?, 'ACTIVE', '{}', now(), ?, false)",
+        subjectId,
+        "post:" + id,
+        id,
+        post.authorId());
   }
 
   /// 取 ID。

@@ -42,7 +42,8 @@ import org.springframework.transaction.support.TransactionOperations;
 ///
 /// 1. 本地校验（类型、能力、key、父评论 ID、正文、@ 候选），任何远程调用之前；
 /// 2. 事务外：发表资格（identity）→ 解析对象（文献首次评论时登记）→ 预读父评论 → 解析 @（identity）；
-/// 3. 事务：发表守卫计数 → 回复时拿楼锁、重读父评论判能否回复 → 插入 → 发布 {@link CommentPublishedEvent}；
+/// 3. 事务：发表守卫计数 → 回复时拿楼锁、重读父评论判能否回复 → 插入 → 楼内回复数（回复时）与对象评论数 +1 →
+///    发布 {@link CommentPublishedEvent}；
 /// 4. 拼响应：自己的名片用资格那一步的。
 @Component
 @RequiredArgsConstructor
@@ -95,11 +96,17 @@ public class PublishCommentHandler implements CommandHandler<PublishCommentComma
                           .mentionedUserIds(resolved.mentionedUserIds())
                           .createdAt(now)
                           .build());
+              if (locked != null) {
+                comments.recordReply(locked.getRootId(), now);
+              }
+              comments.incrementCommentCount(subjectId);
               events.publishEvent(published(newId, subject, locked, author, resolved, now));
               return newId;
             });
     CommentRecord record = reads.findById(id).orElseThrow();
-    return views.assemble(List.of(record), subject, author, Map.of(author, self)).getFirst();
+    return views
+        .assemble(List.of(record), subject, author, Map.of(author, self), Set.of())
+        .getFirst();
   }
 
   /// 事务外预读父评论：不存在 409，不在这个对象下 422。

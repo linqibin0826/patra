@@ -28,6 +28,7 @@ import dev.patra.interaction.domain.post.exception.InvalidExperienceException;
 import dev.patra.interaction.domain.post.exception.PostErrorTrait;
 import dev.patra.interaction.domain.post.model.aggregate.PostAggregate;
 import dev.patra.interaction.domain.post.model.vo.PostId;
+import dev.patra.interaction.domain.post.port.read.PostReadPort;
 import dev.patra.interaction.domain.post.port.repository.PostRepository;
 import dev.patra.interaction.domain.subject.model.enums.PublishKind;
 import dev.patra.interaction.domain.subject.model.enums.SubjectCapability;
@@ -88,7 +89,7 @@ class PublishExperienceHandlerTest {
             subjects,
             guard,
             posts,
-            new ExperienceViews(users, subjects),
+            new ExperienceViews(users, subjects, mock(PostReadPort.class)),
             TestUsers.signedIn(U),
             new RecordingTransactions(events),
             Clock.fixed(NOW, ZoneOffset.UTC));
@@ -133,7 +134,7 @@ class PublishExperienceHandlerTest {
             subjects,
             guard,
             posts,
-            new ExperienceViews(users, subjects),
+            new ExperienceViews(users, subjects, mock(PostReadPort.class)),
             TestUsers.signedIn(U),
             new RecordingTransactions(events),
             Clock.fixed(NOW.plusNanos(123_456_789), ZoneOffset.UTC));

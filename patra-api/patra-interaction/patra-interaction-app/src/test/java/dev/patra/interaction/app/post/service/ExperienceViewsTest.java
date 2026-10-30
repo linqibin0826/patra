@@ -2,6 +2,7 @@ package dev.patra.interaction.app.post.service;
 
 import static dev.patra.interaction.app.post.PostFixtures.JOURNAL;
 import static dev.patra.interaction.app.post.PostFixtures.NOW;
+import static dev.patra.interaction.app.post.PostFixtures.POST_ID;
 import static dev.patra.interaction.app.post.PostFixtures.card;
 import static dev.patra.interaction.app.post.PostFixtures.journalView;
 import static dev.patra.interaction.app.post.PostFixtures.post;
@@ -17,6 +18,8 @@ import dev.patra.interaction.app.post.usecase.query.ExperienceDetailView;
 import dev.patra.interaction.app.post.usecase.query.ExperienceItemView;
 import dev.patra.interaction.domain.post.model.aggregate.PostAggregate;
 import dev.patra.interaction.domain.post.model.enums.PostStatus;
+import dev.patra.interaction.domain.post.model.read.PostStats;
+import dev.patra.interaction.domain.post.port.read.PostReadPort;
 import dev.patra.interaction.domain.subject.port.read.SubjectReadPort;
 import dev.patra.interaction.domain.subject.port.user.UserDirectoryPort;
 import java.util.List;
@@ -25,7 +28,8 @@ import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/// 经验的视图与匿名遮蔽（spec 6.5）：匿名经验对别人不给作者；本人看自己的匿名经验有名片；主页不可见时去掉用户名与头像。
+/// 经验的视图与匿名遮蔽（spec 6.5）：匿名经验对别人不给作者；本人看自己的匿名经验有名片；主页不可见时去掉用户名与头像；
+/// 每条带有帮助数、回复数与「我点过」（PAP-132）。
 class ExperienceViewsTest {
 
   private static final long AUTHOR = 7L;
@@ -33,7 +37,8 @@ class ExperienceViewsTest {
 
   private final UserDirectoryPort users = mock(UserDirectoryPort.class);
   private final SubjectReadPort subjects = mock(SubjectReadPort.class);
-  private final ExperienceViews views = new ExperienceViews(users, subjects);
+  private final PostReadPort reads = mock(PostReadPort.class);
+  private final ExperienceViews views = new ExperienceViews(users, subjects, reads);
 
   @BeforeEach
   void setUp() {
@@ -131,5 +136,38 @@ class ExperienceViewsTest {
     assertThat(detail.journal().title()).isEqualTo("Journal of X");
     assertThat(detail.journal().abbreviation()).isEqualTo("J X");
     verifyNoInteractions(users);
+  }
+
+  /// 列表条目带一次批量取来的三项统计；匿名访客的「我点过」为 `null`。
+  @Test
+  void should_fill_stats_for_items() {
+    when(users.findCards(anyCollection(), any())).thenReturn(Map.of(AUTHOR, card(AUTHOR, true)));
+    when(reads.findStats(List.of(POST_ID), OTHER))
+        .thenReturn(Map.of(POST_ID, PostStats.of(3, 2, true)));
+    when(reads.findStats(List.of(POST_ID), null))
+        .thenReturn(Map.of(POST_ID, PostStats.of(3, 2, null)));
+
+    ExperienceItemView item = views.items(List.of(post(AUTHOR, false, NOW)), OTHER).getFirst();
+    ExperienceItemView forGuest = views.items(List.of(post(AUTHOR, false, NOW)), null).getFirst();
+
+    assertThat(item.helpfulCount()).isEqualTo(3);
+    assertThat(item.replyCount()).isEqualTo(2);
+    assertThat(item.helpful()).isTrue();
+    assertThat(forGuest.helpful()).isNull();
+  }
+
+  /// 详情、作者刚写完的详情与主页条目都带统计。
+  @Test
+  void should_fill_stats_for_detail_and_authored() {
+    PostAggregate post = post(AUTHOR, false, NOW);
+    when(users.findCards(anyCollection(), any())).thenReturn(Map.of(AUTHOR, card(AUTHOR, true)));
+    when(reads.findStats(List.of(POST_ID), OTHER))
+        .thenReturn(Map.of(POST_ID, PostStats.of(5, 1, false)));
+    when(reads.findStats(List.of(POST_ID), AUTHOR))
+        .thenReturn(Map.of(POST_ID, PostStats.of(5, 1, false)));
+
+    assertThat(views.detail(post, OTHER).experience().helpfulCount()).isEqualTo(5);
+    assertThat(views.authored(post, card(AUTHOR, true)).experience().replyCount()).isEqualTo(1);
+    assertThat(views.withoutAuthor(List.of(post), OTHER).getFirst().helpful()).isFalse();
   }
 }

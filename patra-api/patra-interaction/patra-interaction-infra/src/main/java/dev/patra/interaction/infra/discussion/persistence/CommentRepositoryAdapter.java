@@ -4,6 +4,7 @@ import dev.patra.interaction.domain.discussion.model.aggregate.CommentAggregate;
 import dev.patra.interaction.domain.discussion.model.read.RevisionRecord;
 import dev.patra.interaction.domain.discussion.model.vo.NewComment;
 import dev.patra.interaction.domain.discussion.port.repository.CommentRepository;
+import dev.patra.interaction.domain.subject.model.vo.SubjectId;
 import dev.patra.tool.jpa.id.SnowflakeIdGenerator;
 import java.time.Instant;
 import java.util.Optional;
@@ -174,6 +175,87 @@ public class CommentRepositoryAdapter implements CommentRepository {
   public void delete(long commentId) {
     jdbc.sql("DELETE FROM discussion.comment WHERE comment_id = :id")
         .param("id", commentId)
+        .update();
+  }
+
+  /// 楼里多了一条回复。
+  ///
+  /// @param rootId 根评论
+  /// @param createdAt 新回复的发表时刻
+  @Override
+  public void recordReply(long rootId, Instant createdAt) {
+    jdbc.sql(
+            """
+            INSERT INTO discussion.thread_stats (root_id, reply_count, last_reply_at)
+            VALUES (:rootId, 1, :at)
+            ON CONFLICT (root_id) DO UPDATE
+               SET reply_count = discussion.thread_stats.reply_count + 1,
+                   last_reply_at = GREATEST(discussion.thread_stats.last_reply_at,
+                                            EXCLUDED.last_reply_at)
+            """)
+        .param("rootId", rootId)
+        .param("at", CommentRows.utc(createdAt))
+        .update();
+  }
+
+  /// 楼里少了一条回复：锁行与重取最新时间分两条语句，后一条的快照晚于行锁。
+  ///
+  /// @param rootId 根评论
+  @Override
+  @Transactional(propagation = Propagation.MANDATORY)
+  public void removeReply(long rootId) {
+    jdbc.sql("SELECT 1 FROM discussion.thread_stats WHERE root_id = :rootId FOR UPDATE")
+        .param("rootId", rootId)
+        .query((rs, rowNum) -> 1)
+        .list();
+    jdbc.sql(
+            """
+            UPDATE discussion.thread_stats
+               SET reply_count = reply_count - 1,
+                   last_reply_at = (SELECT max(created_at) FROM discussion.comment
+                                     WHERE root_id = :rootId AND parent_id IS NOT NULL
+                                       AND state = 'ACTIVE')
+             WHERE root_id = :rootId
+            """)
+        .param("rootId", rootId)
+        .update();
+  }
+
+  /// 删楼统计行。
+  ///
+  /// @param rootId 根评论
+  @Override
+  public void dropThreadStats(long rootId) {
+    jdbc.sql("DELETE FROM discussion.thread_stats WHERE root_id = :rootId")
+        .param("rootId", rootId)
+        .update();
+  }
+
+  /// 对象评论数 +1。
+  ///
+  /// @param subjectId 对象
+  @Override
+  public void incrementCommentCount(SubjectId subjectId) {
+    jdbc.sql(
+            """
+            INSERT INTO discussion.subject_stats (subject_id, comment_count)
+            VALUES (:subjectId, 1)
+            ON CONFLICT (subject_id) DO UPDATE
+               SET comment_count = discussion.subject_stats.comment_count + 1
+            """)
+        .param("subjectId", subjectId.value())
+        .update();
+  }
+
+  /// 对象评论数 −1。
+  ///
+  /// @param subjectId 对象
+  @Override
+  public void decrementCommentCount(SubjectId subjectId) {
+    jdbc.sql(
+            "UPDATE discussion.subject_stats SET comment_count = comment_count - 1"
+                + " WHERE subject_id = :subjectId")
+        .param("subjectId", subjectId.value())
         .update();
   }
 

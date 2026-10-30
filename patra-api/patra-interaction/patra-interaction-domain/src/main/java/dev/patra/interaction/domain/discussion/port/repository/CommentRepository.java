@@ -3,10 +3,12 @@ package dev.patra.interaction.domain.discussion.port.repository;
 import dev.patra.interaction.domain.discussion.model.aggregate.CommentAggregate;
 import dev.patra.interaction.domain.discussion.model.read.RevisionRecord;
 import dev.patra.interaction.domain.discussion.model.vo.NewComment;
+import dev.patra.interaction.domain.subject.model.vo.SubjectId;
 import java.time.Instant;
 import java.util.Optional;
 
-/// 评论的写端（`discussion.comment`、`discussion.comment_revision`）。写方法不开事务，由 app 层的事务包住。
+/// 评论的写端（`discussion.comment`、`discussion.comment_revision`）与随评论同事务维护的楼统计、对象统计
+/// （`discussion.thread_stats`、`discussion.subject_stats`）。写方法不开事务，由 app 层的事务包住。
 public interface CommentRepository {
 
   /// 拿一楼的事务级 advisory lock `discussion.thread:{rootId}`：同一楼的回复与删除在锁上排队。
@@ -65,4 +67,31 @@ public interface CommentRepository {
   ///
   /// @param commentId 评论
   void delete(long commentId);
+
+  /// 楼里多了一条未删除的回复：回复数 +1，最后回复时间取与它较晚的那个（后拿到楼锁的回复时间可能更早）。
+  ///
+  /// @param rootId 根评论
+  /// @param createdAt 新回复的发表时刻
+  void recordReply(long rootId, Instant createdAt);
+
+  /// 楼里少了一条未删除的回复：先锁住楼统计行，再用新语句把回复数 −1、最后回复时间重取为剩余未删除回复中最新的
+  /// （没有剩余时为空）。调用前这条回复已经变占位或被去掉。
+  ///
+  /// @param rootId 根评论
+  void removeReply(long rootId);
+
+  /// 根评论整条去掉时删它的楼统计行。
+  ///
+  /// @param rootId 根评论
+  void dropThreadStats(long rootId);
+
+  /// 对象下多了一条未删除的评论（根评论或回复）。
+  ///
+  /// @param subjectId 对象
+  void incrementCommentCount(SubjectId subjectId);
+
+  /// 对象下少了一条未删除的评论。
+  ///
+  /// @param subjectId 对象
+  void decrementCommentCount(SubjectId subjectId);
 }

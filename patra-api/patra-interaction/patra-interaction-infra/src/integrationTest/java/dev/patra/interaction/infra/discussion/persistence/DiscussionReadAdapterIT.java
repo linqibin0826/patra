@@ -6,20 +6,24 @@ import dev.patra.interaction.domain.discussion.model.enums.CommentState;
 import dev.patra.interaction.domain.discussion.model.enums.ThreadSort;
 import dev.patra.interaction.domain.discussion.model.read.CommentRecord;
 import dev.patra.interaction.domain.discussion.model.read.RevisionRecord;
+import dev.patra.interaction.domain.discussion.model.read.ThreadStats;
 import dev.patra.interaction.domain.discussion.model.vo.NewComment;
 import dev.patra.interaction.domain.discussion.model.vo.ThreadCursor;
 import dev.patra.interaction.domain.discussion.port.read.DiscussionReadPort;
 import dev.patra.interaction.domain.discussion.port.repository.CommentRepository;
+import dev.patra.interaction.domain.subject.model.vo.RankCursor;
 import dev.patra.interaction.domain.subject.model.vo.SubjectId;
+import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-/// 讨论的读端：根评论分页（两种排序、游标）、每楼预览、楼内分页、整楼、祖先链、修改历史、最近参与者；每条都带父评论
-/// 的作者与状态和有没有直接回复。
+/// 讨论的读端：根评论分页（三种排序、游标）、每楼预览、楼内分页、整楼、祖先链、修改历史、最近参与者、「我点过」、
+/// 楼统计与对象评论数；每条都带父评论的作者与状态、有没有直接回复与有帮助数。
 class DiscussionReadAdapterIT extends DiscussionPersistenceITSupport {
 
   @Autowired private DiscussionReadPort reads;
@@ -196,6 +200,101 @@ class DiscussionReadAdapterIT extends DiscussionPersistenceITSupport {
     return IntStream.rangeClosed(1, count)
         .mapToObj(i -> reply(rootId, rootId, 10L + i, T0.plusSeconds(i)))
         .toList();
+  }
+
+  /// 每条评论带有帮助数；没有统计行为 0。
+  @Test
+  void should_carry_helpful_count() {
+    long r1 = root(S1, 1L, T0);
+    long r2 = root(S1, 1L, T0.plusSeconds(1));
+    helpful(r1, 3);
+
+    assertThat(reads.findById(r1).orElseThrow().helpfulCount()).isEqualTo(3);
+    assertThat(reads.findById(r2).orElseThrow().helpfulCount()).isZero();
+    assertThat(reads.findRoots(S1, ThreadSort.ASC, null, 10))
+        .extracting(CommentRecord::helpfulCount)
+        .containsExactly(3, 0);
+  }
+
+  /// 「最有帮助」：有帮助数降序，相同时新的在前；按三元组游标逐页翻完，不重复不遗漏；只看本对象的根评论。
+  @Test
+  void should_order_roots_by_helpful_then_newest() {
+    long r1 = root(S1, 1L, T0);
+    long r2 = root(S1, 1L, T0.plusSeconds(1));
+    long r3 = root(S1, 1L, T0.plusSeconds(2));
+    long r4 = root(S1, 1L, T0);
+    long other = root(S2, 1L, T0);
+    reply(r3, r3, 2L, T0.plusSeconds(3));
+    helpful(r1, 2);
+    helpful(r2, 2);
+    helpful(r4, 5);
+    helpful(other, 9);
+
+    assertThat(ids(reads.findRootsByHelpful(S1, null, 10))).containsExactly(r4, r2, r1, r3);
+    List<Long> paged = new ArrayList<>();
+    RankCursor after = null;
+    for (int page = 0; page < 5; page++) {
+      List<CommentRecord> one = reads.findRootsByHelpful(S1, after, 1);
+      if (one.isEmpty()) {
+        break;
+      }
+      CommentRecord last = one.getLast();
+      paged.add(last.commentId());
+      after = RankCursor.of(last.helpfulCount(), last.createdAt(), last.commentId());
+    }
+    assertThat(paged).containsExactly(r4, r2, r1, r3);
+  }
+
+  /// 「我点过」只看这个访客的明细。
+  @Test
+  void should_find_helpful_marked_by_viewer() {
+    long c1 = root(S1, 1L, T0);
+    long c2 = root(S1, 1L, T0);
+    long c3 = root(S1, 1L, T0);
+    marked(7L, c1);
+    marked(8L, c2);
+
+    assertThat(reads.findHelpfulMarked(7L, List.of(c1, c2, c3))).containsExactly(c1);
+    assertThat(reads.findHelpfulMarked(7L, List.of())).isEmpty();
+  }
+
+  /// 楼统计只返回有行的楼；对象评论数没有行为 0。
+  @Test
+  void should_find_thread_stats_and_comment_count() {
+    jdbcTemplate.update(
+        "INSERT INTO discussion.thread_stats VALUES (40, 2, ?), (41, 0, NULL)", Timestamp.from(T0));
+    jdbcTemplate.update("INSERT INTO discussion.subject_stats VALUES (?, 5)", S1.value());
+
+    assertThat(reads.findThreadStats(List.of(40L, 41L, 42L)))
+        .containsExactlyInAnyOrderEntriesOf(
+            Map.of(40L, ThreadStats.of(2, T0), 41L, ThreadStats.of(0, null)));
+    assertThat(reads.findThreadStats(List.of())).isEmpty();
+    assertThat(reads.countComments(S1)).isEqualTo(5);
+    assertThat(reads.countComments(S2)).isZero();
+  }
+
+  /// 直接写一条评论的有帮助数。
+  ///
+  /// @param commentId 评论
+  /// @param count 有帮助数
+  private void helpful(long commentId, int count) {
+    jdbcTemplate.update(
+        "INSERT INTO reaction.target_stats (target_type, target_id, helpful_count)"
+            + " VALUES ('COMMENT', ?, ?)",
+        commentId,
+        count);
+  }
+
+  /// 直接写一条有帮助明细。
+  ///
+  /// @param userId 点的人
+  /// @param commentId 评论
+  private void marked(long userId, long commentId) {
+    jdbcTemplate.update(
+        "INSERT INTO reaction.helpful (user_id, target_type, target_id, credited_user_id,"
+            + " created_at) VALUES (?, 'COMMENT', ?, NULL, now())",
+        userId,
+        commentId);
   }
 
   /// 在事务里插入。

@@ -26,6 +26,8 @@ import dev.patra.interaction.domain.post.exception.PostNotFoundException;
 import dev.patra.interaction.domain.post.model.aggregate.PostAggregate;
 import dev.patra.interaction.domain.post.model.enums.PostStatus;
 import dev.patra.interaction.domain.post.model.read.ExperienceStats;
+import dev.patra.interaction.domain.post.model.read.HelpfulRankedPost;
+import dev.patra.interaction.domain.post.model.read.PostStats;
 import dev.patra.interaction.domain.post.model.vo.PostId;
 import dev.patra.interaction.domain.post.model.vo.PostRevision;
 import dev.patra.interaction.domain.post.port.read.PostReadPort;
@@ -33,6 +35,7 @@ import dev.patra.interaction.domain.post.port.repository.PostRepository;
 import dev.patra.interaction.domain.subject.exception.InvalidSubjectKeyException;
 import dev.patra.interaction.domain.subject.exception.SubjectErrorTrait;
 import dev.patra.interaction.domain.subject.model.enums.SubjectType;
+import dev.patra.interaction.domain.subject.model.vo.RankCursor;
 import dev.patra.interaction.domain.subject.port.read.SubjectReadPort;
 import dev.patra.interaction.domain.subject.port.user.UserDirectoryPort;
 import dev.patra.tool.core.security.CurrentUserPort;
@@ -71,10 +74,11 @@ class ExperienceQueryServiceTest {
   void should_return_empty_page_for_unregistered_journal() {
     when(subjects.findIdsByKeys(SubjectType.JOURNAL, List.of("999"))).thenReturn(Map.of());
 
-    CursorPage<ExperienceItemView> page = service(null).journalExperiences("999", null, null);
+    JournalExperiencePage page = service(null).journalExperiences("999", null, null, null);
 
     assertThat(page.items()).isEmpty();
     assertThat(page.nextCursor()).isNull();
+    assertThat(page.total()).isZero();
     assertThat(service(null).summary("999", null).count()).isZero();
     verifyNoInteractions(reads);
   }
@@ -82,9 +86,9 @@ class ExperienceQueryServiceTest {
   /// 期刊 key、每页条数不合法：422。
   @Test
   void should_reject_malformed_journal_key_and_limit() {
-    assertThatThrownBy(() -> service(null).journalExperiences("01", null, null))
+    assertThatThrownBy(() -> service(null).journalExperiences("01", null, null, null))
         .isInstanceOf(InvalidSubjectKeyException.class);
-    assertThatThrownBy(() -> service(null).journalExperiences(JOURNAL_KEY, null, 11))
+    assertThatThrownBy(() -> service(null).journalExperiences(JOURNAL_KEY, null, null, 11))
         .isInstanceOf(InvalidPostRequestException.class);
     assertThatThrownBy(() -> service(null).userExperiences(AUTHOR, null, 0))
         .isInstanceOf(InvalidPostRequestException.class);
@@ -99,8 +103,8 @@ class ExperienceQueryServiceTest {
     when(reads.pageByJournal(JOURNAL, PostId.of(9L), 3)).thenReturn(List.of(first, second, third));
     when(reads.pageByJournal(JOURNAL, null, 11)).thenReturn(List.of(first));
 
-    CursorPage<ExperienceItemView> more = service(null).journalExperiences(JOURNAL_KEY, "9", 2);
-    CursorPage<ExperienceItemView> last = service(null).journalExperiences(JOURNAL_KEY, null, null);
+    JournalExperiencePage more = service(null).journalExperiences(JOURNAL_KEY, null, "9", 2);
+    JournalExperiencePage last = service(null).journalExperiences(JOURNAL_KEY, null, null, null);
 
     assertThat(more.items())
         .extracting(ExperienceItemView::postId)
@@ -108,6 +112,48 @@ class ExperienceQueryServiceTest {
     assertThat(more.nextCursor()).isEqualTo("2");
     assertThat(last.items()).hasSize(1);
     assertThat(last.nextCursor()).isNull();
+  }
+
+  /// 「最有帮助」：按三元组游标取，下一页游标是本页最后一条排序时读出的（有帮助数、发布时刻、ID），不取后一条
+  /// 统计查询里可能已经变了的数，否则两条查询之间有人取消有帮助会跳过同数的经验。
+  @Test
+  void should_page_by_helpful_with_rank_cursor() {
+    PostAggregate first = withId(post(AUTHOR, false, NOW), 1L);
+    PostAggregate second = withId(post(AUTHOR, false, NOW.plusSeconds(1)), 2L);
+    RankCursor after = RankCursor.of(9, NOW.plusSeconds(5), 8L);
+    when(reads.pageByJournalHelpful(JOURNAL, after, 2))
+        .thenReturn(List.of(HelpfulRankedPost.of(first, 4), HelpfulRankedPost.of(second, 2)));
+    when(reads.findStats(List.of(first.postId()), null))
+        .thenReturn(Map.of(first.postId(), PostStats.of(3, 0, null)));
+
+    JournalExperiencePage page =
+        service(null).journalExperiences(JOURNAL_KEY, "helpful", after.format(), 1);
+
+    assertThat(page.items()).extracting(ExperienceItemView::postId).containsExactly(first.postId());
+    assertThat(page.nextCursor()).isEqualTo(RankCursor.of(4, NOW, 1L).format());
+    verify(reads, never()).pageByJournal(any(), any(), anyInt());
+  }
+
+  /// 两种排序都带期刊下的总条数。
+  @Test
+  void should_return_total_for_both_sorts() {
+    when(reads.countByJournal(JOURNAL)).thenReturn(18L);
+
+    assertThat(service(null).journalExperiences(JOURNAL_KEY, null, null, null).total())
+        .isEqualTo(18L);
+    assertThat(service(null).journalExperiences(JOURNAL_KEY, "helpful", null, null).total())
+        .isEqualTo(18L);
+  }
+
+  /// 游标格式与排序对不上：422。
+  @Test
+  void should_reject_cursor_of_other_sort() {
+    String rank = RankCursor.of(1, NOW, 1L).format();
+
+    assertThatThrownBy(() -> service(null).journalExperiences(JOURNAL_KEY, "helpful", "9", null))
+        .isInstanceOf(InvalidPostRequestException.class);
+    assertThatThrownBy(() -> service(null).journalExperiences(JOURNAL_KEY, "latest", rank, null))
+        .isInstanceOf(InvalidPostRequestException.class);
   }
 
   /// 近 3 年的起点是北京时间今天减 3 年；`all` 从最早能填的日期起。
@@ -211,7 +257,7 @@ class ExperienceQueryServiceTest {
         reads,
         posts,
         users,
-        new ExperienceViews(users, subjects),
+        new ExperienceViews(users, subjects, reads),
         currentUser,
         Clock.fixed(NOW, ZoneOffset.UTC));
   }

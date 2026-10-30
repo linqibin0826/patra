@@ -3,20 +3,23 @@ package dev.patra.interaction.infra.discussion.persistence;
 import dev.patra.interaction.domain.discussion.model.enums.ThreadSort;
 import dev.patra.interaction.domain.discussion.model.read.CommentRecord;
 import dev.patra.interaction.domain.discussion.model.read.RevisionRecord;
+import dev.patra.interaction.domain.discussion.model.read.ThreadStats;
 import dev.patra.interaction.domain.discussion.model.vo.ThreadCursor;
 import dev.patra.interaction.domain.discussion.port.read.DiscussionReadPort;
+import dev.patra.interaction.domain.subject.model.vo.RankCursor;
 import dev.patra.interaction.domain.subject.model.vo.SubjectId;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
-/// `DiscussionReadPort` 的原生 SQL 实现。
+/// `DiscussionReadPort` 的原生 SQL 实现。有帮助数与「我点过」按 SQL 读 `reaction` 的两张表（类型码 `'COMMENT'`）。
 @Component
 @RequiredArgsConstructor
 public class DiscussionReadAdapter implements DiscussionReadPort {
@@ -52,6 +55,96 @@ public class DiscussionReadAdapter implements DiscussionReadPort {
             .param("subjectId", subjectId.value())
             .param("limit", limit);
     return withCursor(spec, after).query(CommentRows.RECORD).list();
+  }
+
+  /// 「最有帮助」的根评论一页。
+  ///
+  /// @param subjectId 对象
+  /// @param after 游标，可空
+  /// @param limit 最多几条
+  /// @return 根评论
+  @Override
+  public List<CommentRecord> findRootsByHelpful(SubjectId subjectId, RankCursor after, int limit) {
+    String cursor =
+        after == null
+            ? ""
+            : " AND (COALESCE(hs.helpful_count, 0), c.created_at, c.comment_id)"
+                + " < (:helpful, :at, :id)";
+    JdbcClient.StatementSpec spec =
+        jdbc.sql(
+                CommentRows.RECORD_SELECT
+                    + " WHERE c.subject_id = :subjectId AND c.parent_id IS NULL"
+                    + cursor
+                    + " ORDER BY COALESCE(hs.helpful_count, 0) DESC, c.created_at DESC,"
+                    + " c.comment_id DESC LIMIT :limit")
+            .param("subjectId", subjectId.value())
+            .param("limit", limit);
+    if (after != null) {
+      spec =
+          spec.param("helpful", after.helpfulCount())
+              .param("at", CommentRows.utc(after.createdAt()))
+              .param("id", after.id());
+    }
+    return spec.query(CommentRows.RECORD).list();
+  }
+
+  /// 访客点过有帮助的评论。
+  ///
+  /// @param viewerId 访客
+  /// @param commentIds 评论
+  /// @return 点过的
+  @Override
+  public Set<Long> findHelpfulMarked(long viewerId, Collection<Long> commentIds) {
+    if (commentIds.isEmpty()) {
+      return Set.of();
+    }
+    return Set.copyOf(
+        jdbc.sql(
+                "SELECT target_id FROM reaction.helpful WHERE user_id = :viewer"
+                    + " AND target_type = 'COMMENT' AND target_id IN (:ids)")
+            .param("viewer", viewerId)
+            .param("ids", List.copyOf(commentIds))
+            .query(Long.class)
+            .list());
+  }
+
+  /// 楼统计。
+  ///
+  /// @param rootIds 根评论
+  /// @return 根评论 → 统计
+  @Override
+  public Map<Long, ThreadStats> findThreadStats(Collection<Long> rootIds) {
+    if (rootIds.isEmpty()) {
+      return Map.of();
+    }
+    return jdbc
+        .sql(
+            "SELECT root_id, reply_count, last_reply_at FROM discussion.thread_stats"
+                + " WHERE root_id IN (:rootIds)")
+        .param("rootIds", List.copyOf(rootIds))
+        .query(
+            (rs, rowNum) ->
+                Map.entry(
+                    rs.getLong("root_id"),
+                    ThreadStats.of(
+                        rs.getInt("reply_count"), CommentRows.instant(rs, "last_reply_at"))))
+        .list()
+        .stream()
+        .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
+  }
+
+  /// 对象下未删除的评论总数。
+  ///
+  /// @param subjectId 对象
+  /// @return 条数
+  @Override
+  public int countComments(SubjectId subjectId) {
+    return jdbc.sql(
+            "SELECT COALESCE((SELECT comment_count FROM discussion.subject_stats"
+                + " WHERE subject_id = :subjectId), 0)")
+        .param("subjectId", subjectId.value())
+        .query(Integer.class)
+        .single();
   }
 
   /// 每楼最早的若干条回复。

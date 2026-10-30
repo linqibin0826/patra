@@ -15,6 +15,9 @@ import lombok.Builder;
 /// @param author 作者，可空
 /// @param anonymous 是否匿名发布
 /// @param mine 访客是不是作者
+/// @param helpfulCount 有帮助数
+/// @param helpful 访客点过有帮助没有；没有会话时为 `null`
+/// @param replyCount 经验下未删除的评论总数
 @Builder
 public record ExperienceResponse(
     Long postId,
@@ -24,7 +27,10 @@ public record ExperienceResponse(
     boolean edited,
     AuthorResponse author,
     boolean anonymous,
-    boolean mine) {
+    boolean mine,
+    int helpfulCount,
+    Boolean helpful,
+    int replyCount) {
 
   /// 转换。
   ///
@@ -40,6 +46,9 @@ public record ExperienceResponse(
         .author(AuthorResponse.from(view.author()))
         .anonymous(view.anonymous())
         .mine(view.mine())
+        .helpfulCount(view.helpfulCount())
+        .helpful(view.helpful())
+        .replyCount(view.replyCount())
         .build();
   }
 }

@@ -1,10 +1,9 @@
 package dev.patra.interaction.adapter.post.rest;
 
 import dev.patra.interaction.adapter.post.rest.request.ExperienceRequest;
-import dev.patra.interaction.adapter.post.rest.response.CursorPageResponse;
 import dev.patra.interaction.adapter.post.rest.response.ExperienceDetailResponse;
-import dev.patra.interaction.adapter.post.rest.response.ExperienceResponse;
 import dev.patra.interaction.adapter.post.rest.response.ExperienceSummaryResponse;
+import dev.patra.interaction.adapter.post.rest.response.JournalExperiencePageResponse;
 import dev.patra.interaction.app.post.usecase.experience.PublishExperienceCommand;
 import dev.patra.interaction.app.post.usecase.query.ExperienceQueryService;
 import dev.patra.interaction.domain.post.model.enums.SummaryWindow;
@@ -31,19 +30,22 @@ public class JournalPostController {
   private final CommandBus commandBus;
   private final ExperienceQueryService query;
 
-  /// 经验列表：投稿日期倒序、同日按发布时间倒序；不受统计窗口影响。422 期刊 ID、游标、条数不合法。
+  /// 经验列表，带期刊下的总条数；不受统计窗口影响。`latest`：投稿日期倒序、同日按发布时间倒序；`helpful`：有帮助数
+  /// 降序、相同时发布时间新的在前。422 期刊 ID、排序、游标（含与排序不配套）、条数不合法。
   ///
   /// @param journalId 期刊 ID
-  /// @param cursor 上一页的 `nextCursor`
+  /// @param sort `latest`（默认）/ `helpful`
+  /// @param cursor 同一种排序上一页的 `nextCursor`
   /// @param limit 每页 1 ~ 10，默认 10
   /// @return 一页
   @GetMapping
-  public CursorPageResponse<ExperienceResponse> list(
+  public JournalExperiencePageResponse list(
       @PathVariable String journalId,
+      @RequestParam(required = false) String sort,
       @RequestParam(required = false) String cursor,
       @RequestParam(required = false) Integer limit) {
-    return CursorPageResponse.from(
-        query.journalExperiences(journalId, cursor, limit), ExperienceResponse::from);
+    return JournalExperiencePageResponse.from(
+        query.journalExperiences(journalId, sort, cursor, limit));
   }
 
   /// 「同行经验」汇总，读取时计算，写完立即反映。

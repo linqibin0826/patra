@@ -21,6 +21,9 @@ import org.springframework.transaction.support.TransactionOperations;
 /// 删除自己的评论（spec 5.6）：只有作者能删，不查发表资格。在楼锁里判断：有直接回复变占位（清正文与修改历史），
 /// 没有就整条去掉，再沿父评论往上，去掉已经没有回复的占位；已是占位再删什么都不做。变占位或去掉时发布
 /// {@link CommentDeletedEvent}。
+///
+/// 统计与删除同事务（PAP-132）：一条未删除的评论没了，发事件之前楼内回复数（是回复时）与对象评论数各 −1；
+/// 级联去掉的占位本来不计数，链一直去到根时删它的楼统计行。
 @Component
 @RequiredArgsConstructor
 public class DeleteCommentHandler implements CommandHandler<DeleteCommentCommand, DeleteResult> {
@@ -52,16 +55,32 @@ public class DeleteCommentHandler implements CommandHandler<DeleteCommentCommand
             case NONE -> DeleteResult.of(true, List.of());
             case PLACEHOLDER -> {
               comments.markDeleted(id, now);
+              uncount(comment);
               events.publishEvent(deleted(comment, true, now));
               yield DeleteResult.of(true, List.of());
             }
             case REMOVE -> {
               comments.delete(id);
+              uncount(comment);
               events.publishEvent(deleted(comment, false, now));
-              yield DeleteResult.of(false, removeOrphanedAncestors(comment));
+              List<Long> removedIds = removeOrphanedAncestors(comment);
+              if (removedIds.contains(comment.getRootId())) {
+                comments.dropThreadStats(comment.getRootId());
+              }
+              yield DeleteResult.of(false, removedIds);
             }
           };
         });
+  }
+
+  /// 一条未删除的评论变占位或被去掉：是回复时楼内回复数 −1，对象评论数 −1。
+  ///
+  /// @param comment 锁内读到的评论（删除前是正常状态）
+  private void uncount(CommentAggregate comment) {
+    if (comment.getParentId() != null) {
+      comments.removeReply(comment.getRootId());
+    }
+    comments.decrementCommentCount(comment.getSubjectId());
   }
 
   /// 沿父评论往上，去掉已经没有回复的占位，直到遇到正常评论、仍有回复的占位或到顶。

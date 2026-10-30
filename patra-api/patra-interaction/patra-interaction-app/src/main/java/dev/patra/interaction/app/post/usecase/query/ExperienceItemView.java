@@ -15,6 +15,9 @@ import lombok.Builder;
 /// @param author 作者；匿名且访客不是作者、或 identity 不认识作者时为 `null`
 /// @param anonymous 是否匿名发布
 /// @param mine 访客是不是作者
+/// @param helpfulCount 有帮助数
+/// @param helpful 访客点过有帮助没有；没有会话时为 `null`
+/// @param replyCount 经验下未删除的评论总数
 @Builder
 public record ExperienceItemView(
     PostId postId,
@@ -24,4 +27,7 @@ public record ExperienceItemView(
     boolean edited,
     AuthorView author,
     boolean anonymous,
-    boolean mine) {}
+    boolean mine,
+    int helpfulCount,
+    Boolean helpful,
+    int replyCount) {}

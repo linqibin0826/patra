@@ -5,6 +5,9 @@ import dev.patra.interaction.app.post.usecase.query.ExperienceDetailView;
 import dev.patra.interaction.app.post.usecase.query.ExperienceItemView;
 import dev.patra.interaction.app.post.usecase.query.JournalRefView;
 import dev.patra.interaction.domain.post.model.aggregate.PostAggregate;
+import dev.patra.interaction.domain.post.model.read.PostStats;
+import dev.patra.interaction.domain.post.model.vo.PostId;
+import dev.patra.interaction.domain.post.port.read.PostReadPort;
 import dev.patra.interaction.domain.subject.model.read.UserCard;
 import dev.patra.interaction.domain.subject.model.vo.SubjectId;
 import dev.patra.interaction.domain.subject.port.read.SubjectReadPort;
@@ -17,13 +20,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 /// 把经验拼成给访客的视图，并做匿名遮蔽（spec 6.5）：匿名经验只有作者本人拿得到作者名片；一页一次向 identity 取名片，
-/// 没有要取的就不调。identity 不可用时异常照常传播（503）。
+/// 没有要取的就不调。identity 不可用时异常照常传播（503）。每条带有帮助数、回复数与「我点过」，一页一次批量取。
 @Component
 @RequiredArgsConstructor
 public class ExperienceViews {
 
   private final UserDirectoryPort users;
   private final SubjectReadPort subjects;
+  private final PostReadPort reads;
 
   /// 一页经验。
   ///
@@ -36,20 +40,26 @@ public class ExperienceViews {
         .filter(post -> authorVisible(post, viewer))
         .forEach(post -> authors.add(post.authorId()));
     Map<Long, UserCard> cards = authors.isEmpty() ? Map.of() : users.findCards(authors, viewer);
+    Map<PostId, PostStats> stats = stats(posts, viewer);
     return posts.stream()
         .map(
             post ->
-                item(post, authorVisible(post, viewer) ? cards.get(post.authorId()) : null, viewer))
+                item(
+                    post,
+                    authorVisible(post, viewer) ? cards.get(post.authorId()) : null,
+                    viewer,
+                    stats))
         .toList();
   }
 
   /// 不带作者的条目（用户主页列表：作者就是主页主人，不再调 identity）。
   ///
-  /// @param post 经验
+  /// @param posts 经验
   /// @param viewer 访客，匿名为 `null`
-  /// @return 条目
-  public ExperienceItemView withoutAuthor(PostAggregate post, Long viewer) {
-    return item(post, null, viewer);
+  /// @return 条目，顺序同 `posts`
+  public List<ExperienceItemView> withoutAuthor(List<PostAggregate> posts, Long viewer) {
+    Map<PostId, PostStats> stats = stats(posts, viewer);
+    return posts.stream().map(post -> item(post, null, viewer, stats)).toList();
   }
 
   /// 详情：已删除的只给删除标记与期刊。
@@ -74,7 +84,7 @@ public class ExperienceViews {
   /// @param self 作者自己的名片
   /// @return 详情
   public ExperienceDetailView authored(PostAggregate post, UserCard self) {
-    return detailOf(post, item(post, self, post.authorId()));
+    return detailOf(post, item(post, self, post.authorId(), stats(List.of(post), post.authorId())));
   }
 
   /// 期刊的引用。
@@ -99,13 +109,29 @@ public class ExperienceViews {
         .build();
   }
 
+  /// 一页经验的统计。
+  ///
+  /// @param posts 经验
+  /// @param viewer 访客，匿名为 `null`
+  /// @return 经验 → 统计
+  private Map<PostId, PostStats> stats(List<PostAggregate> posts, Long viewer) {
+    return posts.isEmpty()
+        ? Map.of()
+        : reads.findStats(posts.stream().map(PostAggregate::postId).toList(), viewer);
+  }
+
   /// 一条经验的视图。
   ///
   /// @param post 经验
   /// @param card 作者名片；不该给或 identity 不认识时为 `null`
   /// @param viewer 访客，匿名为 `null`
+  /// @param stats 这一页的统计；缺这条时按 0 与「没点过」
   /// @return 条目
-  private static ExperienceItemView item(PostAggregate post, UserCard card, Long viewer) {
+  private static ExperienceItemView item(
+      PostAggregate post, UserCard card, Long viewer, Map<PostId, PostStats> stats) {
+    PostStats stat =
+        stats.getOrDefault(
+            post.postId(), PostStats.of(0, 0, viewer == null ? null : Boolean.FALSE));
     return ExperienceItemView.builder()
         .postId(post.postId())
         .fields(post.fields())
@@ -115,6 +141,9 @@ public class ExperienceViews {
         .author(card == null ? null : AuthorView.of(card))
         .anonymous(post.anonymous())
         .mine(isAuthor(post, viewer))
+        .helpfulCount(stat.helpfulCount())
+        .helpful(stat.helpful())
+        .replyCount(stat.replyCount())
         .build();
   }
 

@@ -27,6 +27,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 import org.junit.jupiter.api.Test;
@@ -62,7 +63,8 @@ class CommentViewsTest {
 
     CommentView view =
         views
-            .assemble(List.of(root(1L, OWNER).build()), post(OWNER, true), VIEWER, Map.of())
+            .assemble(
+                List.of(root(1L, OWNER).build()), post(OWNER, true), VIEWER, Map.of(), Set.of())
             .getFirst();
 
     assertThat(view.author()).isNull();
@@ -79,7 +81,8 @@ class CommentViewsTest {
 
     CommentView view =
         views
-            .assemble(List.of(root(1L, OWNER).build()), post(OWNER, true), OWNER, Map.of())
+            .assemble(
+                List.of(root(1L, OWNER).build()), post(OWNER, true), OWNER, Map.of(), Set.of())
             .getFirst();
 
     assertThat(view.author().userId()).isEqualTo(OWNER);
@@ -94,7 +97,8 @@ class CommentViewsTest {
 
     CommentView view =
         views
-            .assemble(List.of(root(1L, OWNER).build()), post(OWNER, false), VIEWER, Map.of())
+            .assemble(
+                List.of(root(1L, OWNER).build()), post(OWNER, false), VIEWER, Map.of(), Set.of())
             .getFirst();
 
     assertThat(view.owner()).isTrue();
@@ -108,7 +112,9 @@ class CommentViewsTest {
     directory.put(2L, card(2L, AccountState.BANNED, false));
 
     CommentView view =
-        views.assemble(List.of(root(1L, 2L).build()), publication(), VIEWER, Map.of()).getFirst();
+        views
+            .assemble(List.of(root(1L, 2L).build()), publication(), VIEWER, Map.of(), Set.of())
+            .getFirst();
 
     assertThat(view.author().username()).isNull();
     assertThat(view.author().avatarUrl()).isNull();
@@ -131,7 +137,8 @@ class CommentViewsTest {
                 reply(14L, 1L, 11L, OWNER, 7L).build()),
             post(OWNER, true),
             VIEWER,
-            Map.of());
+            Map.of(),
+            Set.of());
 
     assertThat(result.get(0).replyTo()).isNull();
     assertThat(result.get(1).replyTo().author().userId()).isEqualTo(6L);
@@ -155,7 +162,8 @@ class CommentViewsTest {
                         .build()),
                 publication(),
                 VIEWER,
-                Map.of())
+                Map.of(),
+                Set.of())
             .getFirst();
 
     assertThat(view.deleted()).isTrue();
@@ -164,6 +172,56 @@ class CommentViewsTest {
     assertThat(view.mentions()).isEmpty();
     assertThat(view.mine()).isFalse();
     assertThat(view.hasReplies()).isTrue();
+  }
+
+  /// 匿名访客拿不到「我点过」：为 `null`；有帮助数照常。
+  @Test
+  void should_leave_helpful_null_for_anonymous_viewer() {
+    CommentView view =
+        views
+            .assemble(
+                List.of(root(1L, 2L).helpfulCount(3).build()),
+                publication(),
+                null,
+                Map.of(),
+                Set.of())
+            .getFirst();
+
+    assertThat(view.helpful()).isNull();
+    assertThat(view.helpfulCount()).isEqualTo(3);
+  }
+
+  /// 有访客时按点过的集合给真假。
+  @Test
+  void should_mark_helpful_from_set() {
+    List<CommentView> result =
+        views.assemble(
+            List.of(root(1L, 2L).helpfulCount(1).build(), root(2L, 2L).build()),
+            publication(),
+            VIEWER,
+            Map.of(),
+            Set.of(1L));
+
+    assertThat(result).extracting(CommentView::helpful).containsExactly(true, false);
+    assertThat(result).extracting(CommentView::helpfulCount).containsExactly(1, 0);
+  }
+
+  /// 占位不显示数字、不能点：有帮助数 0、「我点过」为 `null`。
+  @Test
+  void should_zero_helpful_on_placeholder() {
+    CommentView view =
+        views
+            .assemble(
+                List.of(
+                    root(1L, 2L).state(CommentState.DELETED).body(null).helpfulCount(4).build()),
+                publication(),
+                VIEWER,
+                Map.of(),
+                Set.of(1L))
+            .getFirst();
+
+    assertThat(view.helpfulCount()).isZero();
+    assertThat(view.helpful()).isNull();
   }
 
   /// 提及实体按出现顺序：可见的给用户名；不可见的只给昵称；已注销与 identity 省略的标已注销。
@@ -180,7 +238,8 @@ class CommentViewsTest {
                 List.of(root(1L, 2L).body("<@7> <@8> <@10> <@11>").build()),
                 publication(),
                 VIEWER,
-                Map.of())
+                Map.of(),
+                Set.of())
             .getFirst();
 
     assertThat(view.mentions())
@@ -195,7 +254,9 @@ class CommentViewsTest {
   @Test
   void should_treat_omitted_author_as_null() {
     CommentView view =
-        views.assemble(List.of(root(1L, 2L).build()), publication(), VIEWER, Map.of()).getFirst();
+        views
+            .assemble(List.of(root(1L, 2L).build()), publication(), VIEWER, Map.of(), Set.of())
+            .getFirst();
 
     assertThat(view.author()).isNull();
     assertThat(view.anonymous()).isFalse();
@@ -210,7 +271,11 @@ class CommentViewsTest {
             .collect(Collectors.joining(" "));
 
     views.assemble(
-        List.of(root(1L, 2L).body(body).build()), publication(), VIEWER, Map.of(2L, card(2L)));
+        List.of(root(1L, 2L).body(body).build()),
+        publication(),
+        VIEWER,
+        Map.of(2L, card(2L)),
+        Set.of());
 
     ArgumentCaptor<Collection<Long>> batches = ArgumentCaptor.captor();
     verify(users, times(2)).findCards(batches.capture(), eq(VIEWER));
@@ -225,7 +290,9 @@ class CommentViewsTest {
         .thenThrow(new UserDirectoryUnavailableException(new IllegalStateException("down")));
 
     assertThatThrownBy(
-            () -> views.assemble(List.of(root(1L, 2L).build()), publication(), VIEWER, Map.of()))
+            () ->
+                views.assemble(
+                    List.of(root(1L, 2L).build()), publication(), VIEWER, Map.of(), Set.of()))
         .isInstanceOf(UserDirectoryUnavailableException.class);
   }
 }

@@ -37,12 +37,14 @@ public class CommentViews {
   /// @param subject 对象（所有者与匿名标记）
   /// @param viewerId 访客，匿名为 `null`
   /// @param knownCards 已经拿到的名片（如发表者自己的），不再向 identity 要
+  /// @param helpfulMarked 访客点过有帮助的评论；没有访客时不看
   /// @return 视图，与 `comments` 一一对应
   public List<CommentView> assemble(
       List<CommentRecord> comments,
       SubjectView subject,
       Long viewerId,
-      Map<Long, UserCard> knownCards) {
+      Map<Long, UserCard> knownCards,
+      Set<Long> helpfulMarked) {
     SubjectOwner owner = subject.owner();
     Set<Long> needed = new LinkedHashSet<>();
     for (CommentRecord comment : comments) {
@@ -60,7 +62,9 @@ public class CommentViews {
     Map<Long, UserCard> cards = new HashMap<>(knownCards);
     needed.removeAll(knownCards.keySet());
     cards.putAll(cards(needed, viewerId));
-    return comments.stream().map(comment -> toView(comment, owner, viewerId, cards)).toList();
+    return comments.stream()
+        .map(comment -> toView(comment, owner, viewerId, cards, helpfulMarked))
+        .toList();
   }
 
   /// 修改历史等只要提及实体的地方。
@@ -95,9 +99,14 @@ public class CommentViews {
   /// @param owner 对象所有者，可空
   /// @param viewerId 访客
   /// @param cards 名片
+  /// @param helpfulMarked 访客点过有帮助的评论
   /// @return 视图
   private static CommentView toView(
-      CommentRecord comment, SubjectOwner owner, Long viewerId, Map<Long, UserCard> cards) {
+      CommentRecord comment,
+      SubjectOwner owner,
+      Long viewerId,
+      Map<Long, UserCard> cards,
+      Set<Long> helpfulMarked) {
     CommentView.CommentViewBuilder view =
         CommentView.builder()
             .commentId(comment.commentId())
@@ -123,6 +132,8 @@ public class CommentViews {
         .body(comment.body())
         .mentions(mentions)
         .edited(comment.edited())
+        .helpfulCount(comment.helpfulCount())
+        .helpful(viewerId == null ? null : helpfulMarked.contains(comment.commentId()))
         .build();
   }
 

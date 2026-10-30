@@ -90,7 +90,9 @@ public class EditCommentHandler implements CommandHandler<EditCommentCommand, Co
               edit.ifPresent(e -> events.publishEvent(edited(after, subject, e, resolved, now)));
               return after;
             });
-    return views.assemble(List.of(record), subject, editor, Map.of(editor, self)).getFirst();
+    return views
+        .assemble(List.of(record), subject, editor, Map.of(editor, self), Set.of())
+        .getFirst();
   }
 
   /// 「评论已编辑」事件。

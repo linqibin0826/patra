@@ -1,6 +1,7 @@
 package dev.patra.interaction.app.discussion.usecase.comment;
 
 import static dev.patra.interaction.app.discussion.DiscussionFixture.BEGIN;
+import static dev.patra.interaction.app.discussion.DiscussionFixture.END;
 import static dev.patra.interaction.app.discussion.DiscussionFixture.PUB_ID;
 import static dev.patra.interaction.app.discussion.DiscussionFixture.T0;
 import static dev.patra.interaction.app.discussion.DiscussionFixture.recording;
@@ -9,6 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -132,6 +134,99 @@ class DeleteCommentHandlerTest {
     verify(comments, never()).markDeleted(anyLong(), any());
     verify(comments, times(0)).delete(anyLong());
     verify(publisher, never()).publishEvent(any(Object.class));
+  }
+
+  /// 有子回复的回复变占位：楼内回复数与对象评论数各减一，都在发事件之前。
+  @Test
+  void should_uncount_reply_turned_placeholder() {
+    stub(comment(60L, 40L, 50L, ACTOR, CommentState.ACTIVE), true);
+
+    handler.handle(DeleteCommentCommand.of(60L));
+
+    InOrder order = inOrder(comments, publisher);
+    order.verify(comments).markDeleted(60L, T0);
+    order.verify(comments).removeReply(40L);
+    order.verify(comments).decrementCommentCount(PUB_ID);
+    order.verify(publisher).publishEvent(any(Object.class));
+    verify(comments, never()).dropThreadStats(anyLong());
+  }
+
+  /// 有回复的根评论变占位：只减对象评论数，楼统计不动。
+  @Test
+  void should_uncount_root_turned_placeholder() {
+    stub(comment(40L, 40L, null, ACTOR, CommentState.ACTIVE), true);
+
+    handler.handle(DeleteCommentCommand.of(40L));
+
+    InOrder order = inOrder(comments, publisher);
+    order.verify(comments).markDeleted(40L, T0);
+    order.verify(comments).decrementCommentCount(PUB_ID);
+    order.verify(publisher).publishEvent(any(Object.class));
+    verify(comments, never()).removeReply(anyLong());
+    verify(comments, never()).dropThreadStats(anyLong());
+  }
+
+  /// 没有回复的根评论整条去掉：减对象评论数、发事件，再删它的楼统计行。
+  @Test
+  void should_drop_thread_stats_when_root_removed() {
+    stub(comment(40L, 40L, null, ACTOR, CommentState.ACTIVE), false);
+
+    handler.handle(DeleteCommentCommand.of(40L));
+
+    InOrder order = inOrder(comments, publisher);
+    order.verify(comments).delete(40L);
+    order.verify(comments).decrementCommentCount(PUB_ID);
+    order.verify(publisher).publishEvent(any(Object.class));
+    order.verify(comments).dropThreadStats(40L);
+    verify(comments, never()).removeReply(anyLong());
+  }
+
+  /// 删回复级联去掉了占位根：楼内与对象各只减一次（占位本来不计数），最后删楼统计行。
+  @Test
+  void should_drop_thread_stats_when_cascade_reaches_root() {
+    stub(comment(60L, 40L, 40L, ACTOR, CommentState.ACTIVE), false);
+    stub(comment(40L, 40L, null, 6L, CommentState.DELETED), false);
+
+    handler.handle(DeleteCommentCommand.of(60L));
+
+    InOrder order = inOrder(comments, publisher);
+    order.verify(comments).delete(60L);
+    order.verify(comments).removeReply(40L);
+    order.verify(comments).decrementCommentCount(PUB_ID);
+    order.verify(publisher).publishEvent(any(Object.class));
+    order.verify(comments).delete(40L);
+    order.verify(comments).dropThreadStats(40L);
+    verify(comments, times(1)).removeReply(anyLong());
+    verify(comments, times(1)).decrementCommentCount(any());
+  }
+
+  /// 已是占位：统计一概不动。
+  @Test
+  void should_not_touch_stats_when_already_placeholder() {
+    stub(comment(60L, 40L, 50L, ACTOR, CommentState.DELETED), true);
+
+    handler.handle(DeleteCommentCommand.of(60L));
+
+    verify(comments, never()).removeReply(anyLong());
+    verify(comments, never()).dropThreadStats(anyLong());
+    verify(comments, never()).decrementCommentCount(any());
+  }
+
+  /// 统计改动都在事务里。
+  @Test
+  void should_update_stats_inside_transaction() {
+    stub(comment(60L, 40L, 50L, ACTOR, CommentState.ACTIVE), true);
+    doAnswer(
+            invocation -> {
+              events.add("removeReply");
+              return null;
+            })
+        .when(comments)
+        .removeReply(40L);
+
+    handler.handle(DeleteCommentCommand.of(60L));
+
+    assertThat(events).containsSubsequence(BEGIN, "removeReply", END);
   }
 
   /// 预读与锁内读都返回这条，并设定有没有回复。

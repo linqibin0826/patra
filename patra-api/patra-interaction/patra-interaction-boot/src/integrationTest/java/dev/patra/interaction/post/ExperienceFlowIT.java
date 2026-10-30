@@ -370,6 +370,80 @@ class ExperienceFlowIT extends InteractionFlowITSupport {
         .isEqualTo(404);
   }
 
+  /// PAP-132 AC：经验列表两种排序都对，不传参数时与现有顺序一致；两种都带总条数；游标跟着排序走。
+  @Test
+  void should_sort_journal_experiences_by_helpful() {
+    long d = 777000444L;
+    IDENTITY_DATA.put(d, "ACTIVE", true, "PUBLIC");
+    String e1 = postId(publish(A, revised(today.minusDays(30), 10, "IN_PROGRESS"), false));
+    String e2 = postId(publish(A, revised(today.minusDays(10), 10, "IN_PROGRESS"), false));
+    String e3 = postId(publish(A, revised(today.minusDays(20), 10, "IN_PROGRESS"), false));
+    mark(B, e1);
+    mark(d, e1);
+    mark(B, e3);
+
+    JsonNode latest = json(get(null, POSTS));
+    assertThat(postIds(latest)).containsExactly(e2, e3, e1);
+    assertThat(latest.get("total").asLong()).isEqualTo(3);
+    assertThat(postIds(json(get(null, POSTS + "?sort=latest")))).containsExactly(e2, e3, e1);
+
+    JsonNode helpful = json(get(null, POSTS + "?sort=helpful"));
+    assertThat(postIds(helpful)).containsExactly(e1, e3, e2);
+    assertThat(helpful.get("total").asLong()).isEqualTo(3);
+    assertThat(helpful.get("items").get(0).get("helpfulCount").asInt()).isEqualTo(2);
+
+    JsonNode first = json(get(null, POSTS + "?sort=helpful&limit=2"));
+    String cursor = first.get("nextCursor").asString();
+    assertThat(postIds(json(get(null, POSTS + "?sort=helpful&limit=2&cursor=" + cursor))))
+        .containsExactly(e2);
+    assertThat(status(get(null, POSTS + "?sort=latest&cursor=" + cursor))).isEqualTo(422);
+    assertThat(status(get(null, POSTS + "?sort=hot"))).isEqualTo(422);
+  }
+
+  /// PAP-132 AC：期刊页列表、主页列表、经验页都带有帮助数、回复数（未删除评论）与「我点过」（只在有会话时）。
+  @Test
+  void should_carry_helpful_and_reply_count_on_experiences() {
+    String post = postId(publish(A, revised(today.minusDays(30), 10, "IN_PROGRESS"), false));
+    commentOn(B, post, "请问审稿人几位", null);
+    String removed = commentOn(B, post, "补充一句", null);
+    assertThat(status(call(HttpMethod.DELETE, B, "/comments/" + removed, null))).isEqualTo(200);
+    mark(B, post);
+
+    JsonNode forB = json(get(B, POSTS)).get("items").get(0);
+    assertThat(forB.get("replyCount").asInt()).isEqualTo(1);
+    assertThat(forB.get("helpfulCount").asInt()).isEqualTo(1);
+    assertThat(forB.get("helpful").asBoolean()).isTrue();
+    JsonNode forGuest = json(get(null, POSTS)).get("items").get(0);
+    assertThat(forGuest.get("helpful").isNull()).isTrue();
+    assertThat(forGuest.get("replyCount").asInt()).isEqualTo(1);
+
+    JsonNode detail = json(get(B, "/posts/" + post)).get("experience");
+    assertThat(detail.get("helpfulCount").asInt()).isEqualTo(1);
+    assertThat(detail.get("replyCount").asInt()).isEqualTo(1);
+    assertThat(detail.get("helpful").asBoolean()).isTrue();
+
+    JsonNode profile = json(get(A, "/users/" + A + "/posts")).get("items").get(0);
+    assertThat(profile.get("experience").get("replyCount").asInt()).isEqualTo(1);
+    assertThat(profile.get("experience").get("helpful").asBoolean()).isFalse();
+  }
+
+  /// 给经验点有帮助，要求 200。
+  ///
+  /// @param user 点的人
+  /// @param postId 经验
+  private void mark(long user, String postId) {
+    assertThat(status(call(HttpMethod.PUT, user, "/posts/" + postId + "/helpful", null)))
+        .isEqualTo(200);
+  }
+
+  /// 一页里的经验 ID。
+  ///
+  /// @param page 列表页
+  /// @return ID
+  private static List<String> postIds(JsonNode page) {
+    return page.get("items").valueStream().map(i -> i.get("postId").asString()).toList();
+  }
+
   /// 首轮大修、给定用时与最终结果的一条（最终日期不填）。
   ///
   /// @param submitted 投稿日期
