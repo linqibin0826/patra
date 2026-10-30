@@ -215,7 +215,7 @@ CREATE TABLE mail.mail_delivery
 - 队列 `notification.security-mail`（持久化），死信交换机 `notification.security-mail.dlx`、死信队列 `notification.security-mail.dlq`，由 `EventQueue` 一并声明；绑定 `identity.events` / `security-mail.*`。
 - 重试、prefetch、AUTO ack 全用事件模块的默认值，不给邮件单独配容器工厂。考虑过给邮件更长的退避（服务商的抖动常常超过 7 秒），没选：要多一个容器工厂与配置项；死信里的信可以重放，链接类过期就跳过（第 5 节），重放是安全的。代价写在第 15 节。
 - 重试耗尽时 Spring AMQP 的 `RejectAndDontRequeueRecoverer` 打 WARN「Retries exhausted for message …」，带 `messageId`（就是事件 ID）与类型头。消息体超过 50 字节时 `Message.toString()` 不打印正文（spring-amqp 4.1.2 的 `DEFAULT_MAX_BODY_LENGTH`），链接与地址不会进日志；IT 断言这一点。WARN 里的 cause 是 `MailDeliveryFailedException`，只有脱敏后的原因（6.1）。每次发送失败，app 再打一条 WARN（事件 ID、类别、脱敏原因）。命令总线的日志拦截器只打命令类名与异常消息（也是脱敏后的）；`SecurityMail` 的 `toString()` 仍只输出事件 ID 与类别，以防别处打印它。
-- 反序列化失败（类型不在 `trusted-packages` 里、JSON 坏了）：监听容器直接拒绝、不重试，进死信。
+- 反序列化失败（类型不在 `trusted-packages` 里、JSON 坏了）：Boot 的重试不区分这类失败，同样重试 3 次后进死信，不拖垮监听（死信 IT 验证）。
 
 ## 10. 配置与部署
 

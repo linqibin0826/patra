@@ -45,7 +45,7 @@ services:
       retries: 10
 
   mailpit:
-    # 开发环境的邮件收集器：identity 默认往这里发（spring.mail.host 跟随 PATRA_INFRA_HOST），
+    # 开发环境的邮件收集器：notification 默认往这里发（spring.mail.host 跟随 PATRA_INFRA_HOST），
     # mini 放了 ~/.patra/secrets/mail.env 后才改发真实服务商。只在 tailnet 内可达，和其他基础设施一样不设密码
     image: axllent/mailpit:v1.31.6
     container_name: patra-mailpit

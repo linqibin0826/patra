@@ -81,7 +81,7 @@ cp patra-infra/docker/.env.secret.example patra-infra/docker/.env.secret
 
 # 4c. (MacBook) 把密钥文件复制到 Mac mini：与 MacBook 上的是同一份，生成方法见下文「密钥」。
 #     目录由第 4 步建好；缺了这几个文件，core 栈的 redis、nacos、rabbitmq 和整个 apps 栈都起不来。
-#     mail.env 可选：没有它 identity 的邮件进 core 栈的 Mailpit；接真实服务商时按 secrets/mail.env.example 在 mini 上放一份
+#     mail.env 可选：没有它通知服务的邮件进 core 栈的 Mailpit；接真实服务商时按 secrets/mail.env.example 在 mini 上放一份
 scp -p ~/.patra/secrets/redis.env ~/.patra/secrets/rabbitmq.env ~/.patra/secrets/gateway.env \
   ~/.patra/secrets/nacos.env ~/.patra/secrets/nacos-push.env linqibin@linqibins-mac-mini:.patra/secrets/
 # 4d. (Mac mini) 生成只放 mini 的 nacos-server.env、nacos-admin.env，命令见 secrets/ 下对应的 *.example。
@@ -163,7 +163,7 @@ ssh linqibin@linqibins-mac-mini 'docker restart patra-xxl-job-admin'  # 只重�
 | `nacos-admin.env` | Nacos 管理员密码 `NACOS_ADMIN_PASSWORD`。**只放 mini**，另存密码管理器 | `nacos-init.sh`、`nacos-verify.sh` | 脚本说明缺哪个变量并退出 |
 | `nacos.env` | 应用账号 `NACOS_USERNAME=patra-app`、`NACOS_PASSWORD` | 6 个后端服务的容器和本机进程；两个 Nacos 脚本 | 同 `redis.env` |
 | `nacos-push.env` | 推送账号 `NACOS_PUSH_USERNAME=patra-push`、`NACOS_PUSH_PASSWORD` | 两个 Nacos 脚本；PAP-75 的推送 | 脚本说明缺哪个变量并退出 |
-| `mail.env` | 真实邮件服务商（Resend）的 SMTP 凭据：`PATRA_MAIL_HOST` / `PORT` / `USERNAME` / `PASSWORD` / `AUTH` / `SSL` / `STARTTLS` / `FROM`。**只放 mini**（本机要走真实服务商时再放一份） | identity 的容器和本机进程 | 跳过：邮件发往 core 栈的 Mailpit |
+| `mail.env` | 真实邮件服务商（Resend）的 SMTP 凭据：`PATRA_MAIL_HOST` / `PORT` / `USERNAME` / `PASSWORD` / `AUTH` / `SSL` / `STARTTLS` / `FROM`。**只放 mini**（本机要走真实服务商时再放一份） | notification 的容器和本机进程（v0.16 起全站只有它发信） | 跳过：邮件发往 core 栈的 Mailpit |
 | `<服务>.env` | 该服务的外部数据源密钥，例如 catalog 的 `SCOPUS_API_KEY`、`PROXY_AUTH_KEY`、`PROXY_AUTH_PWD` | 对应服务的容器和本机进程 | 跳过 |
 
 两种进程怎么读到这些文件：
@@ -392,7 +392,7 @@ Nacos 的地址、账号和服务发现设置由 `patra-spring-boot-starter-naco
 - **Redis**: `linqibins-mac-mini:16379`（要密码：用户 `default`，密码在 `~/.patra/secrets/redis.env`）
 - **Nacos 控制台**: http://linqibins-mac-mini:8080（用管理员 `nacos` 登录，密码在 mini 的 `~/.patra/secrets/nacos-admin.env`）
 - **RabbitMQ**: AMQP `linqibins-mac-mini:5672`；管理界面 http://linqibins-mac-mini:15672（账号 `patra`，密码在 `~/.patra/secrets/rabbitmq.env`）
-- **Mailpit**（开发环境的邮件收集器）: SMTP `linqibins-mac-mini:1025`（无鉴权、无 TLS），Web UI http://linqibins-mac-mini:8025。identity 没放 `mail.env` 时的邮件都在这里
+- **Mailpit**（开发环境的邮件收集器）: SMTP `linqibins-mac-mini:1025`（无鉴权、无 TLS），Web UI http://linqibins-mac-mini:8025。notification 没放 `mail.env` 时的邮件都在这里
 
 ### 存储服务
 - **MinIO API**: `linqibins-mac-mini:19000` (minioadmin/minioadmin123)

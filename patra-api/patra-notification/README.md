@@ -60,3 +60,14 @@ inbox 不依赖 preference：偏好只管邮件，站内提醒照常。
 | 定时任务 | 执行器 `patra-notification`：注销清理 `deletedUserCleanupJob`（PAP-142）；提醒清理、离站邮件、每日汇总随各 Issue 加 |
 | 调用的服务 | identity 内部接口 `POST /_internal/users/recipients`（收件信息）与 `POST /_internal/users/summaries`（注销清理取账号状态），`lb://patra-identity`，连接 1 秒、读 2 秒 |
 | 上线 | `docs/patra/runbooks/v0.16-notification-go-live-runbook.md` |
+
+## 5. 邮件渠道（mail）
+
+全站只有通知服务发信（PAP-105）。工程设计：`docs/patra/specs/2026-10-31-notification-mail-channel-design.md`。
+
+- **安全邮件**：identity 的 13 类事件（`identity.events` / `security-mail.*`）进队列 `notification.security-mail`，死信对 `.dlx` / `.dlq`。事件带收件地址、链接与事实，主题与文案在 `SecurityMailKind`，模板在 infra 的 `resources/mail/`。不进偏好、不能退订、不带退订头。
+- **一封信怎么处理**：按投递 ID（安全邮件就是事件 ID）查发送记录 → 只为链接而发的信链接过期就不发 → 事务外经 SMTP 发出 → 短事务里 `markProcessed` 并记发送记录。失败交给监听容器本地重试 3 次，之后进死信。
+- **幂等键**：每封带 `Resend-Idempotency-Key`（投递 ID）。同一个投递 ID 必须渲染出同一份内容，正文里不放随发送时刻变的东西（有效期写成绝对时刻）。
+- **发送记录** `mail.mail_delivery`：投递 ID、模板名、结果、时刻；不存正文、链接、收件地址与用户 ID。
+- **配置**：SMTP 是 Nacos 里的 `spring.mail.*`（默认 Mailpit，mini 由 `~/.patra/secrets/mail.env` 覆盖成 Resend）；发件人 `patra.notification.mail.from`；显示时区 `patra.notification.mail.zone`（jar，`Asia/Shanghai`）。邮件健康检查关掉。
+- **提醒邮件（PAP-146）复用**：`MailDeliveryPort` + `OutgoingMail` + 发送记录；投递 ID 要由「这封信是什么」确定地算出来，退订头的加法见 spec 第 11 节。
