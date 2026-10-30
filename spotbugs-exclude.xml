@@ -360,7 +360,7 @@
     </Or>
   </Match>
 
-  <!-- 工具层（patra-tool/*）：ObjectKeyContext、StorageLocation 等暴露集合、基础设施类持有注入依赖是设计意图 -->
+  <!-- 工具层（patra-tool/*）：值对象暴露集合、基础设施类持有注入依赖是设计意图 -->
   <Match>
     <Package name="~dev\.patra\.tool\..*"/>
     <Or>

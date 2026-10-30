@@ -3,7 +3,6 @@ package dev.patra.tool.objectstorage.autoconfigure;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.patra.tool.objectstorage.ObjectStorageOperations;
-import dev.patra.tool.objectstorage.StorageLocationResolver;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -20,11 +19,7 @@ class ObjectStorageAutoConfigurationTest {
 
   @Test
   void should_register_minio_operations_by_default() {
-    runner.run(
-        ctx ->
-            assertThat(ctx)
-                .hasSingleBean(ObjectStorageOperations.class)
-                .hasSingleBean(StorageLocationResolver.class));
+    runner.run(ctx -> assertThat(ctx).hasSingleBean(ObjectStorageOperations.class));
   }
 
   @Test
