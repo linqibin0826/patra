@@ -23,7 +23,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 /// - Spring Cloud - 微服务基础设施和服务发现
 /// - HTTP Interface - 声明式 HTTP 客户端（通过 `patra-spring-boot-starter-http-interface`）
 /// - Spring Data JPA + Hibernate - 数据持久化
-/// - RocketMQ - 消息队列（事件发布）
 ///
 /// 配置从 Nacos 读（`patra-common.yaml`、`patra-catalog.yaml`），由启动器导入。
 ///

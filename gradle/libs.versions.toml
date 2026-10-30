@@ -38,8 +38,6 @@ error-prone = "2.14.0"
 
 # Messaging
 xxl-job = "3.2.0"
-rocketmq = "5.3.1"
-rocketmq-spring-boot = "2.3.1"
 
 # API Documentation (swagger-annotations 版本须与 springdoc 传递依赖保持一致)
 springdoc = "3.0.1"
@@ -67,10 +65,6 @@ tomcat = "11.0.26"
 httpclient5 = "5.6.4"
 httpcore5 = "5.4.3"
 opentelemetry = "1.62.0"
-# 以下经 rocketmq-common 5.3.1 传递引入
-grpc = "1.84.0"
-protobuf = "3.25.9"
-lz4 = "1.11.3"                # org.lz4:lz4-java 已停更，替换为维护中的 fork at.yawk.lz4:lz4-java
 commons-beanutils = "1.11.0"  # 经 commons-validator 1.7 传递引入
 spring-retry = "2.0.13"
 commons-lang3 = "3.19.0"      # build-logic：spring-boot-gradle-plugin → commons-compress 1.27.1 传递引入 3.16.0
@@ -168,7 +162,6 @@ webp-imageio = { module = "com.github.usefulness:webp-imageio", version.ref = "w
 commonmark = { module = "org.commonmark:commonmark", version.ref = "commonmark" }
 
 # Messaging
-rocketmq-spring-boot = { module = "org.apache.rocketmq:rocketmq-spring-boot-starter", version.ref = "rocketmq-spring-boot" }
 xxl-job = { module = "com.xuxueli:xxl-job-core", version.ref = "xxl-job" }
 
 # Data & Storage

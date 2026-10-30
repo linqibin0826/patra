@@ -67,9 +67,6 @@ fun Project.applyPatraDependencyManagement(libs: VersionCatalog) {
                 bomProperty("log4j-slf4j2-impl.version", log4jVersion)
             }
             mavenBom("org.testcontainers:testcontainers-bom:$testcontainersVersion")
-            // rocketmq-common 5.3.1 传递引入的 grpc 1.53 / protobuf 3.20 有漏洞；BOM 保证同族构件版本一致
-            mavenBom("io.grpc:grpc-bom:${version("grpc")}")
-            mavenBom("com.google.protobuf:protobuf-bom:${version("protobuf")}")
         }
         dependencies {
             // minio 8.6.0 / spring-cloud-starter 传递引入
@@ -90,10 +87,5 @@ fun Project.applyPatraDependencyManagement(libs: VersionCatalog) {
             // Mockito vs Kryo 版本冲突
             force("org.objenesis:objenesis:$objenesisVersion")
         }
-    }
-
-    // org.lz4:lz4-java 已停更且有未修复漏洞，在元数据层改写为同包名维护 fork（原因见 Lz4ForkRule）
-    dependencies.components.all(Lz4ForkRule::class.java) {
-        params(version("lz4"))
     }
 }

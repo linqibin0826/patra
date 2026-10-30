@@ -30,7 +30,7 @@ import lombok.Getter;
 ///
 /// **数据来源**：
 ///
-/// - 主要来源：PubMed（patra-ingest 采集，通过 RocketMQ 发布事件）
+/// - 主要来源：PubMed（catalog 下载 baseline / updatefiles 后解析入库）
 ///   - 未来支持：EPMC、Crossref、OpenAlex 等多数据源
 ///   - 数据特点：批量导入、周期性同步、幂等处理
 ///
@@ -253,7 +253,7 @@ public class PublicationAggregate extends AggregateRoot<PublicationId> {
 
   /// 创建全新的文献聚合根（用于新采集的文献）。
   ///
-  /// 使用场景：patra-ingest 通过 RocketMQ 发布文献创建事件，patra-catalog 消费事件时调用此方法。
+  /// 使用场景：PubMed 文件导入解析出一篇库里没有的文献时调用。
   ///
   /// @param provenanceCode 数据来源代码（PUBMED, EPMC, CROSSREF 等）
   /// @param pmid PubMed ID（可为空）

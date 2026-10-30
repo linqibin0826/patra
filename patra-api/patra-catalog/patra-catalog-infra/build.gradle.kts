@@ -26,9 +26,6 @@ dependencies {
     // Apache Commons Net（FTP 客户端）
     api(libs.commons.net)
 
-    // RocketMQ
-    api(libs.rocketmq.spring.boot)
-
     // MapStruct 由 patra.hexagonal-infra 插件提供
     // annotationProcessor 由 patra.java-base 插件提供
 

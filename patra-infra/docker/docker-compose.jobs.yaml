@@ -1,8 +1,8 @@
 name: patra-jobs
 
-# Job scheduling and message queue services
-# Optional async workload services for batch processing and event-driven workflows
-# Can be disabled when not working on scheduled jobs or message-driven features
+# Job scheduling services
+# Optional workload services for batch processing
+# Can be disabled when not working on scheduled jobs
 
 services:
   mysql-ops:
@@ -91,89 +91,6 @@ services:
           fi
           sleep 30
         done
-
-  rocketmq-namesrv:
-    image: apache/rocketmq:5.3.1
-    container_name: patra-rocketmq-namesrv
-    restart: unless-stopped
-    environment:
-      TZ: Asia/Shanghai
-    command: [ "sh", "mqnamesrv" ]
-    ports:
-      - "9876:9876"           # NameServer
-    volumes:
-      - ${HOME}/.patra/docker/rocketmq/namesrv/logs:/home/rocketmq/logs
-      - ${HOME}/.patra/docker/rocketmq/namesrv/store:/home/rocketmq/store
-    healthcheck:
-      test: [ "CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/9876'" ]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
-  rocketmq-broker:
-    image: apache/rocketmq:5.3.1
-    container_name: patra-rocketmq-broker
-    restart: unless-stopped
-    environment:
-      TZ: Asia/Shanghai
-      NAMESRV_ADDR: rocketmq-namesrv:9876
-      JAVA_OPT_EXT: "-Xms512m -Xmx2g -XX:+UseG1GC"
-      # Broker 注册到 NameServer 的对外地址 - 客户端拿到此地址后直连。
-      # 默认走 MagicDNS 短名: linqibins-mac-mini（家内自动解析为 LAN IP，
-      # 离家自动解析为 tailscale IP）。可在 .env 中覆盖。
-      BROKER_IP1: ${BROKER_IP1:-linqibins-mac-mini}
-    command:
-      - sh
-      - -c
-      - |
-        cp /home/rocketmq/rocketmq-5.3.1/conf/broker.conf /tmp/broker.conf
-        echo "" >> /tmp/broker.conf
-        echo "brokerIP1=$$BROKER_IP1" >> /tmp/broker.conf
-        echo "=== Final broker.conf ==="
-        cat /tmp/broker.conf
-        echo "========================="
-        sh mqbroker --enable-proxy -c /tmp/broker.conf
-    ports:
-      - "10909:10909"         # remoting
-      - "10911:10911"         # remoting
-      - "10912:10912"         # HA
-      - "7071:8080"           # proxy (HTTP)
-      - "8081:8081"           # proxy (gRPC/HTTP2)
-    volumes:
-      - ${HOME}/.patra/docker/rocketmq/broker/logs:/home/rocketmq/logs
-      - ${HOME}/.patra/docker/rocketmq/broker/store:/home/rocketmq/store
-      - ${HOME}/.patra/docker/rocketmq/broker/conf/broker.conf:/home/rocketmq/rocketmq-5.3.1/conf/broker.conf:ro
-    depends_on:
-      rocketmq-namesrv:
-        condition: service_started
-    healthcheck:
-      test: [ "CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/10911 && exec 3<>/dev/tcp/127.0.0.1/8081'" ]
-      interval: 15s
-      timeout: 5s
-      retries: 12
-      start_period: 20s
-
-  rocketmq-dashboard:
-    image: apacherocketmq/rocketmq-dashboard:2.1.0
-    container_name: patra-rocketmq-dashboard
-    restart: unless-stopped
-    environment:
-      TZ: Asia/Shanghai
-      JAVA_OPTS: "-Drocketmq.namesrv.addr=rocketmq-namesrv:9876"
-    ports:
-      - "4002:8082"           # Dashboard UI
-    # broker 以 mini 主机名注册（BROKER_IP1），容器里要能解析它才能取 broker 统计
-    extra_hosts:
-      - "linqibins-mac-mini:host-gateway"
-    depends_on:
-      rocketmq-namesrv:
-        condition: service_started
-    healthcheck:
-      test: [ "CMD-SHELL", "wget -qO- http://127.0.0.1:8082/ >/dev/null 2>&1 || exit 1" ]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-      start_period: 20s
 
 networks:
   default:
