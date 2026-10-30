@@ -103,7 +103,7 @@ data: {"total":3,"replies":2,"mentions":1,"helpful":0}
 | 决策 I | SSE 放在通知服务；提交后推；只推三个数；连上先推一次当前值；25 秒心跳；30 分钟寿命；显式异步超时；网关单独连接池 |
 | 决策 H | 推送连接在线算在站 |
 | 第 3 节 C | 只跑一个实例，连接表在进程内存里 |
-| PAP-143 契约 | `UnreadCountsChangedEvent(Set<Long> recipientIds)`（`domain.inbox.event`）在信箱写入事务里发布，不带数字；`InboxReadPort#unreadCounts(long)` → `UnreadCounts(replies, mentions, helpful)`，`total()` = replies + mentions；`PresenceGateway#markSeen(long)`（`domain.kernel.port.gateway`，时刻取 `Clock`）；SSE 数据与 `GET /me/notifications/unread-count` 的响应体同形 |
+| PAP-143 契约（共享笔记 10/31 02:14 版核对过，第 3 节无变化） | `UnreadCountsChangedEvent(Set<Long> recipientIds)`（`domain.inbox.event`）在信箱写入事务里发布，不带数字；`InboxReadPort#unreadCounts(long)` → `UnreadCounts(replies, mentions, helpful)`，`total()` = replies + mentions；`PresenceGateway#markSeen(long)`（`domain.kernel.port.gateway`，时刻取 `Clock`）；SSE 数据与 `GET /me/notifications/unread-count` 的响应体同形 |
 | 骨架 spec | 子域 `realtime`；计划中的依赖边 `realtime → inbox` 由本 Issue 在架构测试里声明；推送路由要排在通用 `/patra-notification/**` 前面 |
 
 ## 5. 接口契约（给 PAP-149）

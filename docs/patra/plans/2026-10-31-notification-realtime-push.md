@@ -176,5 +176,5 @@
 
 - [ ] **Step 1**：写文档。
 - [ ] **Step 2**：派独立评审子代理（`model: "opus"`，只给 spec 路径与本分支 diff 范围，不给本会话结论）；重要问题先写复现测试再修。
-- [ ] **Step 3**：`./gradlew check integrationTest --continue`（后台跑）→ 全绿；Gradle 锁或个别 IT 超时先单独重跑。
+- [ ] **Step 3**：只跑受影响模块（编排会话 10/31 规矩：本机负载高，全量由编排会话在集成分支上跑）：`./gradlew :patra-api:patra-gateway-boot:check :patra-api:patra-gateway-boot:integrationTest` 加 notification 六层的 `check` 与 `integrationTest`（`--continue`，后台跑）→ 全绿；Gradle 锁或个别 IT 超时先单独重跑。验收汇报写明跑了哪些模块。
 - [ ] **Step 4**：提交文档；核对 `git diff --cached` 只含本 Issue 路径；给编排会话发验收汇报（SHA、AC ↔ 测试、全量结果、评审发现与处理、留下的小问题、上线步骤、release spec 决策 I 的更正文字）。
