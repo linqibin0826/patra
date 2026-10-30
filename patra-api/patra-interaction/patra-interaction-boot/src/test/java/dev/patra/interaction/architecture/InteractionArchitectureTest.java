@@ -48,14 +48,14 @@ class InteractionArchitectureTest {
       List.of(FOUNDATION, "collection", "discussion", "post", "notification", "reaction");
 
   /// 子域边界规则。依赖方向按 v0.14 决策 A：提醒只经事件契约依赖讨论与投稿经验（PAP-127 经验删除即删提醒）。
-  /// 有帮助（v0.15 决策 B）经讨论的读端口取评论、订阅它的删除事件，只经事件契约依赖投稿经验（经验的作者与匿名读
-  /// 登记表）。其余子域只依赖底座。
+  /// 有帮助（v0.15 决策 B）经讨论的读端口取评论、订阅它的删除事件；v0.16 起也经投稿经验的读端口取经验的结果与正文，
+  /// 带进「有帮助已点」事件（PAP-141，经验的作者与匿名仍读登记表）。其余子域只依赖底座。
   private static final SubdomainArchitectureRules subdomainRules =
       new SubdomainArchitectureRules("dev.patra.interaction", FOUNDATION, Set.copyOf(SUBDOMAINS))
           .allowingSubscription("notification", "discussion")
           .allowingSubscription("notification", "post")
           .allowingDependency("reaction", "discussion")
-          .allowingSubscription("reaction", "post");
+          .allowingDependency("reaction", "post");
 
   /// 导入 interaction 全部模块的主代码。
   @BeforeAll

@@ -1,8 +1,10 @@
 package dev.patra.interaction.domain.discussion.model.read;
 
 import dev.patra.interaction.domain.discussion.model.enums.CommentState;
+import dev.patra.interaction.domain.discussion.policy.MentionSyntax;
 import dev.patra.interaction.domain.subject.model.vo.SubjectId;
 import java.time.Instant;
+import java.util.List;
 import lombok.Builder;
 
 /// 读出来的一条评论，带上父评论的作者与状态（给「回复 @X」）、有没有直接回复（给删除确认的文案）和有帮助数。
@@ -48,6 +50,13 @@ public record CommentRecord(
   /// @return 已删除留占位时为 `true`
   public boolean isDeleted() {
     return state == CommentState.DELETED;
+  }
+
+  /// 正文里提及到的用户（别的子域把正文转纯文本时要用，PAP-141）。
+  ///
+  /// @return 用户 ID，去重、按第一次出现；占位为空
+  public List<Long> mentionedUserIds() {
+    return body == null ? List.of() : MentionSyntax.mentionedIds(body);
   }
 
   /// 是否有修改记录（门户据此显示「已编辑」）。

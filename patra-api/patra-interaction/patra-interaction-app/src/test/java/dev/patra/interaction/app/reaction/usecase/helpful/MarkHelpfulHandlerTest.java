@@ -1,6 +1,7 @@
 package dev.patra.interaction.app.reaction.usecase.helpful;
 
 import static dev.patra.interaction.app.reaction.ReactionFixtures.NOW;
+import static dev.patra.interaction.app.reaction.ReactionFixtures.subject;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -13,6 +14,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import dev.patra.interaction.app.reaction.service.ReactionTargets;
+import dev.patra.interaction.app.reaction.service.TargetFacts;
+import dev.patra.interaction.domain.reaction.event.HelpfulMarkedEvent;
 import dev.patra.interaction.domain.reaction.exception.HelpfulTargetNotFoundException;
 import dev.patra.interaction.domain.reaction.exception.SelfHelpfulException;
 import dev.patra.interaction.domain.reaction.model.enums.HelpfulTargetType;
@@ -20,6 +23,10 @@ import dev.patra.interaction.domain.reaction.model.vo.HelpfulTarget;
 import dev.patra.interaction.domain.reaction.model.vo.TargetProfile;
 import dev.patra.interaction.domain.reaction.port.repository.HelpfulRepository;
 import dev.patra.interaction.domain.subject.model.enums.PublishKind;
+import dev.patra.interaction.domain.subject.model.enums.SubjectState;
+import dev.patra.interaction.domain.subject.model.enums.SubjectType;
+import dev.patra.interaction.domain.subject.model.read.SubjectView;
+import dev.patra.interaction.domain.subject.model.vo.SubjectId;
 import dev.patra.interaction.domain.subject.port.gateway.PublishGuardGateway;
 import dev.patra.tool.core.security.AccountType;
 import dev.patra.tool.core.security.ClientType;
@@ -30,8 +37,11 @@ import java.time.Clock;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.context.ApplicationEventPublisher;
 
 /// 点有帮助（spec §4.1）：事务外解析目标、预检已点过、查资格；事务内配额锁 → 目标锁 → 锁内复核 → 明细 → 计数。
 class MarkHelpfulHandlerTest {
@@ -39,11 +49,15 @@ class MarkHelpfulHandlerTest {
   private static final long ME = 8L;
   private static final long AUTHOR = 7L;
   private static final HelpfulTarget TARGET = HelpfulTarget.of(HelpfulTargetType.COMMENT, 42L);
+  private static final SubjectView PAPER =
+      subject(SubjectId.of(11L), SubjectType.PUBLICATION, SubjectState.ACTIVE, null);
+  private static final TargetFacts FACTS = TargetFacts.of(PAPER, null, "评论正文");
 
   private final ReactionTargets targets = mock(ReactionTargets.class);
   private final PublishGuardGateway guard = mock(PublishGuardGateway.class);
   private final HelpfulRepository helpful = mock(HelpfulRepository.class);
   private final CurrentUserPort currentUser = mock(CurrentUserPort.class);
+  private final ApplicationEventPublisher publisher = mock(ApplicationEventPublisher.class);
   private final List<String> events = new ArrayList<>();
   private MarkHelpfulHandler handler;
 
@@ -52,6 +66,8 @@ class MarkHelpfulHandlerTest {
     when(currentUser.require())
         .thenReturn(CurrentUser.of(ME, 1L, AccountType.USER, ClientType.WEB));
     givenProfile(TargetProfile.of(TARGET, AUTHOR, true, false));
+    when(targets.describe(TARGET)).thenReturn(FACTS);
+    doAnswer(invocation -> events.add("publish")).when(publisher).publishEvent(any(Object.class));
     doAnswer(
             invocation -> {
               events.add("eligible");
@@ -91,6 +107,7 @@ class MarkHelpfulHandlerTest {
             helpful,
             currentUser,
             new RecordingTransactions(events),
+            publisher,
             Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
@@ -111,6 +128,7 @@ class MarkHelpfulHandlerTest {
             "insert",
             "target1",
             "received1",
+            "publish",
             "count",
             RecordingTransactions.END);
     verify(helpful).insert(ME, TARGET, AUTHOR, NOW);
@@ -139,6 +157,7 @@ class MarkHelpfulHandlerTest {
     assertThat(result).isEqualTo(HelpfulResult.of(true, 3));
     verify(helpful, never()).adjustTargetCount(any(), anyInt());
     verify(helpful, never()).adjustReceived(anyLong(), anyLong());
+    verify(publisher, never()).publishEvent(any(Object.class));
   }
 
   /// 已经点过：不查资格、不开事务、不耗额度（点过之后进了冷静期的人重复点也是幂等的 200）。
@@ -152,6 +171,38 @@ class MarkHelpfulHandlerTest {
     assertThat(events).doesNotContain(RecordingTransactions.BEGIN);
     verify(guard, never()).requireEligible(anyLong());
     verify(guard, never()).admit(anyLong(), any());
+    verify(publisher, never()).publishEvent(any(Object.class));
+  }
+
+  /// 真插入了才发「有帮助已点」（PAP-141）：目标、作者、是否匿名、点的人、点的时刻，加上被点内容的对象、结果与纯文本。
+  @Test
+  void should_publish_marked_event_after_insert() {
+    givenProfile(TargetProfile.of(TARGET, AUTHOR, true, true));
+
+    handler.handle(MarkHelpfulCommand.of(HelpfulTargetType.COMMENT, 42L));
+
+    ArgumentCaptor<HelpfulMarkedEvent> captor = ArgumentCaptor.forClass(HelpfulMarkedEvent.class);
+    verify(publisher).publishEvent(captor.capture());
+    HelpfulMarkedEvent event = captor.getValue();
+    assertThat(event.eventId()).isNotNull();
+    assertThat(event)
+        .usingRecursiveComparison()
+        .ignoringFields("eventId")
+        .isEqualTo(
+            HelpfulMarkedEvent.builder()
+                .eventId(UUID.randomUUID())
+                .targetType(HelpfulTargetType.COMMENT)
+                .targetId(42L)
+                .targetAuthorId(AUTHOR)
+                .targetAnonymous(true)
+                .userId(ME)
+                .markedAt(NOW)
+                .subjectId(PAPER.subjectId())
+                .subjectType(SubjectType.PUBLICATION)
+                .subjectOwner(null)
+                .experience(null)
+                .targetPlainText("评论正文")
+                .build());
   }
 
   /// 自己的、不能点的：在打 identity 之前就拒绝。
