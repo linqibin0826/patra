@@ -51,6 +51,9 @@ const EXPERIENCE: { month: string; input: ExperienceInput } = {
 
 const gateway = () => process.env.PATRA_GATEWAY_BASE_URL?.replace(/\/+$/, "") ?? "";
 
+/// C 上一次发评论的时刻：同一账号两条评论要隔 10 秒，用例串行跑、生产构建下很快，下一条用例开头就发会被挡
+let lastPostByC = 0;
+
 interface Stats {
   collectorCount: number;
   discussionCount: number;
@@ -176,9 +179,11 @@ test.describe("公开计数", () => {
         let rootPosted = false;
         try {
           let section = await openDiscussion(c, paperId);
+          await waitSince(c, lastPostByC, PUBLISH_GAP_MS);
           await postRoot(section, ROOT);
           await expect(commentWith(section, ROOT)).toBeVisible(ROUND_TRIP);
           rootPosted = true;
+          lastPostByC = Date.now();
           await expect(titleOf(section)).toContainText(`${base + 1} 条`);
 
           // B 回复：本人发表后楼内统计与条数立刻变，最后回复是「刚刚」
@@ -402,9 +407,11 @@ test.describe("公开计数", () => {
           const replies = c.locator("#discussion");
           const box = await openComposer(replies, "对这条投稿经验有疑问？在这里追问…");
           await box.fill(REPLY);
+          await waitSince(c, lastPostByC, PUBLISH_GAP_MS);
           await replies.getByRole("button", { name: "发表", exact: true }).click();
           await expect(commentWith(replies, REPLY)).toBeVisible(ROUND_TRIP);
           replied = true;
+          lastPostByC = Date.now();
           await expect(titleOf(replies, "回复 · Replies")).toContainText("1 条");
 
           // 期刊页与 B 的主页：这条经验底部有回复数；主页头部获赞 +1

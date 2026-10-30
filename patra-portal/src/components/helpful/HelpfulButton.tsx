@@ -48,7 +48,7 @@ function OwnHelpful({ count, pill }: { count: number; pill: boolean }) {
 /// 别人的内容：可点的按钮 + 行内提示
 function Toggle({ target, helpful, count: serverCount, variant, onGone }: HelpfulButtonProps) {
   const pill = variant === "pill";
-  const { shown, busy, hint, toggle, holdHint } = useHelpfulToggle({
+  const { shown, busy, ready, hint, toggle, holdHint } = useHelpfulToggle({
     target,
     helpful,
     count: serverCount,
@@ -62,6 +62,8 @@ function Toggle({ target, helpful, count: serverCount, variant, onGone }: Helpfu
         type="button"
         aria-pressed={on}
         aria-busy={busy || undefined}
+        // 登录状态还没回来时点了不响应，标出来（与收藏按钮的 pending 一致）
+        aria-disabled={!ready || undefined}
         // 读屏名写死：拼接可见文字与隐藏文字时 Chromium 会在中间多算一个空格（「有帮助 ，3 人…」）
         aria-label={count > 0 ? `有帮助，${formatCount(count)} 人觉得有帮助` : "有帮助"}
         onClick={toggle}

@@ -7,6 +7,7 @@ import "@testing-library/jest-dom/vitest";
 import { HelpfulButton } from "@/components/helpful/HelpfulButton";
 import * as helpfulCache from "@/lib/helpful/cache";
 import { type HelpfulActionResult, setHelpful } from "@/lib/interaction/helpful-actions";
+import { queryKeys } from "@/lib/query-keys";
 
 vi.mock("@/lib/interaction/helpful-actions", () => ({ setHelpful: vi.fn() }));
 vi.mock("@/components/portal/ResendVerificationButton", () => ({
@@ -364,5 +365,58 @@ describe("HelpfulButton 读屏名（e2e 发现）", () => {
   it("读屏名由 aria-label 给出，不靠拼接文字（Chromium 会在隐藏文字前多算一个空格）", () => {
     renderButton({ count: 3 });
     expect(button()).toHaveAttribute("aria-label", "有帮助，3 人觉得有帮助");
+  });
+});
+
+describe("HelpfulButton 登录状态还没回来（生产构建 e2e 发现）", () => {
+  /// 当前用户还在取：`/api/auth/me` 挂起，返回一个放行函数
+  function renderWhileUserLoading() {
+    let release: () => void = () => {};
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise<Response>((resolve) => {
+            release = () => resolve(Response.json({ user: { ...USER, emailVerified: true } }));
+          }),
+      ),
+    );
+    const view = renderDiscussion(
+      <HelpfulButton target={COMMENT} helpful={false} count={3} own={false} variant="text" />,
+      { seed: (client) => client.removeQueries({ queryKey: queryKeys.currentUser }) },
+    );
+    return { ...view, release: () => release() };
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("should_mark_button_disabled_until_current_user_arrives", async () => {
+    const { release } = renderWhileUserLoading();
+    expect(button()).toHaveAttribute("aria-disabled", "true");
+    await act(async () => release());
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(button()).not.toHaveAttribute("aria-disabled");
+  });
+
+  it("should_ignore_click_while_current_user_is_loading", async () => {
+    renderWhileUserLoading();
+    await press();
+    expect(action).not.toHaveBeenCalled();
+    expect(button()).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("should_keep_mark_after_current_user_arrives", async () => {
+    action.mockResolvedValue({ ok: true, result: { helpful: true, helpfulCount: 4 } });
+    const { release } = renderWhileUserLoading();
+    await press();
+    await act(async () => release());
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    await press();
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(action).toHaveBeenCalledTimes(1);
+    expect(button()).toHaveAttribute("aria-pressed", "true");
+    expect(button()).toHaveAccessibleName("有帮助，4 人觉得有帮助");
   });
 });
