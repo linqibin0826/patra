@@ -2,7 +2,10 @@ package dev.patra.notification.domain.kernel.policy;
 
 import dev.patra.notification.domain.kernel.model.read.RenderedExcerpt;
 import java.text.BreakIterator;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -57,6 +60,22 @@ public final class ExcerptRenderer {
       return truncated(out);
     }
     return RenderedExcerpt.of(out.toString(), false);
+  }
+
+  /// 正文里 @ 到的人（显示前要按 ID 取名字）。
+  ///
+  /// @param plainText 纯文本
+  /// @return 用户 ID，按第一次出现的顺序去重
+  public static List<Long> mentionedIds(String plainText) {
+    Set<Long> ids = new LinkedHashSet<>();
+    Matcher matcher = MENTION.matcher(plainText);
+    while (matcher.find()) {
+      Long userId = userIdOf(matcher.group(1));
+      if (userId != null) {
+        ids.add(userId);
+      }
+    }
+    return List.copyOf(ids);
   }
 
   /// 追加一段字面文字，直到用完字素额度。

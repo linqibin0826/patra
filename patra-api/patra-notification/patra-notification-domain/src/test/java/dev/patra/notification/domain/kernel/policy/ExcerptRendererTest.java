@@ -70,4 +70,11 @@ class ExcerptRendererTest {
     assertThat(ExcerptRenderer.render("<@9999999999999999999>", NAMES, 120, true).text())
         .isEqualTo("<@9999999999999999999>");
   }
+
+  /// 正文里 @ 到的人：按第一次出现的顺序去重，超出 long 的不算。
+  @Test
+  void should_list_mentioned_ids() {
+    assertThat(ExcerptRenderer.mentionedIds("<@4> 和 <@2> 还有 <@4> <@9999999999999999999>"))
+        .containsExactly(4L, 2L);
+  }
 }
