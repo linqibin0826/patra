@@ -1,5 +1,5 @@
 import { type APIRequestContext, expect, type Locator, type Page } from "@playwright/test";
-import { ROUND_TRIP, waitForTakeover } from "@tests/e2e/support/account";
+import { ROUND_TRIP, visit, waitForTakeover } from "@tests/e2e/support/account";
 
 /// 两条评论至少间隔 10 秒（release spec 2.1.1），多等半秒防边界
 export const PUBLISH_GAP_MS = 10_500;
@@ -21,7 +21,7 @@ export async function pickPaper(request: APIRequestContext): Promise<string> {
 
 /// 打开文献页并滚到讨论区，等它接管
 export async function openDiscussion(page: Page, paperId: string, query = ""): Promise<Locator> {
-  await page.goto(`/papers/${paperId}${query}`, { timeout: 60_000 });
+  await visit(page, `/papers/${paperId}${query}`);
   const section = page.locator("#discussion");
   await section.scrollIntoViewIfNeeded();
   await expect(section.getByRole("heading", { name: /讨论 · Discussion/i })).toBeVisible(

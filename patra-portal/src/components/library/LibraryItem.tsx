@@ -3,6 +3,7 @@
 import { Globe, Lock, NotebookPen } from "lucide-react";
 import { useState } from "react";
 import { NoteEditor } from "@/components/library/NoteEditor";
+import { PaperStats } from "@/components/library/PaperStats";
 import { UnavailableEntry } from "@/components/library/UnavailableEntry";
 import { Pill } from "@/components/portal/Pill";
 import { PaperListItem } from "@/components/portal/papers/PaperListItem";
@@ -33,7 +34,7 @@ interface LibraryItemProps {
 const NOTE_FOLD_GRAPHEMES = 90;
 const NOTE_FOLD_LINES = 3;
 
-/// 文献库条目（简报 §3.10）：`PaperListItem` 的结构（不显示摘要与证据徽章，日期按精度）+ 归属行
+/// 文献库条目（简报 §3.10）：`PaperListItem` 的结构（不显示摘要与证据徽章，日期按精度）+ 收藏人数与讨论数 + 归属行
 /// （所在收藏夹胶囊 · 收藏 / 加入时间）+ 备注。已失效的用快照标题，不是链接。
 export function LibraryItem({
   entry,
@@ -45,7 +46,7 @@ export function LibraryItem({
   onNoteSaved,
   onNoteDone,
 }: LibraryItemProps) {
-  const { item, paper } = entry;
+  const { item, paper, stats } = entry;
   const extra = (
     <>
       <Membership item={item} collections={collections} currentCollectionId={currentCollectionId} />
@@ -63,7 +64,13 @@ export function LibraryItem({
     </>
   );
   const body = paper ? (
-    <PaperListItem paper={paper} action={menu} detailedDate summary={false}>
+    <PaperListItem
+      paper={paper}
+      action={menu}
+      detailedDate
+      summary={false}
+      stats={<PaperStats paperKey={paper.id} stats={stats} />}
+    >
       {extra}
     </PaperListItem>
   ) : (

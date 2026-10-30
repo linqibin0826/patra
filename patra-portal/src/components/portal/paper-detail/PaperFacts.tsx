@@ -1,34 +1,23 @@
 import type { ReactNode } from "react";
+import { FACT_CELL, FactCell } from "@/components/portal/paper-detail/FactCell";
 import { fetchPublicationFullText } from "@/lib/portal-api/fulltext";
 import { deriveFullTextState, deriveFullTextStats } from "@/lib/portal-api/fulltext-derive";
 import { deriveEvidence } from "@/lib/portal-api/publication-derive";
 import type { PaperDetail } from "@/types/portal";
 
-const CELL =
-  "border-r border-border-subtle py-3.5 pr-4 pl-4 first:pl-0 last:border-r-0 max-[540px]:border-r-0 max-[540px]:pl-0";
-
-/** 事实条的一格：等宽小标 + 数值。 */
-export function FactCell({ term, children }: { term: string; children: ReactNode }) {
-  return (
-    <div className={CELL}>
-      <dt className="font-mono text-3xs tracking-mono text-fg-3">{term}</dt>
-      <dd className="m-0 mt-1.5 flex items-center gap-1.5 font-sans text-md font-medium tabular-nums text-fg-1">
-        {children}
-      </dd>
-    </div>
-  );
-}
-
 /**
  * 页头事实条（spec §5.2）：详情里有的几项直接给出；篇幅、图表、参考文献来自全文接口，
- * 由调用方包在 Suspense 里作为 `fullTextFacts` 传入，排在最后。
+ * 由调用方包在 Suspense 里作为 `fullTextFacts` 传入；收藏人数与讨论数来自 interaction（`interactionFacts`，
+ * 同样在 Suspense 里），放在最后，晚到也不挤动前面的格子（v0.15 简报 §3.7）。
  */
 export function PaperFacts({
   paper,
   fullTextFacts,
+  interactionFacts,
 }: {
   paper: PaperDetail;
   fullTextFacts?: ReactNode;
+  interactionFacts?: ReactNode;
 }) {
   return (
     <dl className="m-0 mt-8 grid grid-cols-[repeat(auto-fit,minmax(128px,1fr))] border-y border-border-default">
@@ -42,6 +31,7 @@ export function PaperFacts({
         <FactCell term="原文阅读">≈ {paper.estimatedReadMin} 分钟</FactCell>
       )}
       {fullTextFacts}
+      {interactionFacts}
     </dl>
   );
 }
@@ -51,7 +41,7 @@ export function FactCellsSkeleton() {
   return (
     <>
       {[0, 1, 2].map((i) => (
-        <div key={i} aria-hidden className={CELL}>
+        <div key={i} aria-hidden className={FACT_CELL}>
           <div className="shimmer h-3 w-10 rounded-sm" />
           <div className="shimmer mt-2 h-4 w-16 rounded-sm" />
         </div>

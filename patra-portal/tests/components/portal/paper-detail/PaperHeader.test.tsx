@@ -2,6 +2,7 @@ import { screen } from "@testing-library/react";
 import { renderWithQuery } from "@tests/support/render-with-query";
 import { describe, expect, it } from "vitest";
 import "@testing-library/jest-dom/vitest";
+import { useSaveStatus } from "@/components/library/LibraryStatusProvider";
 import { PaperHeader } from "@/components/portal/paper-detail/PaperHeader";
 import type { PaperDetail } from "@/types/portal";
 
@@ -273,5 +274,24 @@ describe("PaperHeader · 分享与窄屏操作行（PAP-115，简报 §3.3）", 
     const group = screen.getByRole("group", { name: "次要操作" });
     const pmc = screen.getByRole("link", { name: "在 PMC 查看原文 ↗" });
     expect(group.compareDocumentPosition(pmc) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+});
+
+describe("PaperHeader · 事实条的互动两格", () => {
+  /// 读这篇的收藏状态：在 `LibraryStatusProvider` 里未登录是 anon，在外面是 pending
+  function StatusProbe({ id }: { id: string }) {
+    return (
+      <div>
+        <dt>探针</dt>
+        <dd>{useSaveStatus(id).kind}</dd>
+      </div>
+    );
+  }
+
+  it("should_render_interaction_facts_inside_library_status_scope", () => {
+    renderWithQuery(
+      <PaperHeader paper={paper()} shareLink={LINK} interactionFacts={<StatusProbe id="1" />} />,
+    );
+    expect(screen.getByText("探针").nextElementSibling).toHaveTextContent("anon");
   });
 });

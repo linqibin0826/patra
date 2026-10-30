@@ -40,11 +40,18 @@ const page = <T>(items: T[]) => ({
 });
 const urls = () => fetchMock.mock.calls.map(([url]) => String(url));
 
-/// 按地址分派：interaction 的回 `interaction`，catalog 批量卡片回 `cards`
-function respond(interaction: Response, cards: Response = Response.json({ items: [] })) {
-  fetchMock.mockImplementation(async (url) =>
-    String(url).includes("/patra-catalog/") ? cards.clone() : interaction.clone(),
-  );
+/// 按地址分派：interaction 的回 `interaction`，catalog 批量卡片回 `cards`，批量对象统计回 `stats`
+function respond(
+  interaction: Response,
+  cards: Response = Response.json({ items: [] }),
+  stats: Response = Response.json({ items: [] }),
+) {
+  fetchMock.mockImplementation(async (url) => {
+    if (String(url).includes("/patra-catalog/")) {
+      return cards.clone();
+    }
+    return String(url).includes("/subjects/stats") ? stats.clone() : interaction.clone();
+  });
 }
 
 describe("参数解析", () => {
@@ -118,23 +125,25 @@ describe("fetchLibraryPage", () => {
   const second = makeLibraryItem({ itemId: "502", key: "12" });
   const gone = makeLibraryItem({ itemId: "503", key: null, state: "UNAVAILABLE", title: "旧标题" });
 
-  it("取一页条目，再一次批量取正常条目的卡片，按条目顺序拼好", async () => {
+  it("取一页条目，再一次批量取正常条目的卡片与计数，按条目顺序拼好", async () => {
     const paper = makePaper({ id: "11" });
     respond(Response.json(page([active, gone])), Response.json({ items: [paper] }));
     const read = await fetchLibraryPage("all", "published", 2);
     expect(urls()).toEqual([
       "http://gw.test/patra-interaction/me/library/items?view=all&sort=published&page=2&size=50",
       "http://gw.test/patra-catalog/portal/publications/batch?id=11",
+      "http://gw.test/patra-interaction/subjects/stats",
     ]);
     expect(fetchMock.mock.calls[1]?.[1]?.headers).not.toHaveProperty("Authorization");
+    expect(fetchMock.mock.calls[2]?.[1]?.headers).not.toHaveProperty("Authorization");
     expect(read).toEqual({
       kind: "ok",
       data: {
         ...page([]),
         total: 2,
         items: [
-          { item: active, paper },
-          { item: gone, paper: null },
+          { item: active, paper, stats: null },
+          { item: gone, paper: null, stats: null },
         ],
       },
     });
@@ -171,6 +180,37 @@ describe("fetchLibraryPage", () => {
     await expect(fetchLibraryPage({ collectionId: "9" }, "added", 1)).resolves.toEqual({
       kind: "not-found",
     });
+  });
+
+  it("should_attach_stats_per_entry_fetched_with_cards", async () => {
+    respond(
+      Response.json(page([active, second, gone])),
+      Response.json({ items: [makePaper({ id: "11" }), makePaper({ id: "12" })] }),
+      Response.json({ items: [{ key: "11", collectorCount: 2, discussionCount: 5 }] }),
+    );
+    const read = await fetchLibraryPage("all", "added", 1);
+    const statsCall = fetchMock.mock.calls.find(([url]) => String(url).includes("/subjects/stats"));
+    expect(JSON.parse(String(statsCall?.[1]?.body))).toEqual({
+      type: "publication",
+      keys: ["11", "12"],
+    });
+    expect(read.kind === "ok" && read.data.items.map((entry) => entry.stats)).toEqual([
+      { collectorCount: 2, discussionCount: 5 },
+      null,
+      null,
+    ]);
+  });
+
+  it("should_stay_ok_with_null_stats_when_stats_unavailable", async () => {
+    respond(
+      Response.json(page([active])),
+      Response.json({ items: [makePaper({ id: "11" })] }),
+      new Response("x", { status: 502 }),
+    );
+    const read = await fetchLibraryPage("all", "added", 1);
+    expect(read.kind).toBe("ok");
+    expect(read.kind === "ok" && read.data.items[0]?.stats).toBeNull();
+    expect(read.kind === "ok" && read.data.items[0]?.paper?.id).toBe("11");
   });
 
   it("卡片取不到：unavailable", async () => {

@@ -1,5 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { screen } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { makeComment, makeReply, makeThread } from "@tests/fixtures/discussion";
 import { renderDiscussion } from "@tests/support/discussion";
@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { DiscussionView } from "@/components/discussion/DiscussionView";
 import { PAPER_DISCUSSION_COPY } from "@/lib/discussion/copy";
+import { setHelpful } from "@/lib/interaction/helpful-actions";
 import { queryKeys } from "@/lib/query-keys";
 
 let params = new URLSearchParams("comment=3");
@@ -15,6 +16,7 @@ vi.mock("next/navigation", async (original) => ({
   usePathname: () => "/papers/1",
   useSearchParams: () => params,
 }));
+vi.mock("@/lib/interaction/helpful-actions", () => ({ setHelpful: vi.fn() }));
 vi.mock("@/lib/interaction/discussion-actions", () => ({
   publishComment: vi.fn(),
   editComment: vi.fn(),
@@ -104,5 +106,29 @@ describe("单楼视图", () => {
     renderSingle(SINGLE);
     await userEvent.setup().click(screen.getByRole("button", { name: "查看全部讨论" }));
     expect(replace).toHaveBeenLastCalledWith(null, "", "/papers/1?sort=latest");
+  });
+});
+
+describe("单楼视图的有帮助", () => {
+  it("这条已被删除：提示之后重取单楼", async () => {
+    vi.mocked(setHelpful).mockResolvedValue({ ok: false, reason: "gone" });
+    const fetchMock = vi.fn(async () => Response.json(SINGLE));
+    vi.stubGlobal("fetch", fetchMock);
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      renderSingle(SINGLE);
+      const target = document.getElementById("comment-3") as HTMLElement;
+      await userEvent
+        .setup({ advanceTimers: vi.advanceTimersByTime })
+        .click(within(target).getByRole("button", { name: "有帮助" }));
+      expect(await screen.findByText("这条评论已被删除")).toBeVisible();
+      expect(fetchMock).not.toHaveBeenCalled();
+      await act(() => vi.advanceTimersByTimeAsync(4100));
+      await waitFor(() =>
+        expect(fetchMock).toHaveBeenCalledWith("/api/discussions/publication/1/comments/3/thread"),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

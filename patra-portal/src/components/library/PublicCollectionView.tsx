@@ -4,6 +4,7 @@ import { CopyCollectionButton } from "@/components/library/CopyCollectionButton"
 import { InteractionUnavailable } from "@/components/library/InteractionUnavailable";
 import { LibraryStatusProvider } from "@/components/library/LibraryStatusProvider";
 import { LinkPagination } from "@/components/library/LinkPagination";
+import { PaperStats } from "@/components/library/PaperStats";
 import { PublicCollectionActions } from "@/components/library/PublicCollectionActions";
 import { SaveButton } from "@/components/library/SaveButton";
 import { SortSelect } from "@/components/library/SortSelect";
@@ -196,6 +197,9 @@ function Entries({
                 <PaperListItem
                   paper={entry.paper}
                   detailedDate
+                  stats={
+                    <PaperStats paperKey={entry.paper.id} stats={entry.stats} className="mt-1" />
+                  }
                   action={
                     <SaveButton
                       paperKey={entry.paper.id}

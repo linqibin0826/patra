@@ -11,6 +11,9 @@ vi.mock("@/lib/portal-api/publications", () => ({
   fetchPublicationDetail: vi.fn(),
 }));
 
+vi.mock("@/lib/interaction/stats", () => ({ fetchPaperStats: vi.fn(async () => new Map()) }));
+
+import { fetchPaperStats } from "@/lib/interaction/stats";
 import { fetchFeed } from "@/lib/portal-api/publications";
 
 describe("ExploreFeed 查看更多", () => {
@@ -54,5 +57,36 @@ describe("ExploreFeed 区块说明", () => {
     });
     renderWithQuery(await ExploreFeed({ tab: "recent" }));
     expect(screen.getByText(/最近入库与高被引的文献/)).not.toHaveTextContent(/采集时生成/);
+  });
+});
+
+describe("ExploreFeed · 公开计数", () => {
+  const feedOf = (ids: string[]) => ({
+    page: 1,
+    pageSize: 14,
+    total: ids.length,
+    totalPages: 1,
+    items: ids.map((id) => makePaper({ id })),
+  });
+
+  it("should_fetch_stats_for_the_feed_and_show_them_on_cards", async () => {
+    vi.mocked(fetchFeed).mockResolvedValue(feedOf(["11", "12"]));
+    vi.mocked(fetchPaperStats).mockResolvedValue(
+      new Map([["12", { collectorCount: 0, discussionCount: 3 }]]),
+    );
+    renderWithQuery(await ExploreFeed({ tab: "recent" }));
+    expect(fetchPaperStats).toHaveBeenCalledWith(["11", "12"]);
+    expect(screen.getByRole("link", { name: "3 条讨论" })).toHaveAttribute(
+      "href",
+      "/papers/12#discussion",
+    );
+  });
+
+  it("should_render_feed_without_stats_when_unavailable", async () => {
+    vi.mocked(fetchFeed).mockResolvedValue(feedOf(["11"]));
+    vi.mocked(fetchPaperStats).mockResolvedValue(null);
+    renderWithQuery(await ExploreFeed({ tab: "recent" }));
+    expect(screen.getByRole("link", { name: /查看更多文献/ })).toBeInTheDocument();
+    expect(screen.queryByText(/人收藏|条讨论/)).not.toBeInTheDocument();
   });
 });

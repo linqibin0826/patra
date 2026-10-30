@@ -24,6 +24,7 @@ import {
   appendReply,
   applyDeletion,
   insertRoot,
+  removeOwnComment,
   replaceComment,
   replaceThread,
   type ThreadsData,
@@ -39,6 +40,7 @@ import { useNow } from "@/lib/discussion/use-now";
 import type { Comment, DiscussionSort, Thread } from "@/lib/interaction/discussion-schema";
 import { btnSecondary } from "@/lib/portal-ui";
 import { queryKeys } from "@/lib/query-keys";
+import { uniqueBy } from "@/lib/unique-by";
 import { cn } from "@/lib/utils";
 
 /// 讨论区（简报 §3.1）：文献页与经验页共用。视图以地址为准：`?comment=` 是单楼视图，否则是列表
@@ -147,26 +149,28 @@ function ThreadList({
       stale();
     },
     onDeleted: (comment, result) => {
-      update((data) => applyDeletion(data, comment.commentId, result));
+      update((data) => removeOwnComment(data, comment, result));
       stale();
       if (result.removedIds.includes(comment.rootId)) {
         return;
       }
       // 楼里由它派生的字段（子回复的「回复已删除的评论」、父评论有没有回复）以服务端为准：重取这一楼
-      fetchThreadOf(subject, comment.rootId)
-        .then((single) =>
-          update((data) =>
-            single
-              ? replaceThread(data, single.thread)
-              : applyDeletion(data, comment.rootId, {
-                  placeholder: false,
-                  removedIds: [comment.rootId],
-                }),
-          ),
-        )
-        .catch(() => {});
+      reconcileThread(comment.rootId);
     },
   });
+
+  /// 按服务端重取一楼替换进列表；整楼没了就去掉
+  const reconcileThread = (rootId: string) => {
+    fetchThreadOf(subject, rootId)
+      .then((single) =>
+        update((data) =>
+          single
+            ? replaceThread(data, single.thread)
+            : applyDeletion(data, rootId, { placeholder: false, removedIds: [rootId] }),
+        ),
+      )
+      .catch(() => {});
+  };
 
   const actions: CommentActions = {
     ...handlers,
@@ -179,12 +183,17 @@ function ThreadList({
       }
     },
     onOpenPermalink: (comment) => location.openSingle(comment.commentId),
+    onHelpfulGone: (comment) => {
+      reconcileThread(comment.rootId);
+      stale();
+    },
   };
 
   const header = (withSort: boolean) => (
     <DiscussionHeader
       title={copy.title}
       titleId={titleId}
+      total={query.data?.pages[0]?.total}
       sort={withSort ? sort : undefined}
       onSort={location.setSort}
     />
@@ -206,7 +215,11 @@ function ThreadList({
       </div>
     );
   } else {
-    const threads = query.data.pages.flatMap((page) => page.items);
+    // 「最有帮助」翻页期间数字会变，同一楼可能出现在两页里：只渲染先加载的那份（决策 D）
+    const threads = uniqueBy(
+      query.data.pages.flatMap((page) => page.items),
+      (thread) => thread.root.commentId,
+    );
     const onRootDone = async ({ comment }: { comment: Comment }) => {
       await client.cancelQueries({ queryKey: key });
       const current = client.getQueryData<ThreadsData>(key);

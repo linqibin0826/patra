@@ -1,4 +1,4 @@
-import type { Card, Comment, Thread } from "@/lib/interaction/discussion-schema";
+import type { Card, Comment, Thread, ThreadPage } from "@/lib/interaction/discussion-schema";
 
 /// 作者名片：默认是主页可见的正常账号陈宇
 export function makeCard(overrides: Partial<Card> = {}): Card {
@@ -31,6 +31,8 @@ export function makeComment(overrides: Partial<Comment> = {}): Comment {
     hasReplies: false,
     createdAt: "2026-10-24T06:20:00Z",
     edited: false,
+    helpfulCount: 0,
+    helpful: false,
     ...overrides,
   };
 }
@@ -40,13 +42,20 @@ export function makeReply(id: string, rootId = "1", overrides: Partial<Comment> 
   return makeComment({ commentId: id, rootId, parentId: rootId, ...overrides });
 }
 
-/// 一楼：根评论 + 回复
+/// 一楼：根评论 + 回复，默认没有回复（楼内统计 0）
 export function makeThread(overrides: Partial<Thread> = {}): Thread {
   return {
     root: makeComment(),
     replies: [],
     hasMoreReplies: false,
     repliesCursor: null,
+    replyCount: 0,
+    lastReplyAt: null,
     ...overrides,
   };
+}
+
+/// 讨论区的一页楼：默认没有下一页，总条数 0
+export function makeThreadPage(items: Thread[], overrides: Partial<ThreadPage> = {}): ThreadPage {
+  return { items, nextCursor: null, total: 0, ...overrides };
 }

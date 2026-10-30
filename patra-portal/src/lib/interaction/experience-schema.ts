@@ -12,12 +12,16 @@ export const firstDecisionSchema = z.enum(FIRST_DECISIONS);
 export const finalOutcomeSchema = z.enum(FINAL_OUTCOMES);
 export const articleTypeSchema = z.enum(ARTICLE_TYPES);
 
+/// 期刊页经验列表的排序：最新投稿（默认）/ 最有帮助
+export const experienceSortSchema = z.enum(["latest", "helpful"]);
+export type ExperienceSort = z.infer<typeof experienceSortSchema>;
+
 /// 汇总的统计窗口：近 3 年（默认）/ 全部
 export const summaryWindowSchema = z.enum(["3y", "all"]);
 export type SummaryWindow = z.infer<typeof summaryWindowSchema>;
 
 /// 一条经验（列表条目，也是详情里的 `experience`）。匿名且访客不是作者时 `author` 为 null；
-/// identity 不认识这个人时也是 null（按已注销用户显示）
+/// identity 不认识这个人时也是 null（按已注销用户显示）。`helpful` 是访客点过有帮助没有，没有会话时为 null
 export const experienceSchema = z.object({
   postId: id,
   submittedOn: date,
@@ -40,6 +44,10 @@ export const experienceSchema = z.object({
   author: cardSchema.nullable(),
   anonymous: z.boolean(),
   mine: z.boolean(),
+  helpfulCount: z.number().int().nonnegative(),
+  helpful: z.boolean().nullable(),
+  /// 经验下未删除的评论数
+  replyCount: z.number().int().nonnegative(),
 });
 export type Experience = z.infer<typeof experienceSchema>;
 
@@ -61,9 +69,11 @@ export const postDetailSchema = z.object({
 });
 export type PostDetail = z.infer<typeof postDetailSchema>;
 
+/// 期刊的一页经验。`total` 是期刊下未删除的经验数（不受分页影响）；后端是 `long`，数字与数字字符串都收
 export const experiencePageSchema = z.object({
   items: z.array(experienceSchema),
   nextCursor: z.string().nullable(),
+  total: z.coerce.number().int().nonnegative(),
 });
 export type ExperiencePage = z.infer<typeof experiencePageSchema>;
 

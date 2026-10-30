@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { makeComment, makeThread } from "@tests/fixtures/discussion";
+import { makeComment, makeThread, makeThreadPage } from "@tests/fixtures/discussion";
 import { resetCookieJar } from "@tests/stubs/cookie-jar";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GET as getConversation } from "@/app/api/comments/[id]/conversation/route";
@@ -35,7 +35,7 @@ const gatewayUrl = () => fetchMock.mock.calls[0]?.[0];
 
 describe("讨论的 Route Handler", () => {
   it("一页楼：传 sort 与 cursor，不缓存", async () => {
-    fetchMock.mockResolvedValue(Response.json({ items: [makeThread()], nextCursor: null }));
+    fetchMock.mockResolvedValue(Response.json(makeThreadPage([makeThread()], { total: 1 })));
     const res = await getThreads(
       get("/api/discussions/publication/11/threads?sort=latest&cursor=c1"),
       params({ type: "publication", key: "11" }),
@@ -45,6 +45,15 @@ describe("讨论的 Route Handler", () => {
     expect(gatewayUrl()).toBe(
       "http://gw.test/patra-interaction/discussions/publication/11/threads?sort=latest&cursor=c1",
     );
+  });
+
+  it("最有帮助原样转发", async () => {
+    fetchMock.mockResolvedValue(Response.json({ items: [], nextCursor: null }));
+    await getThreads(
+      get("/api/discussions/publication/11/threads?sort=helpful"),
+      params({ type: "publication", key: "11" }),
+    );
+    expect(gatewayUrl()).toContain("sort=helpful");
   });
 
   it("sort 不认识时按正序", async () => {

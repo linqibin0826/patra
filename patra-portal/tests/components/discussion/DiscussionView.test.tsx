@@ -1,14 +1,15 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { makeComment, makeReply, makeThread } from "@tests/fixtures/discussion";
 import { renderDiscussion } from "@tests/support/discussion";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { DiscussionView } from "@/components/discussion/DiscussionView";
-import { PAPER_DISCUSSION_COPY } from "@/lib/discussion/copy";
+import { PAPER_DISCUSSION_COPY, POST_REPLIES_COPY } from "@/lib/discussion/copy";
 import { publishComment } from "@/lib/interaction/discussion-actions";
 import type { Thread } from "@/lib/interaction/discussion-schema";
+import { setHelpful } from "@/lib/interaction/helpful-actions";
 import { queryKeys } from "@/lib/query-keys";
 
 let params = new URLSearchParams();
@@ -22,6 +23,7 @@ vi.mock("@/lib/interaction/discussion-actions", () => ({
   editComment: vi.fn(),
   deleteComment: vi.fn(),
 }));
+vi.mock("@/lib/interaction/helpful-actions", () => ({ setHelpful: vi.fn() }));
 
 const SUBJECT = { type: "publication", key: "1" } as const;
 const SEED = {
@@ -75,19 +77,21 @@ const THREAD = makeThread({
   replies: [makeReply("2"), makeReply("3"), makeReply("4")],
   hasMoreReplies: true,
   repliesCursor: "r1",
+  replyCount: 4,
+  lastReplyAt: "2026-10-24T06:20:00Z",
 });
 
 describe("列表", () => {
-  it("根评论 + 前 3 条回复 + 展开更多回复（不带条数）", async () => {
+  it("根评论 + 前 3 条回复 + 展开其余回复（带剩余条数）", async () => {
     fetchMock.mockResolvedValueOnce(Response.json({ items: [makeReply("5")], nextCursor: null }));
     renderView(seedThreads([THREAD]));
     expect(screen.getAllByRole("article")).toHaveLength(4);
-    const more = screen.getByRole("button", { name: "展开更多回复" });
+    const more = screen.getByRole("button", { name: "展开其余 1 条回复" });
     expect(more).toHaveAttribute("aria-expanded", "false");
     await userEvent.setup().click(more);
     await waitFor(() => expect(screen.getAllByRole("article")).toHaveLength(5));
     expect(String(fetchMock.mock.calls[0]?.[0])).toBe("/api/comments/1/replies?cursor=r1");
-    expect(screen.queryByRole("button", { name: "展开更多回复" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /展开/ })).toBeNull();
   });
 
   it("排序：点最新改地址并按最新取", async () => {
@@ -252,5 +256,196 @@ describe("降级", () => {
     window.dispatchEvent(new Event("visibilitychange"));
     await waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThan(before));
     expect(await screen.findByText("每组只有 47 例")).toBeInTheDocument();
+  });
+});
+
+describe("有帮助", () => {
+  const first = makeThread({ root: makeComment({ commentId: "1", rootId: "1", helpfulCount: 3 }) });
+  const second = makeThread({ root: makeComment({ commentId: "2", rootId: "2", body: "第二楼" }) });
+
+  it("点了数字立刻变、楼不重排，缓存里这条也改了", async () => {
+    vi.mocked(setHelpful).mockResolvedValue({
+      ok: true,
+      result: { helpful: true, helpfulCount: 1 },
+    });
+    const { client } = renderView(seedThreads([first, second]));
+    const secondRoot = document.getElementById("comment-2") as HTMLElement;
+    await userEvent.setup().click(within(secondRoot).getByRole("button", { name: "有帮助" }));
+    await waitFor(() =>
+      expect(
+        within(secondRoot).getByRole("button", { name: "有帮助，1 人觉得有帮助" }),
+      ).toBeVisible(),
+    );
+    const ids = screen.getAllByRole("article").map((article) => article.id);
+    expect(ids).toEqual(["comment-1", "comment-2"]);
+    const data = client.getQueryData<{ pages: { items: Thread[] }[] }>(
+      queryKeys.discussionThreads("publication", "1", "asc"),
+    );
+    expect(data?.pages[0]?.items[1]?.root).toMatchObject({ helpful: true, helpfulCount: 1 });
+  });
+
+  it("这条已被删除：提示之后重取这一楼", async () => {
+    vi.mocked(setHelpful).mockResolvedValue({ ok: false, reason: "gone" });
+    const placeholder = makeThread({
+      root: makeComment({
+        commentId: "2",
+        rootId: "2",
+        deleted: true,
+        author: null,
+        body: null,
+        helpful: null,
+      }),
+      replies: [makeReply("8", "2")],
+    });
+    fetchMock.mockImplementation(async (input) =>
+      String(input).endsWith("/comments/2/thread")
+        ? Response.json({ targetId: "2", thread: placeholder })
+        : Response.json([]),
+    );
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      renderView(seedThreads([first, second]));
+      const secondRoot = document.getElementById("comment-2") as HTMLElement;
+      await userEvent
+        .setup({ advanceTimers: vi.advanceTimersByTime })
+        .click(within(secondRoot).getByRole("button", { name: "有帮助" }));
+      expect(await screen.findByText("这条评论已被删除")).toBeVisible();
+      await act(() => vi.advanceTimersByTimeAsync(4100));
+      await waitFor(() => expect(screen.getByText("该评论已删除")).toBeVisible());
+      expect(fetchMock.mock.calls.map((call) => String(call[0]))).toContain(
+        "/api/discussions/publication/1/comments/2/thread",
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe("最有帮助", () => {
+  const top = makeThread({ root: makeComment({ commentId: "1", rootId: "1", helpfulCount: 5 }) });
+  const next = makeThread({ root: makeComment({ commentId: "2", rootId: "2", body: "第二楼" }) });
+
+  it("排序三项，地址 sort=helpful 时选中最有帮助", () => {
+    params = new URLSearchParams("sort=helpful");
+    renderView(seedThreads([top, next], null, "helpful"));
+    const group = screen.getByRole("group", { name: "排序" });
+    expect(
+      within(group)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["正序", "最新", "最有帮助"]);
+    expect(within(group).getByRole("button", { name: "最有帮助" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("点最有帮助：写进地址", async () => {
+    const replace = vi.spyOn(window.history, "replaceState");
+    renderView(seedThreads([top, next]));
+    await userEvent.setup().click(screen.getByRole("button", { name: "最有帮助" }));
+    expect(replace).toHaveBeenLastCalledWith(null, "", "/papers/1?sort=helpful");
+  });
+
+  it("最有帮助下发表根评论：插在最前、没有去看看", async () => {
+    params = new URLSearchParams("sort=helpful");
+    publish.mockResolvedValue({
+      ok: true,
+      comment: makeComment({ commentId: "9", rootId: "9", body: "新的" }),
+    });
+    renderView(seedThreads([top, next], "c2", "helpful"));
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole("button", { name: "写下你对这篇文献的看法、疑问或补充证据…" }),
+    );
+    fireEvent.change(screen.getByRole("combobox", { name: "评论内容" }), {
+      target: { value: "新的" },
+    });
+    await user.click(screen.getByRole("button", { name: "发表" }));
+    await waitFor(() => expect(screen.getAllByRole("article")[0]).toHaveTextContent("新的"));
+    expect(screen.queryByRole("link", { name: "去看看" })).toBeNull();
+  });
+
+  it("同一楼出现在两页里只渲染一次", () => {
+    params = new URLSearchParams("sort=helpful");
+    renderView((client: QueryClient) =>
+      client.setQueryData(queryKeys.discussionThreads("publication", "1", "helpful"), {
+        pages: [
+          { items: [top, next], nextCursor: "c1" },
+          { items: [next], nextCursor: null },
+        ],
+        pageParams: [null, "c1"],
+      }),
+    );
+    expect(document.querySelectorAll("#comment-2")).toHaveLength(1);
+  });
+});
+
+describe("标题条数", () => {
+  function seedTotal(total: number, sort = "asc") {
+    return (client: QueryClient) =>
+      client.setQueryData(queryKeys.discussionThreads("publication", "1", sort), {
+        pages: [{ items: total > 0 ? [makeThread()] : [], nextCursor: null, total }],
+        pageParams: [null],
+      });
+  }
+  const heading = () => screen.getByRole("heading", { name: "讨论 · Discussion" });
+
+  it("should_show_total_beside_title", () => {
+    renderView(seedTotal(7));
+    expect(heading().parentElement).toHaveTextContent("7 条");
+  });
+
+  it("should_not_show_total_when_empty", () => {
+    renderView(seedTotal(0));
+    expect(heading().parentElement).not.toHaveTextContent(/\d+ 条/);
+  });
+
+  it("should_not_show_total_while_loading_or_unavailable", async () => {
+    fetchMock.mockResolvedValue(new Response(null, { status: 503 }));
+    renderView();
+    expect(heading().parentElement).not.toHaveTextContent(/\d+ 条/);
+    await screen.findByRole("button", { name: "重试" });
+    expect(heading().parentElement).not.toHaveTextContent(/\d+ 条/);
+  });
+
+  it("should_add_one_after_own_root_posted", async () => {
+    params = new URLSearchParams("sort=latest");
+    publish.mockResolvedValue({
+      ok: true,
+      comment: makeComment({ commentId: "9", rootId: "9", body: "新的" }),
+    });
+    renderView(seedTotal(7, "latest"));
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole("button", { name: "写下你对这篇文献的看法、疑问或补充证据…" }),
+    );
+    fireEvent.change(screen.getByRole("combobox", { name: "评论内容" }), {
+      target: { value: "新的" },
+    });
+    await user.click(screen.getByRole("button", { name: "发表" }));
+    await waitFor(() => expect(heading().parentElement).toHaveTextContent("8 条"));
+  });
+
+  it("should_show_total_on_post_replies_title", () => {
+    renderDiscussion(
+      <DiscussionView
+        subject={{ type: "post", key: "5" }}
+        copy={POST_REPLIES_COPY}
+        viewer={SEED}
+        now={NOW}
+        basePath="/posts/5"
+        shareBase="http://patra.test/posts/5"
+      />,
+      {
+        seed: (client) =>
+          client.setQueryData(queryKeys.discussionThreads("post", "5", "asc"), {
+            pages: [{ items: [makeThread()], nextCursor: null, total: 5 }],
+            pageParams: [null],
+          }),
+      },
+    );
+    const title = screen.getByRole("heading", { name: "回复 · Replies" });
+    expect(title.parentElement).toHaveTextContent("5 条");
   });
 });

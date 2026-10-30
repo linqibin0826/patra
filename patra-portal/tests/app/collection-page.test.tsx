@@ -51,10 +51,12 @@ const ITEMS = {
     {
       item: makePublicItem({ key: "11" }),
       paper: makePaper({ id: "11", title: "Paper one", publishedDate: "2019-03" }),
+      stats: { collectorCount: 4, discussionCount: 2 },
     },
     {
       item: makePublicItem({ itemId: "502", key: null, state: "UNAVAILABLE", title: "旧标题" }),
       paper: null,
+      stats: null,
     },
   ],
 };
@@ -185,6 +187,17 @@ describe("/collections/[id]", () => {
     expect(within(list).getByRole("button", { name: "收藏「Paper one」" })).toBeInTheDocument();
     expect(within(list).getByText("旧标题")).toBeInTheDocument();
     expect(within(list).getByText("已失效")).toBeInTheDocument();
+  });
+
+  it("should_show_stats_on_public_collection_entries", async () => {
+    viewAs("anonymous");
+    await renderPage();
+    const list = screen.getByRole("list", { name: "收藏夹条目" });
+    expect(within(list).getByText("4 人收藏")).toBeInTheDocument();
+    expect(within(list).getByRole("link", { name: "2 条讨论" })).toHaveAttribute(
+      "href",
+      "/papers/11#discussion",
+    );
   });
 
   it("空收藏夹", async () => {

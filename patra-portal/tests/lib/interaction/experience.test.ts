@@ -41,37 +41,52 @@ const headersOf = (index = 0) => (call(index)[1]?.headers ?? {}) as Record<strin
 
 describe("fetchJournalExperiences", () => {
   it("带会话取一页（每页 10 条），过 schema", async () => {
-    const page = { items: [makeExperience()], nextCursor: "c2" };
+    const page = { items: [makeExperience()], nextCursor: "c2", total: 11 };
     fetchMock.mockResolvedValue(Response.json(page));
-    await expect(fetchJournalExperiences("100")).resolves.toEqual({ kind: "ok", data: page });
-    expect(call()[0]).toBe("http://gw.test/patra-interaction/journals/100/posts?limit=10");
+    await expect(fetchJournalExperiences("100", "latest")).resolves.toEqual({
+      kind: "ok",
+      data: page,
+    });
+    expect(call()[0]).toBe(
+      "http://gw.test/patra-interaction/journals/100/posts?limit=10&sort=latest",
+    );
     expect(headersOf()).toMatchObject({ Authorization: "Bearer patra_user_abc" });
   });
 
   it("游标按查询参数编码", async () => {
-    fetchMock.mockResolvedValue(Response.json({ items: [], nextCursor: null }));
-    await fetchJournalExperiences("100", "a+b/c=");
+    fetchMock.mockResolvedValue(Response.json({ items: [], nextCursor: null, total: 0 }));
+    await fetchJournalExperiences("100", "latest", "a+b/c=");
     expect(call()[0]).toBe(
-      "http://gw.test/patra-interaction/journals/100/posts?limit=10&cursor=a%2Bb%2Fc%3D",
+      "http://gw.test/patra-interaction/journals/100/posts?limit=10&sort=latest&cursor=a%2Bb%2Fc%3D",
+    );
+  });
+
+  it("最有帮助带游标", async () => {
+    fetchMock.mockResolvedValue(Response.json({ items: [], nextCursor: null, total: 0 }));
+    await fetchJournalExperiences("100", "helpful", "c1");
+    expect(call()[0]).toBe(
+      "http://gw.test/patra-interaction/journals/100/posts?limit=10&sort=helpful&cursor=c1",
     );
   });
 
   it("令牌被网关拒时按访客重取一次", async () => {
     fetchMock
       .mockResolvedValueOnce(Response.json({ code: "GW-0401" }, { status: 401 }))
-      .mockResolvedValueOnce(Response.json({ items: [], nextCursor: null }));
-    await expect(fetchJournalExperiences("100")).resolves.toMatchObject({ kind: "ok" });
+      .mockResolvedValueOnce(Response.json({ items: [], nextCursor: null, total: 0 }));
+    await expect(fetchJournalExperiences("100", "latest")).resolves.toMatchObject({ kind: "ok" });
     expect(headersOf(1)).not.toHaveProperty("Authorization");
   });
 
   it("期刊 ID 不合格不请求", async () => {
-    await expect(fetchJournalExperiences("abc")).resolves.toEqual({ kind: "not-found" });
+    await expect(fetchJournalExperiences("abc", "latest")).resolves.toEqual({ kind: "not-found" });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("503 → unavailable", async () => {
     fetchMock.mockResolvedValue(Response.json({}, { status: 503 }));
-    await expect(fetchJournalExperiences("100")).resolves.toEqual({ kind: "unavailable" });
+    await expect(fetchJournalExperiences("100", "latest")).resolves.toEqual({
+      kind: "unavailable",
+    });
   });
 });
 

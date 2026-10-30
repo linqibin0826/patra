@@ -1,15 +1,19 @@
 import { Suspense } from "react";
 import { Experiences } from "@/components/experience/Experiences";
 import { SectionEyebrow } from "@/components/portal/SectionEyebrow";
+import type { ExperienceSort } from "@/lib/interaction/experience-schema";
 
 /// 期刊页的经验区（简报 §3.13，期刊页第一个互动区块）：`section#experiences`，自己一个 Suspense（决策 F）：
 /// interaction 慢或不可用时期刊页主体照常出，经验区先是骨架、再是内容或「暂不可用」
 export function ExperienceSection({
   journalId,
   journalTitle,
+  sort,
 }: {
   journalId: string;
   journalTitle: string;
+  /// 地址里的列表排序（首屏按它取）
+  sort: ExperienceSort;
 }) {
   return (
     <section id="experiences" aria-labelledby="experiences-title" className="scroll-mt-[126px]">
@@ -36,7 +40,7 @@ export function ExperienceSection({
           </div>
         }
       >
-        <Experiences journalId={journalId} journalTitle={journalTitle} />
+        <Experiences journalId={journalId} journalTitle={journalTitle} sort={sort} />
       </Suspense>
     </section>
   );

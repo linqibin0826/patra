@@ -59,3 +59,16 @@ export async function login(page: Page, account: Pick<Account, "email" | "passwo
   await page.getByLabel("密码", { exact: true }).fill(account.password);
   await page.getByRole("button", { name: "登录" }).click();
 }
+
+/// 打开页面。next dev 首次编译一个路由时会让已打开的页面整页刷新，正在进行的跳转被打断（`net::ERR_ABORTED`）：
+/// 只对这种情况重试一次，其余错误照常抛出
+export async function visit(page: Page, url: string): Promise<void> {
+  try {
+    await page.goto(url, { timeout: 60_000 });
+  } catch (error) {
+    if (!String(error).includes("ERR_ABORTED")) {
+      throw error;
+    }
+    await page.goto(url, { timeout: 60_000 });
+  }
+}

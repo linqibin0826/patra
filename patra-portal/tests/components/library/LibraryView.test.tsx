@@ -80,6 +80,7 @@ function page(items: LibraryEntry[], total = items.length): Page<LibraryEntry> {
 const ACTIVE: LibraryEntry = {
   item: makeLibraryItem({ itemId: "501", key: "11", collectionIds: ["9", "10"], note: null }),
   paper,
+  stats: null,
 };
 
 function renderView(view: string, entries: LibraryEntry[], total?: number) {
@@ -172,6 +173,7 @@ describe("LibraryItem", () => {
       {
         item: makeLibraryItem({ itemId: "503", key: null, state: "UNAVAILABLE", title: "旧标题" }),
         paper: null,
+        stats: null,
       },
     ]);
     const item = screen.getByRole("article");
@@ -203,7 +205,11 @@ describe("条目菜单", () => {
   it("已失效：只有编辑备注、移出、移除", async () => {
     pathname = "/library/9";
     const { user } = renderView("9", [
-      { item: makeLibraryItem({ key: null, state: "UNAVAILABLE", title: "旧" }), paper: null },
+      {
+        item: makeLibraryItem({ key: null, state: "UNAVAILABLE", title: "旧" }),
+        paper: null,
+        stats: null,
+      },
     ]);
     await user.click(screen.getByRole("button", { name: "条目操作" }));
     await screen.findByRole("menu");
@@ -361,5 +367,24 @@ describe("评审修复", () => {
         { key: "11", collectionIds: ["10"] },
       ]),
     );
+  });
+});
+
+describe("LibraryView · 公开计数", () => {
+  it("should_show_stats_of_entry_after_meta_and_before_membership", () => {
+    renderView("all", [{ ...ACTIVE, stats: { collectorCount: 3, discussionCount: 1 } }]);
+    const item = screen.getByRole("article");
+    expect(within(item).getByText("3 人收藏")).toBeInTheDocument();
+    expect(within(item).getByRole("link", { name: "1 条讨论" })).toHaveAttribute(
+      "href",
+      "/papers/11#discussion",
+    );
+  });
+
+  it("should_not_show_stats_when_unavailable", () => {
+    renderView("all", [ACTIVE]);
+    expect(
+      within(screen.getByRole("article")).queryByText(/人收藏|条讨论/),
+    ).not.toBeInTheDocument();
   });
 });

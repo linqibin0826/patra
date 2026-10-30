@@ -32,15 +32,24 @@ const gatewayUrl = () => String(fetchMock.mock.calls[0]?.[0]);
 
 describe("投稿经验的 Route Handler", () => {
   it("期刊的一页经验：透传游标，不缓存", async () => {
-    const page = { items: [makeExperience()], nextCursor: null };
+    const page = { items: [makeExperience()], nextCursor: null, total: 1 };
     fetchMock.mockResolvedValue(Response.json(page));
-    const res = await getJournalPosts(get("/api/journals/100/posts?cursor=c1"), params("100"));
+    const res = await getJournalPosts(
+      get("/api/journals/100/posts?sort=helpful&cursor=c1"),
+      params("100"),
+    );
     expect(res.status).toBe(200);
     expect(res.headers.get("cache-control")).toBe("private, no-store");
     expect(await res.json()).toEqual(page);
     expect(gatewayUrl()).toBe(
-      "http://gw.test/patra-interaction/journals/100/posts?limit=10&cursor=c1",
+      "http://gw.test/patra-interaction/journals/100/posts?limit=10&sort=helpful&cursor=c1",
     );
+  });
+
+  it("期刊的一页经验：sort 不认识时是最新投稿", async () => {
+    fetchMock.mockResolvedValue(Response.json({ items: [], nextCursor: null, total: 0 }));
+    await getJournalPosts(get("/api/journals/100/posts?sort=hot"), params("100"));
+    expect(gatewayUrl()).toContain("sort=latest");
   });
 
   it("汇总：缺省窗口是近 3 年", async () => {

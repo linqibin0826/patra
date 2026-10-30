@@ -15,8 +15,8 @@ export interface Subject {
   key: string;
 }
 
-/// 根评论的排序：正序（默认）/ 最新
-export type DiscussionSort = "asc" | "latest";
+/// 根评论的排序：正序（默认）/ 最新 / 最有帮助
+export type DiscussionSort = "asc" | "latest" | "helpful";
 
 /// 作者名片（与 PAP-122 的作者对象同形）。`profileVisible` 为假时 `username`、`avatarUrl` 为 null（后端 5.8）；
 /// 已注销时 `state = DELETED`，名字也为 null
@@ -47,7 +47,8 @@ export const replyToSchema = z.object({
   author: cardSchema.nullable().default(null),
 });
 
-/// 一条评论（后端 6.4）。占位只有 `commentId`、`rootId`、`parentId`、`deleted: true`、`hasReplies`、`createdAt`
+/// 一条评论（后端 6.4）。占位只有 `commentId`、`rootId`、`parentId`、`deleted: true`、`hasReplies`、`createdAt`。
+/// `helpfulCount` 是有帮助数（占位为 0），`helpful` 是访客点过没有（没有会话、占位为 null）
 export const commentSchema = z.object({
   commentId: id,
   rootId: id,
@@ -63,6 +64,8 @@ export const commentSchema = z.object({
   hasReplies: z.boolean(),
   createdAt: z.string(),
   edited: z.boolean(),
+  helpfulCount: z.number().int().nonnegative(),
+  helpful: z.boolean().nullable(),
 });
 export type Comment = z.infer<typeof commentSchema>;
 
@@ -72,12 +75,18 @@ export const threadSchema = z.object({
   replies: z.array(commentSchema),
   hasMoreReplies: z.boolean(),
   repliesCursor: z.string().nullable(),
+  /// 这一楼未删除的回复数（任意深度）
+  replyCount: z.number().int().nonnegative(),
+  /// 最新一条未删除回复的发表时刻；没有回复时为 null
+  lastReplyAt: z.string().nullable(),
 });
 export type Thread = z.infer<typeof threadSchema>;
 
+/// 一页楼。`total` 是对象下未删除的评论总数（根评论与回复，不受分页影响）；数字与数字字符串都收
 export const threadPageSchema = z.object({
   items: z.array(threadSchema),
   nextCursor: z.string().nullable(),
+  total: z.coerce.number().int().nonnegative(),
 });
 export type ThreadPage = z.infer<typeof threadPageSchema>;
 

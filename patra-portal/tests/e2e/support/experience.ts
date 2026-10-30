@@ -1,5 +1,5 @@
 import { type APIRequestContext, expect, type Locator, type Page } from "@playwright/test";
-import { ROUND_TRIP, waitForTakeover } from "@tests/e2e/support/account";
+import { ROUND_TRIP, visit, waitForTakeover } from "@tests/e2e/support/account";
 
 const gateway = () => process.env.PATRA_GATEWAY_BASE_URL?.replace(/\/+$/, "") ?? "";
 
@@ -23,7 +23,7 @@ export async function pickEmptyJournal(request: APIRequestContext): Promise<stri
 
 /// 打开期刊页并滚到经验区，等它接管
 export async function openExperiences(page: Page, journalId: string): Promise<Locator> {
-  await page.goto(`/journals/${journalId}`, { timeout: 60_000 });
+  await visit(page, `/journals/${journalId}`);
   const section = page.locator("#experiences");
   await section.scrollIntoViewIfNeeded();
   await expect(section.getByRole("article", { name: "同行经验" })).toBeVisible(ROUND_TRIP);
@@ -97,9 +97,13 @@ export async function publishExperience(
   await fillExperience(form, input);
   await form.getByRole("button", { name: "发布投稿经验" }).click();
   await expect(form).toBeHidden(ROUND_TRIP);
-  const row = section.getByRole("link", { name: new RegExp(month) }).first();
+  // 经验行是 article，链接只是标题行（v0.15 改结构）：按月份文字找行，再取行里的链接
+  const row = section
+    .getByRole("article")
+    .filter({ hasText: new RegExp(month) })
+    .first();
   await expect(row).toBeVisible(ROUND_TRIP);
-  const href = (await row.getAttribute("href")) ?? "";
+  const href = (await row.getByRole("link").getAttribute("href")) ?? "";
   return href.replace("/posts/", "");
 }
 

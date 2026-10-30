@@ -1,4 +1,4 @@
-import { makeComment, makeReply, makeThread } from "@tests/fixtures/discussion";
+import { makeComment, makeReply, makeThread, makeThreadPage } from "@tests/fixtures/discussion";
 import { describe, expect, it } from "vitest";
 import {
   appendReplies,
@@ -7,6 +7,8 @@ import {
   applyDeletion,
   applyDeletionSingle,
   insertRoot,
+  removeOwnComment,
+  removeOwnCommentSingle,
   replaceComment,
   replaceCommentSingle,
   replaceThread,
@@ -19,6 +21,7 @@ function data(pages: { ids: string[]; next: string | null }[]): ThreadsData {
     pages: pages.map((page) => ({
       items: page.ids.map((id) => makeThread({ root: makeComment({ commentId: id, rootId: id }) })),
       nextCursor: page.next,
+      total: 0,
     })),
     pageParams: pages.map((_, index) => (index === 0 ? null : `c${index}`)),
   };
@@ -41,6 +44,12 @@ describe("insertRoot", () => {
 
   it("最新：插到第一页最前", () => {
     const result = insertRoot(frozen(data([{ ids: ["1", "2"], next: null }])), fresh, "latest");
+    expect(result.placed).toBe("top");
+    expect(rootIds(result.data)).toEqual(["9", "1", "2"]);
+  });
+
+  it("最有帮助：同最新，插到第一页最前", () => {
+    const result = insertRoot(frozen(data([{ ids: ["1", "2"], next: "c1" }])), fresh, "helpful");
     expect(result.placed).toBe("top");
     expect(rootIds(result.data)).toEqual(["9", "1", "2"]);
   });
@@ -78,7 +87,7 @@ describe("回复、替换、展开", () => {
 
   it("replaceComment 能替换根评论与回复", () => {
     const before = frozen({
-      pages: [{ items: [makeThread({ replies: [makeReply("5")] })], nextCursor: null }],
+      pages: [{ items: [makeThread({ replies: [makeReply("5")] })], nextCursor: null, total: 0 }],
       pageParams: [null],
     });
     const edited = replaceComment(
@@ -97,6 +106,7 @@ describe("回复、替换、展开", () => {
             makeThread({ replies: [makeReply("2")], hasMoreReplies: true, repliesCursor: "r1" }),
           ],
           nextCursor: null,
+          total: 0,
         },
       ],
       pageParams: [null],
@@ -131,6 +141,7 @@ describe("applyDeletion", () => {
             makeThread({ root: makeComment({ commentId: "4", rootId: "4" }) }),
           ],
           nextCursor: null,
+          total: 0,
         },
       ],
       pageParams: [null],
@@ -196,6 +207,172 @@ describe("toPlaceholder", () => {
       edited: false,
       replyTo: null,
       hasReplies: true,
+    });
+  });
+
+  it("占位不带有帮助数、没有「我点过没有」", () => {
+    expect(toPlaceholder(makeComment({ helpfulCount: 5, helpful: true }))).toMatchObject({
+      helpfulCount: 0,
+      helpful: null,
+    });
+  });
+});
+
+describe("公开计数随本人发表、删除变化", () => {
+  const ROOT = "1";
+  const OLD = "2026-10-29T08:00:00Z";
+  const NEW = "2026-10-30T09:00:00Z";
+
+  /// 一页一楼：根评论 1 带两条回复 2、3，楼内 2 条，对象下共 3 条；`next` 给了表示后面还有没加载的页
+  function counted(next: string | null = null): ThreadsData {
+    return frozen({
+      pages: [
+        makeThreadPage(
+          [
+            makeThread({
+              replies: [makeReply("2"), makeReply("3")],
+              replyCount: 2,
+              lastReplyAt: OLD,
+            }),
+          ],
+          { total: 3, nextCursor: next },
+        ),
+      ],
+      pageParams: [null],
+    });
+  }
+  const thread = (data: ThreadsData) => data.pages[0]?.items.find((t) => t.root.commentId === ROOT);
+  const total = (data: ThreadsData) => data.pages[0]?.total;
+
+  it.each(["asc", "latest", "helpful"] as const)(
+    "should_add_one_to_total_when_root_posted_in_%s",
+    (sort) => {
+      const { data } = insertRoot(counted(), makeComment({ commentId: "9", rootId: "9" }), sort);
+      expect(total(data)).toBe(4);
+      expect(
+        data.pages.flatMap((p) => p.items).find((t) => t.root.commentId === "9"),
+      ).toMatchObject({ replyCount: 0, lastReplyAt: null });
+    },
+  );
+
+  it("should_add_one_to_total_when_root_posted_offpage", () => {
+    const result = insertRoot(counted("c1"), makeComment({ commentId: "9", rootId: "9" }), "asc");
+    expect(result.placed).toBe("offpage");
+    expect(total(result.data)).toBe(4);
+  });
+
+  it("should_count_reply_and_move_last_reply_time_when_reply_posted", () => {
+    const after = appendReply(counted(), ROOT, makeReply("4", ROOT, { createdAt: NEW }));
+    expect(thread(after)).toMatchObject({ replyCount: 3, lastReplyAt: NEW });
+    expect(total(after)).toBe(4);
+  });
+
+  it("should_uncount_reply_and_keep_last_reply_time_when_own_reply_removed", () => {
+    const after = removeOwnComment(counted(), makeReply("3"), {
+      placeholder: false,
+      removedIds: ["3"],
+    });
+    expect(thread(after)?.replies.map((c) => c.commentId)).toEqual(["2"]);
+    expect(thread(after)).toMatchObject({ replyCount: 1, lastReplyAt: OLD });
+    expect(total(after)).toBe(2);
+  });
+
+  it("should_uncount_own_reply_left_as_placeholder", () => {
+    const after = removeOwnComment(counted(), makeReply("2"), {
+      placeholder: true,
+      removedIds: [],
+    });
+    expect(thread(after)?.replyCount).toBe(1);
+    expect(total(after)).toBe(2);
+  });
+
+  it("should_uncount_own_reply_not_loaded_in_this_thread", () => {
+    const after = removeOwnComment(counted(), makeReply("8"), {
+      placeholder: false,
+      removedIds: ["8"],
+    });
+    expect(thread(after)?.replyCount).toBe(1);
+    expect(total(after)).toBe(2);
+  });
+
+  it("should_clear_last_reply_time_when_last_reply_removed", () => {
+    const one = frozen({
+      pages: [
+        makeThreadPage(
+          [makeThread({ replies: [makeReply("2")], replyCount: 1, lastReplyAt: OLD })],
+          { total: 2 },
+        ),
+      ],
+      pageParams: [null],
+    });
+    const after = removeOwnComment(one, makeReply("2"), { placeholder: false, removedIds: ["2"] });
+    expect(thread(after)).toMatchObject({ replyCount: 0, lastReplyAt: null });
+  });
+
+  it("should_only_uncount_total_when_own_root_left_as_placeholder", () => {
+    const after = removeOwnComment(counted(), makeComment(), { placeholder: true, removedIds: [] });
+    expect(thread(after)).toMatchObject({ replyCount: 2, lastReplyAt: OLD });
+    expect(thread(after)?.root.deleted).toBe(true);
+    expect(total(after)).toBe(2);
+  });
+
+  it("should_uncount_total_once_when_own_thread_removed", () => {
+    const after = removeOwnComment(counted(), makeComment(), {
+      placeholder: false,
+      removedIds: [ROOT],
+    });
+    expect(thread(after)).toBeUndefined();
+    expect(total(after)).toBe(2);
+  });
+
+  it("should_not_count_when_thread_dropped_by_reconciliation", () => {
+    const after = applyDeletion(counted(), ROOT, { placeholder: false, removedIds: [ROOT] });
+    expect(total(after)).toBe(3);
+  });
+
+  it("should_not_go_below_zero", () => {
+    const empty = frozen({
+      pages: [makeThreadPage([makeThread({ replyCount: 0 })], { total: 0 })],
+      pageParams: [null],
+    });
+    const after = removeOwnComment(empty, makeComment(), {
+      placeholder: false,
+      removedIds: [ROOT],
+    });
+    expect(total(after)).toBe(0);
+  });
+
+  it("should_take_server_counts_when_thread_reconciled", () => {
+    const removed = removeOwnComment(counted(), makeReply("3"), {
+      placeholder: false,
+      removedIds: ["3"],
+    });
+    const server = makeThread({
+      replies: [makeReply("2")],
+      replyCount: 1,
+      lastReplyAt: "2026-10-28T00:00:00Z",
+    });
+    expect(thread(replaceThread(removed, server))).toMatchObject({
+      replyCount: 1,
+      lastReplyAt: "2026-10-28T00:00:00Z",
+    });
+  });
+
+  it("should_count_in_single_thread_view", () => {
+    const single = frozen({
+      targetId: ROOT,
+      thread: makeThread({ replies: [makeReply("2")], replyCount: 1, lastReplyAt: OLD }),
+    });
+    const added = appendReplySingle(single, makeReply("4", ROOT, { createdAt: NEW }));
+    expect("thread" in added && added.thread).toMatchObject({ replyCount: 2, lastReplyAt: NEW });
+    const removed = removeOwnCommentSingle(single, makeReply("2"), {
+      placeholder: false,
+      removedIds: ["2"],
+    });
+    expect("thread" in removed && removed.thread).toMatchObject({
+      replyCount: 0,
+      lastReplyAt: null,
+      replies: [],
     });
   });
 });

@@ -37,6 +37,7 @@ export function ConversationDialog({
     onEdit: NOOP,
     onDelete: NOOP,
     onCopyLink: NOOP,
+    onHelpfulGone: NOOP,
     onOpenPermalink: (comment) => openSingle(comment.commentId),
   };
   return (

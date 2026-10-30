@@ -1,6 +1,7 @@
 import { makeCard } from "@tests/fixtures/discussion";
 import type {
   Experience,
+  ExperiencePage,
   PostDetail,
   Revision,
   Summary,
@@ -30,8 +31,19 @@ export function makeExperience(overrides: Partial<Experience> = {}): Experience 
     author: makeCard(),
     anonymous: false,
     mine: false,
+    helpfulCount: 0,
+    helpful: false,
+    replyCount: 0,
     ...overrides,
   };
+}
+
+/// 期刊的一页经验：默认没有下一页，总条数等于这一页的条数
+export function makeExperiencePage(
+  items: Experience[],
+  overrides: Partial<ExperiencePage> = {},
+): ExperiencePage {
+  return { items, nextCursor: null, total: items.length, ...overrides };
 }
 
 /// 经验页详情：默认挂在 J Am Heart Assoc（期刊 ID 100）下

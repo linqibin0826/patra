@@ -38,7 +38,7 @@ export function useCommentActions({
   onEdited,
   onDeleted,
 }: UseCommentActionsInput): {
-  handlers: Omit<CommentActions, "onReply" | "onOpenPermalink">;
+  handlers: Omit<CommentActions, "onReply" | "onOpenPermalink" | "onHelpfulGone">;
   editingOf: (comment: Comment) => ReactNode | undefined;
   dialogs: ReactNode;
 } {

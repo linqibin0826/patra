@@ -1,6 +1,7 @@
-import { render, screen, within } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { makeCard, makeComment, makeReply } from "@tests/fixtures/discussion";
+import { renderDiscussion } from "@tests/support/discussion";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { type CommentActions, CommentItem } from "@/components/discussion/CommentItem";
@@ -17,12 +18,13 @@ function actions(): CommentActions {
     onDelete: vi.fn(),
     onCopyLink: vi.fn(),
     onOpenPermalink: vi.fn(),
+    onHelpfulGone: vi.fn(),
   };
 }
 
 function renderItem(comment: Comment, extra: Partial<Parameters<typeof CommentItem>[0]> = {}) {
   const handlers = actions();
-  const view = render(
+  const view = renderDiscussion(
     <CommentItem
       comment={comment}
       level={comment.parentId ? "reply" : "root"}
@@ -170,5 +172,56 @@ describe("CommentItem 长评论", () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "展开全文" }));
     expect(screen.getByRole("button", { name: "收起" })).toBeInTheDocument();
+  });
+});
+
+describe("CommentItem 有帮助", () => {
+  it("操作行第一个是有帮助，排在回复前", () => {
+    renderItem(makeComment({ helpfulCount: 2 }));
+    const names = screen
+      .getAllByRole("button")
+      .map((button) => button.getAttribute("aria-label") ?? button.textContent);
+    const helpful = names.findIndex((name) => name?.startsWith("有帮助"));
+    expect(helpful).toBeGreaterThanOrEqual(0);
+    expect(helpful).toBeLessThan(names.indexOf("回复"));
+    expect(screen.getByRole("button", { name: "有帮助，2 人觉得有帮助" })).toBeVisible();
+  });
+
+  it("自己的评论只显示人数", () => {
+    renderItem(makeComment({ mine: true, helpfulCount: 2 }));
+    expect(screen.queryByRole("button", { name: /^有帮助/ })).toBeNull();
+    expect(screen.getByText("2 人觉得有帮助")).toBeVisible();
+  });
+
+  it("占位没有有帮助与数字", () => {
+    renderItem(makeComment({ deleted: true, helpfulCount: 0, helpful: null }));
+    expect(screen.queryByText(/有帮助/)).toBeNull();
+  });
+
+  it("只读与原地编辑时没有有帮助", () => {
+    renderItem(makeComment({ helpfulCount: 1 }), { readOnly: true });
+    expect(screen.queryByText(/有帮助/)).toBeNull();
+  });
+});
+
+describe("CommentItem · 操作行右端", () => {
+  it("should_render_trailing_in_action_row", () => {
+    renderItem(makeComment(), { trailing: <span>楼内统计</span> });
+    const reply = screen.getByRole("button", { name: "回复" });
+    expect(reply.parentElement).toContainElement(screen.getByText("楼内统计"));
+  });
+
+  it("should_render_trailing_after_deleted_placeholder", () => {
+    renderItem(makeComment({ deleted: true, body: null, author: null }), {
+      trailing: <span>楼内统计</span>,
+    });
+    expect(screen.getByText("该评论已删除").parentElement).toContainElement(
+      screen.getByText("楼内统计"),
+    );
+  });
+
+  it("should_hide_trailing_while_editing", () => {
+    renderItem(makeComment(), { trailing: <span>楼内统计</span>, editing: <p>编辑器</p> });
+    expect(screen.queryByText("楼内统计")).not.toBeInTheDocument();
   });
 });

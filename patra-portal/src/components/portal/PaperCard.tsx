@@ -1,9 +1,11 @@
 import { ArrowRight, Quote } from "lucide-react";
 import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
+import { PaperStats } from "@/components/library/PaperStats";
 import { SaveButton } from "@/components/library/SaveButton";
 import { AISummaryBadge } from "@/components/portal/AISummaryBadge";
 import { RichInlineText } from "@/components/portal/RichInlineText";
+import type { PaperStats as PaperStatsValue } from "@/lib/interaction/stats";
 import { snippetText } from "@/lib/portal-api/publication-derive";
 import { sourceDotClass } from "@/lib/portal-ui";
 import { publishedYear } from "@/lib/published-date";
@@ -16,12 +18,14 @@ interface PaperCardProps {
   variant?: "lead" | "default";
   /** 1 起的序号，显示为两位数 */
   index?: number;
+  /** 这一屏取到的收藏人数与讨论数；不传或取不到（null）时没有计数 */
+  stats?: PaperStatsValue | null;
 }
 
 /// 首页文献流条目（编辑排版，无卡片框）：顶部发丝线 hover 时由陶土色自左生长、标题下划线绘出。
-/// 来源行（序号 · 来源 · DOI）→ 衬线标题 → 刊名 · 年份 · 作者 → [头条摘要] → [AI 速读] → 阅读详情 / 引用数 / 收藏。
-/// 收藏状态来自外层的 `LibraryStatusProvider`（文献流一屏一批）。
-export function PaperCard({ paper, variant = "default", index }: PaperCardProps) {
+/// 来源行（序号 · 来源 · DOI）→ 衬线标题 → 刊名 · 年份 · 作者 → [头条摘要] → [AI 速读] → 阅读详情 / 收藏人数与
+/// 讨论数 / 引用数 / 收藏。收藏状态来自外层的 `LibraryStatusProvider`（文献流一屏一批），计数由文献流随页面取好传入。
+export function PaperCard({ paper, variant = "default", index, stats = null }: PaperCardProps) {
   const lead = variant === "lead";
   const visibleAuthors = paper.authors.slice(0, 2);
   const remaining = paper.authors.length - visibleAuthors.length;
@@ -120,7 +124,12 @@ export function PaperCard({ paper, variant = "default", index }: PaperCardProps)
         <AISummaryBadge aiSummary={paper.aiSummary} estimatedReadMin={paper.estimatedReadMin} />
       )}
 
-      <div className={cn("flex items-center gap-2 pt-1 text-sm", !lead && "mt-auto")}>
+      <div
+        className={cn(
+          "flex flex-wrap items-center gap-x-2 gap-y-2 pt-1 text-sm",
+          !lead && "mt-auto",
+        )}
+      >
         <Link
           href={`/papers/${paper.id}`}
           className="group/more inline-flex items-center gap-1 font-medium text-ink-900"
@@ -132,9 +141,17 @@ export function PaperCard({ paper, variant = "default", index }: PaperCardProps)
             aria-hidden
           />
         </Link>
-        <span className="ml-auto inline-flex items-center gap-1.5 font-mono text-xs tabular-nums text-fg-3">
-          <Quote className="size-3.5" strokeWidth={1.5} aria-hidden />
-          {paper.cites ?? 0} 引用
+        {/* 宽屏：计数接在引用数前、一起靠右；窄屏放不下，计数移到底部行上方单独一行（简报 §3.12 ④） */}
+        <span className="ml-auto inline-flex items-center gap-x-2 max-md:contents">
+          <PaperStats
+            paperKey={paper.id}
+            stats={stats}
+            className="max-md:order-first max-md:basis-full"
+          />
+          <span className="inline-flex items-center gap-1.5 font-mono text-xs tabular-nums text-fg-3 max-md:ml-auto">
+            <Quote className="size-3.5" strokeWidth={1.5} aria-hidden />
+            {paper.cites ?? 0} 引用
+          </span>
         </span>
         <SaveButton paperKey={paper.id} title={paper.title} variant="icon" />
       </div>

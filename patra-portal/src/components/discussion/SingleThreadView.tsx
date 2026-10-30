@@ -19,7 +19,7 @@ import { useCommentActions } from "@/components/discussion/use-comment-actions";
 import { InteractionUnavailable } from "@/components/library/InteractionUnavailable";
 import {
   appendReplySingle,
-  applyDeletionSingle,
+  removeOwnCommentSingle,
   replaceCommentSingle,
   type SingleData,
 } from "@/lib/discussion/cache";
@@ -87,7 +87,7 @@ export function SingleThreadView({
       stale();
     },
     onDeleted: (comment, result) => {
-      update((data) => applyDeletionSingle(data, comment.commentId, result));
+      update((data) => removeOwnCommentSingle(data, comment, result));
       stale();
       if (!result.removedIds.includes(comment.rootId)) {
         void client.invalidateQueries({ queryKey: key });
@@ -112,6 +112,8 @@ export function SingleThreadView({
       setReply(comment);
     },
     onOpenPermalink: (comment) => location.openSingle(comment.commentId),
+    // 点有帮助时这条已被删除：重取这一楼（正在看，立刻取）
+    onHelpfulGone: () => void client.invalidateQueries({ queryKey: key }),
   };
 
   const notice = (text: string) => (

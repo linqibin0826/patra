@@ -1,11 +1,6 @@
 import "server-only";
-import {
-  attachPapers,
-  READ_TIMEOUT_MS,
-  type Read,
-  toRead,
-  type WithPaper,
-} from "@/lib/interaction/read";
+import { attachPapers, type WithPaper } from "@/lib/interaction/attach-papers";
+import { READ_TIMEOUT_MS, type Read, toRead } from "@/lib/interaction/read";
 import { callInteraction } from "@/lib/interaction/request";
 import {
   type ItemStatus,

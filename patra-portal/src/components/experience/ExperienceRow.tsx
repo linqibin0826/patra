@@ -1,5 +1,10 @@
+"use client";
+
+import { useQueryClient } from "@tanstack/react-query";
+import { MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { AuthorAvatar } from "@/components/discussion/AuthorIdentity";
+import { HelpfulButton } from "@/components/helpful/HelpfulButton";
 import { type AuthorView, authorView } from "@/lib/discussion/author";
 import {
   formatDetailLine,
@@ -8,6 +13,8 @@ import {
   formatSubmittedMonth,
 } from "@/lib/experience/format";
 import { ARTICLE_TYPE_LABELS } from "@/lib/experience/labels";
+import { formatCount } from "@/lib/format-count";
+import { refetchPostLists } from "@/lib/helpful/cache";
 import type { Experience, UserExperience } from "@/lib/interaction/experience-schema";
 import { excerpt } from "@/lib/markdown/plain";
 
@@ -39,8 +46,12 @@ function AnonymousChip({ label }: { label: string }) {
   );
 }
 
-/// 经验列表的一条（简报 §3.14、§3.17）：整条链到经验页，悬停时标题行下划线绘出；不显示回复数。
-/// `journal`（期刊页）第一行是投稿月份与类型、标题行是结果；`profile`（主页标签）第一行是期刊名
+/// 标题行的链接：伪元素铺满整行（整行可点、悬停整行时标题下划线绘出），读屏名只是标题行
+const ROW_LINK = "link-draw text-inherit after:absolute after:inset-0 after:content-['']";
+
+/// 经验列表的一条（简报 v0.14 §3.14、§3.17，v0.15 §3.9）：`article` 里标题行是链到经验页的链接、铺满整行；
+/// 底部行压在链接上面放有帮助按钮（按钮不能放进链接里）。`journal`（期刊页）第一行是投稿月份与类型、标题行是结果；
+/// `profile`（主页标签）第一行是期刊名
 export function ExperienceRow(props: ExperienceRowProps) {
   const experience = props.variant === "journal" ? props.experience : props.item.experience;
   const month = `${formatSubmittedMonth(experience.submittedOn)} · ${ARTICLE_TYPE_LABELS[experience.articleType]}`;
@@ -48,16 +59,17 @@ export function ExperienceRow(props: ExperienceRowProps) {
   const detail = formatDetailLine(experience);
   const body = experience.body ? excerpt(experience.body, EXCERPT_MAX) : "";
   const published = `发布于 ${formatPublished(experience.createdAt, props.now)}`;
+  const client = useQueryClient();
+  const href = `/posts/${experience.postId}`;
   return (
-    <Link
-      href={`/posts/${experience.postId}`}
-      className="group flex flex-col gap-1.5 border-border-subtle border-t py-5 text-inherit last:border-b"
-    >
+    <article className="relative flex flex-col gap-1.5 border-border-subtle border-t py-5 last:border-b">
       {props.variant === "journal" ? (
         <>
           <span className="font-mono text-2xs text-fg-3 tracking-mono">{month}</span>
           <span className="m-0 font-medium font-serif text-ink-900 text-lg leading-snug">
-            <span className="link-draw">{outcome}</span>
+            <Link href={href} className={ROW_LINK}>
+              {outcome}
+            </Link>
           </span>
           {detail && (
             <span data-detail className="text-fg-2 text-sm tabular-nums leading-5">
@@ -77,7 +89,9 @@ export function ExperienceRow(props: ExperienceRowProps) {
       ) : (
         <>
           <span className="m-0 font-medium font-serif text-ink-900 text-lg leading-snug">
-            <span className="link-draw">{props.item.journal.title}</span>
+            <Link href={href} className={ROW_LINK}>
+              {props.item.journal.title}
+            </Link>
           </span>
           <span className="text-fg-2 text-sm tabular-nums leading-5">
             {month} · {outcome}
@@ -94,7 +108,26 @@ export function ExperienceRow(props: ExperienceRowProps) {
           </span>
         </>
       )}
-    </Link>
+      {(!experience.mine || experience.helpfulCount > 0 || experience.replyCount > 0) && (
+        <div data-row-foot className="relative z-1 mt-1 flex items-center gap-4">
+          <HelpfulButton
+            target={{ type: "post", id: experience.postId }}
+            helpful={experience.helpful}
+            count={experience.helpfulCount}
+            own={experience.mine}
+            variant="text"
+            onGone={() => refetchPostLists(client)}
+          />
+          {/* 纯文本：点了落在铺满的标题链接上，进经验页 */}
+          {experience.replyCount > 0 && (
+            <span className="inline-flex items-center gap-1 text-xs text-fg-3">
+              <MessageCircle className="size-3.5" strokeWidth={1.75} aria-hidden="true" />
+              {formatCount(experience.replyCount)} 条回复
+            </span>
+          )}
+        </div>
+      )}
+    </article>
   );
 }
 

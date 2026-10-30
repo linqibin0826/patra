@@ -62,8 +62,11 @@ export const queryKeys = {
   /** 期刊页「同行经验」汇总：按窗口（`3y` / `all`）缓存 */
   experienceSummary: (journalId: string, window: string) =>
     ["experience", "journal", journalId, "summary", window] as const,
-  /** 期刊页经验列表（`useInfiniteQuery`） */
-  experienceList: (journalId: string) => ["experience", "journal", journalId, "list"] as const,
+  /** 期刊页经验列表两种排序的公共前缀：发布之后一起重置 */
+  experienceListAll: (journalId: string) => ["experience", "journal", journalId, "list"] as const,
+  /** 期刊页经验列表（`useInfiniteQuery`）：按排序（`latest` / `helpful`）缓存 */
+  experienceList: (journalId: string, sort: string) =>
+    ["experience", "journal", journalId, "list", sort] as const,
   /** 主页「投稿经验」标签（`useInfiniteQuery`） */
   experienceUser: (userId: string) => ["experience", "user", userId] as const,
   /** 一条经验的修改历史 */

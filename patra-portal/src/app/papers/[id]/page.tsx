@@ -9,6 +9,7 @@ import { FullTextSection } from "@/components/portal/fulltext/FullTextSection";
 import { FullTextSkeleton, TocCardSkeleton } from "@/components/portal/fulltext/FullTextSkeleton";
 import { CrumbStatus } from "@/components/portal/paper-detail/CrumbStatus";
 import { FactCellsSkeleton, FullTextFacts } from "@/components/portal/paper-detail/PaperFacts";
+import { PaperInteractionFacts } from "@/components/portal/paper-detail/PaperInteractionFacts";
 import { PublicationDetailView } from "@/components/portal/paper-detail/PublicationDetailView";
 import { RecordSection } from "@/components/portal/paper-detail/RecordSection";
 import { TopNav } from "@/components/portal/TopNav";
@@ -61,6 +62,11 @@ export default async function PaperDetailPage({
               fallback={<CrumbStatus shortTitle={shortTitle(paper.title)} positions={[]} />}
             >
               <FullTextCrumbStatus paper={paper} />
+            </Suspense>
+          }
+          interactionFacts={
+            <Suspense fallback={null}>
+              <PaperInteractionFacts paperId={paper.id} />
             </Suspense>
           }
           fullTextFacts={

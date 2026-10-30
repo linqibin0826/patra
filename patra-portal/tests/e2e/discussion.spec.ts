@@ -21,11 +21,11 @@ import {
 import { publicLink, readCopied } from "@tests/e2e/support/library";
 
 /// v0.14 文献讨论（PAP-124，release spec D4）：连 mini 上的后端跑。发评论要邮箱已验证的账号，mini 的 identity 走真实
-/// 邮件服务商、新注册的账号收不到验证邮件，所以用预先验证过的账号（用户的真实账号，不进仓库，放本机环境变量）；
-/// 用例最后把自己发的评论全部删掉。邮箱未验证的情形用新注册的账号
+/// 邮件服务商、新注册的账号收不到验证邮件，所以用预先验证过的测试账号 C（会公开留痕，不用用户本人的账号；凭据不进
+/// 仓库，放本机环境变量）；用例最后把自己发的评论全部删掉。邮箱未验证的情形用新注册的账号
 const VERIFIED = {
-  email: process.env.PATRA_E2E_VERIFIED_EMAIL ?? "",
-  password: process.env.PATRA_E2E_VERIFIED_PASSWORD ?? "",
+  email: process.env.PATRA_E2E_VERIFIED_C_EMAIL ?? "",
+  password: process.env.PATRA_E2E_VERIFIED_C_PASSWORD ?? "",
 };
 
 /// 根评论：覆盖 Markdown 子集、PMID、DOI、图片与 HTML 不渲染
@@ -51,7 +51,7 @@ test.describe("文献讨论", () => {
   test.skip(!process.env.PATRA_GATEWAY_BASE_URL, "未设置 PATRA_GATEWAY_BASE_URL：跳过讨论冒烟");
   test.skip(
     !VERIFIED.email || !VERIFIED.password,
-    "没有已验证邮箱的测试账号（~/.patra/secrets/e2e.env 里的 PATRA_E2E_VERIFIED_EMAIL / PATRA_E2E_VERIFIED_PASSWORD）",
+    "没有已验证邮箱的测试账号（~/.patra/secrets/e2e.env 里的 PATRA_E2E_VERIFIED_C_EMAIL / PATRA_E2E_VERIFIED_C_PASSWORD）",
   );
   test.describe.configure({ mode: "serial" });
 

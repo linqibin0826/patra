@@ -254,3 +254,40 @@ describe("编辑与复制链接", () => {
     expect(toastSuccess).toHaveBeenCalledWith("已复制链接");
   });
 });
+
+describe("删除后的条数", () => {
+  it("should_subtract_one_from_title_total_after_own_delete", async () => {
+    vi.mocked(deleteComment).mockResolvedValue({ ok: true, placeholder: false, removedIds: ["1"] });
+    renderDiscussion(
+      <DiscussionView
+        subject={{ type: "publication", key: "1" }}
+        copy={PAPER_DISCUSSION_COPY}
+        viewer={SEED}
+        now={Date.parse("2026-10-27T06:20:00Z")}
+        basePath="/papers/1"
+        shareBase="http://patra.test/papers/1"
+      />,
+      {
+        seed: (client: QueryClient) =>
+          client.setQueryData(queryKeys.discussionThreads("publication", "1", "asc"), {
+            pages: [
+              {
+                items: [
+                  makeThread({ root: makeComment({ mine: true }) }),
+                  makeThread({ root: makeComment({ commentId: "7", rootId: "7" }) }),
+                ],
+                nextCursor: null,
+                total: 7,
+              },
+            ],
+            pageParams: [null],
+          }),
+      },
+    );
+    const heading = screen.getByRole("heading", { name: "讨论 · Discussion" });
+    expect(heading.parentElement).toHaveTextContent("7 条");
+    await openMenuItem(screen.getAllByRole("article")[0] as HTMLElement, "删除");
+    await userEvent.setup().click(await screen.findByRole("button", { name: "删除评论" }));
+    await waitFor(() => expect(heading.parentElement).toHaveTextContent("6 条"));
+  });
+});

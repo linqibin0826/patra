@@ -12,6 +12,7 @@ import { ExperienceRow } from "@/components/experience/ExperienceRow";
 import { ExperienceSummary, type SummaryState } from "@/components/experience/ExperienceSummary";
 import { ResendVerificationButton } from "@/components/portal/ResendVerificationButton";
 import { SectionEyebrow } from "@/components/portal/SectionEyebrow";
+import { SortToggle } from "@/components/portal/SortToggle";
 import { authPageHref } from "@/lib/auth/next-path";
 import { useViewer, type ViewerSeed } from "@/lib/discussion/viewer";
 import {
@@ -19,8 +20,16 @@ import {
   useExperienceSummary,
   useJournalExperiences,
 } from "@/lib/experience/queries";
-import type { PostDetail, SummaryWindow } from "@/lib/interaction/experience-schema";
+import { useExperienceSort } from "@/lib/experience/use-experience-sort";
+import { formatCount } from "@/lib/format-count";
+import type {
+  ExperienceSort,
+  PostDetail,
+  SummaryWindow,
+} from "@/lib/interaction/experience-schema";
 import { btnPrimary, btnSecondary } from "@/lib/portal-ui";
+import { queryKeys } from "@/lib/query-keys";
+import { uniqueBy } from "@/lib/unique-by";
 import { cn } from "@/lib/utils";
 
 interface ExperienceAreaProps {
@@ -33,6 +42,12 @@ interface ExperienceAreaProps {
 }
 
 const SMALL = "px-4 py-1.5 text-sm";
+
+/// 经验列表的两种排序（简报 v0.15 §3.8）
+const SORT_OPTIONS = [
+  { value: "latest", label: "最新投稿" },
+  { value: "helpful", label: "最有帮助" },
+] as const satisfies readonly { value: ExperienceSort; label: string }[];
 
 /// 期刊页经验区的客户端部分（简报 §3.13–§3.15、spec 6）：区块标题与「写投稿经验」、原地展开的表单、
 /// 「同行经验」汇总、经验列表。汇总或列表在没有任何数据时取不到，整块降级为「同行经验暂不可用」：
@@ -50,18 +65,42 @@ export function ExperienceArea({
   const [writing, setWriting] = useState(false);
   const writeButton = useRef<HTMLButtonElement | null>(null);
   const summary = useExperienceSummary(journalId, window);
-  const list = useJournalExperiences(journalId);
+  const { sort, setSort } = useExperienceSort();
+  const list = useJournalExperiences(journalId, sort);
 
-  // 整块降级只看首屏的两份（近 3 年汇总、列表）；切到「全部」取不到时只在卡里提示，按钮、列表与切换控件照常
+  /// 首屏的列表排序：整块降级只看它；换到另一种排序取不到时只在列表处提示
+  const [firstSort] = useState(sort);
+  // 整块降级只看首屏的两份（近 3 年汇总、首屏排序的列表）；切到「全部」或另一种排序取不到时只就地提示，
+  // 按钮、工具行与切换控件照常
   const summaryFailed = summary.isError && !summary.data;
-  const unavailable = (list.isError && !list.data) || (window === "3y" && summaryFailed);
+  const listFailed = list.isError && !list.data;
+  const unavailable = (listFailed && sort === firstSort) || (window === "3y" && summaryFailed);
   const summaryState: SummaryState =
     unavailable || summaryFailed
       ? { kind: "unavailable" }
       : summary.data
         ? { kind: "ok", summary: summary.data }
         : { kind: "loading" };
-  const items = list.data?.pages.flatMap((page) => page.items) ?? [];
+  // 「最有帮助」翻页期间数字会变，同一条可能出现在两页里：只渲染先加载的那份（决策 D）
+  const items = uniqueBy(
+    list.data?.pages.flatMap((page) => page.items) ?? [],
+    (experience) => experience.postId,
+  );
+  // 换排序失败时列表没有数据，工具行用上一次取到的总条数（不随排序变）
+  const [knownTotal, setKnownTotal] = useState(0);
+  const loadedTotal = list.data?.pages[0]?.total;
+  if (loadedTotal !== undefined && loadedTotal !== knownTotal) {
+    setKnownTotal(loadedTotal);
+  }
+  const total = loadedTotal ?? knownTotal;
+  /// 换排序 = 从第一页重新取：先清掉目标排序已缓存的页，取回前列表留着当前的（`keepPreviousData`）
+  const changeSort = (next: ExperienceSort) => {
+    if (next === sort) {
+      return;
+    }
+    client.removeQueries({ queryKey: queryKeys.experienceList(journalId, next), exact: true });
+    setSort(next);
+  };
   const listEmpty = list.data !== undefined && items.length === 0;
 
   const retry = () => {
@@ -160,6 +199,28 @@ export function ExperienceArea({
             投过这本期刊？写下投稿、审稿和结果，帮后来的人选刊。
           </p>
           {!writing && <div className="mt-1.5">{write("写第一条投稿经验", "md")}</div>}
+        </div>
+      )}
+
+      {!unavailable && total > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="m-0 text-fg-2 text-sm">{formatCount(total)} 条投稿经验</p>
+          {total > 1 && <SortToggle value={sort} options={SORT_OPTIONS} onChange={changeSort} />}
+        </div>
+      )}
+
+      {!unavailable && listFailed && (
+        <div className="flex flex-col items-center gap-2 py-6">
+          <p role="alert" className="m-0 text-center text-sm text-status-danger">
+            没有加载成功，请稍后再试
+          </p>
+          <button
+            type="button"
+            onClick={() => void list.refetch()}
+            className={cn(btnSecondary, SMALL)}
+          >
+            重试
+          </button>
         </div>
       )}
 
