@@ -29,6 +29,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
@@ -84,14 +85,36 @@ class DeleteCommentHandlerTest {
     verify(comments).markDeleted(60L, T0);
     verify(comments, never()).delete(anyLong());
     assertThat(published())
+        .usingRecursiveComparison()
+        .ignoringFields("eventId")
         .isEqualTo(
             CommentDeletedEvent.builder()
+                .eventId(UUID.randomUUID())
                 .commentId(60L)
+                .version(CommentAggregate.INITIAL_VERSION)
                 .subjectId(PUB_ID)
                 .authorId(ACTOR)
                 .placeholder(true)
                 .deletedAt(T0)
                 .build());
+  }
+
+  /// 事件带新生成的事件 ID（每次删除各不相同）与删除时的正文版本（PAP-141）。
+  @Test
+  void should_publish_deleted_event_with_event_id_and_version() {
+    stub(comment(60L, 40L, 50L, ACTOR, CommentState.ACTIVE).toBuilder().version(3).build(), true);
+    stub(comment(61L, 61L, null, ACTOR, CommentState.ACTIVE), false);
+
+    handler.handle(DeleteCommentCommand.of(60L));
+    handler.handle(DeleteCommentCommand.of(61L));
+
+    ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+    verify(publisher, times(2)).publishEvent(captor.capture());
+    CommentDeletedEvent first = (CommentDeletedEvent) captor.getAllValues().get(0);
+    CommentDeletedEvent second = (CommentDeletedEvent) captor.getAllValues().get(1);
+    assertThat(first.version()).isEqualTo(3);
+    assertThat(second.version()).isEqualTo(CommentAggregate.INITIAL_VERSION);
+    assertThat(first.eventId()).isNotNull().isNotEqualTo(second.eventId());
   }
 
   /// 没回复：整条去掉；父评论、根评论都是已经没有回复的占位，一并去掉；事件只发一次。

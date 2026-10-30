@@ -36,8 +36,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
 
 /// 删除经验（spec 6.3）：作者本人；不查资格；软删并把登记行置为失效（同一事务、传当前快照）；已删的幂等。
@@ -123,7 +125,21 @@ class DeleteExperienceHandlerTest {
 
     handler.handle(DeleteExperienceCommand.of(POST_ID.value()));
 
-    verify(publisher).publishEvent(PostDeletedEvent.of(POST_ID.value(), POST_SUBJECT, U, NOW));
+    ArgumentCaptor<PostDeletedEvent> captor = ArgumentCaptor.forClass(PostDeletedEvent.class);
+    verify(publisher).publishEvent(captor.capture());
+    PostDeletedEvent event = captor.getValue();
+    assertThat(event.eventId()).isNotNull();
+    assertThat(event)
+        .usingRecursiveComparison()
+        .ignoringFields("eventId")
+        .isEqualTo(
+            PostDeletedEvent.builder()
+                .eventId(UUID.randomUUID())
+                .postId(POST_ID.value())
+                .subjectId(POST_SUBJECT)
+                .authorId(U)
+                .deletedAt(NOW)
+                .build());
   }
 
   /// 已经删了：什么都不做（幂等），也不发事件。

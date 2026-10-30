@@ -17,6 +17,7 @@ import dev.patra.interaction.domain.reaction.model.vo.HelpfulTarget;
 import dev.patra.interaction.domain.reaction.port.repository.HelpfulRepository;
 import dev.patra.interaction.domain.subject.model.vo.SubjectId;
 import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -60,7 +61,14 @@ class HelpfulTargetDeletedListenerTest {
   void should_remove_post_helpful_on_delete() {
     when(helpful.deleteAllOn(POST)).thenReturn(Map.of());
 
-    listener.on(PostDeletedEvent.of(500L, SubjectId.of(77L), 7L, NOW));
+    listener.on(
+        PostDeletedEvent.builder()
+            .eventId(UUID.randomUUID())
+            .postId(500L)
+            .subjectId(SubjectId.of(77L))
+            .authorId(7L)
+            .deletedAt(NOW)
+            .build());
 
     verify(helpful).lockTarget(POST);
     verify(helpful).deleteAllOn(POST);
@@ -84,7 +92,9 @@ class HelpfulTargetDeletedListenerTest {
   /// @return 事件
   private static CommentDeletedEvent commentDeleted(boolean placeholder) {
     return CommentDeletedEvent.builder()
+        .eventId(UUID.randomUUID())
         .commentId(42L)
+        .version(1)
         .subjectId(SubjectId.of(11L))
         .authorId(7L)
         .placeholder(placeholder)

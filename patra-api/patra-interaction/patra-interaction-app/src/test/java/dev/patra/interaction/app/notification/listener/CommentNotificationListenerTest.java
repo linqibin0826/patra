@@ -29,6 +29,7 @@ import dev.patra.interaction.domain.subject.port.markdown.PlainTextPort;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -105,7 +106,7 @@ class CommentNotificationListenerTest {
   /// 删除：删掉这条评论的全部提醒。
   @Test
   void should_delete_notifications_on_comment_deleted() {
-    listener.on(new CommentDeletedEvent(10L, SubjectId.of(100L), A, true, AT));
+    listener.on(commentDeleted(true));
 
     verify(notifications).deleteByComment(10L);
     verifyNoMoreInteractions(notifications);
@@ -132,9 +133,7 @@ class CommentNotificationListenerTest {
     NotificationNotFoundException failure = new NotificationNotFoundException();
     when(notifications.deleteByComment(10L)).thenThrow(failure);
 
-    assertThatThrownBy(
-            () -> listener.on(new CommentDeletedEvent(10L, SubjectId.of(100L), A, false, AT)))
-        .isSameAs(failure);
+    assertThatThrownBy(() -> listener.on(commentDeleted(false))).isSameAs(failure);
   }
 
   /// 文献下的回复事件。
@@ -178,6 +177,22 @@ class CommentNotificationListenerTest {
         .addedMentionedUserIds(added)
         .body("改过")
         .editedAt(AT)
+        .build();
+  }
+
+  /// 评论 10 的删除事件。
+  ///
+  /// @param placeholder 是否留下占位
+  /// @return 事件
+  private static CommentDeletedEvent commentDeleted(boolean placeholder) {
+    return CommentDeletedEvent.builder()
+        .eventId(UUID.randomUUID())
+        .commentId(10L)
+        .version(1)
+        .subjectId(SubjectId.of(100L))
+        .authorId(A)
+        .placeholder(placeholder)
+        .deletedAt(AT)
         .build();
   }
 }

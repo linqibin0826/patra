@@ -42,6 +42,22 @@ class DiscussionEventsTest {
         .isInstanceOf(UnsupportedOperationException.class);
   }
 
+  /// 评论已删除缺事件 ID 就拒绝（PAP-141）：外送时原样带进集成事件，补投靠它不变才去得了重，所以不兜底生成。
+  @Test
+  void should_reject_comment_deleted_without_event_id() {
+    assertThatThrownBy(
+            () ->
+                CommentDeletedEvent.builder()
+                    .commentId(1L)
+                    .version(1)
+                    .subjectId(SubjectId.of(2L))
+                    .authorId(3L)
+                    .deletedAt(T0)
+                    .build())
+        .isInstanceOf(NullPointerException.class)
+        .hasMessageContaining("eventId");
+  }
+
   /// 一个发表事件（列表另给）。
   ///
   /// @return 构造器

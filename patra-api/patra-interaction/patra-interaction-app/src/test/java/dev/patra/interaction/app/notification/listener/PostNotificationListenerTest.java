@@ -12,6 +12,7 @@ import dev.patra.interaction.domain.notification.port.repository.NotificationRep
 import dev.patra.interaction.domain.post.event.PostDeletedEvent;
 import dev.patra.interaction.domain.subject.model.vo.SubjectId;
 import java.time.Instant;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
 
@@ -20,7 +21,13 @@ class PostNotificationListenerTest {
 
   private static final SubjectId SUBJECT = SubjectId.of(77L);
   private static final PostDeletedEvent DELETED =
-      PostDeletedEvent.of(500L, SUBJECT, 7L, Instant.parse("2026-10-29T02:00:00Z"));
+      PostDeletedEvent.builder()
+          .eventId(UUID.randomUUID())
+          .postId(500L)
+          .subjectId(SUBJECT)
+          .authorId(7L)
+          .deletedAt(Instant.parse("2026-10-29T02:00:00Z"))
+          .build();
 
   private final NotificationRepository notifications = mock(NotificationRepository.class);
   private final PostNotificationListener listener = new PostNotificationListener(notifications);

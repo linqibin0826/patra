@@ -15,6 +15,7 @@ import dev.patra.tool.core.security.CurrentUserPort;
 import dev.patra.tool.cqrs.CommandHandler;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
@@ -61,7 +62,13 @@ public class DeleteExperienceHandler implements CommandHandler<DeleteExperienceC
           posts.markDeleted(id, now);
           gateway.updateLocal(SubjectType.POST, id.value(), SubjectState.UNAVAILABLE, snapshot);
           events.publishEvent(
-              PostDeletedEvent.of(id.value(), registry.subjectIdOf(id), userId, now));
+              PostDeletedEvent.builder()
+                  .eventId(UUID.randomUUID())
+                  .postId(id.value())
+                  .subjectId(registry.subjectIdOf(id))
+                  .authorId(userId)
+                  .deletedAt(now)
+                  .build());
         });
     return null;
   }
