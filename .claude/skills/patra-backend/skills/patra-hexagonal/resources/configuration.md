@@ -2,7 +2,7 @@
 
 ## 环境配置
 
-5 个后端服务的配置分两处，不用 Spring profile：
+6 个后端服务的配置分两处，不用 Spring profile：
 
 ```
 patra-{service}-boot/src/main/resources/

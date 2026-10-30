@@ -5,6 +5,7 @@
         "catalog",
         "identity",
         "interaction",
+        "notification",
         "gateway",
         "foundation"
     ],
@@ -233,6 +234,74 @@
             ]
         },
         {
+            "dir": "patra-api/patra-notification/patra-notification-adapter",
+            "project": ":patra-api:patra-notification:patra-notification-adapter",
+            "unit": "notification",
+            "impacts": [
+                "notification"
+            ],
+            "tasks": [
+                "check"
+            ]
+        },
+        {
+            "dir": "patra-api/patra-notification/patra-notification-api",
+            "project": ":patra-api:patra-notification:patra-notification-api",
+            "unit": "notification",
+            "impacts": [
+                "notification"
+            ],
+            "tasks": [
+                "check"
+            ]
+        },
+        {
+            "dir": "patra-api/patra-notification/patra-notification-app",
+            "project": ":patra-api:patra-notification:patra-notification-app",
+            "unit": "notification",
+            "impacts": [
+                "notification"
+            ],
+            "tasks": [
+                "check"
+            ]
+        },
+        {
+            "dir": "patra-api/patra-notification/patra-notification-boot",
+            "project": ":patra-api:patra-notification:patra-notification-boot",
+            "unit": "notification",
+            "impacts": [
+                "notification"
+            ],
+            "tasks": [
+                "check",
+                "integrationTest"
+            ]
+        },
+        {
+            "dir": "patra-api/patra-notification/patra-notification-domain",
+            "project": ":patra-api:patra-notification:patra-notification-domain",
+            "unit": "notification",
+            "impacts": [
+                "notification"
+            ],
+            "tasks": [
+                "check"
+            ]
+        },
+        {
+            "dir": "patra-api/patra-notification/patra-notification-infra",
+            "project": ":patra-api:patra-notification:patra-notification-infra",
+            "unit": "notification",
+            "impacts": [
+                "notification"
+            ],
+            "tasks": [
+                "check",
+                "integrationTest"
+            ]
+        },
+        {
             "dir": "patra-api/patra-registry/patra-registry-adapter",
             "project": ":patra-api:patra-registry:patra-registry-adapter",
             "unit": "registry",
@@ -324,6 +393,7 @@
                 "gateway",
                 "identity",
                 "interaction",
+                "notification",
                 "registry"
             ],
             "tasks": [
@@ -370,6 +440,7 @@
                 "gateway",
                 "identity",
                 "interaction",
+                "notification",
                 "registry"
             ],
             "tasks": [
@@ -387,6 +458,7 @@
                 "gateway",
                 "identity",
                 "interaction",
+                "notification",
                 "registry"
             ],
             "tasks": [
@@ -418,6 +490,7 @@
                 "gateway",
                 "identity",
                 "interaction",
+                "notification",
                 "registry"
             ],
             "tasks": [
@@ -432,7 +505,8 @@
                 "catalog",
                 "foundation",
                 "identity",
-                "interaction"
+                "interaction",
+                "notification"
             ],
             "tasks": [
                 "check"
@@ -463,6 +537,7 @@
                 "gateway",
                 "identity",
                 "interaction",
+                "notification",
                 "registry"
             ],
             "tasks": [
@@ -480,6 +555,7 @@
                 "gateway",
                 "identity",
                 "interaction",
+                "notification",
                 "registry"
             ],
             "tasks": [

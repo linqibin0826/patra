@@ -1,5 +1,5 @@
 {
-  "_comment": "后端服务 CD 单一事实源（SSOT）。cd.yml 的 detect-changes / build / deploy 与 deploy.sh 都从这里按 name 查询，代码里不写死服务清单。加新服务=加一个条目，不改 workflow 逻辑。条目顺序就是 deploy.sh 的部署顺序（identity 先于 gateway；interaction 在 catalog 之后）。healthPath/healthMatch 供 deploy.sh 健康检查（healthMatch 缺省=仅要求 HTTP 成功）。portal / learn 条目为 deploy-only（gradleTask=null，构建在 portal-cd.yml / learn-cd.yml 的 docker build 内完成，勿在 cd.yml dispatch 填 portal/learn）。srcPrefix 保留供人工查阅路径归属；context 是 docker build 上下文（boot 模块，build/libs 所在）。",
+  "_comment": "后端服务 CD 单一事实源（SSOT）。cd.yml 的 detect-changes / build / deploy 与 deploy.sh 都从这里按 name 查询，代码里不写死服务清单。加新服务=加一个条目，不改 workflow 逻辑。条目顺序就是 deploy.sh 的部署顺序（identity 先于 gateway；interaction 在 catalog 之后，notification 在 interaction 之后）。healthPath/healthMatch 供 deploy.sh 健康检查（healthMatch 缺省=仅要求 HTTP 成功）。portal / learn 条目为 deploy-only（gradleTask=null，构建在 portal-cd.yml / learn-cd.yml 的 docker build 内完成，勿在 cd.yml dispatch 填 portal/learn）。srcPrefix 保留供人工查阅路径归属；context 是 docker build 上下文（boot 模块，build/libs 所在）。",
   "services": [
     {
       "name": "registry",
@@ -48,6 +48,16 @@
       "srcPrefix": "patra-api/patra-interaction/",
       "port": 6500,
       "image": "ghcr.io/linqibin0826/patra-interaction",
+      "healthPath": "/actuator/health",
+      "healthMatch": "\"status\":\"UP\""
+    },
+    {
+      "name": "notification",
+      "gradleTask": ":patra-api:patra-notification:patra-notification-boot:bootJar",
+      "context": "patra-api/patra-notification/patra-notification-boot",
+      "srcPrefix": "patra-api/patra-notification/",
+      "port": 6600,
+      "image": "ghcr.io/linqibin0826/patra-notification",
       "healthPath": "/actuator/health",
       "healthMatch": "\"status\":\"UP\""
     },

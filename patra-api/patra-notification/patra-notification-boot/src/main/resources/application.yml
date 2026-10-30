@@ -1,0 +1,38 @@
+server:
+  port: 6600
+  # 解析网关注入的 X-Forwarded-*，让 OpenAPI 文档里的地址指向网关
+  forward-headers-strategy: framework
+
+spring:
+  # 数据源地址、账号随环境变，在 Nacos：patra-notification.yaml、patra-common.yaml
+  # （源文件在 patra-infra/nacos/dev/），由启动器 PatraApplication 导入
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  flyway:
+    enabled: true
+    # 递归扫描：每个子域的脚本在 db/migration/{子域}/，整个服务一份历史（public.flyway_schema_history）。
+    # 不设 schemas：设了 Flyway 会自己建这些 schema 并把历史表挪进第一个，脚本里由 CREATE SCHEMA 建
+    locations: classpath:db/migration
+  jpa:
+    # 关掉 OSIV：请求第一次查库拿到的连接不会一直占到请求结束
+    open-in-view: false
+
+patra:
+  web:
+    error:
+      context-prefix: NOTIFICATION
+
+# XXL-Job 执行器：管理端地址随环境变，在 Nacos 公共配置 patra-common.yaml；执行器端口 = 服务端口 + 1 = 6601
+xxl:
+  job:
+    executor:
+      # 回调地址：admin 按它回调本执行器。与 Nacos 注册地址同一个变量；容器里不设，自动探测 patra-net 上的 IP
+      ip: ${PATRA_ADVERTISE_IP:}
+      logpath: ${XXL_JOB_EXECUTOR_LOG_PATH:${PATRA_LOG_DIR:logs}/xxl-job/patra-notification}
+      logretentiondays: ${XXL_JOB_LOG_RETENTION_DAYS:30}

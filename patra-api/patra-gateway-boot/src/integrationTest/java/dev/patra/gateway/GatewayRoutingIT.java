@@ -60,6 +60,13 @@ class GatewayRoutingIT {
           .options(wireMockConfig().dynamicPort().http2PlainDisabled(true).gzipDisabled(true))
           .build();
 
+  /// notification 的下游桩：验证 `/patra-notification/**` 路由（PAP-139）。
+  @RegisterExtension
+  static final WireMockExtension notification =
+      WireMockExtension.newInstance()
+          .options(wireMockConfig().dynamicPort().http2PlainDisabled(true).gzipDisabled(true))
+          .build();
+
   @Autowired private RestTestClient restClient;
   @Autowired private Environment environment;
 
@@ -70,6 +77,9 @@ class GatewayRoutingIT {
     registry.add(
         "spring.cloud.discovery.client.simple.instances.patra-interaction[0].uri",
         interaction::baseUrl);
+    registry.add(
+        "spring.cloud.discovery.client.simple.instances.patra-notification[0].uri",
+        notification::baseUrl);
   }
 
   /// `/patra-interaction/**` 剥掉前缀转到 `lb://patra-interaction`，查询串原样。
@@ -90,6 +100,25 @@ class GatewayRoutingIT {
     interaction.verify(
         getRequestedFor(urlPathEqualTo("/collections/1"))
             .withQueryParam("view", equalTo("reader")));
+  }
+
+  /// `/patra-notification/**` 剥掉前缀转到 `lb://patra-notification`，查询串原样。
+  @Test
+  void should_route_notification_prefix_to_notification_service() {
+    notification.stubFor(
+        get(urlPathEqualTo("/notifications"))
+            .withQueryParam("tab", equalTo("reply"))
+            .willReturn(okJson("{}")));
+
+    restClient
+        .get()
+        .uri("/patra-notification/notifications?tab=reply")
+        .exchange()
+        .expectStatus()
+        .isOk();
+
+    notification.verify(
+        getRequestedFor(urlPathEqualTo("/notifications")).withQueryParam("tab", equalTo("reply")));
   }
 
   @Test

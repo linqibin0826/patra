@@ -1,0 +1,8 @@
+patra.config-source.service: patra-notification.yaml
+
+spring:
+  datasource:
+    url: jdbc:postgresql://${PATRA_INFRA_HOST:127.0.0.1}:15432/patra_notification
+  # RabbitMQ 的 host、port、username 在公共配置；密码只写在用到它的服务文件里（值在 ~/.patra/secrets/rabbitmq.env）
+  rabbitmq:
+    password: ${RABBITMQ_PASSWORD}

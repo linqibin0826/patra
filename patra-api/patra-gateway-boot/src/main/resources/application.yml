@@ -88,6 +88,15 @@ spring:
               filters:
                 - StripPrefix=1
 
+            # Notification Service Route（站内提醒、提醒偏好与退订；以后的实时推送）
+            # Example: /patra-notification/notifications -> lb://patra-notification/notifications
+            - id: patra-notification
+              uri: lb://patra-notification
+              predicates:
+                - Path=/patra-notification/**
+              filters:
+                - StripPrefix=1
+
 # ----------------------------------------------------------------------------
 # API Documentation Aggregation
 # ----------------------------------------------------------------------------
@@ -106,6 +115,9 @@ scalar:
     - url: /patra-interaction/v3/api-docs
       title: Interaction Service
       slug: interaction
+    - url: /patra-notification/v3/api-docs
+      title: Notification Service
+      slug: notification
 
 # ----------------------------------------------------------------------------
 # Logging Configuration

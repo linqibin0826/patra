@@ -14,6 +14,7 @@
 - `patra-catalog` - 目录服务 (采集外部数据源并直接入库；文献、期刊、MeSH、机构、全文)
 - `patra-identity` - 身份服务 (前台用户的注册、登录、会话、封禁)
 - `patra-interaction` - 社区互动服务 (文献库、收藏夹、讨论、投稿经验、提醒、有帮助；以后的关注)，每层按子域分包，子域边界由 ArchUnit 守
+- `patra-notification` - 通知服务 (站内提醒、提醒偏好与退订、邮件、实时推送)，每层按子域分包，子域边界由 ArchUnit 守
 - `patra-gateway-boot` - API 网关 (路由、认证、限流)
 
 ## 模块结构

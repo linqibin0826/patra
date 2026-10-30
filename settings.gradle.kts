@@ -95,6 +95,14 @@ includeAt(":patra-api:patra-interaction:patra-interaction-adapter", "patra-api/p
 includeAt(":patra-api:patra-interaction:patra-interaction-boot", "patra-api/patra-interaction/patra-interaction-boot")
 mapParent(":patra-api:patra-interaction", "patra-api/patra-interaction")
 
+includeAt(":patra-api:patra-notification:patra-notification-api", "patra-api/patra-notification/patra-notification-api")
+includeAt(":patra-api:patra-notification:patra-notification-domain", "patra-api/patra-notification/patra-notification-domain")
+includeAt(":patra-api:patra-notification:patra-notification-app", "patra-api/patra-notification/patra-notification-app")
+includeAt(":patra-api:patra-notification:patra-notification-infra", "patra-api/patra-notification/patra-notification-infra")
+includeAt(":patra-api:patra-notification:patra-notification-adapter", "patra-api/patra-notification/patra-notification-adapter")
+includeAt(":patra-api:patra-notification:patra-notification-boot", "patra-api/patra-notification/patra-notification-boot")
+mapParent(":patra-api:patra-notification", "patra-api/patra-notification")
+
 // ==================== patra-api / Gateway ====================
 includeAt(":patra-api:patra-gateway-boot", "patra-api/patra-gateway-boot")
 

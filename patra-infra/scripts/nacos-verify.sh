@@ -2,7 +2,7 @@
 # Nacos 加固的验收：逐项打印 PASS / FAIL，任意一项 FAIL 返回 1；参数错误或缺凭据返回 2。
 # 用法（mini 上，仓库根目录）：
 #   bash patra-infra/scripts/nacos-verify.sh                     # 第 1～9 项
-#   bash patra-infra/scripts/nacos-verify.sh --expect-services   # 另查第 10 项：5 个服务都已注册
+#   bash patra-infra/scripts/nacos-verify.sh --expect-services   # 另查第 10 项：6 个服务都已注册
 # 输入同 nacos-init.sh：NACOS_ADDR、NACOS_CONSOLE_ADDR、NACOS_SECRETS_DIR；凭据可用同名环境变量覆盖。
 # 只读写探针：配置 nacos-verify-probe*.yaml、服务 nacos-verify-probe，结束时清掉。不碰任何真实配置和密钥。
 set -o pipefail
@@ -26,7 +26,7 @@ PROBE=nacos-verify-probe.yaml
 PROBE_PUSH=nacos-verify-probe-push.yaml
 PROBE_SVC=nacos-verify-probe
 PROBE_IP=192.0.2.1 # TEST-NET-1，保证探针实例不会真的被调用
-SERVICES="patra-registry patra-catalog patra-identity patra-interaction patra-gateway"
+SERVICES="patra-registry patra-catalog patra-identity patra-interaction patra-notification patra-gateway"
 PASS=0
 FAIL=0
 AT=""
@@ -148,7 +148,7 @@ else
 fi
 
 if [ "$EXPECT_SERVICES" = true ]; then
-  D="public 下 5 个 patra 服务都有实例"
+  D="public 下 6 个 patra 服务都有实例"
   if [ -z "$APT" ]; then
     fail 10 "$D" "patra-app 登录失败"
   else

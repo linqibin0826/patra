@@ -21,15 +21,15 @@ Patra 是一个面向个人专业用户的**医学文献门户**，后端负责:
 ## 🏗️ 架构概览
 
 ```
-                ┌──────────────────────────────────────────────┐
-                │        API Gateway (patra-gateway-boot)      │
-                │        入口: 路由 • 认证 • 身份断言            │
-                └───────┬──────────────┬──────────────┬────────┘
-                        │              │              │
-               ┌────────▼───────┐ ┌────▼─────────┐ ┌──▼──────────────┐
-               │ patra-catalog  │ │patra-identity│ │patra-interaction│
-               │ 采集 + 目录数据 │ │ 账号与会话    │ │ 社区互动         │
-               └───┬────────┬───┘ └──────────────┘ └─────────────────┘
+                ┌─────────────────────────────────────────────────────────────┐
+                │              API Gateway (patra-gateway-boot)               │
+                │                入口: 路由 • 认证 • 身份断言                 │
+                └───────┬──────────────┬──────────────┬──────────────────┬────┘
+                        │              │              │                  │
+               ┌────────▼───────┐ ┌────▼─────────┐ ┌──▼──────────────┐ ┌─▼────────────────┐
+               │ patra-catalog  │ │patra-identity│ │patra-interaction│ │patra-notification│
+               │ 采集 + 目录数据 │ │ 账号与会话    │ │ 社区互动         │ │ 提醒、邮件、推送 │
+               └───┬────────┬───┘ └──────────────┘ └─────────────────┘ └──────────────────┘
                    │        │       identity、interaction 经内部接口调 catalog
                    │        ▼
                    │  patra-registry（平台字典：国家、语言）
@@ -56,6 +56,7 @@ Patra 是一个面向个人专业用户的**医学文献门户**，后端负责:
 | [**patra-catalog**](./patra-catalog/README.md) | 采集外部数据源并直接入库；文献、期刊、主题词、机构、全文等目录数据 | `patra-catalog-boot` |
 | [**patra-identity**](./patra-identity/README.md) | 前台用户的账号：注册、登录、会话、封禁 | `patra-identity-boot` |
 | [**patra-interaction**](./patra-interaction/README.md) | 社区互动：文献库与收藏夹、讨论、投稿经验、提醒，按子域分包 | `patra-interaction-boot` |
+| [**patra-notification**](./patra-notification/README.md) | 通知：站内提醒、提醒偏好与退订、邮件、实时推送，按子域分包 | `patra-notification-boot` |
 | [**patra-gateway-boot**](./patra-gateway-boot/README.md) | API 网关 (入口),包含路由和认证 | `patra-gateway-boot` |
 
 ### 工具模块
@@ -125,7 +126,7 @@ curl http://localhost:6300/actuator/health   # Catalog
 
 ## 🔧 环境配置文件
 
-- **5 个后端服务**：配置从 Nacos 读（`patra-common.yaml` 加 `{服务名}.yaml`，源文件在 `patra-infra/nacos/dev/`），启动类用 `PatraApplication.run(服务名, …)`。jar 里只有 `application.yml`，放端口、连接池、超时等随代码变的默认值；库地址、Redis、MinIO、xxl-job、公钥、密钥引用等随环境变的值在 Nacos。IDE 与容器读同一份配置，只差 `PATRA_INFRA_HOST`、`PATRA_ADVERTISE_IP`、`PATRA_LOG_DIR` 三个本地变量。设计见 `docs/patra/specs/2026-10-13-config-migration-batch1-design.md`、`docs/patra/specs/2026-10-14-config-migration-batch2-design.md`。
+- **6 个后端服务**：配置从 Nacos 读（`patra-common.yaml` 加 `{服务名}.yaml`，源文件在 `patra-infra/nacos/dev/`），启动类用 `PatraApplication.run(服务名, …)`。jar 里只有 `application.yml`，放端口、连接池、超时等随代码变的默认值；库地址、Redis、MinIO、xxl-job、公钥、密钥引用等随环境变的值在 Nacos。IDE 与容器读同一份配置，只差 `PATRA_INFRA_HOST`、`PATRA_ADVERTISE_IP`、`PATRA_LOG_DIR` 三个本地变量。设计见 `docs/patra/specs/2026-10-13-config-migration-batch1-design.md`、`docs/patra/specs/2026-10-14-config-migration-batch2-design.md`。
 - 服务注册中心 (Nacos) 在端口 8848 运行，提供服务发现、配置和健康检查功能。
 - 密钥（Redis 密码、网关私钥、外部数据源 API key）不进仓库：Nacos 配置里只写 `${变量}`，值放在 `~/.patra/secrets/` 下的 `.env` 文件里，本机由 Nacos starter 读，容器经 compose 的 `env_file` 注入。
 
