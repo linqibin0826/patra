@@ -13,7 +13,7 @@
 | `discussion` | 文献与投稿经验下的讨论：评论与回复（树存、两层展示、「回复 @X」）、单楼视图与对话链、Markdown 正文与 @（存 `<@用户ID>`）、修改历史（发布 5 分钟内的修改不记版本）、有回复的删除留占位、@ 联想；匿名所有者的评论对别人显示「匿名作者」。评论写入、编辑、删除时在同一事务里发布进程内事件（事件契约 `domain.discussion.event`）。工程设计 `docs/patra/specs/2026-10-27-interaction-discussion-design.md` | PAP-121 |
 | `post` | 投稿经验（按帖子结构存）：帖子基表 + 经验扩展表 + 修改历史（发布后 5 分钟内的修改不记版本）；字段与首轮 / 最终结果的一致性规则；同一作者同刊同投稿日期只能有一条；匿名由服务端遮蔽（他人拿不到作者 ID）；期刊页汇总读取时由 PG `percentile_cont` 算、Java 半进位；写入经发表守卫（每天 10 条），经验作为本地对象 `POST` 在同一事务里登记、删除时置为失效，并在同一事务里发布进程内事件 `PostDeletedEvent`（事件契约 `domain.post.event`）。工程设计 `docs/patra/specs/2026-10-27-interaction-post-design.md` | PAP-122、PAP-127 |
 | `notification` | 站内提醒：订阅讨论的事件，按规则在同一事务里写入；评论或投稿经验删除时删掉对应提醒；未读数、列表、已读、5 个月清理。工程设计 `docs/patra/specs/2026-10-27-interaction-notification-design.md`、`docs/patra/specs/2026-10-28-notification-inbox-redesign-design.md` | PAP-123、PAP-127 |
-| `reaction` | 「有帮助」：给别人的评论（根评论、楼内回复）与投稿经验点、取消；明细、每个目标的有帮助数、每个用户的获赞同事务维护（明细真插入 / 删除才 ±1）。资格与每天 300 次复用发表守卫（种类 `HELPFUL`），不能给自己点（含匿名经验作者）；匿名经验与作者在自己匿名经验下的评论不计获赞。订阅评论与投稿经验的删除事件，在删除的同一事务里清掉被删目标的有帮助。不接入注销清理，不发提醒。工程设计 `docs/patra/specs/2026-10-29-reaction-helpful-design.md` | PAP-131 |
+| `reaction` | 「有帮助」：给别人的评论（根评论、楼内回复）与投稿经验点、取消；明细、每个目标的有帮助数、每个用户的获赞同事务维护（明细真插入 / 删除才 ±1）。资格与每天 300 次复用发表守卫（种类 `HELPFUL`），不能给自己点（含匿名经验作者）；匿名经验与作者在自己匿名经验下的评论不计获赞。订阅评论与投稿经验的删除事件，在删除的同一事务里清掉被删目标的有帮助。不接入注销清理。点、取消真写入时发布进程内事件（事件契约 `domain.reaction.event`），「已点」外送给通知服务（4.7）。工程设计 `docs/patra/specs/2026-10-29-reaction-helpful-design.md` | PAP-131、PAP-141 |
 
 `InteractionArchitectureTest` 的子域清单已经写满上面六个；以后再新增子域才改清单。子域的各层包随第一批代码建（规则 22b：一个子域只要有一层出现，四层就都要有），不建没有代码的空包和空 schema。
 
@@ -40,7 +40,7 @@ dev.patra.interaction.config           装配（XXL-Job 执行器等），不属
 
 - 普通子域公开包之外的一切（聚合、实体、仓储、领域服务、app / infra / adapter 的任何类）只在子域内部用。
 - 子域之间无环；底座不依赖任何其他子域。
-- **跨子域依赖必须声明**（规则 27）：任何子域都可以依赖底座；其余的边要在 `InteractionArchitectureTest` 里用 `allowingDependency`（经对方全部公开包）或 `allowingSubscription`（只经对方的事件契约）声明。现在有四条：提醒订阅讨论的事件（v0.14 决策 A）、提醒订阅投稿经验的删除事件（PAP-127）、有帮助依赖讨论（读端口取评论、订阅删除事件）与订阅投稿经验的删除事件（PAP-131）。除事件契约外，讨论、提醒、有帮助都不依赖投稿经验：「作者」标记、匿名遮蔽与经验的作者只看登记表的所有者两列。没有子域依赖有帮助：讨论、经验的列表要带有帮助数时只经 SQL 读 `reaction` 的表（Java 依赖会成环）。
+- **跨子域依赖必须声明**（规则 27）：任何子域都可以依赖底座；其余的边要在 `InteractionArchitectureTest` 里用 `allowingDependency`（经对方全部公开包）或 `allowingSubscription`（只经对方的事件契约）声明。现在有四条：提醒订阅讨论的事件（v0.14 决策 A）、提醒订阅投稿经验的删除事件（PAP-127）、有帮助依赖讨论（读端口取评论、订阅删除事件）与依赖投稿经验（订阅删除事件，PAP-131；读端口取经验的结果与正文带进「有帮助已点」事件，PAP-141）。提醒只经事件契约依赖投稿经验，讨论不依赖它；「作者」标记、匿名遮蔽与经验的作者只看登记表的所有者两列。没有子域依赖有帮助：讨论、经验的列表要带有帮助数时只经 SQL 读 `reaction` 的表（Java 依赖会成环）。
 - 推论：非底座子域的读端口签名、事件 record 的字段，只能用 JDK 类型、自己 `model.read` / `event` 里的类型和底座公开的类型。
 - 进程内事件：发布方的 app 层在写入事务里调 Spring 的 `ApplicationEventPublisher`；订阅方的 app 层用同步的 `@EventListener`（同一线程、同一事务），不用 `@TransactionalEventListener`，订阅方失败时整个事务回滚。
 
@@ -101,6 +101,15 @@ dev.patra.interaction.config           装配（XXL-Job 执行器等），不属
 - 批量对象统计 `POST /subjects/stats`（不要会话）挂在底座读端：`SubjectStatsReadAdapter` 只经 SQL 读收藏、讨论两张统计表，是本服务唯一一处跨子域读。主页获赞 `GET /users/{userId}/helpful-received` 读 `reaction.user_stats`。
 - 按明细重算：底座定扩展点 `StatsRecountGateway<K>`，每项计数一个 `*RecountGatewayImpl`（各在自己子域的 app 层）；`RecountStatsHandler` 先让每项不加锁地找差异，再每个差异键一个短事务「先锁、再用新语句数、不一致才写」。锁与写方相同：收藏人数、获赞、对象评论总数锁统计行，有帮助数拿目标锁，楼统计拿楼锁（根评论已不在的楼统计行删掉）。设计见 `docs/patra/specs/2026-10-29-object-stats-design.md`。
 
+## 4.7 集成事件（PAP-141）
+
+interaction 把提醒要用的事实外送给通知服务：领域事件在业务事务里发布，`patra-tool-events`（Spring Modulith 事件发布登记当 Outbox）与业务同事务写一行 `public.event_publication`，提交后外送到 RabbitMQ 并等 broker 确认，失败留给补投任务。设计与事件契约见 `docs/patra/specs/2026-10-31-interaction-integration-events-design.md`（第 5 节）。
+
+- 外送五种，交换机 `interaction.events`（topic），路由键是事件类型：`comment.published`、`comment.edited`、`comment.deleted`、`post.deleted`、`helpful.marked`。有帮助已取消只在服务内发布：通知服务对它没有动作，没有队列绑定的事件会被退回、一直补投。
+- 契约是 `patra-interaction-api` 里的 record（`api.{子域}.event`，实现 `IntegrationEvent`，带 `ROUTING_KEY` 常量）；领域事件到集成事件的选择、路由、映射只在 boot 的 `InteractionEventsConfiguration` 与 `IntegrationEventMapper`，领域层不贴 `@Externalized`，映射只拷字段。
+- 领域事件带 `eventId`（发布处生成，补投不变，消费方据此去重）；评论事件带正文版本（`discussion.comment.version`，发表为 1、每次正文确有变化加 1，消费方据此丢弃晚到的旧编辑）与 PAP-128 的全文纯文本。事件只带算收件人与判乱序要用的事实，对象的展示信息由消费方按 `subjectId` 读时现查。
+- 上线后改外送领域事件的类名或字段，先确认 `event_publication` 是空的；新增外送事件时通知服务要先绑定它的路由键。
+
 ## 5. 运行
 
 | 项 | 值 |
@@ -109,8 +118,8 @@ dev.patra.interaction.config           装配（XXL-Job 执行器等），不属
 | 网关前缀 | `/patra-interaction/**` |
 | 错误码前缀 | `INTERACTION`（如 `INTERACTION-0404`） |
 | 配置 | jar 里的 `application.yml` 放随代码变的默认值；库地址在 Nacos `patra-interaction.yaml`，账号与 xxl-job 管理端地址在 `patra-common.yaml` |
-| 定时任务 | 执行器 `patra-interaction`；对象对账 `subjectReconciliationJob`（`0 30 6 * * ?`，超时 600 秒、不重试，PAP-112；只对外部对象，文献按 PMID、期刊按 NLM ID；catalog 换库重建或重跑导入后立即手动触发一次）、注销清理 `deletedUserCleanupJob`（`0 0 6 * * ?`，超时 600 秒、不重试；PAP-120 起是底座的公共流程：合并各子域有数据的用户，分批回查 identity，只删 `DELETED` 用户在各子域登记的个人数据：收藏、发表计数与提醒）、提醒清理 `notificationRetentionJob`（`0 45 6 * * ?`，超时 300 秒、不重试，PAP-123；删除北京时间 5 个自然月前的提醒）、统计重算 `statsRecountJob`（只手动触发，调度类型「无」，超时 600 秒、不重试，PAP-133；按明细修正各项公开计数，回写「差异 N 行：{…}」） |
-| 上线 | `docs/patra/runbooks/v0.13-library-go-live-runbook.md`、`docs/patra/runbooks/v0.14-discussion-go-live-runbook.md`、`docs/patra/runbooks/v0.15-helpful-go-live-runbook.md` |
+| 定时任务 | 执行器 `patra-interaction`；对象对账 `subjectReconciliationJob`（`0 30 6 * * ?`，超时 600 秒、不重试，PAP-112；只对外部对象，文献按 PMID、期刊按 NLM ID；catalog 换库重建或重跑导入后立即手动触发一次）、注销清理 `deletedUserCleanupJob`（`0 0 6 * * ?`，超时 600 秒、不重试；PAP-120 起是底座的公共流程：合并各子域有数据的用户，分批回查 identity，只删 `DELETED` 用户在各子域登记的个人数据：收藏、发表计数与提醒）、提醒清理 `notificationRetentionJob`（`0 45 6 * * ?`，超时 300 秒、不重试，PAP-123；删除北京时间 5 个自然月前的提醒）、统计重算 `statsRecountJob`（只手动触发，调度类型「无」，超时 600 秒、不重试，PAP-133；按明细修正各项公开计数，回写「差异 N 行：{…}」）、事件补投 `eventPublicationResubmitJob`（`0 * * * * ?`，路由「第一个」、阻塞处理「丢弃后续调度」、超时 60 秒、不重试，PAP-141；由 `patra-tool-events` 注册） |
+| 上线 | `docs/patra/runbooks/v0.13-library-go-live-runbook.md`、`docs/patra/runbooks/v0.14-discussion-go-live-runbook.md`、`docs/patra/runbooks/v0.15-helpful-go-live-runbook.md`、`docs/patra/runbooks/v0.16-notification-go-live-runbook.md` |
 
 ## 6. 什么时候拆分
 

@@ -253,7 +253,7 @@ EventExternalizationConfiguration eventExternalizationConfiguration() {
 | `ownerId` | Long，可空 | 投稿经验的作者；文献为空 |
 | `ownerAnonymous` | boolean | 投稿经验是匿名发布的；文献为 `false` |
 
-`api.post.event.ExperienceOutcome`：投稿经验的结果，只出现在 `helpful.marked`（目标是经验时）。
+`api.reaction.event.ExperienceOutcome`：投稿经验的结果，只出现在 `helpful.marked`（目标是经验时）。
 
 | 字段 | 类型 | 含义 |
 |---|---|---|
@@ -416,3 +416,5 @@ IT 底座：`InteractionFlowITSupport` 加 `RabbitMQContainerInitializer`，导�
 6. 结果给天数不给周数，周数是展示规则（4.6）。
 7. `event_publication` 放 `public`，迁移脚本放 `db/migration/events/`（4.9）。
 8. `HelpfulUnmarkedEvent` 只带目标与取消的人，不为没有订阅方的事件多读目标（4.3）。
+9. `ExperienceOutcome` 放 `api.reaction.event`（不放 `api.post.event`）：api 层的子域包互不公开（`SubdomainArchitectureRules`），只有 `HelpfulMarked` 用它。
+10. 集成事件放 `api.{子域}.event`：包模板原来只认 `endpoint`、`dto`，编排会话在 `d3644fde4` 统一放开（PAP-141 与 PAP-104 共用）。
