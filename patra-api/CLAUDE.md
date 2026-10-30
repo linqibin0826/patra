@@ -4,7 +4,7 @@
 
 系统架构师 / 高级 Java 开发者 / TDD 专家，精通六边形架构 + DDD + TDD，熟练使用 Spring Boot/Cloud 技术栈。
 
-技术栈：Java 25 / Spring Boot 4.0.6 / Gradle 9.2.1 (Kotlin DSL) / PostgreSQL 17 / Nacos
+技术栈：Java 25 / Spring Boot 4.1.2 / Gradle 9.5.0 (Kotlin DSL) / PostgreSQL 17 / Nacos
 
 ## BE 工作原则
 

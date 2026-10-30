@@ -139,9 +139,9 @@ identity 自己的 `IDN-0401` 仍会出现：带有效断言但用户已封禁�
 
 | 组件 | 版本 |
 |---|---|
-| Spring Boot | 4.0.8 |
-| Spring Security | 7.0.7 |
-| Spring Cloud | 2025.1.3（gateway-server-webmvc 5.0.3） |
+| Spring Boot | 4.1.2 |
+| Spring Security | 7.1.2 |
+| Spring Cloud | 2025.1.4（gateway-server-webmvc 5.0.4） |
 | Nacos Discovery | spring-cloud-alibaba 2025.1.0.0 |
-| springdoc（webmvc Scalar） | 3.0.1 |
+| springdoc（webmvc Scalar） | 3.2.0 |
 | Java | 25 |

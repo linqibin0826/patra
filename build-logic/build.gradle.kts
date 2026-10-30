@@ -25,12 +25,8 @@ dependencies {
 
     // 安全版本约束：spring-boot-gradle-plugin 传递引入的有漏洞版本
     // - commons-lang3 3.16.0（经 commons-compress 1.27.1）
-    // - httpclient5 5.5.2 / httpcore5(-h2) 5.3.6（经 spring-boot-buildpack-platform）
     constraints {
         implementation("org.apache.commons:commons-lang3:${libs.versions.commons.lang3.get()}")
-        implementation("org.apache.httpcomponents.client5:httpclient5:${libs.versions.httpclient5.get()}")
-        implementation("org.apache.httpcomponents.core5:httpcore5:${libs.versions.httpcore5.get()}")
-        implementation("org.apache.httpcomponents.core5:httpcore5-h2:${libs.versions.httpcore5.get()}")
     }
 
     // build-logic 自己的测试：规则是纯函数用 JUnit 测，插件挂载用 TestKit 冒烟
