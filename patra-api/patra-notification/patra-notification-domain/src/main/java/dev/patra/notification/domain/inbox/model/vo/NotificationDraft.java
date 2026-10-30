@@ -14,6 +14,7 @@ import lombok.Builder;
 /// @param subjectId 所在对象
 /// @param commentId 评论；回复与 @ 必填
 /// @param occurredAt 排序时间（事件里的发表或编辑时刻）
+/// @param createdAt 写入信箱的时刻（处理时的时钟）
 @Builder
 public record NotificationDraft(
     long recipientId,
@@ -22,11 +23,13 @@ public record NotificationDraft(
     boolean actorAnonymous,
     long subjectId,
     Long commentId,
-    Instant occurredAt) {
+    Instant occurredAt,
+    Instant createdAt) {
 
   /// 校验非空。
   public NotificationDraft {
     Objects.requireNonNull(type, "type 不能为 null");
     Objects.requireNonNull(occurredAt, "occurredAt 不能为 null");
+    Objects.requireNonNull(createdAt, "createdAt 不能为 null");
   }
 }
