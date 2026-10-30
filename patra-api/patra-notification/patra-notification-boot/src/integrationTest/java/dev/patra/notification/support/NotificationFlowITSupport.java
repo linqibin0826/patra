@@ -30,7 +30,7 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/// 各子域流程测试的共用底座：真实 PostgreSQL、真实的身份断言验签；identity 由 WireMock 扮演，
+/// 各子域流程测试的共用底座：真实 PostgreSQL、真实的身份断言验签；identity 与 interaction 由 WireMock 扮演，
 /// 经 Spring Cloud LoadBalancer + SimpleDiscoveryClient 走 `lb://` 这条真实的路。
 /// 写法同 interaction 的 `InteractionFlowITSupport`。
 ///
@@ -47,17 +47,23 @@ public abstract class NotificationFlowITSupport {
   /// 假 identity 的 WireMock：每个测试 JVM 只启动一次，端口在整个 JVM 里不变（理由同 interaction）。
   protected static final WireMockServer identity = start();
 
+  /// 假 interaction 的 WireMock（提醒列表读时现查对象视图与经验结果）。
+  protected static final WireMockServer interaction = start();
+
   @DynamicPropertySource
   static void downstreamInstances(DynamicPropertyRegistry registry) {
     registry.add("spring.cloud.discovery.enabled", () -> "true");
     registry.add(
         "spring.cloud.discovery.client.simple.instances.patra-identity[0].uri", identity::baseUrl);
+    registry.add(
+        "spring.cloud.discovery.client.simple.instances.patra-interaction[0].uri",
+        interaction::baseUrl);
   }
 
   @Autowired protected RestTestClient restClient;
   @Autowired protected JdbcTemplate jdbcTemplate;
 
-  /// 每例从干净的表与空的假 identity 开始：没打桩的请求回 404。
+  /// 每例从干净的表与空的假 identity、interaction 开始：没打桩的请求回 404。
   @BeforeEach
   void resetWorld() {
     List<String> tables =
@@ -69,6 +75,7 @@ public abstract class NotificationFlowITSupport {
       jdbcTemplate.update("TRUNCATE " + String.join(", ", tables));
     }
     identity.resetAll();
+    interaction.resetAll();
   }
 
   /// identity 对这个人的收件信息查询回这样一条。
@@ -92,6 +99,44 @@ public abstract class NotificationFlowITSupport {
                         + ",\"accountStatus\":\""
                         + status
                         + "\",\"username\":null,\"displayName\":null}]}")));
+  }
+
+  /// identity 的批量用户摘要对任何请求都回这些人（JSON 数组的元素，写法同 `UserSummaryResp`）。
+  ///
+  /// @param usersJson 摘要，逗号分隔的 JSON 对象
+  protected static void stubSummaries(String usersJson) {
+    identity.stubFor(
+        post(urlPathEqualTo("/_internal/users/summaries"))
+            .willReturn(okJson("{\"users\":[" + usersJson + "]}")));
+  }
+
+  /// interaction 的对象视图接口对任何请求都回这些视图（写法同 `SubjectViewResp`）。
+  ///
+  /// @param subjectsJson 视图，逗号分隔的 JSON 对象
+  protected static void stubSubjectViews(String subjectsJson) {
+    interaction.stubFor(
+        post(urlPathEqualTo("/_internal/subjects/views"))
+            .willReturn(okJson("{\"subjects\":[" + subjectsJson + "]}")));
+  }
+
+  /// interaction 的经验结果接口对任何请求都回这些结果（写法同 `ExperienceOutlineResp`）。
+  ///
+  /// @param outlinesJson 结果，逗号分隔的 JSON 对象
+  protected static void stubPostOutlines(String outlinesJson) {
+    interaction.stubFor(
+        post(urlPathEqualTo("/_internal/posts/outlines"))
+            .willReturn(okJson("{\"outlines\":[" + outlinesJson + "]}")));
+  }
+
+  /// interaction 对任何请求都回 503。
+  protected static void interactionDown() {
+    interaction.stubFor(
+        any(anyUrl())
+            .willReturn(
+                aResponse()
+                    .withStatus(503)
+                    .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE)
+                    .withBody("{\"code\":\"INTERACTION-0503\",\"traits\":[\"DEP_UNAVAILABLE\"]}")));
   }
 
   /// identity 对任何请求都回 503。

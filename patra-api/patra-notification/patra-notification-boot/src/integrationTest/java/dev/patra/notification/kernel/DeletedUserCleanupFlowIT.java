@@ -52,6 +52,39 @@ class DeletedUserCleanupFlowIT extends NotificationFlowITSupport {
         .isEqualTo(404);
   }
 
+  /// 信箱与在站记录也接进清理：已注销的人作为收件人的提醒、他的在站记录被删，别人的保留。
+  @Test
+  void should_delete_inbox_and_presence_of_deleted_users() {
+    jdbcTemplate.update(
+        "INSERT INTO inbox.notification (recipient_id, notification_id, category, type, actor_id,"
+            + " actor_anonymous, subject_id, comment_id, occurred_at, created_at)"
+            + " VALUES (?, 1, 'REPLY', 'COMMENT_REPLY', 3, false, 40, 500, now(), now()),"
+            + " (?, 2, 'REPLY', 'COMMENT_REPLY', 3, false, 40, 500, now(), now())",
+        GONE,
+        ACTIVE);
+    jdbcTemplate.update(
+        "INSERT INTO kernel.presence (user_id, last_seen_at) VALUES (?, now()), (?, now())",
+        GONE,
+        ACTIVE);
+    identity.stubFor(
+        post(urlPathEqualTo("/_internal/users/summaries"))
+            .willReturn(
+                okJson(
+                    "{\"users\":["
+                        + summary(GONE, "DELETED")
+                        + ","
+                        + summary(ACTIVE, "ACTIVE")
+                        + "]}")));
+
+    CleanupResult result = commandBus.handle(CleanupDeletedUsersCommand.of());
+
+    assertThat(result.failedBatches()).isZero();
+    assertThat(jdbcTemplate.queryForList("SELECT recipient_id FROM inbox.notification", Long.class))
+        .containsExactly(ACTIVE);
+    assertThat(jdbcTemplate.queryForList("SELECT user_id FROM kernel.presence", Long.class))
+        .containsExactly(ACTIVE);
+  }
+
   /// identity 不可用：这一批计失败，什么都不删。
   @Test
   void should_keep_everything_when_identity_down() {
