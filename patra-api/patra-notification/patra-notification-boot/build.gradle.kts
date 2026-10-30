@@ -25,6 +25,9 @@ dependencies {
     // XXL-Job 执行器（执行器端口 = 服务端口 + 1 = 6601）
     implementation(libs.xxl.job)
 
+    // 通用事件模块：消费 interaction、identity 经 RabbitMQ 发来的集成事件（去重表与登记表见 infra 的 db/migration/kernel）
+    implementation(project(":patra-tool:patra-tool-events"))
+
     // 架构测试要看到全部五层：domain、app、api 在后续 Issue 接上层间依赖之前不在运行时类路径上
     testImplementation(project(":patra-api:patra-notification:patra-notification-domain"))
     testImplementation(project(":patra-api:patra-notification:patra-notification-app"))

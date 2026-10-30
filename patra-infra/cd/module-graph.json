@@ -419,7 +419,8 @@
             "project": ":patra-tool:patra-tool-events",
             "unit": "foundation",
             "impacts": [
-                "foundation"
+                "foundation",
+                "notification"
             ],
             "tasks": [
                 "check",
