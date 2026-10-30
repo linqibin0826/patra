@@ -46,6 +46,8 @@ export async function orderOf(rows: Locator, items: string[]): Promise<number[]>
 /// 随后回滚），结束后不该有失败提示
 export async function toggleHelpful(scope: Locator): Promise<void> {
   const button = helpfulButton(scope);
+  // 登录状态还没回来时按钮标 aria-disabled、点了不响应：等它可点
+  await expect(button).not.toHaveAttribute("aria-disabled", "true", ROUND_TRIP);
   const before = await button.getAttribute("aria-pressed");
   await button.click();
   await expect(button).toHaveAttribute("aria-pressed", before === "true" ? "false" : "true");

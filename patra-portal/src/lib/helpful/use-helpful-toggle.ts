@@ -45,6 +45,8 @@ export function useHelpfulToggle({
 }): {
   shown: HelpfulValue;
   busy: boolean;
+  /// 登录状态已确定（未登录或已登录），点击才会响应
+  ready: boolean;
   hint: HelpfulHint | null;
   toggle: () => void;
   /// 指针或焦点停在提示里：暂停计时
@@ -98,6 +100,11 @@ export function useHelpfulToggle({
   }, [hint, held]);
 
   const toggle = () => {
+    // 登录状态还没回来时不响应：未登录、邮箱未验证都还判断不了，而且点击时记不下是谁点的，请求成功后状态一到会被
+    // 当成换了访客、退回未点（生产构建上手机尺寸一打开页面就点会遇到）
+    if (current.status === "pending") {
+      return;
+    }
     if (helpful === null || current.status === "anonymous") {
       redirectToLogin();
       return;
@@ -148,5 +155,12 @@ export function useHelpfulToggle({
     });
   };
 
-  return { shown, busy: pending !== null, hint, toggle, holdHint: setHeld };
+  return {
+    shown,
+    busy: pending !== null,
+    ready: current.status !== "pending",
+    hint,
+    toggle,
+    holdHint: setHeld,
+  };
 }
