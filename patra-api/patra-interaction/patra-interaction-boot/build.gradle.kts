@@ -44,4 +44,6 @@ dependencies {
     testImplementation(testFixtures(project(":patra-api:patra-interaction:patra-interaction-infra")))
     // 流程测试用测试私钥签身份断言
     testImplementation(testFixtures(project(":patra-tool:patra-tool-security")))
+    // 事件流程测试用 Modulith 的事件序列化器核对登记表里的领域事件能原样读回（PAP-141）
+    testImplementation("org.springframework.modulith:spring-modulith-events-core")
 }

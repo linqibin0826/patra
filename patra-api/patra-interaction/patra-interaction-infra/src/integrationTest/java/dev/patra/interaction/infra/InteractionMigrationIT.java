@@ -39,6 +39,32 @@ class InteractionMigrationIT {
             "public", "subject", "collection", "discussion", "post", "notification", "reaction");
   }
 
+  /// 事件发布登记表（PAP-141）在 public，不属于任何子域；列是 Modulith 固定的那几列。
+  @Test
+  void should_create_event_publication_in_public() {
+    assertThat(
+            jdbcTemplate.queryForList(
+                "SELECT table_schema FROM information_schema.tables "
+                    + "WHERE table_name = 'event_publication'",
+                String.class))
+        .containsExactly("public");
+    assertThat(
+            jdbcTemplate.queryForList(
+                "SELECT column_name FROM information_schema.columns "
+                    + "WHERE table_schema = 'public' AND table_name = 'event_publication'",
+                String.class))
+        .containsExactlyInAnyOrder(
+            "id",
+            "listener_id",
+            "event_type",
+            "serialized_event",
+            "publication_date",
+            "completion_date",
+            "status",
+            "completion_attempts",
+            "last_resubmission_date");
+  }
+
   /// Flyway 历史表只有一张，在 public。
   @Test
   void should_keep_a_single_flyway_history_in_public() {
