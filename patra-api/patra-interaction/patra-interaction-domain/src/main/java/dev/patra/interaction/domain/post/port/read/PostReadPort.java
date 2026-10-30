@@ -1,6 +1,7 @@
 package dev.patra.interaction.domain.post.port.read;
 
 import dev.patra.interaction.domain.post.model.aggregate.PostAggregate;
+import dev.patra.interaction.domain.post.model.read.ExperienceDigest;
 import dev.patra.interaction.domain.post.model.read.ExperienceStats;
 import dev.patra.interaction.domain.post.model.read.HelpfulRankedPost;
 import dev.patra.interaction.domain.post.model.read.PostStats;
@@ -12,6 +13,7 @@ import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /// 投稿经验的读端：期刊与作者的分页列表、修改历史、期刊汇总的原始统计、每条经验的公开计数。只读未删除的经验
 /// （历史与计数除外）。公开计数按 SQL 读 reaction 与 discussion 的统计表，不依赖它们的 Java 类型。
@@ -71,4 +73,10 @@ public interface PostReadPort {
   /// @param since 窗口起点（投稿日期，含）
   /// @return 统计
   ExperienceStats summarize(SubjectId journal, LocalDate since);
+
+  /// 一条经验的结果与正文，给别的子域带进事件。已删除的也返回。
+  ///
+  /// @param postId 帖子 ID
+  /// @return 摘要；没有这条为空
+  Optional<ExperienceDigest> findDigest(long postId);
 }

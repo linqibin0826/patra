@@ -1,6 +1,8 @@
 package dev.patra.interaction.infra.post.persistence;
 
 import dev.patra.interaction.domain.post.model.aggregate.PostAggregate;
+import dev.patra.interaction.domain.post.model.read.ExperienceDigest;
+import dev.patra.interaction.domain.post.model.read.ExperienceOutline;
 import dev.patra.interaction.domain.post.model.read.ExperienceStats;
 import dev.patra.interaction.domain.post.model.read.HelpfulRankedPost;
 import dev.patra.interaction.domain.post.model.read.PostStats;
@@ -17,6 +19,7 @@ import java.time.ZoneOffset;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -229,6 +232,23 @@ public class PostReadAdapter implements PostReadPort {
         .param("id", id.value())
         .query(rows.revisionMapper())
         .list();
+  }
+
+  /// 一条经验的结果与正文：按帖子 ID 读整条（不看是否删除）再取结果与正文。
+  ///
+  /// @param postId 帖子 ID
+  /// @return 摘要；没有这条为空
+  @Override
+  public Optional<ExperienceDigest> findDigest(long postId) {
+    return jdbc.sql("SELECT " + PostRows.COLUMNS + PostRows.FROM + " WHERE p.post_id = :id")
+        .param("id", postId)
+        .query(rows.postMapper())
+        .optional()
+        .map(
+            post ->
+                ExperienceDigest.of(
+                    ExperienceOutline.of(post.fields()),
+                    post.body() == null ? null : post.body().value()));
   }
 
   /// 期刊汇总的原始统计。
