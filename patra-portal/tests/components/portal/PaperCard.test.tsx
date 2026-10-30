@@ -110,3 +110,27 @@ describe("PaperCard", () => {
     );
   });
 });
+
+describe("PaperCard · 公开计数", () => {
+  const follows = (a: Node, b: Node) =>
+    Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+
+  it("should_show_stats_between_read_more_and_citations", () => {
+    renderWithQuery(
+      <PaperCard paper={makePaper()} stats={{ collectorCount: 2, discussionCount: 5 }} />,
+    );
+    const collectors = screen.getByText("2 人收藏");
+    expect(follows(screen.getByRole("link", { name: /阅读详情/ }), collectors)).toBe(true);
+    expect(follows(collectors, screen.getByText(/142 引用/))).toBe(true);
+    expect(screen.getByRole("link", { name: "5 条讨论" })).toHaveAttribute(
+      "href",
+      "/papers/p1#discussion",
+    );
+  });
+
+  it("should_not_show_stats_when_unavailable", () => {
+    renderWithQuery(<PaperCard paper={makePaper()} stats={null} />);
+    expect(screen.queryByText(/人收藏|条讨论/)).not.toBeInTheDocument();
+    expect(screen.getByText(/142 引用/)).toBeInTheDocument();
+  });
+});

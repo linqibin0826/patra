@@ -203,3 +203,25 @@ describe("CommentItem 有帮助", () => {
     expect(screen.queryByText(/有帮助/)).toBeNull();
   });
 });
+
+describe("CommentItem · 操作行右端", () => {
+  it("should_render_trailing_in_action_row", () => {
+    renderItem(makeComment(), { trailing: <span>楼内统计</span> });
+    const reply = screen.getByRole("button", { name: "回复" });
+    expect(reply.parentElement).toContainElement(screen.getByText("楼内统计"));
+  });
+
+  it("should_render_trailing_after_deleted_placeholder", () => {
+    renderItem(makeComment({ deleted: true, body: null, author: null }), {
+      trailing: <span>楼内统计</span>,
+    });
+    expect(screen.getByText("该评论已删除").parentElement).toContainElement(
+      screen.getByText("楼内统计"),
+    );
+  });
+
+  it("should_hide_trailing_while_editing", () => {
+    renderItem(makeComment(), { trailing: <span>楼内统计</span>, editing: <p>编辑器</p> });
+    expect(screen.queryByText("楼内统计")).not.toBeInTheDocument();
+  });
+});

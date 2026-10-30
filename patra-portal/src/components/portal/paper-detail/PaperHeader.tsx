@@ -31,11 +31,15 @@ const TITLE_CLASS = {
 export function PaperHeader({
   paper,
   fullTextFacts,
+  interactionFacts,
   shareLink,
 }: {
   paper: PaperDetail;
   /** 事实条里来自全文接口的几格（Suspense 包好的节点） */
   fullTextFacts?: ReactNode;
+  /** 事实条最后的收藏人数、讨论数两格（Suspense 包好的节点）；本人收藏 / 取消时收藏格 ±1，所以和收藏按钮在同一个
+   *  `LibraryStatusProvider` 里 */
+  interactionFacts?: ReactNode;
   /** 这篇的规范地址（服务端按门户公开地址拼好），分享面板「复制链接」用 */
   shareLink: string;
 }) {
@@ -129,40 +133,49 @@ export function PaperHeader({
         {published != null && <span className="tabular-nums text-fg-2">&nbsp;· {published}</span>}
       </div>
 
-      <PaperFacts paper={paper} fullTextFacts={fullTextFacts} />
+      <LibraryStatusProvider keys={[paper.id]}>
+        <PaperFacts
+          paper={paper}
+          fullTextFacts={fullTextFacts}
+          interactionFacts={interactionFacts}
+        />
 
-      <div className="anim-rise mt-6 flex flex-wrap items-center gap-3 [--delay:200ms] max-[540px]:flex-col max-[540px]:items-stretch">
-        <FullTextPrimaryAction paper={paper} />
-        {/* 次按钮组：桌面与主按钮同一行；≤ 540px 等分一行、图标在上文字在下（方案 A），
+        <div className="anim-rise mt-6 flex flex-wrap items-center gap-3 [--delay:200ms] max-[540px]:flex-col max-[540px]:items-stretch">
+          <FullTextPrimaryAction paper={paper} />
+          {/* 次按钮组：桌面与主按钮同一行；≤ 540px 等分一行、图标在上文字在下（方案 A），
             有几个就几等分，「收藏暂不可用」变长也不挤动其他按钮 */}
-        {/* biome-ignore lint/a11y/useSemanticElements: 这是一组操作按钮，不是表单控件，用 fieldset 不对 */}
-        <div
-          role="group"
-          aria-label="次要操作"
-          className="contents max-[540px]:grid max-[540px]:grid-flow-col max-[540px]:auto-cols-fr max-[540px]:gap-2"
-        >
-          <FullTextPdfAction paper={paper} className={COMPACT} />
-          <LibraryStatusProvider keys={[paper.id]}>
+          {/* biome-ignore lint/a11y/useSemanticElements: 这是一组操作按钮，不是表单控件，用 fieldset 不对 */}
+          <div
+            role="group"
+            aria-label="次要操作"
+            className="contents max-[540px]:grid max-[540px]:grid-flow-col max-[540px]:auto-cols-fr max-[540px]:gap-2"
+          >
+            <FullTextPdfAction paper={paper} className={COMPACT} />
             <SaveButton
               paperKey={paper.id}
               title={paper.title}
               variant="pill"
               className={COMPACT}
             />
-          </LibraryStatusProvider>
-          <ShareButton paperId={paper.id} pmid={paper.pmid} link={shareLink} className={COMPACT} />
+            <ShareButton
+              paperId={paper.id}
+              pmid={paper.pmid}
+              link={shareLink}
+              className={COMPACT}
+            />
+          </div>
+          {pmcUrl && (
+            <a
+              href={pmcUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="link-draw ml-2 font-sans text-sm font-medium text-fg-2 hover:text-fg-1 max-[540px]:ml-0 max-[540px]:self-start"
+            >
+              在 PMC 查看原文 ↗
+            </a>
+          )}
         </div>
-        {pmcUrl && (
-          <a
-            href={pmcUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="link-draw ml-2 font-sans text-sm font-medium text-fg-2 hover:text-fg-1 max-[540px]:ml-0 max-[540px]:self-start"
-          >
-            在 PMC 查看原文 ↗
-          </a>
-        )}
-      </div>
+      </LibraryStatusProvider>
     </section>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import { MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { AuthorAvatar } from "@/components/discussion/AuthorIdentity";
 import { HelpfulButton } from "@/components/helpful/HelpfulButton";
@@ -12,6 +13,7 @@ import {
   formatSubmittedMonth,
 } from "@/lib/experience/format";
 import { ARTICLE_TYPE_LABELS } from "@/lib/experience/labels";
+import { formatCount } from "@/lib/format-count";
 import { refetchPostLists } from "@/lib/helpful/cache";
 import type { Experience, UserExperience } from "@/lib/interaction/experience-schema";
 import { excerpt } from "@/lib/markdown/plain";
@@ -106,7 +108,7 @@ export function ExperienceRow(props: ExperienceRowProps) {
           </span>
         </>
       )}
-      {(!experience.mine || experience.helpfulCount > 0) && (
+      {(!experience.mine || experience.helpfulCount > 0 || experience.replyCount > 0) && (
         <div data-row-foot className="relative z-1 mt-1 flex items-center gap-4">
           <HelpfulButton
             target={{ type: "post", id: experience.postId }}
@@ -116,6 +118,13 @@ export function ExperienceRow(props: ExperienceRowProps) {
             variant="text"
             onGone={() => refetchPostLists(client)}
           />
+          {/* 纯文本：点了落在铺满的标题链接上，进经验页 */}
+          {experience.replyCount > 0 && (
+            <span className="inline-flex items-center gap-1 text-xs text-fg-3">
+              <MessageCircle className="size-3.5" strokeWidth={1.75} aria-hidden="true" />
+              {formatCount(experience.replyCount)} 条回复
+            </span>
+          )}
         </div>
       )}
     </article>

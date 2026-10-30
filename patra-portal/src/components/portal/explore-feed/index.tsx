@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { LibraryStatusProvider } from "@/components/library/LibraryStatusProvider";
 import { PaperCard } from "@/components/portal/PaperCard";
 import { SectionEyebrow } from "@/components/portal/SectionEyebrow";
+import { fetchPaperStats, type PaperStatsMap } from "@/lib/interaction/stats";
 import { fetchFeed } from "@/lib/portal-api/publications";
 import type { FeedTab, Paper } from "@/types/portal";
 import { ExploreFeedEmpty } from "./empty";
@@ -25,21 +26,28 @@ export async function ExploreFeed({ tab }: { tab: FeedTab }) {
     );
   }
 
+  if (papers.length === 0) {
+    return (
+      <FeedSection tabs={<ExploreFeedTabs currentTab={tab} />}>
+        <ExploreFeedEmpty reason="empty" />
+      </FeedSection>
+    );
+  }
+  const keys = papers.map((paper) => paper.id);
+  // 收藏人数与讨论数一屏一批（决策 C）：取不到就没有计数，文献流照常
+  const stats = await fetchPaperStats(keys);
   return (
     <FeedSection tabs={<ExploreFeedTabs currentTab={tab} />}>
-      {papers.length === 0 ? (
-        <ExploreFeedEmpty reason="empty" />
-      ) : (
-        <LibraryStatusProvider keys={papers.map((paper) => paper.id)}>
-          <FeedLayout papers={papers} />
-        </LibraryStatusProvider>
-      )}
+      <LibraryStatusProvider keys={keys}>
+        <FeedLayout papers={papers} stats={stats} />
+      </LibraryStatusProvider>
     </FeedSection>
   );
 }
 
 /// 编辑排版：第 1 篇为头条（左 7 栏），2–4 篇并列右 5 栏，其余进入两栏编号列表。
-function FeedLayout({ papers }: { papers: Paper[] }) {
+function FeedLayout({ papers, stats }: { papers: Paper[]; stats: PaperStatsMap | null }) {
+  const statsOf = (paper: Paper) => stats?.get(paper.id) ?? null;
   const [first, ...rest] = papers;
   const side = rest.slice(0, SIDE_COUNT);
   const more = rest.slice(SIDE_COUNT);
@@ -48,13 +56,13 @@ function FeedLayout({ papers }: { papers: Paper[] }) {
       <div className="grid grid-cols-1 lg:grid-cols-12 lg:gap-x-12">
         {first && (
           <div className="max-lg:pb-8 lg:col-span-7">
-            <PaperCard paper={first} variant="lead" index={1} />
+            <PaperCard paper={first} variant="lead" index={1} stats={statsOf(first)} />
           </div>
         )}
         <ol className="flex flex-col lg:col-span-5">
           {side.map((p, i) => (
             <li key={p.id} className="flex-1">
-              <PaperCard paper={p} index={i + 2} />
+              <PaperCard paper={p} index={i + 2} stats={statsOf(p)} />
             </li>
           ))}
         </ol>
@@ -65,7 +73,7 @@ function FeedLayout({ papers }: { papers: Paper[] }) {
         <ol className="mt-4 grid grid-cols-2 gap-x-12 max-md:grid-cols-1">
           {more.map((p, i) => (
             <li key={p.id} className="reveal max-md:[&:nth-child(n+5)]:hidden">
-              <PaperCard paper={p} index={i + 2 + SIDE_COUNT} />
+              <PaperCard paper={p} index={i + 2 + SIDE_COUNT} stats={statsOf(p)} />
             </li>
           ))}
         </ol>

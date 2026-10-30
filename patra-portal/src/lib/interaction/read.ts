@@ -1,10 +1,7 @@
 import "server-only";
 import type { z } from "zod";
-import { logRequestError, logUnexpectedResponse } from "@/lib/auth/gateway-response";
+import { logUnexpectedResponse } from "@/lib/auth/gateway-response";
 import { callInteraction, type InteractionReply } from "@/lib/interaction/request";
-import type { Page } from "@/lib/interaction/schema";
-import { fetchPublicationCards } from "@/lib/portal-api/publications";
-import type { Paper } from "@/types/portal";
 
 /// 读 interaction 的结果。不抛错：互动区块失败只降级，不拖垮页面（决策 H）。
 /// - `signed-out`：没有会话或会话失效（RSC 里不能清 Cookie，交给调用方跳登录）
@@ -61,39 +58,4 @@ export async function readPublic<S extends z.ZodType>(
     return toRead(await callInteraction(path, init, { auth: "none" }), schema, path);
   }
   return toRead(reply, schema, path);
-}
-
-/// 条目与它的卡片。`paper` 为 null：条目已失效，或 catalog 这次没回它（刚软删、对账还没跑），按已失效外观显示
-export interface WithPaper<I> {
-  item: I;
-  paper: Paper | null;
-}
-
-/// 给一页条目配卡片：只为 `ACTIVE` 且有 `key` 的取，一页一次批量请求；卡片取不到时整页 `unavailable`
-export async function attachPapers<I extends { key: string | null; state: string }>(
-  page: Page<I>,
-): Promise<Read<Page<WithPaper<I>>>> {
-  const keys = [
-    ...new Set(
-      page.items.flatMap((item) => (item.state === "ACTIVE" && item.key ? [item.key] : [])),
-    ),
-  ];
-  let papers: Paper[];
-  try {
-    papers = await fetchPublicationCards(keys);
-  } catch (error) {
-    logRequestError("/patra-catalog/portal/publications/batch", error);
-    return { kind: "unavailable" };
-  }
-  const byId = new Map(papers.map((paper) => [paper.id, paper]));
-  return {
-    kind: "ok",
-    data: {
-      ...page,
-      items: page.items.map((item) => ({
-        item,
-        paper: item.state === "ACTIVE" && item.key ? (byId.get(item.key) ?? null) : null,
-      })),
-    },
-  };
 }

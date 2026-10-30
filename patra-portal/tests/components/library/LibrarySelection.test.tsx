@@ -56,6 +56,7 @@ const OVERVIEW = makeOverview({
 const entry = (n: number): LibraryEntry => ({
   item: makeLibraryItem({ itemId: String(500 + n), key: String(10 + n), collectionIds: [] }),
   paper: makePaper({ id: String(10 + n), title: `Paper ${n}` }),
+  stats: null,
 });
 
 function renderView(view = "all", page = 1, entries = [entry(1), entry(2)]) {

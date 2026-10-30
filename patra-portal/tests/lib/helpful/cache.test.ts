@@ -16,7 +16,7 @@ const ON = { helpful: true, helpfulCount: 4 };
 
 function threads(...pages: ReturnType<typeof makeThread>[][]): ThreadsData {
   return {
-    pages: pages.map((items) => ({ items, nextCursor: null })),
+    pages: pages.map((items) => ({ items, nextCursor: null, total: 0 })),
     pageParams: pages.map((_, index) => (index === 0 ? null : `c${index}`)),
   };
 }

@@ -16,6 +16,8 @@ interface PublicationDetailViewProps {
   shareLink: string;
   /** 事实条里来自全文接口的几格（页面在 Suspense 里流式给出） */
   fullTextFacts?: ReactNode;
+  /** 事实条最后的收藏人数、讨论数两格（页面在 Suspense 里流式给出） */
+  interactionFacts?: ReactNode;
   /** 全文区块（页面在 Suspense 里流式给出；没有时不渲染） */
   fullText?: ReactNode;
   /** 桌面侧栏的目录卡，只在有全文时放进侧栏 */
@@ -35,6 +37,7 @@ export function PublicationDetailView({
   paper,
   shareLink,
   fullTextFacts,
+  interactionFacts,
   fullText,
   tocCard,
   tocButton,
@@ -58,7 +61,12 @@ export function PublicationDetailView({
       />
 
       <div className="mx-auto max-w-page px-gutter pt-14 max-[980px]:pt-8">
-        <PaperHeader paper={paper} fullTextFacts={fullTextFacts} shareLink={shareLink} />
+        <PaperHeader
+          paper={paper}
+          fullTextFacts={fullTextFacts}
+          interactionFacts={interactionFacts}
+          shareLink={shareLink}
+        />
       </div>
 
       <div className="mx-auto grid max-w-page grid-cols-[minmax(0,1fr)_340px] items-start gap-14 px-gutter pt-16 max-[1100px]:gap-10 max-[980px]:grid-cols-1 max-[980px]:gap-8 max-[980px]:pt-10">

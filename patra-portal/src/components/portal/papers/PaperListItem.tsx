@@ -18,6 +18,8 @@ interface PaperListItemProps {
   detailedDate?: boolean;
   /** 显示证据徽章与摘要；文献库是整理视图，信息密度优先，不显示（简报 §3.10） */
   summary?: boolean;
+  /** 收藏人数与讨论数（`PaperStats`）：有摘要时在卡片末尾，没有摘要（文献库）时在元信息之后、归属与备注之前 */
+  stats?: ReactNode;
   /** 元信息之后的附加行（文献库条目的归属与备注） */
   children?: ReactNode;
 }
@@ -26,7 +28,7 @@ interface PaperListItemProps {
  * 文献检索页列表项（RSC）：PaperCard 的紧凑列表变体。
  * 来源行（来源 · DOI · 类型）→ 衬线标题（两行截断，可高亮）→ 期刊 · 年份 · 作者 → 证据徽章 → 摘要两行。
  * hover 时左侧页边一道陶土细线自上而下生长、标题下划线绘出。标题行右端可放一个 32px 操作（收藏按钮，简报 §3.1）。
- * 不放评论、被引数（被引数据全 0）。
+ * 摘要之后可放收藏人数与讨论数一行（简报 §3.12）；不放被引数（被引数据全 0）。
  */
 export function PaperListItem({
   paper,
@@ -34,6 +36,7 @@ export function PaperListItem({
   action,
   detailedDate = false,
   summary = true,
+  stats,
   children,
 }: PaperListItemProps) {
   const shownAuthors = paper.authors.slice(0, 2);
@@ -148,6 +151,7 @@ export function PaperListItem({
           {snippetText(paper.abstractSnippet)}
         </p>
       )}
+      {stats}
       {children}
     </article>
   );

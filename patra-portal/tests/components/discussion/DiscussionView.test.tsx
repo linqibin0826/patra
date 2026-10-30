@@ -6,7 +6,7 @@ import { renderDiscussion } from "@tests/support/discussion";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { DiscussionView } from "@/components/discussion/DiscussionView";
-import { PAPER_DISCUSSION_COPY } from "@/lib/discussion/copy";
+import { PAPER_DISCUSSION_COPY, POST_REPLIES_COPY } from "@/lib/discussion/copy";
 import { publishComment } from "@/lib/interaction/discussion-actions";
 import type { Thread } from "@/lib/interaction/discussion-schema";
 import { setHelpful } from "@/lib/interaction/helpful-actions";
@@ -77,19 +77,21 @@ const THREAD = makeThread({
   replies: [makeReply("2"), makeReply("3"), makeReply("4")],
   hasMoreReplies: true,
   repliesCursor: "r1",
+  replyCount: 4,
+  lastReplyAt: "2026-10-24T06:20:00Z",
 });
 
 describe("列表", () => {
-  it("根评论 + 前 3 条回复 + 展开更多回复（不带条数）", async () => {
+  it("根评论 + 前 3 条回复 + 展开其余回复（带剩余条数）", async () => {
     fetchMock.mockResolvedValueOnce(Response.json({ items: [makeReply("5")], nextCursor: null }));
     renderView(seedThreads([THREAD]));
     expect(screen.getAllByRole("article")).toHaveLength(4);
-    const more = screen.getByRole("button", { name: "展开更多回复" });
+    const more = screen.getByRole("button", { name: "展开其余 1 条回复" });
     expect(more).toHaveAttribute("aria-expanded", "false");
     await userEvent.setup().click(more);
     await waitFor(() => expect(screen.getAllByRole("article")).toHaveLength(5));
     expect(String(fetchMock.mock.calls[0]?.[0])).toBe("/api/comments/1/replies?cursor=r1");
-    expect(screen.queryByRole("button", { name: "展开更多回复" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /展开/ })).toBeNull();
   });
 
   it("排序：点最新改地址并按最新取", async () => {
@@ -376,5 +378,74 @@ describe("最有帮助", () => {
       }),
     );
     expect(document.querySelectorAll("#comment-2")).toHaveLength(1);
+  });
+});
+
+describe("标题条数", () => {
+  function seedTotal(total: number, sort = "asc") {
+    return (client: QueryClient) =>
+      client.setQueryData(queryKeys.discussionThreads("publication", "1", sort), {
+        pages: [{ items: total > 0 ? [makeThread()] : [], nextCursor: null, total }],
+        pageParams: [null],
+      });
+  }
+  const heading = () => screen.getByRole("heading", { name: "讨论 · Discussion" });
+
+  it("should_show_total_beside_title", () => {
+    renderView(seedTotal(7));
+    expect(heading().parentElement).toHaveTextContent("7 条");
+  });
+
+  it("should_not_show_total_when_empty", () => {
+    renderView(seedTotal(0));
+    expect(heading().parentElement).not.toHaveTextContent(/\d+ 条/);
+  });
+
+  it("should_not_show_total_while_loading_or_unavailable", async () => {
+    fetchMock.mockResolvedValue(new Response(null, { status: 503 }));
+    renderView();
+    expect(heading().parentElement).not.toHaveTextContent(/\d+ 条/);
+    await screen.findByRole("button", { name: "重试" });
+    expect(heading().parentElement).not.toHaveTextContent(/\d+ 条/);
+  });
+
+  it("should_add_one_after_own_root_posted", async () => {
+    params = new URLSearchParams("sort=latest");
+    publish.mockResolvedValue({
+      ok: true,
+      comment: makeComment({ commentId: "9", rootId: "9", body: "新的" }),
+    });
+    renderView(seedTotal(7, "latest"));
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole("button", { name: "写下你对这篇文献的看法、疑问或补充证据…" }),
+    );
+    fireEvent.change(screen.getByRole("combobox", { name: "评论内容" }), {
+      target: { value: "新的" },
+    });
+    await user.click(screen.getByRole("button", { name: "发表" }));
+    await waitFor(() => expect(heading().parentElement).toHaveTextContent("8 条"));
+  });
+
+  it("should_show_total_on_post_replies_title", () => {
+    renderDiscussion(
+      <DiscussionView
+        subject={{ type: "post", key: "5" }}
+        copy={POST_REPLIES_COPY}
+        viewer={SEED}
+        now={NOW}
+        basePath="/posts/5"
+        shareBase="http://patra.test/posts/5"
+      />,
+      {
+        seed: (client) =>
+          client.setQueryData(queryKeys.discussionThreads("post", "5", "asc"), {
+            pages: [{ items: [makeThread()], nextCursor: null, total: 5 }],
+            pageParams: [null],
+          }),
+      },
+    );
+    const title = screen.getByRole("heading", { name: "回复 · Replies" });
+    expect(title.parentElement).toHaveTextContent("5 条");
   });
 });

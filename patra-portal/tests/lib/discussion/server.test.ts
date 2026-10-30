@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { makeThread } from "@tests/fixtures/discussion";
+import { makeThread, makeThreadPage } from "@tests/fixtures/discussion";
 import { resetCookieJar } from "@tests/stubs/cookie-jar";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { parseDiscussionView, prefetchDiscussion } from "@/lib/discussion/server";
@@ -29,17 +29,17 @@ const keysOf = (state: Awaited<ReturnType<typeof prefetchDiscussion>>) =>
 
 describe("prefetchDiscussion", () => {
   it("列表取到：放进第一页", async () => {
-    fetchMock.mockResolvedValue(Response.json({ items: [makeThread()], nextCursor: null }));
+    fetchMock.mockResolvedValue(Response.json(makeThreadPage([makeThread()], { total: 1 })));
     const state = await prefetchDiscussion(PAPER, { mode: "list", sort: "asc" });
     expect(keysOf(state)).toEqual([["discussion", "publication", "11", "threads", "asc"]]);
     expect(state.queries[0]?.state.data).toEqual({
-      pages: [{ items: [makeThread()], nextCursor: null }],
+      pages: [makeThreadPage([makeThread()], { total: 1 })],
       pageParams: [null],
     });
   });
 
   it("最有帮助：按 sort=helpful 取，放进这种排序的缓存", async () => {
-    fetchMock.mockResolvedValue(Response.json({ items: [makeThread()], nextCursor: null }));
+    fetchMock.mockResolvedValue(Response.json(makeThreadPage([makeThread()], { total: 1 })));
     const state = await prefetchDiscussion(PAPER, { mode: "list", sort: "helpful" });
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/threads?sort=helpful");
     expect(keysOf(state)).toEqual([["discussion", "publication", "11", "threads", "helpful"]]);

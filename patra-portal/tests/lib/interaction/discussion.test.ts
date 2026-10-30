@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { makeComment, makeThread } from "@tests/fixtures/discussion";
+import { makeComment, makeThread, makeThreadPage } from "@tests/fixtures/discussion";
 import { resetCookieJar } from "@tests/stubs/cookie-jar";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -37,7 +37,7 @@ const headersOf = (index = 0) => (call(index)[1]?.headers ?? {}) as Record<strin
 
 describe("fetchThreads", () => {
   it("带会话请求一页楼，过 schema", async () => {
-    const page = { items: [makeThread()], nextCursor: "c2" };
+    const page = makeThreadPage([makeThread()], { nextCursor: "c2", total: 1 });
     fetchMock.mockResolvedValue(Response.json(page));
     await expect(fetchThreads(PAPER, "latest")).resolves.toEqual({ kind: "ok", data: page });
     expect(call()[0]).toBe(
@@ -57,17 +57,17 @@ describe("fetchThreads", () => {
   it("optional_read_retries_anonymously_when_token_rejected", async () => {
     fetchMock
       .mockResolvedValueOnce(Response.json({ code: "GW-0401" }, { status: 401 }))
-      .mockResolvedValueOnce(Response.json({ items: [], nextCursor: null }));
+      .mockResolvedValueOnce(Response.json(makeThreadPage([])));
     await expect(fetchThreads(PAPER, "asc")).resolves.toEqual({
       kind: "ok",
-      data: { items: [], nextCursor: null },
+      data: makeThreadPage([]),
     });
     expect(headersOf(1)).not.toHaveProperty("Authorization");
   });
 
   it("没有会话 Cookie：不带令牌照常请求", async () => {
     resetCookieJar();
-    fetchMock.mockResolvedValue(Response.json({ items: [], nextCursor: null }));
+    fetchMock.mockResolvedValue(Response.json(makeThreadPage([])));
     await expect(fetchThreads(PAPER, "asc")).resolves.toMatchObject({ kind: "ok" });
     expect(headersOf()).not.toHaveProperty("Authorization");
   });

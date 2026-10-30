@@ -36,7 +36,7 @@ describe("期刊页的一行（简报 §3.14）", () => {
     expect(row).toHaveTextContent("发布于 6 月 3 日");
   });
 
-  it("不显示回复数，只有一个链接（作者名不单独链接）", () => {
+  it("没有回复时不显示回复数，只有一个链接（作者名不单独链接）", () => {
     const row = renderRow();
     expect(within(row).getAllByRole("link")).toHaveLength(1);
     expect(row).not.toHaveTextContent("回复");
@@ -195,5 +195,31 @@ describe("经验行的有帮助（简报 v0.15 §3.9）", () => {
       />,
     );
     expect(screen.getByRole("article")).toHaveTextContent("3 人觉得有帮助");
+  });
+});
+
+describe("经验行的回复数（简报 v0.15 §3.9）", () => {
+  it("should_show_reply_count_in_foot_as_plain_text", () => {
+    const row = renderRow({ replyCount: 3 });
+    const foot = row.querySelector("[data-row-foot]");
+    expect(foot).toHaveTextContent("3 条回复");
+    expect(within(row).getAllByRole("link")).toHaveLength(1);
+  });
+
+  it("should_show_foot_with_only_reply_count_for_own_unhelped_experience", () => {
+    const row = renderRow({ mine: true, helpfulCount: 0, replyCount: 2 });
+    const foot = row.querySelector("[data-row-foot]");
+    expect(foot).toHaveTextContent(/^2 条回复$/);
+  });
+
+  it("should_group_thousands", () => {
+    expect(renderRow({ replyCount: 1500 })).toHaveTextContent("1,500 条回复");
+  });
+
+  it("should_show_reply_count_on_profile_row", () => {
+    renderDiscussion(
+      <ExperienceRow variant="profile" item={makeUserExperience({ replyCount: 4 })} now={NOW} />,
+    );
+    expect(screen.getByRole("article")).toHaveTextContent("4 条回复");
   });
 });

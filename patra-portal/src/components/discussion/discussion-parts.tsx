@@ -6,6 +6,7 @@ import { SortToggle } from "@/components/portal/SortToggle";
 import type { DiscussionCopy } from "@/lib/discussion/copy";
 import type { useDiscussionLocation } from "@/lib/discussion/use-discussion-location";
 import type { ViewerSeed } from "@/lib/discussion/viewer";
+import { formatCount } from "@/lib/format-count";
 import type { DiscussionSort, Subject } from "@/lib/interaction/discussion-schema";
 
 /// 新发表的评论高亮多久（简报 §3.4）
@@ -34,23 +35,31 @@ export interface DiscussionViewProps {
   titleId?: string;
 }
 
-/// 标题行：左边区块标题，右边排序（只在列表视图、且有评论时出）
+/// 标题行：左边区块标题与条数，右边排序（只在列表视图、且有评论时出）。条数是对象下未删除的评论总数（含楼内回复，
+/// v0.15 简报 §3.6），只在列表取到且不为 0 时传
 export function DiscussionHeader({
   title,
   titleId,
+  total,
   sort,
   onSort,
 }: {
   title: string;
   titleId: string;
+  total?: number;
   sort?: DiscussionSort;
   onSort?: (sort: DiscussionSort) => void;
 }) {
   return (
     <div className="flex min-h-9 flex-wrap items-center justify-between gap-x-4 gap-y-2">
-      <SectionEyebrow as="h2" id={titleId} className="mb-0">
-        {title}
-      </SectionEyebrow>
+      <div className="flex items-baseline gap-2.5">
+        <SectionEyebrow as="h2" id={titleId} className="mb-0">
+          {title}
+        </SectionEyebrow>
+        {total !== undefined && total > 0 && (
+          <span className="font-mono text-2xs tabular-nums text-fg-3">{formatCount(total)} 条</span>
+        )}
+      </div>
       {sort && onSort && <SortToggle value={sort} options={SORT_OPTIONS} onChange={onSort} />}
     </div>
   );

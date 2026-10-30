@@ -75,12 +75,18 @@ export const threadSchema = z.object({
   replies: z.array(commentSchema),
   hasMoreReplies: z.boolean(),
   repliesCursor: z.string().nullable(),
+  /// 这一楼未删除的回复数（任意深度）
+  replyCount: z.number().int().nonnegative(),
+  /// 最新一条未删除回复的发表时刻；没有回复时为 null
+  lastReplyAt: z.string().nullable(),
 });
 export type Thread = z.infer<typeof threadSchema>;
 
+/// 一页楼。`total` 是对象下未删除的评论总数（根评论与回复，不受分页影响）；数字与数字字符串都收
 export const threadPageSchema = z.object({
   items: z.array(threadSchema),
   nextCursor: z.string().nullable(),
+  total: z.coerce.number().int().nonnegative(),
 });
 export type ThreadPage = z.infer<typeof threadPageSchema>;
 

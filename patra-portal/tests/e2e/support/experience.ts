@@ -1,5 +1,5 @@
 import { type APIRequestContext, expect, type Locator, type Page } from "@playwright/test";
-import { ROUND_TRIP, waitForTakeover } from "@tests/e2e/support/account";
+import { ROUND_TRIP, visit, waitForTakeover } from "@tests/e2e/support/account";
 
 const gateway = () => process.env.PATRA_GATEWAY_BASE_URL?.replace(/\/+$/, "") ?? "";
 
@@ -23,7 +23,7 @@ export async function pickEmptyJournal(request: APIRequestContext): Promise<stri
 
 /// 打开期刊页并滚到经验区，等它接管
 export async function openExperiences(page: Page, journalId: string): Promise<Locator> {
-  await page.goto(`/journals/${journalId}`, { timeout: 60_000 });
+  await visit(page, `/journals/${journalId}`);
   const section = page.locator("#experiences");
   await section.scrollIntoViewIfNeeded();
   await expect(section.getByRole("article", { name: "同行经验" })).toBeVisible(ROUND_TRIP);

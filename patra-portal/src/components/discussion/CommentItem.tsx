@@ -38,6 +38,8 @@ interface CommentItemProps {
   editing?: ReactNode;
   /// 只读（「查看对话」对话框里）：没有操作行与菜单
   readOnly?: boolean;
+  /// 操作行右端（根评论的楼内统计）；占位评论排在「该评论已删除」右侧；编辑时随操作行隐藏
+  trailing?: ReactNode;
 }
 
 /// 超过 12 行折叠到 8 行（简报 §3.2）
@@ -54,6 +56,7 @@ export function CommentItem({
   fresh = false,
   editing,
   readOnly = false,
+  trailing,
 }: CommentItemProps) {
   const reply = level === "reply";
   const grid = reply
@@ -78,7 +81,10 @@ export function CommentItem({
         )}
       >
         <span className="aspect-square w-full rounded-full border border-dashed border-ink-300" />
-        <span className="text-sm text-fg-3 italic">该评论已删除</span>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          <span className="text-sm text-fg-3 italic">该评论已删除</span>
+          {trailing && <span className="ml-auto max-[880px]:ml-0">{trailing}</span>}
+        </div>
       </div>
     );
   }
@@ -122,6 +128,10 @@ export function CommentItem({
             <TextAction onClick={() => actions.onReply(comment)}>回复</TextAction>
             {comment.replyTo && !isSelfReply(comment) && (
               <TextAction onClick={() => actions.onShowConversation(comment)}>查看对话</TextAction>
+            )}
+            {/* 窄屏换到操作行下一行、左对齐（简报 §3.4） */}
+            {trailing && (
+              <span className="ml-auto max-[880px]:ml-0 max-[880px]:basis-full">{trailing}</span>
             )}
           </div>
         )}

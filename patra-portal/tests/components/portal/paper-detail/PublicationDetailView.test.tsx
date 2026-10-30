@@ -151,3 +151,23 @@ describe("PublicationDetailView · 全文", () => {
     expect(screen.queryByText("TOC-CARD")).toBeNull();
   });
 });
+
+describe("PublicationDetailView · 事实条的互动两格", () => {
+  it("should_pass_interaction_facts_into_the_facts_row", () => {
+    renderWithQuery(
+      <PublicationDetailView
+        paper={paper()}
+        shareLink="http://patra.test/papers/1"
+        interactionFacts={
+          <div>
+            <dt>收藏人数探针</dt>
+            <dd>2 人</dd>
+          </div>
+        }
+      />,
+    );
+    expect(screen.getByText("收藏人数探针").closest("dl")).toContainElement(
+      screen.getByText("被引"),
+    );
+  });
+});

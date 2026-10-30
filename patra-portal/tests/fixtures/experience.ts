@@ -33,6 +33,7 @@ export function makeExperience(overrides: Partial<Experience> = {}): Experience 
     mine: false,
     helpfulCount: 0,
     helpful: false,
+    replyCount: 0,
     ...overrides,
   };
 }

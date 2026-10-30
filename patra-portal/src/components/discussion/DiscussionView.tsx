@@ -24,6 +24,7 @@ import {
   appendReply,
   applyDeletion,
   insertRoot,
+  removeOwnComment,
   replaceComment,
   replaceThread,
   type ThreadsData,
@@ -148,7 +149,7 @@ function ThreadList({
       stale();
     },
     onDeleted: (comment, result) => {
-      update((data) => applyDeletion(data, comment.commentId, result));
+      update((data) => removeOwnComment(data, comment, result));
       stale();
       if (result.removedIds.includes(comment.rootId)) {
         return;
@@ -192,6 +193,7 @@ function ThreadList({
     <DiscussionHeader
       title={copy.title}
       titleId={titleId}
+      total={query.data?.pages[0]?.total}
       sort={withSort ? sort : undefined}
       onSort={location.setSort}
     />

@@ -34,6 +34,33 @@ describe("PaperFacts", () => {
     ]);
   });
 
+  it("should_put_interaction_facts_after_full_text_facts", () => {
+    render(
+      <PaperFacts
+        paper={makePaperDetail({ estimatedReadMin: null })}
+        fullTextFacts={
+          <div>
+            <dt>篇幅</dt>
+            <dd>1 词</dd>
+          </div>
+        }
+        interactionFacts={
+          <div>
+            <dt>收藏</dt>
+            <dd>2 人</dd>
+          </div>
+        }
+      />,
+    );
+    expect(cells().map((c) => c.split(" ")[0])).toEqual([
+      "证据等级",
+      "被引",
+      "来源",
+      "篇幅",
+      "收藏",
+    ]);
+  });
+
   it("没有阅读时长时不出「原文阅读」；全文三项插在「来源」之后", () => {
     render(
       <PaperFacts

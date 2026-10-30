@@ -114,3 +114,35 @@ describe("PaperListItem 标题行操作", () => {
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });
+
+describe("PaperListItem · 公开计数槽位", () => {
+  const follows = (a: Node, b: Node) =>
+    Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+
+  it("should_render_stats_after_summary_and_before_children", () => {
+    render(
+      <PaperListItem
+        paper={makePaper({ abstractSnippet: "Here, we demonstrate." })}
+        stats={<p>计数行</p>}
+      >
+        <p>归属行</p>
+      </PaperListItem>,
+    );
+    const stats = screen.getByText("计数行");
+    expect(follows(screen.getByText("Here, we demonstrate."), stats)).toBe(true);
+    expect(follows(stats, screen.getByText("归属行"))).toBe(true);
+  });
+
+  it("should_render_stats_after_meta_when_summary_hidden", () => {
+    render(
+      <PaperListItem paper={makePaper()} summary={false} stats={<p>计数行</p>}>
+        <p>归属行</p>
+      </PaperListItem>,
+    );
+    const stats = screen.getByText("计数行");
+    expect(follows(screen.getByRole("link", { name: "Journal of advanced research" }), stats)).toBe(
+      true,
+    );
+    expect(follows(stats, screen.getByText("归属行"))).toBe(true);
+  });
+});

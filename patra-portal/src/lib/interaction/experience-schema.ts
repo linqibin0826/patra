@@ -46,6 +46,8 @@ export const experienceSchema = z.object({
   mine: z.boolean(),
   helpfulCount: z.number().int().nonnegative(),
   helpful: z.boolean().nullable(),
+  /// 经验下未删除的评论数
+  replyCount: z.number().int().nonnegative(),
 });
 export type Experience = z.infer<typeof experienceSchema>;
 
