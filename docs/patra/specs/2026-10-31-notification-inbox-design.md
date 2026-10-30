@@ -424,7 +424,7 @@ UnreadCounts unreadCounts(long recipientId);   // replies、mentions、helpful�
 
 **`POST /_internal/subjects/views`**（`patra-interaction-api` 的 `dev.patra.interaction.api.subject.endpoint.SubjectEndpoint`）
 
-- 请求 `SubjectViewsReq { List<Long> subjectIds }`：1 ~ 100 个，重复的只算一次；超出、为空、含 `null` 422。
+- 请求 `SubjectViewsReq { List<Long> subjectIds }`：0 ~ 100 个，重复的只算一次；缺列表、超出、含 `null` 422（空列表回空，同 identity 的 `/summaries`）。
 - 响应 `SubjectViewsResp { List<SubjectViewResp> subjects }`，按请求顺序，查不到的省略：
 
 | 字段 | 说明 |
@@ -440,7 +440,7 @@ UnreadCounts unreadCounts(long recipientId);   // replies、mentions、helpful�
 
 **`POST /_internal/posts/outlines`**（`dev.patra.interaction.api.post.endpoint.PostEndpoint`）
 
-- 请求 `ExperienceOutlinesReq { List<Long> postIds }`：1 ~ 100 个，规则同上。
+- 请求 `ExperienceOutlinesReq { List<Long> postIds }`：0 ~ 100 个，规则同上。
 - 响应 `ExperienceOutlinesResp { List<ExperienceOutlineResp> outlines }`，每项 `postId`、`firstDecision`、`finalOutcome`、`firstRoundDays`、`totalDays`（可空）；已删除的也返回（提醒在删除事件到达前可能还在）；查不到的省略。
 - 实现：`adapter.post.internal.PostEndpointImpl` → `app.post.usecase.query.ExperienceOutlineQueryService` → `PostReadPort` 新增批量方法 `Map<PostId, ExperienceOutline> findOutlines(Collection<PostId>)`，复用 PAP-141 的 `ExperienceOutline`（在 PAP-141 合入后的基线上写）。
 - 经验的帖子 ID 就是它的对象视图里的 `key`。

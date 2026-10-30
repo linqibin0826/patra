@@ -251,6 +251,26 @@ public class PostReadAdapter implements PostReadPort {
                     post.body() == null ? null : post.body().value()));
   }
 
+  /// 一批经验的结果（含已删除的）。
+  ///
+  /// @param postIds 帖子 ID
+  /// @return 帖子 ID → 结果
+  @Override
+  public Map<PostId, ExperienceOutline> findOutlines(Collection<PostId> postIds) {
+    if (postIds.isEmpty()) {
+      return Map.of();
+    }
+    return jdbc
+        .sql("SELECT " + PostRows.COLUMNS + PostRows.FROM + " WHERE p.post_id IN (:ids)")
+        .param("ids", postIds.stream().map(PostId::value).toList())
+        .query(rows.postMapper())
+        .list()
+        .stream()
+        .collect(
+            Collectors.toUnmodifiableMap(
+                PostAggregate::postId, post -> ExperienceOutline.of(post.fields())));
+  }
+
   /// 期刊汇总的原始统计。
   ///
   /// @param journal 期刊

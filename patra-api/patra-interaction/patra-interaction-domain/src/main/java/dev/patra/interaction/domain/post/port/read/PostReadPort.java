@@ -2,6 +2,7 @@ package dev.patra.interaction.domain.post.port.read;
 
 import dev.patra.interaction.domain.post.model.aggregate.PostAggregate;
 import dev.patra.interaction.domain.post.model.read.ExperienceDigest;
+import dev.patra.interaction.domain.post.model.read.ExperienceOutline;
 import dev.patra.interaction.domain.post.model.read.ExperienceStats;
 import dev.patra.interaction.domain.post.model.read.HelpfulRankedPost;
 import dev.patra.interaction.domain.post.model.read.PostStats;
@@ -79,4 +80,10 @@ public interface PostReadPort {
   /// @param postId 帖子 ID
   /// @return 摘要；没有这条为空
   Optional<ExperienceDigest> findDigest(long postId);
+
+  /// 一批经验的结果（PAP-143：通知服务读时现查，写提醒里的结果行）。已删除的也返回。
+  ///
+  /// @param postIds 帖子 ID
+  /// @return 帖子 ID → 结果；没有的不在结果里
+  Map<PostId, ExperienceOutline> findOutlines(Collection<PostId> postIds);
 }

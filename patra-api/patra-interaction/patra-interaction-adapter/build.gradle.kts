@@ -16,6 +16,9 @@ dependencies {
     // 文献库与收藏夹的门户接口
     api(project(":patra-tool:patra-tool-web"))
 
+    // 内部接口的契约（对象视图、经验结果，PAP-143）：*EndpointImpl 实现它
+    implementation(project(":patra-api:patra-interaction:patra-interaction-api"))
+
     // 对象对账等每日任务的处理器
     api(libs.xxl.job)
 

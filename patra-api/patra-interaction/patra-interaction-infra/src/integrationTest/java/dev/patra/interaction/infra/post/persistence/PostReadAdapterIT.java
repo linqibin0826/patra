@@ -324,4 +324,21 @@ class PostReadAdapterIT extends PostPersistenceITSupport {
   void should_return_empty_digest_when_post_missing() {
     assertThat(reads.findDigest(999_999L)).isEmpty();
   }
+
+  /// 批量取结果（PAP-143 的内部接口）：已删除的照样返回，没有的省略。
+  @Test
+  void should_find_outlines_including_deleted() {
+    PostAggregate kept = publish(U, J1, false, fields("2026-01-04"), null, T0);
+    PostAggregate deleted = publish(U, J1, false, fields("2026-01-05"), null, T0);
+    delete(deleted.postId(), T0.plusSeconds(60));
+
+    Map<PostId, ExperienceOutline> outlines =
+        reads.findOutlines(List.of(kept.postId(), deleted.postId(), PostId.of(999_999L)));
+
+    assertThat(outlines)
+        .containsOnlyKeys(kept.postId(), deleted.postId())
+        .containsEntry(
+            kept.postId(),
+            ExperienceOutline.of(FirstDecision.MAJOR_REVISION, FinalOutcome.IN_PROGRESS, 10, null));
+  }
 }
