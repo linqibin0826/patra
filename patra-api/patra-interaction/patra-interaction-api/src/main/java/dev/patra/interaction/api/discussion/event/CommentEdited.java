@@ -23,7 +23,7 @@ import lombok.Builder;
 /// @param authorAnonymous 作者是对象的匿名所有者
 /// @param mentionedUserIds 改完后正文 @ 到的人
 /// @param addedMentionedUserIds 这条评论第一次 @ 到的人（以前任何一版都没 @ 过）：只给他们发 @ 提醒，作者本人由消费方去掉
-/// @param plainText 改完后的全文纯文本（PAP-128）
+/// @param plainText 改完后的全文纯文本（PAP-128）；正文只有 Markdown 结构没有文字时是空串
 /// @param editedAt 编辑时刻（只作展示）
 @Builder
 public record CommentEdited(

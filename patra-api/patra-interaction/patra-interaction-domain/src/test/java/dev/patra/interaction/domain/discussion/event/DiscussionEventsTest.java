@@ -70,6 +70,34 @@ class DiscussionEventsTest {
         .hasMessageContaining("eventId");
   }
 
+  /// 外送映射要解引用的字段在创建时就必填（PAP-141）：缺了让发布的事务回滚，不留一条永远发不出去的登记行。
+  @Test
+  void should_reject_events_missing_fields_the_mapping_needs() {
+    assertThatThrownBy(() -> published().subjectId(null).build())
+        .isInstanceOf(NullPointerException.class)
+        .hasMessageContaining("subjectId");
+    assertThatThrownBy(() -> published().subjectType(null).build())
+        .isInstanceOf(NullPointerException.class)
+        .hasMessageContaining("subjectType");
+    assertThatThrownBy(() -> edited().subjectId(null).build())
+        .isInstanceOf(NullPointerException.class)
+        .hasMessageContaining("subjectId");
+    assertThatThrownBy(() -> edited().subjectType(null).build())
+        .isInstanceOf(NullPointerException.class)
+        .hasMessageContaining("subjectType");
+    assertThatThrownBy(
+            () ->
+                CommentDeletedEvent.builder()
+                    .eventId(UUID.randomUUID())
+                    .commentId(1L)
+                    .version(1)
+                    .authorId(3L)
+                    .deletedAt(T0)
+                    .build())
+        .isInstanceOf(NullPointerException.class)
+        .hasMessageContaining("subjectId");
+  }
+
   /// 一个发表事件（列表另给）。
   ///
   /// @return 构造器

@@ -72,7 +72,7 @@ public class ReactionTargets {
         comment.body() == null
             ? null
             : plainText.toPlainText(comment.body(), Set.copyOf(comment.mentionedUserIds())).value();
-    return TargetFacts.of(subject, null, text);
+    return TargetFacts.of(subject, null, textOrNull(text));
   }
 
   /// 经验：它自己的登记对象、结果与正文的纯文本（经验不解析 @）。投稿经验里查不到这条（数据异常）时结果与纯文本为空，
@@ -88,7 +88,16 @@ public class ReactionTargets {
             .map(ExperienceDigest::body)
             .map(body -> plainText.toPlainText(body, Set.of()).value())
             .orElse(null);
-    return TargetFacts.of(post, digest.map(ExperienceDigest::outline).orElse(null), text);
+    return TargetFacts.of(
+        post, digest.map(ExperienceDigest::outline).orElse(null), textOrNull(text));
+  }
+
+  /// 转出来没有文字（正文只有 Markdown 结构，如单独一个 `-`）记为空：消费方据「没有正文」退回写结果行。
+  ///
+  /// @param text 纯文本，可空
+  /// @return 有文字时原样，否则 `null`
+  private static String textOrNull(String text) {
+    return text == null || text.isBlank() ? null : text;
   }
 
   /// 评论：正常且所在对象正常才能点；所在对象的所有者匿名、且就是评论作者时算匿名。所在对象在登记表里查不到（数据

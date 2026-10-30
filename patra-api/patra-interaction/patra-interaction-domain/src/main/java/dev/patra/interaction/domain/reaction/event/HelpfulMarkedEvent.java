@@ -26,7 +26,8 @@ import lombok.Builder;
 /// @param subjectType 对象种类
 /// @param subjectOwner 对象的所有者与是否匿名；文献为 `null`
 /// @param experience 目标是投稿经验时它的结果；目标是评论、或经验查不到时为 `null`
-/// @param targetPlainText 被点内容的全文纯文本（PAP-128）；经验没写正文、或查不到时为 `null`
+/// @param targetPlainText 被点内容的全文纯文本（PAP-128）；没有文字（经验没写正文、正文只有 Markdown 结构、或查不到）时为
+///     `null`
 @Builder
 public record HelpfulMarkedEvent(
     UUID eventId,
@@ -42,8 +43,12 @@ public record HelpfulMarkedEvent(
     ExperienceOutline experience,
     String targetPlainText) {
 
-  /// 事件 ID 必填：不在这里兜底生成，否则补投读回登记行时会换一个 ID。
+  /// 事件 ID 必填：不在这里兜底生成，否则补投读回登记行时会换一个 ID。外送映射要解引用的目标种类、对象与对象种类
+  /// 也必填：缺了在发布时就让事务回滚，不留一条永远发不出去的登记行。
   public HelpfulMarkedEvent {
     Objects.requireNonNull(eventId, "eventId");
+    Objects.requireNonNull(targetType, "targetType");
+    Objects.requireNonNull(subjectId, "subjectId");
+    Objects.requireNonNull(subjectType, "subjectType");
   }
 }

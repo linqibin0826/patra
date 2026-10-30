@@ -278,7 +278,7 @@ EventExternalizationConfiguration eventExternalizationConfiguration() {
 | `authorId` | long | 作者 |
 | `authorAnonymous` | boolean | 作者是对象的匿名所有者：提醒里触发人显示「匿名作者」 |
 | `mentionedUserIds` | List<Long> | 正文 @ 到的正常账号，去重、按第一次出现；可能含作者本人 |
-| `plainText` | String | 全文纯文本（PAP-128），`<@ID>` 是真提及 |
+| `plainText` | String | 全文纯文本（PAP-128），`<@ID>` 是真提及；正文只有 Markdown 结构（如单独一个 `-`）没有文字时是空串 `""`，消费方按 isBlank 判 |
 | `publishedAt` | Instant | 发表时刻 |
 
 收件人规则（搬自 `NotificationRules`，PAP-143）：先列 `parentAuthorId`（回复），再列 `subject.ownerId`（只在根评论且 `subject.type = POST` 时，评论了你的投稿经验），最后列 `mentionedUserIds`（@）；同一人只取第一次出现的类型；去掉 `authorId`。
@@ -335,8 +335,8 @@ EventExternalizationConfiguration eventExternalizationConfiguration() {
 | `userId` | long | 点的人 |
 | `markedAt` | Instant | 点的那一刻（interaction 写库时的时刻，补投不变）；按北京时间切天用它，不用消费时间 |
 | `subject` | SubjectContext | 被点内容所在的对象；点经验时是经验自己 |
-| `experience` | ExperienceOutcome，可空 | 目标是投稿经验时它的结果；目标是评论为空 |
-| `targetPlainText` | String，可空 | 被点内容的全文纯文本；经验没有正文时为空，摘录行改写结果（设计简报 §3.2） |
+| `experience` | ExperienceOutcome，可空 | 目标是投稿经验时它的结果；目标是评论为空；目标是经验、但投稿经验表里查不到这条（数据异常）时也为空，消费方不能在 `targetType = POST` 时直接解引用 |
+| `targetPlainText` | String，可空 | 被点内容的全文纯文本；没有文字时为空（经验没写正文、正文只有 Markdown 结构、或查不到），摘录行改写结果（设计简报 §3.2）；两个都为空就只写「你的投稿经验」 |
 
 只在真插入了明细时发：同一人对同一目标点、取消、再点，会发两次 `helpful.marked`（两个不同的 `eventId`），按人去重由 PAP-144 做。去处：评论 = 读时现查到的对象 key + `targetId`（`?comment=`）；经验 = `/posts/{targetId}`。
 
@@ -418,3 +418,5 @@ IT 底座：`InteractionFlowITSupport` 加 `RabbitMQContainerInitializer`，导�
 8. `HelpfulUnmarkedEvent` 只带目标与取消的人，不为没有订阅方的事件多读目标（4.3）。
 9. `ExperienceOutcome` 放 `api.reaction.event`（不放 `api.post.event`）：api 层的子域包互不公开（`SubdomainArchitectureRules`），只有 `HelpfulMarked` 用它。
 10. 集成事件放 `api.{子域}.event`：包模板原来只认 `endpoint`、`dto`，编排会话在 `d3644fde4` 统一放开（PAP-141 与 PAP-104 共用）。
+11. 被点内容转出来没有文字（空白）记为 `null`，消费方据「没有正文」退回写结果行；评论事件的 `plainText` 保持原样（可能是空串），契约写明按 isBlank 判（独立评审 M3）。
+12. 外送映射要解引用的字段（对象、对象种类、目标种类、经验结果的两个枚举）在领域事件与 `ExperienceOutline` 的紧凑构造器里必填：哪个发布点漏传，在发布时就让事务回滚，而不是留下一条永远发不出去的登记行（独立评审 M2，反目标第 3 条）。

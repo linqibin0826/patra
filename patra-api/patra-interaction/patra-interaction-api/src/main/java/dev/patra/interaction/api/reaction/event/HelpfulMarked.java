@@ -17,8 +17,10 @@ import lombok.Builder;
 /// @param userId 点的人
 /// @param markedAt 点的时刻（interaction 写库时取，补投不变）；按北京时间切天用它，不用消费时间
 /// @param subject 被点内容所在的对象；点经验时是经验自己
-/// @param experience 目标是投稿经验时它的结果；目标是评论为 `null`
-/// @param targetPlainText 被点内容的全文纯文本（PAP-128）；经验没写正文时为 `null`，摘录行改写结果
+/// @param experience 目标是投稿经验时它的结果；目标是评论为 `null`；目标是经验、但投稿经验表里查不到这条（数据异常）
+///     时也为 `null`
+/// @param targetPlainText 被点内容的全文纯文本（PAP-128）；没有文字（经验没写正文、正文只有 Markdown 结构、或查不到）
+///     时为 `null`，摘录行改写结果
 @Builder
 public record HelpfulMarked(
     UUID eventId,

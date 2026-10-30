@@ -47,9 +47,12 @@ public record CommentEditedEvent(
     String plainText,
     Instant editedAt) {
 
-  /// 事件 ID 必填（不兜底生成，否则补投读回登记行时会换一个 ID）；列表防御性拷贝，`null` 视为空。
+  /// 事件 ID 必填（不兜底生成，否则补投读回登记行时会换一个 ID）；外送映射要解引用的对象与对象种类必填（缺了在发布时
+  /// 就让事务回滚，不留一条永远发不出去的登记行）；列表防御性拷贝，`null` 视为空。
   public CommentEditedEvent {
     Objects.requireNonNull(eventId, "eventId");
+    Objects.requireNonNull(subjectId, "subjectId");
+    Objects.requireNonNull(subjectType, "subjectType");
     mentionedUserIds = mentionedUserIds == null ? List.of() : List.copyOf(mentionedUserIds);
     addedMentionedUserIds =
         addedMentionedUserIds == null ? List.of() : List.copyOf(addedMentionedUserIds);

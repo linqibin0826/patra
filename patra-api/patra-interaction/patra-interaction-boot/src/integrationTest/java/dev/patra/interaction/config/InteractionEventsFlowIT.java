@@ -79,6 +79,7 @@ class InteractionEventsFlowIT extends InteractionFlowITSupport {
 
   private final LocalDate today = LocalDate.now(ZoneId.of("Asia/Shanghai"));
 
+  /// 文献 100、期刊 200，A、B 两个正常账号。
   @BeforeEach
   void world() {
     CATALOG_DATA.put(PAPER, "1000100", "J", "2019");

@@ -22,7 +22,7 @@ import lombok.Builder;
 /// @param authorId 作者
 /// @param authorAnonymous 作者是对象的匿名所有者：提醒里触发人显示「匿名作者」
 /// @param mentionedUserIds 正文 @ 到的正常账号，去重、按第一次出现；可能含作者本人
-/// @param plainText 全文纯文本（PAP-128），每个 `<@用户ID>` 都是真提及
+/// @param plainText 全文纯文本（PAP-128），每个 `<@用户ID>` 都是真提及；正文只有 Markdown 结构没有文字时是空串
 /// @param publishedAt 发表时刻
 @Builder
 public record CommentPublished(

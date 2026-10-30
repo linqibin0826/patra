@@ -27,8 +27,9 @@ public record CommentDeletedEvent(
     boolean placeholder,
     Instant deletedAt) {
 
-  /// 事件 ID 必填：不在这里兜底生成，否则补投读回登记行时会换一个 ID。
+  /// 事件 ID 必填：不在这里兜底生成，否则补投读回登记行时会换一个 ID。外送映射要用的对象也必填。
   public CommentDeletedEvent {
     Objects.requireNonNull(eventId, "eventId");
+    Objects.requireNonNull(subjectId, "subjectId");
   }
 }

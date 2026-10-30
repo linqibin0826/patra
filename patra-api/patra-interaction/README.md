@@ -41,7 +41,7 @@ dev.patra.interaction.config           装配（XXL-Job 执行器等），不属
 - 普通子域公开包之外的一切（聚合、实体、仓储、领域服务、app / infra / adapter 的任何类）只在子域内部用。
 - 子域之间无环；底座不依赖任何其他子域。
 - **跨子域依赖必须声明**（规则 27）：任何子域都可以依赖底座；其余的边要在 `InteractionArchitectureTest` 里用 `allowingDependency`（经对方全部公开包）或 `allowingSubscription`（只经对方的事件契约）声明。现在有四条：提醒订阅讨论的事件（v0.14 决策 A）、提醒订阅投稿经验的删除事件（PAP-127）、有帮助依赖讨论（读端口取评论、订阅删除事件）与依赖投稿经验（订阅删除事件，PAP-131；读端口取经验的结果与正文带进「有帮助已点」事件，PAP-141）。提醒只经事件契约依赖投稿经验，讨论不依赖它；「作者」标记、匿名遮蔽与经验的作者只看登记表的所有者两列。没有子域依赖有帮助：讨论、经验的列表要带有帮助数时只经 SQL 读 `reaction` 的表（Java 依赖会成环）。
-- 推论：非底座子域的读端口签名、事件 record 的字段，只能用 JDK 类型、自己 `model.read` / `event` 里的类型和底座公开的类型。
+- 推论：非底座子域的读端口签名、事件 record 的字段，只能用 JDK 类型、自己 `model.read` / `event` 里的类型和底座公开的类型；例外要有声明的依赖边兜底：`HelpfulMarkedEvent.experience` 用投稿经验的 `model.read.ExperienceOutline`（`reaction → post` 是依赖边），以后只订阅有帮助事件的子域要读它，得同样声明对投稿经验的依赖。
 - 进程内事件：发布方的 app 层在写入事务里调 Spring 的 `ApplicationEventPublisher`；订阅方的 app 层用同步的 `@EventListener`（同一线程、同一事务），不用 `@TransactionalEventListener`，订阅方失败时整个事务回滚。
 
 ## 4. 存储

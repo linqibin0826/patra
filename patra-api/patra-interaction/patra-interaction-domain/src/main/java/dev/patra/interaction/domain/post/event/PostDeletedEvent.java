@@ -19,8 +19,9 @@ import lombok.Builder;
 public record PostDeletedEvent(
     UUID eventId, long postId, SubjectId subjectId, long authorId, Instant deletedAt) {
 
-  /// 事件 ID 必填：不在这里兜底生成，否则补投读回登记行时会换一个 ID。
+  /// 事件 ID 必填：不在这里兜底生成，否则补投读回登记行时会换一个 ID。外送映射要用的对象也必填。
   public PostDeletedEvent {
     Objects.requireNonNull(eventId, "eventId");
+    Objects.requireNonNull(subjectId, "subjectId");
   }
 }

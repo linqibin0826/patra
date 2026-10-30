@@ -197,6 +197,18 @@ class ReactionTargetsTest {
     assertThat(targets.describe(POST)).isEqualTo(TargetFacts.of(postView(), null, null));
   }
 
+  /// 正文只有 Markdown 结构、转出来没有文字（如单独一个 `-`）：纯文本记为空，消费方才会退回写结果行。
+  @Test
+  void should_describe_blank_text_as_null() {
+    ReactionTargets blank =
+        new ReactionTargets(
+            discussions, subjects, posts, (markdown, mentioned) -> PlainText.of(""));
+    givenPost();
+    when(posts.findDigest(POST_ID)).thenReturn(Optional.of(ExperienceDigest.of(OUTLINE, "-")));
+
+    assertThat(blank.describe(POST)).isEqualTo(TargetFacts.of(postView(), OUTLINE, null));
+  }
+
   /// 描述时目标查不到：同解析画像。
   @Test
   void should_throw_when_describing_missing_target() {
