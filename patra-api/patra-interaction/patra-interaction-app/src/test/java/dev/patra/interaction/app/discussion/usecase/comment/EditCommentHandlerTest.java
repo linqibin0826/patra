@@ -77,7 +77,7 @@ class EditCommentHandlerTest {
     when(subjectReads.findByIds(List.of(PUB_ID))).thenReturn(Map.of(PUB_ID, publication()));
     when(guard.requireEligible(EDITOR)).thenReturn(card(EDITOR));
     when(reads.findById(ID)).thenReturn(Optional.of(root(ID, EDITOR).build()));
-    when(views.assemble(any(), any(), any(), any()))
+    when(views.assemble(any(), any(), any(), any(), any()))
         .thenReturn(List.of(CommentView.builder().commentId(ID).build()));
     stubComment(comment("hi", Set.of(8L)));
   }

@@ -34,6 +34,7 @@ import dev.patra.interaction.domain.post.model.aggregate.PostAggregate;
 import dev.patra.interaction.domain.post.model.enums.PostStatus;
 import dev.patra.interaction.domain.post.model.vo.PostId;
 import dev.patra.interaction.domain.post.model.vo.PostRevision;
+import dev.patra.interaction.domain.post.port.read.PostReadPort;
 import dev.patra.interaction.domain.post.port.repository.PostRepository;
 import dev.patra.interaction.domain.subject.exception.SubjectErrorTrait;
 import dev.patra.interaction.domain.subject.model.enums.SubjectState;
@@ -291,7 +292,7 @@ class EditExperienceHandlerTest {
         new PostRegistry(subjects),
         guard,
         posts,
-        new ExperienceViews(mock(UserDirectoryPort.class), subjects),
+        new ExperienceViews(mock(UserDirectoryPort.class), subjects, mock(PostReadPort.class)),
         TestUsers.signedIn(U),
         new RecordingTransactions(events),
         Clock.fixed(now, ZoneOffset.UTC));

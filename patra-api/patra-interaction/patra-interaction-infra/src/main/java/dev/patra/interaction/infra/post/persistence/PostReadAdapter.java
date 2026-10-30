@@ -2,22 +2,30 @@ package dev.patra.interaction.infra.post.persistence;
 
 import dev.patra.interaction.domain.post.model.aggregate.PostAggregate;
 import dev.patra.interaction.domain.post.model.read.ExperienceStats;
+import dev.patra.interaction.domain.post.model.read.HelpfulRankedPost;
+import dev.patra.interaction.domain.post.model.read.PostStats;
 import dev.patra.interaction.domain.post.model.vo.PostId;
 import dev.patra.interaction.domain.post.model.vo.PostRevision;
 import dev.patra.interaction.domain.post.port.read.PostReadPort;
+import dev.patra.interaction.domain.subject.model.vo.RankCursor;
 import dev.patra.interaction.domain.subject.model.vo.SubjectId;
 import java.sql.Array;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
 /// `PostReadPort` 的原生 SQL 实现。列表用键集分页：游标反查自己的排序键 `(submitted_on, created_at, post_id)`，
 /// 有无游标是两条 SQL（PG 推不出 `:after IS NULL` 里空参数的类型）。汇总一条 SQL 在 PG 里算完（spec 第 7 节），
-/// 分位数原值交给领域规则取整。
+/// 分位数原值交给领域规则取整。公开计数按 SQL 读 `reaction.target_stats` / `reaction.helpful`（类型码 `'POST'`）
+/// 与 `discussion.subject_stats`（经 `subject.registry` 的 POST 行从经验 ID 找到它的对象 ID）。
 @Component
 @RequiredArgsConstructor
 public class PostReadAdapter implements PostReadPort {
@@ -62,6 +70,10 @@ public class PostReadAdapter implements PostReadPort {
          AND p.post_type = 'SUBMISSION_EXPERIENCE'
       """;
 
+  /// 经验的有帮助数，表别名 `hs`。
+  private static final String HELPFUL_JOIN =
+      " LEFT JOIN reaction.target_stats hs ON hs.target_type = 'POST' AND hs.target_id = p.post_id";
+
   private final JdbcClient jdbc;
   private final PostRows rows;
 
@@ -84,6 +96,101 @@ public class PostReadAdapter implements PostReadPort {
             .param("journal", journal.value())
             .param("limit", limit);
     return withCursor(spec, after).query(rows.postMapper()).list();
+  }
+
+  /// 期刊下「最有帮助」的一页。
+  ///
+  /// @param journal 期刊
+  /// @param after 游标，可空
+  /// @param limit 条数
+  /// @return 经验与排序时读出的有帮助数
+  @Override
+  public List<HelpfulRankedPost> pageByJournalHelpful(
+      SubjectId journal, RankCursor after, int limit) {
+    JdbcClient.StatementSpec spec =
+        jdbc.sql(
+                "SELECT "
+                    + PostRows.COLUMNS
+                    + ", COALESCE(hs.helpful_count, 0) AS rank_helpful"
+                    + PostRows.FROM
+                    + HELPFUL_JOIN
+                    + " WHERE p.subject_id = :journal AND p.status = 'ACTIVE'"
+                    + (after == null
+                        ? ""
+                        : " AND (COALESCE(hs.helpful_count, 0), p.created_at, p.post_id)"
+                            + " < (:helpful, :at, :id)")
+                    + " ORDER BY COALESCE(hs.helpful_count, 0) DESC, p.created_at DESC,"
+                    + " p.post_id DESC LIMIT :limit")
+            .param("journal", journal.value())
+            .param("limit", limit);
+    if (after != null) {
+      spec =
+          spec.param("helpful", after.helpfulCount())
+              .param("at", after.createdAt().atOffset(ZoneOffset.UTC))
+              .param("id", after.id());
+    }
+    return spec.query(
+            (rs, rowNum) ->
+                HelpfulRankedPost.of(
+                    rows.postMapper().mapRow(rs, rowNum), rs.getInt("rank_helpful")))
+        .list();
+  }
+
+  /// 期刊下未删除的经验数。
+  ///
+  /// @param journal 期刊
+  /// @return 条数
+  @Override
+  public long countByJournal(SubjectId journal) {
+    return jdbc.sql(
+            "SELECT count(*) FROM post.post WHERE subject_id = :journal AND status = 'ACTIVE'")
+        .param("journal", journal.value())
+        .query(Long.class)
+        .single();
+  }
+
+  /// 每条经验的公开计数。
+  ///
+  /// @param postIds 经验
+  /// @param viewerId 访客，可空
+  /// @return 经验 → 统计
+  @Override
+  public Map<PostId, PostStats> findStats(Collection<PostId> postIds, Long viewerId) {
+    if (postIds.isEmpty()) {
+      return Map.of();
+    }
+    String helpful =
+        viewerId == null
+            ? "CAST(NULL AS boolean)"
+            : "EXISTS (SELECT 1 FROM reaction.helpful h WHERE h.user_id = :viewer"
+                + " AND h.target_type = 'POST' AND h.target_id = p.post_id)";
+    JdbcClient.StatementSpec spec =
+        jdbc.sql(
+                "SELECT p.post_id, COALESCE(hs.helpful_count, 0) AS helpful_count,"
+                    + " COALESCE(ds.comment_count, 0) AS reply_count, "
+                    + helpful
+                    + " AS helpful FROM post.post p"
+                    + HELPFUL_JOIN
+                    + " LEFT JOIN subject.registry r ON r.target_type = 3"
+                    + " AND r.source_id = p.post_id"
+                    + " LEFT JOIN discussion.subject_stats ds ON ds.subject_id = r.subject_id"
+                    + " WHERE p.post_id IN (:ids)")
+            .param("ids", postIds.stream().map(PostId::value).toList());
+    if (viewerId != null) {
+      spec = spec.param("viewer", viewerId);
+    }
+    return spec
+        .query(
+            (rs, rowNum) ->
+                Map.entry(
+                    PostId.of(rs.getLong("post_id")),
+                    PostStats.of(
+                        rs.getInt("helpful_count"),
+                        rs.getInt("reply_count"),
+                        rs.getObject("helpful", Boolean.class))))
+        .list()
+        .stream()
+        .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
   }
 
   /// 作者的一页。

@@ -9,12 +9,17 @@ import dev.patra.interaction.domain.discussion.model.enums.CommentState;
 import dev.patra.interaction.domain.discussion.model.read.RevisionRecord;
 import dev.patra.interaction.domain.discussion.model.vo.NewComment;
 import dev.patra.interaction.domain.discussion.port.repository.CommentRepository;
+import dev.patra.interaction.domain.subject.model.read.StatsCorrection;
+import dev.patra.interaction.domain.subject.model.vo.SubjectId;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -26,7 +31,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.IllegalTransactionStateException;
 
-/// 评论的写端：插入根评论与回复、改正文、存修改历史、变占位、删除、楼锁。
+/// 评论的写端：插入根评论与回复、改正文、存修改历史、变占位、删除、楼锁、楼统计与对象统计。
 class CommentRepositoryAdapterIT extends DiscussionPersistenceITSupport {
 
   @Autowired private CommentRepository comments;
@@ -42,6 +47,106 @@ class CommentRepositoryAdapterIT extends DiscussionPersistenceITSupport {
         .isInstanceOf(IllegalTransactionStateException.class);
     assertThatThrownBy(() -> comments.findForEdit(1L))
         .isInstanceOf(IllegalTransactionStateException.class);
+    assertThatThrownBy(() -> comments.removeReply(1L))
+        .isInstanceOf(IllegalTransactionStateException.class);
+  }
+
+  /// 记两条回复：回复数 2，最后回复时间是较晚的那条。
+  @Test
+  void should_record_replies_and_keep_latest_time() {
+    transactions.executeWithoutResult(
+        s -> {
+          comments.recordReply(7L, T0.plusSeconds(1));
+          comments.recordReply(7L, T0.plusSeconds(2));
+        });
+
+    assertThat(threadStats(7L)).containsExactly(2, T0.plusSeconds(2));
+  }
+
+  /// 后拿到楼锁的回复时间可能更早，不能把最后回复时间往回拨。
+  @Test
+  void should_keep_latest_time_when_older_reply_recorded() {
+    transactions.executeWithoutResult(
+        s -> {
+          comments.recordReply(7L, T0.plusSeconds(2));
+          comments.recordReply(7L, T0.plusSeconds(1));
+        });
+
+    assertThat(threadStats(7L)).containsExactly(2, T0.plusSeconds(2));
+  }
+
+  /// 删掉最新的回复：回复数减一，最后回复时间回退到剩下的最新一条（占位不算）。
+  @Test
+  void should_fall_back_to_previous_reply_when_latest_removed() {
+    long root = insert(null, null, 1L, "根", List.of(), T0);
+    insert(root, root, 2L, "a", List.of(), T0.plusSeconds(1));
+    long b = insert(root, root, 2L, "b", List.of(), T0.plusSeconds(2));
+    long c = insert(root, b, 3L, "c", List.of(), T0.plusSeconds(3));
+    transactions.executeWithoutResult(
+        s -> {
+          comments.recordReply(root, T0.plusSeconds(1));
+          comments.recordReply(root, T0.plusSeconds(2));
+          comments.recordReply(root, T0.plusSeconds(3));
+        });
+
+    transactions.executeWithoutResult(
+        s -> {
+          comments.markDeleted(b, T0.plusSeconds(9));
+          comments.removeReply(root);
+        });
+    assertThat(threadStats(root)).containsExactly(2, T0.plusSeconds(3));
+
+    transactions.executeWithoutResult(
+        s -> {
+          comments.delete(c);
+          comments.removeReply(root);
+        });
+    assertThat(threadStats(root)).containsExactly(1, T0.plusSeconds(1));
+  }
+
+  /// 删掉楼里最后一条回复：回复数 0、最后回复时间为空，不撞约束。
+  @Test
+  void should_reset_to_zero_when_last_reply_removed() {
+    long root = insert(null, null, 1L, "根", List.of(), T0);
+    long reply = insert(root, root, 2L, "回复", List.of(), T0.plusSeconds(1));
+    transactions.executeWithoutResult(s -> comments.recordReply(root, T0.plusSeconds(1)));
+
+    transactions.executeWithoutResult(
+        s -> {
+          comments.delete(reply);
+          comments.removeReply(root);
+        });
+
+    assertThat(threadStats(root)).containsExactly(0, null);
+  }
+
+  /// 根评论整条去掉时删它的楼统计行。
+  @Test
+  void should_drop_thread_stats() {
+    transactions.executeWithoutResult(s -> comments.recordReply(7L, T0));
+
+    transactions.executeWithoutResult(s -> comments.dropThreadStats(7L));
+
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM discussion.thread_stats WHERE root_id = 7", Long.class))
+        .isZero();
+  }
+
+  /// 对象统计按对象加减；没动过的对象没有行。
+  @Test
+  void should_count_comments_per_subject() {
+    transactions.executeWithoutResult(
+        s -> {
+          comments.incrementCommentCount(S1);
+          comments.incrementCommentCount(S1);
+          comments.decrementCommentCount(S1);
+        });
+
+    assertThat(
+            jdbcTemplate.queryForList(
+                "SELECT subject_id, comment_count FROM discussion.subject_stats"))
+        .containsExactly(Map.of("subject_id", S1.value(), "comment_count", 1));
   }
 
   /// 根评论的根是自己，回复的根是所在楼的根；字段原样读回。
@@ -188,6 +293,110 @@ class CommentRepositoryAdapterIT extends DiscussionPersistenceITSupport {
     }
   }
 
+  /// 楼统计的重算：回复数或最后回复时间不对、缺行、根评论已没有的行都找得到；拿楼锁后改成明细值并带回回复数的前后值，
+  /// 根评论没有了就删行；修完再找为空。
+  @Test
+  void should_find_and_fix_thread_stats_drift() {
+    long root = insert(null, null, 1L, "根", List.of(), T0);
+    insert(root, root, 2L, "一", List.of(), T0.plus(1, ChronoUnit.HOURS));
+    long second = insert(root, root, 3L, "二", List.of(), T0.plus(2, ChronoUnit.HOURS));
+    transactions.executeWithoutResult(
+        s -> comments.markDeleted(second, T0.plus(3, ChronoUnit.HOURS)));
+    long other = insert(null, null, 1L, "另一楼", List.of(), T0);
+    insert(other, other, 2L, "回", List.of(), T0.plus(4, ChronoUnit.HOURS));
+    jdbcTemplate.update(
+        "INSERT INTO discussion.thread_stats (root_id, reply_count, last_reply_at) VALUES"
+            + " (?, 5, ?), (999, 2, ?)",
+        root,
+        Timestamp.from(T0.plus(2, ChronoUnit.HOURS)),
+        Timestamp.from(T0));
+
+    assertThat(comments.findThreadStatsDrift()).containsExactlyInAnyOrder(root, other, 999L);
+
+    assertThat(recountThread(root)).contains(StatsCorrection.of(5, 1));
+    assertThat(threadStats(root)).containsExactly(1, T0.plus(1, ChronoUnit.HOURS));
+    assertThat(recountThread(root)).isEmpty();
+    assertThat(recountThread(other)).contains(StatsCorrection.of(0, 1));
+    assertThat(threadStats(other)).containsExactly(1, T0.plus(4, ChronoUnit.HOURS));
+    assertThat(recountThread(999L)).contains(StatsCorrection.of(2, 0));
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM discussion.thread_stats WHERE root_id = 999", Long.class))
+        .isZero();
+    assertThat(comments.findThreadStatsDrift()).isEmpty();
+  }
+
+  /// 最后回复时间不对、回复数对，也算差异并修正（修正里回复数前后相同）。
+  @Test
+  void should_fix_last_reply_time_only_drift() {
+    long root = insert(null, null, 1L, "根", List.of(), T0);
+    insert(root, root, 2L, "一", List.of(), T0.plus(1, ChronoUnit.HOURS));
+    jdbcTemplate.update(
+        "INSERT INTO discussion.thread_stats (root_id, reply_count, last_reply_at) VALUES (?, 1, ?)",
+        root,
+        Timestamp.from(T0));
+
+    assertThat(comments.findThreadStatsDrift()).containsExactly(root);
+    assertThat(recountThread(root)).contains(StatsCorrection.of(1, 1));
+    assertThat(threadStats(root)).containsExactly(1, T0.plus(1, ChronoUnit.HOURS));
+  }
+
+  /// 对象评论总数的重算：只数未删除的（占位不算）；多出来的统计行置 0、保留；修完再找为空。
+  @Test
+  void should_find_and_fix_comment_count_drift() {
+    long root = insert(null, null, 1L, "根", List.of(), T0);
+    insert(root, root, 2L, "一", List.of(), T0);
+    long gone = insert(root, root, 3L, "二", List.of(), T0);
+    transactions.executeWithoutResult(s -> comments.markDeleted(gone, T0));
+    jdbcTemplate.update(
+        "INSERT INTO discussion.subject_stats (subject_id, comment_count) VALUES (11, 7), (12, 3)");
+
+    assertThat(comments.findCommentCountDrift()).containsExactlyInAnyOrder(S1, S2);
+
+    assertThat(recountSubject(S1)).contains(StatsCorrection.of(7, 2));
+    assertThat(recountSubject(S1)).isEmpty();
+    assertThat(recountSubject(S2)).contains(StatsCorrection.of(3, 0));
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT comment_count FROM discussion.subject_stats WHERE subject_id = 12",
+                Integer.class))
+        .isZero();
+    assertThat(comments.findCommentCountDrift()).isEmpty();
+  }
+
+  /// 两项的锁内修正都要在事务里调用。
+  @Test
+  void should_require_transaction_for_recount() {
+    assertThatThrownBy(() -> comments.recountThreadStats(1L))
+        .isInstanceOf(IllegalTransactionStateException.class);
+    assertThatThrownBy(() -> comments.recountCommentCount(S1))
+        .isInstanceOf(IllegalTransactionStateException.class);
+  }
+
+  /// 拿楼锁后重算楼统计（与重算任务的调用方式一致）。
+  ///
+  /// @param rootId 根评论
+  /// @return 修正
+  private Optional<StatsCorrection> recountThread(long rootId) {
+    Optional<StatsCorrection> correction =
+        transactions.execute(
+            s -> {
+              comments.lockThread(rootId);
+              return comments.recountThreadStats(rootId);
+            });
+    return correction;
+  }
+
+  /// 在事务里重算对象评论总数。
+  ///
+  /// @param subjectId 对象
+  /// @return 修正
+  private Optional<StatsCorrection> recountSubject(SubjectId subjectId) {
+    Optional<StatsCorrection> correction =
+        transactions.execute(s -> comments.recountCommentCount(subjectId));
+    return correction;
+  }
+
   /// 在事务里插入一条评论。
   ///
   /// @param rootId 根评论，根评论为 `null`
@@ -215,6 +424,20 @@ class CommentRepositoryAdapterIT extends DiscussionPersistenceITSupport {
             .createdAt(createdAt)
             .build();
     return transactions.execute(s -> comments.insert(comment));
+  }
+
+  /// 一楼的统计：回复数与最后回复时间。
+  ///
+  /// @param rootId 根评论
+  /// @return `[回复数, 最后回复时间]`，时间为空时第二项为 `null`
+  private List<Object> threadStats(long rootId) {
+    return jdbcTemplate.queryForObject(
+        "SELECT reply_count, last_reply_at FROM discussion.thread_stats WHERE root_id = ?",
+        (rs, rowNum) -> {
+          Timestamp last = rs.getTimestamp("last_reply_at");
+          return Arrays.asList(rs.getInt("reply_count"), last == null ? null : last.toInstant());
+        },
+        rootId);
   }
 
   /// 某条评论的修改历史行数。

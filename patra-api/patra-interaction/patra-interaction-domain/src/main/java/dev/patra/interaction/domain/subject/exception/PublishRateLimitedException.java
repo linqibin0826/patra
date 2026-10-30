@@ -50,7 +50,7 @@ public final class PublishRateLimitedException extends DomainException implement
   public static PublishRateLimitedException dailyLimitReached(
       PublishKind kind, Duration retryAfter) {
     return new PublishRateLimitedException(
-        "今天已经发表了 " + kind.dailyLimit() + " 条" + kind.displayName() + "，明天再来吧",
+        "今天已经" + kind.dailyLimitPhrase() + "，明天再来吧",
         SubjectErrorTrait.DAILY_LIMIT_REACHED,
         kind,
         retryAfter);

@@ -3,6 +3,7 @@ package dev.patra.interaction.app.discussion.usecase.query;
 import static dev.patra.interaction.app.discussion.DiscussionFixture.POST_ID;
 import static dev.patra.interaction.app.discussion.DiscussionFixture.PUB_ID;
 import static dev.patra.interaction.app.discussion.DiscussionFixture.T0;
+import static dev.patra.interaction.app.discussion.DiscussionFixture.anonymous;
 import static dev.patra.interaction.app.discussion.DiscussionFixture.card;
 import static dev.patra.interaction.app.discussion.DiscussionFixture.publication;
 import static dev.patra.interaction.app.discussion.DiscussionFixture.reply;
@@ -10,9 +11,13 @@ import static dev.patra.interaction.app.discussion.DiscussionFixture.root;
 import static dev.patra.interaction.app.discussion.DiscussionFixture.signedIn;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -27,17 +32,20 @@ import dev.patra.interaction.domain.discussion.model.enums.CommentState;
 import dev.patra.interaction.domain.discussion.model.enums.ThreadSort;
 import dev.patra.interaction.domain.discussion.model.read.CommentRecord;
 import dev.patra.interaction.domain.discussion.model.read.RevisionRecord;
+import dev.patra.interaction.domain.discussion.model.read.ThreadStats;
 import dev.patra.interaction.domain.discussion.model.vo.ThreadCursor;
 import dev.patra.interaction.domain.discussion.port.read.DiscussionReadPort;
 import dev.patra.interaction.domain.subject.model.enums.AccountState;
 import dev.patra.interaction.domain.subject.model.enums.SubjectType;
 import dev.patra.interaction.domain.subject.model.read.UserCard;
+import dev.patra.interaction.domain.subject.model.vo.RankCursor;
 import dev.patra.interaction.domain.subject.port.read.SubjectReadPort;
 import dev.patra.tool.core.security.CurrentUserPort;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.LongStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -57,7 +65,7 @@ class DiscussionQueryServiceTest {
     when(subjectReads.findIdsByKeys(SubjectType.PUBLICATION, List.of("100")))
         .thenReturn(Map.of("100", PUB_ID));
     when(subjectReads.findByIds(List.of(PUB_ID))).thenReturn(Map.of(PUB_ID, publication()));
-    when(views.assemble(anyList(), any(), any(), any()))
+    when(views.assemble(anyList(), any(), any(), any(), any()))
         .thenAnswer(
             invocation -> {
               List<CommentRecord> records = invocation.getArgument(0);
@@ -105,7 +113,71 @@ class DiscussionQueryServiceTest {
             List.of(r1, replies.get(0), replies.get(1), replies.get(2)),
             publication(),
             VIEWER,
-            Map.of());
+            Map.of(),
+            Set.of());
+  }
+
+  /// 「最有帮助」：按三元组游标取，下一页游标是本页最后一条的（有帮助数、时刻、ID）。
+  @Test
+  void should_page_by_helpful_with_rank_cursor() {
+    CommentRecord r1 = root(1L, 2L).helpfulCount(5).build();
+    CommentRecord r2 = root(2L, 2L).helpfulCount(2).createdAt(T0.plusSeconds(1)).build();
+    RankCursor after = RankCursor.of(9, T0.minusSeconds(1), 7L);
+    when(reads.findRootsByHelpful(PUB_ID, after, 2)).thenReturn(List.of(r1, r2));
+
+    ThreadPageView page =
+        service(VIEWER).threads("publication", "100", "helpful", after.format(), 1);
+
+    assertThat(page.items()).extracting(t -> t.root().commentId()).containsExactly(1L);
+    assertThat(page.nextCursor()).isEqualTo(RankCursor.of(5, T0, 1L).format());
+    verify(reads, never()).findRoots(any(), any(), any(), anyInt());
+  }
+
+  /// 每楼带楼统计（没有统计行为 0 与空），每页带对象评论总数。
+  @Test
+  void should_attach_thread_stats_and_total() {
+    CommentRecord r1 = root(1L, 2L).build();
+    CommentRecord r2 = root(2L, 2L).createdAt(T0.plusSeconds(1)).build();
+    when(reads.findRoots(PUB_ID, ThreadSort.ASC, null, 21)).thenReturn(List.of(r1, r2));
+    when(reads.findThreadStats(List.of(1L, 2L)))
+        .thenReturn(Map.of(1L, ThreadStats.of(4, T0.plusSeconds(9))));
+    when(reads.countComments(PUB_ID)).thenReturn(6);
+
+    ThreadPageView page = service(VIEWER).threads("publication", "100", null, null, null);
+
+    assertThat(page.total()).isEqualTo(6);
+    assertThat(page.items())
+        .extracting(ThreadView::replyCount, ThreadView::lastReplyAt)
+        .containsExactly(tuple(4, T0.plusSeconds(9)), tuple(0, null));
+  }
+
+  /// 游标格式与排序对不上：422。
+  @Test
+  void should_reject_cursor_of_other_sort() {
+    String twoPart = ThreadCursor.of(T0, 1L).format();
+    String threePart = RankCursor.of(1, T0, 1L).format();
+
+    assertThatThrownBy(
+            () -> service(VIEWER).threads("publication", "100", "helpful", twoPart, null))
+        .isInstanceOf(InvalidDiscussionRequestException.class);
+    assertThatThrownBy(() -> service(VIEWER).threads("publication", "100", "asc", threePart, null))
+        .isInstanceOf(InvalidDiscussionRequestException.class);
+  }
+
+  /// 有访客时一页查一次「我点过」并交给拼装；匿名访客不查。
+  @Test
+  void should_query_helpful_marks_only_with_viewer() {
+    CommentRecord r1 = root(1L, 2L).build();
+    when(reads.findRoots(PUB_ID, ThreadSort.ASC, null, 21)).thenReturn(List.of(r1));
+    when(reads.findHelpfulMarked(VIEWER, List.of(1L))).thenReturn(Set.of(1L));
+
+    service(VIEWER).threads("publication", "100", null, null, null);
+    verify(views).assemble(List.of(r1), publication(), VIEWER, Map.of(), Set.of(1L));
+
+    new DiscussionQueryService(new DiscussionSubjects(subjectReads), reads, views, anonymous())
+        .threads("publication", "100", null, null, null);
+    verify(reads, times(1)).findHelpfulMarked(anyLong(), any());
+    verify(views).assemble(List.of(r1), publication(), null, Map.of(), Set.of());
   }
 
   /// 分页参数不合法：422，不查库。

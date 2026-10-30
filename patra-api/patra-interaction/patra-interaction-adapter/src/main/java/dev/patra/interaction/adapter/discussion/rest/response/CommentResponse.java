@@ -5,7 +5,7 @@ import java.time.Instant;
 import java.util.List;
 import lombok.Builder;
 
-/// 一条评论（spec 6.4）。占位只有位置：`deleted` 为真，作者、正文为空。
+/// 一条评论（spec 6.4）。占位只有位置：`deleted` 为真，作者、正文为空，有帮助数为 0。
 ///
 /// @param commentId 评论 ID
 /// @param rootId 所在楼的根评论
@@ -21,6 +21,8 @@ import lombok.Builder;
 /// @param hasReplies 有没有直接回复
 /// @param createdAt 发表时刻
 /// @param edited 有没有修改记录（「已编辑」）
+/// @param helpfulCount 有帮助数
+/// @param helpful 访客点过有帮助没有；没有会话或是占位时为 `null`
 @Builder
 public record CommentResponse(
     Long commentId,
@@ -36,7 +38,9 @@ public record CommentResponse(
     List<MentionResponse> mentions,
     boolean hasReplies,
     Instant createdAt,
-    boolean edited) {
+    boolean edited,
+    int helpfulCount,
+    Boolean helpful) {
 
   /// 防御性拷贝。
   public CommentResponse {
@@ -63,6 +67,8 @@ public record CommentResponse(
         .hasReplies(view.hasReplies())
         .createdAt(view.createdAt())
         .edited(view.edited())
+        .helpfulCount(view.helpfulCount())
+        .helpful(view.helpful())
         .build();
   }
 

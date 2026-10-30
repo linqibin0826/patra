@@ -5,7 +5,7 @@ import dev.patra.interaction.domain.subject.model.vo.SubjectId;
 import java.time.Instant;
 import lombok.Builder;
 
-/// 读出来的一条评论，带上父评论的作者与状态（给「回复 @X」）和有没有直接回复（给删除确认的文案）。
+/// 读出来的一条评论，带上父评论的作者与状态（给「回复 @X」）、有没有直接回复（给删除确认的文案）和有帮助数。
 ///
 /// @param commentId 评论 ID
 /// @param subjectId 对象
@@ -19,6 +19,7 @@ import lombok.Builder;
 /// @param parentAuthorId 父评论的作者；根评论为 `null`
 /// @param parentState 父评论的状态；根评论为 `null`
 /// @param hasReplies 有没有直接回复
+/// @param helpfulCount 有帮助数（`reaction.target_stats`，没有统计行为 0）
 @Builder
 public record CommentRecord(
     long commentId,
@@ -32,7 +33,8 @@ public record CommentRecord(
     Instant revisedAt,
     Long parentAuthorId,
     CommentState parentState,
-    boolean hasReplies) {
+    boolean hasReplies,
+    int helpfulCount) {
 
   /// 是否根评论。
   ///

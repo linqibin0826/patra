@@ -83,6 +83,7 @@ public abstract class InteractionFlowITSupport {
     CATALOG_DATA.clear();
     IDENTITY_DATA.clear();
     DiscussionEventRecorder.EVENTS.clear();
+    DiscussionEventRecorder.failOnDelete = false;
     catalog.stubFor(any(anyUrl()).willReturn(ok()));
     identity.stubFor(any(anyUrl()).willReturn(ok()));
   }

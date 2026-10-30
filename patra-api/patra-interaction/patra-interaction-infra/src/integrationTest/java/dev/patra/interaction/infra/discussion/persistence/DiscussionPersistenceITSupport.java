@@ -12,7 +12,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.transaction.support.TransactionTemplate;
 
-/// discussion 持久化集成测试的公共底座：真实 PG，每例前清空两张表；写操作包在事务里，模拟 app 层。
+/// discussion 持久化集成测试的公共底座：真实 PG，每例前清空讨论的表与关联读的 reaction 表；
+/// 写操作包在事务里，模拟 app 层。
 @SpringBootTest(classes = DiscussionPersistenceITBootstrap.class)
 @ContextConfiguration(initializers = InteractionITPostgreSQLContainerInitializer.class)
 @ActiveProfiles("test")
@@ -33,7 +34,9 @@ abstract class DiscussionPersistenceITSupport {
   /// 每例从空表开始。
   @BeforeEach
   void truncateDiscussionTables() {
-    jdbcTemplate.update("TRUNCATE discussion.comment_revision, discussion.comment");
+    jdbcTemplate.update(
+        "TRUNCATE discussion.comment_revision, discussion.comment, discussion.thread_stats,"
+            + " discussion.subject_stats, reaction.target_stats, reaction.helpful");
   }
 
   /// 不经仓储直接插一行（约束测试用）。

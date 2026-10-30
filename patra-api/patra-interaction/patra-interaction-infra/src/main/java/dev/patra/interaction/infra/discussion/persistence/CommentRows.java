@@ -38,15 +38,19 @@ final class CommentRows {
               .revisedAt(instant(rs, "revised_at"))
               .build();
 
-  /// 读回带父评论信息的评论要的 `SELECT … FROM … LEFT JOIN`（表别名 `c` 是评论，`p` 是父评论），后面接条件。
+  /// 读回带父评论信息的评论要的 `SELECT … FROM … LEFT JOIN`（表别名 `c` 是评论，`p` 是父评论，`hs` 是 reaction 的
+  /// 有帮助统计），后面接条件。
   static final String RECORD_SELECT =
       """
       SELECT c.comment_id, c.subject_id, c.root_id, c.parent_id, c.author_id, c.state, c.body,
              c.created_at, c.revised_at, p.author_id AS parent_author_id, p.state AS parent_state,
              EXISTS (SELECT 1 FROM discussion.comment r WHERE r.parent_id = c.comment_id)
-                 AS has_replies
+                 AS has_replies,
+             COALESCE(hs.helpful_count, 0) AS helpful_count
         FROM discussion.comment c
         LEFT JOIN discussion.comment p ON p.comment_id = c.parent_id
+        LEFT JOIN reaction.target_stats hs
+               ON hs.target_type = 'COMMENT' AND hs.target_id = c.comment_id
       """;
 
   /// 评论行（含父评论信息）→ 读模型。
@@ -66,6 +70,7 @@ final class CommentRows {
             .parentAuthorId(nullableLong(rs, "parent_author_id"))
             .parentState(parentState == null ? null : CommentState.valueOf(parentState))
             .hasReplies(rs.getBoolean("has_replies"))
+            .helpfulCount(rs.getInt("helpful_count"))
             .build();
       };
 

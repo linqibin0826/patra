@@ -52,6 +52,15 @@ class SubjectExceptionsTest {
         "对象标识格式不正确");
   }
 
+  /// 批量对象统计的参数不合法：422，说明原样带出。
+  @Test
+  void should_mark_invalid_request_as_rule_violation() {
+    assertTraitAndMessage(
+        new InvalidSubjectRequestException("一次 1 ~ 100 个 key"),
+        StandardErrorTrait.RULE_VIOLATION,
+        "一次 1 ~ 100 个 key");
+  }
+
   @Test
   void should_mark_unsupported_capability_as_rule_violation() {
     assertTraitAndMessage(

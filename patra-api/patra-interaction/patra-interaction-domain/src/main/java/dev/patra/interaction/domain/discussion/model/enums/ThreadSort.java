@@ -7,9 +7,11 @@ public enum ThreadSort {
   /// 正序：最早的在前（默认）。
   ASC,
   /// 最新：最新的在前。
-  LATEST;
+  LATEST,
+  /// 最有帮助：根评论自己的有帮助数降序，相同时新的在前。
+  HELPFUL;
 
-  /// 解析请求参数（`asc` / `latest`），缺省为 `ASC`。
+  /// 解析请求参数（`asc` / `latest` / `helpful`），缺省为 `ASC`。
   ///
   /// @param param 参数，可空
   /// @return 排序
@@ -21,6 +23,7 @@ public enum ThreadSort {
     return switch (param) {
       case "asc" -> ASC;
       case "latest" -> LATEST;
+      case "helpful" -> HELPFUL;
       default -> throw new InvalidDiscussionRequestException("不支持的排序");
     };
   }

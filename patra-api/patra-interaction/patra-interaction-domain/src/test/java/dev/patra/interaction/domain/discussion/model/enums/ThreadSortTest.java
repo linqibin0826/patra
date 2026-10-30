@@ -6,7 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import dev.patra.interaction.domain.discussion.exception.InvalidDiscussionRequestException;
 import org.junit.jupiter.api.Test;
 
-/// 根评论排序的请求参数：默认正序，只认小写的 `asc`、`latest`。
+/// 根评论排序的请求参数：默认正序，只认小写的 `asc`、`latest`、`helpful`。
 class ThreadSortTest {
 
   /// 不传为正序。
@@ -16,11 +16,12 @@ class ThreadSortTest {
     assertThat(ThreadSort.fromParam("")).isEqualTo(ThreadSort.ASC);
   }
 
-  /// 两个合法值。
+  /// 三个合法值。
   @Test
   void should_parse_known_values() {
     assertThat(ThreadSort.fromParam("asc")).isEqualTo(ThreadSort.ASC);
     assertThat(ThreadSort.fromParam("latest")).isEqualTo(ThreadSort.LATEST);
+    assertThat(ThreadSort.fromParam("helpful")).isEqualTo(ThreadSort.HELPFUL);
   }
 
   /// 大写与未知值都拒绝。

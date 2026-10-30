@@ -122,6 +122,21 @@ class PublishQuotaTest {
             });
   }
 
+  /// 有帮助每天最多 300 次、不限间隔：第 300 次紧挨着上一次也放行，第 301 次拒绝。
+  @Test
+  void should_admit_three_hundredth_helpful_without_interval_and_reject_next() {
+    assertThat(admit(quota(TODAY, 299, NOW.minusSeconds(1)), PublishKind.HELPFUL, NOW).dayCount())
+        .isEqualTo(300);
+    assertThatThrownBy(
+            () -> admit(quota(TODAY, 300, NOW.minusSeconds(1)), PublishKind.HELPFUL, NOW))
+        .isInstanceOfSatisfying(
+            PublishRateLimitedException.class,
+            ex -> {
+              assertThat(ex.getErrorTraits()).contains(SubjectErrorTrait.DAILY_LIMIT_REACHED);
+              assertThat(ex.getMessage()).isEqualTo("今天已经点了 300 次有帮助，明天再来吧");
+            });
+  }
+
   /// 按北京时间放行一次。
   ///
   /// @param current 现有计数

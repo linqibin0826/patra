@@ -32,11 +32,12 @@ public class DiscussionController {
   private final DiscussionQueryService discussions;
   private final MentionSuggestionQueryService suggestions;
 
-  /// 讨论列表的一页：每楼根评论加前 3 条回复。对象还没人讨论过时为空列表。
+  /// 讨论列表的一页：每楼根评论加前 3 条回复与楼统计，带对象的评论总数。对象还没人讨论过时为空列表、总数 0。
+  /// 游标与排序配套，格式对不上 422。
   ///
   /// @param type 对象类型
   /// @param key 对象 key
-  /// @param sort `asc`（默认，正序）/ `latest`（最新）
+  /// @param sort `asc`（默认，正序）/ `latest`（最新）/ `helpful`（根评论有帮助数降序，相同时新的在前）
   /// @param cursor 上一页的 `nextCursor`
   /// @param size 每页几楼，1 ~ 50，默认 20
   /// @return 一页

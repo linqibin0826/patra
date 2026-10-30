@@ -8,6 +8,7 @@ import dev.patra.interaction.domain.discussion.exception.InvalidDiscussionReques
 import dev.patra.interaction.domain.discussion.model.enums.ThreadSort;
 import dev.patra.interaction.domain.discussion.model.read.CommentRecord;
 import dev.patra.interaction.domain.discussion.model.read.RevisionRecord;
+import dev.patra.interaction.domain.discussion.model.read.ThreadStats;
 import dev.patra.interaction.domain.discussion.model.vo.ThreadCursor;
 import dev.patra.interaction.domain.discussion.policy.DiscussionLimits;
 import dev.patra.interaction.domain.discussion.policy.MentionSyntax;
@@ -16,6 +17,7 @@ import dev.patra.interaction.domain.subject.model.enums.AccountState;
 import dev.patra.interaction.domain.subject.model.enums.SubjectType;
 import dev.patra.interaction.domain.subject.model.read.SubjectView;
 import dev.patra.interaction.domain.subject.model.read.UserCard;
+import dev.patra.interaction.domain.subject.model.vo.RankCursor;
 import dev.patra.tool.core.security.CurrentUser;
 import dev.patra.tool.core.security.CurrentUserPort;
 import java.util.ArrayList;
@@ -29,8 +31,8 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/// 讨论的读（spec 6.1）：登录可选，已登录时带访客拿「这条是我发的」与主页可见性。对象还没登记（没人讨论过）回空页；
-/// 对象已失效 404。编辑原文要登录、只给作者。
+/// 讨论的读（spec 6.1）：登录可选，已登录时带访客拿「这条是我发的」「我点过有帮助没有」与主页可见性。对象还没登记
+/// （没人讨论过）回空页；对象已失效 404。编辑原文要登录、只给作者。列表每楼带楼统计、每页带对象评论总数（PAP-132）。
 @Component
 @RequiredArgsConstructor
 public class DiscussionQueryService {
@@ -44,22 +46,26 @@ public class DiscussionQueryService {
   ///
   /// @param type 对外类型名
   /// @param key 对外 key
-  /// @param sort `asc`（默认）/ `latest`
+  /// @param sort `asc`（默认）/ `latest` / `helpful`
   /// @param cursor 游标，可空
   /// @param size 每页几楼，可空（默认 20）
   /// @return 一页
   public ThreadPageView threads(String type, String key, String sort, String cursor, Integer size) {
     SubjectType subjectType = subjects.requireDiscussable(type, key);
     ThreadSort threadSort = ThreadSort.fromParam(sort);
-    ThreadCursor after = ThreadCursor.parse(cursor).orElse(null);
+    boolean helpful = threadSort == ThreadSort.HELPFUL;
+    ThreadCursor after = helpful ? null : ThreadCursor.parse(cursor).orElse(null);
+    RankCursor rankAfter = helpful ? rankCursor(cursor) : null;
     int pageSize = pageSize(size, DiscussionLimits.THREAD_PAGE_DEFAULT);
     Optional<SubjectView> found = subjects.findForRead(subjectType, key);
     if (found.isEmpty()) {
-      return ThreadPageView.of(List.of(), null);
+      return ThreadPageView.of(List.of(), null, 0);
     }
     SubjectView subject = found.get();
     List<CommentRecord> fetched =
-        reads.findRoots(subject.subjectId(), threadSort, after, pageSize + 1);
+        helpful
+            ? reads.findRootsByHelpful(subject.subjectId(), rankAfter, pageSize + 1)
+            : reads.findRoots(subject.subjectId(), threadSort, after, pageSize + 1);
     List<CommentRecord> roots = fetched.subList(0, Math.min(pageSize, fetched.size()));
     Map<Long, List<CommentRecord>> previews =
         roots.isEmpty()
@@ -73,6 +79,10 @@ public class DiscussionQueryService {
       records.addAll(shown(previews.getOrDefault(root.commentId(), List.of())));
     }
     Map<Long, CommentView> byId = assemble(records, subject);
+    Map<Long, ThreadStats> stats =
+        roots.isEmpty()
+            ? Map.of()
+            : reads.findThreadStats(roots.stream().map(CommentRecord::commentId).toList());
     List<ThreadView> threads =
         roots.stream()
             .map(
@@ -80,15 +90,22 @@ public class DiscussionQueryService {
                   List<CommentRecord> preview = previews.getOrDefault(root.commentId(), List.of());
                   List<CommentRecord> shown = shown(preview);
                   boolean more = preview.size() > shown.size();
-                  return ThreadView.of(
+                  return thread(
                       byId.get(root.commentId()),
                       shown.stream().map(r -> byId.get(r.commentId())).toList(),
-                      more,
-                      more ? cursorOf(shown.getLast()) : null);
+                      more ? cursorOf(shown.getLast()) : null,
+                      stats.get(root.commentId()));
                 })
             .toList();
-    String next = fetched.size() > pageSize ? cursorOf(roots.getLast()) : null;
-    return ThreadPageView.of(threads, next);
+    String next = null;
+    if (fetched.size() > pageSize) {
+      CommentRecord last = roots.getLast();
+      next =
+          helpful
+              ? RankCursor.of(last.helpfulCount(), last.createdAt(), last.commentId()).format()
+              : cursorOf(last);
+    }
+    return ThreadPageView.of(threads, next, reads.countComments(subject.subjectId()));
   }
 
   /// 单楼视图：目标所在的整楼。
@@ -112,7 +129,8 @@ public class DiscussionQueryService {
     CommentView root = byId.get(records.getFirst().commentId());
     List<CommentView> replies =
         records.subList(1, records.size()).stream().map(r -> byId.get(r.commentId())).toList();
-    return SingleThreadView.of(commentId, ThreadView.of(root, replies, false, null));
+    ThreadStats stats = reads.findThreadStats(List.of(root.commentId())).get(root.commentId());
+    return SingleThreadView.of(commentId, thread(root, replies, null, stats));
   }
 
   /// 楼内回复的一页（「展开更多回复」）。
@@ -215,8 +233,45 @@ public class DiscussionQueryService {
   /// @param subject 对象
   /// @return 评论 ID → 视图
   private Map<Long, CommentView> assemble(List<CommentRecord> records, SubjectView subject) {
-    return views.assemble(records, subject, viewer(), Map.of()).stream()
+    Long viewer = viewer();
+    Set<Long> marked =
+        viewer == null || records.isEmpty()
+            ? Set.of()
+            : reads.findHelpfulMarked(
+                viewer, records.stream().map(CommentRecord::commentId).toList());
+    return views.assemble(records, subject, viewer, Map.of(), marked).stream()
         .collect(Collectors.toMap(CommentView::commentId, Function.identity()));
+  }
+
+  /// 一楼的视图。
+  ///
+  /// @param root 根评论
+  /// @param replies 给出的回复
+  /// @param repliesCursor 取剩下回复的游标；没有更多时为 `null`
+  /// @param stats 楼统计；没有统计行时为 `null`（视为没有回复）
+  /// @return 一楼
+  private static ThreadView thread(
+      CommentView root, List<CommentView> replies, String repliesCursor, ThreadStats stats) {
+    return ThreadView.builder()
+        .root(root)
+        .replies(replies)
+        .hasMoreReplies(repliesCursor != null)
+        .repliesCursor(repliesCursor)
+        .replyCount(stats == null ? 0 : stats.replyCount())
+        .lastReplyAt(stats == null ? null : stats.lastReplyAt())
+        .build();
+  }
+
+  /// 「最有帮助」的游标：没传为 `null`，格式不对 422。
+  ///
+  /// @param raw 原文，可空
+  /// @return 游标
+  /// @throws InvalidDiscussionRequestException 格式不对
+  private static RankCursor rankCursor(String raw) {
+    if (raw == null || raw.isBlank()) {
+      return null;
+    }
+    return RankCursor.parse(raw).orElseThrow(() -> new InvalidDiscussionRequestException("游标不合法"));
   }
 
   /// 预览里要展示的回复：前 3 条。

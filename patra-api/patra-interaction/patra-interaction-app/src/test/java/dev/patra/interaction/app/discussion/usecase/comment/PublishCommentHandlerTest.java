@@ -108,9 +108,11 @@ class PublishCommentHandlerTest {
     when(subjectReads.findByIds(List.of(PUB_ID))).thenReturn(Map.of(PUB_ID, publication()));
     when(comments.insert(any())).thenAnswer(record("insert", NEW_ID));
     doAnswer(record("lock", null)).when(comments).lockThread(anyLong());
+    doAnswer(record("recordReply", null)).when(comments).recordReply(anyLong(), any());
+    doAnswer(record("count", null)).when(comments).incrementCommentCount(any());
     doAnswer(record("publish", null)).when(publisher).publishEvent(any(Object.class));
     when(reads.findById(NEW_ID)).thenReturn(Optional.of(root(NEW_ID, AUTHOR).build()));
-    when(views.assemble(any(), any(), any(), any())).thenReturn(List.of(assembled));
+    when(views.assemble(any(), any(), any(), any(), any())).thenReturn(List.of(assembled));
   }
 
   /// 未知类型、空正文、不合法的父评论 ID、101 个候选：都在任何远程调用之前拒绝。
@@ -144,7 +146,8 @@ class PublishCommentHandlerTest {
     verifyNoInteractions(gateway);
   }
 
-  /// 根评论：资格 → 解析对象 → 事务（计数 → 插入 → 发布）；事件字段齐全，时刻截到微秒；响应用自己的名片。
+  /// 根评论：资格 → 解析对象 → 事务（计数 → 插入 → 对象评论数 +1 → 发布）；事件字段齐全，时刻截到微秒；
+  /// 响应用自己的名片。
   @Test
   void should_publish_root_comment_in_one_transaction() {
     when(directory.resolve(List.of("bob")))
@@ -155,7 +158,9 @@ class PublishCommentHandlerTest {
 
     assertThat(view).isSameAs(assembled);
     assertThat(events)
-        .containsExactly("eligible", "resolve", BEGIN, "admit", "insert", "publish", END);
+        .containsExactly("eligible", "resolve", BEGIN, "admit", "insert", "count", "publish", END);
+    verify(comments).incrementCommentCount(PUB_ID);
+    verify(comments, never()).recordReply(anyLong(), any());
     NewComment inserted = captureInsert();
     assertThat(inserted.rootId()).isNull();
     assertThat(inserted.parentId()).isNull();
@@ -178,10 +183,15 @@ class PublishCommentHandlerTest {
                 .build());
     verify(views)
         .assemble(
-            List.of(root(NEW_ID, AUTHOR).build()), publication(), AUTHOR, Map.of(AUTHOR, self));
+            List.of(root(NEW_ID, AUTHOR).build()),
+            publication(),
+            AUTHOR,
+            Map.of(AUTHOR, self),
+            Set.of());
   }
 
-  /// 回复：预读父评论，事务里先拿楼锁再重读，插入时根是父评论所在的楼。
+  /// 回复：预读父评论，事务里先拿楼锁再重读，插入时根是父评论所在的楼；插入后楼内回复数、对象评论数各 +1，
+  /// 都在发事件之前。
   @Test
   void should_lock_thread_and_recheck_parent_for_replies() {
     when(comments.find(50L)).thenAnswer(record("find", Optional.of(reply(50L, 40L, 6L))));
@@ -198,9 +208,13 @@ class PublishCommentHandlerTest {
             "lock",
             "find",
             "insert",
+            "recordReply",
+            "count",
             "publish",
             END);
     verify(comments).lockThread(40L);
+    verify(comments).recordReply(40L, NOW_MICROS);
+    verify(comments).incrementCommentCount(PUB_ID);
     NewComment inserted = captureInsert();
     assertThat(inserted.rootId()).isEqualTo(40L);
     assertThat(inserted.parentId()).isEqualTo(50L);
@@ -275,7 +289,7 @@ class PublishCommentHandlerTest {
     assertThat(event.subjectOwner()).isEqualTo(SubjectOwner.of(AUTHOR, true));
     assertThat(event.authorAnonymous()).isTrue();
     verify(directory, never()).resolve(anyCollection());
-    verify(views).assemble(any(), eq(post(AUTHOR, true)), eq(AUTHOR), any());
+    verify(views).assemble(any(), eq(post(AUTHOR, true)), eq(AUTHOR), any(), eq(Set.of()));
   }
 
   /// 一条正常的回复（作者 6，楼 `rootId`）。
